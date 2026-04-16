@@ -12,8 +12,7 @@
  * \file batch_mat_mul_v3_asw_bl1_full_load_kernel_advanced.h
  * \brief
  */
-#ifndef BATCH_MAT_MUL_V3_ASW_BL1_FULL_LOAD_KERNEL_ADVANCED_H
-#define BATCH_MAT_MUL_V3_ASW_BL1_FULL_LOAD_KERNEL_ADVANCED_H
+#pragma once
 
 #include "batch_mat_mul_v3_asw_block_advanced.h"
 #include "../../mat_mul_v3/arch35/mat_mul_v3_full_load_kernel_helper.h"
@@ -117,4 +116,3 @@ __aicore__ inline void BatchMatMulAswBL1FullLoadKernel<A_TYPE, B_TYPE, C_TYPE, B
 }
 }
 
-#endif // BATCH_MAT_MUL_V3_ASW_BL1_FULL_LOAD_KERNEL_ADVANCED_H

@@ -12,8 +12,7 @@
  * \file dual_level_quant_batch_matmul_basic_block.h
  * \brief
  */
-#ifndef DUAL_LEVEL_QUANT_BATCH_MATMUL_BASIC_BLOCK_H
-#define DUAL_LEVEL_QUANT_BATCH_MATMUL_BASIC_BLOCK_H
+#pragma once
 
 #if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
@@ -234,4 +233,4 @@ __aicore__ inline void DualLevelQuantMatmulBasicBlock<LOCAL_TEMPLATE_FUNC_PARAMS
 }
 
 } // namespace DualLevelQuantBatchMatmul::Arch35
-#endif // DUAL_LEVEL_QUANT_BATCH_MATMUL_BASIC_BLOCK_H
+

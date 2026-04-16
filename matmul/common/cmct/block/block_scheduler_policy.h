@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef MATMUL_BLOCK_BLOCK_SCHEDULER_POLICY_H
-#define MATMUL_BLOCK_BLOCK_SCHEDULER_POLICY_H
+#pragma once
 
 namespace Cmct {
 namespace Gemm {
@@ -37,4 +36,4 @@ struct QuantBatchMatmulV3Scheduler {
 struct BuiltInMulScheduler {};
 } // namespace Gemm
 } // namespace Cmct
-#endif
+

@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef DUAL_LEVEL_QUANT_BATCH_MATMUL_TOOL_ARCH35_H
-#define DUAL_LEVEL_QUANT_BATCH_MATMUL_TOOL_ARCH35_H
+#pragma once
 
 #include <limits>
 
@@ -103,4 +102,4 @@ __aicore__ inline T Min(T a, T b)
 }
 
 } // namespace DualLevelQuantBatchMatmul::Arch35
-#endif
+

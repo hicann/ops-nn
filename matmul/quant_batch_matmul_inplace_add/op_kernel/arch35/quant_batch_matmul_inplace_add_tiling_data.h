@@ -11,8 +11,7 @@
  * \file quant_matmul_inplace_add_tiling_data.h
  * \brief
  */
-#ifndef QUANT_BATCH_MATMUL_INPLACE_ADD_TILING_DATA_H
-#define QUANT_BATCH_MATMUL_INPLACE_ADD_TILING_DATA_H
+#pragma once
 #include "kernel_tiling/kernel_tiling.h"
 
 #ifndef __CCE_AICORE__
@@ -86,4 +85,4 @@ struct QuantBatchMatmulInplaceAddTilingData {
 };
 #pragma pack(pop)
 } // namespace QMMIA
-#endif // QUANT_BATCH_MATMUL_INPLACE_ADD_TILING_DATA_H
+

@@ -12,8 +12,7 @@
  * \file fused_matmul_tiling_key.h
  * \brief
  */
-#ifndef __OP_HOST_FUSED_MATMUL_TILING_KEY_H__
-#define __OP_HOST_FUSED_MATMUL_TILING_KEY_H__
+#pragma once
 
 #include <sstream>
 #include "op_host/tiling_key.h"
@@ -39,4 +38,3 @@ protected:
 } // namespace fused_matmul
 } // namespace optiling
 
-#endif // __OP_HOST_FUSED_MATMUL_TILING_KEY_H__

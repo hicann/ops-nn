@@ -12,8 +12,7 @@
  * \file qbmm_mix_online_dynamic_al1_full_load.h
  * \brief
  */
-#ifndef QBMM_MIX_ONLINE_DYNAMIC_AL1_FULL_LOAD_H
-#define QBMM_MIX_ONLINE_DYNAMIC_AL1_FULL_LOAD_H
+#pragma once
 
 #include "qbmm_mix_online_dynamic.h"
 #include "qbmm_api_utils.h"
@@ -211,4 +210,3 @@ __aicore__ inline void QuantBmmPertokenAL1FullLoad<LOCAL_TEMPLATE_FUNC_MIX_PARAM
 
 }  // namespace QuantBatchMatmulV3
 
-#endif  // QBMM_MIX_ONLINE_DYNAMIC_AL1_FULL_LOAD_H

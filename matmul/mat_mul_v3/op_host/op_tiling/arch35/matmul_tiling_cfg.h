@@ -12,8 +12,7 @@
  * \file matmul_tiling_cfg.h
  * \brief
  */
-#ifndef __OP_HOST_MATMUL_TILING_CFG_H__
-#define __OP_HOST_MATMUL_TILING_CFG_H__
+#pragma once
 
 #include <cstdint>
 #include <cstddef>
@@ -51,4 +50,3 @@ public:
 };
 } // namespace optiling
 
-#endif // __OP_HOST_MATMUL_TILING_CFG_H__

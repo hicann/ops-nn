@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef CMCT_INCLUDE_UTILS_UNDERSCORE_H
-#define CMCT_INCLUDE_UTILS_UNDERSCORE_H
+#pragma once
 
 #include "integral_constant.h"
 
@@ -24,4 +23,4 @@ struct Underscore : _0 {};
 static constexpr Underscore _;
 } // namespace Gemm
 } // namespace Cmct
-#endif
+

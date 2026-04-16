@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef CMCT_BLOCK_BLOCK_MMAD_B_PROLOGUE_MX_H
-#define CMCT_BLOCK_BLOCK_MMAD_B_PROLOGUE_MX_H
+#pragma once
 
 #include "../utils/common_utils.h"
 #include "../utils/gemm_type.h"
@@ -699,4 +698,4 @@ private:
     static constexpr TEventID eventIdsFixToM_[2] = {0, 1};
 };
 } // namespace Cmct::Gemm::Block
-#endif
+

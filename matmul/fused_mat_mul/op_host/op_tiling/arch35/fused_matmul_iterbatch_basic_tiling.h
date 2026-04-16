@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef __OP_HOST_FUSED_MATMUL_ITERBATCH_BASIC_TILING_H__
-#define __OP_HOST_FUSED_MATMUL_ITERBATCH_BASIC_TILING_H__
+#pragma once
 
 #include "batch_mat_mul_v3/op_host/op_tiling/arch35/batch_matmul_v3_iterbatch_basicapi_tiling.h"
 
@@ -36,4 +35,4 @@ protected:
 };
 } // namespace fused_matmul
 } // namespace optiling
-#endif // __OP_HOST_FUSED_MATMUL_ITERBATCH_BASIC_TILING_H__
+

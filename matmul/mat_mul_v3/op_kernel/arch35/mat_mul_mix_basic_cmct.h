@@ -12,8 +12,7 @@
  * \file mat_mul_mix_basic_cmct.h
  * \brief
  */
-#ifndef OP_KERNEL_MATMUL_MIX_BASIC_CMCT_H
-#define OP_KERNEL_MATMUL_MIX_BASIC_CMCT_H
+#pragma once
 
 #include "cmct/block/block_scheduler_policy.h"
 #include "cmct/block/block_scheduler_utils.h"
@@ -92,4 +91,4 @@ __aicore__ inline void MatMulMixWithoutQueActKernel(GM_ADDR aGM, GM_ADDR bGM, GM
     mm(params);
 }
 }
-#endif  // OP_KERNEL_MATMUL_MIX_BASIC_CMCT_H
+

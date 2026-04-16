@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef UTILS_COMMON_UTILS_H
-#define UTILS_COMMON_UTILS_H
+#pragma once
 
 #include "integral_constant.h"
 #if ASC_DEVKIT_MAJOR >= 9
@@ -182,4 +181,4 @@ template <class Stride>
 struct is_2d_nz_c0_32 : is_2d_nz_c0_32_impl<typename AscendC::Std::remove_cvref_t<Stride>> {};
 } // namespace Gemm
 } // namespace Cmct
-#endif
+

@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef OP_KERNEL_TQBMM_TILING_KEY_PUBLIC_H
-#define OP_KERNEL_TQBMM_TILING_KEY_PUBLIC_H
+#pragma once
 #include <cstdint>
 
 #define TRANSPOSE_QUANT_BATCH_MAT_MUL_BATCH_SPLIT_FALSE 0
@@ -48,4 +47,4 @@ enum class TQBMMPrecisionMode : std::uint8_t {
     PRECISION_MODE_FP8 = TRANSPOSE_QUANT_BATCH_MAT_MUL_FP8,
     PRECISION_MODE_MXFP8 = TRANSPOSE_QUANT_BATCH_MAT_MUL_MXFP8
 };
-#endif
+

@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef QUANT_BATCH_MATMUL_V4_BASIC_BLOCK_TILING_H
-#define QUANT_BATCH_MATMUL_V4_BASIC_BLOCK_TILING_H
+#pragma once
 
 #include <algorithm>
 #include <limits>
@@ -336,4 +335,3 @@ protected:
 }  // namespace matmul_v4
 }  // namespace optiling
 
-#endif  // QUANT_BATCH_MATMUL_V4_BASIC_BLOCK_TILING_H

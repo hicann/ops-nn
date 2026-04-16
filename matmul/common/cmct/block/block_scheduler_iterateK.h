@@ -12,8 +12,7 @@
  * \brief
  */
 
-#ifndef MATMUL_BLOCK_BLOCK_SCHEDULER_ITERATEK_H
-#define MATMUL_BLOCK_BLOCK_SCHEDULER_ITERATEK_H
+#pragma once
 
 #include "./block_scheduler_utils.h"
 #include "./block_scheduler_policy.h"
@@ -126,4 +125,4 @@ struct BlockSchedulerSelector<ProblemShape_, L1TileShape_, L0TileShape_, Cmct::G
 } // namespace Block
 } // namespace Gemm
 } // namespace Cmct
-#endif
+

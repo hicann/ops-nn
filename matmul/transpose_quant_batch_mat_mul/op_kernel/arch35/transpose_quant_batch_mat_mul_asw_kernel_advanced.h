@@ -12,8 +12,7 @@
  * \file transpose_quant_batch_mat_mul_asw_kernel_advanced.h
  * \brief
  */
-#ifndef TRANSPOSE_QUANT_BATCH_MAT_MUL_ASW_KERNEL_ADVANCED_H
-#define TRANSPOSE_QUANT_BATCH_MAT_MUL_ASW_KERNEL_ADVANCED_H
+#pragma once
 
 #include "../../inc/platform.h"
 #include "mm_extension_interface/tqbmm_custom_mm_policy.h"
@@ -447,4 +446,3 @@ __aicore__ inline void TransposeQuantBatchMatMulAswKernel<LOCAL_TEMPLATE_FUNC_MI
 
 } // namespace TransposeQuantBatchMatMulAdvanced
 
-#endif // QBMM_MIX_ONLINE_DYNAMIC_H

@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef CMCT_INCLUDE_MATMUL_BLOCK_BLOCK_SCHEDULER_SWIZZLE_IN_MN_CORE_H
-#define CMCT_INCLUDE_MATMUL_BLOCK_BLOCK_SCHEDULER_SWIZZLE_IN_MN_CORE_H
+#pragma once
 
 #include <cstdint>
 
@@ -129,4 +128,4 @@ private:
 }  // namespace Block
 }  // namespace Gemm
 }  // namespace Cmct
-#endif
+

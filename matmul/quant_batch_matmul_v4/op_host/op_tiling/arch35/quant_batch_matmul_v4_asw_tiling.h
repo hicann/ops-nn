@@ -12,8 +12,7 @@
  * \file quant_batch_matmul_v4_asw_tiling.h
  * \brief
  */
-#ifndef QUANT_BATCH_MATMUL_V4_ASW_TILING_H
-#define QUANT_BATCH_MATMUL_V4_ASW_TILING_H
+#pragma once
 #include "../../../../quant_batch_matmul_v3/op_host/op_tiling/arch35/adaptive_sliding_window_tiling.h"
 #include "../quant_batch_matmul_v4_compile_info.h"
 
@@ -87,4 +86,4 @@ protected:
     std::unique_ptr<QuantBatchMatmulV4CompileInfo> compileInfoPtr_;
 };
 }  // namespace optiling
-#endif  // QUANT_BATCH_MATMUL_V4_ASW_TILING_H
+

@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef CMCT_BLOCK_BLOCK_MMAD_A_PREFETCH_B_PROLOGUE_H
-#define CMCT_BLOCK_BLOCK_MMAD_A_PREFETCH_B_PROLOGUE_H
+#pragma once
 
 #include "../utils/constant.h"
 #include "../utils/gemm_type.h"
@@ -503,4 +502,4 @@ private:
     AscendC::LocalTensor<BiasL1TensorTrait> biasL1_;
 };
 } // namespace Cmct::Gemm::Block
-#endif
+

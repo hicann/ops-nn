@@ -12,8 +12,7 @@
  * \file sparse_tensor_dense_mat_mul_base.h
  * \brief
  */
-#ifndef SPARSE_TENSOR_DENSE_MAT_MUL_BASE_H
-#define SPARSE_TENSOR_DENSE_MAT_MUL_BASE_H
+#pragma once
 
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
@@ -27,4 +26,3 @@ constexpr int32_t INDICES_DIM_1 = 2;
 
 } // namespace SparseTensorDenseMatMul
 
-#endif // SPARSE_TENSOR_DENSE_MAT_MUL_BASE_H

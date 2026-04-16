@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef UTILS_DEVICE_UTILS_H
-#define UTILS_DEVICE_UTILS_H
+#pragma once
 #if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
 #else
@@ -40,4 +39,4 @@ __aicore__ inline int64_t AlignBlock(const int64_t& t)
 
 } // namespace Gemm
 } // namespace Cmct
-#endif
+

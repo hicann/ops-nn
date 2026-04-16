@@ -12,8 +12,7 @@
  * \file qbmm_cube_on_the_fly_bl1_full_load.h
  * \brief
  */
-#ifndef QBMM_CUBE_ON_THE_FLY_BL1_FULL_LOAD_H
-#define QBMM_CUBE_ON_THE_FLY_BL1_FULL_LOAD_H
+#pragma once
 
 #include "../quant_batch_matmul_v3_base.h"
 #include "qbmm_api_utils.h"
@@ -164,4 +163,3 @@ __aicore__ inline void MatmulAswKernelBL1FullLoad<LOCAL_TEMPLATE_FUNC_PARAMS>::P
 }
 }  // namespace QuantBatchMatmulV3
 
-#endif  // QBMM_CUBE_ON_THE_FLY_BL1_FULL_LOAD_H

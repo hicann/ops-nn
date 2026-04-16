@@ -7,8 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-#ifndef PTA_NPU_OP_API_INC_LEVEL0_OP_BATCHMATMUL_OP_H_
-#define PTA_NPU_OP_API_INC_LEVEL0_OP_BATCHMATMUL_OP_H_
+#pragma once
 
 #include "opdev/op_executor.h"
 
@@ -38,4 +37,3 @@ const aclTensor* BatchMatMulNzFp162Fp32(
     const bool adjX2, const bool offsetX, const int64_t opImplModeEnum, aclOpExecutor* executor);
 } // namespace l0op
 
-#endif // PTA_NPU_OP_API_INC_LEVEL0_OP_BATCHMATMUL_OP_H_

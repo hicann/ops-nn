@@ -12,8 +12,7 @@
  * \file quant_batch_matmul_v3_checker.h
  * \brief
  */
-#ifndef QUANT_BATCH_MATMUL_V3_CHECKER_H
-#define QUANT_BATCH_MATMUL_V3_CHECKER_H
+#pragma once
 #include "quant_batch_matmul_v3_checker_base.h"
 
 namespace optiling {
@@ -71,4 +70,4 @@ protected:
     bool CheckABDtypesSame() const;
 };
 }  // namespace optiling
-#endif  // QUANT_BATCH_MATMUL_V3_CHECKER_H
+

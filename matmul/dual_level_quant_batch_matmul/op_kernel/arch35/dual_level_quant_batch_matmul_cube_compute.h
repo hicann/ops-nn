@@ -13,8 +13,7 @@
  * \brief
  */
  
-#ifndef DUAL_LEVEL_QUANT_BATCH_MATMUL_CUBE_COMPUTE_H
-#define DUAL_LEVEL_QUANT_BATCH_MATMUL_CUBE_COMPUTE_H
+#pragma once
 
 #if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
@@ -294,4 +293,4 @@ __aicore__ inline void DLQBMM_CUBE_COMPUTE_CLASS::EndSync()
 }
 
 } // namespace DualLevelQuantBatchMatmul::Arch35
-#endif
+

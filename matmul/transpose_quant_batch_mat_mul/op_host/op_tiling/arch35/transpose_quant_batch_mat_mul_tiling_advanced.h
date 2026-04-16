@@ -12,8 +12,7 @@
  * \file transpose_quant_batch_mat_mul_tiling_advanced.h
  * \brief
  */
-#ifndef __OP_HOST_TRANSPOSE_QUANT_BATCH_MAT_MUL_TILING_ADVANCED_H__
-#define __OP_HOST_TRANSPOSE_QUANT_BATCH_MAT_MUL_TILING_ADVANCED_H__
+#pragma once
 
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_v3_tiling_advanced.h"
 namespace optiling {
@@ -42,4 +41,4 @@ protected:
 };
 } // namespace transpose_quant_batch_mat_mul_advanced
 } // namespace optiling
-#endif // __OP_HOST_TRANSPOSE_QUANT_BATCH_MAT_MUL_TILING_ADVANCED_H__
+

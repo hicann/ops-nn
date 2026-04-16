@@ -15,8 +15,7 @@
 
 #include <cstdint>
 
-#ifndef OP_KERNEL_TBMM_TILING_KEY_PUBLIC_H
-#define OP_KERNEL_TBMM_TILING_KEY_PUBLIC_H
+#pragma once
 
 #define TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_FALSE 0
 #define TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_TRUE 1
@@ -42,4 +41,3 @@ enum class TBMMBatchSplit : std::uint8_t {
     BATCH_SPLIT_TRUE = TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_TRUE
 };
 
-#endif

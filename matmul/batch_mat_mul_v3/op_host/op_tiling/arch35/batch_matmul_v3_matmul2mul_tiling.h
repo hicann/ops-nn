@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef __OP_HOST_BATCH_MATMUL_V3_MATMUL2MUL_TILING_H__
-#define __OP_HOST_BATCH_MATMUL_V3_MATMUL2MUL_TILING_H__
+#pragma once
 
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_v3_base_tiling_advanced.h"
 
@@ -38,4 +37,4 @@ protected:
 };
 } // namespace batch_matmul_v3_advanced
 } // namespace optiling
-#endif
+

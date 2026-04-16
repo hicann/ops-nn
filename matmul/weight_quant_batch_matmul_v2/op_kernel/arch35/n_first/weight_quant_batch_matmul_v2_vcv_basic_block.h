@@ -12,8 +12,7 @@
  * \file weight_quant_batch_matmul_v2_vcv_basic_block.h
  * \brief
  */
-#ifndef WEIGHT_QUANT_BATCHMATMUL_V2_VCV_BASIC_BLOCK_H
-#define WEIGHT_QUANT_BATCHMATMUL_V2_VCV_BASIC_BLOCK_H
+#pragma once
 
 #include "basic_block_config.h"
 #if ASC_DEVKIT_MAJOR >= 9
@@ -298,4 +297,3 @@ __aicore__ inline void WeightQuantVcvMatmulBasicBlock<xType, wType, biasType, yT
 }
 } // namespace WeightQuantBatchMatmulV2::Arch35
 
-#endif // WEIGHT_QUANT_BATCHMATMUL_V2_BASIC_BLOCK_H

@@ -12,8 +12,7 @@
  * \file tool_arch35.h
  * \brief
  */
-#ifndef WEIGHT_QUANT_BATCH_MATMUL_V2_TOOL_ARCH35_H
-#define WEIGHT_QUANT_BATCH_MATMUL_V2_TOOL_ARCH35_H
+#pragma once
 
 #include <limits>
 
@@ -132,4 +131,4 @@ struct MatmulL1GmType : MatmulType<POSITION, FORMAT, TYPE, ISTRANS, LAYOUT, IBSH
     constexpr static TPosition srcPos = TPosition::GM;
 };
 } // namespace WeightQuantBatchMatmulV2::Arch35
-#endif
+

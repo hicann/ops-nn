@@ -12,8 +12,7 @@
  * \file batch_mat_mul_v3_asw_block_advanced.h
  * \brief
  */
-#ifndef BATCH_MATMUL_V3_ASW_BLOCK_ADVANCED_H
-#define BATCH_MATMUL_V3_ASW_BLOCK_ADVANCED_H
+#pragma once
 
 #if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
@@ -278,4 +277,3 @@ __aicore__ inline void BatchMatMulAswBlock::CalcSplitKGMOffset(uint64_t splitKIn
 
 } // namespace BatchMatMulV3Advanced
 
-#endif // BATCH_MAT_MUL_V3_ASW_BLOCK_ADVANCED_H

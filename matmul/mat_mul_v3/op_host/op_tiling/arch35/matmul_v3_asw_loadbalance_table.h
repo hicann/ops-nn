@@ -13,8 +13,7 @@
  * \file matmul_v3_asw_loadbalance_table.h
  * \brief
  */
-#ifndef __OP_HOST_MATMUL_V3_ASW_LOADBALANCE_TABLE_H__
-#define __OP_HOST_MATMUL_V3_ASW_LOADBALANCE_TABLE_H__
+#pragma once
 
 #include <vector>
 #include <cstdint>
@@ -89,4 +88,4 @@ const std::vector<std::tuple<uint64_t, uint64_t, uint64_t, double, double>> BLOC
 };
 } // namespace matmul_v3_advanced
 } // namespace optiling
-#endif // __OP_HOST_MATMUL_V3_ASW_LOADBALANCE_TABLE_H__
+

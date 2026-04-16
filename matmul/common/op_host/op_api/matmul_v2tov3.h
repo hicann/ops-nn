@@ -8,8 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
 */
 
-#ifndef PTA_NPU_OP_API_INC_LEVEL0_OP_MATMUL_V2TOV3_H_
-#define PTA_NPU_OP_API_INC_LEVEL0_OP_MATMUL_V2TOV3_H_
+#pragma once
 
 #include "opdev/common_types.h"
 
@@ -46,4 +45,4 @@ using l0op::MmCheckHitV3Shape;
 } // namespace NN
 } // namespace Ops
 #endif
-#endif  // PTA_NPU_OP_API_INC_LEVEL0_OP_MATMUL_V2TOV3_H_
+

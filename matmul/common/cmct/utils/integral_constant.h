@@ -12,8 +12,7 @@
  * \file integral_constant.h
  * \brief
  */
-#ifndef UTILS_INTEGRAL_CONSTANT_H
-#define UTILS_INTEGRAL_CONSTANT_H
+#pragma once
 #if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
 #else
@@ -195,4 +194,4 @@ __host_aicore__ inline constexpr Int<(t <= u)> operator<=(Int<t>, Int<u>)
 }
 } // namespace Gemm
 } // namespace Cmct
-#endif
+

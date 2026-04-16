@@ -12,8 +12,7 @@
  * \file fused_quant_matmul_checker.h
  * \brief
  */
-#ifndef FUSED_QUANT_MATMUL_CHECKER_H
-#define FUSED_QUANT_MATMUL_CHECKER_H
+#pragma once
 
 #include "register/tilingdata_base.h"
 #include "tiling/tiling_api.h"
@@ -48,4 +47,4 @@ protected:
                        const gert::StorageShape *offsetShape, const std::vector<int64_t> &dimValueOfMKN) const;
 };
 } // namespace optiling
-#endif // FUSED_QUANT_MATMUL_CHECKER_H
+

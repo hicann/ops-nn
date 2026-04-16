@@ -12,8 +12,7 @@
  * \file tqbmm_custom_mm_policy.h
  * \brief
  */
-#ifndef TQBMM_CUSTOM_MM_POLICY_H
-#define TQBMM_CUSTOM_MM_POLICY_H
+#pragma once
 
 #include "lib/matmul_intf.h"
 #include "tqbmm_copy_cube_out.h"
@@ -26,4 +25,4 @@ public:
     using CopyCubeOut = TQBmmCustomCopyCubeOut<IMPL, A_TYPE, B_TYPE, C_TYPE, MM_CFG, McgShfMode::DUAL_DST_SPLIT_M>;
 };
 } // namespace AscendC
-#endif // TQBMM_CUSTOM_MM_POLICY_H
+

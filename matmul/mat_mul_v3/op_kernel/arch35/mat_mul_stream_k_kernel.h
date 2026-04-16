@@ -12,8 +12,7 @@
  * \file mat_mul_stream_k_kernel.h
  * \brief
  */
-#ifndef MMV3_MATMUL_STREAM_K_KERNEL_H
-#define MMV3_MATMUL_STREAM_K_KERNEL_H
+#pragma once
 #ifndef DTYPE_Y
 #define DTYPE_Y half
 #endif
@@ -291,4 +290,3 @@ __aicore__ inline void MatmulStreamKKernel
 }
 } // namespace MatmulV3Advanced
 
-#endif // MMV3_MATMUL_STREAM_K_KERNEL_H

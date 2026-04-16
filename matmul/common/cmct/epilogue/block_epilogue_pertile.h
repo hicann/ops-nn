@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef EPILOGUE_BLOCK_EPILOGUE_PERTILE_H
-#define EPILOGUE_BLOCK_EPILOGUE_PERTILE_H
+#pragma once
 #if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
 #else
@@ -890,4 +889,4 @@ __aicore__ inline void BlockEpiloguePertile<QBMM_BLOCK_EPILOGUE_PERTILE_FUNC_LOC
 } // namespace Block
 } // namespace Gemm
 } // namespace Cmct
-#endif // EPILOGUE_BLOCK_EPILOGUE_PERTILE_H
+

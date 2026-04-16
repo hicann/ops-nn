@@ -12,8 +12,7 @@
  * \file mm_copy_cube_out.h
  * \brief
  */
-#ifndef MM_COPY_CUBE_OUT_H
-#define MM_COPY_CUBE_OUT_H
+#pragma once
 #include "lib/matmul_intf.h"
 
 namespace MatmulCommon {
@@ -219,4 +218,4 @@ private:
 };
 
 }  // namespace MatmulCommon
-#endif  // MM_COPY_CUBE_OUT_H
+

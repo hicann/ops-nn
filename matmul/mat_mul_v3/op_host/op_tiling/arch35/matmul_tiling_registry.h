@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef __OP_HOST_MATMUL_TILING_REGISTRY_H__
-#define __OP_HOST_MATMUL_TILING_REGISTRY_H__
+#pragma once
 
 #include <map>
 #include <string>
@@ -188,4 +187,3 @@ private:
         MMRegister(#opType).tiling<className>(static_cast<int32_t>(priority), NpuArch::npuArch)
 } // namespace optiling
 
-#endif // __OP_HOST_MATMUL_TILING_REGISTRY_H__

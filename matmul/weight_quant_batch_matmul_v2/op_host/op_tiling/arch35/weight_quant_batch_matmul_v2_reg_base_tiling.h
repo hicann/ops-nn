@@ -12,8 +12,7 @@
  * \file weight_quant_batch_matmul_v2_reg_base_tiling.h
  * \brief
  */
-#ifndef WEIGHT_QUANT_BATCH_MATMUL_V2_REG_BASE_TILING_H
-#define WEIGHT_QUANT_BATCH_MATMUL_V2_REG_BASE_TILING_H
+#pragma once
 
 #include "weight_quant_batch_matmul_v2_basic_block_tiling.h"
 #include "matmul/weight_quant_batch_matmul_v2/op_kernel/arch35/weight_quant_batch_matmul_v2_arch35_tiling_data.h"
@@ -64,4 +63,4 @@ private:
     ge::graphStatus InstantiateTilingData();
 };
 } // namespace optiling
-#endif // WEIGHT_QUANT_BATCH_MATMUL_V2_REG_BASE_TILING_H
+

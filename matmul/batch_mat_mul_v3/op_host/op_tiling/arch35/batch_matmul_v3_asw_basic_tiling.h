@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef __OP_HOST_BATCH_MATMUL_V3_ASW_BASIC_TILING_H__
-#define __OP_HOST_BATCH_MATMUL_V3_ASW_BASIC_TILING_H__
+#pragma once
 
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_v3_base_tiling_advanced.h"
 
@@ -45,4 +44,4 @@ protected:
 };
 }
 }
-#endif // __OP_HOST_BATCH_MATMUL_V3_ASW_BAISC_TILING_H__
+

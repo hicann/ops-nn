@@ -12,8 +12,7 @@
  * \file sparse_tensor_dense_mat_mul_b16.h
  * \brief
  */
-#ifndef SPARSE_TENSOR_DENSE_MAT_MUL_B16_H
-#define SPARSE_TENSOR_DENSE_MAT_MUL_B16_H
+#pragma once
 
 #include "sparse_tensor_dense_mat_mul_base.h"
 #include "../inc/platform.h"
@@ -212,4 +211,3 @@ __aicore__ inline void SparseTensorDenseMatMulB16<T_IDX, T_VAL, T_SUM, ADJ_A, AD
 
 } // namespace SparseTensorDenseMatMul
 
-#endif // SPARSE_TENSOR_DENSE_MAT_MUL_B16_H

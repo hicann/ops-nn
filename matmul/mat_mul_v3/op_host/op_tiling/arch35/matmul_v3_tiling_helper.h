@@ -13,8 +13,7 @@
  * \file matmul_v3_tiling_helper.h
  * \brief
  */
-#ifndef __OP_HOST_MATMUL_V3_TILING_HELPER_H__
-#define __OP_HOST_MATMUL_V3_TILING_HELPER_H__
+#pragma once
 
 #include "matmul_v3_common_advanced.h"
 #include "matmul_v3_compile_info_advanced.h"
@@ -44,4 +43,3 @@ public:
 }
 }
 
-#endif // __OP_HOST_MATMUL_V3_TILING_HELPER_H__

@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef MATMUL_COMMON_INFERSHAPE_H
-#define MATMUL_COMMON_INFERSHAPE_H
+#pragma once
 
 #include "runtime/infer_shape_context.h"
 #include "register/op_impl_registry.h"
@@ -31,4 +30,3 @@ bool CheckIsUnknownDimNum(const gert::Shape& shape);
 } // namespace NN
 } // namespace Ops
 
-#endif

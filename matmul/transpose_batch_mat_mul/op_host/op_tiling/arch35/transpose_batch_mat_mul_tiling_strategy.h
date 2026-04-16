@@ -12,8 +12,7 @@
  * \file transpose_batch_mat_mul_tiling_strategy.h
  * \brief
  */
-#ifndef __OP_HOST_TRANSPOSE_BATCH_MAT_MUL_TILING_STRATEGY_H__
-#define __OP_HOST_TRANSPOSE_BATCH_MAT_MUL_TILING_STRATEGY_H__
+#pragma once
 
 #include <map>
 #include <vector>
@@ -43,4 +42,3 @@ inline std::vector<int32_t> GetTransposeBatchMatMulPriorities(NpuArch NpuArch)
 }
 }
 
-#endif // __OP_HOST_TRANSPOSE_BATCH_MAT_MUL_TILING_STRATEGY_H__

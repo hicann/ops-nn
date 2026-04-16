@@ -12,8 +12,7 @@
  * \file dual_level_quant_batch_matmul_vec_compute.h
  * \brief
  */
-#ifndef DUAL_LEVEL_QUANT_BATCH_MATMUL_VEC_COMPUTE_H
-#define DUAL_LEVEL_QUANT_BATCH_MATMUL_VEC_COMPUTE_H
+#pragma once
 
 #if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
@@ -360,4 +359,3 @@ __aicore__ inline void DLQBMM_VEC_COMPUTE_CLASS::SetAndWaitMte2ToV()
 
 } // namespace DualLevelQuantBatchMatmul::Arch35
 
-#endif // DUAL_LEVEL_QUANT_BATCH_MATMUL_VEC_COMPUTE_H

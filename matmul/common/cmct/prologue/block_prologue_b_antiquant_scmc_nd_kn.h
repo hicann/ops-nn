@@ -7,8 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-#ifndef PROLOGUE_BLOCK_BLOCK_PROLOGUE_B_ANTIQUANT_SCMC_ND_KN_H
-#define PROLOGUE_BLOCK_BLOCK_PROLOGUE_B_ANTIQUANT_SCMC_ND_KN_H
+#pragma once
 #include "../tile/tile_copy_if.h"
 #include "../utils/arch.h"
 #include "../utils/math_utils.h"
@@ -474,4 +473,4 @@ private:
     static constexpr QuantType ANTIQUANT_TYPE = QUANT_TYPE<decltype(LayoutScale{}.GetShape()), ElementScale>;
 };
 } // namespace Cmct::Prologue
-#endif
+

@@ -12,8 +12,7 @@
  * \file batch_mat_mul_v3_asw_kernel_advanced.h
  * \brief
  */
-#ifndef BATCH_MAT_MUL_V3_ASW_KERNEL_ADVANCED_H
-#define BATCH_MAT_MUL_V3_ASW_KERNEL_ADVANCED_H
+#pragma once
 
 #include "batch_mat_mul_v3_asw_block_advanced.h"
 #if ASC_DEVKIT_MAJOR >= 9
@@ -147,4 +146,3 @@ __aicore__ inline void BatchMatMulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, B
 
 } // namespace BatchMatMulV3Advanced
 
-#endif // BATCH_MAT_MUL_V3_ASW_KERNEL_ADVANCED_H

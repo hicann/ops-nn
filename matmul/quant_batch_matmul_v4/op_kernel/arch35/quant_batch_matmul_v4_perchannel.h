@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef QUANT_BATCH_MATMUL_V4_PERCHANNEL_H
-#define QUANT_BATCH_MATMUL_V4_PERCHANNEL_H
+#pragma once
 
 #include "quant_batch_matmul_v4_reg_base_common.h"
 #include "quant_batch_matmul_v4_tiling_data_apt.h"
@@ -347,4 +346,4 @@ QuantBatchMatmulV4PerChannelKernel<xType, wType, biasType, yType, aTrans, bTrans
     }
 }
 }  // namespace QuantBatchMatmulV4
-#endif  // QUANT_BATCH_MATMUL_V4_PERCHANNEL_H
+

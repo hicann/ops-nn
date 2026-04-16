@@ -12,8 +12,7 @@
  * \file qbmm_cube_basic_api_cmct.h
  * \brief
  */
-#ifndef QBMM_CUBE_BAISC_API_CMCT_H
-#define QBMM_CUBE_BAISC_API_CMCT_H
+#pragma once
 #include "cmct/block/block_scheduler_policy.h"
 #include "cmct/block/block_scheduler_utils.h"
 #include "cmct/epilogue/block_epilogue_empty.h"
@@ -95,4 +94,4 @@ __aicore__ inline void QbmmCubeBasicApiKernel(
     MatmulKernel qbmm;
     qbmm(params);
 }
-#endif
+

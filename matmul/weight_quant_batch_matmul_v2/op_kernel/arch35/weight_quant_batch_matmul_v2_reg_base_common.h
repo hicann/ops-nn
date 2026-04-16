@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef WEIGHT_QUANT_BATCHMATMUL_V2_REG_BASE_COMMON_H
-#define WEIGHT_QUANT_BATCHMATMUL_V2_REG_BASE_COMMON_H
+#pragma once
 
 #if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
@@ -2260,4 +2259,3 @@ __aicore__ inline void WeightQuantBatchMatmulV2RegBaseCommonKernel<
 }
 } // namespace WeightQuantBatchMatmulV2::Arch35
 
-#endif // WEIGHT_QUANT_BATCHMATMUL_V2_REG_BASE_COMMON_H

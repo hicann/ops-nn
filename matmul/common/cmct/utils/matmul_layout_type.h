@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef UTILS_MATMUL_LAYOUT_TYPE_H
-#define UTILS_MATMUL_LAYOUT_TYPE_H
+#pragma once
 
 #include "./integral_constant.h"
 #include "./layout_utils.h"
@@ -49,4 +48,4 @@ using ToMatmulTypeT = typename ToMatmulType<LayoutT>::Type;
 
 } // namespace Gemm
 } // namespace Cmct
-#endif
+

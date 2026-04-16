@@ -12,8 +12,7 @@
  * \file transpose_quant_batch_mat_mul_asw_block_advanced.h
  * \brief
  */
-#ifndef TRANSPOSE_QUANT_BATCH_MAT_MUL_ASW_BLOCK_ADVANCED_H
-#define TRANSPOSE_QUANT_BATCH_MAT_MUL_ASW_BLOCK_ADVANCED_H
+#pragma once
 
 #include "../../mat_mul_v3/arch35/mat_mul_tiling_data.h"
 #include "../../common/cmct/utils/common_utils.h"
@@ -157,4 +156,3 @@ __aicore__ inline void TransposeQuantBatchMatMulAswBlock::CalcGMOffset(bool isMx
 
 } // namespace TransposeQuantBatchMatMulAdvanced
 
-#endif // TRANSPOSE_QUANT_BATCH_MAT_MUL_ASW_BLOCK_ADVANCED_H

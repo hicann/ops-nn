@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef CMCT_KERNEL_KERNEL_MATMUL_MIX_WITH_WEIGHT_PRELOGUE_H
-#define CMCT_KERNEL_KERNEL_MATMUL_MIX_WITH_WEIGHT_PRELOGUE_H
+#pragma once
 #include "../utils/common_utils.h"
 #include "../utils/coord_utils.h"
 #include "../utils/layout_utils.h"
@@ -150,4 +149,4 @@ private:
 }  // namespace Kernel
 }  // namespace Gemm
 }  // namespace Cmct
-#endif
+

@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef QUANT_BATCH_MATMUL_V4_ARCH35_CMCT_CONVERTOR_H
-#define QUANT_BATCH_MATMUL_V4_ARCH35_CMCT_CONVERTOR_H
+#pragma once
 #include "cmct/block/block_mmad_mx_weight_from_ub.h"
 #include "cmct/block/block_scheduler_swizzle_in_mn_core_nn.h"
 #include "cmct/kernel/kernel_matmul_mix_with_weight_prologue_nn.h"
@@ -168,4 +167,3 @@ __aicore__ inline void InvokeKernel(
 #define KERNEL_PARAMS \
     x1, x2, bias, x1_scale, x2_scale, y_scale, x1_offset, x2_offset, y_offset, x2_table, y, workspace, tiling
 
-#endif

@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef WEIGHT_QUANT_BATCH_MATMUL_V2_ITERBATCH_TILING_H
-#define WEIGHT_QUANT_BATCH_MATMUL_V2_ITERBATCH_TILING_H
+#pragma once
 #include "weight_quant_batch_matmul_v2_adaptive_sliding_window_tiling.h"
 #include "../weight_quant_batch_matmul_v2_tiling.h"
 #include "matmul/weight_quant_batch_matmul_v2/op_kernel/arch35/weight_quant_batch_matmul_v2_arch35_tiling_data.h"
@@ -41,4 +40,4 @@ private:
 };
 }  // namespace weight_quant_batch_matmul_v2
 }  // namespace optiling
-#endif // WEIGHT_QUANT_BATCH_MATMUL_V2_ITERBATCH_TILING_H
+

@@ -12,8 +12,7 @@
  * \file math_util.h
  * \brief
  */
-#ifndef MATMUL_COMMON_MATH_UTIL_H_
-#define MATMUL_COMMON_MATH_UTIL_H_
+#pragma once
 
 #include "util/math_util.h"
 
@@ -67,4 +66,3 @@ static T CeilDiv(T num1, T num2)
 }
 }
 
-#endif

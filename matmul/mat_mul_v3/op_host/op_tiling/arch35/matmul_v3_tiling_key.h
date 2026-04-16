@@ -12,8 +12,7 @@
  * \file matmul_v3_tiling_key.h
  * \brief
  */
-#ifndef OP_HOST_MATMUL_V3_TILING_KEY_H
-#define OP_HOST_MATMUL_V3_TILING_KEY_H
+#pragma once
 
 #include <sstream>
 #include "../../../op_kernel/arch35/mat_mul_v3_tiling_key_public.h"
@@ -120,4 +119,3 @@ protected:
 } // namespace matmul_v3_advanced
 } // namespace optiling
 
-#endif // OP_HOST_MATMUL_V3_TILING_KEY_H

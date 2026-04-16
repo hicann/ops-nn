@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef MATMUL_KERNEL_KERNEL_MATMUL_ITERBATCH_H
-#define MATMUL_KERNEL_KERNEL_MATMUL_ITERBATCH_H
+#pragma once
 
 #define ASCENDC_CUBE_ONLY
 #if ASC_DEVKIT_MAJOR >= 9
@@ -320,4 +319,4 @@ public:
 } // namespace Kernel
 } // namespace Gemm
 } // namespace Cmct
-#endif
+

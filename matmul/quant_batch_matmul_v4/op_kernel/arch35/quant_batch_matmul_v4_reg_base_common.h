@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef QUANT_BATCH_MATMUL_V4_REG_BASE_COMMON_H
-#define QUANT_BATCH_MATMUL_V4_REG_BASE_COMMON_H
+#pragma once
 
 #include "lib/matmul_intf.h"
 #include "quant_batch_matmul_v4_constant.h"
@@ -1636,4 +1635,3 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
 }
 }  // namespace QuantBatchMatmulV4
 
-#endif  // QUANT_BATCH_MATMUL_V4_REG_BASE_COMMON_H

@@ -12,8 +12,7 @@
  * \file transpose_quant_batch_mat_mul_common.h
  * \brief
  */
-#ifndef __OP_HOST_TRANSPOSE_QUANT_BATCH_MAT_MUL_COMMON_H__
-#define __OP_HOST_TRANSPOSE_QUANT_BATCH_MAT_MUL_COMMON_H__
+#pragma once
 
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_v3_common_advanced.h"
 
@@ -75,4 +74,4 @@ bool inline IsMicroScaling(const gert::CompileTimeTensorDesc* x1Scale, const ger
 }
 } // namespace transpose_quant_batch_mat_mul_advanced
 } // namespace optiling
-#endif // __OP_HOST_TRANSPOSE_QUANT_BATCH_MAT_MUL_COMMON_H__
+

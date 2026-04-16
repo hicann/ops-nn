@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef MATMUL_BLOCK_MATMUL_IMPL_TRAITS_H
-#define MATMUL_BLOCK_MATMUL_IMPL_TRAITS_H
+#pragma once
 
 #include "../utils/common_utils.h"
 #include "../utils/tuple_utils.h"
@@ -213,4 +212,4 @@ using MatmulImplTraitsT = typename MatmulImplTraits<
 } // namespace Block
 } // namespace Gemm
 } // namespace Cmct
-#endif
+

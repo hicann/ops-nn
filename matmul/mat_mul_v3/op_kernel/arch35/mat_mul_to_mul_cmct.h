@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef MAT_MUL_TO_MUL_CMCT_H
-#define MAT_MUL_TO_MUL_CMCT_H
+#pragma once
 
 #include "cmct/block/block_scheduler_policy.h"
 #include "cmct/block/block_scheduler_utils.h"
@@ -73,4 +72,4 @@ __aicore__ inline void MatMulToMulActKernel(
     mm(params);
 }
 }
-#endif
+

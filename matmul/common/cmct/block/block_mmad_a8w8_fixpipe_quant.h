@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef BLOCK_MMAD_A8W8_FIXPIPE_QUANT_H
-#define BLOCK_MMAD_A8W8_FIXPIPE_QUANT_H
+#pragma once
 #include "../policy/dispatch_policy.h"
 #include "../utils/common_utils.h"
 #include "../utils/layout_utils.h"
@@ -689,4 +688,4 @@ private:
 }
 }
 }
-#endif
+

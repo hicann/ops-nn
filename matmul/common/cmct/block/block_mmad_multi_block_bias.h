@@ -12,8 +12,7 @@
  * \file block_mmad_multi_block_bias.h
  * \brief
  */
-#ifndef MATMUL_BLOCK_BLOCK_MMAD_MULTI_BLOCK_BIAS_H
-#define MATMUL_BLOCK_BLOCK_MMAD_MULTI_BLOCK_BIAS_H
+#pragma once
 
 #include "lib/matmul/matmul.h"
 #include "lib/matmul/tiling.h"
@@ -117,4 +116,4 @@ private:
 } // namespace Block
 } // namespace Gemm
 } // namespace Cmct
-#endif
+

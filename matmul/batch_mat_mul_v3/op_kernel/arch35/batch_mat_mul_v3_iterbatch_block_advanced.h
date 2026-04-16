@@ -12,8 +12,7 @@
  * \file batch_mat_mul_v3_iterbatch_block_advanced.h
  * \brief
  */
-#ifndef BATCH_MATMUL_V3_ITERBATCH_BLOCK_ADVANCED_H
-#define BATCH_MATMUL_V3_ITERBATCH_BLOCK_ADVANCED_H
+#pragma once
 
 #if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
@@ -132,4 +131,3 @@ __aicore__ inline void BatchMatMulMultiBatchBaseBlock::CalcGMOffset()
 }
 }
 
-#endif // BATCH_MATMUL_V3_ITERBATCH_BLOCK_ADVANCED_H

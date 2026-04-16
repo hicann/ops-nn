@@ -7,8 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-#ifndef UTILS_CONSTANT_H
-#define UTILS_CONSTANT_H
+#pragma once
 
 #include "common_utils.h"
 #include "integral_constant.h"
@@ -201,4 +200,4 @@ constexpr uint64_t BLK_ELEM = 32 / sizeof(T);
 template <typename T>
 inline constexpr uint32_t C0 = 32 / sizeof(T);
 } // namespace Cmct::Gemm
-#endif
+

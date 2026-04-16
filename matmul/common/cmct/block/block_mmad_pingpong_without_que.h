@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef MATMUL_BLOCK_BLOCK_MMAD_PINGPONG_WITHOUT_QUE_H
-#define MATMUL_BLOCK_BLOCK_MMAD_PINGPONG_WITHOUT_QUE_H
+#pragma once
 #include "./block_mmad.h"
 #include "../utils/common_utils.h"
 #include "../utils/layout_utils.h"
@@ -1018,4 +1017,4 @@ private:
 }  // namespace Block
 }  // namespace Gemm
 }  // namespace Cmct
-#endif
+

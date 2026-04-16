@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef WEIGHT_QUANT_BATCH_MATMUL_V2_TILING_CUSTOM_BACKWARD_COMPATIBLE_H
-#define WEIGHT_QUANT_BATCH_MATMUL_V2_TILING_CUSTOM_BACKWARD_COMPATIBLE_H
+#pragma once
 
 #include "../../weight_quant_batch_matmul_v2_tiling_custom.h"
 
@@ -37,4 +36,4 @@ protected:
 };
 
 } // namespace optiling
-#endif // WEIGHT_QUANT_BATCH_MATMUL_V2_TILING_CUSTOM_BACKWARD_COMPATIBLE_H
+

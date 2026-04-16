@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef QBMM_ITERBATCH_BLOCK_H
-#define QBMM_ITERBATCH_BLOCK_H
+#pragma once
 
 #include "../quant_batch_matmul_v3_base.h"
 #include "quant_batch_matmul_v3_tiling_data.h"
@@ -251,4 +250,3 @@ __aicore__ inline void QbmmMultiBatchBaseBlock::CalcGMOffset()
 }
 }  // namespace QuantBatchMatmulV3
 
-#endif  // QBMM_ITERBATCH_BLOCK_H

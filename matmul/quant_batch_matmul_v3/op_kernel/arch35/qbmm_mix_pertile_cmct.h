@@ -8,8 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#ifndef QBMM_MIX_PERTILE_CMCT_H
-#define QBMM_MIX_PERTILE_CMCT_H
+#pragma once
 
 #include "cmct/epilogue/block_epilogue_pertile.h"
 #include "cmct/block/block_mmad_pertile.h"
@@ -94,4 +93,4 @@ __aicore__ inline void QbmmCmctPertileKernel(
     QbmmKernel qbmm;
     qbmm(params);
 }
-#endif
+

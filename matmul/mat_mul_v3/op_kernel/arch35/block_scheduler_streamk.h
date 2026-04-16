@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef CMCT_BLOCK_SCHEDULER_STREAMK_BUILTIN_H
-#define CMCT_BLOCK_SCHEDULER_STREAMK_BUILTIN_H
+#pragma once
 
 #include "cmct/block/block_scheduler_utils.h"
 #include "cmct/block/block_scheduler_policy.h"
@@ -209,4 +208,4 @@ using SchedulerOp = BlockSchedulerStreamKBuiltIn<ProblemShape_, L1TileShape_, L0
 } // namespace Block
 } // namespace Gemm
 } // namespace Cmct
-#endif
+

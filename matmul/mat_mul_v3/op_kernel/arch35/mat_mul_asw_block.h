@@ -12,8 +12,7 @@
  * \file mat_mul_asw_block.h
  * \brief
  */
-#ifndef MMV3_MATMUL_ASW_BLOCK_H
-#define MMV3_MATMUL_ASW_BLOCK_H
+#pragma once
 
 #include "../mat_mul_v3_common.h"
 #include "mat_mul_tiling_data.h"
@@ -306,4 +305,3 @@ __aicore__ inline void MatmulAswBlock::CalcSplitKGMOffset(uint64_t splitKIndex)
 
 } // namespace MatmulV3Advanced
 
-#endif // MMV3_MATMUL_ASW_BLOCK_H

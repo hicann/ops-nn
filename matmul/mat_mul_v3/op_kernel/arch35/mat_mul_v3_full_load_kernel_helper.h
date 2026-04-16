@@ -12,8 +12,7 @@
  * \file mat_mul_v3_full_load_kernel_helper.h
  * \brief
  */
-#ifndef __OP_KERNEL_MAT_MUL_V3_FULL_LOAD_KERNEL_HELPER_H__
-#define __OP_KERNEL_MAT_MUL_V3_FULL_LOAD_KERNEL_HELPER_H__
+#pragma once
 
 #include "../mat_mul_v3_common.h"
 
@@ -226,4 +225,4 @@ __aicore__ inline void AswBL1FullLoadKernelMainLoop(MatmulImpl<A_TYPE, B_TYPE, C
 }
 
 } // namespace MatmulV3Advanced
-#endif // __OP_KERNEL_MAT_MUL_V3_FULL_LOAD_KERNEL_HELPER_H__
+

@@ -12,8 +12,7 @@
  * \brief
  */
 
-#ifndef QUANT_BATCH_MATMUL_V4_CMCT_BLOCK_BLOCK_MMAD_MX_WEIGHT_FROM_UB_H
-#define QUANT_BATCH_MATMUL_V4_CMCT_BLOCK_BLOCK_MMAD_MX_WEIGHT_FROM_UB_H
+#pragma once
 
 #include "cmct/block/block_mmad.h"
 #include "../../quant_batch_matmul_v4_tiling_data_apt.h"
@@ -62,4 +61,4 @@ public:
 };
 } // namespace Block
 } // namespace QuantBatchMatmulV4
-#endif
+

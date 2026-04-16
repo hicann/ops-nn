@@ -12,8 +12,7 @@
  * \file quant_batch_matmul_v3_iterbatch_tiling.h
  * \brief
  */
-#ifndef QUANT_BATCH_MATMUL_V3_ITERBATCH_TILING_H
-#define QUANT_BATCH_MATMUL_V3_ITERBATCH_TILING_H
+#pragma once
 #include "util/math_util.h"
 #include "../quant_batch_matmul_v3_tiling_base.h"
 #include "quant_batch_matmul_v3_tiling_util.h"
@@ -62,4 +61,4 @@ private:
     void Reset();
 };
 }
-#endif // QUANT_BATCH_MATMUL_V3_ITERBATCH_TILING_H
+

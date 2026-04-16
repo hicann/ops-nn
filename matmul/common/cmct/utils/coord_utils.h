@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef UTILS_COORD_UTILS_H
-#define UTILS_COORD_UTILS_H
+#pragma once
 
 #include "common_utils.h"
 #include "quant_batch_matmul_constant.h"
@@ -408,4 +407,4 @@ public:
 };
 } // namespace Gemm
 } // namespace Cmct
-#endif
+

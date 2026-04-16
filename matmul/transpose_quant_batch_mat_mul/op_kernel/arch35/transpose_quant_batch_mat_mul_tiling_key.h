@@ -12,8 +12,7 @@
  * \file transpose_quant_batch_mat_mul_tiling_key.h
  * \brief
  */
-#ifndef __OP_KERNEL_TQBMM_TILING_KEY_H__
-#define __OP_KERNEL_TQBMM_TILING_KEY_H__
+#pragma once
 
 #include "ascendc/host_api/tiling/template_argument.h"
 #include "transpose_quant_batch_mat_mul_tiling_key_public.h"
@@ -50,4 +49,4 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_UINT_SEL(PRECISION_MODE, ASCENDC_TPL_UI_LIST, TRANSPOSE_QUANT_BATCH_MAT_MUL_MXFP8)),
 
 );
-#endif
+

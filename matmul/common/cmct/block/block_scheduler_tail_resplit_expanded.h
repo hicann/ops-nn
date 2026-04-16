@@ -7,8 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-#ifndef BLOCK_SCHEDULER_TAIL_RESPLIT_EXPANDED_H
-#define BLOCK_SCHEDULER_TAIL_RESPLIT_EXPANDED_H
+#pragma once
 
 #include "../utils/tuple_utils.h"
 #include "../utils/device_utils.h"
@@ -108,4 +107,4 @@ public:
     uint64_t n2Tile;
 };
 } // namespace Cmct::Gemm::Block
-#endif
+

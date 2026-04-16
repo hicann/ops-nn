@@ -16,8 +16,7 @@
  *        Pipeline: CopyIn -> Compute (int4->half->int8) -> CopyOut
  */
 
-#ifndef QBMM_INT4_TO_INT8_PREPROCESS_H
-#define QBMM_INT4_TO_INT8_PREPROCESS_H
+#pragma once
 
 #include "../quant_batch_matmul_v3_base.h"
 #include "quant_batch_matmul_v3_tiling_data.h"
@@ -176,4 +175,3 @@ __aicore__ inline void QbmmInt4ToInt8Preprocess::CopyOut(uint32_t progress, uint
     outQueueInt8_.FreeTensor(int8Local);
 }
 
-#endif // QBMM_INT4_TO_INT8_PREPROCESS_H

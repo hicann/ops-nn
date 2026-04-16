@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef DUAL_LEVEL_QUANT_BATCH_MATMUL_BASIC_BLOCK_CONTROLLER_H
-#define DUAL_LEVEL_QUANT_BATCH_MATMUL_BASIC_BLOCK_CONTROLLER_H
+#pragma once
 
 #include "../dual_level_quant_batch_matmul_tiling_data.h"
 #include "dual_level_quant_batch_matmul_basic_block.h"
@@ -97,4 +96,4 @@ __aicore__ inline void DualLevelQuantBatchMatmulBasicBlockController<LOCAL_TEMPL
 }
 
 } // namespace DualLevelQuantBatchMatmul::Arch35
-#endif // DUAL_LEVEL_QUANT_BATCH_MATMUL_BASIC_BLOCK_CONTROLLER_H
+

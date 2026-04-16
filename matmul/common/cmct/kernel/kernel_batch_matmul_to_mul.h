@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef MATMUL_KERNEL_KERNEL_BATCH_MATMUL_TO_MUL_H
-#define MATMUL_KERNEL_KERNEL_BATCH_MATMUL_TO_MUL_H
+#pragma once
 
 #if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
@@ -246,4 +245,4 @@ public:
 } // namespace Kernel
 } // namespace Gemm
 } // namespace Cmct
-#endif
+

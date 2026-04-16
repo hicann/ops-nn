@@ -7,8 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-#ifndef UTILS_MATH_UTILS_H
-#define UTILS_MATH_UTILS_H
+#pragma once
 #include "device_utils.h"
 #if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
@@ -97,4 +96,4 @@ __aicore__ inline Int ElemToByte(AscendC::Std::integral_constant<Int, Count>)
     return Count * sizeof(Dtype);
 }
 } // namespace Cmct
-#endif
+

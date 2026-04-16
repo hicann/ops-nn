@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef MATMUL_KERNEL_KERNEL_QBMM_PERTILE_H
-#define MATMUL_KERNEL_KERNEL_QBMM_PERTILE_H
+#pragma once
 
 #if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
@@ -413,4 +412,3 @@ __aicore__ inline void QuantMmBatchPertile<QBMM_PERTILE_KERNEL_FUN_TEM_PARAMS>::
 } // namespace Gemm
 } // namespace Cmct
 
-#endif

@@ -12,8 +12,7 @@
  * \brief
  */
 
-#ifndef QUANT_BATCH_MATMUL_V4_PERGROUP_ARCH35_TILING_H
-#define QUANT_BATCH_MATMUL_V4_PERGROUP_ARCH35_TILING_H
+#pragma once
 
 #include "../quant_batch_matmul_v4_pergroup_tiling.h"
 #include "quant_batch_matmul_v4_tiling.h"
@@ -66,4 +65,3 @@ private:
 };
 } // namespace optiling
 
-#endif // QUANT_BATCH_MATMUL_V4_PERGROUP_ARCH35_TILING_H

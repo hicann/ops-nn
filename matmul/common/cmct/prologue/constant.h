@@ -7,8 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-#ifndef PROLOGUE_CONSTANT_H
-#define PROLOGUE_CONSTANT_H
+#pragma once
 
 #if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
@@ -61,4 +60,4 @@ template <typename Dst, typename Src = Dst>
 constexpr uint32_t VECTOR_REG_SIZE = detail::VectorRegSize<
     typename AscendC::Std::remove_cvref_t<Dst>, typename AscendC::Std::remove_cvref_t<Src>>::VALUE;
 } // namespace Cmct::Prologue
-#endif
+

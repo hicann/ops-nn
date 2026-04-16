@@ -12,8 +12,7 @@
  * \file fused_quant_mat_mul_tiling_data.h
  * \brief
  */
-#ifndef __OP_KERNEL_FUSED_QUANT_MAT_MUL_TILING_DATA_H__
-#define __OP_KERNEL_FUSED_QUANT_MAT_MUL_TILING_DATA_H__
+#pragma once
 #include "kernel_tiling/kernel_tiling.h"
 
 #ifndef __CCE_AICORE__
@@ -43,5 +42,3 @@ struct FusedQuantMatmulSwigluTilingData {
 };
 #pragma pack(pop)
 
-
-#endif // __OP_KERNEL_FUSED_QUANT_MAT_MUL_TILING_DATA_H__

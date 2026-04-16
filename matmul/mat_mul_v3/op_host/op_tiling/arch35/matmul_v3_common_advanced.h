@@ -13,8 +13,7 @@
  * \file matmul_v3_common_advanced.h
  * \brief
  */
-#ifndef __OP_HOST_MATMUL_V3_COMMON_ADVANCED_H__
-#define __OP_HOST_MATMUL_V3_COMMON_ADVANCED_H__
+#pragma once
 
 #include <cstdint>
 #include "graph/types.h"
@@ -175,4 +174,4 @@ struct MatMulV3RunInfo {
 };
 }
 }
-#endif // __OP_HOST_MATMUL_V3_COMMON_ADVANCED_H__
+

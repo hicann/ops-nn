@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef CMCT_INCLUDE_UTILS_GEMM_TYPE_H
-#define CMCT_INCLUDE_UTILS_GEMM_TYPE_H
+#pragma once
 
 #include "kernel_operator_block_sync_intf.h"
 
@@ -27,4 +26,3 @@ struct GemmType {
 };
 }  // namespace Cmct::Gemm
 
-#endif

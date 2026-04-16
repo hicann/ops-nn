@@ -12,8 +12,7 @@
  * \file tile_copy_policy.h
  * \brief
  */
-#ifndef MATMUL_TILE_TILE_COPY_POLICY_H
-#define MATMUL_TILE_TILE_COPY_POLICY_H
+#pragma once
 
 #include "../utils/arch.h"
 
@@ -49,4 +48,4 @@ struct Copy {};
 } // namespace Tile
 } // namespace Gemm
 } // namespace Cmct
-#endif
+

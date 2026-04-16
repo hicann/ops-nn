@@ -11,8 +11,7 @@
  * \file quant_batch_matmul_v3_tiling_data.h
  * \brief
  */
-#ifndef QUANT_BATCH_MATMUL_V3_TILING_DATA_H
-#define QUANT_BATCH_MATMUL_V3_TILING_DATA_H
+#pragma once
 #include "kernel_tiling/kernel_tiling.h"
 
 #ifndef __CCE_AICORE__
@@ -145,4 +144,4 @@ struct QuantBatchMatmulV3BasicAPITilingData {
 };
 #pragma pack(pop)
 } // namespace DequantBmm
-#endif // QUANT_BATCH_MATMUL_V3_TILING_DATA_H
+

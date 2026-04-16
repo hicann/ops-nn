@@ -12,8 +12,7 @@
  * \file quant_batch_matmul_v3_tiling_util.h
  * \brief
  */
-#ifndef QUANT_BATCH_MATMUL_V3_TILING_UTIL_H
-#define QUANT_BATCH_MATMUL_V3_TILING_UTIL_H
+#pragma once
 
 #include "../quant_batch_matmul_v3_tiling_base.h"
 #include "../../../op_kernel/arch35/quant_batch_matmul_v3_tiling_data.h"
@@ -72,4 +71,4 @@ public:
     static uint64_t GetBiasMode(const QuantBatchMatmulInfo &inputParams);
 };
 } // namespace optiling
-#endif
+

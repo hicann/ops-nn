@@ -12,8 +12,7 @@
  * \file matmul_custom_impl.h
  * \brief
  */
-#ifndef MATMUL_CUSTOM_IMPL_H
-#define MATMUL_CUSTOM_IMPL_H
+#pragma once
 
 #include "tool.h"
 
@@ -353,4 +352,4 @@ __aicore__ inline void MatmulCustomImpl<xType, wType, biasType, yType, scaleType
 }
 
 }  // namespace QuantBatchMatmulV4
-#endif  // MATMUL_CUSTOM_IMPL_H
+

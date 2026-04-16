@@ -12,8 +12,7 @@
  * \file mat_mul_asw_kernel.h
  * \brief
  */
-#ifndef MMV3_MATMUL_ASW_KERNEL_H
-#define MMV3_MATMUL_ASW_KERNEL_H
+#pragma once
 
 #include "mat_mul_asw_block.h"
 
@@ -145,4 +144,3 @@ __aicore__ inline void MatmulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, BLOCK_
 
 } // namespace MatmulV3Advanced
 
-#endif // MMV3_MATMUL_ASW_KERNEL_H

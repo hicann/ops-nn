@@ -12,8 +12,7 @@
  * \file transpose_batch_mat_mul_tiling_key.h
  * \brief
  */
-#ifndef __OP_KERNEL_TBMM_TILING_KEY_H__
-#define __OP_KERNEL_TBMM_TILING_KEY_H__
+#pragma once
 
 #include "ascendc/host_api/tiling/template_argument.h"
 #include "transpose_batch_mat_mul_tiling_key_public.h"
@@ -69,4 +68,4 @@ ASCENDC_TPL_SEL(
                          ASCENDC_TPL_UINT_SEL(PERM_X2, ASCENDC_TPL_UI_LIST, TRANSPOSE_BATCH_MAT_MUL_PERM_X2_0_2_1),
                          ASCENDC_TPL_UINT_SEL(BATCH_SPLIT, ASCENDC_TPL_UI_LIST,
                                               TRANSPOSE_BATCH_MAT_MUL_BATCH_SPLIT_TRUE)));
-#endif
+

@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef WEIGHT_QUANT_BATCH_MATMUL_V2_BASIC_BLOCK_TABLE_H
-#define WEIGHT_QUANT_BATCH_MATMUL_V2_BASIC_BLOCK_TABLE_H
+#pragma once
 
 #include <array>
 #include <cstdint>
@@ -218,4 +217,3 @@ private:
 };
 } // namespace optiling
 
-#endif // WEIGHT_QUANT_BATCH_MATMUL_V2_BASIC_BLOCK_TABLE_H

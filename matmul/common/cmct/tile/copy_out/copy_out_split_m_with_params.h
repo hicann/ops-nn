@@ -12,8 +12,7 @@
  * \file copy_out_split_m_with_params.h
  * \brief
  */
-#ifndef MATMUL_TILE_COPY_OUT_COPY_OUT_SPLIT_M_WITH_PARAMS_H
-#define MATMUL_TILE_COPY_OUT_COPY_OUT_SPLIT_M_WITH_PARAMS_H
+#pragma once
 
 #include "../tile_copy_policy.h"
 #include "../../utils/tensor_utils.h"
@@ -238,4 +237,4 @@ public:
 } // namespace Tile
 } // namespace Gemm
 } // namespace Cmct
-#endif
+

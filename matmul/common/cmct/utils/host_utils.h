@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef UTILS_HOST_UTILS_H
-#define UTILS_HOST_UTILS_H
+#pragma once
 #ifndef __NPU_ARCH__
 #include "tiling/platform/platform_ascendc.h"
 
@@ -45,4 +44,4 @@ static size_t GetSysWorkspaceSize()
 } // namespace Gemm
 } // namespace Cmct
 #endif
-#endif
+

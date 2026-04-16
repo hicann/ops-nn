@@ -13,8 +13,7 @@
  * \file matmul_v3_tiling_advanced.h
  * \brief
  */
-#ifndef __OP_HOST_MATMUL_V3_ADVANCED_TILING_H__
-#define __OP_HOST_MATMUL_V3_ADVANCED_TILING_H__
+#pragma once
 
 #include "runtime/tiling_context.h"
 #include "matmul_v3_common_advanced.h"
@@ -52,4 +51,4 @@ protected:
 };
 }
 }
-#endif // __OP_HOST_MATMUL_V3_ADVANCED_TILING_H__
+

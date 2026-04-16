@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef BATCH_MAT_MUL_V3_MATMUL2MUL_CMCT_H
-#define BATCH_MAT_MUL_V3_MATMUL2MUL_CMCT_H
+#pragma once
 
 #include "cmct/block/block_scheduler_policy.h"
 #include "cmct/block/block_scheduler_utils.h"
@@ -73,4 +72,4 @@ __aicore__ inline void BatchMatMulToMulActKernel(
     BatchMatmulKernel bmm;
     bmm(params);
 }
-#endif
+

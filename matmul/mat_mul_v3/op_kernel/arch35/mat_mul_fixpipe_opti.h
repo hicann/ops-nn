@@ -12,8 +12,7 @@
  * \file mat_mul_fixpipe_opti.h
  * \brief
  */
-#ifndef __OP_KERNEL_MATMUL_V3_FIXPIPE_OPTI_H__
-#define __OP_KERNEL_MATMUL_V3_FIXPIPE_OPTI_H__
+#pragma once
 
 #include "mat_mul_asw_block.h"
 #include "mm_extension_interface/mm_custom_mm_policy.h"
@@ -270,4 +269,3 @@ __aicore__ inline void MatmulFixpipeOptiDualDstKernel<A_TYPE, B_TYPE, C_TYPE, BI
 
 } // namespace MatmulV3Advanced
 
-#endif

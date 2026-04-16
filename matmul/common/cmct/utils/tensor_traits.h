@@ -7,8 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-#ifndef UTILS_TENSOR_TRAITS_H
-#define UTILS_TENSOR_TRAITS_H
+#pragma once
 #if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
 #else
@@ -66,4 +65,4 @@ struct TensorTraitL1<false, T, TPos> {
                 AscendC::Stride<Cmct::Gemm::_16, Cmct::Gemm::_256>, AscendC::Stride<Cmct::Gemm::_1, uint64_t>>>>;
 };
 } // namespace Cmct::Gemm
-#endif
+

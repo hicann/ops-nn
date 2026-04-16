@@ -12,8 +12,7 @@
  * \file quant_batch_matmul_v3_checker_for_mmads8s4.h
  * \brief
  */
-#ifndef QUANT_BATCH_MATMUL_V3_CHECKER_FOR_MMADS8S4_H
-#define QUANT_BATCH_MATMUL_V3_CHECKER_FOR_MMADS8S4_H
+#pragma once
 #include "quant_batch_matmul_v3_checker_base.h"
 #include <cstdint>
 #include <vector>
@@ -49,4 +48,4 @@ protected:
     virtual bool ExtraInputCheck() const;
 };
 }  // namespace optiling
-#endif  // QUANT_BATCH_MATMUL_V3_CHECKER_FOR_MMADS8S4_H
+

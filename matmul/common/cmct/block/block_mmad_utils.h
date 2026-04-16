@@ -12,8 +12,7 @@
  * \file block_mmad_utils.h
  * \brief
  */
-#ifndef MATMUL_BLOCK_BLOCK_MMAD_UTILS_H
-#define MATMUL_BLOCK_BLOCK_MMAD_UTILS_H
+#pragma once
 
 #include <type_traits>
 #include "../utils/common_utils.h"
@@ -249,4 +248,4 @@ struct GetL0CAndBtType {
 } // namespace Block
 } // namespace Gemm
 } // namespace Cmct
-#endif
+

@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef CMCT_INCLUDE_EPILOGUE_BLOCK_EPILOGUE_ITERBATCH_H
-#define CMCT_INCLUDE_EPILOGUE_BLOCK_EPILOGUE_ITERBATCH_H
+#pragma once
 #if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
 #else
@@ -238,4 +237,4 @@ private:
 } // namespace Block
 } // namespace Gemm
 } // namespace Cmct
-#endif
+

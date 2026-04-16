@@ -13,8 +13,7 @@
  * \brief TilingData def for op SparseTensorDenseMatMul
  */
 
-#ifndef __SPARSE_TENSOR_DENSE_MAT_MUL_TILING_DEF_H__
-#define __SPARSE_TENSOR_DENSE_MAT_MUL_TILING_DEF_H__
+#pragma once
 
 // 所有模板共用同一套TilingData
 struct SparseTensorDenseMatMulTilingData {
@@ -50,4 +49,3 @@ struct SparseTensorDenseMatMulTilingData {
     int64_t outTailCoreUbLoopTimes;             // 尾核，要多少次循环
 };
 
-#endif //__SPARSE_TENSOR_DENSE_MAT_MUL_TILING_DEF_H__

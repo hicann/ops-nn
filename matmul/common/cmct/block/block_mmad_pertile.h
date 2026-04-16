@@ -12,8 +12,7 @@
  * \file block_mmad_pertile.h
  * \brief
  */
-#ifndef MATMUL_BLOCK_BLOCK_MMAD_PERTILE_H
-#define MATMUL_BLOCK_BLOCK_MMAD_PERTILE_H
+#pragma once
 
 #include "../policy/dispatch_policy.h"
 #include "../tile/tile_copy.h"
@@ -476,4 +475,4 @@ __aicore__ inline BlockMmadPertile<QBMM_BLOCK_MMAD_PERTILE_FUNC_LOCAL_PARAMS>::~
 } // namespace Block
 } // namespace Gemm
 } // namespace Cmct
-#endif
+

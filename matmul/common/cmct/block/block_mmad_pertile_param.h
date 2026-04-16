@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef MATMUL_BLOCK_BLOCK_MMAD_PERTILE_PARAM_H
-#define MATMUL_BLOCK_BLOCK_MMAD_PERTILE_PARAM_H
+#pragma once
 
 #if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
@@ -259,4 +258,3 @@ MatMulCommonParam<aTrans, bTrans>::LoadData2dParamsB(AscendC::LoadData2DParamsV2
 } // namespace Gemm
 } // namespace Cmct
 
-#endif

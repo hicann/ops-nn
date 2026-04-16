@@ -12,8 +12,7 @@
  * \file mm_custom_mm_policy.h
  * \brief
  */
-#ifndef MM_CUSTOM_MM_POLICY_H
-#define MM_CUSTOM_MM_POLICY_H
+#pragma once
 
 #include "lib/matmul_intf.h"
 #include "mm_copy_cube_out.h"
@@ -26,4 +25,4 @@ public:
     using CopyCubeOut = MMCustomCopyCubeOut<IMPL, A_TYPE, B_TYPE, C_TYPE, MM_CFG, McgShfMode::DUAL_DST_SPLIT_M>;
 };
 }  // namespace MatmulCommon
-#endif  // MM_CUSTOM_MM_POLICY_H
+

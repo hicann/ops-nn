@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef BATCH_MAT_MUL_V3_MATMUL2MUL_BLOCK_SCHEDULER_H
-#define BATCH_MAT_MUL_V3_MATMUL2MUL_BLOCK_SCHEDULER_H
+#pragma once
 
 #include "cmct/block/block_scheduler_policy.h"
 #include "cmct/block/block_scheduler_utils.h"
@@ -75,4 +74,3 @@ struct BlockSchedulerSelector<
 } // namespace Gemm
 } // namespace Cmct
 
-#endif

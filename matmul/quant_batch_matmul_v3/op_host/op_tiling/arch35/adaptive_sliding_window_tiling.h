@@ -12,8 +12,7 @@
  * \file adaptive_sliding_window_tiling.h
  * \brief
  */
-#ifndef ADAPTIVE_SLIDING_WINDOW_TILING_H
-#define ADAPTIVE_SLIDING_WINDOW_TILING_H
+#pragma once
 #include "util/math_util.h"
 #include "../quant_batch_matmul_v3_tiling_base.h"
 #include "quant_batch_matmul_v3_tiling_util.h"
@@ -147,4 +146,4 @@ protected:
                                     uint64_t bCacheLine);
 };
 }  // namespace optiling
-#endif  // ADAPTIVE_SLIDING_WINDOW_TILING_H
+

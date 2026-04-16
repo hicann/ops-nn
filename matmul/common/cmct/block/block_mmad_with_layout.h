@@ -12,8 +12,7 @@
  * \file block_mmad_with_layout.h
  * \brief
  */
-#ifndef MATMUL_BLOCK_BLOCK_MMAD_WITH_LAYOUT_H
-#define MATMUL_BLOCK_BLOCK_MMAD_WITH_LAYOUT_H
+#pragma once
 
 #include <type_traits>
 #include "../utils/layout_utils.h"
@@ -157,4 +156,4 @@ private:
 } // namespace Block
 } // namespace Gemm
 } // namespace Cmct
-#endif
+

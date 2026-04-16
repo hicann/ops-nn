@@ -12,8 +12,7 @@
  * \file kernel_matmul_a_prefetch_b_antiquant.h
  * \brief
  */
-#ifndef KERNEL_MATMUL_A_PREFETCH_B_ANTIQUANT_H
-#define KERNEL_MATMUL_A_PREFETCH_B_ANTIQUANT_H
+#pragma once
 
 #include "../utils/integral_constant.h"
 #include "../utils/tuple_utils.h"
@@ -215,4 +214,3 @@ private:
 };
 } // namespace Cmct::Gemm::Kernel
 
-#endif

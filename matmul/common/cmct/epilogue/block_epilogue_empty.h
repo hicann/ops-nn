@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef EPILOGUE_BLOCK_EPILOGUE_EMPTY_H
-#define EPILOGUE_BLOCK_EPILOGUE_EMPTY_H
+#pragma once
 #if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
 #else
@@ -79,4 +78,4 @@ public:
 } // namespace Block
 } // namespace Gemm
 } // namespace Cmct
-#endif
+

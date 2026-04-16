@@ -12,8 +12,7 @@
  * \file fused_matmul_common.h
  * \brief
  */
-#ifndef __OP_HOST_FUSED_MATMUL_COMMON_H__
-#define __OP_HOST_FUSED_MATMUL_COMMON_H__
+#pragma once
 #include <map>
 #include <set>
 #include "matmul/fused_mat_mul/op_kernel/arch35/fused_mat_mul_tilingkey.h"
@@ -64,4 +63,4 @@ const std::map<std::string, FusedOpType> FUSED_OP_TYPE_MAP = {
 const std::set<std::string> FusedOpTypeSupportStreamK = {"", "relu", "16cast32"};
 
 } // namespace optiling
-#endif // __OP_HOST_FUSED_MATMUL_COMMON_H__
+

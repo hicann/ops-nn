@@ -13,8 +13,7 @@
  * \file matmul_v3_basic_streamk_tiling.h
  * \brief
  */
-#ifndef __OP_HOST_MATMUL_V3_BASIC_STREAMK_H__
-#define __OP_HOST_MATMUL_V3_BASIC_STREAMK_H__
+#pragma once
 
 #include "matmul_v3_base_tiling_advanced.h"
 
@@ -51,4 +50,4 @@ private:
 };
 } // namespace matmul_v3
 } // namespace optiling
-#endif // __OP_HOST_MATMUL_V3_BASIC_STREAM_K_H__
+

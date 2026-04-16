@@ -13,12 +13,10 @@
  * \file matmul_v3_tiling_data.h
  * \brief
  */
-#ifndef __OP_HOST_MATMUL_V3_TILING_DATA_H__
-#define __OP_HOST_MATMUL_V3_TILING_DATA_H__
+#pragma once
 
 #include "register/tilingdata_base.h"
 #include "tiling/tiling_api.h"
 
 #include "../../../op_kernel/arch35/mat_mul_tiling_data.h"
 
-#endif // __OP_HOST_MATMUL_V3_TILING_DATA_H__

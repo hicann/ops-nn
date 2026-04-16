@@ -12,8 +12,7 @@
  * \file fused_quant_mat_mul_tilingkey.h
  * \brief
  */
-#ifndef FUSED_QUANT_MAT_MUL_TILINGKEY_H
-#define FUSED_QUANT_MAT_MUL_TILINGKEY_H
+#pragma once
 
 #include "ascendc/host_api/tiling/template_argument.h"
 
@@ -60,4 +59,4 @@ ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(
                                          TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOBL1_WITH_MMAPI),
                     ASCENDC_TPL_UINT_SEL(OPTYPE, ASCENDC_TPL_UI_LIST, F_OPTYPE_NONE, F_OPTYPE_RELU, F_OPTYPE_SWIGLU)), );
 } // namespace FusedQuantMatMulTilingKey
-#endif
+

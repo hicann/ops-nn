@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef QBMM_CUBE_ON_THE_FLY_H
-#define QBMM_CUBE_ON_THE_FLY_H
+#pragma once
 
 #include "../quant_batch_matmul_v3_base.h"
 #include "qbmm_api_utils.h"
@@ -304,4 +303,4 @@ __aicore__ inline void MatMulASWKernel<LOCAL_TEMPLATE_FUNC_PARAMS>::SetMMParaAnd
     mm_.GetTensorC(cGlobal_[block_.offset_.offsetC]);
 }
 }
-#endif // QBMM_CUBE_ON_THE_FLY_H
+

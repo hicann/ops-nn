@@ -12,8 +12,7 @@
  * \file compile_info.h
  * \brief
  */
-#ifndef OPS_MATMUL_COMPILE_INFO_H_
-#define OPS_MATMUL_COMPILE_INFO_H_
+#pragma once
 
 #include "exe_graph/runtime/tiling_context.h"
 
@@ -24,4 +23,3 @@ std::string DebugTilingData(gert::TilingContext *context);
 }  // namespace NN
 }  // namespace Ops
 
-#endif  // OPS_MATMUL_COMPILE_INFO_H_

@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef MATMUL_KERNEL_KERNEL_QBMM_MX_H
-#define MATMUL_KERNEL_KERNEL_QBMM_MX_H
+#pragma once
 #if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
 #else
@@ -352,4 +351,3 @@ __aicore__ inline void QuantMmBatchMX<QBMM_MX_KERNEL_FUN_TEM_PARAMS>::ProcessSin
 } // namespace Gemm
 } // namespace Cmct
 
-#endif

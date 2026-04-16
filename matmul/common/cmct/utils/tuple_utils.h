@@ -12,8 +12,7 @@
  * \file tuple_utils.h
  * \brief
  */
-#ifndef UTILS_TUPLE_UTILS_H
-#define UTILS_TUPLE_UTILS_H
+#pragma once
 
 #include "lib/std/tuple.h"
 #include "./integral_constant.h"
@@ -42,4 +41,4 @@ __aicore__ constexpr inline decltype(auto) GetIntegralConstant()
 }
 } // namespace Gemm
 } // namespace Cmct
-#endif
+

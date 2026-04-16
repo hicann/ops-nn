@@ -13,8 +13,7 @@
  * \brief
  */
 
- #ifndef QUANT_BATCH_MATMUL_V4_VF_H
- #define QUANT_BATCH_MATMUL_V4_VF_H
+ #pragma once
 
 #if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
@@ -250,4 +249,3 @@
 
  }  // namespace QuantBatchMatmulV4
 
- #endif  // QUANT_BATCH_MATMUL_V4_VF_H

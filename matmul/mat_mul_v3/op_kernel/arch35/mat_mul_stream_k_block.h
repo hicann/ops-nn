@@ -12,8 +12,7 @@
  * \file mat_mul_stream_k_block.h
  * \brief
  */
-#ifndef MMV3_MATMUL_STREAM_K_BLOCK_H
-#define MMV3_MATMUL_STREAM_K_BLOCK_H
+#pragma once
 
 #include "mat_mul_asw_block.h"
 
@@ -267,4 +266,3 @@ __aicore__ inline void MatmulStreamKBlock::UpdateAivParams(uint64_t index, uint6
 }
 } // namespace MatmulV3Advanced
 
-#endif // MMV3_MATMUL_STREAM_K_BLOCK_H

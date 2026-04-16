@@ -12,8 +12,7 @@
  * \file anti_quant_y_vf.h
  * \brief
  */
-#ifndef WEIGHT_QUANT_BATCHMATMUL_V2_ANTI_QUANT_Y_VF_H
-#define WEIGHT_QUANT_BATCHMATMUL_V2_ANTI_QUANT_Y_VF_H
+#pragma once
 
 #include "basic_block_config.h"
 #if ASC_DEVKIT_MAJOR >= 9
@@ -94,4 +93,4 @@ __aicore__ inline void AntiQuantYB32(
     }
 }
 } // namespace WeightQuantBatchMatmulV2::Arch35
-#endif // WEIGHT_QUANT_BATCHMATMUL_V2_ANTI_QUANT_Y_VF_H
+

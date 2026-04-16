@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef MATMUL_KERNEL_KERNEL_QBMM_CUBE_H
-#define MATMUL_KERNEL_KERNEL_QBMM_CUBE_H
+#pragma once
 #include "kernel_operator_intf.h"
 
 #include "../block/block_scheduler_qbmm.h"
@@ -326,4 +325,3 @@ __aicore__ inline void QuantMmBatchCube<QBMM_CUBE_KERNEL_FUN_TEM_PARAMS>::Proces
 } // namespace Gemm
 } // namespace Cmct
 
-#endif

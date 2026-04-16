@@ -12,8 +12,7 @@
  * \file qbmm_asw_block.h
  * \brief
  */
-#ifndef QBMM_ASW_BLOCK_H
-#define QBMM_ASW_BLOCK_H
+#pragma once
 
 #include "quant_batch_matmul_v3_tiling_data.h"
 #include "../quant_batch_matmul_v3_base.h"
@@ -519,4 +518,3 @@ __aicore__ inline void QuantBmmAswBlock::UpdatePerBlockMmParam()
 }
 }  // namespace QuantBatchMatmulV3
 
-#endif  // QBMM_ASW_BLOCK_H

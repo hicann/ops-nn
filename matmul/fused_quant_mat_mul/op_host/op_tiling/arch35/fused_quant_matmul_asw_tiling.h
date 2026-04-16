@@ -12,8 +12,7 @@
  * \file fused_quant_matmul_asw_tiling.h
  * \brief
  */
-#ifndef FUSED_QUANT_MATMUL_ASW_TILING_H
-#define FUSED_QUANT_MATMUL_ASW_TILING_H
+#pragma once
 
 
 #include "../fused_quant_matmul_common.h"
@@ -58,4 +57,4 @@ protected:
     uint64_t fusedOpType_ = 0UL;
 };
 } // namespace optiling
-#endif // FUSED_QUANT_MATMUL_ASW_TILING_H
+

@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef MATMUL_BLOCK_BLOCK_MMAD_ITERBATCH_H
-#define MATMUL_BLOCK_BLOCK_MMAD_ITERBATCH_H
+#pragma once
 #include "./block_mmad.h"
 #include "../utils/layout_utils.h"
 #include "../utils/tuple_utils.h"
@@ -540,4 +539,4 @@ private:
 } // namespace Block
 } // namespace Gemm
 } // namespace Cmct
-#endif
+

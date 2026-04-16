@@ -12,8 +12,7 @@
  * \file batch_matmul_v3_common_advanced.h
  * \brief
  */
-#ifndef __OP_HOST_BATCH_MATMUL_V3_COMMON_ADVANCED_H__
-#define __OP_HOST_BATCH_MATMUL_V3_COMMON_ADVANCED_H__
+#pragma once
 
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_v3_common_advanced.h"
 
@@ -31,4 +30,4 @@ constexpr uint64_t ND_NZ_DIM_DIFF = 2;
 constexpr uint64_t BATCH_DIM_MAX = 6;
 }
 }
-#endif // __OP_HOST_BATCH_MATMUL_V3_COMMON_ADVANCED_H__
+

@@ -8,8 +8,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-#ifndef PROLOGUE_TILE_CAST_MX_H
-#define PROLOGUE_TILE_CAST_MX_H
+#pragma once
 #if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
 #else
@@ -134,4 +133,4 @@ struct TileCastImpl<
 };
 } // namespace detail
 } // namespace Cmct::Prologue::Tile
-#endif
+

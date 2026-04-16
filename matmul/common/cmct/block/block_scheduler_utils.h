@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef MATMUL_BLOCK_BLOCK_SCHEDULER_UTILS_H
-#define MATMUL_BLOCK_BLOCK_SCHEDULER_UTILS_H
+#pragma once
 #include "../utils/common_utils.h"
 #include "../utils/status_utils.h"
 #include "../utils/host_utils.h"
@@ -137,4 +136,4 @@ __host_aicore__ static Status DoCheckArgs(const ProblemShape_ &shape, int64_t l1
 } // namespace Block
 } // namespace Gemm
 } // namespace Cmct
-#endif
+

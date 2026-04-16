@@ -12,8 +12,7 @@
  * \file batch_mat_mul_v3_iterbatch_basicapi_cmct.h
  * \brief
  */
-#ifndef BATCH_MAT_MUL_V3_ITERBATCH_BASICAPI_CMCT_H
-#define BATCH_MAT_MUL_V3_ITERBATCH_BASICAPI_CMCT_H
+#pragma once
 
 #include "cmct/block/block_scheduler_policy.h"
 #include "cmct/block/block_scheduler_utils.h"
@@ -94,4 +93,4 @@ __aicore__ inline void BatchMatMulActIterBatchKernel(
     MatmulKernel mm;
     mm(params);
 }
-#endif
+

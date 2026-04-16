@@ -7,8 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-#ifndef TILE_COPY_UB_TO_L1_H
-#define TILE_COPY_UB_TO_L1_H
+#pragma once
 #include "../utils/constant.h"
 
 namespace Cmct::Gemm::Tile {
@@ -95,4 +94,4 @@ struct CopyIfImpl<
 };
 } // namespace detail
 } // namespace Cmct::Gemm::Tile
-#endif // TILE_COPY_UB_TO_L1_H
+

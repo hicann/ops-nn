@@ -12,8 +12,7 @@
  * \file quant_batch_matmul_v4_constant.h
  * \brief
  */
-#ifndef QUANT_BATCH_MATMUL_V4_CONSTANT_H
-#define QUANT_BATCH_MATMUL_V4_CONSTANT_H
+#pragma once
 namespace QuantBatchMatmulV4 {
 enum class QuantType : uint32_t {
     NONE = 0,
@@ -49,4 +48,4 @@ constexpr uint32_t SHIFT_RIGHT_SIZE = 0x4;
 constexpr uint32_t E2M1_AND_MASK = 0x9C;
 constexpr uint32_t PERGROUP_NZ_MASK_REG = 32;
 } // namespace QuantBatchMatmulV4
-#endif // QUANT_BATCH_MATMUL_V4_CONSTANT_H
+

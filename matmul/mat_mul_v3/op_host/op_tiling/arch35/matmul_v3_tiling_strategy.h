@@ -13,8 +13,7 @@
  * \file matmul_v3_tiling_strategy.h
  * \brief
  */
-#ifndef __OP_HOST_MATMUL_V3_STRATEGY_H__
-#define __OP_HOST_MATMUL_V3_STRATEGY_H__
+#pragma once
 
 #include <map>
 #include <vector>
@@ -50,4 +49,3 @@ inline std::vector<int32_t> GetMatMulV3Priorities(NpuArch npuArch)
 }
 }
 
-#endif // __OP_HOST_MATMUL_V3_STRATEGY_H__

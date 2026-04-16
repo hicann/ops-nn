@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef MAT_MUL_TILING_KEY_PUBLIC_H
-#define MAT_MUL_TILING_KEY_PUBLIC_H
+#pragma once
 
 #define MAT_MUL_BASIC_LEVEL 1 // 数据类型定义
 #define MAT_MUL_HIGH_LEVEL 0
@@ -89,4 +88,4 @@ enum class MatMulV3L0C2Out : std::uint8_t
     ND_FIXPIPE_1_1 = MAT_MUL_1V1_ND_ALIG_FIXPIPE,
     ND_FIXPIPE_1_2 = MAT_MUL_1V2_ND_ALIG_FIXPIPE
 };
-#endif
+

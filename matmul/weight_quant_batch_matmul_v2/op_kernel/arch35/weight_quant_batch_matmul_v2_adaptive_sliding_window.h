@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef WEIGHT_QUANT_BATCH_MATMUL_V2_ADAPTIVE_SLIDING_WINDOW_H
-#define WEIGHT_QUANT_BATCH_MATMUL_V2_ADAPTIVE_SLIDING_WINDOW_H
+#pragma once
 
 #include "weight_quant_batch_matmul_v2_asw_block.h"
 #include "../weight_quant_batch_matmul_v2_constant.h"
@@ -225,4 +224,4 @@ __aicore__ inline void WeightQuantBatchMatmulV2ASWKernel<LOCAL_TEMPLATE_FUNC_PAR
     mm_.GetTensorC(cGlobal_[block_.offset_.offsetC]);
 }
 }  // namespace WeightQuantBatchMatmulV2::Arch35
-#endif  // WEIGHT_QUANT_BATCH_MATMUL_V2_ADAPTIVE_SLIDING_WINDOW_H
+

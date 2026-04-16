@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef QBMM_MIX_PERBLOCK_H
-#define QBMM_MIX_PERBLOCK_H
+#pragma once
 
 #include "qbmm_api_utils.h"
 #include "qbmm_perblock_api_utils.h"
@@ -92,4 +91,4 @@ MatMulPerBlockASW<x1Type, x2Type, biasType, yType, formatX1, formatX2, formatY, 
     }
 }
 }  // namespace QuantBatchMatmulV3
-#endif  // QBMM_MIX_PERBLOCK_H
+

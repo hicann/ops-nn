@@ -12,8 +12,7 @@
  * \file dispatch_policy.h
  * \brief
  */
-#ifndef CMCT_INCLUDE_PROLOGUE_DISPATCH_POLICY_H
-#define CMCT_INCLUDE_PROLOGUE_DISPATCH_POLICY_H
+#pragma once
 
 #include "../utils/constant.h"
 
@@ -62,4 +61,3 @@ struct BAntiquantScmc {
 };
 }  // namespace Cmct::Prologue
 
-#endif

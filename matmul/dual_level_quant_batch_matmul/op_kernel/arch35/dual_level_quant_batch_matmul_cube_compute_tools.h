@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef DUAL_LEVEL_QUANT_BATCH_MATMUL_CUBE_COMPUTE_TOOLS_H
-#define DUAL_LEVEL_QUANT_BATCH_MATMUL_CUBE_COMPUTE_TOOLS_H
+#pragma once
 
 #include "kernel_cube_intf.h"
 #include "op_kernel/math_util.h"
@@ -202,4 +201,4 @@ __aicore__ inline void FixL0CToDst(
 }
 
 } // namespace DualLevelQuantBatchMatmul::Arch35
-#endif
+

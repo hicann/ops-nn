@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef EPILOGUE_FUSION_EPILOGUE_FUSION_ADD_H
-#define EPILOGUE_FUSION_EPILOGUE_FUSION_ADD_H
+#pragma once
 #if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
 #else
@@ -129,4 +128,4 @@ public:
 } // namespace Block
 } // namespace Gemm
 } // namespace Cmct
-#endif // EPILOGUE_FUSION_EPILOGUE_FUSION_ADD_H
+

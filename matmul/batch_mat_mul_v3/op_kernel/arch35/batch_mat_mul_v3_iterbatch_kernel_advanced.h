@@ -12,8 +12,7 @@
  * \file batch_mat_mul_v3_iterbatch_kernel_advanced.h
  * \brief
  */
-#ifndef BATCH_MAT_MUL_V3_ITERBATCH_KERNEL_ADVANCED_H
-#define BATCH_MAT_MUL_V3_ITERBATCH_KERNEL_ADVANCED_H
+#pragma once
 
 #include "batch_mat_mul_v3_iterbatch_block_advanced.h"
 #if ASC_DEVKIT_MAJOR >= 9
@@ -137,4 +136,4 @@ __aicore__ inline void BatchMatMulMultiBatchKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_
     mm_.SetHF32(false, 0);
 }
 }
-#endif // BATCH_MAT_MUL_V3_ITERBATCH_KERNEL_ADVANCED_H
+

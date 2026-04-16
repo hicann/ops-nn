@@ -12,8 +12,7 @@
  * \file weight_quant_batch_matmul_v2_vec_compute.h
  * \brief
  */
-#ifndef WEIGHT_QUANT_BATCH_MATMUL_V2_VEC_COMPUTE_H
-#define WEIGHT_QUANT_BATCH_MATMUL_V2_VEC_COMPUTE_H
+#pragma once
 
 #include "anti_quant_y_vf.h"
 #include "basic_block_config.h"
@@ -1218,4 +1217,3 @@ BasicBlockLibVectorAntiQuantCompute<xType, wType, antiQuantScaleType, yType, wqm
 }
 } // namespace WeightQuantBatchMatmulV2::Arch35
 
-#endif // WEIGHT_QUANT_BATCH_MATMUL_V2_VEC_COMPUTE_H

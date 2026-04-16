@@ -13,8 +13,7 @@
  * \file gemm_v3_tiling_key.h
  * \brief
  */
-#ifndef __OP_KERNEL_GEMM_V3_TILING_KEY_H__
-#define __OP_KERNEL_GEMM_V3_TILING_KEY_H__
+#pragma once
 
 #include "ascendc/host_api/tiling/template_argument.h"
 
@@ -72,4 +71,4 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_UINT_SEL(FULL_LOAD, ASCENDC_TPL_UI_LIST, MAT_MUL_NO_FULL_LOAD),
         ASCENDC_TPL_UINT_SEL(L0C2OUT_MODEL, ASCENDC_TPL_UI_LIST, MAT_MUL_ON_THE_FLY))
 ); // __OP_KERNEL_GEMM_V3_TILING_KEY_H__
-#endif
+

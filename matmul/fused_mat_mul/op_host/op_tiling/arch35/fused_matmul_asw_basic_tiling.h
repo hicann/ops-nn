@@ -12,8 +12,7 @@
  * \file fused_matmul_asw_basic_tiling.h
  * \brief
  */
-#ifndef __OP_HOST_FUSED_MATMUL_ASW_BASIC_TILING_H__
-#define __OP_HOST_FUSED_MATMUL_ASW_BASIC_TILING_H__
+#pragma once
 
 #include "mat_mul_v3/op_host/op_tiling/arch35/matmul_v3_basic_aswt_tiling.h"
 
@@ -35,4 +34,4 @@ protected:
 };
 } // namespace fused_matmul
 } // namespace optiling
-#endif // __OP_HOST_FUSED_MATMUL_ASW_BASIC_TILING_H__
+

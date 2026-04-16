@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef UTILS_FILL_UTILS_H
-#define UTILS_FILL_UTILS_H
+#pragma once
 #include "common_utils.h"
 #if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
@@ -73,4 +72,4 @@ __aicore__ inline void InitOutputWithZero(AscendC::GlobalTensor<T> yInitGlobal, 
 #endif
 } // namespace Gemm
 } // namespace Cmct
-#endif
+

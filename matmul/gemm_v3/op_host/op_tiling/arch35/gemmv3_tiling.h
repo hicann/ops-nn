@@ -12,8 +12,7 @@
  * \file gemmv3_tiling.h
  * \brief
  */
-#ifndef __OP_HOST_GEMMV3_TILING_H__
-#define __OP_HOST_GEMMV3_TILING_H__
+#pragma once
 
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_v3_tiling_advanced.h"
 namespace optiling {
@@ -40,4 +39,4 @@ protected:
 };
 } // namespace gemmv3
 } // namespace optiling
-#endif // __OP_HOST_TRANSPOSE_BATCH_MAT_MUL_TILING_H__
+

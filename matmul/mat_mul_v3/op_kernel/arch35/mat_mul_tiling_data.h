@@ -12,8 +12,7 @@
  * \file mat_mul_tiling_data.h
  * \brief
  */
-#ifndef __OP_KERNEL_MATMUL_TILING_DATA_H__
-#define __OP_KERNEL_MATMUL_TILING_DATA_H__
+#pragma once
 
 #include "kernel_tiling/kernel_tiling.h"
 
@@ -198,4 +197,3 @@ struct MatMulToMulBasicTilingData{
 };
 #pragma pack(pop)
 
-#endif // __OP_KERNEL_MATMUL_TILING_DATA_H__

@@ -12,8 +12,7 @@
  * \file block_prologue_b_cast_scsc.h
  * \brief
  */
-#ifndef CMCT_INCLUDE_PROLOGUE_BLOCK_PROLOGUE_B_CAST_SCSC_H
-#define CMCT_INCLUDE_PROLOGUE_BLOCK_PROLOGUE_B_CAST_SCSC_H
+#pragma once
 
 #include "../utils/common_utils.h"
 #include "../utils/integral_constant.h"
@@ -698,4 +697,3 @@ private:
 };
 } // namespace Cmct::Prologue
 
-#endif

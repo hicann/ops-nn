@@ -8,8 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#ifndef ARCH35_CMCT_CONVERTOR_H
-#define ARCH35_CMCT_CONVERTOR_H
+#pragma once
 #include "cmct/policy/dispatch_policy.h"
 #include "cmct/kernel/kernel_matmul_a_prefetch_b_antiquant.h"
 #include "cmct/block/block_scheduler_tail_resplit_expanded.h"
@@ -514,4 +513,3 @@ __aicore__ inline void InvokeKernel(
 
 #define KERNEL_PARAMS x, weight, antiquantScale, antiquantOffset, quantScale, quantOffset, bias, y, workspace, tiling
 
-#endif

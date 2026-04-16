@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef __OP_HOST_BATCH_MATMUL_V3_TILING_KEY_H__
-#define __OP_HOST_BATCH_MATMUL_V3_TILING_KEY_H__
+#pragma once
 
 #include <sstream>
 #include "op_host/tiling_key.h"
@@ -29,4 +28,3 @@ public:
 } // namespace matmul_v3_advanced
 } // namespace optiling
 
-#endif // __OP_HOST_BATCH_MATMUL_V3_TILING_KEY_H__

@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef WEIGHT_QUANT_BATCH_MATMUL_V2_ARCH35_TILING_KEY_H
-#define WEIGHT_QUANT_BATCH_MATMUL_V2_ARCH35_TILING_KEY_H
+#pragma once
 
 #include "ascendc/host_api/tiling/template_argument.h"
 #include "weight_quant_batch_matmul_v2_arch35_tiling_data.h"
@@ -720,4 +719,3 @@ ASCENDC_TPL_SEL(
 #endif
 );
 
-#endif // WEIGHT_QUANT_BATCH_MATMUL_V2_ARCH35_TILING_KEY_H

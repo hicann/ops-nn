@@ -7,8 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-#ifndef PTA_NPU_OP_API_INC_LEVEL0_OP_FUSEDMATMUL_OP_H_
-#define PTA_NPU_OP_API_INC_LEVEL0_OP_FUSEDMATMUL_OP_H_
+#pragma once
 
 #include "opdev/op_executor.h"
 
@@ -23,4 +22,3 @@ const aclTensor* FusedMatMul16Cast32(
 
 } // namespace l0op
 
-#endif // PTA_NPU_OP_API_INC_LEVEL0_OP_FUSEDMATMUL_OP_H_

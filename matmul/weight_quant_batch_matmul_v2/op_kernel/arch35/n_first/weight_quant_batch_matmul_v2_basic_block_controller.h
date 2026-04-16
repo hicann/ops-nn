@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef WEIGHT_QUANT_BATCHMATMUL_V2_BASIC_BLOCK_CONTROLLER_H
-#define WEIGHT_QUANT_BATCHMATMUL_V2_BASIC_BLOCK_CONTROLLER_H
+#pragma once
 #include "basic_block_config.h"
 #include "weight_quant_batch_matmul_v2_basic_block.h"
 
@@ -128,4 +127,4 @@ __aicore__ inline void WeightQuantBatchMatmulV2BasicBlockController<
     wqmmBasicBlock_.End();
 }
 } // namespace WeightQuantBatchMatmulV2::Arch35
-#endif // WEIGHT_QUANT_BATCHMATMUL_V2_BASIC_BLOCK_CONTROLLER_H
+

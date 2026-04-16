@@ -12,8 +12,7 @@
  * \file block_mmad_with_params.h
  * \brief
  */
-#ifndef MATMUL_BLOCK_BLOCK_MMAD_WITH_PARAMS_H
-#define MATMUL_BLOCK_BLOCK_MMAD_WITH_PARAMS_H
+#pragma once
 
 #include <type_traits>
 #include "./block_mmad.h"
@@ -112,4 +111,4 @@ public:
 } // namespace Block
 } // namespace Gemm
 } // namespace Cmct
-#endif
+

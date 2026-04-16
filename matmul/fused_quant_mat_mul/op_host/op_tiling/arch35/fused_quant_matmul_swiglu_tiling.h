@@ -12,8 +12,7 @@
  * \file fused_quant_matmul_swiglu_tiling.h
  * \brief
  */
-#ifndef FUSED_QUANT_MATMUL_SWIGLU_H
-#define FUSED_QUANT_MATMUL_SWIGLU_H
+#pragma once
 #include "fused_quant_matmul_asw_tiling.h"
 
 namespace optiling {
@@ -73,4 +72,4 @@ protected:
     ge::graphStatus PostTiling() override;
 };
 }
-#endif // FUSED_QUANT_MATMUL_SWIGLU_H
+

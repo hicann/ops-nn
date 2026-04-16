@@ -7,8 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-#ifndef MATMUL_COMMON_OP_API_CUBE_UTIL_H_
-#define MATMUL_COMMON_OP_API_CUBE_UTIL_H_
+#pragma once
 
 #include "aclnn/aclnn_base.h"
 #include "op_api/op_api_def.h"
@@ -66,4 +65,3 @@ bool CheckUnSupportDtype(const aclTensor *input, const aclTensor *weight);
 } // namespace NN
 } // namespace Ops
 
-#endif

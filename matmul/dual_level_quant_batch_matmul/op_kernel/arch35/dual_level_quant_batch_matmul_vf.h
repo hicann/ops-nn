@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef DUAL_LEVEL_QUANT_BATCH_MATMUL_VF_H
-#define DUAL_LEVEL_QUANT_BATCH_MATMUL_VF_H
+#pragma once
 
 #if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
@@ -158,4 +157,4 @@ __simd_vf__ inline void MulAdd(
 }
 
 } // namespace DualLevelQuantBatchMatmul::Arch35
-#endif // DUAL_LEVEL_QUANT_BATCH_MATMUL_VF_H
+

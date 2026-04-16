@@ -12,8 +12,7 @@
  * \file quant_batch_matmul_constant.h
  * \brief
  */
-#ifndef UTILS_QUANT_BATCH_MATMUL_CONSTANT_H
-#define UTILS_QUANT_BATCH_MATMUL_CONSTANT_H
+#pragma once
 namespace Cmct {
 namespace Gemm {
 namespace QuantBatchMatmul {
@@ -73,4 +72,4 @@ enum class QuantMode : uint32_t {
 } // namespace QuantBatchMatmul
 } // namespace Gemm
 } // namespace Cmct
-#endif
+

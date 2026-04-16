@@ -12,8 +12,7 @@
  * \file dispatch_policy.h
  * \brief
  */
-#ifndef MATMUL_POLICY_DISPATCH_POLICY_H
-#define MATMUL_POLICY_DISPATCH_POLICY_H
+#pragma once
 
 #include "../utils/arch.h"
 #include "../utils/common_utils.h"
@@ -330,4 +329,4 @@ struct MatmulToMul {
 
 } // namespace Gemm
 } // namespace Cmct
-#endif
+

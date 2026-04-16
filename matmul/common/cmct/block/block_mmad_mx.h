@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef MATMUL_BLOCK_MMAD_MX_QUANT_H
-#define MATMUL_BLOCK_MMAD_MX_QUANT_H
+#pragma once
 #include "../utils/layout_utils.h"
 #include "../utils/common_utils.h"
 #include "../utils/quant_batch_matmul_constant.h"
@@ -851,4 +850,4 @@ private:
 }  // namespace Block
 }  // namespace Gemm
 }  // namespace Cmct
-#endif
+

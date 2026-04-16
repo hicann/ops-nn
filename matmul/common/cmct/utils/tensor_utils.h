@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef UTILS_TENSOR_UTILS_H
-#define UTILS_TENSOR_UTILS_H
+#pragma once
 #include "common_utils.h"
 #include "integral_constant.h"
 #include "kernel_operator_list_tensor_intf.h"
@@ -310,4 +309,4 @@ __aicore__ inline constexpr bool PosIsL0C()
 
 } // namespace Gemm
 } // namespace Cmct
-#endif
+

@@ -12,8 +12,7 @@
  * \file quant_batch_matmul_v3_apt_tiling_key.h
  * \brief
  */
-#ifndef QBMMV3_ARCH35_TILING_KEY_H
-#define QBMMV3_ARCH35_TILING_KEY_H
+#pragma once
 
 #include "ascendc/host_api/tiling/template_argument.h"
 
@@ -119,4 +118,4 @@ ASCENDC_TPL_SEL(
             TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI))
 );
 } // namespace QuantBatchMatmulV3_Arch35_TilingKey
-#endif
+

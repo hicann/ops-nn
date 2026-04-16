@@ -13,8 +13,7 @@
  * \file matmul_v3_compile_info_advanced.h
  * \brief
  */
-#ifndef __OP_HOST_MATMUL_V3_COMPILE_INFO_ADVANCED_H__
-#define __OP_HOST_MATMUL_V3_COMPILE_INFO_ADVANCED_H__
+#pragma once
 
 #include "platform/platform_infos_def.h"
 #include "tiling/platform/platform_ascendc.h"
@@ -76,4 +75,4 @@ inline ge::graphStatus InitCompileInfo(gert::TilingParseContext *context)
 }
 }
 } // namespace optiling::matmul_v3
-#endif // __OP_HOST_MATMUL_V3_COMPILE_INFO_ADVANCED_H__
+

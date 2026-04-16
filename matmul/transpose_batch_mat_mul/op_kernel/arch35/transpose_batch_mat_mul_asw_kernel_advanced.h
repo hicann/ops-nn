@@ -12,8 +12,7 @@
  * \file transpose_batch_mat_mul_asw_kernel_advanced.h
  * \brief
  */
-#ifndef TRANSPOSE_BATCH_MAT_MUL_ASW_KERNEL_ADVANCED_H
-#define TRANSPOSE_BATCH_MAT_MUL_ASW_KERNEL_ADVANCED_H
+#pragma once
 
 #include "transpose_batch_mat_mul_asw_block_advanced.h"
 #if ASC_DEVKIT_MAJOR >= 9
@@ -187,4 +186,3 @@ TransposeBatchMatMulAswKernel<A_TYPE, B_TYPE, C_TYPE, BIAS_TYPE, MODE, BLOCK_TYP
 
 } // namespace TransposeBatchMatMulAdvanced
 
-#endif // TRANSPOSE_BATCH_MAT_MUL_ASW_KERNEL_ADVANCED_H

@@ -12,8 +12,7 @@
  * \file qbmm_mix_online_dynamic.h
  * \brief
  */
-#ifndef QBMM_MIX_ONLINE_DYNAMIC_H
-#define QBMM_MIX_ONLINE_DYNAMIC_H
+#pragma once
 
 #include "../../inc/platform.h"
 #include "mm_extension_interface/qbmm_custom_mm_policy.h"
@@ -707,4 +706,3 @@ __aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PAR
 
 }  // namespace QuantBatchMatmulV3
 
-#endif  // QBMM_MIX_ONLINE_DYNAMIC_H

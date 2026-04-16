@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef ARCH35_QUANT_BATCH_MATMUL_V4_TILING_KEY_H
-#define ARCH35_QUANT_BATCH_MATMUL_V4_TILING_KEY_H
+#pragma once
 
 #include "ascendc/host_api/tiling/template_argument.h"
 
@@ -104,4 +103,4 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_UINT_SEL(KERNEL_TEMPLATE_TYPE, ASCENDC_TPL_UI_LIST, QBMMV4_LUT_ASW, QBMMV4_LUT_AL1FULL), ),
 #endif
 );
-#endif // ARCH35_QUANT_BATCH_MATMUL_V4_TILING_KEY_H
+

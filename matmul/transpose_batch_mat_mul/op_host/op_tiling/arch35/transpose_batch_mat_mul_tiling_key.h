@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef __OP_HOST_TBMM_TILING_KEY_H__
-#define __OP_HOST_TBMM_TILING_KEY_H__
+#pragma once
 
 #include <sstream>
 #include "op_host/tiling_key.h"
@@ -36,4 +35,4 @@ private:
 };
 } // namespace transpose_batch_mat_mul_advanced
 } // namespace optiling
-#endif // __OP_HOST_TBMM_TILING_KEY_H__
+

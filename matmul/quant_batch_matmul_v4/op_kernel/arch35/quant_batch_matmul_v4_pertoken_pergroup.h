@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef QUANT_BATCH_MATMUL_V4_PERTOKEN_PERGROUP_H
-#define QUANT_BATCH_MATMUL_V4_PERTOKEN_PERGROUP_H
+#pragma once
 
 #include "../quant_batch_matmul_v4_common.h"
 
@@ -561,4 +560,4 @@ private:
 };
 
 } // namespace AscendC
-#endif
+

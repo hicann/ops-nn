@@ -12,8 +12,7 @@
  * \file fused_matmul_tiling.h
  * \brief
  */
-#ifndef __OP_HOST_FUSED_MATMUL_TILING_H__
-#define __OP_HOST_FUSED_MATMUL_TILING_H__
+#pragma once
 
 #include <nlohmann/json.hpp>
 
@@ -48,4 +47,4 @@ private:
 };
 } // namespace fused_matmul
 } // namespace optiling
-#endif // __OP_HOST_FUSED_MATMUL_TILING_H__
+

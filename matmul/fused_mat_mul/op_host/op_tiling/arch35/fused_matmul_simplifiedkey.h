@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef __OP_HOST_FUSED_MATMUL_SIMPILIFIEDKEY_H__
-#define __OP_HOST_FUSED_MATMUL_SIMPILIFIEDKEY_H__
+#pragma once
 
 #include "log/log.h"
 #include "error_util.h"
@@ -92,4 +91,4 @@ inline ge::graphStatus GenSimplifiedKey(gert::TilingContext* context, ge::char_t
 }
 } // namespace fused_matmul
 } // namespace optiling
-#endif // __OP_HOST_FUSED_MATMUL_SIMPILIFIEDKEY_H__
+

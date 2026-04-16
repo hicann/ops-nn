@@ -12,8 +12,7 @@
  * \file mat_mul_full_load.h
  * \brief
  */
-#ifndef MMV3_MATMUL_FULL_LOAD_H
-#define MMV3_MATMUL_FULL_LOAD_H
+#pragma once
 
 #include "mat_mul_asw_block.h"
 #include "mat_mul_v3_full_load_kernel_helper.h"
@@ -272,4 +271,3 @@ __aicore__ inline void MatmulAswKernelABL1FullLoad<A_TYPE, B_TYPE, C_TYPE, BIAS_
 
 } // namespace MatmulV3Advanced
 
-#endif // MMV3_MATMUL_FULL_LOAD_H

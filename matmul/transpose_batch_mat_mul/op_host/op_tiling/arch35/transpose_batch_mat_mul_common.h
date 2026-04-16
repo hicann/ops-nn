@@ -12,8 +12,7 @@
  * \file transpose_batch_mat_mul_common.h
  * \brief
  */
-#ifndef __OP_HOST_TRANSPOSE_BATCH_MAT_MUL_COMMON_H__
-#define __OP_HOST_TRANSPOSE_BATCH_MAT_MUL_COMMON_H__
+#pragma once
 
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_v3_common_advanced.h"
 
@@ -34,4 +33,4 @@ constexpr size_t ATTR_NUM = 5;
 constexpr int64_t UNKNOWN_DIM_NUM = -2;
 }
 } // namespace
-#endif // __OP_HOST_TRANSPOSE_BATCH_MAT_MUL_COMMON_H__
+

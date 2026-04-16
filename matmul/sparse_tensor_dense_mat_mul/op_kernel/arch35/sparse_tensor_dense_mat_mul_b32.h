@@ -12,8 +12,7 @@
  * \file sparse_tensor_dense_mat_mul_b32.h
  * \brief
  */
-#ifndef SPARSE_TENSOR_DENSE_MAT_MUL_B32_H
-#define SPARSE_TENSOR_DENSE_MAT_MUL_B32_H
+#pragma once
 
 #include "sparse_tensor_dense_mat_mul_base.h"
 
@@ -128,4 +127,3 @@ __aicore__ inline void SparseTensorDenseMatMulB32<T_IDX, T_VAL, ADJ_A, ADJ_B>::P
 
 } // namespace SparseTensorDenseMatMul
 
-#endif // SPARSE_TENSOR_DENSE_MAT_MUL_B32_H

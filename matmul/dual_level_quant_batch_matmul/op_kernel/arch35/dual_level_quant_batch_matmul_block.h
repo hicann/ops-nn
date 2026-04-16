@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef DUAL_LEVEL_QUANT_BATCH_MATMUL_BLOCK_H
-#define DUAL_LEVEL_QUANT_BATCH_MATMUL_BLOCK_H
+#pragma once
 #include "../dual_level_quant_batch_matmul_tiling_data.h"
 #include "op_kernel/math_util.h"
 #include "tool_arch35.h"
@@ -241,4 +240,4 @@ __aicore__ inline void DualLevelQuantBatchMatmulBaseBlock::CalcGMOffset()
 }
 
 } // namespace DualLevelQuantBatchMatmul::Arch35
-#endif // DUAL_LEVEL_QUANT_BATCH_MATMUL_BLOCK_H
+

@@ -12,8 +12,7 @@
  * \file batch_mat_mul_v3_mergebatch_basicapi_cmct.h
  * \brief
  */
-#ifndef BATCH_MAT_MUL_V3_MERGEBATCH_BASICAPI_CMCT_H
-#define BATCH_MAT_MUL_V3_MERGEBATCH_BASICAPI_CMCT_H
+#pragma once
 #include "cmct/kernel/kernel_matmul_merge_batch.h"
 #include "batch_mat_mul_v3_mergebatch_basicapi_block_scheduler.h"
 using namespace Cmct;
@@ -66,4 +65,4 @@ __aicore__ inline void BatchMatMulActMergeBatchKernel(GM_ADDR aGM, GM_ADDR bGM, 
     MatmulKernel mm;
     mm(params);
 }
-#endif
+

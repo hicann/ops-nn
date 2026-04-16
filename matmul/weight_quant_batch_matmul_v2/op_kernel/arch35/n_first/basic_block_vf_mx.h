@@ -12,8 +12,7 @@
  * \file basic_block_vf_mx.h
  * \brief
  */
-#ifndef WEIGHT_QUANT_BATCHMATMUL_V2_BASIC_BLOCK_VF_MX_H
-#define WEIGHT_QUANT_BATCHMATMUL_V2_BASIC_BLOCK_VF_MX_H
+#pragma once
 
 #include "basic_block_config.h"
 #if ASC_DEVKIT_MAJOR >= 9
@@ -320,4 +319,4 @@ __aicore__ inline void AntiQuantFp4NzKnVf(Fp4NzParams<xType, wType>& fp4NzParams
     }
 }
 } // namespace WeightQuantBatchMatmulV2::Arch35
-#endif // WEIGHT_QUANT_BATCHMATMUL_V2_BASIC_BLOCK_VF_MX_H
+

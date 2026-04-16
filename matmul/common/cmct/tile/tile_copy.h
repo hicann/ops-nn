@@ -12,8 +12,7 @@
  * \file tile_copy.h
  * \brief
  */
-#ifndef MATMUL_TILE_TILE_COPY_H
-#define MATMUL_TILE_TILE_COPY_H
+#pragma once
 
 #include "copy_out/copy_out_split_m_with_params.h"
 
@@ -291,4 +290,4 @@ inline constexpr bool HasCopyCo1ToOutV = HasCopyCo1ToOut<TileCopy>::value;
 } // namespace Tile
 } // namespace Gemm
 } // namespace Cmct
-#endif
+

@@ -12,8 +12,7 @@
  * \file tqbmm_copy_cube_out.h
  * \brief
  */
-#ifndef TQBMM_COPY_CUBE_OUT_H
-#define TQBMM_COPY_CUBE_OUT_H
+#pragma once
 #include "lib/matmul_intf.h"
 
 namespace AscendC {
@@ -205,4 +204,4 @@ private:
 };
 
 } // namespace AscendC
-#endif // QBMM_COPY_CUBE_OUT_H
+

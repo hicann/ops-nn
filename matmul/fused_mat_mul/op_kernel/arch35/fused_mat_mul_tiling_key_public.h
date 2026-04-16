@@ -12,8 +12,7 @@
  * \file fused_mat_mul_tiling_key_public.h
  * \brief
  */
-#ifndef FUSED_MAT_MUL_TILING_KEY_PUBLIC_H
-#define FUSED_MAT_MUL_TILING_KEY_PUBLIC_H
+#pragma once
 #if defined(__CCE_AICORE__)
 #include "../../mat_mul_v3/arch35/mat_mul_v3_tiling_key_public.h"
 #else
@@ -35,4 +34,4 @@
 
 #define MAT_MUL_FOR_BATCH 0
 #define MAT_MUL_ITER_BATCH_SINGLE_BIAS 1
-#endif
+

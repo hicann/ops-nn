@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef ARCH35_WEIGHT_QUANT_BATCH_MATMUL_V2_TILING_DATA_H
-#define ARCH35_WEIGHT_QUANT_BATCH_MATMUL_V2_TILING_DATA_H
+#pragma once
 #include "kernel_tiling/kernel_tiling.h"
 
 #ifndef __CCE_AICORE__
@@ -161,4 +160,4 @@ struct alignas(8) WeightQuantBatchMatmulV2TilingData
 };
 #pragma pack(pop)
 } // namespace wqbmmv2_tiling
-#endif // ARCH35_WEIGHT_QUANT_BATCH_MATMUL_V2_TILING_DATA_H
+

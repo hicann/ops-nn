@@ -13,8 +13,7 @@
  * \file matmul_v3_k_equal_zero_tiling.h
  * \brief
  */
-#ifndef __OP_HOST_MATMUL_V3_K_EQUAL_ZERO_TILING_H__
-#define __OP_HOST_MATMUL_V3_K_EQUAL_ZERO_TILING_H__
+#pragma once
 
 #include "matmul_v3_base_tiling_advanced.h"
 
@@ -39,4 +38,4 @@ protected:
 };
 } // namespace matmul_v3
 } // namespace optiling
-#endif // __OP_HOST_MATMUL_V3_K_EQUAL_ZERO_H__
+

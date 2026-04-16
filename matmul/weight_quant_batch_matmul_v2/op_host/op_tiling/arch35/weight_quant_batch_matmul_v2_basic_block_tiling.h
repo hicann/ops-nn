@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef WEIGHT_QUANT_BATCH_MATMUL_V2_BASIC_BLOCK_TILING_H
-#define WEIGHT_QUANT_BATCH_MATMUL_V2_BASIC_BLOCK_TILING_H
+#pragma once
 
 #include <algorithm>
 #include <cmath>
@@ -498,4 +497,3 @@ protected:
 
 } // namespace optiling
 
-#endif // WEIGHT_QUANT_BATCH_MATMUL_V2_BASIC_BLOCK_TILING_H

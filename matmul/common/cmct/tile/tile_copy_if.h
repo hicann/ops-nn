@@ -7,8 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-#ifndef TILE_TILE_COPY_IF_H
-#define TILE_TILE_COPY_IF_H
+#pragma once
 
 #if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
@@ -60,4 +59,4 @@ __aicore__ inline void CopyIf(const DstTensor& dstTensor, const SrcTensor& srcTe
 
 #include "copy_gm_to_ub.h"
 #include "copy_ub_to_l1.h"
-#endif
+

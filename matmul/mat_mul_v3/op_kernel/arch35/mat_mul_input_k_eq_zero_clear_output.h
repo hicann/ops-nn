@@ -12,8 +12,7 @@
  * \file mat_mul_input_k_eq_zero_clear_output.h
  * \brief
  */
-#ifndef MAT_MUL_INPUT_K_EQ_ZERO_CLEAR_OUTPUT_H
-#define MAT_MUL_INPUT_K_EQ_ZERO_CLEAR_OUTPUT_H
+#pragma once
 
 #ifndef DTYPE_Y
 #define DTYPE_Y half
@@ -64,4 +63,4 @@ __aicore__ inline void MatMulInputKEqZeroClearOutput(GM_ADDR biasGM, GM_ADDR cGM
     AscendC::InitOutput<DTYPE_Y>(outputGM[coreIdx * everyAivDataCount], static_cast<uint64_t>(copyDataAmount), (DTYPE_Y)0);
 }
 }
-#endif
+

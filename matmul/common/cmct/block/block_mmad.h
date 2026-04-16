@@ -12,8 +12,7 @@
  * \file block_mmad.h
  * \brief
  */
-#ifndef MATMUL_BLOCK_BLOCK_MMAD_H
-#define MATMUL_BLOCK_BLOCK_MMAD_H
+#pragma once
 
 #include <type_traits>
 #include "../utils/arch.h"
@@ -105,4 +104,4 @@ public:
 } // namespace Cmct
 #include "block_mmad_a_prefetch_b_prologue.h"
 #include "block_mmad_b_prologue_mx.h"
-#endif
+

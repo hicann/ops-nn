@@ -8,8 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#ifndef OP_API_SRC_LEVEL2_BATCH_MATMUL_UTIL_H_
-#define OP_API_SRC_LEVEL2_BATCH_MATMUL_UTIL_H_
+#pragma once
 
 #include "aclnn/aclnn_base.h"
 #include "opdev/common_types.h"
@@ -60,4 +59,3 @@ const aclTensor* ExecFusedmmOp(
 }  // namespace Ops
 }  // namespace NN
 
-#endif  // OP_API_SRC_LEVEL2_BATCH_MATMUL_UTIL_H_

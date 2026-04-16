@@ -12,8 +12,7 @@
  * \file tiling_cache.h
  * \brief
  */
-#ifndef OPS_BUILT_IN_OP_TILING_CUBE_ALGORITHM_HASH_TILING_CACHE_H_
-#define OPS_BUILT_IN_OP_TILING_CUBE_ALGORITHM_HASH_TILING_CACHE_H_
+#pragma once
 
 #include <map>
 #include <shared_mutex>
@@ -77,4 +76,4 @@ class TilingCache {
 };
 }  // namespace NN
 }  // namespace Ops
-#endif  // OPS_BUILT_IN_OP_TILING_CUBE_ALGORITHM_HASH_TILING_CACHE_H_
+

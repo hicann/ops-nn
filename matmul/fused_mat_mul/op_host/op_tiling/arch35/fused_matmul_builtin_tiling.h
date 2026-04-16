@@ -12,8 +12,7 @@
  * \file fused_matmul_builtin_tiling.h
  * \brief
  */
-#ifndef __OP_HOST_FUSED_MATMUL_BUILTIN_TILING_H__
-#define __OP_HOST_FUSED_MATMUL_BUILTIN_TILING_H__
+#pragma once
 
 #include "matmul/batch_mat_mul_v3/op_host/op_tiling/arch35/batch_matmul_v3_tiling_advanced.h"
 #include "platform/platform_ascendc.h"
@@ -44,4 +43,4 @@ private:
 };
 } // namespace fused_matmul
 } // namespace optiling
-#endif // __OP_HOST_FUSED_MATMUL_BUILTIN_TILING_H__
+

@@ -12,8 +12,7 @@
  * \file qbmmia_mx_basic_api_cmct.h
  * \brief
  */
-#ifndef QBMMIA_MX_BAISC_API_CMCT_H
-#define QBMMIA_MX_BAISC_API_CMCT_H
+#pragma once
 #include "cmct/block/block_mmad_mx.h"
 #include "cmct/block/block_scheduler_policy.h"
 #include "cmct/block/block_scheduler_utils.h"
@@ -87,4 +86,4 @@ __aicore__ inline void QbmmiaMxBasicApiKernel(
     MatmulKernel qbmm;
     qbmm(params);
 }
-#endif
+

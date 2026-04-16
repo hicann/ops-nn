@@ -12,8 +12,7 @@
  * \file adaptive_sliding_window_basic_api_tiling.h
  * \brief
  */
-#ifndef ADAPTIVE_SLIDING_WINDOW_BASIC_API_TILING_H
-#define ADAPTIVE_SLIDING_WINDOW_BASIC_API_TILING_H
+#pragma once
 #include "util/math_util.h"
 #include "../quant_batch_matmul_v3_tiling_base.h"
 #include "adaptive_sliding_window_tiling.h"
@@ -57,4 +56,4 @@ protected:
     DequantBmm::QuantBatchMatmulV3BasicAPITilingData &tilingData_;
 };
 }
-#endif  // ADAPTIVE_SLIDING_WINDOW_BASIC_API_TILING_H
+

@@ -12,8 +12,7 @@
  * \file qbmm_api_utils.h
  * \brief
  */
-#ifndef QBMM_API_UTILS_H
-#define QBMM_API_UTILS_H
+#pragma once
 
 #include "../quant_batch_matmul_v3_base.h"
 #include "qbmm_asw_block.h"
@@ -257,4 +256,3 @@ __aicore__ inline void ProcessWithBatch(QuantBmmAswBlock& block, T& object)
 
 }  // namespace QuantBatchMatmulV3
 
-#endif  // QBMM_API_UTILS_H

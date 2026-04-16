@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef FUSED_MAT_MUL_TILINGKEY_H
-#define FUSED_MAT_MUL_TILINGKEY_H
+#pragma once
 
 #include "ascendc/host_api/tiling/template_argument.h"
 #include "fused_mat_mul_tiling_key_public.h"
@@ -139,4 +138,4 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_UINT_SEL(OPTYPE, ASCENDC_TPL_UI_LIST, F_OPTYPE_RELU)),
 #endif
 );
-#endif // FUSED_MAT_MUL_TILINGKEY_H
+

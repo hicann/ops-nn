@@ -13,8 +13,7 @@
  * \file matmul_v3_base_tiling_advanced.h
  * \brief
  */
-#ifndef __OP_HOST_MATMUL_V3_BASE_TILING_ADVANCED_H__
-#define __OP_HOST_MATMUL_V3_BASE_TILING_ADVANCED_H__
+#pragma once
 
 #include "matmul/common/op_host/math_util.h"
 #include "matmul_base_tiling.h"
@@ -485,4 +484,4 @@ private:
 };
 } // namespace matmul_v3
 }
-#endif // __OP_HOST_MATMUL_V3_BASE_TILING_ADVANCED_H__
+

@@ -8,8 +8,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-#ifndef PROLOGUE_TILE_CAST_H
-#define PROLOGUE_TILE_CAST_H
+#pragma once
 
 namespace Cmct::Prologue::Tile {
 
@@ -32,4 +31,3 @@ __aicore__ inline void TileCast(const TensorOut& tensorOut, const TensorIn& tens
 } // namespace Cmct::Prologue::Tile
 #include "tile_cast_b8_to_b16.h"
 
-#endif

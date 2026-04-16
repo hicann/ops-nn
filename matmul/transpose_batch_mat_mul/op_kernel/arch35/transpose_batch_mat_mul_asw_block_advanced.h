@@ -12,8 +12,7 @@
  * \file transpose_batch_mat_mul_asw_block_advanced.h
  * \brief
  */
-#ifndef TRANSPOSE_BATCH_MAT_MUL_ASW_BLOCK_ADVANCED_H
-#define TRANSPOSE_BATCH_MAT_MUL_ASW_BLOCK_ADVANCED_H
+#pragma once
 
 #if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
@@ -216,4 +215,3 @@ __aicore__ inline void TransposeBatchMatMulAswBlock::CalcGMOffset()
 
 } // namespace TransposeBatchMatMulAdvanced
 
-#endif // TRANSPOSE_BATCH_MAT_MUL_ASW_BLOCK_ADVANCED_H

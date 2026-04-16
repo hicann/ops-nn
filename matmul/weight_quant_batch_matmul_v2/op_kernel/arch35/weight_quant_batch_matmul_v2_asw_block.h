@@ -12,8 +12,7 @@
  * \file weight_quant_batch_matmul_v2_asw_block.h
  * \brief
  */
-#ifndef WEIGHT_QUANT_BMMV2_ASW_BLOCK_H
-#define WEIGHT_QUANT_BMMV2_ASW_BLOCK_H
+#pragma once
 
 #if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
@@ -192,4 +191,3 @@ __aicore__ inline void WeightQuantBmmAswBlock::CalcGMOffset()
 
 }  // namespace WeightQuantBatchMatmulV2::Arch35
 
-#endif  // WEIGHT_QUANT_BMMV2_ASW_BLOCK_H

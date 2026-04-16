@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef CMCT_INCLUDE_PROLOGUE_BLOCK_PROLOGUE_H
-#define CMCT_INCLUDE_PROLOGUE_BLOCK_PROLOGUE_H
+#pragma once
 namespace Cmct::Prologue {
 template <class DispatchPolicy, class... Args>
 class BlockPrologue {
@@ -24,4 +23,4 @@ class BlockPrologue {
 
 #include "block_prologue_b_antiquant_scmc_nd_kn.h"
 #include "block_prologue_b_antiquant_scmc_nd_nk_nz_kn.h"
-#endif
+

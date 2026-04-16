@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef UTILS_STATUS_UTILS_H
-#define UTILS_STATUS_UTILS_H
+#pragma once
 
 namespace Cmct {
 namespace Gemm {
@@ -92,4 +91,4 @@ constexpr const char* GetStatusString(Status status)
 
 } // namespace Gemm
 } // namespace Cmct
-#endif
+

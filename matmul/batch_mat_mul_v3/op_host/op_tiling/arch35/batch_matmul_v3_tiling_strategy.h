@@ -13,8 +13,7 @@
  * \file batch_matmul_v3_tiling_strategy.h
  * \brief
  */
-#ifndef __OP_HOST_BATCH_MATMUL_V3_TILING_STRATEGY_H__
-#define __OP_HOST_BATCH_MATMUL_V3_TILING_STRATEGY_H__
+#pragma once
 
 #include <map>
 #include <vector>
@@ -58,4 +57,3 @@ inline std::vector<int32_t> GetBatchMatMulV3Priorities(NpuArch NpuArch)
 } // namespace batch_matmul_v3_advanced
 } // namespace optiling
 
-#endif // __OP_HOST_BATCH_MATMUL_V3_STRATEGY_H__

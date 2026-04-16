@@ -13,8 +13,7 @@
  * \brief
  */
 
- #ifndef QBMM_PERBLOCK_API_PARAM_UTILS_H
- #define QBMM_PERBLOCK_API_PARAM_UTILS_H
+ #pragma once
 
  #include "qbmm_asw_block.h"
  #include "../quant_batch_matmul_v3_base.h"
@@ -239,4 +238,4 @@
      }
  }
  }  // namespace QuantBatchMatmulV3
- #endif  // QBMM_PERBLOCK_API_PARAM_UTILS_H
+

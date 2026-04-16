@@ -12,8 +12,7 @@
  * \file adaptive_sliding_window_basic_api_v4_tiling.h
  * \brief
  */
-#ifndef ADAPTIVE_SLIDING_WINDOW_BASIC_API_V4_TILING_H
-#define ADAPTIVE_SLIDING_WINDOW_BASIC_API_V4_TILING_H
+#pragma once
 #include "../../../../quant_batch_matmul_v3/op_host/op_tiling/arch35/adaptive_sliding_window_basic_api_tiling.h"
 #include "../quant_batch_matmul_v4_compile_info.h"
 
@@ -82,4 +81,4 @@ protected:
     std::unique_ptr<QuantBatchMatmulV4CompileInfo> compileInfoPtr_;
 };
 }  // namespace optiling
-#endif  // ADAPTIVE_SLIDING_WINDOW_BASIC_API_V4_TILING_H
+

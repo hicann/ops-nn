@@ -12,8 +12,7 @@
  * \file matmul_base_tiling.h
  * \brief
  */
-#ifndef __OP_HOST_MATMUL_BASE_TILING_H__
-#define __OP_HOST_MATMUL_BASE_TILING_H__
+#pragma once
 
 #include "exe_graph/runtime/tiling_context.h"
 #include "log/log.h"
@@ -92,4 +91,3 @@ protected:
 };
 } // namespace optiling
 
-#endif // __OP_HOST_MATMUL_BASE_TILING_H__

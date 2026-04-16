@@ -12,8 +12,7 @@
  * \file basic_block_config.h
  * \brief
  */
-#ifndef WEIGHT_QUANT_BATCHMATMUL_V2_BASIC_BLOCK_CONFIG_H
-#define WEIGHT_QUANT_BATCHMATMUL_V2_BASIC_BLOCK_CONFIG_H
+#pragma once
 
 #include "../tool_arch35.h"
 #include "../../weight_quant_batch_matmul_v2_constant.h"
@@ -227,4 +226,4 @@ __aicore__ constexpr VfConfig GetVfConfig()
     }
 }
 } // namespace WeightQuantBatchMatmulV2::Arch35
-#endif // WEIGHT_QUANT_BATCHMATMUL_V2_BASIC_BLOCK_CONFIG_H
+

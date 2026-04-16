@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef MATMUL_BLOCK_BLOCK_MATMUL_BUILDER_H
-#define MATMUL_BLOCK_BLOCK_MATMUL_BUILDER_H
+#pragma once
 
 #include <type_traits>
 
@@ -169,4 +168,4 @@ public:
 } // namespace Block
 } // namespace Gemm
 } // namespace Cmct
-#endif
+

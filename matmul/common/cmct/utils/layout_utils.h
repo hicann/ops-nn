@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef UTILS_LAYOUT_UTILS_H
-#define UTILS_LAYOUT_UTILS_H
+#pragma once
 
 // dependency of matmul_utils.h
 #include "matmul/tiling.h"
@@ -243,4 +242,4 @@ __aicore__ constexpr inline decltype(auto) MakeLayoutByFormat(int row, int col)
 }
 } // namespace Gemm
 } // namespace Cmct
-#endif
+

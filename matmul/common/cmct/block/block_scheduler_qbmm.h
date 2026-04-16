@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef CMCT_QBMM_BLOCK_SCHEDULER_H
-#define CMCT_QBMM_BLOCK_SCHEDULER_H
+#pragma once
 
 #include "./block_scheduler_utils.h"
 #include "./block_scheduler_policy.h"
@@ -322,4 +321,4 @@ struct BlockSchedulerSelector<ProblemShape_, L1TileShape_, L0TileShape_, Cmct::G
 }  // namespace Block
 }  // namespace Gemm
 }  // namespace Cmct
-#endif
+

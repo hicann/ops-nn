@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef CMCT_INCLUDE_EPILOGUE_BLOCK_EPILOGUE_FIXPIPE_H
-#define CMCT_INCLUDE_EPILOGUE_BLOCK_EPILOGUE_FIXPIPE_H
+#pragma once
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
 #if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
@@ -132,4 +131,4 @@ public:
 } // namespace Gemm
 }  // namespace Cmct
 #endif  // CMCT_INCLUDE_EPILOGUE_BLOCK_EPILOGUE_FIXPIPE_H
-#endif
+

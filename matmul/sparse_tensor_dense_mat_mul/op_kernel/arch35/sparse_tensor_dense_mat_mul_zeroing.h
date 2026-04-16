@@ -12,8 +12,7 @@
  * \file sparse_tensor_dense_mat_mul_zeroing.h
  * \brief
  */
-#ifndef SPARSE_TENSOR_DENSE_MAT_MUL_ZEROING_H
-#define SPARSE_TENSOR_DENSE_MAT_MUL_ZEROING_H
+#pragma once
 
 #include "sparse_tensor_dense_mat_mul_base.h"
 
@@ -50,4 +49,3 @@ __aicore__ inline void SparseTensorDenseMatMulZeroing<T_VAL>::InitAndProcessZero
 
 } // namespace SparseTensorDenseMatMul
 
-#endif // SPARSE_TENSOR_DENSE_MAT_MUL_ZEROING_H

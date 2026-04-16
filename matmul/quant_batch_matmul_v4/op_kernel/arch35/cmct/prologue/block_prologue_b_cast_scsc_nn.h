@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef QUANT_BATCH_MATMUL_V4_ARCH35_CMCT_PROLOGUE_BLOCK_PROLOGUE_B_CAST_SCSC_NN_H
-#define QUANT_BATCH_MATMUL_V4_ARCH35_CMCT_PROLOGUE_BLOCK_PROLOGUE_B_CAST_SCSC_NN_H
+#pragma once
 #include "cmct/prologue/block_prologue_b_cast_scsc.h"
 #include "../../quant_batch_matmul_v4_tiling_data_apt.h"
 
@@ -55,4 +54,3 @@ public:
 }  // namespace Prologue
 }  // namespace QuantBatchMatmulV4
 
-#endif

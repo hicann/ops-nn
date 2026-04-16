@@ -7,8 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-#ifndef PROLOGUE_TILE_ANTIQUANT_ND_KN_H
-#define PROLOGUE_TILE_ANTIQUANT_ND_KN_H
+#pragma once
 #include "../../utils/underscore.h"
 #if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
@@ -387,4 +386,4 @@ struct AntiquantImpl<
 
 } // namespace detail
 } // namespace Cmct::Prologue::Tile
-#endif
+

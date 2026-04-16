@@ -13,8 +13,7 @@
  * \brief
  */
 
-#ifndef __TRANSPOSE_QUANT_BATCH_MAT_MUL_ASW_TILING_H__
-#define __TRANSPOSE_QUANT_BATCH_MAT_MUL_ASW_TILING_H__
+#pragma once
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_v3_base_tiling_advanced.h"
 #include "../../../op_kernel/arch35/transpose_quant_batch_mat_mul_tiling_key_public.h"
 
@@ -57,4 +56,4 @@ private:
 };
 } // namespace transpose_quant_batch_mat_mul_advanced
 } // namespace optiling
-#endif // TRANSPOSE_QUANT_BATCH_MAT_MUL_ASW_TILING_H
+

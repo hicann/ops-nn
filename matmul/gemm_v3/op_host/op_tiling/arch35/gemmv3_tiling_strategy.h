@@ -12,8 +12,7 @@
  * \file gemmv3_tiling_strategy.h
  * \brief
  */
-#ifndef __OP_HOST_GEMMV3_TILING_STRATEGY_H__
-#define __OP_HOST_GEMMV3_TILING_STRATEGY_H__
+#pragma once
 
 #include <map>
 #include <vector>
@@ -43,4 +42,3 @@ inline std::vector<int32_t> GetGemmV3Priorities(NpuArch npuArch)
 } // namespace gemmv3
 } // namespace optiling
 
-#endif // __OP_HOST_GEMMV3_TILING_STRATEGY_H__

@@ -12,8 +12,7 @@
  * \file quant_batch_matmul_v3_checker_base.h
  * \brief
  */
-#ifndef QUANT_BATCH_MATMUL_V3_CHECKER_BASE_H
-#define QUANT_BATCH_MATMUL_V3_CHECKER_BASE_H
+#pragma once
 #include "../quant_batch_matmul_v3_tiling_base.h"
 #include <cstdint>
 #include <vector>
@@ -81,4 +80,4 @@ protected:
     }
 };
 }  // namespace optiling
-#endif  // QUANT_BATCH_MATMUL_V3_CHECKER_BASE_H
+

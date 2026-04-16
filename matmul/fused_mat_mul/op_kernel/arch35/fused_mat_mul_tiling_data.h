@@ -12,8 +12,7 @@
  * \file fused_mat_mul_tiling_data.h
  * \brief
  */
-#ifndef __OP_KERNEL_FUSED_MAT_MUL_TILING_DATA_H__
-#define __OP_KERNEL_FUSED_MAT_MUL_TILING_DATA_H__
+#pragma once
 
 #ifndef __CCE_AICORE__
 #include <cstdint>
@@ -27,4 +26,4 @@ struct FusedMatMulTilingData {
     uint32_t hasBias = 0;
 };
 #pragma pack(pop)
-#endif // __OP_KERNEL_FUSED_MAT_MUL_TILING_DATA_H__
+

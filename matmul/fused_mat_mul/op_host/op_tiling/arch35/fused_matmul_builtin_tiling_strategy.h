@@ -12,8 +12,7 @@
  * \file fused_matmul_builtin_tiling_strategy.h
  * \brief
  */
-#ifndef __OP_HOST_FUSED_MATMUL_BUILTIN_TILING_STRATEGY_H__
-#define __OP_HOST_FUSED_MATMUL_BUILTIN_TILING_STRATEGY_H__
+#pragma once
 
 #include <map>
 #include <vector>
@@ -48,4 +47,3 @@ inline std::vector<int32_t> GetFusedMatMulPriorities(NpuArch npuArch)
 } // namespace fused_matmul
 } // namespace optiling
 
-#endif // __OP_HOST_FUSED_MATMUL_BUILTIN_TILING_STRATEGY_H__

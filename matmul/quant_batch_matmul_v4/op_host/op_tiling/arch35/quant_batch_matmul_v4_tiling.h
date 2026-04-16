@@ -14,8 +14,7 @@
  * \brief
  */
 
-#ifndef QUANT_BATCH_MATMUL_V4_TILING_H
-#define QUANT_BATCH_MATMUL_V4_TILING_H
+#pragma once
 
 #include <cstdint>
 #include <vector>
@@ -289,4 +288,4 @@ protected:
     QuantBatchMatmulV4BasicBlockTiling tilingSolver_;
 };
 }  // namespace optiling
-#endif  // QUANT_BATCH_MATMUL_V4_TILING_H
+

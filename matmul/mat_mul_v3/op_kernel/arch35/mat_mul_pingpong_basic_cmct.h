@@ -12,8 +12,7 @@
  * \file mat_mul_pingpong_basic_cmct.h
  * \brief
  */
-#ifndef MAT_MUL_PINGPONG_BASIC_CMCT_H
-#define MAT_MUL_PINGPONG_BASIC_CMCT_H
+#pragma once
 
 #include "cmct/block/block_scheduler_policy.h"
 #include "cmct/block/block_scheduler_utils.h"
@@ -72,4 +71,4 @@ __aicore__ inline void MatMulActKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM,
     mm(params);
 }
 }
-#endif
+
