@@ -1792,7 +1792,7 @@ uint64_t MatmulV3BaseTiling::GetTotalSize(uint64_t m, uint64_t k, uint64_t n, ui
 }
 
 bool MatmulV3BaseTiling::DoBL1FullloadWithFixpipeTiling() {
-    if (!NeedSolveFixBound()) {
+    if (!NeedSolveFixBound() || SupportForceGrpAccForFp32()) {
         return false;
     }
     runInfo_.baseN = ops::CeilAlign(args_.nValue, N_ALIGNED);
@@ -1840,7 +1840,7 @@ bool MatmulV3BaseTiling::DoBL1FullloadWithFixpipeTiling() {
 bool MatmulV3BaseTiling::DoAL1FullLoadTiling()
 {
     // only support fp32, and resreict transpose attrs as network cases
-    if (!compileInfo_.supportL0c2out || args_.aType != ge::DT_FLOAT || args_.isATrans || !args_.isBTrans) {
+    if (!compileInfo_.supportL0c2out || args_.aType != ge::DT_FLOAT || args_.isATrans || !args_.isBTrans || SupportForceGrpAccForFp32()) {
         return false;
     }
     if (ShouldUseDeterministicMultiCoreSplitKwithSmallMN() && args_.mValue >= BASIC_ALIGN_8) {
@@ -1881,6 +1881,9 @@ bool MatmulV3BaseTiling::DoAL1FullLoadTiling()
 
 bool MatmulV3BaseTiling::DoBL1FullLoadTiling()
 {
+    if(SupportForceGrpAccForFp32()){
+        return false;
+    }
     uint64_t c0 = BLOCK_BYTE_SIZE / aDtypeSize_;
     uint64_t innerSizeA = args_.isATrans ? args_.mValue : args_.kValue;
     uint64_t outerSizeA = args_.isATrans ? args_.kValue : args_.mValue;
