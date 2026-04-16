@@ -68,15 +68,16 @@ __aicore__ inline void KernelSimdDynSort<X_T, IDS_T, Mode, CAST_MODE>::Init(GM_A
     pipe_->InitBuffer(outQueueRes_, 1, td_->sortBaseS * td_->sortBaseA * sizeof(X_T));
 
     uint64_t idsAlignB32 = Aligned(static_cast<uint64_t>(td_->sortBaseS * sizeof(uint32_t)), ONE_BLOCK_SIZE);
-    uint64_t idsAlign = Aligned(static_cast<uint64_t>(td_->sortBaseS * sizeof(CAST_T)), ONE_BLOCK_SIZE);
+    uint64_t idsAlign = Aligned(static_cast<uint64_t>(td_->sortBaseS * sizeof(IDS_T)), ONE_BLOCK_SIZE);
+    uint64_t idsCastAlign = Aligned(static_cast<uint64_t>(td_->sortBaseS * sizeof(CAST_T)), ONE_BLOCK_SIZE);
 
     pipe_->InitBuffer(idsQue_, DYN_SORT_DB_BUF, idsAlign);
     pipe_->InitBuffer(noDupBuf_, idsAlignB32 + SORT_PADDING);
     if constexpr (CAST_MODE == CAST_0) {
         pipe_->InitBuffer(sortedKeyBuf_, idsAlign + SORT_PADDING);
     } else {
-        pipe_->InitBuffer(idsCastQue_, DYN_SORT_DB_BUF, idsAlign);
-        pipe_->InitBuffer(sortedKeyBuf_, idsAlign + SORT_PADDING);
+        pipe_->InitBuffer(idsCastQue_, DYN_SORT_DB_BUF, idsCastAlign);
+        pipe_->InitBuffer(sortedKeyBuf_, idsCastAlign + SORT_PADDING);
     }
     pipe_->InitBuffer(sortedIdxBuf_, idsAlignB32);
     pipe_->InitBuffer(sharedTmpBuf_, Aligned(static_cast<uint64_t>(td_->sortSharedBufSize), ONE_BLOCK_SIZE));
