@@ -84,7 +84,7 @@ float bf16_to_float(uint16_t bf16)
             return sign ? -0.0f : 0.0f;
         } else {
             // 非规格化 BF16 -> float
-            return (sign ? -1.0f : 1.0f) * (float)mant * (1.0f / (1 << 7)) * (1.0f / (1, 127));
+            return (sign ? -1.0f : 1.0f) * (float)mant * (1.0f / (1 << 7) / std::ldexp(1.0, 126));
         }
     } else if (exp == 255) {
         //无穷大或 NaN
