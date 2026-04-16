@@ -208,7 +208,7 @@ static __aicore__ inline void CalcOutToA1DstAddr(Intf *self, const uint32_t stri
         uint32_t allWoExpand = woExpand;
         woExpand = ((self->ctx.realWoSize_ - 1) * self->ctx.tiling_->strideW) + 1;
         // 子wk可能不需要加载完整地wo参与计算，计算右侧wo跳过部分
-        uint32_t actualDstWoEndIdx = self->ctx.curWoRightIdx_ < 0 ? woExpand - 1 + self->ctx.curWoRightIdx_ : 0;
+        uint32_t actualDstWoEndIdx = self->ctx.curWoRightIdx_ < 0 ? allWoExpand - 1 + self->ctx.curWoRightIdx_ : 0;
         if (self->ctx.tiling_->strideW > 1 && actualDstWoEndIdx % self->ctx.tiling_->strideW) {
             // stride大于1时，可能存在结束位置刚好在前放大补0位置处，需要加载这一部分wo
             woExpand += (actualDstWoEndIdx - AlignDown(actualDstWoEndIdx, self->ctx.tiling_->strideW));
