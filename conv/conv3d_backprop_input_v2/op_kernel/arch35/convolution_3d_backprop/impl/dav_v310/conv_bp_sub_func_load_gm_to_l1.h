@@ -368,7 +368,7 @@ __aicore__ inline void LoadGmDataToB1(Intf *self, uint32_t kIdx, uint32_t curDkI
 {
     LocalTensor<typename Intf::SrcBT> useB1Buf = self->ctx.inQueL1B_.template AllocTensor<typename Intf::SrcBT>();
 
-    uint32_t curCinIdx = self->ctx.curNL1Idx_ * self->ctx.tiling_->stepN * self->ctx.tiling_->baseN;
+    uint32_t curCinIdx = self->ctx.curNIdx_ * self->ctx.tiling_->baseN;
     uint32_t curCinSize = CalcCurCinSizeB1(self, curCinIdx);
     uint32_t curCoutIdx = 0;
     uint32_t curCoutSize = 0;

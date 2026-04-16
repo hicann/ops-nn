@@ -190,7 +190,7 @@ static __aicore__ inline void InitParamsForKernelSplitH(Intf *self)
     uint32_t alignedCout = AlignUpC0<Intf>(self, self->ctx.tiling_->singleCoreCout);
     self->ctx.channelSize_ = curChannelSize > alignedCout ? alignedCout : curChannelSize;
     self->ctx.coutChannelSize_ = self->ctx.curStepKb_ * self->ctx.tiling_->baseK / self->ctx.splitHkWkList_[0];
-    uint32_t mL1Size = self->ctx.tiling_->baseM * self->ctx.tiling_->stepM;
+    uint32_t mL1Size = self->ctx.tiling_->baseM;
     mL1Size = mL1Size > self->ctx.tiling_->singleCoreM ? self->ctx.tiling_->singleCoreM : mL1Size;
     self->ctx.curHoSize_ = CalFmapH<Intf>(self, mL1Size);
 }
@@ -230,7 +230,7 @@ static __aicore__ inline void RecalcBaseUseMForKernelSplit(Intf *self)
     }
 
     // hi不对齐strideH时，会出现两个子kenrel计算得Msize不一样大得场景，需要重新计算baseUseN, 避免多搬
-    uint64_t curMIdx = self->ctx.curMStartIdx_ + self->ctx.curML0Idx_ * self->ctx.tiling_->baseM;
+    uint64_t curMIdx = self->ctx.curMStartIdx_ + self->ctx.curMIdx_ * self->ctx.tiling_->baseM;
     if (curMIdx > self->ctx.subKernelM_) {
         self->ctx.needComputeFlag_ = false;
         self->ctx.curHoSize_ = 0;

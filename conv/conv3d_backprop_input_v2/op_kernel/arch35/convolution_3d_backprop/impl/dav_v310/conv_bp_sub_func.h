@@ -32,7 +32,7 @@ template <class Intf>
 static __aicore__ inline void InitMmadParams(Intf *self)
 {
     self->ctx.mmad_.m = self->ctx.baseUseM_;
-    if (unlikely(self->ctx.curML0Idx_ == self->ctx.mIter_ - 1)) {
+    if (self->ctx.curMIdx_ == self->ctx.mIter_ - 1) {
         // 4用来替换除法运算
         self->ctx.mmad_.m = ((self->ctx.baseUseM_ + BLOCK_CUBE - 1) >> 4) << 4;
     }
@@ -61,7 +61,7 @@ static __aicore__ inline void MmadLocal(Intf *self, const LocalTensor<typename I
             // bias 通路，C矩阵初始值通过BT（C2）进行初始化
             self->ctx.mmad_.cmatrixInitVal = 0; //不初始化，使用bias的值
             self->ctx.mmad_.cmatrixSource = 1; // 第一次mmad，cmatrix值从BT buffer获取
-            uint64_t biasOffset = self->ctx.tiling_->isBiasFullLoad ? (self->ctx.curNL0Idx_ * self->ctx.tiling_->baseN) : 0;
+            uint64_t biasOffset = self->ctx.tiling_->isBiasFullLoad ? (self->ctx.curNIdx_ * self->ctx.tiling_->baseN) : 0;
             Mmad(l0c, l0a, l0b, self->ctx.biasBTBuf_[biasOffset], self->ctx.mmad_);
             self->ctx.mmad_.cmatrixSource = 0; // 后续值从l0c读取
         } else {
@@ -384,15 +384,15 @@ static __aicore__ inline uint64_t ComputeDstOffset(Intf *self, FixpipeParamsC310
         uint64_t singleCoreWorkspaceSize = singleCoreCinAlignBaseN * singleCoreMAlignBaseM *
             self->ctx.tiling_->singleCoreDin;
         dstOffset = (self->ctx.curDinIdx_ - self->ctx.curDinStartIdx_) * singleCoreCinAlignBaseN *
-            singleCoreMAlignBaseM + self->ctx.curNL0Idx_ * self->ctx.tiling_->baseN *
-            singleCoreMAlignBaseM + self->ctx.curML0Idx_ * self->ctx.tiling_->baseN *
+            singleCoreMAlignBaseM + self->ctx.curNIdx_ * self->ctx.tiling_->baseN *
+            singleCoreMAlignBaseM + self->ctx.curMIdx_ * self->ctx.tiling_->baseN *
             self->ctx.tiling_->baseM + GetBlockIdx() * singleCoreWorkspaceSize;
     } else {
         // loop2_dst_stride, element, c
         fixPipeParams.dstStride = self->ctx.diHiWi_; // dst N stride, loop2_dst_stride (unit: element)
-        dstOffset = static_cast<uint64_t>(self->ctx.curNL0Idx_) * self->ctx.tiling_->baseN * self->ctx.diHiWi_ + // cin offset
+        dstOffset = static_cast<uint64_t>(self->ctx.curNIdx_) * self->ctx.tiling_->baseN * self->ctx.diHiWi_ + // cin offset
             static_cast<uint64_t>(self->ctx.curDinIdx_) * self->ctx.hiWi_ + // di offset, remove useless data
-            static_cast<uint64_t>(self->ctx.curML0Idx_) * self->ctx.tiling_->baseM; // hi&wi offset
+            static_cast<uint64_t>(self->ctx.curMIdx_) * self->ctx.tiling_->baseM; // hi&wi offset
     }
     return dstOffset;
 }
@@ -443,7 +443,7 @@ static __aicore__ inline void LoadL0c2GmForNz2Dn(Intf *self, const GlobalTensor<
 #endif
     } else if (Intf::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT &&
         self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
-        uint64_t scaleAddr = self->ctx.curNL0Idx_ * self->ctx.tiling_->baseN;
+        uint64_t scaleAddr = self->ctx.curNIdx_ * self->ctx.tiling_->baseN;
         Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR>(output[dstOffset],
             useC1Buf, self->ctx.scaleL1Buf_[scaleAddr], fixPipeParams);
     } else {
@@ -456,9 +456,9 @@ template <class Intf>
 static __aicore__ inline void LoadL0c2GmForNz2Nd(Intf *self, const GlobalTensor<typename Intf::DstT> &output,
     LocalTensor<typename Intf::L0cT> &useC1Buf)
 {
-    uint64_t dstOffset = static_cast<uint64_t>(self->ctx.curNL0Idx_) * self->ctx.tiling_->baseN + // cin offset
+    uint64_t dstOffset = static_cast<uint64_t>(self->ctx.curNIdx_) * self->ctx.tiling_->baseN + // cin offset
                     static_cast<uint64_t>(self->ctx.curDinIdx_) * self->ctx.hiWi_ * self->ctx.tiling_->cin + // di offset, remove useless data
-                    static_cast<uint64_t>(self->ctx.curML0Idx_) * self->ctx.tiling_->baseM * self->ctx.tiling_->cin; // hi&wi offset
+                    static_cast<uint64_t>(self->ctx.curMIdx_) * self->ctx.tiling_->baseM * self->ctx.tiling_->cin; // hi&wi offset
 
     // NZ (1, cin1, hi, wi, cin0) -> ND (n, di, hi, wi, cin)
     //
@@ -488,7 +488,7 @@ template <class Intf>
 static __aicore__ inline void CalcCutInWIndexForOnlyH(Intf *self)
 {
     // singleCoreM 不对齐wi，M起始位置不一定在每行开头，需要加上curMStartIdx_来计算此时首地址对应位置
-    uint32_t mSize = self->ctx.curML0Idx_ * self->ctx.tiling_->baseM + self->ctx.curMStartIdx_;
+    uint32_t mSize = self->ctx.curMIdx_ * self->ctx.tiling_->baseM + self->ctx.curMStartIdx_;
     uint32_t curWiPos = self->ctx.tiling_->wi - (mSize % self->ctx.tiling_->wi);
     self->ctx.headWi_ = (curWiPos == self->ctx.tiling_->wi) ? 0 : curWiPos;
     if (self->ctx.headWi_ > self->ctx.baseUseM_) {
@@ -509,7 +509,7 @@ static __aicore__ inline void LoadL0c2GmForKernelSplitHFixPipe(Intf *self, const
 {
     if (Intf::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT &&
         self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
-        uint64_t scaleAddr = self->ctx.curNL0Idx_ * self->ctx.tiling_->baseN;
+        uint64_t scaleAddr = self->ctx.curNIdx_ * self->ctx.tiling_->baseN;
         Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR>(output[dstOffset],
             useC1Buf[srcOffset], self->ctx.scaleL1Buf_[scaleAddr], fixPipeParams);
     } else {
@@ -523,10 +523,10 @@ static __aicore__ inline void LoadL0c2GmForKernelSplitH(Intf *self, const Global
     LocalTensor<typename Intf::L0cT> &useC1Buf)
 {
     // NZ (1, cin1, splithi, wi, cin0) -> DN (n, cin, di, splithi, wi)
-    uint32_t mSize = self->ctx.curML0Idx_ * self->ctx.tiling_->baseM;
+    uint32_t mSize = self->ctx.curMIdx_ * self->ctx.tiling_->baseM;
     int64_t skipDstOffset = self->ctx.tiling_->wi * (self->ctx.tiling_->strideH - 1);
     uint32_t curSkipMSize = (mSize / self->ctx.tiling_->wi) * skipDstOffset;
-    int64_t dstOffset = self->ctx.curNL0Idx_ * self->ctx.tiling_->baseN * self->ctx.diHiWi_ + // cin offset
+    int64_t dstOffset = self->ctx.curNIdx_ * self->ctx.tiling_->baseN * self->ctx.diHiWi_ + // cin offset
             self->ctx.curDinIdx_ * self->ctx.hiWi_ + // di offset, remove useless data
             mSize + curSkipMSize; // hi&wi offset
 
@@ -652,7 +652,7 @@ __aicore__ inline void LoadBiasToBT(Intf *self)
     DataCopyParams dataCopyParams(1, blockBytes, 0, 0);
     uint8_t rightPadding = DivCeil(blockBytes, ONE_BLK_SIZE) * ONE_BLK_SIZE / sizeof(typename Intf::BiasT) - btCinSize;
     DataCopyPadParams padParams(true, 0, rightPadding, 0);
-    uint64_t biasOffset = self->ctx.curCinStartIdx_ + self->ctx.curNL0Idx_ * self->ctx.tiling_->baseN;
+    uint64_t biasOffset = self->ctx.curCinStartIdx_ + self->ctx.curNIdx_ * self->ctx.tiling_->baseN;
 #ifndef __CCE_KT_TEST__
     DataCopyPad<typename Intf::BiasT>(useBiasL1, self->ctx.biasGlobal_[biasOffset], dataCopyParams, padParams);
 #endif

@@ -781,8 +781,6 @@ bool Conv3DBackpropInputV2TilingArch35::CalBaseBlockTiling(
 
     tilingParams.stepKa = stepKa;
     tilingParams.stepKb = stepKb;
-    tilingParams.stepM = 1;
-    tilingParams.stepN = 1;
     tilingParams.stepBatch = 1;
     tilingParams.stepGroup = 1;
     tilingParams.iterateOrder = static_cast<uint32_t>(IterateOrder::ORDER_N);
@@ -820,19 +818,13 @@ void Conv3DBackpropInputV2TilingArch35::CalTbeBlockTiling(TilingValueDavid& tili
     tilingParams.al1Pbuffer = static_cast<uint32_t>(tbeTiling_.db_al1);
     tilingParams.bl1Pbuffer = static_cast<uint32_t>(tbeTiling_.db_bl1);
     tbeTiling_.k_al1 = (tbeTiling_.k_al1 > static_cast<int32_t>(tilingParams.singleCoreCout1)) ?
-                           static_cast<int32_t>(tilingParams.singleCoreCout1) :
-                           tbeTiling_.k_al1;
+                           static_cast<int32_t>(tilingParams.singleCoreCout1) : tbeTiling_.k_al1;
     tbeTiling_.k_bl1 = (tbeTiling_.k_bl1 > static_cast<int32_t>(tilingParams.singleCoreCout1)) ?
-                           static_cast<int32_t>(tilingParams.singleCoreCout1) :
-                           tbeTiling_.k_bl1;
+                           static_cast<int32_t>(tilingParams.singleCoreCout1) : tbeTiling_.k_bl1;
     tilingParams.stepKa = Ops::Base::CeilDiv(
-        static_cast<uint64_t>(tbeTiling_.k_al1) * runInfo_.kernel_h * runInfo_.kernel_w,
-        static_cast<uint64_t>(baseK / blockSize_));
+        static_cast<uint64_t>(tbeTiling_.k_al1) * runInfo_.kernel_h * runInfo_.kernel_w, static_cast<uint64_t>(baseK / blockSize_));
     tilingParams.stepKb = Ops::Base::CeilDiv(
-        static_cast<uint64_t>(tbeTiling_.k_bl1) * runInfo_.kernel_h * runInfo_.kernel_w,
-        static_cast<uint64_t>(baseK / blockSize_));
-    tilingParams.stepM = 1;
-    tilingParams.stepN = 1;
+        static_cast<uint64_t>(tbeTiling_.k_bl1) * runInfo_.kernel_h * runInfo_.kernel_w, static_cast<uint64_t>(baseK / blockSize_));
     tilingParams.stepBatch = 1;
     tilingParams.stepGroup = 1;
     tilingParams.iterateOrder = static_cast<uint32_t>(IterateOrder::ORDER_N);
@@ -869,7 +861,7 @@ void Conv3DBackpropInputV2TilingArch35::InitTilingValue(TilingValueDavid& tiling
         // fixpipe bound的case切Dk性能会劣化
         enableSplitDk_ = (runInfo_.kernel_d > 1) && (runInfo_.enlarge == 1) &&
                          (tilingParams.baseK * tilingParams.stepKb >= singleShapeK) &&
-                         (tilingParams.baseN * tilingParams.stepN >= tilingParams.singleCoreCin) &&
+                         (tilingParams.baseN >= tilingParams.singleCoreCin) &&
                          runInfo_.stride_d == 1 && runInfo_.dilation_d == 1 &&
                          (singleShapeK >= FP32_FIXPIPE_BOUND_K_LIMIT);
         uint64_t singleCoreUsrSpaceSize =
@@ -925,9 +917,6 @@ void Conv3DBackpropInputV2TilingArch35::SetTilingValue(
     dxt.baseM = tilingParams.baseM;
     dxt.baseK = tilingParams.baseK;
     dxt.baseN = tilingParams.baseN;
-
-    dxt.stepM = tilingParams.stepM;
-    dxt.stepN = tilingParams.stepN;
 
     dxt.stepKa = tilingParams.stepKa;
     dxt.stepKb = tilingParams.stepKb;
@@ -1108,8 +1097,7 @@ void Conv3DBackpropInputV2TilingArch35::PrintTilingData()
        << " singleCoreGroup: " << tiling.singleCoreGroup << " singleCoreCout: " << tiling.singleCoreCout
        << " singleCoreCin: " << tiling.singleCoreCin << " singleCoreDin: " << tiling.singleCoreDin
        << " baseM: " << tiling.baseM << " baseK: " << tiling.baseK << " baseN: " << tiling.baseN
-       << " stepM: " << tiling.stepM << " stepN: " << tiling.stepN << " stepKa: " << tiling.stepKa
-       << " stepKb: " << tiling.stepKb << " singleIterateDk: " << tiling.singleIterateDk
+       << " stepKa: " << tiling.stepKa << " stepKb: " << tiling.stepKb << " singleIterateDk: " << tiling.singleIterateDk
        << " singleCoreBatch: " << tiling.singleCoreBatch << " singleCoreM: " << tiling.singleCoreM
        << " enableVecTrans: " << static_cast<uint32_t>(tiling.enableVecTrans)
        << " kSCoutFullLoad: " << ksTiling.kSCoutFullLoad << " kSUseWorkSpace: " << ksTiling.kSUseWorkSpace

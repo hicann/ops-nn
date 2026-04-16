@@ -101,8 +101,6 @@ TUNING_TILING_DATA_FIELD_DEF(uint64_t, singleCoreDin);
 TUNING_TILING_DATA_FIELD_DEF(uint64_t, baseM);
 TUNING_TILING_DATA_FIELD_DEF(uint64_t, baseK);
 TUNING_TILING_DATA_FIELD_DEF(uint64_t, baseN);
-TUNING_TILING_DATA_FIELD_DEF(uint64_t, stepM);
-TUNING_TILING_DATA_FIELD_DEF(uint64_t, stepN);
 TUNING_TILING_DATA_FIELD_DEF(uint64_t, stepKa);
 TUNING_TILING_DATA_FIELD_DEF(uint64_t, stepKb);
 TUNING_TILING_DATA_FIELD_DEF(uint64_t, singleIterateDk);
@@ -150,8 +148,6 @@ DECLARE_SCHEMA(Conv3DBackpropInputTunerTiling,
   FIELD(Conv3DBackpropInputTunerTiling, baseM),
   FIELD(Conv3DBackpropInputTunerTiling, baseK),
   FIELD(Conv3DBackpropInputTunerTiling, baseN),
-  FIELD(Conv3DBackpropInputTunerTiling, stepM),
-  FIELD(Conv3DBackpropInputTunerTiling, stepN),
   FIELD(Conv3DBackpropInputTunerTiling, stepKa),
   FIELD(Conv3DBackpropInputTunerTiling, stepKb),
   FIELD(Conv3DBackpropInputTunerTiling, singleIterateDk),

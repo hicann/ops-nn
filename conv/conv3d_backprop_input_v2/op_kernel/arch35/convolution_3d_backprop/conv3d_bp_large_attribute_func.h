@@ -57,7 +57,7 @@ static __aicore__ inline void ComputeForTilingHkWk(Intf *self, LocalTensor<typen
     uint32_t khDilation = (self->ctx.tiling_->hk - 1) * self->ctx.tiling_->dilationH + 1;
     uint32_t kwDilation = (self->ctx.tiling_->wk - 1) * self->ctx.tiling_->dilationW + 1;
     uint32_t woExpand = (self->ctx.tiling_->wo - 1) * self->ctx.tiling_->strideW + 1;
-    int32_t woStartIdx = (self->ctx.curMStartIdx_ + self->ctx.curML0Idx_ * self->ctx.tiling_->baseM) % self->ctx.tiling_->wi; // M循环的起始Wi位置
+    int32_t woStartIdx = (self->ctx.curMStartIdx_ + self->ctx.curMIdx_ * self->ctx.tiling_->baseM) % self->ctx.tiling_->wi; // M循环的起始Wi位置
     uint32_t curMStartPt = self->ctx.load3d_.mStartPt;
     for (uint64_t curInnerKdIdx = self->ctx.curDkIdx_; curInnerKdIdx < self->ctx.curDkIdx_ + self->ctx.tiling_->singleIterateDk; curInnerKdIdx++) {
         if constexpr (Intf::conv3dConfig.groupMode == TPL_GROUP_MODE_ENLARGE) {
@@ -113,7 +113,7 @@ static __aicore__ inline void UpdateWkComputeStatus(Intf *self)
 
     uint32_t kwDilation = (self->ctx.tiling_->wk - 1) * self->ctx.tiling_->dilationW + 1;
     uint32_t woExpand = (self->ctx.tiling_->wo - 1) * self->ctx.tiling_->strideW + 1;
-    int32_t woStartIdx = (self->ctx.curMStartIdx_ + self->ctx.curML0Idx_ * self->ctx.tiling_->baseM) %
+    int32_t woStartIdx = (self->ctx.curMStartIdx_ + self->ctx.curMIdx_ * self->ctx.tiling_->baseM) %
         self->ctx.tiling_->wi; // M循环的起始Wi位置
     bool isKNeedCompute = false;
     for (int64_t curWkIdx = 0; curWkIdx < self->ctx.tiling_->wk; curWkIdx++) {      

@@ -67,8 +67,6 @@ __aicore__ inline void CheckTiling(Intf *self)
         "orignal hk is %d , which should be larger than 0", self->ctx.tiling_->hk);
     ascendc_assert((self->ctx.tiling_->wk > 0),
         "orignal wk is %d , which should be larger than 0", self->ctx.tiling_->wk);
-    ascendc_assert((self->ctx.tiling_->stepM == 1 && self->ctx.tiling_->stepN == 1),
-        "stepM or stepN is invalid.");
     ascendc_assert((self->ctx.tiling_->singleCoreBatch > 0),
         "singleCoreBatch is %d , which should be larger than 0", self->ctx.tiling_->singleCoreBatch);
     ascendc_assert((self->ctx.tiling_->singleCoreCout > 0),
@@ -81,10 +79,6 @@ __aicore__ inline void CheckTiling(Intf *self)
         "baseK is %d , which should be larger than 0", self->ctx.tiling_->baseK);
     ascendc_assert((self->ctx.tiling_->baseN > 0),
         "baseN is %d , which should be larger than 0", self->ctx.tiling_->baseN);
-    ascendc_assert((self->ctx.tiling_->stepM > 0),
-        "stepM is %d , which should be larger than 0", self->ctx.tiling_->stepM);
-    ascendc_assert((self->ctx.tiling_->stepN > 0),
-        "stepN is %d , which should be larger than 0", self->ctx.tiling_->stepN);
     ascendc_assert((self->ctx.tiling_->stepKa > 0),
         "stepKa is %d , which should be larger than 0", self->ctx.tiling_->stepKa);
     ascendc_assert((self->ctx.tiling_->stepKb > 0),
@@ -165,7 +159,7 @@ __aicore__ inline void InitFullLoadFlag(Intf *self)
         return;
     }
 
-    self->ctx.isB1FullLoadFlag_ = (self->ctx.tiling_->stepN * self->ctx.tiling_->baseN >= self->ctx.tiling_->singleCoreCin) &&
+    self->ctx.isB1FullLoadFlag_ = (self->ctx.tiling_->baseN >= self->ctx.tiling_->singleCoreCin) &&
         (self->ctx.tiling_->enlarge == 1);
     if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
         if (!self->ctx.kSCoutFullLoad_) {
@@ -239,13 +233,9 @@ __aicore__ inline void InitParamsPart2(Intf *self)
     self->ctx.tailM_ = 0;
     self->ctx.tailN_ = 0;
     self->ctx.tailK_ = 0;
-    self->ctx.curML0Idx_ = 0;
-    self->ctx.curNL0Idx_ = 0;
-    self->ctx.curStepM_ = 0;
-    self->ctx.curStepN_ = 0;
+    self->ctx.curMIdx_ = 0;
+    self->ctx.curNIdx_ = 0;
     self->ctx.curLoadKbl1_ = 0;
-    self->ctx.curNL1Idx_ = 0;
-    self->ctx.curML1Idx_ = 0;
     self->ctx.curDinIdx_ = 0;
     self->ctx.curDkIdx_ = 0;
     self->ctx.kIterStepKaTail = 0;
@@ -291,7 +281,7 @@ static __aicore__ inline void InitParamsForNormal(Intf *self)
         uint32_t alignedCout = AlignUpC0<Intf>(self, self->ctx.tiling_->singleCoreCout);
         self->ctx.channelSize_ = curChannelSize > alignedCout ? alignedCout : curChannelSize;
     }
-    uint32_t mL1Size = self->ctx.tiling_->baseM * self->ctx.tiling_->stepM;
+    uint32_t mL1Size = self->ctx.tiling_->baseM;
     mL1Size = mL1Size > self->ctx.tiling_->singleCoreM ? self->ctx.tiling_->singleCoreM : mL1Size;
     self->ctx.curHoSize_ = CalFmapH<Intf>(self, mL1Size);
 }
@@ -358,17 +348,17 @@ __aicore__ inline void CalcMatrixByteSize(Intf *self, uint32_t &aMatrixByteSize,
         hoSize = self->ctx.tiling_->ho < hoSize ? self->ctx.tiling_->ho : hoSize;
         aMatrixByteSize = hoSize * self->ctx.tiling_->wo * self->ctx.channelSize_ * sizeof(typename Intf::SrcAT);
         if (self->ctx.kSCoutFullLoad_) {
-            bMatrixByteSize = self->ctx.tiling_->stepN * self->ctx.tiling_->baseN *
+            bMatrixByteSize = self->ctx.tiling_->baseN *
                 self->ctx.channelSize_ * self->ctx.singleShapeHWk_ * sizeof(typename Intf::SrcBT);
         } else {
-            bMatrixByteSize = self->ctx.tiling_->stepN * self->ctx.tiling_->baseN *
+            bMatrixByteSize = self->ctx.tiling_->baseN *
                 self->ctx.curStepKb_ * self->ctx.tiling_->baseK * sizeof(typename Intf::SrcBT);
         }
     } else if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_H) {
         uint32_t hoSize = self->ctx.tiling_->ho < self->ctx.curHoSize_ ? self->ctx.tiling_->ho : self->ctx.curHoSize_;
         aMatrixByteSize = hoSize * self->ctx.tiling_->wo * self->ctx.tiling_->strideW *
             self->ctx.channelSize_ * sizeof(typename Intf::SrcAT);
-        bMatrixByteSize = self->ctx.tiling_->stepN * self->ctx.tiling_->baseN *
+        bMatrixByteSize = self->ctx.tiling_->baseN *
             self->ctx.curStepKb_ * self->ctx.tiling_->baseK * sizeof(typename Intf::SrcBT);
     } else {
         uint32_t hoSize = self->ctx.hoExpand_ < static_cast<uint64_t>(self->ctx.curHoSize_) ?
@@ -385,7 +375,7 @@ __aicore__ inline void CalcMatrixByteSize(Intf *self, uint32_t &aMatrixByteSize,
                 DivHkWk<Intf>(self, self->ctx.curStepKa_ * self->ctx.tiling_->baseK) *
                 sizeof(typename Intf::SrcAT);
         }
-        bMatrixByteSize = self->ctx.tiling_->stepN * self->ctx.tiling_->baseN *
+        bMatrixByteSize = self->ctx.tiling_->baseN *
             self->ctx.curStepKb_ * self->ctx.tiling_->baseK * sizeof(typename Intf::SrcBT);
     }
 }
@@ -549,19 +539,6 @@ static __aicore__ inline void Compute(Intf *self)
 }
 
 template <class Intf>
-static __aicore__ inline void UpdateIdxAndStep(Intf *self)
-{
-    self->ctx.curML0Idx_ = self->ctx.curML1Idx_;
-    self->ctx.curNL0Idx_ = self->ctx.curNL1Idx_;
-    self->ctx.curStepM_ = (self->ctx.mIter_ - self->ctx.curML0Idx_) > self->ctx.tiling_->stepM
-                              ? self->ctx.tiling_->stepM
-                              : (self->ctx.mIter_ - self->ctx.curML1Idx_);
-    self->ctx.curStepN_ = (self->ctx.nIter_ - self->ctx.curNL0Idx_) > self->ctx.tiling_->stepN
-                              ? self->ctx.tiling_->stepN
-                              : (self->ctx.nIter_ - self->ctx.curNL1Idx_);
-}
-
-template <class Intf>
 static __aicore__ inline void UpdateCurHoSize(Intf *self)
 {
     // 要从当前核hoStartIdx开始算，普通场景可以跨行，要从GM起点开始计算
@@ -570,7 +547,7 @@ static __aicore__ inline void UpdateCurHoSize(Intf *self)
         curWi = self->ctx.splitWi_;
     }
 
-    uint64_t curMIdx = self->ctx.curMStartIdx_ + self->ctx.curML0Idx_ * self->ctx.tiling_->baseM;
+    uint64_t curMIdx = self->ctx.curMStartIdx_ + self->ctx.curMIdx_ * self->ctx.tiling_->baseM;
     uint32_t curHiIdx = curMIdx / curWi;
     uint32_t curWiIdx = curMIdx - curHiIdx * curWi;
     self->ctx.load3d_.mStartPt = curWiIdx;
@@ -640,8 +617,8 @@ static __aicore__ inline void UpdateFullLoadL1Status(Intf *self)
     if (!self->ctx.isB1FullLoadFlag_ && !self->ctx.isA1FullLoadFlag_) {
         return;
     }
-    bool isLastMNIter = (self->ctx.curML0Idx_ == self->ctx.mIter_ - 1) &&
-        self->ctx.curNL0Idx_ == self->ctx.nIter_ - 1;
+    bool isLastMNIter = (self->ctx.curMIdx_ == self->ctx.mIter_ - 1) &&
+        self->ctx.curNIdx_ == self->ctx.nIter_ - 1;
     bool isLastDIter = (self->ctx.tiling_->dk == 1 && self->ctx.curDinIdx_ ==
         self->ctx.curDinStartIdx_ + self->ctx.singleShapeDin_ - 1) ||
         self->ctx.tiling_->dk > 1;
@@ -670,7 +647,7 @@ template <class Intf>
 static __aicore__ inline void UpdateL1ComputeInfo(Intf *self)
 {
     self->ctx.baseUseM_ =
-        (self->ctx.curML0Idx_ + 1 == self->ctx.mIter_) ? self->ctx.tailM_ : self->ctx.tiling_->baseM;
+        (self->ctx.curMIdx_ + 1 == self->ctx.mIter_) ? self->ctx.tailM_ : self->ctx.tiling_->baseM;
     if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_NO_SPLIT_KERNEL) {
         uint32_t Hd = (self->ctx.tiling_->hk - 1) * self->ctx.tiling_->dilationH + 1;
         uint32_t Wd = (self->ctx.tiling_->wk - 1) * self->ctx.tiling_->dilationW + 1;
@@ -684,7 +661,7 @@ static __aicore__ inline void UpdateL1ComputeInfo(Intf *self)
         }
     }
     self->ctx.baseUseN_ =
-        (self->ctx.curNL0Idx_ + 1 == self->ctx.nIter_) ? self->ctx.tailN_ : self->ctx.tiling_->baseN;
+        (self->ctx.curNIdx_ + 1 == self->ctx.nIter_) ? self->ctx.tailN_ : self->ctx.tiling_->baseN;
     self->ctx.needComputeFlag_ = true;
     UpdateCurHoSize<Intf>(self);
     UpdateKComputeStatus<Intf>(self);
@@ -850,22 +827,14 @@ struct Iterate {
                 self->ctx.groupIterIdx_ = 0;
             }
             self->ctx.needComputeFlag_ = true;
-            self->ctx.curML0Idx_ = 0;
-            self->ctx.curNL0Idx_ = 0;
-            self->ctx.curML1Idx_ = 0;
-            self->ctx.curNL1Idx_ = 0;
+            self->ctx.curMIdx_ = 0;
+            self->ctx.curNIdx_ = 0;
             self->ctx.curDinIdx_ = self->ctx.curDinStartIdx_;
             self->ctx.curDkIdx_ = 0;
             self->ctx.curHoIdx_ = self->ctx.curHoStartIdx_;
             self->ctx.isFirstIter_ = false;
             self->ctx.isLoadA1_ = true;
             self->ctx.isFreeA1_ = false;
-            self->ctx.curStepM_ = (self->ctx.mIter_ - self->ctx.curML0Idx_) > self->ctx.tiling_->stepM
-                                      ? self->ctx.tiling_->stepM
-                                      : (self->ctx.mIter_ - self->ctx.curML1Idx_);
-            self->ctx.curStepN_ = (self->ctx.nIter_ - self->ctx.curNL0Idx_) > self->ctx.tiling_->stepN
-                                      ? self->ctx.tiling_->stepN
-                                      : (self->ctx.nIter_ - self->ctx.curNL1Idx_);
             if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
                 self->ctx.rearrangeHIndex_ = 0;
                 self->ctx.rearrangeWIndex_ = 0;
@@ -882,7 +851,7 @@ struct Iterate {
                     self->ctx.isFreeB1_ = false;
                 }
             }
-        } else if (likely(self->ctx.tiling_->iterateOrder == static_cast<int>(IterateOrder::ORDER_N))) {
+        } else {
             if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
                 if (IterateForKernelSplit<Intf>(self)) {
                     UpdateFullLoadL1Status<Intf>(self);
@@ -893,85 +862,13 @@ struct Iterate {
                     return true;
                 }
             }
-            if (++self->ctx.curML0Idx_ >= self->ctx.curML1Idx_ + self->ctx.curStepM_) {
-                self->ctx.curML0Idx_ = self->ctx.curML1Idx_;
-                if (++self->ctx.curNL0Idx_ >= self->ctx.curNL1Idx_ + self->ctx.curStepN_) {
-                    self->ctx.curML1Idx_ += self->ctx.curStepM_;
-                    if (self->ctx.curNL0Idx_ >= self->ctx.nIter_ && self->ctx.curML1Idx_ >= self->ctx.mIter_) {
-                        self->ctx.curML1Idx_ = 0;
-                        self->ctx.curNL1Idx_ = 0;
-                        if (++self->ctx.curDinIdx_ >= self->ctx.curDinStartIdx_ + self->ctx.singleShapeDin_) {
-                            return false;
-                        }
+            if (++self->ctx.curMIdx_ >= self->ctx.mIter_) {
+                self->ctx.curMIdx_ = 0;
+                if (++self->ctx.curNIdx_ >= self->ctx.nIter_) {
+                    self->ctx.curNIdx_ = 0;
+                    if (++self->ctx.curDinIdx_ >= self->ctx.curDinStartIdx_ + self->ctx.singleShapeDin_) {
+                        return false;
                     }
-                    if (self->ctx.curML1Idx_ >= self->ctx.mIter_) {
-                        self->ctx.curML1Idx_ = 0;
-                        self->ctx.curNL1Idx_ += self->ctx.curStepN_;
-                    }
-                    UpdateIdxAndStep<Intf>(self);
-                }
-            }
-        } else if (unlikely(self->ctx.tiling_->iterateOrder == static_cast<int>(IterateOrder::ORDER_K))) {
-            if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
-                if (IterateForKernelSplit<Intf>(self)) {
-                    UpdateFullLoadL1Status<Intf>(self);
-                    if (unlikely(self->ctx.tiling_->hk == 1)) {
-                        return true;
-                    }
-                    Compute<Intf>(self);
-                    return true;
-                }
-            }
-            if (++self->ctx.curML0Idx_ >= self->ctx.curML1Idx_ + self->ctx.curStepM_) {
-                self->ctx.curML0Idx_ = self->ctx.curML1Idx_;
-                if (++self->ctx.curNL0Idx_ >= self->ctx.curNL1Idx_ + self->ctx.curStepN_) {
-                    self->ctx.curML1Idx_ += self->ctx.curStepM_;
-                    if (self->ctx.curNL0Idx_ >= self->ctx.nIter_ && self->ctx.curML1Idx_ >= self->ctx.mIter_) {
-                        self->ctx.curML1Idx_ = 0;
-                        self->ctx.curNL1Idx_ = 0;
-                        if (++self->ctx.curDinIdx_ >= self->ctx.curDinStartIdx_ + self->ctx.singleShapeDin_) {
-                            self->ctx.curDinIdx_ = self->ctx.curDinStartIdx_;
-                            self->ctx.curDkIdx_ += self->ctx.tiling_->singleIterateDk;
-                            if (self->ctx.curDkIdx_ >= self->ctx.tiling_->dk) {
-                                return false;
-                            }
-                            self->ctx.isLastDk_ = (self->ctx.curDkIdx_ == self->ctx.tiling_->dk - 1);
-                        }
-                    }
-                    if (self->ctx.curML1Idx_ >= self->ctx.mIter_) {
-                        self->ctx.curML1Idx_ = 0;
-                        self->ctx.curNL1Idx_ += self->ctx.curStepN_;
-                    }
-                    UpdateIdxAndStep<Intf>(self);
-                }
-            }
-        } else {  // order_M
-            if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
-                if (IterateForKernelSplit<Intf>(self)) {
-                    UpdateFullLoadL1Status<Intf>(self);
-                    if (unlikely(self->ctx.tiling_->hk == 1)) {
-                        return true;
-                    }
-                    Compute<Intf>(self);
-                    return true;
-                }
-            }
-            if (++self->ctx.curNL0Idx_ >= self->ctx.curNL1Idx_ + self->ctx.curStepN_) {
-                self->ctx.curNL0Idx_ = self->ctx.curNL1Idx_;
-                if (++self->ctx.curML0Idx_ >= self->ctx.curML1Idx_ + self->ctx.curStepM_) {
-                    self->ctx.curNL1Idx_ += self->ctx.curStepN_;
-                    if (self->ctx.curML0Idx_ >= self->ctx.mIter_ && self->ctx.curNL1Idx_ >= self->ctx.nIter_) {
-                        self->ctx.curML1Idx_ = 0;
-                        self->ctx.curNL1Idx_ = 0;
-                        if (++self->ctx.curDinIdx_ >= self->ctx.curDinStartIdx_ + self->ctx.singleShapeDin_) {
-                            return false;
-                        }
-                    }
-                    if (self->ctx.curNL1Idx_ >= self->ctx.nIter_) {
-                        self->ctx.curNL1Idx_ = 0;
-                        self->ctx.curML1Idx_ += self->ctx.curStepM_;
-                    }
-                    UpdateIdxAndStep<Intf>(self);
                 }
             }
         }

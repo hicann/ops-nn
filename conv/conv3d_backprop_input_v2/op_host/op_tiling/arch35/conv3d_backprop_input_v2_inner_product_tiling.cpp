@@ -356,7 +356,7 @@ void Conv3DDXV2InnerProductTiling::SetTilingCondition(
         return;
     }
 
-    if (runInfo_.filterFormat == ge::FORMAT_NDHWC && l0Params.baseN * l1Params.stepN >= kernelHW) {
+    if (runInfo_.filterFormat == ge::FORMAT_NDHWC && l0Params.baseN >= kernelHW) {
         loadB2Condition_ = B2_REVERSE_ONLY; // 性能优化分支，加快格式转换效率
     } else if (runInfo_.filterFormat == ge::FORMAT_NCDHW && kernelDHW * runInfo_.dedx_cin * dtypeByteL0b_ <= BYTE_64) {
         loadB2Condition_ = B2_REVERSE_ONLY; // 性能优化分支，加快逆序效率
@@ -389,8 +389,6 @@ void Conv3DDXV2InnerProductTiling::SetCommonTilingData(
     dxt.baseM = l0Params.baseM;
     dxt.baseK = l0Params.baseK;
     dxt.baseN = l0Params.baseN;
-    dxt.stepM = l1Params.stepM;
-    dxt.stepN = l1Params.stepN;
     dxt.stepKa = l1Params.stepKa;
     dxt.stepKb = l1Params.stepKb;
 
@@ -592,8 +590,6 @@ void Conv3DDXV2InnerProductTiling::TranslateTuningData(std::shared_ptr<tuningtil
     tilingData_.conv3DDxTiling.baseM = tunerTiling->baseM;
     tilingData_.conv3DDxTiling.baseK = tunerTiling->baseK;
     tilingData_.conv3DDxTiling.baseN = tunerTiling->baseN;
-    tilingData_.conv3DDxTiling.stepM = tunerTiling->stepM;
-    tilingData_.conv3DDxTiling.stepN = tunerTiling->stepN;
     tilingData_.conv3DDxTiling.stepKa = tunerTiling->stepKa;
     tilingData_.conv3DDxTiling.stepKb = tunerTiling->stepKb;
     tilingData_.conv3DDxTiling.singleIterateDk = tunerTiling->singleIterateDk;
@@ -700,7 +696,7 @@ void Conv3DDXV2InnerProductTiling::CalcBL1Size(
         copyLine = TWO;
     }
 
-    bL1Size = l1Params.bl1Pbuffer * dtypeByteL0b_ * l1Params.stepN * l0Params.baseN * copyLine * tilingRunInfo_.lenHkWkC0;
+    bL1Size = l1Params.bl1Pbuffer * dtypeByteL0b_ * l0Params.baseN * copyLine * tilingRunInfo_.lenHkWkC0;
 }
 
 bool Conv3DDXV2InnerProductTiling::IsL1ParamsValid(const L1TilingParams& l1Params, const L0TilingParams& l0Params)
@@ -719,7 +715,7 @@ bool Conv3DDXV2InnerProductTiling::IsL1ParamsValid(const L1TilingParams& l1Param
     }
     bool isL1SplitHk = tilingRunInfo_.tilingHkWkMode != NO_TILING_HWK;
     uint64_t coutNum = std::max(l1Params.stepKa * l0Params.baseK / kernelHW, ONE_U64);
-    uint64_t a1PixelNum = static_cast<uint64_t>(CalFmapH(l1Params.stepM * l0Params.baseM, isL1SplitHk)) *
+    uint64_t a1PixelNum = static_cast<uint64_t>(CalFmapH(l0Params.baseM, isL1SplitHk)) *
         runInfo_.dedy_w * runInfo_.stride_w * coutNum;
     if (tilingRunInfo_.tilingHkWkMode == TILING_HK_WK) {
         a1PixelNum = BASIC_BLOCK_SIZE_256 * coutNum;    // 切hkwk时, 无需加载完整wo, 且此时最大baseM为256,切hk时，wi=1特殊场景
@@ -903,8 +899,6 @@ void Conv3DDXV2InnerProductTiling::UpdateIsBiasFullLoad(L1TilingParams& l1Params
 void Conv3DDXV2InnerProductTiling::InitL1Params(L1TilingParams& l1Params)
 {
     l1Params.iterateOrder = 1U; // 默认orderN, 暂无左矩阵全载逻辑
-    l1Params.stepM = ONE_U32;
-    l1Params.stepN = ONE_U32; // 固定1, 暂不支持其他场景
     UpdateIsBiasFullLoad(l1Params);
 }
 
@@ -1018,11 +1012,11 @@ void Conv3DDXV2InnerProductTiling::CalStepK(L1TilingParams& l1Params, const L0Ti
     l1Params.al1Pbuffer = DB_ON;
     l1Params.bl1Pbuffer = DB_ON;
 
-    L1TilingParams params1 = {l1Params.al1Pbuffer,  l1Params.bl1Pbuffer, l1Params.stepM, l1Params.stepN, 1, 1,
+    L1TilingParams params1 = {l1Params.al1Pbuffer,  l1Params.bl1Pbuffer, 1, 1,
                               l1Params.iterateOrder};
     EqualL1MatchStepMNK(params1, l0Params);
 
-    L1TilingParams params2 = {l1Params.al1Pbuffer,  l1Params.bl1Pbuffer, l1Params.stepM, l1Params.stepN, 1, 1,
+    L1TilingParams params2 = {l1Params.al1Pbuffer,  l1Params.bl1Pbuffer, 1, 1,
                               l1Params.iterateOrder};
     LadderMatchStepMNK(params2, l0Params);
 
@@ -1043,7 +1037,7 @@ void Conv3DDXV2InnerProductTiling::LadderMatchStepKWithFullLoad(
     uint32_t stepKa = stepKb;
     while (stepKa > ONE_U32) {
         L1TilingParams params = {
-            l1Params.al1Pbuffer,  l1Params.bl1Pbuffer, l1Params.stepM, l1Params.stepN, stepKa, stepKb,
+            l1Params.al1Pbuffer,  l1Params.bl1Pbuffer, stepKa, stepKb,
             l1Params.iterateOrder};
         if (IsL1ParamsValid(params, l0Params) && stepKb % stepKa == 0U) {
             break;
@@ -1066,7 +1060,7 @@ void Conv3DDXV2InnerProductTiling::LadderMatchStepMNK(L1TilingParams& l1Params, 
     uint32_t stepKb = stepKa;
     while (stepKa > ONE_U32 && stepKb > ONE_U32) {
         L1TilingParams params = {
-            l1Params.al1Pbuffer,  l1Params.bl1Pbuffer, l1Params.stepM, l1Params.stepN, stepKa, stepKb,
+            l1Params.al1Pbuffer,  l1Params.bl1Pbuffer, stepKa, stepKb,
             l1Params.iterateOrder};
         if (IsL1ParamsValid(params, l0Params)) {
             break;

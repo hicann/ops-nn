@@ -84,8 +84,6 @@ struct TilingValueDavid {
     uint32_t baseD;
     uint32_t baseBatch;
     uint32_t baseGroup;
-    uint32_t stepM;
-    uint32_t stepN;
     uint32_t stepKa;
     uint32_t stepKb;
     uint32_t stepBatch;

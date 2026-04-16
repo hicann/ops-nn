@@ -55,8 +55,6 @@ struct L0TilingParams {
 struct L1TilingParams {
     uint8_t al1Pbuffer = 1;
     uint8_t bl1Pbuffer = 1;
-    uint32_t stepM = 1;
-    uint32_t stepN = 1;
     uint32_t stepKa = 1;
     uint32_t stepKb = 1;
     uint8_t iterateOrder = 1;

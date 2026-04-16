@@ -84,13 +84,9 @@ public:
         DEFINE_STUCT_TEMPLATE_FIELD(TQue, biasBTQue_, TPosition::C2, 1);
         DEFINE_STUCT_TEMPLATE_FIELD(TBuf, l0aBuf_, TPosition::A2);
         DEFINE_STUCT_TEMPLATE_FIELD(TBuf, l0bBuf_, TPosition::B2);
-        DEFINE_STUCT_FIELD(uint32_t, curStepM_);
-        DEFINE_STUCT_FIELD(uint32_t, curStepN_);
         DEFINE_STUCT_FIELD(uint32_t, curLoadKbl1_);
-        DEFINE_STUCT_FIELD(uint32_t, curNL0Idx_);
-        DEFINE_STUCT_FIELD(uint32_t, curNL1Idx_);
-        DEFINE_STUCT_FIELD(uint64_t, curML0Idx_);
-        DEFINE_STUCT_FIELD(uint64_t, curML1Idx_);
+        DEFINE_STUCT_FIELD(uint32_t, curNIdx_);
+        DEFINE_STUCT_FIELD(uint64_t, curMIdx_);
         DEFINE_STUCT_FIELD(uint32_t, curDinIdx_);
         DEFINE_STUCT_FIELD(uint32_t, curDkIdx_);
         DEFINE_STUCT_FIELD(uint32_t, channelSize_);

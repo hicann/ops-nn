@@ -77,8 +77,6 @@ struct TConv3DInputV2Tiling {
     uint32_t baseM = 1;
     uint32_t baseK = 1;
     uint32_t baseN = 1;
-    uint32_t stepM = 1;
-    uint32_t stepN = 1;
     uint32_t stepKa = 1;
     uint32_t stepKb = 1;
     uint32_t singleIterateDk = 1;

@@ -200,7 +200,7 @@ __aicore__ inline LocalTensor<typename Intf::SrcBT> GetB1Tbuf(Intf *self, const 
 template <class Intf>
 __aicore__ inline uint32_t CalcCurCinSizeB1(Intf *self, uint32_t curCinIdx)
 {
-    uint32_t curCinSize = self->ctx.curStepN_ * self->ctx.tiling_->baseN;
+    uint32_t curCinSize = self->ctx.tiling_->baseN;
     // consider tail
     uint32_t curCinRemain = self->ctx.singleShapeCin_ - curCinIdx;
     curCinSize = curCinSize < curCinRemain ? curCinSize : curCinRemain;
@@ -242,7 +242,7 @@ static __aicore__ inline void CalcCutInWIndex(Intf *self, const uint32_t crossBl
 {
     uint32_t doubleBaseUseM = self->ctx.baseUseM_ << crossBlockNum;
     uint32_t wiUsed = AlignUp(self->ctx.tiling_->wi, self->ctx.tiling_->strideW); // 奇数场景当前tiling限制wi<512，对其之后不会溢出
-    uint32_t mSize = self->ctx.curML0Idx_ * (self->ctx.tiling_->baseM << crossBlockNum);
+    uint32_t mSize = self->ctx.curMIdx_ * (self->ctx.tiling_->baseM << crossBlockNum);
     uint32_t curWiPos = wiUsed - (mSize % wiUsed); // 上一轮baseM搬完后一行Wi还剩下未处理的长度
     if (curWiPos > doubleBaseUseM || curWiPos == wiUsed) {
         // 未处理的长度大于baseUseM 或 等于整行wi，即上一次搬运不涉及尾块
@@ -265,7 +265,7 @@ static __aicore__ inline void LoadL0c2GMForKernelSplitFixPipe(Intf *self, const 
 {
     if (Intf::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT &&
         self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
-        uint64_t scaleAddr = self->ctx.curNL0Idx_ * self->ctx.tiling_->baseN;
+        uint64_t scaleAddr = self->ctx.curNIdx_ * self->ctx.tiling_->baseN;
         Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR>(self->ctx.l0cOutWorkspace_[wsDstOffset],
             useC1Buf[srcOffset], self->ctx.scaleL1Buf_[scaleAddr], fixPipeParams);
     } else {
@@ -280,7 +280,7 @@ static __aicore__ inline void LoadL0c2UbForKernelSplitFixPipe(Intf *self, const 
 {
     if (Intf::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT &&
         self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
-        uint64_t scaleAddr = self->ctx.curNL0Idx_ * self->ctx.tiling_->baseN;
+        uint64_t scaleAddr = self->ctx.curNIdx_ * self->ctx.tiling_->baseN;
         Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR_UB>(self->ctx.vecOutBuf_[ubDstOffset],
             useC1Buf[srcOffset], self->ctx.scaleL1Buf_[scaleAddr], fixPipeParams);
     } else {
@@ -552,11 +552,11 @@ static __aicore__ inline void LoadUbToGmForKernelSplit(Intf *self, const GlobalT
     const uint32_t curUseN, const int64_t hwSize, const int64_t dstNOffset, const uint32_t crossBlockNum)
 {
     uint32_t wiUsed = AlignUp(self->ctx.tiling_->wi, self->ctx.tiling_->strideW);
-    uint32_t mSize = self->ctx.curML0Idx_ * self->ctx.tiling_->baseM << crossBlockNum;
+    uint32_t mSize = self->ctx.curMIdx_ * self->ctx.tiling_->baseM << crossBlockNum;
     uint32_t hiUsed = mSize / wiUsed;
     uint32_t mUseSize = hiUsed * self->ctx.tiling_->wi + mSize - hiUsed * wiUsed;
     uint32_t curSkipMSize = (mSize / wiUsed) * self->ctx.tiling_->wi; // GM上隔行需要空开的数量
-    uint64_t dstOffset = static_cast<uint64_t>(self->ctx.curNL0Idx_) * self->ctx.tiling_->baseN * self->ctx.diHiWi_ + // cin offset
+    uint64_t dstOffset = static_cast<uint64_t>(self->ctx.curNIdx_) * self->ctx.tiling_->baseN * self->ctx.diHiWi_ + // cin offset
                     static_cast<uint64_t>(self->ctx.curDinIdx_) * self->ctx.hiWi_ + // di offset, remove useless data
                     mUseSize + curSkipMSize + // hi&wi offset
                     self->ctx.rearrangeHIndex_ * self->ctx.tiling_->wi + dstNOffset;
@@ -766,8 +766,8 @@ __aicore__ inline void CastToDstType(Intf *self, const GlobalTensor<typename Int
         uint64_t singleCoreWorkspaceSize = singleCoreCinAlignBaseN * singleCoreMAlignBaseM *
             self->ctx.tiling_->singleCoreDin;
         int64_t srcOffset = (self->ctx.curDinIdx_ - self->ctx.curDinStartIdx_) * singleCoreCinAlignBaseN *
-            singleCoreMAlignBaseM + self->ctx.curNL0Idx_ * self->ctx.tiling_->baseN *
-            singleCoreMAlignBaseM + self->ctx.curML0Idx_ * self->ctx.tiling_->baseN *
+            singleCoreMAlignBaseM + self->ctx.curNIdx_ * self->ctx.tiling_->baseN *
+            singleCoreMAlignBaseM + self->ctx.curMIdx_ * self->ctx.tiling_->baseN *
             self->ctx.tiling_->baseM + GetAicBlockIdx() * singleCoreWorkspaceSize;
         self->ctx.castVecTensor_ = self->ctx.vecBuf_.template Get<float>();
         DataCopyExtParams mte2Param;
@@ -790,9 +790,9 @@ __aicore__ inline void CastToDstType(Intf *self, const GlobalTensor<typename Int
         SetFlag<HardEvent::V_MTE3>(eventIdVecToMte3);
         WaitFlag<HardEvent::V_MTE3>(eventIdVecToMte3);
         // ub(Dst Type, DCHW) -> GM(Dst Type, CDHW)
-        uint64_t dstOffset = static_cast<uint64_t>(self->ctx.curNL0Idx_) * self->ctx.tiling_->baseN * self->ctx.diHiWi_ + // cin offset
+        uint64_t dstOffset = static_cast<uint64_t>(self->ctx.curNIdx_) * self->ctx.tiling_->baseN * self->ctx.diHiWi_ + // cin offset
                             static_cast<uint64_t>(self->ctx.curDinIdx_) * self->ctx.hiWi_ + // di offset
-                            static_cast<uint64_t>(self->ctx.curML0Idx_) * self->ctx.tiling_->baseM; // hi&wi offset
+                            static_cast<uint64_t>(self->ctx.curMIdx_) * self->ctx.tiling_->baseM; // hi&wi offset
         DataCopyExtParams mte3Param;
         mte3Param.blockCount = self->ctx.baseUseN_;
         mte3Param.blockLen = self->ctx.baseUseM_ * sizeof(typename Intf::DstT);
@@ -1079,7 +1079,7 @@ __aicore__ inline void GroupTransdataWeight(Intf *self, uint32_t kIdx, uint32_t 
 
     LocalTensor<typename Intf::SrcBT> useB1Tbuf = GetB1Tbuf<Intf>(self, kIdx);
 
-    uint32_t curCinIdx = self->ctx.curNL1Idx_ * self->ctx.tiling_->stepN * self->ctx.tiling_->baseN;
+    uint32_t curCinIdx = self->ctx.curNIdx_ * self->ctx.tiling_->baseN;
     uint32_t curCinSize = CalcCurCinSizeB1(self, curCinIdx);
     uint32_t curCoutIdx = 0;
     uint32_t curCoutSize = 0;
@@ -1362,7 +1362,7 @@ __aicore__ inline void C04TransdataWeight(Intf *self, const uint32_t kIdx, uint3
     LocalTensor<typename Intf::SrcBT> useB1Tbuf = GetB1Tbuf<Intf>(self, kIdx);
 
     if (GetSubBlockIdx() == (self->ctx.c04LoadToB1IterIdx_ & 1)) {
-        uint32_t curCinIdx = self->ctx.curNL1Idx_ * self->ctx.tiling_->stepN * self->ctx.tiling_->baseN;
+        uint32_t curCinIdx = self->ctx.curNIdx_ * self->ctx.tiling_->baseN;
         uint32_t b1CinSize = CalcCurCinSizeB1(self, curCinIdx);
         uint64_t srcGmOffset = static_cast<uint64_t>(curCinIdx) * self->ctx.dkHkWk_;
 
