@@ -33,12 +33,6 @@ using namespace Ops::NN::Optiling;
 using namespace AscendC;
 
 struct TilingValueDwArch35 {
-    uint64_t batchDim;
-    uint32_t groupDim;
-    uint32_t dkDim;
-    uint32_t mDim;
-    uint32_t kDim;
-    uint32_t nDim;
     uint32_t singleCoreBatch;
     uint32_t singleCoreGroup;
     uint32_t singleCoreDk;

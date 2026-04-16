@@ -71,35 +71,18 @@ struct TConv3DDwTiling {
     uint32_t singleCoreCout = 1;
     uint32_t singleCoreHo = 1;
     uint32_t splitWo = 128;
-    uint32_t reserve1 = 0; // 占位字段
-    uint64_t singleCoreBatch = 1;
-    uint64_t singleCoreCin = 1;
-};
-
-struct Conv3DBackpropFilterV2Params {
-    uint64_t batchDim = 1;
-    uint32_t groupDim = 1;
-    uint32_t mDim = 1;
-    uint32_t kDim = 1;
-    uint32_t nDim = 1;
-    uint32_t dkDim = 1;
-    uint32_t totalL1Size = 1;
-};
-
-struct TConv3DDwBasicBlockTiling {
-    uint64_t singleCoreBatchDout = 1;
     uint32_t streamkType = 1;
     uint32_t usedCoreNum = 1;
     uint32_t singleCoreM = 1;
     uint32_t singleCoreN = 1;
     uint32_t singleCoreK = 1;
-    uint32_t reserve0 = 0; // 占位字段，为了8位字节对齐，否则 memcpy_s tilingData时候会出现补位导致数据异常
+    uint64_t singleCoreBatch = 1;
+    uint64_t singleCoreCin = 1;
+    uint64_t singleCoreBatchDout = 1;
 };
 
 struct Conv3DBackpropFilterV2TilingData {
-    Conv3DBackpropFilterV2Params params;
     TConv3DDwTiling dwTiling;
-    TConv3DDwBasicBlockTiling basicBlockTiling;
 };
 }  // namespace conv_bp_v2_kernel
 }

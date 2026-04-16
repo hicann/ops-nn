@@ -106,10 +106,10 @@ protected:
     __aicore__ void InitCommonTilingData(const conv_bp_v2_kernel::Conv3DBackpropFilterV2TilingData* tilingData)
     {
         Conv3dDw<xType, xFormat, dedyType, dedyFormat, yType, yFormat, isSplitKernelHW>::InitTilingData(tilingData);
-        usedCoreNum_ = tilingData->basicBlockTiling.usedCoreNum;
-        streamkType_ = tilingData->basicBlockTiling.streamkType;
-        singleCoreBatch_ = tilingData->basicBlockTiling.singleCoreBatchDout;
-        singleShapeK_ = tilingData->basicBlockTiling.singleCoreK;
+        usedCoreNum_ = tilingData->dwTiling.usedCoreNum;
+        streamkType_ = tilingData->dwTiling.streamkType;
+        singleCoreBatch_ = tilingData->dwTiling.singleCoreBatchDout;
+        singleShapeK_ = tilingData->dwTiling.singleCoreK;
         CalBasicBlockCnt();
     }
 

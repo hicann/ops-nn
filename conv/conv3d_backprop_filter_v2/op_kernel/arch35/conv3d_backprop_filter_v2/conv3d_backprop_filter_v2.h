@@ -92,8 +92,8 @@ protected:
     __aicore__ inline void InitTilingData(const conv_bp_v2_kernel::Conv3DBackpropFilterV2TilingData* tilingData)
     {
         tiling_ = &(tilingData->dwTiling);
-        singleShapeM_ = tilingData->basicBlockTiling.singleCoreM;
-        singleShapeN_ = tilingData->basicBlockTiling.singleCoreN;
+        singleShapeM_ = tiling_->singleCoreM;
+        singleShapeN_ = tiling_->singleCoreN;
 
         k_ = static_cast<uint64_t>(tiling_->ho) * tiling_->wo;
         groupFlag_ = tiling_->group > 1;
