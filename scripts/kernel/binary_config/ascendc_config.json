@@ -473,7 +473,7 @@
     {"name":"AllGatherMatmul", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : false, "compile_options": {"ascend910_93":["-DAICORE_EXCEPTION_RESTART"]}},
     {"name":"AllGatherMatmulV2", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : ""},
     {"name":"BatchMatMulReduceScatterAlltoAll", "compute_units": ["ascend910_93"], "auto_sync" : false, "compile_options": {"ascend910_93":["-DAICORE_EXCEPTION_RESTART"]}},
-    {"name":"RepeatInterleaveGrad", "compute_units": ["ascend910b", "ascend910_93", "ascend950"], "auto_sync" : false, "compile_options": {"ascend950": ["-mllvm -trunc-to-buildin-type-only"]}},
+    {"name":"RepeatInterleaveGrad", "compute_units": ["ascend910b", "ascend910_93", "ascend950"], "auto_sync" : false},
     {"name":"RepeatInterleave", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : "", "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},
     {"name":"RepeatInterleaveV2", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : false},
     {"name":"FeedsRepeat", "compute_units":["ascend910b","ascend910_93"], "auto_sync" : true},
