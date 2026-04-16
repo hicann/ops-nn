@@ -153,17 +153,17 @@ static bool CheckShape(
         OP_CHECK_SHAPE_NOT_EQUAL(out, target, return false);
     } else {
         OP_CHECK(
-            out->Size() == 1,
+            out->Numel() == 1,
             OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "Shape of out tensor should be [1], but current is [%s].",
+                ACLNN_ERR_PARAM_INVALID, "Shape of out tensor should be [1], but current is %s.",
                 op::ToString(out->GetViewShape()).GetString()),
             return false);
     }
 
     OP_CHECK(
-        totalWeightOut->Size() == 1,
+        totalWeightOut->Numel() == 1,
         OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Shape of totalWeightOut tensor should be [1], but current is [%s].",
+            ACLNN_ERR_PARAM_INVALID, "Shape of totalWeightOut tensor should be [1], but current is %s.",
             op::ToString(totalWeightOut->GetViewShape()).GetString()),
         return false);
     return true;
