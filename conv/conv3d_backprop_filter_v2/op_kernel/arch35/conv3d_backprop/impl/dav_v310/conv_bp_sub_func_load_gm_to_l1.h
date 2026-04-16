@@ -685,14 +685,13 @@ __aicore__ inline void UpdateSrcAddrBaseOnBatchDoutIdx(Intf *self, uint64_t curL
     uint64_t curDinIdx = static_cast<uint64_t>(curDoutIdx) *
         self->ctx.tiling_->strideD + self->ctx.dkStartIdx_ * self->ctx.tiling_->dilationD;
     // 在拆分dk的情况下，如果涉及到的dinIdx在padding部分，则跳过Compute计算
-    bool invalidDinIdx = curDinIdx < self->ctx.tiling_->padFront ||
-        curDinIdx >= (self->ctx.tiling_->di + self->ctx.tiling_->padFront);
-    if (self->ctx.seperateDk_ && invalidDinIdx) {
+    if (curDinIdx < self->ctx.tiling_->padFront || curDinIdx >= (self->ctx.tiling_->di + self->ctx.tiling_->padFront)) {
         // dinIdx当前在padding部分，因此跳过本轮mmad的计算。
         // 由于每次A, B矩阵的偏移计算依赖于前一次BatchDoutIdx迭代中的偏移，因此不能直接return跳过接下来偏移的计算
         skipCurrentDinCompute = true;
     }
-    if (curLoopBatchDoutIdx == self->ctx.batchDoutStartIdx_) { // 当batchLoopBatchDoutIdx为起始Idx时，无需更新地址
+    // 当batchLoopBatchDoutIdx为起始Idx时，无需更新地址
+    if (curLoopBatchDoutIdx == self->ctx.batchDoutStartIdx_) {
         return;
     }
     // 更新batchIdx和doutIdx，重新计算offsetA和offsetB的值，优先循环dout方向；offsetC不需要更新

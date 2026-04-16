@@ -512,10 +512,9 @@ template <class Intf>
 struct Init {
     // 定义call函数的默认重载函数，支持任意类型任意数量的参数
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, ConvolutionBackpropFunc);
-    static __aicore__ inline void call(Intf *self, const AscendC::conv_bp_v2_kernel::TConv3DDwTiling *__restrict tiling, bool seperateDk)
+    static __aicore__ inline void call(Intf *self, const AscendC::conv_bp_v2_kernel::TConv3DDwTiling *__restrict tiling)
     {
         self->ctx.tiling_ = tiling;
-        self->ctx.seperateDk_ = seperateDk;
         CheckTiling<Intf>(self);
         InitParams<Intf>(self);
         InitTque<Intf>(self);

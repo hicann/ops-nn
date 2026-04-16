@@ -42,12 +42,12 @@ public:
     }
 
     __aicore__ inline void Init(
-        const AscendC::conv_bp_v2_kernel::TConv3DDwTiling* __restrict tiling, bool seperateDk = true)
+        const AscendC::conv_bp_v2_kernel::TConv3DDwTiling* __restrict tiling)
     {
         using Local = typename Ext::Init;
         // CheckFun检查impl是否实现了Init的call函数
-        if constexpr (CHECK_FUN(Local, ConvolutionBackpropFunc, this, tiling, seperateDk)) {
-            Local::call(this, tiling, seperateDk);
+        if constexpr (CHECK_FUN(Local, ConvolutionBackpropFunc, this, tiling)) {
+            Local::call(this, tiling);
         }
     }
 

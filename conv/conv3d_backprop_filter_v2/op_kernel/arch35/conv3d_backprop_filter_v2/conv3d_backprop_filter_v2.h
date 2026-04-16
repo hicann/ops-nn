@@ -86,7 +86,6 @@ protected:
     uint32_t tailCinG_ = 0;
     uint32_t tailCoutG_ = 0;
     bool groupFlag_ = 0;
-    bool seperateDk_ = true;
     uint64_t offsetCubeWorkSpaceC_ = 0;
 
     __aicore__ inline void InitTilingData(const conv_bp_v2_kernel::Conv3DBackpropFilterV2TilingData* tilingData)
@@ -110,9 +109,6 @@ protected:
         } else {
             m_ = tiling_->cout;
             n_ = tiling_->cin * tiling_->hk * tiling_->wk;
-            if (!seperateDk_) {
-                n_ *= tiling_->dk;
-            }
         }
 #endif
     }
@@ -154,15 +150,9 @@ protected:
         uint64_t groupOffsetB = 0;
         dinCurIdx = static_cast<uint64_t>(doutIdx) * tiling_->strideD;
         uint64_t dinIdx = static_cast<uint64_t>(dkIdx) * tiling_->dilationD;
-        // 当dilationD_大于1或者分组卷积时，cin与dk分轴，dinIdx无需考虑pad，使用seperateDk_作为判断条件
-        if (seperateDk_) {
-            dinCurIdx += dinIdx;
-            dinIdx = dinCurIdx - tiling_->padFront;
-        } else {
-            if (dinCurIdx > tiling_->padFront) {
-                dinIdx += dinCurIdx - tiling_->padFront;
-            }
-        }
+        // 当dilationD_大于1或者分组卷积时，cin与dk分轴，dinIdx无需考虑pad
+        dinCurIdx += dinIdx;
+        dinIdx = dinCurIdx - tiling_->padFront;
 
         uint64_t hiIdx = 0;
         if (hoCal * tiling_->strideH > tiling_->padUp) {
@@ -223,25 +213,14 @@ protected:
         if constexpr (yCubeFormat == ConvolutionBackprop::CubeFormat::NCDHW) {
             uint64_t cinDkOffset = cinCoreIndx_ * tiling_->singleCoreCin * tiling_->dk * tiling_->hk * tiling_->wk + dkIdx * tiling_->hk * tiling_->wk;
             offsetC_ = groupOffsetC + cinDkOffset + coutOffsetC;
-            if (dinCurIdx < tiling_->padFront && !seperateDk_) {
-                offsetC_ += static_cast<uint64_t>(tiling_->padFront - dinCurIdx) * tiling_->hk * tiling_->wk;
-
-
-            }
         } else if constexpr (yCubeFormat == ConvolutionBackprop::CubeFormat::NDHWC) {
             // NDHWC格式，C在最内轴，考虑到group，需要使用cinG计算偏移
             uint64_t cinDkOffset = static_cast<uint64_t>(cinCoreIndx_) * tiling_->singleCoreCin + dkIdx * tiling_->hk * tiling_->wk * tiling_->cin1G;
             offsetC_ = groupOffsetC + cinDkOffset + coutOffsetC;
-            if (dinCurIdx < tiling_->padFront && !seperateDk_) {
-                offsetC_ += static_cast<uint64_t>(tiling_->padFront - dinCurIdx) * tiling_->hk * tiling_->wk * tiling_->cin1G;
-            }
         } else {
             // DHWCN
             uint64_t cinDkOffset = cinCoreIndx_ * tiling_->singleCoreCin * tiling_->cout + dkIdx * tiling_->hk * tiling_->wk * (tiling_->cin / tiling_->group) * tiling_->cout;
             offsetC_ = groupOffsetC + cinDkOffset + coutOffsetC;
-            if (dinCurIdx < tiling_->padFront && !seperateDk_) {
-                offsetC_ += (tiling_->padFront - dinCurIdx) * tiling_->hk * tiling_->wk * (tiling_->cin / tiling_->group) * tiling_->cout;
-            }
         }
     }
 
@@ -269,58 +248,18 @@ protected:
     {
         singleShapeNInCurrentHo_ = singleShapeN_;
         singleShapeMInCurrentHo_ = singleShapeM_;
-        uint64_t dinIdx = doutIdx * tiling_->strideD;
+        bool invalidDIndex = true;
 
-        if (seperateDk_) {
-            bool invalidDIndex = true;
-            ReCalcSingleCoreBatchDout(doutIdx, dkIdx, invalidDIndex);
-            if (invalidDIndex) {
-                singleShapeNInCurrentHo_ = 0;
-                return;
-            }
-            // 若group大于1，还需判断分组的cin和cout尾块
-            if (groupFlag_) {
-                ReCalSingleShapeWithGroup(groupIdx);
-            }
-            // 由于cin和dk分轴，每轮singlecoreDk都为1，因此无需使用下面复杂的代码来计算实际din应当载入多少
+        ReCalcSingleCoreBatchDout(doutIdx, dkIdx, invalidDIndex);
+        if (invalidDIndex) {
+            singleShapeNInCurrentHo_ = 0;
             return;
         }
-        // 当D轴有pad，且nCoreIndx为dkIndx时，仅nCoreIndx为0时singleShapeNInCurrentHo不为0，即dk核仅0核运行，其他核不运行
-        // 此时，singleCoreDk失效，新的singleCoreDk为newDk
-        // 当D轴有pad，且nCoreIndx为cinIndx时，所有核的singleShapeNInCurrentHo均不为0，即所有核都参与计算，
-        // 此时，singleCoreDk失效，新的singleCoreDk为newDk
-        // 当D轴有pad，nCoreIndx既包含cinIndx又包含dkIndx时，当nCoreIndx小于cinIndx时，所有核参与运行，
-        // 当nCoreIndx等于cinIndx, 此核为0核，当nCoreIndx大于cinIndx，所有核均不运行
-        uint64_t newDk = tiling_->dk;
-        if (dinIdx + newDk > tiling_->padFront + tiling_->di) {
-            if (dinIdx < tiling_->padFront + tiling_->di) {
-                newDk = tiling_->padFront + tiling_->di - dinIdx;
-                if (n_ / tiling_->dk * newDk < nCoreIndx_ * tiling_->singleCoreCin * tiling_->hk * tiling_->wk * newDk) {
-                    singleShapeNInCurrentHo_ = 0;
-                    return;
-                }
-                uint64_t nRamin = n_ / tiling_->dk * newDk - nCoreIndx_ * tiling_->singleCoreCin * tiling_->hk * tiling_->wk * newDk;
-                singleShapeNInCurrentHo_ =
-                    nRamin < tiling_->singleCoreCin * tiling_->hk * tiling_->wk * newDk ? nRamin : tiling_->singleCoreCin * tiling_->hk * tiling_->wk * newDk;
-            } else {
-                singleShapeNInCurrentHo_ = 0;
-            }
+        // 若group大于1，还需判断分组的cin和cout尾块
+        if (groupFlag_) {
+            ReCalSingleShapeWithGroup(groupIdx);
         }
-
-        if (dinIdx < tiling_->padFront) {
-            if (dinIdx + newDk > tiling_->padFront) {
-                newDk = dinIdx + newDk - tiling_->padFront;
-                if (n_ / tiling_->dk * newDk < nCoreIndx_ * tiling_->singleCoreCin * tiling_->hk * tiling_->wk * newDk) {
-                    singleShapeNInCurrentHo_ = 0;
-                    return;
-                }
-                uint64_t nRamin = n_ / tiling_->dk * newDk - nCoreIndx_ * tiling_->singleCoreCin * tiling_->hk * tiling_->wk * newDk;
-                singleShapeNInCurrentHo_ =
-                    nRamin < tiling_->singleCoreCin * tiling_->hk * tiling_->wk * newDk ? nRamin : tiling_->singleCoreCin * tiling_->hk * tiling_->wk * newDk;
-            } else {
-                singleShapeNInCurrentHo_ = 0;
-            }
-        }
+        // 由于cin和dk分轴，每轮singlecoreDk都为1，后续无需再计算实际din应当载入量
     }
 #endif
 
