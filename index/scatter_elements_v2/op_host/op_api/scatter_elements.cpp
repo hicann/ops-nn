@@ -572,6 +572,11 @@ static bool NoTransposeShapeCheck(const aclTensor* data, const aclTensor* indice
     auto updatesShape = updates->GetViewShape();
     auto dataDimNum = dataShape.GetDimNum();
     
+    // 尾轴场景本就不需要transpose 走原有分支即可
+    if (axis == dataDimNum - 1 && updatesShape.GetDimNum() != 0 && data->GetDataType() != op::DataType::DT_BOOL) {
+        return false;
+    }
+    
     if (updatesShape.GetDimNum() == 0) {
         OP_LOGD("ScatterElementsV2 updates is scalar Tensor.");
         updatesShape = indicesShape;
