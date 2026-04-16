@@ -58,10 +58,15 @@ class KernelMatMulIterBatch {
 template <class ProblemShape_, class BlockMmadBuilder_, class BlockEpilogue_, class BlockScheduler_>
 class KernelMatMulIterBatch<
     ProblemShape_, BlockMmadBuilder_, BlockEpilogue_, BlockScheduler_,
+    // ON_THE_FLY: EMPYT/RELU    ND_FIXPIPE_1_2: EMPYT/ADD
     AscendC::Std::enable_if_t<
         (AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueEmpty> &&
-         AscendC::Std::is_same_v<
-             MatmulIterBatch<MatMulL0C2Out::ON_THE_FLY>, typename BlockMmadBuilder_::BlockMatmulPolicy>) ||
+         (AscendC::Std::is_same_v<
+              MatmulIterBatch<MatMulL0C2Out::ON_THE_FLY, AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_EMPTY>,
+              typename BlockMmadBuilder_::BlockMatmulPolicy> ||
+          AscendC::Std::is_same_v<
+              MatmulIterBatch<MatMulL0C2Out::ON_THE_FLY, AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_RELU>,
+              typename BlockMmadBuilder_::BlockMatmulPolicy>)) ||
         ((AscendC::Std::is_base_of_v<
               BlockEpilogue_, Block::BlockEpilogueIterbatch<float, float, Block::FusionAdd<float, float>>> ||
           AscendC::Std::is_base_of_v<
@@ -75,9 +80,13 @@ class KernelMatMulIterBatch<
               Block::BlockEpilogueIterbatch<bfloat16_t, bfloat16_t, Block::FusionAdd<bfloat16_t, bfloat16_t>>> ||
           AscendC::Std::is_base_of_v<
               BlockEpilogue_, Block::BlockEpilogueIterbatch<
-                                  bfloat16_t, bfloat16_t, Block::DefaultFusion<bfloat16_t, bfloat16_t>>>)&&AscendC::
-             Std::is_same_v<
-                 MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2>, typename BlockMmadBuilder_::BlockMatmulPolicy>)>> {
+                                  bfloat16_t, bfloat16_t, Block::DefaultFusion<bfloat16_t, bfloat16_t>>>) && 
+          (AscendC::Std::is_same_v<
+               MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2, AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_EMPTY>,
+               typename BlockMmadBuilder_::BlockMatmulPolicy> ||
+           AscendC::Std::is_same_v<
+               MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2, AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_ADD>,
+               typename BlockMmadBuilder_::BlockMatmulPolicy>))>> {
 public:
     __aicore__ inline KernelMatMulIterBatch() {}
     __aicore__ inline ~KernelMatMulIterBatch() {}

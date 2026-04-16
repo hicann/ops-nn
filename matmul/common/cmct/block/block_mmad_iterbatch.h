@@ -28,8 +28,14 @@ template <
 class BlockMmad<
     DispatchPolicy_, L1TileShape_, L0TileShape_, AType_, BType_, CType_, BiasType_, TileCopy_,
     AscendC::Std::enable_if_t<
-        AscendC::Std::is_base_of_v<MatmulIterBatch<>, DispatchPolicy_> ||
-        AscendC::Std::is_base_of_v<MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2>, DispatchPolicy_>>> {
+        AscendC::Std::is_base_of_v<MatmulIterBatch<MatMulL0C2Out::ON_THE_FLY,
+            AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_EMPTY>, DispatchPolicy_> ||
+        AscendC::Std::is_base_of_v<MatmulIterBatch<MatMulL0C2Out::ON_THE_FLY,
+            AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_RELU>, DispatchPolicy_> ||
+        AscendC::Std::is_base_of_v<MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2,
+            AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_EMPTY>, DispatchPolicy_> ||
+        AscendC::Std::is_base_of_v<MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2,
+            AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_ADD>, DispatchPolicy_>>> {
 public:
 // supportMmadS8S4平台L0c和biasBt的dtype为int32_t
     using L0cType = typename GetL0CAndBtType::Type;
@@ -311,6 +317,11 @@ public:
         fixpipeParams.params.srcNdStride =
             Align(mInGM, AscendC::BLOCK_CUBE) * Align(nInGM, AscendC::BLOCK_CUBE) / AscendC::BLOCK_CUBE;
         fixpipeParams.params.dstNdStride = mInGM * nInGM;
+        if constexpr (DispatchPolicy::enableRelu) {
+            fixpipeParams.reluEn = 1;
+        } else {
+            fixpipeParams.reluEn = 0;
+        }
         AscendC::Fixpipe<C_T, L0cType, AscendC::CFG_ROW_MAJOR>(cGlobal, l0c, fixpipeParams);
     }
 

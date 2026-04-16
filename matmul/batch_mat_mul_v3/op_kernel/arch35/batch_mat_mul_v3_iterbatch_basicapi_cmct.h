@@ -62,9 +62,10 @@ __aicore__ inline void BatchMatMulActIterBatchKernel(
     using BlockScheduler = BuiltInIterBatchScheduler;
 
     // 定义MMAD类型
+    using DispatchPolicy = MatmulIterBatch<FIXPIPE_OPT, AscendC::Shape<_0, _0, _0, _0>, FUSED_OPTYPE>;
     using BlockMmad = Block::BlockMmadBuilder<
             AType, LayoutA, BType, LayoutB, OutType, LayoutC, BiasType, LayoutC,
-            L1TileShape, L0TileShape, BlockScheduler, MatmulIterBatch<FIXPIPE_OPT>>;
+            L1TileShape, L0TileShape, BlockScheduler, DispatchPolicy>;
 
     // 定义BlockEpilogue类型
     using BlockEpilogue = typename BlockEpilogueSelector<FIXPIPE_OPT, OutType, OutType, FUSED_OPTYPE>::type;

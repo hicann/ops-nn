@@ -31,6 +31,7 @@ protected:
     bool IsCapable() override;
     ge::graphStatus DoOpTiling() override;
     uint64_t GetTilingKey() const override;
+    bool CheckBatch() const;
 };
 } // namespace fused_matmul
 } // namespace optiling

@@ -18,18 +18,55 @@
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_tiling_registry.h"
 #include "matmul/common/op_host/math_util.h"
 
+namespace {
+using namespace optiling;
+using namespace optiling::matmul_v3_advanced;
+// ------------------------------ CheckBatch -------------------------------------------//
+bool CheckBatchDefault(const MatMulV3Args& args)
+{
+    if (args.batchInfo->batchC > 1) {
+        OP_LOGD(args.opName, "FusedMatMulAswBasicApiTiling does not support multiple batches");
+        return false;
+    }
+    return true;
+}
+
+bool CheckBatchDav3510(const MatMulV3Args& args)
+{
+    if (args.batchInfo->batchC > 1) {
+        OP_LOGE(args.opName, "bmm only support IterBatch shape");
+        return false;
+    }
+    return true;
+}
+
+using CheckBatchFunc = bool (*)(const MatMulV3Args&);
+
+const static std::map<NpuArch, CheckBatchFunc> CheckBatchFuncMap = {
+    {NpuArch::DAV_3510, CheckBatchDav3510},
+};
+} // namespace
+
 namespace optiling {
 namespace fused_matmul {
-using matmul_v3_advanced::strategy::BASIC_ASWT;
-MM_REGISTER_TILING_TEMPLATE(FusedMatMul, FusedMatMulAswBasicApiTiling, DAV_3510, BASIC_ASWT);
+using namespace strategy;
+MM_REGISTER_TILING_TEMPLATE(FusedMatMul, FusedMatMulAswBasicApiTiling, DAV_3510, BASIC_ASWT_INHERITED_FROM_MMV3);
+MM_REGISTER_TILING_TEMPLATE(FusedMatMul, FusedMatMulAswBasicApiTiling, DAV_RESV, BASIC_ASWT_INHERITED_FROM_MMV3);
+
+bool FusedMatMulAswBasicApiTiling::CheckBatch() const
+{
+    auto iter = (CheckBatchFuncMap.find(compileInfo_.npuArch) == CheckBatchFuncMap.end()) ?
+                    CheckBatchDefault :
+                    CheckBatchFuncMap.at(compileInfo_.npuArch);
+    return iter(args_);
+}
 
 bool FusedMatMulAswBasicApiTiling::IsCapable()
 {
     auto attrs = context_->GetAttrs();
     OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs);
     std::string opType = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
-    if (args_.batchInfo->batchC > 1) {
-        OP_LOGE(args_.opName, "bmm only support IterBatch shape");
+    if (!CheckBatch()) {
         return false;
     }
     if (args_.bFormat != ge::FORMAT_ND || args_.aFormat != ge::FORMAT_ND) {

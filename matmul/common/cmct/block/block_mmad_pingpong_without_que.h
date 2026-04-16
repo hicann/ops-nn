@@ -420,6 +420,11 @@ public:
         fixpipeParams.params.ndNum = 1;
         fixpipeParams.params.srcNdStride = 1;
         fixpipeParams.params.dstNdStride = 1;
+        if constexpr (DispatchPolicy::enableRelu) {
+            fixpipeParams.reluEn = 1;
+        } else {
+            fixpipeParams.reluEn = 0;
+        }
         AscendC::Fixpipe<C_T, L0cType, AscendC::CFG_ROW_MAJOR>(cGlobal, c1Local, fixpipeParams);
     }
 

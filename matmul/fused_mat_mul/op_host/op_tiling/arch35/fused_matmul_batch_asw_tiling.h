@@ -9,31 +9,26 @@
  */
 
 /* !
- * \file fused_matmul_iterbatch_basic_tiling.h
+ * \file fused_matmul_asw_tiling.h
  * \brief
  */
-
 #pragma once
 
-#include "batch_mat_mul_v3/op_host/op_tiling/arch35/batch_matmul_v3_iterbatch_basicapi_tiling.h"
+#include "batch_mat_mul_v3/op_host/op_tiling/arch35/batch_matmul_v3_asw_tiling.h"
 
 namespace optiling {
 namespace fused_matmul {
-using batch_matmul_v3_advanced::BatchMatMulV3IterBatchBasicApiTiling;
+using batch_matmul_v3_advanced::BatchMatMulV3AswTiling;
 
-class FusedMatMulIterBatchApiTiling : public BatchMatMulV3IterBatchBasicApiTiling {
+class FusedMatMulBatchAswTiling : public BatchMatMulV3AswTiling {
 public:
-    FusedMatMulIterBatchApiTiling(gert::TilingContext* context, MatMulTilingCfg& cfg)
-        : BatchMatMulV3IterBatchBasicApiTiling(context, cfg){};
+    FusedMatMulBatchAswTiling(gert::TilingContext* context, MatMulTilingCfg& cfg)
+        : BatchMatMulV3AswTiling(context, cfg){};
 
-    ~FusedMatMulIterBatchApiTiling() override = default;
+    ~FusedMatMulBatchAswTiling() override = default;
 
 protected:
-    bool IsCapable() override;
     uint64_t GetTilingKey() const override;
-    ge::graphStatus DoOpTiling() override;
-    void SetNeedNdDma();
 };
 } // namespace fused_matmul
 } // namespace optiling
-

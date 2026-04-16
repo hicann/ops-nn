@@ -18,10 +18,46 @@
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_tiling_registry.h"
 #include "matmul/common/op_host/math_util.h"
 
+namespace {
+using namespace optiling;
+using namespace optiling::matmul_v3_advanced;
+// ------------------------------ SetNeedNdDma -------------------------------------------//
+void SetNeedNdDmaDefault(
+    const MatmulV3CompileInfo& /* compileInfo */, const MatMulV3Args& /* args */, MatMulV3RunInfo& /* runInfo*/)
+{
+    return;
+}
+
+void SetNeedNdDmaDav3510(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args, MatMulV3RunInfo& runInfo)
+{
+    uint64_t restUB = compileInfo.ubSize - runInfo.iterBatchL0 * runInfo.baseM * runInfo.baseN;
+    uint64_t singleBatchSize = args.mValue * runInfo.baseN;
+    uint64_t iterBatchX3 = std::min(runInfo.iterBatchL0, restUB / NUM_TWO / singleBatchSize);
+    runInfo.needNdDma = (iterBatchX3 > 1) && (args.batchX3 == 1);
+}
+
+using SetNeedNdDmaFunc = void (*)(const MatmulV3CompileInfo&, const MatMulV3Args&, MatMulV3RunInfo&);
+
+const static std::map<NpuArch, SetNeedNdDmaFunc> SetNeedNdDmaFuncMap = {
+    {NpuArch::DAV_3510, SetNeedNdDmaDav3510},
+};
+} // namespace
+
 namespace optiling {
 namespace fused_matmul {
-using strategy::ITER_BATCH_BASICAPI;
-MM_REGISTER_TILING_TEMPLATE(FusedMatMul, FusedMatMulIterBatchApiTiling, DAV_3510, ITER_BATCH_BASICAPI);
+using namespace strategy;
+MM_REGISTER_TILING_TEMPLATE(
+    FusedMatMul, FusedMatMulIterBatchApiTiling, DAV_3510, ITER_BATCH_BASICAPI_INHERITED_FROM_BMMV3);
+MM_REGISTER_TILING_TEMPLATE(
+    FusedMatMul, FusedMatMulIterBatchApiTiling, DAV_RESV, ITER_BATCH_BASICAPI_INHERITED_FROM_BMMV3);
+
+void FusedMatMulIterBatchApiTiling::SetNeedNdDma()
+{
+    auto iter = (SetNeedNdDmaFuncMap.find(compileInfo_.npuArch) == SetNeedNdDmaFuncMap.end()) ?
+                    SetNeedNdDmaDefault :
+                    SetNeedNdDmaFuncMap.at(compileInfo_.npuArch);
+    iter(compileInfo_, args_, runInfo_);
+}
 
 bool FusedMatMulIterBatchApiTiling::IsCapable()
 {
@@ -64,13 +100,9 @@ uint64_t FusedMatMulIterBatchApiTiling::GetTilingKey() const
 }
 
 ge::graphStatus FusedMatMulIterBatchApiTiling::DoOpTiling() {
-    BatchMatMulV3IterBatchBasicApiTiling::DoOpTiling();
-    // calculate iterBatchX3 for rest ub
-    uint64_t restUB = compileInfo_.ubSize - runInfo_.iterBatchL0 * runInfo_.baseM * runInfo_.baseN;
-    uint64_t singleBatchSize = args_.mValue * runInfo_.baseN;
-    uint64_t iterBatchX3 = std::min(runInfo_.iterBatchL0, restUB / NUM_TWO / singleBatchSize);
-    runInfo_.needNdDma = (iterBatchX3 > 1) && (args_.batchX3 == 1);
-    return ge::GRAPH_SUCCESS;
+    ge::graphStatus status = BatchMatMulV3IterBatchBasicApiTiling::DoOpTiling();
+    SetNeedNdDma();
+    return status;
 }
 
 } // namespace fused_matmul
