@@ -152,6 +152,8 @@ bool QuantBatchMatmulV4PerblockTiling::AnalyzeDtype()
 
 bool QuantBatchMatmulV4PerblockTiling::AnalyzeInputs()
 {
+    constexpr uint32_t KAlignedLimit = 128;
+    constexpr uint32_t NAlignedLimit = 256;
     auto x1Shape = GetShape(X1_IDX);
     auto x2Shape = GetShape(X2_IDX);
     auto x1ShapeDim = x1Shape.GetDimNum();
@@ -176,12 +178,16 @@ bool QuantBatchMatmulV4PerblockTiling::AnalyzeInputs()
     OP_TILING_CHECK(x1Outer != x2kSize,
                     VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "The size of k dimension in x1[%ld] is not equal to the size of k dimension in x2[%ld].",
                                                 x1Outer, x2Inner), return false);
-    OP_TILING_CHECK(x2nSize % basicTiling_.baseN != 0,
+    OP_TILING_CHECK(x2nSize % NAlignedLimit != 0,
         VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "The size of N [%ld] does not align with baseN [%lu].",
-                                                x2Outer, basicTiling_.baseN), return false);
+                                                x2Outer, NAlignedLimit), return false);
     inputParams_.mSize = x1Inner;
     inputParams_.kSize = x1Outer;
     inputParams_.nSize = inputParams_.transB ? x2Inner : x2Outer;
+    
+    OP_TILING_CHECK(inputParams_.kSize % KAlignedLimit != 0 || inputParams_.kSize % (KAlignedLimit * 4) != 0, // k must align BaseK and BaseK * 4
+        VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "G-B Scene: The size of K -> %ld does not align with baseK -> %lu and baseK * 4 -> %lu * 4.",
+                                                x2Outer, KAlignedLimit, KAlignedLimit), return false);
 
     auto aFormat = static_cast<ge::Format>(ge::GetPrimaryFormat(context_->GetInputDesc(X1_IDX)->GetStorageFormat()));
     OP_TILING_CHECK(aFormat != ge::FORMAT_ND, VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "aFormat Only support Nd"), return false);
