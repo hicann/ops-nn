@@ -197,7 +197,8 @@ aclnnStatus aclnnScatterNdUpdate(
   - aclnnScatterNdUpdate默认确定性实现。
 
 - 输入shape限制：
-  - indices至少是2维，其最后1维的大小不能超过varRef的维度大小。
+  - varRef 支持8维，varRef.rank为[1,8]。
+  - indices至少是2维，indices最后1维rank表示索引的维度数，rank取值范围为[1, 7], 且必须满足rank <= varRef.rank, 即索引维度数不能超过varRef的维度数。
   - 假设indices最后1维的大小是a，则updates的shape等于indices除最后1维外的shape加上varRef除前a维外的shape。举例：varRef的shape是(4, 5, 6)，indices的shape是(3, 2)，则updates的shape必须是(3, 6)。
 
 ## 调用示例
