@@ -752,3 +752,45 @@ TEST_F(l2BatchNormTest, ascend950PR_9589_l2_batch_norm_nullptr)
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
 }
+
+TEST_F(l2BatchNormTest, ascend950PR_3807_l2_batch_norm_fp32_input_fp16_weight_bias)
+{
+    auto selfDesc = TensorDesc({3, 5, 3, 8}, ACL_FLOAT, ACL_FORMAT_NCHW);
+    auto weightDesc = TensorDesc({5}, ACL_FLOAT16, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1});
+    auto biasDesc = TensorDesc({5}, ACL_FLOAT16, ACL_FORMAT_ND).Value(vector<float>{0, 0, 0, 0, 0});
+    auto rMeanDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{0, 0, 0, 0, 0});
+    auto rVarDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1});
+
+    auto outDesc = TensorDesc({3, 5, 3, 8}, ACL_FLOAT, ACL_FORMAT_NCHW);
+    auto meanDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto varDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(
+        aclnnBatchNorm, INPUT(selfDesc, weightDesc, biasDesc, rMeanDesc, rVarDesc, true, 0.1, 1e-5),
+        OUTPUT(outDesc, meanDesc, varDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
+}
+
+TEST_F(l2BatchNormTest, ascend950PR_3807_l2_batch_norm_bf16_input_fp16_weight_bias)
+{
+    auto selfDesc = TensorDesc({3, 5, 3, 8}, ACL_BF16, ACL_FORMAT_NCHW);
+    auto weightDesc = TensorDesc({5}, ACL_FLOAT16, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1});
+    auto biasDesc = TensorDesc({5}, ACL_FLOAT16, ACL_FORMAT_ND).Value(vector<float>{0, 0, 0, 0, 0});
+    auto rMeanDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{0, 0, 0, 0, 0});
+    auto rVarDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1});
+
+    auto outDesc = TensorDesc({3, 5, 3, 8}, ACL_BF16, ACL_FORMAT_NCHW);
+    auto meanDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto varDesc = TensorDesc({5}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(
+        aclnnBatchNorm, INPUT(selfDesc, weightDesc, biasDesc, rMeanDesc, rVarDesc, true, 0.1, 1e-5),
+        OUTPUT(outDesc, meanDesc, varDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACL_SUCCESS);
+}
