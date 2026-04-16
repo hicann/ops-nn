@@ -39,12 +39,15 @@ static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST_VOCAB = {
 
 static inline bool CheckNotNull(
     const aclTensor* logitsMax, const aclTensor* sumExpLogits, const aclTensor* predictedLogits,
-    const aclTensor* lossOut)
+    const aclTensor* lossOut, const aclTensor* vocabParallelLogitsOptional, const aclTensor* softMaxOutOptional)
 {
     OP_CHECK_NULL(logitsMax, return false);
     OP_CHECK_NULL(sumExpLogits, return false);
     OP_CHECK_NULL(predictedLogits, return false);
     OP_CHECK_NULL(lossOut, return false);
+    if (vocabParallelLogitsOptional != nullptr) {
+        OP_CHECK_NULL(softMaxOutOptional, return false);
+    }
     return true;
 }
 
@@ -92,7 +95,7 @@ static aclnnStatus CheckParams(
 {
     // 错误码等DFX方案细化后刷新，错误日志在check接口内打印
     // 1. 检查参数是否为空指针
-    CHECK_RET(CheckNotNull(logitsMax, sumExpLogits, predictedLogits, lossOut), ACLNN_ERR_PARAM_NULLPTR);
+    CHECK_RET(CheckNotNull(logitsMax, sumExpLogits, predictedLogits, lossOut, vocabParallelLogitsOptional, softMaxOutOptional), ACLNN_ERR_PARAM_NULLPTR);
 
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
     CHECK_RET(
