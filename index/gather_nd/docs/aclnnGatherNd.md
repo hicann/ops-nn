@@ -155,7 +155,7 @@ aclnnStatus aclnnGatherNd(
       </tr>
     </tbody></table>
 
-    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据不类型支持DOUBLE、INT16、UINT16、UINT32、UINT64。
+    - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：数据类型不支持DOUBLE、INT16、UINT16、UINT32、UINT64。
 - **返回值**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
