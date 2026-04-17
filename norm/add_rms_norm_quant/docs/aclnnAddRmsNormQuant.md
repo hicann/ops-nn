@@ -365,7 +365,6 @@ aclnnStatus aclnnAddRmsNormQuant(
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     
     | x1数据类型 | x2数据类型 | gamma数据类型 | scales1数据类型 |     scales2Optional数据类型 | zeroPoints1Optional数据类型 |     zeroPoints2Optional数据类型 | y1Out数据类型 | y2Out数据类型 | xOut数据类型 |
-
     | - | - | - | - | - | - | - | - | - | - |
     | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT32 | FLOAT32 | INT32 | INT32 |     INT8 | INT8 | FLOAT16 |
     | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 |     BFLOAT16 | INT8 | INT8 | BFLOAT16 |
@@ -373,7 +372,6 @@ aclnnStatus aclnnAddRmsNormQuant(
   - <term>Atlas 推理系列产品</term>：
     
     | x1数据类型 | x2数据类型 | gamma数据类型 | scales1数据类型 |     scales2Optional数据类型 | zeroPoints1Optional数据类型 |     zeroPoints2Optional数据类型 | y1Out数据类型 | y2Out数据类型 | xOut数据类型 |
-
     | - | - | - | - | - | - | - | - | - | - |
     | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT32 | FLOAT32 | INT32 | INT32 |     INT8 | INT8 | FLOAT16 |
 

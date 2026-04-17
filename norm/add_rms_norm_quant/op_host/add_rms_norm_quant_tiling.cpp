@@ -73,7 +73,8 @@ bool CheckOptionalParamsExisting(const gert::StorageShape* checkShape)
 {
     OP_CHECK_IF(nullptr == checkShape, OP_LOGD("CheckOptionalParamsExisting", "Get nullptr checkShape"), return false);
     int64_t checkShapeSize = checkShape->GetOriginShape().GetShapeSize();
-    OP_CHECK_IF((checkShapeSize <= 0), OP_LOGD("CheckOptionalParamsExisting", "Get empty checkShapeSize"), return false);
+    OP_CHECK_IF(
+        (checkShapeSize <= 0), OP_LOGD("CheckOptionalParamsExisting", "Get empty checkShapeSize"), return false);
     return true;
 }
 
@@ -288,8 +289,8 @@ ge::graphStatus Tiling4AddRmsNormQuant(gert::TilingContext* context)
 ge::graphStatus Tiling4AddRmsNormQuantV2(gert::TilingContext* context)
 {
     OP_CHECK_IF(
-        Tiling4AddRmsNormQuantNotRegbase(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "Tiling4AddRmsNormQuantNotRegbase failed."),
-        return ge::GRAPH_FAILED);
+        Tiling4AddRmsNormQuantNotRegbase(context) != ge::GRAPH_SUCCESS,
+        OP_LOGE(context, "Tiling4AddRmsNormQuantNotRegbase failed."), return ge::GRAPH_FAILED);
     CalcTilingKeyWithOptionalInput(context);
     return ge::GRAPH_SUCCESS;
 }
@@ -300,13 +301,11 @@ ge::graphStatus TilingPrepare4AddRmsNormQuant(gert::TilingParseContext* context)
     OP_LOGD(context, "Enter TilingPrepare4AddRmsNormQuant.");
     fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
     OP_CHECK_IF(
-        platformInfoPtr == nullptr, OP_LOGE("AddRmsNormQuant", "PlatformInfoPtr is null"),
-        return ge::GRAPH_FAILED);
+        platformInfoPtr == nullptr, OP_LOGE("AddRmsNormQuant", "PlatformInfoPtr is null"), return ge::GRAPH_FAILED);
 
     auto compileInfoPtr = context->GetCompiledInfo<AddRmsNormQuantCompileInfo>();
     OP_CHECK_IF(
-        compileInfoPtr == nullptr, OP_LOGE("AddRmsNormQuant", "CompileInfoPtr is null"),
-        return ge::GRAPH_FAILED);
+        compileInfoPtr == nullptr, OP_LOGE("AddRmsNormQuant", "CompileInfoPtr is null"), return ge::GRAPH_FAILED);
 
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     compileInfoPtr->curSocVersion = ascendcPlatform.GetSocVersion();
@@ -320,8 +319,7 @@ inline ge::graphStatus GenSimplifiedKey4AddRmsNormQuant(gert::TilingContext* con
     OP_CHECK_IF(nullptr == context, OP_LOGE("AddRmsNormQuant", "Context is null"), return ge::GRAPH_FAILED);
     OP_LOGW(context, "Enter AddRmsNormQuant genSimplifiedKey.");
 
-    OP_CHECK_IF(
-        nullptr == simplifiedKey, OP_LOGE(context, "SimplifiedKey is null"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(nullptr == simplifiedKey, OP_LOGE(context, "SimplifiedKey is null"), return ge::GRAPH_FAILED);
     OP_CHECK_NULL_WITH_CONTEXT(context, context->GetInputDesc(X1_INDEX));
     OP_CHECK_NULL_WITH_CONTEXT(context, context->GetInputDesc(X2_INDEX));
     OP_CHECK_NULL_WITH_CONTEXT(context, context->GetInputDesc(GAMMA_INDEX));
@@ -335,12 +333,12 @@ inline ge::graphStatus GenSimplifiedKey4AddRmsNormQuant(gert::TilingContext* con
     int32_t scales2Dtype = -1;
     int32_t zeroPoints1Dtype = -1;
     int32_t zeroPoints2Dtype = -1;
+    int32_t betaDtype = -1;
 
     int32_t y1Dtype = static_cast<int32_t>(context->GetOutputDesc(Y1_INDEX)->GetDataType());
 
     OP_CHECK_IF(
-        context->GetOptionalInputDesc(SCALES2_INDEX) != nullptr,
-        OP_LOGW(context, "Optional input scale2 exist"),
+        context->GetOptionalInputDesc(SCALES2_INDEX) != nullptr, OP_LOGW(context, "Optional input scale2 exist"),
         scales2Dtype = static_cast<int32_t>(context->GetOptionalInputDesc(SCALES2_INDEX)->GetDataType()));
     OP_CHECK_IF(
         context->GetOptionalInputDesc(ZERO_POINTS1_INDEX) != nullptr,
@@ -350,6 +348,9 @@ inline ge::graphStatus GenSimplifiedKey4AddRmsNormQuant(gert::TilingContext* con
         context->GetOptionalInputDesc(ZERO_POINTS2_INDEX) != nullptr,
         OP_LOGW(context, "Optional input zeroPoints2 exist"),
         zeroPoints2Dtype = static_cast<int32_t>(context->GetOptionalInputDesc(ZERO_POINTS2_INDEX)->GetDataType()));
+    OP_CHECK_IF(
+        context->GetOptionalInputDesc(BETA_INDEX) != nullptr, OP_LOGW(context, "Optional input beta exist"),
+        betaDtype = static_cast<int32_t>(context->GetOptionalInputDesc(BETA_INDEX)->GetDataType()));
 
     std::string simpleKeyTemp = "";
     strcat_s(simplifiedKey, DEST_MAX, "diy,");
@@ -368,16 +369,17 @@ inline ge::graphStatus GenSimplifiedKey4AddRmsNormQuant(gert::TilingContext* con
         .append("/")
         .append(std::to_string(zeroPoints2Dtype)) // zeroPoints2
         .append("/")
+        .append(std::to_string(betaDtype)) // beta
+        .append("/")
         .append(std::to_string(y1Dtype)) // y1Dtype
         .append("/");
     OP_LOGW(context, "SimpleKeyTemp: %s", simpleKeyTemp.c_str());
     errno_t err = strcat_s(simplifiedKey, DEST_MAX, simpleKeyTemp.c_str());
     OP_CHECK_IF(
-        (err != 0), OP_LOGE(context, "Error: strcat_s failed with error code %d.", err),
-        return ge::GRAPH_FAILED);
+        (err != 0), OP_LOGE(context, "Error: strcat_s failed with error code %d.", err), return ge::GRAPH_FAILED);
     OP_CHECK_IF(
-        strlen(simplifiedKey) > MAX_LEN_SIMPLIFIED_KEY,
-        OP_LOGE(context, "Len of simplifiedKey exceeds max length."), return ge::GRAPH_FAILED);
+        strlen(simplifiedKey) > MAX_LEN_SIMPLIFIED_KEY, OP_LOGE(context, "Len of simplifiedKey exceeds max length."),
+        return ge::GRAPH_FAILED);
     OP_LOGW(context, "Finish AddRmsNormQuant genSimplifiedKey.");
     return ge::GRAPH_SUCCESS;
 }

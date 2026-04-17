@@ -15,7 +15,6 @@
 #ifndef ADD_RMS_NORM_QUANT_REGBASE_PERF_H_
 #define ADD_RMS_NORM_QUANT_REGBASE_PERF_H_
 
-#include "kernel_utils.h"
 #include "../inc/platform.h"
 #include "add_rms_norm_quant_regbase_common.h"
 #include "../../norm_common/reduce_common_regbase.h"
@@ -24,7 +23,7 @@ namespace AddRmsNormQuant {
 
 template <typename T_X, typename T_Y, typename T_SCALES, typename T_ZEROPOINTS, uint64_t TILING_KEY>
 class KernelAddRmsNormQuantRegbasePerf {
-#define DIV_MODE ((TILING_KEY / 100) == 1)
+#define HAS_BETA (((TILING_KEY % 1000)/100) == 1)
 #define INPUT_KEY ((TILING_KEY % 100) / 10)
 #define HAS_ZEROPOINTS1 ((INPUT_KEY >> 2) % 2 == 1)
 #define HAS_SCALE2 ((INPUT_KEY >> 1) % 2 == 1)
@@ -38,7 +37,7 @@ public:
 
     __aicore__ inline void Init(
         GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2, GM_ADDR zeroPoints1,
-        GM_ADDR zeroPoints2, GM_ADDR y1, GM_ADDR y2, GM_ADDR x, const AddRmsNormQuantRegbaseTilingData* tilingData)
+        GM_ADDR zeroPoints2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR x, const AddRmsNormQuantRegbaseTilingData* tilingData)
     {
         numM = tilingData->numM;
         numN = tilingData->numN;
@@ -50,6 +49,7 @@ public:
         mLastCore = tilingData->mLastCore;
         epsilon = tilingData->epsilon;
         avgFactor = tilingData->avgFactor;
+        divMode = tilingData->divMode != 0;
 
         // dtype size
         xDtypeSize = blockSize / sizeof(T_X);
@@ -68,7 +68,7 @@ public:
         blockIdx = GetBlockIdx();
 
         CalBlockTail();
-        InitBuffer(x1, x2, gamma, scales1, scales2, zeroPoints1, zeroPoints2, y1, y2, x);
+        InitBuffer(x1, x2, gamma, scales1, scales2, zeroPoints1, zeroPoints2, beta, y1, y2, x);
     }
 
     __aicore__ inline void CalBlockTail()
@@ -80,7 +80,7 @@ public:
 
     __aicore__ inline void InitBuffer(
         GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2, GM_ADDR zeroPoints1,
-        GM_ADDR zeroPoints2, GM_ADDR y1, GM_ADDR y2, GM_ADDR x)
+        GM_ADDR zeroPoints2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR x)
     {
         uint64_t gmOffset = blockIdx * mPerCore * numN;
         uint64_t gmLen = mCore * numN;
@@ -88,10 +88,10 @@ public:
         x2Gm.SetGlobalBuffer((__gm__ T_X*)x2 + gmOffset, gmLen);
         y1Gm.SetGlobalBuffer((__gm__ T_Y*)y1 + gmOffset, gmLen);
         xGm.SetGlobalBuffer((__gm__ T_X*)x + gmOffset, gmLen);
+        // gamma + scales1
         gammaGm.SetGlobalBuffer((__gm__ T_X*)gamma, numN);
         scales1Gm.SetGlobalBuffer((__gm__ T_SCALES*)scales1, numN);
-
-        // gamma + scales1
+        
         int64_t preloadDataSize = xGammaAlign * sizeof(T_X) + scalesAlign * sizeof(T_SCALES);
         if constexpr (HAS_SCALE2) {
             scales2Gm.SetGlobalBuffer((__gm__ T_SCALES*)scales2, numN);
@@ -104,6 +104,10 @@ public:
         if constexpr (HAS_ZEROPOINTS2) {
             zeroPoints2Gm.SetGlobalBuffer((__gm__ T_ZEROPOINTS*)zeroPoints2, numN);
             preloadDataSize = preloadDataSize + zeroPointsAlign * sizeof(T_ZEROPOINTS);
+        }
+        if constexpr (HAS_BETA) {
+            betaGm.SetGlobalBuffer((__gm__ T_X*)beta, numN);
+            preloadDataSize = preloadDataSize + xGammaAlign * sizeof(T_X);
         }
         if constexpr (HAS_Y2) {
             y2Gm.SetGlobalBuffer((__gm__ T_Y*)y2 + gmOffset, gmLen);
@@ -165,7 +169,7 @@ public:
             }
 
             // 3. Quant
-            CalculateQuant(xOutTmpLocal,rstdLocal,gammaLocal,scales1Local,scales2Local,zeroPoints1Local,zeroPoints2Local,y1Local,y2Local,realM,baseN,xGammaAlign,scalesAlign,zeroPointsAlign,yAlign);
+            CalculateQuant(xOutTmpLocal,rstdLocal,gammaLocal,betaLocal,scales1Local,scales2Local,zeroPoints1Local,zeroPoints2Local,y1Local,y2Local,realM,baseN,xGammaAlign,scalesAlign,zeroPointsAlign,yAlign);
 
             outQueueY1.EnQue<T_Y>(y1Local);
             if constexpr (HAS_Y2) {
@@ -222,26 +226,34 @@ private:
         copyInParamszeroPoints.srcStride = 0;
         copyInParamszeroPoints.dstStride = 0;
                 
-        if (HAS_SCALE2) {
+        if constexpr (HAS_SCALE2) {
             // LocalTensor<T_SCALES> scales2Local;
             scales2Local = otherLocal[localOffset].ReinterpretCast<T_SCALES>();
             localOffset = localOffset + scalesAlign * sizeof(T_SCALES);
             DataCopyPad(scales2Local, scales2Gm, copyInParamsScales, dataCopyPadExtParamsScales);
         }
 
-        if (HAS_ZEROPOINTS1) {
+        if constexpr (HAS_ZEROPOINTS1) {
             // LocalTensor<T_ZEROPOINTS> zeroPoints1Local;
             zeroPoints1Local = otherLocal[localOffset].ReinterpretCast<T_ZEROPOINTS>();
             localOffset = localOffset + zeroPointsAlign * sizeof(T_ZEROPOINTS);
             DataCopyPad(zeroPoints1Local, zeroPoints1Gm, copyInParamszeroPoints, dataCopyPadExtParamszeroPoints);
         }
 
-        if (HAS_ZEROPOINTS2) {
+        if constexpr (HAS_ZEROPOINTS2) {
             // LocalTensor<T_ZEROPOINTS> zeroPoints2Local;
             zeroPoints2Local = otherLocal[localOffset].ReinterpretCast<T_ZEROPOINTS>();
             localOffset = localOffset + zeroPointsAlign * sizeof(T_ZEROPOINTS);
             DataCopyPad(zeroPoints2Local, zeroPoints2Gm, copyInParamszeroPoints, dataCopyPadExtParamszeroPoints);
         }
+
+        if constexpr (HAS_BETA) {
+            // LocalTensor<T_X> betaLocal
+            betaLocal = otherLocal[localOffset].ReinterpretCast<T_X>();
+            localOffset = localOffset + xGammaAlign * sizeof(T_X);
+            DataCopyPad(betaLocal, betaGm, copyInParamsGamma, dataCopyPadExtParamsGamma);
+        }
+
     }
     __aicore__ inline void CopyInXMutiMoveAlign(uint64_t gmOffset, uint32_t realM)
     {
@@ -612,7 +624,7 @@ __aicore__ inline void StoreTensorForDtypeTOut(
 
     // template <bool HAS_ZEROPOINTS2, bool HAS_ZEROPOINTS1, bool HAS_SCALE2, bool DIV_MODE>
     __aicore__ inline void CalculateQuant(LocalTensor<float> xLocal, LocalTensor<float> rstdLocal, 
-        LocalTensor<T_X> gammaLocal, 
+        LocalTensor<T_X> gammaLocal, LocalTensor<T_X> betaLocal,
         LocalTensor<T_SCALES> scales1Local, LocalTensor<T_SCALES> scales2Local, 
         LocalTensor<T_ZEROPOINTS> zeroPoints1Local, LocalTensor<T_ZEROPOINTS> zeroPoints2Local, 
         LocalTensor<T_Y> y1Local, LocalTensor<T_Y> y2Local, 
@@ -631,6 +643,7 @@ __aicore__ inline void StoreTensorForDtypeTOut(
         __local_mem__ T_SCALES* scales2Addr;
         __local_mem__ T_ZEROPOINTS* zeroPoints1Addr;
         __local_mem__ T_ZEROPOINTS* zeroPoints2Addr;
+        __local_mem__ T_X* betaAddr;
         __local_mem__ T_Y* y1Addr = (__ubuf__ T_Y*)y1Local.GetPhyAddr();
         __local_mem__ T_Y* y2Addr;
 
@@ -642,6 +655,9 @@ __aicore__ inline void StoreTensorForDtypeTOut(
         }
         if constexpr(HAS_ZEROPOINTS2) {
             zeroPoints2Addr = (__ubuf__ T_ZEROPOINTS*)zeroPoints2Local.GetPhyAddr();
+        }
+        if constexpr (HAS_BETA) {
+            betaAddr = (__ubuf__ T_X*)betaLocal.GetPhyAddr();
         }       
         if constexpr((HAS_Y2)) {
             y2Addr = (__ubuf__ T_Y*)y2Local.GetPhyAddr();
@@ -649,7 +665,7 @@ __aicore__ inline void StoreTensorForDtypeTOut(
         // y = cast((x * rstd * gamma) */ scales + zeropints)
         __VEC_SCOPE__
         {
-            RegTensor<float> xReg, rstdReg, gammaReg;
+            RegTensor<float> xReg, rstdReg, gammaReg, betaReg;
             RegTensor<float> scales1Reg, zeroPoints1Reg, scales2Reg, zeroPoints2Reg;
             RegTensor<float> mul1Reg, mul2Reg;
             RegTensor<float> scales1ResultReg, scales2ResultReg;
@@ -666,8 +682,12 @@ __aicore__ inline void StoreTensorForDtypeTOut(
                     Mul(mul1Reg, xReg, rstdReg, pregCurLoop);
                     LoadTensorForDtypeTIn(gammaAddr, gammaReg, pregCurLoop, j * vectorLenB32);
                     Mul(mul2Reg, gammaReg, mul1Reg, pregCurLoop);
+                    if constexpr (HAS_BETA) {
+                        LoadTensorForDtypeTIn(betaAddr, betaReg, pregCurLoop, j * vectorLenB32);
+                        Add(mul2Reg, mul2Reg, betaReg, pregCurLoop);
+                    }
                     LoadTensorForDtypeTIn(scales1Addr, scales1Reg, pregCurLoop, j * vectorLenB32);
-                    if constexpr(DIV_MODE) {
+                    if (divMode) {
                         Div(scales1ResultReg, mul2Reg, scales1Reg, pregCurLoop); 
                     } else {
                         Mul(scales1ResultReg, mul2Reg, scales1Reg, pregCurLoop); 
@@ -683,7 +703,7 @@ __aicore__ inline void StoreTensorForDtypeTOut(
                     if constexpr(HAS_Y2) {
                         if constexpr(HAS_SCALE2) {
                             LoadTensorForDtypeTIn(scales2Addr, scales2Reg, pregCurLoop, j * vectorLenB32);
-                            if constexpr(DIV_MODE) {
+                            if (divMode) {
                                 Div(scales2ResultReg, mul2Reg, scales2Reg, pregCurLoop); 
                             } else {
                                 Mul(scales2ResultReg, mul2Reg, scales2Reg, pregCurLoop); 
@@ -708,6 +728,7 @@ private:
     GlobalTensor<T_X> x1Gm;
     GlobalTensor<T_X> x2Gm;
     GlobalTensor<T_X> gammaGm;
+    GlobalTensor<T_X> betaGm;
     GlobalTensor<T_X> xGm;
     GlobalTensor<T_SCALES> scales1Gm, scales2Gm;
     GlobalTensor<T_ZEROPOINTS> zeroPoints1Gm, zeroPoints2Gm;
@@ -727,6 +748,7 @@ private:
     TBuf<TPosition::VECCALC> xOutTmpBuf;
 
     LocalTensor<T_X> gammaLocal;
+    LocalTensor<T_X> betaLocal;
     LocalTensor<T_SCALES> scales1Local, scales2Local;
     LocalTensor<T_ZEROPOINTS> zeroPoints1Local, zeroPoints2Local;
     // Tiling data
@@ -740,6 +762,7 @@ private:
     int64_t mLastCore{0};
     float epsilon{0};
     float avgFactor{0};
+    bool divMode{false};
 
     // Platform
     int64_t blockIdx{0};

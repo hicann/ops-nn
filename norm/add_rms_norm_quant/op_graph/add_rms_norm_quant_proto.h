@@ -20,11 +20,11 @@
 namespace ge {
 /**
 * @brief AddRmsNormQuant operator interface implementation.
-* Calculating input: x1, x2, gamma, scales1, scales2, zero_points1, zero_points2 \n
+* Calculating input: x1, x2, gamma, scales1, scales2, zero_points1, zero_points2, beta \n
 * Calculating process: \n
 *  x = x1 + x2 \n
 *  rstd = np.rsqrt(np.mean(np.power(x, 2), reduce_axis, keepdims=True) + epsilon)) \n
-*  rmsnorm_out = x * rstd * gamma \n
+*  rmsnorm_out = x * rstd * gamma + beta \n
 *  if div_mode is true: \n
 *    y1 = round(rmsnorm_out / scales1 + zero_points1) \n
 *    y2 = round(rmsnorm_out / scales2 + zero_points2) \n
@@ -47,6 +47,8 @@ namespace ge {
 *                   Support dtype: int32/float32/float16/bfloat16, support format: ND.
 * @li zero_points2: An optional input tensor. Describing the bias of the secend quant operation.
 *                   Support dtype: int32/float32/float16/bfloat16, support format: ND.
+* @li beta: An optional input tensor. Describing the bias of the add operation.
+*                   Support dtype: float32/float16/bfloat16, support format: ND.
 
 * @par Attributes
 * @li axis: An optional attribute. Describing the axis of the quant operation, does not take effect now.
@@ -56,7 +58,7 @@ namespace ge {
 * @li div_mode: An optional attribute. When div_mode is true, the quant opertaion uses division, otherwise, uses
 multiplication.
 *               The type is bool. Defaults to true.
-* @li dst_type: An optional int32. Output y data type enum value. Support DT_INT8, DT_HIFLOAT8, DT_FLOAT8_E5M2, 
+* @li dst_type: An optional int32. Output y data type enum value. Support DT_INT8, DT_HIFLOAT8, DT_FLOAT8_E5M2,
 *               DT_FLOAT8_E4M3FN. Defaults to DT_INT8.
 * @par Outputs
 * @li y1: A tensor. Describing the output of the first quant operation.
@@ -75,6 +77,7 @@ REG_OP(AddRmsNormQuant)
     .OPTIONAL_INPUT(scales2, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
     .OPTIONAL_INPUT(zero_points1, TensorType({DT_INT32, DT_FLOAT16, DT_FLOAT, DT_BF16}))
     .OPTIONAL_INPUT(zero_points2, TensorType({DT_INT32, DT_FLOAT16, DT_FLOAT, DT_BF16}))
+    .OPTIONAL_INPUT(beta, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))
     .OUTPUT(y1, TensorType({DT_INT8, DT_HIFLOAT8, DT_FP8_E5M2, DT_FP8_E4M3FN}))
     .OUTPUT(y2, TensorType({DT_INT8, DT_HIFLOAT8, DT_FP8_E5M2, DT_FP8_E4M3FN}))
     .OUTPUT(x, TensorType({DT_FLOAT16, DT_FLOAT, DT_BF16}))

@@ -12,8 +12,8 @@
  * \file add_rms_norm_quant_regbase_split_reduce.h
  * \brief
  */
-#ifndef ADD_RMS_NORM_QUANT_REBASE_REDUCE_H_
-#define ADD_RMS_NORM_QUANT_REBASE_REDUCE_H_
+#ifndef ADD_RMS_NORM_QUANT_REGBASE_SPLIT_REDUCE_H_
+#define ADD_RMS_NORM_QUANT_REGBASE_SPLIT_REDUCE_H_
 
 #include "add_rms_norm_quant_regbase_common.h"
 
@@ -21,7 +21,7 @@ namespace AddRmsNormQuant {
 
 template <typename T_X, typename T_Y, typename T_SCALES, typename T_ZEROPOINTS, uint64_t TILING_KEY>
 class KernelAddRmsNormQuantRegbaseSpiltReduce {
-#define DIV_MODE ((TILING_KEY / 100) == 1)
+#define HAS_BETA (((TILING_KEY % 1000)/100) == 1)
 #define INPUT_KEY ((TILING_KEY % 100) / 10)
 #define HAS_ZEROPOINTS1 ((INPUT_KEY >> 2) % 2 == 1)
 #define HAS_SCALE2 ((INPUT_KEY >> 1) % 2 == 1)
@@ -35,7 +35,7 @@ public:
 
     __aicore__ inline void Init(
         GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2, GM_ADDR zeroPoints1,
-        GM_ADDR zeroPoints2, GM_ADDR y1, GM_ADDR y2, GM_ADDR x, const AddRmsNormQuantRegbaseTilingData* tilingData)
+        GM_ADDR zeroPoints2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR x, const AddRmsNormQuantRegbaseTilingData* tilingData)
     {
         numM_ = tilingData->numM;
         numN_ = tilingData->numN;
@@ -49,12 +49,13 @@ public:
         mLastCore_ = tilingData->mLastCore;
         epsilon_ = tilingData->epsilon;
         avgFactor_ = tilingData->avgFactor;
+        divMode_ = tilingData->divMode != 0;
 
         blockNum_ = GetBlockNum();
         blockIdx_ = GetBlockIdx();
 
         CalBlockTail();
-        InitBuffer(x1, x2, gamma, scales1, scales2, zeroPoints1, zeroPoints2, y1, y2, x);
+        InitBuffer(x1, x2, gamma, scales1, scales2, zeroPoints1, zeroPoints2, beta, y1, y2, x);
     }
 
     __aicore__ inline void CalBlockTail()
@@ -63,62 +64,41 @@ public:
         nCnt_ = CeilDiv(numN_, baseN_);
         tailN_ = numN_ - (nCnt_ - 1) * baseN_;
 
-        tailNDtypeAlign_ = CeilAlign(tailN_, BLOCK_SIZE / sizeof(T_X));
+        tailNDtypeAlign_ = CeilAlign(static_cast<uint64_t>(tailN_), static_cast<uint64_t>(BLOCK_SIZE / sizeof(T_X)));
         baseNB8Align_ = CeilAlign(baseN_, B8_BLOCK_NUM);
         uint64_t reduceBufLen = baseNReduceAlign_ / (2 * V_LENGTH);
         reduceBufAlign_ = CeilAlign(reduceBufLen, B32_BLOCK_NUM);
     }
 
-    __aicore__ inline void InitBuffer(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2, GM_ADDR zeroPoints1,
-        GM_ADDR zeroPoints2, GM_ADDR y1, GM_ADDR y2, GM_ADDR x)
+    __aicore__ inline void SetGlobalBuffers(
+        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2, 
+        GM_ADDR zeroPoints1, GM_ADDR zeroPoints2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR x)
     {
-        uint64_t gmOffset = blockIdx_ * mPerCore_ * numN_;
-        uint64_t gmLen = mCore_ * numN_;
-        x1Gm_.SetGlobalBuffer((__gm__ T_X*)x1 + gmOffset, gmLen);
-        x2Gm_.SetGlobalBuffer((__gm__ T_X*)x2 + gmOffset, gmLen);
-        gammaGm_.SetGlobalBuffer((__gm__ T_X*)gamma, numN_);
-        scales1Gm_.SetGlobalBuffer((__gm__ T_SCALES*)scales1, numN_);
-        y1Gm_.SetGlobalBuffer((__gm__ T_Y*)y1 + gmOffset, gmLen);
-        y2Gm_.SetGlobalBuffer((__gm__ T_Y*)y2 + gmOffset, gmLen);
-        xGm_.SetGlobalBuffer((__gm__ T_X*)x + gmOffset, gmLen);
-        if constexpr (HAS_SCALE2) {
-            scales2Gm_.SetGlobalBuffer((__gm__ T_SCALES*)scales2, numN_);
-        }
-        if constexpr (HAS_ZEROPOINTS1) {
-            zeroPoints1Gm_.SetGlobalBuffer((__gm__ T_ZEROPOINTS*)zeroPoints1, numN_);
-        }
-        if constexpr (HAS_ZEROPOINTS2) {
-            zeroPoints2Gm_.SetGlobalBuffer((__gm__ T_ZEROPOINTS*)zeroPoints2, numN_);
-        }
+        SetQuantGlobalBuffers<T_X, T_Y, T_SCALES, T_ZEROPOINTS, TILING_KEY>(
+            x1Gm_, x2Gm_, gammaGm_, betaGm_, scales1Gm_, scales2Gm_, zeroPoints1Gm_, zeroPoints2Gm_,
+            y1Gm_, y2Gm_, xGm_, x1, x2, gamma, scales1, scales2, zeroPoints1, zeroPoints2, beta, y1, y2, x,
+            blockIdx_, mPerCore_, mCore_, numN_);
+    }
 
-        uint64_t ubFactorQuant = CeilAlign(baseN_, BLOCK_SIZE / sizeof(T_SCALES));
-        uint64_t ubFactorRstd = B32_BLOCK_NUM;
-        pipe_->InitBuffer(inQueueX1_, 1, baseNReduceAlign_ * sizeof(T_X));
-        pipe_->InitBuffer(inQueueX2_, 1, baseNReduceAlign_ * sizeof(T_X));
-        pipe_->InitBuffer(outQueueX_, 1, baseNReduceAlign_ * sizeof(T_X));
-        pipe_->InitBuffer(inQueueGamma_, 1, baseNDtypeAlign_ * sizeof(T_X));
-        pipe_->InitBuffer(inQueueScales1_, 1, ubFactorQuant * sizeof(T_SCALES));
-        pipe_->InitBuffer(outQueueY1_, 1, baseNB8Align_ * sizeof(T_Y));
-        if constexpr (HAS_SCALE2) {
-            pipe_->InitBuffer(inQueueScales2_, 1, ubFactorQuant * sizeof(T_SCALES));
-        }
-        if constexpr (HAS_ZEROPOINTS1) {
-            pipe_->InitBuffer(inQueueZeroPoints1_, 1, ubFactorQuant * sizeof(T_ZEROPOINTS));
-        }
-        if constexpr (HAS_ZEROPOINTS2) {
-            pipe_->InitBuffer(inQueueZeroPoints2_, 1, ubFactorQuant * sizeof(T_ZEROPOINTS));
-        }
-        if constexpr (HAS_Y2) {
-            pipe_->InitBuffer(outQueueY2_, 1, baseNB8Align_ * sizeof(T_Y));
-        }
-
-        pipe_->InitBuffer(rstdBuf_, ubFactorRstd * sizeof(float));
-        pipe_->InitBuffer(reduceBuf_, reduceBufAlign_ * sizeof(float));
+    __aicore__ inline void InitPipeBuffers()
+    {
+        InitQuantPipeBuffers<T_X, T_Y, T_SCALES, T_ZEROPOINTS, TILING_KEY>(
+            pipe_, inQueueX1_, inQueueX2_, outQueueX_, inQueueGamma_, inQueueBeta_, inQueueScales1_,
+            inQueueScales2_, inQueueZeroPoints1_, inQueueZeroPoints2_, outQueueY1_, outQueueY2_,
+            rstdBuf_, reduceBuf_, baseNReduceAlign_, baseNDtypeAlign_, baseNB8Align_, baseN_, reduceBufAlign_);
+    
         pipe_->InitBuffer(level1Buf_, RmsNorm::ONCE_VECTOR_SIZE * sizeof(float));
         pipe_->InitBuffer(level2Buf_, RmsNorm::ONCE_VECTOR_SIZE * sizeof(float));
         pipe_->InitBuffer(level3Buf_, RmsNorm::ONCE_VECTOR_SIZE * sizeof(float));
         pipe_->InitBuffer(tempBuf_, V_LENGTH * sizeof(float));
+    }
+
+    __aicore__ inline void InitBuffer(
+        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2, GM_ADDR zeroPoints1,
+        GM_ADDR zeroPoints2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR x)
+    {
+        SetGlobalBuffers(x1, x2, gamma, scales1, scales2, zeroPoints1, zeroPoints2, beta, y1, y2, x);
+        InitPipeBuffers();
     }
 
     __aicore__ inline void Process()
@@ -140,8 +120,15 @@ public:
                 uint64_t realN = (nIdx == nCnt_ - 1) ? tailN_ : baseN_;
                 uint64_t realNDtypeAlign = (nIdx == nCnt_ - 1) ? tailNDtypeAlign_ : baseNDtypeAlign_;
                 CopyInGamma(nIdx * baseN_, realN);
+                if constexpr (HAS_BETA) {
+                    CopyInBeta(nIdx * baseN_, realN);
+                }
                 CopyInQuant(nIdx * baseN_, realN);
                 LocalTensor<T_X> gammaLocal = inQueueGamma_.DeQue<T_X>();
+                LocalTensor<T_X> betaLocal;
+                if constexpr (HAS_BETA) {
+                    betaLocal = inQueueBeta_.DeQue<T_X>();
+                }
                 LocalTensor<T_SCALES> scales1Local = inQueueScales1_.DeQue<T_SCALES>();
                 LocalTensor<T_SCALES> scales2Local;
                 LocalTensor<T_ZEROPOINTS> zeroPoints1Local, zeroPoints2Local;
@@ -158,13 +145,16 @@ public:
                 uint64_t gmOffset = mIdx * numN_ + nIdx * baseN_;
                 CopyInX(inQueueX1_, xGm_, gmOffset, realN, 0, realNDtypeAlign - realN);
                 Compute(
-                    rstdLocal, gammaLocal, scales1Local, scales2Local, zeroPoints1Local, zeroPoints2Local, mIdx, nIdx);
+                    rstdLocal, gammaLocal, betaLocal, scales1Local, scales2Local, zeroPoints1Local, zeroPoints2Local, mIdx, nIdx);
                 CopyOutY(y1Gm_, outQueueY1_, gmOffset, realN);
                 if constexpr (HAS_Y2) {
                     CopyOutY(y2Gm_, outQueueY2_, gmOffset, realN);
                 }
 
                 inQueueGamma_.FreeTensor(gammaLocal);
+                if constexpr (HAS_BETA) {
+                    inQueueBeta_.FreeTensor(betaLocal);
+                }
                 inQueueScales1_.FreeTensor(scales1Local);
                 if constexpr (HAS_SCALE2) {
                     inQueueScales2_.FreeTensor(scales2Local);
@@ -185,6 +175,13 @@ private:
         LocalTensor<T_X> gammaLocal = inQueueGamma_.AllocTensor<T_X>();
         RmsNorm::DataCopyImpl<T_X>(gammaLocal, gammaGm_[gmOffset], 1, blockLen);
         inQueueGamma_.EnQue(gammaLocal);
+    }
+
+    __aicore__ inline void CopyInBeta(uint64_t gmOffset, uint64_t blockLen)
+    {
+        LocalTensor<T_X> betaLocal = inQueueBeta_.AllocTensor<T_X>();
+        RmsNorm::DataCopyImpl<T_X>(betaLocal, betaGm_[gmOffset], 1, blockLen);
+        inQueueBeta_.EnQue(betaLocal);
     }
 
     __aicore__ inline void CopyInQuant(uint64_t gmOffset, uint64_t blockLen)
@@ -304,9 +301,10 @@ private:
     }
 
     __aicore__ inline void Compute(
-        LocalTensor<float>& rstdLocal, LocalTensor<T_X>& gammaLocal, LocalTensor<T_SCALES>& scales1Local,
-        LocalTensor<T_SCALES>& scales2Local, LocalTensor<T_ZEROPOINTS>& zeroPoints1Local,
-        LocalTensor<T_ZEROPOINTS>& zeroPoints2Local, uint64_t mIdx, uint64_t nIdx)
+        LocalTensor<float>& rstdLocal, LocalTensor<T_X>& gammaLocal, LocalTensor<T_X>& betaLocal,
+        LocalTensor<T_SCALES>& scales1Local, LocalTensor<T_SCALES>& scales2Local,
+        LocalTensor<T_ZEROPOINTS>& zeroPoints1Local, LocalTensor<T_ZEROPOINTS>& zeroPoints2Local,
+        uint64_t mIdx, uint64_t nIdx)
     {
         LocalTensor<T_X> x1Local = inQueueX1_.DeQue<T_X>();
         LocalTensor<T_Y> y1Local = outQueueY1_.AllocTensor<T_Y>();
@@ -315,11 +313,20 @@ private:
             y2Local = outQueueY2_.AllocTensor<T_Y>();
         }
 
-        ComputeY<T_X, T_Y, T_SCALES, T_ZEROPOINTS, true, HAS_ZEROPOINTS1, DIV_MODE>(
-            y1Local, x1Local, rstdLocal, gammaLocal, scales1Local, zeroPoints1Local, mIdx, baseNDtypeAlign_);
-        if constexpr (HAS_Y2) {
-            ComputeY<T_X, T_Y, T_SCALES, T_ZEROPOINTS, HAS_SCALE2, HAS_ZEROPOINTS2, DIV_MODE>(
-                y2Local, x1Local, rstdLocal, gammaLocal, scales2Local, zeroPoints2Local, mIdx, baseNDtypeAlign_);
+        if (divMode_) {
+            ComputeY<T_X, T_Y, T_SCALES, T_ZEROPOINTS, true, HAS_ZEROPOINTS1, HAS_BETA, true>(
+                y1Local, x1Local, rstdLocal, gammaLocal, betaLocal, scales1Local, zeroPoints1Local, mIdx, baseNDtypeAlign_);
+            if constexpr (HAS_Y2) {
+                ComputeY<T_X, T_Y, T_SCALES, T_ZEROPOINTS, HAS_SCALE2, HAS_ZEROPOINTS2, HAS_BETA, true>(
+                    y2Local, x1Local, rstdLocal, gammaLocal, betaLocal, scales2Local, zeroPoints2Local, mIdx, baseNDtypeAlign_);
+            }
+        } else {
+            ComputeY<T_X, T_Y, T_SCALES, T_ZEROPOINTS, true, HAS_ZEROPOINTS1, HAS_BETA, false>(
+                y1Local, x1Local, rstdLocal, gammaLocal, betaLocal, scales1Local, zeroPoints1Local, mIdx, baseNDtypeAlign_);
+            if constexpr (HAS_Y2) {
+                ComputeY<T_X, T_Y, T_SCALES, T_ZEROPOINTS, HAS_SCALE2, HAS_ZEROPOINTS2, HAS_BETA, false>(
+                    y2Local, x1Local, rstdLocal, gammaLocal, betaLocal, scales2Local, zeroPoints2Local, mIdx, baseNDtypeAlign_);
+            }
         }
 
         inQueueX1_.FreeTensor(x1Local);
@@ -335,13 +342,13 @@ private:
     GlobalTensor<T_X> x1Gm_;
     GlobalTensor<T_X> x2Gm_;
     GlobalTensor<T_X> gammaGm_;
+    GlobalTensor<T_X> betaGm_;
     GlobalTensor<T_X> xGm_;
     GlobalTensor<T_SCALES> scales1Gm_, scales2Gm_;
     GlobalTensor<T_ZEROPOINTS> zeroPoints1Gm_, zeroPoints2Gm_;
-    GlobalTensor<T_Y> y1Gm_;
-    GlobalTensor<T_Y> y2Gm_;
+    GlobalTensor<T_Y> y1Gm_, y2Gm_;
     // UB Buffer
-    TQue<QuePosition::VECIN, 1> inQueueX1_, inQueueX2_, inQueueGamma_;
+    TQue<QuePosition::VECIN, 1> inQueueX1_, inQueueX2_, inQueueGamma_, inQueueBeta_;
     TQue<QuePosition::VECIN, 1> inQueueScales1_, inQueueScales2_, inQueueZeroPoints1_, inQueueZeroPoints2_;
     TQue<QuePosition::VECOUT, 1> outQueueY1_, outQueueY2_, outQueueX_;
     TBuf<TPosition::VECCALC> rstdBuf_;
@@ -366,16 +373,15 @@ private:
     uint64_t mLastCore_{0};
     float epsilon_{0};
     float avgFactor_{0};
+    bool divMode_{false};
     // Platform
     int64_t blockIdx_{0};
     int64_t blockNum_{0};
     // Cal params
-    uint64_t mCore_;
-    uint64_t nCnt_;
-    uint64_t tailN_;
-    uint64_t baseNB8Align_;
-    // Other
-    uint32_t vfLength_{0};
+    int64_t mCore_;
+    int64_t nCnt_;
+    int64_t tailN_;
+    int64_t baseNB8Align_;
 };
 } // namespace AddRmsNormQuant
-#endif // ADD_RMS_NORM_QUANT_REGBASE_SPILT_REDUCE_H_
+#endif // ADD_RMS_NORM_QUANT_REGBASE_SPLIT_REDUCE_H_

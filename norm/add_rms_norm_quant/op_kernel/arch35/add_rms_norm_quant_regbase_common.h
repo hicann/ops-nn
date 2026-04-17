@@ -136,6 +136,90 @@ __aicore__ inline void CopyOutY(
     outQueueY.FreeTensor(yLocal);
 }
 
+template <typename T_X, typename T_Y, typename T_SCALES, typename T_ZEROPOINTS, uint64_t TILING_KEY>
+__aicore__ inline void SetQuantGlobalBuffers(
+    GlobalTensor<T_X>& x1Gm, GlobalTensor<T_X>& x2Gm, GlobalTensor<T_X>& gammaGm, GlobalTensor<T_X>& betaGm,
+    GlobalTensor<T_SCALES>& scales1Gm, GlobalTensor<T_SCALES>& scales2Gm,
+    GlobalTensor<T_ZEROPOINTS>& zeroPoints1Gm, GlobalTensor<T_ZEROPOINTS>& zeroPoints2Gm,
+    GlobalTensor<T_Y>& y1Gm, GlobalTensor<T_Y>& y2Gm, GlobalTensor<T_X>& xGm,
+    GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2,
+    GM_ADDR zeroPoints1, GM_ADDR zeroPoints2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR x,
+    uint64_t blockIdx, uint64_t mPerCore, uint64_t mCore, uint64_t numN)
+{
+    constexpr bool HAS_BETA = (((TILING_KEY % 1000)/100) == 1);
+    constexpr uint64_t INPUT_KEY = ((TILING_KEY % 100) / 10);
+    constexpr bool HAS_ZEROPOINTS1 = ((INPUT_KEY >> 2) % 2 == 1);
+    constexpr bool HAS_SCALE2 = ((INPUT_KEY >> 1) % 2 == 1);
+    constexpr bool HAS_ZEROPOINTS2 = (INPUT_KEY % 2 == 1);
+
+    uint64_t gmOffset = blockIdx * mPerCore * numN;
+    uint64_t gmLen = mCore * numN;
+    x1Gm.SetGlobalBuffer((__gm__ T_X*)x1 + gmOffset, gmLen);
+    x2Gm.SetGlobalBuffer((__gm__ T_X*)x2 + gmOffset, gmLen);
+    gammaGm.SetGlobalBuffer((__gm__ T_X*)gamma, numN);
+    if constexpr (HAS_BETA) {
+        betaGm.SetGlobalBuffer((__gm__ T_X*)beta, numN);
+    }
+    scales1Gm.SetGlobalBuffer((__gm__ T_SCALES*)scales1, numN);
+    y1Gm.SetGlobalBuffer((__gm__ T_Y*)y1 + gmOffset, gmLen);
+    y2Gm.SetGlobalBuffer((__gm__ T_Y*)y2 + gmOffset, gmLen);
+    xGm.SetGlobalBuffer((__gm__ T_X*)x + gmOffset, gmLen);
+    if constexpr (HAS_SCALE2) {
+        scales2Gm.SetGlobalBuffer((__gm__ T_SCALES*)scales2, numN);
+    }
+    if constexpr (HAS_ZEROPOINTS1) {
+        zeroPoints1Gm.SetGlobalBuffer((__gm__ T_ZEROPOINTS*)zeroPoints1, numN);
+    }
+    if constexpr (HAS_ZEROPOINTS2) {
+        zeroPoints2Gm.SetGlobalBuffer((__gm__ T_ZEROPOINTS*)zeroPoints2, numN);
+    }
+}
+
+template <typename T_X, typename T_Y, typename T_SCALES, typename T_ZEROPOINTS, uint64_t TILING_KEY>
+__aicore__ inline void InitQuantPipeBuffers(
+    TPipe* pipe, TQue<QuePosition::VECIN, 1>& inQueueX1, TQue<QuePosition::VECIN, 1>& inQueueX2,
+    TQue<QuePosition::VECOUT, 1>& outQueueX, TQue<QuePosition::VECIN, 1>& inQueueGamma,
+    TQue<QuePosition::VECIN, 1>& inQueueBeta, TQue<QuePosition::VECIN, 1>& inQueueScales1,
+    TQue<QuePosition::VECIN, 1>& inQueueScales2, TQue<QuePosition::VECIN, 1>& inQueueZeroPoints1,
+    TQue<QuePosition::VECIN, 1>& inQueueZeroPoints2, TQue<QuePosition::VECOUT, 1>& outQueueY1,
+    TQue<QuePosition::VECOUT, 1>& outQueueY2, TBuf<TPosition::VECCALC>& rstdBuf,
+    TBuf<TPosition::VECCALC>& reduceBuf, uint64_t baseNReduceAlign, uint64_t baseNDtypeAlign,
+    uint64_t baseNB8Align, uint64_t baseN, uint64_t reduceBufAlign)
+{
+    constexpr bool HAS_BETA = (((TILING_KEY % 1000)/100) == 1);
+    constexpr uint64_t INPUT_KEY = ((TILING_KEY % 100) / 10);
+    constexpr bool HAS_ZEROPOINTS1 = ((INPUT_KEY >> 2) % 2 == 1);
+    constexpr bool HAS_SCALE2 = ((INPUT_KEY >> 1) % 2 == 1);
+    constexpr bool HAS_ZEROPOINTS2 = (INPUT_KEY % 2 == 1);
+    constexpr bool HAS_Y2 = (HAS_SCALE2 || HAS_ZEROPOINTS2);
+
+    uint64_t ubFactorQuant = CeilAlign(baseN, BLOCK_SIZE / sizeof(T_SCALES));
+    uint64_t ubFactorRstd = B32_BLOCK_NUM;
+    pipe->InitBuffer(inQueueX1, 1, baseNReduceAlign * sizeof(T_X));
+    pipe->InitBuffer(inQueueX2, 1, baseNReduceAlign * sizeof(T_X));
+    pipe->InitBuffer(outQueueX, 1, baseNReduceAlign * sizeof(T_X));
+    pipe->InitBuffer(inQueueGamma, 1, baseNDtypeAlign * sizeof(T_X));
+    if constexpr (HAS_BETA) {
+        pipe->InitBuffer(inQueueBeta, 1, baseNDtypeAlign * sizeof(T_X));
+    }
+    pipe->InitBuffer(inQueueScales1, 1, ubFactorQuant * sizeof(T_SCALES));
+    pipe->InitBuffer(outQueueY1, 1, baseNB8Align * sizeof(T_Y));
+    if constexpr (HAS_SCALE2) {
+        pipe->InitBuffer(inQueueScales2, 1, ubFactorQuant * sizeof(T_SCALES));
+    }
+    if constexpr (HAS_ZEROPOINTS1) {
+        pipe->InitBuffer(inQueueZeroPoints1, 1, ubFactorQuant * sizeof(T_ZEROPOINTS));
+    }
+    if constexpr (HAS_ZEROPOINTS2) {
+        pipe->InitBuffer(inQueueZeroPoints2, 1, ubFactorQuant * sizeof(T_ZEROPOINTS));
+    }
+    if constexpr (HAS_Y2) {
+        pipe->InitBuffer(outQueueY2, 1, baseNB8Align * sizeof(T_Y));
+    }
+    pipe->InitBuffer(rstdBuf, ubFactorRstd * sizeof(float));
+    pipe->InitBuffer(reduceBuf, reduceBufAlign * sizeof(float));
+}
+
 /**
  * @brief y = round2Int8(x * rstd * gamma * scales + zeropoints)
  *        Use muti cast(float32->int32->float32->half->int8) to round
@@ -143,10 +227,10 @@ __aicore__ inline void CopyOutY(
  */
 template <
     typename T_X, typename T_Y, typename T_SCALES = float, typename T_ZEROPOINTS = float, bool HAS_SCALES = true,
-    bool HAS_ZEROPOINTS = false, bool DIV_MODE = true>
+    bool HAS_ZEROPOINTS = false, bool HAS_BETA = false, bool DIV_MODE = true>
 __aicore__ inline void ComputeY(
     LocalTensor<T_Y>& yLocal, LocalTensor<T_X>& xLocal, LocalTensor<float>& rstdLocal, LocalTensor<T_X>& gammaLocal,
-    LocalTensor<T_SCALES>& scalesLocal, LocalTensor<T_ZEROPOINTS>& zeroPointsLocal, uint32_t rstdOffset, uint32_t count)
+    LocalTensor<T_X>& betaLocal, LocalTensor<T_SCALES>& scalesLocal, LocalTensor<T_ZEROPOINTS>& zeroPointsLocal, uint32_t rstdOffset, uint32_t count)
 {
     uint32_t sreg = (uint32_t)count;
     uint16_t repeatTimes = CeilDivision(count, V_LENGTH);
@@ -154,6 +238,10 @@ __aicore__ inline void ComputeY(
     __local_mem__ T_X* xAddr = (__ubuf__ T_X*)xLocal.GetPhyAddr();
     __local_mem__ float* rstdAddr = (__ubuf__ float*)rstdLocal.GetPhyAddr();
     __local_mem__ T_X* gammaAddr = (__ubuf__ T_X*)gammaLocal.GetPhyAddr();
+    __local_mem__ T_X* betaAddr;
+    if constexpr (HAS_BETA) {
+        betaAddr = (__ubuf__ T_X*)betaLocal.GetPhyAddr();
+    }
     __local_mem__ T_SCALES* scalesAddr = (__ubuf__ T_SCALES*)scalesLocal.GetPhyAddr();
     __local_mem__ T_ZEROPOINTS* zeroPointsAddr = (__ubuf__ T_ZEROPOINTS*)zeroPointsLocal.GetPhyAddr();
     __local_mem__ T_Y* yAddr = (__ubuf__ T_Y*)yLocal.GetPhyAddr();
@@ -161,7 +249,7 @@ __aicore__ inline void ComputeY(
     if constexpr (IsSameType<T_X, float>::value) {
         __VEC_SCOPE__
         {
-            RegTensor<float> xReg, rstdReg, gammaReg, scalesReg, zeroPointsReg;
+            RegTensor<float> xReg, rstdReg, gammaReg, betaReg, scalesReg, zeroPointsReg;
             RegTensor<int32_t> yRegInt32;
             RegTensor<half> yRegFp16;
             RegTensor<T_Y> yReg;
@@ -171,6 +259,9 @@ __aicore__ inline void ComputeY(
                 maskReg = UpdateMask<float>(sreg);
                 DataCopy(xReg, xAddr + i * V_LENGTH);
                 DataCopy(gammaReg, gammaAddr + i * V_LENGTH);
+                if constexpr (HAS_BETA) {
+                    DataCopy(betaReg, betaAddr + i * V_LENGTH);
+                }
                 if constexpr (HAS_SCALES) {
                     DataCopy(scalesReg, scalesAddr + i * V_LENGTH);
                 }
@@ -179,6 +270,9 @@ __aicore__ inline void ComputeY(
                 }
                 Mul(xReg, xReg, rstdReg, maskReg);
                 Mul(xReg, xReg, gammaReg, maskReg);
+                if constexpr (HAS_BETA) {
+                    Add(xReg, xReg, betaReg, maskReg);
+                }
                 if constexpr (HAS_SCALES) {
                     if constexpr (DIV_MODE) {
                         Div(xReg, xReg, scalesReg, maskReg);
@@ -208,11 +302,11 @@ __aicore__ inline void ComputeY(
     } else {
         __VEC_SCOPE__
         {
-            RegTensor<T_X> xReg, gammaReg;
+            RegTensor<T_X> xReg, gammaReg, betaReg;
             RegTensor<T_SCALES> scalesReg;
             RegTensor<T_ZEROPOINTS> zeroPointsReg;
             RegTensor<float> rstdReg;
-            RegTensor<float> xRegFp32, gammaRegFp32, scalesRegFp32, zeroPointsRegFp32;
+            RegTensor<float> xRegFp32, gammaRegFp32, betaRegFp32, scalesRegFp32, zeroPointsRegFp32;
             RegTensor<int32_t> yRegInt32;
             RegTensor<half> yRegFp16;
             RegTensor<T_Y> yReg;
@@ -222,6 +316,9 @@ __aicore__ inline void ComputeY(
                 maskReg = UpdateMask<float>(sreg);
                 DataCopy<T_X, LoadDist::DIST_UNPACK_B16>(xReg, xAddr + i * V_LENGTH);
                 DataCopy<T_X, LoadDist::DIST_UNPACK_B16>(gammaReg, gammaAddr + i * V_LENGTH);
+                if constexpr (HAS_BETA) {
+                    DataCopy<T_X, LoadDist::DIST_UNPACK_B16>(betaReg, betaAddr + i * V_LENGTH);
+                }
                 if constexpr (HAS_SCALES) {
                     if constexpr (IsSameType<T_SCALES, float>::value) {
                         DataCopy(scalesRegFp32, scalesAddr + i * V_LENGTH);
@@ -240,6 +337,9 @@ __aicore__ inline void ComputeY(
                 }
                 Cast<float, T_X, NormCommon::castTraitB162B32>(xRegFp32, xReg, maskReg);
                 Cast<float, T_X, NormCommon::castTraitB162B32>(gammaRegFp32, gammaReg, maskReg);
+                if constexpr (HAS_BETA) {
+                    Cast<float, T_X, NormCommon::castTraitB162B32>(betaRegFp32, betaReg, maskReg);
+                }
                 if constexpr (!IsSameType<T_SCALES, float>::value && HAS_SCALES) {
                     Cast<float, T_SCALES, NormCommon::castTraitB162B32>(scalesRegFp32, scalesReg, maskReg);
                 }
@@ -253,6 +353,9 @@ __aicore__ inline void ComputeY(
                 }
                 Mul(xRegFp32, xRegFp32, rstdReg, maskReg);
                 Mul(xRegFp32, xRegFp32, gammaRegFp32, maskReg);
+                if constexpr (HAS_BETA) {
+                    Add(xRegFp32, xRegFp32, betaRegFp32, maskReg);
+                }
                 if constexpr (HAS_SCALES) {
                     if constexpr (DIV_MODE) {
                         Div(xRegFp32, xRegFp32, scalesRegFp32, maskReg);

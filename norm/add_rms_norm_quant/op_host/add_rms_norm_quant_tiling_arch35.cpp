@@ -90,6 +90,7 @@ void AddRmsNormQuantRegbaseTiling::CheckOptionalInput()
     const gert::StorageShape* scales2Shape = context_->GetOptionalInputShape(SCALES2_INDEX);
     const gert::StorageShape* zeroPoints1Shape = context_->GetOptionalInputShape(ZERO_POINTS1_INDEX);
     const gert::StorageShape* zeroPoints2Shape = context_->GetOptionalInputShape(ZERO_POINTS2_INDEX);
+    const gert::StorageShape* betaShape = context_->GetOptionalInputShape(BETA_INDEX);
 
     tilingParams.quantBufCnt = 0;
     if (scales2Shape != nullptr) {
@@ -103,6 +104,9 @@ void AddRmsNormQuantRegbaseTiling::CheckOptionalInput()
     if (zeroPoints2Shape != nullptr) {
         tilingParams.hasZeroPoints2 = true;
         tilingParams.quantBufCnt++;
+    }
+    if (betaShape != nullptr) {
+        tilingParams.hasBeta = true;
     }
     tilingParams.hasY2 = tilingParams.hasScales2 || tilingParams.hasZeroPoints2;
 }
@@ -121,6 +125,7 @@ bool AddRmsNormQuantRegbaseTiling::CheckInputShapeDim()
     const gert::StorageShape* scales2StorageShape = context_->GetOptionalInputShape(SCALES2_INDEX);
     const gert::StorageShape* zp1StorageShape = context_->GetOptionalInputShape(ZERO_POINTS1_INDEX);
     const gert::StorageShape* zp2StorageShape = context_->GetOptionalInputShape(ZERO_POINTS2_INDEX);
+    const gert::StorageShape* betaStorageShape = context_->GetOptionalInputShape(BETA_INDEX);
 
     size_t x1DimNum = x1Shape.GetDimNum();
     size_t x2DimNum = x2Shape.GetDimNum();
@@ -141,12 +146,64 @@ bool AddRmsNormQuantRegbaseTiling::CheckInputShapeDim()
         auto zp2Shape = EnsureNotScalar(zp2StorageShape->GetStorageShape());
         zp2DimNum = zp2Shape.GetDimNum();
     }
+    size_t betaDimNum = 0;
+    if (tilingParams.hasBeta) {
+        auto betaShape = EnsureNotScalar(betaStorageShape->GetStorageShape());
+        betaDimNum = betaShape.GetDimNum();
+    }
     OP_CHECK_IF(
         (x1DimNum > MAX_DIM_CNT) || (x2DimNum > MAX_DIM_CNT) || (gammaDimNum > MAX_DIM_CNT) ||
             (scales1DimNum > MAX_DIM_CNT) || (scales2DimNum > MAX_DIM_CNT && tilingParams.hasScales2) ||
             (zp1DimNum > MAX_DIM_CNT && tilingParams.hasZeroPoints1) ||
-            (zp2DimNum > MAX_DIM_CNT && tilingParams.hasZeroPoints2),
+            (zp2DimNum > MAX_DIM_CNT && tilingParams.hasZeroPoints2) ||
+            (betaDimNum > MAX_DIM_CNT && tilingParams.hasBeta),
         OP_LOGE(nodeName.c_str(), "All input dim should not bigger than %u.", MAX_DIM_CNT), return false);
+    return true;
+}
+
+bool AddRmsNormQuantRegbaseTiling::CheckMainInputShapes(
+    const gert::StorageShape* x1Shape, const gert::StorageShape* x2Shape,
+    const gert::StorageShape* y1Shape, const gert::StorageShape* y2Shape,
+    const gert::StorageShape* xShape)
+{
+    if (!NormCheck::CheckShapeSame(x1Shape, x2Shape, nodeName, "x1", "x2")) {
+        return false;
+    }
+    if (!NormCheck::CheckShapeSame(x1Shape, y1Shape, nodeName, "x1", "y1")) {
+        return false;
+    }
+    if (tilingParams.hasScales2 && !NormCheck::CheckShapeSame(x1Shape, y2Shape, nodeName, "x1", "y2")) {
+        return false;
+    }
+    if (!NormCheck::CheckShapeSame(x1Shape, xShape, nodeName, "x1", "x")) {
+        return false;
+    }
+    return true;
+}
+
+bool AddRmsNormQuantRegbaseTiling::CheckQuantParamShapes(
+    const gert::StorageShape* gammaShape, const gert::StorageShape* scales1Shape,
+    const gert::StorageShape* scales2Shape, const gert::StorageShape* zeroPoints1Shape,
+    const gert::StorageShape* zeroPoints2Shape)
+{
+    if (!NormCheck::CheckShapeLastDim(gammaShape, scales1Shape, nodeName, "gamma", "scales1")) {
+        return false;
+    }
+    if (!NormCheck::CheckShapeNumel(gammaShape, scales1Shape, nodeName, "gamma", "scales1")) {
+        return false;
+    }
+    if (tilingParams.hasScales2 &&
+        !NormCheck::CheckShapeSame(scales1Shape, scales2Shape, nodeName, "scales1", "scales2")) {
+        return false;
+    }
+    if (tilingParams.hasZeroPoints1 &&
+        !NormCheck::CheckShapeSame(scales1Shape, zeroPoints1Shape, nodeName, "scales1", "zeroPoints1")) {
+        return false;
+    }
+    if (tilingParams.hasZeroPoints2 &&
+        !NormCheck::CheckShapeSame(scales1Shape, zeroPoints2Shape, nodeName, "scales1", "zeroPoints2")) {
+        return false;
+    }
     return true;
 }
 
@@ -160,52 +217,23 @@ bool AddRmsNormQuantRegbaseTiling::CheckInputShapeValue()
     const gert::StorageShape* scales2Shape = context_->GetOptionalInputShape(SCALES2_INDEX);
     const gert::StorageShape* zeroPoints1Shape = context_->GetOptionalInputShape(ZERO_POINTS1_INDEX);
     const gert::StorageShape* zeroPoints2Shape = context_->GetOptionalInputShape(ZERO_POINTS2_INDEX);
+    const gert::StorageShape* betaShape = context_->GetOptionalInputShape(BETA_INDEX);
     const gert::StorageShape* y1Shape = context_->GetOutputShape(Y1_INDEX);
     const gert::StorageShape* y2Shape = context_->GetOutputShape(Y2_INDEX);
     const gert::StorageShape* xShape = context_->GetOutputShape(X_INDEX);
 
-    // Check x1&x2&y1&y2&x's shape should be equal
-    if (!NormCheck::CheckShapeSame(x1Shape, x2Shape, nodeName, "x1", "x2")) {
+    if (!CheckMainInputShapes(x1Shape, x2Shape, y1Shape, y2Shape, xShape)) {
         return false;
-    };
-    if (!NormCheck::CheckShapeSame(x1Shape, y1Shape, nodeName, "x1", "y1")) {
+    }
+    if (!CheckQuantParamShapes(gammaShape, scales1Shape, scales2Shape, zeroPoints1Shape, zeroPoints2Shape)) {
         return false;
-    };
-    if (tilingParams.hasScales2 && !NormCheck::CheckShapeSame(x1Shape, y2Shape, nodeName, "x1", "y2")) {
+    }
+    if (tilingParams.hasBeta && !NormCheck::CheckShapeSame(gammaShape, betaShape, nodeName, "gamma", "beta")) {
         return false;
-    };
-    if (!NormCheck::CheckShapeSame(x1Shape, xShape, nodeName, "x1", "x")) {
-        return false;
-    };
-
-    // Check gamma&scales&zeropoints's shape should be equal
-    if (!NormCheck::CheckShapeLastDim(gammaShape, scales1Shape, nodeName, "gamma", "scales1")) {
-        return false;
-    };
-
-    // Check gamma&scales&zeropoints's shape Numel should be equal
-    if (!NormCheck::CheckShapeNumel(gammaShape, scales1Shape, nodeName, "gamma", "scales1")) {
-        return false;
-    };
-
-    if (tilingParams.hasScales2 &&
-        !NormCheck::CheckShapeSame(scales1Shape, scales2Shape, nodeName, "scales1", "scales2")) {
-        return false;
-    };
-    if (tilingParams.hasZeroPoints1 &&
-        !NormCheck::CheckShapeSame(scales1Shape, zeroPoints1Shape, nodeName, "scales1", "zeroPoints1")) {
-        return false;
-    };
-    if (tilingParams.hasZeroPoints2 &&
-        !NormCheck::CheckShapeSame(scales1Shape, zeroPoints2Shape, nodeName, "scales1", "zeroPoints2")) {
-        return false;
-    };
-
-    // Check gamma should be last few dim of x
+    }
     if (!NormCheck::CheckShapeBC(x1Shape, gammaShape, nodeName, "x1", "gamma")) {
         return false;
-    };
-
+    }
     return true;
 }
 
@@ -235,16 +263,16 @@ bool AddRmsNormQuantRegbaseTiling::CheckInputDtype()
     std::vector<ge::DataType> supportedZeroPointsDtypes = {
         ge::DataType::DT_INT32, ge::DataType::DT_FLOAT, ge::DataType::DT_FLOAT16, ge::DataType::DT_BF16};
 
-    const uint32_t totalCheckCnt = 7;
-    string checkNameList[totalCheckCnt] = {"x1", "x2", "gamma", "scales1", "scales2", "zeroPoints1", "zeroPoints2"};
+    const uint32_t totalCheckCnt = 8;
+    string checkNameList[totalCheckCnt] = {"x1", "x2", "gamma", "scales1", "scales2", "zeroPoints1", "zeroPoints2", "beta"};
     uint32_t idxList[totalCheckCnt] = {X1_INDEX,      X2_INDEX,           GAMMA_INDEX,       SCALES1_INDEX,
-                                       SCALES2_INDEX, ZERO_POINTS1_INDEX, ZERO_POINTS2_INDEX};
-    bool isOptionalList[totalCheckCnt] = {false, false, false, false, true, true, true};
+                                       SCALES2_INDEX, ZERO_POINTS1_INDEX, ZERO_POINTS2_INDEX, BETA_INDEX};
+    bool isOptionalList[totalCheckCnt] = {false, false, false, false, true, true, true, true};
     bool needCheckList[totalCheckCnt] = {
-        true, true, true, true, tilingParams.hasScales2, tilingParams.hasZeroPoints1, tilingParams.hasZeroPoints2};
+        true, true, true, true, tilingParams.hasScales2, tilingParams.hasZeroPoints1, tilingParams.hasZeroPoints2, tilingParams.hasBeta};
     std::vector<ge::DataType>* supportedList[totalCheckCnt] = {
         &supportedXGammaDtypes, &supportedXGammaDtypes,     &supportedXGammaDtypes,    &supportedScalesDtypes,
-        &supportedScalesDtypes, &supportedZeroPointsDtypes, &supportedZeroPointsDtypes};
+        &supportedScalesDtypes, &supportedZeroPointsDtypes, &supportedZeroPointsDtypes, &supportedXGammaDtypes};
 
     for (uint32_t checkIdx = 0; checkIdx < totalCheckCnt; checkIdx++) {
         if (!needCheckList[checkIdx]) {
@@ -270,6 +298,7 @@ bool AddRmsNormQuantRegbaseTiling::CheckInputDtype()
     ge::DataType zeroPoints1Dtype = ge::DT_BOOL; // Init one not support dtype
     ge::DataType zeroPoints2Dtype = ge::DT_BOOL; // Init one not support dtype
     ge::DataType zeroPointsDtype = ge::DT_BOOL; // Init one not support dtype
+    ge::DataType betaDtype = ge::DT_BOOL;        // Init one not support dtype
     bool hasZeroPoints = false;        
     if (tilingParams.hasScales2) {
         scales2Dtype = context_->GetOptionalInputTensor(SCALES2_INDEX)->GetDataType();
@@ -280,6 +309,9 @@ bool AddRmsNormQuantRegbaseTiling::CheckInputDtype()
     if (tilingParams.hasZeroPoints2) {
         zeroPoints2Dtype = context_->GetOptionalInputTensor(ZERO_POINTS2_INDEX)->GetDataType();
     }
+    if (tilingParams.hasBeta) {
+        betaDtype = context_->GetOptionalInputTensor(BETA_INDEX)->GetDataType();
+    }
     if(tilingParams.hasZeroPoints1){
         zeroPointsDtype = zeroPoints1Dtype;
         hasZeroPoints = true;
@@ -289,6 +321,10 @@ bool AddRmsNormQuantRegbaseTiling::CheckInputDtype()
     }    
     if ((x1Dtype != x2Dtype) || (x1Dtype != gammaDtype)) {
         OP_LOGE(nodeName.c_str(), "Input x1/gamma/xout dtype should be equal.");
+        return false;
+    }
+    if (tilingParams.hasBeta && (x1Dtype != betaDtype)) {
+        OP_LOGE(nodeName.c_str(), "Input x/beta dtype should be equal.");
         return false;
     }
     if ((x1Dtype != scales1Dtype) && (scales1Dtype != ge::DataType::DT_FLOAT)) {
@@ -317,7 +353,7 @@ bool AddRmsNormQuantRegbaseTiling::CheckInputDtype()
             }
         }else if(scales1Dtype == ge::DataType::DT_FLOAT16){
             if(hasZeroPoints && zeroPointsDtype != ge::DataType::DT_FLOAT16){
-                OP_LOGE(context_->GetNodeName(), "Input x dtype is fp16 and scales1 dtype is bf16, zeropoints dtype should be bf16.");
+                OP_LOGE(context_->GetNodeName(), "Input x dtype is fp16 and scales1 dtype is fp16, zeropoints dtype should be fp16.");
                 return false;
             }
         }else {
@@ -468,6 +504,7 @@ uint64_t AddRmsNormQuantRegbaseTiling::CalUBTotalSize(
         3 * baseNReduceAlign * tilingParams.xDtypeSize +                                 // x1/x2/xout
         1 * reduceBufLenAlign * sizeof(float) +                                          // reduceBuf
         1 * baseNDtypeAlign * tilingParams.xDtypeSize +                                  // gamma
+        (tilingParams.hasBeta ? 1 : 0) * baseNDtypeAlign * tilingParams.xDtypeSize +     // beta
         (1 + tilingParams.quantBufCnt) * baseNQuantAlign * tilingParams.quantDtypeSize + // scales/zeropoints
         1 * baseNB8Align * sizeof(int8_t);                                               // y1
 
@@ -495,10 +532,12 @@ int64_t AddRmsNormQuantRegbaseTiling::CalFullLoadBaseM(uint64_t baseN, int64_t& 
     int64_t scalesNum      = tilingParams.hasScales2 ? CONST_TWO : CONST_ONE;
     int64_t zeroPointsNum  = (tilingParams.hasZeroPoints1 ? CONST_ONE : CONST_ZERO)
                             + (tilingParams.hasZeroPoints2 ? CONST_ONE : CONST_ZERO);
+    int64_t betaNum        = tilingParams.hasBeta ? CONST_ONE : CONST_ZERO;
     int64_t yNum           = tilingParams.hasY2 ? CONST_TWO : CONST_ONE;
     int64_t yDtypeSize = ge::GetSizeByDataType(context_->GetOutputDesc(Y1_INDEX)->GetDataType());
     int64_t LastUbSize =
         tilingParams.maxUbSize - baseNDtypeAlign * tilingParams.xDtypeSize -   // gamma
+        betaNum * baseNDtypeAlign * tilingParams.xDtypeSize -                  // beta
         scalesNum * baseNDtypeAlign * tilingParams.quantDtypeSize -            // scale
         zeroPointsNum * baseNDtypeAlign * tilingParams.zeroPointDtypeSize -    // zeropoints
         ALIGN_SPACE;                                                           // align space
@@ -550,6 +589,7 @@ ge::graphStatus AddRmsNormQuantRegbaseTiling::SetTilingParams()
         if (rstdRemainUBSize + justNUBSize <= tilingParams.maxUbSize) {
             tilingParams.baseM = (tilingParams.maxUbSize - rstdRemainUBSize - justNUBSize) /
                                  (tmpUBSize - rstdRemainUBSize - justNUBSize + rstdCount * sizeof(float));
+            tilingParams.baseM = std::min(tilingParams.baseM, tilingParams.mPerCore);
         }
 
         tilingParams.tilingType = TILING_TYPE_NORMAL;
@@ -627,6 +667,7 @@ void AddRmsNormQuantRegbaseTiling::SetTilingData()
     tilingData.set_mLastCore(tilingParams.mLastCore);
     tilingData.set_epsilon(tilingParams.epsilon);
     tilingData.set_avgFactor(tilingParams.avgFactor);
+    tilingData.set_divMode(tilingParams.divMode ? 1 : 0);
 }
 
 void AddRmsNormQuantRegbaseTiling::PrintTilingData()
@@ -636,11 +677,11 @@ void AddRmsNormQuantRegbaseTiling::PrintTilingData()
         "TilingData numM: %lu, numN: %lu, baseM: %lu, baseN: %lu, "
         "baseNDtypeAlign: %lu, baseNReduceAlign: %lu, powerSplit: %lu, powerLoop: %lu, "
         "mPerCore: %lu, mLastCore: %lu, "
-        "epsilon: %f, avgFactor: %f.",
+        "epsilon: %f, avgFactor: %f, divMode: %u.",
         tilingData.get_numM(), tilingData.get_numN(), tilingData.get_baseM(), tilingData.get_baseN(),
         tilingData.get_baseNDtypeAlign(), tilingData.get_baseNReduceAlign(), tilingData.get_powerSplit(),
         tilingData.get_powerLoop(), tilingData.get_mPerCore(), tilingData.get_mLastCore(), tilingData.get_epsilon(),
-        tilingData.get_avgFactor());
+        tilingData.get_avgFactor(), tilingData.get_divMode());
 }
 
 ge::graphStatus AddRmsNormQuantRegbaseTiling::DoLibApiTiling()
@@ -676,8 +717,8 @@ uint64_t AddRmsNormQuantRegbaseTiling::GetTilingKey() const
     tilingKey +=
         TILING_OFFSET_HAS_QUANT * ((tilingParams.hasZeroPoints1 << ZERO_POINTS1_BIN_OFFSET) |
                                    (tilingParams.hasScales2 << SCALES2_BIN_OFFSET) | tilingParams.hasZeroPoints2);
-    if (tilingParams.divMode) {
-        tilingKey += TILING_OFFSET_DIV_MODE;
+    if (tilingParams.hasBeta) {
+        tilingKey += TILING_OFFSET_HAS_BETA;
     }
     OP_LOGI(nodeName.c_str(), "TilingKey is %lu.", tilingKey);
     return tilingKey;

@@ -55,6 +55,7 @@ TILING_DATA_FIELD_DEF(uint64_t, mPerCore); //blockFactor 单核处理a的大小
 TILING_DATA_FIELD_DEF(uint64_t, mLastCore); //blockTail 尾核处理a的大小
 TILING_DATA_FIELD_DEF(float, avgFactor);
 TILING_DATA_FIELD_DEF(float, epsilon);
+TILING_DATA_FIELD_DEF(uint32_t, divMode);  //add divMode
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(AddRmsNormQuant, AddRMSNormQuantTilingData)
@@ -111,7 +112,7 @@ constexpr uint32_t TILING_TYPE_NORMAL = 0;
 constexpr uint32_t TILING_TYPE_SPILT = 1;
 constexpr uint32_t TILING_TYPE_PERF = 2;
 constexpr uint32_t TILING_OFFSET_HAS_QUANT = 10;
-constexpr uint32_t TILING_OFFSET_DIV_MODE = 100;
+constexpr uint32_t TILING_OFFSET_HAS_BETA = 100;
 constexpr uint32_t TILING_OFFSET_REGBASE = 1000;
 constexpr uint64_t X1_INDEX = 0;
 constexpr uint64_t X2_INDEX = 1;
@@ -174,6 +175,7 @@ struct AddRmsNormQuantRegbaseTilingParams {
     bool hasZeroPoints1{false};
     bool hasZeroPoints2{false};
     bool hasY2{false};
+    bool hasBeta{false};
     bool needGetCompileInfo{false};
 };
 
@@ -195,6 +197,14 @@ public:
     bool CheckShapeNull();
     void CheckOptionalInput();
     bool CheckInputShapeDim();
+    bool CheckMainInputShapes(
+        const gert::StorageShape* x1Shape, const gert::StorageShape* x2Shape,
+        const gert::StorageShape* y1Shape, const gert::StorageShape* y2Shape,
+        const gert::StorageShape* xShape);
+    bool CheckQuantParamShapes(
+        const gert::StorageShape* gammaShape, const gert::StorageShape* scales1Shape,
+        const gert::StorageShape* scales2Shape, const gert::StorageShape* zeroPoints1Shape,
+        const gert::StorageShape* zeroPoints2Shape);
     bool CheckInputShapeValue();
     bool CheckInputDtype();
     bool CheckOutputDtype();
