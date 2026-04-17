@@ -47,12 +47,12 @@ aclnnStatus aclnnLSTMGetWorkspaceSize(
     const aclTensorList *params,
     const aclTensorList *hx,
     const aclTensor     *batchSizes,
-    bool                 has_biases,
+    bool                 hasBias,
     int64_t              numLayers,
-    double               droupout,
+    double               dropout,
     bool                 train,
     bool                 bidirectional,        
-    bool                 batch_first,
+    bool                 batchFirst,
     aclTensor           *output,
     aclTensor           *hy,
     aclTensor           *cy,
@@ -108,12 +108,12 @@ aclnnStatus aclnnLSTM(
       <td>
       <ul>
           <li><strong>若batchSizes传入空指针：</strong>
-            <br>shape格式根据batch_first参数区分：
+            <br>shape格式根据batchFirst参数区分：
             <ul>
-              <li>batch_first=False：(time_step, batch_size, input_size)</li>
-              <li>batch_first=True：(batch_size, time_step, input_size)</li>
+              <li>batchFirst=False：(time_step, batch_size, input_size)</li>
+              <li>batchFirst=True：(batch_size, time_step, input_size)</li>
             </ul>
-            说明：batch_first表示batch维度是否在第一维；time_step为时间维度；batch_size为每个时刻处理的样本数；input_size为输入特征数。
+            说明：batchFirst表示batch维度是否在第一维；time_step为时间维度；batch_size为每个时刻处理的样本数；input_size为输入特征数。
           </li>
           <li><strong>若传入有效batchSizes：</strong>
             <br>shape格式：(time_step * batch_size, input_size)
@@ -201,7 +201,7 @@ aclnnStatus aclnnLSTM(
       <td>√</td>
     </tr>
        <tr>
-      <td>droupout</td>
+      <td>dropout</td>
       <td>输入</td>
       <td>表示随机掩码的概率。</td>
       <td>当前不支持该功能</td>
@@ -221,7 +221,7 @@ aclnnStatus aclnnLSTM(
       <td>√</td>
     </tr>
       <tr>
-      <td>bidirection</td>
+      <td>bidirectional</td>
       <td>输入</td>
       <td>表示是否是双向。</td>
       <td>/</td>
@@ -244,7 +244,7 @@ aclnnStatus aclnnLSTM(
       <td>output</td>
       <td>输出</td>
       <td>表示LSTM运算中最后一层每个时间步的输出结果。</td>
-      <td><ul><li>若batchSizes传入空指针：<br>当batch_first=False时shape支持三维（time_step, batch_size, D * hidden_size），否则支持三维（batch_size, time_step, D * hidden_size）。</li><li>若传入有效batchSizes：<br>shape应为(time_step, batch_size, D * hidden_size)。</li></ul></td>
+      <td><ul><li>若batchSizes传入空指针：<br>当batchFirst=False时shape支持三维（time_step, batch_size, D * hidden_size），否则支持三维（batch_size, time_step, D * hidden_size）。</li><li>若传入有效batchSizes：<br>shape应为(time_step, batch_size, D * hidden_size)。</li></ul></td>
       <td>FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>3</td>
@@ -254,7 +254,7 @@ aclnnStatus aclnnLSTM(
       <td>hy</td>
       <td>输出</td>
       <td>表示进行LSTM运算中每层最后一个时间步的隐藏层（公式（7）的输出）。</td>
-      <td>shape支持三维（D * num_layers, batch_size, hidden_size</td>
+      <td>shape支持三维（D * num_layers, batch_size, hidden_size）</td>
       <td>FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>3</td>
@@ -264,7 +264,7 @@ aclnnStatus aclnnLSTM(
       <td>cy</td>
       <td>输出</td>
       <td>表示进行LSTM运算中每层最后一个时间步的Cell状态（公式（5）的输出）。</td>
-      <td>shape支持三维（D * num_layers, batch_size, hidden_size</td>
+      <td>shape支持三维（D * num_layers, batch_size, hidden_size）</td>
       <td>FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>3</td>
@@ -274,7 +274,7 @@ aclnnStatus aclnnLSTM(
       <td>hy</td>
       <td>输出</td>
       <td>表示进行LSTM运算中每层最后一个时间步的隐藏层（公式（7）的输出）。</td>
-      <td>shape支持三维（D * num_layers, batch_size, hidden_size</td>
+      <td>shape支持三维（D * num_layers, batch_size, hidden_size）</td>
       <td>FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>3</td>
@@ -284,7 +284,7 @@ aclnnStatus aclnnLSTM(
       <td>cy</td>
       <td>输出</td>
       <td>表示进行LSTM运算中每层最后一个时间步的Cell状态（公式（5）的输出）。</td>
-      <td>shape支持三维（D * num_layers, batch_size, hidden_size</td>
+      <td>shape支持三维（D * num_layers, batch_size, hidden_size）</td>
       <td>FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>3</td>

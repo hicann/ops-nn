@@ -106,7 +106,7 @@ aclnnStatus aclnnAvgPool3d(
       <td>-</td>
     </tr>
     <tr>
-      <td>stride</td>
+      <td>strides</td>
       <td>输入</td>
       <td>池化操作的步长，公式中的strides。</td>
       <td>长度为0（数值与kernelSize数值保持一致）或者1(SD = SH = SW)或者3(SD, SH, SW)，长度为1或3时数值必须大于0。</td>

@@ -42,7 +42,7 @@ struct LstmDataParamsIn {
     const aclTensorList *hx;
     const aclTensor *batchSizes;
     int64_t numLayers;
-    bool has_biases;
+    bool hasBias;
     bool train;
     bool bidirectional;
 };
@@ -123,10 +123,10 @@ auto nullptrInner = std::tuple<aclTensor*, aclTensor*, aclTensor*, aclTensor*, a
 
 std::tuple<const aclTensor *, const aclTensor *, const aclTensor *, const aclTensor *, const aclTensor *, const aclTensor *, const aclTensor *, const aclTensor *> LstmSingleLayerDirec(
     const aclTensor * input, const aclTensorList * params, const aclTensorList * hx, aclTensor *yOutDirec, aclTensor *iOutDirec, aclTensor *jOutDirec, aclTensor *fOutDirec, aclTensor *oOutDirec, aclTensor *hOutDirec, aclTensor *cOutDirec, aclTensor *tanhCOutDirec, 
-    const char *direction,  bool bidirectional, bool train, int64_t num_layers, bool has_biases, aclOpExecutor* executor)
+    const char *direction,  bool bidirectional, bool train, int64_t num_layers, bool hasBias, aclOpExecutor* executor)
 {
     auto oneLayerParams = bidirectional == true ? 4 : 2;
-    oneLayerParams = has_biases == true ? oneLayerParams * 2 : oneLayerParams;
+    oneLayerParams = hasBias == true ? oneLayerParams * 2 : oneLayerParams;
     auto weightStart = strcmp(direction, "UNIDIRECTIONAL") == 0 ? 0 : oneLayerParams / 2;
     auto paramsOffsets = oneLayerParams * num_layers + weightStart;
     op::FVector<const aclTensor*> weightConcatList;
@@ -144,7 +144,7 @@ std::tuple<const aclTensor *, const aclTensor *, const aclTensor *, const aclTen
     OP_CHECK_NULL(weightTrans, return nullptrInner);
 
     const aclTensor * bias = nullptr;
-    if (has_biases) {
+    if (hasBias) {
         bias = l0op::Add((*params)[paramsOffsets + 2], (*params)[paramsOffsets + 3], executor);
         OP_CHECK_NULL(bias, return nullptrInner);
     } else {
@@ -307,10 +307,10 @@ static inline bool CheckDtypeValid(const aclTensor *input,  const aclTensorList 
     return true;
 }
 
-static bool CheckDimsSize(const aclTensorList *params, const aclTensorList *hx, bool has_biases, int64_t numLayers, bool train, bool bidirectional, aclTensorList *iOut, aclTensorList *jOut, aclTensorList *fOut,  aclTensorList *oOut, 
+static bool CheckDimsSize(const aclTensorList *params, const aclTensorList *hx, bool hasBias, int64_t numLayers, bool train, bool bidirectional, aclTensorList *iOut, aclTensorList *jOut, aclTensorList *fOut,  aclTensorList *oOut, 
     aclTensorList *hOut, aclTensorList *cOut, aclTensorList *tanhCOut) {
     uint64_t dScale = bidirectional == true ? 2 : 1;
-    uint64_t bScale = has_biases == true ? 2 : 1;
+    uint64_t bScale = hasBias == true ? 2 : 1;
     uint64_t output_nums = dScale * numLayers;
     uint64_t param_nums = 2 * bScale * dScale * numLayers;
 
@@ -355,11 +355,11 @@ static bool CheckDimsSize(const aclTensorList *params, const aclTensorList *hx, 
     return true;
 }
 
-static bool CheckDims(const aclTensor *input,  const aclTensorList *params, const aclTensorList *hx, bool has_biases, int64_t numLayers, bool train, bool bidirectional, 
+static bool CheckDims(const aclTensor *input,  const aclTensorList *params, const aclTensorList *hx, bool hasBias, int64_t numLayers, bool train, bool bidirectional, 
     aclTensor *output, aclTensor *hy, aclTensor *cy, aclTensorList *iOut, aclTensorList *jOut, aclTensorList *fOut,  aclTensorList *oOut, 
     aclTensorList *hOut, aclTensorList *cOut, aclTensorList *tanhCOut) {
     OP_CHECK_WRONG_DIMENSION(input, INPUT_DIMS, return false);
-    uint64_t bScale = has_biases == true ? 2 : 1;
+    uint64_t bScale = hasBias == true ? 2 : 1;
     uint64_t dScale = bidirectional == true ? 2 : 1;
     uint64_t oneLayerParams = 2 * bScale * dScale;
     for (uint64_t i = 0; i < (uint64_t)numLayers; i++) {
@@ -367,7 +367,7 @@ static bool CheckDims(const aclTensor *input,  const aclTensorList *params, cons
             uint64_t offsets = i * oneLayerParams + j * oneLayerParams / 2;
             OP_CHECK_WRONG_DIMENSION((*params)[offsets], WEIGHT_DIMS, return false);
             OP_CHECK_WRONG_DIMENSION((*params)[offsets + 1], WEIGHT_DIMS, return false);
-            if (has_biases) {
+            if (hasBias) {
                 OP_CHECK_WRONG_DIMENSION((*params)[offsets + 2], BIAS_DIMS, return false);
                 OP_CHECK_WRONG_DIMENSION((*params)[offsets + 3], BIAS_DIMS, return false);
             }
@@ -640,7 +640,7 @@ static aclnnStatus CheckDimsAndListLength(const LstmDataParamsIn& inputs, const 
         int64_t currOffset = group * info.groupLen;
         OP_CHECK_WRONG_DIMENSION((*inputs.params)[currOffset + INDEX_0], INDEX_2, return ACLNN_ERR_PARAM_INVALID);
         OP_CHECK_WRONG_DIMENSION((*inputs.params)[currOffset + INDEX_1], INDEX_2, return ACLNN_ERR_PARAM_INVALID);
-        if (inputs.has_biases) {
+        if (inputs.hasBias) {
             OP_CHECK_WRONG_DIMENSION((*inputs.params)[currOffset + INDEX_2], INDEX_1, return ACLNN_ERR_PARAM_INVALID);
             OP_CHECK_WRONG_DIMENSION((*inputs.params)[currOffset + INDEX_3], INDEX_1, return ACLNN_ERR_PARAM_INVALID);
         }
@@ -716,7 +716,7 @@ static aclnnStatus CheckShapes(const LstmDataParamsIn& inputs, const LstmDataPar
             return ACLNN_ERR_PARAM_INVALID
         );
         OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*inputs.params)[currOffset + INDEX_1], weightHhShape, return ACLNN_ERR_PARAM_INVALID);
-        if (inputs.has_biases) {
+        if (inputs.hasBias) {
             OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*inputs.params)[currOffset + INDEX_2], biasShape, return ACLNN_ERR_PARAM_INVALID);
             OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*inputs.params)[currOffset + INDEX_3], biasShape, return ACLNN_ERR_PARAM_INVALID);
         }
@@ -807,7 +807,7 @@ static aclnnStatus CheckParamsValid(const LstmDataParamsIn& inputs, const LstmDa
 
     info.L = inputs.numLayers;
     info.D = (inputs.bidirectional) ? INDEX_2 : INDEX_1;
-    info.groupLen = (inputs.has_biases) ? INDEX_4 : INDEX_2;
+    info.groupLen = (inputs.hasBias) ? INDEX_4 : INDEX_2;
     info.LD = info.L * info.D;
 
     // list长度与tensor dim校验
@@ -992,7 +992,7 @@ static aclnnStatus LstmDataProcessParams(
     CHECK_RET(baseIn.weight != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // bias。add
-    if (inputs.has_biases) {
+    if (inputs.hasBias) {
         baseIn.bias = l0op::Add(
             (*inputs.params)[currOffset + INDEX_2],
             (*inputs.params)[currOffset + INDEX_3],
@@ -1213,12 +1213,12 @@ aclnnStatus aclnnLSTMGetWorkspaceSize(
     const aclTensorList *params,
     const aclTensorList *hx,
     const aclTensor *batchSizes,
-    bool has_biases,
+    bool hasBias,
     int64_t numLayers,
-    double droupout,
+    double dropout,
     bool train,
     bool bidirectional,
-    bool batch_first,
+    bool batchFirst,
     aclTensor *output,
     aclTensor *hy,
     aclTensor *cy,
@@ -1232,12 +1232,12 @@ aclnnStatus aclnnLSTMGetWorkspaceSize(
     uint64_t *workspaceSize,
     aclOpExecutor **executor){
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
-    L2_DFX_PHASE_1(aclnnLSTM, DFX_IN(input, params, hx, batchSizes, has_biases, numLayers, droupout, train, bidirectional, batch_first), 
+    L2_DFX_PHASE_1(aclnnLSTM, DFX_IN(input, params, hx, batchSizes, hasBias, numLayers, dropout, train, bidirectional, batchFirst), 
     DFX_OUT(output, hy, cy, iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut));
 
     // 判断是否进入data模式
     if (batchSizes) {
-        LstmDataParamsIn inputs = {input, params, hx, batchSizes, numLayers, has_biases, train, bidirectional};
+        LstmDataParamsIn inputs = {input, params, hx, batchSizes, numLayers, hasBias, train, bidirectional};
         LstmDataParamsOut outputs = {output, hy, cy, iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut};
         return LstmDataGetWorkspaceSize(inputs, outputs, workspaceSize, executor);
     }
@@ -1254,7 +1254,7 @@ aclnnStatus aclnnLSTMGetWorkspaceSize(
     }
 
     // 固定写法，参数检查
-    auto ret = CheckParams(input, params, hx, has_biases, numLayers, train, bidirectional, batch_first, output, hy, cy,
+    auto ret = CheckParams(input, params, hx, hasBias, numLayers, train, bidirectional, batchFirst, output, hy, cy,
             iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
@@ -1275,7 +1275,7 @@ aclnnStatus aclnnLSTMGetWorkspaceSize(
 
     // 输入batchFirst转换
     auto curInput = inputContiguous;
-    if (batch_first == true) {
+    if (batchFirst == true) {
         std::vector<int64_t> perm={1, 0, 2};
         auto valuePerm = uniqueExecutor.get()->AllocIntArray(perm.data(), 3);
         curInput = l0op::Transpose(inputContiguous, valuePerm, uniqueExecutor.get());
@@ -1309,7 +1309,7 @@ aclnnStatus aclnnLSTMGetWorkspaceSize(
             CHECK_RET(tanhCOutForward != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
             auto layerResultForward = LstmSingleLayerDirec(curInput, paramsContiguous, hxContiguous, yOutForward, iOutForward, jOutForward, fOutForward, oOutForward, hOutForward, cOutForward, tanhCOutForward, 
-                                    "UNIDIRECTIONAL", bidirectional, train, i, has_biases, uniqueExecutor.get());
+                                    "UNIDIRECTIONAL", bidirectional, train, i, hasBias, uniqueExecutor.get());
     
             ProcessViewCopy(layerResultForward, iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut, i, bidirectional, "UNIDIRECTIONAL", uniqueExecutor.get());
             ProcessOutputHC(layerResultForward, hyVector, cyVector, "UNIDIRECTIONAL", uniqueExecutor.get());
@@ -1333,7 +1333,7 @@ aclnnStatus aclnnLSTMGetWorkspaceSize(
                 CHECK_RET(tanhCOutBackward != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
                 auto layerResultBackward = LstmSingleLayerDirec(curInput, paramsContiguous, hxContiguous, yOutBackward, iOutBackward, jOutBackward, fOutBackward, oOutBackward, hOutBackward, cOutBackward, tanhCOutBackward, 
-                                            "REDIRECTIONAL", bidirectional, train, i, has_biases, uniqueExecutor.get());
+                                            "REDIRECTIONAL", bidirectional, train, i, hasBias, uniqueExecutor.get());
                 // ConcatInput
                 op::FVector<const aclTensor*> inputConcat;
                 inputConcat.emplace_back(std::get<0>(layerResultForward));
@@ -1348,7 +1348,7 @@ aclnnStatus aclnnLSTMGetWorkspaceSize(
         }
 
         auto outputY = curInput;
-        if (batch_first) {
+        if (batchFirst) {
              std::vector<int64_t> perm={1, 0, 2};
             auto valuePerm = uniqueExecutor.get()->AllocIntArray(perm.data(), 3);
             outputY = l0op::Transpose(curInput, valuePerm, uniqueExecutor.get());
@@ -1396,7 +1396,7 @@ aclnnStatus aclnnLSTMGetWorkspaceSize(
             CHECK_RET(cOutForward != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
             auto layerResultForward = LstmSingleLayerDirec(curInput, paramsContiguous, hxContiguous, yOutForward, iOutForward, jOutForward, fOutForward, oOutForward, hOutForward, cOutForward, tanhCOutForward, 
-                                        "UNIDIRECTIONAL", bidirectional, train, i, has_biases, uniqueExecutor.get());
+                                        "UNIDIRECTIONAL", bidirectional, train, i, hasBias, uniqueExecutor.get());
             ProcessOutputHC(layerResultForward, hyVector, cyVector, "UNIDIRECTIONAL", uniqueExecutor.get());
             
             if (bidirectional == true) {
@@ -1408,7 +1408,7 @@ aclnnStatus aclnnLSTMGetWorkspaceSize(
                 CHECK_RET(yOutBackward != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
                 auto layerResultBackward = LstmSingleLayerDirec(curInput, paramsContiguous, hxContiguous, yOutBackward, iOutBackward, jOutBackward, fOutBackward, oOutBackward, hOutBackward, cOutBackward, tanhCOutBackward, 
-                                            "REDIRECTIONAL", bidirectional, train, i, has_biases, uniqueExecutor.get());
+                                            "REDIRECTIONAL", bidirectional, train, i, hasBias, uniqueExecutor.get());
                 // ConcatInput
                 op::FVector<const aclTensor*> inputConcat;
                 inputConcat.emplace_back(std::get<0>(layerResultForward));
@@ -1421,7 +1421,7 @@ aclnnStatus aclnnLSTMGetWorkspaceSize(
             }
         }
         auto outputY = curInput;
-        if (batch_first) {
+        if (batchFirst) {
             std::vector<int64_t> perm={1, 0, 2};
             auto valuePerm = uniqueExecutor.get()->AllocIntArray(perm.data(), 3);
             outputY = l0op::Transpose(curInput, valuePerm, uniqueExecutor.get());
