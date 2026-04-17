@@ -29,11 +29,11 @@
 
 ```Cpp
 aclnnStatus aclnnScatterListGetWorkspaceSize(
-  const aclTensorList* var,
+  aclTensorList*       var,
   const aclTensor*     indices,
   const aclTensor*     updates,
   const aclTensor*     mask,
-  const char*          reduce,
+  char*                reduce,
   int64_t              axis,
   uint64_t*            workspaceSize,
   aclOpExecutor**      executor)
@@ -44,7 +44,7 @@ aclnnStatus aclnnScatterList(
   void*             workspace,
   uint64_t          workspaceSize,
   aclOpExecutor*    executor,
-  aclrtStream stream)
+  aclrtStream       stream)
 ```
 
 ## aclnnScatterListGetWorkspaceSize
