@@ -2,11 +2,11 @@
 
 ## 使用须知
 
-本指南旨在帮助您快速上手CANN和`ops-nn`算子仓的使用。为方便快速了解算子开发全流程，将以**AddExample**算子为实践对象，其源文件位于`ops-nn/examples/add_example`，具体操作流程如下：
+本指南旨在帮助您快速上手CANN和`ops-nn`算子仓的使用。为方便您快速了解算子开发全流程，以**AddExample**算子为实践对象，算子源码位于`ops-nn/examples/add_example`，操作流程如下：
 
-1. **[环境部署](zh/install/quick_install.md)**：完成软件安装和源码下载，此处不再赘述。快速入门场景下，**推荐WebIDE或Docker环境**，安装操作简单。
+1. **[前提条件](../README.md)**：参考项目README完成环境准备和源码下载，此处不再赘述。快速入门场景**推荐WebIDE或Docker部署**，操作简单。
 
-   > **说明**：WebIDE或Docker环境默认提供最新商发版CANN包；如需体验master分支最新能力，可手动搭建环境。注意软件包与源码版本是否配套。
+   > **说明**：WebIDE或Docker环境默认提供最新商发版CANN包；如需体验master分支最新能力，可手动搭建环境。
 
 2. **[编译运行](#一编译运行)**：编译自定义算子包并安装，实现快速调用算子。
 
@@ -20,21 +20,29 @@
 
 本阶段目的是**快速体验项目标准流程**，验证环境能否成功进行算子源码编译、打包、安装和运行。
 
-### 1. 进入项目目录
+### 1. 进入项目源码
 
-环境准备好后（注意软件与源码版本配套），进入项目目录。
+1. 检查源码版本。
 
-- 对于Docker部署或手动安装场景，项目源码位于
+    根据[release仓库](https://gitcode.com/cann/release-management)CANN版本配套关系检查源码版本是否配套，若不配套请参考下述命令重新下载，\$\{tag\_version\}替换为目标分支标签。
 
-  ```bash
-  cd ops-nn
-  ```
+    > 说明：对于WebIDE环境，**已默认提供最新商发版CANN配套的项目源码**。
+    
+    ```bash
+    git clone -b ${tag_version} https://gitcode.com/cann/ops-nn.git
+    ```
 
-- 对于WebIDE场景，项目源码位于
-
-  ```bash
-  cd /mnt/workspace/ops-nn
-  ```
+    若出现提示信息`fatal: destination path 'ops-nn' already exists and is not an empty directory.`，说明项目源码已存在。
+    
+2. 进入源码目录。
+    - Docker或手动安装场景下源码位于：
+      ```bash
+      cd ops-nn
+      ```
+    - WebIDE场景下源码位于：
+      ```bash
+      cd /mnt/workspace/ops-nn
+      ```
 
 ### 2. 编译AddExample算子
 
@@ -78,13 +86,11 @@ export LD_LIBRARY_PATH=${ASCEND_HOME_PATH}/opp/vendors/custom_nn/op_api/lib:${LD
 
 ```bash
 bash build.sh --run_example add_example eager cust --vendor_name=custom
-
 ```
 
 预期输出：打印算子`AddExample`的加法计算结果，表明算子已成功部署并正确执行。
 
 ```
-
 add_example first input[0] is: 1.000000, second input[0] is: 1.000000, result[0] is: 2.000000
 add_example first input[1] is: 1.000000, second input[1] is: 1.000000, result[1] is: 2.000000
 add_example first input[2] is: 1.000000, second input[2] is: 1.000000, result[2] is: 2.000000
@@ -124,12 +130,13 @@ __aicore__ inline void AddExample<T>::Compute(int32_t progress)
 重复[编译运行](#一编译运行)章节中的步骤：
 
 1. **重新编译**：
-    先回到项目根目录，编译命令如下：
 
+    先回到项目根目录，编译命令如下：
+    
     ```bash
     bash build.sh --pkg --soc=ascend910b --ops=add_example -j16
     ```
-
+    
 2. **重新安装**：
 
     ```bash
@@ -168,33 +175,33 @@ __aicore__ inline void AddExample<T>::Compute(int32_t progress)
 
 * **printf**
 
-该接口支持打印Scalar类型数据，如整数、字符型、布尔型等，详细介绍请参见[《Ascend C API》](https://hiascend.com/document/redirect/CannCommunityAscendCApi)中“算子调测API > printf”。
-
-```c++
-blockLength_ = (tilingData->totalLength + AscendC::GetBlockNum() - 1) / AscendC::GetBlockNum();
-tileNum_ = tilingData->tileNum;
-tileLength_ = ((blockLength_ + tileNum_ - 1) / tileNum_ / BUFFER_NUM) ?
+  该接口支持打印Scalar类型数据，如整数、字符型、布尔型等，详细介绍请参见[《Ascend C API》](https://hiascend.com/document/redirect/CannCommunityAscendCApi)中“算子调测API > printf”。
+  
+  ```c++
+  blockLength_ = (tilingData->totalLength + AscendC::GetBlockNum() - 1) / AscendC::GetBlockNum();
+  tileNum_ = tilingData->tileNum;
+  tileLength_ = ((blockLength_ + tileNum_ - 1) / tileNum_ / BUFFER_NUM) ?
         ((blockLength_ + tileNum_ - 1) / tileNum_ / BUFFER_NUM) : 1;
-// 打印当前核计算Block长度
-AscendC::PRINTF("Tiling blockLength is %llu\n", blockLength_);
-```
-
+  // 打印当前核计算Block长度
+  AscendC::PRINTF("Tiling blockLength is %llu\n", blockLength_);
+  ```
+  
 * **DumpTensor**
 
-该接口支持Dump指定Tensor的内容，同时支持打印自定义附加信息，比如当前行号等，详细介绍请参见[《Ascend C API》](https://hiascend.com/document/redirect/CannCommunityAscendCApi)中“算子调测API > DumpTensor”。
-
-```c++
-AscendC::LocalTensor<T> zLocal = outputQueueZ.DeQue<T>();
-// 打印zLocal Tensor信息
-DumpTensor(zLocal, 0, 128);
-```
+  该接口支持Dump指定Tensor的内容，同时支持打印自定义附加信息，比如当前行号等，详细介绍请参见[《Ascend C API》](https://hiascend.com/document/redirect/CannCommunityAscendCApi)中“算子调测API > DumpTensor”。
+  
+  ```c++
+  AscendC::LocalTensor<T> zLocal = outputQueueZ.DeQue<T>();
+  // 打印zLocal Tensor信息
+  DumpTensor(zLocal, 0, 128);
+  ```
 
 ### 2. 性能采集
 
 当算子功能验证正确后，可通过`msprof`工具采集算子性能数据。
 
 - **生成可执行文件**
-
+  
     调用AddExample算子的example样例，生成可执行文件（test_aclnn_add_example），该文件位于项目`ops-nn/build`目录。
 
     ```bash
@@ -224,7 +231,7 @@ DumpTensor(zLocal, 0, 128);
 ```c++
 int main() {
     // ... 初始化代码 ...
-
+    
     // === ① 修改selfX的输入 ===
     // 修改前：shape = {32, 4, 4, 4}, 数值全为1
     // 修改后：将输入shape改为 {8, 8, 8, 8}，并填充不同的测试数据
@@ -235,7 +242,7 @@ int main() {
         selfXHostData[i] = static_cast<float>(i % 10); // 填充0-9的循环值
     }
     // === ② 参考selfX，同理修改selfY、selfZ的输入 ===
-
+    
     // ... 后续执行代码 ...
 }
 ```
@@ -254,4 +261,4 @@ int main() {
 
 ## 结语
 
-体验完上述流程后，您已基本完成一个算子开发，如果您想贡献算子或学习更多高阶技能，请访问本项目README，进一步了解[学习教程](../README.md#学习教程)和[贡献指南](../README.md#相关信息)等。
+体验完上述流程，您已基本完成算子开发过程，如果您想进一步贡献新算子或学习更多高阶开发、调试等技能，请访问本项目README学习[进阶教程](../README.md#学习教程)和[贡献指南](../README.md#相关信息)等。

@@ -2,269 +2,35 @@
 
 ## 使用须知
 
-- 前提条件：调用项目算子前，请先参考[环境部署](../install/quick_install.md)完成基础环境搭建和源码下载。
-- 算子范围：可调用的项目算子范围参见[算子列表](../op_list.md)，算子对应的aclnn接口参见[aclnn列表](../op_api_list.md)。
-- build.sh：基于build.sh实现算子调用，命令选项通过`bash build.sh --help`查看，参数介绍参考[build参数说明](../install/build.md)。
-- 算子调用方式：目前算子支持aclnn API（推荐）和图模式调用，调用原理和流程详见[算子调用方式](op_invocation.md)。
+- 前提说明：算子调用前，请参考本项目README完成环境准备和源码下载，再完成[源码构建](../install/compile.md)，此处不再赘述。
+- 调用算子：支持调用非experimental目录算子（内置算子，清单详见[算子列表](../op_list.md)）和experimental目录算子（贡献算子）。
 
-## 源码编译
+## 调用算子样例
 
-### 第三方软件依赖
+如何快速调用项目中的算子，本章介绍最简调用方法，通过build.sh命令执行算子样例。
 
-本项目编译过程依赖的第三方开源软件列表如下：
-
-| 开源软件 | 版本 | 下载地址 |
-|---|---|---|
-| googletest | 1.14.0 | [googletest-1.14.0.tar.gz](https://gitcode.com/cann-src-third-party/googletest/releases/download/v1.14.0/googletest-1.14.0.tar.gz) |
-| json | 3.11.3 | [include.zip](https://gitcode.com/cann-src-third-party/json/releases/download/v3.11.3/include.zip) |
-| makeself | 2.5.0 | [makeself-release-2.5.0-patch1.tar.gz](https://gitcode.com/cann-src-third-party/makeself/releases/download/release-2.5.0-patch1.0/makeself-release-2.5.0-patch1.tar.gz) |
-| eigen | 5.0.0 | [eigen-5.0.0.tar.gz](https://gitcode.com/cann-src-third-party/eigen/releases/download/5.0.0/eigen-5.0.0.tar.gz) |
-| protobuf | 25.1.0 | [protobuf-25.1.tar.gz](https://gitcode.com/cann-src-third-party/protobuf/releases/download/v25.1/protobuf-25.1.tar.gz) |
-| abseil-cpp | 20230802.1 | [abseil-cpp-20230802.1.tar.gz](https://gitcode.com/cann-src-third-party/abseil-cpp/releases/download/20230802.1/abseil-cpp-20230802.1.tar.gz) |
-| opbase(自CANN 9.0.0及以后版本需要下载) | c8d83f3e57a63a7375e89a2d6937452c0ae2e522 | [opbase](https://gitcode.com/cann/opbase) |
-
-若您的编译环境可以访问网络，请参考[联网编译](#联网编译)，编译脚本会自动联网下载第三方软件。否则，请参考[未联网编译](#未联网编译)手动下载第三方软件。
-
-准备好开源第三方软件后，可采用如下编译方式，请按需选择：
-
-- **自定义算子包**：
-
-  选择部分算子编译生成的包称为自定义算子包，以**挂载**形式作用于CANN包，不改变原始包内容。生成的自定义算子包优先级高于原始CANN包。该包支持aclnn和图模式调用AI Core算子。
-
-- **ops-nn包**：
-
-  选择整个项目编译生成的包称为ops-nn包，可**完整替换**CANN包对应部分。该包支持aclnn和图模式调用AI Core算子。
-
-- **ops-nn静态库**：
-
-  > 说明：若您需要**基于本项目进行二次发布**并且对**软件包大小有要求**时，建议采用静态库编译，该库可以链接您的应用开发程序，仅保留业务所需的算子，从而实现软件最小化部署。
-
-  表示整个项目编译为一个静态库文件，包含libcann_nn_static.a和aclnn接口头文件。该包仅支持aclnn调用AI Core算子。
-
-### 联网编译
-
-#### 自定义算子包
-
-1. **编译自定义算子包**
-
-    进入项目根目录，执行如下编译命令：
-
-    ```bash
-    bash build.sh --pkg --soc=${soc_version} [--vendor_name=${vendor_name}] [--ops=${op_list}]
-    # 以TransposeBatchMatMul算子编译为例
-    # bash build.sh --pkg --soc=ascend910b --vendor_name=transpose_batch_mat_mul --ops=transpose_batch_mat_mul
-    # 编译experimental贡献目录下的用户算子
-    # bash build.sh --pkg --experimental --soc=ascend910b --ops=${experimental_op}
-    ```
-
-    - --soc：\$\{soc\_version\}表示NPU型号。Atlas A2系列产品使用"ascend910b"（默认），Atlas A3系列产品使用"ascend910_93"，Ascend 950PR/Ascend 950DT产品使用"ascend950"。
-    - --vendor_name（可选）：\$\{vendor\_name\}表示构建的自定义算子包名，默认名为custom。
-    - --ops（可选）：\$\{op\_list\}表示待编译算子，不指定时默认编译所有算子。格式形如"transpose_batch_mat_mul,gemm,..."，多算子之间用英文逗号","分隔。
-    - --experimental（可选）：表示编译experimental贡献目录下的算子，${experimental_op}为新贡献算子目录名，贡献说明参见[贡献指南](../../../CONTRIBUTING.md)。
-
-    若\$\{vendor\_name\}和\$\{op\_list\}都不传入编译的是ops-nn包；若编译所有算子的自定义算子包，需传入\$\{vendor\_name\}。当提示如下信息，说明编译成功。
-
-    ```bash
-    Self-extractable archive "cann-ops-nn-${vendor_name}_linux-${arch}.run" successfully created.
-    ```
-
-    编译成功后，run包存放于项目根目录的build_out目录下。
-
-2. **安装自定义算子包**
-
-    ```bash
-    ./cann-ops-nn-${vendor_name}_linux-${arch}.run
-    ```
-
-    自定义算子包安装路径为`${ASCEND_HOME_PATH}/opp/vendors`，\$\{ASCEND\_HOME\_PATH\}已通过环境变量配置，表示CANN toolkit包安装路径，一般为\$\{install\_path\}/cann。
-
-    > 说明：如果部署算子包时通过配置--install-path参数指定了算子包的安装目录，则在使用自定义算子前，需要执行source \$\{install-path\}/vendors/${vendor_name}/bin/set_env.bash命令，set_env.bash脚本中将自定义算子包的安装路径追加到环境变量ASCEND_CUSTOM_OPP_PATH中，使自定义算子在当前环境中生效。
-
-3. **（可选）卸载自定义算子包**
-
-    自定义算子包安装后在```${ASCEND_HOME_PATH}/opp/vendors/${vendor_name}_nn/scripts```目录会生成`uninstall.sh`脚本，通过执行该脚本可卸载自定义算子包，具体命令如下：
-
-    ```bash
-    bash ${ASCEND_HOME_PATH}/opp/vendors/${vendor_name}_nn/scripts/uninstall.sh
-    ```
-
-#### ops-nn包
-
-1. **编译ops-nn包**
-
-   进入项目根目录，执行如下编译命令：
-
-   ```bash
-   # 编译除experimental贡献目录外的所有算子
-   bash build.sh --pkg --soc=${soc_version}
-   # 编译experimental贡献目录下的所有算子
-   # bash build.sh --pkg --experimental --soc=${soc_version}
-   ```
-
-   - --soc：\$\{soc\_version\}表示NPU型号。Atlas A2系列产品使用"ascend910b"（默认），Atlas A3系列产品使用"ascend910_93"，Ascend 950PR/Ascend 950DT产品使用"ascend950"。
-   - --experimental（可选）：表示编译experimental贡献目录下的算子。
-
-   若提示如下信息，说明编译成功。
-
-   ```bash
-   Self-extractable archive "cann-${soc_name}-ops-nn_${cann_version}_linux-${arch}.run" successfully created.
-   ```
-
-   \$\{soc\_name\}表示NPU型号名称，即\$\{soc\_version\}删除“ascend”后剩余的内容。编译成功后，run包存放于build_out目录下。
-
-2. **安装ops-nn包**
-
-    ```bash
-    # 安装命令
-    ./cann-${soc_name}-ops-nn_${cann_version}_linux-${arch}.run --full --install-path=${install_path}
-    ```
-
-    \$\{install\_path\}：表示指定安装路径，需要与toolkit包安装在相同路径，默认安装在`/usr/local/Ascend`目录。
-
-3. **（可选）卸载ops-nn包**
-
-    ```bash
-    # 卸载命令
-    ./${install_path}/cann/share/info/ops_nn/script/uninstall.sh
-    ```
-
-#### ops-nn静态库
-
-> 说明：静态库仅支持Atlas A2、Atlas A3系列产品。experimental算子暂不支持使用静态库。
-
-1. **编译ops-nn静态库**
-
-   进入项目根目录，执行如下编译命令：
-
-    ```bash
-   bash build.sh --pkg --static --soc=${soc_version}
-    ```
-
-   \$\{soc\_version\}表示NPU型号。Atlas A2系列产品使用"ascend910b"（默认），Atlas A3系列产品使用"ascend910_93"。
-
-   若提示如下信息，说明编译并压缩成功。
-
-    ```bash
-   [SUCCESS] Build static lib success!
-   Successfully created compressed package: ${repo_path}/build_out/cann-${soc_name}-ops-nn-static_${cann_version}_linux-${arch}.tar.gz
-    ```
-
-   \$\{repo\_path\}表示项目根目录，\$\{soc\_name\}表示NPU型号名称，即\$\{soc\_version\}删除“ascend”后剩余的内容。编译成功后，压缩包存放于build_out目录下。
-
-2. **解压ops-nn静态库**
-
-   进入build_out目录执行解压命令：
-
-    ```bash
-   tar -zxvf ./cann-${soc_name}-ops-nn-static_${cann_version}_linux-${arch}.tar.gz -C ${static_lib_path}
-    ```
-
-   \$\{static\_lib\_path\}表示静态库解压路径。解压后目录结构如下：
-
-    ```
-    ├── cann-${soc_name}-ops-nn-static_${cann_version}_linux-${arch}
-    │   ├── lib64
-    │   │   ├── libcann_nn_static.a                # 静态库文件
-    │   └── include
-    |       ├── ...                                 # aclnn接口头文件
-    ```
-
-### 未联网编译
-
-若在没有连接互联网的环境下编译，需要提前准备好依赖的第三方软件，再进行源码编译。具体过程如下：
-
-1. **检查基础环境是否完备**
-
-    请确保已按[环境部署](../install/quick_install.md)完成基础环境搭建，包括CANN包安装、源码下载等。
-
-    - 在联网环境中，进入[本项目主页](https://gitcode.com/cann/ops-nn)，通过`下载ZIP`或`clone`按钮，根据指导完成源码下载。
-    - 连接离线环境，上传源码至您指定的目录下。若下载的是源码压缩包，请先进行解压。
-
-2. **下载第三方软件依赖**
-
-    在联网环境中提前下载第三方软件，目前有如下方式，请按需选择：
-
-    - 方式1：根据[第三方软件依赖](#第三方软件依赖)提供的表格手动下载，若从其他地址下载，请确保版本号一致。
-
-    - 方式2：通过[third_lib_download.py](../../../scripts/tools/third_lib_download.py)脚本一键下载，该脚本在本项目`scripts/tools/`目录，下载该脚本并执行如下命令：
-
-        ```bash
-        python ${scripts_dir}/third_lib_download.py
-        ```
-        
-    \$\{scripts\_dir\}表示脚本存放路径，下载的第三方软件包默认存放在当前脚本所在目录。
-
-3. **编译算子包**
-
-    将下载好的第三方软件上传至离线环境，可存放在`third_party`目录或自定义目录下。**推荐前者，其编译命令与联网编译场景下的命令一致。**
-
-    - **third\_party目录**（推荐）
-
-        请在本项目根目录创建`third_party`目录（若有则无需创建），将第三方软件拷贝到该指定目录。此时编译命令与联网编译命令一致，具体参考[联网编译](#联网编译)。
-
-    - **自定义目录**
-
-        在离线环境的任意位置新建`${cann_3rd_lib_path}`目录，将第三方软件拷贝到该目录，请确保该目录有权限访问。
-
-        ```bash
-        mkdir -p ${cann_3rd_lib_path}
-        ```
-
-        此时编译命令需在联网编译命令基础上额外增加`--cann_3rd_lib_path=${cann_3rd_lib_path}`用于指定第三方软件所在路径。假设存放路径为`/path/cann_3rd_lib_path`，不同编译方式对应的命令如下：
-
-      - 自定义算子包
-
-        ```bash
-        bash build.sh --pkg --soc=${soc_version} [--vendor_name=${vendor_name}] [--ops=${op_list}] --cann_3rd_lib_path=${cann_3rd_lib_path}
-        # 以TransposeBatchMatMul算子编译为例
-        # bash build.sh --pkg --soc=ascend910b --ops=transpose_batch_mat_mul --cann_3rd_lib_path=/path/cann_3rd_lib_path
-        ```
-
-      - ops-nn整包
-
-        ```bash
-        bash build.sh --pkg --soc=${soc_version} --cann_3rd_lib_path=${cann_3rd_lib_path}
-        # bash build.sh --pkg --soc=ascend910b --cann_3rd_lib_path=/path/cann_3rd_lib_path
-        ```
-
-      - ops-nn静态库
-
-        ```bash
-        bash build.sh --pkg --static --soc=${soc_version} --cann_3rd_lib_path=${cann_3rd_lib_path}
-        # bash build.sh --pkg --static --soc=ascend910b --cann_3rd_lib_path=/path/cann_3rd_lib_path
-        ```
-
-4. **安装/卸载算子包**
-
-    未联网和联网场景下编译得到算子包结果一样，默认存放于项目根目录build_out目录下，并且安装和卸载的操作命令也一样，具体参见[联网编译](#联网编译)。
-
-## 本地验证
-
-通过项目根目录build.sh执行算子和UT用例。目前算子支持aclnn API（推荐）和图模式调用，调用原理和流程详见[算子调用方式](op_invocation.md)。
-
-### 执行算子样例
-
-> **说明**：Ascend 950PR产品使用仿真执行算子样例，请见[仿真指导](../debug/op_debug_prof.md#方式二针对ascend-950pr)。
+> **说明**：对于Ascend 950PR产品，可通过Simulator仿真工具执行算子样例，详见[仿真指导](../debug/op_debug_prof.md#方式二针对ascend-950pr)。
 
 - 基于**自定义算子包**执行算子样例，包安装后，执行如下命令：
 
     ```bash
-    bash build.sh --run_example ${op} ${mode} ${pkg_mode} [--example_name=${example_name}] [--vendor_name=${vendor_name}] [--soc=${soc_version}] [--simulator]
-    # 以TransposeBatchMatMul算子执行test_aclnn_transpose_batch_mat_mul.cpp为例
-    # bash build.sh --run_example transpose_batch_mat_mul eager cust --example_name=transpose_batch_mat_mul --vendor_name=transpose_batch_mat_mul
+    bash build.sh --run_example ${op} ${mode} ${pkg_mode} [--example_name=${example_name}] [--vendor_name=${vendor_name}] [--soc=${soc_version}] [--simulator] [--experimental]
+    # TransposeBatchMatMul算子执行test_aclnn_transpose_batch_mat_mul.cpp为例
+    # bash build.sh --run_example transpose_batch_mat_mul eager cust --example_name=transpose_batch_mat_mul --vendor_name=custom
     ```
 
-    - \$\{op\}：表示待执行算子，算子名为小写下划线形式，如transpose_batch_mat_mul。
-    - \$\{mode\}：表示执行模式，目前支持eager（aclnn调用）、graph（图模式调用）。
+    - \$\{op\}：表示待执行算子，算子名小写下划线形式，如transpose_batch_mat_mul。
+    - \$\{mode\}：表示调用方式，目前支持eager（aclnn调用）、graph（图模式调用）。
     - \$\{pkg_mode\}：表示包模式，目前仅支持cust，即自定义算子包。
     - \$\{example_name\}（可选）：表示待执行样例名，名称为各个算子examples文件夹下的文件名称，去掉`test_aclnn_`前缀和`.cpp`后缀。
     - \$\{vendor\_name\}（可选）：与构建的自定义算子包设置一致，默认名为custom。
     - \$\{soc_version\}（可选）：表示NPU型号。当设置为"ascend950"时会额外运行"arch35"目录下的示例文件。
     - \$\{simulator\}（可选）：表示仿真模式，目前仅支持eager（aclnn调用）场景下使用。仿真模式下，会根据soc_version链接对应的仿真库。
-
+    - \$\{experimental\}（可选）：表示执行用户保存在experimental贡献目录下的算子。
+    
     说明：\$\{mode\}为graph时，不指定\$\{pkg_mode\}和\$\{vendor\_name\}
 
-- 基于**ops-nn包**执行算子样例，安装后，执行命令如下：
+- 基于**ops-nn包**执行算子样例，安装后，执行如下命令：
 
     ```bash
     bash build.sh --run_example ${op} ${mode} [--soc=${soc_version}] [--simulator]
@@ -283,7 +49,7 @@
 
         ops-nn静态库依赖于ops-legacy静态库和ops-math静态库，将上述静态库准备好，解压并将所有lib64、include目录移动至统一目录\$\{static\_lib\_path\}下。
 
-        > 说明：ops-legacy静态库`cann-${soc_name}-ops-legacy-static_${cann_version}_linux-${arch}.tar.gz`需单击[下载链接](https://ascend.devcloud.huaweicloud.com/artifactory/cann-run-release/software/master)获取， ops-nn静态库、ops-math静态库暂未提供软件包，请通过本地编译生成。
+        > 说明：ops-legacy静态库```cann-${soc_name}-ops-legacy-static_${cann_version}_linux-${arch}.tar.gz```可通过单击[下载链接](https://ascend.devcloud.huaweicloud.com/artifactory/cann-run-release/software/master)获取， ops-nn静态库、ops-math静态库暂未提供软件包，请通过本地编译生成。
 
     2. **创建run.sh**
 
@@ -292,6 +58,9 @@
         以TransposeBatchMatMul算子执行test_aclnn_transpose_batch_mat_mul.cpp为例，示例如下:
 
         ```bash
+        # 静态库文件路径
+        static_lib_path=""
+
         # 环境变量生效
         if [ -n "$ASCEND_INSTALL_PATH" ]; then
             _ASCEND_INSTALL_PATH=$ASCEND_INSTALL_PATH
@@ -304,25 +73,34 @@
         source ${_ASCEND_INSTALL_PATH}/bin/setenv.bash
 
         # 编译可执行文件
-        g++ test_aclnn_transpose_batch_mat_mul.cpp -I ${static_lib_path}/include -L ${static_lib_path}/lib64 -L ${ASCEND_HOME_PATH}/lib64 -Wl,--allow-multiple-definition \
-            -Wl,--start-group -lcann_nn_static -lcann_math_static -lcann_legacy_static -Wl,--end-group -lgraph -lgraph_base \
-            -lpthread -lmmpa -lmetadef -lascendalog -lregister -lopp_registry -lops_base -lascendcl -ltiling_api -lplatform \
-            -ldl -lc_sec -lnnopbase -lruntime -lerror_manager -lunified_dlog -o test_aclnn_transpose_batch_mat_mul   # 替换为实际算子可执行文件名
+        g++ test_aclnn_transpose_batch_mat_mul.cpp \
+        -I ${static_lib_path}/include \
+        -L ${static_lib_path}/lib64 \
+        -I ${_ASCEND_INSTALL_PATH}/include \
+        -I ${_ASCEND_INSTALL_PATH}/include/aclnnop \
+        -L ${_ASCEND_INSTALL_PATH}/lib64 \
+        -Wl,--allow-multiple-definition \
+        -Wl,--start-group -lcann_nn_static -lcann_math_static -lcann_legacy_static -Wl,--end-group -lgraph -lgraph_base \
+        -lpthread -lmmpa -lmetadef -lascendalog -lregister -lopp_registry -lops_base -lascendcl -ltiling_api -lplatform \
+        -ldl -lc_sec -lnnopbase -lruntime -lerror_manager -lunified_dlog \
+        -o test_aclnn_transpose_batch_mat_mul   # 替换为实际算子可执行文件名
 
         # 执行程序
         ./test_aclnn_transpose_batch_mat_mul
         ```
 
-        \$\{static\_lib\_path}表示静态库统一放置路径；\$\{ASCEND\_HOME\_PATH\}已通过环境变量配置，表示CANN toolkit包安装路径，一般为\$\{install\_path\}/cann；最终可执行文件名请替换为实际算子可执行文件名。
-        其中lcann\_nn\_static、lcann\_math\_static、lcann\_legacy\_static表示算子依赖的静态库文件，从静态库统一放置路径\$\{static\_lib\_path\}中获取；lgraph、lmetadef等表示算子依赖的底层库文件，可在CANN toolkit包获取。
-
+        \$\{static\_lib\_path\}表示静态库统一放置路径； \$\{ASCEND\_INSTALL\_PATH\}已通过环境变量配置，表示CANN toolkit包安装路径； 最终可执行文件名请替换为**实际算子可执行文件名**。  
+        
+        其中lcann\_nn\_static、lcann\_math\_static、lcann\_legacy\_static表示算子依赖的静态库文件，从静态库统一放置路径\$\{static\_lib\_path\}中获取； 
+        lgraph、lmetadef等表示算子依赖的底层库文件，可在CANN toolkit包获取。 
+        
     3. **执行run.sh**
 
         ```bash
         bash run.sh
         ```
 
-无论上述哪种方式，算子样例执行后会打印结果，以TransposeBatchMatMul算子执行为例：
+无论上述哪种方式，算子样例执行后会打印结果，以TransposeBatchMatMul算子为例：
 
 ```
 result[0] is: 0.000000
@@ -332,40 +110,370 @@ result[3] is: 0.000000
 ...
 ```
 
-### 执行算子UT
+## 调用方式
 
-> 说明：执行UT用例依赖googletest单元测试框架，详细介绍参见[googletest官网](https://google.github.io/googletest/advanced.html#running-a-subset-of-the-tests)。
+通过build.sh执行算子时，其底层调用算子的原理目前包括如下几种方式：
 
-```bash
-# 安装根目录下test相关requirements.txt依赖
-pip3 install -r tests/requirements.txt
-# 方式1: 编译并执行指定算子和对应功能的UT测试用例（选其一）
-bash build.sh -u --[opapi|ophost|opkernel] --ops=transpose_batch_mat_mul
-# 方式2: 编译并执行所有的UT测试用例
-# bash build.sh -u
-# 方式3: 编译所有的UT测试用例但不执行
-# bash build.sh -u --noexec
-# 方式4: 编译并执行对应功能的UT测试用例（选其一）
-# bash build.sh -u --[opapi|ophost|opkernel]
-# 方式5: 编译对应功能的UT测试用例但不执行（选其一）
-# bash build.sh -u --noexec --[opapi|ophost|opkernel]
-# 方式6: 执行UT测试用例时可指定soc编译
-# bash build.sh -u --[opapi|ophost|opkernel] [--soc=${soc_version}]
+- PyTorch调用**（建设中）**：通过`<<<>>>`方式启动算子Kernel，流程极简，实现PyTorch方式调用NPU算子。
+
+- aclnn调用 **（推荐）**：Host侧提供算子对应的C语言API（前缀aclnn），无需提供IR定义，实现aclnn API方式调用算子。
+
+- 图模式调用：提供IR（Intermediate Representation）定义，实现构图方式调用算子。
+
+### PyTorch调用（建设中）
+
+该方式提供一套基于Ascend Extension for PyTorch（torch_npu）框架调用NPU算子的方法，具体调用原理和过程请参考[examples/fast_kernel_launch_example](../../../examples/fast_kernel_launch_example/README.md)，内容仍在建设和优化中，欢迎您提问和建议。
+
+### aclnn调用
+
+#### 调用流程
+
+该方式也称为“单算子API调用”，通过提供一套基于C的API（以aclnn为前缀API）实现算子调用，无需提供算子IR（Intermediate Representation）定义。aclnn API的调用流程如下：
+
+![原理图](../figures/aclnn调用.png)
+
+aclnn API调用示例以`AddExample`算子为例，代码示例如下，仅供参考，全量代码参见[test_aclnn_add_example.cpp](../../../examples/add_example/examples/test_aclnn_add_example.cpp)。调用前，请按照环境安装的提示信息设置环境变量。
+
+> 注意：如需调用项目已实现的算子，可访问目标算子`examples`目录下test\_aclnn\_\$\{op\_name\}.cpp，\$\{op\_name\}表示算子名。
+
+```Cpp
+int main()
+{
+    // 1. 调用acl进行device/stream初始化
+    int32_t deviceId = 0;
+    aclrtStream stream;
+    auto ret = Init(deviceId, &stream);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
+
+    // 2. 构造输入与输出，需要根据API的接口自定义构造
+    aclTensor* selfX = nullptr;
+    void* selfXDeviceAddr = nullptr;
+    std::vector<int64_t> selfXShape = {32, 4, 4, 4};
+    std::vector<float> selfXHostData(2048, 1);
+    ret = CreateAclTensor(selfXHostData, selfXShape, &selfXDeviceAddr, aclDataType::ACL_FLOAT, &selfX);
+    CHECK_RET(ret == ACL_SUCCESS, return ret);
+
+    aclTensor* selfY = nullptr;
+    void* selfYDeviceAddr = nullptr;
+    std::vector<int64_t> selfYShape = {32, 4, 4, 4};
+    std::vector<float> selfYHostData(2048, 1);
+    ret = CreateAclTensor(selfYHostData, selfYShape, &selfYDeviceAddr, aclDataType::ACL_FLOAT, &selfY);
+    CHECK_RET(ret == ACL_SUCCESS, return ret);
+
+    aclTensor* out = nullptr;
+    void* outDeviceAddr = nullptr;
+    std::vector<int64_t> outShape = {32, 4, 4, 4};
+    std::vector<float> outHostData(2048, 1);
+    ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_FLOAT, &out);
+    CHECK_RET(ret == ACL_SUCCESS, return ret);
+
+    // 3. 调用CANN算子库API，需要修改为具体的Api名称
+    uint64_t workspaceSize = 0;
+    aclOpExecutor* executor;
+
+    // 4. 调用aclnnAddExample第一段接口
+    ret = aclnnAddExampleGetWorkspaceSize(selfX, selfY, out, &workspaceSize, &executor);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnAddExampleGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+
+    // 根据第一段接口计算出的workspaceSize申请device内存
+    void* workspaceAddr = nullptr;
+    if (workspaceSize > static_cast<uint64_t>(0)) {
+        ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
+    }
+
+    // 5. 调用aclnnAddExample第二段接口
+    ret = aclnnAddExample(workspaceAddr, workspaceSize, executor, stream);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnAddExample failed. ERROR: %d\n", ret); return ret);
+
+    // 6. （固定写法）同步等待任务执行结束
+    ret = aclrtSynchronizeStream(stream);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
+
+    // 7. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
+    PrintOutResult(outShape, &outDeviceAddr);
+
+    // 8. 释放aclTensor，需要根据具体API的接口定义修改
+    aclDestroyTensor(selfX);
+    aclDestroyTensor(selfY);
+    aclDestroyTensor(out);
+
+    // 9. 释放device资源
+    aclrtFree(selfXDeviceAddr);
+    aclrtFree(selfYDeviceAddr);
+    aclrtFree(outDeviceAddr);
+    if (workspaceSize > static_cast<uint64_t>(0)) {
+        aclrtFree(workspaceAddr);
+    }
+    aclrtDestroyStream(stream);
+    aclrtResetDevice(deviceId);
+
+    // 9. acl去初始化
+    aclFinalize();
+    return 0;
+}
 ```
 
-假设验证ophost功能是否正常，执行如下命令：
+#### 编译与运行
 
-```bash
-bash build.sh -u --ophost
+>说明：对于本项目内已实现的算子（非自定义算子），可通过根目录下build.sh直接运行算子，操作请参考[执行算子样例](#执行算子样例)。
+
+1. 前提条件。
+   请参考本项目[源码构建](../install/compile.md)完成目标算子的编译部署。
+
+2. 创建CMakeLists.txt文件。
+
+   在test\_aclnn\_\$\{op\_name\}.cpp同级目录下创建CMakeLists.txt文件，以`AddExample`算子为例，示例如下，请根据实际情况自行修改。
+
+    ```bash
+    cmake_minimum_required(VERSION 3.14)
+    # 设置工程名
+    project(ACLNN_EXAMPLE)
+
+    # 设置C++编译标准
+    add_compile_options(-std=c++11)
+
+    # 设置编译输出目录为当前目录下的bin文件夹
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY  "./bin")    
+
+    # 设置调试和发布模式的编译选项
+    set(CMAKE_CXX_FLAGS_DEBUG "-fPIC -O0 -g -Wall")
+    set(CMAKE_CXX_FLAGS_RELEASE "-fPIC -O2 -Wall")
+
+    # 添加可执行文件（请替换为实际算子可执行文件），指定算子调用的*.cpp文件
+    add_executable(test_aclnn_add_example              
+    test_aclnn_add_example.cpp)         
+
+    # ASCEND_PATH（CANN软件包目录，请根据实际路径修改）
+    if(NOT "$ENV{ASCEND_HOME_PATH}" STREQUAL "")      
+        set(ASCEND_PATH $ENV{ASCEND_HOME_PATH})
+    else()
+        set(ASCEND_PATH "/usr/local/Ascend/cann")
+    endif()
+
+    # 获取自定义算子包名称，存在多个自定义算子包时，只会使用其中一个
+    set(VENDORS_DIR "${ASCEND_PATH}/opp/vendors")
+    file(GLOB CUSTOM_DIRS "${VENDORS_DIR}/*")
+    foreach(CUSTOM_DIR ${CUSTOM_DIRS})
+        if(IS_DIRECTORY ${CUSTOM_DIR})
+            set(TARGET_SUBDIR ${CUSTOM_DIR})
+        endif()
+    endforeach()
+
+    if(NOT DEFINED TARGET_SUBDIR)
+        message(FATAL_ERROR "在路径${ASCEND_PATH}中未找到自定义算子包") 
+    endif()
+
+    # 设置头文件路径
+    set(INCLUDE_BASE_DIR "${ASCEND_PATH}/include")
+    include_directories(
+        ${INCLUDE_BASE_DIR}
+        ${TARGET_SUBDIR}/op_api/include    # 仅自定义算子需要
+        # ${INCLUDE_BASE_DIR}/aclnn                                   # 仅内置算子需要
+    )
+    include_directories(
+        ${INCLUDE_BASE_DIR}
+    )
+
+    # 链接所需的动态库
+    target_link_libraries(test_aclnn_add_example PRIVATE             # 替换实际算子可执行文件
+        ${ASCEND_PATH}/lib64/libascendcl.so
+        ${ASCEND_PATH}/lib64/libnnopbase.so
+        ${TARGET_SUBDIR}/op_api/lib/libcust_opapi.so   # 仅自定义算子需要
+        # ${ASCEND_PATH}/lib64/libopapi_nn.so    # 仅内置算子需要
+    )
+    target_link_options(test_aclnn_add_example PRIVATE
+        "-Wl,-rpath,${TARGET_SUBDIR}/op_api/lib" # 仅自定义算子需要
+    )
+
+    # 安装目标文件到bin目录  
+    install(TARGETS test_aclnn_add_example DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+    ```
+
+3. 创建run.sh文件。
+   
+    在test\_aclnn\_\$\{op\_name\}.cpp同级目录下创建run.sh文件，以`AddExample`算子为例，示例如下，请根据实际情况自行修改。
+    
+    ```bash
+    if [ -n "$ASCEND_INSTALL_PATH" ]; then                      # 实际CANN包安装路径
+        _ASCEND_INSTALL_PATH=$ASCEND_INSTALL_PATH
+    elif [ -n "$ASCEND_HOME_PATH" ]; then
+        _ASCEND_INSTALL_PATH=$ASCEND_HOME_PATH
+    else
+        _ASCEND_INSTALL_PATH="/usr/local/Ascend/cann"
+    fi
+
+    source ${_ASCEND_INSTALL_PATH}/bin/setenv.bash
+    
+    rm -rf build
+    mkdir -p build 
+    cd build
+    cmake ../ -DCMAKE_CXX_COMPILER=g++ -DCMAKE_SKIP_RPATH=TRUE  # 执行构建命令
+    make
+    cd bin
+    ./test_aclnn_add_example            # 替换为实际算子可执行文件名
+    ```
+    
+4. 运行run.sh文件。
+    在run.sh文件所在路径执行如下命令：
+
+   ```bash
+   bash run.sh
+   ```
+   
+    默认在当前执行路径 `/build/bin`下生成可执行文件test\_aclnn\_add\_example，运行结果如下：
+
+   ```
+   mean result[2046] is 2.000000
+   mean result[2047] is 2.000000
+   ```
+
+### 图模式调用
+
+#### 调用流程
+
+该方式采用算子IR（Intermediate Representation）构图方式调用算子，调用流程如下：
+
+
+
+![原理图](../figures/IR调用.png)
+
+调用示例以`AddExample`算子为例，代码示例如下，仅供参考，全量代码参见[test_geir_add_example.cpp](../../../examples/add_example/examples/test_geir_add_example.cpp)。调用前，请按照环境安装的提示信息设置环境变量。
+
+> 说明：如需调用项目已实现算子，可访问目标算子`examples`目录下test\_geir\_\$\{op\_name\}.cpp，$\{op\_name\}表示算子名。
+
+```CPP
+int main() {
+    // 1. 创建图对象
+    Graph graph(graphName);
+
+    // 2. 图全局编译选项初始化
+    Status ret = ge::GEInitialize(globalOptions);
+
+    // 3. 创建AddExample算子实例
+    auto add1 = op::AddExample("add1");
+
+    // 4. 定义图输入输出向量
+    std::vector<Operator> inputs{};
+    std::vector<Operator> outputs{};
+
+    // 5. 准备输入数据
+    std::vector<int64_t> xShape = {32,4,4,4};
+    // 宏展开方式处理变量赋值
+    ADD_INPUT(1, x1, inDtype, xShape);
+    ADD_INPUT(2, x2, inDtype, xShape);
+    ADD_OUTPUT(1, y, inDtype, xShape);
+
+    outputs.push_back(add1);
+
+    // 6. 设置图对象的输入算子和输出算子
+    graph.SetInputs(inputs).SetOutputs(outputs);
+
+    // 7. 创建session对象
+    ge::Session* session = new Session(buildOptions);
+
+    // 8. session添加图
+    ret = session->AddGraph(graphId, graph, graphOptions);
+
+    // 9. 运行图
+    ret = session->RunGraph(graphId, input, output);
+
+    // 10. 释放资源
+    GEFinalize();
+
+    return 0;
+}
 ```
 
-执行完成后出现如下内容，表示执行成功。
+#### 编译与运行
 
-```bash
-Global Environment TearDown
-[==========] ${n} tests from ${m} test suites ran. (${x} ms total)
-[  PASSED  ] ${n} tests.
-[100%] Built target nn_op_host_ut
-```
+>说明：对于本项目内已实现的算子（非自定义算子），可通过根目录下build.sh直接运行算子，操作请参考[执行算子样例](#执行算子样例)。
 
-\$\{n\}表示执行了n个用例，\$\{m\}表示m项测试，\$\{x\}表示执行用例消耗的时间，单位为毫秒。
+1. 前提条件。
+   请参考本项目[源码构建](../install/compile.md)完成目标算子的编译部署。
+
+2. 创建CMakelist文件。
+
+   在test\_geir\_\$\{op\_name\}.cpp同级目录下创建CMakelist文件，以`AddExample`算子为例，示例如下，请根据实际情况自行修改。
+
+    ```bash
+   cmake_minimum_required(VERSION 3.14)
+    
+   # 设置工程名
+   project(GE_IR_EXAMPLE)
+   
+   if(NOT "$ENV{ASCEND_OPP_PATH}" STREQUAL "")
+       get_filename_component(ASCEND_PATH $ENV{ASCEND_OPP_PATH} DIRECTORY)
+   elseif(NOT "$ENV{ASCEND_HOME_PATH}" STREQUAL "")
+       set(ASCEND_PATH $ENV{ASCEND_HOME_PATH})
+   else()
+       set(ASCEND_PATH "/usr/local/Ascend/cann")
+   endif()
+   
+   set(FWK_INCLUDE_DIR "${ASCEND_PATH}/compiler/include")
+   
+   message(STATUS "ASCEND_PATH: ${ASCEND_PATH}")
+   
+   file(GLOB files CONFIGURE_DEPENDS
+        test_geir_add_example.cpp         
+   )
+   
+   # 添加可执行文件（请替换为实际算子可执行文件）
+   add_executable(test_geir_add_example ${files})      
+   
+   find_library(GRAPH_LIBRARY_DIR libgraph.so "${ASCEND_PATH}/compiler/lib64/stub")
+   find_library(GE_RUNNER_LIBRARY_DIR libge_runner.so "${ASCEND_PATH}/compiler/lib64/stub")
+   find_library(GRAPH_BASE_LIBRARY_DIR libgraph_base.so "${ASCEND_PATH}/compiler/lib64")
+   
+   # 链接所需的动态库
+   target_link_libraries(test_geir_add_example PRIVATE      
+        ${GRAPH_LIBRARY_DIR}
+        ${GE_RUNNER_LIBRARY_DIR}
+        ${GRAPH_BASE_LIBRARY_DIR}
+   )
+   
+   # 设置头文件路径
+   target_include_directories(test_geir_add_example PRIVATE       
+        ${FWK_INCLUDE_DIR}/graph/
+        ${FWK_INCLUDE_DIR}/ge/
+        ${ASCEND_PATH}/opp/built-in/op_proto/inc/
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${ASCEND_PATH}/compiler/include
+   )
+    ```
+
+3. 创建run.sh脚本。
+
+   在test\_geir\_\$\{op\_name\}.cpp同级目录下创建run.sh文件，以`AddExample`算子为例，示例如下，请根据实际情况自行修改。
+
+    ```bash
+    if [ -n "$ASCEND_INSTALL_PATH" ]; then                      # 实际CANN包安装路径
+        _ASCEND_INSTALL_PATH=$ASCEND_INSTALL_PATH
+    elif [ -n "$ASCEND_HOME_PATH" ]; then
+        _ASCEND_INSTALL_PATH=$ASCEND_HOME_PATH
+    else
+        _ASCEND_INSTALL_PATH="/usr/local/Ascend/cann"
+    fi
+
+    source ${_ASCEND_INSTALL_PATH}/bin/setenv.bash               
+
+    rm -rf build                 
+    mkdir -p build 
+    cd build
+    cmake ../ -DCMAKE_CXX_COMPILER=g++ -DCMAKE_SKIP_RPATH=TRUE  # 执行构建命令
+    make
+    ./test_geir_add_example                  # 替换为实际算子可执行文件名
+    ```
+
+4. 运行run.sh脚本。
+    在run.sh文件所在路径执行如下命令：
+   
+    ```bash
+    bash run.sh
+    ```
+   
+    默认在当前执行路径 `/build/bin`下生成可执行文件test\_geir\_add\_example，运行结果如下：
+   
+    ```
+    INFO - [XIR]: Finalize ir graph session success
+    ```

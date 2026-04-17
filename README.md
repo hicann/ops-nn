@@ -14,85 +14,40 @@ ops-nn是[CANN](https://hiascend.com/software/cann) （Compute Architecture for 
 
 <img src="docs/zh/figures/architecture.png" alt="架构图"  width="700px" height="320px">
 
-## 📝版本配套
+## 📌版本配套
 
 本项目源码会跟随CANN软件版本发布，关于CANN软件版本与本项目标签的对应关系请参阅[release仓库](https://gitcode.com/cann/release-management)中的相应版本说明。
 请注意，为确保您的源码定制开发顺利进行，请选择配套的CANN版本与Gitcode标签源码，使用master分支可能存在版本不匹配的风险。
 
-## ⚡️快速入门
+## 🛠️环境准备
 
-若您希望**从零到一快速体验**项目能力，请访问下述简易教程。
+[环境部署](docs/zh/install/quick_install.md)是体验本项目能力的前提，请先完成NPU驱动、CANN包安装等，确保环境正常。
 
-1. [环境部署](docs/zh/install/quick_install.md)：本文是**QuickStart和各类教程的操作前提**，请先完成基础环境搭建和源码下载。
-2. [QuickStart](docs/QUICKSTART.md)：针对源码编译、算子调用/开发/调试等关键能力，提供快速上手的简易指南。
+## ⬇️源码下载
+
+环境准备好后，根据环境中CANN版本下载与之配套的分支源码，\$\{tag\_version\}替换为配套的分支标签名。
+
+```bash
+git clone -b ${tag_version} https://gitcode.com/cann/ops-nn.git
+```
+说明：对于WebIDE环境，已默认提供最新商发CANN版本配套的源码，如需获取其他版本源码，参考上述命令获取。
 
 ## 📖学习教程
 
-若您已学习完**快速入门**章节，对本项目有一定认知，并希望**深入了解和体验项目**，请访问下述详细教程。
-
-1. [算子列表](docs/zh/op_list.md)：提供全量算子信息，方便您查看算子分类和功能。
-2. [算子调用](docs/zh/invocation/quick_op_invocation.md)：提供多种源码编译和执行算子样例（包括执行UT）的方法。
-3. [算子开发](docs/zh/develop/aicore_develop_guide.md)：提供算子端到端开发指南，从零学习创建算子工程、实现Tiling和Kernel核心交付件。
-4. [算子调试调优](docs/zh/debug/op_debug_prof.md)：提供常见算子调试和调优方法，如DumpTensor、msProf、Simulator等。
-
-除了上述关键教程，还有其他文档介绍，例如算子调用方式、build参数说明、术语概念等，全量文档请访问[docs](docs/README.md)。
-
-## 🔍目录结构
-
-关键目录如下，详细目录介绍参见[项目目录](./docs/zh/install/dir_structure.md)。
-
-```
-├── activation                         # activation类算子
-├── cmake                              # 项目工程编译目录
-├── common                             # 项目公共头文件和公共源码
-├── control                            # control类算子
-├── conv                               # conv类算子
-├── docs                               # 项目文档介绍
-├── examples                           # 端到端算子开发和调用示例
-├── experimental                       # 用户自定义算子存放目录
-├── foreach                            # foreach类算子
-├── index                              # index类算子
-├── loss                               # loss类算子
-├── matmul                             # matmul类算子
-│   ├── transpose_batch_mat_mul        # transpose_batch_mat_mul算子所有交付件，如Tiling、Kernel等
-│   │   ├── docs                       # 算子说明文档
-│   │   ├── examples                   # 算子使用示例
-│   │   ├── op_graph                   # 算子构图相关目录
-│   │   ├── op_host                    # 算子信息库、Tiling、InferShape相关实现目录
-│   │   ├── op_api                 # 可选，算子aclnn接口实现目录，如未提供则表示此算子的aclnn接口会让工程自动生成
-│   │   ├── op_kernel                  # 算子Kernel目录
-│   │   ├── CMakeLists.txt             # 算子编译配置文件
-│   │   └── README.md                  # 算子介绍文档
-│   ├── ...
-│   └── CMakeLists.txt                 # 算子编译配置文件
-├── ...
-├── rnn                                # rnn类算子
-├── scripts                            # 脚本目录，包含自定义算子、Kernel构建相关配置文件
-├── tests                              # 测试工程目录
-├── vfusion                            # vfusion类算子
-├── CMakeLists.txt
-├── README.md
-├── build.sh                           # 项目工程编译脚本
-├── install_deps.sh                    # 安装依赖包脚本
-└── requirements.txt                   # 项目需要的第三方依赖包
-```
+- [快速入门](docs/QUICKSTART.md)：从零开始快速体验项目核心基础能力，涵盖源码编译、算子调用、开发与调试等操作。
+- [进阶教程](docs/README.md)：如需深入了解项目编译部署、算子调用、开发、调试调优等能力，请查阅文档中心获取详细指引。
 
 ## 💬相关信息
 
+- [目录结构](docs/zh/install/dir_structure.md)
 - [贡献指南](CONTRIBUTING.md)
 - [安全声明](SECURITY.md)
 - [许可证](LICENSE)
-- [所属SIG](https://gitcode.com/cann/community/tree/master/CANN/sigs/ops-nn)
+- [所属SIG](https://gitcode.com/cann/community/tree/master/CANN/sigs/ops-basic)
 
-## 🤝联系我们
-
-本项目功能和文档正在持续更新和完善中，建议您关注最新版本。
+-----
+PS：本项目功能和文档正在持续更新和完善中，欢迎您关注最新版本。
 
 - **问题反馈**：通过GitCode[【Issues】](https://gitcode.com/cann/ops-nn/issues)提交问题。
 - **社区互动**：通过GitCode[【讨论】](https://gitcode.com/cann/ops-nn/discussions)参与交流。
 - **技术专栏**：通过GitCode[【Wiki】](https://gitcode.com/cann/ops-nn/wiki)获取技术文章，如系列化教程、优秀实践等。
-
-  |技术专题|样例|
-  |----|----|
-  |算子性能优化|[MatMul算子性能优化实践与效果分析](https://gitcode.com/cann/ops-nn/wiki/MatMul%E7%AE%97%E5%AD%90%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96%E5%AE%9E%E8%B7%B5%E4%B8%8E%E6%95%88%E6%9E%9C%E5%88%86%E6%9E%90.md)|
-  |算子性能优化|[MatMul算子VCV性能优化实践与效果分析](https://gitcode.com/cann/ops-nn/wiki/MatMul%E7%AE%97%E5%AD%90VCV%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96%E5%AE%9E%E8%B7%B5%E4%B8%8E%E6%95%88%E6%9E%9C%E5%88%86%E6%9E%90.md)|
