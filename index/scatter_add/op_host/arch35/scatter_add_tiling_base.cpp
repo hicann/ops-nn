@@ -55,6 +55,7 @@ constexpr uint32_t DOUBLE = 2;
 constexpr uint32_t THREE = 3;
 constexpr uint32_t TEN = 10;
 constexpr uint64_t SIMD_RESERVED_SIZE = static_cast<uint64_t>(8) * 1024;
+static constexpr uint64_t SORT_MIN_INDICES = 8;
 static constexpr uint64_t BASE_A_SIZE = 4096;
 static constexpr uint64_t BASE_BLOCK_SIZE = 4096;
 static constexpr uint64_t COL_LIMIT_SIZE = 4096;
@@ -69,6 +70,7 @@ static constexpr uint64_t DETERMIN_THRESHOLD_BOT = 16;
 static constexpr float SCALE_FACOTR = 0.8;
 static constexpr uint64_t INDICES_THRESHOLD = 4096;
 static constexpr uint64_t VAR_LASTDIM_10W = 100000;
+static constexpr uint64_t MIN_SIMT_BLOCK_SIZE = 128;
 
 static const std::unordered_map<ge::DataType, uint64_t> INDICE_DATA_TYPE_TO_INT{{ge::DataType::DT_INT32, 1},
                                                                                 {ge::DataType::DT_INT64, 2}};
@@ -152,15 +154,13 @@ ge::graphStatus ScatterAddTiling::GetPlatformInfo()
     ubSize_ = ubSizePlatForm;
     if (isSimt_) {
         if (isSort_ == 1) {
-            ubSize_ = ubSizePlatForm - DCACHE_SIZE1 - SIMD_RESERVED_SIZE;
+            ubSize_ = ubSizePlatForm - DCACHE_SIZE1;
         } else {
             OP_CHECK_IF((ubSizePlatForm <= DCACHE_SIZE),
                             OP_LOGE(opName, "ub size less than Dcache Size. please check"),
                             return ge::GRAPH_FAILED);
             ubSize_ = ubSizePlatForm - DCACHE_SIZE;
         }
-    } else {
-        ubSize_ = ubSizePlatForm - SIMD_RESERVED_SIZE;
     }
 
     return ge::GRAPH_SUCCESS;
@@ -444,7 +444,6 @@ ge::graphStatus ScatterAddTiling::TilingSimdSupportAtomicAddSortCompute()
         baseCol = normBlockCol_;
     }
     ubFactorCol_ = baseCol;
-    ubSize_ -= SIMD_RESERVED_SIZE;
     uint64_t coreMaxRow = std::max(normBlockRow_, tailBlockRow_);
 
     // ub split for non sort case
@@ -491,7 +490,6 @@ ge::graphStatus ScatterAddTiling::TilingSimdSupportAtomicAddCompute()
 {
     // block split, ensure that ub prioritizes a, block split s * (a/maxBaseCol)
     uint64_t minBaseIndices = 1;
-    ubSize_ -= SIMD_RESERVED_SIZE;
     uint64_t ubBlock = static_cast<uint64_t>(Ops::Base::GetUbBlockSize(context_));
 
     uint64_t maxBaseCol =       // 计算UB最多能容纳多少个updates, (假设只搬1行且尾轴非常大)  
@@ -727,21 +725,16 @@ ge::graphStatus ScatterAddTiling::TilingSimtSort()
     }
 
     indicesFactor_ = static_cast<uint64_t>(start);
-    uint64_t totalLoop = Ops::Base::CeilDiv(static_cast<uint64_t>(indicesNum_), indicesFactor_);
-    // 按照UB总循环次数分核
-    normBlockLoop_ = Ops::Base::CeilDiv(totalLoop, totalCoreNum_);
-    usedCoreNum_ = Ops::Base::CeilDiv(totalLoop, normBlockLoop_);
-    tailBlockLoop_ = totalLoop - normBlockLoop_ * (usedCoreNum_ - 1);
-    tailBlockTail_ = indicesNum_ - indicesFactor_ * normBlockLoop_ * (usedCoreNum_ - 1) - indicesFactor_ * (tailBlockLoop_ - 1);
-    while(usedCoreNum_ <= totalCoreNum_ / DOUBLE && indicesFactor_ > 1) {
-        indicesFactor_ = indicesFactor_ / DOUBLE;
-        totalLoop = Ops::Base::CeilDiv(static_cast<uint64_t>(indicesNum_), indicesFactor_);
-        normBlockLoop_ = Ops::Base::CeilDiv(totalLoop, totalCoreNum_);
-        usedCoreNum_ = Ops::Base::CeilDiv(totalLoop, normBlockLoop_);
-        tailBlockLoop_ = totalLoop - normBlockLoop_ * (usedCoreNum_ - 1);
-        tailBlockTail_ = indicesNum_ - indicesFactor_ * normBlockLoop_ * (usedCoreNum_ - 1) - indicesFactor_ * (tailBlockLoop_ - 1);
-    }
-    normBlockIndices_ = indicesFactor_ * normBlockLoop_;
+    uint64_t minBlockIndices_ = std::max(MIN_SIMT_BLOCK_SIZE / varShape_[1], SORT_MIN_INDICES);
+    normBlockIndices_ = std::max(minBlockIndices_, Ops::Base::CeilDiv(indicesNum_, totalCoreNum_));
+    indicesFactor_ = std::min(normBlockIndices_, indicesFactor_);
+    usedCoreNum_ = Ops::Base::CeilDiv(indicesNum_, normBlockIndices_);
+    uint64_t tailBlockIndices = indicesNum_ - (usedCoreNum_ - 1) * normBlockIndices_;
+    normBlockLoop_ = Ops::Base::CeilDiv(normBlockIndices_, indicesFactor_);
+    tailBlockLoop_ = Ops::Base::CeilDiv(tailBlockIndices, indicesFactor_);
+    normBlockTail_ = normBlockIndices_ - (normBlockLoop_ - 1) * indicesFactor_;
+    tailBlockTail_ = tailBlockIndices - (tailBlockLoop_ - 1) * indicesFactor_;
+
     return ge::GRAPH_SUCCESS;
 }
 
@@ -783,6 +776,7 @@ void ScatterAddTiling::SetTilingData()
     tilingData_.set_indicesFactor(indicesFactor_);
     tilingData_.set_normBlockLoop(normBlockLoop_);
     tilingData_.set_tailBlockLoop(tailBlockLoop_);
+    tilingData_.set_normBlockTail(normBlockTail_);
     tilingData_.set_tailBlockTail(tailBlockTail_);
     tilingData_.set_sortCoreNum(usedCoreNum_);
     tilingData_.set_rowTileNum(rowTileNum_);
@@ -988,6 +982,7 @@ void ScatterAddTiling::DumpTilingInfo()
     info << "indicesFactor:" << tilingData_.get_indicesFactor() << std::endl;
     info << "normBlockLoop:" << tilingData_.get_normBlockLoop() << std::endl;
     info << "tailBlockLoop:" << tilingData_.get_tailBlockLoop() << std::endl;
+    info << "normBlockTail:" << tilingData_.get_normBlockTail() << std::endl;
     info << "tailBlockTail:" << tilingData_.get_tailBlockTail() << std::endl;
     info << "sortCoreNum:" << tilingData_.get_sortCoreNum() << std::endl;
     info << "rowTileNum:" << tilingData_.get_rowTileNum() << std::endl;

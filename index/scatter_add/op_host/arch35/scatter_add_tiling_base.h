@@ -70,6 +70,7 @@ TILING_DATA_FIELD_DEF(uint64_t, normBlockIndices);
 TILING_DATA_FIELD_DEF(uint64_t, indicesFactor);
 TILING_DATA_FIELD_DEF(uint64_t, normBlockLoop);
 TILING_DATA_FIELD_DEF(uint64_t, tailBlockLoop);
+TILING_DATA_FIELD_DEF(uint64_t, normBlockTail);
 TILING_DATA_FIELD_DEF(uint64_t, tailBlockTail);
 TILING_DATA_FIELD_DEF(uint64_t, sortCoreNum);
 
@@ -189,6 +190,7 @@ private:
     uint64_t indicesFactor_ = 0;
     uint64_t normBlockLoop_ = 0;
     uint64_t tailBlockLoop_ = 0;
+    uint64_t normBlockTail_ = 0;
     uint64_t tailBlockTail_ = 0;
 
     uint64_t rowTileNum_ = 0;

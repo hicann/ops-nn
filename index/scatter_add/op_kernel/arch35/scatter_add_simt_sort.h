@@ -73,7 +73,7 @@ __aicore__ inline void ScatterAddSimtSort<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdate
         ubTailLoopSize_ = td_.tailBlockTail;
     } else {
         currLoopCount_ = td_.normBlockLoop;
-        ubTailLoopSize_ = td_.indicesFactor;
+        ubTailLoopSize_ = td_.normBlockTail;
     }
 }
 
