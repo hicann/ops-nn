@@ -192,6 +192,10 @@ aclnnStatus aclnnApplyAdamWV2GetWorkspaceSize(
     // 固定写法，将输入grad转换成连续的tensor
     auto gradContiguous = l0op::Contiguous(grad, uniqueExecutor.get());
     CHECK_RET(gradContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    
+    // 固定写法，将输入step转换成连续的tensor
+    auto stepContiguous = l0op::Contiguous(step, uniqueExecutor.get());
+    CHECK_RET(stepContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     bool isNeedCast = IsNeedDtypeCast(varContiguous, mContiguous, vContiguous, maxGradNormContiguous, gradContiguous);
 
@@ -212,7 +216,7 @@ aclnnStatus aclnnApplyAdamWV2GetWorkspaceSize(
 
     // 固定写法，调用ApplyAdamWV2算子完成计算
     l0op::ApplyAdamWV2(
-        varCast, mCast, vCast, maxGradNormCast, gradCast, step, lr, beta1, beta2, weightDecay, eps, amsgrad, maximize,
+        varCast, mCast, vCast, maxGradNormCast, gradCast, stepContiguous, lr, beta1, beta2, weightDecay, eps, amsgrad, maximize,
         uniqueExecutor.get());
 
     // 固定写法，将计算结果转换成输出的数据类型
