@@ -46,7 +46,9 @@ public:
                 return;
             }
         }
-
+        
+        constexpr int8_t saturationControlBit = 48; // CTRL 寄存器饱和度控制位为48位
+        AscendC::SetCtrlSpr<saturationControlBit,saturationControlBit>(0); // 0为饱和模式
         InitTilingData(tilingData);
         if (!this->enableVecTrans_) {
             this->filterGm_.SetGlobalBuffer((__gm__ filterType *)filter);

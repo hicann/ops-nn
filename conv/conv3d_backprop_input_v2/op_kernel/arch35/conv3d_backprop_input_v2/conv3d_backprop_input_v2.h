@@ -79,6 +79,8 @@ public:
                                 const conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData *tilingData, GM_ADDR bias = nullptr,
                                 GM_ADDR scale=nullptr)
     {
+        constexpr int8_t saturationControlBit = 48; // CTRL 寄存器饱和度控制位为48位
+        AscendC::SetCtrlSpr<saturationControlBit,saturationControlBit>(0); // 0为饱和模式
         InitTilingData(tilingData);
         enableSplitDk_ = tiling_->singleIterateDk != tiling_->dk;
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || (__NPU_ARCH__ == 5102)
