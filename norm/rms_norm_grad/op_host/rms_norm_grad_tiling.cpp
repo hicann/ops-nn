@@ -22,6 +22,7 @@ using namespace Ops::NN::OpTiling;
 
 static const uint32_t ALIGN_32 = 8;
 static const uint32_t ALIGN_16 = 16;
+static const uint32_t ALIGN_4096 = 4096;
 static const uint64_t DTYPE_FP32 = 1;
 static const uint64_t DTYPE_FP16 = 2;
 static const uint64_t DTYPE_BF16 = 3;
@@ -287,6 +288,50 @@ static bool CheckInputShape4RmsNormGrad(const gert::TilingContext* context)
     return true;
 }
 
+static void SetChunkWorkspace(
+    gert::TilingContext* context, RmsNormGradTilingData& tiling, uint32_t row_val, uint32_t col_val,
+    uint32_t col_val_align, uint64_t tiling_key, uint64_t block_factor)
+{
+    uint32_t dtype_key = tiling.get_data_type() + 1;
+    uint32_t dtype_size = dtype_key == DTYPE_FP32 ? 4 : 2;
+    uint64_t totalInputSize = row_val * col_val * dtype_size * 2 + row_val * 4 + col_val * dtype_size;
+    const uint64_t WORKSPACE_LIMIT = 500 * 1024 * 1024;  // 16MB
+    const uint64_t WORKSPACE_ENABLE = static_cast<uint64_t>(totalInputSize * 0.05);  // 16MB
+    const uint32_t sizeof_float = 4;
+    uint32_t blockDim = tiling.get_block_dim();
+    uint32_t need_chunk = 0;
+    // Deterministic mode: calculate chunk parameters
+    uint64_t currentWorkspace = (uint64_t)blockDim * col_val_align * sizeof_float;
+    auto ascendc_platform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
+    platform_ascendc::SocVersion curSocVersion = ascendc_platform.GetSocVersion();
+    bool isSoc910bc = curSocVersion == platform_ascendc::SocVersion::ASCEND910B || curSocVersion == platform_ascendc::SocVersion::ASCEND910_93; 
+    if (currentWorkspace <= WORKSPACE_ENABLE || totalInputSize < WORKSPACE_LIMIT || tiling_key == 1 || !isSoc910bc) {
+        // No need for chunk processing
+        tiling.set_need_chunk(0);
+        tiling.set_chunk_size(col_val_align);
+        tiling.set_chunk_num(1);
+        tiling.set_chunk_tail(0);
+    } else {
+        // Need chunk processing to limit workspace within 16MB
+        tiling.set_need_chunk(1);
+        // Calculate chunk_size to fit within workspace limit
+        uint32_t chunk_size = (WORKSPACE_ENABLE - block_factor * 4) / (blockDim * sizeof_float);
+        // Align chunk_size to ALIGN_32
+        chunk_size = (chunk_size / ALIGN_4096) * ALIGN_4096;
+        if (chunk_size == 0) {
+            chunk_size = ALIGN_4096;  // Minimum chunk size
+        }
+        tiling.set_chunk_size(chunk_size);
+        // Calculate chunk_num and chunk_tail
+        uint32_t chunk_num = (col_val_align + chunk_size - 1) / chunk_size;
+        uint32_t chunk_tail = col_val_align - (chunk_num - 1) * chunk_size;
+        tiling.set_chunk_num(chunk_num);
+        tiling.set_chunk_tail(chunk_tail);
+    }
+    OP_LOGI(context, "[RmsNormGrad] Chunk params: need_chunk=%u, chunk_size=%u, chunk_num=%u, chunk_tail=%u",
+            tiling.get_need_chunk(), tiling.get_chunk_size(), tiling.get_chunk_num(), tiling.get_chunk_tail());
+}
+
 static void SetTilingDataAndWorkspace(
     gert::TilingContext* context, RmsNormGradTilingData& tiling, uint32_t row_val, uint32_t col_val,
     uint32_t col_val_align, float avg_factor_val, uint64_t tiling_key)
@@ -297,16 +342,43 @@ static void SetTilingDataAndWorkspace(
     uint32_t fixed_output_flag = context->GetDeterministic() == 1 ? 1 : 0;
     OP_LOGI(context, "[RmsNormGrad] GetDeterministic state: %u", context->GetDeterministic());
     tiling.set_fixed_output(fixed_output_flag); // 0 is atomic add, 1 is fixed add output
+    
+    // Calculate chunk parameters for workspace optimization
+    uint64_t block_factor = tiling.get_block_factor();
+    
+    if (fixed_output_flag == 1) {
+        SetChunkWorkspace(context, tiling, row_val, col_val, col_val_align, tiling_key, block_factor);
+    } else {
+        // Non-deterministic mode: no chunk processing needed
+        tiling.set_need_chunk(0);
+        tiling.set_chunk_size(col_val_align);
+        tiling.set_chunk_num(1);
+        tiling.set_chunk_tail(0);
+    }
+    
     context->SetTilingKey(tiling_key);
 
     tiling.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
     context->GetRawTilingData()->SetDataSize(tiling.GetDataSize());
 
-    size_t usr_workspace_size = fixed_output_flag == 1 ? (col_val_align + ALIGN_32) * tiling.get_block_dim() * 4 :
-                                                         ALIGN_32 * tiling.get_block_dim() * 4;
+    // Calculate workspace size based on chunk parameters
+    size_t usr_workspace_size = 0;
+    if (fixed_output_flag == 1) {
+        uint32_t need_chunk = tiling.get_need_chunk();
+        // Deterministic mode: use chunk_size instead of col_val_align
+        if (need_chunk == 1) {
+            usr_workspace_size = (tiling.get_chunk_size() + ALIGN_32 + block_factor) * tiling.get_block_dim() * 4;
+        } else {
+            usr_workspace_size = (col_val_align + ALIGN_32) * tiling.get_block_dim() * 4;
+        }
+        
+    } else {
+        usr_workspace_size = ALIGN_32 * tiling.get_block_dim() * 4;
+    }
     size_t sys_work_space_size = 16 * 1024 * 1024;
     size_t* current_workspace = context->GetWorkspaceSizes(1);
     current_workspace[0] = usr_workspace_size + sys_work_space_size;
+    OP_LOGI(context, "[RmsNormGrad] Workspace size: usr=%zu, total=%zu", usr_workspace_size, current_workspace[0]);
 }
 
 static void UpdateShapeInfo(gert::TilingContext* context, uint32_t& col_val, uint32_t& row_val, uint32_t& rstd_shape)

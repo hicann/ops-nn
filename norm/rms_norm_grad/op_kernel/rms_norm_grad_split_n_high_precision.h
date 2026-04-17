@@ -201,7 +201,7 @@ public:
         LocalTensor<float> buffer1_ = inQueX_.AllocTensor<float>();
         LocalTensor<float> buffer2_ = inQueDY_.AllocTensor<float>();
         deterministic_struct deterministicStruct = {buffer1_, buffer2_, workspaceGmOri_, dgammaGm_};
-        FinalProcessDeterministic(colValAlign_, blockDim_, colVal_, deterministicStruct);
+        FinalProcessDeterministic(colValAlign_, blockDim_, colVal_, 0, colValAlign_, deterministicStruct);
         inQueX_.FreeTensor(buffer1_);
         inQueDY_.FreeTensor(buffer2_);
     }

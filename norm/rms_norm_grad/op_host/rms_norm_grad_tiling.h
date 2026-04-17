@@ -47,6 +47,10 @@ TILING_DATA_FIELD_DEF(uint32_t, ub_calc_tail_num);
 TILING_DATA_FIELD_DEF(uint32_t, ub_calc_tail_tail);
 TILING_DATA_FIELD_DEF(uint32_t, ub_calc_tail_loop);
 TILING_DATA_FIELD_DEF(uint32_t, fixed_output);
+TILING_DATA_FIELD_DEF(uint32_t, chunk_size);      // 单次处理的列维度大小
+TILING_DATA_FIELD_DEF(uint32_t, chunk_num);       // chunk 总数
+TILING_DATA_FIELD_DEF(uint32_t, chunk_tail);      // 最后一个 chunk 的大小
+TILING_DATA_FIELD_DEF(uint32_t, need_chunk);      // 是否需要分块处理标志
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(RmsNormGrad, RmsNormGradTilingData);

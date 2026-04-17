@@ -37,6 +37,10 @@ struct RmsNormGradTilingData {
     uint32_t ub_calc_tail_tail;
     uint32_t ub_calc_tail_loop;
     uint32_t fixed_output;
+    uint32_t chunk_size;
+    uint32_t chunk_num;
+    uint32_t chunk_tail;
+    uint32_t need_chunk;
 };
 
 #pragma pack()
@@ -67,7 +71,11 @@ struct RmsNormGradTilingData {
     (tilingData).ub_calc_tail_num = tilingDataPointer->ub_calc_tail_num;       \
     (tilingData).ub_calc_tail_tail = tilingDataPointer->ub_calc_tail_tail;     \
     (tilingData).ub_calc_tail_loop = tilingDataPointer->ub_calc_tail_loop;     \
-    (tilingData).fixed_output = tilingDataPointer->fixed_output;
+    (tilingData).fixed_output = tilingDataPointer->fixed_output;               \
+    (tilingData).chunk_size = tilingDataPointer->chunk_size;                   \
+    (tilingData).chunk_num = tilingDataPointer->chunk_num;                     \
+    (tilingData).chunk_tail = tilingDataPointer->chunk_tail;                   \
+    (tilingData).need_chunk = tilingDataPointer->need_chunk;
 
 #define DTYPE_DY half
 #define DTYPE_GAMMA half

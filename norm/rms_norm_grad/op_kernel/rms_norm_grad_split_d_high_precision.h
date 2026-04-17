@@ -35,13 +35,11 @@ public:
             InitOutput<float>(dgammaGm_, colVal_, 0);
         }
         if (isDeterministic_) {
-            workspaceGm_.SetGlobalBuffer((__gm__ float*)usrWorkspace + GetBlockIdx() * colValAlign_);
-            InitOutput<float>(workspaceGm_, colVal_, 0);
-            workspaceGmOri_.SetGlobalBuffer((__gm__ float*)usrWorkspace);
+            uint32_t workspaceColSize = needChunk_ ? chunkSize_ : colValAlign_;
+            InitWorkspaceBuffers(workspaceGm_, workspaceBlockFactorGm_, workspaceGmOri_, usrWorkspace, GetBlockIdx(), blockDim_, workspaceColSize, blockFactor_, needChunk_);
         }
         SyncAll();
-#endif
-#if defined(__CCE_AICORE__) && (__CCE_AICORE__ == 200)
+#else
         InitGammaFor310(gamma, dgamma, usrWorkspace);
 #endif
         InitGmBuffer(dy, x, rstd, gamma, dx);
@@ -51,11 +49,9 @@ public:
     __aicore__ inline void InitVar(const RmsNormGradTilingData* tiling)
     {
         blockDim_ = tiling->block_dim;
-        rowVal_ = tiling->row;
         colVal_ = tiling->col;
         avgFactor_ = tiling->avg_factor;
         dataType_ = tiling->data_type;
-        coreCalcNum_ = tiling->core_calc_num;
         coreCalcTail_ = tiling->core_calc_tail;
         blockFactor_ = tiling->block_factor;
         ubFactor_ = tiling->ub_factor;
@@ -68,6 +64,12 @@ public:
 
         colValAlign_ = (colVal_ + alignLen_ - 1) / alignLen_ * alignLen_;
         isDeterministic_ = tiling->fixed_output;
+        
+        // Initialize chunk parameters for workspace optimization
+        needChunk_ = tiling->need_chunk;
+        chunkSize_ = tiling->chunk_size;
+        chunkNum_ = tiling->chunk_num;
+        chunkTail_ = tiling->chunk_tail;
     }
 
     __aicore__ inline void InitGmBuffer(
@@ -99,26 +101,15 @@ public:
         InitGmZero<int32_t>(syncTmpSpaceGm_, outZeroTmpBuf_, syncLen, (uint32_t)0);
         if (isDeterministic_ == 0) {
             if (GetBlockIdx() == 0) {
-                InitDgammaOut(dgammaGm_);
+                InitDgammaOutCommon(dgammaGm_, outZeroTmpBuf_, loopMainCol_, ubFactor_, tailCol_);
             }
             LocalTensor<int32_t> workLocal = syncTmpBuf_.Get<int32_t>();
             SyncAll(syncTmpSpaceGm_, workLocal);
         } else if (isDeterministic_) {
             workspaceGm_.SetGlobalBuffer((__gm__ float*)usrWorkspace + syncLen + GetBlockIdx() * colVal_);
             if (GetBlockIdx() == 0) {
-                InitDgammaOut(workspaceGm_);
+                InitDgammaOutCommon(workspaceGm_, outZeroTmpBuf_, loopMainCol_, ubFactor_, tailCol_);
             }
-        }
-    }
-
-    __aicore__ inline void InitDgammaOut(GlobalTensor<float>& outGm)
-    {
-        for (uint32_t iOuter = 0; iOuter < loopMainCol_; iOuter++) {
-            InitGmZero<float>(outGm, outZeroTmpBuf_, ubFactor_, iOuter * ubFactor_);
-        }
-
-        if (tailCol_ > 0) {
-            InitGmZero<float>(outGm, outZeroTmpBuf_, tailCol_, loopMainCol_ * ubFactor_);
         }
     }
 
@@ -137,15 +128,123 @@ public:
 
     __aicore__ inline void Process()
     {
-        if (coreCalcTail_ == 0) {
-            ProcessMain(blockFactor_);
+        // Check if chunk processing is needed for deterministic mode
+        if (isDeterministic_ && needChunk_) {
+            ProcessWithChunk();
         } else {
-            if (GetBlockIdx() < blockDim_ - 1) {
+            // Original processing logic
+            if (coreCalcTail_ == 0) {
                 ProcessMain(blockFactor_);
             } else {
-                ProcessMain(coreCalcTail_);
+                if (GetBlockIdx() < blockDim_ - 1) {
+                    ProcessMain(blockFactor_);
+                } else {
+                    ProcessMain(coreCalcTail_);
+                }
             }
         }
+    }
+    
+    // Chunk processing for workspace optimization
+    __aicore__ inline void ProcessWithChunk()
+    {
+        uint32_t loop_len = (coreCalcTail_ == 0) ? blockFactor_ : (GetBlockIdx() < blockDim_ - 1) ? blockFactor_ : coreCalcTail_;
+        uint32_t loopMainOuter = loop_len / rowFactor_;
+        uint32_t tailOuter = loop_len % rowFactor_;
+
+        for (uint32_t chunkId = 0; chunkId < chunkNum_; chunkId++) {
+            uint32_t chunkStart, currentChunkLen;
+            GetChunkRange(chunkId, chunkSize_, chunkNum_, chunkTail_, chunkStart, currentChunkLen);
+            uint32_t loopMainColChunk = currentChunkLen / ubFactor_;
+            uint32_t tailColChunk = currentChunkLen % ubFactor_;
+            ProcessChunkPart1(chunkId, chunkStart, currentChunkLen, loopMainOuter, tailOuter, loopMainColChunk, tailColChunk);
+            uint32_t currentChunkLenAlign_ = (currentChunkLen + alignLen_ - 1) / alignLen_ * alignLen_;
+            doDeterminCompute(chunkStart, currentChunkLen, currentChunkLenAlign_, chunkSize_);
+            SyncAll();
+            InitOutput<float>(workspaceGm_, chunkSize_, 0);
+            SyncAll();
+        }
+        ProcessChunkPart2(0, 0, colVal_, loopMainOuter, tailOuter, loopMainCol_, tailCol_);
+    }
+
+    // Deterministic compute for chunk processing
+    __aicore__ inline void doDeterminCompute(uint32_t offset, uint32_t calcLen, uint32_t calcLenAlign, uint32_t calcBlockSize)
+    {
+        SyncAll();
+        LocalTensor<float> buffer1_ = inQueX_.AllocTensor<float>();
+        LocalTensor<float> buffer2_ = inQueDY_.AllocTensor<float>();
+        deterministic_struct deterministicStruct = {buffer1_, buffer2_, workspaceGmOri_, dgammaGm_};
+        FinalProcessDeterministic(calcLenAlign, blockDim_, calcLen, offset, calcBlockSize, deterministicStruct);
+        inQueX_.FreeTensor(buffer1_);
+        inQueDY_.FreeTensor(buffer2_);
+    }
+
+    // Process a single chunk
+    __aicore__ inline void ProcessChunkPart1(uint32_t chunkId, uint32_t chunkStart, uint32_t currentChunkLen, 
+        uint32_t loopMainOuter, uint32_t tailOuter, uint32_t loopMainColChunk, uint32_t tailColChunk)
+    {
+        for (uint32_t iOuter = 0; iOuter < loopMainOuter; iOuter++) {
+            SubProcessChunkPart1(iOuter, rowFactor_, chunkStart, loopMainColChunk, tailColChunk);
+        }
+        if (tailOuter > 0) {
+            SubProcessChunkPart1(loopMainOuter, tailOuter, chunkStart, loopMainColChunk, tailColChunk);
+        }
+    }
+
+    __aicore__ inline void ProcessChunkPart2(uint32_t chunkId, uint32_t chunkStart, uint32_t currentChunkLen, uint32_t loopMainOuter, uint32_t tailOuter, uint32_t loopMainColChunk, uint32_t tailColChunk)
+    {
+        for (uint32_t iOuter = 0; iOuter < loopMainOuter; iOuter++) {
+            SubProcessChunkPart2(iOuter, rowFactor_, chunkStart, loopMainColChunk, tailColChunk);
+        }
+        if (tailOuter > 0) {
+            SubProcessChunkPart2(loopMainOuter, tailOuter, chunkStart, loopMainColChunk, tailColChunk);
+        }
+    }
+
+    __aicore__ inline void calcBeforeLoop(uint32_t iOuter, uint32_t calcRow, uint32_t chunkStart, 
+        uint32_t loopMainColChunk, uint32_t tailColChunk, LocalTensor<float>& rstdLocal)
+    {
+        for (uint32_t j = 0; j < loopMainColChunk; j++) {
+            loopColProcessBeforeReduce(iOuter, j, calcRow, ubFactor_, rstdLocal, chunkStart);
+        }
+        if (tailColChunk > 0) {
+            loopColProcessBeforeReduce(iOuter, loopMainColChunk, calcRow, tailColChunk, rstdLocal, chunkStart);
+        }
+    }
+
+    __aicore__ inline void SubProcessChunkPart1(uint32_t iOuter, uint32_t calcRow, uint32_t chunkStart, uint32_t loopMainColChunk, uint32_t tailColChunk)
+    {
+        CopyRstdIn(iOuter, calcRow);
+        LocalTensor<float> rstdLocal = inQueRstd_.DeQue<float>();
+        calcBeforeLoop(iOuter, calcRow, chunkStart, loopMainColChunk, tailColChunk, rstdLocal);
+        inQueRstd_.FreeTensor(rstdLocal);
+    }
+
+    __aicore__ inline void calcAfterLoop(uint32_t iOuter, uint32_t calcRow, uint32_t chunkStart, 
+        uint32_t loopMainColChunk, uint32_t tailColChunk,
+        LocalTensor<float>& rstdLocal, LocalTensor<float>& meanLocal)
+    {
+        Muls(meanLocal, meanLocal, avgFactor_, calcRow);
+        PipeBarrier<PIPE_V>();
+        for (uint32_t j = 0; j < loopMainColChunk; j++) {
+            loopColProcessAfterReduce(iOuter, j, calcRow, ubFactor_, rstdLocal, chunkStart);
+        }
+        if (tailColChunk > 0) {
+            loopColProcessAfterReduce(iOuter, loopMainColChunk, calcRow, tailColChunk, rstdLocal, chunkStart);
+        }
+    }
+    
+    // SubProcess for chunk processing
+    __aicore__ inline void SubProcessChunkPart2(uint32_t iOuter, uint32_t calcRow, uint32_t chunkStart, 
+        uint32_t loopMainColChunk, uint32_t tailColChunk)
+    {
+        CopyRstdIn(iOuter, calcRow);
+        CopyMeanIn(iOuter, calcRow);
+        SyncEventMTE2_V();
+        LocalTensor<float> rstdLocal = inQueRstd_.DeQue<float>();
+        LocalTensor<float> meanLocal = meanBuf_.Get<float>();
+        calcAfterLoop(iOuter, calcRow, chunkStart, loopMainColChunk, tailColChunk, rstdLocal, meanLocal);
+        inQueRstd_.FreeTensor(rstdLocal);
     }
 
     __aicore__ inline void ProcessMain(uint32_t loop_len)
@@ -172,13 +271,7 @@ public:
                 AddDgamma(loopMainCol_, tailCol_);
             }
 #else
-            SyncAll();
-            LocalTensor<float> buffer1_ = inQueX_.AllocTensor<float>();
-            LocalTensor<float> buffer2_ = inQueDY_.AllocTensor<float>();
-            deterministic_struct deterministicStruct = {buffer1_, buffer2_, workspaceGmOri_, dgammaGm_};
-            FinalProcessDeterministic(colValAlign_, blockDim_, colVal_, deterministicStruct);
-            inQueX_.FreeTensor(buffer1_);
-            inQueDY_.FreeTensor(buffer2_);
+            doDeterminCompute(0, colVal_, colValAlign_, colValAlign_);
 #endif
         }
     }
@@ -191,75 +284,62 @@ public:
         LocalTensor<float> meanLocal = meanBuf_.Get<float>();
         Duplicate(meanLocal, 0.0f, calcRow);
         PipeBarrier<PIPE_V>();
-        for (uint32_t j = 0; j < loopMainCol_; j++) {
-            loopColProcessBeforeReduce(iOuter, j, calcRow, ubFactor_, rstdLocal);
-        }
-        if (tailCol_ > 0) {
-            loopColProcessBeforeReduce(iOuter, loopMainCol_, calcRow, tailCol_, rstdLocal);
-        }
-        Muls(meanLocal, meanLocal, avgFactor_, calcRow);
-        PipeBarrier<PIPE_V>();
-        for (uint32_t j = 0; j < loopMainCol_; j++) {
-            loopColProcessAfterReduce(iOuter, j, calcRow, ubFactor_, rstdLocal);
-        }
-        if (tailCol_ > 0) {
-            loopColProcessAfterReduce(iOuter, loopMainCol_, calcRow, tailCol_, rstdLocal);
-        }
+        calcBeforeLoop(iOuter, calcRow, 0, loopMainCol_, tailCol_, rstdLocal);
+        calcAfterLoop(iOuter, calcRow, 0, loopMainCol_, tailCol_, rstdLocal, meanLocal);
         inQueRstd_.FreeTensor(rstdLocal);
     }
 
     __aicore__ inline void loopColProcessBeforeReduce(
-        uint32_t iOuter, uint32_t j, uint32_t calcRow, uint32_t calcCol, LocalTensor<float>& rstdLocal)
+        uint32_t iOuter, uint32_t j, uint32_t calcRow, uint32_t calcCol, 
+        LocalTensor<float>& rstdLocal, uint32_t chunkStart)
     {
-        CopyGammaIn(j, calcCol);
+        CopyGammaIn(j, calcCol, chunkStart);
         LocalTensor<float> gammaLocal = inQueGamma_.DeQue<float>();
         Cast2FloatIf<T_GAMMA>(gammaLocal, ubFactor_, calcCol);
         LocalTensor<float> dgamma = outQueDgamma_.AllocTensor<float>();
         Duplicate(dgamma, 0.0f, calcCol);
         PipeBarrier<PIPE_V>();
         for (uint32_t iInner = 0; iInner < calcRow; iInner++) {
-            CopyIn(iOuter * rowFactor_ + iInner, j, calcCol);
-            event_t eventVS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
-            SetFlag<HardEvent::V_S>(eventVS);
-            WaitFlag<HardEvent::V_S>(eventVS);
+            CopyIn(iOuter * rowFactor_ + iInner, j, calcCol, chunkStart);
+            SyncEventV_S();
             float rstdValue = rstdLocal.GetValue(iInner);
-            event_t eventSV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
-            SetFlag<HardEvent::S_V>(eventSV);
-            WaitFlag<HardEvent::S_V>(eventSV);
+            SyncEventS_V();
             ComputeFormer(iInner, rstdValue, calcCol, gammaLocal, dgamma);
         }
         inQueGamma_.FreeTensor(gammaLocal);
         outQueDgamma_.EnQue(dgamma);
-        if (isDeterministic_) {
-            CopyDgammaOut(j, calcCol, workspaceGm_);
+        if(needChunk_) {
+            CopyDgammaOutCommon(outQueDgamma_, workspaceGm_, j, calcCol, ubFactor_);
+            CopyMeanOutChunkCommon(meanTmpBuf_, workspaceBlockFactorGm_, iOuter, calcRow, rowFactor_);
         } else {
-            CopyDgammaOut(j, calcCol, dgammaGm_);
+            if (isDeterministic_) {
+                CopyDgammaOutCommon(outQueDgamma_, workspaceGm_, j, calcCol, ubFactor_);
+            } else {
+                CopyDgammaOutCommon(outQueDgamma_, dgammaGm_, j, calcCol, ubFactor_);
+            }
+            LocalTensor<float> meanTmpLocal = meanTmpBuf_.Get<float>();
+            LocalTensor<float> meanLocal = meanBuf_.Get<float>();
+            Add(meanLocal, meanLocal, meanTmpLocal, calcRow);
+            PipeBarrier<PIPE_V>();
         }
-        LocalTensor<float> meanTmpLocal = meanTmpBuf_.Get<float>();
-        LocalTensor<float> meanLocal = meanBuf_.Get<float>();
-        Add(meanLocal, meanLocal, meanTmpLocal, calcRow);
-        PipeBarrier<PIPE_V>();
     }
 
     __aicore__ inline void loopColProcessAfterReduce(
-        uint32_t iOuter, uint32_t j, uint32_t calcRow, uint32_t calcCol, LocalTensor<float>& rstdLocal)
+        uint32_t iOuter, uint32_t j, uint32_t calcRow, uint32_t calcCol, 
+        LocalTensor<float>& rstdLocal, uint32_t chunkStart)
     {
-        CopyGammaIn(j, calcCol);
+        CopyGammaIn(j, calcCol, chunkStart);
         LocalTensor<float> gammaLocal = inQueGamma_.DeQue<float>();
         Cast2FloatIf<T_GAMMA>(gammaLocal, ubFactor_, calcCol);
         LocalTensor<float> meanLocal = meanBuf_.Get<float>();
         for (uint32_t iInner = 0; iInner < calcRow; iInner++) {
-            CopyIn(iOuter * rowFactor_ + iInner, j, calcCol);
-            event_t eventVS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
-            SetFlag<HardEvent::V_S>(eventVS);
-            WaitFlag<HardEvent::V_S>(eventVS);
+            CopyIn(iOuter * rowFactor_ + iInner, j, calcCol, chunkStart);
+            SyncEventV_S();
             float rstdValue = rstdLocal.GetValue(iInner);
             float meanValue = meanLocal.GetValue(iInner);
-            event_t eventSV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
-            SetFlag<HardEvent::S_V>(eventSV);
-            WaitFlag<HardEvent::S_V>(eventSV);
+            SyncEventS_V();
             ComputeLatter(rstdValue, meanValue, calcCol, gammaLocal);
-            CopyDxOut(iOuter * rowFactor_ + iInner, j, calcCol);
+            CopyDxOut(iOuter * rowFactor_ + iInner, j, calcCol, chunkStart);
         }
         inQueGamma_.FreeTensor(gammaLocal);
     }
@@ -278,103 +358,29 @@ public:
         inQueRstd_.EnQue(rstdLocal);
     }
 
-    __aicore__ inline void CopyGammaIn(uint32_t dIdx, uint32_t calcLen)
+    __aicore__ inline void CopyMeanIn(uint32_t iOuter, uint32_t calcRow)
+    {
+        LocalTensor<float> meanLocal = meanBuf_.Get<float>();
+        DataCopyExtParams copyInParams{static_cast<uint16_t>(1), (uint32_t)(calcRow * sizeof(float)), 0, 0, 0};
+        DataCopyPadExtParams<float> padParams{true, 0, 0, 0};
+        DataCopyPad(meanLocal, workspaceBlockFactorGm_[iOuter * rowFactor_], copyInParams, padParams);
+    }
+
+    __aicore__ inline void CopyGammaIn(uint32_t dIdx, uint32_t calcLen, uint32_t chunkStart)
     {
         LocalTensor<T_GAMMA> gammaLocal = inQueGamma_.AllocTensor<T_GAMMA>();
-#if defined(__CCE_AICORE__) && (__CCE_AICORE__ == 220)
-        DataCopyExtParams dataCopyParams{1, (uint32_t)(calcLen * sizeof(T_GAMMA)), 0, 0, 0};
-        DataCopyPadExtParams<T_GAMMA> padParams{false, 0, 0, 0};
-        if constexpr (!is_same<T_GAMMA, float>::value) {
-            DataCopyPad(gammaLocal[ubFactor_], gammaGm_[dIdx * ubFactor_], dataCopyParams, padParams);
-        } else {
-            DataCopyPad(gammaLocal, gammaGm_[dIdx * ubFactor_], dataCopyParams, padParams);
-        }
-#else
-        uint32_t calcLen_align = ROUND_UP(calcLen, alignLen_);
-        if constexpr (!is_same<T_GAMMA, float>::value) {
-            DataCopy(gammaLocal[ubFactor_], gammaGm_[dIdx * ubFactor_], calcLen_align);
-        } else {
-            DataCopy(gammaLocal, gammaGm_[dIdx * ubFactor_], calcLen_align);
-        }
-#endif
-
+        uint32_t gmOffset = chunkStart + dIdx * ubFactor_;
+        DataCopyWithOffset(gammaLocal, gammaGm_, gmOffset, calcLen, ubFactor_, alignLen_);
         inQueGamma_.EnQue(gammaLocal);
     }
 
-    __aicore__ inline void CopyDgammaOut(uint32_t dIdx, uint32_t calcLen, GlobalTensor<float>& outGm)
+    __aicore__ inline void CopyIn(uint32_t nIdx, uint32_t dIdx, uint32_t calcLen, uint32_t chunkStart)
     {
-        LocalTensor<float> dgamma_out = outQueDgamma_.DeQue<float>();
-        SetAtomicAdd<float>();
-#if defined(__CCE_AICORE__) && (__CCE_AICORE__ == 220)
-        DataCopyExtParams dataCopyParams{1, (uint32_t)(calcLen * sizeof(float)), 0, 0, 0};
-        DataCopyPad(outGm[dIdx * ubFactor_], dgamma_out, dataCopyParams);
-#else
-        if (calcLen < ALIGN_32) {
-            for (uint32_t i = 0; i < ALIGN_32; i++) {
-                if (i >= calcLen) {
-                    dgamma_out.SetValue(i, 0.0f);
-                }
-            }
-            DataCopy(outGm[dIdx * ubFactor_], dgamma_out, ALIGN_32);
-            SetFlag<HardEvent::S_MTE3>(EVENT_ID0);
-            WaitFlag<HardEvent::S_MTE3>(EVENT_ID0);
-        } else {
-            uint32_t calcLenAlign = (calcLen / ALIGN_32) * ALIGN_32;
-            uint32_t calcLenTail = calcLen - calcLenAlign;
-            DataCopy(outGm[dIdx * ubFactor_], dgamma_out, calcLenAlign);
-            if (calcLenTail > 0) {
-                SetFlag<HardEvent::MTE3_S>(EVENT_ID0);
-                WaitFlag<HardEvent::MTE3_S>(EVENT_ID0);
-                for (uint32_t i = 0; i < ALIGN_32; i++) {
-                    if (i < (ALIGN_32 - calcLenTail)) {
-                        dgamma_out.SetValue(i, 0.0f);
-                    } else {
-                        uint32_t tailOffset = calcLenAlign + i - (ALIGN_32 - calcLenTail);
-                        dgamma_out.SetValue(i, dgamma_out.GetValue(tailOffset));
-                    }
-                }
-                DataCopy(outGm[dIdx * ubFactor_ + calcLen - ALIGN_32], dgamma_out, ALIGN_32);
-                SetFlag<HardEvent::S_MTE3>(EVENT_ID0);
-                WaitFlag<HardEvent::S_MTE3>(EVENT_ID0);
-            }
-        }
-#endif
-        SetAtomicNone();
-        outQueDgamma_.FreeTensor(dgamma_out);
-    }
-
-    __aicore__ inline void CopyIn(uint32_t nIdx, uint32_t dIdx, uint32_t calcLen)
-    {
-        // x dy, rstd
         LocalTensor<T_DY> xLocal = inQueX_.AllocTensor<T_DY>();
         LocalTensor<T_DY> dyLocal = inQueDY_.AllocTensor<T_DY>();
-        uint32_t gmOffset = nIdx * colVal_ + dIdx * ubFactor_;
-#if defined(__CCE_AICORE__) && (__CCE_AICORE__ == 220)
-        DataCopyExtParams dataCopyParams{1, (uint32_t)(calcLen * sizeof(T_DY)), 0, 0, 0};
-        DataCopyPadExtParams<T_DY> padParams{true, 0, 0, 0};
-        if constexpr (!is_same<T_DY, float>::value) {
-            DataCopyPad(xLocal[ubFactor_], xGm_[gmOffset], dataCopyParams, padParams);
-        } else {
-            DataCopyPad(xLocal, xGm_[gmOffset], dataCopyParams, padParams);
-        }
-        if constexpr (!is_same<T_DY, float>::value) {
-            DataCopyPad(dyLocal[ubFactor_], dyGm_[gmOffset], dataCopyParams, padParams);
-        } else {
-            DataCopyPad(dyLocal, dyGm_[gmOffset], dataCopyParams, padParams);
-        }
-#else
-        uint32_t calcLen_align = ROUND_UP(calcLen, alignLen_);
-        if constexpr (!is_same<T_DY, float>::value) {
-            DataCopy(xLocal[ubFactor_], xGm_[gmOffset], calcLen_align);
-        } else {
-            DataCopy(xLocal, xGm_[gmOffset], calcLen_align);
-        }
-        if constexpr (!is_same<T_DY, float>::value) {
-            DataCopy(dyLocal[ubFactor_], dyGm_[gmOffset], calcLen_align);
-        } else {
-            DataCopy(dyLocal, dyGm_[gmOffset], calcLen_align);
-        }
-#endif
+        uint32_t gmOffset = nIdx * colVal_ + chunkStart + dIdx * ubFactor_;
+        DataCopyWithOffset(xLocal, xGm_, gmOffset, calcLen, ubFactor_, alignLen_);
+        DataCopyWithOffset(dyLocal, dyGm_, gmOffset, calcLen, ubFactor_, alignLen_);
         inQueX_.EnQue(xLocal);
         inQueDY_.EnQue(dyLocal);
     }
@@ -398,9 +404,7 @@ public:
         float sumValue = ReduceSumHalfInterval(xLocal, calcLen);
         LocalTensor<float> meanTmpLocal = meanTmpBuf_.Get<float>();
         meanTmpLocal.SetValue(iInner, sumValue);
-        event_t eventSV2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
-        SetFlag<HardEvent::S_V>(eventSV2);
-        WaitFlag<HardEvent::S_V>(eventSV2);
+        SyncEventS_V();
         inQueX_.FreeTensor(xLocal);
         inQueDY_.FreeTensor(dyLocal);
     }
@@ -422,27 +426,17 @@ public:
         PipeBarrier<PIPE_V>();
         Muls(dxLocal, dxLocal, rstdValue, calcLen);
         PipeBarrier<PIPE_V>();
-        if constexpr (is_same<T_DY, half>::value) {
-            LocalTensor<T_DY> dxLocalB16 = dxLocal.ReinterpretCast<T_DY>();
-            Cast(dxLocalB16, dxLocal, RoundMode::CAST_NONE, calcLen);
-            PipeBarrier<PIPE_V>();
-        }
-#if defined(__CCE_AICORE__) && (__CCE_AICORE__ == 220)
-        else if constexpr (is_same<T_DY, bfloat16_t>::value) {
-            LocalTensor<T_DY> dxLocalB16 = dxLocal.ReinterpretCast<T_DY>();
-            Cast(dxLocalB16, dxLocal, RoundMode::CAST_RINT, calcLen);
-            PipeBarrier<PIPE_V>();
-        }
-#endif
+        LocalTensor<T_DY> dxLocalB16 = dxLocal.ReinterpretCast<T_DY>();
+        CastAndPrepareDxOutput<T_DY>(dxLocal, dxLocalB16, calcLen);
         inQueX_.FreeTensor(xLocal);
         inQueDY_.FreeTensor(dyLocal);
         outQueDX_.EnQue(dxLocal);
     }
 
-    __aicore__ inline void CopyDxOut(uint32_t nIdx, uint32_t dIdx, uint32_t calcLen)
+    __aicore__ inline void CopyDxOut(uint32_t nIdx, uint32_t dIdx, uint32_t calcLen, uint32_t chunkStart)
     {
         LocalTensor<T_DY> dx = outQueDX_.DeQue<T_DY>();
-        uint32_t gmOffset = nIdx * colVal_ + dIdx * ubFactor_;
+        uint32_t gmOffset = nIdx * colVal_ + chunkStart + dIdx * ubFactor_;
 #if defined(__CCE_AICORE__) && (__CCE_AICORE__ == 220)
         DataCopyExtParams dataCopyParams{1, (uint32_t)(calcLen * sizeof(T_DY)), 0, 0, 0};
         DataCopyPad(dxGm_[gmOffset], dx, dataCopyParams);
@@ -452,18 +446,7 @@ public:
             DataCopy(dxGm_[gmOffset], dx, calcLenAlign32);
         }
         uint32_t calcLenTail32 = calcLen % alignLen_;
-
-        if (calcLenTail32 > 0) {
-            SetFlag<HardEvent::MTE3_S>(EVENT_ID0);
-            WaitFlag<HardEvent::MTE3_S>(EVENT_ID0);
-            for (uint32_t i = 0; i < calcLenTail32; i++) {
-                dxGm_.SetValue(gmOffset + calcLenAlign32 + i, dx.GetValue(calcLenAlign32 + i));
-            }
-            DataCacheCleanAndInvalid<T_DY, CacheLine::ENTIRE_DATA_CACHE>(dxGm_);
-            PipeBarrier<PIPE_ALL>();
-            SetFlag<HardEvent::S_MTE3>(EVENT_ID0);
-            WaitFlag<HardEvent::S_MTE3>(EVENT_ID0);
-        }
+        CopyTailDataToGm(dxGm_, dx, gmOffset, calcLenAlign32, calcLenTail32);
 #endif
         outQueDX_.FreeTensor(dx);
     }
@@ -501,11 +484,9 @@ public:
     }
 
 public:
-    uint32_t rowVal_{0};
     uint32_t colVal_{0};
     uint32_t colValAlign_{0};
     float avgFactor_{1.0f};
-    uint32_t coreCalcNum_{0};
     uint32_t coreCalcTail_{0};
     uint32_t blockFactor_{0};
     uint32_t blockDim_{0};
@@ -523,12 +504,19 @@ public:
     uint32_t coreOffsetStart_{0};
     uint32_t coreOffsetLen_{0};
     uint32_t isDeterministic_{0};
+    
+    // Chunk processing parameters for workspace optimization
+    uint32_t needChunk_{0};
+    uint32_t chunkSize_{0};
+    uint32_t chunkNum_{0};
+    uint32_t chunkTail_{0};
 
     TPipe pipe;
     GlobalTensor<T_DY> dyGm_;
     GlobalTensor<T_GAMMA> gammaGm_;
     GlobalTensor<T_DY> dxGm_;
     GlobalTensor<T_DY> xGm_;
+    GlobalTensor<float> workspaceBlockFactorGm_;
     GlobalTensor<float> workspaceGm_;
     GlobalTensor<float> workspaceGmOri_;
     GlobalTensor<float> rstdGm_;
