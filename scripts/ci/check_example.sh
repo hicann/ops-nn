@@ -124,7 +124,7 @@ do
     #安装指定路径的自定义算子包
     echo "--------------------------------"
     echo "${name}"
-    ./single/cann-ops-nn-${name}_linux*.run
+    ./single/cann-ops-nn-${name}_linux*.run --force
     echo "[EXECUTE_COMMAND] bash build.sh --run_example $name eager cust --vendor_name=$name"
     bash build.sh --run_example $name eager cust --vendor_name=$name
     status=$?
