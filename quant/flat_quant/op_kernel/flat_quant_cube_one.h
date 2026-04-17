@@ -33,7 +33,6 @@ public:
         p1GM.SetGlobalBuffer((__gm__ T *)p1mtx_);
         p2GM.SetGlobalBuffer((__gm__ T *)p2mtx_);
         outnzGM.SetGlobalBuffer((__gm__ T *)workspace_);
-        doubleP1GM.SetGlobalBuffer((__gm__ T *)(workspace_ + (shape.K + shape.K % 2) * shape.Mceil * shape.N * sizeof(T)));
 
         SetFixpipeNz2ndFlag(1, 1, shape.Nceil);
         pipe.InitBuffer(l1Buf, L1_SIZE);
@@ -101,7 +100,7 @@ public:
 
         for (int64_t startK = shape.K1; startK < shape.K2; startK += shape.perK) {
             int64_t endK = (startK + shape.perK > shape.K2) ? shape.K2 : (startK + shape.perK);
-            bool isLast = startK + shape.perK > shape.K2;
+            bool isLast = (endK == shape.K);
             if constexpr (MM_MODE == MM_SPLIT_MODE) {
                 for (int64_t k = startK; k < endK; ++k) {
                     ProcessSplitK(k, isLast);
@@ -133,11 +132,11 @@ public:
             l1empty.wait();
             CopyXToL1(GetXTensor(nextK), xGM[nextK * shape.M * shape.N], nextK > invalidK, shape);
             l1ready.set();
-        } else if (nextK < shape.K2 && !isLast) {
+        } else if (nextK < shape.K2 && nextK != shape.K - 1) {
             l1empty.wait();
             CopyXToL1(GetXTensor(nextK), xGM[nextK * shape.M * shape.N], nextK > invalidK, shape);
             l1ready.set();
-        } else if (nextK < shape.K2 && isLast) {
+        } else if (nextK < shape.K2 && nextK == shape.K - 1) {
             int64_t oriM = shape.M;
             shape.M = tailK;
             l1empty.wait();
@@ -233,7 +232,6 @@ private:
     GlobalTensor<T> p1GM;
     GlobalTensor<T> p2GM;
     GlobalTensor<T> outnzGM;
-    GlobalTensor<T> doubleP1GM;
 
     TBuf<TPosition::A1> l1Buf;
     TBuf<TPosition::A2> l0aBuf;
