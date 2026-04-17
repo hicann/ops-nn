@@ -217,7 +217,7 @@ do
     for dir in "${builtin_dirs[@]}"
     do
         # 如果算子目录下的arch35子目录中的文件被修改 则触发A5 kernel编译
-        if [[ "$file_path" == *"/$dir/"*"/arch35/"* ]]; then
+        if [[ "$file_path" == *"/$dir/"*"/arch35/"* && "$file_path" != "experimental"* ]]; then
             if [[ ! " ${builtin_ops_name[@]} " =~ " $dir " ]]; then
                 builtin_ops_name+=("$dir")
             fi
