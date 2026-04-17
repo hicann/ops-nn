@@ -229,7 +229,7 @@ aclnnStatus aclnnMaxPool2dWithMaskBackward(
       <td>padding的长度不等于1或2。</td>
     </tr>
     <tr>
-      <td>padding的数值中存在小于0或者大于kernelSize</td>
+      <td>padding的数值中存在小于0或者大于kernelSize的数值</td>
     </tr>
     <tr>
       <td>dilation的数值不等于1。</td>

@@ -6,17 +6,17 @@
 
 调用算子API时，需引用依赖的头文件和库文件，一般头文件默认在```${INSTALL_DIR}/include/aclnnop```，库文件默认在```${INSTALL_DIR}/lib64```，具体文件如下：
 
-- 依赖的头文件：①方式1 （推荐）：引用算子总头文件aclnn\_ops\_\$\{ops\_project\}.h。②方式2：按需引用单算子API头文件aclnn\_\*.h。
-- 依赖的库文件：按需引用算子总库文件libopapi\_\$\{ops\_project\}.so。
+- 依赖的头文件：①方式1 （推荐）：引用算子总头文件```aclnn_ops_${ops_project}.h```。②方式2：按需引用单算子API头文件```aclnn_*.h```。
+- 依赖的库文件：按需引用算子总库文件```libopapi_${ops_project}.so```。
 
-其中${INSTALL_DIR}表示CANN安装后文件路径；\$\{ops\_project\}表示算子仓（如math、nn、cv、transformer），请配置为实际算子仓名。
+其中```${INSTALL_DIR}```表示CANN安装后文件路径；```${ops_project}```表示算子仓（如math、nn、cv、transformer），请配置为实际算子仓名。
 
 ## 接口列表
 
 > **确定性简介**：
 >
 > - 配置说明：因CANN或NPU型号不同等原因，可能无法保证同一个算子多次运行结果一致。在相同条件下（平台、设备、版本号和其他随机性参数等），部分算子接口可通过`aclrtCtxSetSysParamOpt`（参见[《acl API（C）》](https://hiascend.com/document/redirect/CannCommunityCppApi)）开启确定性算法，使多次运行结果一致。
-> - 性能说明：同一个算子采用确定性计算通常比非确定性慢，因此模型单次运行性能可能会下降。但在实验、调试调测等需要保证多次运行结果相同来定位问题的场景，确定性计算可以提升效率。
+> - 性能说明：同一个算子采用确定性计算通常比非确定性慢，因此模型单次运行性能可能会下降。但在实验、调试和调测等需要保证多次运行结果相同来定位问题的场景，确定性计算可以提升效率。
 > - 线程说明：同一线程中只能设置一次确定性状态，多次设置以最后一次有效设置为准。有效设置是指设置确定性状态后，真正执行了一次算子任务下发。如果仅设置，没有算子下发，只能是确定性变量开启但未下发给算子，因此不执行算子。
 >   解决方案：暂不推荐一个线程多次设置确定性。该问题在二进制开启和关闭情况下均存在，在后续版本中会解决该问题。
 > - 符号说明：表中 “ - ” 符号表示该接口暂不支持当前列产品。
@@ -198,7 +198,7 @@
 | [aclnnForeachTan](../../foreach/foreach_tan/docs/aclnnForeachTan.md) | 对输入张量列表的每个张量进行正切函数运算。 | 默认确定性实现 |   |
 | [aclnnForeachTanh](../../foreach/foreach_tanh/docs/aclnnForeachTanh.md) | 对输入张量列表的每个张量进行双曲正切函数运算。 | 默认确定性实现 |   |
 | [aclnnForeachZeroInplace](../../foreach/foreach_zero_inplace/docs/aclnnForeachZeroInplace.md) | 原地更新输入张量列表，输入张量列表的每个张量置为0。 | 默认确定性实现 |   |
-| [aclnnFusedLinearOnlineMaxSum](../../matmul/fused_linear_online_max_sum/docs/aclnnFusedLinearOnlineMaxSum.md) | 功能等价Megatron的matmul与fused\_vocab\_parallel\_cross\_entropy的实现，支持vocabulary\_size维度切卡融合matmul与celoss。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnFusedLinearOnlineMaxSum](../../matmul/fused_linear_online_max_sum/docs/aclnnFusedLinearOnlineMaxSum.md) | 功能等价Megatron的matmul与fused\_vocab\_parallel\_cross\_entropy的实现，支持vocabulary\_size维度切卡融合matmul与cross-entropy loss。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnFusedLinearCrossEntropyLossGrad](../../matmul/fused_linear_cross_entropy_loss_grad/docs/aclnnFusedLinearCrossEntropyLossGrad.md) | 是词汇表并行场景下交叉熵损失计算模块中的一部分，解决超大规模词汇表下的显存和计算效率问题，当前部分为梯度计算实现，用于计算叶子节点`input`和`weight`的梯度。 | 默认确定性实现 | - |
 | [aclnnFusedMatmul](../../matmul/fused_mat_mul/docs/aclnnFusedMatmul.md) | 矩阵乘与通用向量计算融合。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnFusedQuantMatmul](../../matmul/fused_quant_mat_mul/docs/aclnnFusedQuantMatmul.md) | 量化矩阵乘与通用向量计算融合。 | 默认确定性实现 | - |
@@ -278,9 +278,9 @@
 | [aclnnMaxPool2dWithMask](../../pooling/max_pool3d_with_argmax_v2/docs/aclnnMaxPool2dWithMask.md) | 对于输入信号的输入通道，提供2维最大池化（max pooling）操作，输出池化后的值out和索引indices（采用mask语义计算得出）。 | 默认确定性实现 | - |
 | [aclnnMaxPool2dWithMaskBackward](../../pooling/max_pool3d_grad_with_argmax/docs/aclnnMaxPool2dWithMaskBackward.md) | 正向最大池化aclnnMaxPool2dWithMask的反向传播。 | 默认非确定性实现，支持配置开启。 | - |
 | [aclnnMaxPool3dWithArgmax](../../pooling/max_pool3d_with_argmax_v2/docs/aclnnMaxPool3dWithArgmax.md) | 对于输入信号的输入通道，提供3维最大池化（max pooling）操作，输出池化后的值out和索引indices。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnMaxPool3dWithArgmaxBackWard](../../pooling/max_pool3d_grad_with_argmax/docs/aclnnMaxPool3dWithArgmaxBackward.md) | 正向最大池化aclnnMaxPool3dWithArgmax的反向传播，将梯度回填到每个窗口最大值的坐标处，相同坐标处累加。 | 默认非确定性实现，支持配置开启。 | 默认确定性实现 |
+| [aclnnMaxPool3dWithArgmaxBackward](../../pooling/max_pool3d_grad_with_argmax/docs/aclnnMaxPool3dWithArgmaxBackward.md) | 正向最大池化aclnnMaxPool3dWithArgmax的反向传播，将梯度回填到每个窗口最大值的坐标处，相同坐标处累加。 | 默认非确定性实现，支持配置开启。 | 默认确定性实现 |
 | [aclnnMaxUnpool2dBackward](../../index/gather_elements/docs/aclnnMaxUnpool2dBackward.md) | MaxPool2d的逆运算aclnnMaxUnpool2d的反向传播，根据indices索引在out中填入gradOutput的元素值。 | 默认确定性实现 | 默认非确定性实现，支持配置开启 |
-| [aclnnMaxUnpool3dBackward](../../index/gather_elements/docs/aclnnMaxUnpool3dBackward.md) | axPool3d的逆运算aclnnMaxUnpool3d的反向传播，根据indices索引在out中填入gradOutput的元素值。 | 默认确定性实现 | 默认非确定性实现，支持配置开启 |
+| [aclnnMaxUnpool3dBackward](../../index/gather_elements/docs/aclnnMaxUnpool3dBackward.md) | MaxPool3d的逆运算aclnnMaxUnpool3d的反向传播，根据indices索引在out中填入gradOutput的元素值。 | 默认确定性实现 | 默认非确定性实现，支持配置开启 |
 | [aclnnMedian](../../index/gather_v2/docs/aclnnMedian.md) | 返回所有元素的中位数。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnMm](../../matmul/mat_mul_v3/docs/aclnnMm.md) | 完成2维张量self与张量mat2的矩阵乘计算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnMish&aclnnInplaceMish](../../activation/mish/docs/aclnnMish&aclnnInplaceMish.md) | 一个自正则化的非单调神经网络激活函数。 | 默认确定性实现 | 默认确定性实现 |

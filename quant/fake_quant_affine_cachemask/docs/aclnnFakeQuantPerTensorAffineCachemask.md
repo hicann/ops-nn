@@ -367,7 +367,7 @@ int main() {
   std::vector<char> maskHostData{1};
   int64_t quantMin = 1;
   int64_t quantMax = 3;
-  float fakeQuantEnabled;
+  float fakeQuantEnabled = 1.0f;
   // 创建 aclTensor
   ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, aclDataType::ACL_FLOAT, &self);
   CHECK_RET(ret == ACL_SUCCESS, return ret);

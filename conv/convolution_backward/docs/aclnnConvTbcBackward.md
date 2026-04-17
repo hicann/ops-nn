@@ -107,7 +107,7 @@ aclnnStatus aclnnConvTbcBackward(
      <td>输入</td>
      <td>公式中的输出张量y对L的梯度，表示卷积反向的输入。</td>
      <td>
-       <ul><li>支持空Tensor。</li><li>shape为(N,C<sub>out</sub>,H<sub>out</sub>)。</li><li>数据类型与 weight 的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>)。</li></ul>
+       <ul><li>支持空Tensor。</li><li>shape为(N,C<sub>out</sub>,H<sub>out</sub>)。</li><li>数据类型与 weight 的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>）。</li></ul>
      </td>
      <td>FLOAT、FLOAT16、BFLOAT16</td>
      <td>ND、NCL</td>

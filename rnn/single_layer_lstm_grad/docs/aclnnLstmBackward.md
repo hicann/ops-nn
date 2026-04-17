@@ -388,7 +388,7 @@ aclnnStatus aclnnLstmBackward(
     <tr>
       <td>o</td>
       <td>输入</td>
-      <td>LSTM正向中每层输出门的激活值。对于公式中的o。</td>
+      <td>LSTM正向中每层输出门的激活值。对应公式中的o。</td>
       <td><ul><li>列表长度为 D * num_layers。</li><li>多层双向时tensor间按先双向后多层排布。</li><li>数据类型与input一致。</li></ul></td>
       <td>FLOAT32、FLOAT16</td>
       <td>ND</td>

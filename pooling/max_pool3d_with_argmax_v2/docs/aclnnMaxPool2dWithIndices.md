@@ -239,7 +239,7 @@ aclnnStatus aclnnMaxPool2dWithIndices(
       <td>padding的长度不等于1或2。</td>
     </tr>
     <tr>
-      <td>padding的数值中存在小于0或者大于kernelSize</td>
+      <td>padding的数值中存在小于0或者大于kernelSize/2</td>
     </tr>
     <tr>
       <td>dilation的长度不等于1或2。</td>
