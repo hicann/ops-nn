@@ -246,7 +246,7 @@ __aicore__ inline void dCopyIn(int64_t colIndex, int64_t colSize, int64_t rowSiz
      DataCopyParams intriParams; 
      intriParams.blockCount = rowSize; 
      intriParams.blockLen   = (colSize + FLOAT_ALIGN - 1) / FLOAT_ALIGN; 
-     intriParams.srcStride  = (colAlignV_ - colSize) / FLOAT_ALIGN; 
+     intriParams.srcStride  = (chunkSize - colSize) / FLOAT_ALIGN; 
      intriParams.dstStride  = (COL_TEMPLATE - (colSize + rightPad)) / FLOAT_ALIGN; 
      DataCopy(deterministicStruct.buffer1_, deterministicStruct.workspaceGmOri_[offset], intriParams);
 #endif
