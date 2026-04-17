@@ -42,6 +42,10 @@ constexpr uint64_t TILING_KEY_UINT32 = 9;
 constexpr uint64_t TILING_KEY_INT64 = 10;
 constexpr uint64_t TILING_KEY_DOUBLE = 11;
 constexpr uint64_t TILING_KEY_BOOL = 12;
+constexpr uint64_t TILING_KEY_FLOAT_TO_HALF = 13;
+constexpr uint64_t TILING_KEY_HALF_TO_FLOAT = 14;
+constexpr uint64_t TILING_KEY_FLOAT_TO_BF16 = 15;
+constexpr uint64_t TILING_KEY_BF16_TO_FLOAT = 16;
 /**
 ** function: GetDataTypeSize
 */
@@ -101,6 +105,23 @@ inline uint64_t GetTilingKeyByDtypeOnly(ge::DataType dataType)
             return TILING_KEY_BOOL;
         default:
             return 0;
+    }
+}
+
+inline uint64_t GetTilingKeyForForeachCopy(ge::DataType dataType, ge::DataType dstDataType) {
+    if (dataType == dstDataType) {
+        return GetTilingKeyByDtypeOnly(dataType);
+    }
+    if (dataType == ge::DT_FLOAT && dstDataType == ge::DT_FLOAT16) {
+        return TILING_KEY_FLOAT_TO_HALF;
+    } else if (dataType == ge::DT_FLOAT16 && dstDataType == ge::DT_FLOAT) {
+        return TILING_KEY_HALF_TO_FLOAT;
+    } else if (dataType == ge::DT_FLOAT && dstDataType == ge::DT_BF16) {
+        return TILING_KEY_FLOAT_TO_BF16;
+    } else if (dataType == ge::DT_BF16 && dstDataType == ge::DT_FLOAT) {
+        return TILING_KEY_BF16_TO_FLOAT;
+    } else {
+        return 0;
     }
 }
 

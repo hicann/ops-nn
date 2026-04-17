@@ -14,8 +14,19 @@
  */
 
 #include "foreach_copy.h"
+#include "foreach_cast.h"
 
 using namespace ForeachCopy;
+using namespace ForeachCast;
+
+#define INIT_AND_PROCESS                \
+    op.Init(x, y, userWS, &tilingData); \
+    op.Process()
+
+#define FOREACH_COPY_OP(T) \
+    ForeachCopyND<T> op; \
+    op.Init(x, y, userWS, &tilingData); \
+    op.Process()
 
 extern "C" __global__ __aicore__ void foreach_copy(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
@@ -23,48 +34,45 @@ extern "C" __global__ __aicore__ void foreach_copy(GM_ADDR x, GM_ADDR y, GM_ADDR
 
     // foreach(vector) not need workspace
     GM_ADDR userWS = nullptr;
-
-#define INIT_AND_PROCESS                \
-    op.Init(x, y, userWS, &tilingData); \
-    op.Process()
-
     if (TILING_KEY_IS(1)) {
-        ForeachCopyND<half> op;
-        INIT_AND_PROCESS;
+        FOREACH_COPY_OP(half);
     } else if (TILING_KEY_IS(2)) {
-        ForeachCopyND<float> op;
-        INIT_AND_PROCESS;
+        FOREACH_COPY_OP(float);
     } else if (TILING_KEY_IS(3)) {
-        ForeachCopyND<int> op;
-        INIT_AND_PROCESS;
+        FOREACH_COPY_OP(int);
 #if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     } else if (TILING_KEY_IS(4)) {
-        ForeachCopyND<bfloat16_t> op;
-        INIT_AND_PROCESS;
+        FOREACH_COPY_OP(bfloat16_t);
 #endif
     } else if (TILING_KEY_IS(5)) {
-        ForeachCopyND<int16_t> op;
-        INIT_AND_PROCESS;
+        FOREACH_COPY_OP(int16_t);
     } else if (TILING_KEY_IS(6)) {
-        ForeachCopyND<uint16_t> op;
-        INIT_AND_PROCESS;
+        FOREACH_COPY_OP(uint16_t);
     } else if (TILING_KEY_IS(7)) {
-        ForeachCopyND<int8_t> op;
-        INIT_AND_PROCESS;
+        FOREACH_COPY_OP(int8_t);
     } else if (TILING_KEY_IS(8)) {
-        ForeachCopyND<uint8_t> op;
-        INIT_AND_PROCESS;
+        FOREACH_COPY_OP(uint8_t);
     } else if (TILING_KEY_IS(9)) {
-        ForeachCopyND<uint32_t> op;
-        INIT_AND_PROCESS;
+        FOREACH_COPY_OP(uint32_t);
     } else if (TILING_KEY_IS(10)) {
-        ForeachCopyND<uint64_t> op;
-        INIT_AND_PROCESS;
+        FOREACH_COPY_OP(uint64_t);
     } else if (TILING_KEY_IS(11)) {
-        ForeachCopyND<double> op;
-        INIT_AND_PROCESS;
+        FOREACH_COPY_OP(double);
     } else if (TILING_KEY_IS(12)) {
-        ForeachCopyND<bool> op;
+        FOREACH_COPY_OP(bool);
+    } else if (TILING_KEY_IS(13)) {
+        ForeachCastND<float, half> op;
         INIT_AND_PROCESS;
+    } else if (TILING_KEY_IS(14)) {
+        ForeachCastND<half, float> op;
+        INIT_AND_PROCESS;
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
+    } else if (TILING_KEY_IS(15)) {
+        ForeachCastND<float, bfloat16_t> op;
+        INIT_AND_PROCESS;
+    } else if (TILING_KEY_IS(16)) {
+        ForeachCastND<bfloat16_t, float> op;
+        INIT_AND_PROCESS;
+#endif
     }
 }

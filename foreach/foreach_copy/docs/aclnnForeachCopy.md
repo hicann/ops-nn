@@ -209,6 +209,7 @@ aclnnStatus aclnnForeachCopy(
 
 - 确定性计算：
   - aclnnForeachCopy默认确定性实现。
+- A2/A3/950处理器支持输入和输出数据类型不一致：输入为float32时支持输出float16或bfloat16,输入为float16或bfloat16时支持输出float32。
 
 ## 调用示例
 

@@ -63,6 +63,7 @@
   </tbody></table>
 
 - Kirin X90/Kirin 9030处理器系列产品：不支持BFLOAT16。
+- A2/A3/950处理器系列产品：支持输入和输出数据类型不一致，输入为float32时支持输出float16或bfloat16，输入为float16或bfloat16时支持输出float32。
 
 ## 约束说明
 

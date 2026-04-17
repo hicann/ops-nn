@@ -188,6 +188,10 @@ public:
             } else if (srcDtype != dataType) {
                 return ge::GRAPH_FAILED;
             }
+            if (opCode == FOREACH_COPY_OP_CODE) {
+                auto tempDstDesc = tilingContext->GetOutputDesc(i);
+                dstDataType = tempDstDesc->GetDataType();
+            }
             gert::Shape tempShape = srcTensor->GetStorageShape();
             // Make a 32-byte alignment for each Tensor
             tensorDataCountList[i] = tempShape.GetShapeSize();
@@ -211,8 +215,11 @@ public:
 
         uint64_t ubSizePlatForm = 0;
         platformInfo.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
-
-        tilingContext->SetTilingKey(GetTilingKeyByDtypeOnly(dataType));
+        if (opCode == FOREACH_COPY_OP_CODE) {
+            tilingContext->SetTilingKey(GetTilingKeyForForeachCopy(dataType, dstDataType));
+        } else {
+            tilingContext->SetTilingKey(GetTilingKeyByDtypeOnly(dataType));
+        }
 
         uint32_t needCoreNum = GetNeedCoreNum(platformInfo.GetCoreNumAiv());
         needCoreNum = needCoreNum > MAX_CORE_CONT ? MAX_CORE_CONT : needCoreNum;
@@ -267,6 +274,28 @@ public:
     }
 
 private:
+
+    ge::graphStatus CheckForeachCopyDtype(ge::DataType dstDtype)
+    {
+        if (dstDtype != dstDataType) {
+            return ge::GRAPH_FAILED;
+        }
+        if (dataType == dstDtype) {
+            return ge::GRAPH_SUCCESS;
+        }
+        if (dataType == ge::DT_FLOAT && dstDtype == ge::DT_FLOAT16) {
+            return ge::GRAPH_SUCCESS;
+        } else if (dataType == ge::DT_FLOAT16 && dstDtype == ge::DT_FLOAT) {
+            return ge::GRAPH_SUCCESS;
+        } else if (dataType == ge::DT_FLOAT && dstDtype == ge::DT_BF16) {
+            return ge::GRAPH_SUCCESS;
+        } else if (dataType == ge::DT_BF16 && dstDtype == ge::DT_FLOAT) {
+            return ge::GRAPH_SUCCESS;
+        } else {
+            return ge::GRAPH_FAILED;
+        }
+    }
+
     /**
      ** function: Check output tensor list shape and dtype invalid
      */
@@ -287,10 +316,17 @@ private:
                 tempDesc == nullptr, OP_LOGE(tilingContext->GetNodeName(), "The output %u desc is null.", i),
                 return ge::GRAPH_FAILED);
             auto dstDtype = tempDesc->GetDataType();
-            OP_CHECK_IF(
-                dstDtype != dataType,
-                OP_LOGE(tilingContext->GetNodeName(), "The tensor %u of output datatype should be same with input.", i),
-                return ge::GRAPH_FAILED);
+            if (opCode == FOREACH_COPY_OP_CODE) {
+                OP_CHECK_IF(
+                    CheckForeachCopyDtype(dstDtype) != ge::GRAPH_SUCCESS,
+                    OP_LOGE(tilingContext->GetNodeName(), "The tensor %u of output datatype should meet the conditions with input.", i),
+                    return ge::GRAPH_FAILED);
+            } else {
+                OP_CHECK_IF(
+                    dstDtype != dataType,
+                    OP_LOGE(tilingContext->GetNodeName(), "The tensor %u of output datatype should be same with input.", i),
+                    return ge::GRAPH_FAILED);
+            }
             auto srcShape = tilingContext->GetDynamicInputShape(inputIndexZero, i);
             OP_CHECK_IF(
                 srcShape == nullptr, OP_LOGE(tilingContext->GetNodeName(), "The input %u shape is null.", i),
@@ -1090,11 +1126,12 @@ private:
             // The remaining UB size is one buffer enabled, and rounded down 32 bytes.
             // foreach_copy
             uint32_t totalSize = uint32_t(ubSizePlatForm - tilingData.GetDataSize());
-            if (dataType == ge::DT_BF16) {
-                totalSize = totalSize / UB_DIVIDER_FOR_TEMP_CASTING;
-            }
+
             uint32_t canUseUbSize = totalSize;
             inputsTensorUbSize = static_cast<uint64_t>(canUseUbSize / BYTE_BLOCK * BYTE_BLOCK);
+            if (dataType != dstDataType) {
+                inputsTensorUbSize /= BUFFER_ATTENUATION;
+            }
         }
     }
 
@@ -1153,6 +1190,7 @@ private:
     gert::TilingContext* tilingContext = nullptr;
 
     ge::DataType dataType = ge::DT_UNDEFINED;
+    ge::DataType dstDataType = ge::DT_UNDEFINED;
 
     uint64_t inputsTensorUbSize = 0;
     int64_t tensorDataCountList[MAX_TENSOR_CONT] = {0};
