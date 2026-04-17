@@ -64,6 +64,7 @@ public:
         GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR quant_scales, GM_ADDR quant_zero_points, GM_ADDR out,
         const QuantUpdateScatterTilingData* tiling)
     {
+        Base::SetFloatOverflowModeForRegbase();
         blockIdx_ = GetBlockIdx();
         varGm_.SetGlobalBuffer(reinterpret_cast<__gm__ VarType*>(var));
         indicesGm_.SetGlobalBuffer(reinterpret_cast<__gm__ IndicesType*>(indices));

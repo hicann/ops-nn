@@ -17,6 +17,7 @@
 #define GELU_QUANT_BASE_REGBASE_H
 
 #include "kernel_operator.h"
+#include "op_kernel/math_util.h"
 #include "../inc/platform.h"
 namespace GeluQuantALL {
 using namespace AscendC;
@@ -49,13 +50,18 @@ constexpr uint32_t FP16_BLOCK_NUM = 16;
 constexpr uint32_t INT8_BLOCK_NUM = 32;
 constexpr uint32_t FP32_VECTOR_CAPACITY_ONE_CYCLE = 64;
 constexpr uint32_t MAX_ROWS_NUM = 1024;
+constexpr int8_t FLOAT_OVERFLOW_MODE_CTRL = 60;
+// 控制饱和模式的使能位，配合Cast的SatMode使用
+// SatMode::SAT下为单指令饱和模式
+// SatMode::NO_SAT下为单指令非饱和模式
+constexpr int64_t FLOAT_OVERFLOW_MODE_SATURATE = 0;
+
 #ifdef __CCE_AICORE__
 constexpr static AscendC::MicroAPI::CastTrait castTrait0 = {
     AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN, AscendC::MicroAPI::MaskMergeMode::ZEROING,
     AscendC::RoundMode::UNKNOWN};
 #endif
-class GeluQuantBase
-{
+class GeluQuantBase {
 public:
     __aicore__ inline GeluQuantBase(){};
 
@@ -66,6 +72,19 @@ public:
     __aicore__ inline void ComputeGeluTanh(const LocalTensor<T>& src, const LocalTensor<float>& dst, uint32_t calCount);
     template <typename T>
     __aicore__ float GetFloatScalar(GlobalTensor<T> inputScaleGm_);
+    template <typename dstType, AscendC::RoundMode roundMode>
+    __aicore__ inline void CastOutLocal(LocalTensor<float>& src, LocalTensor<int8_t>& dst, int32_t calCount);
+    template <typename dstType>
+    __aicore__ inline void SetFloatOverflowModeForRegbase()
+    {
+#if (__NPU_ARCH__ == 3510)
+        if constexpr (
+            IsSameType<dstType, hifloat8_t>::value || IsSameType<dstType, fp8_e5m2_t>::value ||
+            IsSameType<dstType, fp8_e4m3fn_t>::value) {
+            AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(FLOAT_OVERFLOW_MODE_SATURATE);
+        }
+#endif
+    }
     // 变量区
     uint32_t usedCoreNum_;
     int64_t curCoreProcessNum_;
@@ -87,6 +106,25 @@ public:
     uint32_t blockIdx_;
     uint32_t dstType_;
     AscendC::RoundMode roundMode_;
+
+    constexpr static AscendC::MicroAPI::CastTrait castTraitF32ToF16 = {
+        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
+        AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_ODD};
+    constexpr static AscendC::MicroAPI::CastTrait castTraitF16ToI8Rint = {
+        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING,
+        AscendC::RoundMode::CAST_RINT};
+    constexpr static AscendC::MicroAPI::CastTrait castTraitF16ToI8Round = {
+        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING,
+        AscendC::RoundMode::CAST_ROUND};
+    constexpr static AscendC::MicroAPI::CastTrait castTraitF32ToF8 = {
+        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING,
+        AscendC::RoundMode::CAST_RINT};
+    constexpr static AscendC::MicroAPI::CastTrait castTraitF32ToH8Round = {
+        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING,
+        AscendC::RoundMode::CAST_ROUND};
+    constexpr static AscendC::MicroAPI::CastTrait castTraitF32ToH8Hybrid = {
+        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING,
+        AscendC::RoundMode::CAST_HYBRID};
 };
 
 __aicore__ inline void GeluQuantBase::ParseTilingData(const GeluQuantTilingData& tilingData)
@@ -274,6 +312,49 @@ __aicore__ float GeluQuantBase::GetFloatScalar(GlobalTensor<T> inputScaleGm_)
     return (float)inputScaleGm_.GetValue(0);
 }
 
+template <typename dstType, AscendC::RoundMode roundMode>
+__aicore__ inline void GeluQuantBase::CastOutLocal(LocalTensor<float>& src, LocalTensor<int8_t>& dst, int32_t calCount)
+{
+    this->SetFloatOverflowModeForRegbase<dstType>();
+    uint32_t dtypeSize = sizeof(float);
+    uint32_t vl = VECTOR_REG_WIDTH / dtypeSize;
+    uint16_t loopNum = Ops::Base::CeilDiv(static_cast<uint32_t>(calCount), vl);
+    __ubuf__ float* xAddr = (__ubuf__ float*)src.GetPhyAddr();
+    __ubuf__ dstType* yAddr = (__ubuf__ dstType*)dst.GetPhyAddr();
+
+    __VEC_SCOPE__
+    {
+        AscendC::MicroAPI::RegTensor<float> vregInput;
+        AscendC::MicroAPI::RegTensor<half> vregHalf;
+        AscendC::MicroAPI::RegTensor<dstType> vregY;
+        AscendC::MicroAPI::MaskReg preg0;
+
+        uint32_t sreg1 = calCount;
+        for (uint16_t i = 0; i < loopNum; i++) {
+            auto yOutAddr = yAddr + i * vl;
+            preg0 = AscendC::MicroAPI::UpdateMask<float>(sreg1);
+            AscendC::MicroAPI::DataCopy(vregInput, xAddr + i * vl);
+
+            if constexpr (IsSameType<dstType, int8_t>::value) {
+                AscendC::MicroAPI::Cast<half, float, castTraitF32ToF16>(vregHalf, vregInput, preg0);
+                if constexpr (roundMode == AscendC::RoundMode::CAST_ROUND) {
+                    AscendC::MicroAPI::Cast<dstType, half, castTraitF16ToI8Round>(vregY, vregHalf, preg0);
+                } else if constexpr (roundMode == AscendC::RoundMode::CAST_RINT) {
+                    AscendC::MicroAPI::Cast<dstType, half, castTraitF16ToI8Rint>(vregY, vregHalf, preg0);
+                }
+            } else if constexpr (IsSameType<dstType, fp8_e4m3fn_t>::value || IsSameType<dstType, fp8_e5m2_t>::value) {
+                AscendC::MicroAPI::Cast<dstType, float, castTraitF32ToF8>(vregY, vregInput, preg0);
+            } else if constexpr (
+                IsSameType<dstType, hifloat8_t>::value && roundMode == AscendC::RoundMode::CAST_HYBRID) {
+                AscendC::MicroAPI::Cast<dstType, float, castTraitF32ToH8Hybrid>(vregY, vregInput, preg0);
+            } else if constexpr (
+                IsSameType<dstType, hifloat8_t>::value && roundMode == AscendC::RoundMode::CAST_ROUND) {
+                AscendC::MicroAPI::Cast<dstType, float, castTraitF32ToH8Round>(vregY, vregInput, preg0);
+            }
+            AscendC::MicroAPI::DataCopy<dstType, AscendC::MicroAPI::StoreDist::DIST_PACK4_B32>(yOutAddr, vregY, preg0);
+        }
+    }
+}
 } // namespace GeluQuantALL
 
 #endif // GELU_QUANT_BASE_REGBASE_H

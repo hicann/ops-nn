@@ -322,17 +322,15 @@ __aicore__ inline void GeluDynamicQuantWorkspace<T1, T2>::ComputeDynamicQuant(
     LocalTensor<int8_t> outLocal = workspaceQueue_.AllocTensor<int8_t>();
 
     if (dstType_ == DT_INT8) {
-        LocalTensor<half> castFp16 = castBuf_.Get<half>();
-        Cast<half, float>(castFp16, geluRes, AscendC::RoundMode::CAST_ODD, calCount);
-        Cast<int8_t, half>(outLocal, castFp16, AscendC::RoundMode::CAST_RINT, calCount);
-    } else if (dstType_ == DT_FLOAT8_E5M2) {
-        Cast<fp8_e5m2_t, float>(
-            outLocal.ReinterpretCast<fp8_e5m2_t>(), geluRes, AscendC::RoundMode::CAST_RINT, calCount);
+        CastOutLocal<int8_t, AscendC::RoundMode::CAST_RINT>(geluRes, outLocal, calCount);
     } else if (dstType_ == DT_FLOAT8_E4M3FN) {
-        Cast<fp8_e4m3fn_t, float>(
-            outLocal.ReinterpretCast<fp8_e4m3fn_t>(), geluRes, AscendC::RoundMode::CAST_RINT, calCount);
-    } else if (dstType_ == DT_HIFLOAT8) {
-        Cast<hifloat8_t, float>(outLocal.ReinterpretCast<hifloat8_t>(), geluRes, roundMode_, calCount);
+        CastOutLocal<fp8_e4m3fn_t, AscendC::RoundMode::CAST_RINT>(geluRes, outLocal, calCount);
+    } else if (dstType_ == DT_FLOAT8_E5M2) {
+        CastOutLocal<fp8_e5m2_t, AscendC::RoundMode::CAST_RINT>(geluRes, outLocal, calCount);
+    } else if (roundMode_ == AscendC::RoundMode::CAST_ROUND) { // hifloat8 roundMode hi8_round
+        CastOutLocal<hifloat8_t, AscendC::RoundMode::CAST_ROUND>(geluRes, outLocal, calCount);
+    } else { // hifloat8 roundMode hi8_hybrid
+        CastOutLocal<hifloat8_t, AscendC::RoundMode::CAST_HYBRID>(geluRes, outLocal, calCount);
     }
 
     inQueue_.FreeTensor(geluRes);

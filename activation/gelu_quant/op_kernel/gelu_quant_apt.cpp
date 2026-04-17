@@ -107,6 +107,9 @@ extern "C" __global__ __aicore__ void gelu_quant(
     GM_ADDR x, GM_ADDR input_scale, GM_ADDR input_offset, GM_ADDR y, GM_ADDR out_scale, GM_ADDR workspace,
     GM_ADDR tiling_data)
 {
+    #if (__NPU_ARCH__ == 3510)
+        int64_t oriOverflowMode = AscendC::GetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>();
+    #endif 
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     SetSysWorkspace(workspace);
     GM_ADDR userWS = GetUserWorkspace(workspace);
@@ -198,4 +201,7 @@ extern "C" __global__ __aicore__ void gelu_quant(
     }
 #endif
     // todo empty tensor
+    #if (__NPU_ARCH__ == 3510)
+        AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(oriOverflowMode);
+    #endif 
 }

@@ -84,21 +84,6 @@ private:
     uint32_t endAxisActualAlignLen_;
 
     float maxValue_ = 0.0;
-    constexpr static AscendC::MicroAPI::CastTrait castTraitF32ToF16 = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
-        AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_ODD};
-    constexpr static AscendC::MicroAPI::CastTrait castTraitF16ToI8 = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
-        AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT};
-    constexpr static AscendC::MicroAPI::CastTrait castTraitF32ToF8 = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
-        AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT};
-    constexpr static AscendC::MicroAPI::CastTrait castTraitF32ToH8Round = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
-        AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_ROUND};
-    constexpr static AscendC::MicroAPI::CastTrait castTraitF32ToH8Hybrid = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
-        AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_HYBRID};
 };
 
 template <typename T1, typename T2>
@@ -274,6 +259,7 @@ template <typename dstType, AscendC::RoundMode roundMode>
 __aicore__ inline void GeluDynamicQuant<T1, T2>::ComputeDynamicQuantRegbase(
     LocalTensor<float>& geluRes, LocalTensor<float>& scaleLocalFp32, int32_t rowCount)
 {
+    this->SetFloatOverflowModeForRegbase<dstType>();
     uint32_t dtypeSize = sizeof(float);
     uint32_t vl = VECTOR_REG_WIDTH / dtypeSize;
     uint16_t rowCountLocal = static_cast<uint16_t>(rowCount);
@@ -332,7 +318,7 @@ __aicore__ inline void GeluDynamicQuant<T1, T2>::ComputeDynamicQuantRegbase(
 
                 if constexpr (IsSameType<dstType, int8_t>::value) {
                     AscendC::MicroAPI::Cast<half, float, castTraitF32ToF16>(vregHalf, vregQuantRes, preg2);
-                    AscendC::MicroAPI::Cast<dstType, half, castTraitF16ToI8>(vregY, vregHalf, preg2);
+                    AscendC::MicroAPI::Cast<dstType, half, castTraitF16ToI8Rint>(vregY, vregHalf, preg2);
                 } else if constexpr (
                     IsSameType<dstType, fp8_e4m3fn_t>::value || IsSameType<dstType, fp8_e5m2_t>::value) {
                     AscendC::MicroAPI::Cast<dstType, float, castTraitF32ToF8>(vregY, vregQuantRes, preg2);
