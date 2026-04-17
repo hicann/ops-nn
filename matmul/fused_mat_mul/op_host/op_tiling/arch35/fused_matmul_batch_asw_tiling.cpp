@@ -21,7 +21,7 @@
 namespace optiling {
 namespace fused_matmul {
 using namespace strategy;
-MM_REGISTER_TILING_TEMPLATE(FusedMatMul, FusedMatMulBatchAswTiling, DAV_RESV, ASWT_BASIC_INHERITED_FROM_BMMV3);
+MM_REGISTER_TILING_TEMPLATE(FusedMatMul, FusedMatMulBatchAswTiling, DAV_RESV, BASE_INHERITED_FROM_BMMV3);
 
 uint64_t FusedMatMulBatchAswTiling::GetTilingKey() const
 {
