@@ -16,7 +16,7 @@
 ## 功能说明
 
 - 接口功能：
-将输入self执行logits计算，将得到的值与标签值target一起进行[BECLoss](../../sigmoid_cross_entropy_with_logits_v2/docs/aclnnBinaryCrossEntropyWithLogits.md)关于target的反向传播计算。
+将输入self执行logits计算，将得到的值与标签值target一起进行[BECLoss](../../../loss/sigmoid_cross_entropy_with_logits_v2/docs/aclnnBinaryCrossEntropyWithLogits.md)关于target的反向传播计算。
 
 ## 函数原型
 
@@ -42,7 +42,7 @@
 
   aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-  ```
+  ```text
   第一段接口完成入参校验，出现以下场景时报错：
   161001（ACLNN_ERR_PARAM_NULLPTR）：1. 传入的gradOutput、self、target、gradTarget为空指针。
   161002（ACLNN_ERR_PARAM_INVALID）：1. gradOutput、self、target、gradTarget的数据类型和数据格式不在支持的范围内。

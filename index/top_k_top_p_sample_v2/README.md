@@ -62,6 +62,7 @@ logits中的每一行logits[batch][:]根据相应的topK[batch]、topP[batch]、
   v = 8 * \text{ks\_max}
   $$
   ks_max有效取值范围[1,1024]，默认为1024，并且需要向上对齐到8的整数倍。
+
   * 生成需要过滤的mask
 
   $$
@@ -92,6 +93,7 @@ logits中的每一行logits[batch][:]根据相应的topK[batch]、topP[batch]、
   $$
 
   TopP采样
+
   * 根据入参约束属性inputIsLogits，如果该属性为True，则对排序后结果进行归一化：
     $$
     \text{logit\_sortProb} = 
@@ -172,6 +174,7 @@ logits中的每一行logits[batch][:]根据相应的topK[batch]、topP[batch]、
     min_ps[b]≥1时，每个batch仅取1个最大token，其余位置填充defLogit。
 
   可选输出
+  
   * 如果​入参属性IsNeedLogits=True，则使用topK-topP-minP联合采样后的logitsIndexMasked，进行`logits_top_kp_select`输出。
     $$
     \text{logitsIndex}[b][v] = \text{Index}(\text{logitsSortMasked}[b][v] \in \text{Logits})
@@ -190,6 +193,7 @@ logits中的每一行logits[batch][:]根据相应的topK[batch]、topP[batch]、
     $$
 
   后继处理
+
   * 此阶段输入为前序对前序topK-topP-minP采样的联合结果logitsSortMasked。
   * 此处输入须要确保logitsSortMasked∈(0,1)，根据输入Logits的实际情况，配置入参约束属性inputIsLogits，即：
     $$

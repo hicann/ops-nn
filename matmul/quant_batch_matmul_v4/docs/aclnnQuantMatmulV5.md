@@ -692,7 +692,7 @@ aclnnStatus aclnnQuantMatmulV5(
       - 数据格式支持ND。shape支持1维（n，）或3维（batch，1，n），n与x2的n一致。
       - 当x1和x2为INT32、INT4时，bias的shape只支持1维（n，）。
       - 当out的shape为2、4、5、6维时，bias的shape只支持1维（n，）。
-  - yOffset的约束：shape支持1维（n）。为计算过程中离线计算的辅助结果，值要求为8 * x2 * x2Scale，并在第1维累加。
+  - yOffset的约束：shape支持1维（n）。为计算过程中离线计算的辅助结果，值要求为8 *x2* x2Scale，并在第1维累加。
 
   </details>
 

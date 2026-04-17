@@ -2817,7 +2817,7 @@
   </tr>
   <tr>
     <td>pooling</td>
-    <td><a href="../../pooling/max_pool3d/README.md">max_pool3d</a></td>
+    <td><a href="../../pooling/max_pool3_d/README.md">max_pool3d</a></td>
     <td>✓</td>
     <td>✓</td>
     <td>✗</td>
@@ -3107,7 +3107,7 @@
   </tr>
     <tr>
     <td>rnn</td>
-    <td><a href="../../../../rnn/bidirection_lstm_v2/README.md">bidirection_lstm_v2</a></td>
+    <td><a href="../../rnn/bidirection_lstmv2/README.md">bidirection_lstm_v2</a></td>
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>

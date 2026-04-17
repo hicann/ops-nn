@@ -40,7 +40,7 @@
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-  ```
+  ```text
   第一段接口完成入参校验，出现以下场景时报错：
   返回161001(ACLNN_ERR_PARAM_NULLPTR)：1. 传入的 self或valueOut或inverseOut是空指针时。
   返回161002(ACLNN_ERR_PARAM_INVALID)：1. self 或valueOut 的数据类型不在支持的范围之内。
@@ -51,7 +51,7 @@
 
 ## aclnnUnique
 
-* **参数说明**：
+* **参数说明**
   * workspace（void\*, 入参）：在Device侧申请的workspace内存地址。
   * workspaceSize（uint64\_t, 入参）：在Device侧申请的workspace大小，由第一段接口aclnnUniqueGetWorkspaceSize获取。
   * executor（aclOpExecutor\*, 入参）：op执行器，包含了算子计算流程。

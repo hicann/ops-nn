@@ -45,7 +45,7 @@ ops-nn是[CANN](https://hiascend.com/software/cann) （Compute Architecture for 
 
 关键目录如下，详细目录介绍参见[项目目录](./docs/zh/context/dir_structure.md)。
 
-```
+```text
 ├── activation                         # activation类算子
 ├── cmake                              # 项目工程编译目录
 ├── common                             # 项目公共头文件和公共源码

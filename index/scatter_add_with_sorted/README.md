@@ -18,9 +18,9 @@
 - 算子功能: 将tensor src中的值按指定的轴和方向和对应的位置关系逐个替换/累加/累乘至tensor self中。
 
 - 示例：
-  对于一个3D tensor， self会按照如下的规则进行更新：
+  对于一个3D tensor，self会按照如下的规则进行更新：
 
-  ```
+  ```text
   self[index[i][j][k]][j][k] += src[i][j][k] # 如果 dim == 0 && reduction == 1
   self[i][index[i][j][k]][k] *= src[i][j][k] # 如果 dim == 1 && reduction == 2
   self[i][j][index[i][j][k]] = src[i][j][k]  # 如果 dim == 2 && reduction == 0

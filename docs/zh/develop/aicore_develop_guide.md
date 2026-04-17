@@ -15,9 +15,9 @@
 
 2. [算子定义](#算子定义)：确定算子功能与原型定义。
 
-3. [Tiling实现](#Tiling实现)：实现Host侧算子Tiling函数。
+3. [Tiling实现](#tiling实现)：实现Host侧算子Tiling函数。
 
-4. [Kernel实现](#Kernel实现)：实现Device侧算子核函数。
+4. [Kernel实现](#kernel实现)：实现Device侧算子核函数。
 
 5. [aclnn适配](#aclnn适配)：自定义算子推荐aclnn接口调用，需提前完成二进制发布。**如采用图模式调用算子**，请参考[图模式适配指南](./graph_develop_guide.md)。
 
@@ -52,7 +52,7 @@ Create the initial directory for ${op_name} under ${op_class} success
 
 创建完成后，目录结构如下所示：
 
-```
+```text
 ${op_name}                              # 替换为实际算子名的小写下划线形式
 ├── examples                            # 算子调用示例
 │   └── test_aclnn_${op_name}.cpp       # 算子aclnn调用示例

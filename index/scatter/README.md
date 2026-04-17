@@ -22,7 +22,7 @@
 
   **场景一：** indices为1维，axis指定更新的维度shape为1，indices指定的是每个batch维度（最高维）在axis维度的偏移。
 
-  ```
+  ```text
   样例输入：
   data:(a, b, c, d)
   updates:(a, b, 1, d)
@@ -35,7 +35,7 @@
 
   **场景二：** indices为1维，axis指定更新的维度shape大于1，indices指定的是每个batch维度（最高维）在axis维度的偏移。
 
-  ```
+  ```text
   样例输入：
   data:(a, b, c, d)
   updates:(a, b, e, d), indices[i] + e <= c

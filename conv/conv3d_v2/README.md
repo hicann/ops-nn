@@ -182,7 +182,7 @@
 - Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：
   - `filter` 的 `H`、`W` 维度范围：[1,511]。
   - 不支持空 `tensor`。
-  - 当 `groups` 为 1, `dilation` 全为 1，`padding` 全为 0，`filter` 没有为 1 的维度， `x` 的 `D` * `H` * `W` 小于 65536，`bias` 为 `FLOAT` 时，会进入 `Pointwise` 分支，可以使用 `NCDHW` 格式。
+  - 当 `groups` 为 1, `dilation` 全为 1，`padding` 全为 0，`filter` 没有为 1 的维度， `x` 的 `D` *`H`* `W` 小于 65536，`bias` 为 `FLOAT` 时，会进入 `Pointwise` 分支，可以使用 `NCDHW` 格式。
 
   <table>
   <tr>

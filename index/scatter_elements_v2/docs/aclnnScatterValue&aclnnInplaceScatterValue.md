@@ -18,7 +18,7 @@
 - **示例：**
   对于一个3D tensor， self会按照如下的规则进行更新：
 
-  ```
+  ```text
   self[index[i][j][k]][j][k] = value # 如果 dim == 0
   self[i][index[i][j][k]][k] = value # 如果 dim == 1
   self[i][j][index[i][j][k]] = value # 如果 dim == 2
@@ -73,7 +73,7 @@
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-  ```
+  ```text
   第一段接口完成入参校验，出现以下场景时报错：
   返回161001 (ACLNN_ERR_PARAM_NULLPTR): 1. 传入的self、index、value或out是空指针。
   返回161002 (ACLNN_ERR_PARAM_INVALID): 1. self、index、value或out的数据类型不在支持范围内。
@@ -122,7 +122,7 @@
 - **返回值：**
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-  ```
+  ```text
   第一段接口完成入参校验，出现以下场景时报错：
   返回161001 (ACLNN_ERR_PARAM_NULLPTR): 1. 传入的selfRef、index、value是空指针。
   返回161002 (ACLNN_ERR_PARAM_INVALID): 1. selfRef、index、value的数据类型不在支持范围内

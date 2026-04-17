@@ -46,7 +46,7 @@ $$
 
   返回aclnnStatus状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-  ```
+  ```text
   第一段接口完成入参校验，若出现以下错误码，则对应原因为：
   - 161001(ACLNN_ERR_PARAM_NULLPTR): 1. 传入的varRef、indices、updates是空指针。
   - 161002(ACLNN_ERR_PARAM_INVALID): 1. varRef、indices、updates的数据类型不在支持的范围之内。

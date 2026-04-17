@@ -18,7 +18,8 @@
 * 算子功能：
   * 对于输入信号的输入通道，提供3维最大池化（Max pooling）操作，输出池化后的值out和索引indices。
   * 输入dims的描述：N - 批次，C - 通道，D - 深度，W - 宽度，H - 高度。
-  * 当D * H * W超过int32时，建议在模型尺寸上分割D轴。
+  * 当D *H* W超过int32时，建议在模型尺寸上分割D轴。
+
 * 计算公式：
   
   * output tensor中每个元素的计算公式：
@@ -196,7 +197,7 @@ aclnnStatus aclnnMaxPool3dWithArgmax(
     </tr>
   </tbody></table>
 
-   - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：`dilation` 元素值仅支持为1；`indices` 数据类型不支持INT64。输入数据排布不支持NDHWC。depth * height * width 不支持大于 max int32。
+   - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：`dilation` 元素值仅支持为1；`indices` 数据类型不支持INT64。输入数据排布不支持NDHWC。depth*height*width 不支持大于 max int32。
 
 * **返回值**：
   

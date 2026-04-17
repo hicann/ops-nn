@@ -13,7 +13,7 @@
 
 ## 目录结构介绍
 
-```
+```text
 ├── weight_quant_batch_matmul_experiment
 │   ├── examples           // 样例工程
 │   ├── op_host            // tiling && 算子定义
@@ -68,7 +68,6 @@
         A_{3} \\
         \end{bmatrix}
     $$
-
 10. 计算$C_{int}$:
 
     $$Y_{int} =     \begin{bmatrix}

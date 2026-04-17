@@ -49,7 +49,7 @@ Create the AI CPU initial directory for ${op_name} under ${op_class} success
 
 创建完成后，目录结构如下所示：
 
-```
+```text
 ${op_name}                              # 替换为实际算子名的小写下划线形式
 ├── examples                            # 算子调用示例
 │   └── test_aclnn_${op_name}.cpp       # 算子aclnn调用示例

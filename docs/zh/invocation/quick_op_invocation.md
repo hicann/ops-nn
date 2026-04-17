@@ -158,7 +158,7 @@
 
    \$\{static\_lib\_path\}表示静态库解压路径。解压后目录结构如下：
 
-    ```
+    ```text
     ├── cann-${soc_name}-ops-nn-static_${cann_version}_linux-${arch}
     │   ├── lib64
     │   │   ├── libcann_nn_static.a                # 静态库文件
@@ -321,7 +321,7 @@
 
 无论上述哪种方式，算子样例执行后会打印结果，以TransposeBatchMatMul算子执行为例：
 
-```
+```text
 result[0] is: 0.000000
 result[1] is: 0.000000
 result[2] is: 0.000000

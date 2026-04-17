@@ -10,13 +10,13 @@
 
    程序执行结束后，默认可在"$HOME/ascendc/log"下查看，host日志文件存储路径如下：
 
-   ```
+   ```bash
    $HOME/ascend/log/debug/plog/plog-pid_*.log
    ```
 
    开启环境变量ASCEND_SLOG_PRINT_TO_STDOUT可以将log日志直接打屏显示(1:开启打屏，0：关闭打屏)，配置示例如下：
 
-   ```
+   ```bash
    export ASCEND_SLOG_PRINT_TO_STDOUT=1
    ```
 
@@ -26,13 +26,13 @@
    
    通过aclGetRecentErrMsg接口（参见[《acl API（C）》](https://hiascend.com/document/redirect/CannCommunityCppApi)）获取aclnn接口调用过程中的异常信息，使用方法如下：
 
-   ```
+   ```bash
    printf(aclGetRecentErrMsg());
    ```
 
    打印错误信息样例如下：
 
-   ```
+   ```bash
    [PID:646612] 2026-01-24-11:53:44.671.727 AclNN_Parameter_Error(EZ1001): Expected a proper Tensor but got null for argument addmmTennsor.self.
    ```
 
@@ -177,13 +177,13 @@
 
 2. 执行仿真命令，生成仿真数据
 
-   ```
+   ```text
    cannsim record ./test_aclnn_add_example -s Ascend950 --gen-report
    ```
 
    仿真结果在本项目`examples/add_example/examples/build/bin/cannsim_*`目录，流水相关文件为：
 
-   ```
+   ```text
    trace_core0.json
    ``` 
 

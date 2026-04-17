@@ -107,7 +107,7 @@ aclnnStatus aclnnBatchMatmulQuant(
       <td>quantParam</td>
       <td>输入</td>
       <td>硬件完成量化计算的量化参数。</td>
-      <td>可以通过 <a href="../../quant/trans_quant_param/docs/aclnnTransQuantParam.md">aclnnTransQuantParam</a> 接口获取。shape的大小（即元素个数）需要满足以下场景中任意一种:<ul><li>shape的大小为1。</li>
+      <td>可以通过 <a href="../../../quant/trans_quant_param/docs/aclnnTransQuantParam.md">aclnnTransQuantParam</a> 接口获取。shape的大小（即元素个数）需要满足以下场景中任意一种:<ul><li>shape的大小为1。</li>
       <li>shape的大小等于输出tensor(out)最后一个维度的大小向上对齐到16的倍数。</li></ul></td>
       <td>UINT64</td>
       <td>NC1HWC0</td>

@@ -17,7 +17,7 @@
 
 - 示例：
 
-  ```
+  ```text
   # If sparse_values is scalar
   dense[i] = (i == sparse_indices ? sparse_values : default_value)
 

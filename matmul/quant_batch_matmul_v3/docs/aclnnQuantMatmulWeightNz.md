@@ -491,7 +491,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
     | INT8 | INT32 | UINT64       | FLOAT32          | null          | FLOAT32 | null                        | FLOAT16/BFLOAT16  |
     
   - x1的约束：当数据类型为INT8时，且x2的数据类型为INT32时，transposeX1为false。维度为：（m，k），要求k为偶数，并小于29576。
-  - yOffset的约束：shape支持1维（n）。为计算过程中离线计算的辅助结果，值要求为8 * x2 * x2Scale，并在第1维累加。
+  - yOffset的约束：shape支持1维（n）。为计算过程中离线计算的辅助结果，值要求为8 *x2* x2Scale，并在第1维累加。
 
 </details>
 

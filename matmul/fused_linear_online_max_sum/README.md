@@ -20,31 +20,26 @@
      $$
      vocab\_parallel\_logits\_out = input @ weight^T
      $$
-     
-  2. 计算$vocab\_parallel\_logits\_out$每行的最大值：
+ 2. 计算$vocab\_parallel\_logits\_out$每行的最大值：
 
      $$
      logits\_max\_local = max(vocab\_parallel\_logits\_out, dim=-1)
      $$
-     
-  3. 计算$vocab\_parallel\_logits\_out$与$logits\_max\_local$的差值：
+ 3. 计算$vocab\_parallel\_logits\_out$与$logits\_max\_local$的差值：
 
      $$
      sub\_res[b][n] = vocab\_parallel\_logits\_out[b][n] - logits\_max\_local[b]
      $$
-
-  4. 计算$sub\_res$经过指数运算后每行的和
+ 4. 计算$sub\_res$经过指数运算后每行的和
 
      $$
      sum\_exp\_logits\_local = sum(exp(sub\_res), dim=-1)
      $$
-
   5. 计算$target$小于$vocab\_start\_index$或$target$大于$vocab\_end\_index$的mask
 
      $$
      target\_mask = (target < vocab\_start\_index) | (target > vocab\_end\_index)
      $$
-
   6. 计算$masked\_target$
 
      $$
@@ -54,7 +49,6 @@
      target[b] - vocab\_start\_index & \text{target\_mask[b]=false}
      \end{cases}
      $$
-
   7. 计算$predicted\_logits\_local$
 
      $$
@@ -64,7 +58,6 @@
      sub\_res[b][masked\_target[b]] & \text{target\_mask[b]=false}
      \end{cases}
      $$
-
   8. 计算$target\_mask$
 
      $$

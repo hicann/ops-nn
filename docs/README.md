@@ -4,7 +4,7 @@
 
 关键目录结构如下：
 
-```
+```text
 ├── context                            # 公共目录，存放包括基本概念、项目目录介绍、build参数说明等文档
 │   ├── dir_structure.md
 │   ├── build.md

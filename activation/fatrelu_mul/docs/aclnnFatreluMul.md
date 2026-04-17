@@ -28,7 +28,6 @@
      $$
      x_1 = \text{input}[..., :d], \quad x_2 = \text{input}[..., d:]
      $$
-
   2. 对x1应用Threshold激活函数，定义如下：
 
      $$
@@ -44,7 +43,6 @@
      $$
      x_1 = \text{Threshold}(x_1, \text{threshold})
      $$
-
   3. 最终输出是x1和x2的逐元素乘积：
   
      $$

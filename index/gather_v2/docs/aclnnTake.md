@@ -49,7 +49,7 @@ $$
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-  ```
+  ```text
   第一段接口完成入参校验，出现以下场景时报错：
   161001 (ACLNN_ERR_PARAM_NULLPTR):1. 参数self、index、out是空指针。
   161002 (ACLNN_ERR_PARAM_INVALID):1. 参数self、index、out的数据类型不在支持范围内。

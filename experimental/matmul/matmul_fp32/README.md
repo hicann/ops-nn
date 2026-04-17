@@ -12,7 +12,7 @@
 
 ## 目录结构介绍
 
-```
+```text
 ├── CMakeLists.txt                        // 编译工程文件
 ├── README.md                             // 算子样例工程介绍文件
 ├── examples                              // 样例算子的aclnn接口样例目录
