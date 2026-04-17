@@ -274,7 +274,9 @@ public:
 
             CalReduceMax(absTensor, rowNumCeil * shape.Nceil, eventIdVToS);
             float tmpMax = static_cast<float>(absTensor.GetValue(0));
-            maxValue = AscendC::Std::max(tmpMax, maxValue);
+            if (tmpMax != tmpMax || tmpMax > maxValue) {
+                maxValue = tmpMax;
+            }
             p ++;
         }
     }

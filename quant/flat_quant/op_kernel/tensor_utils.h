@@ -220,14 +220,14 @@ __aicore__ inline void DataCopyInContiguous(LocalTensor<T> dstTensor, GlobalTens
 
 __aicore__ inline void CalReduceMaxOne(LocalTensor<half> srcTensor, int32_t rowNum, int32_t colAlign, int32_t colSize)
 {
-    int32_t repeatTimes = colSize >> LOG2_128;   // 除128
+    int32_t repeatTimes = (colSize - 1) >> LOG2_128;   // 除128
     uint8_t repeatStride = colAlign >> LOG2_16;
     BinaryRepeatParams repeatParams = {1, 1, 1, repeatStride, repeatStride, repeatStride};
-    for (int64_t i = 0; i < repeatTimes - 1; i++) {
+    for (int64_t i = 1; i < repeatTimes; i++) {
         Max(srcTensor, srcTensor[i * BASE_SIZE], srcTensor, BASE_SIZE, rowNum, repeatParams);
         PipeBarrier<PIPE_V>();
     }
-    Max(srcTensor, srcTensor[repeatTimes * BASE_SIZE], srcTensor, colSize % BASE_SIZE, rowNum, repeatParams);
+    Max(srcTensor, srcTensor[repeatTimes * BASE_SIZE], srcTensor, colSize - repeatTimes * BASE_SIZE, rowNum, repeatParams);
     PipeBarrier<PIPE_V>();
     WholeReduceMax(srcTensor, srcTensor, colSize < BASE_SIZE ? colSize : BASE_SIZE, rowNum, 1, 1, repeatStride, ReduceOrder::ORDER_ONLY_VALUE);
     PipeBarrier<PIPE_V>();

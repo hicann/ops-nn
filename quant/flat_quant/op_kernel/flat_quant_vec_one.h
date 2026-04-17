@@ -109,11 +109,11 @@ public:
         int64_t subBlockIdx = GetSubBlockIdx();
         for (int64_t startK = shape.K1; startK < shape.K2; startK += shape.perK) {
             int64_t endK = startK + shape.perK > shape.K2 ? shape.K2 : startK + shape.perK;
-            bool isLast = startK + shape.perK > shape.K2;
+            bool isLast = shape.K - (endK - 1) * perM < perM;
             for (int64_t k = startK; k < endK; k ++) {
                 // 量化分给两个vec核，0核做偶数，1核做奇数
                 if ((k & 1) == subBlockIdx) {
-                    if (isLast && k == endK - 1) {
+                    if (isLast && shape.K - k * perM < perM) {
                         MultiQuantTail(k, scaleK, isLast);
                     } else {
                         MultiQuant(k, scaleK, isLast);
