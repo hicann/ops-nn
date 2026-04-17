@@ -404,6 +404,24 @@ static bool IsSortAndTopK(bool sorted, int64_t k, int64_t sortDimValue) {
     return k > SORT_WITH_INDEX_THRESHOLD;
 }
 
+/**
+ * 是否Sort单独处理
+ */
+static bool IsSort(int64_t sortDimValue, int64_t k, const aclTensor* target) {
+    bool isFullSort = sortDimValue == k;
+    bool isRegBase = Ops::NN::AclnnUtil::IsRegbase(); 
+    bool isSortCanDealWith = CanDealWith(target, k) && IsSortEnable(target);
+    return isFullSort && isRegBase && isSortCanDealWith;
+}
+
+/**
+ * 判断数据类型是否为double
+ */
+static bool IsDataTypeDouble(op::DataType xDataType) {
+    OP_LOGD("x dataType=%d", static_cast<int>(xDataType));
+    return op::DataType::DT_DOUBLE == xDataType;
+}
+
 aclnnStatus aclnnTopkGetWorkspaceSize(const aclTensor *self, int64_t k, int64_t dim, bool largest, bool sorted,
                                       aclTensor *valuesOut, aclTensor *indicesOut, uint64_t *workspaceSize,
                                       aclOpExecutor **executor) {
@@ -447,6 +465,7 @@ aclnnStatus aclnnTopkGetWorkspaceSize(const aclTensor *self, int64_t k, int64_t 
   CHECK_RET(selfCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
   auto indicesDType = indicesOut->GetDataType();
+  auto xDType = self->GetDataType();
   bool isHasCasted = false;
   if (IsTopKCopy(selfCast, k, sortDimValue, sorted)) {
     TopKCopy(selfCast, k, valuesOut, indicesOut, uniqueExecutor.get());
@@ -455,6 +474,8 @@ aclnnStatus aclnnTopkGetWorkspaceSize(const aclTensor *self, int64_t k, int64_t 
     uniqueExecutor.ReleaseTo(executor);
     return ACLNN_SUCCESS;
   }
+
+  OP_LOGD("aclnnTopkGetWorkspaceSize positiveDim = %ld, lastDim = %ld", positiveDim, lastDim);
   if (positiveDim != lastDim) {
     aclIntArray *axes = GetDimTransposeArray(dimNum, lastDim, positiveDim, uniqueExecutor.get());
     CHECK_RET(axes != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -464,14 +485,18 @@ aclnnStatus aclnnTopkGetWorkspaceSize(const aclTensor *self, int64_t k, int64_t 
     CHECK_RET(selfTranspose != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 进行top计算
+    // sort不支持double，double不能走sort的任何处理，topk的aicore也不支持double，aicpu支持double
     std::tuple<const aclTensor*, const aclTensor*> topkOut(nullptr, nullptr);
-    if (sortDimValue == k && Ops::NN::AclnnUtil::IsRegbase() && CanDealWith(selfTranspose, k) && IsSortEnable(selfTranspose)) {
+    if (IsSort(sortDimValue, k, selfTranspose) && !IsDataTypeDouble(xDType)) {
+      OP_LOGD("sort, positiveDim not equal lastDim.");
       topkOut = l0op::Sort(selfTranspose, -1, largest, true, indicesDType, uniqueExecutor.get());
       isHasCasted = true;
-    } else if (IsSortAndTopK(sorted, k, sortDimValue)) {
+    } else if (IsSortAndTopK(sorted, k, sortDimValue) && !IsDataTypeDouble(xDType)) {
+      OP_LOGD("sort and topk, positiveDim not equal lastDim.");
       topkOut = SortAndTopK(selfTranspose, k, lastDim, sortDimValue, largest, indicesDType, uniqueExecutor.get());
       isHasCasted = true;
     } else {
+      OP_LOGD("topk, positiveDim not equal lastDim.");
       topkOut = l0op::Topk(selfTranspose, k, lastDim, largest, sorted, indicesDType, uniqueExecutor.get());
     }
 
@@ -497,13 +522,16 @@ aclnnStatus aclnnTopkGetWorkspaceSize(const aclTensor *self, int64_t k, int64_t 
       indicesCastInt32 = l0op::GatherElements(indicesCastFirst, positiveDim, indicesCast, uniqueExecutor.get());
     } else {
       std::tuple<const aclTensor*, const aclTensor*> topkOut(nullptr, nullptr);
-      if (sortDimValue == k && Ops::NN::AclnnUtil::IsRegbase() && CanDealWith(selfCast, k) && IsSortEnable(selfCast)) {
+      if (IsSort(sortDimValue, k, selfCast) && !IsDataTypeDouble(xDType)) {
+        OP_LOGD("sort, positiveDim equal lastDim.");
         topkOut = l0op::Sort(selfCast, -1, largest, true, indicesDType, uniqueExecutor.get());
         isHasCasted = true;
-      } else if (IsSortAndTopK(sorted, k, sortDimValue)) {
+      } else if (IsSortAndTopK(sorted, k, sortDimValue) && !IsDataTypeDouble(xDType)) {
+        OP_LOGD("sort and topk, positiveDim equal lastDim.");
         topkOut = SortAndTopK(selfCast, k, positiveDim, sortDimValue, largest, indicesDType, uniqueExecutor.get());
         isHasCasted = true;
       } else {
+        OP_LOGD("topk, positiveDim equal lastDim.");
         topkOut = l0op::Topk(selfCast, k, positiveDim, largest, sorted, indicesDType, uniqueExecutor.get());
       }
       valuesTopkOut = std::get<0>(topkOut);
