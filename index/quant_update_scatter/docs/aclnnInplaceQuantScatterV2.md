@@ -76,7 +76,7 @@ aclnnStatus aclnnInplaceQuantScatterV2(
       <td>支持空Tensor。</td>
       <td>INT8、FLOAT8_E4M3FN、FLOAT_E5M2、HIFLOAT8</td>
       <td>ND</td>
-      <td>1,2</td>
+      <td>3-8</td>
       <td>√</td>
     </tr>
     <tr>
@@ -96,7 +96,7 @@ aclnnStatus aclnnInplaceQuantScatterV2(
       <td><ul><li>updates的维数需要与selfRef的维数一样，其第1维的大小等于indices的第1维的大小，且不大于selfRef的第1维的大小</li><li>其axis轴的大小不大于selfRef的axis轴的大小</li><li>其余维度的大小要跟selfRef对应维度的大小相等</li></ul></td>
       <td>BFLOAT16、FLOAT16</td>
       <td>ND</td>
-      <td>1,2</td>
+      <td>3-8</td>
       <td>√</td>
     </tr>
     <tr>
