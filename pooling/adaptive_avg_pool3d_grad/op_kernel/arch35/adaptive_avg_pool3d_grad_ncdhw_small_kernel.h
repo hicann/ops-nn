@@ -109,7 +109,6 @@ private:
     TQue<QuePosition::VECOUT, BUFFER_NUM> transQue_;
     TQue<QuePosition::VECOUT, BUFFER_NUM> transOutQue_;
 
-    // 仅供 half/bfloat16 升精度使用
     TBuf<QuePosition::VECCALC> computeSrcBuf_;
     TBuf<QuePosition::VECCALC> computeAccumBuf_;
 
@@ -152,12 +151,10 @@ private:
     int64_t curCoreProcessNum_ = 1;
     int64_t usedCoreNum_ = 1;
 
-    // 逐 queue buffer size
     int64_t inputQueBufferSize_ = 1;
     int64_t transQueBufferSize_ = 1;
     int64_t transOutQueBufferSize_ = 1;
 
-    // float scratch buffer size（仅 half/bfloat16 有效）
     int64_t computeSrcBufferSize_ = 0;
     int64_t computeAccumBufferSize_ = 0;
 
@@ -324,25 +321,20 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::ScalarCo
         GetEndFromOutputInputSize(
             wAxisIndex_ * wOutputInner_ + wOutputActual_ - 1, wGradInput_, wOutput_);
 
-    // 搬运 y_grad 的实际长度
     dGradInputActual_ = dEndRightCornerIdx_ - dStLeftCornerIdx_;
     hGradInputActual_ = hEndRightCornerIdx_ - hStLeftCornerIdx_;
     wGradInputActual_ = wEndRightCornerIdx_ - wStLeftCornerIdx_;
 
-    // 按转置接口对齐
     highAxisAligned_ = highAxisInner_;
     wGradInputAligned_ = CeilAlign(wGradInputActual_, static_cast<int64_t>(MAX_DATA_NUM_IN_ONE_BLOCK));
 
-    // 输入转置列数
     inputColNum_ = dGradInputActual_ * hGradInputActual_ * wGradInputAligned_;
 
     wOutputAligned_ = CeilAlign(wOutputActual_, static_cast<int64_t>(MAX_DATA_NUM_IN_ONE_BLOCK));
 
-    // 输出转置列数
     outputRowNum_ = dOutputActual_ * hOutputActual_ * wOutputAligned_;
     outputRowNumAligned_ = CeilAlign(outputRowNum_, static_cast<int64_t>(TRANS_ADDR_LEN));
 
-    // GM 偏移
     highAxisGradInputOffset_ = highAxisIndex_ * highAxisInner_ * gradInputPlaneSize_;
     dAxisGradInputOffset_ = dStLeftCornerIdx_ * hGradInput_ * wGradInput_;
     hAxisGradInputOffset_ = hStLeftCornerIdx_ * wGradInput_;
@@ -353,9 +345,13 @@ template <typename T, typename INDEX>
 __aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::CopyIn()
 {
     LocalTensor<T> gradInputLocal = inputQue_.AllocTensor<T>();
-    Duplicate(gradInputLocal, (T)0, inputQueBufferSize_ / sizeof(T));
 
-    // 当前 tile 的起始偏移
+    // 先清零整个 UB buffer，保证尾块/未覆盖位置没有脏数据
+    Duplicate(gradInputLocal, (T)0, inputQueBufferSize_ / sizeof(T));
+    event_t eventIDVToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE2));
+    SetFlag<HardEvent::V_MTE2>(eventIDVToMte2);
+    WaitFlag<HardEvent::V_MTE2>(eventIDVToMte2);
+
     const int64_t gradInputGmOffset =
         highAxisGradInputOffset_ + dAxisGradInputOffset_ +
         hAxisGradInputOffset_ + wAxisGradInputOffset_;
@@ -380,6 +376,9 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::CopyIn()
 
     SetLoopModePara(loopModeParams, DataCopyMVType::OUT_TO_UB);
     DataCopyPad(gradInputLocal, gradInputGm_[gradInputGmOffset], paramsIn, padParams);
+    event_t eventIDMte2ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
+    SetFlag<HardEvent::MTE2_S>(eventIDMte2ToS);
+    WaitFlag<HardEvent::MTE2_S>(eventIDMte2ToS);
     ResetLoopModePara(DataCopyMVType::OUT_TO_UB);
 
     inputQue_.EnQue(gradInputLocal);
@@ -494,7 +493,6 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::TransInp
 {
     LocalTensor<T> srcLocal = inputQue_.DeQue<T>();
     LocalTensor<T> dstLocal = transQue_.AllocTensor<T>();
-    Duplicate(dstLocal, (T)0, transQueBufferSize_ / sizeof(T));
 
     if constexpr (IsSameType<T, float>::value) {
         this->template TransposeB32<T>(dstLocal, srcLocal, rowNum, colNum);
@@ -503,11 +501,11 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::TransInp
     }
 
     PIPE_V_S();
+
     inputQue_.FreeTensor(srcLocal);
     transQue_.EnQue(dstLocal);
 }
 
-// 求一个输入点覆盖当前 tile 的输出区间
 template <typename T, typename INDEX>
 __aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::CalcOutputRangeFromInputIndex(
     int64_t inputIdxGlobal,
@@ -529,13 +527,11 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::CalcOutp
     const int64_t stClamped = stGlobal > tileStart ? stGlobal : tileStart;
     const int64_t edClamped = edGlobal < tileEnd ? edGlobal : tileEnd;
 
-    // 转换为局部索引
     stLocal = stClamped - tileStart;
     edLocal = edClamped - tileStart;
     coverCount = edGlobal - stGlobal;
 }
 
-// 批量 scatter 回 x_grad
 template <typename T, typename INDEX>
 __aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::AccumulateOutputRowsForInputPointReg(
     LocalTensor<T> srcLocal,
@@ -580,19 +576,15 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::Accumula
                         const int64_t outRow = hRowBase + static_cast<int64_t>(stW + ow);
                         const int64_t outBase = outRow * highAxisAligned_;
 
-                        // gather 同一（d,h,w）位置所有 NC 上的点
                         __local_mem__ T* dstAddr =
                             (__local_mem__ T*)dstLocal[outBase + processed].GetPhyAddr();
+
                         MicroAPI::DataCopy(dstReg, dstAddr);
                         MicroAPI::Add(dstReg, dstReg, scaledReg, computeMask);
                         MicroAPI::DataCopy(dstAddr, dstReg, computeMask);
                     }
                 }
             }
-
-            MicroAPI::LocalMemBar<
-                MicroAPI::MemType::VEC_STORE,
-                MicroAPI::MemType::VEC_LOAD>();
         }
 
         processed += curCount;
@@ -647,16 +639,13 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::Accumula
                         const int64_t outBase = outRow * highAxisAligned_;
                         __local_mem__ COMPUTE_TYPE* dstAddr =
                             (__local_mem__ COMPUTE_TYPE*)dstLocal[outBase + processed].GetPhyAddr();
+
                         MicroAPI::DataCopy(dstReg, dstAddr);
                         MicroAPI::Add(dstReg, dstReg, scaledReg, computeMask);
                         MicroAPI::DataCopy(dstAddr, dstReg, computeMask);
                     }
                 }
             }
-
-            MicroAPI::LocalMemBar<
-                MicroAPI::MemType::VEC_STORE,
-                MicroAPI::MemType::VEC_LOAD>();
         }
 
         processed += curCount;
@@ -668,7 +657,13 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::Compute(
 {
     LocalTensor<T> srcLocal = transQue_.DeQue<T>();
     LocalTensor<T> dstLocal = transOutQue_.AllocTensor<T>();
+
     Duplicate(dstLocal, (T)0, transOutQueBufferSize_ / sizeof(T));
+    __VEC_SCOPE__ {
+        MicroAPI::LocalMemBar<
+            MicroAPI::MemType::VEC_STORE,
+            MicroAPI::MemType::VEC_LOAD>();
+    }
 
     for (int64_t sdLocal = 0; sdLocal < dGradInputActual_; ++sdLocal) {
         int64_t stD = 0;
@@ -685,14 +680,12 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::Compute(
             edD,
             coverD);
 
-        // 快速判断当前 y_grad 点在 x_grad 内有没有作出贡献
         if (edD <= stD || coverD <= 0) {
             continue;
         }
 
         const int64_t dBase = sdLocal * hGradInputActual_ * wGradInputAligned_;
 
-        // 对于每一个 y_grad，计算它会回传到当前 x_grad 中的哪些位置
         for (int64_t shLocal = 0; shLocal < hGradInputActual_; ++shLocal) {
             int64_t stH = 0;
             int64_t edH = 0;
@@ -741,6 +734,7 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::Compute(
 
                 const int64_t inBase = (hBase + swLocal) * highAxisAligned_;
                 const T scale = static_cast<T>(1.0f / static_cast<float>(kernelSize));
+
                 AccumulateOutputRowsForInputPointReg(
                     srcLocal,
                     dstLocal,
@@ -772,9 +766,18 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::ComputeW
     const uint32_t dstElemCount = static_cast<uint32_t>(outputRowNumAligned_ * highAxisAligned_);
 
     Cast(srcLocal, srcLocalT, RoundMode::CAST_NONE, srcElemCount);
-    PIPE_V_S();
+    __VEC_SCOPE__ {
+        MicroAPI::LocalMemBar<
+            MicroAPI::MemType::VEC_STORE,
+            MicroAPI::MemType::VEC_LOAD>();
+    }
 
     Duplicate(dstLocal, static_cast<COMPUTE_TYPE>(0), dstElemCount);
+    __VEC_SCOPE__ {
+        MicroAPI::LocalMemBar<
+            MicroAPI::MemType::VEC_STORE,
+            MicroAPI::MemType::VEC_LOAD>();
+    }
 
     for (int64_t sdLocal = 0; sdLocal < dGradInputActual_; ++sdLocal) {
         int64_t stD = 0;
@@ -846,6 +849,7 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::ComputeW
                 const int64_t inBase = (hBase + swLocal) * highAxisAligned_;
                 const COMPUTE_TYPE scale =
                     static_cast<COMPUTE_TYPE>(1.0f / static_cast<float>(kernelSize));
+
                 AccumulateOutputRowsForInputPointRegFp32(
                     srcLocal,
                     dstLocal,
@@ -860,8 +864,6 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::ComputeW
             }
         }
     }
-
-    PIPE_V_S();
 
     LocalTensor<T> dstLocalT = transOutQue_.AllocTensor<T>();
     Cast(dstLocalT, dstLocal, RoundMode::CAST_RINT, dstElemCount);
@@ -879,7 +881,6 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::TransOut
 
     LocalTensor<T> srcLocal = transOutQue_.DeQue<T>();
     LocalTensor<T> dstLocal = transQue_.AllocTensor<T>();
-    Duplicate(dstLocal, (T)0, transQueBufferSize_ / sizeof(T));
 
     if constexpr (IsSameType<T, float>::value) {
         this->template TransposeB32<T>(dstLocal, srcLocal, rowNum, colNum);
@@ -888,6 +889,7 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::TransOut
     }
 
     PIPE_V_S();
+
     transOutQue_.FreeTensor(srcLocal);
     transQue_.EnQue(dstLocal);
 }
@@ -923,6 +925,9 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWSmallKernel<T, INDEX>::CopyOut(
 
     SetLoopModePara(loopModeParams, DataCopyMVType::UB_TO_OUT);
     DataCopyPad(yGm_[outputGmOffset], yLocal, valueParams);
+    event_t eventIDMte3ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_S));
+    SetFlag<HardEvent::MTE3_S>(eventIDMte3ToS);
+    WaitFlag<HardEvent::MTE3_S>(eventIDMte3ToS);
     ResetLoopModePara(DataCopyMVType::UB_TO_OUT);
 
     transQue_.FreeTensor(yLocal);

@@ -137,7 +137,6 @@ bool AdaptiveAvgPool3dGradTilingSmallKernel::IsCapable()
     kernelH = Ops::Base::CeilDiv(gradOutputH, gradInputH);
     kernelW = Ops::Base::CeilDiv(gradOutputW, gradInputW);
 
-    //魔鬼数字
     if (kernelD * kernelH * kernelW >= KERNEL_SIZE_MAX ||
         baseData.inputNCSize < HIGH_THRESHOLD ||
         gradInputW * gradInputH * gradInputD < WINSIZE_THRESHOLD) {
@@ -158,7 +157,6 @@ bool AdaptiveAvgPool3dGradTilingSmallKernel::IsCapable()
     splitData.dOutputInner = 1;
     splitData.hOutputInner = 1;
     splitData.wOutputInner = 1;
-
     DoBufferCalculate();
     return splitData.totalBufferSize <= baseData.availableUb;
 }
@@ -207,7 +205,6 @@ void AdaptiveAvgPool3dGradTilingSmallKernel::DynamicAdjustmentAlignDWH()
     }
 }
 
-// 对齐kernel的长度切，不想切太碎
 void AdaptiveAvgPool3dGradTilingSmallKernel::SplitAlignDHW()
 {
     splitData.highAxisInner = baseData.proDataNumInOneBeatT2;

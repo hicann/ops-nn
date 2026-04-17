@@ -101,6 +101,7 @@ struct AdaptiveAvgPool3dNCDHWGradSmallKernelTilingDataV35 {
     int64_t transOutQueBufferSize = 0;
 };
 
+// 大 kernel tiling data
 struct AdaptiveAvgPool3dNCDHWGradBigKernelTilingDataV35 {
     int64_t dInput = 0;
     int64_t hInput = 0;

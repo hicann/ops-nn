@@ -85,7 +85,6 @@ bool AdaptiveAvgPool3dGradTilingBigKernel::IsCapable()
     splitData.highAxisInner = 1;
     splitData.dOutputInner = 1;
     splitData.hOutputInner = 1;
-
     splitData.wOutputInner = std::min(gradOutputW, baseData.proDataNumInOneBeatT2);
     DoBufferCalculate();
     return splitData.totalBufferSize <= baseData.availableUb;
