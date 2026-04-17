@@ -76,7 +76,6 @@ protected:
 
     // for kernel split param
     bool enableSplitKernel_ = false;
-    uint8_t kernelSplitMode_ = 0;
     uint32_t kSCoutFullLoad_ = 0;
     uint32_t kSUseWorkSpace_ = 0;
     uint64_t usrSpaceSizeForKernelSplit_ = 0;

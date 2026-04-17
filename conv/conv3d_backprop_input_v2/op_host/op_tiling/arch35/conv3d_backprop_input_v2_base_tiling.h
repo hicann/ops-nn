@@ -266,6 +266,7 @@ protected:
     bool hasScaleFlag_ = false;
     uint8_t loadB2Condition_ = 0;
     uint8_t loadB1Condition_ = 0;
+    uint8_t kernelSplitMode_ = 0;
     uint8_t groupConvMode_ = TILING_GROUP_MODE_ORIGIN;
     platform_ascendc::SocVersion shortSocVersion_;
 	NpuArch npuArch_;

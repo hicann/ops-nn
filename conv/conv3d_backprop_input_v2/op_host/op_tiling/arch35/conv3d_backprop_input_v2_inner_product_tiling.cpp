@@ -540,7 +540,7 @@ void Conv3DDXV2InnerProductTiling::TranslateRunInfoData() {
     tilingData_.conv3DDxTiling.dk = runInfo_.kernel_d;
     tilingData_.conv3DDxTiling.hk = runInfo_.kernel_h;
     tilingData_.conv3DDxTiling.wk = runInfo_.kernel_w;
-    tilingData_.conv3DDxTiling.group = runInfo_.groups;
+    tilingData_.conv3DDxTiling.group = runInfo_.real_g;
     tilingData_.conv3DDxTiling.oriGroup = runInfo_.groups;
     tilingData_.conv3DDxTiling.strideD = runInfo_.stride_d;
     tilingData_.conv3DDxTiling.strideH = runInfo_.stride_h;
@@ -601,6 +601,7 @@ void Conv3DDXV2InnerProductTiling::TranslateTuningData(std::shared_ptr<tuningtil
     tilingData_.conv3DDxKSTiling.kSUseWorkSpace = tunerTiling->kSUseWorkSpace;
     loadB1Condition_ = tunerTiling->loadB1Condition;
     loadB2Condition_ = tunerTiling->loadB2Condition;
+    kernelSplitMode_ = tunerTiling->kernelSplitMode;
 }
 
 ge::graphStatus Conv3DDXV2InnerProductTiling::DoLibApiTiling()
@@ -666,7 +667,7 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::GetWorkspaceSize()
 uint64_t Conv3DDXV2InnerProductTiling::GetTilingKey() const
 {
     const uint64_t tilingKey = GET_TPL_TILING_KEY(loadB2Condition_, 0, groupConvMode_, true, loadB1Condition_);
-    OP_LOGD(context_->GetNodeName(), "loadB2Condition_, loadB1Condition_ is: [%u, %u]", loadB2Condition_, loadB1Condition_);
+    OP_LOGD(context_->GetNodeName(), "loadB2Condition_, loadB1Condition_, kernelSplitMode_ is: [%u, %u, %u]", loadB2Condition_, loadB1Condition_, kernelSplitMode_);
     return tilingKey;
 }
 

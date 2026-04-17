@@ -112,6 +112,7 @@ TUNING_TILING_DATA_FIELD_DEF(uint64_t, kSCoutFullLoad);
 TUNING_TILING_DATA_FIELD_DEF(uint64_t, kSUseWorkSpace);
 TUNING_TILING_DATA_FIELD_DEF(uint8_t, loadB2Condition);
 TUNING_TILING_DATA_FIELD_DEF(uint8_t, loadB1Condition);
+TUNING_TILING_DATA_FIELD_DEF(uint8_t, kernelSplitMode);
 END_TUNING_TILING_DEF
 
 DECLARE_SCHEMA(Conv3DBackpropInputTunerTiling,
@@ -158,6 +159,7 @@ DECLARE_SCHEMA(Conv3DBackpropInputTunerTiling,
   FIELD(Conv3DBackpropInputTunerTiling, kSCoutFullLoad),
   FIELD(Conv3DBackpropInputTunerTiling, kSUseWorkSpace),
   FIELD(Conv3DBackpropInputTunerTiling, loadB2Condition),
-  FIELD(Conv3DBackpropInputTunerTiling, loadB1Condition));
+  FIELD(Conv3DBackpropInputTunerTiling, loadB1Condition),
+  FIELD(Conv3DBackpropInputTunerTiling, kernelSplitMode));
 }  // namespace tuningtiling
 #endif
