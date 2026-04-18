@@ -16,7 +16,6 @@
 #define SYNC_BN_TRAINING_UPDATE_PROTO_H
 
 #include "graph/operator_reg.h"
-#include "graph/operator.h"
 
 namespace ge {
 /**

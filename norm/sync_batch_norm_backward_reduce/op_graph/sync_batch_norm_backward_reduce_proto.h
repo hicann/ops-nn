@@ -16,7 +16,6 @@
 #define SYNC_BATCH_NORM_BACKWARD_REDUCE_PROTO_H
 
 #include "graph/operator_reg.h"
-#include "graph/operator.h"
 
 namespace ge {
 /**
