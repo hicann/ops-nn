@@ -848,7 +848,7 @@ static bool IndicesBroadcastUndeter(FVector<const aclTensor*, DIMLIMIT>& allIndi
     OP_LOGD("Enter IndicesBroadcast");
     bool needBroadcast = false;
     std::vector<int64_t> tensorShape;
-    CHECK_RET(ComputeBroadCastShape(allIndices, tensorShape), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(ComputeBroadCastShape(allIndices, tensorShape), false);
     uint64_t tensorShapeDim = tensorShape.size();
     auto dstDtype = op::DataType::DT_INT64;
     auto valueShapeBroad = executor->AllocIntArray(tensorShape.data(), tensorShapeDim);
@@ -946,9 +946,9 @@ static const aclTensor* SortedIndexPutProcess(const aclTensor* selfCast, const a
     auto valueSizeTensor = executor->ConvertToTensor(valueSize.data(), valueSize.size(), DataType::DT_INT32);
 
     // Indices Broadcast
-    auto ret = IndicesBroadcastUndeter(allIndices, executor);   // scalar tensor will be broadcast
+    auto ret = IndicesBroadcastUndeter(definedIndices, executor);   // scalar tensor will be broadcast
     CHECK_RET(ret, nullptr);
-    auto allIndicesTensorList = executor->AllocTensorList(allIndices.data(), allIndices.size());
+    auto allIndicesTensorList = executor->AllocTensorList(definedIndices.data(), definedIndices.size());
 
     // LinearIndexV2
     auto linearIndex = l0op::LinearIndexV2(allIndicesTensorList, strideTensor, valueSizeTensor, executor);
