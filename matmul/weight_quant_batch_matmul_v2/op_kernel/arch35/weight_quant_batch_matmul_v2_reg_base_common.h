@@ -1704,7 +1704,7 @@ __aicore__ inline void WeightQuantBatchMatmulV2RegBaseCommonKernel<
 
     WaitFlag<HardEvent::V_MTE2>(ubInBufIdx_);
 
-    int32_t bubNLen = CeilAlign(Min(vecNBL1Len_, static_cast<int64_t>(tiling_->nBubSize)), BLOCK_CUBE);
+    int32_t bubNLen = Min(vecNBL1Len_, static_cast<int64_t>(tiling_->nBubSize));
     CopyInWeight(kBL1Offset, nBL1Offset, bubKLen, bubNLen);
     CopyInScaleOffset(nBL1Offset, bubNLen, 0, 0, kBL1Offset, 1);
     SetFlag<HardEvent::MTE2_V>(ubInBufIdx_);
