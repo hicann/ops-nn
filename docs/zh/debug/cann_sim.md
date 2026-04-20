@@ -43,8 +43,6 @@ bash build.sh --pkg --soc=Ascend950 --vendor_name=custom --ops=add_example
 ./build_out/cann-ops-nn-${vendor_name}_linux-${arch}.run
 ```
 
-* 参考[aclnn调用](../invocation/op_invocation.md#aclnn调用)完成test_aclnn_add_example.cpp的编译，编出可执行文件test_aclnn_add_example
-
 ## 执行仿真命令
 
 ```
