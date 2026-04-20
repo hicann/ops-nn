@@ -786,6 +786,14 @@ void Conv3DDXV2InnerProductTiling::AdjustBaseMWhenSmallN(uint32_t& baseM, uint32
     uint64_t alingedMValue = Ops::Base::CeilAlign(tilingRunInfo.mValue, static_cast<uint64_t>(tilingRunInfo_.m0));
     
     uint32_t maxBaseM = CalculateMaxBaseM(baseN);
+    int64_t bpPadRight = runInfo_.dedx_w - (static_cast<int64_t>(runInfo_.dedy_w - 1) * runInfo_.stride_w + 1) +
+        (runInfo_.kernel_w - 1) * runInfo_.dilation_w - runInfo_.backprop_pad_l;
+    int64_t bpPadDown = runInfo_.dedx_h - (static_cast<int64_t>(runInfo_.dedy_h - 1) * runInfo_.stride_h + 1) +
+                        (runInfo_.kernel_h - 1) * runInfo_.dilation_h - runInfo_.backprop_pad_u;
+    if ((runInfo_.backprop_pad_l > PAD_DIM_UP || runInfo_.backprop_pad_u > PAD_DIM_UP ||
+        bpPadRight > PAD_DIM_UP || bpPadDown > PAD_DIM_UP) && maxBaseM > BASIC_BLOCK_SIZE_512) {
+        maxBaseM = BASIC_BLOCK_SIZE_512;
+    }
     uint32_t mL0cMax = ONE_U32;
     if (baseN > 0 && tilingRunInfo_.n0 > 0) {
         mL0cMax = std::max(l0cMaxNum / baseN / tilingRunInfo_.n0, ONE_U32) * tilingRunInfo_.n0;
