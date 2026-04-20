@@ -132,7 +132,7 @@ __aicore__ inline void GatherNdZero<T1>::Process() {
     uint64_t beginRowIdx = cBlockIdx * blockFactor;
     uint64_t endRowdx = (cBlockIdx + 1) * blockFactor < indicesNum ? (cBlockIdx + 1) * blockFactor : indicesNum;
     uint64_t ubLoop = (gatherSize + ubFactor - 1) / ubFactor;
-    uint64_t ubTail = gatherSize % ubFactor;
+    uint64_t ubTail = gatherSize - ubFactor * (ubLoop - 1);
 
     for (uint64_t b = beginRowIdx; b < endRowdx; b++) {
       for (uint64_t u = 0; u < ubLoop; u++) {
