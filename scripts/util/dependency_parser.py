@@ -11,10 +11,12 @@
 # ----------------------------------------------------------------------------
 
 import os
+import re
 import sys
 import argparse
 import logging
 import subprocess
+from pathlib import Path
 
 
 KEYS = ['OP_CATEGORY', 'OP_NAME', 'HOSTNAME', 'MODE', 'DIR', 'OPTYPE', 'ACLNNTYPE', 'DEPENDENCIES']
@@ -35,12 +37,6 @@ def args_parse():
                         nargs='?',
                         required=True,
                         help='Build path.')
-    
-    parser.add_argument('--peo',
-                        nargs='?',
-                        required=False,
-                        default=None,
-                        help='All PyTorch extension operators.')
 
     return parser.parse_args()
 
@@ -51,14 +47,29 @@ def set_dict_value(dict_value, key, value):
     dict_value[key].append(value)
 
 
+
+def check_pytorch_extension_op(cmake_file: Path) -> bool:
+    if not cmake_file.exists():
+        return False
+    try:
+        add_sources_pattern = re.compile(r'add_sources\s*\([^)]*\)')
+        comment_pattern = re.compile(r'#[^\n]*')
+        content = cmake_file.read_text(encoding='utf-8')
+        content_no_comment = comment_pattern.sub('', content)
+        return add_sources_pattern.search(content_no_comment) is not None
+    except (IOError, UnicodeDecodeError) as e:
+        logging.warning('Failed to read CMakeLists.txt: %s, error: %s', cmake_file, e)
+        return False
+
+
 class OpDependenciesParser:
-    def __init__(self, build_path, pytorch_extension_ops=None):
+    def __init__(self, build_path):
         self.all_ops_dependency = {}
         self.all_ops_reverse_dependency = {}
         self.all_ops = ["add_example", "add_example_aicpu"]
         self.all_category_ops = {}
         self.parse_dependency(build_path)
-        self.set_pe_ops(pytorch_extension_ops)
+        self.parse_pytorch_extension_ops(build_path)
         pass
 
     def find_all_dependency(self, op, result_dependencies, all_dependencies, src_op):
@@ -114,13 +125,22 @@ class OpDependenciesParser:
                     set_dict_value(self.all_ops_dependency, op, common_name)
 
 
-    def set_pe_ops(self, pe_ops):
-        if pe_ops:
-            for pe_op in pe_ops.strip().split(';'):
-                op_category = pe_op.strip().split(',')[0]
-                op_type = pe_op.strip().split(',')[1]
-                set_dict_value(self.all_category_ops, op_category, op_type)
-                self.all_ops.append(op_type)
+    def parse_pytorch_extension_ops(self, build_path):
+        experimental_path = Path(build_path).resolve().parent / 'experimental'
+        if not experimental_path.exists():
+            logging.warning('experimental directory not found: %s', experimental_path)
+            return
+
+        for op_class_dir in experimental_path.iterdir():
+            if not op_class_dir.is_dir():
+                continue
+            for op_dir in op_class_dir.iterdir():
+                if not op_dir.is_dir():
+                    continue
+                cmake_file = op_dir / 'CMakeLists.txt'
+                if check_pytorch_extension_op(cmake_file):
+                    set_dict_value(self.all_category_ops, op_class_dir.name, op_dir.name)
+                    self.all_ops.append(op_dir.name)
 
 
     def get_dependencies_by_ops(self, ops):
@@ -149,7 +169,7 @@ def find_category(ops_list, all_category_ops):
 
 def main():
     args = args_parse()
-    parser = OpDependenciesParser(args.path, args.peo)
+    parser = OpDependenciesParser(args.path)
     (op_dependencies, reverse_op_dependencies) = parser.get_dependencies_by_ops(args.ops.split(';'))
     op_dependencies = ';'.join(op_dependencies)
     reverse_op_dependencies = ';'.join(reverse_op_dependencies)

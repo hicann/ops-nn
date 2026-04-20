@@ -621,7 +621,6 @@ checkopts() {
   VERBOSE=""
   BUILD_MODE=""
   COMPILED_OPS=""
-  PE_OPS=""
   UT_TEST_ALL=FALSE
   CHANGED_FILES=""
   CI_MODE=FALSE
@@ -1215,29 +1214,11 @@ build_pkg() {
   print_success "Build package success!"
 }
 
-find_pytorch_extension_ops() {
-  for category_dir in "${BASE_PATH}/experimental"/*/; do
-    for op_dir in "$category_dir"*/; do
-      if [ -n "$op_dir/CMakeLists.txt" ]; then
-        if grep -qE "^\s*add_sources\s*\(" "$op_dir/CMakeLists.txt" 2>/dev/null; then
-          category_name=$(basename "$category_dir")
-          op_name=$(basename "$op_dir")
-          if [ -n "$PE_OPS" ]; then
-            PE_OPS="$PE_OPS;$category_name,$op_name"
-          else
-            PE_OPS="$category_name,$op_name"
-          fi
-        fi
-      fi
-    done
-  done
-}
-
 parse_op_dependencies() {
   echo $dotted_line
   echo "Start to parse op dependencies for ${COMPILED_OPS}"
   cd "${BUILD_PATH}"
-  python3 ${BASE_PATH}/scripts/util/dependency_parser.py --ops ${COMPILED_OPS} -p ${BUILD_PATH} --peo ${PE_OPS}
+  python3 ${BASE_PATH}/scripts/util/dependency_parser.py --ops ${COMPILED_OPS} -p ${BUILD_PATH}
   echo "End to parse op dependencies"
   echo $dotted_line
 }
@@ -1564,13 +1545,30 @@ package_static() {
 }
 
 build_pytorch_extension() {
+  PE_OPS=""
+  for category_dir in "${BASE_PATH}/experimental"/*/; do
+    for op_dir in "$category_dir"*/; do
+      if [ -f "$op_dir/CMakeLists.txt" ]; then
+        if grep -qE "^\s*add_sources\s*\(" "$op_dir/CMakeLists.txt" 2>/dev/null; then
+          category_name=$(basename "$category_dir")
+          op_name=$(basename "$op_dir")
+          if [ -n "$PE_OPS" ]; then
+            PE_OPS="$PE_OPS;$op_name"
+          else
+            PE_OPS="$op_name"
+          fi
+        fi
+      fi
+    done
+  done
+
   if [[ -z "$PE_OPS" ]]; then
     return 0
   fi
   ENABLE_BUILD_PE=FALSE
   if [[ -n "$COMPILED_OPS" ]]; then
     for op in ${COMPILED_OPS//;/ }; do
-      if [[ "$PE_OPS;" == *",$op;"* ]]; then
+      if [[ ";$PE_OPS;" == *";$op;"* ]]; then
         ENABLE_BUILD_PE=TRUE
         break
       fi
@@ -1603,7 +1601,6 @@ main() {
     exit $?
   fi
   cmake_init
-  find_pytorch_extension_ops
 
   if [[ "$CI_MODE" == "TRUE" ]]; then
     set_ci_mode

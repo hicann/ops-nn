@@ -233,3 +233,7 @@ cpu_result = cpu_x + cpu_y
 assert torch.allclose(cpu_result, result.cpu(), rtol=1e-6)
 print("验证成功！")
 ```
+
+> [!NOTE] 注意
+>
+> 不同芯片型号的代码需要使用宏进行隔离，否则会导致whl包编译失败

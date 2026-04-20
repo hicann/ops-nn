@@ -63,7 +63,7 @@ BUILD_OUT_DIR="$OPS_NN_DIR/build_out"
 VALID_OPS=""
 for category_dir in "$EXPERIMENTAL_DIR"/*/; do
   for op_dir in "$category_dir"*/; do
-    if [ -n "$op_dir/CMakeLists.txt" ]; then
+    if [ -f "$op_dir/CMakeLists.txt" ]; then
       if grep -qE "^\s*add_sources\s*\(" "$op_dir/CMakeLists.txt" 2>/dev/null; then
         op_name=$(basename "$op_dir")
         if [ -n "$VALID_OPS" ]; then
