@@ -116,7 +116,7 @@ ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context, int64_t& totalId
     auto inputShapeX = EnsureNotScalar(inputX->GetStorageShape());
     
     // 获取输入y的shape信息
-    auto inputY = = context->GetInputShape(1);
+    auto inputY = context->GetInputShape(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputY);
     auto inputShapeY = EnsureNotScalar(inputY->GetStorageShape());
     
