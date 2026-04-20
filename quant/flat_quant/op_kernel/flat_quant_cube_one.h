@@ -83,7 +83,7 @@ public:
             matmulInfo.splitCount2 = matmulInfo.splitCount * splitN;
             matmulInfo.splitCount1 = matmulInfo.splitCount * splitM;
         }
-        invalidK = static_cast<int64_t>(static_cast<float>(shape.K * shape.M - shape.Mceil) / static_cast<float>(shape.M));
+        invalidK = (shape.K * shape.M - shape.Mceil) / shape.M;
     }
 
     aifunc void Process(){

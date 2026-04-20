@@ -89,8 +89,7 @@ public:
         if (shape.K * shape.M - shape.Mceil < 0) {
             invalidK = -1;
         } else {
-            invalidK =
-                static_cast<int64_t>(static_cast<float>(shape.K * shape.M - shape.Mceil) / static_cast<float>(shape.M));
+            invalidK = (shape.K * shape.M - shape.Mceil) / shape.M;
         }
     }
 
