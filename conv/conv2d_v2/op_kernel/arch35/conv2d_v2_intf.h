@@ -72,6 +72,7 @@ struct Conv2dIntf {
         !(ConvParam::groupType == static_cast<int8_t>(ConvGroupType::NORMAL_CONV));
     constexpr static bool kl0FullLoadFlag = (ConvParam::l0PingPong == 1 || ConvParam::l0PingPong == 2) &&
                                             ConvParam::groupType != static_cast<int8_t>(ConvGroupType::ORI_GROUP_CONV);
+    constexpr static bool preFusionFlag = ConvParam::fmapDataSrc == 1;
 
     constexpr static bool kPreLoadAFlag =
         ConvParam::l1PingPong == static_cast<int8_t>(ConvL1PingPong::AL1_OPEN) && ConvParam::weightTiling == 0;
@@ -82,7 +83,7 @@ struct Conv2dIntf {
         ConvParam::groupType == static_cast<int8_t>(ConvGroupType::NORMAL_CONV);
     constexpr static bool kPreLoadFlag =
         kPreLoadAFlag || kPreLoadBFlag || kPreLoadABFlag;
-#if defined(FORMAT_FILTER) && (FORMAT_FILTER == FORMAT_FRACTAL_Z || FORMAT_FILTER == FORMAT_FRACTAL_Z_C04)
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
     constexpr static bool groupOptPreloadFlag = false;
 #else
     constexpr static bool groupOptPreloadFlag =
@@ -140,7 +141,17 @@ struct Conv2dIntf {
     constexpr static uint8_t sizeOfWeight = sizeof(WeightT);
     constexpr static uint8_t sizeOfBias = sizeof(BiasT);
     constexpr static uint8_t sizeOfScale = sizeof(ScaleT);
+    constexpr static uint8_t sizeOfReluWeight = sizeof(ReluWeightT);
     constexpr static uint8_t sizeOfL0c = sizeof(L0cT);
+
+    constexpr static bool isOneBatch = ConvParam::isBatchOne;
+    constexpr static bool isNoPad = ConvParam::isNoPad;
+
+    constexpr static bool isKL1NL0FullLoad = ConvParam::smallWeight == 1 || ConvParam::smallWeight == 2;
+    constexpr static bool isL0BFullLoadable = ConvParam::smallWeight == 2;
+    constexpr static bool isMPreLoad = isKL1NL0FullLoad && !isInnerBatchFlag &&
+                                       outputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE) &&
+                                       ConvParam::l1PingPong == static_cast<int8_t>(ConvL1PingPong::AL1_OPEN);
 
 public:
     ContextType ctx;
@@ -339,31 +350,42 @@ public:
     }
 
     template <bool sync = true>
-    __aicore__ inline bool Iterate(bool enPartialSum = false)
+     __aicore__ inline bool Iterate(bool enPartialSum = false, bool *updateL1Flag = nullptr)
     {
         using local = typename Ext::Iterate;
-        if constexpr (CONV_CHECK_FUN_TEMPLATE(local, Conv2dFunc, sync, this, enPartialSum)) {
-            return local::template call<sync>(this, enPartialSum);
+        if constexpr (CONV_CHECK_FUN_TEMPLATE(local, Conv2dFunc, sync, this, enPartialSum, updateL1Flag)) {
+            return local::template call<sync>(this, enPartialSum, updateL1Flag);
         }
         return false;
     }
 
-    template <template <typename> class TensorTypeT, bool sync = true>
-    __aicore__ inline void GetTensorC(const TensorTypeT<OutputT>& output, CopyUbInfo* ubInfo = nullptr, bool enSequentialWrite = false)
+    template <bool sync = true>
+    __aicore__ inline void PreFusionProcess(uint64_t& aL1Offset, AscendC::TEventID& eventIdMte3ToMte1,
+                                            AscendC::TEventID& eventIdMte1ToMte3)
+
     {
-        using local = typename Ext::GetTensorC;
-        if constexpr (CONV_CHECK_FUN_TEMPLATE(local, Conv2dFunc, TensorTypeT, this, output, ubInfo, enSequentialWrite)) {
-            local::template call<TensorTypeT, sync>(this, output, ubInfo, enSequentialWrite);
+        using local = typename Ext::PreFusionProcess;
+        if constexpr (CONV_CHECK_FUN_TEMPLATE(local, Conv2dFunc, sync, this, aL1Offset, eventIdMte3ToMte1, eventIdMte1ToMte3)) {
+            local::template call<sync>(this, aL1Offset, eventIdMte3ToMte1, eventIdMte1ToMte3);
         }
     }
 
-    template <template <typename> class TensorTypeT, bool sync = true>
+    template <template <typename> class TensorTypeT, const FixpipeConfig &config, bool sync = true>
+    __aicore__ inline void GetTensorC(const TensorTypeT<OutputT>& output, CopyUbInfo* ubInfo = nullptr, bool enSequentialWrite = false)
+    {
+        using local = typename Ext::GetTensorC;
+        if constexpr (CONV_CHECK_FUN_THREE_TEMPLATE(local, Conv2dFunc, TensorTypeT, config, sync, this, output, ubInfo, enSequentialWrite)) {
+            local::template call<TensorTypeT, config, sync>(this, output, ubInfo, enSequentialWrite);
+        }
+    }
+
+    template <template <typename> class TensorTypeT, const FixpipeConfig &config, bool sync = true>
     __aicore__ inline void GetTensorC(const TensorTypeT<OutputT>& output0, const GlobalTensor<Output1T>& output1,
                                       CopyUbInfo* ubInfo = nullptr, bool enSequentialWrite = false)
     {
         using local = typename Ext::GetTensorC;
-        if constexpr (CONV_CHECK_FUN_TEMPLATE(local, Conv2dFunc, TensorTypeT, this, output0, output1, ubInfo, enSequentialWrite)) {
-            local::template call<TensorTypeT, sync>(this, output0, output1, ubInfo, enSequentialWrite);
+        if constexpr (CONV_CHECK_FUN_THREE_TEMPLATE(local, Conv2dFunc, TensorTypeT, config, sync, this, output0, output1, ubInfo, enSequentialWrite)) {
+            local::template call<TensorTypeT, config, sync>(this, output0, output1, ubInfo, enSequentialWrite);
         }
     }
 };

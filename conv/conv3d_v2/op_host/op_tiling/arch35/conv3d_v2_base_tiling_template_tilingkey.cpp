@@ -43,7 +43,7 @@ uint64_t Conv3dV2BaseTilingKey::GetFmpTilingVal()
 
     uint64_t ci1 = CeilDiv(shapeInfo_.ci, convOpsConstParams_.k0);
     uint64_t fmpKSize = ci1 * shapeInfo_.kh * shapeInfo_.kd * shapeInfo_.kw * convOpsConstParams_.k0;
-    if (tilingData_.conv3dApiTiling.kAL1 == fmpKSize) {
+    if (tilingData_.convApiTiling.kAL1 == fmpKSize) {
         kAL1FullloadFlag = true;
     }
     if (flagInfo_.mSplitModeFlag) {
@@ -60,8 +60,8 @@ uint64_t Conv3dV2BaseTilingKey::GetFmpTilingValMMode(const bool kAL1FullloadFlag
 {
     bool mL1FullloadFlag = false;
     bool mL0FullloadFlag = false;
-    mL1FullloadFlag = tilingData_.conv3dApiTiling.singleCoreHo <= tilingData_.conv3dApiTiling.hoL1;
-    mL0FullloadFlag = tilingData_.conv3dApiTiling.hoL1 == tilingData_.conv3dApiTiling.hoL0;
+    mL1FullloadFlag = tilingData_.convApiTiling.singleCoreHo <= tilingData_.convApiTiling.hoL1;
+    mL0FullloadFlag = tilingData_.convApiTiling.hoL1 == tilingData_.convApiTiling.hoL0;
     if (kAL1FullloadFlag && mL1FullloadFlag) {
         return FULLLOAD_AL1;
     } else if (!kAL1FullloadFlag && mL1FullloadFlag && mL0FullloadFlag) {
@@ -76,15 +76,15 @@ uint64_t Conv3dV2BaseTilingKey::GetFmpTilingValHWMode(const bool kAL1FullloadFla
     bool woL1FullloadFlag = false;
     bool hoL0FullloadFlag = false;
     bool woL0FullloadFlag = false;
-    hoL1FullloadFlag = tilingData_.conv3dApiTiling.singleCoreHo <= tilingData_.conv3dApiTiling.hoL1;
-    if (tilingData_.conv3dApiTiling.singleCoreWo <= tilingData_.conv3dApiTiling.woL1 &&
-        !(CeilDiv(tilingData_.conv3dApiTiling.singleCoreWo, tilingData_.conv3dApiTiling.woL0) > 1 &&
-        tilingData_.conv3dApiTiling.singleCoreWo % convOpsConstParams_.m0 > 0 &&
-        tilingData_.conv3dApiTiling.hoL0 > 1)) {
+    hoL1FullloadFlag = tilingData_.convApiTiling.singleCoreHo <= tilingData_.convApiTiling.hoL1;
+    if (tilingData_.convApiTiling.singleCoreWo <= tilingData_.convApiTiling.woL1 &&
+        !(CeilDiv(tilingData_.convApiTiling.singleCoreWo, tilingData_.convApiTiling.woL0) > 1 &&
+        tilingData_.convApiTiling.singleCoreWo % convOpsConstParams_.m0 > 0 &&
+        tilingData_.convApiTiling.hoL0 > 1)) {
         woL1FullloadFlag = true;
     }
-    hoL0FullloadFlag = tilingData_.conv3dApiTiling.hoL1 == tilingData_.conv3dApiTiling.hoL0;
-    woL0FullloadFlag = tilingData_.conv3dApiTiling.woL1 == tilingData_.conv3dApiTiling.woL0;
+    hoL0FullloadFlag = tilingData_.convApiTiling.hoL1 == tilingData_.convApiTiling.hoL0;
+    woL0FullloadFlag = tilingData_.convApiTiling.woL1 == tilingData_.convApiTiling.woL0;
     if (kAL1FullloadFlag && hoL1FullloadFlag && woL1FullloadFlag) {
         return FULLLOAD_AL1;
     } else if (!kAL1FullloadFlag && hoL1FullloadFlag && hoL0FullloadFlag && woL1FullloadFlag && woL0FullloadFlag) {
@@ -105,11 +105,11 @@ uint64_t Conv3dV2BaseTilingKey::GetWeightTilingVal()
     uint64_t ci1 = CeilDiv(shapeInfo_.ci, k0);
     uint64_t weightKSize = ci1 * shapeInfo_.kd * shapeInfo_.kh * shapeInfo_.kw * k0;
     uint64_t singleCoreNSize = AlignB(CeilDiv(shapeInfo_.co, numBlocksRes_.nDim), n0);
-    if (tilingData_.conv3dApiTiling.kBL1 == weightKSize) {
+    if (tilingData_.convApiTiling.kBL1 == weightKSize) {
         kBL1FullloadFlag = true;
     }
  
-    if (tilingData_.conv3dApiTiling.nBL1 == singleCoreNSize) {
+    if (tilingData_.convApiTiling.nBL1 == singleCoreNSize) {
         nBL1FullloadFlag = true;
     }
  
@@ -117,7 +117,7 @@ uint64_t Conv3dV2BaseTilingKey::GetWeightTilingVal()
         return FULLLOAD_BL1;
     }
  
-    if (!kBL1FullloadFlag && tilingData_.conv3dApiTiling.nL0 == singleCoreNSize) {
+    if (!kBL1FullloadFlag && tilingData_.convApiTiling.nL0 == singleCoreNSize) {
         return ONLY_N_FULLLOAD_BL1_BL0;
     }
     return WEIGHT_OTHER;
@@ -126,7 +126,7 @@ uint64_t Conv3dV2BaseTilingKey::GetWeightTilingVal()
  
 uint64_t Conv3dV2BaseTilingKey::GetL1PingPongVal()
 {
-    uint64_t l1PingPong = static_cast<uint64_t>(tilingData_.conv3dApiTiling.pBufferFlag & 0x18) >> L1_PB_OFFSET;
+    uint64_t l1PingPong = static_cast<uint64_t>(tilingData_.convApiTiling.pBufferFlag & 0x18) >> L1_PB_OFFSET;
     // in group conv: only care about bl1 pingpong
     if (flagInfo_.convGroupType != ConvGroupType::NORMAL_CONV) {
         if (l1PingPong == L1_PB_BL1_OPEN || l1PingPong == L1_PB_ALL_OPEN) {
@@ -140,7 +140,7 @@ uint64_t Conv3dV2BaseTilingKey::GetL1PingPongVal()
 
 uint64_t Conv3dV2BaseTilingKey::GetL0PingPongVal()
 {
-    return static_cast<uint64_t>(tilingData_.conv3dApiTiling.pBufferFlag & L0A_L0B_PB_FLAG_MASK);
+    return static_cast<uint64_t>(tilingData_.convApiTiling.pBufferFlag & L0A_L0B_PB_FLAG_MASK);
 }
 
 uint64_t Conv3dV2BaseTilingKey::GetOutputOrderVal()
@@ -175,7 +175,7 @@ void Conv3dV2BaseTilingKey::GetTemplateTilingKey(ConvTilingKeyPara& tilingKeyPar
     tilingKeyPara.l1PingPong = GetL1PingPongVal();
     tilingKeyPara.l0PingPong = GetL0PingPongVal();
     tilingKeyPara.outputOrder = GetOutputOrderVal();
-    tilingKeyPara.iterOrder = static_cast<uint64_t>(tilingData_.conv3dApiTiling.iterateMNOrder);
+    tilingKeyPara.iterOrder = static_cast<uint64_t>(tilingData_.convApiTiling.iterateMNOrder);
     tilingKeyPara.groupType = static_cast<uint64_t>(flagInfo_.convGroupType);
     ReSetTilingKeyPara(tilingKeyPara);
 }

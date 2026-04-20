@@ -51,6 +51,7 @@ struct TConv3DTiling {
     uint64_t kernelHxkernelW = 0;
     uint64_t cin1xOriHixOriWixk0 = 0;
     uint64_t oriHixOriWixk0 = 0;
+    uint64_t unionDataXt = 0;
     uint64_t oriWixk0 = 0;
     uint64_t orgHixWi = 0;
     uint64_t orgHoxWo = 0;
@@ -155,8 +156,8 @@ struct Conv3DRunInfo {
 };
 
 struct Conv3DV2TilingData {
-    TConv3DTiling conv3dApiTiling;
-    Conv3DRunInfo conv3dRunInfo;
+    TConv3DTiling convApiTiling;
+    Conv3DRunInfo convRunInfo;
 };
 
 #pragma pack(pop)

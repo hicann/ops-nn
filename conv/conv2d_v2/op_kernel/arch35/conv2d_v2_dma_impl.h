@@ -28,14 +28,13 @@ template <class Intf>
 class DmaProcessTools {
 public:
     __aicore__ inline DmaProcessTools() {}
-
-    __aicore__ inline bool DmaUpdateAL1(Intf *self)
+    __aicore__ inline bool DmaUpdateAL1(Intf *self, const uint64_t& kIter)
     {
         if (self->ctx.loadUB2L1Iter >= self->ctx.aL1LoadTimes) {
             return false;
         }
     
-        if (!((self->ctx.kIter == self->ctx.ddr2l0LoopK - 1) || ((self->ctx.kIter + 1) % self->ctx.multiKAL1 == 0))) {
+        if (!((kIter == self->ctx.ddr2l0LoopK - 1) || ((kIter + 1) % self->ctx.multiKAL1 == 0))) {
             return false;
         }
     
@@ -60,14 +59,14 @@ public:
         return updateAL1Flag;
     }
  
-    __aicore__ inline void DmaSyncSet(Intf *self)
+    __aicore__ inline void DmaSyncSet(Intf *self, const uint64_t& kIter)
     {
-        if (!DmaUpdateAL1(self)) {
+        if (!DmaUpdateAL1(self, kIter)) {
             return;
         }
     
         CrossCoreSetFlag<CV_ENHANCE_MODE, PIPE_MTE1>(CV_SYNC_ID_MTE1_MTE3);
-        if (self->ctx.convTiling->cinAInCore > Intf::k0) {
+        if (self->ctx.convTilingData->convApiTiling.cinAInCore > Intf::k0) {
             CrossCoreSetFlag<CV_ENHANCE_MODE, PIPE_MTE1>(VEC_ID_MAX + CV_SYNC_ID_MTE1_MTE3);
         }
     }
@@ -75,7 +74,7 @@ public:
     __aicore__ inline void DmaSyncWait(Intf *self)
     {
         CrossCoreWaitFlag<CV_ENHANCE_MODE, PIPE_MTE1>(CV_SYNC_ID_MTE3_MTE1);
-        if (self->ctx.convTiling->cinAInCore > Intf::k0) {
+        if (self->ctx.convTilingData->convApiTiling.cinAInCore > Intf::k0) {
             CrossCoreWaitFlag<CV_ENHANCE_MODE, PIPE_MTE1>(VEC_ID_MAX + CV_SYNC_ID_MTE3_MTE1);
         }
         self->ctx.loadUB2L1Iter++;
@@ -84,9 +83,9 @@ public:
     __aicore__ inline void DmaCalcAL1LoadTimes(Intf *self)
     {
         if (!self->ctx.kAL1fullload) {
-            uint64_t ddr2L0LoopN = CeilDiv(self->ctx.singleCoreCo, self->ctx.convTiling->nL0);
-            uint64_t ddr2L0LoopH = CeilDiv(self->ctx.singleCoreHo, self->ctx.convTiling->hoL0);
-            uint64_t ddr2L0LoopW = CeilDiv(self->ctx.singleCoreWo, self->ctx.convTiling->woL0);
+            uint64_t ddr2L0LoopN = CeilDiv(self->ctx.singleCoreCo, self->ctx.convTilingData->convApiTiling.nL0);
+            uint64_t ddr2L0LoopH = CeilDiv(self->ctx.singleCoreHo, self->ctx.convTilingData->convApiTiling.hoL0);
+            uint64_t ddr2L0LoopW = CeilDiv(self->ctx.singleCoreWo, self->ctx.convTilingData->convApiTiling.woL0);
             self->ctx.ddr2l1LoopKA = self->ctx.maxKAL1Iter + 1;
     
             self->ctx.aL1LoadTimes = ddr2L0LoopN * ddr2L0LoopH * ddr2L0LoopW * self->ctx.ddr2l1LoopKA *
@@ -104,59 +103,59 @@ public:
     __aicore__ inline void DmaUpdateHWValue(Intf *self)
     {
         self->ctx.currentHoL1 = self->ctx.hoAL1Iter == self->ctx.maxHoL1Iter ?
-            self->ctx.hoAL1Tail : self->ctx.convTiling->hoL1;
+            self->ctx.hoAL1Tail : self->ctx.convTilingData->convApiTiling.hoL1;
     
         self->ctx.currentWoL1 = self->ctx.woAL1Iter == self->ctx.maxWoL1Iter ?
-            self->ctx.woAL1Tail : self->ctx.convTiling->woL1;
+            self->ctx.woAL1Tail : self->ctx.convTilingData->convApiTiling.woL1;
     
         self->ctx.currentHoL1xWoL1Align = self->ctx.currentHoL1 * AlignB(self->ctx.currentWoL1, BLOCK_L0_M);
     
         if (!self->ctx.kAL1fullload) {
-            self->ctx.l12l0LoopH = CeilDiv(self->ctx.currentHoL1, self->ctx.convTiling->hoL0);
-            self->ctx.l12l0LoopW = CeilDiv(self->ctx.currentWoL1, self->ctx.convTiling->woL0);
+            self->ctx.l12l0LoopH = CeilDiv(self->ctx.currentHoL1, self->ctx.convTilingData->convApiTiling.hoL0);
+            self->ctx.l12l0LoopW = CeilDiv(self->ctx.currentWoL1, self->ctx.convTilingData->convApiTiling.woL0);
             self->ctx.ddr2l1LoopInner = self->ctx.ddr2l1LoopTmp * self->ctx.l12l0LoopH * self->ctx.l12l0LoopW;
         }
     }
  
     __aicore__ inline void DmaInitKValue(Intf *self)
     {
-        self->ctx.kAL1Tail = (AlignB(self->ctx.singleCoreCi, Intf::k0) * self->ctx.convTiling->kernelHxkernelW) % self->ctx.convTiling->kAL1;
-        self->ctx.kAL1Tail = self->ctx.kAL1Tail == 0 ? self->ctx.convTiling->kAL1 : self->ctx.kAL1Tail;
-        if (self->ctx.vecId == 0 && CeilDiv(self->ctx.convTiling->cinATailInCore, Intf::k0) > 1) {
+        self->ctx.kAL1Tail = (AlignB(self->ctx.singleCoreCi, Intf::k0) * self->ctx.convTilingData->convApiTiling.kernelHxkernelW) % self->ctx.convTilingData->convApiTiling.kAL1;
+        self->ctx.kAL1Tail = self->ctx.kAL1Tail == 0 ? self->ctx.convTilingData->convApiTiling.kAL1 : self->ctx.kAL1Tail;
+        if (self->ctx.vecId == 0 && CeilDiv(self->ctx.convTilingData->convApiTiling.cinATailInCore, Intf::k0) > 1) {
             self->ctx.ciTail = Intf::k0;
         } else {
             self->ctx.ciTail = self->ctx.singleCoreCi % Intf::k0;
             self->ctx.ciTail = self->ctx.ciTail == 0 ? Intf::k0 : self->ctx.ciTail;
         }
     
-        self->ctx.ddr2l1LoopKA = CeilDiv(AlignB(self->ctx.singleCoreCi, Intf::k0) * self->ctx.convTiling->kernelHxkernelW,
-            self->ctx.convTiling->kAL1);
+        self->ctx.ddr2l1LoopKA = CeilDiv(AlignB(self->ctx.singleCoreCi, Intf::k0) * self->ctx.convTilingData->convApiTiling.kernelHxkernelW,
+            self->ctx.convTilingData->convApiTiling.kAL1);
         self->ctx.maxKAL1Iter = self->ctx.ddr2l1LoopKA - 1;
         self->ctx.kAL1fullload = self->ctx.ddr2l1LoopKA == 1;
     
-        uint32_t currentCi1 = self->ctx.convTiling->cinAInCore / Intf::k0;
+        uint32_t currentCi1 = self->ctx.convTilingData->convApiTiling.cinAInCore / Intf::k0;
         self->ctx.currentCi1Ub = CeilDiv(currentCi1, VEC_NUM);
     
         if (self->ctx.vecId == 1) {
             self->ctx.currentVec0Ci = self->ctx.currentCi1Ub * Intf::k0;
             self->ctx.currentCi1Ub = currentCi1 - self->ctx.currentCi1Ub;
-            self->ctx.vec0TotalSize = self->ctx.convTiling->hoL1 * self->ctx.convTiling->woL1 * self->ctx.currentVec0Ci *
-                                    self->ctx.convTiling->khL1 * self->ctx.convTiling->kwL1;
+            self->ctx.vec0TotalSize = self->ctx.convTilingData->convApiTiling.hoL1 * self->ctx.convTilingData->convApiTiling.woL1 * self->ctx.currentVec0Ci *
+                                    self->ctx.convTilingData->convApiTiling.khL1 * self->ctx.convTilingData->convApiTiling.kwL1;
         }
         self->ctx.maxVecCi1Iter = self->ctx.currentCi1Ub - 1;
     }
  
     __aicore__ inline void DmaInitHWValue(Intf *self)
     {
-        self->ctx.woAL1Tail = self->ctx.singleCoreWo % self->ctx.convTiling->woL1;
-        self->ctx.woAL1Tail = self->ctx.woAL1Tail == 0 ?  self->ctx.convTiling->woL1 : self->ctx.woAL1Tail;
+        self->ctx.woAL1Tail = self->ctx.singleCoreWo % self->ctx.convTilingData->convApiTiling.woL1;
+        self->ctx.woAL1Tail = self->ctx.woAL1Tail == 0 ?  self->ctx.convTilingData->convApiTiling.woL1 : self->ctx.woAL1Tail;
     
-        self->ctx.ddr2l1LoopW = CeilDiv(self->ctx.singleCoreWo, self->ctx.convTiling->woL1);
+        self->ctx.ddr2l1LoopW = CeilDiv(self->ctx.singleCoreWo, self->ctx.convTilingData->convApiTiling.woL1);
         self->ctx.maxWoL1Iter = self->ctx.ddr2l1LoopW  - 1;
     
-        self->ctx.hoAL1Tail = self->ctx.singleCoreHo % self->ctx.convTiling->hoL1;
-        self->ctx.hoAL1Tail = self->ctx.hoAL1Tail == 0 ? self->ctx.convTiling->hoL1 : self->ctx.hoAL1Tail;
-        self->ctx.ddr2l1LoopH = CeilDiv(self->ctx.singleCoreHo, self->ctx.convTiling->hoL1);
+        self->ctx.hoAL1Tail = self->ctx.singleCoreHo % self->ctx.convTilingData->convApiTiling.hoL1;
+        self->ctx.hoAL1Tail = self->ctx.hoAL1Tail == 0 ? self->ctx.convTilingData->convApiTiling.hoL1 : self->ctx.hoAL1Tail;
+        self->ctx.ddr2l1LoopH = CeilDiv(self->ctx.singleCoreHo, self->ctx.convTilingData->convApiTiling.hoL1);
         self->ctx.maxHoL1Iter = self->ctx.ddr2l1LoopH - 1;
     
         DmaUpdateHWValue(self);
@@ -165,58 +164,55 @@ public:
     __aicore__ inline void DmaInitIterValue(Intf *self)
     {
         if constexpr (Intf::iterateMFirstFlag) {
-            self->ctx.nBL1Tail = self->ctx.singleCoreCo % self->ctx.convTiling->nBL1;
-            self->ctx.nBL1Tail = self->ctx.nBL1Tail == 0 ? self->ctx.convTiling->nBL1 : self->ctx.nBL1Tail;
+            self->ctx.nBL1Tail = self->ctx.singleCoreCo % self->ctx.convTilingData->convApiTiling.nBL1;
+            self->ctx.nBL1Tail = self->ctx.nBL1Tail == 0 ? self->ctx.convTilingData->convApiTiling.nBL1 : self->ctx.nBL1Tail;
     
-            self->ctx.ddr2l1LoopN = CeilDiv(self->ctx.singleCoreCo, self->ctx.convTiling->nBL1);
+            self->ctx.ddr2l1LoopN = CeilDiv(self->ctx.singleCoreCo, self->ctx.convTilingData->convApiTiling.nBL1);
             self->ctx.maxNBL1Iter = self->ctx.ddr2l1LoopN - 1;
     
             if (!self->ctx.kAL1fullload) {
-                self->ctx.ddr2l1LoopTmp = self->ctx.convTiling->multiNBL1;
+                self->ctx.ddr2l1LoopTmp = self->ctx.convTilingData->convApiTiling.multiNBL1;
             }
         } else {
             if (!self->ctx.kAL1fullload) {
-                self->ctx.ddr2l1LoopTmp = CeilDiv(self->ctx.singleCoreCo, self->ctx.convTiling->nL0);
+                self->ctx.ddr2l1LoopTmp = CeilDiv(self->ctx.singleCoreCo, self->ctx.convTilingData->convApiTiling.nL0);
             }
         }
     }
  
     __aicore__ inline void DmaInitBuf(Intf *self)
     {
-        self->ctx.ubBufSize = self->ctx.convTiling->hoL1 * AlignB(self->ctx.convTiling->woL1, BLOCK_L0_M) *
-                            self->ctx.convTiling->khUb * self->ctx.convTiling->kwUb * Intf::k0;
+        self->ctx.ubBufSize = self->ctx.convTilingData->convApiTiling.hoL1 * AlignB(self->ctx.convTilingData->convApiTiling.woL1, BLOCK_L0_M) *
+                            self->ctx.convTilingData->convApiTiling.khUb * self->ctx.convTilingData->convApiTiling.kwUb * Intf::k0;
     
         self->ctx.pipe.InitBuffer(self->ctx.ubBuf, self->ctx.ubBufSize * Intf::sizeOfFmap);
         self->ctx.img2ColTensor = self->ctx.ubBuf.template Get<typename Intf::FmapT>();
     
-        self->ctx.pipe.InitBuffer(self->ctx.aL1TBuf, self->ctx.convTiling->aL1SpaceSize);
+        self->ctx.pipe.InitBuffer(self->ctx.aL1TBuf, self->ctx.convTilingData->convApiTiling.aL1SpaceSize);
         self->ctx.al1 = self->ctx.aL1TBuf.template Get<typename Intf::FmapT>();
     }
  
     __aicore__ inline void DmaVecInit(Intf *self)
     {
         self->ctx.vecId = GetSubBlockIdx();
-    
-        self->ctx.orgCi = self->ctx.convTiling->orgCi;
-        self->ctx.orgHi = self->ctx.convTiling->orgHi;
-        self->ctx.orgWi = self->ctx.convTiling->orgWi;
-        self->ctx.singleCoreCi = self->ctx.convTiling->singleCoreCi;
-        self->ctx.singleCoreCo = self->ctx.convTiling->singleCoreCo;
-        self->ctx.singleCoreHo = self->ctx.convTiling->singleCoreHo;
-        self->ctx.singleCoreWo = self->ctx.convTiling->singleCoreWo;
-        self->ctx.vecKhLoopTimes = CeilDiv(self->ctx.convTiling->khL1, self->ctx.convTiling->khUb);
+
+        self->ctx.singleCoreCo = self->ctx.convTilingData->convApiTiling.singleCoreCo;
+        self->ctx.singleCoreHo = self->ctx.convTilingData->convApiTiling.singleCoreHo;
+        self->ctx.singleCoreWo = self->ctx.convTilingData->convApiTiling.singleCoreWo;
+        self->ctx.singleCoreCi = self->ctx.convTilingData->convApiTiling.singleCoreCi;
+        self->ctx.vecKhLoopTimes = CeilDiv(self->ctx.convTilingData->convApiTiling.khL1, self->ctx.convTilingData->convApiTiling.khUb);
         self->ctx.maxVecKhIter = self->ctx.vecKhLoopTimes - 1;
-        self->ctx.vecKwLoopTimes = CeilDiv(self->ctx.convTiling->kwL1, self->ctx.convTiling->kwUb);
+        self->ctx.vecKwLoopTimes = CeilDiv(self->ctx.convTilingData->convApiTiling.kwL1, self->ctx.convTilingData->convApiTiling.kwUb);
         self->ctx.maxVecKwIter = self->ctx.vecKwLoopTimes - 1;
-        self->ctx.ddr2L1LoopKh = CeilDiv(self->ctx.convTiling->kernelH, self->ctx.convTiling->khL1);
+        self->ctx.ddr2L1LoopKh = CeilDiv(self->ctx.convTilingData->convApiTiling.kernelH, self->ctx.convTilingData->convApiTiling.khL1);
         self->ctx.maxKhAL1Iter = self->ctx.ddr2L1LoopKh - 1;
-        self->ctx.ddr2L1LoopKw = CeilDiv(self->ctx.convTiling->kernelW, self->ctx.convTiling->kwL1);
+        self->ctx.ddr2L1LoopKw = CeilDiv(self->ctx.convTilingData->convApiTiling.kernelW, self->ctx.convTilingData->convApiTiling.kwL1);
         self->ctx.maxKwAL1Iter = self->ctx.ddr2L1LoopKw - 1;
-        self->ctx.cinAL1 = self->ctx.convTiling->kAL1 / (self->ctx.convTiling->khL1 * self->ctx.convTiling->kwL1);
+        self->ctx.cinAL1 = self->ctx.convTilingData->convApiTiling.kAL1 / (self->ctx.convTilingData->convApiTiling.khL1 * self->ctx.convTilingData->convApiTiling.kwL1);
         self->ctx.cinAL1LoopTimes = CeilDiv(self->ctx.singleCoreCi, self->ctx.cinAL1);
         self->ctx.maxCinAL1Iter = self->ctx.cinAL1LoopTimes - 1;
     
-        self->ctx.fmapOneBatchSize = self->ctx.convTiling->orgCi * self->ctx.convTiling->orgHixWi;
+        self->ctx.fmapOneBatchSize = self->ctx.convTilingData->convApiTiling.orgCi * self->ctx.convTilingData->convApiTiling.orgHixWi;
     
         DmaInitBuf(self);
         DmaInitKValue(self);
@@ -229,12 +225,12 @@ public:
 
     __aicore__ inline void DmaCubeInit(Intf *self)
     {
-        self->ctx.ddr2L1LoopKh = CeilDiv(self->ctx.convTiling->kernelH, self->ctx.convTiling->khL1);
+        self->ctx.ddr2L1LoopKh = CeilDiv(self->ctx.convTilingData->convApiTiling.kernelH, self->ctx.convTilingData->convApiTiling.khL1);
         self->ctx.maxKhAL1Iter = self->ctx.ddr2L1LoopKh - 1;
-        self->ctx.ddr2L1LoopKw = CeilDiv(self->ctx.convTiling->kernelW, self->ctx.convTiling->kwL1);
+        self->ctx.ddr2L1LoopKw = CeilDiv(self->ctx.convTilingData->convApiTiling.kernelW, self->ctx.convTilingData->convApiTiling.kwL1);
         self->ctx.maxKwAL1Iter = self->ctx.ddr2L1LoopKw - 1;
-        self->ctx.cinBL1 = CeilDiv(self->ctx.convTiling->kBL1, self->ctx.convTiling->khL1 * self->ctx.convTiling->kwL1);
-        self->ctx.cinBL1LoopTimes = CeilDiv(self->ctx.convTiling->singleCoreCi, self->ctx.cinBL1);
+        self->ctx.cinBL1 = CeilDiv(self->ctx.convTilingData->convApiTiling.kBL1, self->ctx.convTilingData->convApiTiling.khL1 * self->ctx.convTilingData->convApiTiling.kwL1);
+        self->ctx.cinBL1LoopTimes = CeilDiv(self->ctx.convTilingData->convApiTiling.singleCoreCi, self->ctx.cinBL1);
     }
  
     __aicore__ inline void DmaUpdateLoopInner(Intf *self) {
@@ -244,12 +240,12 @@ public:
     
         if constexpr (Intf::iterateMFirstFlag) {
             self->ctx.ddr2l1LoopTmp = self->ctx.nBL1Iter == self->ctx.maxNBL1Iter ? 
-                CeilDiv(self->ctx.nBL1Tail, self->ctx.convTiling->nL0) : self->ctx.convTiling->multiNBL1;
+                CeilDiv(self->ctx.nBL1Tail, self->ctx.convTilingData->convApiTiling.nL0) : self->ctx.convTilingData->convApiTiling.multiNBL1;
         }
     
         self->ctx.ddr2l1LoopInner = self->ctx.ddr2l1LoopTmp * self->ctx.l12l0LoopH * self->ctx.l12l0LoopW;
     }
-    
+ 
     __aicore__ inline void DmaIterInit(Intf *self)
     {
         self->ctx.kAL1Iter = 0;

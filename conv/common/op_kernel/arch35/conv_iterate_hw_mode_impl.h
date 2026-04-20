@@ -28,11 +28,11 @@ template <class Intf>
 static __aicore__ inline void InitHoDirectionValue(Intf *self)
 {
     // Ho方向L1及L0均全载时相关变量赋值
-    self->ctx.hoAL1Tail = self->ctx.singleCoreHo % self->ctx.convTiling->hoL1;
-    self->ctx.hoAL1Tail = self->ctx.hoAL1Tail == 0 ? self->ctx.convTiling->hoL1 : self->ctx.hoAL1Tail;
+    self->ctx.hoAL1Tail = self->ctx.singleCoreHo % self->ctx.convTilingData->convApiTiling.hoL1;
+    self->ctx.hoAL1Tail = self->ctx.hoAL1Tail == 0 ? self->ctx.convTilingData->convApiTiling.hoL1 : self->ctx.hoAL1Tail;
     self->ctx.currentHoL1 = self->ctx.hoAL1Tail;
-    self->ctx.hoL0Tail = self->ctx.currentHoL1 % self->ctx.convTiling->hoL0;
-    self->ctx.hoL0Tail = self->ctx.hoL0Tail == 0 ? self->ctx.convTiling->hoL0 : self->ctx.hoL0Tail;
+    self->ctx.hoL0Tail = self->ctx.currentHoL1 % self->ctx.convTilingData->convApiTiling.hoL0;
+    self->ctx.hoL0Tail = self->ctx.hoL0Tail == 0 ? self->ctx.convTilingData->convApiTiling.hoL0 : self->ctx.hoL0Tail;
     self->ctx.currentHoL0 = self->ctx.hoL0Tail;
 
     // Ho方向变量计算
@@ -40,7 +40,7 @@ static __aicore__ inline void InitHoDirectionValue(Intf *self)
         self->ctx.ddr2l1LoopH = 1;
         self->ctx.maxHoL1Iter = 0;
     } else {
-        self->ctx.ddr2l1LoopH = CeilDiv(self->ctx.singleCoreHo, self->ctx.convTiling->hoL1);
+        self->ctx.ddr2l1LoopH = CeilDiv(self->ctx.singleCoreHo, self->ctx.convTilingData->convApiTiling.hoL1);
         self->ctx.maxHoL1Iter = self->ctx.ddr2l1LoopH - 1;
     }
 }
@@ -49,26 +49,26 @@ template <class Intf>
 static __aicore__ inline void InitWoDirectionValue(Intf *self)
 {
     // Wo方向L1及L0均全载时相关变量赋值
-    self->ctx.woAL1Tail = self->ctx.singleCoreWo % self->ctx.convTiling->woL1;
-    self->ctx.woAL1Tail = self->ctx.woAL1Tail == 0 ?  self->ctx.convTiling->woL1 : self->ctx.woAL1Tail;
+    self->ctx.woAL1Tail = self->ctx.singleCoreWo % self->ctx.convTilingData->convApiTiling.woL1;
+    self->ctx.woAL1Tail = self->ctx.woAL1Tail == 0 ?  self->ctx.convTilingData->convApiTiling.woL1 : self->ctx.woAL1Tail;
     self->ctx.currentWoL1 = self->ctx.woAL1Tail;
     self->ctx.maxWoL1Iter = 0;
-    self->ctx.woL0Tail = self->ctx.currentWoL1 % self->ctx.convTiling->woL0;
-    self->ctx.woL0Tail = self->ctx.woL0Tail == 0 ? self->ctx.convTiling->woL0 : self->ctx.woL0Tail;
+    self->ctx.woL0Tail = self->ctx.currentWoL1 % self->ctx.convTilingData->convApiTiling.woL0;
+    self->ctx.woL0Tail = self->ctx.woL0Tail == 0 ? self->ctx.convTilingData->convApiTiling.woL0 : self->ctx.woL0Tail;
     self->ctx.currentWoL0 = self->ctx.woL0Tail;
     self->ctx.maxWoL0Iter = 0;
     self->ctx.l12l0LoopW = 1;
 
     // Wo方向变量计算
     if constexpr (Intf::hasWL1IterFlag) {
-        self->ctx.maxWoL1Iter = CeilDiv(self->ctx.singleCoreWo, self->ctx.convTiling->woL1) - 1;
+        self->ctx.maxWoL1Iter = CeilDiv(self->ctx.singleCoreWo, self->ctx.convTilingData->convApiTiling.woL1) - 1;
     }
 
     if constexpr (!Intf::isDmaFlag) {
-        if (Intf::hasWL0IterFlag && self->ctx.convTiling->hoL0 > 1 && self->ctx.woAL1Tail % BLOCK_L0_N > 0 &&
-            CeilDiv(self->ctx.woAL1Tail, self->ctx.convTiling->woL0) > 1) {
-            self->ctx.woL1SmallTail = self->ctx.woAL1Tail % self->ctx.convTiling->woL0;
-            self->ctx.woAL1Tail = (self->ctx.woAL1Tail / self->ctx.convTiling->woL0) * self->ctx.convTiling->woL0;
+        if (Intf::hasWL0IterFlag && self->ctx.convTilingData->convApiTiling.hoL0 > 1 && self->ctx.woAL1Tail % BLOCK_L0_N > 0 &&
+            CeilDiv(self->ctx.woAL1Tail, self->ctx.convTilingData->convApiTiling.woL0) > 1) {
+            self->ctx.woL1SmallTail = self->ctx.woAL1Tail % self->ctx.convTilingData->convApiTiling.woL0;
+            self->ctx.woAL1Tail = (self->ctx.woAL1Tail / self->ctx.convTilingData->convApiTiling.woL0) * self->ctx.convTilingData->convApiTiling.woL0;
         }
         
         if (self->ctx.woL1SmallTail > 0) {
@@ -89,17 +89,17 @@ __aicore__ inline void CalcWoDirectionVar(Intf *self)
             } else if (self->ctx.woAL1Iter == self->ctx.maxWoL1Iter - 1) {
                 self->ctx.currentWoL1 = self->ctx.woAL1Tail;
             } else {
-                self->ctx.currentWoL1 = self->ctx.convTiling->woL1;
+                self->ctx.currentWoL1 = self->ctx.convTilingData->convApiTiling.woL1;
             }
         } else {
             self->ctx.currentWoL1 = self->ctx.woAL1Iter == self->ctx.maxWoL1Iter ?
-                self->ctx.woAL1Tail : self->ctx.convTiling->woL1;
+                self->ctx.woAL1Tail : self->ctx.convTilingData->convApiTiling.woL1;
         }
     }
     if constexpr (Intf::hasWL0IterFlag) {
-        self->ctx.woL0Tail = self->ctx.currentWoL1 % self->ctx.convTiling->woL0;
-        self->ctx.woL0Tail = self->ctx.woL0Tail == 0 ? self->ctx.convTiling->woL0 : self->ctx.woL0Tail;
-        self->ctx.maxWoL0Iter = CeilDiv(self->ctx.currentWoL1, self->ctx.convTiling->woL0) - 1;
+        self->ctx.woL0Tail = self->ctx.currentWoL1 % self->ctx.convTilingData->convApiTiling.woL0;
+        self->ctx.woL0Tail = self->ctx.woL0Tail == 0 ? self->ctx.convTilingData->convApiTiling.woL0 : self->ctx.woL0Tail;
+        self->ctx.maxWoL0Iter = CeilDiv(self->ctx.currentWoL1, self->ctx.convTilingData->convApiTiling.woL0) - 1;
         self->ctx.l12l0LoopW = self->ctx.maxWoL0Iter + 1;
     }
 }
@@ -109,13 +109,13 @@ __aicore__ inline void CalcHoDirectionVar(Intf *self)
 {
     if constexpr (Intf::hasHL1IterFlag) {
         self->ctx.currentHoL1 = self->ctx.hoAL1Iter == self->ctx.maxHoL1Iter ?
-            self->ctx.hoAL1Tail : self->ctx.convTiling->hoL1;
+            self->ctx.hoAL1Tail : self->ctx.convTilingData->convApiTiling.hoL1;
     }
     
     if constexpr (Intf::hasHL0IterFlag) {
-        self->ctx.hoL0Tail = self->ctx.currentHoL1 % self->ctx.convTiling->hoL0;
-        self->ctx.hoL0Tail = self->ctx.hoL0Tail == 0 ? self->ctx.convTiling->hoL0 : self->ctx.hoL0Tail;
-        self->ctx.maxHoL0Iter = CeilDiv(self->ctx.currentHoL1, self->ctx.convTiling->hoL0) - 1;
+        self->ctx.hoL0Tail = self->ctx.currentHoL1 % self->ctx.convTilingData->convApiTiling.hoL0;
+        self->ctx.hoL0Tail = self->ctx.hoL0Tail == 0 ? self->ctx.convTilingData->convApiTiling.hoL0 : self->ctx.hoL0Tail;
+        self->ctx.maxHoL0Iter = CeilDiv(self->ctx.currentHoL1, self->ctx.convTilingData->convApiTiling.hoL0) - 1;
         self->ctx.l12l0LoopH = self->ctx.maxHoL0Iter + 1;
     }
 }
@@ -124,36 +124,36 @@ template <class Intf>
 __aicore__ inline void UpdateHoL0WoL0(Intf *self)
 {
     self->ctx.currentHoL0 = self->ctx.hoL0Iter == self->ctx.maxHoL0Iter ?
-        self->ctx.hoL0Tail : self->ctx.convTiling->hoL0;
+        self->ctx.hoL0Tail : self->ctx.convTilingData->convApiTiling.hoL0;
     self->ctx.currentWoL0 = self->ctx.woL0Iter == self->ctx.maxWoL0Iter ?
-        self->ctx.woL0Tail : self->ctx.convTiling->woL0;
+        self->ctx.woL0Tail : self->ctx.convTilingData->convApiTiling.woL0;
 }
 
 template <class Intf>
 __aicore__ inline void CalcGroupOptParamForHWMode(Intf *self)
 {
     if (((self->ctx.groupOptIter + 1 == self->ctx.singleGroupOpt - 1 && self->ctx.groupOptIter != 0) ||
-        self->ctx.singleGroupOpt == 1) && self->ctx.updateEnlarge != self->ctx.convTiling->enlarge) {
+        self->ctx.singleGroupOpt == 1) && self->ctx.updateEnlarge != self->ctx.convTilingData->convApiTiling.enlarge) {
         self->ctx.singleGroups = self->ctx.updateEnlarge;
-        self->ctx.singleGroups = self->ctx.singleGroups == 0 ? self->ctx.convTiling->enlarge : self->ctx.singleGroups;
+        self->ctx.singleGroups = self->ctx.singleGroups == 0 ? self->ctx.convTilingData->convApiTiling.enlarge : self->ctx.singleGroups;
     }
-    uint64_t enlargeTail = self->ctx.singleGroups % self->ctx.convTiling->enlarge;
-    enlargeTail = enlargeTail == 0 ? self->ctx.convTiling->enlarge : enlargeTail;
-    if (enlargeTail != self->ctx.convTiling->enlarge) {
-        self->ctx.singleCoreCi = enlargeTail * (self->ctx.convTiling->orgCi / self->ctx.convTiling->groups);
+    uint64_t enlargeTail = self->ctx.singleGroups % self->ctx.convTilingData->convApiTiling.enlarge;
+    enlargeTail = enlargeTail == 0 ? self->ctx.convTilingData->convApiTiling.enlarge : enlargeTail;
+    if (enlargeTail != self->ctx.convTilingData->convApiTiling.enlarge) {
+        self->ctx.singleCoreCi = enlargeTail * (self->ctx.convTilingData->convApiTiling.orgCi / self->ctx.convTilingData->convApiTiling.groups);
         if (self->ctx.groupOptIter == self->ctx.singleGroupOpt - 1) {
             self->ctx.singleCoreCo = self->ctx.updateSingleCoOpt;
 
-            uint64_t totalKAlignK0 = AlignB(self->ctx.singleCoreCi, Intf::k0) * self->ctx.convTiling->kernelHxkernelW;
-            self->ctx.ddr2l0LoopK = CeilDiv(totalKAlignK0, self->ctx.convTiling->kL0);
+            uint64_t totalKAlignK0 = AlignB(self->ctx.singleCoreCi, Intf::k0) * self->ctx.convTilingData->convApiTiling.kernelHxkernelW;
+            self->ctx.ddr2l0LoopK = CeilDiv(totalKAlignK0, self->ctx.convTilingData->convApiTiling.kL0);
             self->ctx.maxKL0Iter = self->ctx.ddr2l0LoopK - 1;
-            self->ctx.kL0Tail = totalKAlignK0 % self->ctx.convTiling->kL0;
+            self->ctx.kL0Tail = totalKAlignK0 % self->ctx.convTilingData->convApiTiling.kL0;
             if constexpr (Intf::k0 != Intf::k0FmapTail) {
                 self->ctx.kAL0Tail = AlignB(self->ctx.singleCoreCi, Intf::k0FmapTail) *
-                    self->ctx.convTiling->kernelHxkernelW % self->ctx.convTiling->kL0;
-                self->ctx.kAL0Tail = self->ctx.kAL0Tail == 0 ? self->ctx.convTiling->kL0 : self->ctx.kAL0Tail;
+                    self->ctx.convTilingData->convApiTiling.kernelHxkernelW % self->ctx.convTilingData->convApiTiling.kL0;
+                self->ctx.kAL0Tail = self->ctx.kAL0Tail == 0 ? self->ctx.convTilingData->convApiTiling.kL0 : self->ctx.kAL0Tail;
             }
-            self->ctx.kL0Tail = self->ctx.kL0Tail == 0 ? self->ctx.convTiling->kL0 : self->ctx.kL0Tail;
+            self->ctx.kL0Tail = self->ctx.kL0Tail == 0 ? self->ctx.convTilingData->convApiTiling.kL0 : self->ctx.kL0Tail;
             
             InitCoDirectionValue<Intf>(self);
         }
@@ -199,18 +199,18 @@ __aicore__ inline void FirstIterateImplHWMode(Intf *self)
     CalcCoDirectionVar<Intf>(self);
 
     if constexpr (Intf::groupOptPreloadFlag) {
-        if (self->ctx.singleGroupOpt == 1 && self->ctx.updateEnlarge != self->ctx.convTiling->enlarge) {
+        if (self->ctx.singleGroupOpt == 1 && self->ctx.updateEnlarge != self->ctx.convTilingData->convApiTiling.enlarge) {
             self->ctx.singleGroups = self->ctx.updateEnlarge;
             self->ctx.singleGroups = self->ctx.singleGroups == 0 ?
-                self->ctx.convTiling->enlarge : self->ctx.singleGroups;
+                self->ctx.convTilingData->convApiTiling.enlarge : self->ctx.singleGroups;
             CalcGroupOptParamForHWMode<Intf>(self);
         }
         LoadAL1BaseModule<Intf>(self);
         self->ctx.loadAL1Flag = true;
-        if (self->ctx.singleGroupOpt == 2 && self->ctx.updateEnlarge != self->ctx.convTiling->enlarge) {
+        if (self->ctx.singleGroupOpt == 2 && self->ctx.updateEnlarge != self->ctx.convTilingData->convApiTiling.enlarge) {
             self->ctx.singleGroups = self->ctx.updateEnlarge;
             self->ctx.singleGroups = self->ctx.singleGroups == 0 ?
-                self->ctx.convTiling->enlarge : self->ctx.singleGroups;
+                self->ctx.convTilingData->convApiTiling.enlarge : self->ctx.singleGroups;
             CalcGroupOptParamForHWMode<Intf>(self);
         }
     }
@@ -367,7 +367,7 @@ __aicore__ inline bool IterateMFirstHWMode(Intf *self)
         if (self->ctx.groupOptIter != self->ctx.singleGroupOpt) {
             return true;
         } else if (self->ctx.groupOptIter == self->ctx.singleGroupOpt - 1) {
-            if (self->ctx.updateSingleCoOpt == 0 && self->ctx.updateEnlarge != self->ctx.convTiling->enlarge) {
+            if (self->ctx.updateSingleCoOpt == 0 && self->ctx.updateEnlarge != self->ctx.convTilingData->convApiTiling.enlarge) {
                 return false;
             }
             return true;

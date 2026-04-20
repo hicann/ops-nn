@@ -660,7 +660,7 @@ TEST(TestConv3dTilingEngine, GetConv3dApiTiling_HF32)
     bool ok = engine.GetConv3dApiTiling(tilingData);
 
     EXPECT_TRUE(ok);
-    EXPECT_EQ(tilingData.conv3dApiTiling.hf32Enable, 1); // Should be enabled
+    EXPECT_EQ(tilingData.convApiTiling.hf32Enable, 1); // Should be enabled
 }
 
 TEST(TestConv3dTilingEngine, GetConv3DV2TilingData_Load3DViolation)
@@ -1114,24 +1114,24 @@ TEST(TestConv3dTilingEngine, IntegrationTest_FullPipelineSuccess)
 
     // Verify all major fields are populated
     // Verify input shape is set
-    EXPECT_GT(tilingData.conv3dApiTiling.orgDi, 0);
-    EXPECT_GT(tilingData.conv3dApiTiling.orgHi, 0);
-    EXPECT_GT(tilingData.conv3dApiTiling.orgWi, 0);
+    EXPECT_GT(tilingData.convApiTiling.orgDi, 0);
+    EXPECT_GT(tilingData.convApiTiling.orgHi, 0);
+    EXPECT_GT(tilingData.convApiTiling.orgWi, 0);
 
     // Verify output shape is set
-    EXPECT_GT(tilingData.conv3dApiTiling.orgDo, 0);
-    EXPECT_GT(tilingData.conv3dApiTiling.orgHo, 0);
-    EXPECT_GT(tilingData.conv3dApiTiling.orgWo, 0);
+    EXPECT_GT(tilingData.convApiTiling.orgDo, 0);
+    EXPECT_GT(tilingData.convApiTiling.orgHo, 0);
+    EXPECT_GT(tilingData.convApiTiling.orgWo, 0);
 
     // Verify kernel shape is set
-    EXPECT_GT(tilingData.conv3dApiTiling.kernelD, 0);
-    EXPECT_GT(tilingData.conv3dApiTiling.kernelH, 0);
-    EXPECT_GT(tilingData.conv3dApiTiling.kernelW, 0);
+    EXPECT_GT(tilingData.convApiTiling.kernelD, 0);
+    EXPECT_GT(tilingData.convApiTiling.kernelH, 0);
+    EXPECT_GT(tilingData.convApiTiling.kernelW, 0);
 
     // Verify block dimension related fields are set
-    EXPECT_GT(tilingData.conv3dRunInfo.batchDim, 0);
-    EXPECT_GT(tilingData.conv3dRunInfo.mDim, 0);
-    EXPECT_GT(tilingData.conv3dRunInfo.nDim, 0);
+    EXPECT_GT(tilingData.convRunInfo.batchDim, 0);
+    EXPECT_GT(tilingData.convRunInfo.mDim, 0);
+    EXPECT_GT(tilingData.convRunInfo.nDim, 0);
 }
 
 TEST(TestConv3dTilingEngine, IntegrationTest_MultiGroupComplexShape)

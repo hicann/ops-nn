@@ -29,10 +29,10 @@ class C04ProcessTools {
 public:
     __aicore__ inline C04ProcessTools() {}
 
-    __aicore__ inline bool C04UpdateBL1(Intf *self)
+    __aicore__ inline bool C04UpdateBL1(Intf *self, const uint64_t &kIter)
     {
-        if (!((self->ctx.kIter == self->ctx.ddr2l0LoopK - 1) ||
-            ((self->ctx.kIter + 1) % self->ctx.multiKBL1 == 0))) {
+        if (!((kIter == self->ctx.ddr2l0LoopK - 1) ||
+              ((kIter + 1) % self->ctx.multiKBL1 == 0))) {
             return false;
         }
 
@@ -40,9 +40,9 @@ public:
         bool updateBL1Flag = false;
         if constexpr (Intf::outputOrder == static_cast<int8_t>(ConvOutputOrder::HW_MODE)) {
             if constexpr (Intf::iterateMFirstFlag) {
-                updateBL1Flag = self->ctx.woL0Iter == self->ctx.maxWoL0Iter &&
+                updateBL1Flag = self->ctx.nL0Iter == self->ctx.maxNL0Iter &&
+                                self->ctx.woL0Iter == self->ctx.maxWoL0Iter &&
                                 self->ctx.hoL0Iter == self->ctx.maxHoL0Iter &&
-                                self->ctx.nL0Iter == self->ctx.maxNL0Iter &&
                                 self->ctx.woAL1Iter == self->ctx.maxWoL1Iter &&
                                 self->ctx.hoAL1Iter == self->ctx.maxHoL1Iter &&
                                 self->ctx.batchIter == self->ctx.ddr2l1LoopBatch - 1;
@@ -53,8 +53,8 @@ public:
             }
         } else if constexpr (Intf::outputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE)) {
             if constexpr (Intf::iterateMFirstFlag) {
-                updateBL1Flag = self->ctx.mL0Iter == self->ctx.maxML0Iter &&
-                                self->ctx.nL0Iter == self->ctx.maxNL0Iter &&
+                updateBL1Flag = self->ctx.nL0Iter == self->ctx.maxNL0Iter &&
+                                self->ctx.mL0Iter == self->ctx.maxML0Iter &&
                                 self->ctx.mAL1Iter == self->ctx.maxMAL1Iter &&
                                 self->ctx.batchIter == self->ctx.ddr2l1LoopBatch - 1;
             } else {
@@ -66,9 +66,9 @@ public:
         return updateBL1Flag;
     }
 
-    __aicore__ inline void C04SyncSet(Intf *self)
+    __aicore__ inline void C04SyncSet(Intf *self, const uint64_t &kIter)
     {
-        if (!C04UpdateBL1(self)) {
+        if (!C04UpdateBL1(self, kIter)) {
             return;
         }
 
@@ -78,7 +78,7 @@ public:
             } else {
                 CrossCoreSetFlag<CV_ENHANCE_MODE, PIPE_MTE1>(CV_SYNC_ID_MTE1_MTE3);
                 // Each core deal with half of nBL1 at least n0, when nBL1 <= n0, vec1 doesn't have data to deal.
-                if (self->ctx.convTiling->nBL1 > BLOCK_L0_N) {
+                if (self->ctx.convTilingData->convApiTiling.nBL1 > BLOCK_L0_N) {
                     CrossCoreSetFlag<CV_ENHANCE_MODE, PIPE_MTE1>(VEC_ID_MAX + CV_SYNC_ID_MTE1_MTE3);
                 }
             }
@@ -99,12 +99,12 @@ public:
                     self->ctx.ddr2l1LoopH = 1;
                     self->ctx.maxHoL1Iter = 0;
                 } else {
-                    self->ctx.ddr2l1LoopH = CeilDiv(self->ctx.singleCoreHo, self->ctx.convTiling->hoL1);
+                    self->ctx.ddr2l1LoopH = CeilDiv(self->ctx.singleCoreHo, self->ctx.convTilingData->convApiTiling.hoL1);
                     self->ctx.maxHoL1Iter = self->ctx.ddr2l1LoopH - 1;
                 }
 
                 if constexpr (Intf::hasWL1IterFlag) {
-                    self->ctx.ddr2l1LoopW = CeilDiv(self->ctx.singleCoreWo, self->ctx.convTiling->woL1);
+                    self->ctx.ddr2l1LoopW = CeilDiv(self->ctx.singleCoreWo, self->ctx.convTilingData->convApiTiling.woL1);
                 } else {
                     self->ctx.ddr2l1LoopW = 1;
                 }
@@ -127,21 +127,21 @@ public:
 
     __aicore__ inline void C04InitNValue(Intf *self)
     {
-        self->ctx.nBL1Tail = self->ctx.singleCoreCo % self->ctx.convTiling->nBL1;
-        self->ctx.nBL1Tail = self->ctx.nBL1Tail == 0 ? self->ctx.convTiling->nBL1 : self->ctx.nBL1Tail;
+        self->ctx.nBL1Tail = self->ctx.singleCoreCo % self->ctx.convTilingData->convApiTiling.nBL1;
+        self->ctx.nBL1Tail = self->ctx.nBL1Tail == 0 ? self->ctx.convTilingData->convApiTiling.nBL1 : self->ctx.nBL1Tail;
 
         if constexpr (!Intf::hasNL1IterFlag) {
             self->ctx.ddr2l1LoopN = 1;
             self->ctx.maxNBL1Iter = 0;
         } else {
-            self->ctx.ddr2l1LoopN = CeilDiv(self->ctx.singleCoreCo, self->ctx.convTiling->nBL1);
+            self->ctx.ddr2l1LoopN = CeilDiv(self->ctx.singleCoreCo, self->ctx.convTilingData->convApiTiling.nBL1);
             self->ctx.maxNBL1Iter = self->ctx.ddr2l1LoopN  - 1;
         }
     }
 
     __aicore__ inline void C04InitBuf(Intf *self)
     {
-        self->ctx.ubBufSize = self->ctx.convTiling->bUbNStep * self->ctx.convTiling->kBL1;
+        self->ctx.ubBufSize = self->ctx.convTilingData->convApiTiling.bUbNStep * self->ctx.convTilingData->convApiTiling.kBL1;
         self->ctx.pipe.InitBuffer(self->ctx.ndUbBuf, self->ctx.ubBufSize * Intf::sizeOfWeight);
         self->ctx.pipe.InitBuffer(self->ctx.nzUbBuf, self->ctx.ubBufSize * Intf::sizeOfWeight);
         self->ctx.pipe.InitBuffer(self->ctx.indexUbBuf, REG_SIZE);
@@ -149,12 +149,11 @@ public:
         self->ctx.ndTensor = self->ctx.ndUbBuf.template Get<typename Intf::WeightT>();
         self->ctx.nzTensor = self->ctx.nzUbBuf.template Get<typename Intf::WeightT>();
 
-        int8_t al1db = (self->ctx.convTiling->pBufferFlag & AL1_DB_IDX) >> AL1_DB_OFFSET;
-        uint32_t aL1SpaceSize = self->ctx.convTiling->aL1SpaceSize;
-        if (al1db) {
+        uint32_t aL1SpaceSize = self->ctx.convTilingData->convApiTiling.aL1SpaceSize;
+        if ((self->ctx.convTilingData->convApiTiling.pBufferFlag & AL1_DB_IDX) >> AL1_DB_OFFSET) {
             aL1SpaceSize *= DOUBLE_BUF;
         }
-        self->ctx.bL1SpaceSize = self->ctx.convTiling->nBL1 * self->ctx.convTiling->kBL1;
+        self->ctx.bL1SpaceSize = self->ctx.convTilingData->convApiTiling.nBL1 * self->ctx.convTilingData->convApiTiling.kBL1;
 
         if constexpr (Intf::bL1DBFlag) {
             self->ctx.pipe.InitBuffer(self->ctx.bL1TBuf,
@@ -171,17 +170,17 @@ public:
     {
         self->ctx.vecId = GetSubBlockIdx();
 
-        self->ctx.singleCoreCo = self->ctx.convTiling->singleCoreCo;
-        self->ctx.kSizeC04 = self->ctx.convTiling->kernelHxkernelW * C04_CIN_SIZE;
-        self->ctx.ddr2l1LoopBatch = self->ctx.convTiling->singleCoreBatch;
+        self->ctx.singleCoreCo = self->ctx.convTilingData->convApiTiling.singleCoreCo;
+        self->ctx.kSizeC04 = self->ctx.convTilingData->convApiTiling.kernelHxkernelW * C04_CIN_SIZE;
+        self->ctx.ddr2l1LoopBatch = self->ctx.convTilingData->convApiTiling.singleCoreBatch;
 
         if constexpr (Intf::outputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE)) {
-            self->ctx.singleCoreM = self->ctx.convTiling->singleCoreHo;
-            self->ctx.mAL1 = self->ctx.convTiling->hoL1;
-            self->ctx.mL0 = self->ctx.convTiling->hoL0;
+            self->ctx.singleCoreM = self->ctx.convTilingData->convApiTiling.singleCoreHo;
+            self->ctx.mAL1 = self->ctx.convTilingData->convApiTiling.hoL1;
+            self->ctx.mL0 = self->ctx.convTilingData->convApiTiling.hoL0;
         } else {
-            self->ctx.singleCoreHo = self->ctx.convTiling->singleCoreHo;
-            self->ctx.singleCoreWo = self->ctx.convTiling->singleCoreWo;
+            self->ctx.singleCoreHo = self->ctx.convTilingData->convApiTiling.singleCoreHo;
+            self->ctx.singleCoreWo = self->ctx.convTilingData->convApiTiling.singleCoreWo;
         }
 
         C04InitBuf(self);
@@ -197,14 +196,14 @@ public:
     __aicore__ inline void C04UpdateNUbValue(Intf *self)
     {
         self->ctx.currentUbNStep = self->ctx.vecNIter == self->ctx.maxVecNIter ?
-                self->ctx.bUbNTailStep : self->ctx.convTiling->bUbNStep;
+                self->ctx.bUbNTailStep : self->ctx.convTilingData->convApiTiling.bUbNStep;
         self->ctx.currentUbNStepAilgn = AlignB(self->ctx.currentUbNStep, BLOCK_L0_N);
     }
 
     __aicore__ inline void C04UpdateNL1Value(Intf *self)
     {
         self->ctx.currentNBL1 = self->ctx.nBL1Iter == self->ctx.maxNBL1Iter ?
-            self->ctx.nBL1Tail : self->ctx.convTiling->nBL1;
+            self->ctx.nBL1Tail : self->ctx.convTilingData->convApiTiling.nBL1;
         self->ctx.currentNBL1Align = AlignB(self->ctx.currentNBL1, BLOCK_L0_N);
 
         if constexpr (!Intf::bL1DBFlag) {
@@ -220,10 +219,10 @@ public:
             }
         }
 
-        self->ctx.vecNLoopTimes = CeilDiv(self->ctx.currentNBL1, self->ctx.convTiling->bUbNStep);
+        self->ctx.vecNLoopTimes = CeilDiv(self->ctx.currentNBL1, self->ctx.convTilingData->convApiTiling.bUbNStep);
         self->ctx.maxVecNIter = self->ctx.vecNLoopTimes - 1;
-        self->ctx.bUbNTailStep = self->ctx.currentNBL1 % self->ctx.convTiling->bUbNStep;
-        self->ctx.bUbNTailStep = self->ctx.bUbNTailStep == 0 ? self->ctx.convTiling->bUbNStep : self->ctx.bUbNTailStep;
+        self->ctx.bUbNTailStep = self->ctx.currentNBL1 % self->ctx.convTilingData->convApiTiling.bUbNStep;
+        self->ctx.bUbNTailStep = self->ctx.bUbNTailStep == 0 ? self->ctx.convTilingData->convApiTiling.bUbNStep : self->ctx.bUbNTailStep;
 
         self->ctx.currentNLoopRpSize =
             self->ctx.nBL1Iter == self->ctx.maxNBL1Iter && self->ctx.vecNIter == self->ctx.maxVecNIter ?
@@ -331,7 +330,7 @@ public:
     __aicore__ inline bool C04VecImpl(Intf *self)
     {
         if constexpr (!Intf::bL1DBFlag) {
-            if (self->ctx.convTiling->nBL1 <= BLOCK_L0_N && self->ctx.vecId == 1) {
+            if (self->ctx.convTilingData->convApiTiling.nBL1 <= BLOCK_L0_N && self->ctx.vecId == 1) {
                 return false;
             }
         }

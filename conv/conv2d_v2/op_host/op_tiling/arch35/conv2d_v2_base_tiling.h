@@ -207,6 +207,8 @@ private:
     uint64_t GetFmapCopyMode();
     uint64_t GetEnableInnerBatch();
     void ReSetTilingKeyPara();
+    uint64_t GetNoPad() const;
+    uint64_t GetSmallWeightVal();
 
     int32_t BasicBlockSortFWDimScores(vector<tuple<uint64_t, float, uint32_t, double>>& scores);
     ge::graphStatus GetConv2DAxisPosInfo();
@@ -240,6 +242,8 @@ private:
     bool CheckScaleLegal(uint32_t scaleIndex, uint8_t& quantMode, const std::string& scaleType);
     ge::Format GetWeightFormat() const;
     gert::Shape GetWeightShape(const gert::StorageShape* weightShapePtr) const;
+    void SetUnionDataXt(shared_ptr<tuningtiling::Conv2DV2TunnerTiling> convRepoTiling);
+    void PrintInputArgs(shared_ptr<tuningtiling::Conv2DV2InputArgs> conv2DInput);
 };
 }
 }

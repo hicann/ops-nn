@@ -152,9 +152,9 @@ __global__ __aicore__ void conv3dv2(
     GET_TILING_DATA(tilingData, tiling);
     ASC_OP_LOGD("[Conv3dv2] Get tiling data success.\n");
     ASC_OP_LOGD(
-        "[Conv3dv2] mUB %u, nUB %u, scaleandbiastype %u, quantType %u.\n", tilingData.conv3dApiTiling.mUB,
-        tilingData.conv3dApiTiling.nUB, tilingData.conv3dApiTiling.scaleAndBiasLoadType,
-        tilingData.conv3dApiTiling.quantType);
+        "[Conv3dv2] mUB %u, nUB %u, scaleandbiastype %u, quantType %u.\n", tilingData.convApiTiling.mUB,
+        tilingData.convApiTiling.nUB, tilingData.convApiTiling.scaleAndBiasLoadType,
+        tilingData.convApiTiling.quantType);
 
     using A_TYPE = ConvType<TPosition::GM, aFormat, DTYPE_X>;
     using B_TYPE = ConvType<TPosition::GM, bFormat, DTYPE_FILTER>;

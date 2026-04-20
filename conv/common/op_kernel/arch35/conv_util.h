@@ -21,6 +21,43 @@
 namespace conv {
 using namespace AscendC;
 
+// 新加bitmode
+#pragma pack(push, 1)  // 确保无填充，严格按位排列
+typedef struct {
+    uint64_t strideW        : 6;       // bits 0-5
+    uint64_t strideH        : 6;       // bits 6-11
+    uint64_t kernelW        : 8;       // bits 12-19
+    uint64_t kernelH        : 8;       // bits 20-27
+    uint64_t dilationW      : 8;       // bits 28-35
+    uint64_t dilationH      : 8;       // bits 36-43
+    uint64_t kernelW_highest_bit : 1; // bit 44
+    uint64_t kernelH_highest_bit : 1; // bit 45
+    uint64_t reserve1       : 2;        // bits 46-47
+    uint64_t channelSize    : 16;      // bits 48-64
+} BitFieldXtData;
+#pragma pack(pop)
+ 
+#pragma pack(push, 1)  // 确保无填充，严格按位排列
+typedef struct {
+    uint64_t currentKL0        : 16;       // bits 0-15
+    uint64_t mExtension_        : 16;       // bits 16-31
+    uint64_t posK        : 16;       // bits 32-47
+    uint64_t mStartPt_        : 16;       // bits 48-63
+} BitFieldXmData;
+#pragma pack(pop)
+ 
+union UnionDataXt {
+    uint64_t n;
+    BitFieldXtData bf;
+    __aicore__ inline UnionDataXt() : n(0) {}
+};
+ 
+union UnionDataXm {
+    uint64_t n;
+    BitFieldXmData bf;
+    __aicore__ inline UnionDataXm() : n(0) {}
+};
+
 const static uint64_t L0A_SIZE = 65536;
 const static uint64_t L0B_SIZE = 65536;
 const static uint64_t L0C_SIZE = 262144;

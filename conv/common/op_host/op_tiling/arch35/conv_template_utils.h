@@ -222,8 +222,13 @@ constexpr uint64_t CONV_INNER_BATCH_SINGLE = 0;
 constexpr uint64_t CONV_INNER_BATCH_KERNEL_1X1_MULTI = 1;
 constexpr uint64_t CONV_INNER_BATCH_MULTI = 2;
 
+constexpr uint64_t CONV_NOT_SMALL_WEIGHT = 0;
+constexpr uint64_t CONV_FULLLOAD_KL1_NL0 = 1;
+constexpr uint64_t CONV_WEIGHT_SMALLER_THAN_BL0 = 2;
+
 constexpr uint32_t FP16_DTYPE_SIZE = 2;
 constexpr uint32_t INT64_DTYPE_SIZE_COMPARE_FP16 = 4;
+constexpr uint32_t FLOAT_DTYPE_SIZE_COMPARE_FP16 = 2;
 
 // idxList
 constexpr size_t IDX_LIST_N_IDX = 0;
@@ -425,6 +430,9 @@ struct ConvTilingKeyPara {
     uint64_t fmapCppyMode = 0;
     uint64_t innerBatch = 0;
     uint64_t disContinuous = 0;
+    uint64_t batchOne = 0;
+    uint64_t noPad = 0;
+    uint64_t smallWeight = 0;
 };
 
 static std::map<ge::DataType, uint32_t> dtypeSizeTab = {

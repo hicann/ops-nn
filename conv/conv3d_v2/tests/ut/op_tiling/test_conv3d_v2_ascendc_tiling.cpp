@@ -94,6 +94,7 @@ struct TilingParam {
     uint64_t oriWixk0;
     uint64_t orgHixWi;
     uint64_t orgHoxWo;
+    uint64_t unionDataXt;
     uint32_t orgCi;
     uint32_t kernelD;
     uint32_t kernelH;

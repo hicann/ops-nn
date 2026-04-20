@@ -46,14 +46,12 @@ public:
     __aicore__ inline Conv3dV2Base() {}
 
     __aicore__ inline void RunConv3dV2Kernel(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y,
-                                             const Ops::NN::Conv3dV2::Conv3DV2TilingData& conv3dTilingData,
+                                             const Ops::NN::Conv3dV2::Conv3DV2TilingData& convTilingData,
                                              const ExtendParams* extendParams = nullptr);
 protected:
     __aicore__ inline bool Conv3dV2KernelInit(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y,
                                               const ExtendParams* extendParams,
-                                              const Ops::NN::Conv3dV2::Conv3DV2TilingData& conv3dTilingData);
-
-    __aicore__ inline void InitTilingData(const Ops::NN::Conv3dV2::Conv3DV2TilingData& conv3dTilingData);
+                                              const Ops::NN::Conv3dV2::Conv3DV2TilingData& tilingData);
 
     __aicore__ inline bool InitSingleCoreData(uint32_t blockPerNDim, uint32_t blockPerHoDim, uint32_t blockPerMDim);
 
@@ -72,12 +70,10 @@ public:
 
     // Conv3D API
     Conv3d<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG> conv;
-    ConvCommon<Conv3dV2Base, Ops::NN::Conv3dV2::Conv3DRunInfo> convCommon;
+    ConvCommon<Conv3dV2Base, Ops::NN::Conv3dV2::Conv3DV2TilingData> convCommon;
 
     // Tiling data
-    const Ops::NN::Conv3dV2::TConv3DTiling* conv3dApiTiling;
-    const Ops::NN::Conv3dV2::Conv3DRunInfo* conv3dRunInfo;
-
+    const Ops::NN::Conv3dV2::Conv3DV2TilingData* convTilingData;
     // Input and output tensor declare
     GlobalTensor<FMAP_T> fmapGm;
     GlobalTensor<WEIGHT_T> filterGm;
@@ -124,9 +120,9 @@ public:
 template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class SCALE_TYPE, class CONV_CFG>
 __aicore__ inline void Conv3dV2Base<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>::
     RunConv3dV2Kernel(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y,
-                      const Ops::NN::Conv3dV2::Conv3DV2TilingData& conv3dTilingData, const ExtendParams* extendParams)
+                      const Ops::NN::Conv3dV2::Conv3DV2TilingData& convTilingData, const ExtendParams* extendParams)
 {
-    if (Conv3dV2KernelInit(x, filter, bias, y, extendParams, conv3dTilingData)) {
+    if (Conv3dV2KernelInit(x, filter, bias, y, extendParams, convTilingData)) {
         Conv3dV2KernelImpl();
     }
 }
@@ -134,32 +130,31 @@ __aicore__ inline void Conv3dV2Base<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TY
 template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class SCALE_TYPE, class CONV_CFG>
 __aicore__ inline bool Conv3dV2Base<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>::
     Conv3dV2KernelInit(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y, const ExtendParams* extendParams,
-                       const Ops::NN::Conv3dV2::Conv3DV2TilingData& conv3dTilingData)
+                       const Ops::NN::Conv3dV2::Conv3DV2TilingData& tilingData)
 {
     hasScale = (extendParams != nullptr);
-    InitTilingData(conv3dTilingData);
+    convTilingData = &tilingData;
+    convCommon.Init(this, convTilingData, hasScale);
 
-    convCommon.Init(this, conv3dRunInfo, hasScale);
-
-    conv.Init(conv3dApiTiling);
+    conv.Init(convTilingData);
 
     if constexpr (C_FORMAT == ConvFormat::NCDHW) {
         if constexpr (isMMode) {
-            if (!InitSingleCoreData(conv3dRunInfo->mDim, 1, 0)) {
+            if (!InitSingleCoreData(convTilingData->convRunInfo.mDim, 1, 0)) {
                 return false;
             }
         } else {
-            if (!InitSingleCoreData(conv3dRunInfo->hoDim, 0, 1)) {
+            if (!InitSingleCoreData(convTilingData->convRunInfo.hoDim, 0, 1)) {
                 return false;
             }
         }
     } else {
         if constexpr (isMMode) {
-            if (!InitSingleCoreData(1, conv3dRunInfo->nDim, 0)) {
+            if (!InitSingleCoreData(1, convTilingData->convRunInfo.nDim, 0)) {
                 return false;
             }
         } else {
-            if (!InitSingleCoreData(1, 0, conv3dRunInfo->nDim)) {
+            if (!InitSingleCoreData(1, 0, convTilingData->convRunInfo.nDim)) {
                 return false;
             }
         }
@@ -171,48 +166,40 @@ __aicore__ inline bool Conv3dV2Base<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TY
 }
 
 template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class SCALE_TYPE, class CONV_CFG>
-__aicore__ inline void Conv3dV2Base<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>::
-    InitTilingData(const Ops::NN::Conv3dV2::Conv3DV2TilingData& conv3dTilingData)
-{
-    conv3dRunInfo = &(conv3dTilingData.conv3dRunInfo);
-    conv3dApiTiling = &(conv3dTilingData.conv3dApiTiling);
-}
-
-template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE, class SCALE_TYPE, class CONV_CFG>
 __aicore__ inline bool Conv3dV2Base<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>::
     InitSingleCoreData(uint32_t blockPerNDim, uint32_t blockPerMDim, uint32_t blockPerHoDim)
 {
-    const uint32_t dataPerBatchDim = conv3dRunInfo->hoDim * conv3dRunInfo->nDim * conv3dRunInfo->doDim;
+    const uint32_t dataPerBatchDim = convTilingData->convRunInfo.hoDim * convTilingData->convRunInfo.nDim * convTilingData->convRunInfo.doDim;
     DimDataToFill batchStruct(singleCoreBatch, batchIdxStart, isBatchDimTail);
-    bool isRealDim = convCommon.CalcDimData(dataPerBatchDim, conv3dRunInfo->batchDim, conv3dRunInfo->batch,
-                                            conv3dRunInfo->batch, batchStruct);
+    bool isRealDim = convCommon.CalcDimData(dataPerBatchDim, convTilingData->convRunInfo.batchDim, convTilingData->convRunInfo.batch,
+                                            convTilingData->convRunInfo.batch, batchStruct);
     if (unlikely(!isRealDim)) {
         return false;
     }
 
-    const uint32_t dataPerDoDim = conv3dRunInfo->nDim * conv3dRunInfo->hoDim;
+    const uint32_t dataPerDoDim = convTilingData->convRunInfo.nDim * convTilingData->convRunInfo.hoDim;
     DimDataToFill doStruct(singleCoreDout, doIdxStart, isDoDimTail);
-    isRealDim = convCommon.CalcDimData(dataPerDoDim, conv3dRunInfo->doDim, conv3dRunInfo->dout, conv3dRunInfo->dout,
+    isRealDim = convCommon.CalcDimData(dataPerDoDim, convTilingData->convRunInfo.doDim, convTilingData->convRunInfo.dout, convTilingData->convRunInfo.dout,
                                        doStruct);
     if (unlikely(!isRealDim)) {
         return false;
     }
 
     DimDataToFill nStruct(singleCoreN, nIdxStart, isNDimTail);
-    isRealDim = convCommon.CalcNDimDataAlign(blockPerNDim, conv3dRunInfo->nDim, conv3dRunInfo->cout, nStruct);
+    isRealDim = convCommon.CalcNDimDataAlign(blockPerNDim, convTilingData->convRunInfo.nDim, convTilingData->convRunInfo.cout, nStruct);
     if (unlikely(!isRealDim)) {
         return false;
     }
 
     if constexpr (isMMode) {
         DimDataToFill mStruct(singleCoreM, mIdxStart, isMDimTail);
-        uint64_t totalM = conv3dRunInfo->hout * conv3dRunInfo->wout;
-        isRealDim = convCommon.CalcDimData(blockPerMDim, conv3dRunInfo->mDim,
+        uint64_t totalM = convTilingData->convRunInfo.hout * convTilingData->convRunInfo.wout;
+        isRealDim = convCommon.CalcDimData(blockPerMDim, convTilingData->convRunInfo.mDim,
             convCommon.AlignB(totalM, M0), totalM, mStruct);
     } else {
         DimDataToFill hoToFill(singleCoreHo, hoIdxStart, isHoDimTail);
-        isRealDim = convCommon.CalcDimData(blockPerHoDim, conv3dRunInfo->hoDim, conv3dRunInfo->hout,
-            conv3dRunInfo->hout, hoToFill);
+        isRealDim = convCommon.CalcDimData(blockPerHoDim, convTilingData->convRunInfo.hoDim, convTilingData->convRunInfo.hout,
+            convTilingData->convRunInfo.hout, hoToFill);
     }
     if (unlikely(!isRealDim)) {
         return false;
@@ -225,24 +212,24 @@ template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE
 __aicore__ inline void Conv3dV2Base<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>::
     InitBuffer(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y, const ExtendParams* extendParams)
 {
-    int64_t diIdxStart = doIdxStart * conv3dRunInfo->strideD - conv3dRunInfo->padHead;
+    int64_t diIdxStart = doIdxStart * convTilingData->convRunInfo.strideD - convTilingData->convRunInfo.padHead;
     diIdxStart = convCommon.Max(diIdxStart, 0);
     if constexpr (A_FORMAT == ConvFormat::NCDHW && C_FORMAT == ConvFormat::NDHWC) {
-        convCommon.CalcStartAddrDeQuant(conv3dRunInfo->din, conv3dRunInfo->dout, conv3dRunInfo->kd,
+        convCommon.CalcStartAddrDeQuant(convTilingData->convRunInfo.din, convTilingData->convRunInfo.dout, convTilingData->convRunInfo.kd,
                                         doIdxStart, diIdxStart);
     } else if constexpr (A_FORMAT == ConvFormat::NCDHW) {
         if constexpr (isMMode) {
-            convCommon.CalcStartAddrMMode(conv3dRunInfo->din, conv3dRunInfo->dout, conv3dRunInfo->kd,
+            convCommon.CalcStartAddrMMode(convTilingData->convRunInfo.din, convTilingData->convRunInfo.dout, convTilingData->convRunInfo.kd,
                 doIdxStart, diIdxStart);
         } else {
-            convCommon.CalcStartAddrHWode(conv3dRunInfo->din, conv3dRunInfo->dout, conv3dRunInfo->kd,
+            convCommon.CalcStartAddrHWode(convTilingData->convRunInfo.din, convTilingData->convRunInfo.dout, convTilingData->convRunInfo.kd,
                 doIdxStart, diIdxStart);
         }
     } else {
         if constexpr (isMMode) {
-            convCommon.CalcStartAddrMModeHWC(conv3dRunInfo->din, conv3dRunInfo->dout, doIdxStart, diIdxStart);
+            convCommon.CalcStartAddrMModeHWC(convTilingData->convRunInfo.din, convTilingData->convRunInfo.dout, doIdxStart, diIdxStart);
         } else {
-            convCommon.CalcStartAddrHWodeHWC(conv3dRunInfo->din, conv3dRunInfo->dout, doIdxStart, diIdxStart);
+            convCommon.CalcStartAddrHWodeHWC(convTilingData->convRunInfo.din, convTilingData->convRunInfo.dout, doIdxStart, diIdxStart);
         }
     }
     convCommon.InitBufferCommon(x, filter, bias, y, extendParams);
@@ -252,7 +239,7 @@ template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE
 __aicore__ inline void Conv3dV2Base<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>::
     Conv3dV2KernelImpl()
 {
-    int64_t diIdxStart = doIdxStart * conv3dRunInfo->strideD;
+    int64_t diIdxStart = doIdxStart * convTilingData->convRunInfo.strideD;
     if constexpr (isMMode) {
         if (unlikely(isDoDimTail || isNDimTail || isMDimTail || isBatchDimTail)) {
             conv.SetSingleOutputShape(singleCoreN, singleCoreDout, singleCoreM, singleCoreBatch);
@@ -261,13 +248,13 @@ __aicore__ inline void Conv3dV2Base<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TY
     } else {
         if (unlikely(this->isDoDimTail || this->isNDimTail || this->isHoDimTail || isBatchDimTail)) {
             conv.SetSingleOutputShape(this->singleCoreN, this->singleCoreDout, this->singleCoreHo,
-                conv3dRunInfo->wout, singleCoreBatch);
+                convTilingData->convRunInfo.wout, singleCoreBatch);
         }
         conv.SetFmapStartPosition(diIdxStart, this->singleCoreHiStartPos, 0, 0);
     }
 
     conv.SetWeight(filterGm);
-    if (conv3dRunInfo->hasBias) {
+    if (convTilingData->convRunInfo.hasBias) {
         conv.SetBias(biasGm);
     }
     if constexpr (isQuant) {

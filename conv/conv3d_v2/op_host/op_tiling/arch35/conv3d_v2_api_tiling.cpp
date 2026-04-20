@@ -240,6 +240,20 @@ void Conv3dTiling::SetAttrsTilingData(Ops::NN::Conv3dV2::TConv3DTiling& tiling)
     }
 }
 
+void Conv3dTiling::SetUnionDataXt(Ops::NN::Conv3dV2::TConv3DTiling& tiling)
+{
+    conv_tiling::UnionDataXt unionDataXt;
+    unionDataXt.bf.kernelW = static_cast<uint64_t>(this->shapeInfo.orgkW);
+    unionDataXt.bf.kernelW_highest_bit = (static_cast<uint64_t>(this->shapeInfo.orgkW) & 0x100) >> 8;
+    unionDataXt.bf.kernelH = static_cast<uint64_t>(this->shapeInfo.orgkH);
+    unionDataXt.bf.kernelH_highest_bit = (static_cast<uint64_t>(this->shapeInfo.orgkH) & 0x100) >> 8;
+    unionDataXt.bf.dilationH = static_cast<uint32_t>(this->attrInfo.dilationH);
+    unionDataXt.bf.dilationW = static_cast<uint32_t>(this->attrInfo.dilationW);
+    unionDataXt.bf.strideH = static_cast<uint32_t>(this->attrInfo.strideH);
+    unionDataXt.bf.strideW = static_cast<uint32_t>(this->attrInfo.strideW);
+    tiling.unionDataXt = unionDataXt.n;
+}
+
 void Conv3dTiling::SetTilingData(Ops::NN::Conv3dV2::TConv3DTiling& tiling)
 {
     if (outputOrder == static_cast<int8_t>(OutputOrder::M)) {
@@ -273,6 +287,7 @@ void Conv3dTiling::SetTilingData(Ops::NN::Conv3dV2::TConv3DTiling& tiling)
     tiling.kernelW = static_cast<uint32_t>(this->shapeInfo.orgkW);
 
     SetAttrsTilingData(tiling);
+    SetUnionDataXt(tiling);
 
     tiling.kAL1 = static_cast<uint32_t>(this->l1TilingInfo.kAL1);
     tiling.kBL1 = static_cast<uint32_t>(this->l1TilingInfo.kBL1);
@@ -821,7 +836,7 @@ int64_t Conv3dTiling::GetTilingData(optiling::conv_ops_tiling::ConvAscendcAttrIn
                                      optiling::conv_ops_tiling::dtypeMap[convDescInfo.biasDtype]);
     }
 
-    if (GetTiling(tilingData.conv3dApiTiling) == -1) {
+    if (GetTiling(tilingData.convApiTiling) == -1) {
         return -1;
     }
 

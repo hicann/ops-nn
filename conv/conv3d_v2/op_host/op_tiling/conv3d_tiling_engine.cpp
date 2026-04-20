@@ -352,13 +352,13 @@ void Conv3dTilingEngine::GetNumBlocksDetail(uint32_t &batchDim, uint32_t &mDim, 
     groupDim = numBlocksRes_.groupDim;
 }
 
-// Map internal engine state (shapeInfo_/attrInfo_/numBlocksRes_/flagInfo_) into Conv3DV2TilingData::conv3dRunInfo.
+// Map internal engine state (shapeInfo_/attrInfo_/numBlocksRes_/flagInfo_) into Conv3DV2TilingData::convRunInfo.
 // Precondition: CheckAllParams() has passed and numBlocksRes_ has been computed.
 void Conv3dTilingEngine::GetConv3DRunInfo(Ops::NN::Conv3dV2::Conv3DV2TilingData &tilingdata)
 {
     OP_LOGD(logTag_.c_str(), "Filling Conv3DRunInfo from engine state.");
 
-    auto &runInfo = tilingdata.conv3dRunInfo;
+    auto &runInfo = tilingdata.convRunInfo;
 
     runInfo.batch = shapeInfo_.batch;
     runInfo.cin = shapeInfo_.cIn;
@@ -399,7 +399,7 @@ void Conv3dTilingEngine::GetConv3DRunInfo(Ops::NN::Conv3dV2::Conv3DV2TilingData 
 
 void Conv3dTilingEngine::PrintOpTilingData(const Ops::NN::Conv3dV2::Conv3DV2TilingData &tilingData) const
 {
-    const auto &runInfo = tilingData.conv3dRunInfo;
+    const auto &runInfo = tilingData.convRunInfo;
     uint32_t k0 = g_cubeMknMap.GetMKN(descInfo_.fMapDtype, MKN_K_IDX);
 
     OP_LOGD(logTag_.c_str(),
@@ -443,7 +443,7 @@ void Conv3dTilingEngine::PrintOpTilingData(const Ops::NN::Conv3dV2::Conv3DV2Tili
 
 void Conv3dTilingEngine::PrintApiTilingDataShapeInfo(const Ops::NN::Conv3dV2::Conv3DV2TilingData &tilingData) const
 {
-    const auto &api = tilingData.conv3dApiTiling;
+    const auto &api = tilingData.convApiTiling;
     OP_LOGD(logTag_.c_str(),
         "Conv3D AscendC: api tilingdata shapeInfo: groups: %u, orgDo: %lu, orgCo: %u, "\
         "orgHo: %lu, orgWo: %lu, orgDi: %lu, orgCi: %u, orgHi: %lu, orgWi: %lu, kernelD: %u, "\
@@ -481,7 +481,7 @@ void Conv3dTilingEngine::PrintApiTilingDataShapeInfo(const Ops::NN::Conv3dV2::Co
 
 void Conv3dTilingEngine::PrintApiTilingDataDecisionInfo(const Ops::NN::Conv3dV2::Conv3DV2TilingData &tilingData) const
 {
-    const auto &api = tilingData.conv3dApiTiling;
+    const auto &api = tilingData.convApiTiling;
     OP_LOGD(logTag_.c_str(),
         "Conv3D AscendC: api tilingdata shapeInfo: singleCoreCo: %u, singleCoreDo: %lu, "\
         "singleCoreM: %lu, singleCoreGroupOpt: %u, mL0: %u, kL0: %u, nL0: %u, kAL1: %u, kBL1: %u, "\
@@ -517,7 +517,7 @@ void Conv3dTilingEngine::PrintApiTilingDataDecisionInfo(const Ops::NN::Conv3dV2:
 
 void Conv3dTilingEngine::PrintApiTilingDataScalarInfo(const Ops::NN::Conv3dV2::Conv3DV2TilingData &tilingData) const
 {
-    const auto &api = tilingData.conv3dApiTiling;
+    const auto &api = tilingData.convApiTiling;
     OP_LOGD(logTag_.c_str(),
         "Conv3D AscendC: api tilingdata scalarInfo: kernelHxkernelW: %lu, cin1xOriHixOriWixk0: %lu, "\
         "oriHixOriWixk0: %lu, oriWixk0: %lu, orgHixWi: %lu, orgHoxWo: %lu, mAL1DivmL0: %u, "\
@@ -1547,7 +1547,7 @@ bool Conv3dTilingEngine::GetConv3dApiTiling(Ops::NN::Conv3dV2::Conv3DV2TilingDat
     }
 
     // Get the actual tiling data
-    if (conv3dApiTiling_.GetTiling(tilingdata.conv3dApiTiling) == Conv3dApiTiling::INVALID_VALUE) {
+    if (conv3dApiTiling_.GetTiling(tilingdata.convApiTiling) == Conv3dApiTiling::INVALID_VALUE) {
         OP_LOGE(logTag_.c_str(), "Conv3D AscendC: get api tiling wrong");
         return false;
     }
@@ -1556,7 +1556,7 @@ bool Conv3dTilingEngine::GetConv3dApiTiling(Ops::NN::Conv3dV2::Conv3DV2TilingDat
         conv3dApiTiling_.hasBias = true;
     }
 
-    tilingdata.conv3dApiTiling.outputOrder = outputOrder_;
+    tilingdata.convApiTiling.outputOrder = outputOrder_;
 
     OP_LOGD(logTag_.c_str(), "API tiling retrieved successfully");
     return true;

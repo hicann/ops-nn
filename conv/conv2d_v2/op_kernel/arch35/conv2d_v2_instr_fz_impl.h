@@ -33,13 +33,13 @@ public:
         self_ = self;
         maxNBL1Iter_ = self->ctx.maxNBL1Iter;
         maxKBL1Iter_ = self->ctx.maxKBL1Iter;
-        orgCoAlignN0 = AlignB(self_->ctx.convTiling->orgCo, BLOCK_L0_N);
+        orgCoAlignN0 = AlignB(self_->ctx.convTilingData->convApiTiling.orgCo, BLOCK_L0_N);
         if constexpr (Intf::groupOptNZFlag) {
-            self->ctx.coPerGroup = self->ctx.convTiling->orgCo / self->ctx.convTiling->groups;
-            self->ctx.coOpt = self->ctx.coPerGroup * self->ctx.convTiling->enlarge;
+            self->ctx.coPerGroup = self->ctx.convTilingData->convApiTiling.orgCo / self->ctx.convTilingData->convApiTiling.groups;
+            self->ctx.coOpt = self->ctx.coPerGroup * self->ctx.convTilingData->convApiTiling.enlarge;
             orgCoAlignN0 = AlignB(self->ctx.coOpt, BLOCK_L0_N);
         } else {
-            orgCoAlignN0 = AlignB(self_->ctx.convTiling->orgCo, BLOCK_L0_N);
+            orgCoAlignN0 = AlignB(self_->ctx.convTilingData->convApiTiling.orgCo, BLOCK_L0_N);
         }
     }
 
@@ -52,16 +52,16 @@ public:
     {
         uint64_t bL1GmOffset;
         if constexpr (!Intf::hasNL1IterFlag) {
-            bL1GmOffset = kBL1Iter * self_->ctx.convTiling->kBL1 * orgCoAlignN0;
+            bL1GmOffset = kBL1Iter * self_->ctx.convTilingData->convApiTiling.kBL1 * orgCoAlignN0;
         } else {
-            bL1GmOffset = kBL1Iter * self_->ctx.convTiling->kBL1 * orgCoAlignN0 +
-                          nBL1Iter * self_->ctx.convTiling->nBL1 * Intf::k0;
-            self_->ctx.currentNBL1 = nBL1Iter == maxNBL1Iter_ ? self_->ctx.nBL1Tail : self_->ctx.convTiling->nBL1;
+            bL1GmOffset = kBL1Iter * self_->ctx.convTilingData->convApiTiling.kBL1 * orgCoAlignN0 +
+                          nBL1Iter * self_->ctx.convTilingData->convApiTiling.nBL1 * Intf::k0;
+            self_->ctx.currentNBL1 = nBL1Iter == maxNBL1Iter_ ? self_->ctx.nBL1Tail : self_->ctx.convTilingData->convApiTiling.nBL1;
         }
 
-        uint64_t currentKBL1 = self_->ctx.convTiling->kBL1;
+        uint64_t currentKBL1 = self_->ctx.convTilingData->convApiTiling.kBL1;
         if constexpr (!Intf::c04Flag) {
-            currentKBL1 = kBL1Iter == maxKBL1Iter_ ? self_->ctx.kBL1AlignK0Tail : self_->ctx.convTiling->kBL1;
+            currentKBL1 = kBL1Iter == maxKBL1Iter_ ? self_->ctx.kBL1AlignK0Tail : self_->ctx.convTilingData->convApiTiling.kBL1;
         }
         DataCopyPadExtParams<typename Intf::WeightT> padParams;
         DataCopyExtParams dataCopyParams;
@@ -73,7 +73,7 @@ public:
             dataCopyParams.blockCount = CeilDiv(currentKBL1, Intf::k0);
             dataCopyParams.blockLen = self_->ctx.currentNBL1 * C0_SIZE;
             dataCopyParams.srcStride = (orgCoAlignN0 - self_->ctx.currentNBL1) * C0_SIZE;
-            dataCopyParams.dstStride = self_->ctx.convTiling->nBL1 - self_->ctx.currentNBL1;
+            dataCopyParams.dstStride = self_->ctx.convTilingData->convApiTiling.nBL1 - self_->ctx.currentNBL1;
         }
         DataCopyPad<typename Intf::WeightT>(self_->ctx.bl1, self_->ctx.bgm[bL1GmOffset], dataCopyParams, padParams);
     }

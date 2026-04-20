@@ -114,10 +114,10 @@ void Conv3dBaseTilingV2::GetCachedTilingData() {
 void Conv3dBaseTilingV2::TranslateCachedTilingData()
 {
     tilingData_ = cachedTilingData_;
-    tilingData_.conv3dApiTiling.hasScale = static_cast<uint8_t>(flagInfo_.quantFlag);
-    tilingData_.conv3dApiTiling.offsetx = attrInfo_.offsetx;
-    tilingData_.conv3dApiTiling.roundMode = attrInfo_.roundMode;
-    flagInfo_.mSplitModeFlag = cachedTilingData_.conv3dApiTiling.outputOrder == 0 ? true : false;
+    tilingData_.convApiTiling.hasScale = static_cast<uint8_t>(flagInfo_.quantFlag);
+    tilingData_.convApiTiling.offsetx = attrInfo_.offsetx;
+    tilingData_.convApiTiling.roundMode = attrInfo_.roundMode;
+    flagInfo_.mSplitModeFlag = cachedTilingData_.convApiTiling.outputOrder == 0 ? true : false;
 }
 }
 }

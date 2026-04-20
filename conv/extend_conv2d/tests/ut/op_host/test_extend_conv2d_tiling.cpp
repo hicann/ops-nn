@@ -73,6 +73,7 @@ struct TilingParam {
     uint64_t singleCoreBatch;
     uint64_t singleCoreHo;
     uint64_t singleCoreWo;
+    uint64_t UnionDataXt;
     uint32_t orgCi;
     uint32_t orgCo;
     uint32_t singleCoreCi;

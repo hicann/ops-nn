@@ -33,11 +33,11 @@ public:
     {
         self_ = self;
 
-        mStride = self_->ctx.convTiling->mUB * BLOCK_L0_N;
+        mStride = self_->ctx.convTilingData->convApiTiling.mUB * BLOCK_L0_N;
         isFirst = true;
 
         fixpipeParams.params.ndNum = 1;
-        fixpipeParams.dstStride = self_->ctx.convTiling->nUB;
+        fixpipeParams.dstStride = self_->ctx.convTilingData->convApiTiling.nUB;
         fixpipeParams.quantPre = QuantMode_t::NoQuant;
     }
 
@@ -52,25 +52,25 @@ public:
         fixpipeParams.srcStride = self_->ctx.currentML0Align;
 
         if constexpr (Intf::outputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE)) {
-            maxMIter = CeilDiv(currentML0, self_->ctx.convTiling->mUB) - 1;
-            mUbTail = currentML0 % self_->ctx.convTiling->mUB;
+            maxMIter = CeilDiv(currentML0, self_->ctx.convTilingData->convApiTiling.mUB) - 1;
+            mUbTail = currentML0 % self_->ctx.convTilingData->convApiTiling.mUB;
         } else {
-            maxWoUbLoopTimes = CeilDiv(self_->ctx.currentWoL0, self_->ctx.convTiling->mUB);
+            maxWoUbLoopTimes = CeilDiv(self_->ctx.currentWoL0, self_->ctx.convTilingData->convApiTiling.mUB);
             maxWoUbIter = maxWoUbLoopTimes - 1;
             maxMIter = maxWoUbLoopTimes * self_->ctx.currentHoL0 - 1;
-            mUbTail = self_->ctx.currentWoL0 % self_->ctx.convTiling->mUB;
+            mUbTail = self_->ctx.currentWoL0 % self_->ctx.convTilingData->convApiTiling.mUB;
         }
-        mUbTail = mUbTail == 0 ? self_->ctx.convTiling->mUB : mUbTail;
+        mUbTail = mUbTail == 0 ? self_->ctx.convTilingData->convApiTiling.mUB : mUbTail;
         
         fixpipeParams.nSize = self_->ctx.currentNL0Align;
 
         uint32_t srcOffset = 0;
         for (uint32_t mIter = 0; mIter <= maxMIter; ++mIter) {
             if constexpr (Intf::outputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE)) {
-                self_->ctx.currentMUb = mIter == maxMIter ? mUbTail : self_->ctx.convTiling->mUB;
+                self_->ctx.currentMUb = mIter == maxMIter ? mUbTail : self_->ctx.convTilingData->convApiTiling.mUB;
             } else {
                 woUbIter = mIter % maxWoUbLoopTimes;
-                self_->ctx.currentMUb = woUbIter == maxWoUbIter ? mUbTail : self_->ctx.convTiling->mUB;
+                self_->ctx.currentMUb = woUbIter == maxWoUbIter ? mUbTail : self_->ctx.convTilingData->convApiTiling.mUB;
                 srcOffset = woUbIter * mStride + (mIter / maxWoUbLoopTimes) * self_->ctx.currentWoL0 * BLOCK_L0_N;
             }
             fixpipeParams.mSize = self_->ctx.currentMUb;
@@ -128,8 +128,8 @@ public:
         WaitFlag<HardEvent::V_MTE2>(eventId);
 
         copyParams.blockLen = self_->ctx.currentNUb * Intf::sizeOfScale;
-        uint64_t srcOffset = self_->ctx.nBL1Iter * self_->ctx.convTiling->nBL1 +
-                             self_->ctx.nL0Iter * self_->ctx.convTiling->nL0;
+        uint64_t srcOffset = self_->ctx.nBL1Iter * self_->ctx.convTilingData->convApiTiling.nBL1 +
+                             self_->ctx.nL0Iter * self_->ctx.convTilingData->convApiTiling.nL0;
         DataCopyPad<typename Intf::ScaleT>(self_->ctx.scaleTensor, self_->ctx.scalegm[srcOffset], copyParams, padParams);
 
         copyParams.blockLen = self_->ctx.currentNUb * Intf::sizeOfBias;
@@ -165,9 +165,9 @@ public:
 
         ubCalcTensor = self_->ctx.mmadResUbBuf.template Get<float>();
 
-        calcCount = self_->ctx.convTiling->mUB * self_->ctx.convTiling->nUB;
+        calcCount = self_->ctx.convTilingData->convApiTiling.mUB * self_->ctx.convTilingData->convApiTiling.nUB;
 
-        uint32_t repStride = self_->ctx.convTiling->nUB / COUNT_ONE_BLK_B32;
+        uint32_t repStride = self_->ctx.convTilingData->convApiTiling.nUB / COUNT_ONE_BLK_B32;
         repeatParams.dstBlkStride = 1;
         repeatParams.src0BlkStride = 1;
         repeatParams.src1BlkStride = 1;
@@ -194,7 +194,7 @@ public:
 
         for (uint32_t mIter = 0; mIter <= maxMIter; ++mIter) {
             uint32_t repeatTime = mIter == maxMIter ? repeatTimeTail : UB_MAX_REPEAT_TIMES;
-            uint32_t mOffset = mIter * UB_MAX_REPEAT_TIMES * self_->ctx.convTiling->nUB;
+            uint32_t mOffset = mIter * UB_MAX_REPEAT_TIMES * self_->ctx.convTilingData->convApiTiling.nUB;
             for (uint32_t nIter = 0; nIter <= maxNIter; ++nIter) {
                 uint32_t calcCount = nIter == maxNIter ? calcCountTail : UB_CALC_ONE_REPEAT;
                 uint32_t nOffset = nIter * UB_CALC_ONE_REPEAT;
@@ -232,7 +232,7 @@ public:
     __aicore__ inline void SetParams(Intf *self)
     {
         self_ = self;
-        doStride = self_->ctx.orgHo * self_->ctx.orgWo * self_->ctx.orgCo;
+        doStride = self_->ctx.convTilingData->convApiTiling.orgHo * self_->ctx.convTilingData->convApiTiling.orgWo * self_->ctx.convTilingData->convApiTiling.orgCo;
     }
 
     __aicore__ inline void SetOutputGm(const GlobalTensor<typename Intf::OutputT> &output)
@@ -244,37 +244,37 @@ public:
     {
         copyParams.blockCount = self_->ctx.currentMUb;
         copyParams.blockLen = self_->ctx.currentNUb * Intf::sizeOfOutput;
-        copyParams.srcStride = (self_->ctx.convTiling->nUB - self_->ctx.currentNL0Align) / blockSize;
-        copyParams.dstStride = (self_->ctx.orgCo - self_->ctx.currentNUb) * Intf::sizeOfOutput;
+        copyParams.srcStride = (self_->ctx.convTilingData->convApiTiling.nUB - self_->ctx.currentNL0Align) / blockSize;
+        copyParams.dstStride = (self_->ctx.convTilingData->convApiTiling.orgCo - self_->ctx.currentNUb) * Intf::sizeOfOutput;
 
         uint64_t dstOffset = self_->ctx.batchIter * self_->ctx.outputOneBatchSize + self_->ctx.dOutIter * doStride +
-            self_->ctx.nBL1Iter * self_->ctx.convTiling->nBL1 + self_->ctx.nL0Iter * self_->ctx.convTiling->nL0;
+            self_->ctx.nBL1Iter * self_->ctx.convTilingData->convApiTiling.nBL1 + self_->ctx.nL0Iter * self_->ctx.convTilingData->convApiTiling.nL0;
 
         if constexpr (Intf::outputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE)) {
-            dstOffset += self_->ctx.mUbIter * self_->ctx.convTiling->mUB * self_->ctx.orgCo +
-                (self_->ctx.mAL1Iter * self_->ctx.mAL1 + self_->ctx.mL0Iter * self_->ctx.mL0) * self_->ctx.orgCo;
+            dstOffset += self_->ctx.mUbIter * self_->ctx.convTilingData->convApiTiling.mUB * self_->ctx.convTilingData->convApiTiling.orgCo +
+                (self_->ctx.mAL1Iter * self_->ctx.mAL1 + self_->ctx.mL0Iter * self_->ctx.mL0) * self_->ctx.convTilingData->convApiTiling.orgCo;
         } else {
-            uint64_t offsetH = self_->ctx.hoAL1Iter * self_->ctx.convTiling->hoL1 +
-                               self_->ctx.hoL0Iter * self_->ctx.convTiling->hoL0;
+            uint64_t offsetH = self_->ctx.hoAL1Iter * self_->ctx.convTilingData->convApiTiling.hoL1 +
+                               self_->ctx.hoL0Iter * self_->ctx.convTilingData->convApiTiling.hoL0;
             uint64_t offsetW;
             if (self_->ctx.woL1SmallTail == 0) {
-                offsetW = self_->ctx.woAL1Iter * self_->ctx.convTiling->woL1 +
-                        self_->ctx.woL0Iter * self_->ctx.convTiling->woL0;
+                offsetW = self_->ctx.woAL1Iter * self_->ctx.convTilingData->convApiTiling.woL1 +
+                        self_->ctx.woL0Iter * self_->ctx.convTilingData->convApiTiling.woL0;
             } else {
                 if (self_->ctx.woAL1Iter == self_->ctx.maxWoL1Iter) {
-                    offsetW = ((self_->ctx.woAL1Iter - 1) * self_->ctx.convTiling->woL1 + self_->ctx.woAL1Tail) +
-                              self_->ctx.woL0Iter * self_->ctx.convTiling->woL0;
+                    offsetW = ((self_->ctx.woAL1Iter - 1) * self_->ctx.convTilingData->convApiTiling.woL1 + self_->ctx.woAL1Tail) +
+                              self_->ctx.woL0Iter * self_->ctx.convTilingData->convApiTiling.woL0;
                 } else {
-                    offsetW = self_->ctx.woAL1Iter * self_->ctx.convTiling->woL1 +
-                              self_->ctx.woL0Iter * self_->ctx.convTiling->woL0;
+                    offsetW = self_->ctx.woAL1Iter * self_->ctx.convTilingData->convApiTiling.woL1 +
+                              self_->ctx.woL0Iter * self_->ctx.convTilingData->convApiTiling.woL0;
                 }
             }
-            dstOffset += offsetH * self_->ctx.orgWo * self_->ctx.orgCo + offsetW * self_->ctx.orgCo;
+            dstOffset += offsetH * self_->ctx.convTilingData->convApiTiling.orgWo * self_->ctx.convTilingData->convApiTiling.orgCo + offsetW * self_->ctx.convTilingData->convApiTiling.orgCo;
 
             uint32_t woUbIter = self_->ctx.mUbIter % self_->ctx.l0C2UbLoopWo;
             uint32_t hoUbIter = self_->ctx.mUbIter / self_->ctx.l0C2UbLoopWo;
-            dstOffset += hoUbIter * self_->ctx.orgWo * self_->ctx.orgCo +
-                         woUbIter * self_->ctx.convTiling->mUB * self_->ctx.orgCo;
+            dstOffset += hoUbIter * self_->ctx.convTilingData->convApiTiling.orgWo * self_->ctx.convTilingData->convApiTiling.orgCo +
+                         woUbIter * self_->ctx.convTilingData->convApiTiling.mUB * self_->ctx.convTilingData->convApiTiling.orgCo;
         }
 
         event_t eventId = static_cast<event_t>(self_->ctx.pipe.FetchEventID(HardEvent::V_MTE3));

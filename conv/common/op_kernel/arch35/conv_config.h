@@ -59,14 +59,14 @@ struct Extendconv2dFixpipeParams {
 
 struct CopyUbInfo {
     // only support batchUb = 1 in tiling hw mode
-    // when batchUb > 1, mUb should equal to convTiling->hoL0
+    // when batchUb > 1, mUb should equal to hoL0
     uint64_t batchUb = 0;
     // nUb should be aligned to BLOCK_L0_N
     uint64_t nUb = 0;
     // mUb should be aligned to BLOCK_L0_M
-    // In tiling m mode, mUb is part of convTiling->hoL0
-    // In tiling hw mode, mUb is part of convTiling->hoL0*convTiling->woL0,
-    // additionally, when convTiling->hoL0 != 1, mUb must be >= convTiling->woL0.
+    // In tiling m mode, mUb is part of hoL0
+    // In tiling hw mode, mUb is part of hoL0*woL0,
+    // additionally, when hoL0 != 1, mUb must be >= woL0.
     uint64_t mUb = 0;
     uint64_t batchLoopIdx = 0;
     uint64_t nLoopIdx = 0;
@@ -164,6 +164,9 @@ struct ConvParam {
     constexpr static int8_t iterOrder = 0;
     constexpr static int8_t groupType = 0;
     constexpr static int8_t innerBatch = static_cast<int8_t>(ConvInnerBatch::SINGLE_BATCH);
+    constexpr static int8_t batchOne = 0;
+    constexpr static int8_t noPad = 0;
+    constexpr static int8_t smallWeight = 0;
 };
 
 template <typename T>
@@ -263,8 +266,11 @@ public:
         GlobalTensor<typename ConvDataType::BiasT> biasgm;
         GlobalTensor<typename ConvDataType::ScaleT> scalegm;
         GlobalTensor<typename ConvDataType::ScaleT> scale1gm;
+        GlobalTensor<typename ConvDataType::ReluWeightT> reluWeightGM;
+        GlobalTensor<typename ConvDataType::ReluWeightT> reluWeight1GM;
         TQue<QuePosition::A1, 1> queueBiasL1; // BiasL1
         TQue<QuePosition::A1, 1> queueScaleL1; // ScaleL1
+        TQue<QuePosition::A1, 1> queueReluWeightL1; // ReluWeightL1
         TQue<TPosition::C2, 1> queueBiasBT; // BT
         TQue<QuePosition::CO1, 1> queueCL0;
         TBuf<TPosition::A2> al0Buf;
@@ -275,10 +281,9 @@ public:
         LocalTensor<typename ConvDataType::WeightT> bl1;
         LocalTensor<typename ConvDataType::BiasT> biasL1;
         LocalTensor<typename ConvDataType::ScaleT> scaleL1;
+        LocalTensor<typename ConvDataType::ReluWeightT> reluWeightL1;
         LocalTensor<typename ConvDataType::FmapT> wholeAl0Tensor;
-        LocalTensor<typename ConvDataType::FmapT> al0;
         LocalTensor<typename ConvDataType::WeightT> wholeBl0Tensor;
-        LocalTensor<typename ConvDataType::WeightT> bl0;
         LocalTensor<typename ConvDataType::L0cT> biasBT;
         LocalTensor<typename ConvDataType::L0cT> wholeCl0Tensor =
             LocalTensor<typename ConvDataType::L0cT>(TPosition::CO1, 0, 0);
@@ -287,7 +292,9 @@ public:
 
         uint8_t enableBias = false;  // 是否有bias
         uint8_t enableVectorQuant = false;  // 是否有vector类型scale，双输出场景下任一scale为vector类型，即为true
+        uint8_t enableVectorRelu = false;  // 是否有vector类型relu_weight，双输出场景下任一relu_weight为vector类型，即为true
         uint64_t scale1L1offset = 0; // 双输出时scale1在L1上的偏移
+        uint64_t reluWeight1L1offset = 0; // 双输出时reluWeight1在L1上的偏移
         uint64_t deqScalar0 = DEQ_SCALAR_ONE;  // m1 = 1.0, other bits are 0.
         uint64_t deqScalar1 = DEQ_SCALAR_ONE;  // m1 = 1.0, other bits are 0.
         uint64_t preReluScalar0 = 0;
@@ -396,6 +403,14 @@ public:
         uint8_t loadBL1Flag = true; // 是否载入BL1的标志
         uint8_t loadAL0Flag = true; // 是否载入AL0的标志
         uint8_t loadBL0Flag = true; // 是否载入BL0的标志
+        uint8_t updateL1Flag = false; // 是否更新AL1数据的标志
+        // 用于管理前融合场景下MTE1/MTE3之前的同步管理，在后续处理中赋值后使用
+        AscendC::TEventID eventIdMte3ToMte1;
+        AscendC::TEventID eventIdMte1ToMte3;
+        AscendC::TEventID eventIdMte3ToMte1Ping;
+        AscendC::TEventID eventIdMte3ToMte1Pong;
+        AscendC::TEventID eventIdMte1ToMte3Ping;
+        AscendC::TEventID eventIdMte1ToMte3Pong;
 
         uint64_t kIter = 0; // k方向迭代器，从DDR到L0
         uint64_t batchIter = 0; // batch方向迭代器
@@ -406,7 +421,6 @@ public:
         uint64_t kBL0Iter = 0; // L1B 到L0方向的迭代器
         uint64_t nL0Iter = 0; // BL0上n方向迭代器
 
-        uint64_t maxBatchIter = 0;
         uint64_t multiKAL1 = 1;
         uint64_t multiKBL1 = 1;
         uint64_t maxKAL1Iter = 0;
@@ -444,17 +458,7 @@ public:
         uint16_t kL0FullLoadAl0PingPongFlag = 0;
         uint16_t kL0FullLoadBl0PingPongFlag = 0;
         uint16_t cl0PingPongFlag = 0;
-
-        // Input shape info
-        uint64_t orgBatch = 0;  // fmap上batch大小
-        uint64_t orgCi = 0;     // fmap上cin大小
-        uint64_t orgCo = 0;     // weight上cout大小
-        uint64_t orgHi = 0;     // fmap上h大小
-        uint64_t orgWi = 0;     // fmap上w大小
-        uint64_t orgHo = 0;     // output上h大小
-        uint64_t orgWo = 0;     // output上w大小
-        uint64_t kernelH = 0;   // weight上h大小
-        uint64_t kernelW = 0;   // weight上w大小
+        uint16_t al1PingPongFlag = 0;
     };
 };
 

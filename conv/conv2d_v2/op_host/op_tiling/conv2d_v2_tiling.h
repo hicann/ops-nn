@@ -59,8 +59,8 @@ namespace optiling {
     REGISTER_TILING_DATA_CLASS(Conv2DRunInfoOp, Conv2DRunInfo)
 
     BEGIN_TILING_DATA_DEF(Conv2DTilingData)
-    TILING_DATA_FIELD_DEF_STRUCT(TConv2DTiling, conv2dApiTiling);
-    TILING_DATA_FIELD_DEF_STRUCT(Conv2DRunInfo, conv2dRunInfo);
+    TILING_DATA_FIELD_DEF_STRUCT(TConv2DTiling, convApiTiling);
+    TILING_DATA_FIELD_DEF_STRUCT(Conv2DRunInfo, convRunInfo);
     END_TILING_DATA_DEF;
 
     REGISTER_TILING_DATA_CLASS(Conv2DV2, Conv2DTilingData)

@@ -446,12 +446,12 @@ ge::graphStatus Conv2dBaseTiling::GetFeatureFlag()
 
 void Conv2dBaseTiling::SetNumBlocksRes()
 {
-    numBlocksRes.batchDim = tilingData_.conv2dRunInfo.get_batchDim();
-    numBlocksRes.nDim = tilingData_.conv2dRunInfo.get_nDim();
-    numBlocksRes.hoDim = tilingData_.conv2dRunInfo.get_hoDim();
-    numBlocksRes.woDim = tilingData_.conv2dRunInfo.get_woDim();
+    numBlocksRes.batchDim = tilingData_.convRunInfo.get_batchDim();
+    numBlocksRes.nDim = tilingData_.convRunInfo.get_nDim();
+    numBlocksRes.hoDim = tilingData_.convRunInfo.get_hoDim();
+    numBlocksRes.woDim = tilingData_.convRunInfo.get_woDim();
     numBlocksRes.mDim = numBlocksRes.hoDim;
-    numBlocksRes.groupDim = tilingData_.conv2dRunInfo.get_groupDim();
+    numBlocksRes.groupDim = tilingData_.convRunInfo.get_groupDim();
 }
 
 // reset conv2d API's tilingdata

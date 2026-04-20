@@ -29,19 +29,19 @@ __aicore__ inline void OptGroupCalcBL1LoadTimesHWMode(Intf *self)
 {
     if (!self->ctx.kBL1fullload) {
         self->ctx.ddr2l1LoopKB = self->ctx.maxKBL1Iter + 1;
-        uint64_t ddr2l0LoopH = CeilDiv(self->ctx.singleCoreHo, self->ctx.convTiling->hoL0);
+        uint64_t ddr2l0LoopH = CeilDiv(self->ctx.singleCoreHo, self->ctx.convTilingData->convApiTiling.hoL0);
         uint64_t ddr2l0LoopW = 0;
         if constexpr (Intf::hasWL0IterFlag) {
             if (self->ctx.woL1SmallTail > 0) {
                 ddr2l0LoopW = (self->ctx.ddr2l1LoopW - W_TAIL_NUM) *
-                    CeilDiv(self->ctx.convTiling->woL1, self->ctx.convTiling->woL0) +
-                    CeilDiv(self->ctx.woAL1Tail, self->ctx.convTiling->woL0) +
-                    CeilDiv(self->ctx.woL1SmallTail, self->ctx.convTiling->woL0);
+                    CeilDiv(self->ctx.convTilingData->convApiTiling.woL1, self->ctx.convTilingData->convApiTiling.woL0) +
+                    CeilDiv(self->ctx.woAL1Tail, self->ctx.convTilingData->convApiTiling.woL0) +
+                    CeilDiv(self->ctx.woL1SmallTail, self->ctx.convTilingData->convApiTiling.woL0);
             } else {
-                ddr2l0LoopW = CeilDiv(self->ctx.singleCoreWo, self->ctx.convTiling->woL0);
+                ddr2l0LoopW = CeilDiv(self->ctx.singleCoreWo, self->ctx.convTilingData->convApiTiling.woL0);
             }
         } else {
-            ddr2l0LoopW = CeilDiv(self->ctx.singleCoreWo, self->ctx.convTiling->woL0);
+            ddr2l0LoopW = CeilDiv(self->ctx.singleCoreWo, self->ctx.convTilingData->convApiTiling.woL0);
         }
         self->ctx.bL1LoadTimes = ddr2l0LoopH * ddr2l0LoopW * self->ctx.ddr2l1LoopN * self->ctx.l12l0LoopN *
                                  self->ctx.ddr2l1LoopBatch * self->ctx.ddr2l1LoopKB;
@@ -98,27 +98,27 @@ template <class Intf>
 __aicore__ inline void OptGroupInitIterValueMfirstHWMode(Intf *self)
 {
     if (!self->ctx.kBL1fullload) {
+        uint64_t ddr2l0LoopH = CeilDiv(self->ctx.singleCoreHo, self->ctx.convTilingData->convApiTiling.hoL0);
         uint64_t ddr2l0LoopW = 0;
-        uint64_t ddr2l0LoopH = CeilDiv(self->ctx.singleCoreHo, self->ctx.convTiling->hoL0);
         if constexpr (Intf::hasWL0IterFlag) {
-            self->ctx.woAL1Tail = self->ctx.singleCoreWo % self->ctx.convTiling->woL1;
-            self->ctx.woAL1Tail = self->ctx.woAL1Tail == 0 ?  self->ctx.convTiling->woL1 : self->ctx.woAL1Tail;
-            if (self->ctx.convTiling->hoL0 > 1 && self->ctx.woAL1Tail % BLOCK_L0_N > 0 &&
-                CeilDiv(self->ctx.woAL1Tail, self->ctx.convTiling->woL0) > 1) {
-                self->ctx.woAL1Tail = (self->ctx.woAL1Tail / self->ctx.convTiling->woL0) * self->ctx.convTiling->woL0;
-                self->ctx.woL1SmallTail = self->ctx.woAL1Tail % self->ctx.convTiling->woL0;
+            self->ctx.woAL1Tail = self->ctx.singleCoreWo % self->ctx.convTilingData->convApiTiling.woL1;
+            self->ctx.woAL1Tail = self->ctx.woAL1Tail == 0 ?  self->ctx.convTilingData->convApiTiling.woL1 : self->ctx.woAL1Tail;
+            if (self->ctx.convTilingData->convApiTiling.hoL0 > 1 && self->ctx.woAL1Tail % BLOCK_L0_N > 0 &&
+                CeilDiv(self->ctx.woAL1Tail, self->ctx.convTilingData->convApiTiling.woL0) > 1) {
+                self->ctx.woL1SmallTail = self->ctx.woAL1Tail % self->ctx.convTilingData->convApiTiling.woL0;
+                self->ctx.woAL1Tail = (self->ctx.woAL1Tail / self->ctx.convTilingData->convApiTiling.woL0) * self->ctx.convTilingData->convApiTiling.woL0;
             }
 
-            self->ctx.ddr2l1LoopW = CeilDiv(self->ctx.singleCoreWo, self->ctx.convTiling->woL1);
+            self->ctx.ddr2l1LoopW = CeilDiv(self->ctx.singleCoreWo, self->ctx.convTilingData->convApiTiling.woL1);
             ddr2l0LoopW = 
-                (self->ctx.ddr2l1LoopW - 1) * CeilDiv(self->ctx.woAL1Tail, self->ctx.convTiling->woL0) +
-                CeilDiv(self->ctx.convTiling->woL1, self->ctx.convTiling->woL0);
+                (self->ctx.ddr2l1LoopW - 1) * CeilDiv(self->ctx.convTilingData->convApiTiling.woL1, self->ctx.convTilingData->convApiTiling.woL0) +
+                CeilDiv(self->ctx.woAL1Tail, self->ctx.convTilingData->convApiTiling.woL0);
 
             if (self->ctx.woL1SmallTail > 0) {
-                ddr2l0LoopW += CeilDiv(self->ctx.woL1SmallTail, self->ctx.convTiling->woL0);
+                ddr2l0LoopW += CeilDiv(self->ctx.woL1SmallTail, self->ctx.convTilingData->convApiTiling.woL0);
             }
         } else {
-            ddr2l0LoopW = CeilDiv(self->ctx.singleCoreWo, self->ctx.convTiling->woL0);
+            ddr2l0LoopW = CeilDiv(self->ctx.singleCoreWo, self->ctx.convTilingData->convApiTiling.woL0);
         }
 
         self->ctx.ddr2l1LoopTmp = self->ctx.ddr2l1LoopBatch * ddr2l0LoopH * ddr2l0LoopW;
@@ -135,23 +135,23 @@ __aicore__ inline void OptGroupInitIterValueNfirstHWMode(Intf *self)
         self->ctx.ddr2l1LoopH = 1;
         self->ctx.maxHoL1Iter = 0;
     } else {
-        self->ctx.ddr2l1LoopH = CeilDiv(self->ctx.singleCoreHo, self->ctx.convTiling->hoL1);
+        self->ctx.ddr2l1LoopH = CeilDiv(self->ctx.singleCoreHo, self->ctx.convTilingData->convApiTiling.hoL1);
         self->ctx.maxHoL1Iter = self->ctx.ddr2l1LoopH - 1;
     }
 
     if constexpr (Intf::hasWL1IterFlag) {
-        self->ctx.ddr2l1LoopW = CeilDiv(self->ctx.singleCoreWo, self->ctx.convTiling->woL1);
+        self->ctx.ddr2l1LoopW = CeilDiv(self->ctx.singleCoreWo, self->ctx.convTilingData->convApiTiling.woL1);
     } else {
         self->ctx.ddr2l1LoopW = 1;
     }
 
-    self->ctx.woAL1Tail = self->ctx.singleCoreWo % self->ctx.convTiling->woL1;
-    self->ctx.woAL1Tail = self->ctx.woAL1Tail == 0 ?  self->ctx.convTiling->woL1 : self->ctx.woAL1Tail;
+    self->ctx.woAL1Tail = self->ctx.singleCoreWo % self->ctx.convTilingData->convApiTiling.woL1;
+    self->ctx.woAL1Tail = self->ctx.woAL1Tail == 0 ?  self->ctx.convTilingData->convApiTiling.woL1 : self->ctx.woAL1Tail;
     if constexpr (Intf::hasWL0IterFlag) {
-        if (self->ctx.convTiling->hoL0 > 1 && self->ctx.woAL1Tail % BLOCK_L0_N > 0 &&
-            CeilDiv(self->ctx.woAL1Tail, self->ctx.convTiling->woL0) > 1) {
-            self->ctx.woL1SmallTail = self->ctx.woAL1Tail % self->ctx.convTiling->woL0;
-            self->ctx.woAL1Tail = (self->ctx.woAL1Tail / self->ctx.convTiling->woL0) * self->ctx.convTiling->woL0;
+        if (self->ctx.convTilingData->convApiTiling.hoL0 > 1 && self->ctx.woAL1Tail % BLOCK_L0_N > 0 &&
+            CeilDiv(self->ctx.woAL1Tail, self->ctx.convTilingData->convApiTiling.woL0) > 1) {
+            self->ctx.woL1SmallTail = self->ctx.woAL1Tail % self->ctx.convTilingData->convApiTiling.woL0;
+            self->ctx.woAL1Tail = (self->ctx.woAL1Tail / self->ctx.convTilingData->convApiTiling.woL0) * self->ctx.convTilingData->convApiTiling.woL0;
         }
 
         if (self->ctx.woL1SmallTail > 0) {
@@ -160,8 +160,8 @@ __aicore__ inline void OptGroupInitIterValueNfirstHWMode(Intf *self)
     }
 
     if (!self->ctx.kBL1fullload) {
-        self->ctx.hoAL1Tail = self->ctx.singleCoreHo % self->ctx.convTiling->hoL1;
-        self->ctx.hoAL1Tail = self->ctx.hoAL1Tail == 0 ? self->ctx.convTiling->hoL1 : self->ctx.hoAL1Tail;
+        self->ctx.hoAL1Tail = self->ctx.singleCoreHo % self->ctx.convTilingData->convApiTiling.hoL1;
+        self->ctx.hoAL1Tail = self->ctx.hoAL1Tail == 0 ? self->ctx.convTilingData->convApiTiling.hoL1 : self->ctx.hoAL1Tail;
         self->ctx.currentHoL1 = self->ctx.hoAL1Tail;
         self->ctx.currentWoL1 = self->ctx.woAL1Tail;
         self->ctx.maxWoL1Iter = self->ctx.ddr2l1LoopW - 1;
@@ -225,15 +225,15 @@ template <class Intf>
 __aicore__ inline void OptGroupInitKValue(Intf *self)
 {
     self->ctx.ddr2l1LoopKB =
-        CeilDiv(AlignB(self->ctx.singleCoreCi, Intf::k0) * self->ctx.convTiling->kernelHxkernelWxkernelD,
-                self->ctx.convTiling->kBL1);
+        CeilDiv(AlignB(self->ctx.singleCoreCi, Intf::k0) * self->ctx.convTilingData->convApiTiling.kernelHxkernelWxkernelD,
+                self->ctx.convTilingData->convApiTiling.kBL1);
     self->ctx.maxKBL1Iter = self->ctx.ddr2l1LoopKB - 1;
     self->ctx.kBL1fullload = self->ctx.ddr2l1LoopKB == 1;
 
     self->ctx.ci1Opt = CeilDiv(self->ctx.singleCoreCi, Intf::k0);
 
     if constexpr (Intf::isConv3D) {
-        self->ctx.bL1Cin = self->ctx.convTiling->cinBInCore / self->ctx.bL1Dk;
+        self->ctx.bL1Cin = self->ctx.convTilingData->convApiTiling.cinBInCore / self->ctx.bL1Dk;
         self->ctx.bL1CinTail = self->ctx.bL1Dk > 1 ? self->ctx.bL1Cin : self->ctx.singleCoreCi % self->ctx.bL1Cin;
         self->ctx.bL1CinTail = self->ctx.bL1CinTail == 0 ? self->ctx.bL1Cin : self->ctx.bL1CinTail;
         self->ctx.bL1CinLoadNum = CeilDiv(self->ctx.singleCoreCi, self->ctx.bL1Cin);
@@ -243,28 +243,28 @@ __aicore__ inline void OptGroupInitKValue(Intf *self)
 template <class Intf>
 __aicore__ inline void OptGroupInitNValue(Intf *self)
 {
-    self->ctx.nBL1Tail = self->ctx.singleCoreCo % self->ctx.convTiling->nBL1;
-    self->ctx.nBL1Tail = self->ctx.nBL1Tail == 0 ? self->ctx.convTiling->nBL1 : self->ctx.nBL1Tail;
+    self->ctx.nBL1Tail = self->ctx.singleCoreCo % self->ctx.convTilingData->convApiTiling.nBL1;
+    self->ctx.nBL1Tail = self->ctx.nBL1Tail == 0 ? self->ctx.convTilingData->convApiTiling.nBL1 : self->ctx.nBL1Tail;
 
     if constexpr (!Intf::hasNL1IterFlag) {
         self->ctx.ddr2l1LoopN = 1;
         self->ctx.maxNBL1Iter = 0;
     } else {
-        self->ctx.ddr2l1LoopN = CeilDiv(self->ctx.singleCoreCo, self->ctx.convTiling->nBL1);
+        self->ctx.ddr2l1LoopN = CeilDiv(self->ctx.singleCoreCo, self->ctx.convTilingData->convApiTiling.nBL1);
         self->ctx.maxNBL1Iter = self->ctx.ddr2l1LoopN  - 1;
     }
 
     if constexpr (!Intf::hasNL0IterFlag) {
         self->ctx.l12l0LoopN = 1;
     } else {
-        self->ctx.l12l0LoopN = self->ctx.convTiling->multiNBL1;
+        self->ctx.l12l0LoopN = self->ctx.convTilingData->convApiTiling.multiNBL1;
     }
 }
 
 template <class Intf>
 __aicore__ inline void OptGroupInitBuf(Intf *self)
 {
-    self->ctx.ubBufSize = self->ctx.ci1Opt * self->ctx.convTiling->kernelHxkernelWxkernelD * self->ctx.co1Opt *
+    self->ctx.ubBufSize = self->ctx.ci1Opt * self->ctx.convTilingData->convApiTiling.kernelHxkernelWxkernelD * self->ctx.co1Opt *
                           Intf::k0 * BLOCK_L0_N;
     self->ctx.pipe.InitBuffer(self->ctx.ndUbBuf, self->ctx.ubBufSize * Intf::sizeOfWeight);
     self->ctx.pipe.InitBuffer(self->ctx.nzUbBuf, self->ctx.ubBufSize * Intf::sizeOfWeight);
@@ -272,12 +272,11 @@ __aicore__ inline void OptGroupInitBuf(Intf *self)
 
     self->ctx.nzTensor = self->ctx.nzUbBuf.template Get<typename Intf::WeightT>();
 
-    int8_t al1db = (self->ctx.convTiling->pBufferFlag & AL1_DB_IDX) >> AL1_DB_OFFSET;
-    uint32_t aL1SpaceSize = self->ctx.convTiling->aL1SpaceSize;
-    if (al1db) {
+    uint32_t aL1SpaceSize = self->ctx.convTilingData->convApiTiling.aL1SpaceSize;
+    if ((self->ctx.convTilingData->convApiTiling.pBufferFlag & AL1_DB_IDX) >> AL1_DB_OFFSET) {
         aL1SpaceSize *= DOUBLE_BUF;
     }
-    self->ctx.bL1SpaceSize = self->ctx.convTiling->nBL1 * self->ctx.convTiling->kBL1;
+    self->ctx.bL1SpaceSize = self->ctx.convTilingData->convApiTiling.nBL1 * self->ctx.convTilingData->convApiTiling.kBL1;
 
     if constexpr (Intf::bL1DBFlag) {
         self->ctx.pipe.InitBuffer(self->ctx.bL1TBuf,
@@ -295,37 +294,37 @@ __aicore__ inline void OptGroupVecInit(Intf *self)
 {
     self->ctx.vecId = GetSubBlockIdx();
 
-    self->ctx.singleCoreCi = self->ctx.convTiling->singleCoreCi;
-    self->ctx.singleCoreCo = self->ctx.convTiling->singleCoreCo;
-    self->ctx.singleGroups = self->ctx.convTiling->singleCoreGroups;
-    self->ctx.singleGroupOpt = self->ctx.convTiling->singleCoreGroupOpt;
+    self->ctx.singleCoreCi = self->ctx.convTilingData->convApiTiling.singleCoreCi;
+    self->ctx.singleCoreCo = self->ctx.convTilingData->convApiTiling.singleCoreCo;
+    self->ctx.singleGroups = self->ctx.convTilingData->convApiTiling.singleCoreGroups;
+    self->ctx.singleGroupOpt = self->ctx.convTilingData->convApiTiling.singleCoreGroupOpt;
 
-    self->ctx.enlarge = self->ctx.convTiling->enlarge;
-    self->ctx.ciPerGroup = self->ctx.convTiling->orgCi / self->ctx.convTiling->groups;
-    self->ctx.coPerGroup = self->ctx.convTiling->orgCo / self->ctx.convTiling->groups;
-    self->ctx.ciOpt = self->ctx.ciPerGroup * self->ctx.convTiling->enlarge;
+    self->ctx.enlarge = self->ctx.convTilingData->convApiTiling.enlarge;
+    self->ctx.ciPerGroup = self->ctx.convTilingData->convApiTiling.orgCi / self->ctx.convTilingData->convApiTiling.groups;
+    self->ctx.coPerGroup = self->ctx.convTilingData->convApiTiling.orgCo / self->ctx.convTilingData->convApiTiling.groups;
+    self->ctx.ciOpt = self->ctx.ciPerGroup * self->ctx.convTilingData->convApiTiling.enlarge;
     self->ctx.ci1Opt = CeilDiv(self->ctx.ciOpt, Intf::k0);
     self->ctx.ciOptAlign = self->ctx.ci1Opt * Intf::k0;
-    self->ctx.kUbSize = self->ctx.ciOptAlign * self->ctx.convTiling->kernelHxkernelWxkernelD;
-    self->ctx.coOpt = self->ctx.coPerGroup * self->ctx.convTiling->enlarge;
+    self->ctx.kUbSize = self->ctx.ciOptAlign * self->ctx.convTilingData->convApiTiling.kernelHxkernelWxkernelD;
+    self->ctx.coOpt = self->ctx.coPerGroup * self->ctx.convTilingData->convApiTiling.enlarge;
     self->ctx.co1Opt = CeilDiv(self->ctx.coOpt, BLOCK_L0_N);
     self->ctx.coOptAlign = self->ctx.co1Opt * BLOCK_L0_N;
 
     if constexpr (Intf::outputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE)) {
-        self->ctx.singleCoreM = self->ctx.convTiling->singleCoreHo;
-        self->ctx.mAL1 = self->ctx.convTiling->hoL1;
-        self->ctx.mL0 = self->ctx.convTiling->hoL0;
+        self->ctx.singleCoreM = self->ctx.convTilingData->convApiTiling.singleCoreHo;
+        self->ctx.mAL1 = self->ctx.convTilingData->convApiTiling.hoL1;
+        self->ctx.mL0 = self->ctx.convTilingData->convApiTiling.hoL0;
     } else {
-        self->ctx.singleCoreHo = self->ctx.convTiling->singleCoreHo;
-        self->ctx.singleCoreWo = self->ctx.convTiling->singleCoreWo;
+        self->ctx.singleCoreHo = self->ctx.convTilingData->convApiTiling.singleCoreHo;
+        self->ctx.singleCoreWo = self->ctx.convTilingData->convApiTiling.singleCoreWo;
     }
 
     if constexpr (Intf::isConv3D) {
-        self->ctx.singleCoreDo = self->ctx.convTiling->singleCoreDo;
+        self->ctx.singleCoreDo = self->ctx.convTilingData->convApiTiling.singleCoreDo;
         self->ctx.cin1xcin0 = AlignB(self->ctx.singleCoreCi, Intf::k0);
-        self->ctx.bL1Dk = self->ctx.convTiling->cinBInCore <= self->ctx.cin1xcin0 ?
-                            1 : self->ctx.convTiling->cinBInCore / self->ctx.cin1xcin0;
-        self->ctx.bL1DkTail = self->ctx.kernelD % self->ctx.bL1Dk;
+        self->ctx.bL1Dk = self->ctx.convTilingData->convApiTiling.cinBInCore <= self->ctx.cin1xcin0 ?
+                            1 : self->ctx.convTilingData->convApiTiling.cinBInCore / self->ctx.cin1xcin0;
+        self->ctx.bL1DkTail = self->ctx.convTilingData->convApiTiling.kernelD % self->ctx.bL1Dk;
         self->ctx.bL1DkTail = self->ctx.bL1DkTail == 0 ? self->ctx.bL1Dk : self->ctx.bL1DkTail;
     }
 

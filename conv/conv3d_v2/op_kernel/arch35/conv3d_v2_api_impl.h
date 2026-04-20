@@ -63,7 +63,7 @@ public:
     struct ContextData : public Config::ContextData {
         __aicore__ inline ContextData(){};
 
-        const struct Ops::NN::Conv3dV2::TConv3DTiling *__restrict convTiling;
+        const Ops::NN::Conv3dV2::Conv3DV2TilingData* convTilingData;
 
         // Using Conditional<flag, type1, type2>::type to select M or HW, if flag=true, type=type1, else type=type2
         using LoadAL1Tools = typename Conditional<
@@ -96,9 +96,6 @@ public:
         TQue<QuePosition::A1, static_cast<int8_t>(Intf::kPreLoadAFlag || Intf::kPreLoadABFlag) + 1> queueAL1; // AL1
         TQue<QuePosition::B1, static_cast<int8_t>(Intf::kPreLoadBFlag || Intf::kPreLoadABFlag) + 1> queueBL1; // BL1
 
-        uint64_t orgDi = 0;
-        uint64_t orgDo = 0;
-        uint64_t kernelD = 0;
         uint64_t dilatedKernelD = 0;
 
         int64_t diStartPos = 0;

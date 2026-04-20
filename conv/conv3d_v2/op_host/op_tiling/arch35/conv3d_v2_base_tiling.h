@@ -157,6 +157,8 @@ private:
     ge::graphStatus PrepareTiling();
     ge::graphStatus CheckBiasShape() const;
     void SetApiInputPlatformInfo();
+    void SetUnionDataXt(shared_ptr<tuningtiling::Conv3DV2TunnerTiling> convRepoTiling);
+    void PrintInputArgs(shared_ptr<tuningtiling::Conv3DV2InputArgs> conv3DInput);
 };
 }
 }

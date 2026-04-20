@@ -162,8 +162,8 @@ struct Conv3DRunInfo {
 };
 
 struct Conv3DV2TilingData {
-    TConv3DTiling conv3dApiTiling;
-    Conv3DRunInfo conv3dRunInfo;
+    TConv3DTiling convApiTiling;
+    Conv3DRunInfo convRunInfo;
 };
 
 #pragma pack()

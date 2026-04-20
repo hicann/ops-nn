@@ -62,12 +62,12 @@ public:
         if constexpr (Intf::groupOptPreloadFlag) {
             uint64_t weightOneGroupSize = self_->ctx.coPerGroup * self_->ctx.ciPerGroup * self_->ctx.enlarge;
             if constexpr (Intf::formatOutput == ConvFormat::NCHW) {
-                weightOneGroupSize *= self_->ctx.convTiling->kernelHxkernelWxkernelD;
+                weightOneGroupSize *= self_->ctx.convTilingData->convApiTiling.kernelHxkernelWxkernelD;
             }
             gmOffset = weightOneGroupSize * self_->ctx.groupOptIter;
         }
         if constexpr (Intf::formatOutput == ConvFormat::NDHWC || Intf::formatOutput == ConvFormat::NHWC) {
-            uint64_t curSrcCoOpt = self_->ctx.convTiling->orgCo;
+            uint64_t curSrcCoOpt = self_->ctx.convTilingData->convApiTiling.orgCo;
             copyParamsHWC.loopInfo.loopSrcStride[NDDMA_LOOP1_INDEX] = curSrcCoOpt;
             copyParamsHWC.loopInfo.loopSrcStride[NDDMA_LOOP3_INDEX] = curSrcCoOpt * self_->ctx.ciPerGroup;
             copyParamsHWC.loopInfo.loopSize[NDDMA_LOOP2_INDEX] = self_->ctx.singleGroups;
@@ -83,7 +83,7 @@ public:
 private:
 __aicore__ inline void NDDMAFirstSetCopyParamsCHW()
     {
-        uint64_t srcKSize = self_->ctx.ciPerGroup * self_->ctx.convTiling->kernelHxkernelWxkernelD;
+        uint64_t srcKSize = self_->ctx.ciPerGroup * self_->ctx.convTilingData->convApiTiling.kernelHxkernelWxkernelD;
         // NDDMA Loop0 params
         copyParams.loopInfo.loopSize[NDDMA_LOOP0_INDEX] = srcKSize;
         copyParams.loopInfo.loopSrcStride[NDDMA_LOOP0_INDEX] = 1;
@@ -112,7 +112,7 @@ __aicore__ inline void NDDMAFirstSetCopyParamsCHW()
         copyParamsHWC.loopInfo.loopDstStride[NDDMA_LOOP2_INDEX] = self_->ctx.coOptAlign * self_->ctx.ciPerGroup +
                                                                   self_->ctx.coPerGroup;
         // NDDMA Loop3 params
-        copyParamsHWC.loopInfo.loopSize[NDDMA_LOOP3_INDEX] = self_->ctx.convTiling->kernelHxkernelWxkernelD;
+        copyParamsHWC.loopInfo.loopSize[NDDMA_LOOP3_INDEX] = self_->ctx.convTilingData->convApiTiling.kernelHxkernelWxkernelD;
         copyParamsHWC.loopInfo.loopDstStride[NDDMA_LOOP3_INDEX] = self_->ctx.coOptAlign * self_->ctx.ciOptAlign;
     }
 
@@ -170,7 +170,7 @@ private:
         for (uint8_t idx = 0; idx < Intf::k0; ++idx) {
             indexTensor.SetValue(idx, curValue);
             if constexpr (Intf::formatOutput == ConvFormat::NCDHW || Intf::formatOutput == ConvFormat::NCHW) {
-                curValue += self_->ctx.convTiling->kernelHxkernelWxkernelD;
+                curValue += self_->ctx.convTilingData->convApiTiling.kernelHxkernelWxkernelD;
             } else {
                 curValue += self_->ctx.coOptAlign;
             }
@@ -209,10 +209,10 @@ private:
     {
         uint16_t ciLoopTimes = self_->ctx.ci1Opt;
         uint16_t coLoopTimes = coOptLoopTimes;
-        uint16_t khkwLoopTimes = self_->ctx.convTiling->kernelHxkernelW;
-        uint32_t srcCiStride = self_->ctx.convTiling->kernelHxkernelW * Intf::k0;
+        uint16_t khkwLoopTimes = self_->ctx.convTilingData->convApiTiling.kernelHxkernelW;
+        uint32_t srcCiStride = self_->ctx.convTilingData->convApiTiling.kernelHxkernelW * Intf::k0;
         uint32_t srcCoStride = coPerReg * self_->ctx.kUbSize;
-        uint32_t dstCiStride = self_->ctx.convTiling->kernelHxkernelW * Intf::k0 * self_->ctx.coOptAlign;
+        uint32_t dstCiStride = self_->ctx.convTilingData->convApiTiling.kernelHxkernelW * Intf::k0 * self_->ctx.coOptAlign;
         uint32_t dstKhKwStride = Intf::k0 * self_->ctx.coOptAlign;
         uint32_t dstCoStride = coPerReg * Intf::k0;
 
@@ -262,16 +262,16 @@ private:
 
     __aicore__ inline void TransNCDHW2NZ()
     {
-        uint16_t kdLoopTimes = self_->ctx.convTiling->kernelD;
+        uint16_t kdLoopTimes = self_->ctx.convTilingData->convApiTiling.kernelD;
         uint16_t ciLoopTimes = self_->ctx.ci1Opt;
         uint16_t coLoopTimes = coOptLoopTimes;
-        uint16_t khkwLoopTimes = self_->ctx.convTiling->kernelHxkernelW;
-        uint32_t srcCiStride = self_->ctx.convTiling->kernelHxkernelWxkernelD * Intf::k0;
+        uint16_t khkwLoopTimes = self_->ctx.convTilingData->convApiTiling.kernelHxkernelW;
+        uint32_t srcCiStride = self_->ctx.convTilingData->convApiTiling.kernelHxkernelWxkernelD * Intf::k0;
         uint32_t srcCoStride = coPerReg * self_->ctx.kUbSize;
-        uint32_t dstCiStride = self_->ctx.convTiling->kernelHxkernelW * Intf::k0 * self_->ctx.coOptAlign;
+        uint32_t dstCiStride = self_->ctx.convTilingData->convApiTiling.kernelHxkernelW * Intf::k0 * self_->ctx.coOptAlign;
         uint32_t dstKhKwStride = Intf::k0 * self_->ctx.coOptAlign;
         uint32_t dstCoStride = coPerReg * Intf::k0;
-        uint32_t srcKdStride = self_->ctx.convTiling->kernelHxkernelW;
+        uint32_t srcKdStride = self_->ctx.convTilingData->convApiTiling.kernelHxkernelW;
         uint32_t dstKdStride = self_->ctx.ci1Opt * dstCiStride;
 
         __VEC_SCOPE__
@@ -321,19 +321,19 @@ private:
 
     __aicore__ inline void TransNDHWC2NZ()
     {
-        uint16_t kdLoopTimes = self_->ctx.convTiling->kernelD;
+        uint16_t kdLoopTimes = self_->ctx.convTilingData->convApiTiling.kernelD;
         uint16_t ciLoopTimes = self_->ctx.ci1Opt;
         uint16_t coLoopTimes = coOptLoopTimes;
-        uint16_t khkwLoopTimes = self_->ctx.convTiling->kernelHxkernelW;
+        uint16_t khkwLoopTimes = self_->ctx.convTilingData->convApiTiling.kernelHxkernelW;
         uint32_t srcGroupOptSize = self_->ctx.coOptAlign * self_->ctx.ciOptAlign;
         uint32_t srcCiStride = self_->ctx.coOptAlign * Intf::k0;
         uint32_t srcCoStride = coPerReg;
-        uint32_t dstCiStride = self_->ctx.convTiling->kernelHxkernelW * Intf::k0 * self_->ctx.coOptAlign;
+        uint32_t dstCiStride = self_->ctx.convTilingData->convApiTiling.kernelHxkernelW * Intf::k0 * self_->ctx.coOptAlign;
         uint32_t dstKhKwStride = Intf::k0 * self_->ctx.coOptAlign;
         uint32_t srcKhKwStride = srcGroupOptSize;
         uint32_t dstCoStride = coPerReg * Intf::k0;
-        uint32_t srcKdStride = self_->ctx.convTiling->kernelHxkernelW * srcGroupOptSize;
-        uint32_t dstKdStride = self_->ctx.convTiling->kernelHxkernelW * self_->ctx.coOptAlign *
+        uint32_t srcKdStride = self_->ctx.convTilingData->convApiTiling.kernelHxkernelW * srcGroupOptSize;
+        uint32_t dstKdStride = self_->ctx.convTilingData->convApiTiling.kernelHxkernelW * self_->ctx.coOptAlign *
                                self_->ctx.ci1Opt * Intf::k0; // ci1Opt has updated in groupOptTail
         __VEC_SCOPE__
         {
@@ -383,12 +383,12 @@ private:
     __aicore__ inline void TransNHWC2NZ()
     {
         uint16_t ciLoopTimes = self_->ctx.ci1Opt;
-        uint16_t khkwLoopTimes = self_->ctx.convTiling->kernelHxkernelW;
+        uint16_t khkwLoopTimes = self_->ctx.convTilingData->convApiTiling.kernelHxkernelW;
         uint16_t coLoopTimes = coOptLoopTimes;
         uint32_t srcCiStride = self_->ctx.coOptAlign * Intf::k0;
         uint32_t srcKhKwStride = self_->ctx.coOptAlign * self_->ctx.ciOptAlign; 
         uint32_t srcCoStride = coPerReg;
-        uint32_t dstCiStride = self_->ctx.convTiling->kernelHxkernelW * Intf::k0 * self_->ctx.coOptAlign;
+        uint32_t dstCiStride = self_->ctx.convTilingData->convApiTiling.kernelHxkernelW * Intf::k0 * self_->ctx.coOptAlign;
         uint32_t dstKhKwStride = Intf::k0 * self_->ctx.coOptAlign;
         uint32_t dstCoStride = coPerReg * Intf::k0;
  
@@ -482,30 +482,39 @@ private:
     __aicore__ inline void SetCopyParams2D()
     {
         if (unlikely(self_->ctx.groupOptIter == self_->ctx.vecId)) {
-            copyParams.blockCount = self_->ctx.convTiling->kBL1 / Intf::k0;
-            copyParams.blockLen = self_->ctx.convTiling->nBL1;
-            copyParams.srcStride = self_->ctx.co1Opt * BLOCK_L0_N - self_->ctx.convTiling->nBL1;
+            copyParams.blockCount = self_->ctx.convTilingData->convApiTiling.kBL1 / Intf::k0;
+            copyParams.blockLen = self_->ctx.convTilingData->convApiTiling.nBL1;
+            copyParams.srcStride = self_->ctx.co1Opt * BLOCK_L0_N - self_->ctx.convTilingData->convApiTiling.nBL1;
         }
 
-        srcOffset = (self_->ctx.coStartPos + self_->ctx.nBL1Iter * self_->ctx.convTiling->nBL1) * Intf::k0 +
-                    self_->ctx.kBL1Iter * self_->ctx.convTiling->kBL1 * self_->ctx.coOptAlign;
+        if constexpr (Intf::isKL1NL0FullLoad) {
+            srcOffset = self_->ctx.coStartPos * Intf::k0 +
+                        self_->ctx.kBL1Iter * self_->ctx.convTilingData->convApiTiling.kBL1 * self_->ctx.coOptAlign;
+        } else {
+            srcOffset = (self_->ctx.coStartPos + self_->ctx.nBL1Iter * self_->ctx.convTilingData->convApiTiling.nBL1) * Intf::k0 +
+                        self_->ctx.kBL1Iter * self_->ctx.convTilingData->convApiTiling.kBL1 * self_->ctx.coOptAlign;
+        }
     }
 
     __aicore__ inline void SetCopyParams3D()
     {
         if (unlikely(self_->ctx.loadUB2L1Iter == 0)) {
-            copyParams.blockLen = self_->ctx.convTiling->nBL1;
-            copyParams.srcStride = self_->ctx.co1Opt * BLOCK_L0_N - self_->ctx.convTiling->nBL1;
-            kOffset = self_->ctx.bL1Dk * self_->ctx.bL1Cin * self_->ctx.convTiling->kernelHxkernelW;
+            copyParams.blockLen = self_->ctx.convTilingData->convApiTiling.nBL1;
+            copyParams.srcStride = self_->ctx.co1Opt * BLOCK_L0_N - self_->ctx.convTilingData->convApiTiling.nBL1;
+            kOffset = self_->ctx.bL1Dk * self_->ctx.bL1Cin * self_->ctx.convTilingData->convApiTiling.kernelHxkernelW;
         }
 
         uint64_t currentBL1Dk = IsKBL1Tail() ? self_->ctx.bL1DkTail : self_->ctx.bL1Dk;
         uint64_t currentBL1Cin1 = IsKBL1Tail() ? self_->ctx.bL1CinTail : self_->ctx.bL1Cin;
         copyParams.blockCount = currentBL1Dk * CeilDiv(currentBL1Cin1, Intf::k0) *
-                                self_->ctx.convTiling->kernelHxkernelW;
+                                self_->ctx.convTilingData->convApiTiling.kernelHxkernelW;
 
-        srcOffset = (self_->ctx.coStartPos + self_->ctx.nBL1Iter * self_->ctx.convTiling->nBL1) * Intf::k0 +
-                    self_->ctx.kBL1Iter * kOffset * self_->ctx.coOptAlign;
+        if constexpr (Intf::isKL1NL0FullLoad) {
+            srcOffset = self_->ctx.coStartPos * Intf::k0 + self_->ctx.kBL1Iter * kOffset * self_->ctx.coOptAlign;
+        } else {
+            srcOffset = (self_->ctx.coStartPos + self_->ctx.nBL1Iter * self_->ctx.convTilingData->convApiTiling.nBL1) * Intf::k0 +
+                        self_->ctx.kBL1Iter * kOffset * self_->ctx.coOptAlign;
+        }
     }
 
     __aicore__ inline bool IsKBL1Tail()

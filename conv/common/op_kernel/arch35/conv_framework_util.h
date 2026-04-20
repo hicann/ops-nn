@@ -62,6 +62,9 @@ using namespace AscendC;
 #define CONV_CHECK_FUN_TEMPLATE(T, NAMESPACE, ARG, ...)                                                               \
     (!IsSameType<decltype(T::template call<ARG>(__VA_ARGS__)), NAMESPACE::TypeFalse>::value)
 
+#define CONV_CHECK_FUN_THREE_TEMPLATE(T, NAMESPACE, ARG0, ARG1, ARG2, ...)                                            \
+ 	(!IsSameType<decltype(T::template call<ARG0, ARG1, ARG2>(__VA_ARGS__)), NAMESPACE::TypeFalse>::value)
+
 // Define struct _has_member_MEMBER for check whether MEMBER exists.
 #define CONV_DECLARE_CHECK_MEMBER(MEMBER) namespace __ConvFramework {                                                 \
     template <typename T>                                                                                             \

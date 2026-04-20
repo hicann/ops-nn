@@ -159,6 +159,26 @@ struct ShapeInfo {
     uint8_t dualOutput = 0;
 };
 
+#pragma pack(push, 1)  // 确保无填充，严格按位排列
+typedef struct {
+    uint64_t strideW        : 6;       // bits 0-5
+    uint64_t strideH        : 6;       // bits 6-11
+    uint64_t kernelW        : 8;       // bits 12-19
+    uint64_t kernelH        : 8;       // bits 20-27
+    uint64_t dilationW      : 8;       // bits 28-35
+    uint64_t dilationH      : 8;       // bits 36-43
+    uint64_t kernelW_highest_bit : 1; // bit 44
+    uint64_t kernelH_highest_bit : 1; // bit 45
+    uint64_t reserve1       : 2;        // bits 46-47
+    uint64_t channelSize    : 16;      // bits 48-63
+} BitFieldData;
+#pragma pack(pop)
+ 
+union UnionDataXt {
+    uint64_t n;
+    BitFieldData bf;    // n与bf共享同一块内存空间
+};
+
 struct AttrInfo {
     int32_t padHead = 0;
     int32_t padTail = 0;
@@ -178,6 +198,9 @@ struct AttrInfo {
     int32_t groups = 1;
     int8_t offsetx = 0;
     int8_t roundMode = 0;
+
+    UnionDataXt unionDataXt;
+    AttrInfo() : unionDataXt{} {}
 };
 
 struct DescInfo {

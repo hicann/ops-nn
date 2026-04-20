@@ -61,11 +61,10 @@ template <class Intf>
 static __aicore__ inline void InitBatchDirectionValue(Intf *self)
 {
     if constexpr (Intf::isInnerBatchFlag) {
-        self->ctx.ddr2l1LoopBatch = CeilDiv(self->ctx.singleCoreBatch, self->ctx.convTiling->innerBatch);
-        self->ctx.maxBatchIter = self->ctx.ddr2l1LoopBatch - 1;
-        self->ctx.innerBatchTail = self->ctx.singleCoreBatch % self->ctx.convTiling->innerBatch;
+        self->ctx.ddr2l1LoopBatch = CeilDiv(self->ctx.singleCoreBatch, self->ctx.convTilingData->convApiTiling.innerBatch);
+        self->ctx.innerBatchTail = self->ctx.singleCoreBatch % self->ctx.convTilingData->convApiTiling.innerBatch;
         self->ctx.innerBatchTail = self->ctx.innerBatchTail == 0 ?
-            self->ctx.convTiling->innerBatch : self->ctx.innerBatchTail;
+            self->ctx.convTilingData->convApiTiling.innerBatch : self->ctx.innerBatchTail;
     } else {
         self->ctx.ddr2l1LoopBatch = self->ctx.singleCoreBatch;
     }
@@ -74,16 +73,16 @@ static __aicore__ inline void InitBatchDirectionValue(Intf *self)
 template <class Intf>
 static __aicore__ inline void InitCoDirectionValue(Intf *self)
 {
-    self->ctx.nBL1Tail = self->ctx.singleCoreCo % self->ctx.convTiling->nBL1;
-    self->ctx.nBL1Tail = self->ctx.nBL1Tail == 0 ? self->ctx.convTiling->nBL1 : self->ctx.nBL1Tail;
-    self->ctx.nL0Tail = self->ctx.nBL1Tail % self->ctx.convTiling->nL0;
-    self->ctx.nL0Tail = self->ctx.nL0Tail == 0 ? self->ctx.convTiling->nL0 : self->ctx.nL0Tail;
+    self->ctx.nBL1Tail = self->ctx.singleCoreCo % self->ctx.convTilingData->convApiTiling.nBL1;
+    self->ctx.nBL1Tail = self->ctx.nBL1Tail == 0 ? self->ctx.convTilingData->convApiTiling.nBL1 : self->ctx.nBL1Tail;
+    self->ctx.nL0Tail = self->ctx.nBL1Tail % self->ctx.convTilingData->convApiTiling.nL0;
+    self->ctx.nL0Tail = self->ctx.nL0Tail == 0 ? self->ctx.convTilingData->convApiTiling.nL0 : self->ctx.nL0Tail;
 
     if constexpr (!Intf::hasNL1IterFlag) {
         self->ctx.maxNBL1Iter = 0;
         self->ctx.ddr2l1LoopN = 1;
     } else {
-        self->ctx.ddr2l1LoopN = CeilDiv(self->ctx.singleCoreCo, self->ctx.convTiling->nBL1);
+        self->ctx.ddr2l1LoopN = CeilDiv(self->ctx.singleCoreCo, self->ctx.convTilingData->convApiTiling.nBL1);
         self->ctx.maxNBL1Iter = self->ctx.ddr2l1LoopN - 1;
     }
 
@@ -92,7 +91,7 @@ static __aicore__ inline void InitCoDirectionValue(Intf *self)
         self->ctx.maxNL0Iter = 0;
     } else if constexpr (Intf::groupOptFlag || Intf::weightUbTrans) {
         self->ctx.l12l0LoopN = self->ctx.nBL1Iter == self->ctx.maxNBL1Iter ?
-            CeilDiv(self->ctx.nBL1Tail, self->ctx.convTiling->nL0) : self->ctx.convTiling->multiNBL1;
+            CeilDiv(self->ctx.nBL1Tail, self->ctx.convTilingData->convApiTiling.nL0) : self->ctx.convTilingData->convApiTiling.multiNBL1;
     }
 
     if constexpr (Intf::WEIGHT_NZ_FLAG) {
@@ -106,7 +105,7 @@ __aicore__ inline void CalcCoDirectionVar(Intf *self)
 {
     if constexpr (Intf::hasNL0IterFlag) {
         self->ctx.l12l0LoopN = self->ctx.nBL1Iter == self->ctx.maxNBL1Iter ?
-            CeilDiv(self->ctx.nBL1Tail, self->ctx.convTiling->nL0) : self->ctx.convTiling->multiNBL1;
+            CeilDiv(self->ctx.nBL1Tail, self->ctx.convTilingData->convApiTiling.nL0) : self->ctx.convTilingData->convApiTiling.multiNBL1;
         self->ctx.maxNL0Iter = self->ctx.l12l0LoopN - 1;
     }
 }
@@ -114,11 +113,15 @@ __aicore__ inline void CalcCoDirectionVar(Intf *self)
 template <class Intf>
 __aicore__ inline uint64_t CalcCurrentNL0(Intf *self)
 {
-    bool isNL0Tail = self->ctx.nBL1Iter == self->ctx.maxNBL1Iter && self->ctx.nL0Iter == self->ctx.maxNL0Iter;
-    uint64_t currentNL0 = isNL0Tail ? self->ctx.nL0Tail : self->ctx.convTiling->nL0;
-    self->ctx.currentNL0Align = isNL0Tail ? AlignB(currentNL0, BLOCK_L0_N) : currentNL0;
-
-    return currentNL0;
+    if constexpr (Intf::isKL1NL0FullLoad) {
+        self->ctx.currentNL0Align = AlignB(self->ctx.nL0Tail, BLOCK_L0_N);
+        return self->ctx.nL0Tail;
+    } else {
+        bool isNL0Tail = self->ctx.nBL1Iter == self->ctx.maxNBL1Iter && self->ctx.nL0Iter == self->ctx.maxNL0Iter;
+        uint64_t currentNL0 = isNL0Tail ? self->ctx.nL0Tail : self->ctx.convTilingData->convApiTiling.nL0;
+        self->ctx.currentNL0Align = isNL0Tail ? AlignB(currentNL0, BLOCK_L0_N) : currentNL0;
+        return currentNL0;
+    }
 }
 
 template <class Intf>
@@ -141,9 +144,9 @@ __aicore__ inline uint64_t CalcCurrentML0HWMode(Intf *self)
         return currentML0;
     } else {
         uint64_t currentML0 = self->ctx.currentHoL0 * self->ctx.currentWoL0;
-        if (self->ctx.currentWoL0 == self->ctx.convTiling->woL0 &&
-            self->ctx.currentHoL0 == self->ctx.convTiling->hoL0) {
-            self->ctx.currentML0Align = self->ctx.convTiling->mStep;
+        if (self->ctx.currentWoL0 == self->ctx.convTilingData->convApiTiling.woL0 &&
+            self->ctx.currentHoL0 == self->ctx.convTilingData->convApiTiling.hoL0) {
+            self->ctx.currentML0Align = self->ctx.convTilingData->convApiTiling.mStep;
         } else {
             self->ctx.currentML0Align = AlignB(currentML0, BLOCK_L0_N);
         }
@@ -155,14 +158,24 @@ __aicore__ inline uint64_t CalcCurrentML0HWMode(Intf *self)
 template <class Intf>
 __aicore__ inline void LoadAL1BaseModule(Intf *self)
 {
-    self->ctx.al1 = self->ctx.queueAL1.template AllocTensor<typename Intf::FmapT>();
+    if constexpr (Intf::preFusionFlag) {
+        if ((self->ctx.convTilingData->convApiTiling.pBufferFlag & AL1_DB_IDX) >> AL1_DB_OFFSET) {
+            self->ctx.al1PingPongFlag ^= 1;
+        }
+        self->ctx.al1 = LocalTensor<typename Intf::FmapT>(TPosition::A1, 0, 0);
+    } else {
+        self->ctx.al1 = self->ctx.queueAL1.template AllocTensor<typename Intf::FmapT>();
+    }
     if constexpr (Intf::isDmaFlag) {
         self->ctx.dmaProcessTools.DmaSyncWait(self);
     } else {
         self->ctx.loadAl1Ins.LoadAL1();
     }
- 
-    self->ctx.queueAL1.EnQue(self->ctx.al1);
+    if constexpr (Intf::preFusionFlag) {
+        AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE1>(self->ctx.eventIdMte3ToMte1);
+    } else {
+        self->ctx.queueAL1.EnQue(self->ctx.al1);
+    }
     self->ctx.loadAL1Flag = false;  // Only k directrion can be reloaded in LoopK
 }
 
@@ -201,7 +214,7 @@ __aicore__ inline void LoadBL1BaseModule(Intf *self)
                 CrossCoreWaitFlag<CV_ENHANCE_MODE, PIPE_MTE1>(self->ctx.pingPongFlag * VEC_ID_MAX + CV_SYNC_ID_MTE3_MTE1);
             } else {
                 CrossCoreWaitFlag<CV_ENHANCE_MODE, PIPE_MTE1>(CV_SYNC_ID_MTE3_MTE1);
-                if (self->ctx.convTiling->nBL1 > BLOCK_L0_N) {
+                if (self->ctx.convTilingData->convApiTiling.nBL1 > BLOCK_L0_N) {
                     CrossCoreWaitFlag<CV_ENHANCE_MODE, PIPE_MTE1>(VEC_ID_MAX + CV_SYNC_ID_MTE3_MTE1);
                 }
             }
@@ -226,7 +239,7 @@ __aicore__ inline void LoadBL1BaseModule(Intf *self, TempIters& tempIters)
             CrossCoreWaitFlag<CV_ENHANCE_MODE, PIPE_MTE1>(self->ctx.pingPongFlag * VEC_ID_MAX + CV_SYNC_ID_MTE3_MTE1);
         } else {
             CrossCoreWaitFlag<CV_ENHANCE_MODE, PIPE_MTE1>(CV_SYNC_ID_MTE3_MTE1);
-            if (self->ctx.convTiling->nBL1 > BLOCK_L0_N) {
+            if (self->ctx.convTilingData->convApiTiling.nBL1 > BLOCK_L0_N) {
                 CrossCoreWaitFlag<CV_ENHANCE_MODE, PIPE_MTE1>(VEC_ID_MAX + CV_SYNC_ID_MTE3_MTE1);
             }
         }
@@ -237,16 +250,16 @@ __aicore__ inline void LoadBL1BaseModule(Intf *self, TempIters& tempIters)
 }
 
 template <class Intf>
-__aicore__ inline void LoadAL1Module(Intf *self)
+__aicore__ inline void LoadAL1Module(Intf *self, const int64_t& kIter)
 {
-    self->ctx.kAL1Iter = self->ctx.kIter / self->ctx.multiKAL1;
+    self->ctx.kAL1Iter = kIter / self->ctx.multiKAL1;
     LoadAL1BaseModule<Intf>(self);
 }
 
 template <class Intf>
-__aicore__ inline void LoadBL1Module(Intf *self)
+__aicore__ inline void LoadBL1Module(Intf *self, const int64_t& kIter)
 {
-    self->ctx.kBL1Iter = self->ctx.kIter / self->ctx.multiKBL1;
+    self->ctx.kBL1Iter = kIter / self->ctx.multiKBL1;
     if constexpr (Intf::isDmaFlag) {
         self->ctx.kwBL1Iter = self->ctx.kBL1Iter % self->ctx.ddr2L1LoopKw;
         self->ctx.khBL1Iter = (self->ctx.kBL1Iter / self->ctx.ddr2L1LoopKw) % self->ctx.ddr2L1LoopKh;
@@ -257,180 +270,201 @@ __aicore__ inline void LoadBL1Module(Intf *self)
 }
 
 template <class Intf>
-__aicore__ inline void ReduceKCloseL0PingPong(Intf *self, bool isFirst)
+__aicore__ inline void ReduceKCloseL0PingPong(Intf *self, const uint64_t &kIter, const uint64_t &currentKL0, const uint64_t &posK,
+const uint64_t &KStartPosition, const uint64_t &kStep, const MmadParams &mmadParams)
 {
     event_t eventID = static_cast<event_t>(L0_SYBC_DB_CLOSE);
     AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(eventID);
-    if (!((self->ctx.convTiling->kAL1 == self->ctx.convTiling->kL0) && (!self->ctx.loadAL0Flag))) {
-        self->ctx.al0 = self->ctx.wholeAl0Tensor;
-        self->ctx.kAL0Iter = self->ctx.kIter % self->ctx.multiKAL1;
-        self->ctx.loadAL0Ins.LoadAL0(isFirst);
+    const LocalTensor<typename Intf::FmapT> &al0 = self->ctx.wholeAl0Tensor;
+    if (!((self->ctx.convTilingData->convApiTiling.kAL1 == self->ctx.convTilingData->convApiTiling.kL0) && (!self->ctx.loadAL0Flag))) {
+        self->ctx.loadAL0Ins.LoadAL0(currentKL0, posK, kIter, al0);
     }
 
     if constexpr (Intf::isDmaFlag) {
-        self->ctx.dmaProcessTools.DmaSyncSet(self);
+        self->ctx.dmaProcessTools.DmaSyncSet(self, kIter);
     }
 
-    if (!((self->ctx.convTiling->kBL1 == self->ctx.convTiling->kL0) && (!self->ctx.loadBL0Flag))) {
-        self->ctx.bl0 = self->ctx.wholeBl0Tensor;
-        self->ctx.kBL0Iter = self->ctx.kIter % self->ctx.multiKBL1;
-        self->ctx.loadBL0Ins.LoadBL0(isFirst);
+    LocalTensor<typename Intf::WeightT> bl0;
+    if constexpr (Intf::isL0BFullLoadable) {
+        bl0 = 
+            self->ctx.wholeBl0Tensor[kIter * self->ctx.convTilingData->convApiTiling.nL0 * self->ctx.convTilingData->convApiTiling.kL0];
+    } else {
+        bl0 = self->ctx.wholeBl0Tensor;
+    }
+    if (!((self->ctx.convTilingData->convApiTiling.kBL1 == self->ctx.convTilingData->convApiTiling.kL0) && (!self->ctx.loadBL0Flag))) {
+        if constexpr (!Intf::isL0BFullLoadable) {
+            self->ctx.loadBL0Ins.LoadBL0(KStartPosition, kStep, bl0);
+        }
     }
 
     if constexpr (Intf::groupOptPreloadFlag) {
-        OptGroupPreloadSyncSet<Intf>(self);
+        OptGroupPreloadSyncSet<Intf>(self, kIter);
     } else if constexpr (Intf::groupOptNDFlag) {
-        OptGroupSyncSet<Intf>(self);
+        OptGroupSyncSet<Intf>(self, kIter);
     } else if constexpr (Intf::c04NDFlag) {
-        self->ctx.c04ProcessTools.C04SyncSet(self);
+        self->ctx.c04ProcessTools.C04SyncSet(self, kIter);
     } else if constexpr (Intf::weightUbTrans) {
-        self->ctx.weightUbProcessTools.WeightUbTransSyncSet(self);
+        self->ctx.weightUbProcessTools.WeightUbTransSyncSet(self, kIter);
     }
 
     AscendC::SetFlag<AscendC::HardEvent::MTE1_M>(eventID);
     AscendC::WaitFlag<AscendC::HardEvent::MTE1_M>(eventID);
-    self->ctx.madIns.Mad();
+    self->ctx.madIns.Mad(kIter, al0, bl0, mmadParams);
     AscendC::SetFlag<AscendC::HardEvent::M_MTE1>(eventID);
-    self->ctx.kIter++;
 }
 
 template <class Intf>
-__aicore__ inline void ReduceKOpenL0APingPong(Intf *self, uint16_t& al0PingPongFlag, bool isFirst)
+__aicore__ inline void ReduceKOpenL0APingPong(Intf *self, const uint64_t &kIter, const uint16_t& al0PingPongFlag, const uint64_t &currentKL0,
+const uint64_t &posK, const uint64_t &KStartPosition, const uint64_t &kStep, const MmadParams &mmadParams)
 {
     event_t eventID = static_cast<event_t>(al0PingPongFlag);
+    const LocalTensor<typename Intf::FmapT> &al0 = self->ctx.wholeAl0Tensor[(al0PingPongFlag) * L0A_HALF_SIZE / Intf::sizeOfFmap];;
+
     AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(eventID);
-    self->ctx.al0 =
-        self->ctx.wholeAl0Tensor[(al0PingPongFlag) * L0A_HALF_SIZE / Intf::sizeOfFmap];
-    self->ctx.kAL0Iter = self->ctx.kIter % self->ctx.multiKAL1;
-    self->ctx.loadAL0Ins.LoadAL0(isFirst);
+    self->ctx.loadAL0Ins.LoadAL0(currentKL0, posK, kIter, al0);
     if constexpr (Intf::isDmaFlag) {
-        self->ctx.dmaProcessTools.DmaSyncSet(self);
+        self->ctx.dmaProcessTools.DmaSyncSet(self, kIter);
     }
 
-    if (!((self->ctx.convTiling->kBL1 == self->ctx.convTiling->kL0) && (!self->ctx.loadBL0Flag))) {
-        self->ctx.bl0 = self->ctx.wholeBl0Tensor;
-        self->ctx.kBL0Iter = self->ctx.kIter % self->ctx.multiKBL1;
+    LocalTensor<typename Intf::WeightT> bl0;
+    if constexpr (Intf::isL0BFullLoadable) {
+        bl0 = 
+            self->ctx.wholeBl0Tensor[kIter * self->ctx.convTilingData->convApiTiling.nL0 * self->ctx.convTilingData->convApiTiling.kL0];
+    } else {
+        bl0 = self->ctx.wholeBl0Tensor;
+    }
+    if (!((self->ctx.convTilingData->convApiTiling.kBL1 == self->ctx.convTilingData->convApiTiling.kL0) && (!self->ctx.loadBL0Flag))) {
         // BL0 wait MMAD
         event_t e = static_cast<event_t>(al0PingPongFlag ^ 1);
         AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(e);
         AscendC::SetFlag<AscendC::HardEvent::M_MTE1>(e);
-        self->ctx.loadBL0Ins.LoadBL0(isFirst);
+
+        if constexpr (!Intf::isL0BFullLoadable) {
+            self->ctx.loadBL0Ins.LoadBL0(KStartPosition, kStep, bl0);
+        }
     }
 
     if constexpr (Intf::groupOptPreloadFlag) {
-        OptGroupPreloadSyncSet<Intf>(self);
+        OptGroupPreloadSyncSet<Intf>(self, kIter);
     } else if constexpr (Intf::groupOptNDFlag) {
-        OptGroupSyncSet<Intf>(self);
+        OptGroupSyncSet<Intf>(self, kIter);
     } else if constexpr (Intf::c04NDFlag) {
-        self->ctx.c04ProcessTools.C04SyncSet(self);
+        self->ctx.c04ProcessTools.C04SyncSet(self, kIter);
     } else if constexpr (Intf::weightUbTrans) {
-        self->ctx.weightUbProcessTools.WeightUbTransSyncSet(self);
+        self->ctx.weightUbProcessTools.WeightUbTransSyncSet(self, kIter);
     }
 
     AscendC::SetFlag<AscendC::HardEvent::MTE1_M>(eventID);
     AscendC::WaitFlag<AscendC::HardEvent::MTE1_M>(eventID);
-    self->ctx.madIns.Mad();
+    self->ctx.madIns.Mad(kIter, al0, bl0, mmadParams);
     AscendC::SetFlag<AscendC::HardEvent::M_MTE1>(eventID);
-    al0PingPongFlag ^= 1;
-    self->ctx.kIter++;
 }
 
 template <class Intf>
-__aicore__ inline void ReduceKOpenL0BPingPong(Intf *self, uint16_t& bl0PingPongFlag, bool isFirst)
+__aicore__ inline void ReduceKOpenL0BPingPong(Intf *self, const uint64_t &kIter, const uint16_t& bl0PingPongFlag,
+const uint64_t &currentKL0, const uint64_t &posK, const uint64_t &KStartPosition, const uint64_t &kStep, const MmadParams &mmadParams)
 {
     event_t eventID = static_cast<event_t>(bl0PingPongFlag);
+    const LocalTensor<typename Intf::FmapT> &al0 = self->ctx.wholeAl0Tensor;
+    LocalTensor<typename Intf::WeightT> bl0;
+
     AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(eventID);
  
-    self->ctx.bl0 =
-        self->ctx.wholeBl0Tensor[(bl0PingPongFlag) * L0B_HALF_SIZE / Intf::sizeOfWeight];
-    self->ctx.kBL0Iter = self->ctx.kIter % self->ctx.multiKBL1;
-    self->ctx.loadBL0Ins.LoadBL0(isFirst);
-    if constexpr (Intf::groupOptPreloadFlag) {
-        OptGroupPreloadSyncSet<Intf>(self);
-    } else if constexpr (Intf::groupOptNDFlag) {
-        OptGroupSyncSet<Intf>(self);
-    } else if constexpr (Intf::c04NDFlag) {
-        self->ctx.c04ProcessTools.C04SyncSet(self);
-    } else if constexpr (Intf::weightUbTrans) {
-        self->ctx.weightUbProcessTools.WeightUbTransSyncSet(self);
+    if constexpr (Intf::isL0BFullLoadable) {
+        bl0 = 
+            self->ctx.wholeBl0Tensor[kIter * self->ctx.convTilingData->convApiTiling.nL0 * self->ctx.convTilingData->convApiTiling.kL0];
+    } else {
+        bl0 =
+            self->ctx.wholeBl0Tensor[(bl0PingPongFlag) * L0B_HALF_SIZE / Intf::sizeOfWeight];
+        self->ctx.loadBL0Ins.LoadBL0(KStartPosition, kStep, bl0);
     }
 
-    if (!((self->ctx.convTiling->kAL1 == self->ctx.convTiling->kL0) && (!self->ctx.loadAL0Flag))) {
-        self->ctx.al0 = self->ctx.wholeAl0Tensor;
-        self->ctx.kAL0Iter = self->ctx.kIter % self->ctx.multiKAL1;
+    if constexpr (Intf::groupOptPreloadFlag) {
+        OptGroupPreloadSyncSet<Intf>(self, kIter);
+    } else if constexpr (Intf::groupOptNDFlag) {
+        OptGroupSyncSet<Intf>(self, kIter);
+    } else if constexpr (Intf::c04NDFlag) {
+        self->ctx.c04ProcessTools.C04SyncSet(self, kIter);
+    } else if constexpr (Intf::weightUbTrans) {
+        self->ctx.weightUbProcessTools.WeightUbTransSyncSet(self, kIter);
+    }
+
+    if (!((self->ctx.convTilingData->convApiTiling.kAL1 == self->ctx.convTilingData->convApiTiling.kL0) && (!self->ctx.loadAL0Flag))) {
         // AL0 wait MMAD
         event_t e = static_cast<event_t>((bl0PingPongFlag ^ 1));
         AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(e);
         AscendC::SetFlag<AscendC::HardEvent::M_MTE1>(e);
-        self->ctx.loadAL0Ins.LoadAL0(isFirst);
+        self->ctx.loadAL0Ins.LoadAL0(currentKL0, posK, kIter, al0);
     }
 
     if constexpr (Intf::isDmaFlag) {
-        self->ctx.dmaProcessTools.DmaSyncSet(self);
+        self->ctx.dmaProcessTools.DmaSyncSet(self, kIter);
     }
 
     AscendC::SetFlag<AscendC::HardEvent::MTE1_M>(eventID);
     AscendC::WaitFlag<AscendC::HardEvent::MTE1_M>(eventID);
-    self->ctx.madIns.Mad();
+    self->ctx.madIns.Mad(kIter, al0, bl0, mmadParams);
     AscendC::SetFlag<AscendC::HardEvent::M_MTE1>(eventID);
-    bl0PingPongFlag ^= 1;
-    self->ctx.kIter++;
 }
 
 template <class Intf>
-__aicore__ inline void ReduceKOpenL0AL0BPingPong(Intf *self, uint16_t& al0PingPongFlag, bool isFirst)
+__aicore__ inline void ReduceKOpenL0AL0BPingPong(Intf *self, const uint64_t &kIter, const uint16_t& al0PingPongFlag,
+const uint64_t &currentKL0, const uint64_t &posK, const uint64_t &KStartPosition, const uint64_t &kStep, const MmadParams &mmadParams)
 {
-    self->ctx.al0 =
-        self->ctx.wholeAl0Tensor[(al0PingPongFlag) * L0A_HALF_SIZE / Intf::sizeOfFmap];
-    self->ctx.bl0 =
-        self->ctx.wholeBl0Tensor[(al0PingPongFlag) * L0B_HALF_SIZE / Intf::sizeOfWeight];
+    const LocalTensor<typename Intf::FmapT> &al0 = self->ctx.wholeAl0Tensor[(al0PingPongFlag) * L0A_HALF_SIZE / Intf::sizeOfFmap];
     event_t eventID = static_cast<event_t>(al0PingPongFlag);
     AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(eventID);
-    self->ctx.kAL0Iter = self->ctx.kIter % self->ctx.multiKAL1;
-    self->ctx.loadAL0Ins.LoadAL0(isFirst);
+
+    self->ctx.loadAL0Ins.LoadAL0(currentKL0, posK, kIter, al0);
     if constexpr (Intf::isDmaFlag) {
-        self->ctx.dmaProcessTools.DmaSyncSet(self);
+        self->ctx.dmaProcessTools.DmaSyncSet(self, kIter);
     }
 
-    self->ctx.kBL0Iter = self->ctx.kIter % self->ctx.multiKBL1;
-    self->ctx.loadBL0Ins.LoadBL0(isFirst);
+    LocalTensor<typename Intf::WeightT> bl0;
+    if constexpr (Intf::isL0BFullLoadable) {
+        bl0 = self->ctx.wholeBl0Tensor[kIter * self->ctx.convTilingData->convApiTiling.nL0 * self->ctx.convTilingData->convApiTiling.kL0];
+    } else {
+        bl0 = self->ctx.wholeBl0Tensor[(al0PingPongFlag) * L0B_HALF_SIZE / Intf::sizeOfWeight];
+        self->ctx.loadBL0Ins.LoadBL0(KStartPosition, kStep, bl0);
+    }
+
     if constexpr (Intf::groupOptPreloadFlag) {
-        OptGroupPreloadSyncSet<Intf>(self);
+        OptGroupPreloadSyncSet<Intf>(self, kIter);
     } else if constexpr (Intf::groupOptNDFlag) {
-        OptGroupSyncSet<Intf>(self);
+        OptGroupSyncSet<Intf>(self, kIter);
     } else if constexpr (Intf::c04NDFlag) {
-        self->ctx.c04ProcessTools.C04SyncSet(self);
+        self->ctx.c04ProcessTools.C04SyncSet(self, kIter);
     } else if constexpr (Intf::weightUbTrans) {
-        self->ctx.weightUbProcessTools.WeightUbTransSyncSet(self);
+        self->ctx.weightUbProcessTools.WeightUbTransSyncSet(self, kIter);
     }
     AscendC::SetFlag<AscendC::HardEvent::MTE1_M>(eventID);
     AscendC::WaitFlag<AscendC::HardEvent::MTE1_M>(eventID);
-    self->ctx.madIns.Mad();
+    self->ctx.madIns.Mad(kIter, al0, bl0, mmadParams);
     AscendC::SetFlag<AscendC::HardEvent::M_MTE1>(eventID);
-    al0PingPongFlag ^= 1;
-    self->ctx.kIter++;
 }
 
 template <class Intf>
-__aicore__ inline void LoadL0Module(Intf *self, uint16_t &al0PingPongFlag, uint16_t &bl0PingPongFlag, bool isFirst)
+__aicore__ inline void LoadL0Module(Intf *self, const uint64_t &kIter,
+const uint64_t &currentKL0, const uint64_t &posK, const uint64_t &KStartPosition, const uint64_t &kStep, const MmadParams &mmadParams)
 {
     if constexpr (Intf::l0PingPong == static_cast<int32_t>(ConvL0PingPong::ALL_CLOSE)) {
-        ReduceKCloseL0PingPong<Intf>(self, isFirst);
+        ReduceKCloseL0PingPong<Intf>(self, kIter, currentKL0, posK, KStartPosition, kStep, mmadParams);
     } else if constexpr (Intf::l0PingPong == static_cast<int32_t>(ConvL0PingPong::AL0_OPEN)) {
-        ReduceKOpenL0APingPong<Intf>(self, al0PingPongFlag, isFirst);
+        ReduceKOpenL0APingPong<Intf>(self, kIter, kIter & 1, currentKL0, posK, KStartPosition, kStep, mmadParams);
     } else if constexpr (Intf::l0PingPong == static_cast<int32_t>(ConvL0PingPong::BL0_OPEN)) {
-        ReduceKOpenL0BPingPong<Intf>(self, bl0PingPongFlag, isFirst);
+        ReduceKOpenL0BPingPong<Intf>(self, kIter, kIter & 1, currentKL0, posK, KStartPosition, kStep, mmadParams);
     } else if constexpr (Intf::l0PingPong == static_cast<int32_t>(ConvL0PingPong::ALL_OPEN)) {
-        ReduceKOpenL0AL0BPingPong<Intf>(self, al0PingPongFlag, isFirst);
+        ReduceKOpenL0AL0BPingPong<Intf>(self, kIter, kIter & 1, currentKL0, posK, KStartPosition, kStep, mmadParams);
     }
 }
 
 template <class Intf>
-__aicore__ inline void SetMNBeforeIterateK(Intf *self)
+__aicore__ inline void SetMNBeforeIterateK(Intf *self, MmadParams &mmadParams)
 {
     if constexpr (Intf::isInnerBatchFlag) {
-        self->ctx.innerBatch = self->ctx.batchIter == self->ctx.maxBatchIter ?
-            self->ctx.innerBatchTail : self->ctx.convTiling->innerBatch;
+        uint16_t maxBatchIter = CeilDiv(self->ctx.convTilingData->convApiTiling.singleCoreBatch, self->ctx.convTilingData->convApiTiling.innerBatch) - 1;
+        self->ctx.innerBatch = self->ctx.batchIter == maxBatchIter ?
+            self->ctx.innerBatchTail : self->ctx.convTilingData->convApiTiling.innerBatch;
     }
 
     uint64_t currentML0 = 0;
@@ -445,11 +479,13 @@ __aicore__ inline void SetMNBeforeIterateK(Intf *self)
     self->ctx.loadBiasL1Ins.SetN(currentNL0);
     self->ctx.loadBiasBTIns.SetN(self->ctx.currentNL0Align);
     self->ctx.loadScaleL1Ins.SetN(currentNL0);
+
     if constexpr (Intf::ConvParam::innerBatch == static_cast<int8_t>(ConvInnerBatch::KERNEL_1X1_MULTI_BATCH)) {
-        self->ctx.madIns.SetMN(currentML0, self->ctx.currentNL0Align);
-    } else {
-        self->ctx.madIns.SetMN(self->ctx.currentML0Align, self->ctx.currentNL0Align);
-    }
+        mmadParams.m = self->ctx.innerBatch * currentML0;
+     } else {
+        mmadParams.m = self->ctx.currentML0Align;
+     }
+    mmadParams.n = self->ctx.currentNL0Align;
 
     if constexpr (Intf::isDeQuantFlag) {
         self->ctx.dequantL0C2UBTools.SetMN(currentML0, currentNL0);
@@ -463,13 +499,29 @@ __aicore__ inline void SetMNBeforeIterateK(Intf *self)
 }
 
 template <class Intf>
+__aicore__ inline void SetFirstBeforeIterateK(Intf *self)
+{
+    self->ctx.loadAL0Ins.SetFirst();
+    if constexpr (!Intf::isL0BFullLoadable) {
+        self->ctx.loadBL0Ins.SetFirst();
+    }
+}
+
+template <class Intf>
 __aicore__ inline void FreeL1Tensor(Intf *self)
 {
-    if constexpr (Intf::groupOptPreloadFlag) {
-        self->ctx.queueAL1.FreeTensor(self->ctx.al1);
-    } else {
-        if (!self->ctx.kAL1fullload) {
+    if constexpr (!Intf::preFusionFlag) {
+        if constexpr (Intf::groupOptPreloadFlag) {
             self->ctx.queueAL1.FreeTensor(self->ctx.al1);
+        } else if constexpr (Intf::isMPreLoad) {
+            if ((self->ctx.mL0Iter + 1) % CeilDiv(self->ctx.convTilingData->convApiTiling.hoL1,
+                self->ctx.convTilingData->convApiTiling.hoL0) == 0) {
+                self->ctx.queueAL1.FreeTensor(self->ctx.al1);
+            }
+        } else {
+            if (!self->ctx.kAL1fullload) {
+                self->ctx.queueAL1.FreeTensor(self->ctx.al1);
+            }
         }
     }
 
@@ -480,7 +532,7 @@ __aicore__ inline void FreeL1Tensor(Intf *self)
     }
 
     if (self->ctx.enableBias) {
-        if (!self->ctx.convTiling->biasFullLoadFlag) {
+        if (!self->ctx.convTilingData->convApiTiling.biasFullLoadFlag) {
             self->ctx.queueBiasL1.FreeTensor(self->ctx.biasL1);
         }
 
@@ -493,14 +545,14 @@ __aicore__ inline bool CheckReduceOneKNotSupportDBCase(Intf *self)
 {
     // when only L0A pingpong and L0B not pingpong, L0B tensor need full load for template ReduceKOpenL0APingPong
     if constexpr (Intf::l0PingPong == 1) {
-        if (self->ctx.convTiling->nL0 < self->ctx.singleCoreCo) {
+        if (self->ctx.convTilingData->convApiTiling.nL0 < self->ctx.singleCoreCo) {
             return true;
         }
     }
     // when only L0B pingpong and L0A not pingpong, L0A tensor need full load for template ReduceKOpenL0BPingPong
     if constexpr (Intf::l0PingPong == 2) {
-        if (self->ctx.convTiling->hoL0 < self->ctx.convTiling->singleCoreHo ||
-            self->ctx.convTiling->woL0 < self->ctx.convTiling->singleCoreWo) {
+        if (self->ctx.convTilingData->convApiTiling.hoL0 < self->ctx.convTilingData->convApiTiling.singleCoreHo ||
+            self->ctx.convTilingData->convApiTiling.woL0 < self->ctx.convTilingData->convApiTiling.singleCoreWo) {
             return true;
         }
     }

@@ -60,7 +60,7 @@ public:
     struct ContextData: public Config::ContextData {
         __aicore__ inline ContextData(){};
 
-        const struct TConv2DTiling* __restrict convTiling;
+        const Conv2DTilingData* convTilingData;
 
         // Using Conditional<flag, type1, type2>::type to select M or HW, if flag=true, type=type1, else type=type2
         using LoadAL1MModeTools = typename Conditional<Intf::isInnerBatchFlag,
@@ -87,6 +87,7 @@ public:
         LoadBL1Tools loadBL1Ins;
         ConvFunc::LoadChannelWiseL1Tools<Intf, typename Config::BiasT> loadBiasL1Ins;
         ConvFunc::LoadChannelWiseL1Tools<Intf, typename Config::ScaleT> loadScaleL1Ins;
+        ConvFunc::LoadChannelWiseL1Tools<Intf, typename Config::ReluWeightT> loadReluWeightL1Ins;
         LoadAL0Tools loadAL0Ins;
         ConvFunc::LoadBL0Tools<Intf> loadBL0Ins;
         ConvFunc::LoadBiasBtTools<Intf, typename Config::BiasT, typename Config::L0cT> loadBiasBTIns;
@@ -111,6 +112,7 @@ public:
         Conv2dFunc::C04LoadUB2L1Tools<Intf> c04LoadUB2L1Tools;
         Conv2dFunc::C04ProcessTools<Intf> c04ProcessTools;
 
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ != 5102)
         // Used in weight ub trans mode
         Conv2dFunc::WeightLoadGM2UBTools<Intf> weightUbLoadGM2UBTools;
         Conv2dFunc::WeightND2NZTools<Intf> weightUbTransND2NZTools;
@@ -125,6 +127,7 @@ public:
         TBuf<TPosition::A1> aL1TBuf;
         TBuf<TPosition::VECIN> ubBuf;
         LocalTensor<typename Intf::FmapT> img2ColTensor;
+#endif
 
         uint16_t aL1LoadTimes = 0;
         uint16_t vecCi1Iter = 0;

@@ -404,6 +404,7 @@ ge::graphStatus Conv2dBaseTiling::CheckExtendConv2dReluWeightAndClipValue(const 
     if (reluWeightShapeLen == 1) {
         reluMode = static_cast<uint8_t>(ReluMode::SCALARRELU);
     } else if (reluWeightShapeLen > 1) {
+        fixpipeInfo_.channelWiseCoeff += FLOAT_DTYPE_SIZE_COMPARE_FP16;
         reluMode = static_cast<uint8_t>(ReluMode::VECTORRELU);
     }
 

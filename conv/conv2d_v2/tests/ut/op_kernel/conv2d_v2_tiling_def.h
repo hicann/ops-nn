@@ -133,8 +133,8 @@ struct TConv2DTiling {
 
 struct Conv2DTilingData
 {
-    TConv2DTiling conv2dApiTiling;
-    Conv2DRunInfo conv2dRunInfo;
+    TConv2DTiling convApiTiling;
+    Conv2DRunInfo convRunInfo;
 };
 
 #pragma pack()

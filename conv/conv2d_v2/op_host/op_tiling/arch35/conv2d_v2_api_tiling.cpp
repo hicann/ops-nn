@@ -425,7 +425,7 @@ void Conv2dTiling::SetAttrsTilingData(optiling::TConv2DTiling& tiling)
     tiling.set_padBottom(static_cast<uint32_t>(attrInfo.padBottom));
     tiling.set_padLeft(static_cast<uint32_t>(attrInfo.padLeft));
     tiling.set_padRight(static_cast<uint32_t>(attrInfo.padRight));
-
+    tiling.set_unionDataXt(static_cast<uint64_t>(attrInfo.unionDataXt.n));
     tiling.set_groups(static_cast<uint32_t>(attrInfo.groups));
 
     if (this->optGroupFlag) {
@@ -492,6 +492,10 @@ void Conv2dTiling::SetOrgWeightShape(int64_t orgCo, int64_t orgkH, int64_t orgkW
     shapeInfo.orgkH = orgkH;
     shapeInfo.orgkW = orgkW;
     shapeInfo.orgCo = orgCo;
+    attrInfo.unionDataXt.bf.kernelW = static_cast<uint64_t>(orgkW);
+    attrInfo.unionDataXt.bf.kernelW_highest_bit = (static_cast<uint64_t>(orgkW) & 0x100) >> 8; // 8 kernelW lower 8 bit
+    attrInfo.unionDataXt.bf.kernelH = static_cast<uint64_t>(orgkH);
+    attrInfo.unionDataXt.bf.kernelH_highest_bit = (static_cast<uint64_t>(orgkH) & 0x100) >> 8; // 8 kernelH lower 8 bit
 }
 
 void Conv2dTiling::SetSingleWeightShape(int64_t singleCi, int64_t singlekH, int64_t singlekW)
@@ -549,12 +553,16 @@ void Conv2dTiling::SetDilation(int32_t dilationH, int32_t dilationW)
 {
     attrInfo.dilationH = dilationH;
     attrInfo.dilationW = dilationW;
+    attrInfo.unionDataXt.bf.dilationH = static_cast<uint64_t>(dilationH);
+    attrInfo.unionDataXt.bf.dilationW = static_cast<uint64_t>(dilationW);
 }
 
 void Conv2dTiling::SetStride(int32_t strideH, int32_t strideW)
 {
     attrInfo.strideH = strideH;
     attrInfo.strideW = strideW;
+    attrInfo.unionDataXt.bf.strideH = static_cast<uint64_t>(strideH) & 0x3f;
+    attrInfo.unionDataXt.bf.strideW = static_cast<uint64_t>(strideW) & 0x3f;
 }
 
 void Conv2dTiling::SetBiasType(TPosition pos, ConvFormat format, ConvDtype dtype)

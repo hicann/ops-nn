@@ -29,6 +29,7 @@ TILING_DATA_FIELD_DEF(uint64_t, orgHixWi);
 TILING_DATA_FIELD_DEF(uint64_t, singleCoreBatch);
 TILING_DATA_FIELD_DEF(uint64_t, singleCoreHo);
 TILING_DATA_FIELD_DEF(uint64_t, singleCoreWo);
+TILING_DATA_FIELD_DEF(uint64_t, unionDataXt);
 TILING_DATA_FIELD_DEF(uint32_t, orgCi);
 TILING_DATA_FIELD_DEF(uint32_t, orgCo);
 TILING_DATA_FIELD_DEF(uint32_t, singleCoreCi);

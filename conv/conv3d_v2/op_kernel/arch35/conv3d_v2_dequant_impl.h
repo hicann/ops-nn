@@ -33,21 +33,21 @@ __aicore__ inline void DeQuantCalcFixpTimes(Intf *self)
     self->ctx.fixpTimesTotal = self->ctx.ddr2l1LoopBatch * self->ctx.ddr2l1LoopN * self->ctx.l12l0LoopN *
                                self->ctx.ddr2l1LoopD;
     if constexpr (Intf::outputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE)) {
-        uint64_t ddr2UbLoopM = CeilDiv(self->ctx.singleCoreM, self->ctx.convTiling->mUB);
+        uint64_t ddr2UbLoopM = CeilDiv(self->ctx.singleCoreM, self->ctx.convTilingData->convApiTiling.mUB);
         self->ctx.fixpTimesTotal *= ddr2UbLoopM;
     } else {
         uint64_t ddr2UbLoopW = 0;
         if constexpr (Intf::hasWL0IterFlag) {
             if (self->ctx.woL1SmallTail > 0) {
                 ddr2UbLoopW = (self->ctx.ddr2l1LoopW - W_TAIL_NUM) *
-                    CeilDiv(self->ctx.convTiling->woL1, self->ctx.convTiling->mUB) +
-                    CeilDiv(self->ctx.woAL1Tail, self->ctx.convTiling->mUB) +
-                    CeilDiv(self->ctx.woL1SmallTail, self->ctx.convTiling->mUB);
+                    CeilDiv(self->ctx.convTilingData->convApiTiling.woL1, self->ctx.convTilingData->convApiTiling.mUB) +
+                    CeilDiv(self->ctx.woAL1Tail, self->ctx.convTilingData->convApiTiling.mUB) +
+                    CeilDiv(self->ctx.woL1SmallTail, self->ctx.convTilingData->convApiTiling.mUB);
             } else {
-                ddr2UbLoopW = CeilDiv(self->ctx.singleCoreWo, self->ctx.convTiling->mUB);
+                ddr2UbLoopW = CeilDiv(self->ctx.singleCoreWo, self->ctx.convTilingData->convApiTiling.mUB);
             }
         } else {
-            ddr2UbLoopW = CeilDiv(self->ctx.singleCoreWo, self->ctx.convTiling->mUB);
+            ddr2UbLoopW = CeilDiv(self->ctx.singleCoreWo, self->ctx.convTilingData->convApiTiling.mUB);
         }
         self->ctx.fixpTimesTotal *= self->ctx.singleCoreHo * ddr2UbLoopW;
     }
@@ -57,20 +57,20 @@ template <class Intf>
 __aicore__ inline void DeQuantInitBuf(Intf *self)
 {
     self->ctx.pipe.InitBuffer(
-        self->ctx.mmadResUbBuf, self->ctx.convTiling->mUB * self->ctx.convTiling->nUB * Intf::sizeOfL0c);
+        self->ctx.mmadResUbBuf, self->ctx.convTilingData->convApiTiling.mUB * self->ctx.convTilingData->convApiTiling.nUB * Intf::sizeOfL0c);
     self->ctx.mmadResUbTensor = self->ctx.mmadResUbBuf.template Get<typename Intf::L0cT>();
     self->ctx.outputResUbTensor = self->ctx.mmadResUbBuf.template Get<typename Intf::OutputT>();
 
-    self->ctx.pipe.InitBuffer(self->ctx.scaleUbBuf, self->ctx.convTiling->nUB * Intf::sizeOfScale);
+    self->ctx.pipe.InitBuffer(self->ctx.scaleUbBuf, self->ctx.convTilingData->convApiTiling.nUB * Intf::sizeOfScale);
     self->ctx.scaleTensor = self->ctx.scaleUbBuf.template Get<typename Intf::ScaleT>();
 
     if constexpr (AscendC::IsSameType<typename Intf::BiasT, float>::value) {
-        self->ctx.pipe.InitBuffer(self->ctx.biasB32UbBuf, self->ctx.convTiling->nUB * Intf::sizeOfBias);
+        self->ctx.pipe.InitBuffer(self->ctx.biasB32UbBuf, self->ctx.convTilingData->convApiTiling.nUB * Intf::sizeOfBias);
     } else {
-        self->ctx.pipe.InitBuffer(self->ctx.biasB16UbBuf, self->ctx.convTiling->nUB * Intf::sizeOfBias);
+        self->ctx.pipe.InitBuffer(self->ctx.biasB16UbBuf, self->ctx.convTilingData->convApiTiling.nUB * Intf::sizeOfBias);
         self->ctx.biasB16Tensor = self->ctx.biasB16UbBuf.template Get<typename Intf::BiasT>();
 
-        self->ctx.pipe.InitBuffer(self->ctx.biasB32UbBuf, self->ctx.convTiling->nUB * DTYPE_SIZE_B32);   
+        self->ctx.pipe.InitBuffer(self->ctx.biasB32UbBuf, self->ctx.convTilingData->convApiTiling.nUB * DTYPE_SIZE_B32);   
     }
     self->ctx.biasB32Tensor = self->ctx.biasB32UbBuf.template Get<float>();
 }
@@ -80,28 +80,23 @@ __aicore__ inline void DeQuantVecInit(Intf *self)
 {
     self->ctx.vecId = GetSubBlockIdx();
 
-    self->ctx.orgCo = self->ctx.convTiling->orgCo;
-    self->ctx.orgDo = self->ctx.convTiling->orgDo;
-    self->ctx.orgHo = self->ctx.convTiling->orgHo;
-    self->ctx.orgWo = self->ctx.convTiling->orgWo;
-
-    self->ctx.singleCoreCo = self->ctx.convTiling->singleCoreCo;
-    self->ctx.singleCoreDo = self->ctx.convTiling->singleCoreDo;
+    self->ctx.singleCoreCo = self->ctx.convTilingData->convApiTiling.singleCoreCo;
+    self->ctx.singleCoreDo = self->ctx.convTilingData->convApiTiling.singleCoreDo;
     self->ctx.ddr2l1LoopD = self->ctx.singleCoreDo;
     if constexpr (Intf::outputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE)) {
-        self->ctx.singleCoreM = self->ctx.convTiling->singleCoreHo;
-        self->ctx.mAL1 = self->ctx.convTiling->hoL1;
-        self->ctx.mL0 = self->ctx.convTiling->hoL0;
+        self->ctx.singleCoreM = self->ctx.convTilingData->convApiTiling.singleCoreHo;
+        self->ctx.mAL1 = self->ctx.convTilingData->convApiTiling.hoL1;
+        self->ctx.mL0 = self->ctx.convTilingData->convApiTiling.hoL0;
         InitMDirectionValue<Intf>(self);
     } else {
-        self->ctx.singleCoreHo = self->ctx.convTiling->singleCoreHo;
-        self->ctx.singleCoreWo = self->ctx.convTiling->singleCoreWo;
+        self->ctx.singleCoreHo = self->ctx.convTilingData->convApiTiling.singleCoreHo;
+        self->ctx.singleCoreWo = self->ctx.convTilingData->convApiTiling.singleCoreWo;
         InitHoDirectionValue<Intf>(self);
         InitWoDirectionValue<Intf>(self);
     }
     InitCoDirectionValue<Intf>(self);
 
-    self->ctx.outputOneBatchSize = self->ctx.orgCo * self->ctx.orgHo * self->ctx.orgWo * self->ctx.orgDo;
+    self->ctx.outputOneBatchSize = self->ctx.convTilingData->convApiTiling.orgCo * self->ctx.convTilingData->convApiTiling.orgHo * self->ctx.convTilingData->convApiTiling.orgWo * self->ctx.convTilingData->convApiTiling.orgDo;
 
     DeQuantInitBuf<Intf>(self);
 
@@ -119,23 +114,23 @@ __aicore__ inline void DeQuantUBParamsUpdate(Intf *self)
         uint64_t currentML0 =
             self->ctx.mAL1Iter == self->ctx.maxMAL1Iter && self->ctx.mL0Iter == self->ctx.maxML0Iter ?
             self->ctx.mAL0Tail : self->ctx.mL0;
-        self->ctx.l0C2UbLoopM = CeilDiv(currentML0, self->ctx.convTiling->mUB);
+        self->ctx.l0C2UbLoopM = CeilDiv(currentML0, self->ctx.convTilingData->convApiTiling.mUB);
         self->ctx.maxMUbIter = self->ctx.l0C2UbLoopM - 1;
-        mUbTail = currentML0 % self->ctx.convTiling->mUB;
-        mUbTail = mUbTail == 0 ? self->ctx.convTiling->mUB : mUbTail;
-        self->ctx.currentMUb = self->ctx.mUbIter == self->ctx.maxMUbIter ? mUbTail : self->ctx.convTiling->mUB;
+        mUbTail = currentML0 % self->ctx.convTilingData->convApiTiling.mUB;
+        mUbTail = mUbTail == 0 ? self->ctx.convTilingData->convApiTiling.mUB : mUbTail;
+        self->ctx.currentMUb = self->ctx.mUbIter == self->ctx.maxMUbIter ? mUbTail : self->ctx.convTilingData->convApiTiling.mUB;
     } else {
         self->ctx.currentHoL0 = self->ctx.hoL0Iter == self->ctx.maxHoL0Iter ?
-            self->ctx.hoL0Tail : self->ctx.convTiling->hoL0;
+            self->ctx.hoL0Tail : self->ctx.convTilingData->convApiTiling.hoL0;
         self->ctx.currentWoL0 = self->ctx.woL0Iter == self->ctx.maxWoL0Iter ?
-            self->ctx.woL0Tail : self->ctx.convTiling->woL0;
-        self->ctx.l0C2UbLoopWo = CeilDiv(self->ctx.currentWoL0, self->ctx.convTiling->mUB);
+            self->ctx.woL0Tail : self->ctx.convTilingData->convApiTiling.woL0;
+        self->ctx.l0C2UbLoopWo = CeilDiv(self->ctx.currentWoL0, self->ctx.convTilingData->convApiTiling.mUB);
         self->ctx.l0C2UbLoopM = self->ctx.l0C2UbLoopWo * self->ctx.currentHoL0;
         self->ctx.maxMUbIter = self->ctx.l0C2UbLoopM - 1;
-        mUbTail = self->ctx.currentWoL0 % self->ctx.convTiling->mUB;
-        mUbTail = mUbTail == 0 ? self->ctx.convTiling->mUB : mUbTail;
+        mUbTail = self->ctx.currentWoL0 % self->ctx.convTilingData->convApiTiling.mUB;
+        mUbTail = mUbTail == 0 ? self->ctx.convTilingData->convApiTiling.mUB : mUbTail;
         self->ctx.currentMUb = (self->ctx.mUbIter % self->ctx.l0C2UbLoopWo) == (self->ctx.l0C2UbLoopWo - 1) ?
-            mUbTail : self->ctx.convTiling->mUB;
+            mUbTail : self->ctx.convTilingData->convApiTiling.mUB;
     }
 
     self->ctx.currentNUb = CalcCurrentNL0<Intf>(self);

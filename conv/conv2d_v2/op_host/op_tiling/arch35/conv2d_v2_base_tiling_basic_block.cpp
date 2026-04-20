@@ -402,8 +402,13 @@ void Conv2dBaseTiling::GetInitBasicBlockMN(uint64_t& basicBlockM, uint64_t& basi
 {
     uint64_t howo = shapeInfo_.ho * shapeInfo_.wo;
     if (shapeInfo_.co <= BASICBLOCK_BOUNDARY_VALUE_64) {
-        basicBlockM = BASICBLOCK_INIT_VALUE_1024;
-        basicBlockN = BASICBLOCK_INIT_VALUE_64;
+        if (descInfo_.fMapDtype == ge::DT_FLOAT16 && descInfo_.weightDtype == ge::DT_INT8) {
+            basicBlockM = BASICBLOCK_INIT_VALUE_512;
+            basicBlockN = BASICBLOCK_INIT_VALUE_64;
+        } else {
+            basicBlockM = BASICBLOCK_INIT_VALUE_1024;
+            basicBlockN = BASICBLOCK_INIT_VALUE_64;
+        }
     } else if (shapeInfo_.co > BASICBLOCK_BOUNDARY_VALUE_64
         && shapeInfo_.co <= BASICBLOCK_BOUNDARY_VALUE_128) {
         basicBlockM = BASICBLOCK_INIT_VALUE_512;

@@ -67,8 +67,8 @@ protected:
     __aicore__ inline void InitTilingData(const Ops::NN::Conv3dV2::Conv3DV2TilingData *allTilingData)
     {
         this->allTilingData = allTilingData;
-        this->conv3dRunInfo = &(allTilingData->conv3dRunInfo);
-        this->conv3dApiTiling = &(allTilingData->conv3dApiTiling);
+        this->conv3dRunInfo = &(allTilingData->convRunInfo);
+        this->conv3dApiTiling = &(allTilingData->convApiTiling);
 
         numBlocks = this->conv3dRunInfo->mDim * this->conv3dRunInfo->nDim * this->conv3dRunInfo->groupDim * this->conv3dRunInfo->doDim *
                    this->conv3dRunInfo->batchDim;

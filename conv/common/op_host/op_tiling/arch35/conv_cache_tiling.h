@@ -134,6 +134,7 @@ struct Conv2dCacheTilingData {
     uint32_t singleCoreCi = 0;
     uint32_t singleCoreCo = 0;
     uint64_t orgHixWi = 0;
+    uint64_t unionDataXt = 0;
     uint32_t hoL1 = 0;
     uint32_t woL1 = 0;
     uint32_t kAL1 = 0;
@@ -207,6 +208,7 @@ struct Conv3dCacheTilingData {
     uint64_t oriWixk0 = 0;
     uint64_t orgHixWi = 0;
     uint64_t orgHoxWo = 0;
+    uint64_t unionDataXt = 0;
 
     // uint32_t fields
     uint32_t orgCi = 0;

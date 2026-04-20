@@ -38,6 +38,7 @@ struct Conv3dIntf {
     using ContextType = typename Ext::ContextData;
     using ImplDataType = typename Ext::ImplDataType;
     using ConvParam = typename Config::ConvParam;
+    using ReluWeightT = typename Config::ReluWeightT;
 
     constexpr static bool isExtendConv2d = false;
     constexpr static int8_t outputOrder = ConvParam::outputOrder;
@@ -56,6 +57,7 @@ struct Conv3dIntf {
     constexpr static bool hasML0IterFlag = true;
     constexpr static bool kl0FullLoadFlag = (ConvParam::l0PingPong == 1 || ConvParam::l0PingPong == 2) &&
                                             ConvParam::groupType != static_cast<int8_t>(ConvGroupType::ORI_GROUP_CONV);
+    constexpr static bool preFusionFlag = false;
 
     constexpr static bool kPreLoadAFlag = false;
     constexpr static bool kPreLoadBFlag = false;
@@ -98,6 +100,13 @@ struct Conv3dIntf {
     constexpr static uint8_t sizeOfScale = sizeof(ScaleT);
     constexpr static uint8_t sizeOfL0c = sizeof(L0cT);
     constexpr static uint8_t sizeOfOutput = sizeof(OutputT);
+    constexpr static uint8_t sizeOfReluWeight = sizeof(ReluWeightT);
+
+    constexpr static bool isOneBatch = false;
+    constexpr static bool isNoPad = false;
+    constexpr static bool isKL1NL0FullLoad = false;
+    constexpr static bool isL0BFullLoadable = false;
+    constexpr static bool isMPreLoad = false;
 
 public:
     ContextType ctx;
