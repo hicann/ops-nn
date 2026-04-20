@@ -21,6 +21,7 @@ extern "C" {
  * @brief aclnnBatchMatmulQuant的第一段接口，根据具体的计算流程，计算workspace大小。
  * @domain aclnn_ops_infer
  */
+ACL_DEPRECATED_MESSAGE("aclnnBatchMatmulQuantGetWorkspaceSize is deprecated")
 ACLNN_API aclnnStatus aclnnBatchMatmulQuantGetWorkspaceSize(
     const aclTensor* x1, const aclTensor* x2, const aclTensor* quantParam, const aclTensor* bias, bool transposeX1,
     bool transposeX2, aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor);
@@ -28,6 +29,7 @@ ACLNN_API aclnnStatus aclnnBatchMatmulQuantGetWorkspaceSize(
 /**
  * @brief aclnnBatchMatmulQuant的第二段接口，用于执行计算。
  */
+ACL_DEPRECATED_MESSAGE("aclnnBatchMatmulQuant is deprecated")
 ACLNN_API aclnnStatus
 aclnnBatchMatmulQuant(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream);
 

@@ -63,7 +63,6 @@
 | [aclnnAvgPool3dBackward](../../pooling/avg_pool3_d_grad/docs/aclnnAvgPool3dBackward.md) | 三维平均池化的反向传播，计算三维平均池化正向传播的输入梯度。 | 默认非确定性实现，支持配置开启 | - |
 | [aclnnBaddbmm&aclnnInplaceBaddbmm](../../matmul/batch_mat_mul_v3/docs/aclnnBaddbmm&aclnnInplaceBaddbmm.md) | 计算α与batch1、batch2的矩阵乘结果的乘积，再与β和self的乘积求和。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnBatchMatMul](../../matmul/batch_mat_mul_v3/docs/aclnnBatchMatMul.md) | 完成张量self与张量mat2的矩阵乘计算。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnBatchMatmulQuant](../../matmul/batch_matmul_quant/docs/aclnnBatchMatmulQuant.md) | 实现输入Tensor的dtype是float16, 输出的dtype是int8的矩阵乘计算。 | 默认确定性实现 | - |
 | [aclnnBatchMatMulWeightNz](../../matmul/batch_mat_mul_v3/docs/aclnnBatchMatMulWeightNz.md) | 完成张量self与张量mat2的矩阵乘计算, mat2仅支持昇腾亲和数据排布格式，只支持self为3维, mat2为5维。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnBatchNorm](../../norm/batch_norm_v3/docs/aclnnBatchNorm.md) | 对一个批次的数据做批量归一化处理，正则化之后生成的数据的统计结果为0均值、1标准差。 | 默认非确定性实现，支持配置开启 | 默认确定性实现 |
 | [aclnnBatchNormElemt](../../norm/batch_norm_elemt/docs/aclnnBatchNormElemt.md) | 将全局的均值和标准差倒数作为算子输入，对x做BatchNorm计算。 | 默认非确定性实现，支持配置开启 |   |
@@ -369,3 +368,4 @@
 | [aclnnQuantMatmulV2](../../matmul/quant_matmul/docs/aclnnQuantMatmulV2.md)|此接口后续版本会废弃，请使用最新接口[aclnnQuantMatmulV5](../../matmul/quant_batch_matmul_v4/docs/aclnnQuantMatmulV5.md)。 |
 | [aclnnQuantMatmulV3](../../matmul/quant_batch_matmul_v3/docs/aclnnQuantMatmulV3.md)|此接口后续版本会废弃，请使用最新接口[aclnnQuantMatmulV5](../../matmul/quant_batch_matmul_v4/docs/aclnnQuantMatmulV5.md)。 |
 | [aclnnQuantMatmulV4](../../matmul/quant_batch_matmul_v3/docs/aclnnQuantMatmulV4.md)|此接口后续版本会废弃，请使用最新接口[aclnnQuantMatmulV5](../../matmul/quant_batch_matmul_v4/docs/aclnnQuantMatmulV5.md)。 |
+| [aclnnBatchMatmulQuant](../../matmul/batch_matmul_quant/docs/aclnnBatchMatmulQuant.md)|此接口后续版本会废弃，请勿使用该接口。 |
