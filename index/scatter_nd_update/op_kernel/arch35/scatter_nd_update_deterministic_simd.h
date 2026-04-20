@@ -22,11 +22,11 @@
 namespace ScatterNdUpdate {
 using namespace AscendC;
 
-template <typename PARAMS_T, typename INDICES_T, typename TYPE_T>
-class ScatterNdUpdateDeterministicSimd: public ScatterNdUpdateDeterministicCommon<PARAMS_T, INDICES_T, TYPE_T>
+template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T = INDICES_T>
+class ScatterNdUpdateDeterministicSimd: public ScatterNdUpdateDeterministicCommon<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>
 {
 public:
-    __aicore__ inline ScatterNdUpdateDeterministicSimd(const ScatterNdUpdateRegBaseTilingData& tilingData, TPipe& pipe) : ScatterNdUpdateDeterministicCommon<PARAMS_T, INDICES_T, TYPE_T>(tilingData, pipe){};
+    __aicore__ inline ScatterNdUpdateDeterministicSimd(const ScatterNdUpdateRegBaseTilingData& tilingData, TPipe& pipe) : ScatterNdUpdateDeterministicCommon<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>(tilingData, pipe){};
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace);
     __aicore__ inline void Process();
 
@@ -42,14 +42,14 @@ private:
     int32_t updateCount = 0;
 };
 
-template <typename PARAMS_T, typename INDICES_T, typename TYPE_T>
-__aicore__ inline void ScatterNdUpdateDeterministicSimd<PARAMS_T, INDICES_T, TYPE_T>::Init(GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y ,GM_ADDR workspace)
+template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T>
+__aicore__ inline void ScatterNdUpdateDeterministicSimd<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>::Init(GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y ,GM_ADDR workspace)
 {    
     this->InitBase(x, indices, updates, y, workspace);
 }
 
-template <typename PARAMS_T, typename INDICES_T, typename TYPE_T>
-__aicore__ inline void ScatterNdUpdateDeterministicSimd<PARAMS_T, INDICES_T, TYPE_T>::Process()
+template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T>
+__aicore__ inline void ScatterNdUpdateDeterministicSimd<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>::Process()
 {
     // if input is empty, return directly
     if (this->tiling_.sliceSize == 0) {
@@ -78,19 +78,19 @@ __aicore__ inline void ScatterNdUpdateDeterministicSimd<PARAMS_T, INDICES_T, TYP
 
         int64_t globalValRowIdx = this->varIdxGm(this->indiceOffSet); 
         // 越界校验
-        if (globalValRowIdx < 0 || globalValRowIdx > this->tiling_.varInAxis) {
-            continue; 
+        if (globalValRowIdx < 0 || globalValRowIdx > this->tiling_.outputStorageShapeSize) {
+            continue;
         }
 
         // 获取行对应varIdx
-        if (this->maskGm(globalValRowIdx) != this->indiceOffSet) {
+        if (this->maskGm(globalValRowIdx / this->tiling_.sliceSize) != this->indiceOffSet) {
             continue;
         }
 
         for (TYPE_T j = 0; j < this->updateLoopSize; j++) {
             LocalTensor<PARAMS_T> updateLocal = this->inQueX.template AllocTensor<PARAMS_T>();
             this->updateOffSet = this->indiceOffSet * this->tiling_.sliceSize + j * this->tiling_.afterAxisFactor;
-            uint64_t varGmOffSet = globalValRowIdx * this->tiling_.afterAxis + j * this->tiling_.afterAxisFactor;
+            uint64_t varGmOffSet = globalValRowIdx + j * this->tiling_.afterAxisFactor;
             if (j == this->updateLoopSize-1) {
                 this->updateCount =  this->tiling_.updateTailNum;
             } else {
@@ -108,16 +108,16 @@ __aicore__ inline void ScatterNdUpdateDeterministicSimd<PARAMS_T, INDICES_T, TYP
     }
 }
 
-template <typename PARAMS_T, typename INDICES_T, typename TYPE_T>
-__aicore__ inline void ScatterNdUpdateDeterministicSimd<PARAMS_T, INDICES_T, TYPE_T>::CopyInUpdate(LocalTensor<PARAMS_T>& updateLocal)
+template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T>
+__aicore__ inline void ScatterNdUpdateDeterministicSimd<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>::CopyInUpdate(LocalTensor<PARAMS_T>& updateLocal)
 {
     DataCopyExtParams xCopyParams{1, static_cast<uint32_t>(this->updateCount * sizeof(PARAMS_T)), 0, 0, 0};
     DataCopyPadExtParams<PARAMS_T> xPadParams{false, 0, 0, 0};
     DataCopyPad(updateLocal, this->updateGm[this->updateOffSet], xCopyParams, xPadParams);
 }
 
-template <typename PARAMS_T, typename INDICES_T, typename TYPE_T>
-__aicore__ inline void ScatterNdUpdateDeterministicSimd<PARAMS_T, INDICES_T, TYPE_T>::CopyOutUpdate(LocalTensor<PARAMS_T>& updateLocal, uint64_t varGmOffSet)
+template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T>
+__aicore__ inline void ScatterNdUpdateDeterministicSimd<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>::CopyOutUpdate(LocalTensor<PARAMS_T>& updateLocal, uint64_t varGmOffSet)
 {
     DataCopyExtParams xCopyParams{1, static_cast<uint32_t>(this->updateCount * sizeof(PARAMS_T)), 0, 0, 0};
     DataCopyPad(this->outputGm[varGmOffSet], updateLocal[0], xCopyParams);

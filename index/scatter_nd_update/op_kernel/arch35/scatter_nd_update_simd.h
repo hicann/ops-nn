@@ -24,8 +24,8 @@
 namespace ScatterNdUpdate {
 using namespace AscendC;
 
-template <typename T, typename U>
-class ScatterNdUpdateSimd : public ScatterNdUpdateBase<T, U> {
+template <typename T, typename U, typename OFFSET_T = U>
+class ScatterNdUpdateSimd : public ScatterNdUpdateBase<T, U, OFFSET_T> {
 public:
     __aicore__ inline ScatterNdUpdateSimd(const ScatterNdUpdateRegBaseTilingData& tilingData, TPipe& pipe) :
         tilingData_(tilingData), pipe_(pipe) {};
@@ -51,8 +51,8 @@ private:
     uint64_t strideList[MAX_RANK_COUNT];
 };
 
-template <typename T, typename U>
-__aicore__ inline void ScatterNdUpdateSimd<T, U>::Init(
+template <typename T, typename U, typename OFFSET_T>
+__aicore__ inline void ScatterNdUpdateSimd<T, U, OFFSET_T>::Init(
     GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace)
 {
     varGm_.SetGlobalBuffer((__gm__ T *)(var));
@@ -65,15 +65,15 @@ __aicore__ inline void ScatterNdUpdateSimd<T, U>::Init(
     this->afterAxisFactor_ = tilingData_.afterAxisFactor;
     this->indexRankSize_ = tilingData_.indexRankSize;
     this->eachCoreAfterAxisCount_ = tilingData_.eachCoreAfterAxisCount;
-    this->varInAxis_ = tilingData_.varInAxis;
+    this->varInAxis_ = tilingData_.outputStorageShapeSize;
     this->InitBaseBuffer(pipe_, tilingData_.indicesFactor, indices, updates, y);
 
     curCoreIndexCount_ = (GetBlockIdx() != (tilingData_.usedCoreNumBefore - 1) ? tilingData_.eachCoreIndexCount :
                                                                                  tilingData_.tailCoreIndexCount);
 }
 
-template <typename T, typename U>
-__aicore__ inline void ScatterNdUpdateSimd<T, U>::ProcessSplitAfter()
+template <typename T, typename U, typename OFFSET_T>
+__aicore__ inline void ScatterNdUpdateSimd<T, U, OFFSET_T>::ProcessSplitAfter()
 {
     if (GetBlockIdx() >= tilingData_.usedCoreNumBefore) {
         return;
@@ -92,7 +92,7 @@ __aicore__ inline void ScatterNdUpdateSimd<T, U>::ProcessSplitAfter()
         int64_t rowDataLen = (rowIdx == rowLoopNum - 1) ? rowTailDataLen : rowMainDataLen;
         this->CopyIndiceInSplitAfter(rowIdx, rowDataLen);
         if (this->maxScore_ > SORT_HIST_THRESHOLD) {
-            LocalTensor<U> outOfstLocal = this->outOfstBuf_.template Get<U>();
+            LocalTensor<OFFSET_T> outOfstLocal = this->outOfstBuf_.template Get<OFFSET_T>();
             this->SortAndComputeUniqueIdx(outOfstLocal, rowDataLen);
             for (int64_t colIdx = 0; colIdx < colLoopNum; colIdx++) {
                 int64_t colDataLen = (colIdx == colLoopNum - 1) ? colTailDataLen : colMainDataLen;
@@ -113,11 +113,11 @@ __aicore__ inline void ScatterNdUpdateSimd<T, U>::ProcessSplitAfter()
     }
 }
 
-template <typename T, typename U>
-__aicore__ inline void ScatterNdUpdateSimd<T, U>::CopyIndiceInSplitIndices(int64_t rowIdx, int64_t rowLen)
+template <typename T, typename U, typename OFFSET_T>
+__aicore__ inline void ScatterNdUpdateSimd<T, U, OFFSET_T>::CopyIndiceInSplitIndices(int64_t rowIdx, int64_t rowLen)
 {
     LocalTensor<U> indicesLocal = this->indicesBuf_.template Get<U>();
-    LocalTensor<U> outOfstLocal = this->outOfstBuf_.template Get<U>();
+    LocalTensor<OFFSET_T> outOfstLocal = this->outOfstBuf_.template Get<OFFSET_T>();
     LocalTensor<float> dstLocal = this->maxScoreBuf_.template Get<float>();
 
     int64_t rankSize = tilingData_.indexRankSize;
@@ -127,15 +127,15 @@ __aicore__ inline void ScatterNdUpdateSimd<T, U>::CopyIndiceInSplitIndices(int64
     SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
     WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
     this->ComputeOutOfset(indicesLocal, outOfstLocal, rowLen, rankSize);
-    if constexpr (IsSameType<U, int32_t>::value) {
+    if constexpr (IsSameType<OFFSET_T, int32_t>::value) {
         IndexStatisticInt32(outOfstLocal, dstLocal, this->maxScore_, rowLen, tilingData_.afterAxis);
     } else {
         IndexStatisticInt64(outOfstLocal, dstLocal, this->maxScore_, rowLen, tilingData_.afterAxis);
     }
 }
 
-template <typename T, typename U>
-__aicore__ inline void ScatterNdUpdateSimd<T, U>::CopyUpdatesInSplitIndices(
+template <typename T, typename U, typename OFFSET_T>
+__aicore__ inline void ScatterNdUpdateSimd<T, U, OFFSET_T>::CopyUpdatesInSplitIndices(
     int64_t rowIdx, int64_t colIdx, int64_t rowLen, int64_t colLen)
 {
     LocalTensor<T> updatesLocal = this->dataQueue_.template AllocTensor<T>();
@@ -152,22 +152,21 @@ __aicore__ inline void ScatterNdUpdateSimd<T, U>::CopyUpdatesInSplitIndices(
     this->dataQueue_.template EnQue(updatesLocal);
 }
 
-template <typename T, typename U>
-__aicore__ inline void ScatterNdUpdateSimd<T, U>::CopyOutSplitIndices(
+template <typename T, typename U, typename OFFSET_T>
+__aicore__ inline void ScatterNdUpdateSimd<T, U, OFFSET_T>::CopyOutSplitIndices(
     int64_t rowLen, int64_t colLen, int64_t colIdx)
 {
     LocalTensor<T> dataLocal = this->dataQueue_.template DeQue<T>();
-    LocalTensor<U> outOfstLocal = this->outOfstBuf_.template Get<U>();
+    LocalTensor<OFFSET_T> outOfstLocal = this->outOfstBuf_.template Get<OFFSET_T>();
     int64_t colLenAlignSize = Ops::Base::CeilAlign(colLen * sizeof(T), UB_AGLIN_VALUE) / sizeof(T);
-    int64_t varInAxis = tilingData_.varInAxis;
+    int64_t varInAxis = tilingData_.outputStorageShapeSize;
 
     event_t eventIdVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
     SetFlag<HardEvent::V_S>(eventIdVToS);
     WaitFlag<HardEvent::V_S>(eventIdVToS);
     for (int64_t i = 0; i < rowLen; i++) {
-        int64_t rowOfset = outOfstLocal(i) * tilingData_.afterAxis;
-        int64_t outOfset = rowOfset + colIdx * tilingData_.afterAxisFactor;
         int64_t indicesValue = outOfstLocal(i);
+        int64_t outOfset = indicesValue + colIdx * tilingData_.afterAxisFactor;
  	    if (indicesValue >= 0 && indicesValue < varInAxis) {
  	        this->template CopyOut<T>(yGm_[outOfset], dataLocal[i * colLenAlignSize], colLen);
  	    }
@@ -175,17 +174,17 @@ __aicore__ inline void ScatterNdUpdateSimd<T, U>::CopyOutSplitIndices(
     this->dataQueue_.FreeTensor(dataLocal);
 }
 
-template <typename T, typename U>
-__aicore__ inline void ScatterNdUpdateSimd<T, U>::CopyOutSplitIndicesWithSort(
+template <typename T, typename U, typename OFFSET_T>
+__aicore__ inline void ScatterNdUpdateSimd<T, U, OFFSET_T>::CopyOutSplitIndicesWithSort(
     int64_t rowLen, int64_t colLen, int64_t colIdx)
 {
     LocalTensor<T> dataLocal = this->dataQueue_.template DeQue<T>();
-    LocalTensor<U> sortIndicesLocal = this->sortIndicesQue_.template Get<U>();
-    LocalTensor<U> shiftSortLocal = sortIndicesLocal[this->shiftOffset_];
+    LocalTensor<OFFSET_T> sortIndicesLocal = this->sortIndicesQue_.template Get<OFFSET_T>();
+    LocalTensor<OFFSET_T> shiftSortLocal = sortIndicesLocal[this->shiftOffset_];
     LocalTensor<uint32_t> updatesOriginIdexLocal = this->updatesOriginIdexQue_.template DeQue<uint32_t>();
     LocalTensor<int32_t> uniqueIdCountLocal = this->uniqueIdCountQue_.template DeQue<int32_t>();
     int64_t colLenAlignSize = Ops::Base::CeilAlign(colLen * sizeof(T), UB_AGLIN_VALUE) / sizeof(T);
-    int64_t varInAxis = tilingData_.varInAxis;
+    int64_t varInAxis = tilingData_.outputStorageShapeSize;
 
     event_t eventIdVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
     SetFlag<HardEvent::V_S>(eventIdVToS);
@@ -193,7 +192,7 @@ __aicore__ inline void ScatterNdUpdateSimd<T, U>::CopyOutSplitIndicesWithSort(
     for (int64_t i = 0; i < rowLen; i++) {
         int32_t uniqueIdx = uniqueIdCountLocal(i);
         int64_t inOfset = updatesOriginIdexLocal(uniqueIdx) * colLenAlignSize;
-        int64_t outOfset = shiftSortLocal(uniqueIdx) * tilingData_.afterAxis;
+        int64_t outOfset = shiftSortLocal(uniqueIdx);
         outOfset += colIdx * tilingData_.afterAxisFactor;
         int64_t indicesValue = shiftSortLocal(uniqueIdx);
  	    if (indicesValue >= 0 && indicesValue < varInAxis) {
@@ -206,8 +205,8 @@ __aicore__ inline void ScatterNdUpdateSimd<T, U>::CopyOutSplitIndicesWithSort(
     this->dataQueue_.FreeTensor(dataLocal);
 }
 
-template <typename T, typename U>
-__aicore__ inline void ScatterNdUpdateSimd<T, U>::ProcessSplitIndices()
+template <typename T, typename U, typename OFFSET_T>
+__aicore__ inline void ScatterNdUpdateSimd<T, U, OFFSET_T>::ProcessSplitIndices()
 {
     if (GetBlockIdx() >= tilingData_.usedCoreNumBefore) {
         return;
@@ -224,7 +223,7 @@ __aicore__ inline void ScatterNdUpdateSimd<T, U>::ProcessSplitIndices()
         int64_t rowDataLen = (rowIdx == rowLoopNum - 1) ? rowTailDataLen : rowMainDataLen;
         CopyIndiceInSplitIndices(rowIdx, rowDataLen);
         if (this->maxScore_ > SORT_HIST_THRESHOLD) {
-            LocalTensor<U> outOfstLocal = this->outOfstBuf_.template Get<U>();
+            LocalTensor<OFFSET_T> outOfstLocal = this->outOfstBuf_.template Get<OFFSET_T>();
             this->SortAndComputeUniqueIdx(outOfstLocal, rowDataLen);
             for (int64_t colIdx = 0; colIdx < colLoopNum; colIdx++) {
                 int64_t colDataLen = (colIdx == colLoopNum - 1) ? colTailDataLen : colMainDataLen;
@@ -241,10 +240,10 @@ __aicore__ inline void ScatterNdUpdateSimd<T, U>::ProcessSplitIndices()
     }
 }
 
-template <typename T, typename U>
-__aicore__ inline void ScatterNdUpdateSimd<T, U>::Process()
+template <typename T, typename U, typename OFFSET_T>
+__aicore__ inline void ScatterNdUpdateSimd<T, U, OFFSET_T>::Process()
 {
-    LocalTensor<U> strideLocal = this->strideBuf_.template Get<U>();
+    LocalTensor<OFFSET_T> strideLocal = this->strideBuf_.template Get<OFFSET_T>();
     for (int32_t i = 0; i < MAX_RANK_COUNT; i++) {
         strideLocal(i) = tilingData_.strideList[i];
     }

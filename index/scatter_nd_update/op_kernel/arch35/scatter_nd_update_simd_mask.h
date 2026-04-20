@@ -24,8 +24,8 @@
 namespace ScatterNdUpdate {
 using namespace AscendC;
 
-template <typename T, typename U>
-class ScatterNdUpdateSimdMask : public ScatterNdUpdateBase<T, U> {
+template <typename T, typename U, typename OFFSET_T = U>
+class ScatterNdUpdateSimdMask : public ScatterNdUpdateBase<T, U, OFFSET_T> {
 public:
     __aicore__ inline ScatterNdUpdateSimdMask(const ScatterNdUpdateRegBaseTilingData& tilingData, TPipe& pipe)
         : tilingData_(tilingData), pipe_(pipe){};
@@ -50,8 +50,8 @@ private:
     const ScatterNdUpdateRegBaseTilingData& tilingData_;
 };
 
-template <typename T, typename U>
-__aicore__ inline void ScatterNdUpdateSimdMask<T, U>::Init(
+template <typename T, typename U, typename OFFSET_T>
+__aicore__ inline void ScatterNdUpdateSimdMask<T, U, OFFSET_T>::Init(
     GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace)
 {
     varGm_.SetGlobalBuffer((__gm__ T *)(var));
@@ -63,15 +63,15 @@ __aicore__ inline void ScatterNdUpdateSimdMask<T, U>::Init(
                                                                                : tilingData_.tailCoreIndexCount);
 
     pipe_.InitBuffer(maskBuf_,
-        Ops::Base::CeilAlign(tilingData_.varInAxis * sizeof(int8_t), static_cast<uint64_t>(Ops::Base::GetUbBlockSize())));
-    pipe_.InitBuffer(this->outOfstBuf_, tilingData_.indicesFactor * sizeof(U));
+        Ops::Base::CeilAlign(tilingData_.varStorageInAxis * sizeof(int8_t), static_cast<uint64_t>(Ops::Base::GetUbBlockSize())));
+    pipe_.InitBuffer(this->outOfstBuf_, tilingData_.indicesFactor * sizeof(OFFSET_T));
     pipe_.InitBuffer(this->indicesBuf_, tilingData_.indicesFactor * tilingData_.indexRankSize * sizeof(U));
     pipe_.InitBuffer(this->strideBuf_, MAX_RANK_COUNT * sizeof(U));
     pipe_.InitBuffer(
         this->dataQueue_, DOUBLE_BUFFER, tilingData_.indicesFactor * tilingData_.afterAxisFactor * sizeof(T));
 
     LocalTensor<int8_t> maskLocal = maskBuf_.Get<int8_t>();
-    Duplicate(maskLocal, static_cast<int8_t>(0), tilingData_.varInAxis);
+    Duplicate(maskLocal, static_cast<int8_t>(0), tilingData_.varStorageInAxis);
 
     LocalTensor<U> strideLocal = this->strideBuf_.template Get<U>();
     for (int32_t i = 0; i < MAX_RANK_COUNT; i++) {
@@ -79,11 +79,11 @@ __aicore__ inline void ScatterNdUpdateSimdMask<T, U>::Init(
     }
 }
 
-template <typename T, typename U>
-__aicore__ inline void ScatterNdUpdateSimdMask<T, U>::CopyIndiceIn(int64_t rowIdx, int64_t rowLen)
+template <typename T, typename U, typename OFFSET_T>
+__aicore__ inline void ScatterNdUpdateSimdMask<T, U, OFFSET_T>::CopyIndiceIn(int64_t rowIdx, int64_t rowLen)
 {
     LocalTensor<U> indicesLocal = this->indicesBuf_.template Get<U>();
-    LocalTensor<U> outOfstLocal = this->outOfstBuf_.template Get<U>();
+    LocalTensor<OFFSET_T> outOfstLocal = this->outOfstBuf_.template Get<OFFSET_T>();
 
     int64_t indicesOfset = GetBlockIdx() * tilingData_.eachCoreIndexCount + rowIdx * tilingData_.indicesFactor;
     this->template CopyIn<U>(
@@ -94,8 +94,8 @@ __aicore__ inline void ScatterNdUpdateSimdMask<T, U>::CopyIndiceIn(int64_t rowId
     this->ComputeOutOfset(indicesLocal, outOfstLocal, rowLen, tilingData_.indexRankSize);
 }
 
-template <typename T, typename U>
-__aicore__ inline void ScatterNdUpdateSimdMask<T, U>::CopyUpdatesIn(
+template <typename T, typename U, typename OFFSET_T>
+__aicore__ inline void ScatterNdUpdateSimdMask<T, U, OFFSET_T>::CopyUpdatesIn(
     int64_t rowIdx, int64_t colIdx, int64_t rowLen, int64_t colLen)
 {
     LocalTensor<T> updatesLocal = this->dataQueue_.template AllocTensor<T>();
@@ -113,25 +113,25 @@ __aicore__ inline void ScatterNdUpdateSimdMask<T, U>::CopyUpdatesIn(
     this->dataQueue_.template EnQue(updatesLocal);
 }
 
-template <typename T, typename U>
-__aicore__ inline void ScatterNdUpdateSimdMask<T, U>::CopyOutOneLine(int64_t colLen, int64_t colIdx)
+template <typename T, typename U, typename OFFSET_T>
+__aicore__ inline void ScatterNdUpdateSimdMask<T, U, OFFSET_T>::CopyOutOneLine(int64_t colLen, int64_t colIdx)
 {
     LocalTensor<T> dataLocal = this->dataQueue_.template DeQue<T>();
-    LocalTensor<U> outOfstLocal = this->outOfstBuf_.template Get<U>();
+    LocalTensor<OFFSET_T> outOfstLocal = this->outOfstBuf_.template Get<OFFSET_T>();
 
     event_t eventIdVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
     SetFlag<HardEvent::V_S>(eventIdVToS);
     WaitFlag<HardEvent::V_S>(eventIdVToS);
-    int64_t rowOfset = outOfstLocal(0) * tilingData_.afterAxis;
+    int64_t rowOfset = outOfstLocal(0);
     int64_t outOfset = rowOfset + colIdx * tilingData_.afterAxisFactor;
     this->template CopyOut<T>(yGm_[outOfset], dataLocal[0], colLen);
     this->dataQueue_.FreeTensor(dataLocal);
 }
 
-template <typename T, typename U>
-__aicore__ inline void ScatterNdUpdateSimdMask<T, U>::ProcessMaskOneLine()
+template <typename T, typename U, typename OFFSET_T>
+__aicore__ inline void ScatterNdUpdateSimdMask<T, U, OFFSET_T>::ProcessMaskOneLine()
 {
-    LocalTensor<U> outOfstLocal = this->outOfstBuf_.template Get<U>();
+    LocalTensor<OFFSET_T> outOfstLocal = this->outOfstBuf_.template Get<OFFSET_T>();
     LocalTensor<int8_t> maskLocal = maskBuf_.template Get<int8_t>();
 
     for (int64_t rowIdx = 0; rowIdx < curCoreIndexCount_; rowIdx++) {
@@ -140,10 +140,10 @@ __aicore__ inline void ScatterNdUpdateSimdMask<T, U>::ProcessMaskOneLine()
         SetFlag<HardEvent::V_S>(eventIdVToS);
         WaitFlag<HardEvent::V_S>(eventIdVToS);
         int64_t outOfstVal = outOfstLocal(0);
- 	    if (outOfstVal < 0 || outOfstVal >= tilingData_.varInAxis) {
+ 	    if (outOfstVal < 0 || outOfstVal >= tilingData_.outputStorageShapeSize) {
  	        continue;
  	    }
-        if (maskLocal(outOfstVal) != 0) {
+        if (maskLocal(outOfstVal / tilingData_.sliceSize) != 0) {
             continue;
         }
 
@@ -153,15 +153,15 @@ __aicore__ inline void ScatterNdUpdateSimdMask<T, U>::ProcessMaskOneLine()
             CopyUpdatesIn(rowIdx, colIdx, tilingData_.indicesFactor, colDataLen);
             CopyOutOneLine(colDataLen, colIdx);
         }
-        maskLocal(outOfstVal) = 1;
+        maskLocal(outOfstVal / tilingData_.sliceSize) = 1;
     }
 }
 
-template <typename T, typename U>
-__aicore__ inline void ScatterNdUpdateSimdMask<T, U>::CopyOutMultiLine(int64_t rowLen)
+template <typename T, typename U, typename OFFSET_T>
+__aicore__ inline void ScatterNdUpdateSimdMask<T, U, OFFSET_T>::CopyOutMultiLine(int64_t rowLen)
 {
     LocalTensor<T> dataLocal = this->dataQueue_.template DeQue<T>();
-    LocalTensor<U> outOfstLocal = this->outOfstBuf_.template Get<U>();
+    LocalTensor<OFFSET_T> outOfstLocal = this->outOfstBuf_.template Get<OFFSET_T>();
     LocalTensor<int8_t> maskLocal = maskBuf_.template Get<int8_t>();
     int64_t colLenAlignSize =
         Ops::Base::CeilAlign(tilingData_.afterAxis * sizeof(T), static_cast<uint64_t>(Ops::Base::GetUbBlockSize())) /
@@ -173,20 +173,19 @@ __aicore__ inline void ScatterNdUpdateSimdMask<T, U>::CopyOutMultiLine(int64_t r
     for (int64_t i = 0; i < rowLen; i++) {
         int64_t srcOffset = i * colLenAlignSize;
         int64_t outOfstVal = outOfstLocal(i);
- 	    if (outOfstVal < 0 || outOfstVal >= tilingData_.varInAxis) {
+ 	    if (outOfstVal < 0 || outOfstVal >= tilingData_.outputStorageShapeSize) {
  	        continue;
  	    }
-        int64_t dstOffset = outOfstVal * tilingData_.afterAxis;
-        if (maskLocal(outOfstVal) == 0) {
-            this->template CopyOut<T>(yGm_[dstOffset], dataLocal[srcOffset], tilingData_.afterAxis);
-            maskLocal(outOfstVal) = 1;
+        if (maskLocal(outOfstVal / tilingData_.sliceSize) == 0) {
+            this->template CopyOut<T>(yGm_[outOfstVal], dataLocal[srcOffset], tilingData_.afterAxis);
+            maskLocal(outOfstVal / tilingData_.sliceSize) = 1;
         }
     }
     this->dataQueue_.FreeTensor(dataLocal);
 }
 
-template <typename T, typename U>
-__aicore__ inline void ScatterNdUpdateSimdMask<T, U>::ProcessMaskMultiLine()
+template <typename T, typename U, typename OFFSET_T>
+__aicore__ inline void ScatterNdUpdateSimdMask<T, U, OFFSET_T>::ProcessMaskMultiLine()
 {
     int64_t rowLoopNum = Ops::Base::CeilDiv(curCoreIndexCount_, tilingData_.indicesFactor);
     int64_t rowMainDataLen = tilingData_.indicesFactor;
@@ -199,8 +198,8 @@ __aicore__ inline void ScatterNdUpdateSimdMask<T, U>::ProcessMaskMultiLine()
     }
 }
 
-template <typename T, typename U>
-__aicore__ inline void ScatterNdUpdateSimdMask<T, U>::Process()
+template <typename T, typename U, typename OFFSET_T>
+__aicore__ inline void ScatterNdUpdateSimdMask<T, U, OFFSET_T>::Process()
 {
     if (GetBlockIdx() >= tilingData_.usedCoreNumBefore) {
         return;

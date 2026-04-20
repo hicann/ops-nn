@@ -29,8 +29,10 @@ public:
     uint64_t sliceSize;
     uint64_t outPutShape[MAX_SHAPE_RANK];
     uint64_t strideList[MAX_RANK_COUNT];
+    uint64_t outputStorageShapeSize;
     /* for determinstic */
     int64_t varInAxis;
+    int64_t varStorageInAxis;
     int64_t indexRankSize;
     int64_t afterAxis;
 
@@ -61,6 +63,7 @@ public:
     int64_t isSimdNonDeterminstic;
     int64_t isMask;
     int64_t isSplitOneLine;
+    int64_t IsContiguous;
 
     /* for determinstic */
     int64_t normCoreHandleIdx;

@@ -49,6 +49,12 @@ protected:
                                  int64_t originalSize, int64_t postAxisSize, ge::DataType idType);
     ge::graphStatus CheckScatterNdUpdateTensorShape(const gert::Shape& indiceShape, const gert::Shape& updateShape, 
                                  const gert::Shape& outputShape);
+    ge::graphStatus ValidateVarInfo(const gert::Tensor* var, const gert::Shape& varOriginShape);
+    ge::graphStatus ValidateIndicesInfo(const gert::Tensor* indices, gert::Shape& indiceShape, int64_t& indiceDims);
+    ge::graphStatus HandleNonContiguousCase(const gert::Tensor* var, const gert::Shape& varOriginShape);
+    ge::graphStatus HandleContiguousCase();
+    ge::graphStatus ValidateUpdatesInfo(const gert::Tensor* updates, gert::Shape& updateShape);
+    ge::graphStatus CalculateDerivedParams(const gert::Shape& varOriginShape, gert::Shape& indiceShape, gert::Shape& updateShape);
     void DoOpTilingSplitAfter();
     void DoOpTilingSimdSplitIndices();
     void DoOpTilingForSimdNonDetermin();
@@ -82,11 +88,16 @@ private:
   ge::graphStatus SetStride();
 
 private:
+    int64_t shapeRank_ = 0;
     int64_t totalCoreNum_ {0};
+    ge::DataType varDtype_;
     ge::DataType updateDtype_;
     ge::DataType indiceDtype_;
+    ge::DataType outOfSetDtype_;
+
     uint64_t updateShapeSize {0};
     uint64_t indiceShapeSize {0};
+    uint64_t outputStorageShapeSize_ = 1;
     uint64_t outputShapeSize = 1;
     uint64_t alignFactor {0};
     uint64_t blockNum {0};
@@ -101,10 +112,12 @@ private:
 
     int64_t indicesAxis_ = 0;
     int64_t varInAxis_ = 1;
+    int64_t varStorageInAxis_ = 1;
     int64_t updatesInAxis_ = 1;
     int64_t afterAxis_ = 1;
     int64_t varTypeSize_ = 0;
     int64_t indicesTypeSize_ = 0;
+    int64_t outOfSetTypeSize_ = 0;
     int64_t indicesFactor_ = 0;
     int64_t ubRowFactor_ = 0;
     int64_t afterAxisFactor_ = 0;
@@ -139,6 +152,7 @@ private:
     int64_t tailBlockLoop_ = 0;
     int64_t normBlockTail_ = 0;
     int64_t tailBlockTail_ = 0;
+    int64_t IsContiguous_ = 0;
 
     // 处理AtomicMax
     int64_t normCoreHandleIdx_ = 0;
@@ -147,6 +161,7 @@ private:
     int64_t maskNormBlockLen_ = 0;
     int64_t maskTailBlockLen_ = 0;
     int64_t isDeterminSimt_ = 0;
+    int64_t needInt64_ = 0;
 
     const char* opName = "ScatterNdUpdate";
 };

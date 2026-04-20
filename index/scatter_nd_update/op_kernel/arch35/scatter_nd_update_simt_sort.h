@@ -22,11 +22,11 @@
 namespace ScatterNdUpdate {
 using namespace AscendC;
 
-template <typename INDICES_T, typename PARAMS_T, typename TYPE_T>
+template <typename OFFSET_T, typename PARAMS_T, typename TYPE_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SortSimtCompute(
-    __gm__ PARAMS_T* updateAddr, __gm__ PARAMS_T* varAddr, const __ubuf__ INDICES_T* shiftSortLocalAddr,
+    __gm__ PARAMS_T* updateAddr, __gm__ PARAMS_T* varAddr, const __ubuf__ OFFSET_T* shiftSortLocalAddr,
     const __ubuf__ uint32_t* updatesOriginIdexLocalAddr, const __ubuf__ int32_t* uniqueIdCountLocalAddr,
-    TYPE_T sliceSize, uint32_t uniqueIdNum, TYPE_T indiceBlockOffSet, int64_t varInAxis, TYPE_T magic, TYPE_T shift)
+    TYPE_T sliceSize, uint32_t uniqueIdNum, TYPE_T indiceBlockOffSet, int64_t varSize, TYPE_T magic, TYPE_T shift)
 {
     for (TYPE_T index = Simt::GetThreadIdx(); index < uniqueIdNum * sliceSize; index += Simt::GetThreadNum()) {
         TYPE_T rowIndex = Simt::UintDiv(index, magic, shift);
@@ -34,42 +34,42 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SortSim
 
         int32_t indiceIndex = uniqueIdCountLocalAddr[rowIndex];
 
-        INDICES_T varIndex = shiftSortLocalAddr[indiceIndex];
+        OFFSET_T varIndex = shiftSortLocalAddr[indiceIndex];
         
-        if (varIndex >= 0 && varIndex < varInAxis)
+        if (varIndex >= 0 && varIndex < varSize)
         {
-            INDICES_T updateIndex = updatesOriginIdexLocalAddr[indiceIndex];
+            OFFSET_T updateIndex = updatesOriginIdexLocalAddr[indiceIndex];
 
-            int64_t varOffset = varIndex * sliceSize + sliceIndex;
+            int64_t varOffset = varIndex + sliceIndex;
             int64_t updateOffset = (indiceBlockOffSet + updateIndex) * sliceSize + sliceIndex;
             varAddr[varOffset] = updateAddr[updateOffset];
         }
     }
 }
 
-template <typename INDICES_T, typename PARAMS_T, typename TYPE_T>
+template <typename OFFSET_T, typename PARAMS_T, typename TYPE_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void NoSortSimtCompute(
-    __gm__ PARAMS_T* updateAddr, __gm__ PARAMS_T* varAddr, const __ubuf__ INDICES_T* varIndexLocalAddr,
-    TYPE_T sliceSize, uint32_t currUbTilingSize, TYPE_T indiceBlockOffSet, int64_t varInAxis, TYPE_T magic,
+    __gm__ PARAMS_T* updateAddr, __gm__ PARAMS_T* varAddr, const __ubuf__ OFFSET_T* varIndexLocalAddr,
+    TYPE_T sliceSize, uint32_t currUbTilingSize, TYPE_T indiceBlockOffSet, int64_t varSize, TYPE_T magic,
     TYPE_T shift)
 {
     for (TYPE_T index = Simt::GetThreadIdx(); index < currUbTilingSize * sliceSize; index += Simt::GetThreadNum()) {
         TYPE_T rowIndex = Simt::UintDiv(index, magic, shift);
         TYPE_T sliceIndex = index - rowIndex * sliceSize;
 
-        INDICES_T varIndex = varIndexLocalAddr[rowIndex];
+        OFFSET_T varIndex = varIndexLocalAddr[rowIndex];
         
-        if (varIndex >= 0 && varIndex < varInAxis)
+        if (varIndex >= 0 && varIndex < varSize)
         {
-            int64_t varOffset = varIndex * sliceSize + sliceIndex;
+            int64_t varOffset = varIndex + sliceIndex;
             int64_t updateOffset = (indiceBlockOffSet + rowIndex) * sliceSize + sliceIndex;
             varAddr[varOffset] = updateAddr[updateOffset];
         }
     }
 }
 
-template <typename PARAMS_T, typename INDICES_T, typename TYPE_T>
-class ScatterNdUpdateSimtSort : public ScatterNdUpdateBase<PARAMS_T, INDICES_T>
+template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T = INDICES_T>
+class ScatterNdUpdateSimtSort : public ScatterNdUpdateBase<PARAMS_T, INDICES_T, OFFSET_T>
 {
 public:
     __aicore__ inline ScatterNdUpdateSimtSort(const ScatterNdUpdateRegBaseTilingData& tilingData, TPipe& pipe)
@@ -85,8 +85,8 @@ private:
     __aicore__ inline void Compute();
     __aicore__ inline void ComputeSortDimensionOne(LocalTensor<INDICES_T> indiceLocal);
     __aicore__ inline void ComputeSortDimensionOther(LocalTensor<INDICES_T> indiceLocal);
-    __aicore__ inline void SortDataMove(LocalTensor<INDICES_T> varIndexLocal);
-    __aicore__ inline void NoSortDataMove(LocalTensor<INDICES_T> varIndexLocal);
+    __aicore__ inline void SortDataMove(LocalTensor<OFFSET_T> varIndexLocal);
+    __aicore__ inline void NoSortDataMove(LocalTensor<OFFSET_T> varIndexLocal);
 
 private:
     TPipe& pipe_;
@@ -107,8 +107,8 @@ private:
     uint32_t blockIdx;
 };
 
-template <typename PARAMS_T, typename INDICES_T, typename TYPE_T>
-__aicore__ inline void ScatterNdUpdateSimtSort<PARAMS_T, INDICES_T, TYPE_T>::Init(
+template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T>
+__aicore__ inline void ScatterNdUpdateSimtSort<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>::Init(
     GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace)
 {
     if (tiling_.sliceSize == 0) {
@@ -136,19 +136,19 @@ __aicore__ inline void ScatterNdUpdateSimtSort<PARAMS_T, INDICES_T, TYPE_T>::Ini
 
     pipe_.InitBuffer(indicesQueue_, 1, ROUND_UP32(ubTilingSize * tiling_.rankSize * sizeof(INDICES_T)));
     // 计算完偏移存储indice
-    pipe_.InitBuffer(this->outOfstBuf_, ROUND_UP32(ubTilingSize * sizeof(INDICES_T)));
-    pipe_.InitBuffer(this->sortIndicesQue_, ROUND_UP32(ubTilingSize  * sizeof(INDICES_T)) + UB_AGLIN_VALUE * 2);
-    pipe_.InitBuffer(this->updatesOriginIdexQue_, 1, ROUND_UP32(ubTilingSize * sizeof(INDICES_T)));
-    pipe_.InitBuffer(this->uniqueIdCountQue_, 1, ROUND_UP32((ubTilingSize + 1) * sizeof(INDICES_T)));
+    pipe_.InitBuffer(this->outOfstBuf_, ROUND_UP32(ubTilingSize * sizeof(OFFSET_T)));
+    pipe_.InitBuffer(this->sortIndicesQue_, ROUND_UP32(ubTilingSize  * sizeof(OFFSET_T)) + UB_AGLIN_VALUE * 2);
+    pipe_.InitBuffer(this->updatesOriginIdexQue_, 1, ROUND_UP32(ubTilingSize * sizeof(uint32_t)));
+    pipe_.InitBuffer(this->uniqueIdCountQue_, 1, ROUND_UP32((ubTilingSize + 1) * sizeof(int32_t)));
 
     pipe_.InitBuffer(this->maxScoreBuf_, HASH_SCORE_BUF_SIZE * sizeof(float));
-    pipe_.InitBuffer(this->strideBuf_, MAX_RANK_COUNT * sizeof(TYPE_T));
+    pipe_.InitBuffer(this->strideBuf_, MAX_RANK_COUNT * sizeof(INDICES_T));
 
     InitStride();
 }
 
-template <typename PARAMS_T, typename INDICES_T, typename TYPE_T>
-__aicore__ inline void ScatterNdUpdateSimtSort<PARAMS_T, INDICES_T, TYPE_T>::Process()
+template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T>
+__aicore__ inline void ScatterNdUpdateSimtSort<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>::Process()
 {
     // if input is empty, return directly
     if (tiling_.sliceSize == 0) {
@@ -167,23 +167,18 @@ __aicore__ inline void ScatterNdUpdateSimtSort<PARAMS_T, INDICES_T, TYPE_T>::Pro
     }
 }
 
-template <typename PARAMS_T, typename INDICES_T, typename TYPE_T>
-__aicore__ inline void ScatterNdUpdateSimtSort<PARAMS_T, INDICES_T, TYPE_T>::Compute()
+template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T>
+__aicore__ inline void ScatterNdUpdateSimtSort<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>::Compute()
 {
-    LocalTensor<INDICES_T> varIndexLocal;
+    LocalTensor<OFFSET_T> varIndexLocal;
     LocalTensor<INDICES_T> indiceLocal = indicesQueue_.AllocTensor<INDICES_T>();
 
-    if (tiling_.rankSize >= INDICE_RANK_TWO) {
-        ComputeSortDimensionOther(indiceLocal);
-        varIndexLocal = this->outOfstBuf_.template Get<INDICES_T>();
-    } else {
-        ComputeSortDimensionOne(indiceLocal);
-        varIndexLocal = indiceLocal;
-    }
+    ComputeSortDimensionOther(indiceLocal);
+    varIndexLocal = this->outOfstBuf_.template Get<OFFSET_T>();
 
     // 判断是否动态排序
     LocalTensor<float> dstLocal = this->maxScoreBuf_.template Get<float>();
-    if constexpr (IsSameType<INDICES_T, int32_t>::value) {
+    if constexpr (IsSameType<OFFSET_T, int32_t>::value) {
         IndexStatisticInt32(varIndexLocal, dstLocal, this->maxScore_, currUbTilingSize, tiling_.afterAxis);
     } else {
         IndexStatisticInt64(varIndexLocal, dstLocal, this->maxScore_, currUbTilingSize, tiling_.afterAxis);
@@ -197,54 +192,54 @@ __aicore__ inline void ScatterNdUpdateSimtSort<PARAMS_T, INDICES_T, TYPE_T>::Com
     indicesQueue_.FreeTensor(indiceLocal);
 }
 
-template <typename PARAMS_T, typename INDICES_T, typename TYPE_T>
-__aicore__ inline void ScatterNdUpdateSimtSort<PARAMS_T, INDICES_T, TYPE_T>::SortDataMove(
-    LocalTensor<INDICES_T> varIndexLocal)
+template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T>
+__aicore__ inline void ScatterNdUpdateSimtSort<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>::SortDataMove(
+    LocalTensor<OFFSET_T> varIndexLocal)
 {
     this->SortAndComputeUniqueIdx(varIndexLocal, currUbTilingSize);
 
-    LocalTensor<INDICES_T> sortIndiceLocal = this->sortIndicesQue_.template Get<INDICES_T>();
+    LocalTensor<OFFSET_T> sortIndiceLocal = this->sortIndicesQue_.template Get<OFFSET_T>();
     LocalTensor<uint32_t> updatesOriginIndexLocal = this->updatesOriginIdexQue_.template DeQue<uint32_t>();
     LocalTensor<int32_t> uniqueIdCountLocal = this->uniqueIdCountQue_.template DeQue<int32_t>();
 
-    LocalTensor<INDICES_T> shiftSortLocal = sortIndiceLocal[this->shiftOffset_];
+    LocalTensor<OFFSET_T> shiftSortLocal = sortIndiceLocal[this->shiftOffset_];
     TYPE_T sliceSize = tiling_.sliceSize;
     uint32_t uniqueIdNum = this->uniqueIdNum_;
     TYPE_T indiceBlockOffSets = this->indiceBlockOffSet;
-    int64_t varInAxis = tiling_.varInAxis;
+    int64_t varSize = tiling_.outputStorageShapeSize;
     TYPE_T magic = 0;
     TYPE_T shift = 0;
 
     GetUintDivMagicAndShift(magic, shift, sliceSize);
-    AscendC::Simt::VF_CALL<SortSimtCompute<INDICES_T, PARAMS_T, TYPE_T>>(
+    AscendC::Simt::VF_CALL<SortSimtCompute<OFFSET_T, PARAMS_T, TYPE_T>>(
         Simt::Dim3(THREAD_NUM), (__gm__ PARAMS_T*)(updateGm.GetPhyAddr()), (__gm__ PARAMS_T*)(varGm.GetPhyAddr()),
-        (__ubuf__ INDICES_T*)shiftSortLocal.GetPhyAddr(), (__ubuf__ uint32_t*)updatesOriginIndexLocal.GetPhyAddr(),
-        (__ubuf__ int32_t*)uniqueIdCountLocal.GetPhyAddr(), sliceSize, uniqueIdNum, indiceBlockOffSets, varInAxis, magic,
+        (__ubuf__ OFFSET_T*)shiftSortLocal.GetPhyAddr(), (__ubuf__ uint32_t*)updatesOriginIndexLocal.GetPhyAddr(),
+        (__ubuf__ int32_t*)uniqueIdCountLocal.GetPhyAddr(), sliceSize, uniqueIdNum, indiceBlockOffSets, varSize, magic,
         shift);
     this->indiceBlockOffSet = this->indiceBlockOffSet + currUbTilingSize;
     SimdFree(updatesOriginIndexLocal, uniqueIdCountLocal);
 }
 
-template <typename PARAMS_T, typename INDICES_T, typename TYPE_T>
-__aicore__ inline void ScatterNdUpdateSimtSort<PARAMS_T, INDICES_T, TYPE_T>::NoSortDataMove(
-    LocalTensor<INDICES_T> varIndexLocal)
+template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T>
+__aicore__ inline void ScatterNdUpdateSimtSort<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>::NoSortDataMove(
+    LocalTensor<OFFSET_T> varIndexLocal)
 {
     TYPE_T sliceSize = tiling_.sliceSize;
     uint32_t currUbTilingSize = this->currUbTilingSize;
     TYPE_T indiceBlockOffSets = this->indiceBlockOffSet;
-    int64_t varInAxis = tiling_.varInAxis;
+    int64_t varSize = tiling_.outputStorageShapeSize;
     TYPE_T magic = 0;
     TYPE_T shift = 0;
     GetUintDivMagicAndShift(magic, shift, sliceSize);
-    AscendC::Simt::VF_CALL<NoSortSimtCompute<INDICES_T, PARAMS_T, TYPE_T>>(
+    AscendC::Simt::VF_CALL<NoSortSimtCompute<OFFSET_T, PARAMS_T, TYPE_T>>(
         Simt::Dim3(THREAD_NUM), (__gm__ PARAMS_T*)(updateGm.GetPhyAddr()), (__gm__ PARAMS_T*)(varGm.GetPhyAddr()),
-        (__ubuf__ INDICES_T*)varIndexLocal.GetPhyAddr(), sliceSize, currUbTilingSize, indiceBlockOffSets,
-        varInAxis, magic, shift);
+        (__ubuf__ OFFSET_T*)varIndexLocal.GetPhyAddr(), sliceSize, currUbTilingSize, indiceBlockOffSets,
+        varSize, magic, shift);
     this->indiceBlockOffSet = this->indiceBlockOffSet + currUbTilingSize;
 }
 
-template <typename PARAMS_T, typename INDICES_T, typename TYPE_T>
-__aicore__ inline void ScatterNdUpdateSimtSort<PARAMS_T, INDICES_T, TYPE_T>::ComputeSortDimensionOther(
+template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T>
+__aicore__ inline void ScatterNdUpdateSimtSort<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>::ComputeSortDimensionOther(
     LocalTensor<INDICES_T> indiceLocal)
 {
     this->template CopyIn<INDICES_T>(
@@ -253,7 +248,7 @@ __aicore__ inline void ScatterNdUpdateSimtSort<PARAMS_T, INDICES_T, TYPE_T>::Com
     SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
     WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
 
-    LocalTensor<INDICES_T> outOfstLocal = this->outOfstBuf_.template Get<INDICES_T>();
+    LocalTensor<OFFSET_T> outOfstLocal = this->outOfstBuf_.template Get<OFFSET_T>();
     this->ComputeOutOfset(indiceLocal, outOfstLocal, currUbTilingSize, tiling_.rankSize);
 
     event_t eventIdVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
@@ -261,8 +256,8 @@ __aicore__ inline void ScatterNdUpdateSimtSort<PARAMS_T, INDICES_T, TYPE_T>::Com
     WaitFlag<HardEvent::V_S>(eventIdVToS);
 }
 
-template <typename PARAMS_T, typename INDICES_T, typename TYPE_T>
-__aicore__ inline void ScatterNdUpdateSimtSort<PARAMS_T, INDICES_T, TYPE_T>::ComputeSortDimensionOne(
+template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T>
+__aicore__ inline void ScatterNdUpdateSimtSort<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>::ComputeSortDimensionOne(
     LocalTensor<INDICES_T> indiceLocal)
 {
     this->template CopyIn<INDICES_T>(
@@ -273,8 +268,8 @@ __aicore__ inline void ScatterNdUpdateSimtSort<PARAMS_T, INDICES_T, TYPE_T>::Com
     WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
 }
 
-template <typename PARAMS_T, typename INDICES_T, typename TYPE_T>
-__aicore__ inline void ScatterNdUpdateSimtSort<PARAMS_T, INDICES_T, TYPE_T>::InitStride()
+template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T>
+__aicore__ inline void ScatterNdUpdateSimtSort<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>::InitStride()
 {
     LocalTensor<INDICES_T> strideLocal = this->strideBuf_.template Get<INDICES_T>();
     for (int32_t i = 0; i < MAX_RANK_COUNT; i++) {
@@ -282,8 +277,8 @@ __aicore__ inline void ScatterNdUpdateSimtSort<PARAMS_T, INDICES_T, TYPE_T>::Ini
     }
 }
 
-template <typename PARAMS_T, typename INDICES_T, typename TYPE_T>
-__aicore__ inline void ScatterNdUpdateSimtSort<PARAMS_T, INDICES_T, TYPE_T>::SimdFree(
+template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T>
+__aicore__ inline void ScatterNdUpdateSimtSort<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>::SimdFree(
     LocalTensor<uint32_t>& updatesOriginIndexLocal, LocalTensor<int32_t>& uniqueIdCountLocal)
 {
     this->updatesOriginIdexQue_.FreeTensor(updatesOriginIndexLocal);

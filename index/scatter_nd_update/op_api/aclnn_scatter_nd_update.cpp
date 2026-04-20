@@ -54,7 +54,8 @@ static bool CheckNotNull(aclTensor *varRef, const aclTensor *indices, const aclT
 }
 
 static const std::initializer_list<DataType>& GetDtypeSupportList() {
-  if (Ops::NN::AclnnUtil::IsRegbase()) {
+  auto socVersion = op::GetCurrentPlatformInfo().GetCurNpuArch();
+  if (socVersion == NpuArch::DAV_3510) {
     return ASCEND950_DTYPE_DTYPE_SUPPORT_LIST;
   }
   if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
@@ -91,6 +92,128 @@ static aclnnStatus CheckParams(aclTensor *varRef, const aclTensor *indices, cons
   return ACLNN_SUCCESS;
 }
 
+// 判断指定轴范围是否连续
+// startAxis: 起始轴（包含），endAxis: 结束轴（不包含）
+static bool IsAxesContiguous(const aclTensor *tensor, int64_t startAxis, int64_t endAxis) {
+  if (tensor == nullptr || startAxis < 0 || endAxis < 0 || startAxis >= endAxis) {
+    return false;
+  }
+  
+  auto viewShape = tensor->GetViewShape();
+  auto viewStrides = tensor->GetViewStrides();
+  int64_t dimNum = viewShape.GetDimNum();
+  
+  if (endAxis > dimNum) {
+    return false;
+  }
+  
+  int64_t validStride = 1;
+  for (int64_t i = endAxis - 1; i >= startAxis; i--) {
+    if (viewShape.GetDim(i) == 1) {
+      continue;
+    }
+    if (viewStrides[i] != validStride) {
+      return false;
+    }
+    validStride *= viewShape.GetDim(i);
+  }
+  return true;
+}
+
+// 判断 varRef 是否满足：总体非连续，非索引轴部分连续
+// indexAxisNum: 索引轴的数量（varRef 的前 indexAxisNum 个维度是索引轴）
+static bool IsSupportNonContiguous(const aclTensor *varRef, int64_t indexAxisNum) {
+  if (varRef == nullptr || indexAxisNum < 0) {
+    return false;
+  }
+  
+  auto viewShape = varRef->GetViewShape();
+  int64_t varRefDimNum = viewShape.GetDimNum();
+  
+  if (indexAxisNum > varRefDimNum) {
+    return false;
+  }
+
+  bool indicesContiguous = true;
+  if (indexAxisNum > 0) {
+    indicesContiguous = IsAxesContiguous(varRef, 0, varRefDimNum);
+  }
+  
+  bool nonIndexAxesContiguous = true;
+  if (indexAxisNum < varRefDimNum) {
+    nonIndexAxesContiguous = IsAxesContiguous(varRef, indexAxisNum, varRefDimNum);
+  }
+  
+  return nonIndexAxesContiguous && (!indicesContiguous);
+}
+
+// 执行 ScatterNdUpdate 算子计算（公共实现）
+static aclnnStatus ExecuteScatterNdUpdate(const aclTensor *varRef, const aclTensor *indices, const aclTensor *updates,
+                                          bool needViewCopy, uint64_t* workspaceSize, aclOpExecutor** executor,
+                                          auto& uniqueExecutor) {
+  // 将 indices 转换成连续的 tensor
+  auto indicesContiguous = l0op::Contiguous(indices, uniqueExecutor.get());
+  CHECK_RET(indicesContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+  
+  // 将 updates 转换成连续的 tensor
+  auto updatesContiguous = l0op::Contiguous(updates, uniqueExecutor.get());
+  CHECK_RET(updatesContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+  
+  // 执行 L0 算子
+  auto scatterUpdateRes = l0op::ScatterNdUpdate(varRef, indicesContiguous, updatesContiguous, false, uniqueExecutor.get());
+  CHECK_RET(scatterUpdateRes != nullptr, ACLNN_ERR_INNER_NULLPTR);
+  
+  // 如果需要，将计算结果拷贝到输出 data 上
+  if (needViewCopy) {
+    auto viewCopyResult = l0op::ViewCopy(scatterUpdateRes, varRef, uniqueExecutor.get());
+    CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+  }
+  
+  // 获取计算过程中需要使用的 workspace 大小
+  *workspaceSize = uniqueExecutor->GetWorkspaceSize();
+  uniqueExecutor.ReleaseTo(executor);
+  return ACLNN_SUCCESS;
+}
+
+// 非连续优化路径：indices 与 updates 转连续，varRef 使用 CreateView 设置 stride
+static aclnnStatus ProcessNonContiguousCase(aclTensor *varRef, const aclTensor *indices, const aclTensor *updates,
+                                            uint64_t* workspaceSize, aclOpExecutor** executor, auto& uniqueExecutor) {
+  // 将 indices 转换成连续的 tensor
+  auto indicesContiguous = l0op::Contiguous(indices, uniqueExecutor.get());
+  CHECK_RET(indicesContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+  
+  // 将 updates 转换成连续的 tensor
+  auto updatesContiguous = l0op::Contiguous(updates, uniqueExecutor.get());
+  CHECK_RET(updatesContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+  
+  // 使用 CreateView 为 varRef 创建视图，保持原始 stride
+  auto varRefView = uniqueExecutor->CreateView(varRef,
+                                              varRef->GetViewShape(),
+                                              varRef->GetStorageShape(),
+                                              varRef->GetViewStrides(),
+                                              varRef->GetViewOffset());
+  CHECK_RET(varRefView != nullptr, ACLNN_ERR_INNER_NULLPTR);
+  
+  auto scatterUpdateRes = l0op::ScatterNdUpdate(varRefView, indicesContiguous, updatesContiguous, false, uniqueExecutor.get());
+  CHECK_RET(scatterUpdateRes != nullptr, ACLNN_ERR_INNER_NULLPTR);
+  
+  *workspaceSize = uniqueExecutor->GetWorkspaceSize();
+  uniqueExecutor.ReleaseTo(executor);
+  return ACLNN_SUCCESS;
+}
+
+// 常规路径：将所有输入转换成连续的 tensor
+static aclnnStatus ProcessContiguousCase(aclTensor *varRef, const aclTensor *indices, const aclTensor *updates,
+                                         uint64_t* workspaceSize, aclOpExecutor** executor, auto& uniqueExecutor) {
+  // 将输入 varRef 转换成连续的 tensor
+  auto varRefContiguous = l0op::Contiguous(varRef, uniqueExecutor.get());
+  CHECK_RET(varRefContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+  
+  bool needViewCopy = !IsContiguous(varRef);
+  return ExecuteScatterNdUpdate(varRefContiguous, indices, updates, needViewCopy, 
+                               workspaceSize, executor, uniqueExecutor);
+}
+
 aclnnStatus aclnnScatterNdUpdateGetWorkspaceSize(aclTensor *varRef, const aclTensor *indices, const aclTensor *updates,
                                                  uint64_t* workspaceSize, aclOpExecutor** executor) {
   L2_DFX_PHASE_1(aclnnScatterNdUpdate, DFX_IN(varRef, indices, updates), DFX_OUT(varRef));
@@ -113,39 +236,38 @@ aclnnStatus aclnnScatterNdUpdateGetWorkspaceSize(aclTensor *varRef, const aclTen
     OP_LOGW("varRef/indices/updates dim num(%lu, %lu, %lu) exceeds max limit %lu.",
             varRefDimNum, indicesDimNum, updatesDimNum, MAX_DIM_NUM);
   }
-
+  
   if (varRef->IsEmpty() || indices->IsEmpty() || updates->IsEmpty()) {
     *workspaceSize = 0;
     uniqueExecutor.ReleaseTo(executor);
     return ACLNN_SUCCESS;
   }
 
-  // 将输入varRef转换成连续的tensor
-  auto varRefContiguous = l0op::Contiguous(varRef, uniqueExecutor.get());
-  CHECK_RET(varRefContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  // 将输入indices转换成连续的tensor
-  auto indicesContiguous = l0op::Contiguous(indices, uniqueExecutor.get());
-  CHECK_RET(indicesContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  // 将输入updates转换成连续的tensor
-  auto updatesContiguous = l0op::Contiguous(updates, uniqueExecutor.get());
-  CHECK_RET(updatesContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  // 执行L0算子
-  auto scatterUpdateRes = l0op::ScatterNdUpdate(varRefContiguous, indicesContiguous, updatesContiguous, false, uniqueExecutor.get());
-  CHECK_RET(scatterUpdateRes != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  // 将计算结果拷贝到输出data上
-  if (!IsContiguous(varRef)) {
-    auto viewCopyResult = l0op::ViewCopy(scatterUpdateRes, varRef, uniqueExecutor.get());
-    CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+  // 判断 varRef 索引轴部分是否非连续，非索引轴部分是否连续
+  auto indicesShape = indices->GetViewShape();
+  constexpr int64_t MAX_INDICES_RANK = 4;
+  // 索引轴的数量是 indices 的最后一个维度
+  int64_t indexAxisNum = indicesShape.GetDim(indicesShape.GetDimNum() - 1);
+  // 检查芯片架构，只在 arch35 时支持非连续场景
+  auto& platformInfo = op::GetCurrentPlatformInfo();
+  auto socVersion = platformInfo.GetCurNpuArch();
+  
+  // 检查是否满足准入条件
+  bool archCheck = (socVersion == NpuArch::DAV_3510);
+  bool dimCheck = (indicesDimNum > 0 && indexAxisNum <= MAX_INDICES_RANK);
+  
+  if (archCheck && dimCheck) {
+    // 判断是否满足：非索引轴部分连续，索引轴部分非连续
+    bool isSpecialCase = IsSupportNonContiguous(varRef, indexAxisNum);
+    if (isSpecialCase) {
+      // 满足条件：非索引轴部分连续，索引轴部分非连续，且 indices rank <= 4
+      // 执行优化路径
+      return ProcessNonContiguousCase(varRef, indices, updates, workspaceSize, executor, uniqueExecutor);
+    }
   }
 
-  // 获取计算过程中需要使用的workspace大小
-  *workspaceSize = uniqueExecutor->GetWorkspaceSize();
-  uniqueExecutor.ReleaseTo(executor);
-  return ACLNN_SUCCESS;
+  // 常规路径：将所有输入转换成连续的 tensor
+  return ProcessContiguousCase(varRef, indices, updates, workspaceSize, executor, uniqueExecutor);
 }
 
 aclnnStatus aclnnScatterNdUpdate(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream) {

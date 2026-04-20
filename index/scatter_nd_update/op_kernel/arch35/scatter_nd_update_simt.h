@@ -29,55 +29,53 @@ __aicore__ inline uint32_t ROUND_UP32(uint32_t x)
     return x;
 }
 
-template <typename INDICES_T, typename PARAMS_T, typename TYPE_T>
+template <typename INDICES_T, typename PARAMS_T, typename TYPE_T, typename OFFSET_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtCompute(
     __ubuf__ INDICES_T* idxLocalAddr, __ubuf__ PARAMS_T* xLocalAddr, __gm__ PARAMS_T* outputGmAddr,
     const __ubuf__ TYPE_T* strideListAddr, const __ubuf__ TYPE_T* outputShapeAddr, uint32_t currUbTilingSize,
-    TYPE_T xOffSet, TYPE_T sliceSize, uint32_t rankSize, TYPE_T indiceOffSet,
-    int64_t varInAxis, TYPE_T magic, TYPE_T shift)
+    TYPE_T xOffSet, TYPE_T sliceSize, uint32_t rankSize, OFFSET_T indiceOffSet, TYPE_T magic, TYPE_T shift)
 {
     for (uint32_t index = Simt::GetThreadIdx(); index < currUbTilingSize; index += Simt::GetThreadNum()) {
         TYPE_T globalIdx = xOffSet + index;
         TYPE_T quotient = Simt::UintDiv(globalIdx, magic, shift);
         TYPE_T currIndiceIdx = quotient * rankSize;
         TYPE_T scatterAxisIdx = globalIdx - quotient * sliceSize;
-        INDICES_T idx = 0;
+        OFFSET_T idx = 0;
         bool outOfBound = false;
         for (TYPE_T dim = 0; dim < rankSize; ++dim) {
             INDICES_T indiceVal = idxLocalAddr[currIndiceIdx + dim - indiceOffSet];
-            outOfBound |= static_cast<TYPE_T>(indiceVal) > outputShapeAddr[dim];
-            idx += indiceVal * strideListAddr[dim];
+            outOfBound |= (indiceVal < static_cast<INDICES_T>(0) ||
+                            static_cast<TYPE_T>(indiceVal) > outputShapeAddr[dim]);
+            idx += static_cast<OFFSET_T>(indiceVal) * strideListAddr[dim];
         }
         if (!outOfBound) {
-            if (idx >= 0 && idx < varInAxis){
-                uint64_t dst = static_cast<uint64_t>(idx * sliceSize + scatterAxisIdx);
-                outputGmAddr[dst] = xLocalAddr[index];
-            }
-        }
-    }
-}
-
-template <typename INDICES_T, typename PARAMS_T, typename TYPE_T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtComputeDimensionOne(
-    __gm__ INDICES_T* idxGmAddr, __ubuf__ PARAMS_T* xLocalAddr, __gm__ PARAMS_T* outputGmAddr,
-    uint32_t currUbTilingSize, TYPE_T xOffSet, TYPE_T sliceSize, uint32_t rankSize,
-    TYPE_T indiceOffSet, int64_t varInAxis, TYPE_T magic, TYPE_T shift)
-{
-    for (uint32_t index = Simt::GetThreadIdx(); index < currUbTilingSize; index += Simt::GetThreadNum()) {
-        TYPE_T globalIdx = xOffSet + index;
-        TYPE_T quotient = Simt::UintDiv(globalIdx, magic, shift);
-        TYPE_T currIndiceIdx = quotient * rankSize;
-        TYPE_T scatterAxisIdx = globalIdx - quotient * sliceSize;
-        INDICES_T idx = idxGmAddr[currIndiceIdx];
-        
-        if (idx >= 0 && idx < varInAxis){
-            uint64_t dst = static_cast<uint64_t>(idx * sliceSize + scatterAxisIdx);
+            uint64_t dst = static_cast<uint64_t>(idx + scatterAxisIdx);
             outputGmAddr[dst] = xLocalAddr[index];
         }
     }
 }
 
-template <typename PARAMS_T, typename INDICES_T, typename TYPE_T>
+template <typename INDICES_T, typename PARAMS_T, typename TYPE_T, typename OFFSET_T>
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtComputeDimensionOne(
+    __gm__ INDICES_T* idxGmAddr, __ubuf__ PARAMS_T* xLocalAddr, __gm__ PARAMS_T* outputGmAddr,
+    uint32_t currUbTilingSize, TYPE_T xOffSet, TYPE_T sliceSize, uint32_t rankSize, TYPE_T sliceStride,
+    OFFSET_T indiceOffSet, int64_t varInAxis, TYPE_T magic, TYPE_T shift)
+{
+    for (uint32_t index = Simt::GetThreadIdx(); index < currUbTilingSize; index += Simt::GetThreadNum()) {
+        TYPE_T globalIdx = xOffSet + index;
+        TYPE_T quotient = Simt::UintDiv(globalIdx, magic, shift);
+        TYPE_T currIndiceIdx = quotient * rankSize;
+        TYPE_T scatterAxisIdx = globalIdx - quotient * sliceSize;
+        OFFSET_T idx = static_cast<OFFSET_T>(idxGmAddr[currIndiceIdx]);
+
+        if (idx >= 0 && idx < varInAxis){
+            uint64_t dst = static_cast<uint64_t>(idx * sliceStride + scatterAxisIdx);
+            outputGmAddr[dst] = xLocalAddr[index];
+        }
+    }
+}
+
+template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T = INDICES_T>
 class ScatterNdUpdateSimt
 {
 public:
@@ -113,14 +111,15 @@ private:
     
     TYPE_T xBlockOffSet = 0;
     TYPE_T xOffSet = 0;
-    TYPE_T indiceBlockOffSet = 0;
-    TYPE_T indiceOffSet = 0;
+    OFFSET_T indiceBlockOffSet = 0;
+    OFFSET_T indiceOffSet = 0;
     uint32_t currIdxTilingSize = 0;
     TYPE_T ubLoopCnt = 0;
 };
 
-template <typename PARAMS_T, typename INDICES_T, typename TYPE_T>
-__aicore__ inline void ScatterNdUpdateSimt<PARAMS_T, INDICES_T, TYPE_T>::Init(GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y ,GM_ADDR workspace)
+template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T>
+__aicore__ inline void ScatterNdUpdateSimt<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>::Init(
+    GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace)
 {
     if (tiling_.sliceSize == 0) {
         return;
@@ -129,8 +128,7 @@ __aicore__ inline void ScatterNdUpdateSimt<PARAMS_T, INDICES_T, TYPE_T>::Init(GM
     blockIdx = GetBlockIdx();
 
     this->xBlockOffSet = tiling_.blockTilingSize * blockIdx;
-    // calculate indice offset size by x offset size
-    this->indiceBlockOffSet = this->xBlockOffSet / tiling_.sliceSize * tiling_.rankSize;
+    this->indiceBlockOffSet = static_cast<OFFSET_T>(this->xBlockOffSet / tiling_.sliceSize * tiling_.rankSize);
 
     if (blockIdx == tiling_.blockNum - 1) {
         this->currBlockTilingSize = tiling_.tailBlockTilingSize;
@@ -145,7 +143,6 @@ __aicore__ inline void ScatterNdUpdateSimt<PARAMS_T, INDICES_T, TYPE_T>::Init(GM
 
     auto indiceUbTilingSize =
         (this->ubTilingSize + tiling_.sliceSize - 1) / tiling_.sliceSize * tiling_.rankSize;
-    // add 2 indices  for the scenario where boundary values are not accessible.
     indiceUbTilingSize += 2;
     idxGm.SetGlobalBuffer((__gm__ INDICES_T*)indices);
     xGm.SetGlobalBuffer((__gm__ PARAMS_T*)updates);
@@ -159,8 +156,8 @@ __aicore__ inline void ScatterNdUpdateSimt<PARAMS_T, INDICES_T, TYPE_T>::Init(GM
     }
 }
 
-template <typename PARAMS_T, typename INDICES_T, typename TYPE_T>
-__aicore__ inline void ScatterNdUpdateSimt<PARAMS_T, INDICES_T, TYPE_T>::ComputeDimensionOther()
+template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T>
+__aicore__ inline void ScatterNdUpdateSimt<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>::ComputeDimensionOther()
 {
     LocalTensor<INDICES_T> idxLocal = inQueIdx.AllocTensor<INDICES_T>();
     LocalTensor<PARAMS_T> xLocal = inQueX.AllocTensor<PARAMS_T>();
@@ -169,8 +166,7 @@ __aicore__ inline void ScatterNdUpdateSimt<PARAMS_T, INDICES_T, TYPE_T>::Compute
     TYPE_T xOffSet = this->xOffSet;
     TYPE_T sliceSize = tiling_.sliceSize;
     uint32_t rankSize = tiling_.rankSize;
-    TYPE_T indiceOffSet = this->indiceOffSet;
-    int64_t varInAxis = tiling_.varInAxis;
+    OFFSET_T indiceOffSet = this->indiceOffSet;
 
     LocalTensor<TYPE_T> strideList = strideListBuf.Get<TYPE_T>();
     LocalTensor<TYPE_T> outputShape = outputShapeBuf.Get<TYPE_T>();
@@ -184,16 +180,16 @@ __aicore__ inline void ScatterNdUpdateSimt<PARAMS_T, INDICES_T, TYPE_T>::Compute
     TYPE_T magic = 0;
     TYPE_T shift = 0;
     GetUintDivMagicAndShift(magic, shift, sliceSize);
-    AscendC::Simt::VF_CALL<SimtCompute<INDICES_T, PARAMS_T, TYPE_T>>(
+    AscendC::Simt::VF_CALL<SimtCompute<INDICES_T, PARAMS_T, TYPE_T, OFFSET_T>>(
         Simt::Dim3(THREAD_NUM), (__ubuf__ INDICES_T*)idxLocal.GetPhyAddr(), (__ubuf__ PARAMS_T*)xLocal.GetPhyAddr(),
         (__gm__ PARAMS_T*)(outputGm.GetPhyAddr()), (__ubuf__ TYPE_T*)strideList.GetPhyAddr(),
-        (__ubuf__ TYPE_T*)outputShape.GetPhyAddr(), currUbTilingSize, xOffSet, sliceSize, rankSize, indiceOffSet, varInAxis, magic,
+        (__ubuf__ TYPE_T*)outputShape.GetPhyAddr(), currUbTilingSize, xOffSet, sliceSize, rankSize, indiceOffSet, magic,
         shift);
     SimdFree(idxLocal, xLocal);
 }
 
-template <typename PARAMS_T, typename INDICES_T, typename TYPE_T>
-__aicore__ inline void ScatterNdUpdateSimt<PARAMS_T, INDICES_T, TYPE_T>::ComputeDimensionOne()
+template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T>
+__aicore__ inline void ScatterNdUpdateSimt<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>::ComputeDimensionOne()
 {
     LocalTensor<PARAMS_T> xLocal = inQueX.AllocTensor<PARAMS_T>();
     CopyInUpdate(xLocal);
@@ -201,23 +197,23 @@ __aicore__ inline void ScatterNdUpdateSimt<PARAMS_T, INDICES_T, TYPE_T>::Compute
     TYPE_T xOffSet = this->xOffSet;
     TYPE_T sliceSize = tiling_.sliceSize;
     uint32_t rankSize = tiling_.rankSize;
-    TYPE_T indiceOffSet = this->indiceOffSet;
+    OFFSET_T indiceOffSet = this->indiceOffSet;
     int64_t varInAxis = tiling_.varInAxis;
+    TYPE_T sliceStride = tiling_.strideList[0];
 
     TYPE_T magic = 0;
     TYPE_T shift = 0;
     GetUintDivMagicAndShift(magic, shift, sliceSize);
-    AscendC::Simt::VF_CALL<SimtComputeDimensionOne<INDICES_T, PARAMS_T, TYPE_T>>(
+    AscendC::Simt::VF_CALL<SimtComputeDimensionOne<INDICES_T, PARAMS_T, TYPE_T, OFFSET_T>>(
         Simt::Dim3(THREAD_NUM), (__gm__ INDICES_T*)(idxGm.GetPhyAddr()), (__ubuf__ PARAMS_T*)xLocal.GetPhyAddr(),
-        (__gm__ PARAMS_T*)(outputGm.GetPhyAddr()), currUbTilingSize, xOffSet, sliceSize, rankSize, indiceOffSet, varInAxis, magic,
-        shift);
+        (__gm__ PARAMS_T*)(outputGm.GetPhyAddr()), currUbTilingSize, xOffSet, sliceSize, rankSize, sliceStride, indiceOffSet,
+        varInAxis, magic, shift);
     inQueX.FreeTensor(xLocal);
 }
 
-template <typename PARAMS_T, typename INDICES_T, typename TYPE_T>
-__aicore__ inline void ScatterNdUpdateSimt<PARAMS_T, INDICES_T, TYPE_T>::Process()
+template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T>
+__aicore__ inline void ScatterNdUpdateSimt<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>::Process()
 {
-    // if input is empty, return directly
     if (tiling_.sliceSize == 0) {
         return;
     }
@@ -234,12 +230,12 @@ __aicore__ inline void ScatterNdUpdateSimt<PARAMS_T, INDICES_T, TYPE_T>::Process
     }
 }
 
-template <typename PARAMS_T, typename INDICES_T, typename TYPE_T>
-__aicore__ inline void ScatterNdUpdateSimt<PARAMS_T, INDICES_T, TYPE_T>::ComputeData()
+template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T>
+__aicore__ inline void ScatterNdUpdateSimt<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>::ComputeData()
 {
     auto currEnd = this->xOffSet + this->currUbTilingSize;
-    auto indiceBegin = this->xOffSet / tiling_.sliceSize * tiling_.rankSize;
-    auto indiceEnd = (currEnd + tiling_.sliceSize - 1) / tiling_.sliceSize * tiling_.rankSize;
+    auto indiceBegin = static_cast<OFFSET_T>(this->xOffSet / tiling_.sliceSize * tiling_.rankSize);
+    auto indiceEnd = static_cast<OFFSET_T>((currEnd + tiling_.sliceSize - 1) / tiling_.sliceSize * tiling_.rankSize);
     this->currIdxTilingSize = indiceEnd - indiceBegin;
     this->indiceOffSet = indiceBegin;
     if (tiling_.rankSize >= INDICE_RANK_TWO) {
@@ -249,8 +245,8 @@ __aicore__ inline void ScatterNdUpdateSimt<PARAMS_T, INDICES_T, TYPE_T>::Compute
     }
 }
 
-template <typename PARAMS_T, typename INDICES_T, typename TYPE_T>
-__aicore__ inline void ScatterNdUpdateSimt<PARAMS_T, INDICES_T, TYPE_T>::CopyIn(
+template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T>
+__aicore__ inline void ScatterNdUpdateSimt<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>::CopyIn(
     LocalTensor<INDICES_T>& idxLocal, LocalTensor<PARAMS_T>& xLocal)
 {
     DataCopyExtParams idxCopyParams{1, static_cast<uint32_t>(this->currIdxTilingSize * sizeof(INDICES_T)), 0, 0, 0};
@@ -267,16 +263,16 @@ __aicore__ inline void ScatterNdUpdateSimt<PARAMS_T, INDICES_T, TYPE_T>::CopyIn(
     inQueX.DeQue<PARAMS_T>();
 }
 
-template <typename PARAMS_T, typename INDICES_T, typename TYPE_T>
-__aicore__ inline void ScatterNdUpdateSimt<PARAMS_T, INDICES_T, TYPE_T>::SimdFree(
+template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T>
+__aicore__ inline void ScatterNdUpdateSimt<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>::SimdFree(
     LocalTensor<INDICES_T>& idxLocal, LocalTensor<PARAMS_T>& xLocal)
 {
     inQueIdx.FreeTensor(idxLocal);
     inQueX.FreeTensor(xLocal);
 }
 
-template <typename PARAMS_T, typename INDICES_T, typename TYPE_T>
-__aicore__ inline void ScatterNdUpdateSimt<PARAMS_T, INDICES_T, TYPE_T>::CopyInUpdate(LocalTensor<PARAMS_T>& xLocal)
+template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T>
+__aicore__ inline void ScatterNdUpdateSimt<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>::CopyInUpdate(LocalTensor<PARAMS_T>& xLocal)
 {
     DataCopyExtParams xCopyParams{1, static_cast<uint32_t>(this->currUbTilingSize * sizeof(PARAMS_T)), 0, 0, 0};
     DataCopyPadExtParams<PARAMS_T> xPadParams{false, 0, 0, 0};
