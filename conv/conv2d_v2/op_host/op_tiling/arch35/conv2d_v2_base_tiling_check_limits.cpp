@@ -96,73 +96,31 @@ ge::graphStatus Conv2dBaseTiling::CheckL1SizeLimitsKernelFullLoad(bool isC04)
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus Conv2dBaseTiling::CheckL1SizeLimitsKernelSplit()
-{
-    uint64_t fMapDtypeSize = dtypeSizeTab.at(descInfo_.fMapDtype);
-    uint64_t biasDtypeSize = dtypeSizeTab.at(descInfo_.biasDtype);
-    uint64_t weightDtypeSize = dtypeSizeTab.at(descInfo_.weightDtype);
-    uint64_t nBL1min = convOpsConstParams_.n0;
-    uint64_t biasUsedL1Size = flagInfo_.hasBias ? ConvAlignB(nBL1min * biasDtypeSize, C0_SIZE) : 0;
-    uint64_t scaleUsedL1Size = ConvAlignB(
-        static_cast<uint64_t>(nBL1min * fixpipeInfo_.channelWiseCoeff * FP16_DTYPE_SIZE), C0_SIZE);
-    uint64_t kBL1min = convOpsConstParams_.k0;
-    uint64_t weightUsedL1Size = ConvAlignB(kBL1min * nBL1min * weightDtypeSize, C0_SIZE);
-
-    uint64_t fmapUsedL1Size = 0;
-    uint64_t hoAL1min = 1;
-    uint64_t kAL1min = convOpsConstParams_.k0;
-    uint64_t woAL1min = convOpsConstParams_.m0;
-    fmapUsedL1Size = ConvAlignB(hoAL1min * woAL1min * kAL1min * fMapDtypeSize, C0_SIZE);
-
-    uint64_t minL1LoadSize = biasUsedL1Size + scaleUsedL1Size + fmapUsedL1Size + weightUsedL1Size;
-
-    if (minL1LoadSize > opInfo_->l1Size) {
-        OP_LOGE(context_->GetNodeName(),
-            "%s AscendC: KernelFullLoadMinL1LoadSize > L1size, current L1size: %lu, maxL1Size: %lu",
-                context_->GetNodeType(), minL1LoadSize, opInfo_->l1Size);
-        return ge::GRAPH_FAILED;
-    }
-    return ge::GRAPH_SUCCESS;
-}
-
-ge::graphStatus Conv2dBaseTiling::CheckDmaLimits()
-{
-    uint64_t woAL1Min = convOpsConstParams_.m0;
-    uint64_t hoAL1Min = 1;
-
-    uint64_t fmapUbSizeMin =
-        ConvAlignB(hoAL1Min * woAL1Min * convOpsConstParams_.k0 * dtypeSizeTab.at(descInfo_.fMapDtype), C0_BYTE_SIZE);
-    if (fmapUbSizeMin > opInfo_->ubSize) {
-        OP_LOGE(context_->GetNodeName(),
-            "%s AscendC: DMA min ub size not enough: platformInfo.ubSize=%lu, fmapUbSizeMin=%lu.",
-            paramInfo_.nodeType.c_str(), opInfo_->ubSize, fmapUbSizeMin);
-        return ge::GRAPH_FAILED;
-    }
-
-    return CheckL1SizeLimitsKernelSplit();
-}
-
 ge::graphStatus Conv2dBaseTiling::CheckInstructionLimits()
 {
     // DataCopy limits
-    uint64_t loadAL1loop1SrcStrideLimits = MAX_40_BIT_NUM;
-    uint64_t loadAL1loop1SrcStride = shapeInfo_.hi * shapeInfo_.wi * dtypeSizeTab.at(descInfo_.fMapDtype);
-    if (descInfo_.fMapFormat == ge::FORMAT_NCHW && loadAL1loop1SrcStride > loadAL1loop1SrcStrideLimits) {
-        OP_LOGE(context_->GetNodeName(),
-            "%s AscendC: Fmap shape exceeds DataCopy's limits: hi(%lu)*wi(%lu)*typesize(%u)=%lu, which must <= %lu",
-            paramInfo_.nodeType.c_str(), shapeInfo_.hi, shapeInfo_.wi, dtypeSizeTab.at(descInfo_.fMapDtype),
-            loadAL1loop1SrcStride, loadAL1loop1SrcStrideLimits);
-        return ge::GRAPH_FAILED;
+    if (featureFlagInfo_ != ConvAscendcFeatureFlag::IS_DMA_FLAG) {
+        uint64_t loadAL1loop1SrcStrideLimits = MAX_40_BIT_NUM;
+        uint64_t loadAL1loop1SrcStride = shapeInfo_.hi * shapeInfo_.wi * dtypeSizeTab.at(descInfo_.fMapDtype);
+        if (descInfo_.fMapFormat == ge::FORMAT_NCHW && loadAL1loop1SrcStride > loadAL1loop1SrcStrideLimits) {
+            OP_LOGE(context_->GetNodeName(),
+                "%s AscendC: Fmap shape exceeds DataCopy's limits: hi(%lu)*wi(%lu)*typesize(%u)=%lu, which must <= %lu",
+                paramInfo_.nodeType.c_str(), shapeInfo_.hi, shapeInfo_.wi, dtypeSizeTab.at(descInfo_.fMapDtype),
+                loadAL1loop1SrcStride, loadAL1loop1SrcStrideLimits);
+            return ge::GRAPH_FAILED;
+        }
     }
 
-    // FixPipe limits
-    uint64_t fixpipeLoop2DstStrideLimit = MAX_32_BIT_NUM;
-    uint64_t fixpipeLoop2DstStride = shapeInfo_.ho * shapeInfo_.wo;
-    if (fixpipeLoop2DstStride > fixpipeLoop2DstStrideLimit) {
-        OP_LOGE(context_->GetNodeName(),
-                "%s AscendC: Output shape not satisfy Fixpipe's limits: hout(%lu)*wout(%lu)=%lu, which must <= %lu",
-                paramInfo_.nodeType.c_str(), shapeInfo_.ho, shapeInfo_.wo, fixpipeLoop2DstStride, fixpipeLoop2DstStrideLimit);
-        return ge::GRAPH_FAILED;
+    // FixPipe limits M/HW mode
+    if (descInfo_.fMapFormat == ge::FORMAT_NCHW) {
+        uint64_t fixpipeLoop2DstStrideLimit = MAX_32_BIT_NUM;
+        uint64_t fixpipeLoop2DstStride = shapeInfo_.ho * shapeInfo_.wo;
+        if (fixpipeLoop2DstStride > fixpipeLoop2DstStrideLimit) {
+            OP_LOGE(context_->GetNodeName(),
+                    "%s AscendC: Output shape not satisfy Fixpipe's limits: hout(%lu)*wout(%lu)=%lu, which must <= %lu",
+                    paramInfo_.nodeType.c_str(), shapeInfo_.ho, shapeInfo_.wo, fixpipeLoop2DstStride, fixpipeLoop2DstStrideLimit);
+            return ge::GRAPH_FAILED;
+        }
     }
 
     return ge::GRAPH_SUCCESS;

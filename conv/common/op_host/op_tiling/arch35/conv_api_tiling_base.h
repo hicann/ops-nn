@@ -244,7 +244,6 @@ protected:
     bool CheckDtype();
     std::vector<std::vector<ConvDtype>> GetSupportedDataTypes() const;
     bool CheckLoad3DLimits();
-    bool CheckDmaLimits();
     uint32_t GetBandWidthCof() const;
 };
 } // namespace conv_tiling

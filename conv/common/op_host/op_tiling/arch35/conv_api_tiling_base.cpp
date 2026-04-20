@@ -233,21 +233,4 @@ bool ConvTilingBase::CheckLoad3DLimits()
     }
     return true;
 }
- 
-bool ConvTilingBase::CheckDmaLimits()
-{
-    uint64_t woAL1Min = cubeInfo.m0;
-    uint64_t hoAL1Min = 1;
- 
-    uint64_t fmapUbSizeMin =
-        AlignB(hoAL1Min * woAL1Min * cubeInfo.k0 * DTYPE_SIZE_TAB.at(descInfo.fMapType.dtype), C0_BYTE_SIZE);
-    if (fmapUbSizeMin > platformInfo.ubSize) {
-        OP_LOGE(nodeType, "DMA min ub size not enough: platformInfo.ubSize=%lu, fmapUbSizeMin=%lu.",
-            platformInfo.ubSize, fmapUbSizeMin);
-        return false;
-    }
- 
-    return true;
-}
-
 }

@@ -121,12 +121,6 @@ ge::graphStatus Conv3dBaseTilingV2::CheckWeightShape()
                 paramInfo_.nodeType.c_str(), oriShapeAttrInfo_.oriWeightW, MAX_KW_BF16_SHAPE);
         return ge::GRAPH_FAILED;
     }
-    if (oriShapeAttrInfo_.oriWeightC < 1 || oriShapeAttrInfo_.oriWeightC > MAX_CIN_BF16_SHAPE) {
-        OP_LOGE(context_->GetNodeName(),
-                "%s AscendC: Cin (%ld) is out of range[1, %ld].",
-                paramInfo_.nodeType.c_str(), oriShapeAttrInfo_.oriWeightC, MAX_CIN_BF16_SHAPE);
-        return ge::GRAPH_FAILED;
-    }
     if (oriShapeAttrInfo_.oriWeightN < 1 || oriShapeAttrInfo_.oriWeightN > MAX_COUT_BF16_SHAPE) {
         OP_LOGE(context_->GetNodeName(),
                 "%s AscendC: Cout (%ld) is out of range[1, %ld].",

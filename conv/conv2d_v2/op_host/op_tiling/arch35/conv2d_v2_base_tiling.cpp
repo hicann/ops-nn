@@ -421,9 +421,6 @@ ge::graphStatus Conv2dBaseTiling::GetFeatureFlag()
 {
     if (CheckLoad3DLimits() != ge::GRAPH_SUCCESS ||
         CheckL1SizeLimitsKernelFullLoad(IsEnableC04()) != ge::GRAPH_SUCCESS) {
-        if (CheckDmaLimits() != ge::GRAPH_SUCCESS) {
-            return ge::GRAPH_FAILED;
-        }
         if (flagInfo_.disContinuousFlag) {
             OP_LOGE(context_->GetNodeName(), "%s AscendC: DMA not support disContinuous input.",
                 paramInfo_.nodeType.c_str());

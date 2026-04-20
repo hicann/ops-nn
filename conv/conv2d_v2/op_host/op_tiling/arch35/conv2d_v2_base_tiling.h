@@ -154,9 +154,7 @@ private:
     ge::graphStatus CheckInputDesc();
     ge::graphStatus CheckParamsDtype();
     ge::graphStatus CheckLoad3DLimits();
-    ge::graphStatus CheckDmaLimits();
     ge::graphStatus CheckL1SizeLimitsKernelFullLoad(bool isC04);
-    ge::graphStatus CheckL1SizeLimitsKernelSplit();
     ge::graphStatus CheckInstructionLimits();
     ge::graphStatus CheckDisContinuousInstrLimits();
     ge::graphStatus CheckQuantDescLegal();

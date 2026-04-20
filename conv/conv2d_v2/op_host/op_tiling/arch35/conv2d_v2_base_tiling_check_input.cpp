@@ -356,7 +356,7 @@ ge::graphStatus Conv2dBaseTiling::CheckInputDesc()
 ge::graphStatus Conv2dBaseTiling::CheckParamsDtype()
 {
     // check int8 input not support  c04
-    if (descInfo_.weightFormat == ge::Format::FORMAT_FRACTAL_Z_C04 &&
+    if (IsMdcSoc(opInfo_->npuArch) && descInfo_.weightFormat == ge::Format::FORMAT_FRACTAL_Z_C04 &&
         dtypeMap.at(descInfo_.fMapDtype) == ConvDtype::INT8) {
         OP_LOGE(context_->GetNodeName(), "%s AscendC: int8 input not support C04.", context_->GetNodeType());
         return ge::GRAPH_FAILED;

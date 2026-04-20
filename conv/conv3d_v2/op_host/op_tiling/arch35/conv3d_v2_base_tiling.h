@@ -153,8 +153,6 @@ private:
     void SetQuantFlag();
     void SetScaleBiasFlag();
     ge::graphStatus GetConv3DAxisPosInfo();
-    bool CheckInstrLimitsMmode();
-    bool CheckInstrLimitsHWmode();
     ge::graphStatus ApplySamesPad(const string& padMode);
     ge::graphStatus PrepareTiling();
     ge::graphStatus CheckBiasShape() const;

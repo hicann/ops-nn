@@ -1050,9 +1050,6 @@ bool Conv2dTiling::CheckL1SizeLimitsKernelFullLoad(bool isC04)
 bool Conv2dTiling::CheckInstructionLimits()
 {
     if (!CheckLoad3DLimits() || !CheckL1SizeLimitsKernelFullLoad(isC04Flag)) {
-        if (!CheckDmaLimits()) {
-            return false;
-        }
         this->isDmaFlag = true;
     }
 
