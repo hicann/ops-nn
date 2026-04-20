@@ -1771,10 +1771,9 @@ static aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleTensor man
     uint32_t M = inputAShape.GetDimNum() == NO_BATCH_DIM_SUM ? inputAShape[0] : inputAShape[1];
     auto socLongVersion = GetCurrentPlatformInfo().GetSocLongVersion();
     bool isPpMatmul =
-        ((socLongVersion == "Ascend310P3" && M >= PPMATMUL_PRIORITY_M && bias != nullptr && !transposeX1 &&
-          transposeX2 && dtype != DataType::DT_BF16) ||
-         (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P && 
-         pertokenScaleOptional != nullptr && !pertokenScaleOptional->IsEmpty()));
+        (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P &&
+         ((M >= PPMATMUL_PRIORITY_M && bias != nullptr && !transposeX1 && transposeX2 && dtype != DataType::DT_BF16) ||
+          (pertokenScaleOptional != nullptr && !pertokenScaleOptional->IsEmpty())));
     ret = TransdataX1Process(isX1TransdataFlag, reformatedX1, executor, isPpMatmul);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
