@@ -57,7 +57,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtCom
     bool outOfBound = false;
     for (TYPE_T dim = 0; dim < rankSize; ++dim) {
       INDICES_T indiceVal = idxLocalAddr[currIndiceIdx + dim - indiceOffSet];
-      outOfBound |= static_cast<TYPE_T>(indiceVal) > outputShapeAddr[dim];
+      outOfBound |= (indiceVal < 0 || static_cast<TYPE_T>(indiceVal) >= outputShapeAddr[dim]);
       idx += indiceVal * strideListAddr[dim];
     }
     if (!outOfBound) {

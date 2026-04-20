@@ -103,6 +103,7 @@ private:
     TBuf<QuePosition::VECCALC> indicesBuf_;
     TBuf<QuePosition::VECCALC> outOfstBuf_;
     TBuf<QuePosition::VECCALC> calcBuf_;
+    TBuf<QuePosition::VECCALC> outputShapeBuf_;
 
     TQue<QuePosition::VECIN, DOUBLE_BUF> indicesQue_;
     TBuf<QuePosition::VECCALC> sortedIndicesQue_;
@@ -125,6 +126,7 @@ private:
     uint64_t postVarAlignSize_{0};
     uint64_t postVarAlignSizeFp32_{0};
     uint64_t strideList[MAX_RANK_COUNT];
+    uint64_t outputShape[MAX_RANK_COUNT];
     uint64_t initPerCore{0};
     uint64_t initCoreReal{0};
 
@@ -165,6 +167,7 @@ __aicore__ inline void ScatterNdDeterministicImpl<T, U>::Init(GM_ADDR indices, G
         pipe_.InitBuffer(indicesBuf_, tilingData_.indicesUbFactor * tilingData_.rankSize * sizeof(U));
         pipe_.InitBuffer(outOfstBuf_, tilingData_.indicesUbFactor * sizeof(U));
         pipe_.InitBuffer(calcBuf_, MAX_RANK_COUNT * sizeof(U));
+        pipe_.InitBuffer(outputShapeBuf_, MAX_RANK_COUNT * sizeof(U));
 
         SyncAll();
         return;
@@ -202,7 +205,8 @@ __aicore__ inline void ScatterNdDeterministicImpl<T, U>::Init(GM_ADDR indices, G
 
     pipe_.InitBuffer(indicesQue_, DOUBLE_BUF, ops::CeilAlign(tilingData_.indicesUbFactor * tilingData_.rankSize * sizeof(U), UB_AGLIN_VALUE));
     pipe_.InitBuffer(outOfstBuf_, tilingData_.indicesUbFactor * sizeof(U));
-    pipe_.InitBuffer(calcBuf_, MAX_RANK_COUNT * sizeof(U));  
+    pipe_.InitBuffer(calcBuf_, MAX_RANK_COUNT * sizeof(U));
+    pipe_.InitBuffer(outputShapeBuf_, MAX_RANK_COUNT * sizeof(U));
     pipe_.InitBuffer(sortedIndicesQue_, ops::CeilAlign(tilingData_.indicesUbFactor * sizeof(U), UB_AGLIN_VALUE) + SORT_STAT_PADDING);
     pipe_.InitBuffer(updatesOriginIdexQue_, ops::CeilAlign(tilingData_.indicesUbFactor * sizeof(uint32_t), UB_AGLIN_VALUE));
     pipe_.InitBuffer(updateSumIdxQueue_, DOUBLE_BUF, ops::CeilAlign(tilingData_.indicesUbFactor * sizeof(U), UB_AGLIN_VALUE));
@@ -253,6 +257,7 @@ __aicore__ inline void ScatterNdDeterministicImpl<T, U>::ComputOutOfset(
 {
     LocalTensor<U> outOfstLocal = outOfstBuf_.Get<U>();
     LocalTensor<U> calcLocal = calcBuf_.Get<U>();
+    LocalTensor<U> outputShapeLocal = outputShapeBuf_.Get<U>();
 
     __local_mem__ U* indicesLocalPtr = ((__local_mem__ U*)indicesLocal.GetPhyAddr());
     __local_mem__ U* outOfstLocalPtr = ((__local_mem__ U*)outOfstLocal.GetPhyAddr());
@@ -268,26 +273,41 @@ __aicore__ inline void ScatterNdDeterministicImpl<T, U>::ComputOutOfset(
         InnerRegType inReg;
         InnerRegType outReg;
         InnerRegType orderReg;
+        InnerRegType selectReg;
         IndexRegType indexReg;
         AscendC::MicroAPI::MaskReg pregLoop;
+        AscendC::MicroAPI::MaskReg cmpMask;
+        AscendC::MicroAPI::MaskReg invalidMask; 
 
         for (uint16_t i = 0; i < loopCnt; i++) {
             if constexpr (IsSameType<U, int64_t>::value) {
                 pregLoop = AscendC::MicroAPI::UpdateMask<U, AscendC::MicroAPI::RegTraitNumTwo>(dataLen);
+                invalidMask = AscendC::MicroAPI::UpdateMask<U, AscendC::MicroAPI::RegTraitNumTwo>(dataLen);
             } else {
                 pregLoop = AscendC::MicroAPI::UpdateMask<U>(dataLen);
+                invalidMask = AscendC::MicroAPI::UpdateMask<U>(dataLen);
             }
             AscendC::MicroAPI::Duplicate(outReg, 0, pregLoop);
             AscendC::MicroAPI::Arange(orderReg, i * vfLen);
             AscendC::MicroAPI::Muls(orderReg, orderReg, rankSize, pregLoop);
             for (uint16_t dim = 0; dim < rankSizeLoops; dim++) {
                 U strideValue = calcLocal(dim);
+                U outputShapeValue = outputShapeLocal(dim);
+                
                 indexReg = (IndexRegType&)orderReg;
                 AscendC::MicroAPI::DataCopyGather(inReg, indicesLocalPtr, indexReg, pregLoop);
+                
+                AscendC::MicroAPI::CompareScalar<U, CMPMODE::LT>(cmpMask, inReg, static_cast<U>(0), pregLoop);
+                AscendC::MicroAPI::Or(invalidMask, invalidMask, cmpMask, pregLoop);
+                AscendC::MicroAPI::CompareScalar<U, CMPMODE::GE>(cmpMask, inReg, outputShapeValue, pregLoop);
+                AscendC::MicroAPI::Or(invalidMask, invalidMask, cmpMask, pregLoop);
+
                 AscendC::MicroAPI::Muls(inReg, inReg, strideValue, pregLoop);
                 AscendC::MicroAPI::Add(outReg, inReg, outReg, pregLoop);
                 AscendC::MicroAPI::Adds(orderReg, orderReg, (U)(1), pregLoop);
             }
+            AscendC::MicroAPI::Duplicate(selectReg, static_cast<U>(-1), pregLoop);
+            AscendC::MicroAPI::Select(outReg, selectReg, outReg, invalidMask);
             auto outOfstAddr = outOfstLocalPtr + i * vfLen;
             AscendC::MicroAPI::DataCopy(outOfstAddr, outReg, pregLoop);
         }
@@ -315,6 +335,9 @@ __aicore__ inline void ScatterNdDeterministicImpl<T,  U>::ProcessSingleLoopIndic
     WaitFlag<HardEvent::V_S>(scalarWaitVectorEventID);
 
     for (int64_t i = 0; i < indicesLen; ++i) {
+        if (outOfstLocal(i) < 0 || outOfstLocal(i) >= static_cast<U>(tilingData_.rankFusedAxis)) {
+            continue;
+        }
         int64_t varRefOffset = outOfstLocal(i) * tilingData_.afterAxis;
         int64_t updatesOffset = (indicesOffset + i) * tilingData_.afterAxis;
         int64_t updatesTailUbFactor = tilingData_.updatesTailUbFactor;
@@ -346,8 +369,12 @@ __aicore__ inline void ScatterNdDeterministicImpl<T,  U>::ProcessAtomicAdd()
     int64_t indicesOffset = 0;
 
     LocalTensor<U> calcLocal = calcBuf_.Get<U>();
+    LocalTensor<U> outputShapeLocal = outputShapeBuf_.Get<U>();
     for (int32_t i = 0; i < MAX_RANK_COUNT; i++) {
         calcLocal(i) = tilingData_.strideList[i];
+    }
+    for (int32_t i = 0; i < MAX_RANK_COUNT; i++) {
+        outputShapeLocal(i) = tilingData_.outPutShape[i];
     }
     for (int64_t indicesLoopIdx = 0; indicesLoopIdx < indicesLoopSize - 1; ++indicesLoopIdx) {
         indicesOffset = indicesLoopIdx * tilingData_.indicesUbFactor;
@@ -579,7 +606,7 @@ __aicore__ inline void ScatterNdDeterministicImpl<T,  U>::ProcessSortAndSum(uint
     LocalTensor<U> indicesOfset = outOfstBuf_.Get<U>();
 
     LocalTensor<uint32_t> updatesOriginIdexLocal = updatesOriginIdexQue_.Get<uint32_t>();   
-    Duplicate(sortedIndicesLocal, static_cast<U>(-1), shiftOffset_ * DOUBLE + tilingData_.indicesUbFactor);
+    Duplicate(sortedIndicesLocal, static_cast<U>(-2), shiftOffset_ * DOUBLE + tilingData_.indicesUbFactor);
     LocalTensor<U> shiftSortLocal = sortedIndicesLocal[shiftOffset_];
 
     AscendC::Sort<U, false, sortConfig>(shiftSortLocal, updatesOriginIdexLocal, indicesOfset, dataLen);
@@ -928,8 +955,12 @@ __aicore__ inline void ScatterNdDeterministicImpl<T,  U>::Process()
     }
 
     LocalTensor<U> calcLocal = calcBuf_.Get<U>();
+    LocalTensor<U> outputShapeLocal = outputShapeBuf_.Get<U>();
     for (int32_t i = 0; i < MAX_RANK_COUNT; i++) {
         calcLocal(i) = tilingData_.strideList[i];
+    }
+    for (int32_t i = 0; i < MAX_RANK_COUNT; i++) {
+        outputShapeLocal(i) = tilingData_.outPutShape[i];
     }
 
     if (GetBlockIdx() < tilingData_.logicCoreNum) {
