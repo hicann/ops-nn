@@ -13,7 +13,7 @@
  * \brief RmsNormDynamicMxQuant base tiling implementation
  */
 
-#include "rms_norm_dynamic_mx_quant_tiling_arch35.h"
+#include "rms_norm_dynamic_mx_quant_tiling.h"
 #include "tiling/platform/platform_ascendc.h"
 #include "register/op_impl_registry.h"
 #include "log/log.h"
@@ -80,21 +80,20 @@ ge::graphStatus RmsNormDynamicMxQuantTilingBase::CheckDtype()
     xDtype_ = inputXPtr->GetDataType();
     OP_CHECK_IF(
         X_SUPPORT_DTYPE_SET.count(xDtype_) == 0,
-        OP_LOGE(
-            context_->GetNodeName(),
-            "Input x's data type[%s] only support FLOAT16 and BFLOAT16 currently, please check.",
-            Ops::Base::ToString(static_cast<ge::DataType>(xDtype_)).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPE(
+            context_->GetNodeName(), "x", Ops::Base::ToString(static_cast<ge::DataType>(xDtype_)).c_str(),
+            "float16 or bfloat16"),
         return ge::GRAPH_FAILED);
 
     auto inputGammaPtr = context_->GetInputDesc(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputGammaPtr);
     gammaDtype_ = inputGammaPtr->GetDataType();
+    std::string gammaReasonStr = "same as x (" + Ops::Base::ToString(static_cast<ge::DataType>(xDtype_)) + ") or float";
     OP_CHECK_IF(
         gammaDtype_ != xDtype_ && gammaDtype_ != ge::DT_FLOAT,
-        OP_LOGE(
-            context_->GetNodeName(), "Input gamma's data type[%s] should be same as x[%s] or FLOAT, please check.",
-            Ops::Base::ToString(static_cast<ge::DataType>(gammaDtype_)).c_str(),
-            Ops::Base::ToString(static_cast<ge::DataType>(xDtype_)).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            context_->GetNodeName(), "gamma", Ops::Base::ToString(static_cast<ge::DataType>(gammaDtype_)).c_str(),
+            gammaReasonStr.c_str()),
         return ge::GRAPH_FAILED);
 
     gammaDtypeSize_ = gammaDtype_ == ge::DT_FLOAT ? FP32_BYTES : FP16_BYTES;
@@ -102,12 +101,12 @@ ge::graphStatus RmsNormDynamicMxQuantTilingBase::CheckDtype()
     auto inputBetaPtr = context_->GetOptionalInputDesc(2);
     if (inputBetaPtr != nullptr) {
         auto betaDtype = inputBetaPtr->GetDataType();
+        std::string betaReasonStr = "same as gamma (" + Ops::Base::ToString(static_cast<ge::DataType>(gammaDtype_)) + ")";
         OP_CHECK_IF(
             betaDtype != gammaDtype_,
-            OP_LOGE(
-                context_->GetNodeName(), "Input beta's data type[%s] should be same as gamma[%s], please check.",
-                Ops::Base::ToString(static_cast<ge::DataType>(betaDtype)).c_str(),
-                Ops::Base::ToString(static_cast<ge::DataType>(gammaDtype_)).c_str()),
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                context_->GetNodeName(), "beta", Ops::Base::ToString(static_cast<ge::DataType>(betaDtype)).c_str(),
+                betaReasonStr.c_str()),
             return ge::GRAPH_FAILED);
     }
 
@@ -116,11 +115,9 @@ ge::graphStatus RmsNormDynamicMxQuantTilingBase::CheckDtype()
     yDtype_ = outputYPtr->GetDataType();
     OP_CHECK_IF(
         Y_SUPPORT_DTYPE_SET.count(yDtype_) == 0,
-        OP_LOGE(
-            context_->GetNodeName(),
-            "Output y's data type[%s] only support FLOAT4_E2M1/FLOAT4_E1M2/FLOAT8_E4M3FN/FLOAT8_E5M2 currently, please "
-            "check.",
-            Ops::Base::ToString(static_cast<ge::DataType>(yDtype_)).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPE(
+            context_->GetNodeName(), "y", Ops::Base::ToString(static_cast<ge::DataType>(yDtype_)).c_str(),
+            "float4_e2m1, float4_e1m2, float8_e4m3fn and float8_e5m2"),
         return ge::GRAPH_FAILED);
 
     int checkDstType = static_cast<int>(dstType_);
@@ -129,25 +126,21 @@ ge::graphStatus RmsNormDynamicMxQuantTilingBase::CheckDtype()
             (yDtype_ == ge::DT_FLOAT4_E1M2 && checkDstType != 41) ||
             (yDtype_ == ge::DT_FLOAT8_E4M3FN && checkDstType != 36) ||
             (yDtype_ == ge::DT_FLOAT8_E5M2 && checkDstType != 35),
-        OP_LOGE(
-            context_->GetNodeName(),
-            "y's data type[%s] and dst_type[%d] is not corresponded, y's data type: "
-            "FLOAT4_E2M1/FLOAT4_E1M2/FLOAT8_E4M3FN/FLOAT8_E5M2 correspond to dst_type: 40/41/36/35, please check.",
-            Ops::Base::ToString(static_cast<ge::DataType>(yDtype_)).c_str(), checkDstType),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context_->GetNodeName(), "dst_type", std::to_string(checkDstType).c_str(),
+            "40/41/36/35 for float4_e2m1/float4_e1m2/float8_e4m3fn/float8_e5m2"),
         return ge::GRAPH_FAILED);
 
     // 暂不支持fp4的cublass方案
     OP_CHECK_IF(
         scaleAlg_ == 1 && Y_SUPPORT_DTYPE_FP4_SET.count(yDtype_) != 0,
-        OP_LOGE(context_->GetNodeName(), "When y's data type is FLOAT4_E2M1/FLOAT4_E1M2, scale_alg must be set to 0."),
+        OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "scale_alg", std::to_string(scaleAlg_).c_str(), "0"),
         return ge::GRAPH_FAILED);
 
     // y输出为fp8时只支持rint
     OP_CHECK_IF(
         Y_SUPPORT_DTYPE_FP8_SET.count(yDtype_) != 0 && roundMode_ != static_cast<int64_t>(RoundModeList::MODE_RINT),
-        OP_LOGE(
-            context_->GetNodeName(),
-            "When output y's data type is FLOAT8_E4M3FN/FLOAT8_E5M2, round_mode only support rint, please check."),
+        OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "round_mode", std::to_string(roundMode_).c_str(), "rint"),
         return ge::GRAPH_FAILED);
 
     auto outputMxScalePtr = context_->GetOutputDesc(1);
@@ -155,9 +148,9 @@ ge::graphStatus RmsNormDynamicMxQuantTilingBase::CheckDtype()
     auto mxscaleDtype = outputMxScalePtr->GetDataType();
     OP_CHECK_IF(
         mxscaleDtype != ge::DT_FLOAT8_E8M0,
-        OP_LOGE(
-            context_->GetNodeName(), "Output mxscale's data type[%s] only support FLOAT8_E8M0 currently, please check.",
-            Ops::Base::ToString(static_cast<ge::DataType>(mxscaleDtype)).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPE(
+            context_->GetNodeName(), "mxscale", Ops::Base::ToString(static_cast<ge::DataType>(mxscaleDtype)).c_str(),
+            "float8_e8m0"),
         return ge::GRAPH_FAILED);
 
     if (hasOutputRstd_) {
@@ -166,9 +159,9 @@ ge::graphStatus RmsNormDynamicMxQuantTilingBase::CheckDtype()
         auto rstdDtype = outputRstdPtr->GetDataType();
         OP_CHECK_IF(
             rstdDtype != ge::DT_FLOAT,
-            OP_LOGE(
-                context_->GetNodeName(), "Output rstd's data type[%s] only support FLOAT currently, please check.",
-                Ops::Base::ToString(static_cast<ge::DataType>(rstdDtype)).c_str()),
+            OP_LOGE_FOR_INVALID_DTYPE(
+                context_->GetNodeName(), "rstd", Ops::Base::ToString(static_cast<ge::DataType>(rstdDtype)).c_str(),
+                "float"),
             return ge::GRAPH_FAILED);
     }
 
@@ -188,7 +181,7 @@ ge::graphStatus RmsNormDynamicMxQuantTilingBase::GetAttr()
     scaleAlg_ = (scaleAlgPtr != nullptr) ? static_cast<int64_t>(*scaleAlgPtr) : SCALE_ALG_DEFAULT;
     OP_CHECK_IF(
         scaleAlg_ != 0 && scaleAlg_ != 1,
-        OP_LOGE(context_->GetNodeName(), "The scale_alg[%ld] should be 0 or 1, please check.", scaleAlg_),
+        OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "scale_alg", std::to_string(scaleAlg_).c_str(), "0 or 1"),
         return ge::GRAPH_FAILED);
 
     const char* roundModePtr = attrs->GetAttrPointer<char>(2);
@@ -197,13 +190,10 @@ ge::graphStatus RmsNormDynamicMxQuantTilingBase::GetAttr()
         RoundModeList roundMode = GetRoundMode(roundModeStr);
         OP_CHECK_IF(
             roundMode == RoundModeList::MODE_UNDEFINED,
-            OP_LOGE(
-                context_->GetNodeName(), "invalid round_mode:%s; round_mode should be one of {rint, round, floor}",
-                roundModePtr),
+            OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "round_mode", roundModePtr, "rint, round or floor"),
             return ge::GRAPH_FAILED);
 
         roundMode_ = static_cast<int64_t>(roundMode);
-
     } else {
         roundMode_ = ROUND_MODE_DEFAULT;
     }
@@ -231,7 +221,8 @@ ge::graphStatus RmsNormDynamicMxQuantTilingBase::CheckShape()
 
     OP_CHECK_IF(
         xShapeDimNum < 1 || xShapeDimNum > MAX_DIM_NUM,
-        OP_LOGE(context_->GetNodeName(), "Input x rank[%ld] should be in [1, 7].", xShapeDimNum),
+        OP_LOGE_FOR_INVALID_SHAPEDIM(
+            context_->GetNodeName(), "x", std::to_string(xShapeDimNum).c_str(), "1D to 7D"),
         return ge::GRAPH_FAILED);
 
     int64_t xLastDim = xShape.GetDim(xShapeDimNum - 1);
@@ -246,9 +237,8 @@ ge::graphStatus RmsNormDynamicMxQuantTilingBase::CheckShape()
     if (Y_SUPPORT_DTYPE_FP4_SET.count(yDtype_) != 0) {
         OP_CHECK_IF(
             xLastDim % 2 != 0,
-            OP_LOGE(
-                context_->GetNodeName(),
-                "When output y's data type is FLOAT4_E2M1/FLOAT4_E1M2, the last axis should be even, please check."),
+            OP_LOGE_FOR_INVALID_SHAPESIZE(
+                context_->GetNodeName(), "x", std::to_string(xLastDim).c_str(), "even number when y dtype is fp4"),
             return ge::GRAPH_FAILED);
     }
 
@@ -257,15 +247,16 @@ ge::graphStatus RmsNormDynamicMxQuantTilingBase::CheckShape()
     auto gammaShape = gammaShapePtr->GetStorageShape();
     OP_CHECK_IF(
         gammaShape.GetDimNum() != 1,
-        OP_LOGE(context_->GetNodeName(), "Input gamma rank[%zu] should be 1.", gammaShape.GetDimNum()),
+        OP_LOGE_FOR_INVALID_SHAPEDIM(
+            context_->GetNodeName(), "gamma", std::to_string(gammaShape.GetDimNum()).c_str(), "1D"),
         return ge::GRAPH_FAILED);
 
     int64_t gammaDim = gammaShape.GetDim(0);
+    std::string gammaReasonStr = "gamma dim should be " + std::to_string(xLastDim) + ", same as x's last dim";
     OP_CHECK_IF(
         gammaDim != xLastDim,
-        OP_LOGE(
-            context_->GetNodeName(), "Input gamma's last dim[%ld] should be equal to x's last dim[%ld].", gammaDim,
-            xLastDim),
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context_->GetNodeName(), "gamma", std::to_string(gammaDim).c_str(), gammaReasonStr.c_str()),
         return ge::GRAPH_FAILED);
 
     auto betaShapePtr = context_->GetOptionalInputShape(2);
@@ -273,25 +264,26 @@ ge::graphStatus RmsNormDynamicMxQuantTilingBase::CheckShape()
         auto betaShape = betaShapePtr->GetStorageShape();
         OP_CHECK_IF(
             betaShape.GetDimNum() != 1,
-            OP_LOGE(context_->GetNodeName(), "Input beta rank[%zu] should be 1.", betaShape.GetDimNum()),
+            OP_LOGE_FOR_INVALID_SHAPEDIM(
+                context_->GetNodeName(), "beta", std::to_string(betaShape.GetDimNum()).c_str(), "1D"),
             return ge::GRAPH_FAILED);
         int64_t betaDim = betaShape.GetDim(0);
+        std::string betaReasonStr = "beta dim should be " + std::to_string(xLastDim) + ", same as x's last dim";
         OP_CHECK_IF(
             betaDim != xLastDim,
-            OP_LOGE(
-                context_->GetNodeName(), "Input beta's last dim[%ld] should be equal to x's last dim[%ld].", betaDim,
-                xLastDim),
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                context_->GetNodeName(), "beta", std::to_string(betaDim).c_str(), betaReasonStr.c_str()),
             return ge::GRAPH_FAILED);
     }
 
     auto yShapePtr = context_->GetOutputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, yShapePtr);
     auto yShape = yShapePtr->GetStorageShape();
+    std::string yReasonStr = "y shape should be " + Ops::Base::ToString(xShape) + ", same as x's shape";
     OP_CHECK_IF(
         xShape != yShape,
-        OP_LOGE(
-            context_->GetNodeName(), "Output y shape[%s] must be same with input x shape[%s].",
-            Shape2String(yShape).c_str(), Shape2String(xShape).c_str()),
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context_->GetNodeName(), "y", Ops::Base::ToString(yShape).c_str(), yReasonStr.c_str()),
         return ge::GRAPH_FAILED);
 
     if (hasOutputRstd_) {
@@ -300,23 +292,28 @@ ge::graphStatus RmsNormDynamicMxQuantTilingBase::CheckShape()
         int64_t rstdDimNum = rstdShape.GetDimNum();
         OP_CHECK_IF(
             rstdDimNum != xShapeDimNum,
-            OP_LOGE(context_->GetNodeName(), "Output rstd rank[%ld] should be %ld.", rstdDimNum, xShapeDimNum),
+            OP_LOGE_FOR_INVALID_SHAPEDIM(
+                context_->GetNodeName(), "rstd", std::to_string(rstdDimNum).c_str(),
+                std::to_string(xShapeDimNum).c_str()),
             return ge::GRAPH_FAILED);
 
+        auto expectedRstdShape = xShape;
+        expectedRstdShape.SetDim(xShapeDimNum - 1, 1);
+        std::string rstdReasonStr = "rstd shape should be " + Ops::Base::ToString(expectedRstdShape) + ", same dims as x except last dim is 1";
         for (int64_t i = 0; i < xShapeDimNum - 1; i++) {
             OP_CHECK_IF(
                 rstdShape.GetDim(i) != xShape.GetDim(i),
-                OP_LOGE(
-                    context_->GetNodeName(), "Output rstd dim[%ld]=%ld should be equal to x dim[%ld]=%ld.", i,
-                    rstdShape.GetDim(i), i, xShape.GetDim(i)),
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                    context_->GetNodeName(), "rstd", Ops::Base::ToString(rstdShape).c_str(),
+                    rstdReasonStr.c_str()),
                 return ge::GRAPH_FAILED);
         }
 
         OP_CHECK_IF(
             rstdShape.GetDim(xShapeDimNum - 1) != 1,
-            OP_LOGE(
-                context_->GetNodeName(), "Output rstd dim[%ld]=%ld should be equal to 1.", xShapeDimNum - 1,
-                rstdShape.GetDim(xShapeDimNum - 1)),
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                context_->GetNodeName(), "rstd", Ops::Base::ToString(rstdShape).c_str(),
+                rstdReasonStr.c_str()),
             return ge::GRAPH_FAILED);
     }
 
@@ -326,20 +323,20 @@ ge::graphStatus RmsNormDynamicMxQuantTilingBase::CheckShape()
     int64_t mxscaleDimNum = mxscaleShape.GetDimNum();
     OP_CHECK_IF(
         mxscaleDimNum != xShapeDimNum + 1,
-        OP_LOGE(
-            context_->GetNodeName(), "Output mxscale rank[%ld] should be equal to x rank[%ld] + 1.", mxscaleDimNum,
-            xShapeDimNum),
+        OP_LOGE_FOR_INVALID_SHAPEDIM(
+            context_->GetNodeName(), "mxscale", std::to_string(mxscaleDimNum).c_str(),
+            std::to_string(xShapeDimNum + 1).c_str()),
         return ge::GRAPH_FAILED);
 
     auto newScaleShape = xShape;
     newScaleShape.SetDim(xShapeDimNum - 1, Ops::Base::CeilDiv(Ops::Base::CeilDiv(xLastDim, MX_BLOCK_SIZE), CONST_TWO));
     newScaleShape.AppendDim(CONST_TWO);
 
+    std::string mxscaleReasonStr = "mxscale shape should be " + Ops::Base::ToString(newScaleShape);
     OP_CHECK_IF(
         newScaleShape != mxscaleShape,
-        OP_LOGE(
-            context_->GetNodeName(), "The shape of output mxscale %s is incorrect, correct shape is %s, please check.",
-            Shape2String(mxscaleShape).c_str(), Shape2String(newScaleShape).c_str()),
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context_->GetNodeName(), "mxscale", Ops::Base::ToString(mxscaleShape).c_str(), mxscaleReasonStr.c_str()),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -386,12 +383,15 @@ ge::graphStatus RmsNormDynamicMxQuantTilingBase::GetShapeAttrsInfo()
     OP_CHECK_IF(
         context_ == nullptr, OP_LOGE("RmsNormDynamicMxQuantTilingBase", "context is nullptr."),
         return ge::GRAPH_FAILED);
-    OP_CHECK_IF(GetAttr() != ge::GRAPH_SUCCESS, OP_LOGE("RmsNormDynamicMxQuantTiling", "GetAttr Failed."),
-                return ge::GRAPH_FAILED);
-    OP_CHECK_IF(CheckDtype() != ge::GRAPH_SUCCESS, OP_LOGE("RmsNormDynamicMxQuantTiling", "CheckDtype Failed."),
-                return ge::GRAPH_FAILED);
-    OP_CHECK_IF(CheckShape() != ge::GRAPH_SUCCESS, OP_LOGE("RmsNormDynamicMxQuantTiling", "CheckShape Failed."),
-                return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        GetAttr() != ge::GRAPH_SUCCESS, OP_LOGE("RmsNormDynamicMxQuantTiling", "GetAttr Failed."),
+        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        CheckDtype() != ge::GRAPH_SUCCESS, OP_LOGE("RmsNormDynamicMxQuantTiling", "CheckDtype Failed."),
+        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        CheckShape() != ge::GRAPH_SUCCESS, OP_LOGE("RmsNormDynamicMxQuantTiling", "CheckShape Failed."),
+        return ge::GRAPH_FAILED);
     OP_LOGD(
         context_->GetNodeName(), "numM: %ld, numN: %ld, epsilon: %f, dstType: %ld, quantAlg: %ld, roundMode: %ld",
         numM_, numN_, epsilon_, dstType_, scaleAlg_, roundMode_);

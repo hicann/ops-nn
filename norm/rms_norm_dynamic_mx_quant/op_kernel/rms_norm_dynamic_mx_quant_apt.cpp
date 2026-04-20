@@ -13,19 +13,21 @@
  * \brief rms_norm_dynamic_mx_quant kernel entry
  */
 
+#include "arch35/rms_norm_dynamic_mx_quant_tiling_data.h"
 #include "arch35/rms_norm_dynamic_mx_quant_full_load.h"
 #include "arch35/rms_norm_dynamic_mx_quant_reduce_empty.h"
+#include "arch35/rms_norm_dynamic_mx_quant_recompute.h"
+#include "arch35/rms_norm_dynamic_mx_quant_tiling_key.h"
 
 using namespace AscendC;
 using namespace RmsNormDynamicMxQuantNs;
 
-#define TILING_KEY_REDUCE_EMPTY 3000
-#define TILING_KEY_FULL_LOAD_GENERAL 1000
-#define TILING_KEY_FULL_LOAD_OPTIMIZE 10000
-
 #define FLOAT_OVERFLOW_MODE_CTRL 60
 
-extern "C" __global__ __aicore__ void rms_norm_dynamic_mx_quant(
+REGISTER_TILING_DEFAULT(RmsNormDynamicMxQuantFullLoadTilingData);
+
+template <int8_t COMPUTE_MODE, int8_t OPTIMIZE_MODE>
+__global__ __aicore__ void rms_norm_dynamic_mx_quant(
     GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mxscale, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
@@ -34,23 +36,25 @@ extern "C" __global__ __aicore__ void rms_norm_dynamic_mx_quant(
     int64_t oriOverflowMode = AscendC::GetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>();
 #endif
 
-    if (TILING_KEY_IS(TILING_KEY_REDUCE_EMPTY)) {
+    constexpr bool isOptimize = (OPTIMIZE_MODE == OPTIMIZE_MODE_OPTIMIZE);
+
+    if constexpr (COMPUTE_MODE == COMPUTE_MODE_REDUCE_EMPTY) {
         GET_TILING_DATA_WITH_STRUCT(RmsNormDynamicMxQuantReduceEmptyTilingData, tilingDataIn, tiling);
         RmsNormDynamicMxQuantReduceEmpty op(&tilingDataIn);
         op.Init(rstd);
         op.Process();
-    } else if (TILING_KEY_IS(TILING_KEY_FULL_LOAD_GENERAL)) {
+    } else if constexpr (COMPUTE_MODE == COMPUTE_MODE_FULL_LOAD) {
         GET_TILING_DATA_WITH_STRUCT(RmsNormDynamicMxQuantFullLoadTilingData, tilingDataIn, tiling);
         const RmsNormDynamicMxQuantFullLoadTilingData* __restrict tilingData = &tilingDataIn;
         TPipe pipe;
-        RmsNormDynamicMxQuantFullLoad<DTYPE_X, DTYPE_GAMMA, DTYPE_Y, false> op(&pipe);
+        RmsNormDynamicMxQuantFullLoad<DTYPE_X, DTYPE_GAMMA, DTYPE_Y, isOptimize> op(&pipe);
         op.Init(x, gamma, beta, y, mxscale, rstd, tilingData);
         op.Process();
-    } else if (TILING_KEY_IS(TILING_KEY_FULL_LOAD_OPTIMIZE)) {
-        GET_TILING_DATA_WITH_STRUCT(RmsNormDynamicMxQuantFullLoadTilingData, tilingDataIn, tiling);
-        const RmsNormDynamicMxQuantFullLoadTilingData* __restrict tilingData = &tilingDataIn;
+    } else if constexpr (COMPUTE_MODE == COMPUTE_MODE_RECOMPUTE) {
+        GET_TILING_DATA_WITH_STRUCT(RmsNormDynamicMxQuantRecomputeTilingData, tilingDataIn, tiling);
+        const RmsNormDynamicMxQuantRecomputeTilingData* __restrict tilingData = &tilingDataIn;
         TPipe pipe;
-        RmsNormDynamicMxQuantFullLoad<DTYPE_X, DTYPE_GAMMA, DTYPE_Y, true> op(&pipe);
+        RmsNormDynamicMxQuantRecompute<DTYPE_X, DTYPE_GAMMA, DTYPE_Y, isOptimize> op(&pipe);
         op.Init(x, gamma, beta, y, mxscale, rstd, tilingData);
         op.Process();
     }

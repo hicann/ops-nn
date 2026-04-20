@@ -20,43 +20,7 @@
 
 #define __CCE_UT_TEST__
 
-#pragma pack(1)
-struct RmsNormDynamicMxQuantFullLoadTilingData {
-    int64_t usedCoreNum;
-    int64_t mTailCores;
-    int64_t numM;
-    int64_t numN;
-    int64_t numNUbAligned;
-    int64_t binAddFoldPoint;
-    int64_t mPerCore;
-    int64_t mUbFactor;
-    int64_t mxBlockSize;
-    int64_t nMxblockAligned;
-    int64_t nMxblockNumAlignedTwo;
-    int64_t nMxblockNum;
-    int64_t needPadN;
-    int64_t needPadScale;
-    int64_t scaleAlg;
-    int64_t roundMode;
-    int64_t hasInputBeta;
-    int64_t hasOutputRstd;
-    float epsilon;
-    float avgFactor;
-};
-
-struct RmsNormDynamicMxQuantReduceEmptyTilingData {
-    uint64_t perCoreElements;
-    uint64_t lastCoreElements;
-    uint64_t perCoreLoops;
-    uint64_t perCorePerLoopElements;
-    uint64_t perCoreLastLoopElements;
-    uint64_t lastCoreLoops;
-    uint64_t lastCorePerLoopElements;
-    uint64_t lastCoreLastLoopElements;
-    uint64_t hasOutputRstd;
-    uint64_t numM;
-};
-#pragma pack()
+#include "../../../op_kernel/arch35/rms_norm_dynamic_mx_quant_tiling_data.h"
 
 template <typename T>
 inline void InitTilingData(uint8_t* tiling, T* const_data)

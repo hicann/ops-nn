@@ -13,14 +13,24 @@
  * \brief RmsNormDynamicMxQuant FullLoad General tiling implementation
  */
 
-#include "rms_norm_dynamic_mx_quant_tiling_arch35.h"
+#include "rms_norm_dynamic_mx_quant_tiling.h"
 
 using namespace ge;
+using namespace optiling::rms_norm_dynamic_mx_quant;
 
 namespace optiling {
 
 bool RmsNormDynamicMxQuantFullLoadTiling::IsCapable()
 {
+    constexpr int64_t BIN_ADD_FOLD_THRESHOLD = 16384;
+    if (numN_ > BIN_ADD_FOLD_THRESHOLD) {
+        OP_LOGD(
+            context_->GetNodeName(),
+            "FullLoad IsCapable false: numN=%ld >= binAddFoldThreshold=%ld, "
+            "binary add rounds increase, recommend Recompute mode.",
+            numN_, BIN_ADD_FOLD_THRESHOLD);
+        return false;
+    }
     return true;
 }
 
@@ -73,40 +83,44 @@ ge::graphStatus RmsNormDynamicMxQuantFullLoadTiling::DoOpTiling()
 
     OP_CHECK_IF(
         mUbFactorMax < 1,
-        OP_LOGE(
+        OP_LOGI(
             context_->GetNodeName(), "fused input shape (%ld, %ld) too large, full_load_template out of ub[%ld].",
             numM_, numN_, ubSize_),
-        return ge::GRAPH_FAILED);
+        return ge::GRAPH_PARAM_INVALID);
 
     int64_t mUbFactor = std::min(mPerTailCore, mUbFactorMax);
 
-    tilingData_.set_usedCoreNum(usedCoreNum_);
-    tilingData_.set_mTailCores(mTailCores);
-    tilingData_.set_numM(numM_);
-    tilingData_.set_numN(numN_);
-    tilingData_.set_mPerCore(mPerCore);
-    tilingData_.set_mUbFactor(mUbFactor);
-    tilingData_.set_binAddFoldPoint(binAddFoldPoint);
-    tilingData_.set_mxBlockSize(mxBlockSize);
-    tilingData_.set_nMxblockAligned(nMxblockAligned);
-    tilingData_.set_nMxblockNumAlignedTwo(nMxblockNumAlignedTwo);
-    tilingData_.set_needPadN(needPadN);
-    tilingData_.set_scaleAlg(scaleAlg_);
-    tilingData_.set_roundMode(roundMode_);
-    tilingData_.set_hasInputBeta(hasInputBeta_);
-    tilingData_.set_hasOutputRstd(hasOutputRstd_);
-    tilingData_.set_epsilon(epsilon_);
-    tilingData_.set_avgFactor(avgFactor_);
+    tilingData_.usedCoreNum = usedCoreNum_;
+    tilingData_.mTailCores = mTailCores;
+    tilingData_.numM = numM_;
+    tilingData_.numN = numN_;
+    tilingData_.mPerCore = mPerCore;
+    tilingData_.mUbFactor = mUbFactor;
+    tilingData_.binAddFoldPoint = binAddFoldPoint;
+    tilingData_.mxBlockSize = mxBlockSize;
+    tilingData_.nMxblockAligned = nMxblockAligned;
+    tilingData_.nMxblockNumAlignedTwo = nMxblockNumAlignedTwo;
+    tilingData_.needPadN = needPadN;
+    tilingData_.scaleAlg = scaleAlg_;
+    tilingData_.roundMode = roundMode_;
+    tilingData_.hasInputBeta = hasInputBeta_;
+    tilingData_.hasOutputRstd = hasOutputRstd_;
+    tilingData_.epsilon = epsilon_;
+    tilingData_.avgFactor = avgFactor_;
 
     return ge::GRAPH_SUCCESS;
 }
 
 uint64_t RmsNormDynamicMxQuantFullLoadTiling::GetTilingKey() const
 {
+    RmsNormDynamicMxQuantTilingKey tilingKey;
+    tilingKey.SetComputeMode(ComputeMode::FULL_LOAD);
     if (IsOptimizeCondition()) {
-        return TILING_KEY_FULL_LOAD_OPTIMIZE;
+        tilingKey.SetOptimizeMode(OptimizeMode::OPTIMIZE);
+    } else {
+        tilingKey.SetOptimizeMode(OptimizeMode::NORMAL);
     }
-    return TILINGKEY_FULL_LOAD_GENERAL;
+    return tilingKey.GetTilingKey();
 }
 
 ge::graphStatus RmsNormDynamicMxQuantFullLoadTiling::PostTiling()
@@ -116,13 +130,16 @@ ge::graphStatus RmsNormDynamicMxQuantFullLoadTiling::PostTiling()
     OP_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
     workspaces[0] = workspaceSize_;
 
-    tilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
-    context_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
+    size_t tilingDataSize = sizeof(tilingData_);
+    errno_t ret = memcpy_s(
+        context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
+        reinterpret_cast<void*>(&tilingData_), tilingDataSize);
+    OP_CHECK_IF(ret != EOK, OP_LOGE(context_->GetNodeName(), "memcpy_s failed."), return ge::GRAPH_FAILED);
+    context_->GetRawTilingData()->SetDataSize(tilingDataSize);
 
     return ge::GRAPH_SUCCESS;
 }
 
-REGISTER_OPS_TILING_TEMPLATE(
-    RmsNormDynamicMxQuant, RmsNormDynamicMxQuantFullLoadTiling, TEMPLATE_FULL_LOAD_GENERAL_PRIORITY);
+REGISTER_OPS_TILING_TEMPLATE(RmsNormDynamicMxQuant, RmsNormDynamicMxQuantFullLoadTiling, TEMPLATE_FULL_LOAD_PRIORITY);
 
 } // namespace optiling

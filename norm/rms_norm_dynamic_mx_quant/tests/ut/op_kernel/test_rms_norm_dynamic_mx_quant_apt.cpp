@@ -23,11 +23,18 @@
 #include "data_utils.h"
 #include "rms_norm_dynamic_mx_quant_tiling_def.h"
 
+#ifdef __CCE_KT_TEST__
+#include "rms_norm_dynamic_mx_quant_apt.cpp"
+#endif
+
 using namespace std;
 
-extern "C" __global__ __aicore__ void rms_norm_dynamic_mx_quant(
-    GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mxscale, GM_ADDR rstd,
-    GM_ADDR workspace, GM_ADDR tiling);
+#define COMPUTE_MODE_FULL_LOAD 0
+#define COMPUTE_MODE_RECOMPUTE 1
+#define COMPUTE_MODE_REDUCE_EMPTY 2
+
+#define OPTIMIZE_MODE_NORMAL 0
+#define OPTIMIZE_MODE_OPTIMIZE 1
 
 class rms_norm_dynamic_mx_quant_test : public testing::Test {
 protected:
@@ -41,7 +48,7 @@ protected:
     }
 };
 
-// numM=1, numN=64, GENERAL mode (key=1000), no beta, no rstd, scaleAlg=OCP, roundMode=RINT
+// numM=1, numN=64, FULL_LOAD + NORMAL mode (key=0), no beta, no rstd, scaleAlg=OCP, roundMode=RINT
 TEST_F(rms_norm_dynamic_mx_quant_test, test_case_general_small)
 {
     int64_t numM = 1;
@@ -71,16 +78,13 @@ TEST_F(rms_norm_dynamic_mx_quant_test, test_case_general_small)
     tilingData->mTailCores = 0;
     tilingData->numM = numM;
     tilingData->numN = numN;
-    tilingData->numNUbAligned = 64;
     tilingData->binAddFoldPoint = 64;
     tilingData->mPerCore = 1;
     tilingData->mUbFactor = 1;
     tilingData->mxBlockSize = 32;
     tilingData->nMxblockAligned = 64;
     tilingData->nMxblockNumAlignedTwo = 2;
-    tilingData->nMxblockNum = 2;
     tilingData->needPadN = 0;
-    tilingData->needPadScale = 0;
     tilingData->scaleAlg = 0;
     tilingData->roundMode = 4;
     tilingData->hasInputBeta = 0;
@@ -89,9 +93,16 @@ TEST_F(rms_norm_dynamic_mx_quant_test, test_case_general_small)
     tilingData->avgFactor = 1.0f / numN;
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_SET_TILING_KEY(1000);
-    ICPU_RUN_KF(rms_norm_dynamic_mx_quant, blockDim, x, gamma, beta, y, mxscale, rstd, workspace,
-                (uint8_t*)(tilingData));
+    ICPU_SET_TILING_KEY(0);
+
+    auto rms_norm_dynamic_mx_quant_wrapper = [](GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mxscale,
+                                                GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
+        ::rms_norm_dynamic_mx_quant<COMPUTE_MODE_FULL_LOAD, OPTIMIZE_MODE_NORMAL>(
+            x, gamma, beta, y, mxscale, rstd, workspace, tiling);
+    };
+    ICPU_RUN_KF(
+        rms_norm_dynamic_mx_quant_wrapper, blockDim, x, gamma, beta, y, mxscale, rstd, workspace,
+        (uint8_t*)(tilingData));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -103,7 +114,7 @@ TEST_F(rms_norm_dynamic_mx_quant_test, test_case_general_small)
     AscendC::GmFree(tiling);
 }
 
-// numM=2, numN=64, GENERAL mode (key=1000), with beta and rstd output
+// numM=2, numN=64, FULL_LOAD + NORMAL mode (key=0), with beta and rstd output
 TEST_F(rms_norm_dynamic_mx_quant_test, test_case_general_with_beta_rstd)
 {
     int64_t numM = 2;
@@ -133,16 +144,13 @@ TEST_F(rms_norm_dynamic_mx_quant_test, test_case_general_with_beta_rstd)
     tilingData->mTailCores = 0;
     tilingData->numM = numM;
     tilingData->numN = numN;
-    tilingData->numNUbAligned = 64;
     tilingData->binAddFoldPoint = 64;
-    tilingData->mPerCore = 2;
-    tilingData->mUbFactor = 2;
+    tilingData->mPerCore = 1;
+    tilingData->mUbFactor = 1;
     tilingData->mxBlockSize = 32;
     tilingData->nMxblockAligned = 64;
     tilingData->nMxblockNumAlignedTwo = 2;
-    tilingData->nMxblockNum = 2;
     tilingData->needPadN = 0;
-    tilingData->needPadScale = 0;
     tilingData->scaleAlg = 0;
     tilingData->roundMode = 4;
     tilingData->hasInputBeta = 1;
@@ -151,9 +159,16 @@ TEST_F(rms_norm_dynamic_mx_quant_test, test_case_general_with_beta_rstd)
     tilingData->avgFactor = 1.0f / numN;
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_SET_TILING_KEY(1000);
-    ICPU_RUN_KF(rms_norm_dynamic_mx_quant, blockDim, x, gamma, beta, y, mxscale, rstd, workspace,
-                (uint8_t*)(tilingData));
+    ICPU_SET_TILING_KEY(0);
+
+    auto rms_norm_dynamic_mx_quant_wrapper = [](GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mxscale,
+                                                GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
+        ::rms_norm_dynamic_mx_quant<COMPUTE_MODE_FULL_LOAD, OPTIMIZE_MODE_NORMAL>(
+            x, gamma, beta, y, mxscale, rstd, workspace, tiling);
+    };
+    ICPU_RUN_KF(
+        rms_norm_dynamic_mx_quant_wrapper, blockDim, x, gamma, beta, y, mxscale, rstd, workspace,
+        (uint8_t*)(tilingData));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -165,7 +180,7 @@ TEST_F(rms_norm_dynamic_mx_quant_test, test_case_general_with_beta_rstd)
     AscendC::GmFree(tiling);
 }
 
-// numM=1, numN=50, GENERAL mode (key=1000), N not aligned to mxBlockSize, needs padding
+// numM=1, numN=50, FULL_LOAD + NORMAL mode (key=0), N not aligned to mxBlockSize, needs padding
 TEST_F(rms_norm_dynamic_mx_quant_test, test_case_general_need_pad)
 {
     int64_t numM = 1;
@@ -197,16 +212,13 @@ TEST_F(rms_norm_dynamic_mx_quant_test, test_case_general_need_pad)
     tilingData->mTailCores = 0;
     tilingData->numM = numM;
     tilingData->numN = numN;
-    tilingData->numNUbAligned = 64;
     tilingData->binAddFoldPoint = 64;
     tilingData->mPerCore = 1;
     tilingData->mUbFactor = 1;
     tilingData->mxBlockSize = 32;
     tilingData->nMxblockAligned = nMxblockAligned;
     tilingData->nMxblockNumAlignedTwo = 2;
-    tilingData->nMxblockNum = nMxblockNum;
     tilingData->needPadN = 1;
-    tilingData->needPadScale = 0;
     tilingData->scaleAlg = 0;
     tilingData->roundMode = 4;
     tilingData->hasInputBeta = 0;
@@ -215,9 +227,16 @@ TEST_F(rms_norm_dynamic_mx_quant_test, test_case_general_need_pad)
     tilingData->avgFactor = 1.0f / numN;
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_SET_TILING_KEY(1000);
-    ICPU_RUN_KF(rms_norm_dynamic_mx_quant, blockDim, x, gamma, beta, y, mxscale, rstd, workspace,
-                (uint8_t*)(tilingData));
+    ICPU_SET_TILING_KEY(0);
+
+    auto rms_norm_dynamic_mx_quant_wrapper = [](GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mxscale,
+                                                GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
+        ::rms_norm_dynamic_mx_quant<COMPUTE_MODE_FULL_LOAD, OPTIMIZE_MODE_NORMAL>(
+            x, gamma, beta, y, mxscale, rstd, workspace, tiling);
+    };
+    ICPU_RUN_KF(
+        rms_norm_dynamic_mx_quant_wrapper, blockDim, x, gamma, beta, y, mxscale, rstd, workspace,
+        (uint8_t*)(tilingData));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -229,7 +248,7 @@ TEST_F(rms_norm_dynamic_mx_quant_test, test_case_general_need_pad)
     AscendC::GmFree(tiling);
 }
 
-// numM=1, numN=64, OPTIMIZE mode (key=10000), FP16 input + RINT rounding
+// numM=1, numN=64, FULL_LOAD + OPTIMIZE mode (key=16), FP16 input + RINT rounding
 TEST_F(rms_norm_dynamic_mx_quant_test, test_case_optimize)
 {
     int64_t numM = 1;
@@ -259,78 +278,13 @@ TEST_F(rms_norm_dynamic_mx_quant_test, test_case_optimize)
     tilingData->mTailCores = 0;
     tilingData->numM = numM;
     tilingData->numN = numN;
-    tilingData->numNUbAligned = 64;
     tilingData->binAddFoldPoint = 64;
     tilingData->mPerCore = 1;
     tilingData->mUbFactor = 1;
     tilingData->mxBlockSize = 32;
     tilingData->nMxblockAligned = 64;
     tilingData->nMxblockNumAlignedTwo = 2;
-    tilingData->nMxblockNum = 2;
     tilingData->needPadN = 0;
-    tilingData->needPadScale = 0;
-    tilingData->scaleAlg = 0;
-    tilingData->roundMode = 4;
-    tilingData->hasInputBeta = 0;
-    tilingData->hasOutputRstd = 0;
-    tilingData->epsilon = 1e-6f;
-    tilingData->avgFactor = 1.0f / numN;
-
-    AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_SET_TILING_KEY(10000);
-    ICPU_RUN_KF(rms_norm_dynamic_mx_quant, blockDim, x, gamma, beta, y, mxscale, rstd, workspace,
-                (uint8_t*)(tilingData));
-
-    AscendC::GmFree(x);
-    AscendC::GmFree(gamma);
-    AscendC::GmFree(beta);
-    AscendC::GmFree(y);
-    AscendC::GmFree(mxscale);
-    AscendC::GmFree(rstd);
-    AscendC::GmFree(workspace);
-    AscendC::GmFree(tiling);
-}
-
-// numM=4, numN=128, GENERAL mode (key=1000), multi-core, with tail cores
-TEST_F(rms_norm_dynamic_mx_quant_test, test_case_multicore)
-{
-    int64_t numM = 4;
-    int64_t numN = 128;
-    size_t xByteSize = numM * numN * sizeof(DTYPE_X);
-    size_t gammaByteSize = numN * sizeof(DTYPE_GAMMA);
-    size_t yByteSize = numM * numN * sizeof(DTYPE_Y);
-    size_t mxscaleByteSize = numM * 4 * sizeof(uint8_t);
-    size_t rstdByteSize = numM * sizeof(float);
-
-    size_t tilingDataSize = sizeof(RmsNormDynamicMxQuantFullLoadTilingData);
-    uint32_t blockDim = 2;
-
-    uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
-    uint8_t* gamma = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
-    uint8_t* beta = (uint8_t*)AscendC::GmAlloc(gammaByteSize);
-    uint8_t* y = (uint8_t*)AscendC::GmAlloc(yByteSize);
-    uint8_t* mxscale = (uint8_t*)AscendC::GmAlloc(mxscaleByteSize);
-    uint8_t* rstd = (uint8_t*)AscendC::GmAlloc(rstdByteSize);
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 2);
-    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
-
-    RmsNormDynamicMxQuantFullLoadTilingData* tilingData =
-        reinterpret_cast<RmsNormDynamicMxQuantFullLoadTilingData*>(tiling);
-
-    tilingData->usedCoreNum = 2;
-    tilingData->mTailCores = 0;
-    tilingData->numM = numM;
-    tilingData->numN = numN;
-    tilingData->numNUbAligned = 128;
-    tilingData->binAddFoldPoint = 128;
-    tilingData->mPerCore = 2;
-    tilingData->mUbFactor = 2;
-    tilingData->mxBlockSize = 32;
-    tilingData->nMxblockAligned = 128;
-    tilingData->nMxblockNumAlignedTwo = 4;
-    tilingData->nMxblockNum = 4;
-    tilingData->needPadN = 0;
-    tilingData->needPadScale = 0;
     tilingData->scaleAlg = 0;
     tilingData->roundMode = 4;
     tilingData->hasInputBeta = 1;
@@ -339,9 +293,16 @@ TEST_F(rms_norm_dynamic_mx_quant_test, test_case_multicore)
     tilingData->avgFactor = 1.0f / numN;
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_SET_TILING_KEY(1000);
-    ICPU_RUN_KF(rms_norm_dynamic_mx_quant, blockDim, x, gamma, beta, y, mxscale, rstd, workspace,
-                (uint8_t*)(tilingData));
+    ICPU_SET_TILING_KEY(16);
+
+    auto rms_norm_dynamic_mx_quant_wrapper = [](GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mxscale,
+                                                GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
+        ::rms_norm_dynamic_mx_quant<COMPUTE_MODE_FULL_LOAD, OPTIMIZE_MODE_OPTIMIZE>(
+            x, gamma, beta, y, mxscale, rstd, workspace, tiling);
+    };
+    ICPU_RUN_KF(
+        rms_norm_dynamic_mx_quant_wrapper, blockDim, x, gamma, beta, y, mxscale, rstd, workspace,
+        (uint8_t*)(tilingData));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -353,7 +314,7 @@ TEST_F(rms_norm_dynamic_mx_quant_test, test_case_multicore)
     AscendC::GmFree(tiling);
 }
 
-// numM=1, numN=64, GENERAL mode (key=1000), scaleAlg=cuBLAS(1), roundMode=ROUND(0)
+// numM=1, numN=64, FULL_LOAD + NORMAL mode (key=0), scaleAlg=cuBLAS(1), roundMode=ROUND(0)
 TEST_F(rms_norm_dynamic_mx_quant_test, test_case_cublas_scale)
 {
     int64_t numM = 1;
@@ -383,17 +344,14 @@ TEST_F(rms_norm_dynamic_mx_quant_test, test_case_cublas_scale)
     tilingData->mTailCores = 0;
     tilingData->numM = numM;
     tilingData->numN = numN;
-    tilingData->numNUbAligned = 64;
     tilingData->binAddFoldPoint = 64;
     tilingData->mPerCore = 1;
     tilingData->mUbFactor = 1;
     tilingData->mxBlockSize = 32;
     tilingData->nMxblockAligned = 64;
     tilingData->nMxblockNumAlignedTwo = 2;
-    tilingData->nMxblockNum = 2;
     tilingData->needPadN = 0;
-    tilingData->needPadScale = 0;
-    tilingData->scaleAlg = 1;
+    tilingData->scaleAlg = 0;
     tilingData->roundMode = 0;
     tilingData->hasInputBeta = 0;
     tilingData->hasOutputRstd = 0;
@@ -401,9 +359,16 @@ TEST_F(rms_norm_dynamic_mx_quant_test, test_case_cublas_scale)
     tilingData->avgFactor = 1.0f / numN;
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_SET_TILING_KEY(1000);
-    ICPU_RUN_KF(rms_norm_dynamic_mx_quant, blockDim, x, gamma, beta, y, mxscale, rstd, workspace,
-                (uint8_t*)(tilingData));
+    ICPU_SET_TILING_KEY(0);
+
+    auto rms_norm_dynamic_mx_quant_wrapper = [](GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mxscale,
+                                                GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
+        ::rms_norm_dynamic_mx_quant<COMPUTE_MODE_FULL_LOAD, OPTIMIZE_MODE_NORMAL>(
+            x, gamma, beta, y, mxscale, rstd, workspace, tiling);
+    };
+    ICPU_RUN_KF(
+        rms_norm_dynamic_mx_quant_wrapper, blockDim, x, gamma, beta, y, mxscale, rstd, workspace,
+        (uint8_t*)(tilingData));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -415,15 +380,21 @@ TEST_F(rms_norm_dynamic_mx_quant_test, test_case_cublas_scale)
     AscendC::GmFree(tiling);
 }
 
-// numM=5, numN=128, GENERAL mode (key=1000), multi-core with tail cores (3 cores, mTailCores=0, odd distribution)
+// numM=5, numN=128, FULL_LOAD + NORMAL mode (key=0), multi-core with tail cores
+// 5 rows, 3 cores: mPerCore=1, mTailCores=2
+//   core 0: curM = mPerCore+1 = 2, rowOffset = 0*1 + 0 = 0
+//   core 1: curM = mPerCore+1 = 2, rowOffset = 1*1 + 1 = 2
+//   core 2: curM = mPerCore = 1, rowOffset = 2*1 + 2 = 4
 TEST_F(rms_norm_dynamic_mx_quant_test, test_case_multicore_with_tail)
 {
     int64_t numM = 5;
     int64_t numN = 128;
+    int64_t nMxblockAligned = 128;     // CeilAlign(128, 64) = 128
+    int64_t nMxblockNumAlignedTwo = 4; // 128 / 32 = 4
     size_t xByteSize = numM * numN * sizeof(DTYPE_X);
     size_t gammaByteSize = numN * sizeof(DTYPE_GAMMA);
     size_t yByteSize = numM * numN * sizeof(DTYPE_Y);
-    size_t mxscaleByteSize = numM * 4 * sizeof(uint8_t);
+    size_t mxscaleByteSize = numM * nMxblockNumAlignedTwo * sizeof(uint8_t);
     size_t rstdByteSize = numM * sizeof(float);
 
     size_t tilingDataSize = sizeof(RmsNormDynamicMxQuantFullLoadTilingData);
@@ -441,32 +412,35 @@ TEST_F(rms_norm_dynamic_mx_quant_test, test_case_multicore_with_tail)
     RmsNormDynamicMxQuantFullLoadTilingData* tilingData =
         reinterpret_cast<RmsNormDynamicMxQuantFullLoadTilingData*>(tiling);
 
-    // 5 rows, 3 cores: mPerCore=1, mTailCores=2 (cores 0,1 get 2 rows, core 2 gets 1 row)
     tilingData->usedCoreNum = 3;
     tilingData->mTailCores = 2;
     tilingData->numM = numM;
     tilingData->numN = numN;
-    tilingData->numNUbAligned = 128;
     tilingData->binAddFoldPoint = 128;
     tilingData->mPerCore = 1;
     tilingData->mUbFactor = 2;
     tilingData->mxBlockSize = 32;
-    tilingData->nMxblockAligned = 128;
-    tilingData->nMxblockNumAlignedTwo = 4;
-    tilingData->nMxblockNum = 4;
+    tilingData->nMxblockAligned = nMxblockAligned;
+    tilingData->nMxblockNumAlignedTwo = nMxblockNumAlignedTwo;
     tilingData->needPadN = 0;
-    tilingData->needPadScale = 0;
     tilingData->scaleAlg = 0;
     tilingData->roundMode = 4;
-    tilingData->hasInputBeta = 0;
+    tilingData->hasInputBeta = 1;
     tilingData->hasOutputRstd = 1;
     tilingData->epsilon = 1e-6f;
     tilingData->avgFactor = 1.0f / numN;
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_SET_TILING_KEY(1000);
-    ICPU_RUN_KF(rms_norm_dynamic_mx_quant, blockDim, x, gamma, beta, y, mxscale, rstd, workspace,
-                (uint8_t*)(tilingData));
+    ICPU_SET_TILING_KEY(0);
+
+    auto rms_norm_dynamic_mx_quant_wrapper = [](GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mxscale,
+                                                GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
+        ::rms_norm_dynamic_mx_quant<COMPUTE_MODE_FULL_LOAD, OPTIMIZE_MODE_NORMAL>(
+            x, gamma, beta, y, mxscale, rstd, workspace, tiling);
+    };
+    ICPU_RUN_KF(
+        rms_norm_dynamic_mx_quant_wrapper, blockDim, x, gamma, beta, y, mxscale, rstd, workspace,
+        (uint8_t*)(tilingData));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -478,7 +452,7 @@ TEST_F(rms_norm_dynamic_mx_quant_test, test_case_multicore_with_tail)
     AscendC::GmFree(tiling);
 }
 
-// numM=1, numN=64, GENERAL mode (key=1000), roundMode=FLOOR(1)
+// numM=1, numN=64, FULL_LOAD + NORMAL mode (key=0), roundMode=FLOOR(1)
 TEST_F(rms_norm_dynamic_mx_quant_test, test_case_floor_round_mode)
 {
     int64_t numM = 1;
@@ -508,16 +482,13 @@ TEST_F(rms_norm_dynamic_mx_quant_test, test_case_floor_round_mode)
     tilingData->mTailCores = 0;
     tilingData->numM = numM;
     tilingData->numN = numN;
-    tilingData->numNUbAligned = 64;
     tilingData->binAddFoldPoint = 64;
     tilingData->mPerCore = 1;
     tilingData->mUbFactor = 1;
     tilingData->mxBlockSize = 32;
     tilingData->nMxblockAligned = 64;
     tilingData->nMxblockNumAlignedTwo = 2;
-    tilingData->nMxblockNum = 2;
     tilingData->needPadN = 0;
-    tilingData->needPadScale = 0;
     tilingData->scaleAlg = 0;
     tilingData->roundMode = 1;
     tilingData->hasInputBeta = 0;
@@ -526,9 +497,16 @@ TEST_F(rms_norm_dynamic_mx_quant_test, test_case_floor_round_mode)
     tilingData->avgFactor = 1.0f / numN;
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_SET_TILING_KEY(1000);
-    ICPU_RUN_KF(rms_norm_dynamic_mx_quant, blockDim, x, gamma, beta, y, mxscale, rstd, workspace,
-                (uint8_t*)(tilingData));
+    ICPU_SET_TILING_KEY(0);
+
+    auto rms_norm_dynamic_mx_quant_wrapper = [](GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mxscale,
+                                                GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
+        ::rms_norm_dynamic_mx_quant<COMPUTE_MODE_FULL_LOAD, OPTIMIZE_MODE_NORMAL>(
+            x, gamma, beta, y, mxscale, rstd, workspace, tiling);
+    };
+    ICPU_RUN_KF(
+        rms_norm_dynamic_mx_quant_wrapper, blockDim, x, gamma, beta, y, mxscale, rstd, workspace,
+        (uint8_t*)(tilingData));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -540,14 +518,15 @@ TEST_F(rms_norm_dynamic_mx_quant_test, test_case_floor_round_mode)
     AscendC::GmFree(tiling);
 }
 
-// numM=2, numN=96, GENERAL mode, needPadN=0, needPadScale=1 (nMxblockNum=3, aligned to 4)
+// numM=2, numN=96, FULL_LOAD + NORMAL mode, N not aligned to 64, needs padding
+// nMxblockAligned = CeilAlign(96, 64) = 128
+// nMxblockNumAlignedTwo = 128 / 32 = 4
 TEST_F(rms_norm_dynamic_mx_quant_test, test_case_pad_n_and_scale)
 {
     int64_t numM = 2;
     int64_t numN = 96;
-    int64_t nMxblockAligned = 96;
-    int64_t nMxblockNum = 3;
-    int64_t nMxblockNumAlignedTwo = 4;
+    int64_t nMxblockAligned = 128;     // CeilAlign(96, 64) = 128
+    int64_t nMxblockNumAlignedTwo = 4; // 128 / 32 = 4
     size_t xByteSize = numM * numN * sizeof(DTYPE_X);
     size_t gammaByteSize = numN * sizeof(DTYPE_GAMMA);
     size_t yByteSize = numM * nMxblockAligned * sizeof(DTYPE_Y);
@@ -573,27 +552,31 @@ TEST_F(rms_norm_dynamic_mx_quant_test, test_case_pad_n_and_scale)
     tilingData->mTailCores = 0;
     tilingData->numM = numM;
     tilingData->numN = numN;
-    tilingData->numNUbAligned = 96;
-    tilingData->binAddFoldPoint = 128;
+    tilingData->binAddFoldPoint = 128; // nearest power of 2 for numNUbAligned
     tilingData->mPerCore = 2;
     tilingData->mUbFactor = 2;
     tilingData->mxBlockSize = 32;
-    tilingData->nMxblockAligned = nMxblockAligned;
-    tilingData->nMxblockNumAlignedTwo = nMxblockNumAlignedTwo;
-    tilingData->nMxblockNum = nMxblockNum;
-    tilingData->needPadN = 0;
-    tilingData->needPadScale = 1;
+    tilingData->nMxblockAligned = nMxblockAligned;             // 128
+    tilingData->nMxblockNumAlignedTwo = nMxblockNumAlignedTwo; // 4
+    tilingData->needPadN = 1;                                  // nMxblockAligned(128) != numN(96)
     tilingData->scaleAlg = 0;
-    tilingData->roundMode = 4;
-    tilingData->hasInputBeta = 1;
+    tilingData->roundMode = 1;
+    tilingData->hasInputBeta = 0;
     tilingData->hasOutputRstd = 0;
     tilingData->epsilon = 1e-6f;
     tilingData->avgFactor = 1.0f / numN;
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_SET_TILING_KEY(1000);
-    ICPU_RUN_KF(rms_norm_dynamic_mx_quant, blockDim, x, gamma, beta, y, mxscale, rstd, workspace,
-                (uint8_t*)(tilingData));
+    ICPU_SET_TILING_KEY(0);
+
+    auto rms_norm_dynamic_mx_quant_wrapper = [](GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mxscale,
+                                                GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
+        ::rms_norm_dynamic_mx_quant<COMPUTE_MODE_FULL_LOAD, OPTIMIZE_MODE_NORMAL>(
+            x, gamma, beta, y, mxscale, rstd, workspace, tiling);
+    };
+    ICPU_RUN_KF(
+        rms_norm_dynamic_mx_quant_wrapper, blockDim, x, gamma, beta, y, mxscale, rstd, workspace,
+        (uint8_t*)(tilingData));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -605,7 +588,7 @@ TEST_F(rms_norm_dynamic_mx_quant_test, test_case_pad_n_and_scale)
     AscendC::GmFree(tiling);
 }
 
-// empty_tensor, tilingKey(3000), numM=176, numN=0, putput_rstd=true
+// empty_tensor, REDUCE_EMPTY mode (key=2), numM=176, numN=0, output_rstd=true
 TEST_F(rms_norm_dynamic_mx_quant_test, test_case_m_not0_n_0_outputRstd_true)
 {
     int64_t numM = 176;
@@ -646,9 +629,16 @@ TEST_F(rms_norm_dynamic_mx_quant_test, test_case_m_not0_n_0_outputRstd_true)
     tilingData->numM = 176;
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_SET_TILING_KEY(3000);
-    ICPU_RUN_KF(rms_norm_dynamic_mx_quant, blockDim, x, gamma, beta, y, mxscale, rstd, workspace,
-                (uint8_t*)(tilingData));
+    ICPU_SET_TILING_KEY(2);
+
+    auto rms_norm_dynamic_mx_quant_wrapper = [](GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mxscale,
+                                                GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
+        ::rms_norm_dynamic_mx_quant<COMPUTE_MODE_REDUCE_EMPTY, OPTIMIZE_MODE_NORMAL>(
+            x, gamma, beta, y, mxscale, rstd, workspace, tiling);
+    };
+    ICPU_RUN_KF(
+        rms_norm_dynamic_mx_quant_wrapper, blockDim, x, gamma, beta, y, mxscale, rstd, workspace,
+        (uint8_t*)(tilingData));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -660,7 +650,7 @@ TEST_F(rms_norm_dynamic_mx_quant_test, test_case_m_not0_n_0_outputRstd_true)
     AscendC::GmFree(tiling);
 }
 
-// empty_tensor, tilingKey(3000), numM=0, numN=100, putput_rstd=true
+// empty_tensor, REDUCE_EMPTY mode (key=2), numM=0, numN=100, output_rstd=true
 TEST_F(rms_norm_dynamic_mx_quant_test, test_case_m_0_n_not_0_outputRstd_true)
 {
     int64_t numM = 0;
@@ -701,9 +691,16 @@ TEST_F(rms_norm_dynamic_mx_quant_test, test_case_m_0_n_not_0_outputRstd_true)
     tilingData->numM = 0;
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_SET_TILING_KEY(3000);
-    ICPU_RUN_KF(rms_norm_dynamic_mx_quant, blockDim, x, gamma, beta, y, mxscale, rstd, workspace,
-                (uint8_t*)(tilingData));
+    ICPU_SET_TILING_KEY(2);
+
+    auto rms_norm_dynamic_mx_quant_wrapper = [](GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mxscale,
+                                                GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
+        ::rms_norm_dynamic_mx_quant<COMPUTE_MODE_REDUCE_EMPTY, OPTIMIZE_MODE_NORMAL>(
+            x, gamma, beta, y, mxscale, rstd, workspace, tiling);
+    };
+    ICPU_RUN_KF(
+        rms_norm_dynamic_mx_quant_wrapper, blockDim, x, gamma, beta, y, mxscale, rstd, workspace,
+        (uint8_t*)(tilingData));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);
@@ -715,7 +712,7 @@ TEST_F(rms_norm_dynamic_mx_quant_test, test_case_m_0_n_not_0_outputRstd_true)
     AscendC::GmFree(tiling);
 }
 
-// empty_tensor, tilingKey(3000), numM=0, numN=0, putput_rstd=true
+// empty_tensor, REDUCE_EMPTY mode (key=2), numM=0, numN=0, output_rstd=true
 TEST_F(rms_norm_dynamic_mx_quant_test, test_case_m_0_n_0_outputRstd_true)
 {
     int64_t numM = 0;
@@ -756,9 +753,16 @@ TEST_F(rms_norm_dynamic_mx_quant_test, test_case_m_0_n_0_outputRstd_true)
     tilingData->numM = 0;
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_SET_TILING_KEY(3000);
-    ICPU_RUN_KF(rms_norm_dynamic_mx_quant, blockDim, x, gamma, beta, y, mxscale, rstd, workspace,
-                (uint8_t*)(tilingData));
+    ICPU_SET_TILING_KEY(2);
+
+    auto rms_norm_dynamic_mx_quant_wrapper = [](GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mxscale,
+                                                GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
+        ::rms_norm_dynamic_mx_quant<COMPUTE_MODE_REDUCE_EMPTY, OPTIMIZE_MODE_NORMAL>(
+            x, gamma, beta, y, mxscale, rstd, workspace, tiling);
+    };
+    ICPU_RUN_KF(
+        rms_norm_dynamic_mx_quant_wrapper, blockDim, x, gamma, beta, y, mxscale, rstd, workspace,
+        (uint8_t*)(tilingData));
 
     AscendC::GmFree(x);
     AscendC::GmFree(gamma);

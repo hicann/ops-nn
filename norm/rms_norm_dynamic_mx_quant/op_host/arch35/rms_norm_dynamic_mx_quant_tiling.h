@@ -9,12 +9,12 @@
  */
 
 /*!
- * \file rms_norm_dynamic_mx_quant_tiling_arch35.h
- * \brief RmsNormDynamicMxQuant tiling data structure for arch35
+ * \file rms_norm_dynamic_mx_quant_tiling.h
+ * \brief RmsNormDynamicMxQuant tiling data structure
  */
 
-#ifndef RMS_NORM_DYNAMIC_MX_QUANT_TILING_ARCH35_H
-#define RMS_NORM_DYNAMIC_MX_QUANT_TILING_ARCH35_H
+#ifndef RMS_NORM_DYNAMIC_MX_QUANT_TILING_H
+#define RMS_NORM_DYNAMIC_MX_QUANT_TILING_H
 
 #include <cstdint>
 #include <vector>
@@ -30,12 +30,57 @@
 #include "tiling/platform/platform_ascendc.h"
 #include "op_common/op_host/util/platform_util.h"
 
+#include "../../op_kernel/arch35/rms_norm_dynamic_mx_quant_tiling_data.h"
+#include "../../op_kernel/arch35/rms_norm_dynamic_mx_quant_tiling_key.h"
+
 namespace optiling {
 
 using Ops::NN::Optiling::TilingBaseClass;
 using Ops::NN::Optiling::TilingRegistry;
 
-enum class RoundModeList {
+namespace rms_norm_dynamic_mx_quant {
+
+enum class ComputeMode : uint64_t
+{
+    FULL_LOAD = 0,
+    RECOMPUTE = 1,
+    REDUCE_EMPTY = 2,
+};
+
+enum class OptimizeMode : uint64_t
+{
+    NORMAL = 0,
+    OPTIMIZE = 1,
+};
+
+class RmsNormDynamicMxQuantTilingKey {
+public:
+    RmsNormDynamicMxQuantTilingKey& SetComputeMode(ComputeMode mode)
+    {
+        computeMode_ = mode;
+        return *this;
+    }
+
+    RmsNormDynamicMxQuantTilingKey& SetOptimizeMode(OptimizeMode mode)
+    {
+        optimizeMode_ = mode;
+        return *this;
+    }
+
+    uint64_t GetTilingKey() const
+    {
+        return GET_TPL_TILING_KEY(static_cast<uint64_t>(computeMode_), static_cast<uint64_t>(optimizeMode_));
+    }
+
+private:
+    ComputeMode computeMode_ = ComputeMode::FULL_LOAD;
+    OptimizeMode optimizeMode_ = OptimizeMode::NORMAL;
+};
+
+} // namespace rms_norm_dynamic_mx_quant
+
+enum class RoundModeList
+{
     MODE_ROUND = 0,
     MODE_FLOOR = 1,
     MODE_CEIL = 2,
@@ -73,12 +118,8 @@ constexpr int64_t DST_TYPE_DEFAULT = 40; // DT_FLOAT4_E2M1
 
 // ============== Priority ==============
 constexpr int32_t TEMPLATE_REDUCE_EMPTY_PRIORITY = 50;
-constexpr int32_t TEMPLATE_FULL_LOAD_GENERAL_PRIORITY = 100;
-
-// ============== TilingKey ==============
-constexpr int64_t TILINGKEY_REDUCE_EMPTY = 3000;
-constexpr int64_t TILINGKEY_FULL_LOAD_GENERAL = 1000;
-constexpr int64_t TILING_KEY_FULL_LOAD_OPTIMIZE = 10000;
+constexpr int32_t TEMPLATE_FULL_LOAD_PRIORITY = 100;
+constexpr int32_t TEMPLATE_RECOMPUTE_PRIORITY = 200;
 
 // ============== Dtype Support ==============
 const std::set<ge::DataType> X_SUPPORT_DTYPE_SET = {ge::DT_FLOAT16, ge::DT_BF16};
@@ -89,45 +130,6 @@ const std::set<ge::DataType> Y_SUPPORT_DTYPE_FP4_SET = {ge::DT_FLOAT4_E2M1, ge::
 const std::set<ge::DataType> Y_SUPPORT_DTYPE_FP8_SET = {ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2};
 const std::set<ge::DataType> MXSCALE_SUPPORT_DTYPE_SET = {ge::DT_FLOAT8_E8M0};
 const std::set<ge::DataType> RSTD_SUPPORT_DTYPE_SET = {ge::DT_FLOAT};
-
-// ============== TilingData Definitions ==============
-BEGIN_TILING_DATA_DEF(RmsNormDynamicMxQuantFullLoadTilingData)
-TILING_DATA_FIELD_DEF(int64_t, usedCoreNum);
-TILING_DATA_FIELD_DEF(int64_t, mTailCores);
-TILING_DATA_FIELD_DEF(int64_t, numM);
-TILING_DATA_FIELD_DEF(int64_t, numN);
-TILING_DATA_FIELD_DEF(int64_t, binAddFoldPoint);
-TILING_DATA_FIELD_DEF(int64_t, mPerCore);
-TILING_DATA_FIELD_DEF(int64_t, mUbFactor);
-TILING_DATA_FIELD_DEF(int64_t, mxBlockSize);
-TILING_DATA_FIELD_DEF(int64_t, nMxblockAligned);
-TILING_DATA_FIELD_DEF(int64_t, nMxblockNumAlignedTwo);
-TILING_DATA_FIELD_DEF(int64_t, needPadN);
-TILING_DATA_FIELD_DEF(int64_t, scaleAlg);
-TILING_DATA_FIELD_DEF(int64_t, roundMode);
-TILING_DATA_FIELD_DEF(int64_t, hasInputBeta);
-TILING_DATA_FIELD_DEF(int64_t, hasOutputRstd);
-TILING_DATA_FIELD_DEF(float, epsilon);
-TILING_DATA_FIELD_DEF(float, avgFactor);
-END_TILING_DATA_DEF;
-
-// ============== ReduceEmpty TilingData ==============
-BEGIN_TILING_DATA_DEF(RmsNormDynamicMxQuantReduceEmptyTilingData)
-TILING_DATA_FIELD_DEF(uint64_t, perCoreElements);
-TILING_DATA_FIELD_DEF(uint64_t, lastCoreElements);
-TILING_DATA_FIELD_DEF(uint64_t, perCoreLoops);
-TILING_DATA_FIELD_DEF(uint64_t, perCorePerLoopElements);
-TILING_DATA_FIELD_DEF(uint64_t, perCoreLastLoopElements);
-TILING_DATA_FIELD_DEF(uint64_t, lastCoreLoops);
-TILING_DATA_FIELD_DEF(uint64_t, lastCorePerLoopElements);
-TILING_DATA_FIELD_DEF(uint64_t, lastCoreLastLoopElements);
-TILING_DATA_FIELD_DEF(uint64_t, hasOutputRstd);
-TILING_DATA_FIELD_DEF(uint64_t, numM);
-END_TILING_DATA_DEF;
-
-// ============== Register TilingData ==============
-REGISTER_TILING_DATA_CLASS(RmsNormDynamicMxQuant, RmsNormDynamicMxQuantFullLoadTilingData);
-REGISTER_TILING_DATA_CLASS(RmsNormDynamicMxQuant_3000, RmsNormDynamicMxQuantReduceEmptyTilingData);
 
 // ============== CompileInfo ==============
 struct RmsNormDynamicMxQuantCompileInfo {
@@ -234,11 +236,6 @@ public:
     {}
     ~RmsNormDynamicMxQuantFullLoadTiling() override = default;
 
-    void Reset(gert::TilingContext* context) override
-    {
-        RmsNormDynamicMxQuantTilingBase::Reset(context);
-    }
-
 protected:
     bool IsCapable() override;
     ge::graphStatus DoOpTiling() override;
@@ -257,11 +254,6 @@ public:
     {}
     ~RmsNormDynamicMxQuantReduceEmptyTiling() override = default;
 
-    void Reset(gert::TilingContext* context) override
-    {
-        RmsNormDynamicMxQuantTilingBase::Reset(context);
-    }
-
 protected:
     bool IsCapable() override;
     ge::graphStatus DoOpTiling() override;
@@ -274,10 +266,61 @@ private:
     uint64_t usedCoreNum_{0};
 };
 
+// ============== Recompute Template ==============
+class RmsNormDynamicMxQuantRecomputeTiling : virtual public RmsNormDynamicMxQuantTilingBase {
+public:
+    explicit RmsNormDynamicMxQuantRecomputeTiling(gert::TilingContext* context)
+        : TilingBaseClass(context), RmsNormDynamicMxQuantTilingBase(context)
+    {}
+    ~RmsNormDynamicMxQuantRecomputeTiling() override = default;
+
+protected:
+    bool IsCapable() override;
+    ge::graphStatus DoOpTiling() override;
+    uint64_t GetTilingKey() const override;
+    ge::graphStatus PostTiling() override;
+
+private:
+    struct MxQuantParams {
+        int64_t mxBlockSize;
+        int64_t nMxblockNumAlignedTwo;
+        int64_t needPadN;
+    };
+
+    struct CoreSplitResult {
+        int64_t mPerCore;
+        int64_t mTailCores;
+    };
+
+    struct NSplitResult {
+        int64_t nUbLoops;
+        int64_t baseNTail;
+        int64_t baseNTailAligned;
+        int64_t binAddQuotient;
+        int64_t powerSplit;
+        int64_t mainFoldCount;
+        int64_t foldTail;
+        int64_t resultCacheId;
+    };
+
+    int64_t GetUbSize(int64_t baseN);
+    int64_t GetPowerSplit(int64_t baseN, int64_t numN) const;
+    int64_t GetCacheId(int64_t idx) const;
+    ge::graphStatus ExpandBaseN();
+    void CalcMxQuantParams(MxQuantParams& params);
+    void CalcCoreSplit(CoreSplitResult& result);
+    void CalcNSplit(NSplitResult& result);
+    void FillTilingData(const MxQuantParams& mxParams, const CoreSplitResult& coreSplit, const NSplitResult& nSplit);
+
+    int64_t baseN_{64};
+    int64_t baseM_{128};
+    RmsNormDynamicMxQuantRecomputeTilingData tilingData_;
+};
+
 // ============== Entry Functions ==============
 extern ge::graphStatus TilingForRmsNormDynamicMxQuant(gert::TilingContext* context);
 extern ge::graphStatus TilingPrepareForRmsNormDynamicMxQuant(gert::TilingParseContext* context);
 
 } // namespace optiling
 
-#endif // RMS_NORM_DYNAMIC_MX_QUANT_TILING_ARCH35_H
+#endif // RMS_NORM_DYNAMIC_MX_QUANT_TILING_H
