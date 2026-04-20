@@ -150,7 +150,7 @@ aclnnStatus aclnnMaxPool2dWithIndices(
     <td>out</td>
     <td>输出</td>
     <td>输出的tensor，池化后的结果。</td>
-    <td>shape由上述公式推导出。</td>
+    <td>shape由上述公式推导出。数据格式和数据类型与self保持一致</td>
     <td>BFLOAT16、FLOAT16、FLOAT32</td>
     <td>NCHW，NHWC、ND</td>
     <td>3-4</td>
@@ -212,8 +212,8 @@ aclnnStatus aclnnMaxPool2dWithIndices(
       <td>传入的self、out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="14">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="14">161002</td>
+      <td rowspan="16">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="16">161002</td>
       <td>self的数据类型不在支持的范围内。</td>
     </tr>
     <tr>
@@ -254,6 +254,12 @@ aclnnStatus aclnnMaxPool2dWithIndices(
     </tr>
     <tr>
       <td>out或indices的shape和推导的输出shape不一致。</td>
+    </tr>
+    <tr>
+      <td>out的数据类型和self的数据类型不一致。</td>
+    </tr>
+    <tr>
+      <td>out的数据格式和self的数据格式不一致。</td>
     </tr>
   </tbody>
   </table>
