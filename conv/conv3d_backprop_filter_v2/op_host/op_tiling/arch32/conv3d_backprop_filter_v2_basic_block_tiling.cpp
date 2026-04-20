@@ -647,8 +647,8 @@ void Conv3DDWV2BasicBlockTiling::MultiCoreSplitMN()
 
 uint64_t Conv3DDWV2BasicBlockTiling::CalculateL1SizeGap()
 {
-    uint32_t al1LoadSize = blockTiling_.blockBaseK * blockTiling_.blockBaseM * dtypeByte_;
-    uint32_t bl1LoadSize = CalBL1Bound() * dtypeByte_;
+    uint64_t al1LoadSize = static_cast<uint64_t>(blockTiling_.blockBaseK) * blockTiling_.blockBaseM * dtypeByte_;
+    uint64_t bl1LoadSize = CalBL1Bound() * dtypeByte_;
     uint64_t deltaL1LoadSize = (al1LoadSize + bl1LoadSize > tilingData_.params.totalL1Size) ?
                                 al1LoadSize + bl1LoadSize - tilingData_.params.totalL1Size : 0;
     return deltaL1LoadSize;
@@ -764,9 +764,9 @@ void Conv3DDWV2BasicBlockTiling::ShrinkBaseBlock()
     ShrinkBlockBaseMN();
 
     // M方向回调
-    uint32_t al1LoadSize = blockTiling_.stepKa * blockTiling_.blockBaseK * blockTiling_.stepM *
+    uint64_t al1LoadSize = blockTiling_.stepKa * blockTiling_.blockBaseK * blockTiling_.stepM *
                            blockTiling_.blockBaseM * dtypeByte_ * blockTiling_.dbL1A;
-    uint32_t bl1LoadSize = CalBL1Bound() * dtypeByte_ * blockTiling_.dbL1B;
+    uint64_t bl1LoadSize = CalBL1Bound() * dtypeByte_ * blockTiling_.dbL1B;
     uint64_t deltaL1LoadSize = tilingData_.params.totalL1Size - al1LoadSize - bl1LoadSize;
     uint64_t deltaAl1PerC0M = blockTiling_.blockBaseK * BLOCK_CUBE * dtypeByte_;
     uint64_t c0CompensateCountM = deltaL1LoadSize / std::max(deltaAl1PerC0M, uint64_t(1));
@@ -807,9 +807,9 @@ void Conv3DDWV2BasicBlockTiling::ShrinkBaseBlock()
 
 uint64_t Conv3DDWV2BasicBlockTiling::IsCurBlockL1Invalid()
 {
-    uint32_t al1LoadSize = blockTiling_.stepKa * blockTiling_.blockBaseK * blockTiling_.stepM *
+    uint64_t al1LoadSize = blockTiling_.stepKa * blockTiling_.blockBaseK * blockTiling_.stepM *
                            blockTiling_.blockBaseM * dtypeByte_ * blockTiling_.dbL1A;
-    uint32_t bl1LoadSize = CalBL1Bound() * dtypeByte_ * blockTiling_.dbL1B;
+    uint64_t bl1LoadSize = CalBL1Bound() * dtypeByte_ * blockTiling_.dbL1B;
     bool invalidL1LoadSize = al1LoadSize + bl1LoadSize > tilingData_.params.totalL1Size;
     return invalidL1LoadSize;
 }
@@ -880,7 +880,7 @@ ge::graphStatus Conv3DDWV2BasicBlockTiling::DoLibApiTiling()
     dwt.al1Pbuffer = blockTiling_.dbL1A;
     dwt.bl1Pbuffer = blockTiling_.dbL1B;
     dwt.cl0Pbuffer = blockTiling_.dbL0C;
-    tilingData_.dwTiling.bl1Bound = CalBL1Bound();
+    tilingData_.dwTiling.bl1Bound = static_cast<uint32_t>(CalBL1Bound()); // bl1Bound不超过L1Size，不会超过uint32_t最大值
     dwt.singleCoreCout = blockTiling_.singleCoreM;
 
     uint64_t l1Cin1 = std::max(blockTiling_.singleCoreN /
