@@ -27,9 +27,9 @@ aclnnStatus aclnnWeightQuantBatchMatmulExperiment(void *workspace, uint64_t work
 
 ## 运行样例算子
 
-### 1. 编译算子工程
-
-运行此样例前，请参考[编译算子工程](../README.md#operatorcompile)完成前期准备。
+### 1. 编译运行
+ 	 
+运行此样例前，请参考[编译运行](../README.md#编译运行)完成前期准备。
 
 ### 2. aclnn调用样例运行
 
@@ -43,7 +43,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulExperiment(void *workspace, uint64_t work
 
   - 样例执行
 
-    样例执行过程中会自动生成测试数据，然后编译与运行aclnn样例，检验运行结果并采集性能数据,。具体过程可参见run.sh脚本。
+    样例执行过程中会自动生成测试数据，然后编译与运行aclnn样例，检验运行结果并采集性能数据，具体过程可参见run.sh脚本。
 
     ```bash
     bash run.sh
