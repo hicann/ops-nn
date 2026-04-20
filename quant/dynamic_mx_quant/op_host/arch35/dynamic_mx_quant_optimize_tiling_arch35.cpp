@@ -93,7 +93,8 @@ void DynamicMxQuantOptimzieTiling::SplitCore()
         tilingParam_.totalGroupNum =
             tilingParam_.preAxisSize * tilingParam_.mAlignGroupCount * tilingParam_.nAlignBlockCount;
         tilingParam_.groupPerCore = Ops::Base::CeilDiv(tilingParam_.totalGroupNum, tilingParam_.totalCoreNum);
-        tilingParam_.groupPerTail = tilingParam_.totalGroupNum % tilingParam_.groupPerCore;
+        tilingParam_.groupPerTail =
+            (tilingParam_.groupPerCore == 0) ? 0 : (tilingParam_.totalGroupNum % tilingParam_.groupPerCore);
         tilingParam_.usedCoreNum = Ops::Base::CeilDiv(tilingParam_.totalGroupNum, tilingParam_.groupPerCore);
         tilingParam_.totalBlockNum = tilingParam_.totalGroupNum * BLOCK_PER_GROUP;
 

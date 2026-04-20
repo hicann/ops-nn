@@ -41,7 +41,7 @@ struct DynamicMxQuantTilingParam {
     uint32_t vfLen{0};
     uint32_t workspaceSize{0};
     int64_t axis{0};
-    int64_t roundMode;
+    int64_t roundMode{0};
     int64_t dstType{0};
     int64_t blockSize{0};
     int64_t scaleAlg{0};
@@ -113,7 +113,7 @@ enum class RoundModeList
 class DynamicMxQuantOptimzieTiling {
 public:
     explicit DynamicMxQuantOptimzieTiling(gert::TilingContext* context, const DynamicMxQuantTilingParam& tilingParam)
-        : context_(context), tilingParam_(tilingParam)
+        : context_(context), tilingParam_(tilingParam), tilingData{}
     {}
     ~DynamicMxQuantOptimzieTiling()
     {}
@@ -130,14 +130,14 @@ private:
     void SplitCore();
 private:
     gert::TilingContext* context_ = nullptr;
-    DynamicMxQuant4OptimizeTilingData tilingData;
+    DynamicMxQuant4OptimizeTilingData tilingData{};
     DynamicMxQuantTilingParam tilingParam_;
 };
 
 class DynamicMxQuantTailAxisTiling {
 public:
     explicit DynamicMxQuantTailAxisTiling(gert::TilingContext* context_, const DynamicMxQuantTilingParam& tilingParam_)
-        : context(context_), tilingParam(tilingParam_)
+        : context(context_), tilingParam(tilingParam_), tilingData{}
     {}
     ~DynamicMxQuantTailAxisTiling()
     {}
@@ -155,7 +155,7 @@ private:
 
 private:
     gert::TilingContext* context = nullptr;
-    DynamicMxQuantTailAxisTilingData tilingData;
+    DynamicMxQuantTailAxisTilingData tilingData{};
     DynamicMxQuantTilingParam tilingParam;
 };
 
