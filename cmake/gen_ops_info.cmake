@@ -88,6 +88,12 @@ function(get_op_type_and_validate OP_DIR compute_unit op_name_var op_type_var is
   set(${is_valid_var} FALSE PARENT_SCOPE)
   set(binary_json ${OP_DIR}/op_host/config/${compute_unit}/${op_name}_binary.json)
 
+  if(NOT EXISTS ${OP_DIR}/op_kernel)
+    message(STATUS "[INFO] The op_kernel folder does not exist, [${op_name}] not need to compile.")
+    set(${cache_key} "" CACHE INTERNAL "")
+      return()
+  endif()
+
   if(EXISTS ${binary_json})
     get_op_type_from_binary_json("${binary_json}" op_type)
     message(STATUS "[INFO] On [${compute_unit}], [${op_name}] compile binary with self config.")
