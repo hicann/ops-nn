@@ -77,7 +77,7 @@ $$
 <tbody>
   <tr>
     <td>aclnn调用</td>
-    <td><a href="./examples/test_aclnn_add_example_aicpu.cpp">test_aclnn_add_example_aicpu</a></td>
+    <td><a href="./examples/test_geir_add_example_aicpu.cpp">test_aclnn_add_example_aicpu</a></td>
     <td rowspan="2">参见<a href="../../docs/zh/invocation/quick_op_invocation.md">算子调用</a>完成算子编译和验证。</td>
   </tr>
   <tr>

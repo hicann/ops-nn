@@ -16,12 +16,15 @@
 - 算子功能：三维平均池化的反向传播，计算三维平均池化正向传播的输入梯度。
 
 - 计算公式：
+
 $$
 D_{out} = \left\lfloor \frac{D_{in} + 2 \times \text{pads}[0] - \text{ksize}[0]}{\text{strides}[0]} + 1 \right\rfloor
 $$
+
 $$
 H_{out} = \left\lfloor \frac{H_{in} + 2 \times \text{pads}[1] - \text{ksize}[1]}{\text{strides}[1]} + 1 \right\rfloor
 $$
+
 $$
 W_{out} = \left\lfloor \frac{W_{in} + 2 \times \text{pads}[2] - \text{ksize}[2]}{\text{strides}[2]} + 1 \right\rfloor
 $$

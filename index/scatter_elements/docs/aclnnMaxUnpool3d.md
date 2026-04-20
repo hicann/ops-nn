@@ -29,7 +29,7 @@
     outRef[N][C][indices[N][C][i]] = self[N][C][i]
     $$
     
-    其中outRef、indices和self是最后两轴合为一轴，经过reshape得到的，i ∈ [0, D * H * W)。
+    其中outRef、indices和self是最后两轴合为一轴，经过reshape得到的，i∈[0,D*H*W)。
 
 ## 函数原型
 
