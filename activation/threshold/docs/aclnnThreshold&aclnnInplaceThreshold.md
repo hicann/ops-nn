@@ -369,6 +369,8 @@ aclnnStatus aclnnInplaceThreshold(
 - 确定性计算：
   - aclnnThreshold&aclnnInplaceThreshold默认确定性实现。
 
+- 当输入是INT32类型时，数值不在[-16777216, 16777216]范围内，会存在精度误差。
+  
 ## 调用示例
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
