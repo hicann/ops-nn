@@ -25,6 +25,14 @@
   W_{out}=\lfloor \frac{W_{in}+2*paddings[1]-kW}{strides[1]}+1 \rfloor
   $$
 
+  若ceilMode为true，且满足
+
+  $$
+  (H_{out} - 1) * stride[0] >= H_{in} + padding[0]
+  $$
+  
+  则H_{out}的shape需减1。W_{out}同理。
+
   $$
   out(N_i,C_i,h,w)=\frac{1}{kH*kW}\sum_{m=0}^{kH-1}\sum_{n=0}^{kW-1}input(N_i,C_i,strides[0]*h+m,strides[1]*w+n)
   $$
