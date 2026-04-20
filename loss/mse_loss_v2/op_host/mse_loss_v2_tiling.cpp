@@ -110,6 +110,7 @@ static ge::graphStatus GetTilingAttr(gert::TilingContext* context)
         context->SetScheduleMode(BATCH_MODE);
     } else if (optiling::reduction == optiling::REDUCTION_MEAN) {
         optiling::tilingKey += TILING_KEY_ATTR_MEAN;
+        context->SetScheduleMode(BATCH_MODE);
     } else {
         OP_LOGD(context, "The reduction attribute must be 'none', 'mean', or 'sum'.");
         return ge::GRAPH_FAILED;
