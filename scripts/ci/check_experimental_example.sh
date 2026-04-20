@@ -35,3 +35,7 @@ for op in "${ops[@]}"; do
     fi
     bash build.sh --run_example ${op} eager cust --vendor_name=ci_test  --experimental
 done
+
+echo "================================================"
+echo "All experimental examples executed successfully!"
+echo "================================================"

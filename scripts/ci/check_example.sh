@@ -133,3 +133,7 @@ do
         exit 1
     fi
 done
+
+echo "==================================="
+echo "All examples executed successfully!"
+echo "==================================="
