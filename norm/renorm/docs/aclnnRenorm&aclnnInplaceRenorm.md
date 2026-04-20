@@ -23,7 +23,7 @@
   output_i=\left\{
   \begin{aligned}
   input_i,\quad ||input_i||_p <= maxNorm \\
-  \frac {input_i} {||input_i||_p} \cdot maxNorm,\quad ||input_i||_p>maxNorm
+  \frac {input_i} {max(||input_i||_p, eps)} \cdot maxNorm,\quad ||input_i||_p>maxNorm
   \end{aligned}
   \right.
   $$
@@ -32,7 +32,12 @@
   $i$为dim确定的某维度张量切片：
 
   $$
-  ||input_i||_p = (\sum_{i=0}^{n}{input_i^p}^\frac{1}{p})
+  ||input_i||_p =\left\{
+  \begin{aligned}
+  \sqrt[p]{reduce\_sum(|input_i|^p, dim)},\quad (p > 0) \& (p \ != inf) \\
+  max(|input_i|),\quad p==inf
+  \end{aligned}
+  \right.
   $$
 
 - 举例：

@@ -91,7 +91,7 @@ aclnnStatus aclnnRmsNormGrad(
       <td>支持空Tensor。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>1-8</td>
+      <td>2-8</td>
       <td>√</td>
     </tr>
     <tr>
@@ -101,7 +101,7 @@ aclnnStatus aclnnRmsNormGrad(
       <td><ul><li>支持空Tensor。</li><li>shape与入参`dy`的shape保持一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>1-8</td>
+      <td>2-8</td>
       <td>√</td>
     </tr>
     <tr>
@@ -111,7 +111,7 @@ aclnnStatus aclnnRmsNormGrad(
       <td><ul><li>支持空Tensor。</li><li>shape需要满足rstd_shape = x_shape[0:n]，n < x_shape.dims()，n与`gamma`的n一致。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
-      <td>1-8</td>
+      <td>1-7</td>
       <td>√</td>
     </tr>
     <tr>
@@ -121,7 +121,7 @@ aclnnStatus aclnnRmsNormGrad(
       <td><ul><li>支持空Tensor。</li><li>shape需要满足gamma_shape = x_shape[n:], n < x_shape.dims()。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>1-8</td>
+      <td>1-7</td>
       <td>√</td>
     </tr>
     <tr>
@@ -131,7 +131,7 @@ aclnnStatus aclnnRmsNormGrad(
       <td><ul><li>支持空Tensor。</li><li>shape与入参`dy`的shape保持一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>1-8</td>
+      <td>2-8</td>
       <td>√</td>
     </tr>
     <tr>
@@ -141,7 +141,7 @@ aclnnStatus aclnnRmsNormGrad(
       <td><ul><li>支持空Tensor。</li><li>shape与入参`gamma`的shape保持一致。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
-      <td>1-8</td>
+      <td>1-7</td>
       <td>√</td>
     </tr>
     <tr>
