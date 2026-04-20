@@ -201,7 +201,7 @@ aclnnStatus aclnnRReluWithNoiseGetWorkspaceSize(const aclTensor *self, const acl
     CHECK_RET(zerosTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto maskTensor = l0op::Less(selfReshapeOut, zerosTensor, uniqueExecutor.get());
-    CHECK_RET(zerosTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(maskTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
     // uniform
     const aclTensor* computeOut = nullptr;
     if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
