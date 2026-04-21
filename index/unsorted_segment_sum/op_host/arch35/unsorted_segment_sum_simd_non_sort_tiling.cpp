@@ -24,7 +24,7 @@
 
 namespace optiling {
 static constexpr uint64_t TEMPLATE_SIMD_NON_SORT = 6000;
-static constexpr uint64_t LAST_DIM_SIMD_COND = 128;
+static constexpr uint64_t LAST_DIM_SIMD_COND = 256;
 static constexpr uint64_t BUFFER_NUM = 2;
 static constexpr uint64_t RATIO_BY_SORT = 5;
 static constexpr uint64_t SIMD_RESERVED_SIZE = 8192;
@@ -34,7 +34,7 @@ static const std::set<ge::DataType> setAtomicNotSupport = {ge::DT_UINT32, ge::DT
 
 bool UnsortedSegmentSumSimdNonSortTiling::IsCapable()
 {
-    if (ratio_ < RATIO_BY_SORT && innerDim_ * valueTypeBytes_ >= LAST_DIM_SIMD_COND &&
+    if (innerDim_ * valueTypeBytes_ >= LAST_DIM_SIMD_COND &&
         setAtomicNotSupport.find(dataType_) == setAtomicNotSupport.end()) {
         return true;
     }

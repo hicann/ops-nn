@@ -29,12 +29,14 @@ namespace optiling {
     static constexpr uint64_t COL_LIMIT_SIZE = 1024;
     static constexpr uint64_t DOUBLE = 2;
     static constexpr uint32_t SORT_STAT_PADDING = 64;
+    static constexpr uint32_t OUTPUT_THRESHOLD = 12000;
+    static constexpr uint32_t RATIO_THRESHOLD = 256;
 
     static const std::set<ge::DataType> setAtomicNotSupport = {ge::DT_UINT32, ge::DT_INT64, ge::DT_UINT64};
 
     bool UnsortedSegmentSumSimdDynSortTiling::IsCapable()
     {
-        if (innerDim_ * valueTypeBytes_ >= LAST_DIM_SIMD_COND &&
+        if (ratio_ >= RATIO_THRESHOLD && innerDim_ * outputOuterDim_ < OUTPUT_THRESHOLD && innerDim_ * valueTypeBytes_ >= LAST_DIM_SIMD_COND &&
             setAtomicNotSupport.find(dataType_) == setAtomicNotSupport.end()) {
             return true;
         }
@@ -214,6 +216,6 @@ void UnsortedSegmentSumSimdDynSortTiling::DumpTilingInfo()
     OP_LOGI(context_->GetNodeName(), "%s", info.str().c_str());
 }
 
-REGISTER_OPS_TILING_TEMPLATE(UnsortedSegmentSum, UnsortedSegmentSumSimdDynSortTiling, 50);
+REGISTER_OPS_TILING_TEMPLATE(UnsortedSegmentSum, UnsortedSegmentSumSimdDynSortTiling, 25);
 
 } // namespace optiling

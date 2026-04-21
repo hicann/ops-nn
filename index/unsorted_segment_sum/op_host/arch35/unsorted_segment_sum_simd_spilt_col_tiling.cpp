@@ -25,11 +25,10 @@ static constexpr uint64_t LAST_DIM_SIMD_COND = 256;
 static constexpr uint64_t BUFFER_NUM = 2;
 static constexpr uint64_t SIMD_RESERVED_SIZE = 8192;
 static constexpr uint64_t BASE_A_SIZE = 1024;
-static constexpr uint64_t RATIO_BY_SORT = 5;
 
 bool UnsortedSegmentSumSimdSplitColTiling::IsCapable()
 {
-    if (innerDim_ * valueTypeBytes_ > totalCoreNum_ * LAST_DIM_SIMD_COND && ratio_ > RATIO_BY_SORT) {
+    if (inputOuterDim_ < totalCoreNum_ && innerDim_ * valueTypeBytes_ > totalCoreNum_ * LAST_DIM_SIMD_COND) {
         return IsFullLoad();
     }
     return false;
