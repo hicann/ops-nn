@@ -250,14 +250,14 @@ ge::graphStatus ThnnFusedLstmCellGradTiling::Init()
     size_t sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
     uint64_t ubSizePlatForm;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
+    OP_TILING_CHECK(CheckAttr() != ge::GRAPH_SUCCESS,
+                    VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "check attr fail."),
+                    return ge::GRAPH_FAILED);
     OP_TILING_CHECK(!CheckParamsShape(),
                     VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "check shape fail."),
                     return ge::GRAPH_FAILED);
     OP_TILING_CHECK(!CheckParamsDtype(),
                     VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "check dtype fail."),
-                    return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(CheckAttr() != ge::GRAPH_SUCCESS,
-                    VECTOR_INNER_ERR_REPORT_TILIING(nodeName_, "check attr fail."),
                     return ge::GRAPH_FAILED);
     vector<int64_t> dims = {MIN_BASE_SHAPE};
     uint32_t minSize = 0;
