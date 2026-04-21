@@ -66,4 +66,6 @@ $$out_i = self_i \times \tanh(\mathrm{Softplus}(\mathrm{self}_i))$$
 
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_mish](./examples/test_aclnn_mish.cpp) | 通过[aclnnMish](./docs/aclnnMish&aclnnInplaceMish.md)接口方式调用Mish算子。 |
+| aclnn调用 | [test_aclnn_mish](./examples/test_aclnn_mish.cpp) | 通过[aclnnMish&aclnnInplaceMish](./docs/aclnnMish&aclnnInplaceMish.md)接口方式调用Mish算子。 |
+| aclnn调用 | [test_aclnn_inplace_mish](./examples/test_aclnn_inplace_mish.cpp) | 通过[aclnnMish&aclnnInplaceMish](./docs/aclnnMish&aclnnInplaceMish.md)接口方式调用Mish算子。 |
+| 图模式 | - | 通过[算子IR](./op_graph/mish_proto.h)构图方式调用Mish算子。 |
