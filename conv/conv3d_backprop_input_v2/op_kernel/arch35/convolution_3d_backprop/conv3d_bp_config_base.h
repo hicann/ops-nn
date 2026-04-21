@@ -31,6 +31,7 @@ enum class CubeFormat : uint8_t {
     FRACTALZ_3D,
     ND,
     UNSUPPORT,
+    FRACTALZ,
 };
 
 enum class QuantMode : std::uint8_t {

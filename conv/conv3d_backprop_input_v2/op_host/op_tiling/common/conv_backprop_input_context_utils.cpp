@@ -459,6 +459,13 @@ static void GetNCDHWShape(const T &origin_shape, Shape &ncdhw_shape, const ge::F
     ncdhw_shape.d = origin_shape[0];  // 0: D
     ncdhw_shape.h = origin_shape[1];  // 1: H
     ncdhw_shape.w = origin_shape[2];  // 2: W
+  } else if (origin_format == ge::FORMAT_NCHW) {
+    // test
+    ncdhw_shape.batch = origin_shape[1];  // 1: N
+    ncdhw_shape.c = origin_shape[0];  // 0: C
+    ncdhw_shape.d = 1;  // 0: D
+    ncdhw_shape.h = origin_shape[2];  // 2: H
+    ncdhw_shape.w = origin_shape[3];  // 3: W
   }
 }
 
@@ -564,7 +571,12 @@ static bool CheckStorageFormat(const gert::TilingContext *context, size_t filter
   const auto op_name = context->GetNodeName();
 
   const std::unordered_set<ge::Format> valid_out_bp_format = {ge::FORMAT_NCDHW, ge::FORMAT_NDHWC};
-  const std::unordered_set<ge::Format> valid_filter_format = {ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, ge::FORMAT_DHWCN};
+  std::unordered_set<ge::Format> valid_filter_format;
+  if (IsSocVersionFuse(context)) {
+      valid_filter_format = {ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, ge::FORMAT_DHWCN, ge::FORMAT_FRACTAL_Z};
+  } else {
+      valid_filter_format = {ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, ge::FORMAT_DHWCN};
+  }
   const std::unordered_set<ge::Format> valid_y_format = {ge::FORMAT_NCDHW, ge::FORMAT_NDHWC};
   bool invalid_tag = valid_out_bp_format.count(out_backprop_format) == 0 || valid_filter_format.count(filter_format) == 0 ||
                      valid_y_format.count(y_format) == 0;
@@ -618,12 +630,8 @@ static bool UpdateShapeParams(const gert::TilingContext *context, const Conv3dBp
   return true;
 }
 
-static bool CalShapeInfoFromDesc(const gert::TilingContext *context, size_t filter_input_index,
-                                 size_t out_backprop_input_index, Conv3dBpInputV2RunInfo &runInfoV2, OtherParams& otherParams) {
-  auto filter_desc = context->GetInputDesc(filter_input_index);
-  auto out_backprop_desc = context->GetInputDesc(out_backprop_input_index);
-  auto y_desc = context->GetOutputDesc(Y_INDEX);
-
+static void ExtractStorageShapeInfo(const gert::TilingContext *context, size_t filter_input_index,
+                                    size_t out_backprop_input_index, const Conv3dBpInputV2RunInfo &runInfoV2, OtherParams& otherParams) {
   auto filter_shape = context->GetInputShape(filter_input_index);
   auto out_backprop_shape = context->GetInputShape(out_backprop_input_index);
   auto y_shape = context->GetOutputShape(Y_INDEX);
@@ -648,6 +656,38 @@ static bool CalShapeInfoFromDesc(const gert::TilingContext *context, size_t filt
     otherParams.filter_ci0 = kBlockSize;
   }
   otherParams.co1g_reduce = otherParams.co1g;
+}
+
+static bool ValidateOriginShapeDims(const gert::TilingContext *context,
+                                    const gert::Shape &out_backprop_ori_shape,
+                                    const gert::Shape &filter_ori_shape,
+                                    const gert::Shape &y_ori_shape) {
+  const auto op_name = context->GetNodeName();
+  OP_CHECK_IF(out_backprop_ori_shape.GetDimNum() != K_ORI_SHAPE_DIM_3D,
+              OP_LOGE(op_name, "out_backprop origin shape dim nums = %zu should be 5", out_backprop_ori_shape.GetDimNum()), return false);
+  if (IsSocVersionFuse(context)) {
+    OP_CHECK_IF(filter_ori_shape.GetDimNum() != K_ORI_SHAPE_DIM_3D && filter_ori_shape.GetDimNum() != K_ORI_SHAPE_DIM_2D,
+                OP_LOGE(op_name, "filter origin shape dim nums = %zu should be 5 or 4", filter_ori_shape.GetDimNum()), return false);
+  } else {
+    OP_CHECK_IF(filter_ori_shape.GetDimNum() != K_ORI_SHAPE_DIM_3D,
+                OP_LOGE(op_name, "filter origin shape dim nums = %zu should be 5", filter_ori_shape.GetDimNum()), return false);
+  }
+  OP_CHECK_IF(y_ori_shape.GetDimNum() != K_ORI_SHAPE_DIM_3D,
+              OP_LOGE(op_name, "y origin shape dim nums = %zu should be 5", y_ori_shape.GetDimNum()), return false);
+  return true;
+}
+
+static bool CalShapeInfoFromDesc(const gert::TilingContext *context, size_t filter_input_index,
+                                 size_t out_backprop_input_index, const Conv3dBpInputV2RunInfo &runInfoV2, OtherParams& otherParams) {
+  auto filter_desc = context->GetInputDesc(filter_input_index);
+  auto out_backprop_desc = context->GetInputDesc(out_backprop_input_index);
+  auto y_desc = context->GetOutputDesc(Y_INDEX);
+
+  auto filter_shape = context->GetInputShape(filter_input_index);
+  auto out_backprop_shape = context->GetInputShape(out_backprop_input_index);
+  auto y_shape = context->GetOutputShape(Y_INDEX);
+
+  ExtractStorageShapeInfo(context, filter_input_index, out_backprop_input_index, runInfoV2, otherParams);
 
   auto out_backprop_ori_format = out_backprop_desc->GetOriginFormat();
   auto filter_ori_format = filter_desc->GetOriginFormat();
@@ -657,12 +697,10 @@ static bool CalShapeInfoFromDesc(const gert::TilingContext *context, size_t filt
   const auto &filter_ori_shape = filter_shape->GetOriginShape();
   const auto &y_ori_shape = y_shape->GetOriginShape();
   const auto op_name = context->GetNodeName();
-  OP_CHECK_IF(out_backprop_ori_shape.GetDimNum() != K_ORI_SHAPE_DIM_3D,
-              OP_LOGE(op_name, "out_backprop origin shape dim nums = %zu should be 5", out_backprop_ori_shape.GetDimNum()), return false);
-  OP_CHECK_IF(filter_ori_shape.GetDimNum() != K_ORI_SHAPE_DIM_3D,
-              OP_LOGE(op_name, "filter origin shape dim nums = %zu should be 5", filter_ori_shape.GetDimNum()), return false);
-  OP_CHECK_IF(y_ori_shape.GetDimNum() != K_ORI_SHAPE_DIM_3D,
-              OP_LOGE(op_name, "y origin shape dim nums = %zu should be 5", y_ori_shape.GetDimNum()), return false);
+  
+  if (!ValidateOriginShapeDims(context, out_backprop_ori_shape, filter_ori_shape, y_ori_shape)) {
+    return false;
+  }
 
   Shape out_backprop_shape_ncdhw;
   Shape filter_shape_ncdhw;
@@ -711,7 +749,7 @@ static bool GetShapeParams(gert::TilingContext *context, Conv3dBpInputV2RunInfo 
                       ge::TypeUtils::FormatToSerialString(out_backprop_ori_format).c_str()),
               return false);
   if (IsArchAfter35(context) || IsSocVersionFuse(context)) {
-    OP_CHECK_IF(filter_ori_format != ge::FORMAT_NDHWC && filter_ori_format != ge::FORMAT_NCDHW && filter_ori_format != ge::FORMAT_DHWCN,
+    OP_CHECK_IF(filter_ori_format != ge::FORMAT_NDHWC && filter_ori_format != ge::FORMAT_NCDHW && filter_ori_format != ge::FORMAT_DHWCN && filter_ori_format != ge::FORMAT_NCHW,
                 OP_LOGE(op_name, "filter origin format[%s] should be NDHWC/NCDHW/DHWCN.",
                         ge::TypeUtils::FormatToSerialString(filter_ori_format).c_str()),
                 return false);
@@ -780,7 +818,8 @@ static bool CalGroups(gert::TilingContext *context, OtherParams& otherParams, Co
 
   if (IsArchAfter35(context) || IsSocVersionFuse(context)) {
     bool invalidFilterFormat = runInfoV2.filterFormat != ge::FORMAT_NCDHW &&
-      runInfoV2.filterFormat != ge::FORMAT_NDHWC && runInfoV2.filterFormat != ge::FORMAT_DHWCN;
+      runInfoV2.filterFormat != ge::FORMAT_NDHWC && runInfoV2.filterFormat != ge::FORMAT_DHWCN && 
+      runInfoV2.filterFormat != ge::FORMAT_FRACTAL_Z;
     bool invalidOutBackpropFormat = runInfoV2.outBackpropFormat != ge::FORMAT_NCDHW &&
         runInfoV2.outBackpropFormat != ge::FORMAT_NDHWC;
     bool invalidYFormat = runInfoV2.yFormat != ge::FORMAT_NCDHW && runInfoV2.yFormat != ge::FORMAT_NDHWC;

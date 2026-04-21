@@ -337,6 +337,24 @@ __aicore__ inline void LoadGmDataToB1ForNd2Nz(Intf *self, uint32_t curCinSize, u
 }
 
 template <class Intf>
+__aicore__ inline void LoadGmDataToB1ForFz(Intf *self, uint32_t curCinSize, uint32_t curCoutSize,
+                                              uint64_t out2B1SrcAddrOffset, const LocalTensor<typename Intf::SrcBT> &useB1Buf)
+{
+    DataCopyPadExtParams<typename Intf::SrcBT> padParams;
+    DataCopyExtParams dataCopyParams;
+    if (self->ctx.tiling_->cinG == curCinSize) {
+        dataCopyParams.blockCount = 1;
+        dataCopyParams.blockLen = AlignUp16(curCinSize) * AlignUp(curCoutSize, self->ctx.tiling_->c0) * self->ctx.hkWk_ * sizeof(typename Intf::SrcBT);
+        dataCopyParams.srcStride = 0;
+    } else {
+        dataCopyParams.blockCount = DivCeil(AlignUp(curCoutSize, self->ctx.tiling_->c0) * self->ctx.hkWk_, self->ctx.tiling_->c0);
+        dataCopyParams.blockLen = static_cast<uint64_t>(AlignUp16(curCinSize)) * self->ctx.tiling_->c0 * sizeof(typename Intf::SrcBT);
+        dataCopyParams.srcStride = (self->ctx.tiling_->cinG - AlignUp16(curCinSize)) * self->ctx.tiling_->c0 * sizeof(typename Intf::SrcBT);
+    }
+    DataCopyPad<typename Intf::SrcBT>(useB1Buf, self->ctx.weightGlobal_[out2B1SrcAddrOffset], dataCopyParams, padParams);
+}
+
+template <class Intf>
 __aicore__ inline void LoadGmDataToB1DHWCN2NzTranspose(Intf *self, uint32_t curCinSize, uint32_t curCoutSize,
     uint64_t out2B1SrcAddrOffset, const LocalTensor<typename Intf::SrcBT> &useB1Buf)
 {
@@ -395,6 +413,11 @@ __aicore__ inline void LoadGmDataToB1(Intf *self, uint32_t kIdx, uint32_t curDkI
                 (curDkIdx * self->ctx.hkWk_ + self->ctx.curHkIdx_ * self->ctx.tiling_->wk + self->ctx.curWkIdx_) *
                 self->ctx.tiling_->cinG * self->ctx.tiling_->cout;
             LoadGmDataToB1DHWCN2NzTranspose(self, curCinSize, curCoutSize, out2B1SrcAddrOffset, useB1Buf);
+        } else if constexpr (Intf::Config::xType::format == Convolution3DBackprop::CubeFormat::FRACTALZ) {
+            uint64_t out2B1SrcAddrOffset = static_cast<uint64_t>(curCoutIdx) * self->ctx.hkWk_ * AlignUp16(self->ctx.tiling_->cinG) +
+                (self->ctx.curHkIdx_ * self->ctx.tiling_->wk + self->ctx.curWkIdx_) * self->ctx.tiling_->cinG * self->ctx.tiling_->c0 +
+                curCinIdx * self->ctx.tiling_->c0;
+            LoadGmDataToB1ForFz(self, curCinSize, curCoutSize, out2B1SrcAddrOffset, useB1Buf);
         } else { // NDHWC
             uint64_t out2B1SrcAddrOffset = static_cast<uint64_t>(curCoutIdx) * self->ctx.tiling_->cinG * self->ctx.dkHkWk_ +
                 curCinIdx + (curDkIdx * self->ctx.hkWk_ + self->ctx.curHkIdx_ * self->ctx.tiling_->wk + self->ctx.curWkIdx_) *

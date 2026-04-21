@@ -72,6 +72,14 @@ protected:
     bool ShrinkBaseMN(L1TilingParams& l1Params, L0TilingParams& l0Params) override;
 
     bool CheckKernelSplitEnable();
+    bool CheckDtypeCompatibility();
+    bool CheckBasicConstraints();
+    bool CheckShapeValue() const;
+    bool CheckKernelSizeStrideMatch(
+        int32_t kernelSplitStrideVal, uint32_t splitKernelSize1, uint32_t splitKernelSize2, uint32_t splitKernelSize3,
+        uint32_t splitKernelSize4);
+    bool TryKernelSplitHW(uint32_t bestBaseMN);
+    bool TryKernelSplitH(uint32_t bestBaseMN);
     void UpdateWorkSpaceSize(L0TilingParams& l0Params);
 
     // for kernel split param
@@ -96,7 +104,7 @@ private:
     void UpdateBaseKParams(L1TilingParams& l1Params, L0TilingParams& l0Params, uint32_t coutA1, uint32_t coutB1);
     void ShrinkBaseKForKernelSplit(
         L1TilingParams& l1Params, L0TilingParams& l0Params, uint32_t coutA1, uint32_t coutB1);
-    
+
     bool CheckBestBlockEnable(uint64_t nValue, uint64_t bestBlockCnt);
     bool CheckShapeConditions();
 };

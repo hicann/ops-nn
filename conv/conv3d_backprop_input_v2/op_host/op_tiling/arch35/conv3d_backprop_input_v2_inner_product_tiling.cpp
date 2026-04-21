@@ -317,52 +317,67 @@ bool Conv3DDXV2InnerProductTiling::CheckVecTransEnable(
     return true;
 }
 
-void Conv3DDXV2InnerProductTiling::SetTilingCondition(
-    const CoreTilingParams& coreParams, const L1TilingParams& l1Params, const L0TilingParams& l0Params)
+uint32_t Conv3DDXV2InnerProductTiling::GetLoadB1Condition()
 {
-    tilingRunInfo_.enableVecTransFlag = CheckVecTransEnable(coreParams, l1Params, l0Params);
-    loadB1Condition_ = 0;
     if (tilingRunInfo_.enableC04Flag) {
-        loadB1Condition_ = ENABLE_C04;
+        return ENABLE_C04;
     } else if (tilingRunInfo_.tilingHkWkMode == TILING_HK) {
-        loadB1Condition_ = ENABLE_TILING_HK; // 表示load2b1时只加载wk
+        return ENABLE_TILING_HK; // 表示load2b1时只加载wk
     } else if (tilingRunInfo_.tilingHkWkMode == TILING_HK_WK) {
-        loadB1Condition_ = ENABLE_TILING_HK_WK;   // 表示load2b1时hk wk均不加载，每次只加载hkwk=1的数据
+        return ENABLE_TILING_HK_WK;   // 表示load2b1时hk wk均不加载，每次只加载hkwk=1的数据
+    }
+    return 0;
+}
+
+uint32_t Conv3DDXV2InnerProductTiling::GetLoadB2Condition(
+    const L1TilingParams& l1Params, const L0TilingParams& l0Params)
+{
+    if (IsSocVersionFuse(context_) && runInfo_.filterFormat == ge::FORMAT_FRACTAL_Z && runInfo_.groups == 1) {
+        return B2_NO_TRANSPOSE_NO_REVERSE; // fractal_z格式不转置不逆序，通过fusspass做
     }
 
     a1DbFlag_ = l1Params.al1Pbuffer == DB_ON;
     b1DbFlag_ = l1Params.bl1Pbuffer == DB_ON;
     if (tilingRunInfo_.enableC04Flag) {
-        loadB2Condition_ = B2_NO_TRANSPOSE_NO_REVERSE; // 功能约束, 不转置不逆序
-        return;
+        return B2_NO_TRANSPOSE_NO_REVERSE; // 功能约束, 不转置不逆序
     }
 
     if (runInfo_.filterFormat == ge::FORMAT_DHWCN) {
-        loadB2Condition_ = B2_REVERSE_ONLY; // DHWCN只逆序不转置
-        return;
+        return B2_REVERSE_ONLY; // DHWCN只逆序不转置
     }
 
     if (groupConvMode_ == TILING_GROUP_MODE_ENLARGE || tilingRunInfo_.enableVecTransFlag ||
         static_cast<int32_t>(dtypeByteL0b_) == ge::GetSizeByDataType(ge::DT_FLOAT) ||
         static_cast<int32_t>(dtypeByteL0b_) == ge::GetSizeByDataType(ge::DT_HIFLOAT8)) {
-        loadB2Condition_ = B2_REVERSE_ONLY; // 功能约束, 只逆序不转置
-        return;
+        return B2_REVERSE_ONLY; // 功能约束, 只逆序不转置
     }
 
+    return GetLoadB2ConditionByFormatAndKernel(l0Params);
+}
+
+uint32_t Conv3DDXV2InnerProductTiling::GetLoadB2ConditionByFormatAndKernel(const L0TilingParams& l0Params)
+{
     uint32_t kernelHW = runInfo_.kernel_h * runInfo_.kernel_w;
     uint64_t kernelDHW = static_cast<uint64_t>(runInfo_.kernel_d) * kernelHW;
     if (kernelDHW == ONE_U64 && tilingRunInfo_.tilingHkWkMode == NO_TILING_HWK && groupConvMode_ == TILING_GROUP_MODE_ORIGIN) {
-        loadB2Condition_ = B2_TRANSPOSE_ONLY; // kernel为1, 不需要逆序，DHWCN除外
-        return;
+        return B2_TRANSPOSE_ONLY; // kernel为1, 不需要逆序，DHWCN除外
     }
 
     if (runInfo_.filterFormat == ge::FORMAT_NDHWC && l0Params.baseN >= kernelHW) {
-        loadB2Condition_ = B2_REVERSE_ONLY; // 性能优化分支，加快格式转换效率
+        return B2_REVERSE_ONLY; // 性能优化分支，加快格式转换效率
     } else if (runInfo_.filterFormat == ge::FORMAT_NCDHW && kernelDHW * runInfo_.dedx_cin * dtypeByteL0b_ <= BYTE_64) {
-        loadB2Condition_ = B2_REVERSE_ONLY; // 性能优化分支，加快逆序效率
+        return B2_REVERSE_ONLY; // 性能优化分支，加快逆序效率
     } else {
-        loadB2Condition_ = B2_TRANSPOSE_AND_REVERSE;
+        return B2_TRANSPOSE_AND_REVERSE;
     }
+}
+
+void Conv3DDXV2InnerProductTiling::SetTilingCondition(
+    const CoreTilingParams& coreParams, const L1TilingParams& l1Params, const L0TilingParams& l0Params)
+{
+    tilingRunInfo_.enableVecTransFlag = CheckVecTransEnable(coreParams, l1Params, l0Params);
+    loadB1Condition_ = GetLoadB1Condition();
+    loadB2Condition_ = GetLoadB2Condition(l1Params, l0Params);
 }
 
 void Conv3DDXV2InnerProductTiling::SetCommonTilingData(

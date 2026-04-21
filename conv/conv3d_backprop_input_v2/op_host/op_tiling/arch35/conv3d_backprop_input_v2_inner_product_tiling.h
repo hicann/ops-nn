@@ -105,6 +105,9 @@ private:
     void AdjustBaseNWhenSmallM(uint32_t& baseN, uint32_t baseM, const L0TilingParams& l0Params, const TilingRunInfo& tilingRunInfo);
     uint32_t CalculateOptimalBaseK(uint32_t baseM, uint32_t baseN, const L0TilingParams& l0Params, const TilingRunInfo& tilingRunInfo);
     void UpdateL0CBufferMode(L0TilingParams& l0Params);
+    uint32_t GetLoadB1Condition();
+    uint32_t GetLoadB2Condition(const L1TilingParams& l1Params, const L0TilingParams& l0Params);
+    uint32_t GetLoadB2ConditionByFormatAndKernel(const L0TilingParams& l0Params);
 };
 
 } // namespace Conv

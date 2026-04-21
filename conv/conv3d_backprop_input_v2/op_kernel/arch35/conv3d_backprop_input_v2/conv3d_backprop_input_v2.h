@@ -52,6 +52,8 @@ __aicore__ inline constexpr Convolution3DBackprop::CubeFormat GetFormat(int form
         return Convolution3DBackprop::CubeFormat::NDHWC;
     } else if (format == FORMAT_DHWCN || format == FORMAT_HWCN) {
         return Convolution3DBackprop::CubeFormat::DHWCN;
+    } else if (format == FORMAT_FRACTAL_Z) {
+        return Convolution3DBackprop::CubeFormat::FRACTALZ;
     } else {
         return Convolution3DBackprop::CubeFormat::NCDHW;
     }
@@ -280,6 +282,8 @@ protected:
                 cinStrideB_ = static_cast<uint64_t>(tiling_->dk) * tiling_->hk * tiling_->wk;
             } else if constexpr (filterCubeFormat == Convolution3DBackprop::CubeFormat::NDHWC) {
                 cinStrideB_ = 1;
+            } else if constexpr (filterCubeFormat == Convolution3DBackprop::CubeFormat::FRACTALZ) {
+                cinStrideB_ = static_cast<uint64_t>(tiling_->c0);
             } else {  // DHWCN
                 cinStrideB_ = static_cast<uint64_t>(tiling_->cout);
             }
@@ -308,6 +312,8 @@ protected:
                     groupStrideB_ = static_cast<uint64_t>(tiling_->coutG) * tiling_->dk * tiling_->hk * tiling_->wk *
                         tiling_->cinG;
                 }
+            } else if constexpr (filterCubeFormat == Convolution3DBackprop::CubeFormat::FRACTALZ) {
+                groupStrideB_ = static_cast<uint64_t>(tiling_->coutG) * tiling_->hk * tiling_->wk * tiling_->cinG;
             } else {  // DHWCN
                 groupStrideB_ = static_cast<uint64_t>(tiling_->coutG);
             }
@@ -380,10 +386,10 @@ protected:
     }
 
 #if (__NPU_ARCH__ == 5102)
-    __aicore__ inline void CalcBiasOffset()
+    __aicore__ inline void CalcBiasOffset(uint32_t groupIdx)
     {
         if constexpr (biasFormat != FORMAT_MAX) {
-            offsetBias_ = static_cast<uint64_t>(nCoreIdx_) * tiling_->singleCoreCin;
+            offsetBias_ = static_cast<uint64_t>(nCoreIdx_) * tiling_->singleCoreCin + groupIdx * tiling_->cinG;
         }
     }
 #endif
@@ -391,7 +397,11 @@ protected:
     __aicore__ inline void CalcScaleOffset()
     {
         if constexpr (GetScaleFormat<filterType>(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
-            offsetScale_ = static_cast<uint64_t>(nCoreIdx_) * tiling_->singleCoreCin;
+            if (tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
+                offsetScale_ = static_cast<uint64_t>(nCoreIdx_) * tiling_->singleCoreCin;
+            } else if (tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::SCALAR_QUANT)) {
+                offsetScale_ = 0;
+            }            
         }
     }
     __aicore__ inline void CalcBlockOffset(uint32_t batchIdx, uint32_t groupIdx)
@@ -401,7 +411,7 @@ protected:
         CalcBlockOffsetC(batchIdx);
         CalcGroupBlockOffset(groupIdx);
 #if (__NPU_ARCH__ == 5102)
-        CalcBiasOffset();
+        CalcBiasOffset(groupIdx);
 #endif
         CalcScaleOffset();
     }

@@ -144,29 +144,29 @@ void Conv3DDXV2KernelSplitTiling::SetParamForKernelSplit(bool isKernelSplitOnlyH
 bool Conv3DDXV2KernelSplitTiling::CheckKernelSplitHW11Enable()
 {
     uint64_t mValueForCheck = static_cast<uint64_t>(runInfo_.dedx_h) * runInfo_.dedx_w;
-        uint64_t nValueForCheck = static_cast<uint64_t>(runInfo_.dedx_cin1_g) * BLOCK_CUBE;
-        uint64_t kValueForCheck = runInfo_.dedy_cout1_g * BASIC_BLOCK_SIZE_32 / dtypeByteL0b_;        
-        if (runInfo_.dedx_cin <= BASIC_BLOCK_SIZE_32 || runInfo_.dedy_cout <= BASIC_BLOCK_SIZE_32) { // 小shape不准入
-            return false;
-        }
-        // 判断是否能走进fullload tiling模板
+    uint64_t nValueForCheck = static_cast<uint64_t>(runInfo_.dedx_cin1_g) * BLOCK_CUBE;
+    uint64_t kValueForCheck = runInfo_.dedy_cout1_g * BASIC_BLOCK_SIZE_32 / dtypeByteL0b_;
+    if (runInfo_.dedx_cin <= BASIC_BLOCK_SIZE_32 || runInfo_.dedy_cout <= BASIC_BLOCK_SIZE_32) { // 小shape不准入
+        return false;
+    }
+    // 判断是否能走进fullload tiling模板
         bool fullLoadCondition = (runInfo_.kernel_d <= 1) &&
                                 (mValueForCheck > nValueForCheck) &&
-                                (runInfo_.dedx_w <= static_cast<int32_t>(BASIC_BLOCK_SIZE_512));
-        if (fullLoadCondition) {
+                             (runInfo_.dedx_w <= static_cast<int32_t>(BASIC_BLOCK_SIZE_512));
+    if (fullLoadCondition) {
             bool isMTE2BoundThreshold = (mValueForCheck * nValueForCheck) < (mValueForCheck + nValueForCheck) * BASIC_BLOCK_SIZE_512;
-            bool isFixpBoundThreshold = kValueForCheck <= BASIC_BLOCK_SIZE_128;
-            if (isMTE2BoundThreshold || isFixpBoundThreshold) {
-                uint64_t bestBaseN = BASIC_BLOCK_SIZE_256;
-                bestBaseN = std::min(bestBaseN, nValueForCheck);
-                if (kValueForCheck * bestBaseN * dtypeByteL0b_ * TWO <= static_cast<uint64_t>(platformInfo_.l1_size)) {
-                    return false; // 能走进fullload tiling模板的用例
-                }
+        bool isFixpBoundThreshold = kValueForCheck <= BASIC_BLOCK_SIZE_128;
+        if (isMTE2BoundThreshold || isFixpBoundThreshold) {
+            uint64_t bestBaseN = BASIC_BLOCK_SIZE_256;
+            bestBaseN = std::min(bestBaseN, nValueForCheck);
+            if (kValueForCheck * bestBaseN * dtypeByteL0b_ * TWO <= static_cast<uint64_t>(platformInfo_.l1_size)) {
+                return false; // 能走进fullload tiling模板的用例
             }
         }
-        if (runInfo_.dedx_h > runInfo_.dedx_w || runInfo_.dedx_cin > runInfo_.dedy_cout) {
+    }
+    if (runInfo_.dedx_h > runInfo_.dedx_w || runInfo_.dedx_cin > runInfo_.dedy_cout) {
             return false;  // MTE2 bound性能恶化 经验判断公式
-        }
+    }
     return true;
 }
 
@@ -182,14 +182,14 @@ bool Conv3DDXV2KernelSplitTiling::CheckBestBlockEnable(uint64_t nValue, uint64_t
 bool Conv3DDXV2KernelSplitTiling::CheckShapeConditions()
 {
     if (!IsSocVersionFuse(context_) && (runInfo_.filterFormat == ge::FORMAT_NDHWC && // CV耦合架构，kernel拆分省scalar，性能有收益
-        (kSCoutFullLoad_ || runInfo_.dedx_cin == 1))) { // cin较小，则转为NDHWC性能较差
+         (kSCoutFullLoad_ || runInfo_.dedx_cin == 1))) { // cin较小，则转为NDHWC性能较差
         return false;
     }
 
     if (runInfo_.kernel_h == 1 && runInfo_.kernel_w == 1) {
         if (!CheckKernelSplitHW11Enable()) {
             return false;
-        }     
+        }
         kSCoutFullLoad_ = false;
     }
     // 12 经验值，wi较小时kernel拆分性能较差
@@ -293,8 +293,25 @@ bool Conv3DDXV2KernelSplitTiling::CheckKernelSplitHEnable(const uint32_t bestBas
     return true;
 }
 
-// kernel拆分判断
-bool Conv3DDXV2KernelSplitTiling::CheckKernelSplitEnable()
+bool Conv3DDXV2KernelSplitTiling::CheckDtypeCompatibility()
+{
+    if (!IsSocVersionFuse(context_)) {
+        return true;
+    }
+
+    size_t filterIndex = FILTER_INDEX;
+    size_t outputBackpropIndex = OUTPUT_BP_INDEX;
+    if (opType_ == optiling::OpTypeV2::kConv3DTransposeV2) {
+        outputBackpropIndex = FILTER_INDEX;
+        filterIndex = OUTPUT_BP_INDEX;
+    }
+
+    ge::DataType filterDtype = context_->GetInputDesc(filterIndex)->GetDataType();
+    ge::DataType outputBackpropDtype = context_->GetInputDesc(outputBackpropIndex)->GetDataType();
+    return !(outputBackpropDtype == ge::DT_FLOAT16 && filterDtype == ge::DT_INT8);
+}
+
+bool Conv3DDXV2KernelSplitTiling::CheckBasicConstraints()
 {
     if (runInfo_.groups > 1 || runInfo_.dilation_h != 1 || runInfo_.dilation_w != 1) {
         return false;
@@ -306,35 +323,74 @@ bool Conv3DDXV2KernelSplitTiling::CheckKernelSplitEnable()
     }
 
     bool isPadAlign = (runInfo_.pad_u == runInfo_.pad_d && runInfo_.pad_l == runInfo_.pad_r);
-    if (!isPadAlign) {
-        return false;
-    }
+    return isPadAlign;
+}
 
+bool Conv3DDXV2KernelSplitTiling::CheckShapeValue() const
+{
     constexpr uint32_t bestBaseMN = 256; // kernel拆分M N最优基本块
     uint64_t mValue = static_cast<uint64_t>(runInfo_.dedx_w) * runInfo_.dedx_h;
-    if (mValue < bestBaseMN && runInfo_.dedy_cout1_g == 1) {
-        return false; // 当输入shape较少时，拆分后还多了几次数据搬运，性能可能没有正收益
-    }
+    return !(mValue < bestBaseMN && runInfo_.dedy_cout1_g == 1); // 当输入shape较少时，拆分后还多了几次数据搬运，性能可能没有正收益
+}
 
+bool Conv3DDXV2KernelSplitTiling::CheckKernelSizeStrideMatch(
+    int32_t kernelSplitStrideVal, uint32_t splitKernelSize1, uint32_t splitKernelSize2, uint32_t splitKernelSize3,
+    uint32_t splitKernelSize4)
+{
+    return (runInfo_.kernel_w == splitKernelSize1 && runInfo_.kernel_h == splitKernelSize1) ||
+           (runInfo_.kernel_w == splitKernelSize2 && runInfo_.kernel_h == splitKernelSize2) ||
+           (runInfo_.kernel_w == splitKernelSize3 && runInfo_.kernel_h == splitKernelSize3) ||
+           (runInfo_.kernel_w == splitKernelSize4 && runInfo_.kernel_h == splitKernelSize4);
+}
+
+bool Conv3DDXV2KernelSplitTiling::TryKernelSplitHW(uint32_t bestBaseMN)
+{
     constexpr int32_t kernelSplitStrideVal = 2; // 2:当前仅stride等于2的kernel拆分
     constexpr uint32_t splitKernelSize1 = 1;    // 1:当前支持kernel等于1, stride等于2的kernel拆分
     constexpr uint32_t splitKernelSize2 = 2;    // 2:当前支持kernel等于2, stride等于2的kernel拆分
     constexpr uint32_t splitKernelSize3 = 3;    // 3:当前支持kernel等于3, stride等于2的kernel拆分
     constexpr uint32_t splitKernelSize4 = 4;    // 4:当前支持kernel等于4, stride等于2的kernel拆分
-    bool isEnableKernelSplitFlag1 = (runInfo_.kernel_w == splitKernelSize1 && runInfo_.kernel_h == splitKernelSize1);
-    bool isEnableKernelSplitFlag2 = (runInfo_.kernel_w == splitKernelSize2 && runInfo_.kernel_h == splitKernelSize2);
-    bool isEnableKernelSplitFlag3 = (runInfo_.kernel_w == splitKernelSize3 && runInfo_.kernel_h == splitKernelSize3);
-    bool isEnableKernelSplitFlag4 = (runInfo_.kernel_w == splitKernelSize4 && runInfo_.kernel_h == splitKernelSize4);
-    if (runInfo_.stride_w == kernelSplitStrideVal && runInfo_.stride_h == kernelSplitStrideVal &&
-        (isEnableKernelSplitFlag1 || isEnableKernelSplitFlag2 || isEnableKernelSplitFlag3 || isEnableKernelSplitFlag4)) {
-        SetParamForKernelSplit(false);
-        return CheckKernelSplitHWEnable(isEnableKernelSplitFlag2, kernelSplitStrideVal, bestBaseMN);
-    } else if (runInfo_.stride_h >= kernelSplitStrideVal && runInfo_.kernel_h >= kernelSplitStrideVal) {
-        SetParamForKernelSplit();
-        return CheckKernelSplitHEnable(bestBaseMN);
+
+    bool strideMatch = (runInfo_.stride_w == kernelSplitStrideVal && runInfo_.stride_h == kernelSplitStrideVal);
+    if (!strideMatch) {
+        return false;
     }
 
-    return false;
+    bool kernelSizeMatch = CheckKernelSizeStrideMatch(
+        kernelSplitStrideVal, splitKernelSize1, splitKernelSize2, splitKernelSize3, splitKernelSize4);
+    if (!kernelSizeMatch) {
+        return false;
+    }
+
+    bool isEnableKernelSplitFlag2 = (runInfo_.kernel_w == splitKernelSize2 && runInfo_.kernel_h == splitKernelSize2);
+    SetParamForKernelSplit(false);
+    return CheckKernelSplitHWEnable(isEnableKernelSplitFlag2, kernelSplitStrideVal, bestBaseMN);
+}
+
+bool Conv3DDXV2KernelSplitTiling::TryKernelSplitH(uint32_t bestBaseMN)
+{
+    constexpr int32_t kernelSplitStrideVal = 2;
+    if (runInfo_.stride_h < kernelSplitStrideVal || runInfo_.kernel_h < kernelSplitStrideVal) {
+        return false;
+    }
+
+    SetParamForKernelSplit();
+    return CheckKernelSplitHEnable(bestBaseMN);
+}
+
+bool Conv3DDXV2KernelSplitTiling::CheckKernelSplitEnable()
+{
+    if (!CheckDtypeCompatibility() || !CheckBasicConstraints() || !CheckShapeValue()) {
+        return false;
+    }
+
+    constexpr uint32_t bestBaseMN = 256;
+
+    if (TryKernelSplitHW(bestBaseMN)) {
+        return true;
+    }
+
+    return TryKernelSplitH(bestBaseMN);
 }
 
 void Conv3DDXV2KernelSplitTiling::UpdateWorkSpaceSize(L0TilingParams& l0Params)
