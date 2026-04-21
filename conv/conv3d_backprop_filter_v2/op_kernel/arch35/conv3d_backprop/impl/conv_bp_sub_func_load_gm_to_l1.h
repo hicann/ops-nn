@@ -702,10 +702,10 @@ __aicore__ inline void UpdateSrcAddrBaseOnBatchDoutIdx(Intf *self, uint64_t curL
         preDoutIdx = (curLoopBatchDoutIdx - 1) - preBatchIdx * self->ctx.tiling_->dout;
     }
 
-    int64_t batchOffsetAIncre = (curBatchIdx - preBatchIdx) *
+    int64_t batchOffsetAIncre = static_cast<int64_t>(curBatchIdx - preBatchIdx) *
         self->ctx.tiling_->cout * self->ctx.tiling_->dout * self->ctx.tiling_->ho * self->ctx.tiling_->wo;
-    int64_t doutOffsetAIncre = (curDoutIdx - preDoutIdx) *
-        static_cast<int64_t>(self->ctx.tiling_->ho * self->ctx.tiling_->wo);
+    int64_t doutOffsetAIncre = static_cast<int64_t>(curDoutIdx - preDoutIdx) *
+        self->ctx.tiling_->ho * self->ctx.tiling_->wo;
     if constexpr (Intf::Config::xType::format == ConvolutionBackprop::CubeFormat::NDHWC) {
         doutOffsetAIncre = doutOffsetAIncre * self->ctx.tiling_->cout;
     }

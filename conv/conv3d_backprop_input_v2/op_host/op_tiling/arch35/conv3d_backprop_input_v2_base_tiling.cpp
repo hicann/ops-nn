@@ -329,7 +329,7 @@ bool Conv3DBackpropInputV2TilingArch35::CheckDtypeFormatAttrs(
                          runInfo_.yFormat != ge::FORMAT_NCDHW;
 
     OP_TILING_CHECK(
-        hif8flag && fp8e4m3flag && isFormatNotDn,
+        (hif8flag || fp8e4m3flag) && isFormatNotDn,
         CUBE_INNER_ERR_REPORT(
             opName_,
             "the current output_backprop_dtype is [%s], filter_dtype is [%s], y_dtype is [%s], "
