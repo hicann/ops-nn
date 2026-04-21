@@ -41,10 +41,9 @@ def match_op_proto(file_path):
 
 def merge_op_proto(protos_path, output_file):
     op_defs = []
-    for proto_path in protos_path:
-        if not proto_path.endswith("_proto.h"):
+    for proto_path in list(dict.fromkeys(protos_path)):
+        if not proto_path.endswith("_proto.h") and not proto_path.endswith("_proto_extend.h"):
             continue
-        print(f"proto_path: {proto_path}")
         op_def = match_op_proto(proto_path)
         if op_def:
             op_defs.append(op_def)

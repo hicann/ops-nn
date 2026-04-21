@@ -16,10 +16,10 @@
 
 namespace ge {
 
-#define INPLACE_INDEX_FILL_SUPPORT_TYPES {
-    ge::DT_FLOAT, ge::DT_DOUBLE, ge::DT_FLOAT16, ge::DT_BF16,  ge::DT_INT8,
-    ge::DT_UINT8, ge::DT_INT16,  ge::DT_INT32,   ge::DT_INT64, ge::DT_BOOL,
-    ge::DT_FLOAT, ge::DT_DOUBLE, ge::DT_FLOAT16, ge::DT_BF16,  ge::DT_INT8,
+#define INPLACE_INDEX_FILL_SUPPORT_TYPES {                                  \
+    ge::DT_FLOAT, ge::DT_DOUBLE, ge::DT_FLOAT16, ge::DT_BF16,  ge::DT_INT8, \
+    ge::DT_UINT8, ge::DT_INT16,  ge::DT_INT32,   ge::DT_INT64, ge::DT_BOOL, \
+    ge::DT_FLOAT, ge::DT_DOUBLE, ge::DT_FLOAT16, ge::DT_BF16,  ge::DT_INT8, \
     ge::DT_UINT8, ge::DT_INT16,  ge::DT_INT32,   ge::DT_INT64, ge::DT_BOOL}
 REG_OP(InplaceIndexFill)
     .INPUT(x, TensorType(INPLACE_INDEX_FILL_SUPPORT_TYPES))

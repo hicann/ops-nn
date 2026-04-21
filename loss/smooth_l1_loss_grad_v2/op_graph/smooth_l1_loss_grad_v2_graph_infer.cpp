@@ -29,5 +29,5 @@ static ge::graphStatus InferDataTypeForSmoothL1LossGradV2(gert::InferDataTypeCon
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_INFERSHAPE(SmoothL1LossGradV2).InferDataType(InferDataTypeForSmoothL1LossGradV2);
+IMPL_OP(SmoothL1LossGradV2).InferDataType(InferDataTypeForSmoothL1LossGradV2);
 }  // namespace ops

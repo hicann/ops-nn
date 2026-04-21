@@ -48,7 +48,7 @@ REG_OP(BinaryCrossEntropyGrad)
     .OPTIONAL_INPUT(weight, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
     .OUTPUT(output, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
     .ATTR(reduction, String, "mean")
-    .OP_END_FACTORY_REG(BinaryCrossEntropyGrad)(BinaryCrossEntropy)
+    .OP_END_FACTORY_REG(BinaryCrossEntropyGrad)
 
 } // namespace ge
 #endif

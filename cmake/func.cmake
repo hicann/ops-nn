@@ -484,6 +484,8 @@ function(add_modules_sources)
   endif()
 
   add_tf_plugin_sources()
+  add_graph_plugin_sources()
+  add_onnx_plugin_sources()
 
   file(GLOB OPINFER_SRCS ${SOURCE_DIR}/*_infershape*.cpp)
   if(OPINFER_SRCS)
@@ -628,8 +630,12 @@ function(add_kernel_sources)
 endfunction()
 
 # usage: add_graph_plugin_sources()
-macro(add_graph_plugin_sources)
-  set(SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+function(add_graph_plugin_sources)
+  if(NOT "${OP_DIR}x" STREQUAL "x")
+    set(SOURCE_DIR ${OP_DIR}/op_graph)
+  else()
+    set(SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+  endif()
 
   # 获取算子层级目录名称，判断是否编译该算子
   get_filename_component(PARENT_DIR ${SOURCE_DIR} DIRECTORY)
@@ -649,7 +655,7 @@ macro(add_graph_plugin_sources)
   if(GRAPH_PLUGIN_PROTO_HEADERS)
     target_sources(${GRAPH_PLUGIN_NAME}_proto_headers INTERFACE ${GRAPH_PLUGIN_PROTO_HEADERS})
   endif()
-endmacro()
+endfunction()
 
 # ######################################################################################################################
 # get operating system info
@@ -901,17 +907,19 @@ function(add_cube_utils_plugin_modules)
   endif()
 endfunction()
 
-macro(add_onnx_plugin_sources)
-  set(SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+function(add_onnx_plugin_sources)
+  if(NOT "${OP_DIR}x" STREQUAL "x")
+    set(SOURCE_DIR ${OP_DIR}/framework)
+  else()
+    set(SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+  endif()
 
   file(GLOB ONNX_PLUGIN_SRCS ${SOURCE_DIR}/*_onnx_plugin.cpp)
   if(ONNX_PLUGIN_SRCS)
     add_onnx_plugin_modules()
     target_sources(${ONNX_PLUGIN_NAME}_obj PRIVATE ${ONNX_PLUGIN_SRCS})
-  else()
-    message(STATUS "ONNX_PLUGIN_SRCS is empty")
   endif()
-endmacro()
+endfunction()
 
 # TF plugin 初始化函数（顶层调用一次，内部条件检查）
 function(init_tf_plugin_modules)
