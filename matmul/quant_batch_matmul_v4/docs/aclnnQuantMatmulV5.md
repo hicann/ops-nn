@@ -41,7 +41,7 @@
       - x1，x2为INT4，x1Scale，x2Scale为FLOAT32，x2Offset为FLOAT16，out为FLOAT16/BFLOAT16 (pertoken-pergroup非对称量化)：
 
         $$
-        out = x1Scale * x2Scale @ (x1 @ x2 - x1 @ x2Offset)
+        out = x1Scale * x2Scale * (x1 @ x2 - x1 @ x2Offset)
         $$
 
     </details>
