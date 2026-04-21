@@ -22,7 +22,7 @@
 #include "../../conv3d_backprop_input_v2_arch35_tiling_key.h"
 
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || (__NPU_ARCH__ == 5102)
-#include "impl/dav_v310/conv_bp_sub_func.h"
+#include "impl/conv_bp_sub_func.h"
 #endif
 namespace Convolution3DBackpropFunc {
 

@@ -16,8 +16,8 @@
 #ifndef CONV3D_BP_INPUT_SUB_FUNC_MIX_ADVANCE_H
 #define CONV3D_BP_INPUT_SUB_FUNC_MIX_ADVANCE_H
 
-#include "../../../../../inc/platform.h"
-#include "../../../../conv3d_backprop_input_v2_arch35_tiling_key.h"
+#include "../../../../inc/platform.h"
+#include "../../../conv3d_backprop_input_v2_arch35_tiling_key.h"
 
 using AscendC::DivCeil;
 using AscendC::GlobalTensor;

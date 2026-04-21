@@ -20,8 +20,8 @@
 #include "conv_bp_util.h"
 #include "basic_api/kernel_basic_intf.h"
 #include "../conv3d_backprop_filter_v2/conv3d_backprop_filter_v2_tiling_data.h"
-#include "impl/dav_v310/conv_bp_sub_func.h"
-#include "impl/dav_v310/conv_bp_sub_func_deterministic_calculate.h"
+#include "impl/conv_bp_sub_func.h"
+#include "impl/conv_bp_sub_func_deterministic_calculate.h"
 #include "conv_bp_large_kernel_func.h"
 #include "conv_bp_func_common.h"
 
