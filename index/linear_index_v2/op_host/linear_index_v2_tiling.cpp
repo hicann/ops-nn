@@ -192,6 +192,7 @@ ge::graphStatus LinearIndexV2Tiling::RunKernelTiling()
     tilingContext_->SetBlockDim(usedCoreNum_);
     auto compileInfo = static_cast<const LinearIndexV2CompileInfo*>(tilingContext_->GetCompileInfo());
     if (compileInfo->isAscend950) {
+        tilingContext_->SetScheduleMode(1);
         tilingContext_->SetLocalMemorySize(compileInfo->ubSizePlatForm - DCACHE_SIZE - REGBASE_CCEC_CACHE_SIZE);
     }
     size_t* workspaces = tilingContext_->GetWorkspaceSizes(1);
