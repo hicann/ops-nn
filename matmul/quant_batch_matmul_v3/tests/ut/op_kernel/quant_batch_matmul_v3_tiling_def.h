@@ -29,4 +29,8 @@ inline void InitQuantBatchMatmulV3TilingData(uint8_t* tiling, QuantBatchMatmulV3
 #define GET_TILING_DATA(tiling_data, tiling_arg)                                                        \
     QuantBatchMatmulV3TilingData tiling_data;                                                 \
     InitQuantBatchMatmulV3TilingData(tiling_arg, &tiling_data)
+
+#define GET_TILING_DATA_WITH_STRUCT(tiling_struct, tiling_data, tiling_arg) \
+    QuantBatchMatmulV3TilingData tiling_data; \
+    InitQuantBatchMatmulV3TilingData(tiling_arg, &tiling_data);
 #endif  // QUANT_BATCH_MATMUL_V3_TILING_DEF_H

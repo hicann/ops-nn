@@ -135,7 +135,6 @@ constexpr CubeFormat format_y = CubeFormat::ND;
 
 #define QUANT_BMMV3_IMPL_CLASS(formatX1, formatX2, formatY, transposeX1, transposeX2, templateClass, ...)            \
     do {                                                                                                             \
-        GET_TILING_DATA(tilingData, tiling);                                                                         \
         templateClass<                                                                                               \
             DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_BIAS, DTYPE_PERTOKEN_SCALE, DTYPE_Y, formatX1, formatX2, formatY, \
             transposeX1, transposeX2, DTYPE_LOC_LOCAL, __VA_ARGS__>                                                  \
@@ -181,7 +180,7 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(
         return;
     }
 
-    REGISTER_TILING_DEFAULT(DequantBmm::QuantBatchMatmulV3TilingDataParams);
+    REGISTER_NONE_TILING;
 
 #ifdef IS_A4W4I
 #if defined(ORIG_DTYPE_SCALE) && (ORIG_DTYPE_SCALE == DT_UINT64 || ORIG_DTYPE_SCALE == DT_INT64)
@@ -191,7 +190,7 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(
     uint64_t k      = tilingData.matmulTiling.k;
     uint64_t batchC = tilingData.params.batchC;
 #else
-    GET_TILING_DATA(tilingData, tiling);
+    GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling);
     uint64_t m      = tilingData.matmulTiling.M;
     uint64_t n      = tilingData.matmulTiling.N;
     uint64_t k      = tilingData.matmulTiling.Ka;
@@ -211,12 +210,14 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(
 #if (ORIG_DTYPE_SCALE == DT_FLOAT || ORIG_DTYPE_SCALE == DT_BF16)
     if constexpr (TPL_BIASMODE == TPL_EXCLUDE_FROM_TEMPLATE) {         // Bias Mode = 0;
         if constexpr (TPL_KERNELTYPE == TPL_VEC_EPILOGUE_WITH_MMAPI) { // Kernel Type = 2;
+            GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling);
             QUANT_BMMV3_IMPL_CLASS(
                 format_x1, format_x2, format_y, static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS),
                 QuantBatchMatmulV3::QuantBmmPertokenRegbaseKernel, QuantBatchMatmulV3::QuantBmmAswBlock,
                 MM_CFG_NO_PRELOAD_OPEN_UNIT_FLAG);
         }
         if constexpr (TPL_KERNELTYPE == TPL_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI) { // Kernel Type = 3;
+            GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling);
             QUANT_BMMV3_IMPL_CLASS(
                 format_x1, format_x2, format_y, static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS),
                 QuantBatchMatmulV3::QuantBmmPertokenAL1FullLoad, QuantBatchMatmulV3::QuantBmmAswBlock,
@@ -341,7 +342,7 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(
             }
 #else
             if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI) { // Kernel Type = 0;
-                GET_TILING_DATA(tilingData, tiling);
+                GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling);
                 MatMulASWKernel<
                     DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_BIAS, DTYPE_Y, format_x1, format_x2, format_y,
                     static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS)>
@@ -350,7 +351,7 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(
                 op.Process();
             }
             if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI) { // Kernel Type = 1;
-                GET_TILING_DATA(tilingData, tiling);
+                GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling);
                 QuantBatchMatmulV3::MatmulAswKernelAL1FullLoad<
                     DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_BIAS, DTYPE_Y, format_x1, format_x2, format_y,
                     static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS)>
@@ -396,7 +397,7 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
     if constexpr (TPL_BIASMODE == TPL_EXCLUDE_FROM_TEMPLATE) {
         if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOABL1_WITH_MMAPI) {
-            GET_TILING_DATA(tilingData, tiling);
+            GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling);
             QuantBatchMatmulV3::MatmulAswKernelABL1FullLoad<
                 DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_BIAS, DTYPE_Y, format_x1, format_x2, format_y,
                 static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS)>
@@ -405,7 +406,7 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(
             op.Process();
         }
         if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_BMMAPI) {
-            GET_TILING_DATA(tilingData, tiling);
+            GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling);
             QuantBatchMatmulV3::QbmmIterBatchKernel<
                 DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_BIAS, DTYPE_Y, format_x1, format_x2, format_y,
                 static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS), MM_CFG_MULTI_BATCH>
@@ -414,7 +415,7 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(
             op.Process();
         }
         if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_BMMAPI_NO_BATCH_OUT) {
-            GET_TILING_DATA(tilingData, tiling);
+            GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling);
             QuantBatchMatmulV3::QbmmIterBatchKernel<
                 DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_BIAS, DTYPE_Y, format_x1, format_x2, format_y,
                 static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS), MM_CFG_MULTI_BATCH_NO_BATCH_OUT>
@@ -423,7 +424,7 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(
             op.Process();
         }
         if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOBL1_WITH_MMAPI) {
-            GET_TILING_DATA(tilingData, tiling);
+            GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling);
             QuantBatchMatmulV3::MatmulAswKernelBL1FullLoad<
                 DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_BIAS, DTYPE_Y, format_x1, format_x2, format_y,
                 static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS)>
