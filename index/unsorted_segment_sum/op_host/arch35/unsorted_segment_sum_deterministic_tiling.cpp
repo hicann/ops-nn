@@ -115,9 +115,9 @@ ge::graphStatus UnsortedSegmentSumDetermTiling::DoOpTiling()
     ubSize_ -= DCACHE_SIZE;
     int64_t rowsNumInUB = FindMaxRowsInUb(); 
     if (rowsNumInUB <= 0) {
-        OP_LOGE(
+        OP_LOGW(
             context_->GetNodeName(), "InnerDim is too large, current module does not support !!!");
-        return ge::GRAPH_FAILED;
+        return ge::GRAPH_PARAM_INVALID;
     }
 
     if (rowsNumInUB >= static_cast<int64_t>(inputOuterDim_)) {
