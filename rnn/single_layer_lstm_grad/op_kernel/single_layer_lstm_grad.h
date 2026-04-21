@@ -1234,7 +1234,7 @@ class RNNGrad {
     DataCopyExtParams dataCopyInSeqParams{
         static_cast<uint16_t>(curMLines),
         static_cast<uint32_t>(curCopyNLength * sizeof(T)),
-        static_cast<uint32_t>((tiling.hiddenSize - curCopyNLength) * FLOAT_BYTES),
+        static_cast<uint32_t>((tiling.hiddenSize - curCopyNLength) * sizeof(T)),
         static_cast<uint32_t>((curCopyNLengthAligned - curCopyNLength) / calBlockSize), 
         0
     };
