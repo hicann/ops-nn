@@ -10,7 +10,7 @@
 
 /* !
  * \file elu_apt.cpp
- * \brief y =|x|
+ * \brief
  */
 
 #include "arch35/elu_dag.h"
