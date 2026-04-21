@@ -76,7 +76,7 @@ public:
     bool hasScale = false;
     bool dualOutput = false;
 
-    uint32_t groupBlockNums;
+    uint32_t groupBlockNums = 0;
 
     constexpr static bool isOptGroup = CONV_CFG::groupType == static_cast<int8_t>(ConvGroupType::OPT_GROUP_CONV);
 };

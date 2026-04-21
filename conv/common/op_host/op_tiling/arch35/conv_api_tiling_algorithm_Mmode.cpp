@@ -43,7 +43,8 @@ bool ConvTilingAlgorithmMmode::CheckMinL1Tiling() const
                             tilingIns_->shapeInfo.orgHo);
     uint64_t minHiAL1 = InferHiL1(minHoAL1, tilingIns_->shapeInfo.orgHi); // 2
     uint64_t minKAL1 = tilingIns_->isC04Flag ? C04_CIN_SIZE : tilingIns_->cubeInfo.k0;
-    uint64_t minAL1Size = AlignB(tilingIns_->innerBatch * minHiAL1 * tilingIns_->shapeInfo.orgWi * minKAL1 * this->fMapDTypeSize, C0_SIZE);
+    uint64_t minAL1Size = AlignB(
+        tilingIns_->innerBatch * minHiAL1 * tilingIns_->shapeInfo.orgWi * minKAL1 * this->fMapDTypeSize, C0_SIZE);
     uint64_t minKBL1 = tilingIns_->isC04Flag ? AlignB(C04_CIN_SIZE * tilingIns_->shapeInfo.singlekH *
         tilingIns_->shapeInfo.singlekW, tilingIns_->cubeInfo.k0) :
         tilingIns_->shapeInfo.singlekH * tilingIns_->shapeInfo.singlekW * tilingIns_->cubeInfo.k0;
@@ -187,7 +188,7 @@ int64_t ConvTilingAlgorithmMmode::InitCalcL1FullLoadParams()
 
 int64_t ConvTilingAlgorithmMmode::InitCalcL1Params()
 {
-    if (InitCalcL1FullLoadParams() == -1){
+    if (InitCalcL1FullLoadParams() == -1) {
         return -1;
     }
 
@@ -302,7 +303,7 @@ void ConvTilingAlgorithmMmode::InitABL1TilingMode()
     } else if (IsWeightFullLoadDominant() && IsFmapFullLoadPossible(mL1ExceedInstrLimit)) {
         this->l1TilingFlag.abL1Mode = L1TilingMode::FULL_LOAD_AL1;
         this->dbValue.pbAL1 = 1;
-        if(tilingIns_->enableInnerBatch && CeilDiv(tilingIns_->shapeInfo.singleBatch, tilingIns_->innerBatch) > 1) {
+        if (tilingIns_->enableInnerBatch && CeilDiv(tilingIns_->shapeInfo.singleBatch, tilingIns_->innerBatch) > 1) {
             this->l1TilingFlag.abL1Mode = L1TilingMode::NONE_FULL_LOAD;
             this->dbValue.pbAL1 = CONST_VALUE_2;
         }
@@ -906,14 +907,15 @@ void ConvTilingAlgorithmMmode::CalFormulaicInnerBatch()
         (this->l1TilingFlag.isBiasFullLoad ? tilingIns_->shapeInfo.singleCo1 * tilingIns_->cubeInfo.n0 *
         this->biasDTypeSize : this->l0TilingParams.nL0 * this->biasDTypeSize) : 0;
 
-    uint64_t currentWeightL1Size = this->weightDTypeSize * CONST_VALUE_2 * l0TilingParams.nL0 * 
-                                           l0TilingParams.kL0 * static_cast<uint64_t>(tilingIns_->shapeInfo.orgkH * tilingIns_->shapeInfo.orgkW);
+    uint64_t currentWeightL1Size = this->weightDTypeSize * CONST_VALUE_2 * l0TilingParams.nL0 *
+        l0TilingParams.kL0 * static_cast<uint64_t>(tilingIns_->shapeInfo.orgkH * tilingIns_->shapeInfo.orgkW);
     uint64_t currentFmapK;
     if (tilingIns_->isC04Flag) {
             currentFmapK = CONST_VALUE_2 * AlignB(static_cast<uint64_t>(tilingIns_->shapeInfo.orgWi * tilingIns_->shapeInfo.orgHi) * C04_CIN_SIZE * this->fMapDTypeSize, 
                                                 l0TilingParams.kL0 * this->fMapDTypeSize);
     } else {
-        currentFmapK = static_cast<uint64_t>(tilingIns_->shapeInfo.orgWi * tilingIns_->shapeInfo.orgHi) * l0TilingParams.kL0 * this->fMapDTypeSize * CONST_VALUE_2;
+        currentFmapK = static_cast<uint64_t>(tilingIns_->shapeInfo.orgWi * tilingIns_->shapeInfo.orgHi) *
+            l0TilingParams.kL0 * this->fMapDTypeSize * CONST_VALUE_2;
     }
     bool isL1SizeOverFlow = currentBiasL1Size + currentWeightL1Size > tilingIns_->platformInfo.l1Size;
     uint64_t innerBatchLimit3 = isL1SizeOverFlow ? 0 :

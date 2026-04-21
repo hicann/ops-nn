@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file conv2d_mdc_tiling.cpp
+ * \file conv2d_v2_mdc_tiling.cpp
  * \brief
  */
 

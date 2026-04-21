@@ -320,12 +320,12 @@ struct ConvAscendcShapesInfo {
     uint64_t wo = 1;
 };
 
-struct ConvAscendcNodeInfo{
+struct ConvAscendcNodeInfo {
     std::string nodeName = "";
     std::string nodeType = "";
 };
 
-struct ConvAscendcPlatformInfo{
+struct ConvAscendcPlatformInfo {
     uint32_t aicoreNum = 0;
     uint64_t l1Size = 0;
     uint64_t l0aSize = 0;

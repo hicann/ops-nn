@@ -22,16 +22,16 @@
 using namespace optiling::conv_ops_tiling;
 
 namespace optiling {
-    // using op_tiling register capability in "tiling_templates_registry" for AscendC conv2d operator
-    CONV_REGISTER_TILING_TEMPLATE(Conv2DV2, Conv2dBaseTiling,
-        static_cast<int32_t>(NpuArch::DAV_3510), 0);
+
+// using op_tiling register capability in "tiling_templates_registry" for AscendC conv2d operator
+CONV_REGISTER_TILING_TEMPLATE(Conv2DV2, Conv2dBaseTiling, static_cast<int32_t>(NpuArch::DAV_3510), 0);
 
 static ge::graphStatus Conv2DV2TilingFunc(gert::TilingContext* context)
 {
     return ConvTilingFunc(context);
 }
 
-    IMPL_OP_OPTILING(Conv2DV2)
+IMPL_OP_OPTILING(Conv2DV2)
     .Tiling(Conv2DV2TilingFunc)
     .TilingParse<ConvTilingParseInfo>(TilingPrepareForConv);
 }

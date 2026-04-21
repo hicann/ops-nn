@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file conv2_dv2.h
+ * \file conv2d_v2.h
  * \brief
  */
 

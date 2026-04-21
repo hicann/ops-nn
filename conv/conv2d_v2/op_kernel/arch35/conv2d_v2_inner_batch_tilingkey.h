@@ -9,7 +9,7 @@
  */
  
 /* !
- * \file conv2d_v2_innter_batch_tilingkey.h
+ * \file conv2d_v2_inner_batch_tilingkey.h
  * \brief
  */
 
