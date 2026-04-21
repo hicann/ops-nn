@@ -46,15 +46,15 @@ public:
         this->bagSizeGm_.SetGlobalBuffer((__gm__ I*)(gmParam[BAGSIZE_OUTPUT_IDX]));
         this->offset2bagGm_.SetGlobalBuffer((__gm__ I*)(gmParam[OFFSET2BAG_OUTPUT_IDX]));
         this->maxIndicesGm_.SetGlobalBuffer((__gm__ I*)(gmParam[MAXINDICES_OUTPUT_IDX]));
-        
-        if (GetBlockIdx() == 0){
+
+        if (GetBlockIdx() == 0) {
             InitGlobalMemory(this->yGm_, tiling_.embeddingDim * tiling_.nBags, (T)(0));
             int32_t eventIDMTE3ToV = static_cast<int32_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
             SetFlag<HardEvent::MTE3_V>(eventIDMTE3ToV);
             WaitFlag<HardEvent::MTE3_V>(eventIDMTE3ToV);
             InitGlobalMemory(this->maxIndicesGm_, tiling_.embeddingDim * tiling_.nBags, (I)(-1));
         }
-        
+
         this->weightCoreOfset_ = (GetBlockIdx() % tiling_.colTileNum) * tiling_.colNormalNum;
         this->offsetStart_ = GetBlockIdx() / tiling_.colTileNum * tiling_.rowNormalNum;
         this->curCoreBag_ =
@@ -132,8 +132,7 @@ public:
                     this->CopyWeightNoPerSampleFromGm(weightOffset, curWeightNumber, weightLocal_[weightLocalOffset]);
                     weightLocalOffset = weightLocalOffset + tiling_.weightDimFactor;
                 }
-                this->ComputeMax(
-                    curWeightNumber, (uint16_t)validRowNumber, outYLocal_, weightLocal_, maxIndicesLocal_);
+                this->ComputeMax(curWeightNumber, (uint16_t)validRowNumber, outYLocal_, weightLocal_, maxIndicesLocal_);
                 this->inQueueWeight_.template FreeTensor(weightLocal_);
                 indiceStart = indiceStart + curIndicesNumber;
             }
@@ -152,7 +151,7 @@ public:
         }
         bagSizeLocal_(bagIdx) = bagSizeLocal_(bagIdx) - paddingCount;
         this->inQueueIndices_.template EnQue(indicesLocal_);
-        int32_t eventIDSToV= static_cast<int32_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
+        int32_t eventIDSToV = static_cast<int32_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
         SetFlag<HardEvent::S_V>(eventIDSToV);
         WaitFlag<HardEvent::S_V>(eventIDSToV);
     }
@@ -219,7 +218,8 @@ public:
                         indicesIndex = indicesIndex + 1;
                         int64_t weightOffset = weightIndex * tiling_.embeddingDim + weightOfset;
 
-                        this->CopyWeightNoPerSampleFromGm(weightOffset, curWeightNumber, weightLocal_[weightLocalOffset]);
+                        this->CopyWeightNoPerSampleFromGm(
+                            weightOffset, curWeightNumber, weightLocal_[weightLocalOffset]);
                         weightLocalOffset = weightLocalOffset + tiling_.weightDimFactor;
                     }
                     this->ComputeMax(
@@ -243,7 +243,7 @@ public:
             weightOfset = weightOfset + curWeightNumber;
         }
         bagSizeLocal_(bagIdx) = bagSizeLocal_(bagIdx) - paddingCount;
-        int32_t eventIDSToV= static_cast<int32_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
+        int32_t eventIDSToV = static_cast<int32_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
         SetFlag<HardEvent::S_V>(eventIDSToV);
         WaitFlag<HardEvent::S_V>(eventIDSToV);
     }
@@ -289,7 +289,10 @@ public:
                 } else if (curBagIndiceNumber > tiling_.indicesFactor) {
                     HandleBigBagMax(curBagIndiceNumber, indiceStart, curOffsetStart, bagIdx, bagSizeLocal);
                 } else {
-                    this->CopyIndicesFromGm(indiceStart, tiling_.indicesFactor);
+                    int64_t indicesCopyLen = tiling_.indicesFactor < tiling_.indicesNumel - indiceStart ?
+                                                 tiling_.indicesFactor :
+                                                 tiling_.indicesNumel - indiceStart;
+                    this->CopyIndicesFromGm(indiceStart, indicesCopyLen);
                     this->copyIndicesStart_ = indiceStart;
                     this->copyIndicesEnd_ = indiceStart + tiling_.indicesFactor;
 

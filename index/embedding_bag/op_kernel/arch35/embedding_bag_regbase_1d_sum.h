@@ -45,10 +45,10 @@ public:
         if (GetBlockIdx() >= tiling_.usedCoreNum) {
             return;
         }
-        if (GetBlockIdx() == 0){
+        if (GetBlockIdx() == 0) {
             InitGlobalMemory(this->yGm_, tiling_.embeddingDim * tiling_.nBags, (T)(0));
         }
-        
+
         this->weightCoreOfset_ = (GetBlockIdx() % tiling_.colTileNum) * tiling_.colNormalNum;
         this->offsetStart_ = GetBlockIdx() / tiling_.colTileNum * tiling_.rowNormalNum;
         this->curCoreBag_ =
@@ -247,7 +247,10 @@ public:
                 } else if (curBagIndiceNumber > tiling_.indicesFactor) {
                     HandleBigBagSumNoPerSample(curBagIndiceNumber, indiceStart, curOffsetStart, bagIdx, bagSizeLocal);
                 } else {
-                    this->CopyIndicesFromGm(indiceStart, tiling_.indicesFactor);
+                    int64_t indicesCopyLen = tiling_.indicesFactor < tiling_.indicesNumel - indiceStart ?
+                                                 tiling_.indicesFactor :
+                                                 tiling_.indicesNumel - indiceStart;
+                    this->CopyIndicesFromGm(indiceStart, indicesCopyLen);
                     this->copyIndicesStart_ = indiceStart;
                     this->copyIndicesEnd_ = indiceStart + tiling_.indicesFactor;
                     HandleBagSumNoPerSample(curBagIndiceNumber, indiceStart, curOffsetStart, bagIdx, bagSizeLocal);
@@ -333,8 +336,7 @@ public:
                     weightLocalOffset = weightLocalOffset + tiling_.weightDimFactor;
                 }
                 this->ComputeAddPerSample(
-                    curWeightNumber, (uint16_t)validRowNumber, outYLocal_, weightLocal_,
-                    perSampleWeightCountLocal);
+                    curWeightNumber, (uint16_t)validRowNumber, outYLocal_, weightLocal_, perSampleWeightCountLocal);
                 this->inQueueWeight_.template FreeTensor(weightLocal_);
                 indiceStart = indiceStart + curIndicesNumber;
             }
@@ -348,6 +350,7 @@ public:
         }
         bagSizeLocal(bagIdx) = bagSizeLocal(bagIdx) - paddingCount;
         this->inQueueIndices_.template EnQue(indicesLocal_);
+        this->inQueueperSampleWeights_.template EnQue(perSampleWeightsLocal_);
     }
 
     __aicore__ inline void HandleBigBagSumPerSample(
@@ -493,10 +496,14 @@ public:
                 } else if (curBagIndiceNumber > tiling_.indicesFactor) {
                     HandleBigBagSumPerSample(curBagIndiceNumber, indiceStart, curOffsetStart, bagIdx, bagSizeLocal);
                 } else {
-                    this->CopyIndicesFromGm(indiceStart, tiling_.indicesFactor);
+                    int64_t indicesCopyLen = tiling_.indicesFactor < tiling_.indicesNumel - indiceStart ?
+                                                 tiling_.indicesFactor :
+                                                 tiling_.indicesNumel - indiceStart;
+                    this->CopyIndicesFromGm(indiceStart, indicesCopyLen);
                     int64_t sampleWeightsDataLen = tiling_.indicesFactor;
-                    if (indiceStart + curBagIndiceNumber > tiling_.sampleWeightNum) {
-                        sampleWeightsDataLen = tiling_.sampleWeightNum - indiceStart;
+                    if (indiceStart + tiling_.indicesFactor > tiling_.sampleWeightNum) {
+                        sampleWeightsDataLen =
+                            tiling_.sampleWeightNum > indiceStart ? tiling_.sampleWeightNum - indiceStart : 0;
                     }
                     this->CopyPerSampleWeightsFromGm(indiceStart, sampleWeightsDataLen);
                     this->copyIndicesStart_ = indiceStart;

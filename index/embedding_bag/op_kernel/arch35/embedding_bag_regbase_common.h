@@ -555,7 +555,7 @@ public:
     __aicore__ inline void CopyMaxIndicesToGm(
         int64_t weightOffset, int64_t weightNumber, LocalTensor<I> maxIndicesLocal)
     {
-        DataCopyExtParams copyParam{1, static_cast<uint32_t>(weightNumber * sizeof(U)), 0, 0, 0};
+        DataCopyExtParams copyParam{1, static_cast<uint32_t>(weightNumber * sizeof(I)), 0, 0, 0};
         DataCopyPad(maxIndicesGm_[weightOffset], maxIndicesLocal, copyParam);
     }
 

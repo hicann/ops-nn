@@ -125,7 +125,7 @@ const std::tuple<aclTensor*, aclTensor*, aclTensor*, aclTensor*> EmbeddingBag(
     offset2bag = AllocTensorForEmbeddingBag(offset2bagShape910, indexPromoteDtype, offset2bagShapeOther, indicesDtype, executor);
     aclTensor* bagSize = nullptr;
     op::Shape bagSizeShape910, bagSizeShapeOther;
-    bagSizeShape910.AppendDim(offsets->GetViewShape().GetDim(0));  
+    bagSizeShape910.AppendDim(offsets->GetViewShape().GetDim(0)); 
     if (includeLastOffset) {
         bagSizeShapeOther.AppendDim(offsets->GetViewShape().GetDim(0) - 1);
     } else {

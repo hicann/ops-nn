@@ -43,10 +43,10 @@ public:
         this->bagSizeGm_.SetGlobalBuffer((__gm__ I*)(gmParam[BAGSIZE_OUTPUT_IDX]));
         this->offset2bagGm_.SetGlobalBuffer((__gm__ I*)(gmParam[OFFSET2BAG_OUTPUT_IDX]));
 
-        if (GetBlockIdx() == 0){
+        if (GetBlockIdx() == 0) {
             InitGlobalMemory(this->yGm_, tiling_.embeddingDim * tiling_.nBags, (T)(0));
         }
-        
+
         this->weightCoreOfset_ = (GetBlockIdx() % tiling_.colTileNum) * tiling_.colNormalNum;
         this->offsetStart_ = GetBlockIdx() / tiling_.colTileNum * tiling_.rowNormalNum;
         this->curCoreBag_ =
@@ -258,8 +258,10 @@ public:
                     // bag indices ub
                     HandleBigBagMean(curBagIndiceNumber, indiceStart, curOffsetStart, bagIdx, bagSizeLocal);
                 } else {
-                    //
-                    this->CopyIndicesFromGm(indiceStart, tiling_.indicesFactor);
+                    int64_t indicesCopyLen = tiling_.indicesFactor < tiling_.indicesNumel - indiceStart ?
+                                                 tiling_.indicesFactor :
+                                                 tiling_.indicesNumel - indiceStart;
+                    this->CopyIndicesFromGm(indiceStart, indicesCopyLen);
                     this->copyIndicesStart_ = indiceStart;
                     this->copyIndicesEnd_ = indiceStart + tiling_.indicesFactor;
                     HandleBagMeanNoPerSample(curBagIndiceNumber, indiceStart, curOffsetStart, bagIdx, bagSizeLocal);
