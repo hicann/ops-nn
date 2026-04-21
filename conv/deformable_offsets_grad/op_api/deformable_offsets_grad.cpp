@@ -32,10 +32,10 @@ const std::tuple<aclTensor*, aclTensor*> DeformableOffsetsGrad(
     L0_DFX(DeformableOffsetsGrad, grad_output, input, offsets);
     const char* data_format = "NHWC";
     auto grad_x = executor->AllocTensor(
-        input->GetStorageShape(), input->GetOriginalShape(), DataType::DT_FLOAT, input->GetStorageFormat(),
+        input->GetStorageShape(), input->GetOriginalShape(), input->GetDataType(), input->GetStorageFormat(),
         input->GetOriginalFormat());
     auto grad_offsets = executor->AllocTensor(
-        offsets->GetStorageShape(), offsets->GetOriginalShape(), DataType::DT_FLOAT, offsets->GetStorageFormat(),
+        offsets->GetStorageShape(), offsets->GetOriginalShape(), offsets->GetDataType(), offsets->GetStorageFormat(),
         offsets->GetOriginalFormat());
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
         DeformableOffsetsGrad, OP_INPUT(grad_output, input, offsets), OP_OUTPUT(grad_x, grad_offsets),

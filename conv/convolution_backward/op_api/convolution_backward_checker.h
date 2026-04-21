@@ -93,6 +93,11 @@ const int32_t NCDHW_C_DIM = 1;
 const int32_t NCDHW_D_DIM = 2;
 const int32_t NCDHW_H_DIM = 3;
 const int32_t NCDHW_W_DIM = 4;
+const int64_t INDEX_ZERO = 0;
+const int64_t INDEX_ONE = 1;
+const int64_t INDEX_TWO = 2;
+const int64_t INDEX_THREE = 3;
+static size_t DIM_FOUR = 4;
 static std::map<ge::Format, std::string> g_formatToStrTab = {
     {ge::FORMAT_NCHW, "NCHW"},
     {ge::FORMAT_NHWC, "NHWC"},

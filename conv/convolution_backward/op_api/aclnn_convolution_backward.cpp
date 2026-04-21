@@ -42,6 +42,8 @@
 #include "convolution_backward_checker.h"
 #include "convtbc_backward_checker.h"
 #include "acl/acl_rt.h"
+#include "deformable_conv2d_backward_checker.h"
+#include "../../deformable_offsets_grad/op_api/deformable_offsets_grad.h"
 
 using namespace op;
 using namespace l0op;
@@ -2972,6 +2974,209 @@ aclnnStatus aclnnConvTbcBackwardGetWorkspaceSize(const aclTensor *self, const ac
     return ACLNN_SUCCESS;
 }
 
+static aclnnStatus ResultViewProcess(
+    Ops::NN::Conv::ConvolutionBackwardResult& ResultTensor, Ops::NN::Conv::ConvolutionBackwardOutput& outputTensor,
+    aclOpExecutor* executor)
+{
+    // APIViewCopy
+    // Index  0ViewCopy gradInput
+    auto resultinput = l0op::ViewCopy(ResultTensor.gradInput, outputTensor.gradInput, executor);
+    OP_CHECK(
+        resultinput != nullptr,
+        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The output viewprocess failed, gradInput with ViewCopy return nullptr."),
+        return ACLNN_ERR_INNER_NULLPTR);
+    // Index  1ViewCopy gradWeight
+    auto resultweight = l0op::ViewCopy(ResultTensor.gradWeight, outputTensor.gradWeight, executor);
+    OP_CHECK(
+        resultweight != nullptr,
+        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The output viewprocess failed, gradWeight with ViewCopy return nullptr."),
+        return ACLNN_ERR_INNER_NULLPTR);
+    // Index  2ViewCopy gradBias
+    auto resultbias = l0op::ViewCopy(ResultTensor.gradBias, outputTensor.gradBias, executor);
+    OP_CHECK(
+        resultbias != nullptr,
+        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The output viewprocess failed, gradBias with ViewCopy return nullptr."),
+        return ACLNN_ERR_INNER_NULLPTR);
+    auto resultoffset = l0op::ViewCopy(ResultTensor.gradOffset, outputTensor.gradOffset, executor);
+    OP_CHECK(
+        resultoffset != nullptr,
+        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The output viewprocess failed, gradOffset with ViewCopy return nullptr."),
+        return ACLNN_ERR_INNER_NULLPTR);
+    return ACLNN_SUCCESS;
+}
+
+static aclIntArray* ParamsTranspose(const aclIntArray* inputArray, aclOpExecutor* executor)
+{
+    int64_t data[DIM_FOUR];
+    data[INDEX_ZERO] = (*inputArray)[INDEX_ZERO];
+    data[INDEX_ONE] = (*inputArray)[INDEX_TWO];
+    data[INDEX_TWO] = (*inputArray)[INDEX_THREE];
+    data[INDEX_THREE] = (*inputArray)[INDEX_ONE];
+    aclIntArray* newArray = executor->AllocIntArray(data, DIM_FOUR);
+    return newArray;
+}
+
+static aclnnStatus TransProcess(const aclTensor*& inputTensor, const string& tensorName, aclOpExecutor* executor, bool isInput)
+{
+    // API l0 InputTensor -> l0op::Contiguous -> l0op::Transpose -> inputTensor
+    inputTensor = l0op::Contiguous(inputTensor, executor);
+    OP_CHECK(
+        inputTensor != nullptr,
+        OP_LOGE(
+            ACLNN_ERR_INNER_NULLPTR, "The input preprocess failed, %s with Contiguous return nullptr.",
+            tensorName.c_str()),
+        return ACLNN_ERR_INNER_NULLPTR);
+
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (curArch != NpuArch::DAV_3510 || tensorName != "weight") {
+        std::vector<int64_t> valuePerm;
+        if (isInput) {
+            valuePerm = {0, 2, 3, 1};
+        } else {
+            valuePerm = {0, 3, 1, 2};
+        }
+        auto perm = executor->AllocIntArray(valuePerm.data(), 4);
+        CHECK_RET(perm != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        inputTensor = l0op::Transpose(inputTensor, perm, executor);
+        OP_CHECK(
+            inputTensor != nullptr,
+            OP_LOGE(
+                ACLNN_ERR_INNER_NULLPTR, "The input preprocess failed, %s with Transpose return nullptr.",
+                tensorName.c_str()),
+            return ACLNN_ERR_INNER_NULLPTR);
+    }
+
+    if (curArch == NpuArch::DAV_3510 && tensorName != "weight") {
+        if (isInput) {
+            const_cast<aclTensor*>(inputTensor)->SetStorageFormat(Format::FORMAT_NHWC);
+            const_cast<aclTensor*>(inputTensor)->SetOriginalFormat(Format::FORMAT_NHWC);
+            const_cast<aclTensor*>(inputTensor)->SetViewFormat(Format::FORMAT_NHWC);
+        } else {
+            const_cast<aclTensor*>(inputTensor)->SetStorageFormat(Format::FORMAT_NCHW);
+            const_cast<aclTensor*>(inputTensor)->SetOriginalFormat(Format::FORMAT_NCHW);
+            const_cast<aclTensor*>(inputTensor)->SetViewFormat(Format::FORMAT_NCHW);
+        }
+    }
+    return ACLNN_SUCCESS;
+}
+
+static aclnnStatus CalculateDeformableOffsetsGrad(
+    Ops::NN::Conv::DeformableConv2dBackwardInputTensor& inputTensor,
+    ConvolutionBackwardResult& bp_resultTensor, const aclTensor* offset,
+    Ops::NN::Conv::DeformableConv2dBackwardParams& params,
+    const aclTensor** gradInput, const aclTensor** gradOffset, aclOpExecutor* executor)
+{
+    OP_LOGD("Enter CalculateDeformableOffsetdGrad for CalculateDeformableConv2dBackward.");
+    auto offsetOriContiguous = l0op::Contiguous(offset, executor);
+    CHECK_RET(TransProcess(inputTensor.input, "input", executor, true) == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(TransProcess(offsetOriContiguous, "offset", executor, true) == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(
+        TransProcess(bp_resultTensor.gradInput, "gradInput", executor, true) == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
+
+    params.stride = ParamsTranspose(params.stride, executor);
+    params.dilation = ParamsTranspose(params.dilation, executor);
+    OP_CHECK_NULL(params.stride, return ACLNN_ERR_INNER_NULLPTR);
+    OP_CHECK_NULL(params.dilation, return ACLNN_ERR_INNER_NULLPTR);
+
+    auto deformableResult = l0op::DeformableOffsetsGrad(
+        bp_resultTensor.gradInput, inputTensor.input, offsetOriContiguous, params.stride, params.padding,
+        params.kernelSize, params.dilation, params.modulated, params.deformableGroups, executor);
+    *gradInput = std::get<0>(deformableResult);
+    *gradOffset = std::get<1>(deformableResult);
+    return ACLNN_SUCCESS;
+}
+
+static aclnnStatus CalculateDeformableConv2dBackward(
+    Ops::NN::Conv::DeformableConv2dBackwardInputTensor& inputTensor,
+    Ops::NN::Conv::ConvolutionBackwardOutput& outputTensor, const aclTensor* offset,
+    Ops::NN::Conv::DeformableConv2dBackwardParams& params, aclOpExecutor* executor)
+{
+    Ops::NN::Conv::ConvolutionBackwardResult resultTensor = {
+        outputTensor.gradInput, outputTensor.gradWeight, outputTensor.gradOffset, outputTensor.gradBias};
+    OP_LOGD("Enter CalculateConvolutionBackward for CalculateDeformableConv2dBackward.");
+    auto bp_gradInput = executor->AllocTensor(inputTensor.offsetOut->GetViewShape(), inputTensor.offsetOut->GetDataType());
+    FVector<int64_t> newbiasSize = {0};
+    auto* bp_biasSizes = executor->AllocIntArray(newbiasSize.data(), 1);
+    OP_CHECK_NULL(bp_biasSizes, return ACLNN_ERR_INNER_NULLPTR);
+    auto* bp_stride = params.kernelSize;
+    FVector<int64_t> newPadding = {0, 0};
+    auto* bp_padding = executor->AllocIntArray(newPadding.data(), 2);
+    OP_CHECK_NULL(bp_padding, return ACLNN_ERR_INNER_NULLPTR);
+    FVector<int64_t> newDilation = {1, 1};
+    auto* bp_dilation = executor->AllocIntArray(newDilation.data(), 2);
+    OP_CHECK_NULL(bp_dilation, return ACLNN_ERR_INNER_NULLPTR);
+    const bool bp_transposed = false;
+    FVector<int64_t> newOutputPadding = {0, 0};
+    auto* bp_outputPadding = executor->AllocIntArray(newOutputPadding.data(), 2);
+    OP_CHECK_NULL(bp_outputPadding, return ACLNN_ERR_INNER_NULLPTR);
+    const int64_t bp_groups = params.groups;
+    FVector<bool> newOutputMask = {1, 1, 1};
+    auto* bp_outputMask = executor->AllocBoolArray(newOutputMask.data(), 3);
+    OP_CHECK_NULL(bp_outputMask, return ACLNN_ERR_INNER_NULLPTR);
+    const int64_t bp_cubeMathType = 0;
+    ConvolutionBackwardParams bp_params = {bp_biasSizes, bp_stride, bp_padding, bp_dilation, bp_transposed,
+                 bp_outputPadding, bp_groups, bp_outputMask, bp_cubeMathType};
+    ConvolutionBackwardInputTensor bp_inputTensor = {inputTensor.gradOutput, inputTensor.offsetOut, inputTensor.weight};
+    ConvolutionBackwardResult bp_resultTensor = {bp_gradInput, outputTensor.gradWeight, outputTensor.gradBias};
+    auto ret = CalculateConv2DBp(bp_inputTensor, bp_resultTensor, bp_params, executor);
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+
+    const aclTensor* gradInput = nullptr;
+    const aclTensor* gradOffset = nullptr;
+    CHECK_RET(CalculateDeformableOffsetsGrad(inputTensor, bp_resultTensor, offset, params,
+                                           &gradInput, &gradOffset, executor) == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
+
+    const aclTensor* gradWeight = bp_resultTensor.gradWeight;
+    const aclTensor* gradBias = bp_resultTensor.gradBias;
+    CHECK_RET(TransProcess(gradOffset, "gradOffset", executor, false) == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(TransProcess(gradInput, "gradInput", executor, false) == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(OutputPostProcess(resultTensor.gradOffset, gradOffset, "gradOffset", params.groups, executor) == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(OutputPostProcess(resultTensor.gradInput, gradInput, "gradInput", params.groups, executor) == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(OutputPostProcess(resultTensor.gradWeight, gradWeight, "gradWeight", params.groups, executor) == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(OutputPostProcess(resultTensor.gradBias, gradBias, "gradBias", params.groups, executor) == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
+    return ResultViewProcess(resultTensor, outputTensor, executor);
+}
+
+aclnnStatus aclnnDeformableConv2dBackwardGetWorkspaceSize(
+    const aclTensor* input, const aclTensor* gradOutput, const aclTensor* offsetOut, const aclTensor* weight,
+    const aclTensor* offset, const aclIntArray* kernelSize, const aclIntArray* stride, const aclIntArray* padding,
+    const aclIntArray* dilation, int64_t groups, int64_t deformableGroups, bool modulated, aclTensor* gradInput,
+    aclTensor* gradWeight, aclTensor* gradOffset, aclTensor* gradBias, uint64_t* workspaceSize,
+    aclOpExecutor** executor)
+{
+    L2_DFX_PHASE_1(
+        aclnnDeformableConv2dBackward,
+        DFX_IN(
+            input, gradOutput, offsetOut, weight, offset, kernelSize, stride, padding, dilation, groups,
+            deformableGroups, modulated),
+        DFX_OUT(gradInput, gradWeight, gradOffset, gradBias));
+    // OpExecutor
+    auto uniqueExecutor = CREATE_EXECUTOR();
+    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
+
+    Ops::NN::Conv::DeformableConv2dBackwardInputTensor inputTensor = {
+        gradOutput, input, weight, offset, offsetOut};
+    Ops::NN::Conv::ConvolutionBackwardOutput outputTensor = {gradInput, gradWeight, gradBias, gradOffset};
+
+    Ops::NN::Conv::DeformableConv2dBackwardParams params = {kernelSize, stride, padding,         dilation,
+                                                            modulated,  groups, deformableGroups};
+
+    // 固定写法，参数检查
+    NpuArch npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    Ops::NN::Conv::DeformableConv2dBackwardChecker deformableConv2dBackwardChecker(
+        inputTensor, outputTensor, params, npuArch);
+    auto retCheck = deformableConv2dBackwardChecker.CheckParams();
+    CHECK_RET(retCheck == ACLNN_SUCCESS, retCheck);
+    OP_LOGD("Entering CalculateDeformableConv2dBackward");
+    auto ret = CalculateDeformableConv2dBackward(inputTensor, outputTensor, offset, params, uniqueExecutor.get());
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+
+    // workspace
+    *workspaceSize = uniqueExecutor->GetWorkspaceSize();
+    uniqueExecutor.ReleaseTo(executor); //  uniqueExecutorexecutorexecutor
+    return ACLNN_SUCCESS;
+}
+
 aclnnStatus aclnnConvolutionBackward(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor,
                                      const aclrtStream stream)
 {
@@ -2987,6 +3192,13 @@ aclnnStatus aclnnConvTbcBackward(void *workspace, uint64_t workspaceSize, aclOpE
     OP_LOGD("Entering aclnnConvTbcBackward");
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
+
+ aclnnStatus aclnnDeformableConv2dBackward(
+ 	     void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+ 	 {
+ 	     L2_DFX_PHASE_2(aclnnDeformableConv2dBackward);
+ 	     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
+ 	 }
 
 #ifdef __cplusplus
 }
