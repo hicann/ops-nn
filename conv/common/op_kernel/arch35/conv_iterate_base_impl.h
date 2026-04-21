@@ -184,9 +184,11 @@ __aicore__ inline void LoadAL1BaseModule(Intf *self, TempIters& tempIters)
 {
     self->ctx.al1 = self->ctx.queueAL1.template AllocTensor<typename Intf::FmapT>();
     if constexpr (Intf::outputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE)) {
-        self->ctx.loadAl1Ins.LoadAL1(tempIters.kAL1Iter, tempIters.mAL1Iter, tempIters.batchIter, tempIters.groupOptIter);
+        self->ctx.loadAl1Ins.LoadAL1(
+            tempIters.kAL1Iter, tempIters.mAL1Iter, tempIters.batchIter, tempIters.groupOptIter);
     } else {
-        self->ctx.loadAl1Ins.LoadAL1(tempIters.kAL1Iter, tempIters.woAL1Iter, tempIters.hoAL1Iter, tempIters.batchIter, tempIters.groupOptIter);
+        self->ctx.loadAl1Ins.LoadAL1(
+            tempIters.kAL1Iter, tempIters.woAL1Iter, tempIters.hoAL1Iter, tempIters.batchIter, tempIters.groupOptIter);
     }
     self->ctx.queueAL1.EnQue(self->ctx.al1);
     self->ctx.loadAL1Flag = false;  // Only k directrion can be reloaded in LoopK
@@ -276,7 +278,7 @@ const uint64_t &KStartPosition, const uint64_t &kStep, const MmadParams &mmadPar
     event_t eventID = static_cast<event_t>(L0_SYBC_DB_CLOSE);
     AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(eventID);
     const LocalTensor<typename Intf::FmapT> &al0 = self->ctx.wholeAl0Tensor;
-    if (!((self->ctx.convTilingData->convApiTiling.kAL1 == self->ctx.convTilingData->convApiTiling.kL0) && (!self->ctx.loadAL0Flag))) {
+    if (self->ctx.convTilingData->convApiTiling.kAL1 != self->ctx.convTilingData->convApiTiling.kL0 || self->ctx.loadAL0Flag) {
         self->ctx.loadAL0Ins.LoadAL0(currentKL0, posK, kIter, al0);
     }
 
@@ -291,7 +293,7 @@ const uint64_t &KStartPosition, const uint64_t &kStep, const MmadParams &mmadPar
     } else {
         bl0 = self->ctx.wholeBl0Tensor;
     }
-    if (!((self->ctx.convTilingData->convApiTiling.kBL1 == self->ctx.convTilingData->convApiTiling.kL0) && (!self->ctx.loadBL0Flag))) {
+    if (self->ctx.convTilingData->convApiTiling.kBL1 != self->ctx.convTilingData->convApiTiling.kL0 || self->ctx.loadBL0Flag) {
         if constexpr (!Intf::isL0BFullLoadable) {
             self->ctx.loadBL0Ins.LoadBL0(KStartPosition, kStep, bl0);
         }
@@ -333,7 +335,7 @@ const uint64_t &posK, const uint64_t &KStartPosition, const uint64_t &kStep, con
     } else {
         bl0 = self->ctx.wholeBl0Tensor;
     }
-    if (!((self->ctx.convTilingData->convApiTiling.kBL1 == self->ctx.convTilingData->convApiTiling.kL0) && (!self->ctx.loadBL0Flag))) {
+    if (self->ctx.convTilingData->convApiTiling.kBL1 != self->ctx.convTilingData->convApiTiling.kL0 || self->ctx.loadBL0Flag) {
         // BL0 wait MMAD
         event_t e = static_cast<event_t>(al0PingPongFlag ^ 1);
         AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(e);
@@ -389,7 +391,7 @@ const uint64_t &currentKL0, const uint64_t &posK, const uint64_t &KStartPosition
         self->ctx.weightUbProcessTools.WeightUbTransSyncSet(self, kIter);
     }
 
-    if (!((self->ctx.convTilingData->convApiTiling.kAL1 == self->ctx.convTilingData->convApiTiling.kL0) && (!self->ctx.loadAL0Flag))) {
+    if (self->ctx.convTilingData->convApiTiling.kAL1 != self->ctx.convTilingData->convApiTiling.kL0 || self->ctx.loadAL0Flag) {
         // AL0 wait MMAD
         event_t e = static_cast<event_t>((bl0PingPongFlag ^ 1));
         AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(e);
