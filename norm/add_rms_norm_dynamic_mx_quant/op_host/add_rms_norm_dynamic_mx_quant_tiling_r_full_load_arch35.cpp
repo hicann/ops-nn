@@ -15,6 +15,8 @@
 #include "add_rms_norm_dynamic_mx_quant_tiling.h"
 #include "norm/norm_common/op_host/norm_tiling_check_common.h"
 
+using namespace optiling::add_rms_norm_dynamic_mx_quant;
+
 namespace optiling {
 using namespace NormCheck;
 
@@ -93,7 +95,7 @@ ge::graphStatus AddRmsNormDynamicMxQuantRFullLoadTiling::SetTilingParams()
     }
 
     if (rowFactor < 1) {
-        OP_LOGE(context_->GetNodeName(), "Cannot fit even 1 row in UB for R-full-load. R=%lu.", numCol_);
+        OP_LOGI(context_->GetNodeName(), "Cannot fit even 1 row in UB for R-full-load. R=%lu.", numCol_);
         return ge::GRAPH_PARAM_INVALID; // R轴不能全载，继续调下个模板
     }
 
@@ -110,6 +112,11 @@ bool AddRmsNormDynamicMxQuantRFullLoadTiling::IsCapable()
         return false;
     }
     if (numCol_ > FULL_LOAD_R_MAX) {
+        OP_LOGD(
+            context_->GetNodeName(),
+            "FullLoad IsCapable false: numCol=%ld >= fullLoadRMax=%ld, "
+            "binary add rounds increase, recommend SplitR mode.",
+            numCol_, FULL_LOAD_R_MAX);
         return false;
     }
     return true;
@@ -211,16 +218,14 @@ ge::graphStatus AddRmsNormDynamicMxQuantRFullLoadTiling::PostTiling()
 
 uint64_t AddRmsNormDynamicMxQuantRFullLoadTiling::GetTilingKey() const
 {
-    // Tiling key
-    uint64_t tilingKey = 0;
+    AddRmsNormDynamicMxQuantTilingKey tilingKey;
+    tilingKey.SetComputeMode(ComputeMode::FULL_LOAD);
     if (Y_SUPPORT_DTYPE_FP8_SET.count(yDtype_) != 0) {
-        tilingKey = TILING_KEY_FP8_R_FULL_LOAD;
-        OP_LOGD(context_->GetNodeName(), "TilingKey is %lu.", TILING_KEY_FP8_R_FULL_LOAD);
+        tilingKey.SetYDataType(YDataType::FP8);
     } else if (Y_SUPPORT_DTYPE_FP4_SET.count(yDtype_) != 0) {
-        tilingKey = TILING_KEY_FP4_R_FULL_LOAD;
-        OP_LOGD(context_->GetNodeName(), "TilingKey is %lu.", TILING_KEY_FP4_R_FULL_LOAD);
+        tilingKey.SetYDataType(YDataType::FP4);
     }
-    return tilingKey;
+    return tilingKey.GetTilingKey();
 }
 
 REGISTER_OPS_TILING_TEMPLATE(AddRmsNormDynamicMxQuant, AddRmsNormDynamicMxQuantRFullLoadTiling, ARND_R_FULL_LOAD_PRIORITY);

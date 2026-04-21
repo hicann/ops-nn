@@ -29,10 +29,53 @@
 #include "log/log.h"
 #include "util/math_util.h"
 #include "../op_kernel/arch35/add_rms_norm_dynamic_mx_quant_tiling_data.h"
+#include "../op_kernel/arch35/add_rms_norm_dynamic_mx_quant_tiling_key.h"
 
 using namespace Ops::NN::Optiling;
 
 namespace optiling {
+
+namespace add_rms_norm_dynamic_mx_quant {
+
+enum class ComputeMode : uint64_t
+{
+    FULL_LOAD = 0,
+    SPLIT_R = 1,
+    REDUCE_EMPTY = 2,
+};
+
+enum class YDataType : uint64_t
+{
+    FP8 = 0,
+    FP4 = 1,
+};
+
+class AddRmsNormDynamicMxQuantTilingKey {
+public:
+    AddRmsNormDynamicMxQuantTilingKey& SetComputeMode(ComputeMode mode)
+    {
+        computeMode_ = mode;
+        return *this;
+    }
+
+    AddRmsNormDynamicMxQuantTilingKey& SetYDataType(YDataType type)
+    {
+        yDataType_ = type;
+        return *this;
+    }
+
+    uint64_t GetTilingKey() const
+    {
+        return GET_TPL_TILING_KEY(static_cast<uint64_t>(computeMode_), static_cast<uint64_t>(yDataType_));
+    }
+
+private:
+    ComputeMode computeMode_ = ComputeMode::FULL_LOAD;
+    YDataType yDataType_ = YDataType::FP8;
+};
+
+} // namespace add_rms_norm_dynamic_mx_quant
+
 // Input indices
 constexpr uint64_t X1_INDEX = 0;
 constexpr uint64_t X2_INDEX = 1;
@@ -62,6 +105,7 @@ constexpr uint32_t FP32_SIZE = 4;
 constexpr uint32_t FP8_SIZE = 1;
 constexpr uint32_t B16_SIZE = 2;
 constexpr uint32_t NUM_TWO = 2;
+constexpr uint32_t NUM_FOUR = 4;
 constexpr uint32_t B32_BLOCK_NUM = 8;
 constexpr uint64_t ALIGN_FACTOR_512 = 512;
 constexpr uint64_t COL_ALIGN_NUM = 64;
@@ -69,6 +113,7 @@ constexpr uint32_t UB_RESERVE_FOR_RSTD_ALIGN = 1024;
 constexpr uint32_t UB_RESERVE_FOR_OUTPUT_Y_ALIGN = 1536;
 constexpr uint64_t ARND_REDUCE_EMPTY_PRIORITY = 500;
 constexpr uint64_t ARND_R_FULL_LOAD_PRIORITY = 1000;
+constexpr uint64_t ARND_SPLIT_R_PRIORITY = 2000;
 constexpr uint64_t FULL_LOAD_R_MAX = 16384;
 
 // DstType enum values
@@ -76,10 +121,6 @@ constexpr int64_t DST_TYPE_E5M2 = 35;
 constexpr int64_t DST_TYPE_E4M3FN = 36;
 constexpr int64_t DST_TYPE_E2M1 = 40;
 constexpr int64_t DST_TYPE_E1M2 = 41;
-
-// Tiling key values
-constexpr int64_t TILING_KEY_FP8_R_FULL_LOAD = 100;
-constexpr int64_t TILING_KEY_FP4_R_FULL_LOAD = 101;
 
 const std::set<ge::DataType> Y_SUPPORT_DTYPE_FP4_SET = {ge::DT_FLOAT4_E2M1, ge::DT_FLOAT4_E1M2};
 const std::set<ge::DataType> Y_SUPPORT_DTYPE_FP8_SET = {ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2};
@@ -223,6 +264,39 @@ protected:
     uint64_t GetTilingKey() const override;
 private:
     AddRmsNormDynamicMxQuantReduceEmptyTilingData td_;
+};
+
+class AddRmsNormDynamicMxQuantSplitRTiling : public AddRmsNormDynamicMxQuantRegbaseTilingBase {
+public:
+    explicit AddRmsNormDynamicMxQuantSplitRTiling(gert::TilingContext* context)
+        : AddRmsNormDynamicMxQuantRegbaseTilingBase(context)
+    {}
+    ~AddRmsNormDynamicMxQuantSplitRTiling() override = default;
+    void Reset(gert::TilingContext* context) override
+    {
+        AddRmsNormDynamicMxQuantRegbaseTilingBase::Reset(context);
+    }
+protected:
+    bool IsCapable() override;
+    ge::graphStatus DoOpTiling() override;
+    ge::graphStatus DoLibApiTiling() override;
+    ge::graphStatus PostTiling() override;
+    uint64_t GetTilingKey() const override;
+    int64_t GetPowerSplit(uint64_t numN);
+    int64_t GetCacheId(int64_t idx);
+    uint64_t GetMaxBaseN(uint64_t initialN);
+    void SetTilingData();
+    void PrintTilingData();
+
+private:
+    uint64_t baseN_{64};        // initial baseN, power of 2
+    uint64_t baseM_{128};       // 32-byte aligned, for rstd batch alignment
+    uint64_t nUbLoops_{0};
+    uint64_t powerSplit_{0};
+    uint64_t mainFoldCount_{0};
+    uint64_t foldTail_{0};
+    uint64_t baseNBlockSize_{64};
+    AddRmsNormDynamicMxQuantSplitRTilingData tilingData;
 };
 
 } // namespace optiling

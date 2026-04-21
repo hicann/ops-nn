@@ -32,9 +32,13 @@ namespace ge {
 
 * @par Inputs:
 * @li x1: A tensor for add compute. Support dtype: float16, bfloat16, support format: ND.
+* The shape supports at least 1 dimension, and at most 7 dimensions.
 * @li x2: A tensor for add compute. Support dtype: float16, bfloat16, support format: ND.
+* The shape must be the same as x1.
 * @li gamma: A tensor for rms norm weight params. Support dtype: float32, float16, bfloat16, support format: ND.
+* The shape must match the normalized dimension of x1.
 * @li beta: An optional tensor for rms norm weight params. Support dtype: float32, float16, bfloat16, support format: ND.
+* The shape must match the normalized dimension of x1.
 
 * @par Attributes:
 * @li epsilon: An optional attribute for numerical stability in rms norm, the type is float32. Defaults to 1e-6.

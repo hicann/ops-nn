@@ -14,9 +14,10 @@
  */
 #include "add_rms_norm_dynamic_mx_quant_tiling.h"
 
+using namespace optiling::add_rms_norm_dynamic_mx_quant;
+
 namespace optiling {
 
-constexpr uint64_t TILING_KEY_REDUCE_EMPTY = 300;
 constexpr static int64_t BUFFER_NUM = 1;
 constexpr static int64_t SINGLE_AIV_CORE_THRESHOLD_BYTES = 32L * 1024L;
 constexpr static uint64_t DEFAULT_NUM = 0;
@@ -115,7 +116,10 @@ ge::graphStatus AddRmsNormDynamicMxQuantReduceEmptyTiling::DoLibApiTiling()
 
 uint64_t AddRmsNormDynamicMxQuantReduceEmptyTiling::GetTilingKey() const
 {
-    return TILING_KEY_REDUCE_EMPTY;
+    AddRmsNormDynamicMxQuantTilingKey tilingKey;
+    tilingKey.SetComputeMode(ComputeMode::REDUCE_EMPTY);
+    tilingKey.SetYDataType(YDataType::FP8);
+    return tilingKey.GetTilingKey();
 }
 
 ge::graphStatus AddRmsNormDynamicMxQuantReduceEmptyTiling::PostTiling()

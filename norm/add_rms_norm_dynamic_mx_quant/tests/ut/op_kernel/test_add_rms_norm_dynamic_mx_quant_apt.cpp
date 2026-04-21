@@ -21,15 +21,20 @@
 #include "gtest/gtest.h"
 #include "tikicpulib.h"
 #include "data_utils.h"
+#include "add_rms_norm_dynamic_mx_quant_tiling_def.h"
 
-#include <cstdint>
+#ifdef __CCE_KT_TEST__
+#include "add_rms_norm_dynamic_mx_quant_apt.cpp"
+#endif
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void add_rms_norm_dynamic_mx_quant(
-    GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR beta,
-    GM_ADDR y, GM_ADDR x, GM_ADDR mxscale, GM_ADDR rstd,
-    GM_ADDR workspace, GM_ADDR tiling);
+#define COMPUTE_MODE_FULL_LOAD 0
+#define COMPUTE_MODE_SPLIT_R 1
+#define COMPUTE_MODE_REDUCE_EMPTY 2
+
+#define Y_DATA_TYPE_FP8 0
+#define Y_DATA_TYPE_FP4 1
 
 class add_rms_norm_dynamic_mx_quant_test : public testing::Test {
 protected:
@@ -43,7 +48,7 @@ protected:
     }
 };
 
-TEST_F(add_rms_norm_dynamic_mx_quant_test, test_case_r_full_load_fp8_tilingkey100_case1)
+TEST_F(add_rms_norm_dynamic_mx_quant_test, test_case_r_full_load_fp8_case1)
 {
     int64_t numA = 1;
     int64_t numR = 64;
@@ -88,9 +93,16 @@ TEST_F(add_rms_norm_dynamic_mx_quant_test, test_case_r_full_load_fp8_tilingkey10
     tilingDatafromBin->rstdFlag = 1;
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_SET_TILING_KEY(100);
+    ICPU_SET_TILING_KEY(2);
+
+    auto add_rms_norm_dynamic_mx_quant_wrapper = [](GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR x,
+                                                GM_ADDR mxscale, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
+        ::add_rms_norm_dynamic_mx_quant<COMPUTE_MODE_FULL_LOAD, Y_DATA_TYPE_FP8>(
+            x1, x2, gamma, beta, y, x, mxscale, rstd, workspace, tiling);
+    };
     ICPU_RUN_KF(
-        add_rms_norm_dynamic_mx_quant, blockDim, x1, x2, gamma, beta, y, x, mxscale, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+        add_rms_norm_dynamic_mx_quant_wrapper, blockDim, x1, x2, gamma, beta, y, x, mxscale, rstd, workspace,
+        (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x1);
     AscendC::GmFree(x2);
@@ -104,7 +116,6 @@ TEST_F(add_rms_norm_dynamic_mx_quant_test, test_case_r_full_load_fp8_tilingkey10
     AscendC::GmFree(tiling);
 }
 
-// empty_tensor, tilingKey(3000), numA=176, numR=0, putput_rstd=true
 TEST_F(add_rms_norm_dynamic_mx_quant_test, test_case_m_not0_n_0_outputRstd_true)
 {
     int64_t numA = 176;
@@ -145,9 +156,16 @@ TEST_F(add_rms_norm_dynamic_mx_quant_test, test_case_m_not0_n_0_outputRstd_true)
     tilingDatafromBin->numRow = 176;
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_SET_TILING_KEY(300);
+    ICPU_SET_TILING_KEY(2);
+
+    auto add_rms_norm_dynamic_mx_quant_wrapper = [](GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR x,
+                                                GM_ADDR mxscale, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
+        ::add_rms_norm_dynamic_mx_quant<COMPUTE_MODE_REDUCE_EMPTY, Y_DATA_TYPE_FP8>(
+            x1, x2, gamma, beta, y, x, mxscale, rstd, workspace, tiling);
+    };
     ICPU_RUN_KF(
-        add_rms_norm_dynamic_mx_quant, blockDim, x1, x2, gamma, beta, y, x, mxscale, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+        add_rms_norm_dynamic_mx_quant_wrapper, blockDim, x1, x2, gamma, beta, y, x, mxscale, rstd, workspace,
+        (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x1);
     AscendC::GmFree(x2);
@@ -202,9 +220,16 @@ TEST_F(add_rms_norm_dynamic_mx_quant_test, test_case_m_0_n_not_0_outputRstd_true
     tilingDatafromBin->numRow = 0;
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_SET_TILING_KEY(300);
+    ICPU_SET_TILING_KEY(2);
+
+    auto add_rms_norm_dynamic_mx_quant_wrapper = [](GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR x,
+                                                GM_ADDR mxscale, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
+        ::add_rms_norm_dynamic_mx_quant<COMPUTE_MODE_REDUCE_EMPTY, Y_DATA_TYPE_FP8>(
+            x1, x2, gamma, beta, y, x, mxscale, rstd, workspace, tiling);
+    };
     ICPU_RUN_KF(
-        add_rms_norm_dynamic_mx_quant, blockDim, x1, x2, gamma, beta, y, x, mxscale, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+        add_rms_norm_dynamic_mx_quant_wrapper, blockDim, x1, x2, gamma, beta, y, x, mxscale, rstd, workspace,
+        (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x1);
     AscendC::GmFree(x2);
@@ -259,9 +284,16 @@ TEST_F(add_rms_norm_dynamic_mx_quant_test, test_case_m_0_n_0_outputRstd_true)
     tilingDatafromBin->numRow = 0;
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_SET_TILING_KEY(300);
+    ICPU_SET_TILING_KEY(2);
+
+    auto add_rms_norm_dynamic_mx_quant_wrapper = [](GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR x,
+                                                GM_ADDR mxscale, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling) {
+        ::add_rms_norm_dynamic_mx_quant<COMPUTE_MODE_REDUCE_EMPTY, Y_DATA_TYPE_FP8>(
+            x1, x2, gamma, beta, y, x, mxscale, rstd, workspace, tiling);
+    };
     ICPU_RUN_KF(
-        add_rms_norm_dynamic_mx_quant, blockDim, x1, x2, gamma, beta, y, x, mxscale, rstd, workspace, (uint8_t*)(tilingDatafromBin));
+        add_rms_norm_dynamic_mx_quant_wrapper, blockDim, x1, x2, gamma, beta, y, x, mxscale, rstd, workspace,
+        (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x1);
     AscendC::GmFree(x2);

@@ -10,7 +10,7 @@
 
 /*!
  * \file add_rms_norm_dynamic_mx_quant_reduce_empty.h
- * \brief When numCol=0 and numRow!=0, fill rstd output with NaN.
+ * \brief
  */
 #ifndef ADD_RMS_NORM_DYNAMIC_MX_QUANT_REDUCE_EMPTY_H_
 #define ADD_RMS_NORM_DYNAMIC_MX_QUANT_REDUCE_EMPTY_H_
