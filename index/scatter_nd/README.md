@@ -36,4 +36,4 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口 | [test_aclnn_scatter_nd](examples/test_aclnn_scatter_nd.cpp) | 通过[aclnnScatterNd](docs/aclnnScatterNd.md)接口方式调用ScatterNdUpdate算子。 |
+| aclnn接口 | [test_aclnn_scatter_nd](examples/arch35/test_aclnn_scatter_nd.cpp) | 通过[aclnnScatterNd](docs/aclnnScatterNd.md)接口方式调用ScatterNdUpdate算子。 |
