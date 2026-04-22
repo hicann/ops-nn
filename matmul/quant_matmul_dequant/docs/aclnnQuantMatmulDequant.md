@@ -171,7 +171,7 @@ aclnnStatus aclnnQuantMatmulDequant(
       <tr>
       <td>smoothScaleOptional（aclTensor*）</td>
       <td>可选输入</td>
-      <td>表示x的平滑系数，x的平滑系数，公式中的scale_{smooth}。</td>
+      <td>表示x的平滑系数，公式中的scale_{smooth}。</td>
       <td><ul><li>shape是1维（k，），其中k与x的k一致。</li><li>支持空Tensor。</li></ul></td>
       <td>FLOAT16</td>
       <td>ND</td>
