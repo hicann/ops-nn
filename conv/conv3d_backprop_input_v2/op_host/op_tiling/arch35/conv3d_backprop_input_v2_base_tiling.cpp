@@ -370,6 +370,20 @@ bool Conv3DBackpropInputV2TilingArch35::AnalyzeFuseDtype(const bool f16flag, con
     return true;
 }
 
+DtypeFlags Conv3DBackpropInputV2TilingArch35::ComputeDtypeFlags(const ge::DataType outputBackpropDtype,
+    const ge::DataType filterDtype, const ge::DataType yDtype) const
+{
+    DtypeFlags flags;
+    flags.hif8flag = outputBackpropDtype == ge::DT_HIFLOAT8 && filterDtype == ge::DT_HIFLOAT8 && yDtype == ge::DT_HIFLOAT8;
+    flags.fp8e4m3flag = outputBackpropDtype == ge::DT_FLOAT8_E4M3FN && filterDtype == ge::DT_FLOAT8_E4M3FN &&
+                        yDtype == ge::DT_FLOAT8_E4M3FN;
+    flags.bf16flag = outputBackpropDtype == ge::DT_BF16 && filterDtype == ge::DT_BF16 && yDtype == ge::DT_BF16;
+    flags.f16flag = outputBackpropDtype == ge::DT_FLOAT16 && filterDtype == ge::DT_FLOAT16 && yDtype == ge::DT_FLOAT16;
+    flags.f32flag = outputBackpropDtype == ge::DT_FLOAT && filterDtype == ge::DT_FLOAT && yDtype == ge::DT_FLOAT;
+    flags.int8flag = outputBackpropDtype == ge::DT_INT8 && filterDtype == ge::DT_INT8 && yDtype == ge::DT_FLOAT16;
+    return flags;
+}
+
 bool Conv3DBackpropInputV2TilingArch35::AnalyzeDtype() const
 {
     size_t inputSizeIndex = INPUT_SIZE_INDEX;
@@ -391,22 +405,16 @@ bool Conv3DBackpropInputV2TilingArch35::AnalyzeDtype() const
     ge::DataType inputSizeDtype = context_->GetInputDesc(inputSizeIndex)->GetDataType();
     ge::DataType yDtype = context_->GetOutputDesc(Y_INDEX)->GetDataType();
 
-    bool hif8flag =
-        outputBackpropDtype == ge::DT_HIFLOAT8 && filterDtype == ge::DT_HIFLOAT8 && yDtype == ge::DT_HIFLOAT8;
-    bool fp8e4m3flag = outputBackpropDtype == ge::DT_FLOAT8_E4M3FN && filterDtype == ge::DT_FLOAT8_E4M3FN &&
-                       yDtype == ge::DT_FLOAT8_E4M3FN;
-    bool bf16flag = outputBackpropDtype == ge::DT_BF16 && filterDtype == ge::DT_BF16 && yDtype == ge::DT_BF16;
-    bool f16flag = outputBackpropDtype == ge::DT_FLOAT16 && filterDtype == ge::DT_FLOAT16 && yDtype == ge::DT_FLOAT16;
-    bool f32flag = outputBackpropDtype == ge::DT_FLOAT && filterDtype == ge::DT_FLOAT && yDtype == ge::DT_FLOAT;
+    DtypeFlags flags = ComputeDtypeFlags(outputBackpropDtype, filterDtype, yDtype);
     if (IsSocVersionFuse(context_)) {
-        OP_TILING_CHECK(!AnalyzeFuseDtype(f16flag, outputBackpropDtype, filterDtype, yDtype),
+        OP_TILING_CHECK(!AnalyzeFuseDtype(flags.f16flag, outputBackpropDtype, filterDtype, yDtype),
             CUBE_INNER_ERR_REPORT(opName_, "check dtype failed!"), return false);
     } else {
         OP_TILING_CHECK(
-        !hif8flag && !fp8e4m3flag && !bf16flag && !f16flag && !f32flag,
+        !flags.hif8flag && !flags.fp8e4m3flag && !flags.bf16flag && !flags.f16flag && !flags.f32flag && !flags.int8flag,
         CUBE_INNER_ERR_REPORT(
             opName_,
-            "the dtype of outputBackprop, filter, y only support DT_HIFLOAT8/DT_FLOAT8_E4M3FN/DT_BF16/DT_FLOAT16/DT_FLOAT,"
+            "the dtype of outputBackprop, filter, y only support DT_HIFLOAT8/DT_FLOAT8_E4M3FN/DT_BF16/DT_FLOAT16/DT_FLOAT/DT_INT8,"
             "but actually get outputBackpropDtype is [%s], filterDtype is [%s], yDtype is [%s]",
             ge::TypeUtils::DataTypeToSerialString(outputBackpropDtype).c_str(),
             ge::TypeUtils::DataTypeToSerialString(filterDtype).c_str(),
@@ -420,7 +428,7 @@ bool Conv3DBackpropInputV2TilingArch35::AnalyzeDtype() const
             opName_, "input_size dtype should be int32 or int64, but actually get inputSizeDtype is [%s]",
             ge::TypeUtils::DataTypeToSerialString(inputSizeDtype).c_str()),
         return false);
-    if (!CheckDtypeFormatAttrs(outputBackpropIndex, filterIndex, hif8flag, fp8e4m3flag)) {
+    if (!CheckDtypeFormatAttrs(outputBackpropIndex, filterIndex, flags.hif8flag, flags.fp8e4m3flag)) {
         return false;
     }
     return true;

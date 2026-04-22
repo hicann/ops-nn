@@ -746,6 +746,28 @@ __aicore__ inline void Rearrange2Gm(Intf *self, const GlobalTensor<typename Intf
 }
 
 template <class Intf>
+__aicore__ inline void DataCopyCastVecToOutput(Intf *self, const GlobalTensor<typename Intf::DstT> &output)
+{
+    uint64_t dstOffset = static_cast<uint64_t>(self->ctx.curNIdx_) * self->ctx.tiling_->baseN * self->ctx.diHiWi_ +
+                        static_cast<uint64_t>(self->ctx.curDinIdx_) * self->ctx.hiWi_ +
+                        static_cast<uint64_t>(self->ctx.curMIdx_) * self->ctx.tiling_->baseM;
+    DataCopyExtParams mte3Param;
+    mte3Param.blockCount = self->ctx.baseUseN_;
+    mte3Param.blockLen = self->ctx.baseUseM_ * sizeof(typename Intf::DstT);
+    mte3Param.srcStride = 0;
+    mte3Param.dstStride = self->ctx.diHiWi_ * sizeof(typename Intf::DstT) - mte3Param.blockLen;
+#if (__NPU_ARCH__ != 5102)
+    if constexpr (std::is_same<typename Intf::L0cT, int32_t>::value) {
+        DataCopyPad<typename Intf::DstT, PaddingMode::Compact>(output[dstOffset],
+        self->ctx.castVecTensor_.template ReinterpretCast<typename Intf::DstT>(), mte3Param);
+    } else {
+        DataCopyPad<typename Intf::DstT, PaddingMode::Compact>(output[dstOffset],
+        self->ctx.castVecTensor_.template ReinterpretCast<typename Intf::SrcT>(), mte3Param);
+    }
+#endif
+}
+
+template <class Intf>
 __aicore__ inline void CastToDstType(Intf *self, const GlobalTensor<typename Intf::DstT> &output,
                                          uint8_t enAtomic = 0, bool enSequentialWrite = false)
 {
@@ -789,19 +811,7 @@ __aicore__ inline void CastToDstType(Intf *self, const GlobalTensor<typename Int
         event_t eventIdVecToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
         SetFlag<HardEvent::V_MTE3>(eventIdVecToMte3);
         WaitFlag<HardEvent::V_MTE3>(eventIdVecToMte3);
-        // ub(Dst Type, DCHW) -> GM(Dst Type, CDHW)
-        uint64_t dstOffset = static_cast<uint64_t>(self->ctx.curNIdx_) * self->ctx.tiling_->baseN * self->ctx.diHiWi_ + // cin offset
-                            static_cast<uint64_t>(self->ctx.curDinIdx_) * self->ctx.hiWi_ + // di offset
-                            static_cast<uint64_t>(self->ctx.curMIdx_) * self->ctx.tiling_->baseM; // hi&wi offset
-        DataCopyExtParams mte3Param;
-        mte3Param.blockCount = self->ctx.baseUseN_;
-        mte3Param.blockLen = self->ctx.baseUseM_ * sizeof(typename Intf::DstT);
-        mte3Param.srcStride = 0;
-        mte3Param.dstStride = self->ctx.diHiWi_ * sizeof(typename Intf::DstT) - mte3Param.blockLen;
-#if (__NPU_ARCH__ != 5102)
-        DataCopyPad<typename Intf::DstT, PaddingMode::Compact>(output[dstOffset],
-            self->ctx.castVecTensor_.template ReinterpretCast<typename Intf::SrcT>(), mte3Param);
-#endif
+        DataCopyCastVecToOutput(self, output);
     }
 }
 
@@ -1101,7 +1111,8 @@ __aicore__ inline void GroupTransdataWeight(Intf *self, uint32_t kIdx, uint32_t 
         curCin1Idx) << self->ctx.tiling_->c0BitsB << SHIFT_BIT_4;
     // 调用指令不支持hif8，暂时隔离开，否则编译不通过
     if constexpr(!std::is_same<typename Intf::SrcBT, hifloat8_t>::value &&
-        !std::is_same<typename Intf::SrcBT, fp8_e4m3fn_t>::value) {
+        !std::is_same<typename Intf::SrcBT, fp8_e4m3fn_t>::value &&
+        !std::is_same<typename Intf::SrcBT, int8_t>::value) {
         GroupTransdataWeightCore<Intf>(self, curCinSize, curCoutSize, srcGmOffset, srcUbOffset, useB1Tbuf);
     }
 }
@@ -1368,7 +1379,8 @@ __aicore__ inline void C04TransdataWeight(Intf *self, const uint32_t kIdx, uint3
 
         // 调用指令不支持hif8，暂时隔离开，否则编译不通过
         if constexpr(!std::is_same<typename Intf::SrcBT, hifloat8_t>::value &&
-            !std::is_same<typename Intf::SrcBT, fp8_e4m3fn_t>::value) {
+            !std::is_same<typename Intf::SrcBT, fp8_e4m3fn_t>::value &&
+            !std::is_same<typename Intf::SrcBT, int8_t>::value) {
             // 每个AIV只在第一次计算时需要清零
             if (GetSubBlockIdx() == self->ctx.c04LoadToB1IterIdx_) {
                 InitUbZero4C04<Intf>(self, b1CinSize); // VDup

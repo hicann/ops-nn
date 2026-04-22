@@ -526,8 +526,10 @@ static bool UpdateDtypeParams(const gert::TilingContext *context, Conv3dBpInputV
     bool isFp8E4M3Flag = otherParams.a_dtype == ge::DT_FLOAT8_E4M3FN &&
       otherParams.b_dtype == ge::DT_FLOAT8_E4M3FN &&
       otherParams.c_dtype == ge::DT_FLOAT8_E4M3FN;
-    dtypeSupportFlag = isHiF8Flag || isFp8E4M3Flag || isFp16Flag || isFp32Flag;
-    dtypeCheckLog = "hifloat8, float8_e4m3, fp16 and fp32";
+    bool isInt8Flag = otherParams.a_dtype == ge::DT_INT8 &&
+      otherParams.b_dtype == ge::DT_INT8 && otherParams.c_dtype == ge::DT_FLOAT16;
+    dtypeSupportFlag = isHiF8Flag || isFp8E4M3Flag || isFp16Flag || isFp32Flag || isInt8Flag;
+    dtypeCheckLog = "hifloat8, float8_e4m3, int8, fp16 and fp32";
   }
   if (IsSocVersionFuse(context)) {
     bool isInt8Flag = otherParams.a_dtype == ge::DT_INT8 && otherParams.b_dtype == ge::DT_INT8 &&
@@ -1885,9 +1887,9 @@ bool CheckTranspose(const char* opName, const gert::TilingContext* context) {
     }
     OP_CHECK_IF(offsetX != nullptr && *offsetX != 0,
                 OP_LOGE(opName, "cannot support offset_x attribute parameters"), return false);
-    if (!IsSocVersionFuse(context)) {
+    if (!IsSocVersionFuse(context) && !IsArchAfter35(context)) {
         OP_CHECK_IF(offsetWShape != nullptr && offsetWShape->GetStorageShape().GetShapeSize() != 0,
-                OP_LOGE(opName,"cannot support offset_w input parameters"), return false);
+                  OP_LOGE(opName,"cannot support offset_w input parameters"), return false);
         auto biasShape = context->GetOptionalInputShape(BAIS_INDEX);
         OP_CHECK_IF(biasShape != nullptr && biasShape->GetStorageShape().GetShapeSize() != 0,
                 OP_LOGE(opName, "cannot support bias"), return false);

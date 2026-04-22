@@ -56,6 +56,15 @@ const size_t OUTPUT_PADDING_INDEX = 5;
 const size_t OFFSET_X_INDEX = 6;
 const size_t TRANSPOSE_ENABLE_HF32_INDEX = 7;
 
+struct DtypeFlags {
+    bool hif8flag = false;
+    bool fp8e4m3flag = false;
+    bool bf16flag = false;
+    bool f16flag = false;
+    bool f32flag = false;
+    bool int8flag = false;
+};
+
 struct TilingValueDavid {
     uint64_t coreNum;
     uint32_t batchDim;
@@ -290,6 +299,8 @@ private:
     TilingBestBaseBlock GetBestBaseBlock(uint32_t baseBlockId);
     bool AnalyzeFuseDtype(const bool f16flag, const ge::DataType outputBackpropDtype,
         const ge::DataType filterDtype, const ge::DataType yDtype) const;
+    DtypeFlags ComputeDtypeFlags(const ge::DataType outputBackpropDtype, const ge::DataType filterDtype,
+        const ge::DataType yDtype) const;
     bool CheckL0Size(uint32_t baseM, uint32_t baseN, uint32_t baseK, uint32_t l0Pbuffer = DB_ON);
     bool PrintInputsAttrs(conv_bp_v2_kernel::TConv3DInputV2Tiling& tiling);
 };

@@ -49,7 +49,11 @@ __global__ __aicore__ void extend_conv_transpose(GM_ADDR input_size, GM_ADDR x, 
     REGISTER_TILING_DEFAULT(conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData);
     GET_TILING_DATA_WITH_STRUCT(conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData, tilingData, tiling);
 
+#if (__NPU_ARCH__ == 5102)
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIC_ONLY);
+#elif (__NPU_ARCH__ == 3510)
+    KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIC_1_2);
+#endif
 
     if (tilingData.conv3DDxTiling.initOutputFlag == static_cast<int32_t>(InitOutputFlag::L0_INIT)) {
         Conv3dDxInitOutput<DTYPE_Y> opInitOutput;
