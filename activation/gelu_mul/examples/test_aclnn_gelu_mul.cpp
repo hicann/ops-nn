@@ -134,7 +134,7 @@ int main() {
   PrintOutResult(outShape, &outDeviceAddr);
 
 
-  // 6. 释放aclTensor和aclTensor，需要根据具体API的接口定义修改
+  // 6. 释放aclTensor，需要根据具体API的接口定义修改
   aclDestroyTensor(input);
   aclDestroyTensor(out);
 
