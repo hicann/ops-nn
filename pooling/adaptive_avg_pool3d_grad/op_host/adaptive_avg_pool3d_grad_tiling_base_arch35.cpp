@@ -46,9 +46,9 @@ bool AdaptiveAvgPool3dGradTilingBaseV35::CheckInputShape()
     OPS_CHECK_NULL_WITH_CONTEXT(context_, data_format);
     std::string data_formatStr = data_format;
 
-    // data_format should be NCDHW or NDHWC
-    OP_CHECK_IF(!(data_formatStr == "NCDHW" || data_formatStr == "NDHWC"),
-                OP_LOGE(context_->GetNodeName(), "ATTR data_format is %s ,expect [NDHWC] or [NCDHW].", data_format),
+    // data_format should be NCDHW or NDHWC or CDHW or DHWC
+    OP_CHECK_IF(!(data_formatStr == "NCDHW" || data_formatStr == "NDHWC" || data_formatStr == "CDHW" || data_formatStr == "DHWC"),
+                OP_LOGE(context_->GetNodeName(), "ATTR data_format is %s ,expect [NDHWC] or [NCDHW] or [DHWC] or [CDHW].", data_format),
                 return false);
     
     // xDimNum should be 5 or 4

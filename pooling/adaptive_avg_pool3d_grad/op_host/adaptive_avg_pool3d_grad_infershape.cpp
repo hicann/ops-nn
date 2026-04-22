@@ -34,7 +34,7 @@ constexpr size_t CDHW_DIM_NUM = 4;
  * @param context 推理上下文，用于日志输出和节点信息获取
  * @param gradShape y_grad输入的shape指针
  * @param xShape x输入的shape指针
- * @param dataFormatStr 数据格式字符串（NCDHW/NDHWC）
+ * @param dataFormatStr 数据格式字符串（NCDHW/NDHWC/CDHW/DHWC）
  * @return ge::GRAPH_SUCCESS 校验通过；ge::GRAPH_FAILED 校验失败（含详细日志）
  */
 
@@ -43,9 +43,9 @@ static ge::graphStatus CheckInputValidity(const gert::InferShapeContext* context
                                          const gert::Shape* xShape, 
                                          const std::string& dataFormatStr) {
     // 1. 校验数据格式合法性
-    if (!(dataFormatStr == "NCDHW" || dataFormatStr == "NDHWC")) {
+    if (!(dataFormatStr == "NCDHW" || dataFormatStr == "NDHWC" || dataFormatStr == "CDHW" || dataFormatStr == "DHWC")) {
         OP_LOGE(context->GetNodeName(), 
-                "ATTR dataFormat is %s, expect [NDHWC] or [NCDHW].", 
+                "ATTR dataFormat is %s, expect [NDHWC] or [NCDHW] or [DHWC] or [CDHW].", 
                 dataFormatStr.c_str());
         return ge::GRAPH_FAILED;
     }
