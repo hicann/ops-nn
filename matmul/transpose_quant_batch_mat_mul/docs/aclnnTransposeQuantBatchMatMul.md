@@ -113,7 +113,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
         <td>输入</td>
         <td>表示矩阵乘的偏置矩阵。</td>
         <td>预留参数，当前暂不支持。</td>
-        <td>BFLOAT16、FLOAT16、FLOAT32</td>
+        <td>-</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -189,7 +189,12 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
         <td>permX2（aclIntArray*）</td>
         <td>输入</td>
         <td>表示矩阵乘的第二个矩阵的转置序列，host侧的aclIntArray。</td>
-        <td>-</td>
+        <td>  
+        <ul>        
+          <li>K-C量化场景，支持[0, 1, 2]。</li>
+          <li>MX量化场景，支持[0, 1, 2]或[0, 2, 1]。</li>
+        </ul> 
+        </td>
         <td>INT64</td>
         <td>-</td>
         <td>1</td>
@@ -257,28 +262,19 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
     <tr>
       <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="8">161002</td>
-      <td>x1、x2或out的数据类型不在支持的范围内。</td>
+      <td>x1、x2、x1Scale、x2Scale或out的数据类型不在支持的范围内。</td>
     </tr>
     <tr>
-      <td>x1的第二维和x2的第一维度不相等。</td>
+      <td>x1、x2、x1Scale、x2Scale或out的shape不满足校验条件。</td>
     </tr>
     <tr>
       <td>x1、x2、permX1、permX2、permY的维度大小不等于3。</td>
     </tr>
     <tr>
-      <td>x1Scale、x2Scale的维度大小不等于1。</td>
-    </tr>
-    <tr>
       <td>batchSplitFactor不在支持的范围内</td>
     </tr>
     <tr>
-      <td>x1Scale、x2Scale的数据类型不在支持的范围内。</td>
-    </tr>
-    <tr>
       <td>permX1、permX2、permY的取值不在支持的范围内。</td>
-    </tr>
-    <tr>
-      <td>x1Scale、x2Scale的shape不符合要求。</td>
     </tr>
   </tbody>
   </table>
@@ -333,11 +329,15 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
 - 确定性说明： aclnnTransposeQuantBatchMatMul默认确定性实现。
 
 - <term>Ascend 950PR/Ascend 950DT</term>：
-    - permX1和permY支持[1, 0, 2]
-    - K-C量化场景，permX2支持输入[0, 1, 2]；MX量化场景，permX2支持输入[0, 1, 2]或[0, 2, 1]。
-    - K-C量化场景，K仅支持512，N仅支持128。x1Scale和x2Scale为1维，并且x1Scale为(M,), x2Scale为(N,)，group_size仅支持配置为0，其他取值不生效。
-    - MX量化场景，K仅支持64的倍数。x1Scale和x2Scale为4维，并且x1Scale为(M, B, K/64, 2), x2Scale为(B, K/64, N, 2)或(B, N, K/64, 2)，group_size的groupSizeM和groupSizeN仅支持0或1，groupSizeK仅支持32。
-
+    - K-C量化场景，K仅支持512，N仅支持128。x1Scale和x2Scale仅支持1维，并且x1Scale要求shape为(M,), x2Scale要求shape为(N,)，group_size仅支持配置为0，其他取值不生效。
+    - MX量化场景，K仅支持64的倍数。 x1Scale和x2Scale仅支持4维，并且x1Scale要求shape为(M, B, K/64, 2), 当permX2为[0, 1, 2]时，x2Scale要求shape为(B, K/64, N, 2)；当permX2为[0, 2, 1]时，x2Scale要求shape为(B, N, K/64, 2)。group_size的groupSizeM和groupSizeN仅支持0或1，groupSizeK仅支持32。
+    - groupSize相关约束：
+      - 仅在MX量化场景中生效。
+      - 传入的groupSize内部会按如下公式分解得到groupSizeM、groupSizeN、groupSizeK，当其中有1个或多个为0，会根据x1/x2/x1Scale/x2Scale输入shape重新设置groupSizeM、groupSizeN、groupSizeK用于计算。原理：假设groupSizeM=0，表示M方向量化分组值由接口推断，推断公式为groupSizeM = M / scaleM（需保证M能被scaleM整除），其中M与x1 shape中的M一致，scaleM与x1Scale shape中的M一致。
+      
+    $$
+    groupSize = groupSizeK | groupSizeN << 16 | groupSizeM << 32
+    $$
 ## 调用示例
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
