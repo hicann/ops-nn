@@ -34,7 +34,7 @@ class ApplyAdamWTiling {
   explicit ApplyAdamWTiling(gert::TilingContext *context) : tilingContext_(context) {};
 
   ge::graphStatus RunTiling();
-  ApplyAdamWTilingData* tiling_;
+  ApplyAdamWTilingData* tiling_ = nullptr;
 
  protected:
   ge::graphStatus DoElewiseTiling();

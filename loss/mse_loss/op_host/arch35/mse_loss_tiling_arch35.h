@@ -46,7 +46,7 @@ protected:
     ge::graphStatus TilingReduce(const MseLossCompileInfo* compileInfo);
 
 private:
-    ge::DataType outputDtype;
+    ge::DataType outputDtype = ge::DT_FLOAT;
     gert::TilingContext* tilingContext;
     MseLossTilingKey key;
     MseLossTilingData* tiling = nullptr;

@@ -41,13 +41,13 @@ protected:
     ge::graphStatus DoNonUpdateSlotsTiling();
 
 private:
-    ge::DataType varDtype_;
-    ApplyAdagradDTilingDataStruct *tiling_;
+    ge::DataType varDtype_ = ge::DT_FLOAT;
+    ApplyAdagradDTilingDataStruct *tiling_ = nullptr;
     gert::TilingContext *tilingContext_;
     uint64_t schMode = 0;
     uint64_t updateSlots = 0;
     uint64_t dType = 0;
-    bool updateSlots_;
+    bool updateSlots_ = false;
 };
 } // namespace optiling
 #endif // OPS_BUILD_IN_OP_TILING_RUNTIME_APPLY_ADAGRAD_D_TILING_H

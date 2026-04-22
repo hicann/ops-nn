@@ -33,7 +33,7 @@ class ApplyGradientDescentTiling
 public:
     explicit ApplyGradientDescentTiling(gert::TilingContext* context) : tilingContext(context) {};
     ge::graphStatus RunTiling();
-    ApplyGradientDescentNs::ApplyGradientDescentTilingData* tiling;
+    ApplyGradientDescentNs::ApplyGradientDescentTilingData* tiling = nullptr;
 
 protected:
     ge::graphStatus SetTilingData();
@@ -45,10 +45,10 @@ private:
     gert::TilingContext* tilingContext;
     uint64_t dType_ = 0;
     uint64_t schMode_ = 0;
-    ge::DataType outputDtype;
-    ge::DataType varDtype;
-    ge::DataType alphaDtype;
-    ge::DataType deltaDtype;
+    ge::DataType outputDtype = ge::DT_FLOAT;
+    ge::DataType varDtype = ge::DT_FLOAT;
+    ge::DataType alphaDtype = ge::DT_FLOAT;
+    ge::DataType deltaDtype = ge::DT_FLOAT;
 };
 }  // namespace optiling
 #endif  // OPS_BUILD_IN_OP_TILING_RUNTIME_APPLY_GRADIENT_DESCENT_TILING_H
