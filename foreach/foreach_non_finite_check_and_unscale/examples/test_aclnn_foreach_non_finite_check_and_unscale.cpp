@@ -158,7 +158,7 @@ int main() {
             LOG_PRINT("copy foundInf result from device to host failed. ERROR: %d\n", ret); return ret);
   LOG_PRINT("foundInf result is: %f\n", foundInfData[0]);
 
-  // 6. 释放aclTensorList和aclTensor，需要根据具体API的接口定义修改
+  // 6. 释放aclTensor，需要根据具体API的接口定义修改
   aclDestroyTensorList(tensorListInput);
   aclDestroyTensor(foundInf);
   aclDestroyTensor(invScale);
