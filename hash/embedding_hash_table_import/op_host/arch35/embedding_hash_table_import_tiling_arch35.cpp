@@ -67,7 +67,8 @@ ge::graphStatus EmbeddingHashTableImportTiling::GetInputInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, tableHandleDesc);
     auto tableHandleDtype = tableHandleDesc->GetDataType();
     OP_CHECK_IF((tableHandleDtype != ge::DataType::DT_INT64),
-        OP_LOGE(opName, "table handle dtype should be int64, please check."),
+        OP_LOGE_FOR_INVALID_DTYPE(opName, "table_handles",
+            ge::TypeUtils::DataTypeToSerialString(tableHandleDtype).c_str(), "int64"),
         return ge::GRAPH_FAILED);
 
     // check embedding_dims
@@ -75,7 +76,8 @@ ge::graphStatus EmbeddingHashTableImportTiling::GetInputInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, embeddingDimsDesc);
     auto embeddingDimsDtype = embeddingDimsDesc->GetDataType();
     OP_CHECK_IF((embeddingDimsDtype != ge::DataType::DT_INT64),
-        OP_LOGE(opName, "embedding dims dtype should be int64, please check."),
+        OP_LOGE_FOR_INVALID_DTYPE(opName, "embedding_dims",
+            ge::TypeUtils::DataTypeToSerialString(embeddingDimsDtype).c_str(), "int64"),
         return ge::GRAPH_FAILED);
 
     // check bucket_sizes
@@ -83,13 +85,16 @@ ge::graphStatus EmbeddingHashTableImportTiling::GetInputInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, bucketSizesDesc);
     auto bucketSizesDtype = bucketSizesDesc->GetDataType();
     OP_CHECK_IF((bucketSizesDtype != ge::DataType::DT_INT64),
-        OP_LOGE(opName, "bucket sizes dtype should be int64, please check."),
+        OP_LOGE_FOR_INVALID_DTYPE(opName, "bucket_sizes",
+            ge::TypeUtils::DataTypeToSerialString(bucketSizesDtype).c_str(), "int64"),
         return ge::GRAPH_FAILED);
 
     auto bucketSizesTensor = context_->GetRequiredInputTensor(IN_BUCKET_SIZES_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, bucketSizesTensor);
     tablesCount_ = static_cast<int64_t>(bucketSizesTensor->GetShapeSize());
-    OP_CHECK_IF(tablesCount_ <= 0, OP_LOGE(opName, "tables count should bigger than 0, but got %ld.", tablesCount_),
+    OP_CHECK_IF(tablesCount_ <= 0,
+        OP_LOGE_FOR_INVALID_SHAPESIZE(opName, "bucket_sizes",
+            std::to_string(tablesCount_).c_str(), "greater than 0"),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -102,21 +107,26 @@ ge::graphStatus EmbeddingHashTableImportTiling::GetInputInfoOfTensorList()
     OP_CHECK_NULL_WITH_CONTEXT(context_, keysDesc);
     auto keysDtype = keysDesc->GetDataType();
     OP_CHECK_IF((keysDtype != ge::DataType::DT_INT64),
-        OP_LOGE(opName, "keys dtype should be int64, please check."), return ge::GRAPH_FAILED);
+        OP_LOGE_FOR_INVALID_DTYPE(opName, "keys",
+            ge::TypeUtils::DataTypeToSerialString(keysDtype).c_str(), "int64"),
+        return ge::GRAPH_FAILED);
 
     // check counters
     auto countersDesc = context_->GetRequiredInputDesc(IN_COUNTERS_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, countersDesc);
     auto countersDtype = countersDesc->GetDataType();
     OP_CHECK_IF((countersDtype != ge::DataType::DT_UINT64),
-        OP_LOGE(opName, "counters dtype should be uint64, please check."), return ge::GRAPH_FAILED);
+        OP_LOGE_FOR_INVALID_DTYPE(opName, "counters",
+            ge::TypeUtils::DataTypeToSerialString(countersDtype).c_str(), "uint64"),
+        return ge::GRAPH_FAILED);
 
     // check filter_flags
     auto filterFlagsDesc = context_->GetRequiredInputDesc(IN_FILTER_FLAGS_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, filterFlagsDesc);
     auto filterFlagDtype = filterFlagsDesc->GetDataType();
     OP_CHECK_IF((filterFlagDtype != ge::DataType::DT_UINT8),
-        OP_LOGE(opName, "filter flags dtype should be uint8, please check."),
+        OP_LOGE_FOR_INVALID_DTYPE(opName, "filter_flags",
+            ge::TypeUtils::DataTypeToSerialString(filterFlagDtype).c_str(), "uint8"),
         return ge::GRAPH_FAILED);
 
     // check values
@@ -124,14 +134,17 @@ ge::graphStatus EmbeddingHashTableImportTiling::GetInputInfoOfTensorList()
     OP_CHECK_NULL_WITH_CONTEXT(context_, valuesDesc);
     auto valuesDtype = valuesDesc->GetDataType();
     OP_CHECK_IF((valuesDtype != ge::DataType::DT_FLOAT),
-        OP_LOGE(opName, "values dtype should be float32, please check."),
+        OP_LOGE_FOR_INVALID_DTYPE(opName, "values",
+            ge::TypeUtils::DataTypeToSerialString(valuesDtype).c_str(), "float32"),
         return ge::GRAPH_FAILED);
     bitWidth_ = static_cast<int64_t>(ge::GetSizeByDataType(valuesDtype));
 
     auto valuesTensor = context_->GetRequiredInputTensor(IN_VALUES_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, valuesTensor);
     valuesNum_ = static_cast<int64_t>(valuesTensor->GetShapeSize());
-    OP_CHECK_IF(valuesNum_ <= 0, OP_LOGE(opName, "values dim number should bigger than 0, but got %ld.", valuesNum_),
+    OP_CHECK_IF(valuesNum_ <= 0,
+        OP_LOGE_FOR_INVALID_SHAPESIZE(opName, "values",
+            std::to_string(valuesNum_).c_str(), "greater than 0"),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;

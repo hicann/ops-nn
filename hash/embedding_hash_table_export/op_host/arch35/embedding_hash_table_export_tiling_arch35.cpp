@@ -59,7 +59,14 @@ ge::graphStatus TilingForEmbeddingHashTableExport(gert::TilingContext *context)
     int64_t bucketSizesShapeVal = bucketSizes->GetStorageShape().GetShapeSize();
     if (!(tableHandlesShapeVal == tableSizesShapeVal && tableSizesShapeVal == embeddingDimsShapeVal &&
         embeddingDimsShapeVal == bucketSizesShapeVal)) {
-        OP_LOGE(context->GetNodeName(), "Input shapeSize is not same. Please check.");
+        std::string shapeSizeMsg = std::to_string(tableHandlesShapeVal) + ", " +
+            std::to_string(tableSizesShapeVal) + ", " +
+            std::to_string(embeddingDimsShapeVal) + ", " +
+            std::to_string(bucketSizesShapeVal);
+        OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(context->GetNodeName(),
+            "table_handles, table_sizes, embedding_dims and bucket_sizes",
+            shapeSizeMsg.c_str(),
+            "Input shapeSize of table_handles, table_sizes, embedding_dims and bucket_sizes should be same.");
         return ge::GRAPH_FAILED;
     }
 

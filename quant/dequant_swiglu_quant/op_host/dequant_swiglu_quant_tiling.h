@@ -303,11 +303,11 @@ class DequantSwigluQuantDskTiling : public TilingBaseClass
   ge::graphStatus CheckForDynamicQuant();
   ge::graphStatus CheckForStaticQuant();
   ge::graphStatus CheckQuantScaleDtype();
-  ge::graphStatus CheckStaticQuantShape(const int64_t quantInputIdx, int64_t& colLen);
+  ge::graphStatus CheckStaticQuantShape(const int64_t quantInputIdx, int64_t& colLen, const char* paramName);
   ge::graphStatus CheckIllegalParam();
   void CountTilingKey();
   ge::graphStatus CountMaxDim(int64_t& ubFactorDimx);
-  ge::graphStatus CheckScaleShapeWithDim(const int64_t scaleInputIdx, const int64_t expectDim);
+  ge::graphStatus CheckScaleShapeWithDim(const int64_t scaleInputIdx, const int64_t expectDim, const char* paramName);
   bool IsPerformanceAndGroupIndexBrach();
   ge::graphStatus GetShapeAttrsInfoInner();
   static bool CheckOptionalShapeExisting(const gert::StorageShape* storageShape);

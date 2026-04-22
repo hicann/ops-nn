@@ -14,6 +14,7 @@
  */
 #include "foreach_non_finite_check_and_unscale_tiling.h"
 #include "op_host/tiling_util.h"
+#include "op_host/tiling_templates_registry.h"
 
 namespace optiling {
 using namespace Ops::NN::OpTiling;
@@ -106,7 +107,8 @@ ge::graphStatus ForeachNonFiniteCheckAndUnscaleRegbaseTiling::GetShapeAttrsInfo(
     totalTensorCount_ = allTensorCount - NON_DYN_CNT;
     OP_CHECK_IF(
         totalTensorCount_ > MAX_TENSOR_COUNT || totalTensorCount_ <= 0,
-        OP_LOGE(nodeName_, "The number of input tensors [%hd] not in (0, %hu].", totalTensorCount_, MAX_TENSOR_COUNT),
+        OP_LOGE_FOR_INVALID_TENSORNUM(nodeName_.c_str(), "scaled_grads", totalTensorCount_,
+                                       ("(0, " + std::to_string(MAX_TENSOR_COUNT) + ")").c_str()),
         return ge::GRAPH_FAILED);
 
     // Get shape, dtype information, and the total number of data.
@@ -121,11 +123,18 @@ ge::graphStatus ForeachNonFiniteCheckAndUnscaleRegbaseTiling::GetShapeAttrsInfo(
             dataType_ = tempDtype;
             dataTypeSize_ = ge::GetSizeByDataType(dataType_);
             OP_CHECK_IF(
-                dataTypeSize_ <= 0, OP_LOGE(nodeName_, "dataTypeSize[%d] error.", dataTypeSize_),
+                dataTypeSize_ <= 0,
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(nodeName_.c_str(), "scaled_grads",
+                    ge::TypeUtils::DataTypeToSerialString(dataType_).c_str(),
+                    "dtypeSize of scaled_grads must bigger than 0"),
                 return ge::GRAPH_FAILED);
             elementsPerBlock_ = blockSize_ / dataTypeSize_;
         } else if (tempDtype != dataType_) {
-            OP_LOGE(nodeName_, "All tensor dtype must be consistent.");
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(nodeName_.c_str(), "scaled_grads",
+                ge::TypeUtils::DataTypeToSerialString(tempDtype).c_str(),
+                ("All tensor dtypes must be consistent, expected " +
+                 ge::TypeUtils::DataTypeToSerialString(dataType_) +
+                 ", but scaled_grads[" + std::to_string(i) + "] does not match").c_str());
             return ge::GRAPH_FAILED;
         }
         auto shapePtr = context_->GetDynamicInputShape(SCALE_GRADS_INDEX, i);
@@ -213,14 +222,20 @@ ge::graphStatus ForeachNonFiniteCheckAndUnscaleRegbaseTiling::CheckParams() cons
         totalTensorCount_, totalDataCountAligned_);
     OP_CHECK_IF(
         dataType_ != ge::DT_FLOAT16 && dataType_ != ge::DT_BF16 && dataType_ != ge::DT_FLOAT,
-        OP_LOGE(nodeName_, "The input dtype not in [float16, bfloat16, float]."), return ge::GRAPH_FAILED);
+        OP_LOGE_FOR_INVALID_DTYPE(nodeName_.c_str(), "scaled_grads",
+            ge::TypeUtils::DataTypeToSerialString(dataType_).c_str(), "float16, bfloat16 or float"),
+        return ge::GRAPH_FAILED);
     auto flagDescPtr = context_->GetInputDesc(totalTensorCount_);
     OP_CHECK_NULL_WITH_CONTEXT(context_, flagDescPtr);
     auto scaleDescPtr = context_->GetInputDesc(totalTensorCount_ + INV_SCALE_INDEX_OFFSET);
     OP_CHECK_NULL_WITH_CONTEXT(context_, scaleDescPtr);
     OP_CHECK_IF(
         flagDescPtr->GetDataType() != ge::DT_FLOAT || scaleDescPtr->GetDataType() != ge::DT_FLOAT,
-        OP_LOGE(nodeName_, "The input found_inf and inv_scale dtype must be float."), return ge::GRAPH_FAILED);
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(nodeName_.c_str(), "found_inf and inv_scale",
+            (ge::TypeUtils::DataTypeToSerialString(flagDescPtr->GetDataType()) + " and " +
+             ge::TypeUtils::DataTypeToSerialString(scaleDescPtr->GetDataType())).c_str(),
+            "The input found_inf and inv_scale dtypes must be float."),
+        return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }

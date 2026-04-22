@@ -330,28 +330,35 @@ ge::graphStatus CrossEntropyLossGradRegbaseTiling::GetTilingInput() {
     const gert::Shape& logProbStrorageShape = EnsureNotScalar4CELoss(logProbShape->GetStorageShape());
     const gert::Shape& targetStrorageShape = EnsureNotScalar4CELoss(targetShape->GetStorageShape());
     OP_CHECK_IF((logProbStrorageShape.GetDimNum() != 2),
-                    OP_LOGE(tilingContext, "input log_prob dim num must be 2."),
+                    OP_LOGE_FOR_INVALID_SHAPEDIM(
+                        tilingContext->GetNodeName(), "log_prob",
+                        std::to_string(logProbStrorageShape.GetDimNum()).c_str(), "2"),
                     return ge::GRAPH_FAILED);
     if (ceLossGradTilingKey.reduction == TILING_KEY_NONE) {
         OP_CHECK_IF(
             (gradLossStrorageShape.GetDim(0) != logProbStrorageShape.GetDim(0) ||
              gradLossStrorageShape.GetDimNum() != 1),
-            OP_LOGE(tilingContext,
-                                            "The dim 0 of log_prob should be equal to the size of grad_loss and "
-                                            "grad_loss dimNum should be equle to 1 when reduction is none."),
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                tilingContext->GetNodeName(), "log_prob and grad_loss",
+                (std::to_string(logProbStrorageShape.GetDim(0)) + " and " + std::to_string(gradLossStrorageShape.GetDim(0))).c_str(),
+                "The dim 0 of log_prob should be equal to the size of grad_loss and "
+                "grad_loss dimNum should be equal to 1 when reduction is none."),
             return ge::GRAPH_FAILED);
     } else {
         OP_CHECK_IF(
             (gradLossStrorageShape.GetDim(0) != 1 || gradLossStrorageShape.GetDimNum() != 1),
-            OP_LOGE(
-                tilingContext,
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                tilingContext->GetNodeName(), "grad_loss",
+                std::to_string(gradLossStrorageShape.GetDim(0)).c_str(),
                 "grad_loss should be a scalar or shape should be equal to [1] when reduction is sum or mean."),
             return ge::GRAPH_FAILED);
     }
 
     OP_CHECK_IF((targetStrorageShape.GetDimNum() != 1 || targetStrorageShape.GetDim(0) != logProbStrorageShape.GetDim(0)),
-                    OP_LOGE(tilingContext,
-                                                    "The dim 0 of target should be equal to the size of log_prob dim 1 and target dim num should be 1."),
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                        tilingContext->GetNodeName(), "log_prob and target",
+                        (std::to_string(logProbStrorageShape.GetDim(0)) + " and " + std::to_string(targetStrorageShape.GetDim(0))).c_str(),
+                        "The dim 0 of target should be equal to the dim 0 of log_prob and target dim num should be 1."),
                     return ge::GRAPH_FAILED);
 
     auto weightTensor = tilingContext->GetOptionalInputTensor(INPUT_WEIGHT_IDX);
@@ -359,12 +366,15 @@ ge::graphStatus CrossEntropyLossGradRegbaseTiling::GetTilingInput() {
         ceLossGradTilingKey.isWeight = TILING_KEY_TRUE;
         auto weightShape = EnsureNotScalar4CELoss(weightTensor->GetStorageShape());
         OP_CHECK_IF((weightShape.GetDimNum() != 1),
-                        OP_LOGE(tilingContext,
-                                                        "The dim 0 of log_prob should be equal to the size of target."),
+                        OP_LOGE_FOR_INVALID_SHAPEDIM(
+                            tilingContext->GetNodeName(), "weight",
+                            std::to_string(weightShape.GetDimNum()).c_str(), "1D"),
                         return ge::GRAPH_FAILED);
         OP_CHECK_IF((weightShape.GetDim(0) != logProbShape->GetStorageShape().GetDim(1)),
-                        OP_LOGE(tilingContext,
-                                                        "The dim 1 of logProb should be equal to the size of weight."),
+                        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                            tilingContext->GetNodeName(), "log_prob and weight",
+                            (std::to_string(logProbShape->GetStorageShape().GetDim(1)) + " and " + std::to_string(weightShape.GetDim(0))).c_str(),
+                            "The dim 1 of logProb should be equal to the size of weight."),
                         return ge::GRAPH_FAILED);
     }
     rowVal = logProbShape->GetStorageShape().GetDim(0);
@@ -387,7 +397,9 @@ ge::graphStatus CrossEntropyLossGradRegbaseTiling::GetTilingAttr() {
         OP_LOGD(tilingContext, "Attr reduction is sum.");
         ceLossGradTilingKey.reduction = TILING_KEY_SUM;
     } else {
-      OP_LOGE(tilingContext, "reduction is not in none, mean or sum.");
+      OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+          tilingContext->GetNodeName(), "reduction", reduction,
+          "reduction is not in none, mean or sum.");
       return ge::GRAPH_FAILED;
     }
     ceLossGradRegbaseTiling->reduction = static_cast<int64_t>(ceLossGradTilingKey.reduction);
@@ -404,7 +416,9 @@ ge::graphStatus CrossEntropyLossGradRegbaseTiling::GetTilingAttr() {
     if (labelSmooth >=0 && labelSmooth <= 1) {
       ceLossGradRegbaseTiling->labelSmoothing = labelSmooth;
     } else {
-      OP_LOGE(tilingContext, "the value range of labelSmoothing needs to be within [0, 1].");
+      OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+          tilingContext->GetNodeName(), "label_smoothing", std::to_string(labelSmooth).c_str(),
+          "the value range of labelSmoothing needs to be within [0, 1].");
       return ge::GRAPH_FAILED;
     }
     if (labelSmooth > 0) {
@@ -438,7 +452,10 @@ ge::graphStatus CrossEntropyLossGradRegbaseTiling::CheckDtype() {
     } else if (dataType == ge::DT_FLOAT) {
       dtypeSize = ge::GetSizeByDataType(dataType);
     } else {
-      OP_LOGE(tilingContext, "input log_prob dtype only support float32, float16, bfloat16.");
+      OP_LOGE_FOR_INVALID_DTYPE(
+          tilingContext->GetNodeName(), "log_prob",
+          ge::TypeUtils::DataTypeToSerialString(dataType).c_str(),
+          "float32, float16 or bfloat16");
       return ge::GRAPH_FAILED;
     }
 
@@ -446,15 +463,20 @@ ge::graphStatus CrossEntropyLossGradRegbaseTiling::CheckDtype() {
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, gradLossDesc);
     auto gradLossDataType = gradLossDesc->GetDataType();
     OP_CHECK_IF(gradLossDataType != dataType,
-                    OP_LOGE(tilingContext, "input grad_loss and log_prob dtype should be same."),
+                    OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                        tilingContext->GetNodeName(), "log_prob and grad_loss",
+                        (ge::TypeUtils::DataTypeToSerialString(dataType) + " and " + ge::TypeUtils::DataTypeToSerialString(gradLossDataType)).c_str(),
+                        "datatype of grad_loss and log_prob should be same."),
                     return ge::GRAPH_FAILED);
 
     auto weightDesc = tilingContext->GetOptionalInputDesc(INPUT_WEIGHT_IDX);
     if (weightDesc != nullptr) {
         auto weightDtype = weightDesc->GetDataType();
         OP_CHECK_IF(weightDtype != ge::DT_FLOAT,
-                        OP_LOGE(tilingContext,
-                                                        "optional input weight dtype only support float32."),
+                        OP_LOGE_FOR_INVALID_DTYPE(
+                            tilingContext->GetNodeName(), "weight",
+                            ge::TypeUtils::DataTypeToSerialString(weightDtype).c_str(),
+                            "float32"),
                         return ge::GRAPH_FAILED);
     }
     auto targetDesc = tilingContext->GetInputDesc(INPUT_TARGET_IDX);
@@ -465,7 +487,10 @@ ge::graphStatus CrossEntropyLossGradRegbaseTiling::CheckDtype() {
     } else if (targetDataType == ge::DT_INT32) {
         targetDtypeSize = ge::GetSizeByDataType(targetDataType);
     } else {
-      OP_LOGE(tilingContext, "input target dtype only support int32 or int64.");
+      OP_LOGE_FOR_INVALID_DTYPE(
+          tilingContext->GetNodeName(), "target",
+          ge::TypeUtils::DataTypeToSerialString(targetDataType).c_str(),
+          "int32 or int64");
       return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;

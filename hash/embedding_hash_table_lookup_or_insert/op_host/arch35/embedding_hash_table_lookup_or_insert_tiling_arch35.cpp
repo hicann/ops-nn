@@ -20,6 +20,7 @@
 #include "util/math_util.h"
 #include "util/platform_util.h"
 #include "tiling/tiling_api.h"
+#include "op_host/tiling_templates_registry.h"
 
 namespace {
 inline uint32_t nextPowerOf2(uint32_t x)
@@ -121,7 +122,8 @@ inline ge::graphStatus GetCheckLookupOrInsertInputs(
     OP_CHECK_NULL_WITH_CONTEXT(context, keyDtypePtr);
     ge::DataType keyType = keyDtypePtr->GetDataType();
     if (keyType != ge::DT_INT64) {
-        OP_LOGE(context->GetNodeName(), "Invalid datatype of input key, only support int64");
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "keys",
+            ge::TypeUtils::DataTypeToSerialString(keyType).c_str(), "int64");
         return ge::GRAPH_FAILED;
     }
 

@@ -18,6 +18,7 @@
 #include "log/log.h"
 #include "util/math_util.h"
 #include "util/platform_util.h"
+#include "op_host/tiling_templates_registry.h"
 
 namespace optiling {
 using namespace Ops::Base;
@@ -55,7 +56,8 @@ ge::graphStatus Tiling4InitEmbeddingHashTable(gert::TilingContext *context)
     auto sampledValuesDescPtr = context->GetOptionalInputDesc(OPTIONAL_INPUT_SAMPLED_VALUES_IDX);
     if (sampledValuesTensor != nullptr) {
         OP_CHECK_IF((sampledValuesDescPtr != nullptr) && (sampledValuesDescPtr->GetDataType() != ge::DT_FLOAT),
-            OP_LOGE(context->GetNodeName(), "Current sampled_values only support float32."),
+            OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "sampled_values",
+                ge::TypeUtils::DataTypeToSerialString(sampledValuesDescPtr->GetDataType()).c_str(), "float32"),
             return ge::GRAPH_FAILED);
     }
 
@@ -64,13 +66,17 @@ ge::graphStatus Tiling4InitEmbeddingHashTable(gert::TilingContext *context)
 
     auto *bucketSize = attrs->GetAttrPointer<int64_t>(REQUIRED_ATTR_BUCKET_SIZE_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, bucketSize);
-    OP_CHECK_IF(*bucketSize < 0, OP_LOGE(context->GetNodeName(), "InitEmbeddingHashTable bucketSize must >= 0."),
+    OP_CHECK_IF(*bucketSize < 0,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "bucket_size",
+            std::to_string(static_cast<int64_t>(*bucketSize)).c_str(), "bucketSize must be greater than or equal to 0"),
         return ge::GRAPH_FAILED);
     OP_LOGD(context->GetNodeName(), "InitEmbeddingHashTable bucketSize : %ld", static_cast<int64_t>(*bucketSize));
 
     auto *embeddingDim = attrs->GetAttrPointer<int64_t>(REQUIRED_ATTR_EMBEDDING_DIM_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, embeddingDim);
-    OP_CHECK_IF(*embeddingDim < 0, OP_LOGE(context->GetNodeName(), "InitEmbeddingHashTable embeddingDim must >= 0."),
+    OP_CHECK_IF(*embeddingDim < 0,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "embedding_dim",
+            std::to_string(static_cast<int64_t>(*embeddingDim)).c_str(), "embeddingDim must be greater than or equal to 0"),
         return ge::GRAPH_FAILED);
     OP_LOGD(context->GetNodeName(), "InitEmbeddingHashTable embeddingDim : %ld", static_cast<int64_t>(*embeddingDim));
 
@@ -86,15 +92,18 @@ ge::graphStatus Tiling4InitEmbeddingHashTable(gert::TilingContext *context)
         auto sampledValuesShape = sampledValuesShapePtr->GetStorageShape();
         int64_t sampledValuesShapeSize = sampledValuesShape.GetShapeSize();
         OP_CHECK_IF(static_cast<int64_t>(*embeddingDim) * static_cast<int64_t>(*bucketSize) != sampledValuesShapeSize,
-            OP_LOGE(context->GetNodeName(),
-                "InitEmbeddingHashTable in randdom mode, sampledValues shape should = bucketSize x embeddingDim."),
+            OP_LOGE_FOR_INVALID_SHAPESIZE(context->GetNodeName(), "sampled_values",
+                std::to_string(sampledValuesShapeSize).c_str(),
+                ("InitEmbeddingHashTable in random mode, sampled_values shape should equal to bucketSize * embeddingDim, which is " +
+                 std::to_string(static_cast<int64_t>(*bucketSize) * static_cast<int64_t>(*embeddingDim))).c_str()),
             return ge::GRAPH_FAILED);
     } else if (strcmp(initializerMode, "constant") == 0) {
         OP_CHECK_NULL_WITH_CONTEXT(context, constantValue);
         mode = CONSTANT_MODE;
         constValue = static_cast<float>(*constantValue);
     } else {
-        OP_LOGE(context->GetNodeName(), "Invalid initializer mode, only support random and constant!");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "initializer_mode",
+            initializerMode, "only support random and constant");
         return ge::GRAPH_FAILED;
     }
     OP_LOGD(context->GetNodeName(), "InitEmbeddingHashTable mode : %ld", static_cast<int64_t>(mode));

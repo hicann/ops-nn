@@ -23,6 +23,7 @@
 #include "op_common/op_host/util/platform_util.h"
 #include "../op_kernel/arch35/cross_entropy_loss_tiling_data.h"
 #include "../op_kernel/arch35/cross_entropy_loss_tiling_key.h"
+#include "op_host/tiling_templates_registry.h"
 
 namespace optiling {
 constexpr uint32_t DIM_0 = 0;
@@ -156,13 +157,18 @@ ge::graphStatus CrossEntropyLossRegbaseTiling::CheckInputDtype()
     bool validDtype = inputDtype == ge::DT_BF16 || inputDtype == ge::DT_FLOAT || inputDtype == ge::DT_FLOAT16;
     OP_CHECK_IF(
         !validDtype,
-        OP_LOGE(
-            context_, "Input dtype should be in the support list:[BF16, FLOAT, FLOAT16]."),
+        OP_LOGE_FOR_INVALID_DTYPE(
+            context_->GetNodeName(), "x",
+            ge::TypeUtils::DataTypeToSerialString(inputDtype).c_str(),
+            "BF16, FLOAT or FLOAT16"),
         return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(
         (targetDtype != ge::DT_INT64 && targetDtype != ge::DT_INT32),
-        OP_LOGE(context_, "Target dtype only supports INT64 or INT32."),
+        OP_LOGE_FOR_INVALID_DTYPE(
+            context_->GetNodeName(), "target",
+            ge::TypeUtils::DataTypeToSerialString(targetDtype).c_str(),
+            "INT64 or INT32"),
         return ge::GRAPH_FAILED);
     dtypeTarget = targetDtype == ge::DT_INT64 ? DTYPE_LEN_INT64 : DTYPE_LEN_FP32;
     // optional input
@@ -172,7 +178,10 @@ ge::graphStatus CrossEntropyLossRegbaseTiling::CheckInputDtype()
         auto weightDtype = weight->GetDataType();
         OP_CHECK_IF(
             (weightDtype != ge::DT_FLOAT),
-            OP_LOGE(context_, "Weight dtype only supports FP32."),
+            OP_LOGE_FOR_INVALID_DTYPE(
+            context_->GetNodeName(), "weight",
+                ge::TypeUtils::DataTypeToSerialString(weightDtype).c_str(),
+                "FP32"),
             return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
@@ -246,23 +255,34 @@ ge::graphStatus CrossEntropyLossRegbaseTiling::CheckInputShape()
     auto inputShape = input->GetStorageShape();
     OP_CHECK_IF(
         inputShape.GetDimNum() != DIM_2,
-        OP_LOGE(context_, "The dim of input0 should be equal to 2."),
+        OP_LOGE_FOR_INVALID_SHAPEDIM(
+            context_->GetNodeName(), "x",
+            std::to_string(inputShape.GetDimNum()).c_str(),
+            "2"),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         inputShape.GetDim(DIM_0) != 0 && inputShape.GetDim(DIM_1) == 0,
-        OP_LOGE(context_, "When N is not empty, C is empty, not support."),
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context_->GetNodeName(), "x",
+            (std::to_string(inputShape.GetDim(DIM_0)) + ", " + std::to_string(inputShape.GetDim(DIM_1))).c_str(),
+            "When the N dimension(first dimension) of x is not empty and the C dimension(second dimension) of x is empty, not support."),
         return ge::GRAPH_FAILED);
     auto target = context_->GetInputShape(INPUT_TARGET_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, target);
     auto targetShape = target->GetStorageShape();
     OP_CHECK_IF(
         targetShape.GetDimNum() != DIM_1,
-        OP_LOGE(context_, "The dim of target should be equal to 1."),
+        OP_LOGE_FOR_INVALID_SHAPEDIM(
+            context_->GetNodeName(), "target",
+            std::to_string(targetShape.GetDimNum()).c_str(),
+            "1"),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         (targetShape.GetDim(0) != inputShape.GetDim(DIM_0)),
-        OP_LOGE(
-            context_, "The dim 0 of input0 should be equal to the size of target."),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context_->GetNodeName(), "x and target",
+            (std::to_string(inputShape.GetDim(DIM_0)) + " and " + std::to_string(targetShape.GetDim(0))).c_str(),
+            "The dim 0 of input0 should be equal to the size of target."),
         return ge::GRAPH_FAILED);
 
     auto weight = context_->GetOptionalInputShape(INPUT_WEIGHT_IDX);
@@ -270,8 +290,10 @@ ge::graphStatus CrossEntropyLossRegbaseTiling::CheckInputShape()
         auto weightShape = weight->GetStorageShape();
         OP_CHECK_IF(
             (weightShape.GetDim(0) != inputShape.GetDim(DIM_1)),
-            OP_LOGE(
-                context_, "The dim 1 of input should be equal to the size of weight."),
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context_->GetNodeName(), "x and weight",
+                (std::to_string(inputShape.GetDim(DIM_1)) + " and " + std::to_string(weightShape.GetDim(0))).c_str(),
+                "The dim 1 of input should be equal to the size of weight."),
             return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
@@ -289,7 +311,9 @@ ge::graphStatus CrossEntropyLossRegbaseTiling::GetAttrTilingData()
     } else if (strcmp(reductionStr, "none") == 0) {
         reduction = REDUCTION_NONE;
     } else {
-        OP_LOGE(context_, "Reduction should be in ['none', 'mean', 'sum']");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context_->GetNodeName(), "reduction", reductionStr,
+            "Reduction should be in ['none', 'mean', 'sum']");
         return ge::GRAPH_FAILED;
     }
     int64_t ignoreIndex = DEFAULT_IGNORE_INDEX;
@@ -301,7 +325,9 @@ ge::graphStatus CrossEntropyLossRegbaseTiling::GetAttrTilingData()
     const float* labelSmoothingAttr = attrs->GetAttrPointer<float>(ATTR_LABEL_SMOOTHING_IDX);
     labelSmoothing = labelSmoothingAttr == nullptr ? 0.0 : *labelSmoothingAttr;
     if (labelSmoothing < 0.0 || labelSmoothing > 1.0) {
-        OP_LOGE(context_, "labelSmoothing should be in [0.0, 1.0]");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context_->GetNodeName(), "label_smoothing", std::to_string(labelSmoothing).c_str(),
+            "labelSmoothing should be in [0.0, 1.0]");
         return ge::GRAPH_FAILED;
     }
     labelS = labelSmoothing > 0.0f ? REDUCTION_MEAN : static_cast<uint64_t>(0);

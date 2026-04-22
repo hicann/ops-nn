@@ -125,7 +125,8 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::GetInputX()
     ge::DataType xDType = xDesc->GetDataType();
     // 校验x的数据类型是否合法
     OP_CHECK_IF((SUPPORT_DTYPE.find(xDType) == SUPPORT_DTYPE.end()),
-        OP_LOGE(context_->GetNodeName(), "x dtype only support [int32, float16, bf16], please check."),
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x",
+            ge::TypeUtils::DataTypeToSerialString(xDType).c_str(), "int32, float16 or bf16"),
         return ge::GRAPH_FAILED);
 
     auto xStorageShape = context_->GetInputShape(X_INDEX);
@@ -133,14 +134,18 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::GetInputX()
     xShape_ = EnsureNotScalar(xStorageShape->GetStorageShape());
     xDimNum_ = xShape_.GetDimNum();
     OP_CHECK_IF(xDimNum_ < 2,
-        OP_LOGE(context_->GetNodeName(), "x dimension[%zu] must >= 2, please check.", xDimNum_),
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x",
+            std::to_string(xDimNum_).c_str(), "greater than or equal to 2"),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(xDimNum_ > 8,
-        OP_LOGE(context_->GetNodeName(), "x dimension[%zu] must <= 8, please check.", xDimNum_),
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x",
+            std::to_string(xDimNum_).c_str(), "less than or equal to 8"),
         return ge::GRAPH_FAILED);
     for (size_t i = 0; i < xDimNum_; i++) {
         OP_CHECK_IF(xShape_.GetDim(i) <= 0,
-            OP_LOGE(context_->GetNodeName(), "x shape[%zu] must be positve, please check.", i),
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x",
+                std::to_string(xShape_.GetDim(i)).c_str(),
+                ("x shape[" + std::to_string(i) + "] must be positive").c_str()),
             return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
@@ -152,8 +157,8 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::GetInputGroupIndex()
     if (groupIndexDesc != nullptr) {
         ge::DataType groupIndexDType = groupIndexDesc->GetDataType();
         OP_CHECK_IF(groupIndexDType != ge::DT_INT64 && groupIndexDType != ge::DT_INT32,
-            OP_LOGE(context_->GetNodeName(),
-                                            "group_index dtype only support int32 and int64, please check."),
+            OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "group_index",
+                ge::TypeUtils::DataTypeToSerialString(groupIndexDType).c_str(), "int32 or int64"),
             return ge::GRAPH_FAILED);
 
         auto groupIndexStorageShape = context_->GetOptionalInputShape(INPUT_GROUP_INDEX);
@@ -161,12 +166,14 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::GetInputGroupIndex()
         groupIndexShape_ = EnsureNotScalar(groupIndexStorageShape->GetStorageShape());
         auto groupIndexDimNum = groupIndexShape_.GetDimNum();
         OP_CHECK_IF((groupIndexDimNum != 1) && (groupIndexDimNum != 2),
-            OP_LOGE(context_->GetNodeName(), "group_index dimension must == 1 or == 2, please check."),
+            OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "group_index",
+                std::to_string(groupIndexDimNum).c_str(), "1 or 2"),
             return ge::GRAPH_FAILED);
         
         groupNum_ = groupIndexShape_.GetDim(0);
         OP_CHECK_IF(groupNum_ < 1,
-            OP_LOGE(context_->GetNodeName(), "group_index[0] must >= 1, please check."),
+            OP_LOGE_FOR_INVALID_SHAPESIZE(context_->GetNodeName(), "group_index",
+                std::to_string(groupNum_).c_str(), "group_index[0] must be greater than or equal to 1"),
             return ge::GRAPH_FAILED);
 
         hasGroupIndex_ = true;
@@ -191,27 +198,32 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::GetAttrActivateDim()
   
   // 判断切分轴维度合法性
   OP_CHECK_IF(activateDim_ < 0 || activateDim_ >= static_cast<int64_t>(xDimNum_),
-                  OP_LOGE(
-                    context_->GetNodeName(),
-                    "the value of activateDim %ld must in [-%zu, %zu], pleast check",
-                    activateDim_, xDimNum_, xDimNum_ - 1
-                  ),
+                  OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                    context_->GetNodeName(), "activate_dim",
+                    std::to_string(activateDim_).c_str(),
+                    ("activate_dim must be in [-" + std::to_string(xDimNum_) + ", " +
+                     std::to_string(xDimNum_ - 1) + "]").c_str()),
                   return ge::GRAPH_FAILED);
   // 校验切分轴对应的shape是不是偶数
   OP_CHECK_IF(xShape_.GetDim(activateDim_) % 2 != 0,
-                  OP_LOGE(context_->GetNodeName(),"the split dim must be even, pleast check"), 
+                  OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x",
+                      Ops::Base::ToString(xShape_).c_str(),
+                      ("the split dim(" + std::to_string(activateDim_)+ "dimension) must be even").c_str()),
                   return ge::GRAPH_FAILED);
 
   //如果activateDim不是尾轴，则不允许输入group
   if (activateDim_ != static_cast<int64_t>(xDimNum_ - 1)) {
     OP_CHECK_IF(hasGroupIndex_ == true,
-                  OP_LOGE(context_->GetNodeName(),"the groupIndex must be None when the split dim is not last dim, pleast check"), 
+                  OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "group_index and activate_dim",
+                      ("group_index is not None, and activate_dim is " + std::to_string(activateDim_)).c_str(), "group_index must be None when activate_dim is not the last dim of x"),
                   return ge::GRAPH_FAILED);
   }
 
   // activate_dim对应在x的轴需要是偶数
   OP_CHECK_IF((xShape_.GetDim(activateDim_) % 2) != 0,
-      OP_LOGE(context_->GetNodeName(), "the x dimension of activateDim must be even, please check."),
+      OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x",
+          std::to_string(xShape_.GetDim(activateDim_)).c_str(),
+          "the x dimension of activateDim must be even"),
       return ge::GRAPH_FAILED);
   return ge::GRAPH_SUCCESS;
 }
@@ -222,7 +234,9 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::CheckOutputY()
     OP_CHECK_NULL_WITH_CONTEXT(context_, yDesc);
     ge::DataType yDType = yDesc->GetDataType();
     OP_CHECK_IF(OUTPUT_SUPPORT_DTYPE.find(yDType) == OUTPUT_SUPPORT_DTYPE.end(),
-        OP_LOGE(context_->GetNodeName(), "y dtype only support [int8, hifloat8, float8e4m3, float8e5m2, float4e2m1, floate1m2], please check."),
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "y",
+            ge::TypeUtils::DataTypeToSerialString(yDType).c_str(),
+            "int8, hifloat8, float8e4m3, float8e5m2, float4e2m1 or floate1m2"),
         return ge::GRAPH_FAILED);
     auto yStorageShape = context_->GetOutputShape(Y_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, yStorageShape);
@@ -231,23 +245,28 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::CheckOutputY()
     // 输出y是fp4类型时，y的尾轴对应的shape需要是偶数
     if (yDType == ge::DT_FLOAT4_E2M1 || yDType == ge::DT_FLOAT4_E1M2) {
       OP_CHECK_IF((yShape.GetDim(xDimNum_ - 1) % 2) != 0,
-        OP_LOGE(context_->GetNodeName(), "the last dim of y must be even when the type of y is FP4X2_E2M1 or FP4X2_E1M2, please check."),
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "y",
+            std::to_string(yShape.GetDim(xDimNum_ - 1)).c_str(),
+            "the last dim of y must be even when the type of y is FP4X2_E2M1 or FP4X2_E1M2"),
         return ge::GRAPH_FAILED);
     }
     OP_CHECK_IF(yDimNum != xDimNum_,
-        OP_LOGE(context_->GetNodeName(), 
-                                        "y dimension must be equal to x dimension, please check."),
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "y",
+            std::to_string(yDimNum).c_str(),
+            ("equal to x dimension " + std::to_string(xDimNum_)).c_str()),
         return ge::GRAPH_FAILED);
     for (size_t i = 0; i < yDimNum; i++) {
       if (static_cast<int>(i) != activateDim_){
         OP_CHECK_IF(yShape.GetDim(i) != xShape_.GetDim(i),
-            OP_LOGE(context_->GetNodeName(),
-                                            "y shape[%zu] must be equal to x shape[%zu], please check.", i, i),
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "y",
+                std::to_string(yShape.GetDim(i)).c_str(),
+                ("y shape[" + std::to_string(i) + "] must be equal to x shape[" + std::to_string(i) + "]").c_str()),
             return ge::GRAPH_FAILED);
       } else {
         OP_CHECK_IF(yShape.GetDim(i) != xShape_.GetDim(i) / SWI_FACTOR,
-            OP_LOGE(context_->GetNodeName(),
-                                            "y shape[%zu] must be equal to half of x shape[%zu], please check.", i, i),
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "y",
+                std::to_string(yShape.GetDim(i)).c_str(),
+                ("y shape[" + std::to_string(i) + "] must be equal to half of x shape[" + std::to_string(i) + "]").c_str()),
             return ge::GRAPH_FAILED);
       }
     }
@@ -263,15 +282,15 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::CheckInputWeightScale()
     // 如果输入x是bf16 or float16，则weight_scale需要为空，非法性校验
     if (wScaleDesc != nullptr) {
       OP_CHECK_IF(xDType == ge::DT_FLOAT16 || xDType == ge::DT_BF16,
-        OP_LOGE(context_->GetNodeName(),
-                                        "weight_scale must be None when x in [bfloat16, float16], please check."),
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "weight_scale",
+            "not None", "weight_scale must be None when x's datatype is in [bfloat16, float16]"),
         return ge::GRAPH_FAILED);
     }
     
     // 如果输入x是int32，则weight_scale必须有值，合法性校验
     OP_CHECK_IF((xDType == ge::DT_INT32) && (wScaleDesc == nullptr),
-        OP_LOGE(context_->GetNodeName(),
-                                        "weight_scale must be not None when x in [int32], please check."),
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "weight_scale",
+            "None", "weight_scale must be not None when x's datatype is int32"),
         return ge::GRAPH_FAILED);
 
     // weight_scale不为空，进行判断
@@ -279,8 +298,8 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::CheckInputWeightScale()
       OP_CHECK_NULL_WITH_CONTEXT(context_, wScaleDesc);
       ge::DataType wScaleDType = wScaleDesc->GetDataType();
       OP_CHECK_IF(wScaleDType != ge::DT_FLOAT,
-          OP_LOGE(context_->GetNodeName(),
-                                          "weight_scale dtype only support float32, please check."),
+          OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "weight_scale",
+              ge::TypeUtils::DataTypeToSerialString(wScaleDType).c_str(), "float32"),
           return ge::GRAPH_FAILED);
 
       auto wScaleStorageShape = context_->GetOptionalInputShape(WEIGHT_SCALE_INDEX);
@@ -288,17 +307,19 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::CheckInputWeightScale()
       auto& wScaleShape = EnsureNotScalar(wScaleStorageShape->GetStorageShape());
       const size_t wScaleDimNum = wScaleShape.GetDimNum();
       OP_CHECK_IF(wScaleDimNum > 2,
-          OP_LOGE(context_->GetNodeName(), "weight_scale dimension must <= 2, please check."),
+          OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "weight_scale",
+              std::to_string(wScaleDimNum).c_str(), "less than or equal to 2"),
           return ge::GRAPH_FAILED);
       
       if (wScaleDimNum == static_cast<size_t>(1)) {
         OP_CHECK_IF(hasGroupIndex_ == true,
-          OP_LOGE(context_->GetNodeName(),
-                                          "group_index should be none when weight_scale dimension == 1, please check."),
+          OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "group_index",
+              "not None", "group_index should be none when weight_scale dimension is 1"),
           return ge::GRAPH_FAILED);
         OP_CHECK_IF(wScaleShape.GetDim(0) != xShape_.GetDim(xDimNum_ - 1),
-          OP_LOGE(context_->GetNodeName(),
-                                          "weight_scale shape[-1] must be equal to x shape[-1], please check."),
+          OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "weight_scale",
+              std::to_string(wScaleShape.GetDim(0)).c_str(),
+              ("weight_scale shape[-1] must be equal to x shape[-1] " + std::to_string(xShape_.GetDim(xDimNum_ - 1))).c_str()),
           return ge::GRAPH_FAILED);
       }
       if (wScaleDimNum > static_cast<size_t>(1)) {
@@ -330,14 +351,14 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::CheckInputActScale()
     // 当x：bfloat16 or float16时，activate_scale需要为空
     if (aScaleDesc != nullptr) {
         OP_CHECK_IF(xDType == ge::DT_FLOAT16 || xDType == ge::DT_BF16,
-          OP_LOGE(context_->GetNodeName(),
-                                          "activate_scale must be None when x in [bfloat16, float16], please check."),
+          OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "activation_scale",
+              "not None", "activate_scale must be None when x's datatype is in [bfloat16, float16]"),
           return ge::GRAPH_FAILED);
 
         ge::DataType aScaleDType = aScaleDesc->GetDataType();
         OP_CHECK_IF(aScaleDType != ge::DT_FLOAT,
-            OP_LOGE(context_->GetNodeName(),
-                                            "activation_scale dtype only support float32, please check."),
+            OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "activation_scale",
+                ge::TypeUtils::DataTypeToSerialString(aScaleDType).c_str(), "float32"),
             return ge::GRAPH_FAILED);
 
         auto aScaleStorageShape = context_->GetOptionalInputShape(ACTIVATION_SCALE_INDEX);
@@ -346,8 +367,8 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::CheckInputActScale()
         const size_t aScaleDimNum = aScaleShape.GetDimNum();
 
         OP_CHECK_IF(aScaleDimNum <= 0,
-            OP_LOGE(context_->GetNodeName(),
-                                    "activation_scale dimension shoule be greater than 0, please check."),
+            OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "activation_scale",
+                std::to_string(aScaleDimNum).c_str(), "activation_scale dimension shoule be greater than 0"),
             return ge::GRAPH_FAILED);
         
         // shape校验
@@ -355,8 +376,9 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::CheckInputActScale()
         int64_t aScaleSize = aScaleStorageShape->GetStorageShape().GetShapeSize();
         int64_t xSizeWithoutLastDim = xShape_.GetShapeSize() / xShape_.GetDim(xDimNum_ - 1);
         OP_CHECK_IF(aScaleSize != xSizeWithoutLastDim,
-                    OP_LOGE(context_->GetNodeName(),
-                    "activation_scale shape size shoule be equal to x shape size without last dim, please check."),
+                    OP_LOGE_FOR_INVALID_SHAPESIZE(context_->GetNodeName(), "activation_scale",
+                        std::to_string(aScaleSize).c_str(),
+                        ("activation_scale's shape size shoule be equal to x's shape size without last dim " + std::to_string(xSizeWithoutLastDim)).c_str()),
                     return ge::GRAPH_FAILED);
         hasActivationScale_ = true;
     }
@@ -374,14 +396,17 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::CheckInputBias()
       ge::DataType biasDtype = biasDesc->GetDataType();
       auto it = SUPPORT_BIAS_MODE.find(biasDtype);
       OP_CHECK_IF(it == SUPPORT_BIAS_MODE.end(),
-            OP_LOGE(context_->GetNodeName(), "bias only support [float16, float, bf16, int32], please check."),
+            OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "bias",
+                ge::TypeUtils::DataTypeToSerialString(biasDtype).c_str(), "float16, float, bf16 or int32"),
             return ge::GRAPH_FAILED);
       biasMode_ = it->second;
       // 当前bias支持四种数据类型，但是有些bias类型仅支持x的特定类型
       // x：bf16, float16，bias不支持输入
       if (xDType == ge::DT_BF16 or xDType == ge::DT_FLOAT16) {
         OP_CHECK_IF(BIAS_SUPPORT_DTYPE.find(biasDtype) != BIAS_SUPPORT_DTYPE.end(),
-            OP_LOGE(context_->GetNodeName(), "bias not support when the type of x is bf16 or float16, please check."),
+            OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "bias",
+                ge::TypeUtils::DataTypeToSerialString(biasDtype).c_str(),
+                "bias not support when the type of x is bf16 or float16"),
             return ge::GRAPH_FAILED);
       }
 
@@ -390,23 +415,31 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::CheckInputBias()
       OP_CHECK_NULL_WITH_CONTEXT(context_, biasStorageShape);
       auto& biasShape = EnsureNotScalar(biasStorageShape->GetStorageShape());
       const size_t biasDimNum = biasShape.GetDimNum();
-      OP_CHECK_IF(biasDimNum > static_cast<size_t>(2) || biasDimNum == static_cast<size_t>(0), 
-            OP_LOGE(context_->GetNodeName(), "the dimension of bias should be less than or equal 2 currently, please check."),
+      OP_CHECK_IF(biasDimNum > static_cast<size_t>(2) || biasDimNum == static_cast<size_t>(0),
+            OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "bias",
+                std::to_string(biasDimNum).c_str(), "1D or 2D"),
             return ge::GRAPH_FAILED);
       // 当biasDimNum=1时
       if (biasDimNum == static_cast<size_t>(1)) {
         OP_CHECK_IF(hasGroupIndex_ == true,
-                    OP_LOGE(context_->GetNodeName(), "group_index should be none when bias dimension == 1, please check."),
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "group_index",
+                        "not None", "group_index should be none when bias dimension == 1"),
                     return ge::GRAPH_FAILED);
-        OP_CHECK_IF(biasShape.GetDim(0) != xShape_.GetDim(xDimNum_ - 1), 
-            OP_LOGE(context_->GetNodeName(), "the last dimension of bias: %ld should be equal to the last dimension of x: %ld currently, please check.", biasShape.GetDim(0), xShape_.GetDim(xDimNum_ - 1)),
+        OP_CHECK_IF(biasShape.GetDim(0) != xShape_.GetDim(xDimNum_ - 1),
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "bias",
+                std::to_string(biasShape.GetDim(0)).c_str(),
+                ("the last dimension of bias should be equal to the last dimension of x " +
+                 std::to_string(xShape_.GetDim(xDimNum_ - 1))).c_str()),
             return ge::GRAPH_FAILED);
       }
 
       // 当biasDimNum=2时
       if (biasDimNum == static_cast<size_t>(2)) {
-        OP_CHECK_IF(biasShape.GetDim(1) != xShape_.GetDim(xDimNum_ - 1), 
-            OP_LOGE(context_->GetNodeName(), "the last dimension of bias: %ld should be equal to the last dimension of x: %ld currently, please check.", biasShape.GetDim(1), xShape_.GetDim(xDimNum_ - 1)),
+        OP_CHECK_IF(biasShape.GetDim(1) != xShape_.GetDim(xDimNum_ - 1),
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "bias",
+                std::to_string(biasShape.GetDim(1)).c_str(),
+                ("the last dimension of bias should be equal to the last dimension of x " +
+                 std::to_string(xShape_.GetDim(xDimNum_ - 1))).c_str()),
             return ge::GRAPH_FAILED);
           if (hasGroupIndex_) {
             OP_CHECK_IF(biasShape.GetDim(0) != groupNum_,
@@ -429,8 +462,8 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::CheckInputQuantScale()
     if (qScaleDesc != nullptr) {
         ge::DataType qScaleDType = qScaleDesc->GetDataType();
         OP_CHECK_IF(QUANT_SCALE_SUPPORT_DTYPE.find(qScaleDType) == QUANT_SCALE_SUPPORT_DTYPE.end(),
-            OP_LOGE(context_->GetNodeName(),
-                                            "quant_scale dtype only support [float32], please check."),
+            OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "quant_scale",
+                ge::TypeUtils::DataTypeToSerialString(qScaleDType).c_str(), "float32"),
             return ge::GRAPH_FAILED);
 
         auto qScaleStorageShape = context_->GetOptionalInputShape(QUANT_SCALE_INDEX);
@@ -438,7 +471,8 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::CheckInputQuantScale()
         auto& qScaleShape = EnsureNotScalar(qScaleStorageShape->GetStorageShape());
         const size_t qScaleDimNum = qScaleShape.GetDimNum();
         OP_CHECK_IF(qScaleDimNum > 2,
-            OP_LOGE(context_->GetNodeName(), "quant_scale dimension must <= 2, please check."),
+            OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "quant_scale",
+                std::to_string(qScaleDimNum).c_str(), "less than or equal to 2"),
             return ge::GRAPH_FAILED);
         
         // 获取y的shape
@@ -509,17 +543,20 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::CheckInputQuantOffset()
     if (qOffsetDesc != nullptr) {
       ge::DataType qOffsetDType = qOffsetDesc->GetDataType();
       OP_CHECK_IF(QUANT_OFFSET_SUPPORT_DTYPE.find(qOffsetDType) == QUANT_OFFSET_SUPPORT_DTYPE.end(),
-                  OP_LOGE(context_->GetNodeName(), "quant_offset dtype only support [float32], please check."),
+                  OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "quant_offset",
+                      ge::TypeUtils::DataTypeToSerialString(qOffsetDType).c_str(), "float32"),
             return ge::GRAPH_FAILED);
-      OP_CHECK_IF(quantMode_ != 0, 
-                  OP_LOGE(context_->GetNodeName(), "quant_offset only be supported when static quant, but current quant mode is dynamic quant."),
+      OP_CHECK_IF(quantMode_ != 0,
+                  OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "quant_offset",
+                      "not None", "quant_offset only be supported when static quant, but current quant mode is dynamic quant, quant_offset should be None."),
                   return ge::GRAPH_FAILED);
       auto qOffsetStorageShape = context_->GetOptionalInputShape(QUANT_OFFSET_INDEX);
       OP_CHECK_NULL_WITH_CONTEXT(context_, qOffsetStorageShape);
       auto& qOffsetShape = EnsureNotScalar(qOffsetStorageShape->GetStorageShape());
       const size_t qOffsetDimNum = qOffsetShape.GetDimNum();
-      OP_CHECK_IF(qOffsetDimNum > 2, 
-                  OP_LOGE(context_->GetNodeName(), "quant_offset dimension must <= 2, please check."),
+      OP_CHECK_IF(qOffsetDimNum > 2,
+                  OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "quant_offset",
+                      std::to_string(qOffsetDimNum).c_str(), "less than or equal to 2"),
                   return ge::GRAPH_FAILED);
       auto yStorageShape = context_->GetOutputShape(Y_INDEX);
       OP_CHECK_NULL_WITH_CONTEXT(context_, yStorageShape);
@@ -575,7 +612,8 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::CheckOutputScale()
     OP_CHECK_NULL_WITH_CONTEXT(context_, scaleDesc);
     ge::DataType scaleDType = scaleDesc->GetDataType();
     OP_CHECK_IF(scaleDType != ge::DT_FLOAT,
-        OP_LOGE(context_->GetNodeName(), "scale dtype only support float32, please check."),
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "scale",
+            ge::TypeUtils::DataTypeToSerialString(scaleDType).c_str(), "float32"),
         return ge::GRAPH_FAILED);
     auto scaleStorageShape = context_->GetOutputShape(SCALE_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, scaleStorageShape);
@@ -612,8 +650,9 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::GetAttr()
   std::string quantMode = attrQuantMode == nullptr ? "static" : attrQuantMode;
   auto it = SUPPORT_QUANT_MODE.find(quantMode);
   OP_CHECK_IF(it == SUPPORT_QUANT_MODE.end(),
-                  OP_LOGE(context_->GetNodeName(),
-                                                "attr quant_mode only support [dynamic] or [static] currently, please check."),
+                  OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                      context_->GetNodeName(), "quant_mode",
+                      quantMode.c_str(), "quant_mode only support [dynamic] or [static]"),
                   return ge::GRAPH_FAILED);
   quantMode_ = it->second;
   // 校验dst_type
@@ -621,16 +660,18 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::GetAttr()
   // 类型校验,防止空指针
   dstType_ = (attrDstType != nullptr) ? *attrDstType : 2; // 默认是2，也即对应输出类型为int8
   OP_CHECK_IF(dstType_ != 2 && dstType_ != 34 && dstType_ != 35 && dstType_ != 36 && dstType_ != 40 && dstType_ != 41,
-                OP_LOGE(context_->GetNodeName(),
-                                              "attr dst_type only support [2, 34, 35, 36, 40, 41] currently, please check."),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                    context_->GetNodeName(), "dst_type",
+                    std::to_string(dstType_).c_str(), "dst_type only support [2, 34, 35, 36, 40, 41]"),
                 return ge::GRAPH_FAILED);
   // 校验round_mode
   const char* attrRoundMode = attrs->GetAttrPointer<char>(ATTR_ROUND_MODE_INDEX);
   std::string roundMode = attrRoundMode == nullptr ? "rint" : attrRoundMode;
   auto roundModeIt = SUPPORT_ROUND_MODE.find(roundMode);
   OP_CHECK_IF(roundModeIt == SUPPORT_ROUND_MODE.end(),
-                OP_LOGE(context_->GetNodeName(),
-                                              "attr round_mode only support [rint, round, floor, ceil, trunc] currently, please check."),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                    context_->GetNodeName(), "round_mode",
+                    roundMode.c_str(), "round_mode only support [rint, round, floor, ceil, trunc]"),
                 return ge::GRAPH_FAILED);
   roundMode_ = roundModeIt->second;
   // y:[int8, float8]，仅支持rint，y:[float4]，五种类型都支持
@@ -640,25 +681,31 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::GetAttr()
   // 校验y属于int8和float8时，roundMode是不是rint
   if (yDType != ge::DT_HIFLOAT8) {
     OP_CHECK_IF((yDType == ge::DT_INT8 || yDType == ge::DT_FLOAT8_E5M2 || yDType == ge::DT_FLOAT8_E4M3FN) && roundMode_ != 0,
-                 OP_LOGE(context_->GetNodeName(), "attr round_mode only support [rint] when the type of y in [int8, float8]"),
+                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                     context_->GetNodeName(), "round_mode",
+                     roundMode.c_str(), "round_mode only support [rint] when the type of y in [int8, float8]"),
                  return ge::GRAPH_FAILED);
   } else {
     // 校验y属于hifloat8时，roundMode是不是round
     OP_CHECK_IF(roundMode_ != 1,
-                 OP_LOGE(context_->GetNodeName(), "attr round_mode only support [round] when the type of y in [hifloat8]"),
+                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                     context_->GetNodeName(), "round_mode",
+                     roundMode.c_str(), "round_mode only support [round] when the type of y in [hifloat8]"),
                  return ge::GRAPH_FAILED);
   }
   auto* attrSwigluMode = attrs->GetAttrPointer<int>(ATTR_SWIGLU_MODE_INDEX);
   swigluMode_ = (attrSwigluMode == nullptr) ? 0 : *attrSwigluMode;
   OP_CHECK_IF(swigluMode_ != 0 && swigluMode_ != 1,
-              OP_LOGE(context_->GetNodeName(),
-              "attr swigluMode_ only support [0, 1] currently, please check."),
+              OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                  context_->GetNodeName(), "swigluMode",
+                  std::to_string(swigluMode_).c_str(), "swigluMode only support [0, 1]"),
               return ge::GRAPH_FAILED);
   auto* attrClampLimit = attrs->GetAttrPointer<float>(ATTR_CLAMP_LIMIT_INDEX);
   clampLimit_ = (attrClampLimit == nullptr) ? CLAMP_LIMIT_DEFAULT : *attrClampLimit;
-  OP_CHECK_IF(!(std::isfinite(clampLimit_) && clampLimit_ > 0.0), 
-              OP_LOGE(context_->GetNodeName(),
-              "attr clamp_limit should be positive finite but current is %f, please check.", clampLimit_),
+  OP_CHECK_IF(!(std::isfinite(clampLimit_) && clampLimit_ > 0.0),
+              OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                  context_->GetNodeName(), "clamp_limit",
+                  std::to_string(clampLimit_).c_str(), "clamp_limit should be positive finite"),
               return ge::GRAPH_FAILED);
   auto* attrGluAlpha = attrs->GetAttrPointer<float>(ATTR_GLU_ALPHA_INDEX);
   gluAlpha_ = (attrGluAlpha == nullptr) ? GLU_ALPHA_DEFAULT : *attrGluAlpha;
