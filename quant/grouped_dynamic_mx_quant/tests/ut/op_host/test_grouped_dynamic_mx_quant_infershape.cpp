@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -41,14 +41,18 @@ protected:
 
 TEST_F(GroupedDynamicMxQuant, GroupedDynamicMxQuant_infershape_case_1)
 {
-    constexpr int32_t BLOCK_SIZE = 32;
+    constexpr int64_t BLOCK_SIZE = 32;
+    constexpr int64_t SCALE_ALG = 0;
+    constexpr float DST_TYPE_MAX = 0.0;
     ge::op::GroupedDynamicMxQuant op;
     op.UpdateInputDesc("x", create_desc({32, 128}, ge::DT_BF16));
     op.UpdateInputDesc("group_index", create_desc({1}, ge::DT_INT32));
     op.SetAttr("round_mode", "rint");
     op.SetAttr("dst_type", (int64_t)ge::DT_FLOAT8_E4M3FN);
     op.SetAttr("blocksize", BLOCK_SIZE);
-    Runtime2TestParam param{{"round_mode", "dst_type", "blocksize"}, {}, {}};
+    op.SetAttr("scale_alg", SCALE_ALG);
+    op.SetAttr("dst_type_max", DST_TYPE_MAX);
+    Runtime2TestParam param{{"round_mode", "dst_type", "blocksize", "scale_alg", "dst_type_max"}, {}, {}};
     EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_SUCCESS);
     auto outputY = op.GetOutputDesc(0);
     std::vector<int64_t> expectedYShape = {32, 128};
@@ -60,13 +64,14 @@ TEST_F(GroupedDynamicMxQuant, GroupedDynamicMxQuant_InferDtype_case_1)
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("GroupedDynamicMxQuant"), nullptr);
     auto data_type_func = gert::OpImplRegistry::GetInstance().GetOpImpl("GroupedDynamicMxQuant")->infer_datatype;
 
-    constexpr int32_t BLOCK_SIZE = 32;
     if (data_type_func != nullptr) {
         ge::DataType inDtype = ge::DT_BF16;
         ge::DataType in2Dtype = ge::DT_INT32;
         ge::DataType outDtype = ge::DT_FLOAT8_E4M3FN;
         ge::DataType out2Dtype = ge::DT_FLOAT8_E8M0;
         int64_t blockSize = 32;
+        int64_t scaleAlg = 0;
+        float dstTypeMax = 0.0;
         auto context_holder = gert::InferDataTypeContextFaker()
                     .IrInputNum(2)
                     .NodeIoNum(2, 2)
@@ -76,7 +81,10 @@ TEST_F(GroupedDynamicMxQuant, GroupedDynamicMxQuant_InferDtype_case_1)
                     .NodeOutputTd(1, out2Dtype, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeAttrs({{"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
                                 {"dst_type", Ops::NN::AnyValue::CreateFrom((int64_t)outDtype)},
-                                {"blocksize", Ops::NN::AnyValue::CreateFrom(blockSize)}})
+                                {"blocksize", Ops::NN::AnyValue::CreateFrom(blockSize)},
+                                {"scale_alg", Ops::NN::AnyValue::CreateFrom(scaleAlg)},
+                                {"dst_type_max", Ops::NN::AnyValue::CreateFrom(dstTypeMax)}})
+
                     .InputDataTypes({&inDtype, &in2Dtype})
                     .OutputDataTypes({&outDtype, &out2Dtype})
                     .Build();

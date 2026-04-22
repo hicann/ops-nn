@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -7,12 +7,13 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
+
 /*!
- * \file quantize_ops.h
+ * \file grouped_dynamic_mx_quant_proto.h
  * \brief
  */
-#ifndef OPS_BUILT_IN_OP_PROTO_INC_QUANTIZE_OPS_H_
-#define OPS_BUILT_IN_OP_PROTO_INC_QUANTIZE_OPS_H_
+#ifndef QUANTIZE_GROUPED_DYNAMIC_MX_QUANT_PROTO_H
+#define QUANTIZE_GROUPED_DYNAMIC_MX_QUANT_PROTO_H
 #include "graph/operator_reg.h"
 
 namespace ge {
@@ -29,10 +30,18 @@ namespace ge {
 * @par Attributes:
 * @li round_mode: An optional string, specifying the quantization rounding mode. 
 * Defaults and only supports "rint".
-* @li dst_type: An optional int, specifying the dtype of output y.
+* @li dst_type: An optional int, specifying the dtype of output y. Target data type enum value:
+* - 35: DT_FLOAT8_E5M2
+* - 36: DT_FLOAT8_E4M3FN
 * Defaults to FLOAT8_E5M2, only supports FLOAT8_E4M3FN or FLOAT8_E5M2.
 * @li blocksize: An optional int, specifying the block size of quantization.
 * Defaults and only supports 32.
+* @li scale_alg: An Optional Int. The algorithm for the scale in quantization.
+* Support MxFP4/MxFP8(OCP Microscaling Formats(Mx) Specification, count 0) or MxFP8(nvidia-cuBLAS , count 1).
+* Defaults to 0.
+* @li dst_type_max: An Optional Float. Max_dtype takes the maximum value of the quant_data_type, or the provided value.
+* Only support in FP4_E2M1 mode, with a valid range of 0 or 6 to 12.
+* Defaults to 0.
 
 * @par Outputs:
 * @li y: An output tensor of type FLOAT8_E4M3FN or FLOAT8_E5M2. It has the same shape and rank as input x.
@@ -52,7 +61,9 @@ REG_OP(GroupedDynamicMxQuant)
     .ATTR(round_mode, String, "rint")
     .ATTR(dst_type, Int, DT_FLOAT8_E5M2)
     .ATTR(blocksize, Int, 32)
+    .ATTR(scale_alg, Int, 0)
+    .ATTR(dst_type_max, Float, 0.0)
     .OP_END_FACTORY_REG(GroupedDynamicMxQuant)
 } // namespace ge
 
-#endif  // OPS_BUILT_IN_OP_PROTO_INC_QUANTIZE_OPS_H_
+#endif  // QUANTIZE_GROUPED_DYNAMIC_MX_QUANT_PROTO_H

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -9,7 +9,7 @@
  */
 #include <dlfcn.h>
 #include <new>
-#include "aclnn_grouped_dynamic_mx_quant.h"
+#include "aclnn_grouped_dynamic_mx_quant_v2.h"
 #include "grouped_dynamic_mx_quant.h"
 #include "level0/fault_injection.h"
 #include "aclnn_kernels/contiguous.h"
@@ -38,8 +38,6 @@ static constexpr int64_t X_DIM_NUM = 2;
 static constexpr int64_t NUM_TWO = 2;
 static constexpr int64_t SCALE_DIM_NUM = 3;
 static constexpr uint64_t NUM_ZERO = 0;
-static constexpr int64_t DEFAULT_SCALE_ALG = 0;
-static constexpr float DEFAULT_DST_TYPE_MAX = 0.0;
 
 static const std::initializer_list<op::DataType> X_DTYPE_SUPPORT_LIST = {op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
@@ -63,7 +61,7 @@ static inline bool CheckNotNull(const aclTensor* x, const aclTensor* groupIndex,
   return true;
 }
 
-static bool CheckShape(const aclTensor* x, const aclTensor* groupIndex, int64_t blocksize, const aclTensor* y, const aclTensor* mxscale) {
+static bool CheckShape(const aclTensor* x, const aclTensor* groupIndex, int64_t blocksize, int64_t scaleAlg, double dstTypeMax, const aclTensor* y, const aclTensor* mxscale) {
   auto xShape = x->GetViewShape();
   auto groupShape = groupIndex->GetViewShape();
   auto yShape = y->GetViewShape();
@@ -83,7 +81,7 @@ static bool CheckShape(const aclTensor* x, const aclTensor* groupIndex, int64_t 
   int64_t mxscaleDim0 = mxscaleShape.GetDim(0);
   int64_t mxscaleDim1 = mxscaleShape.GetDim(1);
   int64_t mxscaleDim2 = mxscaleShape.GetDim(NUM_TWO);
-  int64_t mxscaleDim0Count = (xDim0/(blocksize * NUM_TWO) + groupIndexDim0);
+  int64_t mxscaleDim0Count = (xDim0 / (blocksize * NUM_TWO) + groupIndexDim0);
   OP_CHECK(mxscaleDim2 == NUM_TWO,
     OP_LOGE(ACLNN_ERR_PARAM_INVALID, "mxscale dim2 is %ld, should be 2.", mxscaleDim1), return false);
   OP_CHECK(
@@ -96,7 +94,7 @@ static bool CheckShape(const aclTensor* x, const aclTensor* groupIndex, int64_t 
 }
 
 static bool CheckDtypeValid(const aclTensor* x, const aclTensor* groupIndex, const char* roundMode, int64_t dstType, 
-                              int64_t blocksize, const aclTensor* y, const aclTensor* mxscale) {
+                            int64_t blocksize, int64_t scaleAlg, double dstTypeMax, const aclTensor* y, const aclTensor* mxscale) {
   // 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
   bool IsRegbaseSocVersion = Ops::NN::AclnnUtil::IsRegbase();
   if (IsRegbaseSocVersion) {
@@ -111,6 +109,12 @@ static bool CheckDtypeValid(const aclTensor* x, const aclTensor* groupIndex, con
     OP_CHECK(blocksize == 32,
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "blocksize only support '32' now, get: %ld", blocksize),
             return false);
+    OP_CHECK(scaleAlg == 0 || scaleAlg == 1,
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "scaleAlg only support '0' or '1' now, get: %ld", scaleAlg),
+            return false);
+    OP_CHECK(dstTypeMax == 0.0,
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dstTypeMax only support '0.0' now, get: %f", dstTypeMax),
+            return false);
     OP_CHECK(static_cast<int64_t>(y->GetDataType()) == dstType,
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dstType:%ld(%s) is must be the same as y dtype[%s].",
                 dstType, op::ToString(static_cast<op::DataType>(dstType)).GetString(), op::ToString(y->GetDataType()).GetString()),
@@ -124,26 +128,26 @@ static bool CheckDtypeValid(const aclTensor* x, const aclTensor* groupIndex, con
   return true;
 }
 
-inline static aclnnStatus CheckParams(const aclTensor* x, const aclTensor* groupIndex, const char* roundMode, int64_t dstType, int64_t blocksize, 
-                                      const aclTensor* y, const aclTensor* mxscale) {
+inline static aclnnStatus CheckParams(const aclTensor* x, const aclTensor* groupIndex, const char* roundMode, int64_t dstType,
+                                      int64_t blocksize, int64_t scaleAlg, double dstTypeMax, const aclTensor* y, const aclTensor* mxscale) {
   CHECK_RET(CheckNotNull(x, groupIndex, roundMode, y, mxscale), ACLNN_ERR_PARAM_NULLPTR);
-  CHECK_RET(CheckDtypeValid(x, groupIndex, roundMode, dstType, blocksize, y, mxscale), ACLNN_ERR_PARAM_INVALID);
-  CHECK_RET(CheckShape(x, groupIndex, blocksize, y, mxscale), ACLNN_ERR_PARAM_INVALID);
+  CHECK_RET(CheckDtypeValid(x, groupIndex, roundMode, dstType, blocksize, scaleAlg, dstTypeMax, y, mxscale), ACLNN_ERR_PARAM_INVALID);
+  CHECK_RET(CheckShape(x, groupIndex, blocksize, scaleAlg, dstTypeMax, y, mxscale), ACLNN_ERR_PARAM_INVALID);
   return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnGroupedDynamicMxQuantGetWorkspaceSize(const aclTensor* x, const aclTensor* groupIndex,
-                                                const char* roundMode, int64_t dstType, int64_t blocksize, 
-                                                const aclTensor* y, const aclTensor* mxscale,
-                                                uint64_t* workspaceSize, aclOpExecutor** executor) {
-  L2_DFX_PHASE_1(aclnnGroupedDynamicMxQuant, DFX_IN(x, groupIndex, roundMode, dstType, blocksize),
+aclnnStatus aclnnGroupedDynamicMxQuantV2GetWorkspaceSize(const aclTensor* x, const aclTensor* groupIndex, const char* roundMode,
+                                                         int64_t dstType, int64_t blocksize, int64_t scaleAlg, double dstTypeMax, 
+                                                         const aclTensor* y, const aclTensor* mxscale, uint64_t* workspaceSize,
+                                                         aclOpExecutor** executor) {
+  L2_DFX_PHASE_1(aclnnGroupedDynamicMxQuantV2, DFX_IN(x, groupIndex, roundMode, dstType, blocksize, scaleAlg, dstTypeMax),
                  DFX_OUT(y, mxscale));
   // 固定写法，创建OpExecutor
   auto uniqueExecutor = CREATE_EXECUTOR();
   CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
   // 固定写法，参数检查
-  auto ret = CheckParams(x, groupIndex, roundMode, dstType, blocksize, y, mxscale);
+  auto ret = CheckParams(x, groupIndex, roundMode, dstType, blocksize, scaleAlg, dstTypeMax, y, mxscale);
   CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
   // 空Tensor处理
@@ -166,7 +170,7 @@ aclnnStatus aclnnGroupedDynamicMxQuantGetWorkspaceSize(const aclTensor* x, const
   CHECK_RET(groupIndexContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
   auto result = l0op::GroupedDynamicMxQuant(selfContiguous, groupIndexContiguous, roundMode, dstType, blocksize,
-                                            DEFAULT_SCALE_ALG, DEFAULT_DST_TYPE_MAX, uniqueExecutor.get());
+                                            scaleAlg, dstTypeMax, uniqueExecutor.get());
   const aclTensor *yOut = std::get<0>(result);
   const aclTensor *mxscaleOut = std::get<1>(result);
   // 如果出参y是非连续Tensor，需要把计算完的连续Tensor转非连续
@@ -185,8 +189,8 @@ aclnnStatus aclnnGroupedDynamicMxQuantGetWorkspaceSize(const aclTensor* x, const
   return ACLNN_SUCCESS;
 }
 
-aclnnStatus aclnnGroupedDynamicMxQuant(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream) {
-  L2_DFX_PHASE_2(aclnnGroupedDynamicMxQuant);
+aclnnStatus aclnnGroupedDynamicMxQuantV2(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream) {
+  L2_DFX_PHASE_2(aclnnGroupedDynamicMxQuantV2);
   auto ret = CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
   if (ret != ACLNN_SUCCESS) {
     OP_LOGE(ACLNN_ERR_INNER, "This is an error in GroupedDynamicMxQuant launch aicore");

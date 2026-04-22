@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@
 #include <vector>
 
 #include "acl/acl.h"
-#include "aclnnop/aclnn_grouped_dynamic_mx_quant.h"
+#include "aclnnop/aclnn_grouped_dynamic_mx_quant_v2.h"
 
 #define CHECK_RET(cond, return_expr) \
     do {                             \
@@ -91,7 +91,7 @@ void Finalize(int32_t deviceId, aclrtStream stream)
     aclFinalize();
 }
 
-int aclnnGroupedDynamicMxQuantTest(int32_t deviceId, aclrtStream& stream)
+int aclnnGroupedDynamicMxQuantV2Test(int32_t deviceId, aclrtStream& stream)
 {
     auto ret = Init(deviceId, &stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
@@ -112,7 +112,7 @@ int aclnnGroupedDynamicMxQuantTest(int32_t deviceId, aclrtStream& stream)
     //对应BF16的值(0, 8, 64, 512)
     std::vector<uint16_t> xHostData = {{0}, {16640}, {17024}, {17408}, {0}, {16640}, {17024}, {17408}};
     
-    std::vector<uint32_t> groupedIndexHostData = {4,8};
+    std::vector<uint32_t> groupedIndexHostData = {4, 8};
     //对应float8_e4m3的值(0, 4, 32, 256)
     std::vector<uint8_t> yOutHostData = {{0}, {72}, {96}, {120}, {0}, {72}, {96}, {120}};
     //对应float8_e8m0的值(2)
@@ -120,6 +120,8 @@ int aclnnGroupedDynamicMxQuantTest(int32_t deviceId, aclrtStream& stream)
     const char* roundModeOptional = "rint";
     int64_t dstType = 36;
     int64_t blocksize = 32;
+    int64_t scaleAlg = 0;
+    double dstTypeMax = 0.0;
     // 创建x aclTensor
     ret = CreateAclTensor(xHostData, xShape, &xDeviceAddr, aclDataType::ACL_BF16, &x);
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> xTensorPtr(x, aclDestroyTensor);
@@ -145,10 +147,11 @@ int aclnnGroupedDynamicMxQuantTest(int32_t deviceId, aclrtStream& stream)
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;
 
-    // 调用aclnnGroupedDynamicMxQuant第一段接口
-    ret = aclnnGroupedDynamicMxQuantGetWorkspaceSize(x, groupedIndex, roundModeOptional, dstType, blocksize, yOut, mxscaleOut, &workspaceSize, &executor);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnGroupedDynamicMxQuantGetWorkspaceSize failed. ERROR: %d\n", ret);
-            return ret);
+    // 调用aclnnGroupedDynamicMxQuantV2第一段接口
+    ret = aclnnGroupedDynamicMxQuantV2GetWorkspaceSize(x, groupedIndex, roundModeOptional, dstType, blocksize, scaleAlg, dstTypeMax,
+        yOut, mxscaleOut, &workspaceSize, &executor);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnGroupedDynamicMxQuantV2GetWorkspaceSize failed. ERROR: %d\n", ret);
+        return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
     void* workspaceAddr = nullptr;
     std::unique_ptr<void, aclError (*)(void*)> workspaceAddrPtr(nullptr, aclrtFree);
@@ -157,9 +160,9 @@ int aclnnGroupedDynamicMxQuantTest(int32_t deviceId, aclrtStream& stream)
         CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
         workspaceAddrPtr.reset(workspaceAddr);
     }
-    // 调用aclnnGroupedDynamicMxQuant第二段接口
-    ret = aclnnGroupedDynamicMxQuant(workspaceAddr, workspaceSize, executor, stream);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnGroupedDynamicMxQuant failed. ERROR: %d\n", ret); return ret);
+    // 调用aclnnGroupedDynamicMxQuantV2第二段接口
+    ret = aclnnGroupedDynamicMxQuantV2(workspaceAddr, workspaceSize, executor, stream);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnGroupedDynamicMxQuantV2 failed. ERROR: %d\n", ret); return ret);
 
     //（固定写法）同步等待任务执行结束
     ret = aclrtSynchronizeStream(stream);
@@ -195,8 +198,8 @@ int main()
     // 根据自己的实际device填写deviceId
     int32_t deviceId = 0;
     aclrtStream stream;
-    auto ret = aclnnGroupedDynamicMxQuantTest(deviceId, stream);
-    CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnGroupedDynamicMxQuantTest failed. ERROR: %d\n", ret); return ret);
+    auto ret = aclnnGroupedDynamicMxQuantV2Test(deviceId, stream);
+    CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnGroupedDynamicMxQuantV2Test failed. ERROR: %d\n", ret); return ret);
 
     Finalize(deviceId, stream);
     return 0;

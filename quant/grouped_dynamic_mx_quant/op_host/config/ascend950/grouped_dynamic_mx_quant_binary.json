@@ -66,6 +66,16 @@
               "name": "blocksize",
               "dtype": "int",
               "value": null
+            },
+            {
+              "name": "scale_alg",
+              "dtype": "int",
+              "value": null
+            },
+            {
+              "name": "dst_type_max",
+              "dtype": "float32",
+              "value": null
             }
         ]
       },
@@ -133,6 +143,16 @@
             {
               "name": "blocksize",
               "dtype": "int",
+              "value": null
+            },
+            {
+              "name": "scale_alg",
+              "dtype": "int",
+              "value": null
+            },
+            {
+              "name": "dst_type_max",
+              "dtype": "float32",
               "value": null
             }
         ]
@@ -202,6 +222,16 @@
               "name": "blocksize",
               "dtype": "int",
               "value": null
+            },
+            {
+              "name": "scale_alg",
+              "dtype": "int",
+              "value": null
+            },
+            {
+              "name": "dst_type_max",
+              "dtype": "float32",
+              "value": null
             }
         ]
       },
@@ -269,6 +299,16 @@
             {
               "name": "blocksize",
               "dtype": "int",
+              "value": null
+            },
+            {
+              "name": "scale_alg",
+              "dtype": "int",
+              "value": null
+            },
+            {
+              "name": "dst_type_max",
+              "dtype": "float32",
               "value": null
             }
         ]
