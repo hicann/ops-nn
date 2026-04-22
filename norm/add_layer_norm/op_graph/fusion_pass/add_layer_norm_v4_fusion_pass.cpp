@@ -312,7 +312,7 @@ std::vector<PatternUniqPtr> AddLayerNormV4FusionPass::Patterns()
 
 bool AddLayerNormV4FusionPass::MeetRequirements(const std::unique_ptr<MatchResult>& match_result)
 {
-    OPS_LOG_D(FUSION_OP_TYPE.c_str(), "Enter AddLayerNormV4FusionPass MeetRequirements");
+    OPS_LOG_D(kPassName.c_str(), "Enter AddLayerNormV4FusionPass MeetRequirements");
     if (!IsAscend950Platform()) {
         OPS_LOG_D(kPassName.c_str(), "Platform is not support, layerNormV4 only work on Ascend910_95.");
         return false;
@@ -342,7 +342,7 @@ bool AddLayerNormV4FusionPass::MeetRequirements(const std::unique_ptr<MatchResul
 
 std::unique_ptr<Graph> AddLayerNormV4FusionPass::Replacement(const std::unique_ptr<MatchResult>& match_result)
 {
-    OPS_LOG_D(FUSION_OP_TYPE.c_str(), "Enter AddLayerNormV4FusionPass Replacement");
+    OPS_LOG_D(kPassName.c_str(), "Enter AddLayerNormV4FusionPass Replacement");
     auto replace_graph_builder = es::EsGraphBuilder("replacement");
     std::vector<SubgraphInput> subgraph_inputs;
     match_result->ToSubgraphBoundary()->GetAllInputs(subgraph_inputs);

@@ -41,7 +41,6 @@ static void GetInputsInfo(
 
 static Status InferShape(const GraphUniqPtr& replace_graph, const std::vector<SubgraphInput>& subgraph_inputs)
 {
-    OPS_LOG_D(pass_name.c_str(), "Begin infershape for replacements.");
     std::vector<Shape> input_shapes;
     for (const auto& subgraph_input : subgraph_inputs) {
         auto match_node = subgraph_input.GetAllInputs().at(0);
@@ -102,7 +101,7 @@ static bool IsCast1HasControlEdge(
     AscendString cast1_node_name;
     cast1_node.node.GetName(cast1_node_name);
     if (cast1_node.node.GetInControlNodes().size() != 0 || cast1_node.node.GetOutControlNodes().size() != 0) {
-        OPS_LOG_D(kPassName.c_str(), "%s node can not have control edge", cast1_node_name.GetString());
+        OPS_LOG_D(pass_name.c_str(), "%s node can not have control edge", cast1_node_name.GetString());
         return true;
     }
     return false;
