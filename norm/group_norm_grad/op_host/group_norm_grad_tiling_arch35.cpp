@@ -161,12 +161,12 @@ ge::graphStatus GroupNormGradRegBaseTiling::InputCheck(gert::Shape& dyShape)
     for (uint32_t dimIdx = 0; dimIdx < dyShape.GetDimNum(); dimIdx++) {
         auto currShape = dyShape.GetDim(dimIdx);
         OP_TILING_CHECK(
-            (currShape < 1), OP_LOGE(context_->GetNodeName(), "shape value must large than 1."),
+            (currShape < 1), OP_LOGE(context_->GetNodeName(), "shape value must be at least 1."),
             return ge::GRAPH_FAILED);
     }
     auto dimNum = dyShape.GetDimNum();
     OP_TILING_CHECK(
-        (dimNum < MIN_X_DIM), OP_LOGE(context_->GetNodeName(), "x, dy, dx shape dim must large than 2."),
+        (dimNum < MIN_X_DIM), OP_LOGE(context_->GetNodeName(), "x, dy, dx shape dim must be at least 2."),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }

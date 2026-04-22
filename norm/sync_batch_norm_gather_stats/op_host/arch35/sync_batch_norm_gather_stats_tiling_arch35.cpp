@@ -818,12 +818,12 @@ ge::graphStatus SyncBatchNormGatherStatsParse(gert::TilingParseContext *context)
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);    
     compileInfoPtr->ubSize = ubSizePlatForm;
     OP_CHECK_IF((compileInfoPtr->ubSize <= 0),
-        OP_LOGE(context->GetNodeName(), "ubsize less then Dcache size.please check"),
+        OP_LOGE(context->GetNodeName(), "ubSize is less than or equal 0. please check"),
         return ge::GRAPH_FAILED);
 
     compileInfoPtr->blockSize = Ops::Base::GetUbBlockSize(context);
     OP_CHECK_IF((compileInfoPtr->blockSize <= 0),
-        OP_LOGE(context->GetNodeName(), "ubBlockSize less then 0.please check"),
+        OP_LOGE(context->GetNodeName(), "ubBlockSize is less than or equal 0. please check"),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;

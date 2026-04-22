@@ -129,7 +129,7 @@ ge::graphStatus GroupNormGradEmptyTiling::InputCheck(gert::Shape& dyShape)
 
     auto dimNum = dyShape.GetDimNum();
     OP_TILING_CHECK(
-        (dimNum < MIN_X_DIM), OP_LOGE(context_->GetNodeName(), "x, dy, dx shape dim must large than 2."),
+        (dimNum < MIN_X_DIM), OP_LOGE(context_->GetNodeName(), "x, dy, dx shape dim must be at least 2."),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
