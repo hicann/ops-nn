@@ -31,6 +31,7 @@ constexpr uint64_t THREE = 3;
 constexpr uint32_t SORT_STAT_PADDING = 64;
 constexpr uint64_t UB_AGLIN_VALUE = 32;
 constexpr uint16_t MAX_RANK_COUNT = 7;
+constexpr uint16_t MAX_SHAPE_RANK = 8;
 
 static constexpr MicroAPI::CastTrait castTraitFP322INT32 = {MicroAPI::RegLayout::UNKNOWN, MicroAPI::SatMode::SAT,
                                                         MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
@@ -126,7 +127,7 @@ private:
     uint64_t postVarAlignSize_{0};
     uint64_t postVarAlignSizeFp32_{0};
     uint64_t strideList[MAX_RANK_COUNT];
-    uint64_t outputShape[MAX_RANK_COUNT];
+    uint64_t outputShape[MAX_SHAPE_RANK];
     uint64_t initPerCore{0};
     uint64_t initCoreReal{0};
 
@@ -167,7 +168,7 @@ __aicore__ inline void ScatterNdDeterministicImpl<T, U>::Init(GM_ADDR indices, G
         pipe_.InitBuffer(indicesBuf_, tilingData_.indicesUbFactor * tilingData_.rankSize * sizeof(U));
         pipe_.InitBuffer(outOfstBuf_, tilingData_.indicesUbFactor * sizeof(U));
         pipe_.InitBuffer(calcBuf_, MAX_RANK_COUNT * sizeof(U));
-        pipe_.InitBuffer(outputShapeBuf_, MAX_RANK_COUNT * sizeof(U));
+        pipe_.InitBuffer(outputShapeBuf_, MAX_SHAPE_RANK * sizeof(U));
 
         SyncAll();
         return;
@@ -206,7 +207,7 @@ __aicore__ inline void ScatterNdDeterministicImpl<T, U>::Init(GM_ADDR indices, G
     pipe_.InitBuffer(indicesQue_, DOUBLE_BUF, ops::CeilAlign(tilingData_.indicesUbFactor * tilingData_.rankSize * sizeof(U), UB_AGLIN_VALUE));
     pipe_.InitBuffer(outOfstBuf_, tilingData_.indicesUbFactor * sizeof(U));
     pipe_.InitBuffer(calcBuf_, MAX_RANK_COUNT * sizeof(U));
-    pipe_.InitBuffer(outputShapeBuf_, MAX_RANK_COUNT * sizeof(U));
+    pipe_.InitBuffer(outputShapeBuf_, MAX_SHAPE_RANK * sizeof(U));
     pipe_.InitBuffer(sortedIndicesQue_, ops::CeilAlign(tilingData_.indicesUbFactor * sizeof(U), UB_AGLIN_VALUE) + SORT_STAT_PADDING);
     pipe_.InitBuffer(updatesOriginIdexQue_, ops::CeilAlign(tilingData_.indicesUbFactor * sizeof(uint32_t), UB_AGLIN_VALUE));
     pipe_.InitBuffer(updateSumIdxQueue_, DOUBLE_BUF, ops::CeilAlign(tilingData_.indicesUbFactor * sizeof(U), UB_AGLIN_VALUE));
@@ -217,12 +218,15 @@ __aicore__ inline void ScatterNdDeterministicImpl<T, U>::Init(GM_ADDR indices, G
 template<typename T, typename U>
 __aicore__ inline void ScatterNdDeterministicImpl<T,  U>::InitWspZero()
 {
-    InitGlobalMemory(workspaceCoreLogicCoreSumId_, tilingData_.perCoreHandleIndices, (U)(-1));
-    auto vWaitMte3EventID = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
-    SetFlag<HardEvent::MTE3_V>(vWaitMte3EventID);
-    WaitFlag<HardEvent::MTE3_V>(vWaitMte3EventID);
-    InitGlobalMemory(workspaceLogicCoreSumValue_, tilingData_.perCoreHandleIndices * postVarAlignSizeFp32_, (float)(0));
-    InitGlobalMemory(workspaceMaxValueCount_, tilingData_.rankFusedAxis, (uint32_t)(0));
+    if (GetBlockIdx() < tilingData_.logicCoreNum)
+    {
+        InitGlobalMemory(workspaceCoreLogicCoreSumId_, tilingData_.perCoreHandleIndices, (U)(-1));
+        auto vWaitMte3EventID = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
+        SetFlag<HardEvent::MTE3_V>(vWaitMte3EventID);
+        WaitFlag<HardEvent::MTE3_V>(vWaitMte3EventID);
+        InitGlobalMemory(workspaceLogicCoreSumValue_, tilingData_.perCoreHandleIndices * postVarAlignSizeFp32_, (float)(0));
+        InitGlobalMemory(workspaceMaxValueCount_, tilingData_.rankFusedAxis, (uint32_t)(0));
+    }
     InitGlobalMemory(workspaceMaxValueInit_, initCoreReal, (float)(0));
     InitGlobalMemory(workspaceInt32ResInit_, initCoreReal, (int)(0));
 }
@@ -277,15 +281,15 @@ __aicore__ inline void ScatterNdDeterministicImpl<T, U>::ComputOutOfset(
         IndexRegType indexReg;
         AscendC::MicroAPI::MaskReg pregLoop;
         AscendC::MicroAPI::MaskReg cmpMask;
-        AscendC::MicroAPI::MaskReg invalidMask; 
+        AscendC::MicroAPI::MaskReg invalidMask;
 
         for (uint16_t i = 0; i < loopCnt; i++) {
             if constexpr (IsSameType<U, int64_t>::value) {
                 pregLoop = AscendC::MicroAPI::UpdateMask<U, AscendC::MicroAPI::RegTraitNumTwo>(dataLen);
-                invalidMask = AscendC::MicroAPI::UpdateMask<U, AscendC::MicroAPI::RegTraitNumTwo>(dataLen);
+                invalidMask = AscendC::MicroAPI::CreateMask<U, MicroAPI::MaskPattern::ALLF, AscendC::MicroAPI::RegTraitNumTwo>();
             } else {
                 pregLoop = AscendC::MicroAPI::UpdateMask<U>(dataLen);
-                invalidMask = AscendC::MicroAPI::UpdateMask<U>(dataLen);
+                invalidMask = AscendC::MicroAPI::CreateMask<U, MicroAPI::MaskPattern::ALLF>();
             }
             AscendC::MicroAPI::Duplicate(outReg, 0, pregLoop);
             AscendC::MicroAPI::Arange(orderReg, i * vfLen);
@@ -373,7 +377,7 @@ __aicore__ inline void ScatterNdDeterministicImpl<T,  U>::ProcessAtomicAdd()
     for (int32_t i = 0; i < MAX_RANK_COUNT; i++) {
         calcLocal(i) = tilingData_.strideList[i];
     }
-    for (int32_t i = 0; i < MAX_RANK_COUNT; i++) {
+    for (int32_t i = 0; i < MAX_SHAPE_RANK; i++) {
         outputShapeLocal(i) = tilingData_.outPutShape[i];
     }
     for (int64_t indicesLoopIdx = 0; indicesLoopIdx < indicesLoopSize - 1; ++indicesLoopIdx) {
@@ -959,7 +963,7 @@ __aicore__ inline void ScatterNdDeterministicImpl<T,  U>::Process()
     for (int32_t i = 0; i < MAX_RANK_COUNT; i++) {
         calcLocal(i) = tilingData_.strideList[i];
     }
-    for (int32_t i = 0; i < MAX_RANK_COUNT; i++) {
+    for (int32_t i = 0; i < MAX_SHAPE_RANK; i++) {
         outputShapeLocal(i) = tilingData_.outPutShape[i];
     }
 
