@@ -119,21 +119,26 @@ ge::graphStatus ApplyAdamWTiling::CheckShapeAndType() {
     auto maxGradNormDesc = tilingContext_->GetOptionalInputDesc(OPTIONAL_INPUT_INDEX);
     if (maxGradNormDesc != nullptr) {
         auto maxGradNormDtype = maxGradNormDesc->GetDataType();
-        OP_CHECK_IF(
-            maxGradNormDtype != inputDtype,
-            OP_LOGE(tilingContext_->GetNodeName(),
-                                            "Optinal input max_grad_norm dtype not match with input var dtype."),
-            return ge::GRAPH_FAILED);
+        if (maxGradNormDtype != inputDtype) {
+            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                tilingContext_->GetNodeName(), "max_grad_norm and var",
+                (Ops::Base::ToString(maxGradNormDtype) + " and " + Ops::Base::ToString(inputDtype)).c_str(),
+                "dtypes of max_grad_norm and var should be the same");
+            return ge::GRAPH_FAILED;
+        }
     }
-    
+
     auto maxGradNormShape = tilingContext_->GetOptionalInputShape(OPTIONAL_INPUT_INDEX);
     if (maxGradNormShape != nullptr) {
         auto maxGradNormStorageShape = maxGradNormShape->GetStorageShape();
-        OP_CHECK_IF(
-            maxGradNormStorageShape != inputStorageShape,
-            OP_LOGE(tilingContext_->GetNodeName(),
-                                            "Optinal input max_grad_norm dtype not match with input var dtype."),
-            return ge::GRAPH_FAILED);
+        if (maxGradNormStorageShape != inputStorageShape) {
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                tilingContext_->GetNodeName(), "max_grad_norm and var", 
+                (Ops::Base::ToString(maxGradNormStorageShape) + " and " + Ops::Base::ToString(inputStorageShape))
+                    .c_str(),
+                "shape of max_grad_norm and var should be the same");
+            return ge::GRAPH_FAILED;
+        }
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -156,9 +161,9 @@ ge::graphStatus ApplyAdamWTiling::DoElewiseTiling() {
             ret = eleBaseTiling.DoTiling<ApplyAdamWAmsGradDAG<float, float>::OpDag>(tiling_->eleBaseTilingData);
             dType = APPLY_ADAM_W_TPL_FP32;
         } else {
-            OP_LOGE(tilingContext_->GetNodeName(),
-                                            "input dtype is only support fp16, bf16, fp32, while got %s!",
-                                            ge::TypeUtils::DataTypeToSerialString(input0DType).c_str());
+            OP_LOGE_FOR_INVALID_DTYPE(
+                tilingContext_->GetNodeName(), "var",
+                Ops::Base::ToString(input0DType).c_str(), "fp16, bf16 or fp32");
             ret = ge::GRAPH_FAILED;
         }
     } else {
@@ -172,9 +177,9 @@ ge::graphStatus ApplyAdamWTiling::DoElewiseTiling() {
             ret = eleBaseTiling.DoTiling<ApplyAdamWDAG<float, float>::OpDag>(tiling_->eleBaseTilingData);
             dType = APPLY_ADAM_W_TPL_FP32;
         } else {
-            OP_LOGE(tilingContext_->GetNodeName(),
-                                            "input dtype is only support fp16, bf16, fp32, while got %s!",
-                                            ge::TypeUtils::DataTypeToSerialString(input0DType).c_str());
+            OP_LOGE_FOR_INVALID_DTYPE(
+                tilingContext_->GetNodeName(), "var",
+                Ops::Base::ToString(input0DType).c_str(), "fp16, bf16 or fp32");
             ret = ge::GRAPH_FAILED;
         }
     }

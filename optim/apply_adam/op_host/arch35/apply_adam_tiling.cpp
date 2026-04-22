@@ -49,7 +49,7 @@ constexpr int64_t KEY_FP32 = 103;
 
 class ApplyAdamTiling {
 public:
-    explicit ApplyAdamTiling(gert::TilingContext* context) : tilingContext_(context){};
+    explicit ApplyAdamTiling(gert::TilingContext* context) : tilingContext_(context) {};
 
     ge::graphStatus RunTiling();
     ApplyAdamTilingData* tiling_ = nullptr;
@@ -100,6 +100,9 @@ ge::graphStatus ApplyAdamTiling::CheckDtype()
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, varDesc);
 
     this->varDtype_ = varDesc->GetDataType();
+    static const char* kInputNames[] = {"var", "m",     "v",     "beta1_power", "beta2_power",
+                                        "lr",  "beta1", "beta2", "epsilon",     "grad"};
+    static const char* kOutputNames[] = {"var"};
 
     std::vector<int32_t> tensorInputs = {M_INDEX, V_INDEX, GRAD_INDEX};
     for (int32_t inputIdx : tensorInputs) {
@@ -107,10 +110,14 @@ ge::graphStatus ApplyAdamTiling::CheckDtype()
         OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, inputDesc);
 
         auto curDtype = inputDesc->GetDataType();
-        OP_CHECK_IF(
-            curDtype != varDtype_,
-            OP_LOGE(tilingContext_->GetNodeName(), "Input %d dtype not match with var dtype.", inputIdx),
-            return ge::GRAPH_FAILED);
+        if (curDtype != varDtype_) {
+            std::string paramNames = std::string(kInputNames[inputIdx]) + " and var";
+            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                tilingContext_->GetNodeName(), paramNames.c_str(),
+                (Ops::Base::ToString(curDtype) + " and " + Ops::Base::ToString(varDtype_)).c_str(),
+                "their dtypes should be the same");
+            return ge::GRAPH_FAILED;
+        }
     }
 
     std::vector<int32_t> scalarInputs = {BETA1_POWER_INDEX, BETA2_POWER_INDEX, LR_INDEX,
@@ -120,10 +127,13 @@ ge::graphStatus ApplyAdamTiling::CheckDtype()
         OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, inputDesc);
 
         auto curDtype = inputDesc->GetDataType();
-        OP_CHECK_IF(
-            curDtype != ge::DT_FLOAT,
-            OP_LOGE(tilingContext_->GetNodeName(), "Input %d dtype must be float32.", inputIdx),
-            return ge::GRAPH_FAILED);
+        if (curDtype != ge::DT_FLOAT) {
+            std::string paramName = kInputNames[inputIdx];
+            OP_LOGE_FOR_INVALID_DTYPE(
+                tilingContext_->GetNodeName(), paramName.c_str(), Ops::Base::ToString(curDtype).c_str(),
+                "float32");
+            return ge::GRAPH_FAILED;
+        }
     }
 
     for (int32_t outputIdx = 0; outputIdx < OUTPUT_NUM; outputIdx++) {
@@ -131,10 +141,15 @@ ge::graphStatus ApplyAdamTiling::CheckDtype()
         OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, outputDesc);
 
         auto curDtype = outputDesc->GetDataType();
-        OP_CHECK_IF(
-            curDtype != varDtype_,
-            OP_LOGE(tilingContext_->GetNodeName(), "Output %d dtype not match with var dtype.", outputIdx),
-            return ge::GRAPH_FAILED);
+        if (curDtype != varDtype_) {
+            std::string paramNames =
+                std::string(kOutputNames[outputIdx]) + "(output parameter) and var(input parameter)";
+            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                tilingContext_->GetNodeName(), paramNames.c_str(),
+                (Ops::Base::ToString(curDtype) + " and " + Ops::Base::ToString(varDtype_)).c_str(),
+                "their dtypes should be the same");
+            return ge::GRAPH_FAILED;
+        }
     }
 
     return ge::GRAPH_SUCCESS;
@@ -209,7 +224,9 @@ ge::graphStatus ApplyAdamTiling::RunTiling()
                 OP_LOGE(tilingContext_->GetNodeName(), "do tiling failed for fp32 with nesterov"),
                 return ge::GRAPH_FAILED);
         } else {
-            OP_LOGE(tilingContext_->GetNodeName(), "current dtype not supported");
+            OP_LOGE_FOR_INVALID_DTYPE(
+                tilingContext_->GetNodeName(), "var", Ops::Base::ToString(this->varDtype_).c_str(),
+                "fp16, bf16 or fp32");
             return ge::GRAPH_FAILED;
         }
     } else {
@@ -222,7 +239,9 @@ ge::graphStatus ApplyAdamTiling::RunTiling()
                 eleBaseTiling.DoTiling<ApplyAdamDagFusion<float>::OpDag>(tiling_->baseTiling) != ge::GRAPH_SUCCESS,
                 OP_LOGE(tilingContext_->GetNodeName(), "do tiling failed for fp32"), return ge::GRAPH_FAILED);
         } else {
-            OP_LOGE(tilingContext_->GetNodeName(), "current dtype not supported");
+            OP_LOGE_FOR_INVALID_DTYPE(
+                tilingContext_->GetNodeName(), "var", Ops::Base::ToString(this->varDtype_).c_str(),
+                "fp16, bf16 or fp32");
             return ge::GRAPH_FAILED;
         }
     }

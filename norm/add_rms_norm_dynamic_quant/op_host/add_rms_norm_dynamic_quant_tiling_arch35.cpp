@@ -50,9 +50,8 @@ constexpr uint32_t FULL_LOAD_R_MAX = 16384;
 constexpr uint32_t ALIGN_SPACE = 1 * 1024;
 constexpr uint32_t DOUBLE_BUFFER = 2;
 
-    ge::graphStatus
-    AddRmsNormDynamicQuantRegbaseTiling::CheckDtypeVaild(
-        ge::DataType & srcDtype, std::vector<ge::DataType>& supportDtypeList, string srcName)
+ge::graphStatus AddRmsNormDynamicQuantRegbaseTiling::CheckDtypeVaild(
+    ge::DataType& srcDtype, std::vector<ge::DataType>& supportDtypeList, string srcName)
 {
     for (const auto& supportedDtype : supportDtypeList) {
         if (supportedDtype == srcDtype) {
@@ -115,7 +114,10 @@ bool AddRmsNormDynamicQuantRegbaseTiling::CheckInputShapeDim()
     size_t x2DimNum = x2Shape->GetStorageShape().GetDimNum();
     OP_CHECK_IF(
         (x1DimNum > MAX_DIM_CNT) || (x2DimNum > MAX_DIM_CNT),
-        OP_LOGE(nodeName.c_str(), "Input x1/x2 dim should not bigger than %u.", MAX_DIM_CNT), return false);
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            nodeName.c_str(), "x1 and x2", (std::to_string(x1DimNum) + " and " + std::to_string(x2DimNum)).c_str(),
+            "dim num of x1 and x2 should not be greater than 8."),
+        return false);
     OP_CHECK_IF(!CheckDimBiggerZero(x1Shape, x1DimNum, nodeName, "x1"), , return false);
     OP_CHECK_IF(!CheckDimBiggerZero(x2Shape, x2DimNum, nodeName, "x2"), , return false);
     OP_CHECK_IF(1 != gammaShape->GetStorageShape().GetDimNum(),  ,return false);
@@ -175,8 +177,9 @@ bool AddRmsNormDynamicQuantRegbaseTiling::CheckOutputDtype()
     if ((ge::GRAPH_SUCCESS != CheckDtypeVaild(y1DataType, supportedYDtypes, "AddRmsNormDynamicQuant")) ||
         (ge::GRAPH_SUCCESS != CheckDtypeVaild(y2DataType, supportedYDtypes, "AddRmsNormDynamicQuant")) ||
         (y1DataType != y2DataType)) {
-        OP_LOGE(
-            nodeName.c_str(), "Output dtype should be int8 fp8e4m3 fp8e5m2 hifp8 and y1DataType y2DataType need same.");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(nodeName.c_str(), "y1 and y2",
+            (Ops::Base::ToString(y1DataType) + " and " + Ops::Base::ToString(y2DataType)).c_str(),
+            "dtype of y1 and y2 should be int8, fp8e4m3, fp8e5m2 or hifp8, and y1, y2 should have the same dtype.");
         return false;
     }
     return true;
@@ -200,21 +203,34 @@ bool AddRmsNormDynamicQuantRegbaseTiling::CheckInputDtype()
         smoothScale2Dtype = context_->GetOptionalInputTensor(SMOOTH_SCALE2_INDEX)->GetDataType();
     }
     if ((x1Dtype != x2Dtype) || (x1Dtype != gammaDtype)) {
-        OP_LOGE(nodeName.c_str(), "Input x1/gamma/xout dtype should be equal.");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            nodeName.c_str(), "x1, x2 and gamma",
+            (Ops::Base::ToString(x1Dtype) + ", " + Ops::Base::ToString(x2Dtype) + " and " +
+             Ops::Base::ToString(gammaDtype)).c_str(),
+            "dtype of x1, x2 and gamma should be the same.");
         return false;
     }
     if (tilingParams.hasSmoothScale1 && (x1Dtype != smoothScale1Dtype)) {
-        OP_LOGE(nodeName.c_str(), "Input smoothScale1/x1 dtype should be equal.");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            nodeName.c_str(), "x1 and smoothScale1",
+            (Ops::Base::ToString(x1Dtype) + " and " + Ops::Base::ToString(smoothScale1Dtype)).c_str(),
+            "dtype of x1 and smoothScale1 should be the same when smoothScale1 is existed.");
         return false;
     }
     if (tilingParams.hasSmoothScale2 && (x1Dtype != smoothScale2Dtype)) {
-        OP_LOGE(nodeName.c_str(), "Input smoothScale2/x1 dtype should be equal.");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            nodeName.c_str(), "x1 and smoothScale2",
+            (Ops::Base::ToString(x1Dtype) + " and " + Ops::Base::ToString(smoothScale2Dtype)).c_str(),
+            "dtype of x1 and smoothScale2 should be the same when smoothScale2 is existed.");
         return false;
     }
     if (tilingParams.hasBeta) {
         ge::DataType betaDtype = context_->GetOptionalInputTensor(BETA_INDEX)->GetDataType();
         if (gammaDtype != betaDtype) {
-            OP_LOGE(nodeName.c_str(), "Input gammaDtype/betaDtype dtype should be equal.");
+            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                nodeName.c_str(), "gamma and beta",
+                (Ops::Base::ToString(gammaDtype) + " and " + Ops::Base::ToString(betaDtype)).c_str(),
+                "dtype of gamma and beta should be the same.");
             return false;
         }
     }

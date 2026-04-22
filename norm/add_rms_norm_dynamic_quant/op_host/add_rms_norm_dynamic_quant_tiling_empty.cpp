@@ -101,7 +101,10 @@ bool AddRmsNormDynamicQuantEmptyTiling::CheckInputShapeDim()
     size_t x2DimNum = x2InputShape.GetDimNum();
     OP_CHECK_IF(
         (x1DimNum > MAX_DIM_CNT) || (x2DimNum > MAX_DIM_CNT),
-        OP_LOGE(nodeName_.c_str(), "Input x1/x2 dim should not bigger than %u.", MAX_DIM_CNT), return false);
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            nodeName_.c_str(), "x1 and x2", (std::to_string(x1DimNum) + " and " + std::to_string(x2DimNum)).c_str(),
+            "dim num of x1 and x2 should not be greater than 8."),
+        return false);
     OP_CHECK_IF(!CheckDimBiggerZero(x1Shape, x1DimNum, nodeName_, "x1"), , return false);
     OP_CHECK_IF(!CheckDimBiggerZero(x2Shape, x2DimNum, nodeName_, "x2"), , return false);
     return true;
@@ -164,15 +167,23 @@ bool AddRmsNormDynamicQuantEmptyTiling::CheckInputDtype()
         smoothScale2Dtype = context_->GetOptionalInputTensor(SMOOTH_SCALE2_INDEX)->GetDataType();
     }
     if ((x1Dtype != x2Dtype) || (x1Dtype != gammaDtype)) {
-        OP_LOGE(nodeName_.c_str(), "Input x1/gamma/xout dtype should be equal.");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            nodeName_.c_str(), "x1, x2 and gamma",
+            (Ops::Base::ToString(x1Dtype) + ", " + Ops::Base::ToString(x1Dtype) + " and " +
+             Ops::Base::ToString(smoothScale2Dtype)).c_str(),
+            "dtype of x1, x2 and gamma should be the same.");
         return false;
     }
     if (hasSmoothScale1_ && (x1Dtype != smoothScale1Dtype)) {
-        OP_LOGE(nodeName_.c_str(), "Input smoothScale1/x1 dtype should be equal.");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(nodeName_.c_str(), "x1 and smoothScale1",
+            (Ops::Base::ToString(x1Dtype) + " and " + Ops::Base::ToString(smoothScale1Dtype)).c_str(),
+            "dtype of x1 and smoothScale1 should be the same when smoothScale1 is existed.");
         return false;
     }
     if (hasSmoothScale2_ && (x1Dtype != smoothScale2Dtype)) {
-        OP_LOGE(nodeName_.c_str(), "Input smoothScale2/x1 dtype should be equal.");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(nodeName_.c_str(), "x1 and smoothScale2",
+            (Ops::Base::ToString(x1Dtype) + " and " + Ops::Base::ToString(smoothScale2Dtype)).c_str(),
+            "dtype of x1 and smoothScale2 should be the same when smoothScale2 is existed.");
         return false;
     }
 

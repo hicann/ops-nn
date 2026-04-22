@@ -76,15 +76,22 @@ ge::graphStatus ApplyAdagradDTiling::CheckDtype() {
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, varDesc);
 
     this->varDtype_ = varDesc->GetDataType();
+    static const char* kInputNames[] = {"var", "accum", "lr", "grad"};
+    static const char* kOutputNames[] = {"var", "accum"};
 
     for (int32_t inputIdx = ACCUM_INDEX; inputIdx < INPUT_NUM; inputIdx++) {
         auto inputDesc = tilingContext_->GetInputDesc(inputIdx);
         OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, inputDesc);
 
         auto curDtype = inputDesc->GetDataType();
-        OP_CHECK_IF(curDtype != varDtype_,
-                        OP_LOGE(tilingContext_->GetNodeName(), "Input %d dtype not match with var dtype.", inputIdx),
-                        return ge::GRAPH_FAILED);
+        if (curDtype != varDtype_) {
+            std::string paramNames = std::string(kInputNames[inputIdx]) + " and var";
+            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                tilingContext_->GetNodeName(), paramNames.c_str(),
+                (Ops::Base::ToString(curDtype) + " and " + Ops::Base::ToString(varDtype_)).c_str(),
+                "their dtypes should be the same");
+            return ge::GRAPH_FAILED;
+        }
     }
 
     for (int32_t outputIdx = 0; outputIdx < OUTPUT_NUM; outputIdx++) {
@@ -92,9 +99,15 @@ ge::graphStatus ApplyAdagradDTiling::CheckDtype() {
         OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, outputDesc);
 
         auto curDtype = outputDesc->GetDataType();
-        OP_CHECK_IF(curDtype != varDtype_,
-                        OP_LOGE(tilingContext_->GetNodeName(), "Output %d dtype not match with var dtype.", outputIdx),
-                        return ge::GRAPH_FAILED);
+        if (curDtype != varDtype_) {
+            std::string paramNames =
+                std::string(kOutputNames[outputIdx]) + "(output parameter) and var(input parameter)";
+            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                tilingContext_->GetNodeName(), paramNames.c_str(),
+                (Ops::Base::ToString(curDtype) + " and " + Ops::Base::ToString(varDtype_)).c_str(),
+                "their dtypes should be the same");
+            return ge::GRAPH_FAILED;
+        }
     }
 
     return ge::GRAPH_SUCCESS;
@@ -124,9 +137,16 @@ ge::graphStatus ApplyAdagradDTiling::CheckShape() {
     const gert::Shape& accumShape = EnsureNotScalar(accumStorageShape->GetStorageShape());
     const gert::Shape& gradShape = EnsureNotScalar(gradStorageShape->GetStorageShape());
 
-    OP_CHECK_IF(varShape != accumShape || varShape != gradShape,
-                    OP_LOGE(tilingContext_->GetNodeName(), "shape of var, accum and grad are not same"),
-                    return ge::GRAPH_FAILED);
+    if (varShape != accumShape || varShape != gradShape) {
+        std::string varShapeStr = Ops::Base::ToString(varShape);
+        std::string accumShapeStr = Ops::Base::ToString(accumShape);
+        std::string gradShapeStr = Ops::Base::ToString(gradShape);
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            tilingContext_->GetNodeName(), "var, accum and grad",
+            (varShapeStr + ", " + accumShapeStr + " and " + gradShapeStr).c_str(),
+            "shape of var, accum and grad should be the same");
+        return ge::GRAPH_FAILED;
+    }
 
     return ge::GRAPH_SUCCESS;
 }
@@ -150,7 +170,8 @@ ge::graphStatus ApplyAdagradDTiling::DoUpdateSlotsTiling() {
                         OP_LOGE(tilingContext_->GetNodeName(), "Do tiling failed for fp32 with updates_slots"),
                         return ge::GRAPH_FAILED);
     } else {
-        OP_LOGE(tilingContext_->GetNodeName(), "Current dtype not supported");
+        OP_LOGE_FOR_INVALID_DTYPE(
+            tilingContext_->GetNodeName(), "var", Ops::Base::ToString(this->varDtype_).c_str(), "fp16, bf16 or fp32");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -175,7 +196,8 @@ ge::graphStatus ApplyAdagradDTiling::DoNonUpdateSlotsTiling() {
                         OP_LOGE(tilingContext_->GetNodeName(), "Do tiling failed for fp32."),
                         return ge::GRAPH_FAILED);
     } else {
-        OP_LOGE(tilingContext_->GetNodeName(), "Current dtype not supported");
+        OP_LOGE_FOR_INVALID_DTYPE(
+            tilingContext_->GetNodeName(), "var", Ops::Base::ToString(this->varDtype_).c_str(), "fp16, bf16 or fp32");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;

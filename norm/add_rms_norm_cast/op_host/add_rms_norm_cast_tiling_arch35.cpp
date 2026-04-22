@@ -91,7 +91,10 @@ bool AddRmsNormCastRegbaseTiling::CheckInputShapeDim()
     size_t x2DimNum = x2Shape->GetStorageShape().GetDimNum();
     OP_CHECK_IF(
         (x1DimNum > MAX_DIM_CNT) || (x2DimNum > MAX_DIM_CNT),
-        OP_LOGE(nodeName.c_str(), "Input x1/x2 dim should not bigger than %u.", MAX_DIM_CNT), return false);
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            nodeName.c_str(), "x1 and x2", (std::to_string(x1DimNum) + " and " + std::to_string(x2DimNum)).c_str(),
+            "dim num of x1 and x2 should not be greater than 8."),
+        return false);
     OP_CHECK_IF(!CheckDimBiggerZero(x1Shape, x1DimNum, nodeName, "x1"), , return false);
     OP_CHECK_IF(!CheckDimBiggerZero(x2Shape, x2DimNum, nodeName, "x2"), , return false);
     return true;
@@ -139,7 +142,11 @@ bool AddRmsNormCastRegbaseTiling::CheckInputDtype()
     ge::DataType x2Dtype = context_->GetInputTensor(X2_INDEX)->GetDataType();
     ge::DataType gammaDtype = context_->GetInputTensor(GAMMA_INDEX)->GetDataType();
     if ((x1Dtype != x2Dtype) || (x1Dtype != gammaDtype)) {
-        OP_LOGE(nodeName.c_str(), "Input x1/x2/gamma dtype should be equal.");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            nodeName.c_str(), "x1, x2 and gamma",
+            (Ops::Base::ToString(x1Dtype) + ", " + Ops::Base::ToString(x2Dtype) + " and " +
+             Ops::Base::ToString(gammaDtype)).c_str(),
+            "dtype of x1, x2 and gamma should be the same.");
         return false;
     }
 

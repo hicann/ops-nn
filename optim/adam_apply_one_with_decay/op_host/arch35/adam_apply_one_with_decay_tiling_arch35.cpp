@@ -55,17 +55,22 @@ ge::graphStatus AdamApplyOneWithDecayTiling::GetShapeAttrsInfo()
     auto input0Desc = context_->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, input0Desc);
     ge::DataType input0DType = input0Desc->GetDataType();
+    static const char* kInputNames[] = {"input0", "input1", "input2", "input3", "input4", "mul0_x",
+                                        "mul1_x", "mul2_x", "mul3_x", "mul4_x", "add2_y"};
+    static const char* kOutputNames[] = {"input1", "input2", "input3"};
     for (int32_t inputIdx = 1; inputIdx < INPUT_NUM; inputIdx++) {
         auto inputDesc = context_->GetInputDesc(inputIdx);
         OP_CHECK_NULL_WITH_CONTEXT(context_, inputDesc);
 
         auto curDtype = inputDesc->GetDataType();
-        OP_CHECK_IF(
-            curDtype != input0DType,
-            OP_LOGE(
-                context_->GetNodeName(), "Input %d dtype not match with input0 dtype %s.", inputIdx,
-                ge::TypeUtils::DataTypeToSerialString(input0DType).c_str()),
-            return ge::GRAPH_FAILED);
+        if (curDtype != input0DType) {
+            std::string paramNames = std::string(kInputNames[inputIdx]) + " and input0";
+            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                context_->GetNodeName(), paramNames.c_str(),
+                (Ops::Base::ToString(curDtype) + " and " + Ops::Base::ToString(input0DType)).c_str(),
+                "their dtypes should be the same");
+            return ge::GRAPH_FAILED;
+        }
     }
 
     for (int32_t outputIdx = 0; outputIdx < OUTPUT_NUM; outputIdx++) {
@@ -73,12 +78,15 @@ ge::graphStatus AdamApplyOneWithDecayTiling::GetShapeAttrsInfo()
         OP_CHECK_NULL_WITH_CONTEXT(context_, outputDesc);
 
         auto curDtype = outputDesc->GetDataType();
-        OP_CHECK_IF(
-            curDtype != input0DType,
-            OP_LOGE(
-                context_->GetNodeName(), "Output %d dtype not match with input0 dtype %s.", outputIdx,
-                ge::TypeUtils::DataTypeToSerialString(input0DType).c_str()),
-            return ge::GRAPH_FAILED);
+        if (curDtype != input0DType) {
+            std::string paramNames =
+                std::string(kOutputNames[outputIdx]) + "(output parameter) and input0(input parameter)";
+            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                context_->GetNodeName(), paramNames.c_str(),
+                (Ops::Base::ToString(curDtype) + " and " + Ops::Base::ToString(input0DType)).c_str(),
+                "their dtypes should be the same");
+            return ge::GRAPH_FAILED;
+        }
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -118,9 +126,9 @@ ge::graphStatus AdamApplyOneWithDecayTiling::DoOpTiling()
             return ge::GRAPH_FAILED);
         _tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode());
     } else {
-        OP_LOGE(
-            context_->GetNodeName(), "input dtype is only support fp16, bf16, fp32, while got %s!",
-            ge::TypeUtils::DataTypeToSerialString(input0DType).c_str());
+        OP_LOGE_FOR_INVALID_DTYPE(
+            context_->GetNodeName(), "input0", Ops::Base::ToString(input0DType).c_str(),
+            "fp16, bf16 or fp32");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
