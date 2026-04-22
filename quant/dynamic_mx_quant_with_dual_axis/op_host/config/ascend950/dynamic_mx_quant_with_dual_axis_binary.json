@@ -77,6 +77,11 @@
             "name": "scale_alg",
             "dtype": "int",
             "value": null
+          },
+          {
+            "name": "dst_type_max",
+            "dtype": "float",
+            "value": null
           }
         ]
       },
@@ -155,6 +160,11 @@
           {
             "name": "scale_alg",
             "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "dst_type_max",
+            "dtype": "float",
             "value": null
           }
         ]
@@ -235,6 +245,11 @@
             "name": "scale_alg",
             "dtype": "int",
             "value": null
+          },
+          {
+            "name": "dst_type_max",
+            "dtype": "float",
+            "value": null
           }
         ]
       },
@@ -313,6 +328,11 @@
           {
             "name": "scale_alg",
             "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "dst_type_max",
+            "dtype": "float",
             "value": null
           }
         ]
@@ -393,6 +413,11 @@
             "name": "scale_alg",
             "dtype": "int",
             "value": null
+          },
+          {
+            "name": "dst_type_max",
+            "dtype": "float",
+            "value": null
           }
         ]
       },
@@ -471,6 +496,11 @@
           {
             "name": "scale_alg",
             "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "dst_type_max",
+            "dtype": "float",
             "value": null
           }
         ]
@@ -551,6 +581,11 @@
             "name": "scale_alg",
             "dtype": "int",
             "value": null
+          },
+          {
+            "name": "dst_type_max",
+            "dtype": "float",
+            "value": null
           }
         ]
       },
@@ -629,6 +664,11 @@
           {
             "name": "scale_alg",
             "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "dst_type_max",
+            "dtype": "float",
             "value": null
           }
         ]

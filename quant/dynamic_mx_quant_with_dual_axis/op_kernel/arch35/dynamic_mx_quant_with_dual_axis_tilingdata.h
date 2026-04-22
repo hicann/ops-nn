@@ -44,5 +44,7 @@ struct DynamicMxQuantWithDualAxisTilingData {
     int64_t blockCountPerBatch;     // 一个batch轴切分块数
     int64_t scale1ColCountPerBatch; // 一个batch轴-1轴的scale列数
     int64_t scale2RowCountPerBatch; // 一个batch轴-2轴的scale的行数
+    float dstTypeMax;               // 目标数据类型最大值 (scaleAlg=2时使用，0.0表示使用默认最大值)
+    float invDstTypeMax;            // 1 / dstTypeMax (预计算的倒数，用于kernel中避免浮点除法)
 };
 #endif // OPS_NN_DYNAMIC_MX_QUANT_WITH_DUAL_AXIS_H

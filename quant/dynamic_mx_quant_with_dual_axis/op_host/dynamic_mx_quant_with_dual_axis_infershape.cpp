@@ -107,7 +107,7 @@ graphStatus InferShapeForDynamicMxQuantWithDualAxis(gert::InferShapeContext* con
 
     OP_LOGD(
         context->GetNodeName(), "x shape is : %s, mxscale2 shape is %s.", Shape2String(*xShape).c_str(),
-        Shape2String(*scaleShape1).c_str());
+        Shape2String(*scaleShape2).c_str());
 
     OP_LOGD(context->GetNodeName(), "End to do InferShapeForDynamicMxQuantWithDualAxis");
     return ge::GRAPH_SUCCESS;

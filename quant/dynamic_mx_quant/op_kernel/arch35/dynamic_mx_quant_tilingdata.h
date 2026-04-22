@@ -9,7 +9,7 @@
  */
 
 /* !
- * \file dynamic_mx_quant_with_dual_axis_tilingdata.h
+ * \file dynamic_mx_quant_tilingdata.h
  * \brief
  */
 

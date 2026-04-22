@@ -60,6 +60,25 @@ constexpr uint32_t FP8_E4M3_MAX = 0x3b124925; // 1/448的float32表示 448是E4M
 constexpr uint16_t EXP_MASK_BF16 = 0x7f80;    // 0111 1111 1000 0000
 constexpr uint16_t EXP_MASK_FP16 = 0x7c00;    // 0111 1100 0000 0000
 
+// CuBALS Scale算法相关常量 (scaleAlg=1, FP8专用)
+constexpr uint16_t ABS_MASK_FOR_16BIT = 0x7fff;          // 取绝对值掩码，清除符号位
+constexpr uint32_t MAN_MASK_FLOAT = 0x007fffff;          // FP32尾数掩码 (23位尾数)
+constexpr uint32_t FP32_EXP_BIAS_CUBLAS = 0x00007f00;    // FP32指数偏移(CuBALS)，左移7位后为BF16的指数偏移
+constexpr uint32_t MAX_EXP_FOR_FP8_IN_FP32 = 0x000000ff; // FP8 NAN在E8M0中的表示 (0xFF)
+constexpr uint32_t NAN_CUSTOMIZATION_PACK = 0x00007f81;   // NAN的BF16打包表示 (uint32存储)
+constexpr uint32_t NUMBER_ZERO_U32 = 0x00000000;          // uint32零常量
+constexpr uint32_t NUMBER_TWO_FIVE_FOUR = 0x000000fe;     // 254，FP32指数上界
+constexpr uint32_t NUMBER_HALF_U32 = 0x00400000;          // FP32尾数的一半 (2^22)
+
+// DynamicDtypeRange Scale算法相关常量 (scaleAlg=2, FP4_E2M1专用)
+constexpr uint16_t ADD_VALUE_FOR_BF16_MAN1 = 0x003f;     // dstTypeMax=0.0/6.0时BF16尾数进位值
+constexpr uint16_t ADD_VALUE_FOR_BF16_MAN2 = 0x001f;     // dstTypeMax=7.0时BF16尾数进位值
+constexpr uint16_t SUB_NUM_FOR_SCALE_6 = 0x00c1;         // dstTypeMax=0.0/6.0时-2轴减法常量 (FP4_E2M1_BF16_MAX_EXP - addValueBit)
+constexpr uint16_t SUB_NUM_FOR_SCALE_7 = 0x00e1;         // dstTypeMax=7.0时-2轴减法常量
+constexpr float DIGIT_ZERO_FLOAT = 0.0f;
+constexpr float DIGIT_SIX_FLOAT = 6.0f;
+constexpr float DIGIT_SEVEN_FLOAT = 7.0f;
+
 template <typename xDtype, typename y1Dtype, typename y2Dtype, AscendC::RoundMode roundMode, uint64_t scaleAlg>
 class DynamicMxQuantWithDualAxisBase {
 public:
@@ -79,6 +98,20 @@ private:
     __aicore__ inline void CopyIn(int64_t offset, int64_t blockCount, int64_t dataLen, int64_t dimNeg1IsOdd);
     __aicore__ inline void ComputeAll(int64_t blockCount, int64_t dataLen);
     __aicore__ inline void ComputeScaleOcp(
+        uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr, __ubuf__ uint8_t* mxScale1Addr,
+        __ubuf__ uint16_t* mxScale1ReciprocalAddr, __ubuf__ uint8_t* mxScale2Addr,
+        __ubuf__ uint16_t* mxScale2ReciprocalAddr);
+    __aicore__ inline void ComputeScaleCublas(
+        uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr, __ubuf__ uint8_t* mxScale1Addr,
+        __ubuf__ uint16_t* mxScale1ReciprocalAddr, __ubuf__ uint8_t* mxScale2Addr,
+        __ubuf__ uint16_t* mxScale2ReciprocalAddr);
+    // DynamicDtypeRange Default: dstTypeMax=0.0/6.0/7.0, 指数域addValueBit进位法 (scaleAlg=2)
+    __aicore__ inline void ComputeScaleDynamicDefault(
+        uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr, __ubuf__ uint8_t* mxScale1Addr,
+        __ubuf__ uint16_t* mxScale1ReciprocalAddr, __ubuf__ uint8_t* mxScale2Addr,
+        __ubuf__ uint16_t* mxScale2ReciprocalAddr);
+    // DynamicDtypeRange Custom: 自定义dstTypeMax, FP32精度invDstTypeMax乘法法 (scaleAlg=2)
+    __aicore__ inline void ComputeScaleDynamicCustom(
         uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr, __ubuf__ uint8_t* mxScale1Addr,
         __ubuf__ uint16_t* mxScale1ReciprocalAddr, __ubuf__ uint8_t* mxScale2Addr,
         __ubuf__ uint16_t* mxScale2ReciprocalAddr);
@@ -109,12 +142,26 @@ protected:
     static constexpr MicroAPI::CastTrait castTraitHalf2BF16 = {
         MicroAPI::RegLayout::UNKNOWN, MicroAPI::SatMode::UNKNOWN, MicroAPI::MaskMergeMode::ZEROING,
         AscendC::RoundMode::CAST_TRUNC};
+    // DynamicDtypeRange需要CAST_RINT (四舍五入)，与OCP的CAST_TRUNC (截断) 不同
+    static constexpr MicroAPI::CastTrait castTraitHalf2BF16Rint = {
+        MicroAPI::RegLayout::UNKNOWN, MicroAPI::SatMode::UNKNOWN, MicroAPI::MaskMergeMode::ZEROING,
+        AscendC::RoundMode::CAST_RINT};
     static constexpr MicroAPI::CastTrait castTraitBF16toFp4 = {
         MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::SAT, MicroAPI::MaskMergeMode::ZEROING, roundMode};
     static constexpr MicroAPI::CastTrait castTraitFp32toBF16 = {
         MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::NO_SAT, MicroAPI::MaskMergeMode::ZEROING, roundMode};
     static constexpr MicroAPI::CastTrait castTraitFp32toYdtype = {
         MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::SAT, MicroAPI::MaskMergeMode::ZEROING, roundMode};
+    // FP32→FP8 四路RegLayout Cast (参考DynamicMxQuant ComputeData优化模式)
+    // 将4组64个FP32值分别Cast到FP8的不同字节位置，通过Add合并后一次Store输出
+    static constexpr MicroAPI::CastTrait castTraitFp32toFP8Layout0 = {
+        MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::SAT, MicroAPI::MaskMergeMode::ZEROING, roundMode};
+    static constexpr MicroAPI::CastTrait castTraitFp32toFP8Layout1 = {
+        MicroAPI::RegLayout::ONE, MicroAPI::SatMode::SAT, MicroAPI::MaskMergeMode::ZEROING, roundMode};
+    static constexpr MicroAPI::CastTrait castTraitFp32toFP8Layout2 = {
+        MicroAPI::RegLayout::TWO, MicroAPI::SatMode::SAT, MicroAPI::MaskMergeMode::ZEROING, roundMode};
+    static constexpr MicroAPI::CastTrait castTraitFp32toFP8Layout3 = {
+        MicroAPI::RegLayout::THREE, MicroAPI::SatMode::SAT, MicroAPI::MaskMergeMode::ZEROING, roundMode};
 
 private:
     // tiling data
@@ -129,6 +176,7 @@ private:
     TQue<QuePosition::VECOUT, DB_BUFFER> mxScaleQueue2;
     TBuf<TPosition::VECCALC> mxScale1ReciprocalBuf;
     TBuf<TPosition::VECCALC> mxScale2ReciprocalBuf;
+    TBuf<TPosition::VECCALC> tmpScale2Buf;
 
     // gm
     GlobalTensor<xDtype> xGm1_;
@@ -152,6 +200,11 @@ private:
     uint32_t invDtypeMax_ = 0;
     uint16_t dtypeYMaxExp_ = 0;
     uint16_t fp4SpecialValue_ = 0;
+    // DynamicDtypeRange参数 (scaleAlg=2)
+    float dstTypeMax_ = 0.0f;
+    float invDstTypeMax_ = 0.0f;
+    uint16_t addValueBit_ = 0;
+    uint16_t subNumForScale_ = 0;
     int64_t blockSize_ = 0;
     // runtime varible
     int64_t mxScale1BufferSize_ = 0;
@@ -163,7 +216,7 @@ private:
     bool scaleNeedsPad_ = false;
     int64_t vlForHalfNumber_ = platform::GetVRegSize() / sizeof(uint16_t);
     int64_t UBBlockSize_ = platform::GetUbBlockSize();
-    int64_t oneBlockCountB16_ = UBBlockSize_ / sizeof(xDtype);
+    int64_t oneBlockCountB16_ = UBBlockSize_ / sizeof(uint16_t);
     int64_t oneBlockCountB8_ = UBBlockSize_ / sizeof(uint8_t);
 };
 
@@ -213,6 +266,17 @@ __aicore__ inline void DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, 
         dtypeYMaxExp_ = 0;
         fp4SpecialValue_ = SPECIAL_VALUE_E1M2;
     }
+
+    // DynamicDtypeRange参数初始化 (scaleAlg=2时使用)
+    dstTypeMax_ = tilingData_->dstTypeMax;
+    invDstTypeMax_ = tilingData_->invDstTypeMax;
+    if (dstTypeMax_ == DIGIT_ZERO_FLOAT || dstTypeMax_ == DIGIT_SIX_FLOAT) {
+        addValueBit_ = ADD_VALUE_FOR_BF16_MAN1;
+        subNumForScale_ = SUB_NUM_FOR_SCALE_6;
+    } else if (dstTypeMax_ == DIGIT_SEVEN_FLOAT) {
+        addValueBit_ = ADD_VALUE_FOR_BF16_MAN2;
+        subNumForScale_ = SUB_NUM_FOR_SCALE_7;
+    }
 }
 
 template <typename xDtype, typename y1Dtype, typename y2Dtype, AscendC::RoundMode roundMode, uint64_t scaleAlg>
@@ -236,12 +300,14 @@ __aicore__ inline void DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, 
     LocalTensor<uint8_t> y2 = outQueue2.template AllocTensor<uint8_t>();
     LocalTensor<uint16_t> mxScale1ReciprocalLocal = mxScale1ReciprocalBuf.Get<uint16_t>();
     LocalTensor<uint16_t> mxScale2ReciprocalLocal = mxScale2ReciprocalBuf.Get<uint16_t>();
+    LocalTensor<uint8_t> tmpScale2Local = tmpScale2Buf.Get<uint8_t>();
 
     auto xAddr = (__ubuf__ xDtype*)x.GetPhyAddr();
     auto y1Addr = (__ubuf__ uint8_t*)y1.GetPhyAddr();
     auto y2Addr = (__ubuf__ uint8_t*)y2.GetPhyAddr();
     auto mxScale1Addr = (__ubuf__ uint8_t*)mxScale1.GetPhyAddr();
     auto mxScale2Addr = (__ubuf__ uint8_t*)mxScale2.GetPhyAddr();
+    auto tmpScale2Addr = (__ubuf__ uint8_t*)tmpScale2Local.GetPhyAddr();
     // 1/scale
     auto mxScale1ReciprocalAddr = (__ubuf__ uint16_t*)mxScale1ReciprocalLocal.GetPhyAddr();
     auto mxScale2ReciprocalAddr = (__ubuf__ uint16_t*)mxScale2ReciprocalLocal.GetPhyAddr();
@@ -270,10 +336,33 @@ __aicore__ inline void DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, 
         scale2UbOffset = i * ubRowLen_;
         scale1ReciprocalOffset = i * blockSize_ * ops::CeilAlign(ubRowLen_ / blockSize_, oneBlockCountB16_);
         scale2ReciprocalOffset = i * ubRowLen_;
+        if constexpr (scaleAlg == 0) {
         ComputeScaleOcp(
             dataLen, blockSize_, xAddr + xOffset, mxScale1Addr + scale1UbOffset,
-            mxScale1ReciprocalAddr + scale1ReciprocalOffset, mxScale2Addr + scale2UbOffset,
+            mxScale1ReciprocalAddr + scale1ReciprocalOffset, tmpScale2Addr + scale2UbOffset,
             mxScale2ReciprocalAddr + scale2ReciprocalOffset);
+        } else if constexpr (scaleAlg == 1) {
+        // CuBALS Scale算法 (FP8专用)
+        ComputeScaleCublas(
+            dataLen, blockSize_, xAddr + xOffset, mxScale1Addr + scale1UbOffset,
+            mxScale1ReciprocalAddr + scale1ReciprocalOffset, tmpScale2Addr + scale2UbOffset,
+            mxScale2ReciprocalAddr + scale2ReciprocalOffset);
+        } else if constexpr (scaleAlg == 2) {
+        // DynamicDtypeRange Scale算法 (FP4_E2M1专用)
+        // 运行时根据dstTypeMax_选择Default (指数域进位法) 或 Custom (FP32精度乘法法)
+        if (dstTypeMax_ == DIGIT_ZERO_FLOAT || dstTypeMax_ == DIGIT_SIX_FLOAT ||
+            dstTypeMax_ == DIGIT_SEVEN_FLOAT) {
+            ComputeScaleDynamicDefault(
+                dataLen, blockSize_, xAddr + xOffset, mxScale1Addr + scale1UbOffset,
+                mxScale1ReciprocalAddr + scale1ReciprocalOffset, tmpScale2Addr + scale2UbOffset,
+                mxScale2ReciprocalAddr + scale2ReciprocalOffset);
+        } else {
+            ComputeScaleDynamicCustom(
+                dataLen, blockSize_, xAddr + xOffset, mxScale1Addr + scale1UbOffset,
+                mxScale1ReciprocalAddr + scale1ReciprocalOffset, tmpScale2Addr + scale2UbOffset,
+                mxScale2ReciprocalAddr + scale2ReciprocalOffset);
+        }
+        }
 
         ComputeYVf(
             dataLen, blockSize_, xAddr + xOffset, mxScale1ReciprocalAddr + scale1ReciprocalOffset,
@@ -290,25 +379,46 @@ __aicore__ inline void DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, 
         scale2UbOffset = calcLoop * ubRowLen_;
         scale1ReciprocalOffset = calcLoop * blockSize_ * ops::CeilAlign(ubRowLen_ / blockSize_, oneBlockCountB16_);
         scale2ReciprocalOffset = calcLoop * ubRowLen_;
+        if constexpr (scaleAlg == 0) {
         ComputeScaleOcp(
             dataLen, static_cast<uint16_t>(calcBlockTail), xAddr + xOffset, mxScale1Addr + scale1UbOffset,
-            mxScale1ReciprocalAddr + scale1ReciprocalOffset, mxScale2Addr + scale2UbOffset,
+            mxScale1ReciprocalAddr + scale1ReciprocalOffset, tmpScale2Addr + scale2UbOffset,
             mxScale2ReciprocalAddr + scale2ReciprocalOffset);
+        } else if constexpr (scaleAlg == 1) {
+        ComputeScaleCublas(
+            dataLen, static_cast<uint16_t>(calcBlockTail), xAddr + xOffset, mxScale1Addr + scale1UbOffset,
+            mxScale1ReciprocalAddr + scale1ReciprocalOffset, tmpScale2Addr + scale2UbOffset,
+            mxScale2ReciprocalAddr + scale2ReciprocalOffset);
+        } else if constexpr (scaleAlg == 2) {
+        // DynamicDtypeRange Scale算法 (FP4_E2M1专用) - 尾块处理
+        if (dstTypeMax_ == DIGIT_ZERO_FLOAT || dstTypeMax_ == DIGIT_SIX_FLOAT ||
+            dstTypeMax_ == DIGIT_SEVEN_FLOAT) {
+            ComputeScaleDynamicDefault(
+                dataLen, static_cast<uint16_t>(calcBlockTail), xAddr + xOffset, mxScale1Addr + scale1UbOffset,
+                mxScale1ReciprocalAddr + scale1ReciprocalOffset, tmpScale2Addr + scale2UbOffset,
+                mxScale2ReciprocalAddr + scale2ReciprocalOffset);
+        } else {
+            ComputeScaleDynamicCustom(
+                dataLen, static_cast<uint16_t>(calcBlockTail), xAddr + xOffset, mxScale1Addr + scale1UbOffset,
+                mxScale1ReciprocalAddr + scale1ReciprocalOffset, tmpScale2Addr + scale2UbOffset,
+                mxScale2ReciprocalAddr + scale2ReciprocalOffset);
+        }
+        }
         ComputeYVf(
             dataLen, static_cast<uint16_t>(calcBlockTail), xAddr + xOffset,
             mxScale1ReciprocalAddr + scale1ReciprocalOffset, mxScale2ReciprocalAddr + scale2ReciprocalOffset,
             y1Addr + yOffset, y2Addr + yOffset);
     }
 
-    event_t eventIDVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
-    SetFlag<HardEvent::V_S>(eventIDVToS);
-    WaitFlag<HardEvent::V_S>(eventIDVToS);
+    // event_t eventIDVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
+    // SetFlag<HardEvent::V_S>(eventIDVToS);
+    // WaitFlag<HardEvent::V_S>(eventIDVToS);
 
     // -2轴的scale交织处理
     for (int64_t i = 1; i < ((calcBlockLoop + 1) / DIGIT_TWO * DIGIT_TWO); i = i + 2) {
         Interleave(
-            mxScale2[(i - 1) * ubRowLen_], mxScale2[i * ubRowLen_], mxScale2[(i - 1) * ubRowLen_],
-            mxScale2[i * ubRowLen_], ubRowLen_);
+            mxScale2[(i - 1) * ubRowLen_], mxScale2[i * ubRowLen_], tmpScale2Local[(i - 1) * ubRowLen_],
+            tmpScale2Local[i * ubRowLen_], ubRowLen_);
     }
 
     mxScaleQueue1.template EnQue(mxScale1);
@@ -359,8 +469,8 @@ __aicore__ inline void DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, 
         MicroAPI::MaskReg infMask;
         MicroAPI::MaskReg zeroMask;
         MicroAPI::MaskReg invalidDataMask;
-        MicroAPI::MaskReg infNanDataMask0;
-        MicroAPI::MaskReg infNanDataMask1;
+        // MicroAPI::MaskReg infNanDataMask0;
+        // MicroAPI::MaskReg infNanDataMask1;
         MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<xDtype, MicroAPI::MaskPattern::ALL>();
         MicroAPI::MaskReg maskB8 = MicroAPI::CreateMask<uint8_t, MicroAPI::MaskPattern::ALL>();
         MicroAPI::MaskReg maskReduceB8 = MicroAPI::CreateMask<uint8_t, MicroAPI::MaskPattern::VL8>();
@@ -382,21 +492,12 @@ __aicore__ inline void DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, 
             MicroAPI::DataCopy<xDtype, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_DINTLV_B16>(
                 x0, x1, xAddr, vlForHalfNumber_ * DIGIT_TWO);
             if constexpr (IsSameType<xDtype, half>::value) {
-                // 提取指数位
-                MicroAPI::And(x0ExpFP16, (MicroAPI::RegTensor<uint16_t>&)x0, expMaskFP16, maskAll);
-                MicroAPI::And(x1ExpFP16, (MicroAPI::RegTensor<uint16_t>&)x1, expMaskFP16, maskAll);
-                // 比较INF/NAN数据
-                MicroAPI::Compare<uint16_t, CMPMODE::NE>(infNanDataMask0, x0ExpFP16, expMaskFP16, maskAll);
-                MicroAPI::Compare<uint16_t, CMPMODE::NE>(infNanDataMask1, x1ExpFP16, expMaskFP16, maskAll);
                 // 原始数据转成bf16
                 MicroAPI::Cast<bfloat16_t, xDtype, castTraitHalf2BF16>(x0BF16, x0, maskAll);
                 MicroAPI::Cast<bfloat16_t, xDtype, castTraitHalf2BF16>(x1BF16, x1, maskAll);
                 // 提取指数位
                 MicroAPI::And(x0ExpBF16, (MicroAPI::RegTensor<uint16_t>&)x0BF16, expMaskBF16, maskAll);
                 MicroAPI::And(x1ExpBF16, (MicroAPI::RegTensor<uint16_t>&)x1BF16, expMaskBF16, maskAll);
-                // 选择数据，INF/NAN数据时设成BF的INF/NAN
-                MicroAPI::Select<uint16_t>(x0ExpBF16, x0ExpBF16, expMaskBF16, infNanDataMask0);
-                MicroAPI::Select<uint16_t>(x1ExpBF16, x1ExpBF16, expMaskBF16, infNanDataMask1);
             } else {
                 // 提取指数位
                 MicroAPI::And(x0ExpBF16, (MicroAPI::RegTensor<uint16_t>&)x0, expMaskBF16, maskAll);
@@ -426,8 +527,7 @@ __aicore__ inline void DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, 
             MicroAPI::Select<uint16_t>(mxScale1B16, mxScale1B16, zero, zeroMask);
 
             MicroAPI::Pack<uint8_t, uint16_t, MicroAPI::HighLowPart::LOWEST>(mxScale1B8, mxScale1B16);
-            MicroAPI::DataCopy<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-                mxScale1Addr, mxScale1B8, UBBlockSize_ / sizeof(uint8_t), maskReduceB8);
+            MicroAPI::DataCopy<uint8_t>(mxScale1Addr + i * oneBlockCountB8_, mxScale1B8, maskReduceB8);
 
             // 公式中的1/X
             // 只有在E1M2时，yMaxExp=0，expMaxDim1可能会等于biasE8M0
@@ -437,8 +537,7 @@ __aicore__ inline void DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, 
             MicroAPI::Select<uint16_t>(reversedShareExp1, reversedShareExp1, nanBF16, infMask);
             MicroAPI::Select<uint16_t>(reversedShareExp1, reversedShareExp1, zero, zeroMask);
             MicroAPI::Select<uint16_t>(reversedShareExp1, specialExp, reversedShareExp1, invalidDataMask);
-            MicroAPI::DataCopy<uint16_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-                mxScale1ReciprocalAddr, reversedShareExp1, UBBlockSize_ / sizeof(uint16_t), maskReduceB16);
+            MicroAPI::DataCopy<uint16_t>(mxScale1ReciprocalAddr + i * oneBlockCountB16_, reversedShareExp1, maskReduceB16);
         }
         // 计算-2轴的scale2和1/scale2 交织第一部分
         // inf/nan值单独处理，结果为E8M0的nan
@@ -497,6 +596,802 @@ __aicore__ inline void DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, 
     }
 }
 
+// CuBALS Scale算法实现 (scaleAlg=1, FP8专用)
+// 整体框架与ComputeScaleOcp一致：循环blockCount次处理-1轴scale，循环后处理-2轴scale
+// 算法差异：OCP使用指数提取法，CuBALS使用 Amax/Amax(DType) + FP32指数尾数条件舍入法
+template <typename xDtype, typename y1Dtype, typename y2Dtype, AscendC::RoundMode roundMode, uint64_t scaleAlg>
+__aicore__ inline void DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, roundMode, scaleAlg>::ComputeScaleCublas(
+    uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr, __ubuf__ uint8_t* mxScale1Addr,
+    __ubuf__ uint16_t* mxScale1ReciprocalAddr, __ubuf__ uint8_t* mxScale2Addr,
+    __ubuf__ uint16_t* mxScale2ReciprocalAddr)
+{
+    __VEC_SCOPE__
+    {
+        // ========== 输入数据寄存器 ==========
+        MicroAPI::RegTensor<xDtype> x0;
+        MicroAPI::RegTensor<xDtype> x1;
+
+        // ========== 绝对值和max寄存器 ==========
+        MicroAPI::RegTensor<uint16_t> absMax0;         // x0的绝对值
+        MicroAPI::RegTensor<uint16_t> absMax1;         // x1的绝对值
+        MicroAPI::RegTensor<uint16_t> absMaxDim1;      // -1轴方向block内绝对值max
+        MicroAPI::RegTensor<uint16_t> absMax1Dim2;     // -2轴方向累积max (偶数列, 对应x0)
+        MicroAPI::RegTensor<uint16_t> absMax2Dim2;     // -2轴方向累积max (奇数列, 对应x1)
+        MicroAPI::RegTensor<uint16_t> zeroB16;         // -1轴Interleave用零寄存器
+
+        // ========== FP32计算寄存器 ==========
+        // -1轴: Interleave-with-0后单次Cast Zero处理全部8个值，仅需一组FP32寄存器
+        // -2轴: 仍需Zero/One两组独立处理
+        MicroAPI::RegTensor<uint32_t> maxFP32_0;       // FP32表示, 链内复用为expPlusOne
+        MicroAPI::RegTensor<uint32_t> maxFP32_1;       // -2轴奇数部分FP32表示
+        MicroAPI::RegTensor<uint32_t> expFP32_0;       // FP32指数
+        MicroAPI::RegTensor<uint32_t> expFP32_1;       // -2轴奇数部分FP32指数
+        MicroAPI::RegTensor<uint32_t> manFP32_0;       // FP32尾数, 链内复用为extractExp
+        MicroAPI::RegTensor<uint32_t> manFP32_1;       // -2轴奇数部分FP32尾数
+
+        // scale输出寄存器 (循环后复用于-2轴scale输出)
+        MicroAPI::RegTensor<uint16_t> scale1B16_0;     // E8M0 uint16, 循环后复用为mxScale2ZeroB16
+        MicroAPI::RegTensor<uint16_t> scale1B16_1;     // -2轴奇数部分, 循环后复用为mxScale2OneB16
+        MicroAPI::RegTensor<uint16_t> scale1BF16;      // BF16指数格式, 循环后复用为scale2BF16
+        MicroAPI::RegTensor<uint8_t> mxScale1B8;       // uint8 scale, 循环后复用为mxScale2ZeroB8
+        MicroAPI::RegTensor<uint16_t> reversedShareExp1; // 1/scale BF16, 循环后复用为reversedShareExp2Zero
+
+        // -2轴独立寄存器 (需与复用寄存器同时存活，无法复用)
+        MicroAPI::RegTensor<uint8_t> mxScale2OneB8;    // 与mxScale1B8同时存活于最终DataCopy
+
+        // ========== 常量寄存器 ==========
+        MicroAPI::RegTensor<uint16_t> absMask;
+        MicroAPI::Duplicate(absMask, ABS_MASK_FOR_16BIT);
+        MicroAPI::RegTensor<uint32_t> invMax;
+        MicroAPI::Duplicate(invMax, invDtypeMax_);            // 1/Amax(DType), FP32表示
+        MicroAPI::RegTensor<uint32_t> manMaskFP32;
+        MicroAPI::Duplicate(manMaskFP32, MAN_MASK_FLOAT);     // FP32尾数掩码
+        MicroAPI::RegTensor<uint32_t> scaleBiasFP32;
+        MicroAPI::Duplicate(scaleBiasFP32, FP32_EXP_BIAS_CUBLAS); // BF16偏移在uint32
+        MicroAPI::RegTensor<uint32_t> nanPackFP32;
+        MicroAPI::Duplicate(nanPackFP32, NAN_CUSTOMIZATION_PACK);
+
+        MicroAPI::RegTensor<uint16_t> nanE8M0;
+        MicroAPI::Duplicate(nanE8M0, NAN_FOR_FP8_E8M0);
+        MicroAPI::RegTensor<uint16_t> biasE8M0;
+        MicroAPI::Duplicate(biasE8M0, BF16_EXP_BIAS);
+        MicroAPI::RegTensor<uint16_t> zero;
+        MicroAPI::Duplicate(zero, 0);
+        MicroAPI::RegTensor<uint16_t> nanBF16;
+        MicroAPI::Duplicate(nanBF16, NAN_CUSTOMIZATION);
+        MicroAPI::RegTensor<uint16_t> specialExp;
+        MicroAPI::Duplicate(specialExp, SPECIAL_EXP_THRESHOLD);
+        MicroAPI::RegTensor<uint16_t> maxEleBF16;
+        MicroAPI::Duplicate(maxEleBF16, EXP_MASK_BF16);
+
+        MicroAPI::Duplicate(absMax1Dim2, 0);
+        MicroAPI::Duplicate(absMax2Dim2, 0);
+        MicroAPI::Duplicate(zeroB16, 0);
+
+        // ========== Mask定义 ==========
+        MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<xDtype, MicroAPI::MaskPattern::ALL>();
+        MicroAPI::MaskReg maskB8 = MicroAPI::CreateMask<uint8_t, MicroAPI::MaskPattern::ALL>();
+        MicroAPI::MaskReg maskReduceB8 = MicroAPI::CreateMask<uint8_t, MicroAPI::MaskPattern::VL8>();
+        MicroAPI::MaskReg maskReduceB16 = MicroAPI::CreateMask<uint8_t, MicroAPI::MaskPattern::VL16>();
+        MicroAPI::MaskReg maskFP32 = MicroAPI::CreateMask<uint32_t, MicroAPI::MaskPattern::ALL>();
+
+        MicroAPI::MaskReg p0;              // 条件舍入mask
+        MicroAPI::MaskReg p1;              // subnormal条件mask
+        MicroAPI::MaskReg p0Odd;           // -2轴奇数部分条件舍入mask
+        MicroAPI::MaskReg p1Odd;           // -2轴奇数部分subnormal条件mask
+        MicroAPI::MaskReg infMask;
+        MicroAPI::MaskReg invalidDataMask;
+
+        // ========================================================================
+        // 循环blockCount次，每次处理一行，计算-1轴scale并累积-2轴max
+        // ========================================================================
+        for (uint16_t i = 0; i < blockCount; i++) {
+            // 1. 交织搬运输入数据: 将256个xDtype按偶奇拆分为x0(偶), x1(奇)
+            MicroAPI::DataCopy<xDtype, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_DINTLV_B16>(
+                x0, x1, xAddr, vlForHalfNumber_ * DIGIT_TWO);
+
+            // 2. 取绝对值: 清除符号位，保留指数和尾数
+            MicroAPI::And(absMax0, (MicroAPI::RegTensor<uint16_t>&)x0, absMask, maskAll);
+            MicroAPI::And(absMax1, (MicroAPI::RegTensor<uint16_t>&)x1, absMask, maskAll);
+
+            // 3. -1轴: 先取偶奇max，再ReduceMaxWithDataBlock得到每32个元素的绝对值max
+            MicroAPI::Max(absMaxDim1, absMax0, absMax1, maskAll);
+            MicroAPI::ReduceMaxWithDataBlock(absMaxDim1, absMaxDim1, maskAll);
+
+            // 4. -2轴: 逐行累积偶数列和奇数列的绝对值max
+            MicroAPI::Max(absMax1Dim2, absMax1Dim2, absMax0, maskAll);
+            MicroAPI::Max(absMax2Dim2, absMax2Dim2, absMax1, maskAll);
+
+            // ============================================================
+            // 5. 计算-1轴CuBALS Scale (FP32精度)
+            //    ReduceMaxWithDataBlock后，8个max紧凑存储在寄存器前8个位置
+            //    与0交织后，Cast Zero一次处理全部8个值转为FP32
+            //    (与原始DynamicMxQuant的ComputeCuBLAS一致)
+            // ============================================================
+
+            // 与0交织: [v0,0,v1,0,...,v7,0,...] → Cast Zero可一次取出全部8个有效值
+            MicroAPI::Interleave(absMaxDim1, zeroB16, absMaxDim1, zeroB16);
+            MicroAPI::Cast<float, xDtype, castTraitXdtypetoFp32Zero>(
+                (MicroAPI::RegTensor<float>&)maxFP32_0,
+                (MicroAPI::RegTensor<xDtype>&)absMaxDim1, maskAll);
+            // 乘以 1/Amax(DType): max * invDtypeMax
+            MicroAPI::Mul(
+                (MicroAPI::RegTensor<float>&)maxFP32_0,
+                (MicroAPI::RegTensor<float>&)maxFP32_0,
+                (MicroAPI::RegTensor<float>&)invMax, maskFP32);
+            // 提取FP32指数: 右移23位
+            MicroAPI::ShiftRights(expFP32_0, maxFP32_0, SHR_NUM_FOR_FP32, maskFP32);
+            // 提取FP32尾数: 与尾数掩码
+            MicroAPI::And(manFP32_0, maxFP32_0, manMaskFP32, maskFP32);
+            // 条件舍入: normal场景 (exp>0 && exp<254 && man>0) → exp+1
+            MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p0, expFP32_0, NUMBER_ZERO_U32, maskFP32);
+            MicroAPI::CompareScalar<uint32_t, CMPMODE::LT>(p0, expFP32_0, NUMBER_TWO_FIVE_FOUR, p0);
+            MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p0, manFP32_0, NUMBER_ZERO_U32, p0);
+            // 条件舍入: subnormal场景 (exp==0 && man>HALF) → exp+1
+            MicroAPI::CompareScalar<uint32_t, CMPMODE::EQ>(p1, expFP32_0, NUMBER_ZERO_U32, maskFP32);
+            MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p1, manFP32_0, NUMBER_HALF_U32, p1);
+            MicroAPI::MaskOr(p0, p0, p1, maskFP32);
+            // 执行条件加1
+            MicroAPI::Adds(maxFP32_0, expFP32_0, 1, maskFP32);
+            MicroAPI::Select(manFP32_0, maxFP32_0, expFP32_0, p0);
+            // Pack到uint16 (INF/NAN→0xFF, zero→0 自然通过条件舍入保持, 在BF16域1/scale中统一处理)
+            MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>(scale1B16_0, manFP32_0);
+
+            // 左移7位，将E8M0值定位到BF16指数域 (用于计算1/scale)
+            MicroAPI::ShiftLefts(scale1BF16, scale1B16_0, SHR_NUM_FOR_BF16, maskAll);
+
+            // --- 输出-1轴scale (uint8) ---
+            MicroAPI::Pack<uint8_t, uint16_t, MicroAPI::HighLowPart::LOWEST>(mxScale1B8, scale1B16_0);
+            MicroAPI::DataCopy<uint8_t>(mxScale1Addr + i * oneBlockCountB8_, mxScale1B8, maskReduceB8);
+
+            // --- 计算并输出-1轴 1/scale (与原始DynamicMxQuant一致: inf→nan, special→specialExp, 无零值检查) ---
+            MicroAPI::Compare<uint16_t, CMPMODE::NE>(infMask, scale1BF16, maxEleBF16, maskAll);
+            MicroAPI::Compare<uint16_t, CMPMODE::EQ>(invalidDataMask, scale1BF16, biasE8M0, maskAll);
+            MicroAPI::Sub(reversedShareExp1, biasE8M0, scale1BF16, maskAll);
+            MicroAPI::Select<uint16_t>(reversedShareExp1, reversedShareExp1, nanBF16, infMask);
+            MicroAPI::Select<uint16_t>(reversedShareExp1, specialExp, reversedShareExp1, invalidDataMask);
+            MicroAPI::DataCopy<uint16_t>(
+                mxScale1ReciprocalAddr + i * oneBlockCountB16_, reversedShareExp1, maskReduceB16);
+            // 恢复zeroB16 (Interleave会修改dst1)
+            MicroAPI::Duplicate(zeroB16, 0);
+        }
+
+        // ========================================================================
+        // 循环结束后，计算-2轴CuBALS Scale
+        // absMax1Dim2: 128个偶数列的累积绝对值max
+        // absMax2Dim2: 128个奇数列的累积绝对值max
+        // 每个需要拆分为Zero/One两半分别做FP32计算，再合并
+        // ========================================================================
+
+        // ---------- 处理absMax1Dim2 (偶数列, -2轴scale的交织第一部分) ----------
+        // Zero半 (偶数位) — 复用-1轴寄存器: maxFP32_0, expFP32_0, manFP32_0
+        MicroAPI::Cast<float, xDtype, castTraitXdtypetoFp32Zero>(
+            (MicroAPI::RegTensor<float>&)maxFP32_0,
+            (MicroAPI::RegTensor<xDtype>&)absMax1Dim2, maskAll);
+        MicroAPI::Mul(
+            (MicroAPI::RegTensor<float>&)maxFP32_0,
+            (MicroAPI::RegTensor<float>&)maxFP32_0,
+            (MicroAPI::RegTensor<float>&)invMax, maskFP32);
+        MicroAPI::ShiftRights(expFP32_0, maxFP32_0, SHR_NUM_FOR_FP32, maskFP32);
+        MicroAPI::And(manFP32_0, maxFP32_0, manMaskFP32, maskFP32);
+        MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p0, expFP32_0, NUMBER_ZERO_U32, maskFP32);
+        MicroAPI::CompareScalar<uint32_t, CMPMODE::LT>(p0, expFP32_0, NUMBER_TWO_FIVE_FOUR, p0);
+        MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p0, manFP32_0, NUMBER_ZERO_U32, p0);
+        MicroAPI::CompareScalar<uint32_t, CMPMODE::EQ>(p1, expFP32_0, NUMBER_ZERO_U32, maskFP32);
+        MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p1, manFP32_0, NUMBER_HALF_U32, p1);
+        MicroAPI::MaskOr(p0, p0, p1, maskFP32);
+        // 链内复用: maxFP32_0→expPlusOne (maxFP32_0已死亡@And)
+        MicroAPI::Adds(maxFP32_0, expFP32_0, 1, maskFP32);
+        // 链内复用: manFP32_0→extractExp (manFP32_0已死亡@CompareScalar)
+        MicroAPI::Select(manFP32_0, maxFP32_0, expFP32_0, p0);
+        MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>(scale1B16_0, manFP32_0);
+
+        // One半 (奇数位) - 使用独立的p0Odd/p1Odd，与Zero半并行
+        MicroAPI::Cast<float, xDtype, castTraitXdtypetoFp32One>(
+            (MicroAPI::RegTensor<float>&)maxFP32_1,
+            (MicroAPI::RegTensor<xDtype>&)absMax1Dim2, maskAll);
+        MicroAPI::Mul(
+            (MicroAPI::RegTensor<float>&)maxFP32_1,
+            (MicroAPI::RegTensor<float>&)maxFP32_1,
+            (MicroAPI::RegTensor<float>&)invMax, maskFP32);
+        MicroAPI::ShiftRights(expFP32_1, maxFP32_1, SHR_NUM_FOR_FP32, maskFP32);
+        MicroAPI::And(manFP32_1, maxFP32_1, manMaskFP32, maskFP32);
+        MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p0Odd, expFP32_1, NUMBER_ZERO_U32, maskFP32);
+        MicroAPI::CompareScalar<uint32_t, CMPMODE::LT>(p0Odd, expFP32_1, NUMBER_TWO_FIVE_FOUR, p0Odd);
+        MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p0Odd, manFP32_1, NUMBER_ZERO_U32, p0Odd);
+        MicroAPI::CompareScalar<uint32_t, CMPMODE::EQ>(p1Odd, expFP32_1, NUMBER_ZERO_U32, maskFP32);
+        MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p1Odd, manFP32_1, NUMBER_HALF_U32, p1Odd);
+        MicroAPI::MaskOr(p0Odd, p0Odd, p1Odd, maskFP32);
+        // 链内复用: maxFP32_1→expPlusOne, manFP32_1→extractExp
+        MicroAPI::Adds(maxFP32_1, expFP32_1, 1, maskFP32);
+        MicroAPI::Select(manFP32_1, maxFP32_1, expFP32_1, p0Odd);
+        MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>(scale1B16_1, manFP32_1);
+
+        // 合并Zero和One，恢复原始列顺序
+        MicroAPI::Interleave(scale1B16_0, scale1B16_1, scale1B16_0, scale1B16_1);
+        // 左移7位得到BF16指数格式 (用于计算1/scale), 复用scale1BF16
+        MicroAPI::ShiftLefts(scale1BF16, scale1B16_0, SHR_NUM_FOR_BF16, maskAll);
+        // 输出scale (uint8), 复用mxScale1B8
+        MicroAPI::Pack<uint8_t, uint16_t, MicroAPI::HighLowPart::LOWEST>(mxScale1B8, scale1B16_0);
+
+        // 计算1/scale, 复用reversedShareExp1 (与原始DynamicMxQuant一致: 无零值检查)
+        MicroAPI::Compare<uint16_t, CMPMODE::NE>(infMask, scale1BF16, maxEleBF16, maskAll);
+        MicroAPI::Compare<uint16_t, CMPMODE::EQ>(invalidDataMask, scale1BF16, biasE8M0, maskAll);
+        MicroAPI::Sub(reversedShareExp1, biasE8M0, scale1BF16, maskAll);
+        MicroAPI::Select<uint16_t>(reversedShareExp1, reversedShareExp1, nanBF16, infMask);
+        MicroAPI::Select<uint16_t>(reversedShareExp1, specialExp, reversedShareExp1, invalidDataMask);
+
+        // ---------- 处理absMax2Dim2 (奇数列, -2轴scale的交织第二部分) ----------
+        // Zero半 — 再次复用maxFP32_0, expFP32_0, manFP32_0
+        MicroAPI::Cast<float, xDtype, castTraitXdtypetoFp32Zero>(
+            (MicroAPI::RegTensor<float>&)maxFP32_0,
+            (MicroAPI::RegTensor<xDtype>&)absMax2Dim2, maskAll);
+        MicroAPI::Mul(
+            (MicroAPI::RegTensor<float>&)maxFP32_0,
+            (MicroAPI::RegTensor<float>&)maxFP32_0,
+            (MicroAPI::RegTensor<float>&)invMax, maskFP32);
+        MicroAPI::ShiftRights(expFP32_0, maxFP32_0, SHR_NUM_FOR_FP32, maskFP32);
+        MicroAPI::And(manFP32_0, maxFP32_0, manMaskFP32, maskFP32);
+        MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p0, expFP32_0, NUMBER_ZERO_U32, maskFP32);
+        MicroAPI::CompareScalar<uint32_t, CMPMODE::LT>(p0, expFP32_0, NUMBER_TWO_FIVE_FOUR, p0);
+        MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p0, manFP32_0, NUMBER_ZERO_U32, p0);
+        MicroAPI::CompareScalar<uint32_t, CMPMODE::EQ>(p1, expFP32_0, NUMBER_ZERO_U32, maskFP32);
+        MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p1, manFP32_0, NUMBER_HALF_U32, p1);
+        MicroAPI::MaskOr(p0, p0, p1, maskFP32);
+        // 链内复用: maxFP32_0→expPlusOne, manFP32_0→extractExp
+        MicroAPI::Adds(maxFP32_0, expFP32_0, 1, maskFP32);
+        MicroAPI::Select(manFP32_0, maxFP32_0, expFP32_0, p0);
+        MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>(scale1B16_0, manFP32_0);
+
+        // One半 - 使用独立的p0Odd/p1Odd，与Zero半并行
+        MicroAPI::Cast<float, xDtype, castTraitXdtypetoFp32One>(
+            (MicroAPI::RegTensor<float>&)maxFP32_1,
+            (MicroAPI::RegTensor<xDtype>&)absMax2Dim2, maskAll);
+        MicroAPI::Mul(
+            (MicroAPI::RegTensor<float>&)maxFP32_1,
+            (MicroAPI::RegTensor<float>&)maxFP32_1,
+            (MicroAPI::RegTensor<float>&)invMax, maskFP32);
+        MicroAPI::ShiftRights(expFP32_1, maxFP32_1, SHR_NUM_FOR_FP32, maskFP32);
+        MicroAPI::And(manFP32_1, maxFP32_1, manMaskFP32, maskFP32);
+        MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p0Odd, expFP32_1, NUMBER_ZERO_U32, maskFP32);
+        MicroAPI::CompareScalar<uint32_t, CMPMODE::LT>(p0Odd, expFP32_1, NUMBER_TWO_FIVE_FOUR, p0Odd);
+        MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p0Odd, manFP32_1, NUMBER_ZERO_U32, p0Odd);
+        MicroAPI::CompareScalar<uint32_t, CMPMODE::EQ>(p1Odd, expFP32_1, NUMBER_ZERO_U32, maskFP32);
+        MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p1Odd, manFP32_1, NUMBER_HALF_U32, p1Odd);
+        MicroAPI::MaskOr(p0Odd, p0Odd, p1Odd, maskFP32);
+        // 链内复用: maxFP32_1→expPlusOne, manFP32_1→extractExp
+        MicroAPI::Adds(maxFP32_1, expFP32_1, 1, maskFP32);
+        MicroAPI::Select(manFP32_1, maxFP32_1, expFP32_1, p0Odd);
+        MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>(scale1B16_1, manFP32_1);
+
+        // 合并Zero和One
+        MicroAPI::Interleave(scale1B16_0, scale1B16_1, scale1B16_0, scale1B16_1);
+        // 复用scale1BF16
+        MicroAPI::ShiftLefts(scale1BF16, scale1B16_0, SHR_NUM_FOR_BF16, maskAll);
+        MicroAPI::Pack<uint8_t, uint16_t, MicroAPI::HighLowPart::LOWEST>(mxScale2OneB8, scale1B16_0);
+
+        // 计算1/scale, 复用absMax0 (循环后已死亡) (与原始DynamicMxQuant一致: 无零值检查)
+        MicroAPI::Compare<uint16_t, CMPMODE::NE>(infMask, scale1BF16, maxEleBF16, maskAll);
+        MicroAPI::Compare<uint16_t, CMPMODE::EQ>(invalidDataMask, scale1BF16, biasE8M0, maskAll);
+        MicroAPI::Sub(absMax0, biasE8M0, scale1BF16, maskAll);
+        MicroAPI::Select<uint16_t>(absMax0, absMax0, nanBF16, infMask);
+        MicroAPI::Select<uint16_t>(absMax0, specialExp, absMax0, invalidDataMask);
+
+        // 交织搬出-2轴的mxScale和1/scale
+        MicroAPI::DataCopy<uint8_t, MicroAPI::StoreDist::DIST_INTLV_B8>(
+            mxScale2Addr, mxScale1B8, mxScale2OneB8, maskB8);
+        MicroAPI::DataCopy<uint16_t, MicroAPI::StoreDist::DIST_INTLV_B16>(
+            mxScale2ReciprocalAddr, reversedShareExp1, absMax0, maskAll);
+    }
+}
+
+// DynamicDtypeRange Default Scale算法实现 (scaleAlg=2, dstTypeMax=0.0/6.0/7.0, FP4_E2M1专用)
+// 整体框架与ComputeScaleOcp一致：循环blockCount次处理-1轴scale，循环后处理-2轴scale
+// -1轴算法：取BF16绝对值max → addValueBit进位取指数法
+// -2轴算法：累积BF16绝对值max → SUB_NUM_FOR_SCALE减法取指数法
+template <typename xDtype, typename y1Dtype, typename y2Dtype, AscendC::RoundMode roundMode, uint64_t scaleAlg>
+__aicore__ inline void
+DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, roundMode, scaleAlg>::ComputeScaleDynamicDefault(
+    uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr, __ubuf__ uint8_t* mxScale1Addr,
+    __ubuf__ uint16_t* mxScale1ReciprocalAddr, __ubuf__ uint8_t* mxScale2Addr,
+    __ubuf__ uint16_t* mxScale2ReciprocalAddr)
+{
+    __VEC_SCOPE__
+    {
+        // ========== 输入数据寄存器 ==========
+        MicroAPI::RegTensor<xDtype> x0;
+        MicroAPI::RegTensor<xDtype> x1;
+        MicroAPI::RegTensor<bfloat16_t> x0BF16;
+        MicroAPI::RegTensor<bfloat16_t> x1BF16;
+
+        // ========== 绝对值和max寄存器 ==========
+        MicroAPI::RegTensor<uint16_t> absVal0;         // x0的BF16绝对值
+        MicroAPI::RegTensor<uint16_t> absVal1;         // x1的BF16绝对值
+        MicroAPI::RegTensor<uint16_t> absMaxDim1;      // -1轴block内绝对值max (ReduceMax后)
+        MicroAPI::RegTensor<uint16_t> absMax1Dim2;     // -2轴累积绝对值max (偶数列, 对应x0)
+        MicroAPI::RegTensor<uint16_t> absMax2Dim2;     // -2轴累积绝对值max (奇数列, 对应x1)
+
+        // ========== -1轴scale计算寄存器 (循环后复用于-2轴) ==========
+        MicroAPI::RegTensor<uint16_t> expOnly;         // 提取的指数位, 循环后复用为dim2ExpOnly
+        MicroAPI::RegTensor<uint16_t> addedVal;        // addValueBit进位后的值, 循环后复用为dim2SubResult
+        MicroAPI::RegTensor<uint16_t> sharedExp;       // 指数差值, 循环后复用为dim2ExpExtract
+        MicroAPI::RegTensor<uint16_t> scaleValue;      // E8M0 scale值, 循环后复用为mxScale2B16
+        MicroAPI::RegTensor<uint8_t> mxScale1B8;       // -1轴scale输出, 循环后复用为mxScale2ZeroB8
+        MicroAPI::RegTensor<uint16_t> reversedShareExp1; // -1轴1/scale, 循环后复用为reversedShareExp2Zero
+
+        // ========== -2轴独立寄存器 (需与复用寄存器同时存活，无法复用) ==========
+        MicroAPI::RegTensor<uint8_t> mxScale2OneB8;    // 与mxScale1B8同时存活于最终DataCopy
+
+        // ========== 常量寄存器 ==========
+        MicroAPI::RegTensor<uint16_t> absMask;
+        MicroAPI::Duplicate(absMask, ABS_MASK_FOR_16BIT);        // 绝对值掩码 0x7fff
+        MicroAPI::RegTensor<uint16_t> expMaskBF16;
+        MicroAPI::Duplicate(expMaskBF16, EXP_MASK_BF16);         // BF16指数掩码 0x7f80
+        MicroAPI::RegTensor<uint16_t> expMaskFP16;
+        MicroAPI::Duplicate(expMaskFP16, EXP_MASK_FP16);         // FP16指数掩码 0x7c00 (INF/NAN检测)
+        MicroAPI::RegTensor<uint16_t> addValue;
+        MicroAPI::Duplicate(addValue, addValueBit_);              // BF16尾数进位值
+        MicroAPI::RegTensor<uint16_t> maxExpValue;
+        MicroAPI::Duplicate(maxExpValue, FP4_E2M1_BF16_MAX_EXP); // FP4_E2M1的emax在BF16中的表示
+        MicroAPI::RegTensor<uint16_t> subNumForScale;
+        MicroAPI::Duplicate(subNumForScale, subNumForScale_);     // -2轴减法常量
+        MicroAPI::RegTensor<uint16_t> nanE8M0;
+        MicroAPI::Duplicate(nanE8M0, NAN_FOR_FP8_E8M0);          // E8M0的NAN值 0xFF
+        MicroAPI::RegTensor<uint16_t> biasE8M0;
+        MicroAPI::Duplicate(biasE8M0, BF16_EXP_BIAS);            // BF16指数偏移 0x7f00
+        MicroAPI::RegTensor<uint16_t> zero;
+        MicroAPI::Duplicate(zero, 0);
+        MicroAPI::RegTensor<uint16_t> nanBF16;
+        MicroAPI::Duplicate(nanBF16, NAN_CUSTOMIZATION);          // NAN_CUSTOMIZATION 0x7f81
+        MicroAPI::RegTensor<uint16_t> specialExp;
+        MicroAPI::Duplicate(specialExp, SPECIAL_EXP_THRESHOLD);   // 特殊指数阈值 0x0040
+
+        MicroAPI::Duplicate(absMax1Dim2, 0);
+        MicroAPI::Duplicate(absMax2Dim2, 0);
+
+        // ========== Mask定义 ==========
+        MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<xDtype, MicroAPI::MaskPattern::ALL>();
+        MicroAPI::MaskReg maskB8 = MicroAPI::CreateMask<uint8_t, MicroAPI::MaskPattern::ALL>();
+        MicroAPI::MaskReg maskReduceB8 = MicroAPI::CreateMask<uint8_t, MicroAPI::MaskPattern::VL8>();
+        MicroAPI::MaskReg maskReduceB16 = MicroAPI::CreateMask<uint8_t, MicroAPI::MaskPattern::VL16>();
+
+        MicroAPI::MaskReg infMask;
+        MicroAPI::MaskReg zeroMask;
+        MicroAPI::MaskReg invalidDataMask;
+        MicroAPI::MaskReg infNanDataMask0;
+        MicroAPI::MaskReg infNanDataMask1;
+
+        // ========================================================================
+        // 循环blockCount次: 计算-1轴scale并累积-2轴BF16绝对值max
+        // DynamicDtypeRange需要完整的BF16绝对值 (不仅仅是指数)
+        // ========================================================================
+        for (uint16_t i = 0; i < blockCount; i++) {
+            // 1. 交织搬运输入数据: 将256个xDtype按偶奇拆分为x0(偶), x1(奇)
+            MicroAPI::DataCopy<xDtype, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_DINTLV_B16>(
+                x0, x1, xAddr, vlForHalfNumber_ * DIGIT_TWO);
+
+            // 2. 获取BF16绝对值 (区分half和bf16输入)
+            if constexpr (IsSameType<xDtype, half>::value) {
+                // FP16输入: 先检查INF/NAN，再转BF16(RINT)，取绝对值，INF/NAN替换为BF16 INF
+                MicroAPI::And(expOnly, (MicroAPI::RegTensor<uint16_t>&)x0, expMaskFP16, maskAll);
+                MicroAPI::Compare<uint16_t, CMPMODE::NE>(infNanDataMask0, expOnly, expMaskFP16, maskAll);
+                MicroAPI::And(expOnly, (MicroAPI::RegTensor<uint16_t>&)x1, expMaskFP16, maskAll);
+                MicroAPI::Compare<uint16_t, CMPMODE::NE>(infNanDataMask1, expOnly, expMaskFP16, maskAll);
+                // 转BF16 (使用CAST_RINT四舍五入，不同于OCP的CAST_TRUNC截断)
+                MicroAPI::Cast<bfloat16_t, xDtype, castTraitHalf2BF16Rint>(x0BF16, x0, maskAll);
+                MicroAPI::Cast<bfloat16_t, xDtype, castTraitHalf2BF16Rint>(x1BF16, x1, maskAll);
+                // 取绝对值
+                MicroAPI::And(absVal0, (MicroAPI::RegTensor<uint16_t>&)x0BF16, absMask, maskAll);
+                MicroAPI::And(absVal1, (MicroAPI::RegTensor<uint16_t>&)x1BF16, absMask, maskAll);
+                // INF/NAN位置替换为BF16的INF (0x7f80)
+                MicroAPI::Select<uint16_t>(absVal0, absVal0, expMaskBF16, infNanDataMask0);
+                MicroAPI::Select<uint16_t>(absVal1, absVal1, expMaskBF16, infNanDataMask1);
+            } else {
+                // BF16输入: 直接取绝对值
+                MicroAPI::And(absVal0, (MicroAPI::RegTensor<uint16_t>&)x0, absMask, maskAll);
+                MicroAPI::And(absVal1, (MicroAPI::RegTensor<uint16_t>&)x1, absMask, maskAll);
+            }
+
+            // 3. -1轴: 偶奇Max + ReduceMaxWithDataBlock，得到每32个元素的绝对值max
+            MicroAPI::Max(absMaxDim1, absVal0, absVal1, maskAll);
+            MicroAPI::ReduceMaxWithDataBlock(absMaxDim1, absMaxDim1, maskAll);
+
+            // 4. -2轴: 逐行累积偶数列和奇数列的BF16绝对值max
+            MicroAPI::Max(absMax1Dim2, absMax1Dim2, absVal0, maskAll);
+            MicroAPI::Max(absMax2Dim2, absMax2Dim2, absVal1, maskAll);
+
+            // ============================================================
+            // 5. 计算-1轴DynamicDtypeRange Default Scale
+            //    ReduceMax后8个绝对值max紧凑存储在位置0-7
+            //    使用addValueBit进位法: 将addValueBit加到完整BF16绝对值上，
+            //    通过尾数进位自动实现指数的四舍五入
+            // ============================================================
+
+            // 提取指数位 (仅用于INF/NAN、零值、subnormal检查)
+            MicroAPI::And(expOnly, absMaxDim1, expMaskBF16, maskAll);
+            // INF/NAN检查: 指数全1
+            MicroAPI::Compare<uint16_t, CMPMODE::NE>(infMask, expOnly, expMaskBF16, maskAll);
+            // 零值检查
+            MicroAPI::Compare<uint16_t, CMPMODE::NE>(zeroMask, expOnly, zero, maskAll);
+            // subnormal检查: 指数 < FP4_E2M1_BF16_MAX_EXP (注意使用LT，不是LE)
+            MicroAPI::Compare<uint16_t, CMPMODE::LT>(invalidDataMask, expOnly, maxExpValue, maskAll);
+
+            // addValueBit进位: 将addValueBit加到完整BF16绝对值上
+            MicroAPI::Add(addedVal, absMaxDim1, addValue, maskAll);
+            // 从进位后的结果中提取指数
+            MicroAPI::And(addedVal, addedVal, expMaskBF16, maskAll);
+            // subnormal场景: 使用maxExpValue (FP4_E2M1_BF16_MAX_EXP)
+            MicroAPI::Select<uint16_t>(addedVal, maxExpValue, addedVal, invalidDataMask);
+            // 减去FP4_E2M1_BF16_MAX_EXP得到指数差值
+            MicroAPI::Sub(sharedExp, addedVal, maxExpValue, maskAll);
+            // 右移7位，将BF16指数移到低8位 → E8M0 scale
+            MicroAPI::ShiftRights(scaleValue, sharedExp, SHR_NUM_FOR_BF16, maskAll);
+            // INF/NAN → NAN_FOR_FP8_E8M0 (0xFF)
+            MicroAPI::Select<uint16_t>(scaleValue, scaleValue, nanE8M0, infMask);
+            // 零值 → 0
+            MicroAPI::Select<uint16_t>(scaleValue, scaleValue, zero, zeroMask);
+
+            // 输出-1轴scale (uint8)
+            MicroAPI::Pack<uint8_t, uint16_t, MicroAPI::HighLowPart::LOWEST>(mxScale1B8, scaleValue);
+            MicroAPI::DataCopy<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+                mxScale1Addr, mxScale1B8, oneBlockCountB8_, maskReduceB8);
+
+            // 计算-1轴1/scale
+            // sharedExp是左移7位前的指数差值，可直接用于BF16域1/scale计算
+            MicroAPI::Compare<uint16_t, CMPMODE::EQ>(invalidDataMask, sharedExp, biasE8M0, maskAll);
+            MicroAPI::Sub(reversedShareExp1, biasE8M0, sharedExp, maskAll);
+            MicroAPI::Select<uint16_t>(reversedShareExp1, reversedShareExp1, nanBF16, infMask);
+            MicroAPI::Select<uint16_t>(reversedShareExp1, reversedShareExp1, zero, zeroMask);
+            MicroAPI::Select<uint16_t>(reversedShareExp1, specialExp, reversedShareExp1, invalidDataMask);
+            MicroAPI::DataCopy<uint16_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+                mxScale1ReciprocalAddr, reversedShareExp1, oneBlockCountB16_, maskReduceB16);
+        }
+
+        // ========================================================================
+        // 循环结束后，计算-2轴DynamicDtypeRange Default Scale
+        // absMax1Dim2: 128个偶数列的累积BF16绝对值max
+        // absMax2Dim2: 128个奇数列的累积BF16绝对值max
+        // 使用SUB_NUM_FOR_SCALE减法: 直接从完整BF16绝对值减去
+        // (FP4_E2M1_BF16_MAX_EXP - addValueBit)，等效于addValueBit进位法
+        // ========================================================================
+
+        // ---------- 处理absMax1Dim2 (偶数列, -2轴scale的交织第一部分) ----------
+        // 复用expOnly为dim2ExpOnly
+        MicroAPI::And(expOnly, absMax1Dim2, expMaskBF16, maskAll);
+        // INF/NAN检查
+        MicroAPI::Compare<uint16_t, CMPMODE::NE>(infMask, expOnly, expMaskBF16, maskAll);
+        // 零值检查
+        MicroAPI::Compare<uint16_t, CMPMODE::NE>(zeroMask, expOnly, zero, maskAll);
+        // subnormal检查: 指数 < FP4_E2M1_BF16_MAX_EXP
+        MicroAPI::Compare<uint16_t, CMPMODE::LT>(invalidDataMask, expOnly, maxExpValue, maskAll);
+
+        // 复用addedVal为dim2SubResult
+        MicroAPI::Sub(addedVal, absMax1Dim2, subNumForScale, maskAll);
+        // subnormal → 0
+        MicroAPI::Select<uint16_t>(addedVal, zero, addedVal, invalidDataMask);
+        // 右移7位 → E8M0 scale, 复用scaleValue为mxScale2B16
+        MicroAPI::ShiftRights(scaleValue, addedVal, SHR_NUM_FOR_BF16, maskAll);
+        // INF/NAN → NAN
+        MicroAPI::Select<uint16_t>(scaleValue, scaleValue, nanE8M0, infMask);
+        // 零值 → 0
+        MicroAPI::Select<uint16_t>(scaleValue, scaleValue, zero, zeroMask);
+
+        // 输出scale (uint8) — mxScale1B8复用为mxScale2ZeroB8
+        MicroAPI::Pack<uint8_t, uint16_t, MicroAPI::HighLowPart::LOWEST>(mxScale1B8, scaleValue);
+
+        // 计算-2轴1/scale — reversedShareExp1复用为reversedShareExp2Zero
+        // 复用sharedExp为dim2ExpExtract
+        MicroAPI::And(sharedExp, addedVal, expMaskBF16, maskAll);
+        MicroAPI::Compare<uint16_t, CMPMODE::EQ>(invalidDataMask, sharedExp, biasE8M0, maskAll);
+        MicroAPI::Sub(reversedShareExp1, biasE8M0, sharedExp, maskAll);
+        MicroAPI::Select<uint16_t>(reversedShareExp1, reversedShareExp1, nanBF16, infMask);
+        MicroAPI::Select<uint16_t>(reversedShareExp1, reversedShareExp1, zero, zeroMask);
+        MicroAPI::Select<uint16_t>(reversedShareExp1, specialExp, reversedShareExp1, invalidDataMask);
+
+        // ---------- 处理absMax2Dim2 (奇数列, -2轴scale的交织第二部分) ----------
+        // 再次复用expOnly, addedVal, sharedExp, scaleValue
+        MicroAPI::And(expOnly, absMax2Dim2, expMaskBF16, maskAll);
+        MicroAPI::Compare<uint16_t, CMPMODE::NE>(infMask, expOnly, expMaskBF16, maskAll);
+        MicroAPI::Compare<uint16_t, CMPMODE::NE>(zeroMask, expOnly, zero, maskAll);
+        MicroAPI::Compare<uint16_t, CMPMODE::LT>(invalidDataMask, expOnly, maxExpValue, maskAll);
+
+        MicroAPI::Sub(addedVal, absMax2Dim2, subNumForScale, maskAll);
+        MicroAPI::Select<uint16_t>(addedVal, zero, addedVal, invalidDataMask);
+        // 复用scaleValue为mxScale2OneB16
+        MicroAPI::ShiftRights(scaleValue, addedVal, SHR_NUM_FOR_BF16, maskAll);
+        MicroAPI::Select<uint16_t>(scaleValue, scaleValue, nanE8M0, infMask);
+        MicroAPI::Select<uint16_t>(scaleValue, scaleValue, zero, zeroMask);
+
+        MicroAPI::Pack<uint8_t, uint16_t, MicroAPI::HighLowPart::LOWEST>(mxScale2OneB8, scaleValue);
+
+        // 计算-2轴1/scale — absVal0复用为reversedShareExp2One (循环后死亡，与reversedShareExp1不冲突)
+        MicroAPI::And(sharedExp, addedVal, expMaskBF16, maskAll);
+        MicroAPI::Compare<uint16_t, CMPMODE::EQ>(invalidDataMask, sharedExp, biasE8M0, maskAll);
+        MicroAPI::Sub(absVal0, biasE8M0, sharedExp, maskAll);
+        MicroAPI::Select<uint16_t>(absVal0, absVal0, nanBF16, infMask);
+        MicroAPI::Select<uint16_t>(absVal0, absVal0, zero, zeroMask);
+        MicroAPI::Select<uint16_t>(absVal0, specialExp, absVal0, invalidDataMask);
+
+        // 交织搬出-2轴的mxScale和1/scale
+        MicroAPI::DataCopy<uint8_t, MicroAPI::StoreDist::DIST_INTLV_B8>(
+            mxScale2Addr, mxScale1B8, mxScale2OneB8, maskB8);
+        MicroAPI::DataCopy<uint16_t, MicroAPI::StoreDist::DIST_INTLV_B16>(
+            mxScale2ReciprocalAddr, reversedShareExp1, absVal0, maskAll);
+    }
+}
+
+// DynamicDtypeRange Custom Scale算法实现 (scaleAlg=2, 自定义dstTypeMax, FP4_E2M1专用)
+// 与CuBALS (scaleAlg=1) 类似，使用FP32精度乘以invDstTypeMax_，但：
+// 1. 乘法因子为invDstTypeMax_ (1/dstTypeMax) 而非invDtypeMax_ (1/AMax(DType))
+// 2. 条件舍入仅处理normal场景 (exp>0 && exp<254 && man>0)，不处理subnormal场景
+template <typename xDtype, typename y1Dtype, typename y2Dtype, AscendC::RoundMode roundMode, uint64_t scaleAlg>
+__aicore__ inline void
+DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, roundMode, scaleAlg>::ComputeScaleDynamicCustom(
+    uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr, __ubuf__ uint8_t* mxScale1Addr,
+    __ubuf__ uint16_t* mxScale1ReciprocalAddr, __ubuf__ uint8_t* mxScale2Addr,
+    __ubuf__ uint16_t* mxScale2ReciprocalAddr)
+{
+    __VEC_SCOPE__
+    {
+        // ========== 输入数据寄存器 ==========
+        MicroAPI::RegTensor<xDtype> x0;
+        MicroAPI::RegTensor<xDtype> x1;
+
+        // ========== 绝对值和max寄存器 ==========
+        MicroAPI::RegTensor<uint16_t> absMax0;         // x0的绝对值
+        MicroAPI::RegTensor<uint16_t> absMax1;         // x1的绝对值
+        MicroAPI::RegTensor<uint16_t> absMaxDim1;      // -1轴方向block内绝对值max
+        MicroAPI::RegTensor<uint16_t> absMax1Dim2;     // -2轴方向累积max (偶数列, 对应x0)
+        MicroAPI::RegTensor<uint16_t> absMax2Dim2;     // -2轴方向累积max (奇数列, 对应x1)
+        MicroAPI::RegTensor<uint16_t> zeroB16;         // -1轴Interleave用零寄存器
+
+        // ========== FP32计算寄存器 ==========
+        // -1轴: Interleave-with-0后单次Cast Zero处理全部8个值，仅需一组FP32寄存器
+        // -2轴: 仍需Zero/One两组独立处理
+        MicroAPI::RegTensor<uint32_t> maxFP32_0;       // FP32表示, 链内复用为expPlusOne
+        MicroAPI::RegTensor<uint32_t> maxFP32_1;       // -2轴奇数部分FP32表示
+        MicroAPI::RegTensor<uint32_t> expFP32_0;       // FP32指数
+        MicroAPI::RegTensor<uint32_t> expFP32_1;       // -2轴奇数部分FP32指数
+        MicroAPI::RegTensor<uint32_t> manFP32_0;       // FP32尾数, 链内复用为extractExp
+        MicroAPI::RegTensor<uint32_t> manFP32_1;       // -2轴奇数部分FP32尾数
+
+        // scale输出寄存器 (循环后复用于-2轴scale输出)
+        MicroAPI::RegTensor<uint16_t> scale1B16_0;     // E8M0 uint16偶数, 循环后复用为mxScale2ZeroB16
+        MicroAPI::RegTensor<uint16_t> scale1B16_1;     // E8M0 uint16奇数, 循环后复用为mxScale2OneB16
+        MicroAPI::RegTensor<uint16_t> scale1BF16;      // BF16指数格式, 循环后复用为scale2BF16
+        MicroAPI::RegTensor<uint8_t> mxScale1B8;       // uint8 scale, 循环后复用为mxScale2ZeroB8
+        MicroAPI::RegTensor<uint16_t> reversedShareExp1; // 1/scale BF16, 循环后复用为reversedShareExp2Zero
+
+        // -2轴独立寄存器 (需与复用寄存器同时存活，无法复用)
+        MicroAPI::RegTensor<uint8_t> mxScale2OneB8;    // 与mxScale1B8同时存活于最终DataCopy
+
+        // ========== 常量寄存器 ==========
+        MicroAPI::RegTensor<uint16_t> absMask;
+        MicroAPI::Duplicate(absMask, ABS_MASK_FOR_16BIT);
+        MicroAPI::RegTensor<float> invDstTypeMaxReg;
+        MicroAPI::Duplicate(invDstTypeMaxReg, invDstTypeMax_);     // 1/dstTypeMax, FP32表示
+        MicroAPI::RegTensor<uint32_t> manMaskFP32;
+        MicroAPI::Duplicate(manMaskFP32, MAN_MASK_FLOAT);          // FP32尾数掩码
+        MicroAPI::RegTensor<uint32_t> scaleBiasFP32;
+        MicroAPI::Duplicate(scaleBiasFP32, FP32_EXP_BIAS_CUBLAS);  // BF16偏移在uint32
+
+        MicroAPI::RegTensor<uint16_t> nanE8M0;
+        MicroAPI::Duplicate(nanE8M0, NAN_FOR_FP8_E8M0);
+        MicroAPI::RegTensor<uint16_t> biasE8M0;
+        MicroAPI::Duplicate(biasE8M0, BF16_EXP_BIAS);
+        MicroAPI::RegTensor<uint16_t> zero;
+        MicroAPI::Duplicate(zero, 0);
+        MicroAPI::RegTensor<uint16_t> nanBF16;
+        MicroAPI::Duplicate(nanBF16, NAN_CUSTOMIZATION);
+        MicroAPI::RegTensor<uint16_t> specialExp;
+        MicroAPI::Duplicate(specialExp, SPECIAL_EXP_THRESHOLD);
+        MicroAPI::RegTensor<uint16_t> maxEleBF16;
+        MicroAPI::Duplicate(maxEleBF16, EXP_MASK_BF16);
+
+        MicroAPI::Duplicate(absMax1Dim2, 0);
+        MicroAPI::Duplicate(absMax2Dim2, 0);
+        MicroAPI::Duplicate(zeroB16, 0);
+
+        // ========== Mask定义 ==========
+        MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<xDtype, MicroAPI::MaskPattern::ALL>();
+        MicroAPI::MaskReg maskB8 = MicroAPI::CreateMask<uint8_t, MicroAPI::MaskPattern::ALL>();
+        MicroAPI::MaskReg maskReduceB8 = MicroAPI::CreateMask<uint8_t, MicroAPI::MaskPattern::VL8>();
+        MicroAPI::MaskReg maskReduceB16 = MicroAPI::CreateMask<uint8_t, MicroAPI::MaskPattern::VL16>();
+        MicroAPI::MaskReg maskFP32 = MicroAPI::CreateMask<uint32_t, MicroAPI::MaskPattern::ALL>();
+
+        MicroAPI::MaskReg p0;              // 条件舍入: normal场景掩码
+        MicroAPI::MaskReg infMask;
+        MicroAPI::MaskReg invalidDataMask;
+
+        // ========================================================================
+        // 循环blockCount次，每次处理一行，计算-1轴scale并累积-2轴max
+        // 与CuBALS一致: 取绝对值 → Max → ReduceMax → FP32域scale计算
+        // ========================================================================
+        for (uint16_t i = 0; i < blockCount; i++) {
+            // 1. 交织搬运输入数据: 将256个xDtype按偶奇拆分为x0(偶), x1(奇)
+            MicroAPI::DataCopy<xDtype, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_DINTLV_B16>(
+                x0, x1, xAddr, vlForHalfNumber_ * DIGIT_TWO);
+
+            // 2. 取绝对值: 清除符号位，保留指数和尾数
+            MicroAPI::And(absMax0, (MicroAPI::RegTensor<uint16_t>&)x0, absMask, maskAll);
+            MicroAPI::And(absMax1, (MicroAPI::RegTensor<uint16_t>&)x1, absMask, maskAll);
+
+            // 3. -1轴: 先取偶奇max，再ReduceMaxWithDataBlock得到每32个元素的绝对值max
+            MicroAPI::Max(absMaxDim1, absMax0, absMax1, maskAll);
+            MicroAPI::ReduceMaxWithDataBlock(absMaxDim1, absMaxDim1, maskAll);
+
+            // 4. -2轴: 逐行累积偶数列和奇数列的绝对值max
+            MicroAPI::Max(absMax1Dim2, absMax1Dim2, absMax0, maskAll);
+            MicroAPI::Max(absMax2Dim2, absMax2Dim2, absMax1, maskAll);
+
+            // ============================================================
+            // 5. 计算-1轴Custom Scale (FP32精度)
+            //    ReduceMaxWithDataBlock后，8个max紧凑存储在寄存器前8个位置
+            //    与0交织后，Cast Zero一次处理全部8个值转为FP32
+            //    乘以invDstTypeMax_ (1/dstTypeMax)
+            //    仅normal场景条件舍入 (无subnormal舍入)
+            //    (与原始DynamicMxQuant一致)
+            // ============================================================
+
+            // 与0交织: [v0,0,v1,0,...,v7,0,...] → Cast Zero可一次取出全部8个有效值
+            MicroAPI::Interleave(absMaxDim1, zeroB16, absMaxDim1, zeroB16);
+            MicroAPI::Cast<float, xDtype, castTraitXdtypetoFp32Zero>(
+                (MicroAPI::RegTensor<float>&)maxFP32_0,
+                (MicroAPI::RegTensor<xDtype>&)absMaxDim1, maskAll);
+            // 乘以 1/dstTypeMax
+            MicroAPI::Mul(
+                (MicroAPI::RegTensor<float>&)maxFP32_0,
+                (MicroAPI::RegTensor<float>&)maxFP32_0,
+                invDstTypeMaxReg, maskFP32);
+            // 提取FP32指数: 右移23位
+            MicroAPI::ShiftRights(expFP32_0, maxFP32_0, SHR_NUM_FOR_FP32, maskFP32);
+            // 提取FP32尾数: 与尾数掩码
+            MicroAPI::And(manFP32_0, maxFP32_0, manMaskFP32, maskFP32);
+            // 条件舍入: 仅normal场景 (exp>0 && exp<254 && man>0) → exp+1
+            // 注意: 与CuBALS不同，DynamicDtypeRange Custom不处理subnormal场景
+            MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p0, expFP32_0, NUMBER_ZERO_U32, maskFP32);
+            MicroAPI::CompareScalar<uint32_t, CMPMODE::LT>(p0, expFP32_0, NUMBER_TWO_FIVE_FOUR, p0);
+            MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p0, manFP32_0, NUMBER_ZERO_U32, p0);
+            // 执行条件加1
+            MicroAPI::Adds(maxFP32_0, expFP32_0, 1, maskFP32);
+            MicroAPI::Select(manFP32_0, maxFP32_0, expFP32_0, p0);
+            // Pack到uint16 (INF/NAN→0xFF, zero→0 自然通过条件舍入保持, 在BF16域1/scale中统一处理)
+            MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>(scale1B16_0, manFP32_0);
+
+            // 左移7位，将E8M0值定位到BF16指数域 (用于计算1/scale)
+            MicroAPI::ShiftLefts(scale1BF16, scale1B16_0, SHR_NUM_FOR_BF16, maskAll);
+
+            // --- 输出-1轴scale (uint8) ---
+            MicroAPI::Pack<uint8_t, uint16_t, MicroAPI::HighLowPart::LOWEST>(mxScale1B8, scale1B16_0);
+            MicroAPI::DataCopy<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+                mxScale1Addr, mxScale1B8, oneBlockCountB8_, maskReduceB8);
+
+            // --- 计算并输出-1轴 1/scale (与原始DynamicMxQuant一致: inf→nan, special→specialExp, 无零值检查) ---
+            MicroAPI::Compare<uint16_t, CMPMODE::NE>(infMask, scale1BF16, maxEleBF16, maskAll);
+            MicroAPI::Compare<uint16_t, CMPMODE::EQ>(invalidDataMask, scale1BF16, biasE8M0, maskAll);
+            MicroAPI::Sub(reversedShareExp1, biasE8M0, scale1BF16, maskAll);
+            MicroAPI::Select<uint16_t>(reversedShareExp1, reversedShareExp1, nanBF16, infMask);
+            MicroAPI::Select<uint16_t>(reversedShareExp1, specialExp, reversedShareExp1, invalidDataMask);
+            MicroAPI::DataCopy<uint16_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+                mxScale1ReciprocalAddr, reversedShareExp1, oneBlockCountB16_, maskReduceB16);
+            // 恢复zeroB16 (Interleave会修改dst1)
+            MicroAPI::Duplicate(zeroB16, 0);
+        }
+
+        // ========================================================================
+        // 循环结束后，计算-2轴Custom Scale
+        // absMax1Dim2: 128个偶数列的累积绝对值max
+        // absMax2Dim2: 128个奇数列的累积绝对值max
+        // 每个需要拆分为Zero/One两半分别做FP32计算，再合并
+        // ========================================================================
+
+        // ---------- 处理absMax1Dim2 (偶数列, -2轴scale的交织第一部分) ----------
+        // Zero半 (偶数位) — 复用循环体偶数部分寄存器
+        MicroAPI::Cast<float, xDtype, castTraitXdtypetoFp32Zero>(
+            (MicroAPI::RegTensor<float>&)maxFP32_0,
+            (MicroAPI::RegTensor<xDtype>&)absMax1Dim2, maskAll);
+        MicroAPI::Mul(
+            (MicroAPI::RegTensor<float>&)maxFP32_0,
+            (MicroAPI::RegTensor<float>&)maxFP32_0,
+            invDstTypeMaxReg, maskFP32);
+        MicroAPI::ShiftRights(expFP32_0, maxFP32_0, SHR_NUM_FOR_FP32, maskFP32);
+        MicroAPI::And(manFP32_0, maxFP32_0, manMaskFP32, maskFP32);
+        // 条件舍入: 仅normal场景 (无subnormal)
+        MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p0, expFP32_0, NUMBER_ZERO_U32, maskFP32);
+        MicroAPI::CompareScalar<uint32_t, CMPMODE::LT>(p0, expFP32_0, NUMBER_TWO_FIVE_FOUR, p0);
+        MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p0, manFP32_0, NUMBER_ZERO_U32, p0);
+        // 链内复用: maxFP32_0→expPlusOne, expFP32_0同时作为exp和最终结果
+        MicroAPI::Adds(maxFP32_0, expFP32_0, 1, maskFP32);
+        MicroAPI::Select(expFP32_0, maxFP32_0, expFP32_0, p0);
+        MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>(scale1B16_0, expFP32_0);
+
+        // One半 (奇数位) — 复用循环体奇数部分寄存器
+        MicroAPI::Cast<float, xDtype, castTraitXdtypetoFp32One>(
+            (MicroAPI::RegTensor<float>&)maxFP32_1,
+            (MicroAPI::RegTensor<xDtype>&)absMax1Dim2, maskAll);
+        MicroAPI::Mul(
+            (MicroAPI::RegTensor<float>&)maxFP32_1,
+            (MicroAPI::RegTensor<float>&)maxFP32_1,
+            invDstTypeMaxReg, maskFP32);
+        MicroAPI::ShiftRights(expFP32_1, maxFP32_1, SHR_NUM_FOR_FP32, maskFP32);
+        MicroAPI::And(manFP32_1, maxFP32_1, manMaskFP32, maskFP32);
+        MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p0, expFP32_1, NUMBER_ZERO_U32, maskFP32);
+        MicroAPI::CompareScalar<uint32_t, CMPMODE::LT>(p0, expFP32_1, NUMBER_TWO_FIVE_FOUR, p0);
+        MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p0, manFP32_1, NUMBER_ZERO_U32, p0);
+        MicroAPI::Adds(maxFP32_1, expFP32_1, 1, maskFP32);
+        MicroAPI::Select(expFP32_1, maxFP32_1, expFP32_1, p0);
+        MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>(scale1B16_1, expFP32_1);
+
+        // 合并Zero和One，恢复原始列顺序 — scale输出寄存器复用
+        MicroAPI::Interleave(scale1B16_0, scale1B16_1, scale1B16_0, scale1B16_1);
+        // 左移7位得到BF16指数格式 — scale1BF16复用
+        MicroAPI::ShiftLefts(scale1BF16, scale1B16_0, SHR_NUM_FOR_BF16, maskAll);
+        // 输出scale (uint8) — mxScale1B8复用为mxScale2ZeroB8
+        MicroAPI::Pack<uint8_t, uint16_t, MicroAPI::HighLowPart::LOWEST>(mxScale1B8, scale1B16_0);
+
+        // 计算1/scale — reversedShareExp1复用为reversedShareExp2Zero (与原始DynamicMxQuant一致: 无零值检查)
+        MicroAPI::Compare<uint16_t, CMPMODE::NE>(infMask, scale1BF16, maxEleBF16, maskAll);
+        MicroAPI::Compare<uint16_t, CMPMODE::EQ>(invalidDataMask, scale1BF16, biasE8M0, maskAll);
+        MicroAPI::Sub(reversedShareExp1, biasE8M0, scale1BF16, maskAll);
+        MicroAPI::Select<uint16_t>(reversedShareExp1, reversedShareExp1, nanBF16, infMask);
+        MicroAPI::Select<uint16_t>(reversedShareExp1, specialExp, reversedShareExp1, invalidDataMask);
+
+        // ---------- 处理absMax2Dim2 (奇数列, -2轴scale的交织第二部分) ----------
+        // Zero半 — 复用循环体偶数部分寄存器
+        MicroAPI::Cast<float, xDtype, castTraitXdtypetoFp32Zero>(
+            (MicroAPI::RegTensor<float>&)maxFP32_0,
+            (MicroAPI::RegTensor<xDtype>&)absMax2Dim2, maskAll);
+        MicroAPI::Mul(
+            (MicroAPI::RegTensor<float>&)maxFP32_0,
+            (MicroAPI::RegTensor<float>&)maxFP32_0,
+            invDstTypeMaxReg, maskFP32);
+        MicroAPI::ShiftRights(expFP32_0, maxFP32_0, SHR_NUM_FOR_FP32, maskFP32);
+        MicroAPI::And(manFP32_0, maxFP32_0, manMaskFP32, maskFP32);
+        MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p0, expFP32_0, NUMBER_ZERO_U32, maskFP32);
+        MicroAPI::CompareScalar<uint32_t, CMPMODE::LT>(p0, expFP32_0, NUMBER_TWO_FIVE_FOUR, p0);
+        MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p0, manFP32_0, NUMBER_ZERO_U32, p0);
+        MicroAPI::Adds(maxFP32_0, expFP32_0, 1, maskFP32);
+        MicroAPI::Select(expFP32_0, maxFP32_0, expFP32_0, p0);
+        MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>(scale1B16_0, expFP32_0);
+
+        // One半 — 复用循环体奇数部分寄存器
+        MicroAPI::Cast<float, xDtype, castTraitXdtypetoFp32One>(
+            (MicroAPI::RegTensor<float>&)maxFP32_1,
+            (MicroAPI::RegTensor<xDtype>&)absMax2Dim2, maskAll);
+        MicroAPI::Mul(
+            (MicroAPI::RegTensor<float>&)maxFP32_1,
+            (MicroAPI::RegTensor<float>&)maxFP32_1,
+            invDstTypeMaxReg, maskFP32);
+        MicroAPI::ShiftRights(expFP32_1, maxFP32_1, SHR_NUM_FOR_FP32, maskFP32);
+        MicroAPI::And(manFP32_1, maxFP32_1, manMaskFP32, maskFP32);
+        MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p0, expFP32_1, NUMBER_ZERO_U32, maskFP32);
+        MicroAPI::CompareScalar<uint32_t, CMPMODE::LT>(p0, expFP32_1, NUMBER_TWO_FIVE_FOUR, p0);
+        MicroAPI::CompareScalar<uint32_t, CMPMODE::GT>(p0, manFP32_1, NUMBER_ZERO_U32, p0);
+        MicroAPI::Adds(maxFP32_1, expFP32_1, 1, maskFP32);
+        MicroAPI::Select(expFP32_1, maxFP32_1, expFP32_1, p0);
+        MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>(scale1B16_1, expFP32_1);
+
+        // 合并Zero和One — scale输出寄存器复用
+        MicroAPI::Interleave(scale1B16_0, scale1B16_1, scale1B16_0, scale1B16_1);
+        // scale1BF16复用
+        MicroAPI::ShiftLefts(scale1BF16, scale1B16_0, SHR_NUM_FOR_BF16, maskAll);
+        MicroAPI::Pack<uint8_t, uint16_t, MicroAPI::HighLowPart::LOWEST>(mxScale2OneB8, scale1B16_0);
+
+        // 计算1/scale — absMax0复用为reversedShareExp2One (循环后死亡，与reversedShareExp1不冲突) (与原始DynamicMxQuant一致: 无零值检查)
+        MicroAPI::Compare<uint16_t, CMPMODE::NE>(infMask, scale1BF16, maxEleBF16, maskAll);
+        MicroAPI::Compare<uint16_t, CMPMODE::EQ>(invalidDataMask, scale1BF16, biasE8M0, maskAll);
+        MicroAPI::Sub(absMax0, biasE8M0, scale1BF16, maskAll);
+        MicroAPI::Select<uint16_t>(absMax0, absMax0, nanBF16, infMask);
+        MicroAPI::Select<uint16_t>(absMax0, specialExp, absMax0, invalidDataMask);
+
+        // 交织搬出-2轴的mxScale和1/scale
+        MicroAPI::DataCopy<uint8_t, MicroAPI::StoreDist::DIST_INTLV_B8>(
+            mxScale2Addr, mxScale1B8, mxScale2OneB8, maskB8);
+        MicroAPI::DataCopy<uint16_t, MicroAPI::StoreDist::DIST_INTLV_B16>(
+            mxScale2ReciprocalAddr, reversedShareExp1, absMax0, maskAll);
+    }
+}
+
 template <typename xDtype, typename y1Dtype, typename y2Dtype, AscendC::RoundMode roundMode, uint64_t scaleAlg>
 __aicore__ inline void DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, roundMode, scaleAlg>::ComputeYVf(
     uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr, __ubuf__ uint16_t* mxScale1ReciprocalAddr,
@@ -552,7 +1447,7 @@ __aicore__ inline void DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, 
             MicroAPI::DataCopy<xDtype, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_DINTLV_B16>(
                 x0, x1, xAddr, vlForHalfNumber_ * DIGIT_TWO);
             MicroAPI::DataCopy<uint16_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_E2B_B16>(
-                scaleForMulFP16, mxScale1ReciprocalAddr, UBBlockSize_ / sizeof(uint16_t));
+                scaleForMulFP16, mxScale1ReciprocalAddr, oneBlockCountB16_);
 
             if constexpr (IsSameType<xDtype, half>::value) {
                 MicroAPI::Cast<float, bfloat16_t, castTraitXdtypetoFp32Zero>(
@@ -612,6 +1507,9 @@ __aicore__ inline void DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, 
     return;
 }
 
+// 优化后的ComputeY1ToFP8: 参考DynamicMxQuant ComputeData的4路RegLayout Cast+Add模式
+// 消除多次Interleave操作，使用ZERO/ONE/TWO/THREE四个RegLayout将FP32→FP8的结果
+// 分别放到uint32的4个字节位置，通过Add合并后一次StoreAlign输出
 template <typename xDtype, typename y1Dtype, typename y2Dtype, AscendC::RoundMode roundMode, uint64_t scaleAlg>
 __aicore__ inline void DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, roundMode, scaleAlg>::ComputeY1ToFP8(
     uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr, __ubuf__ uint16_t* mxScale1ReciprocalAddr,
@@ -620,69 +1518,74 @@ __aicore__ inline void DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, 
     __VEC_SCOPE__
     {
         MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<uint16_t, MicroAPI::MaskPattern::ALL>();
+        MicroAPI::MaskReg maskFP8 = MicroAPI::CreateMask<y1Dtype>();
         MicroAPI::RegTensor<uint16_t> scaleForMulFP16;
         MicroAPI::RegTensor<float> scaleForMulFP32;
         MicroAPI::RegTensor<xDtype> x0;
         MicroAPI::RegTensor<xDtype> x1;
-        MicroAPI::RegTensor<bfloat16_t> x0BF16;
-        MicroAPI::RegTensor<bfloat16_t> x1BF16;
         MicroAPI::RegTensor<float> x0ZeroFP32;
         MicroAPI::RegTensor<float> x0OneFP32;
         MicroAPI::RegTensor<float> x1ZeroFP32;
         MicroAPI::RegTensor<float> x1OneFP32;
-        MicroAPI::RegTensor<y1Dtype> x0ZeroFP8;
-        MicroAPI::RegTensor<y1Dtype> x0OneFP8;
-        MicroAPI::RegTensor<y1Dtype> x1ZeroFP8;
-        MicroAPI::RegTensor<y1Dtype> x1OneFP8;
+        // 4路FP8寄存器，分别对应uint32中的4个字节位置
+        MicroAPI::RegTensor<y1Dtype> fp8Layout0;  // x0 Zero → byte 0
+        MicroAPI::RegTensor<y1Dtype> fp8Layout1;  // x1 Zero → byte 1
+        MicroAPI::RegTensor<y1Dtype> fp8Layout2;  // x0 One  → byte 2
+        MicroAPI::RegTensor<y1Dtype> fp8Layout3;  // x1 One  → byte 3
 
         for (uint16_t i = 0; i < blockCount; i++) {
+            // 交织搬运: 256个xDtype按偶奇拆分为x0(偶128), x1(奇128)
             MicroAPI::DataCopy<xDtype, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_DINTLV_B16>(
                 x0, x1, xAddr, vlForHalfNumber_ * DIGIT_TWO);
+            // 搬运1/scale: 8个scale广播到128个位置
             MicroAPI::DataCopy<uint16_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_E2B_B16>(
-                scaleForMulFP16, mxScale1ReciprocalAddr, UBBlockSize_ / sizeof(uint16_t));
+                scaleForMulFP16, mxScale1ReciprocalAddr, oneBlockCountB16_);
             if constexpr (IsSameType<xDtype, half>::value) {
-                MicroAPI::Cast<float, xDtype, DynamicMxQuantWithDualAxisBase::castTraitXdtypetoFp32Zero>(
-                    x0ZeroFP32, x0, maskAll);
+                // half输入: 先Cast到FP32再乘scale (避免half精度损失)
+                MicroAPI::Cast<float, xDtype, castTraitXdtypetoFp32Zero>(x0ZeroFP32, x0, maskAll);
                 MicroAPI::Cast<float, xDtype, castTraitXdtypetoFp32One>(x0OneFP32, x0, maskAll);
                 MicroAPI::Cast<float, bfloat16_t, castTraitXdtypetoFp32Zero>(
                     scaleForMulFP32, (MicroAPI::RegTensor<bfloat16_t>&)scaleForMulFP16, maskAll);
                 MicroAPI::Mul(x0ZeroFP32, x0ZeroFP32, scaleForMulFP32, maskAll);
                 MicroAPI::Mul(x0OneFP32, x0OneFP32, scaleForMulFP32, maskAll);
-                MicroAPI::Interleave(x0ZeroFP32, x0OneFP32, x0ZeroFP32, x0OneFP32);
                 MicroAPI::Cast<float, xDtype, castTraitXdtypetoFp32Zero>(x1ZeroFP32, x1, maskAll);
                 MicroAPI::Cast<float, xDtype, castTraitXdtypetoFp32One>(x1OneFP32, x1, maskAll);
                 MicroAPI::Mul(x1ZeroFP32, x1ZeroFP32, scaleForMulFP32, maskAll);
                 MicroAPI::Mul(x1OneFP32, x1OneFP32, scaleForMulFP32, maskAll);
-                MicroAPI::Interleave(x1ZeroFP32, x1OneFP32, x1ZeroFP32, x1OneFP32);
-                MicroAPI::Interleave(x0ZeroFP32, x1ZeroFP32, x0ZeroFP32, x1ZeroFP32);
-                MicroAPI::Interleave(x0OneFP32, x1OneFP32, x0OneFP32, x1OneFP32);
-                MicroAPI::Cast<y1Dtype, float, castTraitFp32toYdtype>(x0ZeroFP8, x0ZeroFP32, maskAll);
-                MicroAPI::Cast<y1Dtype, float, castTraitFp32toYdtype>(x0OneFP8, x1ZeroFP32, maskAll);
-                MicroAPI::Cast<y1Dtype, float, castTraitFp32toYdtype>(x1ZeroFP8, x0OneFP32, maskAll);
-                MicroAPI::Cast<y1Dtype, float, castTraitFp32toYdtype>(x1OneFP8, x1OneFP32, maskAll);
             } else {
+                // bf16输入: 直接在bf16域乘scale，再Cast到FP32
                 MicroAPI::Mul(x0, x0, (MicroAPI::RegTensor<xDtype>&)scaleForMulFP16, maskAll);
                 MicroAPI::Mul(x1, x1, (MicroAPI::RegTensor<xDtype>&)scaleForMulFP16, maskAll);
-                MicroAPI::Interleave(x0, x1, x0, x1);
                 MicroAPI::Cast<float, xDtype, castTraitXdtypetoFp32Zero>(x0ZeroFP32, x0, maskAll);
                 MicroAPI::Cast<float, xDtype, castTraitXdtypetoFp32One>(x0OneFP32, x0, maskAll);
-                MicroAPI::Interleave(x0ZeroFP32, x0OneFP32, x0ZeroFP32, x0OneFP32);
-                MicroAPI::Cast<y1Dtype, float, castTraitFp32toYdtype>(x0ZeroFP8, x0ZeroFP32, maskAll);
-                MicroAPI::Cast<y1Dtype, float, castTraitFp32toYdtype>(x0OneFP8, x0OneFP32, maskAll);
                 MicroAPI::Cast<float, xDtype, castTraitXdtypetoFp32Zero>(x1ZeroFP32, x1, maskAll);
                 MicroAPI::Cast<float, xDtype, castTraitXdtypetoFp32One>(x1OneFP32, x1, maskAll);
-                MicroAPI::Interleave(x1ZeroFP32, x1OneFP32, x1ZeroFP32, x1OneFP32);
-                MicroAPI::Cast<y1Dtype, float, castTraitFp32toYdtype>(x1ZeroFP8, x1ZeroFP32, maskAll);
-                MicroAPI::Cast<y1Dtype, float, castTraitFp32toYdtype>(x1OneFP8, x1OneFP32, maskAll);
             }
-            MicroAPI::DataCopy<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::StoreDist::DIST_PACK4_B32>(
-                y1Addr, (MicroAPI::RegTensor<uint8_t>&)x0ZeroFP8, OUT_ELE_NUM_ONE_BLK, maskAll);
-            MicroAPI::DataCopy<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::StoreDist::DIST_PACK4_B32>(
-                y1Addr, (MicroAPI::RegTensor<uint8_t>&)x0OneFP8, OUT_ELE_NUM_ONE_BLK, maskAll);
-            MicroAPI::DataCopy<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::StoreDist::DIST_PACK4_B32>(
-                y1Addr, (MicroAPI::RegTensor<uint8_t>&)x1ZeroFP8, OUT_ELE_NUM_ONE_BLK, maskAll);
-            MicroAPI::DataCopy<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::StoreDist::DIST_PACK4_B32>(
-                y1Addr, (MicroAPI::RegTensor<uint8_t>&)x1OneFP8, OUT_ELE_NUM_ONE_BLK, maskAll);
+            // 4路RegLayout Cast: 将4组64个FP32值分别Cast到FP8的不同字节位置
+            // Layout0(byte0): x0 Zero (偶数列偶数位)
+            // Layout2(byte2): x0 One  (偶数列奇数位)
+            // Layout1(byte1): x1 Zero (奇数列偶数位)
+            // Layout3(byte3): x1 One  (奇数列奇数位)
+            MicroAPI::Cast<y1Dtype, float, castTraitFp32toFP8Layout0>(fp8Layout0, x0ZeroFP32, maskAll);
+            MicroAPI::Cast<y1Dtype, float, castTraitFp32toFP8Layout2>(fp8Layout2, x0OneFP32, maskAll);
+            MicroAPI::Cast<y1Dtype, float, castTraitFp32toFP8Layout1>(fp8Layout1, x1ZeroFP32, maskAll);
+            MicroAPI::Cast<y1Dtype, float, castTraitFp32toFP8Layout3>(fp8Layout3, x1OneFP32, maskAll);
+            // Add合并: 4个字节位置的FP8值合并到一个寄存器
+            MicroAPI::Add(
+                (MicroAPI::RegTensor<uint8_t>&)fp8Layout0,
+                (MicroAPI::RegTensor<uint8_t>&)fp8Layout0,
+                (MicroAPI::RegTensor<uint8_t>&)fp8Layout2, maskFP8);
+            MicroAPI::Add(
+                (MicroAPI::RegTensor<uint8_t>&)fp8Layout1,
+                (MicroAPI::RegTensor<uint8_t>&)fp8Layout1,
+                (MicroAPI::RegTensor<uint8_t>&)fp8Layout3, maskFP8);
+            MicroAPI::Add(
+                (MicroAPI::RegTensor<uint8_t>&)fp8Layout0,
+                (MicroAPI::RegTensor<uint8_t>&)fp8Layout0,
+                (MicroAPI::RegTensor<uint8_t>&)fp8Layout1, maskFP8);
+            // 一次性输出256个FP8值
+            MicroAPI::DataCopy<uint8_t, MicroAPI::StoreDist::DIST_NORM_B8>(
+                y1Addr + i * vlForHalfNumber_ * DIGIT_TWO, (MicroAPI::RegTensor<uint8_t>&)fp8Layout0, maskFP8);
         }
     }
     return;
@@ -761,6 +1664,9 @@ __aicore__ inline void DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, 
     }
 }
 
+// 优化后的ComputeY2ToFP8: 参考DynamicMxQuant ComputeData的RegLayout优化模式
+// 使用ZERO/ONE两个RegLayout将FP32→FP8的结果分别放到uint32的byte0和byte1位置
+// 通过Add合并后Pack+DataCopy输出，消除Interleave和多余的Pack操作
 template <typename xDtype, typename y1Dtype, typename y2Dtype, AscendC::RoundMode roundMode, uint64_t scaleAlg>
 __aicore__ inline void DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, roundMode, scaleAlg>::ComputeY2ToFP8(
     uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr, __ubuf__ uint16_t* mxScale2ReciprocalAddr,
@@ -774,12 +1680,14 @@ __aicore__ inline void DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, 
         MicroAPI::RegTensor<uint16_t> reversedShareExp;
         MicroAPI::RegTensor<float> reversedShareExp0FP32;
         MicroAPI::RegTensor<float> reversedShareExp1FP32;
-        MicroAPI::RegTensor<y1Dtype> yZeroFP8;
-        MicroAPI::RegTensor<y1Dtype> yOneFP8;
+        // 2路FP8寄存器，分别对应uint32中的byte0和byte1位置
+        MicroAPI::RegTensor<y1Dtype> fp8Layout0;  // x0 (偶数位) → byte 0
+        MicroAPI::RegTensor<y1Dtype> fp8Layout1;  // x1 (奇数位) → byte 1
 
-        MicroAPI::MaskReg pregAll8 = MicroAPI::CreateMask<uint8_t, MicroAPI::MaskPattern::ALL>();
+        MicroAPI::MaskReg pregAll8 = MicroAPI::CreateMask<uint8_t, MicroAPI::MaskPattern::H>();
         MicroAPI::MaskReg pregAll16 = MicroAPI::CreateMask<uint16_t, MicroAPI::MaskPattern::ALL>();
         MicroAPI::MaskReg pregAll32 = MicroAPI::CreateMask<uint32_t, MicroAPI::MaskPattern::ALL>();
+        MicroAPI::MaskReg maskFP8 = MicroAPI::CreateMask<y1Dtype>();
 
         MicroAPI::DataCopy<uint16_t, MicroAPI::LoadDist::DIST_NORM>(reversedShareExp, mxScale2ReciprocalAddr);
         MicroAPI::Cast<float, bfloat16_t, castTraitXdtypetoFp32Zero>(
@@ -794,24 +1702,21 @@ __aicore__ inline void DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, 
             MicroAPI::Mul(x0FP32, x0FP32, reversedShareExp0FP32, pregAll32);
             MicroAPI::Mul(x1FP32, x1FP32, reversedShareExp1FP32, pregAll32);
 
-            MicroAPI::Cast<y1Dtype, float, castTraitFp32toYdtype>(
-                yZeroFP8, (MicroAPI::RegTensor<float>&)x0FP32, pregAll32);
+            // 2路RegLayout Cast: 将2组64个FP32值分别Cast到FP8的不同字节位置
+            // Layout0(byte0): x0 (偶数位元素)
+            // Layout1(byte1): x1 (奇数位元素)
+            MicroAPI::Cast<y1Dtype, float, castTraitFp32toFP8Layout0>(fp8Layout0, x0FP32, pregAll32);
+            MicroAPI::Cast<y1Dtype, float, castTraitFp32toFP8Layout1>(fp8Layout1, x1FP32, pregAll32);
+            // Add合并: byte0和byte1位置的FP8值合并到一个寄存器
+            MicroAPI::Add(
+                (MicroAPI::RegTensor<uint8_t>&)fp8Layout0,
+                (MicroAPI::RegTensor<uint8_t>&)fp8Layout0,
+                (MicroAPI::RegTensor<uint8_t>&)fp8Layout1, maskFP8);
+            // Pack: 提取每个uint32的低16位(包含2个FP8值)，紧凑为128个FP8
             MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>(
-                (MicroAPI::RegTensor<uint16_t>&)yZeroFP8, (MicroAPI::RegTensor<uint32_t>&)yZeroFP8);
+                (MicroAPI::RegTensor<uint16_t>&)fp8Layout0, (MicroAPI::RegTensor<uint32_t>&)fp8Layout0);
 
-            MicroAPI::Cast<y1Dtype, float, castTraitFp32toYdtype>(
-                yOneFP8, (MicroAPI::RegTensor<float>&)x1FP32, pregAll32);
-            MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>(
-                (MicroAPI::RegTensor<uint16_t>&)yOneFP8, (MicroAPI::RegTensor<uint32_t>&)yOneFP8);
-
-            MicroAPI::Interleave(
-                (MicroAPI::RegTensor<uint16_t>&)yZeroFP8, (MicroAPI::RegTensor<uint16_t>&)yOneFP8,
-                (MicroAPI::RegTensor<uint16_t>&)yZeroFP8, (MicroAPI::RegTensor<uint16_t>&)yOneFP8);
-
-            MicroAPI::Pack<uint8_t, uint16_t, MicroAPI::HighLowPart::LOWEST>(
-                (MicroAPI::RegTensor<uint8_t>&)yZeroFP8, (MicroAPI::RegTensor<uint16_t>&)yZeroFP8);
-
-            DataCopy(y2Addr + (j * ubRowLen_), (MicroAPI::RegTensor<uint8_t>&)yZeroFP8, pregAll8);
+            DataCopy(y2Addr + (j * ubRowLen_), (MicroAPI::RegTensor<uint8_t>&)fp8Layout0, pregAll8);
         }
     }
 }
@@ -991,6 +1896,7 @@ __aicore__ inline void DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, 
     pipe_->InitBuffer(outQueue2, DB_BUFFER, outBufferSize);
     pipe_->InitBuffer(mxScale1ReciprocalBuf, tmpScale1BufferSize_);
     pipe_->InitBuffer(mxScale2ReciprocalBuf, tmpScale2BufferSize_);
+    pipe_->InitBuffer(tmpScale2Buf, mxScale2BufferSize_);
 }
 
 template <typename xDtype, typename y1Dtype, typename y2Dtype, AscendC::RoundMode roundMode, uint64_t scaleAlg>

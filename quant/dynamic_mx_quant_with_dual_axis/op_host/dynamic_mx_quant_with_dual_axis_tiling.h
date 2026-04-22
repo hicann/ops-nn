@@ -58,6 +58,8 @@ struct DynamicMxQuantWithDualAxisTilingParam {
     int64_t scale1ColCountPerBatch{0};
     int64_t scale2RowCountPerBatch{0};
     int64_t workspaceSize{0};
+    float dstTypeMax{0.0};
+    float invDstTypeMax{0.0};
 };
 
 enum class RoundModeList

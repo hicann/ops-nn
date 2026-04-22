@@ -28,6 +28,7 @@ namespace optiling {
 constexpr int64_t INDEX_ATTR_ROUND_MODE = 0;
 constexpr int64_t INDEX_ATTR_DST_DTYPE = 1;
 constexpr int64_t INDEX_ATTR_SCALE_ALG = 2;
+constexpr int64_t INDEX_ATTR_DST_DTYPE_MAX = 3;
 constexpr int64_t INDEX_INPUT_X = 0;
 constexpr int64_t INDEX_OUTPUT_Y1 = 0;
 constexpr int64_t INDEX_OUTPUT_SCALE1 = 1;
@@ -48,6 +49,7 @@ constexpr int64_t BYTES_OF_INPUT_TYPE = 2;
 constexpr int64_t MAX_BYTES_OF_OUTPUT_TYPE = 1;
 
 constexpr int64_t RESERVED_UB_SIZE = 1024;
+constexpr float FP4E2M1_MAX = 6.0;
 
 const std::set<ge::DataType> INPUT_SUPPORT_DTYPE_SET = {ge::DT_FLOAT16, ge::DT_BF16};
 const std::set<ge::DataType> INPUT_FP16_DTYPE_SET = {ge::DT_FLOAT16};
@@ -116,8 +118,47 @@ ge::graphStatus DynamicMxQuantWithDualAxisTiling::GetAttr()
     OP_CHECK_NULL_WITH_CONTEXT(context_, attrScaleAlg);
     tilingParams.scaleAlg = static_cast<int64_t>(*attrScaleAlg);
     OP_CHECK_IF(
-        tilingParams.scaleAlg != 0,
-        OP_LOGE(context_->GetNodeName(), "The scaleAlg[%ld] should be 0, please check.", tilingParams.scaleAlg),
+        tilingParams.scaleAlg < 0 || tilingParams.scaleAlg > 2,
+        OP_LOGE(
+            context_->GetNodeName(), "The scaleAlg[%ld] should be one of {0, 1, 2}, please check.",
+            tilingParams.scaleAlg),
+        return ge::GRAPH_FAILED);
+
+    // scaleAlg=1 仅支持 FP8 类型 (CuBALS Scale算法)
+    OP_CHECK_IF(
+        tilingParams.scaleAlg == 1 && yDtype == ge::DT_FLOAT4_E2M1,
+        OP_LOGE(context_->GetNodeName(), "When y's data type is FLOAT4_E2M1, scaleAlg must be 0 or 2."),
+        return ge::GRAPH_FAILED);
+
+    OP_CHECK_IF(
+        (tilingParams.scaleAlg == 1 || tilingParams.scaleAlg == 2) && yDtype == ge::DT_FLOAT4_E1M2,
+        OP_LOGE(context_->GetNodeName(), "When y's data type is FLOAT4_E1M2, scaleAlg must be 0."),
+        return ge::GRAPH_FAILED);
+
+    // scaleAlg=2 仅支持 FP4_E2M1 类型 (Dynamic Dtype Range算法)
+    OP_CHECK_IF(
+        tilingParams.scaleAlg == 2 && Y_SUPPORT_DTYPE_FP8_SET.count(yDtype) != 0,
+        OP_LOGE(context_->GetNodeName(), "When y's data type is FLOAT8_E4M3FN/FLOAT8_E5M2, scaleAlg must be 0 or 1."),
+        return ge::GRAPH_FAILED);
+
+    // 解析 dstTypeMax 属性 (V2接口新增，仅在 scaleAlg=2 时生效)
+    auto* attrDstTypeMax = attrs->GetAttrPointer<float>(INDEX_ATTR_DST_DTYPE_MAX);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, attrDstTypeMax);
+    tilingParams.dstTypeMax = static_cast<float>(*attrDstTypeMax);
+
+    if (tilingParams.dstTypeMax != 0.0) {
+        tilingParams.invDstTypeMax = 1.0 / tilingParams.dstTypeMax;
+    } else {
+        // 当dstTypeMax=0时，默认使用目标数据类型最大值，当前为FP4E2M1最大值6
+        tilingParams.invDstTypeMax = 1.0 / FP4E2M1_MAX;
+    }
+
+    OP_CHECK_IF(
+        tilingParams.dstTypeMax < 0 || (tilingParams.dstTypeMax > 0 && tilingParams.dstTypeMax < 6) ||
+            tilingParams.dstTypeMax > 12,
+        OP_LOGE(
+            context_->GetNodeName(), "The dstTypeMax[%f] should be one of [6,12] or equal 0, please check.",
+            tilingParams.dstTypeMax),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -173,7 +214,7 @@ ge::graphStatus DynamicMxQuantWithDualAxisTiling::CheckShape() const
         xShape.GetDimNum() < 2,
         OP_LOGE(
             context_->GetNodeName(),
-            "The shape is invalid, axis num [%ld] should be large than or equal to 2, please check.",
+            "The shape is invalid, axis num [%ld] should be larger than or equal to 2, please check.",
             static_cast<int64_t>(xShape.GetDimNum())),
         return ge::GRAPH_FAILED);
 
@@ -289,9 +330,9 @@ void DynamicMxQuantWithDualAxisTiling::SplitCore(int64_t blockW, int64_t blockSi
     uint64_t scale2UbSize = BLOCK_PER_GROUP * blockW * UINT8_BYTES_SIZE;
     uint64_t scale1UbSize = blockSize * BLOCK_PER_GROUP *
                             Ops::Base::CeilAlign(Ops::Base::CeilDiv(blockW, blockSize), blockSize) * UINT8_BYTES_SIZE;
-
+    uint64_t tmpscale2UbSize = scale2Tmp;
     tilingParams.groupPerUb = (tilingParams.ubSize - RESERVED_UB_SIZE) / N_BUFFER /
-                              (xUbSize + y1UbSize + y2UbSize + scale2Tmp + scale1Tmp + scale2UbSize + scale1UbSize);
+                              (xUbSize + y1UbSize + y2UbSize + scale2Tmp + scale1Tmp + scale2UbSize + scale1UbSize + tmpscale2UbSize);
 
     tilingParams.splitBlockH = BLOCK_PER_GROUP * blockSize * tilingParams.groupPerUb;
     tilingParams.dimNeg2SplitBlockNum = Ops::Base::CeilDiv(tilingParams.dimNeg2, tilingParams.splitBlockH);
@@ -430,6 +471,8 @@ void DynamicMxQuantWithDualAxisTiling::SetTilingData()
     tilingData.blockCountPerBatch = tilingParams.blockCountPerBatch;
     tilingData.scale1ColCountPerBatch = tilingParams.scale1ColCountPerBatch;
     tilingData.scale2RowCountPerBatch = tilingParams.scale2RowCountPerBatch;
+    tilingData.dstTypeMax = tilingParams.dstTypeMax;
+    tilingData.invDstTypeMax = tilingParams.invDstTypeMax;
 }
 
 void DynamicMxQuantWithDualAxisTiling::PrintTilingData()
@@ -442,14 +485,14 @@ void DynamicMxQuantWithDualAxisTiling::PrintTilingData()
         "dimNeg1Tail: %ld, dimNeg2SplitBlockNum: %ld, dimNeg1BlockNum: %ld, "
         "blockPerHeadCore: %ld, blockPerTailCore: %ld, headCoreNum: %ld, "
         "dimNeg2IsOdd: %ld, dimNeg1IsOdd: %ld, dimNeg1IsPad: %ld, blockCountPerBatch: %ld, "
-        "scale1ColCountPerBatch: %ld, scale2RowCountPerBatch: %ld ",
+        "scale1ColCountPerBatch: %ld, scale2RowCountPerBatch: %ld, dstTypeMax: %f, invDstTypeMax: %f ",
         tilingData.totalCoreNum, tilingData.usedCoreNum, tilingData.roundMode, tilingData.dstType, tilingData.scaleAlg,
         tilingData.dim0, tilingData.dimNeg2, tilingData.dimNeg1, tilingData.blockSize, tilingData.blockW,
         tilingData.tilingKey, tilingData.splitBlockH, tilingData.dimNeg2Tail, tilingData.dimNeg1Tail,
         tilingData.dimNeg2SplitBlockNum, tilingData.dimNeg1BlockNum, tilingData.blockPerHeadCore,
         tilingData.blockPerTailCore, tilingData.headCoreNum, tilingData.dimNeg2IsOdd, tilingData.dimNeg1IsOdd,
         tilingData.dimNeg1IsPad, tilingData.blockCountPerBatch, tilingData.scale1ColCountPerBatch,
-        tilingData.scale2RowCountPerBatch);
+        tilingData.scale2RowCountPerBatch, tilingData.dstTypeMax, tilingData.invDstTypeMax);
 }
 
 static ge::graphStatus TilingForDynamicMxQuantWithDualAxis(gert::TilingContext* context)
@@ -460,8 +503,8 @@ static ge::graphStatus TilingForDynamicMxQuantWithDualAxis(gert::TilingContext* 
         context == nullptr, OP_LOGE("DynamicMxQuantWithDualAxisTiling", "Tiling context is null."),
         return ge::GRAPH_FAILED);
 
-    DynamicMxQuantWithDualAxisTiling mxQunatTiling(context);
-    return mxQunatTiling.DoTiling();
+    DynamicMxQuantWithDualAxisTiling mxQuantTiling(context);
+    return mxQuantTiling.DoTiling();
 }
 
 static ge::graphStatus TilingPrepareForDynamicMxQuantWithDualAxis(gert::TilingParseContext* context)

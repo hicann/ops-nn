@@ -1,4 +1,4 @@
-# aclnnDynamicMxQuantWithDualAxis
+# aclnnDynamicMxQuantWithDualAxisV2
 
 [📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/quant/dynamic_mx_quant_with_dual_axis)
 
@@ -8,7 +8,7 @@
 | :----------------------------------------------------------- | :------: |
 | <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    ×     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    ×     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理产品</term> |    ×     |
 | <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
 | <term>Atlas 推理系列产品</term>                             |    ×     |
 | <term>Atlas 训练系列产品</term>                              |    ×     |
@@ -82,33 +82,70 @@
     - **-2轴量化**：同时，将输入x在-2轴上按照32个数进行分组，采用与-1轴相同的CuBALS Scale计算算法，对每组独立计算块缩放因子并量化。-2轴输出的量化结果是$\left(S^b, [d^j]_{j=1}^{32}\right)$。
     - -1轴量化结果组成输出y1Out，对应的块缩放因子组成输出mxscale1Out。-2轴量化结果组成输出y2Out，对应的块缩放因子组成输出mxscale2Out。
 
+  - 场景3，当scaleAlg为2时，只涉及FP4_E2M1类型：
+    - 当dstTypeMax = 0.0/6.0/7.0时：
+      - **-1轴量化**：将输入x在-1轴上按照32个数进行分组，一组32个数 $\{\{V_i\}_{i=1}^{32}\}$ 量化为 $\{mxscale1, \{P_i\}_{i=1}^{32}\}$：
+        $$
+        shared\_exp = \begin{cases} ceil(log_2(max_i(|V_i|))) - emax, & \text{如果} 尾数位的高比特前一/两位 \text{为1，且尾数不全为0} \\ floor(log_2(max_i(|V_i|))) - emax, & \text{其它} \end{cases} \\
+        $$
+        $$
+        mxscale1 = 2^{shared\_exp}
+        $$
+        $$
+        P_i = cast\_to\_dst\_type(V_i/mxscale1, round\_mode), \space i\space from\space 1\space to\space 32\\
+        $$
+      - **-2轴量化**：同时，将输入x在-2轴上按照32个数进行分组，一组32个数 $\{\{V_j\}_{j=1}^{32}\}$ 采用与-1轴相同的进位计算方法量化为 $\{mxscale2, \{P_j\}_{j=1}^{32}\}$。
+      - ​-1轴量化后的 $P_{i}$ 按对应的 $V_{i}$ 的位置组成输出y1Out，mxscale1按对应的-1轴维度上的分组组成输出mxscale1Out。-2轴量化后的 $P_{j}$ 按对应的 $V_{j}$ 的位置组成输出y2Out，mxscale2按对应的-2轴维度上的分组组成输出mxscale2Out。
+    - 当dstTypeMax != 0.0/6.0/7.0时：
+      - **-1轴量化**：将输入x在-1轴上按照32个数进行分组，每组长度为32，对每组单独计算一个块缩放因子$S_{fp32}^b$，再把组内所有元素用同一个$S_{fp32}^b$映射到目标低精度类型FP4_E2M1。如果最后一组不足32个元素，把缺失值视为0，按照完整组处理。
+        - 找到该组中数值的最大绝对值:
+          $$
+          Amax(D_{fp32}^b)=max(\{|d_{i}|\}_{i=1}^{32})
+          $$
+        - 将FP32映射到目标数据类型可表示的范围内，其中当dstTypeMax=0时，$Amax(DType)$是目标精度能表示的最大值；当dstTypeMax!=0时，$Amax(DType)$是dstTypeMax传入值。
+          $$
+          S_{fp32}^b = \frac{Amax(D_{fp32}^b)}{Amax(DType)}
+          $$
+        - 将块缩放因子$S_{fp32}^b$转换为FP8格式下可表示的缩放值$S_{ue8m0}^b$。
+        - 从块的浮点缩放因子$S_{fp32}^b$中提取无偏指数$E_{int}^b$和尾数$M_{fixp}^b$。
+        - 为保证量化时不溢出，对指数进行向上取整，且在FP8可表示的范围内：
+          $$
+          E_{int}^b = \begin{cases} E_{int}^b + 1, & \text{如果} S_{fp32}^b \text{为正规数，且} E_{int}^b < 254 \text{且} M_{fixp}^b > 0 \\ E_{int}^b, & \text{否则} \end{cases}
+          $$
+        - 计算块缩放因子：$S_{ue8m0}^b=2^{E_{int}^b}$
+        - 计算块转换因子：$R_{fp32}^b=\frac{1}{fp32(S_{ue8m0}^b)}$
+        - 应用到量化的最终步骤，对于每个组内元素，$d^i = DType(d_{fp32}^i \cdot R_{fp32}^b)$，最终-1轴输出的量化结果是$\left(S^b, [d^i]_{i=1}^{32}\right)$，其中$S^b$代表块的缩放因子，即$S_{ue8m0}^b$，$[d^i]_{i=1}^{32}$代表组内量化后的数据。
+      - **-2轴量化**：同时，将输入x在-2轴上按照32个数进行分组，采用与-1轴相同的算法，对每组独立计算块缩放因子并量化。-2轴输出的量化结果是$\left(S^b, [d^j]_{j=1}^{32}\right)$。
+      - -1轴量化结果组成输出y1Out，对应的块缩放因子组成输出mxscale1Out。-2轴量化结果组成输出y2Out，对应的块缩放因子组成输出mxscale2Out。
+
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnDynamicMxQuantWithDualAxisGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnDynamicMxQuantWithDualAxis”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用"aclnnDynamicMxQuantWithDualAxisV2GetWorkspaceSize"接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用"aclnnDynamicMxQuantWithDualAxisV2"接口执行计算。
 
 ```cpp
-aclnnStatus aclnnDynamicMxQuantWithDualAxisGetWorkspaceSize(
-  const aclTensor *x, 
-  char            *roundModeOptional, 
-  int64_t          dstType, 
-  int64_t          scaleAlg, 
-  const aclTensor *y1Out, 
-  const aclTensor *mxscale1Out, 
-  const aclTensor *y2Out, 
-  const aclTensor *mxscale2Out, 
-  uint64_t        *workspaceSize, 
+aclnnStatus aclnnDynamicMxQuantWithDualAxisV2GetWorkspaceSize(
+  const aclTensor *x,
+  char            *roundModeOptional,
+  int64_t          dstType,
+  int64_t          scaleAlg,
+  double           dstTypeMax,
+  const aclTensor *y1Out,
+  const aclTensor *mxscale1Out,
+  const aclTensor *y2Out,
+  const aclTensor *mxscale2Out,
+  uint64_t        *workspaceSize,
   aclOpExecutor   **executor)
 ```
 
 ```cpp
-aclnnStatus aclnnDynamicMxQuantWithDualAxis(
-  void          *workspace, 
-  uint64_t       workspaceSize, 
-  aclOpExecutor *executor, 
+aclnnStatus aclnnDynamicMxQuantWithDualAxisV2(
+  void          *workspace,
+  uint64_t       workspaceSize,
+  aclOpExecutor *executor,
   aclrtStream    stream)
 ```
 
-## aclnnDynamicMxQuantWithDualAxisGetWorkspaceSize
+## aclnnDynamicMxQuantWithDualAxisV2GetWorkspaceSize
 
 - **参数说明：**
 
@@ -137,7 +174,7 @@ aclnnStatus aclnnDynamicMxQuantWithDualAxis(
     <tr>
       <td>x</td>
       <td>输入</td>
-      <td>表示输入x，对应公式中V<sub>i</sub>。</td>
+      <td>表示输入x，对应公式中V<sub>i</sub>和d<sub>i</sub>。</td>
       <td><ul><li>目的类型为FLOAT4_E2M1、FLOAT4_E1M2时，x的最后一维必须是偶数。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
@@ -157,7 +194,7 @@ aclnnStatus aclnnDynamicMxQuantWithDualAxis(
     <tr>
       <td>dstType</td>
       <td>输入</td>
-      <td>表示指定数据转换后y1Out和y2Out的类型。</td>
+      <td>表示指定数据转换后y1Out和y2Out的类型，对应公式中的DType。</td>
       <td><ul><li>输入范围为{35, 36, 40, 41}，分别对应输出y1Out和y2Out的数据类型为{35:FLOAT8_E5M2, 36:FLOAT8_E4M3FN, 40:FLOAT4_E2M1, 41:FLOAT4_E1M2}。</li></ul></td>
       <td>INT64</td>
       <td>-</td>
@@ -168,8 +205,18 @@ aclnnStatus aclnnDynamicMxQuantWithDualAxis(
       <td>scaleAlg</td>
       <td>输入</td>
       <td>表示mxscale1Out和mxscale2Out的计算方法，对应公式中的scaleAlg。</td>
-      <td><ul><li>支持取值0和1，取值为0代表场景1，为1代表场景2。</li><li>当dstType为FLOAT4_E2M1/FLOAT4_E1M2时仅支持取值为0。</li></ul></td>
+      <td><ul><li>支持取值0、1和2，取值为0代表场景1，为1代表场景2，为2代表场景3。</li><li>当dstType为FLOAT4_E1M2时仅支持取值为0。</li><li>当dstType为FLOAT4_E2M1时仅支持取值为0和2。</li><li>当dstType为FLOAT8时仅支持取值为0和1。</li></ul></td>
       <td>INT64</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>dstTypeMax</td>
+      <td>输入</td>
+      <td>表示maxType的取值，对应公式中的Amax(DType)。</td>
+      <td><ul><li>支持取值0.0和6.0-12.0，取值为0.0代表Amax(DType)为量化结果数据类型的最大值；取值为6.0-12.0代表Amax(DType)为传入值。</li><li>仅支持在FP4_E2M1和scaleAlg为2时设置该值。</li></ul></td>
+      <td>DOUBLE</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -177,7 +224,7 @@ aclnnStatus aclnnDynamicMxQuantWithDualAxis(
     <tr>
       <td>y1Out</td>
       <td>输出</td>
-      <td>表示输入x量化-1轴后的对应结果，对应公式中的P<sub>i</sub>。</td>
+      <td>表示输入x量化-1轴后的对应结果，对应公式中的P<sub>i</sub>和d<sup>i</sup>。</td>
       <td><ul><li>shape和输入x一致。</li></ul></td>
       <td>FLOAT4_E2M1、FLOAT4_E1M2、FLOAT8_E4M3FN、FLOAT8_E5M2</td>
       <td>ND</td>
@@ -187,7 +234,7 @@ aclnnStatus aclnnDynamicMxQuantWithDualAxis(
     <tr>
       <td>mxscale1Out</td>
       <td>输出</td>
-      <td>表示-1轴每个分组对应的量化尺度，对应公式中的mxscale1。</td>
+      <td>表示-1轴每个分组对应的量化尺度，对应公式中的mxscale1和S<sup>b</sup>。</td>
       <td><ul><li>shape为x的-1轴的值除以32向上取整，并对其进行偶数pad，pad填充值为0。</li></ul></td>
       <td>FLOAT8_E8M0</td>
       <td>ND</td>
@@ -197,7 +244,7 @@ aclnnStatus aclnnDynamicMxQuantWithDualAxis(
     <tr>
       <td>y2Out</td>
       <td>输出</td>
-      <td>表示输入x量化-2轴后的对应结果，对应公式中的P<sub>j</sub>。</td>
+      <td>表示输入x量化-2轴后的对应结果，对应公式中的P<sub>j</sub>和d<sup>j</sup>。</td>
       <td><ul><li>shape和输入x一致。</li></ul></td>
       <td>FLOAT4_E2M1、FLOAT4_E1M2、FLOAT8_E4M3FN、FLOAT8_E5M2</td>
       <td>ND</td>
@@ -207,7 +254,7 @@ aclnnStatus aclnnDynamicMxQuantWithDualAxis(
     <tr>
       <td>mxscale2Out</td>
       <td>输出</td>
-      <td>表示-2轴每个分组对应的量化尺度，对应公式中的mxscale2。</td>
+      <td>表示-2轴每个分组对应的量化尺度，对应公式中的mxscale2和S<sup>b</sup>。</td>
       <td><ul><li>shape为x的-2轴的值除以32向上取整，并对其进行偶数pad，pad填充值为0。</li><li>mxscale2Out输出需要对每两行数据进行交织处理。</li></ul></td>
       <td>FLOAT8_E8M0</td>
       <td>ND</td>
@@ -264,13 +311,13 @@ aclnnStatus aclnnDynamicMxQuantWithDualAxis(
     <tr>
       <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="3">161002</td>
-      <td> x、roundModeOptional、dstType、scaleAlg、y1Out、mxscale1Out、y2Out、mxscale2Out的数据类型和数据格式不在支持的范围之内。</td>
+      <td> x、roundModeOptional、dstType、scaleAlg、dstTypeMax、y1Out、mxscale1Out、y2Out、mxscale2Out的数据类型和数据格式不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>x、y1Out、y2Out、mxscale1Out或mxscale2Out的shape不满足校验条件。</td>
     </tr>
     <tr>
-      <td>roundModeOptional、dstType、scaleAlg不符合当前支持的值。</td>
+      <td>roundModeOptional、dstType、scaleAlg、dstTypeMax不符合当前支持的值。</td>
     </tr>
     <tr>
       <td>ACLNN_ERR_RUNTIME_ERROR</td>
@@ -279,7 +326,7 @@ aclnnStatus aclnnDynamicMxQuantWithDualAxis(
     </tr>
   </tbody></table>
 
-## aclnnDynamicMxQuantWithDualAxis
+## aclnnDynamicMxQuantWithDualAxisV2
 
 - **参数说明：**
   <table style="undefined;table-layout: fixed; width: 953px"><colgroup>
@@ -302,7 +349,7 @@ aclnnStatus aclnnDynamicMxQuantWithDualAxis(
     <tr>
       <td>workspaceSize</td>
       <td>输入</td>
-      <td>在Device侧申请的workspace大小，由第一段接口aclnnDynamicMxQuantWithDualAxisGetWorkspaceSize获取。</td>
+      <td>在Device侧申请的workspace大小，由第一段接口aclnnDynamicMxQuantWithDualAxisV2GetWorkspaceSize获取。</td>
     </tr>
     <tr>
       <td>executor</td>
@@ -332,7 +379,7 @@ aclnnStatus aclnnDynamicMxQuantWithDualAxis(
     - mxscale2Out.shape[-1] = 2。
     - 其他维度与输入x一致。
     - 举例：输入x的shape为[B, M, N]，目的数据类型为FP8类时，对应的y1和y2的shape为[B, M, N]，mxscale1的shape为[B, M, (ceil(N/32)+2-1)/2, 2]，mxscale2的shape为[B, (ceil(M/32)+2-1)/2, N, 2]。
- - 确定性说明：aclnnDynamicMxQuantWithDualAxis默认确定性实现。
+ - 确定性说明：aclnnDynamicMxQuantWithDualAxisV2默认确定性实现。
 
 ## 调用示例
 
@@ -351,7 +398,7 @@ aclnnStatus aclnnDynamicMxQuantWithDualAxis(
               return_expr;             \
           }                            \
       } while (0)
-  
+
   #define CHECK_FREE_RET(cond, return_expr) \
       do {                                  \
           if (!(cond)) {                    \
@@ -418,7 +465,7 @@ aclnnStatus aclnnDynamicMxQuantWithDualAxis(
       aclFinalize();
   }
 
-  int aclnnDynamicMxQuantWithDualAxisTest(int32_t deviceId, aclrtStream& stream)
+  int aclnnDynamicMxQuantWithDualAxisV2Test(int32_t deviceId, aclrtStream& stream)
   {
       auto ret = Init(deviceId, &stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
@@ -447,6 +494,7 @@ aclnnStatus aclnnDynamicMxQuantWithDualAxis(
       char* roundModeOptional = const_cast<char*>("rint");
       int64_t dstType = 36;
       int64_t scaleAlg = 0;
+      double dstTypeMax = 0.0;
       // 创建x aclTensor
       ret = CreateAclTensor(xHostData, xShape, &xDeviceAddr, aclDataType::ACL_BF16, &x);
       std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> xTensorPtr(x, aclDestroyTensor);
@@ -477,9 +525,9 @@ aclnnStatus aclnnDynamicMxQuantWithDualAxis(
       uint64_t workspaceSize = 0;
       aclOpExecutor* executor;
 
-      // 调用aclnnDynamicMxQuantWithDualAxis第一段接口
-      ret = aclnnDynamicMxQuantWithDualAxisGetWorkspaceSize(x, roundModeOptional, dstType, scaleAlg, y1Out, mxscale1Out, y2Out, mxscale2Out, &workspaceSize, &executor);
-      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDynamicMxQuantWithDualAxisGetWorkspaceSize failed. ERROR: %d\n", ret);
+      // 调用aclnnDynamicMxQuantWithDualAxisV2第一段接口
+      ret = aclnnDynamicMxQuantWithDualAxisV2GetWorkspaceSize(x, roundModeOptional, dstType, scaleAlg, dstTypeMax, y1Out, mxscale1Out, y2Out, mxscale2Out, &workspaceSize, &executor);
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDynamicMxQuantWithDualAxisV2GetWorkspaceSize failed. ERROR: %d\n", ret);
                 return ret);
       // 根据第一段接口计算出的workspaceSize申请device内存
       void* workspaceAddr = nullptr;
@@ -489,9 +537,9 @@ aclnnStatus aclnnDynamicMxQuantWithDualAxis(
           CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
           workspaceAddrPtr.reset(workspaceAddr);
       }
-      // 调用aclnnDynamicMxQuantWithDualAxis第二段接口
-      ret = aclnnDynamicMxQuantWithDualAxis(workspaceAddr, workspaceSize, executor, stream);
-      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDynamicMxQuantWithDualAxis failed. ERROR: %d\n", ret); return ret);
+      // 调用aclnnDynamicMxQuantWithDualAxisV2第二段接口
+      ret = aclnnDynamicMxQuantWithDualAxisV2(workspaceAddr, workspaceSize, executor, stream);
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDynamicMxQuantWithDualAxisV2 failed. ERROR: %d\n", ret); return ret);
 
       //（固定写法）同步等待任务执行结束
       ret = aclrtSynchronizeStream(stream);
@@ -505,7 +553,7 @@ aclnnStatus aclnnDynamicMxQuantWithDualAxis(
       std::vector<uint8_t> y2OutData(
           size2, 0);  // C语言中无法直接打印fp4的数据，需要用uint8读出来，自行通过二进制转成fp4
       ret = aclrtMemcpy(y1OutData.data(), y1OutData.size() * sizeof(y1OutData[0]), y1OutDeviceAddr,
-                        size1 * sizeof(y1OutData[0]), ACL_MEMCPY_DEVICE_TO_HOST) && 
+                        size1 * sizeof(y1OutData[0]), ACL_MEMCPY_DEVICE_TO_HOST) &&
                         aclrtMemcpy(y2OutData.data(), y2OutData.size() * sizeof(y2OutData[0]), y2OutDeviceAddr,
                         size2 * sizeof(y2OutData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy y1Out and y2Out from device to host failed. ERROR: %d\n", ret);
@@ -545,8 +593,8 @@ aclnnStatus aclnnDynamicMxQuantWithDualAxis(
       // 根据自己的实际device填写deviceId
       int32_t deviceId = 0;
       aclrtStream stream;
-      auto ret = aclnnDynamicMxQuantWithDualAxisTest(deviceId, stream);
-      CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDynamicMxQuantWithDualAxisTest failed. ERROR: %d\n", ret); return ret);
+      auto ret = aclnnDynamicMxQuantWithDualAxisV2Test(deviceId, stream);
+      CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDynamicMxQuantWithDualAxisV2Test failed. ERROR: %d\n", ret); return ret);
 
       Finalize(deviceId, stream);
       return 0;
