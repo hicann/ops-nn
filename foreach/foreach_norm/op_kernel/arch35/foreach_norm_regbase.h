@@ -150,11 +150,15 @@ public:
             MicroAPI::MaskReg maskReg;
             MicroAPI::RegTensor<float> inRegToFloat;
             MicroAPI::RegTensor<float> reduceFloat;
+            MicroAPI::RegTensor<float> selectReg;
             MicroAPI::MaskReg pregMain = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
             Duplicate(reduceFloat, (float)0.0, pregMain);
+            Duplicate(selectReg, (float)0.0, pregMain);
             for (uint16_t i = 0; i < (uint16_t)repeatTimes; i++) {
                 maskReg = MicroAPI::UpdateMask<float>(sreg);
                 ops::LoadOneTensorForDtypeT<float>(inUbAddr, inRegToFloat, maskReg, i * dataCountPerLoop);
+                // 抛弃后面的脏数据
+                Select(inRegToFloat, inRegToFloat, selectReg, maskReg);
                 if constexpr (isMulitNum) {
                     if constexpr (modelOrd == POSITIVE_INF_SCALAR_NORM_MODEL_CODE) {
                         Max(reduceFloat, reduceFloat, inRegToFloat, pregMain);
@@ -165,9 +169,9 @@ public:
             }
             if constexpr (isMulitNum) {
                 if constexpr (modelOrd == POSITIVE_INF_SCALAR_NORM_MODEL_CODE) {
-                    ReduceMax<float>(inRegToFloat, reduceFloat, maskReg);
+                    ReduceMax<float>(inRegToFloat, reduceFloat, pregMain);
                 } else {
-                    ReduceSum<float>(inRegToFloat, reduceFloat, maskReg);
+                    ReduceSum<float>(inRegToFloat, reduceFloat, pregMain);
                 }
             }
             if constexpr (modelOrd == TWO_SCALAR_NORM_MODEL_CODE) {
