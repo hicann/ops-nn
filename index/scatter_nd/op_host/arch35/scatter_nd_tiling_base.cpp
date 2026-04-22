@@ -180,9 +180,15 @@ ge::graphStatus ScatterNdTiling::getRestAvailableSize(uint64_t sampleNum, uint64
   OP_CHECK_IF(indicesDtypeSize <= 0, OP_LOGE(opName, "get indicesType size fail."),
                   return ge::GRAPH_FAILED);
   auto ubBlock = static_cast<uint64_t>(Ops::Base::GetUbBlockSize(context_));
-  uint64_t occupy = sampleNum * Ops::Base::CeilAlign(FLOAT_BYTES * postAxisSize_, ubBlock) + sampleNum * Ops::Base::CeilAlign(FLOAT_BYTES * postAxisSize_, ubBlock) + 
-      Ops::Base::CeilAlign(sampleNum * indicesDtypeSize, ubBlock) * THREE + Ops::Base::CeilAlign(sampleNum * UINT32_BYTES, ubBlock) + TWO * TWO * UB_AGLIN_VALUE +
-      TWO * UB_AGLIN_VALUE + GetSortTmpSize(idType, sampleNum, false) + Ops::Base::CeilAlign(postAxisSize_ * FLOAT_BYTES, ubBlock);
+  uint64_t occupy = sampleNum * Ops::Base::CeilAlign(FLOAT_BYTES * postAxisSize_, ubBlock) + 
+                    sampleNum * Ops::Base::CeilAlign(FLOAT_BYTES * postAxisSize_, ubBlock) + 
+                    Ops::Base::CeilAlign(sampleNum * rankSize_ * indicesDtypeSize, ubBlock) +
+                    Ops::Base::CeilAlign(sampleNum * indicesDtypeSize, ubBlock) * THREE + 
+                    Ops::Base::CeilAlign(sampleNum * UINT32_BYTES, ubBlock) + 
+                    TWO * TWO * UB_AGLIN_VALUE + 
+                    TWO * UB_AGLIN_VALUE +  
+                    GetSortTmpSize(idType, sampleNum, false) + 
+                    Ops::Base::CeilAlign(postAxisSize_ * FLOAT_BYTES, ubBlock);
   return originalSize - occupy;
 }
 
@@ -211,7 +217,7 @@ void ScatterNdTiling::BlockTiling() {
 
 ge::graphStatus ScatterNdTiling::UbTiling() {
   // halfUbSize for double buffer
-  auto halfUbSize = ubSize_ / BUFFER_NUM;
+  auto halfUbSize = (ubSize_ - TWO * TWO * UB_AGLIN_VALUE) / BUFFER_NUM;
   auto indiceNum = indiceShapeSize_ / rankSize_;
   sliceSize_ = updateShapeSize_ / indiceNum;
   OP_CHECK_IF(sliceSize_ == static_cast<uint64_t>(0),
@@ -246,7 +252,7 @@ ge::graphStatus ScatterNdTiling::ScatterNdDeterministicTiling()
   }
   if (DeterministicFlag) {
     OP_LOGD(opName, "ScatterNd Deterministic Non-Quant branch start");
-    ubSize_ = static_cast<uint32_t>(ubSize_ / BUFFER_NUM);
+    ubSize_ = static_cast<uint32_t>((ubSize_ - TWO * TWO * UB_AGLIN_VALUE) / BUFFER_NUM);
     perCoreHandleCol_ = Ops::Base::CeilDiv(afterAxis_, coreNum_);
     logicCoreNum_ = Ops::Base::CeilDiv(afterAxis_, perCoreHandleCol_);
     tailCoreHandleCol_ = static_cast<uint64_t>(afterAxis_) - (logicCoreNum_ - static_cast<uint64_t>(1)) * perCoreHandleCol_;
