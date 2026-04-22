@@ -48,6 +48,8 @@ public:
     uint64_t m_;
     uint64_t n_;
     uint64_t k_;
+    uint64_t skKSingleCore_{1};
+    uint64_t blkK_{1};
     uint64_t mL1_{1};
     uint64_t nL1_{1};
     uint64_t kL1_{1};
@@ -56,6 +58,9 @@ public:
     uint64_t baseK_{16};
 
     bool isBias_{false};
+    bool isSplitSingleK_{false};
+    bool isFirstSplitK_{false};
+    bool isEndSplitK_{false};
     constexpr static uint64_t BUFFER_NUM = 2;
     constexpr static uint64_t HALF_L0_SIZE = L0A_SIZE / BUFFER_NUM / sizeof(A_T);
     // C0_SIZE equals 8 in order to adapt to the fp32 matrix
@@ -98,7 +103,7 @@ public:
 
 public:
     __aicore__ inline void Init(
-        const TupleShape& shape, const TupleShape& tileL1, const TupleShape& tileL0, bool isBias)
+        const TupleShape& shape, const TupleShape& tileL1, const TupleShape& tileL0, bool isBias, bool isSplitSingleK = false)
     {
         m_ = Get<DIMENSION_M>(shape);
         n_ = Get<DIMENSION_N>(shape);
@@ -112,6 +117,7 @@ public:
         baseN_ = Get<DIMENSION_N>(tileL0);
         baseK_ = Get<DIMENSION_K>(tileL0);
         isBias_ = isBias;
+        isSplitSingleK_ = isSplitSingleK;
         // init tensor
         if (isBias_) {
             biasL1Offset_ = nL1_ * sizeof(Bias_T) * BUFFER_NUM;
@@ -297,6 +303,12 @@ public:
         const AscendC::GlobalTensor<C_T>& cGlobal, const AscendC::GlobalTensor<float>& workspaceGlobal,
         const AscendC::LocalTensor<float>& c1Local, uint64_t baseM, uint64_t baseN, bool checkIsSkScene)
     {
+        if (isSplitSingleK_) {
+            PipeBarrier<PIPE_FIX>();
+            if (!isFirstSplitK_) {
+                AscendC::SetAtomicAdd<float>();
+            }
+        }
         AscendC::DataCopyCO12DstParams intriParams;
         intriParams.nSize = baseN;
         intriParams.mSize = baseM;
@@ -328,19 +340,25 @@ public:
         } else {
             AscendC::DataCopy(cGlobal, c1Local, intriParams);
         }
+        if (isSplitSingleK_ && isEndSplitK_) {
+            AscendC::DisableDmaAtomic();
+        }
     }
 
     template <CubeFormat LayoutB = CubeFormat::ND>
     __aicore__ inline void operator()(
         AscendC::GlobalTensor<C_T> cGlobal, AscendC::GlobalTensor<A_T> aGlobal, AscendC::GlobalTensor<B_T> bGlobal,
         AscendC::GlobalTensor<Bias_T> biasGlobal, AscendC::GlobalTensor<float> workspaceGlobal, TupleShape tileShape,
-        int64_t kCntIndex, bool checkIsSkScene)
+        int64_t kCntIndex, bool checkIsSkScene, uint64_t blkK = 0, bool isFirstSplitK = false, bool isEndSplitK = false)
     {
         // mL1_ == ml0, nL1_ == nl0
         uint64_t curML1 = Get<0>(tileShape);
         uint64_t curNL1 = Get<1>(tileShape);
-        uint64_t curSingleCoreK = Get<2>(tileShape);
-        uint64_t curKL1Iter = (curSingleCoreK + kL1_ - 1) / kL1_;
+        skKSingleCore_ = Get<2>(tileShape);
+        blkK_ = blkK;
+        isFirstSplitK_ = isFirstSplitK;
+        isEndSplitK_ = isEndSplitK;
+        uint64_t curKL1Iter = (blkK_ + kL1_ - 1) / kL1_;
         uint64_t ml1Align = Cmct::Gemm::Align(curML1, AscendC::BLOCK_CUBE);
         uint64_t nl1Align = Cmct::Gemm::Align(curNL1, AscendC::BLOCK_CUBE);
         AscendC::MmadParams mmadParams;
@@ -351,7 +369,7 @@ public:
         AscendC::LocalTensor<B_T> bl1Local;
 
         for (uint64_t iter0 = 0; iter0 < curKL1Iter; ++iter0) {
-            uint64_t curKL1 = (iter0 + 1 == curKL1Iter) ? (curSingleCoreK - iter0 * kL1_) : kL1_;
+            uint64_t curKL1 = (iter0 + 1 == curKL1Iter) ? (blkK_ - iter0 * kL1_) : kL1_;
             // switch on pingpong, now only support double buffer in streamk
             uint64_t l1BufId = abL1LoopCnt_ & (BUFFER_NUM - 1);
             uint64_t offsetA = AType::isTrans ? iter0 * kL1_ * m_ : iter0 * kL1_;
@@ -359,7 +377,7 @@ public:
             AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(l1BufId);
 
             uint64_t BiasBufId = abL1LoopCnt_ & 0x1;
-            if (isBias_ && iter0 == 0 && kCntIndex == 0) {
+            if (isBias_ && iter0 == 0 && kCntIndex == 0 && isFirstSplitK_) {
                 CopyInC1(biasGlobal, BiasL1Local[nL1_ * l1BufId], curNL1);
             }
 
@@ -405,7 +423,11 @@ public:
                 mmadParams.k = curK0;
                 mmadParams.unitFlag = (iter0 + 1 == curKL1Iter && iter1 + 1 == kL0Iter) ? FINAL_ACCUMULATION :
                                                                                           NON_FINAL_ACCUMULATION;
-                mmadParams.cmatrixInitVal = (iter0 == 0 && iter1 == 0 && (!isBias_ || (isBias_ && kCntIndex != 0)));
+                if (isSplitSingleK_) {
+                    mmadParams.cmatrixInitVal = (iter0 == 0 && iter1 == 0 && (!isBias_ || (isBias_ && !(kCntIndex ==0 && isFirstSplitK_))));
+                } else {
+                    mmadParams.cmatrixInitVal = (iter0 == 0 && iter1 == 0 && (!isBias_ || (isBias_ && kCntIndex != 0)));
+                }
 
                 if (NeedBias(iter0, iter1, kCntIndex)) {
                     mmadParams.cmatrixSource = true;
@@ -430,7 +452,11 @@ public:
 
     __aicore__ inline bool NeedBias(uint64_t kIter0, uint64_t kIter1, int64_t kCntIndex)
     {
-        return isBias_ && kIter0 == 0 && kIter1 == 0 && kCntIndex == 0;
+        if (isSplitSingleK_) {
+            return isBias_ && kIter0 == 0 && kIter1 == 0 && kCntIndex == 0 && isFirstSplitK_;
+        } else {
+            return isBias_ && kIter0 == 0 && kIter1 == 0 && kCntIndex == 0;
+        }
     }
 
 private:

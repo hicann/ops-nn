@@ -105,6 +105,9 @@ public:
     // ND layout
     using NDLayout = AscendC::Layout<AscendC::Shape<int64_t, int64_t>, AscendC::Stride<int64_t, int64_t>>;
 
+    static constexpr bool isNdFormat = BlockMmadBuilder::formatB == CubeFormat::ND;
+    static constexpr bool isFp32 = std::is_same_v<CType, float>;
+
     // no need to have tensortrait
     AscendC::GlobalTensor<AType> aGlobal_;
     AscendC::GlobalTensor<BType> bGlobal_;
@@ -174,7 +177,7 @@ public:
     {
         // Init
         Init(params);
-        BlockSchedulerOp bs(params.problemShape, params.schParams);
+        BlockSchedulerOp bs(params.problemShape, params.schParams, isFp32, isNdFormat);
         TupleShape tileL1 = bs.GetTileL1Shape();
         int64_t mL1 = Get<MNK_M>(tileL1);
         int64_t nL1 = Get<MNK_N>(tileL1);
@@ -202,7 +205,7 @@ public:
                 AscendC::SetHF32TransMode(1);
             }
             SetMMLayoutTransform(true); // copy out with nfirst, try to make cube and fixp pairing.
-            blockMmadOp.Init(problemShape_, tileL1, tileL0, isBias_);
+            blockMmadOp.Init(problemShape_, tileL1, tileL0, isBias_, bs.isSplitSingleK_);
             int64_t tailSKTotalTileNum = static_cast<int64_t>(((mTileNum * nTileNum) % usedCoreNum_) * skKTileNum);
             for (int64_t tileIdx = curBlockIdx; tileIdx < tileNum; tileIdx += usedCoreNum_) {
                 int64_t tmpTileIdx = tileIdx;
@@ -217,18 +220,24 @@ public:
                 }
                 auto singleCoreShape = bs.GetSingleCoreShape(tmpTileIdx);
                 auto singleCoreCoord = bs.GetSingleCoreCoord(tmpTileIdx);
-                auto blockOffset = GetOffsetStreamK<BlockCoord, TupleShape, BlockMmadBuilder::formatB, BType>(
-                    singleCoreCoord, problemShape_, tileL1, bs.GetCurKSingleCore(tmpTileIdx), transA, transB, isBias_);
-                int64_t offsetA = Get<MNK_M>(blockOffset);
-                int64_t offsetB = Get<MNK_N>(blockOffset);
-                int64_t offsetC = Get<2>(blockOffset);
-                int64_t offsetBias = Get<3>(blockOffset);
-                int64_t offsetWorkspace = (((tmpTileIdx % usedCoreNum_) / skKTileNum) * skKTileNum +
-                                           Get<MNK_K>(singleCoreCoord)) * BLOCK_BASE_M * BLOCK_BASE_N;
-                blockMmadOp.template operator()<BlockMmadBuilder::formatB>(
-                    cGlobal_[offsetC], aGlobal_[offsetA], bGlobal_[offsetB], biasGlobal_[offsetBias],
-                    workspaceGlobal_[offsetWorkspace], singleCoreShape, Get<MNK_K>(singleCoreCoord),
-                    bs.CheckIsSkScene(tmpTileIdx));
+                for (int64_t kOffset = 0; kOffset < bs.realSingleCoreK_; kOffset += bs.blkK_) {
+                    bs.UpdateSplitKIdx(kOffset);
+                    auto blockOffset = GetOffsetStreamK<BlockCoord, TupleShape, BlockMmadBuilder::formatB, BType>(
+                        singleCoreCoord, problemShape_, tileL1, bs.GetCurKSingleCore(tmpTileIdx), transA, transB,
+                        isBias_, bs.splitSingleK_, bs.splitSingleKIdx_);
+                    int64_t offsetA = Get<MNK_M>(blockOffset);
+                    int64_t offsetB = Get<MNK_N>(blockOffset);
+                    int64_t offsetC = Get<2>(blockOffset);
+                    int64_t offsetBias = Get<3>(blockOffset);
+                    int64_t offsetWorkspace =
+                        (((tmpTileIdx % usedCoreNum_) / skKTileNum) * skKTileNum + Get<MNK_K>(singleCoreCoord)) *
+                        BLOCK_BASE_M * BLOCK_BASE_N;
+                    blockMmadOp.template operator()<BlockMmadBuilder::formatB>(
+                        cGlobal_[offsetC], aGlobal_[offsetA], bGlobal_[offsetB], biasGlobal_[offsetBias],
+                        workspaceGlobal_[offsetWorkspace], singleCoreShape, Get<MNK_K>(singleCoreCoord),
+                        bs.CheckIsSkScene(tmpTileIdx), bs.blkK_, bs.splitSingleKIdx_ == 0,
+                        bs.splitSingleKIdx_ == (bs.splitSingleKRound_ - 1));
+                }
                 if (tmpTileIdx + usedCoreNum_ >= tileNum) {
                     CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIC_SYNC_AIV_FLAG);
                     CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(AIC_SYNC_AIV_FLAG + FLAG_ID_MAX);

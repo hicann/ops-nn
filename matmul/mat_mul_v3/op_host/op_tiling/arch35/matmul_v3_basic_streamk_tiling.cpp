@@ -31,11 +31,10 @@ bool CheckStreamKDPSKTilingDefault(const MatmulV3CompileInfo& /* compileInfo */,
 bool CheckStreamKDPSKTilingDav3510(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args)
 {
     constexpr uint64_t STREAM_K_MIN_K_THRESHOLD = 8192UL;
-    // 如果k轴小于32*256/DtypeSize_ 或 mn轴不是256对齐 或 输入是fp32类型，不走stream-k-dpsk
+    // 如果k轴小于32*256/DtypeSize_ 或 mn轴不是256对齐,不走stream-k-dpsk
     if (args.mValue % BASIC_BLOCK_SIZE_256 != 0UL || args.nValue % BASIC_BLOCK_SIZE_256 != 0UL ||
         args.kValue <
-            std::max(STREAM_K_MIN_K_THRESHOLD, compileInfo.aicNum * BASIC_BLOCK_K_128_BYTE) / args.aDtypeSize ||
-        (args.aDtypeSize == DATA_SIZE_FP32 && !args.isHf32)) {
+            std::max(STREAM_K_MIN_K_THRESHOLD, compileInfo.aicNum * BASIC_BLOCK_K_128_BYTE) / args.aDtypeSize) {
         return false;
     }
     // 如果mn用256切分的份数小于核数 或者 取余核数为0或大于一半的核数，则不使用stream-k-dpsk
@@ -60,13 +59,6 @@ bool CheckStreamKSKTilingDefault(const MatmulV3CompileInfo& /* compileInfo */, c
 
 bool CheckStreamKSKTilingDav3510(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args)
 {
-    constexpr uint64_t STREAM_K_MAX_K_THRESHOLD = 2000000UL;
-    // 如果dtype是fp32且k轴大于200万 则走基础模板来保证fp32的精度
-    if (args.aDtypeSize == DATA_SIZE_FP32 && !args.isHf32 &&
-        static_cast<uint64_t>(args.kValue) > STREAM_K_MAX_K_THRESHOLD) {
-        OP_LOGD(args.opName, "Due to the requirement of binary accumulation, current fp32 does not support StreamK");
-        return false;
-    }
     constexpr uint64_t STREAM_K_MIN_K_THRESHOLD = 8192UL;
     if (ops::CeilAlign(static_cast<uint64_t>(args.kValue), BASIC_BLOCK_SIZE_256) <
         std::max(STREAM_K_MIN_K_THRESHOLD, compileInfo.aicNum * BASIC_BLOCK_K_256_BYTE) / args.aDtypeSize) {

@@ -179,7 +179,7 @@ __aicore__ inline AscendC::Coord<int64_t, int64_t, int64_t, int64_t> GetOffsetWi
 template <class BlockCoord_, class ProblemShape_, CubeFormat LayoutB = CubeFormat::ND, class B_T>
 __aicore__ inline AscendC::Coord<int64_t, int64_t, int64_t, int64_t> GetOffsetStreamK(
     BlockCoord_ blockCoord, ProblemShape_ problemShape, AscendC::Shape<int64_t, int64_t, int64_t, int64_t> tileL1,
-    int64_t kSingleCore, bool transA, bool transB, bool isBias)
+    int64_t kSingleCore, bool transA, bool transB, bool isBias, int64_t splitSingleK = 0, int64_t splitSingleKIdx = 0)
 {
     int64_t m = Get<MNK_M>(problemShape);
     int64_t n = Get<MNK_N>(problemShape);
@@ -192,21 +192,22 @@ __aicore__ inline AscendC::Coord<int64_t, int64_t, int64_t, int64_t> GetOffsetSt
     int64_t offsetC = Get<MNK_B>(blockCoord) * m * n + Get<MNK_M>(blockCoord) * mL1 * n + Get<MNK_N>(blockCoord) * nL1;
     int64_t offsetBias = 0;
     int64_t C0_SIZE = BLOCK_BYTE_SIZE / sizeof(B_T);
+    int64_t kOffset = splitSingleKIdx * splitSingleK;
 
     if (transA) {
         offsetA =
-            Get<MNK_B>(blockCoord) * m * k + Get<MNK_M>(blockCoord) * mL1 + Get<MNK_K>(blockCoord) * kSingleCore * m;
+            Get<MNK_B>(blockCoord) * m * k + Get<MNK_M>(blockCoord) * mL1 + (Get<MNK_K>(blockCoord) * kSingleCore + kOffset)* m;
     } else {
         offsetA =
-            Get<MNK_B>(blockCoord) * m * k + Get<MNK_M>(blockCoord) * mL1 * k + Get<MNK_K>(blockCoord) * kSingleCore;
+            Get<MNK_B>(blockCoord) * m * k + Get<MNK_M>(blockCoord) * mL1 * k + Get<MNK_K>(blockCoord) * kSingleCore + kOffset;
     }
     if constexpr (LayoutB == CubeFormat::ND) {
         if (transB) {
             offsetB = Get<MNK_B>(blockCoord) * n * k + Get<MNK_N>(blockCoord) * nL1 * k +
-                      Get<MNK_K>(blockCoord) * kSingleCore;
+                      Get<MNK_K>(blockCoord) * kSingleCore + kOffset;
         } else {
             offsetB = Get<MNK_B>(blockCoord) * n * k + Get<MNK_N>(blockCoord) * nL1 +
-                      Get<MNK_K>(blockCoord) * kSingleCore * n;
+                      (Get<MNK_K>(blockCoord) * kSingleCore + kOffset) * n;
         }
     } else {
         if (transB) {

@@ -46,9 +46,19 @@ public:
     int64_t kTileIdx_{1};
     int64_t curKTileNum_{1};
 
+    bool isFp32_{false};
+    bool isNdFormat_{true};
+ 	bool isSplitSingleK_{false};
+    int64_t splitSingleKIdx_{0};
+    int64_t blkK_{0};   // blockK after spliting singlecoreK
+    int64_t splitSingleKRound_{0};
+    int64_t splitSingleK_{1024}; // split singlecorek by 1024
+    int64_t splitSingleKTail_{0};
+
     int64_t mL1_{0};
     int64_t nL1_{0};
     int64_t kL1_{0};
+    int64_t realSingleCoreK_{0};
     int64_t skKSingleCore_{0};
     int64_t baseM_{0};
     int64_t baseN_{0};
@@ -65,7 +75,9 @@ public:
         const MatMulV3BasicTilingData* tilingData;
     };
 public:
-    __aicore__ inline BlockSchedulerStreamKBuiltIn(const ProblemShape& shape, const Params& params)
+    __aicore__ inline BlockSchedulerStreamKBuiltIn(
+        const ProblemShape& shape, const Params& params, bool isFp32 = false, bool isNdFormat = true)
+        : isFp32_(isFp32), isNdFormat_(isNdFormat)
     {
         usedCoreNum_ = params.tilingData->usedCoreNum;
         m_ = shape.m;
@@ -90,6 +102,11 @@ public:
         // totaltilenum = core num of DP (m*n) + tail core num of SK (m*n*k)
         tileNum_ = (mTileNum_ * nTileNum_ - tailMNTileNum) + tailMNTileNum * skKTileNum_;
         totalMNTileNumInDP_ = mTileNum_ * nTileNum_ - tailMNTileNum;
+
+        // fp32 split singlecorek
+        if (isFp32_ && !isHf32_ && isNdFormat_ && skKSingleCore_ > splitSingleK_) {
+            isSplitSingleK_ = true;
+        }
     }
 
     __aicore__ inline int64_t GetTotalTileNum()
@@ -139,10 +156,22 @@ public:
         int64_t tailL1M = m_ - (mTileNum_ - 1) * mL1_;
         int64_t tailL1N = n_ - (nTileNum_ - 1) * nL1_;
         int64_t tailSingleCoreK = k_ - (curKTileNum_ - 1) * skKSingleCore_;
-        int64_t blkM = (mTileIdx_ == (mTileNum_ -1)) ? tailL1M : mL1_;
-        int64_t blkN = (nTileIdx_ == (nTileNum_ -1)) ? tailL1N : nL1_;
-        int64_t blkK = (kTileIdx_ == (curKTileNum_ -1)) ? tailSingleCoreK : skKSingleCore_;
-        return {blkM, blkN, blkK, 0};
+        int64_t blkM = (mTileIdx_ == (mTileNum_ - 1)) ? tailL1M : mL1_;
+        int64_t blkN = (nTileIdx_ == (nTileNum_ - 1)) ? tailL1N : nL1_;
+        realSingleCoreK_ = (kTileIdx_ == (curKTileNum_ - 1)) ? tailSingleCoreK : skKSingleCore_;
+        return {blkM, blkN, realSingleCoreK_, 0};
+    }
+
+    __aicore__ inline void UpdateSplitKIdx(int64_t kOffset)
+    {
+        if (isSplitSingleK_) {
+            splitSingleKRound_ = realSingleCoreK_ / splitSingleK_;
+            splitSingleKTail_ = realSingleCoreK_ % splitSingleK_ + splitSingleK_;
+            splitSingleKIdx_ = CeilDiv(kOffset, splitSingleK_);
+            blkK_ = splitSingleKIdx_ == (splitSingleKRound_ - 1) ? splitSingleKTail_ : splitSingleK_;
+        } else {
+            blkK_ = realSingleCoreK_;
+        }
     }
 
     __aicore__ inline BlockCoord GetSingleCoreCoord(int64_t tileIdx)

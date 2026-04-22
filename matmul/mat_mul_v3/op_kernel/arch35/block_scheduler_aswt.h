@@ -147,13 +147,8 @@ public:
         if (!isSlice_ && isFp32_ && !isHf32_ && isNdFormat_ && k_ > fp32SplitKThreshold && FullLoadMode_ == 0) {
             isSplitSingleK_ = true;
             splitSingleK_ = fp32SplitKThreshold;
-            if (k_ % fp32SplitKThreshold == 0) {
-                splitSingleKRound_ = k_ / fp32SplitKThreshold;
-                splitSingleKTail_ = fp32SplitKThreshold;
-            } else {
-                splitSingleKRound_ = CeilDiv(k_, fp32SplitKThreshold) - 1;
-                splitSingleKTail_ = k_ % splitSingleK_ + splitSingleK_;
-            }
+            splitSingleKRound_ = k_ / fp32SplitKThreshold;
+            splitSingleKTail_ = k_ % splitSingleK_ + splitSingleK_;
         }
         if (batch_ == 1) {
             mTailCnt_ = params.tilingData->mTailCnt;
