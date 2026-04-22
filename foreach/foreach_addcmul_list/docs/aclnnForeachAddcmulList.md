@@ -427,7 +427,7 @@ int main() {
     LOG_PRINT("out2 result[%ld] is: %f\n", i, out2Data[i]);
   }
 
-  // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
+  // 6. 释放aclTensor，需要根据具体API的接口定义修改
   aclDestroyTensorList(tensorListInput1);
   aclDestroyTensorList(tensorListInput2);
   aclDestroyTensorList(tensorListAnother);
