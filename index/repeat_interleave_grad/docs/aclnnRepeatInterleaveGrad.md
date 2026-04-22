@@ -149,7 +149,7 @@
   </colgroup>
   <thead>
     <tr>
-      <th>561002</th>
+      <th>返回值</th>
       <th>错误码</th>
       <th>描述</th>
     </tr></thead>
@@ -157,20 +157,20 @@
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>传入的self、repeats或out是空指针。</td>
+      <td>传入的yGrad、repeats或out是空指针。</td>
     </tr>
     <tr>
       <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="2">161002</td>
-      <td>self、repeats的数据类型不在支持范围内。</td>
+      <td>yGrad、repeats的数据类型不在支持范围内。</td>
     </tr>
     <tr>
-      <td>self、out的数据类型不一样。</td>
+      <td>yGrad、out的数据类型不一样。</td>
     </tr>
     <tr>
       <td>ACLNN_ERR_INNER_TILING_ERROR</td>
       <td>561002</td>
-      <td>当self不为空tensor，但repeats为空tensor时。</td>
+      <td>repeats为空tensor时。</td>
     </tr>
   </tbody>
   </table>
