@@ -324,6 +324,30 @@ scale dtype should not be FLOAT.");
     return true;
 }
 
+static inline bool CheckDtypeValidInBf16OutScenario(TupleTensor mandatoryTensors)
+{
+    auto x1 = std::get<INDEX_X1_IN_MANDTORY_TUPLE>(mandatoryTensors);
+    auto x2 = std::get<INDEX_X2_IN_MANDTORY_TUPLE>(mandatoryTensors);
+    auto scale = std::get<INDEX_SCALE_IN_MANDTORY_TUPLE>(mandatoryTensors);
+    bool isA8W4 = isA8W4Int(x1, x2) || isA8W4Float(x1, x2);
+    bool passScaleCheckA8W4 = isA8W4 && !(scale->GetDataType() == op::DataType::DT_BF16 ||
+        scale->GetDataType() == op::DataType::DT_FLOAT || scale->GetDataType() == op::DataType::DT_UINT64);
+    if (passScaleCheckA8W4) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "When out dtype is BF16, scale dtype should be BF16/FLOAT/UINT64 in A8W4 scenario, actual dtype is %s.",
+                op::ToString(scale->GetDataType()).GetString());
+        return false;
+    }
+    bool passScaleCheckOthers = !isA8W4 && !(scale->GetDataType() == op::DataType::DT_BF16 || scale->GetDataType() == op::DataType::DT_FLOAT);
+    if (passScaleCheckOthers) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "When out dtype is BF16, scale dtype should be BF16/FLOAT in A4W4/A8W8 scenario, actual dtype is %s.",
+                op::ToString(scale->GetDataType()).GetString());
+        return false;
+    }
+    return true;
+}
+
 static inline bool CheckDtypeValidOnOnlyL0c2outForUnclassified(TupleTensor mandatoryTensors,
                                                                TupleOptional optionalTensors, const aclTensor *out)
 {
@@ -342,12 +366,7 @@ static inline bool CheckDtypeValidOnOnlyL0c2outForUnclassified(TupleTensor manda
                 op::ToString(out->GetDataType()).GetString());
         return false;
     }
-    if (out->GetDataType() == op::DataType::DT_BF16 &&
-        !(scale->GetDataType() == op::DataType::DT_BF16 || scale->GetDataType() == op::DataType::DT_FLOAT
-        || scale->GetDataType() == op::DataType::DT_UINT64)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "When out dtype is BF16, scale dtype should be BF16/FLOAT/UINT64, actual dtype is %s.",
-                op::ToString(scale->GetDataType()).GetString());
+    if (out->GetDataType() == op::DataType::DT_BF16 && !CheckDtypeValidInBf16OutScenario(mandatoryTensors)) {
         return false;
     }
     if (out->GetDataType() == op::DataType::DT_INT8 &&
