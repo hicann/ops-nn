@@ -92,7 +92,10 @@ static inline bool CheckRenormShape(const aclTensor* self, const aclTensor* out)
 static inline bool IsSupportPValue(const aclScalar* p)
 {
     float x = p->ToFloat();
-    if (x <= 0) {
+    if (Ops::NN::AclnnUtil::IsRegbase() && x <= 0) {
+        return false;
+    }
+    if (x < 0) {
         return false;
     }
     return true;

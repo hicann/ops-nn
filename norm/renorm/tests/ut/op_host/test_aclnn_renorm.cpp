@@ -283,7 +283,7 @@ TEST_F(l2_renorm_test, case_p_support)
 
     uint64_t workspace_size1 = 0;
     aclnnStatus aclRet1 = ut1.TestGetWorkspaceSize(&workspace_size1);
-    EXPECT_EQ(aclRet1, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(aclRet1, ACL_SUCCESS);
 
     auto ut2 = OP_API_UT(aclnnRenorm, INPUT(self, p2, dim, maxNorm), OUTPUT(out));
 
