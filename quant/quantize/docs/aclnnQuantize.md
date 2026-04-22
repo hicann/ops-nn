@@ -159,7 +159,7 @@ aclnnStatus aclnnQuantize(
     - 数据类型：
       - 入参`x`、`scales`不支持BFLOAT16、FLOAT32。
       - 入参`zeroPoints`不支持FLOAT32。且当数据类型为BFLOAT16时，`x`、`scales`数据类型均为BFLOAT16。
-      - 出参`out`仅支持支持INT8、UINT8、INT32。
+      - 出参`out`仅支持INT8、UINT8、INT32。
     - 入参`dstType`仅支持取值ACL_INT8、ACL_UINT8、ACL_INT32。
 
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
