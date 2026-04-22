@@ -124,8 +124,7 @@ static bool CheckInputOutputShape(const aclTensor* self, const aclTensor* out)
     if (Ops::NN::AclnnUtil::IsRegbase()) {
         for (size_t i = outputDimNum - 2; i < inputDimNum; i++) {
             if (inputShape.GetDim(i) <= 0) {
-                OP_LOGE(
-                    ACLNN_ERR_PARAM_INVALID, "x'dims is invalid, self No.[%lu] dim is not bigger than 0.", i + 1);
+                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x'dims is invalid, self No.[%lu] dim is not bigger than 0.", i + 1);
                 return false;
             }
         }
@@ -227,20 +226,24 @@ static aclnnStatus DoReduceMean(const aclTensor* self, aclTensor* out, aclOpExec
     int64_t dimNum = self->GetViewShape().GetDimNum();
     int64_t reduceAxes[] = {dimNum - 2, dimNum - 1};
     aclIntArray* axes = executor->AllocIntArray(reduceAxes, 2);
-
-    // ReduceMean支持ND,需要先设置下format
-    aclTensor* input = const_cast<aclTensor*>(self);
-    input = Reformat(self, Format::FORMAT_ND);
-
+    const aclTensor* selfContiguous;
+    if (!Ops::NN::AclnnUtil::IsRegbase()) {
+        // ReduceMean支持ND,需要先设置下format
+        aclTensor* input = const_cast<aclTensor*>(self);
+        input = Reformat(self, Format::FORMAT_ND);
+        selfContiguous = l0op::Contiguous(input, executor);
+    } else {
+        selfContiguous = l0op::Contiguous(self, executor);
+    }
     // 固定写法，将输出self转换成连续的tensor
-    auto selfContiguous = l0op::Contiguous(input, executor);
     CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto reduceMeanResult = l0op::ReduceMean(selfContiguous, axes, true, executor);
     CHECK_RET(reduceMeanResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto format = dimNum == chwShapeSize ? Format::FORMAT_NCL : Format::FORMAT_NCHW;
-    reduceMeanResult = Reformat(reduceMeanResult, format);
+    if (!Ops::NN::AclnnUtil::IsRegbase()) {
+        auto format = dimNum == chwShapeSize ? Format::FORMAT_NCL : Format::FORMAT_NCHW;
+        reduceMeanResult = Reformat(reduceMeanResult, format);
+    }
     // 调用ViewCopy将ReduceMean的结果拷贝到out上
     auto viewCopyResult = l0op::ViewCopy(reduceMeanResult, out, executor);
     CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
