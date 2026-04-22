@@ -53,22 +53,22 @@ bool Conv3DDequantToQuantConv3DFusionPass::FixpipeFusionImpl(GraphPtr& graph, GN
     GNodePtr nodePtr = ConvFusionUtilsPass::GetNodePtr(convNode, convDescInfo);
     FUSION_PASS_CHECK_NOLOG(nodePtr == nullptr, return false);
 
-    ops::FixpipeUtils fixpipeUtils;
+    ops::PostCubeUtils fixpipeUtils;
     // [Step 1] Determine which nodes in the subsequent nodes satisfy fixpipe hardware unit
-    FUSION_PASS_CHECK(fixpipeUtils.GetFixpipeNodeList(nodePtr, pass_context) != GRAPH_SUCCESS,
-        OP_LOGD(convDescInfo.nodeNameStr, "GetFixpipeNodeList failed, no fusion."), return false);
+    FUSION_PASS_CHECK(fixpipeUtils.GetPostCubeNodeList(nodePtr, pass_context) != GRAPH_SUCCESS,
+        OP_LOGD(convDescInfo.nodeNameStr, "GetPostCubeNodeList failed, no fusion."), return false);
 
     // [Step 2] To customize the selection of the fixpipe fusion range
     SelectFixpipePassByWhiteList(fixpipeUtils.m_matchpasses_);
 
     // [Step 3] Fixpipe tool method selects 1 Fixpipe paths
-    FUSION_PASS_CHECK(fixpipeUtils.SelectFixpipeNodeList(false) != GRAPH_SUCCESS,
-        OP_LOGD(convDescInfo.nodeNameStr, "SelectFixpipeNodeList failed, no fusion."), return false);
+    FUSION_PASS_CHECK(fixpipeUtils.SelectPostCubeNodeList(false) != GRAPH_SUCCESS,
+        OP_LOGD(convDescInfo.nodeNameStr, "SelectPostCubeNodeList failed, no fusion."), return false);
 
     // [Step 4] Create the Fixpipe operator node and modify the graph
     std::vector<GNodePtr> newNodes;
-    FUSION_PASS_CHECK(fixpipeUtils.CreateFixpipeNode(convDescInfo.nodeNameStr, *graph, newNodes) != GRAPH_SUCCESS,
-        OP_LOGD(convDescInfo.nodeNameStr, "CreateFixpipeNode failed, no fusion."), return false);
+    FUSION_PASS_CHECK(fixpipeUtils.CreatePostCubeNode(convDescInfo.nodeNameStr, *graph, newNodes) != GRAPH_SUCCESS,
+        OP_LOGD(convDescInfo.nodeNameStr, "CreatePostCubeNode failed, no fusion."), return false);
 
     return true;
 }
@@ -183,9 +183,9 @@ bool Conv3DDequantToQuantConv3DFusionPass::GetFixpipeNodes(const GNode &convNode
     return true;
 }
 
-void Conv3DDequantToQuantConv3DFusionPass::SelectFixpipePassByWhiteList(std::vector<ops::FixPipePassInfo> &matchVec)
+void Conv3DDequantToQuantConv3DFusionPass::SelectFixpipePassByWhiteList(std::vector<ops::PostCubePassInfo> &matchVec)
 {
-    std::vector<ops::FixPipePassInfo> tmpPasses(matchVec);
+    std::vector<ops::PostCubePassInfo> tmpPasses(matchVec);
     matchVec.clear();
     for (auto &tmpPass : tmpPasses) {
         if (tmpPass.m_opnodes.size() < FUSION_LIST_LENGTH) {

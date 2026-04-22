@@ -23,11 +23,11 @@ namespace ops {
 using std::queue;
 using std::set;
 using std::unordered_set;
-class FixPipeAddInputBase {
+class PostCubeAddInputBase {
  public:
-  FixPipeAddInputBase(){};
-  virtual ge::graphStatus DoAddInput(ge::Graph &graph, const FixPipePassInfo &match_pass,
-                             const FixPipeFunctionParamPtr &functpara, std::vector<ge::GNodePtr> &new_nodes) const {
+  PostCubeAddInputBase(){};
+  virtual ge::graphStatus DoAddInput(ge::Graph &graph, const PostCubePassInfo &match_pass,
+                             const PostCubeFunctionParamPtr &functpara, std::vector<ge::GNodePtr> &new_nodes) const {
     (void)graph;
     (void)match_pass;
     (void)functpara;
@@ -38,34 +38,40 @@ class FixPipeAddInputBase {
   ge::graphStatus UpdateSalarInput(ge::TensorDesc tensor_desc, T value, ge::Tensor tensornode,
                           const ge::DataType &data_type) const;
   template <typename T>
-  ge::graphStatus CreateAndUpdateSalarInput(ge::Graph &graph, const FixPipeFunctionParamPtr &functpara, T value,
+  ge::graphStatus CreateAndUpdateScalarInput(ge::Graph &graph, const PostCubeFunctionParamPtr &functpara, T value,
                                    const ge::DataType &data_type, std::vector<ge::GNodePtr> &new_nodes) const;
-  ge::graphStatus CreateScalarInputNode(ge::Graph &graph, const FixPipeFunctionParamPtr &functpara,
+  ge::graphStatus CreateScalarInputNode(ge::Graph &graph, const PostCubeFunctionParamPtr &functpara,
                                 const ge::GNodePtr &first_node, const int64_t input_strategy) const;
-  void SetClipValue6(ge::Graph &graph, const FixPipeFunctionParamPtr &functpara,
+  void SetClipValue6(ge::Graph &graph, const PostCubeFunctionParamPtr &functpara,
                      ge::DataType dst_datatype, std::vector<ge::GNodePtr> &new_nodes) const;
   ge::graphStatus CloneVectorInput(ge::Graph &graph,
-                          const FixPipeNodeInfo &tofuzednode,
-                          const FixPipeFunctionParamPtr &functpara,
+                          const PostCubeNodeInfo &tofuzednode,
+                          const PostCubeFunctionParamPtr &functpara,
                           std::vector<ge::GNodePtr> &new_nodes) const;
-  ge::graphStatus CreateAndUpdateVectorMulsInput(ge::Graph &graph, const FixPipeFunctionParamPtr &functpara,
-                                        const FixPipeNodeInfo &postfuzednode, const FixPipeNodeInfo &tofuzednode,
+  ge::graphStatus CreateAndUpdateVectorMulsInput(ge::Graph &graph, const PostCubeFunctionParamPtr &functpara,
+                                        const PostCubeNodeInfo &postfuzednode, const PostCubeNodeInfo &tofuzednode,
                                         std::vector<ge::GNodePtr> &new_nodes) const;
   ge::graphStatus CreateNewDataNodeDirect(ge::Graph &graph, ge::TensorDesc tensor_desc, ge::Tensor tensornode,
-                                 const FixPipeFunctionParamPtr &functpara) const;
+                                 const PostCubeFunctionParamPtr &functpara) const;
   ge::GNode CreateNewDataNodeOnly(ge::Graph &graph, ge::TensorDesc tensor_desc,
                                     ge::Tensor tensornode, const std::string &op_name) const;
-  ge::GNodePtr GetQuantScaleOffset(const FixPipePassInfo &match_pass,
+  ge::GNodePtr GetQuantScaleOffset(const PostCubePassInfo &match_pass,
                                   const uint32_t &index,
                                   float &scale, float &offset) const;
+  ge::GNodePtr GetFirstNodeOutputDesc(const PostCubePassInfo &match_pass,
+                                      const PostCubeFunctionParamPtr &functpara,
+                                      ge::TensorDesc &output_desc) const;
+  ge::GNodePtr GetNodeOutputDescByIndex(const std::vector<PostCubeNodeInfo> &opnodes,
+                                        uint32_t index,
+                                        ge::TensorDesc &output_desc) const;
   ge::graphStatus CreateAndRelinkCastNode(ge::Graph &graph,
                                  const ge::GNodePtr &inputnode,
                                  const ge::GNodePtr &outputnode,
                                  const int &input_index,
                                  std::vector<ge::GNodePtr> &new_nodes) const;
   template <typename T>
-  ge::graphStatus CreateAndUpdateVectorMulScalarInput(ge::Graph &graph, const FixPipeFunctionParamPtr &functpara,
-                                             const FixPipeNodeInfo &prefuzednode, const T &value,
+  ge::graphStatus CreateAndUpdateVectorMulScalarInput(ge::Graph &graph, const PostCubeFunctionParamPtr &functpara,
+                                             const PostCubeNodeInfo &prefuzednode, const T &value,
                                              std::vector<ge::GNodePtr> &new_nodes) const;
   static bool IsScalar(const ge::Shape &origin_shape);
 
@@ -75,8 +81,8 @@ class FixPipeAddInputBase {
                                        const ge::GNodePtr &post_op_desc) const;
   static ge::GNode CreateVectorMulScalarOpDesc(ge::Graph &graph, const std::string &op_name, const ge::GNodePtr &pre_op_desc,
                                                    const ge::GNodePtr &post_op_desc, const ge::DataType &data_type);
-  ge::graphStatus DoWithClipReluInputWithSingleRelu6(ge::Graph &graph, const FixPipePassInfo &match_pass,
-                                           const FixPipeFunctionParamPtr &functpara,
+  ge::graphStatus DoWithClipReluInputWithSingleRelu6(ge::Graph &graph, const PostCubePassInfo &match_pass,
+                                           const PostCubeFunctionParamPtr &functpara,
                                            std::vector<ge::GNodePtr> &new_nodes) const;
   static void GetShapeAfterExpandDims(const ge::GNode &node, const ge::TensorDesc &tensor_desc, ge::Shape &shape);
   static bool GetShapeByFormat(const ge::Format old_format, const ge::Format new_format, const ge::DataType data_type,
@@ -89,217 +95,223 @@ class FixPipeAddInputBase {
   ge::graphStatus UpdateVectorMulsOutputTensorDesc(const ge::TensorDesc &prenode_inputdesc,
                                           const ge::TensorDesc &postnode_inputdesc,
                                           ge::TensorDesc &out_tensor_desc) const;
-  virtual ~FixPipeAddInputBase() {}
+  virtual ~PostCubeAddInputBase() {}
 };
 
-using FixPipeAddInputPtr = std::shared_ptr<FixPipeAddInputBase>;
+using PostCubeAddInputPtr = std::shared_ptr<PostCubeAddInputBase>;
 
 inline int32_t GetPrimaryFormat(int32_t format) {
   return static_cast<int32_t>(static_cast<uint32_t>(format) & 0xff);
 }
 
-class FixPipeAddInputStrategy21 : public FixPipeAddInputBase {
+class PostCubeAddInputStrategy21 : public PostCubeAddInputBase {
  public:
-  ge::graphStatus DoAddInput(ge::Graph &graph, const FixPipePassInfo &match_pass,
-                    const FixPipeFunctionParamPtr &functpara,
+  ge::graphStatus DoAddInput(ge::Graph &graph, const PostCubePassInfo &match_pass,
+                    const PostCubeFunctionParamPtr &functpara,
                     std::vector<ge::GNodePtr> &new_nodes) const override;
 };
 
-class FixPipeAddInputStrategy22 : public FixPipeAddInputBase {
+class PostCubeAddInputStrategy22 : public PostCubeAddInputBase {
  public:
-  ge::graphStatus DoAddInput(ge::Graph &graph, const FixPipePassInfo &match_pass,
-                    const FixPipeFunctionParamPtr &functpara,
+  ge::graphStatus DoAddInput(ge::Graph &graph, const PostCubePassInfo &match_pass,
+                    const PostCubeFunctionParamPtr &functpara,
                     std::vector<ge::GNodePtr> &new_nodes) const override;
 };
 
-class FixPipeAddInputStrategy23 : public FixPipeAddInputBase {
+class PostCubeAddInputStrategy23 : public PostCubeAddInputBase {
 public:
-  ge::graphStatus DoAddInput(ge::Graph &graph, const FixPipePassInfo &match_pass,
-                    const FixPipeFunctionParamPtr &functpara,
+  ge::graphStatus DoAddInput(ge::Graph &graph, const PostCubePassInfo &match_pass,
+                    const PostCubeFunctionParamPtr &functpara,
                     std::vector<ge::GNodePtr> &new_nodes) const override;
 };
 
-class FixPipeAddInputStrategy24 : public FixPipeAddInputBase {
+class PostCubeAddInputStrategy24 : public PostCubeAddInputBase {
 public:
-  ge::graphStatus DoAddInput(ge::Graph &graph, const FixPipePassInfo &match_pass,
-                    const FixPipeFunctionParamPtr &functpara,
+  ge::graphStatus DoAddInput(ge::Graph &graph, const PostCubePassInfo &match_pass,
+                    const PostCubeFunctionParamPtr &functpara,
                     std::vector<ge::GNodePtr> &new_nodes) const override;
 };
 
-class FixPipeAddInputStrategy25 : public FixPipeAddInputBase {
+class PostCubeAddInputStrategy25 : public PostCubeAddInputBase {
 public:
-  ge::graphStatus DoAddInput(ge::Graph &graph, const FixPipePassInfo &match_pass,
-                    const FixPipeFunctionParamPtr &functpara,
+  ge::graphStatus DoAddInput(ge::Graph &graph, const PostCubePassInfo &match_pass,
+                    const PostCubeFunctionParamPtr &functpara,
                     std::vector<ge::GNodePtr> &new_nodes) const override;
   static void UpdatePostNodeShape(const ge::GNode &pre_node, const ge::GNode &post_node);
   static void UpdateQuantScaleNodeShape(const ge::GNode &quant_scale_node);
+private:
+  ge::graphStatus CreateAndLinkQuantScaleNodes(ge::Graph &graph,
+                                              const PostCubeFunctionParamPtr &functpara,
+                                              const ge::GNodePtr &pre_fuze_node,
+                                              const ge::GNodePtr &post_fuze_node,
+                                              const ge::GNodePtr &post_cube_node) const;
 };
 
-class AddInputStrategyDequntLut : public FixPipeAddInputBase {
+class AddInputStrategyDequntLut : public PostCubeAddInputBase {
  public:
-  ge::graphStatus DoAddInput(ge::Graph &graph, const FixPipePassInfo &match_pass,
-                    const FixPipeFunctionParamPtr &functpara,
+  ge::graphStatus DoAddInput(ge::Graph &graph, const PostCubePassInfo &match_pass,
+                    const PostCubeFunctionParamPtr &functpara,
                     std::vector<ge::GNodePtr> &new_nodes) const override;
 };
 
-class FixPipeAddInputStrategy31 : public FixPipeAddInputBase {
+class PostCubeAddInputStrategy31 : public PostCubeAddInputBase {
  public:
-  ge::graphStatus DoAddInput(ge::Graph &graph, const FixPipePassInfo &match_pass,
-                    const FixPipeFunctionParamPtr &functpara,
+  ge::graphStatus DoAddInput(ge::Graph &graph, const PostCubePassInfo &match_pass,
+                    const PostCubeFunctionParamPtr &functpara,
                     std::vector<ge::GNodePtr> &new_nodes) const override;
 };
 
-class FixPipeAddInputStrategy32 : public FixPipeAddInputBase {
+class PostCubeAddInputStrategy32 : public PostCubeAddInputBase {
  public:
-  ge::graphStatus DoAddInput(ge::Graph &graph, const FixPipePassInfo &match_pass,
-                    const FixPipeFunctionParamPtr &functpara,
+  ge::graphStatus DoAddInput(ge::Graph &graph, const PostCubePassInfo &match_pass,
+                    const PostCubeFunctionParamPtr &functpara,
                     std::vector<ge::GNodePtr> &new_nodes) const override;
 };
 
-class FixPipeAddInputStrategy33 : public FixPipeAddInputBase {
+class PostCubeAddInputStrategy33 : public PostCubeAddInputBase {
  public:
-  ge::graphStatus DoAddInput(ge::Graph &graph, const FixPipePassInfo &match_pass,
-                    const FixPipeFunctionParamPtr &functpara,
+  ge::graphStatus DoAddInput(ge::Graph &graph, const PostCubePassInfo &match_pass,
+                    const PostCubeFunctionParamPtr &functpara,
                     std::vector<ge::GNodePtr> &new_nodes) const override;
 };
 
-class FixPipeAddInputStrategy34 : public FixPipeAddInputBase {
+class PostCubeAddInputStrategy34 : public PostCubeAddInputBase {
  public:
-  ge::graphStatus DoAddInput(ge::Graph &graph, const FixPipePassInfo &match_pass,
-                    const FixPipeFunctionParamPtr &functpara,
+  ge::graphStatus DoAddInput(ge::Graph &graph, const PostCubePassInfo &match_pass,
+                    const PostCubeFunctionParamPtr &functpara,
                     std::vector<ge::GNodePtr> &new_nodes) const override;
 };
 
-class FixPipeAddInputStrategy35 : public FixPipeAddInputBase {
+class PostCubeAddInputStrategy35 : public PostCubeAddInputBase {
  public:
-  ge::graphStatus DoAddInput(ge::Graph &graph, const FixPipePassInfo &match_pass,
-                    const FixPipeFunctionParamPtr &functpara,
+  ge::graphStatus DoAddInput(ge::Graph &graph, const PostCubePassInfo &match_pass,
+                    const PostCubeFunctionParamPtr &functpara,
                     std::vector<ge::GNodePtr> &new_nodes) const override;
 };
 
-class FixPipeAddInputStrategy36 : public FixPipeAddInputBase {
+class PostCubeAddInputStrategy36 : public PostCubeAddInputBase {
  public:
-  ge::graphStatus DoAddInput(ge::Graph &graph, const FixPipePassInfo &match_pass,
-                    const FixPipeFunctionParamPtr &functpara,
+  ge::graphStatus DoAddInput(ge::Graph &graph, const PostCubePassInfo &match_pass,
+                    const PostCubeFunctionParamPtr &functpara,
                     std::vector<ge::GNodePtr> &new_nodes) const override;
 };
 
-class FixPipeAddInputStrategy37 : public FixPipeAddInputBase {
+class PostCubeAddInputStrategy37 : public PostCubeAddInputBase {
  public:
-  ge::graphStatus DoAddInput(ge::Graph &graph, const FixPipePassInfo &match_pass,
-                    const FixPipeFunctionParamPtr &functpara,
+  ge::graphStatus DoAddInput(ge::Graph &graph, const PostCubePassInfo &match_pass,
+                    const PostCubeFunctionParamPtr &functpara,
                     std::vector<ge::GNodePtr> &new_nodes) const override;
 };
 
-class FixPipeAddInputStrategy38 : public FixPipeAddInputBase {
+class PostCubeAddInputStrategy38 : public PostCubeAddInputBase {
  public:
-  ge::graphStatus DoAddInput(ge::Graph &graph, const FixPipePassInfo &match_pass,
-                    const FixPipeFunctionParamPtr &functpara,
+  ge::graphStatus DoAddInput(ge::Graph &graph, const PostCubePassInfo &match_pass,
+                    const PostCubeFunctionParamPtr &functpara,
                     std::vector<ge::GNodePtr> &new_nodes) const override;
 };
 
-class FixPipeAddInputStrategy41 : public FixPipeAddInputBase {
+class PostCubeAddInputStrategy41 : public PostCubeAddInputBase {
  public:
-  ge::graphStatus DoAddInput(ge::Graph &graph, const FixPipePassInfo &match_pass,
-                    const FixPipeFunctionParamPtr &functpara,
+  ge::graphStatus DoAddInput(ge::Graph &graph, const PostCubePassInfo &match_pass,
+                    const PostCubeFunctionParamPtr &functpara,
                     std::vector<ge::GNodePtr> &new_nodes) const override;
 };
 
-class FixPipeAddInputStrategy42 : public FixPipeAddInputBase {
+class PostCubeAddInputStrategy42 : public PostCubeAddInputBase {
  public:
-  ge::graphStatus DoAddInput(ge::Graph &graph, const FixPipePassInfo &match_pass,
-                    const FixPipeFunctionParamPtr &functpara,
+  ge::graphStatus DoAddInput(ge::Graph &graph, const PostCubePassInfo &match_pass,
+                    const PostCubeFunctionParamPtr &functpara,
                     std::vector<ge::GNodePtr> &new_nodes) const override;
 };
 
-class FixPipeAddInputStrategy43 : public FixPipeAddInputBase {
+class PostCubeAddInputStrategy43 : public PostCubeAddInputBase {
  public:
-  ge::graphStatus DoAddInput(ge::Graph &graph, const FixPipePassInfo &match_pass,
-                    const FixPipeFunctionParamPtr &functpara,
+  ge::graphStatus DoAddInput(ge::Graph &graph, const PostCubePassInfo &match_pass,
+                    const PostCubeFunctionParamPtr &functpara,
                     std::vector<ge::GNodePtr> &new_nodes) const override;
 };
 
-class FixPipeAddInputStrategy44 : public FixPipeAddInputBase {
+class PostCubeAddInputStrategy44 : public PostCubeAddInputBase {
  public:
-  ge::graphStatus DoAddInput(ge::Graph &graph, const FixPipePassInfo &match_pass,
-                    const FixPipeFunctionParamPtr &functpara,
+  ge::graphStatus DoAddInput(ge::Graph &graph, const PostCubePassInfo &match_pass,
+                    const PostCubeFunctionParamPtr &functpara,
                     std::vector<ge::GNodePtr> &new_nodes) const override;
 };
 
-class FixPipeAddInputStrategy51 : public FixPipeAddInputBase {
+class PostCubeAddInputStrategy51 : public PostCubeAddInputBase {
  public:
-  ge::graphStatus DoAddInput(ge::Graph &graph, const FixPipePassInfo &match_pass,
-                    const FixPipeFunctionParamPtr &functpara,
+  ge::graphStatus DoAddInput(ge::Graph &graph, const PostCubePassInfo &match_pass,
+                    const PostCubeFunctionParamPtr &functpara,
                     std::vector<ge::GNodePtr> &new_nodes) const override;
 };
 
-class FixPipeAddInputStrategy52 : public FixPipeAddInputBase {
+class PostCubeAddInputStrategy52 : public PostCubeAddInputBase {
 public:
-    ge::graphStatus DoAddInput(ge::Graph &graph, const FixPipePassInfo &match_pass,
-                      const FixPipeFunctionParamPtr &functpara,
-                      std::vector<ge::GNodePtr> &new_nodes) const override;
-};
-
-class FixPipeAddInputStrategy61 : public FixPipeAddInputBase {
- public:
-  ge::graphStatus DoAddInput(ge::Graph &graph, const FixPipePassInfo &match_pass,
-                    const FixPipeFunctionParamPtr &functpara,
+  ge::graphStatus DoAddInput(ge::Graph &graph, const PostCubePassInfo &match_pass,
+                    const PostCubeFunctionParamPtr &functpara,
                     std::vector<ge::GNodePtr> &new_nodes) const override;
 };
 
-class FixPipeAddInputStrategy62 : public FixPipeAddInputBase {
+class PostCubeAddInputStrategy61 : public PostCubeAddInputBase {
  public:
-  ge::graphStatus DoAddInput(ge::Graph &graph, const FixPipePassInfo &match_pass,
-                    const FixPipeFunctionParamPtr &functpara,
+  ge::graphStatus DoAddInput(ge::Graph &graph, const PostCubePassInfo &match_pass,
+                    const PostCubeFunctionParamPtr &functpara,
                     std::vector<ge::GNodePtr> &new_nodes) const override;
 };
 
-class FixPipeAddInputStrategy63 : public FixPipeAddInputBase {
+class PostCubeAddInputStrategy62 : public PostCubeAddInputBase {
  public:
-  ge::graphStatus DoAddInput(ge::Graph &graph, const FixPipePassInfo &match_pass,
-                    const FixPipeFunctionParamPtr &functpara,
+  ge::graphStatus DoAddInput(ge::Graph &graph, const PostCubePassInfo &match_pass,
+                    const PostCubeFunctionParamPtr &functpara,
                     std::vector<ge::GNodePtr> &new_nodes) const override;
 };
 
-class FixPipeAddInputStrategy64 : public FixPipeAddInputBase {
+class PostCubeAddInputStrategy63 : public PostCubeAddInputBase {
  public:
-  ge::graphStatus DoAddInput(ge::Graph &graph, const FixPipePassInfo &match_pass,
-                    const FixPipeFunctionParamPtr &functpara,
+  ge::graphStatus DoAddInput(ge::Graph &graph, const PostCubePassInfo &match_pass,
+                    const PostCubeFunctionParamPtr &functpara,
                     std::vector<ge::GNodePtr> &new_nodes) const override;
 };
 
-class FixPipeAddInputStrategy71 : public FixPipeAddInputBase {
+class PostCubeAddInputStrategy64 : public PostCubeAddInputBase {
  public:
-  ge::graphStatus DoAddInput(ge::Graph &graph, const FixPipePassInfo &match_pass,
-                    const FixPipeFunctionParamPtr &functpara,
+  ge::graphStatus DoAddInput(ge::Graph &graph, const PostCubePassInfo &match_pass,
+                    const PostCubeFunctionParamPtr &functpara,
                     std::vector<ge::GNodePtr> &new_nodes) const override;
 };
 
-class FixPipeAddInputStrategy72 : public FixPipeAddInputBase {
+class PostCubeAddInputStrategy71 : public PostCubeAddInputBase {
  public:
-  ge::graphStatus DoAddInput(ge::Graph &graph, const FixPipePassInfo &match_pass,
-                    const FixPipeFunctionParamPtr &functpara,
+  ge::graphStatus DoAddInput(ge::Graph &graph, const PostCubePassInfo &match_pass,
+                    const PostCubeFunctionParamPtr &functpara,
                     std::vector<ge::GNodePtr> &new_nodes) const override;
 };
 
-class FixPipeAddInputStrategy81 : public FixPipeAddInputBase {
+class PostCubeAddInputStrategy72 : public PostCubeAddInputBase {
  public:
-  ge::graphStatus DoAddInput(ge::Graph &graph, const FixPipePassInfo &match_pass,
-                    const FixPipeFunctionParamPtr &functpara,
+  ge::graphStatus DoAddInput(ge::Graph &graph, const PostCubePassInfo &match_pass,
+                    const PostCubeFunctionParamPtr &functpara,
                     std::vector<ge::GNodePtr> &new_nodes) const override;
 };
 
-class FixPipeAddInputStrategy91 : public FixPipeAddInputBase {
+class PostCubeAddInputStrategy81 : public PostCubeAddInputBase {
  public:
-  ge::graphStatus DoAddInput(ge::Graph &graph, const FixPipePassInfo &match_pass,
-                    const FixPipeFunctionParamPtr &functpara,
+  ge::graphStatus DoAddInput(ge::Graph &graph, const PostCubePassInfo &match_pass,
+                    const PostCubeFunctionParamPtr &functpara,
                     std::vector<ge::GNodePtr> &new_nodes) const override;
 };
 
-class FixPipeAddInputStrategyDefault : public FixPipeAddInputBase {
+class PostCubeAddInputStrategy91 : public PostCubeAddInputBase {
  public:
-  ge::graphStatus DoAddInput(ge::Graph &graph, const FixPipePassInfo &match_pass,
-                    const FixPipeFunctionParamPtr &functpara,
+  ge::graphStatus DoAddInput(ge::Graph &graph, const PostCubePassInfo &match_pass,
+                    const PostCubeFunctionParamPtr &functpara,
+                    std::vector<ge::GNodePtr> &new_nodes) const override;
+};
+
+class PostCubeAddInputStrategyDefault : public PostCubeAddInputBase {
+ public:
+  ge::graphStatus DoAddInput(ge::Graph &graph, const PostCubePassInfo &match_pass,
+                    const PostCubeFunctionParamPtr &functpara,
                     std::vector<ge::GNodePtr> &new_nodes) const override;
 };
 }  // namespace ops

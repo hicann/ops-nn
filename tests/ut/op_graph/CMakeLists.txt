@@ -24,6 +24,13 @@ if(UT_TEST_ALL OR OP_GRAPH_UT)
         endif()
     endforeach()
 
+    if(EXISTS ${OPS_NN_DIR}/common/tests/ut/op_graph/CMakeLists.txt)
+        if(NOT ASCEND_OP_NAME)
+            add_subdirectory(${OPS_NN_DIR}/common/tests/ut/op_graph
+                            ${CMAKE_CURRENT_BINARY_DIR}/common_op_graph)
+        endif()
+    endif()
+
     ## add opgraph ut exe:  nn_op_graph_ut
     set(OP_GRAPH_UT_EXE ${PKG_NAME}_op_graph_ut)
     

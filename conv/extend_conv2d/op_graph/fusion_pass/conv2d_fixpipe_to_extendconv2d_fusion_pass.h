@@ -134,7 +134,7 @@ private:
     bool IsReluEnable(
         const std::vector<ge::AscendString> &fixpipeFusionOp, const ge::AscendString &opType = "default") const;
     bool IsScaleEnable(const std::vector<ge::AscendString> &fixpipeFusionOp) const;
-    void SelectFixpipePassByWhiteList(std::vector<ops::FixPipePassInfo> &matchLists) const;
+    void SelectFixpipePassByWhiteList(std::vector<ops::PostCubePassInfo> &matchLists) const;
     bool UpdateExtendConv2DDesc(ge::GNode *extendConv2D) const;
     bool UpdateScaleReluDesc(ge::GNodePtr fixpipe, ge::GNode *extendConv2D,
         const int32_t getIndex, const int32_t updateIndex, const ge::AscendString &name) const;

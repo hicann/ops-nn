@@ -22,7 +22,7 @@ using std::queue;
 using std::set;
 using std::unordered_set;
 namespace {
-const std::string kFixpipeConfigKey = "Intrinsic_fix_pipe_";
+const std::string kPostCubeConfigKey = "Intrinsic_fix_pipe_";
 const std::string kUnitListName = "unit_list";
 const std::string kFuncList = "_func_list";
 const std::string kDependUnits = "_depend_unit";
@@ -64,7 +64,7 @@ const std::string kPRelu = "PRelu";
 const std::string kSigmoid = "Sigmoid";
 const std::string kElu = "Elu";
 const std::string kTanh = "Tanh";
-const std::string kFixPipe = "FixPipe";
+const std::string kPostCube = "FixPipe";
 const std::string kFusionOpList = "fusion_op_list";
 const std::string kUnitList = "unit_list";
 const std::string kEltwiseMode = "eltwise_mode";
@@ -110,8 +110,8 @@ const std::string kInfNan = "INF_NAN";
 const std::string SWITCH = "Switch";
 const std::string ATTR_NEGATIVE_SLOPE = "negative_slope";
 const std::string ELTWISE = "Eltwise";
-const std::string kSupportFixPipeAbility = "support_fixpipe_ability";
-const std::string kNotSupportFixpipeFusion = "_not_support_fixpipe_fusion";
+const std::string kSupportPostCubeAbility = "support_fixpipe_ability";
+const std::string kNotSupportPostCubeFusion = "_not_support_post_cube_fusion";
 const std::string TRANSDATA_INPUT_NAME = "src";
 const std::string TRANSDATA_OUTPUT_NAME = "dst";
 const std::string UNSQUEEZE_V2_INPUT_NAME = "x";
@@ -123,7 +123,7 @@ const std::string AXIS_ATTR_NAME = "axis";
 const std::string ATTR_SCALE = "scale"; 
 const std::string ATTR_OFFSET = "offset";
 
-const size_t kFixpipeNodeLimited = 2;
+const size_t kPostCubeNodeLimited = 2;
 const size_t kPassMinSize = 2;
 const size_t kMaxOpNmaLen = 512U;
 const uint32_t kPassFlag = 2;
@@ -141,7 +141,7 @@ const ge::AscendString kAscendEltwiseAsc(ELTWISE.c_str());
 const ge::AscendString kAscendAddAsc(kAdd.c_str());
 const ge::AscendString kAscendConv2DAsc(CONV2D.c_str());
 const ge::AscendString kAscendMergeAsc(kMerge.c_str());
-const ge::AscendString kAscendFixPipeAsc(kFixPipe.c_str());
+const ge::AscendString kAscendPostCubeAsc(kPostCube.c_str());
 const ge::AscendString kAscendLeakyReluAsc(LEAKY_RELU.c_str());
 const ge::AscendString kAscendPReluAsc(kPRelu.c_str());
 const ge::AscendString kAscendRelu6Asc(RELU6.c_str());
@@ -164,7 +164,7 @@ const ge::AscendString kAscendFusionOpListAsc(kFusionOpList.c_str());
 const ge::AscendString kAscendUnitListAsc(kUnitList.c_str());
 const ge::AscendString kAscendEltwiseModeAsc(kEltwiseMode.c_str());
 
-const std::vector<std::string> kSupportFixpipeCubeTypeVec = {kDepthwiseConv2D,
+const std::vector<std::string> kSupportPostCubeCubeTypeVec = {kDepthwiseConv2D,
                                                              CONV2D,
                                                              kConv3D,
                                                              kMatMul,
@@ -197,7 +197,7 @@ const std::unordered_set<std::string> kCandidateReluTypes = {kPRelu,
                                                              RELU6,
                                                              LEAKY_RELU,
                                                              RELU};
-const std::unordered_set<ge::Format> kMatmulNotSupportFixpipeFormatSet = {ge::FORMAT_ND,
+const std::unordered_set<ge::Format> kMatmulNotSupportPostCubeFormatSet = {ge::FORMAT_ND,
                                                                           ge::FORMAT_NCHW,
                                                                           ge::FORMAT_NHWC,
                                                                           ge::FORMAT_HWCN,
@@ -211,7 +211,7 @@ const unordered_set<std::string> kCubeCompressOpList = {kConv2DCompress,
                                                         kMatMulV2Compress,
                                                         kConv2DTransposeDCompress,
                                                         kBatchMatMulCompress};
-const std::map<std::string, std::string> kFixpipeInstruction2OpTypeMap{{"requant", kAscendRequant},
+const std::map<std::string, std::string> kPostCubeInstruction2OpTypeMap{{"requant", kAscendRequant},
                                                                        {"quant", kAscendQuant},
                                                                        {"dequant", kAscendDequant},
                                                                        {"cast", kCast},
@@ -227,24 +227,24 @@ const std::map<std::string, std::string> kFixpipeInstruction2OpTypeMap{{"requant
                                                                        {"sigmoid", kSigmoid},
                                                                        {"elu", kElu},
                                                                        {"tanh", kTanh}};
-const std::array<FixpipeAbilityAttr,
-    static_cast<size_t>(FixpipeAbilityType::FixpipeAbilityTypeBottom)> kFixpipeAbilityAttrs {
+const std::array<PostCubeAbilityAttr,
+    static_cast<size_t>(PostCubeAbilityType::PostCubeAbilityTypeBottom)> kPostCubeAbilityAttrs {
         kSupportPostEltwiseBroadcast, kSupportMultipleOutput, kUseGmAtomicAdd, kNodeCantAccess
 };
 
-const std::vector<std::string> kSupportFixpipeUtilFuncCubeTypeVec = {CONV2D};
+const std::vector<std::string> kSupportPostCubeUtilFuncCubeTypeVec = {CONV2D};
 
-FixPipeUnit::~FixPipeUnit() {
+PostCubeUnit::~PostCubeUnit() {
   dependunits_.clear();
   dependunitsindex_.clear();
   opnodes_.clear();
 }
 
-FixPipeNodeInfo::~FixPipeNodeInfo() {
-  node_tofixpipelist_.clear();
+PostCubeNodeInfo::~PostCubeNodeInfo() {
+  node_topost_cubelist_.clear();
 }
 
-ge::DataType FixpipeComm::TranferString(const std::string &configstr) {
+ge::DataType PostCubeComm::TranferString(const std::string &configstr) {
   if (configstr == "s4") {
     return ge::DT_INT4;
   } else if (configstr == "s8") {
@@ -273,7 +273,7 @@ ge::DataType FixpipeComm::TranferString(const std::string &configstr) {
   return ge::DT_UNDEFINED;
 }
 
-CONFIGDTYPE FixpipeComm::TransFerConfig2Dtype(const std::string &configstr) {
+CONFIGDTYPE PostCubeComm::TransFerConfig2Dtype(const std::string &configstr) {
   CONFIGDTYPE ret;
   ret.has_output_dtype = false;
   ret.input_dtype = ge::DT_UNDEFINED;
@@ -296,39 +296,39 @@ CONFIGDTYPE FixpipeComm::TransFerConfig2Dtype(const std::string &configstr) {
   return ret;
 }
 
-bool FixpipeComm::ReadPlatFormConfig(const ge::CustomPassContext &context, const bool &skip_trans,
+bool PostCubeComm::ReadPlatFormConfig(const ge::CustomPassContext &context, const bool &skip_trans,
     std::vector<std::string> &unit_list, std::map<std::string, std::vector<std::string>> &depends_list,
-    std::map<std::string, std::map<std::string, std::vector<CONFIGDTYPE>>> &fixpipe_map) {
+    std::map<std::string, std::map<std::string, std::vector<CONFIGDTYPE>>> &post_cube_map) {
   fe::PlatFormInfos platform_infos;
   fe::OptionalInfos optional_infos;
   if (fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(
                                           platform_infos, optional_infos) != ge::GRAPH_SUCCESS) {
-    OPS_LOG_W("Fixpipe", "Fail to get platform info without soc version.");
+    OPS_LOG_W("PostCube", "Fail to get platform info without soc version.");
     return false;
   }
-  // inputmap first key is startwith "Intrinsic_fix_pipe_" second fixpipe config value
+  // inputmap first key is startwith "Intrinsic_fix_pipe_" second post_cube config value
   std::map<std::string, std::vector<std::string>> input_map = optional_infos.GetFixPipeDtypeMap();
-  for (auto &iter : input_map[kFixpipeConfigKey + kUnitListName]) {
+  for (auto &iter : input_map[kPostCubeConfigKey + kUnitListName]) {
     if (skip_trans && iter == kPostTransform) {
       continue;
     }
-    std::vector<std::string> &oplist = input_map[kFixpipeConfigKey + iter + kFuncList];
+    std::vector<std::string> &oplist = input_map[kPostCubeConfigKey + iter + kFuncList];
     std::map<std::string, std::vector<CONFIGDTYPE>> outputinnermap;
     for (auto &opname : oplist) {
       if (opname == kClipRelu) {
         ge::AscendString satuate_mode;
         ge::graphStatus status = context.GetOptionValue(kAscendSatuateModeAsc, satuate_mode);
-        OPS_LOG_D("Fixpipe", "The option value[ge.satuateMode] in ge context is %s.", satuate_mode.GetString());
+        OPS_LOG_D("PostCube", "The option value[ge.satuateMode] in ge context is %s.", satuate_mode.GetString());
         if (status == ge::GRAPH_SUCCESS && satuate_mode == kAscendInfNanAsc) {
           continue;
         }
       }
       std::string outstring;
-      auto item = kFixpipeInstruction2OpTypeMap.find(opname);
-      if (item != kFixpipeInstruction2OpTypeMap.end()) {
+      auto item = kPostCubeInstruction2OpTypeMap.find(opname);
+      if (item != kPostCubeInstruction2OpTypeMap.end()) {
         outstring = item->second;
       }
-      vector<std::string> &dtypelist = input_map[kFixpipeConfigKey + iter + "_" + opname];
+      vector<std::string> &dtypelist = input_map[kPostCubeConfigKey + iter + "_" + opname];
       std::vector<CONFIGDTYPE> outputsinner;
       for (auto &dtype : dtypelist) {
         CONFIGDTYPE dtypestr = TransFerConfig2Dtype(dtype);
@@ -336,53 +336,53 @@ bool FixpipeComm::ReadPlatFormConfig(const ge::CustomPassContext &context, const
       }
       outputinnermap.emplace(make_pair(outstring, outputsinner));
     }
-    std::vector<std::string> &depends_units = input_map[kFixpipeConfigKey + iter + kDependUnits];
+    std::vector<std::string> &depends_units = input_map[kPostCubeConfigKey + iter + kDependUnits];
     depends_list.emplace(make_pair(iter, depends_units));
-    fixpipe_map.emplace(make_pair(iter, outputinnermap));
+    post_cube_map.emplace(make_pair(iter, outputinnermap));
     unit_list.push_back(iter);
   }
   return true;
 }
 
-ge::graphStatus FixpipeComm::CheckPeerOutNode(const ge::GNodePtr &vectornode, const uint32_t &input_index) {
-  OPS_LOG_D("Fixpipe", "name = %s type = %s index = %d", GNodeGetName(vectornode).GetString(), GNodeGetType(vectornode).GetString(), input_index);
+ge::graphStatus PostCubeComm::CheckPeerOutNode(const ge::GNodePtr &vectornode, const uint32_t &input_index) {
+  OPS_LOG_D("PostCube", "name = %s type = %s index = %d", GNodeGetName(vectornode).GetString(), GNodeGetType(vectornode).GetString(), input_index);
   ge::TensorDesc input_desc;
   if (vectornode->GetInputDesc(input_index, input_desc) != ge::GRAPH_SUCCESS) {
-    OPS_LOG_D("Fixpipe", "GetInputDesc() = failed");
+    OPS_LOG_D("PostCube", "GetInputDesc() = failed");
     return ge::GRAPH_FAILED;
   }
 
   auto cube_node = vectornode->GetInDataNodesAndPortIndexs(input_index);
   if (cube_node.first == nullptr) {
-    OPS_LOG_D("Fixpipe", "GetInDataNodes() = null");
+    OPS_LOG_D("PostCube", "GetInDataNodes() = null");
     return ge::GRAPH_FAILED;
   }
   return ge::GRAPH_SUCCESS;
 }
 
-ge::GNodePtr FixpipeComm::GetConstNode(const ge::GNodePtr &vectornode, uint32_t &depth) {
+ge::GNodePtr PostCubeComm::GetConstNode(const ge::GNodePtr &vectornode, uint32_t &depth) {
   if (vectornode == nullptr) {
     return nullptr;
   }
-  OPS_LOG_D("Fixpipe", "name = %s type = %s depth = %d", GNodeGetName(vectornode).GetString(), GNodeGetType(vectornode).GetString(), depth);
+  OPS_LOG_D("PostCube", "name = %s type = %s depth = %d", GNodeGetName(vectornode).GetString(), GNodeGetType(vectornode).GetString(), depth);
   if (depth >= kMaxDepth) {
     return nullptr;
   }
   if (GNodeGetType(vectornode) == kAscendConstantAsc) {
-    OPS_LOG_D("Fixpipe", "name = %s type = %s is constant", GNodeGetName(vectornode).GetString(), GNodeGetType(vectornode).GetString());
+    OPS_LOG_D("PostCube", "name = %s type = %s is constant", GNodeGetName(vectornode).GetString(), GNodeGetType(vectornode).GetString());
     return vectornode;
   } else {
     if (CheckPeerOutNode(vectornode, 0) == ge::GRAPH_SUCCESS) {
       depth++;
       auto node = vectornode->GetInDataNodesAndPortIndexs(0);
-      OPS_LOG_D("Fixpipe", "name = %s type = %s depth = %d", GNodeGetName(node.first).GetString(), GNodeGetType(node.first).GetString(), depth);
+      OPS_LOG_D("PostCube", "name = %s type = %s depth = %d", GNodeGetName(node.first).GetString(), GNodeGetType(node.first).GetString(), depth);
       return GetConstNode(node.first, depth);
     }
     return nullptr;
   }
 }
 
-ge::GNodePtr FixpipeComm::GetConstNode(const ge::GNodePtr &vectornode) {
+ge::GNodePtr PostCubeComm::GetConstNode(const ge::GNodePtr &vectornode) {
   if (CheckPeerOutNode(vectornode, 1) != ge::GRAPH_SUCCESS) {
     return nullptr;
   }
@@ -395,18 +395,18 @@ ge::GNodePtr FixpipeComm::GetConstNode(const ge::GNodePtr &vectornode) {
 }
 
 template <typename T>
-bool FixpipeComm::JudgedataImpl(uint8_t *data, const size_t &data_size) {
+bool PostCubeComm::JudgedataImpl(uint8_t *data, const size_t &data_size) {
   T *shape_data = const_cast<T *>(reinterpret_cast<const T *>(data));
   for (size_t i = 0; i < static_cast<size_t>(data_size / sizeof(T)); i++) {
     if (shape_data[i] < 0) {
-      OPS_LOG_D("Fixpipe", "shape_data = %f", static_cast<float>(shape_data[i]));
+      OPS_LOG_D("PostCube", "shape_data = %f", static_cast<float>(shape_data[i]));
       return false;
     }
   }
   return true;
 }
 
-bool FixpipeComm::JudegedataUInt64(uint8_t *data, const size_t &data_size) {
+bool PostCubeComm::JudegedataUInt64(uint8_t *data, const size_t &data_size) {
   uint64_t *shape_data = const_cast<uint64_t *>(reinterpret_cast<const uint64_t *>(data));
   for (size_t i = 0; i < static_cast<size_t>(data_size / sizeof(uint64_t)); i++) {
     uint32_t scale_deq = GET_DEQUANT_SCALE_DEQ(shape_data[i]);
@@ -421,7 +421,7 @@ bool FixpipeComm::JudegedataUInt64(uint8_t *data, const size_t &data_size) {
   return true;
 }
 
-bool FixpipeComm::JudgedataFp16(uint8_t *data, const size_t &data_size) {
+bool PostCubeComm::JudgedataFp16(uint8_t *data, const size_t &data_size) {
   ops::fp16_t *shape_data = const_cast<ops::fp16_t *>(reinterpret_cast<const ops::fp16_t *>(data));
   for (size_t i = 0; i < (data_size / sizeof(int16_t)); i++) {
     if (shape_data[i].ToInt16() < 0) {
@@ -431,7 +431,7 @@ bool FixpipeComm::JudgedataFp16(uint8_t *data, const size_t &data_size) {
   return true;
 }
 
-bool FixpipeComm::Judgedata(uint8_t *data, const size_t &data_size, const ge::DataType &data_type) {
+bool PostCubeComm::Judgedata(uint8_t *data, const size_t &data_size, const ge::DataType &data_type) {
   if (data == nullptr || data_size == 0) {
     return false;
   }
@@ -463,10 +463,10 @@ bool FixpipeComm::Judgedata(uint8_t *data, const size_t &data_size, const ge::Da
   }
 }
 
-bool FixpipeComm::CheckConstValueData(const ge::GNodePtr &vectornode) {
+bool PostCubeComm::CheckConstValueData(const ge::GNodePtr &vectornode) {
   auto const_node = GetConstNode(vectornode);
   if (const_node == nullptr) {
-    OPS_LOG_D("Fixpipe", "Node[%s, %s] does not have const input.", GNodeGetName(vectornode).GetString(), GNodeGetType(vectornode).GetString());
+    OPS_LOG_D("PostCube", "Node[%s, %s] does not have const input.", GNodeGetName(vectornode).GetString(), GNodeGetType(vectornode).GetString());
     return false;
   }
   ge::TensorDesc cur_tensor_desc;
@@ -476,22 +476,16 @@ bool FixpipeComm::CheckConstValueData(const ge::GNodePtr &vectornode) {
   ge::Tensor weight_value;
   GNodeGetAttr(const_node, kAttrNameWeight, weight_value);
   auto datatype = cur_tensor_desc.GetDataType();
-  OPS_LOG_D("Fixpipe", "datatype = %d", static_cast<uint32_t>(datatype));
+  OPS_LOG_D("PostCube", "datatype = %d", static_cast<uint32_t>(datatype));
   return Judgedata(const_cast<uint8_t *>(reinterpret_cast<const uint8_t *>(weight_value.GetData())),
                    weight_value.GetSize(), datatype);
 }
 
-bool FixpipeComm::CheckIsInVector(const std::vector<FixPipeNodeInfo> &m_opnodes, const uint32_t &index) {
-  if (m_opnodes.size() == 0) {
-    return false;
-  }
-  if (index <= (m_opnodes.size() - 1)) {
-    return true;
-  }
-  return false;
+bool PostCubeComm::CheckIsInVector(const std::vector<PostCubeNodeInfo> &m_opnodes, const uint32_t &index) {
+  return index < m_opnodes.size();
 }
 
-ge::GNodePtr FixpipeComm::GetMergeNodeByCube(const ge::GNodePtr &node_ptr) {
+ge::GNodePtr PostCubeComm::GetMergeNodeByCube(const ge::GNodePtr &node_ptr) {
   ge::GNodePtr merge_node = GetMergeNode(node_ptr);
   if (merge_node == nullptr) {
     return nullptr;
@@ -502,7 +496,7 @@ ge::GNodePtr FixpipeComm::GetMergeNodeByCube(const ge::GNodePtr &node_ptr) {
   return merge_node;
 }
 
-ge::GNodePtr FixpipeComm::GetMergeNode(const ge::GNodePtr &node_ptr) {
+ge::GNodePtr PostCubeComm::GetMergeNode(const ge::GNodePtr &node_ptr) {
   for (size_t idx = 0; idx < node_ptr->GetOutputsSize(); ++idx) {
     auto outputNodesPairs = node_ptr->GetOutDataNodesAndPortIndexs(idx);
     for (const auto &outputPair : outputNodesPairs) {
@@ -515,13 +509,13 @@ ge::GNodePtr FixpipeComm::GetMergeNode(const ge::GNodePtr &node_ptr) {
   return nullptr;
 }
 
-bool FixpipeComm::CheckMergeInput(const ge::GNodePtr &merge_node) {
+bool PostCubeComm::CheckMergeInput(const ge::GNodePtr &merge_node) {
   if (CheckPeerOutNode(merge_node, 0) != ge::GRAPH_SUCCESS) {
-    OPS_LOG_D("Fixpipe", "name = %s type = %s hast input 0node ", GNodeGetName(merge_node).GetString(), GNodeGetType(merge_node).GetString());
+    OPS_LOG_D("PostCube", "name = %s type = %s hast input 0node ", GNodeGetName(merge_node).GetString(), GNodeGetType(merge_node).GetString());
     return false;
   }
   if (CheckPeerOutNode(merge_node, 1) != ge::GRAPH_SUCCESS) {
-    OPS_LOG_D("Fixpipe", "name = %s type = %s hast input 1 node", GNodeGetName(merge_node).GetString(), GNodeGetType(merge_node).GetString());
+    OPS_LOG_D("PostCube", "name = %s type = %s hast input 1 node", GNodeGetName(merge_node).GetString(), GNodeGetType(merge_node).GetString());
     return false;
   }
   auto inputnode0 = merge_node->GetInDataNodesAndPortIndexs(0);
@@ -534,31 +528,31 @@ bool FixpipeComm::CheckMergeInput(const ge::GNodePtr &merge_node) {
       kCubeCompressOpList.count(std::string(GNodeGetType(inputnode1.first).GetString())) == 0) {
     return false;
   }
-  OPS_LOG_D("Fixpipe", "GetFixpipeCubeType cube canbe replace name = %s type = %s",
+  OPS_LOG_D("PostCube", "GetPostCubeCubeType cube canbe replace name = %s type = %s",
           GNodeGetName(merge_node).GetString(), GNodeGetType(merge_node).GetString());
   return true;
 }
 
-FixpipeCubeType FixpipeComm::GetFixpipeCubeType(const ge::GNodePtr &node_ptr) {
+PostCubeCubeType PostCubeComm::GetPostCubeCubeType(const ge::GNodePtr &node_ptr) {
   bool fake_cube = false;
   GNodeGetAttr(node_ptr, kAttrFakeCubeNode, fake_cube);
   if (fake_cube) {
-    return FixpipeCubeType::Cube;
+    return PostCubeCubeType::Cube;
   }
   std::string node_type(GNodeGetType(node_ptr).GetString());
-  auto iter = std::find(kSupportFixpipeCubeTypeVec.begin(), kSupportFixpipeCubeTypeVec.end(), node_type);
-  if (iter == kSupportFixpipeCubeTypeVec.end()) {
-    OPS_LOG_D("Fixpipe", "GetFixpipeCubeType isn't node name = %s type = %s", GNodeGetName(node_ptr).GetString(), node_type.c_str());
-    return FixpipeCubeType::NotCube;
+  auto iter = std::find(kSupportPostCubeCubeTypeVec.begin(), kSupportPostCubeCubeTypeVec.end(), node_type);
+  if (iter == kSupportPostCubeCubeTypeVec.end()) {
+    OPS_LOG_D("PostCube", "GetPostCubeCubeType isn't node name = %s type = %s", GNodeGetName(node_ptr).GetString(), node_type.c_str());
+    return PostCubeCubeType::NotCube;
   }
   auto merge_node = GetMergeNodeByCube(node_ptr);
   if (merge_node == nullptr) {
-    return FixpipeCubeType::Cube;
+    return PostCubeCubeType::Cube;
   }
-  return FixpipeCubeType::CubeMerge;
+  return PostCubeCubeType::CubeMerge;
 }
 
-bool FixpipeComm::IsEltwiseNode(const ge::GNodePtr &node) {
+bool PostCubeComm::IsEltwiseNode(const ge::GNodePtr &node) {
   const std::string op_type = GNodeGetType(node).GetString();
   if (op_type == ELTWISE || op_type == kAdd || op_type == kSub) {
     return true;
@@ -566,31 +560,31 @@ bool FixpipeComm::IsEltwiseNode(const ge::GNodePtr &node) {
   return false;
 }
 
-void FixpipeComm::SetFixpipeAbilityAttr(const ge::GNodePtr &node_ptr, const FixpipeAbilityType &fixpipe_ability_type) {
-  FixpipeAbilityAttr fixpipe_ability_attr = kNoFixpipeAbility;
-  GNodeGetAttr(node_ptr, kSupportFixPipeAbility, fixpipe_ability_attr);
-  fixpipe_ability_attr = fixpipe_ability_attr | kFixpipeAbilityAttrs[static_cast<size_t>(fixpipe_ability_type)];
-  int64_t tmp_int = fixpipe_ability_attr;
-  GNodeSetAttr(node_ptr, kSupportFixPipeAbility, tmp_int);
+void PostCubeComm::SetPostCubeAbilityAttr(const ge::GNodePtr &node_ptr, const PostCubeAbilityType &post_cube_ability_type) {
+  PostCubeAbilityAttr post_cube_ability_attr = kNoPostCubeAbility;
+  GNodeGetAttr(node_ptr, kSupportPostCubeAbility, post_cube_ability_attr);
+  post_cube_ability_attr = post_cube_ability_attr | kPostCubeAbilityAttrs[static_cast<size_t>(post_cube_ability_type)];
+  int64_t tmp_int = post_cube_ability_attr;
+  GNodeSetAttr(node_ptr, kSupportPostCubeAbility, tmp_int);
 }
 
-void FixpipeComm::UnSetFixpipeAbilityAttr(const ge::GNodePtr &node_ptr,
-                                           const FixpipeAbilityType &fixpipe_ability_type) {
-  FixpipeAbilityAttr fixpipe_ability_attr = kNoFixpipeAbility;
-  GNodeGetAttr(node_ptr, kSupportFixPipeAbility, fixpipe_ability_attr);
-  fixpipe_ability_attr = fixpipe_ability_attr & (~(1 << static_cast<size_t>(fixpipe_ability_type)));
-  int64_t tmp_int = fixpipe_ability_attr;
-  GNodeSetAttr(node_ptr, kSupportFixPipeAbility, tmp_int);
+void PostCubeComm::UnSetPostCubeAbilityAttr(const ge::GNodePtr &node_ptr,
+                                           const PostCubeAbilityType &post_cube_ability_type) {
+  PostCubeAbilityAttr post_cube_ability_attr = kNoPostCubeAbility;
+  GNodeGetAttr(node_ptr, kSupportPostCubeAbility, post_cube_ability_attr);
+  post_cube_ability_attr = post_cube_ability_attr & (~(1 << static_cast<size_t>(post_cube_ability_type)));
+  int64_t tmp_int = post_cube_ability_attr;
+  GNodeSetAttr(node_ptr, kSupportPostCubeAbility, tmp_int);
 }
 
-bool FixpipeComm::CheckFixpipeAbilityAttr(const ge::GNodePtr &node_ptr,
-                                           const FixpipeAbilityType &fixpipe_ability_type) {
-  FixpipeAbilityAttr fixpipe_ability_attr = kNoFixpipeAbility;
-  GNodeGetAttr(node_ptr, kSupportFixPipeAbility, fixpipe_ability_attr);
-  return ((fixpipe_ability_attr >> static_cast<size_t>(fixpipe_ability_type)) & 1) == 1;
+bool PostCubeComm::CheckPostCubeAbilityAttr(const ge::GNodePtr &node_ptr,
+                                           const PostCubeAbilityType &post_cube_ability_type) {
+  PostCubeAbilityAttr post_cube_ability_attr = kNoPostCubeAbility;
+  GNodeGetAttr(node_ptr, kSupportPostCubeAbility, post_cube_ability_attr);
+  return ((post_cube_ability_attr >> static_cast<size_t>(post_cube_ability_type)) & 1) == 1;
 }
 
-bool FixpipeComm::HasControlEdge(const ge::GNodePtr &src_node_ptr, const ge::GNodePtr &dst_node_ptr) {
+bool PostCubeComm::HasControlEdge(const ge::GNodePtr &src_node_ptr, const ge::GNodePtr &dst_node_ptr) {
   if (src_node_ptr == nullptr || dst_node_ptr == nullptr) {
     return false;
   }
@@ -611,7 +605,7 @@ bool FixpipeComm::HasControlEdge(const ge::GNodePtr &src_node_ptr, const ge::GNo
   return src_res && dst_res;
 }
 
-std::string FixpipeComm::GetStrByDataTypeVec(const std::vector<ge::DataType>& data_type_vec) {
+std::string PostCubeComm::GetStrByDataTypeVec(const std::vector<ge::DataType>& data_type_vec) {
   std::string result;
   size_t size = data_type_vec.size();
   for (size_t i = 0; i < size; ++i) {
@@ -624,26 +618,26 @@ std::string FixpipeComm::GetStrByDataTypeVec(const std::vector<ge::DataType>& da
   return result;
 }
 
-ge::graphStatus FixpipeComm::GetConv2DReluSwapForbiddenFlag(const ge::GNodePtr &head_node) {
+ge::graphStatus PostCubeComm::GetConv2DReluSwapForbiddenFlag(const ge::GNodePtr &head_node) {
   bool supportOut2L1Dn2Nz = false;
-  if (!FixpipeComm::GetSupportDN2NZSoc(supportOut2L1Dn2Nz)) {
+  if (!PostCubeComm::GetSupportDN2NZSoc(supportOut2L1Dn2Nz)) {
     return ge::GRAPH_NOT_CHANGED;
   }
 
-  bool isConv2DFlag = FixpipeComm::GetConv2DOpType(head_node);
+  bool isConv2DFlag = PostCubeComm::GetConv2DOpType(head_node);
   if (supportOut2L1Dn2Nz && isConv2DFlag) {
     return ge::GRAPH_SUCCESS;
   }
   return ge::GRAPH_FAILED;
 }
 
-bool FixpipeComm::GetSupportDN2NZSoc(bool &supportOut2L1Dn2Nz)
+bool PostCubeComm::GetSupportDN2NZSoc(bool &supportOut2L1Dn2Nz)
 {
   // do soc check
   fe::PlatformInfo platformInfo;
   fe::OptionalInfo optionalInfo;
   if (fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optionalInfo) != ge::GRAPH_SUCCESS) {
-    OPS_LOG_D("Fixpipe", "ConvFusionPassUtils", "Can't get platformInfo.");
+    OPS_LOG_D("PostCube", "ConvFusionPassUtils", "Can't get platformInfo.");
     return false;
   }
   supportOut2L1Dn2Nz = platformInfo.ai_core_intrinsic_dtype_map.find("Intrinsic_data_move_out2l1_dn2nz") !=
@@ -651,7 +645,7 @@ bool FixpipeComm::GetSupportDN2NZSoc(bool &supportOut2L1Dn2Nz)
   return true;
 }
 
-bool FixpipeComm::GetConv2DOpType(const ge::GNodePtr &head_node) {
+bool PostCubeComm::GetConv2DOpType(const ge::GNodePtr &head_node) {
   // head_node null already check in Fusion
   if (GNodeGetType(head_node) != kAscendConv2DAsc) {
     return false;
@@ -659,31 +653,31 @@ bool FixpipeComm::GetConv2DOpType(const ge::GNodePtr &head_node) {
   return true;
 }
 
-ge::graphStatus FixpipeComm::GetFixpipeUtilFuncSupportFlag(const ge::GNodePtr &head_node) {
+ge::graphStatus PostCubeComm::GetPostCubeUtilFuncSupportFlag(const ge::GNodePtr &head_node) {
   bool supportOut2L1Dn2Nz = false;
-  if (!FixpipeComm::GetSupportDN2NZSoc(supportOut2L1Dn2Nz)) { // regardless of which version, always be true
+  if (!PostCubeComm::GetSupportDN2NZSoc(supportOut2L1Dn2Nz)) { // regardless of which version, always be true
     return ge::GRAPH_NOT_CHANGED; // get platform failed
   }
   if (!supportOut2L1Dn2Nz) {
     return ge::GRAPH_SUCCESS;
   }
 
-  bool isInFixpipeUtilFuncOpWhiteListFlag = false;
+  bool isInPostCubeUtilFuncOpWhiteListFlag = false;
   const std::string op_type = GNodeGetType(head_node).GetString();
-  auto iter = std::find(kSupportFixpipeUtilFuncCubeTypeVec.begin(), kSupportFixpipeUtilFuncCubeTypeVec.end(),
+  auto iter = std::find(kSupportPostCubeUtilFuncCubeTypeVec.begin(), kSupportPostCubeUtilFuncCubeTypeVec.end(),
                         op_type);
-  if (iter != kSupportFixpipeUtilFuncCubeTypeVec.end()) {
-    OPS_LOG_D("Fixpipe", "Op in SupportFixpipeUtilFuncCubeTypeVec is node name = %s type = %s",
+  if (iter != kSupportPostCubeUtilFuncCubeTypeVec.end()) {
+    OPS_LOG_D("PostCube", "Op in SupportPostCubeUtilFuncCubeTypeVec is node name = %s type = %s",
             GNodeGetName(head_node).GetString(), op_type.c_str());
-    isInFixpipeUtilFuncOpWhiteListFlag = true;
+    isInPostCubeUtilFuncOpWhiteListFlag = true;
   }
-  if (!isInFixpipeUtilFuncOpWhiteListFlag) {
+  if (!isInPostCubeUtilFuncOpWhiteListFlag) {
     return ge::GRAPH_NOT_CHANGED;
   }
   return ge::GRAPH_SUCCESS;
 }
 
-uint32_t FixpipeComm::GetOutDataNodesSize(const ge::GNodePtr &node) {
+uint32_t PostCubeComm::GetOutDataNodesSize(const ge::GNodePtr &node) {
   uint32_t res = 0;
   for (size_t idx = 0; idx < node->GetOutputsSize(); ++idx) {
     const auto outputNodesPairs = node->GetOutDataNodesAndPortIndexs(idx);
@@ -692,7 +686,7 @@ uint32_t FixpipeComm::GetOutDataNodesSize(const ge::GNodePtr &node) {
   return res;
 }
 
-bool FixpipeComm::IsShapeEqual(const ge::Shape &shape1, const ge::Shape &shape2) {
+bool PostCubeComm::IsShapeEqual(const ge::Shape &shape1, const ge::Shape &shape2) {
   if (shape1.GetDimNum() != shape2.GetDimNum()) {
     return false;
   }
@@ -704,7 +698,7 @@ bool FixpipeComm::IsShapeEqual(const ge::Shape &shape1, const ge::Shape &shape2)
   return true;
 }
 
-std::string FixpipeComm::ShapeToString(const ge::Shape &shape) {
+std::string PostCubeComm::ShapeToString(const ge::Shape &shape) {
   if (shape.GetDimNum() == 0) {
     return "";
   }
@@ -716,7 +710,7 @@ std::string FixpipeComm::ShapeToString(const ge::Shape &shape) {
   return ss.str();
 }
 
-std::vector<string> FixpipeComm::Split(const string &str, const string &pattern) {
+std::vector<string> PostCubeComm::Split(const string &str, const string &pattern) {
   std::vector<string> res_vec;
   if (str.empty()) {
     return res_vec;

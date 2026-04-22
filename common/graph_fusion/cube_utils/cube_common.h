@@ -36,7 +36,7 @@ namespace ops {
 using std::queue;
 using std::set;
 using std::unordered_set;
-extern const std::string kFixpipePassName;
+extern const std::string kPostCubePassName;
 extern const std::string kPatternConv;
 extern const std::string kPatternRelu;
 extern const std::string kPatternQuant;
@@ -62,7 +62,7 @@ extern const std::string kPRelu;
 extern const std::string kSigmoid;
 extern const std::string kElu;
 extern const std::string kTanh;
-extern const std::string kFixPipe;
+extern const std::string kPostCube;
 extern const std::string kFusionOpList;
 extern const std::string kUnitList;
 extern const std::string kEltwiseMode;
@@ -108,8 +108,8 @@ extern const std::string kInfNan;
 extern const std::string SWITCH;
 extern const std::string ATTR_NEGATIVE_SLOPE;
 extern const std::string ELTWISE;
-extern const std::string kSupportFixPipeAbility;
-extern const std::string kNotSupportFixpipeFusion;
+extern const std::string kSupportPostCubeAbility;
+extern const std::string kNotSupportPostCubeFusion;
 extern const std::string TRANSDATA_INPUT_NAME;
 extern const std::string TRANSDATA_OUTPUT_NAME;
 extern const std::string UNSQUEEZE_V2_INPUT_NAME;
@@ -120,7 +120,7 @@ extern const std::string UNSQUEEZE_V2;
 extern const std::string AXIS_ATTR_NAME;
 extern const std::string ATTR_SCALE; 
 extern const std::string ATTR_OFFSET;
-extern const size_t kFixpipeNodeLimited;
+extern const size_t kPostCubeNodeLimited;
 extern const size_t kPassMinSize;
 extern const size_t kMaxOpNmaLen;
 extern const uint32_t kPassFlag;
@@ -131,13 +131,13 @@ extern const uint32_t kNumber1;
 extern const uint32_t kNumber2;
 extern const int64_t SHAPE_NUMBER_16;
 extern const float kRelu6Value;
-extern const std::vector<std::string> kSupportFixpipeCubeTypeVec;
+extern const std::vector<std::string> kSupportPostCubeCubeTypeVec;
 extern const std::unordered_set<std::string> kSupportMultipleOutputCubeSet;
 extern const std::unordered_set<std::string> kMatMulSet;
 extern const std::unordered_set<std::string> kAtomicWriteCubeSet;
 extern const std::unordered_set<std::string> kCandidateReluTypes;
-extern const std::unordered_set<ge::Format> kMatmulNotSupportFixpipeFormatSet;
-extern const std::map<std::string, std::string> kFixpipeInstruction2OpTypeMap;
+extern const std::unordered_set<ge::Format> kMatmulNotSupportPostCubeFormatSet;
+extern const std::map<std::string, std::string> kPostCubeInstruction2OpTypeMap;
 
 // AscendString 常量定义（避免重复构造，用于比较操作）
 // 注意：这些常量需要在 .cc 文件中定义，这里只是声明
@@ -146,7 +146,7 @@ extern const ge::AscendString kAscendEltwiseAsc;
 extern const ge::AscendString kAscendAddAsc;
 extern const ge::AscendString kAscendConv2DAsc;
 extern const ge::AscendString kAscendMergeAsc;
-extern const ge::AscendString kAscendFixPipeAsc;
+extern const ge::AscendString kAscendPostCubeAsc;
 extern const ge::AscendString kAscendLeakyReluAsc;
 extern const ge::AscendString kAscendPReluAsc;
 extern const ge::AscendString kAscendRelu6Asc;
@@ -172,7 +172,7 @@ extern const ge::AscendString kAscendEltwiseModeAsc;
 #define GET_DEQUANT_SCALE_DEQ(dequant_scale_date) (((dequant_scale_date) & 0x00000000ffffffff))
 
 #ifndef REPORT_OPS_ERROR
-#define REPORT_OPS_ERROR(fmt, ...) OPS_LOG_E("Fixpipe", fmt, ##__VA_ARGS__)
+#define REPORT_OPS_ERROR(fmt, ...) OPS_LOG_E("PostCube", fmt, ##__VA_ARGS__)
 #endif
 
 #ifndef OPS_MAKE_SHARED
@@ -181,7 +181,7 @@ extern const ge::AscendString kAscendEltwiseModeAsc;
     try {                                         \
       exec_expr0;                                 \
     } catch (...) {                               \
-      OPS_LOG_E("Fixpipe", "Make shared failed"); \
+      OPS_LOG_E("PostCube", "Make shared failed"); \
       exec_expr1;                                 \
     }                                             \
   } while (0)
@@ -191,7 +191,7 @@ extern const ge::AscendString kAscendEltwiseModeAsc;
 #define OPS_CHECK_NOTNULL(val)              \
 do {                                        \
   if ((val) == nullptr) {                   \
-    OPS_LOG_E("Fixpipe", #val " is null");  \
+    OPS_LOG_E("PostCube", #val " is null");  \
     return ge::GRAPH_FAILED;                \
   }                                         \
 } while (0)
@@ -206,33 +206,33 @@ struct Configtype2Datatype {
 };
 using CONFIGDTYPE = Configtype2Datatype;
 
-enum class FixpipeCubeType {
+enum class PostCubeCubeType {
   NotCube = 0,
   Cube = 1,
   CubeMerge = 2
 };
 
-enum class FixpipeAbilityType {
+enum class PostCubeAbilityType {
   SupportPostEltwiseBroadcast = 0,
   SupportMultipleOutput = 1,
   UseGmAtomicAdd = 2,
   NodeCantAccess = 3,
-  FixpipeAbilityTypeBottom
+  PostCubeAbilityTypeBottom
 };
 
-using FixpipeAbilityAttr = int64_t;
-const FixpipeAbilityAttr kNoFixpipeAbility = 0x00UL;
-const FixpipeAbilityAttr kSupportPostEltwiseBroadcast = 0x01UL;
-const FixpipeAbilityAttr kSupportMultipleOutput = 0x02UL;
-const FixpipeAbilityAttr kUseGmAtomicAdd = 0x04UL;
-const FixpipeAbilityAttr kNodeCantAccess = 0x08UL;
+using PostCubeAbilityAttr = int64_t;
+const PostCubeAbilityAttr kNoPostCubeAbility = 0x00UL;
+const PostCubeAbilityAttr kSupportPostEltwiseBroadcast = 0x01UL;
+const PostCubeAbilityAttr kSupportMultipleOutput = 0x02UL;
+const PostCubeAbilityAttr kUseGmAtomicAdd = 0x04UL;
+const PostCubeAbilityAttr kNodeCantAccess = 0x08UL;
 
-extern const std::array<FixpipeAbilityAttr,
-    static_cast<size_t>(FixpipeAbilityType::FixpipeAbilityTypeBottom)> kFixpipeAbilityAttrs;
+extern const std::array<PostCubeAbilityAttr,
+    static_cast<size_t>(PostCubeAbilityType::PostCubeAbilityTypeBottom)> kPostCubeAbilityAttrs;
 
-class FixPipeUnit {
+class PostCubeUnit {
  public:
-  FixPipeUnit(const std::string &m_unitname, const std::map<std::string, std::vector<CONFIGDTYPE>> &m_optypes)
+  PostCubeUnit(const std::string &m_unitname, const std::map<std::string, std::vector<CONFIGDTYPE>> &m_optypes)
       : unitname_(m_unitname), opnodes_(m_optypes) {}
   const std::map<std::string, std::vector<CONFIGDTYPE>> &GetNode() const { return opnodes_; }
   const std::string &GetName() const { return unitname_; }
@@ -242,7 +242,7 @@ class FixPipeUnit {
   }
   void SetDependUnitsIndex(const std::vector<uint32_t> &index) { dependunitsindex_.assign(index.begin(), index.end()); }
   const std::vector<uint32_t> &GetDependsUnitsIndex() const { return dependunitsindex_; }
-  ~FixPipeUnit();
+  ~PostCubeUnit();
  private:
   std::string unitname_;
   std::vector<std::string> dependunits_;
@@ -250,91 +250,91 @@ class FixPipeUnit {
   std::map<std::string, std::vector<CONFIGDTYPE>> opnodes_;
 };
 
-class FixPipeNodeInfo {
+class PostCubeNodeInfo {
  public:
-  FixPipeNodeInfo() {}
-  explicit FixPipeNodeInfo(const ge::GNodePtr &node)
+  PostCubeNodeInfo() {}
+  explicit PostCubeNodeInfo(const ge::GNodePtr &node)
       : op_kernel_(node),
         belong_unit_type_(""),
-        nodeInfo_fixpipeability_(0),
+        nodeInfo_post_cubeability_(0),
         isheadnode_(false),
         cube_node_(),
         belong_unit_index_(0) {}
-  FixPipeNodeInfo(const ge::GNodePtr &node, const ge::GNodePtr &cube_node)
+  PostCubeNodeInfo(const ge::GNodePtr &node, const ge::GNodePtr &cube_node)
       : op_kernel_(node),
         belong_unit_type_(""),
-        nodeInfo_fixpipeability_(0),
+        nodeInfo_post_cubeability_(0),
         isheadnode_(false),
         cube_node_(cube_node),
         belong_unit_index_(0) {}
   const ge::GNodePtr &GetNode() const { return op_kernel_; }
   const std::string &GetBelongUnitType() const { return belong_unit_type_; }
-  char GetNodeFixpipeability() const { return nodeInfo_fixpipeability_; }
+  char GetNodePostCubeability() const { return nodeInfo_post_cubeability_; }
   bool GetIsHeadNode() const { return isheadnode_; }
   const ge::GNodePtr &GetCubeNode() const { return cube_node_; }
   void SetBelongUnitType(const std::string &belong_unit_type) { belong_unit_type_ = belong_unit_type; }
-  void SetNodeFixpipeability(char nodeInfo_fixpipeability) { nodeInfo_fixpipeability_ = nodeInfo_fixpipeability; }
+  void SetNodePostCubeability(char nodeInfo_post_cubeability) { nodeInfo_post_cubeability_ = nodeInfo_post_cubeability; }
   void SetIsHeadNode(bool isheadnode) { isheadnode_ = isheadnode; }
   void SetBelongUnitIndex(uint32_t belong_unit_index) { belong_unit_index_ = belong_unit_index; }
   uint32_t GetBelongUnitIndex() const { return belong_unit_index_; }
   bool operator==(const ge::GNodePtr &input_node) const {
     return (this->GetNode() == input_node);
   }
-  ~FixPipeNodeInfo();
+  ~PostCubeNodeInfo();
 
  private:
   ge::GNodePtr op_kernel_;
   std::string belong_unit_type_;
-  char nodeInfo_fixpipeability_;
+  char nodeInfo_post_cubeability_;
   bool isheadnode_;
   ge::GNodePtr cube_node_;
   uint32_t belong_unit_index_;
-  std::vector<ge::GNodePtr> node_tofixpipelist_;
+  std::vector<ge::GNodePtr> node_topost_cubelist_;
 };
 
-struct FixpipeMatchParams {
-  std::stack<FixPipeNodeInfo> cur_pass;
+struct PostCubeMatchParams {
+  std::stack<PostCubeNodeInfo> cur_pass;
   std::stack<uint32_t> cur_index;
-  uint64_t fixpipe_index;
-  explicit FixpipeMatchParams()
-      : fixpipe_index(0) {}
+  uint64_t post_cube_index;
+  explicit PostCubeMatchParams()
+      : post_cube_index(0) {}
 };
 
-struct FixPipePassInfoData {
-  std::vector<FixPipeNodeInfo> m_opnodes;
+struct PostCubePassInfoData {
+  std::vector<PostCubeNodeInfo> m_opnodes;
   uint32_t pass_index;
   uint32_t m_flag;
   uint32_t unit_index;
 };
-using FixPipePassInfo = FixPipePassInfoData;
+using PostCubePassInfo = PostCubePassInfoData;
 
-class FixPipeNodePair {
+class PostCubeNodePair {
  public:
-  FixPipeNodePair(const ge::GNodePtr &first, const ge::GNodePtr &second) : parent_(first), child_(second) {}
+  PostCubeNodePair(const ge::GNodePtr &first, const ge::GNodePtr &second) : parent_(first), child_(second) {}
   const ge::GNodePtr &GetParent() const { return parent_; }
   const ge::GNodePtr &GetChild() const { return child_; }
-  ~FixPipeNodePair() {}
+  ~PostCubeNodePair() {}
 
  private:
   ge::GNodePtr parent_;
   ge::GNodePtr child_;
 };
 
-class FixPipeFunctionParam {
+class PostCubeFunctionParam {
  public:
-  FixPipeFunctionParam(const std::string &inputname, const ge::GNodePtr &fixpipenode, const uint32_t &input_index)
+  PostCubeFunctionParam(const std::string &inputname, const ge::GNodePtr &post_cubenode, const uint32_t &input_index)
       : inputname_(inputname),
-        fixpipenode_(fixpipenode),
+        post_cubenode_(post_cubenode),
         inputindex_(input_index),
         firstnodeindex_(0),
         secondnodeindex_(0),
         datatype_(ge::DT_UNDEFINED),
         srcconstnode_() {}
   void SetInputName(const std::string &inputname) { inputname_ = inputname; }
-  void SetFixPipeNode(const ge::GNodePtr &fixpipenode) { fixpipenode_ = fixpipenode; }
+  void SetPostCubeNode(const ge::GNodePtr &post_cubenode) { post_cubenode_ = post_cubenode; }
   void SetInputindex(uint32_t input_index) { inputindex_ = input_index; }
   const std::string &GetInputName() const { return inputname_; }
-  const ge::GNodePtr &GetFixpipeNode() const { return fixpipenode_; }
+  const ge::GNodePtr &GetPostCubeNode() const { return post_cubenode_; }
   uint32_t GetParaIndex() const { return inputindex_; }
   void SetFirstIndex(uint32_t firstnodeindex) { firstnodeindex_ = firstnodeindex; }
   uint32_t GetFirstIndex() const { return firstnodeindex_; }
@@ -344,41 +344,41 @@ class FixPipeFunctionParam {
   ge::DataType GetDataType() const { return datatype_; }
   void SetSrcConstNode(const ge::GNodePtr &srcconstnode) { srcconstnode_ = srcconstnode; }
   const ge::GNodePtr &GetSrcConstNode() const { return srcconstnode_; }
-  ~FixPipeFunctionParam() {}
+  ~PostCubeFunctionParam() {}
 
  private:
   std::string inputname_;
-  ge::GNodePtr fixpipenode_;
+  ge::GNodePtr post_cubenode_;
   uint32_t inputindex_;
   uint32_t firstnodeindex_;
   uint32_t secondnodeindex_;
   ge::DataType datatype_;
   ge::GNodePtr srcconstnode_;
 };
-using FixPipeFunctionParamPtr = std::shared_ptr<FixPipeFunctionParam>;
+using PostCubeFunctionParamPtr = std::shared_ptr<PostCubeFunctionParam>;
 
-class FixpipeComm {
+class PostCubeComm {
  public:
-  FixpipeComm() = default;;
-  ~FixpipeComm() = default;;
+  PostCubeComm() = default;;
+  ~PostCubeComm() = default;;
   static bool ReadPlatFormConfig(const ge::CustomPassContext &context, const bool &skip_trans, std::vector<std::string> &unit_list,
                                  std::map<std::string, std::vector<std::string>> &depends_list,
-                                 std::map<std::string, std::map<std::string, std::vector<CONFIGDTYPE>>> &fixpipe_map);
+                                 std::map<std::string, std::map<std::string, std::vector<CONFIGDTYPE>>> &post_cube_map);
   static ge::graphStatus CheckPeerOutNode(const ge::GNodePtr &vectornode, const uint32_t &input_index);
   static bool CheckConstValueData(const ge::GNodePtr &vectornode);
-  static bool CheckIsInVector(const std::vector<FixPipeNodeInfo> &m_opnodes, const uint32_t &index = 0);
-  static FixpipeCubeType GetFixpipeCubeType(const ge::GNodePtr &node_ptr);
+  static bool CheckIsInVector(const std::vector<PostCubeNodeInfo> &m_opnodes, const uint32_t &index = 0);
+  static PostCubeCubeType GetPostCubeCubeType(const ge::GNodePtr &node_ptr);
   static ge::GNodePtr GetMergeNodeByCube(const ge::GNodePtr &node_ptr);
-  static void SetFixpipeAbilityAttr(const ge::GNodePtr &node_ptr, const FixpipeAbilityType &fixpipe_ability_type);
-  static void UnSetFixpipeAbilityAttr(const ge::GNodePtr &node_ptr, const FixpipeAbilityType &fixpipe_ability_type);
-  static bool CheckFixpipeAbilityAttr(const ge::GNodePtr &node_ptr, const FixpipeAbilityType &fixpipe_ability_type);
+  static void SetPostCubeAbilityAttr(const ge::GNodePtr &node_ptr, const PostCubeAbilityType &post_cube_ability_type);
+  static void UnSetPostCubeAbilityAttr(const ge::GNodePtr &node_ptr, const PostCubeAbilityType &post_cube_ability_type);
+  static bool CheckPostCubeAbilityAttr(const ge::GNodePtr &node_ptr, const PostCubeAbilityType &post_cube_ability_type);
   static bool HasControlEdge(const ge::GNodePtr &src_node_ptr, const ge::GNodePtr &dst_node_ptr);
   static std::string GetStrByDataTypeVec(const std::vector<ge::DataType>& data_type_vec);
   // Conv2D Process
   static bool GetSupportDN2NZSoc(bool &supportOut2L1Dn2Nz);
   static bool GetConv2DOpType(const ge::GNodePtr &head_node);
   static ge::graphStatus GetConv2DReluSwapForbiddenFlag(const ge::GNodePtr &head_node);
-  static ge::graphStatus GetFixpipeUtilFuncSupportFlag(const ge::GNodePtr &head_node);
+  static ge::graphStatus GetPostCubeUtilFuncSupportFlag(const ge::GNodePtr &head_node);
   static uint32_t GetOutDataNodesSize(const ge::GNodePtr &node);
   static bool IsShapeEqual(const ge::Shape &shape1, const ge::Shape &shape2);
   static std::string ShapeToString(const ge::Shape &shape);

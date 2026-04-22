@@ -165,7 +165,7 @@ TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_leakyrelu_to_conv2d_fix
     EXPECT_TRUE(GraphChecker::HasNode(graph, "Conv2D"));
     EXPECT_TRUE(GraphChecker::HasNode(graph, "LeakyRelu"));
 
-    TestTotalPass("conv2d_leakyrelu_to_conv2d_fixpipe_fusion_success", graph, FAILED);
+    TestTotalPass("conv2d_leakyrelu_to_conv2d_fixpipe_fusion_success", graph, SUCCESS);
 }
 
 // Conv2D + Dequant + LeakyRelu -> ExtendConv2D(failed) + LeakyRelu

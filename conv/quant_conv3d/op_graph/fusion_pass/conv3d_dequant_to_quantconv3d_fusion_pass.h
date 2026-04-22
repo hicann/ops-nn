@@ -73,7 +73,7 @@ protected:
     ge::fusion::GraphUniqPtr Replacement(const ge::GNode &convNode) override;
 private:
     bool GetFixpipeNodes(const ge::GNode &convNode);
-    void SelectFixpipePassByWhiteList(std::vector<ops::FixPipePassInfo> &matchVec);
+    void SelectFixpipePassByWhiteList(std::vector<ops::PostCubePassInfo> &matchVec);
     bool UpdateQuantConv3DDesc(ge::GNode *quantConv3D, ge::TensorDesc &fixpipeOutDesc);
 
     ge::GNodePtr fixpipeNode = nullptr;

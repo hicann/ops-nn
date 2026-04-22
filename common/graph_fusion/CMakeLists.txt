@@ -9,5 +9,5 @@
 # of the License.
 # ----------------------------------------------------------------------------
 
-# 添加 fixpipe 插件源文件
+# 添加 post_cube 插件源文件
 add_cube_utils_plugin_sources()
