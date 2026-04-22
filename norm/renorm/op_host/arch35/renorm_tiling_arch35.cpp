@@ -304,9 +304,8 @@ ge::graphStatus RenormTiling::GetAndCheckDtypes()
     dtypeXEqualY = xDtype_ == yDtype;
 
     OP_CHECK_IF(xDtype_ != ge::DT_FLOAT && xDtype_ != ge::DT_FLOAT16 && xDtype_ != ge::DT_BF16,
-                    OP_LOGE(tilingContext_->GetNodeName(),
-                                                    "input dtype [%s] not support, only support [fp16, fp32, bf16]",
-                                                    ge::TypeUtils::DataTypeToSerialString(xDtype_).c_str()),
+                    OP_LOGE_FOR_INVALID_DTYPE(tilingContext_->GetNodeName(), "x",
+                        ToString(xDtype_).c_str(), "FLOAT, FLOAT16 or BF16"),
                     return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -331,7 +330,10 @@ ge::graphStatus RenormTiling::GetAndCheckReduceAxis()
     // 边界检查：dim不合法（<0或>=xShapeDimNum）
     int targetDim = *targetDimPtr;
     if (targetDim < 0 || targetDim >= xShapeDimNum) {
-        OP_LOGE("RenormTiling", "dim range only support [-%ld, %ld - 1], but now dim is [%ld].", xShapeDimNum, xShapeDimNum, targetDim);
+        std::string reasonMsg = "The attr dim should be in the range of [0, " +
+            std::to_string(xShapeDimNum) + ") for the shape of input x";
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(tilingContext_->GetNodeName(), "dim",
+            std::to_string(targetDim).c_str(), reasonMsg.c_str());
         return ge::GRAPH_FAILED;
     }
 

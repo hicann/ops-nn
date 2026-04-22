@@ -19,6 +19,7 @@
 #include "rms_norm_grad_tiling.h"
 
 namespace optiling {
+using namespace Ops::Base;
 static constexpr uint32_t MIN_WORKSPACE_SIZE = 16 * 1024 * 1024;
 static constexpr int64_t INPUT_NUM = 4;
 
@@ -34,6 +35,7 @@ static constexpr uint32_t EMPTY_TENSOR_KEY = 8000;
 static const gert::Shape g_vec_1_shape = {1};
 
 const std::string OP_NAME = "RmsNormGrad";
+static const std::vector<std::string> inputNames = {"dy", "x", "rstd", "gamma"};
 
 
 ge::graphStatus RmsNormGradEmptyTiling::GetPlatformInfo()
@@ -105,7 +107,8 @@ ge::graphStatus RmsNormGradEmptyTiling::CheckInputsShape()
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputShape);
     auto storageShape0 = EnsureNotScalar(inputShape->GetStorageShape());
     if (CheckShapeAllPositive(storageShape0) != ge::GRAPH_SUCCESS) {
-        OP_LOGE(context_->GetNodeName(), "dy shape contains negative.");
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "dy", ToString(storageShape0).c_str(),
+            "The shape of input dy can not be an invalid tensor with a negative dim");
         return ge::GRAPH_FAILED;
     }
 
@@ -114,13 +117,16 @@ ge::graphStatus RmsNormGradEmptyTiling::CheckInputsShape()
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputShape);
     auto storageShape1 = EnsureNotScalar(inputShape->GetStorageShape());
     if (CheckShapeAllPositive(storageShape1) != ge::GRAPH_SUCCESS) {
-        OP_LOGE(context_->GetNodeName(), "x shape contains negative.");
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x", ToString(storageShape1).c_str(),
+            "The shape of input x can not be an invalid tensor with a negative dim");
         return ge::GRAPH_FAILED;
     }
 
     // check shapes of input0 and input1 are equal
     if (CheckShapesEqual(storageShape0, storageShape1) != ge::GRAPH_SUCCESS) {
-        OP_LOGE(context_->GetNodeName(), "Shapes of x1 and x2 are not equal.");
+        std::string shapeMsg = ToString(storageShape0) + " and " + ToString(storageShape1);
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "dy and x", shapeMsg.c_str(),
+            "The shapes of input dy and input x should be the same");
         return ge::GRAPH_FAILED;
     }
 
@@ -129,7 +135,8 @@ ge::graphStatus RmsNormGradEmptyTiling::CheckInputsShape()
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputShape);
     auto storageShape2 = EnsureNotScalar(inputShape->GetStorageShape());
     if (CheckShapeAllPositive(storageShape2) != ge::GRAPH_SUCCESS) {
-        OP_LOGE(context_->GetNodeName(), "gamma shape contains negative.");
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "rstd", ToString(storageShape2).c_str(),
+            "The shape of input rstd can not be an invalid tensor with a negative dim");
         return ge::GRAPH_FAILED;
     }
 
@@ -138,7 +145,8 @@ ge::graphStatus RmsNormGradEmptyTiling::CheckInputsShape()
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputShape);
     auto storageShape3 = EnsureNotScalar(inputShape->GetStorageShape());
     if (CheckShapeAllPositive(storageShape3) != ge::GRAPH_SUCCESS) {
-        OP_LOGE(context_->GetNodeName(), "beta shape contains negative.");
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "gamma", ToString(storageShape3).c_str(),
+            "The shape of input gamma can not be an invalid tensor with a negative dim");
         return ge::GRAPH_FAILED;
     }
 
@@ -155,13 +163,14 @@ ge::graphStatus RmsNormGradEmptyTiling::CheckInputsDtypeAndFormat()
         // check format
         auto format = inputDesc->GetFormat().GetStorageFormat();
         if (format != ge::FORMAT_ND) {
-            OP_LOGE(context_->GetNodeName(), "Input %d only supports ND format.", i);
+            OP_LOGE_FOR_INVALID_FORMAT(context_->GetNodeName(), inputNames[i].c_str(), ToString(format).c_str(), "ND");
             return ge::GRAPH_FAILED;
         }
         // check dtype
         auto dtype = inputDesc->GetDataType();
         if (dtype != ge::DataType::DT_FLOAT16 && dtype != ge::DataType::DT_BF16 && dtype != ge::DataType::DT_FLOAT) {
-            OP_LOGE(context_->GetNodeName(), "Input %d only supports float16, bfloat16, float32.", i);
+            OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), inputNames[i].c_str(),
+                ToString(dtype).c_str(), "FLOAT, FLOAT16 or BF16");
             return ge::GRAPH_FAILED;
         }
     }

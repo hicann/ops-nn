@@ -302,11 +302,26 @@ ge::graphStatus LpNormV2Tiling::GetAndCheckDtypes()
     dypeXEqualY = xDtype_ == yDtype;
 
     OP_CHECK_IF(xDtype_ != ge::DT_FLOAT && xDtype_ != ge::DT_FLOAT16 && xDtype_ != ge::DT_BF16,
-                    OP_LOGE(tilingContext_->GetNodeName(),
-                                                    "input dtype [%s] not support, only support [fp16, fp32, bf16]",
-                                                    ge::TypeUtils::DataTypeToSerialString(xDtype_).c_str()),
+                    OP_LOGE_FOR_INVALID_DTYPE(tilingContext_->GetNodeName(), "x",
+                        ToString(xDtype_).c_str(), "FLOAT, FLOAT16 or BF16"),
                     return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
+}
+
+std::string getAxesVector(const gert::TypedContinuousVector<int64_t> *axisListPtr) {
+    std::vector<int64_t> axes;
+    for (int i = 0; i < static_cast<int>(axisListPtr->GetSize()); i++) {
+        axes.push_back(axisListPtr->GetData()[i]);
+    }
+    std::string res = "[";
+    for (size_t i = 0; i < axes.size(); ++i) {
+        if (i != 0) {
+            res += ", ";
+        }
+        res += std::to_string(axes[i]);
+    }
+    res += "]";
+    return res;
 }
 
 ge::graphStatus LpNormV2Tiling::GetAndCheckReduceAxis()
@@ -333,11 +348,16 @@ ge::graphStatus LpNormV2Tiling::GetAndCheckReduceAxis()
     std::set<int64_t> dimSet;
     for (int i = 0; i < static_cast<int>(axisListPtr->GetSize()); i++) {
         int64_t dim = axisListPtr->GetData()[i];
-        OP_CHECK_IF((dim < -xShapeDimNum || dim > xShapeDimNum),
-                        OP_LOGE(tilingContext_->GetNodeName(),
-                                                        "Dimension is: %ld, out of range [-%ld, %ld]", dim,
-                                                        xShapeDimNum, xShapeDimNum - 1),
-                        return ge::GRAPH_FAILED);
+        if (dim < -xShapeDimNum || dim > xShapeDimNum) {
+            std::string reasonMsg = 
+                "Each axis in attr axes should be in the range of [-" +
+                std::to_string(xShapeDimNum) + ", " + std::to_string(xShapeDimNum) +
+                "] for the shape of input x";
+            std::string axesMsg = getAxesVector(axisListPtr);
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(tilingContext_->GetNodeName(), "axes",
+                axesMsg.c_str(), reasonMsg.c_str());
+            return ge::GRAPH_FAILED;
+        }
 
         dim = (dim < 0) ? (dim + xShapeDimNum) : dim;
         if (dimSet.find(dim) != dimSet.end()) {

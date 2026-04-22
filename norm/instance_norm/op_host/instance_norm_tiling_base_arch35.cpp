@@ -17,6 +17,7 @@
 #include "instance_norm_tiling.h"
 
 using namespace ge;
+using namespace Ops::Base;
 
 namespace {
 constexpr int64_t NCHW_DIM_NUM = 4;
@@ -89,48 +90,66 @@ ge::graphStatus InstanceNormRegbaseTilingBase::GetShapeAttrsInfo()
     gammaDataType = gammaDesc->GetDataType();
     meanDataType = meanDesc->GetDataType();
     format = xDesc->GetFormat().GetStorageFormat();
+    int64_t xDimNum = xStorageShape.GetDimNum();
     if (format == FORMAT_NCHW) {
         OP_CHECK_IF(
-            xStorageShape.GetDimNum() != NCHW_DIM_NUM,
-            OP_LOGE(context_->GetNodeName(), "Dims should be 4 with NCHW format."), return ge::GRAPH_FAILED);
+            xDimNum != NCHW_DIM_NUM,
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "x", 
+                std::to_string(xDimNum).c_str(), "The dimNum of input x should be 4 in NCHW format"),
+            return ge::GRAPH_FAILED);
         a1 = xStorageShape.GetDim(DIM_0);
         a0 = xStorageShape.GetDim(DIM_1);
         r = xStorageShape.GetDim(DIM_2) * xStorageShape.GetDim(DIM_3);
     } else if (format == FORMAT_NCDHW) {
         OP_CHECK_IF(
-            xStorageShape.GetDimNum() != NCDHW_DIM_NUM,
-            OP_LOGE(context_->GetNodeName(), "Dims should be 5 with NCDHW format."), return ge::GRAPH_FAILED);
+            xDimNum != NCDHW_DIM_NUM,
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "x",
+                std::to_string(xDimNum).c_str(), "The dimNum of input x should be 5 in NCDHW format"),
+            return ge::GRAPH_FAILED);
         a1 = xStorageShape.GetDim(DIM_0);
         a0 = xStorageShape.GetDim(DIM_1);
         r = xStorageShape.GetDim(DIM_2) * xStorageShape.GetDim(DIM_3) * xStorageShape.GetDim(DIM_4);
     } else if (format == FORMAT_NHWC) {
         OP_CHECK_IF(
-            xStorageShape.GetDimNum() != NHWC_DIM_NUM,
-            OP_LOGE(context_->GetNodeName(), "Dims should be 4 with NHWC format."), return ge::GRAPH_FAILED);
+            xDimNum != NHWC_DIM_NUM,
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "x",
+                std::to_string(xDimNum).c_str(), "The dimNum of input x should be 4 in NHWC format"),
+            return ge::GRAPH_FAILED);
         a1 = xStorageShape.GetDim(DIM_0);
         r = xStorageShape.GetDim(DIM_1) * xStorageShape.GetDim(DIM_2);
         a0 = xStorageShape.GetDim(DIM_3);
     } else if (format == FORMAT_NDHWC) {
         OP_CHECK_IF(
-            xStorageShape.GetDimNum() != NDHWC_DIM_NUM,
-            OP_LOGE(context_->GetNodeName(), "Dims should be 5 with NDHWC format."), return ge::GRAPH_FAILED);
+            xDimNum != NDHWC_DIM_NUM,
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "x",
+                std::to_string(xDimNum).c_str(), "The dimNum of input x should be 5 in NDHWC format"),
+            return ge::GRAPH_FAILED);
         a1 = xStorageShape.GetDim(DIM_0);
         r = xStorageShape.GetDim(DIM_1) * xStorageShape.GetDim(DIM_2) * xStorageShape.GetDim(DIM_3);
         a0 = xStorageShape.GetDim(DIM_4);
     } else if (format == FORMAT_ND) {
         OP_CHECK_IF(
-            xStorageShape.GetDimNum() < ND_MIN_DIM_NUM || xStorageShape.GetDimNum() > ND_MAX_DIM_NUM,
-            OP_LOGE(context_->GetNodeName(), "Dims should be 2~8 with ND format."), return ge::GRAPH_FAILED);
+            xDimNum < ND_MIN_DIM_NUM || xDimNum > ND_MAX_DIM_NUM,
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "x",
+                std::to_string(xDimNum).c_str(),
+                "The dimNum of input x should be in the range of [2, 8] in ND format"),
+            return ge::GRAPH_FAILED);
         a1 = xStorageShape.GetDim(DIM_0);
         a0 = xStorageShape.GetDim(DIM_1);
         r = xStorageShape.GetShapeSize() / a1 / a0;
     } else {
-        OP_LOGE(context_->GetNodeName(), "Not supported format.");
+        OP_LOGE_FOR_INVALID_FORMAT(context_->GetNodeName(), "x", ToString(format).c_str(),
+            "NCHW, NCDHW, NHWC, NDHWC or ND");
         return ge::GRAPH_FAILED;
     }
-    OP_CHECK_IF(a1 <= 0 || a0 <= 0, 
-        OP_LOGE(context_->GetNodeName(),"Input dims N (=%ld) and C (=%ld) must be positive (>0).", a1, a0),
-        return ge::GRAPH_FAILED);
+    if (a1 <= 0 || a0 <= 0) {
+        std::string reasonMsg = "The dim N and dim C of input x must be positive, "
+            "where N refers to the first axis, "
+            "C refers to the 2nd axis in NCHW, NCDHW or ND, the 4th in NHWC, and the 5th in NDHWC";
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x", ToString(xStorageShape).c_str(),
+            reasonMsg.c_str());
+        return ge::GRAPH_FAILED;
+    }
 
     if (CheckDtypeValid() != ge::GRAPH_SUCCESS) {
         OP_LOGE(context_->GetNodeName(), "Not supported datatype info.");
@@ -148,52 +167,55 @@ ge::graphStatus InstanceNormRegbaseTilingBase::CheckDtypeValid()
     // Step1.校验x数据类型
     OP_CHECK_IF(
         std::find(DTYPE_LIST.begin(), DTYPE_LIST.end(), dataType) == DTYPE_LIST.end(),
-        OP_LOGE(context_->GetNodeName(), "Unsupported dtype %s for input 0.",
-            ge::TypeUtils::DataTypeToSerialString(dataType).c_str()), return ge::GRAPH_FAILED);
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x", ToString(dataType).c_str(), "FLOAT, FLOAT16 or BF16"),
+        return ge::GRAPH_FAILED);
     
     // Step2.校验gamma/betta数据类型
-    OP_CHECK_IF(
-        // 支持gamma和x的混合数据类型
-        (gammaDataType != dataType) && (gammaDataType != ge::DT_FLOAT),
-        OP_LOGE(context_->GetNodeName(), "Dtype of input gamma expect %s, but actual %s.",
-            ge::TypeUtils::DataTypeToSerialString(dataType).c_str(),
-            ge::TypeUtils::DataTypeToSerialString(gammaDataType).c_str()), return ge::GRAPH_FAILED);
-    
+    if ((gammaDataType != dataType) && (gammaDataType != ge::DT_FLOAT)) {
+        std::string dtypeMsg = ToString(gammaDataType) + " and " + ToString(dataType);
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "gamma and x", dtypeMsg.c_str(),
+            "The dtype of input gamma should be FLOAT or the same as the dtype of input x");
+        return ge::GRAPH_FAILED;
+    }
+
     auto bettaDesc = context_->GetInputDesc(INPUT_BETA_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, bettaDesc);
     ge::DataType bettaDataType = bettaDesc->GetDataType();
-    OP_CHECK_IF(
-        (bettaDataType != gammaDataType),
-        OP_LOGE(context_->GetNodeName(), "Dtype of input betta expect %s, but actual %s.",
-            ge::TypeUtils::DataTypeToSerialString(gammaDataType).c_str(),
-            ge::TypeUtils::DataTypeToSerialString(bettaDataType).c_str()), return ge::GRAPH_FAILED);
-    
+    if (bettaDataType != gammaDataType) {
+        std::string dtypeMsg = ToString(bettaDataType) + " and " + ToString(gammaDataType);
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "beta and gamma", dtypeMsg.c_str(),
+            "The dtypes of input beta and input gamma should be the same");
+        return ge::GRAPH_FAILED;
+    }
+
     // Step3.校验输出y数据类型
     auto yDesc = context_->GetOutputDesc(OUTPUT_Y_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, yDesc);
     ge::DataType yDataType = yDesc->GetDataType();
-    OP_CHECK_IF(
-        (yDataType != dataType),
-        OP_LOGE(context_->GetNodeName(), "Dtype of output y expect %s, but actual %s.",
-            ge::TypeUtils::DataTypeToSerialString(dataType).c_str(),
-            ge::TypeUtils::DataTypeToSerialString(yDataType).c_str()), return ge::GRAPH_FAILED);
-    
+    if (yDataType != dataType) {
+        std::string dtypeMsg = ToString(yDataType) + " and " + ToString(dataType);
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "y and x", dtypeMsg.c_str(),
+            "The dtypes of output y and input x should be the same");
+        return ge::GRAPH_FAILED;
+    }
+
     // Step4.校验输出mean/varience数据类型
-    OP_CHECK_IF(
-        // 支持mean和x的混合数据类型
-        (meanDataType != dataType) && (meanDataType != ge::DT_FLOAT),
-        OP_LOGE(context_->GetNodeName(), "Dtype of output mean expect %s, but actual %s.",
-            ge::TypeUtils::DataTypeToSerialString(dataType).c_str(),
-            ge::TypeUtils::DataTypeToSerialString(meanDataType).c_str()), return ge::GRAPH_FAILED);
-    
+    if ((meanDataType != dataType) && (meanDataType != ge::DT_FLOAT)) {
+        std::string dtypeMsg = ToString(meanDataType) + " and " + ToString(dataType);
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "mean and x", dtypeMsg.c_str(),
+            "The dtype of output mean should be FLOAT or the same as the dtype of input x");
+        return ge::GRAPH_FAILED;
+    }
+
     auto varDesc = context_->GetOutputDesc(OUTPUT_VARIANCE_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, varDesc);
     ge::DataType varDataType = varDesc->GetDataType();
-    OP_CHECK_IF(
-        (varDataType != meanDataType),
-        OP_LOGE(context_->GetNodeName(), "Dtype of output variance expect %s, but actual %s.",
-            ge::TypeUtils::DataTypeToSerialString(meanDataType).c_str(),
-            ge::TypeUtils::DataTypeToSerialString(varDataType).c_str()), return ge::GRAPH_FAILED);
+    if (varDataType != meanDataType) {
+        std::string dtypeMsg = ToString(varDataType) + " and " + ToString(meanDataType);
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "variance and mean", dtypeMsg.c_str(),
+            "The dtypes of output variance and output mean should be the same");
+        return ge::GRAPH_FAILED;
+    }
 
     return ge::GRAPH_SUCCESS;
 }
@@ -223,36 +245,38 @@ ge::graphStatus InstanceNormRegbaseTilingBase::CheckShapeValid()
 
 ge::graphStatus InstanceNormRegbaseTilingBase::CheckXYShapeValid()
 {
-    int64_t xShapeSize = xStorageShape.GetDimNum();
+    int64_t xDimNum = xStorageShape.GetDimNum();
 
     auto yShape = context_->GetOutputShape(OUTPUT_Y_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, yShape);
     auto yStorageShape = yShape->GetStorageShape();
-    int64_t yShapeSize = yStorageShape.GetDimNum();
+    int64_t yDimNum = yStorageShape.GetDimNum();
 
     auto yDesc = context_->GetOutputDesc(OUTPUT_Y_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, yDesc);
     ge::Format yFormat = yDesc->GetFormat().GetStorageFormat();
 
-    OP_CHECK_IF(
-        (xShapeSize != yShapeSize),
-        OP_LOGE(
-            context_->GetNodeName(), "Input X dim size [%ld] is not equal to Output Y dim size [%ld]",
-            xShapeSize, yShapeSize), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        (format != yFormat),
-        OP_LOGE(
-            context_->GetNodeName(), "Input X format [%s] does not match Output Y format [%s]",
-            ge::TypeUtils::FormatToAscendString(format).GetString(), ge::TypeUtils::FormatToAscendString(yFormat).GetString()),
-        return ge::GRAPH_FAILED);
+    if (xDimNum != yDimNum) {
+        std::string dimsMsg = std::to_string(xDimNum) + " and " + std::to_string(yDimNum);
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "x and y", dimsMsg.c_str(),
+            "The dimNums of input x and output y  should be the same");
+        return ge::GRAPH_FAILED;
+    }
+    if (format != yFormat) {
+        std::string formatMsg = ToString(format) + " and " + ToString(yFormat);
+        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(context_->GetNodeName(), "x and y", formatMsg.c_str(),
+            "The formats of input x and output y should be the same");
+        return ge::GRAPH_FAILED;
+    }
 
-    for (int64_t i = 0; i < xShapeSize; i++) {
-        OP_CHECK_IF((xStorageShape.GetDim(i) != yStorageShape.GetDim(i)),
-            OP_LOGE(
-                context_->GetNodeName(),
-                "Input X dim [%ld] is [%ld] and Output Y dim [%ld] is [%ld] should be same", i,
-                xStorageShape.GetDim(i), i, yStorageShape.GetDim(i)),
-            return ge::GRAPH_FAILED);
+
+    for (int64_t i = 0; i < xDimNum; i++) {
+        if (xStorageShape.GetDim(i) != yStorageShape.GetDim(i)) {
+            std::string shapeMsg = ToString(xStorageShape) + " and " + ToString(yStorageShape);
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "x and y", shapeMsg.c_str(),
+                "The shapes of input x and output y should be the same");
+            return ge::GRAPH_FAILED;    
+        }
     }
     OP_LOGI(context_->GetNodeName(), "CheckXYShapeValid success.");
     return ge::GRAPH_SUCCESS;
@@ -261,22 +285,32 @@ ge::graphStatus InstanceNormRegbaseTilingBase::CheckXYShapeValid()
 ge::graphStatus InstanceNormRegbaseTilingBase::CheckGammaBettaShapeValid()
 {
     // 依次对gamma、betta的format和shape进行校验
-    for (int64_t i = INPUT_GAMMA_INDEX; i <= INPUT_BETA_INDEX; i++) {
-        auto gammaBettaShape = context_->GetInputShape(i);
+    const std::vector<std::pair<int, std::string>> gammaBetta = {
+        {INPUT_GAMMA_INDEX, "gamma"}, {INPUT_BETA_INDEX, "beta"}
+    };
+    for (const auto& [inputIdx, inputName] : gammaBetta) {
+        auto gammaBettaShape = context_->GetInputShape(inputIdx);
         OP_CHECK_NULL_WITH_CONTEXT(context_, gammaBettaShape);
         auto gammaBettaStorageShape = gammaBettaShape->GetStorageShape();
-        int64_t gammaBettaShapeSize = gammaBettaStorageShape.GetDimNum();
+        int64_t gammaBettaDimNum = gammaBettaStorageShape.GetDimNum();
         
-        OP_CHECK_IF(
-            (gammaBettaShapeSize != 1),
-            OP_LOGE(context_->GetNodeName(), "Input [%ld] dim size [%ld] should be 1",
-                    i, gammaBettaShapeSize), return ge::GRAPH_FAILED);
+        if (gammaBettaDimNum != 1) {
+            std::string reasonMsg = "The dimNum of input " + inputName + " should be 1";
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), inputName.c_str(),
+                std::to_string(gammaBettaDimNum).c_str(), reasonMsg.c_str());
+            return ge::GRAPH_FAILED;
+        }
 
-        OP_CHECK_IF(
-            (gammaBettaStorageShape.GetDim(DIM_0) != a0),
-            OP_LOGE(
-                context_->GetNodeName(), "Input [%ld] dim 0 is [%ld], whitch should be %ld (input channel dim)",
-                i, gammaBettaStorageShape.GetDim(DIM_0), a0), return ge::GRAPH_FAILED);
+        if (gammaBettaStorageShape.GetDim(DIM_0) != a0) {
+            std::string paramMsg = inputName + " and x";
+            std::string shapeMsg = ToString(gammaBettaStorageShape) + " and " + ToString(xStorageShape);
+            std::string reasonMsg = "The first dim of input " + inputName +
+                " should be equal to the dim C of input x, "
+                "where C refers to the 2nd axis in NCHW, NCDHW or ND, the 4th in NHWC, and the 5th in NDHWC";
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), paramMsg.c_str(),
+                shapeMsg.c_str(), reasonMsg.c_str());
+            return ge::GRAPH_FAILED;
+        }
     }
 
     OP_LOGI(context_->GetNodeName(), "CheckGammaBettaShapeValid success.");
@@ -285,49 +319,71 @@ ge::graphStatus InstanceNormRegbaseTilingBase::CheckGammaBettaShapeValid()
 
 ge::graphStatus InstanceNormRegbaseTilingBase::CheckMeanVarianceShapeValid()
 {
-    int64_t xShapeSize = xStorageShape.GetDimNum();
     // 依次对mean、variance的format和shape进行校验
-    for (int64_t i = OUTPUT_MEAN_INDEX; i <= OUTPUT_VARIANCE_INDEX; i++) {
-        auto meanVarianceShape = context_->GetOutputShape(i);
+    const std::vector<std::pair<int, std::string>> meanVariance = {
+        {OUTPUT_MEAN_INDEX, "mean"}, {OUTPUT_VARIANCE_INDEX, "variance"}
+    };
+    int64_t xDimNum = xStorageShape.GetDimNum();
+    for (const auto& [outputIdx, outputName] : meanVariance) {
+        auto meanVarianceShape = context_->GetOutputShape(outputIdx);
         OP_CHECK_NULL_WITH_CONTEXT(context_, meanVarianceShape);
         auto meanVarianceStorageShape = meanVarianceShape->GetStorageShape();
-        int64_t meanVarianceShapeSize = meanVarianceStorageShape.GetDimNum();
+        int64_t meanVarianceDimNum = meanVarianceStorageShape.GetDimNum();
 
-        OP_CHECK_IF(
-            (meanVarianceShapeSize != xShapeSize),
-            OP_LOGE(
-                context_->GetNodeName(), "Output [%ld] dim size [%ld] is not equal to Input X dim size [%ld]",
-                i, meanVarianceShapeSize, xShapeSize), return ge::GRAPH_FAILED);
+        if (meanVarianceDimNum != xDimNum) {
+            std::string paramMsg = outputName + " and x";
+            std::string dimNumMsg = std::to_string(meanVarianceDimNum) + " and " + std::to_string(xDimNum);
+            std::string reasonMsg = "The dimNums of output " + outputName + " and input x should be the same";
+            OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), paramMsg.c_str(),
+                dimNumMsg.c_str(), reasonMsg.c_str());
+            return ge::GRAPH_FAILED;
+        }
+
         // 针对不同format，对各个维度进行校验
-        for (int64_t j = 0; j < meanVarianceShapeSize; j++) {
+        std::string paramMsg = outputName + " and x";
+        std::string shapeMsg = ToString(meanVarianceStorageShape) + " and " + ToString(xStorageShape);
+        for (int64_t j = 0; j < meanVarianceDimNum; j++) {
             if (j == 0) {
                 // 第一个维度，需要与X的第一维相等（N轴）
-                OP_CHECK_IF(
-                    (meanVarianceStorageShape.GetDim(j) != xStorageShape.GetDim(j)),
-                    OP_LOGE(
-                        context_->GetNodeName(), "Output [%ld] dim [%ld] is [%ld], whitch should be %ld",
-                        i, j, meanVarianceStorageShape.GetDim(j), xStorageShape.GetDim(j)), return ge::GRAPH_FAILED);
+                if (meanVarianceStorageShape.GetDim(j) != xStorageShape.GetDim(j)) {
+                    std::string reasonMsg = "The dim N of output " + outputName +
+                        " should be equal to the dim N of input x, where N refers to the first axis";
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), paramMsg.c_str(),
+                        shapeMsg.c_str(), reasonMsg.c_str());
+                    return ge::GRAPH_FAILED;
+                }
             } else if (j == 1 && (format == ge::FORMAT_NCHW || format == ge::FORMAT_NCDHW || format == ge::FORMAT_ND)) {
                 // 第二个维度，对于X的NCHW/NCDHW/ND格式下，需要与X的第二维相等（C轴）
-                OP_CHECK_IF(
-                    (meanVarianceStorageShape.GetDim(j) != xStorageShape.GetDim(j)),
-                    OP_LOGE(
-                        context_->GetNodeName(), "Output [%ld] dim [%ld] is [%ld], whitch should be %ld",
-                        i, j, meanVarianceStorageShape.GetDim(j), xStorageShape.GetDim(j)), return ge::GRAPH_FAILED);
-            } else if (j == (meanVarianceShapeSize - 1) && (format == ge::FORMAT_NHWC || format == ge::FORMAT_NDHWC)) {
+                if (meanVarianceStorageShape.GetDim(j) != xStorageShape.GetDim(j)) {
+                    std::string reasonMsg =" The dim C of output " + outputName +
+                        " should be equal to the dim C of input x, "
+                        "where C refers to the 2nd axis when x's format is NCHW, NCDHW or ND";
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), paramMsg.c_str(),
+                        shapeMsg.c_str(), reasonMsg.c_str());
+                    return ge::GRAPH_FAILED;
+                }
+            } else if (j == (meanVarianceDimNum - 1) && (format == ge::FORMAT_NHWC || format == ge::FORMAT_NDHWC)) {
                 // 最后一个维度，对于X的NHWC/NDHWC格式下，需要与X的最后一维相等（C轴）
-                OP_CHECK_IF(
-                    (meanVarianceStorageShape.GetDim(j) != xStorageShape.GetDim(j)),
-                    OP_LOGE(
-                        context_->GetNodeName(), "Output [%ld] dim [%ld] is [%ld], whitch should be %ld",
-                        i, j, meanVarianceStorageShape.GetDim(j), xStorageShape.GetDim(j)), return ge::GRAPH_FAILED);
+                if (meanVarianceStorageShape.GetDim(j) != xStorageShape.GetDim(j)) {
+                    std::string reasonMsg =" The dim C of output " + outputName +
+                        " should be equal to the dim C of input x, "
+                        "where C refers to the last axis when x's format is NHWC or NDHWC";
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), paramMsg.c_str(),
+                        shapeMsg.c_str(), reasonMsg.c_str());
+                    return ge::GRAPH_FAILED;
+                }
             } else {
                 // 其他维度需要是1
-                OP_CHECK_IF(
-                    (meanVarianceStorageShape.GetDim(j) != 1),
-                    OP_LOGE(
-                        context_->GetNodeName(), "Output [%ld] dim [%ld] is [%ld], whitch should be 1",
-                        i, j, meanVarianceStorageShape.GetDim(j)), return ge::GRAPH_FAILED);
+                if (meanVarianceStorageShape.GetDim(j) != 1) {
+                    std::string reasonMsg = "All dims of output " + outputName +
+                        " except the dim N and dim C should be exactly 1, "
+                        "where N refers to the first axis, "
+                        "C refers to the 2nd axis when x's format is NCHW, NCDHW or ND, "
+                        "or the last axis when x's format is NHWC or NDHWC";
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), outputName.c_str(),
+                        ToString(meanVarianceStorageShape).c_str(), reasonMsg.c_str());
+                    return ge::GRAPH_FAILED;
+                }
             }
         }
     }
@@ -340,8 +396,8 @@ ge::graphStatus InstanceNormRegbaseTilingBase::CheckShapeAllNotNegative(gert::Sh
     for (size_t i = 0; i < shape.GetDimNum(); i++) {
         OP_CHECK_IF(
             shape.GetDim(i) < 0,
-            OP_LOGE(
-                context_->GetNodeName(), "Dim %lu of input expect be not negative, but actual %ld.", i, shape.GetDim(i)),
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x", ToString(shape).c_str(),
+                "The shape of input x can not be an invalid tensor with a negative dim"),
             return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;

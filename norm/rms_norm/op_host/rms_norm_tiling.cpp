@@ -16,6 +16,8 @@
 #include "op_host/tiling_util.h"
 #include "rms_norm_tiling.h"
 
+using namespace Ops::Base;
+
 namespace optiling {
 namespace {
 constexpr uint32_t DTYPE_KEY_FP16 = 1;
@@ -122,47 +124,75 @@ static bool CheckInputShape4RmsNorm(const gert::TilingContext* context)
 
     OP_TILING_CHECK(
         xDimNum > MAX_DIM_NUM || xDimNum < MIN_DIM_X,
-        OP_LOGE(context, "Input x's dim num should not greater than 8 or smaller than 1."),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x", std::to_string(xDimNum).c_str(),
+            "The dimNum of input x should be in the range of [1, 8]"),
         return false);
     OP_TILING_CHECK(
         gammaDimNum > MAX_DIM_NUM || gammaDimNum < MIN_DIM_GAMMA,
-        OP_LOGE(context, "Input gamma's dim num should not greater than 8 or smaller than 1."),
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "gamma", std::to_string(gammaDimNum).c_str(),
+            "The dimNum of input gamma should be in the range of [1, 8]"),
         return false);
-    OP_TILING_CHECK(
-        gammaDimNum > xDimNum,
-        OP_LOGE(context, "Input gamma's dim num should not greater than input x's."), return false);
-    OP_TILING_CHECK(
-        xDimNum != yDimNum, OP_LOGE(context, "Input x's dim num must equal to output y's dim num."),
-        return false);
+    if (gammaDimNum > xDimNum) {
+        std::string dimsMsg = std::to_string(gammaDimNum) + " and " + std::to_string(xDimNum);
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context->GetNodeName(), "gamma and x", dimsMsg.c_str(),
+            "The dimNum of input gamma should not be greater than the dimNum of input x");
+        return false;
+    }
+    if (xDimNum != yDimNum) {
+        std::string dimsMsg = std::to_string(yDimNum) + " and " + std::to_string(xDimNum);
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context->GetNodeName(), "y and x", dimsMsg.c_str(),
+            "The dimNums of input x and output y should be the same");
+        return false;
+    }
     for (uint32_t i = 0; i < gammaDimNum; i++) {
         OP_TILING_CHECK(
             gammaShape->GetStorageShape().GetDim(i) == 0,
-            OP_LOGE(context, "Input gamma shape can not be 0."), return false);
-        OP_TILING_CHECK(
-            gammaShape->GetStorageShape().GetDim(i) != xShape->GetStorageShape().GetDim(xDimNum - gammaDimNum + i),
-            OP_LOGE(context, "Input gamma shape invaild, gamma shape is not equal dy last few dim."),
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "gamma",
+                ToString(gammaShape->GetStorageShape()).c_str(),
+                "The shape of input gamma can not be an empty tensor"),
             return false);
+        if (gammaShape->GetStorageShape().GetDim(i) != xShape->GetStorageShape().GetDim(xDimNum - gammaDimNum + i)) {
+            std::string shapeMsg = ToString(gammaShape->GetStorageShape()) + " and " +
+                 ToString(xShape->GetStorageShape());
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "gamma and x", shapeMsg.c_str(), 
+                "The shape of input gamma should be the same as suffix shape of input x");
+            return false;
+        }
     }
     for (uint32_t i = 0; i < xDimNum; i++) {
         OP_TILING_CHECK(
-            xShape->GetStorageShape().GetDim(i) == 0, OP_LOGE(context, "Input x shape can not be 0."),
+            xShape->GetStorageShape().GetDim(i) == 0,
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "x",
+                ToString(xShape->GetStorageShape()).c_str(),
+                "The shape of input x can not be an empty tensor"),
             return false);
         OP_TILING_CHECK(
-            yShape->GetStorageShape().GetDim(i) == 0, OP_LOGE(context, "Output y shape can not be 0."),
+            yShape->GetStorageShape().GetDim(i) == 0,
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "y",
+                ToString(yShape->GetStorageShape()).c_str(),
+                "The shape of output y can not be an empty tensor"),
             return false);
-        OP_TILING_CHECK(
-            xShape->GetStorageShape().GetDim(i) != yShape->GetStorageShape().GetDim(i),
-            OP_LOGE(context, "Output y shape must equal to input x."), return false);
+        if (xShape->GetStorageShape().GetDim(i) != yShape->GetStorageShape().GetDim(i)) {
+            std::string shapeMsg = ToString(yShape->GetStorageShape()) + " and " + ToString(xShape->GetStorageShape());
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "y and x", shapeMsg.c_str(),
+                "The shapes of output y and input x should be the same");
+            return false;
+        }
     }
     for (uint32_t i = 0; i < rstdDimNum; i++) {
         OP_TILING_CHECK(
-            rstdShape->GetStorageShape().GetDim(i) == 0, OP_LOGE(context, "rstdShape can not be 0."),
+            rstdShape->GetStorageShape().GetDim(i) == 0,
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "rstd",
+                ToString(rstdShape->GetStorageShape()).c_str(),
+                "The shape of output rstd can not be an empty tensor"),
             return false);
-        OP_TILING_CHECK(
-            rstdShape->GetStorageShape().GetDim(i) != xShape->GetStorageShape().GetDim(i) &&
-                rstdShape->GetStorageShape().GetDim(i) != 1,
-            OP_LOGE(context, "Input rstd shape invaild, shape is not equal to xshape first few dim."),
-            return false);
+        if (rstdShape->GetStorageShape().GetDim(i) != xShape->GetStorageShape().GetDim(i) &&
+                rstdShape->GetStorageShape().GetDim(i) != 1) {
+            std::string shapeMsg = ToString(rstdShape->GetStorageShape()) + " and " + ToString(xShape->GetStorageShape());
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "rstd and x", shapeMsg.c_str(),
+                "Each dim of output rstd should be 1 or equal to the corresponding dim of input x");
+            return false;
+        }
     }
     return true;
 }

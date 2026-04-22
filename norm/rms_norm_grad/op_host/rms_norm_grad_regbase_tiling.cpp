@@ -19,6 +19,7 @@
 #include "rms_norm_grad_tiling.h"
 
 namespace optiling {
+using namespace Ops::Base;
 constexpr int64_t MIN_DATANUM_PER_CORE = 1024;
 constexpr int64_t UB_RESERVED_SIZE = 256;
 constexpr uint32_t MIN_WORKSPACE_SIZE = 16 * 1024 * 1024;
@@ -108,7 +109,8 @@ ge::graphStatus RmsNormGradRegbaseTiling::CheckInputsShape()
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputShape);
     auto storageShape0 = inputShape->GetStorageShape();
     if (CheckShapeAllPositive(storageShape0) != ge::GRAPH_SUCCESS) {
-        OP_LOGE(context_->GetNodeName(), "dy shape contains zero.");
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "dy", ToString(storageShape0).c_str(),
+            "The shape of input dy can not be an empty tensor or an invalid tensor with a negative dim");
         return ge::GRAPH_FAILED;
     }
 
@@ -117,13 +119,16 @@ ge::graphStatus RmsNormGradRegbaseTiling::CheckInputsShape()
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputShape);
     auto storageShape1 = inputShape->GetStorageShape();
     if (CheckShapeAllPositive(storageShape1) != ge::GRAPH_SUCCESS) {
-        OP_LOGE(context_->GetNodeName(), "x shape contains zero.");
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x", ToString(storageShape1).c_str(),
+            "The shape of input x can not be an empty tensor or an invalid tensor with a negative dim");
         return ge::GRAPH_FAILED;
     }
 
     // check shapes of input0 and input1 are equal
     if (CheckShapesEqual(storageShape0, storageShape1) != ge::GRAPH_SUCCESS) {
-        OP_LOGE(context_->GetNodeName(), "Shapes of x1 and x2 are not equal.");
+        std::string shapeMsg = ToString(storageShape0) + " and " + ToString(storageShape1);
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "dy and x", shapeMsg.c_str(),
+            "The shapes of input dy and input x should be the same");
         return ge::GRAPH_FAILED;
     }
 
@@ -132,7 +137,8 @@ ge::graphStatus RmsNormGradRegbaseTiling::CheckInputsShape()
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputShape);
     auto storageShape2 = inputShape->GetStorageShape();
     if (CheckShapeAllPositive(storageShape2) != ge::GRAPH_SUCCESS) {
-        OP_LOGE(context_->GetNodeName(), "gamma shape contains zero.");
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "rstd", ToString(storageShape2).c_str(),
+            "The shape of input rstd can not be an empty tensor or an invalid tensor with a negative dim");
         return ge::GRAPH_FAILED;
     }
 
@@ -141,7 +147,8 @@ ge::graphStatus RmsNormGradRegbaseTiling::CheckInputsShape()
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputShape);
     auto storageShape3 = inputShape->GetStorageShape();
     if (CheckShapeAllPositive(storageShape3) != ge::GRAPH_SUCCESS) {
-        OP_LOGE(context_->GetNodeName(), "beta shape contains zero.");
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "gamma", ToString(storageShape3).c_str(),
+            "The shape of input gamma can not be an empty tensor or an invalid tensor with a negative dim");
         return ge::GRAPH_FAILED;
     }
 
@@ -152,13 +159,14 @@ ge::graphStatus RmsNormGradRegbaseTiling::CheckInputsShape()
 
 ge::graphStatus RmsNormGradRegbaseTiling::CheckInputsDtypeAndFormat()
 {
+    const std::vector<std::string> inputNames = {"dy", "x", "rstd", "gamma"};
     for (int i = 0; i < INPUT_NUM; i++) {
         auto inputDesc = context_->GetInputDesc(i);
         OP_CHECK_NULL_WITH_CONTEXT(context_, inputDesc);
         // check format
         auto format = inputDesc->GetFormat().GetStorageFormat();
         if (format != ge::FORMAT_ND) {
-            OP_LOGE(context_->GetNodeName(), "Input %d only supports ND format.", i);
+            OP_LOGE_FOR_INVALID_FORMAT(context_->GetNodeName(), inputNames[i].c_str(), ToString(format).c_str(), "ND");
             return ge::GRAPH_FAILED;
         }
     }
@@ -169,62 +177,53 @@ ge::graphStatus RmsNormGradRegbaseTiling::CheckInputsDtypeAndFormat()
     OP_CHECK_IF(
         (dyDtype_ != ge::DataType::DT_FLOAT16 && dyDtype_ != ge::DataType::DT_BF16 &&
          dyDtype_ != ge::DataType::DT_FLOAT),
-        OP_LOGE(
-            context_->GetNodeName(), "Input dyDtype [%s] not support, only supports float16, bfloat16, float32.",
-            ge::TypeUtils::DataTypeToSerialString(dyDtype_).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "dy", ToString(dyDtype_).c_str(), "FLOAT, FLOAT16 or BF16"),
         return ge::GRAPH_FAILED);
 
     auto xDesc = context_->GetInputDesc(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, xDesc);
     auto xDtype = xDesc->GetDataType();
-    OP_CHECK_IF(
-        (dyDtype_ != xDtype),
-        OP_LOGE(
-            context_->GetNodeName(), "Input xDtype [%s] does not match dyDtype [%s].",
-            ge::TypeUtils::DataTypeToSerialString(xDtype).c_str(),
-            ge::TypeUtils::DataTypeToSerialString(dyDtype_).c_str()),
-        return ge::GRAPH_FAILED);
+    if (dyDtype_ != xDtype) {
+        std::string dtypeMsg = ToString(xDtype) + " and " + ToString(dyDtype_);
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "x and dy", dtypeMsg.c_str(),
+            "The dtypes of input x and input dy should be the same");
+        return ge::GRAPH_FAILED;
+    }
 
     auto rstdDesc = context_->GetInputDesc(2);
     OP_CHECK_NULL_WITH_CONTEXT(context_, rstdDesc);
     auto rstdDtype = rstdDesc->GetDataType();
     OP_CHECK_IF(
         (rstdDtype != ge::DataType::DT_FLOAT),
-        OP_LOGE(
-            context_->GetNodeName(), "Input rstdDtype [%s] not support, only supports float32.",
-            ge::TypeUtils::DataTypeToSerialString(rstdDtype).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "rstd", ToString(rstdDtype).c_str(), "FLOAT"),
         return ge::GRAPH_FAILED);
 
     auto gammaDesc = context_->GetInputDesc(3);
     OP_CHECK_NULL_WITH_CONTEXT(context_, gammaDesc);
     auto gammaDtype = gammaDesc->GetDataType();
-    OP_CHECK_IF(
-        (gammaDtype != ge::DataType::DT_FLOAT && gammaDtype != dyDtype_),
-        OP_LOGE(
-            context_->GetNodeName(), "Input gammaDtype [%s] does not match dyDtype [%s] or match float32.",
-            ge::TypeUtils::DataTypeToSerialString(gammaDtype).c_str(),
-            ge::TypeUtils::DataTypeToSerialString(dyDtype_).c_str()),
-        return ge::GRAPH_FAILED);
+    if (gammaDtype != ge::DataType::DT_FLOAT && gammaDtype != dyDtype_) {
+        std::string dtypeMsg = ToString(gammaDtype) + " and " + ToString(dyDtype_);
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "gamma and dy", dtypeMsg.c_str(),
+            "The dtype of input gamma should be FLOAT or the same as the dtype of input dy");
+        return ge::GRAPH_FAILED;
+    }
 
     auto dxDesc = context_->GetOutputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, dxDesc);
     auto dxDtype = dxDesc->GetDataType();
-    OP_CHECK_IF(
-        (dyDtype_ != dxDtype),
-        OP_LOGE(
-            context_->GetNodeName(), "Input dxDtype [%s] does not match dyDtype [%s].",
-            ge::TypeUtils::DataTypeToSerialString(dxDtype).c_str(),
-            ge::TypeUtils::DataTypeToSerialString(dyDtype_).c_str()),
-        return ge::GRAPH_FAILED);
+    if (dyDtype_ != dxDtype) {
+        std::string dtypeMsg = ToString(dxDtype) + " and " + ToString(dyDtype_);
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "dx and dy", dtypeMsg.c_str(),
+            "The dtypes of output dx and input dy should be the same");
+        return ge::GRAPH_FAILED;
+    }
 
     auto dgammaDesc = context_->GetOutputDesc(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, dgammaDesc);
     auto dgammaDtype = dgammaDesc->GetDataType();
     OP_CHECK_IF(
         (dgammaDtype != ge::DataType::DT_FLOAT),
-        OP_LOGE(
-            context_->GetNodeName(), "Input dgammaDtype [%s] not support, only supports float32.",
-            ge::TypeUtils::DataTypeToSerialString(dgammaDtype).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "dgamma", ToString(dgammaDtype).c_str(), "FLOAT"),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;

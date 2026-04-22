@@ -16,6 +16,8 @@
 #include "layer_norm_v4_tiling.h"
 #include "exe_graph/runtime/shape.h"
 
+using namespace Ops::Base;
+
 namespace optiling {
 constexpr size_t K_INPUT_IDX_X = 0;
 constexpr size_t K_INPUT_IDX_NORM_SHAPE = 1;
@@ -110,7 +112,8 @@ ge::graphStatus GetCommonShapeAttrsInfo(
     if (DTYPE_SIZE_MAP.find(commonParams.tensorDtype) != DTYPE_SIZE_MAP.end()) {
         alignment = BLOCK_SIZE / DTYPE_SIZE_MAP.at(commonParams.tensorDtype);
     } else {
-        OP_LOGE(context, "x dtype must be in float32, float16, bfloat16.");
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "x",
+            ToString(commonParams.tensorDtype).c_str(), "FLOAT, FLOAT16 or BF16");
         return ge::GRAPH_FAILED;
     }
     commonParams.rowAlign = (commonParams.rowSize + alignment - 1) / alignment * alignment;
@@ -148,19 +151,16 @@ ge::graphStatus LayerNormV4TilingBase::GetShapeAttrsInfo()
     const gert::Shape normalizedShape = context_->GetInputShape(K_INPUT_IDX_NORM_SHAPE)->GetStorageShape();
     OP_CHECK_IF(
         normalizedShape.GetDimNum() > 1,
-        OP_LOGE(
-            context_->GetNodeName(), "normalizedShape dim num must be 1, dim num: %u",
-            static_cast<uint32_t>(normalizedShape.GetDimNum())),
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "normalized_shape",
+            std::to_string(normalizedShape.GetDimNum()).c_str(), "1D"),
         return ge::GRAPH_FAILED);
     normalizedShapeLen = normalizedShape.IsScalar() ? 1 : normalizedShape.GetDim(0);
-    OP_CHECK_IF(
-        static_cast<uint64_t>(xShape.GetDimNum()) < normalizedShapeLen,
-        OP_LOGE(
-            context_->GetNodeName(),
-            "normalizedShape dim num must be less than xShape dim num, xShape dim num: %u, "
-            "normalizedShape dim num: %u",
-            static_cast<uint32_t>(xShape.GetDimNum()), static_cast<uint32_t>(normalizedShapeLen)),
-        return ge::GRAPH_FAILED);
+    if (static_cast<uint64_t>(xShape.GetDimNum()) < normalizedShapeLen) {
+        std::string reasonMsg = "The dimNum of input x should be greater or equal to " + std::to_string(normalizedShapeLen);
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            context_->GetNodeName(), "x", std::to_string(xShape.GetDimNum()).c_str(), reasonMsg.c_str());
+        return ge::GRAPH_FAILED;
+    }
     OP_CHECK_IF(
         static_cast<int64_t>(normalizedShapeLen) < 0,
         OP_LOGE(

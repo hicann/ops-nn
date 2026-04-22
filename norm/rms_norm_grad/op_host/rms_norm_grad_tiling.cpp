@@ -17,6 +17,8 @@
 #include "op_host/tiling_util.h"
 #include "tiling/tiling_api.h"
 
+using namespace Ops::Base;
+
 namespace optiling {
 using namespace Ops::NN::OpTiling;
 
@@ -168,26 +170,44 @@ static bool CheckInputDim(const gert::TilingContext* context, size_t dyDimNum, s
 {
     OP_CHECK_IF(
         xDimNum > MAX_DIM_NUM || xDimNum < MIN_DIM_X,
-        OP_LOGE(context, "Input x's dim num should not greater than 8 or smaller than 1."), return false);
-    OP_CHECK_IF(
-        gammaDimNum > MAX_DIM_NUM || gammaDimNum < MIN_DIM_GAMMA,
-        OP_LOGE(context, "Input gamma's dim num should not greater than 8 or smaller than 1."), return false);
-    OP_CHECK_IF(
-        gammaDimNum > xDimNum, OP_LOGE(context, "Input gamma's dim num should not greater than input x's."),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x", std::to_string(xDimNum).c_str(),
+            "The dimNum of input x should be in the range of [1, 8]"),
         return false);
     OP_CHECK_IF(
-        dyDimNum != xDimNum, OP_LOGE(context, "Input dy/x shape invaild, dim num is not equal dy dim."), return false);
+        gammaDimNum > MAX_DIM_NUM || gammaDimNum < MIN_DIM_GAMMA,
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "gamma", std::to_string(gammaDimNum).c_str(),
+            "The dimNum of input gamma should be in the range of [1, 8]"),
+        return false);
+    if (gammaDimNum > xDimNum) {
+        std::string dimsMsg = std::to_string(gammaDimNum) + " and " + std::to_string(xDimNum);
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context->GetNodeName(), "gamma and x", dimsMsg.c_str(),
+            "The dimNum of input gamma should be less than or equal to the dimNum of input x");
+        return false;
+    }
+    if (dyDimNum != xDimNum) {
+        std::string dimsMsg = std::to_string(dyDimNum) + " and " + std::to_string(xDimNum);
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context->GetNodeName(), "dy and x", dimsMsg.c_str(),
+            "The dimNums of input dy and input x should be the same");
+        return false;
+    }
     return true;
 }
 
 static bool CheckOutputDim(
     const gert::TilingContext* context, size_t dyDimNum, size_t dxDimNum, size_t gammaDimNum, size_t dgammaDimNum)
 {
-    OP_CHECK_IF(
-        dxDimNum != dyDimNum, OP_LOGE(context, "Output dx shape invaild, dim num is not equal dy dim."), return false);
-    OP_CHECK_IF(
-        gammaDimNum != dgammaDimNum, OP_LOGE(context, "Output dgamma shape invaild, dim num is not equal gamma dim."),
-        return false);
+    if (dxDimNum != dyDimNum) {
+        std::string dimsMsg = std::to_string(dxDimNum) + " and " + std::to_string(dyDimNum);
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context->GetNodeName(), "dx and dy", dimsMsg.c_str(),
+            "The dimNums of output dx and input dy should be the same");
+        return false;
+    }
+    if (gammaDimNum != dgammaDimNum) {
+        std::string dimsMsg = std::to_string(dgammaDimNum) + " and " + std::to_string(gammaDimNum);
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context->GetNodeName(), "dgamma and gamma", dimsMsg.c_str(),
+            "The dimNums of output dgamma and input gamma should be the same");
+        return false;
+    }
     return true;
 }
 
@@ -197,15 +217,26 @@ static bool CheckInputAndOutputShape(
 {
     size_t xDimNum = xShape->GetStorageShape().GetDimNum();
     for (uint32_t i = 0; i < xDimNum; i++) {
-        OP_CHECK_IF(
-            dyShape->GetStorageShape().GetDim(i) != xShape->GetStorageShape().GetDim(i),
-            OP_LOGE(context, "Input dy/x shape invaild, shape is not equal dy first few dim."), return false);
-        OP_CHECK_IF(
-            dyShape->GetStorageShape().GetDim(i) != dxShape->GetStorageShape().GetDim(i),
-            OP_LOGE(context, "Output dx shape invaild, shape is not equal dy first few dim."), return false);
+        if (dyShape->GetStorageShape().GetDim(i) != xShape->GetStorageShape().GetDim(i)) {
+            std::string shapeMsg = ToString(xShape->GetStorageShape()) + " and " +
+                ToString(dyShape->GetStorageShape());
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "x and dy", shapeMsg.c_str(),
+                "The shapes of input x and input dy should be the same");
+            return false;
+        }
+        if(dyShape->GetStorageShape().GetDim(i) != dxShape->GetStorageShape().GetDim(i)){
+            std::string shapeMsg = ToString(dxShape->GetStorageShape()) + " and " +
+                ToString(dyShape->GetStorageShape());
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "dx and dy", shapeMsg.c_str(),
+                "The shapes of output dx and input dy should be the same");
+            return false;
+        }
     }
     OP_CHECK_IF(
-        dyShape->GetStorageShape().GetDim(xDimNum - 1) == 0, OP_LOGE(context, "Input dy last shape can not be 0."), return false);
+        dyShape->GetStorageShape().GetDim(xDimNum - 1) == 0,
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "dy",
+            ToString(dyShape->GetStorageShape()).c_str(), "The last dim of input dy can not be 0"),
+        return false);
     return true;
 }
 
@@ -217,20 +248,32 @@ static bool CheckRstdShape(
     size_t rstdDimNum = rstdShape->GetStorageShape().GetDimNum();
     if (rstdDimNum < xDimNum - gammaDimNum) {
         for (uint32_t i = 0; i < rstdDimNum; i++) {
-            OP_CHECK_IF(
-                rstdShape->GetStorageShape().GetDim(i) != xShape->GetStorageShape().GetDim(i),
-                OP_LOGE(context, "Input rstd shape invaild, shape is not equal x first few dim."), return false);
+            if (rstdShape->GetStorageShape().GetDim(i) != xShape->GetStorageShape().GetDim(i)) {
+                std::string shapeMsg = ToString(rstdShape->GetStorageShape()) + " and " +
+                    ToString(xShape->GetStorageShape());
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "rstd and x", shapeMsg.c_str(),
+                    "The shape of input rstd should be the same as the prefix shape of input x");
+                return false;
+            }
         }
         for (uint32_t i = rstdDimNum; i < xDimNum - gammaDimNum; i++) {
-            OP_CHECK_IF(
-                xShape->GetStorageShape().GetDim(i) != 1,
-                OP_LOGE(context, "Input rstd shape invaild, shape is not equal x first few dim."), return false);
+            if (xShape->GetStorageShape().GetDim(i) != 1) {
+                std::string reasonMsg = "Each dim of input x in the range of [" +
+                    std::to_string(rstdDimNum) + ", " + std::to_string(xDimNum - gammaDimNum) + ") should be 1";
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "x",
+                    ToString(xShape->GetStorageShape()).c_str(), reasonMsg.c_str());
+                return false;
+            }
         }
     } else {
         for (uint32_t i = 0; i < xDimNum - gammaDimNum; i++) {
-            OP_CHECK_IF(
-                rstdShape->GetStorageShape().GetDim(i) != xShape->GetStorageShape().GetDim(i),
-                OP_LOGE(context, "Input rstd shape invaild, shape is not equal x first few dim."), return false);
+            if (rstdShape->GetStorageShape().GetDim(i) != xShape->GetStorageShape().GetDim(i)) {
+                std::string shapeMsg = ToString(rstdShape->GetStorageShape()) + " and " +
+                    ToString(xShape->GetStorageShape());
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "rstd and x", shapeMsg.c_str(), 
+                    "The shape of input rstd should be the same as the prefix shape of input x");
+                return false;
+            }
         }
     }
     return true;
@@ -242,16 +285,27 @@ static bool CheckGammaAndDgammaShape(
 {
     size_t gammaDimNum = gammaShape->GetStorageShape().GetDimNum();
     size_t dyDimNum = dyShape->GetStorageShape().GetDimNum();
-    OP_CHECK_IF(
-        dyDimNum < gammaDimNum, OP_LOGE(context, "dy dim num should not be smaller than gamma dim num."),
-        return false);
+    if (dyDimNum < gammaDimNum) {
+        std::string dimsMsg = std::to_string(gammaDimNum) + " and " + std::to_string(dyDimNum);
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context->GetNodeName(), "gamma and dy", dimsMsg.c_str(),
+            "The dimNum of input gamma should be less than or equal to the dimNum of input dy");
+        return false;
+    }
     for (uint32_t i = 0; i < gammaDimNum; i++) {
-        OP_CHECK_IF(
-            gammaShape->GetStorageShape().GetDim(i) != dyShape->GetStorageShape().GetDim(dyDimNum - gammaDimNum + i),
-            OP_LOGE(context, "Input gamma shape invaild, gamma shape is not equal dy last few dim."), return false);
-        OP_CHECK_IF(
-            dgammaShape->GetStorageShape().GetDim(i) != dyShape->GetStorageShape().GetDim(dyDimNum - gammaDimNum + i),
-            OP_LOGE(context, "Input gamma shape invaild, gamma shape is not equal dy last few dim."), return false);
+        if (gammaShape->GetStorageShape().GetDim(i) != dyShape->GetStorageShape().GetDim(dyDimNum - gammaDimNum + i)) {
+            std::string shapeMsg = ToString(gammaShape->GetStorageShape()) + " and " +
+                ToString(dyShape->GetStorageShape());
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "gamma and dy", shapeMsg.c_str(), 
+                "The shape of input gamma should be the same as the suffix shape of input dy");
+            return false;
+        }
+        if (dgammaShape->GetStorageShape().GetDim(i) != dyShape->GetStorageShape().GetDim(dyDimNum - gammaDimNum + i)) {
+            std::string shapeMsg = ToString(dgammaShape->GetStorageShape()) + " and " +
+                ToString(dyShape->GetStorageShape());
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "dgamma and dy", shapeMsg.c_str(),
+                "The shape of output dgamma should be the same as the suffix shape of input dy");
+            return false;
+        }
     }
     return true;
 }
