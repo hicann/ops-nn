@@ -52,6 +52,15 @@ TILING_DATA_FIELD_DEF(int64_t, simtUsedCore);                   // 使用核数
 TILING_DATA_FIELD_DEF(int64_t, simtPerCoreNum);                 // 非尾核jisuan的元素个数
 TILING_DATA_FIELD_DEF(int64_t, simtTailCoreNum);                // 尾核jisuan的元素个数
 TILING_DATA_FIELD_DEF(int64_t, simtThreadNum);                  // 使用线程数
+TILING_DATA_FIELD_DEF(int64_t, normBlockColNum);
+TILING_DATA_FIELD_DEF(int64_t, indicesUbFactor);
+TILING_DATA_FIELD_DEF(int64_t, updatesColUbFactor);
+TILING_DATA_FIELD_DEF(int64_t, indicesLoop);
+TILING_DATA_FIELD_DEF(int64_t, indicesTailLoopNum);
+TILING_DATA_FIELD_DEF(int64_t, updatesNormBlockColLoop);
+TILING_DATA_FIELD_DEF(int64_t, updatesTailBlockColLoop);
+TILING_DATA_FIELD_DEF(int64_t, updatesNormBlockTailLoopSize);
+TILING_DATA_FIELD_DEF(int64_t, updatesTailBlockTailLoopSize);
 
 END_TILING_DATA_DEF;
 
@@ -96,6 +105,7 @@ class ScatterTiling : public TilingBaseClass {
   ge::graphStatus PromoteDtype();
   ge::graphStatus GetTilingParam();
   ge::graphStatus DoSimdTiling();
+  ge::graphStatus  DoDeterministicTiling();
   void SetTilingData();
 
   bool oneCoreTemp{false};
@@ -113,6 +123,16 @@ class ScatterTiling : public TilingBaseClass {
   int32_t axis = 1;
   int32_t indicesDim = 0;
   int32_t dtypeSize = 0;
+  int64_t normBlockColNum_ = 0;
+  int64_t tailBlockColNum_ = 0;
+  int64_t indicesUbFactor_ = 0;
+  int64_t updatesColUbFactor_ = 0;
+  int64_t indicesLoop_ = 0;
+  int64_t indicesTailLoopNum_ = 0;
+  int64_t updatesNormBlockColLoop_ = 0;
+  int64_t updatesTailBlockColLoop_ = 0;
+  int64_t updatesNormBlockTailLoopSize_ = 0;
+  int64_t updatesTailBlockTailLoopSize_ = 0;
   ge::DataType inputDtype = ge::DT_UNDEFINED;
   ge::DataType indicesDtype = ge::DT_UNDEFINED;
   ge::DataType updatesDtype = ge::DT_UNDEFINED;
@@ -123,6 +143,7 @@ class ScatterTiling : public TilingBaseClass {
   gert::Shape updatesNewShape;
   ScatterTilingData tilingData;
   bool isUint64{false};
+  bool isDeterministic_{false};
 };
 } // namespace optiling
 

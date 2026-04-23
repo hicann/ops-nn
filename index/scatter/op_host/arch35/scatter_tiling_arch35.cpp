@@ -86,6 +86,10 @@ constexpr int32_t ONE_DIM_SIZE = 1;
 constexpr int32_t ZERO_DIM_SIZE = 0;
 constexpr int32_t BATCH_DIM = 0;
 constexpr int64_t IN_DTYPE_B64 = 8;
+constexpr int64_t DETERM_MIN_COL = 128;
+constexpr int64_t UB_ALIGN_VALUE = 32;
+constexpr uint64_t DETERM_TILINGKEY = 1000;
+
 
 static map<const ge::DataType, const int32_t> g_dtypeLen = {{ge::DT_INT8, 1}, {ge::DT_UINT8, 1}, {ge::DT_FLOAT16, 2},
                                                             {ge::DT_FLOAT, 4}, {ge::DT_INT32, 4}, {ge::DT_BF16, 2},
@@ -204,6 +208,10 @@ ge::graphStatus ScatterTiling::GetShapes() {
   if (indicesDimSize != ZERO_DIM_SIZE && indicesDimSize != ONE_DIM_SIZE && indicesDimSize != TWO_DIM_SIZE) {
     OP_LOGE("Scatter", "dimension of indices should be 0, 1 or 2.");
     return ge::GRAPH_FAILED;
+  }
+
+  if (context_->GetDeterministic() && indicesDimSize == TWO_DIM_SIZE) {
+    isDeterministic_ = true;
   }
 
   inputOriginShape = Ops::Base::EnsureNotScalar(inputShape->GetOriginShape());
@@ -391,6 +399,39 @@ ge::graphStatus ScatterTiling::GetTilingParam() {
   return ge::GRAPH_SUCCESS;
 }
 
+ge::graphStatus ScatterTiling::DoDeterministicTiling() {
+  int64_t updateColSize = updatesNewShape[DIM3];
+  normBlockColNum_ = Ops::Base::CeilDiv(updateColSize, static_cast<int64_t>(aivCoreNum));
+  normBlockColNum_ = std::max(static_cast<int64_t>(DETERM_MIN_COL / dtypeSize), normBlockColNum_);
+  aivCoreNum = Ops::Base::CeilDiv(updateColSize, normBlockColNum_);
+  int64_t tailBlockColNum = updateColSize - normBlockColNum_ * (aivCoreNum - 1);
+
+  int64_t indicesSize = indicesOriginShape.GetShapeSize();
+  int64_t indicesDtypeSize = ge::GetSizeByDataType(indicesDtype);
+  OP_CHECK_IF(indicesDtypeSize <= 0, OP_LOGE("Scatter", "get indicesDtype size fail."), return ge::GRAPH_FAILED);
+  
+  if (normBlockColNum_ * dtypeSize > (ubSize - INDICES_SIZE)) { // 列长大于UBSize，需分列
+    indicesUbFactor_ = 
+        Ops::Base::CeilAlign(std::min(INDICES_SIZE, indicesSize * indicesDtypeSize), UB_ALIGN_VALUE) / indicesDtypeSize;
+    updatesColUbFactor_ = Ops::Base::FloorAlign((ubSize - indicesUbFactor_ * indicesDtypeSize), UB_ALIGN_VALUE) / dtypeSize;
+    updatesColUbFactor_ =  std::min(updatesColUbFactor_, 
+                                    Ops::Base::CeilAlign(normBlockColNum_ * dtypeSize, UB_ALIGN_VALUE) / dtypeSize);
+  } else {
+    updatesColUbFactor_ = Ops::Base::CeilAlign(normBlockColNum_ * dtypeSize, UB_ALIGN_VALUE) / dtypeSize;
+    indicesUbFactor_= Ops::Base::FloorAlign(ubSize - updatesColUbFactor_ * dtypeSize, UB_ALIGN_VALUE) / indicesDtypeSize;
+    indicesUbFactor_ = std::min(indicesUbFactor_, 
+                                Ops::Base::CeilAlign(indicesSize * indicesDtypeSize, UB_ALIGN_VALUE) / indicesDtypeSize);
+  }
+  indicesLoop_ = Ops::Base::CeilDiv(indicesSize, indicesUbFactor_);
+  indicesTailLoopNum_ = indicesSize - (indicesLoop_ - 1) * indicesUbFactor_;
+  updatesNormBlockColLoop_ = Ops::Base::CeilDiv(normBlockColNum_, updatesColUbFactor_);
+  updatesTailBlockColLoop_ = Ops::Base::CeilDiv(tailBlockColNum, updatesColUbFactor_);
+  updatesNormBlockTailLoopSize_ = normBlockColNum_ - (updatesNormBlockColLoop_ - 1) * updatesColUbFactor_;
+  updatesTailBlockTailLoopSize_ = tailBlockColNum - (updatesTailBlockColLoop_ - 1) * updatesColUbFactor_;
+
+  return ge::GRAPH_SUCCESS;
+}
+
 void ScatterTiling::SetTilingData() {
   tilingData.set_axis(axis);
   tilingData.set_indicesDim(indicesDim);
@@ -411,6 +452,15 @@ void ScatterTiling::SetTilingData() {
   tilingData.set_dtypeSize(static_cast<int64_t>(dtypeSize));
   // 32K for simt and 8K for simd
   tilingData.set_ubSize(ubSize - SIMT_RESERVED_SIZE - SIMD_RESERVED_SIZE);
+  tilingData.set_normBlockColNum(normBlockColNum_);
+  tilingData.set_indicesUbFactor(indicesUbFactor_);
+  tilingData.set_updatesColUbFactor(updatesColUbFactor_);
+  tilingData.set_indicesLoop(indicesLoop_);
+  tilingData.set_indicesTailLoopNum(indicesTailLoopNum_);
+  tilingData.set_updatesNormBlockColLoop(updatesNormBlockColLoop_);
+  tilingData.set_updatesTailBlockColLoop(updatesTailBlockColLoop_);
+  tilingData.set_updatesNormBlockTailLoopSize(updatesNormBlockTailLoopSize_);
+  tilingData.set_updatesTailBlockTailLoopSize(updatesTailBlockTailLoopSize_);
 }
 
 ge::graphStatus ScatterTiling::DoOpTiling() {
@@ -432,6 +482,15 @@ ge::graphStatus ScatterTiling::DoOpTiling() {
   if (CheckShapes() != ge::GRAPH_SUCCESS) {
     OP_LOGE("Scatter", "CheckShapes failed!");
     return ge::GRAPH_FAILED;
+  }
+
+  if (isDeterministic_) {
+    if (DoDeterministicTiling() != ge::GRAPH_SUCCESS) {
+      OP_LOGE("Scatter", "DoDeterministicTiling failed!");
+      return ge::GRAPH_FAILED;
+    }
+    SetTilingData();
+    return ge::GRAPH_SUCCESS;
   }
 
   int64_t srcStride = updatesNewShape[DIM2] * updatesNewShape[DIM3];
@@ -515,6 +574,9 @@ uint64_t ScatterTiling::setSimtTilingKey(uint64_t& tilingKey) const {
 }
 
 uint64_t ScatterTiling::GetTilingKey() const {
+  if (isDeterministic_) {
+    return DETERM_TILINGKEY;
+  }
   if (simdTemp > 0) {
     uint64_t factorStart = 100;
     uint64_t tilingKey = simdTemp * factorStart;
@@ -598,6 +660,15 @@ void ScatterTiling::DumpTilingInfo()
   info << ", loopLength: " << tilingData.get_loopLength();
   info << ", indicesUbSize: " << tilingData.get_indicesUbSize();
   info << ", dtypeSize: " << tilingData.get_dtypeSize();
+  info << ", normBlockColNum: " << tilingData.get_normBlockColNum();
+  info << ", indicesUbFactor: " << tilingData.get_indicesUbFactor();
+  info << ", updatesColUbFactor: " << tilingData.get_updatesColUbFactor();
+  info << ", indicesLoop: " << tilingData.get_indicesLoop();
+  info << ", indicesTailLoopNum: " << tilingData.get_indicesTailLoopNum();
+  info << ", updatesNormBlockColLoop: " << tilingData.get_updatesNormBlockColLoop();
+  info << ", updatesTailBlockColLoop: " << tilingData.get_updatesTailBlockColLoop();
+  info << ", updatesNormBlockTailLoopSize: " << tilingData.get_updatesNormBlockTailLoopSize();
+  info << ", updatesTailBlockTailLoopSize: " << tilingData.get_updatesTailBlockTailLoopSize();
   OP_LOGI(context_->GetNodeName(), "%s", info.str().c_str());
 }
 

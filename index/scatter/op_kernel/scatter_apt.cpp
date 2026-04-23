@@ -16,6 +16,7 @@
 #include "arch35/scatter.h"
 #include "arch35/scatter_simd.h"
 #include "arch35/scatter_simt.h"
+#include "arch35/scatter_deterministic.h"
 
 using namespace SCATTER;
 using namespace AscendC;
@@ -64,6 +65,7 @@ using namespace AscendC;
 #define TILING_KEY_ONECORE_INT64_INT32 311
 #define TILING_KEY_ONECORE_INT32_INT2 312
 #define TILING_KEY_ONECORE_INT64_INT2 313
+#define TILING_KEY_DETERMINISTIC 1000
 
 extern "C" __global__ __aicore__ void scatter(GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
   if (workspace == nullptr) {
@@ -77,6 +79,8 @@ extern "C" __global__ __aicore__ void scatter(GM_ADDR x, GM_ADDR indices, GM_ADD
   GET_TILING_DATA(tilingData, tiling);
   TPipe pipeOp;
   KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
+  using VAR_T = typename std::conditional<sizeof(DTYPE_VAR) == sizeof(int8_t), int8_t, DTYPE_VAR>::type;
+
   if (TILING_KEY_IS(TILING_KEY_INT32_INT8)) {
     SCATTER::Scatter<int8_t, int32_t, uint32_t> op;
     op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
@@ -252,6 +256,10 @@ extern "C" __global__ __aicore__ void scatter(GM_ADDR x, GM_ADDR indices, GM_ADD
   } else if (TILING_KEY_IS(TILING_KEY_ONECORE_INT64_INT2)) {
     SCATTER::ScatterSimt<int64_t, int64_t, uint32_t> op;
     op.Init(x, indices, updates, y, userWs, &tilingData, &pipeOp);
+    op.Process();
+  } else if (TILING_KEY_IS(TILING_KEY_DETERMINISTIC)) {
+    SCATTER::ScatterDeterministic<VAR_T, DTYPE_INDICES> op(&tilingData, &pipeOp);
+    op.Init(x, indices, updates, y);
     op.Process();
   }
   return;
