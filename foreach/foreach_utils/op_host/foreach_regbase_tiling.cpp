@@ -760,9 +760,11 @@ ge::graphStatus ForeachRegbaseTilingUnaryScalarList2::DoOpTiling()
 
 REGISTER_OPS_TILING_TEMPLATE(ForeachAddScalar, ForeachRegbaseTilingUnaryScalar, 30000);
 REGISTER_OPS_TILING_TEMPLATE(ForeachMulScalar, ForeachRegbaseTilingUnaryScalar, 30000);
+REGISTER_OPS_TILING_TEMPLATE(ForeachDivScalar, ForeachRegbaseTilingUnaryScalar, 30000);
 REGISTER_OPS_TILING_TEMPLATE(ForeachAddcmulScalar, ForeachRegbaseTilingTernaryScalar, 30000);
 REGISTER_OPS_TILING_TEMPLATE(ForeachLerpScalar, ForeachRegbaseTilingBinaryScalar, 30000);
 REGISTER_OPS_TILING_TEMPLATE(ForeachDivScalarList, ForeachRegbaseTilingUnaryScalarList, 30000);
+REGISTER_OPS_TILING_TEMPLATE(ForeachAddScalarList, ForeachRegbaseTilingUnaryScalarList2, 30000);
 REGISTER_OPS_TILING_TEMPLATE(ForeachMulScalarList, ForeachRegbaseTilingUnaryScalarList2, 30000);
 REGISTER_OPS_TILING_TEMPLATE(ForeachSqrt, ForeachRegbaseTilingUnary, 30000);
 } // namespace optiling

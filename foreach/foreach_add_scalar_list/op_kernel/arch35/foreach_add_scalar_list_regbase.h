@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -28,9 +28,9 @@ using AscendC::MicroAPI::UpdateMask;
 constexpr int32_t VL_SIZE = platform::GetVRegSize();
 template <typename T, typename ScalarT, typename Tiling>
 class ForeachAddScalarListRegbase
-    : public ForeachRegbaseUnaryScalarList<T, Tiling, ForeachAddScalarListRegbase<T, Tiling>> {
+    : public ForeachRegbaseUnaryScalarList<T, Tiling, ForeachAddScalarListRegbase<T, ScalarT, Tiling>> {
 public:
-    using Base = ForeachRegbaseUnaryScalarList<T, Tiling, ForeachAddScalarListRegbase<T, Tiling>>;
+    using Base = ForeachRegbaseUnaryScalarList<T, Tiling, ForeachAddScalarListRegbase<T, ScalarT, Tiling>>;
     using Base::Process;
     __aicore__ inline ForeachAddScalarListRegbase() : Base(*this){};
     __aicore__ inline void Init(
@@ -46,7 +46,7 @@ public:
         __local_mem__ T* inUbAddr = (__ubuf__ T*)tensorLocal.GetPhyAddr();
         __local_mem__ T* outUbAddr = (__ubuf__ T*)outLocal.GetPhyAddr();
 
-        using scalarCalcType = typename Conditional<AscendC::IsSameType<T, int32_t>::value, int32_t, float>::type;
+        using scalarCalcType = typename Conditional<AscendC::IsSameType<ScalarT, int32_t>::value, int32_t, float>::type;
         scalarCalcType scalarVal = scalarCalcType(inScalarGM_.GetValue(tensorIndex));
 
         uint32_t dataCountPerLoop = VL_SIZE / sizeof(float);
@@ -56,14 +56,24 @@ public:
         __VEC_SCOPE__
         {
             MaskReg maskReg;
-            RegTensor<float> inRegToFloat;
-            RegTensor<float> scaleValReg;
-            RegTensor<float> outReg;
-            for (uint16_t i = 0; i < (uint16_t)repeatTimes; i++) {
-                maskReg = UpdateMask<float>(sreg);
-                ops::LoadOneTensorForDtypeT<T>(inUbAddr, inRegToFloat, maskReg, i * dataCountPerLoop);
-                Adds(outReg, inRegToFloat, scaleVal, maskReg);
-                ops::StoreOneTensorForDtypeT<T>(outUbAddr, outReg, maskReg, i * dataCountPerLoop);
+            if constexpr (IsSameType<T, bfloat16_t>::value || IsSameType<T, half>::value || IsSameType<T, float>::value) {
+                RegTensor<float> inRegToFloat;
+                RegTensor<float> outReg;
+                for (uint16_t i = 0; i < (uint16_t)repeatTimes; i++) {
+                    maskReg = UpdateMask<float>(sreg);
+                    ops::LoadOneTensorForDtypeT<T>(inUbAddr, inRegToFloat, maskReg, i * dataCountPerLoop);
+                    Adds(outReg, inRegToFloat, scalarVal, maskReg);
+                    ops::StoreOneTensorForDtypeT<T>(outUbAddr, outReg, maskReg, i * dataCountPerLoop);
+                }
+            } else {
+                RegTensor<T> inReg;
+                RegTensor<T> outReg;
+                for (uint16_t i = 0; i < (uint16_t)repeatTimes; i++) {
+                    maskReg = UpdateMask<float>(sreg);
+                    DataCopy(inReg, inUbAddr + i * dataCountPerLoop);
+                    Adds(outReg, inReg, scalarVal, maskReg);
+                    DataCopy(outUbAddr + i * dataCountPerLoop, outReg, maskReg);
+                }
             }
         }
     }

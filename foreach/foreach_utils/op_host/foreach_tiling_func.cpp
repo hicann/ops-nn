@@ -1260,11 +1260,7 @@ static ge::graphStatus Tiling4ForeachAddScalarTiling(gert::TilingContext* contex
 
 static ge::graphStatus Tiling4ForeachAddScalarListTiling(gert::TilingContext* context)
 {
-    ForeachCommonTiling tilingObject(context);
-    if (tilingObject.Init(ZERO_OP_CODE, ForeachInputType::TYPE_SCALARS_TENSOR) != ge::GRAPH_SUCCESS) {
-        return ge::GRAPH_FAILED;
-    }
-    return tilingObject.RunBigKernelTiling();
+    return Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(context);
 }
 
 static ge::graphStatus Tiling4ForeachAddcdivListTiling(gert::TilingContext* context)
@@ -1364,11 +1360,7 @@ static ge::graphStatus Tiling4ForeachDivListTiling(gert::TilingContext* context)
 
 static ge::graphStatus Tiling4ForeachDivScalarTiling(gert::TilingContext* context)
 {
-    ForeachCommonTiling tilingObject(context);
-    if (tilingObject.Init(FOREACH_DIV_SCALAR_OP_CODE, ForeachInputType::TYPE_SCALAR) != ge::GRAPH_SUCCESS) {
-        return ge::GRAPH_FAILED;
-    }
-    return tilingObject.RunBigScalarKernelTiling();
+    return Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(context);
 }
 
 static ge::graphStatus Tiling4ForeachDivScalarListTiling(gert::TilingContext* context)
@@ -1745,16 +1737,20 @@ ge::graphStatus ForeachBaseClass::GetWorkspaceSize()
 }
 
 MEMBASE_TILING(ForeachAddScalar, ZERO_OP_CODE, ForeachInputType::TYPE_SCALAR);
+MEMBASE_TILING(ForeachAddScalarList, ZERO_OP_CODE, ForeachInputType::TYPE_SCALARS_TENSOR);
 MEMBASE_TILING(ForeachMulScalar, FOREACH_MUL_SCALAR_OP_CODE, ForeachInputType::TYPE_SCALAR);
 MEMBASE_TILING(ForeachAddcmulScalar, FOREACH_POINTWISE_OP_CODE, ForeachInputType::TYPE_SCALAR);
 MEMBASE_TILING(ForeachLerpScalar, FOREACH_LERP_SCALAR_OP_CODE, ForeachInputType::TYPE_SCALAR);
+MEMBASE_TILING(ForeachDivScalar, FOREACH_DIV_SCALAR_OP_CODE, ForeachInputType::TYPE_SCALAR);
 MEMBASE_TILING(ForeachDivScalarList, FOREACH_DIV_SCALAR_OP_CODE, ForeachInputType::TYPE_SCALARS_TENSOR);
 MEMBASE_TILING(ForeachMulScalarList, FOREACH_MUL_SCALAR_OP_CODE, ForeachInputType::TYPE_SCALARS_TENSOR);
 MEMBASE_TILING(ForeachSqrt, ZERO_OP_CODE, ForeachInputType::TYPE_TENSORS);
 REGISTER_OPS_TILING_TEMPLATE(ForeachAddScalar, ForeachAddScalarMembaseTiling, 10000);
+REGISTER_OPS_TILING_TEMPLATE(ForeachAddScalarList, ForeachAddScalarListMembaseTiling, 10000);
 REGISTER_OPS_TILING_TEMPLATE(ForeachMulScalar, ForeachMulScalarMembaseTiling, 10000);
 REGISTER_OPS_TILING_TEMPLATE(ForeachAddcmulScalar, ForeachAddcmulScalarMembaseTiling, 10000);
 REGISTER_OPS_TILING_TEMPLATE(ForeachLerpScalar, ForeachLerpScalarMembaseTiling, 10000);
+REGISTER_OPS_TILING_TEMPLATE(ForeachDivScalar, ForeachDivScalarMembaseTiling, 10000);
 REGISTER_OPS_TILING_TEMPLATE(ForeachDivScalarList, ForeachDivScalarListMembaseTiling, 10000);
 REGISTER_OPS_TILING_TEMPLATE(ForeachMulScalarList, ForeachMulScalarListMembaseTiling, 10000);
 REGISTER_OPS_TILING_TEMPLATE(ForeachSqrt, ForeachSqrtMembaseTiling, 10000);
@@ -1833,7 +1829,7 @@ IMPL_OP_OPTILING(ForeachDivList)
 
 IMPL_OP_OPTILING(ForeachDivScalar)
     .Tiling(Tiling4ForeachDivScalarTiling)
-    .TilingParse<ForeachCompileInfo>(TilingPrepare4ForeachScalarTiling);
+    .TilingParse<ForeachCompileInfo>(TilingPrepare4ForeachTiling);
 
 IMPL_OP_OPTILING(ForeachDivScalarList)
     .Tiling(Tiling4ForeachDivScalarListTiling)
