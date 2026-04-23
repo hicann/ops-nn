@@ -36,8 +36,8 @@ ge::graphStatus Conv2dBaseTiling::CheckStrideLegal()
         static_cast<uint64_t>(oriShapeAttrInfo_.oriStrideH) > MAX_ATTRS_SHAPE ||
         static_cast<uint64_t>(oriShapeAttrInfo_.oriStrideW) > MAX_ATTRS_SHAPE) {
         OP_LOGE(context_->GetNodeName(),
-                "%s AscendC: stride (H: %ld, W: %ld) is out of range[1, %lu].",
-                paramInfo_.nodeType.c_str(), oriShapeAttrInfo_.oriStrideH, oriShapeAttrInfo_.oriStrideW, MAX_ATTRS_SHAPE);
+            "%s AscendC: stride (H: %ld, W: %ld) is out of range[1, %lu].",
+            paramInfo_.nodeType.c_str(), oriShapeAttrInfo_.oriStrideH, oriShapeAttrInfo_.oriStrideW, MAX_ATTRS_SHAPE);
         return ge::GRAPH_FAILED;
     }
     if (oriShapeAttrInfo_.oriStrideN != 1 || oriShapeAttrInfo_.oriStrideC != 1) {
@@ -68,7 +68,7 @@ ge::graphStatus Conv2dBaseTiling::CheckDilationLegal()
     if (oriShapeAttrInfo_.oriDilationH <= 0 || oriShapeAttrInfo_.oriDilationW <= 0 ||
         static_cast<uint64_t>(oriShapeAttrInfo_.oriDilationH) > MAX_ATTRS_SHAPE ||
         static_cast<uint64_t>(oriShapeAttrInfo_.oriDilationW) > MAX_ATTRS_SHAPE) {
-        OP_LOGE(context_->GetNodeName(), 
+        OP_LOGE(context_->GetNodeName(),
                 "%s AscendC: dilation (H: %ld, W: %ld) is out of range[1, %lu].",
                 paramInfo_.nodeType.c_str(), oriShapeAttrInfo_.oriDilationH,
                 oriShapeAttrInfo_.oriDilationW, MAX_ATTRS_SHAPE);
@@ -434,22 +434,23 @@ ge::graphStatus Conv2dBaseTiling::CheckExtendDtypeLegal()
     auto extendDtype0Ptr = context_->GetAttrs()->GetInt(EXTENDCONV_ATTR_DTYPE_0_INDEX);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, extendDtype0Ptr);
     int64_t extendDtype0 = *extendDtype0Ptr;
-    auto iter = std::find(EXTENDCONV2D_SUPPORTED_ATTR_DTYPE.begin(), EXTENDCONV2D_SUPPORTED_ATTR_DTYPE.end(), extendDtype0);
+    auto iter =
+        std::find(EXTENDCONV2D_SUPPORTED_ATTR_DTYPE.begin(), EXTENDCONV2D_SUPPORTED_ATTR_DTYPE.end(), extendDtype0);
     if (iter == EXTENDCONV2D_SUPPORTED_ATTR_DTYPE.end()) {
-         OP_LOGE(context_->GetNodeName(), 
+        OP_LOGE(context_->GetNodeName(),
             "%s AscendC: unSupported dtype0: %ld, only support [default, float, float16, int8, bfloat16, hifloat8, float8_e4m3fn].",
             paramInfo_.nodeType.c_str(), extendDtype0);
-         return ge::GRAPH_FAILED;
+        return ge::GRAPH_FAILED;
     }
     auto extendDtype1Ptr = context_->GetAttrs()->GetInt(EXTENDCONV_ATTR_DTYPE_1_INDEX);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, extendDtype1Ptr);
     int64_t extendDtype1 = *extendDtype1Ptr;
     iter = std::find(EXTENDCONV2D_SUPPORTED_ATTR_DTYPE.begin(), EXTENDCONV2D_SUPPORTED_ATTR_DTYPE.end(), extendDtype1);
     if (iter == EXTENDCONV2D_SUPPORTED_ATTR_DTYPE.end()) {
-         OP_LOGE(context_->GetNodeName(), 
+        OP_LOGE(context_->GetNodeName(),
             "%s AscendC: unSupported dtype1: %ld, only support [default, float, float16, int8, bfloat16, hifloat8, float8_e4m3fn].",
             paramInfo_.nodeType.c_str(), extendDtype1);
-         return ge::GRAPH_FAILED;
+        return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
 }

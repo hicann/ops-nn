@@ -117,7 +117,7 @@ ge::graphStatus Conv2dBaseTiling::CheckFmapShape()
     uint64_t wInMaxSize = shapeBoundTab.at("W").GetUpperBound(descInfo_.fMapDtype);
     OP_LOGE_IF(!CheckDim(oriShapeAttrInfo_.oriFmapN, batchMaxSize), ge::GRAPH_FAILED,  context_->GetNodeName(),
         "%s AscendC: Batch (%ld) is out of range[1, %lu].",
-        paramInfo_.nodeType.c_str(),oriShapeAttrInfo_.oriFmapN, batchMaxSize);
+        paramInfo_.nodeType.c_str(), oriShapeAttrInfo_.oriFmapN, batchMaxSize);
     OP_LOGE_IF(!CheckDim(oriShapeAttrInfo_.oriFmapC, cInMaxSize), ge::GRAPH_FAILED, context_->GetNodeName(),
         "%s AscendC: Cin (%ld) is out of range[1, %lu].",
         paramInfo_.nodeType.c_str(), oriShapeAttrInfo_.oriFmapC, cInMaxSize);

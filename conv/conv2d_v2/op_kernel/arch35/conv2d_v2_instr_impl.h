@@ -481,8 +481,7 @@ private:
         } else if constexpr (Intf::groupOptFlag) {
             if constexpr (Intf::isKL1NL0FullLoad) {
                 intriParams.dValue = self_->ctx.kAL1Tail / self_->ctx.convTilingData->convApiTiling.kernelHxkernelW;
-            }
-            else {
+            } else {
                 intriParams.dValue = IsKAL1Tail(kAL1Iter) ?
                     (self_->ctx.kAL1Tail / self_->ctx.convTilingData->convApiTiling.kernelHxkernelW) : self_->ctx.convTilingData->convApiTiling.cinAInCore;
             }

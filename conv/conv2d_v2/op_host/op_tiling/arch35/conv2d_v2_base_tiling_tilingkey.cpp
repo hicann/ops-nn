@@ -76,7 +76,7 @@ uint64_t Conv2dBaseTiling::GetFmpTilingValForMSplit(bool kAL1FullloadFlag)
     } else if (!kAL1FullloadFlag && mL1FullloadFlag && mL0FullloadFlag) {
         return ONLY_M_FULLLOAD_AL1_AL0;
     }
-    return FMP_OTHER;    
+    return FMP_OTHER;
 }
 
 uint64_t Conv2dBaseTiling::GetL0PingPongVal()

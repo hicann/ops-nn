@@ -350,7 +350,7 @@ uint32_t Conv2dBaseTiling::CalcAL1SpaceSize(shared_ptr<tuningtiling::Conv2DV2Tun
             aL1SpaceSize = tilingData_.convApiTiling.get_cinAInCore() * hiAL1Max * wiAL1Max;
         }
     }
-    aL1SpaceSize = ConvAlignB(aL1SpaceSize * fmapSize , C0_SIZE) * convRepoTiling->innerBatch;
+    aL1SpaceSize = ConvAlignB(aL1SpaceSize * fmapSize, C0_SIZE) * convRepoTiling->innerBatch;
 
     return static_cast<uint32_t>(aL1SpaceSize);
 }

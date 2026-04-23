@@ -360,7 +360,7 @@ struct SetOptGroupParams {
             if constexpr (Intf::groupOptFlag) {
                 OptGroupCalcBL1LoadTimes<Intf>(self);
             }
-        } 
+        }
         if ASCEND_IS_AIV_CONV {
             if constexpr (Intf::groupOptNDFlag) {
                 OptGroupInitKValue<Intf>(self);

@@ -453,7 +453,8 @@ uint32_t Conv2dTiling::CalcAL1SpaceSize(optiling::TConv2DTiling& tiling)
         if (isC04Flag && tiling.get_innerBatch() > 1) {
             aL1SpaceSize = C04_CIN_SIZE * tiling.get_orgHi() * tiling.get_orgWi();
         } else {
-            uint64_t mL1Max = tiling.get_hoL1() < tiling.get_singleCoreHo() ? tiling.get_hoL1() : tiling.get_singleCoreHo();
+            uint64_t mL1Max =
+                tiling.get_hoL1() < tiling.get_singleCoreHo() ? tiling.get_hoL1() : tiling.get_singleCoreHo();
             uint64_t hoL1Max = std::min(mL1Max / tiling.get_orgWo() + CONST_VALUE_2, tiling.get_orgHo());
             uint64_t hiAL1Max = (hoL1Max - 1) * tiling.get_strideH() + dilatedKernelH;
             hiAL1Max = hiAL1Max > tiling.get_orgHi() ? tiling.get_orgHi() : hiAL1Max;
@@ -477,8 +478,8 @@ uint32_t Conv2dTiling::CalcAL1SpaceSize(optiling::TConv2DTiling& tiling)
             aL1SpaceSize = tiling.get_cinAInCore() * hiAL1Max * wiAL1Max;
         }
     }
-    aL1SpaceSize = AlignB(aL1SpaceSize * fmapSize , C0_SIZE) * tiling.get_innerBatch();
-    
+    aL1SpaceSize = AlignB(aL1SpaceSize * fmapSize, C0_SIZE) * tiling.get_innerBatch();
+
     return static_cast<uint32_t>(aL1SpaceSize);
 }
 
@@ -713,7 +714,7 @@ bool Conv2dTiling::CheckAttrBeforeCoreBind()
 {
     if (attrInfo.padLeft < 0 || attrInfo.padRight < 0 ||
         attrInfo.padTop < 0 || attrInfo.padBottom < 0) {
-        OP_LOGE(nodeType, 
+        OP_LOGE(nodeType,
             "Illlegal attrs have set: padTop=%d, padBottom=%d, padLeft=%d, padRight=%d, which must >= 0.",
             attrInfo.padTop, attrInfo.padBottom, attrInfo.padLeft, attrInfo.padRight);
         return false;
@@ -721,13 +722,13 @@ bool Conv2dTiling::CheckAttrBeforeCoreBind()
 
     if (attrInfo.strideH <= 0 || attrInfo.strideW <= 0) {
         OP_LOGE(nodeType, "Illegal attrs have set: strideH=%d, strideW=%d, which must > 0.",
-                         attrInfo.strideH, attrInfo.strideW);
+            attrInfo.strideH, attrInfo.strideW);
         return false;
     }
 
     if (attrInfo.dilationH <= 0 || attrInfo.dilationW <= 0) {
         OP_LOGE(nodeType, "Illegal attrs have set: dilationH=%d, dilationW=%d, which must > 0.",
-                         attrInfo.dilationH, attrInfo.dilationW);
+            attrInfo.dilationH, attrInfo.dilationW);
         return false;
     }
     return true;
@@ -921,8 +922,8 @@ bool Conv2dTiling::CheckFormat()
     if (conv2dSupportFormatSet.find({descInfo.fMapType.format, descInfo.weightType.format}) ==
         conv2dSupportFormatSet.end()) {
         OP_LOGE(nodeType, "unSupported format combo: fmap format: %s, weight format: %s.",
-                         FORMAT_TO_STR.at(descInfo.fMapType.format).c_str(),
-                         FORMAT_TO_STR.at(descInfo.weightType.format).c_str());
+                FORMAT_TO_STR.at(descInfo.fMapType.format).c_str(),
+                FORMAT_TO_STR.at(descInfo.weightType.format).c_str());
         return false;
     }
 
@@ -1000,7 +1001,7 @@ bool Conv2dTiling::CheckFixpipeLimits()
     uint64_t fixpipeLoop3DstStride = shapeInfo.orgWo * shapeInfo.orgCo;
     if (descInfo.fMapType.format == ConvFormat::NHWC && outputOrder == static_cast<int8_t>(OutputOrder::HW) &&
         fixpipeLoop3DstStride > fixpipeLoop3DstStrideLimit) {
-        OP_LOGE(nodeType, 
+        OP_LOGE(nodeType,
             "Output shape not satisfy Fixpipe's limits: wout(%lu)*cout(%lu)=%lu, which must <= %lu",
             shapeInfo.orgWo, shapeInfo.orgCo, fixpipeLoop3DstStride, fixpipeLoop3DstStrideLimit);
         return false;

@@ -188,7 +188,7 @@ void Conv2dBaseTiling::GetCacheTilingInputArgs()
 
 void Conv2dBaseTiling::TranslateCachedRunInfo()
 {
-	tilingData_.convRunInfo.set_batch(cacheInputArgs_.inputShapeN);
+    tilingData_.convRunInfo.set_batch(cacheInputArgs_.inputShapeN);
     tilingData_.convRunInfo.set_hin(cacheInputArgs_.inputShapeH);
     tilingData_.convRunInfo.set_win(cacheInputArgs_.inputShapeW);
     tilingData_.convRunInfo.set_batchDim(cachedTilingData_.batchDim);

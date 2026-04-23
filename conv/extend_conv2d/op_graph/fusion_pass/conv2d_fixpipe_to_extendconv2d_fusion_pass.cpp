@@ -372,7 +372,7 @@ bool Conv2DFixPipeToExtendConv2DFusionPass::IsReluEnable(const std::vector<Ascen
     if (fixpipeFusionOp.empty()) {
         return false;
     }
-    
+
     bool ret = false;
     if (opType == "default") {
         ret = std::find(fixpipeFusionOp.begin(), fixpipeFusionOp.end(), Conv2DFixpipeToExtendConv2DFusion::RELU) !=
@@ -390,7 +390,7 @@ bool Conv2DFixPipeToExtendConv2DFusionPass::IsScaleEnable(const std::vector<Asce
     if (fixpipeFusionOp.empty()) {
         return false;
     }
-    
+
     return std::find(fixpipeFusionOp.begin(), fixpipeFusionOp.end(), ConvFusionUtils::ASCEND_QUANT) !=
         fixpipeFusionOp.end() || std::find(fixpipeFusionOp.begin(), fixpipeFusionOp.end(),
         ConvFusionUtils::ASCEND_DEQUANT) != fixpipeFusionOp.end() || std::find(fixpipeFusionOp.begin(),
@@ -447,7 +447,7 @@ bool Conv2DFixPipeToExtendConv2DFusionPass::UpdateExtendConv2DDesc(GNode *extend
             OP_LOGE(convDescInfo.nodeNameStr, "Get fixpipe0 output tensor desc failed."), return false);
         FUSION_PASS_CHECK(extendConv2D->UpdateOutputDesc(OUTPUT_0_INDEX, output0Desc) != GRAPH_SUCCESS,
             OP_LOGE(convDescInfo.nodeNameStr, "Update ExtendConv2D output0 tensor desc failed."), return false);
-        
+
         if (hasScale0) {
             FUSION_PASS_CHECK_NOLOG(!UpdateScaleReluDesc(fixpipeNodes.front(), extendConv2D,
                 FIXPIPE_INPUT_QUANT_SCALE_0_INDEX, EXTENDCONV2D_QUANT_SCALE_0_INDEX, SCALE_0), return false);

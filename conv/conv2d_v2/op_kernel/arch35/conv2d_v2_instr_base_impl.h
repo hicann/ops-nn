@@ -233,7 +233,7 @@ private:
             intriParams.srcNdMatrixStride = self_->ctx.convTilingData->convApiTiling.orgCi * self_->ctx.convTilingData->convApiTiling.orgHixWi;
             intriParams.dstNzNStride = 1;
             intriParams.dstNzMatrixStride = AlignB(C04_CIN_SIZE * self_->ctx.convTilingData->convApiTiling.orgHixWi, Intf::k0);
-        }  
+        }
         intriParams.dValue = self_->ctx.convTilingData->convApiTiling.orgCi;
         intriParams.srcDValue = self_->ctx.convTilingData->convApiTiling.orgCi;
     }

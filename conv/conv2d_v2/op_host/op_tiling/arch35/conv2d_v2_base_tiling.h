@@ -34,10 +34,10 @@ namespace conv_ops_tiling {
 using conv_tiling::IterateMNOrder;
 using conv_tiling::TPosition;
 using conv_tiling::BoundType;
-class Conv2dTilingCache : public ConvTilingCache<Conv2dCacheTilingData>
-{
+class Conv2dTilingCache : public ConvTilingCache<Conv2dCacheTilingData> {
 public:
-    static Conv2dTilingCache& GetInstance() {
+    static Conv2dTilingCache& GetInstance()
+    {
         static Conv2dTilingCache instance;
         return instance;
     }

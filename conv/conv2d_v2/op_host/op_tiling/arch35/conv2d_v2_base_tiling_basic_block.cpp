@@ -108,7 +108,8 @@ void Conv2dBaseTiling::BasicBlockBoundMode()
             shapeInfo_.kw / (shapeInfo_.batch * shapeInfo_.wi * shapeInfo_.hi * conv2dBasicBlockInfo_.nCut +
             shapeInfo_.kh * shapeInfo_.kw * shapeInfo_.co * conv2dBasicBlockInfo_.mCut) /
             dtypeSizeTab.at(descInfo_.fMapDtype);
-    uint64_t outAI = CONST_VALUE_2 * shapeInfo_.ci * shapeInfo_.kh * shapeInfo_.kw / dtypeSizeTab.at(descInfo_.outDtype);
+    uint64_t outAI =
+        CONST_VALUE_2 * shapeInfo_.ci * shapeInfo_.kh * shapeInfo_.kw / dtypeSizeTab.at(descInfo_.outDtype);
     uint64_t realAI = min(inAI, outAI);
 
     uint64_t sweetPointAI = SWEET_POINT_AI_FP16;
@@ -137,7 +138,8 @@ unordered_set<pair<uint32_t, uint32_t>, pair_hash> Conv2dBaseTiling::BasicBlockF
     uint64_t curCo = flagInfo_.convGroupType != ConvGroupType::NORMAL_CONV ?
         (flagInfo_.convGroupType == ConvGroupType::ORI_GROUP_CONV ?
          oriGroupInfo_.coPerGroup : optGroupInfo_.coutOpt) : shapeInfo_.co;
-    const uint32_t calCut1 = static_cast<uint32_t>(sqrt(static_cast<float>(cores * conv2dBasicBlockInfo_.nKernelHKernelW) /
+    const uint32_t calCut1 =
+        static_cast<uint32_t>(sqrt(static_cast<float>(cores * conv2dBasicBlockInfo_.nKernelHKernelW) /
         static_cast<float>(conv2dBasicBlockInfo_.mIn * conv2dApiTiling_.innerBatch)));
     const uint32_t calCut2 = static_cast<uint32_t>(sqrt(static_cast<double>(static_cast<uint64_t>(cores) * fCut *
         conv2dBasicBlockInfo_.mIn * conv2dApiTiling_.innerBatch) / static_cast<double>(conv2dBasicBlockInfo_.nCut) /
@@ -387,7 +389,7 @@ unordered_set<pair<uint32_t, uint32_t>, pair_hash> Conv2dBaseTiling::BasicBlockG
 {
     const uint32_t cores = opInfo_->aicoreNum;
     const uint64_t fwCut = shapeInfo_.batch * ConvCeilDiv(shapeInfo_.ho * shapeInfo_.wo, conv2dBasicBlockInfo_.mTile) *
-        ConvCeilDiv(shapeInfo_.co ,conv2dBasicBlockInfo_.nTile);
+        ConvCeilDiv(shapeInfo_.co, conv2dBasicBlockInfo_.nTile);
     const uint32_t groupCut = flagInfo_.convGroupType == ConvGroupType::ORI_GROUP_CONV ?
         attrInfo_.groups : optGroupInfo_.groupOpt;
 

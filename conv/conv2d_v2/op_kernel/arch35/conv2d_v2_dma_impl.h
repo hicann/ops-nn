@@ -233,7 +233,8 @@ public:
         self->ctx.cinBL1LoopTimes = CeilDiv(self->ctx.convTilingData->convApiTiling.singleCoreCi, self->ctx.cinBL1);
     }
  
-    __aicore__ inline void DmaUpdateLoopInner(Intf *self) {
+    __aicore__ inline void DmaUpdateLoopInner(Intf *self)
+    {
         if (self->ctx.kAL1fullload) {
             return;
         }
@@ -242,7 +243,7 @@ public:
             self->ctx.ddr2l1LoopTmp = self->ctx.nBL1Iter == self->ctx.maxNBL1Iter ? 
                 CeilDiv(self->ctx.nBL1Tail, self->ctx.convTilingData->convApiTiling.nL0) : self->ctx.convTilingData->convApiTiling.multiNBL1;
         }
-    
+
         self->ctx.ddr2l1LoopInner = self->ctx.ddr2l1LoopTmp * self->ctx.l12l0LoopH * self->ctx.l12l0LoopW;
     }
  
