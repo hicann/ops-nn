@@ -1577,7 +1577,7 @@ build_pytorch_extension() {
     ENABLE_BUILD_PE=TRUE
   fi
   if [[ "$ENABLE_BUILD_PE" == "TRUE" ]]; then
-    bash "${BASE_PATH}/scripts/torch_extension/build_experimental.sh" --ops=$COMPILED_OPS -j$THREAD_NUM --soc=$COMPUTE_UNIT
+    bash "${BASE_PATH}/scripts/torch_extension/build_torch_extension.sh" --ops=$COMPILED_OPS -j$THREAD_NUM --soc=$COMPUTE_UNIT
   fi
 }
 

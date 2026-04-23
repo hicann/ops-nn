@@ -21,6 +21,8 @@ if(UNIX)
   set(SYSTEM_PREFIX ${CMAKE_SYSTEM_PROCESSOR}-linux)
 endif()
 
+set(CANN_3RD_LIB_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../third_party CACHE STRING "cann third party lib path")
+
 set(CMAKE_MODULE_PATH
   ${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/modules
   ${CMAKE_MODULE_PATH}

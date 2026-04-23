@@ -113,7 +113,7 @@ if [[ "$found_mirror_update" == "true" ]]; then
     vfusion_ops_910b=("scaled_masked_softmax_v2")
     rnn_ops_910b=("dynamic_rnn")
     pooling_ops_910b=("avg_pool3_d" "adaptive_max_pool3d")
-    activation_ops_910b=("ge_glu_v2" "ge_glu_grad_v2")
+    activation_ops_910b=("ge_glu_v2" "ge_glu_grad_v2" "fast_gelu")
     loss_ops_910b=("logit" "logit_grad")
     optim_ops_910b=("apply_adam_w_v2" "apply_fused_ema_adam")
     norm_ops_910b=("rms_norm" "add_layer_norm" "add_layer_norm_grad")

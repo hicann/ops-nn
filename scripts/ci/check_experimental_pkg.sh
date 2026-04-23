@@ -28,3 +28,29 @@ if [[ "${ops}" != "" ]]; then
     cd "${BASE_PATH}"
     bash build.sh --pkg --experimental --ops=${ops} --vendor_name=ci_test --no_force
 fi
+
+# 检测镜像文件更新，执行experimental构建
+mirror_updated=0
+mapfile -t lines < ${pr_file}
+for file_path in "${lines[@]}"
+do
+    file_path=$(echo "$file_path" | xargs)
+    if [[ -z "$file_path" ]]; then
+        continue
+    fi
+    if [[ "$file_path" == "scripts/ci/mirror_update_time.txt" ]]; then
+        mirror_updated=1
+        break
+    fi
+done
+
+if [[ "${mirror_updated}" -eq 1 ]]; then
+    cd "${BASE_PATH}"
+    echo "[EXECUTE_COMMAND] bash scripts/torch_extension/build_torch_extension.sh --soc=ascend910b"
+    bash scripts/torch_extension/build_torch_extension.sh --soc=ascend910b
+    status=$?
+    if [ $status -ne 0 ]; then
+        echo "build_torch_extension.sh --soc=ascend910b failed"
+        exit 1
+    fi
+fi
