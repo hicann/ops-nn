@@ -235,10 +235,10 @@
       <td>self或out的数据类型不在支持的范围内。</td>
     </tr>
     <tr>
-      <td>self或out的shape不一致。</td>
+      <td>self和out的shape不一致。</td>
     </tr>
     <tr>
-      <td>self或out的dtype不一致。</td>
+      <td>self和out的dtype不一致。</td>
     </tr>
     <tr>
       <td>p < 0。</td>

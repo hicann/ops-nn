@@ -228,6 +228,7 @@
 | [aclnnHardshrink](../../activation/hard_shrink/docs/aclnnHardshrink.md) | 以元素为单位，强制收缩λ范围内的元素。 | 默认确定性实现 |   |
 | [aclnnGroupNorm](../../norm/group_norm/docs/aclnnGroupNorm.md) | 计算输入self的组归一化结果out，均值meanOut，标准差的倒数rstdOut。 | 默认确定性实现 |   |
 | [aclnnGroupNormBackward](../../norm/group_norm_grad/docs/aclnnGroupNormBackward.md) | [aclnnGroupNorm](../../norm/group_norm/docs/aclnnGroupNorm.md)的反向计算。用于计算输入张量的梯度，以便在反向传播过程中更新模型参数。 | 默认非确定性实现，支持配置开启 | 默认确定性实现 |
+| [aclnnGroupNormSilu](../../norm/group_norm_silu/docs/aclnnGroupNormSilu.md)|计算输入self的组归一化结果groupnormOut，均值meanOut，标准差的倒数rstdOut，将groupnormOut进行silu运算得到最终的输出out。|默认确定性实现|
 | [aclnnGroupNormSiluV2](../../norm/group_norm_silu/docs/aclnnGroupNormSiluV2.md) | 计算输入self的组归一化结果out，均值meanOut，标准差的倒数rstdOut，以及silu的输出。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnGroupNormSiluQuant](../../norm/group_norm_silu_quant/docs/aclnnGroupNormSiluQuant.md) | 计算输入self的组归一化，均值meanOut，标准差的倒数rstdOut，以及对silu的输出进行量化的结果out。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnGroupNormSwish](../../norm/group_norm_swish/docs/aclnnGroupNormSwish.md) | 计算输入x的组归一化结果out，均值meanOut，标准差的倒数rstdOut，以及swish的输出。 | 默认确定性实现 |   |
@@ -308,7 +309,7 @@
 | [aclnnQuantConvolution](../../conv/convolution_forward/docs/aclnnQuantConvolution.md) | 完成per-channel量化的2D/3D卷积计算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnQuantConvolutionWeightNz](../../conv/convolution_forward/docs/aclnnQuantConvolutionWeightNz.md) | 完成 per-channel 量化的 3D 卷积计算，weight仅支持FRACTAL_Z_3D格式。 | 默认确定性实现 | - |
 | [aclnnQuantize](../../quant/quantize/docs/aclnnQuantize.md) | 对输入张量进行量化处理。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnQuantizeBatchNorm](../../norm/quantized_batch_norm/docs/aclnnQuantizedBatchNorm.md) | 将输入Tensor执行一个反量化的计算，再根据输入的weight、bias、epsilon执行归一化，最后根据输出的outputScale以及outputZeroPoint执行量化。 | 默认确定性实现 |   |
+| [aclnnQuantizedBatchNorm](../../norm/quantized_batch_norm/docs/aclnnQuantizedBatchNorm.md) | 将输入Tensor执行一个反量化的计算，再根据输入的weight、bias、epsilon执行归一化，最后根据输出的outputScale以及outputZeroPoint执行量化。 | 默认确定性实现 |   |
 | [aclnnQuantMatmulV5](../../matmul/quant_batch_matmul_v4/docs/aclnnQuantMatmulV5.md) | 完成量化的矩阵乘计算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnQuantBatchMatmulInplaceAdd](../../matmul/quant_batch_matmul_inplace_add/docs/aclnnQuantBatchMatmulInplaceAdd.md) | 实现量化矩阵乘计算和原地累加加法计算，基本功能为矩阵乘和加法的组合。 | - | 默认确定性实现 |
 | [aclnnQuantMatmulReduceSumWeightNz](../../matmul/quant_matmul_reduce_sum/docs/aclnnQuantMatmulReduceSumWeightNz.md) | 完成量化的分组矩阵计算，然后所有组的矩阵计算结果相加后输出。 | 默认非确定性实现，支持配置开启。 | - |
