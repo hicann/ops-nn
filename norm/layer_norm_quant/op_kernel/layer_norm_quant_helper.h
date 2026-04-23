@@ -19,6 +19,8 @@ using namespace AscendC;
 using AscendC::HardEvent;
 
 namespace {
+  static constexpr uint32_t BLOCK_NUM = 16;
+  static constexpr uint32_t DATA_BYTE = 2;
   static constexpr uint32_t BLOCK_SIZE = 32;
   static constexpr uint32_t BUFFER_NUM = 1;
   static constexpr uint32_t TAIL_BUFFER_SIZE = 32;
@@ -27,6 +29,19 @@ namespace {
   static constexpr uint32_t BLOCK_NUMEL = 32;
   static constexpr float QUANT_MIN = -128;
 }
+
+template <typename Tp, Tp v>
+struct integral_constant {
+    static constexpr Tp value = v;
+};
+using true_type = integral_constant<bool, true>;
+using false_type = integral_constant<bool, false>;
+template <typename, typename>
+struct is_same : public false_type {
+};
+template <typename Tp>
+struct is_same<Tp, Tp> : public true_type {
+};
 
 __aicore__ inline uint32_t MIN(uint32_t x, uint32_t y) 
 { 
@@ -78,6 +93,37 @@ __aicore__ inline void CastFromF16ToI8(const AscendC::LocalTensor<int8_t> &res, 
     Cast(res, in, AscendC::RoundMode::CAST_NONE, count);
 #endif
     AscendC::PipeBarrier<PIPE_V>();
+}
+
+template <typename T, template <typename U> typename R, template <typename U> typename S>
+__aicore__ inline void DataCopyEx(
+    const R<T>& dst, const S<T>& src, const AscendC::LocalTensor<T> &tmp, const uint32_t num_last_dim,
+    const uint32_t size = 1)
+{
+    auto eleCount = num_last_dim * size;
+    int32_t numPerBlock = BLOCK_SIZE / sizeof(T);
+    if (eleCount % numPerBlock == 0) {
+        DataCopy(dst, src, eleCount);
+    } else {
+        if constexpr (is_same<R<T>, AscendC::LocalTensor<T>>::value) {
+            auto num = AlignUp(eleCount, numPerBlock);
+            DataCopy(dst, src, num);
+        } else {
+            int32_t num = eleCount / numPerBlock * numPerBlock;
+            DataCopy(dst, src, num);
+            if (eleCount != num) {
+                SetFlag<HardEvent::MTE3_S>(EVENT_ID0);
+                WaitFlag<HardEvent::MTE3_S>(EVENT_ID0);
+                for (int32_t i = 0; i < numPerBlock; i++) {
+                    auto tensorValue = src.GetValue(eleCount - numPerBlock + i);
+                    tmp.SetValue(i, tensorValue);
+                }
+                SetFlag<HardEvent::S_MTE3>(EVENT_ID0);
+                WaitFlag<HardEvent::S_MTE3>(EVENT_ID0);
+                DataCopy(dst[eleCount - numPerBlock], tmp, numPerBlock);
+            }
+        }
+    }
 }
 
 #endif // LAYER_NORM_QUANT_HELPER_H

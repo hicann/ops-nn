@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file layer_norm_quant_normal.h
+ * \file layer_norm_quant_regbase_normal.h
  * \brief
  */
 #include "kernel_operator.h"

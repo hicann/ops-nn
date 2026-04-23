@@ -123,13 +123,13 @@ int main()
     std::vector<float> outputScaleHostData(1);
 
     // 创建self aclTensor
-    ret = CreateAclTensor(xHostData, xShape, &xDeviceAddr, aclDataType::ACL_FLOAT, &x);
+    ret = CreateAclTensor(xHostData, xShape, &xDeviceAddr, aclDataType::ACL_FLOAT16, &x);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    ret = CreateAclTensor(gammaHostData, gammaShape, &gammaDeviceAddr, aclDataType::ACL_FLOAT, &gamma);
+    ret = CreateAclTensor(gammaHostData, gammaShape, &gammaDeviceAddr, aclDataType::ACL_FLOAT16, &gamma);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    ret = CreateAclTensor(betaHostData, betaShape, &betaDeviceAddr, aclDataType::ACL_FLOAT, &beta);
+    ret = CreateAclTensor(betaHostData, betaShape, &betaDeviceAddr, aclDataType::ACL_FLOAT16, &beta);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    ret = CreateAclTensor(scaleOptionalHostData, scaleOptionalShape, &scaleOptionalDeviceAddr, aclDataType::ACL_FLOAT, &scaleOptional);
+    ret = CreateAclTensor(scaleOptionalHostData, scaleOptionalShape, &scaleOptionalDeviceAddr, aclDataType::ACL_FLOAT16, &scaleOptional);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     ret = CreateAclTensor(
         zeroPointOptionalHostData, zeroPointOptionalShape, &zeroPointOptionalDeviceAddr, aclDataType::ACL_INT8, &zeroPointOptional);

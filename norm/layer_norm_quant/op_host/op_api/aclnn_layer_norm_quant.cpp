@@ -46,6 +46,25 @@ constexpr int64_t MAX_GRAD_REDUCE_AXIS = 4096;
 // 根据API定义，需要列出所能支持的所有dtype
 static const std::initializer_list<DataType> DTYPE_SUPPORT_REGBASE_LIST = {
     DataType::DT_FLOAT16, DataType::DT_FLOAT, DataType::DT_BF16};
+static const std::initializer_list<DataType> DTYPE_SUPPORT_910B_LIST = {
+    DataType::DT_FLOAT16, DataType::DT_BF16};
+static const std::initializer_list<DataType> DTYPE_SUPPORT_310P_LIST = {
+    DataType::DT_FLOAT16};
+
+static const std::initializer_list<DataType>& GetDtypeSupportList(){
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
+    
+    if (Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+        return DTYPE_SUPPORT_REGBASE_LIST;
+    } else if(socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93){
+        return DTYPE_SUPPORT_910B_LIST;
+    } else if (socVersion == SocVersion::ASCEND310P){
+        return DTYPE_SUPPORT_310P_LIST;
+    } else {
+        return DTYPE_SUPPORT_910B_LIST;
+    }
+}
 
 static inline bool CheckPlatform()
 {
@@ -73,18 +92,6 @@ inline static bool CheckNotNull(
     return true;
 }
 
-inline static bool CheckOptionalDtype(const aclTensor* tensorOptional)
-{
-    if (tensorOptional && !CheckType(tensorOptional->GetDataType(), DTYPE_SUPPORT_REGBASE_LIST)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "Expected aclnnLayerNormQuant tensorOptional dtype [%s] to be in support list [%s] but check failed.",
-            ToString(tensorOptional->GetDataType()).GetString(), ToString(DTYPE_SUPPORT_REGBASE_LIST).GetString());
-        return false;
-    }
-    return true;
-}
-
 static inline bool CheckOptInputDtype(const aclTensor* tensorPtr, op::DataType dtype)
 {
     if (tensorPtr == nullptr) {
@@ -99,7 +106,7 @@ static bool CheckDtype(
     const aclTensor* zeroPointsOptional, const aclTensor* res)
 {
     // 检查 x 的数据类型是否在 AddLayerNormQuant 算子的支持列表内
-    OP_CHECK_DTYPE_NOT_SUPPORT(x, DTYPE_SUPPORT_REGBASE_LIST, return false);
+    OP_CHECK_DTYPE_NOT_SUPPORT(x, GetDtypeSupportList(), return false);
     OP_CHECK_DTYPE_NOT_MATCH(gamma, x->GetDataType(), return false);
     OP_CHECK_DTYPE_NOT_MATCH(beta, x->GetDataType(), return false);
     OP_CHECK_DTYPE_NOT_MATCH(scale, x->GetDataType(), return false);
@@ -151,8 +158,6 @@ static aclnnStatus CheckParams(
     const aclTensor* x, const aclTensor* gammma, const aclTensor* beta, const aclTensor* scale,
     const aclTensor* zeroPointsOptional, int quantMode, aclTensor* res)
 {
-    // 当前只支持arch35
-    CHECK_RET(CheckPlatform(), ACLNN_ERR_PARAM_INVALID);
     // 1. 检查数据类型是否在API支持的数据类型范围之内
     CHECK_RET(
         CheckDtype(x, gammma, beta, scale, zeroPointsOptional, res),
@@ -171,11 +176,12 @@ aclnnStatus aclnnLayerNormQuantGetWorkspaceSize(
     const aclTensor* zeroPointsOptional, int quantMode, double epsilon, aclTensor* res, aclTensor* scaleOut,
     uint64_t* workspaceSize, aclOpExecutor** executor)
 {
+    OP_LOGI("aclnnLayerNormQuantGetWorkspaceSize start.");
     L2_DFX_PHASE_1(
         aclnnLayerNormQuant,
         DFX_IN(x, gammma, beta, scale, zeroPointsOptional, quantMode, epsilon),
         DFX_OUT(res, scaleOut));
-
+    
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);

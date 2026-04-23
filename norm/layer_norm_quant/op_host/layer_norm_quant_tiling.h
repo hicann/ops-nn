@@ -40,6 +40,7 @@ BEGIN_TILING_DATA_DEF(LayerNormQuantTilingData)
   TILING_DATA_FIELD_DEF(uint32_t, numCore);
   TILING_DATA_FIELD_DEF(uint32_t, numLastDim);
   TILING_DATA_FIELD_DEF(uint32_t, numFirstDim);
+  TILING_DATA_FIELD_DEF(uint32_t, colsAligned);
   TILING_DATA_FIELD_DEF(uint32_t, nlFirstdimPerCore);
   TILING_DATA_FIELD_DEF(uint32_t, lFirstdimPerCore);
   TILING_DATA_FIELD_DEF(uint32_t, firstDimPerTimes);
@@ -92,6 +93,7 @@ protected:
     NormTilingDataPtrCon layerNormPtrCon;
 
     uint32_t maxUbSize{0}; // maxUb
+    uint32_t colsAligned{0};
     uint32_t numCol{0};
 
     uint32_t fp16BufNumForMulRow{2};   // 2: x, cast16 x

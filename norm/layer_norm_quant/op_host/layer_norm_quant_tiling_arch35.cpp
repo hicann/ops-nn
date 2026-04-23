@@ -142,7 +142,7 @@ ge::graphStatus LayerNormQuantRegTiling::DoTiling()
                            static_cast<uint32_t>(FP16_OTHER_USED) * colsAligned - SCALAR_USED) / dtypeSize;
         OP_CHECK_IF(CeilDiv(totalMemNeed, static_cast<uint64_t>(sumData)) > UINT_MAX ,
                         OP_LOGE(context->GetNodeName(), "totalMemNeed is invalid!"), return ge::GRAPH_FAILED);
-        ret = CheckSplit(&tilingData, totalMemNeed, sumData, layerNormPtrCon, context);
+        ret = CheckSplit(&tilingData, totalMemNeed, static_cast<uint64_t>(sumData), layerNormPtrCon, context);
         if (ret == ge::GRAPH_FAILED) {
             return ret;
         }

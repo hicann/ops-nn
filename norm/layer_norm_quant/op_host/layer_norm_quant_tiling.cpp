@@ -27,17 +27,20 @@ constexpr uint32_t LAYER_NORM_TILING_KEY_DTYPE = 100000000; // 0: fp16; 1: bf16
 constexpr uint32_t LAYER_NORM_TILING_KEY_FAST = 10000000;   // 0: fast; 1:slice
 
 constexpr int64_t FP16_DATA_USED = 5;
-constexpr int64_t FP16_OTHER_USED = 6;
+constexpr int64_t FP16_OTHER_USED = 12;
 constexpr uint32_t SCALAR_USED = 50;
-constexpr uint32_t NUM_TEMP_BUF = 32;
+constexpr uint32_t NUM_TEMP_BUF = 64;
 constexpr uint32_t MEAN_AND_VAR_SIZE = 64;
+constexpr uint32_t BLOCK_SIZE = 32;
+constexpr uint32_t LAYER_NORM_HALF_SIZE = 2;
 
 void LayerNormQuantTiling::PrintTilingData()
 {
-    OP_LOGD(context, "Start LayerNormQuantTilingData priting");
+    OP_LOGD(context, "Start LayerNormQuantTilingData printing");
     OP_LOGD(context, "------------------------------------------");
     OP_LOGD(context, "------------------------------------------");
     OP_LOGD(context, "numCore is %u", tilingData.get_numCore());
+    OP_LOGD(context, "colsAligned is %u", tilingData.get_colsAligned());
     OP_LOGD(context, "numFirstDim is %u", tilingData.get_numFirstDim());
     OP_LOGD(context, "lFirstdimPerCore is %u", tilingData.get_lFirstdimPerCore());
     OP_LOGD(context, "nlFirstdimPerCore is %u", tilingData.get_nlFirstdimPerCore());
@@ -51,7 +54,7 @@ void LayerNormQuantTiling::PrintTilingData()
     OP_LOGD(context, "tilingKey is %lu", context->GetTilingKey());
     OP_LOGD(context, "------------------------------------------");
     OP_LOGD(context, "------------------------------------------");
-    OP_LOGD(context, "End LayerNormQuantTilingData priting");
+    OP_LOGD(context, "End LayerNormQuantTilingData printing");
 }
 
 size_t roundDown(size_t size, size_t divisor)
@@ -67,22 +70,22 @@ ge::graphStatus LayerNormQuantTiling::GetTilingSliceInfo()
     uint32_t singleRowSizePerElem = fp32BufNum * sizeof(uint32_t) + fp16BufNum * sizeof(uint16_t); // 3*4 + 2*2  -->  3*4 + 2*2
     uint32_t multiRowSizePerElem = fp16BufNumForMulRow * sizeof(uint16_t) + i8BufNumForMulRow * sizeof(uint8_t); // 2*2 +1
 
-    OP_CHECK_IF(numCol > (UINT_MAX / (singleRowSizePerElem + multiRowSizePerElem)),
+    OP_CHECK_IF(colsAligned > (UINT_MAX / (singleRowSizePerElem + multiRowSizePerElem)),
                     OP_LOGE(context->GetNodeName(), "RowBufferSize invalid!"),
                     return ge::GRAPH_FAILED);
-    uint32_t singleRowBufferSize = singleRowSizePerElem * numCol;
-    uint32_t multiRowBufferSize = multiRowSizePerElem * numCol;
+    uint32_t singleRowBufferSize = singleRowSizePerElem * colsAligned;
+    uint32_t multiRowBufferSize = multiRowSizePerElem * colsAligned;
 
     if ((maxUbSize - MEAN_AND_VAR_SIZE) < (singleRowBufferSize + multiRowBufferSize)) {
         uint32_t oneRepeatElemCount = 256U / 2;
-        uint32_t elemSize = roundDown((maxUbSize - MEAN_AND_VAR_SIZE) / (singleRowSizePerElem + multiRowSizePerElem),
+        uint32_t elementSize = roundDown((maxUbSize - MEAN_AND_VAR_SIZE) / (singleRowSizePerElem + multiRowSizePerElem),
                                       oneRepeatElemCount);
-        tilingData.set_sliceNum(CeilDiv(numCol, elemSize));
-        tilingData.set_sliceSize(elemSize);
-        tilingData.set_tailSliceSize(numCol - (tilingData.get_sliceNum() - 1) * elemSize);
+        tilingData.set_sliceNum(CeilDiv(numCol, elementSize));
+        tilingData.set_sliceSize(elementSize);
+        tilingData.set_tailSliceSize(numCol - (tilingData.get_sliceNum() - 1) * elementSize);
     } else {
         tilingData.set_sliceNum(1);
-        tilingData.set_sliceSize(numCol);
+        tilingData.set_sliceSize(colsAligned);
         tilingData.set_tailSliceSize(numCol);
     }
 
@@ -93,6 +96,7 @@ void LayerNormQuantTiling::GetTilingBasicInfo()
 {
     float tempAve = float(1.0 / numCol);
     tilingData.set_aveStr(tempAve);
+    tilingData.set_colsAligned(colsAligned);
     tilingData.set_numLastDim(numCol);
     uint32_t numCore = layerNormPtrCon.numCore;
     tilingData.set_numCore(numCore);
@@ -112,28 +116,28 @@ ge::graphStatus LayerNormQuantTiling::startTiling()
 
     ge::graphStatus ret =
         PostLayerNormPtrFunc<LayerNormQuantTilingData>(&this->tilingData, this->layerNormPtrCon, this->context);
-    if (ret == ge::GRAPH_FAILED) {  // OP_CHECK_IF_STATUS_RETURN(ret);
+    if (ret == ge::GRAPH_FAILED) { 
         return ret;
     }
 
     this->maxUbSize = layerNormPtrCon.maxUbSize;  // maxUb
     this->numCol = layerNormPtrCon.numCol;
+    this->colsAligned = (this->numCol + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE;  // 对齐后
     GetTilingBasicInfo();
     GetTilingSliceInfo();
 
-    if (tilingData.get_sliceNum() == 1) {
-        OP_CHECK_IF(layerNormPtrCon.numCol > (UINT_MAX / (FP16_DATA_USED * layerNormPtrCon.nlFirstdimPerCoreNum)),
-                        OP_LOGE(context->GetNodeName(), "totalMemNeed is invalid!"),
-                        return ge::GRAPH_FAILED);
-        uint32_t totalMemNeed =
-            static_cast<uint32_t>(FP16_DATA_USED) * layerNormPtrCon.nlFirstdimPerCoreNum * layerNormPtrCon.numCol;
-        OP_CHECK_IF(layerNormPtrCon.numCol > (UINT_MAX / FP16_OTHER_USED),
+    if (tilingData.get_sliceNum() == 1) { 
+        uint64_t totalMemNeed =
+            static_cast<uint64_t>(FP16_DATA_USED) * layerNormPtrCon.nlFirstdimPerCoreNum * colsAligned;
+        OP_CHECK_IF(colsAligned > (UINT_MAX / FP16_OTHER_USED),
                         OP_LOGE(context->GetNodeName(), "sumData is invalid!"),
                         return ge::GRAPH_FAILED);
-        uint32_t sumData = layerNormPtrCon.maxEleFp16 - NUM_TEMP_BUF -
-                           static_cast<uint32_t>(FP16_OTHER_USED) * layerNormPtrCon.numCol - SCALAR_USED;
-
-        ret = CheckSplit(&tilingData, totalMemNeed, sumData, layerNormPtrCon, context);
+        uint32_t sumData = (layerNormPtrCon.maxUbSize - NUM_TEMP_BUF -
+                           static_cast<uint32_t>(FP16_OTHER_USED) * colsAligned - SCALAR_USED) / LAYER_NORM_HALF_SIZE;
+        OP_CHECK_IF(CeilDiv(totalMemNeed, static_cast<uint64_t>(sumData)) > UINT_MAX,
+                        OP_LOGE(context->GetNodeName(), "totalMemNeed is invalid!"),
+                        return ge::GRAPH_FAILED);
+        ret = CheckSplit(&tilingData, totalMemNeed, static_cast<uint64_t>(sumData), layerNormPtrCon, context);
         if (ret == ge::GRAPH_FAILED) {
             return ret;
         }

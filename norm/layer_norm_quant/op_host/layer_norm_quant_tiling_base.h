@@ -92,8 +92,8 @@ inline __attribute__((always_inline)) ge::graphStatus PostLayerNormPtrFunc(T* ti
 }
 
 template <typename T>
-inline __attribute__((always_inline)) ge::graphStatus CheckSplit(T* tilingDataPtr, const int32_t& totalMemNeed,
-                                                                 const int32_t& sumData,
+inline __attribute__((always_inline)) ge::graphStatus CheckSplit(T* tilingDataPtr, const uint64_t& totalMemNeed,
+                                                                 const uint64_t& sumData,
                                                                  const NormTilingDataPtrCon& ptrCon,
                                                                  gert::TilingContext* context)
 {
