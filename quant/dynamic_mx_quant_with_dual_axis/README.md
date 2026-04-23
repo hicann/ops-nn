@@ -70,106 +70,12 @@
     - 当dstTypeMax = 0.0/6.0/7.0时，使用指数域addValueBit进位法计算scale。
     - 当dstTypeMax为其他自定义值时，使用FP32精度invDstTypeMax乘法法计算scale。
 
-## 接口说明
-
-本算子提供两个aclnn接口版本：
-
-### aclnnDynamicMxQuantWithDualAxis（V1接口）
-
-支持scale_alg=0（OCP）和scale_alg=1（CuBALS，仅FP8类型）。
-
-### aclnnDynamicMxQuantWithDualAxisV2（V2接口）
-
-在V1基础上新增dstTypeMax参数，支持scale_alg=0/1/2（scaleAlg=2为DynamicDtypeRange算法，仅FP4_E2M1类型）。
-
 ## 参数说明
-
-### V1接口参数（aclnnDynamicMxQuantWithDualAxis）
-
 <table style="undefined;table-layout: fixed; width: 980px"><colgroup>
   <col style="width: 100px">
   <col style="width: 150px">
-  <col style="width: 280px">
   <col style="width: 330px">
-  <col style="width: 120px">
-  </colgroup>
-  <thead>
-    <tr>
-      <th>参数名</th>
-      <th>输入/输出/属性</th>
-      <th>描述</th>
-      <th>数据类型</th>
-      <th>数据格式</th>
-    </tr></thead>
-  <tbody>
-    <tr>
-      <td>x</td>
-      <td>输入</td>
-      <td>待量化数据，对应公式中V<sub>i</sub>。<br>目的类型为FLOAT4_E2M1、FLOAT4_E1M2时，x的最后一维必须是偶数。</td>
-      <td>FLOAT16、BFLOAT16</td>
-      <td>ND</td>
-    </tr>
-    <tr>
-      <td>round_mode</td>
-      <td>可选属性</td>
-      <td>数据转换的模式。<br>当dst_type为40/41(FLOAT4_E2M1/FLOAT4_E1M2)时，支持{"rint", "floor", "round"}；<br>当dst_type为35/36(FLOAT8_E5M2/FLOAT8_E4M3FN)时，仅支持{"rint"}；<br>传入空指针时，采用"rint"模式。</td>
-      <td>STRING</td>
-      <td>-</td>
-    </tr>
-    <tr>
-      <td>dst_type</td>
-      <td>输入</td>
-      <td>指定数据转换后y1和y2的类型。<br>输入范围为{35, 36, 40, 41}，分别对应{35:FLOAT8_E5M2, 36:FLOAT8_E4M3FN, 40:FLOAT4_E2M1, 41:FLOAT4_E1M2}。</td>
-      <td>INT64</td>
-      <td>-</td>
-    </tr>
-    <tr>
-      <td>scale_alg</td>
-      <td>输入</td>
-      <td>mxscale1和mxscale2的计算方法。<br>支持取值0和1，取值为0代表OCP实现（场景1），为1代表CuBALS实现（场景2）。<br>当dst_type为FLOAT4_E2M1/FLOAT4_E1M2时仅支持取值为0。</td>
-      <td>INT64</td>
-      <td>-</td>
-    </tr>
-    <tr>
-      <td>y1</td>
-      <td>输出</td>
-      <td>输入x量化-1轴后的对应结果，对应公式中的P<sub>i</sub>。<br>shape和输入x一致。</td>
-      <td>FLOAT4_E2M1、FLOAT4_E1M2、FLOAT8_E4M3FN、FLOAT8_E5M2</td>
-      <td>ND</td>
-    </tr>
-    <tr>
-      <td>mxscale1</td>
-      <td>输出</td>
-      <td>-1轴每个分组对应的量化尺度。<br>shape为x的-1轴的值除以32向上取整，并对其进行偶数pad，pad填充值为0。</td>
-      <td>FLOAT8_E8M0</td>
-      <td>ND</td>
-    </tr>
-    <tr>
-      <td>y2</td>
-      <td>输出</td>
-      <td>输入x量化-2轴后的对应结果，对应公式中的P<sub>j</sub>。<br>shape和输入x一致。</td>
-      <td>FLOAT4_E2M1、FLOAT4_E1M2、FLOAT8_E4M3FN、FLOAT8_E5M2</td>
-      <td>ND</td>
-    </tr>
-    <tr>
-      <td>mxscale2</td>
-      <td>输出</td>
-      <td>-2轴每个分组对应的量化尺度。<br>shape为x的-2轴的值除以32向上取整，并对其进行偶数pad，pad填充值为0。<br>mxscale2输出需要对每两行数据进行交织处理。</td>
-      <td>FLOAT8_E8M0</td>
-      <td>ND</td>
-    </tr>
-  </tbody>
-</table>
-
-### V2接口参数（aclnnDynamicMxQuantWithDualAxisV2）
-
-V2接口在V1基础上新增dstTypeMax参数，其余参数与V1一致。
-
-<table style="undefined;table-layout: fixed; width: 980px"><colgroup>
-  <col style="width: 100px">
-  <col style="width: 150px">
   <col style="width: 280px">
-  <col style="width: 330px">
   <col style="width: 120px">
   </colgroup>
   <thead>
@@ -197,21 +103,21 @@ V2接口在V1基础上新增dstTypeMax参数，其余参数与V1一致。
     </tr>
     <tr>
       <td>dst_type</td>
-      <td>输入</td>
+      <td>可选属性</td>
       <td>指定数据转换后y1和y2的类型。<br>输入范围为{35, 36, 40, 41}，分别对应{35:FLOAT8_E5M2, 36:FLOAT8_E4M3FN, 40:FLOAT4_E2M1, 41:FLOAT4_E1M2}。</td>
       <td>INT64</td>
       <td>-</td>
     </tr>
     <tr>
       <td>scale_alg</td>
-      <td>输入</td>
+      <td>可选属性</td>
       <td>mxscale1和mxscale2的计算方法。<br>支持取值0、1和2，取值为0代表OCP实现（场景1），为1代表CuBALS实现（场景2），为2代表DynamicDtypeRange实现（场景3）。<br>当dst_type为FLOAT4_E1M2时仅支持取值为0。<br>当dst_type为FLOAT4_E2M1时仅支持取值为0和2。<br>当dst_type为FLOAT8时仅支持取值为0和1。</td>
       <td>INT64</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>dstTypeMax</td>
-      <td>输入</td>
+      <td>dst_type_max</td>
+      <td>可选属性</td>
       <td>maxType的取值，对应公式中的Amax(DType)。<br>支持取值0.0和6.0-12.0，取值为0.0代表Amax(DType)为量化结果数据类型的最大值；取值为6.0-12.0代表Amax(DType)为传入值。<br>仅支持在FP4_E2M1和scale_alg为2时设置该值。</td>
       <td>DOUBLE</td>
       <td>-</td>
@@ -259,12 +165,11 @@ V2接口在V1基础上新增dstTypeMax参数，其余参数与V1一致。
     - mxscale2.shape[-1] = 2。
     - 其他维度与输入x一致。
     - 举例：输入x的shape为[B, M, N]，目的数据类型为FP8类时，对应的y1和y2的shape为[B, M, N]，mxscale1的shape为[B, M, (ceil(N/32)+2-1)/2, 2]，mxscale2的shape为[B, (ceil(M/32)+2-1)/2, N, 2]。
- - 确定性说明：aclnnDynamicMxQuantWithDualAxis和aclnnDynamicMxQuantWithDualAxisV2默认确定性实现。
 
 ## 调用说明
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口(V1)  | [test_aclnn_dynamic_mx_quant_with_dual_axis](examples/arch35/test_aclnn_dynamic_mx_quant_with_dual_axis.cpp) | 通过[aclnnDynamicMxQuantWithDualAxis](docs/aclnnDynamicMxQuantWithDualAxis.md)接口方式调用，支持scale_alg=0/1。 |
-| aclnn接口(V2)  | [test_aclnn_dynamic_mx_quant_with_dual_axis](examples/arch35/test_aclnn_dynamic_mx_quant_with_dual_axis.cpp) | 通过[aclnnDynamicMxQuantWithDualAxisV2](docs/aclnnDynamicMxQuantWithDualAxisV2.md)接口方式调用，支持scale_alg=0/1/2。 |
+| aclnn接口(V2)  | [test_aclnn_dynamic_mx_quant_with_dual_axis_v2](examples/arch35/test_aclnn_dynamic_mx_quant_with_dual_axis_v2.cpp) | 通过[aclnnDynamicMxQuantWithDualAxisV2](docs/aclnnDynamicMxQuantWithDualAxisV2.md)接口方式调用，支持scale_alg=0/1/2。 |
 | 图模式 | -  | 通过[算子IR](op_graph/dynamic_mx_quant_with_dual_axis_proto.h)构图方式调用DynamicMxQuantWithDualAxis算子。         |
