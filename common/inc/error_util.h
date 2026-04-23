@@ -40,11 +40,14 @@
         }                                     \
     } while (0)
 
-#define OPS_LOG_D(OPS_DESC, fmt, ...) dlog_debug(0, "[%s]" fmt, __func__, ##__VA_ARGS__)
-#define OPS_LOG_I(OPS_DESC, fmt, ...) dlog_info(0, "[%s]" fmt, __func__, ##__VA_ARGS__)
-#define OPS_LOG_W(OPS_DESC, fmt, ...) dlog_warn(0, "[%s]" fmt, __func__, ##__VA_ARGS__)
-#define OPS_LOG_E(OPS_DESC, fmt, ...) dlog_error(0, "[%s]" fmt, __func__, ##__VA_ARGS__)
-#define OPS_LOG_EVENT(OPS_DESC, fmt, ...) dlog_event(0, "[%s]" fmt, __func__, ##__VA_ARGS__)
+#define OPS_LOG_D(OPS_DESC, fmt, ...) \
+    D_OP_LOGD(Ops::Base::GetSafeStr(Ops::Base::GetOpInfo(OPS_DESC)), fmt, ##__VA_ARGS__)
+#define OPS_LOG_I(OPS_DESC, fmt, ...) \
+    D_OP_LOGI(Ops::Base::GetSafeStr(Ops::Base::GetOpInfo(OPS_DESC)), fmt, ##__VA_ARGS__)
+#define OPS_LOG_W(OPS_DESC, fmt, ...) \
+    D_OP_LOGW(Ops::Base::GetSafeStr(Ops::Base::GetOpInfo(OPS_DESC)), fmt, ##__VA_ARGS__)
+#define OPS_LOG_E(OPS_DESC, fmt, ...) \
+    D_OP_LOGE(Ops::Base::GetSafeStr(Ops::Base::GetOpInfo(OPS_DESC)), fmt, ##__VA_ARGS__)
 
 #define OPS_ERR_IF(COND, LOG_FUNC, EXPR) \
     if (__builtin_expect(COND, 0)) {     \
