@@ -171,7 +171,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulV3(
       <tr>
         <td>biasOptional</td>
         <td>输入</td>
-        <td>偏置输入，公式中的输入`bias`。当输入`x`的数据类型为BFLOAT16时，数据类型要求为FLOAT；当输入`x`的数据类型为FLOAT16时，数据类型要求为FLOAT16。</td>
+        <td>偏置输入，公式中的输入`bias`。当输入`x`的数据类型为BFLOAT16时，数据类型要求为BFLOAT16或FLOAT；当输入`x`的数据类型为FLOAT16时，数据类型要求为FLOAT16。</td>
         <td>可选输入, 当不需要时为空指针。</td>
         <td>FLOAT、FLOAT16、BFLOAT16<sup>2</sup></td>
         <td>ND</td>
@@ -419,7 +419,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulV3(
     | FLOAT16/BFLOAT16 | INT4/INT32 | ND | 与x一致 | 与x一致/null | null | null | 与x一致/FLOAT（仅x为BFLOAT16）/null | 0 | 与x一致 | T 量化 |
     | FLOAT16/BFLOAT16 | INT4/INT32 | ND | 与x一致 | 与x一致/null | null | null | 与x一致/FLOAT（仅x为BFLOAT16）/null | pergroup: [32, k-1]且为32倍数<br>其他: 0 | 与x一致 | C & G 量化 |
     | FLOAT16/BFLOAT16 | FLOAT4_E2M1 | ND | FLOAT8_E8M0 | null | null | null | 与x一致/null | 32 | 与x一致 | MX 量化 |
-    | FLOAT16/BFLOAT16 | FLOAT | ND | FLOAT8_E8M0 | null | null | null | 与x一致/FLOAT（仅x为BFLOAT16）/null | 32 | 与x一致 | MX 量化 |
+    | FLOAT16/BFLOAT16 | FLOAT | ND | FLOAT8_E8M0 | null | null | null | 与x一致/null | 32 | 与x一致 | MX 量化 |
 
     - **约束说明**
 

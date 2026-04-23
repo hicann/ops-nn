@@ -446,7 +446,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulV2(
     | FLOAT16/BFLOAT16 | INT4/INT32 | ND | 与x一致 | 与x一致/null | null | null | 与x一致/FLOAT（仅x为BFLOAT16）/null | 0 | 与x一致 | T 量化 |
     | FLOAT16/BFLOAT16 | INT4/INT32 | ND | 与x一致 | 与x一致/null | null | null | 与x一致/FLOAT（仅x为BFLOAT16）/null | pergroup: [32, k-1]且为32倍数<br>其他: 0 | 与x一致 | C & G 量化 |
     | FLOAT16/BFLOAT16 | FLOAT4_E2M1 | ND | FLOAT8_E8M0 | null | null | null | 与x一致/null | 32 | 与x一致 | MX 量化 |
-    | FLOAT16/BFLOAT16 | FLOAT | ND | FLOAT8_E8M0 | null | null | null | 与x一致/FLOAT（仅x为BFLOAT16）/null | 32 | 与x一致 | MX 量化 |
+    | FLOAT16/BFLOAT16 | FLOAT | ND | FLOAT8_E8M0 | null | null | null | 与x一致/null | 32 | 与x一致 | MX 量化 |
 
     - **约束说明**
 
