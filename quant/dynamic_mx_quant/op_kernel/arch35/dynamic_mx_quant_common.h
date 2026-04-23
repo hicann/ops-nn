@@ -17,8 +17,10 @@
 #define DYNAMIC_MX_QUANT_COMMON_H
 
 #include "kernel_operator.h"
+#include "kernel_operator_intf.h"
 #include "../inc/platform.h"
 #include "dynamic_mx_quant_tilingdata.h"
+
 namespace DynamicMxQuant {
 
 template <typename Tp, Tp v>

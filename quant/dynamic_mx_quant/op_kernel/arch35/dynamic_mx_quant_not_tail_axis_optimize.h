@@ -74,20 +74,9 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimize<T, U, ISTAIL>::Init(
     }
     bufferSize_ = this->ubFactor_ * this->blockSize_ * this->postAxisSize_ * sizeof(T);
 
-    // 设置计算模式，分三种情况
-    if (this->scaleAlg_ == ModeZero || IsSame<U, fp4x2_e1m2_t>::value) {
-        calcMode_ = ModeZero;
-    } else if (this->scaleAlg_ == ModeTwo && (this->dstTypeMax_ == DIGIT_ZERO_FLOAT || this->dstTypeMax_ == DIGIT_SIX_FLOAT)) {
-        calcMode_ = ModeOne;
-        subNumForBF16Scale_ = 0x00c1;
-        subNumForFP32Scale_ = 0x00c00001;
-    } else if (this->scaleAlg_ == ModeTwo && this->dstTypeMax_ == DIGIT_SEVEN_FLOAT) {
-        calcMode_ = ModeOne;
-        subNumForBF16Scale_ = 0x00e1;
-        subNumForFP32Scale_ = 0x00e00001;
-    } else {
-        calcMode_ = ModeTwo;
-    }
+    calcMode_ = tilingData->calcMode;
+    subNumForBF16Scale_ = static_cast<uint16_t>(tilingData->subNumForScale);
+    subNumForFP32Scale_ = tilingData->subNumForFP16Scale;
 
     this->xGm_.SetGlobalBuffer((__gm__ T*)(x) + blockOffset_);
     this->mxScaleGm_.SetGlobalBuffer((__gm__ uint8_t*)(mxScale) + scaleBlockOffset_);
@@ -147,24 +136,24 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimize<T, U, ISTAIL>::SplitPre
         offset += blockCount * this->postAxisSize_;
         if (calcMode_ == ModeZero) {
             if (this->roundMode_ == MODE_RINT) {
-                ComputeOcp<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT, 0>(
+                ComputeOcp<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT, ModeZero>(
                     this->postAxisSize_, blockCount, xAddr, mxScaleAddr, yAddr);
             } else if (this->roundMode_ == MODE_FLOOR) {
-                ComputeOcp<RoundMode::CAST_FLOOR, RoundMode::CAST_FLOOR, 0>(
+                ComputeOcp<RoundMode::CAST_FLOOR, RoundMode::CAST_FLOOR, ModeZero>(
                     this->postAxisSize_, blockCount, xAddr, mxScaleAddr, yAddr);
             } else if (this->roundMode_ == MODE_ROUND) {
-                ComputeOcp<RoundMode::CAST_TRUNC, RoundMode::CAST_ROUND, 0>(
+                ComputeOcp<RoundMode::CAST_TRUNC, RoundMode::CAST_ROUND, ModeZero>(
                     this->postAxisSize_, blockCount, xAddr, mxScaleAddr, yAddr);
             }
-        } else if (calcMode_ == ModeOne) {
+        } else if (calcMode_ == ModeTwo) {
             if (this->roundMode_ == MODE_RINT) {
-                ComputeOcp<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT, 1>(
+                ComputeOcp<RoundMode::CAST_TRUNC, RoundMode::CAST_RINT, ModeTwo>(
                     this->postAxisSize_, blockCount, xAddr, mxScaleAddr, yAddr);
             } else if (this->roundMode_ == MODE_FLOOR) {
-                ComputeOcp<RoundMode::CAST_FLOOR, RoundMode::CAST_FLOOR, 1>(
+                ComputeOcp<RoundMode::CAST_FLOOR, RoundMode::CAST_FLOOR, ModeTwo>(
                     this->postAxisSize_, blockCount, xAddr, mxScaleAddr, yAddr);
             } else if (this->roundMode_ == MODE_ROUND) {
-                ComputeOcp<RoundMode::CAST_TRUNC, RoundMode::CAST_ROUND, 1>(
+                ComputeOcp<RoundMode::CAST_TRUNC, RoundMode::CAST_ROUND, ModeTwo>(
                     this->postAxisSize_, blockCount, xAddr, mxScaleAddr, yAddr);
             }
         } else {
@@ -427,7 +416,7 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimize<T, U, ISTAIL>::ComputeO
         AscendC::MicroAPI::MaskReg mask = AscendC::MicroAPI::UpdateMask<calcTypeInt>(maskNum);
         AscendC::MicroAPI::MaskReg pnumMask = AscendC::MicroAPI::UpdateMask<calcTypeInt>(pnum);
         AscendC::MicroAPI::MaskReg tailPnumMask = AscendC::MicroAPI::UpdateMask<calcTypeInt>(tailPnum);
-        if constexpr (calcMode == ModeOne) {
+        if constexpr (calcMode == ModeTwo) {
             AscendC::MicroAPI::Duplicate(absForXReg, this->absForX_);
             AscendC::MicroAPI::Duplicate(xMaxReg, 0);
             if constexpr (IsSame<T, half>::value) {

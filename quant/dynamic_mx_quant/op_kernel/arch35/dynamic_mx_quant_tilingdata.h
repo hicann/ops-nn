@@ -19,7 +19,7 @@
 #include <cstdint>
 
 struct DynamicMxQuantTilingData {
-    int64_t totalCoreNum{0};  // 总核数
+    int64_t totalCoreNum{0};
     int64_t usedCoreNum{0};        // 实际使用的核数
     int64_t blockFactor{0};        // 单核循环次数
     int64_t tailBlockFactor{0};    // 尾核循环次数
@@ -39,6 +39,9 @@ struct DynamicMxQuantTilingData {
     int64_t postAxisSize{0};       // 合轴后axis后面轴的大小
     int64_t mxScaleSize{0};        // scale数据大小
     int64_t tilingKey{0};
+    int64_t calcMode{0};
+    uint32_t subNumForScale{0};
+    uint32_t subNumForFP16Scale{0};
     float dstTypeMax{0.0f};
     float invDstTypeMax{0.0f};
 };
@@ -46,33 +49,32 @@ struct DynamicMxQuantTilingData {
 struct DynamicMxQuant4OptimizeTilingData {
     int64_t totalCoreNum{0};  // 总核数
     int64_t usedCoreNum{0};   // 实际使用的核数
-    int64_t roundMode{0};     // 数据类型转换的模式
-    int64_t dstType{0};       // 输出y的数据类型
     int64_t blockSize{0};     // 进行微缩的数据块大小
     int64_t isPad{0};         // 量化轴最后一个block无法被blockSize整除时，为True
     int64_t tailBlockSize{0}; // 指定量化轴最后一个blockSize大小
-    int64_t scaleAlg{0};
     int64_t tilingKey{0};
     int64_t quantAxisSize{0};    // 优化非尾轴模板量化轴大小
-    int64_t preAxisSize{0};      // 合轴后axis前面轴的大小
     int64_t postAxisSize{0};     // 合轴后axis后面轴的大小
-    int64_t mAlignSize{0};       // 量化轴对齐blockSize之后元素个数
     int64_t nAlignSize{0};       // 融合尾轴对齐32,64,128之后元素个数
     int64_t mAlignBlockCount{0}; // 量化轴对齐blockSize之后block的个数，实际上等于blockSizeNumInAxis
     int64_t nAlignBlockCount{0}; // 融合尾轴对齐32,64,128之后block的个数
     int64_t mAlignGroupCount{0}; // 量化轴对齐blockSize*2（一个Group）之后Group的个数
     int64_t quantAxisIsOdd{0}; // 量化轴是否是奇数，如果是奇数，则有些group会有一个全0的dummy block
-    int64_t totalGroupNum{0};  // 当前shape总共需要多少个Group才能计算完
-    int64_t groupPerCore{0};   // 每个核计算多少个Group
-    int64_t groupPerTail{0};   // 尾核计算多少个Group
-    int64_t groupPerUb{0};     // 每个UB可以放下多少个Group
-    int64_t totalBlockNum{0};  // 总共处理的block数量，此处为对齐成group之后的block数量
-    int64_t blockNumPerTask{0}; // 每个任务处理多少个block
+    int64_t totalGroupNum{0};   // 当前shape总共需要多少个Group才能计算完
+    int64_t groupPerUb{0};      // 每个UB可以放下多少个Group
+    int64_t totalBlockNum{0};   // 总共处理的block数量，此处为对齐成group之后的block数量
+    int64_t blockNumPerTask{0}; // 每个任务处理多少个blcok
     int64_t totalTaskNum{0};    // 总任务数量，用总共处理的block数量除以每个任务处理多少个block
-    int64_t rowPerHeadCore{0};
-    int64_t rowPerTailCore{0};
+    int64_t loopNumPerHeadCore{0};
+    int64_t loopNumPerTailCore{0};
     int64_t needPadPostAxis{0}; // 融合尾轴是否需要对齐
-    float dstTypeMax{0.0f};
+    int64_t ubRowLen{0};
+    int64_t ubRowLenTail{0};
+    int64_t ubRowCount{0};
+    int64_t ubRowCountTail{0};
+    int64_t blockCountPerBatch{0};
+    int64_t scaleRowCountPerBatch{0};
+    uint32_t subNumForScale{0};
     float invDstTypeMax{0.0f};
 };
 

@@ -27,10 +27,18 @@ constexpr int64_t INDEX_ATTR_DST_DTYPE = 2;
 constexpr int64_t INDEX_ATTR_BLOCK_SIZE = 3;
 constexpr int64_t INDEX_ATTR_SCALE_ALG = 4;
 constexpr int64_t INDEX_ATTR_DST_DTYPE_MAX = 5;
+constexpr int64_t NUM_ZERO = 0;
+constexpr int64_t NUM_ONE = 1;
+constexpr int64_t NUM_TWO = 2;
+constexpr float NUM_SIX_FLOAT = 6.0;
+constexpr float NUM_SEVEN_FLOAT = 7.0;
+constexpr int64_t MODE_ZERO = 0;
+constexpr int64_t MODE_ONE = 1;
+constexpr int64_t MODE_TWO = 2;
+constexpr int64_t MODE_THREE = 3;
 constexpr int64_t BYTES_OF_INPUT_TYPE = 2;
 constexpr int64_t MAX_BYTES_OF_OUTPUT_TYPE = 1;
 constexpr int64_t DIGIT_TEN_THOUSAND = 10000;
-constexpr int64_t DIGIT_THOUSAND = 1000;
 constexpr int64_t DIGIT_HUNDRED = 100;
 constexpr int64_t DIGIT_TEN = 10;
 constexpr int64_t N_ALIGN32 = 32;
@@ -40,12 +48,10 @@ constexpr int64_t BLOCK_PER_GROUP = 2;
 constexpr int64_t UINT16_BYTES_SIZE = 2;
 constexpr int64_t UINT8_BYTES_SIZE = 1;
 constexpr int64_t DIGIT_TWO = 2;
-constexpr int64_t DIGIT_THREE = 3;
 constexpr int64_t DIGIT_FOUR = 4;
-constexpr int64_t DIGIT_FIVE = 5;
-constexpr int64_t TILING_KEY_INPUT = 1000;
-constexpr int64_t TILING_KEY_OUTPUT = 100;
-constexpr int64_t TILING_KEY_TMPLATE = 10;
+constexpr int64_t TILING_KEY_TAIL_AXIS = 100;
+constexpr int64_t TILING_KEY_OTHER_AXIS_LARGE = 110;
+constexpr int64_t TILING_KEY_OTHER_AXIS_SMALL = 120;
 constexpr int64_t TILING_KEY_AXIS_SCALE = 1;
 constexpr int64_t N_BUFFER = 2;
 constexpr int64_t EXIST_NODE_NUM = 3;
@@ -72,6 +78,12 @@ constexpr int64_t TAIL_TILING_KEY_DIGIT = 4;
 constexpr int64_t SINGLE_LOOP_MIN_COLS = 128;
 constexpr float FP4E2M1_MAX = 6.0;
 constexpr size_t MAX_DIM_NUM = 7;
+
+// 主模板 tilingKey 只编码 kernel 需要选择的算法路径，不再携带输入/输出 dtype。
+// dtype 组合已经在 binary 编译时通过 DTYPE_X/DTYPE_Y 固化，host 只负责区分 axis/tail 形态和是否需要 scale post：
+// 100/101: 尾轴主路径，101 需要先写 workspace，再由 post 逻辑回写 mxScale。
+// 110/111: 非尾轴大尾路径，111 需要 scale post。
+// 120/121: 非尾轴小尾优化路径，121 需要 scale post。
 
 template <typename T>
 static inline uint64_t GetRemainder(uint64_t num, T div)
@@ -100,8 +112,8 @@ inline static ge::graphStatus DynamicMxQuantSetTilingData(
     uint64_t tilingDataSize = sizeof(tilingData);
     OP_CHECK_NULL_WITH_CONTEXT(context, context->GetRawTilingData());
     auto rawTilingData = context->GetRawTilingData();
-    errno_t ret = memcpy_s(rawTilingData->GetData(), rawTilingData->GetCapacity(),
-        reinterpret_cast<void *>(&tilingData), tilingDataSize);
+    errno_t ret = memcpy_s(
+        rawTilingData->GetData(), rawTilingData->GetCapacity(), reinterpret_cast<void*>(&tilingData), tilingDataSize);
     if (ret != EOK) {
         OP_LOGE(context->GetNodeName(), "memcpy_s failed, ret = %d", ret);
         return ge::GRAPH_FAILED;
@@ -116,12 +128,13 @@ inline static void PrintTilingData(const gert::TilingContext* context, DynamicMx
         context->GetNodeName(),
         "tilingData is totalCoreNum:%ld, usedCoreNum:%ld,  ubFactor:%ld, \
         tailUbFactor:%ld, blockFactor:%ld, tailBlockFactor:%ld, uo:%ld, ubDim:%ld, dstType:%ld, blockSize:%ld, scaleAlg:%ld, \
-        blockSizeNumInAxis:%ld, tailBlockSize:%ld, isPad:%ld, postAxisSize:%ld, tilingKey:%ld, dstTypeMax:%f, invDstTypeMax:%f.",
-        tilingData.totalCoreNum, tilingData.usedCoreNum, tilingData.ubFactor,
-        tilingData.tailUbFactor, tilingData.blockFactor, tilingData.tailBlockFactor,
-        tilingData.uo, tilingData.ubDim, tilingData.dstType, tilingData.blockSize,
-        tilingData.scaleAlg, tilingData.blockSizeNumInAxis, tilingData.tailBlockSize,
-        tilingData.isPad, tilingData.postAxisSize, tilingData.tilingKey, tilingData.dstTypeMax, tilingData.invDstTypeMax);
+        blockSizeNumInAxis:%ld, tailBlockSize:%ld, isPad:%ld, postAxisSize:%ld, tilingKey:%ld, calcMode: %ld, \
+        subNumForScale: %d, subNumForFP16Scale: %d,dstTypeMax:%f, invDstTypeMax:%f.",
+        tilingData.totalCoreNum, tilingData.usedCoreNum, tilingData.ubFactor, tilingData.tailUbFactor,
+        tilingData.blockFactor, tilingData.tailBlockFactor, tilingData.uo, tilingData.ubDim, tilingData.dstType,
+        tilingData.blockSize, tilingData.scaleAlg, tilingData.blockSizeNumInAxis, tilingData.tailBlockSize,
+        tilingData.isPad, tilingData.postAxisSize, tilingData.tilingKey, tilingData.calcMode, tilingData.subNumForScale,
+        tilingData.subNumForFP16Scale, tilingData.dstTypeMax, tilingData.invDstTypeMax);
 }
 
 static RoundModeList GetRoundMode(const std::string& roundMode)
@@ -225,7 +238,8 @@ static ge::graphStatus GetAttr(const gert::TilingContext* context, DynamicMxQuan
 
     OP_CHECK_IF(
         tilingParam.scaleAlg == 2 && tilingParam.blockSize != ATTR_BLOCK_SIZE,
-        OP_LOGE(context->GetNodeName(), "When scaleAlg is 2, blockSize must be 32, but got %ld.", tilingParam.blockSize),
+        OP_LOGE(
+            context->GetNodeName(), "When scaleAlg is 2, blockSize must be 32, but got %ld.", tilingParam.blockSize),
         return ge::GRAPH_FAILED);
 
     auto* attrDstTypeMax = attrs->GetAttrPointer<float>(INDEX_ATTR_DST_DTYPE_MAX);
@@ -356,42 +370,52 @@ static ge::graphStatus CheckShape(const gert::TilingContext* context, const Dyna
     return ge::GRAPH_SUCCESS;
 }
 
-inline static void CalcTilingKey(DataType inputType, DataType outputType, DynamicMxQuantTilingParam& tilingParam)
+inline static void CalcTilingKey(DataType inputType, DynamicMxQuantTilingParam& tilingParam)
 {
-    // 百位数为1、2，分别表示输入类型是float16、bfloat16;
-    int64_t hundredDigit = inputType == DT_FLOAT16 ? 1 : DIGIT_TWO;
-    // 十位数为0、1、2、3，分别表示输出类型是float4_e2m1、float4_e1m2、float8_e4m3fn、float8_e5m2
-    // 前面已做过Dtype校验
-    int64_t tenDigit = 0;
-    if (outputType == DT_FLOAT4_E1M2) {
-        tenDigit = 1;
-    } else if (outputType == DT_FLOAT8_E4M3FN) {
-        tenDigit = DIGIT_TWO;
-    } else if (outputType == DT_FLOAT8_E5M2) {
-        tenDigit = DIGIT_THREE;
-    }
-    // 个位数为0、1、2，分别表示reduce尾轴、非尾轴且尾轴大于VL/2、非尾轴且尾轴小于等于VL/2
-    int64_t digit = 0;
+    // dtype 不再直接参与 tilingKey 编码，这里只保留输入 dtype 对寄存器容量估算的影响，
+    // 用于判断非尾轴场景走 large-tail 还是 small-tail 优化路径。
     int64_t dtypeSize = inputType == DT_FLOAT16 ? DIGIT_FOUR : DIGIT_TWO; // float16需要转化为float32计算
     int64_t vRegSize = static_cast<int64_t>(tilingParam.vfLen) / dtypeSize / DIGIT_TWO;
+    int64_t baseKey = TILING_KEY_TAIL_AXIS;
+    if (!tilingParam.isTailAxis) {
+        baseKey = (tilingParam.postAxisSize > vRegSize || tilingParam.blockSize > OPTIMISE_MAX_BLOCK_SIZE) ?
+                      TILING_KEY_OTHER_AXIS_LARGE :
+                      TILING_KEY_OTHER_AXIS_SMALL;
+    }
+    int64_t isOdd = tilingParam.blockSizeNumInAxis % DIGIT_TWO;
+    // 尾轴且 block 数为偶数时可以直接写回 mxScale，其余情况都需要走 scale post。
+    int64_t axisScaleKey = isOdd == 0 && tilingParam.isTailAxis ? 0 : 1;
+    tilingParam.tilingKey = baseKey + axisScaleKey;
+}
 
-    if (tilingParam.isTailAxis && tilingParam.blockSize == ATTR_BLOCK_SIZE && inputType == DT_FLOAT16 &&
-        Y_SUPPORT_DTYPE_FP4_SET.count(outputType) != 0 &&
-        (tilingParam.roundMode == static_cast<int64_t>(RoundModeList::MODE_RINT) ||
-         tilingParam.roundMode == static_cast<int64_t>(RoundModeList::MODE_ROUND))) {
-        digit = DIGIT_FIVE;
+static ge::graphStatus SetCalcMode(const gert::TilingContext* context, DynamicMxQuantTilingParam& tilingParam)
+{
+    if (tilingParam.scaleAlg == NUM_ZERO) {
+        tilingParam.calcMode = MODE_ZERO;
+    } else if (tilingParam.scaleAlg == NUM_ONE) {
+        tilingParam.calcMode = MODE_ONE;
+    } else if (tilingParam.scaleAlg == NUM_TWO) {
+        if (tilingParam.dstTypeMax == NUM_ZERO || tilingParam.dstTypeMax == NUM_SIX_FLOAT ||
+            tilingParam.dstTypeMax == NUM_SEVEN_FLOAT) {
+            tilingParam.calcMode = MODE_TWO;
+        } else {
+            tilingParam.calcMode = MODE_THREE;
+        }
     } else {
-        digit =
-            tilingParam.isTailAxis ?
-                0 :
-                ((tilingParam.postAxisSize > vRegSize || tilingParam.blockSize > OPTIMISE_MAX_BLOCK_SIZE) ? 1 :
-                                                                                                            DIGIT_TWO);
+        OP_LOGE(context->GetNodeName(), "Invalid scaleAlg value: %ld", tilingParam.scaleAlg);
+        return ge::GRAPH_FAILED;
     }
 
-    int64_t isOdd = tilingParam.blockSizeNumInAxis % DIGIT_TWO;
-    int64_t axisScaleKey = isOdd == 0 && tilingParam.isTailAxis ? 0 : 1;
-    tilingParam.tilingKey =
-        hundredDigit * TILING_KEY_INPUT + tenDigit * TILING_KEY_OUTPUT + digit * TILING_KEY_TMPLATE + axisScaleKey;
+    if (tilingParam.calcMode == MODE_TWO) {
+        if (tilingParam.dstTypeMax == NUM_ZERO || tilingParam.dstTypeMax == NUM_SIX_FLOAT) {
+            tilingParam.subNumForScale = 0x000000c1;
+            tilingParam.subNumForFP16Scale = 0x00c00001;
+        } else {
+            tilingParam.subNumForScale = 0x000000e1;
+            tilingParam.subNumForFP16Scale = 0x00e00001;
+        }
+    }
+    return ge::GRAPH_SUCCESS;
 }
 
 static ge::graphStatus BaseCalc(const gert::TilingContext* context, DynamicMxQuantTilingParam& tilingParam)
@@ -410,7 +434,8 @@ static ge::graphStatus BaseCalc(const gert::TilingContext* context, DynamicMxQua
     if (dimSize < tilingParam.blockSize) {
         tilingParam.blockSize = dimSize;
     }
-    if (tilingParam.blockSize == ATTR_BLOCK_SIZE) {     // 需要再次判断，存在量化轴为尾轴，尾轴大小为32，但是blockSize>32时，也应该走尾轴、blockSize=32的模板
+    if (tilingParam.blockSize ==
+        ATTR_BLOCK_SIZE) { // 需要再次判断，存在量化轴为尾轴，尾轴大小为32，但是blockSize>32时，也应该走尾轴、blockSize=32的模板
         tilingParam.isBlockSize32 = true;
     }
     // 合轴
@@ -505,10 +530,10 @@ static ge::graphStatus DoTiling(const gert::TilingContext* context, DynamicMxQua
     auto inputXPtr = context->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputXPtr);
     auto inDtype = inputXPtr->GetDataType();
-    auto outputYPtr = context->GetOutputDesc(0);
-    OP_CHECK_NULL_WITH_CONTEXT(context, outputYPtr);
-    auto outDtype = outputYPtr->GetDataType();
-    CalcTilingKey(inDtype, outDtype, tilingParam);
+    CalcTilingKey(inDtype, tilingParam);
+    OP_CHECK_IF(
+        SetCalcMode(context, tilingParam) != ge::GRAPH_SUCCESS,
+        OP_LOGE(context->GetNodeName(), "Set calculation mode failed."), return ge::GRAPH_FAILED);
 
     tilingParam.preAxisSize *= tilingParam.blockSizeNumInAxis;
 
@@ -625,6 +650,9 @@ inline static void SetTilingData(DynamicMxQuantTilingData& tilingData, const Dyn
     tilingData.postAxisSize = tilingParam.postAxisSize;
     tilingData.mxScaleSize = tilingParam.mxScaleSize;
     tilingData.isTailAxis = static_cast<int64_t>(tilingParam.isTailAxis);
+    tilingData.calcMode = tilingParam.calcMode;
+    tilingData.subNumForScale = tilingParam.subNumForScale;
+    tilingData.subNumForFP16Scale = tilingParam.subNumForFP16Scale;
     tilingData.dstTypeMax = tilingParam.dstTypeMax;
     tilingData.invDstTypeMax = tilingParam.invDstTypeMax;
 }
@@ -663,7 +691,9 @@ ge::graphStatus Tiling4DynamicMxQuant(gert::TilingContext* context)
     tilingParam.vfLen = Ops::Base::GetVRegSize(context);
     tilingParam.workspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
 
-    BaseCalc(context, tilingParam);
+    OP_CHECK_IF(
+        BaseCalc(context, tilingParam) != ge::GRAPH_SUCCESS,
+        OP_LOGE(context->GetNodeName(), "The base calculation failed."), return ge::GRAPH_FAILED);
 
     bool isOptimizable = IsOptForNotLastQuantAxis(context, tilingParam);
     // 进入性能优化模板判断

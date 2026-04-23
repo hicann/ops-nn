@@ -26,7 +26,6 @@
 #include "atvoss/broadcast/broadcast_tiling.h"
 #include "../../op_kernel/arch35/dynamic_mx_quant_tilingdata.h"
 
-
 namespace optiling {
 using namespace Ops::NN::Optiling;
 
@@ -77,8 +76,17 @@ struct DynamicMxQuantTilingParam {
     int64_t totalBlockNum{0};
     int64_t blockNumPerTask{0};
     int64_t totalTaskNum{0};
-    int64_t rowPerHeadCore{0};
-    int64_t rowPerTailCore{0};
+    int64_t loopNumPerHeadCore{0};
+    int64_t loopNumPerTailCore{0};
+    int64_t calcMode{0};
+    int64_t ubRowLen{0};
+    int64_t ubRowLenTail{0};
+    int64_t ubRowCount{0};
+    int64_t ubRowCountTail{0};
+    uint32_t subNumForScale{0};
+    uint32_t subNumForFP16Scale{0};
+    int64_t blockCountPerBatch{0};
+    int64_t scaleRowCountPerBatch{0};
     bool needPadPostAxis{false};
     bool isOptimize{false};
     // tail axis tiling data
@@ -120,14 +128,13 @@ public:
     ge::graphStatus DoTiling();
 
 private:
-    // Order: GetShapeAttrsInfo->GetPlatformInfo->
-    //        IsCapable->DoOpTiling->DoLibApiTiling->
-    //        GetWorkspaceSize->PostTiling->GetTilingKey
     ge::graphStatus SetTilingParam();
-    void SetTilingData();
+    ge::graphStatus SetCalcMode();
+    ge::graphStatus SetTilingData();
     void SetTilingKey();
     void PrintTilingData();
     void SplitCore();
+
 private:
     gert::TilingContext* context_ = nullptr;
     DynamicMxQuant4OptimizeTilingData tilingData{};
@@ -136,8 +143,8 @@ private:
 
 class DynamicMxQuantTailAxisTiling {
 public:
-    explicit DynamicMxQuantTailAxisTiling(gert::TilingContext* context_, const DynamicMxQuantTilingParam& tilingParam_)
-        : context(context_), tilingParam(tilingParam_), tilingData{}
+    explicit DynamicMxQuantTailAxisTiling(gert::TilingContext* context, const DynamicMxQuantTilingParam& tilingParam)
+        : context_(context), tilingParam_(tilingParam), tilingData_{}
     {}
     ~DynamicMxQuantTailAxisTiling()
     {}
@@ -145,18 +152,17 @@ public:
 
 private:
     ge::graphStatus SetTilingParams();
-    void CalcTilingKeyForTail(DynamicMxQuantTilingParam& tilingParam, const ge::DataType& outputType);
-    void CalcAxisSize(DynamicMxQuantTilingParam& tilingParam, const gert::Shape& xShape);
-    void AutoTiling(DynamicMxQuantTilingParam& tilingParam);
+    void CalcTilingKeyForTail();
+    void CalcAxisSize(const gert::Shape& xShape);
+    ge::graphStatus AutoTiling();
     std::set<int64_t> FindSplitCombo(int64_t usedCoreNum);
-    void SetTilingDataForTailAxis(DynamicMxQuantTailAxisTilingData& tilingData, const DynamicMxQuantTilingParam& tilingParam);
-    ge::graphStatus TailAxisSetTilingData(gert::TilingContext* context, DynamicMxQuantTailAxisTilingData& tilingData);
-    void PrintTilingDataForTailAxis(gert::TilingContext* context, const DynamicMxQuantTailAxisTilingData& tilingData);
+    ge::graphStatus SetTilingDataForTailAxis();
+    void PrintTilingDataForTailAxis();
 
 private:
-    gert::TilingContext* context = nullptr;
-    DynamicMxQuantTailAxisTilingData tilingData{};
-    DynamicMxQuantTilingParam tilingParam;
+    gert::TilingContext* context_ = nullptr;
+    DynamicMxQuantTailAxisTilingData tilingData_{};
+    DynamicMxQuantTilingParam tilingParam_;
 };
 
 } // namespace optiling
