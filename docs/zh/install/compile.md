@@ -2,33 +2,6 @@
 
 源码构建前，请参考本项目README完成环境准备和源码下载，此处不再赘述。
 
-## 安装构建工具
-
-> **说明**：对于WebIDE或Docker环境，默认已安装源码编译所需的构建工具，无需手动安装，可跳过本章操作。
-
-请先确保编译环境的基础库依赖已安装，注意满足版本号要求。若您想体验使用Ascend C和PyTorch Extension能力开发自定义NPU算子，请参考[指南](../develop/torch_extension_develop_guide.md)。
-
-- python >= 3.7.0
-- gcc >= 7.3.0
-- cmake >= 3.16.0
-- pigz（可选，安装后可提升打包速度，建议版本 >= 2.4）
-- dos2unix
-- gawk
-- make
-- patch
-- googletest（仅执行UT时依赖，建议版本 [release-1.11.0](https://github.com/google/googletest/releases/tag/release-1.11.0)）
-
-上述依赖可通过项目根目录install\_deps.sh一键安装，命令如下，若遇到不支持系统，请参考该文件自行适配。
-
-```bash
-bash install_deps.sh
-```
-
-安装完上述依赖后，可通过项目根目录requirements.txt继续安装python三方库依赖，命令如下。
-
-```bash
-pip3 install -r requirements.txt
-```
 
 ## 安装第三方依赖
 
