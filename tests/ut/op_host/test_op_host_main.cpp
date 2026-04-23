@@ -35,13 +35,8 @@ class OpTilingUtEnvironment : public testing::Environment {
       } else {
         exePathStr.assign("./");
       }
-      string opHostSoPath = exePathStr + string("/libophost_nn_ut.so");
-      gert::OppSoDesc oppSoDesc({ge::AscendString(opHostSoPath.c_str())}, "op_host_so");
+      
       shared_ptr<gert::OpImplSpaceRegistryV2> opImplSpaceRegistryV2 = make_shared<gert::OpImplSpaceRegistryV2>();
-      if (opImplSpaceRegistryV2->AddSoToRegistry(oppSoDesc) == ge::GRAPH_FAILED) {
-          cout << "add so to registry failed." << endl;
-          return;
-      }
 
       gert::DefaultOpImplSpaceRegistryV2::GetInstance().SetSpaceRegistry(opImplSpaceRegistryV2);
 
