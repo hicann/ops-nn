@@ -95,6 +95,7 @@ public:
         this->Attr("is_need_sample_result").AttrType(OPTIONAL).Bool(IS_NEED_SAMPLE_RESULT_DEFAULT);
         this->AICore().AddConfig("ascend910b", aicConfig);
         this->AICore().AddConfig("ascend910_93", aicConfig);
+        this->AICore().AddConfig("ascend950", aicConfig);
     }
     };
 

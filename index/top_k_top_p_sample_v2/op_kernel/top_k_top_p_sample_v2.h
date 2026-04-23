@@ -631,8 +631,8 @@ private:
             SetFlag<HardEvent::V_S>(EVENT_ID0);
             WaitFlag<HardEvent::V_S>(EVENT_ID0);
             *reduceSumMax = *reduceSumMax + reduceSumVal.GetValue(0); // S
-            SetFlag<HardEvent::MTE3_V>(EVENT_ID0);
-            WaitFlag<HardEvent::MTE3_V>(EVENT_ID0);
+            SetFlag<HardEvent::MTE3_MTE2>(EVENT_ID0);
+            WaitFlag<HardEvent::MTE3_MTE2>(EVENT_ID0);
         }
     }
 
@@ -661,7 +661,6 @@ private:
         LocalTensor<float> localValueCast = buf3.Get<float>();
 
         uint32_t gmOffset = startIndex;
-
         for (int32_t innerLoopCount = 0; innerLoopCount < this->innerLoopTime; ++innerLoopCount) {
             if (this->innerLoopEleTail > 0 && innerLoopCount == this->innerLoopTime - 1) {
                 // tail block

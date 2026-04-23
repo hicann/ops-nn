@@ -658,7 +658,7 @@
     {"name":"Bincount", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : ""},
     {"name":"Addr", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : ""},
     {"name":"SparseTensorDenseMatMul", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : "", "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},
-    {"name":"TopKTopPSampleV2", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync": true},
+    {"name":"TopKTopPSampleV2", "compute_units": ["ascend910b", "ascend910_93", "ascend950"], "auto_sync": true, "compile_options":{"ascend950": ["--cce-simd-vf-fusion=true"]}},
     {"name":"LogSigmoid", "compute_units": ["ascend950"], "auto_sync": false, "impl_mode": "", "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},
     {"name":"LogSigmoidGrad", "compute_units": ["ascend950"], "auto_sync": false, "impl_mode": "", "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},
     {"name": "ScatterUpdate", "compute_units": ["ascend950"], "auto_sync": false, "impl_mode": "", "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},
