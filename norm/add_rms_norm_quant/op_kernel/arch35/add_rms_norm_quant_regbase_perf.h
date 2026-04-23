@@ -253,8 +253,8 @@ private:
             localOffset = localOffset + xGammaAlign * sizeof(T_X);
             DataCopyPad(betaLocal, betaGm, copyInParamsGamma, dataCopyPadExtParamsGamma);
         }
-
     }
+
     __aicore__ inline void CopyInXMutiMoveAlign(uint64_t gmOffset, uint32_t realM)
     {
         LocalTensor<T_X> xLocal1 = inQueueX1.AllocTensor<T_X>();
