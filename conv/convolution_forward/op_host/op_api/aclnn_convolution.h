@@ -78,7 +78,7 @@ ACLNN_API aclnnStatus aclnnConvolutionGetWorkspaceSize(const aclTensor* input, c
  * @param [in] pad: 对self的填充。
  * int64_t，其值应该大于等于0。
  * @param [out] output: Tbc卷积输出。
- * device侧的aclTensor，数据类型支持FLOAT、FLOAT16、BFLOAT16、HIFLOAT8，数据格式支持NCL。
+ * device侧的aclTensor，数据类型支持FLOAT、FLOAT16、BFLOAT16、HIFLOAT8，数据格式支持NCL、ND。
  * @param [in] cubeMathType：用于判断Cube单元应该使用哪种计算逻辑进行运算。
  * int8_t, Cube单元计算逻辑判断参数。
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
