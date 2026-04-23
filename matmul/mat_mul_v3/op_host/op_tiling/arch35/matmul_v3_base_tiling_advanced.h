@@ -453,7 +453,6 @@ protected:
     {
         matmulToMulBasicData.usedCoreNum = runInfo_.usedCoreNum;
         matmulToMulBasicData.tileNum = runInfo_.mmToMulInfo.tileNum;
-        matmulToMulBasicData.m = args_.mValue;
         matmulToMulBasicData.n = args_.nValue;
         matmulToMulBasicData.k = args_.kValue;
         matmulToMulBasicData.baseMN = runInfo_.mmToMulInfo.baseMN;
@@ -461,6 +460,8 @@ protected:
         matmulToMulBasicData.baseK = runInfo_.mmToMulInfo.baseK;
         matmulToMulBasicData.tailK = runInfo_.mmToMulInfo.tailK;
         matmulToMulBasicData.loopK = runInfo_.mmToMulInfo.loopK;
+        matmulToMulBasicData.loopM = runInfo_.mmToMulInfo.loopM;
+        matmulToMulBasicData.m = matmulToMulBasicData.loopM == 1 ? args_.mValue : 1;
         matmulToMulBasicData.dataCopyMode = runInfo_.mmToMulInfo.dataCopyMode;
         return ge::GRAPH_SUCCESS;
     }

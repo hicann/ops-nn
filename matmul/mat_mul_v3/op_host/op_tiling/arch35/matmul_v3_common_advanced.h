@@ -134,6 +134,7 @@ struct MatMulV3ToMulInfo {
     uint64_t baseK = 1UL;
     uint64_t tailK = 1UL;
     uint64_t loopK = 1UL;
+    uint64_t loopM = 1UL;
     bool dataCopyMode = false;
 };
 

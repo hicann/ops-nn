@@ -39,6 +39,7 @@ public:
     int64_t baseK_{0};
     int64_t tailK_{0};
     int64_t loopK_{0};
+    int64_t loopM_{0};
     bool dataCopyMode_{false};
 
     using TupleShape = Shape<int64_t, int64_t, int64_t, int64_t>;
@@ -57,6 +58,7 @@ public:
         baseK_ = params.tilingData->baseK;
         tailK_ = params.tilingData->tailK;
         loopK_ = params.tilingData->loopK;
+        loopM_ = params.tilingData->loopM;
         dataCopyMode_ = params.tilingData->dataCopyMode;
         n_ = shape.n;
         k_ = shape.k;
@@ -75,6 +77,11 @@ public:
     __aicore__ inline int64_t GetLoopK()
     {
         return loopK_;
+    }
+
+    __aicore__ inline int64_t GetLoopM()
+    {
+        return loopM_;
     }
 
     __aicore__ inline bool GetDataCopyMode()

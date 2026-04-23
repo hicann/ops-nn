@@ -163,6 +163,7 @@ public:
         int64_t tailK = Get<MNK_B>(blockInfo);
         int64_t tileNum = bs.GetTileNum();
         int64_t loopK = bs.GetLoopK();
+        int64_t loopM = bs.GetLoopM();
         bool dataCopyMode = bs.GetDataCopyMode();
         blockMmadOp.Init(problemShape_, blockInfo, loopK, hasBias_, dataCopyMode);
         int64_t loopOffsetA = baseMN;
@@ -173,15 +174,19 @@ public:
         if (n_ == 1 && !transA) {
             loopOffsetA = baseMN * k_;
         }
-        for (int64_t tileIdx = curBlockIdx; tileIdx < tileNum; tileIdx += blockNum) {
-            if (tileIdx == tileNum - 1) {
-                blockMmadOp.SetTailMN(tailMN);
+        for (int64_t tileIdxM = 0; tileIdxM < loopM; ++tileIdxM) {
+            for (int64_t tileIdx = curBlockIdx; tileIdx < tileNum; tileIdx += blockNum) {
+                if (tileIdx == tileNum - 1) {
+                    blockMmadOp.SetTailMN(tailMN);
+                } else {
+                    blockMmadOp.SetTailMN(baseMN);
+                }
+                int64_t offsetA = m_ == 1 ? tileIdxM * k_ : tileIdx * loopOffsetA;
+                int64_t offsetB = n_ == 1 ? 0 : tileIdx * loopOffsetB;
+                int64_t offsetC = tileIdxM * m_ * n_ + tileIdx * baseMN;
+                int64_t offsetBias = n_ == 1 ? 0 : tileIdx * baseMN;
+                blockMmadOp(cGlobal_[offsetC], aGlobal_[offsetA], bGlobal_[offsetB], biasGlobal_[offsetBias]);
             }
-            int64_t offsetA = m_ == 1 ? 0 : tileIdx * loopOffsetA;
-            int64_t offsetB = n_ == 1 ? 0 : tileIdx * loopOffsetB;
-            int64_t offsetC = tileIdx * baseMN;
-            int64_t offsetBias = m_ == 1 ? tileIdx * baseMN : 0;
-            blockMmadOp(cGlobal_[offsetC], aGlobal_[offsetA], bGlobal_[offsetB], biasGlobal_[offsetBias]);
         }
     }
 

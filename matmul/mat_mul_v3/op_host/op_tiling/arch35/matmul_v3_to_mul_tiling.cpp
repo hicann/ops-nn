@@ -31,8 +31,8 @@ bool MatMulV3ToMulTiling::IsCapable()
     if (!args_.isForceGrpAccForFp32) {
         return false;
     }
-    // m=1 || n=1
-    if (args_.mValue != 1UL && args_.nValue != 1UL) {
+    // m=1 || n=1 || m!=1 n!=1 but BTrans
+    if (args_.mValue != 1UL && args_.nValue != 1UL && (args_.isATrans || !args_.isBTrans)) {
         return false;
     }
     if (args_.aDtypeSize != sizeof(float) || args_.bDtypeSize != sizeof(float)) {
@@ -47,6 +47,10 @@ bool MatMulV3ToMulTiling::IsCapable()
 ge::graphStatus MatMulV3ToMulTiling::DoOpTiling()
 {
     uint64_t m = args_.mValue;
+    if (args_.mValue != 1 && args_.nValue != 1) {
+        runInfo_.mmToMulInfo.loopM = args_.mValue;
+        m = 1;
+    }
     uint64_t n = args_.nValue;
     uint64_t k = args_.kValue;
     uint64_t shapeMN = n * m;
@@ -77,9 +81,9 @@ ge::graphStatus MatMulV3ToMulTiling::DoOpTiling()
     // 每个核K方向尾次处理的个数
     uint64_t tailK = k % baseK;
     uint64_t loopK = ops::CeilDiv(k, baseK);
-    // 计算实际核数
     uint64_t tileNum = ops::CeilDiv(shapeMN, baseMN);
-    uint64_t useCoreNum = tileNum >= compileInfo_.aivNum ? compileInfo_.aivNum : tileNum;
+    // 计算实际核数
+    uint64_t usedCoreNum = tileNum >= compileInfo_.aivNum ? compileInfo_.aivNum : tileNum;
 
     runInfo_.mmToMulInfo.baseMN = baseMN;
     runInfo_.mmToMulInfo.tailMN = tailMN;
@@ -87,7 +91,7 @@ ge::graphStatus MatMulV3ToMulTiling::DoOpTiling()
     runInfo_.mmToMulInfo.tailK = tailK;
     runInfo_.mmToMulInfo.loopK = loopK;
     runInfo_.mmToMulInfo.tileNum = tileNum;
-    runInfo_.usedCoreNum = useCoreNum;
+    runInfo_.usedCoreNum = usedCoreNum;
     runInfo_.mmToMulInfo.dataCopyMode = dataCopyMode;
     return ge::GRAPH_SUCCESS;
 }
