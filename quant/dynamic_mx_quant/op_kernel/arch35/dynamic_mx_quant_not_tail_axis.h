@@ -284,10 +284,10 @@ __aicore__ inline void DynamicMxQuantNotTailAxis<T, U, ISTAIL>::SplitPreAxisComp
                     this->postAxisSize_, blockCount, xAddr, mxScaleAddr, yAddr);
             }
         }
-        this->mxScaleQueue_.template EnQue(mxScale);
-        this->outQueue_.template EnQue(y);
-        this->inQueue_.template FreeTensor(x);
     }
+    this->mxScaleQueue_.template EnQue(mxScale);
+    this->outQueue_.template EnQue(y);
+    this->inQueue_.template FreeTensor(x);
 }
 
 template <typename T, typename U, const bool ISTAIL>
