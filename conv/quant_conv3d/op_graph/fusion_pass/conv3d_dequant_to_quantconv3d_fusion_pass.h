@@ -42,7 +42,7 @@ const std::map<std::string, NpuArch> SUPPORT_SOC_LIST = {
 constexpr int32_t FUSION_LIST_LENGTH = 2;
 constexpr int32_t CONV3D_INDEX = 0;
 constexpr int32_t ASCEND_DEQUANT_INDEX = 1;
-constexpr int32_t FIXPIPE_INPUT_QUANT_SCALE_0_INDEX = 2;
+constexpr int32_t POST_CUBE_INPUT_QUANT_SCALE_0_INDEX = 2;
 constexpr int32_t QUANTCONV3D_CONV3D_INPUT_SCALE_INDEX = 2;
 constexpr int32_t QUANTCONV3D_CONV3D_INPUT_BIAS_INDEX = 3;
 constexpr size_t SINGLE_OUTPUTNUM = 1;
@@ -63,7 +63,7 @@ const std::vector<std::vector<Format>> CONV_SUPPORT_FORMATS_DAV_3510 = {
 class __attribute__((visibility("default"))) Conv3DDequantToQuantConv3DFusionPass : public ConvFusionBasePass {
 protected:
     std::unique_ptr<ge::fusion::SubgraphBoundary> ConstructBoundary(const ge::GNode &convNode) override;
-    bool FixpipeFusionImpl(
+    bool PostCubeFusionImpl(
         ge::GraphPtr &graph, ge::GNode &convNode, const ge::CustomPassContext &pass_context) override;
     void InitMember() override;
     bool MeetRequirements(const ge::GNode &convNode) override;
@@ -72,14 +72,14 @@ protected:
     void PrintGraphStructure() const override {};
     ge::fusion::GraphUniqPtr Replacement(const ge::GNode &convNode) override;
 private:
-    bool GetFixpipeNodes(const ge::GNode &convNode);
-    void SelectFixpipePassByWhiteList(std::vector<ops::PostCubePassInfo> &matchVec);
-    bool UpdateQuantConv3DDesc(ge::GNode *quantConv3D, ge::TensorDesc &fixpipeOutDesc);
+    bool GetPostCubeNodes(const ge::GNode &convNode);
+    void SelectPostCubePassByWhiteList(std::vector<ops::PostCubePassInfo> &matchVec);
+    bool UpdateQuantConv3DDesc(ge::GNode *quantConv3D, ge::TensorDesc &postCubeOutDesc);
 
-    ge::GNodePtr fixpipeNode = nullptr;
+    ge::GNodePtr postCubeNode = nullptr;
 };
 
 } // namespace Conv
 } // namespace NN
 } // namespace Ops
-#endif // NN_CONV3D_DEQUANT_TO_QUANTCONV3D_FUSION_PASS_H
+#endif // CONV3D_DEQUANT_TO_QUANTCONV3D_FUSION_PASS_H

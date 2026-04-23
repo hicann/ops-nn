@@ -46,9 +46,9 @@ Status ConvFusionBasePass::Run(GraphPtr &graph, CustomPassContext &pass_context)
 
         InitMember();
 
-        // Transfer to fixpipe node.
-        if (!FixpipeFusionImpl(graph, node, pass_context)) {
-            OP_LOGD(fusionName, "Transfer fixpipe for %s failed, skip.", convDescInfo.nodeNameStr.c_str());
+        // Transfer to PostCube node.
+        if (!PostCubeFusionImpl(graph, node, pass_context)) {
+            OP_LOGD(fusionName, "Transfer postcube for %s failed, skip.", convDescInfo.nodeNameStr.c_str());
             continue;
         }
 

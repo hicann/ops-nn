@@ -31,8 +31,8 @@ public:
 
 protected:
     virtual std::unique_ptr<ge::fusion::SubgraphBoundary> ConstructBoundary(const ge::GNode &convNode) = 0;
-    // Required in quantization scene for creating FixPipe node.
-    virtual bool FixpipeFusionImpl(
+    // Required in quantization scene for creating PostCube node.
+    virtual bool PostCubeFusionImpl(
         ge::GraphPtr &graph, ge::GNode &convNode, const ge::CustomPassContext &pass_context) = 0;
     virtual void InitMember() = 0;
     virtual bool MeetRequirements(const ge::GNode &convNode) = 0;

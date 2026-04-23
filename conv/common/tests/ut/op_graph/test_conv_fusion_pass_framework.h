@@ -330,15 +330,15 @@ struct LeakyReluConfig : public NodeConfig {
     }
 };
 
-struct FixPipeConfig : public NodeConfig {
-    FixPipeConfig() {
+struct PostCubeConfig : public NodeConfig {
+    PostCubeConfig() {
         name = "FixPipe";
     }
 
-    static FixPipeConfig Basic(std::string nodeName,
+    static PostCubeConfig Basic(std::string nodeName,
                                DataType dataType = DT_FLOAT16, Format format = FORMAT_NCHW,
                                const std::vector<int64_t>& shape = {1, 3, 244, 244}) {
-        FixPipeConfig config;
+        PostCubeConfig config;
         config.SetName(nodeName)
             .AddInput(DT_INT32, format, shape, nodeName + "_x1")
             .AddOutput(dataType, format, shape, nodeName + "_output")
@@ -347,28 +347,28 @@ struct FixPipeConfig : public NodeConfig {
         return config;
     }
 
-    FixPipeConfig& WithScale0(DataType dataType = DT_UINT64, const std::vector<int64_t>& shape = {1}) {
+    PostCubeConfig& WithScale0(DataType dataType = DT_UINT64, const std::vector<int64_t>& shape = {1}) {
         quantScale0Tensor = TensorInfo(dataType, FORMAT_ND, shape, this->name + "_quant_scale_0");
         quantScale0Tensor.enabled = true;
         this->AddInput(quantScale0Tensor);
         return *this;
     }
 
-    FixPipeConfig& WithScale1(DataType dataType = DT_UINT64, const std::vector<int64_t>& shape = {1}) {
+    PostCubeConfig& WithScale1(DataType dataType = DT_UINT64, const std::vector<int64_t>& shape = {1}) {
         quantScale1Tensor = TensorInfo(dataType, FORMAT_ND, shape, this->name + "_quant_scale_1");
         quantScale1Tensor.enabled = true;
         this->AddInput(quantScale1Tensor);
         return *this;
     }
 
-    FixPipeConfig& WithRelu0(DataType dataType = DT_FLOAT, const std::vector<int64_t>& shape = {1}) {
+    PostCubeConfig& WithRelu0(DataType dataType = DT_FLOAT, const std::vector<int64_t>& shape = {1}) {
         reluWeight0Tensor = TensorInfo(dataType, FORMAT_ND, shape, this->name + "_relu_weight_0");
         reluWeight0Tensor.enabled = true;
         this->AddInput(reluWeight0Tensor);
         return *this;
     }
 
-    FixPipeConfig& WithRelu1(DataType dataType = DT_FLOAT, const std::vector<int64_t>& shape = {1}) {
+    PostCubeConfig& WithRelu1(DataType dataType = DT_FLOAT, const std::vector<int64_t>& shape = {1}) {
         reluWeight1Tensor = TensorInfo(dataType, FORMAT_ND, shape, this->name + "_relu_weight_1");
         reluWeight1Tensor.enabled = true;
         this->AddInput(reluWeight1Tensor);
@@ -631,35 +631,35 @@ public:
         return *this;
     }
 
-    TestGraph& AddFixPipe(const FixPipeConfig& fixPipeConfig, bool autoInputs = true) {
+    TestGraph& AddPostCube(const PostCubeConfig& postCubeConfig, bool autoInputs = true) {
         PendingNodeInfo nodeInfo;
 
         if (autoInputs) {
-            if (fixPipeConfig.quantScale0Tensor.enabled) {
-                auto scale0 = CreateGraphInput(fixPipeConfig.quantScale0Tensor);
-                pendingConnections.push_back({"", 0, fixPipeConfig.name, 2, scale0});
-                nodeInfo.inputDesc[2] = fixPipeConfig.quantScale0Tensor.tensorDesc; // quantScale0 idx 2
+            if (postCubeConfig.quantScale0Tensor.enabled) {
+                auto scale0 = CreateGraphInput(postCubeConfig.quantScale0Tensor);
+                pendingConnections.push_back({"", 0, postCubeConfig.name, 2, scale0});
+                nodeInfo.inputDesc[2] = postCubeConfig.quantScale0Tensor.tensorDesc; // quantScale0 idx 2
             }
-            if (fixPipeConfig.reluWeight0Tensor.enabled) {
-                auto relu0 = CreateGraphInput(fixPipeConfig.reluWeight0Tensor);
-                pendingConnections.push_back({"", 0, fixPipeConfig.name, 3, relu0});
-                nodeInfo.inputDesc[3] = fixPipeConfig.reluWeight0Tensor.tensorDesc; // relu0 idx 3
+            if (postCubeConfig.reluWeight0Tensor.enabled) {
+                auto relu0 = CreateGraphInput(postCubeConfig.reluWeight0Tensor);
+                pendingConnections.push_back({"", 0, postCubeConfig.name, 3, relu0});
+                nodeInfo.inputDesc[3] = postCubeConfig.reluWeight0Tensor.tensorDesc; // relu0 idx 3
             }
-            if (fixPipeConfig.quantScale1Tensor.enabled) {
-                auto scale1 = CreateGraphInput(fixPipeConfig.quantScale0Tensor);
-                pendingConnections.push_back({"", 0, fixPipeConfig.name, 5, scale1});
-                nodeInfo.inputDesc[5] = fixPipeConfig.quantScale1Tensor.tensorDesc; // quantScale1 idx 5
+            if (postCubeConfig.quantScale1Tensor.enabled) {
+                auto scale1 = CreateGraphInput(postCubeConfig.quantScale0Tensor);
+                pendingConnections.push_back({"", 0, postCubeConfig.name, 5, scale1});
+                nodeInfo.inputDesc[5] = postCubeConfig.quantScale1Tensor.tensorDesc; // quantScale1 idx 5
             }
-            if (fixPipeConfig.reluWeight1Tensor.enabled) {
-                auto relu1 = CreateGraphInput(fixPipeConfig.reluWeight1Tensor);
-                pendingConnections.push_back({"", 0, fixPipeConfig.name, 6, relu1});
-                nodeInfo.inputDesc[6] = fixPipeConfig.reluWeight1Tensor.tensorDesc; // relu1 idx 6
+            if (postCubeConfig.reluWeight1Tensor.enabled) {
+                auto relu1 = CreateGraphInput(postCubeConfig.reluWeight1Tensor);
+                pendingConnections.push_back({"", 0, postCubeConfig.name, 6, relu1});
+                nodeInfo.inputDesc[6] = postCubeConfig.reluWeight1Tensor.tensorDesc; // relu1 idx 6
             }
         }
-        nodeInfo.inputDesc[0] = fixPipeConfig.inputs[0].tensorDesc;
-        nodeInfo.outputDesc[0] = fixPipeConfig.outputs[0].tensorDesc;
+        nodeInfo.inputDesc[0] = postCubeConfig.inputs[0].tensorDesc;
+        nodeInfo.outputDesc[0] = postCubeConfig.outputs[0].tensorDesc;
 
-        nodeInfo.nodeName = fixPipeConfig.name;
+        nodeInfo.nodeName = postCubeConfig.name;
         nodeInfo.opType = "FixPipe";
         nodeInfo.inputDefs = {{"x1", CompliantNodeBuilder::kEsIrInputRequired, ""}};
         nodeInfo.inputDefs = {{"x2", CompliantNodeBuilder::kEsIrInputRequired, ""}};
@@ -672,8 +672,8 @@ public:
         nodeInfo.inputDefs.push_back({"anti_quant_scale", CompliantNodeBuilder::kEsIrInputOptional, ""});
         nodeInfo.inputDefs.push_back({"anti_quant_offset", CompliantNodeBuilder::kEsIrInputOptional, ""});
         nodeInfo.outputDefs = {{"output", CompliantNodeBuilder::kEsIrOutputRequired, ""}};
-        nodeInfo.strAttrs = fixPipeConfig.strAttrs;
-        nodeInfo.listStrAttrs = fixPipeConfig.listStrAttrs;
+        nodeInfo.strAttrs = postCubeConfig.strAttrs;
+        nodeInfo.listStrAttrs = postCubeConfig.listStrAttrs;
         pendingNodes.push_back(nodeInfo);
 
         return *this;

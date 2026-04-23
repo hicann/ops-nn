@@ -8,7 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#include "conv2d_fixpipe_to_extendconv2d_fusion_pass.h"
+#include "conv2d_postcube_to_extendconv2d_fusion_pass.h"
 
 #include "conv/common/op_graph/fusion_pass/conv_fusion_utils_pass.h"
 #include "es_nn_ops.h"
@@ -19,13 +19,13 @@ namespace Ops {
 using namespace NN;
 using namespace Conv;
 using namespace ConvFusionUtils;
-using namespace Conv2DFixpipeToExtendConv2DFusion;
+using namespace Conv2DPostCubeToExtendConv2DFusion;
 using namespace ge;
 using namespace fusion;
 
-std::unique_ptr<SubgraphBoundary> Conv2DFixPipeToExtendConv2DFusionPass::ConstructBoundary(const GNode &convNode)
+std::unique_ptr<SubgraphBoundary> Conv2DPostCubeToExtendConv2DFusionPass::ConstructBoundary(const GNode &convNode)
 {
-    FUSION_PASS_CHECK_NOLOG(!GetFixpipeNodes(convNode), return nullptr);
+    FUSION_PASS_CHECK_NOLOG(!GetPostCubeNodes(convNode), return nullptr);
     FUSION_PASS_CHECK_NOLOG(!CheckDescInfo(), return nullptr);
 
     std::unique_ptr<SubgraphBoundary> boundary = std::make_unique<SubgraphBoundary>();
@@ -36,20 +36,20 @@ std::unique_ptr<SubgraphBoundary> Conv2DFixPipeToExtendConv2DFusionPass::Constru
 
     FUSION_PASS_CHECK_NOLOG(!AddScaleReluToBoundAry(boundary), return nullptr);
 
-    if (outputCase == OutputCase::DUAL_FIXPIPE || outputCase == OutputCase::SINGLE) {
-        for (size_t index = 0; index < fixpipeNodes.size(); index++) {
-            GNodePtr fixpipeNode = fixpipeNodes[index];
-            FUSION_PASS_CHECK_NOLOG(!ConvFusionUtilsPass::AddSubgraphOutput(boundary, *fixpipeNode,
+    if (outputCase == OutputCase::DUAL_POST_CUBE || outputCase == OutputCase::SINGLE) {
+        for (size_t index = 0; index < postCubeNodes.size(); index++) {
+            GNodePtr postCubeNode = postCubeNodes[index];
+            FUSION_PASS_CHECK_NOLOG(!ConvFusionUtilsPass::AddSubgraphOutput(boundary, *postCubeNode,
                 OUTPUT_0_INDEX, static_cast<int64_t>(index)), return nullptr);
         }
-    } else if (outputCase == OutputCase::OTHER_FIXPIPE || outputCase == OutputCase::FIXPIPE_OTHER) {
-        // Add fixpipe to boundary
-        int64_t fipxipeIndex = outputCase != OutputCase::OTHER_FIXPIPE ? OUTPUT_0_INDEX : OUTPUT_1_INDEX;
-        int64_t otherIndex = outputCase != OutputCase::OTHER_FIXPIPE ? OUTPUT_1_INDEX : OUTPUT_0_INDEX;
+    } else if (outputCase == OutputCase::OTHER_POST_CUBE || outputCase == OutputCase::POST_CUBE_OTHER) {
+        // Add PostCube node to boundary
+        int64_t postCubeIndex = outputCase != OutputCase::OTHER_POST_CUBE ? OUTPUT_0_INDEX : OUTPUT_1_INDEX;
+        int64_t otherIndex = outputCase != OutputCase::OTHER_POST_CUBE ? OUTPUT_1_INDEX : OUTPUT_0_INDEX;
 
-        GNodePtr fixpipeNode = fixpipeNodes[0];
-        FUSION_PASS_CHECK_NOLOG(!ConvFusionUtilsPass::AddSubgraphOutput(boundary, *fixpipeNode,
-            static_cast<int64_t>(OUTPUT_INDEX), fipxipeIndex), return nullptr);
+        GNodePtr postCubeNode = postCubeNodes[0];
+        FUSION_PASS_CHECK_NOLOG(!ConvFusionUtilsPass::AddSubgraphOutput(boundary, *postCubeNode,
+            static_cast<int64_t>(OUTPUT_INDEX), postCubeIndex), return nullptr);
         FUSION_PASS_CHECK_NOLOG(!ConvFusionUtilsPass::AddSubgraphOutput(boundary, convNode,
             static_cast<int64_t>(OUTPUT_INDEX), otherIndex), return nullptr);
     }
@@ -57,36 +57,36 @@ std::unique_ptr<SubgraphBoundary> Conv2DFixPipeToExtendConv2DFusionPass::Constru
     return boundary;
 }
 
-bool Conv2DFixPipeToExtendConv2DFusionPass::FixpipeFusionImpl(GraphPtr &graph, GNode &convNode,
+bool Conv2DPostCubeToExtendConv2DFusionPass::PostCubeFusionImpl(GraphPtr &graph, GNode &convNode,
     const CustomPassContext &pass_context)
 {
     GNodePtr nodePtr = ConvFusionUtilsPass::GetNodePtr(convNode, convDescInfo);
     FUSION_PASS_CHECK_NOLOG(nodePtr == nullptr, return false);
 
-    ops::PostCubeUtils fixpipeUtils;
-    // [Step 1] Determine which nodes in the subsequent nodes satisfy fixpipe hardware unit
-    FUSION_PASS_CHECK(fixpipeUtils.GetPostCubeNodeList(nodePtr, pass_context) != GRAPH_SUCCESS,
+    ops::PostCubeUtils postCubeUtils;
+    // [Step 1] Determine which nodes in the subsequent nodes satisfy PostCube hardware unit
+    FUSION_PASS_CHECK(postCubeUtils.GetPostCubeNodeList(nodePtr, pass_context) != GRAPH_SUCCESS,
         OP_LOGD(convDescInfo.nodeNameStr, "GetPostCubeNodeList failed, no fusion."), return false);
 
-    // [Step 2] To customize the selection of the fixpipe fusion range
-    SelectFixpipePassByWhiteList(fixpipeUtils.m_matchpasses_);
+    // [Step 2] To customize the selection of the PostCube fusion range
+    SelectPostCubePassByWhiteList(postCubeUtils.m_matchpasses_);
 
-    // [Step 3] Fixpipe tool method selects 1~2 Fixpipe paths
-    FUSION_PASS_CHECK(fixpipeUtils.SelectPostCubeNodeList(true) != GRAPH_SUCCESS,
+    // [Step 3] PostCube tool method selects 1~2 PostCube paths
+    FUSION_PASS_CHECK(postCubeUtils.SelectPostCubeNodeList(true) != GRAPH_SUCCESS,
         OP_LOGD(convDescInfo.nodeNameStr, "SelectPostCubeNodeList failed, no fusion."), return false);
 
-    // [Step 4] Create the Fixpipe operator node and modify the graph
+    // [Step 4] Create the PostCube operator node and modify the graph
     std::vector<GNodePtr> newNodes;
-    FUSION_PASS_CHECK(fixpipeUtils.CreatePostCubeNode(convDescInfo.nodeNameStr, *graph, newNodes) != GRAPH_SUCCESS,
+    FUSION_PASS_CHECK(postCubeUtils.CreatePostCubeNode(convDescInfo.nodeNameStr, *graph, newNodes) != GRAPH_SUCCESS,
         OP_LOGD(convDescInfo.nodeNameStr, "CreatePostCubeNode failed, no fusion."), return false);
 
     return true;
 }
 
-void Conv2DFixPipeToExtendConv2DFusionPass::InitMember()
+void Conv2DPostCubeToExtendConv2DFusionPass::InitMember()
 {
-    fixpipeFusionOps.clear();
-    fixpipeNodes.clear();
+    postCubeFusionOps.clear();
+    postCubeNodes.clear();
     otherNodes.clear();
     outputCase = OutputCase::SINGLE;
     hasScale0 = false;
@@ -96,7 +96,7 @@ void Conv2DFixPipeToExtendConv2DFusionPass::InitMember()
     graphIndex = REQUIRED_INPUT_NUMS;
 }
 
-bool Conv2DFixPipeToExtendConv2DFusionPass::MeetRequirements(const GNode &convNode)
+bool Conv2DPostCubeToExtendConv2DFusionPass::MeetRequirements(const GNode &convNode)
 {
     FUSION_PASS_CHECK(convNode.GetOutDataNodesAndPortIndexs(OUTPUT_INDEX).empty(),
         OP_LOGD(convDescInfo.nodeNameStr, "Conv2D out nodes is empty, don't need fusion process."), return false);
@@ -119,36 +119,36 @@ bool Conv2DFixPipeToExtendConv2DFusionPass::MeetRequirements(const GNode &convNo
     return true;
 }
 
-AscendString Conv2DFixPipeToExtendConv2DFusionPass::GetNodeType() const
+AscendString Conv2DPostCubeToExtendConv2DFusionPass::GetNodeType() const
 {
     return ConvFusionUtils::CONV2D;
 }
 
-std::map<std::string, NpuArch> Conv2DFixPipeToExtendConv2DFusionPass::GetSocSupportList() const
+std::map<std::string, NpuArch> Conv2DPostCubeToExtendConv2DFusionPass::GetSocSupportList() const
 {
     return SUPPORT_SOC_LIST;
 }
 
-void Conv2DFixPipeToExtendConv2DFusionPass::PrintGraphStructure() const
+void Conv2DPostCubeToExtendConv2DFusionPass::PrintGraphStructure() const
 {
-    if (fixpipeFusionOps.empty()) {
+    if (postCubeFusionOps.empty()) {
         return;
     }
 
-    auto fusionList0 = ConvFusionUtilsPass::ListToAscendString(fixpipeFusionOps.front());
-    auto fusionList1 = ConvFusionUtilsPass::ListToAscendString(fixpipeFusionOps.back());
+    auto fusionList0 = ConvFusionUtilsPass::ListToAscendString(postCubeFusionOps.front());
+    auto fusionList1 = ConvFusionUtilsPass::ListToAscendString(postCubeFusionOps.back());
 
     std::stringstream logStr;
     logStr << "graph structure: cube node name: [ " << convDescInfo.nodeNameStr << " ], ";
     if (outputCase == OutputCase::SINGLE) {
         logStr << "y0" << " output: [" << convDescInfo.nodeNameStr << ", " << fusionList0.GetString() << "].";
-    } else if (outputCase == OutputCase::DUAL_FIXPIPE) {
+    } else if (outputCase == OutputCase::DUAL_POST_CUBE) {
         logStr << "y0" << " output: [" << convDescInfo.nodeNameStr << ", " << fusionList0.GetString() << "], ";
         logStr << "y1" << " output: [" << convDescInfo.nodeNameStr << ", " << fusionList1.GetString() << "].";
-    } else if (outputCase == OutputCase::FIXPIPE_OTHER) {
+    } else if (outputCase == OutputCase::POST_CUBE_OTHER) {
         logStr << "y0" << " output: [" << convDescInfo.nodeNameStr << "], ";
         logStr << "y1" << " output: [" << convDescInfo.nodeNameStr << ", " << fusionList1.GetString() << "].";
-    } else if (outputCase == OutputCase::OTHER_FIXPIPE) {
+    } else if (outputCase == OutputCase::OTHER_POST_CUBE) {
         logStr << "y0" << " output: [" << convDescInfo.nodeNameStr << ", " << fusionList0.GetString() << "], ";
         logStr << "y1" << " output: [" << convDescInfo.nodeNameStr << "].";
     }
@@ -156,7 +156,7 @@ void Conv2DFixPipeToExtendConv2DFusionPass::PrintGraphStructure() const
     OP_LOGI(convDescInfo.nodeNameStr, "%s", logStr.str().c_str());
 }
 
-GraphUniqPtr Conv2DFixPipeToExtendConv2DFusionPass::Replacement(const GNode &convNode)
+GraphUniqPtr Conv2DPostCubeToExtendConv2DFusionPass::Replacement(const GNode &convNode)
 {
     auto replace_graph_builder = es::EsGraphBuilder("replacement");
 
@@ -175,10 +175,10 @@ GraphUniqPtr Conv2DFixPipeToExtendConv2DFusionPass::Replacement(const GNode &con
     auto relu1 = hasRelu1 ?
         replace_graph_builder.CreateInput(graphIndex++) : nullptr;
 
-    bool enableRelu0 = outputCase != OutputCase::OTHER_FIXPIPE &&
-        !fixpipeFusionOps.empty() && IsReluEnable(fixpipeFusionOps.front());
-    bool enableRelu1 = (outputCase == OutputCase::DUAL_FIXPIPE || outputCase == OutputCase::OTHER_FIXPIPE) &&
-        !fixpipeFusionOps.empty() && IsReluEnable(fixpipeFusionOps.back());
+    bool enableRelu0 = outputCase != OutputCase::OTHER_POST_CUBE &&
+        !postCubeFusionOps.empty() && IsReluEnable(postCubeFusionOps.front());
+    bool enableRelu1 = (outputCase == OutputCase::DUAL_POST_CUBE || outputCase == OutputCase::OTHER_POST_CUBE) &&
+        !postCubeFusionOps.empty() && IsReluEnable(postCubeFusionOps.back());
     bool dualOutput = outputCase != OutputCase::SINGLE;
 
     // fmap, filter, bias, offset_w, scale0, relu_weight0, clip_value0, scale1, relu_weight1, clip_value1
@@ -198,34 +198,34 @@ GraphUniqPtr Conv2DFixPipeToExtendConv2DFusionPass::Replacement(const GNode &con
     return replace_graph_builder.BuildAndReset(replaceOutput);
 }
 
-bool Conv2DFixPipeToExtendConv2DFusionPass::AddScaleReluToBoundAry(std::unique_ptr<SubgraphBoundary> &boundary)
+bool Conv2DPostCubeToExtendConv2DFusionPass::AddScaleReluToBoundAry(std::unique_ptr<SubgraphBoundary> &boundary)
 {
     // Add quant_scale_0 and relu_weight_0 to boundary
-    if (outputCase != OutputCase::OTHER_FIXPIPE) {
-        if (IsScaleEnable(fixpipeFusionOps.front())) {
-            GNodePtr fixpipeNode = fixpipeNodes.front();
-            FUSION_PASS_CHECK_NOLOG(!ConvFusionUtilsPass::AddSubgraphInput(boundary, *fixpipeNode,
-                FIXPIPE_INPUT_QUANT_SCALE_0_INDEX, EXTENDCONV2D_QUANT_SCALE_0_INDEX), return false);
+    if (outputCase != OutputCase::OTHER_POST_CUBE) {
+        if (IsScaleEnable(postCubeFusionOps.front())) {
+            GNodePtr postCubeNode = postCubeNodes.front();
+            FUSION_PASS_CHECK_NOLOG(!ConvFusionUtilsPass::AddSubgraphInput(boundary, *postCubeNode,
+                POST_CUBE_INPUT_QUANT_SCALE_0_INDEX, EXTENDCONV2D_QUANT_SCALE_0_INDEX), return false);
             hasScale0 = true;
-        } else if (IsReluEnable(fixpipeFusionOps.front(), Conv2DFixpipeToExtendConv2DFusion::LEAKY_RELU)) {
-            GNodePtr fixpipeNode = fixpipeNodes.front();
-            FUSION_PASS_CHECK_NOLOG(!ConvFusionUtilsPass::AddSubgraphInput(boundary, *fixpipeNode,
-                FIXPIPE_INPUT_RELU_WEIGHT_0_INDEX, EXTENDCONV2D_RELU_WEIGHT_0_INDEX), return false);
+        } else if (IsReluEnable(postCubeFusionOps.front(), Conv2DPostCubeToExtendConv2DFusion::LEAKY_RELU)) {
+            GNodePtr postCubeNode = postCubeNodes.front();
+            FUSION_PASS_CHECK_NOLOG(!ConvFusionUtilsPass::AddSubgraphInput(boundary, *postCubeNode,
+                POST_CUBE_INPUT_RELU_WEIGHT_0_INDEX, EXTENDCONV2D_RELU_WEIGHT_0_INDEX), return false);
             hasRelu0 = true;
         }
     }
 
     // Add quant_scale_1 and relu_weight_1 to boundary
-    if (outputCase == OutputCase::OTHER_FIXPIPE || outputCase == OutputCase::DUAL_FIXPIPE) {
-        if (IsScaleEnable(fixpipeFusionOps.back())) {
-            GNodePtr fixpipeNode = fixpipeNodes.back();
-            FUSION_PASS_CHECK_NOLOG(!ConvFusionUtilsPass::AddSubgraphInput(boundary, *fixpipeNode,
-                FIXPIPE_INPUT_QUANT_SCALE_0_INDEX, EXTENDCONV2D_QUANT_SCALE_1_INDEX), return false);
+    if (outputCase == OutputCase::OTHER_POST_CUBE || outputCase == OutputCase::DUAL_POST_CUBE) {
+        if (IsScaleEnable(postCubeFusionOps.back())) {
+            GNodePtr postCubeNode = postCubeNodes.back();
+            FUSION_PASS_CHECK_NOLOG(!ConvFusionUtilsPass::AddSubgraphInput(boundary, *postCubeNode,
+                POST_CUBE_INPUT_QUANT_SCALE_0_INDEX, EXTENDCONV2D_QUANT_SCALE_1_INDEX), return false);
             hasScale1 = true;
-        } else if (IsReluEnable(fixpipeFusionOps.back(), Conv2DFixpipeToExtendConv2DFusion::LEAKY_RELU)) {
-            GNodePtr fixpipeNode = fixpipeNodes.back();
-            FUSION_PASS_CHECK_NOLOG(!ConvFusionUtilsPass::AddSubgraphInput(boundary, *fixpipeNode,
-                FIXPIPE_INPUT_RELU_WEIGHT_0_INDEX, EXTENDCONV2D_RELU_WEIGHT_1_INDEX), return false);
+        } else if (IsReluEnable(postCubeFusionOps.back(), Conv2DPostCubeToExtendConv2DFusion::LEAKY_RELU)) {
+            GNodePtr postCubeNode = postCubeNodes.back();
+            FUSION_PASS_CHECK_NOLOG(!ConvFusionUtilsPass::AddSubgraphInput(boundary, *postCubeNode,
+                POST_CUBE_INPUT_RELU_WEIGHT_0_INDEX, EXTENDCONV2D_RELU_WEIGHT_1_INDEX), return false);
             hasRelu1 = true;
         }
     }
@@ -233,84 +233,84 @@ bool Conv2DFixPipeToExtendConv2DFusionPass::AddScaleReluToBoundAry(std::unique_p
     return true;
 }
 
-bool Conv2DFixPipeToExtendConv2DFusionPass::CheckConvFixpipeDtype(const GNodePtr fixpipeNode) const
+bool Conv2DPostCubeToExtendConv2DFusionPass::CheckConvPostCubeDtype(const GNodePtr postCubeNode) const
 {
-    TensorDesc fixpipeInDesc;
-    FUSION_PASS_CHECK(fixpipeNode->GetInputDesc(0, fixpipeInDesc) != GRAPH_SUCCESS,
+    TensorDesc postCubeInDesc;
+    FUSION_PASS_CHECK(postCubeNode->GetInputDesc(0, postCubeInDesc) != GRAPH_SUCCESS,
             OP_LOGE(convDescInfo.nodeNameStr, "Get fxipipe in tensor desc failed."), return false);
-    DataType fixpipeInDtype = fixpipeInDesc.GetDataType();
+    DataType postCubeInDtype = postCubeInDesc.GetDataType();
 
-    TensorDesc fixpipeOutDesc;
-    FUSION_PASS_CHECK(fixpipeNode->GetOutputDesc(OUTPUT_INDEX, fixpipeOutDesc) != GRAPH_SUCCESS,
+    TensorDesc postCubeOutDesc;
+    FUSION_PASS_CHECK(postCubeNode->GetOutputDesc(OUTPUT_INDEX, postCubeOutDesc) != GRAPH_SUCCESS,
             OP_LOGE(convDescInfo.nodeNameStr, "Get fxipipe out tensor desc failed."), return false);
-    DataType fixpipeOutDtype = fixpipeOutDesc.GetDataType();
+    DataType postCubeOutDtype = postCubeOutDesc.GetDataType();
 
     std::vector<DataType> checkDtypes = {convDescInfo.fmapDtype, convDescInfo.filterDtype,
-        fixpipeInDtype, fixpipeOutDtype};
-    OP_LOGD(convDescInfo.nodeNameStr, "Current dtypes: fmap is %s weight is %s fixpipeIn is %s fixpipeOut is %s.",
+        postCubeInDtype, postCubeOutDtype};
+    OP_LOGD(convDescInfo.nodeNameStr, "Current dtypes: fmap is %s weight is %s postCubeIn is %s postCubeOut is %s.",
         TypeUtils::DataTypeToSerialString(convDescInfo.fmapDtype).c_str(),
         TypeUtils::DataTypeToSerialString(convDescInfo.filterDtype).c_str(),
-        TypeUtils::DataTypeToSerialString(fixpipeInDtype).c_str(),
-        TypeUtils::DataTypeToSerialString(fixpipeOutDtype).c_str());
+        TypeUtils::DataTypeToSerialString(postCubeInDtype).c_str(),
+        TypeUtils::DataTypeToSerialString(postCubeOutDtype).c_str());
 
     auto supportedDtypes = npuArch == NpuArch::DAV_5102 ?
-        SUPPORTED_DTYPES_WITH_FIXPIPE_DAV_5102 : SUPPORTED_DTYPES_WITH_FIXPIPE_DAV_3510;
+        SUPPORTED_DTYPES_WITH_POST_CUBE_DAV_5102 : SUPPORTED_DTYPES_WITH_POST_CUBE_DAV_3510;
     FUSION_PASS_CHECK(!ConvFusionUtilsPass::CheckSupportList<DataType>(supportedDtypes, checkDtypes),
         OP_LOGE(convDescInfo.nodeNameStr, "Current dtype not supported."), return false);
 
     return true;
 }
 
-bool Conv2DFixPipeToExtendConv2DFusionPass::CheckDescInfo()
+bool Conv2DPostCubeToExtendConv2DFusionPass::CheckDescInfo()
 {
-    for (auto fixpipeNode : fixpipeNodes) {
-        FUSION_PASS_CHECK_NOLOG(!CheckConvFixpipeDtype(fixpipeNode), return false);
-        // Check fixpipe not supported case.
-        FUSION_PASS_CHECK_NOLOG(!CheckSupportFixpipeCase(fixpipeNode), return false);
+    for (auto postCubeNode : postCubeNodes) {
+        FUSION_PASS_CHECK_NOLOG(!CheckConvPostCubeDtype(postCubeNode), return false);
+        // Check PostCube not supported case.
+        FUSION_PASS_CHECK_NOLOG(!CheckSupportPostCubeCase(postCubeNode), return false);
     }
 
     return true;
 }
 
-bool Conv2DFixPipeToExtendConv2DFusionPass::CheckSupportFixpipeCase(const GNodePtr fixpipeNode)
+bool Conv2DPostCubeToExtendConv2DFusionPass::CheckSupportPostCubeCase(const GNodePtr postCubeNode)
 {
-    std::vector<AscendString> fixpipeFusionOp;
-    FUSION_PASS_CHECK(fixpipeNode->GetAttr(FUSION_OP_LIST, fixpipeFusionOp) != GRAPH_SUCCESS,
-        OP_LOGE(convDescInfo.nodeNameStr, "Get fusion op list from FixPipe unsuccessfully."), return false);
+    std::vector<AscendString> postCubeFusionOp;
+    FUSION_PASS_CHECK(postCubeNode->GetAttr(FUSION_OP_LIST, postCubeFusionOp) != GRAPH_SUCCESS,
+        OP_LOGE(convDescInfo.nodeNameStr, "Get fusion op list from PostCube unsuccessfully."), return false);
 
-    fixpipeFusionOps.emplace_back(fixpipeFusionOp);
+    postCubeFusionOps.emplace_back(postCubeFusionOp);
 
     AscendString supportedListStr = ConvFusionUtilsPass::ListToAscendString(SUPPORTED_NODE_TYPES);
-    for (auto &node : fixpipeFusionOp) {
+    for (auto &node : postCubeFusionOp) {
         if (std::find(SUPPORTED_NODE_TYPES.begin(), SUPPORTED_NODE_TYPES.end(), node) == SUPPORTED_NODE_TYPES.end()) {
-            OP_LOGE(convDescInfo.nodeNameStr, "Fixpipe uint not supported: %s, only support [%s].",
+            OP_LOGE(convDescInfo.nodeNameStr, "PostCube uint not supported: %s, only support [%s].",
                 node.GetString(), supportedListStr.GetString());
             return false;
         }
     }
 
-    if (std::find(fixpipeFusionOp.begin(), fixpipeFusionOp.end(), ConvFusionUtils::ASCEND_DEQUANT) !=
-        fixpipeFusionOp.end() || std::find(fixpipeFusionOp.begin(), fixpipeFusionOp.end(),
-        Conv2DFixpipeToExtendConv2DFusion::ASCEND_REQUANT) != fixpipeFusionOp.end()) {
+    if (std::find(postCubeFusionOp.begin(), postCubeFusionOp.end(), ConvFusionUtils::ASCEND_DEQUANT) !=
+        postCubeFusionOp.end() || std::find(postCubeFusionOp.begin(), postCubeFusionOp.end(),
+        Conv2DPostCubeToExtendConv2DFusion::ASCEND_REQUANT) != postCubeFusionOp.end()) {
         TensorDesc quantScale0Desc;
         FUSION_PASS_CHECK(
-            fixpipeNode->GetInputDesc(FIXPIPE_INPUT_QUANT_SCALE_0_INDEX, quantScale0Desc) != GRAPH_SUCCESS,
+            postCubeNode->GetInputDesc(POST_CUBE_INPUT_QUANT_SCALE_0_INDEX, quantScale0Desc) != GRAPH_SUCCESS,
             OP_LOGE(convDescInfo.nodeNameStr, "Get fxipipe quant_scale_0 tensor desc failed."), return false);
 
-        // check fixpipe unit input format: quant_scale_0
+        // check PostCube unit input format: quant_scale_0
         Format quantScale0Format = quantScale0Desc.GetFormat();
         if (quantScale0Format != FORMAT_ND && quantScale0Format != FORMAT_NCHW) {
             OP_LOGE(convDescInfo.nodeNameStr,
-                "Fixpipe node quant_scale_0 format %s not supported, should be in [ND, NCHW].",
+                "PostCube node quant_scale_0 format %s not supported, should be in [ND, NCHW].",
                 TypeUtils::FormatToSerialString(quantScale0Format).c_str());
             return false;
         }
 
-        // check fixpipe unit input dtype: quant_scale_0
+        // check PostCube unit input dtype: quant_scale_0
         DataType quantScale0dtype = quantScale0Desc.GetDataType();
         if (quantScale0dtype != ge::DT_UINT64 && quantScale0dtype != ge::DT_INT64) {
             OP_LOGE(convDescInfo.nodeNameStr,
-                "Fixpipe node quant_scale_0 dtype %s not supported, should be in [uint64, int64].",
+                "PostCube node quant_scale_0 dtype %s not supported, should be in [uint64, int64].",
                 TypeUtils::DataTypeToSerialString(quantScale0dtype).c_str());
             return false;
         }
@@ -319,46 +319,46 @@ bool Conv2DFixPipeToExtendConv2DFusionPass::CheckSupportFixpipeCase(const GNodeP
     return true;
 }
 
-bool Conv2DFixPipeToExtendConv2DFusionPass::GetFixpipeNodes(const GNode &convNode)
+bool Conv2DPostCubeToExtendConv2DFusionPass::GetPostCubeNodes(const GNode &convNode)
 {
     auto convOutputNodes = convNode.GetOutDataNodesAndPortIndexs(OUTPUT_INDEX);
     FUSION_PASS_CHECK(convOutputNodes.empty(),
-        OP_LOGE(convDescInfo.nodeNameStr, "Conv2D out nodes is empty after fixpipe fusion."), return false);
+        OP_LOGE(convDescInfo.nodeNameStr, "Conv2D out nodes is empty after PostCube fusion."), return false);
 
     for (auto &outputNode : convOutputNodes) {
         GNodePtr nodePtr = outputNode.first;
         FUSION_PASS_CHECK(nodePtr == nullptr,
-            OP_LOGE(convDescInfo.nodeNameStr, "After create Fixpipe, Conv2D out nodes is nullptr."), return false);
+            OP_LOGE(convDescInfo.nodeNameStr, "After create PostCube, Conv2D out nodes is nullptr."), return false);
 
         AscendString curNodeType;
         FUSION_PASS_CHECK(nodePtr->GetType(curNodeType) != GRAPH_SUCCESS,
             OP_LOGE(convDescInfo.nodeNameStr, "Get node type failed."), return false);
-        if (curNodeType == FIXPIPE) {
-            fixpipeNodes.emplace_back(nodePtr);
+        if (curNodeType == POST_CUBE_OP) {
+            postCubeNodes.emplace_back(nodePtr);
         } else {
             otherNodes.emplace_back(outputNode);
         }
     }
 
-    FUSION_PASS_CHECK(fixpipeNodes.empty(),
-        OP_LOGE(convDescInfo.nodeNameStr, "Get FixPipe nodes failed."), return false);
+    FUSION_PASS_CHECK(postCubeNodes.empty(),
+        OP_LOGE(convDescInfo.nodeNameStr, "Get PostCube nodes failed."), return false);
 
     AscendString firstNodeType;
     convOutputNodes[0].first->GetType(firstNodeType);
-    bool isFixpipeFirst = firstNodeType == FIXPIPE;
+    bool isPostCubeFirst = firstNodeType == POST_CUBE_OP;
 
-    if ((fixpipeNodes.size() > DUAL_OUTPUTNUM) || (!otherNodes.empty() && fixpipeNodes.size() == DUAL_OUTPUTNUM)) {
-        OP_LOGE(convDescInfo.nodeNameStr, "Unsupported multiple outputs with %zu fixpipe and %zu other nodes.",
-            fixpipeNodes.size(), otherNodes.size());
+    if ((postCubeNodes.size() > DUAL_OUTPUTNUM) || (!otherNodes.empty() && postCubeNodes.size() == DUAL_OUTPUTNUM)) {
+        OP_LOGE(convDescInfo.nodeNameStr, "Unsupported multiple outputs with %zu PostCube and %zu other nodes.",
+            postCubeNodes.size(), otherNodes.size());
         return false;
     }
 
-    if (fixpipeNodes.size() == DUAL_OUTPUTNUM) {
-        outputCase = OutputCase::DUAL_FIXPIPE;
-    } else if (isFixpipeFirst && !otherNodes.empty()) {
-        outputCase = OutputCase::FIXPIPE_OTHER;
-    } else if (!isFixpipeFirst && !otherNodes.empty()) {
-        outputCase = OutputCase::OTHER_FIXPIPE;
+    if (postCubeNodes.size() == DUAL_OUTPUTNUM) {
+        outputCase = OutputCase::DUAL_POST_CUBE;
+    } else if (isPostCubeFirst && !otherNodes.empty()) {
+        outputCase = OutputCase::POST_CUBE_OTHER;
+    } else if (!isPostCubeFirst && !otherNodes.empty()) {
+        outputCase = OutputCase::OTHER_POST_CUBE;
     } else {
         outputCase = OutputCase::SINGLE;
     }
@@ -366,48 +366,48 @@ bool Conv2DFixPipeToExtendConv2DFusionPass::GetFixpipeNodes(const GNode &convNod
     return true;
 }
 
-bool Conv2DFixPipeToExtendConv2DFusionPass::IsReluEnable(const std::vector<AscendString> &fixpipeFusionOp,
+bool Conv2DPostCubeToExtendConv2DFusionPass::IsReluEnable(const std::vector<AscendString> &postCubeFusionOp,
     const AscendString &opType) const
 {
-    if (fixpipeFusionOp.empty()) {
+    if (postCubeFusionOp.empty()) {
         return false;
     }
 
     bool ret = false;
     if (opType == "default") {
-        ret = std::find(fixpipeFusionOp.begin(), fixpipeFusionOp.end(), Conv2DFixpipeToExtendConv2DFusion::RELU) !=
-            fixpipeFusionOp.end() || std::find(fixpipeFusionOp.begin(), fixpipeFusionOp.end(),
-            Conv2DFixpipeToExtendConv2DFusion::LEAKY_RELU) != fixpipeFusionOp.end();
+        ret = std::find(postCubeFusionOp.begin(), postCubeFusionOp.end(), Conv2DPostCubeToExtendConv2DFusion::RELU) !=
+            postCubeFusionOp.end() || std::find(postCubeFusionOp.begin(), postCubeFusionOp.end(),
+            Conv2DPostCubeToExtendConv2DFusion::LEAKY_RELU) != postCubeFusionOp.end();
     } else {
-        ret = std::find(fixpipeFusionOp.begin(), fixpipeFusionOp.end(), opType) != fixpipeFusionOp.end();
+        ret = std::find(postCubeFusionOp.begin(), postCubeFusionOp.end(), opType) != postCubeFusionOp.end();
     }
 
     return ret;
 }
 
-bool Conv2DFixPipeToExtendConv2DFusionPass::IsScaleEnable(const std::vector<AscendString> &fixpipeFusionOp) const
+bool Conv2DPostCubeToExtendConv2DFusionPass::IsScaleEnable(const std::vector<AscendString> &postCubeFusionOp) const
 {
-    if (fixpipeFusionOp.empty()) {
+    if (postCubeFusionOp.empty()) {
         return false;
     }
 
-    return std::find(fixpipeFusionOp.begin(), fixpipeFusionOp.end(), ConvFusionUtils::ASCEND_QUANT) !=
-        fixpipeFusionOp.end() || std::find(fixpipeFusionOp.begin(), fixpipeFusionOp.end(),
-        ConvFusionUtils::ASCEND_DEQUANT) != fixpipeFusionOp.end() || std::find(fixpipeFusionOp.begin(),
-        fixpipeFusionOp.end(), ASCEND_REQUANT) != fixpipeFusionOp.end();
+    return std::find(postCubeFusionOp.begin(), postCubeFusionOp.end(), ConvFusionUtils::ASCEND_QUANT) !=
+        postCubeFusionOp.end() || std::find(postCubeFusionOp.begin(), postCubeFusionOp.end(),
+        ConvFusionUtils::ASCEND_DEQUANT) != postCubeFusionOp.end() || std::find(postCubeFusionOp.begin(),
+        postCubeFusionOp.end(), ASCEND_REQUANT) != postCubeFusionOp.end();
 }
 
-void Conv2DFixPipeToExtendConv2DFusionPass::SelectFixpipePassByWhiteList(
+void Conv2DPostCubeToExtendConv2DFusionPass::SelectPostCubePassByWhiteList(
     std::vector<ops::PostCubePassInfo> &matchLists) const
 {
     std::vector<ops::PostCubePassInfo> tmpLists(matchLists);
     matchLists.clear();
-    for (auto &fixpipePass : tmpLists) {
+    for (auto &postCubePass : tmpLists) {
         std::vector<AscendString> nodeTypeList;
-        for (uint32_t index = 0; index < fixpipePass.m_opnodes.size(); ++index) {
-            auto curNode = fixpipePass.m_opnodes[index].GetNode();
+        for (uint32_t index = 0; index < postCubePass.m_opnodes.size(); ++index) {
+            auto curNode = postCubePass.m_opnodes[index].GetNode();
             FUSION_PASS_CHECK(curNode == nullptr,
-                OP_LOGD(convDescInfo.nodeNameStr, "Node is nullptr in fixpipePass."), return);
+                OP_LOGD(convDescInfo.nodeNameStr, "Node is nullptr in postCubePass."), return);
             AscendString nodeType;
             curNode->GetType(nodeType);
             nodeTypeList.push_back(nodeType);
@@ -418,10 +418,10 @@ void Conv2DFixPipeToExtendConv2DFusionPass::SelectFixpipePassByWhiteList(
                 break;
             }
 
-            if (index == fixpipePass.m_opnodes.size() - 1) {
+            if (index == postCubePass.m_opnodes.size() - 1) {
                 AscendString nodeTypeListStr = ConvFusionUtilsPass::ListToAscendString(nodeTypeList);
                 if (std::find(nodeTypeList.begin(), nodeTypeList.end(),
-                    Conv2DFixpipeToExtendConv2DFusion::LEAKY_RELU) != nodeTypeList.end() &&
+                    Conv2DPostCubeToExtendConv2DFusion::LEAKY_RELU) != nodeTypeList.end() &&
                     std::find(nodeTypeList.begin(), nodeTypeList.end(),
                     ConvFusionUtils::ASCEND_DEQUANT) != nodeTypeList.end()) {
                     OP_LOGD(convDescInfo.nodeNameStr,
@@ -429,32 +429,32 @@ void Conv2DFixPipeToExtendConv2DFusionPass::SelectFixpipePassByWhiteList(
                     break;
                 }
 
-                matchLists.push_back(fixpipePass);
-                OP_LOGD(convDescInfo.nodeNameStr, "FixpipePass after selected by Valid list is %s",
+                matchLists.push_back(postCubePass);
+                OP_LOGD(convDescInfo.nodeNameStr, "PostCubePass after selected by Valid list is %s",
                     nodeTypeListStr.GetString());
             }
         }
     }
 }
 
-bool Conv2DFixPipeToExtendConv2DFusionPass::UpdateExtendConv2DDesc(GNode *extendConv2D) const
+bool Conv2DPostCubeToExtendConv2DFusionPass::UpdateExtendConv2DDesc(GNode *extendConv2D) const
 {
     FUSION_PASS_CHECK_NOLOG(!ConvFusionUtilsPass::UpdateInputDesc(extendConv2D, convDescInfo), return false);
 
-    if (outputCase != OutputCase::OTHER_FIXPIPE) {
+    if (outputCase != OutputCase::OTHER_POST_CUBE) {
         TensorDesc output0Desc;
-        FUSION_PASS_CHECK(fixpipeNodes.front()->GetOutputDesc(OUTPUT_0_INDEX, output0Desc) != GRAPH_SUCCESS,
-            OP_LOGE(convDescInfo.nodeNameStr, "Get fixpipe0 output tensor desc failed."), return false);
+        FUSION_PASS_CHECK(postCubeNodes.front()->GetOutputDesc(OUTPUT_0_INDEX, output0Desc) != GRAPH_SUCCESS,
+            OP_LOGE(convDescInfo.nodeNameStr, "Get PostCube0 output tensor desc failed."), return false);
         FUSION_PASS_CHECK(extendConv2D->UpdateOutputDesc(OUTPUT_0_INDEX, output0Desc) != GRAPH_SUCCESS,
             OP_LOGE(convDescInfo.nodeNameStr, "Update ExtendConv2D output0 tensor desc failed."), return false);
 
         if (hasScale0) {
-            FUSION_PASS_CHECK_NOLOG(!UpdateScaleReluDesc(fixpipeNodes.front(), extendConv2D,
-                FIXPIPE_INPUT_QUANT_SCALE_0_INDEX, EXTENDCONV2D_QUANT_SCALE_0_INDEX, SCALE_0), return false);
+            FUSION_PASS_CHECK_NOLOG(!UpdateScaleReluDesc(postCubeNodes.front(), extendConv2D,
+                POST_CUBE_INPUT_QUANT_SCALE_0_INDEX, EXTENDCONV2D_QUANT_SCALE_0_INDEX, SCALE_0), return false);
         }
         if (hasRelu0) {
-            FUSION_PASS_CHECK_NOLOG(!UpdateScaleReluDesc(fixpipeNodes.front(), extendConv2D,
-                FIXPIPE_INPUT_RELU_WEIGHT_0_INDEX, EXTENDCONV2D_RELU_WEIGHT_0_INDEX, RELU_WEIGHT_0), return false);
+            FUSION_PASS_CHECK_NOLOG(!UpdateScaleReluDesc(postCubeNodes.front(), extendConv2D,
+                POST_CUBE_INPUT_RELU_WEIGHT_0_INDEX, EXTENDCONV2D_RELU_WEIGHT_0_INDEX, RELU_WEIGHT_0), return false);
         }
 
         if (outputCase == OutputCase::SINGLE) {
@@ -463,25 +463,25 @@ bool Conv2DFixPipeToExtendConv2DFusionPass::UpdateExtendConv2DDesc(GNode *extend
         }
     }
 
-    if (outputCase == OutputCase::DUAL_FIXPIPE || outputCase == OutputCase::OTHER_FIXPIPE) {
+    if (outputCase == OutputCase::DUAL_POST_CUBE || outputCase == OutputCase::OTHER_POST_CUBE) {
         TensorDesc output1Desc;
-        FUSION_PASS_CHECK(fixpipeNodes.back()->GetOutputDesc(OUTPUT_0_INDEX, output1Desc) != GRAPH_SUCCESS,
-            OP_LOGE(convDescInfo.nodeNameStr, "Get fixpipe1 output tensor desc failed."), return false);
+        FUSION_PASS_CHECK(postCubeNodes.back()->GetOutputDesc(OUTPUT_0_INDEX, output1Desc) != GRAPH_SUCCESS,
+            OP_LOGE(convDescInfo.nodeNameStr, "Get PostCube1 output tensor desc failed."), return false);
         FUSION_PASS_CHECK(extendConv2D->UpdateOutputDesc(OUTPUT_1_INDEX, output1Desc) != GRAPH_SUCCESS,
             OP_LOGE(convDescInfo.nodeNameStr, "Update ExtendConv2D output1 tensor desc failed."), return false);
 
         if (hasScale1) {
-            FUSION_PASS_CHECK_NOLOG(!UpdateScaleReluDesc(fixpipeNodes.back(), extendConv2D,
-                FIXPIPE_INPUT_QUANT_SCALE_0_INDEX, EXTENDCONV2D_QUANT_SCALE_1_INDEX, SCALE_1), return false);
+            FUSION_PASS_CHECK_NOLOG(!UpdateScaleReluDesc(postCubeNodes.back(), extendConv2D,
+                POST_CUBE_INPUT_QUANT_SCALE_0_INDEX, EXTENDCONV2D_QUANT_SCALE_1_INDEX, SCALE_1), return false);
         }
         if (hasRelu1) {
-            FUSION_PASS_CHECK_NOLOG(!UpdateScaleReluDesc(fixpipeNodes.back(), extendConv2D,
-                FIXPIPE_INPUT_RELU_WEIGHT_0_INDEX, EXTENDCONV2D_RELU_WEIGHT_1_INDEX, RELU_WEIGHT_1), return false);
+            FUSION_PASS_CHECK_NOLOG(!UpdateScaleReluDesc(postCubeNodes.back(), extendConv2D,
+                POST_CUBE_INPUT_RELU_WEIGHT_0_INDEX, EXTENDCONV2D_RELU_WEIGHT_1_INDEX, RELU_WEIGHT_1), return false);
         }
     }
 
-    if (outputCase == OutputCase::FIXPIPE_OTHER || outputCase == OutputCase::OTHER_FIXPIPE) {
-        int32_t index = outputCase == OutputCase::OTHER_FIXPIPE ? OUTPUT_0_INDEX : OUTPUT_1_INDEX;
+    if (outputCase == OutputCase::POST_CUBE_OTHER || outputCase == OutputCase::OTHER_POST_CUBE) {
+        int32_t index = outputCase == OutputCase::OTHER_POST_CUBE ? OUTPUT_0_INDEX : OUTPUT_1_INDEX;
         FUSION_PASS_CHECK(extendConv2D->UpdateOutputDesc(index, convDescInfo.outputDesc) != GRAPH_SUCCESS,
             OP_LOGE(convDescInfo.nodeNameStr, "Update ExtendConv2D output%d tensor desc failed.", index),
             return false);
@@ -490,11 +490,11 @@ bool Conv2DFixPipeToExtendConv2DFusionPass::UpdateExtendConv2DDesc(GNode *extend
     return true;
 }
 
-bool Conv2DFixPipeToExtendConv2DFusionPass::UpdateScaleReluDesc(GNodePtr fixpipe, GNode *extendConv2D,
+bool Conv2DPostCubeToExtendConv2DFusionPass::UpdateScaleReluDesc(GNodePtr postCube, GNode *extendConv2D,
     const int32_t getIndex, const int32_t updateIndex, const AscendString &name) const
 {
     TensorDesc tensorDesc;
-    FUSION_PASS_CHECK(fixpipe->GetInputDesc(getIndex, tensorDesc) != GRAPH_SUCCESS,
+    FUSION_PASS_CHECK(postCube->GetInputDesc(getIndex, tensorDesc) != GRAPH_SUCCESS,
         OP_LOGE(convDescInfo.nodeNameStr, "Get %s tensor desc failed.", name.GetString()), return false);
     // Currently, conv only supports per-tensor quantization scenarios, but onnx plugin set format to NCHW
     tensorDesc.SetFormat(ge::FORMAT_ND);

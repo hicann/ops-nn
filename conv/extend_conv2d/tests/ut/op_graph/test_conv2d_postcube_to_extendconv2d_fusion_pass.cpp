@@ -9,7 +9,7 @@
  */
 
 #include "../../../../common/tests/ut/op_graph/test_conv_fusion_pass_framework.h"
-#include "../../../op_graph/fusion_pass/conv2d_fixpipe_to_extendconv2d_fusion_pass.h"
+#include "../../../op_graph/fusion_pass/conv2d_postcube_to_extendconv2d_fusion_pass.h"
 
 using namespace ge;
 using namespace es;
@@ -22,14 +22,14 @@ using namespace ConvFusionUtils;
 using namespace test_conv_fusion_framework;
 
 #define CONV_DEBUG false
-class Conv2DFixPipeToExtendConv2DFusionPassTest : public testing::Test {
+class Conv2DPostCubeToExtendConv2DFusionPassTest : public testing::Test {
 protected:
     static void SetUpTestCase() {
-        std::cout << "Conv2DFixPipeToExtendConv2DFusionPassTest SetUp" << std::endl;
+        std::cout << "Conv2DPostCubeToExtendConv2DFusionPassTest SetUp" << std::endl;
     }
 
     static void TearDownTestCase() {
-        std::cout << "Conv2DFixPipeToExtendConv2DFusionPassTest TearDown" << std::endl;
+        std::cout << "Conv2DPostCubeToExtendConv2DFusionPassTest TearDown" << std::endl;
     }
 
     void TestTotalPass(std::string passName, GraphPtr &graph, Status expcetRes = SUCCESS) {
@@ -39,7 +39,7 @@ protected:
         }
         CustomPassContext passContex;
         passContex.SetPassName(passName.c_str());
-        Conv2DFixPipeToExtendConv2DFusionPass pass;
+        Conv2DPostCubeToExtendConv2DFusionPass pass;
         auto res = pass.Run(graph, passContex);
         if (CONV_DEBUG) {
             std::string dumpName = passName + "_after";
@@ -51,7 +51,7 @@ protected:
         }
     }
 
-    void TestConvFixpipeFusion(TestGraph &testGraphBuilder, std::string passName, GraphPtr &graph,
+    void TestConvPostCubeFusion(TestGraph &testGraphBuilder, std::string passName, GraphPtr &graph,
         Status expcetRes = SUCCESS) {
         if (CONV_DEBUG) {
             std::string dumpName = passName + "_before";
@@ -59,7 +59,7 @@ protected:
         }
         CustomPassContext passContex;
         passContex.SetPassName(passName.c_str());
-        Conv2DFixPipeToExtendConv2DFusionPass pass;
+        Conv2DPostCubeToExtendConv2DFusionPass pass;
         GNode convNode = testGraphBuilder.GetNode("Conv2D");
         ConvFusionUtilsPass::GetConvDescInfo(convNode, pass.convDescInfo);
         auto boundary = pass.ConstructBoundary(convNode);
@@ -76,17 +76,17 @@ protected:
         }
     }
 
-    void TestFixpipeTrans(TestGraph &testGraphBuilder, std::string passName, GraphPtr &graph) {
+    void TestPostCubeTrans(TestGraph &testGraphBuilder, std::string passName, GraphPtr &graph) {
         if (CONV_DEBUG) {
             std::string dumpName = passName + "_before";
             graph->DumpToFile(Graph::DumpFormat::kOnnx, AscendString(dumpName.c_str()));
         }
         CustomPassContext passContex;
         passContex.SetPassName(passName.c_str());
-        Conv2DFixPipeToExtendConv2DFusionPass pass;
+        Conv2DPostCubeToExtendConv2DFusionPass pass;
         GNode convNode = testGraphBuilder.GetNode("Conv2D");
         ConvFusionUtilsPass::GetConvDescInfo(convNode, pass.convDescInfo);
-        auto res = pass.FixpipeFusionImpl(graph, convNode, passContex);
+        auto res = pass.PostCubeFusionImpl(graph, convNode, passContex);
         if (CONV_DEBUG) {
             std::string dumpName = passName + "_after";
             graph->DumpToFile(Graph::DumpFormat::kOnnx, AscendString(dumpName.c_str()));
@@ -97,7 +97,7 @@ protected:
 };
 
 // Conv2D + Dequant -> ExtendConv2D
-TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_dequant_fusion_success)
+TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, conv2d_dequant_fusion_success)
 {
     TestGraph testGraphBuilder("conv2d_dequant_fusion_success");
 
@@ -115,7 +115,7 @@ TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_dequant_fusion_success)
 }
 
 // Conv2D(NHWC/has bias) + Dequant -> ExtendConv2D
-TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_dequant_fusion_success_nhwc)
+TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, conv2d_dequant_fusion_success_nhwc)
 {
     TestGraph testGraphBuilder("conv2d_dequant_fusion_success_nhwc");
 
@@ -133,7 +133,7 @@ TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_dequant_fusion_success_
 }
 
 // Conv2D + Relu -> extendconv2d
-TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_relu_to_extendconv2d_fusion_success)
+TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, conv2d_relu_to_extendconv2d_fusion_success)
 {
     TestGraph testGraphBuilder("conv2d_relu_to_extendconv2d_fusion_success");
 
@@ -150,10 +150,10 @@ TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_relu_to_extendconv2d_fu
     TestTotalPass("conv2d_relu_to_extendconv2d_fusion_success", graph, SUCCESS);
 }
 
-// Conv2D + LeakyRelu -> ExtendConv2D(failed)
-TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_leakyrelu_to_conv2d_fixpipe_fusion_success)
+// Conv2D + LeakyRelu -> ExtendConv2D
+TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, conv2d_leakyrelu_to_conv2d_postcube_fusion_success)
 {
-    TestGraph testGraphBuilder("conv2d_leakyrelu_to_conv2d_fixpipe_fusion_success");
+    TestGraph testGraphBuilder("conv2d_leakyrelu_to_conv2d_postcube_fusion_success");
 
     auto graph = testGraphBuilder.SetSocAscend950()
         .AddConv2D(Conv2DConfig::Basic("Conv2D", DT_FLOAT16, DT_FLOAT16))
@@ -165,11 +165,11 @@ TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_leakyrelu_to_conv2d_fix
     EXPECT_TRUE(GraphChecker::HasNode(graph, "Conv2D"));
     EXPECT_TRUE(GraphChecker::HasNode(graph, "LeakyRelu"));
 
-    TestTotalPass("conv2d_leakyrelu_to_conv2d_fixpipe_fusion_success", graph, SUCCESS);
+    TestTotalPass("conv2d_leakyrelu_to_conv2d_postcube_fusion_success", graph, SUCCESS);
 }
 
 // Conv2D + Dequant + LeakyRelu -> ExtendConv2D(failed) + LeakyRelu
-TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_dequant_leakyrelu_to_extendconv2d_fusion_success)
+TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, conv2d_dequant_leakyrelu_to_extendconv2d_fusion_success)
 {
     TestGraph testGraphBuilder("conv2d_dequant_leakyrelu_to_extendconv2d_fusion_success");
 
@@ -191,7 +191,7 @@ TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_dequant_leakyrelu_to_ex
 }
 
 // Conv2D + Requant -> ExtendConv2D
-TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_requant_fusion_success)
+TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, conv2d_requant_fusion_success)
 {
     TestGraph testGraphBuilder("conv2d_requant_fusion_success");
 
@@ -209,7 +209,7 @@ TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_requant_fusion_success)
 }
 
 // Conv2D(NHWC/has bias) + Requant -> ExtendConv2D
-TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_bias_requant_fusion_success_nhwc)
+TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, conv2d_bias_requant_fusion_success_nhwc)
 {
     TestGraph testGraphBuilder("conv2d_bias_requant_fusion_success_nhwc");
 
@@ -227,7 +227,7 @@ TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_bias_requant_fusion_suc
 }
 
 // Conv2D + Dequant(1) -- Requant(2) -> ExtendConv2D
-TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_dequant_requant_fusion_success)
+TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, conv2d_dequant_requant_fusion_success)
 {
     TestGraph testGraphBuilder("conv2d_dequant_requant_fusion_success");
 
@@ -248,8 +248,8 @@ TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_dequant_requant_fusion_
     TestTotalPass("conv2d_dequant_requant_fusion_success", graph, SUCCESS);
 }
 
-// Conv2D + Requant(1) + Requant(2) -> Conv2D + FixPipe
-TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_requant_out1_requant_out2_to_extendconv2d_fusion_success)
+// Conv2D + Requant(1) + Requant(2) -> Conv2D + PostCube
+TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, conv2d_requant_out1_requant_out2_to_extendconv2d_fusion_success)
 {
     TestGraph testGraphBuilder("conv2d_requant_out1_requant_out2_to_extendconv2d_fusion_success");
 
@@ -270,7 +270,7 @@ TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_requant_out1_requant_ou
 }
 
 // Conv2D(NHWC) + Dequant(1) -- Requant(2) -> ExtendConv2D
-TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_dequant_requant_fusion_success_nhwc)
+TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, conv2d_dequant_requant_fusion_success_nhwc)
 {
     TestGraph testGraphBuilder("conv2d_dequant_requant_fusion_success_nhwc");
 
@@ -292,7 +292,7 @@ TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_dequant_requant_fusion_
 }
 
 // Conv2D + Relu(1) -- Quant + Relu(2) -> ExtendConv2D
-TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_relu_out1_quant_relu_out2_to_extendconv2d_fusion_success)
+TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, conv2d_relu_out1_quant_relu_out2_to_extendconv2d_fusion_success)
 {
     TestGraph testGraphBuilder("conv2d_relu_out1_quant_relu_out2_to_extendconv2d_fusion_success");
 
@@ -315,10 +315,10 @@ TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_relu_out1_quant_relu_ou
     TestTotalPass("conv2d_relu_out1_quant_relu_out2_to_extendconv2d_fusion_success", graph, SUCCESS);
 }
 
-// Conv2D + Dequant(1) -- Requant(2) -- Relu(3) -> Conv2D + FixPipe x 3, not happen in ATC
-TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_multi_3_output_to_fixpipe_fusion_success)
+// Conv2D + Dequant(1) -- Requant(2) -- Relu(3) -> Conv2D + PostCube x 3, not happen in ATC
+TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, conv2d_multi_3_output_to_postcube_fusion_success)
 {
-    TestGraph testGraphBuilder("conv2d_multi_3_output_to_fixpipe_fusion_success");
+    TestGraph testGraphBuilder("conv2d_multi_3_output_to_postcube_fusion_success");
 
     auto graph = testGraphBuilder.SetSocAscend950()
         .AddConv2D(Conv2DConfig::Basic("Conv2D"))
@@ -338,11 +338,11 @@ TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_multi_3_output_to_fixpi
     EXPECT_TRUE(GraphChecker::HasNode(graph, "AscendRequant"));
     EXPECT_TRUE(GraphChecker::HasNode(graph, "Relu"));
 
-    TestFixpipeTrans(testGraphBuilder, "conv2d_multi_3_output_to_fixpipe_fusion_success", graph);
+    TestPostCubeTrans(testGraphBuilder, "conv2d_multi_3_output_to_postcube_fusion_success", graph);
 }
 
 // Conv2D + Dequant + Relu -> ExtendConv2D
-TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_dequant_relu_to_extendconv2d_fusion_success)
+TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, conv2d_dequant_relu_to_extendconv2d_fusion_success)
 {
     TestGraph testGraphBuilder("conv2d_dequant_relu_to_extendconv2d_fusion_success");
 
@@ -363,7 +363,7 @@ TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_dequant_relu_to_extendc
 }
 
 // Conv2D + Requant + Relu -> ExtendConv2D
-TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_requant_relu_to_extendconv2d_fusion_success)
+TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, conv2d_requant_relu_to_extendconv2d_fusion_success)
 {
     TestGraph testGraphBuilder("conv2d_requant_relu_to_extendconv2d_fusion_success");
 
@@ -384,7 +384,7 @@ TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_requant_relu_to_extendc
 }
 
 // Conv2D + Quant + Relu -> ExtendConv2D
-TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_quant_relu_to_extendconv2d_fusion_success)
+TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, conv2d_quant_relu_to_extendconv2d_fusion_success)
 {
     TestGraph testGraphBuilder("conv2d_quant_relu_to_extendconv2d_fusion_success");
 
@@ -405,7 +405,7 @@ TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_quant_relu_to_extendcon
 }
 
 // Conv2D(1) + Quant + Relu(2) -> ExtendConv2D
-TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_out1_quant_relu_out2_to_extendconv2d_fusion_success)
+TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, conv2d_out1_quant_relu_out2_to_extendconv2d_fusion_success)
 {
     TestGraph testGraphBuilder("conv2d_out1_quant_relu_out2_to_extendconv2d_fusion_success");
 
@@ -427,7 +427,7 @@ TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_out1_quant_relu_out2_to
 }
 
 // Conv2D + Dequant(1) -- Requant + Relu(2) -> ExtendConv2D
-TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_dequant_out1_requant_relu_out2_to_extendconv2d_fusion_success)
+TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, conv2d_dequant_out1_requant_relu_out2_to_extendconv2d_fusion_success)
 {
     TestGraph testGraphBuilder("conv2d_dequant_out1_requant_relu_out2_to_extendconv2d_fusion_success");
 
@@ -452,7 +452,7 @@ TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_dequant_out1_requant_re
 }
 
 // Conv2D + Dequant + Relu(1) -- Requant + Relu(2) -> ExtendConv2D
-TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_dequant_relu_out1_requant_relu_out2_to_extendconv2d_fusion_success)
+TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, conv2d_dequant_relu_out1_requant_relu_out2_to_extendconv2d_fusion_success)
 {
     TestGraph testGraphBuilder("conv2d_dequant_relu_out1_requant_relu_out2_to_extendconv2d_fusion_success");
 
@@ -479,7 +479,7 @@ TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_dequant_relu_out1_requa
 }
 
 // Conv2D + Quant -> ExtendConv2D
-TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_quant_fusion_success)
+TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, conv2d_quant_fusion_success)
 {
     TestGraph testGraphBuilder("conv2d_quant_fusion_success");
 
@@ -497,7 +497,7 @@ TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_quant_fusion_success)
 }
 
 // Conv2D(1) + Relu(2) -> ExtendConv2D
-TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_out1_relu_out2_fusion_success)
+TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, conv2d_out1_relu_out2_fusion_success)
 {
     TestGraph testGraphBuilder("conv2d_out1_relu_out2_fusion_success");
 
@@ -516,7 +516,7 @@ TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_out1_relu_out2_fusion_s
 }
 
 // Conv2D(1) + Quant(2) -> ExtendConv2D
-TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_out1_quant_out2_fusion_success)
+TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, conv2d_out1_quant_out2_fusion_success)
 {
     TestGraph testGraphBuilder("conv2d_out1_quant_out2_fusion_success");
 
@@ -535,7 +535,7 @@ TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_out1_quant_out2_fusion_
 }
 
 // Conv2D(1) + Dequant(2) -> ExtendConv2D
-TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_out1_dequant_out2_fusion_success)
+TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, conv2d_out1_dequant_out2_fusion_success)
 {
     TestGraph testGraphBuilder("conv2d_out1_dequant_out2_fusion_success");
 
@@ -554,7 +554,7 @@ TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_out1_dequant_out2_fusio
 }
 
 // Conv2D + Dequant(1) + Relu(2) -> ExtendConv2D
-TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_dequant_out1_relu_out2_fusion_success)
+TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, conv2d_dequant_out1_relu_out2_fusion_success)
 {
     TestGraph testGraphBuilder("conv2d_dequant_out1_relu_out2_fusion_success");
 
@@ -576,7 +576,7 @@ TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_dequant_out1_relu_out2_
 }
 
 // Conv2D + Quant(1)(2) -> ExtendConv2D
-TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_quant_quant_fusion_success)
+TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, conv2d_quant_quant_fusion_success)
 {
     TestGraph testGraphBuilder("conv2d_quant_quant_fusion_success");
 
@@ -597,7 +597,7 @@ TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_quant_quant_fusion_succ
 }
 
 // Conv2D + Quant + Relu(1) -- Quant + Relu(2) -> ExtendConv2D
-TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_relu_quant_quant_fusion_success)
+TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, conv2d_relu_quant_quant_fusion_success)
 {
     TestGraph testGraphBuilder("conv2d_relu_quant_quant_fusion_success");
 
@@ -623,7 +623,7 @@ TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_relu_quant_quant_fusion
 }
 
 // Conv2D + Requant(1)(2) -> ExtendConv2D
-TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_requant_requant_fusion_success)
+TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, conv2d_requant_requant_fusion_success)
 {
     TestGraph testGraphBuilder("conv2d_requant_requant_fusion_success");
 
@@ -644,7 +644,7 @@ TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_requant_requant_fusion_
 }
 
 // Conv2D + Requant + Relu(1)(2) -> ExtendConv2D
-TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_requant_relu_relu_fusion_success)
+TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, conv2d_requant_relu_relu_fusion_success)
 {
     TestGraph testGraphBuilder("conv2d_requant_relu_relu_fusion_success");
 
@@ -667,15 +667,15 @@ TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_requant_relu_relu_fusio
     TestTotalPass("conv2d_requant_relu_relu_fusion_success", graph, SUCCESS);
 }
 
-// Conv2D + FixPipe(1) -- Relu(2) -- Dequant(3) -> ExtendConv2D(1) + (Relu -- Dequant)
-TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_fipipe_multi_other_fusion_success_first_int8)
+// Conv2D + PostCube(1) -- Relu(2) -- Dequant(3) -> ExtendConv2D(1) + (Relu -- Dequant)
+TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, conv2d_postcube_multi_other_fusion_success_first_int8)
 {
-    TestGraph testGraphBuilder("conv2d_fipipe_multi_other_fusion_success_first");
+    TestGraph testGraphBuilder("conv2d_postcube_multi_other_fusion_success_first");
 
     auto graph = testGraphBuilder.SetSocAscend950()
         .AddConv2D(Conv2DConfig::Basic("Conv2D"))
         .AddRelu(ReluConfig::Basic("Relu"))
-        .AddFixPipe(FixPipeConfig::Basic("FixPipe", DT_INT8).WithScale0())
+        .AddPostCube(PostCubeConfig::Basic("FixPipe", DT_INT8).WithScale0())
         .AddAscendDequant(AscendDequantConfig::Basic("AscendDequant"))
         .Connect("Conv2D", 0, "FixPipe", 0)
         .Connect("Conv2D", 0, "Relu", 0)
@@ -690,20 +690,20 @@ TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_fipipe_multi_other_fusi
     EXPECT_TRUE(GraphChecker::HasNode(graph, "Relu"));
     EXPECT_TRUE(GraphChecker::HasNode(graph, "AscendDequant"));
 
-    TestConvFixpipeFusion(testGraphBuilder, "conv2d_fipipe_multi_other_fusion_success_first", graph);
+    TestConvPostCubeFusion(testGraphBuilder, "conv2d_postcube_multi_other_fusion_success_first", graph);
     EXPECT_TRUE(GraphChecker::HasNode(graph, "Relu"));
     EXPECT_TRUE(GraphChecker::HasNode(graph, "AscendDequant"));
 }
 
-// Conv2D + Relu(1) -- FixPipe(2) -- Dequant(3) -> ExtendConv2D(2) + (Relu -- Dequant)
-TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_fipipe_multi_other_fusion_success_second_int8)
+// Conv2D + Relu(1) -- PostCube(2) -- Dequant(3) -> ExtendConv2D(2) + (Relu -- Dequant)
+TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, conv2d_postcube_multi_other_fusion_success_second_int8)
 {
-    TestGraph testGraphBuilder("conv2d_fipipe_multi_other_fusion_success_second");
+    TestGraph testGraphBuilder("conv2d_postcube_multi_other_fusion_success_second");
 
     auto graph = testGraphBuilder.SetSocAscend950()
         .AddConv2D(Conv2DConfig::Basic("Conv2D"))
         .AddRelu(ReluConfig::Basic("Relu"))
-        .AddFixPipe(FixPipeConfig::Basic("FixPipe", DT_INT8).WithScale0())
+        .AddPostCube(PostCubeConfig::Basic("FixPipe", DT_INT8).WithScale0())
         .AddAscendDequant(AscendDequantConfig::Basic("AscendDequant"))
         .Connect("Conv2D", 0, "Relu", 0)
         .Connect("Conv2D", 0, "FixPipe", 0)
@@ -718,20 +718,20 @@ TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_fipipe_multi_other_fusi
     EXPECT_TRUE(GraphChecker::HasNode(graph, "Relu"));
     EXPECT_TRUE(GraphChecker::HasNode(graph, "AscendDequant"));
 
-    TestConvFixpipeFusion(testGraphBuilder, "conv2d_fipipe_multi_other_fusion_success_second", graph);
+    TestConvPostCubeFusion(testGraphBuilder, "conv2d_postcube_multi_other_fusion_success_second", graph);
     EXPECT_TRUE(GraphChecker::HasNode(graph, "Relu"));
     EXPECT_TRUE(GraphChecker::HasNode(graph, "AscendDequant"));
 }
 
-// Conv2D + FixPipe(fp16_1) -- Relu(2) -- Dequant(3) -> ExtendConv2D(1) + (Relu -- Dequant)
-TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_fipipe_multi_other_fusion_success_first_fp16)
+// Conv2D + PostCube(fp16_1) -- Relu(2) -- Dequant(3) -> ExtendConv2D(1) + (Relu -- Dequant)
+TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, conv2d_postcube_multi_other_fusion_success_first_fp16)
 {
-    TestGraph testGraphBuilder("conv2d_fipipe_multi_other_fusion_success_first");
+    TestGraph testGraphBuilder("conv2d_postcube_multi_other_fusion_success_first");
 
     auto graph = testGraphBuilder.SetSocAscend950()
         .AddConv2D(Conv2DConfig::Basic("Conv2D"))
         .AddRelu(ReluConfig::Basic("Relu"))
-        .AddFixPipe(FixPipeConfig::Basic("FixPipe").WithScale0())
+        .AddPostCube(PostCubeConfig::Basic("FixPipe").WithScale0())
         .AddAscendDequant(AscendDequantConfig::Basic("AscendDequant"))
         .Connect("Conv2D", 0, "FixPipe", 0)
         .Connect("Conv2D", 0, "Relu", 0)
@@ -746,20 +746,20 @@ TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_fipipe_multi_other_fusi
     EXPECT_TRUE(GraphChecker::HasNode(graph, "Relu"));
     EXPECT_TRUE(GraphChecker::HasNode(graph, "AscendDequant"));
 
-    TestConvFixpipeFusion(testGraphBuilder, "conv2d_fipipe_multi_other_fusion_success_first", graph);
+    TestConvPostCubeFusion(testGraphBuilder, "conv2d_postcube_multi_other_fusion_success_first", graph);
     EXPECT_TRUE(GraphChecker::HasNode(graph, "Relu"));
     EXPECT_TRUE(GraphChecker::HasNode(graph, "AscendDequant"));
 }
 
-// Conv2D + Relu(1) -- FixPipe(fp16_2) -- Dequant(3) -> ExtendConv2D(2) + (Relu -- Dequant)
-TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_fipipe_multi_other_fusion_success_second_fp16)
+// Conv2D + Relu(1) -- PostCube(fp16_2) -- Dequant(3) -> ExtendConv2D(2) + (Relu -- Dequant)
+TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, conv2d_postcube_multi_other_fusion_success_second_fp16)
 {
-    TestGraph testGraphBuilder("conv2d_fipipe_multi_other_fusion_success_second");
+    TestGraph testGraphBuilder("conv2d_postcube_multi_other_fusion_success_second");
 
     auto graph = testGraphBuilder.SetSocAscend950()
         .AddConv2D(Conv2DConfig::Basic("Conv2D"))
         .AddRelu(ReluConfig::Basic("Relu"))
-        .AddFixPipe(FixPipeConfig::Basic("FixPipe").WithScale0())
+        .AddPostCube(PostCubeConfig::Basic("FixPipe").WithScale0())
         .AddAscendDequant(AscendDequantConfig::Basic("AscendDequant"))
         .Connect("Conv2D", 0, "Relu", 0)
         .Connect("Conv2D", 0, "FixPipe", 0)
@@ -774,12 +774,12 @@ TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_fipipe_multi_other_fusi
     EXPECT_TRUE(GraphChecker::HasNode(graph, "Relu"));
     EXPECT_TRUE(GraphChecker::HasNode(graph, "AscendDequant"));
 
-    TestConvFixpipeFusion(testGraphBuilder, "conv2d_fipipe_multi_other_fusion_success_second", graph);
+    TestConvPostCubeFusion(testGraphBuilder, "conv2d_postcube_multi_other_fusion_success_second", graph);
     EXPECT_TRUE(GraphChecker::HasNode(graph, "Relu"));
     EXPECT_TRUE(GraphChecker::HasNode(graph, "AscendDequant"));
 }
 
-TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, print_graph_structure_test)
+TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, print_graph_structure_test)
 {
     TestGraph testGraphBuilder("print_graph_structure_test");
 
@@ -798,33 +798,33 @@ TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, print_graph_structure_test)
     }
     CustomPassContext passContex;
     passContex.SetPassName("print_graph_structure_test_before");
-    Conv2DFixPipeToExtendConv2DFusionPass pass;
+    Conv2DPostCubeToExtendConv2DFusionPass pass;
     GNode convNode = testGraphBuilder.GetNode("Conv2D");
     ConvFusionUtilsPass::GetConvDescInfo(convNode, pass.convDescInfo);
-    auto res = pass.FixpipeFusionImpl(graph, convNode, passContex);
+    auto res = pass.PostCubeFusionImpl(graph, convNode, passContex);
     if (CONV_DEBUG) {
         graph->DumpToFile(Graph::DumpFormat::kOnnx, "print_graph_structure_test_after");
     }
     EXPECT_EQ(res, true);
     EXPECT_TRUE(GraphChecker::HasNode(graph, "FixPipe"));
 
-    pass.outputCase = Conv2DFixpipeToExtendConv2DFusion::OutputCase::SINGLE;
-    pass.fixpipeFusionOps.push_back({"Relu"});
+    pass.outputCase = Conv2DPostCubeToExtendConv2DFusion::OutputCase::SINGLE;
+    pass.postCubeFusionOps.push_back({"Relu"});
     pass.PrintGraphStructure();
 
-    pass.outputCase = Conv2DFixpipeToExtendConv2DFusion::OutputCase::OTHER_FIXPIPE;
+    pass.outputCase = Conv2DPostCubeToExtendConv2DFusion::OutputCase::OTHER_POST_CUBE;
     pass.PrintGraphStructure();
 
-    pass.outputCase = Conv2DFixpipeToExtendConv2DFusion::OutputCase::FIXPIPE_OTHER;
+    pass.outputCase = Conv2DPostCubeToExtendConv2DFusion::OutputCase::POST_CUBE_OTHER;
     pass.PrintGraphStructure();
 
-    pass.outputCase = Conv2DFixpipeToExtendConv2DFusion::OutputCase::DUAL_FIXPIPE,
-    pass.fixpipeFusionOps.push_back({"Relu", "AscendQuant"});
+    pass.outputCase = Conv2DPostCubeToExtendConv2DFusion::OutputCase::DUAL_POST_CUBE;
+    pass.postCubeFusionOps.push_back({"Relu", "AscendQuant"});
     pass.PrintGraphStructure();
 }
 
 // Conv2D + Dequant (x: NHWC, filter: NCHW) - 不支持的格式
-TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_not_support_fusion_format_test1)
+TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, conv2d_not_support_fusion_format_test1)
 {
     TestGraph testGraphBuilder("conv2d_not_support_fusion_format_test1");
 
@@ -845,7 +845,7 @@ TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_not_support_fusion_form
 }
 
 // Conv2D + Dequant (x: NCHW, filter: NHWC) - 不支持的格式
-TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_not_support_fusion_format_test2)
+TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, conv2d_not_support_fusion_format_test2)
 {
     TestGraph testGraphBuilder("conv2d_not_support_fusion_format_test2");
 
@@ -865,7 +865,7 @@ TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_not_support_fusion_form
 }
 
 // Conv2D + Dequant (conv2d输出: NHWC) - 不支持的格式
-TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_not_support_fusion_format_test3)
+TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, conv2d_not_support_fusion_format_test3)
 {
     TestGraph testGraphBuilder("conv2d_not_support_fusion_format_test3");
 
@@ -885,7 +885,7 @@ TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_not_support_fusion_form
 }
 
 // Conv2D + Dequant (filter: HWCN) - 不支持的格式
-TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_not_support_fusion_format_test5)
+TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, conv2d_not_support_fusion_format_test5)
 {
     TestGraph testGraphBuilder("conv2d_not_support_fusion_format_test5");
 
@@ -904,17 +904,17 @@ TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, conv2d_not_support_fusion_form
     TestTotalPass("conv2d_not_support_fusion_format_test5", graph, CONV_NOT_CHANGED);
 }
 
-// Conv2D + FixPipe(包含Relu + AscendDequant) -> ExtendConv2D
-TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, fusion_failed_relu_fixpipe)
+// Conv2D + PostCube(包含 Relu + AscendDequant) -> ExtendConv2D
+TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, fusion_failed_relu_postcube)
 {
-    TestGraph testGraphBuilder("fusion_failed_relu_fixpipe");
+    TestGraph testGraphBuilder("fusion_failed_relu_postcube");
 
-    FixPipeConfig fixpipeConfig = FixPipeConfig::Basic("FixPipe", DT_INT8).WithScale0();
-    fixpipeConfig.SetAttr("fusion_op_list", std::vector<std::string>{"AscendDequant", "Relu"});
+    PostCubeConfig postCubeConfig = PostCubeConfig::Basic("FixPipe", DT_INT8).WithScale0();
+    postCubeConfig.SetAttr("fusion_op_list", std::vector<std::string>{"AscendDequant", "Relu"});
 
     auto graph = testGraphBuilder.SetSocAscend950()
         .AddConv2D(Conv2DConfig::Basic("Conv2D"))
-        .AddFixPipe(fixpipeConfig)
+        .AddPostCube(postCubeConfig)
         .Connect("Conv2D", 0, "FixPipe", 0)
         .SetOutput("FixPipe")
         .Build();
@@ -922,17 +922,17 @@ TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, fusion_failed_relu_fixpipe)
     EXPECT_TRUE(GraphChecker::HasNode(graph, "Conv2D"));
     EXPECT_TRUE(GraphChecker::HasNode(graph, "FixPipe"));
 
-    TestConvFixpipeFusion(testGraphBuilder, "fusion_failed_relu_fixpipe", graph);
+    TestConvPostCubeFusion(testGraphBuilder, "fusion_failed_relu_postcube", graph);
 }
 
-// Conv2D + FixPipe(scale fp32) -> ExtendConv2D
-TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, fusion_failed_fixpipe_scale_fp32)
+// Conv2D + PostCube(scale fp32) -> ExtendConv2D
+TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, fusion_failed_postcube_scale_fp32)
 {
-    TestGraph testGraphBuilder("fusion_failed_fixpipe_scale_fp32");
+    TestGraph testGraphBuilder("fusion_failed_postcube_scale_fp32");
 
     auto graph = testGraphBuilder.SetSocAscend950()
         .AddConv2D(Conv2DConfig::Basic("Conv2D"))
-        .AddFixPipe(FixPipeConfig::Basic("FixPipe").WithScale0(DT_FLOAT))
+        .AddPostCube(PostCubeConfig::Basic("FixPipe").WithScale0(DT_FLOAT))
         .Connect("Conv2D", 0, "FixPipe", 0)
         .SetOutput("FixPipe")
         .Build();
@@ -940,47 +940,45 @@ TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, fusion_failed_fixpipe_scale_fp
     EXPECT_TRUE(GraphChecker::HasNode(graph, "Conv2D"));
     EXPECT_TRUE(GraphChecker::HasNode(graph, "FixPipe"));
 
-    TestConvFixpipeFusion(testGraphBuilder, "fusion_failed_fixpipe_scale_fp32", graph, FAILED);
+    TestConvPostCubeFusion(testGraphBuilder, "fusion_failed_postcube_scale_fp32", graph, FAILED);
 }
 
-// Conv2D + FixPipe(输入FP32) - 不支持的输入类型
-TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, fusion_failed_fixpipe_fp32_in)
+// Conv2D + PostCube(输入 FP32) - 不支持的输入类型
+TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, fusion_failed_postcube_fp32_in)
 {
-    TestGraph testGraphBuilder("fusion_failed_fixpipe_fp32_in");
+    TestGraph testGraphBuilder("fusion_failed_postcube_fp32_in");
 
     auto graph = testGraphBuilder.SetSocAscend950()
         .AddConv2D(Conv2DConfig::Basic("Conv2D"))
-        .AddFixPipe(FixPipeConfig::Basic("FixPipe").WithScale0())
+        .AddPostCube(PostCubeConfig::Basic("FixPipe").WithScale0())
         .Connect("Conv2D", 0, "FixPipe", 0)
         .SetOutput("FixPipe")
         .Build();
 
-    auto fixpipeNode = testGraphBuilder.GetNode("FixPipe");
     testGraphBuilder.UpdateNodeInputDesc("FixPipe", 0, DT_FLOAT, FORMAT_NCHW);
 
     EXPECT_TRUE(GraphChecker::HasNode(graph, "Conv2D"));
     EXPECT_TRUE(GraphChecker::HasNode(graph, "FixPipe"));
 
-    TestConvFixpipeFusion(testGraphBuilder, "fusion_failed_fixpipe_fp32_in", graph, FAILED);
+    TestConvPostCubeFusion(testGraphBuilder, "fusion_failed_postcube_fp32_in", graph, FAILED);
 }
 
-// Conv2D + FixPipe(输出FP32) - 不支持的输出类型
-TEST_F(Conv2DFixPipeToExtendConv2DFusionPassTest, fusion_failed_fixpipe_fp32_out)
+// Conv2D + PostCube(输出 FP32) - 不支持的输出类型
+TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, fusion_failed_postcube_fp32_out)
 {
-    TestGraph testGraphBuilder("fusion_failed_fixpipe_fp32_out");
+    TestGraph testGraphBuilder("fusion_failed_postcube_fp32_out");
 
     auto graph = testGraphBuilder.SetSocAscend950()
         .AddConv2D(Conv2DConfig::Basic("Conv2D"))
-        .AddFixPipe(FixPipeConfig::Basic("FixPipe").WithScale0())
+        .AddPostCube(PostCubeConfig::Basic("FixPipe").WithScale0())
         .Connect("Conv2D", 0, "FixPipe", 0)
         .SetOutput("FixPipe")
         .Build();
 
-    auto fixpipeNode = testGraphBuilder.GetNode("FixPipe");
     testGraphBuilder.UpdateNodeOutputDesc("FixPipe", 0, DT_FLOAT, FORMAT_NCHW);
 
     EXPECT_TRUE(GraphChecker::HasNode(graph, "Conv2D"));
     EXPECT_TRUE(GraphChecker::HasNode(graph, "FixPipe"));
 
-    TestConvFixpipeFusion(testGraphBuilder, "fusion_failed_fixpipe_fp32_out", graph, FAILED);
+    TestConvPostCubeFusion(testGraphBuilder, "fusion_failed_postcube_fp32_out", graph, FAILED);
 }
