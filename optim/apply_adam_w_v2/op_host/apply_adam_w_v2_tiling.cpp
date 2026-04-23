@@ -196,7 +196,7 @@ static ge::graphStatus CheckInputShape(const gert::TilingContext* context)
 
     auto stepShapePtr = context->GetInputShape(INDEX_IN_STEP);
     OP_CHECK_NULL_WITH_CONTEXT(context, stepShapePtr);
-    auto stepShape = stepShapePtr->GetStorageShape();
+    auto stepShape = Ops::NN::OpTiling::EnsureNotScalar(stepShapePtr->GetStorageShape());
 
     auto maxGradNormShape = context->GetOptionalInputShape(INDEX_IN_MAX_GRAD_NORM);
 
