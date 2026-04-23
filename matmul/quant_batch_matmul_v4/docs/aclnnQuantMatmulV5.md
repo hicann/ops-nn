@@ -803,13 +803,26 @@ aclnnStatus aclnnQuantMatmulV5(
       | HIFLOAT8                  | HIFLOAT8                  | null        | UINT64/INT64      | null     | null     | null/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32      |
       | FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT32     | FLOAT32           | null     | null     | null/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32               |
       | HIFLOAT8                  | HIFLOAT8                  | FLOAT32     | FLOAT32           | null     | null     | null/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32               |
-      | INT4                  | INT4                  | null     | UINT64/INT64           | null     | null     | null/INT32 | FLOAT16               |
+      | INT4/INT32                  | INT4/INT32                  | null     | UINT64/INT64           | null     | null     | null/INT32 | FLOAT16               |
 
-    - T-T量化场景下，x1Scale的shape为(1,)或nullptr，x2Scale的shape为(1,)。
-    - T-C量化场景下，x1Scale的shape为(1,)或nullptr，x2Scale的shape为(n,)，其中n与x2的n一致。
-    - x1/x2的数据类型为FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8时，区分静态量化和动态量化。静态量化时x2Scale数据类型为UINT64/INT64，动态量化时x2Scale数据类型为FLOAT32；x1/x2数据类型为INT8或INT4时，不支持动态T-C或动态T-T量化。
-    - 静态量化场景下，当x1/x2为INT4或INT32时，x1支持2-6维，x2仅支持2维。
-    - 动态T-C量化场景下，不支持bias。
+  - x1的约束：
+    - 当数据类型为INT4时，transposeX1为false。维度为：（m，k），要求k为偶数。
+    - 当数据类型为INT32时，transposeX1为false。每个INT32数据存放8个INT4数据，对应维度表示：（m，ceil(k / 8)），要求k为8的倍数。
+    - 当数据类型为INT8时，且x2的数据类型为INT32时，transposeX1为false。维度为：（m，k），要求k为偶数。
+  - x2的约束：
+    - 数据类型为INT4时：
+      - 当前仅支持2维ND格式。
+      - transposeX2为true时维度为：（n，k），要求k为偶数。
+      - transposeX2为false时维度为：（k，n），要求n为偶数。
+    - 数据类型为INT32时，每个INT32数据存放8个INT4数据，
+       - 当前仅支持2维ND格式。
+       - transposeX2为true时维度为：（n，ceil(k / 8)），要求k为8的倍数。
+       - transposeX2为false时维度为：（k，ceil(n / 8)），要求n为8的倍数。
+  - T-T量化场景下，x1Scale的shape为(1,)或nullptr，x2Scale的shape为(1,)。
+  - T-C量化场景下，x1Scale的shape为(1,)或nullptr，x2Scale的shape为(n,)，其中n与x2的n一致。
+  - x1/x2的数据类型为FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8时，区分静态量化和动态量化。静态量化时x2Scale数据类型为UINT64/INT64，动态量化时x2Scale数据类型为FLOAT32；x1/x2数据类型为INT8或INT4时，不支持动态T-C或动态T-T量化。
+  - 静态量化场景下，当x1/x2为INT4或INT32时，x1支持2-6维，x2仅支持2维。
+  - 动态T-C量化场景下，不支持bias。
 
   </details>
 
@@ -933,9 +946,9 @@ aclnnStatus aclnnQuantMatmulV5(
 
   - x1、x2、x1Scale、x2Scale和groupSize的取值关系：
 
-    |量化类型| x1数据类型                 | x2数据类型                 | x1Scale数据类型| x2Scale数据类型| x1 shape | x2 shape| x1Scale shape| x2Scale shape| yOffset shape| [gsM，gsN，gsK]|
-    | ----- | ------------------------- | ------------------------- | -------------- | ------------- | -------- | ------- | ------------ | ------------ | ------------ | ------------ |
-    | K-G量化 | INT4                    |INT4                    |FLOAT32              |FLOAT32             |(m, k)|(n, k)|(m, 1)|(ceil(k / 256), n)| null | [0, 0, 256]|
+    |量化类型| x1数据类型                 | x2数据类型                 | x1Scale数据类型| x2Scale数据类型| x1 shape | x2 shape| x1Scale shape| x2Scale shape| x2offset| yOffset shape| [gsM，gsN，gsK]|
+    | ----- | ------------------------- | ------------------------- | -------------- | ------------- | -------- | ------- | ------------ | ------------ | ------------| ------------ | ------------ |
+    | K-G量化 | INT4                    |INT4                    |FLOAT32              |FLOAT32             |(m, k)|(n, k)|(m, 1)|(ceil(k / 256), n)|(ceil(k / 256), n)| null | [0, 0, 256]|
 
   - x1的约束：
     - 当数据类型为INT4时，k需与1024对齐。transposeX1为false。
