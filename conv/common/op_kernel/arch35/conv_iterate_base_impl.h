@@ -265,24 +265,28 @@ __aicore__ inline void ReduceKCloseL0PingPong(Intf *self, bool isFirst)
         self->ctx.al0 = self->ctx.wholeAl0Tensor;
         self->ctx.kAL0Iter = self->ctx.kIter % self->ctx.multiKAL1;
         self->ctx.loadAL0Ins.LoadAL0(isFirst);
-        if constexpr (Intf::isDmaFlag) {
-            self->ctx.dmaProcessTools.DmaSyncSet(self);
-        }
     }
+
+    if constexpr (Intf::isDmaFlag) {
+        self->ctx.dmaProcessTools.DmaSyncSet(self);
+    }
+
     if (!((self->ctx.convTiling->kBL1 == self->ctx.convTiling->kL0) && (!self->ctx.loadBL0Flag))) {
         self->ctx.bl0 = self->ctx.wholeBl0Tensor;
         self->ctx.kBL0Iter = self->ctx.kIter % self->ctx.multiKBL1;
         self->ctx.loadBL0Ins.LoadBL0(isFirst);
-        if constexpr (Intf::groupOptPreloadFlag) {
-            OptGroupPreloadSyncSet<Intf>(self);
-        } else if constexpr (Intf::groupOptNDFlag) {
-            OptGroupSyncSet<Intf>(self);
-        } else if constexpr (Intf::c04NDFlag) {
-            self->ctx.c04ProcessTools.C04SyncSet(self);
-        } else if constexpr (Intf::weightUbTrans) {
-            self->ctx.weightUbProcessTools.WeightUbTransSyncSet(self);
-        }
     }
+
+    if constexpr (Intf::groupOptPreloadFlag) {
+        OptGroupPreloadSyncSet<Intf>(self);
+    } else if constexpr (Intf::groupOptNDFlag) {
+        OptGroupSyncSet<Intf>(self);
+    } else if constexpr (Intf::c04NDFlag) {
+        self->ctx.c04ProcessTools.C04SyncSet(self);
+    } else if constexpr (Intf::weightUbTrans) {
+        self->ctx.weightUbProcessTools.WeightUbTransSyncSet(self);
+    }
+
     AscendC::SetFlag<AscendC::HardEvent::MTE1_M>(eventID);
     AscendC::WaitFlag<AscendC::HardEvent::MTE1_M>(eventID);
     self->ctx.madIns.Mad();
@@ -311,16 +315,18 @@ __aicore__ inline void ReduceKOpenL0APingPong(Intf *self, uint16_t& al0PingPongF
         AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(e);
         AscendC::SetFlag<AscendC::HardEvent::M_MTE1>(e);
         self->ctx.loadBL0Ins.LoadBL0(isFirst);
-        if constexpr (Intf::groupOptPreloadFlag) {
-            OptGroupPreloadSyncSet<Intf>(self);
-        } else if constexpr (Intf::groupOptNDFlag) {
-            OptGroupSyncSet<Intf>(self);
-        } else if constexpr (Intf::c04NDFlag) {
-            self->ctx.c04ProcessTools.C04SyncSet(self);
-        } else if constexpr (Intf::weightUbTrans) {
-            self->ctx.weightUbProcessTools.WeightUbTransSyncSet(self);
-        }
     }
+
+    if constexpr (Intf::groupOptPreloadFlag) {
+        OptGroupPreloadSyncSet<Intf>(self);
+    } else if constexpr (Intf::groupOptNDFlag) {
+        OptGroupSyncSet<Intf>(self);
+    } else if constexpr (Intf::c04NDFlag) {
+        self->ctx.c04ProcessTools.C04SyncSet(self);
+    } else if constexpr (Intf::weightUbTrans) {
+        self->ctx.weightUbProcessTools.WeightUbTransSyncSet(self);
+    }
+
     AscendC::SetFlag<AscendC::HardEvent::MTE1_M>(eventID);
     AscendC::WaitFlag<AscendC::HardEvent::MTE1_M>(eventID);
     self->ctx.madIns.Mad();
@@ -357,9 +363,10 @@ __aicore__ inline void ReduceKOpenL0BPingPong(Intf *self, uint16_t& bl0PingPongF
         AscendC::WaitFlag<AscendC::HardEvent::M_MTE1>(e);
         AscendC::SetFlag<AscendC::HardEvent::M_MTE1>(e);
         self->ctx.loadAL0Ins.LoadAL0(isFirst);
-        if constexpr (Intf::isDmaFlag) {
-            self->ctx.dmaProcessTools.DmaSyncSet(self);
-        }
+    }
+
+    if constexpr (Intf::isDmaFlag) {
+        self->ctx.dmaProcessTools.DmaSyncSet(self);
     }
 
     AscendC::SetFlag<AscendC::HardEvent::MTE1_M>(eventID);
