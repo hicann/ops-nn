@@ -175,8 +175,8 @@ void Conv3dBaseTilingV2::TranslateRunInfo(std::shared_ptr<tuningtiling::Conv3DV2
     tilingData_.convRunInfo.strideD = convRepoTiling->strideD;
     tilingData_.convRunInfo.dilationH = convRepoTiling->dilationH;
     tilingData_.convRunInfo.dilationD = convRepoTiling->dilationD;
-    tilingData_.convRunInfo.padHead= convRepoTiling->padHead;
-    tilingData_.convRunInfo.padTop =convRepoTiling->padTop;
+    tilingData_.convRunInfo.padHead = convRepoTiling->padHead;
+    tilingData_.convRunInfo.padTop = convRepoTiling->padTop;
     tilingData_.convRunInfo.hasBias = flagInfo_.hasBias;
     tilingData_.convRunInfo.groups = convRepoTiling->groups;
     tilingData_.convRunInfo.cinOpt = optGroupInfo_.cinOpt;

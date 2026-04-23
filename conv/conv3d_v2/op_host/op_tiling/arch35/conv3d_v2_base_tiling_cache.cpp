@@ -22,7 +22,7 @@ bool Conv3dBaseTilingV2::CheckSupportCacheTiling()
         return false;
     }
 
-    return true;    
+    return true;
 }
 
 bool Conv3dBaseTilingV2::GetTilingFromCache()
@@ -74,7 +74,7 @@ void Conv3dBaseTilingV2::GetCacheTilingInputArgs()
     cacheInputArgs_.weightShapeD = shapeInfo_.kd;
     cacheInputArgs_.weightShapeH = shapeInfo_.kh;
     cacheInputArgs_.weightShapeW = shapeInfo_.kw;
-    cacheInputArgs_.outputShapeD = shapeInfo_.dout;;
+    cacheInputArgs_.outputShapeD = shapeInfo_.dout;
     cacheInputArgs_.outputShapeH = shapeInfo_.ho;
     cacheInputArgs_.outputShapeW = shapeInfo_.wo;
     cacheInputArgs_.inputFormat = descInfo_.fMapFormat;
@@ -107,7 +107,8 @@ void Conv3dBaseTilingV2::GetCacheTilingInputArgs()
 }
 
 
-void Conv3dBaseTilingV2::GetCachedTilingData() {
+void Conv3dBaseTilingV2::GetCachedTilingData()
+{
     cachedTilingData_ = tilingData_;
 }
 

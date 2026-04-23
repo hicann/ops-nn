@@ -233,8 +233,8 @@ ge::graphStatus Conv3dBaseTilingV2::CheckInputDesc()
                                         descInfo_.weightFormat == ge::FORMAT_NCDHW &&
                                         descInfo_.outFormat == ge::FORMAT_NDHWC;
     std::stringstream ss;
-    ss <<"The support params format list [fmap, weight, output] for scene ";
-    ss <<"(conv3d dequant) is [NCDHW, NCDHW, NDHWC]";
+    ss << "The support params format list [fmap, weight, output] for scene ";
+    ss << "(conv3d dequant) is [NCDHW, NCDHW, NDHWC]";
     if (flagInfo_.isConv3dDequant && !isConv3dDequantFormatLegal) {
         OP_LOGE(context_->GetNodeName(),
             "%s AscendC: unSupported params format [fmap, weight, output]: [%s, %s, %s]. %s",

@@ -14,7 +14,7 @@
 #include "es_nn_ops.h"
 #include "graph/utils/type_utils.h"
 #include "log/log.h"
- 
+
 namespace Ops {
 using namespace NN;
 using namespace Conv;

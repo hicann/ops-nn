@@ -18,9 +18,9 @@
 #include "op_host/tiling_templates_registry.h"
 #include "register/op_def_registry.h"
 #include "../../../common/op_host/op_tiling/conv_tiling_templates_registry.h"
- 
+
 using namespace optiling::conv_ops_tiling;
- 
+
 namespace optiling {
     CONV_REGISTER_TILING_TEMPLATE(QuantConv3D, Conv3dBaseTilingV2, static_cast<int32_t>(NpuArch::DAV_3510), 0);
 

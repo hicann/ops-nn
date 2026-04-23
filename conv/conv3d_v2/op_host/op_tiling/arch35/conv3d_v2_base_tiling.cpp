@@ -172,16 +172,19 @@ ge::graphStatus Conv3dBaseTilingV2::GetShapeAttrsInfo()
     if (CheckQuantScaleDesc() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
-    if (ParseQuantDtypeLegal() !=ge::GRAPH_SUCCESS || ParseStrideLegal() != ge::GRAPH_SUCCESS || ParseDilationLegal() != ge::GRAPH_SUCCESS ||
-        ParsePadLegal() != ge::GRAPH_SUCCESS || ParseGroupLegal() != ge::GRAPH_SUCCESS || ParseQuantDataFormatLegal() !=ge::GRAPH_SUCCESS ||
-        ParseQuantOffsetXLegal() !=ge::GRAPH_SUCCESS || ParseQuantRoundModeLegal() !=ge::GRAPH_SUCCESS) {
+    if (ParseQuantDtypeLegal() != ge::GRAPH_SUCCESS || ParseStrideLegal() != ge::GRAPH_SUCCESS ||
+        ParseDilationLegal() != ge::GRAPH_SUCCESS ||
+        ParsePadLegal() != ge::GRAPH_SUCCESS || ParseGroupLegal() != ge::GRAPH_SUCCESS ||
+        ParseQuantDataFormatLegal() != ge::GRAPH_SUCCESS ||
+        ParseQuantOffsetXLegal() != ge::GRAPH_SUCCESS ||
+        ParseQuantRoundModeLegal() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
     optiling::conv_ops_tiling::InitNumBlocksConstParas(convOpsConstParams_, descInfo_, shapeInfo_);
     convBase_.ConvBaseInit(shapeInfo_, descInfo_, flagInfo_, context_);
     // hf32 judgement should after get dtype
     OP_LOGE_IF(!convBase_.GetConvParasHf32Mode(ATTR_ENABLE_HF32_INDEX, attrInfo_.hf32Mode), ge::GRAPH_FAILED,
-        context_->GetNodeName(), "%s AscendC: Update Hf32Mode failed.",paramInfo_.nodeType.c_str());
+        context_->GetNodeName(), "%s AscendC: Update Hf32Mode failed.", paramInfo_.nodeType.c_str());
 
     return ge::GRAPH_SUCCESS;
 }

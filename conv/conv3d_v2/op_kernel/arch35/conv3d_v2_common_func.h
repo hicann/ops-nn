@@ -104,7 +104,7 @@ struct Init {
                 self->ctx.singleGroupOpt = self->ctx.convTilingData->convApiTiling.singleCoreGroupOpt;
                 OptGroupCalcBL1LoadTimes<Intf>(self);
             }
-        } 
+        }
         if ASCEND_IS_AIV_CONV {
             if constexpr (Intf::groupOptFlag) {
                 OptGroupVecInit<Intf>(self);

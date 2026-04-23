@@ -16,7 +16,8 @@
  
 namespace optiling {
 namespace conv_ops_tiling {
-ge::graphStatus Conv3dBaseTilingV2::Conv3DInfoInitAndCheck() {
+ge::graphStatus Conv3dBaseTilingV2::Conv3DInfoInitAndCheck()
+{
     convBase_.ConvBaseInitAttrInfo(attrInfo_);
     convBase_.ConvBaseInitOpInfo(opInfo_);
     convBase_.updatePlatformInfoFromOpInfo();
@@ -151,7 +152,7 @@ void Conv3dBaseTilingV2::NumBlocksDecision()
 ge::graphStatus Conv3dBaseTilingV2::GetConv3dApiTiling()
 {
     Conv3dOpTilingSetShape();
-    int8_t outputOrder = flagInfo_.mSplitModeFlag ? 1: 0;
+    int8_t outputOrder = flagInfo_.mSplitModeFlag ? 1 : 0;
     conv3dApiTiling_.SetOutputOrder(outputOrder);
     conv3dApiTiling_.SetQuantConvFlag(flagInfo_.quantFlag);
     conv3dApiTiling_.SetPadding(static_cast<int64_t>(attrInfo_.padHead), static_cast<int64_t>(attrInfo_.padTail),

@@ -32,10 +32,10 @@ namespace optiling {
 namespace conv_ops_tiling {
 using conv_tiling::IterateMNOrder;
 using conv_tiling::TPosition;
-class Conv3dTilingCache : public ConvTilingCache<Ops::NN::Conv3dV2::Conv3DV2TilingData>
-{
+class Conv3dTilingCache : public ConvTilingCache<Ops::NN::Conv3dV2::Conv3DV2TilingData> {
 public:
-    static Conv3dTilingCache& GetInstance() {
+    static Conv3dTilingCache& GetInstance()
+    {
         static Conv3dTilingCache instance;
         return instance;
     }
@@ -140,7 +140,7 @@ private:
     void InitNumBlocksConstParas();
     // numBlocks decision
     void NumBlocksDecision();
-	void SetConvBase();
+    void SetConvBase();
     ge::graphStatus GetOriPadFromAttrPad();
     ge::graphStatus CheckOriPadLegal();
     ge::graphStatus GetOriPadFromPadMode();

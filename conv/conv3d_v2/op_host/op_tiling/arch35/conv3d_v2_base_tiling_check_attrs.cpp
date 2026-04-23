@@ -122,8 +122,8 @@ ge::graphStatus Conv3dBaseTilingV2::GetOriPadFromAttrPad()
     auto padPtr = context_->GetAttrs()->GetListInt(attrPadIndex);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, padPtr);
     if (padPtr->GetSize() != FORMAT_PAD_DIM) {
-        OP_LOGE(context_->GetNodeName(), "%s AscendC: input attr pad dim: %zu != %u.", paramInfo_.nodeType.c_str(), 
-                padPtr->GetSize(), FORMAT_PAD_DIM);
+        OP_LOGE(context_->GetNodeName(), "%s AscendC: input attr pad dim: %zu != %u.", paramInfo_.nodeType.c_str(),
+            padPtr->GetSize(), FORMAT_PAD_DIM);
         return ge::GRAPH_FAILED;
     }
     oriShapeAttrInfo_.oriPadHead = padPtr->GetData()[PAD_HEAD_INDEX];
@@ -170,7 +170,7 @@ ge::graphStatus Conv3dBaseTilingV2::GetOriPadFromPadMode()
     auto iter = find(PADMODE_WHITELIST.begin(), PADMODE_WHITELIST.end(), padMode);
     if (iter == PADMODE_WHITELIST.end()) {
         std::stringstream ss;
-        ss << paramInfo_.nodeType.c_str() <<" AscendC: Only support pad_mode in [VALID, SPECIFIC, SAME, SAME_UPPER, "
+        ss << paramInfo_.nodeType.c_str() << " AscendC: Only support pad_mode in [VALID, SPECIFIC, SAME, SAME_UPPER, "
             << "SAME_LOWER], actually is: " << padMode.c_str();
         OP_LOGE(context_->GetNodeName(), "%s", ss.str().c_str());
         return ge::GRAPH_FAILED;
@@ -189,7 +189,7 @@ ge::graphStatus Conv3dBaseTilingV2::GetOriPadFromPadMode()
         oriShapeAttrInfo_.oriPadRight = 0;
         return ge::GRAPH_SUCCESS;
     } else {
-        return ApplySamesPad(padMode); 
+        return ApplySamesPad(padMode);
     }
 }
 
@@ -205,7 +205,7 @@ ge::graphStatus Conv3dBaseTilingV2::ApplySamesPad(const string& padMode)
         if (padMode == "SAME") {
             padD = padD < 0 ? 0 : padD;
             padH = padH < 0 ? 0 : padH;
-            padW = padW < 0 ? 0 : padW;                
+            padW = padW < 0 ? 0 : padW;
         }
         oriShapeAttrInfo_.oriPadTail = ConvCeilDiv(padD, PAD_MODE_DIV_FACTOR);
         oriShapeAttrInfo_.oriPadHead = padD - oriShapeAttrInfo_.oriPadTail;
@@ -220,7 +220,7 @@ ge::graphStatus Conv3dBaseTilingV2::ApplySamesPad(const string& padMode)
         oriShapeAttrInfo_.oriPadTop = ConvCeilDiv(padH, PAD_MODE_DIV_FACTOR);
         oriShapeAttrInfo_.oriPadBottom = padH - oriShapeAttrInfo_.oriPadTop;
         oriShapeAttrInfo_.oriPadLeft = ConvCeilDiv(padW, PAD_MODE_DIV_FACTOR);
-        oriShapeAttrInfo_.oriPadRight = padW - oriShapeAttrInfo_.oriPadLeft;                    
+        oriShapeAttrInfo_.oriPadRight = padW - oriShapeAttrInfo_.oriPadLeft;
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -234,7 +234,7 @@ ge::graphStatus Conv3dBaseTilingV2::ParsePadLegal()
         "%s AscendC: GetOriPadFromPadMode Failed.", paramInfo_.nodeType.c_str());
 
     if (CheckOriPadLegal() != ge::GRAPH_SUCCESS) {
-        return ge::GRAPH_FAILED; 
+        return ge::GRAPH_FAILED;
     }
 
     attrInfo_.padHead = static_cast<uint64_t>(oriShapeAttrInfo_.oriPadHead);
@@ -307,7 +307,7 @@ ge::graphStatus Conv3dBaseTilingV2::ParseQuantOffsetXLegal()
                 paramInfo_.nodeType.c_str(), OFFSET_X_MIN_VALUE, OFFSET_X_MAX_VALUE, oriShapeAttrInfo_.oriOffsetX);
         return ge::GRAPH_FAILED;
     }
-    attrInfo_.offsetx = static_cast<int32_t>(oriShapeAttrInfo_.oriOffsetX);   
+    attrInfo_.offsetx = static_cast<int32_t>(oriShapeAttrInfo_.oriOffsetX);
     return ge::GRAPH_SUCCESS;
 }
 

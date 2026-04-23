@@ -108,11 +108,11 @@ uint64_t Conv3dV2BaseTilingKey::GetWeightTilingVal()
     if (tilingData_.convApiTiling.kBL1 == weightKSize) {
         kBL1FullloadFlag = true;
     }
- 
+
     if (tilingData_.convApiTiling.nBL1 == singleCoreNSize) {
         nBL1FullloadFlag = true;
     }
- 
+
     if (kBL1FullloadFlag && nBL1FullloadFlag) {
         return FULLLOAD_BL1;
     }
@@ -123,7 +123,6 @@ uint64_t Conv3dV2BaseTilingKey::GetWeightTilingVal()
     return WEIGHT_OTHER;
 }
 
- 
 uint64_t Conv3dV2BaseTilingKey::GetL1PingPongVal()
 {
     uint64_t l1PingPong = static_cast<uint64_t>(tilingData_.convApiTiling.pBufferFlag & 0x18) >> L1_PB_OFFSET;
@@ -169,7 +168,8 @@ void Conv3dV2BaseTilingKey::ReSetTilingKeyPara(ConvTilingKeyPara& tilingKeyPara)
     }
 }
 
-void Conv3dV2BaseTilingKey::GetTemplateTilingKey(ConvTilingKeyPara& tilingKeyPara) {
+void Conv3dV2BaseTilingKey::GetTemplateTilingKey(ConvTilingKeyPara& tilingKeyPara)
+{
     tilingKeyPara.fmpTiling = GetFmpTilingVal();
     tilingKeyPara.weightTiling = GetWeightTilingVal();
     tilingKeyPara.l1PingPong = GetL1PingPongVal();

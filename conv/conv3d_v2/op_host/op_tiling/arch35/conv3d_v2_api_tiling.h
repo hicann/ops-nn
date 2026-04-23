@@ -30,8 +30,8 @@ public:
     ~Conv3dTiling() override {};
     int64_t GetTiling(Ops::NN::Conv3dV2::TConv3DTiling &tiling);
     int64_t Compute() override;
-    int64_t GetTilingData(optiling::conv_ops_tiling::ConvAscendcAttrInfo convAttrInfo, 
-                          optiling::conv_ops_tiling::ConvAscendcDescInfo convDescInfo, 
+    int64_t GetTilingData(optiling::conv_ops_tiling::ConvAscendcAttrInfo convAttrInfo,
+                          optiling::conv_ops_tiling::ConvAscendcDescInfo convDescInfo,
                           optiling::conv_ops_tiling::ConvAscendcTilingFlag flagInfo,
                           optiling::conv_ops_tiling::ConvAscendcShapesInfo convShapeInfo,
                           optiling::conv_ops_tiling::ConvOpsConstParams convOpsConstParams,
