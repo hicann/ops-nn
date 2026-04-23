@@ -16,7 +16,8 @@
 
 #include "ascendc/host_api/tiling/template_argument.h"
 
-#if defined(ORIG_DTYPE_X1) && defined(ORIG_DTYPE_X2) && defined(DT_INT4) && \
+#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 5102) && \
+    defined(ORIG_DTYPE_X1) && defined(ORIG_DTYPE_X2) && defined(DT_INT4) && \
     ORIG_DTYPE_X1 == DT_INT4 && ORIG_DTYPE_X2 == DT_INT4
 #define IS_A4W4I
 #undef DTYPE_X1
