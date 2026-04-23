@@ -179,7 +179,7 @@ aclnnStatus aclnnIndexPutImpl(
       <tr>
       <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="3">161002</td>
-      <td>selfRef和values的数据类型不在支持的范围之内。</td>
+      <td>selfRef、values、indices的数据类型不在支持的范围之内。</td>
       </tr>
       <tr>
       <td>selfRef和values数据类型不同。</td>

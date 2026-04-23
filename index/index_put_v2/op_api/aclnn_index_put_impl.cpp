@@ -134,6 +134,7 @@ static bool CheckNotNull(const aclTensor *self,
 }
 
 static bool CheckDtypeValid(const aclTensor *self,
+                            const aclTensorList* indices,
                             const aclTensor *value)
 {
   if (op::GetCurrentPlatformInfo().GetSocVersion() < op::SocVersion::ASCEND910B) {
@@ -149,6 +150,12 @@ static bool CheckDtypeValid(const aclTensor *self,
   // 检查self的数据类型是否在IndexPut算子的支持列表内
   OP_CHECK_DTYPE_NOT_SUPPORT(self, DTYPE_SUPPORT_LIST, return false);
   OP_CHECK_DTYPE_NOT_SUPPORT(value, DTYPE_SUPPORT_LIST, return false);
+  // 检查indices的数据类型是否在支持列表内
+  for (size_t i = 0; i < indices->Size(); i++) {
+      if ((*indices)[i]->GetViewShape().GetShapeSize() != 0) {
+          OP_CHECK_DTYPE_NOT_SUPPORT((*indices)[i], INDICES_DTYPE_SUPPORT_LIST, return false);
+      }
+  }
   return true;
 }
 
@@ -367,7 +374,7 @@ static aclnnStatus CheckParams(const aclTensor *selfRef, const aclTensorList *in
   CHECK_RET(CheckNotNull(selfRef, indices, values), ACLNN_ERR_PARAM_NULLPTR);
 
   // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
-  CHECK_RET(CheckDtypeValid(selfRef, values), ACLNN_ERR_PARAM_INVALID);
+  CHECK_RET(CheckDtypeValid(selfRef, indices, values), ACLNN_ERR_PARAM_INVALID);
 
   // 3. 检查selfRef和other能否做数据类型推导以及推导的数据类型能否转换为输出数据类型
   CHECK_RET(CheckDtypeEqual(selfRef, values), ACLNN_ERR_PARAM_INVALID);
