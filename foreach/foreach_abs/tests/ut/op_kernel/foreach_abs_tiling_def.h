@@ -34,6 +34,25 @@ struct ForeachCommonTilingData {
     int64_t tensorEndOffsetList[MAX_CORE_CONT] = {0};
 };
 
+struct ForeachSoloTilingDataRegbase {
+    uint32_t inputsTensorUbSize;
+    int64_t tensorDataCountList[50];
+    uint16_t tensorStartList[80];
+    uint16_t tensorEndList[80];
+    int64_t tensorStartOffsetList[80];
+    int64_t tensorEndOffsetList[80];
+};
+
+template <typename T>
+inline void InitSoloTilingData(uint8_t* tiling, T* const_data)
+{
+    memcpy(const_data, tiling, sizeof(T));
+};
+
+#define GET_TILING_DATA_WITH_STRUCT(tiling_struct, tiling_data, tiling_arg) \
+    tiling_struct tiling_data;                                              \
+    InitSoloTilingData(tiling_arg, &tiling_data)
+
 inline __aicore__ int32_t AlignDiv32(int32_t n) {
     return ((n + 31) & ~31) / 32;
 }

@@ -65,6 +65,42 @@ uint8_t* CreateTensorListForeachDivScalar(const std::vector<std::vector<uint64_t
 }
 
 template <typename T>
+uint8_t* CreateListTensorForeachDivScalar(const std::vector<std::vector<uint64_t>>& shapeInfos, char* d_type) {
+    if (shapeInfos.empty()) return nullptr;
+    uint32_t N = shapeInfos.size();
+    uint32_t totalShapeCount = 0;
+    for (const auto& s : shapeInfos) totalShapeCount += s.size();
+
+    uint32_t descAreaSize = 1 + N + totalShapeCount;
+    uint32_t totalUint64Count = descAreaSize + N;
+    uint64_t* tensorListDesc = (uint64_t*)AscendC::GmAlloc(totalUint64Count * sizeof(uint64_t));
+    uint64_t dataPtrOffset = descAreaSize * sizeof(uint64_t);
+    *tensorListDesc = dataPtrOffset;
+
+    uint64_t* descPtr = tensorListDesc + 1;
+    for (uint32_t i = 0; i < N; ++i) {
+        uint32_t dim = shapeInfos[i].size();
+        *descPtr++ = ((uint64_t)i << 32) | dim;
+        for (uint64_t shapeVal : shapeInfos[i]) {
+            *descPtr++ = shapeVal;
+        }
+    }
+    uint64_t* dataPtrArray = descPtr;
+
+    for (uint32_t i = 0; i < N; ++i) {
+        uint64_t shapeSize = 1;
+        for (uint64_t s : shapeInfos[i]) shapeSize *= s;
+        uint64_t dataSize = shapeSize * sizeof(T);
+        uint8_t* dataPtr = (uint8_t*)AscendC::GmAlloc(CeilA2B(dataSize, 32) * 32);
+        std::stringstream fileName;
+        fileName << "./div_scalar_data/" << d_type << "_input_t_foreach_div" << i << ".bin";
+        ReadFile(fileName.str(), dataSize, dataPtr, dataSize);
+        dataPtrArray[i] = (uint64_t)dataPtr;
+    }
+    return (uint8_t*)tensorListDesc;
+}
+
+template <typename T>
 void FreeTensorListForeachDivScalar(uint8_t* addr, const std::vector<std::vector<uint64_t>>& shapeInfos, char* d_type) {
     uint64_t dataPtrOffset = *((uint64_t*)addr);
     uint8_t* dataAddr = addr + dataPtrOffset;
