@@ -818,11 +818,12 @@ bool QuantMatmulChecker::CheckBiasShape(const std::vector<int64_t> &batchRecord,
     }
     auto biasFirstDim = bias_->GetViewShape().GetDim(0);
     if (biasDimNum == 1) {
-        OP_CHECK(biasFirstDim == x2NDim_,
-                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The size of bias's 1st dimension should be equal to the size of \
-    x2's n dimension %ld, but it is %ld.",
-                         x2NDim_, biasFirstDim),
-                 return false);
+        OP_CHECK(
+            biasFirstDim == x2NDim_,
+            OP_LOGE(
+                ACLNN_ERR_PARAM_INVALID, "The size of bias's 1st dimension should be equal to the size of x2's n dimension %ld, but it is %ld.",
+                x2NDim_, biasFirstDim),
+            return false);
         return true;
     }
     auto biasSecondDim = bias_->GetViewShape().GetDim(1);
@@ -830,26 +831,33 @@ bool QuantMatmulChecker::CheckBiasShape(const std::vector<int64_t> &batchRecord,
     auto biasThirdDim = bias_->GetViewShape().GetDim(2);
     // output batch need to be only 1 dim when bias dim is 3
     if (batchRecord.size() != 1) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "When bias's dimension is 3, infered out batch dimension should be 1, but infered out batch \
-dimension is %zu.",
-                batchRecord.size());
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID,
+            "When bias's dimension is 3, inferred out batch dimension should be 1, but inferred out batch dimension is %zu.",
+            batchRecord.size());
         return false;
     }
-    OP_CHECK(biasSecondDim == 1,
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The size of bias's 2nd dimension should be equal to 1, \
-but it is %ld.",
-                     biasSecondDim),
-             return false);
-    OP_CHECK(biasThirdDim == x2NDim_,
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The size of bias's last dimension should be equal to the size of x2's \
-n dimension %ld, but actually is %ld.",
-                     x2NDim_, biasThirdDim), return false);
-    OP_CHECK(biasFirstDim == inferedOutbatchValue,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "The size of bias's 1st dimension should be equal to the size of out batch dimension, \
-but it is %ld and infered out batch dimension's size is %ld.",
-                biasFirstDim, inferedOutbatchValue), return false);
+    OP_CHECK(
+        biasSecondDim == 1,
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID, "The size of bias's 2nd dimension should be equal to 1, but it is %ld.",
+            biasSecondDim),
+        return false);
+    OP_CHECK(
+        biasThirdDim == x2NDim_,
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID,
+            "The size of bias's last dimension should be equal to the size of x2's n dimension %ld, but actually is %ld.",
+            x2NDim_, biasThirdDim),
+        return false);
+    OP_CHECK(
+        biasFirstDim == inferedOutbatchValue,
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID,
+            "The size of bias's 1st dimension should be equal to the size of out batch dimension, but it is %ld and "
+            "infered out batch dimension's size is %ld.",
+            biasFirstDim, inferedOutbatchValue),
+        return false);
     return true;
 }
 

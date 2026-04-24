@@ -124,13 +124,9 @@ static inline bool isA8W4Int(const aclTensor* x1, const aclTensor* x2)
            (x2->GetDataType() == op::DataType::DT_INT4 || x2->GetDataType() == op::DataType::DT_INT32);
 }
 
-static inline bool isMxNz(const aclTensor* x1, const aclTensor* x2, const aclTensor* scale)
+static inline bool isMx(const aclTensor* scale)
 {
-    return scale->GetDataType() == op::DataType::DT_FLOAT8_E8M0 &&
-           ((x1->GetDataType() == op::DataType::DT_FLOAT8_E4M3FN &&
-             x2->GetDataType() == op::DataType::DT_FLOAT8_E4M3FN) ||
-            (x1->GetDataType() == op::DataType::DT_FLOAT4_E2M1 &&
-             x2->GetDataType() == op::DataType::DT_FLOAT4_E2M1));
+    return scale->GetDataType() == op::DataType::DT_FLOAT8_E8M0;
 }
 
 static inline bool isA8W4Msd(const aclTensor* x1, const aclTensor* x2, const aclTensor* scale,
@@ -512,7 +508,7 @@ static inline bool CheckDimRange(const aclTensor *x1, const aclTensor *x2, const
     OP_CHECK_MIN_DIM(out, MIN_DIM_NUM_ND, return false);
     OP_CHECK_MAX_DIM(x1, MAX_DIM_NUM_ND, return false);
     OP_CHECK_MAX_DIM(out, MAX_DIM_NUM_ND, return false);
-    size_t expectScaleDim = isMxNz(x1, x2, scale) ? MX_SCALE_DIM_NUM : 1;
+    size_t expectScaleDim = isMx(scale) ? MX_SCALE_DIM_NUM : 1;
     OP_CHECK_WRONG_DIMENSION(scale, expectScaleDim, return false);
     OP_LOGD("QuantMatmul check dim-num range success");
     return true;
@@ -1065,7 +1061,7 @@ static aclnnStatus CheckParamsDAV3510(TupleTensor mandatoryTensors, TupleOptiona
 
     int64_t groupSizeReal = groupSize;
     auto& scale = std::get<INDEX_SCALE_IN_MANDTORY_TUPLE>(mandatoryTensors);
-    if (isMxNz(x1, x2, scale)) {
+    if (isMx(scale)) {
         QuantMatmulChecker qmmV3Checker(inputTensors, quantTensors, boolsTrans, out);
         qmmV3Checker.Init();
         CHECK_RET(qmmV3Checker.InferGroupSize(groupSizeReal), ACLNN_ERR_PARAM_INVALID);
@@ -1937,7 +1933,7 @@ bool checkNotSupportParam(
         return false;
     }
 
-    if (!(isA8W4Float(x1, x2) || isMxNz(x1, x2, scale))) {
+    if (!(isA8W4Float(x1, x2) || isMx(scale))) {
         if (yScale != nullptr && yScale->GetViewShape().GetShapeSize() != 0) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Current version do not support yScale.");
             return false;
