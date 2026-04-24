@@ -128,7 +128,7 @@ __aicore__ inline void DataCopyCustom(const U& dstTensor, const R& srcTensor, co
             }
             SetFlag<HardEvent::S_MTE3>(EVENT_ID0);
             WaitFlag<HardEvent::S_MTE3>(EVENT_ID0);
-            DataCopy(dstTensor[count - numPerBlock], srcTensor, numPerBlock);
+            DataCopy(dstTensor[count - customNumPerBlock], srcTensor, customNumPerBlock);
         }
     }
 #endif
