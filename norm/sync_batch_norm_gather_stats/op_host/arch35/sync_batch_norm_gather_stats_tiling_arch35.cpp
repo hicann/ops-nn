@@ -394,7 +394,6 @@ bool SyncBatchNormGatherStatsTiling::ValidateInputDtypes()
     if ((totalSumDType_ != totalSquareSumDType_) ||
         (totalSquareSumDType_ != meanDType_) ||
         (meanDType_ != varDType_)) {
-
         std::string dtypeMsg = ge::TypeUtils::DataTypeToSerialString(totalSumDType_) + ", " +
                                ge::TypeUtils::DataTypeToSerialString(totalSquareSumDType_) + ", " +
                                ge::TypeUtils::DataTypeToSerialString(meanDType_) + " and " +
@@ -414,7 +413,6 @@ bool SyncBatchNormGatherStatsTiling::ValidateOutputDtypes()
         (batchMeanDType_ != runningMeanDType_) ||
         (batchMeanDType_ != runningVarDType_) ||
         (batchMeanDType_ != meanDType_)) {
-
         std::string dtypeMsg = ge::TypeUtils::DataTypeToSerialString(batchMeanDType_) + ", " +
                                ge::TypeUtils::DataTypeToSerialString(batchInvStdDType_) + ", " +
                                ge::TypeUtils::DataTypeToSerialString(runningMeanDType_) + " and " +
@@ -435,7 +433,6 @@ bool SyncBatchNormGatherStatsTiling::ValidateInputDimensions()
         (totalSumDim1_ != totalSquareSumDim1_) ||
         (totalSumDim1_ != meanDim0_) ||
         (totalSumDim1_ != varDim0_)) {
-
         std::string shapeMsg = Ops::Base::ToString(totalSumShape_) + ", " +
                                Ops::Base::ToString(totalSquareSumShape_) +
                                ", " + Ops::Base::ToString(sampleCountShape_) + ", " +
@@ -459,7 +456,6 @@ bool SyncBatchNormGatherStatsTiling::ValidateOutputDimensions()
         (batchMeanDim0_ != runningMeanDim0_) ||
         (batchMeanDim0_ != runningVarDim0_) ||
         (batchMeanDim0_ != meanDim0_)) {
-
         std::string shapeMsg = Ops::Base::ToString(batchMeanShape_) + ", " +
                                Ops::Base::ToString(batchInvStdShape_) +
                                ", " + Ops::Base::ToString(runningMeanShape_) + " and " +
@@ -591,7 +587,7 @@ ge::graphStatus SyncBatchNormGatherStatsTiling::DoNNotFullLoadTiling()
         if (dTypeSize == CONST_FOUR) {
             cTileNum = (ubSize_ - blockSize_ * CONST_THREE - CONST_TWO * nTileNum * CONST_FOUR - 
                 nTileNum * CONST_FOUR * CONST_TWO - (cacheBufferCount+1) * blockSize_) / 
-                (dTypeSize * ((4 * nTileNum) + (cacheBufferCount+CONST_TWO) + CONST_FOUR * CONST_TWO));
+                (dTypeSize * ((CONST_FOUR * nTileNum) + (cacheBufferCount+CONST_TWO) + CONST_FOUR * CONST_TWO));
         } else if (dTypeSize == CONST_TWO) {
             cTileNum = (ubSize_ - blockSize_ * CONST_THREE - CONST_TWO * nTileNum * CONST_FOUR - 
                 nTileNum * CONST_FOUR * CONST_TWO - (cacheBufferCount+1) * blockSize_) / 
@@ -665,7 +661,6 @@ ge::graphStatus SyncBatchNormGatherStatsTiling::DoOpTiling()
             (INPUT_SIZE_TYPE16 + BIG_INPUT_SIZE_TYPE16 * nLen);
     }
     cTileNum_ = cTileNum_ / (ALIGN_DIM_LEN_LINE / dTypeSize) * (ALIGN_DIM_LEN_LINE / dTypeSize);
-
 
     if (cTileNum_ <= 0 || cTileNum_ * dTypeSize < ALIGN_FACTOR_BASE_BYTE_LEN) {
         cTileNum_ = 0;
