@@ -13,6 +13,7 @@
  * \brief
  */
 #include "register/op_impl_registry.h"
+#include <cmath>
 #include <graph/utils/type_utils.h>
 #include "tiling/tiling_api.h"
 #include "platform/platform_ascendc.h"
@@ -160,10 +161,10 @@ ge::graphStatus SmoothL1LossV2Tiling::RunTiling(const SmoothL1LossV2CompileInfo*
     const string reductionStr = string(attrs->GetAttrPointer<char>(1));
     float sigma = (sigmaPtr == nullptr) ? 1.0 : *sigmaPtr;
     OP_CHECK_IF(
-        sigma <= 0, OP_LOGE(tilingContext->GetNodeName(), "the value of sigma must be positive number."),
+        sigma < 0, OP_LOGE(tilingContext->GetNodeName(), "the value of sigma must be non-negative."),
         return ge::GRAPH_FAILED);
     tiling->Sigma = sigma;
-    tiling->MultiplyValue = 1 / sigma;
+    tiling->MultiplyValue = fabsf(sigma) < 1e-6f ? 0.0 : 1 / sigma;
     tiling->AddsValue = NEGTIVE_CONST_HALF * sigma;
     auto iter = STR_2_INT.find(reductionStr);
     OP_CHECK_IF(

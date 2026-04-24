@@ -15,6 +15,7 @@
 
 #include <graph/utils/type_utils.h>
 #include <map>
+#include <cmath>
 #include "atvoss/broadcast/broadcast_tiling.h"
 #include "op_host/tiling_templates_registry.h"
 #include "smooth_l1_loss_grad_v2_tiling_base.h"
@@ -132,11 +133,11 @@ ge::graphStatus SmoothL1LossGradV2TilingClass::CalcSigma()
  
     const float* sigmaPtr = attrs->GetAttrPointer<float>(0);
     this->sigma = (sigmaPtr == nullptr) ? 1.0 : *sigmaPtr;
-    OP_CHECK_IF(this->sigma <= 0,
-        OP_LOGE(context_->GetNodeName(), "the value must be non-negtive."),
+    OP_CHECK_IF(this->sigma < 0,
+        OP_LOGE(context_->GetNodeName(), "the value must be non-negative."),
         return ge::GRAPH_FAILED);
     this->negSigma = NEGTIVE_ONE * this->sigma;
-    this->invertSigma = 1 / this->sigma;
+    this->invertSigma = fabsf(this->sigma) < 1e-6f ? NAN : 1 / this->sigma;
     OP_LOGD(context_->GetNodeName(), "[TilingData] : sigma = %f, negSigma = %f, invertSigma = %f", 
             this->sigma, this->negSigma, this->invertSigma);
     return ge::GRAPH_SUCCESS;

@@ -22,6 +22,7 @@
 namespace SmoothL1LossGradV2Op {
     using namespace AscendC;
     constexpr int COMPARE_MODE_LT = 0;
+    constexpr int COMPARE_MODE_GT = 1;
     constexpr int COMPARE_MODE_LE = 3;
     constexpr int COMPARE_MODE_GE = 4;
     constexpr int SELECT_SCALAR = 1;
@@ -61,14 +62,14 @@ namespace SmoothL1LossGradV2Op {
         using OpXAbs = Ops::Base::Bind<Ops::Base::Vec::Abs<PromteT>, OpX>;
         using OpXInvertSigma = Ops::Base::Bind<Ops::Base::Vec::Muls<PromteT>, OpX, Ops::Base::Placeholder::Var<PromteT, SCALAR_INVERT_SIGMA_IDX>>;
         
-        using OpCommpareNeg = Ops::Base::Bind<Ops::Base::Vec::Compare<uint8_t, PromteT, COMPARE_MODE_LE>, OpX, Ops::Base::Placeholder::Var<PromteT, SCALAR_NEG_SIGMA_IDX>>;
-        using OpCommparePos = Ops::Base::Bind<Ops::Base::Vec::Compare<uint8_t, PromteT, COMPARE_MODE_GE>, OpX, Ops::Base::Placeholder::Var<PromteT, SCALAR_SIGMA_IDX>>;
-        using OpCommpareX = Ops::Base::Bind<Ops::Base::Vec::Compare<uint8_t, PromteT, COMPARE_MODE_GE>, OpXAbs, Ops::Base::Placeholder::Var<PromteT, SCALAR_SIGMA_IDX>>;
+        using OpCommpareNeg = Ops::Base::Bind<Ops::Base::Vec::Compare<uint8_t, PromteT, COMPARE_MODE_LT>, OpX, Ops::Base::Placeholder::Var<PromteT, SCALAR_NEG_SIGMA_IDX>>;
+        using OpCommparePos = Ops::Base::Bind<Ops::Base::Vec::Compare<uint8_t, PromteT, COMPARE_MODE_GT>, OpX, Ops::Base::Placeholder::Var<PromteT, SCALAR_SIGMA_IDX>>;
+        using OpCommpareX = Ops::Base::Bind<Ops::Base::Vec::Compare<uint8_t, PromteT, COMPARE_MODE_GT>, OpXAbs, Ops::Base::Placeholder::Var<PromteT, SCALAR_SIGMA_IDX>>;
         // x > sigma ? 1.0 : 0.0
         using OpSelectPos = Ops::Base::Bind<Ops::Base::Vec::Select<uint8_t, PromteT, SELECT_SCALAR>, OpCommparePos, ConstValueOne, OpZeroTensor>;
         // x < -sigma ? -1.0 : 0.0
         using OpSelectNeg = Ops::Base::Bind<Ops::Base::Vec::Select<uint8_t, PromteT, SELECT_SCALAR>, OpCommpareNeg, ConstValueNegOne, OpZeroTensor>;
-        // |x| >= sigma ? 0.0 : (predict-latbel) / beta
+        // |x| > sigma ? 0.0 : (predict-latbel) / beta
         using OpSelectX = Ops::Base::Bind<Ops::Base::Vec::Select<uint8_t, PromteT, SELECT_SCALAR>, OpCommpareX, ConstValueZero, OpXInvertSigma>;
 
         using OpAddPosNeg = Ops::Base::Bind<Ops::Base::Vec::Add<PromteT>, OpSelectPos, OpSelectNeg>; 
