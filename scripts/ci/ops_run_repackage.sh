@@ -212,7 +212,7 @@ if [[ ${#kernel_run_files[@]} -gt 0 ]]; then
                 cp "$json_file" "$TARGET_CONFIG_DIR/${json_name}_${base_name}.json"
             done
             
-            cp -rf "$kernel_src_dir"/* "$TARGET_KERNEL_DIR"/ 2>/dev/null || true
+            rsync -au "$kernel_src_dir/" "$TARGET_KERNEL_DIR/" 2>> "$PROCESS_ERROR_FILE"
             
             echo >&8
             exit 0
