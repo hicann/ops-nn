@@ -377,8 +377,8 @@ static void SetChunkWorkspace(
         }
         tiling.set_chunk_size(chunk_size);
         // Calculate chunk_num and chunk_tail
-        uint32_t chunk_num = (col_val_align + chunk_size - 1) / chunk_size;
-        uint32_t chunk_tail = col_val_align - (chunk_num - 1) * chunk_size;
+        uint32_t chunk_num = (col_val + chunk_size - 1) / chunk_size;
+        uint32_t chunk_tail = col_val - (chunk_num - 1) * chunk_size;
         tiling.set_chunk_num(chunk_num);
         tiling.set_chunk_tail(chunk_tail);
     }
