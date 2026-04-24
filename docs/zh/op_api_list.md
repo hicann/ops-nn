@@ -215,7 +215,7 @@
 | [aclnnHardshrink](../../activation/hard_shrink/docs/aclnnHardshrink.md) | 以元素为单位，强制收缩λ范围内的元素。 | 默认确定性实现 | - |
 | [aclnnGroupNorm](../../norm/group_norm/docs/aclnnGroupNorm.md) | 计算输入self的组归一化结果out，均值meanOut，标准差的倒数rstdOut。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnGroupNormBackward](../../norm/group_norm_grad/docs/aclnnGroupNormBackward.md) | [aclnnGroupNorm](../../norm/group_norm/docs/aclnnGroupNorm.md)的反向计算。用于计算输入张量的梯度，以便在反向传播过程中更新模型参数。 | 默认非确定性实现，支持配置开启 | 默认确定性实现 |
-| [aclnnGroupNormSilu](../../norm/group_norm_silu/docs/aclnnGroupNormSilu.md)|计算输入self的组归一化结果groupnormOut，均值meanOut，标准差的倒数rstdOut，将groupnormOut进行silu运算得到最终的输出out。|默认确定性实现|
+| [aclnnGroupNormSilu](../../norm/group_norm_silu/docs/aclnnGroupNormSilu.md)|计算输入self的组归一化结果groupnormOut，均值meanOut，标准差的倒数rstdOut，将groupnormOut进行silu运算得到最终的输出out。|默认确定性实现|默认确定性实现|
 | [aclnnGroupNormSiluV2](../../norm/group_norm_silu/docs/aclnnGroupNormSiluV2.md) | 计算输入self的组归一化结果out，均值meanOut，标准差的倒数rstdOut，以及silu的输出。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnGroupNormSiluQuant](../../norm/group_norm_silu_quant/docs/aclnnGroupNormSiluQuant.md) | 计算输入self的组归一化，均值meanOut，标准差的倒数rstdOut，以及对silu的输出进行量化的结果out。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnGroupNormSwish](../../norm/group_norm_swish/docs/aclnnGroupNormSwish.md) | 计算输入x的组归一化结果out，均值meanOut，标准差的倒数rstdOut，以及swish的输出。 | 默认确定性实现 | - |
