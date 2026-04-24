@@ -323,10 +323,12 @@ ge::graphStatus CTCLossV2GradTiling4AscendC::Init()
     const auto* blankPtr = attrs->GetAttrPointer<int64_t>(ATTR_BLANK_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, blankPtr);
     BLANK = *blankPtr;
-    OP_CHECK_IF(
-        BLANK < 0 || BLANK >= symbolSet,
-        OP_LOGE(context_->GetNodeName(), "BLANK is out of the range, please input the right value."),
-        return ge::GRAPH_FAILED);
+    if (BLANK < 0 || BLANK >= symbolSet) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context_->GetNodeName(), "blank", std::to_string(BLANK).c_str(),
+            "it should be in range from 0 to C dimension num(the third dim of log_probs)");
+        return ge::GRAPH_FAILED;
+    }
     const auto* zeroInfinityPtr = attrs->GetAttrPointer<bool>(ATTR_ZERO_INFINITY_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, zeroInfinityPtr);
     zeroInfinity = (*zeroInfinityPtr) ? 1 : 0;
@@ -340,7 +342,9 @@ bool CTCLossV2GradTiling4AscendC::InitGrad()
     auto const gradStorageShape = gradShape->GetStorageShape();
     OP_CHECK_IF(
         gradStorageShape.GetDimNum() != GRAD_DIM_NUM,
-        OP_LOGE(context_->GetNodeName(), "Check grad shape failed, the dims of grad not equal 3."), return false);
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "grad",
+            std::to_string(gradStorageShape.GetDimNum()).c_str(), "3"),
+        return false);
     gradN = gradStorageShape.GetDim(N_DIM);
     gradT = gradStorageShape.GetDim(T_DIM);
     gradC = gradStorageShape.GetDim(C_DIM);
@@ -354,7 +358,8 @@ bool CTCLossV2GradTiling4AscendC::InitLogAlpha()
     auto const logAlphaShapeVal = logAlphaShape->GetStorageShape();
     OP_CHECK_IF(
         logAlphaShapeVal.GetDimNum() != LOG_ALPHA_DIM_NUM,
-        OP_LOGE(context_->GetNodeName(), "Check log_alpha shape failed, the dims of log_alpha not equal 3."),
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "log_alpha",
+            std::to_string(logAlphaShapeVal.GetDimNum()).c_str(), "3"),
         return false);
     logAlphaN = logAlphaShapeVal.GetDim(BATCH_DIM);
     logAlphaT = logAlphaShapeVal.GetDim(ALPHA_T_DIM);
@@ -370,9 +375,8 @@ bool CTCLossV2GradTiling4AscendC::InitNegLogLikelihood()
     auto const lossShapeVal = lossShape->GetStorageShape();
     OP_CHECK_IF(
         lossShapeVal.GetDimNum() != LOSS_DIM_NUM,
-        OP_LOGE(
-            context_->GetNodeName(),
-            "Check neg_log_likelihood shape failed, the dims of neg_log_likelihood not equal 1."),
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "neg_log_likelihood",
+            std::to_string(lossShapeVal.GetDimNum()).c_str(), "1"),
         return false);
     lossN = lossShapeVal.GetDim(BATCH_DIM);
     return true;
@@ -385,7 +389,8 @@ bool CTCLossV2GradTiling4AscendC::InitTargetLengths()
     auto const targetLengthsStorageShape = targetLengthsShape->GetStorageShape();
     OP_CHECK_IF(
         targetLengthsStorageShape.GetDimNum() != TARGET_LENGTHS_DIM_NUM,
-        OP_LOGE(context_->GetNodeName(), "Check target_lengths shape failed, the dims of target_lengths not equal 1."),
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "target_lengths",
+            std::to_string(targetLengthsStorageShape.GetDimNum()).c_str(), "1"),
         return false);
     targetLengthsN = targetLengthsStorageShape.GetDim(TARGET_LENGTHS_N_DIM_INDEX);
     return true;
@@ -398,7 +403,8 @@ bool CTCLossV2GradTiling4AscendC::InitInputLengths()
     auto const inputLengthsStorageShape = inputLengthsShape->GetStorageShape();
     OP_CHECK_IF(
         inputLengthsStorageShape.GetDimNum() != INPUT_LENGTHS_DIM_NUM,
-        OP_LOGE(context_->GetNodeName(), "Check input_lengths shape failed, the dims of input_lengths not equal 1."),
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "input_lengths",
+            std::to_string(inputLengthsStorageShape.GetDimNum()).c_str(), "1"),
         return false);
     inputLengthsN = inputLengthsStorageShape.GetDim(INPUT_LENGTHS_N_DIM_INDEX);
     return true;
@@ -412,7 +418,8 @@ bool CTCLossV2GradTiling4AscendC::InitTargets()
     targetsDimNum = targetsStorageShape.GetDimNum();
     OP_CHECK_IF(
         targetsDimNum != TARGETS_DIM_NUM_ONE && targetsDimNum != TARGETS_DIM_NUM_TWO,
-        OP_LOGE(context_->GetNodeName(), "Check targets shape failed, the dims of targets not equal 1 or 2."),
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "targets",
+            std::to_string(targetsStorageShape.GetDimNum()).c_str(), "1 or 2"),
         return false);
     targetsN = targetsNum = targetsStorageShape.GetDim(TARGETS_N_DIM_INDEX);
     if (targetsDimNum > TARGETS_DIM_NUM_ONE) {
@@ -429,7 +436,8 @@ bool CTCLossV2GradTiling4AscendC::InitParamLogProbs()
     auto const logProbsStorageShape = logProbsShape->GetStorageShape();
     OP_CHECK_IF(
         logProbsStorageShape.GetDimNum() != GRAD_DIM_NUM,
-        OP_LOGE(context_->GetNodeName(), "Check log_probs shape failed, the dims of log_probs not equal 3."),
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "log_probs",
+            std::to_string(logProbsStorageShape.GetDimNum()).c_str(), "3"),
         return false);
     maxInputLength = logProbsStorageShape.GetDim(T_DIM);
     batchSize = logProbsStorageShape.GetDim(N_DIM);
@@ -444,7 +452,8 @@ bool CTCLossV2GradTiling4AscendC::InitParmaGradOut()
     auto const gradOutStoreShape = gradOutShape->GetStorageShape();
     OP_CHECK_IF(
         gradOutStoreShape.GetDimNum() != GRAD_OUT_DIM_NUM,
-        OP_LOGE(context_->GetNodeName(), "Check grad_out shape failed, the dims of grad_out not equal 1."),
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "grad_out",
+            std::to_string(gradOutStoreShape.GetDimNum()).c_str(), "1"),
         return false);
     gradOutN = gradOutStoreShape.GetDim(GRAD_OUT_DIM_INDEX);
     return true;

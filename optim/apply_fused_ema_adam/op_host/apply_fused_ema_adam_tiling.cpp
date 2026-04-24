@@ -137,16 +137,30 @@ static ge::graphStatus CheckInputDtype(gert::TilingContext* context)
 
     bool isDiffDtype =
         (gradDtype != varDtype) || (gradDtype != mDtype) || (gradDtype != vDtype) || (gradDtype != sDtype);
-    OP_CHECK_IF(
-        isDiffDtype, OP_LOGE(nodeName, "Input grad, var, m, v, s should keep same dtype."), return ge::GRAPH_FAILED);
+    if (isDiffDtype) {
+        std::string dtypeMsg = Ops::Base::ToString(gradDtype) + ", " +
+                               Ops::Base::ToString(varDtype) + ", " +
+                               Ops::Base::ToString(mDtype) + ", " +
+                               Ops::Base::ToString(vDtype) + " and " +
+                               Ops::Base::ToString(sDtype);
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            context->GetNodeName(), "grad, var, m, v and s", dtypeMsg.c_str(),
+            "grad, var, m, v and s should have the same dtype");
+        return ge::GRAPH_FAILED;
+    }
 
     bool isInvalidType = (gradDtype != ge::DT_FLOAT) && (gradDtype != ge::DT_BF16) && (gradDtype != ge::DT_FLOAT16);
     OP_CHECK_IF(
-        isInvalidType, OP_LOGE(nodeName, "Input grad, var, m, v, s dtype only support fp16, fp32 and bf16."),
+        isInvalidType,
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "grad/var/m/v/s",
+            Ops::Base::ToString(gradDtype).c_str(), "float16, bfloat16 and float"),
         return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(
-        stepDtype != ge::DT_INT64, OP_LOGE(nodeName, "Input step dtype only support int64."), return ge::GRAPH_FAILED);
+        stepDtype != ge::DT_INT64,
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "step",
+            Ops::Base::ToString(stepDtype).c_str(), "int64"),
+        return ge::GRAPH_FAILED);
 
     uint32_t tilingKey = DTYPE_BF16_KEY;
     if (gradDtype == ge::DT_FLOAT) {
@@ -184,9 +198,17 @@ static ge::graphStatus CheckInputShape(gert::TilingContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, shapeInput);
 
     bool isDiffSize = gradShape != varShape || gradShape != mShape || gradShape != vShape || gradShape != sShape;
-    OP_CHECK_IF(
-        isDiffSize, OP_LOGE(context, "Input grad, var, m, v, s should keep equal shape."),
-        return ge::GRAPH_FAILED);
+    if (isDiffSize) {
+        std::string shapesMsg = Ops::Base::ToString(gradShape) + ", " +
+                                Ops::Base::ToString(varShape) + ", " +
+                                Ops::Base::ToString(mShape) + ", " +
+                                Ops::Base::ToString(vShape) + " and " +
+                                Ops::Base::ToString(sShape);
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context->GetNodeName(), "grad, var, m, v and s", shapesMsg.c_str(),
+            "grad, var, m, v and s should have the same shape");
+        return ge::GRAPH_FAILED;
+    }
 
     return ge::GRAPH_SUCCESS;
 }

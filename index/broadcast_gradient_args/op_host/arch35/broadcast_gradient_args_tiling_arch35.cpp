@@ -65,22 +65,29 @@ public:
         const gert::Shape& shape2 = x2_storage->GetStorageShape();
         auto x1Dtype = context_->GetInputDesc(INDEX_X1)->GetDataType();
         if (x1Dtype != ge::DT_INT32 && x1Dtype != ge::DT_INT64) {
-            OP_LOGE(context_->GetNodeName(), "The dtype of x1 must be int32 or int64!");
+            OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x1",
+                Ops::Base::ToString(x1Dtype).c_str(), "int32 or int64");
             return ge::GRAPH_FAILED;
         }
         auto x2Dtype = context_->GetInputDesc(INDEX_X2)->GetDataType();
         if (x1Dtype != x2Dtype) {
-            OP_LOGE(context_->GetNodeName(), "Inputs x1 and x2 dtypes must be same!");
+            std::string dtypeMsg = Ops::Base::ToString(x1Dtype) + " and " + Ops::Base::ToString(x2Dtype);
+            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                context_->GetNodeName(), "x1 and x2", dtypeMsg.c_str(), "x1 and x2 should have the same dtype");
             return ge::GRAPH_FAILED;
         }
         if (shape1.GetDimNum() != 1 || shape2.GetDimNum() != 1) {
-            OP_LOGE(context_->GetNodeName(), "Inputs x1 and x2 shapes must be 1D!");
+            std::string dimMsg = std::to_string(shape1.GetDimNum()) + " and " + std::to_string(shape2.GetDimNum());
+            OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+                context_->GetNodeName(), "x1 and x2", dimMsg.c_str(), "dim num of x1 and x2 should be 1");
             return ge::GRAPH_FAILED;
         }
         int64_t x1Len = shape1.GetDim(0);
         int64_t x2Len = shape2.GetDim(0);
         if (x1Len < 0 || x2Len < 0) {
-            OP_LOGE(context_->GetNodeName(), "Inputs x1 and x2 shape size must >= 0!");
+            std::string shapesMsg = Ops::Base::ToString(shape1) + " and " + Ops::Base::ToString(shape2);
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                context_->GetNodeName(), "x1 and x2", shapesMsg.c_str(), "x1 and x2 dimension 0 should be greater than or equal to 0");
             return ge::GRAPH_FAILED;
         }
         int64_t maxRank = x1Len > x2Len ? x1Len : x2Len;

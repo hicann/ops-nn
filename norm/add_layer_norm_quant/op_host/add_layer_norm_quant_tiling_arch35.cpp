@@ -734,9 +734,11 @@ bool AddLayerNormQuantRegbaseTiling::CheckOptionalTensor()
         for (size_t i = 0; i < outScaleDimNum; i++) {
             OP_CHECK_IF(
                 (outScale1Shape->GetStorageShape().GetDim(i) != x1Shape->GetStorageShape().GetDim(i)),
-                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "outScale1",
-                    (std::to_string(outScaleDimNum)).c_str(),
-                    ("the " + std::to_string(i) + "th dim of outScale1 should be equal to the " + std::to_string(i) + "th dim of x1").c_str()),
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    context_->GetNodeName(), "outScale1 and x1",
+                    (Ops::Base::ToString(outScale1Shape->GetStorageShape()) + " and " +
+                     Ops::Base::ToString(x1Shape->GetStorageShape())).c_str(),
+                    ("the " + std::to_string(i) + "th dim num of outScale1 and x1 should be equal").c_str()),
                 return false);
         }
     }

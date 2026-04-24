@@ -19,6 +19,9 @@ using namespace ge;
 namespace optiling
 {
 constexpr float FLT_EPSILON = 1e-6f;
+static const char* inputParamNames[] = {"x", "scale", "offset", "mean", "variance"};
+static const char* outputParamNames[] = {
+        "y", "batch_mean", "batch_variance", "reserve_space_1", "reserve_space_2", "reserve_space_3"};
 static bool Isclose(float a, float b, float rel_tol = FLT_EPSILON, float abs_tol = 0.0f)
 {
     if (a == b) {
@@ -109,32 +112,34 @@ ge::graphStatus BatchNormTilingBase::GetXYShapesAndCheckValid()
     OP_CHECK_NULL_WITH_CONTEXT(context_, xDesc);
     xFormat_ = xDesc->GetFormat().GetStorageFormat();
 
-    OP_CHECK_IF(
-        xFormat_ != FORMAT_NCHW && xFormat_ != FORMAT_NHWC && xFormat_ != FORMAT_NCDHW && xFormat_ != FORMAT_NDHWC && xFormat_ != FORMAT_ND,
-        OP_LOGE(context_->GetNodeName(),
-            "Input X format [%s] not support, only support formats [NCHW/HNWC/NCDHW/NDHWC/ND]",
-            ge::TypeUtils::FormatToAscendString(xFormat_).GetString()),
-        return ge::GRAPH_FAILED);
+    if (xFormat_ != FORMAT_NCHW && xFormat_ != FORMAT_NHWC && xFormat_ != FORMAT_NCDHW && xFormat_ != FORMAT_NDHWC &&
+        xFormat_ != FORMAT_ND) {
+        std::string formatStr = Ops::Base::ToString(xFormat_);
+        OP_LOGE_FOR_INVALID_FORMAT(context_->GetNodeName(), "x", formatStr.c_str(), "NCHW, NHWC, NCDHW, NDHWC or ND");
+        return ge::GRAPH_FAILED;
+    }
 
     bool validShapeSize = (xShapeSize == yShapeSize) &&
                           ((xFormat_ == FORMAT_NHWC && xShapeSize == DIM_NUM_4) ||
                            ((xFormat_ == FORMAT_NCDHW || xFormat_ == FORMAT_NDHWC) && xShapeSize == DIM_NUM_5) ||
                            (xFormat_ == FORMAT_ND && xShapeSize >= DIM_NUM_2) ||
                            (xFormat_ == FORMAT_NCHW && xShapeSize >= DIM_NUM_2));
-    OP_CHECK_IF(
-        !validShapeSize,
-        OP_LOGE(
-            context_->GetNodeName(), "Input X dim size [%ld] or Output Y dim size [%ld] not match format [%s]",
-            xShapeSize, yShapeSize, ge::TypeUtils::FormatToAscendString(xFormat_).GetString()),
-        return ge::GRAPH_FAILED);
+    if (!validShapeSize) {
+        std::string sizeMsg = std::to_string(xShapeSize) + " and " + std::to_string(yShapeSize);
+        std::string reason =
+            "x and y shape size should be the same. NHWC requires 4, NCDHW and NDHWC require 5, NCHW and ND require at "
+            "least 2.";
+        OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(context_->GetNodeName(), "x and y", sizeMsg.c_str(), reason.c_str());
+        return ge::GRAPH_FAILED;
+    }
 
     for (int64_t i = 0; i < xShapeSize; i++) {
-        OP_CHECK_IF((xStorageShape.GetDim(i) != yStorageShape.GetDim(i) || xStorageShape.GetDim(i) <= 0),
-                    OP_LOGE(
-                        context_->GetNodeName(),
-                        "Input X dim [%ld] is [%ld] and Output Y dim [%ld] is [%ld] should be same and '> 0'", i,
-                        xStorageShape.GetDim(i), i, yStorageShape.GetDim(i)),
-                    return ge::GRAPH_FAILED);
+        if (xStorageShape.GetDim(i) != yStorageShape.GetDim(i) || xStorageShape.GetDim(i) <= 0) {
+            std::string shapesMsg = Ops::Base::ToString(xStorageShape) + " and " + Ops::Base::ToString(yStorageShape);
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "x and y",
+                shapesMsg.c_str(), "x and y should have the same shape and each dimension must be greater than 0");
+            return ge::GRAPH_FAILED;
+        }
     }
     OP_LOGD(context_->GetNodeName(), "GetXYShapesAndCheckValid success.");
     return ge::GRAPH_SUCCESS;
@@ -142,6 +147,7 @@ ge::graphStatus BatchNormTilingBase::GetXYShapesAndCheckValid()
 
 ge::graphStatus BatchNormTilingBase::CheckSmallShapesValid(int64_t aDimLen)
 {
+    
     // input scale, offset
     for (int64_t i = CONST_ONE; i < CONST_THREE; i++) {
         auto shape = context_->GetInputShape(i);
@@ -149,14 +155,15 @@ ge::graphStatus BatchNormTilingBase::CheckSmallShapesValid(int64_t aDimLen)
         auto storageShape = Ops::NN::OpTiling::EnsureNotScalar(shape->GetStorageShape());
         OP_CHECK_IF(
             storageShape.GetDimNum() != 1,
-            OP_LOGE(context_->GetNodeName(),
-                "Input [%ld] dim size is [%ld] which should be 1", i, storageShape.GetDimNum()),
+            OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), inputParamNames[i],
+                std::to_string(storageShape.GetDimNum()).c_str(), "1"),
             return ge::GRAPH_FAILED);
 
         OP_CHECK_IF(
             storageShape.GetDim(DIM_0) != aDimLen,
-            OP_LOGE(context_->GetNodeName(),
-                "Input [%ld] dim 0 is [%ld] which should be %ld", i, storageShape.GetDim(DIM_0), aDimLen),
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), inputParamNames[i],
+                Ops::Base::ToString(storageShape).c_str(),
+                (std::string(inputParamNames[i]) + " dimension 0 should be " + std::to_string(aDimLen)).c_str()),
             return ge::GRAPH_FAILED);
     }
 
@@ -180,14 +187,15 @@ ge::graphStatus BatchNormTilingBase::CheckSmallShapesValid(int64_t aDimLen)
         auto storageShape = Ops::NN::OpTiling::EnsureNotScalar(shape->GetStorageShape());
         OP_CHECK_IF(
             storageShape.GetDimNum() != 1,
-            OP_LOGE(context_->GetNodeName(),
-                "Input [%ld] dim size is [%ld] which should be 1", i, storageShape.GetDimNum()),
+            OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), inputParamNames[i],
+                std::to_string(storageShape.GetDimNum()).c_str(), "1"),
             return ge::GRAPH_FAILED);
 
         OP_CHECK_IF(
             storageShape.GetDim(DIM_0) != aDimLen,
-            OP_LOGE(context_->GetNodeName(),
-                "Input [%ld] dim 0 is [%ld] which should be %ld", i, storageShape.GetDim(DIM_0), aDimLen),
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), inputParamNames[i],
+                Ops::Base::ToString(storageShape).c_str(),
+                (std::string(inputParamNames[i]) + " dimension 0 should be " + std::to_string(aDimLen)).c_str()),
             return ge::GRAPH_FAILED);
     }
 
@@ -198,14 +206,15 @@ ge::graphStatus BatchNormTilingBase::CheckSmallShapesValid(int64_t aDimLen)
         auto storageShape = Ops::NN::OpTiling::EnsureNotScalar(shape->GetStorageShape());
         OP_CHECK_IF(
             storageShape.GetDimNum() != 1,
-            OP_LOGE(context_->GetNodeName(),
-                "output [%ld] dim size is [%ld] which should be 1", i, storageShape.GetDimNum()),
+            OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), outputParamNames[i],
+                std::to_string(storageShape.GetDimNum()).c_str(), "1"),
             return ge::GRAPH_FAILED);
 
         OP_CHECK_IF(
             storageShape.GetDim(DIM_0) != aDimLen,
-            OP_LOGE(context_->GetNodeName(),
-                "output [%ld] dim 0 is [%ld] which should be %ld", i, storageShape.GetDim(DIM_0), aDimLen),
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), outputParamNames[i],
+                Ops::Base::ToString(storageShape).c_str(),
+                (std::string(outputParamNames[i]) + " dimension 0 should be " + std::to_string(aDimLen)).c_str()),
             return ge::GRAPH_FAILED);
     }
 
@@ -215,13 +224,13 @@ ge::graphStatus BatchNormTilingBase::CheckSmallShapesValid(int64_t aDimLen)
     auto reserveSpace3StorageShape = Ops::NN::OpTiling::EnsureNotScalar(reserveSpace3Shape->GetStorageShape());
     OP_CHECK_IF(
         reserveSpace3StorageShape.GetDimNum() != 1,
-        OP_LOGE(context_->GetNodeName(),
-            "reserve_space_3 dim size is [%ld] which should be 1", reserveSpace3StorageShape.GetDimNum()),
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "reserve_space_3",
+            std::to_string(reserveSpace3StorageShape.GetDimNum()).c_str(), "1"),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         reserveSpace3StorageShape.GetDim(DIM_0) != CONST_ONE,
-        OP_LOGE(context_->GetNodeName(),
-            "reserve_space_3 dim 0 is [%ld] which should be 1", reserveSpace3StorageShape.GetDim(DIM_0)),
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "reserve_space_3",
+            Ops::Base::ToString(reserveSpace3StorageShape).c_str(), "reserve_space_3 dimension 0 should be 1"),
         return ge::GRAPH_FAILED);
 
     OP_LOGD(context_->GetNodeName(), "CheckSmallShapesValid  success.");
@@ -235,20 +244,19 @@ ge::graphStatus BatchNormTilingBase::GetDtypesAndCheckValid()
     OP_CHECK_NULL_WITH_CONTEXT(context_, xDesc);
     xDtype_ = xDesc->GetDataType();
     OP_CHECK_IF(std::find(DTYPE_LIST.begin(), DTYPE_LIST.end(), xDtype_) == DTYPE_LIST.end(),
-                OP_LOGE(context_->GetNodeName(),
-                    "Unsupported dtype %s for input 0.", ge::TypeUtils::DataTypeToSerialString(xDtype_).c_str()),
+                OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x",
+                    Ops::Base::ToString(xDtype_).c_str(), "float16, bfloat16 or float"),
                 return ge::GRAPH_FAILED);
 
     auto yDesc = context_->GetOutputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, yDesc);
     auto yDataType = yDesc->GetDataType();
-    OP_CHECK_IF(
-        xDtype_ != yDataType,
-        OP_LOGE(context_->GetNodeName(),
-            "Output y dtype %s is not same as input x dtype %s.",
-            ge::TypeUtils::DataTypeToSerialString(yDataType).c_str(),
-            ge::TypeUtils::DataTypeToSerialString(xDtype_).c_str()),
-        return ge::GRAPH_FAILED);
+    if (xDtype_ != yDataType) {
+        std::string dtypeMsg = Ops::Base::ToString(yDataType) + " and " +  Ops::Base::ToString(xDtype_);
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "y and x",
+            dtypeMsg.c_str(), "y and x should have the same dtype");
+        return ge::GRAPH_FAILED;
+    }
 
     // scale, offset
     for (int64_t i = CONST_ONE; i < CONST_THREE; i++) {
@@ -256,9 +264,8 @@ ge::graphStatus BatchNormTilingBase::GetDtypesAndCheckValid()
         OP_CHECK_NULL_WITH_CONTEXT(context_, desc);
         ge::DataType subDataType = desc->GetDataType();
         OP_CHECK_IF(subDataType != ge::DataType::DT_FLOAT,
-                    OP_LOGE(context_->GetNodeName(),
-                        "Dtype of input %ld expect 'Float', but actual %s.", i,
-                        ge::TypeUtils::DataTypeToSerialString(subDataType).c_str()),
+                    OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), inputParamNames[i],
+                        Ops::Base::ToString(subDataType).c_str(), "float"),
                     return ge::GRAPH_FAILED);
     }
 
@@ -270,9 +277,8 @@ ge::graphStatus BatchNormTilingBase::GetDtypesAndCheckValid()
         }
         ge::DataType subDataType = desc->GetDataType();
         OP_CHECK_IF(subDataType != ge::DataType::DT_FLOAT,
-                    OP_LOGE(context_->GetNodeName(),
-                        "Dtype of input %ld expect 'Float', but actual %s.", i,
-                        ge::TypeUtils::DataTypeToSerialString(subDataType).c_str()),
+                    OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), inputParamNames[i],
+                        Ops::Base::ToString(subDataType).c_str(), "float"),
                     return ge::GRAPH_FAILED);
     }
 
@@ -282,9 +288,8 @@ ge::graphStatus BatchNormTilingBase::GetDtypesAndCheckValid()
         OP_CHECK_NULL_WITH_CONTEXT(context_, desc);
         ge::DataType subDataType = desc->GetDataType();
         OP_CHECK_IF(subDataType != ge::DataType::DT_FLOAT,
-                    OP_LOGE(context_->GetNodeName(),
-                        "Dtype of output %ld expect 'Float', but actual %s.", i,
-                        ge::TypeUtils::DataTypeToSerialString(subDataType).c_str()),
+                    OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), outputParamNames[i],
+                        Ops::Base::ToString(subDataType).c_str(), "float"),
                     return ge::GRAPH_FAILED);
     }
 

@@ -46,14 +46,16 @@ ge::graphStatus BinaryCrossEntropyTiling::CalcInputDtype()
     this->inputXDtype = inputXDesc->GetDataType();
     OP_CHECK_IF(
         this->inputXDtype != ge::DT_FLOAT16 && this->inputXDtype != ge::DT_BF16 && this->inputXDtype != ge::DT_FLOAT,
-        OP_LOGE(tilingContext->GetNodeName(), "input X dtype not support"),
+        OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "x",
+            Ops::Base::ToString(this->inputXDtype).c_str(), "float16, bfloat16 and float"),
         return ge::GRAPH_FAILED);
     auto inputYDesc = tilingContext->GetInputDesc(INPUT_Y_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, inputYDesc);
     this->inputYDtype = inputYDesc->GetDataType();
     OP_CHECK_IF(
         this->inputYDtype != ge::DT_FLOAT16 && this->inputYDtype != ge::DT_BF16 && this->inputYDtype != ge::DT_FLOAT,
-        OP_LOGE(tilingContext->GetNodeName(), "input Y dtype not support"),
+        OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "y",
+            Ops::Base::ToString(this->inputYDtype).c_str(), "float16, bfloat16 and float"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -65,11 +67,16 @@ ge::graphStatus BinaryCrossEntropyTiling::CalcOutputDtype()
     this->outputDtype = outputDesc->GetDataType();
     OP_CHECK_IF(
         this->outputDtype != ge::DT_FLOAT16 && this->outputDtype != ge::DT_BF16 && this->outputDtype != ge::DT_FLOAT,
-        OP_LOGE(tilingContext->GetNodeName(), "output dtype not support"),
+        OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "output",
+            Ops::Base::ToString(this->outputDtype).c_str(), "float16, bfloat16 and float"),
         return ge::GRAPH_FAILED);
-    OP_CHECK_IF(this->outputDtype != this->inputXDtype,
-                    OP_LOGE(tilingContext->GetNodeName(), "output y dtype not same as inputs"),
-                    return ge::GRAPH_FAILED);
+    if (this->outputDtype != this->inputXDtype) {
+        std::string dtypeMsg = Ops::Base::ToString(this->outputDtype) + " and " +
+                               Ops::Base::ToString(this->inputXDtype);
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "output and x",
+            dtypeMsg.c_str(), "output and x should have the same dtype");
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -83,17 +90,23 @@ ge::graphStatus BinaryCrossEntropyTiling::CheckInputShape()
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, xStorageShape);
     const gert::Shape& inputXShape = Ops::Base::EnsureNotScalar(xStorageShape->GetStorageShape());
 
-    OP_CHECK_IF(
-        inputYShape != inputXShape,
-        OP_LOGE(tilingContext->GetNodeName(), "the shape of X is different from that of Y"),
-        return ge::GRAPH_FAILED);
+    if (inputYShape != inputXShape) {
+        std::string shapesMsg = Ops::Base::ToString(inputXShape) + " and " +
+                                Ops::Base::ToString(inputYShape);
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext->GetNodeName(), "x and y",
+            shapesMsg.c_str(), "x and y should have the same shape");
+        return ge::GRAPH_FAILED;
+    }
     auto weightStorageShape = tilingContext->GetOptionalInputShape(INPUT_WEIGHT_INDEX);
     if (weightStorageShape != nullptr) {
         const gert::Shape& inputWeightShape = Ops::Base::EnsureNotScalar(weightStorageShape->GetStorageShape());
-        OP_CHECK_IF(inputWeightShape != inputXShape,
-                        OP_LOGE(tilingContext->GetNodeName(),
-                                                        "the shape of Weight is different from that of X"),
-                        return ge::GRAPH_FAILED);
+        if (inputWeightShape != inputXShape) {
+            std::string shapesMsg = Ops::Base::ToString(inputXShape) + " and " +
+                                    Ops::Base::ToString(inputWeightShape);
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext->GetNodeName(), "x and weight",
+                shapesMsg.c_str(), "weight and x should have the same shape");
+            return ge::GRAPH_FAILED;
+        }
         bceTilingKey.hasWeight = static_cast<uint32_t>(1);
     }
     return ge::GRAPH_SUCCESS;
@@ -121,7 +134,8 @@ ge::graphStatus BinaryCrossEntropyTiling::DoElewiseTiling()
             eleBaseTilingResult = elewiseBaseTiling.DoTiling<BCEElewise<float>::OpDag>(tiling->eleBaseTiling);
         }
     } else {
-        OP_LOGE(tilingContext->GetNodeName(), "output dtype not support");
+        OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "output",
+            Ops::Base::ToString(this->outputDtype).c_str(), "float16, bfloat16 and float");
         return ge::GRAPH_FAILED;
     }
     return eleBaseTilingResult;
@@ -222,7 +236,8 @@ ge::graphStatus BinaryCrossEntropyTiling::DoReduceTiling(const BinaryCrossEntrop
                         OP_LOGE(tilingContext->GetNodeName(), "get input dtype failed"),
                         return ge::GRAPH_FAILED);
     } else {
-        OP_LOGE(tilingContext->GetNodeName(), "output dtype not support");
+        OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "output",
+            Ops::Base::ToString(this->outputDtype).c_str(), "float16, bfloat16 and float");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -279,7 +294,8 @@ ge::graphStatus BinaryCrossEntropyTiling::RunTiling(const BinaryCrossEntropyComp
     auto iter = STR_2_INT.find(this->reductionStr);
     OP_CHECK_IF(
         iter == STR_2_INT.end(),
-        OP_LOGE(tilingContext->GetNodeName(), "reduction is not in none, mean or sum."),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            tilingContext->GetNodeName(), "reduction", this->reductionStr, "none, mean or sum"),
         return ge::GRAPH_FAILED);
     this->isReductionNone = strcmp(this->reductionStr, "none") == 0;
     this->isReductionMean = strcmp(this->reductionStr, "mean") == 0;

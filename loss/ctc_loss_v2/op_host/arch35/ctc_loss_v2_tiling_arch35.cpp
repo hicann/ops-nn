@@ -122,8 +122,8 @@ ge::graphStatus Tiling4CTCLossV2ForAscendC(gert::TilingContext* context)
     DataType logProbsDtype = logProbsDesc->GetDataType();
     OP_CHECK_IF(
         find(SUPPORTED_DTYPE.begin(), SUPPORTED_DTYPE.end(), logProbsDtype) == SUPPORTED_DTYPE.end(),
-        OP_LOGE(
-            context->GetNodeName(), "CTCLossV2 dtype is not support, should be one of {float32, float16, bfloat16}."),
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "log_probs",
+            Ops::Base::ToString(logProbsDtype).c_str(), "float32, float16 or bfloat16"),
         return ge::GRAPH_FAILED);
     auto logProbsShape = logProbs->GetStorageShape();
     size_t logProbsDimNum = logProbsShape.GetDimNum();

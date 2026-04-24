@@ -52,14 +52,16 @@ ge::graphStatus BinaryCrossEntropyGradTiling::CalcInputDtype()
     this->inputXDtype = inputXDesc->GetDataType();
     OP_CHECK_IF(
         this->inputXDtype != ge::DT_FLOAT16 && this->inputXDtype != ge::DT_BF16 && this->inputXDtype != ge::DT_FLOAT,
-        OP_LOGE(context_->GetNodeName(), "input X dtype not support"),
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x",
+            Ops::Base::ToString(this->inputXDtype).c_str(), "float16, bfloat16 and float"),
         return ge::GRAPH_FAILED);
     auto inputYDesc = context_->GetInputDesc(INPUT_Y_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputYDesc);
     this->inputYDtype = inputYDesc->GetDataType();
     OP_CHECK_IF(
         this->inputYDtype != ge::DT_FLOAT16 && this->inputYDtype != ge::DT_BF16 && this->inputYDtype != ge::DT_FLOAT,
-        OP_LOGE(context_->GetNodeName(), "input Y dtype not support"),
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "y",
+            Ops::Base::ToString(this->inputYDtype).c_str(), "float16, bfloat16 and float"),
         return ge::GRAPH_FAILED);
     auto inputGradOutputDesc = context_->GetInputDesc(INPUT_GRAD_OUTPUT_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputGradOutputDesc);
@@ -67,7 +69,8 @@ ge::graphStatus BinaryCrossEntropyGradTiling::CalcInputDtype()
     OP_CHECK_IF(
         this->inputGradOutputDtype != ge::DT_FLOAT16 && this->inputGradOutputDtype != ge::DT_BF16 &&
         this->inputGradOutputDtype != ge::DT_FLOAT,
-        OP_LOGE(context_->GetNodeName(), "input GradOutput dtype not support"),
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "grad_output",
+            Ops::Base::ToString(this->inputGradOutputDtype).c_str(), "float16, bfloat16 and float"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -79,10 +82,16 @@ ge::graphStatus BinaryCrossEntropyGradTiling::CalcOutputDtype()
     this->outputDtype = outputDesc->GetDataType();
     OP_CHECK_IF(
         this->outputDtype != ge::DT_FLOAT16 && this->outputDtype != ge::DT_BF16 && this->outputDtype != ge::DT_FLOAT,
-        OP_LOGE(context_->GetNodeName(), "output dtype not support"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(this->outputDtype != this->inputXDtype,
-                    OP_LOGE(context_->GetNodeName(), "output dtype not same as inputs"),
-                    return ge::GRAPH_FAILED);
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "output",
+            Ops::Base::ToString(this->outputDtype).c_str(), "float16, bfloat16 and float"),
+        return ge::GRAPH_FAILED);
+    if (this->outputDtype != this->inputXDtype) {
+        std::string dtypeMsg = Ops::Base::ToString(this->outputDtype) + " and " +
+                               Ops::Base::ToString(this->inputXDtype);
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "output and x",
+            dtypeMsg.c_str(), "output and x should have the same dtype");
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -138,9 +147,11 @@ ge::graphStatus BinaryCrossEntropyGradTiling::DoOpTiling()
 
     this->reductionStr = attrs->GetAttrPointer<char>(REDUCTION_INDEX);
     auto iter = STR_2_INT.find(this->reductionStr);
-    OP_CHECK_IF(iter == STR_2_INT.end(),
-                    OP_LOGE(context_->GetNodeName(), "reduction is not in none, mean or sum."),
-                    return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        iter == STR_2_INT.end(),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context_->GetNodeName(), "reduction", this->reductionStr, "none, mean or sum"),
+        return ge::GRAPH_FAILED);
     this->isReductionNone = strcmp(this->reductionStr, "none") == 0;
     this->isReductionMean = strcmp(this->reductionStr, "mean") == 0;
     this->isReductionSum = strcmp(this->reductionStr, "sum") == 0;
@@ -155,9 +166,8 @@ ge::graphStatus BinaryCrossEntropyGradTiling::DoOpTiling()
                         OP_LOGE(context_->GetNodeName(), "get input dtype failed"),
                         return ge::GRAPH_FAILED);
     } else {
-        OP_LOGE(context_->GetNodeName(),
-            "input dtype is only support fp16, bf16, fp32, while got %s!",
-            ge::TypeUtils::DataTypeToSerialString(input0DType).c_str());
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x",
+            Ops::Base::ToString(input0DType).c_str(), "float16, bfloat16 and float");
             return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
