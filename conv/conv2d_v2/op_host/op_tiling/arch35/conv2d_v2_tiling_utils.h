@@ -134,11 +134,6 @@ inline bool isExtendConv2D(const string& nodeType)
     return nodeType == "ExtendConv2D";
 }
 
-const vector<string> CONV2D_SUPPORTED_NODETYPE = {
-    "Conv2DV2",
-    "QuantConv2D",
-    "ExtendConv2D"
-};
 const vector<int64_t> EXTENDCONV2D_SUPPORTED_ATTR_DTYPE = {
     -1,
     0,

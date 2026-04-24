@@ -287,11 +287,6 @@ ge::graphStatus Conv2dBaseTiling::GetNodeType()
 {
     auto nodeType = context_->GetNodeType();
     OPS_CHECK_NULL_WITH_CONTEXT(context_, nodeType);
-    auto iter = std::find(CONV2D_SUPPORTED_NODETYPE.begin(), CONV2D_SUPPORTED_NODETYPE.end(), nodeType);
-    if (iter == CONV2D_SUPPORTED_NODETYPE.end()) {
-         OP_LOGE(context_->GetNodeName(), "Unsupported node type %s.", nodeType);
-         return ge::GRAPH_FAILED;
-    }
     paramInfo_.nodeType = nodeType;
     flagInfo_.quantFlag = isQuantConv2D(nodeType);
     flagInfo_.extendConvFlag = isExtendConv2D(nodeType);
@@ -375,8 +370,7 @@ ge::graphStatus Conv2dBaseTiling::GetShapeAttrsInfo()
     InitNumBlocksConstParas(convOpsConstParams_, descInfo_, shapeInfo_);
     convBase_.ConvBaseInit(shapeInfo_, descInfo_, flagInfo_, context_);
     // hf32 judgement should after get dtype
-    OP_LOGE_IF(!convBase_.GetConvParasHf32Mode(ATTR_ENABLE_HF32_INDEX, attrInfo_.hf32Mode), ge::GRAPH_FAILED,
-        context_->GetNodeName(), "%s AscendC: Update Hf32Mode failed.", paramInfo_.nodeType.c_str());
+    convBase_.GetConvParasHf32Mode(ATTR_ENABLE_HF32_INDEX, attrInfo_.hf32Mode);
     if (GetFeatureFlag() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }

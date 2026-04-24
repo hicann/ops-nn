@@ -183,8 +183,7 @@ ge::graphStatus Conv3dBaseTilingV2::GetShapeAttrsInfo()
     optiling::conv_ops_tiling::InitNumBlocksConstParas(convOpsConstParams_, descInfo_, shapeInfo_);
     convBase_.ConvBaseInit(shapeInfo_, descInfo_, flagInfo_, context_);
     // hf32 judgement should after get dtype
-    OP_LOGE_IF(!convBase_.GetConvParasHf32Mode(ATTR_ENABLE_HF32_INDEX, attrInfo_.hf32Mode), ge::GRAPH_FAILED,
-        context_->GetNodeName(), "%s AscendC: Update Hf32Mode failed.", paramInfo_.nodeType.c_str());
+    convBase_.GetConvParasHf32Mode(ATTR_ENABLE_HF32_INDEX, attrInfo_.hf32Mode);
 
     return ge::GRAPH_SUCCESS;
 }

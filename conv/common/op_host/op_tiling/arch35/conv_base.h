@@ -305,7 +305,7 @@ public:
     void SetBitsFromBool(uint64_t& number, const std::array<bool, UINT64_BIT_COUNT>& bits) const;
     void SetBytesFromUint8(uint64_t& number, const std::array<uint8_t, UINT64_BYTE_COUNT>& bytes) const;
     void SetBytesFromUint32(uint64_t& number, uint32_t highPart, uint32_t lowPart) const;
-    bool GetConvParasHf32Mode(const uint32_t enableHf32Idx, uint32_t& hf32Mode);
+    void GetConvParasHf32Mode(const uint32_t enableHf32Idx, uint32_t& hf32Mode);
     void GetSupportedFormats(bool quantFlag, bool is2dFlag,
                              std::stringstream& ss, std::vector<std::vector<ge::Format>>& supportFormats);
     void ConvBaseInitFixpipeInfo(const FixpipeInfo& fixpipeInfo);

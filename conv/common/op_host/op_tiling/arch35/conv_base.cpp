@@ -258,18 +258,17 @@ bool ConvBase::IsFp32InputFp32Output()
     return ret;
 }
 
-bool ConvBase::GetConvParasHf32Mode(const uint32_t enableHf32Idx, uint32_t& hf32Mode)
+void ConvBase::GetConvParasHf32Mode(const uint32_t enableHf32Idx, uint32_t& hf32Mode)
 {
     if (!IsFp32InputFp32Output()) {
-        return true; // hf32Mode is default 0 (means not enable).
+        return; // hf32Mode is default 0 (means not enable).
     }
     auto enableHf32Ptr = context_->GetAttrs()->GetBool(enableHf32Idx);
     if (enableHf32Ptr == nullptr) {
         hf32Mode = 0;
-        return true;
+        return;
     }
     hf32Mode = static_cast<uint32_t>(*enableHf32Ptr ? 1 : 0);
-    return true;
 }
 
 void ConvBase::GetSupportedFormats(bool quantFlag, bool is2dFlag,

@@ -13,7 +13,7 @@
  * \brief
  */
 #include "conv2d_v2_base_tiling.h"
- 
+
 namespace optiling {
 namespace conv_ops_tiling {
 
@@ -431,26 +431,21 @@ ge::graphStatus Conv2dBaseTiling::CheckExtendDtypeLegal()
     if (!flagInfo_.extendConvFlag) {
         return ge::GRAPH_SUCCESS;
     }
-    auto extendDtype0Ptr = context_->GetAttrs()->GetInt(EXTENDCONV_ATTR_DTYPE_0_INDEX);
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, extendDtype0Ptr);
-    int64_t extendDtype0 = *extendDtype0Ptr;
-    auto iter =
-        std::find(EXTENDCONV2D_SUPPORTED_ATTR_DTYPE.begin(), EXTENDCONV2D_SUPPORTED_ATTR_DTYPE.end(), extendDtype0);
-    if (iter == EXTENDCONV2D_SUPPORTED_ATTR_DTYPE.end()) {
-        OP_LOGE(context_->GetNodeName(),
-            "%s AscendC: unSupported dtype0: %ld, only support [default, float, float16, int8, bfloat16, hifloat8, float8_e4m3fn].",
-            paramInfo_.nodeType.c_str(), extendDtype0);
-        return ge::GRAPH_FAILED;
-    }
-    auto extendDtype1Ptr = context_->GetAttrs()->GetInt(EXTENDCONV_ATTR_DTYPE_1_INDEX);
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, extendDtype1Ptr);
-    int64_t extendDtype1 = *extendDtype1Ptr;
-    iter = std::find(EXTENDCONV2D_SUPPORTED_ATTR_DTYPE.begin(), EXTENDCONV2D_SUPPORTED_ATTR_DTYPE.end(), extendDtype1);
-    if (iter == EXTENDCONV2D_SUPPORTED_ATTR_DTYPE.end()) {
-        OP_LOGE(context_->GetNodeName(),
-            "%s AscendC: unSupported dtype1: %ld, only support [default, float, float16, int8, bfloat16, hifloat8, float8_e4m3fn].",
-            paramInfo_.nodeType.c_str(), extendDtype1);
-        return ge::GRAPH_FAILED;
+    const uint32_t dtypeAttrIndices[] = {EXTENDCONV_ATTR_DTYPE_0_INDEX, EXTENDCONV_ATTR_DTYPE_1_INDEX};
+    const char *dtypeNames[] = {"dtype0", "dtype1"};
+    for (size_t i = 0; i < sizeof(dtypeAttrIndices) / sizeof(dtypeAttrIndices[0]); ++i) {
+        auto extendDtypePtr = context_->GetAttrs()->GetInt(dtypeAttrIndices[i]);
+        OPS_CHECK_NULL_WITH_CONTEXT(context_, extendDtypePtr);
+        int64_t extendDtype = *extendDtypePtr;
+        auto iter = std::find(EXTENDCONV2D_SUPPORTED_ATTR_DTYPE.begin(), EXTENDCONV2D_SUPPORTED_ATTR_DTYPE.end(),
+            extendDtype);
+        if (iter == EXTENDCONV2D_SUPPORTED_ATTR_DTYPE.end()) {
+            std::string supportList = "[default, float, float16, int8, bfloat16, hifloat8, float8_e4m3fn].";
+            OP_LOGE(context_->GetNodeName(),
+                "%s AscendC: unSupported %s: %ld, only support %s.",
+                paramInfo_.nodeType.c_str(), dtypeNames[i], extendDtype, supportList.c_str());
+            return ge::GRAPH_FAILED;
+        }
     }
     return ge::GRAPH_SUCCESS;
 }
