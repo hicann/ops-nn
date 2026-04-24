@@ -19,7 +19,7 @@
 #include "tiling/tiling_api.h"
 #include "platform/platform_info.h"
 #include "error_util.h"
-#include "scatter_elements_v2_tiling.h"
+#include "scatter_elements_v2_base_tiling.h"
 
 using namespace AscendC;
 namespace optiling
@@ -78,7 +78,7 @@ bool ScatterElementsV2AscTiling::IsCapable()
 
 ge::graphStatus ScatterElementsV2AscTiling::GetPlatformInfo()
 {
-    auto compileInfo = reinterpret_cast<const ScatterElementsV2CompileInfo*>(context_->GetCompileInfo());
+    auto compileInfo = reinterpret_cast<const ScatterElementsV2CompileInfoArch35*>(context_->GetCompileInfo());
     OP_CHECK_NULL_WITH_CONTEXT(context_, compileInfo);
     totalCoreNum_ = compileInfo->totalCoreNum;
     ubSize_ = compileInfo->ubSizePlatForm;

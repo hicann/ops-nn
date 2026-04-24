@@ -73,7 +73,6 @@ struct ScatterElementsV2CompileInfo {
     int32_t totalCoreNum = 30;
     uint64_t ubSizePlatForm = 0;
     uint64_t workspaceSize = 0;
-    bool is_regbase = false;
 };
 } // namespace optiling
 

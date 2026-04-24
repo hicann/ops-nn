@@ -12,7 +12,7 @@
 #include "aclnn_max_unpool2d.h"
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"
-#include "index/scatter_elements_v2/op_host/op_api/scatter_elements.h"
+#include "index/scatter_elements_v2/op_api/scatter_elements.h"
 #include "level0/zero_op.h"
 #include "aclnn_kernels/reshape.h"
 #include "opdev/common_types.h"

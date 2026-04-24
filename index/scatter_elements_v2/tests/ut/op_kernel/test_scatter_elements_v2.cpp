@@ -15,7 +15,7 @@
 #include <array>
 #include <vector>
 #include "gtest/gtest.h"
-#include "../../../op_host/scatter_elements_v2_tiling.h"
+#include "../../../op_host/arch22/scatter_elements_v2_tiling.h"
 
 #ifdef __CCE_KT_TEST__
 #include "tikicpulib.h"

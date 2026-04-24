@@ -18,7 +18,7 @@
 #include "level0/adjacent_difference.h"
 #include "level0/cumsum.h"
 #include "level0/sort.h"
-#include "index/scatter_elements_v2/op_host/op_api/scatter_elements.h"
+#include "index/scatter_elements_v2/op_api/scatter_elements.h"
 
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"

@@ -780,7 +780,7 @@ __aicore__ inline void KernelScatterElementsDeterm<DATA_T, IDX_T, COMP_T, REDU, 
                 loopInfo.loopLpSize[DIM_2] = 0;
                 loopInfo.loopRpSize[0] = 0;
                 loopInfo.loopRpSize[DIM_1] = 0;
-                loopInfo.loopLpSize[DIM_2] = 0;
+                loopInfo.loopRpSize[DIM_2] = 0;
 
                 IDX_T constValue = 0;
                 AscendC::MultiCopyParams<IDX_T, DIM_3> paramsMain = {loopInfo, constValue};

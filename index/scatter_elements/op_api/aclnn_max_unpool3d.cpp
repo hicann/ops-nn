@@ -11,7 +11,7 @@
 
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"
-#include "index/scatter_elements_v2/op_host/op_api/scatter_elements.h"
+#include "index/scatter_elements_v2/op_api/scatter_elements.h"
 #include "level0/zero_op.h"
 #include "aclnn_kernels/reshape.h"
 #include "aclnn_max_unpool3d.h"

@@ -18,11 +18,9 @@
 #include "tiling/platform/platform_ascendc.h"
 #include "platform/platform_info.h"
 #include "op_host/tiling_util.h"
-#include "scatter_elements_v2_asc_tiling.h"
 #include "scatter_elements_v2_tiling.h"
 
 using namespace std;
-using Ops::NN::Optiling::TilingRegistry;
 
 namespace {
 const int OPERATOR_TYPE = 1;
@@ -835,9 +833,6 @@ ge::graphStatus TilingScatterElementsV2(gert::TilingContext* context)
 {
     auto compile_info = reinterpret_cast<const ScatterElementsV2CompileInfo*>(context->GetCompileInfo());
     OP_CHECK_NULL_WITH_CONTEXT(context, compile_info);
-    if (compile_info->is_regbase) {
-        return Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(context);
-    }
 
     auto platformInfo = context->GetPlatformInfo();
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
@@ -876,7 +871,6 @@ ge::graphStatus TilingPrepareForScatterElementsV2(gert::TilingParseContext* cont
     OP_LOGD(context, "ub_size_platform is %lu.", compileInfo->ubSizePlatForm);
     uint64_t totalUbSize = 0;
     platformInfo->GetLocalMemSize(fe::LocalMemType::UB, totalUbSize);
-    compileInfo->is_regbase = IsRegbaseSocVersion(context);
     OP_LOGD(context, "total_ub_size is %lu.", totalUbSize);
     OP_LOGD(context, "TilingPrepareForScatterElementsV2 end.");
     return ge::GRAPH_SUCCESS;
