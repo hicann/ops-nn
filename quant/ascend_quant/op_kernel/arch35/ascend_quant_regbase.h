@@ -18,6 +18,8 @@
 
 #include "ascend_quant.h"
 
+#define FLOAT_OVERFLOW_MODE_CTRL 60
+
 namespace AscendQuantOp {
 using namespace AscendC;
 template <typename T, typename U, uint64_t RoundMode>
@@ -48,10 +50,23 @@ private:
     int64_t blockLen_ = 1;
 };
 
+template <typename yDtype>
+__aicore__ inline void SetFloatOverflowModeForRegbase()
+{
+  #if (__NPU_ARCH__ == 3510)
+      if constexpr (
+          IsSameType<yDtype, hifloat8_t>::value || IsSameType<yDtype, fp8_e5m2_t>::value 
+          || IsSameType<yDtype, fp8_e4m3fn_t>::value) {
+          AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(0);
+      }
+  #endif
+}
+
 template <typename T, typename U, uint64_t RoundMode>
 __aicore__ inline void AscendQuantPerTensorRegbase<T, U, RoundMode>::Init(
     GM_ADDR x, GM_ADDR y, const AscendQuantTilingData* tilingData)
 {
+    SetFloatOverflowModeForRegbase<U>();  
     blockIdx_ = GetBlockIdx();
     xGm_.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(x));
     yGm_.SetGlobalBuffer(reinterpret_cast<__gm__ yCopyDtype*>(y));
