@@ -27,7 +27,7 @@ ops-nn是[CANN](https://hiascend.com/software/cann) （Compute Architecture for 
 
 环境准备好后，下载与CANN版本配套的分支源码，命令如下，\$\{tag\_version\}替换为分支标签名。
  	 
-> 说明：若环境中已存在配套分支源码，**可跳过本步骤**，例如WedIDE默认已提供最新商发版CANN对应的源码 。
+> 说明：若环境中已存在配套分支源码，**可跳过本步骤**，例如WebIDE默认已提供最新商发版CANN对应的源码 。
 
 ```bash
 git clone -b ${tag_version} https://gitcode.com/cann/ops-nn.git
