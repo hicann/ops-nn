@@ -286,6 +286,9 @@ ge::graphStatus ClippedSwigluTiling::CountMaxPair()
     ubMaxPair_ =
         ((numerator / (xBuffer + yBuffer + tmpBuffer1 + tmpBuffer2) / BLOCK_SIZE * BLOCK_SIZE) - (BLOCK_SIZE - 1)) /
         SIZE_OF_BF16_FP16; // 32字节对齐
+    OP_CHECK_IF(
+        (numerator <= 0 || ubMaxPair_ <= 0),
+        OP_LOGE(context_->GetNodeName(), "Input not supported, groupNum is too large."), return ge::GRAPH_FAILED);
     isLongH_ = ubMaxPair_ * SWI_FACTOR < dim2H_ ? 1 : 0;
 
     return ge::GRAPH_SUCCESS;
