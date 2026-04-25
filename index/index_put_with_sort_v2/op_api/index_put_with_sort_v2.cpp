@@ -22,6 +22,7 @@
 #include "opdev/op_log.h"
 #include "opdev/shape_utils.h"
 #include "aclnn_kernels/common/op_error_check.h"
+
 using namespace op;
 
 namespace l0op {
@@ -172,13 +173,14 @@ static bool IsSortV2PerformanceOptimal(const aclTensor* selfRef,
     constexpr int64_t MIN_TAIL_AXIS_ELEMENTS = 2048;
     constexpr int64_t AVG_BYTES_PER_ELEMENT = 2;
     constexpr int64_t MEMORY_LIMIT_BYTES = 64 * 1024 * 1024; // 64MB
-
+    constexpr int64_t MIN_INDEX_NUM = 512;
     auto selfShape = selfRef->GetViewShape();
     auto selfDimNum = selfShape.GetDimNum();
     auto indexCount = indices->Size();
     if (selfDimNum <= indexCount) {
         return false;
     }
+
     // 尾轴元素个数大于等于 2048
     int64_t tailElementsCount = 1;
     for (size_t i = indexCount; i < selfDimNum; i++) {
@@ -191,18 +193,114 @@ static bool IsSortV2PerformanceOptimal(const aclTensor* selfRef,
     // self和values总大小>=64M
     auto valueShape = values->GetViewShape();
     int64_t dataNums = static_cast<int64_t>(selfShape.GetShapeSize() + valueShape.GetShapeSize());
-    if (dataNums < MEMORY_LIMIT_BYTES / AVG_BYTES_PER_ELEMENT) {
-        OP_LOGD("IndexPutWithSortV2 Opt skip: total data size is less than %ld bytes!", MEMORY_LIMIT_BYTES);
+    auto selfDtype = selfRef->GetDataType();
+    int64_t selfTypeSize = ge::GetSizeByDataType(selfDtype);
+    int64_t memLimit = (selfTypeSize / 2) > 1 ? MEMORY_LIMIT_BYTES * selfTypeSize / 2 : MEMORY_LIMIT_BYTES;
+    if (dataNums < (memLimit / selfTypeSize)) {
+        OP_LOGD("IndexPutWithSortV2 Opt skip: total data size is less than %ld bytes!", memLimit);
         return false;
     }
+
+    int64_t indexNums = 0;
+    for (int64_t i = 0; i < indexCount; i++) {
+      if ((*indices)[i]) {
+          indexNums = (*indices)[i]->GetViewShape().GetShapeSize();
+          if (indexNums > 0) {
+            break;
+          }
+      }
+    }
+    if (selfDtype == ge::DT_INT8 && indexNums < MIN_INDEX_NUM) {
+        OP_LOGD("IndexPutWithSortV2 Opt skip: SelfDtype is INT8 And Too few indexes!");
+        return false;
+    }
+    OP_LOGD("IsSortV2PerformanceOptimal!");
+    return true;
+}
+
+bool IsSortV2SpecialScene(const aclTensor* selfRef, 
+    const aclTensorList* indices, const aclTensor* values, const bool& usePutV2SpeOpt)
+{
+    if (!usePutV2SpeOpt) {
+        return false;
+    }
+
+    constexpr int64_t REPEAT_DEGREE = 30;
+    constexpr int64_t MIN_INDEX_NUM = 512;
+    int64_t headElementsCount = 1;
+    int64_t indexAxisNums = 0;
+    auto indexCount = indices->Size();
+    auto selfShape = selfRef->GetViewShape();
+    int64_t indexNums = 0;
+
+    for (size_t i = 0; i < indexCount; i++) {
+        headElementsCount *= static_cast<int64_t>(selfShape.GetDim(i));
+    }
+    for (int64_t i = 0; i < indexCount; i++) {
+      if ((*indices)[i]) {
+        indexNums = (*indices)[i]->GetViewShape().GetShapeSize();
+        if (indexNums > 0) {
+            break;
+        }
+      }
+    }
+
+    if (indexNums < MIN_INDEX_NUM || (indexNums / headElementsCount) < REPEAT_DEGREE) {
+        OP_LOGD("IndexPutWithSortV2 Opt skip: The number of indexes is too small Or Low Index redundancy rate!");
+        return false;
+    }
+    OP_LOGD("IsSortV2SpecialScene!");
+    return true;
+}
+
+bool IsSortV2Scene(const aclTensor* selfRef, const aclTensorList* indices)
+{
+    constexpr int64_t REPEAT_DEGREE = 100;
+    constexpr int64_t MEMORY_LIMIT_BYTES = 12 * 1024 * 1024;
+    constexpr int64_t MIN_INDEX_NUM = 512;
+    int64_t indexAxisNums = 0;
+    auto indexCount = indices->Size();
+    auto selfShape = selfRef->GetViewShape();
+    auto selfDimNum = selfRef->GetViewShape().GetDimNum();
+    int64_t selfShapeSize = static_cast<int64_t>(selfRef->GetViewShape().GetShapeSize());
+    int64_t indexNums = 0;
+    auto selfDtype = selfRef->GetDataType();
+    int64_t selfTypeSize = ge::GetSizeByDataType(selfDtype);
+    int64_t selfSize = selfShapeSize * selfTypeSize;
+    for (int64_t i = 0; i < indexCount; i++) {
+      if ((*indices)[i]) {
+        if ((*indices)[i]->GetViewShape().GetShapeSize() > 0) {
+            indexAxisNums++;
+            indexNums = (*indices)[i]->GetViewShape().GetShapeSize();
+        }
+      }
+    }
+
+    if (indexAxisNums != selfDimNum) {
+        OP_LOGD("IndexPutWithSortV2 Opt skip: No Full Index!");
+        return false;
+    }
+
+    if (selfDtype != op::DataType::DT_FLOAT16 && selfDtype != op::DataType::DT_BF16 && 
+            selfDtype != op::DataType::DT_INT8 && selfDtype != op::DataType::DT_UINT8) {
+        OP_LOGD("IndexPutWithSortV2 Opt skip: selfDtype does not need to be casted!");
+        return false;
+    }
+
+    if (selfSize < MEMORY_LIMIT_BYTES || selfShapeSize / indexNums < REPEAT_DEGREE) {
+        OP_LOGD("IndexPutWithSortV2 Opt skip: selfSize is too small or Too much index");
+        return false;
+    }
+
+    OP_LOGD("IsSortV2Scene!");
     return true;
 }
 
 bool IsUseSortedV2OptScene(
     const bool isAiCpu, const aclTensor* self, const aclTensorList* indices, const aclTensor* values,
-    const bool deterministicValue, const bool accumulate, const bool isNonContiguous) {
+    const bool deterministicValue, const bool accumulate, const bool isNonContiguous, const bool& usePutV2SpeOpt) {
     // 1. 基本判断
-    if (isAiCpu || deterministicValue || !accumulate || isNonContiguous) {
+    if (isAiCpu || deterministicValue || isNonContiguous) {
         return false;
     }
     // 2. self, indices和values数据类型限制
@@ -230,7 +328,7 @@ bool IsUseSortedV2OptScene(
         return false;
     }
     // 8. sortv2优化判断
-    if (!IsSortV2PerformanceOptimal(self, indices, values)) {
+    if (!IsSortV2PerformanceOptimal(self, indices, values) && !IsSortV2SpecialScene(self, indices, values, usePutV2SpeOpt) && !IsSortV2Scene(self, indices)) {
         return false;
     }
 

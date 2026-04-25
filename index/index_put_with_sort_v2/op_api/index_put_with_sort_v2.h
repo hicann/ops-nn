@@ -20,7 +20,7 @@
 namespace l0op {
 bool IsUseSortedV2OptScene(
     const bool isAiCpu, const aclTensor* self, const aclTensorList* indices, const aclTensor* values,
-    const bool deterministicValue, const bool accumulate, const bool isNonContiguous);
+    const bool deterministicValue, const bool accumulate, const bool isNonContiguous, const bool& usePutV2SpeOpt);
 const aclTensor* IndexPutWithSortV2(
     const aclTensor* self, const aclTensor* linearIndex, const aclTensor* posIdx, const aclTensor* values,
     const aclIntArray* indexed_sizes, const bool accumulate, aclTensor* out, aclOpExecutor* executor);

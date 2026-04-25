@@ -1154,6 +1154,67 @@ static bool IsIndexPutV2Scene()
   return false;
 }
 
+bool IsSpecialScene(const aclTensor* selfRef, FVector<int64_t, DIMLIMIT> masks, const bool& accumulate)
+{
+    constexpr int64_t NON_INDEX_LENGTH_LIMIT = 256;
+    std::set<op::DataType> supportType = {
+        op::DataType::DT_BOOL, op::DataType::DT_INT8, op::DataType::DT_UINT8, op::DataType::DT_FLOAT16,
+        op::DataType::DT_BF16, op::DataType::DT_INT32, op::DataType::DT_FLOAT, op::DataType::DT_INT64
+    };
+    std::set<op::DataType> atomicAddSupportType = {op::DataType::DT_INT8, op::DataType::DT_FLOAT16, 
+                                                            op::DataType::DT_INT32, op::DataType::DT_FLOAT, op::DataType::DT_BF16};
+
+    auto selfDtype = selfRef->GetDataType();
+    if (accumulate) {
+        if (atomicAddSupportType.find(selfDtype) == atomicAddSupportType.end()) {
+            return false;
+        }
+    } else {
+        if (supportType.find(selfDtype) == supportType.end()) {
+            return false;
+        }
+    }
+
+    int64_t selfDimNum = selfRef->GetViewShape().GetDimNum();
+    while(masks.size() < selfDimNum) {
+        masks.emplace_back(0);
+    }
+    int64_t masksSize = static_cast<int64_t>(masks.size());
+    int64_t firstZeroPos = masksSize;
+    for (int64_t i = 0; i < masksSize; i++) {
+        if (masks[i] == 0) {
+            firstZeroPos = i;
+            break;
+        }
+    }
+
+    if (firstZeroPos == 0 || firstZeroPos >= selfDimNum) {
+        return false;
+    }
+
+    for (int64_t i = 0; i < firstZeroPos; i++) {
+        if(masks[i] != 1) {
+            return false;
+        }
+    }
+
+    for (int64_t i = firstZeroPos; i < masksSize; i++) {
+        if (masks[i] != 0) {
+            return false;
+        }
+    }
+
+    int64_t nonIndexedLength = 1;
+    for (int64_t i = firstZeroPos; i < selfDimNum; i++) {
+        nonIndexedLength *= selfRef->GetViewShape().GetDim(i);
+    }
+    int64_t dtypeSize = GetSizeByDataType(selfRef->GetDataType());
+    if (dtypeSize * nonIndexedLength < NON_INDEX_LENGTH_LIMIT) {
+        return false;
+    }
+    return true;
+}
+
 aclnnStatus aclnnIndexPutImplGetWorkspaceSize(aclTensor *selfRef,
                                               const aclTensorList *indices,
                                               const aclTensor *values,
@@ -1245,7 +1306,8 @@ aclnnStatus aclnnIndexPutImplGetWorkspaceSize(aclTensor *selfRef,
       if (retRts != RT_ERROR_NONE) {
           deterministicValue = 0;
       }
-      const bool useSortedV2Opt = l0op::IsUseSortedV2OptScene(isAiCpu, selfRef, indices, values, deterministicValue, accumulate, isNonContiguous);
+      const bool usePutV2SpeOpt = IsSpecialScene(selfRef, masks, accumulate);
+      const bool useSortedV2Opt = l0op::IsUseSortedV2OptScene(isAiCpu, selfRef, indices, values, deterministicValue, accumulate, isNonContiguous, usePutV2SpeOpt);
       const bool disDeterministicHighPrecision = accumulate && deterministicValue == 0 && !useSortedV2Opt &&
           (selfRef->GetDataType() == op::DataType::DT_FLOAT16 || selfRef->GetDataType() == op::DataType::DT_BF16 ||
            selfRef->GetDataType() == op::DataType::DT_INT8 || selfRef->GetDataType() == op::DataType::DT_UINT8);
@@ -1258,7 +1320,7 @@ aclnnStatus aclnnIndexPutImplGetWorkspaceSize(aclTensor *selfRef,
               valuesCast = l0op::Cast(valuesContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
           }
           OP_LOGD("Begin cast int8, uint8 to int32");
-          if (selfRef->GetDataType() == op::DataType::DT_INT8 || selfRef->GetDataType() == op::DataType::DT_UINT8) {
+          if (selfRef->GetDataType() == op::DataType::DT_INT8 && !usePutV2SpeOpt || selfRef->GetDataType() == op::DataType::DT_UINT8) {
               selfCast = l0op::Cast(selfRefContiguous, op::DataType::DT_INT32, uniqueExecutor.get());
               valuesCast = l0op::Cast(valuesContiguous, op::DataType::DT_INT32, uniqueExecutor.get());
           }
@@ -1269,7 +1331,7 @@ aclnnStatus aclnnIndexPutImplGetWorkspaceSize(aclTensor *selfRef,
                                           masksNum, isAiCpu, isNonContiguous, useSortedV2Opt, uniqueExecutor.get());
     CHECK_RET(indexPutOpOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
     const aclTensor* arch3510Result = indexPutOpOut;
-    if (!useSortedV2Opt) {
+    if (!useSortedV2Opt && (!usePutV2SpeOpt || (usePutV2SpeOpt && selfRef->GetDataType() != op::DataType::DT_INT8))) {
         arch3510Result = l0op::Cast(indexPutOpOut, selfRef->GetDataType(), uniqueExecutor.get());
         CHECK_RET(arch3510Result != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
