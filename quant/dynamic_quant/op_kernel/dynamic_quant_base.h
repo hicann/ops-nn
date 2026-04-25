@@ -134,7 +134,6 @@ public:
             multiRowNum = tilingData_.multiRowNumTailCore;
             loopCnt = rowPerTailCore / multiRowNum;
             remainRow = rowPerTailCore % multiRowNum;
-        } else {
         }
         sizeHalfLen = (tilingData_.rowLen + FIFTEEN) / SIXTEEN * SIXTEEN;
         rightPadding = sizeHalfLen - tilingData_.rowLen;
@@ -167,7 +166,6 @@ public:
             loopCnt = rowPerHeadCore;
         } else if (blockIdx >= tilingData_.headCoreNum && blockIdx < tilingData_.coreNum) {
             loopCnt = rowPerTailCore;
-        } else {
         }
         // 尾轴切分，最后剩余的部分
         uint32_t sizeTailLen = (tilingData_.innerLoopTail + FIFTEEN) / SIXTEEN * SIXTEEN;

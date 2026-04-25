@@ -246,22 +246,16 @@ private:
     {
         LocalTensor<yDtype> outLocal = outQueue.DeQue<yDtype>();
         LocalTensor<float> scaleLocal = scaleQueue.DeQue<float>();
-        LocalTensor<float> offsetLocal;
-        if (isAsymmetrical) {
-            offsetLocal = offsetQueue.DeQue<float>();
-        }
         DataCopyExtParams copyParams{(uint16_t)multiRow, (uint16_t)(tilingData_.rowLen * sizeof(yDtype)), 0, 0, 0};
         if constexpr (IsSameType<yDtype, int4b_t>::value) {
             copyParams.blockLen = copyParams.blockLen >> 1;
-            uint32_t index = loopCount * lenGMMultiRow;
-            DataCopyPad(outGm[index], outLocal, copyParams);
-        } else {
-            DataCopyPad(outGm[loopCount * lenGMMultiRow], outLocal, copyParams);
         }
+        DataCopyPad(outGm[loopCount * lenGMMultiRow], outLocal, copyParams);
 
         DataCopyParams copyParams1{1, (uint16_t)(multiRow * sizeof(float)), 0, 0};
         DataCopyPad(scaleGm[loopCount * multiRowNum], scaleLocal, copyParams1);
         if (isAsymmetrical) {
+            LocalTensor<float> offsetLocal = offsetQueue.DeQue<float>();
             DataCopyPad(offsetGm[loopCount * multiRowNum], offsetLocal, copyParams1);
             offsetQueue.FreeTensor(offsetLocal);
         }
