@@ -2,6 +2,71 @@
 
 > 本文档记录各版本的重要变更，版本按时间倒序排列。
 
+## v9.0.0-beta.2
+
+发布日期：2026-03-30
+
+本版本新增多项新增特性、问题修复及性能改进，支持最新的950硬件。
+我们诚挚欢迎社区反馈，以进一步提升 ops-nn 的稳定性和功能完备性。
+使用方式请参阅[官方文档](https://gitcode.com/cann/ops-nn/blob/master/README.md)。
+
+[CANN 9.0.0-beta.2](https://ascend.devcloud.huaweicloud.com/cann/run/software/9.0.0-beta.2/)
+
+```
+版本目录说明如下：
+├── aarch64                 # CPU为ARM类型
+│   ├── ops                  # ops算子包目录，用于归档算子子包
+│   ├── ...
+├── x86_64                   # CPU为X86类型
+│   ├── ops                  # ops算子包目录，用于归档算子子包
+│   ├── ...
+```
+
+
+### 📌 版本配套
+
+**CANN独立升级子包版本配套关系**
+
+| CANN子包版本 | 版本源码标签   | 配套CANN版本|
+|--|--|--|
+| [cann-ops-math   9.0.0-beta.2](https://ascend.devcloud.huaweicloud.com/cann/run/software/9.0.0-beta.2/) | [v9.0.0-beta.2](https://gitcode.com/cann/ops-math/tags/v9.0.0-beta.2) | CANN   9.0.0-beta.2 |
+| [cann-ops-nn   9.0.0-beta.2](https://ascend.devcloud.huaweicloud.com/cann/run/software/9.0.0-beta.2/) | [v9.0.0-beta.2](https://gitcode.com/cann/ops-nn/tags/v9.0.0-beta.2) | CANN   9.0.0-beta.2 |
+| [cann-ops-cv   9.0.0-beta.2](https://ascend.devcloud.huaweicloud.com/cann/run/software/9.0.0-beta.2/) | [v9.0.0-beta.2](https://gitcode.com/cann/ops-cv/tags/v9.0.0-beta.2) | CANN   9.0.0-beta.2 |
+| [cann-ops-transformer   9.0.0-beta.2](https://ascend.devcloud.huaweicloud.com/cann/run/software/9.0.0-beta.2/) | [v9.0.0-beta.2](https://gitcode.com/cann/ops-transformer/tags/v9.0.0-beta.2) | CANN   9.0.0-beta.2 |
+| [cann-hccl   9.0.0-beta.2](https://ascend.devcloud.huaweicloud.com/cann/run/software/9.0.0-beta.2/) | [v9.0.0-beta.2](https://gitcode.com/cann/hccl/tags/v9.0.0-beta.2) | CANN   9.0.0-beta.2 |
+| [cann-hixl   9.0.0-beta.2](https://ascend.devcloud.huaweicloud.com/cann/run/software/9.0.0-beta.2/) | [v9.0.0-beta.2](https://gitcode.com/cann/hixl/tags/v9.0.0-beta.2) | CANN   9.0.0-beta.2 |
+
+**CANN开源子包版本配套关系**
+
+| CANN子包版本                         | 版本源码标签                                                 | 配套CANN版本        |
+| ------------------------------------ | ------------------------------------------------------------ | ------------------- |
+| cann-opbase 9.0.0-beta.2             | [v9.0.0-beta.2](https://gitcode.com/cann/opbase/tags/v9.0.0-beta.2) | CANN   9.0.0-beta.2 |
+| cann-oam-tools   9.0.0-beta.2        | [v9.0.0-beta.2](https://gitcode.com/cann/oam-tools/tags/v9.0.0-beta.2) | CANN   9.0.0-beta.2 |
+| cann-asc-tools   9.0.0-beta.2        | [v9.0.0-beta.2](https://gitcode.com/cann/asc-tools/tags/v9.0.0-beta.2) | CANN   9.0.0-beta.2 |
+| cann-asc-devkit   9.0.0-beta.2       | [v9.0.0-beta.2](https://gitcode.com/cann/asc-devkit/tags/v9.0.0-beta.2) | CANN   9.0.0-beta.2 |
+| cann-pto-isa   9.0.0-beta.2          | [v9.0.0-beta.2](https://gitcode.com/cann/pto-isa/tags/v9.0.0-beta.2) | CANN   9.0.0-beta.2 |
+| cann-ge-compiler   9.0.0-beta.2      | [v9.0.0-beta.2](https://gitcode.com/cann/ge/tags/v9.0.0-beta.2) | CANN   9.0.0-beta.2 |
+| cann-ge-executor   9.0.0-beta.2      | [v9.0.0-beta.2](https://gitcode.com/cann/ge/tags/v9.0.0-beta.2) | CANN   9.0.0-beta.2 |
+| cann-graph-autofusion   9.0.0-beta.2 | [v9.0.0-beta.2](https://gitcode.com/cann/graph-autofusion/tags/v9.0.0-beta.2) | CANN   9.0.0-beta.2 |
+| cann-metadef   9.0.0-beta.2          | [v9.0.0-beta.2](https://gitcode.com/cann/metadef/tags/v9.0.0-beta.2) | CANN   9.0.0-beta.2 |
+| cann-dflow-executor   9.0.0-beta.2   | [v9.0.0-beta.2](https://gitcode.com/cann/ge/tags/v9.0.0-beta.2) | CANN   9.0.0-beta.2 |
+| cann-hcomm   9.0.0-beta.2            | [v9.0.0-beta.2](https://gitcode.com/cann/hcomm/tags/v9.0.0-beta.2) | CANN   9.0.0-beta.2 |
+| cann-npu-runtime   9.0.0-beta.2      | [v9.0.0-beta.2](https://gitcode.com/cann/runtime/tags/v9.0.0-beta.2) | CANN   9.0.0-beta.2 |
+
+### 🚀 关键特性
+
+- 【工程能力】静态库工程适配  [!391](https://gitcode.com/cann/ops-nn/pull/391)
+- 【工程能力】算子工程适配950 [!450](https://gitcode.com/cann/ops-nn/pull/450)
+- 【工程能力】新增支持按模板编译特定算子kernel能力[#1097](https://gitcode.com/cann/ops-nn/issues/1097)
+- 【新特性】950支持PyTorch view的算子融合优化 [#864](https://gitcode.com/cann/ops-nn/issues/864)
+- 【新特性】950支持SIMD/SIMT新同构编程([#660](https://gitcode.com/cann/ops-nn/issues/660)、[#710](https://gitcode.com/cann/ops-nn/issues/710)、[#668](https://gitcode.com/cann/ops-nn/issues/668)、[#656](https://gitcode.com/cann/ops-nn/issues/656)、[#658](https://gitcode.com/cann/ops-nn/issues/658))
+
+### 🐛 问题修复
+
+- ScatterNd算子确定性计算按列分核偏移修复([!3137](https://gitcode.com/cann/ops-nn/pull/3137))
+- scatter_elements 确定性模板([!3092](https://gitcode.com/cann/ops-nn/pull/3092))
+- Matmul算子FP32场景下单核切K模板的精度（[!2651](https://gitcode.com/cann/ops-nn/pull/2651)）
+
 ## v8.5.0-beta.1
 
 发布日期：2025-12-30
