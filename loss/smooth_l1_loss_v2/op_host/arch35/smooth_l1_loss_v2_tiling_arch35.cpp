@@ -23,6 +23,7 @@
 #include "smooth_l1_loss_v2_tiling_arch35.h"
 
 using namespace std;
+using namespace Ops::Base;
 
 namespace {
 const size_t INDEX_PREDICT = 0;
@@ -52,14 +53,22 @@ ge::graphStatus SmoothL1LossV2Tiling::CheckShape()
     this->outputDtype = outputDesc->GetDataType();
     auto iter = DTYEP_2_INT_KEY.find(this->outputDtype);
     OP_CHECK_IF(
-        iter == DTYEP_2_INT_KEY.end(), OP_LOGE(tilingContext->GetNodeName(), "output dtype is not support."),
+        iter == DTYEP_2_INT_KEY.end(),
+        OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "y", ToString(this->outputDtype).c_str(),
+            "FLOAT, FLOAT16 or BF16"),
         return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        inputPDesc->GetDataType() != inputLDesc->GetDataType(),
-        OP_LOGE(tilingContext->GetNodeName(), "input predict and label dtype not same"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        inputPShape != inputLShape, OP_LOGE(tilingContext->GetNodeName(), "input predict and label shape not same"),
-        return ge::GRAPH_FAILED);
+    if (inputPDesc->GetDataType() != inputLDesc->GetDataType()) {
+        std::string dtypeMsg = ToString(inputPDesc->GetDataType()) + " and " + ToString(inputLDesc->GetDataType());
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "predict and label",
+            dtypeMsg.c_str(), "The dtypes of input predict and input label should be the same");
+        return ge::GRAPH_FAILED;
+    }
+    if (inputPShape != inputLShape) {
+        std::string shapeMsg = ToString(inputPShape) + " and " + ToString(inputLShape);
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext->GetNodeName(), "predict and label",
+            shapeMsg.c_str(), "The shapes of input predict and input label should be the same");
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -100,7 +109,8 @@ ge::graphStatus SmoothL1LossV2Tiling::TilingEle()
                 ge::GRAPH_SUCCESS,
             OP_LOGE(tilingContext->GetNodeName(), "do tiling failed for fp32"), return ge::GRAPH_FAILED);
     } else {
-        OP_LOGE(tilingContext->GetNodeName(), "current dtype not supported");
+        OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "y", ToString(this->outputDtype).c_str(),
+            "FLOAT, FLOAT16 or BF16");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -161,7 +171,9 @@ ge::graphStatus SmoothL1LossV2Tiling::RunTiling(const SmoothL1LossV2CompileInfo*
     const string reductionStr = string(attrs->GetAttrPointer<char>(1));
     float sigma = (sigmaPtr == nullptr) ? 1.0 : *sigmaPtr;
     OP_CHECK_IF(
-        sigma < 0, OP_LOGE(tilingContext->GetNodeName(), "the value of sigma must be non-negative."),
+        sigma < 0,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(tilingContext->GetNodeName(), "sigma",
+            std::to_string(sigma).c_str(), "The attr sigma must be non-negative"),
         return ge::GRAPH_FAILED);
     tiling->Sigma = sigma;
     tiling->MultiplyValue = fabsf(sigma) < 1e-6f ? 0.0 : 1 / sigma;
@@ -169,9 +181,8 @@ ge::graphStatus SmoothL1LossV2Tiling::RunTiling(const SmoothL1LossV2CompileInfo*
     auto iter = STR_2_INT.find(reductionStr);
     OP_CHECK_IF(
         iter == STR_2_INT.end(),
-        OP_LOGE(
-            tilingContext->GetNodeName(), "reduction %s is not support, should be one of {mean, sum, none}.",
-            reductionStr.c_str()),
+        OP_LOGE_WITH_INVALID_ATTR(tilingContext->GetNodeName(), "reduction",
+            reductionStr.c_str(), "none, sum or mean"),
         return ge::GRAPH_FAILED);
     this->reduction = iter->second;
     key.Reduction = this->reduction;
@@ -184,7 +195,8 @@ ge::graphStatus SmoothL1LossV2Tiling::RunTiling(const SmoothL1LossV2CompileInfo*
             TilingReduce(compileInfo) != ge::GRAPH_SUCCESS,
             OP_LOGE(tilingContext->GetNodeName(), "do tiling failed for reduce"), return ge::GRAPH_FAILED);
     } else {
-        OP_LOGE(tilingContext->GetNodeName(), "reduction %s is not supported", reductionStr.c_str());
+        OP_LOGE_WITH_INVALID_ATTR(tilingContext->GetNodeName(), "reduction",
+            reductionStr.c_str(), "none, sum or mean");
         return ge::GRAPH_FAILED;
     }
     return SetTilingData();

@@ -222,12 +222,19 @@ static ge::graphStatus Tiling4NLLLossAC(gert::TilingContext* context, uint32_t m
 
     if (xShape.GetDimNum() == INPUT_ONE_DIM || xShape.GetDimNum() == INPUT_TWO_DIM) {
         auto nsize = xShape.GetDimNum() == 1 ? 1 : xShape.GetDim(0);
+        if (targetShape.GetDim(0) < nsize) {
+            std::string reasonMsg =
+                "The 0th dim of input target should be greater than or equal to the batch of input x, "
+                "where batch is 1 when x's number of dimensions is 1, otherwise it is the value of x's 0th dim";
+            std::string shapeMsg = ToString(targetShape) + " and " + ToString(xShape);
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "target and x",
+                shapeMsg.c_str(), reasonMsg.c_str());
+            return ge::GRAPH_FAILED;
+        }
         OP_CHECK_IF(
-            (targetShape.GetDim(0) < nsize),
-            OP_LOGE(context->GetNodeName(), "The target size should be greater or equal to N!"),
-            return ge::GRAPH_FAILED);
-        OP_CHECK_IF(
-            targetShape.GetDimNum() != 1, OP_LOGE(context->GetNodeName(), "Input tensor target should be 1D"),
+            targetShape.GetDimNum() != 1,
+            OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "target",
+                std::to_string(targetShape.GetDimNum()).c_str(), "1D"),
             return ge::GRAPH_FAILED);
     } else if (xShape.GetDimNum() == INPUT_FOUR_DIM) {
         auto nsize = xShape.GetDim(0);
@@ -236,21 +243,44 @@ static ge::graphStatus Tiling4NLLLossAC(gert::TilingContext* context, uint32_t m
 
         OP_CHECK_IF(
             (xShape.GetShapeSize() < 0),
-            OP_LOGE(context->GetNodeName(), "Input x shape size should no less than 0!"), return ge::GRAPH_FAILED);
+            OP_LOGE_FOR_INVALID_SHAPESIZE(context->GetNodeName(), "x", ToString(xShape).c_str(),
+                "greater than or equal to 0"),
+            return ge::GRAPH_FAILED);
+        if (targetShape.GetDim(0) < nsize) {
+            std::string reasonMsg =
+                "The 0th dim of input target should be greater than or equal to the N axis of input x, "
+                "where N refers to the 0th dim";
+            std::string shapeMsg = ToString(targetShape) + " and " + ToString(xShape);
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "target and x",
+                shapeMsg.c_str(), reasonMsg.c_str());
+            return ge::GRAPH_FAILED;
+        }
+        if (targetShape.GetDim(1) < hsize) {
+            std::string reasonMsg =
+                "The 1st dim of input target should be greater than or equal to the H axis of input x, "
+                "where H refers to the 2nd dim";
+            std::string shapeMsg = ToString(targetShape) + " and " + ToString(xShape);
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "target and x",
+                shapeMsg.c_str(), reasonMsg.c_str());
+            return ge::GRAPH_FAILED;
+        }
+        if (targetShape.GetDim(NUMBER_TWO) < wsize) {
+            std::string reasonMsg =
+                "The 2nd dim of input target should be greater than or equal to the W axis of input x, "
+                "where W refers to the 3rd dim";
+            std::string shapeMsg = ToString(targetShape) + " and " + ToString(xShape);
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "target and x",
+                shapeMsg.c_str(), reasonMsg.c_str());
+            return ge::GRAPH_FAILED;
+        }
         OP_CHECK_IF(
-            (targetShape.GetDim(0) < nsize),
-            OP_LOGE(context->GetNodeName(), "The target dim0 size should be equal to N!"), return ge::GRAPH_FAILED);
-        OP_CHECK_IF(
-            (targetShape.GetDim(1) < hsize),
-            OP_LOGE(context->GetNodeName(), "The target dim1 size should be equal to H!"), return ge::GRAPH_FAILED);
-        OP_CHECK_IF(
-            (targetShape.GetDim(NUMBER_TWO) < wsize),
-            OP_LOGE(context->GetNodeName(), "The target dim2 size should be equal to W!"), return ge::GRAPH_FAILED);
-        OP_CHECK_IF(
-            targetShape.GetDimNum() != 3, OP_LOGE(context->GetNodeName(), "Input tensor target should be 3D"),
+            targetShape.GetDimNum() != 3,
+            OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "target",
+                std::to_string(targetShape.GetDimNum()).c_str(), "3D"),
             return ge::GRAPH_FAILED);
     } else {
-        OP_LOGE("NLLLoss", "Input x dims should be 1D, 2D or 4D!");
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "x",
+            std::to_string(xShape.GetDimNum()).c_str(), "1D, 2D or 4D");
         return ge::GRAPH_FAILED;
     }
 
@@ -273,8 +303,8 @@ static ge::graphStatus Tiling4NLLLossAC(gert::TilingContext* context, uint32_t m
     }
     OP_CHECK_IF(
         xTypeKeyMap.count(xType) == 0,
-        OP_LOGE(
-            context->GetNodeName(), "xType not support this data type, just support float32, bfloat16 and float16."),
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "x", ToString(xType).c_str(),
+            "FLOAT, FLOAT16 or BF16"),
         return ge::GRAPH_FAILED);
     tilingParams.dtypeSize = sizeof(xType);
 
@@ -283,7 +313,8 @@ static ge::graphStatus Tiling4NLLLossAC(gert::TilingContext* context, uint32_t m
     auto targetType = targetTensorType->GetDataType();
     OP_CHECK_IF(
         targetTypeKeyMap.count(targetType) == 0,
-        OP_LOGE(context->GetNodeName(), "targetType not support this data type, just support int64, int32 and uint8."),
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "target", ToString(targetType).c_str(),
+            "INT32, INT64 or UINT8"),
         return ge::GRAPH_FAILED);
 
     auto weightShape = context->GetOptionalInputShape(WEIGHT_INDEX);
@@ -307,7 +338,8 @@ static ge::graphStatus Tiling4NLLLossAC(gert::TilingContext* context, uint32_t m
     } else if (strcmp(reduction, "mean") == 0) {
         tilingParams.reduction = REDUCTION_MEAN;
     } else {
-        OP_LOGE(context->GetNodeName(), "Invalid reduction mode, only support mean, sum and none!");
+        OP_LOGE_WITH_INVALID_ATTR(context->GetNodeName(), "reduction", reduction,
+            "mean, sum or none");
         return ge::GRAPH_FAILED;
     }
 

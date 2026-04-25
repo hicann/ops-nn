@@ -26,6 +26,7 @@
 #include "util/platform_util.h"
 
 using namespace AscendC;
+using namespace Ops::Base;
 
 namespace optiling
 {
@@ -95,10 +96,14 @@ ge::graphStatus NLLLossGradSimtTiling::ProcessShapeInfo() {
         height_ = inShapeVal.GetDim(NUMBER_TWO);
         width_ = inShapeVal.GetDim(NUMBER_THREE);
         OP_CHECK_IF(
-            (height_ <= 0U), OP_LOGE(context_->GetNodeName(), "NLLLossGrad Simt input height_ should be greater than 0!"),
+            (height_ <= 0U),
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x", ToString(inShapeVal).c_str(),
+                "The H axis of input x should be positive, where H refers to the 2nd dim"),
             return ge::GRAPH_FAILED);
         OP_CHECK_IF(
-            (width_ <= 0U), OP_LOGE(context_->GetNodeName(), "NLLLossGrad Simt input width_ should be greater than 0!"),
+            (width_ <= 0U),
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x", ToString(inShapeVal).c_str(),
+                "The W axis of input x should be positive, where W refers to the 3rd dim"),
             return ge::GRAPH_FAILED);
         tilingData_.set_batchNum(batchNum_);
         tilingData_.set_classNum(inShapeVal.GetDim(1));
@@ -106,7 +111,8 @@ ge::graphStatus NLLLossGradSimtTiling::ProcessShapeInfo() {
         tilingData_.set_width(width_);
     }
     else {
-        OP_LOGE("NLLLossGrad Simt", "Input x dim is %u, support dim is 1, 2, 4!", inputRank);
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x",
+            std::to_string(inputRank).c_str(), "1D, 2D or 4D");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -124,7 +130,8 @@ ge::graphStatus NLLLossGradSimtTiling::ProcessAttributesInfo() {
     } else if (strcmp(reduction, "sum") == 0) {
         tilingData_.set_reductionMode(SUM_MODE);
     } else {
-        OP_LOGE("NLLLossGrad Simt", "Invalid reduction mode, only support mean, sun and none!");
+        OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "reduction", reduction,
+            "mean, sum or none");
         return ge::GRAPH_FAILED;
     }
 
@@ -176,14 +183,14 @@ ge::graphStatus NLLLossGradSimtTiling::GenerateTilingKey()
     } else if (paramsDtype == ge::DT_FLOAT16) {
         tilingKey_ = DTYPE_F16;
     } else {
-        OP_LOGE("NLLLossGrad Simt", "ValuesDtype = %s not supported.",
-                                        Ops::Base::ToString(paramsDtype).c_str());
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x",
+            ToString(paramsDtype).c_str(), "FLOAT, FLOAT16 or BF16");
         return ge::GRAPH_FAILED;
     }
     auto targetDtype = context_->GetInputDesc(INPUT_TARGET_IDX)->GetDataType();
     if (targetDtype != ge::DT_INT64 && targetDtype != ge::DT_INT32 && targetDtype != ge::DT_UINT8) {
-        OP_LOGE("NLLLossGrad", "Target type = %s not supported.",
-                                        Ops::Base::ToString(targetDtype).c_str());
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "target",
+            ToString(targetDtype).c_str(), "INT32, INT64 or UINT8");
         return ge::GRAPH_FAILED;
     }
     // no need of tiingkey

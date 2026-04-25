@@ -55,23 +55,26 @@ ge::graphStatus MseLossGradTilingClass::GetShapeAttrsInfo()
     ge::DataType labelDType = labelDesc->GetDataType();
     ge::DataType doutDType = doutDesc->GetDataType();
     ge::DataType outputDType = outputDesc->GetDataType();
-    OP_CHECK_IF((predictDType != labelDType),
-        OP_LOGE(context_->GetNodeName(), "dtype of predict[%s] and dtype of label[%s] not same",
-            ge::TypeUtils::DataTypeToSerialString(predictDType).c_str(),
-            ge::TypeUtils::DataTypeToSerialString(labelDType).c_str()),
-        return ge::GRAPH_FAILED);
+    if (predictDType != labelDType) {
+        std::string dtypeMsg = ToString(predictDType) + " and " + ToString(labelDType);
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "predict and label",
+            dtypeMsg.c_str(), "The dtypes of input predict and input label should be the same");
+        return ge::GRAPH_FAILED;
+    }
 
-    OP_CHECK_IF((predictDType != doutDType),
-        OP_LOGE(context_->GetNodeName(), "dtype of predict[%s] and dtype of dout[%s] not same",
-            ge::TypeUtils::DataTypeToSerialString(predictDType).c_str(),
-            ge::TypeUtils::DataTypeToSerialString(doutDType).c_str()),
-        return ge::GRAPH_FAILED);
+    if (predictDType != doutDType) {
+        std::string dtypeMsg = ToString(predictDType) + " and " + ToString(doutDType);
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "predict and dout",
+            dtypeMsg.c_str(), "The dtypes of input predict and input dout should be the same");
+        return ge::GRAPH_FAILED;
+    }
 
-    OP_CHECK_IF((predictDType != outputDType),
-        OP_LOGE(context_->GetNodeName(), "dtype of predict[%s] and dtype of y[%s] not same",
-            ge::TypeUtils::DataTypeToSerialString(predictDType).c_str(),
-            ge::TypeUtils::DataTypeToSerialString(outputDType).c_str()),
-        return ge::GRAPH_FAILED);
+    if (predictDType != outputDType) {
+        std::string dtypeMsg = ToString(predictDType) + " and " + ToString(outputDType);
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "predict and y",
+            dtypeMsg.c_str(), "The dtypes of input predict and output y should be the same");
+        return ge::GRAPH_FAILED;
+    }
     this->inputDtype = predictDType;
     return ge::GRAPH_SUCCESS;
 }
@@ -101,7 +104,8 @@ ge::graphStatus MseLossGradTilingClass::CalcReduceMeanCof()
     this->reducationStr = attrs->GetAttrPointer<char>(0);
     auto iter = STR_2_INT.find(this->reducationStr);
     OP_CHECK_IF((iter == STR_2_INT.end()),
-        OP_LOGE(context_->GetNodeName(), "reduction is not in [none, mean, sum]"),
+        OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "reduction", this->reducationStr,
+            "none, mean or sum"),
         return ge::GRAPH_FAILED);
     this->reduceMeanCof = 2.0f;
     int64_t dimVal = 1;
@@ -114,7 +118,9 @@ ge::graphStatus MseLossGradTilingClass::CalcReduceMeanCof()
             if (inputShape.GetDim(i) != 0) {
                 dimVal = dimVal * inputShape.GetDim(i);
             } else {
-                OP_LOGE(context_->GetNodeName(), "the shape[%u] of output is 0, do not supported", i);
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "predict",
+                    ToString(inputShape).c_str(),
+                    "The shape of input predict can not be an empty tensor when the attr reduction is mean");
                 return ge::GRAPH_FAILED;
             }
         }
@@ -148,8 +154,8 @@ ge::graphStatus MseLossGradTilingClass::DoScalarDagOpTiling()
             return ge::GRAPH_FAILED);
         this->tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), this->doutIsScalar);
     } else {
-        OP_LOGE(context_->GetNodeName(), "input dtype is only support float16, bfloat16, float32, while got %s!",
-            ge::TypeUtils::DataTypeToSerialString(inputDtype).c_str());
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "predict",
+            ToString(this->inputDtype).c_str(), "FLOAT, FLOAT16 or BF16");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -179,8 +185,8 @@ ge::graphStatus MseLossGradTilingClass::DoTensorDagOpTiling()
             return ge::GRAPH_FAILED);
         this->tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), this->doutIsScalar);
     } else {
-        OP_LOGE(context_->GetNodeName(), "input tensor dtype is only support float16, bfloat16, float32, while got %s!",
-            ge::TypeUtils::DataTypeToSerialString(inputDtype).c_str());
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "predict",
+            ToString(this->inputDtype).c_str(), "FLOAT, FLOAT16 or BF16");
         return ge::GRAPH_FAILED;
     }
 

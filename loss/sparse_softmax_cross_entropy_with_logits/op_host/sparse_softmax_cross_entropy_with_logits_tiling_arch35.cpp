@@ -31,6 +31,8 @@
 #include "../op_kernel/arch35/sparse_softmax_cross_entropy_with_logits_tiling_key.h"
 
 namespace optiling {
+using namespace Ops::Base;
+
 constexpr uint32_t INPUT_FEATURES_IDX = 0;
 constexpr uint32_t INPUT_LABELS_IDX = 1;
 constexpr uint32_t OUTPUT_LOSS_IDX = 0;
@@ -130,13 +132,17 @@ ge::graphStatus SparseSoftmaxCrossEntropyWithLogitsTiling::CheckInputDtype()
 
     bool validDtype = featuresDtype == ge::DT_BF16 || featuresDtype == ge::DT_FLOAT || featuresDtype == ge::DT_FLOAT16;
     OP_CHECK_IF(
-        (!validDtype), OP_LOGE(context_->GetNodeName(), "The input featuresDtype only support F32/FP16/BF16 but got %s.",
-                ge::TypeUtils::DataTypeToSerialString(featuresDtype).c_str()), return ge::GRAPH_FAILED);
+        (!validDtype),
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "features", ToString(featuresDtype).c_str(),
+            "FLOAT, FLOAT16 or BF16"),
+        return ge::GRAPH_FAILED);
 
     validDtype = labelsDtype == ge::DT_INT32 || labelsDtype == ge::DT_INT64;
     OP_CHECK_IF(
-        (!validDtype), OP_LOGE(context_->GetNodeName(), "The input labelsDtype only support INT64/INT32 but got %s.",
-                ge::TypeUtils::DataTypeToSerialString(labelsDtype).c_str()), return ge::GRAPH_FAILED);
+        (!validDtype),
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "labels", ToString(labelsDtype).c_str(),
+            "INT32 or INT64"),
+        return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -149,13 +155,18 @@ ge::graphStatus SparseSoftmaxCrossEntropyWithLogitsTiling::CheckInputShape()
     OPS_CHECK_NULL_WITH_CONTEXT(context_, labelsShape);
     auto labelsStorageShape = labelsShape->GetStorageShape();
     if (featuresStorageShape.GetDimNum() - 1 != labelsStorageShape.GetDimNum()) {
-        OP_LOGE(context_->GetNodeName(), "labels.dimNum must equal features.dimNum - 1, labels.dimNum = %lu, features.dimNum = %lu", labelsStorageShape.GetDimNum(), featuresStorageShape.GetDimNum());
+        std::string dimNumMsg = std::to_string(labelsStorageShape.GetDimNum()) + " and " +
+            std::to_string(featuresStorageShape.GetDimNum());
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "labels and features", dimNumMsg.c_str(),
+            "The dimension number of input labels should be one less than the dimension number of input features");
         return ge::GRAPH_FAILED;
     }
 
     for (size_t i = 0; i < featuresStorageShape.GetDimNum() - 1; i++) {
         if (featuresStorageShape.GetDim(i) != labelsStorageShape.GetDim(i)) {
-            OP_LOGE(context_->GetNodeName(), "labels.shape must equal features.shape except for last dim");
+            std::string shapeMsg = ToString(labelsStorageShape) + " and " + ToString(featuresStorageShape);
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "labels and features", shapeMsg.c_str(),
+                "The shape of input labels should be the same as the prefix shape of input features");
             return ge::GRAPH_FAILED;
         }
     }
@@ -364,8 +375,13 @@ ge::graphStatus SparseSoftmaxCrossEntropyWithLogitsTiling::DoTiling()
     auto outputShape = output->GetStorageShape();
     auto outputDimNum = outputShape.GetDimNum();
     baseTiling_.r = outputShape.GetDim(outputDimNum - 1);
-    OP_CHECK_IF(
-        (baseTiling_.r <= 0), OP_LOGE(context_->GetNodeName(), "Must have at least 1 class"), return ge::GRAPH_FAILED);
+    if (baseTiling_.r <= 0) {
+        std::string reasonMsg = "The reduce axis of output backprop should be positive, "
+            "where reduce axis refers to the last dim";
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "backprop",
+            ToString(outputShape).c_str(), reasonMsg.c_str());
+        return ge::GRAPH_FAILED;
+    }
     baseTiling_.a = outputShape.GetShapeSize() / baseTiling_.r;
     OP_CHECK_IF(
         (CalTilingData() != ge::GRAPH_SUCCESS), OP_LOGE(context_->GetNodeName(), "Calculate TilingData failed"),

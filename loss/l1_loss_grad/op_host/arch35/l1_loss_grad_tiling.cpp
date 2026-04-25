@@ -29,6 +29,7 @@ const size_t INDEX_PREDICT = 0;
 
 namespace optiling {
 using namespace L1LossGradKernel;
+using namespace Ops::Base;
 
 const size_t ASCEND_WORKSPACE = 16777216; // 16MB
 constexpr static uint64_t COMMON_TILING_PRIORITY = 0;
@@ -54,21 +55,31 @@ ge::graphStatus L1LossGradTiling::GetShapeAttrsInfo()
     ge::DataType inputLabelDtype = inputLabelDesc->GetDataType();
     ge::DataType outputDtype = outputDesc->GetDataType();
 
-    OP_CHECK_IF(inputGradsDtype != inputPredictDtype,
-        OP_LOGE(context_->GetNodeName(), "Input grads dtype not match with input predict dtype."),
-        return ge::GRAPH_FAILED);
+    if (inputGradsDtype != inputPredictDtype) {
+        std::string dtypeMsg = ToString(inputGradsDtype) + " and " + ToString(inputPredictDtype);
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "grads and predict",
+            dtypeMsg.c_str(), "The dtypes of input grads and input predict should be the same");
+        return ge::GRAPH_FAILED;
+    }
     
-    OP_CHECK_IF(inputGradsDtype != inputLabelDtype,
-        OP_LOGE(context_->GetNodeName(),  "Input grads dtype not match with input label dtype."),
-        return ge::GRAPH_FAILED);
+    if (inputGradsDtype != inputLabelDtype) {
+        std::string dtypeMsg = ToString(inputGradsDtype) + " and " + ToString(inputLabelDtype);
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "grads and label",
+            dtypeMsg.c_str(), "The dtypes of input grads and input label should be the same");
+        return ge::GRAPH_FAILED;
+    }
    
     OP_CHECK_IF(inputPredictDtype != ge::DT_FLOAT16 && inputPredictDtype != ge::DT_BF16 && inputPredictDtype != ge::DT_FLOAT,
-        OP_LOGE(context_->GetNodeName(),  "input predict dtype not support"),
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "predict", ToString(inputPredictDtype).c_str(),
+            "FLOAT, FLOAT16 or BF16"),
         return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(outputDtype != inputGradsDtype ,
-        OP_LOGE(context_->GetNodeName(),  "output y dtype not same as inputs"),
-        return ge::GRAPH_FAILED);
+    if (outputDtype != inputGradsDtype) {
+        std::string dtypeMsg = ToString(outputDtype) + " and " + ToString(inputGradsDtype);
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "y and grads",
+            dtypeMsg.c_str(), "The dtypes of output y and input grads should be the same");
+        return ge::GRAPH_FAILED;
+    }
 
     this->outputDtype_ = outputDtype;
     return ge::GRAPH_SUCCESS;
@@ -98,8 +109,9 @@ ge::graphStatus L1LossGradTiling::CaluateReduceElts()
     const char* reduction = reductionAttr != nullptr ? reductionAttr : "mean";
     
     OP_CHECK_IF(strcmp(reduction, "mean") != 0 && strcmp(reduction, "sum") != 0 && strcmp(reduction, "none") != 0,
-               OP_LOGE(context_, "reduction is not in none, mean or sum"),
-               return ge::GRAPH_FAILED);
+        OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "reduction", reduction,
+            "none, mean or sum"),
+        return ge::GRAPH_FAILED);
 
     if (strcmp(reduction, "mean") == 0) {
         auto labelStorageShape = context_->GetInputShape(INPUT_LABEL_INDEX);
@@ -111,7 +123,9 @@ ge::graphStatus L1LossGradTiling::CaluateReduceElts()
                 reduceEltsTemp = reduceEltsTemp / inputLabelShape.GetDim(i);
                 this->reduceElts_ = reduceEltsTemp;
             } else {
-                OP_LOGE(context_->GetNodeName(), "the shape[%u] is 0, do not supported", i);
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "label",
+                    ToString(inputLabelShape).c_str(),
+                    "The shape of input label can not be an empty tensor when the attr reduction is mean");
                 return ge::GRAPH_FAILED;
             }
         }

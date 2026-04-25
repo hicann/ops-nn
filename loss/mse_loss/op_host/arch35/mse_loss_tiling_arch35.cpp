@@ -54,16 +54,21 @@ ge::graphStatus MseLossTiling::CheckShape()
     auto iter = DTYEP_2_INT_KEY.find(this->outputDtype);
     OP_CHECK_IF(
         iter == DTYEP_2_INT_KEY.end(),
-        OP_LOGE(
-            tilingContext->GetNodeName(),
-            "output dtype is not support, should be one of {float32, float16, bfloat16}. "),
+        OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "y", ToString(this->outputDtype).c_str(),
+            "FLOAT, FLOAT16 or BF16"),
         return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        inputPDesc->GetDataType() != inputLDesc->GetDataType(),
-        OP_LOGE(tilingContext->GetNodeName(), "input predict and label dtype not same"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        inputPShape != inputLShape, OP_LOGE(tilingContext->GetNodeName(), "input predict and label shape not same"),
-        return ge::GRAPH_FAILED);
+    if (inputPDesc->GetDataType() != inputLDesc->GetDataType()) {
+        std::string dtypeMsg = ToString(inputPDesc->GetDataType()) + " and " + ToString(inputLDesc->GetDataType());
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "predict and label",
+            dtypeMsg.c_str(), "The dtypes of input predict and input label should be the same");
+        return ge::GRAPH_FAILED;
+    }
+    if (inputPShape != inputLShape) {
+        std::string shapeMsg = ToString(inputPShape) + " and " + ToString(inputLShape);
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext->GetNodeName(), "predict and label",
+            shapeMsg.c_str(), "The shapes of input predict and input label should be the same");
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -102,7 +107,8 @@ ge::graphStatus MseLossTiling::TilingEle()
             eleBaseTiling.DoTiling<MseLoss::MseLossOp<float>::OpDag>(tiling->baseTiling) != ge::GRAPH_SUCCESS,
             OP_LOGE(tilingContext->GetNodeName(), "do tiling failed for fp32"), return ge::GRAPH_FAILED);
     } else {
-        OP_LOGE(tilingContext->GetNodeName(), "current dtype not supported");
+        OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "y", ToString(this->outputDtype).c_str(),
+            "FLOAT, FLOAT16 or BF16");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -156,9 +162,9 @@ ge::graphStatus MseLossTiling::RunTiling(const MseLossCompileInfo* compileInfo)
     auto iter = STR_2_INT.find(reductionStr);
     OP_CHECK_IF(
         iter == STR_2_INT.end(),
-        OP_LOGE(
-            tilingContext->GetNodeName(), "reduction %s is not support, should be one of {mean, sum, none}.",
-            reductionStr.c_str()),
+        OP_LOGE_WITH_INVALID_ATTR(
+            tilingContext->GetNodeName(), "reduction", reductionStr.c_str(),
+            "none, sum or mean"),
         return ge::GRAPH_FAILED);
     this->reduction = iter->second;
     key.Reduction = this->reduction;
@@ -172,7 +178,9 @@ ge::graphStatus MseLossTiling::RunTiling(const MseLossCompileInfo* compileInfo)
             TilingReduce(compileInfo) != ge::GRAPH_SUCCESS,
             OP_LOGE(tilingContext->GetNodeName(), "do tiling failed for reduce"), return ge::GRAPH_FAILED);
     } else {
-        OP_LOGE(tilingContext->GetNodeName(), "reduction %s is not supported", reductionStr.c_str());
+        OP_LOGE_WITH_INVALID_ATTR(
+            tilingContext->GetNodeName(), "reduction", reductionStr.c_str(),
+            "none, sum or mean");
         return ge::GRAPH_FAILED;
     }
     return SetTilingData();
