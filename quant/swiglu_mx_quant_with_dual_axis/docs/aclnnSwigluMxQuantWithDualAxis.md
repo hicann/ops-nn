@@ -90,8 +90,8 @@ aclnnStatus aclnnSwigluMxQuantWithDualAxisGetWorkspaceSize(
   const aclTensor *groupIndexOptional,
   bool             activateLeft,
   char            *roundModeOptional,
-  int64_t          dstType,
   int64_t          scaleAlg,
+  int64_t          dstType,
   double           maxDtypeValue,
   const aclTensor *y1Out,
   const aclTensor *mxscale1Out,
@@ -149,7 +149,7 @@ aclnnStatus aclnnSwigluMxQuantWithDualAxis(
       <td>groupIndexOptional (aclTensor*)</td>
       <td>输入</td>
       <td>分组索引，用于控制分组量化边界。</td>
-      <td><ul><li>shape 为 [G]，采用 cumsum 模式，表示每个 group 的行数累积值。</li><li>可选参数，支持传空指针，传空指针表示不分组。</li></ul></td>
+      <td><ul><li>shape 为 [G]，采用 cumsum 模式，表示每个 group 的行数累积值。</li><li>当前不支持传入空Tensor</li></ul></td>
       <td>INT64</td>
       <td>ND</td>
       <td>1</td>
@@ -169,18 +169,8 @@ aclnnStatus aclnnSwigluMxQuantWithDualAxis(
       <td>roundModeOptional (char*)</td>
       <td>输入</td>
       <td>表示数据转换的模式，对应公式中的 round_mode。</td>
-      <td><ul><li>当 dstType 为 40/41，对应输出 y1Out 和 y2Out 的数据类型为 FLOAT4_E2M1/FLOAT4_E1M2 时，支持 {"rint", "floor", "round"}。</li><li>当 dstType 为 35/36，对应输出 y1Out 和 y2Out 数据类型为 FLOAT8_E5M2/FLOAT8_E4M3FN 时，仅支持 {"rint"}。</li><li>传入空指针时，采用 "rint" 模式。</li></ul></td>
+      <td><ul><li>仅支持dstType为36，对应输出 y1Out 和 y2Out 数据类型为 FLOAT8_E4M3FN 时，仅支持 {"rint"}。</li><li>传入空指针时，采用 "rint" 模式。</li></ul></td>
       <td>STRING</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
-    </tr>
-    <tr>
-      <td>dstType (int64_t)</td>
-      <td>输入</td>
-      <td>表示指定数据转换后 y1Out 和 y2Out 的类型。</td>
-      <td>输入范围为 {35, 36, 40, 41}，分别对应输出 y1Out 和 y2Out 的数据类型为 {35: FLOAT8_E5M2, 36: FLOAT8_E4M3FN, 40: FLOAT4_E2M1, 41: FLOAT4_E1M2}</td>
-      <td>INT64</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -189,7 +179,17 @@ aclnnStatus aclnnSwigluMxQuantWithDualAxis(
       <td>scaleAlg (int64_t)</td>
       <td>输入</td>
       <td>表示 mxscale1Out 和 mxscale2Out 的计算方法。</td>
-      <td><ul><li>取值范围：{0, 1}。</li><li>0：代表 OCP（Microscaling Formats Specification）实现。</li><li>1：代表 cuBLAS 实现。</li><li>当 dstType 为 FLOAT4_E2M1/FLOAT4_E1M2 时仅支持取值为 0。</li></ul></td>
+      <td><ul><li>取值范围：{1}，代表 cuBLAS 实现。</li></ul></td>
+      <td>INT64</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>dstType (int64_t)</td>
+      <td>输入</td>
+      <td>表示指定数据转换后 y1Out 和 y2Out 的类型。</td>
+      <td><ul><li>输入范围为 {36}，分别对应输出 y1Out 和 y2Out 的数据类型为 {36: FLOAT8_E4M3FN}</li></ul></td>
       <td>INT64</td>
       <td>-</td>
       <td>-</td>
@@ -199,7 +199,7 @@ aclnnStatus aclnnSwigluMxQuantWithDualAxis(
       <td>maxDtypeValue (double)</td>
       <td>输入</td>
       <td>预留参数。</td>
-      <td><ul><li>仅当 scaleAlg=2 且 dstType=FLOAT4_E1M2 时生效。</li></ul></td>
+      <td><ul><li>maxDtypeValue取值仅支持0。</li></ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -210,7 +210,7 @@ aclnnStatus aclnnSwigluMxQuantWithDualAxis(
       <td>输出</td>
       <td>表示 SwiGLU 结果量化 -1 轴后的对应结果，对应公式中的 <i>P<sub>i</sub></i>。</td>
       <td><ul><li>shape 为 [M, N]，即 SwiGLU 输出的一半。</li></ul></td>
-      <td>FLOAT4_E2M1、FLOAT4_E1M2、FLOAT8_E4M3FN、FLOAT8_E5M2</td>
+      <td>FLOAT8_E4M3FN</td>
       <td>ND</td>
       <td>2</td>
       <td>√</td>
@@ -230,7 +230,7 @@ aclnnStatus aclnnSwigluMxQuantWithDualAxis(
       <td>输出</td>
       <td>表示 SwiGLU 结果量化 -2 轴后的对应结果，对应公式中的 <i>P<sub>j</sub></i>。</td>
       <td><ul><li>shape 为 [M, N]。</li></ul></td>
-      <td>FLOAT4_E2M1、FLOAT4_E1M2、FLOAT8_E4M3FN、FLOAT8_E5M2</td>
+      <td>FLOAT8_E4M3FN</td>
       <td>ND</td>
       <td>2</td>
       <td>√</td>
@@ -239,7 +239,7 @@ aclnnStatus aclnnSwigluMxQuantWithDualAxis(
       <td>mxscale2Out (aclTensor*)</td>
       <td>输出</td>
       <td>表示 -2 轴每个分组对应的量化尺度，对应公式中的 mxscale2。</td>
-      <td><ul><li>当 groupIndexOptional 存在时，shape 为 [floor(M/64)+G, N, 2]。</li><li>当 groupIndexOptional 不存在时，shape 为 [ceil(M/64), N, 2]。</li><li>需进行偶数 pad，pad 填充值为 0。</li><li>mxscale2Out 输出需要对每两行数据进行交织处理。</li></ul></td>
+      <td><ul><li>当 groupIndexOptional 存在时，shape 为 [floor(M/64)+G, N, 2]。</li><li>需进行偶数 pad，pad 填充值为 0。</li><li>mxscale2Out 输出需要对每两行数据进行交织处理。</li></ul></td>
       <td>FLOAT8_E8M0</td>
       <td>ND</td>
       <td>3</td>
@@ -303,7 +303,7 @@ aclnnStatus aclnnSwigluMxQuantWithDualAxis(
       <td>roundModeOptional、dstType、scaleAlg 不符合当前支持的值。</td>
     </tr>
     <tr>
-      <td>x 的最后一维不能被 2 整除。</td>
+      <td>x 的最后一维不能被2整除。</td>
     </tr>
     <tr>
       <td>ACLNN_ERR_RUNTIME_ERROR</td>
@@ -357,16 +357,15 @@ aclnnStatus aclnnSwigluMxQuantWithDualAxis(
 ## 约束说明
 
 - 输入 x 必须为 2 维张量，最后一维必须能被 2 整除（shape 为 [M, 2N]）。
-- 当 dstType 为 FP4 类型（FLOAT4_E2M1/FLOAT4_E1M2）时，最后一维 N 必须能被 4 整除。
-- FP8 输出类型（FLOAT8_E4M3FN/FLOAT8_E5M2）仅支持 "rint" 舍入模式。
-- FP4 输出类型仅支持 scaleAlg=0（OCP）。
-- 当 groupIndexOptional 存在时，采用 cumsum 模式，每个值表示对应 group 的行数累积值。
+- FP8 输出类型（FLOAT8_E4M3FN）仅支持 "rint" 舍入模式。
+- groupIndexOptional采用 cumsum 模式，每个值表示对应 group 的行数累积值，groupIndexOptional的每个元素值需要大于0且最后一个元素值要等于M。
 - 关于 mxscale1Out、mxscale2Out 的 shape 约束说明：
   - mxscale1Out.shape[-2] = (ceil(N/32) + 2 - 1) / 2。
   - mxscale1Out.shape[-1] = 2。
   - mxscale2Out.shape[-1] = 2。
   - 当 groupIndexOptional 存在时，mxscale2Out.shape[0] = floor(M/64) + G；当 groupIndexOptional 不存在时，mxscale2Out.shape[0] = ceil(M/64)。
   - 其他维度与 SwiGLU 输出一致。
+- 默认支持饱和模式。
 - 确定性说明：aclnnSwigluMxQuantWithDualAxis 默认确定性实现。
 
 ## 调用示例
@@ -500,7 +499,7 @@ int aclnnSwigluMxQuantWithDualAxisTest(int32_t deviceId, aclrtStream& stream)
     bool activateLeft = true;
     char* roundModeOptional = const_cast<char*>("rint");
     int64_t dstType = 36;  // FLOAT8_E4M3FN
-    int64_t scaleAlg = 0;  // OCP
+    int64_t scaleAlg = 1;  // cuBLAS
     double maxDtypeValue = 0.0;
 
     // 创建 x aclTensor
@@ -545,7 +544,7 @@ int aclnnSwigluMxQuantWithDualAxisTest(int32_t deviceId, aclrtStream& stream)
 
     // 调用aclnnSwigluMxQuantWithDualAxis第一段接口（带 groupIndex 输入）
     ret = aclnnSwigluMxQuantWithDualAxisGetWorkspaceSize(x, groupIndex, activateLeft, roundModeOptional,
-        dstType, scaleAlg, maxDtypeValue, y1Out, mxscale1Out, y2Out, mxscale2Out, &workspaceSize, &executor);
+        scaleAlg, dstType, maxDtypeValue, y1Out, mxscale1Out, y2Out, mxscale2Out, &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnSwigluMxQuantWithDualAxisGetWorkspaceSize failed. ERROR: %d\n", ret);
               return ret);
 

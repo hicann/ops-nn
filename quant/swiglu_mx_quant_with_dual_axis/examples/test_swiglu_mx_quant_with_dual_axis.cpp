@@ -106,7 +106,7 @@ int main() {
 
   bool activateLeft = true;
   int64_t dstType = 36;  // FLOAT8_E4M3FN
-  int64_t scaleAlg = 0;  // OCP
+  int64_t scaleAlg = 1;  // cuBLAS
   double maxDtypeValue = 0.0;
 
   // 创建 x aclTensor
@@ -133,7 +133,7 @@ int main() {
   aclOpExecutor* executor;
   // 调用aclnnSwigluMxQuantWithDualAxis第一段接口（带 groupIndex 输入）
   ret = aclnnSwigluMxQuantWithDualAxisGetWorkspaceSize(x, groupIndex, activateLeft, "rint",
-      dstType, scaleAlg, maxDtypeValue, y1Out, mxscale1Out, y2Out, mxscale2Out, &workspaceSize, &executor);
+      scaleAlg, dstType, maxDtypeValue, y1Out, mxscale1Out, y2Out, mxscale2Out, &workspaceSize, &executor);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnSwigluMxQuantWithDualAxisGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
   // 根据第一段接口计算出的workspaceSize申请device内存
   void* workspaceAddr = nullptr;
