@@ -353,7 +353,7 @@ function(add_modules_ut_sources)
 
     string(FIND "${MODULE_HOSTNAME}_cases_obj" "op_api" OPAPI_FOUND_INDEX)
     if(${OPAPI_FOUND_INDEX} GREATER_EQUAL 0)
-        if(${target_dir} STREQUAL "")
+        if("${target_dir}" STREQUAL "")
             file(GLOB OPHOST_OPAPI_SRCS ${MODULE_DIR}/test_aclnn_*.cpp)
         else()
             file(GLOB OPHOST_OPAPI_SRCS ${MODULE_DIR}/test_aclnn_*.cpp ${MODULE_DIR}/${target_dir}/test_aclnn_*.cpp)

@@ -136,7 +136,6 @@ docker run --name cann_container --device /dev/davinci0 --device /dev/davinci_ma
 - cmake >= 3.16.0
 - pigz（可选，安装后可提升打包速度，建议版本 >= 2.4）
 - dos2unix
-- gawk
 - make
 - patch
 - googletest（仅执行UT时依赖，建议版本 [release-1.11.0](https://github.com/google/googletest/releases/tag/release-1.11.0)）

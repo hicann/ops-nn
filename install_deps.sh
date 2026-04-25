@@ -75,36 +75,6 @@ detect_os() {
     fi
 }
 
-install_gawk() {
-    echo -e "\n==== Checking gawk ===="
-
-    if command -v gawk &> /dev/null; then
-        echo "gawk has been installed"
-        return
-    fi
-
-    echo "Installing gawk..."
-    case "$OS" in
-        debian)
-            run_command sudo $PKG_MANAGER update
-            run_command sudo $PKG_MANAGER install -y gawk
-            ;;
-        rhel|euler)
-            run_command sudo $PKG_MANAGER install -y gawk
-            ;;
-        macos)
-            run_command brew install gawk
-            ;;
-    esac
-
-    if command -v gawk &> /dev/null; then
-        echo "gawk installed successfully"
-    else
-        echo "gawk installation failed"
-        exit 1
-    fi
-}
-
 install_python() {
     # Python version >= 3.7.0
     echo -e "\n==== Checking Python ===="
@@ -394,7 +364,6 @@ check_dependencies_silent() {
 
     local missing_deps=()
     declare -A req_versions
-    req_versions["gawk"]=""
     req_versions["Python"]="3.7.0"
     req_versions["GCC"]="7.3.0"
     req_versions["CMake"]="3.16.0"
@@ -434,7 +403,6 @@ check_dependencies_silent() {
         fi
     }
 
-    check_deps "gawk" "gawk" "${req_versions["gawk"]}"
     check_deps "Python" "python3" "${req_versions["Python"]}"
     check_deps "GCC" "gcc" "${req_versions["GCC"]}"
     check_deps "CMake" "cmake" "${req_versions["CMake"]}"
@@ -471,7 +439,6 @@ main() {
     echo "===================================================="
 
     detect_os
-    install_gawk
     install_python
     install_gcc
     install_cmake
