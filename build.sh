@@ -1103,7 +1103,7 @@ build_lib() {
   echo "Start to build libs ${BUILD_LIBS[@]}"
 
   git submodule init && git submodule update
-  cd "${BUILD_PATH}" && cmake ${CMAKE_ARGS} -UENABLE_STATIC .. &>/dev/null
+  cd "${BUILD_PATH}" && cmake ${CMAKE_ARGS} -UENABLE_STATIC .. >/dev/null
   local all_targets=$(cmake --build . --target help)
   for lib in "${BUILD_LIBS[@]}"; do
     if grep -wq "$lib" <<< "${all_targets}"; then
@@ -1146,7 +1146,7 @@ build_binary() {
   echo "arch=$(arch)" >> ${BUILD_PATH}/opp/scene.info
   echo "--------------- build tiling end ---------------"
 
-  cd "${BUILD_PATH}" && cmake .. ${CMAKE_ARGS} &>/dev/null
+  cd "${BUILD_PATH}" && cmake .. ${CMAKE_ARGS} >/dev/null
 
   echo "--------------- prepare build start ---------------"
   local all_targets=$(cmake --build . --target help)
@@ -1178,7 +1178,7 @@ build_binary() {
     [[ -f "$OPC_CMD_FILE" ]] && opc_list_num=$(wc -l < "$OPC_CMD_FILE") || opc_list_num=0
     CMAKE_ARGS="${CMAKE_ARGS} -DOPC_NUM_${unit}=${opc_list_num}"
   done
-  cd "$BUILD_PATH" && cmake .. ${CMAKE_ARGS} &>/dev/null
+  cd "$BUILD_PATH" && cmake .. ${CMAKE_ARGS} >/dev/null
 
   if grep -wq "binary" <<< "${all_targets}"; then
     cmake --build . --target binary -- ${VERBOSE} -j $THREAD_NUM
@@ -1204,7 +1204,7 @@ build_pkg() {
       if [ $? -ne 0 ]; then exit 1; fi
     fi
   fi
-  cd "${BUILD_PATH}" && cmake ${CMAKE_ARGS} .. &>/dev/null
+  cd "${BUILD_PATH}" && cmake ${CMAKE_ARGS} .. >/dev/null
 
   if echo "${all_targets}" | grep -wq "build_es_nn"; then
  	     cmake --build . --target build_es_nn -- ${VERBOSE} -j $THREAD_NUM
@@ -1257,7 +1257,7 @@ build_ut() {
     mkdir -p "${BUILD_PATH}"
   fi
   # 删除ai_core下的json文件，强制UT执行时重新生成json文件，避免多次执行之间的干扰
-  cd "${BUILD_PATH}"  && rm -rf ${BUILD_PATH}/tbe/op_info_cfg/ai_core/* && cmake ${CMAKE_ARGS} .. &>/dev/null
+  cd "${BUILD_PATH}"  && rm -rf ${BUILD_PATH}/tbe/op_info_cfg/ai_core/* && cmake ${CMAKE_ARGS} .. >/dev/null
   local enable_cov=FALSE
   if [[ "$CI_MODE" == "TRUE" ]]; then
     # ci 模式
@@ -1610,7 +1610,7 @@ main() {
   fi
 
   cd "${BUILD_PATH}" && cmake ${CMAKE_ARGS} -DENABLE_GEN_ACLNN=ON -DPREPROCESS_ONLY=OFF ..
-  cd "${BUILD_PATH}" && cmake ${CMAKE_ARGS} -DENABLE_GEN_ACLNN=OFF -DPREPROCESS_ONLY=OFF .. &>/dev/null
+  cd "${BUILD_PATH}" && cmake ${CMAKE_ARGS} -DENABLE_GEN_ACLNN=OFF -DPREPROCESS_ONLY=OFF .. >/dev/null
 
   if [[ "$ENABLE_TEST" == "TRUE" ]]; then
     build_ut
