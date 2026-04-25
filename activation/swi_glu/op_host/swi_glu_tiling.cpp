@@ -21,6 +21,7 @@
 
 namespace optiling {
 using namespace Ops::NN::OpTiling;
+using namespace Ops::Base;
 
 const uint32_t UB_RESERVED_BUFF = 0; // reserve 0k
 const uint32_t L2_CACHE_LINE_SIZE = 512; // pack unit in cache 512B
@@ -173,7 +174,10 @@ inline bool GetLengthByType(int32_t dtype, uint32_t& dsize) {
         int64_t shapeAfter = 1;
         int64_t dimNum = inShape.GetDimNum();
         if (inDim < -dimNum || inDim >= dimNum) {
-            OP_LOGE(opName_, "SetTotalShape Unsupported inDim %d", inDim);
+            std::string reasonMsg = "The value of attr dim should be in the range of [-" +
+                std::to_string(dimNum) + ", " + std::to_string(dimNum) + ")";
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_.c_str(), "dim",
+                std::to_string(inDim).c_str(), reasonMsg.c_str());
             return false;
         }
         int64_t splitDim = inDim < 0 ? dimNum + inDim : inDim; // inDim default -1

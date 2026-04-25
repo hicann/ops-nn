@@ -86,27 +86,27 @@ ge::graphStatus SoftmaxV2TilingBase::GetAndCheckDtypes()
     yDtype_ = yDesc->GetDataType();
 
     if (!halfToFloat_) {
-        OP_CHECK_IF(xDtype_ != yDtype_,
-                        OP_LOGE(
-                            context_->GetNodeName(),
-                            "Input x dtype [%s] and Output y dtype [%s] should be same when half_to_float is 'false'.",
-                            ge::TypeUtils::DataTypeToSerialString(xDtype_).c_str(),
-                            ge::TypeUtils::DataTypeToSerialString(yDtype_).c_str()),
-                        return ge::GRAPH_FAILED);
+        if (xDtype_ != yDtype_) {
+            std::string dtypeMsg = ToString(xDtype_) + " and " + ToString(yDtype_);
+            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                context_->GetNodeName(), "x and y", dtypeMsg.c_str(),
+                "The dtypes of input x and output y should be the same when attr half_to_float is false");
+            return ge::GRAPH_FAILED;
+        }
         OP_CHECK_IF(xDtype_ != ge::DT_FLOAT16 && xDtype_ != ge::DT_FLOAT && xDtype_ != ge::DT_BF16,
-                        OP_LOGE(
-                            context_->GetNodeName(),
-                            "Input x dtype is [%s], only support dtype ge::DT_FLOAT16, ge::DT_FLOAT or ge::DT_BF16.",
-                            ge::TypeUtils::DataTypeToSerialString(xDtype_).c_str()),
+                        OP_LOGE_FOR_INVALID_DTYPE(
+                            context_->GetNodeName(), "x", ToString(xDtype_).c_str(), "FLOAT, FLOAT16 or BF16"),
                         return ge::GRAPH_FAILED);
     } else {
-        OP_CHECK_IF(xDtype_ != ge::DT_FLOAT16 || yDtype_ != ge::DT_FLOAT,
-                        OP_LOGE(context_->GetNodeName(),
-                                                        "Input x dtype [%s] and Output y dtype [%s] should be "
-                                                        "ge::DT_FLOAT16 and ge::DT_FLOAT when half_to_float is 'true'.",
-                                                        ge::TypeUtils::DataTypeToSerialString(xDtype_).c_str(),
-                                                        ge::TypeUtils::DataTypeToSerialString(yDtype_).c_str()),
-                        return ge::GRAPH_FAILED);
+        if (xDtype_ != ge::DT_FLOAT16 || yDtype_ != ge::DT_FLOAT) {
+            std::string dtypeMsg = ToString(xDtype_) + " and " + ToString(yDtype_);
+            std::string reasonMsg = "The dtype of input x should be FLOAT16 and"
+                " the dtype of output y should be FLOAT when attr half_to_float is true";
+            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                context_->GetNodeName(), "x and y", dtypeMsg.c_str(),
+                reasonMsg.c_str());
+            return ge::GRAPH_FAILED;
+        }
     }
 
     if (xDtype_ == ge::DT_FLOAT) {
@@ -136,32 +136,39 @@ ge::graphStatus SoftmaxV2TilingBase::GetDimsAndCheckShapeValid()
     auto yStorageShape = EnsureNotScalar(yShape->GetStorageShape());
     int64_t yShapeSize = yStorageShape.GetDimNum();
 
-    OP_CHECK_IF(xShapeSize_ != yShapeSize,
-                    OP_LOGE(context_->GetNodeName(),
-                                                    "Input X dim size [%ld] and Output Y dim size [%ld] should be same",
-                                                    xShapeSize_, yShapeSize),
-                        return ge::GRAPH_FAILED);
+    if (xShapeSize_ != yShapeSize) {
+        std::string dimsMsg = std::to_string(xShapeSize_) + " and " + std::to_string(yShapeSize);
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            context_->GetNodeName(), "x and y", dimsMsg.c_str(),
+            "The dimension numbers of input x and output y should be the same");
+        return ge::GRAPH_FAILED;
+    }
 
-    OP_CHECK_IF(
-        xShapeSize_ > MAX_DIMS,
-        OP_LOGE(context_->GetNodeName(), "Input X dim size [%ld] is larger than 8.", xShapeSize_),
-                        return ge::GRAPH_FAILED);
+    if (xShapeSize_ > MAX_DIMS) {
+        std::string reasonMsg = "The dimension number of input x can not be greater than " + std::to_string(MAX_DIMS);
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "x",
+            std::to_string(xShapeSize_).c_str(), reasonMsg.c_str());
+        return ge::GRAPH_FAILED;
+    }
     OP_CHECK_IF(
         xShapeSize_ == 0,
-        OP_LOGE(context_->GetNodeName(), "Input X dim size is zero, not support empty tensor."),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "x", "0",
+            "The dimNum of input x can not be zero, empty tensor is not supported"),
                         return ge::GRAPH_FAILED);
     xShape_.resize(xShapeSize_);
     for (int i = 0; i < xShapeSize_; i++) {
-        OP_CHECK_IF(
-            xStorageShape.GetDim(i) != yStorageShape.GetDim(i),
-            OP_LOGE(
-                context_->GetNodeName(), "Input X dim[%d] is: %ld and Output Y dim[%d] is: %ld, which should be same.",
-                i, xStorageShape.GetDim(i), i, yStorageShape.GetDim(i)),
-                        return ge::GRAPH_FAILED);
+        if (xStorageShape.GetDim(i) != yStorageShape.GetDim(i)) {
+            std::string shapesMsg = ToString(xStorageShape) + " and " + ToString(yStorageShape);
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                context_->GetNodeName(), "x and y", shapesMsg.c_str(),
+                "The shapes of input x and output y should be the same");
+            return ge::GRAPH_FAILED;
+        }
         OP_CHECK_IF(xStorageShape.GetDim(i) <= 0,
-                        OP_LOGE(context_->GetNodeName(), "Not support input X dim[%d]: %ld.", i,
-                        xStorageShape.GetDim(i)),
-                        return ge::GRAPH_FAILED);
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                context_->GetNodeName(), "x", ToString(xStorageShape).c_str(),
+                "The shape of input x can not be an empty tensor or an invalid tensor with a negative dim"),
+            return ge::GRAPH_FAILED);
         xShape_[i] = xStorageShape.GetDim(i);
     }
 
@@ -178,16 +185,17 @@ ge::graphStatus SoftmaxV2TilingBase::GetAndCheckAxes()
         reduceAxes_ = xShapeSize_ - 1;
     } else {
         OP_CHECK_IF(axisListPtr->GetSize() != 1,
-                        OP_LOGE(context_->GetNodeName(),
-                                                        "Not support input axes size: %lu, which should be 1.",
-                                                        axisListPtr->GetSize()),
+                    OP_LOGE_WITH_INVALID_ATTR_SIZE(context_->GetNodeName(),
+                        "axes", std::to_string(axisListPtr->GetSize()).c_str(), "1"),
                         return ge::GRAPH_FAILED);
         reduceAxes_ = axisListPtr->GetData()[0];
-        OP_CHECK_IF(
-            (reduceAxes_ < -xShapeSize_ || reduceAxes_ > xShapeSize_ - 1),
-            OP_LOGE(context_->GetNodeName(), "Dimension is: %ld, out of range [-%ld, %ld]",
-            reduceAxes_, xShapeSize_, xShapeSize_ - 1),
-                        return ge::GRAPH_FAILED);
+        if (reduceAxes_ < -xShapeSize_ || reduceAxes_ > xShapeSize_ - 1) {
+            std::string reasonMsg = "The value of attr axes should be in range [-" + std::to_string(xShapeSize_) + ", "
+                + std::to_string(xShapeSize_) + ")";
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                context_->GetNodeName(), "axes", std::to_string(reduceAxes_).c_str(), reasonMsg.c_str());
+            return ge::GRAPH_FAILED;
+        }
 
         reduceAxes_ = reduceAxes_ < 0 ? reduceAxes_ + xShapeSize_ : reduceAxes_;
     }

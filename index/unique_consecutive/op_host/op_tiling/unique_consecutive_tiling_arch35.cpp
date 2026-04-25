@@ -105,15 +105,19 @@ bool UniqueConsecutiveTilingHelper::GetAttrs()
     bool returnInvIdx = GetOptionalAttr<bool>(attrs, RETURN_INVID_IDX, DEFAULT_RETURN_IDX);
     this->outIdxDtype_ = GetOptionalAttr<ge::DataType>(attrs, OUT_DTYPE_IDX, ge::DataType::DT_INT64);
 
-    OP_CHECK_IF(axis != DEFAULT_AXIS, OP_LOGE(context_->GetNodeName(), "UniqueConsecutive Aicore only support flatten tensor."),
+    OP_CHECK_IF(axis != DEFAULT_AXIS,
+                OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "axis",
+                    std::to_string(axis).c_str(), std::to_string(DEFAULT_AXIS).c_str()),
                 return false);
     this->debugOnlyMaxSingleCoreBytes_ = axis;
     OP_LOGI("GetAttrsDebugOptional", "axis(debugOnlyMaxSingleCoreBytes_)=%ld", this->debugOnlyMaxSingleCoreBytes_);
 
-    OP_CHECK_IF(returnInvIdx, OP_LOGE(context_->GetNodeName(), "UniqueConsecutive Aicore not support 'return_idx = true'."),
+    OP_CHECK_IF(returnInvIdx,
+                OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "return_idx", "True", "False"),
                 return false);
     OP_CHECK_IF((ge::DataType::DT_INT32 != outIdxDtype_) && (ge::DataType::DT_INT64 != outIdxDtype_),
-                OP_LOGE(context_->GetNodeName(), "UniqueConsecutive Aicore only support return int32 or int64 idx/counts."),
+                OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "out_idx", 
+                    ToString(outIdxDtype_).c_str(), "INT32 or INT64"),
                 return false);
 
     this->retCounts_ = GetOptionalAttr<bool>(attrs, RETURN_COUNTS_IDX, DEFAULT_RETURN_COUNTS);

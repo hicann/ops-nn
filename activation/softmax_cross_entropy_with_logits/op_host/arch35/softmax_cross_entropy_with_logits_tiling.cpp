@@ -24,6 +24,8 @@
 #include "../op_kernel/arch35/softmax_cross_entropy_with_logits_tiling_key.h"
 
 namespace optiling {
+using namespace Ops::Base;
+
 constexpr uint32_t INPUT_FEATURES_IDX = 0;
 constexpr uint32_t INPUT_LABELS_IDX = 1;
 constexpr uint32_t OUTPUT_LOSS_IDX = 0;
@@ -116,14 +118,17 @@ ge::graphStatus SoftmaxCrossEntropyWithLogitsRegbaseTiling::CheckInputDtype()
     OP_CHECK_NULL_WITH_CONTEXT(context_, input);
     auto labelsDtype = input->GetDataType();
 
-    OP_CHECK_IF(
-        (labelsDtype != featuresDtype),
-        OP_LOGE(context_->GetNodeName(), "input labels and features dtype should be same."), return ge::GRAPH_FAILED);
+    if (labelsDtype != featuresDtype) {
+        std::string dtypeMsg = ToString(labelsDtype) + " and " + ToString(featuresDtype);
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "labels and features", dtypeMsg.c_str(),
+            "The dtypes of input labels and input features should be the same");
+        return ge::GRAPH_FAILED;
+    }
     bool validDtype = featuresDtype == ge::DT_BF16 || featuresDtype == ge::DT_FLOAT || featuresDtype == ge::DT_FLOAT16;
     OP_CHECK_IF(!validDtype,
-                OP_LOGE(
-                    context_->GetNodeName(), "input dtype is only support float16, bfloat16, float32.");
-                , return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_DTYPE(
+                    context_->GetNodeName(), "features", ToString(featuresDtype).c_str(), "FLOAT, FLOAT16 or BF16"),
+                return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }

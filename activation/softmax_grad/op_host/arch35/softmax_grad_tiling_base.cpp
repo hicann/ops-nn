@@ -15,6 +15,7 @@
 
 using namespace ge;
 using namespace AscendC;
+using namespace Ops::Base;
 using Ops::NN::Optiling::TilingRegistry;
 namespace optiling {
 
@@ -59,20 +60,17 @@ ge::graphStatus SoftmaxGradTilingBase::GetAndCheckDtypes()
     OP_CHECK_NULL_WITH_CONTEXT(context_, yDesc);
     yDtype_ = yDesc->GetDataType();
 
-    OP_CHECK_IF(
-        xDtype_ != yDtype_ || xDtype_ != xDtype1,
-        OP_LOGE(
-            context_->GetNodeName(), "Input0 dtype [%s], Input1 dtype [%s] and Output dtype [%s] should be same.",
-            ge::TypeUtils::DataTypeToSerialString(xDtype_).c_str(),
-            ge::TypeUtils::DataTypeToSerialString(xDtype1).c_str(),
-            ge::TypeUtils::DataTypeToSerialString(yDtype_).c_str()),
-        return ge::GRAPH_FAILED);
+    if (xDtype_ != yDtype_ || xDtype_ != xDtype1) {
+        std::string dtypeMsg = ToString(xDtype_) + ", " + ToString(xDtype1) + " and " + ToString(yDtype_);
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            context_->GetNodeName(), "softmax, grad_softmax and grad_x", dtypeMsg.c_str(),
+            "The dtypes of input softmax, input grad_softmax and output grad_x should be the same");
+        return ge::GRAPH_FAILED;
+    }
     OP_CHECK_IF(
         xDtype_ != ge::DT_FLOAT16 && xDtype_ != ge::DT_FLOAT && xDtype_ != ge::DT_BF16,
-        OP_LOGE(
-            context_->GetNodeName(),
-            "Input dtype is [%s], only support dtype ge::DT_FLOAT16, ge::DT_FLOAT or ge::DT_BF16.",
-            ge::TypeUtils::DataTypeToSerialString(xDtype_).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPE(
+            context_->GetNodeName(), "softmax", ToString(xDtype_).c_str(), "FLOAT, FLOAT16 or BF16"),
         return ge::GRAPH_FAILED);
 
     if (xDtype_ == ge::DT_FLOAT) {
@@ -103,36 +101,41 @@ ge::graphStatus SoftmaxGradTilingBase::GetDimsAndCheckShapeValid()
     auto yStorageShape = Ops::Base::EnsureNotScalar(yShape->GetStorageShape());
     int64_t yShapeSize = yStorageShape.GetDimNum();
 
-    OP_CHECK_IF(
-        xShapeSize_ != yShapeSize || xShapeSize_ != xShapeSize1,
-        OP_LOGE(
-            context_->GetNodeName(),
-            "Input0 dim size [%ld], Input1 dim size [%ld] and Output dim size [%ld] should be same", xShapeSize_,
-            xShapeSize1, yShapeSize),
-        return ge::GRAPH_FAILED);
+    if (xShapeSize_ != yShapeSize || xShapeSize_ != xShapeSize1) {
+        std::string dimNumMsg = std::to_string(xShapeSize_) + ", " + std::to_string(xShapeSize1) + " and " + std::to_string(yShapeSize);
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            context_->GetNodeName(), "softmax, grad_softmax and grad_x", dimNumMsg.c_str(),
+            "The dimension numbers of input softmax, input grad_softmax and output grad_x should be the same");
+        return ge::GRAPH_FAILED;
+    }
 
-    OP_CHECK_IF(
-        xShapeSize_ > MAX_DIMS,
-        OP_LOGE(context_->GetNodeName(), "Input dim size [%ld] is larger than 8.", xShapeSize_),
-        return ge::GRAPH_FAILED);
+    if (xShapeSize_ > MAX_DIMS) {
+        std::string reasonMsg = "The dimension number of input softmax can not be greater than " + std::to_string(MAX_DIMS);
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "softmax",
+            std::to_string(xShapeSize_).c_str(), reasonMsg.c_str());
+        return ge::GRAPH_FAILED;
+    }
+    
     OP_CHECK_IF(
         xShapeSize_ == CONST_ZERO,
-        OP_LOGE(context_->GetNodeName(), "Input dim size is zero, not support empty tensor."),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "softmax", "0",
+            "The dimension number of input softmax is zero, while empty tensor is not supported"),
         return ge::GRAPH_FAILED);
 
     xShape_.resize(xShapeSize_);
     for (int i = 0; i < xShapeSize_; i++) {
-        OP_CHECK_IF(
-            xStorageShape.GetDim(i) != yStorageShape.GetDim(i) || xStorageShape.GetDim(i) != xStorageShape1.GetDim(i),
-            OP_LOGE(
-                context_->GetNodeName(),
-                "Input0 dim[%d]: %ld, Input1 dim[%d]: %ld and Output dim[%d]: %ld should be same.", i,
-                xStorageShape.GetDim(i), i, xStorageShape1.GetDim(i), i, yStorageShape.GetDim(i)),
-            return ge::GRAPH_FAILED);
+        if (xStorageShape.GetDim(i) != yStorageShape.GetDim(i) || xStorageShape.GetDim(i) != xStorageShape1.GetDim(i)) {
+            std::string shapesMsg = ToString(xStorageShape) + ", " + ToString(xStorageShape1) + " and " + ToString(yStorageShape);
+            std::string reasonMsg = "The shapes of input softmax, input grad_softmax and output grad_x should be the same";
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                context_->GetNodeName(), "softmax, grad_softmax and grad_x", shapesMsg.c_str(), reasonMsg.c_str());
+            return ge::GRAPH_FAILED;
+        }
         OP_CHECK_IF(
             xStorageShape.GetDim(i) <= CONST_ZERO,
-            OP_LOGE(
-                context_->GetNodeName(), "Not support input dim[%d]: %ld.", i, xStorageShape.GetDim(i)),
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                context_->GetNodeName(), "softmax", ToString(xStorageShape).c_str(),
+                "The shape of input softmax can not be an empty tensor or an invalid tensor with a negative dim"),
             return ge::GRAPH_FAILED);
         xShape_[i] = xStorageShape.GetDim(i);
     }
@@ -151,17 +154,18 @@ ge::graphStatus SoftmaxGradTilingBase::GetAndCheckAxes()
     } else {
         OP_CHECK_IF(
             axisListPtr->GetSize() != CONST_ONE,
-            OP_LOGE(
-                context_->GetNodeName(), "Not support input axes size: %zu, which should be 1.",
-                axisListPtr->GetSize()),
+            OP_LOGE_WITH_INVALID_ATTR_SIZE(
+                context_->GetNodeName(), "axes", std::to_string(axisListPtr->GetSize()).c_str(), "1"),
             return ge::GRAPH_FAILED);
         reduceAxes_ = axisListPtr->GetData()[CONST_ZERO];
-        OP_CHECK_IF(
-            (reduceAxes_ < -xShapeSize_ || reduceAxes_ > xShapeSize_ - CONST_ONE),
-            OP_LOGE(
-                context_->GetNodeName(), "Dimension is: %ld, out of range [-%ld, %ld]", reduceAxes_, xShapeSize_,
-                xShapeSize_ - CONST_ONE),
-            return ge::GRAPH_FAILED);
+        if (reduceAxes_ < -xShapeSize_ || reduceAxes_ > xShapeSize_ - CONST_ONE) {
+            std::string reasonMsg = "The value of attr axes should be in the range of [-" +
+                std::to_string(xShapeSize_) + ", " + std::to_string(xShapeSize_) + ")";
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                context_->GetNodeName(), "axes", std::to_string(reduceAxes_).c_str(),
+                reasonMsg.c_str());
+            return ge::GRAPH_FAILED;
+        }
 
         reduceAxes_ = reduceAxes_ < CONST_ZERO ? reduceAxes_ + xShapeSize_ : reduceAxes_;
     }
