@@ -274,12 +274,12 @@ static aclnnStatus BinaryCrossEntropyWithLogitsStub(const aclTensor* self, const
 }
 
 aclnnStatus aclnnBinaryCrossEntropyWithLogitsGetWorkspaceSize(const aclTensor* self, const aclTensor* target,
-                                                              const aclTensor* weightOptioanl,
-                                                              const aclTensor* posWeightOptioanl, int64_t reduction,
+                                                              const aclTensor* weightOptional,
+                                                              const aclTensor* posWeightOptional, int64_t reduction,
                                                               aclTensor* out, uint64_t* workspaceSize,
                                                               aclOpExecutor** executor) {
   L2_DFX_PHASE_1(aclnnBinaryCrossEntropyWithLogits,
-                 DFX_IN(self, target, weightOptioanl, posWeightOptioanl, reduction),
+                 DFX_IN(self, target, weightOptional, posWeightOptional, reduction),
                  DFX_OUT(out));
 
   // 创建OpExecutor
@@ -287,7 +287,7 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogitsGetWorkspaceSize(const aclTensor* s
   CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
   // 参数检查
-  auto ret = CheckParams(self, target, weightOptioanl, posWeightOptioanl, reduction, out);
+  auto ret = CheckParams(self, target, weightOptional, posWeightOptional, reduction, out);
   CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
   // 空tensor处理
@@ -300,7 +300,7 @@ aclnnStatus aclnnBinaryCrossEntropyWithLogitsGetWorkspaceSize(const aclTensor* s
   }
 
   // 开始bce with logits计算
-  auto bceWithLogitsRet = BinaryCrossEntropyWithLogitsStub(self, target, weightOptioanl, posWeightOptioanl,
+  auto bceWithLogitsRet = BinaryCrossEntropyWithLogitsStub(self, target, weightOptional, posWeightOptional,
                                                            reduction, out, uniqueExecutor.get());
   CHECK_RET(bceWithLogitsRet == ACLNN_SUCCESS, bceWithLogitsRet);
 
