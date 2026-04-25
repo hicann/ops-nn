@@ -161,6 +161,7 @@ aclnnStatus aclnnAdaptiveAvgPool3dBackward(
       </tr>
     </tbody>
     </table>
+    Ascend 950PR/Ascend 950DT: gradOutput，self的shape，N轴取值可以为0
 
 ## aclnnAdaptiveAvgPool3dBackward
 
