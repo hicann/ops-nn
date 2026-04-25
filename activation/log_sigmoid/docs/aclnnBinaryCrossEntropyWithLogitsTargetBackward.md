@@ -15,7 +15,6 @@
 
 ## 功能说明
 
-- 接口功能：
 将输入self执行logits计算，将得到的值与标签值target一起进行[BECLoss](../../sigmoid_cross_entropy_with_logits_v2/docs/aclnnBinaryCrossEntropyWithLogits.md)关于target的反向传播计算。
 
 ## 函数原型
@@ -57,10 +56,41 @@
 ## aclnnBinaryCrossEntropyWithLogitsTargetBackward
 
 - **参数说明：**
-  * workspace(void \*, 入参): 在Device侧申请的workspace内存地址。
-  * workspaceSize(uint64_t, 入参): 在Device侧申请的workspace大小，由第一段接口aclnnBinaryCrossEntropyWithLogitsTargetBackwardGetWorkspaceSize获取。
-  * executor(aclOpExecutor \*, 入参): op执行器，包含了算子计算流程。
-  * stream(aclrtStream, 入参): 指定执行任务的Stream。
+
+  <table style="undefined;table-layout: fixed; width: 1151px"><colgroup>
+  <col style="width: 184px">
+  <col style="width: 134px">
+  <col style="width: 833px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>workspace</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace内存地址。</td>
+    </tr>
+    <tr>
+      <td>workspaceSize</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace大小，由第一段接口aclnnBinaryCrossEntropyWithLogitsTargetBackwardGetWorkspaceSize获取。</td>
+    </tr>
+    <tr>
+      <td>executor</td>
+      <td>输入</td>
+      <td>op执行器，包含了算子计算流程。</td>
+    </tr>
+    <tr>
+      <td>stream</td>
+      <td>输入</td>
+      <td>指定执行任务的Stream。</td>
+    </tr>
+  </tbody>
+  </table>
 
 - **返回值：**
 

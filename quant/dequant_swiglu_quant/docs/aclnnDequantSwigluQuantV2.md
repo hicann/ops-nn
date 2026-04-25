@@ -13,7 +13,11 @@
 
 ## 功能说明
 
-- 接口功能：在Swish门控线性单元激活函数前后添加dequant和quant操作，实现x的DequantSwigluQuant计算。本接口相较于[aclnnDequantSwigluQuant](aclnnDequantSwigluQuant.md)有两类新增参数：1）新增了三个昇腾950芯片上使用的输入参数：dstType、roundModeOptional、activateDim。2）在Atlas A2和Atlas A3芯片上，新增了四个参数用于GPT-OSS使用的变体SwiGLU：swigluMode、clampLimit、gluAlpha和gluBias；在昇腾950芯片上使用该接口时，需要给这四个参数设置默认值。请根据实际情况选择合适的接口。
+- 接口功能：在Swish门控线性单元激活函数前后添加dequant和quant操作，实现x的DequantSwigluQuant计算。本接口相较于[aclnnDequantSwigluQuant](aclnnDequantSwigluQuant.md)有两类新增参数：
+
+  1）新增了三个<term>Ascend 950PR/Ascend 950DT</term>上使用的输入参数：dstType、roundModeOptional、activateDim。
+
+  2）在Atlas A2和Atlas A3芯片上，新增了四个参数用于GPT-OSS使用的变体SwiGLU：swigluMode、clampLimit、gluAlpha和gluBias；在<term>Ascend 950PR/Ascend 950DT</term>上使用该接口时，需要给这四个参数设置默认值。请根据实际情况选择合适的接口。
 - swigluMode为0时的计算公式：  
 
   $$

@@ -30,7 +30,7 @@
 
     <details>
     
-    <summary><term><strong>K-G量化模式</strong></term></summary>
+    <summary><strong>K-G量化模式</strong></summary>
     
       - x1为INT8，x2为INT32，x1Scale为FLOAT32，x2Scale为UINT64/INT64，yOffset为FLOAT32：
 
@@ -48,7 +48,7 @@
 
     <details>
 
-    <summary><term><strong>K-C && K-T量化模式</strong></term></summary>
+    <summary><strong>K-C && K-T量化模式</strong></summary>
 
       - x1Scale、无bias：
 
@@ -72,7 +72,7 @@
 
     <details>
 
-    <summary><term><strong>T-C && T-T量化模式</strong></term></summary>
+    <summary><strong>T-C && T-T量化模式</strong></summary>
 
       - 无x1Scale、无bias：
 
@@ -96,7 +96,7 @@
 
     <details>
 
-    <summary><term><strong>G-B量化模式</strong></term></summary>
+    <summary><strong>G-B量化模式</strong></summary>
 
       - x1，x2为INT8，x1Scale，x2Scale为FLOAT32，bias为FLOAT32，out为FLOAT16/BFLOAT16（pergroup-perblock量化）：
 
@@ -112,7 +112,7 @@
 
     <details>
 
-    <summary><term><strong>K-C量化模式</strong></term></summary>
+    <summary><strong>K-C量化模式</strong></summary>
 
       - x1Scale、无bias：
 
@@ -134,7 +134,7 @@
 
     <details>
     
-    <summary><term><strong>K-G量化模式</strong></term></summary>
+    <summary><strong>K-G量化模式</strong></summary>
         
       - x1，x2为INT4，x1Scale，x2Scale为FLOAT32，x2Offset为FLOAT16，out为FLOAT16/BFLOAT16 (pertoken-pergroup非对称量化)：
 
@@ -146,7 +146,7 @@
 
     <details>
 
-    <summary><term><strong>T-C && T-T量化模式</strong></term></summary>
+    <summary><strong>T-C && T-T量化模式</strong></summary>
 
       - x1，x2为INT8，无x1Scale，x2Scale为INT64/UINT64，可选参数x2Offset为FLOAT32，可选参数bias为INT32：
 
@@ -178,7 +178,7 @@
 
     <details>
 
-    <summary><term><strong>K-C && K-T量化模式</strong></term></summary>
+    <summary><strong>K-C && K-T量化模式</strong></summary>
 
       - x1，x2为INT8，x1Scale为FLOAT32，x2Scale为BFLOAT16/FLOAT32，可选参数bias为INT32；
       或x1，x2为FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8，x1Scale为FLOAT32，x2Scale为FLOAT32，可选参数bias为FLOAT32；
@@ -201,7 +201,7 @@
 
     <details>
 
-    <summary><term><strong>G-B && B-B && mx量化模式</strong></term></summary>
+    <summary><strong>G-B && B-B && mx量化模式</strong></summary>
 
       $$
       out[m,n] = \sum_{j=0}^{kLoops-1} ((\sum_{k=0}^{gsK-1} (x1Slice * x2Slice))* (x1Scale[m/gsM, j] * x2Scale[j, n/gsN]))+bias[n]
@@ -213,7 +213,7 @@
 
     <details>
 
-    <summary><term><strong>T-CG量化模式</strong></term></summary>
+    <summary><strong>T-CG量化模式</strong></summary>
 
       $$
       out = (x1@(x2 * x2Scale)) * yScale
@@ -587,7 +587,7 @@ aclnnStatus aclnnQuantMatmulV5(
 
   <details>
 
-  <summary><term><strong>K-C 量化场景约束：</strong></term></summary>
+  <summary><strong>K-C 量化场景约束：</strong></summary>
   <a id="K-C 量化"></a>
 
   - 输入和输出支持以下数据类型组合：
@@ -642,7 +642,7 @@ aclnnStatus aclnnQuantMatmulV5(
 
   <details>
 
-  <summary><term><strong>G-B量化场景约束：</strong></term></summary>
+  <summary><strong>G-B量化场景约束：</strong></summary>
   <a id="G-B量化"></a>
 
   - 输入和输出支持以下数据类型组合：
@@ -666,7 +666,7 @@ aclnnStatus aclnnQuantMatmulV5(
 
   <details>
 
-  <summary><term><strong>T-C && T-T && K-C && K-T量化场景约束：</strong></term></summary>
+  <summary><strong>T-C && T-T && K-C && K-T量化场景约束：</strong></summary>
   <a id="T-C && T-T && K-C && K-T量化"></a>
 
   - 输入和输出支持以下数据类型组合：
@@ -712,7 +712,7 @@ aclnnStatus aclnnQuantMatmulV5(
 
   <details>
 
-  <summary><term><strong>K-G量化场景约束：</strong></term></summary>
+  <summary><strong>K-G量化场景约束：</strong></summary>
   <a id="K-G量化"></a>
 
   - 输入和输出支持以下数据类型组合：
@@ -787,7 +787,7 @@ aclnnStatus aclnnQuantMatmulV5(
 
   <details>
 
-  <summary><term><strong>T-C量化 && T-T量化场景约束：</strong></term></summary>
+  <summary><strong>T-C量化 && T-T量化场景约束：</strong></summary>
   <a id="T-C量化 && T-T量化"></a>
 
   - 输入和输出支持以下数据类型组合：
@@ -828,7 +828,7 @@ aclnnStatus aclnnQuantMatmulV5(
 
   <details>
 
-  <summary><term><strong>K-C量化 && K-T量化场景约束：</strong></term></summary>
+  <summary><strong>K-C量化 && K-T量化场景约束：</strong></summary>
   <a id="K-C量化 && K-T量化"></a>
 
   - 输入和输出支持以下数据类型组合：
@@ -850,7 +850,7 @@ aclnnStatus aclnnQuantMatmulV5(
 
   <details>
 
-  <summary><term><strong>G-B量化 && B-B量化场景约束：</strong></term></summary>
+  <summary><strong>G-B量化 && B-B量化场景约束：</strong></summary>
   <a id="G-B量化 && B-B量化"></a>
 
   - 输入和输出支持以下数据类型组合：
@@ -878,7 +878,7 @@ aclnnStatus aclnnQuantMatmulV5(
 
   <details>
 
-  <summary><term><strong>mx量化场景约束：</strong></term></summary>
+  <summary><strong>mx量化场景约束：</strong></summary>
   <a id="mx量化"></a>
 
   - 输入和输出支持以下数据类型组合：
@@ -908,7 +908,7 @@ aclnnStatus aclnnQuantMatmulV5(
 
   <details>
 
-  <summary><term><strong>T-CG量化场景约束：</strong></term></summary>
+  <summary><strong>T-CG量化场景约束：</strong></summary>
   <a id="T-CG量化"></a>
 
   - 输入和输出支持以下数据类型组合：
@@ -934,7 +934,7 @@ aclnnStatus aclnnQuantMatmulV5(
 
   <details>
 
-  <summary><term><strong>K-G量化场景约束：</strong></term></summary>
+  <summary><strong>K-G量化场景约束：</strong></summary>
   <a id="K-G量化"></a>
 
   - 输入和输出支持以下数据类型组合：

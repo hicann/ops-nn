@@ -190,6 +190,7 @@ aclnnStatus aclnnMaxPool2dWithMask(
       <td>-</td>
     </tr>
   </tbody></table>
+  
   - <term>Atlas 推理系列产品</term>：数据类型支持FLOAT。
 
   - <term>Atlas 训练系列产品</term>：不支持BFLOAT16数据类型。

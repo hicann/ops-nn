@@ -237,7 +237,7 @@ aclnnStatus aclnnBatchMatMul(
 
 - 确定性计算
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnBatchMatMul默认确定性实现。
-  - <term>Ascend 950PR/Ascend 950DT</term>: aclnnBatchMatMul默认确定性实现。
+  - <term>Ascend 950PR/Ascend 950DT</term>：aclnnBatchMatMul默认确定性实现。
 
 ## 调用示例
 

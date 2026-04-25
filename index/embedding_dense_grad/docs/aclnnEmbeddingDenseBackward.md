@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-算子功能：实现[aclnnEmbedding](../../../index/embedding/docs/aclnnEmbedding.md)的反向计算, 将相同索引`indices`对应grad的一行累加到out上。
+实现[aclnnEmbedding](../../../index/embedding/docs/aclnnEmbedding.md)的反向计算, 将相同索引`indices`对应grad的一行累加到out上。
 
 ## 函数原型
 
@@ -56,10 +56,40 @@
 
 - **参数说明：**
 
-  * workspace(void *, 入参): 在Device侧申请的workspace内存地址。
-  * workspaceSize(uint64_t, 入参): 在Device侧申请的workspace大小，由第一段接口aclnnEmbeddingDenseBackwardGetWorkspaceSize获取。
-  * executor(aclOpExecutor *, 入参): op执行器，包含了算子计算流程。
-  * stream(aclrtStream, 入参): 指定执行任务的Stream。
+  <table style="undefined;table-layout: fixed; width: 1151px"><colgroup>
+  <col style="width: 184px">
+  <col style="width: 134px">
+  <col style="width: 833px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>workspace</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace内存地址。</td>
+    </tr>
+    <tr>
+      <td>workspaceSize</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace大小，由第一段接口aclnnEmbeddingDenseBackwardGetWorkspaceSize获取。</td>
+    </tr>
+    <tr>
+      <td>executor</td>
+      <td>输入</td>
+      <td>op执行器，包含了算子计算流程。</td>
+    </tr>
+    <tr>
+      <td>stream</td>
+      <td>输入</td>
+      <td>指定执行任务的Stream。</td>
+    </tr>
+  </tbody>
+  </table>
   
 - **返回值：**
 
@@ -70,17 +100,23 @@
 - <term>Atlas 训练系列产品</term>：
   - 对于scale为true的场景，设定grad最后一维为embeddingDim，其大小超出指定范围时会被拦截报错。其合理范围如下：
     - indices为int32时，需满足
-    $$
-    embeddingDim < \frac{180192 - countsSize * 4}{36}
-    $$
-    - indices为int64时，需满足
-    $$
-    embeddingDim < \frac{180192 - countsSize * 8}{20}
-    $$
-    - 其中，countsSize的公式如下，coreNum代表AI处理器核数：
-    $$
-    countsSize = numWeights / coreNum + numWeights \% coreNum
-    $$
+
+      $$
+      embeddingDim < \frac{180192 - countsSize * 4}{36}
+      $$
+
+      - indices为int64时，需满足
+
+      $$
+      embeddingDim < \frac{180192 - countsSize * 8}{20}
+      $$
+
+      - 其中，countsSize的公式如下，coreNum代表AI处理器核数：
+
+      $$
+      countsSize = numWeights / coreNum + numWeights \% coreNum
+      $$
+
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
   - 在参数shape超过以下限制时，输出无法保证高精度，若开启了确定性计算，也无法保证高性能
     - grad合轴成二维shape后，第一个维度超过INT32_MAX(2147483647)

@@ -240,7 +240,7 @@ aclnnStatus aclnnMatmul(
 
 - 确定性说明：
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnMatmul默认确定性实现。
-  - <term>Ascend 950PR/Ascend 950DT</term>: aclnnMatmul默认确定性实现。
+  - <term>Ascend 950PR/Ascend 950DT</term>：aclnnMatmul默认确定性实现。
 
 - 计算一致性说明
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：

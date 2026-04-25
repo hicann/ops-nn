@@ -180,7 +180,7 @@ aclnnStatus aclnnAscendAntiQuant(
       - 入参`scale`、`offset`和出参`y`不支持BFLOAT16。
     - 入参`dstType`仅支持取值1，表示FLOAT16。
     - 入参`scale`、`offset`仅支持一维，且只能等于x尾轴大小或1，当x为int32类型时，必须为x尾轴大小的8倍。
-  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品/Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - 入参`x`仅支持INT4、INT8、INT32。
     - 入参`scale`、`offset`仅支持一维，且只能等于x尾轴大小或1，当x为int32类型时，必须为x尾轴大小的8倍。
 

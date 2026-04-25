@@ -315,7 +315,7 @@ aclnnStatus aclnnQuantMatmulV3(
 
 - 确定性说明：
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnQuantMatmulV3默认确定性实现。
-  - <term>Ascend 950PR/Ascend 950DT</term>: aclnnQuantMatmulV3默认确定性实现。
+  - <term>Ascend 950PR/Ascend 950DT</term>：aclnnQuantMatmulV3默认确定性实现。
 
 - <term>Atlas 推理系列产品</term>：
   - x1的最后一维大小不能超过65535，x1的最后一维指transposeX1为true时的m或transposeX1为false时的k。

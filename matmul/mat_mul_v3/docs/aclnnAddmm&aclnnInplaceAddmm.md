@@ -513,7 +513,7 @@ aclnnStatus aclnnInplaceAddmm(
 
 - 确定性说明：
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnAddmm&aclnnInplaceAddmm默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
-  - <term>Ascend 950PR/Ascend 950DT</term>: aclnnAddmm&aclnnInplaceAddmm默认确定性实现。
+  - <term>Ascend 950PR/Ascend 950DT</term>：aclnnAddmm&aclnnInplaceAddmm默认确定性实现。
 
 - 计算一致性说明
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：

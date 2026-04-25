@@ -400,7 +400,7 @@ aclnnStatus aclnnQuantMatmulV4(
 
 - 确定性说明：
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnQuantMatmulV4默认确定性实现。
-  - <term>Ascend 950PR/Ascend 950DT</term>: aclnnQuantMatmulV4默认确定性实现。
+  - <term>Ascend 950PR/Ascend 950DT</term>：aclnnQuantMatmulV4默认确定性实现。
 
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持调用本接口前，通过[aclnnTransMatmulWeight](https://gitcode.com/cann/ops-math/blob/master/conversion/trans_data/docs/aclnnTransMatmulWeight.md)对format为ND的x2处理得到AI处理器亲和数据排布格式。
 - <term>Ascend 950PR/Ascend 950DT</term>：

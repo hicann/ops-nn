@@ -198,7 +198,8 @@ aclnnStatus aclnnMultiScaleDeformableAttnFunction(
     </tr>
   </tbody></table>
 
-  - Atlas推理系列产品：不支持BFLOAT16数据类型。
+  - <term>Atlas 推理系列产品</term>：不支持BFLOAT16数据类型。
+  
 - **返回值**：
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。

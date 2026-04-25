@@ -451,7 +451,7 @@ aclnnStatus aclnnConvolutionBackward(
   </colgroup>
    <thead>
     <tr>
-     <th><term>约束类型</term></th>
+     <th>约束类型</th>
      <th><term>Ascend 950PR/Ascend 950DT</term></th>
      <th><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term></th>
      <th><term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term></th>
