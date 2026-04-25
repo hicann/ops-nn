@@ -36,13 +36,43 @@ static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST_REGBA
     op::DataType::DT_INT8,  op::DataType::DT_INT16,   op::DataType::DT_INT32,  op::DataType::DT_INT64,
     op::DataType::DT_BOOL,  op::DataType::DT_BF16};
 
-static bool CheckShapeLimit(const aclTensor* self, const aclTensor* mask)
+static bool CheckSupportV1(const aclTensor* self, const aclTensor* mask, const aclTensor* source)
 {
-    return self->GetViewShape() == mask->GetViewShape();
+    if (GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_2201) {
+        return false;
+    }
+    auto maskShape = mask->GetViewShape();
+    auto selfShape = self->GetViewShape();
+    auto sourceShape = source->GetViewShape();
+    size_t maskDimNum = maskShape.GetDimNum();
+    size_t selfDimNum = selfShape.GetDimNum();
+    size_t sourceDimNum = sourceShape.GetDimNum();
+    if (maskDimNum != selfDimNum) {
+        return false;
+    }
+
+    for (size_t i = 0; i < maskDimNum - 1; i++) {
+        if (maskShape.GetDim(i) != selfShape.GetDim(i)) {
+            return false;
+        }
+    }
+
+    if (maskShape.GetDim(maskDimNum - 1) != selfShape.GetDim(selfDimNum - 1) &&
+        !(maskShape.GetDim(maskDimNum - 1) == 1 &&
+        selfShape.GetDim(selfDimNum - 1) == sourceShape.GetDim(sourceDimNum - 1))) {
+        return false;
+    }
+    return true;
+}
+
+static bool CheckShapeLimit(const aclTensor* self, const aclTensor* mask, const aclTensor* source)
+{
+    bool isSupportV1 = CheckSupportV1(self, mask, source);
+    return self->GetViewShape() == mask->GetViewShape() || isSupportV1;
 }
 
 // 根据芯片类型、dtype判断算子是否支持走aicore
-static bool IsAiCoreSupport(const aclTensor* self, const aclTensor* mask)
+static bool IsAiCoreSupport(const aclTensor* self, const aclTensor* mask, const aclTensor* source)
 {
     // 只需要判断dtype
     auto supportList = Ops::NN::AclnnUtil::IsRegbase() ?     // 判断芯片架构
@@ -50,7 +80,7 @@ static bool IsAiCoreSupport(const aclTensor* self, const aclTensor* mask)
                            AICORE_DTYPE_SUPPORT_LIST;
     bool result = CheckType(self->GetDataType(), supportList);
     result = result && (mask->GetDataType() == op::DataType::DT_BOOL);
-    result = result && CheckShapeLimit(self, mask);
+    result = result && CheckShapeLimit(self, mask, source);
     return result;
 }
 
@@ -88,7 +118,7 @@ const aclTensor* MaskedScatter(
 {
     L0_DFX(MaskedScatter, self, mask, source);
     auto maskedScatterOut = executor->AllocTensor(self->GetViewShape(), self->GetDataType());
-    if (IsAiCoreSupport(self, mask)) {
+    if (IsAiCoreSupport(self, mask, source)) {
         return MaskedScatterAiCore(self, mask, source, maskedScatterOut, executor);
     } else {
         return MaskedScatterAiCpu(self, mask, source, maskedScatterOut, executor);

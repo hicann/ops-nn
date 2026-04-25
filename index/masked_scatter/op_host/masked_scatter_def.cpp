@@ -29,6 +29,38 @@ static const std::vector<ge::Format> SUPPORT_FORMAT = {
     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND
 };
+
+static ge::graphStatus CheckIfAICoreSupported(const ge::Operator& op, ge::AscendString& result) {
+    auto xShape = op.GetInputDesc("x").GetShape();
+    auto maskShape = op.GetInputDesc("mask").GetShape();
+    auto updatesShape = op.GetInputDesc("updates").GetShape();
+    size_t xDimNum = xShape.GetDimNum();
+    size_t maskDimNum = maskShape.GetDimNum();
+    size_t updatesDimNum = updatesShape.GetDimNum();
+    if (maskDimNum != xDimNum) {
+        result = ge::AscendString(
+            R"({"isSupported": "False", "dynamicCompileStatic": "True", "reason": "Unsupported Shape."})");
+        return ge::GRAPH_FAILED;
+    }
+    for (size_t i = 0; i < maskDimNum - 1; i++) {
+        if (maskShape.GetDim(i) != xShape.GetDim(i)) {
+            result = ge::AscendString(
+                R"({"isSupported": "False", "dynamicCompileStatic": "True", "reason": "Unsupported Shape."})");
+            return ge::GRAPH_FAILED;
+        }
+    }
+    if (maskShape.GetDim(maskDimNum - 1) != xShape.GetDim(xDimNum - 1) &&
+        !(maskShape.GetDim(maskDimNum - 1) == 1 &&
+        xShape.GetDim(xDimNum - 1) == updatesShape.GetDim(updatesDimNum - 1))) {
+        result = ge::AscendString(
+            R"({"isSupported": "False", "dynamicCompileStatic": "True", "reason": "Unsupported Shape."})");
+        return ge::GRAPH_FAILED;
+    }
+    result = ge::AscendString(
+            R"({"isSupported": "True", "dynamicCompileStatic": "True", "reason": "AICore CheckSupport Passed."})");
+    return ge::GRAPH_SUCCESS;
+}
+
 class MaskedScatter : public OpDef {
  public:
   explicit MaskedScatter(const char* name) : OpDef(name) {
@@ -65,8 +97,27 @@ class MaskedScatter : public OpDef {
         .PrecisionReduceFlag(true)
         .ExtendCfgInfo("opFile.value", "masked_scatter_apt");
     this->AICore().AddConfig("ascend950", aicore_config);
+
+    OpAICoreConfig aicore_config_910B;
+    aicore_config_910B.DynamicCompileStaticFlag(true)
+        .DynamicFormatFlag(false)
+        .DynamicRankSupportFlag(true)
+        .DynamicShapeSupportFlag(true)
+        .NeedCheckSupportFlag(true)
+        .PrecisionReduceFlag(true);
+    this->AICore().AddConfig("ascend910b", aicore_config_910B);
+    this->AICore().AddConfig("ascend910_93", aicore_config_910B);
+    this->AICore().SetCheckSupport(CheckIfAICoreSupported);
   }
 };
 
 OP_ADD(MaskedScatter);
+
+// 手动注册opDef.AICore()里设置的CheckSupport函数
+// 需要当前目录下的CMakeLists.txt将本_def.cpp加入${OPHOST_NAME}_tiling_obj编译目标内
+static int MASKED_SCATTER_REGISTERED = [](const char* name) {
+    MaskedScatter opDef(name);
+    optiling::OpCheckFuncHelper(FUNC_CHECK_SUPPORTED, name, opDef.AICore().GetCheckSupport());
+    return 0;
+}("MaskedScatter");
 }  // namespace ops
