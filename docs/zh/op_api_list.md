@@ -236,6 +236,7 @@
 | [aclnnIndexFillTensor&aclnnInplaceIndexFillTensor](../../index/index_fill_d/docs/aclnnIndexFillTensor&aclnnInplaceIndexFillTensor.md) | 沿输入self的给定轴dim，将index指定位置的值使用value进行替换。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnIndexPutImpl](../../index/index_put_v2/docs/aclnnIndexPutImpl.md) | 根据索引 indices 将输入 x 对应坐标的数据与输入 value 进行替换或累加。 | 默认非确定性实现，支持配置开启 | 默认非确定性实现，支持配置开启 |
 | [aclnnInplacePut](../../index/scatter_nd_update/docs/aclnnInplacePut.md) | 将selfRef视为一维张量，把index张量中元素值作为索引，如果accumulate为true，把source中元素和selfRef对应的位置上元素做累加操作；如果accumulate为false，把source中元素替换掉selfRef对应位置上的元素。 | 默认非确定性实现，支持配置开启 | 默认非确定性实现，支持配置开启 |
+| [aclnnInplaceScatterUpdate](../../index/scatter/docs/aclnnInplaceScatterUpdate.md) | 将tensor updates中的值按指定的轴axis和索引indices逐个更新tensor data中的值。该算子为自定义算子语义，无对应的tensorflow或pytorch接口。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnIndexSelect](../../index/gather_v2/docs/aclnnIndexSelect.md) | 从输入Tensor的指定维度dim，按index中的下标序号提取元素，保存到out Tensor中。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnInplaceAddRmsNorm](../../norm/inplace_add_rms_norm/docs/aclnnInplaceAddRmsNorm.md) | RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnInplaceMaskedScatter](../../index/masked_scatter/docs/aclnnInplaceMaskedScatter.md) | 根据掩码(mask)张量中元素为True的位置，复制(source)中的元素到(selfRef)对应的位置上。 | 默认确定性实现 | 默认确定性实现 |
@@ -274,6 +275,7 @@
 | [aclnnMaxUnpool2dBackward](../../index/gather_elements/docs/aclnnMaxUnpool2dBackward.md) | MaxPool2d的逆运算aclnnMaxUnpool2d的反向传播，根据indices索引在out中填入gradOutput的元素值。 | 默认确定性实现 | 默认非确定性实现，支持配置开启 |
 | [aclnnMaxUnpool3dBackward](../../index/gather_elements/docs/aclnnMaxUnpool3dBackward.md) | MaxPool3d的逆运算aclnnMaxUnpool3d的反向传播，根据indices索引在out中填入gradOutput的元素值。 | 默认确定性实现 | 默认非确定性实现，支持配置开启 |
 | [aclnnMedian](../../index/gather_v2/docs/aclnnMedian.md) | 返回所有元素的中位数。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnMedianDim](../../index/gather_v2/docs/aclnnMedianDim.md) | 返回所有元素的中位数及所在位置（若指定维度元素个数为size，则中位数对应排序后的下标为`(size - 1) // 2`）。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnMm](../../matmul/mat_mul_v3/docs/aclnnMm.md) | 完成2维张量self与张量mat2的矩阵乘计算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnMish&aclnnInplaceMish](../../activation/mish/docs/aclnnMish&aclnnInplaceMish.md) | 一个自正则化的非单调神经网络激活函数。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnMishBackward](../../activation/mish_grad/docs/aclnnMishBackward.md) | 计算aclnnMish的反向传播过程。 | 默认确定性实现 | 默认确定性实现 |
@@ -283,6 +285,8 @@
 | [aclnnMultiScaleDeformableAttnFunction](../../vfusion/multi_scale_deformable_attn_function/docs/aclnnMultiScaleDeformableAttnFunction.md) | 通过指定参数来遍历不同尺寸特征图的不同采样点。 | 默认确定性实现 | - |
 | [aclnnMultiScaleDeformableAttentionGrad](../../vfusion/multi_scale_deformable_attention_grad/docs/aclnnMultiScaleDeformableAttentionGrad.md) | 正向算子功能主要通过指定参数来遍历不同尺寸特征图的不同采样点。而反向算子的功能为根据正向的输入对输出的贡献及初始梯度求出输入对应的梯度。 | 默认非确定性实现，支持配置开启。 | - |
 | [aclnnMv](../../matmul/mv/docs/aclnnMv.md) | 计算矩阵input与向量vec的乘积。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnNanMedian](../../index/gather_v2/docs/aclnnNanMedian.md) | 忽略NAN后，返回所有元素的中位数。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnNanMedianDim](../../index/gather_v2/docs/aclnnNanMedian.md) | 忽略NAN后，返回Tensor指定维度求中位数及所在位置。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnNorm](../../norm/lp_norm_v2/docs/aclnnNorm.md) | 返回给定张量的矩阵范数或者向量范数。 | 默认非确定性实现，支持配置开启。 | 默认确定性实现 |
 | [aclnnNLLLoss](../../loss/nll_loss/docs/aclnnNLLLoss.md) | 计算负对数似然损失值。 | 默认非确定性实现，支持配置开启。 | 默认确定性实现 |
 | [aclnnNLLLoss2d](../../loss/nll_loss/docs/aclnnNLLLoss2d.md) | 计算负对数似然损失值。 | 默认非确定性实现，支持配置开启。 | 默认确定性实现 |
