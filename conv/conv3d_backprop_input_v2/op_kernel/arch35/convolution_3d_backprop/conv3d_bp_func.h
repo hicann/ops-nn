@@ -105,7 +105,7 @@ __aicore__ inline void InitStepKParams(Intf *self)
     uint64_t tmpSingleCoreK = 0;
     // kernel拆分后，K方向去除无效计算
     if constexpr (Intf::conv3dConfig.kernelSplitMode != TPL_NO_SPLIT_KERNEL) {
-        tmpSingleCoreK = static_cast<uint64_t>(self->ctx.tiling_->cout1) * self->ctx.splitHkWkC0List_[self->ctx.splitIndex_];
+        tmpSingleCoreK = static_cast<uint64_t>(self->ctx.tiling_->cout1G) * self->ctx.splitHkWkC0List_[self->ctx.splitIndex_];
         if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
             RecalcStepForKernelSplit<Intf>(self);   // 当pad大于0时，子kernel顺序会变化，stepka需要重新计算
         }

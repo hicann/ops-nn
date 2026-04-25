@@ -35,6 +35,8 @@ struct KernelSplitPara {
     uint32_t maxSplitKw;
     uint32_t curWi;
     bool isKernelSplitOnlyH;
+    bool isA16W8 = false;
+    bool isA16W8GroupNoEnlarge = false;
 };
 
 class Conv3DDXV2KernelSplitTiling : public Conv3DDXV2InnerProductTiling {

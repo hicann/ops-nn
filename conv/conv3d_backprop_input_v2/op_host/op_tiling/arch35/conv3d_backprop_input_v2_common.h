@@ -32,6 +32,7 @@ constexpr uint32_t ONE_U32 = 1;
 constexpr int32_t ONE_S32 = 1;
 constexpr uint64_t BYTE_64 = 64;
 constexpr uint32_t MAX_BASE_MN = 1024;
+constexpr uint32_t MAX_BASE_MN_A16W8 = 512;
 constexpr uint32_t BASIC_BLOCK_SIZE_512 = 512;
 constexpr uint32_t BASIC_BLOCK_SIZE_256 = 256;
 constexpr uint32_t BASIC_BLOCK_SIZE_128 = 128;

@@ -174,8 +174,8 @@ struct RunInfoParaV2 {
 
     int32_t load3d_special;
     int32_t hf32_flag;
-    int32_t groups;  // 950
-    int32_t enlarge; // 950
+    int32_t groups;
+    int32_t enlarge;
     // format vars
     ge::Format outBackpropFormat;
     ge::Format filterFormat;

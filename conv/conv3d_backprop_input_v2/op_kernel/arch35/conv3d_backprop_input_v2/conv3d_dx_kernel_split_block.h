@@ -46,9 +46,9 @@ public:
         InitTilingData(tilingData);
         if (this->enableVecTrans_) {
             this->filterGm_.SetGlobalBuffer((__gm__ filterType *)workSpace);
-            workSpace += static_cast<uint64_t>(this->tiling_->cout) *
+            workSpace += static_cast<uint64_t>(this->tiling_->coutG) *
                 this->tiling_->dk * this->tiling_->hk * this->tiling_->wk *
-                (((this->tiling_->cin + BLOCK_CUBE - 1) >> 4) << 4) * sizeof(filterType); // 4 : 2的4次方
+                (((this->tiling_->cinG + BLOCK_CUBE - 1) >> 4) << 4) * sizeof(filterType); // 4 : 2的4次方
         } else {
             this->filterGm_.SetGlobalBuffer((__gm__ filterType *)filter);
         }
@@ -113,7 +113,7 @@ protected:
         this->mCnt_ = DivCeil(this->kSM_, this->singleShapeM_);
         this->mCoreTail_ = this->kSM_ - (this->mCnt_ - 1) * this->singleShapeM_;
 
-        uint64_t n = this->tiling_->cin;
+        uint64_t n = this->tiling_->cinG;
         this->nCnt_ = DivCeil(n, this->singleShapeN_);
         this->nCoreTail_ = n - (this->nCnt_ - 1) * this->singleShapeN_;
 
@@ -125,8 +125,11 @@ protected:
             this->dinCoreTail_ = 1;
         }
 
+        uint64_t k = static_cast<uint64_t>(this->tiling_->cout) * this->tiling_->hk * this->tiling_->wk;
+        this->coutGroupTail_ = k - (this->tiling_->group - 1) * this->singleShapeK_;
+
         // 记录基本块的位置
-        this->totalCnt_ = kSCnt * static_cast<uint64_t>(this->tiling_->batch) *
+        this->totalCnt_ = kSCnt * static_cast<uint64_t>(this->tiling_->batch) * this->tiling_->group *
             this->dinCnt_ * this->mCnt_ * this->nCnt_;
 
         uint64_t blockNum = GetBlockNum();
@@ -208,7 +211,7 @@ protected:
         this->kSUseWorkSpace_ = tilingData->conv3DDxKSTiling.kSUseWorkSpace;
         this->dedx_.SetKernelSplitParams(tilingData->conv3DDxKSTiling.kSCoutFullLoad, this->kSUseWorkSpace_);
         this->singleShapeM_ = this->tiling_->singleCoreM;
-        this->singleShapeK_ = static_cast<uint64_t>(this->tiling_->cout) * this->tiling_->hk * this->tiling_->wk;
+        this->singleShapeK_ = static_cast<uint64_t>(this->tiling_->coutG) * this->tiling_->hk * this->tiling_->wk;
         this->singleShapeN_ = this->tiling_->singleCoreCin;
         this->singleShapeDin_ = this->tiling_->singleCoreDin;
         this->enableVecTrans_ = this->tiling_->enableVecTrans;

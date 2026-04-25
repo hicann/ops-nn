@@ -131,7 +131,7 @@ void Conv3DDXV2KernelSplitFullLoadTiling::AdjustBaseMNK(L0TilingParams& l0Params
             // 耦合架构下cin小，kernel拆分 scalar bound严重，理论建模失效，在负载均衡下尽可能减少计算轮次
             uint64_t maxSingleCoreM = Base::CeilDiv(tilingRunInfo.mValue, static_cast<uint64_t>(coreNum_));
             maxSingleCoreM = Ops::Base::CeilAlign(maxSingleCoreM, static_cast<uint64_t>(tilingRunInfo_.m0));
-            maxBaseM = std::min(static_cast<uint64_t>(MAX_BASE_MN), maxSingleCoreM);
+            maxBaseM = std::min(static_cast<uint64_t>(kernelSplitPara_.isA16W8 ? MAX_BASE_MN_A16W8 : MAX_BASE_MN), maxSingleCoreM);
         }
         uint32_t mL0cMax = std::max(l0cMaxNum / baseN / tilingRunInfo_.n0, ONE_U32) * tilingRunInfo_.n0;
         baseM = std::min(maxBaseM, mL0cMax);
