@@ -47,9 +47,8 @@ ge::graphStatus Conv3DDXV2KernelSplitTiling::GetShapeAttrsInfo()
         return ge::GRAPH_FAILED;
     }
 
-    enableSplitKernel_ = CheckKernelSplitEnable();
-    tilingRunInfo_.enableSplitKernelFlag = enableSplitKernel_;
-    if (!enableSplitKernel_) {
+    tilingRunInfo_.enableSplitKernelFlag = CheckKernelSplitEnable();
+    if (!tilingRunInfo_.enableSplitKernelFlag) {
         return ge::GRAPH_SUCCESS;
     }
 
@@ -79,7 +78,11 @@ bool Conv3DDXV2KernelSplitTiling::IsCapable()
         return false;
     }
 
-    if (!enableSplitKernel_) {
+    if (Conv3DDXV2KernelSplitTiling::GetTilingFromRepo()) {
+        isGetTilingFromRepo = true;
+    }
+
+    if (!tilingRunInfo_.enableSplitKernelFlag) {
         return false;
     }
 
@@ -472,9 +475,9 @@ void Conv3DDXV2KernelSplitTiling::SetTilingData(
 ge::graphStatus Conv3DDXV2KernelSplitTiling::DoLibApiTiling()
 {
     OP_LOGD(opName_, "Enable kernel split tiling");
-    if (Conv3DDXV2InnerProductTiling::GetTilingFromRepo()) {
+    if (isGetTilingFromRepo) {
         OP_LOGD(context_->GetNodeName(), "Conv3DBackpropInputV2 AscendC: KernelSplit get tiling from knowledge_tiling success.");
-        PrintTilingData();
+        PrintTilingSummary();
         return ge::GRAPH_SUCCESS;
     }
 
@@ -513,7 +516,7 @@ ge::graphStatus Conv3DDXV2KernelSplitTiling::DoLibApiTiling()
     }
     UpdateWorkSpaceSize(l0Params);
     SetTilingData(coreParams, l1Params, l0Params);
-    PrintTilingData();
+    PrintTilingSummary();
     return ge::GRAPH_SUCCESS;
 }
 
@@ -523,6 +526,11 @@ ge::graphStatus Conv3DDXV2KernelSplitTiling::GetWorkspaceSize()
     OP_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
     // 框架预留16M
     workspaces[0] = static_cast<size_t>(WORKSIZE);
+
+    if(isGetTilingFromRepo) {
+        workspaces[0] += usrSpaceSizeForKernelSplit_;
+        return ge::GRAPH_SUCCESS;
+    }
 
     if (tilingRunInfo_.enableVecTransFlag) {
         size_t usrSpaceSizeForVecTrans =
@@ -820,6 +828,57 @@ void Conv3DDXV2KernelSplitTiling::SetSingleCoreInfo(CoreTilingParams& coreParams
             l0Params.baseM = Ops::Base::CeilAlign(coreParams.singleCoreM, static_cast<uint64_t>(tilingRunInfo_.m0));
         }
     }
+}
+
+bool Conv3DDXV2KernelSplitTiling::GetTilingFromRepo()
+{
+    std::shared_ptr<tuningtiling::TuningTilingDef> tuningTiling = Conv3DDXV2KernelSplitTiling::GetKnowledgeTiling();
+    if (tuningTiling == nullptr) {
+        return false;
+    }
+
+    auto tunerTiling = std::static_pointer_cast<tuningtiling::Conv3DBackpropInputTunerTiling>(tuningTiling);
+    if (tunerTiling == nullptr) {
+        return false;
+    }
+
+    Conv3DDXV2KernelSplitTiling::TranslateRunInfoData();
+    Conv3DDXV2KernelSplitTiling::TranslateTilingData(tunerTiling);
+    Conv3DDXV2KernelSplitTiling::TranslateTilingRunInfo(tunerTiling);
+    if (tilingData_.conv3DDxTiling.enlarge == 1) {
+        groupConvMode_ = TILING_GROUP_MODE_ORIGIN;
+    } else {
+        groupConvMode_ = TILING_GROUP_MODE_ENLARGE;
+    }
+    return true;
+}
+
+void Conv3DDXV2KernelSplitTiling::TranslateTilingRunInfo(std::shared_ptr<tuningtiling::Conv3DBackpropInputTunerTiling> tunerTiling) {
+    loadB1Condition_ = tunerTiling->loadB1Condition;
+    loadB2Condition_ = tunerTiling->loadB2Condition;
+    kernelSplitMode_ = tunerTiling->kernelSplitMode;
+    usrSpaceSizeForKernelSplit_ = tunerTiling->usrSpaceSizeForKernelSplit;
+    tilingRunInfo_.enableC04Flag = tunerTiling->enableC04Flag;
+    tilingRunInfo_.enableFullLoadTiling = tunerTiling->enableFullLoadTiling;
+    tilingRunInfo_.enableVecTransFlag = tunerTiling->enableVecTransFlag;
+    tilingRunInfo_.enableSplitKernelFlag = tunerTiling->enableSplitKernelFlag;
+    tilingRunInfo_.tilingHkWkMode = tunerTiling->tilingHkWkMode;
+}
+
+void Conv3DDXV2KernelSplitTiling::PrintTilingRunInfo()
+{
+    std::stringstream ss;
+    ss << "enableC04Flag: " << tilingRunInfo_.enableC04Flag << " enableFullLoadTiling: " << tilingRunInfo_.enableFullLoadTiling
+       << " enableVecTransFlag: " << tilingRunInfo_.enableVecTransFlag << " enableSplitKernelFlag: " << tilingRunInfo_.enableSplitKernelFlag
+       << " tilingHkWkMode: " << static_cast<uint32_t>(tilingRunInfo_.tilingHkWkMode) << " usrSpaceSizeForKernelSplit: " << usrSpaceSizeForKernelSplit_;
+    OP_LOGD(opName_, "TilingRunInfo: %s", ss.str().c_str());
+}
+
+void Conv3DDXV2KernelSplitTiling::PrintTilingSummary()
+{
+    PrintRunInfoData();
+    Conv3DDXV2KernelSplitTiling::PrintTilingRunInfo();
+    PrintTilingData();
 }
 
 REGISTER_TILING_TEMPLATE("Conv3DBackpropInputV2", Conv3DDXV2KernelSplitTiling, 98);

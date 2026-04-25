@@ -35,6 +35,10 @@ bool Conv3DDXV2SmallShapeTiling::IsCapable()
         return false;
     }
 
+    if (Conv3DDXV2InnerProductTiling::GetTilingFromRepo()) {
+        isGetTilingFromRepo = true;
+    }
+
     // 暂不支持fp16/bfp16以外类型
     if (tilingRunInfo_.tilingHkWkMode != 0) {
         return false;
@@ -65,9 +69,9 @@ bool Conv3DDXV2SmallShapeTiling::IsCapable()
 ge::graphStatus Conv3DDXV2SmallShapeTiling::DoLibApiTiling()
 {
     OP_LOGD(opName_, "Enable small shape tiling");
-    if (Conv3DDXV2InnerProductTiling::GetTilingFromRepo()) {
+    if (isGetTilingFromRepo) {
         OP_LOGD(context_->GetNodeName(), "Conv3DBackpropInputV2 AscendC: SmallShape get tiling from knowledge_tiling success.");
-        PrintTilingData();
+        PrintTilingSummary();
         return ge::GRAPH_SUCCESS;
     }
 
@@ -98,7 +102,7 @@ ge::graphStatus Conv3DDXV2SmallShapeTiling::DoLibApiTiling()
     }
     Conv3DDXV2InnerProductTiling::SetTilingCondition(coreParams, l1Params, l0Params);
     Conv3DDXV2InnerProductTiling::SetTilingData(coreParams, l1Params, l0Params);
-    Conv3DDXV2InnerProductTiling::PrintTilingData();
+    Conv3DDXV2InnerProductTiling::PrintTilingSummary();
     return ge::GRAPH_SUCCESS;
 }
 

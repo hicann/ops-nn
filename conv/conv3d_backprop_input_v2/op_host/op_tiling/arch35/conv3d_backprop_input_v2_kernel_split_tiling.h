@@ -85,11 +85,15 @@ protected:
     void UpdateWorkSpaceSize(L0TilingParams& l0Params);
 
     // for kernel split param
-    bool enableSplitKernel_ = false;
     uint32_t kSCoutFullLoad_ = 0;
     uint32_t kSUseWorkSpace_ = 0;
     uint64_t usrSpaceSizeForKernelSplit_ = 0;
     KernelSplitPara kernelSplitPara_ = {};
+
+    bool GetTilingFromRepo();
+    void TranslateTilingRunInfo(std::shared_ptr<tuningtiling::Conv3DBackpropInputTunerTiling> tunerTiling);
+    void PrintTilingRunInfo();
+    void PrintTilingSummary();
 
 private:
     void SetParamForKernelSplit(bool isKernelSplitOnlyH = true);

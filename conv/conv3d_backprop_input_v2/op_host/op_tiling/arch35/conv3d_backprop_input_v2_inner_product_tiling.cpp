@@ -119,8 +119,6 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::GetPublicShapeAttrsInfo()
         return ge::GRAPH_FAILED);
     SetRunInfoTiling(tilingData_.conv3DDxTiling);
 
-    PrintRunInfoData();
-
     return ge::GRAPH_SUCCESS;
 }
 
@@ -214,6 +212,10 @@ bool Conv3DDXV2InnerProductTiling::IsCapable()
         NpuArch::DAV_3510 &&
         !IsSocVersionFuse(context_)) {
         return false;
+    }
+
+    if (Conv3DDXV2InnerProductTiling::GetTilingFromRepo()) {
+        isGetTilingFromRepo = true;
     }
 
     return true;
@@ -445,28 +447,52 @@ void Conv3DDXV2InnerProductTiling::SetTilingData(
 
 bool Conv3DDXV2InnerProductTiling::GetTilingFromRepo()
 {
+    std::shared_ptr<tuningtiling::TuningTilingDef> tuningTiling = GetKnowledgeTiling();
+    if (tuningTiling == nullptr) {
+        return false;
+    }
+
+    auto tunerTiling = std::static_pointer_cast<tuningtiling::Conv3DBackpropInputTunerTiling>(tuningTiling);
+    if (tunerTiling == nullptr) {
+        return false;
+    }
+
+    TranslateRunInfoData();
+    TranslateTilingData(tunerTiling);
+    TranslateTilingRunInfo(tunerTiling);
+    if (tilingData_.conv3DDxTiling.enlarge == 1) {
+        groupConvMode_ = TILING_GROUP_MODE_ORIGIN;
+    } else {
+        groupConvMode_ = TILING_GROUP_MODE_ENLARGE;
+    }
+    return true;
+}
+
+std::shared_ptr<tuningtiling::TuningTilingDef> Conv3DDXV2InnerProductTiling::GetKnowledgeTiling()
+{
     std::shared_ptr<void> inputArgs = nullptr;
     std::size_t inputArgsSize = 0;
     if (!GetTilingInputArgs(inputArgs, inputArgsSize)) {
-        return false;
+        return nullptr;
     }
 
     std::shared_ptr<tuningtiling::TuningTilingDef> tuningTiling = nullptr;
     auto compileInfo = context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>();
-    OP_TILING_CHECK(compileInfo == nullptr, CUBE_INNER_ERR_REPORT("Conv3DBackpropInputV2", "compileInfo is null"), return false);
+    OP_TILING_CHECK(compileInfo == nullptr, CUBE_INNER_ERR_REPORT("Conv3DBackpropInputV2", "compileInfo is null"), return nullptr);
     const std::string& socVersion = compileInfo->soc_version;
     OP_LOGD(context_, "socVersion = %s, coreNum_ = %d", socVersion.c_str(), coreNum_);
     uint32_t ret = Ops::NN::QueryBank(
         inputArgs.get(), inputArgsSize, "Conv3DBackpropInputV2", socVersion, coreNum_, tuningTiling);
     if (ret != 0) {
         OP_LOGD(context_->GetNodeName(), "Conv3DBackpropInputV2 AscendC: get tiling from knowledge_tiling failed, ret = %d.", ret);
-        return false;
+        return nullptr;
     }
     if (tuningTiling == nullptr) {
         OP_LOGD(context_->GetNodeName(), "Conv3DBackpropInputV2 AscendC: get tiling from knowledge_tiling failed, tuningTiling is null.");
-        return false;
+        return nullptr;
     }
-    return TranslateTunerTiling(tuningTiling);
+
+    return tuningTiling;
 }
 
 bool Conv3DDXV2InnerProductTiling::GetTilingInputArgs(std::shared_ptr<void>& inputArgs, std::size_t& inputArgsSize)
@@ -524,23 +550,6 @@ bool Conv3DDXV2InnerProductTiling::GetTilingInputArgs(std::shared_ptr<void>& inp
     return true;
 }
 
-bool Conv3DDXV2InnerProductTiling::TranslateTunerTiling(tuningtiling::TuningTilingDefPtr &tuningTiling)
-{
-    auto tunerTiling = std::static_pointer_cast<tuningtiling::Conv3DBackpropInputTunerTiling>(tuningTiling);
-    if (tunerTiling == nullptr) {
-        return false;
-    }
-
-    TranslateRunInfoData();
-    TranslateTuningData(tunerTiling);
-    if (tilingData_.conv3DDxTiling.enlarge == 1) {
-        groupConvMode_ = TILING_GROUP_MODE_ORIGIN;
-    } else {
-        groupConvMode_ = TILING_GROUP_MODE_ENLARGE;
-    }
-    return true;
-}
-
 void Conv3DDXV2InnerProductTiling::TranslateRunInfoData() {
     tilingData_.conv3DDxTiling.hf32Flag = runInfo_.hf32_flag;
     tilingData_.conv3DDxTiling.batch = runInfo_.batch_n;
@@ -571,7 +580,7 @@ void Conv3DDXV2InnerProductTiling::TranslateRunInfoData() {
     tilingData_.conv3DDxTiling.dilationW = runInfo_.dilation_w;
 }
     
-void Conv3DDXV2InnerProductTiling::TranslateTuningData(std::shared_ptr<tuningtiling::Conv3DBackpropInputTunerTiling> tunerTiling) {
+void Conv3DDXV2InnerProductTiling::TranslateTilingData(std::shared_ptr<tuningtiling::Conv3DBackpropInputTunerTiling> tunerTiling) {
     tilingData_.conv3DDxTiling.al0Pbuffer = tunerTiling->al0Pbuffer;
     tilingData_.conv3DDxTiling.bl0Pbuffer = tunerTiling->bl0Pbuffer;
     tilingData_.conv3DDxTiling.cl0Pbuffer = tunerTiling->cl0Pbuffer;
@@ -614,18 +623,25 @@ void Conv3DDXV2InnerProductTiling::TranslateTuningData(std::shared_ptr<tuningtil
     tilingData_.params.coreNum = tunerTiling->coreNum;
     tilingData_.conv3DDxKSTiling.kSCoutFullLoad = tunerTiling->kSCoutFullLoad;
     tilingData_.conv3DDxKSTiling.kSUseWorkSpace = tunerTiling->kSUseWorkSpace;
+}
+
+void Conv3DDXV2InnerProductTiling::TranslateTilingRunInfo(std::shared_ptr<tuningtiling::Conv3DBackpropInputTunerTiling> tunerTiling) {
     loadB1Condition_ = tunerTiling->loadB1Condition;
     loadB2Condition_ = tunerTiling->loadB2Condition;
     kernelSplitMode_ = tunerTiling->kernelSplitMode;
+    tilingRunInfo_.enableC04Flag = tunerTiling->enableC04Flag;
+    tilingRunInfo_.enableFullLoadTiling = tunerTiling->enableFullLoadTiling;
+    tilingRunInfo_.enableVecTransFlag = tunerTiling->enableVecTransFlag;
+    tilingRunInfo_.enableSplitKernelFlag = tunerTiling->enableSplitKernelFlag;
+    tilingRunInfo_.tilingHkWkMode = tunerTiling->tilingHkWkMode;
 }
 
 ge::graphStatus Conv3DDXV2InnerProductTiling::DoLibApiTiling()
 {
     OP_LOGD(opName_, "Enable inneProduct tiling");
-
-    if (Conv3DDXV2InnerProductTiling::GetTilingFromRepo()) {
+    if (isGetTilingFromRepo) {
         OP_LOGD(context_->GetNodeName(), "Conv3DBackpropInputV2 AscendC: InnerProduct get tiling from knowledge_tiling success.");
-        PrintTilingData();
+        PrintTilingSummary();
         return ge::GRAPH_SUCCESS;
     }
 
@@ -655,7 +671,7 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::DoLibApiTiling()
     }
     SetTilingCondition(coreParams, l1Params, l0Params);
     SetTilingData(coreParams, l1Params, l0Params);
-    PrintTilingData();
+    PrintTilingSummary();
     return ge::GRAPH_SUCCESS;
 }
 

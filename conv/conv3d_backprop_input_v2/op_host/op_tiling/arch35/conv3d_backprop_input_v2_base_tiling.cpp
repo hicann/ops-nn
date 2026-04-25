@@ -271,7 +271,6 @@ bool Conv3DBackpropInputV2TilingArch35::PrintInputsAttrs(conv_bp_v2_kernel::TCon
 ge::graphStatus Conv3DBackpropInputV2TilingArch35::DoLibApiTiling()
 {
     SetDxTilingFromTbeTiling();
-    PrintTilingData();
     return ge::GRAPH_SUCCESS;
 }
 
@@ -1097,7 +1096,7 @@ void Conv3DBackpropInputV2TilingArch35::PrintTilingData()
        << " isBiasFullLoad: " << static_cast<uint32_t>(tiling.isBiasFullLoad)
        << " cinG: " << tiling.cinG
        << " coutG: " << tiling.coutG << " cout1: " << tiling.cout1 << " cin1: " << tiling.cin1
-       << " cout1G: " << tiling.cout1G << " cin1G: " << tiling.cin1G  
+       << " cout1G: " << tiling.cout1G << " cin1G: " << tiling.cin1G
        << " group: " << tiling.group << " oriGroup: " << tiling.oriGroup
        << " backpropPadTail: " << tiling.backpropPadTail << " backpropPadUp: " << tiling.backpropPadUp
        << " backpropPadDown: " << tiling.backpropPadDown << " backpropPadLeft: " << tiling.backpropPadLeft
@@ -1145,6 +1144,22 @@ void Conv3DBackpropInputV2TilingArch35::PrintRunInfoData() {
        << " filterFormat: " << static_cast<uint32_t>(runInfo_.filterFormat)
        << " yFormat: " << static_cast<uint32_t>(runInfo_.yFormat);
     OP_LOGD(opName_, "runInfo Data: %s", ss.str().c_str());
+}
+
+void Conv3DBackpropInputV2TilingArch35::PrintTilingRunInfo()
+{
+    std::stringstream ss;
+    ss << "enableC04Flag: " << tilingRunInfo_.enableC04Flag << " enableFullLoadTiling: " << tilingRunInfo_.enableFullLoadTiling
+       << " enableVecTransFlag: " << tilingRunInfo_.enableVecTransFlag << " enableSplitKernelFlag: " << tilingRunInfo_.enableSplitKernelFlag
+       << " tilingHkWkMode: " << static_cast<uint32_t>(tilingRunInfo_.tilingHkWkMode);
+    OP_LOGD(opName_, "TilingRunInfo: %s", ss.str().c_str());
+}
+
+void Conv3DBackpropInputV2TilingArch35::PrintTilingSummary()
+{
+    PrintRunInfoData();
+    PrintTilingRunInfo();
+    PrintTilingData();
 }
 
 REGISTER_TILING_TEMPLATE("Conv3DBackpropInputV2", Conv3DBackpropInputV2TilingArch35, 102);

@@ -113,6 +113,12 @@ TUNING_TILING_DATA_FIELD_DEF(uint32_t, kSUseWorkSpace);
 TUNING_TILING_DATA_FIELD_DEF(uint8_t, loadB2Condition);
 TUNING_TILING_DATA_FIELD_DEF(uint8_t, loadB1Condition);
 TUNING_TILING_DATA_FIELD_DEF(uint8_t, kernelSplitMode);
+TUNING_TILING_DATA_FIELD_DEF(bool, enableC04Flag);
+TUNING_TILING_DATA_FIELD_DEF(bool, enableFullLoadTiling);
+TUNING_TILING_DATA_FIELD_DEF(bool, enableVecTransFlag);
+TUNING_TILING_DATA_FIELD_DEF(bool, enableSplitKernelFlag);
+TUNING_TILING_DATA_FIELD_DEF(uint8_t, tilingHkWkMode);
+TUNING_TILING_DATA_FIELD_DEF(uint64_t, usrSpaceSizeForKernelSplit);
 END_TUNING_TILING_DEF
 
 DECLARE_SCHEMA(Conv3DBackpropInputTunerTiling,
@@ -160,6 +166,12 @@ DECLARE_SCHEMA(Conv3DBackpropInputTunerTiling,
   FIELD(Conv3DBackpropInputTunerTiling, kSUseWorkSpace),
   FIELD(Conv3DBackpropInputTunerTiling, loadB2Condition),
   FIELD(Conv3DBackpropInputTunerTiling, loadB1Condition),
-  FIELD(Conv3DBackpropInputTunerTiling, kernelSplitMode));
+  FIELD(Conv3DBackpropInputTunerTiling, kernelSplitMode),
+  FIELD(Conv3DBackpropInputTunerTiling, enableC04Flag),
+  FIELD(Conv3DBackpropInputTunerTiling, enableFullLoadTiling),
+  FIELD(Conv3DBackpropInputTunerTiling, enableVecTransFlag),
+  FIELD(Conv3DBackpropInputTunerTiling, enableSplitKernelFlag),
+  FIELD(Conv3DBackpropInputTunerTiling, tilingHkWkMode),
+  FIELD(Conv3DBackpropInputTunerTiling, usrSpaceSizeForKernelSplit));
 }  // namespace tuningtiling
 #endif

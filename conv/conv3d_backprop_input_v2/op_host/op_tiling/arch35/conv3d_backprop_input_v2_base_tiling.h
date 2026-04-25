@@ -240,7 +240,6 @@ protected:
     bool CheckDtypeFormatAttrs(size_t aMatrixesIndex, size_t bMatrixesIndex, bool hif8flag, bool fp8e4m3flag) const;
     bool AnalyzeDtype() const;
     void SetDxTilingFromTbeTiling();
-    void PrintTilingData();
     void PrintTbeTiling();
     int32_t GetDimFactor(const int64_t& value, const std::vector<int32_t>& factorLits) const;
     int32_t CalFmapH(const int32_t& mL1Size, bool isL1SplitHk = false) const;
@@ -266,6 +265,9 @@ protected:
     void SetTilingValue(conv_bp_v2_kernel::TConv3DInputV2Tiling& dxt, const TilingValueDavid& tilingParams);
     ge::graphStatus SetCoreMemSizeInfo();
     void PrintRunInfoData();
+    void PrintTilingRunInfo();
+    void PrintTilingData();
+    void PrintTilingSummary();
 
     bool a1DbFlag_ = false;
     bool b1DbFlag_ = false;
@@ -293,6 +295,7 @@ protected:
     conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData tilingData_ = {};
     Conv3dBpInputV2RunInfo runInfo_ = {};
     PlatformInfo platformInfo_;
+    TilingRunInfo tilingRunInfo_;
 
 private:
     Conv3dBackpropV2TBETilingData tbeTiling_ = {};

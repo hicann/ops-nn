@@ -84,14 +84,16 @@ protected:
     void AlignCout1(uint32_t& cout1A, uint32_t& cout1B, bool adaptFP32);
     void LadderMatchStepKWithFullLoad(L1TilingParams& l1Params, const L0TilingParams& l0Params);
     void CloseL0PingPong(L0TilingParams& l0Params);
-    TilingRunInfo tilingRunInfo_;
     uint64_t GetCVRation();
 
     bool GetTilingFromRepo();
+    std::shared_ptr<tuningtiling::TuningTilingDef> GetKnowledgeTiling();
     bool GetTilingInputArgs(std::shared_ptr<void>& inputArgs, std::size_t& inputArgsSize);
-    bool TranslateTunerTiling(tuningtiling::TuningTilingDefPtr &tuningTiling);
     void TranslateRunInfoData();
-    void TranslateTuningData(std::shared_ptr<tuningtiling::Conv3DBackpropInputTunerTiling> tunerTiling);
+    void TranslateTilingData(std::shared_ptr<tuningtiling::Conv3DBackpropInputTunerTiling> tunerTiling);
+    void TranslateTilingRunInfo(std::shared_ptr<tuningtiling::Conv3DBackpropInputTunerTiling> tunerTiling);
+    bool isGetTilingFromRepo = false;
+    
 private:
     bool CheckC04Enable();
     bool CheckVecTrans16bitPlus(const CoreTilingParams& coreParams, const L0TilingParams& l0Params);
