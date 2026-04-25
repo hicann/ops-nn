@@ -56,7 +56,8 @@ private:
     TQue<QuePosition::VECIN, BUFFER_NUM> offsetQueue_;
     TQue<QuePosition::VECOUT, BUFFER_NUM> outQueue_;
     TBuf<TPosition::VECCALC> tempQueue_;
-    TBuf<TPosition::VECCALC> castQueue_;
+    TBuf<TPosition::VECCALC> castInputFp32Queue_;
+    TBuf<TPosition::VECCALC> efrQueue_;
 
     /* global memory address */
     GlobalTensor<T1> xGm_;
@@ -96,7 +97,8 @@ __aicore__ inline void GeluQuant<T1, T2>::Init(
 
     pipe.InitBuffer(inQueue_, BUFFER_NUM, coexistentNodeElementNum_ * sizeof(float));
     pipe.InitBuffer(tempQueue_, coexistentNodeElementNum_ * sizeof(float));
-    pipe.InitBuffer(castQueue_, coexistentNodeElementNum_ * sizeof(float));
+    pipe.InitBuffer(castInputFp32Queue_, coexistentNodeElementNum_ * sizeof(float));
+    pipe.InitBuffer(efrQueue_, coexistentNodeElementNum_ * sizeof(float));
     pipe.InitBuffer(outQueue_, BUFFER_NUM, coexistentNodeElementNum_ * sizeof(float));
     pipe.InitBuffer(scaleQueue_, BUFFER_NUM, coexistentNodeElementNum_ * sizeof(float));
     pipe.InitBuffer(offsetQueue_, BUFFER_NUM, coexistentNodeElementNum_ * sizeof(float));
@@ -207,9 +209,20 @@ template <typename T1, typename T2>
 __aicore__ inline void GeluQuant<T1, T2>::ComputeGelu(LocalTensor<float>& geluRes, int32_t calCount)
 {
     LocalTensor<T1> xLocal = inQueue_.DeQue<T1>();
+    LocalTensor<float> erfFp32 = efrQueue_.Get<float>();
 
     if (approximate_ == APPROXIMATE_NONE) {
-        ComputeGeluErf(xLocal, geluRes, calCount);
+        if constexpr (IsSameType<T1, float>::value) {
+            Muls(erfFp32, xLocal, ONE_OVER_SQRT_TWO, calCount);
+            Vec::Erf(geluRes, erfFp32, calCount);
+            GeluV2ErfPost(geluRes, xLocal, geluRes, calCount);
+        } else {
+            LocalTensor<float> castInputFp32 = castInputFp32Queue_.Get<float>();
+            Cast(castInputFp32, xLocal, RoundMode::CAST_NONE, calCount);
+            Muls(erfFp32, castInputFp32, ONE_OVER_SQRT_TWO, calCount);
+            Vec::Erf(geluRes, erfFp32, calCount);
+            GeluV2ErfPost(geluRes, castInputFp32, geluRes, calCount);
+        }
     } else {
         ComputeGeluTanh(xLocal, geluRes, calCount);
     }

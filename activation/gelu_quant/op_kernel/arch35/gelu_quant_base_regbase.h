@@ -19,8 +19,11 @@
 #include "kernel_operator.h"
 #include "op_kernel/math_util.h"
 #include "../inc/platform.h"
+#include "atvoss/util/vec.h"
+
 namespace GeluQuantALL {
 using namespace AscendC;
+using namespace Ops::Base;
 
 constexpr float NEG_SQRT_EIGHT_OVER_PI = -1.595769121f * 0.044715f;
 constexpr float TANH_APPROX_FACTOR = 1.0f / 0.044715f;
@@ -35,6 +38,7 @@ constexpr float ERF_PARAM7 = -0.1595769883e1f;
 constexpr float ERF_MIN = 5.75f;
 constexpr float ERF_MAX = -13.15f;
 constexpr float MAX_INT8 = 127.0f;
+constexpr float ONE_OVER_SQRT_TWO = 0.707106781f;
 
 constexpr uint32_t APPROXIMATE_NONE = 0;
 constexpr uint32_t APPROXIMATE_TANH = 1;
@@ -66,8 +70,8 @@ public:
     __aicore__ inline GeluQuantBase(){};
 
     __aicore__ inline void ParseTilingData(const GeluQuantTilingData& tilingData);
-    template <typename T>
-    __aicore__ inline void ComputeGeluErf(const LocalTensor<T>& src, const LocalTensor<float>& dst, uint32_t calCount);
+    __aicore__ inline void GeluV2ErfPost(
+        LocalTensor<float>& dst, LocalTensor<float>& src1, LocalTensor<float>& src2, uint32_t count);
     template <typename T>
     __aicore__ inline void ComputeGeluTanh(const LocalTensor<T>& src, const LocalTensor<float>& dst, uint32_t calCount);
     template <typename T>
@@ -111,11 +115,11 @@ public:
         AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
         AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_ODD};
     constexpr static AscendC::MicroAPI::CastTrait castTraitF16ToI8Rint = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING,
-        AscendC::RoundMode::CAST_RINT};
+        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
+        AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT};
     constexpr static AscendC::MicroAPI::CastTrait castTraitF16ToI8Round = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING,
-        AscendC::RoundMode::CAST_ROUND};
+        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT,
+        AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_ROUND};
     constexpr static AscendC::MicroAPI::CastTrait castTraitF32ToF8 = {
         AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING,
         AscendC::RoundMode::CAST_RINT};
@@ -142,99 +146,38 @@ __aicore__ inline void GeluQuantBase::ParseTilingData(const GeluQuantTilingData&
     roundMode_ = static_cast<AscendC::RoundMode>(tilingData.roundMode);
 }
 
-template <typename T>
-__aicore__ inline void GeluQuantBase::ComputeGeluErf(
-    const LocalTensor<T>& src, const LocalTensor<float>& dst, uint32_t count)
+__aicore__ inline void GeluQuantBase::GeluV2ErfPost(
+    LocalTensor<float>& dst, LocalTensor<float>& src1, LocalTensor<float>& src2, uint32_t count)
 {
 #ifdef __CCE_AICORE__
     uint32_t dtypeSize = sizeof(float);
     uint32_t vl = VECTOR_REG_WIDTH / dtypeSize;
-    uint16_t loopNum = (count + vl - 1) / vl;
+    uint16_t loopNum = CeilDivision(count, vl);
     uint32_t vlSize = vl;
-    __ubuf__ T* srcAddr = (__ubuf__ T*)src.GetPhyAddr();
+    __ubuf__ float* src1Addr = (__ubuf__ float*)src1.GetPhyAddr();
+    __ubuf__ float* src2Addr = (__ubuf__ float*)src2.GetPhyAddr();
     __ubuf__ float* dstAddr = (__ubuf__ float*)dst.GetPhyAddr();
 
-    MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> vregInput;
+    MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> vregInput1;
     MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> vregInput2;
-    MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> vregInputSqr;
+    MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> vregInputAdds;
+    MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> vregInputMuls;
     MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> vregOutput;
-    MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> vregValue3;
-    MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> vregValue4;
-    MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> vregValue5;
-    MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> vregValue6;
-    MicroAPI::RegTensor<float, MicroAPI::RegTraitNumOne> vregValue7;
     MicroAPI::MaskReg mask;
-    MicroAPI::MaskReg cmpMaskReg;
-    if constexpr (std::is_same_v<T, float>) {
-        __VEC_SCOPE__
-        {
-            MicroAPI::Duplicate(vregValue3, ERF_PARAM3);
-            MicroAPI::Duplicate(vregValue4, ERF_PARAM4);
-            MicroAPI::Duplicate(vregValue5, ERF_PARAM5);
-            MicroAPI::Duplicate(vregValue6, ERF_PARAM6);
-            MicroAPI::Duplicate(vregValue7, ERF_PARAM7);
-            for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
-                mask = MicroAPI::UpdateMask<float, MicroAPI::RegTraitNumOne>(count);
-                // OpCopyIn
-                MicroAPI::DataCopy(vregInput, (__ubuf__ float*)(srcAddr + loopIdx * vlSize));
-
-                MicroAPI::Maxs(vregInput2, vregInput, ERF_MAX, mask);
-                MicroAPI::Mins(vregInput, vregInput2, ERF_MIN, mask);
-                MicroAPI::Mul(vregInputSqr, vregInput, vregInput, mask);
-                MicroAPI::Duplicate(vregOutput, ERF_PARAM2);
-                MicroAPI::Axpy(vregOutput, vregInputSqr, ERF_PARAM1, mask);
-
-                MicroAPI::FusedMulDstAdd(vregOutput, vregInputSqr, vregValue3, mask);
-                MicroAPI::FusedMulDstAdd(vregOutput, vregInputSqr, vregValue4, mask);
-                MicroAPI::FusedMulDstAdd(vregOutput, vregInputSqr, vregValue5, mask);
-                MicroAPI::FusedMulDstAdd(vregOutput, vregInputSqr, vregValue6, mask);
-                MicroAPI::FusedMulDstAdd(vregOutput, vregInputSqr, vregValue7, mask);
-                MicroAPI::Mul(vregOutput, vregOutput, vregInput, mask);
-                MicroAPI::Exp(vregOutput, vregOutput, mask);
-
-                MicroAPI::Adds(vregOutput, vregOutput, 1.0f, mask);
-                MicroAPI::Div(vregOutput, vregInput2, vregOutput, mask);
-                // OpCopyOut
-                MicroAPI::DataCopy((__ubuf__ float*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
-            }
-        }
-    } else {
-        MicroAPI::RegTensor<T, MicroAPI::RegTraitNumOne> vregInput16;
-        __VEC_SCOPE__
-        {
-            MicroAPI::Duplicate(vregValue3, ERF_PARAM3);
-            MicroAPI::Duplicate(vregValue4, ERF_PARAM4);
-            MicroAPI::Duplicate(vregValue5, ERF_PARAM5);
-            MicroAPI::Duplicate(vregValue6, ERF_PARAM6);
-            MicroAPI::Duplicate(vregValue7, ERF_PARAM7);
-            for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
-                mask = MicroAPI::UpdateMask<float, MicroAPI::RegTraitNumOne>(count);
-                // OpCopyIn
-                MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_UNPACK_B16>(
-                    vregInput16, (__ubuf__ T*)(srcAddr + loopIdx * vlSize));
-                MicroAPI::Cast<float, T, castTrait0>(vregInput, vregInput16, mask);
-                MicroAPI::Maxs(vregInput2, vregInput, ERF_MAX, mask);
-                MicroAPI::Mins(vregInput, vregInput2, ERF_MIN, mask);
-                MicroAPI::Mul(vregInputSqr, vregInput, vregInput, mask);
-                MicroAPI::Duplicate(vregOutput, ERF_PARAM2);
-                MicroAPI::Axpy(vregOutput, vregInputSqr, ERF_PARAM1, mask);
-
-                MicroAPI::FusedMulDstAdd(vregOutput, vregInputSqr, vregValue3, mask);
-                MicroAPI::FusedMulDstAdd(vregOutput, vregInputSqr, vregValue4, mask);
-                MicroAPI::FusedMulDstAdd(vregOutput, vregInputSqr, vregValue5, mask);
-                MicroAPI::FusedMulDstAdd(vregOutput, vregInputSqr, vregValue6, mask);
-                MicroAPI::FusedMulDstAdd(vregOutput, vregInputSqr, vregValue7, mask);
-                MicroAPI::Mul(vregOutput, vregOutput, vregInput, mask);
-                MicroAPI::Exp(vregOutput, vregOutput, mask);
-
-                MicroAPI::Adds(vregOutput, vregOutput, 1.0f, mask);
-                MicroAPI::Div(vregOutput, vregInput2, vregOutput, mask);
-                // OpCopyOut
-                MicroAPI::DataCopy((__ubuf__ float*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
-            }
+    __VEC_SCOPE__
+    {
+        for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
+            mask = MicroAPI::UpdateMask<float, MicroAPI::RegTraitNumOne>(count);
+            // OpCopyIn
+            MicroAPI::DataCopy(vregInput1, (__ubuf__ float*)(src1Addr + loopIdx * vlSize));
+            MicroAPI::DataCopy(vregInput2, (__ubuf__ float*)(src2Addr + loopIdx * vlSize));
+            MicroAPI::Adds(vregInputAdds, vregInput2, (float)1.0, mask);
+            MicroAPI::Muls(vregInputMuls, vregInput1, (float)0.5, mask);
+            MicroAPI::Mul(vregOutput, vregInputAdds, vregInputMuls, mask);
+            // OpCopyOut
+            MicroAPI::DataCopy((__ubuf__ float*)(dstAddr + loopIdx * vlSize), vregOutput, mask);
         }
     }
-
 #endif
 }
 

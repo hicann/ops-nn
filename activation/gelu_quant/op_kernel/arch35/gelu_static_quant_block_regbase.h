@@ -25,8 +25,7 @@ using namespace AscendC;
 // static quant performance template   单个矩形块处理，满核情况下单次处理多尾轴或者非满核时切分尾轴分核
 
 template <typename T1, typename T2>
-class StaticQuantBlock : public GeluQuantBase
-{
+class StaticQuantBlock : public GeluQuantBase {
 public:
     __aicore__ inline StaticQuantBlock(){};
     __aicore__ inline void Init(
@@ -58,6 +57,7 @@ private:
     TQue<QuePosition::VECOUT, BUFFER_NUM> outQueue_;
     TBuf<TPosition::VECCALC> castQueue_;
     TBuf<TPosition::VECCALC> tempQueue_;
+    TBuf<TPosition::VECCALC> efrQueue_;
 
     /* global memory address */
     GlobalTensor<T1> xGm_;
@@ -81,7 +81,6 @@ private:
     uint32_t colActualAlignTo32_;
     uint32_t colActualAlignTo16_;
     uint32_t colActualAlignTo8_;
-
 };
 
 template <typename T1, typename T2>
@@ -119,6 +118,7 @@ __aicore__ inline void StaticQuantBlock<T1, T2>::Init(
     pipe.InitBuffer(inQueue_, BUFFER_NUM, coexistentNodeElementNum_ * sizeof(float));
     pipe.InitBuffer(castQueue_, coexistentNodeElementNum_ * sizeof(float));
     pipe.InitBuffer(tempQueue_, coexistentNodeElementNum_ * sizeof(float));
+    pipe.InitBuffer(efrQueue_, coexistentNodeElementNum_ * sizeof(float));
     pipe.InitBuffer(outQueue_, BUFFER_NUM, coexistentNodeElementNum_ * sizeof(float));
     pipe.InitBuffer(scaleQueue_, BUFFER_NUM, coexistentNodeElementNum_ * sizeof(float));
     pipe.InitBuffer(offsetQueue_, BUFFER_NUM, coexistentNodeElementNum_ * sizeof(float));
@@ -234,6 +234,7 @@ __aicore__ inline void StaticQuantBlock<T1, T2>::ComputeGelu(LocalTensor<float>&
 {
     LocalTensor<T1> xLocal = inQueue_.DeQue<T1>();
     LocalTensor<float> castFp32 = castQueue_.Get<float>();
+    LocalTensor<float> erfFp32 = efrQueue_.Get<float>();
 
     for (int32_t i = 0; i < rowActual_; i++) {
         if constexpr (IsSameType<T1, float>::value) {
@@ -247,7 +248,9 @@ __aicore__ inline void StaticQuantBlock<T1, T2>::ComputeGelu(LocalTensor<float>&
 
     int32_t calCount = rowActual_ * colActualAlignTo32_;
     if (approximate_ == APPROXIMATE_NONE) {
-        ComputeGeluErf(castFp32, geluRes, calCount);
+        Muls(erfFp32, castFp32, ONE_OVER_SQRT_TWO, calCount);
+        Vec::Erf(geluRes, erfFp32, calCount);
+        GeluV2ErfPost(geluRes, castFp32, geluRes, calCount);
     } else {
         ComputeGeluTanh(castFp32, geluRes, calCount);
     }

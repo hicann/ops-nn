@@ -24,8 +24,7 @@ namespace GeluQuantALL {
 using namespace AscendC;
 // static quant per-tensor   elewise切分
 template <typename T1, typename T2>
-class StaticQuantPerTensor : public GeluQuantBase
-{
+class StaticQuantPerTensor : public GeluQuantBase {
 public:
     __aicore__ inline StaticQuantPerTensor(){};
     __aicore__ inline void Init(
@@ -46,6 +45,7 @@ private:
     TQue<QuePosition::VECIN, BUFFER_NUM> inQueue_;
     TBuf<TPosition::VECCALC> tempQueue_;
     TBuf<TPosition::VECCALC> castQueue_;
+    TBuf<TPosition::VECCALC> efrQueue_;
     TQue<QuePosition::VECOUT, BUFFER_NUM> outQueue_;
 
     /* global memory address */
@@ -88,6 +88,7 @@ __aicore__ inline void StaticQuantPerTensor<T1, T2>::Init(
     pipe.InitBuffer(inQueue_, BUFFER_NUM, coexistentNodeElementNum_ * sizeof(float));
     pipe.InitBuffer(tempQueue_, coexistentNodeElementNum_ * sizeof(float));
     pipe.InitBuffer(castQueue_, coexistentNodeElementNum_ * sizeof(float));
+    pipe.InitBuffer(efrQueue_, coexistentNodeElementNum_ * sizeof(float));
     pipe.InitBuffer(outQueue_, BUFFER_NUM, coexistentNodeElementNum_ * sizeof(int8_t));
 }
 
@@ -170,6 +171,8 @@ __aicore__ inline void StaticQuantPerTensor<T1, T2>::ComputeGelu(LocalTensor<flo
 {
     LocalTensor<T1> xLocal = inQueue_.DeQue<T1>();
     LocalTensor<float> castFp32 = castQueue_.Get<float>();
+    LocalTensor<float> erfFp32 = efrQueue_.Get<float>();
+
     if constexpr (IsSameType<T1, float>::value) {
         Muls(castFp32, xLocal, 1.0f, calCount);
     } else {
@@ -179,7 +182,9 @@ __aicore__ inline void StaticQuantPerTensor<T1, T2>::ComputeGelu(LocalTensor<flo
     inQueue_.FreeTensor(xLocal);
 
     if (approximate_ == APPROXIMATE_NONE) {
-        ComputeGeluErf(castFp32, geluRes, calCount);
+        Muls(erfFp32, castFp32, ONE_OVER_SQRT_TWO, calCount);
+        Vec::Erf(geluRes, erfFp32, calCount);
+        GeluV2ErfPost(geluRes, castFp32, geluRes, calCount);
     } else {
         ComputeGeluTanh(castFp32, geluRes, calCount);
     }

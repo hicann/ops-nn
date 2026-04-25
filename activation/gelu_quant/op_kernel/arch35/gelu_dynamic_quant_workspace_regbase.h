@@ -30,8 +30,7 @@ constexpr float HIFLOAT8_MAX = 32768.0f;
 constexpr float MAX_VALUE_INT8 = 127.0f;
 
 template <typename T1, typename T2>
-class GeluDynamicQuantWorkspace : public GeluQuantBase
-{
+class GeluDynamicQuantWorkspace : public GeluQuantBase {
 public:
     __aicore__ inline GeluDynamicQuantWorkspace(){};
     __aicore__ inline void Init(
@@ -78,6 +77,8 @@ private:
     TBuf<TPosition::VECCALC> castBuf_;
     TBuf<TPosition::VECCALC> geluBuf_;
     TBuf<TPosition::VECCALC> maxValueBuf_;
+    TBuf<TPosition::VECCALC> castInputFp32Queue_;
+    TBuf<TPosition::VECCALC> efrQueue_;
 
     /* global memory address */
     GlobalTensor<T1> xGm_;
@@ -126,6 +127,8 @@ __aicore__ inline void GeluDynamicQuantWorkspace<T1, T2>::Init(
     pipe.InitBuffer(inQueue_, BUFFER_NUM, coexistentNodeElementNum_ * sizeof(float));
     pipe.InitBuffer(geluBuf_, coexistentNodeElementNum_ * sizeof(float));
     pipe.InitBuffer(castBuf_, coexistentNodeElementNum_ * sizeof(float));
+    pipe.InitBuffer(castInputFp32Queue_, coexistentNodeElementNum_ * sizeof(float));
+    pipe.InitBuffer(efrQueue_, coexistentNodeElementNum_ * sizeof(float));
     pipe.InitBuffer(maxValueBuf_, FP32_VECTOR_CAPACITY_ONE_CYCLE * sizeof(float));
     pipe.InitBuffer(workspaceQueue_, BUFFER_NUM, coexistentNodeElementNum_ * sizeof(float));
     pipe.InitBuffer(scaleQueue_, BUFFER_NUM, coexistentNodeElementNum_ * sizeof(float));
@@ -304,9 +307,19 @@ template <typename T1, typename T2>
 __aicore__ inline void GeluDynamicQuantWorkspace<T1, T2>::ComputeGelu(LocalTensor<float>& geluRes, int32_t calCount)
 {
     LocalTensor<T1> xLocal = inQueue_.DeQue<T1>();
-
+    LocalTensor<float> erfFp32 = efrQueue_.Get<float>();
     if (approximate_ == APPROXIMATE_NONE) {
-        ComputeGeluErf<T1>(xLocal, geluRes, calCount);
+        if constexpr (IsSameType<T1, float>::value) {
+            Muls(erfFp32, xLocal, ONE_OVER_SQRT_TWO, calCount);
+            Vec::Erf(geluRes, erfFp32, calCount);
+            GeluV2ErfPost(geluRes, xLocal, geluRes, calCount);
+        } else {
+            LocalTensor<float> castInputFp32 = castInputFp32Queue_.Get<float>();
+            Cast(castInputFp32, xLocal, RoundMode::CAST_NONE, calCount);
+            Muls(erfFp32, castInputFp32, ONE_OVER_SQRT_TWO, calCount);
+            Vec::Erf(geluRes, erfFp32, calCount);
+            GeluV2ErfPost(geluRes, castInputFp32, geluRes, calCount);
+        }
     } else {
         ComputeGeluTanh<T1>(xLocal, geluRes, calCount);
     }

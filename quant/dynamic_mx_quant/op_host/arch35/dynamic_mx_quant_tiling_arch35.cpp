@@ -608,7 +608,6 @@ static bool IsOptForNotLastQuantAxis(const gert::TilingContext* context, const D
     }
 
     int64_t groupPerUb = GetNotAxisGroupPerUb(tilingParam);
-
     if (groupPerUb == 0) {
         OP_LOGD(context->GetNodeName(), "blockSize too large to fit the optimal template.");
         return false;
