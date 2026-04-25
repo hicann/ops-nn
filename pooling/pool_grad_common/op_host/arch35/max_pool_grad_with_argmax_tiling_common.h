@@ -123,5 +123,11 @@ static inline bool IsGreaterThanInt32MaxNHWC(const MaxPoolGradWithArgmaxInputInf
      int64_t planeSize = inputData.hX * inputData.wX * inputData.cX;
      return planeSize > static_cast<int64_t>(INT32_MAX);
  }
-}  // namespace optiling
+
+static inline bool IsGreaterThanInt32MaxNCHW(const MaxPoolGradWithArgmaxInputInfoCommon& inputData)
+{
+    int64_t planeSize = inputData.hX * inputData.wX;
+    return planeSize > static_cast<int64_t>(INT32_MAX);
+}
+} // namespace optiling
 #endif

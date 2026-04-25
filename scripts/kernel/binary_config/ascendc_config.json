@@ -641,6 +641,7 @@
     {"name":"ReduceSum", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : ""},
     {"name":"ReduceAny", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : ""},
     {"name":"MaxPoolWithArgmax", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : ""},
+    {"name":"MaxPoolGrad", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : ""},
     {"name":"MaxPoolWithArgmaxV3", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : "", "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},
     {"name":"MaxPoolGradWithArgmaxV3", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : "", "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},
     {"name":"KlDivLossGrad", "compute_units": ["ascend950"], "auto_sync": false, "impl_mode": "", "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},
