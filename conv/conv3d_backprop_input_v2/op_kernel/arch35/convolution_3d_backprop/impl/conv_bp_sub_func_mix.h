@@ -648,10 +648,11 @@ __aicore__ inline void LoadWorkSpaceDataToUb(Intf *self, const int64_t hwSize,
     mte2Param.srcStride = 0;
     mte2Param.dstStride = 0;
     LoadWorkSpaceDataToUbInner(self, srcOffset, 0, mte2Param);
-
-    srcOffset += hwSize * self->ctx.baseUseN_;
-    int64_t dstOffset = hwSize * curUseN;
-    LoadWorkSpaceDataToUbInner(self, srcOffset, dstOffset, mte2Param);
+    if (self->ctx.tiling_->wk != 1 || self->ctx.tiling_->hk != 1) { // kernel=1*1 只需要搬一块
+        srcOffset += hwSize * self->ctx.baseUseN_;
+        int64_t dstOffset = hwSize * curUseN;
+        LoadWorkSpaceDataToUbInner(self, srcOffset, dstOffset, mte2Param);
+    }
     event_t eventIdMte2ToVec = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
     SetFlag<HardEvent::MTE2_V>(eventIdMte2ToVec);
     WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToVec);

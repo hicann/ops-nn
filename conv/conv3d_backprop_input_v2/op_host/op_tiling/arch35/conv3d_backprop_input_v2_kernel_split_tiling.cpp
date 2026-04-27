@@ -149,7 +149,20 @@ bool Conv3DDXV2KernelSplitTiling::CheckKernelSplitHW11Enable()
     uint64_t mValueForCheck = static_cast<uint64_t>(runInfo_.dedx_h) * runInfo_.dedx_w;
     uint64_t nValueForCheck = static_cast<uint64_t>(runInfo_.dedx_cin1_g) * BLOCK_CUBE;
     uint64_t kValueForCheck = runInfo_.dedy_cout1_g * BASIC_BLOCK_SIZE_32 / dtypeByteL0b_;
+    if (mValueForCheck <= BASIC_BLOCK_SIZE_256) { // Mvalue过小没有基本快数量及计算轮次上的优化
+        return false; 
+    }
+    uint64_t batchDepth = static_cast<uint64_t>(runInfo_.batch_n) * runInfo_.dedx_d;
+    uint64_t mCnt = Ops::Base::CeilDiv(mValueForCheck, static_cast<uint64_t>(BASIC_BLOCK_SIZE_256));
+    uint64_t nCnt = Ops::Base::CeilDiv(nValueForCheck, static_cast<uint64_t>(BASIC_BLOCK_SIZE_256));
+    if (batchDepth * mCnt * nCnt <= coreNum_) { // 优化前无法分满核则不走kernel拆分
+       return false;
+    }
     if (runInfo_.dedx_cin_g <= BASIC_BLOCK_SIZE_32 || runInfo_.dedy_cout_g <= BASIC_BLOCK_SIZE_32) { // 小shape不准入
+        return false;
+    }
+    if (mValueForCheck * kValueForCheck * dtypeByteL0a_ <= static_cast<uint64_t>(platformInfo_.l0_ab_size) &&
+        nValueForCheck * kValueForCheck * dtypeByteL0b_ <= static_cast<uint64_t>(platformInfo_.l0_ab_size)) { // 不用切块的小shape不准入
         return false;
     }
     // 判断是否能走进fullload tiling模板

@@ -166,8 +166,8 @@ static __aicore__ inline void CalcLoadToA1Dn2NzParams4KernelSplit(Intf *self, ui
     uint32_t curCoutSize = 0;
     CalcCurCoutSizeA1(self, kIdx, curCoutIdx, curCoutSize);
     CalcCurHoSize4KernelSplit(self, curDoutIdx, curOriHoIdx, woOffset, realWo, curHoSize);
-    // 目前只支持各方向pad相等，只判断左pad，简化计算
-    if (self->ctx.tiling_->backpropPadLeft == 0) {
+    // 目前只支持各方向pad相等，只判断左pad，简化计算，kernel=1*1 只需要搬第一块子dedy，不用分开搬运
+    if (self->ctx.tiling_->backpropPadLeft == 0 && (self->ctx.tiling_->wk != 1 || self->ctx.tiling_->hk != 1)) {
         dn2NzParams.dnNum = curHoSize;
         dn2NzParams.nValue = realWo;
         dn2NzParams.dValue = curCoutSize;
