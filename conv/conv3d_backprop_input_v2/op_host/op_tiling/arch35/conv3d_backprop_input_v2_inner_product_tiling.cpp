@@ -122,6 +122,73 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::GetPublicShapeAttrsInfo()
     return ge::GRAPH_SUCCESS;
 }
 
+ge::graphStatus Conv3DDXV2InnerProductTiling::CalcKSegment() {
+    // 拦截c04场景和group场景
+    if (tilingRunInfo_.enableC04Flag || groupConvMode_ == TILING_GROUP_MODE_ENLARGE) {
+        splitKMode_ = 0;
+        tilingRunInfo_.enableSplitK = splitKMode_;
+        return ge::GRAPH_FAILED;
+    }
+
+    // 超出累加阈值准入
+    uint64_t kValue = static_cast<uint64_t>(runInfo_.dedy_cout1_g) * tilingRunInfo_.lenHkWkC0;
+    uint32_t kValueThreshold = (tilingRunInfo_.tilingHkWkMode == NO_TILING_HWK) ? MAX_K_VALUE_SPLIT_K : MAX_K_VALUE_TILING_KERNEL;
+    if (kValue < kValueThreshold) {
+        return ge::GRAPH_FAILED;
+    }
+
+    uint32_t hkWk;
+    if (tilingRunInfo_.tilingHkWkMode == TILING_HK) {
+        hkWk = static_cast<uint32_t>(runInfo_.kernel_w);
+    } else if (tilingRunInfo_.tilingHkWkMode == TILING_HK_WK) {
+        hkWk = 1;
+    } else {
+        hkWk = static_cast<uint32_t>(runInfo_.kernel_h) * runInfo_.kernel_w;
+    }
+
+    // CoutThreshold: 每个K段能容纳的Cout数量
+    // CoutThreshold = FloorAlign(65536 / HkWk, k0)
+    uint32_t coutThreshold =
+        (hkWk >= kValueThreshold) ?
+            runInfo_.dedy_cout_g :
+            std::max(Ops::Base::FloorDiv(kValueThreshold, hkWk), ONE_U32);
+    coutThreshold = std::max(Ops::Base::FloorAlign(coutThreshold, tilingRunInfo_.k0), ONE_U32);
+
+    // CoutSegmentCount: Cout方向的分段数量
+    // CoutSegmentCount = ceil(Cout / CoutThreshold)
+    uint32_t coutSegmentCount =
+        std::max(Ops::Base::CeilDiv(static_cast<uint32_t>(runInfo_.dedy_cout_g), coutThreshold), ONE_U32);
+
+    tilingRunInfo_.kSegment = static_cast<uint64_t>(coutThreshold);
+    tilingRunInfo_.kSegmentTail = runInfo_.dedy_cout_g - (coutSegmentCount - 1) * tilingRunInfo_.kSegment;
+
+    // kValueSegment: 每次循环计算的 K 大小 = kSegment * HkWk，对齐到k0
+    tilingRunInfo_.kValueSegment = Ops::Base::CeilAlign(tilingRunInfo_.kSegment * hkWk, static_cast<uint64_t>(tilingRunInfo_.k0));
+
+    splitKMode_ = (coutSegmentCount > 1) ? 1 : 0;
+    tilingRunInfo_.enableSplitK = splitKMode_;
+
+    if (tilingRunInfo_.enableSplitK) {
+        // workspace累加支持fp16、bf16
+        if (static_cast<int32_t>(runInfo_.c_dtype_bytes) == ge::GetSizeByDataType(ge::DT_FLOAT16) ||
+            static_cast<int32_t>(runInfo_.c_dtype_bytes) == ge::GetSizeByDataType(ge::DT_BF16)) {
+            tilingRunInfo_.useUbAccumForSplitK = true;
+        }
+    } else {
+        // 未开启切K且Dtype为fp32
+        tilingRunInfo_.useUbAccumForSplitK = false;
+    }
+
+    OP_LOGD(
+        opName_,
+        "Split K status: kValue=%lu, kSegment=%lu, kValueSegment=%lu, kSegmentTail=%lu,"
+        "enableSplitK=%d, useUbAccumForSplitK=%d, coutThreshold=%u, coutSegmentCount=%u",
+        tilingRunInfo_.kValue, tilingRunInfo_.kSegment, tilingRunInfo_.kValueSegment, tilingRunInfo_.kSegmentTail,
+        tilingRunInfo_.enableSplitK, tilingRunInfo_.useUbAccumForSplitK, coutThreshold, coutSegmentCount);
+
+    return ge::GRAPH_SUCCESS;
+}
+
 ge::graphStatus Conv3DDXV2InnerProductTiling::GetShapeAttrsInfo()
 {
     if (context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->npuArch !=
@@ -430,6 +497,12 @@ void Conv3DDXV2InnerProductTiling::SetTilingData(
     tilingData_.conv3DDxKSTiling.kSCoutFullLoad = 0;
     tilingData_.conv3DDxKSTiling.kSUseWorkSpace = 0;
 
+    tilingData_.conv3DDxTiling.enableSplitK = tilingRunInfo_.enableSplitK;
+    tilingData_.conv3DDxTiling.kSegment = tilingRunInfo_.kSegment;
+    tilingData_.conv3DDxTiling.kSegmentTail = tilingRunInfo_.kSegmentTail;
+    tilingData_.conv3DDxTiling.kValueSegment = tilingRunInfo_.kValueSegment;
+    tilingData_.conv3DDxTiling.useUbAccumForSplitK = tilingRunInfo_.useUbAccumForSplitK;
+
     uint64_t hwI = static_cast<uint64_t>(runInfo_.dedx_h) * runInfo_.dedx_w;
     uint64_t totalCnt = static_cast<uint64_t>(runInfo_.batch_n) * static_cast<uint64_t>(runInfo_.real_g) *
                         Ops::Base::CeilDiv(static_cast<uint32_t>(runInfo_.dedx_d), coreParams.singleCoreDin) *
@@ -645,6 +718,11 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::DoLibApiTiling()
         return ge::GRAPH_SUCCESS;
     }
 
+    // 计算K轴分段大小实现Cout轴切分，判断是否需要切分
+    if (CalcKSegment() == ge::GRAPH_SUCCESS && tilingRunInfo_.enableSplitK) {
+        OP_LOGD(opName_, "Enable Split K.");
+    }
+
     // 更新并设置L0基本块
     L0TilingParams l0Params;
     InitBaseMNK(l0Params);
@@ -669,6 +747,7 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::DoLibApiTiling()
             return ge::GRAPH_FAILED;
         }
     }
+
     SetTilingCondition(coreParams, l1Params, l0Params);
     SetTilingData(coreParams, l1Params, l0Params);
     PrintTilingSummary();
@@ -692,13 +771,30 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::GetWorkspaceSize()
             opName_, "Enable vector transpose weight matrix before cube, usrSpaceSize = %ld", usrSpaceSizeForVecTrans);
     }
 
+    // splitK非fp32场景需要额外workspace存储fp32中间结果
+    // workspace: singleCoreDin * singleCoreCin * singleCoreM * sizeof(float)
+    // 每个AICore block独立slice, 故需要乘以AICore数量
+    if (tilingRunInfo_.enableSplitK && tilingRunInfo_.useUbAccumForSplitK) {
+        uint64_t singleCoreDin = static_cast<uint64_t>(runInfo_.dedx_d);
+        uint64_t singleCoreCin = Ops::Base::CeilAlign(
+            static_cast<uint64_t>(runInfo_.dedx_cin), static_cast<uint64_t>(tilingRunInfo_.n0));
+        uint64_t singleCoreM = Ops::Base::CeilAlign(
+            static_cast<uint64_t>(runInfo_.dedx_h) * static_cast<uint64_t>(runInfo_.dedx_w),
+            static_cast<uint64_t>(tilingRunInfo_.m0));
+        uint64_t singleCoreUsrSpaceSize = singleCoreDin * singleCoreCin * singleCoreM * sizeof(float);
+        uint64_t usrSpaceSizeForSplitK = tilingData_.params.coreNum * singleCoreUsrSpaceSize;
+        workspaces[0] += usrSpaceSizeForSplitK;
+        OP_LOGD(opName_, "SplitK non-fp32 workspace size = %ld", usrSpaceSizeForSplitK);
+    }
+
     return ge::GRAPH_SUCCESS;
 }
 
 uint64_t Conv3DDXV2InnerProductTiling::GetTilingKey() const
 {
     const uint64_t tilingKey = GET_TPL_TILING_KEY(loadB2Condition_, 0, groupConvMode_, true, loadB1Condition_);
-    OP_LOGD(context_->GetNodeName(), "loadB2Condition_, loadB1Condition_, kernelSplitMode_ is: [%u, %u, %u]", loadB2Condition_, loadB1Condition_, kernelSplitMode_);
+    OP_LOGD(context_->GetNodeName(), "loadB2Condition_, loadB1Condition_, kernelSplitMode_, splitKMode_ is: [%u, %u, %u, %u]",
+            loadB2Condition_, loadB1Condition_, kernelSplitMode_, splitKMode_);
     return tilingKey;
 }
 
@@ -819,6 +915,7 @@ void Conv3DDXV2InnerProductTiling::InitBaseMNK(L0TilingParams& l0Params)
     }
 
     AdjustBaseMNK(l0Params, tilingRunInfo_);
+    AdjustBaseKForSplitK(l0Params, tilingRunInfo_);
 }
 
 uint32_t Conv3DDXV2InnerProductTiling::CalculateMaxBaseM(uint32_t baseN)
@@ -900,6 +997,36 @@ void Conv3DDXV2InnerProductTiling::UpdateL0CBufferMode(L0TilingParams& l0Params)
     } else {
         l0Params.cl0Pbuffer = DB_OFF;
     }
+}
+
+void Conv3DDXV2InnerProductTiling::AdjustBaseKForSplitK(L0TilingParams& l0Params, const TilingRunInfo tilingRunInfo) {
+    // 如果未启用SplitK，则直接返回
+    if (!tilingRunInfo_.enableSplitK) {
+        return;
+    }
+
+    if (l0Params.baseK > tilingRunInfo_.kValueSegment) {
+        // kValueSegment是k0对齐的
+        l0Params.baseK = tilingRunInfo_.kValueSegment;
+    } else if (l0Params.baseK > tilingRunInfo_.lenHkWkC0 && l0Params.baseK % tilingRunInfo_.lenHkWkC0 != 0) {
+        // 对于只切Cout需要baseK是hkWkK0的倍数，直接对齐到最近的大小
+        l0Params.baseK = Ops::Base::CeilAlign(l0Params.baseK, static_cast<uint32_t>(tilingRunInfo_.lenHkWkC0));
+    }
+
+    // 重新检查L0约束，确保baseM/baseN仍然合法
+    uint32_t l0abMaxNum = platformInfo_.l0_ab_size / l0Params.al0Pbuffer / dtypeByteL0a_;
+    uint32_t maxL0ABaseM = l0abMaxNum / std::max(l0Params.baseN, tilingRunInfo_.m0);
+    uint32_t maxL0ABaseN = l0abMaxNum / std::max(l0Params.baseM, tilingRunInfo_.m0);
+
+    l0Params.baseM = std::min(l0Params.baseM, maxL0ABaseM);
+    l0Params.baseN = std::min(l0Params.baseN, maxL0ABaseN);
+
+    // 确保baseK不小于k0（最小单位）
+    l0Params.baseK = std::max(l0Params.baseK, tilingRunInfo_.k0);
+
+    OP_LOGD(
+        opName_, "Split K AdjustBaseMNK: after baseM=%u, baseN=%u, baseK=%u", l0Params.baseM, l0Params.baseN,
+        l0Params.baseK);
 }
 
 void Conv3DDXV2InnerProductTiling::AdjustBaseMNK(L0TilingParams& l0Params, const TilingRunInfo tilingRunInfo)

@@ -87,6 +87,11 @@ struct TilingRunInfo {
     bool enableVecTransFlag = false;
     bool enableSplitKernelFlag = false;
     uint8_t tilingHkWkMode = 0;
+    uint64_t kSegment = 0;
+    uint64_t kSegmentTail = 0;
+    uint64_t kValueSegment = 0;
+    bool enableSplitK = false;
+    bool useUbAccumForSplitK = false;
 };
 
 struct PlatformInfo {

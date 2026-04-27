@@ -41,15 +41,20 @@ public:
                                 const conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData *tilingData,
                                 GM_ADDR bias = nullptr, GM_ADDR scale=nullptr)
     {
-        if constexpr (!enableC04Flag && !groupMode) {
+        constexpr int8_t saturationControlBit = 48; // CTRL 寄存器饱和度控制位为48位
+        AscendC::SetCtrlSpr<saturationControlBit,saturationControlBit>(0); // 0为饱和模式
+        InitTilingData(tilingData);
+
+        if (!enableC04Flag && !groupMode && !this->useUbAccumForSplitK_) {
             if ASCEND_IS_AIV_SHOULD_RETURN {
                 return;
             }
         }
-        
-        constexpr int8_t saturationControlBit = 48; // CTRL 寄存器饱和度控制位为48位
-        AscendC::SetCtrlSpr<saturationControlBit,saturationControlBit>(0); // 0为饱和模式
-        InitTilingData(tilingData);
+
+        if (this->useUbAccumForSplitK_ && GetSubBlockIdx() != 0) {
+            return;
+        }
+
         if (!this->enableVecTrans_) {
             this->filterGm_.SetGlobalBuffer((__gm__ filterType *)filter);
         } else {
@@ -65,14 +70,21 @@ public:
             this->biasGm_.SetGlobalBuffer((__gm__ biasType *)bias);
         }
 #endif
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || (__NPU_ARCH__ == 5102)
+        InitMixCoreBuffer(workSpace);
+#endif
         this->dedx_.Init(&(tilingData->conv3DDxTiling));
     }
 
     __aicore__ inline void Process() {
-        if constexpr (!enableC04Flag && !groupMode) {
+        if (!enableC04Flag && !groupMode && !this->useUbAccumForSplitK_) {
             if ASCEND_IS_AIV_SHOULD_RETURN {
                 return;
             }
+        }
+
+        if (this->useUbAccumForSplitK_ && GetSubBlockIdx() != 0) {
+            return;
         }
 
         if (GetAicBlockIdx() >= this->usedCoreNum_) {
@@ -101,6 +113,7 @@ protected:
     uint64_t usedCoreNum_ = 0;
     uint64_t preOffsetB_ = 0;
     uint8_t preEnableFullLoad = 0;
+    uint8_t useUbAccumForSplitK_ = 0;
 
      __aicore__ inline void CrossCoreWaitVecTrans()
     {
@@ -236,9 +249,20 @@ protected:
                 this->singleShapeK_ = static_cast<uint64_t>(this->tiling_->cout);
             }
         }
+        // 开启 split cout 同时 split Hk 或 split HkWk 时 Cout 置为 1
+        if (this->tiling_->enableSplitK) {
+            if constexpr (b1Condition == TPL_GM_TO_L1) {
+                this->singleShapeK_ = static_cast<uint64_t>(this->tiling_->kSegment) * this->tiling_->hk * this->tiling_->wk;
+            } else if constexpr (b1Condition == TPL_GM_TO_L1_NO_HK) {
+                this->singleShapeK_ = static_cast<uint64_t>(this->tiling_->kSegment) * this->tiling_->wk;
+            } else if constexpr (b1Condition == TPL_GM_TO_L1_NO_HK_WK) {
+                this->singleShapeK_ = static_cast<uint64_t>(this->tiling_->kSegment);
+            }
+        }
         this->singleShapeN_ = this->tiling_->singleCoreCin;
         this->singleShapeDin_ = this->tiling_->singleCoreDin;
         this->enableVecTrans_ = this->tiling_->enableVecTrans;
+        this->useUbAccumForSplitK_ = this->tiling_->useUbAccumForSplitK;
         this->CalBasicBlockCnt();
         this->InitBasicBlockLoopDirect();
         this->InitBlockStride();
@@ -321,6 +345,11 @@ protected:
             // 当b1全载且dk=1时，只需要加载一次b1，在循环结束后释放
             this->dedx_.FreeB1Tensor();
         }
+    }
+
+    __aicore__ inline void InitMixCoreBuffer(GM_ADDR workSpace)
+    {
+        this->dedx_.ctx.l0cOutGm_.SetGlobalBuffer((__gm__ float *)workSpace);
     }
 };
 }

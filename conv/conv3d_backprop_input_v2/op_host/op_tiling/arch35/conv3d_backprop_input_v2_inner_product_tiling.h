@@ -28,6 +28,9 @@ namespace Conv {
 
 constexpr int32_t NUM_THREE = 3;
 constexpr uint32_t NUM_FIVE = 5;
+constexpr uint32_t MAX_K_VALUE_SPLIT_K = 32768;
+// 暂定切HkWk准入为8192
+constexpr uint32_t MAX_K_VALUE_TILING_KERNEL = 8192;
 
 class Conv3DDXV2InnerProductTiling : public Conv3DBackpropInputV2TilingArch35 {
 public:
@@ -84,6 +87,7 @@ protected:
     void AlignCout1(uint32_t& cout1A, uint32_t& cout1B, bool adaptFP32);
     void LadderMatchStepKWithFullLoad(L1TilingParams& l1Params, const L0TilingParams& l0Params);
     void CloseL0PingPong(L0TilingParams& l0Params);
+    void AdjustBaseKForSplitK(L0TilingParams& l0Params, const TilingRunInfo tilingRunInfo);
     uint64_t GetCVRation();
 
     bool GetTilingFromRepo();
@@ -93,7 +97,7 @@ protected:
     void TranslateTilingData(std::shared_ptr<tuningtiling::Conv3DBackpropInputTunerTiling> tunerTiling);
     void TranslateTilingRunInfo(std::shared_ptr<tuningtiling::Conv3DBackpropInputTunerTiling> tunerTiling);
     bool isGetTilingFromRepo = false;
-    
+
 private:
     bool CheckC04Enable();
     bool CheckVecTrans16bitPlus(const CoreTilingParams& coreParams, const L0TilingParams& l0Params);
@@ -102,6 +106,7 @@ private:
     bool ShrinkBaseK(L1TilingParams& l1Params, L0TilingParams& l0Params, const uint32_t maxBaseK);
     void ShrinkBasicBlock(L1TilingParams& l1Params, L0TilingParams& l0Params);
     ge::graphStatus GetLargeHkWkTilingMode();
+    ge::graphStatus CalcKSegment();
     uint32_t CalculateMaxBaseM(uint32_t baseN);
     void AdjustBaseMWhenSmallN(uint32_t& baseM, uint32_t baseN, const L0TilingParams& l0Params, const TilingRunInfo& tilingRunInfo);
     void AdjustBaseNWhenSmallM(uint32_t& baseN, uint32_t baseM, const L0TilingParams& l0Params, const TilingRunInfo& tilingRunInfo);

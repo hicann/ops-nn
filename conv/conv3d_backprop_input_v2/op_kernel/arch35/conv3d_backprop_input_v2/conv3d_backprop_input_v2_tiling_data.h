@@ -83,6 +83,11 @@ struct TConv3DInputV2Tiling {
     uint64_t singleCoreBatch = 1;
     uint64_t singleCoreM = 1;
     uint64_t enRelu = 0;
+    uint64_t kSegment = 0;
+    uint64_t kSegmentTail = 0;
+    uint64_t kValueSegment = 0;
+    bool enableSplitK = false;
+    bool useUbAccumForSplitK = false;
 };
 
 struct Conv3DBackpropInputV2Params {

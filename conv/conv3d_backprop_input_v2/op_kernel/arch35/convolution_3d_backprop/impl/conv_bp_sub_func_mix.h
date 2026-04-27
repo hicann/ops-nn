@@ -232,9 +232,12 @@ __aicore__ inline void CalcCoutIndexAndSizeB1(Intf *self, uint64_t kIdx,
         curCoutIdx = DivHkWk<Intf>(self, kIdx * self->ctx.tiling_->baseK);
     }
     curCoutSize = DivHkWk<Intf>(self, kbL1Size);
-    // consider tail
+
     uint32_t curCoutRemain = self->ctx.singleShapeCout_ - curCoutIdx;
     curCoutSize = curCoutSize < curCoutRemain ? curCoutSize : curCoutRemain;
+    if (self->ctx.enableSplitK_) {
+        curCoutIdx += self->ctx.curCoutStartIdx_;
+    }
 }
 
 template <class Intf>
@@ -749,14 +752,43 @@ __aicore__ inline void Rearrange2Gm(Intf *self, const GlobalTensor<typename Intf
 template <class Intf>
 __aicore__ inline void DataCopyCastVecToOutput(Intf *self, const GlobalTensor<typename Intf::DstT> &output)
 {
-    uint64_t dstOffset = static_cast<uint64_t>(self->ctx.curNIdx_) * self->ctx.tiling_->baseN * self->ctx.diHiWi_ +
-                        static_cast<uint64_t>(self->ctx.curDinIdx_) * self->ctx.hiWi_ +
-                        static_cast<uint64_t>(self->ctx.curMIdx_) * self->ctx.tiling_->baseM;
+    uint64_t dstOffset = 0;
     DataCopyExtParams mte3Param;
-    mte3Param.blockCount = self->ctx.baseUseN_;
-    mte3Param.blockLen = self->ctx.baseUseM_ * sizeof(typename Intf::DstT);
-    mte3Param.srcStride = 0;
-    mte3Param.dstStride = self->ctx.diHiWi_ * sizeof(typename Intf::DstT) - mte3Param.blockLen;
+    // for Split K
+    if (self->ctx.useUbAccumForSplitK_) {
+        if constexpr (Intf::Config::xType::format == Convolution3DBackprop::CubeFormat::NCDHW) {
+            // UB->GM: NCDHW
+            dstOffset =
+                static_cast<uint64_t>(self->ctx.curNIdx_) * self->ctx.tiling_->baseN * self->ctx.diHiWi_ + // cin offset
+                static_cast<uint64_t>(self->ctx.curDinStartIdx_) * self->ctx.hiWi_ + // di offset
+                static_cast<uint64_t>(self->ctx.curMIdx_) * self->ctx.tiling_->baseM; // hi&wi offset
+            mte3Param.blockCount = self->ctx.baseUseN_;
+            mte3Param.blockLen = self->ctx.realMSize_ * sizeof(typename Intf::DstT);
+            mte3Param.srcStride = 0;
+            mte3Param.dstStride = self->ctx.diHiWi_ * sizeof(typename Intf::DstT) - mte3Param.blockLen;
+        } else if constexpr (Intf::Config::xType::format == Convolution3DBackprop::CubeFormat::NDHWC) {
+            // UB->GM: NDHWC
+            dstOffset =
+                static_cast<uint64_t>(self->ctx.curNIdx_) * self->ctx.tiling_->baseN +                         // cin offset
+                static_cast<uint64_t>(self->ctx.curDinStartIdx_) * self->ctx.hiWi_ * self->ctx.tiling_->cin +  // di offset
+                static_cast<uint64_t>(self->ctx.curMIdx_) * self->ctx.tiling_->baseM * self->ctx.tiling_->cin; // hi&wi offset
+            mte3Param.blockCount = self->ctx.realMSize_;
+            mte3Param.blockLen = self->ctx.baseUseN_ * sizeof(typename Intf::DstT);
+            mte3Param.srcStride = 0;
+            mte3Param.dstStride = self->ctx.tiling_->cin * sizeof(typename Intf::DstT) - mte3Param.blockLen;
+        }
+    }
+    // deprecated: for Split Dk
+    if (self->ctx.enableSplitDk_) {
+        dstOffset = static_cast<uint64_t>(self->ctx.curNIdx_) * self->ctx.tiling_->baseN * self->ctx.diHiWi_ +
+                    static_cast<uint64_t>(self->ctx.curDinIdx_) * self->ctx.hiWi_ +
+                    static_cast<uint64_t>(self->ctx.curMIdx_) * self->ctx.tiling_->baseM;
+        mte3Param.blockCount = self->ctx.baseUseN_;
+        mte3Param.blockLen = self->ctx.baseUseM_ * sizeof(typename Intf::DstT);
+        mte3Param.srcStride = 0;
+        mte3Param.dstStride = self->ctx.diHiWi_ * sizeof(typename Intf::DstT) - mte3Param.blockLen;
+    }
+
 #if (__NPU_ARCH__ != 5102)
     if constexpr (std::is_same<typename Intf::L0cT, int32_t>::value) {
         DataCopyPad<typename Intf::DstT, PaddingMode::Compact>(output[dstOffset],
@@ -814,6 +846,65 @@ __aicore__ inline void CastToDstType(Intf *self, const GlobalTensor<typename Int
         WaitFlag<HardEvent::V_MTE3>(eventIdVecToMte3);
         DataCopyCastVecToOutput(self, output);
     }
+}
+
+template <class Intf>
+__aicore__ inline void MoveFromUsrSpaceToUbCast(Intf *self)
+{
+    // 计算workspace中当前(din, n, m)位置的fp32数据起始偏移
+    // workspace格式: D singleCoreCinAlignBaseN singleCoreMAlignBaseM
+    uint64_t singleCoreCinAlignBaseN = AlignUp(self->ctx.tiling_->singleCoreCin, self->ctx.tiling_->baseN);
+    uint64_t singleCoreMAlignBaseM = AlignUp(self->ctx.tiling_->singleCoreM, self->ctx.tiling_->baseM);
+    uint64_t singleCoreWorkspaceSize = singleCoreCinAlignBaseN * singleCoreMAlignBaseM *
+                                       self->ctx.tiling_->di;
+    uint64_t srcOffset = GetAicBlockIdx() * singleCoreWorkspaceSize;
+
+    // 获取UB cast缓冲区
+    self->ctx.castVecTensor_ = self->ctx.vecBuf_.template Get<float>();
+
+    // 从workspace读取fp32数据到UB
+    DataCopyExtParams mte2Param;
+    mte2Param.blockCount = 1;
+    mte2Param.blockLen = self->ctx.singleShapeDin_ * self->ctx.realMSize_ * self->ctx.baseUseN_ * sizeof(float);
+    mte2Param.srcStride = 0;
+    mte2Param.dstStride = 0;
+    DataCopyPadExtParams<float> padParams {false, 0, 0, 0};
+    DataCopyPad<float, PaddingMode::Compact>(self->ctx.castVecTensor_,
+                                             self->ctx.l0cOutGm_[srcOffset], mte2Param, padParams);
+
+    event_t eventIdMte2ToVec = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
+    SetFlag<HardEvent::MTE2_V>(eventIdMte2ToVec);
+    WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToVec);
+
+    // fp32 cast to DstT
+    Cast(self->ctx.castVecTensor_.template ReinterpretCast<typename Intf::SrcT>(),
+         self->ctx.castVecTensor_, RoundMode::CAST_RINT,
+         self->ctx.realMSize_ * self->ctx.baseUseN_);
+
+    event_t eventIdVecToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
+    SetFlag<HardEvent::V_MTE3>(eventIdVecToMte3);
+    WaitFlag<HardEvent::V_MTE3>(eventIdVecToMte3);
+}
+
+template <class Intf>
+__aicore__ inline void AccumulateSegmentOnWorkspace(Intf *self,
+                                                    const GlobalTensor<typename Intf::DstT> &output,
+                                                    bool enSequentialWrite = false)
+{
+    if ASCEND_IS_AIC_SHOULD_RETURN {
+        return;
+    }
+
+    if (GetSubBlockIdx() > 0) {
+        return;
+    }
+
+    if (enSequentialWrite) {
+        return;
+    }
+
+    MoveFromUsrSpaceToUbCast<Intf>(self);
+    DataCopyCastVecToOutput<Intf>(self, output);
 }
 
 template <class Intf>
@@ -1397,6 +1488,17 @@ template <class Intf>
 __aicore__ inline void InitUbByteSize(Intf *self)
 {
 #if __CCE_AICORE__ == 310 || (__NPU_ARCH__ == 5102)
+    // 切K场景非fp32需要初始化AIV
+    if (self->ctx.useUbAccumForSplitK_) {
+        if (GetSubBlockIdx() != 0) {
+            return;
+        }
+        if ASCEND_IS_AIV_SCALAR {
+            self->ctx.pipe_.InitBuffer(self->ctx.vecBuf_, UB_SIZE);
+        }
+        return;
+    }
+
     if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
         if (GetSubBlockIdx() != 0) {
             return;
@@ -1417,8 +1519,8 @@ __aicore__ inline void InitUbByteSize(Intf *self)
         }
     } else if constexpr (Intf::conv3dConfig.enableC04Flag) {
         if ASCEND_IS_AIV_SCALAR {
-            constexpr uint32_t C04_UB_BUF_SIZE = (UB_SIZE - AscendC::VECTOR_REG_WIDTH -
-                MASK_REG_WIDTH - AscendC::ONE_BLOCK_SIZE) >> 1;
+            constexpr uint32_t C04_UB_BUF_SIZE =
+                (UB_SIZE - AscendC::VECTOR_REG_WIDTH - MASK_REG_WIDTH - AscendC::ONE_BLOCK_SIZE) >> 1;
             self->ctx.pipe_.InitBuffer(self->ctx.ndVecBuf_, C04_UB_BUF_SIZE);
             self->ctx.pipe_.InitBuffer(self->ctx.nzVecBuf_, C04_UB_BUF_SIZE);
             self->ctx.pipe_.InitBuffer(self->ctx.idxVecBuf_, AscendC::VECTOR_REG_WIDTH);

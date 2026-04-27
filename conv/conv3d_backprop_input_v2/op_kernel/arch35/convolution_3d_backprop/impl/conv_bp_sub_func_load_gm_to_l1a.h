@@ -99,8 +99,14 @@ static __aicore__ inline void CalcCurCoutSizeA1(Intf *self, const uint64_t kIdx,
     } else {
         curCoutSize = DivHkWk<Intf>(self, kaL1Size);
     }
-    curCoutSize = (curCoutSize < self->ctx.singleShapeCout_ - curCoutIdx) ?
-        curCoutSize : (self->ctx.singleShapeCout_ - curCoutIdx);
+
+    if (self->ctx.enableSplitK_) {
+        uint32_t coutRemain = self->ctx.singleShapeCout_ - (curCoutIdx - self->ctx.curCoutStartIdx_);
+        curCoutSize = curCoutSize < coutRemain ? curCoutSize : coutRemain;
+    } else {
+        curCoutSize = (curCoutSize < self->ctx.singleShapeCout_ - curCoutIdx) ?
+                          curCoutSize : (self->ctx.singleShapeCout_ - curCoutIdx);
+    }
 }
 
 template <class Intf>
@@ -378,9 +384,9 @@ __aicore__ inline void LoadToA1ForDn2Nz(Intf *self, LocalTensor<typename Intf::S
     uint32_t curCoutIdx = 0;
     if constexpr (!Intf::conv3dConfig.enableC04Flag) {
         curCoutIdx = DivHkWk<Intf>(self, kIdx * self->ctx.tiling_->baseK);
+        curCoutIdx += self->ctx.enableSplitK_ ? self->ctx.curCoutStartIdx_ : 0;
     }
     coOffset = curCoutIdx * self->ctx.doHoWo_;
-
     if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
         CalcLoadToA1Dn2NzParams4KernelSplit(self, kIdx, dn2NzParams, curDoutIdx, curOriHoIdx, woOffset);
     } else {
@@ -391,25 +397,20 @@ __aicore__ inline void LoadToA1ForDn2Nz(Intf *self, LocalTensor<typename Intf::S
         if (unlikely(self->ctx.tiling_->strideW * strideH > 1)) {
             InitZeroValue<Intf, typename Intf::SrcAT>(self, useA1Buf);
         }
-        CalcLoadToA1Dn2NzParams<Intf, typename Intf::SrcAT>(self, dn2NzParams, out2A1DstAddrOffset,
-            curCoutIdx, kIdx);
+        CalcLoadToA1Dn2NzParams<Intf, typename Intf::SrcAT>(self, dn2NzParams, out2A1DstAddrOffset, curCoutIdx, kIdx);
         if (strideH > 1) {
             curHoIdx = self->ctx.curHoIdx_ < 0 ? 0 : self->ctx.curHoIdx_;
-            // 换算回放大前的相对Ho坐标（以单核HoStartIdx为原点, 用当前Ho的坐标（均是放大前的坐标）
-            // 减去当前分核起始点的坐标,获取当前点的src ho偏移（相对偏移）
+            // 换算回放大前的相对Ho坐标（以单核HoStartIdx为原点, 用当前Ho的坐标（均是放大前的坐标）, 减去当前分核起始点的坐标,获取当前点的src ho偏移（相对偏移）
             curOriHoIdx = DivCeil(curHoIdx, strideH) - DivCeil(curHoStartOffset, strideH);
         }
     }
-
     hoOffset = curOriHoIdx * self->ctx.tiling_->wo;
     if constexpr (Intf::conv3dConfig.loadB1Condition == TPL_GM_TO_L1_NO_HK_WK) {
         woOffset += (self->ctx.curWoLeftIdx_ <= 0 ? 0 : DivCeil(self->ctx.curWoLeftIdx_, self->ctx.tiling_->strideW));
     }
-    
     if (self->ctx.tiling_->backpropPadLeft < 0) {
         woOffset += DivCeil(abs(self->ctx.tiling_->backpropPadLeft), self->ctx.tiling_->strideW);
     }
-
     uint64_t doOffset = static_cast<uint64_t>(curDoutIdx) * self->ctx.hoWo_;
     uint64_t out2A1SrcAddrOffset = coOffset + doOffset + hoOffset + woOffset;
     if (dn2NzParams.dnNum > 0) { // dn2nz参数有效时，才执行加载，否则先跳过；后续考虑提前计算dn2nz参数减少无效计算
@@ -434,7 +435,6 @@ __aicore__ inline void LoadToA1ForNd2Nz(Intf *self, LocalTensor<typename Intf::S
     int64_t curHoIdx = self->ctx.curHoIdx_ < 0 ? 0 : (self->ctx.curHoIdx_ - curHoStartOffset);
     // 换算回放大前的相对Ho坐标（以单核HoStartIdx为原点）
     int64_t curOriHoIdx = curHoIdx;
-
     if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
         CalcLoadToA1Nd2NzParams4KernelSplit(self, nd2NzParams);
     } else {
@@ -445,33 +445,28 @@ __aicore__ inline void LoadToA1ForNd2Nz(Intf *self, LocalTensor<typename Intf::S
         if (unlikely(self->ctx.tiling_->strideW * strideH > 1)) {
             InitZeroValue<Intf, typename Intf::SrcAT>(self, useA1Buf);
         }
-
         uint32_t curCoutIdx = 0;
         if constexpr (!Intf::conv3dConfig.enableC04Flag) {
             curCoutIdx = DivHkWk<Intf>(self, kIdx * self->ctx.tiling_->baseK);
+            curCoutIdx += self->ctx.enableSplitK_ ? self->ctx.curCoutStartIdx_ : 0;
         }
-        CalcLoadToA1Nd2NzParams<Intf, typename Intf::SrcAT>(self, nd2NzParams, out2A1DstAddrOffset,
-            curCoutIdx, kIdx);
+        CalcLoadToA1Nd2NzParams<Intf, typename Intf::SrcAT>(self, nd2NzParams, out2A1DstAddrOffset, curCoutIdx, kIdx);
         coOffset = curCoutIdx;
         if (strideH > 1) {
             curHoIdx = self->ctx.curHoIdx_ < 0 ? 0 : self->ctx.curHoIdx_;
-            // 换算回放大前的相对Ho坐标（以单核HoStartIdx为原点, 用当前Ho的坐标（均是放大前的坐标）
-            // 减去当前分核起始点的坐标,获取当前点的src ho偏移（相对偏移）
+            // 换算回放大前的相对Ho坐标（以单核HoStartIdx为原点, 用当前Ho的坐标（均是放大前的坐标）, 减去当前分核起始点的坐标,获取当前点的src ho偏移（相对偏移）
             curOriHoIdx = DivCeil(curHoIdx, strideH) - DivCeil(curHoStartOffset, strideH);
         }
     }
-
     hoOffset = curOriHoIdx * self->ctx.tiling_->wo * self->ctx.tiling_->cout;
     uint64_t woOffset = 0;
     if constexpr (Intf::conv3dConfig.loadB1Condition == TPL_GM_TO_L1_NO_HK_WK) {
         woOffset = (self->ctx.curWoLeftIdx_ <= 0 ? 0 :
             DivCeil(self->ctx.curWoLeftIdx_, self->ctx.tiling_->strideW) * self->ctx.tiling_->cout);
     }
-    
     if (self->ctx.tiling_->backpropPadLeft < 0) {
         woOffset += DivCeil(abs(self->ctx.tiling_->backpropPadLeft), self->ctx.tiling_->strideW) * self->ctx.tiling_->cout;
     }
-
     uint64_t doOffset = static_cast<uint64_t>(curDoutIdx) * self->ctx.hoWo_ * self->ctx.tiling_->cout;
     uint64_t out2A1SrcAddrOffset = coOffset + doOffset + hoOffset + woOffset;
     if (nd2NzParams.ndNum > 0) { // nd2nz参数有效时，才执行加载，否则先跳过；后续考虑提前计算dn2nz参数减少无效计算

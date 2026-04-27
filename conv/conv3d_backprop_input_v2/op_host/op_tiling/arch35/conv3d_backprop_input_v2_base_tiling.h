@@ -275,6 +275,7 @@ protected:
     bool enableSplitDk_ = false;
     bool hasBiasFlag_ = false;
     bool hasScaleFlag_ = false;
+    bool splitKMode_ = false;
     uint8_t loadB2Condition_ = 0;
     uint8_t loadB1Condition_ = 0;
     uint8_t kernelSplitMode_ = 0;

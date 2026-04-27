@@ -1127,14 +1127,14 @@ void Conv3DBackpropInputV2TilingArch35::PrintRunInfoData() {
        << " kernel_d: " << runInfo_.kernel_d << " kernel_h: " << runInfo_.kernel_h
        << " kernel_w: " << runInfo_.kernel_w << " stride_d: " << runInfo_.stride_d
        << " stride_h: " << runInfo_.stride_h << " stride_w: " << runInfo_.stride_w
-       << " pad_t: " << runInfo_.pad_t <<" pad_h: "<< runInfo_.pad_h << " pad_u:" << runInfo_.pad_u 
+       << " pad_t: " << runInfo_.pad_t <<" pad_h: "<< runInfo_.pad_h << " pad_u:" << runInfo_.pad_u
        << " pad_d:" << runInfo_.pad_d << " pad_l:" << runInfo_.pad_l << " pad_r:"<<runInfo_.pad_r
        << " backprop_pad_t:" << runInfo_.backprop_pad_t << " backprop_pad_h:"<<runInfo_.backprop_pad_h
        << " backprop_pad_u:"<<runInfo_.backprop_pad_u << " backprop_pad_d:" << runInfo_.backprop_pad_d
        << " backprop_pad_l:" << runInfo_.backprop_pad_l<<" backprop_pad_r:"<<runInfo_.backprop_pad_r
        << " dilation_d:" << runInfo_.dilation_d << " dilation_h:" << runInfo_.dilation_h << " dilation_w:" << runInfo_.dilation_w
-       << " enlarge: " << runInfo_.enlarge << " hf32_flag: " << runInfo_.hf32_flag 
-       << " a_dtype_bytes:" << runInfo_.a_dtype_bytes 
+       << " enlarge: " << runInfo_.enlarge << " hf32_flag: " << runInfo_.hf32_flag
+       << " a_dtype_bytes:" << runInfo_.a_dtype_bytes
        << " b_dtype_bytes: " << runInfo_.b_dtype_bytes
        << " c_dtype_bytes: " << runInfo_.c_dtype_bytes
        << " initOutputFlag: " << runInfo_.initOutputFlag

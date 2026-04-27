@@ -271,7 +271,9 @@ __aicore__ inline void InitParamsPart2(Intf *self)
     self->ctx.isFreeA1_ = false;
     self->ctx.isFreeB1_ = false;
     self->ctx.isLastDk_ = true;
+    self->ctx.isLastKSegment_ = false;
     self->ctx.needComputeFlag_ = true;
+    self->ctx.realMSize_ = 0;
 }
 
 template <class Intf>
@@ -290,16 +292,13 @@ static __aicore__ inline void InitParamsForNormal(Intf *self)
 }
 
 template <class Intf>
-__aicore__ inline void InitParams(Intf *self)
+__aicore__ inline void InitSingleShapeParams(Intf *self)
 {
     // 初始化为0，避免decache功能开启后全局变量不会初始化为0，出现随机值导致未知问题
     self->ctx.singleShapeDin_ = 0;
     self->ctx.singleShapeM_ = 0;
     self->ctx.singleShapeCin_ = 0;
     self->ctx.singleShapeCout_ = 0;
-    self->ctx.l0cPingPongFlag_ = 1;
-
-    self->ctx.isFirstIter_ = true;
     self->ctx.hkWk_ = static_cast<uint64_t>(self->ctx.tiling_->hk) * self->ctx.tiling_->wk;
     self->ctx.singleShapeHWk_ = self->ctx.hkWk_;
     if constexpr (Intf::conv3dConfig.loadB1Condition == TPL_GM_TO_L1_NO_HK) {
@@ -307,10 +306,22 @@ __aicore__ inline void InitParams(Intf *self)
     } else if constexpr (Intf::conv3dConfig.loadB1Condition == TPL_GM_TO_L1_NO_HK_WK) {
         self->ctx.singleShapeHWk_ = 1;
     }
+}
+
+template <class Intf>
+__aicore__ inline void InitParams(Intf *self)
+{
+    InitSingleShapeParams<Intf>(self);
+    self->ctx.l0cPingPongFlag_ = 1;
+    self->ctx.isFirstIter_ = true;
     self->ctx.curStepKa_ = self->ctx.tiling_->stepKa;
     self->ctx.curStepKb_ = self->ctx.tiling_->stepKb;
     InitParamsForSplitDkSplit<Intf>(self);
-
+    self->ctx.kSegment_ = self->ctx.tiling_->kSegment;
+    self->ctx.kSegmentTail_ = self->ctx.tiling_->kSegmentTail;
+    self->ctx.kValueSegment_ = self->ctx.tiling_->kValueSegment;
+    self->ctx.enableSplitK_ = self->ctx.tiling_->enableSplitK;
+    self->ctx.useUbAccumForSplitK_ = self->ctx.tiling_->useUbAccumForSplitK;
     if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
         InitParamsForKernelSplitHW<Intf>(self);
     } else if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_H) {
@@ -318,7 +329,6 @@ __aicore__ inline void InitParams(Intf *self)
     } else  {
         InitParamsForNormal<Intf>(self);
     }
-
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || (__NPU_ARCH__ == 5102)
     self->ctx.dkHkWk_ = static_cast<uint64_t>(self->ctx.tiling_->dk) * self->ctx.hkWk_;
     self->ctx.hoWo_ = static_cast<uint64_t>(self->ctx.tiling_->ho) * self->ctx.tiling_->wo;
@@ -677,6 +687,60 @@ static __aicore__ inline void UpdateL1ComputeInfo(Intf *self)
     UpdateFullLoadL1Status<Intf>(self);
 }
 
+
+template <class Intf>
+static __aicore__ inline void UpdateSplitKTail(Intf *self, uint32_t kIdx)
+{
+    if (kIdx + self->ctx.kSegment_ < self->ctx.tiling_->coutG) {
+        return;
+    }
+    self->ctx.isLastKSegment_ = true;
+    self->ctx.singleShapeCout_ = self->ctx.kSegmentTail_;
+    uint64_t tmpSingleCoreK = 0;
+    uint32_t singleShapeCout1 = DivCeilC0<Intf>(self, self->ctx.singleShapeCout_);
+    tmpSingleCoreK = singleShapeCout1 * self->ctx.singleShapeHWk_ * self->ctx.tiling_->c0;
+
+    self->ctx.kIter_ = DivCeil(tmpSingleCoreK, self->ctx.tiling_->baseK);
+    self->ctx.tailK_ = tmpSingleCoreK - (self->ctx.kIter_ - 1) * self->ctx.tiling_->baseK;
+    self->ctx.kIterStepKaTail =
+        (DivCeil(self->ctx.kIter_, self->ctx.curStepKa_) - 1) * self->ctx.curStepKa_;
+    self->ctx.kIterStepKbTail =
+        (DivCeil(self->ctx.kIter_, self->ctx.curStepKb_) - 1) * self->ctx.curStepKb_;
+
+    self->ctx.stepKaTail = self->ctx.kIter_ - self->ctx.kIterStepKaTail;
+    self->ctx.stepKbTail = self->ctx.kIter_ - self->ctx.kIterStepKbTail;
+}
+
+template <class Intf>
+static __aicore__ inline void CalcInWorkspace(Intf *self,
+                                              const GlobalTensor<typename Intf::DstT> &output)
+{
+    // 无需在workspace上累加的场景不需要搬出
+    if (!self->ctx.useUbAccumForSplitK_) {
+        return;
+    }
+    // 无需计算场景不需要搬出
+    if (!self->ctx.needComputeFlag_) {
+        return;
+    }
+    if ASCEND_IS_AIV_SCALAR {
+        CvCrossCoreWait<Intf, PIPE_FIX, PIPE_MTE2>(self, FLAG_MTE2_VEC_ID);
+        AccumulateSegmentOnWorkspace<Intf>(self, output);
+    }
+}
+
+template <class Intf>
+static __aicore__ inline void SetDequantScale(Intf *self)
+{
+    if constexpr (Intf::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
+        if (self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
+            Convolution3DBackpropFunc::FullLoadToScaleL1<Intf>(self);
+        } else if (self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::SCALAR_QUANT)) {
+            self->ctx.deqScalar_ = self->ctx.scaleGlobal_.GetValue(0);
+        }
+    }
+}
+
 template <class Intf>
 struct Init {
     // 定义call函数的默认重载函数，支持任意类型任意数量的参数
@@ -907,22 +971,37 @@ struct IterateAll {
             Convolution3DBackpropFunc::FullLoadBias<Intf>(self);
         }
 #endif
-        if constexpr (Intf::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
-            if (self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
-                Convolution3DBackpropFunc::FullLoadToScaleL1<Intf>(self);
-            } else if (self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::SCALAR_QUANT)) {
-                self->ctx.deqScalar_ = self->ctx.scaleGlobal_.GetValue(0);
-            }
-        }
+        SetDequantScale<Intf>(self);
         if constexpr (Intf::conv3dConfig.kernelSplitMode != TPL_SPLIT_KERNEL_HW) {
-            while (self->template Iterate<sync>()) {
-                self->template VecPreProcess<sync>(output, enAtomic);
-                self->template GetTensorC<sync>(output, enAtomic);
-                self->template VecPostProcess<sync>(output, enAtomic);
+            if (self->ctx.enableSplitK_) {
+                // calRound多轮场景重置标志位
+                self->ctx.isLastKSegment_ = false;
+                for (uint32_t kIdx = self->ctx.curCoutStartIdx_; kIdx < self->ctx.tiling_->coutG; kIdx += self->ctx.kSegment_) {
+                    self->ctx.curCoutStartIdx_ = kIdx;
+                    UpdateSplitKTail<Intf>(self, kIdx);
+                    // fp32: 使用atomic累加到GM; 非fp32: 使用atomic累加到workspace
+                    enAtomic = (kIdx == 0) ? 0 : 1;
+                    uint32_t iterCnt = 0;
+                    while (self->template Iterate<sync>()) {
+                        self->ctx.realMSize_ = (iterCnt++ != 0) ? self->ctx.tiling_->singleCoreM : self->ctx.baseUseM_;
+                        self->template GetTensorC<sync>(output, enAtomic);
+                    }
+                    self->template VecPostProcess<sync>(output, enAtomic);
+                    self->ctx.isFirstIter_ = true;
+                }
+                CalcInWorkspace<Intf>(self, output);
+            } else {
+                while (self->template Iterate<sync>()) {
+                    self->template VecPreProcess<sync>(output, enAtomic);
+                    self->template GetTensorC<sync>(output, enAtomic);
+                    self->template VecPostProcess<sync>(output, enAtomic);
+                }
             }
         } else {
             self->template IterateAllForKernelSplit<sync>(output, enAtomic);
         }
+
+        self->ctx.isFirstIter_ = true;
 #if (__NPU_ARCH__ == 5102)
         if (self->ctx.tiling_->isBiasFullLoad && Intf::Config::eType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
             if ASCEND_IS_AIC_SCALAR {
@@ -991,6 +1070,15 @@ struct VecPostProcess {
                     CvCrossCoreWait<Intf, PIPE_FIX, PIPE_MTE2>(self, FLAG_MTE2_VEC_ID);
                     CastToDstType<Intf>(self, output, enAtomic, enSequentialWrite);
                     CvCrossCoreSet<Intf, PIPE_MTE3, PIPE_FIX>(self, FLAG_FIXP_ID);
+                }
+            }
+        }
+        // workSpace累加UB cast搬出
+        if (self->ctx.useUbAccumForSplitK_) {
+            if ASCEND_IS_AIC_SCALAR {
+                // splitK场景最后一段KSegment且需要计算搬出
+                if (self->ctx.isLastKSegment_ && self->ctx.needComputeFlag_) {
+                    CvCrossCoreSet<Intf, PIPE_FIX, PIPE_MTE2>(self, FLAG_MTE2_VEC_ID);
                 }
             }
         }

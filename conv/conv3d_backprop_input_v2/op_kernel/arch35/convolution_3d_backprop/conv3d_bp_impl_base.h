@@ -119,6 +119,15 @@ public:
         DEFINE_STUCT_FIELD(int32_t, curCinStartIdx_);
         DEFINE_STUCT_FIELD(int32_t, curCoutStartIdx_);
         DEFINE_STUCT_FIELD(int32_t, hoExpand_);
+
+        DEFINE_STUCT_FIELD(uint32_t, kSegment_);
+        DEFINE_STUCT_FIELD(uint32_t, kSegmentTail_);
+        DEFINE_STUCT_FIELD(uint64_t, kValueSegment_);
+        DEFINE_STUCT_FIELD(bool, enableSplitK_);
+        DEFINE_STUCT_FIELD(bool, useUbAccumForSplitK_);
+        DEFINE_STUCT_FIELD(bool, isLastKSegment_);
+        DEFINE_STUCT_FIELD(uint32_t, realMSize_);
+
         DEFINE_STUCT_ARRAY_FIELD(uint32_t, splitHkList_, SUB_KERNEL_NUM);
         DEFINE_STUCT_ARRAY_FIELD(uint32_t, splitWkList_, SUB_KERNEL_NUM);
         DEFINE_STUCT_ARRAY_FIELD(uint32_t, splitHkWkList_, SUB_KERNEL_NUM);

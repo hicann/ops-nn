@@ -39,10 +39,17 @@ bool Conv3DDXV2SmallShapeTiling::IsCapable()
         isGetTilingFromRepo = true;
     }
 
-    // 暂不支持fp16/bfp16以外类型
+    // 不支持超大kernel
     if (tilingRunInfo_.tilingHkWkMode != 0) {
         return false;
     }
+
+    // 不支持超大累加轴
+    uint64_t kValue = static_cast<uint64_t>(runInfo_.dedy_cout1_g) * runInfo_.kernel_h * runInfo_.kernel_w * blockSize_;
+    if (kValue > MAX_K_VALUE_SPLIT_K) {
+        return false;
+    }
+
     // 8bit时只在filter_format=NDHWC放开基本块tiling，否则理论建模对8bit容易失效。
     auto filter_index = FILTER_INDEX;
     if (IsSocVersionFuse(context_)) {

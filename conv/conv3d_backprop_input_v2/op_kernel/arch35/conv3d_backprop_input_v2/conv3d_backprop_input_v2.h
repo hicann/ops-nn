@@ -210,7 +210,7 @@ protected:
     using yDxType = Convolution3DBackprop::ConvType<TPosition::GM, yCubeFormat, yType>;
     using biasDxType = Convolution3DBackprop::ConvType<TPosition::GM, biasCubeFormat, biasType>;
     using scaleDxType = Convolution3DBackprop::ConvType<TPosition::GM, scaleCubeFormat, scaleType>;
-    static constexpr Conv3dConfig conv3dConfig = {b2Condition, kernelSplitMode, groupMode, b1Condition, enableC04Flag};
+    static constexpr Conv3dConfig conv3dConfig = {b2Condition, kernelSplitMode, groupMode,b1Condition, enableC04Flag};
     Convolution3DBackprop::Conv3DBackpropInput<filterDxType, inputSizeDxType, dedyDxType, yDxType, biasDxType,
         scaleDxType, conv3dConfig> dedx_;
 
