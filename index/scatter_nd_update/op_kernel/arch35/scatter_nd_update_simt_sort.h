@@ -142,7 +142,7 @@ __aicore__ inline void ScatterNdUpdateSimtSort<PARAMS_T, INDICES_T, TYPE_T, OFFS
     pipe_.InitBuffer(this->uniqueIdCountQue_, 1, ROUND_UP32((ubTilingSize + 1) * sizeof(int32_t)));
 
     pipe_.InitBuffer(this->maxScoreBuf_, HASH_SCORE_BUF_SIZE * sizeof(float));
-    pipe_.InitBuffer(this->strideBuf_, MAX_RANK_COUNT * sizeof(INDICES_T));
+    pipe_.InitBuffer(this->strideBuf_, MAX_SHAPE_RANK * sizeof(INDICES_T));
 
     InitStride();
 }
@@ -272,7 +272,7 @@ template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSE
 __aicore__ inline void ScatterNdUpdateSimtSort<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>::InitStride()
 {
     LocalTensor<INDICES_T> strideLocal = this->strideBuf_.template Get<INDICES_T>();
-    for (int32_t i = 0; i < MAX_RANK_COUNT; i++) {
+    for (int32_t i = 0; i < MAX_SHAPE_RANK; i++) {
         strideLocal(i) = tiling_.strideList[i];
     }
 }

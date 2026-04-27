@@ -25,10 +25,10 @@ using namespace AscendC;
 template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SimtComputeData(
     __ubuf__ PARAMS_T* updateLocalAddr, __gm__ PARAMS_T* outputGmAddr, __gm__ TYPE_T* maskGmAddr,
-    __gm__ TYPE_T* varIdxGmAddr, uint32_t afterAxisFactor, TYPE_T updateOffSet, TYPE_T sliceSize, uint32_t rankSize,
+    __gm__ TYPE_T* varIdxGmAddr, uint32_t updateCount, TYPE_T updateOffSet, TYPE_T sliceSize, uint32_t rankSize,
     int64_t varSize, TYPE_T magic, TYPE_T shift)
 {
-    for (uint32_t i = Simt::GetThreadIdx(); i < afterAxisFactor; i += Simt::GetThreadNum()) {
+    for (uint32_t i = Simt::GetThreadIdx(); i < updateCount; i += Simt::GetThreadNum()) {
         TYPE_T globalUpdateIdx = updateOffSet + i;
         TYPE_T quotient = Simt::UintDiv(globalUpdateIdx, magic, shift);
         
@@ -80,14 +80,14 @@ __aicore__ inline void ScatterNdUpdateDeterministicSimt<PARAMS_T, INDICES_T, TYP
     TYPE_T updateOffSet = this->updateOffSet;
 
     int64_t varSize = this->tiling_.outputStorageShapeSize;
-    uint32_t afterAxisFactor = this->tiling_.afterAxisFactor;
+    uint32_t updateCount = this->updateCount;
 
     TYPE_T magic = 0;
     TYPE_T shift = 0;
     GetUintDivMagicAndShift(magic, shift, sliceSize);
     AscendC::Simt::VF_CALL<SimtComputeData<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>>(
         Simt::Dim3(THREAD_NUM), (__ubuf__ PARAMS_T*)updateLocal.GetPhyAddr(), (__gm__ PARAMS_T*)(this->outputGm.GetPhyAddr()),
-        (__gm__ TYPE_T*)this->maskGm.GetPhyAddr(), (__gm__ TYPE_T*)this->varIdxGm.GetPhyAddr(), afterAxisFactor, updateOffSet,
+        (__gm__ TYPE_T*)this->maskGm.GetPhyAddr(), (__gm__ TYPE_T*)this->varIdxGm.GetPhyAddr(), updateCount, updateOffSet,
         sliceSize, rankSize, varSize, magic, shift);
     this->inQueX. template FreeTensor(updateLocal);
 }
@@ -106,7 +106,7 @@ __aicore__ inline void ScatterNdUpdateDeterministicSimt<PARAMS_T, INDICES_T, TYP
         return;
     }
     if (this->blockIdx == this->tiling_.usedCoreNumBefore - 1) {
-        this->currBlockHandleIdx = this->tiling_.tailCoreIndexCount; 
+        this->currBlockHandleIdx = this->tiling_.tailCoreIndexCount;
     } else {
         this->currBlockHandleIdx = this->tiling_.eachCoreIndexCount;
     }
@@ -114,12 +114,15 @@ __aicore__ inline void ScatterNdUpdateDeterministicSimt<PARAMS_T, INDICES_T, TYP
    
     this->idxLoopSize = Ops::Base::CeilDiv(this->currBlockHandleIdx, static_cast<TYPE_T>(this->tiling_.indicesFactor));
     this->indiceBlockOffSet = this->blockIdx * this->tiling_.eachCoreIndexCount;
+    int64_t tailLoopIndices = this->currBlockHandleIdx - this->tiling_.indicesFactor * (this->idxLoopSize - 1);
     for (TYPE_T i = 0; i < this->idxLoopSize; i++) {
         this->indiceOffSet = this->indiceBlockOffSet + i * this->tiling_.indicesFactor;
+        int64_t currLoopIndicesCount = i == this->idxLoopSize - 1 ? tailLoopIndices : this->tiling_.indicesFactor;
+        int64_t currLoopUpdatesCount = currLoopIndicesCount * this->tiling_.afterAxis;
         for (TYPE_T j = 0; j < this->tiling_.updateLoopSize; j++) {
             this->updateOffSet = this->indiceOffSet * this->tiling_.sliceSize + j * this->tiling_.afterAxisFactor;
             if (j == this->tiling_.updateLoopSize - 1) {
-                this->updateCount = this->tiling_.updateTailNum;
+                this->updateCount = currLoopUpdatesCount - j * this->tiling_.afterAxisFactor;
             } else {
                 this->updateCount = this->tiling_.afterAxisFactor;
             }

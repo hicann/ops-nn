@@ -93,7 +93,7 @@ public:
         updatesGm_.SetGlobalBuffer((__gm__ T*)(updates));
         yGm_.SetGlobalBuffer((__gm__ T*)(y));
 
-        pipe.InitBuffer(strideBuf_, MAX_RANK_COUNT * sizeof(U));
+        pipe.InitBuffer(strideBuf_, MAX_SHAPE_RANK * sizeof(U));
         pipe.InitBuffer(dataQueue_, DOUBLE_BUFFER, indicesFactor_ * afterAxisFactor_ * sizeof(T));
         pipe.InitBuffer(outOfstBuf_, indicesFactor_ * sizeof(OFFSET_T));
         pipe.InitBuffer(indicesBuf_, indicesFactor_ * indexRankSize_ * sizeof(U));
@@ -479,7 +479,7 @@ __aicore__ inline void ScatterNdUpdateDeterministicCommon<PARAMS_T, INDICES_T, T
     pipe_.InitBuffer(
         indicesQue_, 1, Ops::Base::CeilAlign(tiling_.indicesUbFactor * rankSize_ * sizeof(INDICES_T), UB_AGLIN_VALUE));
 
-    pipe_.InitBuffer(this->strideBuf_, MAX_RANK_COUNT * sizeof(INDICES_T));
+    pipe_.InitBuffer(this->strideBuf_, MAX_SHAPE_RANK * sizeof(INDICES_T));
     pipe_.InitBuffer(
         this->outOfstBuf_, Ops::Base::CeilAlign(tiling_.indicesUbFactor * sizeof(OFFSET_T), UB_AGLIN_VALUE));
 
@@ -545,7 +545,7 @@ __aicore__ inline void ScatterNdUpdateDeterministicCommon<PARAMS_T, INDICES_T, T
     }
 
     LocalTensor<INDICES_T> strideLocal = this->strideBuf_.template Get<INDICES_T>();
-    for (uint32_t i = 0; i < MAX_RANK_COUNT; i++) {
+    for (uint32_t i = 0; i < MAX_SHAPE_RANK; i++) {
         strideLocal(i) = static_cast<INDICES_T>(tiling_.strideList[i]);
     }
 

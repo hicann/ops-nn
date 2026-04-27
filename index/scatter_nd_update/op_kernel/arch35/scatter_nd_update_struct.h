@@ -28,7 +28,7 @@ public:
     uint32_t ubTilingSize;
     uint64_t sliceSize;
     uint64_t outPutShape[MAX_SHAPE_RANK];
-    uint64_t strideList[MAX_RANK_COUNT];
+    uint64_t strideList[MAX_SHAPE_RANK];
     uint64_t outputStorageShapeSize;
     /* for determinstic */
     int64_t varInAxis;

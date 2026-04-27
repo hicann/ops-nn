@@ -151,7 +151,7 @@ __aicore__ inline void ScatterNdUpdateSimt<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T
     pipe_.InitBuffer(inQueX, DOUBLE_BUFFER, ROUND_UP32(this->ubTilingSize * sizeof(PARAMS_T)));
     if (tiling_.rankSize >= INDICE_RANK_TWO) {
         pipe_.InitBuffer(inQueIdx, DOUBLE_BUFFER, ROUND_UP32(indiceUbTilingSize * sizeof(INDICES_T)));
-        pipe_.InitBuffer(strideListBuf, MAX_RANK_COUNT * sizeof(TYPE_T));
+        pipe_.InitBuffer(strideListBuf, MAX_SHAPE_RANK * sizeof(TYPE_T));
         pipe_.InitBuffer(outputShapeBuf, MAX_SHAPE_RANK * sizeof(TYPE_T));
     }
 }
@@ -170,7 +170,7 @@ __aicore__ inline void ScatterNdUpdateSimt<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T
 
     LocalTensor<TYPE_T> strideList = strideListBuf.Get<TYPE_T>();
     LocalTensor<TYPE_T> outputShape = outputShapeBuf.Get<TYPE_T>();
-    for (uint32_t i = 0; i < MAX_RANK_COUNT; i++) {
+    for (uint32_t i = 0; i < MAX_SHAPE_RANK; i++) {
         strideList(i) = tiling_.strideList[i];
     }
     for (uint32_t i = 0; i < MAX_SHAPE_RANK; i++) {

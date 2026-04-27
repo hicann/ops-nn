@@ -106,7 +106,7 @@ private:
     uint32_t ubTilingSize {0};
     uint32_t rankSize_ {0};
     uint64_t sliceSize {0};
-    uint64_t strideList[MAX_RANK_COUNT] = {0};
+    uint64_t strideList[MAX_SHAPE_RANK] = {0};
     uint64_t outPutShape[MAX_SHAPE_RANK] = {0};
     uint64_t workspaceSize {0};
 

@@ -48,7 +48,7 @@ private:
     const ScatterNdUpdateRegBaseTilingData& tilingData_;
 
     int64_t curCoreIndexCount_{0};
-    uint64_t strideList[MAX_RANK_COUNT];
+    uint64_t strideList[MAX_SHAPE_RANK];
 };
 
 template <typename T, typename U, typename OFFSET_T>
@@ -244,7 +244,7 @@ template <typename T, typename U, typename OFFSET_T>
 __aicore__ inline void ScatterNdUpdateSimd<T, U, OFFSET_T>::Process()
 {
     LocalTensor<OFFSET_T> strideLocal = this->strideBuf_.template Get<OFFSET_T>();
-    for (int32_t i = 0; i < MAX_RANK_COUNT; i++) {
+    for (int32_t i = 0; i < MAX_SHAPE_RANK; i++) {
         strideLocal(i) = tilingData_.strideList[i];
     }
 

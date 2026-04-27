@@ -66,7 +66,7 @@ __aicore__ inline void ScatterNdUpdateSimdMask<T, U, OFFSET_T>::Init(
         Ops::Base::CeilAlign(tilingData_.varStorageInAxis * sizeof(int8_t), static_cast<uint64_t>(Ops::Base::GetUbBlockSize())));
     pipe_.InitBuffer(this->outOfstBuf_, tilingData_.indicesFactor * sizeof(OFFSET_T));
     pipe_.InitBuffer(this->indicesBuf_, tilingData_.indicesFactor * tilingData_.indexRankSize * sizeof(U));
-    pipe_.InitBuffer(this->strideBuf_, MAX_RANK_COUNT * sizeof(U));
+    pipe_.InitBuffer(this->strideBuf_, MAX_SHAPE_RANK * sizeof(U));
     pipe_.InitBuffer(
         this->dataQueue_, DOUBLE_BUFFER, tilingData_.indicesFactor * tilingData_.afterAxisFactor * sizeof(T));
 
@@ -74,7 +74,7 @@ __aicore__ inline void ScatterNdUpdateSimdMask<T, U, OFFSET_T>::Init(
     Duplicate(maskLocal, static_cast<int8_t>(0), tilingData_.varStorageInAxis);
 
     LocalTensor<U> strideLocal = this->strideBuf_.template Get<U>();
-    for (int32_t i = 0; i < MAX_RANK_COUNT; i++) {
+    for (int32_t i = 0; i < MAX_SHAPE_RANK; i++) {
         strideLocal(i) = tilingData_.strideList[i];
     }
 }

@@ -32,6 +32,7 @@ static constexpr uint16_t INPUT_IDX_UPDATES = 2;
 static constexpr uint16_t OUTPUT_IDX_SHAPE = 0;
 static constexpr uint16_t RANK_MIN_VALUE = 1;
 static constexpr uint16_t RANK_MAX_VALUE = 7;
+static constexpr uint16_t STRIDE_MAX_VALUE = 8;
 static constexpr uint64_t MIN_TILING_SIZE = 128;
 static constexpr uint32_t DCACHE_SIZE = 32U * 1024U;
 static constexpr uint32_t RESERVED_WORKSPACE_SIZE = 16U * 1024U * 1024U;
@@ -237,6 +238,7 @@ ge::graphStatus ScatterNdUpdateTiling::CalculateDerivedParams(
 
     for (int64_t idx = 0; idx < shapeRank_; idx++) {
         outPutShape[idx] = varOriginShape.GetDim(idx);
+        OP_LOGI(opName, "outPutShape[%lld] = %lld", idx, outPutShape[idx]);
     }
 
     OP_LOGI(
@@ -429,7 +431,7 @@ ge::graphStatus ScatterNdUpdateTiling::SortTiling()
                                  TWO * ubBlockSize +                                                    // sortIndiceBuf
                                  Ops::Base::CeilAlign(mid * indicesTypeSize_, ubBlockSize) +            // updateOrigin
                                  Ops::Base::CeilAlign((mid + 1) * indicesTypeSize_, ubBlockSize) +      // uniqeIdCount
-                                 Ops::Base::CeilAlign(RANK_MAX_VALUE * indicesTypeSize_, ubBlockSize) + // strideBuf
+                                 Ops::Base::CeilAlign(STRIDE_MAX_VALUE * indicesTypeSize_, ubBlockSize) + // strideBuf
                                  MIN_HANDLE_SIZE * FP32_BYTES;                                          // maxScore
         sortTmpSize = GetSortTmpSize(outOfSetDtype_, mid, false);
         sortTmpSize = Ops::Base::CeilAlign(sortTmpSize, ubBlockSize);
@@ -619,13 +621,6 @@ void ScatterNdUpdateTiling::DoOpTilingSplitAfter()
     int64_t halfUbSize = static_cast<int64_t>((ubSize_ - RESERVE_SIZE) / DB_BUFFER);
     int64_t alignNum = ALIGN_SIZE / varTypeSize_;
     int64_t oneIndexSize = static_cast<int64_t>(rankSize_) * indicesTypeSize_;
-    if (outputStorageShapeSize_ < INT32_MAX) {
-        outOfSetTypeSize_ = indicesTypeSize_;
-        outOfSetDtype_ = indiceDtype_;
-    } else {
-        outOfSetTypeSize_ = sizeof(int64_t);
-        outOfSetDtype_ = ge::DataType::DT_INT64;
-    }
     needInt64_ = outOfSetTypeSize_ == sizeof(int64_t);
 
     int64_t indicesSize =
@@ -819,7 +814,7 @@ void ScatterNdUpdateTiling::CalcDeterministicIndicesSplit(int64_t ubBlock)
             Ops::Base::CeilAlign(mid * outOfSetTypeSize_, ubBlockSize) + TWO * ubBlockSize +        // sortIndiceBuf
             Ops::Base::CeilAlign(mid * static_cast<int64_t>(sizeof(uint32_t)), ubBlockSize) +       // updateOrigin
             Ops::Base::CeilAlign((mid + 1) * static_cast<int64_t>(sizeof(uint32_t)), ubBlockSize) + // uniqeIdCount
-            Ops::Base::CeilAlign(RANK_MAX_VALUE * indicesTypeSize_, ubBlockSize) +                  // strideBuf
+            Ops::Base::CeilAlign(STRIDE_MAX_VALUE * indicesTypeSize_, ubBlockSize) +                  // strideBuf
             MIN_HANDLE_SIZE * FP32_BYTES;                                                           // maxScore
         sortTmpSize = GetSortTmpSize(outOfSetDtype_, mid, false);
         sortTmpSize = Ops::Base::CeilAlign(sortTmpSize, ubBlockSize);
@@ -861,6 +856,14 @@ void ScatterNdUpdateTiling::CalculateMask()
 }
 ge::graphStatus ScatterNdUpdateTiling::DoOpTiling()
 {
+    if (outputStorageShapeSize_ < INT32_MAX) {
+        outOfSetTypeSize_ = indicesTypeSize_;
+        outOfSetDtype_ = indiceDtype_;
+    } else {
+        outOfSetTypeSize_ = sizeof(int64_t);
+        outOfSetDtype_ = ge::DataType::DT_INT64;
+    }
+
     if (isSimdNonDeterminstic_ == 1) {
         CalculateMask();
         if (isMask_ == 1) {
@@ -983,7 +986,7 @@ void ScatterNdUpdateTiling::SetTilingData()
     tilingData->ubTilingSize = ubTilingSize;
     tilingData->sliceSize = sliceSize;
     tilingData->rankSize = rankSize_;
-    for (int32_t i = 0; i < MAX_RANK_COUNT; i++) {
+    for (int32_t i = 0; i < MAX_SHAPE_RANK; i++) {
         tilingData->strideList[i] = strideList[i];
     }
     for (int32_t i = 0; i < MAX_SHAPE_RANK; i++) {
