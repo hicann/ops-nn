@@ -1760,6 +1760,7 @@ VC1@ops-nn:
         - ops/ops-nn/quant/trans_quant_param_v2/op_kernel/trans_quant_param_v2.h
         - ops/ops-nn/index/quant_update_scatter/
         - ops/ops-nn/index/sparse_slice/
+        - ops/ops-nn/quant/quant_max/
       opensource_style: null
       kernel_style: null
     unrelease:
