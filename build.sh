@@ -256,11 +256,11 @@ usage() {
         echo "    --onnxplugin           Build onnxplugin library"
         echo "    -j[n]                  Compile thread nums, default is 8, eg: -j8"
         echo "    -O[n]                  Compile optimization options, support [O0 O1 O2 O3], eg:-O3"
-        echo "    --debug                Build with debug mode"
+        echo "    --build-type=<TYPE>    Specify build type (TYPE options: Release/Debug), Default: Release"
         echo $dotted_line
         echo "Examples:"
         echo "    bash build.sh --onnxplugin -j16 -O3"
-        echo "    bash build.sh --onnxplugin --debug"
+        echo "    bash build.sh --onnxplugin --build-type=Debug"
         return
         ;;
       tfplugin)
@@ -269,11 +269,11 @@ usage() {
         echo "    --tfplugin             Build tfplugin library"
         echo "    -j[n]                  Compile thread nums, default is 8, eg: -j8"
         echo "    -O[n]                  Compile optimization options, support [O0 O1 O2 O3], eg:-O3"
-        echo "    --debug                Build with debug mode"
+        echo "    --build-type=<TYPE>    Specify build type (TYPE options: Release/Debug), Default: Release"
         echo $dotted_line
         echo "Examples:"
         echo "    bash build.sh --tfplugin -j16 -O3"
-        echo "    bash build.sh --tfplugin --debug"
+        echo "    bash build.sh --tfplugin --build-type=Debug"
         return
         ;;
       opgraph)
@@ -282,11 +282,11 @@ usage() {
         echo "    --opgraph              Build opgraph library"
         echo "    -j[n]                  Compile thread nums, default is 8"
         echo "    -O[n]                  Compile optimization options, support [O0 O1 O2 O3]"
-        echo "    --debug                Build with debug mode"
+        echo "    --build-type=<TYPE>    Specify build type (TYPE options: Release/Debug), Default: Release"
         echo $dotted_line
         echo "Examples:"
         echo "    bash build.sh --opgraph -j16 -O3"
-        echo "    bash build.sh --opgraph --debug"
+        echo "    bash build.sh --opgraph --build-type=Debug"
         return
         ;;
       opapi)

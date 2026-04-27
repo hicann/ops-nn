@@ -46,7 +46,6 @@ bash build.sh --help
 | --static         | 可选     | 配置后，表示生成静态库文件，包含libcann_nn_static.a和aclnn接口头文件，搭配--pkg参数，生成静态库压缩包。|
 | --vendor_name    | 可选     | 指定自定义算子包的名称，默认值为custom。                                                   |
 | --build-type     | 可选     | 启用调试模式。可选类型：Release/Debug，默认为Release。值为Debug时，不可与--mssanitizer、--oom、--dump_cce同时使用         |
-| --debug          | 可选     | 启用调试模式。                                                                     |
 | --cov            | 可选     | 预留参数，开发者暂不需要关注。                                                              |
 | --noexec         | 可选     | 仅编译单元测试二进制文件，不自动执行编译后的UT可执行文件。                                              |
 | --opkernel       | 可选     | 编译二进制内核。                                                     |
