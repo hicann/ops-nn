@@ -26,7 +26,7 @@ extern "C" {
  * @param [in] x1: matmul左矩阵，数据类型支持：float4_e2m1, int8, int4, float8_e4m3fn, float8_e5m2, hifloat8。
  * @param [in] x2: matmul右矩阵，数据类型支持：float4_e2m1, int8, int4, float8_e4m3fn, float8_e5m2, hifloat8。
  * @param [in] x1Scale: x1量化参数，数据类型支持：float8_e8m0, float32。
- * @param [in] x2Scale: x2量化参数，数据类型支持：float8_e8m0, bfloat16, float32, int64, uint64。
+ * @param [in] x2Scale: x2量化参数，数据类型支持：float8_e8m0, float16，bfloat16, float32, int64, uint64。
  * @param [in] yScale: y量化参数，数据类型支持：int64、uint64。
  * @param [in] x1Offset: 预留参数，当前接口不支持该参数。
  * @param [in] x2Offset: 量化参数，数据类型支持：float32, float16。
@@ -35,7 +35,7 @@ extern "C" {
  * @param [in] transposeX1: x1矩阵是否转置。
  * @param [in] transposeX2: x2矩阵是否转置。
  * @param [in] groupSize: 量化参数，数据类型支持：int64。
- * @param [out] out: 计算结果，数据类型：int8，float16, bfloat16, float32。
+ * @param [out] out: 计算结果，数据类型：int8，float16, bfloat16, float32，int32。
  * @param [out] workspaceSize: 返回需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含了算子计算流程。
  * @return aclnnStatus: 返回状态码
