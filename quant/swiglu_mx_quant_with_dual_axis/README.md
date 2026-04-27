@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-- 算子功能：融合算子，实现 SwiGLU 激活函数与双轴动态块量化的组合计算。先对输入计算 SwiGLU 激活函数，然后对结果同时在 -1 轴和 -2 轴进行基于块的动态量化，输出低精度的 FP4/FP8 张量和对应的缩放因子。
+- 算子功能：融合算子，实现SwiGLU激活函数与双轴动态块量化的组合计算。先对输入计算SwiGLU激活函数，然后对结果同时在-1轴和-2轴进行基于块的动态量化，输出低精度的FP4/FP8张量和对应的缩放因子。
 
 - 计算公式：
 
@@ -31,11 +31,11 @@
   act = swish * hidden
   </p>
 
-  其中，当 `activate_left=True` 时，左半部分为 hidden，右半部分为 gate；当 `activate_left=False` 时，右半部分为 hidden，左半部分为 gate。
+  其中，当 `activate_left=True` 时，左半部分为hidden，右半部分为gate；当 `activate_left=False` 时，右半部分为hidden，左半部分为gate。
 
   **阶段 2：双轴动态块量化**
 
-  - **-1 轴量化（列方向）**：将 SwiGLU 结果在 -1 轴上按照 32 个数进行分组，一组 32 个数 $\{\{V_i\}_{i=1}^{32}\}$ 量化为 $\{mxscale1, \{P_i\}_{i=1}^{32}\}$
+  - **-1 轴量化（列方向）**：将SwiGLU结果在-1轴上按照32个数进行分组，一组32个数 $\{\{V_i\}_{i=1}^{32}\}$ 量化为 $\{mxscale1, \{P_i\}_{i=1}^{32}\}$
 
     $$
     shared\_exp = floor(log_2(max_i(|V_i|))) - emax
@@ -49,7 +49,7 @@
     P_i = cast\_to\_dst\_type(V_i/mxscale1, round\_mode), \space i\space from\space 1\space to\space 32
     $$
 
-  - **-2 轴量化（行方向）**：将 SwiGLU 结果在 -2 轴上按照 32 个数进行分组，一组 32 个数 $\{\{V_j\}_{j=1}^{32}\}$ 量化为 $\{mxscale2, \{P_j\}_{j=1}^{32}\}$
+  - **-2 轴量化（行方向）**：将SwiGLU结果在-2轴上按照32个数进行分组，一组32个数 $\{\{V_j\}_{j=1}^{32}\}$ 量化为 $\{mxscale2, \{P_j\}_{j=1}^{32}\}$
 
     $$
     shared\_exp = floor(log_2(max_j(|V_j|))) - emax
@@ -93,77 +93,77 @@
     <tr>
       <td>x</td>
       <td>输入</td>
-      <td>输入张量，必须为 2 维，且最后一维必须为偶数（shape 为 [M, 2N]）</td>
+      <td>输入张量，必须为2维，且最后一维必须为偶数（shape为[M, 2N]）</td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>group_index</td>
       <td>可选输入</td>
-      <td>分组索引，用于控制分组量化边界。shape 为 [G]，采用 cumsum 模式，表示每个 group 的行数累积值。传入空指针时表示不分组。</td>
+      <td>分组索引，用于控制分组量化边界。shape为[G]，采用 cumsum 模式，表示每个group的行数累积值。传入空指针时表示不分组。</td>
       <td>INT64</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>activate_left</td>
       <td>属性</td>
-      <td>SwiGLU 激活侧选择。True 表示左半部分为 hidden，右半部分为 gate；False 表示右半部分为 hidden，左半部分为 gate。默认值为 True。</td>
+      <td>SwiGLU激活侧选择。True表示左半部分为hidden，右半部分为gate；False表示右半部分为hidden，左半部分为gate。默认值为True。</td>
       <td>BOOL</td>
       <td>-</td>
     </tr>
     <tr>
       <td>round_mode</td>
       <td>属性</td>
-      <td>舍入模式，用于量化时的类型转换。<br>当 dst_type 为 FLOAT4_E2M1/FLOAT4_E1M2 时，支持 "rint"、"floor"、"round"；<br>当 dst_type 为 FLOAT8_E4M3FN/FLOAT8_E5M2 时，仅支持 "rint"。默认值为 "rint"。</td>
+      <td>舍入模式，用于量化时的类型转换。<br>当dst_type为FLOAT8_E4M3FN 时，仅支持"rint"。默认值为"rint"。</td>
       <td>STRING</td>
       <td>-</td>
     </tr>
     <tr>
       <td>scale_alg</td>
       <td>属性</td>
-      <td>缩放算法：0=OCP（Microscaling Formats Specification），1=cuBLAS。默认值为 0。<br>FP4 输出类型仅支持 scale_alg=0。</td>
+      <td>缩放算法：取值为1时，表示使用cuBLAS算法。取值为0时，表示使用OCP算法。默认值为0。<br>仅支持scale_alg=1。</td>
       <td>INT64</td>
       <td>-</td>
     </tr>
     <tr>
       <td>dst_type</td>
       <td>属性</td>
-      <td>目标量化类型：40=FLOAT4_E2M1，41=FLOAT4_E1M2，36=FLOAT8_E4M3FN，35=FLOAT8_E5M2。默认值为 36。</td>
+      <td>目标量化类型：36=FLOAT8_E4M3FN。默认值为 35。</td>
       <td>INT64</td>
       <td>-</td>
     </tr>
     <tr>
       <td>max_dtype_value</td>
       <td>属性</td>
-      <td>预留参数，scale_alg=2 且 dst_type=FLOAT4_E1M2 时生效。默认值为 0.0。</td>
+      <td>预留参数，scale_alg=2且dst_type=FLOAT4_E1M2 时生效。<br>当前仅支持取值为0.0。</td>
       <td>FLOAT</td>
       <td>-</td>
     </tr>
     <tr>
       <td>y1</td>
       <td>输出</td>
-      <td>-1 轴量化后的输出张量，形状为 [M, N]（SwiGLU 输出的一半）</td>
-      <td>FLOAT4_E2M1、FLOAT4_E1M2、FLOAT8_E4M3FN、FLOAT8_E5M2</td>
+      <td>-1轴量化后的输出张量，形状为[M, N]（SwiGLU 输出的一半）</td>
+      <td>FLOAT8_E4M3FN</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>mx_scale1</td>
       <td>输出</td>
-      <td>-1 轴每个量化块对应的缩放因子。shape 为 [M, (ceil(N/32)+2-1)/2, 2]，需进行偶数 pad，pad 填充值为 0。</td>
+      <td>-1轴每个量化块对应的缩放因子。shape为[M, (ceil(N/32)+2-1)/2, 2]，需进行偶数pad，pad填充值为 0。</td>
       <td>FLOAT8_E8M0</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y2</td>
       <td>输出</td>
-      <td>-2 轴量化后的输出张量，形状为 [M, N]</td>
-      <td>FLOAT4_E2M1、FLOAT4_E1M2、FLOAT8_E4M3FN、FLOAT8_E5M2</td>
+      <td>-2轴量化后的输出张量，形状为[M, N]</td>
+      <td>FLOAT8_E4M3FN</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>mx_scale2</td>
       <td>输出</td>
-      <td>-2 轴每个量化块对应的缩放因子。当 groupIndex 存在时 shape 为 [floor(M/64) + G, N, 2]，当 groupIndex 不存在时 shape 为 [ceil(M/64), N, 2]，需进行偶数 pad，pad 填充值为 0。输出需要对每两行数据进行交织处理。</td>
+      <td>-2轴每个量化块对应的缩放因子。当groupIndex存在时shape为[floor(M/64) + G, N, 2]，当groupIndex不存在时shape为[ceil(M/64), N, 2]，需进行偶数pad，pad填充值为 0。输出需要对每两行数据进行交织处理。</td>
       <td>FLOAT8_E8M0</td>
       <td>ND</td>
     </tr>
@@ -171,11 +171,9 @@
 
 ## 约束说明
 
-- 输入 x 必须为 2 维张量，最后一维必须能被 2 整除（shape 为 [M, 2N]）。
-- 当 dst_type 为 FP4 类型（FLOAT4_E2M1/FLOAT4_E1M2）时，最后一维 N 必须能被 4 整除。
-- FP8 输出类型（FLOAT8_E4M3FN/FLOAT8_E5M2）仅支持 "rint" 舍入模式。
-- FP4 输出类型仅支持 scale_alg=0（OCP）。
-- 当 group_index 存在时，采用 cumsum 模式，每个值表示对应 group 的行数累积值。
+- 输入x必须为2维张量，最后一维必须能被2整除（shape为[M, 2N]）。
+- FP8输出类型（FLOAT8_E4M3FN）仅支持"rint"舍入模式。
+- 当group_index存在时，采用cumsum模式，每个值表示对应group的行数累积值，group_index的每个元素值需要大于0且最后一个元素值要等于M。
 
 ## 调用说明
 
