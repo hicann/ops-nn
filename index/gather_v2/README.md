@@ -100,4 +100,3 @@
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
 | aclnn调用 | [test_aclnn_gather_v2](./examples/test_aclnn_gather_v2.cpp) | 通过[aclnnGatherV2](./docs/aclnnGatherV2.md)接口方式调用GatherV2算子。 |
 | 图模式调用 | [test_geir_gather_v2](./examples/test_geir_gather_v2.cpp) | 通过[算子IR](./op_graph/gather_v2_proto.h)构图方式调用GatherV2算子。 |
-| aclnn调用 | [test_aclnn_embedding_renorm](./examples/test_aclnn_embedding_renorm.cpp) | 通过[aclnnEmbeddingRenorm](./docs/aclnnEmbeddingRenorm.md)接口方式调用Renorm算子。 |

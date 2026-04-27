@@ -1,6 +1,6 @@
 # aclnnEmbeddingRenorm
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/index/gather_v2)
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/norm/renorm)
 
 ## 产品支持情况
 

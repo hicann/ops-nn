@@ -103,3 +103,4 @@
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_renorm](examples/test_aclnn_renorm.cpp) | 通过[aclnnRenorm](docs/aclnnRenorm&aclnnInplaceRenorm.md)接口方式调用Renorm算子。 |
 | aclnn接口  | [test_aclnn_inplace_renorm](examples/test_aclnn_inplace_renorm.cpp) | 通过[aclnnInplaceRenorm](docs/aclnnRenorm&aclnnInplaceRenorm.md)接口方式调用Renorm算子。 |
+| aclnn接口  | [test_aclnn_embedding_renorm](examples/test_aclnn_embedding_renorm.cpp) | 通过[aclnnEmbeddingRenorm](docs/aclnnEmbeddingRenorm.md)接口方式调用Renorm算子。 |
