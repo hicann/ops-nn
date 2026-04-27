@@ -44,6 +44,7 @@ public:
     int64_t mTileIdx_{1};
     int64_t nTileIdx_{1};
     int64_t kTileIdx_{1};
+    int64_t bTileIdx_{1};
     int64_t curKTileNum_{1};
 
     bool isFp32_{false};
@@ -100,7 +101,7 @@ public:
 
         int64_t tailMNTileNum = (mTileNum_ * nTileNum_) % usedCoreNum_; // tail mCnt * nCnt num of SK
         // totaltilenum = core num of DP (m*n) + tail core num of SK (m*n*k)
-        tileNum_ = (mTileNum_ * nTileNum_ - tailMNTileNum) + tailMNTileNum * skKTileNum_;
+        tileNum_ = (mTileNum_ * nTileNum_ - tailMNTileNum) + tailMNTileNum * skKTileNum_ * batch_;
         totalMNTileNumInDP_ = mTileNum_ * nTileNum_ - tailMNTileNum;
 
         // fp32 split singlecorek
@@ -111,7 +112,7 @@ public:
 
     __aicore__ inline int64_t GetTotalTileNum()
     {
-        return tileNum_ * batch_;
+        return tileNum_;
     }
 
     __aicore__ inline int64_t GetHf32Flag()
@@ -126,7 +127,7 @@ public:
 
     __aicore__ inline Shape<int64_t, int64_t, int64_t, int64_t> GetMNKTileNum()
     {
-        return {mTileNum_, nTileNum_, skKTileNum_, 1};
+        return {mTileNum_, nTileNum_, skKTileNum_, batch_};
     }
 
     __aicore__ inline int64_t GetCurKSingleCore(int64_t tileIdx)
@@ -137,8 +138,8 @@ public:
     __aicore__ inline int64_t GetBlockNum(int64_t blockNum)
     {
         int64_t tilingBlockNum = 0;
-        if (tileNum_ * batch_ < blockNum) {
-            tilingBlockNum = tileNum_ * batch_;
+        if (tileNum_ < blockNum) {
+            tilingBlockNum = tileNum_;
         } else {
             tilingBlockNum = blockNum;
         }
@@ -177,7 +178,7 @@ public:
     __aicore__ inline BlockCoord GetSingleCoreCoord(int64_t tileIdx)
     {
         UpdateMNTileIdx(tileIdx);
-        return {mTileIdx_, nTileIdx_, kTileIdx_, 0};
+        return {mTileIdx_, nTileIdx_, kTileIdx_, bTileIdx_};
     }
 
     __aicore__ inline bool CheckIsSkScene(int64_t tileIdx)
@@ -189,13 +190,15 @@ public:
     {
         // judge now in dp loop (kTileNum = 1) or in sk loop
         curKTileNum_ = CheckIsSkScene(tileIdx) ? skKTileNum_ : 1;
+        bTileIdx_ = tileIdx / (mTileNum_ * nTileNum_ * skKTileNum_);
+        uint64_t mnkTileIdx = tileIdx % (mTileNum_ * nTileNum_ * skKTileNum_);
         int64_t mnIdxInCurLoop = 0;
         if (CheckIsSkScene(tileIdx)) { // SK scene
-            kTileIdx_ = (tileIdx % usedCoreNum_) % curKTileNum_;
-            mnIdxInCurLoop = (tileIdx % usedCoreNum_) / curKTileNum_ + totalMNTileNumInDP_;
+            kTileIdx_ = (mnkTileIdx % usedCoreNum_) % curKTileNum_;
+            mnIdxInCurLoop = (mnkTileIdx % usedCoreNum_) / curKTileNum_ + totalMNTileNumInDP_;
         } else { // DP scene
             kTileIdx_ = 0;
-            mnIdxInCurLoop = tileIdx / curKTileNum_;
+            mnIdxInCurLoop = mnkTileIdx / curKTileNum_;
         }
         int64_t mainWindow = AscendC::Std::min(WINDOW_LEN, mTileNum_);
         int64_t mainRow = mTileNum_ / mainWindow - 1UL;

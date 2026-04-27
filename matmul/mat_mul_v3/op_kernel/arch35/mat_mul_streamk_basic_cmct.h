@@ -24,7 +24,7 @@ using namespace Cmct::Gemm;
 template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class A_LAYOUT, class B_LAYOUT, class C_LAYOUT,
           MatMulL0C2Out MATMUL_L0C2OUT, uint64_t FUSED_OP_TYPE = 0>
 __aicore__ inline void MatMulStreamKActKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM,
-    GM_ADDR cGM, GM_ADDR workspaceGM, const MatMulV3BasicTilingData& tilingData, int64_t batch = 0)
+    GM_ADDR cGM, GM_ADDR workspaceGM, const MatMulV3BasicTilingData& tilingData, int64_t batch = 1)
 {
     // 定义L1和L0的TileShape
     using L1TileShape = AscendC::Shape<_0, _0, _0>;
@@ -39,10 +39,6 @@ __aicore__ inline void MatMulStreamKActKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR 
     using LayoutA = A_LAYOUT;
     using LayoutB = B_LAYOUT;
     using LayoutC = C_LAYOUT;
-
-    if (batch > 1) {
-        return;
-    }
 
     // 定义scheduler类型 来自block_scheduler_policy.h
     using BlockScheduler = BuiltInStreamKScheduler;

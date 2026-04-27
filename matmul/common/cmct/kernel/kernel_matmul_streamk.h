@@ -185,6 +185,7 @@ public:
         int64_t mTileNum = Get<MNK_M>(bs.GetMNKTileNum());
         int64_t nTileNum = Get<MNK_N>(bs.GetMNKTileNum());
         int64_t skKTileNum = Get<MNK_K>(bs.GetMNKTileNum()); // it only used in sk
+        int64_t batchNum =  Get<MNK_B>(bs.GetMNKTileNum());
         int64_t tileNum = bs.GetTotalTileNum();
 
         if ASCEND_IS_AIC {
@@ -206,7 +207,8 @@ public:
             }
             SetMMLayoutTransform(true); // copy out with nfirst, try to make cube and fixp pairing.
             blockMmadOp.Init(problemShape_, tileL1, tileL0, isBias_, bs.isSplitSingleK_);
-            int64_t tailSKTotalTileNum = static_cast<int64_t>(((mTileNum * nTileNum) % usedCoreNum_) * skKTileNum);
+            int64_t tailSKTotalTileNum =
+                static_cast<int64_t>(((mTileNum * nTileNum * batchNum) % usedCoreNum_) * skKTileNum);
             for (int64_t tileIdx = curBlockIdx; tileIdx < tileNum; tileIdx += usedCoreNum_) {
                 int64_t tmpTileIdx = tileIdx;
                 if (!bs.CheckIsSkScene(0)) { // SK Preload in DP+SK
@@ -250,7 +252,7 @@ public:
         }
 
         if ASCEND_IS_AIV {
-            uint64_t lastLoopTotalCnt = (mTileNum * nTileNum % usedCoreNum_) * skKTileNum;
+            uint64_t lastLoopTotalCnt = (mTileNum * nTileNum * batchNum % usedCoreNum_) * skKTileNum;
             uint64_t curBlockIdxInAiv = AscendC::GetBlockIdx();
             if (curBlockIdxInAiv >= lastLoopTotalCnt * AscendC::GetTaskRation()) {
                 CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_MTE3>(AIC_SYNC_AIV_FLAG);

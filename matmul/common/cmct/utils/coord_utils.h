@@ -211,15 +211,17 @@ __aicore__ inline AscendC::Coord<int64_t, int64_t, int64_t, int64_t> GetOffsetSt
         }
     } else {
         if (transB) {
-            offsetB = Get<MNK_B>(blockCoord) * n * k + Get<MNK_N>(blockCoord) * nL1 * C0_SIZE +
+            offsetB = Get<MNK_B>(blockCoord) * CeilAlign(n, C0_SIZE) * CeilAlign(k, C0_SIZE) +
+                      Get<MNK_N>(blockCoord) * nL1 * C0_SIZE +
                       Get<MNK_K>(blockCoord) * kSingleCore * CeilAlign(n, OUTER_SIZE);
         } else {
-            offsetB = Get<MNK_B>(blockCoord) * n * k + Get<MNK_N>(blockCoord) * nL1 * CeilAlign(k, C0_SIZE) +
+            offsetB = Get<MNK_B>(blockCoord) * CeilAlign(n, C0_SIZE) * CeilAlign(k, C0_SIZE) +
+                      Get<MNK_N>(blockCoord) * nL1 * CeilAlign(k, C0_SIZE) +
                       Get<MNK_K>(blockCoord) * kSingleCore * C0_SIZE;
         }
     }
     if (isBias) {
-        offsetBias = Get<MNK_B>(blockCoord) * n + Get<MNK_N>(blockCoord) * nL1;
+        offsetBias = Get<MNK_N>(blockCoord) * nL1;
     }
 
     return {offsetA, offsetB, offsetC, offsetBias};

@@ -27,6 +27,7 @@
 
 #include "arch35/batch_mat_mul_v3_iterbatch_basicapi_cmct.h"
 #include "../mat_mul_v3/arch35/mat_mul_pingpong_basic_cmct.h"
+#include "../mat_mul_v3/arch35/mat_mul_streamk_basic_cmct.h"
 
 using namespace AscendC;
 using namespace matmul;
@@ -200,6 +201,20 @@ __global__ __aicore__ void batch_mat_mul_v3(
         GET_TILING_DATA_WITH_STRUCT(BatchMatMulV3IterBatchBasicTilingData, tilingData, tilingGM);
         BatchMatMulActIterBatchKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor>(
             aGM, bGM, biasGM, cGM, workspaceGM, tilingData);
+    } else if constexpr (BATCH_API_LEVEL == MAT_MUL_BASIC_LEVEL && BMODEL == MAT_MUL_STREAM_K &&
+                         BATCH_FULL_LOAD == MAT_MUL_NO_FULL_LOAD && BATCH_L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY &&
+                         BATCH_ITER_MODEL == MAT_MUL_FOR_BATCH) {
+        GET_TILING_DATA_WITH_STRUCT(BatchMatMulV3BasicTilingData, tilingData, tilingGM);
+        MatMulStreamKActKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor,
+                               MatMulL0C2Out::ON_THE_FLY>(aGM, bGM, biasGM, cGM, workspaceGM,
+                                                          tilingData.matMulTilingData, tilingData.batchDimAll);
+    } else if constexpr (BATCH_API_LEVEL == MAT_MUL_BASIC_LEVEL && BMODEL == MAT_MUL_STREAM_K &&
+                         BATCH_FULL_LOAD == MAT_MUL_NO_FULL_LOAD &&
+                         BATCH_L0C2OUT_MODEL == MAT_MUL_1V2_ND_ALIG_FIXPIPE && BATCH_ITER_MODEL == MAT_MUL_FOR_BATCH) {
+        GET_TILING_DATA_WITH_STRUCT(BatchMatMulV3BasicTilingData, tilingData, tilingGM);
+        MatMulStreamKActKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor,
+                               MatMulL0C2Out::ND_FIXPIPE_1_2>(aGM, bGM, biasGM, cGM, workspaceGM,
+                                                              tilingData.matMulTilingData, tilingData.batchDimAll);
 #if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
     } else if constexpr (
         BATCH_API_LEVEL == MAT_MUL_HIGH_LEVEL && BMODEL == MAT_MUL_BASIC && BATCH_FULL_LOAD == MAT_MUL_NO_FULL_LOAD &&

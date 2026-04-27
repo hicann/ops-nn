@@ -59,6 +59,7 @@ public:
     uint64_t mCnt_ = 0;
     uint64_t nCnt_ = 0;
     uint64_t kCnt_ = 0;
+    uint64_t bCnt_ = 0;
     uint64_t round_ = 1;
     uint64_t usedCoreNum_ = 0;
     uint64_t aivMte2Num_ = 0;
@@ -70,6 +71,7 @@ public:
         uint64_t mCntIndex = 0;
         uint64_t nCntIndex = 0;
         uint64_t kCntIndex = 0;
+        uint64_t bCntIndex = 0;
         uint64_t curML1InAiv = 0;
         uint64_t curNL1InAiv = 0;
         uint64_t curAlignedNInAiv = 0;
@@ -107,6 +109,7 @@ public:
         mCnt_ = Get<MNK_M>(coordInAiv);
         nCnt_ = Get<MNK_N>(coordInAiv);
         kCnt_ = Get<MNK_K>(coordInAiv);
+        bCnt_ = Get<MNK_B>(coordInAiv);
         usedCoreNum_ = usedCoreNum;
         // Decrease tile size of per vector core to prevent data race of cube and vector
         aivMte2Num_ = checkIsSkScene ? AscendC::GetTaskRation() : AscendC::BLOCK_CUBE;
@@ -176,20 +179,22 @@ public:
     __aicore__ inline void UpdateAivBasicIndex()
     {
         uint64_t newBlockIdx = AscendC::GetBlockIdx() / (AscendC::GetTaskRation() * kCnt_);
+        //kCntIndex为m方向的切分
         aivParams_.kCntIndex = AscendC::GetBlockIdx() % (AscendC::GetTaskRation() * kCnt_);
-
+        aivParams_.bCntIndex = newBlockIdx / (mCnt_ * nCnt_);
         aivParams_.indexParams = newBlockIdx;
-        uint64_t cGmIndex = aivParams_.indexParams + (mCnt_ * nCnt_ - mCnt_ * nCnt_ % usedCoreNum_);
+        uint64_t mnIndex = 
+            (aivParams_.indexParams + (bCnt_ * mCnt_ * nCnt_ - bCnt_ * mCnt_ * nCnt_ % usedCoreNum_)) % (mCnt_ * nCnt_);
         uint64_t mainWindow = AscendC::Std::min(MAIN_WINDOW, mCnt_);
         uint64_t mainRow = mCnt_ / mainWindow - 1UL;
         uint64_t tailWindow = mCnt_ - mainRow * mainWindow;
-        uint64_t rowIdx = cGmIndex / nCnt_ / mainWindow;
+        uint64_t rowIdx = mnIndex / nCnt_ / mainWindow;
         if (rowIdx < mainRow) {
-            aivParams_.mCntIndex = rowIdx * mainWindow + cGmIndex % mainWindow;
-            aivParams_.nCntIndex = (cGmIndex / mainWindow) % nCnt_;
+            aivParams_.mCntIndex = rowIdx * mainWindow + mnIndex % mainWindow;
+            aivParams_.nCntIndex = (mnIndex / mainWindow) % nCnt_;
         } else {
             rowIdx = mainRow;
-            uint64_t tailIndex = cGmIndex - mainRow * mainWindow * nCnt_;
+            uint64_t tailIndex = mnIndex - mainRow * mainWindow * nCnt_;
             aivParams_.mCntIndex = mainRow * mainWindow + tailIndex % tailWindow;
             aivParams_.nCntIndex = (tailIndex / tailWindow) % nCnt_;
         }
@@ -228,15 +233,12 @@ public:
         copyGm2UbParams_.mBurst = CeilDiv(copyGm2UbParams_.mBurstOri, aivMte2Num_);
         // Calculate init address of workspace for moving into UB.
         copyGm2UbParams_.offsetWorkspaceGM =
-            (aivParams_.indexParams) * kCnt_ *
-                BLOCK_BASE_M * BLOCK_BASE_N +
-            (aivParams_.kCntIndex * mBurstBase_ + copyGm2UbParams_.mBurst * index) *
-                aivParams_.curAlignedNInAiv;
+            aivParams_.indexParams * kCnt_ * BLOCK_BASE_M * BLOCK_BASE_N +
+            (aivParams_.kCntIndex * mBurstBase_ + copyGm2UbParams_.mBurst * index) * aivParams_.curAlignedNInAiv;
         // Calculate init address of GM for moving out to GM.
-        copyUb2GmParams_.offsetCGm =
-                        aivParams_.nCntIndex * nL1_ +
-                        aivParams_.mCntIndex * mL1_ * n_ +
-                        (aivParams_.kCntIndex * mBurstBase_ + copyGm2UbParams_.mBurst * index) * n_;
+        copyUb2GmParams_.offsetCGm = aivParams_.nCntIndex * nL1_ + aivParams_.mCntIndex * mL1_ * n_ +
+                                     (aivParams_.kCntIndex * mBurstBase_ + copyGm2UbParams_.mBurst * index) * n_ +
+                                     aivParams_.bCntIndex * m_ * n_;
         uint64_t singleCnt = 1;
         if (index == singleCnt - 1) {
             copyGm2UbParams_.mBurst = copyGm2UbParams_.mBurstOri - (singleCnt - 1) * copyGm2UbParams_.mBurst;
