@@ -246,7 +246,7 @@ ge::graphStatus DequantSwigluQuantTiling::checkWeightBiasActivate(gert::TilingCo
         OP_CHECK_IF(biasShapeSize != tilingData.get_colLen() * 2,
             OP_LOGE_FOR_INVALID_SHAPESIZE(context->GetNodeName(), "bias",
                 std::to_string(biasShapeSize).c_str(),
-                ("equal to " + std::to_string(tilingData.get_colLen() * 2)).c_str()),
+                (std::to_string(tilingData.get_colLen() * 2)).c_str()),
             return ge::GRAPH_FAILED);
     }
     tilingData.set_biasIsEmpty(biasShapeShapePtr == nullptr);
@@ -266,7 +266,7 @@ ge::graphStatus DequantSwigluQuantTiling::checkWeightBiasActivate(gert::TilingCo
     OP_CHECK_IF(weightScaleShapeSize != tilingData.get_colLen() * 2,
         OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(context->GetNodeName(), "weight_scale",
             std::to_string(weightScaleShapeSize).c_str(),
-            ("The shape of the weight scale is not equal to the last dimension of the xshape "
+            ("The shapesize of the weight scale is not equal to the last dimension of the xshape "
             + std::to_string(tilingData.get_colLen() * 2)).c_str()),
         return ge::GRAPH_FAILED);
 
@@ -317,7 +317,7 @@ ge::graphStatus DequantSwigluQuantTiling::checkInputShape(gert::TilingContext* c
     OP_CHECK_IF(checkQuantScaleSize,
         OP_LOGE_FOR_INVALID_SHAPESIZE(context->GetNodeName(), "quant_scale",
             std::to_string(quantScaleShapeSize).c_str(),
-            ("equal to " + std::to_string(tilingData.get_colLen()) + " or 1").c_str()),
+            (std::to_string(tilingData.get_colLen()) + " or 1").c_str()),
         return ge::GRAPH_FAILED);
     if (quantMode == 0) {
         auto quantOffsetShapePtr = context->GetOptionalInputShape(5);
@@ -333,7 +333,7 @@ ge::graphStatus DequantSwigluQuantTiling::checkInputShape(gert::TilingContext* c
         OP_CHECK_IF(checkQuantOffsetSize,
             OP_LOGE_FOR_INVALID_SHAPESIZE(context->GetNodeName(), "quant_offset",
                 std::to_string(quantOffsetShapeSize).c_str(),
-                ("equal to " + std::to_string(tilingData.get_colLen()) + " or 1").c_str()),
+                (std::to_string(tilingData.get_colLen()) + " or 1").c_str()),
             return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
@@ -502,7 +502,7 @@ bool DequantSwigluQuantTiling::CalcTiling(
         (tilingData.get_colLen() % blockSizeOf64B != 0)) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x",
             std::to_string(tilingData.get_colLen()).c_str(),
-            "input shape must be 64B aligned on ASCEND310P");
+            "colLen (the last dimension of x) must be 64B aligned on ASCEND310P");
         return false;
     }
     GluSingleTilingOptParam optTilingDb;
@@ -558,14 +558,16 @@ ge::graphStatus DequantSwigluQuantTiling::GetShapeAttrsInfoInner()
 
     int32_t dimNum = xShape.GetDimNum();
     if(xShape.GetDimNum() != yShape.GetDimNum()){
-        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(opName, "x and y", 
-        (std::to_string(xShape.GetDimNum()) + " and " + std::to_string(yShape.GetDimNum())).c_str(),
+        std::string incorrectDims = std::to_string(xShape.GetDimNum()) + " and " + std::to_string(yShape.GetDimNum());
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(opName, "x and y",
+        incorrectDims.c_str(),
         "The shape of y must be equal to the shape of x");
     }
-    
+
     if(xShape.GetDim(dimNum - 1) != yShape.GetDim(dimNum - 1) * 2){
-         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(opName, "x and y", 
-        (std::to_string(xShape.GetDimNum()) + " and " + std::to_string(yShape.GetDimNum())).c_str(),
+         std::string incorrectDims = std::to_string(xShape.GetDimNum()) + " and " + std::to_string(yShape.GetDimNum());
+         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(opName, "x and y",
+        incorrectDims.c_str(),
         "The last dimension of x must be twice the last dimension of y.");
     }
 
@@ -574,9 +576,11 @@ ge::graphStatus DequantSwigluQuantTiling::GetShapeAttrsInfoInner()
     const gert::Shape scaleShape = scaleShapePtr->GetStorageShape();
 
     if (static_cast<uint64_t>(scaleShape.GetShapeSize()) != tilingData.get_rowLen()) {
-         OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(opName, "scale", 
-        (std::to_string(static_cast<uint64_t>(scaleShape.GetShapeSize()))).c_str(),
-        ("scale shape must be equal to row length" + std::to_string(tilingData.get_rowLen())).c_str());
+         std::string incorrectSize = std::to_string(static_cast<uint64_t>(scaleShape.GetShapeSize()));
+         std::string reason =
+             "scale's shapesize must be equal to row length" + std::to_string(tilingData.get_rowLen()) +
+             "(row length is total number of elements of x across all dimensions except the last one.)";
+         OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(opName, "scale", incorrectSize.c_str(), reason.c_str());
     }
     return ge::GRAPH_SUCCESS;
 }

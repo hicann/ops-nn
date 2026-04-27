@@ -182,20 +182,26 @@ ge::graphStatus BatchNormV3InferLastChannelTiling::GetShapeAttrsInfo()
 
     if (format == FORMAT_NHWC) {
         OP_CHECK_IF(
-            xStorageShape.GetDimNum() != NHWC_DIM_NUM, OP_LOGE(opName, "Dims should be 4 with NHWC format."),
+            xStorageShape.GetDimNum() != NHWC_DIM_NUM,
+            OP_LOGE_FOR_INVALID_SHAPEDIM(opName, "x",
+                std::to_string(xStorageShape.GetDimNum()).c_str(), "4D with NHWC format"),
             return ge::GRAPH_FAILED);
         fusedALen = xStorageShape.GetDim(DIM_3);
         fusedBLen = xStorageShape.GetDim(DIM_0) * xStorageShape.GetDim(DIM_1) * xStorageShape.GetDim(DIM_2);
     } else if (format == FORMAT_NDHWC) {
         OP_CHECK_IF(
-            xStorageShape.GetDimNum() != NDHWC_DIM_NUM, OP_LOGE(opName, "Dims should be 5 with NDHWC format."),
+            xStorageShape.GetDimNum() != NDHWC_DIM_NUM,
+            OP_LOGE_FOR_INVALID_SHAPEDIM(opName, "x",
+                std::to_string(xStorageShape.GetDimNum()).c_str(), "5D with NDHWC format"),
             return ge::GRAPH_FAILED);
         fusedALen = xStorageShape.GetDim(DIM_4);
         fusedBLen = xStorageShape.GetDim(DIM_0) * xStorageShape.GetDim(DIM_1) * xStorageShape.GetDim(DIM_2) *
                     xStorageShape.GetDim(DIM_3);
     } else if (format == FORMAT_NCHW) {
         OP_CHECK_IF(
-            xStorageShape.GetDimNum() != NHWC_DIM_NUM, OP_LOGE(opName, "Dims should be 4 with NCHW format."),
+            xStorageShape.GetDimNum() != NHWC_DIM_NUM,
+            OP_LOGE_FOR_INVALID_SHAPEDIM(opName, "x",
+                std::to_string(xStorageShape.GetDimNum()).c_str(), "4D with NCHW format"),
             return ge::GRAPH_FAILED);
         bool hwIsOne = xStorageShape.GetDim(DIM_2) == 1 && xStorageShape.GetDim(DIM_3) == 1;
         if (!hwIsOne) {
@@ -205,7 +211,9 @@ ge::graphStatus BatchNormV3InferLastChannelTiling::GetShapeAttrsInfo()
         fusedBLen = xStorageShape.GetDim(DIM_0);
     } else if (format == FORMAT_NCDHW) {
         OP_CHECK_IF(
-            xStorageShape.GetDimNum() != NDHWC_DIM_NUM, OP_LOGE(opName, "Dims should be 5 with NCDHW format."),
+            xStorageShape.GetDimNum() != NDHWC_DIM_NUM,
+            OP_LOGE_FOR_INVALID_SHAPEDIM(opName, "x",
+                std::to_string(xStorageShape.GetDimNum()).c_str(), "5D with NCDHW format"),
             return ge::GRAPH_FAILED);
         bool dhwIsOne =
             xStorageShape.GetDim(DIM_2) == 1 && xStorageShape.GetDim(DIM_3) == 1 && xStorageShape.GetDim(DIM_4) == 1;

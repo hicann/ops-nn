@@ -22,6 +22,7 @@
 #include "register/op_def_registry.h"
 #include "register/tilingdata_base.h"
 #include "tiling/platform/platform_ascendc.h"
+#include "op_host/tiling_templates_registry.h"
 
 using namespace ge;
 using namespace ApplyAdamWV2RegbaseOp;
@@ -76,8 +77,12 @@ ge::graphStatus ApplyAdamWV2RegbaseTiling::CheckScalarInput() {
     auto inputShape = tilingContext_->GetInputShape(index);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, inputShape);
     auto storageShape = inputShape->GetStorageShape();
-    OP_CHECK_IF((!storageShape.IsScalar() && storageShape.GetShapeSize() != 1),
-                OP_LOGE(tilingContext_, "input step must be scalar."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        (!storageShape.IsScalar() && storageShape.GetShapeSize() != 1),
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            tilingContext_->GetNodeName(), "step", Ops::Base::ToString(storageShape).c_str(),
+            "step should be a scalar(0D) or have shape size 1"),
+        return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -108,7 +113,9 @@ ge::graphStatus ApplyAdamWV2RegbaseTiling::CheckMixAndOptionalInput(const gert::
     auto gradStorageShape = inputGradShape->GetStorageShape();
 
     OP_CHECK_IF(gradStorageShape != inputStorageShape,
-                OP_LOGE(tilingContext_, "the shape of input grad is different from that of input var."),
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext_->GetNodeName(), "var and grad",
+                    (Ops::Base::ToString(inputStorageShape) + " and " + Ops::Base::ToString(gradStorageShape)).c_str(),
+                    "the shape of input grad must be same as that of input var."),
                 return ge::GRAPH_FAILED);
     auto inputGradDesc = tilingContext_->GetInputDesc(INPUT_GRAD_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, inputGradDesc);
@@ -118,7 +125,9 @@ ge::graphStatus ApplyAdamWV2RegbaseTiling::CheckMixAndOptionalInput(const gert::
     if (maxGradNormDesc != nullptr) {
         auto maxGradNormDtype = maxGradNormDesc->GetDataType();
         OP_CHECK_IF(maxGradNormDtype != gradDtype,
-                    OP_LOGE(tilingContext_, "Optinal input max_grad_norm dtype not match with input grad dtype."),
+                    OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext_->GetNodeName(), "max_grad_norm and grad",
+                        (ge::TypeUtils::DataTypeToSerialString(maxGradNormDtype) + " and " + ge::TypeUtils::DataTypeToSerialString(gradDtype)).c_str(),
+                        "dtype of max_grad_norm must be same as dtype of grad."),
                     return ge::GRAPH_FAILED);
     }
     auto maxGradNormShape = tilingContext_->GetOptionalInputShape(OPTIONAL_INPUT_INDEX);
@@ -126,7 +135,9 @@ ge::graphStatus ApplyAdamWV2RegbaseTiling::CheckMixAndOptionalInput(const gert::
         auto maxGradNormStorageShape = maxGradNormShape->GetStorageShape();
         OP_CHECK_IF(
             maxGradNormStorageShape != gradStorageShape,
-            OP_LOGE(tilingContext_, "the shape of optinal input max_grad_norm is different from that of input grad."),
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext_->GetNodeName(), "max_grad_norm and grad",
+                (Ops::Base::ToString(maxGradNormStorageShape) + " and " + Ops::Base::ToString(gradStorageShape)).c_str(),
+                "the shape of max_grad_norm must be same as that of grad."),
             return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
@@ -147,11 +158,15 @@ ge::graphStatus ApplyAdamWV2RegbaseTiling::CheckShapeAndType() {
     for (const auto& pair : TENSOR_INDEX_LIST) {
         OP_CHECK_IF(
             CheckSameShape(pair.first, inputStorageShape) != ge::GRAPH_SUCCESS,
-            OP_LOGE(tilingContext_, "the shape of input %s is different from that of input var.", pair.second.c_str()),
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext_->GetNodeName(), (string("var and ") + pair.second).c_str(),
+                (Ops::Base::ToString(inputStorageShape) + " and " + Ops::Base::ToString(tilingContext_->GetInputShape(pair.first)->GetStorageShape())).c_str(),
+                (string("the shape of input ") + pair.second + " must be same as that of input var.").c_str()),
             return ge::GRAPH_FAILED);
         OP_CHECK_IF(
             CheckSameDtype(pair.first, inputDtype) != ge::GRAPH_SUCCESS,
-            OP_LOGE(tilingContext_, "the dtype of input %s is different from that of input var.", pair.second.c_str()),
+            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext_->GetNodeName(), (string("var and ") + pair.second).c_str(),
+                (ge::TypeUtils::DataTypeToSerialString(inputDtype) + " and " + ge::TypeUtils::DataTypeToSerialString(tilingContext_->GetInputDesc(pair.first)->GetDataType())).c_str(),
+                (string("the dtype of input ") + pair.second + " must be same as that of input var.").c_str()),
             return ge::GRAPH_FAILED);
     }
     OP_CHECK_IF(CheckMixAndOptionalInput(inputStorageShape) != ge::GRAPH_SUCCESS,
@@ -180,7 +195,9 @@ ge::graphStatus ApplyAdamWV2RegbaseTiling::DoAmsGradTiling(ElewiseBaseTiling& el
         ret =
             eleBaseTiling.DoTiling<ApplyAdamWV2AmsGradDAG<float, half, int64_t, float>::OpDag>(tiling_->elewiseTiling);
     } else {
-        OP_LOGE(tilingContext_, "input dtype is not support!");
+        OP_LOGE_FOR_INVALID_DTYPE(tilingContext_->GetNodeName(), "var, grad and step",
+            (ge::TypeUtils::DataTypeToSerialString(varDType) + ", " + ge::TypeUtils::DataTypeToSerialString(gradDType) + ", " + ge::TypeUtils::DataTypeToSerialString(stepDType)).c_str(),
+            "fp16, fp32, bf16 for var and grad, fp32 or int64 for step");
         ret = ge::GRAPH_FAILED;
     }
     return ret;
@@ -202,7 +219,9 @@ ge::graphStatus ApplyAdamWV2RegbaseTiling::DoNormTiling(ElewiseBaseTiling& eleBa
     } else if (varDType == ge::DT_FLOAT && gradDType != ge::DT_FLOAT && stepDType == ge::DT_INT64) {
         ret = eleBaseTiling.DoTiling<ApplyAdamWV2DAG<float, half, int64_t, float>::OpDag>(tiling_->elewiseTiling);
     } else {
-        OP_LOGE(tilingContext_, "input dtype is not support!");
+        OP_LOGE_FOR_INVALID_DTYPE(tilingContext_->GetNodeName(), "var, grad and step",
+            (ge::TypeUtils::DataTypeToSerialString(varDType) + ", " + ge::TypeUtils::DataTypeToSerialString(gradDType) + ", " + ge::TypeUtils::DataTypeToSerialString(stepDType)).c_str(),
+            "fp16, fp32, bf16 for var and grad, fp32 or int64 for step");
         ret = ge::GRAPH_FAILED;
     }
     return ret;

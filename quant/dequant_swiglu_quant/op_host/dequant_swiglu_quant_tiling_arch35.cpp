@@ -144,8 +144,8 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::GetInputX()
     for (size_t i = 0; i < xDimNum_; i++) {
         OP_CHECK_IF(xShape_.GetDim(i) <= 0,
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x",
-                std::to_string(xShape_.GetDim(i)).c_str(),
-                ("x shape[" + std::to_string(i) + "] must be positive").c_str()),
+                Ops::Base::ToString(xShape_).c_str(),
+                ("the dim[" + std::to_string(i) + "] of x must be positive").c_str()),
             return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
@@ -214,7 +214,7 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::GetAttrActivateDim()
   //如果activateDim不是尾轴，则不允许输入group
   if (activateDim_ != static_cast<int64_t>(xDimNum_ - 1)) {
     OP_CHECK_IF(hasGroupIndex_ == true,
-                  OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "group_index and activate_dim",
+                  OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "group_index and activate_dim",
                       ("group_index is not None, and activate_dim is " + std::to_string(activateDim_)).c_str(), "group_index must be None when activate_dim is not the last dim of x"),
                   return ge::GRAPH_FAILED);
   }
@@ -222,7 +222,7 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::GetAttrActivateDim()
   // activate_dim对应在x的轴需要是偶数
   OP_CHECK_IF((xShape_.GetDim(activateDim_) % 2) != 0,
       OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x",
-          std::to_string(xShape_.GetDim(activateDim_)).c_str(),
+          Ops::Base::ToString(xShape_).c_str(),
           "the x dimension of activateDim must be even"),
       return ge::GRAPH_FAILED);
   return ge::GRAPH_SUCCESS;
@@ -246,7 +246,7 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::CheckOutputY()
     if (yDType == ge::DT_FLOAT4_E2M1 || yDType == ge::DT_FLOAT4_E1M2) {
       OP_CHECK_IF((yShape.GetDim(xDimNum_ - 1) % 2) != 0,
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "y",
-            std::to_string(yShape.GetDim(xDimNum_ - 1)).c_str(),
+            Ops::Base::ToString(yShape).c_str(),
             "the last dim of y must be even when the type of y is FP4X2_E2M1 or FP4X2_E1M2"),
         return ge::GRAPH_FAILED);
     }
@@ -258,15 +258,15 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::CheckOutputY()
     for (size_t i = 0; i < yDimNum; i++) {
       if (static_cast<int>(i) != activateDim_){
         OP_CHECK_IF(yShape.GetDim(i) != xShape_.GetDim(i),
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "y",
-                std::to_string(yShape.GetDim(i)).c_str(),
-                ("y shape[" + std::to_string(i) + "] must be equal to x shape[" + std::to_string(i) + "]").c_str()),
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "x and y",
+                (Ops::Base::ToString(xShape_) + "and" + Ops::Base::ToString(yShape)).c_str(),
+                ("dim[" + std::to_string(i) + "] of y must be equal to dim[" + std::to_string(i) + "] of x").c_str()),
             return ge::GRAPH_FAILED);
       } else {
         OP_CHECK_IF(yShape.GetDim(i) != xShape_.GetDim(i) / SWI_FACTOR,
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "y",
-                std::to_string(yShape.GetDim(i)).c_str(),
-                ("y shape[" + std::to_string(i) + "] must be equal to half of x shape[" + std::to_string(i) + "]").c_str()),
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "x and y",
+                Ops::Base::ToString(yShape).c_str(),
+                ("dim[" + std::to_string(i) + "] of y must be equal to half of dim[" + std::to_string(i) + "] of x").c_str()),
             return ge::GRAPH_FAILED);
       }
     }
@@ -282,14 +282,14 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::CheckInputWeightScale()
     // 如果输入x是bf16 or float16，则weight_scale需要为空，非法性校验
     if (wScaleDesc != nullptr) {
       OP_CHECK_IF(xDType == ge::DT_FLOAT16 || xDType == ge::DT_BF16,
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "weight_scale",
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "weight_scale",
             "not None", "weight_scale must be None when x's datatype is in [bfloat16, float16]"),
         return ge::GRAPH_FAILED);
     }
     
     // 如果输入x是int32，则weight_scale必须有值，合法性校验
     OP_CHECK_IF((xDType == ge::DT_INT32) && (wScaleDesc == nullptr),
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "weight_scale",
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "weight_scale",
             "None", "weight_scale must be not None when x's datatype is int32"),
         return ge::GRAPH_FAILED);
 
@@ -313,13 +313,13 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::CheckInputWeightScale()
       
       if (wScaleDimNum == static_cast<size_t>(1)) {
         OP_CHECK_IF(hasGroupIndex_ == true,
-          OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "group_index",
+          OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "group_index",
               "not None", "group_index should be none when weight_scale dimension is 1"),
           return ge::GRAPH_FAILED);
         OP_CHECK_IF(wScaleShape.GetDim(0) != xShape_.GetDim(xDimNum_ - 1),
           OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "weight_scale",
-              std::to_string(wScaleShape.GetDim(0)).c_str(),
-              ("weight_scale shape[-1] must be equal to x shape[-1] " + std::to_string(xShape_.GetDim(xDimNum_ - 1))).c_str()),
+              Ops::Base::ToString(wScaleShape).c_str(),
+              ("weight_scale shape[0] must be equal to x shape[-1] " + std::to_string(xShape_.GetDim(xDimNum_ - 1))).c_str()),
           return ge::GRAPH_FAILED);
       }
       if (wScaleDimNum > static_cast<size_t>(1)) {
@@ -351,7 +351,7 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::CheckInputActScale()
     // 当x：bfloat16 or float16时，activate_scale需要为空
     if (aScaleDesc != nullptr) {
         OP_CHECK_IF(xDType == ge::DT_FLOAT16 || xDType == ge::DT_BF16,
-          OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "activation_scale",
+          OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "activation_scale",
               "not None", "activate_scale must be None when x's datatype is in [bfloat16, float16]"),
           return ge::GRAPH_FAILED);
 
@@ -368,7 +368,7 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::CheckInputActScale()
 
         OP_CHECK_IF(aScaleDimNum <= 0,
             OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "activation_scale",
-                std::to_string(aScaleDimNum).c_str(), "activation_scale dimension shoule be greater than 0"),
+                std::to_string(aScaleDimNum).c_str(), "greater than 0"),
             return ge::GRAPH_FAILED);
         
         // shape校验
@@ -376,7 +376,7 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::CheckInputActScale()
         int64_t aScaleSize = aScaleStorageShape->GetStorageShape().GetShapeSize();
         int64_t xSizeWithoutLastDim = xShape_.GetShapeSize() / xShape_.GetDim(xDimNum_ - 1);
         OP_CHECK_IF(aScaleSize != xSizeWithoutLastDim,
-                    OP_LOGE_FOR_INVALID_SHAPESIZE(context_->GetNodeName(), "activation_scale",
+                    OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(context_->GetNodeName(), "activation_scale",
                         std::to_string(aScaleSize).c_str(),
                         ("activation_scale's shape size shoule be equal to x's shape size without last dim " + std::to_string(xSizeWithoutLastDim)).c_str()),
                     return ge::GRAPH_FAILED);
@@ -423,11 +423,11 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::CheckInputBias()
       if (biasDimNum == static_cast<size_t>(1)) {
         OP_CHECK_IF(hasGroupIndex_ == true,
                     OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "group_index",
-                        "not None", "group_index should be none when bias dimension == 1"),
+                        "not None", "group_index should be none when bias dimension is 1"),
                     return ge::GRAPH_FAILED);
         OP_CHECK_IF(biasShape.GetDim(0) != xShape_.GetDim(xDimNum_ - 1),
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "bias",
-                std::to_string(biasShape.GetDim(0)).c_str(),
+                Ops::Base::ToString(biasShape).c_str(),
                 ("the last dimension of bias should be equal to the last dimension of x " +
                  std::to_string(xShape_.GetDim(xDimNum_ - 1))).c_str()),
             return ge::GRAPH_FAILED);
@@ -437,17 +437,26 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::CheckInputBias()
       if (biasDimNum == static_cast<size_t>(2)) {
         OP_CHECK_IF(biasShape.GetDim(1) != xShape_.GetDim(xDimNum_ - 1),
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "bias",
-                std::to_string(biasShape.GetDim(1)).c_str(),
+                Ops::Base::ToString(biasShape).c_str(),
                 ("the last dimension of bias should be equal to the last dimension of x " +
                  std::to_string(xShape_.GetDim(xDimNum_ - 1))).c_str()),
             return ge::GRAPH_FAILED);
           if (hasGroupIndex_) {
-            OP_CHECK_IF(biasShape.GetDim(0) != groupNum_,
-                OP_LOGE(context_->GetNodeName(), "when the dimension of bias is 2, the first dimension of bias should be equal to groupNum when group_index exists, but %ld currently, please check.", biasShape.GetDim(0)),
-                return ge::GRAPH_FAILED);
+              if (biasShape.GetDim(0) != groupNum_) {
+                  std::string reason =
+                      "when the dimension of bias is 2 and group_index exists, the first dimension of bias (" +
+                      std::to_string(biasShape.GetDim(0)) +
+                      ") should be equal to the first dimension of group_index (" + std::to_string(groupNum_) +
+                      "), please check";
+                  OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                      context_->GetNodeName(), "bias", Ops::Base::ToString(biasShape).c_str(), reason.c_str());
+                  return ge::GRAPH_FAILED;
+              }
           } else {
             OP_CHECK_IF(biasShape.GetDim(0) != 1,
-                OP_LOGE(context_->GetNodeName(), "when the dimension of bias is 2, the first dimension of bias should be 1 when group_index not exists, but %ld currently, please check.", biasShape.GetDim(0)),
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "bias",
+                std::to_string(biasShape.GetDim(0)).c_str(),
+                "when the dimension of bias is 2 and group_index does not exist, the first dimension of bias should be 1"),
                 return ge::GRAPH_FAILED);
           }
       }

@@ -13,6 +13,7 @@
  * \brief
  */
 #include "group_norm_silu_tiling.h"
+#include "op_host/tiling_templates_registry.h"
 namespace optiling {
 static const uint64_t X_SHAPE_MIN_LEN = 2;
 static const uint64_t INPUT_IDX_X = 0;
@@ -122,10 +123,11 @@ static ge::graphStatus CheckGammaAndBetaParams(
         uint64_t betaDtypeSize = ge::GetSizeByDataType(betaDtype);
         OP_CHECK_IF(
             (gammaDtypeSize != betaDtypeSize),
-            OP_LOGE(
-                context->GetNodeType(),
-                "The dtype of gamma and beta must be consistent, currently gamma is %d, beta is %d.", gammaDtype,
-                betaDtype),
+            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                context->GetNodeName(), "gamma and beta",
+                (ge::TypeUtils::DataTypeToSerialString(gammaDtype) + " and " +
+                 ge::TypeUtils::DataTypeToSerialString(betaDtype)).c_str(),
+                "The datatype size of gamma and beta must be consistent."),
             return ge::GRAPH_FAILED);
     }
 
@@ -133,13 +135,19 @@ static ge::graphStatus CheckGammaAndBetaParams(
         auto gammaShape = gammaShapePtr->GetStorageShape();
         uint64_t gammaSizes = gammaShape.GetDim(DIM_0);
         OP_CHECK_IF(
-            (gammaShape.GetDimNum() != 1 || gammaSizes != channel),
-            OP_LOGE(
-                context->GetNodeType(),
-                "Gamma dimension should be one, and the shape of gamma must be "
-                "the same as channel size of input, currently is "
-                "%lu.",
-                gammaSizes),
+            gammaShape.GetDimNum() != 1,
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                context->GetNodeName(), "gamma",
+                std::to_string(gammaShape.GetDimNum()).c_str(),
+                "the dimension number of gamma must be 1"),
+            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(
+            gammaSizes != channel,
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                context->GetNodeName(), "gamma",
+                Ops::Base::ToString(gammaShape).c_str(),
+                ("the shape of gamma must be the same as channel(dim[1] of input x), "
+                 "got gamma size = " + std::to_string(gammaSizes) + ", channel = " + std::to_string(channel)).c_str()),
             return ge::GRAPH_FAILED);
         auto gammaDtype = gammaDtypePtr->GetDataType();
         OP_CHECK_IF(
@@ -154,17 +162,17 @@ static ge::graphStatus CheckGammaAndBetaParams(
         uint64_t betaSizes = betaShape.GetDim(DIM_0);
         OP_CHECK_IF(
             (betaShape.GetDimNum() != 1 || betaSizes != channel),
-            OP_LOGE(
-                context->GetNodeType(),
-                "Beta dimension should be one, and the shape of beta must be "
-                "the same as channel size of input, currently is "
-                "%lu.",
-                betaSizes),
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                context->GetNodeName(), "beta",
+                Ops::Base::ToString(betaShape).c_str(),
+                ("Beta dimension should be one, and the shape of beta must be "
+                 "the same as channel(dim[1] of input x), got beta size = " +
+                 std::to_string(betaSizes) + ", channel = " + std::to_string(channel)).c_str()),
             return ge::GRAPH_FAILED);
         auto betaDtype = betaDtypePtr->GetDataType();
         OP_CHECK_IF(
             (CheckMixType(context, xDtype, betaDtype) == ge::GRAPH_FAILED),
-            OP_LOGE(
+            OP_LOGE(	 
                 context->GetNodeType(), "The dtype combination of gamma, beta and inputs is invalid."),
             return ge::GRAPH_FAILED);
     }
@@ -176,14 +184,19 @@ static ge::graphStatus CheckInputXShape(const gert::TilingContext* context, cons
     uint64_t xDims = xShape.GetDimNum();
     OP_CHECK_IF(
         (xDims < X_SHAPE_MIN_LEN),
-        OP_LOGE(context->GetNodeType(), "inputDims can't be smaller than 2."),
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "x",
+            std::to_string(xDims).c_str(),
+            "greater than or equal to 2"),
         return ge::GRAPH_FAILED);
     for (uint64_t i = 0; i < xDims; i++) {
         int64_t curDim = xShape.GetDim(i);
         OP_CHECK_IF(
             (curDim < 0),
-            OP_LOGE(
-                context->GetNodeType(), "The input %lu dimension must be greater than 0, currently is %ld.", i, curDim),
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                context->GetNodeName(), "x",
+                Ops::Base::ToString(xShape).c_str(),
+                ("The dim[" + std::to_string(i) + "] of x must be greater than 0, got " +
+                 std::to_string(curDim)).c_str()),
             return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
@@ -198,7 +211,7 @@ static ge::graphStatus CheckInputParams(const gert::TilingContext* context)
     uint64_t xDtypeSize = ge::GetSizeByDataType(xDtype);
     OP_CHECK_IF(
         (xDtypeSize <= 0),
-        OP_LOGE(context->GetNodeType(), "xDtypeSize is invalid %lu, please check.", xDtypeSize),
+        OP_LOGE(context->GetNodeName(), "xDtypeSize is invalid %lu, please check.", xDtypeSize),
         return ge::GRAPH_FAILED);
     auto xShape = inputX->GetStorageShape();
     uint64_t channel = xShape.GetDim(DIM_1);
@@ -222,11 +235,16 @@ static ge::graphStatus CheckAttrParams(const gert::TilingContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
     const int64_t* numGroups = attrs->GetAttrPointer<int64_t>(INDEX_NUM_GROUPS);
     OP_CHECK_IF(
-        (*numGroups <= 0), OP_LOGE(context->GetNodeType(), "numGroups must be bigger than 0."),
+        (*numGroups <= 0),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "num_groups",
+            std::to_string(*numGroups).c_str(), "num_groups must be bigger than 0."),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         (channel % *numGroups != 0),
-        OP_LOGE(context->GetNodeType(), "channel must be integer multiples of numGroups."),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "num_groups",
+            std::to_string(*numGroups).c_str(),
+            ("channel(dim[1] of input x) must be integer multiples of num_groups, "
+             "got channel = " + std::to_string(channel) + ", num_groups = " + std::to_string(*numGroups)).c_str()),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -751,14 +769,14 @@ static ge::graphStatus CheckEmptyTensorParams(const gert::TilingContext* context
 
 ge::graphStatus Tiling4GroupNormSiluRegBase(gert::TilingContext* context)
 {
-    OP_LOGD(context->GetNodeType(), "Start running Tiling4GroupNormSilu.");
+    OP_LOGD(context->GetNodeName(), "Start running Tiling4GroupNormSilu.");
     // check input && attrs params
     OP_CHECK_IF(
         (CheckInputParams(context) != ge::GRAPH_SUCCESS),
-        OP_LOGE(context->GetNodeType(), "InputParams is invalid."), return ge::GRAPH_FAILED);
+        OP_LOGE(context->GetNodeName(), "InputParams is invalid."), return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         (CheckAttrParams(context) != ge::GRAPH_SUCCESS),
-        OP_LOGE(context->GetNodeType(), "AttrParams is invalid."), return ge::GRAPH_FAILED);
+        OP_LOGE(context->GetNodeName(), "AttrParams is invalid."), return ge::GRAPH_FAILED);
     auto xInputShape = context->GetInputShape(INPUT_IDX_X);
     OP_CHECK_NULL_WITH_CONTEXT(context, xInputShape);
     uint64_t xShapeSize = xInputShape->GetStorageShape().GetShapeSize();
@@ -776,10 +794,10 @@ ge::graphStatus Tiling4GroupNormSiluRegBase(gert::TilingContext* context)
     SetTilingForRegbase(context, tilingData);
     OP_CHECK_IF(
         GroupNormSiluSetTilingData(context, tilingData) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context->GetNodeType(), "GroupNormSiluSetTilingData set tiling data fail."),
+        OP_LOGE(context->GetNodeName(), "GroupNormSiluSetTilingData set tiling data fail."),
         return ge::GRAPH_FAILED);
     OP_LOGI(
-        context->GetNodeType(),
+        context->GetNodeName(),
         "tilingData is numGroups:%ld, hwNum:%ld, elemNum:%ld, shapeN:%ld, shapeC:%ld, shapeD:%ld, realCoreNum:%ld, \
             numPerCore:%ld, numLastCore:%ld, processSize:%ld, loopNum:%ld, loopTail:%ld, innerLoopNum:%ld, \
             innerLoopTail:%ld, tilingKey:%ld, epsilon:%f, activateSilu:%ld, parallelN:%ld, ubSize:%ld, dichotomyAddPower:%ld, \

@@ -402,9 +402,9 @@ ge::graphStatus DequantSwigluQuantDskTiling::CheckScaleShapeWithDim(const int64_
                       std::to_string(scaleShape.GetDimNum()).c_str(), "greater than or equal to 1"),
                   return ge::GRAPH_FAILED);
   OP_CHECK_IF(scaleShape.GetDim(scaleShape.GetDimNum() - 1) != expectDim,
-                  OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), paramName,
+                  OP_LOGE_FOR_INVALID_SHAPE(context_->GetNodeName(), paramName,
                       Ops::Base::ToString(scaleShape).c_str(),
-                      ("ScaleShape[-1] must be " + std::to_string(expectDim)).c_str()),
+                      std::to_string(expectDim).c_str()),
                   return ge::GRAPH_FAILED);
   if (groupNum_ > 1) {
     // check with group index
@@ -415,9 +415,11 @@ ge::graphStatus DequantSwigluQuantDskTiling::CheckScaleShapeWithDim(const int64_
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         scaleShape.GetDim(0) != groupNum_,
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), paramName,
-            Ops::Base::ToString(scaleShape).c_str(),
-            ("ScaleShape[0] must be groupNum(" + std::to_string(groupNum_) + ")").c_str()),
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context_->GetNodeName(), paramName, Ops::Base::ToString(scaleShape).c_str(),
+            ("the first dimension of " + std::string(paramName) + " (" + std::to_string(scaleShape.GetDim(0)) +
+             ") must be equal to the first dimension of group_index (" + std::to_string(groupNum_) + ")")
+                .c_str()),
         return ge::GRAPH_FAILED);
   } else {
     OP_CHECK_IF(
@@ -428,9 +430,9 @@ ge::graphStatus DequantSwigluQuantDskTiling::CheckScaleShapeWithDim(const int64_
     int64_t groupNumFromScale = scaleShape.GetDimNum() <= 1 ? 1 : scaleShape.GetDim(0);
     OP_CHECK_IF(
         groupNumFromScale != 1,
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), paramName,
+        OP_LOGE_FOR_INVALID_SHAPE(context_->GetNodeName(), paramName,
             Ops::Base::ToString(scaleShape).c_str(), 
-            ("ScaleShape must be [1," + std::to_string(expectDim) + "] or [" + std::to_string(expectDim) + "]").c_str()),
+            ("[1," + std::to_string(expectDim) + "] or [" + std::to_string(expectDim) + "]").c_str()),
         return ge::GRAPH_FAILED);
   }
   return ge::GRAPH_SUCCESS;
@@ -450,18 +452,18 @@ ge::graphStatus DequantSwigluQuantDskTiling::CheckStaticQuantShape(const int64_t
   colLen = quantShape.GetDim(quantShape.GetDimNum() - 1);
   if(quantShape.GetDimNum() == 1){
     OP_CHECK_IF(colLen != groupNum_,
-              OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), paramName,
+              OP_LOGE_FOR_INVALID_SHAPE(context_->GetNodeName(), paramName,
                   Ops::Base::ToString(quantShape).c_str(),
-                  ("QuantShape must be [" + std::to_string(groupNum_) + ", ] or [" +
+                  ("[" + std::to_string(groupNum_) + ", ] or [" +
                    std::to_string(groupNum_) + ", " + std::to_string(outDimy_) + "]").c_str()),
               return ge::GRAPH_FAILED);
     colLen = 1;
   }
   else {
     OP_CHECK_IF(colLen != outDimy_ || quantShape.GetDim(0) != groupNum_,
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), paramName,
+        OP_LOGE_FOR_INVALID_SHAPE(context_->GetNodeName(), paramName,
             Ops::Base::ToString(quantShape).c_str(),
-            ("QuantShape must be [" + std::to_string(groupNum_) + ", ] or [" +
+            ("[" + std::to_string(groupNum_) + ", ] or [" +
              std::to_string(groupNum_) + ", " + std::to_string(outDimy_) + "]").c_str()),
         return ge::GRAPH_FAILED);
   }

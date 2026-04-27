@@ -228,7 +228,7 @@ ge::graphStatus DynamicDualLevelMxQuantTiling::CheckSmoothScaleDtypeShape()
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
                 context_->GetNodeName(), "smooth_scale",
                 Ops::Base::ToString(smoothScaleShape).c_str(),
-                ("The size of smooth_scale should match the size of the last axis of x " +
+                ("smooth_scale can NOT be scalar and the size of smooth_scale should match the size of the last axis of x " +
                  std::to_string(xShape.GetDim(xShape.GetDimNum() - 1))).c_str()),
             return ge::GRAPH_FAILED);
         needSmoothScale = true;

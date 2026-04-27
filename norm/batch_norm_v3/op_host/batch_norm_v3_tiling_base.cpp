@@ -14,6 +14,7 @@
  */
 
 #include "batch_norm_v3_tiling.h"
+#include "op_host/tiling_templates_registry.h"
 
 static constexpr int64_t NCHW_DIM_NUM = 4;
 static constexpr int64_t NCDHW_DIM_NUM = 5;
@@ -68,23 +69,33 @@ bool BatchNormV3TilingBase::CheckInputDtype()
 
     auto varDtype = context_->GetInputDesc(VAR_INPUT_IDX)->GetDataType();
     OP_CHECK_IF(
-        !IsDtypeSupported(xDtype), OP_LOGE("BatchNormV3TilingBase", "x dtype must in [DT_FLOAT, DT_FLOAT16, DT_BF16]"),
+        !IsDtypeSupported(xDtype), OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x",
+            ge::TypeUtils::DataTypeToSerialString(xDtype).c_str(), "DT_FLOAT, DT_FLOAT16 or DT_BF16"),
         return false);
     OP_CHECK_IF(
         (!IsDtypeSupported(weightDtype)),
-        OP_LOGE("BatchNormV3TilingBase", "weight dtype must in [DT_FLOAT, DT_FLOAT16, DT_BF16]"), return false);
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "weight",
+            ge::TypeUtils::DataTypeToSerialString(weightDtype).c_str(), "DT_FLOAT, DT_FLOAT16 or DT_BF16"), return false);
     OP_CHECK_IF(
         (xDtype != weightDtype) && (weightDtype != ge::DT_FLOAT),
-        OP_LOGE("BatchNormV3TilingBase", "when weight dtype not same as x dtype, weight dtype must be DT_FLOAT"),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "weight",
+            ge::TypeUtils::DataTypeToSerialString(weightDtype).c_str(),
+            "when weight dtype not same as x dtype, weight dtype must be DT_FLOAT"),
+        return false);
+    if (weightDtype != biasDtype) {
+        std::string dtypesStr = ge::TypeUtils::DataTypeToSerialString(weightDtype) + " and " +
+                                ge::TypeUtils::DataTypeToSerialString(biasDtype);
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "weight and bias",
+            dtypesStr.c_str(), "bias dtype must be same as weight dtype");
+        return false;
+    }
+    OP_CHECK_IF(
+        (meanDtype != ge::DT_FLOAT), OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "running_mean",
+            ge::TypeUtils::DataTypeToSerialString(meanDtype).c_str(), "DT_FLOAT"),
         return false);
     OP_CHECK_IF(
-        (weightDtype != biasDtype), OP_LOGE("BatchNormV3TilingBase", "bias dtype must be same as weight dtype"),
-        return false);
-    OP_CHECK_IF(
-        (meanDtype != ge::DT_FLOAT), OP_LOGE("BatchNormV3TilingBase", "running_mean dtype should be DT_FLOAT"),
-        return false);
-    OP_CHECK_IF(
-        (varDtype != ge::DT_FLOAT), OP_LOGE("BatchNormV3TilingBase", "running_var dtype should be DT_FLOAT"),
+        (varDtype != ge::DT_FLOAT), OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "running_var",
+            ge::TypeUtils::DataTypeToSerialString(varDtype).c_str(), "DT_FLOAT"),
         return false);
     commonParams.xDtype = xDtype;
     return true;
@@ -112,62 +123,77 @@ bool BatchNormV3TilingBase::CheckInputShape()
     if (format == FORMAT_NCHW) {
         OP_CHECK_IF(
             xStorageShape.GetDimNum() != NCHW_DIM_NUM,
-            OP_LOGE("BatchNormV3TilingBase", "x shape dims should be 4 with NCHW format."), return false);
+            OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x",
+                std::to_string(xStorageShape.GetDimNum()).c_str(), "4D with NCHW format"), return false);
         commonParams.patternR1 = xStorageShape.GetDim(DIM_0);
         commonParams.patternA = xStorageShape.GetDim(DIM_1);
         commonParams.patternR0 = xStorageShape.GetDim(DIM_2) * xStorageShape.GetDim(DIM_3);
     } else if (format == FORMAT_NCDHW) {
         OP_CHECK_IF(
             xStorageShape.GetDimNum() != NCDHW_DIM_NUM,
-            OP_LOGE("BatchNormV3TilingBase", "x shape dims should be 5 with NCDHW format."), return false);
+            OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x",
+                std::to_string(xStorageShape.GetDimNum()).c_str(), "5D with NCDHW format"), return false);
         commonParams.patternR1 = xStorageShape.GetDim(DIM_0);
         commonParams.patternA = xStorageShape.GetDim(DIM_1);
         commonParams.patternR0 =
             xStorageShape.GetDim(DIM_2) * xStorageShape.GetDim(DIM_3) * xStorageShape.GetDim(DIM_4);
     } else {
-        OP_LOGE("BatchNormV3TilingBase", "Not supported x format.");
+        OP_LOGE_FOR_INVALID_FORMAT(context_->GetNodeName(), "x",
+            ge::TypeUtils::FormatToSerialString(format).c_str(), "NCHW and NCDHW");
         return false;
     }
     OP_CHECK_IF(
-        commonParams.patternR1 <= 0, OP_LOGE(commonParams.nodeName, "x shape dim 0 should be more than zero."),
+        commonParams.patternR1 <= 0,
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x",
+            Ops::Base::ToString(xStorageShape).c_str(), "x shape dim 0 should be more than zero."),
         return false);
     OP_CHECK_IF(
-        commonParams.patternA <= 0, OP_LOGE(commonParams.nodeName, "x shape dim 1 should be more than zero."),
+        commonParams.patternA <= 0,
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x",
+            Ops::Base::ToString(xStorageShape).c_str(), "x shape dim 1 should be more than zero."),
         return false);
     OP_CHECK_IF(
-        commonParams.patternR0 <= 0, OP_LOGE(commonParams.nodeName, "x shape dim_2 * dim_3 should be more than zero."),
+        commonParams.patternR0 <= 0,
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x",
+            Ops::Base::ToString(xStorageShape).c_str(), "x shape dim_2 * dim_3 * dim_4 should be more than zero."),
         return false);
-    OP_CHECK_IF(
-        bnWeightStorageShape.GetShapeSize() != commonParams.patternA,
-        OP_LOGE(
-            commonParams.nodeName, "weight ShapeSize: %ld should equal x shape C dim: %ld",
-            bnWeightStorageShape.GetShapeSize(), commonParams.patternA),
-        return false);
-    OP_CHECK_IF(
-        bnBiasStorageShape.GetShapeSize() != commonParams.patternA,
-        OP_LOGE(
-            commonParams.nodeName, "bias ShapeSize: %ld should equal x shape C dim: %ld",
-            bnBiasStorageShape.GetShapeSize(), commonParams.patternA),
-        return false);
-    OP_CHECK_IF(
-        bnMeanStorageShape.GetShapeSize() != commonParams.patternA,
-        OP_LOGE(
-            commonParams.nodeName, "running_mean ShapeSize: %ld should equal x shape C dim: %ld",
-            bnMeanStorageShape.GetShapeSize(), commonParams.patternA),
-        return false);
-    OP_CHECK_IF(
-        bnVarStorageShape.GetShapeSize() != commonParams.patternA,
-        OP_LOGE(
-            commonParams.nodeName, "running_var ShapeSize: %ld should equal x shape C dim: %ld",
-            bnVarStorageShape.GetShapeSize(), commonParams.patternA),
-        return false);
+    if (bnWeightStorageShape.GetShapeSize() != commonParams.patternA) {
+        std::string reasonMsg = "weight ShapeSize: " + std::to_string(bnWeightStorageShape.GetShapeSize()) +
+                                " should be equal to the C dimension of x (the second dimension is C dimension): " + std::to_string(commonParams.patternA);
+        OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(context_->GetNodeName(), "weight",
+            std::to_string(bnWeightStorageShape.GetShapeSize()).c_str(), reasonMsg.c_str());
+        return false;
+    }
+    if (bnBiasStorageShape.GetShapeSize() != commonParams.patternA) {
+        std::string reasonMsg = "bias ShapeSize: " + std::to_string(bnBiasStorageShape.GetShapeSize()) +
+                                " should be equal to the C dimension of x (the second dimension is C dimension): " + std::to_string(commonParams.patternA);
+        OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(context_->GetNodeName(), "bias",
+            std::to_string(bnBiasStorageShape.GetShapeSize()).c_str(), reasonMsg.c_str());
+        return false;
+    }
+    if (bnMeanStorageShape.GetShapeSize() != commonParams.patternA) {
+        std::string reasonMsg = "running_mean ShapeSize: " + std::to_string(bnMeanStorageShape.GetShapeSize()) +
+                                " should be equal to the C dimension of x (the second dimension is C dimension): " + std::to_string(commonParams.patternA);
+        OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(context_->GetNodeName(), "running_mean",
+            std::to_string(bnMeanStorageShape.GetShapeSize()).c_str(), reasonMsg.c_str());
+        return false;
+    }
+    if (bnVarStorageShape.GetShapeSize() != commonParams.patternA) {
+        std::string reasonMsg = "running_var ShapeSize: " + std::to_string(bnVarStorageShape.GetShapeSize()) +
+                                " should be equal to the C dimension of x (the second dimension is C dimension): " + std::to_string(commonParams.patternA);
+        OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(context_->GetNodeName(), "running_var",
+            std::to_string(bnVarStorageShape.GetShapeSize()).c_str(), reasonMsg.c_str());
+        return false;
+    }
     return true;
 }
 
 bool BatchNormV3TilingBase::CheckInputParam()
 {
     OP_CHECK_IF(
-        isTrainingValue == false, OP_LOGE(commonParams.nodeName, "Attr is_training false is not supported."),
+        isTrainingValue == false,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "is_training",
+            "false", "Attr is_training does not support false."),
         return false);
     // check输入dtype
     OP_CHECK_IF(
@@ -216,7 +242,8 @@ ge::graphStatus BatchNormV3TilingBase::GetShapeAttrsInfo()
         OP_LOGE("BatchNormV3", "TilingContext is nullptr.");
         return ge::GRAPH_FAILED;
     }
-    commonParams.nodeName = context_->GetNodeName();
+    const char* nodeNamePtr = context_->GetNodeName();
+    commonParams.nodeName = (nodeNamePtr != nullptr) ? nodeNamePtr : "";
     // 获取attr
     auto attrs = context_->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context_, attrs);

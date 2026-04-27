@@ -248,17 +248,17 @@ ge::graphStatus CheckOffsetArgs(
     OP_CHECK_IF(outputShapeInfo.GetDim(LIST_INDEX_1) != offsetHeightSame,
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "y",
             Ops::Base::ToString(outputShapeInfo).c_str(),
-            ("y's height(y[1]) " + std::to_string(outputHeight) +
-             " should be offsets height(offsets[1]) " + std::to_string(offsetHeight) +
-             " * ksize height(ksize[0]) " + std::to_string(deformableOffsetAttrInfo.dimKh)).c_str()),
+            ("y's height(dim1 of y) " + std::to_string(outputHeight) +
+             " should be offsets height(dim1 of offsets) " + std::to_string(offsetHeight) +
+             " * ksize height(dim0 of ksize) " + std::to_string(deformableOffsetAttrInfo.dimKh)).c_str()),
         return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(outputShapeInfo.GetDim(LIST_INDEX_2) != offsetWidthSame,
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "y",
             Ops::Base::ToString(outputShapeInfo).c_str(),
-            ("y's width(y[2]) " + std::to_string(outputWidth) +
-             " should be offsets width(offsets[2]) " + std::to_string(offsetWidth) +
-             " * ksize width(ksize[1]) " + std::to_string(deformableOffsetAttrInfo.dimKw)).c_str()),
+            ("y's width(dim2 of y) " + std::to_string(outputWidth) +
+             " should be offsets width(dim2 of offsets) " + std::to_string(offsetWidth) +
+             " * ksize width(dim1 of ksize) " + std::to_string(deformableOffsetAttrInfo.dimKw)).c_str()),
         return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(deformableOffsetsOffset.imgOutHeight != inputOffsetShape.GetDim(LIST_INDEX_1),

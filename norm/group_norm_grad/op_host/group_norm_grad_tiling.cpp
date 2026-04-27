@@ -16,6 +16,7 @@
 #include "group_norm_grad_empty_tiling_arch35.h"
 #include "group_norm_grad_tiling.h"
 #include "op_host/tiling_util.h"
+#include "op_host/tiling_templates_registry.h"
 
 namespace {
 constexpr int64_t FP32_MODE = 0;
@@ -123,12 +124,21 @@ bool GroupNormGradTiling::CheckInputDtype()
         return false);
     auto inputDesc = tilingContext->GetInputDesc(INPUT_0);
     this->dtypeStr = inputDesc->GetDataType();
-    OP_TILING_CHECK(
-        !(this->dtypeStr == tilingContext->GetInputDesc(INPUT_1)->GetDataType() &&
+    if (!(this->dtypeStr == tilingContext->GetInputDesc(INPUT_1)->GetDataType() &&
           this->dtypeStr == tilingContext->GetInputDesc(INPUT_2)->GetDataType() &&
           this->dtypeStr == tilingContext->GetInputDesc(INPUT_3)->GetDataType() &&
-          this->dtypeStr == tilingContext->GetInputDesc(INPUT_4)->GetDataType()),
-        OP_LOGE(tilingContext->GetNodeName(), "Input dtypeBytes is not same"), return false);
+          this->dtypeStr == tilingContext->GetInputDesc(INPUT_4)->GetDataType())) {
+        std::string dtypesMsg =
+            ge::TypeUtils::DataTypeToSerialString(this->dtypeStr) + " , " +
+            ge::TypeUtils::DataTypeToSerialString(tilingContext->GetInputDesc(INPUT_1)->GetDataType()) + " , " +
+            ge::TypeUtils::DataTypeToSerialString(tilingContext->GetInputDesc(INPUT_2)->GetDataType()) + " , " +
+            ge::TypeUtils::DataTypeToSerialString(tilingContext->GetInputDesc(INPUT_3)->GetDataType()) + " and " +
+            ge::TypeUtils::DataTypeToSerialString(tilingContext->GetInputDesc(INPUT_4)->GetDataType());
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            tilingContext->GetNodeName(), "x, dy, dx, mean and rstd", dtypesMsg.c_str(),
+            "data types of x, dy, dx, mean and rstd must be same");
+        return false;
+    }
     this->dtypeBytes = GetDataTypeSize(this->dtypeStr);
     OP_TILING_CHECK((this->dtypeBytes == 0), OP_LOGE(tilingContext->GetNodeName(), "dtypeBytes is zero"), return false);
     // Calculate elePerBlock based on the value of dtypeBytes
@@ -169,7 +179,9 @@ bool GroupNormGradTiling::CheckInputShape()
     auto dimNum = dyShape.GetDimNum();
     OP_TILING_CHECK(
         dyShape != xShape,
-        OP_LOGE(tilingContext->GetNodeName(), "Input shape check Failed, dy shape should be same with x shape"),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext->GetNodeName(), "dy and x",
+            (Ops::Base::ToString(dyShape) + " and " + Ops::Base::ToString(xShape)).c_str(),
+            "dy shape should be same with x shape."),
         return false);
     attrs = tilingContext->GetAttrs();
     OP_TILING_CHECK((attrs == nullptr), OP_LOGE(tilingContext->GetNodeName(), "Get attrs Failed."), return false);
@@ -182,41 +194,67 @@ bool GroupNormGradTiling::CheckInputShape()
     
     OP_TILING_CHECK(
         meanShape.GetDim(DIM1) != tilingParams->g,
-        OP_LOGE(tilingContext->GetNodeName(), "Check shape failed, group_num shuold be same with mean.shape[1]"),
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(tilingContext->GetNodeName(), "mean",
+            Ops::Base::ToString(meanShape).c_str(),
+            "the second dim of mean should be same with group_num."),
         return false);
     tilingParams->n = dyShape.GetDim(DIM0);
     tilingParams->c = dyShape.GetDim(DIM1);
     OP_TILING_CHECK(
         meanShape.GetDim(DIM0) != tilingParams->n,
-        OP_LOGE(tilingContext->GetNodeName(), "Check shape failed, mean.shape[0] should be same with N(x.shape[0])"),
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(tilingContext->GetNodeName(), "mean",
+            Ops::Base::ToString(meanShape).c_str(),
+            "the first dim of mean should be same with the first dim of x"),
         return false);
     OP_TILING_CHECK(
         meanShape != rstdShape,
-        OP_LOGE(tilingContext->GetNodeName(), "Check shape failed, Shape of mean and rstd not same."), return false);
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext->GetNodeName(), "mean and rstd",
+            (Ops::Base::ToString(meanShape) + " and " + Ops::Base::ToString(rstdShape)).c_str(),
+            "Shape of mean and rstd must be same."), return false);
     OP_TILING_CHECK(
         (meanShape.GetDimNum() != 2 || rstdShape.GetDimNum() != 2),
-        OP_LOGE(tilingContext->GetNodeName(), "Check shape failed, Dim of mean and rstd should be 2."), return false);
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(tilingContext->GetNodeName(), "mean and rstd",
+            (std::to_string(meanShape.GetDimNum()) + " and " + std::to_string(rstdShape.GetDimNum())).c_str(),
+            "they should be 2D"), return false);
     OP_TILING_CHECK(
         (gammaShape.GetDimNum() != 1 || gammaShape.GetDim(DIM0) != tilingParams->c),
-        OP_LOGE(tilingContext->GetNodeName(), "Check shape failed, Shape of gamma should be (C,)."), return false);
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(tilingContext->GetNodeName(), "gamma",
+            Ops::Base::ToString(gammaShape).c_str(),
+            ("Shape of gamma should be (C,), where C is dim[1] of input x, got C = " +
+             std::to_string(tilingParams->c)).c_str()), return false);
     tilingParams->nxg = tilingParams->n * tilingParams->g;
     OP_TILING_CHECK(
-        tilingParams->nxg == 0, OP_LOGE(tilingContext->GetNodeName(), "Check shape failed, N x G should not be 0."),
+        tilingParams->nxg == 0, OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(tilingContext->GetNodeName(), "x",
+            Ops::Base::ToString(xShape).c_str(),
+            ("N * G should not be 0, where N is dim[0] of input x, got N = " +
+             std::to_string(tilingParams->n) + ", G is num_groups, got G = " +
+             std::to_string(tilingParams->g)).c_str()),
         return false);
     tilingParams->channelPerGroup = tilingParams->c / tilingParams->g;
     // C / G must not be zero, and C must be an integer multiple of G
-    OP_TILING_CHECK(
-        (tilingParams->channelPerGroup == 0 || tilingParams->c % tilingParams->g != 0),
-        OP_LOGE(tilingContext->GetNodeName(), "Group_num or Channel num is invalid"), return false);
+    if(tilingParams->channelPerGroup == 0 || tilingParams->c % tilingParams->g != 0){
+        std::string reasonMsg = "The C axis of parameter dy must can be completely divided into num_groups(" +
+                                std::to_string(tilingParams->g) +
+                                ") uniform groups, and each group "
+                                "must not be empty";
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            tilingContext->GetNodeName(), "dy", Ops::Base::ToString(dyShape).c_str(), reasonMsg.c_str());
+            return false;
+    }
     OP_TILING_CHECK(
         (tilingParams->c > MAX_C_SIZE),
-        OP_LOGE(tilingContext->GetNodeName(), "Check shape failed, C should not exceed 240000."), return false);
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(tilingContext->GetNodeName(), "x",
+            Ops::Base::ToString(dyShape).c_str(),
+            ("C(C is dim[1] of input x) should not exceed " + std::to_string(MAX_C_SIZE)).c_str()), return false);
     tilingParams->hxw = 1;
     for (uint32_t dimIdx = 2; dimIdx < dimNum; dimIdx++) {
         tilingParams->hxw *= dyShape.GetDim(dimIdx);
     }
     OP_TILING_CHECK(
-        tilingParams->hxw == 0, OP_LOGE(tilingContext->GetNodeName(), "Check shape failed, HxW should not be 0."),
+        tilingParams->hxw == 0, OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(tilingContext->GetNodeName(), "x",
+            Ops::Base::ToString(dyShape).c_str(),
+            ("product of dim[2:] of input x should not be 0, got " +
+             std::to_string(tilingParams->hxw)).c_str()),
         return false);
     return true;
 }
@@ -366,7 +404,9 @@ ge::graphStatus GroupNormGradTiling::SetTilingKeyMode(ge::DataType dtypeStrLocal
             tilingContext->SetTilingKey(FP32_MODE + isDeterministicKey * TEN);
             return ge::GRAPH_SUCCESS;
         default:
-            OP_LOGE(tilingContext->GetNodeName(), "inputdtype must be in [float32, float16, bfloat16]");
+            OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "x",
+                ge::TypeUtils::DataTypeToSerialString(dtypeStrLocal).c_str(),
+                "float32, float16 or bfloat16");
             return ge::GRAPH_FAILED;
     }
 }
@@ -381,7 +421,9 @@ uint32_t GroupNormGradTiling::GetDataTypeSize(ge::DataType dtypeStrLocal) const
         case ge::DT_FLOAT16:
             return FLOAT16_DTYPE_BYTES + FLOAT_DTYPE_BYTES;
         default:
-            OP_LOGE(tilingContext->GetNodeName(), "inputdtype must be in [float32, float16, bfloat16]");
+            OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "x",
+                ge::TypeUtils::DataTypeToSerialString(dtypeStrLocal).c_str(),
+                "float32, float16 or bfloat16");
             return 0;
     }
 }

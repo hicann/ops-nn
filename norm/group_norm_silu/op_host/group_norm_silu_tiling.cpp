@@ -14,6 +14,7 @@
  */
 #include "group_norm_silu_tiling.h"
 #include "op_host/tiling_util.h"
+#include "op_host/tiling_templates_registry.h"
 
 namespace optiling {
 using namespace Ops::NN::OpTiling;
@@ -84,7 +85,9 @@ static ge::graphStatus CheckInputParams(const gert::TilingContext* context)
     uint64_t xDtypeSize = ge::GetSizeByDataType(xDtype);
     OP_CHECK_IF(
         (xDtypeSize <= 0),
-        OP_LOGE(context->GetNodeType(), "xDtypeSize is invalid %lu, please check.", xDtypeSize),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            context->GetNodeName(), "X", Ops::Base::ToString(xDtype).c_str(),
+            ("xDtypeSize must be greater than 0, but got " + std::to_string(xDtypeSize)).c_str()),
         return ge::GRAPH_FAILED);
     auto xShapePtr = context->GetInputShape(INPUT_IDX_X);
     OP_CHECK_NULL_WITH_CONTEXT(context, xShapePtr);
@@ -92,7 +95,9 @@ static ge::graphStatus CheckInputParams(const gert::TilingContext* context)
     uint64_t xDims = xShape.GetDimNum();
     OP_CHECK_IF(
         (xDims < X_SHAPE_MIN_LEN),
-        OP_LOGE(context->GetNodeType(), "inputDims can't be smaller than 2."),
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "x",
+            std::to_string(xDims).c_str(),
+            "greater than or equal to 2"),
         return ge::GRAPH_FAILED);
     uint64_t channel = xShape.GetDim(DIM_1);
     // check gamma and beta
@@ -101,24 +106,40 @@ static ge::graphStatus CheckInputParams(const gert::TilingContext* context)
     auto gammaShape = gammaShapePtr->GetStorageShape();
     uint64_t gammaSizes = gammaShape.GetDim(DIM_0);
     OP_CHECK_IF(
-        (gammaShape.GetDimNum() != 1 || gammaSizes != channel),
-        OP_LOGE(
-            context->GetNodeType(),
-            "The shape of gamma must be"
-            " the same as channe, currently is %lu.",
-            gammaSizes),
+        gammaShape.GetDimNum() != 1,
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            context->GetNodeName(), "gamma",
+            std::to_string(gammaShape.GetDimNum()).c_str(),
+            "the dimension number of gamma must be 1"),
+        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        gammaSizes != channel,
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context->GetNodeName(), "gamma",
+            Ops::Base::ToString(gammaShape).c_str(),
+            ("the shape size of gamma must be the same as channel"
+             "(channel is the second dim of x), got gamma size = " +
+             std::to_string(gammaSizes) + ", channel = " + std::to_string(channel)).c_str()),
         return ge::GRAPH_FAILED);
     auto betaShapePtr = context->GetInputShape(INPUT_IDX_BETA);
     OP_CHECK_NULL_WITH_CONTEXT(context, betaShapePtr);
     auto betaShape = betaShapePtr->GetStorageShape();
     uint64_t betaSizes = betaShape.GetDim(DIM_0);
     OP_CHECK_IF(
-        (betaShape.GetDimNum() != 1 || betaSizes != channel),
-        OP_LOGE(
-            context->GetNodeType(),
-            "The shape of beta must be"
-            " the same as channel, currently is %lu.",
-            betaSizes),
+        betaShape.GetDimNum() != 1,
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            context->GetNodeName(), "beta",
+            std::to_string(betaShape.GetDimNum()).c_str(),
+            "the dimension number of beta must be 1"),
+        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        betaSizes != channel,
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context->GetNodeName(), "beta",
+            Ops::Base::ToString(betaShape).c_str(),
+            ("the shape size of beta must be the same as channel"
+             "(channel is the second dim of x), got beta size = " +
+             std::to_string(betaSizes) + ", channel = " + std::to_string(channel)).c_str()),
         return ge::GRAPH_FAILED);
     auto gammaDtypePtr = context->GetInputDesc(INPUT_IDX_GAMMA);
     OP_CHECK_NULL_WITH_CONTEXT(context, gammaDtypePtr);
@@ -130,18 +151,20 @@ static ge::graphStatus CheckInputParams(const gert::TilingContext* context)
     uint64_t betaDtypeSize = ge::GetSizeByDataType(betaDtype);
     OP_CHECK_IF(
         (gammaDtypeSize != betaDtypeSize),
-        OP_LOGE(
-            context->GetNodeType(),
-            "The dtype of gamma and beta must"
-            " be consistent."),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            context->GetNodeName(), "gamma and beta",
+            (ge::TypeUtils::DataTypeToSerialString(gammaDtype) + " and " +
+             ge::TypeUtils::DataTypeToSerialString(betaDtype)).c_str(),
+            "The dtype of gamma and beta must be consistent."),
         return ge::GRAPH_FAILED);
     if (xDtypeSize == FLOAT32_BYTES) {
         OP_CHECK_IF(
             (gammaDtypeSize != xDtypeSize || betaDtypeSize != xDtypeSize),
-            OP_LOGE(
-                context->GetNodeType(),
-                "The dtype of x is float32, gamma and beta must"
-                " be consistent."),
+            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                context->GetNodeName(), "gamma and beta",
+                (ge::TypeUtils::DataTypeToSerialString(gammaDtype) + " and " +
+                 ge::TypeUtils::DataTypeToSerialString(betaDtype)).c_str(),
+                "The dtype of x is float32, gamma and beta must be consistent."),
             return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
@@ -156,11 +179,17 @@ static ge::graphStatus CheckAttrParams(const gert::TilingContext* tilingContext)
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, attrs);
     const int64_t* numGroups = attrs->GetAttrPointer<int64_t>(INDEX_NUM_GROUPS);
     OP_CHECK_IF(
-        (*numGroups <= 0), OP_LOGE(tilingContext->GetNodeType(), "numGroups must be bigger than 0."),
+        (*numGroups <= 0),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(tilingContext->GetNodeName(), "num_groups",
+            std::to_string(*numGroups).c_str(), "num_groups must be bigger than 0."),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         (channel % *numGroups != 0),
-        OP_LOGE(tilingContext->GetNodeType(), "channel must be integer multiples of numGroups."),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            tilingContext->GetNodeName(), "num_groups", std::to_string(*numGroups).c_str(),
+            ("channel(channel is the second dim of x) must be integer multiples of num_groups, channel is " +
+             std::to_string(channel))
+                .c_str()),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -184,20 +213,20 @@ static ge::graphStatus TilingPrepare4GroupNormSilu(gert::TilingParseContext* con
         uint32_t vectorLength = Ops::Base::GetVRegSize(context);
         OP_CHECK_IF(
             (vectorLength <= FLOAT32_BYTES),
-            OP_LOGE(context->GetNodeType(), "vector length is invalid."),
+            OP_LOGE(context->GetNodeName(), "vector length is invalid."),
             return ge::GRAPH_FAILED);
         compileInfo->vectorLength = vectorLength;
 
         int32_t blockSize = Ops::Base::GetUbBlockSize(context);
         OP_CHECK_IF(
-            (blockSize <= 0), OP_LOGE(context->GetNodeType(), "block size is invalid."),
+            (blockSize <= 0), OP_LOGE(context->GetNodeName(), "block size is invalid."),
             return ge::GRAPH_FAILED);
         compileInfo->blockSizePlatform = blockSize;
     }
     OP_LOGD(context, "Get total core num:%d", compileInfo->totalCoreNum);
     OP_CHECK_IF(
         (compileInfo->totalCoreNum <= 0),
-        OP_LOGE(context->GetNodeType(), "Failed to get core num."), return ge::GRAPH_FAILED);
+        OP_LOGE(context->GetNodeName(), "Failed to get core num."), return ge::GRAPH_FAILED);
 
     uint64_t ubSizePlatForm = 0;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
@@ -205,7 +234,7 @@ static ge::graphStatus TilingPrepare4GroupNormSilu(gert::TilingParseContext* con
     OP_LOGD(context, "Get total ub size:%lu", compileInfo->ubSizePlatForm);
     OP_CHECK_IF(
         (compileInfo->ubSizePlatForm <= 0),
-        OP_LOGE(context->GetNodeType(), "Failed to get ub size."), return ge::GRAPH_FAILED);
+        OP_LOGE(context->GetNodeName(), "Failed to get ub size."), return ge::GRAPH_FAILED);
 
     OP_LOGD(context, "TilingPrepare4GroupNormSilu ends.");
     return ge::GRAPH_SUCCESS;
@@ -367,14 +396,14 @@ static ge::graphStatus SetProcessSize(const gert::TilingContext* context, GroupN
     uint64_t gammaPerCore = (tilingData.get_numPerCore() + 1) * tilingData.get_shapeD();
     OP_CHECK_IF(
         (gammaDtypeSize == 0),
-        OP_LOGE(context->GetNodeType(), "Division by zero, gammaDtypeSize is 0!"), return ge::GRAPH_FAILED);
+        OP_LOGE(context->GetNodeName(), "Division by zero, gammaDtypeSize is 0!"), return ge::GRAPH_FAILED);
     uint64_t gammaPerCoreRoundUp = CeilDiv(gammaPerCore, (BLOCK_SIZE / gammaDtypeSize)) * (BLOCK_SIZE / gammaDtypeSize);
     auto compileInfo = context->GetCompileInfo<GroupNormSiluCompileInfo>();
     uint64_t remainUbSize = compileInfo->ubSizePlatForm - gammaPerCoreRoundUp * gammaDtypeSize * GAMMA_BETA_UB_NUM -
                             BLOCK_SIZE * RESERVED_BLOCK_NUM;
     OP_CHECK_IF(
         (remainUbSize == 0),
-        OP_LOGE(context->GetNodeType(), "RemainUbSize is 0!"), return ge::GRAPH_FAILED);
+        OP_LOGE(context->GetNodeName(), "RemainUbSize is 0!"), return ge::GRAPH_FAILED);
     int64_t maxProcessSize = remainUbSize / INPUT_OUTPUT_UB_NUM;
     if (maxProcessSize < tilingData.get_hwNum()) {
         maxProcessSize = maxProcessSize / BLOCK_SIZE * BLOCK_SIZE;
@@ -382,7 +411,7 @@ static ge::graphStatus SetProcessSize(const gert::TilingContext* context, GroupN
         int64_t lcmNum = Lcm(tilingData.get_hwNum(), (BLOCK_SIZE / gammaDtypeSize));
         OP_CHECK_IF(
             (lcmNum == 0),
-            OP_LOGE(context->GetNodeType(), "Division by zero, lcmNum is 0!"), return ge::GRAPH_FAILED);
+            OP_LOGE(context->GetNodeName(), "Division by zero, lcmNum is 0!"), return ge::GRAPH_FAILED);
         maxProcessSize = maxProcessSize / lcmNum * lcmNum;
     }
     tilingData.set_processSize(maxProcessSize);
@@ -406,7 +435,7 @@ static ge::graphStatus SetTilingSD(const gert::TilingContext* context, GroupNorm
             tilingData.get_numGroups() - tilingData.get_numPerCore() * tilingData.get_realCoreNum());
         OP_CHECK_IF(
             (SetProcessSize(context, tilingData) != ge::GRAPH_SUCCESS),
-            OP_LOGE(context->GetNodeType(), "SetProcessSize failed."), return ge::GRAPH_FAILED);
+            OP_LOGE(context->GetNodeName(), "SetProcessSize failed."), return ge::GRAPH_FAILED);
         tilingData.set_loopNum(tilingData.get_elemNum() / tilingData.get_processSize());
         tilingData.set_loopTail(tilingData.get_elemNum() - tilingData.get_processSize() * tilingData.get_loopNum());
         if (tilingData.get_processSize() > tilingData.get_hwNum()) {
@@ -433,10 +462,10 @@ static ge::graphStatus Tiling4GroupNormSilu(gert::TilingContext* context)
     // check input && attrs params
     OP_CHECK_IF(
         (CheckInputParams(context) != ge::GRAPH_SUCCESS),
-        OP_LOGE(context->GetNodeType(), "InputParams is invalid."), return ge::GRAPH_FAILED);
+        OP_LOGE(context->GetNodeName(), "InputParams is invalid."), return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         (CheckAttrParams(context) != ge::GRAPH_SUCCESS),
-        OP_LOGE(context->GetNodeType(), "AttrParams is invalid."), return ge::GRAPH_FAILED);
+        OP_LOGE(context->GetNodeName(), "AttrParams is invalid."), return ge::GRAPH_FAILED);
     GroupNormSiluTilingData tilingData;
     SetAttrParams(context, tilingData);
     SetTilingParams(context, tilingData);
@@ -452,11 +481,11 @@ static ge::graphStatus Tiling4GroupNormSilu(gert::TilingContext* context)
         sysWorkspaceSize = RESERVED_WORKSPACE_SIZE_310P;
         OP_CHECK_IF(
             (SetTilingSD(context, tilingData) != ge::GRAPH_SUCCESS),
-            OP_LOGE(context->GetNodeType(), "SetTilingSD failed."), return ge::GRAPH_FAILED);
+            OP_LOGE(context->GetNodeName(), "SetTilingSD failed."), return ge::GRAPH_FAILED);
     }
     OP_CHECK_IF(
         GroupNormSiluSetTilingData(context, tilingData) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context->GetNodeType(), "GroupNormSiluSetTilingData set tiling data fail."),
+        OP_LOGE(context->GetNodeName(), "GroupNormSiluSetTilingData set tiling data fail."),
         return ge::GRAPH_FAILED);
     OP_LOGD(
         context,

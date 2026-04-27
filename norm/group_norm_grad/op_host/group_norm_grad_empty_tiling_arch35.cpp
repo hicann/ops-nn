@@ -7,13 +7,14 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
- 
+
 /* !
  * \file group_norm_grad_empty_tiling_arch35.cpp
  * \brief
  */
 #include "group_norm_grad_empty_tiling_arch35.h"
 #include "group_norm_grad_tiling.h"
+#include "op_host/tiling_templates_registry.h"
 
 namespace optiling {
 constexpr uint32_t MIN_WORKSPACE_SIZE = 16 * 1024 * 1024;
@@ -84,7 +85,9 @@ ge::graphStatus GroupNormGradEmptyTiling::GetShapeAttrsInfo()
 
     const int64_t* gValue = attrs->GetAttrPointer<int64_t>(0);
     OP_TILING_CHECK(
-        (*gValue <= 0), OP_LOGE(context_->GetNodeName(), "numGroups must be greater than 0(numGroups > 0)."),
+        (*gValue <= 0),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context_->GetNodeName(), "num_groups", std::to_string(*gValue).c_str(), "num_groups must be greater than 0."),
         return ge::GRAPH_FAILED);
     G_ = static_cast<int64_t>(*gValue);
     N_ = dyShape.GetDim(DIM0);
@@ -115,22 +118,39 @@ ge::graphStatus GroupNormGradEmptyTiling::InputCheck(gert::Shape& dyShape)
     ge::DataType dxDtypeStr = dxDesc->GetDataType();
     OP_TILING_CHECK(
         (tTypeStr_ != dxDtypeStr || dxDtypeStr != xDtypeStr),
-        OP_LOGE(context_->GetNodeName(), "x, dy, dx data type must be same."), return ge::GRAPH_FAILED);
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            context_->GetNodeName(), "x, dx and dy",
+            (ge::TypeUtils::DataTypeToSerialString(xDtypeStr) + " , " +
+             ge::TypeUtils::DataTypeToSerialString(dxDtypeStr) + " and " +
+             ge::TypeUtils::DataTypeToSerialString(tTypeStr_))
+                .c_str(),
+            "the data types of x, dx, dy data type must be same."),
+        return ge::GRAPH_FAILED);
     auto iter = DATA_TYPE_TO_INT.find(tTypeStr_);
     if (iter == DATA_TYPE_TO_INT.end()) {
-        OP_LOGE(
-            context_->GetNodeName(), "inputdtype [%d] must be in float32:[%d], float16:[%d], bfloat16:[%d]", tTypeStr_,
-            ge::DataType::DT_FLOAT, ge::DataType::DT_FLOAT16, ge::DataType::DT_BF16);
+        OP_LOGE_FOR_INVALID_DTYPE(
+            context_->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(tTypeStr_).c_str(),
+            "float32, float16 or bfloat16");
         return ge::GRAPH_FAILED;
     }
-    OP_TILING_CHECK(
-        (dyShape != dxShape || dxShape != xShape), OP_LOGE(context_->GetNodeName(), "x, dy, dx shape must be same."),
-        return ge::GRAPH_FAILED);
+    if (dyShape != dxShape || dxShape != xShape) {
+        std::string incorrectShapes =
+            Ops::Base::ToString(xShape) + ", " + Ops::Base::ToString(dyShape) + " and " + Ops::Base::ToString(dxShape);
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context_->GetNodeName(), "x, dy and dx", incorrectShapes.c_str(),
+            "the shapes of x, dy and dx must be same.");
+        return ge::GRAPH_FAILED;
+    }
 
     auto dimNum = dyShape.GetDimNum();
-    OP_TILING_CHECK(
-        (dimNum < MIN_X_DIM), OP_LOGE(context_->GetNodeName(), "x, dy, dx shape dim must be at least 2."),
-        return ge::GRAPH_FAILED);
+    if(dimNum < MIN_X_DIM){
+        std::string shapeDimMesg = std::to_string(xShape.GetDimNum()) + ", " + std::to_string(dimNum) + " and " + std::to_string(dxShape.GetDimNum());
+         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            context_->GetNodeName(), "x, dy and dx",
+            shapeDimMesg.c_str(),
+            "the shape dims of x, dy and dx must be at least 2.");
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -149,12 +169,22 @@ ge::graphStatus GroupNormGradEmptyTiling::CheckInputAndOutput()
     // while also not exceeding the operator's current carrying capacity.
     if (C_ != 0) {
         if (CPerG_ == 0 || C_ % G_ != 0 || CPerG_ > UPPER_CARRYING_LIMIT) {
-            OP_LOGE(context_->GetNodeName(), "Group_num is invalid");
+            std::string errMsg =
+                "num_groups is invalid. C / num_groups must not be zero, C must be an integer multiple of num_groups, "
+                "and C / num_groups must not exceed the upper carrying limit(" +
+                std::to_string(UPPER_CARRYING_LIMIT) + "). (C is the second dim of dy and C is " + std::to_string(C_) +
+                ").";
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                context_->GetNodeName(), "num_groups", std::to_string(G_).c_str(), errMsg.c_str());
             return ge::GRAPH_FAILED;
         }
     } else {
         if (CPerG_ > UPPER_CARRYING_LIMIT) {
-            OP_LOGE(context_->GetNodeName(), "Group_num is invalid");
+            std::string errMsg = "C / num_groups must not exceed the upper carrying limit(" +
+                                 std::to_string(UPPER_CARRYING_LIMIT) + "). (C is the second dim of dy and C is " +
+                                 std::to_string(C_) + ").";
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                context_->GetNodeName(), "num_groups", std::to_string(G_).c_str(), errMsg.c_str());
             return ge::GRAPH_FAILED;
         }
     }
@@ -167,9 +197,11 @@ ge::graphStatus GroupNormGradEmptyTiling::CheckInputAndOutput()
     }
     OP_TILING_CHECK(
         gammaShape.GetDimNum() != 1 || gammaSize != this->C_,
-        OP_LOGE(
-            context_->GetNodeName(), "the shape of gamma must be the same as Channel, current gammaSize is :%ld.",
-            gammaSize),
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context_->GetNodeName(), "gamma", std::to_string(gammaSize).c_str(),
+            ("the shape of gamma must be the same as Channel(the second dim of dy), current Channel is " +
+             std::to_string(this->C_))
+                .c_str()),
         return ge::GRAPH_FAILED);
     CalcRowsAndCols(gammaShape);
     return ge::GRAPH_SUCCESS;
@@ -202,26 +234,46 @@ ge::graphStatus GroupNormGradEmptyTiling::CheckShapeAndType()
     }
     auto iter = DATA_TYPE_TO_INT.find(uTypeStr_);
     if (iter == DATA_TYPE_TO_INT.end()) {
-        OP_LOGE(
-            context_->GetNodeName(), "inputdtype [%d] must be in float32:[%d], float16:[%d], bfloat16:[%d]", tTypeStr_,
-            ge::DataType::DT_FLOAT, ge::DataType::DT_FLOAT16, ge::DataType::DT_BF16);
+        OP_LOGE_FOR_INVALID_DTYPE(
+            context_->GetNodeName(), "gamma", ge::TypeUtils::DataTypeToSerialString(uTypeStr_).c_str(),
+            "float32, float16 or bfloat16");
+        return ge::GRAPH_FAILED;
+    }
+    if (meanDtypeStr != rstdDtypeStr || rstdDtypeStr != dGammaDtypeStr || dGammaDtypeStr != dBetaDtypeStr ||
+        dBetaDtypeStr != uTypeStr_) {
+        std::string dtypesMsg = ge::TypeUtils::DataTypeToSerialString(rstdDtypeStr) + " , " +
+                                ge::TypeUtils::DataTypeToSerialString(meanDtypeStr) + " , " +
+                                ge::TypeUtils::DataTypeToSerialString(uTypeStr_) + " , " +
+                                ge::TypeUtils::DataTypeToSerialString(dBetaDtypeStr) + " and " +
+                                ge::TypeUtils::DataTypeToSerialString(dGammaDtypeStr);
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            context_->GetNodeName(), "rstd, mean, gamma, dbeta and dgamma", dtypesMsg.c_str(),
+            "data types of rstd, mean, gamma, dbeta and dgamma must be same");
+        return ge::GRAPH_FAILED;
+    }
+    if (tTypeStr_ == ge::DT_FLOAT && (uTypeStr_ == ge::DT_FLOAT16 || uTypeStr_ == ge::DT_BF16)) {
+        std::string dtypesMsg = ge::TypeUtils::DataTypeToSerialString(tTypeStr_) + " , " +
+                                ge::TypeUtils::DataTypeToSerialString(tTypeStr_) + " , " +
+                                ge::TypeUtils::DataTypeToSerialString(tTypeStr_) + " , " +
+                                ge::TypeUtils::DataTypeToSerialString(meanDtypeStr) + " , " +
+                                ge::TypeUtils::DataTypeToSerialString(rstdDtypeStr) + " , " +
+                                ge::TypeUtils::DataTypeToSerialString(uTypeStr_) + " , " +
+                                ge::TypeUtils::DataTypeToSerialString(dGammaDtypeStr) + " and " +
+                                ge::TypeUtils::DataTypeToSerialString(dBetaDtypeStr);
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            context_->GetNodeName(), "dy, x, dx and mean, rstd, gamma, dgamma, dbeta", dtypesMsg.c_str(),
+            "when dy, x, dx are float32, mean, rstd, gamma, dgamma, dbeta must also be float32");
         return ge::GRAPH_FAILED;
     }
     OP_TILING_CHECK(
-        (meanDtypeStr != rstdDtypeStr || rstdDtypeStr != dGammaDtypeStr || dGammaDtypeStr != dBetaDtypeStr ||
-         dBetaDtypeStr != uTypeStr_),
-        OP_LOGE(context_->GetNodeName(), "rstd, mean, gamma, dbeta, dgamma data type must be same."),
-        return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(
-        (tTypeStr_ == ge::DT_FLOAT && (uTypeStr_ == ge::DT_FLOAT16 || uTypeStr_ == ge::DT_BF16)),
-        OP_LOGE(
-            context_->GetNodeName(), "dy, x, dx is float, mean, rstd gamma, dgamma, dbeta only support float type."),
-        return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(
         meanSize != rstdSize || meanSize != this->N_ * this->G_,
-        OP_LOGE(
-            context_->GetNodeName(), "the shape of mean [%ld], rstd [%ld] must equal N * G, current N * G is :%ld.",
-            meanSize, rstdSize, this->N_ * this->G_),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context_->GetNodeName(), "mean and rstd",
+            (std::to_string(meanSize) + " and " + std::to_string(rstdSize)).c_str(),
+            ("mean and rstd must have the same shapesize, which equals the sum of num_groups times the size of N axis "
+             "(N is the first axis of dy, N is " +
+             std::to_string(this->N_) + ", num_groups is " + std::to_string(this->G_) + ").")
+                .c_str()),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }

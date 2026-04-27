@@ -25,6 +25,7 @@
 #include "../../op_kernel/arch35/apply_gradient_descent_tiling_key.h"
 
 #include <iostream>
+#include "op_host/tiling_templates_registry.h"
 namespace optiling {
 using namespace ApplyGradientDescentOp;
 const size_t ASCEND_WORKSPACE = 16777216; // 16 * 1024 * 1024
@@ -60,18 +61,20 @@ ge::graphStatus ApplyGradientDescentTiling::CalcInputDtype()
 
     OP_CHECK_IF(
         this->varDtype != ge::DT_FLOAT && this->varDtype != ge::DT_FLOAT16 && this->varDtype != ge::DT_BF16,
-        OP_LOGE(tilingContext->GetNodeName(),
-                                        "input var dtype only support float32, float16, bfloat16"),
+        OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "var",
+            ge::TypeUtils::DataTypeToSerialString(this->varDtype).c_str(), "float32, float16 or bfloat16"),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         this->alphaDtype != this->varDtype,
-        OP_LOGE(tilingContext->GetNodeName(),
-                                        "input alpha and var dtype not same, alpha dtype is %d", this->alphaDtype),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "alpha and var",
+            (ge::TypeUtils::DataTypeToSerialString(this->alphaDtype) + " and " + ge::TypeUtils::DataTypeToSerialString(this->varDtype)).c_str(),
+            "dtype of alpha must be same as dtype of var."),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         this->deltaDtype != this->varDtype,
-        OP_LOGE(tilingContext->GetNodeName(),
-                                        "input delta and var dtype not same, delta dtype is %d", this->deltaDtype),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "delta and var",
+            (ge::TypeUtils::DataTypeToSerialString(this->deltaDtype) + " and " + ge::TypeUtils::DataTypeToSerialString(this->varDtype)).c_str(),
+            "dtype of delta must be same as dtype of var."),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -84,8 +87,9 @@ ge::graphStatus ApplyGradientDescentTiling::CalcOutputDtype()
     this->outputDtype = outputDesc->GetDataType();
     OP_CHECK_IF(
         this->outputDtype != this->varDtype,
-        OP_LOGE(tilingContext->GetNodeName(),
-                                        "input and output dtype not same, output dtype is %d", this->deltaDtype),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "output var and input var",
+            (ge::TypeUtils::DataTypeToSerialString(this->outputDtype) + " and " + ge::TypeUtils::DataTypeToSerialString(this->varDtype)).c_str(),
+            "their dtypes must be same."),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -113,7 +117,9 @@ ge::graphStatus ApplyGradientDescentTiling::CheckShape()
     const gert::Shape &outputShape = EnsureNotScalar(outputStorageShape->GetStorageShape());
 
     OP_CHECK_IF(varShape != deltaShape || varShape != outputShape,
-        OP_LOGE(tilingContext->GetNodeName(), "input var, delta and output shape not same"),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext->GetNodeName(), "input var, delta and output var",
+            (Ops::Base::ToString(varShape) + " and " + Ops::Base::ToString(deltaShape) + " and " + Ops::Base::ToString(outputShape)).c_str(),
+            "the shapes of input var, delta and output var must be same."),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -136,7 +142,8 @@ ge::graphStatus ApplyGradientDescentTiling::RunTiling()
     } else if (this->outputDtype == ge::DT_FLOAT) {
         baseTilingResult = elewiseBaseTiling.DoTiling<ApplyGradientDescentDAG<float>::OpDag>(tiling->baseTiling);
     } else {
-        OP_LOGE(tilingContext->GetNodeName(), "output dtype not support");
+        OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "output var",
+            ge::TypeUtils::DataTypeToSerialString(this->outputDtype).c_str(), "float32, float16 or bfloat16");
         return ge::GRAPH_FAILED;
     }
     OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED,

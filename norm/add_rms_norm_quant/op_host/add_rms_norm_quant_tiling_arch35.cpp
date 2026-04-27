@@ -151,18 +151,20 @@ bool AddRmsNormQuantRegbaseTiling::CheckInputShapeDim()
         auto betaShape = EnsureNotScalar(betaStorageShape->GetStorageShape());
         betaDimNum = betaShape.GetDimNum();
     }
-    OP_CHECK_IF(
-        (x1DimNum > MAX_DIM_CNT) || (x2DimNum > MAX_DIM_CNT) || (gammaDimNum > MAX_DIM_CNT) ||
-            (scales1DimNum > MAX_DIM_CNT) || (scales2DimNum > MAX_DIM_CNT && tilingParams.hasScales2) ||
-            (zp1DimNum > MAX_DIM_CNT && tilingParams.hasZeroPoints1) ||
-            (zp2DimNum > MAX_DIM_CNT && tilingParams.hasZeroPoints2) ||
-            (betaDimNum > MAX_DIM_CNT && tilingParams.hasBeta),
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(nodeName.c_str(), 
-            "x1, x2, gamma, scales1, scales2, zero_points1, zero_points2",
-            (std::to_string(x1DimNum) + ", " + std::to_string(x2DimNum) + ", " + std::to_string(gammaDimNum) + ", " +
-             std::to_string(scales1DimNum) + ", " + std::to_string(scales2DimNum) + ", " +
-             std::to_string(zp1DimNum) + " and " + std::to_string(zp2DimNum)).c_str(),
-            "all input dim nums should not be greater than 8."), return false);
+    if ((x1DimNum > MAX_DIM_CNT) || (x2DimNum > MAX_DIM_CNT) || (gammaDimNum > MAX_DIM_CNT) ||
+        (scales1DimNum > MAX_DIM_CNT) || (scales2DimNum > MAX_DIM_CNT && tilingParams.hasScales2) ||
+        (zp1DimNum > MAX_DIM_CNT && tilingParams.hasZeroPoints1) ||
+        (zp2DimNum > MAX_DIM_CNT && tilingParams.hasZeroPoints2) ||
+        (betaDimNum > MAX_DIM_CNT && tilingParams.hasBeta)) {
+        std::string incorrectDims = std::to_string(x1DimNum) + ", " + std::to_string(x2DimNum) + ", " +
+                                    std::to_string(gammaDimNum) + ", " + std::to_string(scales1DimNum) + ", " +
+                                    std::to_string(scales2DimNum) + ", " + std::to_string(zp1DimNum) + " and " +
+                                    std::to_string(zp2DimNum);
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            nodeName.c_str(), "x1, x2, gamma, scales1, scales2, zero_points1 and zero_points2", incorrectDims.c_str(),
+            "all input dim nums should not be greater than 8.");
+        return false;
+    }
     return true;
 }
 

@@ -22,6 +22,7 @@
 #include "register/op_def_registry.h"
 #include "register/tilingdata_base.h"
 #include "tiling/platform/platform_ascendc.h"
+#include "op_host/tiling_templates_registry.h"
 
 using namespace ge;
 using namespace ApplyFtrlOp;
@@ -38,8 +39,10 @@ ge::graphStatus ApplyFtrlRegbaseTiling::CheckScalarShape(int32_t inputIdx) {
     auto inputShape = tilingContext_->GetInputShape(inputIdx);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, inputShape);
     auto storageShape = inputShape->GetStorageShape();
+    std::string paramName = SCALAR_INDEX_LIST.at(inputIdx);
     OP_CHECK_IF((!storageShape.IsScalar() && storageShape.GetShapeSize() != 1),
-                OP_LOGE(tilingContext_, "Check input %d failed.", inputIdx), return ge::GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(tilingContext_->GetNodeName(), paramName.c_str(),
+                    Ops::Base::ToString(storageShape).c_str(), "the param should be a scalar(0D) or have shape size 1"), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -75,22 +78,29 @@ ge::graphStatus ApplyFtrlRegbaseTiling::CheckShapeAndType() {
     for (const auto& pair : SCALAR_INDEX_LIST) {
         OP_CHECK_IF(
             CheckScalarShape(pair.first) != ge::GRAPH_SUCCESS,
-            OP_LOGE(tilingContext_, "the shape of input %s must be rank 0.", pair.second.c_str()),
+            OP_LOGE_FOR_INVALID_SHAPEDIM(tilingContext_->GetNodeName(), pair.second.c_str(),
+                std::to_string(tilingContext_->GetInputShape(pair.first)->GetStorageShape().GetDimNum()).c_str(), "0D"),
             return ge::GRAPH_FAILED);
         OP_CHECK_IF(
             CheckSameDtype(pair.first, inputDtype) != ge::GRAPH_SUCCESS,
-            OP_LOGE(tilingContext_, "the dtype of input %s is different from that of input var.", pair.second.c_str()),
+            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext_->GetNodeName(), (string("var and ") + pair.second).c_str(),
+                (ge::TypeUtils::DataTypeToSerialString(inputDtype) + " and " + ge::TypeUtils::DataTypeToSerialString(tilingContext_->GetInputDesc(pair.first)->GetDataType())).c_str(),
+                (string("the dtype of input ") + pair.second + " must be same as that of input var.").c_str()),
             return ge::GRAPH_FAILED);
     }
     // check tensor input
     for (const auto& pair : TENSOR_INDEX_LIST) {
         OP_CHECK_IF(
             CheckSameShape(pair.first, inputStorageShape) != ge::GRAPH_SUCCESS,
-            OP_LOGE(tilingContext_, "the shape of input %s is different from that of input var.", pair.second.c_str()),
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext_->GetNodeName(), (string("var and ") + pair.second).c_str(),
+                (Ops::Base::ToString(inputStorageShape) + " and " + Ops::Base::ToString(tilingContext_->GetInputShape(pair.first)->GetStorageShape())).c_str(),
+                (string("the shape of input ") + pair.second + " must be same as that of input var.").c_str()),
             return ge::GRAPH_FAILED);
         OP_CHECK_IF(
             CheckSameDtype(pair.first, inputDtype) != ge::GRAPH_SUCCESS,
-            OP_LOGE(tilingContext_, "the dtype of input %s is different from that of input var.", pair.second.c_str()),
+            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext_->GetNodeName(), (string("var and ") + pair.second).c_str(),
+                (ge::TypeUtils::DataTypeToSerialString(inputDtype) + " and " + ge::TypeUtils::DataTypeToSerialString(tilingContext_->GetInputDesc(pair.first)->GetDataType())).c_str(),
+                (string("the dtype of input ") + pair.second + " must be same as that of input var.").c_str()),
             return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
@@ -109,7 +119,8 @@ ge::graphStatus ApplyFtrlRegbaseTiling::DoElewiseTiling() {
     } else if (varDType == ge::DT_BF16) {
         ret = eleBaseTiling.DoTiling<ApplyFtrlOp::ApplyFtrlDag<bfloat16_t, float>::OpDag>(tiling_->elewiseTiling);
     } else {
-        OP_LOGE(tilingContext_, "input dtype is not support!");
+        OP_LOGE_FOR_INVALID_DTYPE(tilingContext_->GetNodeName(), "var",
+            ge::TypeUtils::DataTypeToSerialString(varDType).c_str(), "fp32, fp16 or bf16");
         ret = ge::GRAPH_FAILED;
     }
     return ret;

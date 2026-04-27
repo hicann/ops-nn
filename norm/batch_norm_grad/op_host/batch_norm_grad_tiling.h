@@ -51,6 +51,9 @@ constexpr int64_t PARAM_OUTPUT_DX_INDEX = 0;                // x_backprop
 
 constexpr float DEFAULT_EPSILON = 1e-4;
 
+static constexpr const char* inputParamNames[] = {"y_backprop", "x", "scale", "reserve_space_1", "reserve_space_2", "reserve_space_3"};
+static constexpr const char* outputParamNames[] = {"x_backprop", "scale_backprop", "offset_backprop", "reserve_space_4", "reserve_space_5"};
+
 BEGIN_TILING_DATA_DEF(BatchNormGradBaseTilingData)
 TILING_DATA_FIELD_DEF(int64_t, r1Dim);          // R1AR0 R外轴
 TILING_DATA_FIELD_DEF(int64_t, aDim);           // R1AR0 A轴
@@ -415,6 +418,7 @@ protected:
     const gert::Shape& EnsureNotScalar(const gert::Shape& in_shape);
 
     ge::graphStatus CheckInputDtypeValid();
+    void BuildDtypeMismatchInfo(std::string& incorrectDtypeStr, std::string& expectedDtypesStr);
     ge::graphStatus CheckSmallShapesValid();
     ge::graphStatus CheckBigShapesValid();
     ge::graphStatus GetShapesAndCheckValid();

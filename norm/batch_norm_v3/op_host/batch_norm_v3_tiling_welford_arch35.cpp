@@ -194,7 +194,9 @@ ge::graphStatus BatchNormV3WelfordReduceTilingBase::GetShapeAttrsInfo()
 
     if (format == FORMAT_NCHW) {
         OP_CHECK_IF(
-            xStorageShape.GetDimNum() != NCHW_DIM_NUM, OP_LOGE(opName, "Dims should be 4 with NCHW format."),
+            xStorageShape.GetDimNum() != NCHW_DIM_NUM,
+            OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x",
+                std::to_string(xStorageShape.GetDimNum()).c_str(), "4D with NCHW format"),
             return ge::GRAPH_FAILED);
         tilingData.set_r1(xStorageShape.GetDim(DIM_0));
         tilingData.set_a0(xStorageShape.GetDim(DIM_1));
@@ -204,7 +206,9 @@ ge::graphStatus BatchNormV3WelfordReduceTilingBase::GetShapeAttrsInfo()
         r0 = xStorageShape.GetDim(DIM_2) * xStorageShape.GetDim(DIM_3);
     } else if (format == FORMAT_NCDHW) {
         OP_CHECK_IF(
-            xStorageShape.GetDimNum() != NCDHW_DIM_NUM, OP_LOGE(opName, "Dims should be 5 with NCDHW format."),
+            xStorageShape.GetDimNum() != NCDHW_DIM_NUM,
+            OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x",
+                std::to_string(xStorageShape.GetDimNum()).c_str(), "5D with NCDHW format"),
             return ge::GRAPH_FAILED);
         r1 = xStorageShape.GetDim(DIM_0);
         a0 = xStorageShape.GetDim(DIM_1);
@@ -213,7 +217,8 @@ ge::graphStatus BatchNormV3WelfordReduceTilingBase::GetShapeAttrsInfo()
         tilingData.set_a0(a0);
         tilingData.set_r0(r0);
     } else {
-        OP_LOGE(opName, "Not supported format.");
+        OP_LOGE_FOR_INVALID_FORMAT(context_->GetNodeName(), "x",
+            ge::TypeUtils::FormatToSerialString(format).c_str(), "NCHW or NCDHW");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;

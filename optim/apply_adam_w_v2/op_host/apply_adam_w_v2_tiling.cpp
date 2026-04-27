@@ -21,6 +21,7 @@
 #include "error_util.h"
 #include "apply_adam_w_v2_tiling.h"
 #include "op_host/tiling_util.h"
+#include "op_host/tiling_templates_registry.h"
 
 using namespace std;
 using namespace ge;
@@ -102,7 +103,8 @@ static ge::graphStatus CheckInputDtype(const gert::TilingContext* context, Apply
     auto dtype = dtypePtr->GetDataType();
     OP_CHECK_IF(
         IsInvalidType(dtype),
-        OP_LOGE(context, "input var dtype only support fp16, fp32, bf16 currently, please check."),
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "var",
+            ge::TypeUtils::DataTypeToSerialString(dtype).c_str(), "fp16, fp32 or bf16"),
         return ge::GRAPH_FAILED);
     tilingParam.dtypeLst.push_back(dtype);
 
@@ -111,7 +113,8 @@ static ge::graphStatus CheckInputDtype(const gert::TilingContext* context, Apply
     dtype = dtypePtr->GetDataType();
     OP_CHECK_IF(
         IsInvalidType(dtype),
-        OP_LOGE(context, "input m dtype only support fp16, fp32, bf16 currently, please check."),
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "m",
+            ge::TypeUtils::DataTypeToSerialString(dtype).c_str(), "fp16, fp32 or bf16"),
         return ge::GRAPH_FAILED);
     tilingParam.dtypeLst.push_back(dtype);
 
@@ -120,7 +123,8 @@ static ge::graphStatus CheckInputDtype(const gert::TilingContext* context, Apply
     dtype = dtypePtr->GetDataType();
     OP_CHECK_IF(
         IsInvalidType(dtype),
-        OP_LOGE(context, "input v dtype only support fp16, fp32, bf16 currently, please check."),
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "v",
+            ge::TypeUtils::DataTypeToSerialString(dtype).c_str(), "fp16, fp32, bf16"),
         return ge::GRAPH_FAILED);
     tilingParam.dtypeLst.push_back(dtype);
 
@@ -129,7 +133,8 @@ static ge::graphStatus CheckInputDtype(const gert::TilingContext* context, Apply
     dtype = dtypePtr->GetDataType();
     OP_CHECK_IF(
         IsInvalidType(dtype),
-        OP_LOGE(context, "input grad dtype only support fp16, fp32, bf16 currently, please check."),
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "grad",
+            ge::TypeUtils::DataTypeToSerialString(dtype).c_str(), "fp16, fp32 or bf16"),
         return ge::GRAPH_FAILED);
     tilingParam.dtypeLst.push_back(dtype);
     // grad的数据类型，用于判断cast转换时用哪种mode
@@ -141,19 +146,24 @@ static ge::graphStatus CheckInputDtype(const gert::TilingContext* context, Apply
     bool isInvalidType = dtype != ge::DT_FLOAT && dtype != ge::DT_INT64;
     OP_CHECK_IF(
         isInvalidType,
-        OP_LOGE(context, "input step dtype only support fp32 and int64 currently, please check."),
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "step",
+            ge::TypeUtils::DataTypeToSerialString(dtype).c_str(), "fp32 or int64"),
         return ge::GRAPH_FAILED);
     tilingParam.dtypeLst.push_back(dtype);
 
     auto inputDesc = context->GetOptionalInputDesc(INDEX_IN_MAX_GRAD_NORM);
     OP_CHECK_IF(
         tilingParam.amsgrad == 1 && inputDesc == nullptr,
-        OP_LOGE(context, "the input max_grad_norm is mandatory when the value of amsgrad is true."),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "amsgrad",
+            std::to_string(tilingParam.amsgrad).c_str(),
+            "the input max_grad_norm is mandatory when the value of amsgrad is true."),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         inputDesc != nullptr && IsInvalidType(inputDesc->GetDataType()),
-        OP_LOGE(
-            context, "input max_grad_norm dtype only support fp16, fp32, bf16 currently, please check."),
+        OP_LOGE_FOR_INVALID_DTYPE(
+            context->GetNodeName(), "max_grad_norm",
+            ge::TypeUtils::DataTypeToSerialString(inputDesc->GetDataType()).c_str(),
+            "fp16, fp32 or bf16"),
         return ge::GRAPH_FAILED);
     if (inputDesc != nullptr) {
         tilingParam.dtypeLst.push_back(inputDesc->GetDataType());
@@ -205,12 +215,18 @@ static ge::graphStatus CheckInputShape(const gert::TilingContext* context)
                        (maxGradNormShape != nullptr && !IsSameShape(varShape, maxGradNormShape->GetStorageShape()));
     OP_CHECK_IF(
         isDiffShape,
-        OP_LOGE(context, "var,m,v,max_grad_norm and grad should have same shape, please check."),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "var, m, v, grad and max_grad_norm",
+            (Ops::Base::ToString(varShape) + " , " + Ops::Base::ToString(mShape) + " , " +
+             Ops::Base::ToString(vShape) + " , " + Ops::Base::ToString(gradShape) +
+             (maxGradNormShape != nullptr ? " , " + Ops::Base::ToString(maxGradNormShape->GetStorageShape()) : "")).c_str(),
+            "var, m, v, grad and max_grad_norm(if provided) should have same shape."),
         return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(
         stepShape.GetDimNum() != 1 || stepShape.GetDim(0) != 1,
-        OP_LOGE(context, "step should have only one element, please check."), return ge::GRAPH_FAILED);
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "step",
+            Ops::Base::ToString(stepShape).c_str(), "step should be 1D with shape [1]"),
+        return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 

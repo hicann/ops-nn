@@ -188,14 +188,18 @@ ge::graphStatus BatchNormV3InferTiling::GetShapeAttrsInfo()
 
     if (format == FORMAT_NCHW) {
         OP_CHECK_IF(
-            xStorageShape.GetDimNum() != DIM_NUM_4, OP_LOGE(opName, "Dims should be 4 with NCHW format."),
+            xStorageShape.GetDimNum() != DIM_NUM_4,
+            OP_LOGE_FOR_INVALID_SHAPEDIM(opName, "x",
+                std::to_string(xStorageShape.GetDimNum()).c_str(), "4D with NCHW format"),
             return ge::GRAPH_FAILED);
         fusedB0Len_ = xStorageShape.GetDim(DIM_0);
         fusedALen_ = xStorageShape.GetDim(DIM_1);
         fusedB1Len_ = xStorageShape.GetDim(DIM_2) * xStorageShape.GetDim(DIM_3);
     } else if (format == FORMAT_NCDHW) {
         OP_CHECK_IF(
-            xStorageShape.GetDimNum() != DIM_NUM_5, OP_LOGE(opName, "Dims should be 5 with NCDHW format."),
+            xStorageShape.GetDimNum() != DIM_NUM_5,
+            OP_LOGE_FOR_INVALID_SHAPEDIM(opName, "x",
+                std::to_string(xStorageShape.GetDimNum()).c_str(), "5D with NCDHW format"),
             return ge::GRAPH_FAILED);
         fusedB0Len_ = xStorageShape.GetDim(DIM_0);
         fusedALen_ = xStorageShape.GetDim(DIM_1);
