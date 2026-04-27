@@ -61,7 +61,7 @@ static inline bool CheckNotNull(const aclTensor* x, const aclTensor* groupIndex,
   return true;
 }
 
-static bool CheckShape(const aclTensor* x, const aclTensor* groupIndex, int64_t blocksize, int64_t scaleAlg, double dstTypeMax, const aclTensor* y, const aclTensor* mxscale) {
+static bool CheckShape(const aclTensor* x, const aclTensor* groupIndex, int64_t blocksize, const aclTensor* y, const aclTensor* mxscale) {
   auto xShape = x->GetViewShape();
   auto groupShape = groupIndex->GetViewShape();
   auto yShape = y->GetViewShape();
@@ -94,7 +94,7 @@ static bool CheckShape(const aclTensor* x, const aclTensor* groupIndex, int64_t 
 }
 
 static bool CheckDtypeValid(const aclTensor* x, const aclTensor* groupIndex, const char* roundMode, int64_t dstType, 
-                            int64_t blocksize, int64_t scaleAlg, double dstTypeMax, const aclTensor* y, const aclTensor* mxscale) {
+                            int64_t blocksize, int64_t scaleAlg, const aclTensor* y, const aclTensor* mxscale) {
   // 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
   bool IsRegbaseSocVersion = Ops::NN::AclnnUtil::IsRegbase();
   if (IsRegbaseSocVersion) {
@@ -112,9 +112,6 @@ static bool CheckDtypeValid(const aclTensor* x, const aclTensor* groupIndex, con
     OP_CHECK(scaleAlg == 0 || scaleAlg == 1,
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "scaleAlg only support '0' or '1' now, get: %ld", scaleAlg),
             return false);
-    OP_CHECK(dstTypeMax == 0.0,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dstTypeMax only support '0.0' now, get: %f", dstTypeMax),
-            return false);
     OP_CHECK(static_cast<int64_t>(y->GetDataType()) == dstType,
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dstType:%ld(%s) is must be the same as y dtype[%s].",
                 dstType, op::ToString(static_cast<op::DataType>(dstType)).GetString(), op::ToString(y->GetDataType()).GetString()),
@@ -129,10 +126,10 @@ static bool CheckDtypeValid(const aclTensor* x, const aclTensor* groupIndex, con
 }
 
 inline static aclnnStatus CheckParams(const aclTensor* x, const aclTensor* groupIndex, const char* roundMode, int64_t dstType,
-                                      int64_t blocksize, int64_t scaleAlg, double dstTypeMax, const aclTensor* y, const aclTensor* mxscale) {
+                                      int64_t blocksize, int64_t scaleAlg, const aclTensor* y, const aclTensor* mxscale) {
   CHECK_RET(CheckNotNull(x, groupIndex, roundMode, y, mxscale), ACLNN_ERR_PARAM_NULLPTR);
-  CHECK_RET(CheckDtypeValid(x, groupIndex, roundMode, dstType, blocksize, scaleAlg, dstTypeMax, y, mxscale), ACLNN_ERR_PARAM_INVALID);
-  CHECK_RET(CheckShape(x, groupIndex, blocksize, scaleAlg, dstTypeMax, y, mxscale), ACLNN_ERR_PARAM_INVALID);
+  CHECK_RET(CheckDtypeValid(x, groupIndex, roundMode, dstType, blocksize, scaleAlg, y, mxscale), ACLNN_ERR_PARAM_INVALID);
+  CHECK_RET(CheckShape(x, groupIndex, blocksize, y, mxscale), ACLNN_ERR_PARAM_INVALID);
   return ACLNN_SUCCESS;
 }
 
@@ -147,7 +144,7 @@ aclnnStatus aclnnGroupedDynamicMxQuantV2GetWorkspaceSize(const aclTensor* x, con
   CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
   // 固定写法，参数检查
-  auto ret = CheckParams(x, groupIndex, roundMode, dstType, blocksize, scaleAlg, dstTypeMax, y, mxscale);
+  auto ret = CheckParams(x, groupIndex, roundMode, dstType, blocksize, scaleAlg, y, mxscale);
   CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
   // 空Tensor处理

@@ -23,7 +23,6 @@
 #include "register/op_impl_registry.h"
 #include "quant/grouped_dynamic_mx_quant/op_kernel/arch35/grouped_dynamic_mx_quant_tilingdata.h"
 
-using namespace Ops::NN::Optiling;
 namespace optiling {
 struct GroupedDynamicMxQuantCompileInfo {
     int64_t coreNum = 0;
