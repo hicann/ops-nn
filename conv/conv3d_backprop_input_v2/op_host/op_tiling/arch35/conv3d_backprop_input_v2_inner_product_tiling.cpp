@@ -801,6 +801,23 @@ void Conv3DDXV2InnerProductTiling::InitBaseMNK(L0TilingParams& l0Params)
     l0Params.baseN = bestBaseN;
     l0Params.baseK = bestBaseK;
 
+    // HKWK=3,BaseM=512，totalCnt在coreNum10-45倍之间调整为256
+    uint64_t hwi = static_cast<uint64_t>(runInfo_.dedx_h) * runInfo_.dedx_w;
+    uint64_t batchDepth = static_cast<uint64_t>(runInfo_.batch_n) * runInfo_.dedx_d;
+    uint64_t mCnt = Ops::Base::CeilDiv(hwi, static_cast<uint64_t>(l0Params.baseM));
+    uint64_t nCnt = Ops::Base::CeilDiv(tilingRunInfo_.nValue, static_cast<uint64_t>(l0Params.baseN));
+    uint64_t totalCnt = static_cast<uint64_t>(runInfo_.real_g) * batchDepth * mCnt * nCnt;
+    uint64_t alignedWiAl1 = std::max(static_cast<uint64_t>(l0Params.baseM) / runInfo_.dedx_w, ONE_U64) * runInfo_.dedx_w;
+    if (runInfo_.kernel_h == ENABLE_TILING_HK_WK && runInfo_.kernel_w == ENABLE_TILING_HK_WK &&
+        l0Params.baseM == BASIC_BLOCK_SIZE_512 && l0Params.baseK <= BASIC_BLOCK_SIZE_16 && totalCnt >= coreNum_ * TOTAL_CNT_LOWER_RATIO && totalCnt <= coreNum_ * TOTAL_CNT_UPPER_RATIO) {
+        if (opType_ != optiling::OpTypeV2::kConv3DTransposeV2 && hwi>= BASIC_BLOCK_SIZE_512
+            && (alignedWiAl1 * mCnt < tilingRunInfo_.mValue || alignedWiAl1 >= BASIC_BLOCK_SIZE_512)) {
+            l0Params.baseM = BASIC_BLOCK_SIZE_256;
+            OP_LOGD(opName_, "Special adjust: totalCnt=%lu, baseM=%u, alignedWiAl1=%u",
+            totalCnt, l0Params.baseM, alignedWiAl1);
+        }
+    }
+
     AdjustBaseMNK(l0Params, tilingRunInfo_);
 }
 
