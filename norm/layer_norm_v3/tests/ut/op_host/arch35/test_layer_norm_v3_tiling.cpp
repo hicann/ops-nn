@@ -50,8 +50,8 @@ TEST_F(LayerNormV3TilingTest, layer_norm_v3_tiling_regbase_two_pass)
     gert::StorageShape gamma_shape = {{4096}, {4096}};
     gert::StorageShape beta_shape = {{4096}, {4096}};
     gert::StorageShape y_shape = {{64, 4096}, {64, 4096}};
-    gert::StorageShape mean_shape = {{64}, {64}};
-    gert::StorageShape rstd_shape = {{64}, {64}};
+    gert::StorageShape mean_shape = {{64, 1}, {64, 1}};
+    gert::StorageShape rstd_shape = {{64, 1}, {64, 1}};
     float eps = 1e-5;
 
     string compile_info_string = R"({

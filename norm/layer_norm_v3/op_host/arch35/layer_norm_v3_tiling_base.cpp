@@ -23,6 +23,9 @@ namespace optiling {
 constexpr size_t INPUT_IDX_X = 0;
 constexpr size_t INPUT_IDX_GAMMA = 1;
 constexpr size_t INPUT_IDX_BETA = 2;
+constexpr size_t OUTPUT_IDX_Y = 0;
+constexpr size_t OUTPUT_IDX_MEAN = 1;
+constexpr size_t OUTPUT_IDX_RSTD = 2;
 constexpr float DEFAULT_EPSILON_V3 = 1e-5;
 constexpr uint64_t BASE_WSP_SIZE = 32;
 constexpr uint64_t BLOCK_SIZE = 32;
@@ -159,6 +162,45 @@ static inline const gert::Shape& EnsureNotScalar(const gert::Shape& in_shape)
     return in_shape;
 }
 
+ge::graphStatus LayerNormV3TilingBase::OutputShapeCheck(const gert::Shape& xShape, int64_t beginNormAxis)
+{
+    beginNormAxis = beginNormAxis < 0 ? beginNormAxis + static_cast<int64_t>(xShape.GetDimNum()) : beginNormAxis;
+    auto yShapePtr = context_->GetOutputShape(OUTPUT_IDX_Y);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, yShapePtr);
+    const gert::Shape& yShape = EnsureNotScalar(yShapePtr->GetStorageShape());
+    if (yShape != xShape) {
+        std::string shapeMsg = ToString(yShape) + " and " + ToString(xShape);
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "y and x", shapeMsg.c_str(),
+            "The shape of output y should be the same as the shape of input x");
+        return ge::GRAPH_FAILED;
+    }
+
+    gert::Shape expectedShape;
+    expectedShape.SetDimNum(xShape.GetDimNum());
+    for (size_t i = 0; i < xShape.GetDimNum(); i++) {
+        expectedShape.SetDim(i, static_cast<int64_t>(i) < beginNormAxis ? xShape.GetDim(i) : 1);
+    }
+
+    auto meanShapePtr = context_->GetOutputShape(OUTPUT_IDX_MEAN);
+    if (meanShapePtr != nullptr && EnsureNotScalar(meanShapePtr->GetStorageShape()) != expectedShape) {
+        std::string shapeMsg = ToString(EnsureNotScalar(meanShapePtr->GetStorageShape())) + " and " +
+            ToString(expectedShape);
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "mean", shapeMsg.c_str(),
+            "The shape of output mean should be [A1,...,Ai,1,...,1], A1..Ai from x's leading dims");
+        return ge::GRAPH_FAILED;
+    }
+
+    auto rstdShapePtr = context_->GetOutputShape(OUTPUT_IDX_RSTD);
+    if (rstdShapePtr != nullptr && EnsureNotScalar(rstdShapePtr->GetStorageShape()) != expectedShape) {
+        std::string shapeMsg = ToString(EnsureNotScalar(rstdShapePtr->GetStorageShape())) + " and " +
+            ToString(expectedShape);
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "rstd(variance)", shapeMsg.c_str(),
+            "The shape of the third output (rstd or variance) should be [A1,...,Ai,1,...,1]");
+        return ge::GRAPH_FAILED;
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
 ge::graphStatus LayerNormV3TilingBase::GetShapeAttrsInfo()
 {
     auto xDesc = context_->GetInputDesc(INPUT_IDX_X);
@@ -202,6 +244,10 @@ ge::graphStatus LayerNormV3TilingBase::GetShapeAttrsInfo()
     OP_CHECK_IF(
         InputShapeAndAxisCheck(xShape, gammaShape, betaShape, beginNormAxis, beginParamsAxis) == ge::GRAPH_FAILED,
         OP_LOGE(context_->GetNodeName(), "input shape or normlize axis check failed."), return ge::GRAPH_FAILED);
+
+    OP_CHECK_IF(
+        OutputShapeCheck(xShape, beginNormAxis) == ge::GRAPH_FAILED,
+        OP_LOGE(context_->GetNodeName(), "output shape check failed."), return ge::GRAPH_FAILED);
 
     // fuse axis
     uint64_t colSize = 1;

@@ -228,6 +228,7 @@ protected:
     ge::graphStatus InputShapeAndAxisCheck(
         const gert::Shape& xShape, const gert::Shape& gammaShape, const gert::Shape& betaShape, int64_t& beginNormAxis,
         int64_t& beginParamsAxis);
+    ge::graphStatus OutputShapeCheck(const gert::Shape& xShape, int64_t beginNormAxis);
     bool isIndexValid(const gert::Shape& xShape, int64_t beginAxis);
     ge::graphStatus GetCommonPlatformInfo(const LayerNormV3CompileInfo* compileInfo);
 };
