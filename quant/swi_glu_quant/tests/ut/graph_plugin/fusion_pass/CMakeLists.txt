@@ -10,5 +10,5 @@
 
 message(STATUS "=== Debug: target_sources add test_*_proto.cpp: ${test_xxx_proto.cpp} ")
 if(PASS_UT OR (UT_TEST_ALL AND NOT AICPU_ONLY))
-    add_modules_llt_sources(HOSTNAME ${OPTEST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR})
+    add_modules_llt_sources(HOSTNAME ${OP_GRAPH_MODULE_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR})
 endif()

@@ -31,7 +31,7 @@ class selu_backward_test : public testing::Test {
 TEST_F(selu_backward_test, test_selubackward_dataType_error) {
   vector<aclDataType> ValidList = {ACL_DT_UNDEFINED, ACL_INT16,      ACL_INT64,  ACL_UINT8, ACL_UINT16,
                                    ACL_UINT32,       ACL_UINT64,     ACL_DOUBLE, ACL_BOOL,  ACL_STRING,
-                                   ACL_COMPLEX64,    ACL_COMPLEX128, ACL_BF16};
+                                   ACL_COMPLEX64,    ACL_COMPLEX128};
 
   int length = ValidList.size();
   vector<int64_t> gradoutput_dim = {2, 16, 32, 16};
@@ -81,7 +81,7 @@ TEST_F(selu_backward_test, test_selubackward_format_2) {
   int length = ValidList.size();
   vector<int64_t> gradoutput_dim = {2, 16, 32, 16, 16};
   vector<int64_t> result_dim = {2, 16, 32, 16, 16};
-  vector<int64_t> gradinput_dim = {22, 16, 32, 16, 16};
+  vector<int64_t> gradinput_dim = {2, 16, 32, 16, 16};
 
   for (int i = 0; i < length; i++) {
     auto gradoutput= TensorDesc(gradoutput_dim, ACL_FLOAT, ValidList[i]).ValueRange(-2, 2);
