@@ -545,6 +545,7 @@
     {"name": "ScatterNdUpdate", "compute_units": ["ascend950", "ascend910b", "ascend910_93"], "auto_sync": true, "impl_mode": "", "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},
     {"name":"ScatterAddWithSorted", "compute_units": ["ascend910b", "ascend910_93", "kirinx90", "kirin9030"], "auto_sync" : false},
     {"name":"Scatter", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : "" },
+    {"name":"BucketizeV2", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : "", "compile_options": {"ascend950": ["-mllvm -cce-aicore-dcci-before-kernel-end=false"]}},
     {"name":"InplaceIndexAddWithSorted", "compute_units": ["ascend910b", "ascend910_93", "kirinx90", "kirin9030"], "auto_sync" : false},
     {"name":"InplaceScatterAdd", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : false},
     {"name":"InplaceIndexAdd", "compute_units": ["ascend950"], "auto_sync": false, "impl_mode": "", "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},

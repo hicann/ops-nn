@@ -1968,6 +1968,8 @@ VC8@ops-nn:
         - ops/ops-nn/index/scatter_elements_v2/op_kernel/scatter_elements.h
         - ops/ops-nn/index/masked_scatter/op_host/arch35/
         - ops/ops-nn/index/masked_scatter/op_kernel/arch35/
+        - ops/ops-nn/index/bucketize_v2/op_host/arch35/
+        - ops/ops-nn/index/bucketize_v2/op_kernel/arch35/
         - ops/ops-nn/index/scatter_nd_add/op_host/arch35/
         - ops/ops-nn/index/scatter_nd_add/op_kernel/arch35/
         - ops/ops-nn/index/reverse_v2/op_host/
@@ -2004,6 +2006,8 @@ VC8@ops-nn:
       test_code: 
         - ops/ops-nn/index/scatter_elements/examples/
         - ops/ops-nn/index/scatter_elements/tests/
+        - ops/ops-nn/index/bucketize_v2/examples/
+        - ops/ops-nn/index/bucketize_v2/tests/
         - ops/ops-nn/index/scatter_elements_v2/examples/
         - ops/ops-nn/index/scatter_elements_v2/tests/
         - ops/ops-nn/index/masked_scatter/examples/
