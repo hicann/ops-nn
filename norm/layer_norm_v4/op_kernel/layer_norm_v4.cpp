@@ -67,7 +67,6 @@ using namespace LayerNormV4;
         using CopyInBlock = NormBlock::BlockLayerNormCopyInX<SubBlock, SelfSubBlock>;                        \
         using TileCopyOut = NormTile::TileCopyOut;                        \
         using SubBlockOut = NormSubBlock::SubBlockLayerNormCopyOut<TileCopyOut>;                        \
-        using SelfSubBlock = NormSubBlock::SubBlockEmpty;                        \
         using CopyOutBlock = NormBlock::BlockLayerNormCopyOut<SubBlockOut, SelfSubBlock>;                        \
         using Kernel = NormKernel::KernelLayerNormBasic<CopyInBlock, CopyInBlock, CopyInBlock, CopyOutBlock, CopyOutBlock, CopyOutBlock, Tfm, Tweight>;  \
         typename Kernel::Arguments arguments{x, normalized_shape, gamma, beta, y, mean, rstd, workspace, tiling, &pipe};    \
