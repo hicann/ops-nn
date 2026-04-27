@@ -280,8 +280,8 @@
 | [aclnnMaxPool2dWithMaskBackward](../../pooling/max_pool3d_grad_with_argmax/docs/aclnnMaxPool2dWithMaskBackward.md) | 正向最大池化aclnnMaxPool2dWithMask的反向传播。 | 默认非确定性实现，支持配置开启。 | - |
 | [aclnnMaxPool3dWithArgmax](../../pooling/max_pool3d_with_argmax_v2/docs/aclnnMaxPool3dWithArgmax.md) | 对于输入信号的输入通道，提供3维最大池化（max pooling）操作，输出池化后的值out和索引indices。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnMaxPool3dWithArgmaxBackward](../../pooling/max_pool3d_grad_with_argmax/docs/aclnnMaxPool3dWithArgmaxBackward.md) | 正向最大池化aclnnMaxPool3dWithArgmax的反向传播，将梯度回填到每个窗口最大值的坐标处，相同坐标处累加。 | 默认非确定性实现，支持配置开启。 | 默认确定性实现 |
-| [aclnnMaxUnpool2dBackward](../../index/gather_elements/docs/aclnnMaxUnpool2dBackward.md) | MaxPool2d的逆运算aclnnMaxUnpool2d的反向传播，根据indices索引在out中填入gradOutput的元素值。 | 默认确定性实现 | 默认非确定性实现，支持配置开启 |
-| [aclnnMaxUnpool3dBackward](../../index/gather_elements/docs/aclnnMaxUnpool3dBackward.md) | MaxPool3d的逆运算aclnnMaxUnpool3d的反向传播，根据indices索引在out中填入gradOutput的元素值。 | 默认确定性实现 | 默认非确定性实现，支持配置开启 |
+| [aclnnMaxUnpool2dBackward](../../index/gather_elements/docs/aclnnMaxUnpool2dBackward.md) | MaxPool2d的逆运算aclnnMaxUnpool2d的反向传播，根据indices索引在out中填入gradOutput的元素值。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnMaxUnpool3dBackward](../../index/gather_elements/docs/aclnnMaxUnpool3dBackward.md) | MaxPool3d的逆运算aclnnMaxUnpool3d的反向传播，根据indices索引在out中填入gradOutput的元素值。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnMedian](../../index/gather_v2/docs/aclnnMedian.md) | 返回所有元素的中位数。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnMm](../../matmul/mat_mul_v3/docs/aclnnMm.md) | 完成2维张量self与张量mat2的矩阵乘计算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnMish&aclnnInplaceMish](../../activation/mish/docs/aclnnMish&aclnnInplaceMish.md) | 一个自正则化的非单调神经网络激活函数。 | 默认确定性实现 | 默认确定性实现 |
