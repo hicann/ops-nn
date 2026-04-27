@@ -146,7 +146,7 @@
 | [aclnnForeachAddList](../../foreach/foreach_add_list/docs/aclnnForeachAddList.md) | 两个Tensor列表中的元素逐个相加，并可以通过alpha参数调整相加系数。 | 默认确定性实现 | - |
 | [aclnnForeachAddListV2](../../foreach/foreach_add_list/docs/aclnnForeachAddListV2.md) | 两个Tensor列表中的元素逐个相加，并可以通过alpha参数调整相加系数。 | 默认确定性实现 | - |
 | [aclnnForeachAddScalar](../../foreach/foreach_add_scalar/docs/aclnnForeachAddScalar.md) | 将指定的张量值加到张量列表中的每个张量中。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnForeachAddScalarList](../../foreach/foreach_add_scalar_list/docs/aclnnForeachAddScalarList.md) | 输入张量列表和输入标量列表执行逐元素相加运算。 | 默认确定性实现 | - |
+| [aclnnForeachAddScalarList](../../foreach/foreach_add_scalar_list/docs/aclnnForeachAddScalarList.md) | 输入张量列表和输入标量列表执行逐元素相加运算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachAddScalarV2](../../foreach/foreach_add_scalar/docs/aclnnForeachAddScalarV2.md) | 将指定的标量值加到张量列表中的每个张量中。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachAsin](../../foreach/foreach_asin/docs/aclnnForeachAsin.md) | 按元素进行反正弦函数运算。 | 默认确定性实现 | - |
 | [aclnnForeachAtan](../../foreach/foreach_atan/docs/aclnnForeachAtan.md) | 按元素进行反正切函数运算。 | 默认确定性实现 | - |
@@ -154,7 +154,7 @@
 | [aclnnForeachCos](../../foreach/foreach_cos/docs/aclnnForeachCos.md) | 按元素进行余弦函数运算。 | 默认确定性实现 | - |
 | [aclnnForeachCosh](../../foreach/foreach_cosh/docs/aclnnForeachCosh.md) | 按元素进行双曲余弦函数运算。 | 默认确定性实现 | - |
 | [aclnnForeachDivList](../../foreach/foreach_div_list/docs/aclnnForeachDivList.md) | 对张量列表x1和张量列表x2执行逐元素除法。 | 默认确定性实现 | - |
-| [aclnnForeachDivScalar](../../foreach/foreach_div_scalar/docs/aclnnForeachDivScalar.md) | 计算张量列表x除以张量scalar。 | 默认确定性实现 | - |
+| [aclnnForeachDivScalar](../../foreach/foreach_div_scalar/docs/aclnnForeachDivScalar.md) | 计算张量列表x除以张量scalar。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachDivScalarList](../../foreach/foreach_div_scalar_list/docs/aclnnForeachDivScalarList.md) | 对张量列表x和标量列表scalars执行逐元素除法。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachDivScalarV2](../../foreach/foreach_div_scalar/docs/aclnnForeachDivScalarV2.md) | 计算张量列表x除以标量scalar。 | 默认确定性实现 | - |
 | [aclnnForeachErf](../../foreach/foreach_erf/docs/aclnnForeachErf.md) | 按元素进行误差函数运算（也称之为高斯误差函数，error function or Gaussian error function）。 | 默认确定性实现 | - |
