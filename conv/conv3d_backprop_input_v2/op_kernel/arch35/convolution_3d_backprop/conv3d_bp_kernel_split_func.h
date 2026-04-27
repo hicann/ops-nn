@@ -265,7 +265,9 @@ static __aicore__ inline bool IterateForKernelSplit(Intf *self)
     UpdateHoIdxForKernelSplit<Intf>(self);
     RecalcStepForKernelSplit<Intf>(self);
 
-    uint32_t tmpSingleCoreK = self->ctx.tiling_->cout1G * self->ctx.splitHkWkC0List_[self->ctx.splitIndex_];
+    uint32_t tmpSingleCoreK = self->ctx.tiling_->group == 1
+        ? self->ctx.tiling_->cout1 * self->ctx.splitHkWkC0List_[self->ctx.splitIndex_]
+        : self->ctx.tiling_->cout1G * self->ctx.splitHkWkC0List_[self->ctx.splitIndex_];
     self->ctx.kIter_ = DivCeil(tmpSingleCoreK, self->ctx.tiling_->baseK);
     self->ctx.tailK_ = tmpSingleCoreK - (self->ctx.kIter_ - 1) * self->ctx.tiling_->baseK;
     self->ctx.kIterStepKaTail = (DivCeil(self->ctx.kIter_, self->ctx.curStepKa_) - 1) * self->ctx.curStepKa_;
