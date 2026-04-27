@@ -141,6 +141,14 @@ public:
         }
     }
 
+    __aicore__ inline void SetBatchCoreIdx(uint32_t batchCoreIdx)
+    {
+        using Local = typename Ext::SetBatchCoreIdx;
+        if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, batchCoreIdx)) {
+            Local::call(this, batchCoreIdx);
+        }
+    }
+
     __aicore__ inline void FreeB1Tensor()
     {
         using Local = typename Ext::FreeB1Tensor;

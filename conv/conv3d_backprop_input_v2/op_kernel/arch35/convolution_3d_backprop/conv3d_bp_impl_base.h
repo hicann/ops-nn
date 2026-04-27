@@ -56,6 +56,7 @@ public:
     DECLARE_IMPL(Config_, Convolution3DBackpropFunc, SetSingleShape, Intf);
     DECLARE_IMPL(Config_, Convolution3DBackpropFunc, SetStartIdx, Intf);
     DECLARE_IMPL(Config_, Convolution3DBackpropFunc, SetFullLoadFlag, Intf);
+    DECLARE_IMPL(Config_, Convolution3DBackpropFunc, SetBatchCoreIdx, Intf);
     DECLARE_IMPL(Config_, Convolution3DBackpropFunc, FreeB1Tensor, Intf);
     DECLARE_SYNC_IMPL(Config_, Convolution3DBackpropFunc, Iterate, Intf);
     DECLARE_SYNC_IMPL(Config_, Convolution3DBackpropFunc, IterateAll, Intf);
@@ -135,6 +136,7 @@ public:
         DEFINE_STUCT_ARRAY_FIELD(int32_t, subPadUpList_, SUB_KERNEL_NUM);
         DEFINE_STUCT_ARRAY_FIELD(int32_t, subPadDownList_, SUB_KERNEL_NUM);
         DEFINE_STUCT_FIELD(uint64_t, curMStartIdx_);
+        DEFINE_STUCT_FIELD(uint32_t, curBatchCoreIdx_);
         DEFINE_STUCT_FIELD(uint32_t, groupIterIdx_);
         DEFINE_STUCT_FIELD(uint32_t, curEnlarge);
         DEFINE_STUCT_FIELD(bool, isA1FullLoadFlag_);

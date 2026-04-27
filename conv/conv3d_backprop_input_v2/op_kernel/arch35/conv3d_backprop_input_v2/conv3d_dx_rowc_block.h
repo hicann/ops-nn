@@ -282,6 +282,7 @@ protected:
                     }
                 }
             }
+            this->dedx_.SetBatchCoreIdx(this->batchCoreIdx_);
             this->dedx_.SetSingleShape(mCoreUse, coutCoreUse, nCoreUse, dinCoreUse);
             this->dedx_.SetStartIdx(this->dCoreIdx_ * this->singleShapeDin_, this->mCoreIdx_ * this->tiling_->singleCoreM,
                 this->nCoreIdx_ * this->tiling_->singleCoreCin, 0);

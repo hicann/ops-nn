@@ -123,8 +123,28 @@ static __aicore__ inline void CalcRealWo4KernelSplit(Intf *self, uint32_t &realW
 }
 
 template <class Intf>
+static __aicore__ inline void CalcCurHoSize4KernelSplit(Intf *self, uint32_t curDoutIdx, 
+    int64_t curOriHoIdx, uint64_t woOffset, uint32_t realWo, uint32_t &curHoSize)
+{
+    bool isLastTail = (self->ctx.curBatchCoreIdx_ == self->ctx.tiling_->batch - 1) &&
+        (curDoutIdx == self->ctx.tiling_->dout - 1);
+    if (isLastTail && curHoSize > 0) {
+        uint64_t curStartHoWo = static_cast<uint64_t>(self->ctx.curHoStartIdx_) * self->ctx.tiling_->wo;
+        // 反向leftpad为0的场景下，根据dn2nz的参数计算该指令在howo方向上的总偏移量
+        // dn2nz指令在howo的偏移：源地址偏移（hoOffset+woOffset）+ 搬移矩阵的偏移（第一个矩阵的列数 + 后续矩阵数量*wo）
+        uint64_t dn2nzHoWo = curOriHoIdx * self->ctx.tiling_->wo + woOffset + realWo
+            + static_cast<uint64_t>(self->ctx.tiling_->wo) * (curHoSize - 1);
+        int64_t extraHoWo = curStartHoWo + dn2nzHoWo - self->ctx.hoWo_;
+        // 最后一个尾块的场景下，如果在howo方向上有额外的偏移，需要减小curHoSize防止多余的搬运
+        if (extraHoWo > 0) {
+            curHoSize -= extraHoWo / self->ctx.tiling_->wo;
+        }
+    }
+}
+
+template <class Intf>
 static __aicore__ inline void CalcLoadToA1Dn2NzParams4KernelSplit(Intf *self, uint32_t kIdx, Dn2NzParams &dn2NzParams,
-    int64_t &curOriHoIdx, uint64_t &woOffset)
+    uint32_t curDoutIdx, int64_t &curOriHoIdx, uint64_t &woOffset)
 {
     uint32_t curHoSize = self->ctx.curHoSize_;
     uint32_t realWo = self->ctx.tiling_->wo;
@@ -145,6 +165,7 @@ static __aicore__ inline void CalcLoadToA1Dn2NzParams4KernelSplit(Intf *self, ui
     uint32_t curCoutIdx = DivHkWk<Intf>(self, kIdx * self->ctx.tiling_->baseK);
     uint32_t curCoutSize = 0;
     CalcCurCoutSizeA1(self, kIdx, curCoutIdx, curCoutSize);
+    CalcCurHoSize4KernelSplit(self, curDoutIdx, curOriHoIdx, woOffset, realWo, curHoSize);
     // 目前只支持各方向pad相等，只判断左pad，简化计算
     if (self->ctx.tiling_->backpropPadLeft == 0) {
         dn2NzParams.dnNum = curHoSize;
@@ -361,7 +382,7 @@ __aicore__ inline void LoadToA1ForDn2Nz(Intf *self, LocalTensor<typename Intf::S
     coOffset = curCoutIdx * self->ctx.doHoWo_;
 
     if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
-        CalcLoadToA1Dn2NzParams4KernelSplit(self, kIdx, dn2NzParams, curOriHoIdx, woOffset);
+        CalcLoadToA1Dn2NzParams4KernelSplit(self, kIdx, dn2NzParams, curDoutIdx, curOriHoIdx, woOffset);
     } else {
         uint32_t strideH = self->ctx.tiling_->strideH;
         if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_H) {

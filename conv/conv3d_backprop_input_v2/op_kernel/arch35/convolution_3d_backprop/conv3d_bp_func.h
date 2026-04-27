@@ -30,6 +30,7 @@ DECLARE_CHECK_IMPL(SetScale);
 DECLARE_CHECK_IMPL(SetSingleShape);
 DECLARE_CHECK_IMPL(SetStartIdx);
 DECLARE_CHECK_IMPL(SetFullLoadFlag);
+DECLARE_CHECK_IMPL(SetBatchCoreIdx);
 DECLARE_CHECK_SYNC_IMPL(Iterate);
 DECLARE_CHECK_SYNC_IMPL(IterateAll);
 DECLARE_CHECK_SYNC_IMPL(GetTensorC);
@@ -793,6 +794,15 @@ struct SetFullLoadFlag {
     {
         // 设置全载模板标志位
         self->ctx.enableFullLoad_ = enableFullLoad;
+    }
+};
+
+template <class Intf>
+struct SetBatchCoreIdx {
+    DECLARE_DEFAULT_OVERLOADING_FUN(Intf, Convolution3DBackpropFunc);
+    static __aicore__ inline void call(Intf *self, uint32_t batchCoreIdx)
+    {
+        self->ctx.curBatchCoreIdx_ = batchCoreIdx;
     }
 };
 
