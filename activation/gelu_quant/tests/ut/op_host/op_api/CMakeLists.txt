@@ -7,5 +7,5 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 #/
 
-message(STATUS "=== Debug: target_sources add test_aclnn_hardshrink_backward")
+message(STATUS "=== Debug: target_sources add test_aclnn_gelu_quant")
 add_modules_ut_sources(HOSTNAME ${OP_API_MODULE_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR})

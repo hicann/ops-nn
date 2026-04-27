@@ -7,5 +7,5 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 #/
 
-message(STATUS "=== Debug: target_sources add test_threshold_grad_v2_d")
+message(STATUS "=== Debug: target_sources add test_aclnn_threshold_backward")
 add_modules_llt_sources(HOSTNAME ${OPTEST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR})
