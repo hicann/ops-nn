@@ -22,6 +22,7 @@
 #include "opdev/op_log.h"
 #include "opdev/shape_utils.h"
 #include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -37,7 +38,8 @@ static const std::initializer_list<DataType> Ascend910B_dtype_support_list = {
 
 static const std::initializer_list<DataType>& GetDtypeSupportList() {
   if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-      GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) {
+      GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 ||
+      Ops::NN::AclnnUtil::IsRegbase()) {
     return Ascend910B_dtype_support_list;
   }
   return Ascend910_dtype_support_list;
