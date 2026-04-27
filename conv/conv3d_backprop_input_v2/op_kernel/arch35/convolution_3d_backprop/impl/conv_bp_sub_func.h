@@ -623,6 +623,10 @@ __aicore__ inline void FullLoadBias(Intf *self)
     // GM -> L1
     LocalTensor<typename Intf::BiasT> useBiasL1 = self->ctx.biasL1Que_.template AllocTensor<typename Intf::BiasT>();
     uint16_t blockBytes = self->ctx.singleShapeCin_ * sizeof(typename Intf::BiasT);
+    // 如果搬运的字节数在pad补齐后，没有64字节对齐，则有可能出现脏数据污染BT，需要主动清零L1BiasBuf
+    if (blockBytes == 0 || ((blockBytes - 1) / ONE_BLK_SIZE) % 2 == 0) {
+        InitZeroValue<Intf, typename Intf::BiasT>(self, useBiasL1);
+    }
     DataCopyParams dataCopyParams(1, blockBytes, 0, 0);
     uint8_t rightPadding = DivCeil(blockBytes, ONE_BLK_SIZE) * ONE_BLK_SIZE / sizeof(typename Intf::BiasT) -
         self->ctx.singleShapeCin_;
@@ -652,6 +656,10 @@ __aicore__ inline void LoadBiasToBT(Intf *self)
     // GM -> L1
     LocalTensor<typename Intf::BiasT> useBiasL1 = self->ctx.biasL1Que_.template AllocTensor<typename Intf::BiasT>();
     uint16_t blockBytes = btCinSize  * sizeof(typename Intf::BiasT);
+    // 如果搬运的字节数在pad补齐后，没有64字节对齐，则有可能出现脏数据污染BT，需要主动清零L1BiasBuf
+    if (blockBytes == 0 || ((blockBytes - 1) / ONE_BLK_SIZE) % 2 == 0) {
+        InitZeroValue<Intf, typename Intf::BiasT>(self, useBiasL1);
+    }
     DataCopyParams dataCopyParams(1, blockBytes, 0, 0);
     uint8_t rightPadding = DivCeil(blockBytes, ONE_BLK_SIZE) * ONE_BLK_SIZE / sizeof(typename Intf::BiasT) - btCinSize;
     DataCopyPadParams padParams(true, 0, rightPadding, 0);
