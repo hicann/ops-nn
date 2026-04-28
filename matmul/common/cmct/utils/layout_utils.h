@@ -19,7 +19,8 @@
 #include "matmul/tiling.h"
 // CubeFormat
 #include "matmul/matmul_config.h"
-#include "matmul/matmul_client.h"
+// AscendC::CeilAlign
+#include "adv_api/matmul/matmul.h"
 #include "./integral_constant.h"
 
 namespace Cmct {
