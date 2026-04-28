@@ -89,7 +89,7 @@ static bool CheckShape(const aclTensor* selfTensor, const aclTensor* batch1Tenso
     }
 
     if (!CheckBatchDimBroadcast(batch1DimNum, batch2DimNum, batch1, batch2)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "self's batch dim and mat2's batch dim can not broadcast");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "mat1's batch dim and mat2's batch dim can not broadcast");
         return false;
     }
 
