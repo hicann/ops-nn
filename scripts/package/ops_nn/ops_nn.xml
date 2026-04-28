@@ -2,6 +2,7 @@
 <config name="ops_nn" copy_type="delivery" src_path="" dst_path="ops_nn" install_type="all" install_mod="550" install_own="$username:$usergroup">
     <package_info>
         <product_name>cann</product_name>
+        <share_info_name>ops_nn</share_info_name>
         <func_name>ops-nn</func_name>
         <suffix>run</suffix>
         <install_script>share/info/ops_nn/script/install.sh</install_script>

@@ -98,7 +98,7 @@ HOST_RUN_NAME="host.run"
 HOST_EXTRACT_DIR="host"
 MAKESELF_TARGET_DIR="build/makeself"
 RUNFILE_TARGET_DIR="build/_CPack_Packages/makeself_staging"
-PACKAGE_SCRIPT="${WORKDIR}/scripts/package/package.py"
+PACKAGE_SCRIPT="$TOP_DIR/open_source/cann-cmake/scripts/package/package.py"
 MERGE_SCRIPT="${WORKDIR}/scripts/package/common/py/merge_binary_info_config.py"
 PKG_OUTPUT_DIR="build/_CPack_Packages/makeself_staging"
 RUN_PACKAGE_SAVE_AB_PATH=${TOP_DIR}/${RUN_PKG_SAVE_PATH}
@@ -304,7 +304,9 @@ python3 "$PACKAGE_SCRIPT" \
     --pkg-output-dir "${WORKDIR}/$PKG_OUTPUT_DIR" \
     --independent_pkg \
     --chip_name "$SOC" \
-    --os_arch linux-"$OS_ARCH"
+    --os_arch linux-"$OS_ARCH" \
+    --delivery_dir "${WORKDIR}/build" \
+    --source_dir "${WORKDIR}"
 
 log "Packaging completed successfully!"
 

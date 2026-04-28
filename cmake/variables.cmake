@@ -91,6 +91,7 @@ if(ENABLE_CUSTOM)
 else()
   # built-in package install path
   set(OPP_PREFIX "opp")
+  set(CMAKE_INSTALL_DEFAULT_COMPONENT_NAME ops-nn)
 
   set(ACLNN_INC_INSTALL_DIR           ${CMAKE_SYSTEM_PROCESSOR}-linux/include/aclnnop)
   set(ACLNN_OP_INC_INSTALL_DIR        ${CMAKE_SYSTEM_PROCESSOR}-linux/include/aclnnop/level2)

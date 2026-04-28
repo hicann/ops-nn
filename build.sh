@@ -1026,6 +1026,10 @@ cmake_init() {
     mkdir -p "${BUILD_PATH}"
   fi
 
+  if [ ! -d "${BUILD_OUT_PATH}" ]; then
+    mkdir -p "${BUILD_OUT_PATH}"
+  fi
+
   [ -f "${BUILD_PATH}/CMakeCache.txt" ] && rm -f ${BUILD_PATH}/CMakeCache.txt
 
   cd "${BUILD_PATH}" && cmake -DCANN_3RD_LIB_PATH=${CANN_3RD_LIB_PATH} -DENABLE_EXPERIMENTAL=${ENABLE_EXPERIMENTAL} -DPREPROCESS_ONLY=ON ..

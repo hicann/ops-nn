@@ -10,6 +10,8 @@
 
 cmake_minimum_required(VERSION 3.16)
 set(PKG_NAME nn)
+include(cmake/fetch_cann_cmake.cmake)
+
 project(${PKG_NAME} VERSION 1.0.0)
 
 set(CMAKE_C_FLAGS_RELEASE "")
@@ -116,10 +118,11 @@ if(ENABLE_CUSTOM AND ENABLE_ASC_BUILD)
   include(cmake/custom_kernel.cmake)
 endif()
 
+init_cann_project()
 if(BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG)
-  check_pkg_build_deps("ops-nn")
+  check_cann_pkg_build_deps("ops-nn")
 endif()
-add_version_info_targets()
+add_cann_version_info_targets()
 
 if(ENABLE_TEST)
   # ut common dependencies
