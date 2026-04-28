@@ -13,6 +13,7 @@
  */
 #include "log/log.h"
 #include "register/op_impl_registry.h"
+#include <algorithm>
 
 static constexpr int INPUT_X1_IDX = 0;
 static constexpr int INPUT_SCALE2_IDX = 4;
