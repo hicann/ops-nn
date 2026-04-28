@@ -279,8 +279,16 @@ __aicore__ inline void QuantBmmAswBlock::ResetAddressOffsets()
 template <bool bTrans, CubeFormat formatX2>
 __aicore__ inline void QuantBmmAswBlock::UpdateBlockParams4AL1FullLoad(uint64_t roundIdx)
 {
-    params_.singleCoreM = params_.mIndex != (params_.mCnt - 1) ? tilingData_->matmulTiling.baseM : params_.mBaseTail;
-    params_.singleCoreN = params_.nIndex != (params_.nCnt - 1) ? tilingData_->matmulTiling.baseN : params_.nBaseTail;
+    params_.singleCoreM = tilingData_->matmulTiling.baseM;
+    if (params_.mIndex >= params_.mBaseNormCnt) {
+        params_.singleCoreM =
+            (params_.mIndex >= (params_.mCnt - 1UL)) ? params_.mBaseTailLast : params_.mBaseTailMain;
+    }
+    params_.singleCoreN = tilingData_->matmulTiling.baseN;
+    if (params_.nIndex >= params_.nBaseNormCnt) {
+        params_.singleCoreN =
+            (params_.nIndex >= (params_.nCnt - 1UL)) ? params_.nBaseTailLast : params_.nBaseTailMain;
+    }
     if (tilingData_->adaptiveSlidingWin.mTailTile == 1 && tilingData_->adaptiveSlidingWin.nTailTile == 1) {
         return;
     }
@@ -517,4 +525,3 @@ __aicore__ inline void QuantBmmAswBlock::UpdatePerBlockMmParam()
     }
 }
 }  // namespace QuantBatchMatmulV3
-

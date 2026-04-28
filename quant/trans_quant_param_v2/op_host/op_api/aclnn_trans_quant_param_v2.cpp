@@ -68,7 +68,7 @@ static inline bool CheckShape(const aclTensor* scale, const aclTensor* offset, i
         if (!(isScaleVaild || (scale->GetViewShape().GetDimNum() == 2 && scale->GetViewShape().GetDim(0) > 0 &&
                                scale->GetViewShape().GetDim(1) > 0))) {
             OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "Dim value of scale should be large than 0, but current is %s",
+                ACLNN_ERR_PARAM_INVALID, "Dim value of scale should be greater than 0, but current is %s",
                 op::ToString(scale->GetViewShape()).GetString());
             return false;
         }

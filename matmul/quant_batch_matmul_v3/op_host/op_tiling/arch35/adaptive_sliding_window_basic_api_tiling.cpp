@@ -114,11 +114,6 @@ ge::graphStatus AdaptiveSlidingWindowBasicAPITiling::DoOpTiling()
         OP_LOGE(inputParams_.opName, "DoOpTiling fail");
         return ge::GRAPH_FAILED;
     }
-    AdaptiveSlidingWindowTiling::LoadBalanceDataReset();
-    if (!AdaptiveSlidingWindowTiling::OptimizeEdgeBasicBlock()) {
-        OP_LOGE(inputParams_.opName, "OptimizeEdgeBasicBlock fail");
-        return ge::GRAPH_FAILED;
-    }
     AdaptiveSlidingWindowTiling::SetBf16Compat();
     AdaptiveSlidingWindowTiling::CalL1Tiling();
     if (inputParams_.isPertoken) {
@@ -276,6 +271,12 @@ bool AdaptiveSlidingWindowBasicAPITiling::AnalyseSlidingWinInfo()
     adaptiveWin_.nTail = inputParams_.nSize - (adaptiveWin_.nBlockCnt - 1UL) * adaptiveWin_.baseN;
     adaptiveWin_.totalWinCnt = ops::CeilDiv(adaptiveWin_.totalBlockCnt, aicoreParams_.aicNum);
     adaptiveWin_.tailWinBlockCnt = (adaptiveWin_.totalBlockCnt) % aicoreParams_.aicNum;
+
+    AdaptiveSlidingWindowTiling::LoadBalanceDataReset();
+    if (!AdaptiveSlidingWindowTiling::OptimizeEdgeBasicBlock()) {
+        OP_LOGE(inputParams_.opName, "OptimizeEdgeBasicBlock fail");
+        return false;
+    }
     IsAFullLoad();
     if (adaptiveWin_.useTailWinLogic) {
         if (isAFullLoad_) {
@@ -293,11 +294,16 @@ void AdaptiveSlidingWindowBasicAPITiling::IsAFullLoad()
         isAFullLoad_ = false;
         return;
     }
-    uint64_t singleCoreASize =
-        GetSizeWithDataType(static_cast<uint64_t>(adaptiveWin_.baseM) * inputParams_.kSize, inputParams_.aDtype);
+    uint64_t realBaseMSize = adaptiveWin_.mBaseTailSplitCnt == 1UL ? adaptiveWin_.baseM : adaptiveWin_.mTailMain;
+    uint64_t singleCoreASize = GetSizeWithDataType(realBaseMSize * inputParams_.kSize, inputParams_.aDtype);
     isAFullLoad_ = singleCoreASize <= aicoreParams_.l1Size / AFULLLOAD_SINGLE_CORE_A_SCALER &&
                    adaptiveWin_.mBlockCnt < WINDOW_LEN && aicoreParams_.aicNum % adaptiveWin_.mBlockCnt == 0 &&
                    adaptiveWin_.totalBlockCnt > aicoreParams_.aicNum && inputParams_.batchC == 1;
+    if (isAFullLoad_ && adaptiveWin_.baseM != realBaseMSize) {
+        adaptiveWin_.baseM = realBaseMSize;
+        adaptiveWin_.mBaseTailSplitCnt = 1UL;
+        adaptiveWin_.mTailMain = 0UL;
+    }
 }
 
 void AdaptiveSlidingWindowBasicAPITiling::SetTilingData()

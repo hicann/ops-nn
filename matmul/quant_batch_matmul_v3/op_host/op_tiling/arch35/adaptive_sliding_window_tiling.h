@@ -91,6 +91,13 @@ protected:
     virtual void CalcTailBasicBlock();
     virtual void CalcTailBasicBlockAfullLoad();
     void CalcTailBasicBlockBfullLoad();
+    void CalcTailBasicBlock4MmadS8S4();
+    uint64_t GetTailBasicBlockSplitMax(bool isMSplit, uint64_t tileMax, uint64_t splitSize) const;
+    bool CanIncreaseTailSplit(bool isPreSplitM, bool isPreSplit, uint64_t preSplit, uint64_t secSplit,
+                              uint64_t splitMax);
+    uint64_t GetTailSplitState(bool isPreSplitM, bool isPreSplit, uint64_t split, uint64_t splitSize) const;
+    void CalcTailBasicBlockSplit(bool isPreSplitM, uint64_t preSplitMax, uint64_t secSplitMax,
+                                 uint64_t preSplitSize, uint64_t secSplitSize);
     uint32_t CalUsedCoreNum(uint32_t mTile, uint32_t nTile);
     uint64_t GetDepthA1B1(uint64_t leftSize, uint64_t perDepthSize, uint64_t depthInit);
     uint64_t GetDepthB1AfullLoad(uint64_t leftSize);
@@ -146,4 +153,3 @@ protected:
                                     uint64_t bCacheLine);
 };
 }  // namespace optiling
-

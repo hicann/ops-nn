@@ -31,12 +31,18 @@ __aicore__ inline void CopyInA1(const QuantBmmAswBlock &block, uint64_t mCntIdx,
     auto &matmulTilingData = *block.tilingData_;
     uint64_t shapeM = matmulTilingData.matmulTiling.M;
     uint64_t shapeK = matmulTilingData.matmulTiling.Ka;
-    uint64_t singleCoreM = isMultiCore && mCntIdx == block.params_.mCnt - 1UL
-                               ? block.params_.mBaseTail
-                               : static_cast<uint64_t>(matmulTilingData.matmulTiling.singleCoreM);
+    uint64_t singleCoreM = static_cast<uint64_t>(matmulTilingData.matmulTiling.singleCoreM);
+    if (isMultiCore && mCntIdx >= block.params_.mBaseNormCnt) {
+        singleCoreM = mCntIdx >= block.params_.mCnt - 1UL ? block.params_.mBaseTailLast : block.params_.mBaseTailMain;
+    }
     uint64_t nDim = singleCoreM;
     uint64_t dDim = shapeK;
-    uint64_t offsetA = mCntIdx * matmulTilingData.matmulTiling.singleCoreM * shapeK;
+    uint64_t offsetA = mCntIdx * static_cast<uint64_t>(matmulTilingData.matmulTiling.singleCoreM);
+    if (mCntIdx > block.params_.mBaseNormCnt) {
+        offsetA -=
+            (mCntIdx - block.params_.mBaseNormCnt) *
+            (static_cast<uint64_t>(matmulTilingData.matmulTiling.singleCoreM) - block.params_.mBaseTailMain);
+    }
     // supportMmadS8S4平台的al1全载支持s8s8, s8s4, s4s4; david的al1全载支持s8s8, f8s8, f4f4
     constexpr uint64_t c0Size = DequantBmm::GetC0Size<T>();
     constexpr int64_t int4Factor = c0Size == K0_INT4 ? 2 : 1;
@@ -46,9 +52,9 @@ __aicore__ inline void CopyInA1(const QuantBmmAswBlock &block, uint64_t mCntIdx,
     if constexpr (trans) {
         nDim = shapeK;
         dDim = singleCoreM;
-        offsetA = mCntIdx * matmulTilingData.matmulTiling.singleCoreM;
         nd2nzParams.srcDValue = DequantBmm::CeilDiv(shapeM, int4Factor);
     } else {
+        offsetA *= shapeK;
         nd2nzParams.srcDValue = DequantBmm::CeilDiv(shapeK, int4Factor);
     }
 
@@ -167,19 +173,24 @@ __aicore__ inline void CopyInScaleA(const QuantBmmAswBlock& block, uint32_t bloc
     uint64_t shapeK =
         DequantBmm::Align(DequantBmm::CeilDiv(multiTilingData.matmulTiling.Ka, MXFP_GROUP_SIZE), MXFP_MULTI_BASE_SIZE);
     uint64_t mCntIdx = blockId % block.params_.mCnt;
-    uint64_t singleCoreM = isMultiCore && mCntIdx == block.params_.mCnt - 1UL
-                          ? block.params_.mBaseTail
-                          : static_cast<uint64_t>(multiTilingData.matmulTiling.singleCoreM);
+    uint64_t singleCoreM = static_cast<uint64_t>(multiTilingData.matmulTiling.singleCoreM);
+    if (isMultiCore && mCntIdx >= block.params_.mBaseNormCnt) {
+        singleCoreM = mCntIdx >= block.params_.mCnt - 1UL ? block.params_.mBaseTailLast : block.params_.mBaseTailMain;
+    }
 
     uint64_t nDim = singleCoreM;
     uint64_t dDim = shapeK;
-    uint64_t offsetScaleA = 0;
+    uint64_t offsetScaleA = mCntIdx * static_cast<uint64_t>(multiTilingData.matmulTiling.singleCoreM);
+    if (mCntIdx > block.params_.mBaseNormCnt) {
+        offsetScaleA -=
+            (mCntIdx - block.params_.mBaseNormCnt) *
+            (static_cast<uint64_t>(multiTilingData.matmulTiling.singleCoreM) - block.params_.mBaseTailMain);
+    }
     if constexpr (trans) {
         nDim = shapeK;
         dDim = singleCoreM;
-        offsetScaleA = mCntIdx * multiTilingData.matmulTiling.singleCoreM;
     } else {
-        offsetScaleA = mCntIdx * multiTilingData.matmulTiling.singleCoreM * shapeK;
+        offsetScaleA *= shapeK;
     }
 
     Dn2NzParams dn2nzParams;
@@ -255,4 +266,3 @@ __aicore__ inline void ProcessWithBatch(QuantBmmAswBlock& block, T& object)
 }
 
 }  // namespace QuantBatchMatmulV3
-

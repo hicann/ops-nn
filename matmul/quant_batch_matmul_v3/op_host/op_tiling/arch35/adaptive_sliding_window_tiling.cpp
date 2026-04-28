@@ -205,11 +205,6 @@ ge::graphStatus AdaptiveSlidingWindowTiling::DoOpTiling()
         OP_LOGE(inputParams_.opName, "DoOpTiling fail");
         return ge::GRAPH_FAILED;
     }
-    LoadBalanceDataReset();
-    if (!OptimizeEdgeBasicBlock()) {
-        OP_LOGE(inputParams_.opName, "OptimizeEdgeBasicBlock fail");
-        return ge::GRAPH_FAILED;
-    }
     CalL1Tiling();
     if (inputParams_.isPertoken) {
         CalcUbTiling();
@@ -324,6 +319,12 @@ bool AdaptiveSlidingWindowTiling::AnalyseSlidingWinInfo()
     adaptiveWin_.nTail = inputParams_.nSize - (adaptiveWin_.nBlockCnt - 1UL) * adaptiveWin_.baseN;
     adaptiveWin_.totalWinCnt = ops::CeilDiv(adaptiveWin_.totalBlockCnt, aicoreParams_.aicNum);
     adaptiveWin_.tailWinBlockCnt = adaptiveWin_.totalBlockCnt % aicoreParams_.aicNum;
+
+    LoadBalanceDataReset();
+    if (!OptimizeEdgeBasicBlock()) {
+        OP_LOGE(inputParams_.opName, "OptimizeEdgeBasicBlock fail");
+        return false;
+    }
     IsABFullLoad();
     if (isABFullLoad_) {
         adaptiveWin_.useTailWinLogic = false;
@@ -336,6 +337,8 @@ bool AdaptiveSlidingWindowTiling::AnalyseSlidingWinInfo()
             CalcTailBasicBlockAfullLoad();
         } else if (isBFullLoad_) {
             CalcTailBasicBlockBfullLoad();
+        } else if (compileInfo_.supportMmadS8S4) {
+            CalcTailBasicBlock4MmadS8S4();
         } else {
             CalcTailBasicBlock();
         }
@@ -591,16 +594,19 @@ bool AdaptiveSlidingWindowTiling::IsMxBackwardTrans() const
 
 void AdaptiveSlidingWindowTiling::IsAFullLoad()
 {
-    if (inputParams_.batchA != 1UL || IsMxKOdd() || IsMxBackwardTrans() || isTilingOut_ || inputParams_.isPerBlock || inputParams_.cDtype == ge::DT_INT32) {
+    if (inputParams_.batchA != 1UL || IsMxKOdd() || IsMxBackwardTrans() || isTilingOut_ || inputParams_.isPerBlock ||
+        inputParams_.cDtype == ge::DT_INT32) {
         isAFullLoad_ = false;
         return;
     }
-
+    uint64_t realBaseMSize = compileInfo_.supportMmadS8S4 || adaptiveWin_.mBaseTailSplitCnt == 1UL ?
+                                 adaptiveWin_.baseM :
+                                 adaptiveWin_.mTailMain;
     singleCoreASizeWithFullLoad_ =
-        adaptiveWin_.baseM *
-        (inputParams_.transA
-             ? GetSizeWithDataType(ops::CeilAlign(inputParams_.kSize, CUBE_BLOCK), inputParams_.aDtype)
-             : ops::CeilAlign(GetSizeWithDataType(inputParams_.kSize, inputParams_.aDtype), CUBE_REDUCE_BLOCK));
+        realBaseMSize *
+        (inputParams_.transA ?
+             GetSizeWithDataType(ops::CeilAlign(inputParams_.kSize, CUBE_BLOCK), inputParams_.aDtype) :
+             ops::CeilAlign(GetSizeWithDataType(inputParams_.kSize, inputParams_.aDtype), CUBE_REDUCE_BLOCK));
     // supportMmadS8S4平台和david都是阈值256K
     constexpr uint64_t A_L1_LOAD_THRESHOLD = 256 * 1024UL;
     // supportMmadS8S4平台不需要判断mBlockCnt <= nBlockCnt，更大概率使能AFullLoad
@@ -615,6 +621,11 @@ void AdaptiveSlidingWindowTiling::IsAFullLoad()
         (((adaptiveWin_.mBlockCnt == 1UL || adaptiveWin_.mBlockCnt == 2UL || adaptiveWin_.mBlockCnt == 4UL) &&
           aicoreParams_.aicNum >= adaptiveWin_.mBlockCnt && aicoreParams_.aicNum % adaptiveWin_.mBlockCnt == 0) ||
          adaptiveWin_.mBlockCnt * adaptiveWin_.nBlockCnt <= aicoreParams_.aicNum);
+    if (isAFullLoad_ && adaptiveWin_.baseM != realBaseMSize) {
+        adaptiveWin_.baseM = realBaseMSize;
+        adaptiveWin_.mBaseTailSplitCnt = 1UL;
+        adaptiveWin_.mTailMain = 0UL;
+    }
 }
 
 bool AdaptiveSlidingWindowTiling::CheckBiasAndScale(uint64_t baseN, uint64_t dbL0c) const
@@ -999,7 +1010,7 @@ bool AdaptiveSlidingWindowTiling::IsInValidWeighNzTailSplit(uint64_t splitCnt, b
     return tailN % GetShapeWithDataType(L1_ALIGN_SIZE, inputParams_.bDtype) != 0UL;
 }
 
-void AdaptiveSlidingWindowTiling::CalcTailBasicBlock()
+void AdaptiveSlidingWindowTiling::CalcTailBasicBlock4MmadS8S4()
 {
     if (adaptiveWin_.tailWinBlockCnt == 0UL) {
         return;
@@ -1011,39 +1022,132 @@ void AdaptiveSlidingWindowTiling::CalcTailBasicBlock()
     uint64_t secSplit = 1UL;
     auto& preSplitValid = adaptiveWin_.mTail >= adaptiveWin_.nTail ? mTile : nTile;
     auto& secSplitValid = adaptiveWin_.mTail >= adaptiveWin_.nTail ? nTile : mTile;
-    uint64_t tileMax = aicoreParams_.aicNum / adaptiveWin_.tailWinBlockCnt;
-    uint64_t baseMAlignNum =
-        inputParams_.transA ? GetShapeWithDataType(L2_ALIGN_SIZE, inputParams_.aDtype) : CUBE_BLOCK;
-    uint64_t baseNAlignNum =
-        !inputParams_.transB ? GetShapeWithDataType(L2_ALIGN_SIZE, inputParams_.bDtype) : CUBE_BLOCK;
-    uint64_t mTileMax =
-        std::min(tileMax, MathUtil::CeilDivision(std::min(inputParams_.mSize, adaptiveWin_.baseM), baseMAlignNum));
-    uint64_t nTileMax =
-        std::min(tileMax, MathUtil::CeilDivision(std::min(inputParams_.nSize, adaptiveWin_.baseN), baseNAlignNum));
-    uint64_t preSplitMax = adaptiveWin_.mTail >= adaptiveWin_.nTail ? mTileMax : nTileMax;
-    uint64_t secSplitMax = adaptiveWin_.mTail >= adaptiveWin_.nTail ? nTileMax : mTileMax;
-    if (inputParams_.isPerBlock) {
-        while ((CalUsedCoreNum(preSplit + 1, secSplit) <= aicoreParams_.aicNum && preSplit < preSplitMax) ||
-               (CalUsedCoreNum(preSplit, secSplit + 1) <= aicoreParams_.aicNum && secSplit < secSplitMax)) {
-            preSplitValid = CalUsedCoreNum(preSplit + 1, secSplit) <= aicoreParams_.aicNum && preSplit < preSplitMax ?
-                                ++preSplit :
-                                preSplitValid;
-            secSplitValid = CalUsedCoreNum(preSplit, secSplit + 1) <= aicoreParams_.aicNum && secSplit < secSplitMax ?
-                                ++secSplit :
-                                secSplitValid;
-        }
-    } else {
-        while (CalUsedCoreNum(preSplit + 1, secSplit) <= aicoreParams_.aicNum) {
-            preSplit += 1UL;
-            preSplitValid = !IsInValidWeighNzTailSplit(preSplit, true) ? preSplit : preSplitValid;
-            if (CalUsedCoreNum(preSplit, secSplit + 1) <= aicoreParams_.aicNum) {
-                secSplit += 1UL;
-                secSplitValid = !IsInValidWeighNzTailSplit(secSplit, false) ? secSplit : secSplitValid;
-            }
+    while (CalUsedCoreNum(preSplit + 1, secSplit) <= aicoreParams_.aicNum) {
+        preSplit += 1UL;
+        preSplitValid = !IsInValidWeighNzTailSplit(preSplit, true) ? preSplit : preSplitValid;
+        if (CalUsedCoreNum(preSplit, secSplit + 1) <= aicoreParams_.aicNum) {
+            secSplit += 1UL;
+            secSplitValid = !IsInValidWeighNzTailSplit(secSplit, false) ? secSplit : secSplitValid;
         }
     }
     adaptiveWin_.mTailTile = mTile;
     adaptiveWin_.nTailTile = nTile;
+}
+
+uint64_t AdaptiveSlidingWindowTiling::GetTailBasicBlockSplitMax(
+    bool isMSplit, uint64_t tileMax, uint64_t splitSize) const
+{
+    // totalWinCnt == 1UL means one-round tail-window execution; keep NZ transA M-axis split L2-aligned.
+    const uint64_t baseMAlignSize =
+        (inputParams_.isPerBlock ||
+         (inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ && inputParams_.transA &&
+          adaptiveWin_.totalWinCnt == 1UL)) ?
+            L2_ALIGN_SIZE :
+            L1_ALIGN_SIZE;
+    const uint64_t baseNAlignSize = inputParams_.isPerBlock ? L2_ALIGN_SIZE : L1_ALIGN_SIZE;
+    const uint64_t splitAlignNum =
+        isMSplit ? (inputParams_.transA ? GetShapeWithDataType(baseMAlignSize, inputParams_.aDtype) : CUBE_BLOCK) :
+                   (!inputParams_.transB ? GetShapeWithDataType(baseNAlignSize, inputParams_.bDtype) : CUBE_BLOCK);
+    return std::min(tileMax, MathUtil::CeilDivision(splitSize, splitAlignNum));
+}
+
+bool AdaptiveSlidingWindowTiling::CanIncreaseTailSplit(bool isPreSplitM, bool isPreSplit, uint64_t preSplit,
+                                                       uint64_t secSplit, uint64_t splitMax)
+{
+    const uint64_t nextPreSplit = isPreSplit ? preSplit + 1UL : preSplit;
+    const uint64_t nextSecSplit = isPreSplit ? secSplit : secSplit + 1UL;
+    const uint64_t mTile = isPreSplitM ? nextPreSplit : nextSecSplit;
+    const uint64_t nTile = isPreSplitM ? nextSecSplit : nextPreSplit;
+    return (isPreSplit ? preSplit : secSplit) < splitMax &&
+           CalUsedCoreNum(static_cast<uint32_t>(mTile), static_cast<uint32_t>(nTile)) <= aicoreParams_.aicNum;
+}
+
+uint64_t AdaptiveSlidingWindowTiling::GetTailSplitState(bool isPreSplitM, bool isPreSplit, uint64_t split,
+                                                        uint64_t splitSize) const
+{
+    // 0: invalid split, 1: valid split, 2: valid and preferred-aligned split.
+    const bool isMSplit = isPreSplit == isPreSplitM;
+    const bool needWeightNzCheck =
+        !inputParams_.isPerBlock && inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ && (isAFullLoad_ || !isMSplit);
+    if (needWeightNzCheck && IsInValidWeighNzTailSplit(split, isPreSplit)) {
+        return 0UL;
+    }
+
+    const bool isInnerAxis = isMSplit ? inputParams_.transA : !inputParams_.transB;
+    if (!isInnerAxis || adaptiveWin_.totalWinCnt != 1UL) {
+        return 1UL;
+    }
+
+    const uint64_t splitAlignNum =
+        isMSplit ?
+            GetShapeWithDataType(BASIC_BLOCK_SIZE_32, inputParams_.aDtype) :
+            GetShapeWithDataType(BASIC_BLOCK_SIZE_32, inputParams_.bDtype);
+    return MathUtil::CeilDivision(splitSize, split) % splitAlignNum == 0UL ? 2UL : 1UL;
+}
+
+void AdaptiveSlidingWindowTiling::CalcTailBasicBlockSplit(bool isPreSplitM, uint64_t preSplitMax,
+                                                          uint64_t secSplitMax, uint64_t preSplitSize,
+                                                          uint64_t secSplitSize)
+{
+    uint64_t preSplitValid = 1UL;
+    uint64_t secSplitValid = 1UL;
+    // Keep the original max-legal split fallback, and prefer aligned split only for one-round inner-axis cases.
+    uint64_t preSplitAlignValid = 1UL;
+    uint64_t secSplitAlignValid = 1UL;
+
+    uint64_t preSplit = 1UL;
+    uint64_t secSplit = 1UL;
+    while (CanIncreaseTailSplit(isPreSplitM, true, preSplit, secSplit, preSplitMax) ||
+           CanIncreaseTailSplit(isPreSplitM, false, preSplit, secSplit, secSplitMax)) {
+        if (CanIncreaseTailSplit(isPreSplitM, true, preSplit, secSplit, preSplitMax)) {
+            ++preSplit;
+            const uint64_t splitState = GetTailSplitState(isPreSplitM, true, preSplit, preSplitSize);
+            // 0: invalid split, 1: valid split, 2: valid and preferred-aligned split.
+            if (splitState > 0UL) {
+                preSplitValid = preSplit;
+            }
+            if (splitState > 1UL) {
+                preSplitAlignValid = preSplit;
+            }
+        }
+        if (CanIncreaseTailSplit(isPreSplitM, false, preSplit, secSplit, secSplitMax)) {
+            ++secSplit;
+            const uint64_t splitState = GetTailSplitState(isPreSplitM, false, secSplit, secSplitSize);
+            // 0: invalid split, 1: valid split, 2: valid and preferred-aligned split.
+            if (splitState > 0UL) {
+                secSplitValid = secSplit;
+            }
+            if (splitState > 1UL) {
+                secSplitAlignValid = secSplit;
+            }
+        }
+    }
+    const uint64_t preTile = preSplitAlignValid != 1UL ? preSplitAlignValid : preSplitValid;
+    const uint64_t secTile = secSplitAlignValid != 1UL ? secSplitAlignValid : secSplitValid;
+    if (isPreSplitM) {
+        adaptiveWin_.mTailTile = preTile;
+        adaptiveWin_.nTailTile = secTile;
+    } else {
+        adaptiveWin_.mTailTile = secTile;
+        adaptiveWin_.nTailTile = preTile;
+    }
+}
+
+void AdaptiveSlidingWindowTiling::CalcTailBasicBlock()
+{
+    if (adaptiveWin_.tailWinBlockCnt == 0UL) {
+        return;
+    }
+    const bool isPreSplitM = adaptiveWin_.mTail >= adaptiveWin_.nTail;
+    const uint64_t tileMax = aicoreParams_.aicNum / adaptiveWin_.tailWinBlockCnt;
+    const uint64_t tailBaseM = adaptiveWin_.mBaseTailSplitCnt != 1UL ? adaptiveWin_.mTailMain : adaptiveWin_.baseM;
+    const uint64_t mTailSplitSize = std::min(inputParams_.mSize, tailBaseM);
+    const uint64_t nTailSplitSize = std::min(inputParams_.nSize, adaptiveWin_.baseN);
+    const uint64_t mTileMax = GetTailBasicBlockSplitMax(true, tileMax, mTailSplitSize);
+    const uint64_t nTileMax = GetTailBasicBlockSplitMax(false, tileMax, nTailSplitSize);
+    CalcTailBasicBlockSplit(isPreSplitM, isPreSplitM ? mTileMax : nTileMax, isPreSplitM ? nTileMax : mTileMax,
+                            isPreSplitM ? mTailSplitSize : nTailSplitSize,
+                            isPreSplitM ? nTailSplitSize : mTailSplitSize);
 }
 
 void AdaptiveSlidingWindowTiling::CalcTailBasicBlockAfullLoad()
@@ -1051,10 +1155,9 @@ void AdaptiveSlidingWindowTiling::CalcTailBasicBlockAfullLoad()
     adaptiveWin_.mTailTile = 1UL;
     uint64_t nTile = 1UL;
     uint64_t nTileValid = 1UL;
-    constexpr uint64_t MIN_BASEN_PER_TILE = 16UL; // 尾窗口切分后N方向不少于16
     if (adaptiveWin_.tailWinBlockCnt != 0UL) {
         while (CalUsedCoreNum(adaptiveWin_.mTailTile, (nTile + 1UL)) <= aicoreParams_.aicNum &&
-               adaptiveWin_.baseN / (nTile + 1UL) >= MIN_BASEN_PER_TILE) {
+               adaptiveWin_.baseN / (nTile + 1UL) >= CUBE_BLOCK) {
             nTile += 1UL;
             if (IsInValidWeighNzTailSplit(nTile, true)) {
                 continue;
@@ -1187,7 +1290,7 @@ the divisor is zero: WINDOW_LEN %% nCnt.",
 
 bool AdaptiveSlidingWindowTiling::OptimizeEdgeBasicBlock()
 {
-    if (compileInfo_.supportMmadS8S4 || isAFullLoad_ || (inputParams_.transA && !inputParams_.transB) ||
+    if (compileInfo_.supportMmadS8S4 || (inputParams_.transA && !inputParams_.transB) ||
         (inputParams_.isPerBlock && inputParams_.groupSizeM != 1UL)) {
         return true;
     }

@@ -198,7 +198,7 @@ bool WeightQuantBatchMatmulV2IterbatchTiling::IsCapable()
     uint32_t iterBatch = CalcIterBatch();
     OP_TILING_CHECK(
         iterBatch <= 1UL,
-        OP_LOGI(opName_, "the iter batch should be large than 1 but %lu", iterBatch),
+        OP_LOGI(opName_, "the iter batch should be greater than 1 but %lu", iterBatch),
         return false);
 
     uint64_t perCoreBatch = ops::CeilDiv(matmulInfoPtr_->batchY, static_cast<uint64_t>(compileInfoPtr_->aicNum));

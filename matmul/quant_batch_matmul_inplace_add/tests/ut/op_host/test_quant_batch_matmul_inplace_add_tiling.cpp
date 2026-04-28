@@ -275,8 +275,8 @@ static void TestOneParamCase(const QuantBatchMatmulInplaceAddTilingTestParam &pa
     auto workspace = reinterpret_cast<gert::ContinuousVector *>(workspaceHolder.get());
 
     auto holder = gert::TilingContextFaker()
-                      .NodeIoNum(5, 1)
-                      .IrInstanceNum({1, 1, 1, 1, 1})
+                      .NodeIoNum(6, 1)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1})
                       .InputShapes({&x1Shape, &x2Shape, hasBias ? &biasShape : nullptr,
                                     hasX1Scale ? &x1ScaleShape : nullptr, hasX2Scale ? &x2ScaleShape : nullptr,
                                     hasYScale ? &yScaleShape : nullptr})
@@ -332,10 +332,10 @@ TEST_P(QuantBatchMatmulInplaceAddTiling, generalTest)
 static QuantBatchMatmulInplaceAddTilingTestParam casesParams[] = {
 
     // MX ND
-    {"mx-test1_Ascend910-95_128_512_128_1_0_32_ND_ND_FP8-E4M3_FP8-E5M2_FP8-E8M0_FP8-E8M0_UINT64_NULL_FP32_32_64", 30, ge::GRAPH_SUCCESS, 1UL},
-    {"mx-2_Ascend910-95_1024_512_1024_1_0_32_ND_ND_FP8-E5M2_FP8-E5M2_FP8-E8M0_FP8-E8M0_UINT64_NULL_FP32_32_64", 32, ge::GRAPH_SUCCESS, 1UL},
-    {"mx-3_Ascend910-95_128_512_128_1_0_32_ND_ND_FP8-E5M2_FP8-E5M2_FP8-E8M0_FP8-E8M0_UINT64_NULL_FP32_32_64", 30, ge::GRAPH_SUCCESS, 1UL},
-    {"mx-4_Ascend910-95_1024_512_1024_1_0_32_ND_ND_FP8-E4M3_FP8-E4M3_FP8-E8M0_FP8-E8M0_UINT64_NULL_FP32_32_64", 32, ge::GRAPH_SUCCESS, 1UL},
+    {"mx-test1_Ascend950_128_512_128_1_0_32_ND_ND_FP8-E4M3_FP8-E5M2_FP8-E8M0_FP8-E8M0_UINT64_NULL_FP32_32_64", 16, ge::GRAPH_SUCCESS, 1UL},
+    {"mx-2_Ascend950_1024_512_1024_1_0_32_ND_ND_FP8-E5M2_FP8-E5M2_FP8-E8M0_FP8-E8M0_UINT64_NULL_FP32_32_64", 32, ge::GRAPH_SUCCESS, 1UL},
+    {"mx-3_Ascend950_128_512_128_1_0_32_ND_ND_FP8-E5M2_FP8-E5M2_FP8-E8M0_FP8-E8M0_UINT64_NULL_FP32_32_64", 16, ge::GRAPH_SUCCESS, 1UL},
+    {"mx-4_Ascend950_1024_512_1024_1_0_32_ND_ND_FP8-E4M3_FP8-E4M3_FP8-E8M0_FP8-E8M0_UINT64_NULL_FP32_32_64", 32, ge::GRAPH_SUCCESS, 1UL},
 
  };
 
