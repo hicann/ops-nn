@@ -10,7 +10,7 @@
 #include <vector>
 #include <array>
 #include "gtest/gtest.h"
-#include "../../../op_host/op_api/aclnn_ada_layer_norm.h"
+#include "../../../../op_host/op_api/aclnn_ada_layer_norm.h"
 #include "op_api_ut_common/tensor_desc.h"
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/op_api_ut.h"
