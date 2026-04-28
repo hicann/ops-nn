@@ -153,7 +153,7 @@ aclnnStatus aclnnAdaptiveAvgPool3d(
         <td>self的维度不等于4或5。</td>
       </tr>
       <tr>
-        <td>self或out的shape的某一维不大于0。</td>
+        <td>self或out的shape的除第一维度以外不大于0。</td>
       </tr>
       <tr>
         <td>outputSize长度不为3。</td>
@@ -165,6 +165,8 @@ aclnnStatus aclnnAdaptiveAvgPool3d(
         <td>out的shape与self的shape和outputSize推导出的shape结果不一致。</td>
       </tr>
     </tbody></table>
+
+  - <term>Atlas 推理系列产品</term>： 参数`self`、`out`维度不支持第一维度不大于0。
 
 ## aclnnAdaptiveAvgPool3d
 
