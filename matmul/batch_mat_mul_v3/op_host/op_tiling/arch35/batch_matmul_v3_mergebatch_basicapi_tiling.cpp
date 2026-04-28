@@ -26,6 +26,10 @@ MM_REGISTER_TILING_TEMPLATE(BatchMatMulV3, BatchMatMulV3MergeBatchBasicApiTiling
 
 bool BatchMatMulV3MergeBatchBasicApiTiling::IsCapable()
 {
+    if (args_.aFormat == ge::FORMAT_FRACTAL_NZ || args_.bFormat == ge::FORMAT_FRACTAL_NZ) {
+        OP_LOGD(args_.opName, "[mergebatch_basicapi] The NZ format is not supported in this strategy.");
+        return false;
+    }
     if (args_.hasBias || (args_.aType == ge::DT_FLOAT && !args_.isHf32)) {
         return false;
     }
