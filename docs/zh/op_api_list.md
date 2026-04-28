@@ -33,6 +33,7 @@
 | [aclnnAdaptiveAvgPool3d](../../pooling/adaptive_avg_pool3d/docs/aclnnAdaptiveAvgPool3d.md) | 在指定三维输出shape信息（outputSize）的情况下，完成张量self的3D自适应平均池化计算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnAdaptiveAvgPool3dBackward]() | [aclnnAdaptiveAvgPool3d](../../pooling/adaptive_avg_pool3d/docs/aclnnAdaptiveAvgPool3d.md)的反向计算。 | 默认非确定性实现，支持配置开启 | - |
 | [aclnnAdaptiveMaxPool2d](../../pooling/adaptive_max_pool2d/docs/aclnnAdaptiveMaxPool2d.md) | 根据输入的outputSize计算每次kernel的大小，对输入self进行2维最大池化操作。 | 默认确定性实现 | - |
+| [aclnnAdaptiveMaxPool2dBackward](../../pooling/adaptive_max_pool3d_grad/docs/aclnnAdaptiveMaxPool2dBackward.md) | 正向自适应最大池化的反向传播，将梯度回填到每个自适应窗口最大值的坐标处，相同坐标处累加。 | 默认非确定性实现 | - |
 | [aclnnAdaptiveMaxPool3d](../../pooling/adaptive_max_pool3d/docs/aclnnAdaptiveMaxPool3d.md) | 根据输入的outputSize计算每次kernel的大小，对输入self进行3维最大池化操作。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnAdaptiveMaxPool3dBackward](../../pooling/adaptive_max_pool3d_grad/docs/aclnnAdaptiveMaxPool3dBackward.md) | 正向自适应最大池化的反向传播，将梯度回填到每个自适应窗口最大值的坐标处，相同坐标处累加。 | 默认非确定性实现，支持配置开启 | - |
 | [aclnnAddbmm&aclnnInplaceAddbmm](../../matmul/batch_mat_mul_v3/docs/aclnnAddbmm&aclnnInplaceAddbmm.md) | 首先进行batch1、batch3的矩阵乘计算，然后将该结果按照第一维（batch维度）批处理相加，将三维向量压缩为二维向量（shape大小为后两维的shape），然后该结果与α作乘积计算，再与β和self的乘积求和得到结果。 | 默认确定性实现 | 默认确定性实现 |
@@ -42,6 +43,7 @@
 | [aclnnAddLayerNorm](../../norm/add_layer_norm/docs/aclnnAddLayerNorm.md) | 实现AddLayerNorm功能。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnAddLayerNormGrad](../../norm/add_layer_norm_grad/docs/aclnnAddLayerNormGrad.md) | LayerNorm是一种归一化方法，可以将网络层输入数据归一化到[0, 1]之间。 | 默认非确定性实现，支持配置开启 | 默认非确定性实现，支持配置开启 |
 | [aclnnAddLayerNormQuant](../../norm/add_layer_norm_quant/docs/aclnnAddLayerNormQuant.md) | LayerNorm算子是大模型常用的归一化操作。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnAddRelu&aclnnInplaceAddRelu](../../activation/relu/docs/aclnnAddRelu&aclnnInplaceAddRelu.md) | 完成加法计算后得到结果再进行激活。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnAddRmsNormCast](../../norm/add_rms_norm_cast/docs/aclnnAddRmsNormCast.md) | RmsNorm算子是大模型常用的归一化操作，AddRmsNormCast算子将AddRmsNorm后的Cast算子融合起来，减少搬入搬出操作。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnAddRmsNormDynamicQuant](../../norm/add_rms_norm_dynamic_quant/docs/aclnnAddRmsNormDynamicQuant.md) | 将RmsNorm前的Add算子和RmsNorm归一化输出给到的1个或2个DynamicQuant算子融合起来，减少搬入搬出操作。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnAddRmsNormDynamicQuantV2](../../norm/add_rms_norm_dynamic_quant/docs/aclnnAddRmsNormDynamicQuantV2.md) | RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。 | 默认确定性实现 | - |
