@@ -259,6 +259,7 @@
 | [aclnnInplaceAddRmsNorm](../../norm/inplace_add_rms_norm/docs/aclnnInplaceAddRmsNorm.md) | RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnInplaceMaskedScatter](../../index/masked_scatter/docs/aclnnInplaceMaskedScatter.md) | 根据掩码(mask)张量中元素为True的位置，复制(source)中的元素到(selfRef)对应的位置上。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnInplaceQuantScatter](../../index/quant_update_scatter/docs/aclnnInplaceQuantScatter.md) | 先将updates在quantAxis轴上进行量化：quantScales对updates做缩放操作，quantZeroPoints做偏移。然后将量化后的updates中的值按指定的轴axis，根据索引张量indices逐个更新selfRef中对应位置的值。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnInplaceQuantScatterV2](../../index/quant_update_scatter/docs/aclnnInplaceQuantScatterV2.md) | Quantize算子和Scatter算子的融合，先将updates在quantAxis轴上进行量化：quantScales对updates做缩放操作，quantZeroPoints做偏移。然后将量化后的updates中的值按指定的轴axis，根据索引张量indices逐个更新selfRef中对应位置的值。相比aclnnInplaceQuantScatter多了roundMode输入。 | - | 默认确定性实现 |
 | [aclnnInstanceNorm](../../norm/instance_norm_v3/docs/aclnnInstanceNorm.md) | 用于执行Instance Normalization（实例归一化）操作。 | 默认确定性实现 | - |
 | [aclnnKlDivBackward](../../loss/kl_div_loss_grad/docs/aclnnKlDivBackward.md) | 进行aclnnKlDiv api的结果的反向计算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnKlDivTargetBackward](../../loss/kl_div_loss_grad/docs/aclnnKlDivTargetBackward.md) | 进行aclnnKlDiv api的结果的target反向计算。 | 默认确定性实现 | 默认确定性实现 |
