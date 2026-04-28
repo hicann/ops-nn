@@ -484,6 +484,7 @@ HPTG1@ops-nn:
                 - ops/ops-nn/norm/group_norm_swish/op_host/group_norm_swish_def.cpp
                 - ops/ops-nn/norm/group_norm_swish/docs/aclnnGroupNormSwish.md
                 - ops/ops-nn/norm/group_norm_swish/README.md
+                - ops/ops-nn/common/src/framework/unique_onnx_plugin.cpp
             opensource_style: null
             kernel_style: null
         unrelease:
