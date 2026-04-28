@@ -328,7 +328,7 @@
 | [aclnnQuantBatchMatmulInplaceAdd](../../matmul/quant_batch_matmul_inplace_add/docs/aclnnQuantBatchMatmulInplaceAdd.md) | 实现量化矩阵乘计算和原地累加加法计算，基本功能为矩阵乘和加法的组合。 | - | 默认确定性实现 |
 | [aclnnQuantMatmulReduceSumWeightNz](../../matmul/quant_matmul_reduce_sum/docs/aclnnQuantMatmulReduceSumWeightNz.md) | 完成量化的分组矩阵计算，然后所有组的矩阵计算结果相加后输出。 | 默认非确定性实现，支持配置开启。 | - |
 | [aclnnQuantMatmulWeightNz](../../matmul/quant_batch_matmul_v3/docs/aclnnQuantMatmulWeightNz.md) | 完成量化的矩阵乘计算。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnQuantMatmulDequant](../../matmul/quant_matmul_dequant/docs/aclnnQuantMatmulDequant.md) | 对输入x进行量化，矩阵乘以及反量化。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnQuantMatmulDequant](../../matmul/quant_matmul_dequant/docs/aclnnQuantMatmulDequant.md) | 对输入x进行量化，矩阵乘以及反量化。 | 默认确定性实现 | - |
 | [aclnnQuantMax](../../quant/quant_max/docs/aclnnQuantMax.md) | 完成输入的量化计算并得到输入绝对值的最大值。 | - | 默认确定性实现 |
 | [aclnnRelu&aclnnInplaceRelu](../../activation/relu/docs/aclnnRelu&aclnnInplaceRelu.md) | 激活函数，返回与输入tensor shape相同的tensor, tensor中value大于等于0时，取值该value，小于0，取0。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnRenorm&aclnnInplaceRenorm](../../norm/renorm/docs/aclnnRenorm&aclnnInplaceRenorm.md) | 返回一个张量，其中输入张量self沿维度dim的每个子张量都经过归一化，使得子张量的p范数低于maxNorm值。 | 默认确定性实现 | 默认确定性实现 |
