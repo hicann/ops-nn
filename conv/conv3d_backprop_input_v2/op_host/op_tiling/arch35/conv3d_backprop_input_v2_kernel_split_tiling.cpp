@@ -877,6 +877,7 @@ void Conv3DDXV2KernelSplitTiling::TranslateTilingRunInfo(std::shared_ptr<tuningt
     tilingRunInfo_.enableVecTransFlag = tunerTiling->enableVecTransFlag;
     tilingRunInfo_.enableSplitKernelFlag = tunerTiling->enableSplitKernelFlag;
     tilingRunInfo_.tilingHkWkMode = tunerTiling->tilingHkWkMode;
+    kSCoutFullLoad_ = tunerTiling->kSCoutFullLoad;
 }
 
 void Conv3DDXV2KernelSplitTiling::PrintTilingRunInfo()
