@@ -204,6 +204,7 @@
   </table>
 
   - <term>Atlas 训练系列产品</term>：参数`self`、`out`的数据类型不支持BFLOAT16。
+  - <term>Ascend 950PR/Ascend 950DT</term>：入参`p`的取值大于0。
 
 - **返回值**
 
@@ -241,7 +242,7 @@
       <td>self和out的dtype不一致。</td>
     </tr>
     <tr>
-      <td>p < 0。</td>
+      <td>p的取值不满足要求。</td>
     </tr>
     <tr>
       <td>dim的值不在[-self的维度数量，self的维度数量-1]范围内。</td>
