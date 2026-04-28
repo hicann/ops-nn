@@ -19,6 +19,7 @@
 #include "../../op_kernel/arch35/max_pool_grad_struct.h"
 #include "../../../pool_grad_common/op_host/arch35/max_pool_grad_with_argmax_tiling_common.h"
 #include "../../../pool_grad_common/op_kernel/arch35/max_pool_grad_with_argmax_struct_common.h"
+#include "../../../pool_grad_common/op_host/arch35/max_pool_grad_nchw_tiling_common.h"
 #include "../../../pool_grad_common/op_host/arch35/util.h"
 #include "platform/platform_info.h"
 #include "atvoss/broadcast/broadcast_tiling.h"
@@ -30,6 +31,17 @@ using Ops::NN::Optiling::TilingBaseClass;
 using namespace MaxPoolGradWithArgmaxNHWCNameSpace;
 
 static constexpr int64_t KERNEL_OFFSET = 1;
+
+constexpr int64_t BIG_FLOAT16_SIZE = 2;
+constexpr int64_t BIG_FLOAT32_SIZE = 4;
+constexpr int64_t BIG_INT32_SIZE = 4;
+constexpr int64_t BIG_INT64_SIZE = 8;
+constexpr int64_t BIG_UB_RESERVED_SIZE = 1024;
+constexpr int64_t BIG_DOUBLE_BUFFER = 2;
+
+constexpr int64_t BIG_KERNEL_THRESHOLD = 128;
+constexpr int64_t BIG_MAX_KERNEL_COUNT = 512;
+constexpr int64_t BIG_MERGE_BUF_ALIGN = 32;
 
 class MaxPoolGradTilingBase : public MaxPoolGradWithArgmaxTilingCommon {
 public:
@@ -57,6 +69,35 @@ public:
 protected:
     ge::graphStatus GetShapeAttrsInfo() override;
 };
+
+class MaxPoolGradNCHWTilingHelper : public MaxPoolGradNCHWTilingCommon {
+public:
+    MaxPoolGradNCHWTilingHelper(MaxPoolGradWithArgmaxInputInfoCommon* input) : MaxPoolGradNCHWTilingCommon(input)
+    {}
+
+protected:
+    void DoBufferCalculate() override;
+};
+
+class MaxPoolGradNCHWTiling : public MaxPoolGradTilingBase {
+public:
+    explicit MaxPoolGradNCHWTiling(gert::TilingContext* context) : MaxPoolGradTilingBase(context)
+    {}
+
+    ~MaxPoolGradNCHWTiling() override
+    {}
+
+private:
+    MaxPoolGradNCHWTilingHelper commonTiling{&inputData};
+    MaxPoolGradWithArgmaxHardwareInfo hwInfo;
+    uint64_t GetTilingKey() const override;
+    bool IsCapable() override;
+    ge::graphStatus DoOpTiling() override;
+    ge::graphStatus PostTiling() override;
+    ge::graphStatus GetShapeAttrsInfo() override;
+    ge::graphStatus GetPlatformInfo() override;
+};
+
 } // namespace optiling
 
 #endif

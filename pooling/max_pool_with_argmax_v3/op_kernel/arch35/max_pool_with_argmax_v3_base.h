@@ -121,4 +121,172 @@ __aicore__ inline void DuplicateNegInfReg(MicroAPI::RegTensor<T>& negInfReg)
     }
 }
 
+/**
+ * \brief Fill buffer with negative infinity values (vectorized)
+ * \param dstAddr Destination buffer address
+ * \param repeatElm Number of elements per repeat
+ * \param loop Number of full loops
+ * \param tail Number of elements in tail
+ */
+template <typename T>
+__aicore__ inline void DupBufferNegInfCommon(__local_mem__ T* dstAddr, uint32_t repeatElm, uint16_t loop, uint32_t tail)
+{
+    MicroAPI::RegTensor<T> v0;
+    DuplicateNegInfReg<T>(v0);
+    MicroAPI::MaskReg preg = MicroAPI::CreateMask<T, MicroAPI::MaskPattern::ALL>();
+    for (uint16_t i = 0; i < loop; i++) {
+        MicroAPI::DataCopy<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(dstAddr, v0, repeatElm, preg);
+    }
+    preg = MicroAPI::UpdateMask<T>(tail);
+    MicroAPI::DataCopy<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(dstAddr, v0, repeatElm, preg);
+}
+
+/**
+ * \brief Copy data to calculation buffer with padding support (2D)
+ */
+template <typename T>
+__aicore__ inline void CopyToCalcBuffer2DCommon(
+    __local_mem__ T* dstAddr, __local_mem__ T* srcAddr, uint16_t batch, uint16_t rows, uint16_t loopCols,
+    uint16_t tailCols, uint32_t repeatElm, uint32_t srcBatchStride, uint32_t srcRowStride, uint32_t dstBatchStride,
+    uint32_t dstRowStride, uint32_t dstRowOffset, uint32_t dstColOffset)
+{
+    MicroAPI::RegTensor<T> v0;
+    MicroAPI::UnalignReg u0;
+    for (uint16_t i = 0; i < batch; i++) {
+        for (uint16_t j = 0; j < rows; j++) {
+            __local_mem__ T* curSrcAddr = srcAddr + i * srcBatchStride + j * srcRowStride;
+            __local_mem__ T* curDstAddr =
+                dstAddr + i * dstBatchStride + (j + dstRowOffset) * dstRowStride + dstColOffset;
+            for (uint16_t k = 0; k < loopCols; k++) {
+                MicroAPI::DataCopy<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(v0, curSrcAddr, repeatElm);
+                MicroAPI::DataCopyUnAlign(curDstAddr, v0, u0, repeatElm);
+            }
+            MicroAPI::DataCopy<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(v0, curSrcAddr, repeatElm);
+            MicroAPI::DataCopyUnAlign(curDstAddr, v0, u0, tailCols);
+            MicroAPI::DataCopyUnAlignPost(curDstAddr, u0, 0);
+        }
+    }
+}
+
+/**
+ * \brief Copy data to calculation buffer with depth dimension support (3D)
+ */
+template <typename T>
+__aicore__ inline void CopyToCalcBuffer3DCommon(
+    __local_mem__ T* dstAddr, __local_mem__ T* srcAddr, uint16_t batch, uint16_t deps, uint16_t rows, uint16_t loopCols,
+    uint16_t tailCols, uint32_t repeatElm, uint32_t srcBatchStride, uint32_t srcDepStride, uint32_t srcRowStride,
+    uint32_t dstBatchStride, uint32_t dstDepStride, uint32_t dstRowStride, uint32_t dstDepOffset, uint32_t dstRowOffset,
+    uint32_t dstColOffset)
+{
+    MicroAPI::RegTensor<T> v0;
+    MicroAPI::UnalignReg u0;
+    for (uint16_t i = 0; i < batch; i++) {
+        for (uint16_t t = 0; t < deps; t++) {
+            for (uint16_t j = 0; j < rows; j++) {
+                __local_mem__ T* curSrcAddr = srcAddr + i * srcBatchStride + t * srcDepStride + j * srcRowStride;
+                __local_mem__ T* curDstAddr = dstAddr + i * dstBatchStride + (t + dstDepOffset) * dstDepStride +
+                                              (j + dstRowOffset) * dstRowStride + dstColOffset;
+                for (uint16_t k = 0; k < loopCols; k++) {
+                    MicroAPI::DataCopy<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(v0, curSrcAddr, repeatElm);
+                    MicroAPI::DataCopyUnAlign(curDstAddr, v0, u0, repeatElm);
+                }
+                MicroAPI::DataCopy<T, MicroAPI::PostLiteral::POST_MODE_UPDATE>(v0, curSrcAddr, repeatElm);
+                MicroAPI::DataCopyUnAlign(curDstAddr, v0, u0, tailCols);
+                MicroAPI::DataCopyUnAlignPost(curDstAddr, u0, 0);
+            }
+        }
+    }
+}
+
+/**
+ * \brief Convert linear index to 2D (hIndex, wIndex) without padding alignment
+ * \tparam T2 Index type (int32_t or int64_t)
+ * \tparam IS_PAD Whether padding is enabled
+ * \param srcReg Input linear index register
+ * \param wStrideOffset Width stride offset
+ * \param left Left padding offset
+ * \param wInputActualNoPad Width input without padding
+ * \param hIndexBase Height index base offset
+ * \param dstReg Output converted index register
+ * \param ncInputOffset NC batch input offset
+ */
+template <typename T2, const uint32_t IS_PAD>
+__aicore__ inline void ConvertIndexWithoutPadAlignCommon(
+    MicroAPI::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset, T2 left, T2 wInputActualNoPad, T2 hIndexBase,
+    MicroAPI::RegTensor<T2>& dstReg, int32_t ncInputOffset)
+{
+    MicroAPI::RegTensor<T2> hIndexReg;
+    MicroAPI::RegTensor<int32_t> constReg;
+    MicroAPI::RegTensor<int32_t> divResultReg;
+    MicroAPI::RegTensor<T2> divResultRegUnpack;
+    MicroAPI::RegTensor<T2> wIndexReg;
+    MicroAPI::RegTensor<int32_t> wIndexRegUnpack;
+    MicroAPI::RegTensor<T2> zeroReg;
+    MicroAPI::MaskReg negInfMask;
+    MicroAPI::MaskReg allMaskB32 = MicroAPI::CreateMask<int32_t, MicroAPI::MaskPattern::ALL>();
+    MicroAPI::MaskReg allMaskT2 = MicroAPI::CreateMask<T2, MicroAPI::MaskPattern::ALL>();
+    MicroAPI::Duplicate(constReg, static_cast<int32_t>(wStrideOffset));
+    MicroAPI::Duplicate(zeroReg, static_cast<T2>(0));
+    MicroAPI::Adds(srcReg, srcReg, -ncInputOffset, allMaskB32);
+    MicroAPI::Div(divResultReg, srcReg, constReg, allMaskB32);
+    if constexpr (std::is_same<T2, int64_t>::value) {
+        MicroAPI::UnPack(divResultRegUnpack, divResultReg);
+        MicroAPI::Adds(hIndexReg, divResultRegUnpack, hIndexBase, allMaskT2);
+    } else {
+        MicroAPI::Adds(hIndexReg, divResultReg, hIndexBase, allMaskB32);
+    }
+    if constexpr (IS_PAD) {
+        MicroAPI::Compare<T2, CMPMODE::LT>(negInfMask, hIndexReg, zeroReg, allMaskT2);
+        MicroAPI::Select(hIndexReg, zeroReg, hIndexReg, negInfMask);
+    }
+    MicroAPI::Muls(hIndexReg, hIndexReg, wInputActualNoPad, allMaskT2);
+    MicroAPI::Mul(divResultReg, divResultReg, constReg, allMaskB32);
+    MicroAPI::Sub(wIndexRegUnpack, srcReg, divResultReg, allMaskB32);
+    if constexpr (std::is_same<T2, int64_t>::value) {
+        MicroAPI::UnPack(wIndexReg, wIndexRegUnpack);
+        MicroAPI::Adds(wIndexReg, wIndexReg, left, allMaskT2);
+    } else {
+        MicroAPI::Adds(wIndexReg, wIndexRegUnpack, left, allMaskB32);
+    }
+    if constexpr (IS_PAD) {
+        MicroAPI::Compare<T2, CMPMODE::LT>(negInfMask, wIndexReg, zeroReg, allMaskT2);
+        MicroAPI::Select(wIndexReg, zeroReg, wIndexReg, negInfMask);
+    }
+    MicroAPI::Add(dstReg, hIndexReg, wIndexReg, allMaskT2);
+    return;
+}
+
+/**
+ * \brief Convert linear index to 2D (hIndex, wIndex) with NC batch support
+ * \tparam T2 Index type (int32_t or int64_t)
+ * \tparam IS_PAD Whether padding is enabled
+ * \param srcReg Input linear index register
+ * \param wStrideOffset Width stride offset
+ * \param left Left padding offset
+ * \param wInputActualNoPad Width input without padding
+ * \param hIndexBase Height index base offset
+ * \param dstReg Output converted index register
+ * \param ncInputOffset NC batch input offset
+ * \param ncOutputCount NC output count
+ * \param inputNcSize Input NC size
+ */
+template <typename T2, const uint32_t IS_PAD>
+__aicore__ inline void ConvertIndexWithoutPadAlignNcCommon(
+    MicroAPI::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset, T2 left, T2 wInputActualNoPad, T2 hIndexBase,
+    MicroAPI::RegTensor<T2>& dstReg, int32_t ncInputOffset, int32_t ncOutputCount, int32_t inputNcSize)
+{
+    MicroAPI::RegTensor<int32_t> ncIndexReg;
+    MicroAPI::RegTensor<int32_t> divResultReg;
+    MicroAPI::RegTensor<int32_t> constReg;
+    MicroAPI::MaskReg allMaskB32 = MicroAPI::CreateMask<int32_t, MicroAPI::MaskPattern::ALL>();
+    MicroAPI::Arange(ncIndexReg, static_cast<int32_t>(0));
+    MicroAPI::Duplicate(constReg, static_cast<int32_t>(ncOutputCount));
+    MicroAPI::Div(divResultReg, ncIndexReg, constReg, allMaskB32);
+    MicroAPI::Muls(divResultReg, divResultReg, inputNcSize, allMaskB32);
+    MicroAPI::Sub(srcReg, srcReg, divResultReg, allMaskB32);
+
+    ConvertIndexWithoutPadAlignCommon<T2, IS_PAD>(
+        srcReg, wStrideOffset, left, wInputActualNoPad, hIndexBase, dstReg, ncInputOffset);
+}
+
 #endif // MAX_POOL_WITH_ARGMAX_V3_BASE_H_

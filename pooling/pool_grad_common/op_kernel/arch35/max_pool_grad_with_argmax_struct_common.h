@@ -166,12 +166,14 @@ public:
     int64_t normalCoreProcessNum = 0;
     int64_t tailCoreProcessNum = 0;
     int64_t usedCoreNum = 0;
+    int64_t inputBufferSize = 0;
     int64_t outputBufferSize = 0;
     int64_t gradBufferSize = 0;
     int64_t argmaxBufferSize = 0;
     int64_t hProBatchSize = 0;
     int64_t wProBatchSize = 0;
     int64_t tilingKey = 0;
+    int64_t isPad = 0;
 };
 }
 #endif //MAX_POOL_GRAD_WITH_ARGMAX_STRUCT_H

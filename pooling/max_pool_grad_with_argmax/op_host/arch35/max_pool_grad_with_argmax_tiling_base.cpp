@@ -41,7 +41,6 @@ static constexpr int64_t DTYPE_INT64 = 9;
 static constexpr int64_t INPUT_X = 0;
 static constexpr int64_t INPUT_GRAD = 1;
 static constexpr int64_t INPUT_ARGMAX = 2;
-static constexpr int64_t DIGIT_TWO = 2;
 
  ge::graphStatus MaxPoolGradWithArgmaxBaseTiling::GetShapeAttrsInfo() {
     OP_LOGD("MaxPoolGradWithArgmax", "MaxPoolGradWithArgmaxBaseTiling::GetShapeAttrsInfo()");

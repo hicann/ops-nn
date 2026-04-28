@@ -12,11 +12,15 @@
 #include "kernel_tiling/kernel_tiling.h"
 #include "arch35/max_pool_grad_struct.h"
 #include "arch35/max_pool_grad_simt.h"
+#include "arch35/max_pool_grad_nchw_big_kernel.h"
+#include "arch35/max_pool_grad_nchw_small_kernel.h"
 
 using namespace AscendC;
 using MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNCHWTilingCommonData;
 using MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxSimtTilingCommonData;
 using namespace PoolGradNameSpace;
+using namespace MaxPoolGradNCHWBigKernelNameSpace;
+using namespace MaxPoolGradNCHWSmallKernelNameSpace;
 
 template <
     uint64_t KERNEL_MODE = TPL_SIMT_KERNEL, uint64_t FORMAT = TPL_NCHW_FORMAT, uint64_t INDICES_DTYPE = TPL_INT32,
@@ -28,6 +32,7 @@ __global__ __aicore__ void max_pool_grad(
         return;
     }
     TPipe pipe;
+    KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     REGISTER_TILING_DEFAULT(MaxPoolGradWithArgmaxSimtTilingCommonData);
 
     if constexpr (KERNEL_MODE == TPL_SIMT_KERNEL) {
@@ -39,6 +44,44 @@ __global__ __aicore__ void max_pool_grad(
         } else {
             MaxPoolGrad::MaxPoolGradSIMT<DTYPE_X1, int64_t, FORMAT> op(&pipe, &tilingData);
             op.Init(orig_x, orig_y, grads, y, workspace);
+            op.Process();
+        }
+    } else if constexpr (KERNEL_MODE == TPL_NCHW_BIG_KERNEL) {
+        GET_TILING_DATA_WITH_STRUCT(MaxPoolGradWithArgmaxNCHWTilingCommonData, tilingData, tiling);
+        if constexpr (INDICES_DTYPE == TPL_INT32  && IS_CHECK_RANGE == TPL_CHECK_RANGE) {
+            MaxPoolGradNCHWBigKernel<DTYPE_X1, int32_t, int32_t, true> op;
+            op.Init(orig_x, orig_y, grads, y, pipe, tilingData);
+            op.Process();
+        } else if constexpr (INDICES_DTYPE == TPL_INT32 && IS_CHECK_RANGE == TPL_NO_CHECK_RANGE) {
+            MaxPoolGradNCHWBigKernel<DTYPE_X1, int32_t, int32_t , false> op;
+            op.Init(orig_x, orig_y, grads, y, pipe, tilingData);
+            op.Process();
+        } else if constexpr (INDICES_DTYPE == TPL_INT64 && IS_CHECK_RANGE == TPL_CHECK_RANGE) {
+            MaxPoolGradNCHWBigKernel<DTYPE_X1, int64_t, int64_t , true> op;
+            op.Init(orig_x, orig_y, grads, y, pipe, tilingData);
+            op.Process();
+        } else if constexpr (INDICES_DTYPE == TPL_INT64 && IS_CHECK_RANGE == TPL_NO_CHECK_RANGE) {
+            MaxPoolGradNCHWBigKernel<DTYPE_X1, int64_t, int64_t , false> op;
+            op.Init(orig_x, orig_y, grads, y, pipe, tilingData);
+            op.Process();
+        }
+    } else if constexpr (KERNEL_MODE == TPL_NCHW_SMALL_KERNEL) {
+        GET_TILING_DATA_WITH_STRUCT(MaxPoolGradWithArgmaxNCHWTilingCommonData, tilingData, tiling);
+        if constexpr (INDICES_DTYPE == TPL_INT32 && IS_CHECK_RANGE == TPL_CHECK_RANGE) {
+            PoolGradNCHWSmallKernel<DTYPE_X1, int32_t, int32_t, true> op(pipe, tilingData);
+            op.Init(orig_x, orig_y, grads, y);
+            op.Process();
+        } else if constexpr (INDICES_DTYPE == TPL_INT64 && IS_CHECK_RANGE == TPL_CHECK_RANGE) {
+            PoolGradNCHWSmallKernel<DTYPE_X1, int64_t, int64_t, true> op(pipe, tilingData);
+            op.Init(orig_x, orig_y, grads, y);
+            op.Process();
+        } else if constexpr (INDICES_DTYPE == TPL_INT32 && IS_CHECK_RANGE == TPL_NO_CHECK_RANGE) {
+            PoolGradNCHWSmallKernel<DTYPE_X1, int32_t, int32_t, false> op(pipe, tilingData);
+            op.Init(orig_x, orig_y, grads, y);
+            op.Process();
+        } else if constexpr (INDICES_DTYPE == TPL_INT64 && IS_CHECK_RANGE == TPL_NO_CHECK_RANGE) {
+            PoolGradNCHWSmallKernel<DTYPE_X1, int64_t, int64_t, false> op(pipe, tilingData);
+            op.Init(orig_x, orig_y, grads, y);
             op.Process();
         }
     }

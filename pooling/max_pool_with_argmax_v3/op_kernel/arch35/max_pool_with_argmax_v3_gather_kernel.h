@@ -330,62 +330,16 @@ __aicore__ inline void MaxPoolWithArgmaxV3GatherKernel<T1, T2, IS_PAD>::ConvertI
     MicroAPI::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset, T2 left, T2 wInputActualNoPad, T2 hIndexBase,
     MicroAPI::RegTensor<T2>& dstReg, int32_t ncInputOffset, int32_t ncOutputCount, int32_t inputNcSize)
 {
-    MicroAPI::RegTensor<int32_t> ncIndexReg;
-    MicroAPI::RegTensor<int32_t> divResultReg;
-    MicroAPI::RegTensor<int32_t> constReg;
-    MicroAPI::MaskReg allMaskB32 = MicroAPI::CreateMask<int32_t, MicroAPI::MaskPattern::ALL>();
-    MicroAPI::Arange(ncIndexReg, static_cast<int32_t>(0));
-    MicroAPI::Duplicate(constReg, static_cast<int32_t>(ncOutputCount));
-    MicroAPI::Div(divResultReg, ncIndexReg, constReg, allMaskB32);
-    MicroAPI::Muls(divResultReg, divResultReg, inputNcSize, allMaskB32);
-    MicroAPI::Sub(srcReg, srcReg, divResultReg, allMaskB32);
-
-    ConvertIndexWithoutPadAlign(srcReg, wStrideOffset, left, wInputActualNoPad, hIndexBase, dstReg, ncInputOffset);
+    ConvertIndexWithoutPadAlignNcCommon<T2, IS_PAD>(
+        srcReg, wStrideOffset, left, wInputActualNoPad, hIndexBase, dstReg, ncInputOffset, ncOutputCount, inputNcSize);
 }
 template <typename T1, typename T2, const uint32_t IS_PAD>
 __aicore__ inline void MaxPoolWithArgmaxV3GatherKernel<T1, T2, IS_PAD>::ConvertIndexWithoutPadAlign(
     MicroAPI::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset, T2 left, T2 wInputActualNoPad, T2 hIndexBase,
     MicroAPI::RegTensor<T2>& dstReg, int32_t ncInputOffset)
 {
-    MicroAPI::RegTensor<T2> hIndexReg;
-    MicroAPI::RegTensor<int32_t> constReg;
-    MicroAPI::RegTensor<int32_t> divResultReg;
-    MicroAPI::RegTensor<T2> divResultRegUnpack;
-    MicroAPI::RegTensor<T2> wIndexReg;
-    MicroAPI::RegTensor<int32_t> wIndexRegUnpack;
-    MicroAPI::RegTensor<T2> zeroReg;
-    MicroAPI::MaskReg negInfMask;
-    MicroAPI::MaskReg allMaskB32 = MicroAPI::CreateMask<int32_t, MicroAPI::MaskPattern::ALL>();
-    MicroAPI::MaskReg allMaskT2 = MicroAPI::CreateMask<T2, MicroAPI::MaskPattern::ALL>();
-    MicroAPI::Duplicate(constReg, static_cast<int32_t>(wStrideOffset));
-    MicroAPI::Duplicate(zeroReg, static_cast<T2>(0));
-    MicroAPI::Adds(srcReg, srcReg, -ncInputOffset, allMaskB32);
-    MicroAPI::Div(divResultReg, srcReg, constReg, allMaskB32);
-    if constexpr (std::is_same<T2, int64_t>::value) {
-        MicroAPI::UnPack(divResultRegUnpack, divResultReg);
-        MicroAPI::Adds(hIndexReg, divResultRegUnpack, hIndexBase, allMaskT2);
-    } else {
-        MicroAPI::Adds(hIndexReg, divResultReg, hIndexBase, allMaskB32);
-    }
-    if constexpr (IS_PAD == 1) {
-        MicroAPI::Compare<T2, CMPMODE::LT>(negInfMask, hIndexReg, zeroReg, allMaskT2);
-        MicroAPI::Select(hIndexReg, zeroReg, hIndexReg, negInfMask);
-    }
-    MicroAPI::Muls(hIndexReg, hIndexReg, wInputActualNoPad, allMaskT2);
-    MicroAPI::Mul(divResultReg, divResultReg, constReg, allMaskB32);
-    MicroAPI::Sub(wIndexRegUnpack, srcReg, divResultReg, allMaskB32);
-    if constexpr (std::is_same<T2, int64_t>::value) {
-        MicroAPI::UnPack(wIndexReg, wIndexRegUnpack);
-        MicroAPI::Adds(wIndexReg, wIndexReg, left, allMaskT2);
-    } else {
-        MicroAPI::Adds(wIndexReg, wIndexRegUnpack, left, allMaskB32);
-    }
-    if constexpr (IS_PAD == 1) {
-        MicroAPI::Compare<T2, CMPMODE::LT>(negInfMask, wIndexReg, zeroReg, allMaskT2);
-        MicroAPI::Select(wIndexReg, zeroReg, wIndexReg, negInfMask);
-    }
-    MicroAPI::Add(dstReg, hIndexReg, wIndexReg, allMaskT2);
-    return;
+    ConvertIndexWithoutPadAlignCommon<T2, IS_PAD>(
+        srcReg, wStrideOffset, left, wInputActualNoPad, hIndexBase, dstReg, ncInputOffset);
 }
 template <typename T1, typename T2, const uint32_t IS_PAD>
 __aicore__ inline void MaxPoolWithArgmaxV3GatherKernel<T1, T2, IS_PAD>::ProcessW(

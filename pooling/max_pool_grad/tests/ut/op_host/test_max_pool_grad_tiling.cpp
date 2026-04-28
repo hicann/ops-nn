@@ -254,3 +254,113 @@ TEST_F(MaxPoolGradTiling, MaxPoolGrad_tiling_success_fp16_valid_nchw_k3)
         x1Shape, x2Shape, gradShape, yShape, {1, 3, 3, 1}, {1, 3, 3, 1}, "VALID", "NCHW", ge::DT_FLOAT16,
         ge::GRAPH_SUCCESS);
 }
+
+// ============================================================
+// Big kernel cases
+// ============================================================
+
+TEST_F(MaxPoolGradTiling, MaxPoolGrad_tiling_success_big_kernel_fp16_valid_nchw_k16_s16)
+{
+    gert::StorageShape x1Shape = {{1, 4, 64, 64}, {1, 4, 64, 64}};
+    gert::StorageShape x2Shape = {{1, 4, 4, 4}, {1, 4, 4, 4}};
+    gert::StorageShape gradShape = {{1, 4, 4, 4}, {1, 4, 4, 4}};
+    gert::StorageShape yShape = {{1, 4, 64, 64}, {1, 4, 64, 64}};
+
+    ExecuteTilingTestCase(
+        x1Shape, x2Shape, gradShape, yShape,
+        {1, 1, 16, 16},
+        {1, 1, 16, 16},
+        "VALID",
+        "NCHW",
+        ge::DT_FLOAT16,
+        ge::GRAPH_SUCCESS);
+}
+
+TEST_F(MaxPoolGradTiling, MaxPoolGrad_tiling_success_big_kernel_bf16_valid_nchw_k20_s10)
+{
+    gert::StorageShape x1Shape = {{1, 4, 80, 80}, {1, 4, 80, 80}};
+    gert::StorageShape x2Shape = {{1, 4, 7, 7}, {1, 4, 7, 7}};
+    gert::StorageShape gradShape = {{1, 4, 7, 7}, {1, 4, 7, 7}};
+    gert::StorageShape yShape = {{1, 4, 80, 80}, {1, 4, 80, 80}};
+
+    ExecuteTilingTestCase(
+        x1Shape, x2Shape, gradShape, yShape,
+        {1, 1, 20, 20},
+        {1, 1, 10, 10},
+        "VALID",
+        "NCHW",
+        ge::DT_BF16,
+        ge::GRAPH_SUCCESS);
+}
+
+TEST_F(MaxPoolGradTiling, MaxPoolGrad_tiling_success_big_kernel_bf16_same_nchw_k18_10_large_w)
+{
+    gert::StorageShape x1Shape = {{4, 4, 150, 3417}, {4, 4, 150, 3417}};
+    gert::StorageShape x2Shape = {{4, 4, 15, 285}, {4, 4, 15, 285}};
+    gert::StorageShape gradShape = {{4, 4, 15, 285}, {4, 4, 15, 285}};
+    gert::StorageShape yShape = {{4, 4, 150, 3417}, {4, 4, 150, 3417}};
+
+    ExecuteTilingTestCase(
+        x1Shape, x2Shape, gradShape, yShape,
+        {1, 1, 18, 10},
+        {1, 1, 10, 12},
+        "SAME",
+        "NCHW",
+        ge::DT_BF16,
+        ge::GRAPH_SUCCESS);
+}
+
+// ============================================================
+// Small kernel cases
+// ============================================================
+
+TEST_F(MaxPoolGradTiling, MaxPoolGrad_tiling_success_small_kernel_fp32_valid_nchw_k2_s2)
+{
+    gert::StorageShape x1Shape = {{2, 16, 64, 128}, {2, 16, 64, 128}};
+    gert::StorageShape x2Shape = {{2, 16, 32, 64}, {2, 16, 32, 64}};
+    gert::StorageShape gradShape = {{2, 16, 32, 64}, {2, 16, 32, 64}};
+    gert::StorageShape yShape = {{2, 16, 64, 128}, {2, 16, 64, 128}};
+
+    ExecuteTilingTestCase(
+        x1Shape, x2Shape, gradShape, yShape,
+        {1, 1, 2, 2},
+        {1, 1, 2, 2},
+        "VALID",
+        "NCHW",
+        ge::DT_FLOAT,
+        ge::GRAPH_SUCCESS);
+}
+
+TEST_F(MaxPoolGradTiling, MaxPoolGrad_tiling_success_small_kernel_fp32_valid_nchw_k3_5_s2_4)
+{
+    gert::StorageShape x1Shape = {{1, 32, 35, 137}, {1, 32, 35, 137}};
+    gert::StorageShape x2Shape = {{1, 32, 17, 34}, {1, 32, 17, 34}};
+    gert::StorageShape gradShape = {{1, 32, 17, 34}, {1, 32, 17, 34}};
+    gert::StorageShape yShape = {{1, 32, 35, 137}, {1, 32, 35, 137}};
+
+    ExecuteTilingTestCase(
+        x1Shape, x2Shape, gradShape, yShape,
+        {1, 1, 3, 5},
+        {1, 1, 2, 4},
+        "VALID",
+        "NCHW",
+        ge::DT_FLOAT,
+        ge::GRAPH_SUCCESS);
+}
+
+TEST_F(MaxPoolGradTiling, MaxPoolGrad_tiling_success_small_kernel_fp32_same_nchw_k2_s2_odd_shape)
+{
+    gert::StorageShape x1Shape = {{1, 24, 33, 65}, {1, 24, 33, 65}};
+    gert::StorageShape x2Shape = {{1, 24, 17, 33}, {1, 24, 17, 33}};
+    gert::StorageShape gradShape = {{1, 24, 17, 33}, {1, 24, 17, 33}};
+    gert::StorageShape yShape = {{1, 24, 33, 65}, {1, 24, 33, 65}};
+
+    ExecuteTilingTestCase(
+        x1Shape, x2Shape, gradShape, yShape,
+        {1, 1, 2, 2},
+        {1, 1, 2, 2},
+        "SAME",
+        "NCHW",
+        ge::DT_FLOAT,
+        ge::GRAPH_SUCCESS);
+}

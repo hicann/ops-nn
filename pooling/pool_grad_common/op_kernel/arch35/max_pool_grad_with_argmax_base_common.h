@@ -113,24 +113,24 @@ __aicore__ inline void GradientAcc(__local_mem__ computeType* yAddr, MicroAPI::R
 }
 
 template <typename T1, typename T2, typename T3>
-__aicore__ inline void GetConCurrentInput(MicroAPI::RegTensor<T3>& argmaxReg, MicroAPI::RegTensor<computeType>& gradReg,
-                                          __local_mem__ T1* gradAddr, __local_mem__ T2* argmaxAddr,
-                                          MicroAPI::RegTensor<uint32_t>& parallelRegIndex, MicroAPI::MaskReg& pregT1,
-                                          MicroAPI::MaskReg& pregT2)
+__aicore__ inline void GetConCurrentInput(
+    MicroAPI::RegTensor<T3>& argmaxReg, MicroAPI::RegTensor<computeType>& gradReg, __local_mem__ T1* gradAddr,
+    __local_mem__ T2* argmaxAddr, MicroAPI::RegTensor<uint32_t>& parallelRegIndex,
+    MicroAPI::RegTensor<uint32_t>& parallelRegGrad, MicroAPI::MaskReg& pregT1, MicroAPI::MaskReg& pregT2)
 {
     if constexpr (std::negation<std::is_same<T1, float>>::value) {
         AscendC::MicroAPI::RegTensor<T1> gradRegT1;
-        AscendC::MicroAPI::RegTensor<uint16_t> parallelRegIndexU16;
+        AscendC::MicroAPI::RegTensor<uint16_t> parallelRegGradU16;
         AscendC::MicroAPI::MaskReg allMaskU32 =
             AscendC::MicroAPI::CreateMask<uint32_t, AscendC::MicroAPI::MaskPattern::ALL>();
-        AscendC::MicroAPI::Cast<uint16_t, uint32_t, castTraitU32U16>(parallelRegIndexU16, parallelRegIndex, allMaskU32);
-        AscendC::MicroAPI::Pack(parallelRegIndexU16, (AscendC::MicroAPI::RegTensor<int32_t>&)parallelRegIndexU16);
-        AscendC::MicroAPI::DataCopyGather(gradRegT1, gradAddr, parallelRegIndexU16, pregT1);
-        AscendC::MicroAPI::UnPack((AscendC::MicroAPI::RegTensor<uint32_t>&)gradRegT1,
-                                  (AscendC::MicroAPI::RegTensor<uint16_t>&)gradRegT1);
+        AscendC::MicroAPI::Cast<uint16_t, uint32_t, castTraitU32U16>(parallelRegGradU16, parallelRegGrad, allMaskU32);
+        AscendC::MicroAPI::Pack(parallelRegGradU16, (AscendC::MicroAPI::RegTensor<int32_t>&)parallelRegGradU16);
+        AscendC::MicroAPI::DataCopyGather(gradRegT1, gradAddr, parallelRegGradU16, pregT1);
+        AscendC::MicroAPI::UnPack(
+            (AscendC::MicroAPI::RegTensor<uint32_t>&)gradRegT1, (AscendC::MicroAPI::RegTensor<uint16_t>&)gradRegT1);
         AscendC::MicroAPI::Cast<computeType, T1, castTraitT1ComputeType>(gradReg, gradRegT1, allMaskU32);
     } else {
-        AscendC::MicroAPI::DataCopyGather(gradReg, gradAddr, parallelRegIndex, pregT1);
+        AscendC::MicroAPI::DataCopyGather(gradReg, gradAddr, parallelRegGrad, pregT1);
     }
 
     if constexpr (std::is_same<T3, int32_t>::value && std::is_same<T2, int32_t>::value) {
@@ -142,6 +142,16 @@ __aicore__ inline void GetConCurrentInput(MicroAPI::RegTensor<T3>& argmaxReg, Mi
     } else if constexpr (std::is_same<T3, int64_t>::value && std::is_same<T2, int64_t>::value) {
         AscendC::MicroAPI::DataCopyGather(argmaxReg, argmaxAddr, parallelRegIndex, pregT2);
     }
+}
+
+template <typename T1, typename T2, typename T3>
+__aicore__ inline void GetConCurrentInput(
+    MicroAPI::RegTensor<T3>& argmaxReg, MicroAPI::RegTensor<computeType>& gradReg, __local_mem__ T1* gradAddr,
+    __local_mem__ T2* argmaxAddr, MicroAPI::RegTensor<uint32_t>& parallelRegIndex, MicroAPI::MaskReg& pregT1,
+    MicroAPI::MaskReg& pregT2)
+{
+    GetConCurrentInput<T1, T2, T3>(
+        argmaxReg, gradReg, gradAddr, argmaxAddr, parallelRegIndex, parallelRegIndex, pregT1, pregT2);
 }
 
 template <typename T1, typename T2, typename T3, const uint32_t IS_CHECK_RANGE, int32_t VER>

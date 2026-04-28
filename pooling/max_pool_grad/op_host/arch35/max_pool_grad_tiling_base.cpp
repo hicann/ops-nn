@@ -41,7 +41,6 @@ constexpr uint64_t NUM_TWO = 2;
 constexpr size_t HW_DIM_NUM = 3;
 constexpr uint32_t MAX_BLOCK_COUNT = 4095;
 
-// 参数常量
 constexpr size_t NC_DIM_NUM = 2;
 constexpr size_t NCHW_DIM_NUM = 4;
 constexpr size_t PADS_ATTR_INDEX = 3U;
@@ -245,11 +244,11 @@ ge::graphStatus MaxPoolGradTilingBase::CheckAttrShape()
     // Check attr dim num
     OP_CHECK_IF(
         (kSizeDimNum != NCHW_DIM_NUM),
-        OP_LOGE(context_->GetNodeName(), "Attr kSize dim num invalid, dim num should equal 5."),
+        OP_LOGE(context_->GetNodeName(), "Attr kSize dim num invalid, dim num should equal 4."),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         (stridesDimNum != NCHW_DIM_NUM),
-        OP_LOGE(context_->GetNodeName(), "Attr strides dim num invalid, dim num should equal 5."),
+        OP_LOGE(context_->GetNodeName(), "Attr strides dim num invalid, dim num should equal 4."),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
