@@ -244,6 +244,7 @@
 | [aclnnInplaceMaskedScatter](../../index/masked_scatter/docs/aclnnInplaceMaskedScatter.md) | 根据掩码(mask)张量中元素为True的位置，复制(source)中的元素到(selfRef)对应的位置上。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnInplaceQuantScatter](../../index/quant_update_scatter/docs/aclnnInplaceQuantScatter.md) | 先将updates在quantAxis轴上进行量化：quantScales对updates做缩放操作，quantZeroPoints做偏移。然后将量化后的updates中的值按指定的轴axis，根据索引张量indices逐个更新selfRef中对应位置的值。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnInstanceNorm](../../norm/instance_norm_v3/docs/aclnnInstanceNorm.md) | 用于执行Instance Normalization（实例归一化）操作。 | 默认确定性实现 | - |
+| [aclnnInverse](../../index/matrix_inverse/docs/aclnnInverse.md) | 计算输入方阵的逆矩阵。 | 默认确定性实现 | - |
 | [aclnnKlDivBackward](../../loss/kl_div_loss_grad/docs/aclnnKlDivBackward.md) | 进行aclnnKlDiv api的结果的反向计算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnKlDivTargetBackward](../../loss/kl_div_loss_grad/docs/aclnnKlDivTargetBackward.md) | 进行aclnnKlDiv api的结果的target反向计算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnKthvalue](../../index/gather_v2/docs/aclnnKthvalue.md) | 返回输入Tensor在指定维度上的第k个最小值及索引。 | 默认确定性实现 | 默认确定性实现 |
@@ -281,6 +282,8 @@
 | [aclnnMm](../../matmul/mat_mul_v3/docs/aclnnMm.md) | 完成2维张量self与张量mat2的矩阵乘计算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnMish&aclnnInplaceMish](../../activation/mish/docs/aclnnMish&aclnnInplaceMish.md) | 一个自正则化的非单调神经网络激活函数。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnMishBackward](../../activation/mish_grad/docs/aclnnMishBackward.md) | 计算aclnnMish的反向传播过程。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnModulate](../../vfusion/modulate/docs/aclnnModulate.md) | 实现特征的自适应缩放（scale）和平移（shift）。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnModulateBackward](../../vfusion/modulate_grad/docs/aclnnModulateBackward.md) | 完成ModulateBackward反向传播中参数的计算，进行梯度更新。 | 默认确定性实现 | - |
 | [aclnnMseLoss](../../loss/mse_loss/docs/aclnnMseLoss.md) | 计算输入x和目标y中每个元素之间的均方误差。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnMseLossBackward](../../loss/mse_loss_grad_v2/docs/aclnnMseLossBackward.md) | 均方误差函数aclnnMseLoss的反向传播。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnMseLossOut](../../loss/mse_loss/docs/aclnnMseLossOut.md) | 计算输入x和目标y中每个元素之间的均方误差。 | 默认确定性实现 | 默认确定性实现 |
@@ -289,7 +292,7 @@
 | [aclnnMultiScaleDeformableAttentionGrad](../../vfusion/multi_scale_deformable_attention_grad/docs/aclnnMultiScaleDeformableAttentionGrad.md) | 正向算子功能主要通过指定参数来遍历不同尺寸特征图的不同采样点。而反向算子的功能为根据正向的输入对输出的贡献及初始梯度求出输入对应的梯度。 | 默认非确定性实现，支持配置开启。 | - |
 | [aclnnMv](../../matmul/mv/docs/aclnnMv.md) | 计算矩阵input与向量vec的乘积。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnNanMedian](../../index/gather_v2/docs/aclnnNanMedian.md) | 忽略NAN后，返回所有元素的中位数。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnNanMedianDim](../../index/gather_v2/docs/aclnnNanMedian.md) | 忽略NAN后，返回Tensor指定维度求中位数及所在位置。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnNanMedianDim](../../index/gather_v2/docs/aclnnNanMedianDim.md) | 忽略NAN后，返回Tensor指定维度求中位数及所在位置。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnNorm](../../norm/lp_norm_v2/docs/aclnnNorm.md) | 返回给定张量的矩阵范数或者向量范数。 | 默认非确定性实现，支持配置开启。 | 默认确定性实现 |
 | [aclnnNLLLoss](../../loss/nll_loss/docs/aclnnNLLLoss.md) | 计算负对数似然损失值。 | 默认非确定性实现，支持配置开启。 | 默认确定性实现 |
 | [aclnnNLLLoss2d](../../loss/nll_loss/docs/aclnnNLLLoss2d.md) | 计算负对数似然损失值。 | 默认非确定性实现，支持配置开启。 | 默认确定性实现 |
@@ -311,6 +314,10 @@
 | [aclnnRenorm&aclnnInplaceRenorm](../../norm/renorm/docs/aclnnRenorm&aclnnInplaceRenorm.md) | 返回一个张量，其中输入张量self沿维度dim的每个子张量都经过归一化，使得子张量的p范数低于maxNorm值。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnRepeatInterleave](../../index/repeat_interleave/docs/aclnnRepeatInterleave.md) | 将tensor self进行flatten后，重复Tensor repeats中的相应次数。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnRepeatInterleaveGrad](../../index/repeat_interleave_grad/docs/aclnnRepeatInterleaveGrad.md) | 算子repeatInterleave的反向, 将yGrad tensor的axis维度按repeats进行ReduceSum。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnRepeatInterleaveInt](../../index/repeat_interleave/docs/aclnnRepeatInterleaveInt.md) | 将tensor self进行flatten后，每个元素重复repeats的相应次数。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnRepeatInterleaveIntWithDim](../../index/repeat_interleave/docs/aclnnRepeatInterleaveIntWithDim.md) | 将tensor中的每个元素根据dim维度，每个元素重复repeats的相应次数。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnRepeatInterleaveTensor](../../index/repeat_interleave/docs/aclnnRepeatInterleaveTensor.md) | 针对Tensor repeats的第i个元素，将i重复repeats[i]次。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnRepeatInterleaveWithDim](../../index/repeat_interleave/docs/aclnnRepeatInterleaveWithDim.md) | 将tensor中的每个元素根据dim维度，重复Tensor repeats中对应位置的相应次数。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnRmsNorm](../../norm/rms_norm/docs/aclnnRmsNorm.md) | RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnRmsNormGrad](../../norm/rms_norm_grad/docs/aclnnRmsNormGrad.md) | [aclnnRmsNorm](../../norm/rms_norm/docs/aclnnRmsNorm.md)的反向计算。用于计算RMSNorm的梯度，即在反向传播过程中计算输入张量的梯度。 | 默认非确定性实现，支持配置开启。 | 默认确定性实现 |
 | [aclnnRmsNormQuant](../../norm/rms_norm_quant/docs/aclnnRmsNormQuant.md) | aclnnRmsNormQuant算子将aclnnRmsNorm前的Add算子以及aclnnRmsNorm后的Quantize算子融合起来，减少搬入搬出操作。 | 默认确定性实现 | 默认确定性实现 |
@@ -320,6 +327,7 @@
 | [aclnnScatterNd](../../index/scatter_nd_update/docs/aclnnScatterNd.md) | 拷贝data的数据至out，同时在指定indices处根据updates更新out中的数据。 | 默认确定性实现 | 默认非确定性实现，支持配置开启 |
 | [aclnnScatterNdUpdate](../../index/scatter_nd_update/docs/aclnnScatterNdUpdate.md) | 将tensor updates中的值按指定的索引indices逐个更新tensor varRef中的值。 | 默认确定性实现 | 默认非确定性实现，支持配置开启 |
 | [aclnnScatterList](../../index/scatter_list/docs/aclnnScatterList.md) | 将稀疏更新应用到变量引用张量列表中，通过索引将updates中的值scatter到var对应的维度上。 | 默认非确定性实现，支持配置开启 | - |
+| [aclnnScatterValue&aclnnInplaceScatterValue](../../index/scatter_elements_v2/docs/aclnnScatterValue&aclnnInplaceScatterValue.md) | 将scalar value中的值按指定的轴和方向和对应的位置关系逐个填入tensor self中。 | 默认确定性实现 | 默认非确定性实现，支持配置开启 |
 | [aclnnScaledMaskedSoftmax](../../vfusion/scaled_masked_softmax_v2/docs/aclnnScaledMaskedSoftmax.md) | 将输入的数据x先进行scale缩放和mask，然后执行softmax的输出。 | 默认确定性实现 | - |
 | [aclnnScaledMaskedSoftmaxBackward](../../vfusion/scaled_masked_softmax_grad_v2/docs/aclnnScaledMaskedSoftmaxBackward.md) | softmax的反向传播，并对结果进行缩放以及掩码。 | 默认非确定性实现，支持配置开启。 | - |
 | [aclnnSelu&aclnnInplaceSelu](../../activation/selu/docs/aclnnSelu&aclnnInplaceSelu.md) | 对输入tensor逐元素进行Selu符号函数的运算并输出结果tensor。 | 默认确定性实现 | - |
@@ -349,6 +357,7 @@
 | [aclnnSwishBackward](../../activation/swish_grad/docs/aclnnSwishBackward.md) | aclnnSwishBackward是aclnnSwish激活函数的反向传播，用于计算Swish激活函数的梯度。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnSyncBatchNormGatherStats](../../norm/sync_batch_norm_gather_stats/docs/aclnnSyncBatchNormGatherStats.md) | 收集所有device的均值和方差，更新全局的均值和方差。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnTake](../../index/gather_v2/docs/aclnnTake.md) | 将输入的self张量视为一维数组，把index的值当作索引，从self中取值，输出shape与index一致的Tensor。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnTfScatterAdd](../../index/tf_scatter_add/docs/aclnnTfScatterAdd.md) | 实现兼容tf.scatter\_add和tf.scatter\_nd\_add的功能，将updates中的值按指定的索引加到varRef的切片上。 | 默认确定性实现 | - |
 | [aclnnThnnFusedLstmCell](../../rnn/thnn_fused_lstm_cell/docs/aclnnThnnFusedLstmCell.md) | 完成LSTM单元前向计算中，矩阵乘法后的后续计算。 | 默认确定性实现 | - |
 | [aclnnThnnFusedLstmCellBackward](../../rnn/thnn_fused_lstm_cell_grad/docs/aclnnThnnFusedLstmCellBackward.md) | 完成单个时间步LSTM反向的计算。 | 默认确定性实现 | - |
 | [aclnnThreshold&aclnnInplaceThreshold](../../activation/threshold/docs/aclnnThreshold&aclnnInplaceThreshold.md) | 对输入x进行阈值操作。当x中的elements大于threshold时，返回elements；否则，返回value。 | 默认确定性实现 | - |
@@ -358,6 +367,7 @@
 | [aclnnTransQuantParam](../../quant/trans_quant_param/docs/aclnnTransQuantParam.md) | 将输入scale数据从FLOAT32类型转换为硬件需要的UINT64类型，并存储到quantParam中。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnTransQuantParamV2](../../quant/trans_quant_param_v2/docs/aclnnTransQuantParamV2.md) | 完成量化计算参数scale数据类型的转换，将FLOAT32的数据类型转换为硬件需要的UINT64，INT64类型。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnTransQuantParamV3](../../quant/trans_quant_param_v2/docs/aclnnTransQuantParamV3.md) | 完成量化计算参数scale数据类型的转换，将Float32的数据类型转换为硬件需要的UINT64，INT64类型。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnTopKTopPSample](../../index/top_k_top_p_sample/docs/aclnnTopKTopPSample.md) | 根据输入词频logits、topK/topP采样参数、随机采样权重分布q，进行topK-topP-sample采样计算，输出每个batch的最大词频logitsSelectIdx，以及topK-topP采样后的词频分布logitsTopKPSelect。 | 默认确定性实现 | - |
 | [aclnnTopKTopPSampleV2](../../index/top_k_top_p_sample_v2/docs/aclnnTopKTopPSampleV2.md) | 根据输入词频logits、topK/topP/minP采样参数、随机采样权重分布q，进行topK-topP-minP-sample采样计算。当输入isNeedSampleResult为false时，输出每个batch的最大词频logitsSelectIdx，以及topK-topP-minP采样后的词频分布logitsTopKPSelect；当输入isNeedSampleResult为true时，输出topK-topP-minP采样后的中间计算结果logitsIdx和logitsSortMasked，其中logitsSortMasked为词频logits经过topK-topP-minP采样计算后的中间结果，logitsIdx为logitsSortMasked在logits中对应的索引。 | 默认确定性实现 | - |
 | [aclnnUnique](../../index/scatter_elements/docs/aclnnUnique.md) | 返回输入张量中的唯一元素。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnUnique2](../../index/scatter_elements/docs/aclnnUnique2.md) | 对输入张量self进行去重，返回self中的唯一元素。unique功能的增强，新增返回值countsOut，表示valueOut中各元素在输入self中出现的次数，用returnCounts参数控制。 | 默认确定性实现 | 默认确定性实现 |
