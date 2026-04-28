@@ -196,6 +196,7 @@
 | [aclnnFusedLinearCrossEntropyLossGrad](../../matmul/fused_linear_cross_entropy_loss_grad/docs/aclnnFusedLinearCrossEntropyLossGrad.md) | 是词汇表并行场景下交叉熵损失计算模块中的一部分，解决超大规模词汇表下的显存和计算效率问题，当前部分为梯度计算实现，用于计算叶子节点`input`和`weight`的梯度。 | 默认确定性实现 | - |
 | [aclnnFusedMatmul](../../matmul/fused_mat_mul/docs/aclnnFusedMatmul.md) | 矩阵乘与通用向量计算融合。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnFusedQuantMatmul](../../matmul/fused_quant_mat_mul/docs/aclnnFusedQuantMatmul.md) | 量化矩阵乘与通用向量计算融合。 | 默认确定性实现 | - |
+| [aclnnFusedQuantMatmulWeightNz](../../matmul/fused_quant_mat_mul/docs/aclnnFusedQuantMatmulWeightNz.md) | 量化矩阵乘与通用向量计算融合，WeightNz输入。 | 默认确定性实现 | - |
 | [aclnnGather](../../index/gather_elements_v2/docs/aclnnGather.md) | 对输入tensor中指定的维度dim进行数据聚集。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnGatherNd](../../index/gather_nd/docs/aclnnGatherNd.md) | 对于维度为r≥1的输入张量self，和维度q≥1的输入张量indices，将数据切片收集到维度为 (q-1) + (r - indices_shape[-1]) 的输出张量out中。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnGatherV2](../../index/gather_v2/docs/aclnnGatherV2.md) | 从输入Tensor的指定维度dim，按index中的下标序号提取元素，保存到out Tensor中。 | 默认确定性实现 | 默认确定性实现 |
@@ -269,6 +270,7 @@
 | [aclnnMaskedSoftmaxWithRelPosBias](../../norm/masked_softmax_with_rel_pos_bias/docs/aclnnMaskedSoftmaxWithRelPosBias.md) | 替换在swinTransformer中使用window attention计算softmax的部分。 | 默认确定性实现 | - |
 | [aclnnMatmul](../../matmul/mat_mul_v3/docs/aclnnMatmul.md) | 完成1到6维张量self与张量mat2的矩阵乘计算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnMatmulWeightNz](../../matmul/mat_mul_v3/docs/aclnnMatmulWeightNz.md) | 完成张量self与张量mat2的矩阵乘计算，mat2仅支持昇腾亲和数据排布格式。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnMatmulCompress](../../matmul/matmul_compress/docs/aclnnMatmulCompress.md) | 进行l@r矩阵乘计算时，可先通过msModelSlim工具对r矩阵进行无损压缩，减少r矩阵的内存占用大小，然后通过本接口完成无损解压缩，矩阵乘，反量化计算。 | 默认确定性实现 | - |
 | [aclnnMaxPool](../../pooling/max_pool_v3/docs/aclnnMaxPool.md) | 对于dim=3 或4维的输入张量，进行最大池化（max pooling）操作。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnMaxPool2dWithIndices](../../pooling/max_pool3d_with_argmax_v2/docs/aclnnMaxPool2dWithIndices.md) | 对于输入信号的输入通道，提供2维（H，W维度）最大池化（max pooling）操作，输出池化后的值out和索引indices。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnMaxPool2dWithIndicesBackward](../../pooling/max_pool3d_grad_with_argmax/docs/aclnnMaxPool2dWithIndicesBackward.md) | 正向最大池化aclnnMaxPool2dWithIndices的反向传播。 | 默认非确定性实现，支持配置开启。 | 默认确定性实现 |
