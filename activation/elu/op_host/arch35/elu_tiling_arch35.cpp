@@ -61,6 +61,7 @@ ge::graphStatus EluTiling::SetTilingData()
     auto rawTilingData = tilingContext->GetRawTilingData();
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, rawTilingData);
     size_t* currentWorkspace = tilingContext->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, currentWorkspace);
     currentWorkspace[0] = ELU_WORKSPACE_RESERVE_BYTE;
     tilingContext->SetTilingKey(ELU_TILING_KEY_ELEMENTWISE);
     tilingContext->SetBlockDim(tiling->baseTiling.blockNum);

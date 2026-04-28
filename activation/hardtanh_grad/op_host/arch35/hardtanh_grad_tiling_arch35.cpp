@@ -62,6 +62,7 @@ ge::graphStatus HardtanhGradTiling::SetTilingData()
     OP_LOGD(tilingContext->GetNodeName(), "HardtanhGradTiling SetTilingData enter.");
 
     size_t* currentWorkspace = tilingContext->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, currentWorkspace);
     currentWorkspace[0] = static_cast<size_t>(ASCEND_WORKSPACE);
 
     schMode = tiling->baseTiling.scheMode;

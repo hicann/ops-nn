@@ -674,6 +674,7 @@ ge::graphStatus QuantUpdateScatterRegbaseTiling::DoTiling()
     context_->SetBlockDim(tilingData_.get_coreNum());
     context_->SetTilingKey(tilingKey_);
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
     currentWorkspace[0] = SYNC_WORKSPACE_SIZE;
 
     return ge::GRAPH_SUCCESS;

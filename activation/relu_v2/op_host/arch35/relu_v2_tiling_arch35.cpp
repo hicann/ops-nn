@@ -65,6 +65,7 @@ ge::graphStatus ReluV2Tiling::SetTilingData()
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, rawTilingData);
 
     size_t* currentWorkspace = tilingContext->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, currentWorkspace);
     currentWorkspace[0] = SYS_WORKSPACE;
 
     tilingContext->SetBlockDim(tiling->baseTiling.blockNum);

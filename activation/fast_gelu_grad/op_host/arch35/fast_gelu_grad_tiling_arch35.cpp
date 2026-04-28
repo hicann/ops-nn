@@ -140,6 +140,7 @@ ge::graphStatus FastGeluGradTiling::RunTiling()
     size_t usr_workspaceSize = 0;
     size_t sys_workspaceSize = SYSWORKSPACE;
     size_t* current_workspace = tilingContext->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, current_workspace);
     current_workspace[0] = sys_workspaceSize + usr_workspaceSize;
     return ge::GRAPH_SUCCESS;
 }

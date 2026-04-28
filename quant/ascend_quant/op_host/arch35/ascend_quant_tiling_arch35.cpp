@@ -69,6 +69,10 @@ ge::graphStatus AscendQuantRegbase::DoAscendQuantTiling()
     CalcTiling();
     CalcTilingKey();
     WriteTilingData();
+
+    size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
+    currentWorkspace[0] = SYNC_WORKSPACE_SIZE;
     return ge::GRAPH_SUCCESS;
 }
 
@@ -358,9 +362,6 @@ void AscendQuantRegbase::WriteTilingData()
     tilingData_->baseLen = baseLen_;
 
     tilingData_->dim0 = xInputShape_.GetDim(FIRST_DIM);
-
-    size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
-    currentWorkspace[0] = SYNC_WORKSPACE_SIZE;
 }
 } // namespace ascendquantregbase
 

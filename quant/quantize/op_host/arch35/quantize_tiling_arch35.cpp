@@ -86,6 +86,10 @@ ge::graphStatus Quantize::DoQuantizeTiling()
     CalcTiling();
     CalTilingKey();
     WriteTilingData();
+
+    size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
+    currentWorkspace[0] = SYNC_WORKSPACE_SIZE;
     return ge::GRAPH_SUCCESS;
 }
 
@@ -720,9 +724,6 @@ void Quantize::WriteTilingData()
     tilingData_->dim1 = xInputShape_.GetDim(SECOND_SHAPE_DIM);
     tilingData_->dim2 = xInputShape_.GetDim(THIRD_SHAPE_DIM);
     tilingData_->hasZeroPoint = static_cast<int64_t>(hasZeroPoint_);
-
-    size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
-    currentWorkspace[0] = SYNC_WORKSPACE_SIZE;
 }
 }  // namespace quantize
 

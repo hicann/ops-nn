@@ -460,6 +460,7 @@ static ge::graphStatus Tiling4GeGluV2(gert::TilingContext* context)
     context->SetBlockDim(tilingData.get_realCoreNum());
     context->SetTilingKey(tilingData.get_tilingKey());
     size_t* workspaces = context->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context, workspaces);
     workspaces[0] = WORK_SPACE_SIZE + tilingParam.coreNum * BYTES_ONE_BLOCK * FP32_DTYPE_BYTES;
 
     OP_LOGD(

@@ -461,6 +461,7 @@ ge::graphStatus DynamicQuantRegbaseTiling::DoEmptyTensorTiling(gert::TilingConte
     context->SetTilingKey(tilingKey);
 
     size_t* workSpaces = context->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context, workSpaces);
     workSpaces[0] = SYS_WORKSPACE_SIZE;
     context->SetBlockDim(1);
     return ge::GRAPH_SUCCESS;
@@ -766,6 +767,8 @@ ge::graphStatus DynamicQuantRegbaseTiling::RunFusionKernelTiling(gert::TilingCon
     PrintTilingData(context);
 
     size_t* workSpaces = context->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context, workSpaces);
+
     size_t normalWorkSpace = coreNum * sizeof(float);
     size_t perChannelWorkSpace = totalBatchLen * nLen * sizeof(float);
     workSpaces[0] = SYS_WORKSPACE_SIZE;

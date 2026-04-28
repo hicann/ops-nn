@@ -109,6 +109,7 @@ ge::graphStatus LogSigmoidTiling::RunTiling()
 
     // set workspace, tilingkey and blocknum
     size_t* currentWorkspace = tilingContext->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, currentWorkspace);
     currentWorkspace[0] = LOG_SIGMOID_SYS_WORKSPACE;
     const uint64_t tilingKey = GET_TPL_TILING_KEY(static_cast<uint64_t>(tiling->scheMode), dType);
     tilingContext->SetTilingKey(tilingKey);

@@ -136,6 +136,7 @@ ge::graphStatus EluGradTiling::RunTiling()
     size_t usrWorkspaceSize = 0;
     size_t sysWorkspaceSize = ASCEND_WORKSPACE;
     size_t* currentWorkspace = tilingContext->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, currentWorkspace);
     currentWorkspace[0] = sysWorkspaceSize + usrWorkspaceSize;
     return ge::GRAPH_SUCCESS;
 }

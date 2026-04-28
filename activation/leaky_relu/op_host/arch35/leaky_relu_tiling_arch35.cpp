@@ -63,6 +63,7 @@ ge::graphStatus LeakyReluTiling::SetTilingData()
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, rawTilingData);
 
     size_t *currentWorkspace = tilingContext->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, currentWorkspace);
     currentWorkspace[0] = SYS_WORKSPACE;
 
     schMode = tiling->baseTiling.scheMode;

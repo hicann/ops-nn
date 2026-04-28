@@ -15,8 +15,8 @@
 #include "ascendc/host_api/tiling/template_argument.h"
 
 
-#ifndef CANN_CUSTOM_OPS_LEAKY_RELU_STRUCT_H_
-#define CANN_CUSTOM_OPS_LEAKY_RELU_STRUCT_H_
+#ifndef OPS_NN_ACTIVATION_LEAKY_RELU_OP_KERNEL_ARCH35_LEAKY_RELU_STRUCT_H
+#define OPS_NN_ACTIVATION_LEAKY_RELU_OP_KERNEL_ARCH35_LEAKY_RELU_STRUCT_H
 
 namespace LeakyReluOp
 {
@@ -40,4 +40,4 @@ namespace LeakyReluOp
     );
 }      // namespace LeakyReluOp
 
-#endif // CANN_CUSTOM_OPS_LEAKY_RELU_STRUCT_H_
+#endif // OPS_NN_ACTIVATION_LEAKY_RELU_OP_KERNEL_ARCH35_LEAKY_RELU_STRUCT_H

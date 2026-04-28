@@ -149,6 +149,7 @@ ge::graphStatus SwishTiling::RunTiling()
                OP_LOGE(tilingContext, "elewiseBaseTiling failed"), return ge::GRAPH_FAILED);
     elewiseBaseTiling.SetScalar<float>(attrScale);
     size_t* currentWorkspace = tilingContext->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, currentWorkspace);
     currentWorkspace[0] = ASCEND_WORKSPACE;
     const uint64_t tilingKey = GET_TPL_TILING_KEY(schMode, attrWork);
     OP_LOGD(tilingContext->GetNodeName(), "[TilingData] : tilingKey=%lu", tilingKey);

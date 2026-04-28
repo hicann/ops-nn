@@ -12,8 +12,8 @@
  * \file leaky_relu_dag.h
  * \brief
  */
-#ifndef ASCENDC_LEAKY_RELU_DAG_H_
-#define ASCENDC_LEAKY_RELU_DAG_H_
+#ifndef OPS_NN_ACTIVATION_LEAKY_RELU_OP_KERNEL_ARCH35_LEAKY_RELU_DAG_H
+#define OPS_NN_ACTIVATION_LEAKY_RELU_OP_KERNEL_ARCH35_LEAKY_RELU_DAG_H
 #include "atvoss/util/dag.h"
 #include "atvoss/util/vec.h"
 #include "atvoss/util/placeholder.h"
@@ -38,5 +38,5 @@ struct LeakyReluCastDag {
     using Outputs = Ops::Base::Elems<OpCopyOut>;
     using OpDag = Ops::Base::DAGSch<Outputs>;
 };
-#endif // ASCENDC_LEAKY_RELU_DAG_H_
 
+#endif // OPS_NN_ACTIVATION_LEAKY_RELU_OP_KERNEL_ARCH35_LEAKY_RELU_DAG_H

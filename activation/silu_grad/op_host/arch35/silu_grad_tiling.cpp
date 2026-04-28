@@ -252,6 +252,7 @@ ge::graphStatus SiluGradTiling::PostTiling()
     context_->SetTilingKey(GetTilingKey());
     context_->SetBlockDim(blockNum);
     size_t* workspaces = context_->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
     workspaces[0] = workspaceSize_;
     tilingData.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());

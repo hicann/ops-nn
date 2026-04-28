@@ -198,6 +198,7 @@ ge::graphStatus EluGradV2Tiling::RunTiling()
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, tilingContext->GetRawTilingData());
 
     size_t* currentWorkspace = tilingContext->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, currentWorkspace);
     currentWorkspace[0] = static_cast<uint64_t>(ASCEND_WORKSPACE);
 
     return ge::GRAPH_SUCCESS;

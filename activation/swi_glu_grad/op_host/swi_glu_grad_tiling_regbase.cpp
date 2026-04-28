@@ -213,6 +213,7 @@ ge::graphStatus GluBaseTiling4RegBase::PostTiling()
     context_->SetBlockDim(static_cast<uint32_t>(usedCoreNum_));
 
     size_t* workspaces = context_->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
     workspaces[0] = WORK_SPACE_SIZE + usedCoreNum_ * Ops::Base::GetUbBlockSize(context_);
     return ge::GRAPH_SUCCESS;
 }

@@ -157,6 +157,7 @@ ge::graphStatus GeGluGradV2Tiling::RunTiling4GeGluGradV2()
     tilingContext->SetTilingKey(static_cast<uint64_t>(tilingKey));
     FillTilingData();
     size_t* workspaces = tilingContext->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, workspaces);
     workspaces[0] = static_cast<size_t>(WORK_SPACE_SIZE + ptrCompileInfo->totalCoreNum * BLOCK_SIZE);
     return ge::GRAPH_SUCCESS;
 }
