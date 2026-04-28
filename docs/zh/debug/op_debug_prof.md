@@ -65,6 +65,49 @@
 
 对于复杂场景的问题定位，比如算子卡死、GM/UB访问越界等场景，可以采取**单步调试**的方式，具体操作请参见[msDebug](https://www.hiascend.com/document/redirect/CannCommunityToolMsdebug)算子调试工具。
 
+## 调试定位（AI CPU算子）
+
+算子运行过程中，如果出现算子执行失败、精度异常等问题，可以打印各阶段信息，如Kernel中间结果，进行问题分析和定位。
+
+### 1、Host侧日志获取方式
+
+   见AI Core算子[Host侧日志获取方式](#1host侧日志获取方式)
+
+### 2、Kernel调试
+
+常见调试方法如下：
+
+* **KERNEL\_LOG宏**
+
+  可通过如下宏打印算子执行过程中的日志信息，包括DEBUG、INFO、WARN、ERROR级别日志。
+
+  ```Cpp
+  KERNEL_LOG_DEBUG(fmt, …)      // fmt参数表示格式控制字符串
+  KERNEL_LOG_INFO(fmt, …)
+  KERNEL_LOG_WARN(fmt, …)
+  KERNEL_LOG_ERROR(fmt, …)      // 默认打印ERROR级别日志
+  ```
+
+  如需打印非ERROR级别日志，需提前配置环境变量`ASCEND_GLOBAL_LOG_LEVEL`，具体使用方法参见[《环境变量参考》](https://hiascend.com/document/redirect/CannCommunityEnvRef)。
+
+  打印示例如下：
+
+  ```c++
+  Tensor* input0 = ctx.Input(kFirstInputIndex);
+  Tensor* input1 = ctx.Input(kSecondInputIndex);
+  Tensor* output = ctx.Output(0);
+
+  if (input0 == nullptr || input1 == nullptr || output == nullptr) {
+    // 打印错误信息
+    KERNEL_LOG_ERROR("Invalid argument");
+    return kParamInvalid;
+  }
+
+  int64_t num_elements = input0->NumElements();
+  // 打印输入元素个数
+  KERNEL_LOG_INFO("Num of elements is %ld", data_size);
+  ```
+
 ## 性能调优
 
 算子运行过程中，如果出现执行精度下降、内存占用异常等问题，可通过[msProf](https://www.hiascend.com/document/redirect/CannCommunityToolMsprof)性能分析工具分析算子各运行阶段指标数据（如吞吐率、内存占用、耗时等），从而确定问题根源，并针对性地优化。
