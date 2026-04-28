@@ -78,6 +78,7 @@ constexpr uint16_t SUB_NUM_FOR_SCALE_7 = 0x00e1;         // dstTypeMax=7.0时-2�
 constexpr float DIGIT_ZERO_FLOAT = 0.0f;
 constexpr float DIGIT_SIX_FLOAT = 6.0f;
 constexpr float DIGIT_SEVEN_FLOAT = 7.0f;
+constexpr uint16_t elementAfterReduce = platform::GetVRegSize() / platform::GetUbBlockSize();
 
 template <typename xDtype, typename y1Dtype, typename y2Dtype, AscendC::RoundMode roundMode, uint64_t scaleAlg>
 class DynamicMxQuantWithDualAxisBase {
@@ -118,15 +119,15 @@ private:
     __aicore__ inline void ComputeYVf(
         uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr, __ubuf__ uint16_t* mxScale1ReciprocalAddr,
         __ubuf__ uint16_t* mxScale2ReciprocalAddr, __ubuf__ uint8_t* y1Addr, __ubuf__ uint8_t* y2Addr);
-    __aicore__ inline void ComputeY1ToFP4(
+    __aicore__ inline void ComputeYBF16ToFP4(
         uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr, __ubuf__ uint16_t* mxScale1ReciprocalAddr,
-        __ubuf__ uint8_t* y1Addr);
+        __ubuf__ uint8_t* y1Addr, __ubuf__ uint16_t* mxScale2ReciprocalAddr, __ubuf__ uint8_t* y2Addr);
+    __aicore__ inline void ComputeYFP16ToFP4(
+        uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr, __ubuf__ uint16_t* mxScale1ReciprocalAddr,
+        __ubuf__ uint8_t* y1Addr, __ubuf__ uint16_t* mxScale2ReciprocalAddr, __ubuf__ uint8_t* y2Addr);
     __aicore__ inline void ComputeY1ToFP8(
         uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr, __ubuf__ uint16_t* mxScale1ReciprocalAddr,
         __ubuf__ uint8_t* y1Addr);
-    __aicore__ inline void ComputeY2ToFP4(
-        uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr, __ubuf__ uint16_t* mxScale2ReciprocalAddr,
-        __ubuf__ uint8_t* y2Addr);
     __aicore__ inline void ComputeFP4FromHalf(MicroAPI::RegTensor<float>& Reg);
     __aicore__ inline void ComputeY2ToFP8(
         uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr, __ubuf__ uint16_t* mxScale2ReciprocalAddr,
@@ -1398,13 +1399,11 @@ __aicore__ inline void DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, 
     __ubuf__ uint16_t* mxScale2ReciprocalAddr, __ubuf__ uint8_t* y1Addr, __ubuf__ uint8_t* y2Addr)
 {
     if constexpr (IsSameType<y1Dtype, fp4x2_e2m1_t>::value || IsSameType<y1Dtype, fp4x2_e1m2_t>::value) {
-        // 算Y1是交织处理
-        ComputeY1ToFP4(dataLen, blockCount, xAddr, mxScale1ReciprocalAddr, y1Addr);
-        // 算y2是按单VF处理，基本块是两个VF长度，所以需要算两次
-        ComputeY2ToFP4(dataLen, blockCount, xAddr, mxScale2ReciprocalAddr, y2Addr);
-        ComputeY2ToFP4(
-            dataLen, blockCount, xAddr + vlForHalfNumber_, mxScale2ReciprocalAddr + vlForHalfNumber_,
-            y2Addr + vlForHalfNumber_ / 2);
+        if constexpr (IsSameType<xDtype, half>::value) {
+            ComputeYFP16ToFP4(dataLen, blockCount, xAddr, mxScale1ReciprocalAddr, y1Addr, mxScale2ReciprocalAddr, y2Addr);
+        } else {
+            ComputeYBF16ToFP4(dataLen, blockCount, xAddr, mxScale1ReciprocalAddr, y1Addr, mxScale2ReciprocalAddr, y2Addr);
+        }
     } else {
         ComputeY1ToFP8(dataLen, blockCount, xAddr, mxScale1ReciprocalAddr, y1Addr);
         ComputeY2ToFP8(dataLen, blockCount, xAddr, mxScale2ReciprocalAddr, y2Addr);
@@ -1415,16 +1414,75 @@ __aicore__ inline void DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, 
 }
 
 template <typename xDtype, typename y1Dtype, typename y2Dtype, AscendC::RoundMode roundMode, uint64_t scaleAlg>
-__aicore__ inline void DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, roundMode, scaleAlg>::ComputeY1ToFP4(
+__aicore__ inline void DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, roundMode, scaleAlg>::ComputeYBF16ToFP4(
     uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr, __ubuf__ uint16_t* mxScale1ReciprocalAddr,
-    __ubuf__ uint8_t* y1Addr)
+    __ubuf__ uint8_t* y1Addr, __ubuf__ uint16_t* mxScale2ReciprocalAddr, __ubuf__ uint8_t* y2Addr)
+{
+    __VEC_SCOPE__
+    {
+        MicroAPI::MaskReg dataMaskB8 = MicroAPI::CreateMask<uint8_t>();
+        MicroAPI::MaskReg dataMaskB16 = MicroAPI::CreateMask<half>();
+        MicroAPI::RegTensor<uint16_t> scaleForMulFP16;
+        MicroAPI::RegTensor<xDtype> x0;
+        MicroAPI::RegTensor<xDtype> x1;
+
+        MicroAPI::RegTensor<uint16_t> reversedShareExp0;
+        MicroAPI::RegTensor<uint16_t> reversedShareExp1;
+        MicroAPI::RegTensor<bfloat16_t> dim0x0;
+        MicroAPI::RegTensor<bfloat16_t> dim0x1;
+        MicroAPI::RegTensor<bfloat16_t> dim1x0;
+        MicroAPI::RegTensor<bfloat16_t> dim1x1;
+
+        MicroAPI::RegTensor<y1Dtype> dim0x0FP4;
+        MicroAPI::RegTensor<y1Dtype> dim0x1FP4;
+        MicroAPI::RegTensor<y1Dtype> dim1x0FP4;
+        MicroAPI::RegTensor<y1Dtype> dim1x1FP4;
+
+        MicroAPI::DataCopy<uint16_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_DINTLV_B16>(
+                reversedShareExp0, reversedShareExp1, mxScale2ReciprocalAddr, vlForHalfNumber_ * DIGIT_TWO);
+
+        for (uint16_t i = 0; i < blockCount; i++) {
+            MicroAPI::DataCopy<xDtype, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_DINTLV_B16>(
+                x0, x1, xAddr, vlForHalfNumber_ * DIGIT_TWO);
+            MicroAPI::DataCopy<uint16_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_E2B_B16>(
+                scaleForMulFP16, mxScale1ReciprocalAddr, oneBlockCountB16_);
+
+            MicroAPI::Mul(dim0x0, x0, (MicroAPI::RegTensor<xDtype>&)reversedShareExp0, dataMaskB16);
+            MicroAPI::Mul(dim0x1, x1, (MicroAPI::RegTensor<xDtype>&)reversedShareExp1, dataMaskB16);
+            MicroAPI::Mul(dim1x0, x0, (MicroAPI::RegTensor<xDtype>&)scaleForMulFP16, dataMaskB16);
+            MicroAPI::Mul(dim1x1, x1, (MicroAPI::RegTensor<xDtype>&)scaleForMulFP16, dataMaskB16);
+            MicroAPI::Interleave(dim0x0, dim0x1, dim0x0, dim0x1);
+            MicroAPI::Interleave(dim1x0, dim1x1, dim1x0, dim1x1);
+            MicroAPI::Cast<y1Dtype, xDtype, castTraitBF16toFp4>(dim0x0FP4, dim0x0, dataMaskB16);
+            MicroAPI::Cast<y1Dtype, xDtype, castTraitBF16toFp4>(dim0x1FP4, dim0x1, dataMaskB16);
+            MicroAPI::Cast<y1Dtype, xDtype, castTraitBF16toFp4>(dim1x0FP4, dim1x0, dataMaskB16);
+            MicroAPI::Cast<y1Dtype, xDtype, castTraitBF16toFp4>(dim1x1FP4, dim1x1, dataMaskB16);
+
+            // copy to ub
+            MicroAPI::DataCopy<uint8_t, MicroAPI::StoreDist::DIST_PACK4_B32>(
+                y2Addr + (i * ubRowLen_ / DIGIT_TWO), (MicroAPI::RegTensor<uint8_t>&)dim0x0FP4, dataMaskB8);
+            MicroAPI::DataCopy<uint8_t, MicroAPI::StoreDist::DIST_PACK4_B32>(
+                y2Addr + OUT_ELE_NUM_ONE_BLK + (i * ubRowLen_ / DIGIT_TWO), (MicroAPI::RegTensor<uint8_t>&)dim0x1FP4, dataMaskB8);    
+            MicroAPI::DataCopy<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::StoreDist::DIST_PACK4_B32>(
+                y1Addr, (MicroAPI::RegTensor<uint8_t>&)dim1x0FP4, OUT_ELE_NUM_ONE_BLK, dataMaskB8);
+            MicroAPI::DataCopy<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::StoreDist::DIST_PACK4_B32>(
+                y1Addr, (MicroAPI::RegTensor<uint8_t>&)dim1x1FP4, OUT_ELE_NUM_ONE_BLK, dataMaskB8);
+        }
+    }
+    return;
+}
+
+template <typename xDtype, typename y1Dtype, typename y2Dtype, AscendC::RoundMode roundMode, uint64_t scaleAlg>
+__aicore__ inline void DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, roundMode, scaleAlg>::ComputeYFP16ToFP4(
+    uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr, __ubuf__ uint16_t* mxScale1ReciprocalAddr,
+    __ubuf__ uint8_t* y1Addr, __ubuf__ uint16_t* mxScale2ReciprocalAddr, __ubuf__ uint8_t* y2Addr)
 {
     __VEC_SCOPE__
     {
         MicroAPI::MaskReg dataMaskB8 = MicroAPI::CreateMask<uint8_t>();
         MicroAPI::MaskReg dataMaskB16 = MicroAPI::CreateMask<half>();
         MicroAPI::MaskReg dataMaskB32 = MicroAPI::CreateMask<float>();
-        MicroAPI::RegTensor<uint16_t> scaleForMulFP16;
+
         MicroAPI::RegTensor<xDtype> x0;
         MicroAPI::RegTensor<xDtype> x1;
 
@@ -1434,74 +1492,131 @@ __aicore__ inline void DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, 
         MicroAPI::RegTensor<float> x1OneFP32;
         MicroAPI::RegTensor<float> scaleForMulZeroFP32;
         MicroAPI::RegTensor<float> scaleForMulOneFP32;
+        MicroAPI::RegTensor<float> reversedShareExp0ZeroFP32;
+        MicroAPI::RegTensor<float> reversedShareExp0OneFP32;
+        MicroAPI::RegTensor<float> reversedShareExp1ZeroFP32;
+        MicroAPI::RegTensor<float> reversedShareExp1OneFP32;
 
-        MicroAPI::RegTensor<bfloat16_t> x0ZeroBF16;
-        MicroAPI::RegTensor<bfloat16_t> x0OneBF16;
-        MicroAPI::RegTensor<bfloat16_t> x1ZeroBF16;
-        MicroAPI::RegTensor<bfloat16_t> x1OneBF16;
+        MicroAPI::RegTensor<float> dim0x0ZeroFP32;
+        MicroAPI::RegTensor<float> dim0x0OneFP32;
+        MicroAPI::RegTensor<float> dim0x1ZeroFP32;
+        MicroAPI::RegTensor<float> dim0x1OneFP32;
+        MicroAPI::RegTensor<float> dim1x0ZeroFP32;
+        MicroAPI::RegTensor<float> dim1x0OneFP32;
+        MicroAPI::RegTensor<float> dim1x1ZeroFP32;
+        MicroAPI::RegTensor<float> dim1x1OneFP32;
 
-        MicroAPI::RegTensor<y1Dtype> x0FP4;
-        MicroAPI::RegTensor<y1Dtype> x1FP4;
+        MicroAPI::RegTensor<bfloat16_t> dim0x0ZeroBF16;
+        MicroAPI::RegTensor<bfloat16_t> dim0x0OneBF16;
+        MicroAPI::RegTensor<bfloat16_t> dim0x1ZeroBF16;
+        MicroAPI::RegTensor<bfloat16_t> dim0x1OneBF16;
+        MicroAPI::RegTensor<bfloat16_t> dim1x0ZeroBF16;
+        MicroAPI::RegTensor<bfloat16_t> dim1x0OneBF16;
+        MicroAPI::RegTensor<bfloat16_t> dim1x1ZeroBF16;
+        MicroAPI::RegTensor<bfloat16_t> dim1x1OneBF16;
+        //
+        MicroAPI::RegTensor<uint16_t> scaleForMulFP16;
+        MicroAPI::RegTensor<uint16_t> reversedShareExp0;
+        MicroAPI::RegTensor<uint16_t> reversedShareExp1;
+
+        MicroAPI::RegTensor<y1Dtype> dim0x0FP4;
+        MicroAPI::RegTensor<y1Dtype> dim0x1FP4;
+        MicroAPI::RegTensor<y1Dtype> dim1x0FP4;
+        MicroAPI::RegTensor<y1Dtype> dim1x1FP4;
+        //
+        MicroAPI::DataCopy<uint16_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_DINTLV_B16>(
+            reversedShareExp0, reversedShareExp1, mxScale2ReciprocalAddr, vlForHalfNumber_ * DIGIT_TWO);
+        MicroAPI::Cast<float, bfloat16_t, castTraitXdtypetoFp32Zero>(
+            reversedShareExp0ZeroFP32, (MicroAPI::RegTensor<bfloat16_t>&)reversedShareExp0, dataMaskB16);
+        MicroAPI::Cast<float, bfloat16_t, castTraitXdtypetoFp32One>(
+            reversedShareExp0OneFP32, (MicroAPI::RegTensor<bfloat16_t>&)reversedShareExp0, dataMaskB16);
+        MicroAPI::Cast<float, bfloat16_t, castTraitXdtypetoFp32Zero>(
+            reversedShareExp1ZeroFP32, (MicroAPI::RegTensor<bfloat16_t>&)reversedShareExp1, dataMaskB16);
+        MicroAPI::Cast<float, bfloat16_t, castTraitXdtypetoFp32One>(
+            reversedShareExp1OneFP32, (MicroAPI::RegTensor<bfloat16_t>&)reversedShareExp1, dataMaskB16);
 
         for (uint16_t i = 0; i < blockCount; i++) {
             MicroAPI::DataCopy<xDtype, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_DINTLV_B16>(
                 x0, x1, xAddr, vlForHalfNumber_ * DIGIT_TWO);
             MicroAPI::DataCopy<uint16_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::LoadDist::DIST_E2B_B16>(
                 scaleForMulFP16, mxScale1ReciprocalAddr, oneBlockCountB16_);
+            MicroAPI::Cast<float, bfloat16_t, castTraitXdtypetoFp32Zero>(
+                scaleForMulZeroFP32, (MicroAPI::RegTensor<bfloat16_t>&)scaleForMulFP16, dataMaskB16);
 
-            if constexpr (IsSameType<xDtype, half>::value) {
-                MicroAPI::Cast<float, bfloat16_t, castTraitXdtypetoFp32Zero>(
-                    scaleForMulZeroFP32, (MicroAPI::RegTensor<bfloat16_t>&)scaleForMulFP16, dataMaskB16);
+            MicroAPI::Cast<float, xDtype, castTraitXdtypetoFp32Zero>(x0ZeroFP32, x0, dataMaskB16);
+            MicroAPI::Cast<float, xDtype, castTraitXdtypetoFp32One>(x0OneFP32, x0, dataMaskB16);
+            MicroAPI::Cast<float, xDtype, castTraitXdtypetoFp32Zero>(x1ZeroFP32, x1, dataMaskB16);
+            MicroAPI::Cast<float, xDtype, castTraitXdtypetoFp32One>(x1OneFP32, x1, dataMaskB16);
 
-                // x0 cast to bf16
-                MicroAPI::Cast<float, xDtype, castTraitXdtypetoFp32Zero>(x0ZeroFP32, x0, dataMaskB16);
-                MicroAPI::Cast<float, xDtype, castTraitXdtypetoFp32One>(x0OneFP32, x0, dataMaskB16);
+            MicroAPI::Mul(dim0x0ZeroFP32, reversedShareExp0ZeroFP32, x0ZeroFP32, dataMaskB32);
+            MicroAPI::Mul(dim0x0OneFP32, reversedShareExp0OneFP32, x0OneFP32, dataMaskB32);
+            MicroAPI::Mul(dim1x0ZeroFP32, scaleForMulZeroFP32, x0ZeroFP32, dataMaskB32);
+            MicroAPI::Mul(dim1x0OneFP32, scaleForMulZeroFP32, x0OneFP32, dataMaskB32);
 
-                MicroAPI::Mul(x0ZeroFP32, scaleForMulZeroFP32, x0ZeroFP32, dataMaskB32);
-                MicroAPI::Mul(x0OneFP32, scaleForMulZeroFP32, x0OneFP32, dataMaskB32);
-                ComputeFP4FromHalf(x0ZeroFP32);
-                ComputeFP4FromHalf(x0OneFP32);
-                MicroAPI::Cast<bfloat16_t, float, castTraitFp32toBF16>(x0ZeroBF16, x0ZeroFP32, dataMaskB32);
-                MicroAPI::Cast<bfloat16_t, float, castTraitFp32toBF16>(x0OneBF16, x0OneFP32, dataMaskB32);
-                MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>(
-                    (MicroAPI::RegTensor<uint16_t>&)x0ZeroBF16, (MicroAPI::RegTensor<uint32_t>&)x0ZeroBF16);
-                MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>(
-                    (MicroAPI::RegTensor<uint16_t>&)x0OneBF16, (MicroAPI::RegTensor<uint32_t>&)x0OneBF16);
-                MicroAPI::Interleave(x0ZeroBF16, x0OneBF16, x0ZeroBF16, x0OneBF16);
+            ComputeFP4FromHalf(dim0x0ZeroFP32);
+            ComputeFP4FromHalf(dim0x0OneFP32);
+            ComputeFP4FromHalf(dim1x0ZeroFP32);
+            ComputeFP4FromHalf(dim1x0OneFP32);
 
-                // x1 cast to bf16
-                MicroAPI::Cast<float, xDtype, castTraitXdtypetoFp32Zero>(x1ZeroFP32, x1, dataMaskB16);
-                MicroAPI::Cast<float, xDtype, castTraitXdtypetoFp32One>(x1OneFP32, x1, dataMaskB16);
+            MicroAPI::Cast<bfloat16_t, float, castTraitFp32toBF16>(dim0x0ZeroBF16, dim0x0ZeroFP32, dataMaskB32);
+            MicroAPI::Cast<bfloat16_t, float, castTraitFp32toBF16>(dim0x0OneBF16, dim0x0OneFP32, dataMaskB32);
+            MicroAPI::Cast<bfloat16_t, float, castTraitFp32toBF16>(dim1x0ZeroBF16, dim1x0ZeroFP32, dataMaskB32);
+            MicroAPI::Cast<bfloat16_t, float, castTraitFp32toBF16>(dim1x0OneBF16, dim1x0OneFP32, dataMaskB32);
 
-                MicroAPI::Mul(x1ZeroFP32, scaleForMulZeroFP32, x1ZeroFP32, dataMaskB32);
-                MicroAPI::Mul(x1OneFP32, scaleForMulZeroFP32, x1OneFP32, dataMaskB32);
-                ComputeFP4FromHalf(x1ZeroFP32);
-                ComputeFP4FromHalf(x1OneFP32);
-                MicroAPI::Cast<bfloat16_t, float, castTraitFp32toBF16>(x1ZeroBF16, x1ZeroFP32, dataMaskB32);
-                MicroAPI::Cast<bfloat16_t, float, castTraitFp32toBF16>(x1OneBF16, x1OneFP32, dataMaskB32);
-                MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>(
-                    (MicroAPI::RegTensor<uint16_t>&)x1ZeroBF16, (MicroAPI::RegTensor<uint32_t>&)x1ZeroBF16);
-                MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>(
-                    (MicroAPI::RegTensor<uint16_t>&)x1OneBF16, (MicroAPI::RegTensor<uint32_t>&)x1OneBF16);
-                MicroAPI::Interleave(x1ZeroBF16, x1OneBF16, x1ZeroBF16, x1OneBF16);
+            MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>(
+                (MicroAPI::RegTensor<uint16_t>&)dim0x0ZeroBF16, (MicroAPI::RegTensor<uint32_t>&)dim0x0ZeroBF16);
+            MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>(
+                (MicroAPI::RegTensor<uint16_t>&)dim0x0OneBF16, (MicroAPI::RegTensor<uint32_t>&)dim0x0OneBF16);
+            MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>(
+                (MicroAPI::RegTensor<uint16_t>&)dim1x0ZeroBF16, (MicroAPI::RegTensor<uint32_t>&)dim1x0ZeroBF16);
+            MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>(
+                (MicroAPI::RegTensor<uint16_t>&)dim1x0OneBF16, (MicroAPI::RegTensor<uint32_t>&)dim1x0OneBF16);
+            MicroAPI::Interleave(dim0x0ZeroBF16, dim0x0OneBF16, dim0x0ZeroBF16, dim0x0OneBF16);
+            MicroAPI::Interleave(dim1x0ZeroBF16, dim1x0OneBF16, dim1x0ZeroBF16, dim1x0OneBF16);
 
-                // interleave x0 and x1
-                MicroAPI::Interleave(x0ZeroBF16, x1ZeroBF16, x0ZeroBF16, x1ZeroBF16);
-                MicroAPI::Cast<y1Dtype, bfloat16_t, castTraitBF16toFp4>(x0FP4, x0ZeroBF16, dataMaskB16);
-                MicroAPI::Cast<y1Dtype, bfloat16_t, castTraitBF16toFp4>(x1FP4, x1ZeroBF16, dataMaskB16);
-            } else {
-                MicroAPI::Mul(x0, x0, (MicroAPI::RegTensor<xDtype>&)scaleForMulFP16, dataMaskB16);
-                MicroAPI::Mul(x1, x1, (MicroAPI::RegTensor<xDtype>&)scaleForMulFP16, dataMaskB16);
-                MicroAPI::Interleave(x0, x1, x0, x1);
-                MicroAPI::Cast<y1Dtype, xDtype, castTraitBF16toFp4>(x0FP4, x0, dataMaskB16);
-                MicroAPI::Cast<y1Dtype, xDtype, castTraitBF16toFp4>(x1FP4, x1, dataMaskB16);
-            }
+            MicroAPI::Mul(dim0x1ZeroFP32, reversedShareExp1ZeroFP32, x1ZeroFP32, dataMaskB32);
+            MicroAPI::Mul(dim0x1OneFP32, reversedShareExp1OneFP32, x1OneFP32, dataMaskB32);
+            MicroAPI::Mul(dim1x1ZeroFP32, scaleForMulZeroFP32, x1ZeroFP32, dataMaskB32);
+            MicroAPI::Mul(dim1x1OneFP32, scaleForMulZeroFP32, x1OneFP32, dataMaskB32);
+
+            ComputeFP4FromHalf(dim0x1ZeroFP32);
+            ComputeFP4FromHalf(dim0x1OneFP32);
+            ComputeFP4FromHalf(dim1x1ZeroFP32);
+            ComputeFP4FromHalf(dim1x1OneFP32);
+
+            MicroAPI::Cast<bfloat16_t, float, castTraitFp32toBF16>(dim0x1ZeroBF16, dim0x1ZeroFP32, dataMaskB32);
+            MicroAPI::Cast<bfloat16_t, float, castTraitFp32toBF16>(dim0x1OneBF16, dim0x1OneFP32, dataMaskB32);
+            MicroAPI::Cast<bfloat16_t, float, castTraitFp32toBF16>(dim1x1ZeroBF16, dim1x1ZeroFP32, dataMaskB32);
+            MicroAPI::Cast<bfloat16_t, float, castTraitFp32toBF16>(dim1x1OneBF16, dim1x1OneFP32, dataMaskB32);
+
+            MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>(
+                (MicroAPI::RegTensor<uint16_t>&)dim0x1ZeroBF16, (MicroAPI::RegTensor<uint32_t>&)dim0x1ZeroBF16);
+            MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>(
+                (MicroAPI::RegTensor<uint16_t>&)dim0x1OneBF16, (MicroAPI::RegTensor<uint32_t>&)dim0x1OneBF16);
+            MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>(
+                (MicroAPI::RegTensor<uint16_t>&)dim1x1ZeroBF16, (MicroAPI::RegTensor<uint32_t>&)dim1x1ZeroBF16);
+            MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>(
+                (MicroAPI::RegTensor<uint16_t>&)dim1x1OneBF16, (MicroAPI::RegTensor<uint32_t>&)dim1x1OneBF16);
+            MicroAPI::Interleave(dim0x1ZeroBF16, dim0x1OneBF16, dim0x1ZeroBF16, dim0x1OneBF16);
+            MicroAPI::Interleave(dim1x1ZeroBF16, dim1x1OneBF16, dim1x1ZeroBF16, dim1x1OneBF16);
+
+            // interleave x0 and x1
+            MicroAPI::Interleave(dim0x0ZeroBF16, dim0x1ZeroBF16, dim0x0ZeroBF16, dim0x1ZeroBF16);
+            MicroAPI::Interleave(dim1x0ZeroBF16, dim1x1ZeroBF16, dim1x0ZeroBF16, dim1x1ZeroBF16);
+            MicroAPI::Cast<y1Dtype, bfloat16_t, castTraitBF16toFp4>(dim0x0FP4, dim0x0ZeroBF16, dataMaskB16);
+            MicroAPI::Cast<y1Dtype, bfloat16_t, castTraitBF16toFp4>(dim0x1FP4, dim0x1ZeroBF16, dataMaskB16);
+            MicroAPI::Cast<y1Dtype, bfloat16_t, castTraitBF16toFp4>(dim1x0FP4, dim1x0ZeroBF16, dataMaskB16);
+            MicroAPI::Cast<y1Dtype, bfloat16_t, castTraitBF16toFp4>(dim1x1FP4, dim1x1ZeroBF16, dataMaskB16);
 
             // copy to ub
+            MicroAPI::DataCopy<uint8_t, MicroAPI::StoreDist::DIST_PACK4_B32>(
+                y2Addr + (i * ubRowLen_ / DIGIT_TWO), (MicroAPI::RegTensor<uint8_t>&)dim0x0FP4, dataMaskB8);
+            MicroAPI::DataCopy<uint8_t, MicroAPI::StoreDist::DIST_PACK4_B32>(
+                y2Addr + OUT_ELE_NUM_ONE_BLK + (i * ubRowLen_ / DIGIT_TWO), (MicroAPI::RegTensor<uint8_t>&)dim0x1FP4, dataMaskB8);    
             MicroAPI::DataCopy<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::StoreDist::DIST_PACK4_B32>(
-                y1Addr, (MicroAPI::RegTensor<uint8_t>&)x0FP4, OUT_ELE_NUM_ONE_BLK, dataMaskB8);
+                y1Addr, (MicroAPI::RegTensor<uint8_t>&)dim1x0FP4, OUT_ELE_NUM_ONE_BLK, dataMaskB8);
             MicroAPI::DataCopy<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE, MicroAPI::StoreDist::DIST_PACK4_B32>(
-                y1Addr, (MicroAPI::RegTensor<uint8_t>&)x1FP4, OUT_ELE_NUM_ONE_BLK, dataMaskB8);
+                y1Addr, (MicroAPI::RegTensor<uint8_t>&)dim1x1FP4, OUT_ELE_NUM_ONE_BLK, dataMaskB8);
         }
     }
     return;
@@ -1589,79 +1704,6 @@ __aicore__ inline void DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, 
         }
     }
     return;
-}
-
-template <typename xDtype, typename y1Dtype, typename y2Dtype, AscendC::RoundMode roundMode, uint64_t scaleAlg>
-__aicore__ inline void DynamicMxQuantWithDualAxisBase<xDtype, y1Dtype, y2Dtype, roundMode, scaleAlg>::ComputeY2ToFP4(
-    uint16_t dataLen, uint16_t blockCount, __ubuf__ xDtype* xAddr, __ubuf__ uint16_t* mxScale2ReciprocalAddr,
-    __ubuf__ uint8_t* y2Addr)
-{
-    __VEC_SCOPE__
-    {
-        MicroAPI::RegTensor<xDtype> x;
-        MicroAPI::RegTensor<bfloat16_t> x0BF16;
-        MicroAPI::RegTensor<bfloat16_t> x1BF16;
-        MicroAPI::RegTensor<bfloat16_t> xBF16;
-        MicroAPI::RegTensor<float> x0FP32;
-        MicroAPI::RegTensor<float> x1FP32;
-        MicroAPI::RegTensor<uint16_t> reversedShareExp;
-        MicroAPI::RegTensor<float> reversedShareExp0FP32;
-        MicroAPI::RegTensor<float> reversedShareExp1FP32;
-        MicroAPI::RegTensor<y1Dtype> yZeroFP8;
-        MicroAPI::RegTensor<y1Dtype> yOneFP8;
-        MicroAPI::RegTensor<y1Dtype> yZeroFP4;
-        MicroAPI::MaskReg zeroMask;
-        MicroAPI::MaskReg specialMask;
-        MicroAPI::MaskReg negInfMask;
-
-        MicroAPI::RegTensor<int32_t> negZero;
-        MicroAPI::RegTensor<int32_t> maxExpFP32;
-        MicroAPI::RegTensor<int32_t> exp0FP32;
-        MicroAPI::RegTensor<int32_t> exp1FP32;
-
-        MicroAPI::Duplicate(negZero, NEG_ZERO);
-
-        MicroAPI::MaskReg pregAll8 = MicroAPI::CreateMask<uint8_t, MicroAPI::MaskPattern::ALL>();
-        MicroAPI::MaskReg pregAll16 = MicroAPI::CreateMask<uint16_t, MicroAPI::MaskPattern::ALL>();
-        MicroAPI::MaskReg pregAll32 = MicroAPI::CreateMask<uint32_t, MicroAPI::MaskPattern::ALL>();
-
-        MicroAPI::DataCopy<uint16_t, MicroAPI::LoadDist::DIST_NORM>(reversedShareExp, mxScale2ReciprocalAddr);
-
-        for (uint16_t j = 0; j < blockCount; j++) {
-            MicroAPI::DataCopy<xDtype, MicroAPI::LoadDist::DIST_NORM>(x, xAddr + j * ubRowLen_);
-            if constexpr (IsSameType<xDtype, half>::value) {
-                MicroAPI::Cast<float, xDtype, castTraitXdtypetoFp32Zero>(x0FP32, x, pregAll16);
-                MicroAPI::Cast<float, xDtype, castTraitXdtypetoFp32One>(x1FP32, x, pregAll16);
-                MicroAPI::Cast<float, bfloat16_t, castTraitXdtypetoFp32Zero>(
-                    reversedShareExp0FP32, (MicroAPI::RegTensor<bfloat16_t>&)reversedShareExp, pregAll16);
-                MicroAPI::Cast<float, bfloat16_t, castTraitXdtypetoFp32One>(
-                    reversedShareExp1FP32, (MicroAPI::RegTensor<bfloat16_t>&)reversedShareExp, pregAll16);
-                MicroAPI::Mul(x0FP32, x0FP32, reversedShareExp0FP32, pregAll32);
-                MicroAPI::Mul(x1FP32, x1FP32, reversedShareExp1FP32, pregAll32);
-
-                ComputeFP4FromHalf(x0FP32);
-                ComputeFP4FromHalf(x1FP32);
-
-                MicroAPI::Cast<bfloat16_t, float, castTraitFp32toBF16>(
-                    (MicroAPI::RegTensor<bfloat16_t>&)x0BF16, x0FP32, pregAll32);
-                MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>(
-                    (MicroAPI::RegTensor<uint16_t>&)x0BF16, (MicroAPI::RegTensor<uint32_t>&)x0BF16);
-
-                MicroAPI::Cast<bfloat16_t, float, castTraitFp32toBF16>(
-                    (MicroAPI::RegTensor<bfloat16_t>&)x1BF16, x1FP32, pregAll32);
-                MicroAPI::Pack<uint16_t, uint32_t, MicroAPI::HighLowPart::LOWEST>(
-                    (MicroAPI::RegTensor<uint16_t>&)x1BF16, (MicroAPI::RegTensor<uint32_t>&)x1BF16);
-                MicroAPI::Interleave(x0BF16, x1BF16, x0BF16, x1BF16);
-                MicroAPI::Cast<y1Dtype, bfloat16_t, castTraitBF16toFp4>(
-                    yZeroFP4, (MicroAPI::RegTensor<bfloat16_t>&)x0BF16, pregAll16);
-            } else {
-                MicroAPI::Mul(xBF16, x, (MicroAPI::RegTensor<bfloat16_t>&)reversedShareExp, pregAll16);
-                MicroAPI::Cast<y1Dtype, bfloat16_t, castTraitBF16toFp4>(yZeroFP4, xBF16, pregAll16);
-            }
-            DataCopy<uint8_t, MicroAPI::StoreDist::DIST_PACK4_B32>(
-                y2Addr + (j * ubRowLen_ / DIGIT_TWO), (MicroAPI::RegTensor<uint8_t>&)yZeroFP4, pregAll8);
-        }
-    }
 }
 
 // 优化后的ComputeY2ToFP8: 参考DynamicMxQuant ComputeData的RegLayout优化模式
