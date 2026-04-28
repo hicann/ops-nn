@@ -238,6 +238,7 @@
 | [aclnnIndexAdd](../../index/inplace_scatter_add/docs/aclnnIndexAdd.md) | 在指定维度上，根据给定的索引，将源张量中的值加到输入张量中对应位置的值上。 | 默认非确定性实现，支持配置开启 | 默认非确定性实现，支持配置开启 |
 | [aclnnIndexAddV2](../../index/inplace_scatter_add/docs/aclnnIndexAddV2.md) | 在指定维度上，根据给定的索引，将源张量中的值加到输入张量中对应位置的值上。支持开启高性能计算模式。 | 默认非确定性实现，支持配置开启 | 默认非确定性实现，支持配置开启 |
 | [aclnnIndexCopy&aclnnInplaceIndexCopy](../../index/scatter_update/docs/aclnnIndexCopy&aclnnInplaceIndexCopy.md) | 将index张量中元素值作为索引，针对指定轴dim，把source中元素复制到selfRef的对应位置上。 | 默认确定性实现 | 默认非确定性实现，支持配置开启 |
+| [aclnnIndexFill&aclnnInplaceIndexFill](../../index/index_fill_d/docs/aclnnIndexFill&aclnnInplaceIndexFill.md) | 沿输入self的给定轴dim，将index指定位置的值使用value进行替换。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnIndexFillTensor&aclnnInplaceIndexFillTensor](../../index/index_fill_d/docs/aclnnIndexFillTensor&aclnnInplaceIndexFillTensor.md) | 沿输入self的给定轴dim，将index指定位置的值使用value进行替换。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnIndexPutImpl](../../index/index_put_v2/docs/aclnnIndexPutImpl.md) | 根据索引 indices 将输入 x 对应坐标的数据与输入 value 进行替换或累加。 | 默认非确定性实现，支持配置开启 | 默认非确定性实现，支持配置开启 |
 | [aclnnInplacePut](../../index/scatter_nd_update/docs/aclnnInplacePut.md) | 将selfRef视为一维张量，把index张量中元素值作为索引，如果accumulate为true，把source中元素和selfRef对应的位置上元素做累加操作；如果accumulate为false，把source中元素替换掉selfRef对应位置上的元素。 | 默认非确定性实现，支持配置开启 | 默认非确定性实现，支持配置开启 |
