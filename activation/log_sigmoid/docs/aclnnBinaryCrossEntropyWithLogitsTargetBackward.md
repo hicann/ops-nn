@@ -15,81 +15,236 @@
 
 ## 功能说明
 
-将输入self执行logits计算，将得到的值与标签值target一起进行[BECLoss](../../sigmoid_cross_entropy_with_logits_v2/docs/aclnnBinaryCrossEntropyWithLogits.md)关于target的反向传播计算。
+将输入self执行logits计算，将得到的值与标签值target一起进行[BECLoss](../../../loss/sigmoid_cross_entropy_with_logits_v2/docs/aclnnBinaryCrossEntropyWithLogits.md)关于target的反向传播计算。
 
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnBinaryCrossEntropyWithLogitsTargetBackwardGetWorkspaceSize”接口获取入参并根据流程计算所需workspace大小，再调用“aclnnBinaryCrossEntropyWithLogitsTargetBackward”接口执行计算。
 
-  * `aclnnStatus aclnnBinaryCrossEntropyWithLogitsTargetBackwardGetWorkspaceSize(const aclTensor *gradOutput, const aclTensor *self, const aclTensor *target, const aclTensor *weightOptional, const aclTensor *posWeightOptional, int64_t reduction, aclTensor *gradTarget, uint64_t *workspaceSize, aclOpExecutor **executor)`
-  * `aclnnStatus aclnnBinaryCrossEntropyWithLogitsTargetBackward(void *workspace, uint64_t workspaceSize, aclOpExecutor *executor, aclrtStream stream)`
+```Cpp
+aclnnStatus aclnnBinaryCrossEntropyWithLogitsTargetBackwardGetWorkspaceSize(
+  const aclTensor *gradOutput, 
+  const aclTensor *self, 
+  const aclTensor *target, 
+  const aclTensor *weightOptional, 
+  const aclTensor *posWeightOptional, 
+  int64_t          reduction, 
+  aclTensor       *gradTarget, 
+  uint64_t        *workspaceSize, 
+  aclOpExecutor  **executor)
+```
+
+```Cpp
+aclnnStatus aclnnBinaryCrossEntropyWithLogitsTargetBackward(
+  void          *workspace, 
+  uint64_t       workspaceSize, 
+  aclOpExecutor *executor, 
+  aclrtStream    stream)
+```
 
 ## aclnnBinaryCrossEntropyWithLogitsTargetBackwardGetWorkspaceSize
 
 - **参数说明：**
-  * gradOutput(aclTensor \*, 计算输入): 网络反向传播前一步的梯度值，Device侧的aclTensor，数据类型支持FLOAT16、FLOAT、BFLOAT16，shape需要可以[broadcast](../../../docs/zh/context/broadcast关系.md)到self的shape，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-  * self(aclTensor \*, 计算输入): 网络正向前一层的计算结果，Device侧的aclTensor，数据类型支持FLOAT16、FLOAT、BFLOAT16，维度小于等于8，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-  * target(aclTensor \*, 计算输入): lable标签值，Device侧的aclTensor，数据类型支持FLOAT、FLOAT16、BFLOAT16，shape必须与self的shape一致，维度小于等于8，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
-  * weightOptional(aclTensor \*, 计算输入): 二分交叉熵权重，Device侧的aclTensor，数据类型支持FLOAT16、FLOAT、BFLOAT16，shape需要可以[broadcast](../../../docs/zh/context/broadcast关系.md)到self的shape。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，当weightOptional为空时，将以self的shape创建一个全1的Tensor。
-  * posWeightOptional(aclTensor \*, 计算输入): 正类的权重，Device侧的aclTensor，数据类型支持FLOAT16、FLOAT、BFLOAT16，shape可以[broadcast](../../../docs/zh/context/broadcast关系.md)到self的shape。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，当weightOptional为空时，将以self的shape创建一个全1的Tensor。
-  * reduction(int64_t, 计算输入): 表示对二元交叉熵反向求梯度计算结果做的reduce操作，Host侧的整型值，数据类型支持INT64，仅支持0,1,2三个值，0表示不做任何操作；1表示对结果取平均值；2表示对结果求和。
-  * gradTarget(aclTensor\*, 计算输出): 存储梯度计算结果，Device侧的aclTensor，数据类型支持FLOAT、FLOAT16、BFLOAT16，数据类型需要与target相同。shape必须与self的shape一致，维度小于等于8。支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND，且[数据格式](../../../docs/zh/context/数据格式.md)需要与self一致。
-  * workspaceSize(uint64_t \*, 出参): 返回需要在Device侧申请的workspace大小。
-  * executor(aclOpExecutor \*\*, 出参): 返回op执行器，包含了算子计算流程。 
+
+  <table class="tg" style="undefined;table-layout: fixed; width: 1500px"><colgroup>
+  <col style="width: 180px">
+  <col style="width: 120px">
+  <col style="width: 250px">
+  <col style="width: 350px">
+  <col style="width: 220px">
+  <col style="width: 115px">
+  <col style="width: 120px">
+  <col style="width: 145px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th class="tg-0pky">参数名</th>
+      <th class="tg-0pky">输入/输出</th>
+      <th class="tg-0pky">描述</th>
+      <th class="tg-0pky">使用说明</th>
+      <th class="tg-0pky">数据类型</th>
+      <th class="tg-0pky">数据格式</th>
+      <th class="tg-0pky">维度(shape)</th>
+      <th class="tg-0pky">非连续Tensor</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td class="tg-0pky">gradOutput（aclTensor*）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">网络反向传播前一步的梯度值。</td>
+      <td class="tg-0pky">shape需要可以<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>到self的shape</td>
+      <td class="tg-0pky">FLOAT16、FLOAT、BFLOAT16</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">1-8</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">self（aclTensor*）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">网络正向前一层的计算结果。</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">FLOAT16、FLOAT、BFLOAT16</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">1-8</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">target（aclTensor*）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">lable标签值。</td>
+      <td class="tg-0pky">shape必须与self的shape一致。</td>
+      <td class="tg-0pky">FLOAT16、FLOAT、BFLOAT16</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">与self保持一致</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">weightOptional（aclTensor*）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">二分交叉熵权重。</td>
+      <td class="tg-0pky">shape需要可以<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>到self的shape，当weightOptional为空时，将以self的shape创建一个全1的Tensor。</td>
+      <td class="tg-0pky">FLOAT16、FLOAT、BFLOAT16</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">1-8</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">posWeightOptional（aclTensor*）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">正类的权重。</td>
+      <td class="tg-0pky">shape可以<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>到self的shape，当posWeightOptional为空时，将以self的shape创建一个全1的Tensor。</td>
+      <td class="tg-0pky">FLOAT16、FLOAT、BFLOAT16</td>
+      <td class="tg-0pky">ND</td>
+      <td class="tg-0pky">1-8</td>
+      <td class="tg-0pky">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">reduction（int64_t）</td>
+      <td class="tg-0pky">输入</td>
+      <td class="tg-0pky">表示对二元交叉熵反向求梯度计算结果做的reduce操作。</td>
+      <td class="tg-0pky">仅支持0,1,2三个值，0表示不做任何操作；1表示对结果取平均值；2表示对结果求和。</td>
+      <td class="tg-0pky">INT64</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+    </tr>
+    <tr>
+      <td class="tg-0lax">gradTarget（aclTensor*）</td>
+      <td class="tg-0lax">输出</td>
+      <td class="tg-0lax">存储梯度计算结果。</td>
+      <td class="tg-0lax">输入Tensor推导后的dtype，需要可以转化为gradTarget的dtype。</td>
+      <td class="tg-0lax">FLOAT16、FLOAT、BFLOAT16</td>
+      <td class="tg-0lax">与self保持一致</td>
+      <td class="tg-0lax">与self保持一致</td>
+      <td class="tg-0lax">√</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">workspaceSize（uint64_t*）</td>
+      <td class="tg-0pky">输出</td>
+      <td class="tg-0pky">返回需要在Device侧申请的workspace大小。</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+      <td class="tg-0pky">-</td>
+    </tr>
+    <tr>
+      <td class="tg-0lax">executor（aclOpExecutor**）</td>
+      <td class="tg-0lax">输出</td>
+      <td class="tg-0lax">返回op执行器，包含了算子计算流程。</td>
+      <td class="tg-0lax">-</td>
+      <td class="tg-0lax">-</td>
+      <td class="tg-0lax">-</td>
+      <td class="tg-0lax">-</td>
+      <td class="tg-0lax">-</td>
+    </tr>
+  </tbody></table>
 
 - **返回值：**
 
   aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
-  ```
   第一段接口完成入参校验，出现以下场景时报错：
-  161001（ACLNN_ERR_PARAM_NULLPTR）：1. 传入的gradOutput、self、target、gradTarget为空指针。
-  161002（ACLNN_ERR_PARAM_INVALID）：1. gradOutput、self、target、gradTarget的数据类型和数据格式不在支持的范围内。
-                                    2. 当weightOptional和posWeightOptional不为空指针，其数据类型和数据格式不在支持的范围内。
-                                    3. self、target、gradTarget的shape不一致。
-                                    4. 当weightOptional和posWeightOptional不为空指针，其shape不能broadcast到self的shape。
-                                    5. gradOutput不能broadcast到self的shape。
-                                    6. reduction的值非0, 1, 2三值之一。
-                                    7. gradOutput、self、target、gradTarget维度大于8。
-  ```
+
+  <table class="tg" style="undefined;table-layout: fixed; width: 950px"><colgroup>
+  <col style="width: 276px">
+  <col style="width: 132px">
+  <col style="width: 542px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th class="tg-0pky">返回值</th>
+      <th class="tg-0pky">错误码</th>
+      <th class="tg-0pky">描述</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td class="tg-0pky">ACLNN_ERR_PARAM_NULLPTR</td>
+      <td class="tg-0pky">161001</td>
+      <td class="tg-0pky">传入的gradOutput、self、target、gradTarget为空指针。</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky" rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
+      <td class="tg-0pky" rowspan="7">161002</td>
+      <td class="tg-0pky">gradOutput、self、target、gradTarget的数据类型和数据格式不在支持的范围内。</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">当weightOptional和posWeightOptional不为空指针，其数据类型和数据格式不在支持的范围内。</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">self、target、gradTarget的shape不一致。</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">当weightOptional和posWeightOptional不为空指针，其shape不能broadcast到self的shape。</td>
+    </tr>
+    <tr>
+      <td class="tg-0pky">gradOutput不能broadcast到self的shape。</td>
+    </tr>
+    <tr>
+      <td class="tg-0lax">reduction的值非0, 1, 2三值之一。</td>
+    </tr>
+    <tr>
+      <td class="tg-0lax">gradOutput、self、target、gradTarget维度大于8。</td>
+    </tr>
+  </tbody></table>
 
 ## aclnnBinaryCrossEntropyWithLogitsTargetBackward
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1151px"><colgroup>
-  <col style="width: 184px">
-  <col style="width: 134px">
-  <col style="width: 833px">
-  </colgroup>
-  <thead>
-    <tr>
-      <th>参数名</th>
-      <th>输入/输出</th>
-      <th>描述</th>
-    </tr></thead>
-  <tbody>
-    <tr>
-      <td>workspace</td>
-      <td>输入</td>
-      <td>在Device侧申请的workspace内存地址。</td>
-    </tr>
-    <tr>
-      <td>workspaceSize</td>
-      <td>输入</td>
-      <td>在Device侧申请的workspace大小，由第一段接口aclnnBinaryCrossEntropyWithLogitsTargetBackwardGetWorkspaceSize获取。</td>
-    </tr>
-    <tr>
-      <td>executor</td>
-      <td>输入</td>
-      <td>op执行器，包含了算子计算流程。</td>
-    </tr>
-    <tr>
-      <td>stream</td>
-      <td>输入</td>
-      <td>指定执行任务的Stream。</td>
-    </tr>
-  </tbody>
+    <table style="undefined;table-layout: fixed; width: 1244px"><colgroup>
+    <col style="width: 200px">
+    <col style="width: 162px">
+    <col style="width: 882px">
+    </colgroup>
+    <thead>
+      <tr>
+        <th>参数名</th>
+        <th>输入/输出</th>
+        <th>描述</th>
+      </tr></thead>
+    <tbody>
+      <tr>
+        <td>workspace</td>
+        <td>输入</td>
+        <td>在Device侧申请的workspace内存地址。</td>
+      </tr>
+      <tr>
+        <td>workspaceSize</td>
+        <td>输入</td>
+        <td>在Device侧申请的workspace大小，由第一段接口aclnnBinaryCrossEntropyWithLogitsTargetBackwardGetWorkspaceSize获取。</td>
+      </tr>
+      <tr>
+        <td>executor</td>
+        <td>输入</td>
+        <td>op执行器，包含了算子计算流程。</td>
+      </tr>
+      <tr>
+        <td>stream</td>
+        <td>输入</td>
+        <td>指定执行任务的Stream。</td>
+      </tr>
+    </tbody>
   </table>
 
 - **返回值：**
