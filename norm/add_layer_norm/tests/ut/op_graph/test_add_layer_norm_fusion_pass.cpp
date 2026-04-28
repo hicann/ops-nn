@@ -216,12 +216,10 @@ TEST_F(AddLayerNormFusionPassTest, add_layer_norm_fusion_93_fp_OK)
         add1, add2, cast1, layernorm.y, cast2);
 
     std::shared_ptr<Graph> graph = graph_builder.BuildAndReset({cast2, layernorm.mean, layernorm.variance});
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "dump_graph_for_layernorm_test1");
     CustomPassContext pass_contex;
     ops::AddLayerNormFusionPass pass;
     Status status = pass.Run(graph, pass_contex);
     EXPECT_EQ(status, SUCCESS);
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "dump_afterpass_graph_for_layernorm_test1");
 
     bool findAddLayerNorm = false;
     int node_count = 0;
@@ -263,12 +261,10 @@ TEST_F(AddLayerNormFusionPassTest, add_layer_normV3_fusion_93_bf16_OK)
         add1, add2, cast1, layernorm.y, cast2);
 
     std::shared_ptr<Graph> graph = graph_builder.BuildAndReset({cast2, layernorm.mean, layernorm.rstd});
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "dump_graph_for_layernorm_test2");
     CustomPassContext pass_contex;
     ops::AddLayerNormFusionPass pass;
     Status status = pass.Run(graph, pass_contex);
     EXPECT_EQ(status, SUCCESS);
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "dump_afterpass_graph_for_layernorm_test2");
     bool findAddLayerNorm = false;
     int node_count = 0;
     for (auto node : graph->GetAllNodes()) {
@@ -317,12 +313,10 @@ TEST_F(AddLayerNormFusionPassTest, add_layer_norm_fusion_95_fp_OK)
         add1, add2, cast1, layernorm.y, cast2);
 
     std::shared_ptr<Graph> graph = graph_builder.BuildAndReset({cast2, layernorm.mean, layernorm.variance});
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "dump_graph_for_layernorm_test3");
     CustomPassContext pass_contex;
     ops::AddLayerNormFusionPass pass;
     Status status = pass.Run(graph, pass_contex);
     EXPECT_EQ(status, SUCCESS);
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "dump_afterpass_graph_for_layernorm_test3");
     bool findAddLayerNorm = false;
     int node_count = 0;
     for (auto node : graph->GetAllNodes()) {
@@ -363,11 +357,9 @@ TEST_F(AddLayerNormFusionPassTest, add_layer_normV3_fusion_xLastDimNotEqualBias_
         add1, add2, cast1, layernorm.y, cast2);
 
     std::shared_ptr<Graph> graph = graph_builder.BuildAndReset({cast2, layernorm.mean, layernorm.rstd});
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "dump_graph_for_layernorm_test4");
     CustomPassContext pass_contex;
     ops::AddLayerNormFusionPass pass;
     Status status = pass.Run(graph, pass_contex);
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "dump_afterpass_graph_for_layernorm_test4");
     EXPECT_EQ(status, GRAPH_NOT_CHANGED);
 }
 
@@ -410,11 +402,9 @@ TEST_F(AddLayerNormFusionPassTest, add_layer_normV3_fusion_xDTypeAndBiasDTypeNot
     add1.GetProducer()->UpdateInputDesc(1, add1_input_1_desc);
 
     std::shared_ptr<Graph> graph = graph_builder.BuildAndReset({cast2, layernorm.mean, layernorm.rstd});
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "dump_graph_for_layernorm_test5");
     CustomPassContext pass_contex;
     ops::AddLayerNormFusionPass pass;
     Status status = pass.Run(graph, pass_contex);
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "dump_afterpass_graph_for_layernorm_test5");
     EXPECT_EQ(status, GRAPH_NOT_CHANGED);
 }
 
@@ -457,12 +447,10 @@ TEST_F(AddLayerNormFusionPassTest, add_layer_norm_fusion_x1DTypeAndx2DTypeNotSam
     add2.GetProducer()->UpdateInputDesc(0, add2_input_0_desc);
 
     std::shared_ptr<Graph> graph = graph_builder.BuildAndReset({cast2, layernorm.mean, layernorm.variance});
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "dump_graph_for_layernorm_test6");
     CustomPassContext pass_contex;
     ops::AddLayerNormFusionPass pass;
     Status status = pass.Run(graph, pass_contex);
     EXPECT_EQ(status, GRAPH_NOT_CHANGED);
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "dump_afterpass_graph_for_layernorm_test6");
 }
 
 TEST_F(AddLayerNormFusionPassTest, add_layer_norm_fusion_GammaDTypeNotfp32_Fail)
@@ -503,11 +491,9 @@ TEST_F(AddLayerNormFusionPassTest, add_layer_norm_fusion_GammaDTypeNotfp32_Fail)
     layernorm.y.GetProducer()->UpdateInputDesc(1, layernorm_input_1_desc);
 
     std::shared_ptr<Graph> graph = graph_builder.BuildAndReset({cast2, layernorm.mean, layernorm.variance});
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "dump_graph_for_layernorm_test7");
     CustomPassContext pass_contex;
     ops::AddLayerNormFusionPass pass;
     Status status = pass.Run(graph, pass_contex);
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "dump_afterpass_graph_for_layernorm_test7");
     EXPECT_EQ(status, GRAPH_NOT_CHANGED);
 }
 
@@ -538,11 +524,9 @@ TEST_F(AddLayerNormFusionPassTest, add_layer_norm_fusion_cast1HaveCtlEdge_Fail)
 
     std::shared_ptr<Graph> graph = graph_builder.BuildAndReset({cast2, layernorm.mean, layernorm.variance});
     graph->AddControlEdge(*add2.GetProducer(), *cast1.GetProducer());
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "dump_graph_for_layernorm_test8");
     CustomPassContext pass_contex;
     ops::AddLayerNormFusionPass pass;
     Status status = pass.Run(graph, pass_contex);
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "dump_afterpass_graph_for_layernorm_test8");
     EXPECT_EQ(status, GRAPH_NOT_CHANGED);
 }
 
@@ -572,11 +556,9 @@ TEST_F(AddLayerNormFusionPassTest, add_layer_norm_fusion_AddInputShapeIsDynamic_
         add1, add2, cast1, layernorm.y, cast2);
 
     std::shared_ptr<Graph> graph = graph_builder.BuildAndReset({cast2, layernorm.mean, layernorm.rstd});
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "dump_graph_for_layernorm_test9");
     CustomPassContext pass_contex;
     ops::AddLayerNormFusionPass pass;
     Status status = pass.Run(graph, pass_contex);
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "dump_afterpass_graph_for_layernorm_test9");
     EXPECT_EQ(status, GRAPH_NOT_CHANGED);
 }
 
@@ -606,11 +588,9 @@ TEST_F(AddLayerNormFusionPassTest, add_layer_norm_fusion_AddInputIsScaler_Fail)
         add1, add2, cast1, layernorm.y, cast2);
 
     std::shared_ptr<Graph> graph = graph_builder.BuildAndReset({cast2, layernorm.mean, layernorm.rstd});
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "dump_graph_for_layernorm_test10");
     CustomPassContext pass_contex;
     ops::AddLayerNormFusionPass pass;
     Status status = pass.Run(graph, pass_contex);
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "dump_afterpass_graph_for_layernorm_test10");
     EXPECT_EQ(status, GRAPH_NOT_CHANGED);
 }
 
@@ -642,11 +622,9 @@ TEST_F(AddLayerNormFusionPassTest, add_layer_normV4_fusion_BegiNnormAxis_wrong_F
         add1, add2, cast1, layernorm.y, cast2);
 
     std::shared_ptr<Graph> graph = graph_builder.BuildAndReset({cast2, layernorm.mean, layernorm.rstd});
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "dump_graph_for_layernorm_test11");
     CustomPassContext pass_contex;
     ops::AddLayerNormFusionPass pass;
     Status status = pass.Run(graph, pass_contex);
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "dump_afterpass_graph_for_layernorm_test11");
     EXPECT_EQ(status, GRAPH_NOT_CHANGED);
 }
 
@@ -684,11 +662,9 @@ TEST_F(AddLayerNormFusionPassTest, add_layer_norm_fusion_PlatformNotRight_Fail)
         add1, add2, cast1, layernorm.y, cast2);
 
     std::shared_ptr<Graph> graph = graph_builder.BuildAndReset({cast2, layernorm.mean, layernorm.rstd});
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "dump_graph_for_layernorm_test12");
     CustomPassContext pass_contex;
     ops::AddLayerNormFusionPass pass;
     Status status = pass.Run(graph, pass_contex);
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "dump_afterpass_graph_for_layernorm_test12");
     EXPECT_EQ(status, GRAPH_NOT_CHANGED);
 }
 
@@ -728,12 +704,10 @@ TEST_F(AddLayerNormFusionPassTest, for2_add_layer_norm_fusion_95_fp_OK)
         add1, add2, cast1, layernorm.y, cast2);
 
     std::shared_ptr<Graph> graph = graph_builder.BuildAndReset({cast2, layernorm.mean, layernorm.variance, add3});
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "dump_graph_for_layernorm_test13");
     CustomPassContext pass_contex;
     ops::AddLayerNormFusionPass pass;
     Status status = pass.Run(graph, pass_contex);
     EXPECT_EQ(status, SUCCESS);
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "dump_afterpass_graph_for_layernorm_test13");
     bool findAddLayerNorm = false;
     int node_count = 0;
     for (auto node : graph->GetAllNodes()) {
@@ -775,12 +749,10 @@ TEST_F(AddLayerNormFusionPassTest, for2_add_layer_normV3_fusion_93_bf_OK)
         add1, add2, cast1, layernorm.y, cast2);
 
     std::shared_ptr<Graph> graph = graph_builder.BuildAndReset({cast2, layernorm.mean, layernorm.rstd, add3});
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "dump_graph_for_layernorm_test14");
     CustomPassContext pass_contex;
     ops::AddLayerNormFusionPass pass;
     Status status = pass.Run(graph, pass_contex);
     EXPECT_EQ(status, SUCCESS);
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "dump_afterpass_graph_for_layernorm_test14");
     bool findAddLayerNorm = false;
     int node_count = 0;
     for (auto node : graph->GetAllNodes()) {
@@ -823,12 +795,10 @@ TEST_F(AddLayerNormFusionPassTest, for2_add_layer_normV3_fusion_MultiQuoteAdd2_9
         add1, add2, cast1, layernorm.y, cast2);
 
     std::shared_ptr<Graph> graph = graph_builder.BuildAndReset({cast2, layernorm.mean, layernorm.rstd, add3});
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "dump_graph_for_layernorm_test14");
     CustomPassContext pass_contex;
     ops::AddLayerNormFusionPass pass;
     Status status = pass.Run(graph, pass_contex);
     EXPECT_EQ(status, SUCCESS);
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "dump_afterpass_graph_for_layernorm_test14");
     bool findAddLayerNorm = false;
     int node_count = 0;
     for (auto node : graph->GetAllNodes()) {
@@ -869,12 +839,10 @@ TEST_F(AddLayerNormFusionPassTest, for2_add_layer_normV3_fusion_ReverseAddOrder_
         add1, add2, cast1, layernorm.y, cast2);
 
     std::shared_ptr<Graph> graph = graph_builder.BuildAndReset({cast2, layernorm.mean, layernorm.rstd, add3});
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "dump_graph_for_layernorm_test14");
     CustomPassContext pass_contex;
     ops::AddLayerNormFusionPass pass;
     Status status = pass.Run(graph, pass_contex);
     EXPECT_EQ(status, SUCCESS);
-    graph->DumpToFile(Graph::DumpFormat::kOnnx, "dump_afterpass_graph_for_layernorm_test14");
     bool findAddLayerNorm = false;
     int node_count = 0;
     for (auto node : graph->GetAllNodes()) {

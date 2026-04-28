@@ -21,10 +21,13 @@ namespace {
 const std::string kPassName = "AddLayerNormV4FusionPass";
 const std::string kPatternOutputCast = "Cast1";
 const std::string kPatternOutputAdd = "Add2";
+const std::vector<std::string> kAddInputsName = {"x2", "bias"};
 const int64_t kLayerNormV4CaptureIdx = 0l;
 const int64_t kAdd1CaptureIdx = 1l;
 const int64_t kAdd2CaptureIdx = 2l;
 const int64_t kCast1CaptureIdx = 3l;
+const int64_t kX1CaptureIdx = 4l;
+const int64_t kNormShapeCaptureIdx = 5l;
 
 const int64_t kGammaInputIndex = 2;
 const int64_t kBetaInputIndex = 3;
@@ -59,24 +62,23 @@ bool IsOptionalInputDescAsExpect(const TensorDesc& input_desc, const Shape& x1_s
     return true;
 }
 
-std::string GetPatternNameByParamConfig(const std::array<bool, 6>& param_config)
+std::string GetPatternNameByParamConfig(const std::array<bool, 5>& param_config)
 {
     auto pattern_name = param_config[0] ? kPassName + "Cast1" : kPassName;
     pattern_name = param_config[1] ? pattern_name + "Gamma" : pattern_name;
     pattern_name = param_config[2] ? pattern_name + "Beta" : pattern_name;
     pattern_name = param_config[3] ? pattern_name + "Add2" : pattern_name;
-    pattern_name = param_config[4] ? pattern_name + "BiasFirst" : pattern_name + "BiasSecond";
-    pattern_name = param_config[5] ? pattern_name + "AddFirst" : pattern_name + "AddSecond";
+    pattern_name = param_config[4] ? pattern_name + "AddFirst" : pattern_name + "AddSecond";
     return pattern_name;
 }
 
-PatternUniqPtr MakePatternForLayernormV4(const std::array<bool, 6>& param_config)
+PatternUniqPtr MakePatternForLayernormV4(const std::array<bool, 5>& param_config)
 {
     auto pattern_name = GetPatternNameByParamConfig(param_config);
     auto graph_builder = es::EsGraphBuilder(pattern_name.c_str());
-    auto [x1, x2, bias, normalized_shape] = graph_builder.CreateInputs<4>();
-    auto add1 = param_config[4] ? bias + x2 : x2 + bias;
-    auto add2 = param_config[5] ? add1 + x1 : x1 + add1;
+    auto [x1, x2_or_bias, bias_or_x2, normalized_shape] = graph_builder.CreateInputs<4>();
+    auto add1 = x2_or_bias + bias_or_x2;
+    auto add2 = param_config[4] ? add1 + x1 : x1 + add1;
     auto cast1 = es::Cast(add2, DT_FLOAT);
     int64_t cur_data_index = 3;
     es::EsTensorHolder gamma = param_config[1] ? graph_builder.CreateInput(++cur_data_index) : nullptr;
@@ -99,7 +101,9 @@ PatternUniqPtr MakePatternForLayernormV4(const std::array<bool, 6>& param_config
     pattern->CaptureTensor({*mean.GetProducer(), 0})
         .CaptureTensor({*add1.GetProducer(), 0})
         .CaptureTensor({*add2.GetProducer(), 0})
-        .CaptureTensor({*cast1.GetProducer(), 0});
+        .CaptureTensor({*cast1.GetProducer(), 0})
+        .CaptureTensor({*x1.GetProducer(), 0})
+        .CaptureTensor({*normalized_shape.GetProducer(), 0});
     return pattern;
 }
 
@@ -281,6 +285,60 @@ bool IsAllInputShapeDtypeRight(const std::unique_ptr<MatchResult>& match_result)
     return true;
 }
 
+bool NeedCheckNormalizeShape(const AscendString& pattern_graph_name) {
+    OPS_LOG_D(kPassName, "Is check normalize shape needed: %s", pattern_graph_name.GetString());
+    std::string pattern_name_str = pattern_graph_name.GetString();
+    if (pattern_name_str.find("Gamma") == std::string::npos ||
+        pattern_name_str.find("Beta") == std::string::npos) {
+        return true;
+        }
+    return false;
+}
+
+int64_t GetX1LastDim(const std::unique_ptr<MatchResult>& match_result) {
+    NodeIo x1_output;
+    OP_LOGE_IF(
+        match_result->GetCapturedTensor(kX1CaptureIdx, x1_output) != SUCCESS, false, kPassName,
+        "Failed to get x1 in GetX1LastDim");
+    TensorDesc output_desc;
+    OP_LOGE_IF(
+        x1_output.node.GetOutputDesc(x1_output.index, output_desc) != GRAPH_SUCCESS, false, kPassName,
+        "Failed to get desc of x1");
+    return output_desc.GetShape().GetDims().back();
+}
+
+bool NormalizeShapeEqualXLastDim(const std::unique_ptr<MatchResult>& match_result) {
+    NodeIo norm_shape_io;
+    OP_LOGE_IF(
+        match_result->GetCapturedTensor(kNormShapeCaptureIdx, norm_shape_io) != SUCCESS, false, kPassName,
+        "Failed to get layernorm in NormalizeShapeEqualXLastDim");
+    auto norm_shape = norm_shape_io.node;
+    AscendString type;
+    norm_shape.GetType(type);
+    if (type != "Const") {
+        OPS_LOG_D(kPassName, "Normlize shape is not const, can not judge");
+        return false;
+    }
+    Tensor const_tensor;
+    norm_shape.GetAttr("value", const_tensor);
+    TensorDesc normalize_shape_tensor_desc;
+    OP_LOGE_IF(
+        norm_shape.GetOutputDesc(0, normalize_shape_tensor_desc) != GRAPH_SUCCESS, false, kPassName,
+        "Failed to get tensor desc of layer norm");
+    auto data_type = normalize_shape_tensor_desc.GetDataType();
+    OP_LOGE_IF(
+       data_type != DT_INT32 && data_type != DT_INT64, false, kPassName,
+        "Data type of normalize_shape must be int32 or int64");
+    int64_t normalize_shape = -1;
+    if (data_type == DT_INT32) {
+        normalize_shape = *reinterpret_cast<const int32_t *>(const_tensor.GetData());
+    }else {
+        normalize_shape = *reinterpret_cast<const int64_t *>(const_tensor.GetData());
+    }
+    if (normalize_shape == -1) return false;
+    return GetX1LastDim(match_result) == normalize_shape;
+}
+
 struct OptionalFillInfo {
     int32_t optional_input_index;
     float32_t fill_value;
@@ -302,11 +360,39 @@ std::vector<PatternUniqPtr> AddLayerNormV4FusionPass::Patterns()
 {
     std::vector<PatternUniqPtr> pattern_graphs;
     // 遍历所有参数情况
-    for (int i = 0; i < 64; ++i) {
-        std::array<bool, 6> param_config{(i & 1) != 0, (i & 2) != 0, (i & 4) != 0, (i & 8) != 0, (i & 16) != 0,
-                                         (i & 32) != 0};
-        pattern_graphs.emplace_back(MakePatternForLayernormV4(param_config));
-    }
+
+    pattern_graphs.emplace_back(MakePatternForLayernormV4({false, true, false, false, false}));
+    pattern_graphs.emplace_back(MakePatternForLayernormV4({false, false, true, false, false}));
+    pattern_graphs.emplace_back(MakePatternForLayernormV4({false, false, false, true, false}));
+    pattern_graphs.emplace_back(MakePatternForLayernormV4({false, false, false, false, true}));
+    pattern_graphs.emplace_back(MakePatternForLayernormV4({false, false, false, false, false}));
+    pattern_graphs.emplace_back(MakePatternForLayernormV4({false, true, false, true, false}));
+    pattern_graphs.emplace_back(MakePatternForLayernormV4({false, false, true, true, false}));
+    pattern_graphs.emplace_back(MakePatternForLayernormV4({false, true, false, false, true}));
+    pattern_graphs.emplace_back(MakePatternForLayernormV4({false, false, true, false, true}));
+    pattern_graphs.emplace_back(MakePatternForLayernormV4({false, false, false, true, true}));
+    pattern_graphs.emplace_back(MakePatternForLayernormV4({false, true, false, true, true}));
+    pattern_graphs.emplace_back(MakePatternForLayernormV4({false, false, true, true, true}));
+    pattern_graphs.emplace_back(MakePatternForLayernormV4({false, true, true, false, false}));
+    pattern_graphs.emplace_back(MakePatternForLayernormV4({false, true, true, false, true}));
+    pattern_graphs.emplace_back(MakePatternForLayernormV4({false, true, true, true, false}));
+    pattern_graphs.emplace_back(MakePatternForLayernormV4({false, true, true, true, true}));
+    pattern_graphs.emplace_back(MakePatternForLayernormV4({true, true, true, true, true}));
+    pattern_graphs.emplace_back(MakePatternForLayernormV4({true, true, true, true, false}));
+    pattern_graphs.emplace_back(MakePatternForLayernormV4({true, true, true, false, true}));
+    pattern_graphs.emplace_back(MakePatternForLayernormV4({true, true, false, true, true}));
+    pattern_graphs.emplace_back(MakePatternForLayernormV4({true, false, true, true, true}));
+    pattern_graphs.emplace_back(MakePatternForLayernormV4({true, true, true, false, false}));
+    pattern_graphs.emplace_back(MakePatternForLayernormV4({true, true, false, true, false}));
+    pattern_graphs.emplace_back(MakePatternForLayernormV4({true, false, true, true, false}));
+    pattern_graphs.emplace_back(MakePatternForLayernormV4({true, true, false, false, true}));
+    pattern_graphs.emplace_back(MakePatternForLayernormV4({true, false, true, false, true}));
+    pattern_graphs.emplace_back(MakePatternForLayernormV4({true, false, false, true, true}));
+    pattern_graphs.emplace_back(MakePatternForLayernormV4({true, true, false, false, false}));
+    pattern_graphs.emplace_back(MakePatternForLayernormV4({true, false, true, false, false}));
+    pattern_graphs.emplace_back(MakePatternForLayernormV4({true, false, false, true, false}));
+    pattern_graphs.emplace_back(MakePatternForLayernormV4({true, false, false, false, true}));
+    pattern_graphs.emplace_back(MakePatternForLayernormV4({true, false, false, false, false}));
     return pattern_graphs;
 }
 
@@ -337,6 +423,16 @@ bool AddLayerNormV4FusionPass::MeetRequirements(const std::unique_ptr<MatchResul
     if (y_output_nodes.size() != 1) {
         return false;
     }
+    // 判断是否有gamma或beta，如果任一没有，校验normalize shape == x.last_dim
+    AscendString match_pattern_name;
+    auto pattern_graph = match_result->GetPatternGraph();
+    OP_LOGE_IF(
+        pattern_graph.GetName(match_pattern_name) != GRAPH_SUCCESS, false, kPassName,
+        "Failed to get name of pattern");
+    if (NeedCheckNormalizeShape(match_pattern_name) && !NormalizeShapeEqualXLastDim(match_result)) {
+        OPS_LOG_D(kPassName.c_str(), "Only support shapes of gamma/beta/x have same last dims.");
+        return false;
+    }
     return true;
 }
 
@@ -350,10 +446,17 @@ std::unique_ptr<Graph> AddLayerNormV4FusionPass::Replacement(const std::unique_p
     std::vector<DataType> input_dtpyes;
     std::vector<Format> input_formats;
     GetInputsInfo(subgraph_inputs, input_shapes, input_dtpyes, input_formats);
+    if (input_shapes[1].GetDims().size() == input_shapes[2].GetDims().size()) {
+        OPS_LOG_E(kPassName.c_str(), "not support element-wise add");
+        return nullptr;
+    }
+    bool x2first = input_shapes[1].GetDims().size() > input_shapes[2].GetDims().size();
 
     auto r_x1 = replace_graph_builder.CreateInput(0, "x1", input_dtpyes[0], input_formats[0], input_shapes[0].GetDims());
-    auto r_x2 = replace_graph_builder.CreateInput(1, "x2", input_dtpyes[1], input_formats[1], input_shapes[1].GetDims());
-    auto r_bias = replace_graph_builder.CreateInput(2, "bias", input_dtpyes[2], input_formats[2], input_shapes[2].GetDims());
+    auto r_x2_or_bias = replace_graph_builder.CreateInput(1, x2first ? kAddInputsName[0].c_str():kAddInputsName[1].c_str(),
+        input_dtpyes[1], input_formats[1], input_shapes[1].GetDims());
+    auto r_bias_or_x2 = replace_graph_builder.CreateInput(2, x2first ? kAddInputsName[1].c_str():kAddInputsName[0].c_str()
+        , input_dtpyes[2], input_formats[2], input_shapes[2].GetDims());
     auto r_normalize_shape = replace_graph_builder.CreateInput(3, "normalize_shape", input_dtpyes[3], input_formats[3], input_shapes[3].GetDims());
     int64_t current_data_index = 3;
     NodeIo layer_norm_v4_node;
@@ -366,7 +469,8 @@ std::unique_ptr<Graph> AddLayerNormV4FusionPass::Replacement(const std::unique_p
         layer_norm_v4_node.node, r_normalize_shape, {kBetaInputIndex, 0.0f}, replace_graph_builder, current_data_index);
     float32_t epsilon;
     layer_norm_v4_node.node.GetAttr("epsilon", epsilon);
-    es::AddLayerNormOutput addlayernorm = es::AddLayerNorm(r_x1, r_x2, r_gamma, r_beta, r_bias, epsilon, true);
+    es::AddLayerNormOutput addlayernorm = es::AddLayerNorm(r_x1, x2first ? r_x2_or_bias:r_bias_or_x2, r_gamma, r_beta,
+        x2first ? r_bias_or_x2:r_x2_or_bias, epsilon, true);
     GNode addlayernorm_node = *addlayernorm.y.GetProducer();
     auto layernorm_node_format = input_formats[3];
     UpdateAddLayerNormFormat(layernorm_node_format, addlayernorm_node);

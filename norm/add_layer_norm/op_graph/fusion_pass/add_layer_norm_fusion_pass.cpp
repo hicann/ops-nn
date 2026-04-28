@@ -37,20 +37,20 @@ namespace {
 const std::string kPassName = "AddLayerNormFusionPass";
 const std::string kPatternOutputCast = "Cast1";
 const std::string kPatternOutputAdd = "Add2";
+const std::vector<std::string> kAddInputsName = {"x2", "bias"};
 const int64_t kLayerNormCaptureIdx = 0l;
 const int64_t kAdd1CaptureIdx = 1l;
 const int64_t kAdd2CaptureIdx = 2l;
 const int64_t kCast1CaptureIdx = 3l;
 
-PatternUniqPtr MakePatternForLayernorm(bool make_cast1_as_output, bool make_add2_as_output, bool bias_first, bool add_first)
+PatternUniqPtr MakePatternForLayernorm(bool make_cast1_as_output, bool make_add2_as_output, bool add_first)
 {
     std::string pattern_name = make_cast1_as_output ? kPassName + "Cast1" : kPassName;
     pattern_name = make_add2_as_output ? pattern_name + "Add2" : pattern_name;
-    pattern_name = bias_first ? pattern_name + "BiasFirst" : pattern_name + "BiasSecond";
     pattern_name = add_first ? pattern_name + "AddFirst" : pattern_name + "AddSecond";
     auto graph_builder = es::EsGraphBuilder(pattern_name.c_str());
-    auto [x1,x2,gamma,beta,bias] = graph_builder.CreateInputs<5>();
-    auto add1 = bias_first? bias + x2 : x2 + bias;
+    auto [x1,x2_or_bias,gamma,beta,bias_or_x2] = graph_builder.CreateInputs<5>();
+    auto add1 = x2_or_bias + bias_or_x2;
     auto add2 = add_first? add1 + x1 : x1 + add1;
     auto cast1 = es::Cast(add2, DT_FLOAT);
     auto [y, mean, variance] = es::LayerNorm(cast1, gamma, beta);
@@ -67,15 +67,14 @@ PatternUniqPtr MakePatternForLayernorm(bool make_cast1_as_output, bool make_add2
     return pattern;
 }
 
-PatternUniqPtr MakePatternForLayernormV3(bool make_cast1_as_output, bool make_add2_as_output, bool bias_first, bool add_first)
+PatternUniqPtr MakePatternForLayernormV3(bool make_cast1_as_output, bool make_add2_as_output, bool add_first)
 {
     std::string pattern_name = make_cast1_as_output ? kPassName + "V3Cast1" : kPassName + "V3";
     pattern_name = make_add2_as_output ? pattern_name + "Add2" : pattern_name;
-    pattern_name = bias_first ? pattern_name + "BiasFirst" : pattern_name + "BiasSecond";
     pattern_name = add_first ? pattern_name + "AddFirst" : pattern_name + "AddSecond";
     auto graph_builder = es::EsGraphBuilder(pattern_name.c_str());
-    auto [x1,x2,gamma,beta,bias] = graph_builder.CreateInputs<5>();
-    auto add1 = bias_first? bias + x2 : x2 + bias;
+    auto [x1,x2_or_bias,gamma,beta,bias_or_x2] = graph_builder.CreateInputs<5>();
+    auto add1 = x2_or_bias + bias_or_x2;
     auto add2 = add_first? add1 + x1 : x1 + add1;
     auto cast1 = es::Cast(add2, DT_FLOAT);
     auto [y, mean, rstd] = es::LayerNormV3(cast1, gamma, beta);
@@ -260,10 +259,23 @@ std::vector<PatternUniqPtr> AddLayerNormFusionPass::Patterns()
 {
     std::vector<PatternUniqPtr> pattern_graphs;
     // 传入所有情况的bool值
-    for (int i = 0; i < 16; ++i) {
-        pattern_graphs.emplace_back(MakePatternForLayernorm((i & 1) != 0, (i & 2) != 0, (i & 4) != 0, (i & 8) != 0));
-        pattern_graphs.emplace_back(MakePatternForLayernormV3((i & 1) != 0, (i & 2) != 0, (i & 4) != 0, (i & 8) != 0));
-    }
+    pattern_graphs.emplace_back(MakePatternForLayernorm(false,true,true));
+    pattern_graphs.emplace_back(MakePatternForLayernorm(false,true,false));
+    pattern_graphs.emplace_back(MakePatternForLayernorm(false,false,true));
+    pattern_graphs.emplace_back(MakePatternForLayernorm(false,false,false));
+    pattern_graphs.emplace_back(MakePatternForLayernorm(true,true,true));
+    pattern_graphs.emplace_back(MakePatternForLayernorm(true,true,false));
+    pattern_graphs.emplace_back(MakePatternForLayernorm(true,false,true));
+    pattern_graphs.emplace_back(MakePatternForLayernorm(true,false,false));
+
+    pattern_graphs.emplace_back(MakePatternForLayernormV3(false,true,true));
+    pattern_graphs.emplace_back(MakePatternForLayernormV3(false,true,false));
+    pattern_graphs.emplace_back(MakePatternForLayernormV3(false,false,true));
+    pattern_graphs.emplace_back(MakePatternForLayernormV3(false,false,false));
+    pattern_graphs.emplace_back(MakePatternForLayernormV3(true,true,true));
+    pattern_graphs.emplace_back(MakePatternForLayernormV3(true,true,false));
+    pattern_graphs.emplace_back(MakePatternForLayernormV3(true,false,true));
+    pattern_graphs.emplace_back(MakePatternForLayernormV3(true,false,false));
     return pattern_graphs;
 }
 
@@ -304,29 +316,36 @@ GraphUniqPtr AddLayerNormFusionPass::Replacement(const std::unique_ptr<MatchResu
     match_result->ToSubgraphBoundary()->GetAllInputs(subgraph_inputs);
 
     std::vector<Shape> input_shapes;
-    std::vector<DataType> input_dtpyes;
+    std::vector<DataType> input_dtypes;
     std::vector<Format> input_formats;
-    GetInputsInfo(subgraph_inputs, input_shapes, input_dtpyes, input_formats);
+    GetInputsInfo(subgraph_inputs, input_shapes, input_dtypes, input_formats);
+    if (input_shapes[1].GetDims().size() == input_shapes[4].GetDims().size()) {
+        OPS_LOG_E(kPassName.c_str(), "not support element-wise add");
+        return nullptr;
+    }
+    bool x2first = input_shapes[1].GetDims().size() > input_shapes[4].GetDims().size();
 
     auto replace_graph_builder = es::EsGraphBuilder("replacement");
     auto r_x1 = replace_graph_builder.CreateInput(
-        0, "x1", input_dtpyes[0], input_formats[0], input_shapes[0].GetDims());
-    auto r_x2 = replace_graph_builder.CreateInput(
-        1, "x2", input_dtpyes[1], input_formats[1], input_shapes[1].GetDims());
+        0, "x1", input_dtypes[0], input_formats[0], input_shapes[0].GetDims());
+    auto r_x2_or_bias = replace_graph_builder.CreateInput(
+        1, x2first ? kAddInputsName[0].c_str():kAddInputsName[1].c_str(), input_dtypes[1], input_formats[1], input_shapes[1].GetDims());
     auto r_gamma = replace_graph_builder.CreateInput(
-        2, "gamma", input_dtpyes[2], input_formats[2], input_shapes[2].GetDims());
+        2, "gamma", input_dtypes[2], input_formats[2], input_shapes[2].GetDims());
     auto r_beta = replace_graph_builder.CreateInput(
-        3, "beta", input_dtpyes[3], input_formats[3], input_shapes[3].GetDims());
-    auto r_bias = replace_graph_builder.CreateInput(
-        4, "bias", input_dtpyes[4], input_formats[4], input_shapes[4].GetDims());
+        3, "beta", input_dtypes[3], input_formats[3], input_shapes[3].GetDims());
+    auto r_bias_or_x2 = replace_graph_builder.CreateInput(
+        4, x2first ? kAddInputsName[1].c_str():kAddInputsName[0].c_str(), input_dtypes[4], input_formats[4], input_shapes[4].GetDims());
 
     NodeIo layer_norm_node;
     if (match_result->GetCapturedTensor(kLayerNormCaptureIdx, layer_norm_node) != SUCCESS) {
         OPS_LOG_E(kPassName.c_str(), "get layernorm node failed.");
+        return nullptr;
     }
     float32_t attr_epsilion;
     layer_norm_node.node.GetAttr("epsilon", attr_epsilion);
-    auto addlayernorm = es::AddLayerNorm(r_x1, r_x2, r_gamma, r_beta, r_bias, attr_epsilion, true);
+    auto addlayernorm = es::AddLayerNorm(r_x1, x2first ? r_x2_or_bias:r_bias_or_x2, r_gamma,
+        r_beta, x2first ? r_bias_or_x2:r_x2_or_bias, attr_epsilion, true);
 
     GNode addlayernorm_node = *addlayernorm.y.GetProducer();
     auto layernorm_node_format = input_formats[2];

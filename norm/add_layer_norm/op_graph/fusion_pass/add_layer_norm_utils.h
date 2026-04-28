@@ -25,7 +25,7 @@ static bool IsDynamicShape(const Shape& shape)
 
 static void GetInputsInfo(
     const std::vector<SubgraphInput>& subgraph_inputs, std::vector<Shape>& input_shapes,
-    std::vector<DataType>& input_dtpyes, std::vector<Format>& input_formats)
+    std::vector<DataType>& input_dtypes, std::vector<Format>& input_formats)
 {
     for (const auto& subgraph_input : subgraph_inputs) {
         auto match_node = subgraph_input.GetAllInputs().at(0);
@@ -34,7 +34,7 @@ static void GetInputsInfo(
         match_node.node.GetType(node_type);
         match_node.node.GetInputDesc(match_node.index, tensor_desc);
         input_shapes.emplace_back(tensor_desc.GetShape());
-        input_dtpyes.emplace_back(tensor_desc.GetDataType());
+        input_dtypes.emplace_back(tensor_desc.GetDataType());
         input_formats.emplace_back(tensor_desc.GetFormat());
     }
 }
@@ -64,7 +64,7 @@ static bool IsAdd2InputValid(
     auto add1_inputx_desc = (add1_input0_size > add1_input1_size) ? add1_input0_desc : add1_input1_desc;
     
     TensorDesc add2_inputx_desc;
-    auto [input_node0,_] = add2_node.GetInDataNodesAndPortIndexs(0);
+    auto [input_node0, _] = add2_node.GetInDataNodesAndPortIndexs(0);
     AscendString add2_node_type;
     input_node0->GetType(add2_node_type);
     if (add2_node_type == "Add") {

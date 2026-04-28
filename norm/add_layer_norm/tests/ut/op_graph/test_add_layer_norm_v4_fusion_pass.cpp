@@ -359,11 +359,8 @@ TEST_F(AddLayerNormV4FusionPassTest, add_layer_normV4_fusion_95_FP16_noBeta_OK)
     auto x1 = graph_builder.CreateInput(0, "x1", DT_FLOAT16, FORMAT_ND, shape_x.GetDims());
     auto x2 = graph_builder.CreateInput(1, "x2", DT_FLOAT16, FORMAT_ND, shape_x.GetDims());
     auto bias = graph_builder.CreateInput(2, "bias", DT_FLOAT16, FORMAT_ND, shape_bias.GetDims());
-    auto normalized_shape = graph_builder.CreateInput(
-        3, "normalized_shape", DT_INT32, FORMAT_ND, shape_normalized_shape.GetDims());
-    auto gamma = graph_builder.CreateInput(4, "gamma", DT_FLOAT, FORMAT_ND, shape_gamma.GetDims());
-
-    //auto normalized_shape = graph_builder.CreateConst(std::vector<int64_t>{256}, dims_normalized);
+    auto gamma = graph_builder.CreateInput(3, "gamma", DT_FLOAT, FORMAT_ND, shape_gamma.GetDims());
+    auto normalized_shape = graph_builder.CreateConst(std::vector<int64_t>{256}, dims_normalized);
     auto add1 = es::Add(x2, bias);
     auto add2 = es::Add(x1, add1);
     auto cast1 = es::Cast(add2, DT_FLOAT);
@@ -425,10 +422,7 @@ TEST_F(AddLayerNormV4FusionPassTest, add_layer_normV4_fusion_95_FP16_noGammaBeta
     auto x1 = graph_builder.CreateInput(0, "x1", DT_FLOAT16, FORMAT_ND, shape_x.GetDims());
     auto x2 = graph_builder.CreateInput(1, "x2", DT_FLOAT16, FORMAT_ND, shape_x.GetDims());
     auto bias = graph_builder.CreateInput(2, "bias", DT_FLOAT16, FORMAT_ND, shape_bias.GetDims());
-    auto normalized_shape = graph_builder.CreateInput(
-        3, "normalized_shape", DT_INT32, FORMAT_ND, shape_normalized_shape.GetDims());
-
-    //auto normalized_shape = graph_builder.CreateConst(std::vector<int64_t>{256}, dims_normalized);
+    auto normalized_shape = graph_builder.CreateConst(std::vector<int64_t>{256}, dims_normalized);
     auto add1 = es::Add(x2, bias);
     auto add2 = es::Add(x1, add1);
     auto cast1 = es::Cast(add2, DT_FLOAT);
@@ -478,11 +472,8 @@ TEST_F(AddLayerNormV4FusionPassTest, add_layer_normV4_fusion_95_FP16_noGamma_OK)
     auto x1 = graph_builder.CreateInput(0, "x1", DT_FLOAT16, FORMAT_ND, shape_x.GetDims());
     auto x2 = graph_builder.CreateInput(1, "x2", DT_FLOAT16, FORMAT_ND, shape_x.GetDims());
     auto bias = graph_builder.CreateInput(2, "bias", DT_FLOAT16, FORMAT_ND, shape_bias.GetDims());
-    auto normalized_shape = graph_builder.CreateInput(
-        3, "normalized_shape", DT_INT32, FORMAT_ND, shape_normalized_shape.GetDims());
-    auto beta = graph_builder.CreateInput(4, "beta", DT_FLOAT, FORMAT_ND, shape_gamma.GetDims());
-
-    //auto normalized_shape = graph_builder.CreateConst(std::vector<int64_t>{256}, dims_normalized);
+    auto beta = graph_builder.CreateInput(3, "beta", DT_FLOAT, FORMAT_ND, shape_gamma.GetDims());
+    auto normalized_shape = graph_builder.CreateConst(std::vector<int64_t>{256}, dims_normalized);
     auto add1 = es::Add(x2, bias);
     auto add2 = es::Add(x1, add1);
     auto cast1 = es::Cast(add2, DT_FLOAT);
@@ -1437,11 +1428,8 @@ TEST_F(AddLayerNormV4FusionPassTest, add_layer_normV4_fusion_S2_95_FP16_noBeta_O
     auto x1 = graph_builder.CreateInput(0, "x1", DT_FLOAT16, FORMAT_ND, shape_x.GetDims());
     auto x2 = graph_builder.CreateInput(1, "x2", DT_FLOAT16, FORMAT_ND, shape_x.GetDims());
     auto bias = graph_builder.CreateInput(2, "bias", DT_FLOAT16, FORMAT_ND, shape_bias.GetDims());
-    auto normalized_shape = graph_builder.CreateInput(
-        3, "normalized_shape", DT_INT32, FORMAT_ND, shape_normalized_shape.GetDims());
-    auto gamma = graph_builder.CreateInput(4, "gamma", DT_FLOAT, FORMAT_ND, shape_gamma.GetDims());
-
-    //auto normalized_shape = graph_builder.CreateConst(std::vector<int64_t>{256}, dims_normalized);
+    auto gamma = graph_builder.CreateInput(3, "gamma", DT_FLOAT, FORMAT_ND, shape_gamma.GetDims());
+    auto normalized_shape = graph_builder.CreateConst(std::vector<int64_t>{256}, dims_normalized);
     auto add1 = es::Add(x2, bias);
     auto add2 = es::Add(x1, add1);
     auto cast1 = es::Cast(add2, DT_FLOAT);
@@ -1505,10 +1493,7 @@ TEST_F(AddLayerNormV4FusionPassTest, add_layer_normV4_fusion_S2_95_FP16_noGammaB
     auto x1 = graph_builder.CreateInput(0, "x1", DT_FLOAT16, FORMAT_ND, shape_x.GetDims());
     auto x2 = graph_builder.CreateInput(1, "x2", DT_FLOAT16, FORMAT_ND, shape_x.GetDims());
     auto bias = graph_builder.CreateInput(2, "bias", DT_FLOAT16, FORMAT_ND, shape_bias.GetDims());
-    auto normalized_shape = graph_builder.CreateInput(
-        3, "normalized_shape", DT_INT32, FORMAT_ND, shape_normalized_shape.GetDims());
-
-    //auto normalized_shape = graph_builder.CreateConst(std::vector<int64_t>{256}, dims_normalized);
+    auto normalized_shape = graph_builder.CreateConst(std::vector<int64_t>{256}, dims_normalized);
     auto add1 = es::Add(x2, bias);
     auto add2 = es::Add(x1, add1);
     auto cast1 = es::Cast(add2, DT_FLOAT);
@@ -1559,9 +1544,8 @@ TEST_F(AddLayerNormV4FusionPassTest, add_layer_normV4_fusion_95_S2_FP16_noGamma_
     auto x1 = graph_builder.CreateInput(0, "x1", DT_FLOAT16, FORMAT_NCHW, shape_x.GetDims());
     auto x2 = graph_builder.CreateInput(1, "x2", DT_FLOAT16, FORMAT_NCHW, shape_x.GetDims());
     auto bias = graph_builder.CreateInput(2, "bias", DT_FLOAT16, FORMAT_NCHW, shape_bias.GetDims());
-    auto normalized_shape = graph_builder.CreateInput(
-        3, "normalized_shape", DT_INT32, FORMAT_NCHW, shape_normalized_shape.GetDims());
-    auto beta = graph_builder.CreateInput(4, "beta", DT_FLOAT, FORMAT_NCHW, shape_gamma.GetDims());
+    auto beta = graph_builder.CreateInput(3, "beta", DT_FLOAT, FORMAT_NCHW, shape_gamma.GetDims());
+    auto normalized_shape = graph_builder.CreateConst(std::vector<int64_t>{256}, dims_normalized);
 
     auto add1 = es::Add(x2, bias);
     auto add2 = es::Add(x1, add1);
