@@ -868,6 +868,7 @@ bool QuantBatchMatmulV3Checker::CheckDimValue(const gert::Shape & scaleShape, co
                                               const gert::StorageShape *offsetShape,
                                               const std::vector<int64_t> &dimValueOfMKN) const
 {
+    auto x1Inner = dimValueOfMKN[X1_INNER_IDX];
     auto x2Inner = dimValueOfMKN[X2_INNER_IDX];
     auto x2Outer = dimValueOfMKN[X2_OUTER_IDX];
     auto kBSize = static_cast<uint64_t>(inputParams_.transB ? x2Inner : x2Outer);
@@ -900,6 +901,21 @@ but it is %ld.",
         OP_TILING_CHECK(!PerTokenDimValueCheck(scaleShape, pertokenShape),
                         CUBE_INNER_ERR_REPORT(inputParams_.opName, "Check perTokenShape failed"), return false);
     }
+
+    if (inputParams_.aDtype == ge::DT_INT4 && inputParams_.bDtype == ge::DT_INT4) {
+        // remainder by 2 to check if it is a even number
+        OP_TILING_CHECK(x1Inner < 0 || x1Inner % 2 != 0 || x2Inner < 0 || x2Inner % 2 != 0,
+                        CUBE_INNER_ERR_REPORT(inputParams_.opName, "When input dtype is int4, \
+last axis of input x1 and x2 should be a positive even number, \
+but atcually last axis of x1 is [%ld], last axis of x2 is [%ld].",
+                                              x1Inner, x2Inner), return false);
+        // 当输入为INT4, transA必须为false
+        OP_TILING_CHECK(inputParams_.transA,
+                        CUBE_INNER_ERR_REPORT(inputParams_.opName,
+                                              "When input dtype is INT4, transposeX1 should be false, actually is true."),
+                                              return false);
+    }
+    
     return true;
 }
 
