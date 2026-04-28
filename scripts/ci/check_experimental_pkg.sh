@@ -27,6 +27,11 @@ ops=${result[0]}
 if [[ "${ops}" != "" ]]; then
     cd "${BASE_PATH}"
     bash build.sh --pkg --experimental --ops=${ops} --vendor_name=ci_test --no_force
+    status=$?
+    if [ $status -ne 0 ]; then
+        echo "build experimental failed"
+        exit 1
+    fi
 fi
 
 # 检测镜像文件更新，执行experimental构建
