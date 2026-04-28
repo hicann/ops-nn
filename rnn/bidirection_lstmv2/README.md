@@ -203,4 +203,4 @@
 
 | 调用方式 | 调用样例             | 说明                                                     |
 |--------------|------------------------------------------------------------------------|----------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_bidirection_lstm_v2](examples/arch20/test_aclnn_bidirection_lstm_v2.cpp) | 通过[aclnnBidirectionLSTMV2](docs/aclnnBidirectionLSTMV2.md)接口方式调用BidirectionLSTMV2算子。    |
+| aclnn调用 | [test_aclnn_bidirection_lstmv2](examples/arch20/test_aclnn_bidirection_lstmv2.cpp) | 通过[aclnnBidirectionLSTMV2](docs/aclnnBidirectionLSTMV2.md)接口方式调用BidirectionLSTMV2算子。    |
