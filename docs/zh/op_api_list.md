@@ -54,6 +54,7 @@
 | [aclnnAdvanceStep](../../optim/advance_step/docs/aclnnAdvanceStep.md) | 推进推理步骤，即在每个生成步骤中更新模型的状态并生成新的inputTokens、inputPositions、seqLens和slotMapping，为vLLM的推理提升效率。 | 默认确定性实现 | - |
 | [aclnnAdvanceStepV2](../../optim/advance_step/docs/aclnnAdvanceStepV2.md) | 推进推理步骤，即在每个生成步骤中更新模型的状态并生成新的inputTokens、inputPositions、seqLens和slotMapping，为vLLM的推理提升效率。 | 默认确定性实现 | - |
 | [aclnnApplyAdamW](../../optim/apply_adam_w/docs/aclnnApplyAdamW.md) | 实现adamW优化器功能。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnApplyAdamWQuant](../../optim/apply_adam_w_quant/docs/aclnnApplyAdamWQuant.md) | 实现adamW优化器功能，对m和v做量化处理。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnApplyAdamWV2](../../optim/apply_adam_w_v2/docs/aclnnApplyAdamWV2.md) | 实现adamW优化器功能。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnApplyFusedEmaAdam](../../optim/apply_fused_ema_adam/docs/aclnnApplyFusedEmaAdam.md) | 实现FusedEmaAdam融合优化器功能。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnApplyTopKTopP](../../index/apply_top_k_top_p_with_sorted/docs/aclnnApplyTopKTopP.md) | 对原始输入logits进行top-k和top-p采样过滤。 | 默认确定性实现 | 默认确定性实现 |
@@ -295,6 +296,7 @@
 | [aclnnMishBackward](../../activation/mish_grad/docs/aclnnMishBackward.md) | 计算aclnnMish的反向传播过程。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnMseLoss](../../loss/mse_loss/docs/aclnnMseLoss.md) | 计算输入x和目标y中每个元素之间的均方误差。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnMseLossBackward](../../loss/mse_loss_grad_v2/docs/aclnnMseLossBackward.md) | 均方误差函数aclnnMseLoss的反向传播。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnMseLossOut](../../loss/mse_loss/docs/aclnnMseLossOut.md) | 计算输入x和目标y中每个元素之间的均方误差。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnMultilabelMarginLoss](../../loss/multilabel_margin_loss/docs/aclnnMultilabelMarginLoss.md) | 计算负对数似然损失值。 | 默认非确定性实现，支持配置开启。 | - |
 | [aclnnMultiScaleDeformableAttnFunction](../../vfusion/multi_scale_deformable_attn_function/docs/aclnnMultiScaleDeformableAttnFunction.md) | 通过指定参数来遍历不同尺寸特征图的不同采样点。 | 默认确定性实现 | - |
 | [aclnnMultiScaleDeformableAttentionGrad](../../vfusion/multi_scale_deformable_attention_grad/docs/aclnnMultiScaleDeformableAttentionGrad.md) | 正向算子功能主要通过指定参数来遍历不同尺寸特征图的不同采样点。而反向算子的功能为根据正向的输入对输出的贡献及初始梯度求出输入对应的梯度。 | 默认非确定性实现，支持配置开启。 | - |
