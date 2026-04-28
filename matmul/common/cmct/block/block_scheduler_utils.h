@@ -25,8 +25,9 @@ namespace Block {
 constexpr uint64_t WINDOW_LEN = 4UL;
 
 // Base template definition for BlockSchedulerSelector
-template <class ProblemShape, class L1TileShape, class L0TileShape, class BlockScheduler = void,
-          bool TransA = false, bool TransB = false, class AType = void>
+template <
+    class ProblemShape, class L1TileShape, class L0TileShape, class BlockScheduler = void, bool TransA = false,
+    bool TransB = false, class AType = void>
 struct BlockSchedulerSelector;
 
 __aicore__ inline int64_t GetPerBlockNum(int64_t coreNum, int64_t mTileNum, int64_t nTileNum, int64_t b = 1)
@@ -88,7 +89,7 @@ __aicore__ inline int64_t MMLcm(int64_t m, int64_t n)
 
 #ifndef __NPU_ARCH__
 // device -> kernel -> scheduler
-static int64_t DoGetBlockNum(int64_t l1M, int64_t l1N, const MatmulShape &shape)
+static int64_t DoGetBlockNum(int64_t l1M, int64_t l1N, const MatmulShape& shape)
 {
     int maxCoreNum = GetCoreNum();
     int64_t mTotalCnt = Cmct::Gemm::CeilDiv(shape.m, l1M);
@@ -107,8 +108,8 @@ static int64_t DoGetBlockNum(int64_t l1M, int64_t l1N, const MatmulShape &shape)
 #endif
 
 template <class ProblemShape_>
-__host_aicore__ static Status DoCheckArgs(const ProblemShape_ &shape, int64_t l1M, int64_t l1N, int64_t l1K,
-                                          int64_t l0M, int64_t l0N, int64_t l0K)
+__host_aicore__ static Status DoCheckArgs(
+    const ProblemShape_& shape, int64_t l1M, int64_t l1N, int64_t l1K, int64_t l0M, int64_t l0N, int64_t l0K)
 {
     if (l1M > 128 || l0M > 128 || l1N > 256 || l0N > 256) { // 128,256: input limit
         return Status::l1L0ErrorExceedsLimit;
@@ -136,4 +137,3 @@ __host_aicore__ static Status DoCheckArgs(const ProblemShape_ &shape, int64_t l1
 } // namespace Block
 } // namespace Gemm
 } // namespace Cmct
-

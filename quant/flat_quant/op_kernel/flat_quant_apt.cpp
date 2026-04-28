@@ -13,6 +13,7 @@
  * \brief
  */
 #include "arch35/flat_quant_high_v2.h"
+#include "arch35/flat_quant_basic_cmct.h"
 #include "flat_quant_vec.h"
 #include "flat_quant_cube.h"
 #include "flat_quant_vec_one.h"
@@ -20,6 +21,8 @@
 #include "flat_quant_high.h"
 
 using namespace FlatQuantNS;
+using namespace Cmct;
+using namespace Cmct::Gemm;
 
 extern "C" __global__ __aicore__ void flat_quant(
     GM_ADDR x, GM_ADDR kronecker_p1, GM_ADDR kronecker_p2, GM_ADDR out, GM_ADDR quant_scale, GM_ADDR workspace,
@@ -35,6 +38,9 @@ extern "C" __global__ __aicore__ void flat_quant(
             REGIST_MATMUL_OBJ(&op.pipe, GetSysWorkSpacePtr(), op.matmulR, mmTilingR, op.matmulL, mmTilingL);
             op.Init(x, kronecker_p1, kronecker_p2, out, quant_scale, workspace, &tilingData);
             op.Process();
+        } else if (TILING_KEY_IS(6)) {
+            FlatQuantCmctKernel<DTYPE_X, DTYPE_OUT, DTYPE_QUANT_SCALE, layout::RowMajor>(
+                x, kronecker_p1, kronecker_p2, out, quant_scale, workspace, tilingData);
         }
     } else {
         if (TILING_KEY_IS(1)) {

@@ -29,9 +29,11 @@ struct FlatQuantCompileInfo {
 
 BEGIN_TILING_DATA_DEF(FlatQuantTilingData)
 TILING_DATA_FIELD_DEF(uint8_t, dataType);
+TILING_DATA_FIELD_DEF(uint8_t, hasP2);
 TILING_DATA_FIELD_DEF(int64_t, K);
 TILING_DATA_FIELD_DEF(int64_t, M);
 TILING_DATA_FIELD_DEF(int64_t, N);
+TILING_DATA_FIELD_DEF(int64_t, iterBatch);
 TILING_DATA_FIELD_DEF(float, clipRatio);
 
 TILING_DATA_FIELD_DEF_STRUCT(TCubeTiling, matmulTilingR);

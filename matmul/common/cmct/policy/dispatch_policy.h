@@ -27,14 +27,16 @@ struct KernelMultiBlockOnKAxis {}; // Multi-tile pipelined transfer with K-axis 
 struct KernelMmadPerBaseK {};      // Perform matrix multiplication with baseK granularity
 struct KernelL1Input {};           // L1 input pipeline
 struct KernelIterBatch {};         // Multi-tile pipelined transfer with batch caching
-struct KernelMergeBatch {};         // Multi-tile pipelined transfer with batch caching
+struct KernelMergeBatch {};        // Multi-tile pipelined transfer with batch caching
 struct KernelMmadWithScale {};     // Multi-block with scale
 struct KernelMultiBlockStreamK {}; // Multi-tile transfer with K-axis spliting and caching
 struct KernelBatchMatMulToMul {};  // BatchMatmul to mul
 struct KernelMixWithWeightPrologue {};
-struct KernelMatMulToMul {}; 
+struct KernelMatMulToMul {};
+struct KernelFlatQuant {};
 
-enum class MatMulL0C2Out : std::uint8_t {
+enum class MatMulL0C2Out : std::uint8_t
+{
     ON_THE_FLY = 0,
     ND_FIXPIPE_1_1 = 1,
     ND_FIXPIPE_1_2 = 2
@@ -141,8 +143,8 @@ struct MatmulMultiBlock {
  * @param [in] FULL_LOAD_MODE: mode of full load, default is 0(no full load)
  * @param [in] ENABLE_RELU: execute relu after mmad , default is false
  */
-template <class SingleCoreShape = AscendC::Shape<_0, _0, _0, _0>, uint64_t FULL_LOAD_MODE_ = 0,
-    uint64_t FUSED_OP_TYPE_ = 0>
+template <
+    class SingleCoreShape = AscendC::Shape<_0, _0, _0, _0>, uint64_t FULL_LOAD_MODE_ = 0, uint64_t FUSED_OP_TYPE_ = 0>
 struct MatmulMultiBlockWithOutQue {
     using ScheduleType = KernelMultiBlockOnKAxis;
     using SingleShape = SingleCoreShape;
@@ -159,7 +161,8 @@ struct MatmulMultiBlockWithOutQue {
  * @param [in] ENABLE_RELU: execute relu after mmad , default is false
  * @param [in] SingleCoreShape: the shape of a single core, default is AscendC::Shape<_0, _0, _0, _0>
  */
-template <MatMulL0C2Out FixpOpti = MatMulL0C2Out::ON_THE_FLY, uint64_t FUSED_OP_TYPE_ = 0,
+template <
+    MatMulL0C2Out FixpOpti = MatMulL0C2Out::ON_THE_FLY, uint64_t FUSED_OP_TYPE_ = 0,
     class SingleCoreShape = AscendC::Shape<_0, _0, _0, _0>>
 struct MatmulMultiBlockWithStreamK {
     using ScheduleType = KernelMultiBlockStreamK;
@@ -202,6 +205,13 @@ struct MatmulMergeBatch {
     constexpr static bool enableInputDataLenCheck = false;
 };
 
+template <class SingleCoreShape = AscendC::Shape<_0, _0, _0, _0>>
+struct MatmulFlatQuant {
+    using ScheduleType = KernelFlatQuant;
+    using SingleShape = SingleCoreShape;
+    constexpr static bool enableInputDataLenCheck = false;
+};
+
 /**
  * @struct MatmulMultiBlockBias
  * @brief Matrix multiplication multi-block structure, support bias, no quant, implemented based on highlevel api
@@ -230,7 +240,8 @@ struct MatmulMultiBlockOnKAxisWithLayout {
 
 /**
  * @struct SparseMatmulMultiBlockOnKAxisWithLayout
- * @brief Sparse matrix multiplication multi-block structure, with K-axis caching, no quant, no bias, implemented based on Layout
+ * @brief Sparse matrix multiplication multi-block structure, with K-axis caching, no quant, no bias, implemented based
+ * on Layout
  * @param [in] SingleCoreShape: the shape of a single core, default is AscendC::Shape<_0, _0, _0, _0>
  */
 template <class SingleCoreShape = AscendC::Shape<_0, _0, _0, _0>>
@@ -333,4 +344,3 @@ struct MatmulToMul {
 
 } // namespace Gemm
 } // namespace Cmct
-
