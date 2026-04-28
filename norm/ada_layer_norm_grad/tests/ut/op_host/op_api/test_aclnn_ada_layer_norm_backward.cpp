@@ -642,3 +642,312 @@ TEST_F(l2_ada_layer_norm_backward_test, ascend910B2_aclnnAdaLayerNormBackward_x_
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
+
+// bf16 dtype test
+TEST_F(l2_ada_layer_norm_backward_test, ascend910B2_aclnnAdaLayerNormBackward_bf16_nd)
+{
+    vector<int64_t> input_shape = {2, 6, 5, 6};
+    vector<int64_t> norm_shape = {6};
+    vector<int64_t> scale_shape = {2, 6, 6};
+    vector<int64_t> shift_shape = {2, 6, 6};
+    vector<int64_t> mean_shape = {2, 6, 5, 1};
+    aclDataType dtype = ACL_BF16;
+    aclFormat in_format = ACL_FORMAT_ND;
+    auto gradOutDesc = TensorDesc(input_shape, dtype, in_format).ValueRange(-2, 2);
+    auto inputDesc = gradOutDesc;
+    auto normalizedShape = IntArrayDesc(norm_shape);
+    auto meanDesc = TensorDesc(mean_shape, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto rstdDesc = TensorDesc(mean_shape, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(1, 2);
+    auto scaleDesc = TensorDesc(scale_shape, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto shiftDesc = TensorDesc(shift_shape, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto weightDesc = TensorDesc(norm_shape, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto biasDesc = weightDesc;
+
+    auto gradInputOutDesc = TensorDesc(input_shape, dtype, ACL_FORMAT_ND).Precision(0.01, 0.01);
+    auto gradScaleOutDesc = TensorDesc(scale_shape, dtype, ACL_FORMAT_ND).Precision(0.01, 0.01);
+    auto gradShiftOutDesc = TensorDesc(shift_shape, dtype, ACL_FORMAT_ND).Precision(0.01, 0.01);
+    auto gradWeightOutDesc = TensorDesc(norm_shape, dtype, ACL_FORMAT_ND).Precision(0.01, 0.01);
+    auto gradBiasOutDesc = TensorDesc(norm_shape, dtype, ACL_FORMAT_ND).Precision(0.01, 0.01);
+
+    auto ut = OP_API_UT(
+        aclnnAdaLayerNormBackward,
+        INPUT(gradOutDesc, inputDesc, normalizedShape, rstdDesc, meanDesc, scaleDesc, shiftDesc, weightDesc, biasDesc),
+        OUTPUT(gradInputOutDesc, gradScaleOutDesc, gradShiftOutDesc, gradWeightOutDesc, gradBiasOutDesc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// M = 0, N > 0
+TEST_F(l2_ada_layer_norm_backward_test, ascend910B2_aclnnAdaLayerNormBackward_m_zero_n_positive)
+{
+    vector<int64_t> input_shape = {0, 2, 7, 6};
+    vector<int64_t> norm_shape = {6};
+    vector<int64_t> scale_shape = {0, 2, 6};
+    vector<int64_t> shift_shape = {0, 2, 6};
+    vector<int64_t> mean_shape = {0, 2, 7, 1};
+    aclDataType dtype = ACL_FLOAT;
+    aclFormat in_format = ACL_FORMAT_ND;
+    auto gradOutDesc = TensorDesc(input_shape, dtype, in_format).ValueRange(-2, 2);
+    auto inputDesc = gradOutDesc;
+    auto normalizedShape = IntArrayDesc(norm_shape);
+    auto meanDesc = TensorDesc(mean_shape, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto rstdDesc = TensorDesc(mean_shape, dtype, ACL_FORMAT_ND).ValueRange(1, 2);
+    auto scaleDesc = TensorDesc(scale_shape, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto shiftDesc = TensorDesc(shift_shape, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto weightDesc = TensorDesc(norm_shape, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto biasDesc = weightDesc;
+
+    auto gradInputOutDesc = TensorDesc(input_shape, dtype, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto gradScaleOutDesc = TensorDesc(scale_shape, dtype, ACL_FORMAT_ND).Precision(0.01, 0.01);
+    auto gradShiftOutDesc = TensorDesc(shift_shape, dtype, ACL_FORMAT_ND).Precision(0.01, 0.01);
+    auto gradWeightOutDesc = TensorDesc(norm_shape, dtype, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto gradBiasOutDesc = TensorDesc(norm_shape, dtype, ACL_FORMAT_ND).Precision(0.001, 0.001);
+
+    auto ut = OP_API_UT(
+        aclnnAdaLayerNormBackward,
+        INPUT(gradOutDesc, inputDesc, normalizedShape, rstdDesc, meanDesc, scaleDesc, shiftDesc, weightDesc, biasDesc),
+        OUTPUT(gradInputOutDesc, gradScaleOutDesc, gradShiftOutDesc, gradWeightOutDesc, gradBiasOutDesc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// 3D input [B, S, H]
+TEST_F(l2_ada_layer_norm_backward_test, ascend910B2_aclnnAdaLayerNormBackward_3d_input)
+{
+    vector<int64_t> input_shape = {2, 3, 4};
+    vector<int64_t> norm_shape = {4};
+    vector<int64_t> scale_shape = {2, 4};
+    vector<int64_t> shift_shape = {2, 4};
+    vector<int64_t> mean_shape = {2, 3, 1};
+    aclDataType dtype = ACL_FLOAT;
+    aclFormat in_format = ACL_FORMAT_ND;
+    auto gradOutDesc = TensorDesc(input_shape, dtype, in_format).ValueRange(-2, 2);
+    auto inputDesc = gradOutDesc;
+    auto normalizedShape = IntArrayDesc(norm_shape);
+    auto meanDesc = TensorDesc(mean_shape, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto rstdDesc = TensorDesc(mean_shape, dtype, ACL_FORMAT_ND).ValueRange(1, 2);
+    auto scaleDesc = TensorDesc(scale_shape, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto shiftDesc = TensorDesc(shift_shape, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto weightDesc = TensorDesc(norm_shape, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto biasDesc = weightDesc;
+
+    auto gradInputOutDesc = TensorDesc(input_shape, dtype, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto gradScaleOutDesc = TensorDesc(scale_shape, dtype, ACL_FORMAT_ND).Precision(0.01, 0.01);
+    auto gradShiftOutDesc = TensorDesc(shift_shape, dtype, ACL_FORMAT_ND).Precision(0.01, 0.01);
+    auto gradWeightOutDesc = TensorDesc(norm_shape, dtype, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto gradBiasOutDesc = TensorDesc(norm_shape, dtype, ACL_FORMAT_ND).Precision(0.001, 0.001);
+
+    auto ut = OP_API_UT(
+        aclnnAdaLayerNormBackward,
+        INPUT(gradOutDesc, inputDesc, normalizedShape, rstdDesc, meanDesc, scaleDesc, shiftDesc, weightDesc, biasDesc),
+        OUTPUT(gradInputOutDesc, gradScaleOutDesc, gradShiftOutDesc, gradWeightOutDesc, gradBiasOutDesc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// 5D input
+TEST_F(l2_ada_layer_norm_backward_test, ascend910B2_aclnnAdaLayerNormBackward_5d_input)
+{
+    vector<int64_t> input_shape = {2, 2, 2, 2, 2};
+    vector<int64_t> norm_shape = {2};
+    vector<int64_t> scale_shape = {2, 2, 2, 2};
+    vector<int64_t> shift_shape = {2, 2, 2, 2};
+    vector<int64_t> mean_shape = {2, 2, 2, 2, 1};
+    aclDataType dtype = ACL_FLOAT;
+    aclFormat in_format = ACL_FORMAT_ND;
+    auto gradOutDesc = TensorDesc(input_shape, dtype, in_format).ValueRange(-2, 2);
+    auto inputDesc = gradOutDesc;
+    auto normalizedShape = IntArrayDesc(norm_shape);
+    auto meanDesc = TensorDesc(mean_shape, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto rstdDesc = TensorDesc(mean_shape, dtype, ACL_FORMAT_ND).ValueRange(1, 2);
+    auto scaleDesc = TensorDesc(scale_shape, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto shiftDesc = TensorDesc(shift_shape, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto weightDesc = TensorDesc(norm_shape, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto biasDesc = weightDesc;
+
+    auto gradInputOutDesc = TensorDesc(input_shape, dtype, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto gradScaleOutDesc = TensorDesc(scale_shape, dtype, ACL_FORMAT_ND).Precision(0.01, 0.01);
+    auto gradShiftOutDesc = TensorDesc(shift_shape, dtype, ACL_FORMAT_ND).Precision(0.01, 0.01);
+    auto gradWeightOutDesc = TensorDesc(norm_shape, dtype, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto gradBiasOutDesc = TensorDesc(norm_shape, dtype, ACL_FORMAT_ND).Precision(0.001, 0.001);
+
+    auto ut = OP_API_UT(
+        aclnnAdaLayerNormBackward,
+        INPUT(gradOutDesc, inputDesc, normalizedShape, rstdDesc, meanDesc, scaleDesc, shiftDesc, weightDesc, biasDesc),
+        OUTPUT(gradInputOutDesc, gradScaleOutDesc, gradShiftOutDesc, gradWeightOutDesc, gradBiasOutDesc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// scale/shift [B, 1, H] shape
+TEST_F(l2_ada_layer_norm_backward_test, ascend910B2_aclnnAdaLayerNormBackward_scale_shift_b1h_shape)
+{
+    vector<int64_t> input_shape = {2, 6, 5, 6};
+    vector<int64_t> norm_shape = {6};
+    vector<int64_t> scale_shape = {2, 1, 6};
+    vector<int64_t> shift_shape = {2, 1, 6};
+    vector<int64_t> mean_shape = {2, 6, 5, 1};
+    aclDataType dtype = ACL_FLOAT;
+    aclFormat in_format = ACL_FORMAT_ND;
+    auto gradOutDesc = TensorDesc(input_shape, dtype, in_format).ValueRange(-2, 2);
+    auto inputDesc = gradOutDesc;
+    auto normalizedShape = IntArrayDesc(norm_shape);
+    auto meanDesc = TensorDesc(mean_shape, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto rstdDesc = TensorDesc(mean_shape, dtype, ACL_FORMAT_ND).ValueRange(1, 2);
+    auto scaleDesc = TensorDesc(scale_shape, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto shiftDesc = TensorDesc(shift_shape, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto weightDesc = TensorDesc(norm_shape, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto biasDesc = weightDesc;
+
+    auto gradInputOutDesc = TensorDesc(input_shape, dtype, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto gradScaleOutDesc = TensorDesc(scale_shape, dtype, ACL_FORMAT_ND).Precision(0.01, 0.01);
+    auto gradShiftOutDesc = TensorDesc(shift_shape, dtype, ACL_FORMAT_ND).Precision(0.01, 0.01);
+    auto gradWeightOutDesc = TensorDesc(norm_shape, dtype, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto gradBiasOutDesc = TensorDesc(norm_shape, dtype, ACL_FORMAT_ND).Precision(0.001, 0.001);
+
+    auto ut = OP_API_UT(
+        aclnnAdaLayerNormBackward,
+        INPUT(gradOutDesc, inputDesc, normalizedShape, rstdDesc, meanDesc, scaleDesc, shiftDesc, weightDesc, biasDesc),
+        OUTPUT(gradInputOutDesc, gradScaleOutDesc, gradShiftOutDesc, gradWeightOutDesc, gradBiasOutDesc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// weight nullptr
+TEST_F(l2_ada_layer_norm_backward_test, ascend910B2_aclnnAdaLayerNormBackward_weight_nullptr)
+{
+    vector<int64_t> input_shape = {2, 6, 5, 6};
+    vector<int64_t> norm_shape = {6};
+    vector<int64_t> scale_shape = {2, 6, 6};
+    vector<int64_t> shift_shape = {2, 6, 6};
+    vector<int64_t> mean_shape = {2, 6, 5, 1};
+    aclDataType dtype = ACL_FLOAT;
+    aclFormat in_format = ACL_FORMAT_ND;
+    auto gradOutDesc = TensorDesc(input_shape, dtype, in_format).ValueRange(-2, 2);
+    auto inputDesc = gradOutDesc;
+    auto normalizedShape = IntArrayDesc(norm_shape);
+    auto meanDesc = TensorDesc(mean_shape, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto rstdDesc = TensorDesc(mean_shape, dtype, ACL_FORMAT_ND).ValueRange(1, 2);
+    auto scaleDesc = TensorDesc(scale_shape, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto shiftDesc = TensorDesc(shift_shape, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto weightDesc = (aclTensor*)nullptr;
+    auto biasDesc = TensorDesc(norm_shape, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
+
+    auto gradInputOutDesc = TensorDesc(input_shape, dtype, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto gradScaleOutDesc = TensorDesc(scale_shape, dtype, ACL_FORMAT_ND).Precision(0.01, 0.01);
+    auto gradShiftOutDesc = TensorDesc(shift_shape, dtype, ACL_FORMAT_ND).Precision(0.01, 0.01);
+    auto gradWeightOutDesc = TensorDesc(norm_shape, dtype, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto gradBiasOutDesc = TensorDesc(norm_shape, dtype, ACL_FORMAT_ND).Precision(0.001, 0.001);
+
+    auto ut = OP_API_UT(
+        aclnnAdaLayerNormBackward,
+        INPUT(gradOutDesc, inputDesc, normalizedShape, rstdDesc, meanDesc, scaleDesc, shiftDesc, weightDesc, biasDesc),
+        OUTPUT(gradInputOutDesc, gradScaleOutDesc, gradShiftOutDesc, gradWeightOutDesc, gradBiasOutDesc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// bias nullptr
+TEST_F(l2_ada_layer_norm_backward_test, ascend910B2_aclnnAdaLayerNormBackward_bias_nullptr)
+{
+    vector<int64_t> input_shape = {2, 6, 5, 6};
+    vector<int64_t> norm_shape = {6};
+    vector<int64_t> scale_shape = {2, 6, 6};
+    vector<int64_t> shift_shape = {2, 6, 6};
+    vector<int64_t> mean_shape = {2, 6, 5, 1};
+    aclDataType dtype = ACL_FLOAT;
+    aclFormat in_format = ACL_FORMAT_ND;
+    auto gradOutDesc = TensorDesc(input_shape, dtype, in_format).ValueRange(-2, 2);
+    auto inputDesc = gradOutDesc;
+    auto normalizedShape = IntArrayDesc(norm_shape);
+    auto meanDesc = TensorDesc(mean_shape, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto rstdDesc = TensorDesc(mean_shape, dtype, ACL_FORMAT_ND).ValueRange(1, 2);
+    auto scaleDesc = TensorDesc(scale_shape, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto shiftDesc = TensorDesc(shift_shape, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto weightDesc = TensorDesc(norm_shape, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto biasDesc = (aclTensor*)nullptr;
+
+    auto gradInputOutDesc = TensorDesc(input_shape, dtype, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto gradScaleOutDesc = TensorDesc(scale_shape, dtype, ACL_FORMAT_ND).Precision(0.01, 0.01);
+    auto gradShiftOutDesc = TensorDesc(shift_shape, dtype, ACL_FORMAT_ND).Precision(0.01, 0.01);
+    auto gradWeightOutDesc = TensorDesc(norm_shape, dtype, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto gradBiasOutDesc = TensorDesc(norm_shape, dtype, ACL_FORMAT_ND).Precision(0.001, 0.001);
+
+    auto ut = OP_API_UT(
+        aclnnAdaLayerNormBackward,
+        INPUT(gradOutDesc, inputDesc, normalizedShape, rstdDesc, meanDesc, scaleDesc, shiftDesc, weightDesc, biasDesc),
+        OUTPUT(gradInputOutDesc, gradScaleOutDesc, gradShiftOutDesc, gradWeightOutDesc, gradBiasOutDesc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// weight and bias nullptr
+TEST_F(l2_ada_layer_norm_backward_test, ascend910B2_aclnnAdaLayerNormBackward_weight_bias_nullptr)
+{
+    vector<int64_t> input_shape = {2, 6, 5, 6};
+    vector<int64_t> norm_shape = {6};
+    vector<int64_t> scale_shape = {2, 6, 6};
+    vector<int64_t> shift_shape = {2, 6, 6};
+    vector<int64_t> mean_shape = {2, 6, 5, 1};
+    aclDataType dtype = ACL_FLOAT;
+    aclFormat in_format = ACL_FORMAT_ND;
+    auto gradOutDesc = TensorDesc(input_shape, dtype, in_format).ValueRange(-2, 2);
+    auto inputDesc = gradOutDesc;
+    auto normalizedShape = IntArrayDesc(norm_shape);
+    auto meanDesc = TensorDesc(mean_shape, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto rstdDesc = TensorDesc(mean_shape, dtype, ACL_FORMAT_ND).ValueRange(1, 2);
+    auto scaleDesc = TensorDesc(scale_shape, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto shiftDesc = TensorDesc(shift_shape, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto weightDesc = (aclTensor*)nullptr;
+    auto biasDesc = (aclTensor*)nullptr;
+
+    auto gradInputOutDesc = TensorDesc(input_shape, dtype, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto gradScaleOutDesc = TensorDesc(scale_shape, dtype, ACL_FORMAT_ND).Precision(0.01, 0.01);
+    auto gradShiftOutDesc = TensorDesc(shift_shape, dtype, ACL_FORMAT_ND).Precision(0.01, 0.01);
+    auto gradWeightOutDesc = TensorDesc(norm_shape, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto gradBiasOutDesc = TensorDesc(norm_shape, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+
+    auto ut = OP_API_UT(
+        aclnnAdaLayerNormBackward,
+        INPUT(gradOutDesc, inputDesc, normalizedShape, rstdDesc, meanDesc, scaleDesc, shiftDesc, weightDesc, biasDesc),
+        OUTPUT(gradInputOutDesc, gradScaleOutDesc, gradShiftOutDesc, gradWeightOutDesc, gradBiasOutDesc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// all output nullptr
+TEST_F(l2_ada_layer_norm_backward_test, ascend910B2_aclnnAdaLayerNormBackward_all_output_nullptr)
+{
+    vector<int64_t> input_shape = {2, 6, 5, 6};
+    vector<int64_t> norm_shape = {6};
+    vector<int64_t> scale_shape = {2, 6, 6};
+    vector<int64_t> shift_shape = {2, 6, 6};
+    vector<int64_t> mean_shape = {2, 6, 5, 1};
+    aclDataType dtype = ACL_FLOAT;
+    aclFormat in_format = ACL_FORMAT_ND;
+    auto gradOutDesc = TensorDesc(input_shape, dtype, in_format).ValueRange(-2, 2);
+    auto inputDesc = gradOutDesc;
+    auto normalizedShape = IntArrayDesc(norm_shape);
+    auto meanDesc = TensorDesc(mean_shape, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto rstdDesc = TensorDesc(mean_shape, dtype, ACL_FORMAT_ND).ValueRange(1, 2);
+    auto scaleDesc = TensorDesc(scale_shape, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto shiftDesc = TensorDesc(shift_shape, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto weightDesc = TensorDesc(norm_shape, dtype, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto biasDesc = weightDesc;
+
+    auto ut = OP_API_UT(
+        aclnnAdaLayerNormBackward,
+        INPUT(gradOutDesc, inputDesc, normalizedShape, rstdDesc, meanDesc, scaleDesc, shiftDesc, weightDesc, biasDesc),
+        OUTPUT((aclTensor*)nullptr, (aclTensor*)nullptr, (aclTensor*)nullptr, (aclTensor*)nullptr, (aclTensor*)nullptr));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}

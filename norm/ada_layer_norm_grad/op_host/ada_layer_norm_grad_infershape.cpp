@@ -23,9 +23,10 @@ namespace ops {
 static const int64_t INPUT_DY_INDEX = 0;
 static const int64_t INPUT_X_INDEX = 1;
 static const int64_t INPUT_RSTD_INDEX = 2;
-static const int64_t INPUT_SCALE_INDEX =4;
-static const int64_t INPUT_SHIFT_INDEX =5;
-static const int64_t INPUT_GAMMA_INDEX = 6;
+static const int64_t INPUT_MEAN_INDEX = 3;
+static const int64_t INPUT_SCALE_INDEX = 4;
+static const int64_t INPUT_GAMMA_INDEX = 5;
+static const int64_t INPUT_BETA_INDEX = 6;
 static constexpr int OUTPUT_PD_X_INDEX = 0;
 static constexpr int OUTPUT_PD_SCALE_INDEX = 1;
 static constexpr int OUTPUT_PD_SHIFT_INDEX = 2;
@@ -74,12 +75,13 @@ static ge::graphStatus InferShapeAdaLayerNormGrad(gert::InferShapeContext* conte
     const gert::Shape* dy_shape = context->GetInputShape(INPUT_DY_INDEX);
     const gert::Shape* x_shape = context->GetInputShape(INPUT_X_INDEX);
     const gert::Shape* rstd_shape = context->GetInputShape(INPUT_RSTD_INDEX);
+    const gert::Shape* mean_shape = context->GetInputShape(INPUT_MEAN_INDEX);
     const gert::Shape* scale_shape = context->GetInputShape(INPUT_SCALE_INDEX);
-    const gert::Shape* shift_shape = context->GetInputShape(INPUT_SHIFT_INDEX);
     const gert::Shape* gamma_shape = context->GetInputShape(INPUT_GAMMA_INDEX);
+    const gert::Shape* beta_shape = context->GetInputShape(INPUT_BETA_INDEX);
     
     // 空指针检查
-    if (!CheckAllNotNull({dy_shape, x_shape, rstd_shape, scale_shape, shift_shape, gamma_shape})) {
+    if (!CheckAllNotNull({dy_shape, x_shape, rstd_shape, mean_shape, scale_shape, gamma_shape, beta_shape})) {
         return ge::GRAPH_FAILED;
     }
 
@@ -96,10 +98,15 @@ static ge::graphStatus InferShapeAdaLayerNormGrad(gert::InferShapeContext* conte
     }
 
     // 设置输出形状
+    // pd_x: 与 dy 相同
     SetOutputShapeFromInput(dy_shape, output_pd_x_shape);
+    // pd_scale: 与 scale 相同
     SetOutputShapeFromInput(scale_shape, output_pd_scale_shape);
-    SetOutputShapeFromInput(shift_shape, output_pd_shift_shape);
-    SetOutputShapeFromInput(gamma_shape, output_pd_gamma_shape, output_pd_beta_shape);
+    // pd_shift: 与 scale 相同（shift的梯度形状与scale相同）
+    SetOutputShapeFromInput(scale_shape, output_pd_shift_shape);
+    // pd_gamma/pd_beta: 与 gamma 相同
+    SetOutputShapeFromInput(gamma_shape, output_pd_gamma_shape);
+    SetOutputShapeFromInput(gamma_shape, output_pd_beta_shape);
 
     OP_LOGD(context, "End to do InferShapeAdaLayerNormGrad.");
     return ge::GRAPH_SUCCESS;
@@ -111,10 +118,11 @@ static ge::graphStatus InferDataTypeAdaLayerNormGrad(gert::InferDataTypeContext*
     OP_LOGD(context, "Begin to do InferDataTypeAdaLayerNormGrad");
     context->SetOutputDataType(OUTPUT_PD_X_INDEX, context->GetInputDataType(INPUT_X_INDEX));
     context->SetOutputDataType(OUTPUT_PD_SCALE_INDEX, context->GetInputDataType(INPUT_SCALE_INDEX));
-    context->SetOutputDataType(OUTPUT_PD_SHIFT_INDEX, context->GetInputDataType(INPUT_SHIFT_INDEX));
+    // pd_shift 的 dtype 与 scale 相同
+    context->SetOutputDataType(OUTPUT_PD_SHIFT_INDEX, context->GetInputDataType(INPUT_SCALE_INDEX));
     context->SetOutputDataType(OUTPUT_PD_GAMMA_INDEX, context->GetInputDataType(INPUT_GAMMA_INDEX));
-    context->SetOutputDataType(OUTPUT_PD_BETA_INDEX, context->GetInputDataType(INPUT_GAMMA_INDEX));
-    OP_LOGD(context, "End to do InferDataType4GridSampler3DGrad");
+    context->SetOutputDataType(OUTPUT_PD_BETA_INDEX, context->GetInputDataType(INPUT_BETA_INDEX));
+    OP_LOGD(context, "End to do InferDataTypeAdaLayerNormGrad");
     return GRAPH_SUCCESS;
 }
 
