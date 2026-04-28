@@ -3248,6 +3248,16 @@
   </tr>
   <tr>
     <td>quant</td>
+    <td><a href="../../quant/quant_max/README.md">group_quant</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对输入张量x进行量化处理，并得到x绝对值的最大值。</td>
+  </tr>
+  <tr>
+    <td>quant</td>
     <td><a href="../../quant/quantize/README.md">quantize</a></td>
     <td>✓</td>
     <td>✓</td>

@@ -664,5 +664,6 @@
     {"name":"LogSigmoid", "compute_units": ["ascend950"], "auto_sync": false, "impl_mode": "", "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},
     {"name":"LogSigmoidGrad", "compute_units": ["ascend950"], "auto_sync": false, "impl_mode": "", "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},
     {"name": "ScatterUpdate", "compute_units": ["ascend950"], "auto_sync": false, "impl_mode": "", "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},
-    {"name": "SortedSparseSegmentMeanGrad", "compute_units": ["ascend950"], "auto_sync": false, "impl_mode": "", "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}}
+    {"name": "SortedSparseSegmentMeanGrad", "compute_units": ["ascend950"], "auto_sync": false, "impl_mode": "", "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},
+    {"name":"QuantMax", "compute_units": ["ascend950"], "auto_sync": false}
 ]
