@@ -272,19 +272,19 @@ static const aclTensor* MulsProcess(const aclTensor* mat, const aclScalar* scala
 
 static const aclTensor* MatmulProcess(const aclTensor* mat1, const aclTensor* mat2, const aclTensor* out, int8_t cubeMathType, MmOpInfo& mmOpInfo, aclOpExecutor* executor)
 {
-    return MatmulCommonProcess (mat1, mat2, nullptr, out, cubeMathType, mmOpInfo, executor, false);
+    return MatmulCommonProcess(mat1, mat2, nullptr, out, cubeMathType, mmOpInfo, executor, false, true);
 }
 
 static const aclTensor* MatmulWithBiasProcess(const aclTensor* mat1, const aclTensor* mat2, const aclTensor* self, const aclTensor* out, int8_t cubeMathType, MmOpInfo& mmOpInfo, aclOpExecutor* executor)
 {
-    return MatmulCommonProcess (mat1, mat2, self, out, cubeMathType, mmOpInfo, executor, false);
+    return MatmulCommonProcess(mat1, mat2, self, out, cubeMathType, mmOpInfo, executor, false, true);
 }
 
 // ============================================================================
 
 static const aclTensor* MatmulMulProcess(AclnnAddmmTensor& addmmTensor, int8_t cubeMathType, aclOpExecutor* executor)
 {
-    auto matmulOut = ExecMmOp(addmmTensor.mat1, addmmTensor.mat2, cubeMathType, executor);
+    auto matmulOut = ExecMmOp(addmmTensor.mat1, addmmTensor.mat2, addmmTensor.out, cubeMathType, executor);
     CHECK_RET(matmulOut != nullptr, nullptr);
 
     const aclTensor* mulOut = nullptr;
@@ -318,7 +318,7 @@ static const aclTensor* AddMatmulProcess(
     }
 
     // matmul
-    auto matmulOut = ExecMmOp(addmmTensor.mat1, addmmTensor.mat2, cubeMathType, uniqueExecutor);
+    auto matmulOut = ExecMmOp(addmmTensor.mat1, addmmTensor.mat2, addmmTensor.out, cubeMathType, uniqueExecutor, true);
     CHECK_RET(matmulOut != nullptr, nullptr);
 
     bool isInplace = false;
@@ -500,7 +500,9 @@ public:
     using MatmulGraphImpl::MatmulGraphImpl;
 
     aclnnStatus Impl() override{
-        if (CheckGemmV3WithAlphaBeta(bias, matA, matB, cubeMathType)) {
+        auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
+        bool isSupportNpuArch = (npuArch == NpuArch::DAV_2201);
+        if (CheckGemmV3WithAlphaBeta(bias, matA, matB, cubeMathType) && isSupportNpuArch) {
             auto outGemmV3 = ExecGemmV3WithAlphaBetaOp(bias, matA, matB, alpha, beta, executor);
             CHECK_RET(outGemmV3 != nullptr, ACLNN_ERR_INNER_NULLPTR);
             convOut = outGemmV3;
@@ -512,8 +514,6 @@ public:
         CHECK_RET(out1 != nullptr, ACLNN_ERR_INNER_NULLPTR);
         // 执行 Matmul: out2 = mat1 @ mat2
         // 为了提升addmm的精度，如果输入是fp16或者bf16时，输出需要是fp32类型
-        auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
-        bool isSupportNpuArch = (npuArch == NpuArch::DAV_2201);
         if (((matA->GetDataType() == DataType::DT_FLOAT16 && matB->GetDataType() == DataType::DT_FLOAT16) || 
             (matA->GetDataType() == DataType::DT_BF16 && matB->GetDataType() == DataType::DT_BF16)) &&
             (cubeMathType == KEEP_DTYPE || cubeMathType == USE_HF32) && isSupportNpuArch) {
@@ -776,7 +776,8 @@ ACLNN_API aclnnStatus aclnnAddmmWeightNzGetWorkspaceSize(
         castOut = MatmulMulProcess(addmmTensor, cubeMathType, uniqueExecutor.get());
     } else if (NeedToConvertBias(self, mat1, mat2, beta, alpha)) {
         OP_LOGD("aclnnAddmmWeightNz run in NeedToConvertBias branch");
-        auto biasMmOut = ExecMmOpWithBias(mat1, mat2, self, cubeMathType, uniqueExecutor.get());
+        auto biasMmOut = ExecMmOpWithBias(
+            mat1, mat2, self, out, cubeMathType, uniqueExecutor.get(), false, false);
         CHECK_RET(biasMmOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
         castOut = l0op::Cast(biasMmOut, out->GetDataType(), uniqueExecutor.get());
     } else {

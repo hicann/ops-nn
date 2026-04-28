@@ -4416,7 +4416,7 @@ public:
             auto input2dND = l0op::ReFormat(input2d, op::Format::FORMAT_ND);
             auto permutWeightND = l0op::ReFormat(permutWeight, op::Format::FORMAT_ND);
             // matmul (x,weight) to shape n*w/s Cout
-            auto mmOut = ExecMmOp(input2dND, permutWeightND, 0, executor);
+            auto mmOut = ExecMmOp(input2dND, permutWeightND, nullptr, 0, executor);
             CHECK_RET(mmOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
             // matmul output reshape to shape n w/s Cout

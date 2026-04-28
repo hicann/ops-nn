@@ -101,6 +101,10 @@ bool IsTransposeLastTwoDims(const aclTensor* tensor);
 bool CheckGemmV3Support(const aclTensor* mat1, const aclTensor* mat2, MmOpInfo& mmOpInfo,
                                       int8_t cubeMathType);
 
+bool NeedEnable3510Fp32Output(
+    op::DataType selfDtype, op::DataType mat2Dtype, op::DataType outputDtype, int8_t cubeMathType,
+    const aclTensor* bias = nullptr, bool isFusion = false);
+
 bool IsSliceNonContiguous(const aclTensor* self, const aclTensor* mat2);
 
 bool IsTransposeNonContiguous(const aclTensor* tensor, bool& isNeedSwapInnerTwoDim);
@@ -119,10 +123,13 @@ const aclTensor* ExecGemmV3WithAlphaBetaOp(const aclTensor* bias,
                                            const aclScalar* beta,
                                            aclOpExecutor* executor);
 
-const aclTensor* ExecMmOp(const aclTensor* self, const aclTensor* mat2, int8_t cubeMathType, aclOpExecutor* executor);
+const aclTensor* ExecMmOp(
+    const aclTensor* self, const aclTensor* mat2, const aclTensor* out, int8_t cubeMathType, aclOpExecutor* executor,
+    bool isFusion = false);
 
 const aclTensor* ExecMmOpWithBias(const aclTensor* self, const aclTensor* mat2, const aclTensor* bias,
-                                  int8_t cubeMathType, aclOpExecutor* executor, bool transposeX2 = false);
+                                  const aclTensor* out, int8_t cubeMathType, aclOpExecutor* executor,
+                                  bool transposeX2 = false, bool isFusion = false);
 
 const aclTensor* ExecMmOpWithTrans(const aclTensor* self, const aclTensor* mat2, int64_t transSelf, int64_t transMat2,
                                    int8_t cubeMathType, aclOpExecutor* executor);
@@ -133,10 +140,12 @@ aclnnStatus SetMmSupportFormat(const aclTensor* self, const aclTensor* mat2, MmO
 
 aclnnStatus CreateMatmulOpInfo(
     const aclTensor* self, const aclTensor* mat2, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType,
-    MmOpInfo& mmOpInfo, bool isSelfSlice);
+    MmOpInfo& mmOpInfo, bool isSelfSlice, bool isFusion = false);
 
 aclnnStatus GetMmInfo(MmOpInfo mmOpInfo);
-MmOpInfo GetMatmulOpInfo(const aclTensor *self, const aclTensor *mat2, int8_t cubeMathType, bool isSelfSlice = false);
+MmOpInfo GetMatmulOpInfo(
+    const aclTensor* self, const aclTensor* mat2, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType,
+    bool isSelfSlice = false, bool isFusion = false);
 bool ContiguousAndCast(const aclTensor *&contiguousInput, const aclTensor *&castOut, bool &transposeFlag,
                                      op::DataType dtype, aclOpExecutor *executor);
 
@@ -188,7 +197,7 @@ op::FVector<int64_t> GetShape(const aclTensor *tensor);
 const aclTensor* MatmulCommonProcess (
     const aclTensor* self, const aclTensor* mat2, const aclTensor* bias, const aclTensor* out,
     const int8_t cubeMathType, MmOpInfo& mmOpInfo, aclOpExecutor* executor,
-    bool transposeX2);
+    bool transposeX2, bool isFusion = false);
 
 bool CheckGemmV3Support(const aclTensor* mat1, const aclTensor* mat2, const aclTensor* bias, const aclTensor* out,
 MmOpInfo& mmOpInfo, int8_t cubeMathType);
@@ -291,7 +300,9 @@ public:
     virtual bool CheckInput(const aclTensor* matA, const aclTensor* matB, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType) = 0;
 
     // 返回计算时的数据类型MmOpInfo
-    virtual aclnnStatus PromoteDtype(const aclTensor* matA, const aclTensor* matB, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType, struct MmOpInfo& mmOpInfo) = 0  ;
+    virtual aclnnStatus PromoteDtype(
+        const aclTensor* matA, const aclTensor* matB, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType,
+        struct MmOpInfo& mmOpInfo, bool isFusion = false) = 0;
 
     // 获取支持的类型列表
     virtual std::initializer_list<op::DataType> GetSupportedDTypes() = 0;
@@ -350,7 +361,9 @@ public:
 
     bool CheckInput(const aclTensor* matA, const aclTensor* matB, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType) override;
 
-    aclnnStatus PromoteDtype(const aclTensor* matA, const aclTensor* matB, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType, struct MmOpInfo& mmOpInfo) override;
+    aclnnStatus PromoteDtype(
+        const aclTensor* matA, const aclTensor* matB, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType,
+        struct MmOpInfo& mmOpInfo, bool isFusion = false) override;
 
     std::initializer_list<op::DataType> GetSupportedDTypes() override;
 
@@ -373,7 +386,9 @@ public:
 
     bool CheckInput(const aclTensor* matA, const aclTensor* matB, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType) override;
 
-    aclnnStatus PromoteDtype(const aclTensor* matA, const aclTensor* matB, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType, struct MmOpInfo& mmOpInfo) override;
+    aclnnStatus PromoteDtype(
+        const aclTensor* matA, const aclTensor* matB, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType,
+        struct MmOpInfo& mmOpInfo, bool isFusion = false) override;
 
     std::initializer_list<op::DataType> GetSupportedDTypes() override;
 

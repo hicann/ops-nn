@@ -31,9 +31,9 @@ bool BatchMatMulV3AswBL1FullLoadBasicTiling::IsCapable()
 {
     bool isSupportType = (args_.aType == ge::DT_FLOAT16 || args_.aType == ge::DT_BF16) &&
                          (args_.bType == ge::DT_FLOAT16 || args_.bType == ge::DT_BF16) &&
-                         (args_.cType == ge::DT_FLOAT16 || args_.cType == ge::DT_BF16);
+                         (args_.cType == ge::DT_FLOAT16 || args_.cType == ge::DT_BF16 || args_.cType == ge::DT_FLOAT);
     if ((!isSupportType) && args_.bFormat == ge::FORMAT_FRACTAL_NZ) {
-        OP_LOGE(args_.opName, "NZ format is not supported when the data type is FP32");
+        OP_LOGE(args_.opName, "NZ format is not supported when the input data type is FP32");
         return false;
     }
     if (batchInfo_->batchB > 1UL) { // matrix B should not have batch when BL1FullLoad

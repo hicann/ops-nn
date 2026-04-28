@@ -489,7 +489,7 @@ static const aclTensor* BuildMatMulWeightNzGraph(
     CHECK_RET(mat2 != nullptr, nullptr);
 
     // 固定selt二维 mat2四维
-    matmulOut = ExecMmOpWithBias(self, mat2, nullptr, cubeMathType, executor, transposeX2);
+    matmulOut = ExecMmOpWithBias(self, mat2, nullptr, out, cubeMathType, executor, transposeX2);
     CHECK_RET(matmulOut != nullptr, nullptr);
 
     // Reshape to out shape

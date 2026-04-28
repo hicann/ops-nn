@@ -95,7 +95,7 @@ public:
     // Set unitflag state: 3 = final accumulation, 2 = non-final accumulation
     constexpr static uint32_t FINAL_ACCUMULATION = 3;
     constexpr static uint32_t NON_FINAL_ACCUMULATION = 2;
-    constexpr static uint64_t BLOCK_BYTE_SIZE = 32;
+    constexpr static uint64_t BLOCK_BYTE_SIZE = 32UL;
     uint64_t abL1LoopCnt_{0};
     uint64_t l0PingPong_{0};
     uint64_t l0cPingPong_{0};

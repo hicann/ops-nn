@@ -237,7 +237,8 @@ __global__ __aicore__ void batch_mat_mul_v3(
             aGM, bGM, biasGM, cGM, workspaceGM, tilingData);
     } else if constexpr (
         BATCH_API_LEVEL == MAT_MUL_BASIC_LEVEL && BMODEL == MAT_MUL_BASIC && BATCH_FULL_LOAD == MAT_MUL_NO_FULL_LOAD &&
-        BATCH_L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY && BATCH_ITER_MODEL == MAT_MUL_BATCH_MATMUL_TO_MUL) {
+        BATCH_L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY && BATCH_ITER_MODEL == MAT_MUL_BATCH_MATMUL_TO_MUL &&
+        IsSameType<DTYPE_X1, DTYPE_Y>::value) {
         GET_TILING_DATA_WITH_STRUCT(BatchMatMulToMulBasicTilingData, tilingData, tilingGM);
         BatchMatMulToMulActKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor>(
             aGM, bGM, biasGM, cGM, workspaceGM, tilingData);

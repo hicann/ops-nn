@@ -252,7 +252,7 @@ const aclTensor* GetMatMulResult(
     CHECK_RET(mat2Casted != nullptr, nullptr);
 
     // 调用接口进行矩阵乘法运算
-    auto matMulOut = ExecMmOp(matCasted, mat2Casted, cubeMathType, executor);
+    auto matMulOut = ExecMmOp(matCasted, mat2Casted, nullptr, cubeMathType, executor);
     CHECK_RET(matMulOut != nullptr, nullptr);
     // 将矩阵乘结果转换为vec
     auto vecResult = l0op::SqueezeNd(matMulOut, vecToMatShape, executor);

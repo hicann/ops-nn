@@ -198,7 +198,7 @@ static inline bool CheckMathType(const aclTensor* self, const aclTensor* mat2, i
     return CheckCubeMathTypeForMm(promoteType, cubeMathType);
 }
 
-bool CheckDtypeValidWeightNz(const aclTensor* self, const aclTensor* mat2, const aclTensor* out)
+bool CheckDtypeValidWeightNz(const aclTensor* self, const aclTensor* mat2, const aclTensor* out, int8_t cubeMathType)
 {
     auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
     if ((npuArch != NpuArch::DAV_2201) && (npuArch != NpuArch::DAV_3510)) {
@@ -207,9 +207,15 @@ bool CheckDtypeValidWeightNz(const aclTensor* self, const aclTensor* mat2, const
             "batchmatmulweightnz is unsupported in this npu arch");
         return false;
     }
+    bool enable3510Fp32Output = NeedEnable3510Fp32Output(
+        self->GetDataType(), mat2->GetDataType(), out->GetDataType(), cubeMathType);
     OP_CHECK_DTYPE_NOT_SUPPORT(self, DTYPE_SUPPORT_LIST_WEIGHTNZ, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(mat2, DTYPE_SUPPORT_LIST_WEIGHTNZ, return false);
-    OP_CHECK_DTYPE_NOT_SUPPORT(out, DTYPE_SUPPORT_LIST_WEIGHTNZ, return false);
+    if (enable3510Fp32Output && out->GetDataType() == DataType::DT_FLOAT) {
+        OP_CHECK_DTYPE_NOT_SUPPORT(out, DTYPE_SUPPORT_LIST, return false);
+    } else {
+        OP_CHECK_DTYPE_NOT_SUPPORT(out, DTYPE_SUPPORT_LIST_WEIGHTNZ, return false);
+    }
     if (self->GetDataType() != mat2->GetDataType()) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID,
@@ -218,7 +224,7 @@ bool CheckDtypeValidWeightNz(const aclTensor* self, const aclTensor* mat2, const
             return false;
     }
 
-    if (self->GetDataType() != out->GetDataType()) {
+    if (out->GetDataType() != DataType::DT_FLOAT && self->GetDataType() != out->GetDataType()) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID,
             "self's dtype [%s] and out's dtype [%s] are not equal.",
@@ -235,7 +241,7 @@ static aclnnStatus CheckParamsWeightNz(const aclTensor* self, const aclTensor* m
     CHECK_RET(CheckNotNull(self, mat2, out), ACLNN_ERR_PARAM_NULLPTR);
 
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
-    CHECK_RET(CheckDtypeValidWeightNz(self, mat2, out), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckDtypeValidWeightNz(self, mat2, out, cubeMathType), ACLNN_ERR_PARAM_INVALID);
 
     // 3. 检查self和mat2的shape是否符合要求
     CHECK_RET(CheckShape(self, mat2, out), ACLNN_ERR_PARAM_INVALID);

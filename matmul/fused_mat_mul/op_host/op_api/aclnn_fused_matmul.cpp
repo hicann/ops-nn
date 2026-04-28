@@ -259,7 +259,7 @@ static const aclTensor* BuildFusedMatMulGraph(
         return nullptr;
     }
     // 解析当前规格matmulop支持的dtype、format能力
-    MmOpInfo mmOpInfo = GetMatmulOpInfo(x, x2, cubeMathType);
+    MmOpInfo mmOpInfo = GetMatmulOpInfo(x, x2, nullptr, nullptr, cubeMathType);
     // 输出fp32
     if (IsInSupportedOpTypes(fusedOpType, kSupportedIn16CastOut32OpTypes)) {
         mmOpInfo.ori_info.output_dtype = DataType::DT_FLOAT;

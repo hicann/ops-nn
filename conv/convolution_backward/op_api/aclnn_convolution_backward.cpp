@@ -1926,7 +1926,7 @@ static aclnnStatus CalculateW1B1FmNDxByMm(ConvolutionBackwardInputTensor &inputT
   OP_CHECK_NULL(mat2ForMm, return ACLNN_ERR_INNER_NULLPTR);
   OP_LOGD("mat2ForMm is: %s", mat2ForMm->ToString().GetString());
 
-  auto matmulOut = ExecMmOp(mat1ForMm, mat2ForMm, params.cubeMathType, executor);
+  auto matmulOut = ExecMmOp(mat1ForMm, mat2ForMm, nullptr, params.cubeMathType, executor);
   OP_CHECK_NULL(matmulOut, return ACLNN_ERR_INNER_NULLPTR);
   OP_LOGD("matmulOut is: %s", matmulOut->ToString().GetString());
   // Dx: reshape from(Cin, Din*Win*Hin) to(1, Cin, Din=Dout, Hin=Hout, Win=Wout)

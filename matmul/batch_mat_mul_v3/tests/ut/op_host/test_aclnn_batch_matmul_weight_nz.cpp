@@ -142,7 +142,7 @@ TEST_F(l2_batch_matmul_weight_nz_test, batch_matmul_950_BF16_BF16_FP16FP32_KEEP_
     TensorDesc a_desc = TensorDesc({2, 32, 32}, ACL_BF16, ACL_FORMAT_ND);
     TensorDesc b_desc = TensorDesc({2, 32, 32}, ACL_BF16, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 2, 2, 16, 16});
     TensorDesc out_desc = TensorDesc({2, 32, 32}, ACL_FLOAT, ACL_FORMAT_ND);
-    BatchMatMulCommonTest(a_desc, b_desc, out_desc, ACLNN_ERR_PARAM_INVALID, FP16FP32_KEEP_DTYPE);
+    BatchMatMulCommonTest(a_desc, b_desc, out_desc, ACL_SUCCESS, FP16FP32_KEEP_DTYPE);
 }
 
 // 接口整改异常用例 - 310

@@ -276,7 +276,7 @@ const aclIntArray* GetOutputSize(
 
 const aclTensor* TransBmm2Mm(
     const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, int64_t opImplModeEnum, bool adjX1, bool adjX2,
-    const bool offsetX, aclOpExecutor* executor)
+    const bool offsetX, bool enableFp32Output, aclOpExecutor* executor)
 {
     OP_LOGI("Hit bmm2mm scenario.");
     auto x1Bmm2Mm = l0op::Reshape(x1, {-1, x1->GetViewShape().GetDim(x1->GetViewShape().GetDimNum() - 1)}, executor);
@@ -286,7 +286,15 @@ const aclTensor* TransBmm2Mm(
         x2Bmm2Mm->SetStorageShape(x2StorageShape);
         x2Bmm2Mm = l0op::ReFormat(x2Bmm2Mm, op::Format::FORMAT_FRACTAL_NZ);
     }
-    const aclTensor* mmOut = l0op::MatMulV3Nd(x1Bmm2Mm, x2Bmm2Mm, bias, adjX1, adjX2, offsetX, opImplModeEnum, executor);
+    const aclTensor* mmOut = nullptr;
+    if (enableFp32Output) {
+        OP_LOGI("Hit bmm2mm fp16/bf16 in - fp32 out scenario.");
+        mmOut = l0op::MatMulV3NdFp162Fp32(
+                x1Bmm2Mm, x2Bmm2Mm, bias, adjX1, adjX2, offsetX, opImplModeEnum, executor);
+    } else {
+        mmOut = 
+            l0op::MatMulV3Nd(x1Bmm2Mm, x2Bmm2Mm, bias, adjX1, adjX2, offsetX, opImplModeEnum, executor);
+    }
     CHECK_RET(mmOut != nullptr, nullptr);
     auto outShapeIntArray = GetOutputSize(x1, x2, adjX1, adjX2, executor);
     CHECK_RET(outShapeIntArray != nullptr, nullptr);
@@ -376,21 +384,29 @@ const aclTensor* GetBatchMatmulOp(
     bool adjX1, bool adjX2, const bool offsetX, aclOpExecutor* executor, bool isBaddbmm)
 {
     auto bmmOpOut = selfTransdata;
+    auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    bool enable3510Fp32Output = NeedEnable3510Fp32Output(
+        matmulOpInfo.support_info.self_dtype, matmulOpInfo.support_info.mat2_dtype,
+        matmulOpInfo.support_info.output_dtype, KEEP_DTYPE, bias);
     if (CheckAscendCScenario(selfTransdata, mat2Transdata, bias, matmulOpInfo, adjX1, adjX2)) {
-        auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
         if ((npuArch == NpuArch::DAV_3510) && // 1.多维*2维(左非转置)2.多维*多维batch为1
             (GetBatchDimAll(mat2Transdata) <= 1 &&
              (!adjX1 || GetBatchDimAll(selfTransdata) <= 1))) {
             int64_t opImplModeEnumV3 = matmulOpInfo.enableHf32 ? 0x40 : (matmulOpInfo.enableForceGrpAccForFp32 ? 0x4 : 0x1);
             return TransBmm2Mm(
-                selfTransdata, mat2Transdata, bias, opImplModeEnumV3, adjX1, adjX2, offsetX, executor);
+                selfTransdata, mat2Transdata, bias, opImplModeEnumV3, adjX1, adjX2, offsetX,
+                enable3510Fp32Output, executor);
         }
         OP_LOGI("Hit batch_mat_mul_v3 scenario.");
         if ((matmulOpInfo.support_info.self_dtype == op::DataType::DT_FLOAT16 ||
-             matmulOpInfo.support_info.self_dtype == op::DataType::DT_BF16) &&
+            matmulOpInfo.support_info.self_dtype == op::DataType::DT_BF16) &&
             isBaddbmm &&
-            (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201)) {
+            (npuArch == NpuArch::DAV_2201)) {
             OP_LOGI("Hit batch_mat_mul_v3 fp16/bf16 in - fp32 out scenario.");
+            bmmOpOut = l0op::BatchMatMulV3NdFp16Bf162Fp32(
+                selfTransdata, mat2Transdata, bias, nullptr, adjX1, adjX2, offsetX, matmulOpInfo.enableHf32, executor);
+        } else if (enable3510Fp32Output) {
+            OP_LOGI("Hit batch_mat_mul_v3 fp16/bf16 in - fp32 out 3510 scenario.");
             bmmOpOut = l0op::BatchMatMulV3NdFp16Bf162Fp32(
                 selfTransdata, mat2Transdata, bias, nullptr, adjX1, adjX2, offsetX, matmulOpInfo.enableHf32, executor);
         } else {
@@ -748,7 +764,7 @@ static aclnnStatus GetBatchMatmulOpInfo(
     return ACLNN_SUCCESS;
 }
 
-bool CheckDtypeValidWeightNz(const aclTensor* self, const aclTensor* mat2, const aclTensor* out)
+bool CheckDtypeValidWeightNz(const aclTensor* self, const aclTensor* mat2, const aclTensor* out, int8_t cubeMathType)
 {
     auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
     if ((npuArch != NpuArch::DAV_2201) && (npuArch != NpuArch::DAV_3510)) {
@@ -757,9 +773,15 @@ bool CheckDtypeValidWeightNz(const aclTensor* self, const aclTensor* mat2, const
             "batchmatmulweightnz is unsupported in this npu arch");
         return false;
     }
+    bool enable3510Fp32Output = NeedEnable3510Fp32Output(
+        self->GetDataType(), mat2->GetDataType(), out->GetDataType(), cubeMathType);
     OP_CHECK_DTYPE_NOT_SUPPORT(self, DTYPE_SUPPORT_LIST_WEIGHTNZ, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(mat2, DTYPE_SUPPORT_LIST_WEIGHTNZ, return false);
-    OP_CHECK_DTYPE_NOT_SUPPORT(out, DTYPE_SUPPORT_LIST_WEIGHTNZ, return false);
+    if (enable3510Fp32Output && out->GetDataType() == DataType::DT_FLOAT) {
+        OP_CHECK_DTYPE_NOT_SUPPORT(out, DTYPE_SUPPORT_LIST, return false);
+    } else {
+        OP_CHECK_DTYPE_NOT_SUPPORT(out, DTYPE_SUPPORT_LIST_WEIGHTNZ, return false);
+    }
     if (self->GetDataType() != mat2->GetDataType()) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID,
@@ -768,7 +790,7 @@ bool CheckDtypeValidWeightNz(const aclTensor* self, const aclTensor* mat2, const
             return false;
     }
 
-    if (self->GetDataType() != out->GetDataType()) {
+    if (out->GetDataType() != DataType::DT_FLOAT && self->GetDataType() != out->GetDataType()) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID,
             "self's dtype [%s] and out's dtype [%s] are not equal.",
@@ -783,7 +805,7 @@ static aclnnStatus CheckBmmOp(
 {
     CHECK_RET(CheckNotNull(self, mat2, out), ACLNN_ERR_PARAM_NULLPTR);
     if (mat2->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ) {
-        CHECK_RET(CheckDtypeValidWeightNz(self, mat2, out), ACLNN_ERR_PARAM_INVALID);
+        CHECK_RET(CheckDtypeValidWeightNz(self, mat2, out, cubeMathType), ACLNN_ERR_PARAM_INVALID);
     } else {
         CHECK_RET(CheckDtypeValid(self, mat2, bias, out, cubeMathType), ACLNN_ERR_PARAM_INVALID);
     }
@@ -841,11 +863,13 @@ const aclTensor* ExecBatchMatmulOpWithBiasAndAttrs(
 
     const aclTensor* bmmOpOut = nullptr;
     if (isTransposeMat2Contiguous) {
-        bmmOpOut = GetBatchMatmulOp(selfTransdata, mat2Transdata, bias, matmulOpInfo, adjX1, adjX2, 0, executor, isBaddbmm);
+        bmmOpOut = GetBatchMatmulOp(
+            selfTransdata, mat2Transdata, bias, matmulOpInfo, adjX1, adjX2, 0, executor, isBaddbmm);
     } else if (ifKEqual1) {
         bmmOpOut = l0op::Mul(selfTransdata, mat2Transdata, executor);
     } else {
-        bmmOpOut = GetBatchMatmulOp(selfTransdata, mat2Transdata, bias, matmulOpInfo, adjX1, adjX2, 0, executor, isBaddbmm);
+        bmmOpOut = GetBatchMatmulOp(
+            selfTransdata, mat2Transdata, bias, matmulOpInfo, adjX1, adjX2, 0, executor, isBaddbmm);
     }
 
     CHECK_RET(bmmOpOut != nullptr, nullptr);

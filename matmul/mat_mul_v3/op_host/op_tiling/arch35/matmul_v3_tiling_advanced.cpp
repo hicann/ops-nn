@@ -72,9 +72,13 @@ ge::graphStatus IsValidDtype(const MatMulV3Args &args)
         // x1,              x2,             y,              bias
         { ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16 },
         { ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT },
+        { ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16 },
+        { ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT },
         { ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT },
         { ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT },
-        { ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16 } // david supports bias-bf16
+        { ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16 }, // david supports bias-bf16
+        { ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_BF16 },
+        { ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT }
     };
     for (auto &supported : dtypeSuportList) {
         if (std::equal(dtype.begin(), dtype.end(), supported.begin())) {
@@ -85,7 +89,8 @@ ge::graphStatus IsValidDtype(const MatMulV3Args &args)
     if (args.hasBias) {
         OP_LOGE(args.opName,
             "Unsupported data type: x1[%s], x2[%s], y[%s], bias[%s], input dtype of x1 and x2 and output dtype "
-            "must be same, only support[DT_FLOAT16, DT_FLOAT, DT_BF16], and bias dtype must be same to input type "
+            "must be same, only support[DT_FLOAT16, DT_FLOAT, DT_BF16], or input dtype of x1 and x2 is "
+            "DT_FLOAT16 | DT_BF16 and output dtype is DT_FLOAT, and bias dtype must be same to input type "
             "or equals DT_FLOAT when input dtype is DT_FLOAT16 | DT_BF16",
             Ops::Base::ToString(args.aType).c_str(), Ops::Base::ToString(args.bType).c_str(),
             Ops::Base::ToString(args.cType).c_str(), Ops::Base::ToString(args.biasType).c_str());
@@ -93,7 +98,8 @@ ge::graphStatus IsValidDtype(const MatMulV3Args &args)
     } else {
         OP_LOGE(args.opName,
             "Unsupported data type: x1[%s], x2[%s], y[%s], input dtype of x1 and x2 and output dtype must be same, "
-            "only support[DT_FLOAT16, DT_FLOAT, DT_BF16]",
+            "only support[DT_FLOAT16, DT_FLOAT, DT_BF16], or input dtype of x1 and x2 is DT_FLOAT16 | DT_BF16 "
+            "and output dtype is DT_FLOAT",
             Ops::Base::ToString(args.aType).c_str(), Ops::Base::ToString(args.bType).c_str(),
             Ops::Base::ToString(args.cType).c_str());
         return ge::GRAPH_FAILED;
