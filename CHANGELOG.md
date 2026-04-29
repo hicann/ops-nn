@@ -80,7 +80,7 @@ ops-nn 算子首个 Beta 版本 v8.5.0-beta.1 现已发布。
 
 [CANN 8.5.0-beta 1](https://ascend.devcloud.huaweicloud.com/cann/run/software/8.5.0-beta.1/)
 
-```
+```text
 版本目录说明如下：
 ├── aarch64                 # CPU为ARM类型
 │   ├── ops                  # ops算子包目录，用于归档算子子包

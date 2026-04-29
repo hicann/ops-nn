@@ -1,6 +1,7 @@
 # Renorm
 
 ## 贡献说明
+
 | 贡献者      | 贡献方              | 贡献算子 | 贡献时间       | 贡献内容     |
 |----------|------------------|------|------------|----------|
 | cc | 哈尔滨工业大学-苏统华团队 | Renorm | 2025/12/22 | 新增Renorm算子 |
@@ -10,8 +11,8 @@
 - Atlas A2训练系列产品
 - Atlas 200I/500 A2推理产品
 
-
 ## 算子描述
+
 - 功能描述
 
   `Renorm`算子返回输入数据经过重归一化运算的结果。
@@ -21,7 +22,7 @@
   <table>
     <tr><th align="center">算子类型(OpType)</th><th colspan="4" align="center">Renorm</th></tr> 
     <tr><td align="center"> </td><td align="center">name</td><td align="center">Type</td><td align="center">data type</td><td align="center">format</td></tr>  
-    <tr><td rowspan="2" align="center">算子输入</td>
+    <tr><td rowspan="2" align="center">算子输入</td></tr> 
      
     <tr><td align="center">x</td><td align="center">tensor</td><td align="center">float32,float16</td><td align="center">ND</td></tr>  
     
@@ -35,9 +36,11 @@
 - x，y，out的数据类型仅支持float32,float16，数据格式仅支持ND
 
 ## 算子使用
-使用该算子前，请参考[社区版CANN开发套件包安装文档](../../../docs/invocation/quick_op_invocation.md)完成开发运行环境的部署。
+
+使用该算子前，请参考[社区版CANN开发套件包安装文档](../../../docs/zh/invocation/quick_op_invocation.md)完成开发运行环境的部署。
 
 ### 编译部署
+
   - 进入到仓库目录
 
     ```bash
@@ -55,7 +58,9 @@
     ```bash
     ./build_out/cann-ops-<vendor_name>-linux.<arch>.run
     ```
+
 ### 算子调用
+
   - 执行调用
 
     ```bash

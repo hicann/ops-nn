@@ -1,6 +1,6 @@
 # SyncBnTrainingUpdateV2
 
-##  产品支持情况
+## 产品支持情况
 
 | 产品 | 是否支持 |
 | ---- | :----:|
@@ -15,51 +15,41 @@
     - 设分布式训练设备数为 K，第 k 个设备输入张量形状为 [N_k, C, H, W]
     - N_k：设备k的样本数；C：通道数；H/W：空间维度；
 
-
 $$
 N_c = \sum_{k=0}^{K-1} N_k \cdot H \cdot W \quad (\text{通道} \, c \, \text{的全局总元素数})
 $$
-
 
 $$
 sum_c = \sum_{k=0}^{K-1} sum_{k,c} \quad (\text{通道} \, c \, \text{的全局元素和})
 $$
 
-
 $$
 sum\_sq_c = \sum_{k=0}^{K-1} sum\_sq_{k,c} \quad (\text{通道} \, c \, \text{的全局元素平方和})
 $$
-
 
 $$
 \mu_c = \frac{sum_c}{N_c} \quad (\text{通道} \, c \, \text{的全局均值})
 $$
 
-
 $$
 \sigma_c^2 = \frac{sum\_sq_c}{N_c} - \mu_c^2 \quad (\text{通道} \, c \, \text{的全局方差，平方和公式简化计算})
 $$
-
 
 $$
 \hat{x}_{k,c,h,w} = x_{k,c,h,w} - \mu_c \quad (\text{设备}k \, \text{中通道}c \, \text{位置}(h,w) \, \text{的中心化结果})
 $$
 
-
 $$
 \sigma_{\varepsilon, c} = \sqrt{\sigma_c^2 + \varepsilon} \quad (\text{通道}c \, \text{的稳定化标准差，} \varepsilon\approx1e-5)
 $$
-
 
 $$
 \tilde{x}_{k,c,h,w} = \frac{\hat{x}_{k,c,h,w}}{\sigma_{\varepsilon, c}} \quad (\text{设备}k \, \text{中通道}c \, \text{位置}(h,w) \, \text{的归一化结果})
 $$
 
-
 $$
 \text{running\_mean}_c = \text{momentum} \times \text{running\_mean}_c + (1 - \text{momentum}) \times \mu_c \quad (\text{通道}c \, \text{移动均值更新})
 $$
-
 
 $$
 \text{running\_var}_c = \text{momentum} \times \text{running\_var}_c + (1 - \text{momentum}) \times \sigma_c^2 \quad (\text{通道}c \, \text{移动方差更新})

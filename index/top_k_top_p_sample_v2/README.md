@@ -62,6 +62,7 @@ logits中的每一行logits[batch][:]根据相应的topK[batch]、topP[batch]、
   v = 8 * \text{ks\_max}
   $$
   ks_max有效取值范围[1,1024]，默认为1024，并且需要向上对齐到8的整数倍。
+
   * 生成需要过滤的mask
 
   $$
@@ -92,6 +93,7 @@ logits中的每一行logits[batch][:]根据相应的topK[batch]、topP[batch]、
   $$
 
   TopP采样
+
   * 根据入参约束属性inputIsLogits，如果该属性为True，则对排序后结果进行归一化：
     $$
     \text{logit\_sortProb} = 
@@ -172,7 +174,9 @@ logits中的每一行logits[batch][:]根据相应的topK[batch]、topP[batch]、
     min_ps[b]≥1时，每个batch仅取1个最大token，其余位置填充defLogit。
 
   可选输出
+
   * 如果​入参属性IsNeedLogits=True，则使用topK-topP-minP联合采样后的logitsIndexMasked，进行`logits_top_kp_select`输出。
+
     $$
     \text{logitsIndex}[b][v] = \text{Index}(\text{logitsSortMasked}[b][v] \in \text{Logits})
     $$
@@ -180,6 +184,7 @@ logits中的每一行logits[batch][:]根据相应的topK[batch]、topP[batch]、
     \text{logitsIndexMasked}[b,:] = \text{logitsIndex}[b,:] * \text{topKMask}[b] * \text{topPMask}[b] * \text{minPMask}[b]
     $$
     其中，topK、topP、minP采样环节如果被跳过，则相应mask为全1。
+
   * 接下来使用logitsIndexMasked对输入Logits进行Select，过滤输入Logits中的高频token作为`logits_top_kp_select`输出：
     $$
     \text{logitsTopKpSelect}[b][v] = 
@@ -190,6 +195,7 @@ logits中的每一行logits[batch][:]根据相应的topK[batch]、topP[batch]、
     $$
 
   后继处理
+
   * 此阶段输入为前序对前序topK-topP-minP采样的联合结果logitsSortMasked。
   * 此处输入须要确保logitsSortMasked∈(0,1)，根据输入Logits的实际情况，配置入参约束属性inputIsLogits，即：
     $$
@@ -369,7 +375,7 @@ logits中的每一行logits[batch][:]根据相应的topK[batch]、topP[batch]、
   * 输入shape限制：
     * logits、q、logitsTopKPselect、logitsIdx、logitsSortMasked的尺寸和维度必须完全一致，目前仅支持两维。
     * llogits、topK、topP、minPs、logitsSelectIdx、logitsIdx、logitsSortMasked除最后一维以外的所有维度必须顺序和大小完全一致。目前logits只能是2维，topK、topP、logitsSelectIdx必须是1维非空Tensor。logits、topK、topP不允许空Tensor作为输入，如需跳过相应模块，需按相应规则设置输入。
-  * 其他限制：  
+  * 其他限制：
     * 如果需要单独跳过topK模块，请传入[batch, 1]大小的Tensor，并使每个元素均为无效值。
     * 如果min(ksMaxAligned, 1024)<topK[batch]<vocSize[batch]，则视为选择当前batch的全部有效元素并跳过topK采样。其中ksMaxAligned为ksMax向上对齐到8的整数倍。
     * 如果需要单独跳过topP模块，请传入[batch, 1]大小的Tensor，并使每个元素均≥1。

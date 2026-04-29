@@ -39,6 +39,7 @@
   sum(L), & \text{if reduction} = \text{sum}
   \end{cases}
   $$
+  
 - 其中：
   - Xn: predictions
   - Yn: labels/truth

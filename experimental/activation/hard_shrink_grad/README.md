@@ -6,7 +6,7 @@ Hardshrink 激活函数的反向梯度算子，用于神经网络训练过程中
 
 HardShrinkGrad 根据前向输入 `self` 的绝对值与阈值 `lambd` 的比较结果，决定是否将上游梯度 `grad_output` 传递到下游：
 
-```
+```bash
 output_i = grad_output_i,   if |self_i| > lambd
            0,                otherwise
 ```
@@ -113,7 +113,7 @@ HardShrinkGrad 为条件赋值算子，输出为精确的 0 或精确的 grad_ou
 
 ## 目录结构
 
-```
+```text
 hard_shrink_grad/
 ├── CMakeLists.txt                              # 顶层构建配置
 ├── build.sh                                    # 编译脚本

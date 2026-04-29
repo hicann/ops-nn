@@ -117,7 +117,7 @@ bash run.sh
 
 ## 6. 目录结构
 
-```
+```text
 ops/apply_proximal_gradient_descent/
 ├── README.md                     # 本文件
 ├── build.sh                      # 一键构建 + 安装脚本

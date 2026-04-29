@@ -16,6 +16,7 @@ accum\_update_{t} &= \rho \cdot accum\_update_{t-1} + (1 - \rho) \cdot update^2
 $$
 
 其中：
+
 - `var`：待更新的权重参数
 - `accum`：梯度平方的指数移动平均（$E[g^2]$）
 - `accum_update`：参数更新量平方的指数移动平均（$E[\Delta x^2]$）
@@ -85,7 +86,7 @@ $$
 
 ## 目录结构
 
-```
+```text
 apply_adadelta/
 ├── CMakeLists.txt
 ├── README.md
@@ -110,7 +111,7 @@ apply_adadelta/
 
 ## 调用示例
 
-本算子提供 ACLNN 调用示例，样例代码位于 [`examples/test_aclnn_apply_adadelta.cpp`](examples/test_aclnn_apply_adadelta.cpp)。
+本算子提供 ACLNN 调用示例，样例代码位于 [`examples/test_aclnn_apply_adadelta.cpp`](../../../experimental/optim/apply_adadelta/examples/arch35/test_aclnn_apply_adadelta.cpp)。
 
 ### 编译运行
 
@@ -134,7 +135,7 @@ make
 
 示例以 shape=[4,2] 的 fp32 张量、`lr=0.01, rho=0.9, epsilon=1e-6` 执行一次 Adadelta 更新，典型输出：
 
-```
+```text
 var_out[0]=0.998526  accum_out[0]=0.115000  accum_update_out[0]=0.011174
 var_out[1]=2.000976  accum_out[1]=0.189000  accum_update_out[1]=0.018952
 ...
@@ -142,4 +143,4 @@ var_out[1]=2.000976  accum_out[1]=0.189000  accum_update_out[1]=0.018952
 
 > **不支持 GE 图模式**：如前述调用方式支持矩阵所述，本算子**不支持 GE 图模式**，因此不提供 `test_geir_apply_adadelta.cpp` 示例。
 
-具体编译和运行过程可参考 [编译与运行样例](../../../docs/context/编译与运行样例.md)。
+具体编译和运行过程可参考 [编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。

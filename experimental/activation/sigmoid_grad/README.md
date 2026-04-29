@@ -8,7 +8,7 @@
 
 ## 功能说明
 
-- 算子功能：完成[sigmoid](../../sigmoid/docs/aclnnSigmoid&aclnnInplaceSigmoid.md)的反向传播，根据sigmoid反向传播梯度与正向输出计算sigmoid的梯度输入。
+- 算子功能：完成[sigmoid](../../activation/sigmoid_grad/docs/aclnnSigmoidBackward.md)的反向传播，根据sigmoid反向传播梯度与正向输出计算sigmoid的梯度输入。
 - 计算公式：
 
   $$
@@ -74,10 +74,10 @@
       <td>NC1HWC0、ND、FRACTAL_NZ、C1HWNCoC0</td>
       <td>1-8</td>
       <td>√</td>
+     </tr>
    </tbody>
   </table>
   
-
 ## 调用说明
 
 | 调用方式 | 调用样例                                                                   | 说明                                                             |

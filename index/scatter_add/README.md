@@ -16,7 +16,7 @@
 - 算子功能：将src tensor中的值按指定的轴方向和index tensor中的位置关系逐个填入self tensor中，若有多于一个src值被填入到self的同一位置，那么这些值将会在这一位置上进行累加。
   对于一个3D tensor， self会按照如下的规则进行更新：
 
-  ```
+  ```bash
   self[index[i][j][k]][j][k] += src[i][j][k] # 如果 dim == 0
   self[i][index[i][j][k]][k] += src[i][j][k] # 如果 dim == 1
   self[i][j][index[i][j][k]] += src[i][j][k] # 如果 dim == 2

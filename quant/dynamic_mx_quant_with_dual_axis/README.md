@@ -71,6 +71,7 @@
     - 当dstTypeMax为其他自定义值时，使用FP32精度invDstTypeMax乘法法计算scale。
 
 ## 参数说明
+
 <table style="undefined;table-layout: fixed; width: 980px"><colgroup>
   <col style="width: 100px">
   <col style="width: 150px">

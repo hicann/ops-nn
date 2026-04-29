@@ -21,6 +21,7 @@
   $$
 
   其中：
+  
   - $gradients$ 为上游梯度张量。
   - $features$ 为Softsign前向函数的输入特征张量。
   - $output$ 为计算得到的梯度输出张量。

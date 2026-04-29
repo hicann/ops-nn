@@ -27,6 +27,7 @@
   $$
 
   当scale_alg为0时：
+  
    - 将RmsNorm输出y在尾轴维度上按k = 32个数分组，一组k个数 $\{\{V_i\}_{i=1}^{k}\}$ 动态量化为 $\{mxscale,\{P_i\}_{i=1}^{k}\}$
     $$
     shared\_exp = floor(log_2(max_i(|V_i|))) - emax 

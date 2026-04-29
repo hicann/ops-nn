@@ -106,3 +106,4 @@
   | 调用方式 | 调用样例                                                                   | 说明                                                           |
   |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
   | aclnn调用 | [test_aclnn_embedding_dense_grad](./examples/test_aclnn_embedding_dense_grad.cpp) | 通过[aclnnEmbeddingDenseBackward](./docs/aclnnEmbeddingDenseBackward.md)接口方式调用EmbeddingDenseGrad算子。 |
+  

@@ -72,7 +72,7 @@ aclnnStatus aclnnCeluV3(
 
 ## 工程结构
 
-```
+```text
 ops/celu_v3/
 ├── CMakeLists.txt                          # 顶层 CMake 构建文件
 ├── build.sh                                # 编译脚本

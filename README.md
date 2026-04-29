@@ -10,7 +10,7 @@
 
 ## 🚀概述
 
-ops-nn是[CANN](https://hiascend.com/software/cann) （Compute Architecture for Neural Networks）算子库中提供神经网络计算能力的高阶算子库，包括matmul类、activation类等算子，算子库架构图如下：
+ops-nn是[CANN](https://hiascend.com/software/cann)（Compute Architecture for Neural Networks）算子库中提供神经网络计算能力的高阶算子库，包括matmul类、activation类等算子，算子库架构图如下：
 
 <img src="docs/zh/figures/architecture.png" alt="架构图"  width="700px" height="320px">
 
@@ -27,11 +27,12 @@ ops-nn是[CANN](https://hiascend.com/software/cann) （Compute Architecture for 
 
 环境准备好后，下载与CANN版本配套的分支源码，命令如下，\$\{tag\_version\}替换为分支标签名。
  	 
-> 说明：若环境中已存在配套分支源码，**可跳过本步骤**，例如WebIDE默认已提供最新商发版CANN对应的源码 。
+> 说明：若环境中已存在配套分支源码，**可跳过本步骤**，例如WebIDE默认已提供最新商发版CANN对应的源码。
 
 ```bash
 git clone -b ${tag_version} https://gitcode.com/cann/ops-nn.git
 ```
+
 说明：对于WebIDE环境，已默认提供最新商发CANN版本配套的源码，如需获取其他版本源码，参考上述命令获取。
 
 ## 📖学习教程

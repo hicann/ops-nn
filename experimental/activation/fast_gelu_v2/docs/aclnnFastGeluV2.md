@@ -12,13 +12,13 @@
 
 计算公式如下：
 
-```
+```text
 FastGeluV2(x) = x * (sgn(x) * [-0.1444 * (clip(|0.7071 * x|, max=1.769) - 1.769)^2 + 0.5] + 0.5)
 ```
 
 其中：
 
-```
+```text
 sgn(x) = (x + 1e-12) / |x + 1e-12|
 ```
 
@@ -90,7 +90,7 @@ aclnnStatus aclnnFastGeluV2(
 
 ## 调用示例
 
-以下代码摘自 [examples/test_aclnn_fast_gelu_v2.cpp](../examples/test_aclnn_fast_gelu_v2.cpp)，演示两段式 ACLNN 接口的完整调用流程。
+以下代码摘自 [examples/test_aclnn_fast_gelu_v2.cpp](../examples/arch35/test_aclnn_fast_gelu_v2.cpp)，演示两段式 ACLNN 接口的完整调用流程。
 
 ### 1. 初始化 ACL 运行时
 

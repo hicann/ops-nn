@@ -101,7 +101,7 @@ aclnnStatus aclnnDeformableConv2dBackward(
 
 - **参数说明**：
 
-  <table style="undefined;table-layout: fixed; width: 1550px"><colcolgroup>
+  <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
   <col style="width: 170px">
   <col style="width: 120px">
   <col style="width: 271px">

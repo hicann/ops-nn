@@ -24,7 +24,7 @@
 
 在`ops-nn/experimental`目录下创建算子，目录结构如下：
 
-```
+```text
 experimental/
 └── ${op_class}/                # 算子类型目录
     └── ${op_name}/             # 算子名称目录
@@ -154,7 +154,7 @@ add_sources()
 
 ### 安装依赖
 
-```
+```bash
 build
 pyyaml
 numpy<2
@@ -193,11 +193,12 @@ bash build.sh --pkg --experimental --soc=ascend910b
 
 编译成功后，在`build_out`目录下会生成whl包，文件名格式为：
 
-```
+```bash
 ascend_ops_nn-1.0.0-${python_version}-abi3-${arch}.whl
 ```
 
 其中：
+
 - `${python_version}`: Python版本（如cp38表示Python 3.8）
 - `${arch}`: CPU架构
 
@@ -233,7 +234,3 @@ cpu_result = cpu_x + cpu_y
 assert torch.allclose(cpu_result, result.cpu(), rtol=1e-6)
 print("验证成功！")
 ```
-
-> [!NOTE] 注意
->
-> 不同芯片型号的代码需要使用宏进行隔离，否则会导致whl包编译失败

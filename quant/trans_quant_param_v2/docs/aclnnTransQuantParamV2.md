@@ -24,7 +24,6 @@
      $$
      out = out\ |\ (scale\ \&\ 0xFFFFE000)\ |\ (1\ll46)
      $$
-
   3. 根据`offset`取值进行后续计算：
      - 若`offset`不存在，不再进行后续计算。
      - 若`offset`存在：

@@ -10,13 +10,13 @@
 
    程序执行结束后，默认可在"$HOME/ascendc/log"下查看，host日志文件存储路径如下：
 
-   ```
+   ```bash
    $HOME/ascend/log/debug/plog/plog-pid_*.log
    ```
 
    开启环境变量ASCEND_SLOG_PRINT_TO_STDOUT可以将log日志直接打屏显示(1:开启打屏，0：关闭打屏)，配置示例如下：
 
-   ```
+   ```bash
    export ASCEND_SLOG_PRINT_TO_STDOUT=1
    ```
 
@@ -26,13 +26,13 @@
    
    通过aclGetRecentErrMsg接口（参见[《acl API（C）》](https://hiascend.com/document/redirect/CannCommunityCppApi)）获取aclnn接口调用过程中的异常信息，使用方法如下：
 
-   ```
+   ```bash
    printf(aclGetRecentErrMsg());
    ```
 
    打印错误信息样例如下：
 
-   ```
+   ```bash
    [PID:646612] 2026-01-24-11:53:44.671.727 AclNN_Parameter_Error(EZ1001): Expected a proper Tensor but got null for argument addmmTennsor.self.
    ```
 
@@ -119,9 +119,9 @@
 - **上板性能采集**：适用于在真实NPU硬件上运行算子，快速获取算子整体性能指标（如Kernel耗时、Block数、流水占比等），帮助判断算子是否存在性能问题。
 - **流水图仿真**：适用于无NPU硬件开发者，或需要深入分析算子内部指令级流水瓶颈，优化指令排布的场景，提供比上板更详细的指令级流水分析。
 
-### 方式一 上板性能采集
+### 方式一上板性能采集
 
-   * **前提条件**
+* **前提条件**
 
       完成算子开发和编译后，假设采用aclnn接口方式调用，生成的算子可执行文件（test_aclnn_add_example）所在目录为本项目`examples/add_example/examples/build/bin/`。
 
@@ -151,7 +151,7 @@
 
       算子各项流水详细指标可关注`OPPROF_*`下`ArithmeticUtilization`文件，包含了当前各项流水的占比，具体介绍参见[msProf](https://www.hiascend.com/document/redirect/CannCommunityToolMsprof)中“性能数据文件 > msprof op > ArithmeticUtilization（cube及vector类型指令耗时和占比）”章节。
 
-### 方式二 仿真流水图采集
+### 方式二仿真流水图采集
   
    * **前提条件**
 
@@ -161,13 +161,13 @@
 
       执行仿真命令，生成仿真数据
 
-      ```
+      ```bash
       cannsim record ./test_aclnn_add_example -s Ascend950 --gen-report
       ```
 
       仿真结果在本项目`examples/add_example/examples/build/bin/cannsim_*`目录，流水相关文件为：
 
-      ```
+      ```bash
       trace_core0.json
        ```
 

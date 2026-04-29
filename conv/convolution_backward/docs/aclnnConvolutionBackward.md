@@ -31,14 +31,15 @@
     W_{out}=\lfloor \frac{W_{in}+2*padding[2]-dilation[2] * (kernelSize[2] -1) -1}{stride[2]}+1 \rfloor
   $$
   
-  卷积反向传播需要计算对卷积正向的输入张量 $x$（对应函数原型中的input）、卷积核权重张量 $w$ （对应函数原型中的weight）和偏置 $b$ 的梯度。  
+  卷积反向传播需要计算对卷积正向的输入张量 $x$（对应函数原型中的input）、卷积核权重张量 $w$ （对应函数原型中的weight）和偏置 $b$ 的梯度。 
+
   - 对于 $x$ 的梯度 $\frac{\partial L}{\partial x}$（对应函数原型中的gradInput参数）：
   
     $$
     \frac{\partial L}{\partial x_{n, c_{in}, i, j}} = \sum_{c_{out}=1}^{C_{out}} \sum_{p=1}^{k_H} \sum_{q=1}^{k_W} \frac{\partial L}{\partial y_{n, c_{out}, i-p, j-q}}\cdot w_{c_{out}, c_{in}, p, q}
     $$
   
-    其中，$L$ 为损失函数，$\frac{\partial L}{\partial y}$ 为输出张量 $y$ 对 $L$ 的梯度（对应函数原型中的gradOutput参数）。  
+    其中，$L$ 为损失函数，$\frac{\partial L}{\partial y}$ 为输出张量 $y$ 对 $L$ 的梯度（对应函数原型中的gradOutput参数）。
   
   - 对于 $w$ 的梯度 $\frac{\partial L}{\partial w}$（对应函数原型中的gradWeight参数）：
   

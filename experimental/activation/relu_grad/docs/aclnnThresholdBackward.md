@@ -13,10 +13,11 @@
 $$
 y=\begin{cases} 1, & x\ge 0,\\0, & x < 0\end{cases}
 $$
-- 调用说明: 调用relugrad算子时，threshold参数始终传0。 
+- 调用说明: 调用relugrad算子时，threshold参数始终传0。
 
 ## 函数原型
-每个算子分为[两段式接口](../../../docs/context/两段式接口.md)，必须先调用“aclnnThresholdBackwardGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnThresholdBackward”接口执行计算。
+
+每个算子分为[两段式接口](../../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnThresholdBackwardGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnThresholdBackward”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnThresholdBackwardGetWorkspaceSize(
@@ -66,7 +67,7 @@ aclnnStatus aclnnThresholdBackward(
       <td>gradOutput</td>
       <td>输入</td>
       <td>公式中的gradOutput。</td>
-      <td><ul><li>支持空Tensor。</li><li>dtype需要与self保持一致。</li><li>shape需要与self满足<a href="../../../docs/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>dtype需要与self保持一致。</li><li>shape需要与self满足<a href="../../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li></ul></td>
       <td>FLOAT、BFLOAT16、FLOAT16、INT32、INT8、UINT8</td>
       <td>ND</td>
       <td>0-8</td>
@@ -76,7 +77,7 @@ aclnnStatus aclnnThresholdBackward(
       <td>self</td>
       <td>输入</td>
       <td>公式中的threshold。</td>
-      <td>数据类型与gradOutput的数据类型满足数据类型推导规则（参见<a href="../../../docs/context/互推导关系.md" target="_blank">互推导关系</a>）。</td>
+      <td>数据类型与gradOutput的数据类型满足数据类型推导规则（参见<a href="../../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</td>
       <td>FLOAT、BFLOAT16、FLOAT16、INT32、INT8、UINT8</td>
       <td>ND</td>
       <td>0-8</td>
@@ -86,13 +87,12 @@ aclnnStatus aclnnThresholdBackward(
       <td>threshold</td>
       <td>输入</td>
       <td>公式中的self。</td>
-      <td><ul><li>支持空Tensor。</li><li>dtype需要与gradOutput保持一致。</li><li>shape需要与gradOutput满足<a href="../../../docs/context/broadcast关系.md" target="_blank">broadcast关系。</a></li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>dtype需要与gradOutput保持一致。</li><li>shape需要与gradOutput满足<a href="../../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系。</a></li></ul></td>
       <td>FLOAT、BFLOAT16、FLOAT16、INT32、INT8、UINT8</td>
       <td>ND</td>
       <td>0-8</td>
       <td>√</td>
     </tr>
-    <tr>
     <tr>
       <td>out</td>
       <td>输出</td>
@@ -126,10 +126,9 @@ aclnnStatus aclnnThresholdBackward(
   </tbody>
   </table>
   
-
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../../docs/zh/context/aclnn返回码.md)。
   第一段接口会完成入参校验，出现以下场景时报错：
   <table style="undefined;table-layout: fixed;width: 979px"><colgroup>
   <col style="width: 272px">
@@ -161,7 +160,6 @@ aclnnStatus aclnnThresholdBackward(
       <td>gradOutput、out与self数据类型不一致。</td>
     </tr>
   </tbody></table>
-
 
 ## aclnnThresholdBackward
 
@@ -202,10 +200,9 @@ aclnnStatus aclnnThresholdBackward(
   </tbody>
   </table>
 
-
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
@@ -213,7 +210,7 @@ aclnnStatus aclnnThresholdBackward(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../../docs/zh/context/编译与运行样例.md)。
 
 ```Cpp
 #include <iostream>

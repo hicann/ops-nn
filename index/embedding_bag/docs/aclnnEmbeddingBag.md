@@ -11,7 +11,6 @@
 | <term>Atlas 推理系列产品</term>                             |    √     |
 | <term>Atlas 训练系列产品</term>                              |    √     |
 
-
 ## 功能说明
 
 - 接口功能：根据indices从weight中获得一组被聚合的数，然后根据offsets的偏移和mode指定的聚合模式对获取的数进行max、sum、mean聚合。其余参数则更细化了计算过程的控制。
@@ -21,7 +20,7 @@
     
     - 当mode为sum模式：
 
-    ```
+    ```bash
     output的shape为includeLastOffset ? (bagOffsets - 1, embeddingDim) : (bagOffsets, embeddingDim)
     offset2bag的shape 为 (bagIndices,)
     bagSize的shape为includeLastOffset ? (bagOffsets - 1) : (bagOffsets,)
@@ -30,7 +29,7 @@
 
     - 当mode为mean模式：
 
-    ```
+    ```bash
     output的shape为includeLastOffset? (bagOffsets - 1, embeddingDim) : (bagOffsets, embeddingDim)
     offset2bag的shape为(bagIndices,)
     bagSize的shape为includeLastOffset ? (bagOffsets - 1) : (bagOffsets,)
@@ -39,7 +38,7 @@
 
     - 当mode为max模式：
 
-    ```
+    ```bash
     output的shape为includeLastOffset ? (bagOffsets - 1, embeddingDim) : (bagOffsets, embeddingDim)
     offset2bag的shape为(bagIndices,)
     bagSize的shape为includeLastOffset ? (bagOffsets - 1) : (bagOffsets,)
@@ -50,7 +49,7 @@
     
     - 当mode为sum模式：
 
-    ```
+    ```bash
     output的shape为includeLastOffset ? (bagOffsets - 1, embeddingDim) : (bagOffsets, embeddingDim)
     offset2bag的shape为(bagIndices,)
     bagSize的shape为(bagOffsets,)
@@ -59,7 +58,7 @@
 
     - 当mode为mean模式：
 
-    ```
+    ```bash
     output的shape为includeLastOffset? (bagOffsets - 1, embeddingDim) : (bagOffsets, embeddingDim)
     offset2bag的shape为(bagIndices,)
     bagSize的shape为bagOffsets
@@ -68,7 +67,7 @@
 
     - 当mode为max模式：
     
-    ```
+    ```bash
     output的shape为includeLastOffset ? (bagOffsets - 1, embeddingDim) : (bagOffsets, embeddingDim)
     offset2bag的shape为(bagIndices,)
     bagSize的shape为(bagOffsets,)

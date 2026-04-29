@@ -19,6 +19,7 @@ y = \frac{x}{1 + |x|}
 $$
 
 其中：
+
 - $x$ 为输入张量的元素。
 - $y$ 为输出张量的元素。
 - 输出值域为 $(-1, 1)$。
@@ -97,6 +98,7 @@ aclnnStatus 返回状态码。
 通过 aclnn 两段式接口调用 Softsign 算子的完整示例，请参考 [examples/test_aclnn_softsign.cpp](examples/test_aclnn_softsign.cpp)。
 
 主要流程：
+
 1. 初始化 aclnn 环境、设置设备、创建 Stream
 2. 创建输入/输出 Tensor，分配 Device 内存
 3. 将输入数据从 Host 拷贝到 Device

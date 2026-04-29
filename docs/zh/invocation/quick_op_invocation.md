@@ -9,7 +9,7 @@
 
 如何快速调用项目中的算子，本章介绍最简调用方法，通过build.sh命令执行算子样例。
 
-> **说明**：对于Ascend 950PR产品，可通过Simulator仿真工具执行算子样例，详见[仿真指导](../debug/op_debug_prof.md#方式二针对ascend-950pr)。
+> **说明**：对于Ascend 950PR产品，可通过Simulator仿真工具执行算子样例，详见[仿真指导](../../../docs/zh/debug/op_debug_prof.md#方式二-仿真流水图采集)。
 
 - 基于**自定义算子包**执行算子样例，包安装后，执行如下命令：
 
@@ -102,7 +102,7 @@
 
 无论上述哪种方式，算子样例执行后会打印结果，以TransposeBatchMatMul算子为例：
 
-```
+```bash
 result[0] is: 0.000000
 result[1] is: 0.000000
 result[2] is: 0.000000
@@ -216,7 +216,7 @@ int main()
 
 #### 编译与运行
 
->说明：对于本项目内已实现的算子（非自定义算子），可通过根目录下build.sh直接运行算子，操作请参考[执行算子样例](#执行算子样例)。
+>说明：对于本项目内已实现的算子（非自定义算子），可通过根目录下build.sh直接运行算子，操作请参考[调用算子样例](#调用算子样例)。
 
 1. 前提条件。
    请参考本项目[源码构建](../install/compile.md)完成目标算子的编译部署。
@@ -323,7 +323,7 @@ int main()
    
     默认在当前执行路径 `/build/bin`下生成可执行文件test\_aclnn\_add\_example，运行结果如下：
 
-   ```
+   ```bash
    mean result[2046] is 2.000000
    mean result[2047] is 2.000000
    ```
@@ -333,8 +333,6 @@ int main()
 #### 调用流程
 
 该方式采用算子IR（Intermediate Representation）构图方式调用算子，调用流程如下：
-
-
 
 ![原理图](../figures/IR调用.png)
 
@@ -387,7 +385,7 @@ int main() {
 
 #### 编译与运行
 
->说明：对于本项目内已实现的算子（非自定义算子），可通过根目录下build.sh直接运行算子，操作请参考[执行算子样例](#执行算子样例)。
+>说明：对于本项目内已实现的算子（非自定义算子），可通过根目录下build.sh直接运行算子，操作请参考[调用算子样例](#调用算子样例)。
 
 1. 前提条件。
    请参考本项目[源码构建](../install/compile.md)完成目标算子的编译部署。
@@ -474,6 +472,6 @@ int main() {
    
     默认在当前执行路径 `/build/bin`下生成可执行文件test\_geir\_add\_example，运行结果如下：
    
-    ```
+    ```bash
     INFO - [XIR]: Finalize ir graph session success
     ```

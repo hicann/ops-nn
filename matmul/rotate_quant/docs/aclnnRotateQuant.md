@@ -17,13 +17,15 @@
 
 - 接口功能：对张量x进行旋转变换，再执行对称动态量化。
 - 计算公式：
-    1.  旋转变换
+
+    1. 旋转变换
+
         $$
         Y = (x.\text{reshape}(*,k) @ \text{rotation}).\text{reshape}(m, n)
         $$
         其中：$\mathbf{x} \in \mathbb{R}^{m \times n}$，$\mathbf{Y} \in \mathbb{R}^{m \times n}$，$\mathbf{rotation} \in \mathbb{R}^{k \times k}$。
 
-    2.  对称动态量化（pertoken 逐行量化）
+    2. 对称动态量化（pertoken 逐行量化）
         - 缩放因子计算（逐行计算）
             $$
             s_i = \frac{\max_{j \in [0,\ n-1]} |Y_{i,j}|}{C_{\text{MAX}}}

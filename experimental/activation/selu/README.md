@@ -16,12 +16,13 @@
   $$
 
   其中：
+
   - $\alpha = 1.6732632423543772848170429916717$
   - $\text{scale} = 1.0507009873554804934193349852946$
 
-- 分段行为：
-  - 当 $x > 0$ 时：$\text{SELU}(x) = \text{scale} \times x$（线性区）
-  - 当 $x \le 0$ 时：$\text{SELU}(x) = \text{scale} \times \alpha \times (e^x - 1)$（指数饱和区）
+  - 分段行为：
+    - 当 $x > 0$ 时：$\text{SELU}(x) = \text{scale} \times x$（线性区）
+    - 当 $x \le 0$ 时：$\text{SELU}(x) = \text{scale} \times \alpha \times (e^x - 1)$（指数饱和区）
 
 ## 参数说明
 

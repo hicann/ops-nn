@@ -1,6 +1,6 @@
 # AI CPU算子开发指南
 
-### 使用说明
+## 使用说明
 
 算子根据运行的硬件单元不同，可分为AI Core算子和AI CPU算子（少数）。前者使用Ascend C语言开发，运行在AI Core硬件单元；后者使用C++语言开发，运行在AI CPU硬件单元。
 
@@ -18,7 +18,7 @@
 2. [工程创建](#工程创建)：创建标准算子工程目录，方便后续算子编译和部署。
 3. [算子定义](#算子定义)：确定算子功能与原型定义。
 
-4. [Kernel实现](#Kernel实现)：实现Device侧算子核函数。
+4. [Kernel实现](#kernel实现)：实现Device侧算子核函数。
 
 5. [aclnn适配](#aclnn适配)：自定义算子推荐aclnn接口调用，需提前完成二进制发布。**如采用图模式调用算子**，请参考[图模式适配指南](./graph_develop_guide.md)。
 
@@ -47,7 +47,7 @@ Create the AI CPU initial directory for ${op_name} under ${op_class} success
 
 创建完成后，目录结构如下所示：
 
-```
+```bash
 ${op_name}                              # 替换为实际算子名的小写下划线形式
 ├── examples                            # 算子调用示例
 │   └── test_aclnn_${op_name}.cpp       # 算子aclnn调用示例
@@ -230,6 +230,7 @@ REGISTER_CPU_KERNEL(kAddExample, AddExampleCpuKernel);
     # 安装run包
     ./build_out/cann-ops-nn-${vendor_name}_linux-${arch}.run
     ```
+
     自定义算子包安装在```${ASCEND_HOME_PATH}/opp/vendors```路径中，```${ASCEND_HOME_PATH}```表示CANN软件安装目录，可提前在环境变量中配置。
     
 4. **（可选）卸载自定义算子包。**

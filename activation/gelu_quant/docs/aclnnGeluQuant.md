@@ -30,7 +30,6 @@
     $$
     geluOut=Gelu(self)=self × Φ(self)=0.5 * self *[1 + erf(self/\sqrt{2})]
     $$
-
 2. 再对geluOut进行量化操作
 
   - quant_mode = static

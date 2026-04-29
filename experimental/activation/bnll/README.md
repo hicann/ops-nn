@@ -80,7 +80,7 @@ aclrtSynchronizeStream(stream);
 
 算子原型定义（注册名为 "Bnll"）：
 
-```
+```text
 REG_OP(BNLL)
     .INPUT(x, TensorType::FloatingDataType())
     .OUTPUT(y, TensorType::FloatingDataType())
@@ -109,11 +109,11 @@ REG_OP(BNLL)
 atc --singleop=bnll.json --output=. --soc_version=Ascend950DT_9576
 ```
 
-完整调用示例请参考 [examples/test_geir_bnll.cpp](examples/test_geir_bnll.cpp)。
+完整调用示例请参考 [test_geir_bnll.cpp](./examples/test_aclnn_bnll.cpp)。
 
 ## 工程结构
 
-```
+```text
 bnll/
 ├── CMakeLists.txt              # 构建配置
 ├── README.md                   # 本文档

@@ -12,12 +12,13 @@
 
 计算公式：
 
-```
+```text
 当 x + bias >= 0 时：y = (x + bias) * scale
 当 x + bias <  0 时：y = (x + bias) * negative_slope * scale
 ```
 
 其中：
+
 - x 为输入数据张量
 - bias 为偏置张量，shape 与 x 完全相同
 - negative_slope 为 LeakyReLU 负半轴斜率（float 类型属性）
@@ -91,6 +92,7 @@ aclnnStatus aclnnFusedBiasLeakyRelu(
 请参考 [examples/test_aclnn_fused_bias_leaky_relu.cpp](../examples/test_aclnn_fused_bias_leaky_relu.cpp)。
 
 该示例演示了完整的 ACLNN 两段式调用流程：
+
 1. 初始化 ACL 环境（aclInit、aclrtSetDevice、aclrtCreateStream）
 2. 准备输入数据并创建 aclTensor
 3. 调用 aclnnFusedBiasLeakyReluGetWorkspaceSize 获取 workspace 大小和 executor

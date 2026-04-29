@@ -6,7 +6,7 @@
 
 ### 计算公式
 
-```
+```text
 out_i = self_i - bias,  if self_i > lambd
 out_i = self_i + bias,  if self_i < -lambd
 out_i = 0,              if -lambd <= self_i <= lambd
@@ -27,7 +27,7 @@ out_i = 0,              if -lambd <= self_i <= lambd
 
 ## 目录结构
 
-```
+```text
 shrink/
 ├── CMakeLists.txt
 ├── README.md

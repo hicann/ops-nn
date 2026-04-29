@@ -4,7 +4,7 @@
 
 自定义算子如需运行图模式，整体流程与算子开发指南（[AI Core算子开发指南](aicore_develop_guide.md)/[AI CPU算子开发指南](aicpu_develop_guide.md)）一致。值得注意的是，**不需要aclnn适配**，只需做如下交付件适配。
 
-```
+```text
 ${op_name}                              # 替换为实际算子名的小写下划线形式
 ├── op_host                             # Host侧实现
 │   └── ${op_name}_infershape.cpp       # InferShape实现，实现算子形状推导，在运行时推导输出shape

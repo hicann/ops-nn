@@ -1,6 +1,6 @@
 # InplaceIndexFill
 
-##  产品支持情况
+## 产品支持情况
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
@@ -40,7 +40,6 @@
     &emsp;&emsp;&nbsp;[0, 8, 0]]
 
 ## 参数说明
-
 
 <table style="undefined;table-layout: fixed; width: 980px"><colgroup>
   <col style="width: 100px">

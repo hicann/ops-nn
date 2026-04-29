@@ -30,7 +30,7 @@ aclnnStatus aclnnForeachDivScalar(
 
 ## 目录结构
 
-```
+```text
 ops/foreach_div_scalar/
 ├── op_kernel/                      # Kernel 实现
 │   ├── foreach_div_scalar_arch32.cpp   # 核函数入口

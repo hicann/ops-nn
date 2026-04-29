@@ -13,7 +13,7 @@
 
 ## 目录结构介绍
 
-```
+```text
 ├── weight_quant_batch_matmul_experiment
 │   ├── examples           // 样例工程
 │   ├── op_host            // tiling && 算子定义
@@ -28,31 +28,24 @@
 1. 计算$A_{max}$:
 
 $$A_{max} = rowMax(|A_{group}|)$$
-
 2. 计算$tmp_{1}$:
 
 $$tmp_{1} = \frac{7.49 * A_{group}}{A_{max}}$$
-
 3. 计算$A_1$:
 
 $$A_1 = round(tmp_{1})$$
-
 4. 计算$tmp_{2}$:
 
 $$tmp_{2}=(tmp_{1}-A_{1})*14.98$$
-
 5. 计算$A_{2}$:
 
 $$A_{2}=round(tmp_{2})$$
-
 6. 计算$tmp_{3}$:
 
 $$tmp_{3}=(tmp_{2}-A_{2})*14.98$$
-
 7. 计算$A_{3}$:
 
 $$A_{3}=round(tmp_{3})$$
-
 8. 构造矩阵$A_{int}$:
 
 $$
@@ -63,7 +56,6 @@ A_{int} =
     A_{3} \\
     \end{bmatrix}
 $$
-
 9. 计算$C_{int}$:
 
 $$Y_{int} =     \begin{bmatrix}
@@ -126,7 +118,7 @@ $$Y^{i} = Y_{group} + Y^{i-1}$$
 cd ${git_clone_path}  
 # 编译样例算子run包
 bash build.sh --pkg  --soc=ascend910b --vendor_name=custom --ops=weight_quant_batch_matmul_experiment --experimental 
-#安装自定义算子run包
+# 安装自定义算子run包
 ./build_out/cann-ops-nn-${vendor_name}-${arch}_linux.run
 ```
 

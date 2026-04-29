@@ -23,32 +23,27 @@
 
      $$
      vocabParallelLogitsOutOptional = input @ weight^T
-     $$
-     
+     $$  
   2. 计算$vocabParallelLogitsOutOptional$每行的最大值：
 
      $$
      logitsMaxLocalOut = max(vocabParallelLogitsOutOptional, dim=-1)
      $$
-     
   3. 计算$vocabParallelLogitsOutOptional$与$logitsMaxLocalOut$的差值：
 
      $$
      subRes[b][n] = vocabParallelLogitsOutOptional[b][n] - logitsMaxLocalOut[b]
      $$
-
   4. 计算$subRes$经过指数运算后每行的和
 
      $$
      sumExpLogitsLocalOut = sum(exp(subRes), dim=-1)
      $$
-
   5. 计算$target$小于$vocabStartIndex$或$target$大于$vocabEndIndex$的mask
 
      $$
      targetMask = (target < vocabStartIndex) | (target > vocabEndIndex)
      $$
-
   6. 计算$maskedTargetOut$
 
      $$
@@ -58,7 +53,6 @@
      target[b] - vocabStartIndex & \text{targetMask[b]=false}
      \end{cases}
      $$
-
   7. 计算$predictedLogitsLocalOut$
 
      $$
@@ -68,7 +62,6 @@
      subRes[b][maskedTargetOut[b]] & \text{targetMask[b]=false}
      \end{cases}
      $$
-
   8. 计算$targetMaskOut$
 
      $$

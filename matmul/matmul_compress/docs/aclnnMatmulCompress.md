@@ -227,300 +227,300 @@ aclnnStatus aclnnMatmulCompress(
 
 1. 准备压缩前的数据
 
-假设通过脚本gen_data.py生成输入数据，示例如下，仅供参考：
+    假设通过脚本gen_data.py生成输入数据，示例如下，仅供参考：
 
-```python
-import numpy as np
-import os
-import sys
-from numpy import random
+    ```python
+    import numpy as np
+    import os
+    import sys
+    from numpy import random
 
-def write2file(data, path):
-  with open(path, 'wb') as f:
-      data.tofile(f)
+    def write2file(data, path):
+      with open(path, 'wb') as f:
+          data.tofile(f)
 
-if not os.path.exists("./data"):
-    os.mkdir("./data")
+    if not os.path.exists("./data"):
+        os.mkdir("./data")
 
-if len(sys.argv) != 4:
-  print("Usage: python gen_data.py m k n")
-  sys.exit(1)
+    if len(sys.argv) != 4:
+      print("Usage: python gen_data.py m k n")
+      sys.exit(1)
 
-m = int(sys.argv[1])
-k = int(sys.argv[2])
-n = int(sys.argv[3])
+    m = int(sys.argv[1])
+    k = int(sys.argv[2])
+    n = int(sys.argv[3])
 
-if m <= 0 or k <= 0 or n <= 0:
-  print("Error: m, k and n must be positive integers.")
-  sys.exit(1)
+    if m <= 0 or k <= 0 or n <= 0:
+      print("Error: m, k and n must be positive integers.")
+      sys.exit(1)
 
-# 随机生成矩阵mat1，shape为(m,k )
-mat1 = random.randn(m, k).astype(np.float16)
-write2file(mat1, "./data/mat1.bin")
+    # 随机生成矩阵mat1，shape为(m,k )
+    mat1 = random.randn(m, k).astype(np.float16)
+    write2file(mat1, "./data/mat1.bin")
 
-# 随机生成矩阵mat2，shape为(n, k)
-mat2 = random.randint(0, 100, size=(n, k)).astype(np.float16)
-mat2 = np.transpose(mat2, (1, 0)).copy()
-mat2 = mat2.view(np.int8)
-np.save("./data/weight.npy", {'weight': mat2})
-os.chmod("./data/weight.npy", 0o0640)
+    # 随机生成矩阵mat2，shape为(n, k)
+    mat2 = random.randint(0, 100, size=(n, k)).astype(np.float16)
+    mat2 = np.transpose(mat2, (1, 0)).copy()
+    mat2 = mat2.view(np.int8)
+    np.save("./data/weight.npy", {'weight': mat2})
+    os.chmod("./data/weight.npy", 0o0640)
 
-# 生成output
-output = np.random.randn(m, n).astype(np.float16)
-write2file(output, "./data/output.bin")
+    # 生成output
+    output = np.random.randn(m, n).astype(np.float16)
+    write2file(output, "./data/output.bin")
 
-# 生成bias
-bias = random.randn(n).astype(np.float32)
-write2file(bias, "./data/bias.bin")
+    # 生成bias
+    bias = random.randn(n).astype(np.float32)
+    write2file(bias, "./data/bias.bin")
 
-```
+    ```
 
-执行gen_data.py，假设mat1和mat2的shape入参为m=512、k=1024、n=1024。
+    执行gen_data.py，假设mat1和mat2的shape入参为m=512、k=1024、n=1024。
 
-```shell
-python3 gen_data.py 512 1024 1024
-```
+    ```shell
+    python3 gen_data.py 512 1024 1024
+    ```
 
 2. 对数据进行预处理
 
-**原始权重通过msModelSlim压缩工具生成压缩后的x2、compressIndex以及compressInfo:**
-使用以下接口时，需对CANN包中msModelSlim压缩工具进行编译，具体操作参考[Gitee msit仓](https://gitee.com/ascend/msit/tree/master/msmodelslim)中msmodelslim/pytorch/weight_compression目录下的README.md。
+    **原始权重通过msModelSlim压缩工具生成压缩后的x2、compressIndex以及compressInfo:**
+    使用以下接口时，需对CANN包中msModelSlim压缩工具进行编译，具体操作参考[Gitee msit仓](https://gitee.com/ascend/msit/tree/master/msmodelslim)中msmodelslim/pytorch/weight_compression目录下的README.md。
 
-```python
-from msmodelslim.pytorch.weight_compression import CompressConfig, Compressor
+    ```python
+    from msmodelslim.pytorch.weight_compression import CompressConfig, Compressor
 
-compress_config = CompressConfig(do_pseudo_sparse=False, sparse_ratio=1)
-compressor = Compressor(compress_config, weight_path=weight_path)
+    compress_config = CompressConfig(do_pseudo_sparse=False, sparse_ratio=1)
+    compressor = Compressor(compress_config, weight_path=weight_path)
 
-compress_weight, compress_index, compress_info = compressor.run()
-# 压缩后的权重，对应aclnnMatmulCompressGetWorkspaceSize接口的x2
-compressor.export(compress_weight, './data/weight')
-# 压缩权重的索引，对应aclnnMatmulCompressGetWorkspaceSize接口的compressIndex
-compressor.export(compress_index, './data/index')
-```
+    compress_weight, compress_index, compress_info = compressor.run()
+    # 压缩后的权重，对应aclnnMatmulCompressGetWorkspaceSize接口的x2
+    compressor.export(compress_weight, './data/weight')
+    # 压缩权重的索引，对应aclnnMatmulCompressGetWorkspaceSize接口的compressIndex
+    compressor.export(compress_index, './data/index')
+    ```
 
 3. 调用aclnn接口运算
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+    示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 
-```Cpp
-#include <iostream>
-#include <vector>
-#include <acl/acl.h>
-#include <aclnnop/aclnn_matmul_compress.h>
-#include <fstream>
-#include <unistd.h>
-#include <sys/stat.h>
-#include <stdio.h>
-#include <cstdlib>
-#include <string>
+    ```Cpp
+    #include <iostream>
+    #include <vector>
+    #include <acl/acl.h>
+    #include <aclnnop/aclnn_matmul_compress.h>
+    #include <fstream>
+    #include <unistd.h>
+    #include <sys/stat.h>
+    #include <stdio.h>
+    #include <cstdlib>
+    #include <string>
 
-#define CHECK_RET(cond, return_expr) \
-  do {                               \
-    if (!(cond)) {                   \
-      return_expr;                   \
-    }                                \
-  } while (0)
+    #define CHECK_RET(cond, return_expr) \
+      do {                               \
+        if (!(cond)) {                   \
+          return_expr;                   \
+        }                                \
+      } while (0)
 
-#define LOG_PRINT(message, ...)     \
-  do {                              \
-    printf(message, ##__VA_ARGS__); \
-  } while (0)
+    #define LOG_PRINT(message, ...)     \
+      do {                              \
+        printf(message, ##__VA_ARGS__); \
+      } while (0)
 
-int64_t GetShapeSize(const std::vector<int64_t>& shape) {
-  int64_t shapeSize = 1;
-  for (auto i : shape) {
-    shapeSize *= i;
-  }
-  return shapeSize;
-}
+    int64_t GetShapeSize(const std::vector<int64_t>& shape) {
+      int64_t shapeSize = 1;
+      for (auto i : shape) {
+        shapeSize *= i;
+      }
+      return shapeSize;
+    }
 
-int Init(int32_t deviceId, aclrtStream* stream) {
-  // 固定写法，资源初始化
-  auto ret = aclInit(nullptr);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
-  ret = aclrtSetDevice(deviceId);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSetDevice failed. ERROR: %d\n", ret); return ret);
-  ret = aclrtCreateStream(stream);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtCreateStream failed. ERROR: %d\n", ret); return ret);
-  return 0;
-}
+    int Init(int32_t deviceId, aclrtStream* stream) {
+      // 固定写法，资源初始化
+      auto ret = aclInit(nullptr);
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
+      ret = aclrtSetDevice(deviceId);
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSetDevice failed. ERROR: %d\n", ret); return ret);
+      ret = aclrtCreateStream(stream);
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtCreateStream failed. ERROR: %d\n", ret); return ret);
+      return 0;
+    }
 
-int ReadBinFileNNop(std::string filePath, void* buffer, size_t bufferSize)
-{
-    struct stat sBuf;
-    int fileStatus = stat(filePath.data(), &sBuf);
-    CHECK_RET(fileStatus == ACL_SUCCESS, LOG_PRINT("Failed to get file %s\n", filePath); return -1);
+    int ReadBinFileNNop(std::string filePath, void* buffer, size_t bufferSize)
+    {
+        struct stat sBuf;
+        int fileStatus = stat(filePath.data(), &sBuf);
+        CHECK_RET(fileStatus == ACL_SUCCESS, LOG_PRINT("Failed to get file %s\n", filePath); return -1);
 
-    std::ifstream file;
-    file.open(filePath, std::ios::binary);
-    CHECK_RET(file.is_open(), LOG_PRINT("Open file failed.\n"); return -1);
+        std::ifstream file;
+        file.open(filePath, std::ios::binary);
+        CHECK_RET(file.is_open(), LOG_PRINT("Open file failed.\n"); return -1);
 
-    file.seekg(0, file.end);
-    uint64_t binFileBufferLen = file.tellg();
-    CHECK_RET(binFileBufferLen > 0,
-        std::cout<<"File size is 0.\n";
+        file.seekg(0, file.end);
+        uint64_t binFileBufferLen = file.tellg();
+        CHECK_RET(binFileBufferLen > 0,
+            std::cout<<"File size is 0.\n";
+            file.close();
+            return -1);
+
+        file.seekg(0, file.beg);
+        file.read(static_cast<char *>(buffer), binFileBufferLen);
         file.close();
-        return -1);
+        return ACL_SUCCESS;
+    }
 
-    file.seekg(0, file.beg);
-    file.read(static_cast<char *>(buffer), binFileBufferLen);
-    file.close();
-    return ACL_SUCCESS;
-}
+    int CreateAclTensor(std::string filePath, const std::vector<int64_t>& shape, int typeSize,
+                        void** deviceAddr, aclDataType dataType, aclTensor** tensor) {
+      auto size = GetShapeSize(shape) * typeSize;
+      // 调用aclrtMalloc申请device侧内存
+      auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMalloc failed. ERROR: %d\n", ret); return ret);
 
-int CreateAclTensor(std::string filePath, const std::vector<int64_t>& shape, int typeSize,
-                    void** deviceAddr, aclDataType dataType, aclTensor** tensor) {
-  auto size = GetShapeSize(shape) * typeSize;
-  // 调用aclrtMalloc申请device侧内存
-  auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMalloc failed. ERROR: %d\n", ret); return ret);
+      // 调用aclrtMallocHost申请host侧内存
+      void* binBufferHost = nullptr;
+      ret = aclrtMallocHost(&binBufferHost, size);
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMallocHost failed. ERROR: %d\n", ret); return ret);
 
-  // 调用aclrtMallocHost申请host侧内存
-  void* binBufferHost = nullptr;
-  ret = aclrtMallocHost(&binBufferHost, size);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMallocHost failed. ERROR: %d\n", ret); return ret);
+      // 读取文件
+      ret = ReadBinFileNNop(filePath, binBufferHost, size);
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("ReadBinFileNNop failed. ERROR: %d\n", ret); return ret);
 
-  // 读取文件
-  ret = ReadBinFileNNop(filePath, binBufferHost, size);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("ReadBinFileNNop failed. ERROR: %d\n", ret); return ret);
+      // 调用aclrtMemcpy将host侧数据拷贝到device侧内存上
+      ret = aclrtMemcpy(*deviceAddr, size, binBufferHost, size, ACL_MEMCPY_HOST_TO_DEVICE);
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); return ret);
 
-  // 调用aclrtMemcpy将host侧数据拷贝到device侧内存上
-  ret = aclrtMemcpy(*deviceAddr, size, binBufferHost, size, ACL_MEMCPY_HOST_TO_DEVICE);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); return ret);
+      // 计算连续tensor的strides
+      std::vector<int64_t> strides(shape.size(), 1);
+      for (int64_t i = shape.size() - 2; i >= 0; i--) {
+        strides[i] = shape[i + 1] * strides[i + 1];
+      }
 
-  // 计算连续tensor的strides
-  std::vector<int64_t> strides(shape.size(), 1);
-  for (int64_t i = shape.size() - 2; i >= 0; i--) {
-    strides[i] = shape[i + 1] * strides[i + 1];
-  }
+      // 调用aclCreateTensor接口创建aclTensor
+      *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
+                                shape.data(), shape.size(), *deviceAddr);
+      return 0;
+    }
 
-  // 调用aclCreateTensor接口创建aclTensor
-  *tensor = aclCreateTensor(shape.data(), shape.size(), dataType, strides.data(), 0, aclFormat::ACL_FORMAT_ND,
-                            shape.data(), shape.size(), *deviceAddr);
-  return 0;
-}
+    int main(int argc, char* argv[]) {
+      // 1. （固定写法）device/stream初始化，参考acl API手册
+      // 根据自己的实际device填写deviceId
+      int32_t deviceId = 0;
+      aclrtStream stream;
+      auto ret = Init(deviceId, &stream);
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
-int main(int argc, char* argv[]) {
-  // 1. （固定写法）device/stream初始化，参考acl API手册
-  // 根据自己的实际device填写deviceId
-  int32_t deviceId = 0;
-  aclrtStream stream;
-  auto ret = Init(deviceId, &stream);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
+      if (argc != 6) {
+        std::cerr << "Error: Invalid number of arguments. Usage: <program> m k n wCompressedSize indexSize" << std::endl;
+        return -1;
+      }
 
-  if (argc != 6) {
-    std::cerr << "Error: Invalid number of arguments. Usage: <program> m k n wCompressedSize indexSize" << std::endl;
-    return -1;
-  }
+      // 2. 构造输入与输出，需要根据API的接口自定义构造
+      int m = atoi(argv[1]);
+      int k = atoi(argv[2]);
+      int n = atoi(argv[3]);
+      // wShape是右矩阵压缩后数据的大小
+      int wCompressedSize = atoi(argv[4]);
+      // indexShape是压缩索引数据的大小
+      int indexSize = atoi(argv[5]);
 
-  // 2. 构造输入与输出，需要根据API的接口自定义构造
-  int m = atoi(argv[1]);
-  int k = atoi(argv[2]);
-  int n = atoi(argv[3]);
-  // wShape是右矩阵压缩后数据的大小
-  int wCompressedSize = atoi(argv[4]);
-  // indexShape是压缩索引数据的大小
-  int indexSize = atoi(argv[5]);
+      if (m <= 0 || k <= 0 || n <= 0 || wCompressedSize <= 0 || indexSize <= 0) {
+        std::cerr << "Error: m, k, n, wCompressedSize and indexSize must be positive integers." << std::endl;
+        return -1;
+      }
 
-  if (m <= 0 || k <= 0 || n <= 0 || wCompressedSize <= 0 || indexSize <= 0) {
-    std::cerr << "Error: m, k, n, wCompressedSize and indexSize must be positive integers." << std::endl;
-    return -1;
-  }
+      std::vector<int64_t> mat1Shape = {m, k};
+      std::vector<int64_t> mat2CompressedShape = {wCompressedSize};
+      std::vector<int64_t> indexShape = {indexSize};
+      std::vector<int64_t> biasShape = {n};
+      std::vector<int64_t> outputShape = {m, n};
 
-  std::vector<int64_t> mat1Shape = {m, k};
-  std::vector<int64_t> mat2CompressedShape = {wCompressedSize};
-  std::vector<int64_t> indexShape = {indexSize};
-  std::vector<int64_t> biasShape = {n};
-  std::vector<int64_t> outputShape = {m, n};
+      void* mat1DeviceAddr = nullptr;
+      void* mat2CompressedDeviceAddr = nullptr;
+      void* indexDeviceAddr = nullptr;
+      void* biasDeviceAddr = nullptr;
+      void* outputDeviceAddr = nullptr;
 
-  void* mat1DeviceAddr = nullptr;
-  void* mat2CompressedDeviceAddr = nullptr;
-  void* indexDeviceAddr = nullptr;
-  void* biasDeviceAddr = nullptr;
-  void* outputDeviceAddr = nullptr;
+      aclTensor* mat1 = nullptr;
+      aclTensor* mat2Compressed = nullptr;
+      aclTensor* index = nullptr;
+      aclTensor* bias = nullptr;
+      aclTensor* output = nullptr;
 
-  aclTensor* mat1 = nullptr;
-  aclTensor* mat2Compressed = nullptr;
-  aclTensor* index = nullptr;
-  aclTensor* bias = nullptr;
-  aclTensor* output = nullptr;
+      std::string rootPath = "./data/";
 
-  std::string rootPath = "./data/";
+      // 创建mat1 aclTensor
+      std::string mat1FilePath = rootPath + "mat1.bin";
+      ret = CreateAclTensor(mat1FilePath, mat1Shape, sizeof(uint16_t), &mat1DeviceAddr, aclDataType::ACL_FLOAT16, &mat1);
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Create mat1 tensor failed. ERROR: %d\n", ret); return ret);
+      // 创建mat2Compressed aclTensor
+      std::string mat2FilePath = rootPath + "weight/weight.dat";
+      ret = CreateAclTensor(mat2FilePath, mat2CompressedShape, sizeof(int8_t), &mat2CompressedDeviceAddr,
+                            aclDataType::ACL_FLOAT16, &mat2Compressed);
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Create mat2 tensor failed. ERROR: %d\n", ret); return ret);
+      // 创建index aclTensor
+      std::string indexFilePath = rootPath + "index/weight.dat";
+      ret = CreateAclTensor(indexFilePath, indexShape, sizeof(int8_t), &indexDeviceAddr, aclDataType::ACL_INT8, &index);
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Create index tensor failed. ERROR: %d\n", ret); return ret);
+      // 创建bias aclTensor
+      std::string biasFilePath = rootPath + "bias.bin";
+      ret = CreateAclTensor(biasFilePath, biasShape, sizeof(float), &biasDeviceAddr, aclDataType::ACL_FLOAT, &bias);
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Create bias tensor failed. ERROR: %d\n", ret); return ret);
+      // 创建out aclTensor
+      std::string outputFilePath = rootPath + "output.bin";
+      ret = CreateAclTensor(outputFilePath, outputShape, sizeof(uint16_t), &outputDeviceAddr, aclDataType::ACL_FLOAT16, &output);
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Create output tensor failed. ERROR: %d\n", ret); return ret);
 
-  // 创建mat1 aclTensor
-  std::string mat1FilePath = rootPath + "mat1.bin";
-  ret = CreateAclTensor(mat1FilePath, mat1Shape, sizeof(uint16_t), &mat1DeviceAddr, aclDataType::ACL_FLOAT16, &mat1);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Create mat1 tensor failed. ERROR: %d\n", ret); return ret);
-  // 创建mat2Compressed aclTensor
-  std::string mat2FilePath = rootPath + "weight/weight.dat";
-  ret = CreateAclTensor(mat2FilePath, mat2CompressedShape, sizeof(int8_t), &mat2CompressedDeviceAddr,
-                        aclDataType::ACL_FLOAT16, &mat2Compressed);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Create mat2 tensor failed. ERROR: %d\n", ret); return ret);
-  // 创建index aclTensor
-  std::string indexFilePath = rootPath + "index/weight.dat";
-  ret = CreateAclTensor(indexFilePath, indexShape, sizeof(int8_t), &indexDeviceAddr, aclDataType::ACL_INT8, &index);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Create index tensor failed. ERROR: %d\n", ret); return ret);
-  // 创建bias aclTensor
-  std::string biasFilePath = rootPath + "bias.bin";
-  ret = CreateAclTensor(biasFilePath, biasShape, sizeof(float), &biasDeviceAddr, aclDataType::ACL_FLOAT, &bias);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Create bias tensor failed. ERROR: %d\n", ret); return ret);
-  // 创建out aclTensor
-  std::string outputFilePath = rootPath + "output.bin";
-  ret = CreateAclTensor(outputFilePath, outputShape, sizeof(uint16_t), &outputDeviceAddr, aclDataType::ACL_FLOAT16, &output);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Create output tensor failed. ERROR: %d\n", ret); return ret);
+      int32_t offsetX = 0;
 
-  int32_t offsetX = 0;
+      // 3. 调用CANN算子库API，需要修改为具体的Api名称
+      uint64_t workspaceSize = 0;
+      aclOpExecutor* executor;
+      // 调用aclnnMatmulCompress第一段接口
+      ret = aclnnMatmulCompressGetWorkspaceSize(mat1, mat2Compressed, bias, index, output, &workspaceSize, &executor);
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnMatmulCompressGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+      // 根据第一段接口计算出的workspaceSize申请device内存
+      void* workspaceAddr = nullptr;
+      if (workspaceSize > 0) {
+        ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
+      }
+      // 调用aclnnMatmulCompress第二段接口
+      ret = aclnnMatmulCompress(workspaceAddr, workspaceSize, executor, stream);
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnMatmulCompress failed. ERROR: %d\n", ret); return ret);
 
-  // 3. 调用CANN算子库API，需要修改为具体的Api名称
-  uint64_t workspaceSize = 0;
-  aclOpExecutor* executor;
-  // 调用aclnnMatmulCompress第一段接口
-  ret = aclnnMatmulCompressGetWorkspaceSize(mat1, mat2Compressed, bias, index, output, &workspaceSize, &executor);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnMatmulCompressGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
-  // 根据第一段接口计算出的workspaceSize申请device内存
-  void* workspaceAddr = nullptr;
-  if (workspaceSize > 0) {
-    ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
-  }
-  // 调用aclnnMatmulCompress第二段接口
-  ret = aclnnMatmulCompress(workspaceAddr, workspaceSize, executor, stream);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnMatmulCompress failed. ERROR: %d\n", ret); return ret);
+      // 4. （固定写法）同步等待任务执行结束
+      ret = aclrtSynchronizeStream(stream);
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
-  // 4. （固定写法）同步等待任务执行结束
-  ret = aclrtSynchronizeStream(stream);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
+      // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
+      auto size = GetShapeSize(outputShape);
+      std::vector<float> resultData(size, 0);
+      ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outputDeviceAddr,
+                        size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
+      CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
+      for (int64_t i = 0; i < size; i++) {
+        LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);
+      }
 
-  // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
-  auto size = GetShapeSize(outputShape);
-  std::vector<float> resultData(size, 0);
-  ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outputDeviceAddr,
-                    size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
-  for (int64_t i = 0; i < size; i++) {
-    LOG_PRINT("result[%ld] is: %f\n", i, resultData[i]);
-  }
+      // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
+      aclDestroyTensor(mat1);
+      aclDestroyTensor(mat2Compressed);
+      aclDestroyTensor(index);
+      aclDestroyTensor(bias);
+      aclDestroyTensor(output);
 
-  // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
-  aclDestroyTensor(mat1);
-  aclDestroyTensor(mat2Compressed);
-  aclDestroyTensor(index);
-  aclDestroyTensor(bias);
-  aclDestroyTensor(output);
-
-  // 7.释放硬件资源，需要根据具体API的接口定义修改
-  aclrtFree(mat1DeviceAddr);
-  aclrtFree(mat2CompressedDeviceAddr);
-  aclrtFree(indexDeviceAddr);
-  aclrtFree(biasDeviceAddr);
-  aclrtFree(outputDeviceAddr);
-  if (workspaceSize > 0) {
-    aclrtFree(workspaceAddr);
-  }
-  aclrtDestroyStream(stream);
-  aclrtResetDevice(deviceId);
-  aclFinalize();
-  return 0;
-}
-```
+      // 7.释放硬件资源，需要根据具体API的接口定义修改
+      aclrtFree(mat1DeviceAddr);
+      aclrtFree(mat2CompressedDeviceAddr);
+      aclrtFree(indexDeviceAddr);
+      aclrtFree(biasDeviceAddr);
+      aclrtFree(outputDeviceAddr);
+      if (workspaceSize > 0) {
+        aclrtFree(workspaceAddr);
+      }
+      aclrtDestroyStream(stream);
+      aclrtResetDevice(deviceId);
+      aclFinalize();
+      return 0;
+    }
+    ```

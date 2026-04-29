@@ -1,6 +1,6 @@
 # HardtanhGrad
 
-##  产品支持情况
+## 产品支持情况
 
 | 产品 | 是否支持 |
 | ---- | :----:|
@@ -88,7 +88,7 @@
 
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_hardtanh_backward.cpp](./examples/test_aclnn_hardtanh_backward.cpp) | 通过[aclnnHardtanhBackward](./docs/aclnnHardtanhBackward.md)接口方式调用HardtanhGrad算子。 |
+| aclnn调用 | [test_aclnn_hardtanh_backward.cpp](./tests/ut/op_api/test_aclnn_hardtanh_backward.cpp) | 通过[aclnnHardtanhBackward](./docs/aclnnHardtanhBackward.md)接口方式调用HardtanhGrad算子。 |
 
 ## 贡献说明
 

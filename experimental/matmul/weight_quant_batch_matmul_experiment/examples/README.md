@@ -1,6 +1,6 @@
 # 目录结构介绍
 
-```
+```text
 ├── examples                    // 通过aclnn调用的方式调用WeightQuantBatchMatmulExperiment算子
 │   ├── inc                     // 头文件目录
 │   ├── input                   // 存放脚本生成的输入数据目录

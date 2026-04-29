@@ -27,7 +27,7 @@ $$
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnSoftplusGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnSoftplus”接口执行计算。
+每个算子分为[两段式接口](../../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnSoftplusGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnSoftplus”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnSoftplusGetWorkspaceSize(
@@ -87,7 +87,7 @@ aclnnStatus aclnnSoftplus(
       <td>beta（aclScalar*）</td>
       <td>输入</td>
       <td>公式中的beta。</td>
-      <td><ul><li>可表示与relu的近似程度。</li><li>数据类型与self的数据类型满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）（当beta是float，self是整型；或者beta不是bool，而self是bool；或者beta是复数，而self不是复数。这些场景不满足推导关系外，其余场景均满足推导关系）。</li></ul></td>
+      <td><ul><li>可表示与relu的近似程度。</li><li>数据类型与self的数据类型满足数据类型推导规则（参见<a href="../../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）（当beta是float，self是整型；或者beta不是bool，而self是bool；或者beta是复数，而self不是复数。这些场景不满足推导关系外，其余场景均满足推导关系）。</li></ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -97,7 +97,7 @@ aclnnStatus aclnnSoftplus(
       <td>threshold（aclScalar*）</td>
       <td>输入</td>
       <td>公式中的threshold。</td>
-      <td><ul><li>表示阈值。</li><li>大于此值时恢复为线性函数，数据类型与self的数据类型满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）（除了当beta是float，self是整型；或者beta不是bool，而self是bool；或者beta是复数，而self不是复数的场景不满足以外，其余场景均满足推导关系）。</li></ul></td>
+      <td><ul><li>表示阈值。</li><li>大于此值时恢复为线性函数，数据类型与self的数据类型满足数据类型推导规则（参见<a href="../../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）（除了当beta是float，self是整型；或者beta不是bool，而self是bool；或者beta是复数，而self不是复数的场景不满足以外，其余场景均满足推导关系）。</li></ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -140,7 +140,7 @@ aclnnStatus aclnnSoftplus(
 
 - **返回值**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口会完成入参校验，出现以下场景时报错：
 
@@ -216,7 +216,7 @@ aclnnStatus aclnnSoftplus(
 
 - **返回值**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
@@ -225,7 +225,7 @@ aclnnStatus aclnnSoftplus(
 
 ## 调用示例
 
-示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../../docs/zh/context/编译与运行样例.md)。
 
 ```Cpp
 #include <iostream>

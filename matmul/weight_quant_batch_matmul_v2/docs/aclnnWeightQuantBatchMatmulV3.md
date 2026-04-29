@@ -382,6 +382,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulV3(
   - **确定性说明**：默认确定性实现。
 
   <a id="公共约束"></a>
+  
   - **公共约束**
     - `x`和`weight`矩阵m、k、n大小在[1, 2^31-1]范围内。`weight`的Reduce维度k需要与`x`的Reduce维度k大小相等。
     - 支持的量化模式：pertensor[量化模式](../../../docs/zh/context/量化介绍.md)、perchannel[量化模式](../../../docs/zh/context/量化介绍.md)、pergroup[量化模式](../../../docs/zh/context/量化介绍.md)和mx[量化模式](../../../docs/zh/context/量化介绍.md)。

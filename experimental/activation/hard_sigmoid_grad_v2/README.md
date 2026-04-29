@@ -6,7 +6,7 @@ HardSigmoid 激活函数的反向梯度算子，基于 Ascend C 实现。
 
 计算 HardSigmoid 的梯度：
 
-```
+```text
 grad_input = grad_output * (1/6)    当 -3 < self < 3
 grad_input = 0                      其他情况
 ```
@@ -109,7 +109,7 @@ ST 包含 24 个测试用例，在真实 NPU 上验证精度：
 
 ## 目录结构
 
-```
+```text
 hard_sigmoid_grad_v2/
 ├── CMakeLists.txt                          # 顶层 CMake 配置
 ├── README.md                               # 本文件

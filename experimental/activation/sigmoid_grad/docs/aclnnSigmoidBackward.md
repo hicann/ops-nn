@@ -122,8 +122,6 @@ aclnnStatus aclnnSigmoidBackward(
    </tbody>
   </table>
   
-
-
 - **返回值：**
 
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../../docs/zh/context/aclnn返回码.md)。
@@ -155,7 +153,6 @@ aclnnStatus aclnnSigmoidBackward(
       <td>gradOutput、output或gradInput shape不一致。</td>
     </tr>
   </tbody></table>
-
 
 ## aclnnSigmoidBackward
 
@@ -196,10 +193,9 @@ aclnnStatus aclnnSigmoidBackward(
   </tbody>
   </table>
 
-
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 

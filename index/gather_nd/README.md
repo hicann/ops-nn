@@ -26,7 +26,7 @@
 
 - 示例：
 
-  ```
+  ```text
   例1：
     self: [[0, 1],[2, 3]]       # self_shape=[2, 2], r=2
     indices: [[0, 0], [1, 1]]   # indices_shape=[2, 2], q=2, indices_shape[-1]=2

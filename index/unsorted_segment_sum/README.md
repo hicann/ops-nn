@@ -20,10 +20,8 @@
     $$
     其中，对满足 segment_ids[j...] == i 的所有位置 j... 求和。若某个段 i 没有对应的元素，则 y[i] = 0。
    
-
-
-
 ## 参数说明
+
 <table style="undefined;table-layout: fixed; width: 980px"><colgroup>
   <col style="width: 100px">
   <col style="width: 150px">
@@ -71,6 +69,7 @@
   </tbody></table>
 
 ## 约束说明
+
 无
 
 ## 调用说明

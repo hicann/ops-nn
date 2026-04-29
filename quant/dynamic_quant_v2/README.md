@@ -77,6 +77,7 @@
       $$
   
   其中：
+  
   - row_max代表每行求最大值。
   - row_min代表每行求最小值。
   - 当输出y类型为INT8时，scale_opt为255.0，offset_opt为127.0。
