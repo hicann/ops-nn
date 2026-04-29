@@ -118,6 +118,37 @@ static bool CheckDeterministic(const int64_t deterministicValue, int groups) {
     return true;
 }
 
+static bool IsPaddingValidFor3D(const aclTensor *weight, const ConvolutionBackwardParams &params) {
+    auto weightShape = weight->GetViewShape();
+    int64_t kernelH = weightShape.GetDim(kHDimNCHWIdx);
+    int64_t kernelW = weightShape.GetDim(kWDimNCHWIdx);
+    
+    int64_t padH = 0;
+    int64_t padW = 0;
+    int64_t dilationH = (*params.dilation)[0];
+    int64_t dilationW = (*params.dilation)[1];
+    int64_t kernelDilationH = 0;
+    int64_t kernelDilationW = 0;
+
+    if (params.padding->Size() == 4) {
+        padH = std::max((*params.padding)[kPadding4UpIdx], (*params.padding)[kPadding4DownIdx]);
+        padW = std::max((*params.padding)[kPadding4LeftIdx], (*params.padding)[kPadding4RightIdx]);
+    } else if (params.padding->Size() == 2) {
+        padH = (*params.padding)[kPADDINGUPIdx];
+        padW = (*params.padding)[kPADDINGLEFTIdx];
+    }
+    kernelDilationH = dilationH * (kernelH - 1) + 1;
+    kernelDilationW = dilationW * (kernelW - 1) + 1;
+
+    if (padH >= kernelDilationH || padW >= kernelDilationW) {
+        OP_LOGD("Padding is too large for 3D branch: padH=%ld, padW=%ld, kernelH=%ld, kernelW=%ld, dilationH=%ld, dilationW=%ld",
+                padH, padW, kernelH, kernelW, dilationH, dilationW);
+        return false;
+    }
+    
+    return true;
+}
+
 static bool ConvBackGoHf32(const ConvolutionBackwardInputTensor& inputTensor, int8_t cubeMathType) {
   auto promoteType = op::PromoteType(inputTensor.input->GetDataType(), inputTensor.weight->GetDataType());
   if (inputTensor.gradOutput != nullptr) {
@@ -247,6 +278,145 @@ static const aclTensor *View5Das4D(const aclTensor *input, aclOpExecutor *execut
     CHECK_RET(reformatInput != nullptr, nullptr);
 
     return reformatInput;
+}
+
+static int64_t GetDeterministicValue()
+{
+    int64_t deterministicValue = 0;
+    aclError aclRet = aclrtGetSysParamOpt(ACL_OPT_DETERMINISTIC, &deterministicValue);
+    if (aclRet != ACL_SUCCESS) {
+        return 0;
+    }
+    return deterministicValue;
+}
+
+static const aclTensor *CallConv2DBackpropFilter(
+    const aclTensor *input,
+    const aclTensor *weight,
+    const aclTensor *gradOutput,
+    const aclIntArray *stride,
+    const aclIntArray *padding,
+    const aclIntArray *dilation,
+    int64_t groups,
+    bool useHf32,
+    DataType inputDtype,
+    aclOpExecutor *executor)
+{
+    if (useHf32) {
+        return l0op::Conv2DBackpropFilterHf32(input, weight, gradOutput, stride, padding, dilation, groups, executor);
+    } else if (inputDtype == DataType::DT_FLOAT) {
+        return l0op::Conv2DBackpropFilterFp322Fp32(input, weight, gradOutput, stride, padding, dilation, groups, executor);
+    } else if (inputDtype == DataType::DT_BF16) {
+        return l0op::Conv2DBackpropFilterBf162Fp32(input, weight, gradOutput, stride, padding, dilation, groups, executor);
+    } else {
+        return l0op::Conv2DBackpropFilterFp162Fp32(input, weight, gradOutput, stride, padding, dilation, groups, executor);
+    }
+}
+
+static const aclTensor *CallConv3DBackpropFilter(
+    const aclTensor *input,
+    const aclTensor *weight,
+    const aclTensor *gradOutput,
+    const aclIntArray *stride,
+    const aclIntArray *padding,
+    const aclIntArray *dilation,
+    int64_t groups,
+    bool useHf32,
+    DataType inputDtype,
+    aclOpExecutor *executor)
+{
+    if (useHf32) {
+        return l0op::Conv3DBackpropFilterHf32(input, weight, gradOutput, stride, padding, dilation, groups, executor);
+    } else if (inputDtype == DataType::DT_FLOAT) {
+        return l0op::Conv3DBackpropFilterFp322Fp32(input, weight, gradOutput, stride, padding, dilation, groups, executor);
+    } else if (inputDtype == DataType::DT_BF16) {
+        return l0op::Conv3DBackpropFilterBf162Fp32(input, weight, gradOutput, stride, padding, dilation, groups, executor);
+    } else {
+        return l0op::Conv3DBackpropFilterFp162Fp32(input, weight, gradOutput, stride, padding, dilation, groups, executor);
+    }
+}
+
+static const aclTensor *CreateTensorView(
+    const aclTensor *input,
+    const op::Shape &newOriginalShape,
+    const op::Shape &newStorageShape,
+    const op::Strides &newViewStride,
+    Format viewFormat,
+    Format originalFormat,
+    Format storageFormat,
+    aclOpExecutor *executor)
+{
+    auto newTensor = executor->CreateView(input, newOriginalShape, newStorageShape, newViewStride, input->GetViewOffset());
+    CHECK_RET(newTensor != nullptr, nullptr);
+    
+    newTensor->SetStorageShape(newStorageShape);
+    newTensor->SetViewFormat(viewFormat);
+    newTensor->SetOriginalFormat(originalFormat);
+    newTensor->SetStorageFormat(storageFormat);
+    return newTensor;
+}
+
+static op::Format MergeFormat(
+    op::Format formatA,
+    op::Format formatB)
+{
+    uint32_t valA = static_cast<uint32_t>(formatA);
+    uint32_t valB = static_cast<uint32_t>(formatB);
+
+    // valA 保留高 24 位 (预留位、C0、subFormat)
+    // valB 只提取低 8 位 (主 Format)
+    uint32_t mergedVal = (valA & 0xFFFFFF00) | (valB & 0x000000FF);
+
+    return static_cast<op::Format>(mergedVal);
+}
+
+static const aclTensor *View5hdas6hd(const aclTensor *input, aclOpExecutor *executor)
+{
+    CHECK_RET(input != nullptr, nullptr);
+    auto originalShape = input->GetOriginalShape();
+    auto viewStride = input->GetViewStrides();
+    auto storageShape = input->GetStorageShape();
+    auto storageFormat = input->GetStorageFormat();
+    auto newStorageFormat = MergeFormat(storageFormat, Format::FORMAT_NDC1HWC0);
+
+    op::Strides newViewStride = op::Strides({viewStride[0], viewStride[1], viewStride[1], viewStride[2], viewStride[3]});
+    op::Shape newOriginalShape = op::Shape({originalShape[0], originalShape[1], 1, originalShape[2], originalShape[3]});
+    op::Shape newStorageShape = op::Shape({storageShape[0], 1, storageShape[1], storageShape[2], storageShape[3], storageShape[4]});
+    
+    return CreateTensorView(input, newOriginalShape, newStorageShape, newViewStride,
+                           Format::FORMAT_NCDHW, Format::FORMAT_NCDHW, newStorageFormat, executor);
+}
+
+static const aclTensor *ViewFZasFZ3D(const aclTensor *input, aclOpExecutor *executor)
+{
+    CHECK_RET(input != nullptr, nullptr);
+    auto originalShape = input->GetOriginalShape();
+    auto viewStride = input->GetViewStrides();
+    auto storageShape = input->GetStorageShape();
+    auto storageFormat = input->GetStorageFormat();
+    auto newStorageFormat = MergeFormat(storageFormat, Format::FORMAT_FRACTAL_Z_3D);
+
+    op::Strides newViewStride = op::Strides({viewStride[0], viewStride[1], viewStride[1], viewStride[2], viewStride[3]});
+    op::Shape newOriginalShape = op::Shape({originalShape[0], originalShape[1], 1, originalShape[2], originalShape[3]});
+    
+    return CreateTensorView(input, newOriginalShape, storageShape, newViewStride,
+                           Format::FORMAT_NCDHW, Format::FORMAT_NCDHW, newStorageFormat, executor);
+}
+
+static const aclTensor *ViewFZ3DasFZ(const aclTensor *input, aclOpExecutor *executor)
+{
+    CHECK_RET(input != nullptr, nullptr);
+    auto originalShape = input->GetOriginalShape();
+    auto viewStride = input->GetViewStrides();
+    auto storageShape = input->GetStorageShape();
+    auto storageFormat = input->GetStorageFormat();
+    auto newStorageFormat = MergeFormat(storageFormat, Format::FORMAT_FRACTAL_Z);
+    
+    op::Strides newViewStride = op::Strides({viewStride[0], viewStride[1], viewStride[3], viewStride[4]});
+    op::Shape newOriginalShape = op::Shape({originalShape[0], originalShape[1], originalShape[3], originalShape[4]});
+    
+    return CreateTensorView(input, newOriginalShape, storageShape, newViewStride,
+                           Format::FORMAT_NCHW, Format::FORMAT_NCHW, newStorageFormat, executor);
 }
 }
 
@@ -1146,35 +1316,50 @@ static aclnnStatus CalculateConv2DBackward(ConvolutionBackwardInputTensor &input
 
   // Index 为 1：进行dw运算
   if ((*params.outputMask)[1] && !conv2DBp2MatmulMask[1]) {
-    OP_LOGD("Enter dw Calculate");
-    const aclTensor *gradWeightFZ = nullptr;
-    bool useHf32 = ConvBackGoHf32(inputTensor, params.cubeMathType);
-    auto inputDtype = inputTensor.input->GetDataType();
+      OP_LOGD("Enter dw Calculate");
+      const aclTensor *gradWeightFZ = nullptr;
+      bool useHf32 = ConvBackGoHf32(inputTensor, params.cubeMathType);
+      auto inputDtype = inputTensor.input->GetDataType();
 
-    if (useHf32) {
-      gradWeightFZ =
-          l0op::Conv2DBackpropFilterHf32(inputTensor.input, inputTensor.weight, inputTensor.gradOutput, params.stride,
-                                          params.padding, params.dilation, params.groups, executor);
-    } else if (inputDtype == DataType::DT_FLOAT) {
-      gradWeightFZ = l0op::Conv2DBackpropFilterFp322Fp32(inputTensor.input, inputTensor.weight,
-                                                          inputTensor.gradOutput, params.stride, params.padding,
-                                                          params.dilation, params.groups, executor);
-    } else if (inputDtype == DataType::DT_BF16) {
-      gradWeightFZ = l0op::Conv2DBackpropFilterBf162Fp32(inputTensor.input, inputTensor.weight,
-                                                          inputTensor.gradOutput, params.stride, params.padding,
-                                                          params.dilation, params.groups, executor);
-    } else {
-      gradWeightFZ = l0op::Conv2DBackpropFilterFp162Fp32(inputTensor.input, inputTensor.weight,
-                                                          inputTensor.gradOutput, params.stride, params.padding,
-                                                          params.dilation, params.groups, executor);
-    }
-    OP_CHECK(gradWeightFZ != nullptr,
-             OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
-                     "The calculation with empty tensor failed, Conv2dBackpropFilter return nullptr."),
-             return ACLNN_ERR_INNER_NULLPTR);
-    CHECK_RET(OutputPostProcess(outputTensor.gradWeight, gradWeightFZ, "gradWeight", params.groups, executor) ==
-                  ACLNN_SUCCESS,
-              ACLNN_ERR_INNER_NULLPTR);
+      int64_t deterministicValue = GetDeterministicValue();
+
+      if (deterministicValue && IsPaddingValidFor3D(inputTensor.weight, params)) {
+          FVector<int64_t> newStride = {1, (*params.stride)[0], (*params.stride)[1]};
+          FVector<int64_t> newDilation = {1, (*params.dilation)[0], (*params.dilation)[1]};
+          FVector<int64_t> newPadding = {0, 0, (*params.padding)[0], (*params.padding)[0], (*params.padding)[1], (*params.padding)[1]};
+          if (params.padding->Size() == 4) {
+              newPadding = {0, 0, (*params.padding)[0], (*params.padding)[1], (*params.padding)[2], (*params.padding)[3]};
+          }
+          auto stride3d = executor->AllocIntArray(newStride.data(), newStride.size());
+          OP_CHECK(stride3d != nullptr, OP_LOGD("Failed to allocate memory for stride3d"), return ACLNN_ERR_INNER_NULLPTR);
+          auto dilation3d = executor->AllocIntArray(newDilation.data(), newDilation.size());
+          OP_CHECK(dilation3d != nullptr, OP_LOGD("Failed to allocate memory for dilation3d"), return ACLNN_ERR_INNER_NULLPTR);
+          auto padding3d = executor->AllocIntArray(newPadding.data(), newPadding.size());
+          OP_CHECK(padding3d != nullptr, OP_LOGD("Failed to allocate memory for padding3d"), return ACLNN_ERR_INNER_NULLPTR);
+
+          auto newInput = View5hdas6hd(inputTensor.input, executor);
+          OP_CHECK(newInput != nullptr, OP_LOGD("Failed to allocate memory for newInput"), return ACLNN_ERR_INNER_NULLPTR);
+          auto newGradOutput = View5hdas6hd(inputTensor.gradOutput, executor);
+          OP_CHECK(newGradOutput != nullptr, OP_LOGD("Failed to allocate memory for newGradOutput"), return ACLNN_ERR_INNER_NULLPTR);
+          auto newWeight = ViewFZasFZ3D(inputTensor.weight, executor);
+          OP_CHECK(newWeight != nullptr, OP_LOGD("Failed to allocate memory for newWeight"), return ACLNN_ERR_INNER_NULLPTR);
+
+          const aclTensor *gradWeightFZ3D = nullptr;
+          gradWeightFZ3D = CallConv3DBackpropFilter(newInput, newWeight, newGradOutput, stride3d, padding3d,
+                                                    dilation3d, params.groups, useHf32, inputDtype, executor);
+          gradWeightFZ = ViewFZ3DasFZ(gradWeightFZ3D, executor);
+      } else {
+          gradWeightFZ = CallConv2DBackpropFilter(inputTensor.input, inputTensor.weight, inputTensor.gradOutput,
+                                                  params.stride, params.padding, params.dilation, params.groups,
+                                                  useHf32, inputDtype, executor);
+      }
+      OP_CHECK(gradWeightFZ != nullptr,
+              OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
+                      "The calculation with empty tensor failed, Conv2dBackpropFilter return nullptr."),
+              return ACLNN_ERR_INNER_NULLPTR);
+      CHECK_RET(OutputPostProcess(outputTensor.gradWeight, gradWeightFZ, "gradWeight", params.groups, executor) ==
+                    ACLNN_SUCCESS,
+                ACLNN_ERR_INNER_NULLPTR);
   }
 
   return ACLNN_SUCCESS;
@@ -1246,33 +1431,50 @@ static aclnnStatus CalculateConv2DTransposeBackward(ConvolutionBackwardInputTens
   }
 
   if ((*params.outputMask)[1]) {
-    OP_LOGD("Enter dw Calculate");
-    const aclTensor *gradWeightFZ = nullptr;
-    if (useHf32) {
-      gradWeightFZ =
-          l0op::Conv2DBackpropFilterHf32(inputTensor.gradOutput, inputTensor.weight, inputTensor.input, params.stride,
-                                        params.padding, params.dilation, params.groups, executor);
-    } else if (inputTensor.input->GetDataType() == DataType::DT_FLOAT) {
-      gradWeightFZ =
-          l0op::Conv2DBackpropFilterFp322Fp32(inputTensor.gradOutput, inputTensor.weight, inputTensor.input,
-                                        params.stride, params.padding, params.dilation, params.groups, executor);
-    } else if (inputTensor.input->GetDataType() == DataType::DT_BF16) {
-      gradWeightFZ =
-          l0op::Conv2DBackpropFilterBf162Fp32(inputTensor.gradOutput, inputTensor.weight, inputTensor.input,
-                                        params.stride, params.padding, params.dilation, params.groups, executor);
-    } else {
-      gradWeightFZ =
-          l0op::Conv2DBackpropFilterFp162Fp32(inputTensor.gradOutput, inputTensor.weight, inputTensor.input,
-                                      params.stride, params.padding, params.dilation, params.groups, executor);
-    }
+      OP_LOGD("Enter dw Calculate");
+      const aclTensor *gradWeightFZ = nullptr;
+      
+      int64_t deterministicValue = GetDeterministicValue();
+      if (deterministicValue && IsPaddingValidFor3D(inputTensor.weight, params)) {
+          FVector<int64_t> newStride = {1, (*params.stride)[0], (*params.stride)[1]};
+          FVector<int64_t> newDilation = {1, (*params.dilation)[0], (*params.dilation)[1]};
+          FVector<int64_t> newPadding = {0, 0, (*params.padding)[0], (*params.padding)[0], (*params.padding)[1], (*params.padding)[1]};
+          if (params.padding->Size() == 4) {
+              newPadding = {0, 0, (*params.padding)[0], (*params.padding)[1], (*params.padding)[2], (*params.padding)[3]};
+          }
+          auto stride3d = executor->AllocIntArray(newStride.data(), newStride.size());
+          OP_CHECK(stride3d != nullptr, OP_LOGD("Failed to allocate memory for stride3d"), return ACLNN_ERR_INNER_NULLPTR);
+          auto dilation3d = executor->AllocIntArray(newDilation.data(), newDilation.size());
+          OP_CHECK(dilation3d != nullptr, OP_LOGD("Failed to allocate memory for dilation3d"), return ACLNN_ERR_INNER_NULLPTR);
+          auto padding3d = executor->AllocIntArray(newPadding.data(), newPadding.size());
+          OP_CHECK(padding3d != nullptr, OP_LOGD("Failed to allocate memory for padding3d"), return ACLNN_ERR_INNER_NULLPTR);
 
-    OP_CHECK(gradWeightFZ != nullptr,
-             OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
-                     "The calculation with empty tensor failed, Conv2dBackpropFilter return nullptr."),
-             return ACLNN_ERR_INNER_NULLPTR);
-    CHECK_RET(OutputPostProcess(outputTensor.gradWeight, gradWeightFZ, "gradWeight", params.groups, executor) ==
-                  ACLNN_SUCCESS,
-              ACLNN_ERR_INNER_NULLPTR);
+          auto newGradOutput = View5hdas6hd(inputTensor.gradOutput, executor);
+          OP_CHECK(newGradOutput != nullptr, OP_LOGD("Failed to allocate memory for newGradOutput"), return ACLNN_ERR_INNER_NULLPTR);
+          auto newWeight = ViewFZasFZ3D(inputTensor.weight, executor);
+          OP_CHECK(newWeight != nullptr, OP_LOGD("Failed to allocate memory for newWeight"), return ACLNN_ERR_INNER_NULLPTR);
+          auto newInput = View5hdas6hd(inputTensor.input, executor);
+          OP_CHECK(newInput != nullptr, OP_LOGD("Failed to allocate memory for newInput"), return ACLNN_ERR_INNER_NULLPTR);
+
+          const aclTensor *gradWeightFZ3D = nullptr;
+          gradWeightFZ3D = CallConv3DBackpropFilter(newGradOutput, newWeight, newInput, stride3d, padding3d,
+                                                  dilation3d, params.groups, useHf32, inputTensor.input->GetDataType(), executor);
+          gradWeightFZ = ViewFZ3DasFZ(gradWeightFZ3D, executor);
+      }
+    
+      if (gradWeightFZ == nullptr) {
+          gradWeightFZ = CallConv2DBackpropFilter(inputTensor.gradOutput, inputTensor.weight, inputTensor.input,
+                                                params.stride, params.padding, params.dilation, params.groups,
+                                                useHf32, inputTensor.input->GetDataType(), executor);
+      }
+
+      OP_CHECK(gradWeightFZ != nullptr,
+              OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
+                      "The calculation with empty tensor failed, Conv2dBackpropFilter return nullptr."),
+              return ACLNN_ERR_INNER_NULLPTR);
+      CHECK_RET(OutputPostProcess(outputTensor.gradWeight, gradWeightFZ, "gradWeight", params.groups, executor) ==
+                    ACLNN_SUCCESS,
+                ACLNN_ERR_INNER_NULLPTR);
   }
   return ACLNN_SUCCESS;
 }
@@ -2464,12 +2666,19 @@ static bool isConv2dTo3d(const ConvolutionBackwardInputTensor &inputTensor,
     return true;
   }
   if (curArch == NpuArch::DAV_2201) {
-    // 满足白名单时2D->3D
-    l0op::ConvBackpropParams conv2DBackpropParams = {inputTensor.input, inputTensor.weight, inputTensor.gradOutput,
-      params.stride, params.padding, params.dilation, params.groups};
-    bool gradInputWhiteListCase = l0op::IsConv2DBackpropInputTo3DCase(conv2DBackpropParams);
-    bool gradWeightWhiteListCase = l0op::IsConv2DBpFilterTo3Dcase(conv2DBackpropParams);
-    return gradInputWhiteListCase || gradWeightWhiteListCase;
+      int64_t deterministicValue = GetDeterministicValue();
+      if (deterministicValue && (*params.outputMask)[1] && (!(*params.outputMask)[0])) {
+          if (!IsPaddingValidFor3D(inputTensor.weight, params)) {
+              return false;
+          }
+          return true;
+      }
+      // 满足白名单时2D->3D
+      l0op::ConvBackpropParams conv2DBackpropParams = {inputTensor.input, inputTensor.weight, inputTensor.gradOutput,
+          params.stride, params.padding, params.dilation, params.groups};
+      bool gradInputWhiteListCase = l0op::IsConv2DBackpropInputTo3DCase(conv2DBackpropParams);
+      bool gradWeightWhiteListCase = l0op::IsConv2DBpFilterTo3Dcase(conv2DBackpropParams);
+      return gradInputWhiteListCase || gradWeightWhiteListCase;
   }
 
   return false;

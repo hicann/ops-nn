@@ -184,11 +184,11 @@ void Conv3DDWV2BasicBlockTiling::UpdateSingleCoreInfo()
 
 uint64_t Conv3DDWV2BasicBlockTiling::GetSingleShapeKByStreamK()
 {
-    uint64_t shapeK = static_cast<uint64_t>(runInfo_.ho) * runInfo_.wo;
+    uint64_t oriHoWo = static_cast<uint64_t>(runInfo_.ho) * runInfo_.wo;
     uint64_t minSingleShapeK = static_cast<uint64_t>(runInfo_.wo);
     minSingleShapeK = std::max(minSingleShapeK, static_cast<uint64_t>(blockTiling_.blockBaseK));
     
-    uint32_t maxStreamKDim = static_cast<uint32_t>(Ops::Base::CeilDiv(shapeK, minSingleShapeK));
+    uint32_t maxStreamKDim = static_cast<uint32_t>(Ops::Base::CeilDiv(oriHoWo, minSingleShapeK));
     uint32_t actualStreamKDim = std::min(static_cast<uint32_t>(blockTiling_.coreStreamK), maxStreamKDim);
     actualStreamKDim = std::max(actualStreamKDim, static_cast<uint32_t>(1));
 
@@ -209,13 +209,13 @@ bool Conv3DDWV2BasicBlockTiling::IsSplitBatchDoutBetter()
         static_cast<uint64_t>(runInfo_.batch) * runInfo_.dout, singleShapeBatchDout);
     uint64_t singleShapeK = GetSingleShapeKByStreamK();
 
-    uint64_t shapeK = static_cast<uint64_t>(runInfo_.ho) * runInfo_.wo;
-    uint64_t streamkHWoutDim = Ops::Base::CeilDiv(shapeK, singleShapeK);
+    uint64_t oriHoWo = static_cast<uint64_t>(runInfo_.ho) * runInfo_.wo;
+    uint64_t streamkHWoutDim = Ops::Base::CeilDiv(oriHoWo, singleShapeK);
     if (streamkBatchDim < streamkHWoutDim) {
         return false;
     }
 
-    uint64_t singleShapeKTail = shapeK % singleShapeK;
+    uint64_t singleShapeKTail = oriHoWo % singleShapeK;
     double batchDoutTailRatio = static_cast<double>(batchDoutTail) / static_cast<double>(singleShapeBatchDout);
     double kTailTailRatio = static_cast<double>(singleShapeKTail) / static_cast<double>(singleShapeK);
     if (batchDoutTail > 0 && batchDoutTailRatio < kTailTailRatio) {
@@ -416,7 +416,7 @@ void Conv3DDWV2BasicBlockTiling::AdjustBaseNForStreamK()
         blockTiling_.blockBaseK = bL0Max / std::max(blockTiling_.blockBaseM, blockTiling_.blockBaseN);
         blockTiling_.blockBaseK = std::max(blockTiling_.blockBaseK / BLOCK_CUBE, 1U) * BLOCK_CUBE;
 
-        while(blockTiling_.blockBaseK > BLOCK_CUBE && IsCurBlockL1Invalid()) {
+        while (blockTiling_.blockBaseK > BLOCK_CUBE && IsCurBlockL1Invalid()) {
             blockTiling_.blockBaseK -= BLOCK_CUBE;
         }
         if (IsCurBlockL1Invalid()) {
@@ -688,7 +688,7 @@ bool Conv3DDWV2BasicBlockTiling::ShrinkBlockBaseK()
     }
     if (newBaseK >= BLOCK_CUBE) {
         blockTiling_.blockBaseK = newBaseK;
-        while(blockTiling_.blockBaseK > BLOCK_CUBE && IsCurBlockL1Invalid()) {
+        while (blockTiling_.blockBaseK > BLOCK_CUBE && IsCurBlockL1Invalid()) {
             blockTiling_.blockBaseK -= BLOCK_CUBE;
             int32_t woModBlockBaseK = runInfo_.wo % std::max(static_cast<int32_t>(blockTiling_.blockBaseK), int32_t(1));
             int32_t woModFractalSize0 = runInfo_.wo % std::max(static_cast<int32_t>(BLOCK_CUBE), int32_t(1));
