@@ -820,7 +820,7 @@ aclnnStatus aclnnQuantMatmulV5(
        - transposeX2为false时维度为：（k，ceil(n / 8)），要求n为8的倍数。
   - T-T量化场景下，x1Scale的shape为(1,)或nullptr，x2Scale的shape为(1,)。
   - T-C量化场景下，x1Scale的shape为(1,)或nullptr，x2Scale的shape为(n,)，其中n与x2的n一致。
-  - x1/x2的数据类型为FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8时，区分静态量化和动态量化。静态量化时x2Scale数据类型为UINT64/INT64，动态量化时x2Scale数据类型为FLOAT32；x1/x2数据类型为INT8或INT4时，不支持动态T-C或动态T-T量化。
+  - x1/x2的数据类型为FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8时，区分静态量化和动态量化。静态量化时x2Scale数据类型为UINT64/INT64，动态量化时x2Scale数据类型为FLOAT32；x1/x2数据类型为INT8、INT4或INT32时，不支持动态T-C或动态T-T量化。
   - 静态量化场景下，当x1/x2为INT4或INT32时，x1支持2-6维，x2仅支持2维。
   - 动态T-C量化场景下，不支持bias。
 
