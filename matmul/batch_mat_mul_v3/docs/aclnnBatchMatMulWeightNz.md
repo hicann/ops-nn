@@ -227,6 +227,8 @@ aclnnStatus aclnnBatchMatMulWeightNz(
 - 确定性说明：
   - aclnnBatchMatMulWeightNz默认确定性实现。
 
+- 当输入self、mat2的数据类型都为FLOAT16或BFLOAT16，并且指定out数据类型为FLOAT32时，输出y的数据类型为FLOAT32。
+
 - 不支持两个输入分别为BFLOAT16和FLOAT16的数据类型推导。
 - self只支持3维, mat2只支持昇腾私有格式，调用此接口之前，必须完成mat2从ND到昇腾私有格式的转换。
 - 不支持mat2最后两根轴其中一根轴为1，即k=1或者n=1。

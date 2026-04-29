@@ -106,6 +106,15 @@ TEST_F(l2_matmulWeightNz_test, ascend950_test_aligned_bf16_out_weight_nz)
     MatMulCommonTest(a_desc, b_desc, out_desc, ACL_SUCCESS);
 }
 
+TEST_F(l2_matmulWeightNz_test, ascend950_test_aligned_bf16_fp32_out_weight_nz)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    TensorDesc a_desc = TensorDesc({16, 32}, ACL_BF16, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({32, 16}, ACL_BF16, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 1, 16, 16});
+    TensorDesc out_desc = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_ND);
+    MatMulCommonTest(a_desc, b_desc, out_desc, ACL_SUCCESS, KEEP_DTYPE);
+}
+
 TEST_F(l2_matmulWeightNz_test, ascend950_test_aligned_fp32_out_weight_nz)
 {
     TensorDesc a_desc = TensorDesc({16, 32}, ACL_FLOAT, ACL_FORMAT_ND);
@@ -120,6 +129,15 @@ TEST_F(l2_matmulWeightNz_test, ascend950_test_aligned_fp16_out_weight_nz)
     TensorDesc b_desc = TensorDesc({32, 16}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 1, 16, 16});
     TensorDesc out_desc = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
     MatMulCommonTest(a_desc, b_desc, out_desc, ACL_SUCCESS);
+}
+
+TEST_F(l2_matmulWeightNz_test, ascend950_test_aligned_fp16_fp32_out_weight_nz)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    TensorDesc a_desc = TensorDesc({16, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc b_desc = TensorDesc({32, 16}, ACL_FLOAT16, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 1, 16, 16});
+    TensorDesc out_desc = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_ND);
+    MatMulCommonTest(a_desc, b_desc, out_desc, ACL_SUCCESS, KEEP_DTYPE);
 }
 
 TEST_F(l2_matmulWeightNz_test, ascend910B2_test_aligned_fp32_not_support_weight_nz)

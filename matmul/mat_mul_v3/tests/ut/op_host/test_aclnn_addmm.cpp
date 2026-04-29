@@ -764,6 +764,78 @@ TEST_F(l2_addmm_test, case_empty_tensor_3)
 }
 
 // 接口整改异常用例 - 950
+TEST_F(l2_addmm_test, addmm_950_fp16_fp16_fp32_keep_dtype)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    auto self = TensorDesc({16}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto mat1 = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto mat2 = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto out = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.005, 0.005);
+    auto beta = ScalarDesc(1.0f);
+    auto alpha = ScalarDesc(1.0f);
+    int8_t cubeMathType = KEEP_DTYPE;
+
+    auto ut = OP_API_UT(aclnnAddmm, INPUT(self, mat1, mat2, beta, alpha), OUTPUT(out), cubeMathType);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+TEST_F(l2_addmm_test, addmm_950_bf16_bf16_fp32_keep_dtype)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    auto self = TensorDesc({16}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto mat1 = TensorDesc({16, 16}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto mat2 = TensorDesc({16, 16}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto out = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.005, 0.005);
+    auto beta = ScalarDesc(1.0f);
+    auto alpha = ScalarDesc(1.0f);
+    int8_t cubeMathType = KEEP_DTYPE;
+
+    auto ut = OP_API_UT(aclnnAddmm, INPUT(self, mat1, mat2, beta, alpha), OUTPUT(out), cubeMathType);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+TEST_F(l2_addmm_test, addmm_950_fp16_fp16_use_fp32_add_with_2d_self)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    auto self = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto mat1 = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto mat2 = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto out = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.005, 0.005);
+    auto beta = ScalarDesc(1.0f);
+    auto alpha = ScalarDesc(1.0f);
+    int8_t cubeMathType = USE_FP32_ADD;
+
+    auto ut = OP_API_UT(aclnnAddmm, INPUT(self, mat1, mat2, beta, alpha), OUTPUT(out), cubeMathType);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+TEST_F(l2_addmm_test, addmm_950_bf16_bf16_use_fp32_add_with_2d_self)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    auto self = TensorDesc({16, 16}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto mat1 = TensorDesc({16, 16}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto mat2 = TensorDesc({16, 16}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto out = TensorDesc({16, 16}, ACL_BF16, ACL_FORMAT_ND).Precision(0.005, 0.005);
+    auto beta = ScalarDesc(1.0f);
+    auto alpha = ScalarDesc(1.0f);
+    int8_t cubeMathType = USE_FP32_ADD;
+
+    auto ut = OP_API_UT(aclnnAddmm, INPUT(self, mat1, mat2, beta, alpha), OUTPUT(out), cubeMathType);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
 TEST_F(l2_addmm_test, addmm_950_FP32_FP32_FP16FP32_KEEP_DTYPE)
 {
     op::SocVersionManager versionManager(op::SocVersion::ASCEND950);

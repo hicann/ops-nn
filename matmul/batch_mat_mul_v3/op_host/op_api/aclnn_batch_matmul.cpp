@@ -211,7 +211,7 @@ bool CheckDtypeValidWeightNz(const aclTensor* self, const aclTensor* mat2, const
         self->GetDataType(), mat2->GetDataType(), out->GetDataType(), cubeMathType);
     OP_CHECK_DTYPE_NOT_SUPPORT(self, DTYPE_SUPPORT_LIST_WEIGHTNZ, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(mat2, DTYPE_SUPPORT_LIST_WEIGHTNZ, return false);
-    if (enable3510Fp32Output && out->GetDataType() == DataType::DT_FLOAT) {
+    if (enable3510Fp32Output) {
         OP_CHECK_DTYPE_NOT_SUPPORT(out, DTYPE_SUPPORT_LIST, return false);
     } else {
         OP_CHECK_DTYPE_NOT_SUPPORT(out, DTYPE_SUPPORT_LIST_WEIGHTNZ, return false);

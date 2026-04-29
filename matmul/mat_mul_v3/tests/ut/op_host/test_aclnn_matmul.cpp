@@ -795,6 +795,26 @@ TEST_F(l2_matmul_test, ascend950_test_bmm_transpose_scene2)
     aclRet = ut_false_false.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
+
+TEST_F(l2_matmul_test, ascend950_fp16_fp16_fp32_output)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    TensorDesc a_desc = TensorDesc({128, 4096}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    TensorDesc b_desc = TensorDesc({4096, 256}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    TensorDesc out_desc =
+        TensorDesc({128, 256}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2).Precision(0.005, 0.005);
+    MatMulCommonTest(a_desc, b_desc, out_desc, ACL_SUCCESS, KEEP_DTYPE);
+}
+
+TEST_F(l2_matmul_test, ascend950_bf16_bf16_fp32_output)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
+    TensorDesc a_desc = TensorDesc({128, 4096}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    TensorDesc b_desc = TensorDesc({4096, 256}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    TensorDesc out_desc =
+        TensorDesc({128, 256}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2).Precision(0.005, 0.005);
+    MatMulCommonTest(a_desc, b_desc, out_desc, ACL_SUCCESS, KEEP_DTYPE);
+}
 // }
 
 // 接口整改异常用例 - 950

@@ -219,7 +219,7 @@ aclnnStatus aclnnInplaceAddmm(
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
     - cubeMathType=2，当输入数据类型为BFLOAT16时不支持该选项；
     - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不支持该选项。
-    - cubeMathType=4，当输入数据类型为FLOAT32，m轴等于1或者n轴等于1且k轴大于512时，会使用vector核进行计算，以提高计算结果的精度（该方式在部分场景下会导致算子性能发生劣化）。
+    - cubeMathType=4，当输入数据类型为FLOAT32，m轴等于1或者n轴等于1且k轴大于512时，会使用vector核进行计算，以提高计算结果的精度（该方式在部分场景下会导致算子性能发生劣化），当输入为FLOAT16或BFLOAT16且是add+matmul时matmul的输出为FLOAT32。
 
 - **返回值**
 
@@ -514,6 +514,8 @@ aclnnStatus aclnnInplaceAddmm(
 - 确定性说明：
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnAddmm&aclnnInplaceAddmm默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
   - <term>Ascend 950PR/Ascend 950DT</term>：aclnnAddmm&aclnnInplaceAddmm默认确定性实现。
+
+- 当输入mat1、mat2的数据类型都为FLOAT16或BFLOAT16，并且指定out数据类型为FLOAT32时，输出y的数据类型为FLOAT32。
 
 - 计算一致性说明
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：
