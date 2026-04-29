@@ -287,5 +287,5 @@ static ge::graphStatus Tiling4Glu(gert::TilingContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_OPTILING(Glu).Tiling(Tiling4Glu).TilingParse<GluCompileInfo>(TilingPrepare4Glu);
+IMPL_OP_OPTILING(GLU).Tiling(Tiling4Glu).TilingParse<GluCompileInfo>(TilingPrepare4Glu);
 } // namespace optiling

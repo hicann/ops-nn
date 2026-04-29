@@ -15,10 +15,10 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
-class Glu : public OpDef
+class GLU : public OpDef
 {
 public:
-    explicit Glu(const char* name) : OpDef(name)
+    explicit GLU(const char* name) : OpDef(name)
     {
         this->Input("x")
             .ParamType(REQUIRED)
@@ -30,10 +30,19 @@ public:
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
         this->Attr("dim").AttrType(OPTIONAL).Int(-1);
 
-        this->AICore().AddConfig("ascend910_93");
-        this->AICore().AddConfig("ascend910b");
+        OpAICoreConfig aicore_config_910;
+        aicore_config_910.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(true)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .PrecisionReduceFlag(true)
+            .ExtendCfgInfo("opFile.value", "glu");
+
+        this->AICore().AddConfig("ascend910_93",aicore_config_910);
+        this->AICore().AddConfig("ascend910b",aicore_config_910);
     }
 };
 
-OP_ADD(Glu);
+OP_ADD(GLU);
 } // namespace ops

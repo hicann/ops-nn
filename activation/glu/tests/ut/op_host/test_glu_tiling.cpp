@@ -63,7 +63,7 @@ TEST_F(GluTiling, glu_tiling_bigshape)
     // compile info
     optiling::GluCompileInfo compile_info;
 
-    std::string op_type("Glu");
+    std::string op_type("GLU");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
@@ -142,7 +142,7 @@ TEST_F(GluTiling, glu_tiling_smallshape)
     // compile info
     optiling::GluCompileInfo compile_info;
 
-    std::string op_type("Glu");
+    std::string op_type("GLU");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
@@ -221,7 +221,7 @@ TEST_F(GluTiling, glu_tiling_singleshape)
     // compile info
     optiling::GluCompileInfo compile_info;
 
-    std::string op_type("Glu");
+    std::string op_type("GLU");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;

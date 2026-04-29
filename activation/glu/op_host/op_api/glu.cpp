@@ -22,7 +22,7 @@ using namespace op;
 
 namespace l0op {
 
-OP_TYPE_REGISTER(Glu);
+OP_TYPE_REGISTER(GLU);
 
 const aclTensor* Glu(
     const aclTensor* self, int64_t dim, aclOpExecutor* executor)
@@ -42,7 +42,7 @@ const aclTensor* Glu(
     }
 
     ADD_TO_LAUNCHER_LIST_AICORE(
-        Glu, OP_INPUT(self), OP_OUTPUT(out), OP_ATTR(dim));
+        GLU, OP_INPUT(self), OP_OUTPUT(out), OP_ATTR(dim));
     return out;
 }
 

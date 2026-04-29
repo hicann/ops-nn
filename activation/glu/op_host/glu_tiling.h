@@ -34,7 +34,7 @@ TILING_DATA_FIELD_DEF(int64_t, tilingKey);
 TILING_DATA_FIELD_DEF(int64_t, ny);
 END_TILING_DATA_DEF;
 
-REGISTER_TILING_DATA_CLASS(Glu, GluTilingData)
+REGISTER_TILING_DATA_CLASS(GLU, GluTilingData)
 
 struct GluCompileInfo {
     int32_t totalCoreNum = 0;

@@ -1,8 +1,8 @@
 {
-    "op_type": "Glu",
+    "op_type": "GLU",
     "op_list": [
         {
-            "bin_filename": "Glu_9f000368e5df68880e9b3448dfe516db",
+            "bin_filename": "GLU_9f000368e5df68880e9b3448dfe516db",
             "inputs": [
                 {
                     "name": "x",
@@ -38,7 +38,7 @@
             ]
         },
         {
-            "bin_filename": "Glu_da437b7854314f192ac1fe904df95c15",
+            "bin_filename": "GLU_da437b7854314f192ac1fe904df95c15",
             "inputs": [
                 {
                     "name": "x",
@@ -74,7 +74,7 @@
             ]
         },
         {
-            "bin_filename": "Glu_b1035b3d7f6e0f89172a94a5a559e858",
+            "bin_filename": "GLU_b1035b3d7f6e0f89172a94a5a559e858",
             "inputs": [
                 {
                     "name": "x",
