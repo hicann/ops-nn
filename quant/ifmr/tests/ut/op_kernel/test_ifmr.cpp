@@ -15,18 +15,19 @@
 
 #ifdef __CCE_KT_TEST__
 #include "tikicpulib.h"
-#include "../data_utils.h"
+#include "data_utils.h"
 #include "string.h"
 #include <iostream>
 #include <string>
 #endif
 #include <cstdint>
-#include "../../../op_kernel/ifmr.cpp"
 #include "../../../op_kernel/ifmr_tiling_data.h"
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void ifmr(GM_ADDR self, GM_ADDR min, GM_ADDR max, GM_ADDR binsCount, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void ifmr(GM_ADDR data, GM_ADDR data_min, GM_ADDR data_max, GM_ADDR cumsum,
+                                            GM_ADDR scale, GM_ADDR offset, GM_ADDR workspace, GM_ADDR tiling);
+
 class ifmr_test : public testing::Test {
     protected:
     static void SetUpTestCase() {
@@ -62,12 +63,16 @@ TEST_F(ifmr_test, test_case_0) {
     size_t min_size = sizeof(float);
     size_t max_size = sizeof(float);
     size_t cumsum_size = bins * sizeof(float);
+    size_t scale_size = sizeof(float);
+    size_t offset_size = sizeof(float);
     size_t tiling_data_size = sizeof(IfmrTilingData);
 
     uint8_t *inputs = (uint8_t*)AscendC::GmAlloc(inputs_size);
     uint8_t *min = (uint8_t*)AscendC::GmAlloc(min_size);
     uint8_t *max = (uint8_t*)AscendC::GmAlloc(max_size);
     uint8_t *cumsum = (uint8_t*)AscendC::GmAlloc(cumsum_size);
+    uint8_t *scale = (uint8_t*)AscendC::GmAlloc(scale_size);
+    uint8_t *offset = (uint8_t*)AscendC::GmAlloc(offset_size);
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(1024 * 16 * 1024);
     uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 1; //cpu模拟使用单核
@@ -85,12 +90,14 @@ TEST_F(ifmr_test, test_case_0) {
     uint64_t tilingKey = 0;
     auto tilingData = FakeGetTilingData(tilingKey, tiling, blockDim);
     ICPU_SET_TILING_KEY(tilingKey);
-    ICPU_RUN_KF(ifmr, blockDim, inputs, min, max, cumsum, workspace, (uint8_t*)(tilingData));
+    ICPU_RUN_KF(ifmr, blockDim, inputs, min, max, cumsum, scale, offset, workspace, (uint8_t*)(tilingData));
 
     AscendC::GmFree(inputs);
     AscendC::GmFree(min);
     AscendC::GmFree(max);
     AscendC::GmFree(cumsum);
+    AscendC::GmFree(scale);
+    AscendC::GmFree(offset);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
     free(path_);
