@@ -156,7 +156,11 @@ aclnnStatus aclnnTransposeBatchMatMul(
         <td>permX2</td>
         <td>输入</td>
         <td>表示矩阵乘的第二个矩阵的转置序列，host侧的aclIntArray。</td>
-        <td>-</td>
+        <td>
+        <ul>
+          <li> 支持[0, 1, 2]、[0, 2, 1]。</li>
+        </ul>
+        </td>
         <td>INT64</td>
         <td>-</td>
         <td>1</td>
@@ -324,9 +328,8 @@ aclnnStatus aclnnTransposeBatchMatMul(
 
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - B的取值范围为[1, 65536)，N的取值范围为[1, 65536)。
-    - 当x1的输入shape为(B, M, K)时，K <= 65535；当x1的输入shape为(M, B, K)时，B * K <= 65535。
-    - x2的第二维或x2的第三维不能被16整除。
-    - permX2仅支持输入[0, 1, 2]。
+    - 当x1的输入shape为(B, M, K)时，需要K <= 65535; 当x1的输入shape为(M, B, K)且B * K > 65535时，不支持传入scale，并且batchSplitFactor只能等于1, permX1必须为[1, 0, 2]。
+    - 当permX2输入为[0, 2, 1]时，不支持传入scale，并且batchSplitFactor只能等于1, permX1必须为[1, 0, 2]。
     - 当scale不为空时，batchSplitFactor只能等于1，B与N的乘积小于65536, 且仅支持输入为FLOAT16和输出为INT8的类型推导。
 - <term>Ascend 950PR/Ascend 950DT</term>：
     - permX2支持输入[0, 1, 2]、[0, 2, 1]。

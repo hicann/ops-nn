@@ -615,7 +615,6 @@ ge::graphStatus TransposeBatchMatMulBaseTiling::GetShape()
     uint64_t input_batch = batchInfo_.batchC;
     uint64_t input_k = args_.kValue;
     uint64_t input_n = args_.nValue;
-    bool support_k_n = (input_k % BLOCK_CUBE == 0UL) && (input_n % BLOCK_CUBE == 0UL);
     bool support_batch_m = true;
 
     if (transA_ == 213UL) { //213 指的是 {1,0,2} 转置
@@ -627,7 +626,7 @@ ge::graphStatus TransposeBatchMatMulBaseTiling::GetShape()
         return ge::GRAPH_FAILED;
     }
 
-    OP_TILING_CHECK(!(support_k_n && support_batch_m), CUBE_INNER_ERR_REPORT(args_.opName,
+    OP_TILING_CHECK(!support_batch_m, CUBE_INNER_ERR_REPORT(args_.opName,
                     "only support shape inner axis < 65536, input shape b, m, n, k = %lu, %lu, %lu, %lu.",
                     input_batch, args_.mValue, input_n, input_k ), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;

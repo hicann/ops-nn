@@ -23,6 +23,9 @@
 
 namespace optiling {
 namespace transpose_batch_mat_mul {
+
+ge::graphStatus IsPpMatmulEinsumMode(gert::TilingContext* context);
+
 inline int64_t PermDecode(const int64_t* perm, size_t size)
 {
     int64_t trans_ = 0L;
@@ -31,6 +34,7 @@ inline int64_t PermDecode(const int64_t* perm, size_t size)
     }
     return trans_;
 }
+
 class TransposeBatchMatMulEinsumTiling : public pp_matmul::PpMatMulDefault
 {
 public:
@@ -43,7 +47,7 @@ public:
     }
     ~TransposeBatchMatMulEinsumTiling() override = default;
 
-    void DoTiling();
+    ge::graphStatus DoTiling();
     bool GetMatMulInfo();
     bool GetTilingKey();
     ge::graphStatus PostTiling();

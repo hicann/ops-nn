@@ -125,9 +125,9 @@ inline bool IsExceedTilingLimit(uint64_t axes0, uint64_t priAxes0,
                                 uint64_t basicBlockSize, const bool isPertokenArch20)
 {
     return (PRI_FLAG && axes0 > n0TilingLimit) || (!PRI_FLAG && priAxes0 > n0TilingLimit) ||
-           (platformType == platform_ascendc::SocVersion::ASCEND910 && basicBlockSize > UB_LIMIT_SIZE_910A ||
-            platformType == platform_ascendc::SocVersion::ASCEND310P && isPertokenArch20 == true && 
-            basicBlockSize > UB_LIMIT_SIZE_PERTOKEN_ARCH20);
+           ((platformType == platform_ascendc::SocVersion::ASCEND910 && basicBlockSize > UB_LIMIT_SIZE_910A) ||
+            (platformType == platform_ascendc::SocVersion::ASCEND310P && isPertokenArch20 == true && 
+            basicBlockSize > UB_LIMIT_SIZE_PERTOKEN_ARCH20));
 }
 
 template <bool PRI_FLAG, typename OpShareType>

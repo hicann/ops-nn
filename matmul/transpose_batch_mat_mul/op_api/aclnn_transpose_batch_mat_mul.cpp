@@ -133,28 +133,20 @@ inline static bool CheckScaleValid(const aclTensor* scale, int64_t batchN)
 namespace {
 static bool CheckPermLimit(const aclIntArray* perm_x1, const aclIntArray* perm_x2, const aclIntArray* perm_y)
 {
-    auto x1_need_transpose = ((*perm_x1)[0] == 1 && (*perm_x1)[1] == 0 && (*perm_x1)[2] == 2) ||
+    auto x1_support_transpose = ((*perm_x1)[0] == 1 && (*perm_x1)[1] == 0 && (*perm_x1)[2] == 2) ||
                              ((*perm_x1)[0] == 0 && (*perm_x1)[1] == 1 && (*perm_x1)[2] == 2);
-    auto x2_need_transpose = ((*perm_x2)[0] == 0 && (*perm_x2)[1] == 1 && (*perm_x2)[2] == 2);
-    auto y_need_transpose = ((*perm_y)[0] == 1 && (*perm_y)[1] == 0 && (*perm_y)[2] == 2);
-    std::string permX2ErrorInfo = "[0, 1, 2].";
-    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
-        // For DAV-3510 architecture, the perm tensor for x2 operand only supports two patterns:
-        // Pattern 1: [0, 1, 2] - No transpose (identity)
-        // Pattern 2: [0, 2, 1] - Transpose last two dimensions (swap dim1 and dim2)
-        // Any other permutation pattern will cause hardware compatibility issues.
-        x2_need_transpose = x2_need_transpose || ((*perm_x2)[0] == 0 && (*perm_x2)[1] == 2 && (*perm_x2)[2] == 1);
-        permX2ErrorInfo = "[0, 1, 2] or [0, 2, 1].";
-    }
-    if (!x1_need_transpose) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm of x1 should be [0,1,2] or [1, 0, 2].");
+    auto x2_support_transpose = ((*perm_x2)[0] == 0 && (*perm_x2)[1] == 1 && (*perm_x2)[2] == 2) || 
+                             ((*perm_x2)[0] == 0 && (*perm_x2)[1] == 2 && (*perm_x2)[2] == 1);
+    auto y_support_transpose = ((*perm_y)[0] == 1 && (*perm_y)[1] == 0 && (*perm_y)[2] == 2);
+    if (!x1_support_transpose) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm of x1 should be [0, 1, 2] or [1, 0, 2].");
         return false;
     }
-    if (!x2_need_transpose) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm of x2 should be %s", permX2ErrorInfo.c_str());
+    if (!x2_support_transpose) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm of x2 should be [0, 1, 2] or [0, 2, 1].");
         return false;
     }
-    if (!y_need_transpose) {
+    if (!y_support_transpose) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm of y should be [1, 0, 2].");
         return false;
     }
@@ -163,7 +155,7 @@ static bool CheckPermLimit(const aclIntArray* perm_x1, const aclIntArray* perm_x
 } // namespace
 
 static bool CheckShapeValid(const aclTensor* x1, const aclTensor* x2, const aclTensor* scale,
-                            const aclIntArray* perm_x1, const aclIntArray* perm_x2, const aclIntArray* perm_y)
+                            const aclIntArray* perm_x1, const aclIntArray* perm_x2, const aclIntArray* perm_y, int32_t batch_split_factor)
 {
     if (!CheckPermLimit(perm_x1, perm_x2, perm_y)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm is invalid.");
@@ -181,23 +173,24 @@ static bool CheckShapeValid(const aclTensor* x1, const aclTensor* x2, const aclT
                 op::ToString(x1Shape).GetString(), op::ToString(x2Shape).GetString());
         return false;
     }
+
     if (GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510) {
-        auto x1_need_transpose = ((*perm_x1)[0] == 1 && (*perm_x1)[1] == 0 && (*perm_x1)[2] == 2);
-        if (x1_need_transpose && x1->GetViewShape().GetDim(1) * x1KDim >= SUPPORTED_INNER_AXIS) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batch mul k should be less than 65536.");
-            return false;
-        }
-        if (!x1_need_transpose && x1KDim >= SUPPORTED_INNER_AXIS) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "K should be less than 65536.");
-            return false;
-        }
+        auto x1_need_transpose = ((*perm_x1)[0] == 1 && (*perm_x1)[1] == 0 && (*perm_x1)[2] == 2);	 
+        auto x2_need_transpose = ((*perm_x2)[0] == 0 && (*perm_x2)[1] == 2 && (*perm_x2)[2] == 1);
         if (N >= SUPPORTED_INNER_AXIS || batchNum >= SUPPORTED_INNER_AXIS) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batch and n should be less than 65536.");
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Batch and N should be less than 65536.");
             return false;
         }
-        if ((x2KDim % BLOCK_SIZE != 0) || (N % BLOCK_SIZE != 0)) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                  "The shape of the x2 is not supported, now they are %ld, %ld and %ld", batchNum, x2KDim, N);
+        if (!x1_need_transpose && x1KDim >= SUPPORTED_INNER_AXIS) { 
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When x1 is not transposed([B,M,K]), K should be less than 65536."); 
+            return false; 
+        }
+        if (x1_need_transpose && batchNum * x1KDim >= SUPPORTED_INNER_AXIS && (scale != nullptr || batch_split_factor != 1)) { 
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When x1 is transposed([M,B,K]) and Batch * K > 65535, input scale or batch_split_factor != 1 are not supported."); 
+            return false; 
+        }
+        if (x2_need_transpose && (scale != nullptr || batch_split_factor != 1 || !x1_need_transpose)) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When x2 is transposed, input scale or batch_split_factor != 1 are not supported, permX1 must be [1,0,2].");
             return false;
         }
     }
@@ -257,7 +250,7 @@ inline static aclnnStatus CheckParams(const aclTensor* x1, const aclTensor* x2, 
     }
 
     CHECK_RET(CheckDtypeValid(x1, x2, scale, out), ACLNN_ERR_PARAM_INVALID);
-    CHECK_RET(CheckShapeValid(x1, x2, scale, perm_x1, perm_x2, perm_y), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckShapeValid(x1, x2, scale, perm_x1, perm_x2, perm_y, batch_split_factor), ACLNN_ERR_PARAM_INVALID);
 
     if (batch_split_factor <= 0) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batch_split_factor[%d] should be greater than 0.",
