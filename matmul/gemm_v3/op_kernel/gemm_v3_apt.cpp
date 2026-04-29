@@ -68,8 +68,8 @@ __global__ __aicore__ void gemm_v3(
     constexpr bool aTran = (A_TRANS == 1);
     constexpr bool bTran = (B_TRANS == 1);
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
-    REGISTER_TILING_DEFAULT(BatchMatMulV3TilingData);
-    GET_TILING_DATA(tilingData, tilingGM);
+    REGISTER_TILING_DEFAULT(MatMulV3TilingData);
+    GET_TILING_DATA_WITH_STRUCT(MatMulV3TilingData, tilingData, tilingGM);
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIC_ONLY);
     // GemmV3复用matmulV3 kernel和tilingKey，暂只支持aswt模板
     if constexpr (

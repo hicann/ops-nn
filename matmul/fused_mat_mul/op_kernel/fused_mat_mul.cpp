@@ -439,7 +439,7 @@ __global__ __aicore__ void fused_mat_mul(
             }
         }
     } else { // 高阶API
-        GET_TILING_DATA(tilingData, tilingGM);
+        GET_TILING_DATA_WITH_STRUCT(FusedMatMulTilingData, tilingData, tilingGM);
         if constexpr (OPTYPE == F_OPTYPE_GELU_ERF) {
             FusedGeluMatMul<aLayout, bLayout, Block::GeluApproxiMate::ERF>(
                 x1GM, x2GM, biasGM, x3GM, yGM, workspaceGM, tilingData);
