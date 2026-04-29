@@ -100,7 +100,7 @@ static bool CheckShape(const aclTensor *self, const aclIntArray *index,
 static bool CheckDtypeValid(const aclTensor *self, const aclTensor *out) {
   // 检查self的数据类型是否在算子的支持列表内
   auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-  if (socVersion == SocVersion::ASCEND950) {
+  if (Ops::NN::AclnnUtil::IsRegbase()) {
     OP_CHECK_DTYPE_NOT_SUPPORT(self, DTYPE_950_SUPPORT_LIST, return false);
   } else if (socVersion == SocVersion::ASCEND910B ||
       socVersion == SocVersion::ASCEND910_93 || Ops::NN::AclnnUtil::IsRegbase()) {
@@ -288,7 +288,7 @@ aclnnStatus aclnnIndexFillTensorGetWorkspaceSize(const aclTensor *self, int64_t 
   }
 
   auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-  if (socVersion == SocVersion::ASCEND950 && CheckType(self->GetDataType(), DTYPE_950_SUPPORT_LIST)) {
+  if (Ops::NN::AclnnUtil::IsRegbase() && CheckType(self->GetDataType(), DTYPE_950_SUPPORT_LIST)) {
     return IndexFillAiCore(self, dim, index, value, out, workspaceSize, executor, uniqueExecutor);
   }
 
