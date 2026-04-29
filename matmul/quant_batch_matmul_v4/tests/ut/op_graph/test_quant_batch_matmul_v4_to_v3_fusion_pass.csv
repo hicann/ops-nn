@@ -1,0 +1,2 @@
+case_name,dtype,bias,x1_scale,x2_scale,y_scale,x1_offset,x2_offset,y_offset,x2_table
+quantBatchMatmulV4ToV3950PlatformSuccess,-1,0,1,1,0,0,0,0,0
