@@ -60,14 +60,14 @@
   scale2Out=\begin{cases}
     row\_max(abs(input2))/127 & (outputMask[1]=True\ ||\ (!outputMask\ \&\ smoothScale1Optional\ \&\ smoothScale2Optional)) \& y2Out为INT8 \\
     row\_max(abs(input2))/7 & (outputMask[1]=True\ ||\ (!outputMask\ \&\ smoothScale1Optional\ \&\ smoothScale2Optional)) \& y2Out为INT4 \\
-    无效输出 & outputMask[1]=False\ ||\ (!outputMask\ \&\ smoothScale1Optional\ \&\ !smoothScale2Optional)
+    无效输出 & outputMask[1]=False\ ||\ (!outputMask\ \&\ (!smoothScale1Optional\ ||\ !smoothScale2Optional))
     \end{cases}
   $$
 
   $$
   y2Out=\begin{cases}
     round(input2/scale2Out) & outputMask[1]=True\ ||\ (!outputMask\ \&\ smoothScale1Optional\ \&\ smoothScale2Optional)\\
-    无效输出 & outputMask[1]=False\ ||\ (!outputMask\ \&\ smoothScale1Optional\ \&\ !smoothScale2Optional)
+    无效输出 & outputMask[1]=False\ ||\ (!outputMask\ \&\ (!smoothScale1Optional\ ||\ !smoothScale2Optional))
     \end{cases}
   $$
 
@@ -224,7 +224,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       <td>y2Out（aclTensor*）</td>
       <td>输出</td>
       <td>表示量化输出Tensor，对应公式中的`y2Out`。</td>
-      <td><ul><li>支持空Tensor。</li><li>如果`y2Out`为有效输出时，shape需要与`y1Out`保持一致；如果`y2Out`为无效输出时，shape为[1]。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>如果`y2Out`为有效输出时，shape和数据类型需要与`y1Out`保持一致；如果`y2Out`为无效输出时，shape为[1]。</li></ul></td>
       <td>INT4、INT8、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN</td>
       <td>ND</td>
       <td>2-8</td>
@@ -372,6 +372,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
   - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
     - 参数`y1Out`和`y2Out`数据类型仅支持int4和int8。
   - <term>Ascend 950PR/Ascend 950DT</term>：
+    - 暂不支持可选属性`output_mask`的配置。
     - 参数`y1Out`和`y2Out`数据类型不支持int4。
 - 确定性计算：
   - aclnnAddRmsNormDynamicQuantV2默认确定性实现。

@@ -58,14 +58,14 @@
   $$
   scale2Out=\begin{cases}
     row\_max(abs(input2))/127 & outputMask[1]=True\ ||\ (outputMask\ = null\ \&\ smoothScale1Optional\ != null\ \&\ smoothScale2Optional\ != null) \\
-    无效输出 & outputMask[1]=False\ ||\ (outputMask\ = null\ \&\ smoothScale1Optional\ != null\ \&\ smoothScale2Optional\ = null)
+    无效输出 & outputMask[1]=False\ ||\ (outputMask\ = null\ \&\ (smoothScale1Optional\ = null\ ||\ smoothScale2Optional\ = null))
     \end{cases}
   $$
   
   $$
   y2Out=\begin{cases}
     round(input2/scale2Out) & outputMask[1]=True\ ||\ (outputMask\ = null\ \&\ smoothScale1Optional\ != null\ \&\ smoothScale2Optional\ != null)\\
-    无效输出 & outputMask[1]=False\ ||\ (outputMask\ = null\ \&\ smoothScale1Optional\ != null\ \&\ smoothScale2Optional\ = null)
+    无效输出 & outputMask[1]=False\ ||\ (outputMask\ = null\ \&\ (smoothScale1Optional\ = null\ ||\ smoothScale2Optional\ = null))
     \end{cases}
   $$
   
