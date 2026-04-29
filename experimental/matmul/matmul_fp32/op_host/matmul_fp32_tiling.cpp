@@ -378,15 +378,15 @@ static ge::graphStatus TilingPrepareForMatmulFp32([[maybe_unused]] gert::TilingP
 static ge::graphStatus MatmulFp32TilingFunc(gert::TilingContext* context)
 {
     // 2.1 平台信息
-    MatmulFp32CompileInfo* compileInfoPtr = new MatmulFp32CompileInfo;
-    auto ret =GetPlatformInfo(context, compileInfoPtr);
+    auto compileInfoPtr = std::make_unique<MatmulFp32CompileInfo>();
+    auto ret =GetPlatformInfo(context, compileInfoPtr.get());
     if (ret !=ge::GRAPH_SUCCESS){
         return ret;
     }
 
     // 2.2 输入信息
-    MatmulFp32Args* argsPtr = new MatmulFp32Args;
-    ret = GetShapeAttrsInfo(context, argsPtr);
+    auto argsPtr = std::make_unique<MatmulFp32Args>();
+    ret = GetShapeAttrsInfo(context, argsPtr.get());
     if (ret !=ge::GRAPH_SUCCESS){
         return ret;
     }
@@ -394,20 +394,20 @@ static ge::graphStatus MatmulFp32TilingFunc(gert::TilingContext* context)
     // 2.3 计算Tiling参数
     MatmulFp32TilingData* tilingDataPtr = context->GetTilingData<MatmulFp32TilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tilingDataPtr);
-    MatmulFp32RunInfo* runInfoPtr = new MatmulFp32RunInfo;
-    ret = DoOpTiling(tilingDataPtr->tCubeTiling, compileInfoPtr, argsPtr, runInfoPtr);
+    auto runInfoPtr = std::make_unique<MatmulFp32RunInfo>();
+    ret = DoOpTiling(tilingDataPtr->tCubeTiling, compileInfoPtr.get(), argsPtr.get(), runInfoPtr.get());
     if (ret !=ge::GRAPH_SUCCESS){
         return ret;
     }
 
     // 2.4 设置TillingData与生成tilingkey
-    ret = PostTiling(context, compileInfoPtr, tilingDataPtr, argsPtr, runInfoPtr);
+    ret = PostTiling(context, compileInfoPtr.get(), tilingDataPtr, argsPtr.get(), runInfoPtr.get());
     if (ret !=ge::GRAPH_SUCCESS){
         return ret;
     }
 
     // 2.5设置workspaceSize
-    GetWorkspaceSize(context, argsPtr);
+    GetWorkspaceSize(context, argsPtr.get());
     return ge::GRAPH_SUCCESS;
 }
 
