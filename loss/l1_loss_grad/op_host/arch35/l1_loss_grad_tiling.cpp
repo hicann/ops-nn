@@ -109,7 +109,7 @@ ge::graphStatus L1LossGradTiling::CaluateReduceElts()
     const char* reduction = reductionAttr != nullptr ? reductionAttr : "mean";
     
     OP_CHECK_IF(strcmp(reduction, "mean") != 0 && strcmp(reduction, "sum") != 0 && strcmp(reduction, "none") != 0,
-        OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "reduction", reduction,
+        OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "reduction", reduction,
             "none, mean or sum"),
         return ge::GRAPH_FAILED);
 
@@ -125,7 +125,7 @@ ge::graphStatus L1LossGradTiling::CaluateReduceElts()
             } else {
                 OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "label",
                     ToString(inputLabelShape).c_str(),
-                    "The shape of input label can not be an empty tensor when the attr reduction is mean");
+                    "The shape of input label can not be an empty tensor when the attribute reduction is mean");
                 return ge::GRAPH_FAILED;
             }
         }

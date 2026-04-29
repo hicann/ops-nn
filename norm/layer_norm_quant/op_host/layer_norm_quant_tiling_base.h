@@ -61,8 +61,8 @@ inline __attribute__((always_inline)) ge::graphStatus PostLayerNormPtrFunc(T* ti
     auto dimsSize = x_shape->GetStorageShape().GetDimNum();
 
     OP_CHECK_IF(dimsSize <= 0 || dimsSize > 8,
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x",std::to_string(dimsSize).c_str(),
-            "The dimNum of input x should be in the range of [1, 8]"),
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "x", std::to_string(dimsSize).c_str(),
+            "in the range of [1, 8]"),
         return ge::GRAPH_FAILED);
 
     for (size_t i = 0; i < dimsSize - 1; i++) {

@@ -79,7 +79,7 @@ ge::graphStatus LayerNormV3TilingBase::InputShapeAndAxisCheck(
         std::string dimsMsg = std::to_string(gammaShape.GetDimNum()) + " and " +
             std::to_string(xShape.GetDimNum());
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "gamma and x", dimsMsg.c_str(),
-            "The dimNum of input gamma should be less than or equal to the dimNum of input x");
+            "The dim num of input gamma should be less than or equal to the dim num of input x");
         return ge::GRAPH_FAILED;
     }
 
@@ -146,8 +146,8 @@ ge::graphStatus LayerNormV3TilingBase::InputDtypeCheck(
     }
 
     if((gammaDtype != xDtype) && (gammaDtype != ge::DataType::DT_FLOAT)){
-        std::string dtypeMsg = ToString(gammaDtype) + " and " + ToString(xDtype);
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "gamma and x", dtypeMsg.c_str(),
+        std::string dtypeMsg = ToString(gammaDtype);
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "gamma", dtypeMsg.c_str(),
             "The dtype of input gamma should be FLOAT or the same as the dtype of input x");
         return ge::GRAPH_FAILED;
     }

@@ -90,7 +90,7 @@ ge::graphStatus SoftmaxV2TilingBase::GetAndCheckDtypes()
             std::string dtypeMsg = ToString(xDtype_) + " and " + ToString(yDtype_);
             OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
                 context_->GetNodeName(), "x and y", dtypeMsg.c_str(),
-                "The dtypes of input x and output y should be the same when attr half_to_float is false");
+                "The dtypes of input x and output y should be the same when attribute half_to_float is false");
             return ge::GRAPH_FAILED;
         }
         OP_CHECK_IF(xDtype_ != ge::DT_FLOAT16 && xDtype_ != ge::DT_FLOAT && xDtype_ != ge::DT_BF16,
@@ -101,7 +101,7 @@ ge::graphStatus SoftmaxV2TilingBase::GetAndCheckDtypes()
         if (xDtype_ != ge::DT_FLOAT16 || yDtype_ != ge::DT_FLOAT) {
             std::string dtypeMsg = ToString(xDtype_) + " and " + ToString(yDtype_);
             std::string reasonMsg = "The dtype of input x should be FLOAT16 and"
-                " the dtype of output y should be FLOAT when attr half_to_float is true";
+                " the dtype of output y should be FLOAT when attribute half_to_float is true";
             OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
                 context_->GetNodeName(), "x and y", dtypeMsg.c_str(),
                 reasonMsg.c_str());
@@ -140,21 +140,21 @@ ge::graphStatus SoftmaxV2TilingBase::GetDimsAndCheckShapeValid()
         std::string dimsMsg = std::to_string(xShapeSize_) + " and " + std::to_string(yShapeSize);
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
             context_->GetNodeName(), "x and y", dimsMsg.c_str(),
-            "The dimension numbers of input x and output y should be the same");
+            "The shape dims of input x and output y should be the same");
         return ge::GRAPH_FAILED;
     }
 
     if (xShapeSize_ > MAX_DIMS) {
-        std::string reasonMsg = "The dimension number of input x can not be greater than " + std::to_string(MAX_DIMS);
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "x",
-            std::to_string(xShapeSize_).c_str(), reasonMsg.c_str());
+        std::string correctMsg = "less than or equal to " + std::to_string(MAX_DIMS);
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x",
+            std::to_string(xShapeSize_).c_str(), correctMsg.c_str());
         return ge::GRAPH_FAILED;
     }
     OP_CHECK_IF(
         xShapeSize_ == 0,
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "x", "0",
-            "The dimNum of input x can not be zero, empty tensor is not supported"),
-                        return ge::GRAPH_FAILED);
+            "The number of dimensions of input x can not be 0, because empty tensor is not supported"),
+        return ge::GRAPH_FAILED);
     xShape_.resize(xShapeSize_);
     for (int i = 0; i < xShapeSize_; i++) {
         if (xStorageShape.GetDim(i) != yStorageShape.GetDim(i)) {
@@ -185,7 +185,7 @@ ge::graphStatus SoftmaxV2TilingBase::GetAndCheckAxes()
         reduceAxes_ = xShapeSize_ - 1;
     } else {
         OP_CHECK_IF(axisListPtr->GetSize() != 1,
-                    OP_LOGE_WITH_INVALID_ATTR_SIZE(context_->GetNodeName(),
+                    OP_LOGE_FOR_INVALID_LISTSIZE(context_->GetNodeName(),
                         "axes", std::to_string(axisListPtr->GetSize()).c_str(), "1"),
                         return ge::GRAPH_FAILED);
         reduceAxes_ = axisListPtr->GetData()[0];

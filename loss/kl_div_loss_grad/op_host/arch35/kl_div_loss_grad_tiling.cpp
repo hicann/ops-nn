@@ -149,7 +149,7 @@ float KlDivLossGradTiling::CalcReductionCof(const gert::Shape& inputLabelShape)
     this->reducationStr = attrs->GetAttrPointer<char>(REDUCTION_INDEX);
     auto iter = STR_2_INT.find(this->reducationStr);
     OP_CHECK_IF(iter == STR_2_INT.end(),
-        OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "reduction", this->reducationStr,
+        OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "reduction", this->reducationStr,
             "none, mean, sum or batchmean"),
         return negReductionCof);
 
@@ -170,8 +170,8 @@ float KlDivLossGradTiling::CalcReductionCof(const gert::Shape& inputLabelShape)
             dimVal = dimVal * inputLabelShape.GetDim(0);
         } else {
             std::string reasonMsg = 
-                "The dim N of parameter input can not be 0 when the attribute reduction is batchmean, "
-                "where N refers to the 0th axis";
+                "The N axis of parameter input can not be 0 when the attribute reduction is batchmean, "
+                "where N refers to the 0th dim";
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "input",
                 ToString(inputLabelShape).c_str(), reasonMsg.c_str());
             return negReductionCof;

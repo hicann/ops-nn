@@ -150,8 +150,8 @@ bool RmsNormQuantV2RegbaseTilingBase::CheckInputShapeDim()
     }
     for(auto &[inputName, inputDimNum] : inputNames){
         if (inputDimNum > MAX_DIM_CNT) {
-            std::string reasonMsg = "The dimNum of input " + inputName + 
-                "is invalid, all input dimNums should be less than or equal to " + std::to_string(MAX_DIM_CNT);
+            std::string reasonMsg = "The shape dimension of input " + inputName + 
+                " can not be greater than " + std::to_string(MAX_DIM_CNT);
             OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), inputName.c_str(),
                 std::to_string(inputDimNum).c_str(), reasonMsg.c_str());
             return false;
@@ -299,8 +299,8 @@ bool RmsNormQuantV2RegbaseTilingBase::CheckOutputDtype()
         (ge::GRAPH_SUCCESS != CheckDtypeVaild(y2DataType, supportedYDtypes, "RmsNormQuantV2")) ||
         (y1DataType != y2DataType)) {
         std::string dtypeMsg = ToString(y1DataType) + " and " + ToString(y2DataType);
-        std::string reasonMsg = "Output dtype should be int8, fp8e4m3, fp8e5m2 or hifp8 and "
-            "the dtypes of input y1 and input y2 should be the same";
+        std::string reasonMsg = "Each Output's dtype should be int8, fp8e4m3, fp8e5m2 or hifp8 and "
+            "the dtypes of output y1 and output y2 should be the same";
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
             context_->GetNodeName(),
             "y1 and y2",
@@ -316,7 +316,7 @@ bool RmsNormQuantV2RegbaseTilingBase::CheckOutputDtype()
         int64_t xlastDimValue = xShape.GetDim(xDimNum - 1);
         if (xlastDimValue % 2 != 0) {
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x", ToString(xShape).c_str(),
-                "When output dtype is int4, last dimension of x must be even.");
+                "When output dtype is INT4, the last dimension of x must be even");
             return false;
         }
     }
@@ -423,30 +423,36 @@ bool RmsNormQuantV2RegbaseTilingBase::CheckInputDtype()
         return false;
     }
     //check support dtypes 
+    std::string paramMsg = tilingParams.hasZeroPoints1 ? "zero_points1" : "zero_points2";
     if(xDtype == ge::DataType::DT_FLOAT){
         if(scales1Dtype != ge::DataType::DT_FLOAT){
             OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "scales1", 
-                ToString(scales1Dtype).c_str(), "When input x dtype is fp32, scales1 dtype should be fp32.");
+                ToString(scales1Dtype).c_str(), "The dtype of input scales1 should be FLOAT when the dtype of input x is FLOAT, ");
             return false;
         }
         if(hasZeroPoints && zeroPointsDtype != ge::DataType::DT_FLOAT){
-            OP_LOGE(context_->GetNodeName(), "Input x dtype is fp32, zeropoints dtype should be fp32.");
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), paramMsg.c_str(), ToString(zeroPointsDtype).c_str(),
+                "The dtypes of input zero_points1 and zero_points2 should be FLOAT when the dtype of input x is FLOAT");
             return false;
         }
     }else if(xDtype == ge::DataType::DT_FLOAT16){
         if(scales1Dtype == ge::DataType::DT_FLOAT){
             if(hasZeroPoints && zeroPointsDtype != ge::DataType::DT_FLOAT && zeroPointsDtype != ge::DataType::DT_INT32){
-                OP_LOGE(context_->GetNodeName(), "Input x dtype is fp16 and scales1 dtype is fp32, zeropoints dtype should be fp32 or int32.");
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), paramMsg.c_str(), ToString(zeroPointsDtype).c_str(),
+                    "The dtypes of input zero_points1 and zero_points2 should be FLOAT or INT32, "
+                    "when the dtype of input x is FLOAT16 and the dtype of input scales1 is FLOAT");
                 return false;
             }
         }else if(scales1Dtype == ge::DataType::DT_FLOAT16){
             if(hasZeroPoints && zeroPointsDtype != ge::DataType::DT_FLOAT16 && zeroPointsDtype != ge::DataType::DT_INT8){
-                OP_LOGE(context_->GetNodeName(), "Input x dtype is fp16 and scales1 dtype is bf16, zeropoints dtype should be bf16 or int8.");
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), paramMsg.c_str(), ToString(zeroPointsDtype).c_str(),
+                    "The dtypes of input zero_points1 and zero_points2 should be FLOAT16 or INT8, "
+                    "when the dtype of input x is FLOAT16 and the dtype of input scales1 is FLOAT16");
                 return false;
             }
         }else {
             OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "scales1",
-                ToString(scales1Dtype).c_str(), "Input x dtype is fp16, scales1 dtype should be fp32 or fp16.");
+                ToString(scales1Dtype).c_str(), "The dtype of input scales1 should be FLOAT or FLOAT16 when the dtype of Input x is FLOAT16");
             return false;
         }
     }else if(xDtype == ge::DataType::DT_BF16){
@@ -462,7 +468,7 @@ bool RmsNormQuantV2RegbaseTilingBase::CheckInputDtype()
             }
         }else {
             OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "scales1",
-                ToString(scales1Dtype).c_str(), "Input x dtype is bf16, scales1 dtype should be fp32 or bf16.");
+                ToString(scales1Dtype).c_str(), "The dtype of input scales1 should be FLOAT or BF16 when the dtype of Input x is BF16");
             return false;
         }
     }

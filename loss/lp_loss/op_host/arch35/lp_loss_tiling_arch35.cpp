@@ -179,12 +179,12 @@ ge::graphStatus LpLossTiling::RunTiling(const ReduceOpCompileInfo* compileInfo)
     auto P = attrs->GetAttrPointer<int>(0);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, P);
     OP_CHECK_IF(*P != 1,
-        OP_LOGE_WITH_INVALID_ATTR(tilingContext->GetNodeName(), "p", std::to_string(*P).c_str(), "1"),
+        OP_LOGE_FOR_INVALID_VALUE(tilingContext->GetNodeName(), "p", std::to_string(*P).c_str(), "1"),
         return ge::GRAPH_FAILED);
     const string reductionStr = string(attrs->GetAttrPointer<char>(1));
     auto iter = STR_2_INT.find(reductionStr);
     OP_CHECK_IF(iter == STR_2_INT.end(),
-        OP_LOGE_WITH_INVALID_ATTR(tilingContext->GetNodeName(), "reduction", reductionStr.c_str(), "none, sum or mean"),
+        OP_LOGE_FOR_INVALID_VALUE(tilingContext->GetNodeName(), "reduction", reductionStr.c_str(), "none, sum or mean"),
         return ge::GRAPH_FAILED);
     this->reduction = iter->second;
     key.Reduction = this->reduction;
@@ -197,7 +197,7 @@ ge::graphStatus LpLossTiling::RunTiling(const ReduceOpCompileInfo* compileInfo)
                         OP_LOGE(tilingContext->GetNodeName(), "do tiling failed for reduce"),
                         return ge::GRAPH_FAILED);
     } else {
-        OP_LOGE_WITH_INVALID_ATTR(tilingContext->GetNodeName(), "reduction", reductionStr.c_str(), "none, sum or mean");
+        OP_LOGE_FOR_INVALID_VALUE(tilingContext->GetNodeName(), "reduction", reductionStr.c_str(), "none, sum or mean");
         return ge::GRAPH_FAILED;
     }
     return SetTilingData();

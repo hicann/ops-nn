@@ -125,23 +125,23 @@ static bool CheckInputShape4RmsNorm(const gert::TilingContext* context)
     OP_TILING_CHECK(
         xDimNum > MAX_DIM_NUM || xDimNum < MIN_DIM_X,
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x", std::to_string(xDimNum).c_str(),
-            "The dimNum of input x should be in the range of [1, 8]"),
+            "in the range of [1, 8]"),
         return false);
     OP_TILING_CHECK(
         gammaDimNum > MAX_DIM_NUM || gammaDimNum < MIN_DIM_GAMMA,
         OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "gamma", std::to_string(gammaDimNum).c_str(),
-            "The dimNum of input gamma should be in the range of [1, 8]"),
+            "in the range of [1, 8]"),
         return false);
     if (gammaDimNum > xDimNum) {
         std::string dimsMsg = std::to_string(gammaDimNum) + " and " + std::to_string(xDimNum);
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context->GetNodeName(), "gamma and x", dimsMsg.c_str(),
-            "The dimNum of input gamma should not be greater than the dimNum of input x");
+            "The dimNum of input gamma can not be greater than the dimNum of input x");
         return false;
     }
     if (xDimNum != yDimNum) {
         std::string dimsMsg = std::to_string(yDimNum) + " and " + std::to_string(xDimNum);
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context->GetNodeName(), "y and x", dimsMsg.c_str(),
-            "The dimNums of input x and output y should be the same");
+            "The dim nums of input x and output y should be the same");
         return false;
     }
     for (uint32_t i = 0; i < gammaDimNum; i++) {

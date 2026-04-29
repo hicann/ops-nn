@@ -105,21 +105,21 @@ ge::graphStatus SoftmaxGradTilingBase::GetDimsAndCheckShapeValid()
         std::string dimNumMsg = std::to_string(xShapeSize_) + ", " + std::to_string(xShapeSize1) + " and " + std::to_string(yShapeSize);
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
             context_->GetNodeName(), "softmax, grad_softmax and grad_x", dimNumMsg.c_str(),
-            "The dimension numbers of input softmax, input grad_softmax and output grad_x should be the same");
+            "The shape dims of input softmax, input grad_softmax and output grad_x should be the same");
         return ge::GRAPH_FAILED;
     }
 
     if (xShapeSize_ > MAX_DIMS) {
-        std::string reasonMsg = "The dimension number of input softmax can not be greater than " + std::to_string(MAX_DIMS);
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "softmax",
-            std::to_string(xShapeSize_).c_str(), reasonMsg.c_str());
+        std::string correctMsg = "less than or equal to " + std::to_string(MAX_DIMS);
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "softmax",
+            std::to_string(xShapeSize_).c_str(), correctMsg.c_str());
         return ge::GRAPH_FAILED;
     }
     
     OP_CHECK_IF(
         xShapeSize_ == CONST_ZERO,
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "softmax", "0",
-            "The dimension number of input softmax is zero, while empty tensor is not supported"),
+            "The number of dimensions of input softmax can not be 0, because empty tensor is not supported"),
         return ge::GRAPH_FAILED);
 
     xShape_.resize(xShapeSize_);
@@ -154,7 +154,7 @@ ge::graphStatus SoftmaxGradTilingBase::GetAndCheckAxes()
     } else {
         OP_CHECK_IF(
             axisListPtr->GetSize() != CONST_ONE,
-            OP_LOGE_WITH_INVALID_ATTR_SIZE(
+            OP_LOGE_FOR_INVALID_LISTSIZE(
                 context_->GetNodeName(), "axes", std::to_string(axisListPtr->GetSize()).c_str(), "1"),
             return ge::GRAPH_FAILED);
         reduceAxes_ = axisListPtr->GetData()[CONST_ZERO];

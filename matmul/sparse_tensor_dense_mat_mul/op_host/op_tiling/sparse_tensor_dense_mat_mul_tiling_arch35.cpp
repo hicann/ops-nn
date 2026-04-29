@@ -525,7 +525,7 @@ ge::graphStatus SparseTensorDenseMatMulTilingArch35::GetAndCheckInputParams()
         if (x2Col != n_) {
             std::string shapeMsg = x1OriginMatrix + " and " + x2OriginMatrix;
             std::string reasonMsg =
-                "Matrix multiplication failed because the N-axis (inner dimension) of x2 does not match the N-axis of x1,"
+                "Matrix multiplication failed because the N-axis (inner dimension) of x2 does not match the N-axis of x1, "
                 "where the N-axis of x2 is the 1st dim of x2's original shape, and the N-axis of x1 is the " +
                 std::string(adjointA_?"0th":"1st") + " dim of x1's original shape."
                 "Currently, x2 needs to be transposed before matrix multiplication";
@@ -538,7 +538,7 @@ ge::graphStatus SparseTensorDenseMatMulTilingArch35::GetAndCheckInputParams()
         if (x2Row != n_) {
             std::string shapeMsg = x1OriginMatrix + " and " + x2OriginMatrix;
             std::string reasonMsg =
-                "Matrix multiplication failed because the N-axis (inner dimension) of x2 does not match the N-axis of x1,"
+                "Matrix multiplication failed because the N-axis (inner dimension) of x2 does not match the N-axis of x1, "
                 "where the N-axis of x2 is the 0th dim of x2's original shape, and the N-axis of x1 is the " +
                 std::string(adjointA_?"0th":"1st") + " dim of x1's original shape";
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "x1_shape and x2", shapeMsg.c_str(),
@@ -601,11 +601,12 @@ ge::graphStatus SparseTensorDenseMatMulTilingArch35::GetAndCheckInputParams()
     }
 
     if ((m_ > 0 && static_cast<double>(nnz_) / m_ > n_) || (n_ > 0 && static_cast<double>(nnz_) / n_ > m_)) {
-        std::string shapeMsg = "[" + std::to_string(m_) + ", " + std::to_string(n_) + "] and " + ToString(x1IndicesShape_);
-        std::string reasonMsg = "nnz can not be greater than m*n, where m and n is derived from x1 matrix [m, n], "
-            "and nnz (i.e., the number of non-zero elements of x1) is the 1st dim of input x1_indices";
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-            context_->GetNodeName(), "x1_shape and x1_indices", shapeMsg.c_str(), reasonMsg.c_str());
+        std::string shapeMsg = ToString(x1IndicesShape_);
+        std::string reasonMsg = "nnz can not be greater than m * n, where m and n is derived from x1 matrix [m, n]: "
+            + x1Matrix +
+            ", and nnz (i.e., the number of non-zero elements of x1) is the 1st dim of input x1_indices";
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context_->GetNodeName(), "x1_indices", shapeMsg.c_str(), reasonMsg.c_str());
         return ge::GRAPH_FAILED;
     }
 

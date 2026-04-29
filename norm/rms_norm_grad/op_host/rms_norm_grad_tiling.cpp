@@ -171,23 +171,23 @@ static bool CheckInputDim(const gert::TilingContext* context, size_t dyDimNum, s
     OP_CHECK_IF(
         xDimNum > MAX_DIM_NUM || xDimNum < MIN_DIM_X,
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x", std::to_string(xDimNum).c_str(),
-            "The dimNum of input x should be in the range of [1, 8]"),
+            "in the range of [1, 8]"),
         return false);
     OP_CHECK_IF(
         gammaDimNum > MAX_DIM_NUM || gammaDimNum < MIN_DIM_GAMMA,
         OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "gamma", std::to_string(gammaDimNum).c_str(),
-            "The dimNum of input gamma should be in the range of [1, 8]"),
+            "in the range of [1, 8]"),
         return false);
     if (gammaDimNum > xDimNum) {
         std::string dimsMsg = std::to_string(gammaDimNum) + " and " + std::to_string(xDimNum);
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context->GetNodeName(), "gamma and x", dimsMsg.c_str(),
-            "The dimNum of input gamma should be less than or equal to the dimNum of input x");
+            "The dim num of input gamma can not be greater than the dim num of input x");
         return false;
     }
     if (dyDimNum != xDimNum) {
         std::string dimsMsg = std::to_string(dyDimNum) + " and " + std::to_string(xDimNum);
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context->GetNodeName(), "dy and x", dimsMsg.c_str(),
-            "The dimNums of input dy and input x should be the same");
+            "The dim nums of input dy and input x should be the same");
         return false;
     }
     return true;
@@ -199,13 +199,13 @@ static bool CheckOutputDim(
     if (dxDimNum != dyDimNum) {
         std::string dimsMsg = std::to_string(dxDimNum) + " and " + std::to_string(dyDimNum);
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context->GetNodeName(), "dx and dy", dimsMsg.c_str(),
-            "The dimNums of output dx and input dy should be the same");
+            "The dim nums of output dx and input dy should be the same");
         return false;
     }
     if (gammaDimNum != dgammaDimNum) {
         std::string dimsMsg = std::to_string(dgammaDimNum) + " and " + std::to_string(gammaDimNum);
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context->GetNodeName(), "dgamma and gamma", dimsMsg.c_str(),
-            "The dimNums of output dgamma and input gamma should be the same");
+            "The dim nums of output dgamma and input gamma should be the same");
         return false;
     }
     return true;
@@ -288,7 +288,7 @@ static bool CheckGammaAndDgammaShape(
     if (dyDimNum < gammaDimNum) {
         std::string dimsMsg = std::to_string(gammaDimNum) + " and " + std::to_string(dyDimNum);
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context->GetNodeName(), "gamma and dy", dimsMsg.c_str(),
-            "The dimNum of input gamma should be less than or equal to the dimNum of input dy");
+            "The dim num of input gamma can not be greater than the dim num of input dy");
         return false;
     }
     for (uint32_t i = 0; i < gammaDimNum; i++) {

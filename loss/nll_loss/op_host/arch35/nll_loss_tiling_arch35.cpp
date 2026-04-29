@@ -338,7 +338,7 @@ static ge::graphStatus Tiling4NLLLossAC(gert::TilingContext* context, uint32_t m
     } else if (strcmp(reduction, "mean") == 0) {
         tilingParams.reduction = REDUCTION_MEAN;
     } else {
-        OP_LOGE_WITH_INVALID_ATTR(context->GetNodeName(), "reduction", reduction,
+        OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "reduction", reduction,
             "mean, sum or none");
         return ge::GRAPH_FAILED;
     }

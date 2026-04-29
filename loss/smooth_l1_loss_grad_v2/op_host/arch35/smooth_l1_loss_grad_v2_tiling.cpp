@@ -106,7 +106,7 @@ ge::graphStatus SmoothL1LossGradV2TilingClass::CalcReduceMeanCof()
     this->reducationStr = attrs->GetAttrPointer<char>(1);
     auto iter = STR_2_INT.find(this->reducationStr);
     OP_CHECK_IF(iter == STR_2_INT.end(),
-        OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "reduction", this->reducationStr,
+        OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "reduction", this->reducationStr,
             "none, mean or sum"),
         return ge::GRAPH_FAILED);
     this->reduceMeanCof = 1.0f;
@@ -140,8 +140,8 @@ ge::graphStatus SmoothL1LossGradV2TilingClass::CalcSigma()
     const float* sigmaPtr = attrs->GetAttrPointer<float>(0);
     this->sigma = (sigmaPtr == nullptr) ? 1.0 : *sigmaPtr;
     OP_CHECK_IF(this->sigma < 0,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "sigma",
-            std::to_string(this->sigma).c_str(), "The attr sigma must be non-negative"),
+        OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "sigma",
+            std::to_string(this->sigma).c_str(), "non-negative"),
         return ge::GRAPH_FAILED);
     this->negSigma = NEGTIVE_ONE * this->sigma;
     this->invertSigma = fabsf(this->sigma) < 1e-6f ? NAN : 1 / this->sigma;

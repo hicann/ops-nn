@@ -172,8 +172,8 @@ ge::graphStatus SmoothL1LossV2Tiling::RunTiling(const SmoothL1LossV2CompileInfo*
     float sigma = (sigmaPtr == nullptr) ? 1.0 : *sigmaPtr;
     OP_CHECK_IF(
         sigma < 0,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(tilingContext->GetNodeName(), "sigma",
-            std::to_string(sigma).c_str(), "The attr sigma must be non-negative"),
+        OP_LOGE_FOR_INVALID_VALUE(tilingContext->GetNodeName(), "sigma",
+            std::to_string(sigma).c_str(), "non-negative"),
         return ge::GRAPH_FAILED);
     tiling->Sigma = sigma;
     tiling->MultiplyValue = fabsf(sigma) < 1e-6f ? 0.0 : 1 / sigma;
@@ -181,7 +181,7 @@ ge::graphStatus SmoothL1LossV2Tiling::RunTiling(const SmoothL1LossV2CompileInfo*
     auto iter = STR_2_INT.find(reductionStr);
     OP_CHECK_IF(
         iter == STR_2_INT.end(),
-        OP_LOGE_WITH_INVALID_ATTR(tilingContext->GetNodeName(), "reduction",
+        OP_LOGE_FOR_INVALID_VALUE(tilingContext->GetNodeName(), "reduction",
             reductionStr.c_str(), "none, sum or mean"),
         return ge::GRAPH_FAILED);
     this->reduction = iter->second;
@@ -195,7 +195,7 @@ ge::graphStatus SmoothL1LossV2Tiling::RunTiling(const SmoothL1LossV2CompileInfo*
             TilingReduce(compileInfo) != ge::GRAPH_SUCCESS,
             OP_LOGE(tilingContext->GetNodeName(), "do tiling failed for reduce"), return ge::GRAPH_FAILED);
     } else {
-        OP_LOGE_WITH_INVALID_ATTR(tilingContext->GetNodeName(), "reduction",
+        OP_LOGE_FOR_INVALID_VALUE(tilingContext->GetNodeName(), "reduction",
             reductionStr.c_str(), "none, sum or mean");
         return ge::GRAPH_FAILED;
     }

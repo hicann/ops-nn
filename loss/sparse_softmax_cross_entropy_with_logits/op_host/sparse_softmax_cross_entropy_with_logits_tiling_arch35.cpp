@@ -158,7 +158,7 @@ ge::graphStatus SparseSoftmaxCrossEntropyWithLogitsTiling::CheckInputShape()
         std::string dimNumMsg = std::to_string(labelsStorageShape.GetDimNum()) + " and " +
             std::to_string(featuresStorageShape.GetDimNum());
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "labels and features", dimNumMsg.c_str(),
-            "The dimension number of input labels should be one less than the dimension number of input features");
+            "The number of dimensions of input labels should be one less than that of input features");
         return ge::GRAPH_FAILED;
     }
 

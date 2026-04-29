@@ -95,7 +95,7 @@ ge::graphStatus InstanceNormRegbaseTilingBase::GetShapeAttrsInfo()
         OP_CHECK_IF(
             xDimNum != NCHW_DIM_NUM,
             OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "x", 
-                std::to_string(xDimNum).c_str(), "The dimNum of input x should be 4 in NCHW format"),
+                std::to_string(xDimNum).c_str(), "The dim num of input x should be 4 in NCHW format"),
             return ge::GRAPH_FAILED);
         a1 = xStorageShape.GetDim(DIM_0);
         a0 = xStorageShape.GetDim(DIM_1);
@@ -104,7 +104,7 @@ ge::graphStatus InstanceNormRegbaseTilingBase::GetShapeAttrsInfo()
         OP_CHECK_IF(
             xDimNum != NCDHW_DIM_NUM,
             OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "x",
-                std::to_string(xDimNum).c_str(), "The dimNum of input x should be 5 in NCDHW format"),
+                std::to_string(xDimNum).c_str(), "The dim num of input x should be 5 in NCDHW format"),
             return ge::GRAPH_FAILED);
         a1 = xStorageShape.GetDim(DIM_0);
         a0 = xStorageShape.GetDim(DIM_1);
@@ -113,7 +113,7 @@ ge::graphStatus InstanceNormRegbaseTilingBase::GetShapeAttrsInfo()
         OP_CHECK_IF(
             xDimNum != NHWC_DIM_NUM,
             OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "x",
-                std::to_string(xDimNum).c_str(), "The dimNum of input x should be 4 in NHWC format"),
+                std::to_string(xDimNum).c_str(), "The dim num of input x should be 4 in NHWC format"),
             return ge::GRAPH_FAILED);
         a1 = xStorageShape.GetDim(DIM_0);
         r = xStorageShape.GetDim(DIM_1) * xStorageShape.GetDim(DIM_2);
@@ -122,7 +122,7 @@ ge::graphStatus InstanceNormRegbaseTilingBase::GetShapeAttrsInfo()
         OP_CHECK_IF(
             xDimNum != NDHWC_DIM_NUM,
             OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "x",
-                std::to_string(xDimNum).c_str(), "The dimNum of input x should be 5 in NDHWC format"),
+                std::to_string(xDimNum).c_str(), "The dim num of input x should be 5 in NDHWC format"),
             return ge::GRAPH_FAILED);
         a1 = xStorageShape.GetDim(DIM_0);
         r = xStorageShape.GetDim(DIM_1) * xStorageShape.GetDim(DIM_2) * xStorageShape.GetDim(DIM_3);
@@ -132,7 +132,7 @@ ge::graphStatus InstanceNormRegbaseTilingBase::GetShapeAttrsInfo()
             xDimNum < ND_MIN_DIM_NUM || xDimNum > ND_MAX_DIM_NUM,
             OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "x",
                 std::to_string(xDimNum).c_str(),
-                "The dimNum of input x should be in the range of [2, 8] in ND format"),
+                "The dim num of input x should be in the range of [2, 8] in ND format"),
             return ge::GRAPH_FAILED);
         a1 = xStorageShape.GetDim(DIM_0);
         a0 = xStorageShape.GetDim(DIM_1);
@@ -143,9 +143,9 @@ ge::graphStatus InstanceNormRegbaseTilingBase::GetShapeAttrsInfo()
         return ge::GRAPH_FAILED;
     }
     if (a1 <= 0 || a0 <= 0) {
-        std::string reasonMsg = "The dim N and dim C of input x must be positive, "
-            "where N refers to the first axis, "
-            "C refers to the 2nd axis in NCHW, NCDHW or ND, the 4th in NHWC, and the 5th in NDHWC";
+        std::string reasonMsg = "The N axis and C axis of input x must be positive, "
+            "where N refers to the 0th dim, "
+            "C refers to the 1st dim in NCHW, NCDHW or ND, the last in NHWC and NDHWC";
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x", ToString(xStorageShape).c_str(),
             reasonMsg.c_str());
         return ge::GRAPH_FAILED;
@@ -172,8 +172,8 @@ ge::graphStatus InstanceNormRegbaseTilingBase::CheckDtypeValid()
     
     // Step2.校验gamma/betta数据类型
     if ((gammaDataType != dataType) && (gammaDataType != ge::DT_FLOAT)) {
-        std::string dtypeMsg = ToString(gammaDataType) + " and " + ToString(dataType);
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "gamma and x", dtypeMsg.c_str(),
+        std::string dtypeMsg = ToString(gammaDataType);
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "gamma", dtypeMsg.c_str(),
             "The dtype of input gamma should be FLOAT or the same as the dtype of input x");
         return ge::GRAPH_FAILED;
     }
@@ -201,8 +201,8 @@ ge::graphStatus InstanceNormRegbaseTilingBase::CheckDtypeValid()
 
     // Step4.校验输出mean/varience数据类型
     if ((meanDataType != dataType) && (meanDataType != ge::DT_FLOAT)) {
-        std::string dtypeMsg = ToString(meanDataType) + " and " + ToString(dataType);
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "mean and x", dtypeMsg.c_str(),
+        std::string dtypeMsg = ToString(meanDataType);
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "mean", dtypeMsg.c_str(),
             "The dtype of output mean should be FLOAT or the same as the dtype of input x");
         return ge::GRAPH_FAILED;
     }
@@ -259,7 +259,7 @@ ge::graphStatus InstanceNormRegbaseTilingBase::CheckXYShapeValid()
     if (xDimNum != yDimNum) {
         std::string dimsMsg = std::to_string(xDimNum) + " and " + std::to_string(yDimNum);
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "x and y", dimsMsg.c_str(),
-            "The dimNums of input x and output y  should be the same");
+            "The dim nums of input x and output y  should be the same");
         return ge::GRAPH_FAILED;
     }
     if (format != yFormat) {
@@ -295,18 +295,17 @@ ge::graphStatus InstanceNormRegbaseTilingBase::CheckGammaBettaShapeValid()
         int64_t gammaBettaDimNum = gammaBettaStorageShape.GetDimNum();
         
         if (gammaBettaDimNum != 1) {
-            std::string reasonMsg = "The dimNum of input " + inputName + " should be 1";
-            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), inputName.c_str(),
-                std::to_string(gammaBettaDimNum).c_str(), reasonMsg.c_str());
+            OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), inputName.c_str(),
+                std::to_string(gammaBettaDimNum).c_str(), "1D");
             return ge::GRAPH_FAILED;
         }
 
         if (gammaBettaStorageShape.GetDim(DIM_0) != a0) {
             std::string paramMsg = inputName + " and x";
             std::string shapeMsg = ToString(gammaBettaStorageShape) + " and " + ToString(xStorageShape);
-            std::string reasonMsg = "The first dim of input " + inputName +
-                " should be equal to the dim C of input x, "
-                "where C refers to the 2nd axis in NCHW, NCDHW or ND, the 4th in NHWC, and the 5th in NDHWC";
+            std::string reasonMsg = "The 0th axis of input " + inputName +
+                " should be equal to the C axis of input x, "
+                "where C refers to the 1st dim in NCHW, NCDHW or ND, the last in NHWC and NDHWC";
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), paramMsg.c_str(),
                 shapeMsg.c_str(), reasonMsg.c_str());
             return ge::GRAPH_FAILED;
@@ -333,7 +332,7 @@ ge::graphStatus InstanceNormRegbaseTilingBase::CheckMeanVarianceShapeValid()
         if (meanVarianceDimNum != xDimNum) {
             std::string paramMsg = outputName + " and x";
             std::string dimNumMsg = std::to_string(meanVarianceDimNum) + " and " + std::to_string(xDimNum);
-            std::string reasonMsg = "The dimNums of output " + outputName + " and input x should be the same";
+            std::string reasonMsg = "The dim nums of output " + outputName + " and input x should be the same";
             OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), paramMsg.c_str(),
                 dimNumMsg.c_str(), reasonMsg.c_str());
             return ge::GRAPH_FAILED;
@@ -346,8 +345,8 @@ ge::graphStatus InstanceNormRegbaseTilingBase::CheckMeanVarianceShapeValid()
             if (j == 0) {
                 // 第一个维度，需要与X的第一维相等（N轴）
                 if (meanVarianceStorageShape.GetDim(j) != xStorageShape.GetDim(j)) {
-                    std::string reasonMsg = "The dim N of output " + outputName +
-                        " should be equal to the dim N of input x, where N refers to the first axis";
+                    std::string reasonMsg = "The N axis of output " + outputName +
+                        " should be equal to the N axis of input x, where N refers to the 0th dim";
                     OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), paramMsg.c_str(),
                         shapeMsg.c_str(), reasonMsg.c_str());
                     return ge::GRAPH_FAILED;
@@ -355,9 +354,9 @@ ge::graphStatus InstanceNormRegbaseTilingBase::CheckMeanVarianceShapeValid()
             } else if (j == 1 && (format == ge::FORMAT_NCHW || format == ge::FORMAT_NCDHW || format == ge::FORMAT_ND)) {
                 // 第二个维度，对于X的NCHW/NCDHW/ND格式下，需要与X的第二维相等（C轴）
                 if (meanVarianceStorageShape.GetDim(j) != xStorageShape.GetDim(j)) {
-                    std::string reasonMsg =" The dim C of output " + outputName +
-                        " should be equal to the dim C of input x, "
-                        "where C refers to the 2nd axis when x's format is NCHW, NCDHW or ND";
+                    std::string reasonMsg =" The C axis of output " + outputName +
+                        " should be equal to the C axis of input x, "
+                        "where C refers to the 1st dim when x's format is NCHW, NCDHW or ND";
                     OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), paramMsg.c_str(),
                         shapeMsg.c_str(), reasonMsg.c_str());
                     return ge::GRAPH_FAILED;
@@ -365,9 +364,9 @@ ge::graphStatus InstanceNormRegbaseTilingBase::CheckMeanVarianceShapeValid()
             } else if (j == (meanVarianceDimNum - 1) && (format == ge::FORMAT_NHWC || format == ge::FORMAT_NDHWC)) {
                 // 最后一个维度，对于X的NHWC/NDHWC格式下，需要与X的最后一维相等（C轴）
                 if (meanVarianceStorageShape.GetDim(j) != xStorageShape.GetDim(j)) {
-                    std::string reasonMsg =" The dim C of output " + outputName +
-                        " should be equal to the dim C of input x, "
-                        "where C refers to the last axis when x's format is NHWC or NDHWC";
+                    std::string reasonMsg =" The C axis of output " + outputName +
+                        " should be equal to the C axis of input x, "
+                        "where C refers to the last dim when x's format is NHWC or NDHWC";
                     OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), paramMsg.c_str(),
                         shapeMsg.c_str(), reasonMsg.c_str());
                     return ge::GRAPH_FAILED;
@@ -375,11 +374,11 @@ ge::graphStatus InstanceNormRegbaseTilingBase::CheckMeanVarianceShapeValid()
             } else {
                 // 其他维度需要是1
                 if (meanVarianceStorageShape.GetDim(j) != 1) {
-                    std::string reasonMsg = "All dims of output " + outputName +
-                        " except the dim N and dim C should be exactly 1, "
-                        "where N refers to the first axis, "
-                        "C refers to the 2nd axis when x's format is NCHW, NCDHW or ND, "
-                        "or the last axis when x's format is NHWC or NDHWC";
+                    std::string reasonMsg = "All axes of output " + outputName +
+                        " except the N axis and C axis should be 1, "
+                        "where N refers to the 0th dim, "
+                        "C refers to the 1st dim when x's format is NCHW, NCDHW or ND, "
+                        "or the last dim when x's format is NHWC or NDHWC";
                     OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), outputName.c_str(),
                         ToString(meanVarianceStorageShape).c_str(), reasonMsg.c_str());
                     return ge::GRAPH_FAILED;

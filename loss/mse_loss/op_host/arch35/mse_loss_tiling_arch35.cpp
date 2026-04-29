@@ -162,7 +162,7 @@ ge::graphStatus MseLossTiling::RunTiling(const MseLossCompileInfo* compileInfo)
     auto iter = STR_2_INT.find(reductionStr);
     OP_CHECK_IF(
         iter == STR_2_INT.end(),
-        OP_LOGE_WITH_INVALID_ATTR(
+        OP_LOGE_FOR_INVALID_VALUE(
             tilingContext->GetNodeName(), "reduction", reductionStr.c_str(),
             "none, sum or mean"),
         return ge::GRAPH_FAILED);
@@ -178,7 +178,7 @@ ge::graphStatus MseLossTiling::RunTiling(const MseLossCompileInfo* compileInfo)
             TilingReduce(compileInfo) != ge::GRAPH_SUCCESS,
             OP_LOGE(tilingContext->GetNodeName(), "do tiling failed for reduce"), return ge::GRAPH_FAILED);
     } else {
-        OP_LOGE_WITH_INVALID_ATTR(
+        OP_LOGE_FOR_INVALID_VALUE(
             tilingContext->GetNodeName(), "reduction", reductionStr.c_str(),
             "none, sum or mean");
         return ge::GRAPH_FAILED;

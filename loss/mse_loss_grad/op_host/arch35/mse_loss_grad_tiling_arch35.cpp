@@ -104,7 +104,7 @@ ge::graphStatus MseLossGradTilingClass::CalcReduceMeanCof()
     this->reducationStr = attrs->GetAttrPointer<char>(0);
     auto iter = STR_2_INT.find(this->reducationStr);
     OP_CHECK_IF((iter == STR_2_INT.end()),
-        OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "reduction", this->reducationStr,
+        OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "reduction", this->reducationStr,
             "none, mean or sum"),
         return ge::GRAPH_FAILED);
     this->reduceMeanCof = 2.0f;
@@ -154,7 +154,7 @@ ge::graphStatus MseLossGradTilingClass::DoScalarDagOpTiling()
             return ge::GRAPH_FAILED);
         this->tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), this->doutIsScalar);
     } else {
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "predict",
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "predict",
             ToString(this->inputDtype).c_str(), "FLOAT, FLOAT16 or BF16");
         return ge::GRAPH_FAILED;
     }
@@ -185,7 +185,7 @@ ge::graphStatus MseLossGradTilingClass::DoTensorDagOpTiling()
             return ge::GRAPH_FAILED);
         this->tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), this->doutIsScalar);
     } else {
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "predict",
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "predict",
             ToString(this->inputDtype).c_str(), "FLOAT, FLOAT16 or BF16");
         return ge::GRAPH_FAILED;
     }

@@ -106,17 +106,17 @@ bool UniqueConsecutiveTilingHelper::GetAttrs()
     this->outIdxDtype_ = GetOptionalAttr<ge::DataType>(attrs, OUT_DTYPE_IDX, ge::DataType::DT_INT64);
 
     OP_CHECK_IF(axis != DEFAULT_AXIS,
-                OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "axis",
+                OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "axis",
                     std::to_string(axis).c_str(), std::to_string(DEFAULT_AXIS).c_str()),
                 return false);
     this->debugOnlyMaxSingleCoreBytes_ = axis;
     OP_LOGI("GetAttrsDebugOptional", "axis(debugOnlyMaxSingleCoreBytes_)=%ld", this->debugOnlyMaxSingleCoreBytes_);
 
     OP_CHECK_IF(returnInvIdx,
-                OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "return_idx", "True", "False"),
+                OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "return_idx", "True", "False"),
                 return false);
     OP_CHECK_IF((ge::DataType::DT_INT32 != outIdxDtype_) && (ge::DataType::DT_INT64 != outIdxDtype_),
-                OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "out_idx", 
+                OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "out_idx", 
                     ToString(outIdxDtype_).c_str(), "INT32 or INT64"),
                 return false);
 

@@ -202,8 +202,8 @@ ge::graphStatus RmsNormGradRegbaseTiling::CheckInputsDtypeAndFormat()
     OP_CHECK_NULL_WITH_CONTEXT(context_, gammaDesc);
     auto gammaDtype = gammaDesc->GetDataType();
     if (gammaDtype != ge::DataType::DT_FLOAT && gammaDtype != dyDtype_) {
-        std::string dtypeMsg = ToString(gammaDtype) + " and " + ToString(dyDtype_);
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "gamma and dy", dtypeMsg.c_str(),
+        std::string dtypeMsg = ToString(gammaDtype);
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "gamma", dtypeMsg.c_str(),
             "The dtype of input gamma should be FLOAT or the same as the dtype of input dy");
         return ge::GRAPH_FAILED;
     }

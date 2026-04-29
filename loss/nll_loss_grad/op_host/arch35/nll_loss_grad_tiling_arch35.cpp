@@ -130,7 +130,7 @@ ge::graphStatus NLLLossGradSimtTiling::ProcessAttributesInfo() {
     } else if (strcmp(reduction, "sum") == 0) {
         tilingData_.set_reductionMode(SUM_MODE);
     } else {
-        OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "reduction", reduction,
+        OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "reduction", reduction,
             "mean, sum or none");
         return ge::GRAPH_FAILED;
     }
