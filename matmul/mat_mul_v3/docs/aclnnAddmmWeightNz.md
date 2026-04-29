@@ -185,7 +185,7 @@ aclnnStatus aclnnAddmmWeightNz(
       - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
       - cubeMathType=2，当输入数据类型为BFLOAT16时不支持该选项；
       - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不支持该选项。
-      - cubeMathType=4，当输入为FLOAT16或BFLOAT16且是add+matmul时matmul的输出为FLOAT32。
+      - cubeMathType=4，当输入数据类型为FLOAT16/BFLOAT16时，addmm过程会升精度计算，该情况下当前不支持输入self与matmul计算结果矩阵做broadcast。
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：
     - 不支持BFLOAT16数据类型；
     - 当输入数据类型为FLOAT32时不支持cubeMathType=0；

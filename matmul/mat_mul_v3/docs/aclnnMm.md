@@ -151,7 +151,7 @@ aclnnStatus aclnnMm(
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
     - cubeMathType=2，当输入数据类型为BFLOAT16时不支持该选项；
     - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不支持该选项。
-    - cubeMathType=4，当输入数据类型为FLOAT32，m轴等于1或者n轴等于1且k轴大于512时，会使用vector核进行计算，以提高计算结果的精度（该方式在部分场景下会导致算子性能发生劣化）。
+    - cubeMathType=4，当输入数据类型为FLOAT32，且k轴大于512，并满足以下任一条件时，会使用vector核进行计算以提升结果精度：m轴等于1、n轴等于1，或m轴和n轴均不等于1且mat1转置、mat2不转置（该方式在部分场景下可能导致算子性能下降）。
 
 - **返回值：**
 
