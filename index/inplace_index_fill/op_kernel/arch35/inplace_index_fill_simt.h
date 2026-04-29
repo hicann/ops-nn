@@ -18,6 +18,7 @@
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
 #include "inplace_index_fill_struct.h"
+#include "simt_api/asc_simt.h"
 
 namespace InplaceIndexFillSimt {
 using namespace AscendC;
@@ -54,10 +55,10 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void InplaceIndexFillSimt
     COM_T indicesNum, COM_T postDimProduct,
     __gm__ INDEX_TYPE* indices, T_X fillValue, __gm__ T_X* x)
 {
-    uint32_t threadIdx = Simt::GetThreadIdx();
-    uint32_t threadNum = Simt::GetThreadNum();
+    uint32_t thread_idx = threadIdx.x;
+    uint32_t threadNum = blockDim.x;
 
-    for (COM_T i = threadIdx; i < perBlockData; i += threadNum) {
+    for (COM_T i = thread_idx; i < perBlockData; i += threadNum) {
         COM_T curIdx = i + curOffset;
         COM_T pIdx = Simt::UintDiv(curIdx, magic0, shift0);
         COM_T mIdx = Simt::UintDiv(static_cast<COM_T>(curIdx - pIdx * (indicesNum * postDimProduct)), magic1, shift1);
@@ -101,8 +102,8 @@ __aicore__ inline void InplaceIndexFillSimtImpl<T_X, INDEX_TYPE, COM_T>::Process
         perBlockData = tilingData_->tailBlockData;
     }
 
-    AscendC::Simt::VF_CALL<InplaceIndexFillSimtCompute<T_X, INDEX_TYPE, COM_T>>(
-        AscendC::Simt::Dim3{curThreadNum}, curOffset, perBlockData,
+    asc_vf_call<InplaceIndexFillSimtCompute<T_X, INDEX_TYPE, COM_T>>(
+        dim3{curThreadNum}, curOffset, perBlockData,
         dimSize, magic0, shift0, magic1, shift1,
         indicesNum, postDimProduct,
         (__gm__ INDEX_TYPE*)(indices), fillValue, (__gm__ T_X*)(x));
