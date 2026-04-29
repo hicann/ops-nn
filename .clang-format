@@ -22,7 +22,8 @@ BraceWrapping:
     AfterCaseLabel: false
     AfterClass: false
     AfterControlStatement: false
-    AfterEnum: true
+    # AfterEnum: false (紧凑模式，左大括号和enum同行, enum Color {...), AfterEnum: true (左大括号和enum换行).
+    AfterEnum: false
     AfterFunction: true
     AfterNamespace: false
     AfterStruct: false
@@ -42,7 +43,7 @@ AlignOperands: true
 AlignTrailingComments: true
 AllowAllArgumentsOnNextLine: true
 AllowAllParametersOfDeclarationOnNextLine: true
-AlwaysBreakBeforeMultilineStrings: true
+AlwaysBreakBeforeMultilineStrings: false
 AlwaysBreakTemplateDeclarations: true
 
 BinPackArguments: true
@@ -56,7 +57,7 @@ PointerAlignment: Left
 # single line layout
 AllowShortBlocksOnASingleLine: false
 AllowShortCaseLabelsOnASingleLine: false
-AllowShortFunctionsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: true
 AllowShortIfStatementsOnASingleLine: false
 AllowShortLoopsOnASingleLine: false
 
