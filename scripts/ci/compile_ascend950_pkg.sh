@@ -31,7 +31,7 @@ execute_run_file() {
         return 1
     fi
     chmod +x "${run_files[0]}"
-    cmd=""${run_files[0]}" --install-path="/tmp""
+    cmd=""${run_files[0]}" --install-path="/tmp" --force"
     if [ $pkg_type == "builtin" ];then
         cmd+=" --full"
     fi

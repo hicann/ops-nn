@@ -105,8 +105,8 @@ do
     if [ -z "$file_path" ]; then
         continue
     fi
-    # 跳过 .md 后缀的文件 和 测试文件
-    if [[ "$file_path" == *.md || "$file_path" == */tests/* ]]; then
+    # 跳过 .md 后缀的文件 和 测试文件 以及experimental算子
+    if [[ "$file_path" == *.md || "$file_path" == */tests/* || "$file_path" == *"experimental"* ]]; then
         continue
     fi
     # 检查该路径是否包含 valid_dirs 中的任意一个目录名
