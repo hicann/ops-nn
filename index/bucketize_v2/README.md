@@ -94,3 +94,9 @@
 ## 约束说明
 
 boundaries中的数必须是升序，且不重复。
+
+## 调用说明
+
+| 调用方式 | 调用样例                                                                   | 说明                                                           |
+|--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
+| aclnn调用 | [test_aclnn_bucketize](examples/arch35/test_aclnn_bucketize.cpp) | 通过[aclnnBucketize](./docs/aclnnBucketize.md)接口方式调用BucketizeV2算子。 |

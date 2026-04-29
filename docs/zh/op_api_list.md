@@ -83,6 +83,7 @@
 | [aclnnBinaryCrossEntropyBackward](../../loss/binary_cross_entropy_grad/docs/aclnnBinaryCrossEntropyBackward.md) | 求二元交叉熵反向传播的梯度值。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnBinaryCrossEntropyWithLogits](../../loss/sigmoid_cross_entropy_with_logits_v2/docs/aclnnBinaryCrossEntropyWithLogits.md) | 计算输入logits与标签target之间的BCELoss损失。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnBinaryCrossEntropyWithLogitsTargetBackward](../../activation/log_sigmoid/docs/aclnnBinaryCrossEntropyWithLogitsTargetBackward.md) | 将输入self执行logits计算，将得到的值与标签值target一起进行BECLoss关于target的反向传播计算。 | 默认确定性实现 | - |
+| [aclnnBucketize](../../index/bucketize_v2/docs/aclnnBucketize.md) | 根据给定的边界数组（boundaries）确定输入张量中每个元素所属的区间索引。 | - | 默认确定性实现 |
 | [aclnnCelu&aclnnInplaceCelu](../../activation/celu_v2/docs/aclnnCelu&aclnnInplaceCelu.md) | aclnnCelu对输入张量self中的每个元素x调用连续可微指数线性单元激活函数CELU，并将得到的结果存入输出张量out中。 | 默认确定性实现 | - |
 | [aclnnChamferDistanceBackward](../../loss/chamfer_distance_grad/docs/aclnnChamferDistanceBackward.md) | ChamferDistance（倒角距离）的反向算子，根据正向的输入对输出的贡献及初始梯度求出输入对应的梯度。 | 默认非确定性实现，支持配置开启 | - |
 | [aclnnClippedSwiglu](../../activation/clipped_swiglu/docs/aclnnClippedSwiglu.md) | 带截断的Swish门控线性单元激活函数，实现x的SwiGlu计算。 | 默认确定性实现 | - |

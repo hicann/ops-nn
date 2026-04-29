@@ -1401,7 +1401,7 @@
     <td><a href="../../index/bucketize_v2/README.md">bucketize_v2</a></td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
     <td>✓</td>
     <td>AI Core</td>
     <td>用于将张量中的值按照给定的边界进行离散化, 根据给定的边界将输入张量中的每个值映射到对应的分箱区间，并返回该值所属区间索引。</td>
