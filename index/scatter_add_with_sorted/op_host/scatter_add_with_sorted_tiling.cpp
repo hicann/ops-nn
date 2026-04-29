@@ -19,8 +19,12 @@
 #include "platform/platform_info.h"
 #include "tiling/platform/platform_ascendc.h"
 #include "scatter_add_with_sorted_tiling.h"
+#include "op_host/tiling_util.h"
+#include "index/scatter_add_with_sorted/op_host/scatter_add_with_sorted_tiling_base.h"
 
 using namespace std;
+using Ops::NN::Optiling::TilingRegistry;
+using namespace AscendC;
 
 namespace {
 const int DT_FLOAT32_TYPE = 1;
@@ -317,8 +321,18 @@ void ScatterAddWithSortedTiling::TilingDataPrint() const
     OP_LOGD(tilingContext, "max_ub: %lu.", max_ub);
 }
 
+ge::graphStatus ScatterAddWithSortedTilingForAscendC(gert::TilingContext* context)
+{
+    return Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(context);
+}
+
 ge::graphStatus TilingScatterAddWithSorted(gert::TilingContext* context)
 {
+    if (Ops::NN::OpTiling::IsRegbaseSocVersion(context)) {
+        OP_LOGD(context->GetNodeName(), "ScatterAddWithSorted is ascendc. runing ascendc tiling.");
+        return ScatterAddWithSortedTilingForAscendC(context);
+    }
+        
     ScatterAddWithSortedTiling tilingObject(context);
     if (tilingObject.Init() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;

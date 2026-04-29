@@ -26,6 +26,11 @@
 #include "opdev/op_dfx.h"
 #include "opdev/tensor_view_utils.h"
 #include "opdev/op_executor.h"
+#include "index/scatter_add_with_sorted/op_host/op_api/scatter_add_with_sorted.h"
+#include "level0/sort.h"
+#include "runtime/context.h"
+#include "acl/acl_rt.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -45,6 +50,24 @@ static const std::initializer_list<op::DataType> INDEX_DTYPE_SUPPORT_LIST = {
 
 static const std::initializer_list<op::DataType> NULL_SUPPORT_LIST = {};
 
+static const std::initializer_list<op::DataType> SCATTER_ADD_WITH_SORTED_950_DTYPE_SUPPORT_LIST = {
+    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
+
+static bool IsUseScatterAddWithSorted(const aclTensor* varRef)
+{
+    int64_t deterministicValue = 0;
+    rtError_t retRts = aclrtGetSysParamOpt(ACL_OPT_DETERMINISTIC, &deterministicValue);
+    if (retRts != RT_ERROR_NONE) {
+        deterministicValue = 0;
+    }
+    bool isAscend950 = Ops::NN::AclnnUtil::IsRegbase();
+
+    if (!(isAscend950 && deterministicValue != 0)) {
+        return false;
+    }
+    return CheckType(varRef->GetDataType(), SCATTER_ADD_WITH_SORTED_950_DTYPE_SUPPORT_LIST);
+}
+
 static bool CheckNotNull(aclTensor* varRef, const aclTensor* indices, const aclTensor* updates)
 {
     OP_CHECK_NULL(varRef, return false);
@@ -55,9 +78,11 @@ static bool CheckNotNull(aclTensor* varRef, const aclTensor* indices, const aclT
 
 static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910 ||
-        (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-         GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E)) {
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
+    if (Ops::NN::AclnnUtil::IsRegbase(curArch) ||
+        socVersion == SocVersion::ASCEND910 ||
+        (socVersion >= SocVersion::ASCEND910B && socVersion <= SocVersion::ASCEND910E)) {
         return ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST;
     }
     return NULL_SUPPORT_LIST;
@@ -173,6 +198,28 @@ static aclnnStatus CheckParams(aclTensor* varRef, const aclTensor* indices, cons
     return ACLNN_SUCCESS;
 }
 
+static const aclTensor* DoScatterAddWithSortedForTfScatterAdd(
+    const aclTensor* varRef, const aclTensor* indices, const aclTensor* updates, aclOpExecutor* executor)
+{
+    auto indexSize = static_cast<int64_t>(indices->Size());
+    const aclTensor* scatterAddRes = nullptr;
+    if (indexSize > 1) {
+        // 直接对 indices 排序，输出 indices 类型与输入相同
+        auto indicesType = indices->GetDataType();
+        auto sortResult = l0op::Sort(indices, -1, false, true, indicesType, executor);
+        auto sortIdxOut = std::get<0>(sortResult);
+        auto posIdx = std::get<1>(sortResult);
+        CHECK_RET(sortIdxOut != nullptr && posIdx != nullptr, nullptr);
+        scatterAddRes = l0op::ScatterAddWithSorted(varRef, updates, sortIdxOut, posIdx, "add", executor);
+    } else {
+        // indexSize == 1 时，不需要 Sort，直接使用原始 indices
+        const aclTensor* posTensor = executor->ConvertToTensor(executor->AllocScalar(0), op::DataType::DT_INT32);
+        CHECK_RET(posTensor != nullptr, nullptr);
+        scatterAddRes = l0op::ScatterAddWithSorted(varRef, updates, indices, posTensor, "add", executor);
+    }
+    return scatterAddRes;
+}
+
 aclnnStatus aclnnTfScatterAddGetWorkspaceSize(
     aclTensor* varRef, const aclTensor* indices, const aclTensor* updates, uint64_t* workspaceSize,
     aclOpExecutor** executor)
@@ -215,23 +262,33 @@ aclnnStatus aclnnTfScatterAddGetWorkspaceSize(
         auto updatesContiguousFloat = l0op::Cast(updatesContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
         CHECK_RET(updatesContiguousFloat != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-        auto scatterAddResFloat =
-            useScatterNd ?
-                l0op::ScatterNdAdd(
-                    varRefContiguousFloat, indicesContiguous, updatesContiguousFloat, false, uniqueExecutor.get()) :
-                l0op::ScatterAdd(
-                    varRefContiguousFloat, indicesContiguous, updatesContiguousFloat, false, uniqueExecutor.get());
+         const aclTensor* scatterAddResFloat = nullptr;
+        if (!useScatterNd && IsUseScatterAddWithSorted(varRefContiguousFloat)) {
+            scatterAddResFloat = DoScatterAddWithSortedForTfScatterAdd(
+                varRefContiguousFloat, indicesContiguous, updatesContiguousFloat, uniqueExecutor.get());
+        } else {
+            scatterAddResFloat =
+                useScatterNd ?
+                    l0op::ScatterNdAdd(
+                        varRefContiguousFloat, indicesContiguous, updatesContiguousFloat, false, uniqueExecutor.get()) :
+                    l0op::ScatterAdd(
+                        varRefContiguousFloat, indicesContiguous, updatesContiguousFloat, false, uniqueExecutor.get());
+        }
         CHECK_RET(scatterAddResFloat != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
         scatterAddRes = l0op::Cast(scatterAddResFloat, op::DataType::DT_BF16, uniqueExecutor.get());
         CHECK_RET(scatterAddRes != nullptr, ACLNN_ERR_INNER_NULLPTR);
     } else {
-        // 执行L0算子
-        scatterAddRes =
-            useScatterNd ?
-                l0op::ScatterNdAdd(
-                    varRefContiguous, indicesContiguous, updatesContiguous, false, uniqueExecutor.get()) :
-                l0op::ScatterAdd(varRefContiguous, indicesContiguous, updatesContiguous, false, uniqueExecutor.get());
+        if (!useScatterNd && IsUseScatterAddWithSorted(varRefContiguous)) {
+            scatterAddRes = DoScatterAddWithSortedForTfScatterAdd(
+                varRefContiguous, indicesContiguous, updatesContiguous, uniqueExecutor.get());
+        } else {
+            scatterAddRes =
+                useScatterNd ?
+                    l0op::ScatterNdAdd(
+                        varRefContiguous, indicesContiguous, updatesContiguous, false, uniqueExecutor.get()) :
+                    l0op::ScatterAdd(varRefContiguous, indicesContiguous, updatesContiguous, false, uniqueExecutor.get());
+        }
         CHECK_RET(scatterAddRes != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
 

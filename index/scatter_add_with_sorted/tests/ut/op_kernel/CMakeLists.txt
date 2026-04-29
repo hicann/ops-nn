@@ -9,4 +9,5 @@
 
 if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
     AddOpTestCase(scatter_add_with_sorted "ascend910B1" "")
+    AddOpTestCase(scatter_add_with_sorted "ascend950pr_9599" "-DDTYPE_VAR=float -DDTYPE_SORTED_INDEX=int32_t")
 endif()

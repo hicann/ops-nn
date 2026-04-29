@@ -56,6 +56,59 @@ public:
         this->AICore().AddConfig("ascend910b");
         this->AICore().AddConfig("ascend910_93");
 
+        OpAICoreConfig config_950;
+        config_950.Input("var")
+                .ParamType(REQUIRED)
+                .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_INT32, ge::DT_BF16,
+                           ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_INT32, ge::DT_BF16})
+                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                         ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+                .UnknownShapeFormat(
+                    {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        config_950.Input("value")
+                .ParamType(REQUIRED)
+                .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_INT32, ge::DT_BF16,
+                           ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_INT32, ge::DT_BF16})
+                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                         ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+                .UnknownShapeFormat(
+                    {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});                    
+        config_950.Input("sorted_index")
+                .ParamType(REQUIRED)
+                .DataType({ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
+                           ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64})
+                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                         ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+                .UnknownShapeFormat(
+                    {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});                    
+        config_950.Input("pos")
+                .ParamType(OPTIONAL)
+                .DataType({ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32,
+                           ge::DT_INT64, ge::DT_INT64, ge::DT_INT64, ge::DT_INT64})
+                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                         ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+                .UnknownShapeFormat(
+                    {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        config_950.Output("var")
+                .ParamType(REQUIRED)
+                .DataType({ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_INT32, ge::DT_BF16,
+                           ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_INT32, ge::DT_BF16})
+                .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                         ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+                .UnknownShapeFormat(
+                    {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        config_950.ExtendCfgInfo("opFile.value", "scatter_add_with_sorted_apt");
+        config_950.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(true)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true);
+        this->AICore().AddConfig("ascend950", config_950);                
+
         OpAICoreConfig config_kirin = GetKirinCoreConfig();
         this->AICore().AddConfig("kirinx90", config_kirin);
         this->AICore().AddConfig("kirin9030", config_kirin);

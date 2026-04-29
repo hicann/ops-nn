@@ -15,7 +15,7 @@
 #include <array>
 #include <vector>
 #include "gtest/gtest.h"
-#include "test_scatter_add_with_sorted_tiling_def.h"
+#include "scatter_add_with_sorted_tiling_def.h"
 
 #ifdef __CCE_KT_TEST__
 #include "tikicpulib.h"
@@ -52,7 +52,7 @@ TEST_F(scatter_add_with_sorted_test, test_case_fp32)
     size_t ind_size = 63 * sizeof(int);
     size_t pos_size = 63 * sizeof(int);
     size_t output_size = 65 * 4096 * sizeof(float);
-    size_t tiling_data_size = sizeof(ScatterAddWithSortedTilingDataDef);
+    size_t tiling_data_size = sizeof(ScatterAddWithSortedTilingData);
 
     uint8_t* var = (uint8_t*)AscendC::GmAlloc(var_size);
     uint8_t* src = (uint8_t*)AscendC::GmAlloc(src_size);
@@ -80,7 +80,7 @@ TEST_F(scatter_add_with_sorted_test, test_case_fp32)
     ReadFile(path + "/scatter_add_with_sorted_data/pos.bin", pos_size, pos, pos_size);
     ReadFile(path + "/scatter_add_with_sorted_data/tiling.bin", tiling_data_size, tiling, tiling_data_size);
 
-    ScatterAddWithSortedTilingDataDef* tilingDatafromBin = reinterpret_cast<ScatterAddWithSortedTilingDataDef*>(tiling);
+    ScatterAddWithSortedTilingData* tilingDatafromBin = reinterpret_cast<ScatterAddWithSortedTilingData*>(tiling);
 
     ICPU_SET_TILING_KEY(11);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);

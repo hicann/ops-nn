@@ -16,6 +16,7 @@
 #include "opdev/make_op_executor.h"
 #include "opdev/op_dfx.h"
 #include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 
@@ -27,10 +28,12 @@ const aclTensor* ScatterAddWithSorted(
     const std::string& reduction, aclOpExecutor* executor)
 {
     L0_DFX(ScatterAddWithSorted, self, value, sorted_index, pos);
-
+    // ASCEND950平台支持DT_FLOAT, DT_FLOAT16, DT_INT32, DT_BF16
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
-    if (socVersion != SocVersion::ASCEND910B && socVersion != SocVersion::ASCEND910_93) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "[ScatterAddWithSorted] only support ASCEND910B and ASCEND910_93");
+    if (socVersion != SocVersion::ASCEND910B && socVersion != SocVersion::ASCEND910_93 &&
+        !Ops::NN::AclnnUtil::IsRegbase()) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "[ScatterAddWithSorted] only support ASCEND910B, ASCEND910_93 and ASCEND950");
+        return nullptr;
     }
 
     auto selfOut = const_cast<aclTensor*>(self);

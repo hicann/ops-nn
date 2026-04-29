@@ -40,6 +40,9 @@
 #include "opdev/op_executor.h"
 #include "opdev/tensor_view_utils.h"
 #include "op_api/aclnn_util.h"
+#include "runtime/context.h"
+#include "acl/acl_rt.h"
+
 
 using namespace op;
 #ifdef __cplusplus
@@ -71,8 +74,25 @@ static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_INDICES = {
     op::DataType::DT_INT64, op::DataType::DT_INT32};
 
 static const std::initializer_list<op::DataType> SCATTER_ADD_AICORE_REGBASE_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16, 
-    op::DataType::DT_INT32, op::DataType::DT_INT8, op::DataType::DT_UINT8};
+    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16,
+    op::DataType::DT_INT32, op::DataType::DT_INT8,    op::DataType::DT_UINT8};
+
+static const std::initializer_list<op::DataType> SCATTER_ADD_WITH_SORTED_950_DTYPE_SUPPORT_LIST = {
+    op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16,  op::DataType::DT_BF16};
+
+static bool IsUseScatterAddWithSorted(const aclTensor* varRef)
+{
+    int64_t deterministicValue = 0;
+    rtError_t retRts = aclrtGetSysParamOpt(ACL_OPT_DETERMINISTIC, &deterministicValue);
+    if (retRts != RT_ERROR_NONE) {
+        deterministicValue = 0;
+    }
+    bool isAscend950 = Ops::NN::AclnnUtil::IsRegbase();
+    if (!(isAscend950 && deterministicValue != 0)) {
+        return false;
+    }
+    return CheckType(varRef->GetDataType(), SCATTER_ADD_WITH_SORTED_950_DTYPE_SUPPORT_LIST);
+}
 
 static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
@@ -536,7 +556,6 @@ static aclnnStatus ExecScatterBase(
     aclOpExecutor* executor)
 {
     const std::string& reduction = GetReduceStr(reduce);
-
     auto ret = CheckParams(self, index, src, out);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
@@ -594,7 +613,7 @@ static aclnnStatus ExecScatterBase(
     // index的步长为[1,0]或者[x,1,0] 且x不为0，是index expand场景，走scatteraddwithsorted, 超过16777216的FP32无法精准表示整数
     bool expandFlag =
         aicore910b &&
-        ((selfDimNum == TWO_DIM && dimFinal != 1) ||
+        ((selfDimNum == TWO_DIM && indexShape[0] < MAX_EXACT_FLOAT && dimFinal != 1) ||
          (selfDimNum == THREE_DIM && indexShape[0] * indexShape[1] < MAX_EXACT_FLOAT && dimFinal != TWO_DIM)) &&
         strides[selfDimNum + NEG_TWO] == 1 && strides[selfDimNum + NEG_ONE] == 0 && shape.GetDimNum() == 1;
     if (selfDimNum == THREE_DIM) {
@@ -612,10 +631,12 @@ static aclnnStatus ExecScatterBase(
         CHECK_COND(scatterRes != nullptr, ACLNN_ERR_INNER_NULLPTR, "DoScatterAddWithSorted failed!");
         return ACLNN_SUCCESS;
     }
-    
+
     bool expandFlagRegbase = scatterAddRegbaseSupport && selfDimNum == TWO_DIM && dimFinal != 1 &&
-        strides[selfDimNum + NEG_TWO] == 1 && strides[selfDimNum + NEG_ONE] == 0 && shape.GetDimNum() == 1;
-    if (expandFlagRegbase && IsMeetScatterAddShape(selfContiguous->GetViewShape(), indexShape, srcContiguous->GetViewShape(), dimFinal)) {
+                             strides[selfDimNum + NEG_TWO] == 1 && strides[selfDimNum + NEG_ONE] == 0 &&
+                             shape.GetDimNum() == 1;
+    if (expandFlagRegbase &&
+        IsMeetScatterAddShape(selfContiguous->GetViewShape(), indexShape, srcContiguous->GetViewShape(), dimFinal)) {
         OP_LOGD("Use AICORE for ScatterAdd.");
         op::Shape newViewShape;
         newViewShape.SetDimNum(dimFinal + 1);
@@ -623,8 +644,28 @@ static aclnnStatus ExecScatterBase(
         auto indexTmp = executor->CreateView(index, newViewShape, index->GetViewOffset());
         CHECK_RET(indexTmp != nullptr, ACLNN_ERR_INNER_NULLPTR);
         indexTmp->SetDataType(index->GetDataType());
-        
-        const aclTensor *scatterRes = l0op::ScatterAdd(selfContiguous, indexTmp, srcContiguous, false, executor);
+
+        const aclTensor* scatterRes = nullptr;
+        if (IsUseScatterAddWithSorted(selfContiguous)) {
+            auto indexSize = static_cast<int64_t>(indexTmp->Size());
+            if (indexSize > 1) {
+                auto indicesType = indexTmp->GetDataType();
+                auto sortResult = l0op::Sort(indexTmp, -1, false, true, indicesType, executor);
+                auto sortIdxOut = std::get<0>(sortResult);
+                auto posIdx = std::get<1>(sortResult);
+                CHECK_RET(sortIdxOut != nullptr && posIdx != nullptr, ACLNN_ERR_INNER_NULLPTR);
+                scatterRes =
+                    l0op::ScatterAddWithSorted(selfContiguous, srcContiguous, sortIdxOut, posIdx, "add", executor);
+            } else {
+                const aclTensor* posTensor =
+                    executor->ConvertToTensor(executor->AllocScalar(0), op::DataType::DT_INT32);
+                CHECK_RET(posTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
+                scatterRes =
+                    l0op::ScatterAddWithSorted(selfContiguous, srcContiguous, indexTmp, posTensor, "add", executor);
+            }
+        } else {
+            scatterRes = l0op::ScatterAdd(selfContiguous, indexTmp, srcContiguous, false, executor);
+        }
         CHECK_RET(scatterRes != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
         scatterRes = needUnsqueeze ? l0op::SqueezeNd(scatterRes, squeezeDim, executor) : scatterRes;
