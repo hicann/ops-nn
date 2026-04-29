@@ -141,7 +141,7 @@ ge::graphStatus BatchNormGradInferBase::CheckBigShapesFormatValid()
     // 校验dim相等
     if (dyDimNum != xDimNum || dyDimNum != dxDimNum) {
         std::string dimsStr = std::to_string(dyDimNum) + ", " + std::to_string(xDimNum) + " and " + std::to_string(dxDimNum);
-        std::string reasonMsg = "Input Dy dim size, x dim size and output dx dim size should be same";
+        std::string reasonMsg = "the dim size of y_backprop, x and x_backprop should be the same";
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "y_backprop, x and x_backprop",
             dimsStr.c_str(), reasonMsg.c_str());
         return ge::GRAPH_FAILED;
@@ -154,7 +154,7 @@ ge::graphStatus BatchNormGradInferBase::CheckBigShapesFormatValid()
                                  ge::TypeUtils::FormatToSerialString(dxFormat);
         OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(context_->GetNodeName(), "y_backprop, x and x_backprop",
             formatsStr.c_str(),
-            "Input y_backprop format, x format and output x_backprop format should be same");
+            " the format of y_backprop format, x and x_backprop should be the same");
         return ge::GRAPH_FAILED;
     }
 
@@ -182,10 +182,7 @@ ge::graphStatus BatchNormGradInferBase::CheckBigShapesFormatValid()
     // 校验shape的dims相同
     for (int64_t i = 0; i < dyDimNum; i++) {
         if (xStorageShape.GetDim(i) != dyStorageShape.GetDim(i) || dxStorageShape.GetDim(i) != dyStorageShape.GetDim(i)) {
-            std::string reasonMsg = "Input y_backprop dim[" + std::to_string(i) + "]: " +
-                std::to_string(dyStorageShape.GetDim(i)) + ", x dim[" + std::to_string(i) + "]: " +
-                std::to_string(xStorageShape.GetDim(i)) + " and output x_backprop dim[" + std::to_string(i) + "]: " +
-                std::to_string(dxStorageShape.GetDim(i)) + " should be same.";
+            std::string reasonMsg = "dim[" + std::to_string(i) + "] of input y_backprop, x and output x_backprop should be same";
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "y_backprop",
                 Ops::Base::ToString(dyStorageShape).c_str(), reasonMsg.c_str());
             return ge::GRAPH_FAILED;

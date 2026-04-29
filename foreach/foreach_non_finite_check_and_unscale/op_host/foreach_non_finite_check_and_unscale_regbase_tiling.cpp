@@ -124,9 +124,9 @@ ge::graphStatus ForeachNonFiniteCheckAndUnscaleRegbaseTiling::GetShapeAttrsInfo(
             dataTypeSize_ = ge::GetSizeByDataType(dataType_);
             OP_CHECK_IF(
                 dataTypeSize_ <= 0,
-                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(nodeName_.c_str(), "scaled_grads",
+                OP_LOGE_FOR_INVALID_DTYPE(nodeName_.c_str(), "scaled_grads",
                     ge::TypeUtils::DataTypeToSerialString(dataType_).c_str(),
-                    "dtypeSize of scaled_grads must bigger than 0"),
+                    "The dtypeSize of scaled_grads must be bigger than 0"),
                 return ge::GRAPH_FAILED);
             elementsPerBlock_ = blockSize_ / dataTypeSize_;
         } else if (tempDtype != dataType_) {
@@ -234,7 +234,7 @@ ge::graphStatus ForeachNonFiniteCheckAndUnscaleRegbaseTiling::CheckParams() cons
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(nodeName_.c_str(), "found_inf and inv_scale",
             (ge::TypeUtils::DataTypeToSerialString(flagDescPtr->GetDataType()) + " and " +
              ge::TypeUtils::DataTypeToSerialString(scaleDescPtr->GetDataType())).c_str(),
-            "The input found_inf and inv_scale dtypes must be float."),
+            "The datatypes of found_inf and inv_scale must be float"),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;

@@ -82,9 +82,9 @@ ge::graphStatus DynamicDualLevelMxQuantTiling::GetAttr()
     tilingParams.level0BlockSize = static_cast<int64_t>(*attrLevel0BlockSize);
     OP_CHECK_IF(
         tilingParams.level0BlockSize != DEFAULT_LEVEL0_BLOCK_SIZE,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            context_->GetNodeName(), "level0BlockSize",
-            std::to_string(tilingParams.level0BlockSize).c_str(), "level0BlockSize should be 512"),
+        OP_LOGE_FOR_INVALID_VALUE(
+            context_->GetNodeName(), "level0_block_size",
+            std::to_string(tilingParams.level0BlockSize).c_str(), "512"),
         return ge::GRAPH_FAILED);
 
     auto* attrLevel1BlockSize = attrs->GetAttrPointer<int64_t>(INDEX_ATTR_LEVEL1_BLOCK_SIZE);
@@ -93,8 +93,8 @@ ge::graphStatus DynamicDualLevelMxQuantTiling::GetAttr()
     OP_CHECK_IF(
         tilingParams.level1BlockSize != DEFAULT_LEVEL1_BLOCK_SIZE,
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            context_->GetNodeName(), "level1BlockSize",
-            std::to_string(tilingParams.level1BlockSize).c_str(), "level1BlockSize should be 32"),
+            context_->GetNodeName(), "level1_block_size",
+            std::to_string(tilingParams.level1BlockSize).c_str(), "32"),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -155,7 +155,7 @@ ge::graphStatus DynamicDualLevelMxQuantTiling::CheckRequiredShape() const
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
             context_->GetNodeName(), "x",
             std::to_string(xShape.GetDim(xShape.GetDimNum() - 1)).c_str(),
-            "the x last axis should be even when output y's data type is FLOAT4_E2M1"),
+            "The last axis of x should be even when the data type of y is FLOAT4_E2M1"),
         return ge::GRAPH_FAILED);
 
     auto yShapePtr = context_->GetOutputShape(0);
@@ -167,7 +167,7 @@ ge::graphStatus DynamicDualLevelMxQuantTiling::CheckRequiredShape() const
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
             context_->GetNodeName(), "x and y",
             (Ops::Base::ToString(xShape) + " and " + Ops::Base::ToString(yShape)).c_str(),
-            "The shape of output y must be same with shape of input x"),
+            "The shape of y must be the same as shape of x"),
         return ge::GRAPH_FAILED);
 
     auto level0ScaleShapePtr = context_->GetOutputShape(1);
@@ -219,7 +219,7 @@ ge::graphStatus DynamicDualLevelMxQuantTiling::CheckSmoothScaleDtypeShape()
                 context_->GetNodeName(), "smooth_scale and x",
                 (ge::TypeUtils::DataTypeToSerialString(smoothScaleDtype) + " and " +
                  ge::TypeUtils::DataTypeToSerialString(xDtype)).c_str(),
-                "The data type of smooth_scale should match the data type of x"),
+                "The data types of smooth_scale and x must be the same"),
             return ge::GRAPH_FAILED);
         auto smoothScaleShape = smoothScale->GetStorageShape();
         OP_CHECK_IF(
@@ -228,7 +228,7 @@ ge::graphStatus DynamicDualLevelMxQuantTiling::CheckSmoothScaleDtypeShape()
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
                 context_->GetNodeName(), "smooth_scale",
                 Ops::Base::ToString(smoothScaleShape).c_str(),
-                ("smooth_scale can NOT be scalar and the size of smooth_scale should match the size of the last axis of x " +
+                ("smooth_scale can NOT be scalar and the shape size of smooth_scale should be same as the last axis of x " +
                  std::to_string(xShape.GetDim(xShape.GetDimNum() - 1))).c_str()),
             return ge::GRAPH_FAILED);
         needSmoothScale = true;

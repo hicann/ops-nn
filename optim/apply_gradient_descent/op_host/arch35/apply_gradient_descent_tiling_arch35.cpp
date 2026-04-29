@@ -68,13 +68,13 @@ ge::graphStatus ApplyGradientDescentTiling::CalcInputDtype()
         this->alphaDtype != this->varDtype,
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "alpha and var",
             (ge::TypeUtils::DataTypeToSerialString(this->alphaDtype) + " and " + ge::TypeUtils::DataTypeToSerialString(this->varDtype)).c_str(),
-            "dtype of alpha must be same as dtype of var."),
+            "dtype of alpha must be same as dtype of var"),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         this->deltaDtype != this->varDtype,
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "delta and var",
             (ge::TypeUtils::DataTypeToSerialString(this->deltaDtype) + " and " + ge::TypeUtils::DataTypeToSerialString(this->varDtype)).c_str(),
-            "dtype of delta must be same as dtype of var."),
+            "dtype of delta must be same as dtype of var"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -87,9 +87,9 @@ ge::graphStatus ApplyGradientDescentTiling::CalcOutputDtype()
     this->outputDtype = outputDesc->GetDataType();
     OP_CHECK_IF(
         this->outputDtype != this->varDtype,
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "output var and input var",
-            (ge::TypeUtils::DataTypeToSerialString(this->outputDtype) + " and " + ge::TypeUtils::DataTypeToSerialString(this->varDtype)).c_str(),
-            "their dtypes must be same."),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(tilingContext->GetNodeName(), "output var",
+            (ge::TypeUtils::DataTypeToSerialString(this->outputDtype)).c_str(),
+            "dtype of output var must be same as dtype of input var"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -119,7 +119,7 @@ ge::graphStatus ApplyGradientDescentTiling::CheckShape()
     OP_CHECK_IF(varShape != deltaShape || varShape != outputShape,
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext->GetNodeName(), "input var, delta and output var",
             (Ops::Base::ToString(varShape) + " and " + Ops::Base::ToString(deltaShape) + " and " + Ops::Base::ToString(outputShape)).c_str(),
-            "the shapes of input var, delta and output var must be same."),
+            "the shapes of input var, delta and output var must be same"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }

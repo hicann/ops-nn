@@ -196,7 +196,7 @@ bool GroupNormGradTiling::CheckInputShape()
         meanShape.GetDim(DIM1) != tilingParams->g,
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(tilingContext->GetNodeName(), "mean",
             Ops::Base::ToString(meanShape).c_str(),
-            "the second dim of mean should be same with group_num."),
+            "The second dim of mean should be same as group_num"),
         return false);
     tilingParams->n = dyShape.GetDim(DIM0);
     tilingParams->c = dyShape.GetDim(DIM1);
@@ -204,18 +204,18 @@ bool GroupNormGradTiling::CheckInputShape()
         meanShape.GetDim(DIM0) != tilingParams->n,
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(tilingContext->GetNodeName(), "mean",
             Ops::Base::ToString(meanShape).c_str(),
-            "the first dim of mean should be same with the first dim of x"),
+            "The first dim of mean should be same with the first dim of x"),
         return false);
     OP_TILING_CHECK(
         meanShape != rstdShape,
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext->GetNodeName(), "mean and rstd",
             (Ops::Base::ToString(meanShape) + " and " + Ops::Base::ToString(rstdShape)).c_str(),
-            "Shape of mean and rstd must be same."), return false);
+            "Shapes of mean and rstd must be same"), return false);
     OP_TILING_CHECK(
         (meanShape.GetDimNum() != 2 || rstdShape.GetDimNum() != 2),
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(tilingContext->GetNodeName(), "mean and rstd",
             (std::to_string(meanShape.GetDimNum()) + " and " + std::to_string(rstdShape.GetDimNum())).c_str(),
-            "they should be 2D"), return false);
+            "They should be same as 2D"), return false);
     OP_TILING_CHECK(
         (gammaShape.GetDimNum() != 1 || gammaShape.GetDim(DIM0) != tilingParams->c),
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(tilingContext->GetNodeName(), "gamma",

@@ -255,9 +255,7 @@ static ge::graphStatus GetTilingAttr(gert::TilingContext* context)
     } else if (strcmp(reductionStr, "none") == 0) {
         reduction = REDUCTION_NONE;
     } else {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            context->GetNodeName(), "reduction", reductionStr,
-            "Reduction should be in ['none', 'mean', 'sum']");
+        OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "reduction", reductionStr, "in ['none', 'mean', 'sum']");
         return ge::GRAPH_FAILED;
     }
     crossEntropyLossTiling.set_reduction(reduction);
@@ -276,9 +274,8 @@ static ge::graphStatus GetTilingAttr(gert::TilingContext* context)
     const float* labelSmoothingAttr = attrs->GetAttrPointer<float>(ATTR_LABEL_SMOOTHING_IDX);
     labelSmoothing = labelSmoothingAttr == nullptr ? 0.0 : *labelSmoothingAttr;
     if (labelSmoothing < 0.0 || labelSmoothing > 1.0) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            context->GetNodeName(), "label_smoothing", std::to_string(labelSmoothing).c_str(),
-            "labelSmoothing should be in [0.0, 1.0]");
+        OP_LOGE_FOR_INVALID_VALUE(
+            context->GetNodeName(), "label_smoothing", std::to_string(labelSmoothing).c_str(), "in [0.0, 1.0]");
         return ge::GRAPH_FAILED;
     }
     crossEntropyLossTiling.set_labelSmoothing(labelSmoothing);
@@ -344,7 +341,7 @@ static ge::graphStatus CheckInputShape(gert::TilingContext* context)
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
             context->GetNodeName(), "input and target",
             (std::to_string(inputShape.GetDim(DIM_0)) + " and " + std::to_string(targetShape.GetDim(0))).c_str(),
-            "The dim 0 of input should be equal to the size of target."),
+            "The dim 0 of input should be same as the shape size of target"),
         return ge::GRAPH_FAILED);
 
     auto weight = context->GetInputShape(INPUT_WEIGHT_IDX);
@@ -355,7 +352,7 @@ static ge::graphStatus CheckInputShape(gert::TilingContext* context)
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
             context->GetNodeName(), "input and weight",
                 (std::to_string(inputShape.GetDim(DIM_1)) + " and " + std::to_string(weightShape.GetDim(0))).c_str(),
-                "The dim 1 of input should be equal to the size of weight."),
+                "The dim 1 of input should be same as the shape size of weight"),
             return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;

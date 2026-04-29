@@ -51,13 +51,17 @@ static ge::graphStatus DeformableOffsetsInferShape(gert::InferShapeContext* cont
     auto dilations = dilationsPtr->GetData();
     OP_CHECK_NULL_WITH_CONTEXT(context, dilations);
     if (dilationsPtr->GetSize() != kDilationsSize) {
-        OP_LOGE(context->GetNodeName(), "dilations list size should be 4, but got %zu", dilationsPtr->GetSize());
+        OP_LOGE_FOR_INVALID_LISTSIZE(
+            context->GetNodeName(), "dilations", std::to_string(dilationsPtr->GetSize()).c_str(),
+            std::to_string(kDilationsSize).c_str());
         return ge::GRAPH_FAILED;
     }
     auto strides = stridesPtr->GetData();
     OP_CHECK_NULL_WITH_CONTEXT(context, strides);
     if (stridesPtr->GetSize() != kStridesSize) {
-        OP_LOGE(context->GetNodeName(), "strides list size should be 4, but got %zu", stridesPtr->GetSize());
+        OP_LOGE_FOR_INVALID_LISTSIZE(
+            context->GetNodeName(), "strides", std::to_string(stridesPtr->GetSize()).c_str(),
+            std::to_string(kStridesSize).c_str());
         return ge::GRAPH_FAILED;
     }
     int64_t dilationsH;
@@ -76,7 +80,7 @@ static ge::graphStatus DeformableOffsetsInferShape(gert::InferShapeContext* cont
         strideH = strides[kNHWCH];
         strideW = strides[kNHWCW];
     } else {
-        OP_LOGE(context->GetNodeName(), "dataFormat attr only support NCHW or NHWC, but got %s", dataFormat);
+        OP_LOGE_FOR_INVALID_FORMAT(context->GetNodeName(), "data_format", dataFormat, "NCHW or NHWC");
         return ge::GRAPH_FAILED;
     }
 
@@ -87,7 +91,10 @@ static ge::graphStatus DeformableOffsetsInferShape(gert::InferShapeContext* cont
     }
 
     OP_CHECK_IF(
-        (ksizePtr->GetSize() != kKSizeSize), OP_LOGE(context->GetNodeName(), "kSize list size should be 2"),
+        (ksizePtr->GetSize() != kKSizeSize), 
+        OP_LOGE_FOR_INVALID_LISTSIZE(
+            context->GetNodeName(), "kSize", std::to_string(ksizePtr->GetSize()).c_str(),
+            std::to_string(kKSizeSize).c_str()),
         return ge::GRAPH_FAILED);
     auto ksize = ksizePtr->GetData();
     OP_CHECK_NULL_WITH_CONTEXT(context, ksize);
@@ -100,12 +107,16 @@ static ge::graphStatus DeformableOffsetsInferShape(gert::InferShapeContext* cont
     const gert::Shape* xShape = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
     OP_CHECK_IF(
-        (xShape->GetDimNum() != kDimNum), OP_LOGE(context->GetNodeName(), "x rank should be 4D"),
+        (xShape->GetDimNum() != kDimNum),
+        OP_LOGE_FOR_INVALID_SHAPEDIM(
+            context->GetNodeName(), "x", std::to_string(xShape->GetDimNum()).c_str(), std::to_string(kDimNum).c_str()),
         return ge::GRAPH_FAILED);
     const gert::Shape* offsetShape = context->GetInputShape(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, offsetShape);
     OP_CHECK_IF(
-        (offsetShape->GetDimNum() != kDimNum), OP_LOGE(context->GetNodeName(), "offset rank should be 4D"),
+        (offsetShape->GetDimNum() != kDimNum), 
+        OP_LOGE_FOR_INVALID_SHAPEDIM(
+            context->GetNodeName(), "offset", std::to_string(offsetShape->GetDimNum()).c_str(), std::to_string(kDimNum).c_str()),
         return ge::GRAPH_FAILED);
     auto posH = strchr(dataFormat, 'H') - dataFormat;
     auto posW = strchr(dataFormat, 'W') - dataFormat;
@@ -117,7 +128,10 @@ static ge::graphStatus DeformableOffsetsInferShape(gert::InferShapeContext* cont
     auto pads = padsPtr->GetData();
     OP_CHECK_NULL_WITH_CONTEXT(context, pads);
     OP_CHECK_IF(
-        (padsPtr->GetSize() != kPadsSize), OP_LOGE(context->GetNodeName(), "pads list size should be 4"),
+        (padsPtr->GetSize() != kPadsSize), 
+        OP_LOGE_FOR_INVALID_LISTSIZE(
+            context->GetNodeName(), "pads", std::to_string(padsPtr->GetSize()).c_str(),
+            std::to_string(kPadsSize).c_str()),
         return ge::GRAPH_FAILED);
     auto padU = pads[0];
     auto padD = pads[1];

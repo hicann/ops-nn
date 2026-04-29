@@ -341,8 +341,8 @@ ge::graphStatus CrossEntropyLossGradRegbaseTiling::GetTilingInput() {
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
                 tilingContext->GetNodeName(), "log_prob and grad_loss",
                 (std::to_string(logProbStrorageShape.GetDim(0)) + " and " + std::to_string(gradLossStrorageShape.GetDim(0))).c_str(),
-                "The dim 0 of log_prob should be equal to the size of grad_loss and "
-                "grad_loss dimNum should be equal to 1 when reduction is none."),
+                "The dim 0 of log_prob should be same as the shape size of grad_loss and "
+                "grad_loss dimNum should be same as 1 when reduction is none"),
             return ge::GRAPH_FAILED);
     } else {
         OP_CHECK_IF(
@@ -350,7 +350,7 @@ ge::graphStatus CrossEntropyLossGradRegbaseTiling::GetTilingInput() {
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
                 tilingContext->GetNodeName(), "grad_loss",
                 std::to_string(gradLossStrorageShape.GetDim(0)).c_str(),
-                "grad_loss should be a scalar or shape should be equal to [1] when reduction is sum or mean."),
+                "grad_loss should be a scalar or shape should be equal to [1] when reduction is sum or mean"),
             return ge::GRAPH_FAILED);
     }
 
@@ -358,7 +358,7 @@ ge::graphStatus CrossEntropyLossGradRegbaseTiling::GetTilingInput() {
                     OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
                         tilingContext->GetNodeName(), "log_prob and target",
                         (std::to_string(logProbStrorageShape.GetDim(0)) + " and " + std::to_string(targetStrorageShape.GetDim(0))).c_str(),
-                        "The dim 0 of target should be equal to the dim 0 of log_prob and target dim num should be 1."),
+                        "The dim 0 of target and log_prob should be the same and the dim num of target should be 1"),
                     return ge::GRAPH_FAILED);
 
     auto weightTensor = tilingContext->GetOptionalInputTensor(INPUT_WEIGHT_IDX);
@@ -374,7 +374,7 @@ ge::graphStatus CrossEntropyLossGradRegbaseTiling::GetTilingInput() {
                         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
                             tilingContext->GetNodeName(), "log_prob and weight",
                             (std::to_string(logProbShape->GetStorageShape().GetDim(1)) + " and " + std::to_string(weightShape.GetDim(0))).c_str(),
-                            "The dim 1 of logProb should be equal to the size of weight."),
+                            "The dim 1 of logProb should be the same as the shape size of weight"),
                         return ge::GRAPH_FAILED);
     }
     rowVal = logProbShape->GetStorageShape().GetDim(0);
@@ -397,10 +397,8 @@ ge::graphStatus CrossEntropyLossGradRegbaseTiling::GetTilingAttr() {
         OP_LOGD(tilingContext, "Attr reduction is sum.");
         ceLossGradTilingKey.reduction = TILING_KEY_SUM;
     } else {
-      OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-          tilingContext->GetNodeName(), "reduction", reduction,
-          "reduction is not in none, mean or sum.");
-      return ge::GRAPH_FAILED;
+        OP_LOGE_FOR_INVALID_VALUE(tilingContext->GetNodeName(), "reduction", reduction, "none, mean or sum");
+        return ge::GRAPH_FAILED;
     }
     ceLossGradRegbaseTiling->reduction = static_cast<int64_t>(ceLossGradTilingKey.reduction);
     auto ignoreIndex = attrs->GetAttrPointer<int64_t>(IGNORE_INDEX_ATTR_IDX);
@@ -418,7 +416,7 @@ ge::graphStatus CrossEntropyLossGradRegbaseTiling::GetTilingAttr() {
     } else {
       OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
           tilingContext->GetNodeName(), "label_smoothing", std::to_string(labelSmooth).c_str(),
-          "the value range of labelSmoothing needs to be within [0, 1].");
+          "within [0, 1]");
       return ge::GRAPH_FAILED;
     }
     if (labelSmooth > 0) {
@@ -466,7 +464,7 @@ ge::graphStatus CrossEntropyLossGradRegbaseTiling::CheckDtype() {
                     OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
                         tilingContext->GetNodeName(), "log_prob and grad_loss",
                         (ge::TypeUtils::DataTypeToSerialString(dataType) + " and " + ge::TypeUtils::DataTypeToSerialString(gradLossDataType)).c_str(),
-                        "datatype of grad_loss and log_prob should be same."),
+                        "datatype of grad_loss and log_prob should be the same"),
                     return ge::GRAPH_FAILED);
 
     auto weightDesc = tilingContext->GetOptionalInputDesc(INPUT_WEIGHT_IDX);

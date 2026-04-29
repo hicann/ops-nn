@@ -49,35 +49,44 @@ static ge::graphStatus InferShapeForCrossEntropyLoss(gert::InferShapeContext* co
         Ops::Base::SetUnknownRank(*lossShape);
         Ops::Base::SetUnknownRank(*logprobShape);
     } else {
-        OP_CHECK_IF(
-            inputShape->GetDimNum() != DIM_NUM_2,
-            OP_LOGE(context, "Input dim must be 2."),
-            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(inputShape->GetDimNum() != DIM_NUM_2,
+                    OP_LOGE_FOR_INVALID_SHAPEDIM(
+                        context->GetNodeName(), "input", std::to_string(inputShape->GetDimNum()).c_str(),
+                        std::to_string(2).c_str()),
+                    return ge::GRAPH_FAILED);
 
         OP_CHECK_IF(
             targetShape->GetDimNum() != DIM_NUM_1,
-            OP_LOGE(context, "target dim must be 1."),
+            OP_LOGE_FOR_INVALID_SHAPEDIM(
+                        context->GetNodeName(), "target", std::to_string(targetShape->GetDimNum()).c_str(),
+                        std::to_string(1).c_str()),
             return ge::GRAPH_FAILED);
 
-        OP_CHECK_IF(
-            inputShape->GetDim(DIM_0) != UNKNOWN_DIM && targetShape->GetDim(DIM_0) != UNKNOWN_DIM &&
-                inputShape->GetDim(DIM_0) != targetShape->GetDim(DIM_0),
-            OP_LOGE(context, "Input dim 0 should be equal to target dim 0."),
-            return ge::GRAPH_FAILED);
+        if(inputShape->GetDim(DIM_0) != UNKNOWN_DIM && targetShape->GetDim(DIM_0) != UNKNOWN_DIM && inputShape->GetDim(DIM_0) != targetShape->GetDim(DIM_0)){
+            std::string shapeMsg = Ops::Base::ToString(*inputShape) + " and " + Ops::Base::ToString(*targetShape);
+            std::string errMsg = "The dim 0 of input and target should be the same";
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                context->GetNodeName(), "input and target", shapeMsg.c_str(), errMsg.c_str());
+            return ge::GRAPH_FAILED;
+        }
 
         const gert::Shape* weightShape = context->GetOptionalInputShape(INPUT_WEIGHT_IDX); // optional input
         if (weightShape != nullptr) {
             OP_CHECK_IF(
                 weightShape->GetDimNum() != DIM_NUM_1,
-                OP_LOGE(context, "weight dim must be 1."),
+                OP_LOGE_FOR_INVALID_SHAPEDIM(
+                        context->GetNodeName(), "weight", std::to_string(weightShape->GetDimNum()).c_str(),
+                        std::to_string(DIM_NUM_1).c_str()),
                 return ge::GRAPH_FAILED);
 
-            OP_CHECK_IF(
-                inputShape->GetDim(DIM_1) != UNKNOWN_DIM && weightShape->GetDim(DIM_0) != UNKNOWN_DIM &&
-                    inputShape->GetDim(DIM_1) != weightShape->GetDim(DIM_0),
-                OP_LOGE(
-                    context, "Input dim 1 should be equal to weight dim 0."),
-                return ge::GRAPH_FAILED);
+            if (inputShape->GetDim(DIM_1) != UNKNOWN_DIM && weightShape->GetDim(DIM_0) != UNKNOWN_DIM &&
+                inputShape->GetDim(DIM_1) != weightShape->GetDim(DIM_0)) {
+                std::string shapeMsg = Ops::Base::ToString(*inputShape) + " and " + Ops::Base::ToString(*targetShape);
+                std::string errMsg = "The dim 1 of input and the dim 0 of weight should be the same";
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    context->GetNodeName(), "input and weight", shapeMsg.c_str(), errMsg.c_str());
+                return ge::GRAPH_FAILED;
+            }
         }
         const gert::RuntimeAttrs* attrs = context->GetAttrs();
         OP_CHECK_NULL_WITH_CONTEXT(context, attrs);

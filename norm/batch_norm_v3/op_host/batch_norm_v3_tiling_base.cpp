@@ -86,7 +86,7 @@ bool BatchNormV3TilingBase::CheckInputDtype()
         std::string dtypesStr = ge::TypeUtils::DataTypeToSerialString(weightDtype) + " and " +
                                 ge::TypeUtils::DataTypeToSerialString(biasDtype);
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "weight and bias",
-            dtypesStr.c_str(), "bias dtype must be same as weight dtype");
+            dtypesStr.c_str(), "the datatype of bias and weight must be the same");
         return false;
     }
     OP_CHECK_IF(
@@ -145,42 +145,38 @@ bool BatchNormV3TilingBase::CheckInputShape()
     OP_CHECK_IF(
         commonParams.patternR1 <= 0,
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x",
-            Ops::Base::ToString(xStorageShape).c_str(), "x shape dim 0 should be more than zero."),
+            Ops::Base::ToString(xStorageShape).c_str(), "the dim 0 of x should be more than zero"),
         return false);
     OP_CHECK_IF(
         commonParams.patternA <= 0,
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x",
-            Ops::Base::ToString(xStorageShape).c_str(), "x shape dim 1 should be more than zero."),
+            Ops::Base::ToString(xStorageShape).c_str(), "the dim 1 of x should be more than zero"),
         return false);
     OP_CHECK_IF(
         commonParams.patternR0 <= 0,
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x",
-            Ops::Base::ToString(xStorageShape).c_str(), "x shape dim_2 * dim_3 * dim_4 should be more than zero."),
+            Ops::Base::ToString(xStorageShape).c_str(), "dim_2 * dim_3 * dim_4 of x should be more than zero"),
         return false);
     if (bnWeightStorageShape.GetShapeSize() != commonParams.patternA) {
-        std::string reasonMsg = "weight ShapeSize: " + std::to_string(bnWeightStorageShape.GetShapeSize()) +
-                                " should be equal to the C dimension of x (the second dimension is C dimension): " + std::to_string(commonParams.patternA);
+        std::string reasonMsg = "The shape size of weight must be the same as the C dimension of x (the second dimension is C dimension): " + std::to_string(commonParams.patternA);
         OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(context_->GetNodeName(), "weight",
             std::to_string(bnWeightStorageShape.GetShapeSize()).c_str(), reasonMsg.c_str());
         return false;
     }
     if (bnBiasStorageShape.GetShapeSize() != commonParams.patternA) {
-        std::string reasonMsg = "bias ShapeSize: " + std::to_string(bnBiasStorageShape.GetShapeSize()) +
-                                " should be equal to the C dimension of x (the second dimension is C dimension): " + std::to_string(commonParams.patternA);
+        std::string reasonMsg = "The shape size of bias must be the same as the C dimension of x (the second dimension is C dimension): " + std::to_string(commonParams.patternA);
         OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(context_->GetNodeName(), "bias",
             std::to_string(bnBiasStorageShape.GetShapeSize()).c_str(), reasonMsg.c_str());
         return false;
     }
     if (bnMeanStorageShape.GetShapeSize() != commonParams.patternA) {
-        std::string reasonMsg = "running_mean ShapeSize: " + std::to_string(bnMeanStorageShape.GetShapeSize()) +
-                                " should be equal to the C dimension of x (the second dimension is C dimension): " + std::to_string(commonParams.patternA);
+        std::string reasonMsg = "The shape size of running_mean must be the same as the C dimension of x (the second dimension is C dimension): " + std::to_string(commonParams.patternA);
         OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(context_->GetNodeName(), "running_mean",
             std::to_string(bnMeanStorageShape.GetShapeSize()).c_str(), reasonMsg.c_str());
         return false;
     }
     if (bnVarStorageShape.GetShapeSize() != commonParams.patternA) {
-        std::string reasonMsg = "running_var ShapeSize: " + std::to_string(bnVarStorageShape.GetShapeSize()) +
-                                " should be equal to the C dimension of x (the second dimension is C dimension): " + std::to_string(commonParams.patternA);
+        std::string reasonMsg = "The shape size of running_var must be the same as the C dimension of x (the second dimension is C dimension): " + std::to_string(commonParams.patternA);
         OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(context_->GetNodeName(), "running_var",
             std::to_string(bnVarStorageShape.GetShapeSize()).c_str(), reasonMsg.c_str());
         return false;

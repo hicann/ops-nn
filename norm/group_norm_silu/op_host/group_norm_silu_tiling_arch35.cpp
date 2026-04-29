@@ -127,7 +127,7 @@ static ge::graphStatus CheckGammaAndBetaParams(
                 context->GetNodeName(), "gamma and beta",
                 (ge::TypeUtils::DataTypeToSerialString(gammaDtype) + " and " +
                  ge::TypeUtils::DataTypeToSerialString(betaDtype)).c_str(),
-                "The datatype size of gamma and beta must be consistent."),
+                "The datatype sizes of gamma and beta must be the same"),
             return ge::GRAPH_FAILED);
     }
 
@@ -139,15 +139,15 @@ static ge::graphStatus CheckGammaAndBetaParams(
             OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
                 context->GetNodeName(), "gamma",
                 std::to_string(gammaShape.GetDimNum()).c_str(),
-                "the dimension number of gamma must be 1"),
+                "The shape dim of gamma must be 1"),
             return ge::GRAPH_FAILED);
         OP_CHECK_IF(
             gammaSizes != channel,
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
                 context->GetNodeName(), "gamma",
                 Ops::Base::ToString(gammaShape).c_str(),
-                ("the shape of gamma must be the same as channel(dim[1] of input x), "
-                 "got gamma size = " + std::to_string(gammaSizes) + ", channel = " + std::to_string(channel)).c_str()),
+                ("The shape size of gamma must be the same as channel(dim[1] of input x), "
+                 "got gamma shape size = " + std::to_string(gammaSizes) + ", channel = " + std::to_string(channel)).c_str()),
             return ge::GRAPH_FAILED);
         auto gammaDtype = gammaDtypePtr->GetDataType();
         OP_CHECK_IF(
@@ -211,7 +211,9 @@ static ge::graphStatus CheckInputParams(const gert::TilingContext* context)
     uint64_t xDtypeSize = ge::GetSizeByDataType(xDtype);
     OP_CHECK_IF(
         (xDtypeSize <= 0),
-        OP_LOGE(context->GetNodeName(), "xDtypeSize is invalid %lu, please check.", xDtypeSize),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            context->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(xDtype).c_str(),
+            "The datatype size of x must be greater than 0"),
         return ge::GRAPH_FAILED);
     auto xShape = inputX->GetStorageShape();
     uint64_t channel = xShape.GetDim(DIM_1);
@@ -236,8 +238,8 @@ static ge::graphStatus CheckAttrParams(const gert::TilingContext* context)
     const int64_t* numGroups = attrs->GetAttrPointer<int64_t>(INDEX_NUM_GROUPS);
     OP_CHECK_IF(
         (*numGroups <= 0),
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "num_groups",
-            std::to_string(*numGroups).c_str(), "num_groups must be bigger than 0."),
+        OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "num_groups",
+            std::to_string(*numGroups).c_str(), "greater than 0"),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         (channel % *numGroups != 0),
@@ -760,9 +762,8 @@ static ge::graphStatus CheckEmptyTensorParams(const gert::TilingContext* context
     auto yShapeSize = yOutputShape->GetStorageShape().GetShapeSize();
     OP_CHECK_IF(
         yShapeSize != 0,
-        OP_LOGE(
-            context->GetNodeName(), "y must be an empty tensor when x is empty, but total num of y is %ld.",
-            yShapeSize),
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+            context->GetNodeName(), "y", std::to_string(yShapeSize), "y must be an empty tensor when x is empty"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }

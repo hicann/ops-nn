@@ -85,9 +85,13 @@ static graphStatus GroupNormSiluInferDtype(gert::InferDataTypeContext* context)
         bool validGammaDtype = ((gammaDtype != ge::DT_UNDEFINED) && (gammaDtype != ge::DT_MAX));
         bool validBetaDtype = ((betaDtype != ge::DT_UNDEFINED) && (betaDtype != ge::DT_MAX));
         if (validGammaDtype && validBetaDtype) {
-            OP_CHECK_IF(
-                gammaDtype != betaDtype, OP_LOGE(context, "gammaDtype not same as betaDtype"),
-                return ge::GRAPH_FAILED);
+            if (gammaDtype != betaDtype) {
+                std::string dtypeMsg = Ops::Base::ToString(gammaDtype) + " and " + Ops::Base::ToString(betaDtype);
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                    context->GetNodeName(), "gamma and beta", dtypeMsg.c_str(),
+                    "The datatypes of gamma and beta must be the same");
+                return ge::GRAPH_FAILED;
+            }
         }
         if (validGammaDtype) {
             context->SetOutputDataType(GROUPNORMSILU_IDX_OUT_MEAN, gammaDtype);

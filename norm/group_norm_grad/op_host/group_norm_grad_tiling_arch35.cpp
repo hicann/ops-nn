@@ -111,8 +111,7 @@ ge::graphStatus GroupNormGradRegBaseTiling::GetShapeAttrsInfo()
     const int64_t* gValue = attrs->GetAttrPointer<int64_t>(0);
     OP_TILING_CHECK(
         (*gValue <= 0),
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "num_groups",
-            std::to_string(*gValue).c_str(), "num_groups must be bigger than 0."),
+        OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "num_groups", std::to_string(*gValue).c_str(), "bigger than 0"),
         return ge::GRAPH_FAILED);
     G_ = static_cast<int64_t>(*gValue);
     N_ = dyShape.GetDim(DIM0);
@@ -158,7 +157,7 @@ ge::graphStatus GroupNormGradRegBaseTiling::InputCheck(gert::Shape& dyShape)
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "dy, dx and x",
             (ge::TypeUtils::DataTypeToSerialString(tTypeStr_) + ", " + ge::TypeUtils::DataTypeToSerialString(dxDtypeStr) +
              " and " + ge::TypeUtils::DataTypeToSerialString(xDtypeStr)).c_str(),
-            "the datatypes of dy, dx and x must be same."), return ge::GRAPH_FAILED);
+            "The datatypes of dy, dx and x must be same"), return ge::GRAPH_FAILED);
     auto iter = DATA_TYPE_TO_INT.find(tTypeStr_);
     if (iter == DATA_TYPE_TO_INT.end()) {
         OP_LOGE_FOR_INVALID_DTYPE(
@@ -171,7 +170,7 @@ ge::graphStatus GroupNormGradRegBaseTiling::InputCheck(gert::Shape& dyShape)
         std::string incorrectShapes = Ops::Base::ToString(xShape) + ", " + Ops::Base::ToString(dyShape) + " and " + Ops::Base::ToString(dxShape);
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "x, dy and dx",
             incorrectShapes.c_str(),
-            "the shapes of x, dy and dx must be same.");
+            "The shapes of x, dy and dx must be the same");
         return ge::GRAPH_FAILED;
     }
     for (uint32_t dimIdx = 0; dimIdx < dyShape.GetDimNum(); dimIdx++) {
@@ -186,7 +185,7 @@ ge::graphStatus GroupNormGradRegBaseTiling::InputCheck(gert::Shape& dyShape)
             std::to_string(dimNum) + ", " + std::to_string(dimNum) + " and " + std::to_string(dimNum);
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
             context_->GetNodeName(), "x, dy and dx", incorrectDims.c_str(),
-            "the shape dims of x, dy and dx must be at least 2.");
+            "The shape dims of x, dy and dx must be at least 2");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -233,7 +232,7 @@ ge::graphStatus GroupNormGradRegBaseTiling::ParamsCheck()
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
             context_->GetNodeName(), "gamma",
             Ops::Base::ToString(gammaShape).c_str(),
-            ("the shapesize of gamma must be the same as C(dim[1] of dy), got gamma shapesize = " +
+            ("The shapesize of gamma must be the same as C(dim[1] of dy), got gamma shapesize = " +
              std::to_string(gammaSize) + ", C = " + std::to_string(this->C_)).c_str()),
         return ge::GRAPH_FAILED);
     int64_t meanSize = 1;
@@ -261,7 +260,7 @@ ge::graphStatus GroupNormGradRegBaseTiling::ParamsCheck()
                                 ge::TypeUtils::DataTypeToSerialString(dGammaDtypeStr);
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
             context_->GetNodeName(), "rstd, mean, gamma, dbeta and dgamma", dtypesMsg.c_str(),
-            "data types of rstd, mean, gamma, dbeta and dgamma must be same");
+            "The data types of rstd, mean, gamma, dbeta and dgamma must be the same");
         return ge::GRAPH_FAILED;
     }
     OP_TILING_CHECK(
@@ -269,13 +268,13 @@ ge::graphStatus GroupNormGradRegBaseTiling::ParamsCheck()
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "mean and rstd",
             (ge::TypeUtils::DataTypeToSerialString(tTypeStr_) + " and " +
              ge::TypeUtils::DataTypeToSerialString(uTypeStr_)).c_str(),
-            "when dy, x, dx is float, mean, rstd gamma, dgamma, dbeta only support float type."),
+            "when dy, x, dx is float, mean, rstd gamma, dgamma, dbeta only support float type"),
         return ge::GRAPH_FAILED);
     OP_TILING_CHECK(
         meanSize != rstdSize || meanSize != this->N_ * this->G_,
         OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(context_->GetNodeName(), "mean and rstd",
             (std::to_string(meanSize) + " and " + std::to_string(rstdSize)).c_str(),
-            ("the shapesize of mean and rstd must equal N * G, where N is dim[0] of dy, G is num_groups, "
+            ("The shapesizes of mean and rstd must equal N * G, where N is dim[0] of dy, G is num_groups, "
              "got N = " + std::to_string(this->N_) + ", G = " + std::to_string(this->G_)).c_str()),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;

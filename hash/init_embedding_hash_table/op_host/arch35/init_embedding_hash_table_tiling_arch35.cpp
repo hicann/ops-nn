@@ -67,8 +67,8 @@ ge::graphStatus Tiling4InitEmbeddingHashTable(gert::TilingContext *context)
     auto *bucketSize = attrs->GetAttrPointer<int64_t>(REQUIRED_ATTR_BUCKET_SIZE_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, bucketSize);
     OP_CHECK_IF(*bucketSize < 0,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "bucket_size",
-            std::to_string(static_cast<int64_t>(*bucketSize)).c_str(), "bucketSize must be greater than or equal to 0"),
+        OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "bucket_size",
+            std::to_string(static_cast<int64_t>(*bucketSize)).c_str(), "greater than or equal to 0"),
         return ge::GRAPH_FAILED);
     OP_LOGD(context->GetNodeName(), "InitEmbeddingHashTable bucketSize : %ld", static_cast<int64_t>(*bucketSize));
 
@@ -102,8 +102,8 @@ ge::graphStatus Tiling4InitEmbeddingHashTable(gert::TilingContext *context)
         mode = CONSTANT_MODE;
         constValue = static_cast<float>(*constantValue);
     } else {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "initializer_mode",
-            initializerMode, "only support random and constant");
+        OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "initializer_mode",
+            initializerMode, "random or constant");
         return ge::GRAPH_FAILED;
     }
     OP_LOGD(context->GetNodeName(), "InitEmbeddingHashTable mode : %ld", static_cast<int64_t>(mode));

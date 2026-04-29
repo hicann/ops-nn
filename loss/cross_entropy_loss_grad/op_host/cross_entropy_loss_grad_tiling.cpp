@@ -230,7 +230,7 @@ static ge::graphStatus GetTilingInput(gert::TilingContext* context, uint64_t& we
                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
                        context->GetNodeName(), "log_prob and target",
                        (std::to_string(logProbShape->GetStorageShape().GetDim(0)) + " and " + std::to_string(targetShape->GetStorageShape().GetDim(0))).c_str(),
-                       "The dim 0 of logProb should be equal to the size of target."),
+                       "The dim 0 of logProb should be equal to the shape size of target"),
                    return ge::GRAPH_FAILED);
 
   auto weightTensor = context->GetOptionalInputTensor(INPUT_WEIGHT_IDX);
@@ -240,7 +240,7 @@ static ge::graphStatus GetTilingInput(gert::TilingContext* context, uint64_t& we
                      OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
                          context->GetNodeName(), "log_prob and weight",
                          (std::to_string(logProbShape->GetStorageShape().GetDim(1)) + " and " + std::to_string(weightShape.GetDim(0))).c_str(),
-                         "The dim 1 of logProb should be equal to the size of weight."),
+                         "The dim 1 of logProb should be equal to the shape size of weight"),
                      return ge::GRAPH_FAILED);
   }
   weightKey = (weightTensor == nullptr) ? 0 : 1;

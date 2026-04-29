@@ -35,26 +35,39 @@ static constexpr size_t DYNAMIC_OUTPUT_NUM = 4;
 graphStatus CheckEmbeddingHashTableExportParams(
     const gert::InferShapeContext* context, int64_t numTable, int64_t numEmbeddingDim)
 {
-    OP_CHECK_IF(numTable < 0, OP_LOGE(context->GetNodeName(), "numTable must be equal or greater than 0, but it's %ld", numTable),
-        return GRAPH_FAILED);
+    if (numTable < 0) {
+        std::string errMsg = "numTable must be greater than or equal to 0";
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+            context->GetNodeName(), "table_sizes", std::to_string(numTable).c_str(), errMsg.c_str());
+        return GRAPH_FAILED;
+    }
 
-    OP_CHECK_IF(numEmbeddingDim != numTable,
-        OP_LOGE(context->GetNodeName(), "numEmbeddingDim must be equal to numTable, ",
-            "but numEmbeddingDim is %ld numTable is %ld", numEmbeddingDim, numTable),
-        return GRAPH_FAILED);
+    if (numEmbeddingDim != numTable) {
+        std::string errMsg = "The shape sizes of embedding_dims and table_sizes must be the same, got shape size of table_sizes is " +
+                             std::to_string(numTable);
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+            context->GetNodeName(), "embedding_dims", std::to_string(numEmbeddingDim).c_str(), errMsg.c_str());
+        return GRAPH_FAILED;
+    }
     auto tableHandleShape = context->GetInputShape(INPUT_TABLE_HANDLE_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, tableHandleShape);
     int64_t tableHandleNum = tableHandleShape->GetShapeSize();
-    OP_CHECK_IF(tableHandleNum != numTable,
-        OP_LOGE(context->GetNodeName(), "tableHandleNum must be equal to numTable, ",
-            "but tableHandleNum is %ld numTable is %ld", tableHandleNum, numTable),
-        return GRAPH_FAILED);
+    if (tableHandleNum != numTable) {
+        std::string errMsg = "The shape sizes of table_handles and table_sizes must be the same, got shape size of table_sizes is " +
+                             std::to_string(numTable);
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+            context->GetNodeName(), "table_handles", std::to_string(tableHandleNum).c_str(), errMsg.c_str());
+        return GRAPH_FAILED;
+    }
     auto bucketSizeShape = context->GetInputShape(INPUT_BUCKET_SIZE_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, bucketSizeShape);
     int64_t bucketSizeNum = bucketSizeShape->GetShapeSize();
-    OP_CHECK_IF(bucketSizeNum != numTable,
-        OP_LOGE(context->GetNodeName(), "bucketSizeNum must be equal to numTable, ", "but bucketSizeNum is numTable is ", bucketSizeNum, numTable),
-        return GRAPH_FAILED);
+    if(bucketSizeNum != numTable){
+        std::string errMsg = "The shape sizes of bucket_sizes and table_sizes must be the same, got shape size of table_sizes is " + std::to_string(numTable);
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+            context->GetNodeName(), "bucket_sizes", std::to_string(bucketSizeNum).c_str(), errMsg.c_str());
+        return GRAPH_FAILED;
+    }
     int64_t totalOutNum = context->GetComputeNodeOutputNum();
     int64_t exceptOutNum = static_cast<int64_t>(numTable * DYNAMIC_OUTPUT_NUM);
     OP_CHECK_IF(totalOutNum != exceptOutNum,

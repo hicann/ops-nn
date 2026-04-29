@@ -66,7 +66,7 @@ ge::graphStatus TilingForEmbeddingHashTableExport(gert::TilingContext *context)
         OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(context->GetNodeName(),
             "table_handles, table_sizes, embedding_dims and bucket_sizes",
             shapeSizeMsg.c_str(),
-            "Input shapeSize of table_handles, table_sizes, embedding_dims and bucket_sizes should be same.");
+            "The shapeSizes of table_handles, table_sizes, embedding_dims and bucket_sizes should be the same.");
         return ge::GRAPH_FAILED;
     }
 

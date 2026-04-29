@@ -68,9 +68,16 @@ graphStatus CheckForEmbeddingHashTableApplyAdamW(const gert::InferShapeContext* 
     int64_t embeddingDim = *embeddingDimPtr;
     int64_t bucketSize = *bucketSizePtr;
 
-    OP_CHECK_IF(embeddingDim < 0, OP_LOGE(context->GetNodeName(), "infer shape check attr eDim: %ld failed.", embeddingDim),
+    OP_CHECK_IF(
+        embeddingDim < 0,
+        OP_LOGE_FOR_INVALID_VALUE(
+            context->GetNodeName(), "embedding_dim", std::to_string(embeddingDim), "greater than or equal to 0"),
         return ge::GRAPH_FAILED);
-    OP_CHECK_IF(bucketSize < 0, OP_LOGE(context->GetNodeName(), "infer shape check attr bucketSize: %ld failed.", bucketSize),
+
+    OP_CHECK_IF(
+        bucketSize < 0,
+        OP_LOGE_FOR_INVALID_VALUE(
+            context->GetNodeName(), "bucket_size", std::to_string(embeddingDim), "greater than or equal to 0"),
         return ge::GRAPH_FAILED);
 
     auto keyShape = context->GetInputShape(inputKeysIndex);

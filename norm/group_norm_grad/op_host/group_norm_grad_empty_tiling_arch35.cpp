@@ -86,8 +86,7 @@ ge::graphStatus GroupNormGradEmptyTiling::GetShapeAttrsInfo()
     const int64_t* gValue = attrs->GetAttrPointer<int64_t>(0);
     OP_TILING_CHECK(
         (*gValue <= 0),
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            context_->GetNodeName(), "num_groups", std::to_string(*gValue).c_str(), "num_groups must be greater than 0."),
+        OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "num_groups", std::to_string(*gValue).c_str(), " greater than 0"),
         return ge::GRAPH_FAILED);
     G_ = static_cast<int64_t>(*gValue);
     N_ = dyShape.GetDim(DIM0);
@@ -124,7 +123,7 @@ ge::graphStatus GroupNormGradEmptyTiling::InputCheck(gert::Shape& dyShape)
              ge::TypeUtils::DataTypeToSerialString(dxDtypeStr) + " and " +
              ge::TypeUtils::DataTypeToSerialString(tTypeStr_))
                 .c_str(),
-            "the data types of x, dx, dy data type must be same."),
+            "The data types of x, dx, dy data type must be same"),
         return ge::GRAPH_FAILED);
     auto iter = DATA_TYPE_TO_INT.find(tTypeStr_);
     if (iter == DATA_TYPE_TO_INT.end()) {
@@ -138,7 +137,7 @@ ge::graphStatus GroupNormGradEmptyTiling::InputCheck(gert::Shape& dyShape)
             Ops::Base::ToString(xShape) + ", " + Ops::Base::ToString(dyShape) + " and " + Ops::Base::ToString(dxShape);
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
             context_->GetNodeName(), "x, dy and dx", incorrectShapes.c_str(),
-            "the shapes of x, dy and dx must be same.");
+            "The shapes of x, dy and dx must be same");
         return ge::GRAPH_FAILED;
     }
 
@@ -148,7 +147,7 @@ ge::graphStatus GroupNormGradEmptyTiling::InputCheck(gert::Shape& dyShape)
          OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
             context_->GetNodeName(), "x, dy and dx",
             shapeDimMesg.c_str(),
-            "the shape dims of x, dy and dx must be at least 2.");
+            "The shape dims of x, dy and dx must be at least 2");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -173,7 +172,7 @@ ge::graphStatus GroupNormGradEmptyTiling::CheckInputAndOutput()
                 "num_groups is invalid. C / num_groups must not be zero, C must be an integer multiple of num_groups, "
                 "and C / num_groups must not exceed the upper carrying limit(" +
                 std::to_string(UPPER_CARRYING_LIMIT) + "). (C is the second dim of dy and C is " + std::to_string(C_) +
-                ").";
+                ")";
             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
                 context_->GetNodeName(), "num_groups", std::to_string(G_).c_str(), errMsg.c_str());
             return ge::GRAPH_FAILED;
@@ -182,7 +181,7 @@ ge::graphStatus GroupNormGradEmptyTiling::CheckInputAndOutput()
         if (CPerG_ > UPPER_CARRYING_LIMIT) {
             std::string errMsg = "C / num_groups must not exceed the upper carrying limit(" +
                                  std::to_string(UPPER_CARRYING_LIMIT) + "). (C is the second dim of dy and C is " +
-                                 std::to_string(C_) + ").";
+                                 std::to_string(C_) + ")";
             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
                 context_->GetNodeName(), "num_groups", std::to_string(G_).c_str(), errMsg.c_str());
             return ge::GRAPH_FAILED;
@@ -272,7 +271,7 @@ ge::graphStatus GroupNormGradEmptyTiling::CheckShapeAndType()
             (std::to_string(meanSize) + " and " + std::to_string(rstdSize)).c_str(),
             ("mean and rstd must have the same shapesize, which equals the sum of num_groups times the size of N axis "
              "(N is the first axis of dy, N is " +
-             std::to_string(this->N_) + ", num_groups is " + std::to_string(this->G_) + ").")
+             std::to_string(this->N_) + ", num_groups is " + std::to_string(this->G_) + ")")
                 .c_str()),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;

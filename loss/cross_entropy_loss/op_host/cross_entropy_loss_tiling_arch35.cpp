@@ -265,7 +265,7 @@ ge::graphStatus CrossEntropyLossRegbaseTiling::CheckInputShape()
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
             context_->GetNodeName(), "x",
             (std::to_string(inputShape.GetDim(DIM_0)) + ", " + std::to_string(inputShape.GetDim(DIM_1))).c_str(),
-            "Unsupported when the N dimension(first dimension) of x is NOT zero while the C dimension(second dimension) is zero"),
+            "When the N dimension(first dimension) of x is NOT zero, the C dimension(second dimension) of x cann't be zero"),
         return ge::GRAPH_FAILED);
     auto target = context_->GetInputShape(INPUT_TARGET_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, target);
@@ -282,7 +282,7 @@ ge::graphStatus CrossEntropyLossRegbaseTiling::CheckInputShape()
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
             context_->GetNodeName(), "x and target",
             (std::to_string(inputShape.GetDim(DIM_0)) + " and " + std::to_string(targetShape.GetDim(0))).c_str(),
-            "The dim 0 of input0 should be equal to the size of target."),
+            "The dim 0 of input0 should be the same as the shape size of target"),
         return ge::GRAPH_FAILED);
 
     auto weight = context_->GetOptionalInputShape(INPUT_WEIGHT_IDX);
@@ -293,7 +293,7 @@ ge::graphStatus CrossEntropyLossRegbaseTiling::CheckInputShape()
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
             context_->GetNodeName(), "x and weight",
                 (std::to_string(inputShape.GetDim(DIM_1)) + " and " + std::to_string(weightShape.GetDim(0))).c_str(),
-                "The dim 1 of input should be equal to the size of weight."),
+                "The dim 1 of input should be the same as the shape size of weight."),
             return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
@@ -311,9 +311,7 @@ ge::graphStatus CrossEntropyLossRegbaseTiling::GetAttrTilingData()
     } else if (strcmp(reductionStr, "none") == 0) {
         reduction = REDUCTION_NONE;
     } else {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            context_->GetNodeName(), "reduction", reductionStr,
-            "Reduction should be in ['none', 'mean', 'sum']");
+        OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "reduction", reductionStr, "in ['none', 'mean', 'sum']");
         return ge::GRAPH_FAILED;
     }
     int64_t ignoreIndex = DEFAULT_IGNORE_INDEX;
@@ -325,9 +323,9 @@ ge::graphStatus CrossEntropyLossRegbaseTiling::GetAttrTilingData()
     const float* labelSmoothingAttr = attrs->GetAttrPointer<float>(ATTR_LABEL_SMOOTHING_IDX);
     labelSmoothing = labelSmoothingAttr == nullptr ? 0.0 : *labelSmoothingAttr;
     if (labelSmoothing < 0.0 || labelSmoothing > 1.0) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+        OP_LOGE_FOR_INVALID_VALUE(
             context_->GetNodeName(), "label_smoothing", std::to_string(labelSmoothing).c_str(),
-            "labelSmoothing should be in [0.0, 1.0]");
+            "in [0.0, 1.0]");
         return ge::GRAPH_FAILED;
     }
     labelS = labelSmoothing > 0.0f ? REDUCTION_MEAN : static_cast<uint64_t>(0);

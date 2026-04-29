@@ -46,32 +46,47 @@ static graphStatus InferShape4CrossEntropyLossGrad(gert::InferShapeContext* cont
     Ops::Base::SetUnknownRank(*xGradShape);
     return ge::GRAPH_SUCCESS;
   } else {
-    OP_CHECK_IF(logProbShape->GetDimNum() != DIM_NUM_2,
-            OP_LOGE(context, "logProb dim must be 2."),
-            return ge::GRAPH_FAILED);
+      OP_CHECK_IF(
+          logProbShape->GetDimNum() != DIM_NUM_2,
+          OP_LOGE_FOR_INVALID_SHAPEDIM(
+              context->GetNodeName(), "log_prob", std::to_string(logProbShape->GetDimNum()).c_str(),
+              std::to_string(DIM_NUM_2).c_str()),
+          return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(targetShape->GetDimNum() != DIM_NUM_1,
-            OP_LOGE(context, "target dim must be 1."),
-            return ge::GRAPH_FAILED);
+      OP_CHECK_IF(
+          targetShape->GetDimNum() != DIM_NUM_1,
+          OP_LOGE_FOR_INVALID_SHAPEDIM(
+              context->GetNodeName(), "target", std::to_string(targetShape->GetDimNum()).c_str(),
+              std::to_string(DIM_NUM_1).c_str()),
+          return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(logProbShape->GetDim(DIM_0) != UNKNOWN_DIM && targetShape->GetDim(DIM_0) != UNKNOWN_DIM &&
-            logProbShape->GetDim(DIM_0) != targetShape->GetDim(DIM_0),
-            OP_LOGE(context,
-            "logProb dim 0 should be equal to target dim 0."),
-            return ge::GRAPH_FAILED);
+      OP_CHECK_IF(
+          logProbShape->GetDim(DIM_0) != UNKNOWN_DIM && targetShape->GetDim(DIM_0) != UNKNOWN_DIM &&
+              logProbShape->GetDim(DIM_0) != targetShape->GetDim(DIM_0),
+          OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+              context->GetNodeName(), "log_prob and target",
+              (Ops::Base::ToString(*logProbShape) + " and " + Ops::Base::ToString(*targetShape)).c_str(),
+              "The dim 0 of log_prob and target must be the same"),
+          return ge::GRAPH_FAILED);
   }
 
   if (weightShape != nullptr) {
     OP_LOGD(context, "InferShape4CrossEntropyLossGrad: weightShape is not null");
-    OP_CHECK_IF(weightShape->GetDimNum() != DIM_NUM_1,
-            OP_LOGE(context, "weight dim must be 1."),
-            return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        weightShape->GetDimNum() != DIM_NUM_1,
+        OP_LOGE_FOR_INVALID_SHAPEDIM(
+            context->GetNodeName(), "weight", std::to_string(weightShape->GetDimNum()).c_str(),
+            std::to_string(DIM_NUM_1).c_str()),
+        return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(logProbShape->GetDim(DIM_1) != UNKNOWN_DIM && weightShape->GetDim(DIM_0) != UNKNOWN_DIM &&
+    OP_CHECK_IF(
+        logProbShape->GetDim(DIM_1) != UNKNOWN_DIM && weightShape->GetDim(DIM_0) != UNKNOWN_DIM &&
             logProbShape->GetDim(DIM_1) != weightShape->GetDim(DIM_0),
-            OP_LOGE(context,
-            "logProb dim 1 should be equal to weight dim 0."),
-            return ge::GRAPH_FAILED);
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context->GetNodeName(), "log_prob and weight",
+            (Ops::Base::ToString(*logProbShape) + " and " + Ops::Base::ToString(*weightShape)).c_str(),
+            "The dim 1 of log_prob and the dim 0 of target must be the same"),
+        return ge::GRAPH_FAILED);
   } else {
     OP_LOGD(context, "InferShape4CrossEntropyLossGrad: weightShape is null.");
   }

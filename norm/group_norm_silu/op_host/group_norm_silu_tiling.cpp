@@ -110,14 +110,14 @@ static ge::graphStatus CheckInputParams(const gert::TilingContext* context)
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
             context->GetNodeName(), "gamma",
             std::to_string(gammaShape.GetDimNum()).c_str(),
-            "the dimension number of gamma must be 1"),
+            "The shape dim of gamma must be 1"),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         gammaSizes != channel,
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
             context->GetNodeName(), "gamma",
-            Ops::Base::ToString(gammaShape).c_str(),
-            ("the shape size of gamma must be the same as channel"
+           std::to_string(gammaSizes).c_str(),
+            ("The shape size of gamma must be the same as channel"
              "(channel is the second dim of x), got gamma size = " +
              std::to_string(gammaSizes) + ", channel = " + std::to_string(channel)).c_str()),
         return ge::GRAPH_FAILED);
@@ -130,16 +130,15 @@ static ge::graphStatus CheckInputParams(const gert::TilingContext* context)
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
             context->GetNodeName(), "beta",
             std::to_string(betaShape.GetDimNum()).c_str(),
-            "the dimension number of beta must be 1"),
+            "The shape dim of beta must be 1"),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         betaSizes != channel,
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
             context->GetNodeName(), "beta",
-            Ops::Base::ToString(betaShape).c_str(),
-            ("the shape size of beta must be the same as channel"
-             "(channel is the second dim of x), got beta size = " +
-             std::to_string(betaSizes) + ", channel = " + std::to_string(channel)).c_str()),
+            std::to_string(betaSizes).c_str(),
+            ("The shape size of beta must be the same as channel"
+             "(channel is the second dim of x), got channel = " + std::to_string(channel)).c_str()),
         return ge::GRAPH_FAILED);
     auto gammaDtypePtr = context->GetInputDesc(INPUT_IDX_GAMMA);
     OP_CHECK_NULL_WITH_CONTEXT(context, gammaDtypePtr);
@@ -155,7 +154,7 @@ static ge::graphStatus CheckInputParams(const gert::TilingContext* context)
             context->GetNodeName(), "gamma and beta",
             (ge::TypeUtils::DataTypeToSerialString(gammaDtype) + " and " +
              ge::TypeUtils::DataTypeToSerialString(betaDtype)).c_str(),
-            "The dtype of gamma and beta must be consistent."),
+            "The dtypes of gamma and beta must be the same"),
         return ge::GRAPH_FAILED);
     if (xDtypeSize == FLOAT32_BYTES) {
         OP_CHECK_IF(
@@ -164,7 +163,7 @@ static ge::graphStatus CheckInputParams(const gert::TilingContext* context)
                 context->GetNodeName(), "gamma and beta",
                 (ge::TypeUtils::DataTypeToSerialString(gammaDtype) + " and " +
                  ge::TypeUtils::DataTypeToSerialString(betaDtype)).c_str(),
-                "The dtype of x is float32, gamma and beta must be consistent."),
+                "The dtypes of gamma and beta must be the same as x (float32)"),
             return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
@@ -181,7 +180,7 @@ static ge::graphStatus CheckAttrParams(const gert::TilingContext* tilingContext)
     OP_CHECK_IF(
         (*numGroups <= 0),
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(tilingContext->GetNodeName(), "num_groups",
-            std::to_string(*numGroups).c_str(), "num_groups must be bigger than 0."),
+            std::to_string(*numGroups).c_str(), "num_groups must be greater than 0"),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         (channel % *numGroups != 0),

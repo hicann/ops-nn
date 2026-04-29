@@ -160,12 +160,12 @@ static ge::graphStatus CheckInputParams(const gert::TilingContext *context)
     OP_CHECK_IF(gammaShape.GetDimNum() != 1,
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "gamma",
             std::to_string(gammaShape.GetDimNum()).c_str(),
-            "the dimension number of gamma must be 1"),
+            "The shape dim of gamma must be 1"),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(gammaSizes != channel,
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "gamma",
             Ops::Base::ToString(gammaShape).c_str(),
-            ("the shape of gamma must be the same as channel(dim[1] of input x) size, "
+            ("The shape of gamma must be the same as channel(dim[1] of input x) size, "
              "got gamma size = " + std::to_string(gammaSizes) + ", channel = " + std::to_string(channel)).c_str()),
         return ge::GRAPH_FAILED);
     auto betaShapePtr = context->GetInputShape(INPUT_IDX_BETA);
@@ -175,7 +175,7 @@ static ge::graphStatus CheckInputParams(const gert::TilingContext *context)
     OP_CHECK_IF((betaShape.GetDimNum() != 1 || betaSizes != channel),
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "beta",
             Ops::Base::ToString(betaShape).c_str(),
-            ("Beta dimension should be one, and the shape of beta must be the same as "
+            ("The shape dim of beta should be 1, and the shape of beta must be the same as "
              "channel(dim[1] of input x) size, got beta size = " +
              std::to_string(betaSizes) + ", channel = " + std::to_string(channel)).c_str()),
         return ge::GRAPH_FAILED);

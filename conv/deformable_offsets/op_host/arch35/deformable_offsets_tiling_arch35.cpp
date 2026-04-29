@@ -98,7 +98,7 @@ ge::graphStatus CheckDeformableOffsetParams(
         inputXShapeDims != DIM_NUM_4D || inputOffsetShapeDims != DIM_NUM_4D,
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context->GetNodeName(), "x and offsets",
             (std::to_string(inputXShapeDims) + " and " + std::to_string(inputOffsetShapeDims)).c_str(),
-            "shape dim of x and offset must be 4"), return ge::GRAPH_FAILED);
+            "The shape dim of x and offset must be 4"), return ge::GRAPH_FAILED);
     ge::Format inputOffsetDataFormat =
         static_cast<ge::Format>(ge::GetPrimaryFormat(inputOffsetdesc->GetStorageFormat()));
     OP_CHECK_IF(
@@ -106,7 +106,7 @@ ge::graphStatus CheckDeformableOffsetParams(
         OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(context->GetNodeName(), "x and offsets",
             (std::string(ge::GetFormatName(inputXDataFormat)) + " and " +
              std::string(ge::GetFormatName(inputOffsetDataFormat))).c_str(),
-            "format of x and offset must be NHWC"), return ge::GRAPH_FAILED);
+            "The format of x and offset must be NHWC"), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -125,7 +125,7 @@ ge::graphStatus UpdateStrideAndDilationByFormat(
             OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context->GetNodeName(), "strides and dilations",
                 ("{"  + std::to_string(stridesData[0]) + "," + std::to_string(stridesData[1]) + "," + std::to_string(stridesData[2]) + ","+std::to_string(stridesData[3]) + "}"+"and"+
                  "{"  + std::to_string(dilatesData[0]) + "," + std::to_string(dilatesData[1]) + "," + std::to_string(dilatesData[2]) + ","+std::to_string(dilatesData[3]) + "}").c_str(),
-                "The N and C dimensions of strides and dilations must be 1.(The first dimension is N dimension and the second dimension is C dimension in NCHW format.)"),
+                "The N and C dimensions of strides and dilations must be 1.(The first dimension is N dimension and the second dimension is C dimension in NCHW format)"),
             return ge::GRAPH_FAILED);
     } else if (format == "NHWC") {
         deformableOffsetAttrInfo.strideH = stridesData[LIST_INDEX_1];
@@ -138,7 +138,7 @@ ge::graphStatus UpdateStrideAndDilationByFormat(
             OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context->GetNodeName(), "strides and dilations",
                 ("{"  + std::to_string(stridesData[0]) + "," + std::to_string(stridesData[1]) + "," + std::to_string(stridesData[2]) + ","+std::to_string(stridesData[3]) + "}"+"and"+
                  "{"  + std::to_string(dilatesData[0]) + "," + std::to_string(dilatesData[1]) + "," + std::to_string(dilatesData[2]) + ","+std::to_string(dilatesData[3]) + "}").c_str(),
-                "The N and C dimensions of strides and dilations must be 1.(The first dimension is N dimension and the last dimension is C dimension in NHWC format.)"),
+                "The N and C dimensions of strides and dilations must be 1.(The first dimension is N dimension and the last dimension is C dimension in NHWC format)"),
             return ge::GRAPH_FAILED);
     } else {
         OP_LOGE_FOR_INVALID_FORMAT(context->GetNodeName(), "data_format",
@@ -213,7 +213,7 @@ ge::graphStatus CheckDeformableOffsetAttrs(gert::TilingContext* context, Deforma
     OP_CHECK_IF(
         !isModulated,
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "modulated",
-            "false", "modulated attr only support true currently"),
+            "false", "The modulated attr only support true currently"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -301,13 +301,13 @@ ge::graphStatus CalDeformableOffsetsOffset(
             deformableOffsetAttrInfo.strideW + 1;
 
     OP_CHECK_IF(
-        deformableOffsetsOffset.imgOutHeight <= 0, OP_LOGE(context->GetNodeName(), "ImgOutHeight must greate 0"),
+        deformableOffsetsOffset.imgOutHeight <= 0, OP_LOGE(context->GetNodeName(), "ImgOutHeight must be greater than 0"),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(
-        deformableOffsetsOffset.imgOutWidth <= 0, OP_LOGE(context->GetNodeName(), "ImgOutWidth must greate 0"),
+        deformableOffsetsOffset.imgOutWidth <= 0, OP_LOGE(context->GetNodeName(), "ImgOutWidth must be greater than 0"),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(
-        deformableOffsetsOffset.imgChannel <= 0, OP_LOGE(context->GetNodeName(), "Img channel must greate 0"),
+        deformableOffsetsOffset.imgChannel <= 0, OP_LOGE(context->GetNodeName(), "Img channel must be greater than 0"),
         return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(

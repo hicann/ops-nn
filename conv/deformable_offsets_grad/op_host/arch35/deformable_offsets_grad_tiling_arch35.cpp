@@ -222,7 +222,7 @@ ge::graphStatus DeformableOffsetsGradAscendCTilingImpl::GetinputInfoAndCheck()
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "grad, x and offsets",
             (std::to_string(inputGradShapeDims) + "D, " + std::to_string(inputXShapeDims) + "D and " +
              std::to_string(inputOffsetShapeDims) + "D").c_str(),
-            "shape dims of grad, x and offsets must be 4D"),
+            "The shape dims of grad, x and offsets must be 4D"),
         return ge::GRAPH_FAILED);
     gradSize_ = inputGradShape_.GetShapeSize();
     xSize_ = inputXShape.GetShapeSize();
@@ -274,7 +274,7 @@ ge::graphStatus DeformableOffsetsGradAscendCTilingImpl::GetOutputInfoAndCheck(
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "grad_offsets and grad_x",
             (ge::TypeUtils::DataTypeToSerialString(outGradOffsetsType) + " and " +
              ge::TypeUtils::DataTypeToSerialString(outputGradXDataType)).c_str(),
-            "dtype of grad_offsets and grad_x must be same"),
+            "The dtypes of grad_offsets and grad_x must be same"),
         return ge::GRAPH_FAILED);
     deformableOffsetsGradOffset.gradOffsetsBatchNum = outputGradOffsetsShape_.GetDim(LIST_INDEX_0);
     deformableOffsetsGradOffset.gradOffsetsImgOutHeight = outputGradOffsetsShape_.GetDim(LIST_INDEX_1);

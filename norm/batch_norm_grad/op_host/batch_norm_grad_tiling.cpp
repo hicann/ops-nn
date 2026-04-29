@@ -164,8 +164,9 @@ ge::graphStatus BatchNormGradTilingBase::CheckSmallShapesValid()
         }
         int64_t a = storageShape.GetDim(INDEX_0);
         if (a != aDim) {
-            OP_LOGE_FOR_INVALID_SHAPE(context_->GetNodeName(), inputParamNames[i],
-                std::to_string(a).c_str(), std::to_string(aDim).c_str());
+            std::string errMsg = "the first dim of the parameter should be the same as " + std::to_string(aDim);
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), inputParamNames[i],
+                Ops::Base::ToString(storageShape).c_str(), errMsg.c_str());
             return ge::GRAPH_FAILED;
         }
     }
@@ -181,8 +182,9 @@ ge::graphStatus BatchNormGradTilingBase::CheckSmallShapesValid()
         }
         int64_t a = storageShape.GetDim(INDEX_0);
         if (a != aDim) {
-            OP_LOGE_FOR_INVALID_SHAPE(context_->GetNodeName(), outputParamNames[i],
-                std::to_string(a).c_str(), std::to_string(aDim).c_str());
+            std::string errMsg = "the first dim of the parameter should be the same as " + std::to_string(aDim);
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), inputParamNames[i],
+                Ops::Base::ToString(storageShape).c_str(), errMsg.c_str());
             return ge::GRAPH_FAILED;
         }
     }
@@ -227,7 +229,7 @@ ge::graphStatus BatchNormGradTilingBase::CheckBigShapesValid()
     // 校验dim相等
     if (dyDimNum != xDimNum || dyDimNum != dxDimNum) {
         std::string dimsStr = std::to_string(dyDimNum) + ", " + std::to_string(xDimNum) + " and " + std::to_string(dxDimNum);
-        std::string reasonMsg = "Input Dy dim size, x dim size and output dx dim size should be same";
+        std::string reasonMsg = "the dimNum of input Dy, x and output dx should be the same";
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "y_backprop, x and x_backprop",
             dimsStr.c_str(), reasonMsg.c_str());
         return ge::GRAPH_FAILED;
@@ -240,20 +242,20 @@ ge::graphStatus BatchNormGradTilingBase::CheckBigShapesValid()
                                  ge::TypeUtils::FormatToSerialString(dxFormat);
         OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(context_->GetNodeName(), "y_backprop, x and x_backprop",
             formatsStr.c_str(),
-            "Input y_backprop format, x format and output x_backprop format should be same");
+            "the format of Input format, x and output x_backprop should be the same");
         return ge::GRAPH_FAILED;
     }
 
     if (dyFormat == ge::FORMAT_NCHW || dyFormat == ge::FORMAT_NHWC) {
         if (dyDimNum != DIM_NUM_4) {
-            std::string reason = "the dim of y_backprop should be 4 with " + std::string(ge::TypeUtils::FormatToSerialString(dyFormat)) + " format";
+            std::string reason = "the dimNum of y_backprop should be 4 with " + std::string(ge::TypeUtils::FormatToSerialString(dyFormat)) + " format";
             OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "y_backprop",
                 std::to_string(dyDimNum).c_str(), reason.c_str());
             return ge::GRAPH_FAILED;
         }
     } else if (dyFormat == ge::FORMAT_NCDHW || dyFormat == ge::FORMAT_NDHWC) {
         if (dyDimNum != DIM_NUM_5) {
-            std::string reason = "the dim of y_backprop should be 5 with " + std::string(ge::TypeUtils::FormatToSerialString(dyFormat)) + " format";
+            std::string reason = "the dimNum of y_backprop should be 5 with " + std::string(ge::TypeUtils::FormatToSerialString(dyFormat)) + " format";
             OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "y_backprop",
                 std::to_string(dyDimNum).c_str(), reason.c_str());
             return ge::GRAPH_FAILED;

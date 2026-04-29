@@ -156,7 +156,7 @@ static ge::graphStatus CheckInputDtype(const gert::TilingContext* context, Apply
         tilingParam.amsgrad == 1 && inputDesc == nullptr,
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "amsgrad",
             std::to_string(tilingParam.amsgrad).c_str(),
-            "the input max_grad_norm is mandatory when the value of amsgrad is true."),
+            "the input max_grad_norm is mandatory when the value of amsgrad is true"),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         inputDesc != nullptr && IsInvalidType(inputDesc->GetDataType()),
@@ -219,7 +219,7 @@ static ge::graphStatus CheckInputShape(const gert::TilingContext* context)
             (Ops::Base::ToString(varShape) + " , " + Ops::Base::ToString(mShape) + " , " +
              Ops::Base::ToString(vShape) + " , " + Ops::Base::ToString(gradShape) +
              (maxGradNormShape != nullptr ? " , " + Ops::Base::ToString(maxGradNormShape->GetStorageShape()) : "")).c_str(),
-            "var, m, v, grad and max_grad_norm(if provided) should have same shape."),
+            "var, m, v, grad and max_grad_norm(if provided) should have same shape"),
         return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(

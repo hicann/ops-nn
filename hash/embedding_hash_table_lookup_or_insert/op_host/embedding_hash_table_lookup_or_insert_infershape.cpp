@@ -14,6 +14,7 @@
  */
 
 #include "register/op_impl_registry.h"
+#include "op_host/tiling_templates_registry.h"
 #include "log/log.h"
 
 using namespace ge;
@@ -58,21 +59,27 @@ graphStatus InferDtypeForLookupOrInsert (gert::InferDataTypeContext* context) {
         return GRAPH_FAILED;
     }
     auto tableHandleDtype = context->GetInputDataType(TABLE_HANDLES_IDX);    // table_handle
-    OP_CHECK_IF(tableHandleDtype != DT_INT64, OP_LOGE(context->GetNodeName(),
-            "tableHandleDtype [%d] is not match int64.", tableHandleDtype),
-             return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        tableHandleDtype != DT_INT64,
+        OP_LOGE_FOR_INVALID_DTYPE(
+            context->GetNodeName(), "table_handle", ge::TypeUtils::DataTypeToSerialString(tableHandleDtype).c_str(), "int64"),
+        return ge::GRAPH_FAILED);
 
     auto keysDtype = context->GetInputDataType(KEYS_IDX);                    // keys
-    OP_CHECK_IF(keysDtype != DT_INT64, OP_LOGE(context->GetNodeName(),
-            "keysDtype [%d] is not match int64.", keysDtype),
-             return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        keysDtype != DT_INT64,
+        OP_LOGE_FOR_INVALID_DTYPE(
+            context->GetNodeName(), "keys", ge::TypeUtils::DataTypeToSerialString(keysDtype).c_str(), "int64"),
+        return ge::GRAPH_FAILED);
 
     auto valuesDtype = context->GetOutputDataType(VALUES_IDX);                // values
-    OP_CHECK_IF(valuesDtype != DT_FLOAT, OP_LOGE(context->GetNodeName(),
-            "valuesDtype [%d] is not match float.", valuesDtype),
-             return ge::GRAPH_FAILED);
-  OP_LOGD(context->GetNodeName(), "End to do InferDtypeForLookupOrInsert");
-  return GRAPH_SUCCESS;
+    OP_CHECK_IF(
+        valuesDtype != DT_FLOAT,
+        OP_LOGE_FOR_INVALID_DTYPE(
+            context->GetNodeName(), "values", ge::TypeUtils::DataTypeToSerialString(valuesDtype).c_str(), "float"),
+        return ge::GRAPH_FAILED);
+    OP_LOGD(context->GetNodeName(), "End to do InferDtypeForLookupOrInsert");
+    return GRAPH_SUCCESS;
 }
 
 IMPL_OP_INFERSHAPE(EmbeddingHashTableLookupOrInsert).InferShape(InferShapeForLookupOrInsert)
