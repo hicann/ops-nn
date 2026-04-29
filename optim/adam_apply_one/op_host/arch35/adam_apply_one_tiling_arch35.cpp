@@ -62,7 +62,7 @@ ge::graphStatus AdamApplyOneTiling::GetShapeAttrsInfo()
             OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
                 context_->GetNodeName(), paramNames.c_str(),
                 (Ops::Base::ToString(curDtype) + " and " + Ops::Base::ToString(input0DType)).c_str(),
-                "their dtypes should be the same");
+                "Their dtypes should be the same");
             return ge::GRAPH_FAILED;
         }
     }
@@ -77,7 +77,7 @@ ge::graphStatus AdamApplyOneTiling::GetShapeAttrsInfo()
                 Ops::Base::ToString(curDtype) + " and " + Ops::Base::ToString(input0DType);
             OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
                 context_->GetNodeName(), paramNames.c_str(), incorrectDtypes.c_str(),
-                "their dtypes should be the same");
+                "Their dtypes should be the same");
             return ge::GRAPH_FAILED;
         }
     }

@@ -162,7 +162,7 @@ bool AddRmsNormQuantRegbaseTiling::CheckInputShapeDim()
                                     std::to_string(zp2DimNum);
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
             nodeName.c_str(), "x1, x2, gamma, scales1, scales2, zero_points1 and zero_points2", incorrectDims.c_str(),
-            "all input dim nums should not be greater than 8.");
+            "All input shape dims should not be greater than 8");
         return false;
     }
     return true;
@@ -256,7 +256,7 @@ bool AddRmsNormQuantRegbaseTiling::CheckOutputDtype()
         (y1DataType != y2DataType)) {
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(nodeName.c_str(), "y1 and y2",
             (Ops::Base::ToString(y1DataType) + " and " + Ops::Base::ToString(y2DataType)).c_str(),
-            "dtype of y1 and y2 should be int8, fp8e4m3, fp8e5m2 or hifp8, and y1, y2 should have the same dtype.");
+            "The dtypes of y1 and y2 should be int8, fp8e4m3, fp8e5m2 or hifp8, and y1, y2 should have the same dtype");
         return false;
     }
     return true;
@@ -332,83 +332,83 @@ bool AddRmsNormQuantRegbaseTiling::CheckInputDtype()
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(nodeName.c_str(), "x1, x2 and gamma",
             (Ops::Base::ToString(x1Dtype) + ", " + Ops::Base::ToString(x2Dtype) + " and " +
              Ops::Base::ToString(gammaDtype)).c_str(),
-            "dtype of x1, x2 and gamma should be the same.");
+            "The dtypes of x1, x2 and gamma should be the same");
         return false;
     }
     if (tilingParams.hasBeta && (x1Dtype != betaDtype)) {
-        OP_LOGE(nodeName.c_str(), "Input x/beta dtype should be equal.");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(nodeName.c_str(), "x1 and beta",
+            (Ops::Base::ToString(x1Dtype) +  " and " + Ops::Base::ToString(betaDtype)).c_str(),
+            "The dtypes of x1 and beta should be the same");
         return false;
     }
     if ((x1Dtype != scales1Dtype) && (scales1Dtype != ge::DataType::DT_FLOAT)) {
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(nodeName.c_str(), "x1 and scales1",
             (Ops::Base::ToString(x1Dtype) + " and " + Ops::Base::ToString(scales1Dtype)).c_str(),
-            "dtype of x1 and scales1 should be fp32.");
+            "The dtypes of x1 and scales1 should be fp32");
         return false;
     }
     if (tilingParams.hasScales2 && (scales1Dtype != scales2Dtype)) {
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(nodeName.c_str(), "scales1 and scales2",
             (Ops::Base::ToString(scales1Dtype) + " and " + Ops::Base::ToString(scales2Dtype)).c_str(),
-            "dtype of scales1 and scales2 should be the same when scales2 is existed.");
+            "The dtypes of scales1 and scales2 should be the same when scales2 is existed");
         return false;
     }
-    //check support dtypes 
-    if(x1Dtype == ge::DataType::DT_FLOAT){
-        if(scales1Dtype != ge::DataType::DT_FLOAT){
-            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "x and scales1",
-                (Ops::Base::ToString(x1Dtype) + " and " + Ops::Base::ToString(scales1Dtype)).c_str(),
-                "when x dtype is fp32, scales1 dtype should be fp32.");
+    // check support dtypes
+    if (x1Dtype == ge::DataType::DT_FLOAT) {
+        if (scales1Dtype != ge::DataType::DT_FLOAT) {
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                context_->GetNodeName(), "scales1", Ops::Base::ToString(scales1Dtype).c_str(),
+                "The dtype of scales1 should be fp32 when the dtype of x is fp32");
             return false;
         }
-        if(hasZeroPoints && zeroPointsDtype != ge::DataType::DT_FLOAT){
-            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "x and zeroPoints",
-                (Ops::Base::ToString(x1Dtype) + " and " + Ops::Base::ToString(zeroPointsDtype)).c_str(),
-                "when x dtype is fp32, zeroPoints dtype should be fp32.");
+        if (hasZeroPoints && zeroPointsDtype != ge::DataType::DT_FLOAT) {
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                context_->GetNodeName(), "zeroPoints", Ops::Base::ToString(zeroPointsDtype).c_str(),
+                "The dtype of zeroPoints should be fp32 when the dtype of x is fp32");
             return false;
         }
-    }else if(x1Dtype == ge::DataType::DT_FLOAT16){
-        if(scales1Dtype == ge::DataType::DT_FLOAT){
-            if(hasZeroPoints && zeroPointsDtype != ge::DataType::DT_FLOAT && zeroPointsDtype != ge::DataType::DT_INT32){
-                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "x, scales1 and zeroPoints",
-                    (Ops::Base::ToString(x1Dtype) + ", " + Ops::Base::ToString(scales1Dtype) + " and " +
-                     Ops::Base::ToString(zeroPointsDtype)).c_str(),
-                    "when x dtype is fp16 and scales1 dtype is fp32, zeroPoints dtype should be fp32 or int32.");
+    } else if (x1Dtype == ge::DataType::DT_FLOAT16) {
+        if (scales1Dtype == ge::DataType::DT_FLOAT) {
+            if (hasZeroPoints && zeroPointsDtype != ge::DataType::DT_FLOAT &&
+                zeroPointsDtype != ge::DataType::DT_INT32) {
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                    context_->GetNodeName(), "zeroPoints", Ops::Base::ToString(zeroPointsDtype).c_str(),
+                    "The dtype of zeroPoints should be fp32 or int32 when the dtype of x is fp16 and the dtype of scales1 is fp32");
                 return false;
             }
-        }else if(scales1Dtype == ge::DataType::DT_FLOAT16){
-            if(hasZeroPoints && zeroPointsDtype != ge::DataType::DT_FLOAT16){
-                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "x, scales1 and zeroPoints",
-                    (Ops::Base::ToString(x1Dtype) + ", " + Ops::Base::ToString(scales1Dtype) + " and " +
-                     Ops::Base::ToString(zeroPointsDtype)).c_str(),
-                    "when x dtype is fp16 and scales1 dtype is fp16, zeroPoints dtype should be fp16.");
+        } else if (scales1Dtype == ge::DataType::DT_FLOAT16) {
+            if (hasZeroPoints && zeroPointsDtype != ge::DataType::DT_FLOAT16) {
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                    context_->GetNodeName(), "zeroPoints", Ops::Base::ToString(zeroPointsDtype).c_str(),
+                    "The dtype of zeroPoints should be fp16 when the dtypes of x and scales1 is fp16");
                 return false;
             }
-        }else {
-            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "x and scales1",
-                (Ops::Base::ToString(x1Dtype) + " and " + Ops::Base::ToString(scales1Dtype)).c_str(),
-                "when x dtype is fp16, scales1 dtype should be fp32 or fp16.");
+        } else {
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                context_->GetNodeName(), "scales1", Ops::Base::ToString(scales1Dtype).c_str(),
+                "The dtype of scales1 should be fp32 or fp16 when the dtype of x is fp16");
             return false;
         }
-    }else if(x1Dtype == ge::DataType::DT_BF16){
-        if(scales1Dtype == ge::DataType::DT_FLOAT){
-            if(hasZeroPoints && zeroPointsDtype != ge::DataType::DT_FLOAT && zeroPointsDtype != ge::DataType::DT_INT32){
-                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "x, scales1 and zeroPoints",
-                    (Ops::Base::ToString(x1Dtype) + ", " + Ops::Base::ToString(scales1Dtype) + " and " +
-                     Ops::Base::ToString(zeroPointsDtype)).c_str(),
-                    "when x dtype is bf16 and scales1 dtype is fp32, zeroPoints dtype should be fp32 or int32.");
+    } else if (x1Dtype == ge::DataType::DT_BF16) {
+        if (scales1Dtype == ge::DataType::DT_FLOAT) {
+            if (hasZeroPoints && zeroPointsDtype != ge::DataType::DT_FLOAT &&
+                zeroPointsDtype != ge::DataType::DT_INT32) {
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                    context_->GetNodeName(), "zeroPoints", Ops::Base::ToString(zeroPointsDtype).c_str(),
+                    "The dtype of zeroPoints should be fp32 or int32 when the dtype of x is bf16 and the dtype of scales1 is fp32");
                 return false;
             }
-        }else if(scales1Dtype == ge::DataType::DT_BF16){
-            if(hasZeroPoints && zeroPointsDtype != ge::DataType::DT_BF16){
-                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "x, scales1 and zeroPoints",
-                    (Ops::Base::ToString(x1Dtype) + ", " + Ops::Base::ToString(scales1Dtype) + " and " +
-                     Ops::Base::ToString(zeroPointsDtype)).c_str(),
-                    "when x dtype is bf16 and scales1 dtype is bf16, zeroPoints dtype should be bf16.");
+        } else if (scales1Dtype == ge::DataType::DT_BF16) {
+            if (hasZeroPoints && zeroPointsDtype != ge::DataType::DT_BF16) {
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                    context_->GetNodeName(), "zeroPoints", Ops::Base::ToString(zeroPointsDtype).c_str(),
+                    "The dtype of zeroPoints should be bf16 when the dtypes of x and scales1 is bf16");
                 return false;
             }
-        }else {
-            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "x and scales1",
-                (Ops::Base::ToString(x1Dtype) + " and " + Ops::Base::ToString(scales1Dtype)).c_str(),
-                "when x dtype is bf16, scales1 dtype should be fp32 or bf16.");
+        } else {
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                context_->GetNodeName(), "scales1", Ops::Base::ToString(scales1Dtype).c_str(),
+                "The dtype of scales1 should be fp32 or bf16 when the dtype of x is bf16");
             return false;
         }
     }

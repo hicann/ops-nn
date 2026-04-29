@@ -226,8 +226,8 @@ bool AddRmsNormDynamicQuantTilingHelper::ValidateBaseParameters()
 {
     OP_TILING_CHECK(
         this->eps_ <= 0,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "epsilon", std::to_string(this->eps_).c_str(),
-            "epsilon should be greater than zero."), return false);
+        OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "epsilon", std::to_string(this->eps_).c_str(),
+            "greater than zero"), return false);
     OP_TILING_CHECK(
         (this->ubSize_ <= 0), OP_LOGE(context_->GetNodeName(), "ubSize less or equal than zero, please check."),
         return false);
@@ -262,7 +262,7 @@ bool AddRmsNormDynamicQuantTilingHelper::ValidateInputOutput()
         (ge::GRAPH_SUCCESS != CheckDtypeVaild(y2DataType, supportedYDtypes)) || (y1DataType != y2DataType)) {
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "y1 and y2",
             (Ops::Base::ToString(y1DataType) + " and " + Ops::Base::ToString(y2DataType)).c_str(),
-            "dtype of y1 and y2 should be int8 or int4, and y1, y2 should have the same dtype.");
+            "The dtypes of y1 and y2 should be int8 or int4, and y1, y2 should have the same dtype");
         return false;
     }
 
@@ -327,14 +327,14 @@ bool AddRmsNormDynamicQuantTilingHelper::SetFlagsAndCheckConsistency()
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
             context_->GetNodeName(), "gamma and smoothScale1",
             (Ops::Base::ToString(gammaShape) + " and " + Ops::Base::ToString(smooth1Shape->GetStorageShape())).c_str(),
-            "shape of smoothScale1 and gamma should be the same when smoothScale1 is existed."),
+            "The shapes of smoothScale1 and gamma should be the same when smoothScale1 is existed"),
         return false);
     OP_TILING_CHECK(
         (smooth2Exist && smooth2Shape->GetStorageShape() != gammaShape),
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
             context_->GetNodeName(), "gamma and smoothScale2",
             (Ops::Base::ToString(gammaShape) + " and " + Ops::Base::ToString(smooth2Shape->GetStorageShape())).c_str(),
-            "shape of smoothScale2 and gamma should be the same when smoothScale2 is existed."),
+            "The shapes of smoothScale2 and gamma should be the same when smoothScale2 is existed"),
         return false);
 
     // 检查量化标志和可选输入的一致性
@@ -533,13 +533,13 @@ bool AddRmsNormDynamicQuantTilingHelper::CheckInputOutputShape()
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(this->context_->GetNodeName(), "x1, x2 and gamma",
             (std::to_string(x1DimNum) + ", " + std::to_string(x2DimNum) + " and " +
              std::to_string(gammaDimNum)).c_str(),
-            "dim num of x1, x2 and gamma should be greater than 0."),
+            "The shape dims of x1, x2 and gamma should be greater than 0"),
         return false);
     OP_TILING_CHECK(
         ((x1DimNum != x2DimNum)),
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(this->context_->GetNodeName(), "x1 and x2",
             (std::to_string(x1DimNum) + " and " + std::to_string(x2DimNum)).c_str(),
-            "x1 and x2 dim nums should be equal."), return false);
+            "The shape dims of x1 and x2 should be equal"), return false);
     OP_TILING_CHECK(
         ((gammaDimNum != 1)),
         OP_LOGE_FOR_INVALID_SHAPEDIM(this->context_->GetNodeName(), "gamma", std::to_string(gammaDimNum).c_str(), "1"),
@@ -551,7 +551,7 @@ bool AddRmsNormDynamicQuantTilingHelper::CheckInputOutputShape()
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
             context_->GetNodeName(), "gamma and x1",
             (Ops::Base::ToString(shapeOfGamma) + " and " + Ops::Base::ToString(shapeOfX)).c_str(),
-            "gamma shape isn't consistent with the last dimension of x1."),
+            "gamma shape isn't consistent with the last dimension of x1"),
         return false);
     return true;
 }

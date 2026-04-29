@@ -230,10 +230,13 @@ ge::graphStatus BatchNormGradV3Base::CheckInputValid()
 
     OP_CHECK_IF(
         !dtypeValid,
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "dy, weight and running_var",
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            context_->GetNodeName(), "dy, weight and running_var",
             (Ops::Base::ToString(dyDtype_) + ", " + Ops::Base::ToString(weightDtype_) + " and " +
              Ops::Base::ToString(runningVarDtype_)).c_str(),
-            "the combination of dy, weight and running_var dtypes is not supported"),
+            "The dtypes of dy, weight and running_var are not within the supported (all float, all bf16, all fp16, "
+            "(fp16, float, float), (bf16, float, float), (fp16, fp16, float) or (bf16, bf16, float)) combination "
+            "range"),
         return ge::GRAPH_FAILED);
 
     bool shapeValid = weightDimNum_ == runningVarDimNum_ && dyDimNum_ == dxDimNum_ && weightDimNum_ == 1 &&

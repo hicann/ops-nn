@@ -324,9 +324,9 @@ ge::graphStatus CTCLossV2GradTiling4AscendC::Init()
     OP_CHECK_NULL_WITH_CONTEXT(context_, blankPtr);
     BLANK = *blankPtr;
     if (BLANK < 0 || BLANK >= symbolSet) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+        OP_LOGE_FOR_INVALID_VALUE(
             context_->GetNodeName(), "blank", std::to_string(BLANK).c_str(),
-            "it should be in range from 0 to C dimension num(the third dim of log_probs)");
+            "within the range from 0 to C dimension num(the third dim of log_probs)");
         return ge::GRAPH_FAILED;
     }
     const auto* zeroInfinityPtr = attrs->GetAttrPointer<bool>(ATTR_ZERO_INFINITY_IDX);

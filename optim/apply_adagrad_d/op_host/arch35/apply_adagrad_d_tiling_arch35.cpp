@@ -89,7 +89,7 @@ ge::graphStatus ApplyAdagradDTiling::CheckDtype() {
             OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
                 tilingContext_->GetNodeName(), paramNames.c_str(),
                 (Ops::Base::ToString(curDtype) + " and " + Ops::Base::ToString(varDtype_)).c_str(),
-                "their dtypes should be the same");
+                "Their dtypes should be the same");
             return ge::GRAPH_FAILED;
         }
     }
@@ -105,7 +105,7 @@ ge::graphStatus ApplyAdagradDTiling::CheckDtype() {
             OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
                 tilingContext_->GetNodeName(), paramNames.c_str(),
                 (Ops::Base::ToString(curDtype) + " and " + Ops::Base::ToString(varDtype_)).c_str(),
-                "their dtypes should be the same");
+                "Their dtypes should be the same");
             return ge::GRAPH_FAILED;
         }
     }
@@ -144,7 +144,7 @@ ge::graphStatus ApplyAdagradDTiling::CheckShape() {
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
             tilingContext_->GetNodeName(), "var, accum and grad",
             (varShapeStr + ", " + accumShapeStr + " and " + gradShapeStr).c_str(),
-            "shape of var, accum and grad should be the same");
+            "The shapes of var, accum and grad should be the same");
         return ge::GRAPH_FAILED;
     }
 

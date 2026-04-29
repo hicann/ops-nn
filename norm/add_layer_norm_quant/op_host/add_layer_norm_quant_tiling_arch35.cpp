@@ -660,7 +660,7 @@ bool AddLayerNormQuantRegbaseTiling::CheckOptionalTensor()
         invalidBias,
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "bias",
             Ops::Base::ToString(biasShape->GetStorageShape()).c_str(),
-            "the shape of bias should be equal to the shape of x1 or gamma"),
+            "The shape of bias should be equal to the shape of x1 or gamma"),
         return false);
 
     const gert::StorageShape* scale1Shape = context_->GetOptionalInputShape(SCALE1_IDX);
@@ -677,25 +677,25 @@ bool AddLayerNormQuantRegbaseTiling::CheckOptionalTensor()
         ((this->scale1Exist_) && (!checkOptionalShape(elewiseDimNum, gammaShape, scale1Shape))),
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "scale1 and gamma",
             (Ops::Base::ToString(scale1Shape->GetStorageShape()) + " and " + Ops::Base::ToString(gammaShape->GetStorageShape())).c_str(),
-            "the shape of scale1 should be equal to the shape of gamma"),
+            "The shapes of scale1 and gamma should be the same"),
         return false);
     OP_CHECK_IF(
         ((this->scale2Exist_) && (!checkOptionalShape(elewiseDimNum, gammaShape, scale2Shape))),
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "scale2 and gamma",
             (Ops::Base::ToString(scale2Shape->GetStorageShape()) + " and " + Ops::Base::ToString(gammaShape->GetStorageShape())).c_str(),
-            "the shape of scale2 should be equal to the shape of gamma"),
+            "The shapes of scale2 and gamma should be the same"),
         return false);
     OP_CHECK_IF(
         ((this->offset1Exist_) && (!checkOptionalShape(elewiseDimNum, gammaShape, offset1Shape))),
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "zeroPoints1 and gamma",
             (Ops::Base::ToString(offset1Shape->GetStorageShape()) + " and " + Ops::Base::ToString(gammaShape->GetStorageShape())).c_str(),
-            "the shape of zeroPoints1 should be equal to the shape of gamma"),
+            "The shapes of zeroPoints1 and gamma should be the same"),
         return false);
     OP_CHECK_IF(
         ((this->offset2Exist_) && (!checkOptionalShape(elewiseDimNum, gammaShape, offset2Shape))),
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "zeroPoints2 and gamma",
             (Ops::Base::ToString(offset2Shape->GetStorageShape()) + " and " + Ops::Base::ToString(gammaShape->GetStorageShape())).c_str(),
-            "the shape of zeroPoints2 should be equal to the shape of gamma"),
+            "The shapes of zeroPoints2 and gamma should be the same"),
         return false);
 
     const gert::Tensor* scale1Tensor = context_->GetOptionalInputTensor(SCALE1_IDX);
@@ -708,7 +708,7 @@ bool AddLayerNormQuantRegbaseTiling::CheckOptionalTensor()
         ((this->scale2Exist_) && (*y2Shape) != (*x1Shape)),
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON("CheckOptionalTensor", "y2 and x1",
             (Ops::Base::ToString(y2Shape->GetStorageShape()) + " and " + Ops::Base::ToString(x1Shape->GetStorageShape())).c_str(),
-            "the shape of y2 should be equal to the shape of x1"), return false);
+            "The shapes of y2 and x1 should be the same"), return false);
 
     const gert::StorageShape* outScale1Shape = this->context_->GetOutputShape(OUT_SCALE1_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(this->context_, outScale1Shape);
@@ -722,14 +722,14 @@ bool AddLayerNormQuantRegbaseTiling::CheckOptionalTensor()
             ((outScaleDimNum != elewiseDimNum - weightDimNum) && (elewiseDimNum != weightDimNum)),
             OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "x1 and outScale1",
                 (std::to_string(elewiseDimNum) + " and " + std::to_string(outScaleDimNum)).c_str(),
-                (std::string("the dim num of x1 should be equal to the sum of the dim num of weight(") +
-                 std::to_string(weightDimNum) + ") and the dim num of outScale1").c_str()),
+                (std::string("The shape dim of x1 should be equal to the sum of the shape dim of weight(") +
+                 std::to_string(weightDimNum) + ") and the shape dim of outScale1").c_str()),
             return false);
         OP_CHECK_IF(
             (this->scale2Exist_) && ((*outScale1Shape) != (*outScale2Shape)),
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "outScale1 and outScale2",
                 (Ops::Base::ToString(outScale1Shape->GetStorageShape()) + " and " + Ops::Base::ToString(outScale2Shape->GetStorageShape())).c_str(),
-                "the shape of outScale1 should be equal to the shape of outScale2"), return false);
+                "The shape of outScale1 should be equal to the shape of outScale2"), return false);
 
         for (size_t i = 0; i < outScaleDimNum; i++) {
             OP_CHECK_IF(
@@ -738,7 +738,7 @@ bool AddLayerNormQuantRegbaseTiling::CheckOptionalTensor()
                     context_->GetNodeName(), "outScale1 and x1",
                     (Ops::Base::ToString(outScale1Shape->GetStorageShape()) + " and " +
                      Ops::Base::ToString(x1Shape->GetStorageShape())).c_str(),
-                    ("the " + std::to_string(i) + "th dim num of outScale1 and x1 should be equal").c_str()),
+                    ("The " + std::to_string(i) + "th the dimNum of outScale1 and x1 should be equal").c_str()),
                 return false);
         }
     }

@@ -149,7 +149,7 @@ ge::graphStatus BinaryCrossEntropyGradTiling::DoOpTiling()
     auto iter = STR_2_INT.find(this->reductionStr);
     OP_CHECK_IF(
         iter == STR_2_INT.end(),
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+        OP_LOGE_FOR_INVALID_VALUE(
             context_->GetNodeName(), "reduction", this->reductionStr, "none, mean or sum"),
         return ge::GRAPH_FAILED);
     this->isReductionNone = strcmp(this->reductionStr, "none") == 0;

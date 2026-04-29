@@ -116,7 +116,7 @@ ge::graphStatus TilingAddRmsNormRegbase(gert::TilingContext* context)
     OP_CHECK_IF(
         *epsilon < 0,
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "epsilon", std::to_string(*epsilon).c_str(),
-            "epsilon should not be less than zero."),
+            "epsilon should not be less than zero"),
         return ge::GRAPH_FAILED);
     uint64_t numCol = gammaShape.GetShapeSize();
     float avgFactor = (numCol == 0U) ? 0.0f : 1.0f / static_cast<float>(numCol);

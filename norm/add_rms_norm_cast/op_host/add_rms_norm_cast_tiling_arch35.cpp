@@ -91,9 +91,9 @@ bool AddRmsNormCastRegbaseTiling::CheckInputShapeDim()
     size_t x2DimNum = x2Shape->GetStorageShape().GetDimNum();
     OP_CHECK_IF(
         (x1DimNum > MAX_DIM_CNT) || (x2DimNum > MAX_DIM_CNT),
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
             nodeName.c_str(), "x1 and x2", (std::to_string(x1DimNum) + " and " + std::to_string(x2DimNum)).c_str(),
-            "dim num of x1 and x2 should not be greater than 8."),
+            "The shape dims of x1 and x2 should be less than or equal to 8"),
         return false);
     OP_CHECK_IF(!CheckDimBiggerZero(x1Shape, x1DimNum, nodeName, "x1"), , return false);
     OP_CHECK_IF(!CheckDimBiggerZero(x2Shape, x2DimNum, nodeName, "x2"), , return false);
@@ -146,7 +146,7 @@ bool AddRmsNormCastRegbaseTiling::CheckInputDtype()
             nodeName.c_str(), "x1, x2 and gamma",
             (Ops::Base::ToString(x1Dtype) + ", " + Ops::Base::ToString(x2Dtype) + " and " +
              Ops::Base::ToString(gammaDtype)).c_str(),
-            "dtype of x1, x2 and gamma should be the same.");
+            "The dtypes of x1, x2 and gamma should be the same");
         return false;
     }
 

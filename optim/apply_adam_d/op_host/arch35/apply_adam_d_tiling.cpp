@@ -109,7 +109,7 @@ ge::graphStatus ApplyAdamDTiling::CheckDtype() {
             OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
                 tilingContext_->GetNodeName(), paramNames.c_str(),
                 (Ops::Base::ToString(curDtype) + " and " + Ops::Base::ToString(varDtype_)).c_str(),
-                "their dtypes should be the same");
+                "Their dtypes should be the same");
             return ge::GRAPH_FAILED;
         }
     }
@@ -125,7 +125,7 @@ ge::graphStatus ApplyAdamDTiling::CheckDtype() {
             OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
                 tilingContext_->GetNodeName(), paramNames.c_str(),
                 (Ops::Base::ToString(curDtype) + " and " + Ops::Base::ToString(varDtype_)).c_str(),
-                "their dtypes should be the same");
+                "Their dtypes should be the same");
             return ge::GRAPH_FAILED;
         }
     }

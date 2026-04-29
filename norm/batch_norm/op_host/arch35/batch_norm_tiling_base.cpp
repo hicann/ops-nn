@@ -127,8 +127,8 @@ ge::graphStatus BatchNormTilingBase::GetXYShapesAndCheckValid()
     if (!validShapeSize) {
         std::string sizeMsg = std::to_string(xShapeSize) + " and " + std::to_string(yShapeSize);
         std::string reason =
-            "x and y shape size should be the same. NHWC requires 4, NCDHW and NDHWC require 5, NCHW and ND require at "
-            "least 2.";
+            "The shape sizes of x and y should be the same. NHWC requires 4, NCDHW and NDHWC require 5, NCHW and ND "
+            "require at least 2";
         OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(context_->GetNodeName(), "x and y", sizeMsg.c_str(), reason.c_str());
         return ge::GRAPH_FAILED;
     }

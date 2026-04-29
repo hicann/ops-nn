@@ -103,7 +103,7 @@ bool AddRmsNormDynamicQuantEmptyTiling::CheckInputShapeDim()
         (x1DimNum > MAX_DIM_CNT) || (x2DimNum > MAX_DIM_CNT),
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
             nodeName_.c_str(), "x1 and x2", (std::to_string(x1DimNum) + " and " + std::to_string(x2DimNum)).c_str(),
-            "dim num of x1 and x2 should not be greater than 8."),
+            "The shape dims of x1 and x2 should not be greater than 8"),
         return false);
     OP_CHECK_IF(!CheckDimBiggerZero(x1Shape, x1DimNum, nodeName_, "x1"), , return false);
     OP_CHECK_IF(!CheckDimBiggerZero(x2Shape, x2DimNum, nodeName_, "x2"), , return false);
@@ -171,19 +171,19 @@ bool AddRmsNormDynamicQuantEmptyTiling::CheckInputDtype()
             nodeName_.c_str(), "x1, x2 and gamma",
             (Ops::Base::ToString(x1Dtype) + ", " + Ops::Base::ToString(x1Dtype) + " and " +
              Ops::Base::ToString(smoothScale2Dtype)).c_str(),
-            "dtype of x1, x2 and gamma should be the same.");
+            "The dtypes of x1, x2 and gamma should be the same");
         return false;
     }
     if (hasSmoothScale1_ && (x1Dtype != smoothScale1Dtype)) {
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(nodeName_.c_str(), "x1 and smoothScale1",
             (Ops::Base::ToString(x1Dtype) + " and " + Ops::Base::ToString(smoothScale1Dtype)).c_str(),
-            "dtype of x1 and smoothScale1 should be the same when smoothScale1 is existed.");
+            "The dtypes of x1 and smoothScale1 should be the same when smoothScale1 is existed");
         return false;
     }
     if (hasSmoothScale2_ && (x1Dtype != smoothScale2Dtype)) {
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(nodeName_.c_str(), "x1 and smoothScale2",
             (Ops::Base::ToString(x1Dtype) + " and " + Ops::Base::ToString(smoothScale2Dtype)).c_str(),
-            "dtype of x1 and smoothScale2 should be the same when smoothScale2 is existed.");
+            "The dtypes of x1 and smoothScale2 should be the same when smoothScale2 is existed");
         return false;
     }
 

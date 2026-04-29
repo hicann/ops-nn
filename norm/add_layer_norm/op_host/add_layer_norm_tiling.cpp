@@ -362,11 +362,11 @@ static bool CheckDimLimit(size_t x1DimNum, size_t gammaDimNum)
     OP_CHECK_IF(
         x1DimNum > MAX_DIM_NUM || x1DimNum < MIN_DIM_X,
         OP_LOGE_FOR_INVALID_SHAPEDIM("CheckDimLimit", "x1",
-            std::to_string(x1DimNum).c_str(), "between 1 and 8."), return false);
+            std::to_string(x1DimNum).c_str(), "within the range [1, 8]"), return false);
     OP_CHECK_IF(
         gammaDimNum > MAX_DIM_NUM || gammaDimNum < MIN_DIM_GAMMA,
         OP_LOGE_FOR_INVALID_SHAPEDIM("CheckDimLimit", "gamma",
-            std::to_string(gammaDimNum).c_str(), "between 1 and 8."), return false);
+            std::to_string(gammaDimNum).c_str(), "within the range [1, 8]"), return false);
     return true;
 }
 
@@ -416,8 +416,8 @@ static inline bool CheckX1GammaMean(
                 "AddLayerNorm", "gamma and x1",
                 (Ops::Base::ToString(gammaShape->GetStorageShape()) + " and " +
                  Ops::Base::ToString(x1Shape->GetStorageShape())).c_str(),
-                ("the " + std::to_string(i) + " dim of gamma should be equal to the " +
-                 std::to_string(x1DimNum - gammaDimNum + i) + " dim of x1.")
+                ("The " + std::to_string(i) + " dim of gamma should be equal to the " +
+                 std::to_string(x1DimNum - gammaDimNum + i) + " dim of x1")
                     .c_str()),
             return false);
     }
@@ -429,8 +429,8 @@ static inline bool CheckX1GammaMean(
                     "AddLayerNorm", "mean and x1",
                     (Ops::Base::ToString(meanShape->GetStorageShape()) + " and " +
                      Ops::Base::ToString(x1Shape->GetStorageShape())).c_str(),
-                    ("the " + std::to_string(i) + " dim of mean should be equal to the " + std::to_string(i) +
-                     " dim of x1.")
+                    ("The " + std::to_string(i) + " dim of mean should be equal to the " + std::to_string(i) +
+                     " dim of x1")
                         .c_str()),
                 return false);
         } else {
@@ -438,7 +438,7 @@ static inline bool CheckX1GammaMean(
                 meanShape->GetStorageShape().GetDim(i) != 1,
                 OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
                     "AddLayerNorm", "mean", Ops::Base::ToString(meanShape->GetStorageShape()).c_str(),
-                    ("the " + std::to_string(i) + " dim of mean should be equal to 1.").c_str()),
+                    ("The " + std::to_string(i) + " dim of mean should be equal to 1").c_str()),
                 return false);
         }
     }
@@ -474,7 +474,7 @@ static bool CheckInputShape4AddLayerNorm(const gert::TilingContext* context)
             (std::to_string(x1DimNum) + ", " + std::to_string(x2DimNum) + ", " + std::to_string(yDimNum) + ", " +
              std::to_string(xDimNum) + ", " + std::to_string(meanDimNum) + " and " + std::to_string(rstdDimNum))
                 .c_str(),
-            "dim nums of x1, x2, y, x, mean and rstd should be the same."),
+            "The shape dims of x1, x2, y, x, mean and rstd should be the same"),
         return false);
     OP_CHECK_IF(
         (x1DimNum <= 0 || gammaDimNum <= 0 || betaDimNum <= 0),
@@ -482,14 +482,14 @@ static bool CheckInputShape4AddLayerNorm(const gert::TilingContext* context)
             context->GetNodeName(), "x1, gamma and beta",
             (std::to_string(x1DimNum) + ", " + std::to_string(gammaDimNum) + " and " + std::to_string(betaDimNum))
                 .c_str(),
-            "dim nums of x1, gamma and beta should be greater than 0."),
+            "The shape dims of x1, gamma and beta should be greater than 0"),
         return false);
     OP_CHECK_IF(
         x1DimNum < gammaDimNum,
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
             context->GetNodeName(), "x1 and gamma",
             (std::to_string(x1DimNum) + " and " + std::to_string(gammaDimNum)).c_str(),
-            "dim num of x1 should not be less than dim num of gamma."),
+            "The shape dim of x1 should not be less than the shape dim of gamma"),
         return false);
     bool equalX1Shape = CheckEqualsAll<const gert::StorageShape>({*(x1Shape), *(x2Shape), *(yShape), *(xShape)});
     bool equalGammaShape = CheckEqualsAll<const gert::StorageShape>({*(gammaShape), *(betaShape)});
@@ -501,7 +501,7 @@ static bool CheckInputShape4AddLayerNorm(const gert::TilingContext* context)
             (Ops::Base::ToString(x1Shape->GetStorageShape()) + ", " + Ops::Base::ToString(x2Shape->GetStorageShape()) +
              ", " + Ops::Base::ToString(yShape->GetStorageShape()) + " and " +
              Ops::Base::ToString(xShape->GetStorageShape())).c_str(),
-            "shapes of x1, x2, y and x should be the same."),
+            "The shapes of x1, x2, y and x should be the same"),
         return false);
     OP_CHECK_IF(
         !equalGammaShape,
@@ -509,7 +509,7 @@ static bool CheckInputShape4AddLayerNorm(const gert::TilingContext* context)
             context->GetNodeName(), "gamma and beta",
             (Ops::Base::ToString(gammaShape->GetStorageShape()) + " and " +
              Ops::Base::ToString(betaShape->GetStorageShape())).c_str(),
-            "shapes of gamma and beta should be the same."),
+            "The shapes of gamma and beta should be the same"),
         return false);
     OP_CHECK_IF(
         !equalReduceShape,
@@ -517,7 +517,7 @@ static bool CheckInputShape4AddLayerNorm(const gert::TilingContext* context)
             context->GetNodeName(), "mean and rstd",
             (Ops::Base::ToString(meanShape->GetStorageShape()) + " and " +
              Ops::Base::ToString(rstdShape->GetStorageShape())).c_str(),
-            "shapes of mean and rstd should be the same."),
+            "The shapes of mean and rstd should be the same"),
         return false);
     OP_CHECK_IF(
         !CheckX1GammaMean(x1Shape, gammaShape, meanShape, x1DimNum, gammaDimNum),
@@ -530,18 +530,18 @@ static bool CheckInputShape4AddLayerNorm(const gert::TilingContext* context)
             context->GetNodeName(), "x1 and mean",
             (Ops::Base::ToString(x1Shape->GetStorageShape()) + " and " +
              Ops::Base::ToString(meanShape->GetStorageShape())).c_str(),
-            "when x1 is empty tensor, mean should also be empty tensor.");
+            "When x1 is an empty tensor, mean should also be an empty tensor");
         return false;
     }
     OP_CHECK_IF(x1ShapeEmpty,
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "x1",
-            Ops::Base::ToString(x1Shape->GetStorageShape()).c_str(), "x1 cannot be empty tensor."), return false);
+            Ops::Base::ToString(x1Shape->GetStorageShape()).c_str(), "x1 cannot be an empty tensor"), return false);
     OP_CHECK_IF(gammaShapeEmpty,
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "gamma",
-            Ops::Base::ToString(gammaShape->GetStorageShape()).c_str(), "gamma cannot be empty tensor."), return false);
+            Ops::Base::ToString(gammaShape->GetStorageShape()).c_str(), "gamma cannot be an empty tensor"), return false);
     OP_CHECK_IF(meanShapeEmpty,
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "mean",
-            Ops::Base::ToString(meanShape->GetStorageShape()).c_str(), "mean cannot be empty tensor."), return false);
+            Ops::Base::ToString(meanShape->GetStorageShape()).c_str(), "mean cannot be an empty tensor"), return false);
     return true;
 }
 

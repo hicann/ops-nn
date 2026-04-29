@@ -79,7 +79,7 @@ public:
         if (shape1.GetDimNum() != 1 || shape2.GetDimNum() != 1) {
             std::string dimMsg = std::to_string(shape1.GetDimNum()) + " and " + std::to_string(shape2.GetDimNum());
             OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
-                context_->GetNodeName(), "x1 and x2", dimMsg.c_str(), "dim num of x1 and x2 should be 1");
+                context_->GetNodeName(), "x1 and x2", dimMsg.c_str(), "The shape dims of x1 and x2 should be 1");
             return ge::GRAPH_FAILED;
         }
         int64_t x1Len = shape1.GetDim(0);

@@ -71,26 +71,26 @@ static bool CheckDimMaxMin(const gert::TilingContext* context, size_t x1DimNum, 
     OP_CHECK_IF(
         x1DimNum > MAX_DIM_NUM || x1DimNum < MIN_DIM_X,
         OP_LOGE_FOR_INVALID_SHAPEDIM(
-            context->GetNodeName(), "x1", std::to_string(x1DimNum).c_str(), "between 1 and 8."),
+            context->GetNodeName(), "x1", std::to_string(x1DimNum).c_str(), "within the range [1, 8]"),
         return false);
     OP_CHECK_IF(
         gammaDimNum > MAX_DIM_NUM || gammaDimNum < MIN_DIM_GAMMA,
         OP_LOGE_FOR_INVALID_SHAPEDIM(
-            context->GetNodeName(), "gamma", std::to_string(gammaDimNum).c_str(), "between 1 and 8."),
+            context->GetNodeName(), "gamma", std::to_string(gammaDimNum).c_str(), "within the range [1, 8]"),
         return false);
     OP_CHECK_IF(
         x1DimNum != y1DimNum,
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
             context->GetNodeName(), "x1 and y1",
             (std::to_string(x1DimNum) + " and " + std::to_string(y1DimNum)).c_str(),
-            "dim num of x1 should be equal to dim num of y1."),
+            "The shape dims of x1 and y1 should be the same"),
         return false);
     OP_CHECK_IF(
         x1DimNum != y2DimNum,
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
             context->GetNodeName(), "x1 and y2",
             (std::to_string(x1DimNum) + " and " + std::to_string(y2DimNum)).c_str(),
-            "dim num of x1 should be equal to dim num of y2."),
+            "The shape dims of x1 and y2 should be the same"),
         return false);
     // check x1/x2/yOut/xOut dim equal
     OP_CHECK_IF(
@@ -98,7 +98,7 @@ static bool CheckDimMaxMin(const gert::TilingContext* context, size_t x1DimNum, 
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
             context->GetNodeName(), "x1 and x2",
             (std::to_string(x1DimNum) + " and " + std::to_string(x2DimNum)).c_str(),
-            "dim num of x1 should be equal to dim num of x2."),
+            "The shape dims of x1 and x2 should be the same"),
         return false);
     OP_CHECK_IF(
         (y1DimNum != xDimNum) || (xDimNum != x1DimNum) || (y2DimNum != xDimNum),
@@ -107,14 +107,14 @@ static bool CheckDimMaxMin(const gert::TilingContext* context, size_t x1DimNum, 
             (std::to_string(y1DimNum) + ", " + std::to_string(y2DimNum) + ", " + std::to_string(xDimNum) + " and " +
              std::to_string(x1DimNum))
                 .c_str(),
-            "dim nums of y1, y2 and x should be equal to dim num of x1"),
+            "The shape dims of y1, y2, x and x1 should be the same"),
         return false);
     OP_CHECK_IF(
         x1DimNum < gammaDimNum,
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
             context->GetNodeName(), "x1 and gamma",
             (std::to_string(x1DimNum) + " and " + std::to_string(gammaDimNum)).c_str(),
-            "dim num of x1 should be greater than or equal to dim num of gamma."),
+            "The shape dim of x1 should be greater than or equal to the shape dim of gamma"),
         return false);
     return true;
 }
@@ -138,7 +138,7 @@ static bool CheckShapeInfo(const gert::TilingContext* context, size_t x1DimNum, 
                 (Ops::Base::ToString(rstd_shape->GetStorageShape()) + " and " +
                  Ops::Base::ToString(x1_shape->GetStorageShape())).c_str(),
                 ("The shape of rstd should be the same as the first " + std::to_string(x1DimNum - gammaDimNum) +
-                 " dim of x1.").c_str()),
+                 " dim of x1").c_str()),
             return false);
         if (rstd_shape->GetStorageShape().GetDim(i) == 0) {
             rstdEmpty = true;
@@ -151,7 +151,7 @@ static bool CheckShapeInfo(const gert::TilingContext* context, size_t x1DimNum, 
                 context->GetNodeName(), "gamma and x1",
                 (Ops::Base::ToString(gamma_shape->GetStorageShape()) + " and " +
                  Ops::Base::ToString(x1_shape->GetStorageShape())).c_str(),
-                ("The shape of gamma should be equal to the last " + std::to_string(gammaDimNum) + " dim of x1.")
+                ("The shape of gamma should be equal to the last " + std::to_string(gammaDimNum) + " dim of x1")
                     .c_str()),
             return false);
     }
@@ -162,12 +162,12 @@ static bool CheckShapeInfo(const gert::TilingContext* context, size_t x1DimNum, 
                 OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(
                     context->GetNodeName(), "x1 and rstd",
                     ("0 and " + std::to_string(rstd_shape->GetStorageShape().GetShapeSize())).c_str(),
-                    "when x1 shape size is 0, rstd shape size should be 0 too.");
+                    "When x1 shape size is 0, rstd shape size should be 0 too");
                 return false;
             }
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "x1",
                 Ops::Base::ToString(x1_shape->GetStorageShape()).c_str(),
-                "x1 can not be empty tensor.");
+                "x1 can not be empty tensor");
             return false;
         }
         OP_CHECK_IF(
@@ -176,7 +176,7 @@ static bool CheckShapeInfo(const gert::TilingContext* context, size_t x1DimNum, 
                 context->GetNodeName(), "x2 and x1",
                 (Ops::Base::ToString(x2_shape->GetStorageShape()) + " and " +
                  Ops::Base::ToString(x1_shape->GetStorageShape())).c_str(),
-                "shape of x1 and x2 should be the same."),
+                "The shapes of x1 and x2 should be the same"),
             return false);
         OP_CHECK_IF(
             (y1_shape->GetStorageShape().GetDim(i) != x1_shape->GetStorageShape().GetDim(i)) ||
@@ -188,7 +188,7 @@ static bool CheckShapeInfo(const gert::TilingContext* context, size_t x1DimNum, 
                  Ops::Base::ToString(y2_shape->GetStorageShape()) + ", " +
                  Ops::Base::ToString(x_shape->GetStorageShape()) + " and " +
                  Ops::Base::ToString(x1_shape->GetStorageShape())).c_str(),
-                "The shape of y1, y2 and x should be the same as the shape of x1."),
+                "The shapes of y1, y2 and x should be the same as the shape of x1"),
             return false);
     }
     return true;
@@ -273,9 +273,9 @@ static ge::graphStatus Tiling4AddRmsNormCast(gert::TilingContext* context)
     const float* epsilon = attrs->GetFloat(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, epsilon);
     OP_CHECK_IF(
-        *epsilon < 0, 
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "epsilon", std::to_string(*epsilon).c_str(),
-            "epsilon should not be less than zero."),
+        *epsilon < 0,
+        OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "epsilon", std::to_string(*epsilon).c_str(),
+            "greater than or equal to zero"),
         return ge::GRAPH_FAILED);
     uint32_t numCol = gamma_shape.GetShapeSize();
     float avgFactor = (numCol == 0U) ? 0 : 1.0 / numCol;

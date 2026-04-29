@@ -123,7 +123,7 @@ ge::graphStatus ApplyAdamWTiling::CheckShapeAndType() {
             OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
                 tilingContext_->GetNodeName(), "max_grad_norm and var",
                 (Ops::Base::ToString(maxGradNormDtype) + " and " + Ops::Base::ToString(inputDtype)).c_str(),
-                "dtypes of max_grad_norm and var should be the same");
+                "The dtypes of max_grad_norm and var should be the same");
             return ge::GRAPH_FAILED;
         }
     }
@@ -136,7 +136,7 @@ ge::graphStatus ApplyAdamWTiling::CheckShapeAndType() {
                 tilingContext_->GetNodeName(), "max_grad_norm and var", 
                 (Ops::Base::ToString(maxGradNormStorageShape) + " and " + Ops::Base::ToString(inputStorageShape))
                     .c_str(),
-                "shape of max_grad_norm and var should be the same");
+                "The shapes of max_grad_norm and var should be the same");
             return ge::GRAPH_FAILED;
         }
     }
