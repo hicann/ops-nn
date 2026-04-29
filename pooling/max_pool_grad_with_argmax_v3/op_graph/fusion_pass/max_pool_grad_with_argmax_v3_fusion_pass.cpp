@@ -71,9 +71,7 @@ bool CheckPlatformSupport()
         PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optionalInfo) != SUCCESS, false,
         kPassName.c_str(), "Get platform_info failed.");
     const std::string soc = platformInfo.str_info.short_soc_version;
-    const bool isPlatform91093 = (soc == "Ascend910_93");
-    const bool isPlatform950 = (soc == "Ascend950");
-    if (!isPlatform91093 && !isPlatform950) {
+    if (soc != "Ascend950") {
         OPS_LOG_D(kPassName.c_str(), "Platform %s is not supported.", soc.c_str());
         return false;
     }

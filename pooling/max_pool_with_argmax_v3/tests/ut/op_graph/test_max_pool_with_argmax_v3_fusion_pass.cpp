@@ -154,7 +154,7 @@ class MaxPoolWithArgmaxV3FusionPassTest : public testing::Test {
 protected:
     void SetUp() override
     {
-        SetPlatform("Ascend910_93");
+        SetPlatform("Ascend950");
     }
 };
 
