@@ -30,6 +30,7 @@ using AscendC::TPosition;
 using AscendC::WaitFlag;
 
 namespace DualLevelQuantBatchMatmul::Arch35 {
+
 #define DLQBMM_VEC_COMPUTE_TEMPLATE_PARAM \
     template <typename x1Level0ScaleType, typename x2Level0ScaleType, typename biasType, typename yType, bool hasBias>
 
@@ -64,6 +65,14 @@ public:
     __aicore__ inline void SetVToMte2ForX1();
     __aicore__ inline void WaitVToMte2ForX2();
     __aicore__ inline void SetVToMTE2ForX2();
+
+    __aicore__ inline uint64_t CalcRealMSizeForVec(uint64_t totalMSize, uint64_t mUbSize);
+    __aicore__ inline void CopyX1Level0ScaleToUbForAllKDim(
+        const DualLevelQbmmBasicBlockOffsetParams& basicBlockParam, const L0CopyAndCalcParams& l0Params,
+        uint64_t x1Level0ScaleGroupNum, uint64_t realMFirstRound, uint64_t vectorMOffset);
+    __aicore__ inline void CopyX1Level0ScaleToUbForTileKDim(
+        const DualLevelQbmmBasicBlockOffsetParams& basicBlockParam, const L0CopyAndCalcParams& l0Params,
+        uint64_t x1Level0ScaleGroupNum, uint64_t realMFirstRound, uint64_t vectorMOffset);
 
 private:
     static constexpr uint64_t CV_LOOP_NUM = 2;
@@ -115,50 +124,115 @@ __aicore__ inline void DLQBMM_VEC_COMPUTE_CLASS::Init(
 }
 
 DLQBMM_VEC_COMPUTE_TEMPLATE_PARAM
+__aicore__ inline uint64_t DLQBMM_VEC_COMPUTE_CLASS::CalcRealMSizeForVec(uint64_t totalMSize, uint64_t mUbSize)
+{
+    if (GetSubBlockIdx() == 0) {
+        return DualLevelQuantBatchMatmul::Arch35::Min<uint64_t>(mUbSize, totalMSize);
+    } else {
+        return (totalMSize > mUbSize) ? (totalMSize - mUbSize) : 0;
+    }
+}
+
+/**
+ * 数据搬运逻辑：
+ * - mL1Size: 当前core在M方向处理的总数据量（典型值256）
+ * - mL0Size: 每轮L0处理的大小（min(128, mL1Size)），分两轮处理完mL1Size
+ * - mUbSize: 每个vector core处理的大小（ceil(mL0Size/2)，典型值64）
+ * - 两个vector core分别处理每轮的前半段和后半段
+ * 
+ * 切分处理：
+ * 1. mL1Size < 256: 第二轮数据不足128，vec1可能无数据需要处理
+ * 2. mL0Size为奇数: 第一轮vec1的处理量 = mL0Size - mUbSize < mUbSize
+ * 3. mL1Size < 128: 只有第一轮，且vec1可能无数据需要处理
+ */
+DLQBMM_VEC_COMPUTE_TEMPLATE_PARAM
 __aicore__ inline void DLQBMM_VEC_COMPUTE_CLASS::CopyX1Level0ScaleToUb(
     const DualLevelQbmmBasicBlockOffsetParams& basicBlockParam, const L0CopyAndCalcParams& l0Params)
 {
-    uint64_t vectorShiftOffset =
-        GetSubBlockIdx() * basicBlockParam.mUbSize * basicBlockParam.level0ScaleGmGroupNum; // 不同核的偏移量
+    // 计算K方向需要搬运的group数量
     uint64_t x1Level0ScaleGroupNum =
         basicBlockParam.kGmOffset + basicBlockParam.level0ScaleKUbSize > basicBlockParam.kSize ?
             Ops::Base::CeilDiv(basicBlockParam.kSize - basicBlockParam.kGmOffset, basicBlockParam.level0GroupSize) :
             Ops::Base::CeilDiv(basicBlockParam.level0ScaleKUbSize, basicBlockParam.level0GroupSize);
 
+    // 第一轮：处理M方向 [0, mL0Size) 范围的数据
+    uint64_t realML0Size = DualLevelQuantBatchMatmul::Arch35::Min<uint64_t>(l0Params.mL0Size, l0Params.mL1Size);
+    uint64_t realMFirstRound = CalcRealMSizeForVec(realML0Size, basicBlockParam.mUbSize);
+    uint64_t vectorMOffset = GetSubBlockIdx() * basicBlockParam.mUbSize;
+
+    // 两种场景：
+    // - K方向多倍载入一次全部搬运：scale的K维度覆盖全部K轴
+    // - K方向部分搬运：scale的K维度只覆盖部分K轴
     if (basicBlockParam.level0ScaleKUbSize > basicBlockParam.kSize) {
-        uint64_t x1Level0ScaleBlockLen = basicBlockParam.mUbSize * x1Level0ScaleGroupNum;
+        CopyX1Level0ScaleToUbForAllKDim(
+            basicBlockParam, l0Params, x1Level0ScaleGroupNum, realMFirstRound, vectorMOffset);
+    } else {
+        CopyX1Level0ScaleToUbForTileKDim(
+            basicBlockParam, l0Params, x1Level0ScaleGroupNum, realMFirstRound, vectorMOffset);
+    }
+}
+
+DLQBMM_VEC_COMPUTE_TEMPLATE_PARAM
+__aicore__ inline void DLQBMM_VEC_COMPUTE_CLASS::CopyX1Level0ScaleToUbForAllKDim(
+    const DualLevelQbmmBasicBlockOffsetParams& basicBlockParam, const L0CopyAndCalcParams& l0Params,
+    uint64_t x1Level0ScaleGroupNum, uint64_t realMFirstRound, uint64_t vectorMOffset)
+{
+    // K方向多倍载入一次全部搬运：scale的K维度覆盖全部K轴
+    // 第一轮可能就是尾块，两个vector处理大小可能不一样
+    if (realMFirstRound > 0) {
+        uint64_t firstRoundBlockLen = realMFirstRound * x1Level0ScaleGroupNum;
         DataCopyPad2D<float>(
             x1Level0ScaleB32Ub_[mte2X1Level0ScaleBufIdx_ % DOUBLE_BUFFER_NUM * X1_SCALE_B32_OFFSET],
-            x1Level0ScaleB32Gm_[basicBlockParam.mGmOffset * basicBlockParam.level0ScaleGmGroupNum + vectorShiftOffset],
-            1, x1Level0ScaleBlockLen, X1_SCALE_B32_OFFSET, x1Level0ScaleBlockLen);
-        if (l0Params.mL0Size < l0Params.mL1Size) {
-            // x1Level0ScaleBlockLen可能会导致地址32B非对齐
-            // m方向存在第二轮循环时，第一轮会搬运64*x1Level0ScaleGroupNum，满足32B对齐；不存在第二轮循环时没有必要搬运
+            x1Level0ScaleB32Gm_[(basicBlockParam.mGmOffset + vectorMOffset) * basicBlockParam.level0ScaleGmGroupNum], 1,
+            firstRoundBlockLen, X1_SCALE_B32_OFFSET, firstRoundBlockLen);
+    }
+
+    // 第二轮：处理M方向 [mL0Size, mL1Size) 范围的数据
+    // 如果存在第二轮才处理
+    if (l0Params.mL0Size < l0Params.mL1Size) {
+        uint64_t realMSecondRound = CalcRealMSizeForVec(l0Params.mL1Size - l0Params.mL0Size, basicBlockParam.mUbSize);
+        // 同理，第二轮有尾块的情况，两个vector处理大小不同
+        if (realMSecondRound > 0) {
+            uint64_t secondRoundBlockLen = realMSecondRound * x1Level0ScaleGroupNum;
             DataCopyPad2D<float>(
                 x1Level0ScaleB32Ub_
-                    [mte2X1Level0ScaleBufIdx_ % DOUBLE_BUFFER_NUM * X1_SCALE_B32_OFFSET + x1Level0ScaleBlockLen],
+                    [mte2X1Level0ScaleBufIdx_ % DOUBLE_BUFFER_NUM * X1_SCALE_B32_OFFSET +
+                     realMFirstRound * x1Level0ScaleGroupNum],
                 x1Level0ScaleB32Gm_
-                    [basicBlockParam.mGmOffset * basicBlockParam.level0ScaleGmGroupNum + vectorShiftOffset +
-                     l0Params.mL0Size * basicBlockParam.level0ScaleGmGroupNum],
-                1, x1Level0ScaleBlockLen, X1_SCALE_B32_OFFSET, x1Level0ScaleBlockLen);
+                    [(basicBlockParam.mGmOffset + l0Params.mL0Size + vectorMOffset) *
+                     basicBlockParam.level0ScaleGmGroupNum],
+                1, secondRoundBlockLen, X1_SCALE_B32_OFFSET, secondRoundBlockLen);
         }
-    } else {
+    }
+}
+
+DLQBMM_VEC_COMPUTE_TEMPLATE_PARAM
+__aicore__ inline void DLQBMM_VEC_COMPUTE_CLASS::CopyX1Level0ScaleToUbForTileKDim(
+    const DualLevelQbmmBasicBlockOffsetParams& basicBlockParam, const L0CopyAndCalcParams& l0Params,
+    uint64_t x1Level0ScaleGroupNum, uint64_t realMFirstRound, uint64_t vectorMOffset)
+{
+    // K方向部分搬运：scale的K维度只覆盖部分K轴
+    if (realMFirstRound > 0) {
         DataCopyPad2D<float>(
             x1Level0ScaleB32Ub_[mte2X1Level0ScaleBufIdx_ % DOUBLE_BUFFER_NUM * X1_SCALE_B32_OFFSET],
             x1Level0ScaleB32Gm_
-                [basicBlockParam.mGmOffset * basicBlockParam.level0ScaleGmGroupNum + vectorShiftOffset +
+                [(basicBlockParam.mGmOffset + vectorMOffset) * basicBlockParam.level0ScaleGmGroupNum +
                  basicBlockParam.kGmOffset / basicBlockParam.level0GroupSize],
-            basicBlockParam.mUbSize, x1Level0ScaleGroupNum, X1_LEVEL0_SCALE_B32_STORE_INNER_SIZE,
+            realMFirstRound, x1Level0ScaleGroupNum, X1_LEVEL0_SCALE_B32_STORE_INNER_SIZE,
             basicBlockParam.level0ScaleGmGroupNum);
-        if (l0Params.mL0Size < l0Params.mL1Size) {
+    }
+
+    if (l0Params.mL0Size < l0Params.mL1Size) {
+        uint64_t realMSecondRound = CalcRealMSizeForVec(l0Params.mL1Size - l0Params.mL0Size, basicBlockParam.mUbSize);
+        if (realMSecondRound > 0) {
             DataCopyPad2D<float>(
                 x1Level0ScaleB32Ub_
                     [mte2X1Level0ScaleBufIdx_ % DOUBLE_BUFFER_NUM * X1_SCALE_B32_OFFSET + X1_LEVEL0_SCALE_B32_OFFSET],
                 x1Level0ScaleB32Gm_
-                    [basicBlockParam.mGmOffset * basicBlockParam.level0ScaleGmGroupNum + vectorShiftOffset +
-                     l0Params.mL0Size * basicBlockParam.level0ScaleGmGroupNum +
+                    [(basicBlockParam.mGmOffset + l0Params.mL0Size + vectorMOffset) *
+                         basicBlockParam.level0ScaleGmGroupNum +
                      basicBlockParam.kGmOffset / basicBlockParam.level0GroupSize],
-                basicBlockParam.mUbSize, x1Level0ScaleGroupNum, X1_LEVEL0_SCALE_B32_STORE_INNER_SIZE,
+                realMSecondRound, x1Level0ScaleGroupNum, X1_LEVEL0_SCALE_B32_STORE_INNER_SIZE,
                 basicBlockParam.level0ScaleGmGroupNum);
         }
     }
@@ -262,9 +336,9 @@ __aicore__ inline void DLQBMM_VEC_COMPUTE_CLASS::CopyUbToGm(
     WaitFlag<HardEvent::V_MTE3>(EVENT_V_MTE3_ID);
 
     uint64_t realML0Size =
-        mL1Offset + l0Params.mL0Size > l0Params.mL1Size ? l0Params.mL1Size - l0Params.mL0Size : l0Params.mL0Size;
+        mL1Offset + l0Params.mL0Size > l0Params.mL1Size ? l0Params.mL1Size - mL1Offset : l0Params.mL0Size;
     uint64_t realNL0Size =
-        nL1Offset + l0Params.nL0Size > l0Params.nL1Size ? l0Params.nL1Size - l0Params.nL0Size : l0Params.nL0Size;
+        nL1Offset + l0Params.nL0Size > l0Params.nL1Size ? l0Params.nL1Size - nL1Offset : l0Params.nL0Size;
     uint64_t mUbSize = Ops::Base::CeilDiv<uint64_t>(realML0Size, 2);
     uint64_t mOutSize = GetSubBlockIdx() == 0 ? mUbSize : realML0Size - mUbSize;
 
