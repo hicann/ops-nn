@@ -91,7 +91,7 @@ bool SyncBatchNormGatherStatsTiling::TotalSumShapeCheck()
 
     OP_CHECK_IF((totalSumDim0_ <= 0 || totalSumDim1_ <= 0),
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-            opName, "total_sum", Ops::Base::ToString(totalSumShape_).c_str(), "Input total_sum cannot be empty tensor"),
+            opName, "total_sum", Ops::Base::ToString(totalSumShape_).c_str(), "Input total_sum cannot be an empty tensor"),
         return false);
 
     return true;
@@ -121,7 +121,7 @@ bool SyncBatchNormGatherStatsTiling::TotalSquareSumShapeCheck()
 
     OP_CHECK_IF((totalSquareSumDim0_ <= 0 || totalSquareSumDim1_ <= 0),
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, "total_square_sum", Ops::Base::ToString(totalSquareSumShape_).c_str(),
-            "Input total_square_sum cannot be empty tensor"),
+            "Input total_square_sum cannot be an empty tensor"),
         return false);
 
     return true;
@@ -152,7 +152,7 @@ bool SyncBatchNormGatherStatsTiling::SampleCountShapeCheck()
     OP_CHECK_IF((sampleCountDim0_ <= 0),
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
             opName, "sample_count", Ops::Base::ToString(sampleCountShape_).c_str(),
-            "Input sample_count cannot be empty tensor"),
+            "Input sample_count cannot be an empty tensor"),
         return false);
 
     return true;
@@ -181,7 +181,7 @@ bool SyncBatchNormGatherStatsTiling::MeanShapeCheck()
 
     OP_CHECK_IF((meanDim0_ <= 0),
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-            opName, "mean", Ops::Base::ToString(meanShape_).c_str(), "Input mean cannot be empty tensor"),
+            opName, "mean", Ops::Base::ToString(meanShape_).c_str(), "Input mean cannot be an empty tensor"),
         return false);
 
     return true;
@@ -211,7 +211,7 @@ bool SyncBatchNormGatherStatsTiling::VarShapeCheck()
 
     OP_CHECK_IF((varDim0_ <= 0),
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-            opName, "variance", Ops::Base::ToString(varShape_).c_str(), "Input variance cannot be empty tensor"),
+            opName, "variance", Ops::Base::ToString(varShape_).c_str(), "Input variance cannot be an empty tensor"),
         return false);
 
     return true;
@@ -241,7 +241,7 @@ bool SyncBatchNormGatherStatsTiling::BatchMeanCheck()
 
     OP_CHECK_IF((batchMeanDim0_ <= 0),
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, "batch_mean",
-            Ops::Base::ToString(batchMeanShape_).c_str(), "Output batch_mean cannot be empty tensor"),
+            Ops::Base::ToString(batchMeanShape_).c_str(), "Output batch_mean cannot be an empty tensor"),
         return false);
 
     return true;
@@ -272,7 +272,7 @@ bool SyncBatchNormGatherStatsTiling::BatchInvstdCheck()
     OP_CHECK_IF((batchInvStdDim0_ <= 0),
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
             opName, "batch_invstd", Ops::Base::ToString(batchInvStdShape_).c_str(),
-            "Output batch_invstd cannot be empty tensor"),
+            "Output batch_invstd cannot be an empty tensor"),
         return false);
 
     return true;
@@ -302,7 +302,7 @@ bool SyncBatchNormGatherStatsTiling::RunningMeanCheck()
 
     OP_CHECK_IF((runningMeanDim0_ <= 0),
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-            opName, "mean", Ops::Base::ToString(runningMeanShape_).c_str(), "Output mean cannot be empty tensor"),
+            opName, "mean", Ops::Base::ToString(runningMeanShape_).c_str(), "Output mean cannot be an empty tensor"),
         return false);
 
     return true;
@@ -332,7 +332,7 @@ bool SyncBatchNormGatherStatsTiling::RunningVarCheck()
 
     OP_CHECK_IF((runningVarDim0_ <= 0),
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-            opName, "variance", Ops::Base::ToString(runningVarShape_).c_str(), "Output variance cannot be empty tensor"),
+            opName, "variance", Ops::Base::ToString(runningVarShape_).c_str(), "Output variance cannot be an empty tensor"),
         return false);
 
     return true;
@@ -398,7 +398,7 @@ bool SyncBatchNormGatherStatsTiling::ValidateInputDtypes()
                                ge::TypeUtils::DataTypeToSerialString(totalSquareSumDType_) + ", " +
                                ge::TypeUtils::DataTypeToSerialString(meanDType_) + " and " +
                                ge::TypeUtils::DataTypeToSerialString(varDType_);
-        std::string reasonMsg = "Dtypes of input total_sum, total_square_sum, mean and variance must be same";
+        std::string reasonMsg = "The dtypes of input total_sum, total_square_sum, mean and variance must be the same";
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
             opName, "total_sum, total_square_sum, mean and variance", dtypeMsg.c_str(), reasonMsg.c_str());
         return false;
@@ -417,7 +417,7 @@ bool SyncBatchNormGatherStatsTiling::ValidateOutputDtypes()
                                ge::TypeUtils::DataTypeToSerialString(batchInvStdDType_) + ", " +
                                ge::TypeUtils::DataTypeToSerialString(runningMeanDType_) + " and " +
                                ge::TypeUtils::DataTypeToSerialString(runningVarDType_);
-        std::string reasonMsg = "Dtypes of output batch_mean, batch_invstd, mean and variance must be same";
+        std::string reasonMsg = "The dtypes of output batch_mean, batch_invstd, mean and variance must be the same";
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
             opName, "batch_mean, batch_invstd, mean and variance", dtypeMsg.c_str(), reasonMsg.c_str());
         return false;
@@ -439,8 +439,8 @@ bool SyncBatchNormGatherStatsTiling::ValidateInputDimensions()
                                Ops::Base::ToString(meanShape_) +
                                " and " + Ops::Base::ToString(varShape_);
         std::string reasonMsg =
-            "The first dimension of total_sum, total_square_sum and sample_count must match, "
-            "and the second dimension of total_sum, total_square_sum, mean and variance must match";
+            "The first dimension of total_sum, total_square_sum and sample_count must be the same, "
+            "and the second dimension of total_sum, total_square_sum, mean and variance must be the same";
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
             opName, "total_sum, total_square_sum, sample_count, mean and variance", shapeMsg.c_str(),
             reasonMsg.c_str());
@@ -460,7 +460,7 @@ bool SyncBatchNormGatherStatsTiling::ValidateOutputDimensions()
                                Ops::Base::ToString(batchInvStdShape_) +
                                ", " + Ops::Base::ToString(runningMeanShape_) + " and " +
                                Ops::Base::ToString(runningVarShape_);
-        std::string reasonMsg = "The first dimension of batch_mean, batch_invstd, mean and variance must be consistent";
+        std::string reasonMsg = "The first dimension of batch_mean, batch_invstd, mean and variance must be the same";
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
             opName, "batch_mean, batch_invstd, mean and variance", shapeMsg.c_str(), reasonMsg.c_str());
         return false;
@@ -650,7 +650,7 @@ ge::graphStatus SyncBatchNormGatherStatsTiling::DoOpTiling()
     OP_CHECK_IF((dTypeSize == 0),
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
             context_->GetNodeName(), "mean", ge::TypeUtils::DataTypeToSerialString(meanDType_).c_str(),
-            "Input tensor mean's dtype size is zero"),
+            "The dtype size of input parameter mean must be not equal to 0"),
         return ge::GRAPH_FAILED);
 
     if (dTypeSize == FLOAT_DTYPE_SIZE) {

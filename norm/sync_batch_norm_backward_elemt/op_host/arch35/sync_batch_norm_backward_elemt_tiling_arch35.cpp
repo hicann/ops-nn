@@ -95,9 +95,9 @@ ge::graphStatus SyncBatchNormBackwardElemtTiling::CalcInputDtype()
             AllSame(this->gradOutputDtype, {this->saveInputDtype, this->meanDtype, this->invstdDtype, this->weightDtype, this->meanDyDtype, this->meanDyXmuDtype});
     if (!valid) {
         std::string reasonMsg = isFloat16FloatCase ?
-                "When grad_output dtype is float16 and mean dtype is float, save_input must be float16 "
-                "and remaining tensors (invstd, weight, mean_dy, mean_dy_xmu) must be float" :
-                "When grad_output is not float16 or mean is not float, all input tensors must have the same dtype";
+            "The dtype of save_input must be float16 and the dtypes of remaining tensors invstd, weight, mean_dy and mean_dy_xmu must be float, "
+            "when the dtype of grad_output is float16 and the dtype of mean is float" :
+            "The dtypes of all input parameters must be the same, when the dtype of grad_output is not float16 or the dtype of mean is not float";
 
         std::string dtypesStr = ge::TypeUtils::DataTypeToSerialString(this->gradOutputDtype) + ", " +
                                 ge::TypeUtils::DataTypeToSerialString(this->saveInputDtype) + ", " +
@@ -122,8 +122,8 @@ ge::graphStatus SyncBatchNormBackwardElemtTiling::CalcOutputDtype()
     this->outputDtype = outputDesc->GetDataType();
 
     if (this->gradOutputDtype != this->outputDtype) {
-        std::string reasonMsg = "Output tensor grad_input's dtype should be same with input tensor grad_output's dtype " +
-                                ge::TypeUtils::DataTypeToSerialString(this->gradOutputDtype);
+        std::string reasonMsg = "The dtype of output parameter grad_input must be the same as that (" +
+                                ge::TypeUtils::DataTypeToSerialString(this->gradOutputDtype) + ") of input parameter grad_output";
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(tilingContext->GetNodeName(), "grad_input",
             ge::TypeUtils::DataTypeToSerialString(this->outputDtype).c_str(), reasonMsg.c_str());
         return ge::GRAPH_FAILED;

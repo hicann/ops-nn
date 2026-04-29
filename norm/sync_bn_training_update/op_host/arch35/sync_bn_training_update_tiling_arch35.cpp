@@ -109,7 +109,7 @@ ge::graphStatus SyncBNTrainingUpdateTiling::CheckTensorDtype()
                                ge::TypeUtils::DataTypeToSerialString(runningMeanUpdateDtype);
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
             opName, "mean, running_mean and running_mean_update", dtypeMsg.c_str(),
-            "Dtypes of mean, running_mean and running_mean_update should be same");
+            "The dtypes of mean, running_mean and running_mean_update must be the same");
         return ge::GRAPH_FAILED;
     }
 

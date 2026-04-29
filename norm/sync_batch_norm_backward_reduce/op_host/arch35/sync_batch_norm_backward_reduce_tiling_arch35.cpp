@@ -82,21 +82,21 @@ ge::graphStatus SyncBatchNormBackwardReduceTiling::CalcOutputDtype()
         std::string dtypeMsg = ge::TypeUtils::DataTypeToSerialString(inputSumDyDtype) + " and " +
                                ge::TypeUtils::DataTypeToSerialString(inputSumDyDxPadDtype);
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "sum_dy and sum_dy_dx_pad",
-            dtypeMsg.c_str(), "Dtypes of sum_dy and sum_dy_dx_pad must be same");
+            dtypeMsg.c_str(), "The dtypes of sum_dy and sum_dy_dx_pad must be the same");
         return ge::GRAPH_FAILED;
     }
     if (inputMeanDtype != inputInvertStdDtype) {
         std::string dtypeMsg = ge::TypeUtils::DataTypeToSerialString(inputMeanDtype) + " and " +
                                ge::TypeUtils::DataTypeToSerialString(inputInvertStdDtype);
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "mean and invert_std",
-            dtypeMsg.c_str(), "Dtypes of mean and invert_std must be same");
+            dtypeMsg.c_str(), "The dtypes of mean and invert_std must be the same");
         return ge::GRAPH_FAILED;
     }
     if (inputSumDyDtype != inputInvertStdDtype) {
         std::string dtypeMsg = ge::TypeUtils::DataTypeToSerialString(inputSumDyDtype) + " and " +
                                ge::TypeUtils::DataTypeToSerialString(inputInvertStdDtype);
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "sum_dy and invert_std",
-            dtypeMsg.c_str(), "Dtypes of sum_dy and invert_std must be same");
+            dtypeMsg.c_str(), "The dtypes of sum_dy and invert_std must be the same");
         return ge::GRAPH_FAILED;
     }
     // 检查输出之间的dtype是否相同
@@ -104,7 +104,7 @@ ge::graphStatus SyncBatchNormBackwardReduceTiling::CalcOutputDtype()
         std::string dtypeMsg = ge::TypeUtils::DataTypeToSerialString(outputSumDyXmuDtype) + " and " +
                                ge::TypeUtils::DataTypeToSerialString(outputYDtype);
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "sum_dy_xmu and y",
-            dtypeMsg.c_str(), "Dtypes of sum_dy_xmu and y must be same");
+            dtypeMsg.c_str(), "The dtypes of sum_dy_xmu and y must be the same");
         return ge::GRAPH_FAILED;
     }
     // 输入输出之间是dtype是否相同
@@ -113,7 +113,7 @@ ge::graphStatus SyncBatchNormBackwardReduceTiling::CalcOutputDtype()
         std::string dtypeMsg = ge::TypeUtils::DataTypeToSerialString(inputSumDyDtype) + " and " +
                                ge::TypeUtils::DataTypeToSerialString(outputYDtype);
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "sum_dy and y",
-            dtypeMsg.c_str(), "Dtypes of sum_dy and y must be same");
+            dtypeMsg.c_str(), "The dtypes of sum_dy and y must be the same");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
