@@ -28,62 +28,6 @@ constexpr size_t X_DIMS = 5;
 constexpr size_t INDEX_DATAFORMAT = 0;
 constexpr size_t NCDHW_DIM_NUM = 5;
 constexpr size_t CDHW_DIM_NUM = 4;
-
-/**
- * @brief 提取的输入合法性校验辅助函数
- * @param context 推理上下文，用于日志输出和节点信息获取
- * @param gradShape y_grad输入的shape指针
- * @param xShape x输入的shape指针
- * @param dataFormatStr 数据格式字符串（NCDHW/NDHWC/CDHW/DHWC）
- * @return ge::GRAPH_SUCCESS 校验通过；ge::GRAPH_FAILED 校验失败（含详细日志）
- */
-
-static ge::graphStatus CheckInputValidity(const gert::InferShapeContext* context, 
-                                         const gert::Shape* gradShape, 
-                                         const gert::Shape* xShape, 
-                                         const std::string& dataFormatStr) {
-    // 1. 校验数据格式合法性
-    if (!(dataFormatStr == "NCDHW" || dataFormatStr == "NDHWC" || dataFormatStr == "CDHW" || dataFormatStr == "DHWC")) {
-        OP_LOGE(context->GetNodeName(), 
-                "ATTR dataFormat is %s, expect [NDHWC] or [NCDHW] or [DHWC] or [CDHW].", 
-                dataFormatStr.c_str());
-        return ge::GRAPH_FAILED;
-    }
-
-    // 2. 校验输入维度数合法性
-    size_t gradDimNum = gradShape->GetDimNum();
-    size_t xDimNum = xShape->GetDimNum();
-    bool dimNumValid = ((xDimNum == NCDHW_DIM_NUM) && (gradDimNum == NCDHW_DIM_NUM)) ||
-                       ((xDimNum == CDHW_DIM_NUM) && (gradDimNum == CDHW_DIM_NUM));
-    bool isUnknownGrad = Ops::Base::IsUnknownRank(*gradShape) || Ops::Base::IsUnknownShape(*gradShape) ||
-        Ops::Base::IsUnknownRank(*xShape) || Ops::Base::IsUnknownShape(*xShape);
-    if (!dimNumValid && !isUnknownGrad) {
-        OP_LOGE(context->GetNodeName(),
-                "Input dim num should be %lu or %lu, actual: xDim=%lu, gradDim=%lu",
-                NCDHW_DIM_NUM, CDHW_DIM_NUM, xDimNum, gradDimNum);
-        return ge::GRAPH_FAILED;
-    }
-
-    // 3. 校验NC维度一致性
-    uint32_t cPosIdx = (dataFormatStr == "NDHWC") ? xDimNum - 1 : xDimNum - 4;
-    uint64_t xNDim = (xDimNum == CDHW_DIM_NUM) ? 1 : xShape->GetDim(0);
-    uint64_t gradNDim = (gradDimNum == CDHW_DIM_NUM) ? 1 : gradShape->GetDim(0);    
-    uint64_t xCDim = xShape->GetDim(cPosIdx);
-    uint64_t gradCDim = gradShape->GetDim(cPosIdx);
-    
-    if (!isUnknownGrad && ((xNDim != gradNDim) || (xCDim != gradCDim))) {
-        OP_LOGI("InferShape4AdaptiveAvgPool3dGrad", 
-            "NC: grad(%lu,%lu), x(%lu,%lu)", gradNDim, gradCDim, xNDim, xCDim);
-        OP_LOGE(context->GetNodeName(), 
-                "Input N/C dim mismatch: grad(N=%lu,C=%lu), x(N=%lu,C=%lu)",
-                gradNDim, gradCDim, xNDim, xCDim);
-        return ge::GRAPH_FAILED;
-    }
-
-    // 所有校验通过
-    return ge::GRAPH_SUCCESS;
-}
-
 } // namespace
 
 namespace ops {
@@ -128,14 +72,6 @@ static ge::graphStatus InferShape4AdaptiveAvgPool3dGrad(gert::InferShapeContext*
         ge::GRAPH_SUCCESS),
     OP_LOGE(context->GetNodeName(), "Cannot get platform info!"), return ge::GRAPH_FAILED);
     
-    if (platform_info.str_info.short_soc_version == "Ascend950") {
-        ge::graphStatus checkStatus = CheckInputValidity(context, gradShape, xShape, dataFormatStr);
-        if (checkStatus != ge::GRAPH_SUCCESS) {
-            OP_LOGE(context->GetNodeName(), "Input validity check failed!");
-            return GRAPH_FAILED;
-        }
-    }
-
     // 输出shape赋值+0维度校验
     for (size_t i = 0; i < xDimNum; ++i) {
         xGradShape->SetDim(i, xShape->GetDim(i));
