@@ -53,7 +53,8 @@ __aicore__ inline void QbmmCubeBasicApiKernel(
         X2ScaleType>;
 
     // 定义Kernel类型
-    using MatmulKernel = Cmct::Gemm::Kernel::QuantMmBatchCube<ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler>;
+    using MatmulKernel =
+        Cmct::Gemm::Kernel::QuantMmBatchCube<ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler, false>;
     using Params = typename MatmulKernel::Params;
     const DequantBmm::QuantBatchMatmulV3BasicAPITilingData* quantBmmTilingData_;
     quantBmmTilingData_ = static_cast<const DequantBmm::QuantBatchMatmulV3BasicAPITilingData*>(tilingData);

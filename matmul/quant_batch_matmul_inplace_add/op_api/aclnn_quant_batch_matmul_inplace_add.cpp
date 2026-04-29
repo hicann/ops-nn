@@ -82,6 +82,27 @@ static aclnnStatus IsMxQuantDim(const QBMMInplaceAdd::QuantBatchMatmulInplaceAdd
     return ACLNN_SUCCESS;
 }
 
+static aclnnStatus IsPerTensorDim(const QBMMInplaceAdd::QuantBatchMatmulInplaceAddParams& params)
+{
+    auto x1ScaleDimNum = params.x1ScaleOptional->GetViewShape().GetDimNum();
+    auto x2ScaleDimNum = params.x2Scale->GetViewShape().GetDimNum();
+    CHECK_COND(
+        x1ScaleDimNum == PERTENSOR_SCALE_DIM, ACLNN_ERR_PARAM_INVALID,
+        "In HiFloat8 per-tensor quant, the dimension of x1Scale should be 1, but actual is %zu.", x1ScaleDimNum);
+    CHECK_COND(
+        x2ScaleDimNum == PERTENSOR_SCALE_DIM, ACLNN_ERR_PARAM_INVALID,
+        "In HiFloat8 per-tensor quant, the dimension of x2Scale should be 1, but actual is %zu.", x2ScaleDimNum);
+    CHECK_COND(
+        params.x1ScaleOptional->GetViewShape().GetDim(0) == 1, ACLNN_ERR_PARAM_INVALID,
+        "In HiFloat8 per-tensor quant, x1Scale shape should be [1], but actual is [%ld].",
+        params.x1ScaleOptional->GetViewShape().GetDim(0));
+    CHECK_COND(
+        params.x2Scale->GetViewShape().GetDim(0) == 1, ACLNN_ERR_PARAM_INVALID,
+        "In HiFloat8 per-tensor quant, x2Scale shape should be [1], but actual is [%ld].",
+        params.x2Scale->GetViewShape().GetDim(0));
+    return ACLNN_SUCCESS;
+}
+
 static aclnnStatus CheckInputOutDims(const QBMMInplaceAdd::QuantBatchMatmulInplaceAddParams& params)
 {
     auto x1DimNum = params.x1->GetViewShape().GetDimNum();
@@ -102,11 +123,16 @@ static aclnnStatus CheckInputOutDims(const QBMMInplaceAdd::QuantBatchMatmulInpla
 
 static inline bool IsMicroScaling(const aclTensor* x1Scale, const aclTensor* x2Scale)
 {
-    if (x1Scale == nullptr) {
+    if (x1Scale == nullptr || x2Scale == nullptr) {
         return false;
     }
     return x1Scale->GetDataType() == op::DataType::DT_FLOAT8_E8M0 &&
            x2Scale->GetDataType() == op::DataType::DT_FLOAT8_E8M0;
+}
+
+static inline bool IsHiFloat8Input(const aclTensor* x1, const aclTensor* x2)
+{
+    return x1->GetDataType() == op::DataType::DT_HIFLOAT8 && x2->GetDataType() == op::DataType::DT_HIFLOAT8;
 }
 
 static bool CheckMKN(int64_t m, int64_t k, int64_t n)
@@ -151,67 +177,120 @@ Actual groupSize: %ld(torch api group_sizes is [%lu, %lu, %lu]).",
     return true;
 }
 
-static aclnnStatus CheckShape(const QBMMInplaceAdd::QuantBatchMatmulInplaceAddParams& params)
+struct MatmulShapeInfo {
+    int64_t mDim;
+    int64_t kDim;
+    int64_t nDim;
+    int64_t yRefMDim;
+    int64_t yRefNDim;
+};
+
+static MatmulShapeInfo GetMatmulShapeInfo(const QBMMInplaceAdd::QuantBatchMatmulInplaceAddParams& params)
 {
-    CHECK_COND(CheckInputOutDims(params) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID, "Check CheckInputOutDims failed.");
+    int64_t x1DimNum = params.x1->GetViewShape().GetDimNum();
+    int64_t x2DimNum = params.x2->GetViewShape().GetDimNum();
+    return {
+        params.transposeX1 ? params.x1->GetViewShape().GetDim(x1DimNum - 1) :
+                             params.x1->GetViewShape().GetDim(x1DimNum - PENULTIMATE_DIM),
+        params.transposeX1 ? params.x1->GetViewShape().GetDim(x1DimNum - PENULTIMATE_DIM) :
+                             params.x1->GetViewShape().GetDim(x1DimNum - 1),
+        params.transposeX2 ? params.x2->GetViewShape().GetDim(x2DimNum - PENULTIMATE_DIM) :
+                             params.x2->GetViewShape().GetDim(x2DimNum - 1),
+        params.yRef->GetViewShape().GetDim(0),
+        params.yRef->GetViewShape().GetDim(1)};
+}
 
-    int64_t mDim = params.x1->GetViewShape().GetDim(1);  // 从x1的第1维获取m
-    int64_t x1KDim = params.x1->GetViewShape().GetDim(0);  // 从x1的第0维获取k
-    int64_t nDim = params.x2->GetViewShape().GetDim(1);  // 从x2的第1维获取n
-    int64_t x2KDim = params.x2->GetViewShape().GetDim(0); // 从x2的第0维获取k
-    int64_t yRefMDim = params.yRef->GetViewShape().GetDim(0); // 从y的第0维获取m
-    int64_t yRefNDim = params.yRef->GetViewShape().GetDim(1); // 从y的第1维获取n
+static aclnnStatus CheckShapeInfoMatch(
+    const QBMMInplaceAdd::QuantBatchMatmulInplaceAddParams& params, const MatmulShapeInfo& shapeInfo)
+{
+    int64_t x2DimNum = params.x2->GetViewShape().GetDimNum();
+    int64_t x2KDim = params.transposeX2 ? params.x2->GetViewShape().GetDim(x2DimNum - 1) :
+                                          params.x2->GetViewShape().GetDim(x2DimNum - PENULTIMATE_DIM);
     CHECK_COND(
-        x1KDim == x2KDim, ACLNN_ERR_PARAM_INVALID, "The k value of x1/x2 should be equal, but the actual is %ld/%ld.",
-        x1KDim, x2KDim);
+        shapeInfo.kDim == x2KDim, ACLNN_ERR_PARAM_INVALID,
+        "The k value of x1/x2 should be equal, but the actual is %ld/%ld.", shapeInfo.kDim, x2KDim);
     CHECK_COND(
-        mDim == yRefMDim, ACLNN_ERR_PARAM_INVALID, "The m value of x1/yRef should be equal, but the actual is %ld/%ld.",
-        mDim, yRefMDim);
+        shapeInfo.mDim == shapeInfo.yRefMDim, ACLNN_ERR_PARAM_INVALID,
+        "The m value of x1/yRef should be equal, but the actual is %ld/%ld.", shapeInfo.mDim, shapeInfo.yRefMDim);
     CHECK_COND(
-        nDim == yRefNDim, ACLNN_ERR_PARAM_INVALID, "The n value of x2/yRef should be equal, but the actual is %ld/%ld.",
-        nDim, yRefNDim);
+        shapeInfo.nDim == shapeInfo.yRefNDim, ACLNN_ERR_PARAM_INVALID,
+        "The n value of x2/yRef should be equal, but the actual is %ld/%ld.", shapeInfo.nDim, shapeInfo.yRefNDim);
+    return ACLNN_SUCCESS;
+}
 
-    if (!CheckMKN(mDim, x1KDim, nDim)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "CheckMKN failed.");
-        return ACLNN_ERR_PARAM_INVALID;
+static aclnnStatus CheckMxScaleLastDim(const QBMMInplaceAdd::QuantBatchMatmulInplaceAddParams& params)
+{
+    if (!IsMicroScaling(params.x1ScaleOptional, params.x2Scale)) {
+        return ACLNN_SUCCESS;
     }
+
     auto scale1LastDimValue = params.x1ScaleOptional->GetViewShape().GetDim(MX_X1_SCALE_DIM - 1);
     auto scale2LastDimValue = params.x2Scale->GetViewShape().GetDim(MX_X2_SCALE_DIM - 1);
     CHECK_COND(
-        scale1LastDimValue == 2, ACLNN_ERR_PARAM_INVALID, // last dim should be 2 in mx quant mode
+        scale1LastDimValue == MXFP_MULTI_BASE_SIZE, ACLNN_ERR_PARAM_INVALID,
         "The last dim of x1 scale should be 2 in mx quant mode, but actual is %ld.", scale1LastDimValue);
     CHECK_COND(
-        scale2LastDimValue == 2, ACLNN_ERR_PARAM_INVALID, // last dim should be 2 in mx quant mode
+        scale2LastDimValue == MXFP_MULTI_BASE_SIZE, ACLNN_ERR_PARAM_INVALID,
         "The last dim of x2 scale should be 2 in mx quant mode, but actual is %ld.", scale2LastDimValue);
-
-    // x1的shape期望为[K, M]
-    op::Shape x1ExpectShape = {x1KDim, mDim};
-    // x1Scale的shape期望为[CeilDiv(K, 64), M, 2]
-    op::Shape x1ScaleExpectShape = {Ops::Base::CeilDiv(x1KDim, SPLIT_SIZE), mDim, 2};
-    // x2的shape期望为[K, N]
-    op::Shape x2ExpectShape = {x1KDim, nDim};
-    // x2Scale的shape期望为[CeilDiv(K, 64), N, 2]
-    op::Shape x2ScaleExpectShape = {Ops::Base::CeilDiv(x1KDim, SPLIT_SIZE), nDim, 2};
-    // y_input的shape期望为[M, N]
-    op::Shape yInputExpectShape = {yRefMDim, yRefNDim};
-    // y_output的shape期望为[M, N]
-    op::Shape yOutputExpectShape = {mDim, nDim};
-
-    const aclTensor* x1 = params.x1;
-    const aclTensor* x1Scale = params.x1ScaleOptional;
-    const aclTensor* x2 = params.x2;
-    const aclTensor* x2Scale = params.x2Scale;
-    const aclTensor* yInput = params.yRef;
-    const aclTensor* yOutput = params.yRef;
-
-    OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(x1, x1ExpectShape, return ACLNN_ERR_PARAM_INVALID);
-    OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(x1Scale, x1ScaleExpectShape, return ACLNN_ERR_PARAM_INVALID);
-    OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(x2, x2ExpectShape, return ACLNN_ERR_PARAM_INVALID);
-    OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(x2Scale, x2ScaleExpectShape, return ACLNN_ERR_PARAM_INVALID);
-    OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(yInput, yInputExpectShape, return ACLNN_ERR_PARAM_INVALID);
-    OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(yOutput, yOutputExpectShape, return ACLNN_ERR_PARAM_INVALID);
-
     return ACLNN_SUCCESS;
+}
+
+static void GetExpectedScaleShape(
+    const QBMMInplaceAdd::QuantBatchMatmulInplaceAddParams& params, const MatmulShapeInfo& shapeInfo,
+    op::Shape& x1ScaleExpectShape, op::Shape& x2ScaleExpectShape)
+{
+    if (!IsMicroScaling(params.x1ScaleOptional, params.x2Scale)) {
+        x1ScaleExpectShape = {1};
+        x2ScaleExpectShape = {1};
+        return;
+    }
+
+    x1ScaleExpectShape = params.transposeX1 ?
+        op::Shape{Ops::Base::CeilDiv(shapeInfo.kDim, SPLIT_SIZE), shapeInfo.mDim, MXFP_MULTI_BASE_SIZE} :
+        op::Shape{shapeInfo.mDim, Ops::Base::CeilDiv(shapeInfo.kDim, SPLIT_SIZE), MXFP_MULTI_BASE_SIZE};
+    x2ScaleExpectShape = params.transposeX2 ?
+        op::Shape{shapeInfo.nDim, Ops::Base::CeilDiv(shapeInfo.kDim, SPLIT_SIZE), MXFP_MULTI_BASE_SIZE} :
+        op::Shape{Ops::Base::CeilDiv(shapeInfo.kDim, SPLIT_SIZE), shapeInfo.nDim, MXFP_MULTI_BASE_SIZE};
+}
+
+static aclnnStatus CheckExpectedShapes(
+    const QBMMInplaceAdd::QuantBatchMatmulInplaceAddParams& params, const MatmulShapeInfo& shapeInfo)
+{
+    op::Shape x1ExpectShape = params.transposeX1 ? op::Shape{shapeInfo.kDim, shapeInfo.mDim} :
+                                                  op::Shape{shapeInfo.mDim, shapeInfo.kDim};
+    op::Shape x2ExpectShape = params.transposeX2 ? op::Shape{shapeInfo.nDim, shapeInfo.kDim} :
+                                                  op::Shape{shapeInfo.kDim, shapeInfo.nDim};
+    op::Shape x1ScaleExpectShape;
+    op::Shape x2ScaleExpectShape;
+    GetExpectedScaleShape(params, shapeInfo, x1ScaleExpectShape, x2ScaleExpectShape);
+    op::Shape yExpectShape = {shapeInfo.mDim, shapeInfo.nDim};
+
+    OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(params.x1, x1ExpectShape, return ACLNN_ERR_PARAM_INVALID);
+    OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(
+        params.x1ScaleOptional, x1ScaleExpectShape, return ACLNN_ERR_PARAM_INVALID);
+    OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(params.x2, x2ExpectShape, return ACLNN_ERR_PARAM_INVALID);
+    OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(params.x2Scale, x2ScaleExpectShape, return ACLNN_ERR_PARAM_INVALID);
+    OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(params.yRef, yExpectShape, return ACLNN_ERR_PARAM_INVALID);
+    OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(params.yRef, yExpectShape, return ACLNN_ERR_PARAM_INVALID);
+    return ACLNN_SUCCESS;
+}
+
+static aclnnStatus CheckShape(const QBMMInplaceAdd::QuantBatchMatmulInplaceAddParams& params)
+{
+    CHECK_COND(CheckInputOutDims(params) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID, "Check CheckInputOutDims failed.");
+    CHECK_COND(params.transposeX1 == true && params.transposeX2 == false, ACLNN_ERR_PARAM_INVALID,
+        "Only support transposeX1=true and transposeX2=false, but actually is %s and %s.",
+        params.transposeX1 ? "true" : "false", params.transposeX2 ? "true" : "false");
+    MatmulShapeInfo shapeInfo = GetMatmulShapeInfo(params);
+    CHECK_COND(CheckShapeInfoMatch(params, shapeInfo) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID,
+        "CheckShapeInfoMatch failed.");
+
+    if (!CheckMKN(shapeInfo.mDim, shapeInfo.kDim, shapeInfo.nDim)) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "CheckMKN failed.");
+        return ACLNN_ERR_PARAM_INVALID;
+    }
+    CHECK_COND(CheckMxScaleLastDim(params) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID, "CheckMxScaleLastDim failed.");
+    return CheckExpectedShapes(params, shapeInfo);
 }
 
 static inline bool MxScaleContiguousProcess(const aclTensor*& mxScaleTensor, aclOpExecutor* executor)
@@ -257,10 +336,31 @@ static aclnnStatus CheckMxfp8DtypeValid(const QBMMInplaceAdd::QuantBatchMatmulIn
 {
     OP_CHECK_DTYPE_NOT_SUPPORT(params.x1, x1_DTYPE_SUPPORT_LIST, return ACLNN_ERR_PARAM_INVALID);
     OP_CHECK_DTYPE_NOT_SUPPORT(params.x2, x2_DTYPE_SUPPORT_LIST, return ACLNN_ERR_PARAM_INVALID);
-    OP_CHECK_DTYPE_NOT_SUPPORT(params.x1ScaleOptional, X1_SCALE_DTYPE_SUPPORT_LIST, return ACLNN_ERR_PARAM_INVALID);
-    OP_CHECK_DTYPE_NOT_SUPPORT(params.x2Scale, X2_SCALE_DTYPE_SUPPORT_LIST, return ACLNN_ERR_PARAM_INVALID);
+    CHECK_COND(
+        params.x1ScaleOptional->GetDataType() == op::DataType::DT_FLOAT8_E8M0, ACLNN_ERR_PARAM_INVALID,
+        "In mx quant mode, x1Scale dtype must be FLOAT8_E8M0.");
+    CHECK_COND(
+        params.x2Scale->GetDataType() == op::DataType::DT_FLOAT8_E8M0, ACLNN_ERR_PARAM_INVALID,
+        "In mx quant mode, x2Scale dtype must be FLOAT8_E8M0.");
     OP_CHECK_DTYPE_NOT_SUPPORT(params.yRef, YREF_DTYPE_SUPPORT_LIST, return ACLNN_ERR_PARAM_INVALID);
     OP_LOGD("QuantBatchMatmulInplaceAdd CheckMxfp8DtypeVaild success.");
+    return ACLNN_SUCCESS;
+}
+
+static aclnnStatus CheckHif8DtypeValid(const QBMMInplaceAdd::QuantBatchMatmulInplaceAddParams& params)
+{
+    OP_CHECK_DTYPE_NOT_SUPPORT(params.x1, x1_DTYPE_SUPPORT_LIST, return ACLNN_ERR_PARAM_INVALID);
+    OP_CHECK_DTYPE_NOT_SUPPORT(params.x2, x2_DTYPE_SUPPORT_LIST, return ACLNN_ERR_PARAM_INVALID);
+    CHECK_COND(
+        params.x1ScaleOptional->GetDataType() == op::DataType::DT_FLOAT, ACLNN_ERR_PARAM_INVALID,
+        "In HiFloat8 per-tensor quant, x1Scale dtype must be FLOAT32.");
+    CHECK_COND(
+        params.x2Scale->GetDataType() == op::DataType::DT_FLOAT, ACLNN_ERR_PARAM_INVALID,
+        "In HiFloat8 per-tensor quant, x2Scale dtype must be FLOAT32.");
+    OP_CHECK_DTYPE_NOT_SUPPORT(params.yRef, YREF_DTYPE_SUPPORT_LIST, return ACLNN_ERR_PARAM_INVALID);
+    CHECK_COND(
+        IsPerTensorDim(params) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID,
+        "In HiFloat8 per-tensor quant, x1Scale/x2Scale must be shape [1].");
     return ACLNN_SUCCESS;
 }
 
@@ -274,6 +374,8 @@ static aclnnStatus CheckDtype(const QBMMInplaceAdd::QuantBatchMatmulInplaceAddPa
         (x2Dtype == DataType::DT_FLOAT8_E4M3FN || x2Dtype == DataType::DT_FLOAT8_E5M2)) {
         CHECK_COND(IsMxQuantDim(params) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID, "Check IsMxQuantDim failed.");
         return CheckMxfp8DtypeValid(params);
+    } else if (IsHiFloat8Input(params.x1, params.x2)) {
+        return CheckHif8DtypeValid(params);
     } else {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When the dtypes of x1 and x2 are %s and %s, \
 and the dtypes of x1Scale and x2Scale are %s and %s is not supported.",
@@ -422,10 +524,6 @@ static aclnnStatus aclnnQuantBatchMatmulInplaceAddGetWorkspaceSizeCommon(
     CHECK_RET(ret == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
     bool transposeX1 = QBMMIAGetTransposeAttrValue(params.x1, params.transposeX1, true);
     bool transposeX2 = QBMMIAGetTransposeAttrValue(params.x2, params.transposeX2, true);
-    CHECK_COND(
-        transposeX1 == true && transposeX2 == false, ACLNN_ERR_PARAM_INVALID,
-        "Only support when the transposition of x1 is true and transposition of x2 is false, but actually is %s and %s.",
-        transposeX1 ? "true" : "false", transposeX2 ? "true" : "false");
     // 空tensor校验
     if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
         auto x1DimNum = params.x1->GetViewShape().GetDimNum();

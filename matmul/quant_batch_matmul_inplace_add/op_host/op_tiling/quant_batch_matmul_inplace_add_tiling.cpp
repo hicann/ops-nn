@@ -32,6 +32,37 @@ using Ops::NN::Optiling::TilingRegistry;
 
 namespace optiling{
 
+bool QuantBatchMatmulInplaceAddTiling::InitMatmulSize(const gert::Shape &x1Shape, const gert::Shape &x2Shape)
+{
+    auto x1ShapeLen = x1Shape.GetDimNum();
+    auto x2ShapeLen = x2Shape.GetDimNum();
+    if (x1ShapeLen < X1_MINIMUM_DIMENSION_LENGTH || x2ShapeLen < X2_MINIMUM_DIMENSION_LENGTH) {
+        OP_LOGE(
+            context_->GetNodeName(),
+            "X1 Shape Length and x2 shape Length should be greater than 2, but actually is %lu and %lu.", x1ShapeLen,
+            x2ShapeLen);
+        return false;
+    }
+
+    auto x1Inner = x1Shape.GetDim(x1ShapeLen - LAST_FIRST_DIM_INDEX);
+    auto x1Outer = x1Shape.GetDim(x1ShapeLen - LAST_SECOND_DIM_INDEX);
+    auto x2Inner = x2Shape.GetDim(x2ShapeLen - LAST_FIRST_DIM_INDEX);
+    auto x2Outer = x2Shape.GetDim(x2ShapeLen - LAST_SECOND_DIM_INDEX);
+    inputParams_.mSize = static_cast<uint64_t>(inputParams_.transA ? x1Inner : x1Outer);
+    inputParams_.kSize = static_cast<uint64_t>(inputParams_.transA ? x1Outer : x1Inner);
+    inputParams_.nSize = static_cast<uint64_t>(inputParams_.transB ? x2Outer : x2Inner);
+    return true;
+}
+
+bool QuantBatchMatmulInplaceAddTiling::ValidateQuantParams(
+    const gert::Shape &x1ScaleShape, const gert::Shape &scaleShape)
+{
+    if (inputParams_.scaleDtype == ge::DT_FLOAT8_E8M0) {
+        return CheckParamsForMxQuant(x1ScaleShape, scaleShape);
+    }
+    return CheckParamsForPerTensorQuant(x1ScaleShape, scaleShape);
+}
+
 QuantBatchMatmulInplaceAddTiling::QuantBatchMatmulInplaceAddTiling(gert::TilingContext* context)
     : AdaptiveSlidingWindowBasicAPITiling(context), tilingData_(tilingDataSelf_)
 {
@@ -77,9 +108,6 @@ bool QuantBatchMatmulInplaceAddTiling::AnalyzeAttrs()
     inputParams_.groupSize = *groupSizePtr;
     inputParams_.transA = *transposeXPtr;
     inputParams_.transB = *transposeWeightPtr;
-    OP_CHECK_IF(inputParams_.transA != true || inputParams_.transB != false, 
-        OP_LOGE(context_->GetNodeName(), "Only support when transpose of x1 is true and transpose of x2 is false, but actually is %s and %s.",
-        inputParams_.transA ? "true" : "false", inputParams_.transB ? "true" : "false"), return false);
     if (inputParams_.groupSize != 0ULL) {
         inputParams_.groupSizeK = inputParams_.groupSize & GROUP_MKN_BIT_SIZE;
         inputParams_.groupSizeN = (inputParams_.groupSize >> 16U) & GROUP_MKN_BIT_SIZE; // 16 is the bit size of MKN group size
@@ -114,6 +142,11 @@ bool QuantBatchMatmulInplaceAddTiling::IsFp8Dtype(const ge::DataType dtype) cons
     return (dtype == ge::DT_FLOAT8_E4M3FN || dtype == ge::DT_FLOAT8_E5M2);
 }
 
+bool QuantBatchMatmulInplaceAddTiling::IsHiFloat8Dtype(const ge::DataType dtype) const
+{
+    return dtype == ge::DT_HIFLOAT8;
+}
+
 bool QuantBatchMatmulInplaceAddTiling::CheckDtype()
 {
     OP_CHECK_IF(inputParams_.cDtype != ge::DT_FLOAT,
@@ -122,7 +155,15 @@ bool QuantBatchMatmulInplaceAddTiling::CheckDtype()
 be DT_FLOAT8, but actual dtype is %s.",
                 ge::TypeUtils::DataTypeToSerialString(inputParams_.cDtype).c_str()),
             return false);
+    OP_CHECK_IF(
+        inputParams_.transA != true || inputParams_.transB != false,
+        OP_LOGE(
+            context_->GetNodeName(),
+            "Only support transposeX1=true and transposeX2=false, but actually is %s and %s.",
+            inputParams_.transA ? "true" : "false", inputParams_.transB ? "true" : "false"),
+        return false);
     bool isFp8 = IsFp8Dtype(inputParams_.aDtype) && IsFp8Dtype(inputParams_.bDtype);
+    bool isHiFloat8 = IsHiFloat8Dtype(inputParams_.aDtype) && IsHiFloat8Dtype(inputParams_.bDtype);
     if (isFp8) {
         OP_CHECK_IF(
             inputParams_.scaleDtype != ge::DT_FLOAT8_E8M0 || inputParams_.perTokenScaleDtype != ge::DT_FLOAT8_E8M0,
@@ -130,6 +171,15 @@ be DT_FLOAT8, but actual dtype is %s.",
                 context_->GetNodeName(),
                 "With DT_FLOAT8_E4M3FN/DT_FLOAT8_E5M2 inputs, the expected dtype of x1scale and x2scale \
 should be DT_FLOAT8_E8M0, but actual dtype is %s, %s.",
+                ge::TypeUtils::DataTypeToSerialString(inputParams_.scaleDtype).c_str(),
+                ge::TypeUtils::DataTypeToSerialString(inputParams_.perTokenScaleDtype).c_str()),
+            return false);
+    } else if (isHiFloat8) {
+        OP_CHECK_IF(
+            inputParams_.scaleDtype != ge::DT_FLOAT || inputParams_.perTokenScaleDtype != ge::DT_FLOAT,
+            OP_LOGE(
+                context_->GetNodeName(),
+                "With DT_HIFLOAT8 inputs, the expected dtype of x1scale and x2scale should be DT_FLOAT, but actual dtype is %s, %s.",
                 ge::TypeUtils::DataTypeToSerialString(inputParams_.scaleDtype).c_str(),
                 ge::TypeUtils::DataTypeToSerialString(inputParams_.perTokenScaleDtype).c_str()),
             return false);
@@ -209,6 +259,22 @@ is (%lu,%lu,%lu).", expectedKDimValue, inputParams_.mSize, x1ScaleKDim, x1ScaleM
     return true;
 }
 
+bool QuantBatchMatmulInplaceAddTiling::CheckParamsForPerTensorQuant(
+    const gert::Shape &x1ScaleShape, const gert::Shape &x2ScaleShape) const
+{
+    OP_CHECK_IF(
+        x1ScaleShape.GetDimNum() != 1 || x2ScaleShape.GetDimNum() != 1,
+        OP_LOGE(inputParams_.opName, "In per-tensor quant mode, x1Scale and x2Scale dim num should be 1, but actual is %zu and %zu.",
+                x1ScaleShape.GetDimNum(), x2ScaleShape.GetDimNum()),
+        return false);
+    OP_CHECK_IF(
+        x1ScaleShape.GetDim(0) != 1 || x2ScaleShape.GetDim(0) != 1,
+        OP_LOGE(inputParams_.opName, "In per-tensor quant mode, x1Scale and x2Scale shape should be [1], but actual is [%ld] and [%ld].",
+                x1ScaleShape.GetDim(0), x2ScaleShape.GetDim(0)),
+        return false);
+    return true;
+}
+
 bool QuantBatchMatmulInplaceAddTiling::AnalyzeInputs()
 {
     auto x1Shape = GetX1Shape(X1_INDEX);
@@ -221,23 +287,9 @@ bool QuantBatchMatmulInplaceAddTiling::AnalyzeInputs()
 
     inputParams_.hasBias = 0;   // qbmmia has no bias
     inputParams_.batchBias = 1; // qbmmia has no bias
-    auto x1ShapeLen = x1Shape.GetDimNum();
-    auto x2ShapeLen = x2Shape.GetDimNum();
-    if (x1ShapeLen < X1_MINIMUM_DIMENSION_LENGTH || x2ShapeLen < X2_MINIMUM_DIMENSION_LENGTH) {
-        OP_LOGE(
-            context_->GetNodeName(),
-            "X1 Shape Length and x2 shape Length should be greater than 2, but actually is %lu and %lu.", x1ShapeLen,
-            x2ShapeLen);
+    if (!InitMatmulSize(x1Shape, x2Shape)) {
         return false;
     }
-    auto x1Inner = x1Shape.GetDim(x1ShapeLen - LAST_FIRST_DIM_INDEX);
-    auto x1Outer = x1Shape.GetDim(x1ShapeLen - LAST_SECOND_DIM_INDEX);
-    auto x2Inner = x2Shape.GetDim(x2ShapeLen - LAST_FIRST_DIM_INDEX);
-    auto x2Outer = x2Shape.GetDim(x2ShapeLen - LAST_SECOND_DIM_INDEX);
-
-    inputParams_.mSize = static_cast<uint64_t>(inputParams_.transA ? x1Inner : x1Outer);
-    inputParams_.kSize = static_cast<uint64_t>(inputParams_.transA ? x1Outer : x1Inner);
-    inputParams_.nSize = static_cast<uint64_t>(inputParams_.transB ? x2Outer : x2Inner);
     if (!AnalyzeGroupInfo(scaleShape, pertokenShape)) {
         return false;
     }
@@ -246,19 +298,29 @@ bool QuantBatchMatmulInplaceAddTiling::AnalyzeInputs()
     AnalyzeBatchInfo(context_->GetInputShape(0)->GetOriginShape(), context_->GetInputShape(1)->GetOriginShape());
     OP_TILING_CHECK(!InferOutBatchDim(x1Shape, x2Shape),
                     CUBE_INNER_ERR_REPORT(inputParams_.opName, "Batch dimension can not be broadcasted."), return false);
-    if (!SetQuantMode(scaleShape, pertokenShape)) {
-        return false;
-    }
-    if (!CheckParamsForMxQuant(x1ScaleShape, scaleShape)){
-        return false;
-    }
-    if (!CheckShapeVaild(x1Shape, x2Shape)){
+    if (!SetQuantMode(scaleShape, pertokenShape) ||
+        !ValidateQuantParams(x1ScaleShape, scaleShape) ||
+        !CheckShapeVaild(x1Shape, x2Shape)) {
         return false;
     }
     OP_LOGD(
         inputParams_.opName, "batchA: %lu, batchB: %lu, batchC: %lu, isPerTensor: %s, isPertoken: %s",
-        inputParams_.batchA, inputParams_.batchB, inputParams_.batchC, inputParams_.isPerTensor, inputParams_.isPertoken);
+        inputParams_.batchA, inputParams_.batchB, inputParams_.batchC,
+        inputParams_.isPerTensor ? "true" : "false", inputParams_.isPertoken ? "true" : "false");
     return true;
+}
+
+uint64_t QuantBatchMatmulInplaceAddTiling::GetKernelType() const
+{
+    bool isHiFloat8TT = IsHiFloat8Dtype(inputParams_.aDtype) && IsHiFloat8Dtype(inputParams_.bDtype) &&
+                        inputParams_.scaleDtype == ge::DT_FLOAT;
+    if (isHiFloat8TT) {
+        if (isAFullLoad_) {
+            return TPL_CUBE_FIXPIPE_A_FULL_LOAD_WITH_MMAPI;
+        }
+        return TPL_CUBE_FIXPIPE_DEFAULT_LOAD_WITH_MMAPI;
+    }
+    return AdaptiveSlidingWindowTiling::GetKernelType();
 }
 
 ge::graphStatus QuantBatchMatmulInplaceAddTiling::GetShapeAttrsInfo()

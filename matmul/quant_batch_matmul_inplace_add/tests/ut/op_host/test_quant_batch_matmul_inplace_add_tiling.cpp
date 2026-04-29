@@ -135,9 +135,6 @@ static void TestOneParamCase(const QuantBatchMatmulInplaceAddTilingTestParam &pa
     ge::DataType x1Dtype = dtypeMap[testParam[idx++]];
     ge::DataType x2Dtype = dtypeMap[testParam[idx++]];
 
-    bool hasBias = false;
-    ge::DataType biasDtype = ge::DT_FLOAT;
-
     bool hasX1Scale = true;
     ge::DataType x1ScaleDtype = ge::DT_FLOAT;
     string x1ScaleDtypeStr = testParam[idx++];
@@ -156,23 +153,11 @@ static void TestOneParamCase(const QuantBatchMatmulInplaceAddTilingTestParam &pa
         x2ScaleDtype = dtypeMap[x2ScaleDtypeStr];
     }
 
-    bool hasYScale = true;
-    ge::DataType yScaleDtype = ge::DT_FLOAT;
-    string yScaleDtypeStr = testParam[idx++];
-    if (yScaleDtypeStr == "NULL") {
-        hasYScale = false;
-    } else {
-        yScaleDtype = dtypeMap[yScaleDtypeStr];
-    }
-
-    bool hasX2Table = true;
-    ge::DataType x2TableDtype = ge::DT_FLOAT;
-    string x2TableDtypeStr = testParam[idx++];
-    if (x2TableDtypeStr == "NULL") {
-        hasX2Table = false;
-    } else {
-        x2TableDtype = dtypeMap[x2TableDtypeStr];
-    }
+    // Keep the legacy fields in caseName to avoid rewriting all existing cases.
+    string unusedYScaleDtypeStr = testParam[idx++];
+    string unusedX2TableDtypeStr = testParam[idx++];
+    (void)unusedYScaleDtypeStr;
+    (void)unusedX2TableDtypeStr;
 
     ge::DataType yDtype = dtypeMap[testParam[idx++]];
     uint32_t aicNum = stoul(testParam[idx++]);
@@ -189,10 +174,9 @@ static void TestOneParamCase(const QuantBatchMatmulInplaceAddTilingTestParam &pa
 
     gert::StorageShape x1Shape;
     gert::StorageShape x2Shape;
-    gert::StorageShape biasShape;
     gert::StorageShape x1ScaleShape;
     gert::StorageShape x2ScaleShape;
-    gert::StorageShape yScaleShape;
+    gert::StorageShape yInputShape;
     gert::StorageShape outputShape({m, n}, {m, n});
 
     if (transA) {
@@ -217,28 +201,19 @@ static void TestOneParamCase(const QuantBatchMatmulInplaceAddTilingTestParam &pa
             x2Shape.MutableStorageShape() = gert::Shape({n1, k1, k0, n0});
         }
     }
-    biasShape.MutableOriginShape() = gert::Shape({1, n});
-    biasShape.MutableStorageShape() = gert::Shape({1, n});
     int64_t groupSize = 0;
-    int64_t groupK = 0;
-    int64_t groupN = 0;
-    int64_t groupM = 0;
     if (group > 0) {
         groupSize = group;
-        groupK = group & 0xFFFF; // 0-15bit group_k
-        groupN = static_cast<int64_t>((group & 0xFFFF0000) >> 16); // 16-31bit group_n
-        groupM = static_cast<int64_t>((group & 0xFFFF00000000) >> 32); // 32-47bit group_m
         int64_t groupNum = (k + group - 1) / group;
-        if (!hasX2Table) {
-            x1ScaleShape.MutableStorageShape() = gert::Shape({m, groupNum, 2});
-            if (transB) {
-                x2ScaleShape.MutableStorageShape() = gert::Shape({n, groupNum, 2});
-            } else {
-                x2ScaleShape.MutableStorageShape() = gert::Shape({groupNum, n, 2});
-            }
-        } 
+        x1ScaleShape.MutableStorageShape() = gert::Shape({m, groupNum, 2});
+        if (transB) {
+            x2ScaleShape.MutableStorageShape() = gert::Shape({n, groupNum, 2});
+        } else {
+            x2ScaleShape.MutableStorageShape() = gert::Shape({groupNum, n, 2});
+        }
     }
-    yScaleShape.MutableStorageShape() = gert::Shape({1, n});
+    yInputShape.MutableOriginShape() = gert::Shape({m, n});
+    yInputShape.MutableStorageShape() = gert::Shape({m, n});
     x1ScaleShape.MutableOriginShape() = gert::Shape({k1, m, 2});
     x1ScaleShape.MutableStorageShape() = gert::Shape({k1, m, 2});
     x2ScaleShape.MutableOriginShape() = gert::Shape({k1, n, 2});
@@ -275,20 +250,18 @@ static void TestOneParamCase(const QuantBatchMatmulInplaceAddTilingTestParam &pa
     auto workspace = reinterpret_cast<gert::ContinuousVector *>(workspaceHolder.get());
 
     auto holder = gert::TilingContextFaker()
-                      .NodeIoNum(6, 1)
-                      .IrInstanceNum({1, 1, 1, 1, 1, 1})
-                      .InputShapes({&x1Shape, &x2Shape, hasBias ? &biasShape : nullptr,
-                                    hasX1Scale ? &x1ScaleShape : nullptr, hasX2Scale ? &x2ScaleShape : nullptr,
-                                    hasYScale ? &yScaleShape : nullptr})
+                      .NodeIoNum(5, 1)
+                      .IrInstanceNum({1, 1, 1, 1, 1})
+                      .InputShapes({&x1Shape, &x2Shape, hasX2Scale ? &x2ScaleShape : nullptr,
+                                    &yInputShape, hasX1Scale ? &x1ScaleShape : nullptr})
                       .OutputShapes({&outputShape})
                       .CompileInfo(&compileInfo)
                       .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
                       .NodeInputTd(0, x1Dtype, x1Format, x1Format)
                       .NodeInputTd(1, x2Dtype, x2Format, x2Format)
-                      .NodeInputTd(2, biasDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(3, x1ScaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(4, x2ScaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(5, yScaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, x2ScaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, x1ScaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeOutputTd(0, yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
                       .NodeAttrs({{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(transA)},
                                   {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(transB)},
@@ -313,7 +286,7 @@ static void TestOneParamCase(const QuantBatchMatmulInplaceAddTilingTestParam &pa
 
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
     ASSERT_NE(tilingFunc, nullptr);
-    ge:graphStatus ret = tilingFunc(tilingContext);
+    ge::graphStatus ret = tilingFunc(tilingContext);
     ASSERT_EQ(ret, param.tilingResult);
     if (ret == ge::GRAPH_SUCCESS) {
         ASSERT_EQ(tilingContext->GetTilingKey(), param.tilingKey);
@@ -327,8 +300,8 @@ TEST_P(QuantBatchMatmulInplaceAddTiling, generalTest)
     TestOneParamCase(param);
 }
 
-// format: caseName m k n transA transB groupSize x1Format x2Format x1Dtype x2Dtype biasDtype x1ScaleDtype
-//         x2ScaleDtype yScaleDtype yDtype aicNum aivNum platform weightFormat
+// format: caseName m k n transA transB groupSize x1Format x2Format x1Dtype x2Dtype x1ScaleDtype
+//         x2ScaleDtype legacyYScale legacyX2Table yDtype aicNum aivNum platform
 static QuantBatchMatmulInplaceAddTilingTestParam casesParams[] = {
 
     // MX ND

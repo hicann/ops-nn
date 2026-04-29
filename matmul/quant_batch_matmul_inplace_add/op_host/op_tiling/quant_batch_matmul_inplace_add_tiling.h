@@ -46,8 +46,13 @@ private:
     bool AnalyzeInputs() override;
     bool CheckDtype();
     bool IsFp8Dtype(const ge::DataType dtype) const;
+    bool IsHiFloat8Dtype(const ge::DataType dtype) const;
     bool CheckParamsForMxQuant(const gert::Shape &x1ScaleShape, const gert::Shape &x2ScaleShape) const;
+    bool CheckParamsForPerTensorQuant(const gert::Shape &x1ScaleShape, const gert::Shape &x2ScaleShape) const;
     bool CheckShapeVaild(const gert::Shape &x1Shape, const gert::Shape &x2Shape) const;
+    bool InitMatmulSize(const gert::Shape &x1Shape, const gert::Shape &x2Shape);
+    bool ValidateQuantParams(const gert::Shape &x1ScaleShape, const gert::Shape &scaleShape);
+    uint64_t GetKernelType() const override;
     QMMIA::QuantBatchMatmulInplaceAddTilingData tilingDataSelf_;
     QMMIA::QuantBatchMatmulInplaceAddTilingData& tilingData_;
 };

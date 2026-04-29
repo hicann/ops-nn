@@ -26,16 +26,19 @@ struct QuantBatchMatmulInplaceAddParams {
     int64_t groupSize = 0L;
 };
 
-static const std::initializer_list<op::DataType> x1_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT8_E4M3FN, DataType::DT_FLOAT8_E5M2};
-static const std::initializer_list<op::DataType> x2_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT8_E4M3FN, DataType::DT_FLOAT8_E5M2};
-static const std::initializer_list<op::DataType> X1_SCALE_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT8_E8M0};
-static const std::initializer_list<op::DataType> X2_SCALE_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT8_E8M0};
+static const std::initializer_list<op::DataType> x1_DTYPE_SUPPORT_LIST = {
+    DataType::DT_FLOAT8_E4M3FN, DataType::DT_FLOAT8_E5M2, DataType::DT_HIFLOAT8};
+static const std::initializer_list<op::DataType> x2_DTYPE_SUPPORT_LIST = {
+    DataType::DT_FLOAT8_E4M3FN, DataType::DT_FLOAT8_E5M2, DataType::DT_HIFLOAT8};
+static const std::initializer_list<op::DataType> X1_SCALE_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT8_E8M0, DataType::DT_FLOAT};
+static const std::initializer_list<op::DataType> X2_SCALE_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT8_E8M0, DataType::DT_FLOAT};
 static const std::initializer_list<op::DataType> YREF_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT};
 
 constexpr uint32_t MX_X1_DIM = 2U;
 constexpr uint32_t MX_X2_DIM = 2U;
 constexpr uint32_t MX_X1_SCALE_DIM = 3U;
 constexpr uint32_t MX_X2_SCALE_DIM = 3U;
+constexpr uint32_t PERTENSOR_SCALE_DIM = 1U;
 constexpr uint32_t Y_INPUT_DIM = 2U;
 constexpr uint32_t Y_OUTPUT_DIM = 2U;
 constexpr uint32_t MX_X1_PER_TOKEN_SCALE_DIM = 3U;

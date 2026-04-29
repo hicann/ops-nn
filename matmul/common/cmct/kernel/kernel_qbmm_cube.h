@@ -26,9 +26,11 @@
 namespace Cmct {
 namespace Gemm {
 namespace Kernel {
-#define QBMM_CUBE_KERNEL_CLASS_TEM_PARAMS \
-    template <class ProblemShape, class BlockMmad, class BlockEpilogue, class BlockScheduler>
-#define QBMM_CUBE_KERNEL_FUN_TEM_PARAMS ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler
+#define QBMM_CUBE_KERNEL_CLASS_TEMPLATE_DECL_PARAMS \
+    template <class ProblemShape, class BlockMmad, class BlockEpilogue, class BlockScheduler, bool isAtomicAdd = false>
+#define QBMM_CUBE_KERNEL_CLASS_TEMPLATE_DEF_PARAMS \
+    template <class ProblemShape, class BlockMmad, class BlockEpilogue, class BlockScheduler, bool isAtomicAdd>
+#define QBMM_CUBE_KERNEL_FUNC_TEMPLATE_PARAMS ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler, isAtomicAdd
 
 using namespace Cmct;
 using namespace Cmct::Gemm;
@@ -39,7 +41,7 @@ constexpr uint64_t DEQ_SCALE_MUL = 0xFFFFE000;
 constexpr uint32_t LEFT_SHIFT_16 = 16;
 } // namespace
 
-QBMM_CUBE_KERNEL_CLASS_TEM_PARAMS
+QBMM_CUBE_KERNEL_CLASS_TEMPLATE_DECL_PARAMS
 class QuantMmBatchCube {
 public:
     __aicore__ inline QuantMmBatchCube()
@@ -139,9 +141,12 @@ private:
     bool needUpdateTail_{false};
 };
 
-QBMM_CUBE_KERNEL_CLASS_TEM_PARAMS
-__aicore__ inline void QuantMmBatchCube<QBMM_CUBE_KERNEL_FUN_TEM_PARAMS>::Run(const Params& params)
+QBMM_CUBE_KERNEL_CLASS_TEMPLATE_DEF_PARAMS
+__aicore__ inline void QuantMmBatchCube<QBMM_CUBE_KERNEL_FUNC_TEMPLATE_PARAMS>::Run(const Params& params)
 {
+    if constexpr (isAtomicAdd) {
+        AscendC::SetAtomicAdd<float>();
+    }
     Init(params);
     BlockSchedulerOp bs(params.problemShape, params.schParams);
     problemShape_ = ToShapeTuple(params.problemShape);
@@ -154,14 +159,20 @@ __aicore__ inline void QuantMmBatchCube<QBMM_CUBE_KERNEL_FUN_TEM_PARAMS>::Run(co
 
     if (params.problemShape.b == 1) {
         ProcessSingleBatch(params, bs, 0, true);
+        if constexpr (isAtomicAdd) {
+            AscendC::SetAtomicNone();
+        }
         return;
     }
 
     ProcessWithBatch(params, bs);
+    if constexpr (isAtomicAdd) {
+        AscendC::SetAtomicNone();
+    }
 }
 
-QBMM_CUBE_KERNEL_CLASS_TEM_PARAMS
-__aicore__ inline void QuantMmBatchCube<QBMM_CUBE_KERNEL_FUN_TEM_PARAMS>::Init(const Params& params)
+QBMM_CUBE_KERNEL_CLASS_TEMPLATE_DEF_PARAMS
+__aicore__ inline void QuantMmBatchCube<QBMM_CUBE_KERNEL_FUNC_TEMPLATE_PARAMS>::Init(const Params& params)
 {
     if ASCEND_IS_AIV {
         return;
@@ -207,8 +218,8 @@ __aicore__ inline void QuantMmBatchCube<QBMM_CUBE_KERNEL_FUN_TEM_PARAMS>::Init(c
     }
 }
 
-QBMM_CUBE_KERNEL_CLASS_TEM_PARAMS
-__aicore__ inline void QuantMmBatchCube<QBMM_CUBE_KERNEL_FUN_TEM_PARAMS>::ProcessWithBatch(
+QBMM_CUBE_KERNEL_CLASS_TEMPLATE_DEF_PARAMS
+__aicore__ inline void QuantMmBatchCube<QBMM_CUBE_KERNEL_FUNC_TEMPLATE_PARAMS>::ProcessWithBatch(
     const Params& params, BlockSchedulerOp& bs)
 {
     uint64_t batchC3C4 = static_cast<uint64_t>(params.qbmmParams.batchC3) * params.qbmmParams.batchC4;
@@ -266,8 +277,8 @@ __aicore__ inline void QuantMmBatchCube<QBMM_CUBE_KERNEL_FUN_TEM_PARAMS>::Proces
     }
 }
 
-QBMM_CUBE_KERNEL_CLASS_TEM_PARAMS
-__aicore__ inline void QuantMmBatchCube<QBMM_CUBE_KERNEL_FUN_TEM_PARAMS>::ProcessSingleBatch(
+QBMM_CUBE_KERNEL_CLASS_TEMPLATE_DEF_PARAMS
+__aicore__ inline void QuantMmBatchCube<QBMM_CUBE_KERNEL_FUNC_TEMPLATE_PARAMS>::ProcessSingleBatch(
     const Params& params, BlockSchedulerOp& bs, uint64_t restBatch, bool isTailRound)
 {
     CoordClass coord(
@@ -324,4 +335,3 @@ __aicore__ inline void QuantMmBatchCube<QBMM_CUBE_KERNEL_FUN_TEM_PARAMS>::Proces
 } // namespace Kernel
 } // namespace Gemm
 } // namespace Cmct
-

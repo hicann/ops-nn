@@ -22,10 +22,10 @@ extern "C" {
  * @brief aclnnQuantBatchMatmulInplaceAdd的第一段接口，根据具体的计算流程，计算workspace大小。
  * @domain aclnn_ops_infer
  * 算子功能：实现QuantBatchMatmulInplaceAdd计算
- * @param [in] x1: matmul左矩阵，数据类型支持：FLOAT8_E4M3FN、FLOAT8_E5M2数据类型，数据格式支持ND。
- * @param [in] x2: matmul右矩阵，数据类型支持：FLOAT8_E4M3FN、FLOAT8_E5M2数据类型，数据格式支持ND。
- * @param [in] x1ScaleOptional: 量化参数，数据类型支持：FLOAT8_E8M0，数据格式支持ND。
- * @param [in] x2Scale: 量化参数，数据类型支持：FLOAT8_E8M0，数据格式支持ND。
+ * @param [in] x1: matmul左矩阵，数据类型支持：FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8数据类型，数据格式支持ND。
+ * @param [in] x2: matmul右矩阵，数据类型支持：FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8数据类型，数据格式支持ND。
+ * @param [in] x1ScaleOptional: 量化参数，数据类型支持：FLOAT8_E8M0、FLOAT32，数据格式支持ND。
+ * @param [in] x2Scale: 量化参数，数据类型支持：FLOAT8_E8M0、FLOAT32，数据格式支持ND。
  * @param [in/out] yRef: 原地累加，数据类型支持：FLOAT32，数据格式支持ND。
  * @param [in] transposeX1: x1矩阵是否转置。
  * @param [in] transposeX2: x2矩阵是否转置。
