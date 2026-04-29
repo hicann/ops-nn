@@ -288,7 +288,7 @@ static bool CheckInputOutputShape(const gert::TilingContext* context)
     } else if (norm_key == PRE_RMS_NORM || norm_key == POST_RMS_NORM) {
         OP_CHECK_IF(
             (gamma_shape->GetStorageShape().GetDim(0) != 1 ||
-             gamma_shape->GetStorageShape().GetDim(-1) != x1_shape->GetStorageShape().GetDim(-1)),
+             gamma_shape->GetStorageShape().GetDim(gammaDimNum - 1) != x1_shape->GetStorageShape().GetDim(x1DimNum - 1)),
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
                 context->GetNodeName(), "gamma and x1",
                 (Ops::Base::ToString(gamma_shape->GetStorageShape()) + " and " +

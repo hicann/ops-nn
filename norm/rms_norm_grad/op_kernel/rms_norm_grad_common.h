@@ -219,29 +219,28 @@ __aicore__ inline void dCopyIn(int64_t colIndex, int64_t colSize, int64_t rowSiz
         rightPad = FLOAT_ALIGN - colSizeMod;
         isPad = true;
     } 
-#if __CCE_AICORE__ == 220
-    if ASCEND_IS_AIV {
-#endif
     TEventID eventID = GetTPipePtr()->AllocEventID<HardEvent::V_MTE2>();
     SetFlag<HardEvent::V_MTE2>(eventID);
     WaitFlag<HardEvent::V_MTE2>(eventID);
     GetTPipePtr()->ReleaseEventID<HardEvent::V_MTE2>(eventID);
     int64_t offset = colIndex * COL_TEMPLATE;
-#if __CCE_AICORE__ == 220   
-    DataCopyExtParams copyInParams{
-        static_cast<uint16_t>(rowSize),
-        (uint32_t)(colSize * sizeof(float)),
-        (uint32_t)((chunkSize - colSize) * sizeof(float)),
-        static_cast<uint32_t>((COL_TEMPLATE - colSize) / FLOAT_ALIGN),
-        0
-    };
-    DataCopyPadExtParams<float> padParams{
-        false,
-        0,
-        static_cast<uint8_t>(rightPad),
-        0
-    };
-    DataCopyPad(deterministicStruct.buffer1_, deterministicStruct.workspaceGmOri_[offset], copyInParams, padParams);
+#if __CCE_AICORE__ == 220
+    if ASCEND_IS_AIV {  
+        DataCopyExtParams copyInParams{
+            static_cast<uint16_t>(rowSize),
+            (uint32_t)(colSize * sizeof(float)),
+            (uint32_t)((chunkSize - colSize) * sizeof(float)),
+            static_cast<uint32_t>((COL_TEMPLATE - colSize) / FLOAT_ALIGN),
+            0
+        };
+        DataCopyPadExtParams<float> padParams{
+            false,
+            0,
+            static_cast<uint8_t>(rightPad),
+            0
+        };
+        DataCopyPad(deterministicStruct.buffer1_, deterministicStruct.workspaceGmOri_[offset], copyInParams, padParams);
+    }
 #else
      DataCopyParams intriParams; 
      intriParams.blockCount = rowSize; 
@@ -249,9 +248,6 @@ __aicore__ inline void dCopyIn(int64_t colIndex, int64_t colSize, int64_t rowSiz
      intriParams.srcStride  = (chunkSize - colSize) / FLOAT_ALIGN; 
      intriParams.dstStride  = (COL_TEMPLATE - (colSize + rightPad)) / FLOAT_ALIGN; 
      DataCopy(deterministicStruct.buffer1_, deterministicStruct.workspaceGmOri_[offset], intriParams);
-#endif
-#if __CCE_AICORE__ == 220
-    }
 #endif
 }
 

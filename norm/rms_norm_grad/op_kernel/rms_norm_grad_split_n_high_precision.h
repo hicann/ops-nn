@@ -124,7 +124,7 @@ public:
 
     __aicore__ inline void InitInputQue()
     {
-        ubFactorAlign_ = (ubFactor_ * colValAlign_) > (blockDim_ * 64) ? (ubFactor_ * colValAlign_) : (blockDim_ * 64);
+        ubFactorAlign_ = (ubFactor_ * colValAlign_) > (blockDim_ * COL_TEMPLATE) ? (ubFactor_ * colValAlign_) : (blockDim_ * COL_TEMPLATE);
         rstdLen_ = (ubFactor_ + alignLen_ - 1) / alignLen_ * alignLen_;
         bufferLenSize_ = ubFactorAlign_ * sizeof(float);
         bufferNum_ = BUFFER_NUM_DB;
