@@ -208,7 +208,6 @@ const aclTensor* GemmV3NdWithAlphaBeta(const aclTensor* x1,
         OP_LOGE(ACLNN_ERR_INNER_INFERSHAPE_ERROR, "InferShape failed");
         return nullptr; 
     }
-    uint32_t execMode = enableHf32 ? static_cast<uint32_t>(OpExecMode::OP_EXEC_MODE_HF32) : 0U;
     ret = ADD_TO_LAUNCHER_LIST_AICORE(
         GemmV3, OP_INPUT(x1, x2, self), OP_OUTPUT(out), OP_ATTR(alpha, beta, transposeX1, transposeX2, enableHf32));
     OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(ret != ACLNN_SUCCESS, return nullptr, "Add to launcher list aicore failed.");

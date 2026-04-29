@@ -435,7 +435,7 @@ static const aclTensor* GetGemmV3Op(
     return mmOut;
 }
 
-static const bool CheckMatmulV3Support(
+static bool CheckMatmulV3Support(
     const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, MmOpInfo& mmOpInfo, const bool transposeX1,
     const bool transposeX2, const int64_t opImplModeEnum)
 {
@@ -448,7 +448,7 @@ static const bool CheckMatmulV3Support(
            isFP32Wnz;
 }
 
-static const bool CheckSupportInfoFormatNzNzNd(const MmOpInfo& mmOpInfo)
+static bool CheckSupportInfoFormatNzNzNd(const MmOpInfo& mmOpInfo)
 {
     return mmOpInfo.support_info.self_format == ge::FORMAT_FRACTAL_NZ &&
            mmOpInfo.support_info.mat2_format == ge::FORMAT_FRACTAL_NZ &&
@@ -1429,8 +1429,7 @@ const aclTensor* MatmulCommonProcess (
             selfCastOut = l0op::Reshape(selfCastOut, shape, executor);
             CHECK_RET(selfCastOut != nullptr, nullptr);
             // 更新m n k
-            aclnnStatus result =
-                CreateMatmulOpInfo(selfCastOut, mat2, bias, out, cubeMathType, mmOpInfo, isSelfSlice, isFusion);
+            result = CreateMatmulOpInfo(selfCastOut, mat2, bias, out, cubeMathType, mmOpInfo, isSelfSlice, isFusion);
             CHECK_RET(result == ACLNN_SUCCESS, nullptr);
         }
         // reformat为ND

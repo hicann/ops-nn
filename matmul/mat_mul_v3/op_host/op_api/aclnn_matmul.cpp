@@ -79,7 +79,6 @@ static inline bool CheckMathType(const aclTensor* self, const aclTensor* mat2, i
 static bool CheckWeightNzDtype(const aclTensor* self, const aclTensor* mat2)
 {
     if (mat2->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
-        auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
         // weightnz暂不支持self,mat2为bfloat16和float16的数据类型推导
         if ((self->GetDataType() == op::DataType::DT_FLOAT16 && mat2->GetDataType() == op::DataType::DT_BF16) ||
             (self->GetDataType() == op::DataType::DT_BF16 && mat2->GetDataType() == op::DataType::DT_FLOAT16)) {
@@ -364,28 +363,6 @@ aclnnStatus CheckWeightNzParam(const aclTensor* self, const aclTensor* mat2, con
         archRule -> CheckInput(self, mat2, nullptr, out, cubeMathType),
         ACLNN_ERR_PARAM_INVALID);
     OP_LOGD("MatmulWeightNz check params success.");
-    return ACLNN_SUCCESS;
-}
-
-aclnnStatus CheckWeightNzInputParams(const aclTensor* self, const aclTensor* mat2, const aclTensor* out, int8_t cubeMathType)
-{
-    // 1. 检查参数是否为空指针
-    CHECK_RET(CheckNotNull(self, mat2, out), ACLNN_ERR_PARAM_NULLPTR);
-
-    // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
-    auto archRule = BuildRule();
-    CHECK_RET(archRule != nullptr, ACLNN_ERR_PARAM_INVALID);
-    CHECK_RET(
-        archRule -> CheckInput(self, mat2, nullptr, out, cubeMathType),
-        ACLNN_ERR_PARAM_INVALID);
-
-    CHECK_RET(CheckWeightNzDtype(self, mat2), ACLNN_ERR_PARAM_INVALID);
-
-    // 3. 检查Shape是否支持
-    CHECK_RET(CheckWeightNzShapeValid(self, mat2), ACLNN_ERR_PARAM_INVALID);
-
-    OP_LOGD("MatmulWeightNz check params success.");
-
     return ACLNN_SUCCESS;
 }
 
@@ -866,22 +843,6 @@ std::shared_ptr<MatmulGraphImpl> CreateMatmulGraphImpl(
             op::ToString(self->GetViewShape()).GetString(), op::ToString(mat2->GetViewShape()).GetString());
         return nullptr;
     }
-    return matmulGraph;
-}
-
-// 创建WeightNZ计算图
-std::shared_ptr<MatmulGraphImpl> CreateMatmulWeightNZGraphImpl(
-    const aclTensor* self, const aclTensor* mat2, aclTensor* out, int8_t cubeMathType, aclOpExecutor* executor) {
-    std::shared_ptr<MatmulGraphImpl> matmulGraph = nullptr;
-
-    // 空tensor处理, 当输出的shape不为空时
-    if ((self->IsEmpty() || mat2->IsEmpty()) && (!out -> IsEmpty())) {
-        matmulGraph = std::make_shared<MatMulEmptyTensorGraph>(self, mat2, out, cubeMathType, executor);
-        return matmulGraph;
-    }
-
-    matmulGraph = std::make_shared<MatMulWeightNzGraph>(self, mat2, out, cubeMathType, executor);
-
     return matmulGraph;
 }
 

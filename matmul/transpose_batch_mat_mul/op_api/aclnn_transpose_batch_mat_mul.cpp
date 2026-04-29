@@ -44,6 +44,7 @@ static const std::initializer_list<op::DataType> SCALE_DTYPE_SUPPORT_LIST = {Dat
 static const std::initializer_list<op::DataType> OUT_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16, DataType::DT_INT8};
 static constexpr size_t EXPECTED_DIM = 3;
 static constexpr int EXPECTED_NZ_DIM = 5;
+
 static constexpr int BLOCK_SIZE = 16;
 static constexpr int SUPPORTED_INNER_AXIS = 65536;
 
@@ -138,6 +139,10 @@ static bool CheckPermLimit(const aclIntArray* perm_x1, const aclIntArray* perm_x
     auto y_need_transpose = ((*perm_y)[0] == 1 && (*perm_y)[1] == 0 && (*perm_y)[2] == 2);
     std::string permX2ErrorInfo = "[0, 1, 2].";
     if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
+        // For DAV-3510 architecture, the perm tensor for x2 operand only supports two patterns:
+        // Pattern 1: [0, 1, 2] - No transpose (identity)
+        // Pattern 2: [0, 2, 1] - Transpose last two dimensions (swap dim1 and dim2)
+        // Any other permutation pattern will cause hardware compatibility issues.
         x2_need_transpose = x2_need_transpose || ((*perm_x2)[0] == 0 && (*perm_x2)[1] == 2 && (*perm_x2)[2] == 1);
         permX2ErrorInfo = "[0, 1, 2] or [0, 2, 1].";
     }

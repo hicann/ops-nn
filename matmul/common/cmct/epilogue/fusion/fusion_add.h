@@ -41,6 +41,9 @@ public:
     };
 
     static constexpr uint16_t ZERO_FLAG = 0;
+    static const int32_t FIRST_DIM = 0;
+    static const int32_t SECOND_DIM = 1;
+    static const int32_t THIRD_DIM = 2;
     AscendC::LocalTensor<DataTypeIn> inputLocal_{AscendC::TPosition::VECIN, 0, AscendC::TOTAL_UB_SIZE};
     AscendC::GlobalTensor<DataTypeIn> inputGlobal_; // add的输入x3Gm
     int64_t stageSize_ = 0;
@@ -95,21 +98,21 @@ public:
             // NDdma
             int64_t curBatch = stageSize / curAivNAlign / curAivM;
             AscendC::MultiCopyParams<DataTypeIn, DIM_SIZE_THREE> ndDmaParams;
-            ndDmaParams.loopInfo.loopSrcStride[0] = 1;
-            ndDmaParams.loopInfo.loopSrcStride[1] = static_cast<uint32_t>(strideN);
-            ndDmaParams.loopInfo.loopSrcStride[2] = 0;
-            ndDmaParams.loopInfo.loopDstStride[0] = 1;
-            ndDmaParams.loopInfo.loopDstStride[1] = static_cast<uint32_t>(curAivNAlign);
-            ndDmaParams.loopInfo.loopDstStride[2] = static_cast<uint32_t>(curAivNAlign * curAivM);
-            ndDmaParams.loopInfo.loopSize[0] = static_cast<uint32_t>(strideN);
-            ndDmaParams.loopInfo.loopSize[1] = static_cast<uint32_t>(curAivM);
-            ndDmaParams.loopInfo.loopSize[2] = static_cast<uint32_t>(curBatch);
-            ndDmaParams.loopInfo.loopLpSize[0] = 0;
-            ndDmaParams.loopInfo.loopLpSize[1] = 0;
-            ndDmaParams.loopInfo.loopLpSize[2] = 0;
-            ndDmaParams.loopInfo.loopRpSize[0] = static_cast<uint8_t>(curAivNAlign - strideN);
-            ndDmaParams.loopInfo.loopRpSize[1] = 0;
-            ndDmaParams.loopInfo.loopRpSize[2] = 0;
+            ndDmaParams.loopInfo.loopSrcStride[FIRST_DIM] = 1;
+            ndDmaParams.loopInfo.loopSrcStride[SECOND_DIM] = static_cast<uint32_t>(strideN);
+            ndDmaParams.loopInfo.loopSrcStride[THIRD_DIM] = 0;
+            ndDmaParams.loopInfo.loopDstStride[FIRST_DIM] = 1;
+            ndDmaParams.loopInfo.loopDstStride[SECOND_DIM] = static_cast<uint32_t>(curAivNAlign);
+            ndDmaParams.loopInfo.loopDstStride[THIRD_DIM] = static_cast<uint32_t>(curAivNAlign * curAivM);
+            ndDmaParams.loopInfo.loopSize[FIRST_DIM] = static_cast<uint32_t>(strideN);
+            ndDmaParams.loopInfo.loopSize[SECOND_DIM] = static_cast<uint32_t>(curAivM);
+            ndDmaParams.loopInfo.loopSize[THIRD_DIM] = static_cast<uint32_t>(curBatch);
+            ndDmaParams.loopInfo.loopLpSize[FIRST_DIM] = 0;
+            ndDmaParams.loopInfo.loopLpSize[SECOND_DIM] = 0;
+            ndDmaParams.loopInfo.loopLpSize[THIRD_DIM] = 0;
+            ndDmaParams.loopInfo.loopRpSize[FIRST_DIM] = static_cast<uint8_t>(curAivNAlign - strideN);
+            ndDmaParams.loopInfo.loopRpSize[SECOND_DIM] = 0;
+            ndDmaParams.loopInfo.loopRpSize[THIRD_DIM] = 0;
             AscendC::DataCopy(inputLocal_, inputGlobal_, ndDmaParams);
         }
         AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(ZERO_FLAG);
