@@ -94,9 +94,13 @@ public:
             repeatStride = self_->ctx.currentWoL1 / BLOCK_L0_M;
             repeatTime = self_->ctx.currentHoL0;
         }
-
+#if defined(ASC_DEVKIT_VERSION_NUM) && (ASC_DEVKIT_VERSION_NUM >= 90000000)
         LoadDataRepeatParamWithStride repeatParams = {repeatStride, repeatTime, repeatMode, dstStride};
         SetLoadDataRepeatWithStride(repeatParams);
+#else
+        LoadDataRepeatParam repeatParams = {repeatStride, repeatTime, repeatMode, dstStride};
+        SetLoadDataRepeat(repeatParams);
+#endif
     }
 
     __aicore__ inline void SetFirst()

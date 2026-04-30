@@ -78,8 +78,13 @@ public:
             currentML0Align_ = m;
             currentML0_ = mNotAlign;
         }
+#if defined(ASC_DEVKIT_VERSION_NUM) && (ASC_DEVKIT_VERSION_NUM >= 90000000)
         LoadDataRepeatParamWithStride repeatParams = {0, 1, 0, static_cast<uint16_t>(currentML0Align_ / BLOCK_L0_M)};
         SetLoadDataRepeatWithStride(repeatParams);
+#else
+        LoadDataRepeatParam repeatParams = {0, 1, 0, static_cast<uint16_t>(currentML0Align_ / BLOCK_L0_M)};
+        SetLoadDataRepeat(repeatParams);
+#endif
     }
 
     __aicore__ inline void SetFirst()
