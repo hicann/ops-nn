@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-- 接口功能：根据输入的scale对输入x进行量化,并计算输入x的绝对值的最大值amax。
+- 接口功能：根据输入的scale对输入x进行量化，并计算输入x的绝对值的最大值amax。
 
 - 计算公式：
 
@@ -27,7 +27,7 @@
   amax = \max(|x|)
   $$
 
-  其中，$x$ 表示输入张量，$scale$ 表示量化缩放因子，$\text{dst\_type}$ 指定输出类型，$\text{round\_mode}$ 指定舍入模式，$amax$ 为输入张量所有元素绝对值的最大值。
+  其中，$x$表示输入张量，$scale$表示量化缩放因子，$\text{dst\_type}$指定输出类型，$\text{round\_mode}$指定舍入模式，$amax$为输入张量所有元素绝对值的最大值。
 
 ## 函数原型
 
@@ -93,7 +93,7 @@ aclnnStatus aclnnQuantMax(
       <td>scale（aclTensor*）</td>
       <td>输入</td>
       <td>量化缩放因子，对应公式中scale。</td>
-      <td><ul><li>不支持空Tensor。</li><li>数据类型固定为FLOAT。</li><li>shape固定为[1]。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>shape固定为[1]。</li></ul></td>
       <td>FLOAT</td>
       <td>ND</td>
       <td>1</td>
