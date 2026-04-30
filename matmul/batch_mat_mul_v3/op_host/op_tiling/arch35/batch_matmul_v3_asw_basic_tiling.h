@@ -41,6 +41,8 @@ protected:
     bool IsTransposeNonContiguous(uint64_t idx) const;
 
     bool IsContiguousStride(StrideIndexPairs& strideIndexPairs) const;
+
+    void CalL1Tiling(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args, MatMulV3RunInfo& runInfo) const;
 };
 }
 }

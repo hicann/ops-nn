@@ -18,6 +18,7 @@
 #include "batch_matmul_v3_common_advanced.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_tiling_registry.h"
 #include "batch_matmul_v3_tiling_key.h"
+#include "matmul/common/op_host/math_util.h"
 
 namespace optiling {
 namespace batch_matmul_v3_advanced {
@@ -61,7 +62,10 @@ bool BatchMatMulV3AswBasicTiling::IsCapable()
 ge::graphStatus BatchMatMulV3AswBasicTiling::DoOpTiling()
 {
     MatMulV3TilingHelper::ResetBase(compileInfo_, args_, runInfo_);
-    MatMulV3TilingHelper::CalL1Tiling(compileInfo_, args_, runInfo_);
+
+    MatMulV3TilingHelper::GetRebalanceBlock(compileInfo_, args_, runInfo_, context_);
+    // 待matmul负载均衡上库后使用MatMulV3TilingHelper
+    CalL1Tiling(compileInfo_, args_, runInfo_);
 
     // l1开2db后依然只使用了一半的空间，则开启4 db。该字段仅在基础api场景生效
     uint64_t abL1TensorSize = runInfo_.baseK * runInfo_.stepKa * (runInfo_.baseM + runInfo_.baseN) * args_.aDtypeSize;
@@ -138,6 +142,44 @@ ge::graphStatus BatchMatMulV3AswBasicTiling::GetTilingData(TilingResult& tiling)
 uint64_t BatchMatMulV3AswBasicTiling::GetNumBlocks() const
 {
     return compileInfo_.aicNum;
+}
+
+// 待matmul负载均衡上库后合并
+void BatchMatMulV3AswBasicTiling::CalL1Tiling(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
+                                              MatMulV3RunInfo& runInfo) const
+{
+    bool isKInner = !args.isATrans || args.isBTrans;
+    uint64_t totalL1Size = compileInfo.l1Size - (args.hasBias ? runInfo.baseN * DB_SIZE * DATA_SIZE_FP32 : 0UL);
+    // Shape约束 && issue queue约束
+    uint64_t maxStepK = std::min(Ops::NN::MathUtil::CeilDivision(args.kValue, runInfo.baseK), NUM_EIGHT);
+    uint64_t kAlignUnit = isKInner ? BASIC_BLOCK_K_512_BYTE / args.aDtypeSize : BASIC_BLOCK_SIZE_16;
+    uint64_t resKL1 = 0;
+    uint64_t singleMovSize = 0;
+    for (uint64_t stepK = 1; stepK <= maxStepK; stepK++) {
+        uint64_t curKL1 = runInfo.baseK * stepK;
+        uint64_t aL1Size = runInfo.baseM * curKL1 * args.aDtypeSize;
+        uint64_t bL1Size = runInfo.baseN * curKL1 * args.bDtypeSize;
+        if ((aL1Size + bL1Size) * DB_SIZE > totalL1Size ||
+            std::max(aL1Size, bL1Size) * DB_SIZE * 2 > compileInfo.l1Size) {
+            break;
+        }
+        bool condNoRes = resKL1 == 0;
+        bool condKAlign256B = curKL1 % (BASIC_BLOCK_K_256_BYTE / args.aDtypeSize) == 0;
+        bool condKAlign =
+            resKL1 % kAlignUnit != 0 && (condKAlign256B || (!condKAlign256B && singleMovSize < L1_SINGLE_SIZE_LIMIT));
+        bool condMovSize = resKL1 % kAlignUnit == 0 && curKL1 % kAlignUnit == 0 && singleMovSize < L1_SINGLE_SIZE_LIMIT;
+        if (condNoRes || condKAlign || condMovSize) {
+            resKL1 = curKL1;
+            singleMovSize = std::max(aL1Size, bL1Size);
+        }
+    }
+    runInfo.stepKa = resKL1 / runInfo.baseK;
+    runInfo.stepKb = resKL1 / runInfo.baseK;
+    runInfo.depthA1 = runInfo.stepKa * DB_SIZE;
+    runInfo.depthB1 = runInfo.stepKb * DB_SIZE;
+    runInfo.singleCoreM = runInfo.baseM;
+    runInfo.singleCoreN = runInfo.baseN;
+    return;
 }
 } // namespace batch_matmul_v3_advanced
 } // namespace optiling

@@ -39,6 +39,14 @@ public:
         MatMulV3RunInfo& runInfo);
     static void ResetFullLoadLoadBalance(MatMulV3RunInfo& runInfo);
     static bool IsSelfNonContiguous(const gert::TilingContext *context);
+    static void GetRebalanceBlock(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
+                                  MatMulV3RunInfo& runInfo, const gert::TilingContext* context);
+    static double GetHbmBW(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
+                           fe::PlatFormInfos* platformInfo);
+    static double GetL2BW(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
+                          fe::PlatFormInfos* platformInfo);
+    static double GetCoreFreq(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
+                              fe::PlatFormInfos* platformInfo);
 };
 }
 }

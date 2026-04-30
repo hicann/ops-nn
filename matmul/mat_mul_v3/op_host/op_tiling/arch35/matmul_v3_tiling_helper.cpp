@@ -15,6 +15,7 @@
 
 #include "matmul_v3_tiling_helper.h"
 #include "matmul/common/op_host/math_util.h"
+#include "platform/platform_infos_def.h"
 
 using Ops::NN::MathUtil;
 namespace {
@@ -215,6 +216,81 @@ const static std::map<NpuArch, GetStepSmallKFunc> GetStepSmallKFuncMap = {
 };
 }  // namespace
 
+uint64_t GetMaxBaseWithLimit(
+    const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args, const MatMulV3RunInfo& runInfo,
+    uint64_t baseMNBufferLimit, uint64_t baseAlignUnit, bool isRightMatrix, bool isMemoryBound)
+{
+    uint64_t shapeValue = isRightMatrix ? args.nValue : args.mValue;
+    // baseK限制，cube bound场景需要掩盖fixp，约束baseK至少128B，其他场景不做约束
+    uint64_t kAlignValue = ops::CeilAlign(args.kValue, BASIC_BLOCK_SIZE_16);
+    uint64_t kLimitValue = isMemoryBound ? BASIC_BLOCK_SIZE_16 : BASIC_BLOCK_K_128_BYTE / args.aDtypeSize;
+    uint64_t minKL0 = std::min(kLimitValue, kAlignValue) * args.aDtypeSize;
+    // L0 buffer限制
+    uint64_t maxBaseMNWithBuffer = baseMNBufferLimit / DATA_SIZE_FP32 / BASIC_BLOCK_SIZE_16;
+    uint64_t maxBaseBlock = std::min(compileInfo.l0ASize / DB_SIZE / minKL0, maxBaseMNWithBuffer);
+    // bias table约束
+    if (isRightMatrix && args.hasBias) {
+        maxBaseBlock = std::min(maxBaseBlock, compileInfo.btSize / DB_SIZE / DATA_SIZE_FP32);
+    }
+    // K内轴时，要求kL1至少256B对齐,目前batchmatmul固定内轴512B对齐
+    uint64_t kAlignUnit =
+        !args.isATrans || args.isBTrans ?
+            (isMemoryBound && args.batchInfo == nullptr ? BASIC_BLOCK_K_256_BYTE : BASIC_BLOCK_K_512_BYTE) /
+                args.aDtypeSize :
+            BASIC_BLOCK_SIZE_16;
+    uint64_t maxBaseMNWithKInner =
+        compileInfo.l1Size / (NUM_TWO * DB_SIZE * args.aDtypeSize * std::min(kAlignUnit, kAlignValue));
+    maxBaseBlock = std::min(maxBaseBlock, maxBaseMNWithKInner);
+    // 输入shape约束
+    maxBaseBlock =
+        std::min(ops::CeilAlign(shapeValue, baseAlignUnit), ops::FloorAlign(maxBaseBlock, baseAlignUnit));
+    return maxBaseBlock;
+}
+
+double GetBalanceRateWithTail(const MatMulV3Args& args, uint64_t usedCoreNum, uint64_t baseM, uint64_t baseN)
+{
+    // 考虑尾轮优化负载均衡率，仅针对cubebound场景生效
+    uint64_t batch = args.batchInfo == nullptr ? 1 : args.batchInfo->batchA;
+    uint64_t totalRound =
+        batch * MathUtil::CeilDivision(args.mValue, baseM) * MathUtil::CeilDivision(args.nValue, baseN);
+    uint64_t mainRound = MathUtil::CeilDivision(totalRound, usedCoreNum) - 1;
+    uint64_t totalTailSplit = ops::FloorDiv(usedCoreNum, (totalRound - usedCoreNum * mainRound));
+    if (mainRound == 0 || ops::FloorDiv(baseM * baseN, totalTailSplit) < MIN_TATL_BLOCK_SIZE ||
+        args.batchInfo != nullptr) {
+        return (static_cast<double>(batch) * args.mValue * args.nValue / usedCoreNum) /
+               ((mainRound + 1) * baseM * baseN);
+    }
+    uint64_t tailSplitSqrt = static_cast<uint64_t>(std::sqrt(totalTailSplit));
+    uint64_t offset = ops::FloorDiv(totalTailSplit - tailSplitSqrt * tailSplitSqrt, tailSplitSqrt) + 1;
+    double tailRound = 1.0 / (tailSplitSqrt * (tailSplitSqrt + offset - 1));
+    return (static_cast<double>(args.mValue) * args.nValue / usedCoreNum) / ((mainRound + tailRound) * baseM * baseN);
+}
+
+void GetBaseK(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args, MatMulV3RunInfo& runInfo)
+{
+    uint64_t kValueAlign = ops::CeilAlign(static_cast<uint64_t>(args.kValue), BASIC_BLOCK_SIZE_16);
+    uint64_t maxBaseK = compileInfo.l0ASize / DB_SIZE / args.aDtypeSize / std::max(runInfo.baseM, runInfo.baseN);
+    if (kValueAlign <= maxBaseK) {
+        runInfo.baseK = kValueAlign;
+        return;
+    }
+    if (args.isATrans && !args.isBTrans) {
+        runInfo.baseK = ops::FloorAlign(maxBaseK, BASIC_BLOCK_SIZE_16);
+        return;
+    }
+    if (maxBaseK * args.aDtypeSize >= BASIC_BLOCK_K_256_BYTE) {
+        runInfo.baseK = ops::FloorAlign(maxBaseK, BASIC_BLOCK_K_256_BYTE / args.aDtypeSize);
+        return;
+    }
+    std::vector<uint64_t> baseKCandidate = {128, 64, 32, 16};
+    for (uint64_t baseK : baseKCandidate) {
+        if (maxBaseK >= baseK) {
+            runInfo.baseK = baseK;
+            return;
+        }
+    }
+}
+
 namespace optiling {
 namespace matmul_v3_advanced {
 void MatMulV3TilingHelper::ResetBase(const MatmulV3CompileInfo &compileInfo, const MatMulV3Args &args,
@@ -311,6 +387,130 @@ bool MatMulV3TilingHelper::IsSelfNonContiguous(const gert::TilingContext* contex
     return (
         context->InputIsView(0) && selfStorageShape.GetDimNum() == NUM_ONE && selfDimNum == NUM_THREE &&
         mat2DimNum == NUM_TWO);
+}
+
+void MatMulV3TilingHelper::GetRebalanceBlock(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
+                                             MatMulV3RunInfo& runInfo, const gert::TilingContext* context)
+{
+    // 获取规格，计算相关性能指标
+    fe::PlatFormInfos* platformInfo = context->GetPlatformInfo();
+    if (platformInfo == nullptr) {
+        OP_LOGE(context->GetNodeName(), "platformInfo is null");
+        return;
+    }
+    double hbmBW = GetHbmBW(compileInfo, args, platformInfo);
+    double l2BW = GetL2BW(compileInfo, args, platformInfo);
+    double singleCoreComputePower = GetCoreFreq(compileInfo, args, platformInfo) * NUM_EIGHT;
+    // balanceRateEdge用于判断是否取得最优解，进行减枝
+    double balanceRateEdge = 0.9;
+    double cmr = (static_cast<double>(args.mValue) + args.nValue) / (static_cast<double>(args.mValue) * args.nValue);
+    double computePower = singleCoreComputePower * compileInfo.aicNum;
+
+    // 切K场景，要求输出size同时小于L0C和UB
+    uint64_t baseMNBufferLimit = runInfo.usedCoreNum == compileInfo.aicNum ?
+                                     compileInfo.l0CSize :
+                                     std::min(compileInfo.l0CSize, compileInfo.ubSize);
+
+    uint64_t batchNum = args.batchInfo == nullptr ? 1 : args.batchInfo->batchA;
+    double l2CacheUsage =
+        std::max(static_cast<double>(batchNum * (args.mValue + args.nValue) * args.kValue * args.aDtypeSize) /
+                     compileInfo.l2Size,
+                 1.0);
+    runInfo.cubeBoundEdge =
+        (l2BW / computePower) + l2CacheUsage * (1 - l2BW / hbmBW) * cmr - (1 + l2BW / hbmBW) / args.kValue;
+    uint64_t baseMBest = std::min(ops::CeilAlign(args.mValue, BASIC_BLOCK_SIZE_16), BASIC_BLOCK_SIZE_256);
+    uint64_t baseNBest =
+        std::max(BASIC_BLOCK_SIZE_16,
+                 std::min(ops::CeilAlign(args.nValue, BASIC_BLOCK_SIZE_16),
+                          ops::FloorAlign(baseMNBufferLimit / DATA_SIZE_FP32 / baseMBest, BASIC_BLOCK_SIZE_16)));
+    double cubeBoundParamBest = (1.0 / baseMBest) + (1.0 / baseNBest);
+    bool isMemoryBound = cubeBoundParamBest > runInfo.cubeBoundEdge;
+    uint64_t innerAlignUnit = isMemoryBound ? BASIC_BLOCK_SIZE_128 : BASIC_BLOCK_SIZE_64;
+
+    // fixpipe bound场景下，要求baseN是256B对齐，发挥搬出带宽
+    uint64_t fixpBoundEdge = (args.mValue * args.nValue * hbmBW) / ((args.mValue + args.nValue) * l2BW);
+    uint64_t baseMAlignUnit = args.isATrans ? innerAlignUnit / args.aDtypeSize : BASIC_BLOCK_SIZE_16;
+    uint64_t baseNAlignUnit = (args.kValue < fixpBoundEdge) ?
+                                  (BASIC_BLOCK_K_256_BYTE / args.bDtypeSize) :
+                                  (args.isBTrans ? BASIC_BLOCK_SIZE_16 : innerAlignUnit / args.bDtypeSize);
+
+    // 计算候选解集的上界
+    uint64_t maxBaseM =
+        GetMaxBaseWithLimit(compileInfo, args, runInfo, baseMNBufferLimit, baseMAlignUnit, false, isMemoryBound);
+    uint64_t maxBaseN =
+        GetMaxBaseWithLimit(compileInfo, args, runInfo, baseMNBufferLimit, baseNAlignUnit, true, isMemoryBound);
+
+    runInfo.baseM = std::max(BASIC_BLOCK_SIZE_16, std::min(maxBaseM, BASIC_BLOCK_SIZE_256));
+    runInfo.baseN = std::max(
+        BASIC_BLOCK_SIZE_16,
+        std::min(maxBaseN, ops::FloorAlign(baseMNBufferLimit / DATA_SIZE_FP32 / runInfo.baseM, baseNAlignUnit)));
+    runInfo.cubeBoundParam = (1.0 / runInfo.baseM) + (1.0 / runInfo.baseN);
+    runInfo.cubeBoundEdge = runInfo.cubeBoundEdge * 0.85;
+    double balanceRate = GetBalanceRateWithTail(args, runInfo.usedCoreNum, runInfo.baseM, runInfo.baseN);
+
+    for (uint64_t curBaseM = maxBaseM; curBaseM >= 1 && curBaseM <= maxBaseM; curBaseM -= baseMAlignUnit) {
+        uint64_t curMaxBaseN =
+            std::min(maxBaseN, ops::FloorAlign(baseMNBufferLimit / DATA_SIZE_FP32 / curBaseM, baseNAlignUnit));
+        for (uint64_t curBaseN = curMaxBaseN; curBaseN >= 1 && curBaseN <= curMaxBaseN; curBaseN -= baseNAlignUnit) {
+            double curCubeBoundParam = (1.0 / curBaseM) + (1.0 / curBaseN);
+            double curBalanceRate = GetBalanceRateWithTail(args, runInfo.usedCoreNum, curBaseM, curBaseN);
+            // 当前最优解满足负载均衡阈值时，本轮解集无法在计算访存拿到收益时过滤本轮解集
+            if (balanceRate >= balanceRateEdge && curCubeBoundParam > runInfo.cubeBoundParam &&
+                curCubeBoundParam > runInfo.cubeBoundEdge) {
+                continue;
+            }
+            // 当前解满足cubebound并且负载均衡率更高
+            bool cubeBoundCond = curCubeBoundParam <= runInfo.cubeBoundEdge && curBalanceRate > balanceRate;
+            // 综合评选负载均衡和计算访存能力
+            bool balanceCond = ((curCubeBoundParam / curBalanceRate) < (runInfo.cubeBoundParam / balanceRate)) ||
+                               ((curCubeBoundParam / curBalanceRate == runInfo.cubeBoundParam / balanceRate) &&
+                                curBalanceRate > balanceRate);
+            if (cubeBoundCond || balanceCond) {
+                runInfo.baseM = curBaseM;
+                runInfo.baseN = curBaseN;
+                runInfo.cubeBoundParam = curCubeBoundParam;
+                balanceRate = curBalanceRate;
+            }
+        }
+    }
+    runInfo.baseM = std::min(ops::CeilAlign(args.mValue, BASIC_BLOCK_SIZE_16), runInfo.baseM);
+    runInfo.baseN = std::min(ops::CeilAlign(args.nValue, BASIC_BLOCK_SIZE_16), runInfo.baseN);
+    GetBaseK(compileInfo, args, runInfo);
+    uint64_t mCore = MathUtil::CeilDivision(args.mValue, runInfo.baseM);
+    uint64_t nCore = MathUtil::CeilDivision(args.nValue, runInfo.baseN);
+    runInfo.usedCoreNum = std::min(batchNum * mCore * nCore, runInfo.usedCoreNum);
+    runInfo.dbL0C = runInfo.baseM * runInfo.baseN * DATA_SIZE_FP32 * DB_SIZE <= compileInfo.l0CSize ? DB_SIZE : 1UL;
+    runInfo.mixInfo.ubDB = runInfo.baseM * runInfo.baseN * DATA_SIZE_FP32 <= compileInfo.ubSize ? DB_SIZE : 1UL;
+}
+
+double MatMulV3TilingHelper::GetHbmBW(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
+                                      fe::PlatFormInfos* platformInfo)
+{
+    std::string coreCntStr = "";
+    std::string ddrRateStr = "";
+    platformInfo->GetPlatformRes("SoCInfo", "ai_core_cnt", coreCntStr);
+    platformInfo->GetPlatformRes("AICoreMemoryRates", "ddr_rate", ddrRateStr);
+    return GetCoreFreq(compileInfo, args, platformInfo) * std::atoi(coreCntStr.c_str()) *
+           std::atoi(ddrRateStr.c_str()) / KB_SIZE;
+}
+
+double MatMulV3TilingHelper::GetL2BW(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
+                                     fe::PlatFormInfos* platformInfo)
+{
+    std::string coreCntStr = "";
+    std::string l2RateStr = "";
+    platformInfo->GetPlatformRes("SoCInfo", "ai_core_cnt", coreCntStr);
+    platformInfo->GetPlatformRes("AICoreMemoryRates", "l2_rate", l2RateStr);
+    return GetCoreFreq(compileInfo, args, platformInfo) * std::atoi(coreCntStr.c_str()) * std::atoi(l2RateStr.c_str()) /
+           KB_SIZE;
+}
+
+double MatMulV3TilingHelper::GetCoreFreq(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
+                                         fe::PlatFormInfos* platformInfo)
+{
+    std::string freqStr = "";
+    platformInfo->GetPlatformRes("AICoreSpec", "cube_freq", freqStr);
+    return std::atoi(freqStr.c_str()) / static_cast<double>(THOUSAND_NUM);
 }
 }  // namespace matmul_v3_advanced
 }  // namespace optiling

@@ -28,6 +28,7 @@ constexpr uint64_t BASIC_BLOCK_SIZE_128 = 128UL;
 constexpr uint64_t BASIC_BLOCK_SIZE_256 = 256UL;
 constexpr uint64_t BASIC_BLOCK_SIZE_16 = 16UL;
 constexpr uint64_t BASIC_BLOCK_SIZE_64 = 64UL;
+constexpr uint64_t BASIC_BLOCK_K_512_BYTE = 512UL;
 constexpr uint64_t BASIC_BLOCK_K_256_BYTE = 256UL;
 constexpr uint64_t BASIC_BLOCK_K_128_BYTE = 128UL;
 constexpr uint64_t NUM_ONE = 1UL;
@@ -35,6 +36,7 @@ constexpr uint64_t NUM_TWO = 2UL;
 constexpr uint64_t NUM_THREE = 3UL;
 constexpr uint64_t NUM_FOUR = 4UL;
 constexpr uint64_t NUM_FIVE = 5UL;
+constexpr uint64_t NUM_EIGHT = 8UL;
 constexpr uint64_t CACHELINE = 512UL;
 constexpr uint64_t BLOCK_BYTE_SIZE = 32UL;
 constexpr uint64_t BIAS_TABLE_NUM = 256UL;
@@ -48,6 +50,10 @@ constexpr uint64_t RPC_WORKSIZE = 20UL;
 constexpr uint64_t INIT_SPLIT_CNT = 1UL;
 constexpr uint64_t INIT_SPLIT_VALUE = 0UL;
 constexpr uint64_t ALIGN_128 = 128UL;
+constexpr uint64_t L1_SINGLE_SIZE_LIMIT = 48 * 1024UL;
+constexpr uint64_t THOUSAND_NUM = 1000;
+constexpr uint64_t KB_SIZE = 1024;
+constexpr uint64_t MIN_TATL_BLOCK_SIZE = 1024;
 
 struct BatchMatMulV3RunInfo {
     uint64_t iterBatch = 0UL;
@@ -167,6 +173,8 @@ struct MatMulV3RunInfo {
     uint64_t mergeBatchBL1 = 1UL; 
     uint64_t mergeBatchL0 = 1UL;
     bool needNdDma = false;
+    double cubeBoundParam = 0.0;
+    double cubeBoundEdge = 0.0;
     MatMulV3TailInfo tailInfo;
     BatchMatMulV3RunInfo bmmRunInfo;
     MatMulV3MixInfo mixInfo;
