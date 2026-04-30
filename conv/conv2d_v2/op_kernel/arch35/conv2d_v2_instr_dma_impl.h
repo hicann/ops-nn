@@ -178,6 +178,7 @@ private:
             khUbOnPadBottom = self_->ctx.convTilingData->convApiTiling.khUb - khUbOnFmapCountTemp;
         } else if (hIdxWithPadStartOrg < 0 && hIdxWithPadEndOrg >= static_cast<int64_t>(self_->ctx.convTilingData->convApiTiling.orgHi)) {
             khUbOnPadTop = (-hIdxWithPadStartOrg - 1) / self_->ctx.convTilingData->convApiTiling.dilationH + 1;
+            hIdxWithPadStart += khUbOnPadTop * self_->ctx.convTilingData->convApiTiling.dilationH;
             uint32_t khUbOnPadTopAndFmapCountTemp = (static_cast<int64_t>(self_->ctx.convTilingData->convApiTiling.orgHi) - 1 - hIdxWithPadStartOrg) /
                 self_->ctx.convTilingData->convApiTiling.dilationH + 1;
             khUbOnPadBottom = self_->ctx.convTilingData->convApiTiling.khUb - khUbOnPadTopAndFmapCountTemp;
@@ -193,6 +194,7 @@ private:
             kwUbOnPadRight = self_->ctx.convTilingData->convApiTiling.kwUb - kwUbOnFmapCountTemp;
         } else if (wIdxWithPadStartOrg < 0 && wIdxWithPadEndOrg >= static_cast<int64_t>(self_->ctx.convTilingData->convApiTiling.orgWi)) {
             kwUbOnPadLeft = (-wIdxWithPadStartOrg - 1) / self_->ctx.convTilingData->convApiTiling.dilationW + 1;
+            wIdxWithPadStart += kwUbOnPadLeft * self_->ctx.convTilingData->convApiTiling.dilationW;
             uint32_t kwUbOnPadLeftAndFmapCountTemp =
                 (static_cast<int64_t>(self_->ctx.convTilingData->convApiTiling.orgWi) - 1 - wIdxWithPadStartOrg) /
                     self_->ctx.convTilingData->convApiTiling.dilationW + 1;
