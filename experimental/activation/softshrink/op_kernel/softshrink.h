@@ -154,6 +154,15 @@ __aicore__ inline void Softshrink<T, BUFFER_MODE>::Compute(
         Add(fp32Buf, fp32Buf, fp32Tmp, alignedNum);
         PipeBarrier<PIPE_V>();
 
+        // Step 4: NaN handling — reuse fp32Tmp to recast input for NaN detection
+        Cast(fp32Tmp, inputLocal, RoundMode::CAST_NONE, alignedNum);
+        PipeBarrier<PIPE_V>();
+        Compare(maskLocal, fp32Tmp, fp32Tmp, CMPMODE::NE, alignedNum);
+        PipeBarrier<PIPE_V>();
+        Select(fp32Buf, maskLocal, fp32Tmp, fp32Buf,
+            SELMODE::VSEL_TENSOR_TENSOR_MODE, alignedNum);
+        PipeBarrier<PIPE_V>();
+
         // Cast back to original type
         Cast(resultLocal, fp32Buf, RoundMode::CAST_ROUND, alignedNum);
         PipeBarrier<PIPE_V>();
@@ -179,6 +188,11 @@ __aicore__ inline void Softshrink<T, BUFFER_MODE>::Compute(
 
         // Step 3: Merge — result = positive_branch + negative_branch
         Add(resultLocal, resultLocal, tmpLocal, alignedNum);
+        PipeBarrier<PIPE_V>();
+        // Step 4: NaN handling — preserve NaN values from input
+        Compare(maskLocal, inputLocal, inputLocal, CMPMODE::NE, alignedNum);
+        PipeBarrier<PIPE_V>();
+        Select(resultLocal, maskLocal, inputLocal, resultLocal, SELMODE::VSEL_TENSOR_TENSOR_MODE, alignedNum);
         PipeBarrier<PIPE_V>();
     }
 
