@@ -223,21 +223,23 @@ static ge::graphStatus TilingParseForWeightQuantBatchMatmulExperiment(
 static ge::graphStatus WeightQuantBatchMatmulExperimentTilingFunc(gert::TilingContext *context)
 {
     // 2.1 平台信息
-    WeightQuantBatchMatmulExperimentCompileInfo *compileInfoPtr = new WeightQuantBatchMatmulExperimentCompileInfo;
+    WeightQuantBatchMatmulExperimentCompileInfo compileInfo;
+    WeightQuantBatchMatmulExperimentCompileInfo* compileInfoPtr = &compileInfo;
     auto ret = GetPlatformInfo(context, compileInfoPtr);
     if (ret != ge::GRAPH_SUCCESS) {
         return ret;
     }
 
     // 2.2 输入信息
-    WeightQuantBatchMatmulExperimentArgs *argsPtr = new WeightQuantBatchMatmulExperimentArgs;
+    WeightQuantBatchMatmulExperimentArgs args;
+    WeightQuantBatchMatmulExperimentArgs* argsPtr = &args;
     ret = GetShapeAttrsInfo(context, argsPtr);
     if (ret != ge::GRAPH_SUCCESS) {
         return ret;
     }
 
     // 2.3 计算Tiling参数
-    WeightQuantBatchMatmulExperimentTilingData *tilingDataPtr =
+    WeightQuantBatchMatmulExperimentTilingData* tilingDataPtr =
         context->GetTilingData<WeightQuantBatchMatmulExperimentTilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tilingDataPtr);
     ret = DoOpTiling(tilingDataPtr, compileInfoPtr, argsPtr);
