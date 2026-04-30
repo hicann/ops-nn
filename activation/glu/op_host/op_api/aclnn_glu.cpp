@@ -148,8 +148,8 @@ static aclnnStatus CheckParams(const aclTensor *self, int64_t dim, const aclTens
 }
 
 static bool CheckGluKernel(const aclTensor *self) {
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-        GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) {
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+    if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         if (self->GetDataType() == ge::DT_FLOAT || self->GetDataType() == ge::DT_FLOAT16 ||
             self->GetDataType() == ge::DT_BF16) {
             return true;

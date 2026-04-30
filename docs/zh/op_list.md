@@ -198,6 +198,16 @@
   </tr>
   <tr>
     <td>activation</td>
+    <td><a href="../../activation/glu/README.md">glu</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>GLU是一个门控线性单元函数，它将输入张量沿着指定的维度dim平均分成两个张量，并将其前部分张量与后部分张量的Sigmoid函数输出的结果逐元素相乘。</td>
+  </tr>
+  <tr>
+    <td>activation</td>
     <td><a href="../../activation/hard_shrink/README.md">hard_shrink</a></td>
     <td>✗</td>
     <td>✓</td>

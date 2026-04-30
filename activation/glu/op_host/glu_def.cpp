@@ -41,6 +41,34 @@ public:
 
         this->AICore().AddConfig("ascend910_93",aicore_config_910);
         this->AICore().AddConfig("ascend910b",aicore_config_910);
+
+        OpAICoreConfig config950;
+        config950.Input("x")
+            .ParamType(REQUIRED)
+            .DataType(
+                {ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
+            .Format(
+                {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat(
+                {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .AutoContiguous();
+        config950.Output("y")
+            .ParamType(REQUIRED)
+            .DataType(
+                {ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT})
+            .Format(
+                {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat(
+                {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+
+        config950.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(false)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .PrecisionReduceFlag(true)
+            .ExtendCfgInfo("opFile.value", "glu_apt");
+        this->AICore().AddConfig("ascend950", config950);
     }
 };
 
