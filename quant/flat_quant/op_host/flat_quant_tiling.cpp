@@ -51,6 +51,8 @@ constexpr int32_t L0C_SIZE = 256 * 1024;
 
 constexpr float ZERO_FLOAT = 0.0f;
 constexpr float ONE_FLOAT = 1.0f;
+constexpr float SIX_FLOAT = 6.0f;
+constexpr float TWELVE_FLOAT = 12.0f;
 
 constexpr uint8_t MM_BASE_MODE = 1;
 constexpr uint8_t MM_DOUBLE_MODE = 2;
@@ -69,9 +71,14 @@ public:
 private:
     bool CheckShapes();
     bool CheckClipRatio() const;
+    bool CheckDstTypeMax() const;
     bool CheckDstDtype() const;
     void GetKernelMode(int64_t aivNum);
     ge::graphStatus GetTCubeTiling();
+    ge::graphStatus InitializeInputsAndAttributes();
+    ge::graphStatus SetBasicTilingData();
+    ge::graphStatus CalculateIterBatch();
+    ge::graphStatus SetTilingContextAndSaveData();
 
     template <typename T1, typename T2>
     inline auto CeilA2B(T1 a, T2 b) const -> T1;
@@ -93,10 +100,11 @@ private:
 
     const float* clipRatio_ = nullptr;
     const int64_t* dstDtype_ = nullptr;
+    const float* dstTypeMax_ = nullptr;
     FlatQuantTilingData tilingData_;
 };
 
-ge::graphStatus FlatQuantTiling::RunBigKernelTiling()
+ge::graphStatus FlatQuantTiling::InitializeInputsAndAttributes()
 {
     // 获取输入矩阵
     auto xTensor = tilingContext_->GetInputTensor(INDEX_ZERO);
@@ -106,7 +114,6 @@ ge::graphStatus FlatQuantTiling::RunBigKernelTiling()
     if (xTensor == nullptr || p1Tensor == nullptr || p2Tensor == nullptr || attrs == nullptr) {
         return ge::GRAPH_FAILED;
     }
-
     // 获取输入的数据类型，输入Tensor的数据类型保持一致
     for (uint64_t i = 0; i < INPUT_TENSOR_NUM; i++) {
         auto temp = tilingContext_->GetInputDesc(i);
@@ -116,37 +123,54 @@ ge::graphStatus FlatQuantTiling::RunBigKernelTiling()
             return ge::GRAPH_FAILED;
         }
     }
-
-    // 获取输入的shape
+    // 获取输入的shape和属性
     xShape_ = tilingContext_->GetInputShape(INDEX_ZERO)->GetOriginShape();
     p1Shape_ = tilingContext_->GetInputShape(INDEX_ONE)->GetOriginShape();
     p2Shape_ = tilingContext_->GetInputShape(INDEX_TWO)->GetOriginShape();
     hasP2_ = (p2Shape_.GetDim(INDEX_ZERO) > 0 && p2Shape_.GetDim(INDEX_ONE) > 0);
     clipRatio_ = attrs->GetAttrPointer<float>(INDEX_ZERO);
     dstDtype_ = attrs->GetAttrPointer<int64_t>(INDEX_ONE);
+    dstTypeMax_ = attrs->GetAttrPointer<float>(INDEX_TWO);
 
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus FlatQuantTiling::SetBasicTilingData()
+{
     int64_t M = xShape_.GetDim(INDEX_ONE);
     int64_t N = xShape_.GetDim(INDEX_TWO);
     nAlign_ = CeilA2B(N, CEIL_SIZE) * CEIL_SIZE;
     mAlign_ = CeilA2B(M, CEIL_SIZE) * CEIL_SIZE;
-
-    if (!CheckShapes() || !CheckClipRatio() || !CheckDstDtype()) {
+    if (!CheckShapes() || !CheckClipRatio() || !CheckDstDtype() || (dstTypeMax_ != nullptr && !CheckDstTypeMax())) {
         return ge::GRAPH_FAILED;
     }
+    // 设置基本的tiling数据
     tilingData_.set_hasP2(hasP2_ ? 1 : 0);
     tilingData_.set_K(xShape_.GetDim(INDEX_ZERO));
     tilingData_.set_M(xShape_.GetDim(INDEX_ONE));
     tilingData_.set_N(xShape_.GetDim(INDEX_TWO));
     tilingData_.set_clipRatio(*clipRatio_);
-    auto compileInfo = tilingContext_->GetCompileInfo<FlatQuantCompileInfo>();
+    // 仅当dstTypeMax不为空时才设置相关字段，否则传默认值0
+    if (dstTypeMax_ != nullptr) {
+        tilingData_.set_dstTypeMax(*dstTypeMax_);
+        tilingData_.set_invDstTypeMax(*dstTypeMax_ != ZERO_FLOAT ? ONE_FLOAT / *dstTypeMax_ : ZERO_FLOAT);
+    } else {
+        tilingData_.set_dstTypeMax(ZERO_FLOAT);
+        tilingData_.set_invDstTypeMax(ZERO_FLOAT);
+    }
+    return ge::GRAPH_SUCCESS;
+}
 
+ge::graphStatus FlatQuantTiling::CalculateIterBatch()
+{
+    auto compileInfo = tilingContext_->GetCompileInfo<FlatQuantCompileInfo>();
     int64_t aicNum = compileInfo->coreNum;
     int64_t aivNum = compileInfo->aivNum;
-
     GetKernelMode(aivNum);
     if (mmMode_ == MM_HIGH_MODE && GetTCubeTiling() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
+    // 计算迭代批次
     uint64_t p1Size = nAlign_ * nAlign_ * DATA_TYPE_SIZE;
     uint64_t p2Size = mAlign_ * mAlign_ * DATA_TYPE_SIZE;
     uint64_t xInputSize = mAlign_ * nAlign_ * DATA_TYPE_SIZE;
@@ -157,13 +181,39 @@ ge::graphStatus FlatQuantTiling::RunBigKernelTiling()
     uint64_t iterBatchK = CeilA2B(xShape_.GetDim(INDEX_ZERO), aicNum); // 根据K计算的batch
     iterBatch_ = std::max(std::min({iterBatchL1, iterBatchL0, iterBatchL0C, iterBatchK}), 1UL);
     tilingData_.set_iterBatch(iterBatch_);
+    return ge::GRAPH_SUCCESS;
+}
 
+ge::graphStatus FlatQuantTiling::SetTilingContextAndSaveData()
+{
+    auto compileInfo = tilingContext_->GetCompileInfo<FlatQuantCompileInfo>();
     tilingContext_->SetBlockDim(compileInfo->coreNum);
     tilingContext_->SetTilingKey(mmMode_);
-
+    // 保存tiling数据
     tilingData_.SaveToBuffer(
         tilingContext_->GetRawTilingData()->GetData(), tilingContext_->GetRawTilingData()->GetCapacity());
     tilingContext_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus FlatQuantTiling::RunBigKernelTiling()
+{
+    // 初始化输入和属性
+    if (InitializeInputsAndAttributes() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    // 设置基本的tiling数据
+    if (SetBasicTilingData() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    // 计算迭代批次
+    if (CalculateIterBatch() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    // 设置tiling上下文并保存数据
+    if (SetTilingContextAndSaveData() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -279,6 +329,21 @@ bool FlatQuantTiling::CheckDstDtype() const
     if (dstDtype_ != nullptr) {
         if (outDtype == ge::DT_FLOAT4_E2M1) {
             return *dstDtype_ == ge::DT_FLOAT4_E2M1;
+        }
+    }
+    return true;
+}
+
+bool FlatQuantTiling::CheckDstTypeMax() const
+{
+    auto outDtype = tilingContext_->GetOutputDesc(0)->GetDataType();
+    if (outDtype == ge::DT_FLOAT4_E2M1) {
+        float localDstTypeMax = *dstTypeMax_;
+        if ((localDstTypeMax != ZERO_FLOAT) && (localDstTypeMax < SIX_FLOAT || localDstTypeMax > TWELVE_FLOAT)) {
+            OP_LOGE(
+                tilingContext_->GetNodeName(), "The dst_type_max[%f] must be 0 or in range [6, 12], please check.",
+                localDstTypeMax);
+            return false;
         }
     }
     return true;

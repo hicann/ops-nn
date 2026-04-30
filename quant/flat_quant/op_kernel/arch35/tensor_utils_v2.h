@@ -42,6 +42,27 @@ constexpr int16_t SHR_NUM_FOR_BF16 = 7;
 constexpr uint16_t NAN_CUSTOMIZATION = 0x7f81;
 constexpr uint16_t SPECIAL_EXP_THRESHOLD = 0x0040;
 constexpr uint16_t FP4_E2M1_MAX_EXP = 0x0100;
+
+// Constants for cuBLAS FP4 scaling
+constexpr float ZERO_FLOAT = 0.0f;
+constexpr float SIX_FLOAT = 6.0f;
+constexpr float SEVEN_FLOAT = 7.0f;
+constexpr float TWELVE_FLOAT = 12.0f;
+constexpr uint32_t STORE_UNALIGN_STRIDE_BYTES = 8;
+constexpr uint32_t SCALE_STORE_STRIDE = 32;
+constexpr int16_t SHR_NUM_FOR_FP32 = 23;
+constexpr uint32_t NUMBER_ZERO = 0x00000000;
+constexpr uint32_t NUMBER_TWO_FIVE_FOUR = 0x000000fe;
+constexpr uint16_t ADD_VALUE_FOR_BF16_MAN1 = 0x003f;
+constexpr uint16_t ADD_VALUE_FOR_BF16_MAN2 = 0x001f;
+constexpr uint32_t vfLen16 = AscendC::GetVecLen() / sizeof(uint16_t);
+constexpr uint32_t vfLen32 = AscendC::GetVecLen() / sizeof(uint32_t);
+constexpr uint16_t ABS_MASK_FOR_16BIT = 0x7fff;
+constexpr uint32_t MAN_MASK_FLOAT = 0x007fffff;
+constexpr uint32_t MAX_EXP_FOR_FP32 = 0x7f800000;
+constexpr uint32_t FP32_EXP_BIAS_CUBLAS = 0x00007f00;
+constexpr uint32_t NAN_CUSTOMIZATION_PACK = 0x00007f81;
+constexpr uint32_t MAX_EXP_FOR_FP8_IN_FP32 = 0x000000ff;
 } // namespace FlatQuantNS
 
-#endif // TENSOR_UTILS_H
+#endif // TENSOR_UTILS_V2_H

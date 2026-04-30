@@ -35,6 +35,8 @@ TILING_DATA_FIELD_DEF(int64_t, M);
 TILING_DATA_FIELD_DEF(int64_t, N);
 TILING_DATA_FIELD_DEF(int64_t, iterBatch);
 TILING_DATA_FIELD_DEF(float, clipRatio);
+TILING_DATA_FIELD_DEF(float, dstTypeMax);
+TILING_DATA_FIELD_DEF(float, invDstTypeMax);
 
 TILING_DATA_FIELD_DEF_STRUCT(TCubeTiling, matmulTilingR);
 TILING_DATA_FIELD_DEF_STRUCT(TCubeTiling, matmulTilingL);

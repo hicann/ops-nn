@@ -14,6 +14,7 @@
  */
 
 #include "aclnn_flat_quant.h"
+#include "aclnn_flat_quant_v2.h"
 #include "flat_quant.h"
 #include "aclnn_kernels/contiguous.h"
 #include "aclnn_kernels/cast.h"
@@ -44,6 +45,8 @@ static constexpr int32_t MAX_K_SIZE = 262144;
 static constexpr int32_t MAX_MN_SIZE = 256;
 static constexpr double ZERO = 0.0;
 static constexpr double ONE = 1.0;
+static constexpr double SIX = 6.0;
+static constexpr double TWELVE = 12.0;
 
 static const std::initializer_list<op::DataType> EMPTY_LIST = {};
 
@@ -295,6 +298,14 @@ static bool CheckRatioValid(double clipRatio)
     return true;
 }
 
+static bool CheckMaxValid(double dstTypeMax) {
+    OP_CHECK(
+        dstTypeMax == ZERO || (dstTypeMax >= SIX && dstTypeMax <= TWELVE),
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dstTypeMax must be 0 or in range [6, 12], dstTypeMax [%f].", dstTypeMax),
+        return false);
+    return true;
+}
+
 static aclnnStatus CheckParams(
     const aclTensor* x, const aclTensor* kroneckerP1, const aclTensor* kroneckerP2, const aclTensor* out,
     const aclTensor* quantScale)
@@ -333,8 +344,59 @@ aclnnStatus aclnnFlatQuantGetWorkspaceSize(
 
     auto outputDtype = out->GetDataType();
     std::tuple<aclTensor*, aclTensor*> result = l0op::FlatQuant(
-        selfContiguous, p1Contiguous, p2Contiguous, static_cast<float>(clipRatio), outputDtype, out, quantScale,
+        selfContiguous, p1Contiguous, p2Contiguous, static_cast<float>(clipRatio), outputDtype, 0.0f, out, quantScale,
         uniqueExecutor.get());
+
+    const aclTensor* resultTensor = std::get<0>(result);
+    const aclTensor* quantScaleTensor = std::get<1>(result);
+    CHECK_RET(resultTensor != nullptr && quantScaleTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    // 如果输出是Int4，需要转成Int32，8个Int4输出拼成1个Int32
+    auto outDtype = out->GetDataType();
+    const aclTensor* outTensor = resultTensor;
+    ret = Int42Int32PackedTensor(resultTensor, outTensor, outDtype, uniqueExecutor.get());
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+
+    auto outResult = l0op::ViewCopy(outTensor, out, uniqueExecutor.get());
+    CHECK_RET(outResult != nullptr, ACLNN_ERR_PARAM_INVALID);
+    auto scaleResult = l0op::ViewCopy(quantScaleTensor, quantScale, uniqueExecutor.get());
+    CHECK_RET(scaleResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    // 固定写法，获取计算过程中需要使用的workspace大小
+    *workspaceSize = uniqueExecutor->GetWorkspaceSize();
+    uniqueExecutor.ReleaseTo(executor); // 需要把 uniqueExecutor持有executor转移给executor
+    return ACLNN_SUCCESS;
+}
+
+aclnnStatus aclnnFlatQuantV2GetWorkspaceSize(
+    const aclTensor* x, const aclTensor* kroneckerP1, const aclTensor* kroneckerP2, double clipRatio,
+    double dstTypeMax, aclTensor* out, aclTensor* quantScale, uint64_t* workspaceSize, aclOpExecutor** executor)
+{
+    L2_DFX_PHASE_1(aclnnFlatQuantV2, DFX_IN(x, kroneckerP1, kroneckerP2), DFX_OUT(out, quantScale));
+    // 固定写法，创建OpExecutor
+    auto uniqueExecutor = CREATE_EXECUTOR();
+    CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
+
+    // 固定写法，参数检查
+    auto ret = CheckParams(x, kroneckerP1, kroneckerP2, out, quantScale);
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    CHECK_RET(CheckRatioValid(clipRatio), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckMaxValid(dstTypeMax), ACLNN_ERR_PARAM_INVALID);
+
+    // x如果非连续，需要转连续
+    auto selfContiguous = l0op::Contiguous(x, uniqueExecutor.get());
+    CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto p1Contiguous = l0op::Contiguous(kroneckerP1, uniqueExecutor.get());
+    CHECK_RET(p1Contiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto p2Contiguous = l0op::Contiguous(kroneckerP2, uniqueExecutor.get());
+    CHECK_RET(p2Contiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto outputDtype = out->GetDataType();
+    std::tuple<aclTensor*, aclTensor*> result = l0op::FlatQuant(
+        selfContiguous, p1Contiguous, p2Contiguous, static_cast<float>(clipRatio), outputDtype, dstTypeMax, out,
+        quantScale, uniqueExecutor.get());
 
     const aclTensor* resultTensor = std::get<0>(result);
     const aclTensor* quantScaleTensor = std::get<1>(result);
@@ -360,5 +422,11 @@ aclnnStatus aclnnFlatQuantGetWorkspaceSize(
 aclnnStatus aclnnFlatQuant(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnFlatQuant);
+    return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
+}
+
+aclnnStatus aclnnFlatQuantV2(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+{
+    L2_DFX_PHASE_2(aclnnFlatQuantV2);
     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }

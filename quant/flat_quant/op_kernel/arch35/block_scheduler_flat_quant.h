@@ -35,6 +35,8 @@ public:
     int64_t kL1_{0};
     int64_t nL1_{0};
     int64_t iterBatch_{1};
+    float dstTypeMax_{0.0f};
+    float invDstTypeMax_{0.0f};
     int64_t blockNum_{1};
     int64_t mainBatchLoop_{1};
     int64_t mainTailBatch_{1};
@@ -64,6 +66,8 @@ public:
         kL1_ = n_;
         nL1_ = n_;
         iterBatch_ = params.tilingData->iterBatch;
+        dstTypeMax_ = params.tilingData->dstTypeMax;
+        invDstTypeMax_ = params.tilingData->invDstTypeMax;
         blockNum_ = blockNum;
         mL1_ *= iterBatch_;
         baseM_ *= iterBatch_;
@@ -91,6 +95,16 @@ public:
     __aicore__ inline bool GetP2Flag()
     {
         return hasP2_;
+    }
+
+    __aicore__ inline float GetDstTypeMax()
+    {
+        return dstTypeMax_;
+    }
+
+    __aicore__ inline float GetInvDstTypeMax()
+    {
+        return invDstTypeMax_;
     }
 
     __aicore__ inline int64_t GetBlockNum(int64_t blockNum)

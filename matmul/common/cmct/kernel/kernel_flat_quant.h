@@ -152,6 +152,8 @@ public:
         BlockSchedulerOp bs(params.problemShape, blockNum, params.schParams);
         int64_t tileNum = bs.GetTileNum();
         bool hasP2 = bs.GetP2Flag();
+        float dstTypeMax = bs.GetDstTypeMax();
+        float invDstTypeMax = bs.GetInvDstTypeMax();
 
         TupleShape tileL1 = bs.GetTileL1Shape();
         TupleShape tileL0 = bs.GetTileL0Shape();
@@ -164,7 +166,7 @@ public:
         uint64_t curML1 = Get<MNK_M>(tileL1);
         uint64_t curKL1 = Get<MNK_K>(tileL1);
 
-        epilogueOp.Init(params.epilogueParams, problemShape_);
+        epilogueOp.Init(params.epilogueParams, problemShape_, dstTypeMax, invDstTypeMax);
         auto ubLocal = epilogueOp.GetTensor();
         for (int64_t tileIdx = curBlockIdx; tileIdx < tileNum; tileIdx += blockNum) {
             TupleL1L0Shape blockShape = bs.GetBlockShape(tileIdx);

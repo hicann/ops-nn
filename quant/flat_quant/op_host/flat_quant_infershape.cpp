@@ -25,12 +25,16 @@ static const int32_t DTYPE_FLOAT4_E2M1 = 40;
 static constexpr size_t FLATQUANT_K_IDX = 0;
 static constexpr size_t FLATQUANT_M_IDX = 1;
 static constexpr size_t FLATQUANT_N_IDX = 2;
-static constexpr size_t FLATQUANT_ATTRS_NUM = 2;
+static constexpr size_t FLATQUANT_ATTRS_NUM_TWO = 2;
 static constexpr size_t FLATQUANT_MX_N_OUT_DIM = 2;
 static constexpr size_t FLATQUANT_N_IS_EVEN = 2;
 static constexpr size_t FLATQUANT_DOUBLE_CEIL_SIZE = 64;
 static const size_t ATTR_INDEX_OF_DST_DTYPE = 1;
+static const size_t ATTR_INDEX_OF_DST_TYPE_MAX = 2;
 constexpr int64_t DIGIT_TWO = 2;
+constexpr float ZERO_FLOAT = 0.0f;
+constexpr float SIX_FLOAT = 6.0f;
+constexpr float TWELVE_FLOAT = 12.0f;
 
 static bool IsFlatQuantMxFp4DavidSupport()
 {
@@ -58,8 +62,17 @@ static ge::graphStatus InferShape4FlatQuant(gert::InferShapeContext* context)
     }
 
     if (IsFlatQuantMxFp4DavidSupport()) { // Only for 950
+        // Validate dst_type_max parameter if provided
+        const float* dstTypeMax = attrs->GetAttrPointer<float>(ATTR_INDEX_OF_DST_TYPE_MAX);
+        if (dstTypeMax != nullptr) {
+            OP_CHECK_IF(
+                (*dstTypeMax != ZERO_FLOAT) && (*dstTypeMax < SIX_FLOAT || *dstTypeMax > TWELVE_FLOAT),
+                OP_LOGE(context, "The dst_type_max[%f] must be 0 or in range [6, 12].", *dstTypeMax),
+                return GRAPH_FAILED);
+        }
+
         const int32_t* outxDtype = nullptr;
-        if (attrs->GetAttrNum() >= FLATQUANT_ATTRS_NUM) {
+        if (attrs->GetAttrNum() >= FLATQUANT_ATTRS_NUM_TWO) {
             outxDtype = attrs->GetAttrPointer<int32_t>(ATTR_INDEX_OF_DST_DTYPE);
         }
         OP_CHECK_IF(
@@ -123,7 +136,7 @@ static ge::graphStatus InferDataType4FlatQuant(gert::InferDataTypeContext* conte
 
     if (IsFlatQuantMxFp4DavidSupport()) { // For 950
         const int32_t* outxDtype = nullptr;
-        if (attrs->GetAttrNum() >= FLATQUANT_ATTRS_NUM) {
+        if (attrs->GetAttrNum() >= FLATQUANT_ATTRS_NUM_TWO) {
             outxDtype = attrs->GetAttrPointer<int32_t>(ATTR_INDEX_OF_DST_DTYPE);
         }
         if (outxDtype != nullptr) {

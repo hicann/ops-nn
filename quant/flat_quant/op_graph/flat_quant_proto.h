@@ -49,6 +49,7 @@ REG_OP(FlatQuant)
     .OUTPUT(quant_scale, TensorType({DT_FLOAT, DT_FLOAT8_E8M0}))
     .ATTR(clip_ratio, Float, 1)
     .ATTR(dst_dtype, Int, DT_INT4)
+    .ATTR(dst_type_max, Float, 0.0)
     .OP_END_FACTORY_REG(FlatQuant)
 } // namespace ge
 

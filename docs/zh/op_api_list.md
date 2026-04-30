@@ -137,6 +137,7 @@
 | [aclnnFastLayerNorm](../../norm/layer_norm_v4/docs/aclnnFastLayerNorm.md) | 对指定层进行均值为0、标准差为1的归一化计算。 | 默认确定性实现 | - |
 | [aclnnFatreluMul](../../activation/fatrelu_mul/docs/aclnnFatreluMul.md) | 将输入Tensor按照最后一个维度分为左右两个Tensor：x1和x2，对左边的x1进行Threshold计算，将计算结果与x2相乘。 | 默认确定性实现 | - |
 | [aclnnFlatQuant](../../quant/flat_quant/docs/aclnnFlatQuant.md) | 融合算子为输入矩阵x一次进行两次小矩阵乘法。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnFlatQuantV2](../../quant/flat_quant/docs/aclnnFlatQuantV2.md) | 融合算子为输入矩阵x一次进行两次小矩阵乘法，添加了dstTypeMax参数。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnFlip](../../index/reverse_v2/docs/aclnnFlip.md) | 对n维张量的指定维度进行反转（倒序），dims中指定的每个轴的计算公式。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachAbs](../../foreach/foreach_abs/docs/aclnnForeachAbs.md) | 对输入张量列表中的每个张量执行逐元素绝对值运算。 | 默认确定性实现 | - |
 | [aclnnForeachAcos](../../foreach/foreach_acos/docs/aclnnForeachAcos.md) | 对输入张量列表中的每个张量执行逐元素反余弦运算。 | 默认确定性实现 | - |

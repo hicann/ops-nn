@@ -15,6 +15,7 @@
 #include "register/op_def_registry.h"
 
 namespace ops {
+static constexpr float DEFAULT_DST_TYPE_MAX = 0.0;
 class FlatQuant : public OpDef {
 public:
     explicit FlatQuant(const char* name) : OpDef(name)
@@ -46,6 +47,7 @@ public:
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND});
         this->Attr("clip_ratio").AttrType(OPTIONAL).Float(1.0);
         this->Attr("dst_dtype").AttrType(OPTIONAL).Int(ge::DT_INT4);
+        this->Attr("dst_type_max").AttrType(OPTIONAL).Float(DEFAULT_DST_TYPE_MAX);
         this->AICore().AddConfig("ascend910b");
         this->AICore().AddConfig("ascend910_93");
 
