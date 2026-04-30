@@ -59,8 +59,11 @@ constexpr int64_t W_IN_TRANSPOSE_N2H_RULE_MAX = 64;
 constexpr int64_t W_K_TRANSPOSE_N2H_RULE_MAX = 10;
 constexpr int64_t N2H_W_IN_SIXTY = 60;
 constexpr int64_t N2H_W_IN_FORTY = 40;
+constexpr int64_t STRIDEH_TRANSPOSE_LIMIT = 2;
+constexpr int64_t BASEM_TRANSPOSE_LIMIT = 256;
+constexpr int64_t BATCH_TRANSPOSE_LIMIT = 2;
 constexpr int64_t C_IN_TRANSPOSE_LIMIT_MIN = 16;
-constexpr int64_t C_IN_TRANSPOSE_LIMIT_MAX = 32;
+constexpr int64_t C_IN_TRANSPOSE_LIMIT_MAX = 256;
 constexpr float MAX_CIN_MULTIPLIER = 1.5f;
 
 static void AddAclIntArrayToCaseInfo(const aclIntArray &seg, vector<int64_t> &caseInfo)
@@ -1026,12 +1029,13 @@ static bool CheckN2HEnable(const aclTensor *weight, aclTensor *&output,
     return CheckN2HNativeAttrAvailable(weight, output);
 }
 
-static bool CheckWeightPreTransposeEnable(const aclTensor *weight, int groups) {
+static bool CheckWeightPreTransposeEnable(const aclTensor *weight, const aclTensor *input, 
+                                          aclIntArray *stride5, int groups) {
     OP_LOGD("Enter CheckWeightPreTransposeEnable.");
     if (GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510) {
         return false;
     }
-    if (groups > 1 || weight->GetOriginalFormat() != op::Format::FORMAT_NCDHW) {
+    if (groups > 1 || weight->GetOriginalFormat() != op::Format::FORMAT_NCDHW || input->GetOriginalFormat() != op::Format::FORMAT_NCDHW) {
         return false;
     }
 
@@ -1046,17 +1050,33 @@ static bool CheckWeightPreTransposeEnable(const aclTensor *weight, int groups) {
             return false;
         }
     }
-
     uint64_t cout = weightShape[N_DIM_NCDHW_INDEX];
     uint64_t cin = weightShape[C_DIM_NCDHW_INDEX];
     uint64_t dk = weightShape[D_DIM_NCDHW_INDEX];
     uint64_t hk = weightShape[H_DIM_NCDHW_INDEX];
     uint64_t wk = weightShape[W_DIM_NCDHW_INDEX];
+
+    auto inputShape = input->GetOriginalShape();
+    uint64_t batch = inputShape[N_DIM_NCDHW_INDEX];
+    uint64_t di = inputShape[D_DIM_NCDHW_INDEX];
+    uint64_t hi = inputShape[H_DIM_NCDHW_INDEX];
+    uint64_t wi = inputShape[W_DIM_NCDHW_INDEX];
+
+    auto strideData = stride5->GetData();
+    auto strideH = strideData[H_DIM_NCDHW_INDEX];
+    if (strideH < STRIDEH_TRANSPOSE_LIMIT) {
+        // 16bit只支持dk>1且di>1
+        bool isTrans16bit = dataType != op::DataType::DT_FLOAT && (dk <= 1 || di <= 1);
+        bool isMmadCoverMte2 = hi * wi >= BASEM_TRANSPOSE_LIMIT && batch <= BATCH_TRANSPOSE_LIMIT;
+        if (isTrans16bit || isMmadCoverMte2) {
+            return false;
+        }
+    }
+
     if (dk * hk * wk <= 1) {
         return false;
     }
-
-    if ((cin != C_IN_TRANSPOSE_LIMIT_MIN && cin < C_IN_TRANSPOSE_LIMIT_MAX) || cin <= dk * hk * wk) {
+    if ((cin != C_IN_TRANSPOSE_LIMIT_MIN && cin < C_IN_TRANSPOSE_LIMIT_MAX) || cin <= hk * wk) {
         return false;
     }
     return (cout > cin) ? (cout < MAX_CIN_MULTIPLIER * cin) : (cin < MAX_CIN_MULTIPLIER * cout);
@@ -1147,7 +1167,7 @@ static aclnnStatus Conv3DBackpropInputWithFlag(const aclTensor *input, const acl
       }
   }
 
-  if (CheckWeightPreTransposeEnable(weight, groups)) {
+  if (CheckWeightPreTransposeEnable(weight, input, stride5, groups)) {
       OP_LOGD("Conv3d backpropInput v2 support weight pre transpose.");
       // transpose weight NCDHW -> NDHWC
       auto permAfter = executor->AllocIntArray(WEIGHT_TRANSPOSE_SHAPE_DIMS.data(), WEIGHT_TRANSPOSE_SHAPE_DIMS.size());
