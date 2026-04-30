@@ -95,7 +95,7 @@ private:
         updatesLineNum = tilingData->updatesLineNum;
         maskTileLength = tilingData->maskTileLength;
         totalUpdatesNum = tilingData->totalUpdatesNum;
-
+        updatesNum = tilingData->updatesNum;
         if (updatesLineNum == 1) {
             maskTileLength = 1024;
         }
@@ -117,73 +117,94 @@ private:
 
     __aicore__ inline void Compute(uint32_t& updateOffset, uint32_t maskCount)
     {
+        if (updatesIndex >= updatesNum) {
+            return;
+        }
+        remainUpdates = updatesNum - updatesIndex;
         uint32_t maskTrueCount = ComputeMaskTrueCount(maskLocal, maskCount);
+        aviUpdates = maskTrueCount <= remainUpdates ? maskTrueCount : remainUpdates;
+        if (aviUpdates == 0) {
+            return;
+        }
         PipeBarrier<PIPE_ALL>();
-        uint32_t tempUpdateLength = updatesLineNum * maskTrueCount;
+        uint32_t tempUpdateLength = updatesLineNum * aviUpdates;
         if (updatesLineNum == 1) {
-            CommonCopyIn<DTYPE_X>(updatesLocal, updatesGm, updateOffset, 1, maskTrueCount * updatesLineNum);
+            CommonCopyIn<DTYPE_X>(updatesLocal, updatesGm, updateOffset, 1, aviUpdates * updatesLineNum);
         } else {
-            CommonCopyIn<DTYPE_X>(updatesLocal, updatesGm, updateOffset, maskTrueCount, updatesLineNum);
+            CommonCopyIn<DTYPE_X>(updatesLocal, updatesGm, updateOffset, aviUpdates, updatesLineNum);
         }
         
         PipeBarrier<PIPE_ALL>();
         updateOffset = updateOffset + tempUpdateLength;
+        updatesIndex += aviUpdates;
+    }
+
+    __aicore__ inline void CopyOutWithUpdatesOne(uint32_t maskOffset, uint32_t maskCount)
+    {
+        const uint32_t LOOP_SIZE = 8;
+        DTYPE_X updatesCache[LOOP_SIZE];
+        uint64_t loopNum = CeilDiv(maskCount, LOOP_SIZE);
+        auto maskUbAddress = reinterpret_cast<__ubuf__ bool *>(maskLocal.GetPhyAddr(0));
+        auto xUbAddress = reinterpret_cast<__ubuf__ DTYPE_X *>(xLocal.GetPhyAddr(0));
+        auto updatesUbAddress = reinterpret_cast<__ubuf__ DTYPE_X *>(updatesLocal.GetPhyAddr(0));
+        uint32_t index = 0;
+        uint32_t xOffset = 0;
+        for(uint32_t i = 0; i < loopNum; i++) {
+            for (uint32_t j = 0; j < LOOP_SIZE; j++) {
+                bool isUpdate = *(maskUbAddress + (i * LOOP_SIZE + j));
+                if (isUpdate && (index < aviUpdates)) {
+                    updatesCache[j] = *(updatesUbAddress + index);
+                    index++;
+                } else {
+                    updatesCache[j] = *(xUbAddress + (i * LOOP_SIZE + j));
+                }
+            }
+            for (uint32_t j = 0; j < LOOP_SIZE; j++) {
+                *(xUbAddress + xOffset) = updatesCache[j];
+                xOffset++;
+            }
+        }
+        PipeBarrier<PIPE_ALL>();
+        DataCopyExtParams outCopyOutParams;
+        outCopyOutParams.blockCount = 1;
+        outCopyOutParams.blockLen = maskCount * sizeof(DTYPE_X);
+        outCopyOutParams.dstStride = 0;
+        outCopyOutParams.srcStride = 0;
+        outCopyOutParams.rsv = 0;
+        DataCopyPad(yGm[maskOffset], xLocal, outCopyOutParams);
     }
 
     __aicore__ inline void CopyOut(uint32_t maskOffset, uint32_t maskCount)
     {
+        if (aviUpdates == 0) {
+            return;
+        }
         if (updatesLineNum == 1) {
-            const uint32_t LOOP_SIZE = 8;
-            DTYPE_X updatesCache[LOOP_SIZE];
-            uint64_t loopNum = CeilDiv(maskCount, LOOP_SIZE);
-            auto maskUbAddress = reinterpret_cast<__ubuf__ bool *>(maskLocal.GetPhyAddr(0));
-            auto xUbAddress = reinterpret_cast<__ubuf__ DTYPE_X *>(xLocal.GetPhyAddr(0));
-            auto updatesUbAddress = reinterpret_cast<__ubuf__ DTYPE_X *>(updatesLocal.GetPhyAddr(0));
-            uint32_t index = 0;
-            uint32_t xOffset = 0;
-            for(uint32_t i = 0; i < loopNum; i++) {
-                for (uint32_t j = 0; j < LOOP_SIZE; j++) {
-                    bool isUpdate = *(maskUbAddress + (i * LOOP_SIZE + j));
-                    if (isUpdate) {
-                        updatesCache[j] = *(updatesUbAddress + index);
-                        index++;
-                    } else {
-                        updatesCache[j] = *(xUbAddress + (i * LOOP_SIZE + j));
-                    }
-                }
-                for (uint32_t j = 0; j < LOOP_SIZE; j++) {
-                    *(xUbAddress + xOffset) = updatesCache[j];
-                    xOffset++;
-                }
-            }
-            PipeBarrier<PIPE_ALL>();
-            DataCopyExtParams outCopyOutParams;
-            outCopyOutParams.blockCount = 1;
-            outCopyOutParams.blockLen = maskCount * sizeof(DTYPE_X);
-            outCopyOutParams.dstStride = 0;
-            outCopyOutParams.srcStride = 0;
-            outCopyOutParams.rsv = 0;
-            DataCopyPad(yGm[maskOffset], xLocal, outCopyOutParams);
-        } else {
-            DataCopyExtParams outCopyOutParams;
-            outCopyOutParams.blockCount = 1;
-            outCopyOutParams.blockLen = updatesLineNum * sizeof(DTYPE_X);
-            outCopyOutParams.dstStride = 0;
-            outCopyOutParams.srcStride = 0;
-            outCopyOutParams.rsv = 0;
+            CopyOutWithUpdatesOne(maskOffset, maskCount);
+            return;
+        }
 
-            uint32_t index = 0;
-            for (uint32_t i = 0; i < maskCount; i++) {
-                if (maskLocal.GetValue(i)) {
-                    DataCopyPad(yGm[(maskOffset + i) * updatesLineNum], updatesLocal[index * alignedUpdatesLineNum], outCopyOutParams);
-                    index++;
-                }
+        DataCopyExtParams outCopyOutParams;
+        outCopyOutParams.blockCount = 1;
+        outCopyOutParams.blockLen = updatesLineNum * sizeof(DTYPE_X);
+        outCopyOutParams.dstStride = 0;
+        outCopyOutParams.srcStride = 0;
+        outCopyOutParams.rsv = 0;
+        uint32_t index = 0;
+        for (uint32_t i = 0; i < maskCount; i++) {
+            if (index >= aviUpdates) {
+                break;
+            }
+            if (maskLocal.GetValue(i)) {
+                DataCopyPad(yGm[(maskOffset + i) * updatesLineNum], updatesLocal[index * alignedUpdatesLineNum], outCopyOutParams);
+                index++;
             }
         }
     }
 
 private:
     uint32_t maskTileLength, alignedTotalUpdatesNum;
+    uint32_t aviUpdates = 0;
     TQue<QuePosition::VECOUT, BUFFER_NUM> outQueueX;
     LocalTensor<DTYPE_X> xLocal;
 };

@@ -145,7 +145,7 @@ protected:
 
     uint32_t xBlockOffset, xBlockLength, maskBlockOffset, maskBlockLength, alignedUpdatesLineNum, alignedMaskLengthB,
         alignedMaskLengthFp32, alignedMaskLengthHf, circleNum, loopNum, remainNum, alignedPreMaskTileLength, totalUpdatesNum,
-        preMaskLoopNum, preMaskComputeNum, tailPreMaskNum, tailMaskTileLength, updatesLineNum, totalPreMaskLength;
+        preMaskLoopNum, preMaskComputeNum, tailPreMaskNum, tailMaskTileLength, updatesLineNum, totalPreMaskLength, updatesNum, remainUpdates;
     uint32_t updatesIndex = 0;
 };
 

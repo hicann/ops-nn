@@ -76,6 +76,7 @@ private:
         remainNum = tilingData->remainNum;
         updatesLineNum = tilingData->updatesLineNum;
         totalUpdatesNum = tilingData->totalUpdatesNum;
+        updatesNum = tilingData->updatesNum;
 
         PrepareBaseData();
 
@@ -104,8 +105,16 @@ private:
 
     __aicore__ inline void Compute(uint32_t& updateOffset, uint32_t& maskOffset, uint32_t maskTileNum)
     {
+        if (updatesIndex >= updatesNum) {
+            return;
+        }
+        remainUpdates = updatesNum - updatesIndex;
+        uint32_t index = 0;
         CommonCopyIn<bool>(maskLocal, maskGm, maskOffset, 1, maskTileNum);
         for (uint32_t i = 0; i < maskTileNum; i++) {
+            if (index >= remainUpdates) {
+                break;
+            }
             if (maskLocal.GetValue(i)) {
                 uint32_t tempUpdatesComputeNum = updatesComputeNum;
                 uint32_t tempUpdatesOffset = 0;
@@ -120,6 +129,8 @@ private:
                     tempUpdatesOffset += tempUpdatesComputeNum;
                 }
                 updateOffset += updatesLineNum;
+                index++;
+                updatesIndex++;
             }
             maskOffset++;
         }

@@ -70,6 +70,7 @@ private:
     uint32_t maskTileLength = 0;
     uint32_t updatesLineNum = 0;
     uint32_t updateLineLength = 0;
+    uint32_t updatesNum = 0;
     bool isUpdateLengthExceed = false;
 };
 
@@ -114,6 +115,11 @@ ge::graphStatus MaskedScatterV1Tiling::CheckOpInputShape(const gert::TilingConte
     auto updatesShape = context->GetInputShape(UPDATES_INDEX)->GetStorageShape();
     size_t updatesDimNum = updatesShape.GetDimNum();
     
+    uint32_t updatesElement = 1;
+    for (size_t i = 0; i < updatesDimNum; i++) {
+        updatesElement = updatesElement * updatesShape.GetDim(i);
+    }
+
     if (xDimNum != maskDimNum) {
         OP_LOGE(context->GetNodeName(), "Invalid shape!");
         return ge::GRAPH_FAILED;
@@ -125,6 +131,7 @@ ge::graphStatus MaskedScatterV1Tiling::CheckOpInputShape(const gert::TilingConte
         }
         updatesLineNum = 1;
         totalUpdatesNum = totalMaskLength;
+        updatesNum = updatesElement;
         OP_LOGD(context, "CheckOpInputShape end.");
         return ge::GRAPH_SUCCESS;
     }
@@ -141,7 +148,12 @@ ge::graphStatus MaskedScatterV1Tiling::CheckOpInputShape(const gert::TilingConte
         totalMaskLength = totalMaskLength * maskShape.GetDim(i);
     }
     updatesLineNum = xShape.GetDim(xDimNum - 1);
+    if (updatesLineNum == 0) {
+        OP_LOGE(context->GetNodeName(), "Invalid shape!");
+        return ge::GRAPH_FAILED;
+    }
     totalUpdatesNum = totalMaskLength * updatesLineNum;
+    updatesNum = updatesElement / updatesLineNum;
     OP_LOGD(context, "CheckOpInputShape end.");
     return ge::GRAPH_SUCCESS;
 }
@@ -184,13 +196,13 @@ uint32_t MaskedScatterV1Tiling::ComputeupdateLineLength(gert::TilingContext* con
 
 void MaskedScatterV1Tiling::TilingDataPrint(gert::TilingContext* context)
 {
-    OP_LOGD(context->GetNodeName(), "loopNum: %llu.", loopNum);
-    OP_LOGD(context->GetNodeName(), "remainNum: %llu.", remainNum);
+    OP_LOGD(context->GetNodeName(), "loopNum: %u.", loopNum);
+    OP_LOGD(context->GetNodeName(), "remainNum: %u.", remainNum);
     OP_LOGD(context->GetNodeName(), "isUpdateLengthExceed: %d.", isUpdateLengthExceed);
-    OP_LOGD(context->GetNodeName(), "updatesLineNum: %llu.", updatesLineNum);
-    OP_LOGD(context->GetNodeName(), "totalUpdatesNum: %llu.", totalUpdatesNum);
-    OP_LOGD(context->GetNodeName(), "maskTileLength: %llu.", maskTileLength);
-    OP_LOGD(context->GetNodeName(), "ubSize: %llu.", ubSize);
+    OP_LOGD(context->GetNodeName(), "updatesLineNum: %u.", updatesLineNum);
+    OP_LOGD(context->GetNodeName(), "totalUpdatesNum: %u.", totalUpdatesNum);
+    OP_LOGD(context->GetNodeName(), "maskTileLength: %u.", maskTileLength);
+    OP_LOGD(context->GetNodeName(), "updatesNum: %u.", updatesNum);
 }
 
 ge::graphStatus MaskedScatterV1Tiling::SetOpTilingData(gert::TilingContext* context)
@@ -219,6 +231,7 @@ ge::graphStatus MaskedScatterV1Tiling::SetOpTilingData(gert::TilingContext* cont
     tilingData->updatesLineNum = updatesLineNum;
     tilingData->totalUpdatesNum = totalUpdatesNum;
     tilingData->maskTileLength = maskTileLength;
+    tilingData->updatesNum = updatesNum;
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
     currentWorkspace[0] = compileInfo.sysWorkspace;
     return ge::GRAPH_SUCCESS;

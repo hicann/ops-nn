@@ -21,6 +21,7 @@ struct MaskedScatterV1TilingData {
     uint32_t remainNum = 0;
     uint32_t updatesLineNum = 0;
     uint32_t totalUpdatesNum = 0;
+    uint32_t updatesNum = 0;
     uint32_t maskTileLength = 0;
 };
 #endif
