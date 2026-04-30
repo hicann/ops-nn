@@ -219,7 +219,7 @@ aclnnStatus aclnnInplaceAddmm(
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
     - cubeMathType=2，当输入数据类型为BFLOAT16时不支持该选项；
     - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不支持该选项。
-    - cubeMathType=4，当输入数据类型为FLOAT16/BFLOAT16时，addmm过程会升精度计算，该情况下当前不支持输入self与matmul计算结果矩阵做broadcast；当输入数据类型为FLOAT32，且k轴大于512，并满足以下任一条件时，会使用vector核进行计算以提升结果精度：m轴等于1、n轴等于1，或m轴和n轴均不等于1且mat1转置、mat2不转置（该方式在部分场景下可能导致算子性能下降）。
+    - cubeMathType=4，当输入数据类型为FLOAT16/BFLOAT16时，addmm过程会升精度计算，该情况下当前不支持输入self与matmul计算结果矩阵做broadcast；当输入数据类型为FLOAT32，且k轴大于512，并满足以下任一条件时，会使用vector核进行计算以提升结果精度（该方式在部分场景下可能导致算子性能下降）。条件1：m轴等于1、n轴等于1；条件2：m轴和n轴均不等于1且mat1转置、mat2不转置。
 
 - **返回值**
 
@@ -428,7 +428,7 @@ aclnnStatus aclnnInplaceAddmm(
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
     - cubeMathType=2，当输入数据类型为BFLOAT16时不支持该选项；
     - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不支持该选项。
-    - cubeMathType=4，当输入数据类型为FLOAT32，且k轴大于512，并满足以下任一条件时，会使用vector核进行计算以提升结果精度：m轴等于1、n轴等于1，或m轴和n轴均不等于1且mat1转置、mat2不转置（该方式在部分场景下可能导致算子性能下降）。
+    - cubeMathType=4，当输入数据类型为FLOAT32，且k轴大于512，并满足以下任一条件时，会使用vector核进行计算以提升结果精度（该方式在部分场景下可能导致算子性能下降）。条件1：m轴等于1、n轴等于1；条件2：m轴和n轴均不等于1且mat1转置、mat2不转置。
 
 - **返回值**
 
