@@ -374,7 +374,7 @@ int main() {
   // 5. 获取输出的值，将device侧内存上的结果复制至host侧，需要根据具体API的接口定义修改
   PrintOutResult(dxShape, &dxDeviceAddr);
 
-  // 6. 释放aclTensor和aclTensor，需要根据具体API的接口定义修改
+  // 6. 释放aclTensor，需要根据具体API的接口定义修改
   aclDestroyTensor(x);
   aclDestroyTensor(dy);
   aclDestroyTensor(dx);
