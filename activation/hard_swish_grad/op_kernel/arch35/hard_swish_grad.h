@@ -168,7 +168,7 @@ __aicore__ inline void HardSwishGrad<T, BUFFER_MODE>::Compute(
            // ensure all reads of selfFp32 done before overwrite
         Cast(selfFp32, gradOutLocal, RoundMode::CAST_NONE, alignedNum);
         Mul(derivFp32, selfFp32, derivFp32, alignedNum);
-        Cast(resultLocal, derivFp32, RoundMode::CAST_ROUND, alignedNum);
+        Cast(resultLocal, derivFp32, RoundMode::CAST_RINT, alignedNum);
            // ensure result ready before EnQue
     } else {
         // fp32 path: compute directly

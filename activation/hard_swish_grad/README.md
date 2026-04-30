@@ -24,9 +24,9 @@
 
   $$
   gradSelf_{i} = \begin{cases}
-  0, & self_{i} \lt -3, \\
-  self_{i} / 3 + 0.5, & -3 \le self_{i} \le 3, \\
-  1, & self_{i} \gt 3
+  0, & self_{i} \le -3, \\
+  self_{i} / 3 + 0.5, & -3 < self_{i} < 3, \\
+  1, & self_{i} \ge 3
   \end{cases}
   $$
 
