@@ -11,7 +11,7 @@
 #include <array>
 #include <vector>
 
-#include "../../../op_host/op_api/aclnn_batch_norm_elemt.h"
+#include "../../../../op_host/op_api/aclnn_batch_norm_elemt.h"
 
 #include "op_api_ut_common/array_desc.h"
 #include "op_api_ut_common/inner/types.h"
