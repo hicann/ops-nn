@@ -24,7 +24,60 @@ using namespace conv_tiling;
 namespace optiling {
 namespace conv_ops_tiling {
 
-ge::graphStatus ShapeAttrSynthesisCheck(ConvAscendcOriginShapeAttrInfo oriShapeAttrInfo, gert::TilingContext* context)
+std::string GeFormatToString(const ge::Format& geFormat)
+{
+    return std::string(ge::TypeUtils::FormatToAscendString(geFormat).GetString());
+}
+
+std::string GeDtypeToString(const ge::DataType& geDtype)
+{
+    return std::string(ge::TypeUtils::DataTypeToAscendString(geDtype).GetString());
+}
+
+vector<int64_t> GetInputShapeVec(const gert::TilingContext* context, size_t paramIdx)
+{
+    auto inputShapePtr = context->GetInputShape(paramIdx);
+    vector<int64_t> inputShapeVec;
+    if (inputShapePtr == nullptr) {
+        return inputShapeVec;
+    }
+    auto storageShape = inputShapePtr->GetStorageShape();
+    
+    for (uint32_t i = 0; i < storageShape.GetDimNum(); i++) {
+        inputShapeVec.push_back(storageShape.GetDim(i));
+    }
+    return inputShapeVec;
+}
+
+vector<int64_t> GetOutputShapeVec(const gert::TilingContext* context, size_t paramIdx)
+{
+    auto outputShapePtr = context->GetOutputShape(paramIdx);
+    vector<int64_t> outputShapeVec;
+    if (outputShapePtr == nullptr) {
+        return outputShapeVec;
+    }
+    auto storageShape = outputShapePtr->GetStorageShape();
+    for (uint32_t i = 0; i < storageShape.GetDimNum(); i++) {
+        outputShapeVec.push_back(storageShape.GetDim(i));
+    }
+    return outputShapeVec;
+}
+
+vector<int64_t> GetAttrShapeVec(const gert::TilingContext* context, size_t paramIdx)
+{
+    auto stridePtr = context->GetAttrs()->GetListInt(paramIdx);
+    vector<int64_t> shapeVec;
+    if (stridePtr == nullptr) {
+        return shapeVec;
+    }
+    for (uint32_t i = 0; i < stridePtr->GetSize(); i++) {
+        shapeVec.push_back(stridePtr->GetData()[i]);
+    }
+    return shapeVec;
+}
+
+ge::graphStatus ShapeAttrSynthesisCheck(ConvAscendcOriginShapeAttrInfo oriShapeAttrInfo,
+                                        ConvParamInfo paramInfo, gert::TilingContext* context)
 {
     int64_t cmpHo = ConvComputeHo(oriShapeAttrInfo.oriFmapH, oriShapeAttrInfo.oriWeightH, oriShapeAttrInfo.oriPadTop,
         oriShapeAttrInfo.oriPadBottom, oriShapeAttrInfo.oriDilationH, oriShapeAttrInfo.oriStrideH);
@@ -34,76 +87,109 @@ ge::graphStatus ShapeAttrSynthesisCheck(ConvAscendcOriginShapeAttrInfo oriShapeA
         OP_LOGE(context->GetNodeName(), "%s AscendC: ShapeAttrSynthesisCheck failed, " \
             "oriFmapN(%ld) != oriOutputN(%ld)", context->GetNodeType(), oriShapeAttrInfo.oriFmapN,
             oriShapeAttrInfo.oriOutputN);
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeType(), "x, y",
+            VectorsToString(std::vector<std::vector<int64_t>>{
+                GetInputShapeVec(context, INPUT_FMAP_INDEX),
+                GetOutputShapeVec(context, OUTPUT_INDEX)}, IntToString<int64_t>).c_str(),
+            FormatString("Shape[%zu] of %s must be equal to shape[%zu] of %s",
+                paramInfo.paramsIdxVec[paramInfo.FMAP_PARAM_IDX][IDX_LIST_N_IDX], "x",
+                paramInfo.paramsIdxVec[paramInfo.OUT_PARAM_IDX][IDX_LIST_N_IDX], "y").c_str());
         return ge::GRAPH_FAILED;
     }
     if (cmpHo != oriShapeAttrInfo.oriOutputH) {
         OP_LOGE(context->GetNodeName(), "%s AscendC: ShapeAttrSynthesisCheck failed, " \
             "cmpHo(%ld) != oriOutputH(%ld)", context->GetNodeType(), cmpHo, oriShapeAttrInfo.oriOutputH);
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeType(), "y",
+            VectorToString(GetOutputShapeVec(context, OUTPUT_INDEX), IntToString<int64_t>).c_str(),
+            FormatString("Shape[%zu] of this parameter must be equal to the theoretical value %ld of %s",
+                paramInfo.paramsIdxVec[paramInfo.OUT_PARAM_IDX][IDX_LIST_H_IDX], cmpHo, "Ho").c_str());
         return ge::GRAPH_FAILED;
     }
     if (cmpWo != oriShapeAttrInfo.oriOutputW) {
         OP_LOGE(context->GetNodeName(), "%s AscendC: ShapeAttrSynthesisCheck failed, " \
             "cmpWo(%ld) != oriOutputW(%ld)", context->GetNodeType(), cmpWo, oriShapeAttrInfo.oriOutputW);
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeType(), "y",
+            VectorToString(GetOutputShapeVec(context, OUTPUT_INDEX), IntToString<int64_t>).c_str(),
+            FormatString("Shape[%zu] of this parameter must be equal to the theoretical value %ld of %s",
+                paramInfo.paramsIdxVec[paramInfo.OUT_PARAM_IDX][IDX_LIST_W_IDX], cmpWo, "Wo").c_str());
         return ge::GRAPH_FAILED;
     }
-    return ShapeAttrSynthesisCheckAux(oriShapeAttrInfo, context);
+    return ShapeAttrSynthesisCheckAux(oriShapeAttrInfo, paramInfo, context);
 }
 
 ge::graphStatus ShapeAttrSynthesisCheckAux(const ConvAscendcOriginShapeAttrInfo oriShapeAttrInfo,
-                                           const gert::TilingContext* context)
+                                           ConvParamInfo paramInfo, const gert::TilingContext* context)
 {
-    // 0 means INPUT_FMAP_INDEX
     auto fmStorageFormat = static_cast<ge::Format>(GetPrimaryFormat(context->GetInputDesc(0)->GetStorageFormat()));
     if (fmStorageFormat == ge::Format::FORMAT_NCDHW || fmStorageFormat == ge::Format::FORMAT_NDHWC) {
         int64_t cmpDo = ConvComputeDo(oriShapeAttrInfo.oriFmapD, oriShapeAttrInfo.oriWeightD,
         oriShapeAttrInfo.oriPadHead, oriShapeAttrInfo.oriPadTail,
         oriShapeAttrInfo.oriDilationD, oriShapeAttrInfo.oriStrideD);
         if (cmpDo != oriShapeAttrInfo.oriOutputD) {
-            OP_LOGE(context->GetNodeName(),
-                "%s AscendC: ShapeAttrSynthesisCheck failed, cmpDo(%ld) != oriOutputD(%ld)",
+            OP_LOGE(context->GetNodeName(), "%s AscendC: ShapeAttrSynthesisCheck failed, cmpDo(%ld) != oriOutputD(%ld)",
                 context->GetNodeType(), cmpDo, oriShapeAttrInfo.oriOutputD);
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeType(), "y",
+                VectorToString(GetOutputShapeVec(context, OUTPUT_INDEX), IntToString<int64_t>).c_str(),
+                FormatString("Shape[%zu] of this parameter must be equal to the theoretical value %ld of %s",
+                    paramInfo.paramsIdxVec[paramInfo.OUT_PARAM_IDX][IDX_LIST_D_IDX], cmpDo, "Do").c_str());
             return ge::GRAPH_FAILED;
         }
     }
     if (oriShapeAttrInfo.oriFmapC % oriShapeAttrInfo.oriGroups != 0) {
         OP_LOGE(context->GetNodeName(), "%s AscendC: featureMap Cin(%ld) mod groups(%ld) != 0",
             context->GetNodeType(), oriShapeAttrInfo.oriFmapC, oriShapeAttrInfo.oriGroups);
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeType(), "x",
+            VectorToString(GetInputShapeVec(context, INPUT_FMAP_INDEX), IntToString<int64_t>).c_str(),
+            FormatString("Shape[%zu] of this parameter must be exactly divisible by attribute groups %ld",
+                paramInfo.paramsIdxVec[paramInfo.FMAP_PARAM_IDX][IDX_LIST_C_IDX], oriShapeAttrInfo.oriGroups).c_str());
         return ge::GRAPH_FAILED;
     }
     if (oriShapeAttrInfo.oriWeightN % oriShapeAttrInfo.oriGroups != 0) {
         OP_LOGE(context->GetNodeName(), "%s AscendC: weight Cout (%ld) mod groups (%ld) != 0",
             context->GetNodeType(), oriShapeAttrInfo.oriWeightN, oriShapeAttrInfo.oriGroups);
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeType(), "filter",
+            VectorToString(GetInputShapeVec(context, INPUT_WEIGHT_INDEX), IntToString<int64_t>).c_str(),
+            FormatString("Shape[%zu] of this parameter must be exactly divisible by attribute groups %ld",
+                paramInfo.paramsIdxVec[paramInfo.WEIGHT_PARAM_IDX][IDX_LIST_N_IDX], oriShapeAttrInfo.oriGroups).c_str());
         return ge::GRAPH_FAILED;
     }
     if (oriShapeAttrInfo.oriFmapC != oriShapeAttrInfo.oriWeightC * oriShapeAttrInfo.oriGroups) {
         OP_LOGE(context->GetNodeName(), "%s AscendC: featureMap Cin(%ld) != weight Cin(%ld) * groups(%ld).",
             context->GetNodeType(), oriShapeAttrInfo.oriFmapC, oriShapeAttrInfo.oriWeightC,
             oriShapeAttrInfo.oriGroups);
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeType(), "x, filter",
+            VectorsToString(std::vector<std::vector<int64_t>>{
+                GetInputShapeVec(context, INPUT_FMAP_INDEX), GetOutputShapeVec(context, OUTPUT_INDEX)},
+                IntToString<int64_t>).c_str(),
+            FormatString("Shape[%zu] of %s must be equal to shape[%zu] of %s multiplied by %s %ld",
+                paramInfo.paramsIdxVec[paramInfo.FMAP_PARAM_IDX][IDX_LIST_C_IDX], "x",
+                paramInfo.paramsIdxVec[paramInfo.WEIGHT_PARAM_IDX][IDX_LIST_C_IDX], "filter"
+                "groups", oriShapeAttrInfo.oriGroups).c_str());
         return ge::GRAPH_FAILED;
     }
 
     return ge::GRAPH_SUCCESS;
 }
 
-void GetSupportedDataTypes(bool hasBias, bool quantFlag, std::vector<std::vector<ConvDtype>>& supportTypes)
+void GetSupportedDataTypes(bool hasBias, bool quantFlag, std::vector<std::vector<ge::DataType>>& supportTypes)
 {
     if (hasBias) {
         if (quantFlag) {
             supportTypes = QUANTCONV_SUPPORTED_TYPES_WITH_BIAS;
         } else {
-            supportTypes = CONV_SUPPORTED_TYPES_WITH_BIAS;
+            supportTypes = CONV_SUPPORTED_TYPES_WITH_BIAS_DAV;
         }
     } else {
         if (quantFlag) {
             supportTypes = QUANTCONV_SUPPORTED_TYPES_WITHOUT_BIAS;
         } else {
-            supportTypes = CONV_SUPPORTED_TYPES_WITHOUT_BIAS;
+            supportTypes = CONV_SUPPORTED_TYPES_WITHOUT_BIAS_DAV;
         }
     }
 }
 
 void GetSupportedDataTypes(const NpuArch& socVersion, bool quantFlag, 
-    ge::Format fMapFormat, bool exendConvFlag, std::vector<std::vector<ConvDtype>>& supportTypes)
+    ge::Format fMapFormat, bool exendConvFlag, std::vector<std::vector<ge::DataType>>& supportTypes)
 {
     if (exendConvFlag) {
         if (fMapFormat == ge::Format::FORMAT_NCHW &&
@@ -168,11 +254,13 @@ void ConvBase::SetBytesFromUint32(uint64_t& number, uint32_t highPart, uint32_t 
 }
 
 void ConvBase::ConvBaseInit(ConvAscendcShapesInfo shapeInfo, ConvAscendcDescInfo descInfo,
-                            ConvAscendcTilingFlag flagInfo, gert::TilingContext* context)
+                            ConvAscendcTilingFlag flagInfo, ConvParamInfo paramInfo,
+                            gert::TilingContext* context)
 {
     shapeInfo_ = shapeInfo;
     descInfo_ = descInfo;
     flagInfo_ = flagInfo;
+    paramInfo_ = paramInfo;
     context_ = context;
 }
 
@@ -276,50 +364,29 @@ void ConvBase::GetSupportedFormats(bool quantFlag, bool is2dFlag,
 {
     const std::string& nodeType = context_->GetNodeType();
     bool extendConvFlag = nodeType == "ExtendConv2D";
-    ss <<"The support params format list [fmap, weight, output] for scene ";
     auto platformInfoPtr = context_->GetPlatformInfo();
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     if (ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_3510) {
         if (extendConvFlag) {
             supportFormats = EXTENDCONV2D_SUPPORT_FORMAT_LIST;
-            ss << "(extendConvFlag is enable) is ";
         } else if (quantFlag) {
             supportFormats = is2dFlag ? SUPPORT_QUANT_CONV2D_FORMAT_LIST : SUPPORT_QUANT_CONV3D_FORMAT_LIST;
-            ss << "(quantFlag is enable) is ";
         } else if (!quantFlag &&
             (descInfo_.fMapDtype != ge::DataType::DT_HIFLOAT8 || descInfo_.weightDtype != ge::DataType::DT_HIFLOAT8)) {
             supportFormats = is2dFlag ? SUPPORT_CONV2D_FORMAT_LIST : SUPPORT_CONV3D_FORMAT_LIST;
-            ss << "(quantFlag is disable and inputDtype is not HIFLOAT8) is ";
         } else {
             supportFormats = is2dFlag ? SUPPORT_CONV2D_DEFAULT_FORMAT_LIST : SUPPORT_CONV3D_DEFAULT_FORMAT_LIST;
-            ss << "(quantFlag is disable and inputDtype is HIFLOAT8) is ";
         }
     } else if (ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_5102) {
         if (extendConvFlag) {
             supportFormats = EXTENDCONV2D_SUPPORT_FORMAT_LIST_MDC;
-            ss << "(extendConvFlag is enable) is ";
         } else {
             supportFormats = SUPPORT_CONV2D_FORMAT_LIST_MDC;
-            ss << "(extendConvFlag is disable) is ";
         }
     } else {
         supportFormats = is2dFlag ? SUPPORT_CONV2D_DEFAULT_FORMAT_LIST : SUPPORT_CONV3D_DEFAULT_FORMAT_LIST;
-        ss << "(default soc version) is ";
     }
-
-    for (size_t row = 0; row < supportFormats.size(); ++row) {
-        ss << "[";
-        for (size_t elem = 0; elem < supportFormats[row].size(); ++elem) {
-            ss << formatToStrTab.at(supportFormats[row][elem]).c_str();
-             if (elem != supportFormats[row].size() - 1) {
-                ss << ", ";
-             }
-        }
-        ss << "]";
-        if (row != supportFormats.size() - 1) {
-            ss << ", ";
-        }
-    }
+    ss << VectorsToString(supportFormats, GeFormatToString);
 }
 
 bool ConvBase::CheckValidString(const string &inputStr, const gert::TilingContext* context) const
@@ -332,6 +399,11 @@ bool ConvBase::CheckValidString(const string &inputStr, const gert::TilingContex
         OP_LOGE(context->GetNodeName(),
             "%s AscendC: check input string length: %zu failed, string length exceed %zu.",
             context->GetNodeType(), inputStr.size(), MAX_STR_LEN);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeType(), "round_mode",
+            inputStr.c_str(),
+            FormatString("The string length %zu of this parameter exceeds the maximum value %zu",
+                inputStr.size(), MAX_STR_LEN).c_str()
+        );
         return false;
     }
     if (!std::all_of(inputStr.begin(), inputStr.end(),

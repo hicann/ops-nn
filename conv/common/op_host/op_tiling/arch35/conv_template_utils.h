@@ -17,6 +17,8 @@
 
 #include <vector>
 #include <string>
+#include <cstdarg>
+#include "securec.h"
 #include "graph/operator_reg.h"
 #include <platform/soc_spec.h>
 
@@ -238,7 +240,10 @@ constexpr size_t IDX_LIST_H_IDX = 3;
 constexpr size_t IDX_LIST_W_IDX = 4;
 constexpr size_t IDX_LIST_END_IDX = 5;
 constexpr size_t MAX_STR_LEN = 1024;
-
+constexpr size_t NDHWC_D_IDX = 1;
+constexpr size_t NDHWC_H_IDX = 2;
+constexpr size_t NDHWC_W_IDX = 3;
+constexpr size_t NDHWC_C_IDX = 4;
 static std::map<ge::DataType, ConvDtype> dtypeMap = {
     {ge::DT_FLOAT16, ConvDtype::FLOAT16}, {ge::DT_FLOAT, ConvDtype::FLOAT32},
     {ge::DT_BF16, ConvDtype::BFLOAT16}, {ge::DT_INT8, ConvDtype::INT8},

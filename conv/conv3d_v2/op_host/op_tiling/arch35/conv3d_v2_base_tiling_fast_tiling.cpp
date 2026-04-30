@@ -43,10 +43,10 @@ ge::graphStatus Conv3dBaseTilingV2::PrepareTiling()
         return ge::GRAPH_FAILED;
     }
     if (CheckFmapShape() != ge::GRAPH_SUCCESS || CheckWeightShape() != ge::GRAPH_SUCCESS ||
-        CheckBiasShape() != ge::GRAPH_SUCCESS || CheckOutputShape() != ge::GRAPH_SUCCESS) {
+        CheckOutputShape() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
-    if (ShapeAttrSynthesisCheck(oriShapeAttrInfo_, context_) != ge::GRAPH_SUCCESS) {
+    if (ShapeAttrSynthesisCheck(oriShapeAttrInfo_, paramInfo_, context_) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
     if (CheckInstructionLimits() != ge::GRAPH_SUCCESS) {

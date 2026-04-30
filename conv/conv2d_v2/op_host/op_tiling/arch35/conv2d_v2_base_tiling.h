@@ -153,6 +153,8 @@ private:
     ge::graphStatus CheckOutputShape();
     ge::graphStatus CheckInputDesc();
     ge::graphStatus CheckParamsDtype();
+    ge::graphStatus CheckParamsDtypeWithBias(std::vector<std::vector<ge::DataType>> supportedTypesList);
+    ge::graphStatus CheckParamsDtypeWithoutBias(std::vector<std::vector<ge::DataType>> supportedTypesList);
     ge::graphStatus CheckLoad3DLimits();
     ge::graphStatus CheckL1SizeLimitsKernelFullLoad(bool isC04);
     ge::graphStatus CheckInstructionLimits();
@@ -221,6 +223,7 @@ private:
     ge::graphStatus GetDisContinuousFlag();
     ge::graphStatus ParseFmapShape();
     ge::graphStatus ParseWeightShape();
+    ge::graphStatus CheckBiasShapeLegal(size_t idxC, uint32_t biasDimNum);
     ge::graphStatus ParseBiasShape();
     ge::graphStatus ParseOutputShape();
     ge::graphStatus GetNodeType();

@@ -119,6 +119,15 @@ ge::graphStatus Conv2dBaseTiling::CheckInstructionLimits()
             OP_LOGE(context_->GetNodeName(),
                     "%s AscendC: Output shape not satisfy Fixpipe's limits: hout(%lu)*wout(%lu)=%lu, which must <= %lu",
                     paramInfo_.nodeType.c_str(), shapeInfo_.ho, shapeInfo_.wo, fixpipeLoop2DstStride, fixpipeLoop2DstStrideLimit);
+            stringstream ss;
+            ss << "If the format of input x is NCHW, ";
+            ss << "the constraint of instruction %s must be met: ";
+            ss << "shape[%zu] * shape [%zu] ≤ %ld";
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeType(), "y",
+                VectorToString(GetOutputShapeVec(context_, OUTPUT_INDEX), IntToString<int64_t>).c_str(),
+                FormatString(ss.str().c_str(), "Fixpipe",
+                    paramInfo_.paramsIdxVec[paramInfo_.OUT_PARAM_IDX][IDX_LIST_H_IDX],
+                    paramInfo_.paramsIdxVec[paramInfo_.OUT_PARAM_IDX][IDX_LIST_W_IDX]).c_str());
             return ge::GRAPH_FAILED;
         }
     }
@@ -134,6 +143,15 @@ ge::graphStatus Conv2dBaseTiling::CheckDisContinuousInstrLimits()
         OP_LOGE(context_->GetNodeName(), 
                 "%s AscendC: disContinuous input exceeds ND2NZ's limits: ci(%lu)*batch(%lu)=%lu, which must <= %lu",
                 paramInfo_.nodeType.c_str(), shapeInfo_.ci, shapeInfo_.batch, srcDValue, SRC_D_VALUE_MAX);
+        stringstream ss;
+        ss << "If input x is a non-contiguous tensor, ";
+        ss << "the constraint of instruction %s must be met: ";
+        ss << "shape[%zu] * shape [%zu] ≤ %ld";
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeType(), "x",
+            VectorToString(GetOutputShapeVec(context_, INPUT_FMAP_INDEX), IntToString<int64_t>).c_str(),
+            FormatString(ss.str().c_str(), "ND2NZ",
+                paramInfo_.paramsIdxVec[paramInfo_.FMAP_PARAM_IDX][IDX_LIST_C_IDX],
+                paramInfo_.paramsIdxVec[paramInfo_.FMAP_PARAM_IDX][IDX_LIST_N_IDX]).c_str());
         return ge::GRAPH_FAILED;
     }
 
@@ -148,6 +166,15 @@ ge::graphStatus Conv2dBaseTiling::CheckL0c2GmNZ2NDInstrLimits() {
         OP_LOGE(context_->GetNodeName(),
             "%s AscendC: Output shape not satisfy Fixpipe's limits: wout(%lu)*cout(%lu)=%lu, which must <= %lu",
             paramInfo_.nodeType.c_str(), shapeInfo_.wo, shapeInfo_.co, fixpipeLoop3DstStride, fixpipeLoop3DstStrideLimit);
+        stringstream ss;
+        ss << "If the format of input x is NHWC, ";
+        ss << "the constraint of instruction %s must be met: ";
+        ss << "shape[%zu] * shape [%zu] ≤ %ld";
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeType(), "y",
+            VectorToString(GetOutputShapeVec(context_, OUTPUT_INDEX), IntToString<int64_t>).c_str(),
+            FormatString(ss.str().c_str(), "Fixpipe",
+                paramInfo_.paramsIdxVec[paramInfo_.OUT_PARAM_IDX][IDX_LIST_W_IDX],
+                paramInfo_.paramsIdxVec[paramInfo_.OUT_PARAM_IDX][IDX_LIST_C_IDX]).c_str());
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;

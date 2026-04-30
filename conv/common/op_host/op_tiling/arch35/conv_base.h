@@ -60,108 +60,126 @@ static std::map<ge::Format, ConvFormat> formatMap = {
 };
 
 // [fmap, weight, output, bias]
-const std::vector<std::vector<ConvDtype>> CONV_SUPPORTED_TYPES_DAV = {
-    {ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::FLOAT16},
-    {ConvDtype::FLOAT32, ConvDtype::FLOAT32, ConvDtype::FLOAT32, ConvDtype::FLOAT32},
-    {ConvDtype::BFLOAT16, ConvDtype::BFLOAT16, ConvDtype::BFLOAT16, ConvDtype::BFLOAT16},
-    {ConvDtype::HIFLOAT8, ConvDtype::HIFLOAT8, ConvDtype::HIFLOAT8, ConvDtype::FLOAT32},
-    {ConvDtype::INT8, ConvDtype::INT8, ConvDtype::FLOAT16, ConvDtype::FLOAT16},
-    {ConvDtype::INT8, ConvDtype::INT8, ConvDtype::FLOAT16, ConvDtype::FLOAT32},
-    {ConvDtype::INT8, ConvDtype::INT8, ConvDtype::BFLOAT16, ConvDtype::BFLOAT16},
-    {ConvDtype::INT8, ConvDtype::INT8, ConvDtype::BFLOAT16, ConvDtype::FLOAT32}
+const std::vector<std::vector<ge::DataType>> CONV_SUPPORTED_TYPES_DAV = {
+    {ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16},
+    {ge::DataType::DT_FLOAT, ge::DataType::DT_FLOAT, ge::DataType::DT_FLOAT, ge::DataType::DT_FLOAT},
+    {ge::DataType::DT_BF16, ge::DataType::DT_BF16, ge::DataType::DT_BF16, ge::DataType::DT_BF16},
+    {ge::DataType::DT_HIFLOAT8, ge::DataType::DT_HIFLOAT8, ge::DataType::DT_HIFLOAT8, ge::DataType::DT_FLOAT},
+    {ge::DataType::DT_INT8, ge::DataType::DT_INT8, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16},
+    {ge::DataType::DT_INT8, ge::DataType::DT_INT8, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT},
+    {ge::DataType::DT_INT8, ge::DataType::DT_INT8, ge::DataType::DT_BF16, ge::DataType::DT_BF16},
+    {ge::DataType::DT_INT8, ge::DataType::DT_INT8, ge::DataType::DT_BF16, ge::DataType::DT_FLOAT}
+};
+
+const std::vector<std::vector<ge::DataType>> CONV_SUPPORTED_TYPES_WITH_BIAS_DAV = {
+    {ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16},
+    {ge::DataType::DT_FLOAT, ge::DataType::DT_FLOAT, ge::DataType::DT_FLOAT, ge::DataType::DT_FLOAT},
+    {ge::DataType::DT_BF16, ge::DataType::DT_BF16, ge::DataType::DT_BF16, ge::DataType::DT_BF16},
+    {ge::DataType::DT_HIFLOAT8, ge::DataType::DT_HIFLOAT8, ge::DataType::DT_FLOAT, ge::DataType::DT_HIFLOAT8},
+    {ge::DataType::DT_INT8, ge::DataType::DT_INT8, ge::DataType::DT_FLOAT, ge::DataType::DT_FLOAT16},
+    {ge::DataType::DT_INT8, ge::DataType::DT_INT8, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16},
+    {ge::DataType::DT_INT8, ge::DataType::DT_INT8, ge::DataType::DT_FLOAT, ge::DataType::DT_BF16},
+    {ge::DataType::DT_INT8, ge::DataType::DT_INT8, ge::DataType::DT_BF16, ge::DataType::DT_BF16}
+};
+
+const std::vector<std::vector<ge::DataType>> CONV_SUPPORTED_TYPES_WITHOUT_BIAS_DAV  = {
+    {ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16},
+    {ge::DataType::DT_FLOAT, ge::DataType::DT_FLOAT, ge::DataType::DT_FLOAT},
+    {ge::DataType::DT_BF16, ge::DataType::DT_BF16, ge::DataType::DT_BF16},
+    {ge::DataType::DT_HIFLOAT8, ge::DataType::DT_HIFLOAT8, ge::DataType::DT_HIFLOAT8}
 };
 
 // [fmap, weight, output, bias]
-const std::vector<std::vector<ConvDtype>> CONV_SUPPORTED_TYPES_MDC = {
-    {ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::FLOAT16}
+const std::vector<std::vector<ge::DataType>> CONV_SUPPORTED_TYPES_MDC = {
+    {ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16}
 };
 
-const std::map<NpuArch, std::vector<std::vector<ConvDtype>>> SOC_CONV_SUPPORTED_TYPES = {
+const std::map<NpuArch, std::vector<std::vector<ge::DataType>>> SOC_CONV_SUPPORTED_TYPES = {
     {NpuArch::DAV_3510, CONV_SUPPORTED_TYPES_DAV},
     {NpuArch::DAV_5102, CONV_SUPPORTED_TYPES_MDC}
 };
 
 // [fmap, weight, output, bias]
-const std::vector<std::vector<ConvDtype>> QUANTCONV_SUPPORTED_TYPES_WITH_BIAS = {
-    {ConvDtype::INT8, ConvDtype::INT8, ConvDtype::INT32, ConvDtype::FLOAT16},
-    {ConvDtype::HIFLOAT8, ConvDtype::HIFLOAT8, ConvDtype::FLOAT32, ConvDtype::FLOAT32},
-    {ConvDtype::HIFLOAT8, ConvDtype::HIFLOAT8, ConvDtype::FLOAT32, ConvDtype::FLOAT16},
-    {ConvDtype::HIFLOAT8, ConvDtype::HIFLOAT8, ConvDtype::FLOAT32, ConvDtype::BFLOAT16},
-    {ConvDtype::HIFLOAT8, ConvDtype::HIFLOAT8, ConvDtype::FLOAT32, ConvDtype::HIFLOAT8},
-    {ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT32, ConvDtype::FLOAT32},
-    {ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT32, ConvDtype::FLOAT16},
-    {ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT32, ConvDtype::BFLOAT16},
-    {ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT32, ConvDtype::FLOAT8_E4M3FN}
+const std::vector<std::vector<ge::DataType>> QUANTCONV_SUPPORTED_TYPES_WITH_BIAS = {
+    {ge::DataType::DT_INT8, ge::DataType::DT_INT8, ge::DataType::DT_INT32, ge::DataType::DT_FLOAT16},
+    {ge::DataType::DT_HIFLOAT8, ge::DataType::DT_HIFLOAT8, ge::DataType::DT_FLOAT, ge::DataType::DT_FLOAT},
+    {ge::DataType::DT_HIFLOAT8, ge::DataType::DT_HIFLOAT8, ge::DataType::DT_FLOAT, ge::DataType::DT_FLOAT16},
+    {ge::DataType::DT_HIFLOAT8, ge::DataType::DT_HIFLOAT8, ge::DataType::DT_FLOAT, ge::DataType::DT_BF16},
+    {ge::DataType::DT_HIFLOAT8, ge::DataType::DT_HIFLOAT8, ge::DataType::DT_FLOAT, ge::DataType::DT_HIFLOAT8},
+    {ge::DataType::DT_FLOAT8_E4M3FN, ge::DataType::DT_FLOAT8_E4M3FN, ge::DataType::DT_FLOAT, ge::DataType::DT_FLOAT},
+    {ge::DataType::DT_FLOAT8_E4M3FN, ge::DataType::DT_FLOAT8_E4M3FN, ge::DataType::DT_FLOAT, ge::DataType::DT_FLOAT16},
+    {ge::DataType::DT_FLOAT8_E4M3FN, ge::DataType::DT_FLOAT8_E4M3FN, ge::DataType::DT_FLOAT, ge::DataType::DT_BF16},
+    {ge::DataType::DT_FLOAT8_E4M3FN, ge::DataType::DT_FLOAT8_E4M3FN, ge::DataType::DT_FLOAT, ge::DataType::DT_FLOAT8_E4M3FN}
 };
 
 // [fmap, weight, output]
-const std::vector<std::vector<ConvDtype>> QUANTCONV_SUPPORTED_TYPES_WITHOUT_BIAS = {
-    {ConvDtype::INT8, ConvDtype::INT8, ConvDtype::FLOAT16},
-    {ConvDtype::HIFLOAT8, ConvDtype::HIFLOAT8, ConvDtype::FLOAT32},
-    {ConvDtype::HIFLOAT8, ConvDtype::HIFLOAT8, ConvDtype::FLOAT16},
-    {ConvDtype::HIFLOAT8, ConvDtype::HIFLOAT8, ConvDtype::BFLOAT16},
-    {ConvDtype::HIFLOAT8, ConvDtype::HIFLOAT8, ConvDtype::HIFLOAT8},
-    {ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT32},
-    {ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT16},
-    {ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT8_E4M3FN, ConvDtype::BFLOAT16},
-    {ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT8_E4M3FN}
+const std::vector<std::vector<ge::DataType>> QUANTCONV_SUPPORTED_TYPES_WITHOUT_BIAS = {
+    {ge::DataType::DT_INT8, ge::DataType::DT_INT8, ge::DataType::DT_FLOAT16},
+    {ge::DataType::DT_HIFLOAT8, ge::DataType::DT_HIFLOAT8, ge::DataType::DT_FLOAT},
+    {ge::DataType::DT_HIFLOAT8, ge::DataType::DT_HIFLOAT8, ge::DataType::DT_FLOAT16},
+    {ge::DataType::DT_HIFLOAT8, ge::DataType::DT_HIFLOAT8, ge::DataType::DT_BF16},
+    {ge::DataType::DT_HIFLOAT8, ge::DataType::DT_HIFLOAT8, ge::DataType::DT_HIFLOAT8},
+    {ge::DataType::DT_FLOAT8_E4M3FN, ge::DataType::DT_FLOAT8_E4M3FN, ge::DataType::DT_FLOAT},
+    {ge::DataType::DT_FLOAT8_E4M3FN, ge::DataType::DT_FLOAT8_E4M3FN, ge::DataType::DT_FLOAT16},
+    {ge::DataType::DT_FLOAT8_E4M3FN, ge::DataType::DT_FLOAT8_E4M3FN, ge::DataType::DT_BF16},
+    {ge::DataType::DT_FLOAT8_E4M3FN, ge::DataType::DT_FLOAT8_E4M3FN, ge::DataType::DT_FLOAT8_E4M3FN}
 };
 
 // [fmap, weight, output, bias]
-const std::vector<std::vector<ConvDtype>> QUANTCONV_SUPPORTED_TYPES = {
-    {ConvDtype::INT8, ConvDtype::INT8, ConvDtype::FLOAT16, ConvDtype::INT32},
-    {ConvDtype::HIFLOAT8, ConvDtype::HIFLOAT8, ConvDtype::FLOAT32, ConvDtype::FLOAT32},
-    {ConvDtype::HIFLOAT8, ConvDtype::HIFLOAT8, ConvDtype::FLOAT16, ConvDtype::FLOAT32},
-    {ConvDtype::HIFLOAT8, ConvDtype::HIFLOAT8, ConvDtype::BFLOAT16, ConvDtype::FLOAT32},
-    {ConvDtype::HIFLOAT8, ConvDtype::HIFLOAT8, ConvDtype::HIFLOAT8, ConvDtype::FLOAT32},
-    {ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT32, ConvDtype::FLOAT32},
-    {ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT16, ConvDtype::FLOAT32},
-    {ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT8_E4M3FN, ConvDtype::BFLOAT16, ConvDtype::FLOAT32},
-    {ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT32}
+const std::vector<std::vector<ge::DataType>> QUANTCONV_SUPPORTED_TYPES = {
+    {ge::DataType::DT_INT8, ge::DataType::DT_INT8, ge::DataType::DT_FLOAT16, ge::DataType::DT_INT32},
+    {ge::DataType::DT_HIFLOAT8, ge::DataType::DT_HIFLOAT8, ge::DataType::DT_FLOAT, ge::DataType::DT_FLOAT},
+    {ge::DataType::DT_HIFLOAT8, ge::DataType::DT_HIFLOAT8, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT},
+    {ge::DataType::DT_HIFLOAT8, ge::DataType::DT_HIFLOAT8, ge::DataType::DT_BF16, ge::DataType::DT_FLOAT},
+    {ge::DataType::DT_HIFLOAT8, ge::DataType::DT_HIFLOAT8, ge::DataType::DT_HIFLOAT8, ge::DataType::DT_FLOAT},
+    {ge::DataType::DT_FLOAT8_E4M3FN, ge::DataType::DT_FLOAT8_E4M3FN, ge::DataType::DT_FLOAT, ge::DataType::DT_FLOAT},
+    {ge::DataType::DT_FLOAT8_E4M3FN, ge::DataType::DT_FLOAT8_E4M3FN, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT},
+    {ge::DataType::DT_FLOAT8_E4M3FN, ge::DataType::DT_FLOAT8_E4M3FN, ge::DataType::DT_BF16, ge::DataType::DT_FLOAT},
+    {ge::DataType::DT_FLOAT8_E4M3FN, ge::DataType::DT_FLOAT8_E4M3FN, ge::DataType::DT_FLOAT8_E4M3FN, ge::DataType::DT_FLOAT}
 };
 
 // [fmap, weight, output, bias]
-const std::vector<std::vector<ConvDtype>> EXTENDCONV2D_SUPPORTED_TYPES_MDC = {
-    {ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::FLOAT16},
-    {ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::INT8, ConvDtype::FLOAT16},
-    {ConvDtype::INT8, ConvDtype::INT8, ConvDtype::INT8, ConvDtype::INT32},
-    {ConvDtype::INT8, ConvDtype::INT8, ConvDtype::FLOAT16, ConvDtype::INT32},
-    {ConvDtype::FLOAT16, ConvDtype::INT8, ConvDtype::FLOAT16, ConvDtype::INT32},
-    {ConvDtype::FLOAT16, ConvDtype::INT8, ConvDtype::INT8, ConvDtype::INT32}
+const std::vector<std::vector<ge::DataType>> EXTENDCONV2D_SUPPORTED_TYPES_MDC = {
+    {ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16},
+    {ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_INT8, ge::DataType::DT_FLOAT16},
+    {ge::DataType::DT_INT8, ge::DataType::DT_INT8, ge::DataType::DT_INT8, ge::DataType::DT_INT32},
+    {ge::DataType::DT_INT8, ge::DataType::DT_INT8, ge::DataType::DT_FLOAT16, ge::DataType::DT_INT32},
+    {ge::DataType::DT_FLOAT16, ge::DataType::DT_INT8, ge::DataType::DT_FLOAT16, ge::DataType::DT_INT32},
+    {ge::DataType::DT_FLOAT16, ge::DataType::DT_INT8, ge::DataType::DT_INT8, ge::DataType::DT_INT32}
 };
 
 // [fmap, weight, output, bias]
-const std::vector<std::vector<ConvDtype>> EXTENDCONV_SUPPORTED_TYPES_NCHW = {
-    {ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::FLOAT16},
-    {ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::INT8, ConvDtype::FLOAT16},
-    {ConvDtype::INT8, ConvDtype::INT8, ConvDtype::FLOAT16, ConvDtype::INT32},
-    {ConvDtype::INT8, ConvDtype::INT8, ConvDtype::INT8, ConvDtype::INT32},
-    {ConvDtype::HIFLOAT8, ConvDtype::HIFLOAT8, ConvDtype::FLOAT32, ConvDtype::FLOAT32},
-    {ConvDtype::HIFLOAT8, ConvDtype::HIFLOAT8, ConvDtype::FLOAT16, ConvDtype::FLOAT32},
-    {ConvDtype::HIFLOAT8, ConvDtype::HIFLOAT8, ConvDtype::BFLOAT16, ConvDtype::FLOAT32},
-    {ConvDtype::HIFLOAT8, ConvDtype::HIFLOAT8, ConvDtype::HIFLOAT8, ConvDtype::FLOAT32},
-    {ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT32, ConvDtype::FLOAT32},
-    {ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT16, ConvDtype::FLOAT32},
-    {ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT8_E4M3FN, ConvDtype::BFLOAT16, ConvDtype::FLOAT32},
-    {ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT8_E4M3FN, ConvDtype::FLOAT32}
+const std::vector<std::vector<ge::DataType>> EXTENDCONV_SUPPORTED_TYPES_NCHW = {
+    {ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16},
+    {ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_INT8, ge::DataType::DT_FLOAT16},
+    {ge::DataType::DT_INT8, ge::DataType::DT_INT8, ge::DataType::DT_FLOAT16, ge::DataType::DT_INT32},
+    {ge::DataType::DT_INT8, ge::DataType::DT_INT8, ge::DataType::DT_INT8, ge::DataType::DT_INT32},
+    {ge::DataType::DT_HIFLOAT8, ge::DataType::DT_HIFLOAT8, ge::DataType::DT_FLOAT, ge::DataType::DT_FLOAT},
+    {ge::DataType::DT_HIFLOAT8, ge::DataType::DT_HIFLOAT8, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT},
+    {ge::DataType::DT_HIFLOAT8, ge::DataType::DT_HIFLOAT8, ge::DataType::DT_BF16, ge::DataType::DT_FLOAT},
+    {ge::DataType::DT_HIFLOAT8, ge::DataType::DT_HIFLOAT8, ge::DataType::DT_HIFLOAT8, ge::DataType::DT_FLOAT},
+    {ge::DataType::DT_FLOAT8_E4M3FN, ge::DataType::DT_FLOAT8_E4M3FN, ge::DataType::DT_FLOAT, ge::DataType::DT_FLOAT},
+    {ge::DataType::DT_FLOAT8_E4M3FN, ge::DataType::DT_FLOAT8_E4M3FN, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT},
+    {ge::DataType::DT_FLOAT8_E4M3FN, ge::DataType::DT_FLOAT8_E4M3FN, ge::DataType::DT_BF16, ge::DataType::DT_FLOAT},
+    {ge::DataType::DT_FLOAT8_E4M3FN, ge::DataType::DT_FLOAT8_E4M3FN, ge::DataType::DT_FLOAT8_E4M3FN, ge::DataType::DT_FLOAT}
 };
 
 // [fmap, weight, output, bias]
-const std::vector<std::vector<ConvDtype>> EXTENDCONV_SUPPORTED_TYPES_NHWC = {
-    {ConvDtype::INT8, ConvDtype::INT8, ConvDtype::FLOAT16, ConvDtype::INT32},
-    {ConvDtype::INT8, ConvDtype::INT8, ConvDtype::INT8, ConvDtype::INT32},
-    {ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::FLOAT16},
-    {ConvDtype::FLOAT16, ConvDtype::FLOAT16, ConvDtype::INT8, ConvDtype::FLOAT16}
+const std::vector<std::vector<ge::DataType>> EXTENDCONV_SUPPORTED_TYPES_NHWC = {
+    {ge::DataType::DT_INT8, ge::DataType::DT_INT8, ge::DataType::DT_FLOAT16, ge::DataType::DT_INT32},
+    {ge::DataType::DT_INT8, ge::DataType::DT_INT8, ge::DataType::DT_INT8, ge::DataType::DT_INT32},
+    {ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16},
+    {ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_INT8, ge::DataType::DT_FLOAT16}
 };
 
 const std::map<NpuArch,
-    std::vector<std::vector<ConvDtype>>> SOC_EXTENDCONV_SUPPORTED_TYPES_NCHW = {
+    std::vector<std::vector<ge::DataType>>> SOC_EXTENDCONV_SUPPORTED_TYPES_NCHW = {
     {NpuArch::DAV_5102, EXTENDCONV2D_SUPPORTED_TYPES_MDC},
     {NpuArch::DAV_3510, EXTENDCONV_SUPPORTED_TYPES_NCHW}
 };
 
 const std::map<NpuArch,
-    std::vector<std::vector<ConvDtype>>> SOC_EXTENDCONV_SUPPORTED_TYPES_NHWC = {
+    std::vector<std::vector<ge::DataType>>> SOC_EXTENDCONV_SUPPORTED_TYPES_NHWC = {
     {NpuArch::DAV_5102, EXTENDCONV2D_SUPPORTED_TYPES_MDC},
     {NpuArch::DAV_3510, EXTENDCONV_SUPPORTED_TYPES_NHWC}
 };
@@ -247,15 +265,22 @@ struct pair_hash {
     }
 };
 
-ge::graphStatus ShapeAttrSynthesisCheck(ConvAscendcOriginShapeAttrInfo oriShapeAttrInfo, gert::TilingContext* context);
+ge::graphStatus ShapeAttrSynthesisCheck(ConvAscendcOriginShapeAttrInfo oriShapeAttrInfo,
+                                        ConvParamInfo paramInfo, gert::TilingContext* context);
 ge::graphStatus ShapeAttrSynthesisCheckAux(const ConvAscendcOriginShapeAttrInfo oriShapeAttrInfo,
-                                           const gert::TilingContext* context);
-void GetSupportedDataTypes(bool hasBias, bool quantFlag, std::vector<std::vector<ConvDtype>>& supportTypes);
+                                           ConvParamInfo paramInfo, const gert::TilingContext* context);
+void GetSupportedDataTypes(bool hasBias, bool quantFlag, std::vector<std::vector<ge::DataType>>& supportTypes);
 void GetSupportedDataTypes(const NpuArch& socVersion, bool quantFlag,
                            ge::Format fMapFormat, bool exendConvFlag,
-                           std::vector<std::vector<ConvDtype>>& supportTypes);
+                           std::vector<std::vector<ge::DataType>>& supportTypes);
 bool GetConvParamsIdx(const std::vector<ge::Format> formatVec, std::vector<std::vector<std::size_t>>& idxVec);
 bool IsWeightNZFormat(ge::Format weightFormat);
+
+std::string GeFormatToString(const ge::Format& geFormat);
+std::string GeDtypeToString(const ge::DataType& geDtype);
+vector<int64_t> GetInputShapeVec(const gert::TilingContext* context, size_t paramIdx);
+vector<int64_t> GetOutputShapeVec(const gert::TilingContext* context, size_t paramIdx);
+vector<int64_t> GetAttrShapeVec(const gert::TilingContext* context, size_t paramIdx);
 
 template <typename T>
 bool ConvArrMatch(T& arr1, const T& arr2, size_t size)
@@ -290,7 +315,7 @@ public:
     ConvBase() {};
     explicit ConvBase(gert::TilingContext* context) : context_(context) {};
     void ConvBaseInit(ConvAscendcShapesInfo shapeInfo, ConvAscendcDescInfo descInfo, ConvAscendcTilingFlag flagInfo,
-                      gert::TilingContext* context);
+                      ConvParamInfo paramInfo, gert::TilingContext* context);
     void ConvBaseInitOpInfo(const ConvTilingParseInfo* opInfo);
     void ConvBaseInitFeatureFlag(const ConvAscendcFeatureFlag featureFlagInfo);
     void InitGroupInfo(ConvOriGroupInfo convOriGroupInfo,
@@ -314,6 +339,7 @@ public:
 private:
     gert::TilingContext* context_ = nullptr;
     const ConvTilingParseInfo* opInfo_ = nullptr;
+    ConvParamInfo paramInfo_;
 };
 }
 }

@@ -35,6 +35,66 @@ void ConvNumBlocksFactorMix(uint32_t orgDim, vector<uint32_t> &inputRange, const
 void InitNumBlocksConstParas(ConvOpsConstParams& convOpsConstParams,
                             const ConvAscendcDescInfo& descInfo, const ConvAscendcShapesInfo& shapeInfo);
 
+template<typename T, typename Converter>
+std::string VectorToString(const std::vector<T>& vec, Converter converter,
+                           const string& bracketLeft = "", const string& bracketRight = "")
+{
+    std::string result = bracketLeft;
+    for (size_t i = 0; i < vec.size(); ++i) {
+        result += converter(vec[i]);
+        if (i < vec.size() - 1) {
+            result += ",";
+        }
+    }
+    result += bracketRight;
+    return result;
+}
+
+template<typename T, typename Converter>
+std::string VectorsToString(const std::vector<std::vector<T>>& vecs, Converter converter)
+{
+    std::string result = "[";
+
+    for (size_t j = 0; j < vecs.size(); ++j) {
+        result += "[";
+        for (size_t i = 0; i < vecs[j].size(); ++i) {
+            result += converter(vecs[j][i]);
+            if (i < vecs[j].size() - 1) {
+                result += ",";
+            }
+        }
+        result += "]";
+        if (j < vecs.size() - 1) {
+            result += ",";
+        }
+    }
+    result += "]";
+    return result;
+}
+
+template<typename T>
+std::string IntToString(const T& intValue)
+{
+    return std::to_string(intValue);
+}
+
+constexpr size_t LIMIT_MESSAGE_SIZE = 1024U;
+#define FORMAT_STRING(fmt, ...) FormatString(fmt, ##__VA_ARGS__)
+inline std::string FormatString(const char* fmt, ...) {
+    if (fmt == nullptr) {
+        return "";
+    }
+    char buf[LIMIT_MESSAGE_SIZE] = {0};
+    va_list args;
+    va_start(args, fmt);
+    int ret = vsnprintf_s(buf, LIMIT_MESSAGE_SIZE, LIMIT_MESSAGE_SIZE - 1, fmt, args);
+    va_end(args);
+    if (ret < 0) {
+        return "";
+    }
+    return std::string(buf, static_cast<size_t>(ret));
+}
+
 class __attribute__((visibility("default"))) ConvBaseDeci {
 public:
     ConvBaseDeci(){};

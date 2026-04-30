@@ -183,9 +183,9 @@ struct ConvParamInfo {
     std::vector<ge::Format> paramsFormat = {ge::Format::FORMAT_MAX, ge::Format::FORMAT_MAX, ge::Format::FORMAT_MAX};
     // index: N C D H W
     std::vector<std::vector<size_t>> paramsIdxVec = {{0, 0, 0, 0, 0}, {0, 0, 0, 0, 0}, {0, 0, 0, 0, 0}};
-    const size_t FMAP_PARAM_IDX = 0;
-    const size_t WEIGHT_PARAM_IDX = 1;
-    const size_t OUT_PARAM_IDX = 2;
+    static constexpr size_t FMAP_PARAM_IDX = 0;
+    static constexpr size_t WEIGHT_PARAM_IDX = 1;
+    static constexpr size_t OUT_PARAM_IDX = 2;
     std::string nodeType = "";
 };
 }

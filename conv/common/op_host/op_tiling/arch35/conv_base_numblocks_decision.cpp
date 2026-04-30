@@ -200,6 +200,15 @@ bool ConvBaseDeci::CheckInstrLimitsHWmode()
             OP_LOGE(nodeInfo_.nodeName,
                     "%s AscendC: Output shape not satisfy Fixpipe's limits: wout(%lu) * cout(%lu) > %lu.",
                     nodeInfo_.nodeType.c_str(), shapeInfo_.wo, shapeInfo_.co, MAX_32_BIT_NUM);
+            stringstream ss;
+            ss << "If the format of input x is NDHWC, ";
+            ss << "the constraint of instruction %s must be met: ";
+            ss << "shape[%zu] * shape [%zu] ≤ %ld";
+            vector<int64_t> outputShape = {shapeInfo_.batch,
+                shapeInfo_.dout, shapeInfo_.ho, shapeInfo_.wo, shapeInfo_.co};
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(nodeInfo_.nodeType.c_str(), "y",
+                VectorToString(outputShape, IntToString<int64_t>).c_str(),
+                FormatString(ss.str().c_str(), "Fixpipe", NDHWC_W_IDX, NDHWC_C_IDX).c_str());
             return false;
         }
     }

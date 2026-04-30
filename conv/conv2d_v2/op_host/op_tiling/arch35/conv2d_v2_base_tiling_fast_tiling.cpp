@@ -31,7 +31,7 @@ ge::graphStatus Conv2dBaseTiling::PrepareTiling()
     if (CheckExtendDualOutputSpecial() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
-    if (ShapeAttrSynthesisCheck(oriShapeAttrInfo_, context_) != ge::GRAPH_SUCCESS) {
+    if (ShapeAttrSynthesisCheck(oriShapeAttrInfo_, paramInfo_, context_) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
     if (CheckInstructionLimits() != ge::GRAPH_SUCCESS) {

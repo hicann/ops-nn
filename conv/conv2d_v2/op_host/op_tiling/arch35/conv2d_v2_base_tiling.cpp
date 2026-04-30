@@ -368,7 +368,7 @@ ge::graphStatus Conv2dBaseTiling::GetShapeAttrsInfo()
     GetShapeInfo();
     GetAttrsInfo(); // include flagInfo update
     InitNumBlocksConstParas(convOpsConstParams_, descInfo_, shapeInfo_);
-    convBase_.ConvBaseInit(shapeInfo_, descInfo_, flagInfo_, context_);
+    convBase_.ConvBaseInit(shapeInfo_, descInfo_, flagInfo_, paramInfo_, context_);
     // hf32 judgement should after get dtype
     convBase_.GetConvParasHf32Mode(ATTR_ENABLE_HF32_INDEX, attrInfo_.hf32Mode);
     if (GetFeatureFlag() != ge::GRAPH_SUCCESS) {

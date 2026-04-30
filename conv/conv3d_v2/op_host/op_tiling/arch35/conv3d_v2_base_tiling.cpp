@@ -181,7 +181,7 @@ ge::graphStatus Conv3dBaseTilingV2::GetShapeAttrsInfo()
         return ge::GRAPH_FAILED;
     }
     optiling::conv_ops_tiling::InitNumBlocksConstParas(convOpsConstParams_, descInfo_, shapeInfo_);
-    convBase_.ConvBaseInit(shapeInfo_, descInfo_, flagInfo_, context_);
+    convBase_.ConvBaseInit(shapeInfo_, descInfo_, flagInfo_, paramInfo_, context_);
     // hf32 judgement should after get dtype
     convBase_.GetConvParasHf32Mode(ATTR_ENABLE_HF32_INDEX, attrInfo_.hf32Mode);
 

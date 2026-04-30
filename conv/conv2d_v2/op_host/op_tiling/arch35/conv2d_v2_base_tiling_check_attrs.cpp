@@ -26,6 +26,9 @@ ge::graphStatus Conv2dBaseTiling::CheckStrideLegal()
     if (stridePtr->GetSize() != CONV2D_DIM_SIZE_LIMIT) {
         OP_LOGE(context_->GetNodeName(), "%s AscendC: input attr stride dim: %zu != %u.",
             paramInfo_.nodeType.c_str(), stridePtr->GetSize(), CONV2D_DIM_SIZE_LIMIT);
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeType(), "strides",
+            std::to_string(stridePtr->GetSize()).c_str(),
+            std::to_string(CONV2D_DIM_SIZE_LIMIT).c_str());
         return ge::GRAPH_FAILED;
     }
     oriShapeAttrInfo_.oriStrideN = stridePtr->GetData()[conv2dOriginFormatAixsPosInfo_.nIndex];
@@ -38,11 +41,20 @@ ge::graphStatus Conv2dBaseTiling::CheckStrideLegal()
         OP_LOGE(context_->GetNodeName(),
             "%s AscendC: stride (H: %ld, W: %ld) is out of range[1, %lu].",
             paramInfo_.nodeType.c_str(), oriShapeAttrInfo_.oriStrideH, oriShapeAttrInfo_.oriStrideW, MAX_ATTRS_SHAPE);
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeType(), "strides",
+            VectorToString(GetAttrShapeVec(context_, attrStrideIndex), IntToString<int64_t>).c_str(),
+            FormatString("Shape[%zu] and shape[%zu] of this parameter must be within the range [%ld, %ld]",
+                conv2dOriginFormatAixsPosInfo_.hIndex,
+                conv2dOriginFormatAixsPosInfo_.wIndex,
+                1, MAX_ATTRS_SHAPE).c_str());
         return ge::GRAPH_FAILED;
     }
     if (oriShapeAttrInfo_.oriStrideN != 1 || oriShapeAttrInfo_.oriStrideC != 1) {
         OP_LOGE(context_->GetNodeName(), "%s AscendC: stride (N: %ld, C: %ld) should be 1.",
                 paramInfo_.nodeType.c_str(), oriShapeAttrInfo_.oriStrideN, oriShapeAttrInfo_.oriStrideC);
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeType(), "strides",
+            VectorToString(GetAttrShapeVec(context_, attrStrideIndex), IntToString<int64_t>).c_str(),
+            FormatString("Shape[%zu] and shape[%zu] of this parameter must be equal to %ld", 0, 1, 1).c_str());
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -59,6 +71,9 @@ ge::graphStatus Conv2dBaseTiling::CheckDilationLegal()
     if (dilationPtr->GetSize() != CONV2D_DIM_SIZE_LIMIT) {
         OP_LOGE(context_->GetNodeName(), "%s AscendC: input attr dilation dim: %zu != %u.",
                 paramInfo_.nodeType.c_str(), dilationPtr->GetSize(), CONV2D_DIM_SIZE_LIMIT);
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeType(), "dilations",
+            std::to_string(dilationPtr->GetSize()).c_str(),
+            std::to_string(CONV2D_DIM_SIZE_LIMIT).c_str());
         return ge::GRAPH_FAILED;
     }
     oriShapeAttrInfo_.oriDilationN = dilationPtr->GetData()[conv2dOriginFormatAixsPosInfo_.nIndex];
@@ -72,11 +87,20 @@ ge::graphStatus Conv2dBaseTiling::CheckDilationLegal()
                 "%s AscendC: dilation (H: %ld, W: %ld) is out of range[1, %lu].",
                 paramInfo_.nodeType.c_str(), oriShapeAttrInfo_.oriDilationH,
                 oriShapeAttrInfo_.oriDilationW, MAX_ATTRS_SHAPE);
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeType(), "dilations",
+            VectorToString(GetAttrShapeVec(context_, attrDilationIndex), IntToString<int64_t>).c_str(),
+            FormatString("Shape[%zu] and shape[%zu] of this parameter must be within the range [%ld, %ld]",
+                conv2dOriginFormatAixsPosInfo_.hIndex,
+                conv2dOriginFormatAixsPosInfo_.wIndex,
+                1, MAX_ATTRS_SHAPE).c_str());
         return ge::GRAPH_FAILED;
     }
     if (oriShapeAttrInfo_.oriDilationN != 1 || oriShapeAttrInfo_.oriDilationC != 1) {
         OP_LOGE(context_->GetNodeName(), "%s AscendC: dilation (N: %ld, C: %ld) should be 1.",
                 paramInfo_.nodeType.c_str(), oriShapeAttrInfo_.oriDilationN, oriShapeAttrInfo_.oriDilationC);
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeType(), "dilations",
+            VectorToString(GetAttrShapeVec(context_, attrDilationIndex), IntToString<int64_t>).c_str(),
+            FormatString("Shape[%zu] and shape[%zu] of this parameter must be equal to %ld", 0, 1, 1).c_str());
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -91,6 +115,9 @@ ge::graphStatus Conv2dBaseTiling::CheckPadLegal()
     if (padPtr->GetSize() != CONV2D_DIM_SIZE_LIMIT) {
         OP_LOGE(context_->GetNodeName(), "%s AscendC: input attr pad dim: %zu != %u.", paramInfo_.nodeType.c_str(),
                 padPtr->GetSize(), CONV2D_DIM_SIZE_LIMIT);
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeType(), "pads",
+            std::to_string(padPtr->GetSize()).c_str(),
+            std::to_string(CONV2D_DIM_SIZE_LIMIT).c_str());
         return ge::GRAPH_FAILED;
     }
     oriShapeAttrInfo_.oriPadTop = padPtr->GetData()[PAD_TOP_INDEX];
@@ -112,6 +139,10 @@ ge::graphStatus Conv2dBaseTiling::CheckPadLegal()
                 paramInfo_.nodeType.c_str(), oriShapeAttrInfo_.oriPadTop, oriShapeAttrInfo_.oriPadBottom,
                 oriShapeAttrInfo_.oriPadLeft, oriShapeAttrInfo_.oriPadRight,
                 MAX_ATTRS_SHAPE);
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeType(), "pads",
+            VectorToString(GetAttrShapeVec(context_, attrPadIndex), IntToString<int64_t>).c_str(),
+            FormatString("All dimensions of the shape of this parameter must be within the range [%lu, %lu]",
+                0, MAX_ATTRS_SHAPE).c_str());
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -134,6 +165,11 @@ ge::graphStatus Conv2dBaseTiling::CheckRoundModeLegal()
             OP_LOGE(context_->GetNodeName(),
                 "%s AscendC: when outputType is int8 or float8_e4m3fn, round_mode only support rint, actually is %s",
                 paramInfo_.nodeType.c_str(), roundMode.c_str());
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeType(), "round_mode",
+                roundMode.c_str(),
+                FormatString("If the dtype of output y is int8 or float8_e4m3fn, parameter %s must be %s",
+                    "round_mode", "rint").c_str()
+            );
             return ge::GRAPH_FAILED;
         }
     } else if (outputDesc->GetDataType() == ge::DataType::DT_HIFLOAT8) {
@@ -141,6 +177,11 @@ ge::graphStatus Conv2dBaseTiling::CheckRoundModeLegal()
             OP_LOGE(context_->GetNodeName(),
                 "%s AscendC: when outputType is hifloat8, round_mode only support round, actually is %s",
                 paramInfo_.nodeType.c_str(), roundMode.c_str());
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeType(), "round_mode",
+                roundMode.c_str(),
+                FormatString("If the dtype of output y is hifloat8, parameter %s must be %s",
+                    "round_mode", "round").c_str()
+            );
             return ge::GRAPH_FAILED;
         }
     } else {
@@ -184,8 +225,9 @@ bool Conv2dBaseTiling::UpdateOriPadFromPadMode()
     auto iter = find(PADMODE_WHITELIST.begin(), PADMODE_WHITELIST.end(), padMode);
     if (iter == PADMODE_WHITELIST.end()) {
         std::stringstream ss;
-        ss << paramInfo_.nodeType.c_str() <<" AscendC: Only support pad_mode in [VALID, SPECIFIC, SAME, SAME_UPPER, "
-           << "SAME_LOWER], actually is: " << padMode.c_str();
+        string padModeSupport = "[VALID, SPECIFIC, SAME, SAME_UPPER, SAME_LOWER]";
+        ss << paramInfo_.nodeType.c_str() <<" AscendC: Only support pad_mode in " << padModeSupport.c_str();
+        ss << ", actually is: " << padMode.c_str();
         OP_LOGE(context_->GetNodeName(), "%s", ss.str().c_str());
         return false;
     }
@@ -217,14 +259,24 @@ ge::graphStatus Conv2dBaseTiling::CheckGroupsLegal()
     oriShapeAttrInfo_.oriGroups = *groupsPtr;
 
     if (oriShapeAttrInfo_.oriGroups < 1 || static_cast<uint64_t>(oriShapeAttrInfo_.oriGroups) > MAX_GROUP_SHAPE) {
-        OP_LOGE(context_->GetNodeName(), "%s AscendC: groups(%ld) from attr are out of range[1, %lu].",
+        OP_LOGE(context_->GetNodeName(), "%s AscendC: atts groups(%ld) are out of range[1, %lu].",
             paramInfo_.nodeType.c_str(), oriShapeAttrInfo_.oriGroups, MAX_GROUP_SHAPE);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeType(), "groups",
+            std::to_string(oriShapeAttrInfo_.oriGroups).c_str(), FormatString(
+                "The current value is not within the valid range. The valid range is [%lu, %lu]",
+                1, MAX_GROUP_SHAPE).c_str()
+        );
         return ge::GRAPH_FAILED;
     }
 
     if (oriShapeAttrInfo_.oriGroups > 1 && flagInfo_.disContinuousFlag) {
         OP_LOGE(context_->GetNodeName(), "%s AscendC: GroupConv2d not support disContinuous input.",
                 paramInfo_.nodeType.c_str());
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeType(), "groups",
+            std::to_string(oriShapeAttrInfo_.oriGroups).c_str(),
+            FormatString("If input x is a non-contiguous tensor, parameter %s must be %d",
+                "groups", 1).c_str()
+        );
         return ge::GRAPH_FAILED;
     }
 
@@ -257,12 +309,22 @@ ge::graphStatus Conv2dBaseTiling::CheckOffsetXLegal()
         OP_LOGE(context_->GetNodeName(),
             "%s AscendC: Only support offset_x = 0 in hif8 or fp8 mode, actually is %ld",
                 paramInfo_.nodeType.c_str(), oriShapeAttrInfo_.oriOffsetX);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeType(), "offset_x",
+            std::to_string(oriShapeAttrInfo_.oriOffsetX).c_str(), FormatString(
+                "If the dtype of input x is hifloat8 or float8_e4m3fn, parameter %s must be %ld",
+                "offset_x", 0).c_str()
+        );
         return ge::GRAPH_FAILED;
     }
     if (oriShapeAttrInfo_.oriOffsetX > OFFSET_X_MAX_VALUE || oriShapeAttrInfo_.oriOffsetX < OFFSET_X_MIN_VALUE) {
         OP_LOGE(context_->GetNodeName(),
             "%s AscendC: Only support offset_x in ([%d, %d]), actually is %ld",
                 paramInfo_.nodeType.c_str(), OFFSET_X_MIN_VALUE, OFFSET_X_MAX_VALUE, oriShapeAttrInfo_.oriOffsetX);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeType(), "offset_x",
+            std::to_string(oriShapeAttrInfo_.oriOffsetX).c_str(), FormatString(
+                "The current value is not within the valid range. The valid range is [%lu, %lu]",
+                OFFSET_X_MIN_VALUE, OFFSET_X_MAX_VALUE).c_str()
+        );
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -285,6 +347,11 @@ ge::graphStatus Conv2dBaseTiling::CheckExtendReluLegal()
             OP_LOGE(context_->GetNodeName(),
                     "%s AscendC: When dualoutput is false, the second related input and attr is not allowed.",
                     context_->GetNodeType());
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeType(), "dual_output",
+                "false",
+                FormatString("When this parameter is %s, parameters %s and attributes %s cannot be passed",
+                    "false", "scale1", "enable_relu1").c_str()
+            );
             return ge::GRAPH_FAILED;
         }
     }
@@ -325,11 +392,17 @@ ge::graphStatus Conv2dBaseTiling::CheckEnableHf32Legal()
         IsFp32InputFp32OutputFlag = descInfo_.biasDtype == ge::DataType::DT_FLOAT;
     }
     bool enbaleHf32 = *enableHf32Ptr;
-    OP_TILING_CHECK(enbaleHf32 && !IsFp32InputFp32OutputFlag,
-                    OP_LOGE(context_->GetNodeName(),
-                            "%s AscendC: enable_hf32 can be true only when both input and output are FP32",
-                            paramInfo_.nodeType.c_str()),
-                    return ge::GRAPH_FAILED);
+    if (enbaleHf32 && !IsFp32InputFp32OutputFlag) {
+        OP_LOGE(context_->GetNodeName(),
+                "%s AscendC: enable_hf32 can be true only when both input and output are FP32",
+                paramInfo_.nodeType.c_str());
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeType(), "enable_hf32",
+            "true",
+            FormatString("When this parameter is %s, the dtypes of parameters %s must be %s",
+                "true", "x, filter, y", "float32").c_str()
+        );
+        return ge::GRAPH_FAILED;
+    }
     attrInfo_.hf32Mode = static_cast<uint32_t>(enbaleHf32 ? 1 : 0);
     return ge::GRAPH_SUCCESS;
 }
@@ -440,7 +513,8 @@ ge::graphStatus Conv2dBaseTiling::CheckExtendDtypeLegal()
         auto iter = std::find(EXTENDCONV2D_SUPPORTED_ATTR_DTYPE.begin(), EXTENDCONV2D_SUPPORTED_ATTR_DTYPE.end(),
             extendDtype);
         if (iter == EXTENDCONV2D_SUPPORTED_ATTR_DTYPE.end()) {
-            std::string supportList = "[default, float, float16, int8, bfloat16, hifloat8, float8_e4m3fn].";
+            std::string supportList =
+                "[default(-1), float(0), float16(1), int8(2), bfloat16(27), hifloat8(34), float8_e4m3fn(36)].";
             OP_LOGE(context_->GetNodeName(),
                 "%s AscendC: unSupported %s: %ld, only support %s.",
                 paramInfo_.nodeType.c_str(), dtypeNames[i], extendDtype, supportList.c_str());

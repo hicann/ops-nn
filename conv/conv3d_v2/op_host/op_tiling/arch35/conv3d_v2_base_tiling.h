@@ -106,7 +106,9 @@ private:
     ge::graphStatus GetPlatformInfoInner();
     ge::graphStatus ApiTilingGetPlatformInfo();
     ge::graphStatus ParseStrideLegal();
+    ge::graphStatus CheckOriAttrShape();
     ge::graphStatus ParseDilationLegal();
+    ge::graphStatus CheckOriDilationShape();
     ge::graphStatus ParsePadLegal();
     ge::graphStatus ParseFmapShape();
     ge::graphStatus CheckFmapShape();
@@ -118,6 +120,10 @@ private:
     ge::graphStatus CheckInputDesc();
     ge::graphStatus CheckParamsDtype();
     ge::graphStatus CheckLoad3DLimits();
+    ge::graphStatus CheckLoad3DStride();
+    ge::graphStatus CheckLoad3DDialtion();
+    ge::graphStatus CheckLoad3DPad();
+    ge::graphStatus CheckLoad3DWeight();
     ge::graphStatus CheckDataCopyLimits();
     ge::graphStatus CheckFixPipeLimits();
     ge::graphStatus CheckInstructionLimits();
@@ -125,6 +131,7 @@ private:
     ge::graphStatus GetConv3dApiTiling();
     ge::graphStatus CheckL1SizeLimits();
     ge::graphStatus CheckQuantScaleDesc();
+    ge::graphStatus CheckQuantScaleDtype();
     bool GetPosByFormat(const ge::Format format, const std::string &pos, const std::string &inputStr,
         size_t &posIdx) const;
     void GetDescInfo();
@@ -155,7 +162,6 @@ private:
     ge::graphStatus GetConv3DAxisPosInfo();
     ge::graphStatus ApplySamesPad(const string& padMode);
     ge::graphStatus PrepareTiling();
-    ge::graphStatus CheckBiasShape() const;
     void SetApiInputPlatformInfo();
     void SetUnionDataXt(shared_ptr<tuningtiling::Conv3DV2TunnerTiling> convRepoTiling);
     void PrintInputArgs(shared_ptr<tuningtiling::Conv3DV2InputArgs> conv3DInput);
