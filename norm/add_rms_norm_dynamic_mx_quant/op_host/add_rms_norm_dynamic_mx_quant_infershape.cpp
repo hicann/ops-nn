@@ -12,6 +12,7 @@
  * \file add_rms_norm_dynamic_mx_quant_infershape.cpp
  * \brief
  */
+#include <algorithm>
 #include "log/log.h"
 #include "util/shape_util.h"
 #include "register/op_impl_registry.h"

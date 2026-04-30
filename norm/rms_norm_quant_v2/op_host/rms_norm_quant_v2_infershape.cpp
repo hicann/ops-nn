@@ -12,6 +12,7 @@
  * \file rms_norm_quant_v2_infershape.cpp
  * \brief
  */
+#include <algorithm>
 #include "log/log.h"
 #include "register/op_impl_registry.h"
 
