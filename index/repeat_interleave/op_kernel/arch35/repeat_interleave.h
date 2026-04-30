@@ -71,6 +71,8 @@ private:
     int64_t copyToMatchOutNum_{0};
     int64_t copyToGmNum_{0};
     int64_t outStartOffset_{0};
+    int64_t curRepeatHeadPos_{0};
+    int64_t curRepeatTailPos_{0};
 };
 
 template <typename T, typename U>
@@ -102,16 +104,16 @@ __aicore__ inline void RepeatInterleaveImpl<T, U>::CopyInRepeats(int64_t repeatD
 
     /* repeats搬入地址起始位置 */
     int64_t offset = repeatDimIdx % tilingData_.mergedDims[1];
-    int64_t dataLen =
-        ((offset + tilingData_.ubFactor) > tilingData_.mergedDims[1] ? (tilingData_.mergedDims[1] - offset) :
-                                                                       tilingData_.ubFactor) *
-        sizeof(U);
+    int64_t dataLen = (offset + tilingData_.ubFactor) > tilingData_.mergedDims[1] ?
+        (tilingData_.mergedDims[1] - offset) : tilingData_.ubFactor;
 
-    DataCopyExtParams inParams = {1, static_cast<uint32_t>(dataLen), 0, 0, 0};
+    DataCopyExtParams inParams = {1, static_cast<uint32_t>(dataLen * sizeof(U)), 0, 0, 0};
     DataCopyPadExtParams<U> padParams = {false, 0, 0, 0};
     LocalTensor<U> repeatsLocal = repeatsQueue_.AllocTensor<U>();
     DataCopyPad(repeatsLocal, repeatsGm_[offset], inParams, padParams);
     repeatsQueue_.EnQue(repeatsLocal);
+    curRepeatHeadPos_ = offset;
+    curRepeatTailPos_ = offset + dataLen;
 }
 
 template <typename T, typename U>
@@ -123,7 +125,7 @@ __aicore__ inline void RepeatInterleaveImpl<T, U>::ComputeRepeatsOnCurDim(int64_
         return;
     }
     LocalTensor<U> repeatsLocal = repeatsQueue_.DeQue<U>();
-    uint32_t repeatOffset = repeatDimIdx % tilingData_.mergedDims[1] % tilingData_.ubFactor;
+    uint32_t repeatOffset = repeatDimIdx % tilingData_.mergedDims[1] - curRepeatHeadPos_;
     event_t eventIdMte2ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
     SetFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
     WaitFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
@@ -202,11 +204,13 @@ __aicore__ inline void RepeatInterleaveImpl<T, U>::CopyXToMatchOut(int64_t start
     LocalTensor<T> xOutLocal = xOutQueue_.AllocTensor<T>();
     xOutQueue_.EnQue(xOutLocal);
 
-    for (int64_t repeatDimIdx = 0; repeatDimIdx < cpCount; repeatDimIdx++) {
-        if (!isRepeatsScalar_ && (repeatDimIdx % tilingData_.mergedDims[2]) >= tilingData_.ubFactor) {
+    for (int64_t i = 0; i < cpCount; i++) {
+        int64_t repeatDimIdx = i + startCpIdx;
+        if (!isRepeatsScalar_ && ((repeatDimIdx % tilingData_.mergedDims[1]) >= curRepeatTailPos_ ||
+            (repeatDimIdx % tilingData_.mergedDims[1]) < curRepeatHeadPos_)) {
             CopyInRepeats(repeatDimIdx);
         }
-        ComputeRepeatsOnCurDim(startCpIdx + repeatDimIdx);
+        ComputeRepeatsOnCurDim(repeatDimIdx);
         int64_t loopSize = (curCoreRepeatsCountOnCurDim_ + cpCountInUbFactor_ - 1) / cpCountInUbFactor_;
         int64_t mainRepeatTimes = cpCountInUbFactor_;
         int64_t tailRepeatTimes = curCoreRepeatsCountOnCurDim_ - cpCountInUbFactor_ * (loopSize - 1);
@@ -222,7 +226,7 @@ __aicore__ inline void RepeatInterleaveImpl<T, U>::CopyXToMatchOut(int64_t start
         }
         CopyOneCpToRepeatOut(xInLocal, tailRepeatTimes);
         CopyMatchOutToY();
-        if (likely(repeatDimIdx < cpCount - 1)) {
+        if (likely(i < cpCount - 1)) {
             xOutLocal = xOutQueue_.AllocTensor<T>();
             xOutQueue_.EnQue(xOutLocal);
         }
@@ -345,7 +349,8 @@ __aicore__ inline void RepeatInterleaveImpl<T, U>::ProcessWholeCp()
     /* 先完成一次repeats搬运，当处理的repeatDim超过搬运的repeats大小时，再次搬运 */
     CopyInRepeats(0);
     for (int64_t repeatDimIdx = startCpIdx; repeatDimIdx < startCpIdx + curCoreCpCount; repeatDimIdx++) {
-        if (!isRepeatsScalar_ && (repeatDimIdx % tilingData_.mergedDims[2]) >= tilingData_.ubFactor) {
+        if (!isRepeatsScalar_ && ((repeatDimIdx % tilingData_.mergedDims[1]) >= curRepeatTailPos_ ||
+            (repeatDimIdx % tilingData_.mergedDims[1]) < curRepeatHeadPos_)) {
             CopyInRepeats(repeatDimIdx);
         }
         ComputeRepeatsOnCurDim(repeatDimIdx);
@@ -376,7 +381,8 @@ __aicore__ inline void RepeatInterleaveImpl<T, U>::ProcessSplitCp()
     /* 先完成一次repeats搬运，当处理的repeatDim超过搬运的repeats大小时，再次搬运 */
     CopyInRepeats(0);
     for (int64_t repeatDimIdx = startCpIdx; repeatDimIdx < startCpIdx + tilingData_.mergedDims[1]; repeatDimIdx++) {
-        if (!isRepeatsScalar_ && (repeatDimIdx % tilingData_.mergedDims[2]) >= tilingData_.ubFactor) {
+        if (!isRepeatsScalar_ && ((repeatDimIdx % tilingData_.mergedDims[1]) >= curRepeatTailPos_ ||
+            (repeatDimIdx % tilingData_.mergedDims[1]) < curRepeatHeadPos_)) {
             CopyInRepeats(repeatDimIdx);
         }
         ComputeRepeatsOnCurDim(repeatDimIdx);
