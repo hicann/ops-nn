@@ -226,7 +226,7 @@ public:
 
         self->ctx.currentNLoopRpSize =
             self->ctx.nBL1Iter == self->ctx.maxNBL1Iter && self->ctx.vecNIter == self->ctx.maxVecNIter ?
-            AlignB(self->ctx.singleCoreCo, BLOCK_L0_N) - self->ctx.singleCoreCo : 0;
+            AlignB(self->ctx.currentNBL1, BLOCK_L0_N) - self->ctx.currentNBL1 : 0;
     }
 
     __aicore__ inline void C04UB2L1IterInit(Intf *self)
