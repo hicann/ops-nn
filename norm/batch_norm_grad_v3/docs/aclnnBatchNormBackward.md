@@ -271,6 +271,7 @@ aclnnStatus aclnnBatchNormBackward(
     - 当`gradOut`为FLOAT16，`weight`、`runningMean`、`runningVar`、`saveMean`、`saveInvstd`必须为FLOAT16或FLOAT32。
     - 当`gradOut`为BFLOAT16，`weight`、`runningMean`、`runningVar`、`saveMean`、`saveInvstd`必须为BFLOAT16或FLOAT32。
     - 当`weight`为FLOAT32，`gradWeight`必须为FLOAT32；当`weight`为FLOAT16，`gradWeight`必须为FLOAT16或FLOAT32；当`weight`为BFLOAT16，`gradWeight`必须为BFLOAT16或FLOAT32。
+    - `gradWeight`、`gradBias`的数据类型需要保持一致。
     - `runningVar`数据类型需要与`runningMean`的数据类型一致。
     - `saveInvstd`数据类型需要与`saveMean`的数据类型一致。
 
