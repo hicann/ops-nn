@@ -107,15 +107,26 @@ __aicore__ inline void ClearBaseMNL0C(Intf *self, LocalTensor<typename Intf::L0c
     LocalTensor<typename Intf::SrcT> l0a = self->ctx.l0aBuf_.template Get<typename Intf::SrcT>();
     LocalTensor<typename Intf::SrcT> l0b = self->ctx.l0bBuf_.template Get<typename Intf::SrcT>();
 
+    constexpr uint32_t l0aPingPongAddr = TOTAL_L0A_SIZE / 2 / sizeof(typename Intf::SrcT);
+    constexpr uint32_t l0bPingPongAddr = TOTAL_L0B_SIZE / 2 / sizeof(typename Intf::SrcT);
+
+    if (self->ctx.l0aPingPongFlag_) {
+        l0a = l0a[l0aPingPongAddr];
+        l0b = l0b[l0bPingPongAddr];
+    }
+    
     LocalTensor<typename Intf::SrcT> useB1Buf = self->ctx.b1Ping_.template AllocTensor<typename Intf::SrcT>();
     InitZeroValue(self, useB1Buf);
     self->ctx.b1Ping_.EnQue(useB1Buf);
+
     LocalTensor<typename Intf::SrcT> useA1Buf = self->ctx.a1Ping_.template AllocTensor<typename Intf::SrcT>();
     InitZeroValue(self, useA1Buf);
     self->ctx.a1Ping_.EnQue(useA1Buf);
 
     self->ctx.cacheB1BufPing_ = self->ctx.b1Ping_.template DeQue<typename Intf::SrcT>();
     self->ctx.cacheA1BufPing_ = self->ctx.a1Ping_.template DeQue<typename Intf::SrcT>();
+
+    WaitFlag<HardEvent::M_MTE1>(self->ctx.l0aPingPongFlag_);
 
     using LoadData3DParamsV2SrcT = LoadData3DParamsV2<typename Intf::SrcT>;
     LoadData3DParamsV2SrcT load3d_;
@@ -163,17 +174,16 @@ __aicore__ inline void ClearBaseMNL0C(Intf *self, LocalTensor<typename Intf::L0c
     mmad_.k = 16;
     mmad_.cmatrixInitVal = true;
 
-    TEventID eventId = GetTPipePtr()->FetchEventID<HardEvent::MTE1_M>();
-    SetFlag<HardEvent::MTE1_M>(eventId);
-    WaitFlag<HardEvent::MTE1_M>(eventId);
+    SetFlag<HardEvent::MTE1_M>(self->ctx.l0aPingPongFlag_);
+    WaitFlag<HardEvent::MTE1_M>(self->ctx.l0aPingPongFlag_);
+
     Mmad(l0c[0], l0a[0], l0b[0], mmad_);
     if (mmad_.m * mmad_.n <2560) {
         PipeBarrier<PIPE_M>();
     }
-    //添加MTE1到M的同步,防止清零后MTE1操作和当前MMAD冲突
-    eventId = GetTPipePtr()->FetchEventID<HardEvent::M_MTE1>();
-    SetFlag<HardEvent::M_MTE1>(eventId);
-    WaitFlag<HardEvent::M_MTE1>(eventId);
+
+    SetFlag<HardEvent::M_MTE1>(self->ctx.l0aPingPongFlag_);
+    self->ctx.l0aPingPongFlag_ ^= self->ctx.useL0PingPong_;
 }
 
 template <class Intf>
