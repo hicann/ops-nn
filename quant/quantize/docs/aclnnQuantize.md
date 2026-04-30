@@ -103,7 +103,7 @@ aclnnStatus aclnnQuantize(
       <td>√</td>
     </tr>
     <tr>
-      <td>dstType（aclDataType）</td>
+      <td>dtype（aclDataType）</td>
       <td>输入</td>
       <td>指定输出的数据类型。</td>
       <td>支持配置为ACL_INT8、ACL_UINT8、ACL_INT32、ACL_HIFLOAT8、ACL_FLOAT8_E4M3FN、ACL_FLOAT8_E5M2。</td>
@@ -126,7 +126,7 @@ aclnnStatus aclnnQuantize(
       <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>表示量化输出Tensor。对应公式中的`out`。</td>
-      <td><ul><li>支持空Tensor。</li><li>其shape需要与`x`一致，数据类型由入参`dstType`指定。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>其shape需要与`x`一致，数据类型由入参`dtype`指定。</li></ul></td>
       <td>INT8、UINT8、INT32、HIFLOAT8、FLOAT8_E4M3FN、FLOAT8_E5M2</td>
       <td>ND</td>
       <td>1-8</td>
@@ -160,13 +160,13 @@ aclnnStatus aclnnQuantize(
       - 入参`x`、`scales`不支持BFLOAT16、FLOAT32。
       - 入参`zeroPoints`不支持FLOAT32。且当数据类型为BFLOAT16时，`x`、`scales`数据类型均为BFLOAT16。
       - 出参`out`仅支持INT8、UINT8、INT32。
-    - 入参`dstType`仅支持取值ACL_INT8、ACL_UINT8、ACL_INT32。
+    - 入参`dtype`仅支持取值ACL_INT8、ACL_UINT8、ACL_INT32。
 
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - 数据类型：
       - 入参`zeroPoints`不支持FLOAT32。且当数据类型为BFLOAT16时，`x`、`scales`数据类型均为BFLOAT16。
       - 出参`out`仅支持INT8、UINT8、INT32。
-    - 入参`dstType`仅支持取值ACL_INT8、ACL_UINT8、ACL_INT32。
+    - 入参`dtype`仅支持取值ACL_INT8、ACL_UINT8、ACL_INT32。
   
 - **返回值**
 
@@ -201,7 +201,7 @@ aclnnStatus aclnnQuantize(
       <td>输入axis指定的轴超出输入x的维度数。</td>
     </tr>
     <tr>
-      <td>dstType不在有效取值范围。</td>
+      <td>dtype不在有效取值范围。</td>
     </tr>
     <tr>
       <td>输入scales和zeroPoints的size不相等。</td>
@@ -210,7 +210,7 @@ aclnnStatus aclnnQuantize(
       <td>输入scales和zeroPoints的size不为1时，与输入axis指定轴的size不相等。</td>
     </tr>
     <tr>
-      <td>输入out的数据类型与输入dstTyped的取值不一致。</td>
+      <td>输入out的数据类型与输入dtype的取值不一致。</td>
     </tr>
   </tbody></table>
 

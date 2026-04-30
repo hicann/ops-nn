@@ -146,7 +146,7 @@
     <tr>
       <td>dst_type_max</td>
       <td>可选属性</td>
-      <td><ul><li>指定量化输出的范围，仅在Hifloat8场景生效。支持0，15，56，224，32768。</li><li>默认值为0。</li></ul></td>
+      <td><ul><li>指定量化输出的范围，仅在Hifloat8场景生效。支持取值0~32768。</li><li>默认值为0。</li></ul></td>
       <td>FLOAT</td>
       <td>-</td>
     </tr>

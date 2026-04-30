@@ -180,7 +180,7 @@ aclnnStatus aclnnDynamicQuantV4(
       <td>dstTypeMax（float） </td>
       <td>输入</td>
       <td>用于设置量化结果的范围。</td>
-      <td><ul>当前支持0，15，56，224，32768。仅在dstType为34（hifloat8）场景下生效。</ul></td>
+      <td><ul>当前支持取值0 ~ 32768。仅在dstType为34（hifloat8）场景下生效。</ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>

@@ -74,8 +74,6 @@ constexpr uint32_t PER_CHANNEL_N_BASE_SIZE = 64;
 constexpr float HIFLOAT8_MAX_VALUE = 32768.0;
 constexpr float FLT_EPSILON = 1e-6f;
 
-std::vector<float> dstTypeMaxSupportList = {0.0, 15.0, 56.0, 224.0, 32768.0};
-
 template <uint32_t base, typename T = uint32_t>
 auto AlignUp(T a) -> T
 {
@@ -351,11 +349,11 @@ ge::graphStatus DynamicQuantRegbaseTiling::CheckAttrs(gert::TilingContext* conte
         const float* dstTypeMaxAttr = attrs->GetAttrPointer<float>(DST_TYPE_MAX_ATTR_INDEX);
         dstTypeMax = (dstTypeMaxAttr != nullptr) ? *dstTypeMaxAttr : 0.0f;
 
-        if (std::find(dstTypeMaxSupportList.begin(), dstTypeMaxSupportList.end(), dstTypeMax) \
-                == dstTypeMaxSupportList.end()) {
-            OP_LOGE(context, "dstTypeMax must in (0, 15, 56, 224, 32768).");
+        if (dstTypeMax > HIFLOAT8_MAX_VALUE || dstTypeMax < 0) {
+            OP_LOGE(context, "dstTypeMax must in range [0, 32768].");
             return ge::GRAPH_FAILED;
         }
+
         if (std::fabs(dstTypeMax) < FLT_EPSILON) {
             dstTypeMax = HIFLOAT8_MAX_VALUE;
         }

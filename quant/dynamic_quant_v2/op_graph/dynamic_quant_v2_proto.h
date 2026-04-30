@@ -42,7 +42,7 @@ namespace ge {
  * @li quant_mode: An optional attribute of type string. Specifies the mode of quantization.
  * Support "pertoken", "pertensor", "perchannel". Defaults to "pertoken".
  * @li dst_type_max: An optional attribute of type float. Specifies the range of quantized output.
- * Only effective when dst_type is 34(hifloat8), supporting values 0, 15, 56, 224, 32768.
+ * Only effective when dst_type is 34(hifloat8), supporting values range 0 ~ 32768.
  * Defaults to 0. \n
  * @par Outputs:
  * @li y: A tensor. Quantized output tensor, Shape is same as input x. If y dtype is int4, x last dim must be divisible

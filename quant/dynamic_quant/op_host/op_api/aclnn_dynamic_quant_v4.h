@@ -41,7 +41,7 @@ extern "C" {
  * @param [in]
  * quantMode：用于指定量化的模式，Host侧的char*。当前支持"pertoken"，"pertensor"和"perchannel"。当quantMode取"pertensor"、"perchannel"时，groupIndexOptional必须是nullptr。
  * @param [in]
- * dstTypeMax：用于指定量化输出的最大值，当前支持0，15，56，224，32768。仅在输出y是hifloat8的场景生效。
+ * dstTypeMax：用于指定量化输出的最大值，当前支持0 ~ 32768。仅在输出y是hifloat8的场景生效。
  * @param [in] yOut: npu
  * 量化后的输出Tensor，shape和x保持一致，类型由dstType指定。支持非连续的Tensor，数据格式支持ND。
  * @param [in] scaleOut: npu
