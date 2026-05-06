@@ -160,7 +160,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
               <li>在transposeX1为true情况下各个维度表示：(batch, k, m)，batch可不存在。</li>
           </ul>
         </td>
-        <td>INT4<sup>1、3</sup>、INT8、FLOAT8_E4M3FN<sup>1、2</sup>、FLOAT4_E2M1<sup>1、2</sup></td>
+        <td>INT4<sup>1、3</sup>、INT8、HIFLOAT8<sup>1、2</sup>、FLOAT8_E4M3FN<sup>1、2</sup>、FLOAT4_E2M1<sup>1、2</sup></td>
         <td>ND</td>
         <td>2-6</td>
         <td>✓</td>
@@ -176,10 +176,10 @@ aclnnStatus aclnnQuantMatmulWeightNz(
               <li>x1 shape中的k和x2 shape中的k1需要满足ceil(k / k0) = k1，<br>x2 shape中的n1与out的n需要满足ceil(n / n0) = n1。</li>
           </ul>
         </td>
-        <td>INT4<sup>1、3</sup>、INT8、INT32<sup>1、3</sup>、FLOAT4_E2M1<sup>1、2</sup>、FLOAT32<sup>1、2</sup>、FLOAT8_E4M3FN<sup>1、2</sup></td>
+        <td>INT4<sup>1、3</sup>、INT8、INT32<sup>1、3</sup>、HIFLOAT8<sup>1、2</sup>、FLOAT4_E2M1<sup>1、2</sup>、FLOAT32<sup>1、2</sup>、FLOAT8_E4M3FN<sup>1、2</sup></td>
         <td>NZ</td>
         <td>4-8</td>
-        <td>-</td>
+        <td>✓</td>
     </tr>
     <tr>
         <td>x1Scale</td>
@@ -204,6 +204,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
           <ul>     
               <li>x2Scale是FLOAT8_E8M0时，x2Scale为3维，各个维度表示：transposeX2为false时为(ceil(k / 64), n, 2)，transposeX2为true时为(n, ceil(k / 64), 2)。</li>
               <li>x2Scale是其他 dtype 时，shape是1维(t, )，t = 1或n，其中n与x2的n一致。</li>
+              <li>当x1、x2的数据类型为HIFLOAT8且x2为NZ格式时，x2Scale仅支持UINT64、INT64。</li>
               <li>当原始输入类型不满足<a href="#约束说明">约束说明</a>中组合时，需提前调用TransQuantParamV2算子的aclnn接口来将scale转成INT64、UINT64数据类型。</li>
           </ul>
         </td>
@@ -531,6 +532,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
       | INT8            | INT8        | null        | UINT64/ INT64     | null/FLOAT32 | null   | null/INT32                 |   INT8                  |
       | INT8            | INT8        | null        | FLOAT32/BFLOAT16  | null         | null   | null/INT32/FLOAT32/BFLOAT16|   BFLOAT16              |
       | INT8            | INT8        | null        | FLOAT32/BFLOAT16  | null         | null   | null/INT32                 |   INT32                 |
+      | HIFLOAT8        | HIFLOAT8    | null        | UINT64/INT64      | null         | null   | null/FLOAT32               |   FLOAT16/BFLOAT16/FLOAT32 |
 
     - T-T量化场景下，x1Scale的shape为nullptr，x2Scale的shape为(1,)。
     - T-C量化场景下，x1Scale的shape为nullptr，x2Scale的shape为(n,)，其中n与x2的n一致。

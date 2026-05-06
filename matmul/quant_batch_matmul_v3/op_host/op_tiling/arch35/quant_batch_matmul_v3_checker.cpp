@@ -43,6 +43,11 @@ inline constexpr bool IsFp8E4M3Pair(ge::DataType aDtype, ge::DataType bDtype)
     return aDtype == ge::DT_FLOAT8_E4M3FN && bDtype == ge::DT_FLOAT8_E4M3FN;
 }
 
+inline constexpr bool IsHifloat8Pair(ge::DataType aDtype, ge::DataType bDtype)
+{
+    return aDtype == ge::DT_HIFLOAT8 && bDtype == ge::DT_HIFLOAT8;
+}
+
 inline constexpr bool IsFp4Pair(ge::DataType aDtype, ge::DataType bDtype)
 {
     return aDtype == ge::DT_FLOAT4_E2M1 && bDtype == ge::DT_FLOAT4_E2M1;
@@ -365,13 +370,16 @@ bool QuantBatchMatmulV3Checker::CheckDtypesInRange() const
 
 bool QuantBatchMatmulV3Checker::CheckDtype4WeightNz() const
 {
+    bool isInt8Pair = inputParams_.aDtype == ge::DT_INT8 && inputParams_.bDtype == ge::DT_INT8;
+    bool isHifloat8Pair = IsHifloat8Pair(inputParams_.aDtype, inputParams_.bDtype);
+    bool isHifloat8Scale = inputParams_.scaleDtype == ge::DT_UINT64 || inputParams_.scaleDtype == ge::DT_INT64;
     bool isFp8E4M3Pair = IsFp8E4M3Pair(inputParams_.aDtype, inputParams_.bDtype);
     bool isFp4Pair = IsFp4Pair(inputParams_.aDtype, inputParams_.bDtype);
     OP_TILING_CHECK(
-        !(inputParams_.aDtype == ge::DT_INT8 || isFp4Pair || isFp8E4M3Pair),
+        !(isInt8Pair || isHifloat8Pair || isFp4Pair || isFp8E4M3Pair),
         CUBE_INNER_ERR_REPORT(
             inputParams_.opName,
-            "When format of x2 is FRACTAL_NZ, input dtype must be INT8/FLOAT8_E4M3FN/FLOAT4_E2M1, \
+            "When format of x2 is FRACTAL_NZ, input dtype must be INT8/HIFLOAT8/FLOAT8_E4M3FN/FLOAT4_E2M1, \
 actual x1 is %s, x2 is %s.",
             ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype).c_str(),
             ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str()),
@@ -384,6 +392,13 @@ actual x1 is %s, x2 is %s.",
 and pertokenScale are FLOAT8_E8M0, actual scale is %s, pertokenScale is %s.",
                               ge::TypeUtils::DataTypeToSerialString(inputParams_.scaleDtype).c_str(),
                               ge::TypeUtils::DataTypeToSerialString(inputParams_.perTokenScaleDtype).c_str()),
+        return false);
+    OP_TILING_CHECK(
+        isHifloat8Pair && !isHifloat8Scale,
+        CUBE_INNER_ERR_REPORT(
+            inputParams_.opName,
+            "When format of x2 is FRACTAL_NZ and input dtype is HIFLOAT8, scale must be UINT64/INT64, actual scale is %s.",
+            ge::TypeUtils::DataTypeToSerialString(inputParams_.scaleDtype).c_str()),
         return false);
     return true;
 }

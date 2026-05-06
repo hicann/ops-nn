@@ -32,8 +32,8 @@ namespace ge {
           (batch,x1_k1,x1_m1,x1_m0,x1_k0), where batch is optional, x1_m0 = 16, and x1_k0 = 32. \n
           When the data type is int4, float4_e2m1, the last dim must be even. \n
 * @li x2: A matrix tensor. Must be one of the following types: int8, int4, hifloat8, float8_e5m2, float8_e4m3fn, float4_e2m1. \n
-          when the data type is int8, float8_e4m3fn, float4_e2m1, the format supports ND and NZ formats. \n
-          when the data type is int4, hifloat8, float8_e5m2, the format only supports ND. \n
+          when the data type is int8, hifloat8, float8_e4m3fn, float4_e2m1, the format supports ND and NZ formats. \n
+          when the data type is int4, float8_e5m2, the format only supports ND. \n
           - In ND format and Non-int4 type, the shape ranges from 2D to 6D. When transpose_x2 is false, the shape is (batch,k,n), where
           batch is optional; In int4 type, shape only supports 2D. \n
           - In NZ (Ascend affinity) format, the shape ranges from 4D to 8D. \n
@@ -58,6 +58,8 @@ namespace ge {
                  with t equal to 1 or n, where n is the same as that of x2. \n
                - When the quant mode of x2 is perblock, the dimension of shape is same as x2, when x2 is (batch, k, n),
                  scale is (batch, ceil(k / 128), ceil(n / 128)), where 128 is group_size_k, group_size_n(refer to group_size). \n
+            - When x2 format is NZ and the data type of x1 and x2 is hifloat8,
+             scale must be uint64 or int64. \n
 * @li offset: An optional matrix tensor, quantization parameter. Must be one of the following types: float32.
               supports ND format. The shape is 1D (t,), with t equal to 1 or n, where n is the same as that of x2.
 * @li bias: An optional matrix tensor. Must be one of the following types: int32, bfloat16, float16, float32, supports ND format.
@@ -128,6 +130,7 @@ namespace ge {
 *      - when transpose_x2 is false, n must be greater than 2.
 *      - when transpose_x2 is true, n must be greater than 1.
 * @li Only weight supports ND and NZ format on Ascend 950 AI Processor. All other inputs and outputs only support ND format. 
+* @li When x2 is NZ format and input type of x1 and x2 is hifloat8, scale must be uint64/int64.
 * @li The following are the supported data type combinations by platform.
 
 * - Atlas Inference Series Product:

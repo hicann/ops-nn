@@ -1067,13 +1067,14 @@ bool QuantMatmulChecker::CheckFormatInt4() const
 bool QuantMatmulChecker::CheckDtype4WeightNz() const
 {
     if (!(x1_->GetDataType() == op::DataType::DT_INT8 ||
+          IsHif8Input(x1_, x2_) ||
           (x1_->GetDataType() == op::DataType::DT_FLOAT8_E4M3FN &&
            x2_->GetDataType() == op::DataType::DT_FLOAT8_E4M3FN) ||
           (x1_->GetDataType() == op::DataType::DT_FLOAT4_E2M1 && x2_->GetDataType() == op::DataType::DT_FLOAT4_E2M1))) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID,
-            "When format of x2 is FRACTAL_NZ, input dtype must be INT8/FLOAT8_E4M3FN/FLOAT4_E2M1FN, actual x1 is %s, "
-            "x2 is %s.",
+            "When format of x2 is FRACTAL_NZ, input dtype must be "
+            "INT8/HIFLOAT8/FLOAT8_E4M3FN/FLOAT4_E2M1, actual x1 is %s, x2 is %s.",
             op::ToString(x1_->GetDataType()).GetString(), op::ToString(x2_->GetDataType()).GetString());
         return false;
     }
@@ -1098,6 +1099,16 @@ bool QuantMatmulChecker::CheckDtype4WeightNz() const
             "When format of x2 is FRACTAL_NZ and input dtype is FLOAT4_E2M1, x1Scale and x2Scale are FLOAT8_E8M0, "
             "actual x1Scale is %s, x2Scale is %s.",
             op::ToString(x1Scale_->GetDataType()).GetString(), op::ToString(x2Scale_->GetDataType()).GetString());
+        return false;
+    }
+
+    if (IsHif8Input(x1_, x2_) &&
+        !(x2Scale_->GetDataType() == op::DataType::DT_UINT64 ||
+          x2Scale_->GetDataType() == op::DataType::DT_INT64)) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "When format of x2 is FRACTAL_NZ and input dtype is HIFLOAT8, x2Scale must be UINT64/INT64, "
+                "actual x2Scale is %s.",
+                op::ToString(x2Scale_->GetDataType()).GetString());
         return false;
     }
     return true;
