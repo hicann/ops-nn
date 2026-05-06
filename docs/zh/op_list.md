@@ -1213,7 +1213,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>对输入张量列表的每个张量进行x次方运算。</td>
+    <td>对输入张量列表x中的每个张量进行指数运算，底数为输入的标量scalar。</td>
   </tr>
   <tr>
     <td>foreach</td>
@@ -1223,7 +1223,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>对输入张量列表的每个张量进行n次方运算。</td>
+    <td>对输入张量列表x中的每个张量进行指数运算，指数为标量列表exponent中对应的标量。</td>
   </tr>
   <tr>
     <td>foreach</td>
