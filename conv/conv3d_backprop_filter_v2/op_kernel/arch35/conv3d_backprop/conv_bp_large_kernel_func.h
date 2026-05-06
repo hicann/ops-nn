@@ -148,10 +148,17 @@ __aicore__ inline void ClearBaseMNL0C(Intf *self, LocalTensor<typename Intf::L0c
     load3d_.dilationFilterW = 1;
     load3d_.dilationFilterH = 1;
 
+#if defined(ASC_DEVKIT_VERSION_NUM) && (ASC_DEVKIT_VERSION_NUM >= 90000000)
     LoadDataRepeatParamWithStride repeatParam = {0, 1, 0,
         static_cast<uint16_t>(ShiftCeilM0(self->ctx.tiling_->baseN, self->ctx.tiling_->n0))};
     SetLoadDataRepeatWithStride(repeatParam);
     LoadDataWithStride(l0b[0], self->ctx.cacheB1BufPing_, load3d_);
+#else
+    LoadDataRepeatParam repeatParam = {0, 1, 0,
+        static_cast<uint16_t>(ShiftCeilM0(self->ctx.tiling_->baseN, self->ctx.tiling_->n0))};
+    SetLoadDataRepeat(repeatParam);
+    LoadData(l0b[0], self->ctx.cacheB1BufPing_, load3d_);
+#endif
 
     LoadData2DParamsV2 load2dv2_;
     load2dv2_.mStartPosition = 0;
