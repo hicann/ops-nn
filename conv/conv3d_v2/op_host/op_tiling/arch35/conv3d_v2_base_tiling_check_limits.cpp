@@ -128,7 +128,7 @@ ge::graphStatus Conv3dBaseTilingV2::CheckLoad3DWeight()
 
 ge::graphStatus Conv3dBaseTilingV2::CheckLoad3DLimits()
 {
-    if (CheckLoad3DStride() == ge::GRAPH_FAILED || CheckLoad3DStride() == ge::GRAPH_FAILED ||
+    if (CheckLoad3DStride() == ge::GRAPH_FAILED || CheckLoad3DDialtion() == ge::GRAPH_FAILED ||
         CheckLoad3DPad() == ge::GRAPH_FAILED || CheckLoad3DWeight() == ge::GRAPH_FAILED) {
         return ge::GRAPH_FAILED;
     }
