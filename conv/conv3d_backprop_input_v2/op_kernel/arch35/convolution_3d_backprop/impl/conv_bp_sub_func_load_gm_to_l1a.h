@@ -407,8 +407,7 @@ __aicore__ inline void LoadToA1ForDn2Nz(Intf *self, LocalTensor<typename Intf::S
     hoOffset = curOriHoIdx * self->ctx.tiling_->wo;
     if constexpr (Intf::conv3dConfig.loadB1Condition == TPL_GM_TO_L1_NO_HK_WK) {
         woOffset += (self->ctx.curWoLeftIdx_ <= 0 ? 0 : DivCeil(self->ctx.curWoLeftIdx_, self->ctx.tiling_->strideW));
-    }
-    if (self->ctx.tiling_->backpropPadLeft < 0) {
+    } else if (self->ctx.tiling_->backpropPadLeft < 0) {
         woOffset += DivCeil(abs(self->ctx.tiling_->backpropPadLeft), self->ctx.tiling_->strideW);
     }
     uint64_t doOffset = static_cast<uint64_t>(curDoutIdx) * self->ctx.hoWo_;
@@ -463,8 +462,7 @@ __aicore__ inline void LoadToA1ForNd2Nz(Intf *self, LocalTensor<typename Intf::S
     if constexpr (Intf::conv3dConfig.loadB1Condition == TPL_GM_TO_L1_NO_HK_WK) {
         woOffset = (self->ctx.curWoLeftIdx_ <= 0 ? 0 :
             DivCeil(self->ctx.curWoLeftIdx_, self->ctx.tiling_->strideW) * self->ctx.tiling_->cout);
-    }
-    if (self->ctx.tiling_->backpropPadLeft < 0) {
+    } else if (self->ctx.tiling_->backpropPadLeft < 0) {
         woOffset += DivCeil(abs(self->ctx.tiling_->backpropPadLeft), self->ctx.tiling_->strideW) * self->ctx.tiling_->cout;
     }
     uint64_t doOffset = static_cast<uint64_t>(curDoutIdx) * self->ctx.hoWo_ * self->ctx.tiling_->cout;
