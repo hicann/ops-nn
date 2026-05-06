@@ -154,7 +154,7 @@ __aicore__ inline void WeightQuantBatchMatmulV2ASWKernel<LOCAL_TEMPLATE_FUNC_PAR
         block_.UpdateBasicIndex(roundIndex);
         // 1. Set single core param
         block_.UpdateBlockParams(roundIndex);
-        if (block_.params_.singleCoreM <= 0 || block_.params_.singleCoreN <= 0) {
+        if (block_.params_.singleCoreM == 0 || block_.params_.singleCoreN == 0) {
             continue;
         }
         mm_.SetSingleShape(block_.params_.singleCoreM, block_.params_.singleCoreN, tiling_->matmulTiling.Ka);

@@ -255,7 +255,7 @@ __aicore__ inline void MatMulASWKernel<LOCAL_TEMPLATE_FUNC_PARAMS>::ComputeBasic
         block_.UpdateBasicIndex(roundIndex);
         // 1. Set single core param
         block_.template UpdateBlockParams<bTrans, formatX2>(roundIndex);
-        if (block_.params_.singleCoreM <= 0 || block_.params_.singleCoreN <= 0) {
+        if (block_.params_.singleCoreM == 0 || block_.params_.singleCoreN == 0) {
             continue;
         }
         mm_.SetSingleShape(block_.params_.singleCoreM, block_.params_.singleCoreN,

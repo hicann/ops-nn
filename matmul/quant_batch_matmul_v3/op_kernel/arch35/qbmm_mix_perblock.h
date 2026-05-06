@@ -80,7 +80,7 @@ MatMulPerBlockASW<x1Type, x2Type, biasType, yType, formatX1, formatX2, formatY, 
         block_.UpdateBasicIndex(roundIndex);
         // 1. Set single core param
         block_.template UpdateBlockParams<bTrans, formatX2>(roundIndex);
-        if (block_.params_.singleCoreM <= 0 || block_.params_.singleCoreN <= 0) {
+        if (block_.params_.singleCoreM == 0 || block_.params_.singleCoreN == 0) {
             continue;
         }
         if ASCEND_IS_AIC {

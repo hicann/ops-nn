@@ -79,7 +79,7 @@ __aicore__ inline void DualLevelQuantBatchMatmulBasicBlockController<LOCAL_TEMPL
     for (uint64_t roundIdx = 0; roundIdx < block_.params_.round; ++roundIdx) {
         block_.UpdateBasicIndex(roundIdx);
         block_.UpdateBlockParams(roundIdx);
-        if (block_.offset_.singleCoreM <= 0 || block_.offset_.singleCoreN <= 0) {
+        if (block_.offset_.singleCoreM == 0 || block_.offset_.singleCoreN == 0) {
             continue;
         }
         block_.CalcGMOffset();
