@@ -9,12 +9,6 @@
 # ----------------------------------------------------------------------------
 
 add_kernel_sources(
-    AUTO_SYNC false
-)
-
-add_kernel_sources(
-    KERNEL_SRC arch35/transpose_quant_batch_mat_mul.cpp
+    KERNEL_SRC arch35/dual_level_quant_batch_matmul.cpp
     COMPUTE_UNITS ascend950
-    AUTO_SYNC false
-    OPTIONS "--cce-no-dcache-flush" "-DENABLE_CV_COMM_VIA_SSBUF=true"
 )

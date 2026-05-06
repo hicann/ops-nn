@@ -12,11 +12,11 @@
  * \file transpose_batch_mat_mul.cpp
  * \brief
  */
-#include "../mat_mul_v3/arch35/mat_mul_tiling_data.h"
-#include "arch35/transpose_batch_mat_mul_tiling_key.h"
-#include "arch35/transpose_batch_mat_mul_asw_kernel_advanced.h"
-#include "arch35/transpose_batch_mat_mul_tiling_key_public.h"
-#include "arch35/transpose_batch_mat_mul_asw_block_advanced.h"
+#include "../../mat_mul_v3/arch35/mat_mul_tiling_data.h"
+#include "transpose_batch_mat_mul_tiling_key.h"
+#include "transpose_batch_mat_mul_asw_kernel_advanced.h"
+#include "transpose_batch_mat_mul_tiling_key_public.h"
+#include "transpose_batch_mat_mul_asw_block_advanced.h"
 using namespace TransposeBatchMatMulAdvanced;
 
 using namespace AscendC;

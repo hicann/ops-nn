@@ -13,12 +13,12 @@
  * \brief
  */
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
-#include "../mat_mul_v3/arch35/mat_mul_tiling_data.h"
-#include "arch35/gemm_v3_tiling_key.h"
-#include "../mat_mul_v3/arch35/mat_mul_asw_kernel.h"
+#include "../../mat_mul_v3/arch35/mat_mul_tiling_data.h"
+#include "gemm_v3_tiling_key.h"
+#include "../../mat_mul_v3/arch35/mat_mul_asw_kernel.h"
 
 #else
-#include "../mat_mul_v3/mat_mul_base_kernel.h"
+#include "../../mat_mul_v3/mat_mul_base_kernel.h"
 #endif
 
 using namespace AscendC;

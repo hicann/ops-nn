@@ -91,7 +91,7 @@ function(get_op_type_and_validate OP_DIR compute_unit op_name_var op_type_var is
   if(NOT EXISTS ${OP_DIR}/op_kernel)
     message(STATUS "[INFO] The op_kernel folder does not exist, [${op_name}] not need to compile.")
     set(${cache_key} "" CACHE INTERNAL "")
-      return()
+    return()
   endif()
 
   if(EXISTS ${binary_json})

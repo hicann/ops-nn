@@ -45,7 +45,7 @@ def add_to_config(entries, key_name):
 
 
 def main():
-    if len(sys.argv) < 5:
+    if len(sys.argv) < 6:
         raise SystemExit(0)
 
     output_dir = Path(sys.argv[1])

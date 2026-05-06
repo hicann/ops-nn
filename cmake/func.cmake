@@ -569,21 +569,61 @@ endfunction()
 # 1.调用asc_opc 工具 编译二进制kernel时， --simplified_key_mode/--impl_mode 选项中填写的值。
 # 2.调用asc_opc工具 算子名.py 中auto_sync与compile_option中的配置项。
 # 格式如下所示：
+# [KERNEL_SRC op_name.cpp]          算子入口文件，缺省为算子名.cpp
 # [COMPUTE_UNITS ascendxx]          soc版本，支持配置多个unit，缺省为配置所有的soc（支持单独配置soc，单独配置优先级更高）
 # [SIMPLIFIED_KEY 0/None]           缺省为0，最终的编译参数则是--simplified_key_mode=0，若设置为None，则不会携带该参数
 # [AUTO_SYNC false]                 同步选项，缺省为true
 # [IMPL_MODE high_performance]      高性能模式，缺省为high_performance[,optional] [optional]是可选的 
 # [OPTIONS "option1" "option2"]     其他编译选项
 function(add_kernel_sources)
-  set(oneValueArgs SIMPLIFIED_KEY AUTO_SYNC IMPL_MODE)
+  if(PREPROCESS_ONLY)
+    return()
+  endif()
+
+  set(oneValueArgs KERNEL_SRC SIMPLIFIED_KEY AUTO_SYNC IMPL_MODE)
   set(multiValueArgs COMPUTE_UNITS OPTIONS)
   cmake_parse_arguments(MODULE "" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
-  
+
   set(SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-  get_filename_component(PARENT_DIR ${SOURCE_DIR} DIRECTORY)
-  get_filename_component(OP_NAME ${PARENT_DIR} NAME)
+  get_filename_component(OP_DIR ${SOURCE_DIR} DIRECTORY)
+  get_filename_component(op_name ${OP_DIR} NAME)
+
+  if(MODULE_COMPUTE_UNITS)
+    if(NOT "${ASCEND_COMPUTE_UNIT}" IN_LIST MODULE_COMPUTE_UNITS)
+      return()
+    endif()
+  else()
+    set(MODULE_COMPUTE_UNITS "ALL")
+  endif()
+
+  set(cache_key "kernel_src_${op_name}_${ASCEND_COMPUTE_UNIT}")
   set(op_type "")
-  get_op_type_from_op_name("${OP_NAME}" op_type)
+
+  # 检查是否已缓存
+  if(DEFINED ${cache_key})
+    set(op_type "${${cache_key}}")
+  endif()
+  if(NOT op_type)
+    set(binary_json ${OP_DIR}/op_host/config/${ASCEND_COMPUTE_UNIT}/${op_name}_binary.json)
+    if(EXISTS ${binary_json})
+      get_op_type_from_binary_json("${binary_json}" op_type)
+      if(NOT op_type)
+        return()
+      endif()
+    else()
+      get_op_type_from_op_name("${op_name}" op_type)
+      if(NOT op_type)
+        return()
+      endif()
+    endif()
+  endif()
+  set(${cache_key} "${op_type}" CACHE INTERNAL "Cached op_type for ${op_name} on ${compute_unit}")
+
+  if(NOT MODULE_KERNEL_SRC)
+    set(MODULE_KERNEL_SRC "${OP_NAME}")
+  else()
+    string(REGEX REPLACE "\\.cpp$" "" MODULE_KERNEL_SRC "${MODULE_KERNEL_SRC}")
+  endif()
 
   set(simplified_key ${MODULE_SIMPLIFIED_KEY})
   set(auto_sync ${MODULE_AUTO_SYNC})
@@ -605,28 +645,32 @@ function(add_kernel_sources)
 
   string(JOIN "," unit_options ${options})
 
-  if(NOT MODULE_COMPUTE_UNITS OR MODULE_COMPUTE_UNITS STREQUAL "")
+  if(MODULE_COMPUTE_UNITS STREQUAL "ALL")
     set(target_compute_units "ALL")
   else()
     set(target_compute_units "${ASCEND_COMPUTE_UNIT}")
   endif()
 
-  if(NOT MODULE_COMPUTE_UNITS OR "${target_compute_units}" IN_LIST MODULE_COMPUTE_UNITS)
-    set(current_simplified_key_list "${op_type} ${target_compute_units} ${simplified_key}")
-    set(current_impl_mode_list "${op_type} ${target_compute_units} ${impl_mode}")
-    set(current_auto_sync_list "${op_type} ${target_compute_units} ${auto_sync}")
-    set(current_option_list "${op_type} ${target_compute_units} ${unit_options}")
+  set(current_kernel_src_list "${op_type} ${target_compute_units} ${MODULE_KERNEL_SRC}")
+  set(current_simplified_key_list "${op_type} ${target_compute_units} ${simplified_key}")
+  set(current_impl_mode_list "${op_type} ${target_compute_units} ${impl_mode}")
+  set(current_auto_sync_list "${op_type} ${target_compute_units} ${auto_sync_option}")
+  set(current_option_list "${op_type} ${target_compute_units} ${unit_options}")
 
-    list(APPEND simplified_key_list ${current_simplified_key_list})
-    list(APPEND impl_mode_list ${current_impl_mode_list})
-    list(APPEND auto_sync_list ${current_auto_sync_list})
-    list(APPEND option_list ${current_option_list})
+  list(APPEND kernel_src_list ${current_kernel_src_list})
+  list(APPEND simplified_key_list ${current_simplified_key_list})
+  list(APPEND impl_mode_list ${current_impl_mode_list})
+  list(APPEND auto_sync_list ${current_auto_sync_list})
+  list(APPEND option_list ${current_option_list})
 
-    set(simplified_key_list ${simplified_key_list} CACHE INTERNAL "simplified_key")
-    set(impl_mode_list ${impl_mode_list} CACHE INTERNAL "impl_mode")
-    set(auto_sync_list ${auto_sync_list} CACHE INTERNAL "auto_sync")
-    set(option_list ${option_list} CACHE INTERNAL "options")
-  endif()
+  set(kernel_src_list ${kernel_src_list} CACHE INTERNAL "kernel_src")
+  set(simplified_key_list ${simplified_key_list} CACHE INTERNAL "simplified_key")
+  set(impl_mode_list ${impl_mode_list} CACHE INTERNAL "impl_mode")
+  set(auto_sync_list ${auto_sync_list} CACHE INTERNAL "auto_sync")
+  set(option_list ${option_list} CACHE INTERNAL "options")
+
+  # 标记此算子已处理完成
+  set(${cache_key} "${op_type}" CACHE INTERNAL "Cached op_type for ${op_name} on ${ASCEND_COMPUTE_UNIT}")
 endfunction()
 
 # usage: add_graph_plugin_sources()

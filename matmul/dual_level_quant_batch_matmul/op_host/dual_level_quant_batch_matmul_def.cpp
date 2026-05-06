@@ -73,8 +73,7 @@ public:
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true)
-            .ExtendCfgInfo("aclnnSupport.value", "support_aclnn")
-            .ExtendCfgInfo("opFile.value","dual_level_quant_batch_matmul_apt");
+            .ExtendCfgInfo("aclnnSupport.value", "support_aclnn");
         this->AICore().AddConfig("ascend950", config950);
     }
 

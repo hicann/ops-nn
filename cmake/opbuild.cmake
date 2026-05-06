@@ -43,6 +43,12 @@ function(gen_aclnn_classify host_obj prefix ori_out_srcs ori_out_headers opbuild
           ${CMAKE_COMMAND} -E env OPS_PROTO_SEPARATE=1 OPS_PROJECT_NAME=${prefix} OPS_ACLNN_GEN=${need_gen_aclnn}
           OPS_PRODUCT_NAME=${ASCEND_COMPUTE_UNIT} ${OP_BUILD_TOOL} ${out_src_path}/libascend_all_ops.so ${out_src_path}
       )
+      string(JOIN "," kernel_srcs ${kernel_src_list})
+      execute_process(
+        COMMAND 
+          ${ASCEND_PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/util/insert_kernel_src.py 
+          ${kernel_srcs} ${out_src_path} ${ASCEND_COMPUTE_UNIT}
+      )
     endif()
   else()
     message(STATUS "No ${prefix} srcs, skip ${prefix}")

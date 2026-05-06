@@ -25,6 +25,7 @@ add_kernel_sources(
 )
 
 add_kernel_sources(
+    KERNEL_SRC arch35/mat_mul_v3.cpp
     COMPUTE_UNITS ascend950
     SIMPLIFIED_KEY None
     AUTO_SYNC false
@@ -32,6 +33,12 @@ add_kernel_sources(
 )
 
 add_kernel_sources(
+    KERNEL_SRC arch35/mat_mul_v3.cpp
+    COMPUTE_UNITS mc62cm12a
+)
+
+add_kernel_sources(
     COMPUTE_UNITS kirin9030
     AUTO_SYNC false
 )
+

@@ -344,16 +344,18 @@ class AdpBuilder(opdesc_parser.OpDesc):
     def write_adapt(self: any, impl_path, path: str, op_compile_option_all: list = None):
         self._build_paradefault()
         if os.environ.get('BUILD_BUILTIN_OPP') != '1' and impl_path != "":
+            if not self.kernel_src:
+                self.kernel_src = self.op_file
             if self.op_file.endswith("_apt"):
                 op_dir = self.op_file.replace("_apt", "")
-                src_file = os.path.join(impl_path, op_dir, self.op_file + ".cpp")
+                src_file = os.path.join(impl_path, op_dir, self.kernel_src + ".cpp")
             elif self.op_file.endswith("_910b"):
                 op_dir = self.op_file.replace("_910b", "")
                 if (op_dir == "dynamic_rnn_v2"):
                     op_dir = "dynamic_rnnv2"
-                src_file = os.path.join(impl_path, op_dir, self.op_file + ".cpp")
+                src_file = os.path.join(impl_path, op_dir, self.kernel_src + ".cpp")
             else:
-                src_file = os.path.join(impl_path, self.op_file, self.op_file + ".cpp")
+                src_file = os.path.join(impl_path, self.op_file, self.kernel_src + ".cpp")
             if not os.path.exists(src_file):
                 print(f"[ERROR]: operator: {self.op_file} source file: {src_file} does not found, please check.")
                 return
@@ -581,7 +583,7 @@ class AdpBuilder(opdesc_parser.OpDesc):
             kern_name = self.kern_name
         else:
             kern_name = self.op_intf
-        src = self.op_file + '.cpp'
+        src = self.kernel_src + '.cpp'
         virt_exprs = self._build_virtual()
         fd.write(IMPL_API.format(self.op_type, pchk, self.op_intf, argsdef, kern_name, virt_exprs, argsval,\
                                  self.custom_compile_options, self.custom_all_compile_options, self.op_intf,\

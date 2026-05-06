@@ -12,22 +12,22 @@
  * \file batch_mat_mul_v3.cpp
  * \brief
  */
-#include "../mat_mul_v3/arch35/mat_mul_tiling_data.h"
-#include "arch35/batch_mat_mul_v3_tiling_key.h"
-#include "arch35/batch_mat_mul_v3_asw_kernel_advanced.h"
+#include "../../mat_mul_v3/arch35/mat_mul_tiling_data.h"
+#include "batch_mat_mul_v3_tiling_key.h"
+#include "batch_mat_mul_v3_asw_kernel_advanced.h"
 
 #if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
-#include "arch35/batch_mat_mul_v3_asw_al1_full_load_kernel_advanced.h"
-#include "arch35/batch_mat_mul_v3_asw_bl1_full_load_kernel_advanced.h"
-#include "arch35/batch_mat_mul_v3_mergebatch_basicapi_cmct.h"
-#include "arch35/batch_mat_mul_v3_matmul2mul_cmct.h"
-#include "../mat_mul_v3/arch35/mat_mul_input_k_eq_zero_clear_output.h"
-#include "arch35/batch_mat_mul_v3_iterbatch_kernel_advanced.h"
+#include "batch_mat_mul_v3_asw_al1_full_load_kernel_advanced.h"
+#include "batch_mat_mul_v3_asw_bl1_full_load_kernel_advanced.h"
+#include "batch_mat_mul_v3_mergebatch_basicapi_cmct.h"
+#include "batch_mat_mul_v3_matmul2mul_cmct.h"
+#include "../../mat_mul_v3/arch35/mat_mul_input_k_eq_zero_clear_output.h"
+#include "batch_mat_mul_v3_iterbatch_kernel_advanced.h"
 #endif
 
-#include "arch35/batch_mat_mul_v3_iterbatch_basicapi_cmct.h"
-#include "../mat_mul_v3/arch35/mat_mul_pingpong_basic_cmct.h"
-#include "../mat_mul_v3/arch35/mat_mul_streamk_basic_cmct.h"
+#include "batch_mat_mul_v3_iterbatch_basicapi_cmct.h"
+#include "../../mat_mul_v3/arch35/mat_mul_pingpong_basic_cmct.h"
+#include "../../mat_mul_v3/arch35/mat_mul_streamk_basic_cmct.h"
 
 using namespace AscendC;
 using namespace matmul;

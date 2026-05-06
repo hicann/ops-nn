@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file quant_batch_matmul_v4_apt.cpp
+ * \file quant_batch_matmul_v4.cpp
  * \brief
  */
 
@@ -59,25 +59,25 @@
 #define DTYPE_X2 fp4x2_e2m1_t
 #endif
 
-#include "arch35/quant_batch_matmul_v4_tiling_key.h"
-#include "arch35/quant_batch_matmul_v4_tiling_data_apt.h"
+#include "quant_batch_matmul_v4_tiling_key.h"
+#include "quant_batch_matmul_v4_tiling_data_apt.h"
 #if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
 // define DTYPE_X2 should before cmct
 #if CMCT_PRETILE_INT4_INT4_ASYMMETRICAL
-#include "quant_batch_matmul_v4_tiling_data.h"
-#include "../quant_batch_matmul_v3/arch35/qbmm_int4_to_int8_preprocess.h"
-#include "quant_batch_matmul_v4_constant.h"
-#include "arch35/quant_batch_matmul_v4_pertoken_pergroup.h"
+#include "../quant_batch_matmul_v4_tiling_data.h"
+#include "../../quant_batch_matmul_v3/arch35/qbmm_int4_to_int8_preprocess.h"
+#include "../quant_batch_matmul_v4_constant.h"
+#include "quant_batch_matmul_v4_pertoken_pergroup.h"
 #else
-#include "arch35/cmct_convertor.h"
-#include "arch35/quant_batch_matmul_v4_constant.h"
-#include "arch35/quant_batch_matmul_v4_perchannel.h"
-#include "../quant_batch_matmul_v3/arch35/qbmm_mix_pertile_cmct.h"
+#include "cmct_convertor.h"
+#include "quant_batch_matmul_v4_constant.h"
+#include "quant_batch_matmul_v4_perchannel.h"
+#include "../../quant_batch_matmul_v3/arch35/qbmm_mix_pertile_cmct.h"
 #endif
 #else
-#include "../quant_batch_matmul_v3/quant_batch_matmul_v3_base.h"
-#include "../quant_batch_matmul_v3/arch35/qbmm_cube_on_the_fly.h"
-#include "../quant_batch_matmul_v3/arch35/qbmm_cube_on_the_fly_al1_full_load.h"
+#include "../../quant_batch_matmul_v3/quant_batch_matmul_v3_base.h"
+#include "../../quant_batch_matmul_v3/arch35/qbmm_cube_on_the_fly.h"
+#include "../../quant_batch_matmul_v3/arch35/qbmm_cube_on_the_fly_al1_full_load.h"
 using namespace AscendC;
 #endif
 

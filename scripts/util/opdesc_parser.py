@@ -83,6 +83,7 @@ class OpDesc:
         self.op_intf = ''
         self.kern_name = ''
         self.op_file = ''
+        self.kernel_src = ''
         self.op_replay_flag = False
         self.op_replay_batch = False
         self.input_idx = -1
@@ -175,6 +176,11 @@ class OpDesc:
 
     def parse_op_file(self: any, conf: str):
         self.op_file = self._parse_str(conf)
+
+    def parse_kernel_src(self: any, conf: str):
+        self.kernel_src = self._parse_str(conf)
+        if not self.kernel_src:
+            self.kernel_src = self.op_file
 
     def parse_dynamic_shape(self: any, conf: str):
         self.dynamic_shape = self._parse_flag(conf)
@@ -321,6 +327,8 @@ def get_op_desc(file: str, batch_list: list, iterator_list: list, builder: any,
                 op_desc.parse_kern_name(line)
             elif line.startswith('opFile.value'):
                 op_desc.parse_op_file(line)
+            elif line.startswith('kernelSrc.value'):
+                op_desc.parse_kernel_src(line)
             elif line.startswith('dynamicShapeSupport.flag'):
                 op_desc.parse_dynamic_shape(line)
             elif line.startswith('mc2.ctx'):

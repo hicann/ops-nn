@@ -171,7 +171,6 @@ public:
                                  ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
                                  ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
         aicConfig.PrecisionReduceFlag(true)
-            .ExtendCfgInfo("opFile.value", "mat_mul_v3_apt")
             .ExtendCfgInfo("aclnnSupport.value", "support_aclnn");
         this->AICore().AddConfig("ascend950", aicConfig);
 

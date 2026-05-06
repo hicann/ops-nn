@@ -66,8 +66,7 @@ public:
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
-            .ExtendCfgInfo("softsync.flag", "true")
-            .ExtendCfgInfo("opFile.value", "transpose_quant_batch_mat_mul_apt");
+            .ExtendCfgInfo("softsync.flag", "true");
         this->AICore().AddConfig("ascend950", aicore_config);
     }
 };

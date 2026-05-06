@@ -93,7 +93,7 @@ public:
             .DataType({ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_INT8, ge::DT_INT8, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_INT8, ge::DT_INT8})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-        aicConfig.ExtendCfgInfo("opFile.value", "transpose_batch_mat_mul_apt");
+        aicConfig.ExtendCfgInfo("opFile.value", "transpose_batch_mat_mul");
         this->AICore().AddConfig("ascend950", aicConfig);
         this->AICore().AddConfig("ascend910_55", aicConfig);
 

@@ -95,6 +95,8 @@ def parse_ini_to_obj(ini_file, tbe_ops_info):
                 key1 = line[:line.index("=")]
                 key2 = line[line.index("=")+1:]
                 key1_0, key1_1 = key1.split(".")
+                if key1_0 == "kernelSrc":
+                    continue
                 if key1_0 not in op_dict:
                     op_dict[key1_0] = {}
                 if key1_1 in op_dict.get(key1_0):

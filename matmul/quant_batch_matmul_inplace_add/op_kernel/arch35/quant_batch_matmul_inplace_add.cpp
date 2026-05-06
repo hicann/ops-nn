@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file quant_batch_matmul_inplace_add_apt.cpp
+ * \file quant_batch_matmul_inplace_add.cpp
  * \brief
  */
 #if ASC_DEVKIT_MAJOR >= 9
@@ -17,10 +17,10 @@
 #else
 #include "kernel_operator.h"
 #endif
-#include "arch35/quant_batch_matmul_inplace_add_tiling_data.h"
-#include "arch35/quant_batch_matmul_inplace_add_tiling_key.h"
-#include "arch35/qbmmia_mx_basic_api_cmct.h"
-#include "arch35/qbmmia_cube_basic_api_cmct.h"
+#include "quant_batch_matmul_inplace_add_tiling_data.h"
+#include "quant_batch_matmul_inplace_add_tiling_key.h"
+#include "qbmmia_mx_basic_api_cmct.h"
+#include "qbmmia_cube_basic_api_cmct.h"
 
 using namespace AscendC;
 using namespace matmul;

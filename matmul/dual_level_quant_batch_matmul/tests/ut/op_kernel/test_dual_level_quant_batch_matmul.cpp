@@ -21,6 +21,8 @@
 #include "data_utils.h"
 #include "string.h"
 #include "tikicpulib.h"
+#include "dual_level_quant_batch_matmul_tiling_key.h"
+#include "arch35/dual_level_quant_batch_matmul.cpp"
 #endif
 
 #include <cstdint>

@@ -9,12 +9,12 @@
  */
 
 /* !
- * \file weight_quant_batch_matmul_v2_apt.cpp
+ * \file weight_quant_batch_matmul_v2.cpp
  * \brief
  */
 
 #define ENABLE_L2_CACHE
-#include "weight_quant_batch_matmul_v2_constant.h"
+#include "../weight_quant_batch_matmul_v2_constant.h"
 #if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
 #else
@@ -22,12 +22,12 @@
 #include "kernel_operator_intf.h"
 #endif
 #include "lib/matmul_intf.h"
-#include "arch35/weight_quant_batch_matmul_v2_arch35_tiling_key.h"
-#include "arch35/weight_quant_batch_matmul_v2_arch35_tiling_data.h"
+#include "weight_quant_batch_matmul_v2_arch35_tiling_key.h"
+#include "weight_quant_batch_matmul_v2_arch35_tiling_data.h"
 
 #if !defined(__DAV_310R6__) && !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
 #if defined(A16) && (defined(WQBMMV2_S4) || defined(F4) || (defined(WQBMMV2_S8) && defined(WEIGHT_ND)))
-#include "arch35/weight_quant_batch_matmul_v2_reg_base.h"
+#include "weight_quant_batch_matmul_v2_reg_base.h"
 #endif
 #if defined(A16) && defined(WQBMMV2_S8) && !defined(WEIGHT_ND)
 #ifndef DTYPE_BIAS
@@ -37,25 +37,25 @@
 #define DTYPE_BIAS float
 #endif
 #endif
-#include "weight_quant_batch_matmul_v2_custom_weight_nz.h"
+#include "../weight_quant_batch_matmul_v2_custom_weight_nz.h"
 #endif
 
-#include "arch35/n_first/weight_quant_batch_matmul_v2_basic_block_controller.h"
+#include "n_first/weight_quant_batch_matmul_v2_basic_block_controller.h"
 
 #if defined(A16) && (defined(WQBMMV2_S4) || (defined(WQBMMV2_S8) && defined(WEIGHT_ND)) || defined(WEIGHT_F8_INPUT) || \
     defined(MICROSCALING))
-#include "arch35/cmct_convertor.h"
+#include "cmct_convertor.h"
 using WeightQuantBatchMatmulV2::InvokeKernel;
 #endif
 #endif
 
 #if defined(__DAV_310R6__)
-#include "arch35/n_first/weight_quant_batch_matmul_v2_basic_block_controller.h"
+#include "n_first/weight_quant_batch_matmul_v2_basic_block_controller.h"
 #endif
 
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
-#include "arch35/weight_quant_batch_matmul_v2_adaptive_sliding_window.h"
-#include "arch35/weight_quant_batch_matmul_v2_iterbatch.h"
+#include "weight_quant_batch_matmul_v2_adaptive_sliding_window.h"
+#include "weight_quant_batch_matmul_v2_iterbatch.h"
 #endif
 
 using namespace WeightQuantBatchMatmulV2;

@@ -9,28 +9,28 @@
  */
 
 /* !
- * \file quant_batch_matmul_v3_apt.cpp
+ * \file quant_batch_matmul_v3.cpp
  * \brief
  */
-#include "arch35/quant_batch_matmul_v3_tiling_data.h"
-#include "arch35/qbmm_cube_on_the_fly.h"
-#include "arch35/qbmm_cube_on_the_fly_al1_full_load.h"
-#include "arch35/quant_batch_matmul_v3_apt_tiling_key.h"
+#include "quant_batch_matmul_v3_tiling_data.h"
+#include "qbmm_cube_on_the_fly.h"
+#include "qbmm_cube_on_the_fly_al1_full_load.h"
+#include "quant_batch_matmul_v3_apt_tiling_key.h"
 
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
-#include "arch35/qbmm_cube_on_the_fly_bl1_full_load.h"
-#include "arch35/qbmm_cube_on_the_fly_abl1_full_load.h"
-#include "arch35/qbmm_cube_on_the_fly_iterbatch.h"
+#include "qbmm_cube_on_the_fly_bl1_full_load.h"
+#include "qbmm_cube_on_the_fly_abl1_full_load.h"
+#include "qbmm_cube_on_the_fly_iterbatch.h"
 #endif
 #if (ORIG_DTYPE_SCALE == DT_FLOAT || ORIG_DTYPE_SCALE == DT_BF16)
-#include "arch35/qbmm_mix_online_dynamic.h"
-#include "arch35/qbmm_mix_online_dynamic_al1_full_load.h"
-#include "arch35/qbmm_mix_pertile_cmct.h"
+#include "qbmm_mix_online_dynamic.h"
+#include "qbmm_mix_online_dynamic_al1_full_load.h"
+#include "qbmm_mix_pertile_cmct.h"
 #endif
 #if (ORIG_DTYPE_SCALE == DT_FLOAT8_E8M0)
-#include "arch35/qbmm_mx_basic_api_cmct.h"
+#include "qbmm_mx_basic_api_cmct.h"
 #else
-#include "arch35/qbmm_cube_basic_api_cmct.h"
+#include "qbmm_cube_basic_api_cmct.h"
 #endif
 #if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
@@ -39,7 +39,7 @@
 #endif
 
 #ifdef IS_A4W4I
-#include "arch35/qbmm_int4_to_int8_preprocess.h"
+#include "qbmm_int4_to_int8_preprocess.h"
 #endif
 
 #ifdef __CCE_KT_TEST__
@@ -85,7 +85,7 @@ using namespace matmul;
 #endif
 
 #if (defined(ORIG_DTYPE_X1) && defined(ORIG_DTYPE_X2) && defined(ORIG_DTYPE_SCALE) && defined(FORMAT_X2))
-#define IS_MX                                                                                               \
+#define IS_MX                                                                                                     \
     ((ORIG_DTYPE_X1 == DT_FLOAT8_E4M3FN || ORIG_DTYPE_X1 == DT_FLOAT8_E5M2 || ORIG_DTYPE_X1 == DT_FLOAT4_E2M1) && \
      (ORIG_DTYPE_X2 == DT_FLOAT8_E4M3FN || ORIG_DTYPE_X2 == DT_FLOAT8_E5M2 || ORIG_DTYPE_X2 == DT_FLOAT4_E2M1) && \
      ORIG_DTYPE_SCALE == DT_FLOAT8_E8M0)
@@ -103,7 +103,7 @@ using namespace matmul;
 #endif
 
 #if defined(FORMAT_X1) && FORMAT_X1 == FORMAT_FRACTAL_NZ
-    constexpr CubeFormat format_x1 = CubeFormat::NZ;
+constexpr CubeFormat format_x1 = CubeFormat::NZ;
 #else
 constexpr CubeFormat format_x1 = CubeFormat::ND;
 #endif
@@ -144,25 +144,25 @@ constexpr CubeFormat format_y = CubeFormat::ND;
     } while (0)
 
 #if defined(ORIG_DTYPE_SCALE) && ORIG_DTYPE_SCALE == DT_FLOAT8_E8M0
-#define QUANT_BMMV3_MX_CMCT_IMPL_CLASS(aLayout, bLayout, cLayout, fullLoadMode)                     \
-    do {                                                                                            \
-        if ASCEND_IS_AIC {                                                                          \
-            GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3BasicAPITilingData, tilingData, tiling);             \
-            QbmmMxBasicApiKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, aLayout, bLayout, cLayout, fullLoadMode>( \
-                x1, x2, scale, bias, pertokenScale, y, &tilingData);                                    \
-        }                                                                                           \
+#define QUANT_BMMV3_MX_CMCT_IMPL_CLASS(aLayout, bLayout, cLayout, fullLoadMode)                                \
+    do {                                                                                                       \
+        if ASCEND_IS_AIC {                                                                                     \
+            GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3BasicAPITilingData, tilingData, tiling); \
+            QbmmMxBasicApiKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, aLayout, bLayout, cLayout, fullLoadMode>(        \
+                x1, x2, scale, bias, pertokenScale, y, &tilingData);                                           \
+        }                                                                                                      \
     } while (0)
 #endif
 
 #if CUBE_TEMPLATE_ND
-#define QUANT_BMMV3_CUBE_CMCT_IMPL_CLASS(aLayout, bLayout, cLayout, fullLoadMode)                           \
-    do {                                                                                                    \
-        if ASCEND_IS_AIC {                                                                                  \
+#define QUANT_BMMV3_CUBE_CMCT_IMPL_CLASS(aLayout, bLayout, cLayout, fullLoadMode)                               \
+    do {                                                                                                        \
+        if ASCEND_IS_AIC {                                                                                      \
             GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3BasicAPITilingData, tilingData, tiling);  \
             QbmmCubeBasicApiKernel<                                                                             \
                 DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, cLayout, fullLoadMode>( \
-            x1, x2, scale, bias, pertokenScale, y, &tilingData);                                            \
-        }                                                                                                   \
+                x1, x2, scale, bias, pertokenScale, y, &tilingData);                                            \
+        }                                                                                                       \
     } while (0)
 #endif
 
@@ -185,15 +185,15 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(
 #ifdef IS_A4W4I
 #if defined(ORIG_DTYPE_SCALE) && (ORIG_DTYPE_SCALE == DT_UINT64 || ORIG_DTYPE_SCALE == DT_INT64)
     GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3BasicAPITilingData, tilingData, tiling);
-    uint64_t m      = tilingData.matmulTiling.m;
-    uint64_t n      = tilingData.matmulTiling.n;
-    uint64_t k      = tilingData.matmulTiling.k;
+    uint64_t m = tilingData.matmulTiling.m;
+    uint64_t n = tilingData.matmulTiling.n;
+    uint64_t k = tilingData.matmulTiling.k;
     uint64_t batchC = tilingData.params.batchC;
 #else
     GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling);
-    uint64_t m      = tilingData.matmulTiling.M;
-    uint64_t n      = tilingData.matmulTiling.N;
-    uint64_t k      = tilingData.matmulTiling.Ka;
+    uint64_t m = tilingData.matmulTiling.M;
+    uint64_t n = tilingData.matmulTiling.N;
+    uint64_t k = tilingData.matmulTiling.Ka;
     uint64_t batchC = tilingData.params.batchC;
 #endif
     if ASCEND_IS_AIV {
@@ -231,11 +231,11 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(
 #if defined(FORMAT_X2) && FORMAT_X2 == FORMAT_FRACTAL_NZ
         if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI) {
             if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::Nz,
-                                               Cmct::Gemm::layout::RowMajorAlign, 0);
+                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(
+                    Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::Nz, Cmct::Gemm::layout::RowMajorAlign, 0);
             } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::Zn,
-                                               Cmct::Gemm::layout::RowMajorAlign, 0);
+                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(
+                    Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::Zn, Cmct::Gemm::layout::RowMajorAlign, 0);
             } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
                 QUANT_BMMV3_MX_CMCT_IMPL_CLASS(
                     Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::Nz, Cmct::Gemm::layout::RowMajorAlign, 0);
@@ -245,11 +245,13 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(
             }
         } else if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI) {
             if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
-                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::Nz,
-                                               Cmct::Gemm::layout::RowMajorAlign, Cmct::Gemm::A_FULL_LOAD_MODE);
+                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(
+                    Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::Nz, Cmct::Gemm::layout::RowMajorAlign,
+                    Cmct::Gemm::A_FULL_LOAD_MODE);
             } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
-                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::Zn,
-                                               Cmct::Gemm::layout::RowMajorAlign, Cmct::Gemm::A_FULL_LOAD_MODE);
+                QUANT_BMMV3_MX_CMCT_IMPL_CLASS(
+                    Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::Zn, Cmct::Gemm::layout::RowMajorAlign,
+                    Cmct::Gemm::A_FULL_LOAD_MODE);
             } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
                 QUANT_BMMV3_MX_CMCT_IMPL_CLASS(
                     Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::Nz, Cmct::Gemm::layout::RowMajorAlign,
@@ -300,7 +302,7 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(
 #endif
 #endif
     } else {
-        if constexpr (TPL_BIASMODE == TPL_EXCLUDE_FROM_TEMPLATE) {            // Bias Mode = 0
+        if constexpr (TPL_BIASMODE == TPL_EXCLUDE_FROM_TEMPLATE) { // Bias Mode = 0
 #if CUBE_TEMPLATE_ND && defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
             if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI) { // Kernel Type = 0;
                 if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {

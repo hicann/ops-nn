@@ -26,7 +26,7 @@
 #endif
 
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 310
-#include "quant_batch_matmul_v3_apt.cpp"
+#include "arch35/quant_batch_matmul_v3.cpp"
 #define PARAM_LIST_DEF GM_ADDR x1, GM_ADDR x2, GM_ADDR scale, GM_ADDR offset,\
                        GM_ADDR bias, GM_ADDR perTokenScale, GM_ADDR y,\
                        GM_ADDR workspace, GM_ADDR tiling

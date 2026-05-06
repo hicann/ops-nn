@@ -13,7 +13,13 @@ add_kernel_sources(
 )
 
 add_kernel_sources(
+    KERNEL_SRC arch35/weight_quant_batch_matmul_v2.cpp
     COMPUTE_UNITS ascend950
     AUTO_SYNC false
     OPTIONS "--cce-no-dcache-flush" "-DENABLE_CV_COMM_VIA_SSBUF=true"
+)
+
+add_kernel_sources(
+    KERNEL_SRC arch35/weight_quant_batch_matmul_v2.cpp
+    COMPUTE_UNITS mc62cm12a
 )

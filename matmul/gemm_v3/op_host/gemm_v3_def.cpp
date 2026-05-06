@@ -35,31 +35,21 @@ public:
             .ParamType(REQUIRED)
             .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16})
             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-        this->Attr("alpha")
-            .AttrType(REQUIRED)
-            .Float(1.0);
-        this->Attr("beta")
-            .AttrType(REQUIRED)
-            .Float(1.0);
-        this->Attr("transpose_a")
-            .AttrType(REQUIRED)
-            .Bool(false);
-        this->Attr("transpose_b")
-            .AttrType(REQUIRED)
-            .Bool(false);
-        this->Attr("enable_hf32")
-            .AttrType(REQUIRED)
-            .Bool(false);
+        this->Attr("alpha").AttrType(REQUIRED).Float(1.0);
+        this->Attr("beta").AttrType(REQUIRED).Float(1.0);
+        this->Attr("transpose_a").AttrType(REQUIRED).Bool(false);
+        this->Attr("transpose_b").AttrType(REQUIRED).Bool(false);
+        this->Attr("enable_hf32").AttrType(REQUIRED).Bool(false);
         OpAICoreConfig aicConfig;
         aicConfig.DynamicCompileStaticFlag(true)
-                .DynamicFormatFlag(false)
-                .DynamicRankSupportFlag(true)
-                .DynamicShapeSupportFlag(true)
-                .NeedCheckSupportFlag(false)
-                .ExtendCfgInfo("softsync.flag", "true");
+            .DynamicFormatFlag(false)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .ExtendCfgInfo("softsync.flag", "true");
         this->AICore().AddConfig("ascend910b", aicConfig);
         this->AICore().AddConfig("ascend910_93", aicConfig);
-        
+
         OpAICoreConfig aicConfig_95;
         aicConfig_95.Input("a")
             .ParamType(REQUIRED)
@@ -83,8 +73,7 @@ public:
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
-            .ExtendCfgInfo("softsync.flag", "true")
-            .ExtendCfgInfo("opFile.value", "gemm_v3_apt");
+            .ExtendCfgInfo("softsync.flag", "true");
         this->AICore().AddConfig("ascend950", aicConfig_95);
     }
 };

@@ -9,26 +9,26 @@
  */
 
 /*!
- * \file mat_mul_v3_apt.cpp
+ * \file mat_mul_v3.cpp
  * \brief
  */
 
-#include "arch35/mat_mul_tiling_key.h"
-#include "mat_mul_v3_common.h"
-#include "arch35/mat_mul_asw_kernel.h"
-#include "arch35/mat_mul_tiling_data.h"
-#include "arch35/mat_mul_full_load.h"
+#include "mat_mul_tiling_key.h"
+#include "../mat_mul_v3_common.h"
+#include "mat_mul_asw_kernel.h"
+#include "mat_mul_tiling_data.h"
+#include "mat_mul_full_load.h"
 
 #if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
-#include "arch35/mat_mul_stream_k_kernel.h"
-#include "arch35/mat_mul_fixpipe_opti.h"
-#include "arch35/mat_mul_input_k_eq_zero_clear_output.h"
-#include "arch35/mat_mul_streamk_basic_cmct.h"
-#include "arch35/mat_mul_fixpipe_opti_basic_cmct.h"
+#include "mat_mul_stream_k_kernel.h"
+#include "mat_mul_fixpipe_opti.h"
+#include "mat_mul_input_k_eq_zero_clear_output.h"
+#include "mat_mul_streamk_basic_cmct.h"
+#include "mat_mul_fixpipe_opti_basic_cmct.h"
 #endif
 
-#include "arch35/mat_mul_pingpong_basic_cmct.h"
-#include "arch35/mat_mul_to_mul_cmct.h"
+#include "mat_mul_pingpong_basic_cmct.h"
+#include "mat_mul_to_mul_cmct.h"
 
 using namespace Cmct;
 using namespace Cmct::Gemm;

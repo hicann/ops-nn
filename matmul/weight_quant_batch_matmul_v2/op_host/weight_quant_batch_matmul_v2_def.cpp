@@ -525,8 +525,7 @@ public:
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true)
-            .ExtendCfgInfo("aclnnSupport.value", "support_aclnn")
-            .ExtendCfgInfo("opFile.value", "weight_quant_batch_matmul_v2_apt");
+            .ExtendCfgInfo("aclnnSupport.value", "support_aclnn");
         this->AICore().AddConfig("ascend950", aicore_config_950);
     }
 };
