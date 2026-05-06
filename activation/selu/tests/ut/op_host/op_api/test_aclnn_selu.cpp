@@ -31,7 +31,7 @@ class selu_test : public testing::Test {
 TEST_F(selu_test, test_selu_dataType_error) {
   vector<aclDataType> ValidList = {ACL_DT_UNDEFINED, ACL_INT16,      ACL_INT64,  ACL_UINT8, ACL_UINT16,
                                    ACL_UINT32,       ACL_UINT64,     ACL_DOUBLE, ACL_BOOL,  ACL_STRING,
-                                   ACL_COMPLEX64,    ACL_COMPLEX128, ACL_BF16};
+                                   ACL_COMPLEX64,    ACL_COMPLEX128};
 
   int length = ValidList.size();
   vector<int64_t> input_dim = {2, 16, 32, 16};
