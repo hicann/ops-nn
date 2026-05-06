@@ -197,11 +197,6 @@ static aclnnStatus CheckAttr(const DynamicQuantParams& dynamicQuantParams)
         return ACLNN_ERR_PARAM_INVALID;
     }
 
-    if (mode == "pertensor" && dynamicQuantParams.groupIndex != nullptr) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "If quantMode is pertensor, groupIndexOptional must be nullptr.");
-        return ACLNN_ERR_PARAM_INVALID;
-    }
-
     if (mode == "perchannel" && dynamicQuantParams.groupIndex != nullptr) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "If quantMode is perchannel, groupIndexOptional must be nullptr.");
         return ACLNN_ERR_PARAM_INVALID;

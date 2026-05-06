@@ -138,10 +138,6 @@ ge::graphStatus DynamicQuantRegbaseTiling::CheckOpInputShape(gert::TilingContext
                 OP_LOGE(context, "moe expert nums must in [1, 1024]."),
                 return ge::GRAPH_FAILED);
             OP_CHECK_IF(
-                (groupNum > 0 && quantMode_ == TPL_PER_TENSOR_FULL_LOAD),
-                OP_LOGE(context, "quant_mode pertensor not support group_index."),
-                return ge::GRAPH_FAILED);
-            OP_CHECK_IF(
                 (groupNum > 0 && isPerChannel_),
                 OP_LOGE(context, "quant_mode perchannel not support group_index."),
                 return ge::GRAPH_FAILED);
@@ -524,7 +520,7 @@ void DynamicQuantRegbaseTiling::CalculateTilingData()
         if (quantMode_ != TPL_PER_TENSOR_FULL_LOAD) {
             quantMode_ = groupNum > 0 ? TPL_MOE_LARGE_SHAPE : TPL_COMMON_LARGE_SHAPE;
         } else {
-            quantMode_ = TPL_PER_TENSOR_LARGE_SHAPE;
+            quantMode_ = groupNum > 0 ? TPL_MOE_PER_TENSOR_LARGE_SHAPE : TPL_PER_TENSOR_LARGE_SHAPE;
         }
     } else if (calcDbSize > maxUseUbSize) {
         useDb = false;
@@ -534,6 +530,8 @@ void DynamicQuantRegbaseTiling::CalculateTilingData()
         multiRowNumTailCore = std::min({ubAvail, COMPARE_INT, rowPerTailCore});
         if (quantMode_ != TPL_PER_TENSOR_FULL_LOAD) {
             quantMode_ = groupNum > 0 ? TPL_MOE_FULL_LOAD : TPL_COMMON_FULL_LOAD;
+        } else {
+            quantMode_ = groupNum > 0 ? TPL_MOE_PER_TENSOR_FULL_LOAD : TPL_PER_TENSOR_FULL_LOAD;
         }
     } else {
         useDb = true;
@@ -542,6 +540,8 @@ void DynamicQuantRegbaseTiling::CalculateTilingData()
         multiRowNumTailCore = std::min({ubAvail, COMPARE_INT, rowPerTailCore});
         if (quantMode_ != TPL_PER_TENSOR_FULL_LOAD) {
             quantMode_ = groupNum > 0 ? TPL_MOE_FULL_LOAD : TPL_COMMON_FULL_LOAD;
+        } else {
+            quantMode_ = groupNum > 0 ? TPL_MOE_PER_TENSOR_FULL_LOAD : TPL_PER_TENSOR_FULL_LOAD;
         }
     }
 }
@@ -776,7 +776,8 @@ ge::graphStatus DynamicQuantRegbaseTiling::RunFusionKernelTiling(gert::TilingCon
         workSpaces[0] += isSymmetrical_ ? normalWorkSpace : normalWorkSpace * ASYMMETRICAL;
     }
 
-    if (quantMode_ == TPL_PER_TENSOR_FULL_LOAD || quantMode_ == TPL_PER_TENSOR_LARGE_SHAPE){
+    if (quantMode_ == TPL_PER_TENSOR_FULL_LOAD || quantMode_ == TPL_PER_TENSOR_LARGE_SHAPE ||
+        quantMode_ == TPL_MOE_PER_TENSOR_FULL_LOAD || quantMode_ == TPL_MOE_PER_TENSOR_LARGE_SHAPE){
         context->SetScheduleMode(1); // 设置为batch mode模式，所有核同时启动
     }
     context->SetBlockDim(coreNum);

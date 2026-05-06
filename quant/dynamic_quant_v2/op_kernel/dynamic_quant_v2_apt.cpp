@@ -20,6 +20,8 @@
 #include "../dynamic_quant/arch35/dynamic_quant_regbase_moe_large_shape.h"
 #include "../dynamic_quant/arch35/dynamic_quant_regbase_full_load_pertensor.h"
 #include "../dynamic_quant/arch35/dynamic_quant_regbase_large_shape_db_pertensor.h"
+#include "../dynamic_quant/arch35/dynamic_quant_regbase_moe_full_load_pertensor.h"
+#include "../dynamic_quant/arch35/dynamic_quant_regbase_moe_large_shape_pertensor.h"
 #include "../dynamic_quant/arch35/dynamic_quant_regbase_perchannel_full_load.h"
 #include "../dynamic_quant/arch35/dynamic_quant_regbase_perchannel_recompute.h"
 #include "../dynamic_quant/arch35/dynamic_quant_regbase_perchannel_split_m.h"
@@ -33,6 +35,8 @@ using namespace DynamicQuantNDOpt;
 using namespace DynamicQuantNDOpt2;
 using namespace DynamicQuantNDPerTensorOpt;
 using namespace DynamicQuantNDPerTensorOpt2;
+using namespace DynamicQuantMoePerTensorOpt;
+using namespace DynamicQuantMoePerTensorOpt2;
 using namespace DynamicQuantPerChannel;
 
 template<uint64_t V>
@@ -92,6 +96,19 @@ __global__ __aicore__ void dynamic_quant_v2(GM_ADDR x, GM_ADDR smooth_scales, GM
     } else if constexpr (quantMode == TPL_PER_TENSOR_LARGE_SHAPE) {
         DynamicQuantLargeShapeDbPertensor<DTYPE_X, DTYPE_Y, static_cast<int64_t>(hasSmooth),UIntAsBool<isSymmetrical>::value> op(&pipe);
         op.Init(x, smooth_scales, y, scale, offset, usrWorkspace, tilingData);
+        op.Process();
+    } else if constexpr (quantMode == TPL_MOE_PER_TENSOR_FULL_LOAD) {
+        DynamicQuantRegbaseMoeFullLoadPertensor<DTYPE_X, DTYPE_Y,
+            UIntAsBool<hasSmooth>::value,
+            static_cast<uint32_t>(useDb + 1),
+            UIntAsBool<isSymmetrical>::value> op(&pipe);
+        op.Init(x, smooth_scales, group_index, y, scale, offset, usrWorkspace, &tilingData);
+        op.Process();
+    } else if constexpr (quantMode == TPL_MOE_PER_TENSOR_LARGE_SHAPE) {
+        DynamicQuantMoeLargeShapePertensor<DTYPE_X, DTYPE_Y,
+            UIntAsBool<hasSmooth>::value,
+            UIntAsBool<isSymmetrical>::value> op(&pipe);
+        op.Init(x, smooth_scales, group_index, y, scale, offset, usrWorkspace, tilingData);
         op.Process();
     } else if constexpr (quantMode == TPL_EMPTY_TENSOR) {
         return ;

@@ -15,6 +15,7 @@
 #include "gtest/gtest.h"
 #include "tikicpulib.h"
 #include "dynamic_quant_v2_tiling_def.h"
+#include "../../../../dynamic_quant/op_kernel/arch35/dynamic_quant_arch35_tilingdata.h"
 #include "data_utils.h"
 
 #include <cstdint>
@@ -340,4 +341,192 @@ TEST_F(dynamic_quant_v2_test, test_case_310_03)
     AscendC::GmFree(workSpace);
     AscendC::GmFree(tiling);
     free(path_);
+}
+
+TEST_F(dynamic_quant_v2_test, test_case_moe_pertensor_fullload)
+{
+    uint32_t rowLen = 1024;
+    uint32_t totalRow = 128;
+    uint32_t groupNum = 8;
+    uint32_t blockDim = 24;
+
+    size_t inputByteSize = totalRow * rowLen * sizeof(uint16_t);
+    size_t smoothScalesMoeByteSize = groupNum * rowLen * sizeof(uint16_t);
+    size_t groupIndexMoeByteSize = groupNum * sizeof(int32_t);
+    size_t outputByteSize = totalRow * rowLen * sizeof(int8_t);
+    size_t scaleByteSize = 1 * sizeof(uint32_t);
+    size_t offsetByteSize = 1 * sizeof(uint32_t);
+    size_t tiling_data_size = sizeof(DynamicQuantTilingDataArch35);
+
+    uint8_t* input = (uint8_t*)AscendC::GmAlloc(inputByteSize);
+    uint8_t* smooth_scales_moe = (uint8_t*)AscendC::GmAlloc(smoothScalesMoeByteSize);
+    uint8_t* group_index_moe = (uint8_t*)AscendC::GmAlloc(groupIndexMoeByteSize);
+    uint8_t* output = (uint8_t*)AscendC::GmAlloc(outputByteSize);
+    uint8_t* scale = (uint8_t*)AscendC::GmAlloc(scaleByteSize);
+    uint8_t* offset = (uint8_t*)AscendC::GmAlloc(offsetByteSize);
+    uint8_t* workSpace = (uint8_t*)AscendC::GmAlloc(1024 * 1024 * 16);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+
+    DynamicQuantTilingDataArch35* td = reinterpret_cast<DynamicQuantTilingDataArch35*>(tiling);
+    td->coreNum = blockDim;
+    td->rowLen = rowLen;
+    td->headCoreNum = 8;
+    td->rowPerHeadCore = 6;
+    td->rowPerTailCore = 5;
+    td->multiRowNumHeadCore = 6;
+    td->multiRowNumTailCore = 5;
+    td->innerLoopEle = 6;
+    td->innerLoopTimes = 1;
+    td->innerLoopTail = 0;
+    td->groupNum = groupNum;
+    td->alignGroupNum = groupNum;
+    td->hasSmooth = 1;
+    td->unused = 0;
+    td->ubSize = 191 * 1024;
+    td->sizeH = 0;
+    td->sizeX = 0;
+    td->sizeZOut = 0;
+    td->sizeCopyRow = 0;
+    td->numCopyRow = 0;
+    td->numHeadCore = 0;
+    td->numTailCore = 0;
+    td->numHeadTimes = 0;
+    td->numTailTimes = 0;
+    td->numLastTailRow = 0;
+    td->alignType = 0;
+    td->totalBatchLen = 0;
+    td->mLen = 0;
+    td->mBlockSize = 0;
+    td->mTailBlockSize = 0;
+    td->mBlockNum = 0;
+    td->nLen = 0;
+    td->nBlockSize = 0;
+    td->nTailBlockSize = 0;
+    td->nBlockNum = 0;
+    td->nBaseSize = 0;
+    td->nBaseLoopNum = 0;
+    td->blockPerHead = 0;
+    td->blockPerTail = 0;
+    td->totalBlockNum = 0;
+    td->batchBlockSize = 0;
+    td->batchTailBlockSize = 0;
+    td->batchBlockNum = 0;
+    td->dstTypeMax = 0.0f;
+
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+
+    // moe pertensor full load sym
+    ICPU_SET_TILING_KEY(117);
+    ICPU_RUN_KF(
+        dynamic_quant_v2, blockDim, input, smooth_scales_moe, group_index_moe, output, scale, offset, workSpace,
+        (uint8_t*)(td));
+
+    // moe pertensor full load nosym
+    ICPU_SET_TILING_KEY(53);
+    ICPU_RUN_KF(
+        dynamic_quant_v2, blockDim, input, smooth_scales_moe, group_index_moe, output, scale, offset, workSpace,
+        (uint8_t*)(td));
+
+    AscendC::GmFree(input);
+    AscendC::GmFree(smooth_scales_moe);
+    AscendC::GmFree(group_index_moe);
+    AscendC::GmFree(output);
+    AscendC::GmFree(scale);
+    AscendC::GmFree(offset);
+    AscendC::GmFree(workSpace);
+    AscendC::GmFree(tiling);
+}
+
+TEST_F(dynamic_quant_v2_test, test_case_moe_pertensor_largeshape)
+{
+    uint32_t rowLen = 32800;
+    uint32_t totalRow = 128;
+    uint32_t groupNum = 8;
+    uint32_t blockDim = 24;
+
+    size_t inputByteSize = totalRow * rowLen * sizeof(uint16_t);
+    size_t smoothScalesMoeByteSize = groupNum * rowLen * sizeof(uint16_t);
+    size_t groupIndexMoeByteSize = groupNum * sizeof(int32_t);
+    size_t outputByteSize = totalRow * rowLen * sizeof(int8_t);
+    size_t scaleByteSize = 1 * sizeof(uint32_t);
+    size_t offsetByteSize = 1 * sizeof(uint32_t);
+    size_t tiling_data_size = sizeof(DynamicQuantTilingDataArch35);
+
+    uint8_t* input = (uint8_t*)AscendC::GmAlloc(inputByteSize);
+    uint8_t* smooth_scales_moe = (uint8_t*)AscendC::GmAlloc(smoothScalesMoeByteSize);
+    uint8_t* group_index_moe = (uint8_t*)AscendC::GmAlloc(groupIndexMoeByteSize);
+    uint8_t* output = (uint8_t*)AscendC::GmAlloc(outputByteSize);
+    uint8_t* scale = (uint8_t*)AscendC::GmAlloc(scaleByteSize);
+    uint8_t* offset = (uint8_t*)AscendC::GmAlloc(offsetByteSize);
+    uint8_t* workSpace = (uint8_t*)AscendC::GmAlloc(1024 * 1024 * 16);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
+
+    DynamicQuantTilingDataArch35* td = reinterpret_cast<DynamicQuantTilingDataArch35*>(tiling);
+    td->coreNum = blockDim;
+    td->rowLen = rowLen;
+    td->headCoreNum = 8;
+    td->rowPerHeadCore = 6;
+    td->rowPerTailCore = 5;
+    td->multiRowNumHeadCore = 6;
+    td->multiRowNumTailCore = 5;
+    td->innerLoopEle = 4096;
+    td->innerLoopTimes = 7;
+    td->innerLoopTail = 1056;
+    td->groupNum = groupNum;
+    td->alignGroupNum = groupNum;
+    td->hasSmooth = 1;
+    td->unused = 0;
+    td->ubSize = 191 * 1024;
+    td->sizeH = 0;
+    td->sizeX = 0;
+    td->sizeZOut = 0;
+    td->sizeCopyRow = 0;
+    td->numCopyRow = 0;
+    td->numHeadCore = 0;
+    td->numTailCore = 0;
+    td->numHeadTimes = 0;
+    td->numTailTimes = 0;
+    td->numLastTailRow = 0;
+    td->alignType = 0;
+    td->totalBatchLen = 0;
+    td->mLen = 0;
+    td->mBlockSize = 0;
+    td->mTailBlockSize = 0;
+    td->mBlockNum = 0;
+    td->nLen = 0;
+    td->nBlockSize = 0;
+    td->nTailBlockSize = 0;
+    td->nBlockNum = 0;
+    td->nBaseSize = 0;
+    td->nBaseLoopNum = 0;
+    td->blockPerHead = 0;
+    td->blockPerTail = 0;
+    td->totalBlockNum = 0;
+    td->batchBlockSize = 0;
+    td->batchTailBlockSize = 0;
+    td->batchBlockNum = 0;
+    td->dstTypeMax = 0.0f;
+
+    AscendC::SetKernelMode(KernelMode::AIV_MODE);
+
+    // moe pertensor large shape sym
+    ICPU_SET_TILING_KEY(119);
+    ICPU_RUN_KF(
+        dynamic_quant_v2, blockDim, input, smooth_scales_moe, group_index_moe, output, scale, offset, workSpace,
+        (uint8_t*)(td));
+
+    // moe pertensor large shape nosym
+    ICPU_SET_TILING_KEY(55);
+    ICPU_RUN_KF(
+        dynamic_quant_v2, blockDim, input, smooth_scales_moe, group_index_moe, output, scale, offset, workSpace,
+        (uint8_t*)(td));
+
+    AscendC::GmFree(input);
+    AscendC::GmFree(smooth_scales_moe);
+    AscendC::GmFree(group_index_moe);
+    AscendC::GmFree(output);
+    AscendC::GmFree(scale);
+    AscendC::GmFree(offset);
+    AscendC::GmFree(workSpace);
+    AscendC::GmFree(tiling);
 }
