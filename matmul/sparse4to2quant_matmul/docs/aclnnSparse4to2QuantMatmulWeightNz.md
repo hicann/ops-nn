@@ -21,26 +21,26 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnSparse4to2QuantMatmulGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnSparse4to2QuantMatmul”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnSparse4to2QuantMatmulWeightNzGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnSparse4to2QuantMatmulWeightNz”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnSparse4to2QuantMatmulWeightNzGetWorkspaceSize(
-    const aclTensor *x, 
-    const aclTensor *sparseWeight, 
-    const aclTensor *index, 
+    const aclTensor *x,
+    const aclTensor *sparseWeight,
+    const aclTensor *index,
     const aclTensor *xScale,
-    const aclTensor *sparseWeightScale, 
-    const aclTensor *biasOptional, 
-    aclTensor       *out, 
+    const aclTensor *sparseWeightScale,
+    const aclTensor *biasOptional,
+    aclTensor       *out,
     uint64_t        *workspaceSize,
     aclOpExecutor   **executor)
 ```
 
 ```Cpp
 aclnnStatus aclnnSparse4to2QuantMatmulWeightNz(
-    void          *workspace, 
-    uint64_t      workspaceSize, 
-    aclOpExecutor *executor, 
+    void          *workspace,
+    uint64_t      workspaceSize,
+    aclOpExecutor *executor,
     aclrtStream   stream)
 ```
 
@@ -217,7 +217,7 @@ aclnnStatus aclnnSparse4to2QuantMatmulWeightNz(
     <tr>
       <td>workspaceSize</td>
       <td>输入</td>
-      <td>在Device侧申请的workspace大小，由第一段接口aclnnSparse4to2QuantMatmulGetWorkspaceSize获取。</td>
+      <td>在Device侧申请的workspace大小，由第一段接口aclnnSparse4to2QuantMatmulWeightNzGetWorkspaceSize获取。</td>
     </tr>
     <tr>
       <td>executor</td>
@@ -237,9 +237,12 @@ aclnnStatus aclnnSparse4to2QuantMatmulWeightNz(
   aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
+- 确定性说明：
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：aclnnSparse4to2QuantMatmulWeightNz默认确定性实现。
+- 其他约束：
+  - x的最后一维即shape的描述中k的值不能超过65535。
+  - 当前只支持sparseWeightScale，xScale均不是nullptr的场景。
 
-1. x的最后一维即shape的描述中k的值不能超过65535。
-2. 当前只支持sparseWeightScale，xScale均不是nullptr的场景。
 
 ## 调用示例
 
@@ -402,7 +405,7 @@ aclnnStatus aclnnSparse4to2QuantMatmulWeightNz(
       return storageShape;
   }
 
-  int aclnnSparse4to2QuantMatmulTest(int32_t deviceId, aclrtStream& stream)
+  int aclnnSparse4to2QuantMatmulWeightNzTest(int32_t deviceId, aclrtStream& stream)
   {
       auto ret = Init(deviceId, &stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
@@ -474,7 +477,7 @@ aclnnStatus aclnnSparse4to2QuantMatmulWeightNz(
       aclOpExecutor* executor;
       void* workspaceAddr = nullptr;
 
-      // 调用aclnnSparse4to2QuantMatmul第一段接口
+      // 调用aclnnSparse4to2QuantMatmulWeightNz第一段接口
       ret = aclnnSparse4to2QuantMatmulWeightNzGetWorkspaceSize(
           x, sparseWeight, index, xScale, weightScale, bias, out, &workspaceSize, &executor);
 
@@ -488,7 +491,7 @@ aclnnStatus aclnnSparse4to2QuantMatmulWeightNz(
           CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
           workspaceAddrPtrTrans.reset(workspaceAddr);
       }
-      // 调用aclnnSparse4to2QuantMatmul第二段接口
+      // 调用aclnnSparse4to2QuantMatmulWeightNz第二段接口
       ret = aclnnSparse4to2QuantMatmulWeightNz(workspaceAddr, workspaceSize, executor, stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnSparse4to2QuantMatmulWeightNz failed. ERROR: %d\n", ret); return ret);
 
@@ -516,9 +519,9 @@ aclnnStatus aclnnSparse4to2QuantMatmulWeightNz(
       // 根据自己的实际device填写deviceId
       int32_t deviceId = 0;
       aclrtStream stream;
-      auto ret = aclnnSparse4to2QuantMatmulTest(deviceId, stream);
+      auto ret = aclnnSparse4to2QuantMatmulWeightNzTest(deviceId, stream);
       CHECK_FREE_RET(
-          ret == ACL_SUCCESS, LOG_PRINT("aclnnSparse4to2QuantMatmulTest failed. ERROR: %d\n", ret); return ret);
+          ret == ACL_SUCCESS, LOG_PRINT("aclnnSparse4to2QuantMatmulWeightNzTest failed. ERROR: %d\n", ret); return ret);
 
       Finalize(deviceId, stream);
       return 0;
