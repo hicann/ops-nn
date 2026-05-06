@@ -96,7 +96,7 @@ template <typename X_T, typename B_T, typename Y_T, bool RIGHT>
 __aicore__ inline void BucketizeV2FullLoad<X_T, B_T, Y_T, RIGHT>::CopyInX(int64_t offset,
    uint32_t copyLen)
 {
-    LocalTensor<X_T> xLocal = xQueue_.AllocTensor<B_T>();
+    LocalTensor<X_T> xLocal = xQueue_.AllocTensor<X_T>();
     CopyGmToUb<X_T>(xLocal, xGm_, offset, 1, copyLen);
     xQueue_.EnQue(xLocal);
 }

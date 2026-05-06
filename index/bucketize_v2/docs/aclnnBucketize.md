@@ -16,19 +16,19 @@
 ## 功能说明
 
 - 接口功能：根据给定的边界数组（boundaries）确定输入张量中每个元素所属的区间索引。对于输入值 $x$ 和边界数组 $boundaries = [b_0, b_1, ..., b_{n-1}]$，输出索引 $y_i$ 满足：
-  - 如果 $x < b_0$，则 $y_i = 0$
-  - 如果 $b_{i-1} \le x < b_i$，则 $y_i = i$（默认左开右闭区间）
-  - 如果 $x \ge b_{n-1}$，则 $y_i = n$
+  - 如果 $x \le b_0$，则 $y_i = 0$
+  - 如果 $b_{i-1} < x \le b_i$，则 $y_i = i$（默认左开右闭区间）
+  - 如果 $x > b_{n-1}$，则 $y_i = n$
 - 计算公式：
   
-  当right=False时（左闭右开区间）：
-  $$
-  y_i = \min\{j \mid x_i < b_j\}
-  $$
-  
-  当right=True时（左开右闭区间）：
+  当right=False时（默认，左开右闭区间）：
   $$
   y_i = \min\{j \mid x_i \le b_j\}
+  $$
+  
+  当right=True时（左闭右开区间）：
+  $$
+  y_i = \min\{j \mid x_i < b_j\}
   $$
 
 ## 函数原型
@@ -104,7 +104,7 @@ aclnnStatus aclnnBucketize(
       <td>outInt32（bool）</td>
       <td>输入</td>
       <td>输出数据类型控制参数。</td>
-      <td><ul><li>True表示输出数据类型为INT32。</li><li>False表示输出数据类型为INT64。</li></td>
+       <td><ul><li>True表示输出数据类型为INT32。</li><li>False表示输出数据类型为INT64。</li></ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -114,7 +114,7 @@ aclnnStatus aclnnBucketize(
       <td>right（bool）</td>
       <td>输入</td>
       <td>区间边界控制参数。</td>
-      <td><ul><li>True表示区间包含右边界（左开右闭）。</li><li>False表示区间不包含右边界（左闭右开）。</li></td>
+       <td><ul><li>True表示区间包含左边界（左闭右开）。</li><li>False表示区间不包含左边界（左开右闭）。</li></ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
