@@ -11,6 +11,7 @@
 #include <gtest/gtest.h>
 #include <stdlib.h>
 
+#include <fstream>
 #include <iostream>
 #include <thread>
 #include <vector>
@@ -28,6 +29,9 @@
 #include "test_cube_util.h"
 #include "platform/platform_infos_def.h"
 #include "../../../../common/op_host/math_util.h"
+#include "ut_string_utils.h"
+
+using namespace ut_str;
 
 using namespace std;
 
@@ -47,20 +51,45 @@ using namespace ge;
 using namespace ut_util;
 using namespace optiling;
 
-static void SplitStr2Vec(const string &input, const string &delimiter, vector<string> &output)
+static std::vector<QuantBatchMatmulV4TilingTestParam> GetParams()
 {
-    auto delimiterLen = delimiter.size();
-    std::string::size_type currPos = 0;
-    std::string::size_type nextPos = input.find(delimiter, currPos);
-    while (nextPos != std::string::npos) {
-        output.emplace_back(input.substr(currPos, nextPos - currPos));
-        currPos = nextPos + delimiterLen;
-        nextPos = input.find(delimiter, currPos);
+    std::vector<QuantBatchMatmulV4TilingTestParam> params;
+    const std::string rootPath(ut_str::GetExeDirPath() + "../../../../");
+    const std::string casePath(
+        rootPath + "matmul/quant_batch_matmul_v4/tests/ut/op_host/test_quant_batch_matmul_v4_tiling.csv");
+    std::ifstream csvData(casePath, std::ios::in);
+    if (!csvData.is_open()) {
+        std::cout << "cannot open case file " << casePath << ", maybe not exist" << std::endl;
+        return params;
     }
 
-    if (currPos < input.size()) {
-        output.emplace_back(input.substr(currPos));
+    std::string line;
+    bool headerSkipped = false;
+    while (std::getline(csvData, line)) {
+        line = Trim(line);
+        if (line.empty() || line[0] == '#') {
+            continue;
+        }
+        if (!headerSkipped) {
+            headerSkipped = true;
+            continue;
+        }
+
+        std::vector<std::string> testParam;
+        SplitStr2Vec(line, ",", testParam);
+        if (testParam.size() < 4) {
+            continue;
+        }
+
+        QuantBatchMatmulV4TilingTestParam param;
+        size_t idx = 0;
+        param.caseName = Trim(testParam[idx++]);
+        param.numBlocks = static_cast<uint32_t>(std::stoul(Trim(testParam[idx++])));
+        param.tilingResult = ParseGraphStatus(Trim(testParam[idx++]));
+        param.tilingKey = std::stoull(Trim(testParam[idx++]));
+        params.push_back(param);
     }
+    return params;
 }
 
 static void TestOneParamCase(const QuantBatchMatmulV4TilingTestParam &param)
@@ -68,24 +97,7 @@ static void TestOneParamCase(const QuantBatchMatmulV4TilingTestParam &param)
     std::cout << "run case " << param.caseName << std::endl;
     std::vector<string> testParam;
     SplitStr2Vec(param.caseName.substr(param.caseName.find_first_of('_') + 1), "_", testParam);
-    map<string, ge::DataType> dtypeMap = {
-        {"FP16", ge::DT_FLOAT16},
-        {"FP32", ge::DT_FLOAT},
-        {"BF16", ge::DT_BF16},
-        {"INT8", ge::DT_INT8},
-        {"INT4", ge::DT_INT4},
-        {"INT2", ge::DT_INT2},
-        {"UINT1", ge::DT_UINT1},
-        {"UINT64", ge::DT_UINT64},
-        {"FP8-E8M0", ge::DT_FLOAT8_E8M0},
-        {"FP8-E4M3", ge::DT_FLOAT8_E4M3FN},
-        {"FP4-E2M1", ge::DT_FLOAT4_E2M1}
-    };
-
-    map<string, ge::Format> formatMap = {
-        {"ND", ge::FORMAT_ND},
-        {"NZ", ge::FORMAT_FRACTAL_NZ}
-    };
+    ASSERT_GE(testParam.size(), 19U) << "invalid caseName in csv: " << param.caseName;
 
     size_t idx = 0;
     string socVersion = testParam[idx++];
@@ -99,10 +111,10 @@ static void TestOneParamCase(const QuantBatchMatmulV4TilingTestParam &param)
     int64_t transA = stol(testParam[idx++]);
     int64_t transB = stol(testParam[idx++]);
     int64_t group = stol(testParam[idx++]);
-    ge::Format x1Format = formatMap[testParam[idx++]];
-    ge::Format x2Format = formatMap[testParam[idx++]];
-    ge::DataType x1Dtype = dtypeMap[testParam[idx++]];
-    ge::DataType x2Dtype = dtypeMap[testParam[idx++]];
+    ge::Format x1Format = ParseFormat(testParam[idx++]);
+    ge::Format x2Format = ParseFormat(testParam[idx++]);
+    ge::DataType x1Dtype = ParseDtype(testParam[idx++]);
+    ge::DataType x2Dtype = ParseDtype(testParam[idx++]);
     if (transB) {
         k0 = 32;
         k1 = ops::CeilDiv(k, k0);
@@ -115,7 +127,7 @@ static void TestOneParamCase(const QuantBatchMatmulV4TilingTestParam &param)
     if (biasDtypeStr == "NULL") {
         hasBias = false;
     } else {
-        biasDtype = dtypeMap[biasDtypeStr];
+        biasDtype = ParseDtype(biasDtypeStr);
     }
 
     bool hasX1Scale = true;
@@ -124,7 +136,7 @@ static void TestOneParamCase(const QuantBatchMatmulV4TilingTestParam &param)
     if (x1ScaleDtypeStr == "NULL") {
         hasX1Scale = false;
     } else {
-        x1ScaleDtype = dtypeMap[x1ScaleDtypeStr];
+        x1ScaleDtype = ParseDtype(x1ScaleDtypeStr);
     }
 
     bool hasX2Scale = true;
@@ -133,7 +145,7 @@ static void TestOneParamCase(const QuantBatchMatmulV4TilingTestParam &param)
     if (x2ScaleDtypeStr == "NULL") {
         hasX2Scale = false;
     } else {
-        x2ScaleDtype = dtypeMap[x2ScaleDtypeStr];
+        x2ScaleDtype = ParseDtype(x2ScaleDtypeStr);
     }
 
     bool hasYScale = true;
@@ -142,7 +154,7 @@ static void TestOneParamCase(const QuantBatchMatmulV4TilingTestParam &param)
     if (yScaleDtypeStr == "NULL") {
         hasYScale = false;
     } else {
-        yScaleDtype = dtypeMap[yScaleDtypeStr];
+        yScaleDtype = ParseDtype(yScaleDtypeStr);
     }
 
     ge::DataType x1OffsetDtype = ge::DT_FLOAT;
@@ -154,10 +166,10 @@ static void TestOneParamCase(const QuantBatchMatmulV4TilingTestParam &param)
     if (x2TableDtypeStr == "NULL") {
         hasX2Table = false;
     } else {
-        x2TableDtype = dtypeMap[x2TableDtypeStr];
+        x2TableDtype = ParseDtype(x2TableDtypeStr);
     }
 
-    ge::DataType yDtype = dtypeMap[testParam[idx++]];
+    ge::DataType yDtype = ParseDtype(testParam[idx++]);
     uint32_t aicNum = stoul(testParam[idx++]);
     uint32_t aivNum = stoul(testParam[idx++]);
     string compileInfoStr = R"({
@@ -322,15 +334,21 @@ static void TestOneParamCase(const QuantBatchMatmulV4TilingTestParam &param)
     tilingContext->GetPlatformInfo()->SetPlatformRes("version", version);
     auto tilingParseFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling_parse;
     ASSERT_NE(tilingParseFunc, nullptr);
-    ASSERT_EQ(tilingParseFunc(kernelHold.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(tilingParseFunc(kernelHold.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS)
+        << "caseName: " << param.caseName;
 
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
     ASSERT_NE(tilingFunc, nullptr);
-    ge:graphStatus ret = tilingFunc(tilingContext);
-    ASSERT_EQ(ret, param.tilingResult);
+    ge::graphStatus ret = tilingFunc(tilingContext);
+    ASSERT_EQ(ret, param.tilingResult)
+        << "caseName: " << param.caseName;
     if (ret == ge::GRAPH_SUCCESS) {
-        ASSERT_EQ(tilingContext->GetTilingKey(), param.tilingKey);
-        ASSERT_EQ(tilingContext->GetBlockDim(), param.numBlocks);
+        ASSERT_EQ(tilingContext->GetTilingKey(), param.tilingKey)
+            << "caseName: " << param.caseName << ", actual tilingKey: " << tilingContext->GetTilingKey()
+            << ", expected tilingKey: " << param.tilingKey;
+        ASSERT_EQ(tilingContext->GetBlockDim(), param.numBlocks)
+            << "caseName: " << param.caseName << ", actual blockDim: " << tilingContext->GetBlockDim()
+            << ", expected blockDim: " << param.numBlocks;
     }
 }
 
@@ -340,77 +358,6 @@ TEST_P(TestQuantBatchMatmulV4Tiling, generalTest)
     TestOneParamCase(param);
 }
 
-// format: caseName m k n transA transB groupSize x1Format x2Format x1Dtype x2Dtype biasDtype x1ScaleDtype
-//         x2ScaleDtype yScaleDtype x2TableDtype yDtype aicNum aivNum platform weightFormat
-static QuantBatchMatmulV4TilingTestParam casesParams[] = {
-    // MX ND
-    {"mx-1_Ascend950_128_512_128_0_1_32_ND_ND_FP8-E4M3_FP4-E2M1_BF16_FP8-E8M0_FP8-E8M0_UINT64_NULL_BF16_32_64", 32, ge::GRAPH_SUCCESS, 17UL},
-    {"mx-menkan40_Ascend950_944_7680_256_0_1_32_ND_ND_FP8-E4M3_FP4-E2M1_BF16_FP8-E8M0_FP8-E8M0_UINT64_NULL_BF16_32_64", 30, ge::GRAPH_SUCCESS, 17UL},
-    {"mx-menkan18_Ascend950_736_1536_2800_0_1_32_ND_ND_FP8-E4M3_FP4-E2M1_BF16_FP8-E8M0_FP8-E8M0_UINT64_NULL_BF16_32_64", 32, ge::GRAPH_SUCCESS, 17UL},
-    {"mx-menkan17_Ascend950_320_1536_224_0_1_32_ND_ND_FP8-E4M3_FP4-E2M1_BF16_FP8-E8M0_FP8-E8M0_UINT64_NULL_BF16_32_64", 28, ge::GRAPH_SUCCESS, 17UL},
-    {"mx-menkan12_Ascend950_48_7680_80_0_1_32_ND_ND_FP8-E4M3_FP4-E2M1_BF16_FP8-E8M0_FP8-E8M0_UINT64_NULL_BF16_32_64", 9, ge::GRAPH_SUCCESS, 17UL},
-    {"mx-random0001_Ascend950_608_1024_704_0_1_32_ND_ND_FP8-E4M3_FP4-E2M1_BF16_FP8-E8M0_FP8-E8M0_UINT64_NULL_BF16_32_64", 30, ge::GRAPH_SUCCESS, 17UL},
-    {"mx-random0003_Ascend950_3840_512_3200_0_1_32_ND_ND_FP8-E4M3_FP4-E2M1_BF16_FP8-E8M0_FP8-E8M0_UINT64_NULL_BF16_32_64", 32, ge::GRAPH_SUCCESS, 17UL},
-    {"mx-random0013_Ascend950_2256_512_192_0_1_32_ND_ND_FP8-E4M3_FP4-E2M1_BF16_FP8-E8M0_FP8-E8M0_UINT64_NULL_BF16_32_64", 32, ge::GRAPH_SUCCESS, 17UL},
-    {"mx-random0022_Ascend950_32_3072_64_0_1_32_ND_ND_FP8-E4M3_FP4-E2M1_BF16_FP8-E8M0_FP8-E8M0_UINT64_NULL_BF16_32_64", 4, ge::GRAPH_SUCCESS, 17UL},
-    {"mx-random0025_Ascend950_2720_512_192_0_1_32_ND_ND_FP8-E4M3_FP4-E2M1_BF16_FP8-E8M0_FP8-E8M0_UINT64_NULL_BF16_32_64", 32, ge::GRAPH_SUCCESS, 17UL},
-    {"mx-error-x1ScaleDtype_Ascend950_2720_512_192_0_1_32_ND_ND_FP8-E4M3_FP4-E2M1_BF16_BF16_FP8-E8M0_UINT64_NULL_BF16_32_64", 32, ge::GRAPH_FAILED, 17UL},
-    {"mx-error-x2ScaleDtype_Ascend950_2720_512_192_0_1_32_ND_ND_FP8-E4M3_FP4-E2M1_BF16_FP8-E8M0_BF16_UINT64_NULL_BF16_32_64", 32, ge::GRAPH_FAILED, 17UL},
+static const std::vector<QuantBatchMatmulV4TilingTestParam> kCaseParams = GetParams();
 
-    // PERGROUP NZ
-    {"UT-A8W4-PerGroup-NZ-Testcase-0_Ascend950_848_640_896_0_0_32_ND_NZ_FP8-E4M3_FP4-E2M1_NULL_NULL_BF16_UINT64_NULL_BF16_32_64", 30, ge::GRAPH_SUCCESS, 268UL},
-    {"UT-A8W4-PerGroup-NZ-Testcase-1_Ascend950_96_8960_8384_0_0_32_ND_NZ_FP8-E4M3_FP4-E2M1_NULL_NULL_BF16_UINT64_NULL_BF16_32_64", 32, ge::GRAPH_SUCCESS, 268UL},
-    {"UT-A8W4-PerGroup-NZ-Testcase-2_Ascend950_176_64_128_0_0_32_ND_NZ_FP8-E4M3_FP4-E2M1_NULL_NULL_BF16_UINT64_NULL_BF16_32_64", 22, ge::GRAPH_SUCCESS, 268UL},
-    {"UT-A8W4-PerGroup-NZ-Testcase-3_Ascend950_432_192_832_0_0_32_ND_NZ_FP8-E4M3_FP4-E2M1_NULL_NULL_BF16_UINT64_NULL_BF16_32_64", 30, ge::GRAPH_SUCCESS, 268UL},
-    {"UT-A8W4-PerGroup-NZ-Testcase-4_Ascend950_592_1856_192_0_0_32_ND_NZ_FP8-E4M3_FP4-E2M1_NULL_NULL_BF16_UINT64_NULL_BF16_32_64", 30, ge::GRAPH_SUCCESS, 268UL},
-    {"UT-A8W4-PerGroup-NZ-Testcase-5_Ascend950_605_2304_64_0_0_32_ND_NZ_FP8-E4M3_FP4-E2M1_NULL_NULL_BF16_UINT64_NULL_BF16_32_64", 19, ge::GRAPH_SUCCESS, 268UL},
-    {"UT-A8W4-PerGroup-NZ-Testcase-6_Ascend950_8_7168_576_0_0_32_ND_NZ_FP8-E4M3_FP4-E2M1_NULL_NULL_BF16_UINT64_NULL_BF16_32_64", 9, ge::GRAPH_SUCCESS, 268UL},
-    {"UT-A8W4-PerGroup-NZ-Testcase-7_Ascend950_714_128_3392_0_0_32_ND_NZ_FP8-E4M3_FP4-E2M1_NULL_NULL_BF16_UINT64_NULL_BF16_32_64", 32, ge::GRAPH_SUCCESS, 268UL},
-    {"UT-A8W4-PerGroup-NZ-Testcase-8_Ascend950_5968_128_576_0_0_32_ND_NZ_FP8-E4M3_FP4-E2M1_NULL_NULL_BF16_UINT64_NULL_BF16_32_64", 32, ge::GRAPH_SUCCESS, 268UL},
-    {"UT-A8W4-PerGroup-NZ-Testcase-9_Ascend950_27_64_320_0_0_32_ND_NZ_FP8-E4M3_FP4-E2M1_NULL_NULL_BF16_UINT64_NULL_BF16_32_64", 10, ge::GRAPH_SUCCESS, 268UL},
-    {"UT-A8W4-PerGroup-NZ-Testcase-10_Ascend950_192_3648_64_0_0_32_ND_NZ_FP8-E4M3_FP4-E2M1_NULL_NULL_BF16_UINT64_NULL_BF16_32_64", 12, ge::GRAPH_SUCCESS, 268UL},
-
-    // k>65535
-    {"UT-A8W4-PerGroup-NZ-Testcase-11_Ascend950_16_65536_64_0_0_32_ND_NZ_FP8-E4M3_FP4-E2M1_NULL_NULL_BF16_UINT64_NULL_BF16_32_64", 1, ge::GRAPH_SUCCESS, 268UL},
-    // n>65535
-    {"UT-A8W4-PerGroup-NZ-Testcase-12_Ascend950_16_64_65536_0_0_32_ND_NZ_FP8-E4M3_FP4-E2M1_NULL_NULL_BF16_UINT64_NULL_BF16_32_64", 32, ge::GRAPH_SUCCESS, 268UL},
-
-    // PERGROUP NZ ERROR
-    // BIAS: dtype != bf16 dtype != fp16
-    {"UT-A8W4-PerGroup-NZ-Testcase-error-0_Ascend950_16_64_64_0_0_32_ND_NZ_FP8-E4M3_FP4-E2M1_FP32_NULL_BF16_UINT64_NULL_BF16_32_64", 32, ge::GRAPH_FAILED, 268UL},
-    // X2Scale dtype != bf16
-    {"UT-A8W4-PerGroup-NZ-Testcase-error-1_Ascend950_16_64_64_0_0_32_ND_NZ_FP8-E4M3_FP4-E2M1_BF16_NULL_FP32_UINT64_NULL_BF16_32_64", 32, ge::GRAPH_FAILED, 268UL},
-    // X1Scale 不为空
-    {"UT-A8W4-PerGroup-NZ-Testcase-error-3_Ascend950_16_64_64_0_0_32_ND_NZ_FP8-E4M3_FP4-E2M1_BF16_BF16_BF16_UINT64_NULL_BF16_32_64", 32, ge::GRAPH_FAILED, 268UL},
-    // GroupSize不为32
-    {"UT-A8W4-PerGroup-NZ-Testcase-error-5_Ascend950_16_64_64_0_0_96_ND_NZ_FP8-E4M3_FP4-E2M1_BF16_NULL_BF16_UINT64_NULL_BF16_32_64", 32, ge::GRAPH_FAILED, 268UL},
-    // GroupNum不为整数倍
-    {"UT-A8W4-PerGroup-NZ-Testcase-error-6_Ascend950_16_64_64_0_0_65_ND_NZ_FP8-E4M3_FP4-E2M1_BF16_NULL_BF16_UINT64_NULL_BF16_32_64", 32, ge::GRAPH_FAILED, 268UL},
-    // yScale非UINT64
-    {"UT-A8W4-PerGroup-NZ-Testcase-error-7_Ascend950_16_64_64_0_0_32_ND_NZ_FP8-E4M3_FP4-E2M1_BF16_NULL_BF16_FP32_NULL_BF16_32_64", 32, ge::GRAPH_FAILED, 268UL},
-    // yScale为空
-    {"UT-A8W4-PerGroup-NZ-Testcase-error-8_Ascend950_16_64_64_0_0_32_ND_NZ_FP8-E4M3_FP4-E2M1_BF16_NULL_BF16_NULL_NULL_BF16_32_64", 32, ge::GRAPH_FAILED, 268UL},
-    // K不为64对齐
-    {"UT-A8W4-PerGroup-NZ-Testcase-error-9_Ascend950_16_65_64_0_0_32_ND_NZ_FP8-E4M3_FP4-E2M1_BF16_NULL_BF16_UINT64_NULL_BF16_32_64", 32, ge::GRAPH_FAILED, 268UL},
-    // x2: dtype!=fp4_e2m1
-    {"UT-A8W4-PerGroup-NZ-Testcase-error-13_Ascend950_16_64_64_0_0_32_ND_NZ_FP8-E4M3_FP8-E4M3_BF16_NULL_BF16_UINT64_NULL_BF16_32_64", 32, ge::GRAPH_FAILED, 268UL},
-    // y: dtype!=bf16
-    {"UT-A8W4-PerGroup-NZ-Testcase-error-14_Ascend950_16_64_64_0_0_32_ND_NZ_FP8-E4M3_FP4-E2M1_BF16_NULL_BF16_UINT64_NULL_FP16_32_64", 32, ge::GRAPH_FAILED, 268UL},
-    // x2 NZ不支持转置
-    {"UT-A8W4-PerGroup-NZ-Testcase-error-15_Ascend950_16_64_64_0_1_32_ND_NZ_FP8-E4M3_FP4-E2M1_BF16_NULL_BF16_UINT64_NULL_BF16_32_64", 32, ge::GRAPH_FAILED, 268UL},
-    // aic:aiv != 1:2
-    {"UT-A8W4-PerGroup-NZ-Testcase-error-16_Ascend950_192_3648_64_0_0_32_ND_NZ_FP8-E4M3_FP4-E2M1_NULL_NULL_BF16_UINT64_NULL_BF16_32_32", 12, ge::GRAPH_FAILED, 268UL},
-
-    // MX NZ ERROR
-    // X2: dtype != FP4-E2M1
-    {"UT-A8W4-MX-NZ-Testcase-error-3_Ascend950_16_64_64_0_1_32_ND_NZ_FP8-E4M3_FP8-E4M3_BF16_FP8-E8M0_FP8-E8M0_NULL_NULL_BF16_32_64", 32, ge::GRAPH_FAILED, 273UL},
-
-    // RESERVED
-    {"A8W2-LUT-Testcase-0_RESERVED_3072_2048_4096_0_0_16777344_ND_NZ_INT8_INT2_NULL_NULL_UINT64_NULL_INT4_INT8_14_14", 14, ge::GRAPH_SUCCESS, 768UL},
-    {"A8W2-LUT-Testcase-1_RESERVED_1_2048_4096_0_0_16777344_ND_NZ_INT8_INT2_NULL_NULL_UINT64_NULL_INT4_INT8_2_2", 2, ge::GRAPH_SUCCESS, 1280UL},
-    {"A8W4-LUT-Testcase-2_RESERVED_3072_2048_4096_0_0_16777344_ND_NZ_INT8_INT4_NULL_NULL_UINT64_NULL_INT8_INT8_14_14", 14, ge::GRAPH_SUCCESS, 768UL},
-    {"A8W4-LUT-Testcase-3_RESERVED_1_2048_4096_0_0_16777344_ND_NZ_INT8_INT4_NULL_NULL_UINT64_NULL_INT8_INT8_2_2", 2, ge::GRAPH_SUCCESS, 1280UL},
-    {"A8W1-LUT-Testcase-4_RESERVED_3072_2048_4096_0_0_16777344_ND_NZ_INT8_UINT1_NULL_NULL_UINT64_NULL_INT4_INT8_14_14", 14, ge::GRAPH_SUCCESS, 768UL},
-    {"A8W1-LUT-Testcase-5_RESERVED_1_2048_4096_0_0_16777344_ND_NZ_INT8_UINT1_NULL_NULL_UINT64_NULL_INT4_INT8_2_2", 2, ge::GRAPH_SUCCESS, 1280UL},
- };
-INSTANTIATE_TEST_CASE_P(MM, TestQuantBatchMatmulV4Tiling, testing::ValuesIn(casesParams));
+INSTANTIATE_TEST_CASE_P(MM, TestQuantBatchMatmulV4Tiling, testing::ValuesIn(kCaseParams));

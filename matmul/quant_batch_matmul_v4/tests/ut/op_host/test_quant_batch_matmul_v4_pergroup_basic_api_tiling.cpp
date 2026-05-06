@@ -11,7 +11,7 @@
 #include <gtest/gtest.h>
 
 #include <cstdint>
-#include <map>
+#include <fstream>
 #include <string>
 #include <vector>
 
@@ -21,7 +21,9 @@
 #include "test_cube_util.h"
 #include "platform/platform_infos_def.h"
 #include "../../../op_host/op_tiling/quant_batch_matmul_v4_compile_info.h"
+#include "ut_string_utils.h"
 
+using namespace ut_str;
 using namespace ge;
 using namespace ut_util;
 
@@ -46,15 +48,47 @@ struct PergroupBasicApiCaseResult {
 class TestQuantBatchMatmulV4PergroupBasicApiTiling
     : public testing::TestWithParam<PergroupBasicApiShapeGuardCase> {};
 
-static gert::StorageShape MakeStorageShape(const std::vector<int64_t> &dims)
+static std::vector<PergroupBasicApiShapeGuardCase> GetParams()
 {
-    gert::StorageShape shape;
-    auto &storageShape = shape.MutableStorageShape();
-    for (const auto dim : dims) {
-        storageShape.AppendDim(dim);
+    std::vector<PergroupBasicApiShapeGuardCase> params;
+    const std::string rootPath(ut_str::GetExeDirPath() + "../../../../");
+    const std::string casePath(
+        rootPath + "matmul/quant_batch_matmul_v4/tests/ut/op_host/test_quant_batch_matmul_v4_pergroup_basic_api_tiling.csv");
+    std::ifstream csvData(casePath, std::ios::in);
+    if (!csvData.is_open()) {
+        std::cout << "cannot open case file " << casePath << ", maybe not exist" << std::endl;
+        return params;
     }
-    shape.MutableOriginShape() = shape.MutableStorageShape();
-    return shape;
+
+    std::string line;
+    bool skipHeader = true;
+    while (std::getline(csvData, line)) {
+        line = Trim(line);
+        if (line.empty() || line[0] == '#') {
+            continue;
+        }
+        if (skipHeader) {
+            skipHeader = false;
+            continue;
+        }
+
+        std::vector<std::string> cols;
+        SplitStr2Vec(line, ",", cols);
+        if (cols.size() < 8UL) {
+            continue;
+        }
+        PergroupBasicApiShapeGuardCase param;
+        param.caseName = Trim(cols[0]);
+        param.socVersion = Trim(cols[1]);
+        param.x1Dims = ParseInt64Vec(cols[2]);
+        param.x2Dims = ParseInt64Vec(cols[3]);
+        param.expectedResult = ParseGraphStatus(cols[4]);
+        param.expectedTilingKey = std::stoull(Trim(cols[5]));
+        param.expectedNumBlocks = static_cast<uint32_t>(std::stoul(Trim(cols[6])));
+        param.checkTilingMeta = ParseBool(cols[7]);
+        params.push_back(param);
+    }
+    return params;
 }
 
 static PergroupBasicApiCaseResult RunPergroupBasicApiCase(const PergroupBasicApiShapeGuardCase &param)
@@ -210,12 +244,5 @@ TEST_P(TestQuantBatchMatmulV4PergroupBasicApiTiling, ShapeGuard)
 // 2) Ascend910B maps Short_SoC_version=Ascend910B.
 // 3) Verify by only changing x1/x2 dims below.
 // 4) Add future guard cases in this table.
-static PergroupBasicApiShapeGuardCase g_cases[] = {
-    // Legal cases for pergroup basic api path:
-    // m=128, k=1024 (k%1024==0), n=256 (n%256==0), all inputs are 2D.
-    {"legal_rank2_should_succeed_950", "Ascend950", {1024, 1024}, {1024, 1024}, ge::GRAPH_SUCCESS, 537, 32, true},
-    {"legal_rank2_should_succeed_910b", "Ascend910B", {128, 1024}, {256, 1024}, ge::GRAPH_SUCCESS, 1040, 1, true},
-};
-
-INSTANTIATE_TEST_CASE_P(MM, TestQuantBatchMatmulV4PergroupBasicApiTiling, testing::ValuesIn(g_cases));
+INSTANTIATE_TEST_CASE_P(MM, TestQuantBatchMatmulV4PergroupBasicApiTiling, testing::ValuesIn(GetParams()));
 } // namespace

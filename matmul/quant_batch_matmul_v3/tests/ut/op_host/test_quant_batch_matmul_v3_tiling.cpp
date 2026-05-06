@@ -33,7 +33,9 @@
 #include "../../../op_host/op_tiling/quant_batch_matmul_v3_tiling.h"
 #include "../../../op_kernel/arch35/quant_batch_matmul_v3_tiling_data.h"
 #include "platform/platform_infos_def.h"
+#include "ut_string_utils.h"
 
+using namespace ut_str;
 using namespace std;
 using namespace ge;
 using namespace ut_util;
@@ -119,21 +121,6 @@ protected:
     }
 };
 
-static void SplitStr2Vec(const string &input, const string &delimiter, vector<string> &output)
-{
-    auto delimiterLen = delimiter.size();
-    std::string::size_type currPos = 0;
-    std::string::size_type nextPos = input.find(delimiter, currPos);
-    while (nextPos != std::string::npos) {
-        output.emplace_back(input.substr(currPos, nextPos - currPos));
-        currPos = nextPos + delimiterLen;
-        nextPos = input.find(delimiter, currPos);
-    }
-
-    if (currPos < input.size()) {
-        output.emplace_back(input.substr(currPos));
-    }
-}
 
 static void InitPlatformInfo(const std::string &socVersion, gert::TilingContext *tilingContext, string &compileInfoStr,
                              int64_t aicNum = -1, int64_t aivNum = -1)
@@ -230,20 +217,12 @@ static void InitPlatformInfo(const std::string &socVersion, gert::TilingContext 
 static std::vector<QuantBatchMatmulV3TilingTestParam> GetParams(const std::string &socVersion)
 {
     std::vector<QuantBatchMatmulV3TilingTestParam> params;
-    std::string rootPath(GetExeDirPath() + "../../../../");
+    std::string rootPath(ut_str::GetExeDirPath() + "../../../../");
     std::string casePath(rootPath + "matmul/quant_batch_matmul_v3/tests/ut/op_host/test_quant_batch_matmul_v3.csv");
     std::ifstream csvData(casePath, std::ios::in);
     if (!csvData.is_open()) {
-        std::cout << "cannot open case file " << casePath << ", maybe not exist" << std::endl;
         return params;
     }
-
-    map<string, ge::DataType> dtypeMap = {{"FLOAT16", ge::DT_FLOAT16}, {"FLOAT", ge::DT_FLOAT},
-                                          {"BF16", ge::DT_BF16},       {"INT8", ge::DT_INT8},
-                                          {"INT4", ge::DT_INT4},       {"UINT64", ge::DT_UINT64},
-                                          {"INT32", ge::DT_INT32},     {"INT64", ge::DT_INT64}, {"FLOAT8-E8M0", ge::DT_FLOAT8_E8M0},
-                                          {"HIFLOAT8", ge::DT_HIFLOAT8},{"FLOAT8-E5M2", ge::DT_FLOAT8_E5M2},
-                                          {"FLOAT8-E4M3", ge::DT_FLOAT8_E4M3FN}, {"FLOAT4-E2M1", ge::DT_FLOAT4_E2M1}};
 
     std::string line;
     while (std::getline(csvData, line)) {
@@ -287,12 +266,12 @@ static std::vector<QuantBatchMatmulV3TilingTestParam> GetParams(const std::strin
         param.transA = stol(testParam[idx++]);
         param.transB = stol(testParam[idx++]);
         param.quantMode = stol(testParam[idx++]);
-        param.x1Dtype = dtypeMap[testParam[idx++]];
-        param.x2Dtype = dtypeMap[testParam[idx++]];
-        param.scaleDtype = dtypeMap[testParam[idx++]];
-        param.perTokenScaleDtype = dtypeMap[testParam[idx++]];
-        param.biasDtype = dtypeMap[testParam[idx++]];
-        param.yDtype = dtypeMap[testParam[idx++]];
+        param.x1Dtype = ParseDtype(testParam[idx++]);
+        param.x2Dtype = ParseDtype(testParam[idx++]);
+        param.scaleDtype = ParseDtype(testParam[idx++]);
+        param.perTokenScaleDtype = ParseDtype(testParam[idx++]);
+        param.biasDtype = ParseDtype(testParam[idx++]);
+        param.yDtype = ParseDtype(testParam[idx++]);
         param.fmapNz = testParam[idx++] == "NZ";
         param.weightNz = testParam[idx++] == "NZ";
         param.result = (strcasecmp(testParam[idx++].c_str(), "true") == 0);
@@ -505,7 +484,6 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
     gert::StorageShape pertokenShape;
     gert::StorageShape biasShape;
     gert::StorageShape outputShape;
-    cout << "run case " << prefix << std::endl;
     if (yDim == 6) {
         outputShape.MutableOriginShape() = gert::Shape({batchC, batchC, batchC, batchC, m, n});
     } else if (yDim == 3) {
@@ -754,11 +732,19 @@ TEST_P(TestQuantBatchMatmulV3Tiling, generalTest)
     GetParam().Test();
 }
 
-INSTANTIATE_TEST_CASE_P(QUANTMM910B, TestQuantBatchMatmulV3Tiling, testing::ValuesIn(GetParams("Ascend910B2")));
-INSTANTIATE_TEST_CASE_P(QUANTMM910B4, TestQuantBatchMatmulV3Tiling, testing::ValuesIn(GetParams("Ascend910B4")));
-INSTANTIATE_TEST_CASE_P(QUANTMM310P, TestQuantBatchMatmulV3Tiling, testing::ValuesIn(GetParams("Ascend310P3")));
-INSTANTIATE_TEST_CASE_P(QUANTMM950, TestQuantBatchMatmulV3Tiling, testing::ValuesIn(GetParams("Ascend950")));
-INSTANTIATE_TEST_CASE_P(QUANTMMMC62CM12AA, TestQuantBatchMatmulV3Tiling, testing::ValuesIn(GetParams("MC62CM12AA")));
+static const std::vector<QuantBatchMatmulV3TilingTestParam> kCasesParams910B2 = GetParams("Ascend910B2");
+static const std::vector<QuantBatchMatmulV3TilingTestParam> kCasesParams910B4 = GetParams("Ascend910B4");
+static const std::vector<QuantBatchMatmulV3TilingTestParam> kCasesParams310P3 = GetParams("Ascend310P3");
+static const std::vector<QuantBatchMatmulV3TilingTestParam> kCasesParams950 = GetParams("Ascend950");
+static const std::vector<QuantBatchMatmulV3TilingTestParam> kCasesParamsMC62CM12AA = GetParams("MC62CM12AA");
+
+INSTANTIATE_TEST_CASE_P(QUANTMM910B, TestQuantBatchMatmulV3Tiling, testing::ValuesIn(kCasesParams910B2));
+INSTANTIATE_TEST_CASE_P(QUANTMM910B4, TestQuantBatchMatmulV3Tiling, testing::ValuesIn(kCasesParams910B4));
+INSTANTIATE_TEST_CASE_P(QUANTMM310P, TestQuantBatchMatmulV3Tiling, testing::ValuesIn(kCasesParams310P3));
+INSTANTIATE_TEST_CASE_P(QUANTMM950, TestQuantBatchMatmulV3Tiling, testing::ValuesIn(kCasesParams950));
+INSTANTIATE_TEST_CASE_P(QUANTMMMC62CM12AA, TestQuantBatchMatmulV3Tiling, testing::ValuesIn(kCasesParamsMC62CM12AA));
+
+static mutex tilingTestMutex;
 
 static void ThreadFunc(const QuantBatchMatmulV3TilingTestParam *params, size_t testcaseNum, size_t threadIdx,
                        size_t threadNum)
@@ -766,7 +752,12 @@ static void ThreadFunc(const QuantBatchMatmulV3TilingTestParam *params, size_t t
     int32_t logLevel = 0;
     int32_t enableEvent = 0;
     for (size_t idx = threadIdx; idx < testcaseNum; idx += threadNum) {
-        params[idx].Test();
+        if (params[idx].socVersion == "Ascend950") {
+            lock_guard<mutex> lock(tilingTestMutex);
+            params[idx].Test();
+        } else {
+            params[idx].Test();
+        }
     }
 }
 
@@ -834,12 +825,10 @@ static void TestMultiThreadSeparate(const QuantBatchMatmulV3TilingTestParam *par
 
 TEST_F(TestQuantBatchMatmulV3Tiling, multiThread310P3)
 {
-    auto casesParams310P3 = GetParams("Ascend310P3");
-    TestMultiThread(casesParams310P3.data(), casesParams310P3.size(), 3);
+    TestMultiThread(kCasesParams310P3.data(), kCasesParams310P3.size(), 3);
 }
 
 TEST_F(TestQuantBatchMatmulV3Tiling, multiThread950)
 {
-    auto casesParams950 = GetParams("Ascend950");
-    TestMultiThread(casesParams950.data(), casesParams950.size(), 3);
+    TestMultiThread(kCasesParams950.data(), kCasesParams950.size(), 3);
 }

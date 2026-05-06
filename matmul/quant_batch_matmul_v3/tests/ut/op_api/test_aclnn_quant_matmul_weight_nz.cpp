@@ -13,6 +13,8 @@
 #include <gmock/gmock.h>
 #include <vector>
 #include <array>
+#include <fstream>
+#include <memory>
 #include "gtest/gtest.h"
 
 #include "../../../op_api/aclnn_quant_matmul_weight_nz.h"
@@ -21,698 +23,285 @@
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/op_api_ut.h"
 #include "opdev/platform.h"
+#include "../../../../../tests/ut/common/ut_string_utils.h"
+using namespace ut_str;
 
 using namespace std;
 using namespace op;
 
-struct QuantBatchMatmulWeightNzTestParam {
+struct QuantBatchMatmulWeightNzParam {
     string caseName;
-    vector<int64_t> x1;
-    vector<int64_t> x2;
-    vector<int64_t> scale;
-    vector<int64_t> offset;
-    vector<int64_t> bias;
-    vector<int64_t> out;
-    vector<int64_t> x1_stride;
-    vector<int64_t> x2_stride;
-    aclDataType scaleType;
+    string arch;
+
+    vector<int64_t> x1Shape;
+    aclDataType x1Type;
+    aclFormat x1Format;
+    vector<int64_t> x1Stride;
+    vector<int64_t> x1StorageShape;
+
+    bool x2Null;
+    vector<int64_t> x2Shape;
+    aclDataType x2Type;
+    aclFormat x2Format;
+    vector<int64_t> x2Stride;
+    vector<int64_t> x2StorageShape;
+
+    bool x1ScaleNull;
+    vector<int64_t> x1ScaleShape;
+    aclDataType x1ScaleType;
+    aclFormat x1ScaleFormat;
+
+    bool x2ScaleNull;
+    vector<int64_t> x2ScaleShape;
+    aclDataType x2ScaleType;
+    aclFormat x2ScaleFormat;
+
+    bool yScaleNull;
+    vector<int64_t> yScaleShape;
+    aclDataType yScaleType;
+    aclFormat yScaleFormat;
+
+    bool x1OffsetNull;
+    vector<int64_t> x1OffsetShape;
+    aclDataType x1OffsetType;
+    aclFormat x1OffsetFormat;
+
+    bool groupScaleNull;
+    vector<int64_t> groupScaleShape;
+    aclDataType groupScaleType;
+    aclFormat groupScaleFormat;
+
+    bool yOffsetNull;
+    vector<int64_t> yOffsetShape;
+    aclDataType yOffsetType;
+    aclFormat yOffsetFormat;
+
+    bool biasNull;
+    vector<int64_t> biasShape;
+    aclDataType biasType;
+    aclFormat biasFormat;
+
+    vector<int64_t> outShape;
     aclDataType outType;
-    // out
-    aclnnStatus expect_ret;
+    aclFormat outFormat;
+
+    bool transposeX1;
+    bool transposeX2;
+    int64_t groupSize;
+    aclnnStatus expectRet;
+    bool checkRet;
 };
 
-class l2_QuantBatchMatmulWeightNz_test : public testing::Test {
+static vector<QuantBatchMatmulWeightNzParam> GetParams()
+{
+    vector<QuantBatchMatmulWeightNzParam> params;
+    string rootPath(ut_str::GetExeDirPath() + "../../../../");
+    string casePath(rootPath + "matmul/quant_batch_matmul_v3/tests/ut/op_api/test_aclnn_quant_matmul_weight_nz.csv");
+    std::ifstream csvData(casePath, std::ios::in);
+    if (!csvData.is_open()) {
+        return params;
+    }
+
+    string line;
+    bool skipHeader = true;
+    constexpr size_t kExpectedCols = 49UL;
+    while (std::getline(csvData, line)) {
+        const string trimLine = Trim(line);
+        if (trimLine.empty() || trimLine[0] == '#') {
+            continue;
+        }
+        if (skipHeader) {
+            skipHeader = false;
+            continue;
+        }
+        vector<string> cols;
+        SplitStr2Vec(line, ",", cols);
+        if (cols.size() < kExpectedCols) {
+            cols.resize(kExpectedCols);
+        }
+        size_t idx = 0UL;
+        QuantBatchMatmulWeightNzParam p;
+        p.caseName = Trim(cols[idx++]);
+        p.arch = Trim(cols[idx++]);
+
+        p.x1Shape = ParseInt64Vec(cols[idx++]);
+        p.x1Type = ParseAclDataType(cols[idx++]);
+        p.x1Format = ParseAclFormat(cols[idx++]);
+        p.x1Stride = ParseInt64Vec(cols[idx++]);
+        p.x1StorageShape = ParseInt64Vec(cols[idx++]);
+
+        p.x2Null = ParseBool(cols[idx++]);
+        p.x2Shape = ParseInt64Vec(cols[idx++]);
+        p.x2Type = ParseAclDataType(cols[idx++]);
+        p.x2Format = ParseAclFormat(cols[idx++]);
+        p.x2Stride = ParseInt64Vec(cols[idx++]);
+        p.x2StorageShape = ParseInt64Vec(cols[idx++]);
+
+        p.x1ScaleNull = ParseBool(cols[idx++]);
+        p.x1ScaleShape = ParseInt64Vec(cols[idx++]);
+        p.x1ScaleType = ParseAclDataType(cols[idx++]);
+        p.x1ScaleFormat = ParseAclFormat(cols[idx++]);
+
+        p.x2ScaleNull = ParseBool(cols[idx++]);
+        p.x2ScaleShape = ParseInt64Vec(cols[idx++]);
+        p.x2ScaleType = ParseAclDataType(cols[idx++]);
+        p.x2ScaleFormat = ParseAclFormat(cols[idx++]);
+
+        p.yScaleNull = ParseBool(cols[idx++]);
+        p.yScaleShape = ParseInt64Vec(cols[idx++]);
+        p.yScaleType = ParseAclDataType(cols[idx++]);
+        p.yScaleFormat = ParseAclFormat(cols[idx++]);
+
+        p.x1OffsetNull = ParseBool(cols[idx++]);
+        p.x1OffsetShape = ParseInt64Vec(cols[idx++]);
+        p.x1OffsetType = ParseAclDataType(cols[idx++]);
+        p.x1OffsetFormat = ParseAclFormat(cols[idx++]);
+
+        p.groupScaleNull = ParseBool(cols[idx++]);
+        p.groupScaleShape = ParseInt64Vec(cols[idx++]);
+        p.groupScaleType = ParseAclDataType(cols[idx++]);
+        p.groupScaleFormat = ParseAclFormat(cols[idx++]);
+
+        p.yOffsetNull = ParseBool(cols[idx++]);
+        p.yOffsetShape = ParseInt64Vec(cols[idx++]);
+        p.yOffsetType = ParseAclDataType(cols[idx++]);
+        p.yOffsetFormat = ParseAclFormat(cols[idx++]);
+
+        p.biasNull = ParseBool(cols[idx++]);
+        p.biasShape = ParseInt64Vec(cols[idx++]);
+        p.biasType = ParseAclDataType(cols[idx++]);
+        p.biasFormat = ParseAclFormat(cols[idx++]);
+
+        p.outShape = ParseInt64Vec(cols[idx++]);
+        p.outType = ParseAclDataType(cols[idx++]);
+        p.outFormat = ParseAclFormat(cols[idx++]);
+
+        p.transposeX1 = ParseBool(cols[idx++]);
+        p.transposeX2 = ParseBool(cols[idx++]);
+        p.groupSize = ParseInt64OrDefault(cols[idx++], 0);
+        p.expectRet = ParseAclnnStatus(cols[idx++]);
+        p.checkRet = ParseBool(cols[idx++]);
+        params.push_back(p);
+    }
+    return params;
+}
+
+class l2_QuantBatchMatmulWeightNz_test : public testing::TestWithParam<QuantBatchMatmulWeightNzParam> {
  protected:
-  static void SetUpTestCase() { cout << "l2_QuantBatchMatmulWeightNz_test SetUp" << endl; }
-
-  static void TearDownTestCase() { cout << "l2_QuantBatchMatmulWeightNz_test TearDown" << endl; }
+  static void SetUpTestCase() { }
+  static void TearDownTestCase() { }
 };
 
-
-TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend910B2_test_normal_case_01)
+static TensorDesc CreateTensorDesc(const vector<int64_t> &shape, aclDataType type, aclFormat format,
+                                   const vector<int64_t> &stride = {}, const vector<int64_t> &storage = {})
 {
-    TensorDesc x1_desc = TensorDesc({4, 32}, ACL_INT8, ACL_FORMAT_ND);
-    TensorDesc x2_desc = TensorDesc({32, 64}, ACL_INT8, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 2, 16, 32});
-    TensorDesc scale_desc = TensorDesc({1}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc out_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, nullptr, scale_desc, nullptr, nullptr, nullptr, nullptr, nullptr, false, false, 0),
-                        OUTPUT(out_desc));
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    if (!storage.empty()) {
+        return TensorDesc(shape, type, format, stride, 0, storage);
+    }
+    if (!stride.empty()) {
+        return TensorDesc(shape, type, format, stride);
+    }
+    return TensorDesc(shape, type, format);
 }
 
-TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend910B2_test_x2_nullptr_case_02)
+static aclnnStatus RunCaseWithMask(const QuantBatchMatmulWeightNzParam &param)
 {
-    TensorDesc x1_desc = TensorDesc({4, 32}, ACL_INT8, ACL_FORMAT_ND);
-    TensorDesc x2_desc = TensorDesc({32, 64}, ACL_INT8, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 2, 16, 32});
-    TensorDesc scale_desc = TensorDesc({1}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc out_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, nullptr, nullptr, scale_desc, nullptr, nullptr, nullptr, nullptr, nullptr, false, false, 0),
-                        OUTPUT(out_desc));
+    TensorDesc x1Desc = CreateTensorDesc(param.x1Shape, param.x1Type, param.x1Format, param.x1Stride, param.x1StorageShape);
+    TensorDesc x2Desc = CreateTensorDesc(param.x2Shape, param.x2Type, param.x2Format, param.x2Stride, param.x2StorageShape);
+    TensorDesc x1ScaleDesc = CreateTensorDesc(param.x1ScaleShape, param.x1ScaleType, param.x1ScaleFormat);
+    TensorDesc x2ScaleDesc = CreateTensorDesc(param.x2ScaleShape, param.x2ScaleType, param.x2ScaleFormat);
+    TensorDesc yScaleDesc = CreateTensorDesc(param.yScaleShape, param.yScaleType, param.yScaleFormat);
+    TensorDesc x1OffsetDesc = CreateTensorDesc(param.x1OffsetShape, param.x1OffsetType, param.x1OffsetFormat);
+    TensorDesc groupScaleDesc = CreateTensorDesc(param.groupScaleShape, param.groupScaleType, param.groupScaleFormat);
+    TensorDesc yOffsetDesc = CreateTensorDesc(param.yOffsetShape, param.yOffsetType, param.yOffsetFormat);
+    TensorDesc biasDesc = CreateTensorDesc(param.biasShape, param.biasType, param.biasFormat);
+    TensorDesc outDesc = CreateTensorDesc(param.outShape, param.outType, param.outFormat);
+
     uint64_t workspace_size = 0;
-    // aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    const uint32_t mask = (static_cast<uint32_t>(param.x2Null) << 7U) |
+                          (static_cast<uint32_t>(param.x1ScaleNull) << 6U) |
+                          (static_cast<uint32_t>(param.x2ScaleNull) << 5U) |
+                          (static_cast<uint32_t>(param.yScaleNull) << 4U) |
+                          (static_cast<uint32_t>(param.x1OffsetNull) << 3U) |
+                          (static_cast<uint32_t>(param.groupScaleNull) << 2U) |
+                          (static_cast<uint32_t>(param.yOffsetNull) << 1U) |
+                          static_cast<uint32_t>(param.biasNull);
+
+    switch (mask) {
+        case 29U: {
+            auto ut = OP_API_UT(aclnnQuantMatmulWeightNz,
+                INPUT(x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, nullptr, nullptr, nullptr, yOffsetDesc, nullptr,
+                      param.transposeX1, param.transposeX2, param.groupSize),
+                OUTPUT(outDesc));
+            return ut.TestGetWorkspaceSize(&workspace_size);
+        }
+        case 30U: {
+            auto ut = OP_API_UT(aclnnQuantMatmulWeightNz,
+                INPUT(x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, nullptr, nullptr, nullptr, nullptr, biasDesc,
+                      param.transposeX1, param.transposeX2, param.groupSize),
+                OUTPUT(outDesc));
+            return ut.TestGetWorkspaceSize(&workspace_size);
+        }
+        case 31U: {
+            auto ut = OP_API_UT(aclnnQuantMatmulWeightNz,
+                INPUT(x1Desc, x2Desc, x1ScaleDesc, x2ScaleDesc, nullptr, nullptr, nullptr, nullptr, nullptr,
+                      param.transposeX1, param.transposeX2, param.groupSize),
+                OUTPUT(outDesc));
+            return ut.TestGetWorkspaceSize(&workspace_size);
+        }
+        case 79U: {
+            auto ut = OP_API_UT(aclnnQuantMatmulWeightNz,
+                INPUT(x1Desc, x2Desc, nullptr, x2ScaleDesc, yScaleDesc, nullptr, nullptr, nullptr, nullptr,
+                      param.transposeX1, param.transposeX2, param.groupSize),
+                OUTPUT(outDesc));
+            return ut.TestGetWorkspaceSize(&workspace_size);
+        }
+        case 87U: {
+            auto ut = OP_API_UT(aclnnQuantMatmulWeightNz,
+                INPUT(x1Desc, x2Desc, nullptr, x2ScaleDesc, nullptr, x1OffsetDesc, nullptr, nullptr, nullptr,
+                      param.transposeX1, param.transposeX2, param.groupSize),
+                OUTPUT(outDesc));
+            return ut.TestGetWorkspaceSize(&workspace_size);
+        }
+        case 93U: {
+            auto ut = OP_API_UT(aclnnQuantMatmulWeightNz,
+                INPUT(x1Desc, x2Desc, nullptr, x2ScaleDesc, nullptr, nullptr, nullptr, yOffsetDesc, nullptr,
+                      param.transposeX1, param.transposeX2, param.groupSize),
+                OUTPUT(outDesc));
+            return ut.TestGetWorkspaceSize(&workspace_size);
+        }
+        case 95U: {
+            auto ut = OP_API_UT(aclnnQuantMatmulWeightNz,
+                INPUT(x1Desc, x2Desc, nullptr, x2ScaleDesc, nullptr, nullptr, nullptr, nullptr, nullptr,
+                      param.transposeX1, param.transposeX2, param.groupSize),
+                OUTPUT(outDesc));
+            return ut.TestGetWorkspaceSize(&workspace_size);
+        }
+        case 223U: {
+            auto ut = OP_API_UT(aclnnQuantMatmulWeightNz,
+                INPUT(x1Desc, nullptr, nullptr, x2ScaleDesc, nullptr, nullptr, nullptr, nullptr, nullptr,
+                      param.transposeX1, param.transposeX2, param.groupSize),
+                OUTPUT(outDesc));
+            return ut.TestGetWorkspaceSize(&workspace_size);
+        }
+        default:
+            ADD_FAILURE() << "Unsupported optional-input mask for case: " << param.caseName << ", mask=" << mask;
+            return ACLNN_ERR_PARAM_INVALID;
+    }
 }
 
-TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend910B2_test_x2_not_align_32_case_03)
+TEST_P(l2_QuantBatchMatmulWeightNz_test, QuantBatchMatmulWeightNzFromCsv)
 {
-    TensorDesc x1_desc = TensorDesc({4, 32}, ACL_INT8, ACL_FORMAT_ND);
-    TensorDesc x2_desc = TensorDesc({32, 16}, ACL_INT8, ACL_FORMAT_FRACTAL_NZ, {}, 0, {1, 2, 16, 32});
-    TensorDesc scale_desc = TensorDesc({1}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc out_desc = TensorDesc({4, 16}, ACL_BF16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, nullptr, scale_desc, nullptr, nullptr, nullptr, nullptr, nullptr, false, false, 0),
-                        OUTPUT(out_desc));
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+    const auto &param = GetParam();
+    std::unique_ptr<op::NpuArchManager> archManager;
+    if (param.arch == "DAV_3510") {
+        archManager = std::make_unique<op::NpuArchManager>(NpuArch::DAV_3510);
+    }
+
+    const aclnnStatus aclRet = RunCaseWithMask(param);
+    if (param.checkRet) {
+        EXPECT_EQ(aclRet, param.expectRet);
+    }
 }
 
-TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend910B2_test_n_equal_k)
-{
-    TensorDesc x1_desc = TensorDesc({4, 32}, ACL_INT8, ACL_FORMAT_ND);
-    TensorDesc x2_desc = TensorDesc({32, 32}, ACL_INT8, ACL_FORMAT_FRACTAL_NZ, {}, 0, {1, 2, 16, 32});
-    TensorDesc scale_desc = TensorDesc({32}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc out_desc = TensorDesc({4, 32}, ACL_BF16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, nullptr, scale_desc, nullptr, nullptr, nullptr, nullptr, nullptr, false, false, 0),
-                        OUTPUT(out_desc));
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-}
-
-TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend910B2_test_x2_not_align_16_case_04)
-{
-
-    TensorDesc x1_desc = TensorDesc({4, 17}, ACL_INT8, ACL_FORMAT_ND);
-    TensorDesc x2_desc = TensorDesc({17, 16}, ACL_INT8, ACL_FORMAT_FRACTAL_NZ, {}, 0, {1, 2, 16, 32});
-    TensorDesc scale_desc = TensorDesc({1}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc out_desc = TensorDesc({4, 16}, ACL_BF16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, nullptr, scale_desc, nullptr, nullptr, nullptr, nullptr, nullptr, false, false, 0),
-                        OUTPUT(out_desc));
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-}
-
-TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend910B2_test_yscale_not_empty_case_05)
-{
-    TensorDesc x1_desc = TensorDesc({4, 32}, ACL_INT8, ACL_FORMAT_ND);
-    TensorDesc x2_desc = TensorDesc({32, 64}, ACL_INT8, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 2, 16, 32});
-    TensorDesc scale_desc = TensorDesc({1}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc y_scale_desc = TensorDesc({1}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc out_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, nullptr, scale_desc, y_scale_desc, nullptr, nullptr, nullptr, nullptr, false, false, 0),
-                        OUTPUT(out_desc));
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
-}
-
-TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend910B2_test_x1Offset_not_empty_case_06)
-{
-    TensorDesc x1_desc = TensorDesc({4, 32}, ACL_INT8, ACL_FORMAT_ND);
-    TensorDesc x2_desc = TensorDesc({32, 64}, ACL_INT8, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 2, 16, 32});
-    TensorDesc scale_desc = TensorDesc({1}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc y_scale_desc = TensorDesc({1}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc out_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc x1_offset_desc = TensorDesc({1}, ACL_BF16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, nullptr, scale_desc, nullptr, x1_offset_desc, nullptr, nullptr, nullptr, false, false, 0),
-                        OUTPUT(out_desc));
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
-}
-
-TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend910B2_test_yOffset_not_empty_case_06)
-{
-    TensorDesc x1_desc = TensorDesc({4, 32}, ACL_INT8, ACL_FORMAT_ND);
-    TensorDesc x2_desc = TensorDesc({32, 64}, ACL_INT8, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 2, 16, 32});
-    TensorDesc scale_desc = TensorDesc({1}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc y_scale_desc = TensorDesc({1}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc out_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc y_offset_desc = TensorDesc({1}, ACL_BF16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, nullptr, scale_desc, nullptr, nullptr, nullptr, y_offset_desc, nullptr, false, false, 0),
-                        OUTPUT(out_desc));
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
-}
-
-TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend910B2_test_groupsize_not_0_case_06)
-{
-    TensorDesc x1_desc = TensorDesc({4, 32}, ACL_INT8, ACL_FORMAT_ND);
-    TensorDesc x2_desc = TensorDesc({32, 64}, ACL_INT8, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 2, 16, 32});
-    TensorDesc scale_desc = TensorDesc({1}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc y_scale_desc = TensorDesc({1}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc out_desc = TensorDesc({4, 64}, ACL_BF16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, nullptr, scale_desc, nullptr, nullptr, nullptr, nullptr, nullptr, false, false, 11),
-                        OUTPUT(out_desc));
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
-}
-
-TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend910B2_test_x2_not_align_16_x2_not_nz)
-{
-    TensorDesc x1_desc = TensorDesc({4, 17}, ACL_INT8, ACL_FORMAT_ND);
-    TensorDesc x2_desc = TensorDesc({17, 16}, ACL_INT8, ACL_FORMAT_ND, {}, 0, {17, 16});
-    TensorDesc scale_desc = TensorDesc({1}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc out_desc = TensorDesc({4, 16}, ACL_BF16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, nullptr, scale_desc, nullptr, nullptr, nullptr, nullptr, nullptr, false, false, 0),
-                        OUTPUT(out_desc));
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
-}
-
-TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend950_test_x2_not_align_16_case_04)
-{
-
-    TensorDesc x1_desc = TensorDesc({4, 17}, ACL_INT8, ACL_FORMAT_ND);
-    TensorDesc x2_desc = TensorDesc({17, 16}, ACL_INT8, ACL_FORMAT_FRACTAL_NZ, {}, 0, {1, 2, 16, 32});
-    TensorDesc scale_desc = TensorDesc({1}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc out_desc = TensorDesc({4, 16}, ACL_BF16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, nullptr, scale_desc, nullptr, nullptr, nullptr, nullptr, nullptr, false, false, 0),
-                        OUTPUT(out_desc));
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-}
-
-// TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend950_test_out_int32_fail)
-// {
-
-//     TensorDesc x1_desc = TensorDesc({4, 17}, ACL_INT8, ACL_FORMAT_ND);
-//     TensorDesc x2_desc = TensorDesc({17, 16}, ACL_INT8, ACL_FORMAT_FRACTAL_NZ, {}, 0, {1, 2, 16, 32});
-//     TensorDesc scale_desc = TensorDesc({1}, ACL_BF16, ACL_FORMAT_ND);
-//     TensorDesc out_desc = TensorDesc({4, 16}, ACL_INT32, ACL_FORMAT_ND);
-//     auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, nullptr, scale_desc, nullptr, nullptr, nullptr, nullptr, nullptr, false, false, 0),
-//                         OUTPUT(out_desc));
-//     uint64_t workspace_size = 0;
-//     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-//     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
-// }
-
-// TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend950_test_out_nd_fail)
-// {
-
-//     TensorDesc x1_desc = TensorDesc({4, 17}, ACL_INT8, ACL_FORMAT_ND);
-//     TensorDesc x2_desc = TensorDesc({17, 16}, ACL_INT8, ACL_FORMAT_ND, {}, 0, {1, 2, 16, 32});
-//     TensorDesc scale_desc = TensorDesc({1}, ACL_BF16, ACL_FORMAT_ND);
-//     TensorDesc out_desc = TensorDesc({4, 16}, ACL_BF16, ACL_FORMAT_ND);
-//     auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, nullptr, scale_desc, nullptr, nullptr, nullptr, nullptr, nullptr, false, false, 0),
-//                         OUTPUT(out_desc));
-//     uint64_t workspace_size = 0;
-//     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-//     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
-// }
-
-TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend950_test_out_dtype_fail)
-{
-
-    TensorDesc x1_desc = TensorDesc({4, 17}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
-    TensorDesc x2_desc = TensorDesc({17, 16}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND, {}, 0, {1, 2, 16, 32});
-    TensorDesc scale_desc = TensorDesc({1}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc out_desc = TensorDesc({4, 16}, ACL_BF16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, nullptr, scale_desc, nullptr, nullptr, nullptr, nullptr, nullptr, false, false, 0),
-                        OUTPUT(out_desc));
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
-}
-TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend950_test_n_equal_1)
-{
-    TensorDesc x1_desc = TensorDesc({4, 32}, ACL_INT8, ACL_FORMAT_ND);
-    TensorDesc x2_desc = TensorDesc({32, 1}, ACL_INT8, ACL_FORMAT_FRACTAL_NZ, {}, 0, {1, 2, 16, 32});
-    TensorDesc scale_desc = TensorDesc({1}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc out_desc = TensorDesc({4, 1}, ACL_BF16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, nullptr, scale_desc, nullptr, nullptr, nullptr, nullptr, nullptr, false, false, 0),
-                        OUTPUT(out_desc));
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    // EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-}
-
-TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend950_test_a8w4_mx_0)
-{
-    op::NpuArchManager archManager(NpuArch::DAV_3510);
-    TensorDesc x1_desc = TensorDesc({1, 64}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
-    TensorDesc x2_desc = TensorDesc({8, 128}, ACL_FLOAT, ACL_FORMAT_FRACTAL_NZ, {1, 8}, 0, {2, 8, 16, 4});
-    TensorDesc x1_scale_desc = TensorDesc({1, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
-    TensorDesc x2_scale_desc = TensorDesc({128, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
-    int64_t groupSize = 32;
-    TensorDesc out_desc = TensorDesc({1, 128}, ACL_BF16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, x1_scale_desc, x2_scale_desc, nullptr, nullptr, nullptr, nullptr, nullptr, false, false, groupSize),
-                        OUTPUT(out_desc));
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-}
-
-TEST_F(l2_QuantBatchMatmulWeightNz_test, a4w4_weight_nz_case_01_bf16)
-{
-    TensorDesc x1_desc = TensorDesc({6256, 5120}, ACL_INT4, ACL_FORMAT_ND);
-    TensorDesc x2_desc = TensorDesc({15360, 5120}, ACL_INT4, ACL_FORMAT_FRACTAL_NZ, {}, 0, {160, 960, 16, 32});
-    TensorDesc x1Scale_desc = TensorDesc({6256}, ACL_FLOAT, ACL_FORMAT_ND);
-    TensorDesc x2Scale_desc = TensorDesc({15360}, ACL_FLOAT, ACL_FORMAT_ND);
-    TensorDesc out_desc = TensorDesc({6256, 15360}, ACL_BF16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, x1Scale_desc, x2Scale_desc, nullptr, nullptr, nullptr, nullptr, nullptr, false, true, 0),
-                        OUTPUT(out_desc));
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-}
-
-TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend950_test_a8w4_mx_1)
-{
-    op::NpuArchManager archManager(NpuArch::DAV_3510);
-    TensorDesc x1_desc = TensorDesc({16, 64}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
-    TensorDesc x2_desc = TensorDesc({64, 128}, ACL_FLOAT4_E2M1, ACL_FORMAT_FRACTAL_NZ, {}, 0, {4, 4, 16, 32});
-    TensorDesc x2_scale_desc = TensorDesc({2, 128}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc y_scale_desc = TensorDesc({1, 128}, ACL_INT64, ACL_FORMAT_ND);
-    int64_t groupSize = 32;
-    TensorDesc out_desc = TensorDesc({16, 128}, ACL_BF16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, nullptr, x2_scale_desc, y_scale_desc, nullptr, nullptr, nullptr, nullptr, false, false, groupSize),
-                        OUTPUT(out_desc));
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-}
-
-// mxa8w4: bias/out支持fp16
-TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend950_test_mxa8w4_bias_fp16)
-{
-    op::NpuArchManager archManager(NpuArch::DAV_3510);
-    TensorDesc x1_desc = TensorDesc({16, 128}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
-    TensorDesc x2_desc = TensorDesc({64, 128}, ACL_FLOAT4_E2M1, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 8, 16, 32});
-    TensorDesc x1_scale_desc = TensorDesc({16, 2, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
-    TensorDesc x2_scale_desc = TensorDesc({64, 2, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
-    int64_t groupSize = 32;
-    TensorDesc bias_desc = TensorDesc({1, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
-    TensorDesc out_desc = TensorDesc({16, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, x1_scale_desc, x2_scale_desc, nullptr, nullptr, nullptr, nullptr, bias_desc, false, true, groupSize),
-                        OUTPUT(out_desc));
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-}
-
-// mxa8w4: bias/out类型要求一致
-TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend950_test_mxa8w4_bias_fp16_out_bf16)
-{
-    op::NpuArchManager archManager(NpuArch::DAV_3510);
-    TensorDesc x1_desc = TensorDesc({16, 128}, ACL_FLOAT8_E4M3FN, ACL_FORMAT_ND);
-    TensorDesc x2_desc = TensorDesc({128, 64}, ACL_FLOAT4_E2M1, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 8, 16, 32});
-    TensorDesc x1_scale_desc = TensorDesc({16, 2, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
-    TensorDesc x2_scale_desc = TensorDesc({64, 2, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
-    int64_t groupSize = 32;
-    TensorDesc bias_desc = TensorDesc({1, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
-    TensorDesc out_desc = TensorDesc({16, 128}, ACL_BF16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, x1_scale_desc, x2_scale_desc, nullptr, nullptr, nullptr, nullptr, bias_desc, false, true, groupSize),
-                        OUTPUT(out_desc));
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
-}
-
-TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend950_test_mxfp4_weight_nz_micro_scaling_enc_group)
-{
-    op::NpuArchManager archManager(NpuArch::DAV_3510);
-    TensorDesc x1_desc = TensorDesc({16, 64}, ACL_FLOAT4_E2M1, ACL_FORMAT_ND);
-    TensorDesc x2_desc = TensorDesc({64, 128}, ACL_FLOAT4_E2M1, ACL_FORMAT_FRACTAL_NZ, {}, 0, {4, 4, 16, 32});
-    TensorDesc x1_scale_desc = TensorDesc({16, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
-    TensorDesc x2_scale_desc = TensorDesc({1, 128, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
-    int64_t groupSize = 32;
-    TensorDesc out_desc = TensorDesc({16, 128}, ACL_BF16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz,
-                        INPUT(x1_desc, x2_desc, x1_scale_desc, x2_scale_desc, nullptr, nullptr, nullptr, nullptr, nullptr,
-                              false, false, groupSize),
-                        OUTPUT(out_desc));
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-}
-
-// FLOAT4+E8M0：内轴（view 最后一维）须为偶数
-TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend950_test_mxfp4_weight_nz_invalid_odd_inner_axis)
-{
-    op::NpuArchManager archManager(NpuArch::DAV_3510);
-    TensorDesc x1_desc = TensorDesc({16, 63}, ACL_FLOAT4_E2M1, ACL_FORMAT_ND);
-    TensorDesc x2_desc = TensorDesc({128, 63}, ACL_FLOAT4_E2M1, ACL_FORMAT_FRACTAL_NZ, {}, 0, {2, 8, 16, 32});
-    TensorDesc x1_scale_desc = TensorDesc({16, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
-    TensorDesc x2_scale_desc = TensorDesc({128, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
-    const int64_t groupSizeMx = 32;
-    TensorDesc out_desc = TensorDesc({16, 128}, ACL_BF16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz,
-                        INPUT(x1_desc, x2_desc, x1_scale_desc, x2_scale_desc, nullptr, nullptr, nullptr, nullptr, nullptr,
-                              false, true, groupSizeMx),
-                        OUTPUT(out_desc));
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
-}
-
-// FLOAT4+E8M0：k 维须大于 2
-TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend950_test_mxfp4_weight_nz_invalid_k_le_2)
-{
-    op::NpuArchManager archManager(NpuArch::DAV_3510);
-    TensorDesc x1_desc = TensorDesc({8, 2}, ACL_FLOAT4_E2M1, ACL_FORMAT_ND);
-    TensorDesc x2_desc = TensorDesc({16, 2}, ACL_FLOAT4_E2M1, ACL_FORMAT_FRACTAL_NZ, {}, 0, {1, 1, 16, 32});
-    TensorDesc x1_scale_desc = TensorDesc({8, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
-    TensorDesc x2_scale_desc = TensorDesc({16, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
-    const int64_t groupSizeMx = 32;
-    TensorDesc out_desc = TensorDesc({8, 16}, ACL_BF16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz,
-                        INPUT(x1_desc, x2_desc, x1_scale_desc, x2_scale_desc, nullptr, nullptr, nullptr, nullptr, nullptr,
-                              false, true, groupSizeMx),
-                        OUTPUT(out_desc));
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
-}
-
-// FLOAT4+E8M0 + x2 为 NZ：view 最后两维之一为 1（k 或 n 为 1）应拦截
-TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend950_test_mxfp4_weight_nz_invalid_last_two_dim_one)
-{
-    op::NpuArchManager archManager(NpuArch::DAV_3510);
-    TensorDesc x1_desc = TensorDesc({16, 32}, ACL_FLOAT4_E2M1, ACL_FORMAT_ND);
-    TensorDesc x2_desc = TensorDesc({32, 1}, ACL_FLOAT4_E2M1, ACL_FORMAT_FRACTAL_NZ, {}, 0, {1, 2, 16, 32});
-    TensorDesc x1_scale_desc = TensorDesc({16, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
-    TensorDesc x2_scale_desc = TensorDesc({32, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
-    const int64_t groupSizeMx = 32;
-    TensorDesc out_desc = TensorDesc({16, 32}, ACL_BF16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz,
-                        INPUT(x1_desc, x2_desc, x1_scale_desc, x2_scale_desc, nullptr, nullptr, nullptr, nullptr, nullptr,
-                              false, true, groupSizeMx),
-                        OUTPUT(out_desc));
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
-}
-
-// FLOAT4+E8M0 + x2 为 NZ：不允许 transposeX1=true
-TEST_F(l2_QuantBatchMatmulWeightNz_test, ascend950_test_mxfp4_weight_nz_invalid_transpose_x1_true)
-{
-    op::NpuArchManager archManager(NpuArch::DAV_3510);
-    TensorDesc x1_desc = TensorDesc({16, 64}, ACL_FLOAT4_E2M1, ACL_FORMAT_ND);
-    TensorDesc x2_desc = TensorDesc({64, 128}, ACL_FLOAT4_E2M1, ACL_FORMAT_FRACTAL_NZ, {}, 0, {4, 4, 16, 32});
-    TensorDesc x1_scale_desc = TensorDesc({16, 1, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
-    TensorDesc x2_scale_desc = TensorDesc({1, 128, 2}, ACL_FLOAT8_E8M0, ACL_FORMAT_ND);
-    const int64_t groupSizeMx = 32;
-    TensorDesc out_desc = TensorDesc({16, 128}, ACL_BF16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz,
-                        INPUT(x1_desc, x2_desc, x1_scale_desc, x2_scale_desc, nullptr, nullptr, nullptr, nullptr, nullptr,
-                              true, true, groupSizeMx),
-                        OUTPUT(out_desc));
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
-}
-
-TEST_F(l2_QuantBatchMatmulWeightNz_test, a4w4_weight_nz_case_01_fp16)
-{
-    TensorDesc x1_desc = TensorDesc({6256, 5120}, ACL_INT4, ACL_FORMAT_ND);
-    TensorDesc x2_desc = TensorDesc({15360, 5120}, ACL_INT4, ACL_FORMAT_FRACTAL_NZ, {}, 0, {160, 960, 16, 32});
-    TensorDesc x1Scale_desc = TensorDesc({6256}, ACL_FLOAT, ACL_FORMAT_ND);
-    TensorDesc x2Scale_desc = TensorDesc({15360}, ACL_FLOAT, ACL_FORMAT_ND);
-    TensorDesc out_desc = TensorDesc({6256, 15360}, ACL_FLOAT16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, x1Scale_desc, x2Scale_desc, nullptr, nullptr, nullptr, nullptr, nullptr, false, true, 0),
-                        OUTPUT(out_desc));
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-}
-
-TEST_F(l2_QuantBatchMatmulWeightNz_test, a4w4_weight_nz_case_02)
-{
-    TensorDesc x1_desc = TensorDesc({124, 5120}, ACL_INT4, ACL_FORMAT_ND);
-    TensorDesc x2_desc = TensorDesc({15360, 5120}, ACL_INT4, ACL_FORMAT_FRACTAL_NZ, {}, 0, {160, 960, 16, 32});
-    TensorDesc x1Scale_desc = TensorDesc({124}, ACL_FLOAT, ACL_FORMAT_ND);
-    TensorDesc x2Scale_desc = TensorDesc({15360}, ACL_FLOAT, ACL_FORMAT_ND);
-    TensorDesc out_desc = TensorDesc({124, 15360}, ACL_BF16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, x1Scale_desc, x2Scale_desc, nullptr, nullptr, nullptr, nullptr, nullptr, false, true, 0),
-                        OUTPUT(out_desc));
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-}
-
-TEST_F(l2_QuantBatchMatmulWeightNz_test, a4w4_weight_nz_case_03_bf16)
-{
-    TensorDesc x1_desc = TensorDesc({6256, 5120}, ACL_INT4, ACL_FORMAT_ND);
-    TensorDesc x2_desc = TensorDesc({5120, 5120}, ACL_INT4, ACL_FORMAT_FRACTAL_NZ, {}, 0, {160, 320, 16, 32});
-    TensorDesc x1Scale_desc = TensorDesc({6256}, ACL_FLOAT, ACL_FORMAT_ND);
-    TensorDesc x2Scale_desc = TensorDesc({5120}, ACL_FLOAT, ACL_FORMAT_ND);
-    TensorDesc bias_desc = TensorDesc({5120}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc out_desc = TensorDesc({6256, 5120}, ACL_BF16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, x1Scale_desc, x2Scale_desc, nullptr, nullptr, nullptr, nullptr, bias_desc, false, true, 0),
-                        OUTPUT(out_desc));
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-}
-
-TEST_F(l2_QuantBatchMatmulWeightNz_test, a4w4_weight_nz_case_03_fp16)
-{
-    TensorDesc x1_desc = TensorDesc({6256, 5120}, ACL_INT4, ACL_FORMAT_ND);
-    TensorDesc x2_desc = TensorDesc({5120, 5120}, ACL_INT4, ACL_FORMAT_FRACTAL_NZ, {}, 0, {160, 320, 16, 32});
-    TensorDesc x1Scale_desc = TensorDesc({6256}, ACL_FLOAT, ACL_FORMAT_ND);
-    TensorDesc x2Scale_desc = TensorDesc({5120}, ACL_FLOAT, ACL_FORMAT_ND);
-    TensorDesc out_desc = TensorDesc({6256, 5120}, ACL_FLOAT16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, x1Scale_desc, x2Scale_desc, nullptr, nullptr, nullptr, nullptr, nullptr, false, true, 0),
-                        OUTPUT(out_desc));
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-}
-
-TEST_F(l2_QuantBatchMatmulWeightNz_test, a4w4_weight_nz_case_04)
-{
-    TensorDesc x1_desc = TensorDesc({124, 5120}, ACL_INT4, ACL_FORMAT_ND);
-    TensorDesc x2_desc = TensorDesc({5120, 5120}, ACL_INT4, ACL_FORMAT_FRACTAL_NZ, {}, 0, {160, 320, 16, 32});
-    TensorDesc x1Scale_desc = TensorDesc({124}, ACL_FLOAT, ACL_FORMAT_ND);
-    TensorDesc x2Scale_desc = TensorDesc({5120}, ACL_FLOAT, ACL_FORMAT_ND);
-    TensorDesc bias_desc = TensorDesc({5120}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc out_desc = TensorDesc({124, 5120}, ACL_BF16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, x1Scale_desc, x2Scale_desc, nullptr, nullptr, nullptr, nullptr, bias_desc, false, true, 0),
-                        OUTPUT(out_desc));
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-}
-
-TEST_F(l2_QuantBatchMatmulWeightNz_test, a4w4_weight_nz_case_05)
-{
-    TensorDesc x1_desc = TensorDesc({6256, 5120}, ACL_INT4, ACL_FORMAT_ND);
-    TensorDesc x2_desc = TensorDesc({20480, 5120}, ACL_INT4, ACL_FORMAT_FRACTAL_NZ, {}, 0, {160, 1280, 16, 32});
-    TensorDesc x1Scale_desc = TensorDesc({6256}, ACL_FLOAT, ACL_FORMAT_ND);
-    TensorDesc x2Scale_desc = TensorDesc({20480}, ACL_FLOAT, ACL_FORMAT_ND);
-    TensorDesc bias_desc = TensorDesc({20480}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc out_desc = TensorDesc({6256, 20480}, ACL_BF16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, x1Scale_desc, x2Scale_desc, nullptr, nullptr, nullptr, nullptr, bias_desc, false, true, 0),
-                        OUTPUT(out_desc));
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-}
-
-TEST_F(l2_QuantBatchMatmulWeightNz_test, a4w4_weight_nz_case_06)
-{
-    TensorDesc x1_desc = TensorDesc({6256, 20480}, ACL_INT4, ACL_FORMAT_ND);
-    TensorDesc x2_desc = TensorDesc({5120, 20480}, ACL_INT4, ACL_FORMAT_FRACTAL_NZ, {}, 0, {640, 320, 16, 32});
-    TensorDesc x1Scale_desc = TensorDesc({6256}, ACL_FLOAT, ACL_FORMAT_ND);
-    TensorDesc x2Scale_desc = TensorDesc({5120}, ACL_FLOAT, ACL_FORMAT_ND);
-    TensorDesc bias_desc = TensorDesc({5120}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc out_desc = TensorDesc({6256, 5120}, ACL_BF16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, x1Scale_desc, x2Scale_desc, nullptr, nullptr, nullptr, nullptr, bias_desc, false, true, 0),
-                        OUTPUT(out_desc));
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-}
-
-TEST_F(l2_QuantBatchMatmulWeightNz_test, a4w4_weight_nz_case_07)
-{
-    TensorDesc x1_desc = TensorDesc({124, 5120}, ACL_INT4, ACL_FORMAT_ND);
-    TensorDesc x2_desc = TensorDesc({20480, 5120}, ACL_INT4, ACL_FORMAT_FRACTAL_NZ, {}, 0, {160, 1280, 16, 32});
-    TensorDesc x1Scale_desc = TensorDesc({124}, ACL_FLOAT, ACL_FORMAT_ND);
-    TensorDesc x2Scale_desc = TensorDesc({20480}, ACL_FLOAT, ACL_FORMAT_ND);
-    TensorDesc bias_desc = TensorDesc({20480}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc out_desc = TensorDesc({124, 20480}, ACL_BF16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, x1Scale_desc, x2Scale_desc, nullptr, nullptr, nullptr, nullptr, bias_desc, false, true, 0),
-                        OUTPUT(out_desc));
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-}
-
-TEST_F(l2_QuantBatchMatmulWeightNz_test, a4w4_weight_nz_case_08)
-{
-    TensorDesc x1_desc = TensorDesc({124, 20480}, ACL_INT4, ACL_FORMAT_ND);
-    TensorDesc x2_desc = TensorDesc({5120, 20480}, ACL_INT4, ACL_FORMAT_FRACTAL_NZ, {}, 0, {640, 320, 16, 32});
-    TensorDesc x1Scale_desc = TensorDesc({124}, ACL_FLOAT, ACL_FORMAT_ND);
-    TensorDesc x2Scale_desc = TensorDesc({5120}, ACL_FLOAT, ACL_FORMAT_ND);
-    TensorDesc bias_desc = TensorDesc({5120}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc out_desc = TensorDesc({124, 5120}, ACL_BF16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, x1Scale_desc, x2Scale_desc, nullptr, nullptr, nullptr, nullptr, bias_desc, false, true, 0),
-                        OUTPUT(out_desc));
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-}
-
-TEST_F(l2_QuantBatchMatmulWeightNz_test, a4w4_weight_nz_case_09)
-{
-    TensorDesc x1_desc = TensorDesc({6256, 5120}, ACL_INT4, ACL_FORMAT_ND);
-    TensorDesc x2_desc = TensorDesc({15360, 5120}, ACL_INT4, ACL_FORMAT_FRACTAL_NZ, {}, 0, {160, 960, 16, 32});
-    TensorDesc x1Scale_desc = TensorDesc({6256}, ACL_FLOAT, ACL_FORMAT_ND);
-    TensorDesc x2Scale_desc = TensorDesc({15360}, ACL_FLOAT, ACL_FORMAT_ND);
-    TensorDesc out_desc = TensorDesc({6256, 15360}, ACL_FLOAT16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, x1Scale_desc, x2Scale_desc, nullptr, nullptr, nullptr, nullptr, nullptr, false, true, 0),
-                        OUTPUT(out_desc));
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-}
-
-TEST_F(l2_QuantBatchMatmulWeightNz_test, a4w4_weight_nz_case_10)
-{
-    TensorDesc x1_desc = TensorDesc({6256, 5120}, ACL_INT4, ACL_FORMAT_ND);
-    TensorDesc x2_desc = TensorDesc({5120, 5120}, ACL_INT4, ACL_FORMAT_FRACTAL_NZ, {}, 0, {160, 320, 16, 32});
-    TensorDesc x1Scale_desc = TensorDesc({6256}, ACL_FLOAT, ACL_FORMAT_ND);
-    TensorDesc x2Scale_desc = TensorDesc({5120}, ACL_FLOAT, ACL_FORMAT_ND);
-    TensorDesc bias_desc = TensorDesc({5120}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc out_desc = TensorDesc({6256, 5120}, ACL_BF16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, x1Scale_desc, x2Scale_desc, nullptr, nullptr, nullptr, nullptr, bias_desc, false, true, 0),
-                        OUTPUT(out_desc));
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-}
-
-TEST_F(l2_QuantBatchMatmulWeightNz_test, a4w4_weight_nz_case_11)
-{
-    TensorDesc x1_desc = TensorDesc({6256, 5120}, ACL_INT4, ACL_FORMAT_ND);
-    TensorDesc x2_desc = TensorDesc({20480, 5120}, ACL_INT4, ACL_FORMAT_FRACTAL_NZ, {}, 0, {160, 1280, 16, 32});
-    TensorDesc x1Scale_desc = TensorDesc({6256}, ACL_FLOAT, ACL_FORMAT_ND);
-    TensorDesc x2Scale_desc = TensorDesc({20480}, ACL_FLOAT, ACL_FORMAT_ND);
-    TensorDesc bias_desc = TensorDesc({20480}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc out_desc = TensorDesc({6256, 20480}, ACL_BF16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, x1Scale_desc, x2Scale_desc, nullptr, nullptr, nullptr, nullptr, bias_desc, false, true, 0),
-                        OUTPUT(out_desc));
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-}
-
-TEST_F(l2_QuantBatchMatmulWeightNz_test, a4w4_weight_nz_case_12)
-{
-    TensorDesc x1_desc = TensorDesc({6256, 20480}, ACL_INT4, ACL_FORMAT_ND);
-    TensorDesc x2_desc = TensorDesc({5120, 20480}, ACL_INT4, ACL_FORMAT_FRACTAL_NZ, {}, 0, {640, 320, 16, 32});
-    TensorDesc x1Scale_desc = TensorDesc({6256}, ACL_FLOAT, ACL_FORMAT_ND);
-    TensorDesc x2Scale_desc = TensorDesc({5120}, ACL_FLOAT, ACL_FORMAT_ND);
-    TensorDesc bias_desc = TensorDesc({5120}, ACL_BF16, ACL_FORMAT_ND);
-    TensorDesc out_desc = TensorDesc({6256, 5120}, ACL_BF16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, x1Scale_desc, x2Scale_desc, nullptr, nullptr, nullptr, nullptr, bias_desc, false, true, 0),
-                        OUTPUT(out_desc));
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-}
-
-TEST_F(l2_QuantBatchMatmulWeightNz_test, a8w4_weight_nz_case_1)
-{
-    // A8W4 msd方案 支持fp16输出
-    TensorDesc x1_desc = TensorDesc({1, 8192}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1, 1);
-    TensorDesc x2_desc = TensorDesc({8192, 128}, ACL_INT32, ACL_FORMAT_FRACTAL_NZ, {}, 0, {16, 512, 16, 8}).ValueRange(-1, 1); // INT32 = INT4 * 8, 128 = 1024 / 8
-    TensorDesc x1scale_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
-    TensorDesc x2scale_desc = TensorDesc({1024}, ACL_UINT64, ACL_FORMAT_ND);
-    TensorDesc yoffset_desc = TensorDesc({1024}, ACL_FLOAT, ACL_FORMAT_ND);
-    TensorDesc out_desc = TensorDesc({1, 1024}, ACL_FLOAT16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, x1scale_desc, x2scale_desc, nullptr, nullptr, nullptr, yoffset_desc, nullptr, false, false, 0),
-                        OUTPUT(out_desc));
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-}
-
-TEST_F(l2_QuantBatchMatmulWeightNz_test, a8w4_weight_nz_case_2)
-{
-    // A8W4 msd方案 支持fp16输出
-    TensorDesc x1_desc = TensorDesc({1, 8192}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1, 1);
-    TensorDesc x2_desc = TensorDesc({1024, 1024}, ACL_INT32, ACL_FORMAT_FRACTAL_NZ, {}, 0, {128, 64, 16, 8}).ValueRange(-1, 1); // INT32 = INT4 * 8, 128 = 1024 / 8
-    TensorDesc x1scale_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
-    TensorDesc x2scale_desc = TensorDesc({1024}, ACL_UINT64, ACL_FORMAT_ND);
-    TensorDesc yoffset_desc = TensorDesc({1024}, ACL_FLOAT, ACL_FORMAT_ND);
-    TensorDesc out_desc = TensorDesc({1, 1024}, ACL_FLOAT16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, x1scale_desc, x2scale_desc, nullptr, nullptr, nullptr, yoffset_desc, nullptr, false, true, 0),
-                        OUTPUT(out_desc));
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-}
-
-TEST_F(l2_QuantBatchMatmulWeightNz_test, a8w4_weight_nz_case_3)
-{
-    // A8W4 msd方案 支持fp16输出
-    TensorDesc x1_desc = TensorDesc({1, 29568}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1, 1);
-    TensorDesc x2_desc = TensorDesc({8192, 3696}, ACL_INT32, ACL_FORMAT_FRACTAL_NZ, {}, 0, {462, 512, 16, 8}).ValueRange(-1, 1); // INT32 = INT4 * 8, 128 = 1024 / 8
-    TensorDesc x1scale_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
-    TensorDesc x2scale_desc = TensorDesc({8192}, ACL_UINT64, ACL_FORMAT_ND);
-    TensorDesc yoffset_desc = TensorDesc({8192}, ACL_FLOAT, ACL_FORMAT_ND);
-    TensorDesc out_desc = TensorDesc({1, 8192}, ACL_FLOAT16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, x1scale_desc, x2scale_desc, nullptr, nullptr, nullptr, yoffset_desc, nullptr, false, true, 0),
-                        OUTPUT(out_desc));
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-}
-
-TEST_F(l2_QuantBatchMatmulWeightNz_test, a8w4_weight_nz_case_4)
-{
-    // A8W4 msd方案 支持fp16输出
-    TensorDesc x1_desc = TensorDesc({1, 3448}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1, 1);
-    TensorDesc x2_desc = TensorDesc({1024, 431}, ACL_INT32, ACL_FORMAT_FRACTAL_NZ, {}, 0, {54, 64, 16, 8}).ValueRange(-1, 1); // INT32 = INT4 * 8, 128 = 1024 / 8
-    TensorDesc x1scale_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
-    TensorDesc x2scale_desc = TensorDesc({1024}, ACL_UINT64, ACL_FORMAT_ND);
-    TensorDesc yoffset_desc = TensorDesc({1024}, ACL_FLOAT, ACL_FORMAT_ND);
-    TensorDesc out_desc = TensorDesc({1, 1024}, ACL_FLOAT16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, x1scale_desc, x2scale_desc, nullptr, nullptr, nullptr, yoffset_desc, nullptr, false, true, 0),
-                        OUTPUT(out_desc));
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-}
-
-TEST_F(l2_QuantBatchMatmulWeightNz_test, a8w4_weight_nz_case_5)
-{
-    // A8W4 msd方案 支持fp16输出
-    TensorDesc x1_desc = TensorDesc({8, 8}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1, 1);
-    TensorDesc x2_desc = TensorDesc({1, 1}, ACL_INT32, ACL_FORMAT_FRACTAL_NZ, {}, 0, {1, 1, 16, 8}).ValueRange(-1, 1); // INT32 = INT4 * 8, 128 = 1024 / 8
-    TensorDesc x1scale_desc = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND);
-    TensorDesc x2scale_desc = TensorDesc({1}, ACL_UINT64, ACL_FORMAT_ND);
-    TensorDesc yoffset_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
-    TensorDesc out_desc = TensorDesc({8, 1}, ACL_FLOAT16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, x1scale_desc, x2scale_desc, nullptr, nullptr, nullptr, yoffset_desc, nullptr, false, true, 0),
-                        OUTPUT(out_desc));
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
-}
-
-TEST_F(l2_QuantBatchMatmulWeightNz_test, a8w4_weight_nz_case_6)
-{
-    // A8W4 msd方案 支持fp16输出
-    TensorDesc x1_desc = TensorDesc({1, 30000}, ACL_INT8, ACL_FORMAT_ND).ValueRange(-1, 1);
-    TensorDesc x2_desc = TensorDesc({30000, 128}, ACL_INT32, ACL_FORMAT_FRACTAL_NZ, {}, 0, {16, 1875, 16, 8}).ValueRange(-1, 1); // INT32 = INT4 * 8, 128 = 1024 / 8
-    TensorDesc x1scale_desc = TensorDesc({1}, ACL_FLOAT, ACL_FORMAT_ND);
-    TensorDesc x2scale_desc = TensorDesc({1024}, ACL_UINT64, ACL_FORMAT_ND);
-    TensorDesc yoffset_desc = TensorDesc({1024}, ACL_FLOAT, ACL_FORMAT_ND);
-    TensorDesc out_desc = TensorDesc({1, 1024}, ACL_FLOAT16, ACL_FORMAT_ND);
-    auto ut = OP_API_UT(aclnnQuantMatmulWeightNz, INPUT(x1_desc, x2_desc, x1scale_desc, x2scale_desc, nullptr, nullptr, nullptr, yoffset_desc, nullptr, false, false, 0),
-                        OUTPUT(out_desc));
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
-}
+INSTANTIATE_TEST_SUITE_P(QuantBatchMatmulWeightNz, l2_QuantBatchMatmulWeightNz_test, testing::ValuesIn(GetParams()));

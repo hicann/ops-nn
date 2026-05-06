@@ -1,0 +1,8 @@
+caseName,inputNum,x1Shape,x2Shape,scaleShape,offsetShape,biasShape,dtype,transposeX1,transposeX2,expectStatus,expectOutputShape
+QuantBatchMatmulV3_InferShapeCheck,3,4 4,4 4,4,,,FLOAT16,false,false,GRAPH_SUCCESS,4 4
+NoBiasCase,5,2 4,4 5,5,,,FLOAT16,false,false,GRAPH_SUCCESS,2 5
+Transposex2Case,5,2 4,1 4,2,,,FLOAT16,false,true,GRAPH_SUCCESS,2 1
+WithBiasCase,5,2 4,4 5,5,,5,FLOAT16,false,false,GRAPH_SUCCESS,2 5
+WithBatchAndBiasCase,5,2 2 4,4 5,5,,2 1 5,FLOAT16,false,false,GRAPH_SUCCESS,2 2 5
+NoScaleCase,2,-1 13 16,-1 16 13,,,,FLOAT16,false,false,GRAPH_FAILED,
+ErrorDimNumCase,5,2,4 5,5,,2 1 5,FLOAT16,false,false,GRAPH_FAILED,

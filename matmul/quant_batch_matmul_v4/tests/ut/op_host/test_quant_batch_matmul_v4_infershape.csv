@@ -1,0 +1,8 @@
+caseType,caseName,nodeIoNum,x1Shape,x2Shape,biasShape,x1ScaleShape,x2ScaleShape,offsetShape,in2Null,in3Null,in4Null,in5Null,transposeX1,transposeX2,x1Dtype,x2Dtype,dtype,expectRet,expectOutShape,x1RangeMin,x1RangeMax,x2RangeMin,x2RangeMax,expectRangeMin,expectRangeMax
+infer_shape,QuantBatchMatmulV4_InferShapeCheck,2,2 64,128 8,,,,,false,false,false,false,false,true,DT_FLOAT,DT_FLOAT,DT_BF16,GRAPH_SUCCESS,2 128,,,,,,
+infer_shape,NoBiasCase,6,2 4,4 5,,,5,,false,false,false,false,false,false,DT_INT8,DT_INT8,DT_BF16,GRAPH_SUCCESS,2 5,,,,,,
+infer_shape,Transposex2Case,6,2 4,1 4,,2,,,true,false,true,true,false,true,DT_INT8,DT_INT8,DT_BF16,GRAPH_SUCCESS,2 1,,,,,,
+infer_shape,WithBatchAndBiasCase,6,2 2 4,4 5,2 1 5,,5,,false,true,false,true,false,false,DT_INT8,DT_INT8,DT_BF16,GRAPH_SUCCESS,2 2 5,,,,,,
+infer_shape,DtypeCase,6,16 64,8 128,,16 2,128 2,,false,false,false,false,false,false,DT_FLOAT,DT_FLOAT,DT_BF16,GRAPH_SUCCESS,16 128,,,,,,
+infer_shape,ErrorDimNumCase,6,16,8 128,,16 2,128 2,,false,false,false,false,false,false,DT_FLOAT,DT_FLOAT,DT_BF16,GRAPH_FAILED,,,,,,,
+infer_shape_range,ChatGLM2,2,,,,,,,false,false,false,false,false,false,DT_FLOAT8_E4M3FN,DT_FLOAT4_E2M1,DT_BF16,GRAPH_SUCCESS,,0 0,-1 -1,4096 4096,4096 4096,0 4096,-1 4096

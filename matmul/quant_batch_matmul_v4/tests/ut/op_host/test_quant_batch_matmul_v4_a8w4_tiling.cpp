@@ -12,6 +12,7 @@
 #include <stdlib.h>
 
 #include <iostream>
+#include <fstream>
 #include <thread>
 #include <vector>
 
@@ -27,6 +28,9 @@
 #include "platform/platform_infos_def.h"
 #include "../../../op_host/op_tiling/quant_batch_matmul_v4_compile_info.h"
 #include "../../../../common/op_host/math_util.h"
+#include "ut_string_utils.h"
+
+using namespace ut_str;
 
 using namespace std;
 
@@ -45,20 +49,45 @@ class TestQuantBatchMatmulV4TilingMsd : public testing::TestWithParam<QuantBatch
 using namespace ge;
 using namespace ut_util;
 
-static void SplitStr2Vec(const string &input, const string &delimiter, vector<string> &output)
+static std::vector<QuantBatchMatmulV4TilingMsdTestParam> GetParams()
 {
-    auto delimiterLen = delimiter.size();
-    std::string::size_type currPos = 0;
-    std::string::size_type nextPos = input.find(delimiter, currPos);
-    while (nextPos != std::string::npos) {
-        output.emplace_back(input.substr(currPos, nextPos - currPos));
-        currPos = nextPos + delimiterLen;
-        nextPos = input.find(delimiter, currPos);
+    std::vector<QuantBatchMatmulV4TilingMsdTestParam> params;
+    const std::string rootPath(ut_str::GetExeDirPath() + "../../../../");
+    const std::string casePath(
+        rootPath + "matmul/quant_batch_matmul_v4/tests/ut/op_host/test_quant_batch_matmul_v4_a8w4_tiling.csv");
+    std::ifstream csvData(casePath, std::ios::in);
+    if (!csvData.is_open()) {
+        std::cout << "cannot open case file " << casePath << ", maybe not exist" << std::endl;
+        return params;
     }
 
-    if (currPos < input.size()) {
-        output.emplace_back(input.substr(currPos));
+    std::string line;
+    bool skipHeader = true;
+    while (std::getline(csvData, line)) {
+        line = Trim(line);
+        if (line.empty() || line[0] == '#') {
+            continue;
+        }
+        if (skipHeader) {
+            skipHeader = false;
+            continue;
+        }
+
+        std::vector<std::string> cols;
+        SplitStr2Vec(line, ",", cols);
+        if (cols.size() < 5UL) {
+            continue;
+        }
+
+        QuantBatchMatmulV4TilingMsdTestParam param;
+        param.socVersion = Trim(cols[0]);
+        param.caseName = Trim(cols[1]);
+        param.blockDim = static_cast<uint32_t>(std::stoul(Trim(cols[2])));
+        param.tilingResult = ParseGraphStatus(cols[3]);
+        param.tilingKey = std::stoull(Trim(cols[4]));
+        params.push_back(param);
     }
+    return params;
 }
 namespace {
     void InitPlatformInfo(const std::string &socVersion,  string &compileInfoStr)
@@ -81,22 +110,6 @@ static void TestOneParamCase(const QuantBatchMatmulV4TilingMsdTestParam &param)
     std::cout << "run case " << param.caseName << std::endl;
     std::vector<string> testParam;
     SplitStr2Vec(param.caseName.substr(param.caseName.find_first_of('_') + 1), "_", testParam);
-    map<string, ge::DataType> dtypeMap = {
-        {"FP16", ge::DT_FLOAT16},
-        {"FP32", ge::DT_FLOAT},
-        {"BF16", ge::DT_BF16},
-        {"INT8", ge::DT_INT8},
-        {"INT4", ge::DT_INT4},
-        {"UINT64", ge::DT_UINT64},
-        {"FP8-E8M0", ge::DT_FLOAT8_E8M0},
-        {"FP8-E4M3", ge::DT_FLOAT8_E4M3FN},
-        {"FP4-E2M1", ge::DT_FLOAT4_E2M1}
-    };
-
-    map<string, ge::Format> formatMap = {
-        {"ND", ge::FORMAT_ND},
-        {"NZ", ge::FORMAT_FRACTAL_NZ}
-    };
 
     size_t idx = 0;
     int64_t m = stol(testParam[idx++]);
@@ -109,17 +122,17 @@ static void TestOneParamCase(const QuantBatchMatmulV4TilingMsdTestParam &param)
     int64_t transA = stol(testParam[idx++]);
     int64_t transB = stol(testParam[idx++]);
     int64_t groupSize = stol(testParam[idx++]);
-    ge::Format x1Format = formatMap[testParam[idx++]];
-    ge::Format x2Format = formatMap[testParam[idx++]];
-    ge::DataType x1Dtype = dtypeMap[testParam[idx++]];
-    ge::DataType x2Dtype = dtypeMap[testParam[idx++]];
+    ge::Format x1Format = ParseFormat(testParam[idx++]);
+    ge::Format x2Format = ParseFormat(testParam[idx++]);
+    ge::DataType x1Dtype = ParseDtype(testParam[idx++]);
+    ge::DataType x2Dtype = ParseDtype(testParam[idx++]);
     bool hasBias = true;
     ge::DataType biasDtype = ge::DT_FLOAT;
     string biasDtypeStr = testParam[idx++];
     if (biasDtypeStr == "NULL") {
         hasBias = false;
     } else {
-        biasDtype = dtypeMap[biasDtypeStr];
+        biasDtype = ParseDtype(biasDtypeStr);
     }
 
     bool hasX1Scale = true;
@@ -128,7 +141,7 @@ static void TestOneParamCase(const QuantBatchMatmulV4TilingMsdTestParam &param)
     if (x1ScaleDtypeStr == "NULL") {
         hasX1Scale = false;
     } else {
-        x1ScaleDtype = dtypeMap[x1ScaleDtypeStr];
+        x1ScaleDtype = ParseDtype(x1ScaleDtypeStr);
     }
 
     bool hasX2Scale = true;
@@ -137,7 +150,7 @@ static void TestOneParamCase(const QuantBatchMatmulV4TilingMsdTestParam &param)
     if (x2ScaleDtypeStr == "NULL") {
         hasX2Scale = false;
     } else {
-        x2ScaleDtype = dtypeMap[x2ScaleDtypeStr];
+        x2ScaleDtype = ParseDtype(x2ScaleDtypeStr);
     }
 
     bool hasYScale = true;
@@ -146,7 +159,7 @@ static void TestOneParamCase(const QuantBatchMatmulV4TilingMsdTestParam &param)
     if (yScaleDtypeStr == "NULL") {
         hasYScale = false;
     } else {
-        yScaleDtype = dtypeMap[yScaleDtypeStr];
+        yScaleDtype = ParseDtype(yScaleDtypeStr);
     }
 
     bool hasYOffset = true;
@@ -155,9 +168,9 @@ static void TestOneParamCase(const QuantBatchMatmulV4TilingMsdTestParam &param)
     if (yOffsetDtypeStr == "NULL") {
         hasYOffset = false;
     } else {
-        yOffsetDtype = dtypeMap[yOffsetDtypeStr];
+        yOffsetDtype = ParseDtype(yOffsetDtypeStr);
     }
-    ge::DataType yDtype = dtypeMap[testParam[idx++]];
+    ge::DataType yDtype = ParseDtype(testParam[idx++]);
     uint32_t aicNum = stoul(testParam[idx++]);
     uint32_t aivNum = stoul(testParam[idx++]);
     string compileInfoStr;
@@ -263,7 +276,7 @@ static void TestOneParamCase(const QuantBatchMatmulV4TilingMsdTestParam &param)
     ASSERT_EQ(tilingParseFunc(kernelHold.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
     ASSERT_NE(tilingFunc, nullptr);
-    ge:graphStatus ret = tilingFunc(tilingContext);
+    ge::graphStatus ret = tilingFunc(tilingContext);
     ASSERT_EQ(ret, param.tilingResult);
     if (ret == ge::GRAPH_SUCCESS) {
         ASSERT_EQ(tilingContext->GetTilingKey(), param.tilingKey);
@@ -280,11 +293,4 @@ TEST_P(TestQuantBatchMatmulV4TilingMsd, generalTest)
 // format: platform
 //         caseName m k n transA transB groupSize x1Format x2Format x1Dtype x2Dtype biasDtype x1ScaleDtype x2ScaleDtype yScaleDtype yOffset yDtype aicNum aivNum
 //         bolckdim, result, tilingkey
-static QuantBatchMatmulV4TilingMsdTestParam casesParams[] = {
-    // A int8 W int4
-    {"Ascend910B4", "UT-A8W4-MSD-ND-Testcase-0_16_256_256_0_0_256_ND_ND_INT8_INT4_NULL_FP32_UINT64_NULL_FP32_BF16_20_40", 20, ge::GRAPH_SUCCESS, 24UL},
-    {"Ascend910B4", "UT-A8W4-MSD-ND-Testcase-1_16_256_256_0_0_256_ND_ND_INT8_INT4_NULL_FP32_UINT64_NULL_FP32_FP16_20_40", 20, ge::GRAPH_SUCCESS, 24UL},
-    {"Ascend910B4", "UT-A8W4-MSD-ND-Testcase-2_16_256_256_0_0_0_ND_ND_INT8_INT4_NULL_FP32_UINT64_NULL_FP32_FP16_20_40", 1, ge::GRAPH_SUCCESS, 20UL}
- };
-
-INSTANTIATE_TEST_CASE_P(MMA8W4MSD, TestQuantBatchMatmulV4TilingMsd, testing::ValuesIn(casesParams));
+INSTANTIATE_TEST_CASE_P(MMA8W4MSD, TestQuantBatchMatmulV4TilingMsd, testing::ValuesIn(GetParams()));

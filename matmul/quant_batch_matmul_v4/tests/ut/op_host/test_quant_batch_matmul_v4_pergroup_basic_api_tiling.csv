@@ -1,0 +1,3 @@
+caseName,socVersion,x1Dims,x2Dims,expectedResult,expectedTilingKey,expectedNumBlocks,checkTilingMeta
+legal_rank2_should_succeed_950,Ascend950,1024 1024,1024 1024,GRAPH_SUCCESS,537,32,true
+legal_rank2_should_succeed_910b,Ascend910B,128 1024,256 1024,GRAPH_SUCCESS,1040,1,true
