@@ -312,10 +312,10 @@ aclnnStatus aclnnQuantMatmulV4(
     - out数据类型支持FLOAT16、INT8、BFLOAT16、INT32。
   - <term>Ascend 950PR/Ascend 950DT</term>：
     - x1数据类型支持INT8、INT4。
-    - x2数据类型支持INT8、INT4，当最后两根轴其中一根轴为1（即n=1或k=1）时，x2不支持私有格式，仅支持ND格式。
+    - x2数据类型支持INT8、INT4。
     - bias数据类型支持INT32，BFLOAT16，FLOAT16，FLOAT32。
     - out数据类型支持FLOAT16、INT8、BFLOAT16、INT32。
-    - x2为ND格式时，当输入x1为m=0的空tensor或x2为n=0的空tensor时，输出为空tensor；x2为FRACTAL_NZ格式时，当输入x1中m=0的空tensor时，输出为空tensor。
+    - x2仅支持ND格式，当输入x1为m=0的空tensor或x2为n=0的空tensor时，输出为空tensor。
 
 - **返回值：**
 
@@ -404,8 +404,7 @@ aclnnStatus aclnnQuantMatmulV4(
 
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：支持调用本接口前，通过[aclnnTransMatmulWeight](https://gitcode.com/cann/ops-math/blob/master/conversion/trans_data/docs/aclnnTransMatmulWeight.md)对format为ND的x2处理得到AI处理器亲和数据排布格式。
 - <term>Ascend 950PR/Ascend 950DT</term>：
-  1.支持调用本接口前，通过[aclnnTransMatmulWeight](https://gitcode.com/cann/ops-math/blob/master/conversion/trans_data/docs/aclnnTransMatmulWeight.md)或[aclnnNpuFormatCast](https://gitcode.com/cann/ops-math/blob/master/conversion/npu_format_cast/docs/aclnnNpuFormatCast.md)对format为ND的x2处理得到NZ格式。
-  2.当原始ND的后两维中存在某一维度为1时，不建议转NZ格式，默认x2为非连续，且仅支持x2为非连续的tensor。
+  x2仅支持ND格式。
 
 输入和输出支持以下数据类型组合：
 

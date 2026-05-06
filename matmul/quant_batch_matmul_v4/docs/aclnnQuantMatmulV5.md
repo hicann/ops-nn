@@ -479,7 +479,7 @@ aclnnStatus aclnnQuantMatmulV5(
 
     - 上表数据类型列中的角标“1”代表该系列不支持的数据类型。
     - 输入参数x1、x2均不支持INT32类型。
-    - x2为ND格式时，当输入参数x1为m=0的空tensor或x2为n=0的空tensor时，输出为空tensor；x2为FRACTAL_NZ格式时，当输入参数x1中m=0的空tensor时，输出为空tensor。
+    - x2仅支持ND格式，当输入参数x1为m=0的空tensor或x2为n=0的空tensor时，输出为空tensor。
 
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
 

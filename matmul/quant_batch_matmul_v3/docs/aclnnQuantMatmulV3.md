@@ -229,7 +229,7 @@ aclnnStatus aclnnQuantMatmulV3(
     - scale数据类型支持UINT64、INT64、FLOAT32、BFLOAT16
     - scale支持INT32、BFLOAT16、FLOAT32
     - out支持FLOAT16、INT8、BFLOAT16、INT32
-    - x2为ND格式时，当输入x1为m=0的空tensor或x2为n=0的空tensor时，输出为空tensor；x2为FRACTAL_NZ格式时，当输入x1中m=0的空tensor时，输出为空tensor。
+    - x2仅支持ND格式，当输入x1为m=0的空tensor或x2为n=0的空tensor时，输出为空tensor
 
 - **返回值：**
 
@@ -331,9 +331,7 @@ aclnnStatus aclnnQuantMatmulV3(
   - 支持调用本接口前，通过[aclnnTransMatmulWeight](https://gitcode.com/cann/ops-math/blob/master/conversion/trans_data/docs/aclnnTransMatmulWeight.md)对format为ND的x2处理得到NZ格式。
   
 - <term>Ascend 950PR/Ascend 950DT</term>：
-  - 当最后两根轴其中一根轴为1（即n=1或k=1）时，x2不支持私有格式，仅支持ND格式。
-  - 支持调用本接口前，通过[aclnnTransMatmulWeight](https://gitcode.com/cann/ops-math/blob/master/conversion/trans_data/docs/aclnnTransMatmulWeight.md)或[aclnnNpuFormatCast](https://gitcode.com/cann/ops-math/blob/master/conversion/npu_format_cast/docs/aclnnNpuFormatCast.md)对format为ND的x2处理得到NZ格式。
-  - 当原始ND的后两维中存在某一维度为1时，不建议转NZ，默认x2为非连续，且仅支持x2为非连续的tensor。
+  - x2仅支持ND格式。
 
 输入和输出支持以下数据类型组合，以下组合支持T-C && T-T[量化模式](../../../docs/zh/context/量化介绍.md)：
 
