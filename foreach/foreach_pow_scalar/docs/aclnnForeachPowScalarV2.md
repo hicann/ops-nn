@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-- 接口功能：对输入张量列表的每个张量进行n次方运算。本接口相较于[aclnnForeachPowScalar](aclnnForeachPowScalar.md)，修改入参scalar的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口。
+- 接口功能：对输入张量列表x中的每个张量进行指数运算，指数为标量exponent。本接口相较于[aclnnForeachPowScalar](aclnnForeachPowScalar.md)，修改入参scalar的结构类型aclTensor为aclScalar，请根据实际情况选择合适的接口。
 - 计算公式：
 
   $$
