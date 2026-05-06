@@ -27,7 +27,7 @@ SUPPORTED_LONG_OPTS=(
   "help" "ops=" "soc=" "vendor_name=" "build-type=" "cov" "noexec" "noaicpu" "opkernel" "opkernel_aicpu" "opkernel_aicpu_test" "static"
    "jit" "pkg" "asan" "make_clean_all" "make_clean" "no_force"
   "ophost" "opgraph" "opapi" "run_example" "example_name=" "genop=" "genop_aicpu=" "experimental" "cann_3rd_lib_path=" "oom" "onnxplugin" "tfplugin" "dump_cce"
-  "simulator" "bisheng_flags=" "kernel_template_input=" "module_extension=" "noaclnn"
+  "simulator" "bisheng_flags=" "kernel_template_input=" "module_extension=" "noaclnn" "mssanitizer"
 )
 
 source "./install_deps.sh"
@@ -160,6 +160,7 @@ usage() {
         echo "    --experimental         Build experimental version"
         echo "    --cann_3rd_lib_path=<PATH>"
         echo "                           Set ascend third_party package install path, default ./third_party"
+        echo "    --mssanitizer          Build with mssanitizer mode on the kernel side, with options: '-g --cce-enable-sanitizer'"
         echo "    --oom                  Build with oom mode on the kernel side, with options: '-g --cce-enable-oom'"
         echo "    --dump_cce             Dump kernel precompiled files (.i) for debugging"
         echo "    --bisheng_flags=ccec_g,oom"
@@ -183,6 +184,7 @@ usage() {
         echo "    --soc=soc_version      Compile for specified Ascend SoC (comma-separated for multiple)"
         echo "    --ops=op1,op2,...      Compile specified operators (comma-separated for multiple)"
         echo "    --build-type=<Type>    Specify build-type (Type options: Release/Debug), Default:Release"
+        echo "    --mssanitizer          Build with mssanitizer mode on the kernel side, with options: '-g --cce-enable-sanitizer'"
         echo "    --oom                  Build with oom mode on the kernel side, with options: '-g --cce-enable-oom'"
         echo "    --dump_cce             Dump kernel precompiled files (.i) for debugging"
         echo "    --bisheng_flags=ccec_g,oom"
@@ -205,6 +207,7 @@ usage() {
         echo "    --soc=soc_version      Compile for specified Ascend SoC (comma-separated for multiple)"
         echo "    --ops=op1,op2,...      Compile specified operators (comma-separated for multiple)"
         echo "    --build-type=<Type>    Specify build-type (Type options: Release/Debug), Default:Release"
+        echo "    --mssanitizer          Build with mssanitizer mode on the kernel side, with options: '-g --cce-enable-sanitizer'"
         echo "    --oom                  Build with oom mode on the kernel side, with options: '-g --cce-enable-oom'"
         echo $dotted_line
         echo "Examples:"
@@ -381,6 +384,7 @@ usage() {
   echo "    --run_example Compile and execute the example. use --run_example --help for more detail"
   echo "    --genop Create the initial directory for op, like: --genop=op_class/op_name"
   echo "    --genop_aicpu Create the initial directory for AI CPU op, like: --genop_aicpu=op_class/op_name"
+  echo "    --mssanitizer Build with mssanitizer mode on the kernel side, with options: '-g --cce-enable-sanitizer'"
   echo "    --oom Build with oom mode on the kernel side, with options: '-g --cce-enable-oom'"
   echo "    --dump_cce Dump kernel precompiled files (.i) for debugging"
   echo "    --bisheng_flags Specify bisheng compiler config, like: --bisheng_flags=ccec_g,oom, use ',' to separate different compiler flags"
@@ -812,7 +816,7 @@ checkopts() {
           MODULE_EXT=${OPTARG#*=}
           ;;
         noaclnn) NO_ACLNN=TRUE ;;
-        mssanitizer) ENABLE_MSSANITIZER=FALSE ;;
+        mssanitizer) ENABLE_MSSANITIZER=TRUE ;;
         oom) ENABLE_OOM=TRUE ;;
         dump_cce) ENABLE_DUMP_CCE=TRUE ;;
         noexec) ENABLE_UT_EXEC=FALSE ;;

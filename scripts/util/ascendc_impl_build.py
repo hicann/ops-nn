@@ -357,7 +357,7 @@ class AdpBuilder(opdesc_parser.OpDesc):
             else:
                 src_file = os.path.join(impl_path, self.op_file, self.kernel_src + ".cpp")
             if not os.path.exists(src_file):
-                print(f"[ERROR]: operator: {self.op_file} source file: {src_file} does not found, please check.")
+                print(f"[WARNING]: operator: {self.op_file} source file: {src_file} does not found, please check.")
                 return
         out_path = os.path.abspath(path)
         if self.dynamic_shape and not out_path.endswith('dynamic'):
