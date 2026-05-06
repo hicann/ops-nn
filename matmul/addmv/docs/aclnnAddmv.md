@@ -210,7 +210,7 @@ aclnnStatus aclnnAddmv(
     <tr>
       <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="4">161002</td>
-      <td>self和mat、vec的数据类型和数据格式不在支持的范围之内</td>
+      <td>self和mat、vec的数据类型和数据格式不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>self和mat、vec无法做数据类型推导。</td>

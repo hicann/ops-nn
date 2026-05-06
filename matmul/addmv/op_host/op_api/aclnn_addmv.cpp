@@ -145,7 +145,7 @@ static bool CheckPromoteType(
 }
 
 static bool CheckTensorDimAndSize(
-    const aclTensor* self, const aclTensor* mat, const aclTensor* vec, const aclTensor* out)
+    const aclTensor* self, const aclTensor* mat, const aclTensor* vec, const aclScalar* alpha, const aclTensor* out)
 {
     // 需要根据算子实际情况添加校验
     Shape selfShape = self->GetViewShape();
@@ -162,7 +162,8 @@ static bool CheckTensorDimAndSize(
     }
 
     if ((matShape.GetDim(1) != vecShape.GetDim(0)) || (matShape.GetDim(0) != outShape.GetDim(0)) ||
-        (selfShape.GetDimNum() != 0 && selfShape.GetDim(0) != 1 && matShape.GetDim(0) != selfShape.GetDim(0))) {
+        (selfShape.GetDimNum() != 0 && matShape.GetDim(0) != selfShape.GetDim(0) &&
+         (selfShape.GetDim(0) != 1 || std::abs(alpha->ToFloat() - 0.0f) <= std::numeric_limits<float>::epsilon()))) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID,
             "Input tensor shape not statisify, current shape : self [%s], mat [%s], vec [%s], out [%s].",
@@ -171,6 +172,22 @@ static bool CheckTensorDimAndSize(
         return false;
     }
 
+    return true;
+}
+
+static bool CheckFormat(const aclTensor* self, const aclTensor* mat, const aclTensor* vec, const aclTensor* out)
+{
+    auto selfFormat = self->GetStorageFormat();
+    auto matFormat = mat->GetStorageFormat();
+    auto vecFormat = vec->GetStorageFormat();
+    auto outTensorFormat = out->GetStorageFormat();
+    bool noSupportFormat =
+        ((selfFormat == Format::FORMAT_FRACTAL_NZ) || (matFormat == Format::FORMAT_FRACTAL_NZ) ||
+         (vecFormat == Format::FORMAT_FRACTAL_NZ) || (outTensorFormat == Format::FORMAT_FRACTAL_NZ));
+    if (noSupportFormat) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "One of the tensors ('self', 'mat', 'vec', 'out') does not support NZ format");
+        return false;
+    }
     return true;
 }
 
@@ -189,10 +206,13 @@ static aclnnStatus CheckParams(
     CHECK_RET(CheckPromoteType(self, mat, vec, alpha, beta, out), ACLNN_ERR_PARAM_INVALID);
 
     // 4. 检查输入是否满足矩阵乘法和加法要求
-    CHECK_RET(CheckTensorDimAndSize(self, mat, vec, out), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckTensorDimAndSize(self, mat, vec, alpha, out), ACLNN_ERR_PARAM_INVALID);
 
     // 5. 检查cubeMathType
     CHECK_RET(CheckMathType(mat, vec, cubeMathType), ACLNN_ERR_PARAM_INVALID);
+
+    // 6. 检查self、mat和vec的format是否符合要求
+    CHECK_RET(CheckFormat(self, mat, vec, out), ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;
 }
