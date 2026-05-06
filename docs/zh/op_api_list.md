@@ -32,7 +32,7 @@
 | [aclnnAdaptiveAvgPool2d](../../pooling/adaptive_avg_pool2d/docs/aclnnAdaptiveAvgPool2d.md) | 在指定二维输出shape信息（outputSize）的情况下，完成张量self的2D自适应平均池化计算。 | 默认确定性实现 | - |
 | [aclnnAdaptiveAvgPool2dBackward](../../pooling/adaptive_avg_pool3d_grad/docs/aclnnAdaptiveAvgPool2dBackward.md) | [aclnnAdaptiveAvgPool2d](../../pooling/adaptive_avg_pool2d/docs/aclnnAdaptiveAvgPool2d.md) 的反向计算。 | 默认非确定性实现，支持配置开启 | - |
 | [aclnnAdaptiveAvgPool3d](../../pooling/adaptive_avg_pool3d/docs/aclnnAdaptiveAvgPool3d.md) | 在指定三维输出shape信息（outputSize）的情况下，完成张量self的3D自适应平均池化计算。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnAdaptiveAvgPool3dBackward]() | [aclnnAdaptiveAvgPool3d](../../pooling/adaptive_avg_pool3d/docs/aclnnAdaptiveAvgPool3d.md)的反向计算。 | 默认非确定性实现，支持配置开启 | - |
+| [aclnnAdaptiveAvgPool3dBackward](../../pooling/adaptive_avg_pool3d_grad/docs/aclnnAdaptiveAvgPool3dBackward.md) | [aclnnAdaptiveAvgPool3d](../../pooling/adaptive_avg_pool3d/docs/aclnnAdaptiveAvgPool3d.md)的反向计算。 | 默认非确定性实现，支持配置开启 | - |
 | [aclnnAdaptiveMaxPool2d](../../pooling/adaptive_max_pool2d/docs/aclnnAdaptiveMaxPool2d.md) | 根据输入的outputSize计算每次kernel的大小，对输入self进行2维最大池化操作。 | 默认确定性实现 | - |
 | [aclnnAdaptiveMaxPool2dBackward](../../pooling/adaptive_max_pool3d_grad/docs/aclnnAdaptiveMaxPool2dBackward.md) | 正向自适应最大池化的反向传播，将梯度回填到每个自适应窗口最大值的坐标处，相同坐标处累加。 | 默认非确定性实现 | - |
 | [aclnnAdaptiveMaxPool3d](../../pooling/adaptive_max_pool3d/docs/aclnnAdaptiveMaxPool3d.md) | 根据输入的outputSize计算每次kernel的大小，对输入self进行3维最大池化操作。 | 默认确定性实现 | 默认确定性实现 |
