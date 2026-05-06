@@ -464,7 +464,7 @@ template <class Intf>
 __aicore__ inline void SetMNBeforeIterateK(Intf *self, MmadParams &mmadParams)
 {
     if constexpr (Intf::isInnerBatchFlag) {
-        uint16_t maxBatchIter = CeilDiv(self->ctx.convTilingData->convApiTiling.singleCoreBatch, self->ctx.convTilingData->convApiTiling.innerBatch) - 1;
+        uint16_t maxBatchIter = CeilDiv(self->ctx.singleCoreBatch, self->ctx.convTilingData->convApiTiling.innerBatch) - 1;
         self->ctx.innerBatch = self->ctx.batchIter == maxBatchIter ?
             self->ctx.innerBatchTail : self->ctx.convTilingData->convApiTiling.innerBatch;
     }
