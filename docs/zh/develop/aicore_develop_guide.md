@@ -722,7 +722,7 @@ uint32_t blockDim = tilingInfo.blockNum;
 
 - 可使用`tests/ut/op_kernel/data_utils.h`的`ReadFile/WriteFile`读写二进制。
 - 结合`gen_data.py`/`compare_data.py`脚本生成与比对数据，可参考`add_example`的`add_example_data`目录：
-  [gen_data.py](../../../clipped_swiglu/tests/ut/op_kernel/
+  [gen_data.py](../../../activation/clipped_swiglu/tests/ut/op_kernel/
 clipped_swiglu_data/gen_data.py)、
   [compare_data.py](../../../activation/fatrelu_mul/tests/ut/op_kernel/fatrelu_mul_data/compare_data.py)。
 - 简单算子可直接在UT中计算期望值并比对。
