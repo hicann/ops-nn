@@ -404,12 +404,32 @@ ge::graphStatus DynamicQuantRegbaseTiling::CheckOpParams(gert::TilingContext* co
 // 重置大shape变量
 void DynamicQuantRegbaseTiling::ResetLargeTilingParams()
 {
+    useDb = false;
+    isEmptyTensor = false;
     innerLoopEle = 0UL;
     innerLoopTimes = 0UL;
     innerLoopTail = 0UL;
     groupNum = 0UL;
+    groupDtypeSize = 0UL;
     hasSmooth = false;
     quantMode_ = 0UL;
+    dstTypeMax = HIFLOAT8_MAX_VALUE;
+    isPerChannel_ = false;
+
+    mLen = 0;
+    nLen = 0;
+    totalBatchLen = 0;
+    nBlockSize = 1;
+    nBlockNum = 1;
+    mBlockSize = 0;
+    mBlockNum = 1;
+    totalBlockNum = 0;
+    blockPerHead = 0;
+    blockPerTail = 0;
+    nBaseLoopNum = 1;
+    batchBlockSize = 1;
+    batchTailBlockSize = 1;
+    batchBlockNum = 1;
 }
 
 // 打印tiling参数
