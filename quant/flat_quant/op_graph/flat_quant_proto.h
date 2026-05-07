@@ -40,6 +40,7 @@ namespace ge {
  * @par Attributes:
  * clip_ratio: An optional float. Used to control the quantization cropping ratio. Defaults to 1. \n
  * dst_dtype: An optional int. Used to control the quantization dst_type. Defaults to 29. \n
+ * dst_type_max: An optional float. Used to control the quantization dst_type max value. Defaults to 0.0. \n
  */
 REG_OP(FlatQuant)
     .INPUT(x, TensorType({DT_FLOAT16, DT_BF16}))
