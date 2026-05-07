@@ -66,6 +66,7 @@ public:
         
         blockNum = GetBlockNum();
         blockIdx = GetBlockIdx();
+        oriOverflowMode = GetOverflowMode<T_Y>();
 
         CalBlockTail();
         InitBuffer(x1, x2, gamma, scales1, scales2, zeroPoints1, zeroPoints2, beta, y1, y2, x);
@@ -169,7 +170,9 @@ public:
             }
 
             // 3. Quant
+            SetOverflowMode<T_Y>(0);
             CalculateQuant(xOutTmpLocal,rstdLocal,gammaLocal,betaLocal,scales1Local,scales2Local,zeroPoints1Local,zeroPoints2Local,y1Local,y2Local,realM,baseN,xGammaAlign,scalesAlign,zeroPointsAlign,yAlign);
+            SetOverflowMode<T_Y>(oriOverflowMode);
 
             outQueueY1.EnQue<T_Y>(y1Local);
             if constexpr (HAS_Y2) {
@@ -788,6 +791,7 @@ private:
     int64_t mCore{0};
     int64_t mLoops{0};
     int64_t mTail{0};
+    int64_t oriOverflowMode{0};
 
     // const value
     static constexpr int32_t NUM_ONE = 1;

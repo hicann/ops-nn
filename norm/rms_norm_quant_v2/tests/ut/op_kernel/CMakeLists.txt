@@ -9,5 +9,5 @@
 # -----------------------------------------------------------------------------------------------------------
 
 if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
-    AddOpTestCase(rms_norm_quant_v2 "ascend950" "" norm_common rms_norm)
+    AddOpTestCase(rms_norm_quant_v2 "ascend950pr_9599" "" norm_common rms_norm)
 endif()

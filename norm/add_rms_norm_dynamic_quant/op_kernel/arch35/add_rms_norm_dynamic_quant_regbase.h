@@ -37,20 +37,12 @@ public:
         GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR smooathScale1, GM_ADDR smooathScale2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2,
         GM_ADDR x, GM_ADDR scale1, GM_ADDR scale2, const AddRmsNormDynamicQuantRegbaseTilingData* tilingData)
     {
-        numM_ = tilingData->numM;
-        numN_ = tilingData->numN;
-        baseM_ = tilingData->baseM;
-        baseN_ = tilingData->baseN;
-        baseNDtypeAlign_ = tilingData->baseNDtypeAlign;
-        baseNReduceAlign_ = tilingData->baseNReduceAlign;
-        powerSplit_ = tilingData->powerSplit;
-        mPerCore_ = tilingData->mPerCore;
-        mLastCore_ = tilingData->mLastCore;
-        epsilon_ = tilingData->epsilon;
-        avgFactor_ = tilingData->avgFactor;
+        InitTiling(numM_, numN_, baseM_, baseN_, baseNDtypeAlign_, baseNReduceAlign_, powerSplit_,
+                   mPerCore_, mLastCore_, epsilon_, avgFactor_, tilingData);
 
         blockNum_ = GetBlockNum();
         blockIdx_ = GetBlockIdx();
+        oriOverflowMode_ = GetOverflowMode<T_Y>();
 
         CalBlockTail();
         InitBuffer(x1, x2, gamma, smooathScale1, smooathScale2, beta, y1, y2, x, scale1, scale2);
@@ -267,6 +259,7 @@ private:
             y2Local = outQueueY2_.AllocTensor<T_Y>();
         }
 
+        SetOverflowMode<T_Y>(0);
         ComputeYScale<float, T_X, T_SMOOTH_SCALE, HAS_SMOOTH_SCALE1, HAS_BETA, T_Y>(
             y1Local, scale1Local, xOutTmpLocal, rstdLocal, gammaLocal, betaLocal, smoothScale1Local, y1TmpLocal, mInnerIdx,
             baseNDtypeAlign_);
@@ -275,6 +268,7 @@ private:
                 y2Local, scale2Local, xOutTmpLocal, rstdLocal, gammaLocal, betaLocal, smoothScale2Local, y2TmpLocal, mInnerIdx,
                 baseNDtypeAlign_);
         }
+        SetOverflowMode<T_Y>(oriOverflowMode_);
 
         outQueueY1_.EnQue<T_Y>(y1Local);
         if constexpr (HAS_Y2_SCALE2) {
@@ -338,6 +332,9 @@ private:
     uint64_t baseNB8Align_;
     // Other
     uint32_t vfLength_{0};
+#if (__NPU_ARCH__ == 3510)
+    int64_t oriOverflowMode_{0};
+#endif
 };
 } // namespace AddRmsNormDynamicQuant
 #endif // _ADD_RMS_NORM_DYNAMIC_QUANT_REGBASE_H_

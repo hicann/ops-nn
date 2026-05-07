@@ -37,19 +37,11 @@ public:
         GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR smooathScale1, GM_ADDR smooathScale2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2,
         GM_ADDR x, GM_ADDR scale1, GM_ADDR scale2, const AddRmsNormDynamicQuantRegbaseTilingData* tilingData)
     {
-        numM_ = tilingData->numM;
-        numN_ = tilingData->numN;
-        baseM_ = tilingData->baseM;
-        baseN_ = tilingData->baseN;
-        baseNDtypeAlign_ = tilingData->baseNDtypeAlign;
-        baseNReduceAlign_ = tilingData->baseNReduceAlign;
-        powerSplit_ = tilingData->powerSplit;
-        mPerCore_ = tilingData->mPerCore;
-        mLastCore_ = tilingData->mLastCore;
-        epsilon_ = tilingData->epsilon;
-        avgFactor_ = tilingData->avgFactor;
+        InitTiling(numM_, numN_, baseM_, baseN_, baseNDtypeAlign_, baseNReduceAlign_, powerSplit_,
+                   mPerCore_, mLastCore_, epsilon_, avgFactor_, tilingData);
         blockNum_ = GetBlockNum();
         blockIdx_ = GetBlockIdx();
+        oriOverflowMode_ = GetOverflowMode<T_Y>();
 
         CalBlockTail();
         InitBuffer(x1, x2, gamma, smooathScale1, smooathScale2, beta, y1, y2, x, scale1, scale2);
@@ -87,7 +79,7 @@ public:
             y2Gm_.SetGlobalBuffer((__gm__ T_Y*)y2 + gmOffset, gmLen);
             scale2Gm_.SetGlobalBuffer((__gm__ float*)scale2 + scalesGmOffset, mCore_);
         }
-        if constexpr (HAS_BETA){
+        if constexpr (HAS_BETA) {
             betaGm_.SetGlobalBuffer((__gm__ T_X*)beta, numN_);
         }
 
@@ -182,6 +174,7 @@ public:
                 y2Local = outQueueY2_.AllocTensor<T_Y>();
                 y2TmpLocal = y2TmpBuf_.Get<float>();
             }
+            SetOverflowMode<T_Y>(0);
             ComputeMutlScale<float, T_X, T_SMOOTH_SCALE, HAS_SMOOTH_SCALE1, T_Y>(
                 scale1Local, xOutTmpLocal, rstdLocal, gammaLocal, betaLocal, smoothScale1Local, y1TmpLocal, baseN_, realM, baseN_, baseNDtypeAlign_);
             PipeBarrier<PIPE_V>();
@@ -192,6 +185,7 @@ public:
                 PipeBarrier<PIPE_V>();
                 ComputeMutlY<T_Y>(y2Local, scale2Local, y2TmpLocal, baseN_, realM);
             }
+            SetOverflowMode<T_Y>(oriOverflowMode_);
 
             outQueueY1_.EnQue<T_Y>(y1Local);
             if constexpr (HAS_Y2_SCALE2) {
@@ -769,7 +763,9 @@ private:
     // Platform
     int64_t blockIdx_{0};
     int64_t blockNum_{0};
-    // Cal params
+#if (__NPU_ARCH__ == 3510)
+    int64_t oriOverflowMode_{0};
+#endif
     uint64_t mCore_;
     uint64_t mOuterCnt_;
     uint64_t tailMOuter_;

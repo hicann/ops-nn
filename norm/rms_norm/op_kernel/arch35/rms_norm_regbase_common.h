@@ -23,17 +23,64 @@
 namespace RmsNorm {
 using namespace AscendC;
 using namespace AscendC::MicroAPI;
-using AscendC::MicroAPI::CreateMask;
-using AscendC::MicroAPI::LoadDist;
-using AscendC::MicroAPI::LocalMemBar;
-using AscendC::MicroAPI::MaskPattern;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::MemType;
-using AscendC::MicroAPI::RegTensor;
-using AscendC::MicroAPI::StoreDist;
-using AscendC::MicroAPI::UpdateMask;
 using namespace NormCommon;
 using namespace NormCommon::NormCommonRegbase;
+
+#ifndef FLOAT_OVERFLOW_MODE_CTRL
+#define FLOAT_OVERFLOW_MODE_CTRL 60
+#endif
+
+constexpr AscendC::MicroAPI::CastTrait castTraitFp322Fp8 = {
+    AscendC::MicroAPI::RegLayout::ZERO,
+    AscendC::MicroAPI::SatMode::SAT,
+    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+    RoundMode::CAST_RINT,
+};
+
+constexpr AscendC::MicroAPI::CastTrait castTraitFp322Hifp8 = {
+    AscendC::MicroAPI::RegLayout::ZERO,
+    AscendC::MicroAPI::SatMode::SAT,
+    AscendC::MicroAPI::MaskMergeMode::ZEROING,
+    RoundMode::CAST_ROUND,
+};
+
+template <typename T_Y>
+__aicore__ inline uint64_t GetOverflowMode()
+{
+#if (__NPU_ARCH__ == 3510)
+    if constexpr (IsSameType<T_Y, fp8_e4m3fn_t>::value || IsSameType<T_Y, fp8_e5m2_t>::value ||
+                  IsSameType<T_Y, hifloat8_t>::value) {
+        return AscendC::GetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>();
+    }
+#endif
+    return 0;
+}
+
+template <typename T_Y>
+__aicore__ inline void SetOverflowMode(uint64_t mode)
+{
+#if (__NPU_ARCH__ == 3510)
+    if constexpr (IsSameType<T_Y, fp8_e4m3fn_t>::value || IsSameType<T_Y, fp8_e5m2_t>::value ||
+                  IsSameType<T_Y, hifloat8_t>::value) {
+        AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(mode);
+    }
+#endif
+}
+
+template <typename T, typename U, typename R>
+__aicore__ inline void YCopyOutImpl(
+    const U& dstTensor, const R& srcTensor, uint32_t blockCount, uint32_t blockLen, uint32_t srcStride = 0,
+    uint32_t dstStride = 0)
+{
+    DataCopyExtParams extParams{
+        static_cast<uint16_t>(blockCount),           // blockCount
+        static_cast<uint32_t>(blockLen * sizeof(T)), // blockLen
+        srcStride,                                   // srcStride
+        dstStride,                                   // dstStride
+        0                                            // rsv
+    };
+    DataCopyPad(dstTensor, srcTensor, extParams);
+}
 
 /*!
  * DataCopy custom implement
@@ -64,6 +111,40 @@ __aicore__ inline void DataCopyImpl(
     } else {
         DataCopyPad(dstTensor, srcTensor, extParams);
     }
+}
+
+template <typename T_X>
+__aicore__ inline void CopyInX(
+    TQue<QuePosition::VECIN, 1>& inQueueX, GlobalTensor<T_X>& srcGm, uint64_t gmOffset, uint32_t blockLen,
+    uint32_t left = 0, uint32_t right = 0)
+{
+    LocalTensor<T_X> xLocal = inQueueX.AllocTensor<T_X>();
+    DataCopyPadExtParams<T_X> padParams{
+        true,                        // isPad
+        static_cast<uint8_t>(left),  // leftPadding
+        static_cast<uint8_t>(right), // rightPadding
+        static_cast<T_X>(0.0)        // paddingValue
+    };
+    DataCopyImpl<T_X>(xLocal, srcGm[gmOffset], 1, blockLen, 0, 0, padParams);
+    inQueueX.EnQue(xLocal);
+}
+
+template <typename T_X>
+__aicore__ inline void CopyOutX(
+    GlobalTensor<T_X>& xGm, TQue<QuePosition::VECOUT, 1>& outQueueX, uint64_t gmOffset, uint32_t blockLen)
+{
+    LocalTensor<T_X> xLocal = outQueueX.DeQue<T_X>();
+    DataCopyImpl<T_X>(xGm[gmOffset], xLocal, 1, blockLen);
+    outQueueX.FreeTensor(xLocal);
+}
+
+template <typename T_Y>
+__aicore__ inline void CopyOutY(
+    GlobalTensor<T_Y>& yGm, TQue<QuePosition::VECOUT, 1>& outQueueY, uint64_t gmOffset, uint32_t blockLen)
+{
+    LocalTensor<T_Y> yLocal = outQueueY.DeQue<T_Y>();
+    YCopyOutImpl<T_Y>(yGm[gmOffset], yLocal, 1, blockLen);
+    outQueueY.FreeTensor(yLocal);
 }
 
 /*!

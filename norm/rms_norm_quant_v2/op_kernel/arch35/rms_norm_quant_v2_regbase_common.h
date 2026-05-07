@@ -20,19 +20,19 @@
 #include "../../norm_common/reduce_common_regbase.h"
 #include "../../rms_norm/arch35/rms_norm_regbase_common.h"
 
+#ifndef FLOAT_OVERFLOW_MODE_CTRL
+#define FLOAT_OVERFLOW_MODE_CTRL 60
+#endif
+
 namespace RmsNormQuantV2 {
 using namespace AscendC;
-using AscendC::MicroAPI::CreateMask;
-using AscendC::MicroAPI::LoadDist;
-using AscendC::MicroAPI::LocalMemBar;
-using AscendC::MicroAPI::MaskPattern;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::MemType;
-using AscendC::MicroAPI::RegTensor;
-using AscendC::MicroAPI::StoreDist;
-using AscendC::MicroAPI::UpdateMask;
+using namespace AscendC::MicroAPI;
 using namespace NormCommon;
 using namespace NormCommon::NormCommonRegbase;
+using RmsNorm::GetOverflowMode;
+using RmsNorm::SetOverflowMode;
+using RmsNorm::castTraitFp322Fp8;
+using RmsNorm::castTraitFp322Hifp8;
 
 constexpr int64_t ALIGN_512_FACTOR = 512;
 constexpr int64_t ALIGN_32_FACTOR = 32;
@@ -53,7 +53,6 @@ constexpr int32_t NUM_FOUR = 4;
 
 constexpr int32_t VL_SIZE = GetVRegSize();
 constexpr int32_t V_LENGTH = (VL_SIZE / sizeof(float));
-
 
 static constexpr uint32_t DOUBLE_BUFFER_NUM = 2;
 constexpr int64_t AR_RECOMPUTE_SUM_BUFFER_BTYES = 32;
@@ -110,18 +109,6 @@ constexpr AscendC::MicroAPI::CastTrait castTraitFp162Int8 = {
     AscendC::MicroAPI::SatMode::NO_SAT,
     AscendC::MicroAPI::MaskMergeMode::ZEROING,
     AscendC::RoundMode::CAST_RINT,
-};
-constexpr AscendC::MicroAPI::CastTrait castTraitFp322Fp8 = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::NO_SAT,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
-    RoundMode::CAST_RINT,
-};
-constexpr AscendC::MicroAPI::CastTrait castTraitFp322Hifp8 = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::NO_SAT,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
-    RoundMode::CAST_ROUND,
 };
 
 __aicore__ inline int64_t GetCacheId(const int64_t idx)

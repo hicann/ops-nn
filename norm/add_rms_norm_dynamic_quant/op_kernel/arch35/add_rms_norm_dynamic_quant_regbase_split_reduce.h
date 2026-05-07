@@ -53,6 +53,7 @@ public:
 
         blockNum_ = GetBlockNum();
         blockIdx_ = GetBlockIdx();
+        oriOverflowMode_ = GetOverflowMode<T_Y>();
 
         CalBlockTail();
         InitBuffer(x1, x2, gamma, smooathScale1, smooathScale2, beta, y1, y2, x, scale1, scale2, workspace);
@@ -370,6 +371,7 @@ private:
             SetFlag<HardEvent::MTE2_V>(eventMTE2V);
             WaitFlag<HardEvent::MTE2_V>(eventMTE2V);
 
+            SetOverflowMode<T_Y>(0);
             ComputeReduceMax<float, T_X, T_SMOOTH_SCALE, HAS_SMOOTH_SCALE1, HAS_BETA, T_Y>(
                 scale1Local, y1TmpLocal, xOutTmpLocal, rstdLocal, gammaLocal, betaLocal, smoothScale1Local, 0,
                 baseNDtypeAlign_);
@@ -378,6 +380,7 @@ private:
                     scale2Local, y2TmpLocal, xOutTmpLocal, rstdLocal, gammaLocal, betaLocal, smoothScale2Local, 0,
                     baseNDtypeAlign_);
             }
+            SetOverflowMode<T_Y>(oriOverflowMode_);
 
             inQueueGamma_.FreeTensor(gammaLocal);
             if constexpr (HAS_SMOOTH_SCALE1) {
@@ -530,6 +533,9 @@ private:
     uint64_t baseNB32Align_;
     // Other
     uint32_t vfLength_{0};
+#if (__NPU_ARCH__ == 3510)
+    int64_t oriOverflowMode_{0};
+#endif
 };
 } // namespace AddRmsNormDynamicQuant
 #endif // _ADD_RMS_NORM_DYNAMIC_QUANT_REGBASE_SPILT_REDUCE_H_

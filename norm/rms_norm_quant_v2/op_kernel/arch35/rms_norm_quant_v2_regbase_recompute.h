@@ -59,6 +59,7 @@ public:
         avgFactor_ = tilingData->avgFactor;
 
         mCurCore_ = GetBlockIdx() == (GetBlockNum() - 1) ? mLastCore_ : mPerCore_;
+        oriOverflowMode_ = GetOverflowMode<T_Y>();
 
         isHasScale2_ = option_mask_ & (1 << NUM_ZERO);
         isHasZeroPoint1_ = option_mask_ & (1 << NUM_ONE);
@@ -436,6 +437,7 @@ public:
         LocalTensor<T_SCALES>& scales2Local, LocalTensor<T_ZEROPOINTS>& zeroPoints1Local,
         LocalTensor<T_ZEROPOINTS>& zeroPoints2Local, LocalTensor<T_X>& betaLocal, uint32_t rstdOffset, uint32_t count)
     {
+        SetOverflowMode<T_Y>(0);
         uint32_t sreg = (uint32_t)count;
         uint16_t repeatTimes = CeilDivision(count, VL_FP32);
         __local_mem__ T_X* xAddr = (__local_mem__ T_X*)xLocal.GetPhyAddr();
@@ -579,6 +581,7 @@ public:
                 }
             }
         }
+        SetOverflowMode<T_Y>(oriOverflowMode_);
     }
 
 private:
@@ -957,6 +960,9 @@ private:
     bool isHasY2_;
     bool isHasBeta_;
     bool isNeedBrc_;
+#if (__NPU_ARCH__ == 3510)
+    int64_t oriOverflowMode_{0};
+#endif
 };
 } // namespace RmsNormQuantV2
 #endif // RMS_NORM_QUANT_V2_REBASE_REDUCE_H_

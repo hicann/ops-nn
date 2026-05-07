@@ -59,6 +59,9 @@ private:
     // Platform
     int64_t blockIdx{0};
     int64_t blockNum{0};
+#if (__NPU_ARCH__ == 3510)
+    int64_t oriOverflowMode{0};
+#endif
     uint32_t blockSize = platform::GetUbBlockSize();
     uint32_t vectorLen = platform::GetVRegSize();
     uint32_t blockSizeB32 = platform::GetUbBlockSize() / sizeof(float);
@@ -140,6 +143,7 @@ public:
 
         blockNum = GetBlockNum();
         blockIdx = GetBlockIdx();
+        oriOverflowMode = GetOverflowMode<T_Y>();
 
         // init option
         if ((optionMask&ZEROS_POINTS1_MASK) == ZEROS_POINTS1_MASK) {
@@ -264,7 +268,9 @@ public:
             }
 
             // compute quant
+            SetOverflowMode<T_Y>(0);
             QuantRoute(optionMask,xLocal,rstdLocal,gammaLocal,betaLocal,scales1Local,scales2Local,zeroPoints1Local,zeroPoints2Local,y1Local,y2Local,curUbFactor,numR,numQ,xGammaBetaAlign,scalesAlign,zeroPointsAlign,yAlign);
+            SetOverflowMode<T_Y>(oriOverflowMode);
             inQueueX.FreeTensor(xLocal);
 
             outQueueY1.EnQue(y1Local);

@@ -21,19 +21,23 @@
 #include "../../norm_common/reduce_common_regbase.h"
 #include "../../rms_norm/arch35/rms_norm_regbase_common.h"
 
+#ifndef FLOAT_OVERFLOW_MODE_CTRL
+#define FLOAT_OVERFLOW_MODE_CTRL 60
+#endif
+
 namespace AddRmsNormDynamicQuant {
 using namespace AscendC;
-using AscendC::MicroAPI::CreateMask;
-using AscendC::MicroAPI::LoadDist;
-using AscendC::MicroAPI::LocalMemBar;
-using AscendC::MicroAPI::MaskPattern;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::MemType;
-using AscendC::MicroAPI::RegTensor;
-using AscendC::MicroAPI::StoreDist;
-using AscendC::MicroAPI::UpdateMask;
+using namespace AscendC::MicroAPI;
 using namespace NormCommon;
 using namespace NormCommon::NormCommonRegbase;
+using RmsNorm::GetOverflowMode;
+using RmsNorm::SetOverflowMode;
+using RmsNorm::castTraitFp322Fp8;
+using RmsNorm::castTraitFp322Hifp8;
+using RmsNorm::CopyInX;
+using RmsNorm::CopyOutX;
+using RmsNorm::CopyOutY;
+using RmsNorm::YCopyOutImpl;
 
 constexpr uint64_t ALIGN_512_FACTOR = 512;
 constexpr uint64_t ALIGN_32_FACTOR = 32;
@@ -65,66 +69,25 @@ constexpr AscendC::MicroAPI::CastTrait castTraitFp162Int8 = {
     AscendC::MicroAPI::MaskMergeMode::ZEROING,
     AscendC::RoundMode::CAST_TRUNC,
 };
-constexpr static AscendC::MicroAPI::CastTrait castTraitFp322Fp8 = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::NO_SAT,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
-    RoundMode::CAST_RINT,
-};
-constexpr static AscendC::MicroAPI::CastTrait castTraitFp322Hifp8 = {
-    AscendC::MicroAPI::RegLayout::ZERO,
-    AscendC::MicroAPI::SatMode::NO_SAT,
-    AscendC::MicroAPI::MaskMergeMode::ZEROING,
-    RoundMode::CAST_ROUND,
-};
 
-template <typename T_X>
-__aicore__ inline void CopyInX(
-    TQue<QuePosition::VECIN, 1>& inQueueX, GlobalTensor<T_X>& srcGm, uint64_t gmOffset, uint32_t blockLen,
-    uint32_t left = 0, uint32_t right = 0)
+template <typename TilingData>
+__aicore__ inline void InitTiling(
+    uint64_t& numM, uint64_t& numN, uint64_t& baseM, uint64_t& baseN,
+    uint64_t& baseNDtypeAlign, uint64_t& baseNReduceAlign, uint64_t& powerSplit,
+    uint64_t& mPerCore, uint64_t& mLastCore, float& epsilon, float& avgFactor,
+    const TilingData* tilingData)
 {
-    LocalTensor<T_X> xLocal = inQueueX.AllocTensor<T_X>();
-    DataCopyPadExtParams<T_X> padParams{
-        true,                        // isPad
-        static_cast<uint8_t>(left),  // leftPadding
-        static_cast<uint8_t>(right), // rightPadding
-        static_cast<T_X>(0.0)        // paddingValue
-    };
-    RmsNorm::DataCopyImpl<T_X>(xLocal, srcGm[gmOffset], 1, blockLen, 0, 0, padParams);
-    inQueueX.EnQue(xLocal);
-}
-
-template <typename T_X>
-__aicore__ inline void CopyOutX(
-    GlobalTensor<T_X>& xGm, TQue<QuePosition::VECOUT, 1>& outQueueX, uint64_t gmOffset, uint32_t blockLen)
-{
-    LocalTensor<T_X> xLocal = outQueueX.DeQue<T_X>();
-    RmsNorm::DataCopyImpl<T_X>(xGm[gmOffset], xLocal, 1, blockLen);
-    outQueueX.FreeTensor(xLocal);
-}
-
-template <typename T, typename U, typename R>
-__aicore__ inline void YCopyOutImpl(
-    const U& dstTensor, const R& srcTensor, uint32_t blockCount, uint32_t blockLen, uint32_t srcStride = 0,
-    uint32_t dstStride = 0)
-{
-    DataCopyExtParams extParams{
-        static_cast<uint16_t>(blockCount),           // blockCount
-        static_cast<uint32_t>(blockLen * sizeof(T)), // blockLen
-        srcStride,                                   // srcStride
-        dstStride,                                   // dstStride
-        0                                            // rsv
-    };
-    DataCopyPad(dstTensor, srcTensor, extParams);
-}
-
-template <typename T_Y>
-__aicore__ inline void CopyOutY(
-    GlobalTensor<T_Y>& yGm, TQue<QuePosition::VECOUT, 1>& outQueueY, uint64_t gmOffset, uint32_t blockLen)
-{
-    LocalTensor<T_Y> yLocal = outQueueY.DeQue<T_Y>();
-    YCopyOutImpl<T_Y>(yGm[gmOffset], yLocal, 1, blockLen);
-    outQueueY.FreeTensor(yLocal);
+    numM = tilingData->numM;
+    numN = tilingData->numN;
+    baseM = tilingData->baseM;
+    baseN = tilingData->baseN;
+    baseNDtypeAlign = tilingData->baseNDtypeAlign;
+    baseNReduceAlign = tilingData->baseNReduceAlign;
+    powerSplit = tilingData->powerSplit;
+    mPerCore = tilingData->mPerCore;
+    mLastCore = tilingData->mLastCore;
+    epsilon = tilingData->epsilon;
+    avgFactor = tilingData->avgFactor;
 }
 
 __aicore__ inline void CopyOutScale(

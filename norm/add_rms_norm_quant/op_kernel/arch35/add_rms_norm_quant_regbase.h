@@ -52,6 +52,7 @@ public:
 
         blockNum_ = GetBlockNum();
         blockIdx_ = GetBlockIdx();
+        oriOverflowMode_ = GetOverflowMode<T_Y>();
 
         CalBlockTail();
         InitBuffer(x1, x2, gamma, scales1, scales2, zeroPoints1, zeroPoints2, beta, y1, y2, x);
@@ -206,6 +207,7 @@ private:
             y2Local = outQueueY2_.AllocTensor<T_Y>();
         }
 
+        SetOverflowMode<T_Y>(0);
         if (divMode_) {
             ComputeY<T_X, T_Y, T_SCALES, T_ZEROPOINTS, true, HAS_ZEROPOINTS1, HAS_BETA, true>(
                 y1Local, xOutLocal, rstdLocal, gammaLocal, betaLocal, scales1Local, zeroPoints1Local, mInnerIdx, baseNDtypeAlign_);
@@ -221,6 +223,7 @@ private:
                     y2Local, xOutLocal, rstdLocal, gammaLocal, betaLocal, scales2Local, zeroPoints2Local, mInnerIdx, baseNDtypeAlign_);
             }
         }
+        SetOverflowMode<T_Y>(oriOverflowMode_);
         CopyOutX(xGm_, outQueueX_, gmOffset, numN_);
 
         outQueueY1_.EnQue<T_Y>(y1Local);
@@ -271,6 +274,9 @@ private:
     uint64_t mCnt_;
     uint64_t tailM_;
     uint64_t baseNB8Align_;
+#if (__NPU_ARCH__ == 3510)
+    int64_t oriOverflowMode_{0};
+#endif
 };
 } // namespace AddRmsNormQuant
 #endif // ADD_RMS_NORM_QUANT_REGBASE_H_
