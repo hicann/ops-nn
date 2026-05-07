@@ -42,7 +42,7 @@ protected:
     virtual ge::fusion::GraphUniqPtr Replacement(const ge::GNode &convNode) = 0;
 
 protected:
-    NpuArch npuArch;
+    NpuArch npuArch = NpuArch::DAV_RESV;
     ConvFusionUtils::ConvDescInfo convDescInfo = {};
 };
 

@@ -38,7 +38,7 @@ Status ConvFusionBasePass::Run(GraphPtr &graph, CustomPassContext &pass_context)
     for (auto &node : matchedNodes) {
         FUSION_PASS_CHECK_NOLOG(!ConvFusionUtilsPass::GetConvDescInfo(node, convDescInfo), return FAILED);
 
-        // Check fusion contidions.
+        // Check fusion conditions.
         if (!MeetRequirements(node)) {
             OP_LOGD(fusionName, "%s is not meet requirements, skip.", convDescInfo.nodeNameStr.c_str());
             continue;

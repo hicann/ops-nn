@@ -202,7 +202,7 @@ GNodePtr ConvFusionUtilsPass::GetNodePtr(const GNode &node, const ConvDescInfo &
 AscendString ConvFusionUtilsPass::ListToAscendString(const std::vector<AscendString> &strList)
 {
     std::string res = "";
-    for (uint32_t index = 0; index < strList.size(); ++index) {
+    for (auto index = 0; index < strList.size(); ++index) {
         res += strList[index].GetString();
         if (index != strList.size() - 1) {
             res += ", ";

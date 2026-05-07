@@ -25,30 +25,22 @@ namespace Ops {
 namespace NN {
 namespace Conv {
 namespace ConvFusionUtils {
-using ge::AscendString;
-using ge::DataType;
-using ge::GNodePtr;
-using ge::GNode;
-using ge::Format;
-using ge::TensorDesc;
-using ge::GraphPtr;
-
-const AscendString ASCEND_DEQUANT = "AscendDequant";
-const AscendString ASCEND_QUANT = "AscendQuant";
-const AscendString CONV2D = "Conv2D";
-const AscendString CONV3D = "Conv3D";
-const AscendString POST_CUBE_OP = "FixPipe";
-const AscendString STRIDES = "strides";
-const AscendString PADS = "pads";
-const AscendString DILATIONS = "dilations";
-const AscendString GROUPS = "groups";
-const AscendString OFFSET_X = "offset_x";
-const AscendString DATA_FORMAT = "data_format";
-const AscendString PADDING = "padding";
-const AscendString AUTO_PAD = "auto_pad";
-const AscendString OP_IMPL_MODE_ENUM = "_op_impl_mode_enum";
-const AscendString PAD_MODE = "pad_mode";
-const AscendString ENABLE_HF32 = "enable_hf32";
+const ge::AscendString ASCEND_DEQUANT = "AscendDequant";
+const ge::AscendString ASCEND_QUANT = "AscendQuant";
+const ge::AscendString CONV2D = "Conv2D";
+const ge::AscendString CONV3D = "Conv3D";
+const ge::AscendString POST_CUBE_OP = "FixPipe";
+const ge::AscendString STRIDES = "strides";
+const ge::AscendString PADS = "pads";
+const ge::AscendString DILATIONS = "dilations";
+const ge::AscendString GROUPS = "groups";
+const ge::AscendString OFFSET_X = "offset_x";
+const ge::AscendString DATA_FORMAT = "data_format";
+const ge::AscendString PADDING = "padding";
+const ge::AscendString AUTO_PAD = "auto_pad";
+const ge::AscendString OP_IMPL_MODE_ENUM = "_op_impl_mode_enum";
+const ge::AscendString PAD_MODE = "pad_mode";
+const ge::AscendString ENABLE_HF32 = "enable_hf32";
 const std::string UTIL_NAME = "ConvFusionUtilsPass";
 
 constexpr size_t REQUIRED_INPUT_NUMS = 2;
@@ -59,7 +51,7 @@ constexpr int32_t INPUT_FILTER_INDEX = 1;
 constexpr int32_t INPUT_BIAS_INDEX = 2;
 constexpr int32_t OUTPUT_INDEX = 0;
 
-const std::set<AscendString> SPECIFIC_PAD_LIST = {"NOTSET", "EXPLICIT"};
+const std::set<ge::AscendString> SPECIFIC_PAD_LIST = {"NOTSET", "EXPLICIT"};
 const std::vector<int64_t> HF32_PRECISION_MODES_INT = {0x1, 0x2, 0x40};
 
 #define FUSION_PASS_CHECK(condition, log_func, return_expr)                                                      \
@@ -86,51 +78,51 @@ struct ConvBaseAttrs {
     int64_t groups = 0;
     int64_t offsetX = 0;
     int64_t opImplModeEnum = 0;
-    AscendString dataFormat = "";
-    AscendString padMode = "";
+    ge::AscendString dataFormat = "";
+    ge::AscendString padMode = "";
     bool enableHf32 = false;
 };
 
 struct ConvDescInfo {
-    TensorDesc fmapDesc;
-    TensorDesc filterDesc;
-    TensorDesc biasDesc;
-    TensorDesc outputDesc;
+    ge::TensorDesc fmapDesc;
+    ge::TensorDesc filterDesc;
+    ge::TensorDesc biasDesc;
+    ge::TensorDesc outputDesc;
 
-    DataType fmapDtype = DataType::DT_MAX;
-    DataType filterDtype = DataType::DT_MAX;
-    DataType biasDtype = DataType::DT_MAX;
-    DataType outputDtype = DataType::DT_MAX;
+    ge::DataType fmapDtype = ge::DataType::DT_MAX;
+    ge::DataType filterDtype = ge::DataType::DT_MAX;
+    ge::DataType biasDtype = ge::DataType::DT_MAX;
+    ge::DataType outputDtype = ge::DataType::DT_MAX;
 
-    Format fmapFormat = Format::FORMAT_NULL;
-    Format filterFormat = Format::FORMAT_NULL;
-    Format biasFormat = Format::FORMAT_NULL;
-    Format outputFormat = Format::FORMAT_NULL;
+    ge::Format fmapFormat = ge::Format::FORMAT_NULL;
+    ge::Format filterFormat = ge::Format::FORMAT_NULL;
+    ge::Format biasFormat = ge::Format::FORMAT_NULL;
+    ge::Format outputFormat = ge::Format::FORMAT_NULL;
 
-    AscendString nodeName = "";
+    ge::AscendString nodeName = "";
     std::string nodeNameStr = "";
     bool hasBias = false;
 };
 
 class ConvFusionUtilsPass {
 public:
-    static bool AddSubgraphInput(std::unique_ptr<ge::fusion::SubgraphBoundary> &boundary, const GNode &node,
+    static bool AddSubgraphInput(std::unique_ptr<ge::fusion::SubgraphBoundary> &boundary, const ge::GNode &node,
         const int64_t subgraphIndex, const int64_t boundaryIndex);
-    static bool AddSubgraphOutput(std::unique_ptr<ge::fusion::SubgraphBoundary> &boundary, const GNode &node,
+    static bool AddSubgraphOutput(std::unique_ptr<ge::fusion::SubgraphBoundary> &boundary, const ge::GNode &node,
         const int64_t subgraphIndex, const int64_t boundaryIndex);
     template <typename T>
     static bool CheckSupportList(const std::vector<std::vector<T>> &supportLists,
         const std::vector<T> &curList);
     static bool CheckSocSupport(const std::map<std::string, NpuArch> &supportSocList, NpuArch &npuArch);
-    static bool GetConvBaseAttr(const GNode &convNode, ConvBaseAttrs &baseAttrs,
+    static bool GetConvBaseAttr(const ge::GNode &convNode, ConvBaseAttrs &baseAttrs,
         const ConvDescInfo &convDescInfo);
-    static bool GetConvDescInfo(const GNode &convNode, ConvDescInfo &convDescInfo);
-    static bool GetMatchedNodes(const GraphPtr &graph, std::vector<GNode> &matchedNodes,
-        const AscendString &nodeType);
-    static GNodePtr GetNodePtr(const GNode &node, const ConvDescInfo &convDescInfo);
-    static AscendString ListToAscendString(const std::vector<AscendString> &strList);
+    static bool GetConvDescInfo(const ge::GNode &convNode, ConvDescInfo &convDescInfo);
+    static bool GetMatchedNodes(const ge::GraphPtr &graph, std::vector<ge::GNode> &matchedNodes,
+        const ge::AscendString &nodeType);
+    static ge::GNodePtr GetNodePtr(const ge::GNode &node, const ConvDescInfo &convDescInfo);
+    static ge::AscendString ListToAscendString(const std::vector<ge::AscendString> &strList);
     static void PrintConvDescInfo(const ConvDescInfo &convDescInfo);
-    static bool UpdateInputDesc(GNode *convNode, const ConvDescInfo &convDescInfo);
+    static bool UpdateInputDesc(ge::GNode *convNode, const ConvDescInfo &convDescInfo);
 };
 
 template <typename T>
