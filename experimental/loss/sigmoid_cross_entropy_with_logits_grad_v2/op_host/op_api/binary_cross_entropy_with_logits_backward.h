@@ -7,8 +7,8 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-#ifndef OP_API_INC_LEVEL0_BINARY_CROSS_ENTROPY_WITH_LOGITS_BACKEARD_H_
-#define OP_API_INC_LEVEL0_BINARY_CROSS_ENTROPY_WITH_LOGITS_BACKEARD_H_
+#ifndef OP_API_INC_LEVEL0_BINARY_CROSS_ENTROPY_WITH_LOGITS_BACKWARD_H_
+#define OP_API_INC_LEVEL0_BINARY_CROSS_ENTROPY_WITH_LOGITS_BACKWARD_H_
 
 #include "opdev/op_executor.h"
 
@@ -19,4 +19,4 @@ const aclTensor* SigmoidCrossEntropyWithLogitsGradV2(const aclTensor* gradOutput
                                                      aclOpExecutor* executor);
 }  // namespace l0op
 
-#endif  // OP_API_INC_LEVEL0_BINARY_CROSS_ENTROPY_WITH_LOGITS_BACKEARD_H_
+#endif  // OP_API_INC_LEVEL0_BINARY_CROSS_ENTROPY_WITH_LOGITS_BACKWARD_H_

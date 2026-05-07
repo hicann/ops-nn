@@ -46,9 +46,9 @@ aclnnStatus aclnnLogSoftmaxV2(
 
 | 参数          | 说明                                                                                                                                                                                                                                                                   |
 | :------------ | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| self          | **(aclTensor\*, 计算输入)**：Device侧的aclTensor，数据格式支持ND，维度不超过8维，支持非连续的Tensor。 `<br>` **Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件**：数据类型支持FLOAT32、FLOAT16、BFLOAT16。                            |
+| self          | **(aclTensor\*, 计算输入)**：Device侧的aclTensor，数据格式支持ND，维度不超过8维，支持非连续的Tensor。 `<br>` **Atlas A2 训练系列产品/Atlas 800I A2 推理产品**：数据类型支持FLOAT32、FLOAT16、BFLOAT16。                            |
 | dim           | **(int64_t, 计算输入)**：指定进行LogSoftmax运算的维度，取值范围为 `[-rank, rank-1]`，其中 `rank` 是输入Tensor `self` 的维度。                                                                                                                              |
-| out           | **(aclTensor\*, 计算输出)**：Device侧的aclTensor，数据格式支持ND，shape必须和 `self` 一样，维度不超过8维，支持非连续的Tensor。 `<br>` **Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件**：数据类型支持FLOAT32、FLOAT16、BFLOAT16。 |
+| out           | **(aclTensor\*, 计算输出)**：Device侧的aclTensor，数据格式支持ND，shape必须和 `self` 一样，维度不超过8维，支持非连续的Tensor。 `<br>` **Atlas A2 训练系列产品/Atlas 800I A2 推理产品**：数据类型支持FLOAT32、FLOAT16、BFLOAT16。 |
 | workspaceSize | **(uint64_t\*, 出参)**：返回需要在Device侧申请的workspace大小。                                                                                                                                                                                                  |
 | executor      | **(aclOpExecutor \*\*, 出参)**：返回op执行器，包含了算子计算流程。                                                                                                                                                                                               |
 

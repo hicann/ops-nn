@@ -116,7 +116,7 @@
 
 | 调用方式 | 调用样例                                                                   | 说明                                                             |
 |--------------|------------------------------------------------------------------------|----------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_sigmoid_cross_entropy_with_logits_v2](./examples/test_aclnn_sigmoid_cross_entropy_with_logits_v2.cpp) | 通过[aclnnSigmoidCrossEntropyWithLogitsV2](./docs/aclnnSigmoidCrossEntropyWithLogitsV2.md)文档说明的两段式接口调用该算子。    |
+| aclnn调用 | [test_aclnn_sigmoid_cross_entropy_with_logits_v2](./examples/test_aclnn_sigmoid_cross_entropy_with_logits_v2.cpp) | 通过[aclnnBinaryCrossEntropyWithLogits](./docs/aclnnBinaryCrossEntropyWithLogits.md)文档说明的两段式接口调用该算子。    |
 
 ## 贡献说明
 

@@ -9,7 +9,6 @@
 ## 功能说明
 
 - 算子功能：计算二分类交叉熵（带 logits）损失对输入 logits 的梯度，支持可选输入 `weight` 和 `pos_weight`。
-- 该算子对应接口名为 `aclnnBinaryCrossEntropyWithLogitsBackward`。
 
 设输入为 `predict`（logits）、`target`、`dout`，定义：
 
@@ -133,4 +132,4 @@ $$
 
 | 调用方式 | 调用样例 | 说明 |
 |:---|:---|:---|
-| aclnn调用 | [test_aclnn_sigmoid_cross_entropy_with_logits_grad_v2](./examples/test_aclnn_sigmoid_cross_entropy_with_logits_grad_v2.cpp) | 通过 [aclnnSigmoidCrossEntropyWithLogitsGradV2](./docs/aclnnSigmoidCrossEntropyWithLogitsGradV2.md) 文档说明的两段式接口调用该算子。 |
+| aclnn调用 | [test_aclnn_sigmoid_cross_entropy_with_logits_grad_v2](./examples/test_aclnn_sigmoid_cross_entropy_with_logits_grad_v2.cpp) | 通过 [aclnnBinaryCrossEntropyWithLogitsBackward](./docs/aclnnBinaryCrossEntropyWithLogitsBackward.md) 文档说明的两段式接口调用该算子。 |

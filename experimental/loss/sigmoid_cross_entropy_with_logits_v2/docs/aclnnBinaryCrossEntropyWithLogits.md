@@ -1,6 +1,4 @@
-# aclnnSigmoidCrossEntropyWithLogitsV2
-
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/experimental/loss/sigmoid_cross_entropy_with_logits_v2)
+# aclnnBinaryCrossEntropyWithLogits
 
 ## 产品支持情况
 
@@ -380,7 +378,7 @@ int main() {
   aclOpExecutor* executor = nullptr;
   int64_t reduction = 0; // 0:none, 1:mean, 2:sum
 
-  // 调用aclnnBinaryCrossEntropyWithLogitsGet第一段接口
+  // 调用aclnnBinaryCrossEntropyWithLogits第一段接口
   ret = aclnnBinaryCrossEntropyWithLogitsGetWorkspaceSize(
       self, target, weight, posWeight, reduction, out, &workspaceSize, &executor);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnBinaryCrossEntropyWithLogitsGetWorkspaceSize failed. ERROR: %d\\n", ret); return ret);
@@ -392,7 +390,7 @@ int main() {
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\\n", ret); return ret);
   }
 
-  // 调用aclnnBinaryCrossEntropyWithLogitsGet第二段接口
+  // 调用aclnnBinaryCrossEntropyWithLogits第二段接口
   ret = aclnnBinaryCrossEntropyWithLogits(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnBinaryCrossEntropyWithLogits failed. ERROR: %d\\n", ret); return ret);
 
