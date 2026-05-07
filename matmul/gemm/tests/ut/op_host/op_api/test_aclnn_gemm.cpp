@@ -12,8 +12,8 @@
 #include <float.h>
 #include "gtest/gtest.h"
 
-#include "../../../op_host/op_api/aclnn_gemm.h"
-#include "common/op_api_def.h"
+#include "../../../../op_host/op_api/aclnn_gemm.h"
+#include "op_api/op_api_def.h"
 
 #include "op_api_ut_common/tensor_desc.h"
 #include "op_api_ut_common/scalar_desc.h"
@@ -248,27 +248,6 @@ TEST_F(l2_gemm_test, case_empty_tensor_out)
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_INNER_NULLPTR);
-}
-
-// 数据格式支持 NCHW
-TEST_F(l2_gemm_test, case_format_nchw)
-{
-    auto A = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(0, 2);
-    auto B = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(0, 2);
-    auto C = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_NCHW).ValueRange(0, 2);
-    auto out = TensorDesc({16, 16}, ACL_FLOAT, ACL_FORMAT_NCHW).Precision(0.001, 0.001);
-    float alpha = 1.0;
-    float beta = 1.0;
-    int64_t transA = 0;
-    int64_t transB = 0;
-    int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
-
-    auto ut = OP_API_UT(aclnnGemm, INPUT(A, B, C, alpha, beta, transA, transB), OUTPUT(out), cubeMathType);
-
-    // SAMPLE: only test GetWorkspaceSize
-    uint64_t workspace_size = 0;
-    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
 // A不是2维

@@ -8,6 +8,11 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
-if(TILING_UT OR PROTO_UT OR OP_API_UT OR (UT_TEST_ALL AND NOT AICPU_ONLY))
-    add_modules_llt_sources(HOSTNAME ${OPTEST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR})
-endif()
+message(STATUS "=== Debug: start ops.matmul.mv.tests.ut.CMakeLists.txt ")
+file(GLOB CURRENT_SOURCE_DIRS LIST_DIRECTORIES true ${CMAKE_CURRENT_SOURCE_DIR}/*)
+message(STATUS "=== Debug: CURRENT_SOURCE_DIRS =${CURRENT_SOURCE_DIRS} ")
+foreach(SUB_DIR ${CURRENT_SOURCE_DIRS})
+    if(EXISTS "${SUB_DIR}/CMakeLists.txt")
+        add_subdirectory(${SUB_DIR})
+    endif()
+endforeach()

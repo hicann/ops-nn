@@ -13,7 +13,7 @@
 #include <thread>
 #include "gtest/gtest.h"
 #include <gmock/gmock.h>
-#include "../../../op_host/op_api/aclnn_convert_weight_to_int4_pack.h"
+#include "../../../../op_host/op_api/aclnn_convert_weight_to_int4_pack.h"
 #include "op_api_ut_common/tensor_desc.h"
 #include "op_api_ut_common/op_api_ut.h"
 #include "opdev/platform.h"
@@ -82,6 +82,7 @@ static ConvertWeightToINT4PackTestParam casesParams[] = {
 };
 
 INSTANTIATE_TEST_SUITE_P(ConvertWeightToINT4Pack, l2_ConvertWeightToINT4Pack_test, testing::ValuesIn(casesParams));
+INSTANTIATE_TEST_SUITE_P(ConvertWeightToINT4Pack, l2_ConvertWeightToINT4Pack_Ascend950_test, testing::ValuesIn(casesParams));
 
 static void ThreadFunc(const ConvertWeightToINT4PackTestParam *params, size_t testcase_num, size_t thread_idx,
                        size_t thread_num)

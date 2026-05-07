@@ -11,8 +11,8 @@
 #include <vector>
 #include "gtest/gtest.h"
 
-#include "../../../op_host/op_api/aclnn_addmv.h"
-#include "common/op_api_def.h"
+#include "../../../../op_host/op_api/aclnn_addmv.h"
+#include "op_api/op_api_def.h"
 
 #include "op_api_ut_common/op_api_ut.h"
 #include "op_api_ut_common/scalar_desc.h"
