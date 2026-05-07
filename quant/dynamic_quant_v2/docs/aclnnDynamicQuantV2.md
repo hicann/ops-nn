@@ -153,7 +153,7 @@ aclnnStatus aclnnDynamicQuantV2(
       <td>groupIndexOptional（aclTensor*）</td>
       <td>输入</td>
       <td>算子输入的groupIndex。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape只有一维。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape只支持一维，且维度大小等于smoothScalesOptional的第一维。</li><li>groupIndexOptional非nullptr时，smoothScalesOptional必须非nullptr。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1</td>

@@ -210,7 +210,7 @@ aclnnStatus aclnnQuantize(
       <td>输入scales和zeroPoints的size不为1时，与输入axis指定轴的size不相等。</td>
     </tr>
     <tr>
-      <td>输入out的数据类型与输入dtype的取值不一致。</td>
+      <td>输出out的数据类型与输入dtype的取值不一致。</td>
     </tr>
   </tbody></table>
 
