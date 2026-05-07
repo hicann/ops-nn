@@ -30,6 +30,7 @@ using Ops::NN::Optiling::RecursiveSum;
 namespace {
 constexpr uint32_t KERNEL_SPLIT_HW = 1;
 constexpr uint32_t KERNEL_SPLIT_H = 2;
+constexpr uint32_t CV_FUSE_COUT1_LIMIT = 2;
 } // namespace
 
 namespace Ops {
@@ -203,7 +204,7 @@ bool Conv3DDXV2KernelSplitTiling::CheckShapeConditions()
     }
 
     // 经验值，耦合架构下，K轴小场景kernel拆分没有明显收益，会引入更多scaler
-    if (IsSocVersionFuse(context_) && runInfo_.dedy_cout1 <= 2) {
+    if (IsSocVersionFuse(context_) && runInfo_.dedy_cout1 <= CV_FUSE_COUT1_LIMIT) {
         return false;
     }
 
