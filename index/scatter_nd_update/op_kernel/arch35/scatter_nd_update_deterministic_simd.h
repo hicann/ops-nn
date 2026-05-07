@@ -78,7 +78,7 @@ __aicore__ inline void ScatterNdUpdateDeterministicSimd<PARAMS_T, INDICES_T, TYP
 
         int64_t globalValRowIdx = this->varIdxGm(this->indiceOffSet); 
         // 越界校验
-        if (globalValRowIdx < 0 || globalValRowIdx > this->tiling_.outputStorageShapeSize) {
+        if (globalValRowIdx < 0 || globalValRowIdx >= this->tiling_.outputStorageShapeSize) {
             continue;
         }
 
