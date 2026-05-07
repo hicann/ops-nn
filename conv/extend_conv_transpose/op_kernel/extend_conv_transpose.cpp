@@ -58,7 +58,7 @@ __global__ __aicore__ void extend_conv_transpose(GM_ADDR input_size, GM_ADDR x, 
     if (tilingData.conv3DDxTiling.initOutputFlag == static_cast<int32_t>(InitOutputFlag::L0_INIT)) {
         Conv3dDxInitOutput<DTYPE_Y> opInitOutput;
         opInitOutput.Init(y, &tilingData);
-        opInitOutput.Process();
+        opInitOutput.Process(y);
         opInitOutput.Destroy();
     }
 

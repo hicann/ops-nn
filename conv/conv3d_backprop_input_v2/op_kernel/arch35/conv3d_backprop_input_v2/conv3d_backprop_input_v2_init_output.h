@@ -18,6 +18,7 @@
 #include "conv3d_backprop_input_v2_tiling_data.h"
 
 namespace AscendC {
+constexpr uint8_t VEC_FALG_ID = 5;
 #if __CCE_AICORE__ == 310 || (__NPU_ARCH__ == 5102)
     #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || (__NPU_ARCH__ == 5102)
         constexpr int32_t TOTALL0CSIZE = 262144;
@@ -37,9 +38,6 @@ public:
     __aicore__ inline void Init(GM_ADDR y, const conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData *tilingData)
     {
         InitTilingData(tilingData);
-        // init global buffer
-        yGm_.SetGlobalBuffer((__gm__ yType *)y);
-        pipe_.InitBuffer(localBuffer_, TOTALL0CSIZE);
     }
 
     /** main logical function
@@ -50,7 +48,7 @@ public:
         return (a + b - 1) / b;
     }
 
-    __aicore__ inline void ProcessWithL0()
+    __aicore__ inline void ProcessWithL0(GM_ADDR y)
     {
         // david上数据量为128B对齐搬运效率最高，因此需对齐到128B，由于搬运的是fp32，因此搬运数量为32的倍数
         uint64_t clearSizePerCore = AlignUp(Ceil(outputSize_, GetBlockNum()), ONE_BLK_SIZE);
@@ -63,96 +61,44 @@ public:
         uint64_t realClearSize = outputSize_ - offset;
         realClearSize = realClearSize > clearSizePerCore ? clearSizePerCore : realClearSize;
 
-        // popbuffer的dtype应为src的dtype float类型
-#if (__NPU_ARCH__ == 5102)
-        LocalTensor<int32_t> popBuffer = localBuffer_.template Get<int32_t>();
-#else
-        LocalTensor<float> popBuffer = localBuffer_.template Get<float>();
-#endif
-        // fixpipe的mSize的范围为【1，65535】，loc的size为262144，fp32的数据个数为65536，大于mSize，因此需减去32去对齐
-        uint32_t localSize = (static_cast<uint64_t>(popBuffer.GetSize()) - ONE_BLK_SIZE) < clearSizePerCore
-                                 ? (popBuffer.GetSize() - ONE_BLK_SIZE)
-                                 : static_cast<uint32_t>(clearSizePerCore);
-
-        uint64_t round = realClearSize / localSize;
-        uint32_t tail = realClearSize % localSize;
-        QuantMode_t quantPre = QuantMode_t::QF322BF16_PRE;
-        if constexpr (IsSameType<yType, half>::value) {
-            quantPre = QuantMode_t::QF322F16_PRE;
-        } else if constexpr (IsSameType<yType, hifloat8_t>::value) {
-            quantPre = QuantMode_t::QF322HIF8_PRE; // Half to Away Round
-        } else if constexpr (IsSameType<yType, int8_t>::value) {
-            quantPre = QuantMode_t::REQ8;
-        }
-        else if constexpr (IsSameType<yType, float>::value) {
-            quantPre = QuantMode_t::QF322F32_PRE;
-        }  else if constexpr (IsSameType<yType, fp8_e4m3fn_t>::value) {
-            quantPre = QuantMode_t::QF322FP8_PRE;
-        }
-        // fixPipeParams前四个参数为nsize msize srcstride dststride，由于nsize为16，srcstride dststride可以不配置
-        AscendC::FixpipeParamsC310<CO2Layout::NZ> fixPipeParamsDma(BLOCK_CUBE, localSize / BLOCK_CUBE, 1, 1);
-        fixPipeParamsDma.deqScalar = 0;
-        fixPipeParamsDma.quantPre = quantPre;
-        for (uint64_t idx = 0; idx < round; ++idx) {
-            // 由于我们是通过量化参数为0去达到清零效果，因此，我们的src起始地址可以始终为0
-            // 若要配置src的起始地址不能使用popBuffer[offset]，因为offset可能会大于65536，导致越界
-#if (__NPU_ARCH__ == 5102)
-            AscendC::Fixpipe<yType, int32_t, CFG_NZ>(yGm_[offset], popBuffer, fixPipeParamsDma);
-#else
-            AscendC::Fixpipe<yType, float, CFG_NZ>(yGm_[offset], popBuffer, fixPipeParamsDma);
-#endif
-            offset += localSize;
-        }
-
-        if (tail != 0) {
-            if (tail / BLOCK_CUBE > 0) {
-                // tail大于16，可以使用nz2nz去搬运
-                AscendC::FixpipeParamsC310<CO2Layout::NZ> fixPipeParamsDmaTail(BLOCK_CUBE, tail / BLOCK_CUBE, 1, 1);
-                fixPipeParamsDmaTail.deqScalar = 0;
-                fixPipeParamsDmaTail.quantPre = quantPre;
-#if (__NPU_ARCH__ == 5102)
-                AscendC::Fixpipe<yType, int32_t, CFG_NZ>(yGm_[offset], popBuffer, fixPipeParamsDmaTail);
-#else
-                AscendC::Fixpipe<yType, float, CFG_NZ>(yGm_[offset], popBuffer, fixPipeParamsDmaTail);
-#endif
-            }
-            // tail大于16和tail对16取余不等于0 可以同时存在，也可单独存在
-            if (tail % BLOCK_CUBE != 0) {
-                // tail对16取余不等于0，表明清零的size并不是16对齐的，需使用nz2nd去清零
-                offset += tail / BLOCK_CUBE * BLOCK_CUBE;
-                AscendC::FixpipeParamsC310<CO2Layout::ROW_MAJOR> fixPipeParamsNz2nd;
-                fixPipeParamsNz2nd.params.ndNum = 1;
-                fixPipeParamsNz2nd.mSize = 1;
-                fixPipeParamsNz2nd.nSize = tail % BLOCK_CUBE;
-                // 由于msize为1，srcstride dststride可以不配置
-                fixPipeParamsNz2nd.srcStride = BLOCK_CUBE;
-                fixPipeParamsNz2nd.dstStride = tail % BLOCK_CUBE;
-                fixPipeParamsNz2nd.deqScalar = 0;
-                fixPipeParamsNz2nd.quantPre = quantPre;
-
-#if (__NPU_ARCH__ == 5102)
-                AscendC::Fixpipe<yType, int32_t, CFG_ROW_MAJOR>(yGm_[offset], popBuffer, fixPipeParamsNz2nd);
-#else
-                AscendC::Fixpipe<yType, float, CFG_ROW_MAJOR>(yGm_[offset], popBuffer, fixPipeParamsNz2nd);
-#endif
-            }
-        }
+        if constexpr (IsSameType<yType, hifloat8_t>::value || IsSameType<yType, fp8_e4m3fn_t>::value) { 
+            GlobalTensor<int8_t> yGm_;
+            yGm_.SetGlobalBuffer((__gm__ int8_t *)y);
+            InitOutput<int8_t>(yGm_[offset], realClearSize, (int8_t)(0));
+        } else { 
+            GlobalTensor<yType> yGm_;
+            yGm_.SetGlobalBuffer((__gm__ yType *)y);
+            InitOutput<yType>(yGm_[offset], realClearSize, (yType)(0));
+        } 
+        
         SyncAllCores();
     }
 
-    __aicore__ inline void Process()
+    __aicore__ inline void Process(GM_ADDR y)
     {
-        if ASCEND_IS_AIV_SHOULD_RETURN {
-            return;
+        if ASCEND_IS_AIV {
+            ProcessWithL0(y);
         }
-
-        ProcessWithL0();
+        if ASCEND_IS_AIC {
+        #if (__NPU_ARCH__ == 5102)
+            AscendC::TQueSync<PIPE_MTE1, PIPE_MTE3> sync;
+            sync.WaitFlag(VEC_FALG_ID);
+        #else
+            CrossCoreWaitFlag(VEC_FALG_ID);
+        #endif
+        }
     }
 
     __aicore__ inline void SyncAllCores()
     {
-        CrossCoreSetFlag<0, PIPE_FIX>(SYNC_AIC_FLAG);
-        CrossCoreWaitFlag(SYNC_AIC_FLAG);
+    #if (__NPU_ARCH__ == 5102)
+        AscendC::TQueSync<PIPE_MTE1, PIPE_MTE3> sync;
+        sync.SetFlag(VEC_FALG_ID);
+    #else
+        CrossCoreSetFlag<0, PIPE_MTE3>(SYNC_AIV_FLAG);
+        CrossCoreWaitFlag(SYNC_AIV_FLAG);
+        CrossCoreSetFlag<2, PIPE_MTE3>(VEC_FALG_ID);
+    #endif
     }
 
     __aicore__ inline void Destroy()
@@ -164,7 +110,6 @@ protected:
     uint64_t outputSize_;
     TPipe pipe_;
     TBuf<TPosition::CO1> localBuffer_;
-    GlobalTensor<yType> yGm_;
 
     __aicore__ inline void InitTilingData(const conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData *tilingData)
     {
