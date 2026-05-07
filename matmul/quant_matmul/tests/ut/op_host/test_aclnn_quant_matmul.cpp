@@ -36,9 +36,9 @@ TEST_F(l2_quant_matmul_test, ascend910B2_test_normal_input)
     // 使用**Desc描述host api输入输出
     auto x1_desc = TensorDesc({16, 32}, ACL_INT8, ACL_FORMAT_ND);
     auto x2_desc = TensorDesc({32, 16}, ACL_INT8, ACL_FORMAT_ND);
-    auto bias_desc = TensorDesc({16, 16}, ACL_INT32, ACL_FORMAT_ND);
+    auto bias_desc = TensorDesc({16}, ACL_INT32, ACL_FORMAT_ND);
     float deqScale = 1.0;
-    auto out_desc = TensorDesc({16}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto out_desc = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND);
 
     auto ut = OP_API_UT(aclnnQuantMatmul, INPUT(x1_desc, x2_desc, bias_desc, deqScale), OUTPUT(out_desc));
 
