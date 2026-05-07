@@ -44,6 +44,7 @@ set(OP_GRAPH_MODULE_NAME ${PKG_NAME}_op_graph_ut)
 # global variables
 set(COMPILED_OPS CACHE STRING "Compiled Ops" FORCE)
 set(COMPILED_OP_DIRS CACHE STRING "Compiled Ops Dirs" FORCE)
+set(AICPU_HOST_OBJ_TARGETS)
 
 # kernel source and compile options
 set(kernel_src_list CACHE INTERNAL "kernel source" FORCE)
@@ -104,6 +105,7 @@ else()
   set(BIN_KERNEL_CONFIG_INSTALL_DIR   ${OPP_PREFIX}/built-in/op_impl/ai_core/tbe/kernel/config)
   set(OPHOST_LIB_INSTALL_PATH         ${OPP_PREFIX}/built-in/op_impl/ai_core/tbe/op_host/lib/linux/${CMAKE_SYSTEM_PROCESSOR})
   set(AICPU_KERNEL_IMPL               ${OPP_PREFIX}/built-in/op_impl/aicpu/kernel)
+  set(AICPU_HOST_KERNEL_IMPL          ${OPP_PREFIX}/built-in/op_impl/host_cpu)
   set(AICPU_JSON_CONFIG               ${OPP_PREFIX}/built-in/op_impl/aicpu/config)
   set(OPTILING_LIB_INSTALL_DIR        ${OPHOST_LIB_INSTALL_PATH})
   set(OPGRAPH_INC_INSTALL_DIR         ${OPP_PREFIX}/built-in/op_graph/inc)

@@ -278,6 +278,45 @@ function(add_aicpu_cust_kernel_modules target_name)
   endif()
 endfunction()
 
+# Compiles aicpu source as OBJECT for host side (x86).
+# Collects into AICPU_HOST_OBJ_TARGETS; linking into libnn_constant_folding_ops.so
+# is done in symbol.cmake gen_aicpu_const_symbol().
+function(add_aicpu_host_kernel_modules host_target_name)
+  message(STATUS "add_aicpu_host_kernel_modules for ${host_target_name}")
+  if(NOT TARGET ${host_target_name})
+    add_library(${host_target_name} OBJECT)
+    target_include_directories(${host_target_name} PRIVATE
+        ${AICPU_INCLUDE}
+        ${CANN_3RD_LIB_PATH}/eigen
+    )
+    target_compile_definitions(
+      ${host_target_name} PRIVATE
+                    _FORTIFY_SOURCE=2
+                    google=ascend_private
+    )
+    target_compile_options(
+      ${host_target_name} PRIVATE
+                    -Dgoogle=ascend_private
+                    -fvisibility=hidden ${AICPU_DEFINITIONS}
+    )
+    target_link_libraries(
+      ${host_target_name}
+      PRIVATE $<BUILD_INTERFACE:$<IF:$<BOOL:${ENABLE_TEST}>,intf_llt_pub_asan_cxx14,intf_pub_cxx14>>
+              $<BUILD_INTERFACE:dlog_headers>
+              Eigen3::EigenNn
+    )
+    
+    get_property(_host_targets GLOBAL PROPERTY AICPU_HOST_OBJ_TARGETS)
+    if (NOT host_target_name IN_LIST _host_targets)
+      set_property(GLOBAL APPEND PROPERTY
+        AICPU_HOST_OBJ_TARGETS ${host_target_name})
+      message(STATUS "Aicpu regist host target: ${host_target_name}")
+    else()
+      message(STATUS "Skip duplicate target: ${host_target_name}")
+    endif()
+  endif()
+endfunction()
+
 function(add_graph_plugin_modules)
   if(NOT TARGET ${GRAPH_PLUGIN_NAME}_obj)
     if(BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG)
