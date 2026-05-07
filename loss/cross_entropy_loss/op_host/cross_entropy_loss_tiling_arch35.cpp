@@ -265,7 +265,8 @@ ge::graphStatus CrossEntropyLossRegbaseTiling::CheckInputShape()
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
             context_->GetNodeName(), "x",
             (std::to_string(inputShape.GetDim(DIM_0)) + ", " + std::to_string(inputShape.GetDim(DIM_1))).c_str(),
-            "When the N dimension(first dimension) of x is NOT zero, the C dimension(second dimension) of x cann't be zero"),
+            "The C-dimension of x can not be zero, when the N-dimension of x is not zero, where N is the 0th axis and "
+            "C is the 1st axis"),
         return ge::GRAPH_FAILED);
     auto target = context_->GetInputShape(INPUT_TARGET_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, target);

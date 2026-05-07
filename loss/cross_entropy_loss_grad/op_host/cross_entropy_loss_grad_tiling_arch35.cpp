@@ -354,28 +354,33 @@ ge::graphStatus CrossEntropyLossGradRegbaseTiling::GetTilingInput() {
             return ge::GRAPH_FAILED);
     }
 
-    OP_CHECK_IF((targetStrorageShape.GetDimNum() != 1 || targetStrorageShape.GetDim(0) != logProbStrorageShape.GetDim(0)),
-                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-                        tilingContext->GetNodeName(), "log_prob and target",
-                        (std::to_string(logProbStrorageShape.GetDim(0)) + " and " + std::to_string(targetStrorageShape.GetDim(0))).c_str(),
-                        "The dim 0 of target and log_prob should be the same and the dim num of target should be 1"),
-                    return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        (targetStrorageShape.GetDimNum() != 1 || targetStrorageShape.GetDim(0) != logProbStrorageShape.GetDim(0)),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            tilingContext->GetNodeName(), "log_prob and target",
+            (std::to_string(logProbStrorageShape.GetDim(0)) + " and " + std::to_string(targetStrorageShape.GetDim(0)))
+                .c_str(),
+            "The shape of parameter target must be 1D, and the 0th dimension of target must be equal to the same axis "
+            "of parameter log_prob"),
+        return ge::GRAPH_FAILED);
 
     auto weightTensor = tilingContext->GetOptionalInputTensor(INPUT_WEIGHT_IDX);
     if (weightTensor != nullptr) {
         ceLossGradTilingKey.isWeight = TILING_KEY_TRUE;
         auto weightShape = EnsureNotScalar4CELoss(weightTensor->GetStorageShape());
-        OP_CHECK_IF((weightShape.GetDimNum() != 1),
-                        OP_LOGE_FOR_INVALID_SHAPEDIM(
-                            tilingContext->GetNodeName(), "weight",
-                            std::to_string(weightShape.GetDimNum()).c_str(), "1D"),
-                        return ge::GRAPH_FAILED);
-        OP_CHECK_IF((weightShape.GetDim(0) != logProbShape->GetStorageShape().GetDim(1)),
-                        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-                            tilingContext->GetNodeName(), "log_prob and weight",
-                            (std::to_string(logProbShape->GetStorageShape().GetDim(1)) + " and " + std::to_string(weightShape.GetDim(0))).c_str(),
-                            "The dim 1 of logProb should be the same as the shape size of weight"),
-                        return ge::GRAPH_FAILED);
+        OP_CHECK_IF(
+            (weightShape.GetDimNum() != 1),
+            OP_LOGE_FOR_INVALID_SHAPEDIM(
+                tilingContext->GetNodeName(), "weight", std::to_string(weightShape.GetDimNum()).c_str(), "1D"),
+            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(
+            (weightShape.GetDim(0) != logProbShape->GetStorageShape().GetDim(1)),
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                tilingContext->GetNodeName(), "log_prob and weight",
+                (std::to_string(logProbShape->GetStorageShape().GetDim(1)) + " and " +
+                 std::to_string(weightShape.GetDim(0))).c_str(),
+                "The dim 1 of log_prob must be the same as the shape size of weight"),
+            return ge::GRAPH_FAILED);
     }
     rowVal = logProbShape->GetStorageShape().GetDim(0);
     colVal = logProbShape->GetStorageShape().GetDim(1);

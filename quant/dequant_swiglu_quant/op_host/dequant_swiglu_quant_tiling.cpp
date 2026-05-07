@@ -273,13 +273,14 @@ ge::graphStatus DequantSwigluQuantDskTiling::CheckForStaticQuant() {
   OP_CHECK_NULL_WITH_CONTEXT(context_, quantScaleDescPtr);
   auto quantOffsetDtype = quantOffsetDescPtr->GetDataType();
   auto quantScaleDtype = quantScaleDescPtr->GetDataType();
-  OP_CHECK_IF(quantOffsetDtype != quantScaleDtype,
-                  OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-                      context_->GetNodeName(), "quant_offset and quant_scale",
-                      (ge::TypeUtils::DataTypeToSerialString(quantOffsetDtype) + " and " +
-                       ge::TypeUtils::DataTypeToSerialString(quantScaleDtype)).c_str(),
-                      "quantOffset dtype must be same as quantScale dtype"),
-                  return ge::GRAPH_FAILED);
+  OP_CHECK_IF(
+      quantOffsetDtype != quantScaleDtype,
+      OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+          context_->GetNodeName(), "quant_offset and quant_scale",
+          (ge::TypeUtils::DataTypeToSerialString(quantOffsetDtype) + " and " +
+           ge::TypeUtils::DataTypeToSerialString(quantScaleDtype)).c_str(),
+          "The dtypes of quant_offset and quant_scale dtype must be the same"),
+      return ge::GRAPH_FAILED);
 
   int64_t quantScaleColLen = 0;
   int64_t quantOffsetColLen = 0;
@@ -511,7 +512,7 @@ ge::graphStatus DequantSwigluQuantDskTiling::GetShapeAttrsInfoInner() {
   OP_CHECK_IF(inDimy_ % (BLOCK_SIZE * SWI_FACTOR) != 0,
                   OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x",
                       std::to_string(inDimy_).c_str(),
-                      "lastdimSize of x must be divisible by 64"),
+                      "The last dimension of x must be exactly divisible by 64"),
                   return ge::GRAPH_FAILED);
 
   // set the relevant param of group, hasGroupIndex_, groupNum_ and speGroupType_

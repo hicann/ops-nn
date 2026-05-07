@@ -221,10 +221,11 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::GetAttrActivateDim()
 
   // activate_dim对应在x的轴需要是偶数
   OP_CHECK_IF((xShape_.GetDim(activateDim_) % 2) != 0,
-      OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x",
-          Ops::Base::ToString(xShape_).c_str(),
-          "the x dimension of activateDim must be even"),
-      return ge::GRAPH_FAILED);
+              std::string reasonMsg =
+                  "The " + std::to_string(activateDim_) + " dimension(activate_dim) of x must be an even number";
+              OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                  context_->GetNodeName(), "x", Ops::Base::ToString(xShape_).c_str(), reasonMsg.c_str()),
+              return ge::GRAPH_FAILED);
   return ge::GRAPH_SUCCESS;
 }
 

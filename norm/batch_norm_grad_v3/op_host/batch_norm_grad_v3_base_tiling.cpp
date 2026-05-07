@@ -238,18 +238,26 @@ ge::graphStatus BatchNormGradV3Base::CheckInputValid()
             "(fp16, float, float), (bf16, float, float), (fp16, fp16, float) or (bf16, bf16, float)) combination "
             "range"),
         return ge::GRAPH_FAILED);
-
-    bool shapeValid = weightDimNum_ == runningVarDimNum_ && dyDimNum_ == dxDimNum_ && weightDimNum_ == 1 &&
-                      weightDimLen_ == runningVarDimLen_ && weightDimLen_ == fusedALen_;
-
-    OP_CHECK_IF(
-        !shapeValid,
+    OP_CHECK_IF(!(weightDimNum_ == runningVarDimNum_ && weightDimNum_ == 1),
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
-            context_->GetNodeName(), "dy, weight, running_var and dx",
-            (std::to_string(dyDimNum_) + ", " + std::to_string(weightDimNum_) + ", " +
-             std::to_string(runningVarDimNum_) + ", " + std::to_string(dxDimNum_)).c_str(),
-            "weight and running_var should be 1D, and dy and dx should have the same dim num; the first dim of weight "
-            "and running_var should be equal, and they also should be equal to the second dim of dy"),
+            context_->GetNodeName(), "weight and running_var",
+            (std::to_string(weightDimNum_) + " and " + std::to_string(runningVarDimNum_)).c_str(),
+            "The Shapes of weight and running_var must be 1D"),
+        return ge::GRAPH_FAILED);
+
+    OP_CHECK_IF(dyDimNum_ != dxDimNum_,
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            context_->GetNodeName(), "dy and dx",
+            (std::to_string(dyDimNum_) + " and " + std::to_string(dxDimNum_)).c_str(),
+            "The shape dims of dy and dx must be the same"),
+        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!(weightDimLen_ == runningVarDimLen_ && weightDimLen_ == fusedALen_),
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            context_->GetNodeName(), "weight, running_var and dy",
+            (std::to_string(weightDimNum_) + ", " + std::to_string(dxDimNum_) + " and " + std::to_string(dyDimNum_))
+                .c_str(),
+            "The number of elements of weight and running_var must be the same as the C-dimension of paremeter dy, "
+            "where C is the 1st axis of dy"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }

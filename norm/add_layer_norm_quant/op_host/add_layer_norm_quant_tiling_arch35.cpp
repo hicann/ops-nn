@@ -246,13 +246,13 @@ bool AddLayerNormQuantRegbaseTiling::GetAttrs()
     this->divMode_ = GetOptionalAttr<bool>(attrs, DIV_MODE_IDX, true);
 
     OP_CHECK_IF(
-        this->eps_ <= 0, OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "epsilon",
-            std::to_string(this->eps_).c_str(), "epsilon should be greater than zero"),
+        this->eps_ <= 0, OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "epsilon",
+            std::to_string(this->eps_).c_str(), "greater than zero"),
         return false);
     OP_CHECK_IF(
         ((quantModeStr != "dynamic") && (quantModeStr != "static")),
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "quantMode",
-            quantModeStr.c_str(), "quantMode should be 'dynamic' or 'static'"),
+        OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "quant_mode",
+            quantModeStr.c_str(), "'dynamic' or 'static'"),
         return false);
 
     OP_LOGW(
@@ -738,7 +738,8 @@ bool AddLayerNormQuantRegbaseTiling::CheckOptionalTensor()
                     context_->GetNodeName(), "outScale1 and x1",
                     (Ops::Base::ToString(outScale1Shape->GetStorageShape()) + " and " +
                      Ops::Base::ToString(x1Shape->GetStorageShape())).c_str(),
-                    ("The " + std::to_string(i) + "th the dimNum of outScale1 and x1 should be equal").c_str()),
+                    ("The shape of outScale1 must be the same as the shape consisting of the first " +
+                     std::to_string(outScaleDimNum) + " axes of x").c_str()),
                 return false);
         }
     }

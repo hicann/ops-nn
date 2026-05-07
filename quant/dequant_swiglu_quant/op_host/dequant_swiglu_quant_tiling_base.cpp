@@ -266,7 +266,7 @@ ge::graphStatus DequantSwigluQuantTiling::checkWeightBiasActivate(gert::TilingCo
     OP_CHECK_IF(weightScaleShapeSize != tilingData.get_colLen() * 2,
         OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(context->GetNodeName(), "weight_scale",
             std::to_string(weightScaleShapeSize).c_str(),
-            ("The shapesize of the weight scale is not equal to the last dimension of the xshape "
+            ("The shape size of weight_scale must be equal to the last dimension of x"
             + std::to_string(tilingData.get_colLen() * 2)).c_str()),
         return ge::GRAPH_FAILED);
 
@@ -502,7 +502,7 @@ bool DequantSwigluQuantTiling::CalcTiling(
         (tilingData.get_colLen() % blockSizeOf64B != 0)) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x",
             std::to_string(tilingData.get_colLen()).c_str(),
-            "colLen (the last dimension of x) must be 64B aligned on ASCEND310P");
+            "The last dimension of x must be 64B aligned on ASCEND310P");
         return false;
     }
     GluSingleTilingOptParam optTilingDb;
@@ -576,11 +576,10 @@ ge::graphStatus DequantSwigluQuantTiling::GetShapeAttrsInfoInner()
     const gert::Shape scaleShape = scaleShapePtr->GetStorageShape();
 
     if (static_cast<uint64_t>(scaleShape.GetShapeSize()) != tilingData.get_rowLen()) {
-         std::string incorrectSize = std::to_string(static_cast<uint64_t>(scaleShape.GetShapeSize()));
-         std::string reason =
-             "scale's shapesize must be equal to row length" + std::to_string(tilingData.get_rowLen()) +
-             "(row length is total number of elements of x across all dimensions except the last one.)";
-         OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(opName, "scale", incorrectSize.c_str(), reason.c_str());
+        std::string incorrectSize = std::to_string(static_cast<uint64_t>(scaleShape.GetShapeSize()));
+        std::string reason = "The numbers of elements in scale must be equal to the total number of elements in all "
+                             "axes of x except the last one";
+        OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(opName, "scale", incorrectSize.c_str(), reason.c_str());
     }
     return ge::GRAPH_SUCCESS;
 }

@@ -282,7 +282,7 @@ static bool CheckInputOutputShape(const gert::TilingContext* context)
                 OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
                     context->GetNodeName(), "rstd",
                     Ops::Base::ToString(rstd_shape->GetStorageShape()).c_str(),
-                    ("The " + std::to_string(x1DimNum - 1 - i) + "th the dimNum of rstd should be 1").c_str()),
+                    ("The " + std::to_string(x1DimNum - 1 - i) + "th dimension of rstd must be 1").c_str()),
                 return false);
         }
     } else if (norm_key == PRE_RMS_NORM || norm_key == POST_RMS_NORM) {
@@ -293,7 +293,7 @@ static bool CheckInputOutputShape(const gert::TilingContext* context)
                 context->GetNodeName(), "gamma and x1",
                 (Ops::Base::ToString(gamma_shape->GetStorageShape()) + " and " +
                  Ops::Base::ToString(x1_shape->GetStorageShape())).c_str(),
-                "The first dim of gamma should be 1 and the last dim of gamma and x1 should be the same"),
+                "The first dim of gamma should be 1 and the last dim of gamma and x1 must be the same"),
             return false);
     }
     return true;
