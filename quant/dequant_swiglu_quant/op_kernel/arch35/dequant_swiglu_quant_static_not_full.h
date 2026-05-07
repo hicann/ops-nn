@@ -224,6 +224,7 @@ __aicore__ inline void DequantSwigluQuantStaticNotFull<TXtype, TActScale, TBias,
     scaleGm_.SetGlobalBuffer((__gm__ float*)scale);
 
     pipe_->InitBuffer(tmpBuffer, 2 * tl_->UbFactorDimy * sizeof(float));
+    SetFloatOverflowModeForRegbase<TYtype>();
 }
 
 template <typename TXtype, typename TActScale, typename TBias, typename TQuantScale, typename TQuantOffset, typename TGroup, typename TYtype>

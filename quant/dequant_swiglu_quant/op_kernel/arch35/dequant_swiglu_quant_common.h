@@ -22,6 +22,8 @@
     #include "kernel_operator.h"
 #endif
 
+#define GLOBAL_OVERFLOW_MODE_CTRL 60 // 饱和模式使能位
+
 namespace DequantSwigluQuantV35Ops {
 using namespace AscendC;
 
@@ -39,7 +41,7 @@ constexpr static int64_t FP4_WEIGHT = 2;
 
 static constexpr AscendC::MicroAPI::CastTrait CAST_FP32_TO_FP8 = {
   AscendC::MicroAPI::RegLayout::ZERO,
-  AscendC::MicroAPI::SatMode::NO_SAT,
+  AscendC::MicroAPI::SatMode::SAT,
   AscendC::MicroAPI::MaskMergeMode::ZEROING,
   AscendC::RoundMode::CAST_RINT
 };
@@ -51,7 +53,7 @@ static constexpr AscendC::MicroAPI::CastTrait CAST_BF16_FP16_TO_FP32 = {
 };
 static constexpr AscendC::MicroAPI::CastTrait CAST_FP32_TO_BF16 = {
   AscendC::MicroAPI::RegLayout::ZERO,
-  AscendC::MicroAPI::SatMode::NO_SAT,
+  AscendC::MicroAPI::SatMode::SAT,
   AscendC::MicroAPI::MaskMergeMode::ZEROING,
   AscendC::RoundMode::CAST_RINT
 };
@@ -117,7 +119,7 @@ static constexpr AscendC::MicroAPI::CastTrait CAST_FP16_TO_INT8 = {
 };
 constexpr static AscendC::MicroAPI::CastTrait CAST_FP32_TO_HI8 = {
   AscendC::MicroAPI::RegLayout::ZERO,
-  AscendC::MicroAPI::SatMode::NO_SAT,
+  AscendC::MicroAPI::SatMode::SAT,
   AscendC::MicroAPI::MaskMergeMode::ZEROING,
   RoundMode::CAST_ROUND
 };
@@ -125,6 +127,18 @@ static constexpr AscendC::MicroAPI::DivSpecificMode DIV_MODE = {
   AscendC::MicroAPI::MaskMergeMode::ZEROING,
   true,
 };
+
+template <typename yDtype>
+__aicore__ inline void SetFloatOverflowModeForRegbase()
+{
+  #if (__NPU_ARCH__ == 3510)
+      if constexpr (
+          IsSameType<yDtype, hifloat8_t>::value || IsSameType<yDtype, fp8_e5m2_t>::value 
+          || IsSameType<yDtype, fp8_e4m3fn_t>::value) {
+          AscendC::SetCtrlSpr<GLOBAL_OVERFLOW_MODE_CTRL, GLOBAL_OVERFLOW_MODE_CTRL>(0); // 饱和模式使能位置0，使能SatMode控制饱和模式
+      }
+  #endif
+}
 
 template <typename TXtype, bool ifXFloat16Index_, bool ifXBf16Index_>
 __aicore__ inline void FloatDequant(__local_mem__ TXtype* xPtr, __local_mem__ float* dstPtr,

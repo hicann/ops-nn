@@ -188,6 +188,7 @@ __aicore__ inline void DequantSwigluQuantNlast<TActScale, TQuantScale, TGroup, T
     biasGm_.SetGlobalBuffer((__gm__ TBias*)bias);
     pipe_->InitBuffer(biasQueue_, 1, biasAlign_ * sizeof(TBias));
   }
+  SetFloatOverflowModeForRegbase<TYtype>();
 }
 
 template <typename TActScale, typename TQuantScale, typename TGroup, typename TBias, typename TXtype, typename TYtype>
@@ -534,7 +535,6 @@ __aicore__ inline void DequantSwigluQuantNlast<TActScale, TQuantScale, TGroup, T
   dataCopyScaleParams.srcStride = 0;
   dataCopyScaleParams.dstStride = 0;
   DataCopyPad(scaleGm_[outGmOffset], scaleLocal[0], dataCopyScaleParams);
-
   __VEC_SCOPE__
   {
     constexpr uint16_t sizePerRepeat = AscendC::GetVecLen() / sizeof(float);

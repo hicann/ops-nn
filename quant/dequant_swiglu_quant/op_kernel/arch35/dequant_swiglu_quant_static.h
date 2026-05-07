@@ -251,6 +251,7 @@ __aicore__ inline void DequantSwigluQuantBaseStatic<TActScale, TQuantScale, TGro
       pipe_->InitBuffer(biasQueue_, 1, (biasUbAlign_ * 2) * sizeof(TBias) + tailSupply * sizeof(TBias));
     }
   }
+  SetFloatOverflowModeForRegbase<TYtype>();
 }
 
 template <typename TActScale, typename TQuantScale, typename TGroup, typename TBias, typename TXtype, typename TYtype>

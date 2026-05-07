@@ -183,6 +183,9 @@
 #define QUANTMODE_DYNAMIC_BIAS_BF16_ACT_TRUE_QUANT_TRUE_OFFSET_FALSE_GROUP_FALSE    1141100
 #define QUANTMODE_DYNAMIC_BIAS_BF16_ACT_TRUE_QUANT_TRUE_OFFSET_FALSE_GROUP_TRUE     1141101
 
+#ifndef GLOBAL_OVERFLOW_MODE_CTRL
+#define GLOBAL_OVERFLOW_MODE_CTRL 60
+#endif
 
 using namespace AscendC;
 
@@ -355,6 +358,11 @@ extern "C" __global__ __aicore__ void dequant_swiglu_quant(GM_ADDR x, GM_ADDR we
   TILING_KEY_IS(QUANTMODE_DYNAMIC_BIAS_BF16_ACT_TRUE_QUANT_FALSE_OFFSET_FALSE_GROUP_TRUE);
   TILING_KEY_IS(QUANTMODE_DYNAMIC_BIAS_BF16_ACT_TRUE_QUANT_TRUE_OFFSET_FALSE_GROUP_FALSE);
   TILING_KEY_IS(QUANTMODE_DYNAMIC_BIAS_BF16_ACT_TRUE_QUANT_TRUE_OFFSET_FALSE_GROUP_TRUE);
+
+#if (__NPU_ARCH__ == 3510)
+  int64_t oriOverflowMode = AscendC::GetCtrlSpr<GLOBAL_OVERFLOW_MODE_CTRL, GLOBAL_OVERFLOW_MODE_CTRL>();
+#endif
+
   #if TILING_KEY_VAR == ACT_TRUE_QUANT_TRUE_GROUPINDEX_TRUE 
     // activate_dim=-1, x=int32/fp16/bf6, bias无值, activate_scale有值, quant_scale有值, group_index有值, 000111
     GET_TILING_DATA_WITH_STRUCT(DequantSwigluQuantV35BaseTilingData, tilingDataIn, tiling);
@@ -1407,5 +1415,8 @@ extern "C" __global__ __aicore__ void dequant_swiglu_quant(GM_ADDR x, GM_ADDR we
     DequantSwigluQuantV35Ops::DequantSwigluQuantStaticNotFull<DTYPE_X, float, float, float, float, int32_t, DTYPE_Y> op(&pipe);
     op.Init(x, weightScale, activationScale, bias, quantScale, quantOffset, groupIndex, y, scale, tilingData);
     op.Process();
+  #endif
+  #if (__NPU_ARCH__ == 3510)
+    AscendC::SetCtrlSpr<GLOBAL_OVERFLOW_MODE_CTRL, GLOBAL_OVERFLOW_MODE_CTRL>(oriOverflowMode);
   #endif
 }

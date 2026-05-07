@@ -186,6 +186,7 @@ __aicore__ inline void DSQDynamicNotFull<ActiScaleType, QuantScaleType, GroupTyp
     if constexpr (hasBiasIndex_) {
         pipe_->InitBuffer(biasQueue_, 1, blockLength_ * 2 * sizeof(BiasType));
     }
+    SetFloatOverflowModeForRegbase<YType>();
 }
 
 template <typename ActiScaleType, typename QuantScaleType, typename GroupType, typename BiasType, typename XType, typename YType>
