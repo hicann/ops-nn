@@ -74,6 +74,58 @@ inline static bool CheckNotNull(const aclTensor* input, const aclIntArray* norma
     return true;
 }
 
+static bool CheckMeanRstdOutputShape(
+    const aclTensor* input, const aclIntArray* normalizedShape, const aclTensor* meanOrRstdOptional,
+    const char* tensorName)
+{
+    if (meanOrRstdOptional == nullptr) {
+        return true;
+    }
+
+    auto inputShape = input->GetViewShape();
+    auto meanRstdShape = meanOrRstdOptional->GetViewShape();
+    const size_t inputDimNum = inputShape.GetDimNum();
+    const size_t meanRstdDimNum = meanRstdShape.GetDimNum();
+    const size_t j = normalizedShape->Size();
+    const size_t i = inputDimNum - j;
+
+    if (meanRstdDimNum != inputDimNum) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "Expected %s dimNum [%zu] to be equal to input dimNum [%zu], but check failed.",
+                tensorName, meanRstdDimNum, inputDimNum);
+        return false;
+    }
+
+    for (size_t index = 0; index < i; index++) {
+        int64_t meanRstdDim = meanRstdShape.GetDim(index);
+        int64_t inputDim = inputShape.GetDim(index);
+        if (meanRstdDim != inputDim) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "Expected %s dim [%zu] shape [%ld] to be equal to input dim [%zu] shape [%ld], but check failed.",
+                    tensorName, index, meanRstdDim, index, inputDim);
+            return false;
+        }
+    }
+
+    for (size_t index = i; index < meanRstdDimNum; index++) {
+        int64_t meanRstdDim = meanRstdShape.GetDim(index);
+        if (meanRstdDim != 1) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "Expected %s trailing dim [%zu] to be 1 (normalizedShape axis), but got [%ld]. "
+                    "The trailing %zu dimensions should all be 1.",
+                    tensorName, index, meanRstdDim, j);
+            return false;
+        }
+    }
+
+    return true;
+}
+
+static bool IsArch3510()
+{
+    return GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510;
+}
+
 static bool CheckInputDtype(const aclTensor* input, const aclTensor* weightOptional, const aclTensor* biasOptional)
 {
     const auto& supportList = GetDtypeSupportList();
@@ -267,7 +319,22 @@ static aclnnStatus CheckParamsWithImplMode(
     CHECK_RET(
         CheckShape(input, normalizedShape, weightOptional, biasOptional, out, meanOutOptional, rstdOutOptional),
         ACLNN_ERR_PARAM_INVALID);
-    // 4. 检查implMode是否合法
+    // 4. arch3510下检查meanOutOptional和rstdOutOptional的shape
+    if (IsArch3510()) {
+        if (!CheckMeanRstdOutputShape(input, normalizedShape, meanOutOptional, "meanOutOptional")) {
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+        if (!CheckMeanRstdOutputShape(input, normalizedShape, rstdOutOptional, "rstdOutOptional")) {
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+        if (meanOutOptional != nullptr && rstdOutOptional != nullptr &&
+            meanOutOptional->GetViewShape() != rstdOutOptional->GetViewShape()) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "Expected meanOutOptional shape to be equal to rstdOutOptional shape, but check failed.");
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+    }
+    // 5. 检查implMode是否合法
     CHECK_RET(CheckImplMode(input, weightOptional, biasOptional, implMode), ACLNN_ERR_PARAM_INVALID);
     return ACLNN_SUCCESS;
 }

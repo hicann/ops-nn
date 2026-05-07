@@ -13,6 +13,7 @@
 #include "gtest/gtest.h"
 
 #include "../../../../op_host/op_api/aclnn_layer_norm.h"
+#include "opdev/platform.h"
 #include "op_api_ut_common/op_api_ut.h"
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/tensor_desc.h"
@@ -379,6 +380,50 @@ TEST_F(l2_layer_norm_test, ascend910B2_aclnnLayerNorm_error_weight_and_bias_shap
     auto outputDesc = TensorDesc({2, 2}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
     auto meanDesc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
     auto rstdDesc = TensorDesc({2, 1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+
+    auto ut = OP_API_UT(
+        aclnnLayerNorm, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
+        OUTPUT(outputDesc, meanDesc, rstdDesc));
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// error meanOut shape
+TEST_F(l2_layer_norm_test, ascend910B2_aclnnLayerNorm_error_mean_shape)
+{
+    op::NpuArchManager archManager(NpuArch::DAV_3510);
+    auto inputDesc = TensorDesc({2, 6, 5, 6}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto weightDesc = TensorDesc({6, 5, 6}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto biasDesc = TensorDesc({6, 5, 6}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto normalizedShape = IntArrayDesc(vector<int64_t>{6, 5, 6});
+    double eps = 1e-12;
+    auto outputDesc = TensorDesc({2, 6, 5, 6}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto meanDesc = TensorDesc({3, 1, 1, 1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto rstdDesc = TensorDesc({2, 1, 1, 1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+
+    auto ut = OP_API_UT(
+        aclnnLayerNorm, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
+        OUTPUT(outputDesc, meanDesc, rstdDesc));
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+// error rstdOut shape
+TEST_F(l2_layer_norm_test, ascend910B2_aclnnLayerNorm_error_rstd_shape)
+{
+    op::NpuArchManager archManager(NpuArch::DAV_3510);
+    auto inputDesc = TensorDesc({2, 6, 5, 6}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto weightDesc = TensorDesc({6, 5, 6}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto biasDesc = TensorDesc({6, 5, 6}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto normalizedShape = IntArrayDesc(vector<int64_t>{6, 5, 6});
+    double eps = 1e-12;
+    auto outputDesc = TensorDesc({2, 6, 5, 6}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto meanDesc = TensorDesc({2, 1, 1, 1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto rstdDesc = TensorDesc({2, 1, 5, 1}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
 
     auto ut = OP_API_UT(
         aclnnLayerNorm, INPUT(inputDesc, normalizedShape, weightDesc, biasDesc, eps),
