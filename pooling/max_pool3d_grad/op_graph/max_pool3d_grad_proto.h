@@ -43,11 +43,10 @@ namespace ge {
 * A required list of int8, int16, int32, or int64 values,
 * specifying the strides of the sliding window for each dimension (D/H/W) of the input tensor.
 * The stride of the N and C dimensions should be 1.  \n
-* @li padding: A string specifying the padding algorithm for the input feature map. Defaults to "SAME", it support SAME, VALID and CALCULATED.
+* @li padding: A string specifying the padding algorithm for the input feature map. Defaults to "SAME", it support SAME and VALID.
 * when padding_mode is "SAME": pads 0 to ensure output shape equal to ceil(input shape / stride) ,
 * (output shape equal to input shape when stride=1). \n
 * when padding_mode is "VALID": no padding. The kernel slides only over valid regions, resulting in smaller output . \n
-* when padding_mode is "CALCULATED": use pads to calculate output shape.
 * @li pads: A list of 6 ints. Supports only padding along the D,
 * H and W dimensions in sequence of head, tail, top, bottom, left and right.
 * to use.
