@@ -96,7 +96,6 @@ protected:
     T minValue_ = 0;
 };
 
-//TODO
 template <typename T>
 template <typename U>
 __aicore__ inline U AdaptivePool2dBigKernel<T>::GetDtypeMinValue() //取min操作
