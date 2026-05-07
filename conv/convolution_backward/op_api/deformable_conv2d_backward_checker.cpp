@@ -8,6 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 #include "deformable_conv2d_backward_checker.h"
+#include "convolution_backward_checker.h"
 
 namespace Ops {
 namespace NN {
@@ -73,12 +74,12 @@ bool DeformableConv2dBackwardChecker::CheckDtypeValid()
 
 bool DeformableConv2dBackwardChecker::CheckFormat()
 {
-    OP_CHECK(inputTensor_.gradOutput->GetStorageFormat() == Format::FORMAT_NCHW ||
-             inputTensor_.gradOutput->GetStorageFormat() == Format::FORMAT_ND,
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "gradOutput Format only support NCHW or ND."), return false);
-    OP_CHECK(inputTensor_.input->GetStorageFormat() == Format::FORMAT_NCHW ||
-            inputTensor_.input->GetStorageFormat() == Format::FORMAT_ND,
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "input Format only support NCHW or ND."), return false);
+    OP_CHECK(inputTensor_.gradOutput->GetStorageFormat() == Format::FORMAT_NCHW,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "gradOutput Format only support NCHW, but got [%s].",
+             op::ToString(inputTensor_.gradOutput->GetStorageFormat()).GetString()), return false);
+    OP_CHECK(inputTensor_.input->GetStorageFormat() == Format::FORMAT_NCHW,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "input Format only support NCHW, but got [%s].",
+             op::ToString(inputTensor_.input->GetStorageFormat()).GetString()), return false);
    
     OP_CHECK(inputTensor_.weight->GetStorageFormat() == inputTensor_.input->GetStorageFormat(),
              OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of weight and input should be equal."), return false);
@@ -100,7 +101,8 @@ bool DeformableConv2dBackwardChecker::CheckFormat()
     
     if (outputTensor_.gradBias != nullptr) {
         OP_CHECK(outputTensor_.gradBias->GetStorageFormat() == Format::FORMAT_ND,
-                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "gradBias Format only support ND."), return false);
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "gradBias Format only support ND, but got [%s].",
+                 op::ToString(outputTensor_.gradBias->GetStorageFormat()).GetString()), return false);
     }
     
     return true;
@@ -109,36 +111,40 @@ bool DeformableConv2dBackwardChecker::CheckFormat()
 bool DeformableConv2dBackwardChecker::CheckAttrs()
 {
     OP_CHECK(params_.kernelSize->Size() == KERNEL_ARRAY_DIM_SIZE,
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "kernelSize length should be 2."), return false);
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "kernelSize length should be 2, but got %ld.", params_.kernelSize->Size()), return false);
     OP_CHECK(params_.stride->Size() == STRIDE_ARRAY_DIM_SIZE,
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "stride length should be 4."), return false);
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "stride length should be 4, but got %ld.", params_.stride->Size()), return false);
     OP_CHECK(params_.padding->Size() == PADDING_ARRAY_DIM_SIZE,
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "padding length should be 4."), return false);
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "padding length should be 4, but got %ld.", params_.padding->Size()), return false);
     OP_CHECK(params_.dilation->Size() == DILATION_ARRAY_DIM_SIZE,
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dilation length should be 4."), return false);
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dilation length should be 4, but got %ld.", params_.dilation->Size()), return false);
     
     int64_t kH = (*params_.kernelSize)[INDEX_ZERO];
     int64_t kW = (*params_.kernelSize)[INDEX_ONE];
-    OP_CHECK(kH > 0 && kW > 0, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "kernelSize should greater than 0."), return false);
-    //正向一致
-    OP_CHECK(kH * kW <= MAX_KERNEL_SIZE, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "kH * kW should not exceed 2048."),
-             return false);
-    
-    OP_CHECK((*params_.stride)[INDEX_ZERO] == 1 && (*params_.stride)[INDEX_ONE] == 1,
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "stride[0]、stride[1] should be 1."), return false);
-    OP_CHECK((*params_.stride)[INDEX_TWO] > 0 && (*params_.stride)[INDEX_THREE] > 0,
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "stride[2]、stride[3] should greater than 0."), return false);
-    
-    OP_CHECK((*params_.dilation)[INDEX_ZERO] == 1 && (*params_.dilation)[INDEX_ONE] == 1,
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dilation[0]、dilation[1] should be 1."), return false);
-    OP_CHECK((*params_.dilation)[INDEX_TWO] > 0 && (*params_.dilation)[INDEX_THREE] > 0,
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dilation[2]、dilation[3] should greater than 0."), return false);
-    
-    OP_CHECK(params_.groups > 0, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "groups should greater than 0."), return false);
-    OP_CHECK(params_.deformableGroups > 0, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "deformableGroups should greater than 0."),
-             return false);
-    OP_CHECK(params_.modulated == true, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "modulated should be true."), return false);
-    
+    OP_CHECK(kH > 0 && kW > 0,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "kernelSize should be greater than 0, but got KH = %ld, KW = %ld.", kH, kW), return false);
+    OP_CHECK(kH * kW <= MAX_KERNEL_SIZE,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "kH[%ld] * kW[%ld] should not exceed 2048.", kH, kW), return false);
+    // stride >= 1
+    OP_CHECK((*params_.stride)[INDEX_ZERO] == 1 && (*params_.stride)[INDEX_ONE] == 1 && CheckParamsValue(params_.stride, false),
+              OP_LOGE(ACLNN_ERR_PARAM_INVALID, 
+              "stride[0]、stride[1] should be 1, stride[2]、stride[3] should be greater than or equal to 1, but got stride[%s].",
+              AclarrayToString(params_.stride).c_str()), return false);
+    // padding >= 0
+    OP_CHECK(CheckParamsValue(params_.padding, true),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "padding should be greater than or equal to 0, but got padding[%s].",
+             AclarrayToString(params_.padding).c_str()), return false);
+    // dilation >= 1
+    OP_CHECK((*params_.dilation)[INDEX_ZERO] == 1 && (*params_.dilation)[INDEX_ONE] == 1 && CheckParamsValue(params_.dilation, false),
+              OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+              "dilation[0]、dilation[1] should be 1, dilation[2]、dilation[3] should be greater than or equal to 1, but got dilation[%s].",
+              AclarrayToString(params_.dilation).c_str()), return false);
+    OP_CHECK(params_.groups > 0,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "groups should be greater than 0, but got %ld.", params_.groups), return false);
+    OP_CHECK(params_.deformableGroups > 0,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "deformableGroups should be greater than 0, but got %ld.", params_.deformableGroups), return false);
+    OP_CHECK(params_.modulated == true,
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "modulated should be true, but got false."), return false);
     return true;
 }
 
@@ -169,11 +175,11 @@ bool DeformableConv2dBackwardChecker::CheckShape()
     int64_t inSize = inH * inW;
     int64_t outC = inputTensor_.weight->GetViewShape()[INDEX_ZERO];
     OP_CHECK(inC % params_.deformableGroups == 0,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "inC needs to be divisible by deformable_groups."), return false);
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "inC[%ld] needs to be divisible by deformable_groups[%ld].", inC, params_.deformableGroups), return false);
     OP_CHECK(inC % params_.groups == 0 && outC % params_.groups == 0,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Both inC and outC needs to be divisible by groups."), return false);
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Both inC[%ld] and outC[%ld] needs to be divisible by groups[%ld].", inC, outC, params_.groups), return false);
     OP_CHECK(inSize <= INT_MAX_VALUE,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "inH multiplied by inW should not exceed 2147483647."), return false);
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "inH[%ld] multiplied by inW[%ld] should not exceed 2147483647.", inH, inW), return false);
 
     int64_t kH = (*params_.kernelSize)[INDEX_ZERO];
     int64_t kW = (*params_.kernelSize)[INDEX_ONE];
@@ -204,8 +210,8 @@ bool DeformableConv2dBackwardChecker::CheckShape()
     
     int64_t matmulK = kH * kW * inC / params_.groups;
     OP_CHECK(matmulK <= MAX_MATMUL_K,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID,"kH multiplied by kW multiplied by inC divided by groups should not exceed 65535."),return false);
-
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID,"kH[%ld] multiplied by kW[%ld] multiplied by inC[%ld] divided by groups[%ld] should not exceed 65535.",
+             kH, kW, inC, params_.groups),return false);
     return true;
 }
 
