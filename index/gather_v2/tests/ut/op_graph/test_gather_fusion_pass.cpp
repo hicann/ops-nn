@@ -140,9 +140,9 @@ protected:
         fe::PlatformInfo platformInfo;
         fe::OptionalInfo optiCompilationInfo;
         platformInfo.soc_info.ai_core_cnt = 64;
-        platformInfo.str_info.short_soc_version = "Ascend910_93";
-        optiCompilationInfo.soc_version = "Ascend910_93";
-        fe::PlatformInfoManager::Instance().platform_info_map_["Ascend910_93"] = platformInfo;
+        platformInfo.str_info.short_soc_version = "Ascend950";
+        optiCompilationInfo.soc_version = "Ascend950";
+        fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
         fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
     }
 
@@ -151,9 +151,9 @@ protected:
         fe::PlatformInfo platformInfo;
         fe::OptionalInfo optiCompilationInfo;
         platformInfo.soc_info.ai_core_cnt = 64;
-        platformInfo.str_info.short_soc_version = "Ascend910_93";
-        optiCompilationInfo.soc_version = "Ascend910_93";
-        fe::PlatformInfoManager::Instance().platform_info_map_["Ascend910_93"] = platformInfo;
+        platformInfo.str_info.short_soc_version = "Ascend950";
+        optiCompilationInfo.soc_version = "Ascend950";
+        fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
         fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
     }
 };

@@ -55,7 +55,7 @@ bool IsTargetPlatform()
         PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optionalInfo) != SUCCESS,
         false, PASS_NAME.c_str(), "Get platformInfo failed.");
     const std::string soc = platformInfo.str_info.short_soc_version;
-    bool isSupported = (soc == "Ascend910_93") || (soc == "Ascend950");
+    bool isSupported = (soc == "Ascend950");
     if (!isSupported) {
         OPS_LOG_D(PASS_NAME.c_str(), "Platform %s is not supported.", soc.c_str());
         return false;
