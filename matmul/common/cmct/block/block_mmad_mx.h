@@ -776,7 +776,7 @@ public:
             uint64_t offsetAl1 = l1BufferAOffset_[l1BufId];
             CopyScalesInL1(scaleAGlobal, scaleBGlobal, tileL1L0Param, iter0, scaleL1BufId);
             AscendC::WaitFlag<AscendC::HardEvent::MTE1_MTE2>(l1BufId);
-            biasBufId_ = abL1LoopCnt_ & 1;
+            biasBufId_ = scaleL1BufId;
             UpdateKL1(tileL1L0Param, iter0);
             CopyAInL1(aGlobal, tileL1L0Param, offsetA, offsetAl1, iter0);
             if (isBias_ && iter0 == 0) {
