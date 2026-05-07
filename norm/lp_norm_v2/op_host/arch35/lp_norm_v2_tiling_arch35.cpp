@@ -24,8 +24,6 @@
 #include "norm/lp_norm_v2/op_kernel/arch35/lp_norm_v2_dag.h"
 #include "norm/lp_norm_v2/op_kernel/arch35/lp_norm_v2_tiling_key.h"
 
-using namespace Ops::Base;
-
 namespace optiling
 {
 using namespace LpNormV2;
@@ -423,7 +421,7 @@ ge::graphStatus Tiling4LpNormV2Func(gert::TilingContext* context)
 {
     OP_LOGD(context->GetNodeName(), "Tiling4LpNormV2Func running begin");
 
-    auto compileInfo = reinterpret_cast<const ReduceOpCompileInfo*>(context->GetCompileInfo());
+    auto compileInfo = context->GetCompileInfo<ReduceOpCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
 
     OP_LOGD(context->GetNodeName(), "Tiling4LpNormV2Func enter LpNormV2 tiling.");

@@ -21,11 +21,14 @@
 #include "register/tilingdata_base.h"
 #include "op_host/tiling_base.h"
 #include "op_api/runtime2_util.h"
+#include "op_common/op_host/util/platform_util.h"
 
 namespace optiling {
 struct GroupNormV2CompileInfo {
-  int32_t coreNum;
-  uint64_t ubSize;
+  int32_t coreNum = 0;
+  int64_t ubSize = 0;
+  int64_t blockSize = 0;
+  int64_t vectorLength = 0;
 };
 
 BEGIN_TILING_DATA_DEF(GroupNormV2TilingData)

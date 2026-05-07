@@ -88,6 +88,8 @@ TEST_F(GroupNormV2Tiling, GroupNormV2_tiling_0)
     optiling::GroupNormV2CompileInfo compile_info;
     compile_info.coreNum = 64;
     compile_info.ubSize = 245760;
+    compile_info.blockSize = 32;
+    compile_info.vectorLength = 256;
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
@@ -156,6 +158,8 @@ TEST_F(GroupNormV2Tiling, GroupNormV2_tiling_1)
     optiling::GroupNormV2CompileInfo compile_info;
     compile_info.coreNum = 64;
     compile_info.ubSize = 262114;
+    compile_info.blockSize = 32;
+    compile_info.vectorLength = 256;
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
@@ -220,6 +224,8 @@ TEST_F(GroupNormV2Tiling, GroupNormV2_tiling_2)
     optiling::GroupNormV2CompileInfo compile_info;
     compile_info.coreNum = 64;
     compile_info.ubSize = 262114;
+    compile_info.blockSize = 32;
+    compile_info.vectorLength = 256;
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
@@ -284,6 +290,8 @@ TEST_F(GroupNormV2Tiling, GroupNormV2_tiling_3)
     optiling::GroupNormV2CompileInfo compile_info;
     compile_info.coreNum = 64;
     compile_info.ubSize = 245760;
+    compile_info.blockSize = 32;
+    compile_info.vectorLength = 256;
 
     // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);

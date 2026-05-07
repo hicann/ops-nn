@@ -27,7 +27,7 @@ namespace optiling
 {
 struct LpNormV2TilingKey {
     ReduceTilingKey reduceTiling;
-    uint32_t templateNum;
+    uint32_t templateNum = 0;
 };
 
 class LpNormV2Tiling
@@ -57,10 +57,10 @@ private:
     bool ChechReduceAxisIsOne();
 
 private:
-    ge::DataType xDtype_;
-    gert::TilingContext* tilingContext_;
+    ge::DataType xDtype_ = ge::DT_FLOAT;
+    gert::TilingContext* tilingContext_ = nullptr;
     LpNormV2TilingKey key_;
-    LpNormV2TilingData* tilingData_;
+    LpNormV2TilingData* tilingData_ = nullptr;
     float p_ = 0.0f;
     float recp_ = 0.0f;
     float epsilon_ = 0.0f;

@@ -17,15 +17,13 @@
 
 #include "atvoss/reduce/reduce_tiling_data.h"
 
-using namespace Ops::Base;
-
 namespace optiling
 {
 struct LpNormV2TilingData {
-    ReduceOpTilingData reduceTiling;
-    float epsilon;
-    float p;
-    float recp;
+    Ops::Base::ReduceOpTilingData reduceTiling;
+    float epsilon = 0.0f;
+    float p = 0.0f;
+    float recp = 0.0f;
 };
 } // namespace optiling
 

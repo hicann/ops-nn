@@ -19,11 +19,11 @@
 #include "register/tilingdata_base.h"
 #include "op_host/tiling_base.h"
 #include "register/op_impl_registry.h"
+#include <string>
 #include <vector>
 #include <exe_graph/runtime/tiling_context.h>
 
 using namespace Ops::NN::Optiling;
-using namespace std;
 namespace optiling
 {
 // ar小尾轴
@@ -268,7 +268,7 @@ protected:
     int64_t yDtypeSize_{0};
 
     int64_t xShapeSize_;
-    vector<int64_t> xShape_;
+    std::vector<int64_t> xShape_;
 
     int64_t a1_{DIM_NUM_ONE};
     int64_t r_{DIM_NUM_ONE};
