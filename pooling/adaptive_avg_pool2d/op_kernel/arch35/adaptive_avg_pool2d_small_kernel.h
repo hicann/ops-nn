@@ -60,7 +60,7 @@ constexpr AscendC::MicroAPI::CastTrait castTraitI32F32 = {
     AscendC::RoundMode::CAST_RINT
 };
 
-template <typename T, typename ID_T>
+template <typename T, typename ID_T, const uint32_t NC_FACTOR>
 class AdaptiveAvgPool2dSmallKernel {
 public:
     __aicore__ inline AdaptiveAvgPool2dSmallKernel(const AdaptivePool2dSmallKernelTilingData* tilingData, TPipe* pipe)
@@ -114,8 +114,8 @@ protected:
                          typename AscendC::MicroAPI::RegTensor<int32_t>>::type;  
 };
 
-template <typename T, typename ID_T>
-__aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T>::Init(GM_ADDR x, GM_ADDR y)
+template <typename T, typename ID_T, const uint32_t NC_FACTOR>
+__aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T, NC_FACTOR>::Init(GM_ADDR x, GM_ADDR y)
 {
     if (GetBlockIdx() >= tilingData_->useCoreNum) {
         return;
@@ -123,7 +123,7 @@ __aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T>::Init(GM_ADDR x, GM
     inHW_ = tilingData_->hIn * tilingData_->wIn;
     outHW_ = tilingData_->hOut * tilingData_->wOut;
 
-    vlNum_ = V_REG_SIZE / sizeof(T);
+    vlNum_ = tilingData_->ncFactor;
     ubAlignNum_ = UB_BLOCK_SIZE / sizeof(T);
 
     int64_t curHandleBlockNum = tilingData_->blockFactor;
@@ -151,8 +151,8 @@ __aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T>::Init(GM_ADDR x, GM
     pipe_->InitBuffer(resQue2_, 1, tilingData_->resQue2Size);
 }
 
-template <typename T, typename ID_T>
-__aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T>::CalInputBlockPara(
+template <typename T, typename ID_T, const uint32_t NC_FACTOR>
+__aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T, NC_FACTOR>::CalInputBlockPara(
     int64_t curBlockIdx, BlockSplitParam& blockPara)
 {
     int64_t hwOuter = tilingData_->hoOuter * tilingData_->woOuter;
@@ -182,8 +182,8 @@ __aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T>::CalInputBlockPara(
         blockPara.ncIdx * tilingData_->ncFactor * inHW_ + kerHStartIdx * tilingData_->wIn + kerWStartIdx;
 }
 
-template <typename T, typename ID_T>
-__aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T>::CopyInput(
+template <typename T, typename ID_T, const uint32_t NC_FACTOR>
+__aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T, NC_FACTOR>::CopyInput(
     uint32_t ncNum, uint32_t hiDataLen, uint32_t wiDataLen, int64_t xOffset)
 {
     LocalTensor<T> xLocal = inputQue_.AllocTensor<T>();
@@ -209,8 +209,8 @@ __aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T>::CopyInput(
     inputQue_.EnQue(xLocal);
 }
 
-template <typename T, typename ID_T>
-__aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T>::TransposeB16(
+template <typename T, typename ID_T, const uint32_t NC_FACTOR>
+__aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T, NC_FACTOR>::TransposeB16(
     LocalTensor<T> xLocalTrans, LocalTensor<T> xLocal, uint32_t rowNum, uint32_t colNum)
 {
     uint64_t dstList[TRANS_ADDR_LEN];
@@ -253,9 +253,9 @@ __aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T>::TransposeB16(
     }
 }
 
-template <typename T, typename ID_T>
+template <typename T, typename ID_T, const uint32_t NC_FACTOR>
 template <typename U>
-__aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T>::TransposeB32(
+__aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T, NC_FACTOR>::TransposeB32(
     LocalTensor<U> xLocalTrans, LocalTensor<U> xLocal, uint32_t rowNum, uint32_t colNum)
 {
     uint64_t dstList[TRANS_ADDR_LEN];
@@ -306,8 +306,8 @@ __aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T>::TransposeB32(
     }
 }
 
-template <typename T, typename ID_T>
-__aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T>::TransInput(
+template <typename T, typename ID_T, const uint32_t NC_FACTOR>
+__aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T, NC_FACTOR>::TransInput(
     uint32_t hiDataLen, uint32_t wiDataLen)
 {
     uint32_t wiDataAlign = ops::CeilAlign(wiDataLen, ubAlignNum_);
@@ -322,8 +322,8 @@ __aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T>::TransInput(
     resQue1_.EnQue(xLocalTransVL);
 }
 
-template <typename T, typename ID_T>
-__aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T>::CalKernelSize(
+template <typename T, typename ID_T, const uint32_t NC_FACTOR>
+__aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T, NC_FACTOR>::CalKernelSize(
     int64_t kernelIdx, int32_t kernelNum, int64_t dimIn, int64_t dimOut, LocalTensor<int32_t> startIdxLocal,
     LocalTensor<int32_t> kernelSizeLocal)
 {
@@ -379,9 +379,9 @@ __aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T>::CalKernelSize(
     }
 }
 
-template <typename T, typename ID_T>
+template <typename T, typename ID_T, const uint32_t NC_FACTOR>
 template <typename U>
-__aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T>::CustomSum(
+__aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T, NC_FACTOR>::CustomSum(
     LocalTensor<U> inputLocal, LocalTensor<float> outLocal, uint32_t repeatTimes, uint32_t kernelSize,
     uint32_t srcMidStride)
 {
@@ -407,8 +407,8 @@ __aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T>::CustomSum(
             }
             MicroAPI::DataCopy(outAddr + dstOffset, sumReg, preg);
 
-            // fp16/bf16 vlNum_是2倍的vfLenFp32，再来一次累加
-            if constexpr (!IsSameType<T, float>::value) {
+            // fp16/bf16 ncFactor 是128时，再来一次累加
+            if constexpr (NC_FACTOR == TPL_NC_FACTOR_128) {
                 ops::LoadOneTensorForDtypeT<U>(inputAddr, sumReg, preg, srcOffset + vfLenFp32);
                 for (uint16_t k = 1; k < static_cast<uint16_t>(kernelSize); k++) {
                     ops::LoadOneTensorForDtypeT<U>(inputAddr, inputReg, preg, srcOffset + k * vlNum_ + vfLenFp32);
@@ -420,8 +420,8 @@ __aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T>::CustomSum(
     }
 }
 
-template <typename T, typename ID_T>
-__aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T>::PoolOnW(
+template <typename T, typename ID_T, const uint32_t NC_FACTOR>
+__aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T, NC_FACTOR>::PoolOnW(
     uint32_t hiDataLen, uint32_t wiDataLen, int64_t woIdx, int32_t woNum)
 {
     LocalTensor<T> xTransLocal = resQue1_.DeQue<T>();
@@ -450,8 +450,8 @@ __aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T>::PoolOnW(
     resQue2_.EnQue(resOutLocal);
 }
 
-template <typename T, typename ID_T>
-__aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T>::PoolOnH(
+template <typename T, typename ID_T, const uint32_t NC_FACTOR>
+__aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T, NC_FACTOR>::PoolOnH(
     uint32_t hiDataLen, uint32_t woNum, int64_t hoIdx, int32_t hoNum)
 {
     LocalTensor<float> wTransLocal = resQue2_.DeQue<float>();
@@ -480,8 +480,8 @@ __aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T>::PoolOnH(
     resQue1_.EnQue(resOutLocal);
 }
 
-template <typename T, typename ID_T>
-__aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T>::CalAvg(int64_t hoNum, int64_t woNum)
+template <typename T, typename ID_T, const uint32_t NC_FACTOR>
+__aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T, NC_FACTOR>::CalAvg(int64_t hoNum, int64_t woNum)
 {
     LocalTensor<float> sumLocal = resQue1_.DeQue<float>();
     LocalTensor<int32_t> hKerSizeLocal = hKerSizeBuf.Get<int32_t>();
@@ -513,8 +513,8 @@ __aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T>::CalAvg(int64_t hoN
                 MicroAPI::DataCopy(sumReg, sumAddr + srcOffset);
                 MicroAPI::Div(avgReg, sumReg, divisorCastReg, calMask);
                 MicroAPI::DataCopy(sumAddr + srcOffset, avgReg, calMask);
-                // fp16/bf16 vlNum_是2倍的vfLenFp32，再来一次
-                if constexpr (!IsSameType<T, float>::value) {
+                // fp16/bf16 ncFactor 是128时，再来一次
+                if constexpr (NC_FACTOR == TPL_NC_FACTOR_128) {
                     srcOffset += vfLenFp32;
                     MicroAPI::DataCopy(sumReg, sumAddr + srcOffset);
                     MicroAPI::Div(avgReg, sumReg, divisorCastReg, calMask);
@@ -526,8 +526,8 @@ __aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T>::CalAvg(int64_t hoN
     resQue1_.EnQue(sumLocal);
 }
 
-template <typename T, typename ID_T>
-__aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T>::TransOut(int64_t hoNum, int64_t woNum)
+template <typename T, typename ID_T, const uint32_t NC_FACTOR>
+__aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T, NC_FACTOR>::TransOut(int64_t hoNum, int64_t woNum)
 {
     int64_t woNumAlign = ops::CeilAlign(woNum, static_cast<int64_t>(ubAlignNum_));
     int64_t rowNum = hoNum * woNumAlign;
@@ -542,8 +542,8 @@ __aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T>::TransOut(int64_t h
     resQue2_.EnQue(resOutLocal);
 }
 
-template <typename T, typename ID_T>
-__aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T>::CopyOut(
+template <typename T, typename ID_T, const uint32_t NC_FACTOR>
+__aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T, NC_FACTOR>::CopyOut(
     int64_t ncNum, int64_t hoNum, int64_t woNum, int64_t yGmOffset)
 {
     uint32_t woNumAlign = ops::CeilAlign(woNum, static_cast<int64_t>(ubAlignNum_));
@@ -584,8 +584,8 @@ __aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T>::CopyOut(
     resQue2_.FreeTensor(resOutLocal);
 }
 
-template <typename T, typename ID_T>
-__aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T>::Process()
+template <typename T, typename ID_T, const uint32_t NC_FACTOR>
+__aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T, NC_FACTOR>::Process()
 {
     if (GetBlockIdx() >= tilingData_->useCoreNum) {
         return;

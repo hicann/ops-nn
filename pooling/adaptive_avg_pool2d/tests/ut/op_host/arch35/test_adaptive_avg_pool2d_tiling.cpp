@@ -187,7 +187,7 @@ TEST_F(AdaptiveAvgPool2dTiling950Test, test_small_kernel_fp16_3x3)
 {
     gert::StorageShape x_shape = {{1, 64, 3, 3}, {1, 64, 3, 3}}; // n*c = 64
     gert::StorageShape y_shape = {{1, 64, 2, 2}, {1, 64, 2, 2}};
-    ExecuteAdaptiveAvgPool2d950TestCase(x_shape, y_shape, {2, 2}, ge::DT_FLOAT16, 0);
+    ExecuteAdaptiveAvgPool2d950TestCase(x_shape, y_shape, {2, 2}, ge::DT_FLOAT16, 32);
 }
 
 // 测试用例3: BF16 小kernel 4x4，n*c=128 >= 32
@@ -195,7 +195,7 @@ TEST_F(AdaptiveAvgPool2dTiling950Test, test_small_kernel_bf16_4x4)
 {
     gert::StorageShape x_shape = {{4, 32, 4, 4}, {4, 32, 4, 4}}; // n*c = 128
     gert::StorageShape y_shape = {{4, 32, 1, 1}, {4, 32, 1, 1}};
-    ExecuteAdaptiveAvgPool2d950TestCase(x_shape, y_shape, {1, 1}, ge::DT_BF16, 0);
+    ExecuteAdaptiveAvgPool2d950TestCase(x_shape, y_shape, {1, 1}, ge::DT_BF16, 32);
 }
 
 // 测试用例4: 小kernel边界条件 - kernel大小刚好在限制内 (8x8 = 64 < 128)

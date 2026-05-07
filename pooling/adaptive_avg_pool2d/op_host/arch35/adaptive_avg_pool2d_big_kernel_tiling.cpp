@@ -53,7 +53,7 @@ bool AdaptiveAvgPool2dBigKernelTiling::IsCapable()
 
 uint64_t AdaptiveAvgPool2dBigKernelTiling::GetTilingKey() const
 {
-    return GET_TPL_TILING_KEY(TPL_BIG_KERNEL, TPL_INT32_UINT32);
+    return GET_TPL_TILING_KEY(TPL_BIG_KERNEL, TPL_INT32_UINT32, TPL_NC_FACTOR_64);
 }
 
 void AdaptiveAvgPool2dBigKernelTiling::DoBlockTiling()

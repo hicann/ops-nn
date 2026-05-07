@@ -19,7 +19,7 @@
 #include "arch35/adaptive_avg_pool2d_struct.h"
 
 using namespace AdaptiveAvgPool2dOp;
-template <uint64_t TEMPLATE_MODE = TPL_SIMT_KERNEL, uint64_t DTYPE_MODE = TPL_INT32_UINT32>
+template <uint64_t TEMPLATE_MODE = TPL_SIMT_KERNEL, uint64_t DTYPE_MODE = TPL_INT32_UINT32, uint64_t NC_FACTOR>
 __global__ __aicore__ void adaptive_avg_pool2d(
     GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
@@ -32,11 +32,13 @@ __global__ __aicore__ void adaptive_avg_pool2d(
     if constexpr (TEMPLATE_MODE == TPL_SMALL_KERNEL) {
         GET_TILING_DATA_WITH_STRUCT(AdaptivePool2dSmallKernelTilingData, tilingData, tiling);
         if constexpr (DTYPE_MODE == TPL_INT32_UINT32) {
-            AdaptivePool2dSmallKernelNamespace::AdaptiveAvgPool2dSmallKernel<DTYPE_X, int32_t> op(&tilingData, &pipe);
+            AdaptivePool2dSmallKernelNamespace::AdaptiveAvgPool2dSmallKernel<DTYPE_X, int32_t, NC_FACTOR> op(
+                &tilingData, &pipe);
             op.Init(x, y);
             op.Process();
         } else {
-            AdaptivePool2dSmallKernelNamespace::AdaptiveAvgPool2dSmallKernel<DTYPE_X, int64_t> op(&tilingData, &pipe);
+            AdaptivePool2dSmallKernelNamespace::AdaptiveAvgPool2dSmallKernel<DTYPE_X, int64_t, NC_FACTOR> op(
+                &tilingData, &pipe);
             op.Init(x, y);
             op.Process();
         }

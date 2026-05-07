@@ -25,7 +25,7 @@
 using namespace AscendC;
 
 namespace AdaptiveAvgPool2dOp {
-constexpr static uint32_t THREAD_DIM = 512;
+constexpr static uint32_t THREAD_DIM = 1024;
 constexpr static uint32_t TILING_DATA_NUM = 8;
 constexpr static uint32_t SIMT_PARAMS_NUM = 32;
 constexpr static uint32_t IDX0 = 0;
@@ -82,11 +82,10 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AdaptiveAvgPool2dNch
     OFFSET_T count = nDims * cDims * outH * outW;
     for (OFFSET_T index = Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx(); index < count;
          index += Simt::GetBlockNum() * Simt::GetThreadNum()) {
-        //强转去掉
-        OFFSET_T wDiv = Simt::UintDiv(index, static_cast<OFFSET_T>(magicOW), static_cast<OFFSET_T>(shiftOW));
-        OFFSET_T wOutIndex = index - wDiv * static_cast<OFFSET_T>(outW);      //w= index % outW
-        OFFSET_T hDiv = Simt::UintDiv(wDiv, static_cast<OFFSET_T>(magicOH), static_cast<OFFSET_T>(shiftOH));
-        OFFSET_T hOutIndex = wDiv - hDiv * static_cast<OFFSET_T>(outH);      //h = (index / inw) % inH
+        OFFSET_T wDiv = Simt::UintDiv(index, magicOW, shiftOW);
+        OFFSET_T wOutIndex = index - wDiv * outW;      //w= index % outW
+        OFFSET_T hDiv = Simt::UintDiv(wDiv, magicOH, shiftOH);
+        OFFSET_T hOutIndex = wDiv - hDiv * outH;      //h = (index / inw) % inH
 
         OFFSET_T hStarts = CalStartIdx<OFFSET_T>(hOutIndex, inH, magicOH, shiftOH); // oy*isize/osize
         OFFSET_T hEnds = CalEndIdx<OFFSET_T>(hOutIndex, inH, outH, magicOH, shiftOH);// ((oy+1)* isize + osize - 1)/osize
@@ -135,7 +134,7 @@ __aicore__ inline void AdaptiveAvgPool2dSimt<VALUE_T, OFFSET_T>::Process()
     auto yData = (__gm__ VALUE_T *)y_.GetPhyAddr();
 
     Simt::VF_CALL<AdaptiveAvgPool2dNchw<VALUE_T, OFFSET_T>>(
-        Simt::Dim3(THREAD_DIM),
+        Simt::Dim3(tilingData_->threads),
         xData, yData,
         magicOsizeH, shiftOsizeH,
         magicOsizeW, shiftOsizeW,

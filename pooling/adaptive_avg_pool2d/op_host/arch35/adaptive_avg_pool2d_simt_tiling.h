@@ -41,6 +41,7 @@ protected:
     AdaptiveAvgPool2dOp::AdaptivePool2DSimtTilingData* tilingData_ = 
         context_->GetTilingData<AdaptiveAvgPool2dOp::AdaptivePool2DSimtTilingData>();
     int64_t maxDivUseNum_ = 0;
+    int64_t threads_ = 0;
 };
 
 }  // namespace optiling

@@ -33,7 +33,8 @@ using namespace std;
 namespace optiling {
 using Ops::NN::Optiling::TilingBaseClass;
 constexpr int64_t MAX_INT32 = 2147483647;
-constexpr int64_t MAX_THREAD_NUM = 1024;
+constexpr int64_t MAX_THREAD = 1024;
+constexpr int64_t MIN_THREAD = 512;
 constexpr uint64_t DCACHE_SIZE = 128 * 1024UL;
 constexpr uint64_t DIM_N = 0;
 constexpr uint64_t DIM_C = 1;
