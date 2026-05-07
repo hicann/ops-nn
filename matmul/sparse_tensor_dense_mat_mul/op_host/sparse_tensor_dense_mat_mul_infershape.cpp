@@ -13,6 +13,7 @@
  * \brief
  */
 
+#include <algorithm>
 #include "runtime/infer_shape_context.h"
 #include "register/op_impl_registry.h"
 #include "error_util.h"

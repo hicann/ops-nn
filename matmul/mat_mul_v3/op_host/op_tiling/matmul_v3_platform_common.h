@@ -15,6 +15,7 @@
 #ifndef __OP_HOST_MATMUL_V3_PLATFORM_COMMON_H__
 #define __OP_HOST_MATMUL_V3_PLATFORM_COMMON_H__
 
+#include <algorithm>
 #include "exe_graph/runtime/tiling_parse_context.h"
 #include "exe_graph/runtime/tiling_context.h"
 #include "platform/platform_infos_def.h"
