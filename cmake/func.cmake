@@ -480,11 +480,15 @@ endfunction()
 # DISABLE_IN_OPP 设置是否在opp包中编译tiling文件，布尔类型：TRUE，FALSE
 # 需一一对应
 function(add_modules_sources)
-  set(multiValueArgs OPTYPE ACLNNTYPE DEPENDENCIES COMPUTE_UNIT TILING_DIR)
-  set(oneValueArgs DIR DISABLE_IN_OPP)
+  set(multiValueArgs OPTYPE ACLNNTYPE DEPENDENCIES COMPUTE_UNIT TILING_DIR DIR)
+  set(oneValueArgs DISABLE_IN_OPP)
 
   cmake_parse_arguments(MODULE "" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
-  set(SOURCE_DIR ${MODULE_DIR})
+  if(MODULE_DIR)
+    set(SOURCE_DIR ${MODULE_DIR})
+  else()
+    set(SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+  endif()
 
   add_opbase_modules()
 
