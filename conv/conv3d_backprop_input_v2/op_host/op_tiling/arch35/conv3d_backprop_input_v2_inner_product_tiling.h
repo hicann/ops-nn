@@ -87,7 +87,6 @@ protected:
     void AlignCout1(uint32_t& cout1A, uint32_t& cout1B, bool adaptFP32);
     void LadderMatchStepKWithFullLoad(L1TilingParams& l1Params, const L0TilingParams& l0Params);
     void CloseL0PingPong(L0TilingParams& l0Params);
-    void AdjustBaseKForSplitK(L0TilingParams& l0Params, const TilingRunInfo tilingRunInfo);
     uint64_t GetCVRation();
 
     bool GetTilingFromRepo();
@@ -110,6 +109,8 @@ private:
     uint32_t CalculateMaxBaseM(uint32_t baseN);
     void AdjustBaseMWhenSmallN(uint32_t& baseM, uint32_t baseN, const L0TilingParams& l0Params, const TilingRunInfo& tilingRunInfo);
     void AdjustBaseNWhenSmallM(uint32_t& baseN, uint32_t baseM, const L0TilingParams& l0Params, const TilingRunInfo& tilingRunInfo);
+    void AdjustBaseMNCommon(L0TilingParams& l0Params, const TilingRunInfo& tilingRunInfo, uint32_t& baseM, uint32_t& baseN, uint32_t& baseK);
+    void AdjustBaseKForSplitK(L0TilingParams& l0Params, const TilingRunInfo tilingRunInfo);
     uint32_t CalculateOptimalBaseK(uint32_t baseM, uint32_t baseN, const L0TilingParams& l0Params, const TilingRunInfo& tilingRunInfo);
     void UpdateL0CBufferMode(L0TilingParams& l0Params);
     uint32_t GetLoadB1Condition();

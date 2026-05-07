@@ -124,7 +124,7 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::GetPublicShapeAttrsInfo()
 
 ge::graphStatus Conv3DDXV2InnerProductTiling::CalcKSegment() {
     // 拦截c04场景和group场景
-    if (tilingRunInfo_.enableC04Flag || groupConvMode_ == TILING_GROUP_MODE_ENLARGE) {
+    if (tilingRunInfo_.enableC04Flag || (unlikely(runInfo_.groups > 1))) {
         splitKMode_ = 0;
         tilingRunInfo_.enableSplitK = splitKMode_;
         return ge::GRAPH_FAILED;
@@ -999,30 +999,61 @@ void Conv3DDXV2InnerProductTiling::UpdateL0CBufferMode(L0TilingParams& l0Params)
     }
 }
 
-void Conv3DDXV2InnerProductTiling::AdjustBaseKForSplitK(L0TilingParams& l0Params, const TilingRunInfo tilingRunInfo) {
+void Conv3DDXV2InnerProductTiling::AdjustBaseMNCommon(L0TilingParams& l0Params,
+                                                      const TilingRunInfo& tilingRunInfo,
+                                                      uint32_t& baseM,
+                                                      uint32_t& baseN,
+                                                      uint32_t& baseK)
+{
+    // 重新检查L0约束，确保baseM/baseN仍然合法
+    uint32_t maxL0ABaseM = platformInfo_.l0_ab_size / (tilingRunInfo_.k0 * l0Params.al0Pbuffer * dtypeByteL0a_);
+    baseM = std::min(baseM, maxL0ABaseM); // L0A_SIZE的上界保护
+    uint64_t alingedMValue = Ops::Base::CeilAlign(tilingRunInfo.mValue, static_cast<uint64_t>(tilingRunInfo_.m0));
+    // K对齐约束大，优先做调整, 从最优基本块往下找到能满足搬运对齐的块
+    baseN = std::min(static_cast<uint64_t>(baseN), tilingRunInfo.nValue);
+    baseM = std::min(static_cast<uint64_t>(baseM), alingedMValue);
+    baseK = std::min(static_cast<uint64_t>(baseK), tilingRunInfo.kValue);
+
+    // N和K方向如果都比较小，M方向优化满足搬运对齐，而且做边界保护
+    if (baseN < l0Params.baseN) {
+        AdjustBaseMWhenSmallN(baseM, baseN, l0Params, tilingRunInfo);
+    }
+
+    // M和K方向如果都比较小，N方向优化满足搬运对齐，而且做边界保护
+    if (baseM < l0Params.baseM) {
+        AdjustBaseNWhenSmallM(baseN, baseM, l0Params, tilingRunInfo);
+    }
+}
+
+void Conv3DDXV2InnerProductTiling::AdjustBaseKForSplitK(L0TilingParams& l0Params, const TilingRunInfo tilingRunInfo)
+{
     // 如果未启用SplitK，则直接返回
     if (!tilingRunInfo_.enableSplitK) {
         return;
     }
 
-    if (l0Params.baseK > tilingRunInfo_.kValueSegment) {
+    uint32_t baseM = l0Params.baseM;
+    uint32_t baseN = l0Params.baseN;
+    uint32_t baseK = l0Params.baseK;
+
+    if (baseK > tilingRunInfo_.kValueSegment) {
         // kValueSegment是k0对齐的
-        l0Params.baseK = tilingRunInfo_.kValueSegment;
+        baseK = tilingRunInfo_.kValueSegment;
     } else if (l0Params.baseK > tilingRunInfo_.lenHkWkC0 && l0Params.baseK % tilingRunInfo_.lenHkWkC0 != 0) {
         // 对于只切Cout需要baseK是hkWkK0的倍数，直接对齐到最近的大小
-        l0Params.baseK = Ops::Base::CeilAlign(l0Params.baseK, static_cast<uint32_t>(tilingRunInfo_.lenHkWkC0));
+        baseK = Ops::Base::CeilAlign(l0Params.baseK, static_cast<uint32_t>(tilingRunInfo_.lenHkWkC0));
     }
+    // 确保baseK不小于k0
+    baseK = std::max(baseK, tilingRunInfo_.k0);
 
-    // 重新检查L0约束，确保baseM/baseN仍然合法
-    uint32_t l0abMaxNum = platformInfo_.l0_ab_size / l0Params.al0Pbuffer / dtypeByteL0a_;
-    uint32_t maxL0ABaseM = l0abMaxNum / std::max(l0Params.baseN, tilingRunInfo_.m0);
-    uint32_t maxL0ABaseN = l0abMaxNum / std::max(l0Params.baseM, tilingRunInfo_.m0);
+    // 重新调整baseM/baseN大小
+    AdjustBaseMNCommon(l0Params, tilingRunInfo, baseM, baseN, baseK);
 
-    l0Params.baseM = std::min(l0Params.baseM, maxL0ABaseM);
-    l0Params.baseN = std::min(l0Params.baseN, maxL0ABaseN);
+    l0Params.baseM = baseM;
+    l0Params.baseN = baseN;
+    l0Params.baseK = baseK;
 
-    // 确保baseK不小于k0（最小单位）
-    l0Params.baseK = std::max(l0Params.baseK, tilingRunInfo_.k0);
+    UpdateL0CBufferMode(l0Params);
 
     OP_LOGD(
         opName_, "Split K AdjustBaseMNK: after baseM=%u, baseN=%u, baseK=%u", l0Params.baseM, l0Params.baseN,
@@ -1034,26 +1065,8 @@ void Conv3DDXV2InnerProductTiling::AdjustBaseMNK(L0TilingParams& l0Params, const
     uint32_t baseM = l0Params.baseM;
     uint32_t baseN = l0Params.baseN;
     uint32_t baseK = l0Params.baseK;
-    
-    uint32_t maxL0ABaseM = platformInfo_.l0_ab_size / (tilingRunInfo_.k0 * l0Params.al0Pbuffer * dtypeByteL0a_);
-    baseM = std::min(baseM, maxL0ABaseM); // L0A_SIZE的上界保护
-    
-    uint64_t alingedMValue = Ops::Base::CeilAlign(tilingRunInfo.mValue, static_cast<uint64_t>(tilingRunInfo_.m0));
-    
-    // K对齐约束大，优先做调整, 从最优基本块往下找到能满足搬运对齐的块
-    baseN = std::min(static_cast<uint64_t>(baseN), tilingRunInfo.nValue);
-    baseM = std::min(static_cast<uint64_t>(baseM), alingedMValue);
-    baseK = std::min(static_cast<uint64_t>(baseK), tilingRunInfo.kValue);
-    
-    // N和K方向如果都比较小，M方向优化满足搬运对齐，而且做边界保护
-    if (baseN < l0Params.baseN) {
-        AdjustBaseMWhenSmallN(baseM, baseN, l0Params, tilingRunInfo);
-    }
-    
-    // M和K方向如果都比较小，N方向优化满足搬运对齐，而且做边界保护
-    if (baseM < l0Params.baseM) {
-        AdjustBaseNWhenSmallM(baseN, baseM, l0Params, tilingRunInfo);
-    }
+
+    AdjustBaseMNCommon(l0Params, tilingRunInfo, baseM, baseN, baseK);
     
     baseK = CalculateOptimalBaseK(baseM, baseN, l0Params, tilingRunInfo);
     

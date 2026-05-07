@@ -756,7 +756,7 @@ __aicore__ inline void DataCopyCastVecToOutput(Intf *self, const GlobalTensor<ty
     DataCopyExtParams mte3Param;
     // for Split K
     if (self->ctx.useUbAccumForSplitK_) {
-        if constexpr (Intf::Config::xType::format == Convolution3DBackprop::CubeFormat::NCDHW) {
+        if constexpr (Intf::Config::dType::format == Convolution3DBackprop::CubeFormat::NCDHW) {
             // UB->GM: NCDHW
             dstOffset =
                 static_cast<uint64_t>(self->ctx.curNIdx_) * self->ctx.tiling_->baseN * self->ctx.diHiWi_ + // cin offset
@@ -766,7 +766,7 @@ __aicore__ inline void DataCopyCastVecToOutput(Intf *self, const GlobalTensor<ty
             mte3Param.blockLen = self->ctx.realMSize_ * sizeof(typename Intf::DstT);
             mte3Param.srcStride = 0;
             mte3Param.dstStride = self->ctx.diHiWi_ * sizeof(typename Intf::DstT) - mte3Param.blockLen;
-        } else if constexpr (Intf::Config::xType::format == Convolution3DBackprop::CubeFormat::NDHWC) {
+        } else if constexpr (Intf::Config::dType::format == Convolution3DBackprop::CubeFormat::NDHWC) {
             // UB->GM: NDHWC
             dstOffset =
                 static_cast<uint64_t>(self->ctx.curNIdx_) * self->ctx.tiling_->baseN +                         // cin offset
