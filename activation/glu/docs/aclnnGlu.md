@@ -1,6 +1,6 @@
 # aclnnGlu
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/activation/sigmoid)
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/activation/glu)
 
 ## 产品支持情况
 
@@ -74,7 +74,7 @@ aclnnStatus aclnnGlu(
     <tr>
       <td>self（aclTensor*）</td>
       <td>输入</td>
-      <td>待进行Glu计算的入参，将该输入张量沿着指定的维度dim平均分成公式中的两个张量a,b。</td>
+      <td>待进行GLU计算的入参，将该输入张量沿着指定的维度dim平均分成公式中的两个张量a,b。</td>
       <td><ul><li>支持空Tensor。</li><li>Tensor的维度必须大于0，且shape必须在入参dim对应的维度上可以整除2，shape表示为$(*_1,N,*_2)$其中$*$表示任何数量的附加维，$N$表示dim指定的维度大小。</li></ul></td>
       <td>DOUBLE、FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>

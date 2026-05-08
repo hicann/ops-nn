@@ -47,7 +47,7 @@
     <tr>
       <td>self</td>
       <td>输入</td>
-      <td>待进行Glu计算的入参，将该输入张量沿着指定的维度dim平均分成公式中的两个张量a,b。</td>
+      <td>待进行GLU计算的入参，将该输入张量沿着指定的维度dim平均分成公式中的两个张量a,b。</td>
       <td>DOUBLE、FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
@@ -75,4 +75,4 @@
 
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_glu](examples/test_aclnn_glu.cpp) | 通过[aclnnGlu](docs/aclnnGlu.md)接口方式调用glu算子。 |
+| aclnn调用 | [test_aclnn_glu](examples/test_aclnn_glu.cpp) | 通过[aclnnGlu](docs/aclnnGlu.md)接口方式调用GLU算子。 |
