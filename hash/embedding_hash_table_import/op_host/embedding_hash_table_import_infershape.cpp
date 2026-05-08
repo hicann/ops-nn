@@ -140,8 +140,8 @@ ge::graphStatus InferDataType4EmbeddingHashTableImport(gert::InferDataTypeContex
     for (uint32_t i = 0; i < countersInfo->GetInstanceNum(); i++) {
         auto countersDtype = context->GetDynamicInputDataType(COUNTERS_IDX, i);
         if(countersDtype != DT_UINT64){
-            std::string errMsg = "The datatype of " + std::to_string(i) +
-                "th counters must be same as uint64";
+            std::string errMsg = "The dtype of " + std::to_string(i) +
+                "th tensor in tensor list counters must be uint64";
             OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
                 context->GetNodeName(), "counters", ge::TypeUtils::DataTypeToSerialString(countersDtype).c_str(),
                 errMsg.c_str());
@@ -152,8 +152,8 @@ ge::graphStatus InferDataType4EmbeddingHashTableImport(gert::InferDataTypeContex
     for (uint32_t i = 0; i < filterFlagsInfo->GetInstanceNum(); i++) {
         auto filterFlagsDtype = context->GetDynamicInputDataType(FILTER_FLAGS_IDX, i);
         if (filterFlagsDtype != DT_UINT8) {
-            std::string errMsg = "The datatype of " + std::to_string(i) +
-                "th filter_flags must be same as uint8";
+            std::string errMsg = "The dtype of " + std::to_string(i) +
+                "th tensor in tensor list filter_flags must be uint8";
             OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
                 context->GetNodeName(), "filter_flags", ge::TypeUtils::DataTypeToSerialString(filterFlagsDtype).c_str(),
                 errMsg.c_str());
@@ -165,8 +165,8 @@ ge::graphStatus InferDataType4EmbeddingHashTableImport(gert::InferDataTypeContex
     for (uint32_t i = 0; i < valuesInfo->GetInstanceNum(); i++) {
         auto valuesDtype = context->GetDynamicInputDataType(VALUES_IDX, i);
         if (valuesDtype != DT_FLOAT) {
-            std::string errMsg = "The datatype of " + std::to_string(i) +
-                "th values must be same as float";
+            std::string errMsg = "The dtype of " + std::to_string(i) +
+                "th tensor in tensor list values must be float";
             OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
                 context->GetNodeName(), "values", ge::TypeUtils::DataTypeToSerialString(valuesDtype).c_str(),
                 errMsg.c_str());

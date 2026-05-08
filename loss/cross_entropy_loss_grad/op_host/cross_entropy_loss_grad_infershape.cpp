@@ -66,7 +66,7 @@ static graphStatus InferShape4CrossEntropyLossGrad(gert::InferShapeContext* cont
           OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
               context->GetNodeName(), "log_prob and target",
               (Ops::Base::ToString(*logProbShape) + " and " + Ops::Base::ToString(*targetShape)).c_str(),
-              "The dim 0 of log_prob and target must be the same"),
+              "The dim 0 of log_prob and that of target must be the same"),
           return ge::GRAPH_FAILED);
   }
 

@@ -299,7 +299,7 @@ static ge::graphStatus CheckInputDtype(gert::TilingContext* context)
     OP_CHECK_IF(
         !validDtype,
         OP_LOGE_FOR_INVALID_DTYPE(
-            context->GetNodeName(), "x",
+            context->GetNodeName(), "input",
             ge::TypeUtils::DataTypeToSerialString(inputDtype).c_str(),
             "BF16, FLOAT or FLOAT16"),
         return ge::GRAPH_FAILED);

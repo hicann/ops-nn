@@ -44,9 +44,10 @@ ge::graphStatus ForeachReduceRegbaseTiling::GetShapeAttrsInfo()
     totalTensorCount_ = anchorInstanceInfo->GetInstanceNum();
     OP_CHECK_IF(
         totalTensorCount_ > MAX_TENSOR_CONT_950 || totalTensorCount_ <= 0,
-        OP_LOGE(
-            context_, "The number of input tensors must not be greater than %hu or less than/equal to 0, but get [%hu].", MAX_TENSOR_CONT_950,
-            totalTensorCount_),
+        OP_LOGE_FOR_INVALID_TENSORNUM(
+            context_->GetNodeName(), "x",
+            static_cast<int64_t>(totalTensorCount_),
+            ("within the range [1, " + std::to_string(MAX_TENSOR_CONT_950) + "]").c_str()),
         return ge::GRAPH_FAILED);
     totalDataCount_ = 0;
     dataType_ = ge::DT_UNDEFINED;
@@ -59,7 +60,14 @@ ge::graphStatus ForeachReduceRegbaseTiling::GetShapeAttrsInfo()
         if (dataType_ == ge::DT_UNDEFINED) {
             dataType_ = srcDtype;
         } else if (srcDtype != dataType_) {
-            OP_LOGE(context_, "DataType of all input should be same.");
+            std::string reasonMsg = "The dtypes of all tensors in the tensor list must be the same. "
+                                    "Currently, the dtype of the " +
+                                    std::to_string(i) + "th tensor is inconsistent with that (" +
+                                    ge::TypeUtils::DataTypeToSerialString(dataType_) + ") of other tensors";
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                context_->GetNodeName(), "x",
+                ge::TypeUtils::DataTypeToSerialString(srcDtype).c_str(),
+                reasonMsg.c_str());
             return ge::GRAPH_FAILED;
         }
         auto tempShape = context_->GetDynamicInputShape(0, i);
@@ -67,10 +75,11 @@ ge::graphStatus ForeachReduceRegbaseTiling::GetShapeAttrsInfo()
         // check max dim
         OP_CHECK_IF(
             tempShape->GetStorageShape().GetDimNum() > MAX_SUPPORT_DIM_NUMS,
-            OP_LOGE(
+            OP_LOGE_FOR_INVALID_SHAPEDIM(
                 context_->GetNodeName(),
-                "The input1 tensors[%u] shape is invaild, and it cannot be larger than 8 dimensions, but its %zu dims.",
-                i, tempShape->GetStorageShape().GetDimNum()),
+                "x",
+                std::to_string(tempShape->GetStorageShape().GetDimNum()).c_str(),
+                "less than or equal to 8"),
             return ge::GRAPH_FAILED);
 
         // Make a 32-byte alignment for each Tensor
@@ -94,20 +103,24 @@ ge::graphStatus ForeachReduceRegbaseTiling::CheckScalar()
     scalarDtype_ = scalarDesc->GetDataType();
     OP_CHECK_IF(
         scalarDtype_ != ge::DT_FLOAT && scalarDtype_ != ge::DT_INT64,
-        OP_LOGE(
-            context_, "The data type of the scalar only supports FP32 and INT64, but it is %s.",
-            Ops::Base::ToString(scalarDtype_).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPE(
+            context_->GetNodeName(), "scalar",
+            ge::TypeUtils::DataTypeToSerialString(scalarDtype_).c_str(), "FP32 or INT64"),
         return ge::GRAPH_FAILED);
     auto scalarShape = context_->GetRequiredInputShape(SECOND_INPUT_IDX);
     OP_CHECK_IF(scalarShape == nullptr, OP_LOGE(context_, "The scalar shape is null."), return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         scalarShape->GetStorageShape().GetDimNum() > MAX_SUPPORT_DIM_NUMS,
-        OP_LOGE(
-            context_, "The scalar shape is invaild, and it cannot be larger than 8 dimensions, but its %zu dims.",
-            scalarShape->GetStorageShape().GetDimNum()),
+        OP_LOGE_FOR_INVALID_SHAPEDIM(
+            context_->GetNodeName(), "scalar",
+            std::to_string(scalarShape->GetStorageShape().GetDimNum()).c_str(),
+            "less than or equal to 8"),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(
-        scalarShape->GetStorageShape().GetShapeSize() != 1, OP_LOGE(context_, "The scalar shape must be 1."),
+        scalarShape->GetStorageShape().GetShapeSize() != 1,
+        OP_LOGE_FOR_INVALID_SHAPESIZE(
+            context_->GetNodeName(), "scalar",
+            std::to_string(scalarShape->GetStorageShape().GetShapeSize()).c_str(), "1"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -117,7 +130,11 @@ ge::graphStatus ForeachReduceRegbaseTiling::CheckShapeAllPositive(const gert::Sh
     for (size_t i = 0; i < shape.GetDimNum(); i++) {
         OP_CHECK_IF(
             shape.GetDim(i) < 0,
-            OP_LOGE(context_, "Dim %lu of input %u expect cant be negtive, but actual %ld.", i, idx, shape.GetDim(i)),
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                context_->GetNodeName(), "x", std::to_string(shape.GetDim(i)).c_str(),
+                "All axes of tensors in the tensor list must be 0 or positive numbers. Currently, the " +
+                    std::to_string(i) + "th axis of the " + std::to_string(idx) +
+                    "th tensor in the tensor list does not meet the condition"),
             return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
@@ -212,33 +229,39 @@ ge::graphStatus ForeachReduceRegbaseTiling::CheckOutput()
     size_t outputCount = context_->GetComputeNodeOutputNum();
     OP_CHECK_IF(
         totalTensorCount_ != outputCount,
-        OP_LOGE(
-            context_, "The output num should be same with input, expect %hu, actual %lu.", totalTensorCount_,
-            outputCount),
+        OP_LOGE_FOR_INVALID_TENSORNUMS_WITH_REASON(
+            context_->GetNodeName(), "x and y",
+            (std::to_string(totalTensorCount_) + " and " + std::to_string(outputCount)).c_str(),
+            "The tensor nums in {x, y} must be the same"),
         return ge::GRAPH_FAILED);
     for (uint32_t i = 0; i < totalTensorCount_; i++) {
         auto tempDesc = context_->GetOutputDesc(i);
         OP_CHECK_IF(tempDesc == nullptr, OP_LOGE(context_, "The output %u desc is null.", i), return ge::GRAPH_FAILED);
         auto dstDtype = tempDesc->GetDataType();
         OP_CHECK_IF(
-            dstDtype != dataType_, OP_LOGE(context_, "The output %u datatype should be same with input.", i),
+            dstDtype != dataType_,
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                context_->GetNodeName(), "y",
+                ge::TypeUtils::DataTypeToSerialString(dstDtype).c_str(),
+                "The dtype of y must be the same as x"),
             return ge::GRAPH_FAILED);
         auto dstShape = context_->GetOutputShape(i);
         OP_CHECK_IF(dstShape == nullptr, OP_LOGE(context_, "The output %u shape is null.", i), return ge::GRAPH_FAILED);
         // check max dim
         OP_CHECK_IF(
             dstShape->GetStorageShape().GetDimNum() > MAX_SUPPORT_DIM_NUMS,
-            OP_LOGE(
-                context_->GetNodeName(),
-                "The output tensors[%u] shape is invaild, and it cannot be larger than 8 dimensions, but its %zu dims.",
-                i, dstShape->GetStorageShape().GetDimNum()),
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                context_->GetNodeName(), "y",
+                std::to_string(dstShape->GetStorageShape().GetDimNum()).c_str(),
+                ("The shape dim of " + std::to_string(i) + "th tensor in tensorlist y must be less than or equal 8").c_str()),
             return ge::GRAPH_FAILED);
 
         OP_CHECK_IF(
             dstShape->GetStorageShape().GetShapeSize() != 1,
-            OP_LOGE(
-                context_, "The output tensors[%u] shapeSize should be 1, but it is %ld.", i,
-                dstShape->GetStorageShape().GetShapeSize()),
+            OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+                context_->GetNodeName(), "y",
+                std::to_string(dstShape->GetStorageShape().GetShapeSize()).c_str(),
+                ("The shape size of " + std::to_string(i) + "th tensor in tensorlist y must be 1").c_str()),
             return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;

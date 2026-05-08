@@ -108,7 +108,7 @@ ge::graphStatus ForeachNonFiniteCheckAndUnscaleRegbaseTiling::GetShapeAttrsInfo(
     OP_CHECK_IF(
         totalTensorCount_ > MAX_TENSOR_COUNT || totalTensorCount_ <= 0,
         OP_LOGE_FOR_INVALID_TENSORNUM(nodeName_.c_str(), "scaled_grads", totalTensorCount_,
-                                       ("(0, " + std::to_string(MAX_TENSOR_COUNT) + ")").c_str()),
+                                       ("within the range (0, " + std::to_string(MAX_TENSOR_COUNT) + ")").c_str()),
         return ge::GRAPH_FAILED);
 
     // Get shape, dtype information, and the total number of data.
@@ -132,9 +132,9 @@ ge::graphStatus ForeachNonFiniteCheckAndUnscaleRegbaseTiling::GetShapeAttrsInfo(
         } else if (tempDtype != dataType_) {
             OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(nodeName_.c_str(), "scaled_grads",
                 ge::TypeUtils::DataTypeToSerialString(tempDtype).c_str(),
-                ("All tensor dtypes must be consistent, expected " +
+                ("The dtypes of all tensors in the tensor list must be the same, expected " +
                  ge::TypeUtils::DataTypeToSerialString(dataType_) +
-                 ", but scaled_grads[" + std::to_string(i) + "] does not match").c_str());
+                 ".Currently, the dtype of scaled_grads[" + std::to_string(i) + "] is inconsistent with that of other tensors").c_str());
             return ge::GRAPH_FAILED;
         }
         auto shapePtr = context_->GetDynamicInputShape(SCALE_GRADS_INDEX, i);
@@ -234,7 +234,7 @@ ge::graphStatus ForeachNonFiniteCheckAndUnscaleRegbaseTiling::CheckParams() cons
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(nodeName_.c_str(), "found_inf and inv_scale",
             (ge::TypeUtils::DataTypeToSerialString(flagDescPtr->GetDataType()) + " and " +
              ge::TypeUtils::DataTypeToSerialString(scaleDescPtr->GetDataType())).c_str(),
-            "The datatypes of found_inf and inv_scale must be float"),
+            "The dtypes of found_inf and inv_scale must be float"),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;

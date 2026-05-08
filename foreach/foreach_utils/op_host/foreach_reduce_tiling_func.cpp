@@ -260,9 +260,9 @@ private:
         size_t xSize = anchorInstanceInfo->GetInstanceNum();
         OP_CHECK_IF(
             xSize > MAX_TENSOR_CONT,
-            OP_LOGE(
-                tilingContext->GetNodeName(), "The number of input tensors [%lu] not in [0, %d].", xSize,
-                MAX_TENSOR_CONT),
+            OP_LOGE_FOR_INVALID_TENSORNUM(
+                tilingContext->GetNodeName(), "x", static_cast<int64_t>(xSize),
+                ("within the range [0," + std::to_string(MAX_TENSOR_CONT) + "]").c_str()),
             return ge::GRAPH_FAILED);
 
         OP_CHECK_IF(
@@ -289,23 +289,24 @@ private:
                 return ge::GRAPH_FAILED);
 
             // check max dim
-            OP_CHECK_IF(
-                x1Shape->GetStorageShape().GetDimNum() > MAX_SUPPORT_DIMS_NUMS,
-                OP_LOGE(
-                    tilingContext->GetNodeName(),
-                    "The input %lu shape is invalid, and it cannot be larger than %zu dimensions.", startListIndex,
-                    static_cast<size_t>(MAX_SUPPORT_DIMS_NUMS)),
-                return ge::GRAPH_FAILED);
+            if(x1Shape->GetStorageShape().GetDimNum() > MAX_SUPPORT_DIMS_NUMS){
+                OP_LOGE_FOR_INVALID_SHAPEDIM(
+                    tilingContext->GetNodeName(), "x",
+                    std::to_string(x1Shape->GetStorageShape().GetDimNum()).c_str(),
+                    "less than or equal to 8");
+                return ge::GRAPH_FAILED;
+            }                
 
-            // checke tensorlist input consistent
+            // check tensorlist input consistent
             for (size_t listId = startListIndex + 1; listId < static_cast<size_t>(inputTensorsNum); listId++) {
-                OP_CHECK_IF(
-                    x1Shape->GetStorageShape() !=
-                        tilingContext->GetDynamicInputShape(listId, tensorId)->GetStorageShape(),
-                    OP_LOGE(
-                        tilingContext->GetNodeName(), "The input %lu shape should be same with input %lu.", listId,
-                        startListIndex),
-                    return ge::GRAPH_FAILED);
+                if (x1Shape->GetStorageShape() !=
+                    tilingContext->GetDynamicInputShape(listId, tensorId)->GetStorageShape()) {
+                    std::string paramName = "x " + std::to_string(listId + 1);
+                    std::string errMsg = Ops::Base::ToString(tilingContext->GetDynamicInputShape(listId, tensorId)->GetStorageShape());
+                    std::string reasonMsg = "The shape of x" + std::to_string(listId + 1) + " should be the same as x" + std::to_string(startListIndex + 1);
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(tilingContext->GetNodeName(), paramName.c_str(),errMsg.c_str(),reasonMsg.c_str());
+                    return ge::GRAPH_FAILED;
+                }
             }
         }
         return ge::GRAPH_SUCCESS;
@@ -317,12 +318,13 @@ private:
     ge::graphStatus CheckOutputShapeAndDtype()
     {
         size_t outputCount = tilingContext->GetComputeNodeOutputNum();
-        OP_CHECK_IF(
-            static_cast<size_t>(totalTensorCount) != outputCount,
-            OP_LOGE(
-                tilingContext->GetNodeName(), "The output num should be same with input, expect %u, actual %lu.",
-                totalTensorCount, outputCount),
-            return ge::GRAPH_FAILED);
+        if(static_cast<size_t>(totalTensorCount) != outputCount){
+            OP_LOGE_FOR_INVALID_TENSORNUMS_WITH_REASON(
+                tilingContext->GetNodeName(), "x and y",
+                (std::to_string(totalTensorCount) + " and " + std::to_string(outputCount)).c_str(),
+                "The tensor nums in {x, y} must be the same");
+            return ge::GRAPH_FAILED;
+        }
         for (uint32_t i = 0; i < totalTensorCount; i++) {
             auto tempDesc = tilingContext->GetOutputDesc(i);
             OP_CHECK_IF(
@@ -331,7 +333,10 @@ private:
             auto dstDtype = tempDesc->GetDataType();
             OP_CHECK_IF(
                 dstDtype != dataType,
-                OP_LOGE(tilingContext->GetNodeName(), "The tensor %u of output datatype should be same with input.", i),
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                    tilingContext->GetNodeName(), "y",
+                    ge::TypeUtils::DataTypeToSerialString(dstDtype).c_str(),
+                    "The dtype of y must be the same as x"),
                 return ge::GRAPH_FAILED);
             auto dstShape = tilingContext->GetOutputShape(i);
             OP_CHECK_IF(
@@ -339,7 +344,10 @@ private:
                 return ge::GRAPH_FAILED);
             OP_CHECK_IF(
                 dstShape->GetStorageShape().GetShapeSize() != 1,
-                OP_LOGE(tilingContext->GetNodeName(), "The number of output tensor [%u] must be 1.", i),
+                OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+                    tilingContext->GetNodeName(), "y",
+                    std::to_string(dstShape->GetStorageShape().GetShapeSize()).c_str(),
+                    ("The shape size of " + std::to_string(i) + "th tensor in tensorlist y must be 1").c_str()),
                 return ge::GRAPH_FAILED);
         }
         return ge::GRAPH_SUCCESS;

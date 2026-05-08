@@ -265,7 +265,7 @@ ge::graphStatus CrossEntropyLossRegbaseTiling::CheckInputShape()
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
             context_->GetNodeName(), "x",
             (std::to_string(inputShape.GetDim(DIM_0)) + ", " + std::to_string(inputShape.GetDim(DIM_1))).c_str(),
-            "The C-dimension of x can not be zero, when the N-dimension of x is not zero, where N is the 0th axis and "
+            "The C-dimension of x cannot be zero, when the N-dimension of x is not zero, where N is the 0th axis and "
             "C is the 1st axis"),
         return ge::GRAPH_FAILED);
     auto target = context_->GetInputShape(INPUT_TARGET_IDX);
@@ -294,7 +294,7 @@ ge::graphStatus CrossEntropyLossRegbaseTiling::CheckInputShape()
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
             context_->GetNodeName(), "x and weight",
                 (std::to_string(inputShape.GetDim(DIM_1)) + " and " + std::to_string(weightShape.GetDim(0))).c_str(),
-                "The dim 1 of input should be the same as the shape size of weight."),
+                "The dim 1 of input should be the same as the shape size of weight"),
             return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;

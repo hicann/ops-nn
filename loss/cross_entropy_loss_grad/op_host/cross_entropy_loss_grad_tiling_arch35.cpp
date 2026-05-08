@@ -469,7 +469,7 @@ ge::graphStatus CrossEntropyLossGradRegbaseTiling::CheckDtype() {
                     OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
                         tilingContext->GetNodeName(), "log_prob and grad_loss",
                         (ge::TypeUtils::DataTypeToSerialString(dataType) + " and " + ge::TypeUtils::DataTypeToSerialString(gradLossDataType)).c_str(),
-                        "datatype of grad_loss and log_prob should be the same"),
+                        "The dtypes of grad_loss and log_prob must be the same"),
                     return ge::GRAPH_FAILED);
 
     auto weightDesc = tilingContext->GetOptionalInputDesc(INPUT_WEIGHT_IDX);

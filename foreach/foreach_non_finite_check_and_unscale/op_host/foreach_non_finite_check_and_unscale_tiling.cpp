@@ -104,14 +104,15 @@ ge::graphStatus ForeachNonFiniteCheckAndUnscaleTiling::Init()
                 dataTypeSize <= 0,
                 OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(nodeName.c_str(), "scaled_grads",
                     ge::TypeUtils::DataTypeToSerialString(dataType).c_str(),
-                    "The dataTypeSize of scaled_grads must bigger than 0"),
+                    "The dtype size of scaled_grads must be greater than 0"),
                 return ge::GRAPH_FAILED);
             elementsPerBlock = BYTE_BLOCK / dataTypeSize;
         } else if (tempDtype != dataType) {
             OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(nodeName.c_str(), "scaled_grads",
                 ge::TypeUtils::DataTypeToSerialString(tempDtype).c_str(),
-                ("All tensor dtype must be consistent, expected " +
-                 ge::TypeUtils::DataTypeToSerialString(dataType)).c_str());
+                ("The dtypes of all tensors in tensor list scaled_grads must be the same, expected " +
+                 ge::TypeUtils::DataTypeToSerialString(dataType)+
+                 ".Currently, the dtype of scaled_grads[" + std::to_string(i) + "] is inconsistent with that of other tensors").c_str());
             return ge::GRAPH_FAILED;
         }
         auto shapePtr = tilingContext->GetDynamicInputShape(SCALE_GRADS_INDEX, i);
@@ -181,7 +182,7 @@ ge::graphStatus ForeachNonFiniteCheckAndUnscaleTiling::CheckParams() const
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(nodeName.c_str(), "found_inf and inv_scale",
             (ge::TypeUtils::DataTypeToSerialString(flagDescPtr->GetDataType()) + " and " +
              ge::TypeUtils::DataTypeToSerialString(scaleDescPtr->GetDataType())).c_str(),
-            "The datatypes of found_inf and inv_scale must be float"),
+            "The dtypes of found_inf and inv_scale must be float"),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;

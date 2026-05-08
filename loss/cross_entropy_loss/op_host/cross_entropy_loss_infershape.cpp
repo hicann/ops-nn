@@ -64,7 +64,7 @@ static ge::graphStatus InferShapeForCrossEntropyLoss(gert::InferShapeContext* co
 
         if(inputShape->GetDim(DIM_0) != UNKNOWN_DIM && targetShape->GetDim(DIM_0) != UNKNOWN_DIM && inputShape->GetDim(DIM_0) != targetShape->GetDim(DIM_0)){
             std::string shapeMsg = Ops::Base::ToString(*inputShape) + " and " + Ops::Base::ToString(*targetShape);
-            std::string errMsg = "The dim 0 of input and target should be the same";
+            std::string errMsg = "The dim 0 of input and target must be the same";
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
                 context->GetNodeName(), "input and target", shapeMsg.c_str(), errMsg.c_str());
             return ge::GRAPH_FAILED;
@@ -82,7 +82,7 @@ static ge::graphStatus InferShapeForCrossEntropyLoss(gert::InferShapeContext* co
             if (inputShape->GetDim(DIM_1) != UNKNOWN_DIM && weightShape->GetDim(DIM_0) != UNKNOWN_DIM &&
                 inputShape->GetDim(DIM_1) != weightShape->GetDim(DIM_0)) {
                 std::string shapeMsg = Ops::Base::ToString(*inputShape) + " and " + Ops::Base::ToString(*targetShape);
-                std::string errMsg = "The dim 1 of input and the dim 0 of weight should be the same";
+                std::string errMsg = "The dim 1 of input and the dim 0 of weight must be the same";
                 OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
                     context->GetNodeName(), "input and weight", shapeMsg.c_str(), errMsg.c_str());
                 return ge::GRAPH_FAILED;

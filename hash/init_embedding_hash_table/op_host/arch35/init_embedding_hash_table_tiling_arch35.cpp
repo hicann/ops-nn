@@ -141,12 +141,11 @@ static ge::graphStatus TilingPrepare4InitEmbeddingHashTable(gert::TilingParseCon
     auto platformInfo = context->GetPlatformInfo();
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->coreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF((compileInfo->coreNum <= 0), OP_LOGE(context->GetNodeName(), "The core num is invaild."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->coreNum <= 0), OP_LOGE(context->GetNodeName(), "The core num is invalid."), return ge::GRAPH_FAILED);
     compileInfo->maxThread = GetSimtMaxThreadNum(context);
-    OP_CHECK_IF((compileInfo->maxThread <= 0), OP_LOGE(context->GetNodeName(), "The Thread num is invaild."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((compileInfo->maxThread <= 0), OP_LOGE(context->GetNodeName(), "The Thread num is invalid."), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
-
 IMPL_OP_OPTILING(InitEmbeddingHashTable)
     .Tiling(Tiling4InitEmbeddingHashTable)
     .TilingParse<InitEmbeddingHashTableCompileInfo>(TilingPrepare4InitEmbeddingHashTable);

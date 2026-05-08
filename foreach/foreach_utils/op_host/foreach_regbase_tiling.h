@@ -73,6 +73,7 @@ protected:
 private:
     void AssignDataToEachCore(int64_t needCoreNum, int64_t elementsPerBlock);
     ge::graphStatus CheckShapeAllPositive(const gert::Shape& shape, uint32_t idx);
+    const char* GetFirstTensorName() const;
 };
 
 class ForeachRegbaseTilingUnaryScalar : public ForeachRegbaseTiling

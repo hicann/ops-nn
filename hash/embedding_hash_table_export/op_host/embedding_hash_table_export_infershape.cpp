@@ -36,7 +36,7 @@ graphStatus CheckEmbeddingHashTableExportParams(
     const gert::InferShapeContext* context, int64_t numTable, int64_t numEmbeddingDim)
 {
     if (numTable < 0) {
-        std::string errMsg = "numTable must be greater than or equal to 0";
+        std::string errMsg = "The shape size of table_sizes must be greater than or equal to 0";
         OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
             context->GetNodeName(), "table_sizes", std::to_string(numTable).c_str(), errMsg.c_str());
         return GRAPH_FAILED;
