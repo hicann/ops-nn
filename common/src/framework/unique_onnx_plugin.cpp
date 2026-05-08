@@ -16,7 +16,6 @@
  */
 #include "onnx_common.h"
 #include "op_nn_proto_extend.h"
-#include "control/shape/op_graph/shape_proto.h"
 
 namespace domi {
 using NodeProto = ge::onnx::NodeProto;

@@ -9,7 +9,6 @@
  */
 
 #include "onnx_common.h"
-#include "control/shape/op_graph/shape_proto.h"
 #include "op_nn_proto_extend.h"
 
 using namespace ge;
