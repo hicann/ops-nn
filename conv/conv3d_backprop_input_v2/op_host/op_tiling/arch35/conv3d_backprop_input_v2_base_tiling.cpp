@@ -332,7 +332,7 @@ bool Conv3DBackpropInputV2TilingArch35::CheckDtypeFormatAttrs(
         CUBE_INNER_ERR_REPORT(
             opName_,
             "the current output_backprop_dtype is [%s], filter_dtype is [%s], y_dtype is [%s], "
-            "and format only support NCDHW, but actually get out_backprop_format is [%s], filter_format is [%s], "
+            "and format only supports NCDHW, but actually get out_backprop_format is [%s], filter_format is [%s], "
             "y_format is [%s]",
             ge::TypeUtils::DataTypeToSerialString(out_backprop_desc->GetDataType()).c_str(),
             ge::TypeUtils::DataTypeToSerialString(filter_desc->GetDataType()).c_str(),
@@ -360,7 +360,7 @@ bool Conv3DBackpropInputV2TilingArch35::AnalyzeFuseDtype(const bool f16flag, con
         !f16flag && !int8flag && !fp16int8flag,
         CUBE_INNER_ERR_REPORT(
             opName_,
-            "the fuse dtype of outputBackprop, filter, y only support DT_FLOAT16/DT_INT8"
+            "the fuse dtype of outputBackprop, filter, y only supports DT_FLOAT16/DT_INT8"
             "but actually get outputBackpropDtype is [%s], filterDtype is [%s], yDtype is [%s]",
             ge::TypeUtils::DataTypeToSerialString(outputBackpropDtype).c_str(),
             ge::TypeUtils::DataTypeToSerialString(filterDtype).c_str(),
@@ -413,7 +413,7 @@ bool Conv3DBackpropInputV2TilingArch35::AnalyzeDtype() const
         !flags.hif8flag && !flags.fp8e4m3flag && !flags.bf16flag && !flags.f16flag && !flags.f32flag && !flags.int8flag,
         CUBE_INNER_ERR_REPORT(
             opName_,
-            "the dtype of outputBackprop, filter, y only support DT_HIFLOAT8/DT_FLOAT8_E4M3FN/DT_BF16/DT_FLOAT16/DT_FLOAT/DT_INT8,"
+            "the dtype of outputBackprop, filter, y only supports DT_HIFLOAT8/DT_FLOAT8_E4M3FN/DT_BF16/DT_FLOAT16/DT_FLOAT/DT_INT8,"
             "but actually get outputBackpropDtype is [%s], filterDtype is [%s], yDtype is [%s]",
             ge::TypeUtils::DataTypeToSerialString(outputBackpropDtype).c_str(),
             ge::TypeUtils::DataTypeToSerialString(filterDtype).c_str(),

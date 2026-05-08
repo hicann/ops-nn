@@ -1067,13 +1067,13 @@ bool Conv3DDWV2BasicBlockTilingArch35::CheckAttrs()
                       runInfo_.c_dtype == ge::DT_FLOAT;
     isDeterSupportDType_ = isFp16Flag || isBf16Flag;
     OP_LOGE_IF(!(isHiF8Flag_ || isFp16Flag || isFp32Flag || isBf16Flag), false, opName_,
-        "x/output_backprop dtype only support HiF8/Fp16/Fp32/Bf16, y dtype only support fp32 now");
+        "x/output_backprop dtype only supports HiF8/Fp16/Fp32/Bf16, y dtype only supports fp32 now");
 
     OP_LOGE_IF(isHiF8Flag_ && runInfo_.groups != 1, false, opName_,
         "hifloat8 dtype only supports groups = 1, currently is %d", runInfo_.groups);
 
     OP_LOGE_IF(runInfo_.groups < 1 || runInfo_.groups > UINT16_MAX, false, opName_,
-        "Groups[%d] is invalid, it shoud be in range: [1, %d]", runInfo_.groups, UINT16_MAX);
+        "Groups[%d] is invalid, it should be in range: [1, %d]", runInfo_.groups, UINT16_MAX);
     return true;
 }
 
@@ -1096,7 +1096,7 @@ bool Conv3DDWV2BasicBlockTilingArch35::CheckFormat()
     enableSplitW = (format_.fmapFormat == ge::FORMAT_NCDHW && format_.dedyFormat == ge::FORMAT_NCDHW) ||
                    (format_.fmapFormat == ge::FORMAT_NDHWC && format_.dedyFormat == ge::FORMAT_NDHWC);
     OP_LOGE_IF(isHiF8Flag_ && deterNotSupportFormat_, false, opName_,
-        "When datatype is HiF8, fmapFormat[%s], dedyFormat[%s] and filter_format[%s] is only support format NCDHW for now",
+        "When datatype is HiF8, fmapFormat[%s], dedyFormat[%s] and filter_format[%s] is only supports format NCDHW for now",
         ge::TypeUtils::FormatToSerialString(format_.fmapFormat).c_str(),
         ge::TypeUtils::FormatToSerialString(format_.dedyFormat).c_str(),
         ge::TypeUtils::FormatToSerialString(format_.filterFormat).c_str());

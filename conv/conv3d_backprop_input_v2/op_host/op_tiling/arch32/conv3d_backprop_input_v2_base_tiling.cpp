@@ -344,7 +344,7 @@ bool Conv3DBackpropInputV2Tiling::AnalyzeDtype() const
           (aDtype == ge::DT_FLOAT16 && bDtype == ge::DT_FLOAT16 && cDtype == ge::DT_FLOAT16)),
         CUBE_INNER_ERR_REPORT(
             opName_,
-            "x/weight/y only support DT_BF16/DT_FLOAT16/DT_FLOAT dtype, get actual aDtype[%s] bDtype[%s] cDtype[%s]",
+            "x/weight/y only supports DT_BF16/DT_FLOAT16/DT_FLOAT dtype, get actual aDtype[%s] bDtype[%s] cDtype[%s]",
             ge::TypeUtils::DataTypeToAscendString(aDtype).GetString(),
             ge::TypeUtils::DataTypeToAscendString(bDtype).GetString(),
             ge::TypeUtils::DataTypeToAscendString(cDtype).GetString()),

@@ -129,7 +129,7 @@ void Conv3DBackpropFilterV2StreamKTiling::AdjustSmallCaseBaseBlockForStreamK(uin
         }
 
         if (singleShapeM * blockTiling_.blockBaseN * L0C_DTYPE_BYTE > platformInfo_.l0c_size) {
-            OP_LOGD(opName_, "base block after adjust exceed loC size,stop adjust block baseM");
+            OP_LOGD(opName_, "base block after adjust exceed L0C size,stop adjust block baseM");
             break;
         }
 
@@ -166,7 +166,7 @@ void Conv3DBackpropFilterV2StreamKTiling::AdjustSmallCaseBaseBlockForSingleCoreN
 
         uint64_t blockBaseK = GetBaseK(blockTiling_.blockBaseM, singleCoreN);
         if (singleCoreN * blockTiling_.blockBaseM * L0C_DTYPE_BYTE > platformInfo_.l0c_size) {
-            OP_LOGD(opName_, "base block after adjust exceed loC size, singleCoreN[%lu].", singleCoreN);
+            OP_LOGD(opName_, "base block after adjust exceed L0C size, singleCoreN[%lu].", singleCoreN);
             continue;
         }
 
@@ -319,7 +319,7 @@ void Conv3DBackpropFilterV2StreamKTiling::DoStreamKTiling()
         OP_LOGD(opName_, "The basic block streamk template does not process the tail block.");
     } else if (deterNotSupportFormat_) {
         blockTiling_.streamkType = NO_STREAMK_CALC;
-        OP_LOGD(opName_, "The basic block streamk template only process the format of NCDHW.");
+        OP_LOGD(opName_, "The basic block streamk template only processes the format of NCDHW.");
     } else {
         blockTiling_.coreStreamK = platformInfo_.core_num / streamkCnt;
 

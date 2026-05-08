@@ -49,7 +49,7 @@ bool ConvTbcBackwardChecker::CheckDtypeValidBf16Allowed(const aclTensor *inputTe
 bool ConvTbcBackwardChecker::CheckTbcFormat(const aclTensor *inputTensor, const string &tensorName) const {
     OP_CHECK(inputTensor->GetStorageFormat() == op::Format::FORMAT_ND ||
                  inputTensor->GetStorageFormat() == op::Format::FORMAT_NCL,
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "%s format only support ND or NCL, but got %s.", tensorName.c_str(),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "%s format only supports ND or NCL, but got %s.", tensorName.c_str(),
                      op::ToString(inputTensor->GetStorageFormat()).GetString()),
              return false);
     return true;
@@ -57,7 +57,7 @@ bool ConvTbcBackwardChecker::CheckTbcFormat(const aclTensor *inputTensor, const 
 
 bool ConvTbcBackwardChecker::CheckTbcBiasFormat(const aclTensor *inputTensor, const string &tensorName) const {
     OP_CHECK(inputTensor->GetStorageFormat() == op::Format::FORMAT_ND,
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "%s format only support ND, but got %s.", tensorName.c_str(),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "%s format only supports ND, but got %s.", tensorName.c_str(),
                      op::ToString(inputTensor->GetStorageFormat()).GetString()),
              return false);
     return true;

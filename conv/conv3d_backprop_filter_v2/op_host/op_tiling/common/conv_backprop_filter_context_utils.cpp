@@ -84,7 +84,7 @@ static bool GetNCDHWShape(const T &origin_shape, int64_t *ncdhw_shape, ge::Forma
         ncdhw_shape[idx++] = origin_shape[2];  // 2: W
         return true;
     } else {
-        OP_LOGE("Conv3DBackpropFilterV2", "this foramt %s is not supported.", ge::TypeUtils::FormatToSerialString(origin_format).c_str());
+        OP_LOGE("Conv3DBackpropFilterV2", "this format %s is not supported.", ge::TypeUtils::FormatToSerialString(origin_format).c_str());
         return false;
     }
 }
@@ -146,7 +146,7 @@ bool SetDilationsAttr(const gert::TilingContext *context, Conv3dBpFilterV2RunInf
     const auto attrs = context->GetAttrs();
     OP_CHECK_IF(attrs == nullptr, OP_LOGE(op_name, "failed to get attrs from context."), return false);
     const auto dilations = attrs->GetAttrPointer<gert::ContinuousVector>(DIALTIONS_INDEX);
-    OP_CHECK_IF(dilations == nullptr, OP_LOGE(op_name, "get dilations from context fail."), return false);
+    OP_CHECK_IF(dilations == nullptr, OP_LOGE(op_name, "failed to get dilations from context."), return false);
     OP_CHECK_IF(dilations->GetSize() != CONV_BACKPROP_SHAPE_DIM, 
                 OP_LOGE(op_name, "dilations length = %zu must be 5.", dilations->GetSize()), return false);
     const int64_t *dilations_data = static_cast<const int64_t *>(dilations->GetData());
@@ -232,7 +232,7 @@ bool SetGroupsAttrs(const gert::TilingContext *context, Conv3dBpFilterV2RunInfo 
     SetHf32Flag(op_name, attrs, runInfoV2);
 
     // 分组卷积在arch35的tiling阶段会计算扩维系数，此处跳过
-    OP_CHECK_IF(IsArchAfter35(context), OP_LOGD(op_name, "DAV_3510 do not need to calculate factor in utils."), return true);
+    OP_CHECK_IF(IsArchAfter35(context), OP_LOGD(op_name, "DAV_3510 does not need to calculate factor in utils."), return true);
 
     // groups attrs
     int32_t mag_factor = 1;
@@ -460,13 +460,13 @@ bool CheckGradOutputShape(const gert::TilingContext* context, Conv3dBpFilterV2Ru
         runInfoV2.stride_w + 1;
     OP_CHECK_IF(
         do_expect != runInfoV2.dout, OP_LOGE(op_name,
-            "out_backprop's D = %d is not equal with inferred D = %ld", runInfoV2.dout, do_expect), return false);
+            "out_backprop's D = %d is not equal to inferred D = %ld", runInfoV2.dout, do_expect), return false);
     OP_CHECK_IF(
         ho_expect != runInfoV2.ho, OP_LOGE(op_name,
-            "out_backprop's H = %d is not equal with inferred H = %ld", runInfoV2.ho, ho_expect), return false);
+            "out_backprop's H = %d is not equal to inferred H = %ld", runInfoV2.ho, ho_expect), return false);
     OP_CHECK_IF(
         wo_expect != runInfoV2.wo, OP_LOGE(op_name,
-            "out_backprop's W = %d is not equal with inferred W = %ld", runInfoV2.wo, wo_expect), return false);
+            "out_backprop's W = %d is not equal to inferred W = %ld", runInfoV2.wo, wo_expect), return false);
     return true;
 }
 

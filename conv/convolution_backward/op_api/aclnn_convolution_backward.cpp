@@ -1976,7 +1976,7 @@ static aclnnStatus CalculateConv3DBackwardDwByMmMode(ConvolutionBackwardInputTen
   if (status != ACLNN_SUCCESS) {
     return status;
   }
-  OP_LOGD("Enter backprop filter Calculate with matmul mode");
+  OP_LOGD("Enter backprop filter calculate with matmul mode");
   aclTensor *mmDwOutput = nullptr;
   status = GenConvMmDwOutputByMode(mmDwOutput, outputTensor, executor, conv2MmMode);
   if (status != ACLNN_SUCCESS) {
@@ -2395,7 +2395,7 @@ static aclnnStatus CalculateConv3DBackward(ConvolutionBackwardInputTensor &input
   if (!(Ops::NN::AclnnUtil::IsRegbase(curArch))) {
     useV2Flag = l0op::IsConv3DBackpropInputV2(conv3DBackpropPrarams);
     inputTransDataFlag = !((*params.outputMask)[1] && l0op::IsConv3DBackpropFilterV2(conv3DBackpropPrarams) && l0op::IsInputTransdataWhiteListCase(conv3DBackpropPrarams)); // dw、v2、白名单同时满足，输入x融合transdata;
-    OP_LOGD("Input trans data flag is %d", static_cast<int>(inputTransDataFlag));
+    OP_LOGD("Input transdata flag is %d", static_cast<int>(inputTransDataFlag));
   }
   auto promoteType = CalcPromoteType(inputTensor);
   CHECK_RET(InputPreProcess(inputTensor.gradOutput, "gradOutput", params, promoteType, executor) == ACLNN_SUCCESS,
@@ -2797,7 +2797,7 @@ static aclnnStatus CalculateConvolutionBackward(ConvolutionBackwardInputTensor &
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
   } else {
     OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-            "ConvolutionBackward only support input with dimensions 3, 4, or 5, Actually is %ld.", inputDim);
+            "aclnnConvolutionBackward only supports input with dimensions 3, 4, or 5, Actually is %ld.", inputDim);
     return ACLNN_ERR_PARAM_INVALID;
   }
   auto ret = OutputViewProcess(resultTensor, outputTensor, params.outputMask, executor);
@@ -2877,7 +2877,7 @@ static aclnnStatus CalculateConvolutionTbcBackward(ConvolutionBackwardInputTenso
     }
   } else {
     OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
-            "ConvolutionTbcBackward only support input with dimensions 3, Actually is %ld.", inputDim);
+            "ConvolutionTbcBackward only supports input with dimensions 3, Actually is %ld.", inputDim);
     return ACLNN_ERR_INNER_NULLPTR;
   }
   // recover NCL to TBC
@@ -3080,15 +3080,15 @@ static aclnnStatus CalculateConvolutionTbcBackwardBy3D(ConvolutionBackwardInputT
 
     auto gradInputResult = l0op::ViewCopy(resultTensor.gradInput, finalTensor.gradInput, executor);
     OP_CHECK(gradInputResult != nullptr,
-             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The tbc output viewprocess failed, gradInput with ViewCopy return nullptr."),
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The aclnnConvTbcBackward output viewprocess failed, gradInput with ViewCopy return nullptr."),
              return ACLNN_ERR_INNER_NULLPTR);
     auto gradWeightResult = l0op::ViewCopy(resultTensor.gradWeight, finalTensor.gradWeight, executor);
     OP_CHECK(gradWeightResult != nullptr,
-             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The tbc output viewprocess failed, gradWeight with ViewCopy return nullptr."),
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The aclnnConvTbcBackward output viewprocess failed, gradWeight with ViewCopy return nullptr."),
              return ACLNN_ERR_INNER_NULLPTR);
     auto gradBiasResult = l0op::ViewCopy(resultTensor.gradBias, finalTensor.gradBias, executor);
     OP_CHECK(gradBiasResult != nullptr,
-             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The tbc output viewprocess failed, gradBias with ViewCopy return nullptr."),
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The aclnnConvTbcBackward output viewprocess failed, gradBias with ViewCopy return nullptr."),
              return ACLNN_ERR_INNER_NULLPTR);
     return ACLNN_SUCCESS;
 }

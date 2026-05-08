@@ -541,7 +541,7 @@ static bool UpdateDtypeParams(const gert::TilingContext *context, Conv3dBpInputV
   }
   OP_CHECK_IF(
     !dtypeSupportFlag,
-    OP_LOGE(op_name, "out_backprop/fitler/y dtype only support %s now, get actual out_backprop dtype[%s] fitler dtype[%s] y dtype[%s].",
+    OP_LOGE(op_name, "out_backprop/filter/y dtype only supports %s now, get actual out_backprop dtype[%s] filter dtype[%s] y dtype[%s].",
             dtypeCheckLog.c_str(),
             ge::TypeUtils::DataTypeToSerialString(otherParams.a_dtype).c_str(),
             ge::TypeUtils::DataTypeToSerialString(otherParams.b_dtype).c_str(),
@@ -867,7 +867,7 @@ static bool CheckInputSizeAllZero(gert::TilingContext *context, bool &allzero) {
     auto tensor_data = input_size->GetData<int64_t>();
     allzero = CheckAllZero(tensor_data, input_size_dim_num);
   } else {
-    OP_LOGE(context, "input_size dtype only support int32 or int64");
+    OP_LOGE(context, "input_size dtype only supports int32 or int64");
     return false;
   }
   return true;
@@ -918,11 +918,11 @@ static bool CheckCalPads(const gert::TilingContext *context, const Conv3dBpInput
                       runInfoV2.pad_r - otherParams.filter_w_dilation) /
                       runInfoV2.stride_w + 1;
   std::string check_input_name = (op_type == optiling::OpTypeV2::kConv3DTransposeV2) ? "x" : "out_backprop";
-  OP_CHECK_IF(do_expect != otherParams.a_shape.d, OP_LOGE(context->GetNodeName(), "%s's D = %ld is not equal with inferred D = %ld",
+  OP_CHECK_IF(do_expect != otherParams.a_shape.d, OP_LOGE(context->GetNodeName(), "%s's D = %ld is not equal to inferred D = %ld",
               check_input_name.c_str(), otherParams.a_shape.d, do_expect), return false);
-  OP_CHECK_IF(ho_expect != otherParams.a_shape.h, OP_LOGE(context->GetNodeName(), "%s's H = %ld is not equal with inferred H = %ld",
+  OP_CHECK_IF(ho_expect != otherParams.a_shape.h, OP_LOGE(context->GetNodeName(), "%s's H = %ld is not equal to inferred H = %ld",
               check_input_name.c_str(), otherParams.a_shape.h, ho_expect), return false);
-  OP_CHECK_IF(wo_expect != otherParams.a_shape.w, OP_LOGE(context->GetNodeName(), "%s's W = %ld is not equal with inferred W = %ld",
+  OP_CHECK_IF(wo_expect != otherParams.a_shape.w, OP_LOGE(context->GetNodeName(), "%s's W = %ld is not equal to inferred W = %ld",
               check_input_name.c_str(), otherParams.a_shape.w, wo_expect), return false);
   return true;
 }
@@ -1178,8 +1178,8 @@ static bool CalModifyBackpropPadHW(gert::TilingContext *context, Conv3dBpInputV2
 }
 
 static bool CalModify(gert::TilingContext *context, Conv3dBpInputV2RunInfo &runInfoV2, OtherParams& otherParams) {
-  OP_CHECK_IF(!CalModifyBackpropPadD(context, runInfoV2, otherParams), OP_LOGE(context, "Cal backprop pad d invalid"), return false);
-  OP_CHECK_IF(!CalModifyBackpropPadHW(context, runInfoV2, otherParams), OP_LOGE(context, "Cal backprop pad h,w invalid"),return false);
+  OP_CHECK_IF(!CalModifyBackpropPadD(context, runInfoV2, otherParams), OP_LOGE(context, "Calculate backprop pad d invalid"), return false);
+  OP_CHECK_IF(!CalModifyBackpropPadHW(context, runInfoV2, otherParams), OP_LOGE(context, "Calculate backprop pad h,w invalid"),return false);
   return true;
 }
 
@@ -1479,7 +1479,7 @@ bool Conv3DBackpropInputParseFunc(gert::TilingContext *context, optiling::OpType
     OP_CHECK_IF(!CalPads(context, runInfoV2, opType, otherParams), OP_LOGE(op_name, "Calc pads failed."), return false);
     OP_CHECK_IF(!CalModify(context, runInfoV2, otherParams), OP_LOGE(op_name, "Modify pad failed."), return false);
     OP_CHECK_IF(!CalRealG(context, runInfoV2, otherParams), OP_LOGE(op_name, "Calc real_g failed."), return false);
-    OP_CHECK_IF(!CalScale(context, runInfoV2, otherParams), OP_LOGE(op_name, "Sacle size too big, not support."), return false);
+    OP_CHECK_IF(!CalScale(context, runInfoV2, otherParams), OP_LOGE(op_name, "Scale size too big, not support."), return false);
     return true;
 }
 
@@ -1560,10 +1560,10 @@ bool CheckShapeValidWithLog(const gert::TilingContext *context, const OtherParam
               OP_LOGE(op_name, "dout value [%ld] is invalid, support range [%d, %d]", otherParams.a_shape.d, kDimLow, kDimUp),
               return false);
   OP_CHECK_IF(!CheckRange(otherParams.a_shape.h, kDimLow, kDimUp),
-              OP_LOGE(op_name, "hout value [%ld] is invalid, support range [%d, %d]", otherParams.a_shape.h, kDimLow, kDimUp),
+              OP_LOGE(op_name, "hout value [%ld] is invalid, supports range [%d, %d]", otherParams.a_shape.h, kDimLow, kDimUp),
               return false);
   OP_CHECK_IF(!CheckRange(otherParams.a_shape.w, kDimLow, kDimUp),
-              OP_LOGE(op_name, "wout value [%ld] is invalid, support range [%d, %d]", otherParams.a_shape.w, kDimLow, kDimUp),
+              OP_LOGE(op_name, "wout value [%ld] is invalid, supports range [%d, %d]", otherParams.a_shape.w, kDimLow, kDimUp),
               return false);
   OP_CHECK_IF(!CheckLowerBound(otherParams.a_shape.c, kDimLow),
               OP_LOGE(op_name, "cout value [%ld] is invalid, should not be less than [%d]", otherParams.a_shape.c, kDimLow),
@@ -1875,14 +1875,14 @@ bool CheckTranspose(const char* opName, const gert::TilingContext* context) {
                 context->GetInputDesc(OUT_BACKPROP_INDEX)->GetDataType() != ge::DT_FLOAT16 &&
                 context->GetInputDesc(OUT_BACKPROP_INDEX)->GetDataType() != ge::DT_FLOAT)),
                 CUBE_INNER_ERR_REPORT(opName,
-                "when output_padding[%s] is not all zero, op can only support all input are bfloat16 or float16 or float32, get filter dtype[%s], output backprop dtype[%s]",
+                "when output_padding[%s] is not all zero, op only supports bfloat16, float16 and float32 for all inputs, get filter dtype[%s], output backprop dtype[%s]",
                 DebugString(outputPaddingValue).c_str(),
                 ge::TypeUtils::DataTypeToSerialString(context->GetInputDesc(FILTER_INDEX)->GetDataType()).c_str(),
                 ge::TypeUtils::DataTypeToSerialString(context->GetInputDesc(OUT_BACKPROP_INDEX)->GetDataType()).c_str()),
                 return false);
         OP_CHECK_IF(!outputPaddingAllNonNegative && IsArchAfter35(context),
                 CUBE_INNER_ERR_REPORT(opName,
-                "output_padding[%s] contains negative values, op can only support all non-negative inputs.",
+                "output_padding[%s] contains negative values, op only supports all non-negative inputs.",
                 DebugString(outputPaddingValue).c_str()), return false);
     }
     OP_CHECK_IF(offsetX != nullptr && *offsetX != 0,

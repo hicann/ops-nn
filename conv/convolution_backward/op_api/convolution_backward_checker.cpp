@@ -512,7 +512,7 @@ bool ConvolutionBackwardChecker::CheckConvShape() {
     int64_t cOut = inputTensor_.gradOutput->GetViewShape().GetDim(channelOutIdx);
     if (outputTensor_.gradBias != nullptr) {
         OP_CHECK(outputTensor_.gradBias->GetViewShape().GetDimNum() == 1,
-                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The dimension of gradBias only support 1."), return false);
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The dimension of gradBias only supports 1."), return false);
         OP_CHECK(outputTensor_.gradBias->GetViewShape().GetDim(0) == cOut,
                  OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The gradBias shape should be equal [%ld].", cOut), return false);
     }
@@ -657,7 +657,7 @@ bool ConvolutionBackwardChecker::CheckConvShapePlus() {
                             (expectValue.woExpect == gradOutputWVal);
           }
           OP_CHECK(expectCheck, OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-              "gradOutput's shape%s is not equal with inferred shape[%ld,%ld,%ld,%ld,%ld]",
+              "gradOutput's shape%s is not equal to inferred shape[%ld,%ld,%ld,%ld,%ld]",
               op::ToString(gradOutShape).GetString(), gradOutShape.GetDim(0), gradOutputCout,
               expectValue.doExpect, expectValue.hoExpect, expectValue.woExpect), return false);
     }
@@ -746,7 +746,7 @@ aclnnStatus ConvolutionBackwardChecker::CheckParams() {
     if (!params_.transposed && outputTensor_.gradBias != nullptr) {
       if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         OP_CHECK(outputTensor_.gradBias->GetStorageFormat() == op::Format::FORMAT_ND,
-          OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "gradBias format only support ND, but get [%s].",
+          OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "gradBias format only supports ND, but get [%s].",
             op::ToString(outputTensor_.gradBias->GetStorageFormat()).GetString()), return ACLNN_ERR_PARAM_INVALID);
       }
     }
@@ -822,7 +822,7 @@ bool ConvolutionBackwardChecker::CheckShape() {
     int64_t dimInput = inputShape.GetDim(i) + (*params_.padding)[index] * 2 - filterDimDilation; // 2: pad two dim
     OP_CHECK(dimInput >= 0,
       OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-      "At dimendion %ld, (in_dim(%ld) + pad_dim(%ld) * 2) should >= ((weight_shape(%ld) - 1) * dilation(%ld) + 1)",
+      "At dimension %ld, (in_dim(%ld) + pad_dim(%ld) * 2) should >= ((weight_shape(%ld) - 1) * dilation(%ld) + 1)",
       i, inputShape.GetDim(i), (*params_.padding)[index], weightShape[i], (*params_.dilation)[index]),
       return false);
   }
@@ -833,7 +833,7 @@ bool ConvolutionBackwardChecker::CheckShapeTransposed() {
   int64_t inputC = inputTensor_.input->GetViewShape().GetDim(1);
   int64_t weightCo = inputTensor_.weight->GetViewShape().GetDim(0);
   OP_CHECK(weightCo > 0,
-           OP_LOGE(ACLNN_ERR_PARAM_INVALID, "weight Cout should > 0."),
+           OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Weight Cout should be greater than 0."),
            return false);
   OP_CHECK(weightCo == inputC,
            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "weight Cout should be %ld, but get %ld", inputC, weightCo),
@@ -887,7 +887,7 @@ bool ConvolutionBackwardChecker::CheckEmptyTensor() {
 
       OP_CHECK(inputShape[0] == 0 || inputShape[1] == 0,
               OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                     "When the input tensors contain an empty tensor, aclnnConvolutionBackward only support zero batch or zero channel with input, but got input shape is %s",
+                     "When the input tensors contain an empty tensor, aclnnConvolutionBackward only supports zero batch or zero channel with input, but got input shape is %s",
                       op::ToString(inputShape).GetString()),
               return false);
     }

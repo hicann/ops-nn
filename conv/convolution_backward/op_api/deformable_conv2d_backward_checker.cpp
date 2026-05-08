@@ -75,10 +75,10 @@ bool DeformableConv2dBackwardChecker::CheckDtypeValid()
 bool DeformableConv2dBackwardChecker::CheckFormat()
 {
     OP_CHECK(inputTensor_.gradOutput->GetStorageFormat() == Format::FORMAT_NCHW,
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "gradOutput Format only support NCHW, but got [%s].",
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "gradOutput Format only supports NCHW, but got [%s].",
              op::ToString(inputTensor_.gradOutput->GetStorageFormat()).GetString()), return false);
     OP_CHECK(inputTensor_.input->GetStorageFormat() == Format::FORMAT_NCHW,
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "input Format only support NCHW, but got [%s].",
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "input Format only supports NCHW, but got [%s].",
              op::ToString(inputTensor_.input->GetStorageFormat()).GetString()), return false);
    
     OP_CHECK(inputTensor_.weight->GetStorageFormat() == inputTensor_.input->GetStorageFormat(),
@@ -101,7 +101,7 @@ bool DeformableConv2dBackwardChecker::CheckFormat()
     
     if (outputTensor_.gradBias != nullptr) {
         OP_CHECK(outputTensor_.gradBias->GetStorageFormat() == Format::FORMAT_ND,
-                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "gradBias Format only support ND, but got [%s].",
+                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "gradBias Format only supports ND, but got [%s].",
                  op::ToString(outputTensor_.gradBias->GetStorageFormat()).GetString()), return false);
     }
     
