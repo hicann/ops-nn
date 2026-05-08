@@ -237,12 +237,12 @@ bool Conv2DPostCubeToExtendConv2DFusionPass::CheckConvPostCubeDtype(const GNodeP
 {
     TensorDesc postCubeInDesc;
     FUSION_PASS_CHECK(postCubeNode->GetInputDesc(0, postCubeInDesc) != GRAPH_SUCCESS,
-            OP_LOGE(convDescInfo.nodeNameStr, "Get fxipipe in tensor desc failed."), return false);
+            OP_LOGE(convDescInfo.nodeNameStr, "Get fixpipe in tensor desc failed."), return false);
     DataType postCubeInDtype = postCubeInDesc.GetDataType();
 
     TensorDesc postCubeOutDesc;
     FUSION_PASS_CHECK(postCubeNode->GetOutputDesc(OUTPUT_INDEX, postCubeOutDesc) != GRAPH_SUCCESS,
-            OP_LOGE(convDescInfo.nodeNameStr, "Get fxipipe out tensor desc failed."), return false);
+            OP_LOGE(convDescInfo.nodeNameStr, "Get fixpipe out tensor desc failed."), return false);
     DataType postCubeOutDtype = postCubeOutDesc.GetDataType();
 
     std::vector<DataType> checkDtypes = {convDescInfo.fmapDtype, convDescInfo.filterDtype,
@@ -295,7 +295,7 @@ bool Conv2DPostCubeToExtendConv2DFusionPass::CheckSupportPostCubeCase(const GNod
         TensorDesc quantScale0Desc;
         FUSION_PASS_CHECK(
             postCubeNode->GetInputDesc(POST_CUBE_INPUT_QUANT_SCALE_0_INDEX, quantScale0Desc) != GRAPH_SUCCESS,
-            OP_LOGE(convDescInfo.nodeNameStr, "Get fxipipe quant_scale_0 tensor desc failed."), return false);
+            OP_LOGE(convDescInfo.nodeNameStr, "Get fixpipe quant_scale_0 tensor desc failed."), return false);
 
         // check PostCube unit input format: quant_scale_0
         Format quantScale0Format = quantScale0Desc.GetFormat();

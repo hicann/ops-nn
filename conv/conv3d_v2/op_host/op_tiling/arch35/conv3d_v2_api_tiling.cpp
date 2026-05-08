@@ -535,7 +535,7 @@ bool Conv3dTiling::CheckDataCopyLimits()
         uint64_t loadAL1SrcNdMatixStride = shapeInfo.orgHi * shapeInfo.orgWi * shapeInfo.orgCi * attrInfo.dilationD;
         if (loadAL1SrcNdMatixStride > MAX_40_BIT_NUM) {
             OP_LOGE(nodeType,
-                "Fmap shape not satisfy DataCopy's limits: cin(%ld)*hin(%ld)*win(%ld)*dilationD(%d)=%lu, must <= %lu",
+                "Fmap shape does not satisfy DataCopy's limits: cin(%ld)*hin(%ld)*win(%ld)*dilationD(%d)=%lu, must <= %lu",
                 shapeInfo.orgCi, shapeInfo.orgHi, shapeInfo.orgWi,
                 attrInfo.dilationD,
                 loadAL1SrcNdMatixStride, MAX_40_BIT_NUM);
@@ -553,7 +553,7 @@ bool Conv3dTiling::CheckFixpipeLimits()
         uint64_t fixpipeLoop2DstStride = static_cast<uint64_t>(shapeInfo.orgHo) * shapeInfo.orgWo * tmpOrgDo;
         if (fixpipeLoop2DstStride > fixpipeLoop2DstStrideLimit) {
             OP_LOGE(nodeType,
-                "Output shape not satisfy Fixpipe's limits: dout(%ld)*hout(%ld)*wout(%ld)=%lu, must <= %lu",
+                "Output shape does not satisfy Fixpipe's limits: dout(%ld)*hout(%ld)*wout(%ld)=%lu, must <= %lu",
                 tmpOrgDo, shapeInfo.orgHo, shapeInfo.orgWo,
                 fixpipeLoop2DstStride, fixpipeLoop2DstStrideLimit);
             return false;
@@ -563,7 +563,7 @@ bool Conv3dTiling::CheckFixpipeLimits()
         uint64_t fixpipeLoop3DstStride = shapeInfo.orgCo * shapeInfo.orgWo;
         if (fixpipeLoop3DstStride > MAX_32_BIT_NUM) {
             OP_LOGE(nodeType,
-                "Output shape not satisfy Fixpipe's limits: cout(%ld)*wout(%ld)=%lu, must <= %lu",
+                "Output shape does not satisfy Fixpipe's limits: cout(%ld)*wout(%ld)=%lu, must <= %lu",
                 shapeInfo.orgCo, shapeInfo.orgWo,
                 fixpipeLoop3DstStride, MAX_32_BIT_NUM);
             return false;

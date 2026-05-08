@@ -2449,7 +2449,7 @@ static void UpdateInputDtype(
         }
         if ((upperDtype == op::DataType::DT_HIFLOAT8 || upperDtype == op::DataType::DT_FLOAT8_E4M3FN) &&
             (!transposed) && op::IsSupportND()) {
-            OP_LOGD("Bias dtype must be fp32 in hif8 or fp8_e4m3fn scene for conv forward.");
+            OP_LOGD("Bias dtype must be fp32 in hifloat8 or float8_e4m3fn scene for conv forward.");
             opInfo.biasDtype = op::DataType::DT_FLOAT;
         }
     }
@@ -5363,7 +5363,7 @@ aclnnStatus aclnnConvTbcGetWorkspaceSize(
             return ret;
         }
     } else if ((self->IsEmpty() || weight->IsEmpty()) && !output->IsEmpty()) {
-        OP_LOGD("Input is zero tensor, and output is non-zero tenosr.");
+        OP_LOGD("Input is zero tensor, and output is non-zero tensor.");
         auto biasContiguous = l0op::Contiguous(bias, uniqueExecutor.get());
         op::FVector<int64_t, op::MAX_DIM_NUM> broadcastDims = op::ToShapeVector(output->GetViewShape());
         auto shapes = (uniqueExecutor.get())->AllocIntArray(broadcastDims.data(), output->GetViewShape().GetDimNum());

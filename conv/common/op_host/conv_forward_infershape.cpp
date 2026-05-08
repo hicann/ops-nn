@@ -1109,7 +1109,6 @@ static void GetConvOutShapeRangeNeedInfer(size_t dimIdx, ConvOpInfo& opInfo,
     }
 
     if (stride <= 0) {
-        OP_LOGE("GetConvOutShapeRangeNeedInfer", "diviser stride must > 0.");
         return;
     }
 

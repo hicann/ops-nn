@@ -220,7 +220,7 @@ bool ConvTilingBase::CheckLoad3DLimits()
     }
     if (static_cast<uint64_t>(shapeInfo.orgkH) > LOAD3D_MAX_FILTER_H_W ||
         static_cast<uint64_t>(shapeInfo.orgkW) > LOAD3D_MAX_FILTER_H_W) {
-        OP_LOGD(nodeType, "Weight shape not satisfy Load3D's limits: kh=%ld, kw=%ld, which must <= %u.",
+        OP_LOGD(nodeType, "Weight shape does not satisfy Load3D's limits: kh=%ld, kw=%ld, which must <= %u.",
             shapeInfo.orgkH, shapeInfo.orgkW, LOAD3D_MAX_FILTER_H_W);
         return false;
     }

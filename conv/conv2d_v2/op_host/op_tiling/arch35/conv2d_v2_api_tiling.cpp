@@ -934,7 +934,7 @@ bool Conv2dTiling::CheckAlgorithmLimit()
 {
     if (attrInfo.groups > 1 && isC04Flag) {
         // group conv2d currently not support c04 mode
-        OP_LOGE(nodeType, "not support C04 mode in group Conv.");
+        OP_LOGE(nodeType, "not support C04 mode in group conv.");
         return false;
     }
 
@@ -991,7 +991,7 @@ bool Conv2dTiling::CheckFixpipeLimits()
     uint64_t fixpipeLoop2DstStride = static_cast<uint64_t>(shapeInfo.orgHo) * shapeInfo.orgWo;
     if (descInfo.fMapType.format == ConvFormat::NCHW && fixpipeLoop2DstStride > fixpipeLoop2DstStrideLimit) {
         OP_LOGE(nodeType, 
-            "Output shape not satisfy Fixpipe's limits: hout(%ld)*wout(%ld)=%lu, which must <= %lu",
+            "Output shape does not satisfy Fixpipe's limits: hout(%ld)*wout(%ld)=%lu, which must <= %lu",
             shapeInfo.orgHo, shapeInfo.orgWo, fixpipeLoop2DstStride, fixpipeLoop2DstStrideLimit);
         return false;
     }
@@ -1002,7 +1002,7 @@ bool Conv2dTiling::CheckFixpipeLimits()
     if (descInfo.fMapType.format == ConvFormat::NHWC && outputOrder == static_cast<int8_t>(OutputOrder::HW) &&
         fixpipeLoop3DstStride > fixpipeLoop3DstStrideLimit) {
         OP_LOGE(nodeType,
-            "Output shape not satisfy Fixpipe's limits: wout(%lu)*cout(%lu)=%lu, which must <= %lu",
+            "Output shape does not satisfy Fixpipe's limits: wout(%lu)*cout(%lu)=%lu, which must <= %lu",
             shapeInfo.orgWo, shapeInfo.orgCo, fixpipeLoop3DstStride, fixpipeLoop3DstStrideLimit);
         return false;
     }

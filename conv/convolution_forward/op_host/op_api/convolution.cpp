@@ -524,7 +524,7 @@ static aclnnStatus Conv2dWithFlag(const aclTensor *input, const aclTensor *weigh
     }
     auto dilation4 = ConstructConv2DNewDilation(input, dilation, executor);
     if (dilation4->Size() != PAD_DIM_4) {
-        OP_LOGE(ACLNN_ERR_INNER, "L0 func construct conv2d new dialtion failed.");
+        OP_LOGE(ACLNN_ERR_INNER, "L0 func construct conv2d new dilation failed.");
         return ACLNN_ERR_INNER;
     }
     const char *empty_str = "";
@@ -699,7 +699,7 @@ static aclnnStatus ResetStorageShape(const aclTensor *input, aclTensor *&output)
 
   auto viewShape = output->GetViewShape();
   if (viewShape.GetDimNum() != conv3dDimNum) {
-    OP_LOGE(ACLNN_ERR_INNER, "L0 func get ouput view shapeDim != 5.");
+    OP_LOGE(ACLNN_ERR_INNER, "L0 func get output view shapeDim != 5.");
     return ACLNN_ERR_INNER;
   }
 
@@ -737,7 +737,7 @@ static aclnnStatus Conv3dv2WithFlag(const aclTensor *input, const aclTensor *wei
 
     aclIntArray *pad6 = ConstructConv3DNewPad(padding, executor);
     if (pad6->Size() != PAD_DIM_6) {
-        OP_LOGE(ACLNN_ERR_INNER, "L0 func construct conv3d newpad failed.");
+        OP_LOGE(ACLNN_ERR_INNER, "L0 func construct conv3d new pad failed.");
         return ACLNN_ERR_INNER;
     }
 
@@ -1086,7 +1086,7 @@ static bool CheckN2HTransposeNativeAttrAvailable(const aclTensor *input, const a
         return false;
     }
     if (cout < 1 || cout > C_TRANSPOSE_N2H_RULE_MAX || cin < 1 || cin > C_TRANSPOSE_N2H_RULE_MAX) {
-        OP_LOGD("[N2H] the valid range for Cout is [1, 128], and for Cin is [1, 128], but cout=%lld, cin=%lld.",
+        OP_LOGD("[N2H] the valid range for cout is [1, 128], and for cin is [1, 128], but cout=%lld, cin=%lld.",
                 cout, cin);
         return false;
     }

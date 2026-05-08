@@ -252,7 +252,7 @@ ConvGroupType Conv3dBaseTilingV2::GetGroupsInfo()
         OP_LOGD(context_->GetNodeName(), "%s AscendC: group type: Opt Group.", paramInfo_.nodeType.c_str());
         return ConvGroupType::OPT_GROUP_CONV;
     } else {
-        OP_LOGD(context_->GetNodeName(), "%s AscendC: group type: Ori Group.", paramInfo_.nodeType.c_str());
+        OP_LOGD(context_->GetNodeName(), "%s AscendC: group type: original Group.", paramInfo_.nodeType.c_str());
         return ConvGroupType::ORI_GROUP_CONV;
     }
 }

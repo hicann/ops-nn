@@ -141,7 +141,7 @@ GraphUniqPtr Conv3DDequantToQuantConv3DFusionPass::Replacement(const GNode &conv
 
     TensorDesc postCubeOutDesc;
     FUSION_PASS_CHECK(postCubeNode->GetOutputDesc(OUTPUT_INDEX, postCubeOutDesc) != GRAPH_SUCCESS,
-        OP_LOGE(convDescInfo.nodeNameStr, "Get fxipipe out tensor desc failed."), return nullptr);
+        OP_LOGE(convDescInfo.nodeNameStr, "Get fixpipe out tensor desc failed."), return nullptr);
     auto outDtype = postCubeOutDesc.GetDataType();
 
     auto [fmap, filter] = replacement_graph_builder.CreateInputs<REQUIRED_INPUT_NUMS>();

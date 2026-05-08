@@ -98,7 +98,7 @@ static aclnnStatus ExtendConv2dL0Inner(const aclTensor *input, const aclTensor *
     dilation4 = executor->AllocIntArray(newDilaition.data(), QUANT_CONV2D_DIM);
     pad4 = ConstructQuantConvNewPad(padding, executor);
     if (pad4->Size() != QUANT_CONV2D_PAD_DIM_4) {
-        OP_LOGE(ACLNN_ERR_INNER, "L0 func construct quant conv2d newpad failed.");
+        OP_LOGE(ACLNN_ERR_INNER, "L0 func construct quant conv2d new pad failed.");
         return ACLNN_ERR_INNER;
     }
     ge::AscendString originalFormat = op::ToString(input->GetOriginalFormat());
@@ -152,7 +152,7 @@ static aclnnStatus QuantConv3dL0Inner(const aclTensor *input, const aclTensor *w
     dilation5 = executor->AllocIntArray(newDilaition.data(), QUANT_CONV3D_DIM);
     pad6 = ConstructQuantConvNewPad(padding, executor);
     if (pad6->Size() != QUANT_CONV3D_PAD_DIM_6) {
-        OP_LOGE(ACLNN_ERR_INNER, "L0 func construct quant conv3d newpad failed.");
+        OP_LOGE(ACLNN_ERR_INNER, "L0 func construct quant conv3d new pad failed.");
         return ACLNN_ERR_INNER;
     }
     ge::AscendString originalFormat = op::ToString(input->GetOriginalFormat());

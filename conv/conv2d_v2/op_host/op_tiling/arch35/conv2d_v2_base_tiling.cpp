@@ -138,7 +138,7 @@ void Conv2dBaseTiling::GetGroupsInfo()
         OP_LOGD(context_->GetNodeName(), "%s AscendC: group type: Opt Group.", paramInfo_.nodeType.c_str());
     } else {
         flagInfo_.convGroupType = ConvGroupType::ORI_GROUP_CONV;
-        OP_LOGD(context_->GetNodeName(), "%s AscendC: group type: Ori Group.", paramInfo_.nodeType.c_str());
+        OP_LOGD(context_->GetNodeName(), "%s AscendC: group type: original Group.", paramInfo_.nodeType.c_str());
     }
 }
 

@@ -22,7 +22,7 @@ ge::graphStatus Conv2dBaseTiling::CheckLoad3DLimits()
     // LOAD3D limits
     if (attrInfo_.strideH > LOAD3D_MAX_STRIDE_H_W || attrInfo_.strideW > LOAD3D_MAX_STRIDE_H_W) {
         OP_LOGD(context_->GetNodeName(),
-                "%s AscendC: Attrs not satisfy Load3D's limits: strideH=%u, strideW=%u, which must <= %u.",
+                "%s AscendC: Attrs does not satisfy Load3D's limits: strideH=%u, strideW=%u, which must <= %u.",
                 paramInfo_.nodeType.c_str(), attrInfo_.strideH, attrInfo_.strideW, LOAD3D_MAX_STRIDE_H_W);
         return ge::GRAPH_FAILED;
     }
@@ -30,7 +30,7 @@ ge::graphStatus Conv2dBaseTiling::CheckLoad3DLimits()
     if (attrInfo_.padTop > LOAD3D_MAX_PAD || attrInfo_.padBottom > LOAD3D_MAX_PAD ||
         attrInfo_.padLeft > LOAD3D_MAX_PAD || attrInfo_.padRight > LOAD3D_MAX_PAD) {
         OP_LOGD(context_->GetNodeName(),
-                "%s AscendC: Attrs not satisfy Load3D's limit: pads=[%u, %u, %u, %u], each dim must <= %u.",
+                "%s AscendC: Attrs does not satisfy Load3D's limit: pads=[%u, %u, %u, %u], each dim must <= %u.",
                 paramInfo_.nodeType.c_str(), attrInfo_.padTop, attrInfo_.padBottom, attrInfo_.padLeft,
                 attrInfo_.padRight, LOAD3D_MAX_PAD);
         return ge::GRAPH_FAILED;
@@ -38,14 +38,14 @@ ge::graphStatus Conv2dBaseTiling::CheckLoad3DLimits()
 
     if (attrInfo_.dilationH > LOAD3D_MAX_DILATION_H_W || attrInfo_.dilationW > LOAD3D_MAX_DILATION_H_W) {
         OP_LOGD(context_->GetNodeName(),
-                "%s AscendC: Attrs not satisfy Load3D's limits: dilationH=%u, dilationW=%u, which must <= %u.",
+                "%s AscendC: Attrs does not satisfy Load3D's limits: dilationH=%u, dilationW=%u, which must <= %u.",
                 paramInfo_.nodeType.c_str(), attrInfo_.dilationH, attrInfo_.dilationW, LOAD3D_MAX_DILATION_H_W);
         return ge::GRAPH_FAILED;
     }
 
     if (shapeInfo_.kh > LOAD3D_MAX_FILTER_H_W || shapeInfo_.kw > LOAD3D_MAX_FILTER_H_W) {
         OP_LOGD(context_->GetNodeName(),
-                "%s AscendC: Weight shape not satisfy Load3D's limits: kh=%lu, kw=%lu, which must <= %lu.",
+                "%s AscendC: Weight shape does not satisfy Load3D's limits: kh=%lu, kw=%lu, which must <= %lu.",
                 paramInfo_.nodeType.c_str(), shapeInfo_.kh, shapeInfo_.kw, LOAD3D_MAX_FILTER_H_W);
         return ge::GRAPH_FAILED;
     }
@@ -55,7 +55,7 @@ ge::graphStatus Conv2dBaseTiling::CheckLoad3DLimits()
     uint64_t load3dPosk = shapeInfo_.kh * shapeInfo_.kw * k0;
     if (load3dPosk >= load3dPoskLimit) {
         OP_LOGD(context_->GetNodeName(),
-            "%s AscendC: Weight shape not satisfy Load3D's limits: kH(%lu)*kW(%lu)*k0(%u)=%lu, which must <= %lu.",
+            "%s AscendC: Weight shape does not satisfy Load3D's limits: kH(%lu)*kW(%lu)*k0(%u)=%lu, which must <= %lu.",
             paramInfo_.nodeType.c_str(), shapeInfo_.kh, shapeInfo_.kw, k0, load3dPosk, load3dPoskLimit);
         return ge::GRAPH_FAILED;
     }
