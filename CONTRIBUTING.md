@@ -51,6 +51,7 @@ PR上库要求：
 
 - 代码交付件：需提供算子Kernel实现、算子测试文件，开发过程参考[fast_kernel_launch_example](examples/fast_kernel_launch_example/README.md)。
 - 文档交付件：算子README文档为必选，其余文档可视情况提供。文档写作模板和规范参考[文档贡献指南](docs/CONTRIBUTING_DOCS.md)。
+- 精度要求：新贡献算子需满足精度标准，具体请参见[生态算子开源精度标准](https://gitcode.com/cann/opbase/blob/master/docs/zh/ops_precision_standard/experimental_standard.md)。
 - 合规检查：
   - 代码是否符合《[C++ 编程规范](https://gitcode.com/cann/community/blob/master/contributor/coding-standards/C++%20Coding%20standards.md)》
   - 代码是否编译通过
