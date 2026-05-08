@@ -2684,6 +2684,148 @@ static bool isConv2dTo3d(const ConvolutionBackwardInputTensor &inputTensor,
   return false;
 }
 
+// Swap D and H dimensions for a tensor (N, C, D, H, W) -> (N, C, H, D, W)
+static const aclTensor *SwapDHDimensions(const aclTensor *input, aclOpExecutor *executor)
+{
+  auto inputShape = input->GetViewShape();
+  int64_t nDim = inputShape.GetDim(NCDHW_N_DIM);
+  int64_t cDim = inputShape.GetDim(NCDHW_C_DIM);
+  int64_t dDim = inputShape.GetDim(NCDHW_D_DIM);
+  int64_t hDim = inputShape.GetDim(NCDHW_H_DIM);
+  int64_t wDim = inputShape.GetDim(NCDHW_W_DIM);
+  
+  // Create new shape with D and H swapped
+  op::Shape newShape = op::Shape({nDim, cDim, hDim, dDim, wDim});
+  
+  auto contiguousInput = l0op::Contiguous(input, executor);
+  CHECK_RET(contiguousInput != nullptr, nullptr);
+
+  std::vector<int64_t> shapeVec;
+  for (size_t i = 0; i < newShape.GetDimNum(); i++) {
+    shapeVec.push_back(newShape.GetDim(i));
+  }
+  
+  auto *shapeArray = executor->AllocIntArray(shapeVec.data(), newShape.GetDimNum());
+  CHECK_RET(shapeArray != nullptr, nullptr);
+  
+  auto reshapedTensor = l0op::Reshape(contiguousInput, shapeArray, executor);
+  CHECK_RET(reshapedTensor != nullptr, nullptr);
+  
+  return reshapedTensor;
+}
+
+static const aclIntArray *SwapDHInArray3(const aclIntArray *arr, aclOpExecutor *executor)
+{
+  if (arr == nullptr || arr->Size() != 3) {
+    return arr;
+  }
+  int64_t elemD = (*arr)[0]; // depth element
+  int64_t elemH = (*arr)[1]; // height element
+  int64_t elemW = (*arr)[2]; // width element
+  int64_t newArray[] = {elemH, elemD, elemW}; // swap D and H
+  return executor->AllocIntArray(newArray, 3);
+}
+
+static const aclIntArray *SwapDHInPaddingArray6(const aclIntArray *arr, aclOpExecutor *executor)
+{
+  if (arr == nullptr || arr->Size() != 6) {
+    return arr;
+  }
+  int64_t padDHead = (*arr)[0];
+  int64_t padDTail = (*arr)[1];
+  int64_t padHTop = (*arr)[2];
+  int64_t padHBottom = (*arr)[3];
+  int64_t padWLeft = (*arr)[4];
+  int64_t padWRight = (*arr)[5];
+  int64_t newArray[] = {padHTop, padHBottom, padDHead, padDTail, padWLeft, padWRight}; // swap D and H
+  return executor->AllocIntArray(newArray, 6);
+}
+
+// Apply D-H swap on input tensors and parameters before calculation
+static aclnnStatus ApplySwapDHBeforeCalculation(ConvolutionBackwardInputTensor &inputTensor,
+                                                 ConvolutionBackwardParams &params,
+                                                 aclOpExecutor *executor)
+{
+  OP_LOGD("Conv3DBackward: Swapping D and H dimensions before calculation");
+  
+  // Swap D and H for input tensors
+  inputTensor.input = SwapDHDimensions(inputTensor.input, executor);
+  OP_CHECK(inputTensor.input != nullptr, 
+           OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Swap D and H for input failed."), 
+           return ACLNN_ERR_INNER_NULLPTR);
+  
+  inputTensor.gradOutput = SwapDHDimensions(inputTensor.gradOutput, executor);
+  OP_CHECK(inputTensor.gradOutput != nullptr, 
+           OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Swap D and H for gradOutput failed."), 
+           return ACLNN_ERR_INNER_NULLPTR);
+  
+  inputTensor.weight = SwapDHDimensions(inputTensor.weight, executor);
+  OP_CHECK(inputTensor.weight != nullptr, 
+           OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Swap D and H for weight failed."), 
+           return ACLNN_ERR_INNER_NULLPTR);
+  
+  // Adjust stride, padding, dilation parameters by swapping D and H indices
+  if (params.stride->Size() == 3) {
+    params.stride = SwapDHInArray3(params.stride, executor);
+    OP_CHECK(params.stride != nullptr, 
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AllocIntArray for stride failed."), 
+             return ACLNN_ERR_INNER_NULLPTR);
+  }
+  
+  if (params.dilation->Size() == 3) {
+    params.dilation = SwapDHInArray3(params.dilation, executor);
+    OP_CHECK(params.dilation != nullptr, 
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AllocIntArray for dilation failed."), 
+             return ACLNN_ERR_INNER_NULLPTR);
+  }
+  
+  if (params.padding->Size() == 6) {
+    params.padding = SwapDHInPaddingArray6(params.padding, executor);
+    OP_CHECK(params.padding != nullptr, 
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AllocIntArray for padding failed."), 
+             return ACLNN_ERR_INNER_NULLPTR);
+  } else if (params.padding->Size() == 3) {
+    params.padding = SwapDHInArray3(params.padding, executor);
+    OP_CHECK(params.padding != nullptr, 
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AllocIntArray for padding failed."), 
+             return ACLNN_ERR_INNER_NULLPTR);
+  }
+  
+  if (params.outputPadding->Size() == 3) {
+    params.outputPadding = SwapDHInArray3(params.outputPadding, executor);
+    OP_CHECK(params.outputPadding != nullptr, 
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AllocIntArray for outputPadding failed."), 
+             return ACLNN_ERR_INNER_NULLPTR);
+  }
+  
+  return ACLNN_SUCCESS;
+}
+
+// Restore D and H dimensions on output tensors after calculation
+// Returns ACLNN_SUCCESS on success, error code on failure
+static aclnnStatus RestoreDHAfterCalculation(ConvolutionBackwardResult &outputTensor,
+                                              const ConvolutionBackwardParams &params,
+                                              aclOpExecutor *executor)
+{
+  OP_LOGD("Conv3DBackward: Restoring D and H dimensions after calculation");
+  
+  if ((*params.outputMask)[0] && outputTensor.gradInput != nullptr) {
+    outputTensor.gradInput = SwapDHDimensions(outputTensor.gradInput, executor);
+    OP_CHECK(outputTensor.gradInput != nullptr, 
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Restore D and H for gradInput failed."), 
+             return ACLNN_ERR_INNER_NULLPTR);
+  }
+  
+  if ((*params.outputMask)[1] && outputTensor.gradWeight != nullptr) {
+    outputTensor.gradWeight = SwapDHDimensions(outputTensor.gradWeight, executor);
+    OP_CHECK(outputTensor.gradWeight != nullptr, 
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Restore D and H for gradWeight failed."), 
+             return ACLNN_ERR_INNER_NULLPTR);
+  }
+  
+  return ACLNN_SUCCESS;
+}
+
 static aclnnStatus CalculateConv3DBp(ConvolutionBackwardInputTensor &inputTensor,
                                      ConvolutionBackwardResult &outputTensor,
                                      ConvolutionBackwardParams &params,
@@ -2698,12 +2840,28 @@ static aclnnStatus CalculateConv3DBp(ConvolutionBackwardInputTensor &inputTensor
   if (!(Ops::NN::AclnnUtil::IsRegbase(curArch))) {
     CHECK_RET(CheckSupportedForConv3dBackpropFilter(inputTensor, outputTensor, params), ACLNN_ERR_PARAM_INVALID);
   }
+  
+  // Check if need to swap D and H dimensions for Conv3D backward
+  bool needSwapDH = l0op::NeedSwapDHForConv3DBackward(inputTensor, params);
+  
+  // Apply D-H swap before calculation if needed
+  if (needSwapDH) {
+    ret = ApplySwapDHBeforeCalculation(inputTensor, params, executor);
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+  }
+  
   if (!params.transposed) {
     OP_LOGD("Entering CalculateConv3DBackward");
     ret = CalculateConv3DBackward(inputTensor, outputTensor, params, executor);
   } else {
     OP_LOGD("Entering CalculateConv3DTransposeBackward");
     ret = CalculateConv3DTransposeBackward(inputTensor, outputTensor, params, executor);
+  }
+  
+  // Restore original D and H dimensions after calculation if we swapped them
+  if (needSwapDH) {
+    aclnnStatus restoreRet = RestoreDHAfterCalculation(outputTensor, params, executor);
+    CHECK_RET(restoreRet == ACLNN_SUCCESS, restoreRet);
   }
 
   return ret;

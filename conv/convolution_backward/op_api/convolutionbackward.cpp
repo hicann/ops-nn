@@ -135,6 +135,53 @@ static bool IsConv2DV2WhiteListCase(const vector<int64_t> &caseInfo, const vecto
   return false;
 }
 
+// Construct case info for D-H swap white list from ConvolutionBackwardInputTensor and ConvolutionBackwardParams
+static void ConstructDHSwapCaseInfo(const ConvolutionBackwardInputTensor &inputTensor,
+                                    const ConvolutionBackwardParams &params,
+                                    vector<int64_t> &caseInfo)
+{
+  caseInfo.reserve(CONV3D_BACKPROP_WHITE_LIST_CASE_SIZE);
+  auto inputDataType = inputTensor.input->GetDataType();
+  caseInfo.push_back(static_cast<int64_t>(inputDataType));
+  AddTensorShapeToCaseInfo(*(inputTensor.input), caseInfo);
+  AddTensorShapeToCaseInfo(*(inputTensor.weight), caseInfo);
+  AddTensorShapeToCaseInfo(*(inputTensor.gradOutput), caseInfo);
+  AddAclIntArrayToCaseInfo(*(params.stride), caseInfo);
+  AddAclIntArrayToCaseInfo(*(params.padding), caseInfo);
+  AddAclIntArrayToCaseInfo(*(params.dilation), caseInfo);
+  caseInfo.push_back(params.groups);
+}
+
+// Check if need to swap D and H dimensions for Conv3D backward
+bool NeedSwapDHForConv3DBackward(const ConvolutionBackwardInputTensor &inputTensor,
+                                 const ConvolutionBackwardParams &params)
+{
+  NpuArch npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
+  if (npuArch != NpuArch::DAV_2201) {
+    return false;
+  }
+  
+  // Check format - all tensors must be NCDHW
+  if (inputTensor.input->GetOriginalFormat() != op::Format::FORMAT_NCDHW) {
+    OP_LOGD("Conv3DBackward: NeedSwapDH skip: input format is not NCDHW");
+    return false;
+  }
+  if (inputTensor.weight->GetOriginalFormat() != op::Format::FORMAT_NCDHW) {
+    OP_LOGD("Conv3DBackward: NeedSwapDH skip: weight format is not NCDHW");
+    return false;
+  }
+  if (inputTensor.gradOutput->GetOriginalFormat() != op::Format::FORMAT_NCDHW) {
+    OP_LOGD("Conv3DBackward: NeedSwapDH skip: gradOutput format is not NCDHW");
+    return false;
+  }
+  
+  vector<int64_t> caseInfo;
+  ConstructDHSwapCaseInfo(inputTensor, params, caseInfo);
+  
+  // Use IsConv2DV2WhiteListCase for exact match
+  return IsConv2DV2WhiteListCase(caseInfo, CONV3D_BACKPROP_DH_SWAP_WHITE_LIST);
+}
+
 static bool CheckV2Stride(const ConvBackpropParams &params)
 {
   const aclIntArray &stride = *(params.stride);

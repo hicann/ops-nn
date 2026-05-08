@@ -44,6 +44,10 @@ struct ConvolutionBackwardParams {
   const int8_t cubeMathType;
 };
 
+// Check if need to swap D and H dimensions for Conv3D backward
+bool NeedSwapDHForConv3DBackward(const ConvolutionBackwardInputTensor &inputTensor,
+                                 const ConvolutionBackwardParams &params);
+
 // Conv2dBackpropInput
 // 5HD->FZ with Fp16
 const aclTensor *Conv2DBackpropInputFp162Fp16(const aclTensor *input, const aclTensor *weight,

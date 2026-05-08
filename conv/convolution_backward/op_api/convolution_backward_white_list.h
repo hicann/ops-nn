@@ -133,6 +133,14 @@ const std::vector<std::vector<int64_t>> CONV3D_BACKPROP_FILTER_V2_TRANSDATA_MERG
   {op::DataType::DT_BF16, 1, 8, 5, 32, 32, 8, 8, 1, 1, 1, 1, 8, 5, 32, 32, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1},
 };
 
+// D-H swap white list for Conv3D backward
+// Format: [dtype, N_input, C_in, D_input, H_input, W_input, C_out, C_in/groups, Kd, Kh, Kw,
+//          N_gradOutput, C_out, D_gradOutput, H_gradOutput, W_gradOutput, strideD, strideH, strideW,
+//          padD, padH, padW, dilationD, dilationH, dilationW, groups]
+const std::vector<std::vector<int64_t>> CONV3D_BACKPROP_DH_SWAP_WHITE_LIST = {
+  {op::DataType::DT_FLOAT, 1, 512, 4099, 1, 16, 512, 1, 4, 1, 1, 1, 512, 4096, 1, 16, 1, 1, 1, 0, 0, 0, 1, 1, 1, 512},
+};
+
 }  // namespace l0op
 
 #endif  // OP_API_CONVOLUTION_BACKWARD_WHITE_LIST_H_
