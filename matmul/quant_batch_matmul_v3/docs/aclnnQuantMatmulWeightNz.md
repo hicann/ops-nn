@@ -402,18 +402,15 @@ aclnnStatus aclnnQuantMatmulWeightNz(
       <td>传入的x1、x2、x2Scale或out是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="6">161002</td>
-      <td>x1、x2、bias、x2Scale、x2Offset或out的数据类型和数据格式不在支持的范围之内。</td>
+      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="5">161002</td>
+      <td>x1、x2、bias、x1Scale、x2Scale、x2Offset或out的数据类型和数据格式不在支持的范围之内。</td>
     </tr>
     <tr>
-        <td>x1、x2、bias、x2Scale、x2Offset或out的shape不满足校验条件。</td>
+      <td>x1、x2、bias、x1Scale、x2Scale、x2Offset或out的shape不满足校验条件。</td>
     </tr>
     <tr>
-        <td>x1、x2、bias、x2Scale、x2Offset或out是空tensor。</td>
-    </tr>
-    <tr>
-        <td>x1与x2的最后一维大小超过65535，x1的最后一维指transposeX1为true时的m或transposeX1为false时的k，x2的最后一维指transposeX2为true时的k或transposeX2为false时的n。</td>
+      <td>x1、x2、bias、x1Scale、x2Scale、x2Offset或out是空tensor。</td>
     </tr>
     <tr>
         <td>输入的yScale、x1Offset和yOffset不是nullptr并且不是空tensor。</td>
@@ -474,6 +471,8 @@ aclnnStatus aclnnQuantMatmulWeightNz(
 <details>
 <summary><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term></summary>
 
+  - x1的最后一维大小不能超过65535，x1的最后一维指transposeX1为true时的m或transposeX1为false时的k。
+  - x2的最后一维大小不能超过65535，x2的最后一维指transposeX2为true时的k或transposeX2为false时的n。
   - 支持调用本接口前，通过[aclnnTransMatmulWeight](https://gitcode.com/cann/ops-math/blob/master/conversion/trans_data/docs/aclnnTransMatmulWeight.md)对format为ND的x2处理得到AI处理器亲和数据排布格式。
 
   - 输入和输出支持以下数据类型组合：
@@ -499,6 +498,8 @@ aclnnStatus aclnnQuantMatmulWeightNz(
 <details>
 <summary><term>Atlas 推理系列产品</term></summary>
 
+  - x1的最后一维大小不能超过65535，x1的最后一维指transposeX1为true时的m或transposeX1为false时的k。
+  - x2的最后一维大小不能超过65535，x2的最后一维指transposeX2为true时的k或transposeX2为false时的n。
   - 支持调用本接口前，通过[aclnnTransMatmulWeight](https://gitcode.com/cann/ops-math/blob/master/conversion/trans_data/docs/aclnnTransMatmulWeight.md)对format为ND的x2处理得到AI处理器亲和数据排布格式。
 
   - 输入和输出支持以下数据类型组合：
