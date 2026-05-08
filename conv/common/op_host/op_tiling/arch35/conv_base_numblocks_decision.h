@@ -15,6 +15,8 @@
 #ifndef OPS_BUILT_IN_OP_TILING_RUNTIME_CONV_BASE_BLOCK_DIM_DECISION_H
 #define OPS_BUILT_IN_OP_TILING_RUNTIME_CONV_BASE_BLOCK_DIM_DECISION_H
 
+#include <cstdarg>
+#include "securec.h"
 #include "conv_template_utils.h"
 
 namespace optiling {

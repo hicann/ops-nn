@@ -196,11 +196,8 @@ bool Conv2dBaseTiling::UpdateOriPadFromPadMode()
     string padMode(padModePtr);
     auto iter = find(PADMODE_WHITELIST.begin(), PADMODE_WHITELIST.end(), padMode);
     if (iter == PADMODE_WHITELIST.end()) {
-        std::stringstream ss;
         string padModeSupport = "[VALID, SPECIFIC, SAME, SAME_UPPER, SAME_LOWER]";
-        ss << paramInfo_.nodeType.c_str() <<" AscendC: Only support pad_mode in " << padModeSupport.c_str();
-        ss << ", actually is: " << padMode.c_str();
-        OP_LOGE(context_->GetNodeName(), "%s", ss.str().c_str());
+        OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeType(), "pad_mode", padMode.c_str(), padModeSupport.c_str());
         return false;
     }
     GetOriPadFromPadMode(padMode);
@@ -215,8 +212,7 @@ ge::graphStatus Conv2dBaseTiling::CheckDataFormatLegal()
     OPS_CHECK_NULL_WITH_CONTEXT(context_, dataFormatPtr);
     string dataFormat(dataFormatPtr);
     if (dataFormat != "NCHW" && dataFormat != "NHWC") {
-        OP_LOGE(context_->GetNodeName(), "%s AscendC: unsupported dataFormat attr: %s",
-                paramInfo_.nodeType.c_str(), dataFormat.c_str());
+        OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeType(), "data_format", dataFormat.c_str(), "NCHW or NHWC");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -471,9 +467,8 @@ ge::graphStatus Conv2dBaseTiling::CheckExtendDtypeLegal()
         if (iter == EXTENDCONV2D_SUPPORTED_ATTR_DTYPE.end()) {
             std::string supportList =
                 "[default(-1), float(0), float16(1), int8(2), bfloat16(27), hifloat8(34), float8_e4m3fn(36)].";
-            OP_LOGE(context_->GetNodeName(),
-                "%s AscendC: unSupported %s: %ld, only support %s.",
-                paramInfo_.nodeType.c_str(), dtypeNames[i], extendDtype, supportList.c_str());
+            OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeType(), dtypeNames[i],
+                std::to_string(extendDtype), supportList.c_str());
             return ge::GRAPH_FAILED;
         }
     }

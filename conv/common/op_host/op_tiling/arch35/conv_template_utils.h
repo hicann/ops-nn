@@ -17,8 +17,6 @@
 
 #include <vector>
 #include <string>
-#include <cstdarg>
-#include "securec.h"
 #include "graph/operator_reg.h"
 #include <platform/soc_spec.h>
 

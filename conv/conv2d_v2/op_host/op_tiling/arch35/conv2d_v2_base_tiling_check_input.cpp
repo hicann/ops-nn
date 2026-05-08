@@ -69,15 +69,19 @@ ge::graphStatus Conv2dBaseTiling::GetDisContinuousFlag()
     std::vector<int64_t> expectStride = {viewShape[FORMAT_NCHW_C_INDEX], 1,
         viewShape[FORMAT_NCHW_W_INDEX] * viewShape[FORMAT_NCHW_N_INDEX] * viewShape[FORMAT_NCHW_C_INDEX],
         viewShape[FORMAT_NCHW_N_INDEX] * viewShape[FORMAT_NCHW_C_INDEX]};
+    std::vector<int64_t> realStride(CONV2D_DIM_SIZE_LIMIT, 0);
+    bool legalStride = true;
     for (size_t i = 0; i < CONV2D_DIM_SIZE_LIMIT; i++) {
-        if (viewStridePtr->GetStride(i) != expectStride[i]) {
-            OP_LOGE(context_->GetNodeName(),
-                    "%s AscendC: disContinuous Input not satisfy viewShape(HWNC) storageShape(NCHW)",
-                    paramInfo_.nodeType.c_str());
-            return ge::GRAPH_FAILED;
+        realStride[i] = viewStridePtr->GetStride(i);
+        if (realStride[i] != expectStride[i]) {
+            legalStride = false;
         }
     }
-
+    if (!legalStride) {
+        OP_LOGE_FOR_INVALID_STRIDE(context_->GetNodeType(), "x", VectorToString(realStride, IntToString<int64_t>, "[",
+            "]").c_str(), VectorToString(expectStride, IntToString<int64_t>, "[", "]").c_str());
+        return ge::GRAPH_FAILED;
+    }
     flagInfo_.disContinuousFlag = true;
     OP_LOGD(context_->GetNodeName(), "%s AscendC: disContinuous HWNC input", paramInfo_.nodeType.c_str());
     return ge::GRAPH_SUCCESS;
@@ -150,7 +154,6 @@ ge::graphStatus Conv2dBaseTiling::CheckFmapShape()
         return ge::GRAPH_FAILED;
     }
 
-
     return ge::GRAPH_SUCCESS;
 }
 
@@ -206,7 +209,6 @@ ge::graphStatus Conv2dBaseTiling::CheckWeightShape()
                 paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_W_IDX], 1, kWMaxSize).c_str());
         return ge::GRAPH_FAILED;
     }
-
 
     auto k0 = CUBE_MKN_MAP.GetMKN(dtypeMap.at(descInfo_.weightDtype), MKN_K_IDX);
     if (k0 == 0) {

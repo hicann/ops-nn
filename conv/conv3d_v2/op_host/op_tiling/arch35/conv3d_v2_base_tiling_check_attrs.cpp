@@ -203,11 +203,8 @@ ge::graphStatus Conv3dBaseTilingV2::GetOriPadFromPadMode()
     string padMode(padModePtr);
     auto iter = find(PADMODE_WHITELIST.begin(), PADMODE_WHITELIST.end(), padMode);
     if (iter == PADMODE_WHITELIST.end()) {
-        std::stringstream ss;
         string padModeSupport = "[VALID, SPECIFIC, SAME, SAME_UPPER, SAME_LOWER]";
-        ss << paramInfo_.nodeType.c_str() <<" AscendC: Only support pad_mode in " << padModeSupport.c_str();
-        ss << ", actually is: " << padMode.c_str();
-        OP_LOGE(context_->GetNodeName(), "%s", ss.str().c_str());
+        OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeType(), "pad_mode", padMode.c_str(), padModeSupport.c_str());
         return ge::GRAPH_FAILED;
     }
 
@@ -317,8 +314,7 @@ ge::graphStatus Conv3dBaseTilingV2::ParseQuantDataFormatLegal()
     OPS_CHECK_NULL_WITH_CONTEXT(context_, DataFormatPtr);
     string dataFormat(DataFormatPtr);
     if (dataFormat != "NCDHW") {
-        OP_LOGE(context_->GetNodeName(), "%s AscendC: Only support dataFormat(NCDHW), actually is %s",
-                paramInfo_.nodeType.c_str(), dataFormat.c_str());
+        OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeType(), "data_format", dataFormat.c_str(), "NCDHW");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;

@@ -16,6 +16,7 @@
 #include "log/log.h"
 #include <cmath>
 #include <set>
+#include <algorithm>
 
 namespace optiling {
 namespace conv_ops_tiling {
