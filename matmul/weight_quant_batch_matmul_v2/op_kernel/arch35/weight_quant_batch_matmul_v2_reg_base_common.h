@@ -937,6 +937,7 @@ __aicore__ inline void WeightQuantBatchMatmulV2RegBaseCommonKernel<
     // 处理一块 (kBub, nBub), 数据格式为 (nBub1, kBub1, kBub0, nBub0)
     // 每次处理 128 个数，按照 128 个数 (256B) 输出, 对于每个 256B, 间隔 1024B 存放, 避免 bank 冲突
 
+    uint16_t nbubAlign = CeilAlign(bubNLen, BLOCK_CUBE);
     uint16_t nbub1 = CeilDiv(bubNLen, BLOCK_CUBE);
     uint16_t mainGroupNum = bubKLen / tiling_->groupSize; // 一个 kBubSize 中 group 的个数
     uint16_t mainInnerNum; // 对于 kBubSize 的一个 group 中, 需要处理 innerNum 次 128 个数（对应 256B）, 目前只支持常数
@@ -979,8 +980,8 @@ __aicore__ inline void WeightQuantBatchMatmulV2RegBaseCommonKernel<
         uint32_t n1DstExtend =
             CeilAlign((CeilAlign(bubKLen, BLOCK_CUBE) * BLOCK_CUBE) * sizeof(xType), VECTOR_REG_WIDTH) / sizeof(xType) *
             bubpingpong_;
-        __local_mem__ xType* tailScaleBaseAddr = scaleBaseAddr1_ + mainGroupNum * bubNLen;
-        __local_mem__ xType* tailOffsetBaseAddr = offsetBaseAddr1_ + mainGroupNum * bubNLen;
+        __local_mem__ xType* tailScaleBaseAddr = scaleBaseAddr1_ + mainGroupNum * nbubAlign;
+        __local_mem__ xType* tailOffsetBaseAddr = offsetBaseAddr1_ + mainGroupNum * nbubAlign;
         __local_mem__ int8_t* tailWeightInUbBaseAddr = weightInUbBaseAddr_ + mainGroupSize * BLOCK_CUBE_INT4;
         __local_mem__ xType* tailWeightOutUbBaseAddr =
             weightOutUbAddr_ +
@@ -994,7 +995,7 @@ __aicore__ inline void WeightQuantBatchMatmulV2RegBaseCommonKernel<
             for (uint16_t n1Idx = 0; n1Idx < (uint16_t)nbub1; ++n1Idx) { // 对 nBub1 迭代
                 // 对一个 kBubSize 中 group 的个数迭代
                 for (uint16_t groupIdx = 0; groupIdx < (uint16_t)mainGroupNum; ++groupIdx) {
-                    MicroAPI::AddrReg aregScale = MicroAPI::CreateAddrReg<xType>(n1Idx, BLOCK_CUBE, groupIdx, bubNLen);
+                    MicroAPI::AddrReg aregScale = MicroAPI::CreateAddrReg<xType>(n1Idx, BLOCK_CUBE, groupIdx, nbubAlign);
                     // 每次处理 128 个数, scale broadcast 为 128 个数 (256B)
                     MicroAPI::DataCopy<xType, MicroAPI::LoadDist::DIST_BLK>(scale, scaleBaseAddr, aregScale);
 
@@ -1089,7 +1090,7 @@ __aicore__ inline void WeightQuantBatchMatmulV2RegBaseCommonKernel<
             for (uint16_t n1Idx = 0; n1Idx < (uint16_t)nbub1; ++n1Idx) { // 对 nBub1 迭代
                 // 对一个 kBubSize 中 group 的个数迭代
                 for (uint16_t groupIdx = 0; groupIdx < (uint16_t)mainGroupNum; ++groupIdx) {
-                    MicroAPI::AddrReg aregScale = MicroAPI::CreateAddrReg<xType>(n1Idx, BLOCK_CUBE, groupIdx, bubNLen);
+                    MicroAPI::AddrReg aregScale = MicroAPI::CreateAddrReg<xType>(n1Idx, BLOCK_CUBE, groupIdx, nbubAlign);
                     // 每次处理 128 个数, scale broadcast 为 128 个数 (256B)
                     MicroAPI::DataCopy<xType, MicroAPI::LoadDist::DIST_BLK>(scale, scaleBaseAddr, aregScale);
                     if constexpr (hasAntiQuantOffset) {
