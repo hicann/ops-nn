@@ -19,36 +19,38 @@ namespace ops {
 
 class MaxPool3DGrad : public OpDef {
 public:
+    const std::vector<ge::DataType> maxPool3DGradXDataType = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16};
+    const std::vector<ge::Format> maxPool3DGradXFormat = {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
     explicit MaxPool3DGrad(const char* name) : OpDef(name)
     {
         this->Input("orig_x")
             .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16})
-            .Format({ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW})
-            .UnknownShapeFormat({ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW})
+            .DataType(maxPool3DGradXDataType)
+            .Format(maxPool3DGradXFormat)
+            .UnknownShapeFormat(maxPool3DGradXFormat)
             .AutoContiguous();
         this->Input("orig_y")
             .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16})
-            .Format({ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW})
-            .UnknownShapeFormat({ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW})
+            .DataType(maxPool3DGradXDataType)
+            .Format(maxPool3DGradXFormat)
+            .UnknownShapeFormat(maxPool3DGradXFormat)
             .AutoContiguous();
         this->Input("grads")
             .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16})
-            .Format({ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW})
-            .UnknownShapeFormat({ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW})
+            .DataType(maxPool3DGradXDataType)
+            .Format(maxPool3DGradXFormat)
+            .UnknownShapeFormat(maxPool3DGradXFormat)
             .AutoContiguous();
         this->Output("y")
             .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16})
-            .Format({ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW})
-            .UnknownShapeFormat({ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW});
+            .DataType(maxPool3DGradXDataType)
+            .Format(maxPool3DGradXFormat)
+            .UnknownShapeFormat(maxPool3DGradXFormat);
         this->Attr("ksize").AttrType(REQUIRED).ListInt();
         this->Attr("strides").AttrType(REQUIRED).ListInt();
         this->Attr("padding").AttrType(OPTIONAL).String("SAME");
         this->Attr("pads").AttrType(REQUIRED).ListInt();
-        this->Attr("data_format").AttrType(OPTIONAL).String("NCDHW");
+        this->Attr("data_format").AttrType(OPTIONAL).String("NDHWC");
 
         OpAICoreConfig aicore_config;
         aicore_config.DynamicCompileStaticFlag(true)
