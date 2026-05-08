@@ -935,8 +935,6 @@ __aicore__ inline void GatherElementsFullLoadKernel<X_T, INDEX_T, DIM_NUM, AXIS>
             ComputeDim1Vf<X_T, INDEX_T, OFFSET_T>(xLocal, idxLocal, yLocal, xRegOffset, idxRegOffset, yRegOffset, repeatNum, oneRepeatSize, (uint32_t)indexUbFactor);
         }
     }
-    yQueue_.EnQue(yLocal);
-    indexQueue_.FreeTensor(idxLocal);
 }
 
 template <typename X_T, typename INDEX_T, int32_t DIM_NUM, int32_t AXIS>
