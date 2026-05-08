@@ -2248,6 +2248,16 @@
   </tr>
   <tr>
     <td>matmul</td>
+    <td><a href="../../matmul/rotate_quant/README.md">rotate_quant</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对张量x进行旋转变换，再执行对称动态量化。</td>
+  </tr>
+  <tr>
+    <td>matmul</td>
     <td><a href="../../matmul/transpose_batch_mat_mul/README.md">transpose_batch_mat_mul</a></td>
     <td>✓</td>
     <td>✓</td>
