@@ -244,9 +244,9 @@ void Conv3dTiling::SetUnionDataXt(Ops::NN::Conv3dV2::TConv3DTiling& tiling)
 {
     conv_tiling::UnionDataXt unionDataXt;
     unionDataXt.bf.kernelW = static_cast<uint64_t>(this->shapeInfo.orgkW);
-    unionDataXt.bf.kernelW_highest_bit = (static_cast<uint64_t>(this->shapeInfo.orgkW) & 0x100) >> 8;
+    unionDataXt.bf.kernelW_highest_bit = (static_cast<uint64_t>(this->shapeInfo.orgkW) & 0x100) >> 8; // 8 kernelW lower 8 bit
     unionDataXt.bf.kernelH = static_cast<uint64_t>(this->shapeInfo.orgkH);
-    unionDataXt.bf.kernelH_highest_bit = (static_cast<uint64_t>(this->shapeInfo.orgkH) & 0x100) >> 8;
+    unionDataXt.bf.kernelH_highest_bit = (static_cast<uint64_t>(this->shapeInfo.orgkH) & 0x100) >> 8; // 8 kernelH lower 8 bit
     unionDataXt.bf.dilationH = static_cast<uint32_t>(this->attrInfo.dilationH);
     unionDataXt.bf.dilationW = static_cast<uint32_t>(this->attrInfo.dilationW);
     unionDataXt.bf.strideH = static_cast<uint32_t>(this->attrInfo.strideH);

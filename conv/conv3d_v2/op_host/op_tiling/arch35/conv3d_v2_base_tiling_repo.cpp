@@ -278,9 +278,9 @@ void Conv3dBaseTilingV2::SetUnionDataXt(shared_ptr<tuningtiling::Conv3DV2TunnerT
 {
     conv_tiling::UnionDataXt unionDataXt;
     unionDataXt.bf.kernelW = static_cast<uint64_t>(convRepoTiling->kernelW);
-    unionDataXt.bf.kernelW_highest_bit = (static_cast<uint64_t>(convRepoTiling->kernelW) & 0x100) >> 8;
+    unionDataXt.bf.kernelW_highest_bit = (static_cast<uint64_t>(convRepoTiling->kernelW) & 0x100) >> 8; // 8 kernelW lower 8 bit
     unionDataXt.bf.kernelH = static_cast<uint64_t>(convRepoTiling->kernelH);
-    unionDataXt.bf.kernelH_highest_bit = (static_cast<uint64_t>(convRepoTiling->kernelH) & 0x100) >> 8;
+    unionDataXt.bf.kernelH_highest_bit = (static_cast<uint64_t>(convRepoTiling->kernelH) & 0x100) >> 8; // 8 kernelH lower 8 bit
     unionDataXt.bf.dilationH = static_cast<uint64_t>(convRepoTiling->dilationH);
     unionDataXt.bf.dilationW = static_cast<uint64_t>(convRepoTiling->dilationW);
     unionDataXt.bf.strideH = static_cast<uint64_t>(convRepoTiling->strideH) & 0x3f;

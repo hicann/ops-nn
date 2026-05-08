@@ -64,18 +64,14 @@ public:
             padList[PAD_IDX_T] = padTopL1;
             Load3DSetFMatrixCal(hiLoadL1, wiLoadL1, padList);
         }
-        if constexpr (Intf::isQuantScene) {
-            Load3DSetPaddingCal(self_->ctx.convTilingData->convApiTiling.offsetx);
-        }
+        Load3DSetPaddingCal(self_->ctx.convTilingData->convApiTiling.offsetx);
     }
 
     __aicore__ inline void SetLoad3dFMatrixNoPad(uint64_t wiLoadL1)
     {
         uint8_t padList[4] = {0};
         Load3DSetFMatrixCal(hiLoadL1, wiLoadL1, padList);
-        if constexpr (Intf::isQuantScene) {
-            Load3DSetPaddingCal(self_->ctx.convTilingData->convApiTiling.offsetx);
-        }
+        Load3DSetPaddingCal(self_->ctx.convTilingData->convApiTiling.offsetx);
     }
 
     __aicore__ inline void SetLoad3dFMatrixForOptPreload()

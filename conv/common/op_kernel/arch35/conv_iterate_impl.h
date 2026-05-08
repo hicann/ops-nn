@@ -570,13 +570,13 @@ __aicore__ void Iterate<Intf, ImplType>::ReduceKPreloadWithWeightFullloadL0(Intf
         if (self->ctx.mAL1Iter < self->ctx.maxMAL1Iter) {
             self->ctx.al1 = self->ctx.queueAL1.template AllocTensor<typename Intf::FmapT>();
             if constexpr (Intf::outputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE)) {
-                self->ctx.loadAl1Ins.LoadAL1(0, self->ctx.mAL1Iter + 1, self->ctx.batchIter);
+                self->ctx.loadAl1Ins.LoadAL1(0, self->ctx.mAL1Iter + 1, self->ctx.batchIter, 0);
             }
             self->ctx.queueAL1.EnQue(self->ctx.al1);
         } else if (self->ctx.batchIter < self->ctx.ddr2l1LoopBatch - 1) {
             self->ctx.al1 = self->ctx.queueAL1.template AllocTensor<typename Intf::FmapT>();
             if constexpr (Intf::outputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE)) {
-                self->ctx.loadAl1Ins.LoadAL1(0, 0, self->ctx.batchIter + 1); // load -> pong
+                self->ctx.loadAl1Ins.LoadAL1(0, 0, self->ctx.batchIter + 1, 0);
             }
             self->ctx.queueAL1.EnQue(self->ctx.al1);
         }
@@ -663,6 +663,9 @@ __aicore__ void Iterate<Intf, ImplType>::ReduceK(Intf *self, MmadParams &mmadPar
             LoadBL1Module<Intf>(self, kIter);
             self->ctx.bl1 = self->ctx.queueBL1.template DeQue<typename Intf::WeightT>();
             self->ctx.loadBL0Flag = true;
+            if constexpr (Intf::isL0BFullLoadable) {
+                self->ctx.loadBL0Ins.FullLoadBL0(self->ctx.wholeBl0Tensor[0]);
+            }
         }
     }
 
@@ -706,6 +709,9 @@ __aicore__ void Iterate<Intf, ImplType>::ReduceK(Intf *self, MmadParams &mmadPar
             }
             loadBkIter += multiKBL1;
             self->ctx.loadBL0Flag = true;
+            if constexpr (Intf::isL0BFullLoadable) {
+                self->ctx.loadBL0Ins.FullLoadBL0(self->ctx.wholeBl0Tensor[0]);
+            }
             KStartPosition = 0;
         }
 
@@ -752,6 +758,9 @@ __aicore__ void Iterate<Intf, ImplType>::ReduceK(Intf *self, MmadParams &mmadPar
             self->ctx.bl1 = self->ctx.queueBL1.template DeQue<typename Intf::WeightT>();
         }
         self->ctx.loadBL0Flag = true;
+        if constexpr (Intf::isL0BFullLoadable) {
+            self->ctx.loadBL0Ins.FullLoadBL0(self->ctx.wholeBl0Tensor[0]);
+        }
         KStartPosition = 0;
     }
 

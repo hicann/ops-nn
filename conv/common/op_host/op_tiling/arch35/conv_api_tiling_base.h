@@ -160,7 +160,7 @@ struct ShapeInfo {
 };
 
 #pragma pack(push, 1)  // 确保无填充，严格按位排列
-typedef struct {
+using BitFieldData = struct {
     uint64_t strideW        : 6;       // bits 0-5
     uint64_t strideH        : 6;       // bits 6-11
     uint64_t kernelW        : 8;       // bits 12-19
@@ -171,7 +171,7 @@ typedef struct {
     uint64_t kernelH_highest_bit : 1; // bit 45
     uint64_t reserve1       : 2;        // bits 46-47
     uint64_t channelSize    : 16;      // bits 48-63
-} BitFieldData;
+};
 #pragma pack(pop)
  
 union UnionDataXt {

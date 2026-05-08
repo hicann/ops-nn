@@ -13,6 +13,7 @@
  * \brief
  */
 
+#include "conv2d_v2_api_tiling.h"
 #include <cstdint>
 #include <algorithm>
 #include <set>
@@ -20,7 +21,6 @@
 #include "common/op_host/op_tiling/arch35/conv_api_tiling_algorithm_HWmode.h"
 #include "common/op_host/op_tiling/arch35/conv_api_tiling_algorithm_Mmode.h"
 #include "common/op_host/op_tiling/arch35/conv_api_tiling_algorithm_BBmode.h"
-#include "conv2d_v2_api_tiling.h"
 
 using namespace conv_tiling_algo_m;
 using namespace conv_tiling_algo_hw;

@@ -142,7 +142,6 @@ public:
         }
     };
 
-
 private:
     Intf *self_ = nullptr;
     uint64_t currentML0_ = 0;
