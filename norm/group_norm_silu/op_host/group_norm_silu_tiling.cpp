@@ -86,7 +86,7 @@ static ge::graphStatus CheckInputParams(const gert::TilingContext* context)
     OP_CHECK_IF(
         (xDtypeSize <= 0),
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            context->GetNodeName(), "X", Ops::Base::ToString(xDtype).c_str(),
+            context->GetNodeName(), "x", Ops::Base::ToString(xDtype).c_str(),
             ("xDtypeSize must be greater than 0, but got " + std::to_string(xDtypeSize)).c_str()),
         return ge::GRAPH_FAILED);
     auto xShapePtr = context->GetInputShape(INPUT_IDX_X);

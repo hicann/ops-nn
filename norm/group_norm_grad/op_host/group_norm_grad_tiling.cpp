@@ -136,7 +136,7 @@ bool GroupNormGradTiling::CheckInputDtype()
             ge::TypeUtils::DataTypeToSerialString(tilingContext->GetInputDesc(INPUT_4)->GetDataType());
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
             tilingContext->GetNodeName(), "x, dy, dx, mean and rstd", dtypesMsg.c_str(),
-            "data types of x, dy, dx, mean and rstd must be same");
+            "The dtypes of x, dy, dx, mean and rstd must be the same");
         return false;
     }
     this->dtypeBytes = GetDataTypeSize(this->dtypeStr);
@@ -181,7 +181,7 @@ bool GroupNormGradTiling::CheckInputShape()
         dyShape != xShape,
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext->GetNodeName(), "dy and x",
             (Ops::Base::ToString(dyShape) + " and " + Ops::Base::ToString(xShape)).c_str(),
-            "dy shape should be same with x shape."),
+            "The shape of dy must be the same as that of x"),
         return false);
     attrs = tilingContext->GetAttrs();
     OP_TILING_CHECK((attrs == nullptr), OP_LOGE(tilingContext->GetNodeName(), "Get attrs Failed."), return false);
@@ -210,17 +210,17 @@ bool GroupNormGradTiling::CheckInputShape()
         meanShape != rstdShape,
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext->GetNodeName(), "mean and rstd",
             (Ops::Base::ToString(meanShape) + " and " + Ops::Base::ToString(rstdShape)).c_str(),
-            "Shapes of mean and rstd must be same"), return false);
+            "The shapes of mean and rstd must be the same"), return false);
     OP_TILING_CHECK(
         (meanShape.GetDimNum() != 2 || rstdShape.GetDimNum() != 2),
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(tilingContext->GetNodeName(), "mean and rstd",
             (std::to_string(meanShape.GetDimNum()) + " and " + std::to_string(rstdShape.GetDimNum())).c_str(),
-            "They should be same as 2D"), return false);
+            "The shape dims of mean and rstd must be 2D"), return false);
     OP_TILING_CHECK(
         (gammaShape.GetDimNum() != 1 || gammaShape.GetDim(DIM0) != tilingParams->c),
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(tilingContext->GetNodeName(), "gamma",
             Ops::Base::ToString(gammaShape).c_str(),
-            ("Shape of gamma should be (C,), where C is dim[1] of input x, got C = " +
+            ("The shape of gamma should be (C), where C is dim[1] of input x, got C = " +
              std::to_string(tilingParams->c)).c_str()), return false);
     tilingParams->nxg = tilingParams->n * tilingParams->g;
     OP_TILING_CHECK(
@@ -253,7 +253,7 @@ bool GroupNormGradTiling::CheckInputShape()
     OP_TILING_CHECK(
         tilingParams->hxw == 0, OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(tilingContext->GetNodeName(), "x",
             Ops::Base::ToString(dyShape).c_str(),
-            ("product of dim[2:] of input x should not be 0, got " +
+            ("The product of dim[2:] of input x cannot be 0, got " +
              std::to_string(tilingParams->hxw)).c_str()),
         return false);
     return true;

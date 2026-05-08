@@ -141,7 +141,7 @@ ge::graphStatus BatchNormGradInferBase::CheckBigShapesFormatValid()
     // 校验dim相等
     if (dyDimNum != xDimNum || dyDimNum != dxDimNum) {
         std::string dimsStr = std::to_string(dyDimNum) + ", " + std::to_string(xDimNum) + " and " + std::to_string(dxDimNum);
-        std::string reasonMsg = "the dim size of y_backprop, x and x_backprop should be the same";
+        std::string reasonMsg = "The shape dims of y_backprop, x and x_backprop must be the same";
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "y_backprop, x and x_backprop",
             dimsStr.c_str(), reasonMsg.c_str());
         return ge::GRAPH_FAILED;
@@ -154,7 +154,7 @@ ge::graphStatus BatchNormGradInferBase::CheckBigShapesFormatValid()
                                  ge::TypeUtils::FormatToSerialString(dxFormat);
         OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(context_->GetNodeName(), "y_backprop, x and x_backprop",
             formatsStr.c_str(),
-            " the format of y_backprop format, x and x_backprop should be the same");
+            "The formats of y_backprop, x and x_backprop must be the same");
         return ge::GRAPH_FAILED;
     }
 
@@ -182,7 +182,7 @@ ge::graphStatus BatchNormGradInferBase::CheckBigShapesFormatValid()
     // 校验shape的dims相同
     for (int64_t i = 0; i < dyDimNum; i++) {
         if (xStorageShape.GetDim(i) != dyStorageShape.GetDim(i) || dxStorageShape.GetDim(i) != dyStorageShape.GetDim(i)) {
-            std::string reasonMsg = "dim[" + std::to_string(i) + "] of input y_backprop, x and output x_backprop should be same";
+            std::string reasonMsg = "dim[" + std::to_string(i) + "] of y_backprop, x and x_backprop must be the same";
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "y_backprop",
                 Ops::Base::ToString(dyStorageShape).c_str(), reasonMsg.c_str());
             return ge::GRAPH_FAILED;
@@ -219,8 +219,7 @@ ge::graphStatus BatchNormGradInferBase::CheckSmallShapesValid()
 
         int64_t a = storageShape.GetDim(INDEX_0);
         if (a != aDim) {
-            std::string reasonMsg = "the first dim of " + std::string(inputParamNames[i]) + " should be " + std::to_string(aDim) +
-                                    ", but actual " + std::to_string(a);
+            std::string reasonMsg = "the first dim of " + std::string(inputParamNames[i]) + " should be " + std::to_string(aDim);
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), inputParamNames[i],
                 Ops::Base::ToString(storageShape).c_str(), reasonMsg.c_str());
             return ge::GRAPH_FAILED;
@@ -239,8 +238,7 @@ ge::graphStatus BatchNormGradInferBase::CheckSmallShapesValid()
         }
         int64_t a = storageShape.GetDim(INDEX_0);
         if (a != aDim) {
-            std::string reasonMsg = "the first dim of " + std::string(outputParamNames[i]) + " should be " + std::to_string(aDim) +
-                                    ", but actual " + std::to_string(a);
+            std::string reasonMsg = "The first dim of " + std::string(outputParamNames[i]) + " must be equal to" + std::to_string(aDim);
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), outputParamNames[i],
                 Ops::Base::ToString(storageShape).c_str(), reasonMsg.c_str());
             return ge::GRAPH_FAILED;
@@ -319,21 +317,21 @@ ge::graphStatus BatchNormGradInferBase::CheckDtypeValid()
         std::string dtypesStr = ge::TypeUtils::DataTypeToSerialString(dxDtype) + " and " +
                                 ge::TypeUtils::DataTypeToSerialString(dyDtype_);
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "x_backprop and y_backprop",
-            dtypesStr.c_str(), "dtype of x_backprop should be same as y_backprop");
+            dtypesStr.c_str(), "The dtypes of x_backprop and y_backprop must be the same");
         return ge::GRAPH_FAILED;
     }
     if (dweightDtype != weightDtype_) {
         std::string dtypesStr = ge::TypeUtils::DataTypeToSerialString(dweightDtype) + " and " +
                                 ge::TypeUtils::DataTypeToSerialString(weightDtype_);
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "scale_backprop and scale",
-            dtypesStr.c_str(), "dtype of scale_backprop should be same as scale");
+            dtypesStr.c_str(), "The dtypes of scale_backprop and scale must be the same");
         return ge::GRAPH_FAILED;
     }
     if (dbiasDtype != weightDtype_) {
         std::string dtypesStr = ge::TypeUtils::DataTypeToSerialString(dbiasDtype) + " and " +
                                 ge::TypeUtils::DataTypeToSerialString(weightDtype_);
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "offset_backprop and scale",
-            dtypesStr.c_str(), "dtype of offset_backprop should be same as scale");
+            dtypesStr.c_str(), "The dtypes of offset_backprop and scale must be the same");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;

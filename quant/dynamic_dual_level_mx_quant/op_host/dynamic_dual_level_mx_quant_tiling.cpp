@@ -73,7 +73,7 @@ ge::graphStatus DynamicDualLevelMxQuantTiling::GetAttr()
         (roundMode == RoundModeList::MODE_UNDEFINED),
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
             context_->GetNodeName(), "round_mode",
-            attrRoundMode, "round_mode should be one of {rint, floor, round}"),
+            attrRoundMode, "The value of round_mode must be in {rint, floor, round}"),
         return ge::GRAPH_FAILED);
     tilingParams.roundMode = static_cast<int64_t>(roundMode);
 
@@ -92,7 +92,7 @@ ge::graphStatus DynamicDualLevelMxQuantTiling::GetAttr()
     tilingParams.level1BlockSize = static_cast<int64_t>(*attrLevel1BlockSize);
     OP_CHECK_IF(
         tilingParams.level1BlockSize != DEFAULT_LEVEL1_BLOCK_SIZE,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+        OP_LOGE_FOR_INVALID_VALUE(
             context_->GetNodeName(), "level1_block_size",
             std::to_string(tilingParams.level1BlockSize).c_str(), "32"),
         return ge::GRAPH_FAILED);
@@ -155,7 +155,7 @@ ge::graphStatus DynamicDualLevelMxQuantTiling::CheckRequiredShape() const
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
             context_->GetNodeName(), "x",
             std::to_string(xShape.GetDim(xShape.GetDimNum() - 1)).c_str(),
-            "The last axis of x should be even when the data type of y is FLOAT4_E2M1"),
+            "The last axis of x should be even when the dtype of y is FLOAT4_E2M1"),
         return ge::GRAPH_FAILED);
 
     auto yShapePtr = context_->GetOutputShape(0);
@@ -167,7 +167,7 @@ ge::graphStatus DynamicDualLevelMxQuantTiling::CheckRequiredShape() const
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
             context_->GetNodeName(), "x and y",
             (Ops::Base::ToString(xShape) + " and " + Ops::Base::ToString(yShape)).c_str(),
-            "The shape of y must be the same as shape of x"),
+            "The shapes of x and y must be the same"),
         return ge::GRAPH_FAILED);
 
     auto level0ScaleShapePtr = context_->GetOutputShape(1);
@@ -219,7 +219,7 @@ ge::graphStatus DynamicDualLevelMxQuantTiling::CheckSmoothScaleDtypeShape()
                 context_->GetNodeName(), "smooth_scale and x",
                 (ge::TypeUtils::DataTypeToSerialString(smoothScaleDtype) + " and " +
                  ge::TypeUtils::DataTypeToSerialString(xDtype)).c_str(),
-                "The data types of smooth_scale and x must be the same"),
+                "The dtypes of smooth_scale and x must be the same"),
             return ge::GRAPH_FAILED);
         auto smoothScaleShape = smoothScale->GetStorageShape();
         OP_CHECK_IF(

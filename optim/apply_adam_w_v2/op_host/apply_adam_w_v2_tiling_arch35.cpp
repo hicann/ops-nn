@@ -81,7 +81,7 @@ ge::graphStatus ApplyAdamWV2RegbaseTiling::CheckScalarInput() {
         (!storageShape.IsScalar() && storageShape.GetShapeSize() != 1),
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
             tilingContext_->GetNodeName(), "step", Ops::Base::ToString(storageShape).c_str(),
-            "step should be a scalar(0D) or have shape size 1"),
+            "Step should be a scalar(0D) or have shape size 1"),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -115,7 +115,7 @@ ge::graphStatus ApplyAdamWV2RegbaseTiling::CheckMixAndOptionalInput(const gert::
     OP_CHECK_IF(gradStorageShape != inputStorageShape,
                 OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext_->GetNodeName(), "var and grad",
                     (Ops::Base::ToString(inputStorageShape) + " and " + Ops::Base::ToString(gradStorageShape)).c_str(),
-                    "the shape of input grad must be the same as that of input var"),
+                    "The shape of input grad must be the same as that of input var"),
                 return ge::GRAPH_FAILED);
     auto inputGradDesc = tilingContext_->GetInputDesc(INPUT_GRAD_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, inputGradDesc);
@@ -127,7 +127,7 @@ ge::graphStatus ApplyAdamWV2RegbaseTiling::CheckMixAndOptionalInput(const gert::
         OP_CHECK_IF(maxGradNormDtype != gradDtype,
                     OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext_->GetNodeName(), "max_grad_norm and grad",
                         (ge::TypeUtils::DataTypeToSerialString(maxGradNormDtype) + " and " + ge::TypeUtils::DataTypeToSerialString(gradDtype)).c_str(),
-                        "datatype of max_grad_norm must be the same as datatype of grad"),
+                        "The dtype of max_grad_norm must be the same as grad"),
                     return ge::GRAPH_FAILED);
     }
     auto maxGradNormShape = tilingContext_->GetOptionalInputShape(OPTIONAL_INPUT_INDEX);
@@ -137,7 +137,7 @@ ge::graphStatus ApplyAdamWV2RegbaseTiling::CheckMixAndOptionalInput(const gert::
             maxGradNormStorageShape != gradStorageShape,
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext_->GetNodeName(), "max_grad_norm and grad",
                 (Ops::Base::ToString(maxGradNormStorageShape) + " and " + Ops::Base::ToString(gradStorageShape)).c_str(),
-                "the shape of max_grad_norm must be the same as that of grad"),
+                "The shapes of max_grad_norm and grad must be the same"),
             return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
@@ -160,13 +160,13 @@ ge::graphStatus ApplyAdamWV2RegbaseTiling::CheckShapeAndType() {
             CheckSameShape(pair.first, inputStorageShape) != ge::GRAPH_SUCCESS,
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext_->GetNodeName(), (string("var and ") + pair.second).c_str(),
                 (Ops::Base::ToString(inputStorageShape) + " and " + Ops::Base::ToString(tilingContext_->GetInputShape(pair.first)->GetStorageShape())).c_str(),
-                (string("the shape of input ") + pair.second + " must be the same as that of input var").c_str()),
+                (string("The shapes of input ") + pair.second + " and var must be the same").c_str()),
             return ge::GRAPH_FAILED);
         OP_CHECK_IF(
             CheckSameDtype(pair.first, inputDtype) != ge::GRAPH_SUCCESS,
             OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext_->GetNodeName(), (string("var and ") + pair.second).c_str(),
                 (ge::TypeUtils::DataTypeToSerialString(inputDtype) + " and " + ge::TypeUtils::DataTypeToSerialString(tilingContext_->GetInputDesc(pair.first)->GetDataType())).c_str(),
-                (string("the dtype of input ") + pair.second + " must be same as that of input var").c_str()),
+                (string("The dtypes of input ") + pair.second + " and var must be the same").c_str()),
             return ge::GRAPH_FAILED);
     }
     OP_CHECK_IF(CheckMixAndOptionalInput(inputStorageShape) != ge::GRAPH_SUCCESS,

@@ -211,7 +211,7 @@ ge::graphStatus BatchNormV3RegbaseTilingBase::CheckOneOutputShape(int64_t idx)
         a != actualA,
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), outputName.c_str(),
             Ops::Base::ToString(outputStorageShape).c_str(),
-            ("the first dim of " + outputName + " expect [" + std::to_string(a) + "], but got [" + std::to_string(actualA) + "]").c_str()),
+            ("The first dim of " + outputName + " must be " + std::to_string(a)).c_str()),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -235,7 +235,7 @@ ge::graphStatus BatchNormV3RegbaseTilingBase::CheckInputValid()
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "weight and x",
             (ge::TypeUtils::DataTypeToSerialString(weightDataType) + " and " +
              ge::TypeUtils::DataTypeToSerialString(dataType)).c_str(),
-            "weight's datatype must be same as x's datatype or DT_FLOAT"),
+            "weight's dtype must be same as x's dtype or DT_FLOAT"),
         return ge::GRAPH_FAILED);
 
     auto biasDesc = context_->GetInputDesc(BIAS_INDEX);
@@ -246,7 +246,7 @@ ge::graphStatus BatchNormV3RegbaseTilingBase::CheckInputValid()
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "bias and weight",
             (ge::TypeUtils::DataTypeToSerialString(biasDataType) + " and " +
              ge::TypeUtils::DataTypeToSerialString(weightDataType)).c_str(),
-            "bias's datatype must be same as weight's datatype"),
+            "The dtypes of bias and weight must be the same"),
         return ge::GRAPH_FAILED);
 
     auto runningMeanDesc = context_->GetInputDesc(RUNNING_MEAN_INDEX);
@@ -258,7 +258,7 @@ ge::graphStatus BatchNormV3RegbaseTilingBase::CheckInputValid()
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "running_mean and x",
             (ge::TypeUtils::DataTypeToSerialString(runningMeanDataType) + " and " +
              ge::TypeUtils::DataTypeToSerialString(dataType)).c_str(),
-            "running_mean's datatype must be same as x's datatype or DT_FLOAT"),
+            "running_mean's dtype must be same as x's dtype or DT_FLOAT"),
         return ge::GRAPH_FAILED);
     
     auto runningVarDesc = context_->GetInputDesc(RUNNING_VAR_INDEX);
@@ -269,7 +269,7 @@ ge::graphStatus BatchNormV3RegbaseTilingBase::CheckInputValid()
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "running_mean and running_var",
             (ge::TypeUtils::DataTypeToSerialString(runningMeanDataType) + " and " +
              ge::TypeUtils::DataTypeToSerialString(runningVarDataType)).c_str(),
-            "running_mean's datatype must be same as running_var's datatype"),
+            "The dtypes of running_mean and running_var must be the same"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -371,7 +371,7 @@ ge::graphStatus BatchNormV3RegbaseTilingBase::CheckOutputShapeValid()
         OP_CHECK_IF((xStorageShape.GetDim(i) != yStorageShape.GetDim(i)),
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "y",
                 Ops::Base::ToString(yStorageShape).c_str(),
-                (std::string("y's dim[") + std::to_string(i) + "] should be " + std::to_string(xStorageShape.GetDim(i))).c_str()),
+                (std::string("The dim ") + std::to_string(i) + " of y must be " + std::to_string(xStorageShape.GetDim(i))).c_str()),
             return ge::GRAPH_FAILED);
     }
     OP_LOGI(context_->GetNodeName(), "CheckXYShapeValid success.");
@@ -394,7 +394,7 @@ ge::graphStatus BatchNormV3RegbaseTilingBase::CheckShapeAllPositive(gert::Shape&
             shape.GetDim(i) <= 0,
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x",
                 (Ops::Base::ToString(shape)).c_str(),
-                "all dims of input x should be positive"),
+                "All dims of x should be positive numbers"),
             return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;

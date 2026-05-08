@@ -153,7 +153,7 @@ static ge::graphStatus CheckGammaAndBetaParams(
         OP_CHECK_IF(
             (CheckMixType(context, xDtype, gammaDtype) == ge::GRAPH_FAILED),
             OP_LOGE(
-                context->GetNodeType(), "The dtype combination of gamma, beta and inputs is invalid."),
+                context->GetNodeName(), "The dtype combination of gamma, beta and inputs is invalid."),
             return ge::GRAPH_FAILED);
     }
 

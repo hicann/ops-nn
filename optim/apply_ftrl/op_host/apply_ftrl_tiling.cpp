@@ -42,7 +42,7 @@ ge::graphStatus ApplyFtrlRegbaseTiling::CheckScalarShape(int32_t inputIdx) {
     std::string paramName = SCALAR_INDEX_LIST.at(inputIdx);
     OP_CHECK_IF((!storageShape.IsScalar() && storageShape.GetShapeSize() != 1),
                 OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(tilingContext_->GetNodeName(), paramName.c_str(),
-                    Ops::Base::ToString(storageShape).c_str(), "the param should be a scalar(0D) or have shape size 1"), return ge::GRAPH_FAILED);
+                    Ops::Base::ToString(storageShape).c_str(), "The param must be a scalar(0D) or have shape size 1"), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -85,7 +85,7 @@ ge::graphStatus ApplyFtrlRegbaseTiling::CheckShapeAndType() {
             CheckSameDtype(pair.first, inputDtype) != ge::GRAPH_SUCCESS,
             OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext_->GetNodeName(), (string("var and ") + pair.second).c_str(),
                 (ge::TypeUtils::DataTypeToSerialString(inputDtype) + " and " + ge::TypeUtils::DataTypeToSerialString(tilingContext_->GetInputDesc(pair.first)->GetDataType())).c_str(),
-                (string("the dtype of input ") + pair.second + " must be same as that of input var").c_str()),
+                (string("The dtypes of input ") + pair.second + " and var must be the same").c_str()),
             return ge::GRAPH_FAILED);
     }
     // check tensor input
@@ -94,13 +94,13 @@ ge::graphStatus ApplyFtrlRegbaseTiling::CheckShapeAndType() {
             CheckSameShape(pair.first, inputStorageShape) != ge::GRAPH_SUCCESS,
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext_->GetNodeName(), (string("var and ") + pair.second).c_str(),
                 (Ops::Base::ToString(inputStorageShape) + " and " + Ops::Base::ToString(tilingContext_->GetInputShape(pair.first)->GetStorageShape())).c_str(),
-                (string("the shape of input ") + pair.second + " must be same as that of input var").c_str()),
+                (string("The shapes of input ") + pair.second + " and var must be the same").c_str()),
             return ge::GRAPH_FAILED);
         OP_CHECK_IF(
             CheckSameDtype(pair.first, inputDtype) != ge::GRAPH_SUCCESS,
             OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext_->GetNodeName(), (string("var and ") + pair.second).c_str(),
                 (ge::TypeUtils::DataTypeToSerialString(inputDtype) + " and " + ge::TypeUtils::DataTypeToSerialString(tilingContext_->GetInputDesc(pair.first)->GetDataType())).c_str(),
-                (string("the dtype of input ") + pair.second + " must be same as that of input var").c_str()),
+                (string("The dtypes of input ") + pair.second + " and var must be the same").c_str()),
             return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;

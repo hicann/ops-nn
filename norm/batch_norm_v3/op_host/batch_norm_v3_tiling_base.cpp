@@ -86,7 +86,7 @@ bool BatchNormV3TilingBase::CheckInputDtype()
         std::string dtypesStr = ge::TypeUtils::DataTypeToSerialString(weightDtype) + " and " +
                                 ge::TypeUtils::DataTypeToSerialString(biasDtype);
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "weight and bias",
-            dtypesStr.c_str(), "the datatype of bias and weight must be the same");
+            dtypesStr.c_str(), "The dtype of bias and weight must be the same");
         return false;
     }
     OP_CHECK_IF(
@@ -145,17 +145,17 @@ bool BatchNormV3TilingBase::CheckInputShape()
     OP_CHECK_IF(
         commonParams.patternR1 <= 0,
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x",
-            Ops::Base::ToString(xStorageShape).c_str(), "the dim 0 of x should be more than zero"),
+            Ops::Base::ToString(xStorageShape).c_str(), "The dim 0 of x should be greater than zero"),
         return false);
     OP_CHECK_IF(
         commonParams.patternA <= 0,
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x",
-            Ops::Base::ToString(xStorageShape).c_str(), "the dim 1 of x should be more than zero"),
+            Ops::Base::ToString(xStorageShape).c_str(), "The dim 1 of x should be greater than zero"),
         return false);
     OP_CHECK_IF(
         commonParams.patternR0 <= 0,
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x",
-            Ops::Base::ToString(xStorageShape).c_str(), "dim_2 * dim_3 * dim_4 of x should be more than zero"),
+            Ops::Base::ToString(xStorageShape).c_str(), "dim_2 * dim_3 * dim_4 of x should be greater than zero"),
         return false);
     if (bnWeightStorageShape.GetShapeSize() != commonParams.patternA) {
         std::string reasonMsg = "The shape size of weight must be the same as the C dimension of x (the second dimension is C dimension): " + std::to_string(commonParams.patternA);
