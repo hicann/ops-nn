@@ -122,7 +122,7 @@ void Conv3dBaseTilingV2::NumBlocksDecision()
     if (flagInfo_.mSplitModeFlag) { // M split mode
         numBlocksRes = convBase_.NumBlocksDecisionMsplitMode();
         OP_LOGD(context_->GetNodeName(),
-            "%s AscendC: get tiling from Mmode formulaic algorithm, belong to fast_tiling.",
+            "%s AscendC: get tiling from Mmode formulaic algorithm, belongs to fast_tiling.",
             paramInfo_.nodeType.c_str());
         OP_LOGD(context_->GetNodeName(),
             "%s AscendC: batchDim / mDim / nDim / doDim / groupDim / minCost: %u, %u, %u, %u, %u, %lu.",
@@ -136,7 +136,7 @@ void Conv3dBaseTilingV2::NumBlocksDecision()
     } else { // HW split mode
         numBlocksRes = convBase_.NumBlocksDecisionHWsplitMode();
         OP_LOGD(context_->GetNodeName(),
-            "%s AscendC: get tiling from HWmode formulaic algorithm, belong to fast_tiling.",
+            "%s AscendC: get tiling from HWmode formulaic algorithm, belongs to fast_tiling.",
             paramInfo_.nodeType.c_str());
         OP_LOGD(context_->GetNodeName(),
             "Conv3D AscendC: batchDim / hoDim / nDim / doDim / groupDim / minCost: %u, %u, %u, %u, %u, %lu.",

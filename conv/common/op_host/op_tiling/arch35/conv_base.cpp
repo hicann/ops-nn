@@ -84,9 +84,6 @@ ge::graphStatus ShapeAttrSynthesisCheck(ConvAscendcOriginShapeAttrInfo oriShapeA
     int64_t cmpWo = ConvComputeWo(oriShapeAttrInfo.oriFmapW, oriShapeAttrInfo.oriWeightW, oriShapeAttrInfo.oriPadLeft,
         oriShapeAttrInfo.oriPadRight, oriShapeAttrInfo.oriDilationW, oriShapeAttrInfo.oriStrideW);
     if (oriShapeAttrInfo.oriFmapN != oriShapeAttrInfo.oriOutputN) {
-        OP_LOGE(context->GetNodeName(), "%s AscendC: ShapeAttrSynthesisCheck failed, " \
-            "oriFmapN(%ld) != oriOutputN(%ld)", context->GetNodeType(), oriShapeAttrInfo.oriFmapN,
-            oriShapeAttrInfo.oriOutputN);
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeType(), "x, y",
             VectorsToString(std::vector<std::vector<int64_t>>{
                 GetInputShapeVec(context, INPUT_FMAP_INDEX),
@@ -97,8 +94,6 @@ ge::graphStatus ShapeAttrSynthesisCheck(ConvAscendcOriginShapeAttrInfo oriShapeA
         return ge::GRAPH_FAILED;
     }
     if (cmpHo != oriShapeAttrInfo.oriOutputH) {
-        OP_LOGE(context->GetNodeName(), "%s AscendC: ShapeAttrSynthesisCheck failed, " \
-            "cmpHo(%ld) != oriOutputH(%ld)", context->GetNodeType(), cmpHo, oriShapeAttrInfo.oriOutputH);
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeType(), "y",
             VectorToString(GetOutputShapeVec(context, OUTPUT_INDEX), IntToString<int64_t>).c_str(),
             FormatString("Shape[%zu] of this parameter must be equal to the theoretical value %ld of %s",
@@ -106,8 +101,6 @@ ge::graphStatus ShapeAttrSynthesisCheck(ConvAscendcOriginShapeAttrInfo oriShapeA
         return ge::GRAPH_FAILED;
     }
     if (cmpWo != oriShapeAttrInfo.oriOutputW) {
-        OP_LOGE(context->GetNodeName(), "%s AscendC: ShapeAttrSynthesisCheck failed, " \
-            "cmpWo(%ld) != oriOutputW(%ld)", context->GetNodeType(), cmpWo, oriShapeAttrInfo.oriOutputW);
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeType(), "y",
             VectorToString(GetOutputShapeVec(context, OUTPUT_INDEX), IntToString<int64_t>).c_str(),
             FormatString("Shape[%zu] of this parameter must be equal to the theoretical value %ld of %s",
@@ -126,8 +119,6 @@ ge::graphStatus ShapeAttrSynthesisCheckAux(const ConvAscendcOriginShapeAttrInfo 
         oriShapeAttrInfo.oriPadHead, oriShapeAttrInfo.oriPadTail,
         oriShapeAttrInfo.oriDilationD, oriShapeAttrInfo.oriStrideD);
         if (cmpDo != oriShapeAttrInfo.oriOutputD) {
-            OP_LOGE(context->GetNodeName(), "%s AscendC: ShapeAttrSynthesisCheck failed, cmpDo(%ld) != oriOutputD(%ld)",
-                context->GetNodeType(), cmpDo, oriShapeAttrInfo.oriOutputD);
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeType(), "y",
                 VectorToString(GetOutputShapeVec(context, OUTPUT_INDEX), IntToString<int64_t>).c_str(),
                 FormatString("Shape[%zu] of this parameter must be equal to the theoretical value %ld of %s",
@@ -136,8 +127,6 @@ ge::graphStatus ShapeAttrSynthesisCheckAux(const ConvAscendcOriginShapeAttrInfo 
         }
     }
     if (oriShapeAttrInfo.oriFmapC % oriShapeAttrInfo.oriGroups != 0) {
-        OP_LOGE(context->GetNodeName(), "%s AscendC: featureMap Cin(%ld) mod groups(%ld) != 0",
-            context->GetNodeType(), oriShapeAttrInfo.oriFmapC, oriShapeAttrInfo.oriGroups);
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeType(), "x",
             VectorToString(GetInputShapeVec(context, INPUT_FMAP_INDEX), IntToString<int64_t>).c_str(),
             FormatString("Shape[%zu] of this parameter must be exactly divisible by attribute groups %ld",
@@ -145,8 +134,6 @@ ge::graphStatus ShapeAttrSynthesisCheckAux(const ConvAscendcOriginShapeAttrInfo 
         return ge::GRAPH_FAILED;
     }
     if (oriShapeAttrInfo.oriWeightN % oriShapeAttrInfo.oriGroups != 0) {
-        OP_LOGE(context->GetNodeName(), "%s AscendC: weight Cout (%ld) mod groups (%ld) != 0",
-            context->GetNodeType(), oriShapeAttrInfo.oriWeightN, oriShapeAttrInfo.oriGroups);
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeType(), "filter",
             VectorToString(GetInputShapeVec(context, INPUT_WEIGHT_INDEX), IntToString<int64_t>).c_str(),
             FormatString("Shape[%zu] of this parameter must be exactly divisible by attribute groups %ld",
@@ -154,9 +141,6 @@ ge::graphStatus ShapeAttrSynthesisCheckAux(const ConvAscendcOriginShapeAttrInfo 
         return ge::GRAPH_FAILED;
     }
     if (oriShapeAttrInfo.oriFmapC != oriShapeAttrInfo.oriWeightC * oriShapeAttrInfo.oriGroups) {
-        OP_LOGE(context->GetNodeName(), "%s AscendC: featureMap Cin(%ld) != weight Cin(%ld) * groups(%ld).",
-            context->GetNodeType(), oriShapeAttrInfo.oriFmapC, oriShapeAttrInfo.oriWeightC,
-            oriShapeAttrInfo.oriGroups);
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeType(), "x, filter",
             VectorsToString(std::vector<std::vector<int64_t>>{
                 GetInputShapeVec(context, INPUT_FMAP_INDEX), GetOutputShapeVec(context, OUTPUT_INDEX)},
@@ -396,9 +380,6 @@ bool ConvBase::CheckValidString(const string &inputStr, const gert::TilingContex
     }
 
     if (inputStr.size() > MAX_STR_LEN) {
-        OP_LOGE(context->GetNodeName(),
-            "%s AscendC: check input string length: %zu failed, string length exceed %zu.",
-            context->GetNodeType(), inputStr.size(), MAX_STR_LEN);
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeType(), "round_mode",
             inputStr.c_str(),
             FormatString("The string length %zu of this parameter exceeds the maximum value %zu",

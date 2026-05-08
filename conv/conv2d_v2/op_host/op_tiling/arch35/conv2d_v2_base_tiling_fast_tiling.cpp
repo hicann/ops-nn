@@ -52,7 +52,7 @@ ge::graphStatus Conv2dBaseTiling::GetTilingFromFastTiling()
         if (flagInfo_.mBasicBlockFlag) {
             BasicBlock();
             OP_LOGD(context_->GetNodeName(),
-                "%s AscendC: get tiling from Mmode basic block algorithm, belong to fast_tiling.",
+                "%s AscendC: get tiling from Mmode basic block algorithm, belongs to fast_tiling.",
                 paramInfo_.nodeType.c_str());
             OP_LOGD(context_->GetNodeName(),
                 "%s AscendC: batchDim / mDim / nDim / groupDim: %u, %u, %u, %u.", paramInfo_.nodeType.c_str(),
@@ -60,7 +60,7 @@ ge::graphStatus Conv2dBaseTiling::GetTilingFromFastTiling()
         } else {
             numBlocksRes = convBase_.NumBlocksDecisionMsplitMode();
             OP_LOGD(context_->GetNodeName(),
-                "%s AscendC: get tiling from Mmode formulaic algorithm, belong to fast_tiling.",
+                "%s AscendC: get tiling from Mmode formulaic algorithm, belongs to fast_tiling.",
                 paramInfo_.nodeType.c_str());
             OP_LOGD(context_->GetNodeName(),
                 "%s AscendC: batchDim / mDim / nDim / doDim / groupDim / minCost: %u, %u, %u, %u, %u, %lu.",
@@ -70,7 +70,7 @@ ge::graphStatus Conv2dBaseTiling::GetTilingFromFastTiling()
     } else { // HW split mode
         numBlocksRes = convBase_.NumBlocksDecisionHWsplitMode();
         OP_LOGD(context_->GetNodeName(),
-            "%s AscendC: get tiling from HWmode formulaic algorithm, belong to fast_tiling.",
+            "%s AscendC: get tiling from HWmode formulaic algorithm, belongs to fast_tiling.",
             paramInfo_.nodeType.c_str());
         OP_LOGD(context_->GetNodeName(),
             "%s AscendC: batchDim / hoDim / woDim / nDim / groupDim / minCost: %u, %u, %u, %u, %u, %lu.",

@@ -715,7 +715,7 @@ bool Conv2dTiling::CheckAttrBeforeCoreBind()
     if (attrInfo.padLeft < 0 || attrInfo.padRight < 0 ||
         attrInfo.padTop < 0 || attrInfo.padBottom < 0) {
         OP_LOGE(nodeType,
-            "Illlegal attrs have set: padTop=%d, padBottom=%d, padLeft=%d, padRight=%d, which must >= 0.",
+            "Illegal attrs have set: padTop=%d, padBottom=%d, padLeft=%d, padRight=%d, which must >= 0.",
             attrInfo.padTop, attrInfo.padBottom, attrInfo.padLeft, attrInfo.padRight);
         return false;
     }
@@ -1016,7 +1016,7 @@ bool Conv2dTiling::CheckDataCopyLimits()
     uint64_t loadAL1loop1SrcStride = shapeInfo.orgHi * shapeInfo.orgWi * DTYPE_SIZE_TAB.at(descInfo.fMapType.dtype);
     if (descInfo.fMapType.format == ConvFormat::NCHW && loadAL1loop1SrcStride > loadAL1loop1SrcStrideLimits) {
         OP_LOGE(nodeType, 
-            "Fmap shape not satisfy DataCopy's limits: hin(%ld)*win(%ld)*typesize(%u)=%lu, must <= %lu",
+            "Fmap shape does not satisfy DataCopy's limits: hin(%ld)*win(%ld)*datatype size(%u)=%lu, must <= %lu",
             shapeInfo.orgHi, shapeInfo.orgWi, DTYPE_SIZE_TAB.at(descInfo.fMapType.dtype),
             loadAL1loop1SrcStride, loadAL1loop1SrcStrideLimits);
         return false;

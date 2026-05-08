@@ -472,7 +472,7 @@ bool Conv3dTiling::CheckPadStrideDilation()
         this->attrInfo.padHead < 0 || this->attrInfo.padTail < 0);
     if (padInvalidFlag) {
         OP_LOGE(nodeType,
-            "Illlegal attrs have set: padTop=%d, padBottom=%d, padLeft=%d, padRight=%d, padHead=%d, padTail=%d,\
+            "Illegal attrs have set: padTop=%d, padBottom=%d, padLeft=%d, padRight=%d, padHead=%d, padTail=%d,\
             which must >= 0.", this->attrInfo.padTop, this->attrInfo.padBottom, this->attrInfo.padLeft,
             this->attrInfo.padRight, this->attrInfo.padHead, this->attrInfo.padTail);
         return false;
@@ -524,7 +524,7 @@ bool Conv3dTiling::CheckDataCopyLimits()
                                         DTYPE_SIZE_TAB.at(descInfo.fMapType.dtype);
         if (loadAL1loop1SrcStride > loadAL1loop1SrcStrideLimits) {
             OP_LOGE(nodeType, 
-                "Fmap shape not satisfy DataCopy's limits: din(%ld)*hin(%ld)*win(%ld)*typesize(%u)=%lu, must <= %lu",
+                "Fmap shape does not satisfy DataCopy's limits: din(%ld)*hin(%ld)*win(%ld)*datatype size(%u)=%lu, must <= %lu",
                 tmpOrgDi, shapeInfo.orgHi, shapeInfo.orgWi,
                 DTYPE_SIZE_TAB.at(descInfo.fMapType.dtype),
                 loadAL1loop1SrcStride, loadAL1loop1SrcStrideLimits);

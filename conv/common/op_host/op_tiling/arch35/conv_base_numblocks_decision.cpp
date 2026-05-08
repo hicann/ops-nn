@@ -197,9 +197,6 @@ bool ConvBaseDeci::CheckInstrLimitsHWmode()
     if (descInfo_.fMapFormat == ge::Format::FORMAT_NDHWC) {
         uint64_t fixpipeDstNdStride = shapeInfo_.wo * shapeInfo_.co;
         if (fixpipeDstNdStride > MAX_32_BIT_NUM) {
-            OP_LOGE(nodeInfo_.nodeName,
-                    "%s AscendC: Output shape not satisfy Fixpipe's limits: wout(%lu) * cout(%lu) > %lu.",
-                    nodeInfo_.nodeType.c_str(), shapeInfo_.wo, shapeInfo_.co, MAX_32_BIT_NUM);
             stringstream ss;
             ss << "If the format of input x is NDHWC, ";
             ss << "the constraint of instruction %s must be met: ";

@@ -70,7 +70,7 @@ const aclTensor *DeformableOffsetsNHWC(const aclTensor *x, const aclTensor *offs
     L0_DFX(DeformableOffsetsNHWC, x, offset, kernelSize, outputDtype, stride, padding, dilation, deformableGroups,
         modulated);
     if (x->GetStorageFormat() != Format::FORMAT_NHWC || offset->GetStorageFormat() != Format::FORMAT_NHWC) {
-        OP_LOGE(ACLNN_ERR_INNER, "L0 func only support inputs with NHWC format.");
+        OP_LOGE(ACLNN_ERR_INNER, "L0 func only supports inputs with NHWC format.");
         return nullptr;
     }
     ge::AscendString originalFormat = op::ToString(x->GetOriginalFormat());

@@ -157,7 +157,7 @@ int64_t ConvTilingAlgorithmMmode::InitCalcL1FullLoadParams()
         tilingIns_->shapeInfo.orgWi * tilingIns_->cubeInfo.k0 * this->fMapDTypeSize) / this->fMapDTypeSize !=
         (tilingIns_->shapeInfo.singlekD * tilingIns_->shapeInfo.singleCi1 * hiL1FullLoad *
         tilingIns_->shapeInfo.orgWi * tilingIns_->cubeInfo.k0)) {
-        OP_LOGE(tilingIns_->nodeType, "fmap size in l1 is overflow uint64, initcalc l1 params failed!");
+        OP_LOGE(tilingIns_->nodeType, "fmap size in l1 is overflow uint64.");
         return -1;
     }
     if (!tilingIns_->isC04Flag) {
@@ -178,7 +178,7 @@ int64_t ConvTilingAlgorithmMmode::InitCalcL1FullLoadParams()
         tilingIns_->shapeInfo.singleCo1 * tilingIns_->cubeInfo.n0 * this->weightDTypeSize) / weightDTypeSize !=
         (tilingIns_->shapeInfo.singlekD * tilingIns_->shapeInfo.singleCi1 * this->l1TilingCalc.ci0HkWk *
         tilingIns_->shapeInfo.singleCo1 * tilingIns_->cubeInfo.n0)) {
-        OP_LOGE(tilingIns_->nodeType, "weight size in l1 is overflow uint64, initcalc l1 params failed!");
+        OP_LOGE(tilingIns_->nodeType, "weight size in l1 is overflow uint64.");
         return -1;
     }
     this->l1TilingCalc.weightFullLoadL1Size = tilingIns_->shapeInfo.singlekD * this->l1TilingCalc.kBL1FullLoadSize *
