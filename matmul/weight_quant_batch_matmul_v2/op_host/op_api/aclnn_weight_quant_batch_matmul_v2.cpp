@@ -832,6 +832,19 @@ static bool CheckNotNull(
     return true;
 }
 
+static bool CheckWeightFormat(const aclTensor* weight)
+{
+    if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
+        if (weight->GetStorageFormat() != op::Format::FORMAT_ND) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                    "In DAV_3510, aclnnWeightQuantBatchMatmulV2 and aclnnWeightQuantBatchMatmulV3 weight format only "
+                    "support FORMAT_ND.");
+            return false;
+        }
+    }
+    return true;
+}
+
 static bool CheckOptionalNotNull(const aclTensor* quantScaleOptional, const aclTensor* quantOffsetOptional)
 {
     if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P) {
@@ -1738,15 +1751,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulV2GetWorkspaceSize(
     CHECK_RET(socRes == ACLNN_SUCCESS, socRes);
     CHECK_RET(CheckNotNull(x, weight, antiquantScale, y), ACLNN_ERR_PARAM_NULLPTR);
     CHECK_RET(CheckOptionalNotNull(quantScaleOptional, quantOffsetOptional), ACLNN_ERR_PARAM_NULLPTR);
-    if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
-        OP_CHECK(
-            weight->GetStorageFormat() == op::Format::FORMAT_ND,
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "In DAV_3510, aclnnWeightQuantBatchMatmulV2 not support FORMAT_FRACTAL_NZ and only support "
-                "FORMAT_ND."),
-            return ACLNN_ERR_PARAM_INVALID);
-    }
+    CHECK_RET(CheckWeightFormat(weight), ACLNN_ERR_PARAM_INVALID);
     const aclTensor* tensorWeight = weight;
     const aclTensor* antiquantScaleRef = antiquantScale;
     const aclTensor* tensorQuantScaleOptional = quantScaleOptional;
@@ -1798,7 +1803,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulV3GetWorkspaceSize(
     CHECK_RET(socRes == ACLNN_SUCCESS, socRes);
     CHECK_RET(CheckNotNull(x, weight, antiquantScale, y), ACLNN_ERR_PARAM_NULLPTR);
     CHECK_RET(CheckOptionalNotNull(quantScaleOptional, quantOffsetOptional), ACLNN_ERR_PARAM_NULLPTR);
-
+    CHECK_RET(CheckWeightFormat(weight), ACLNN_ERR_PARAM_INVALID);
     const aclTensor* tensorWeight = weight;
     const aclTensor* antiquantScaleRef = antiquantScale;
     const aclTensor* tensorQuantScaleOptional = quantScaleOptional;
