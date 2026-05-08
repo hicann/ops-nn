@@ -79,24 +79,34 @@ ge::graphStatus LayerNormV3TilingBase::InputShapeAndAxisCheck(
         std::string dimsMsg = std::to_string(gammaShape.GetDimNum()) + " and " +
             std::to_string(xShape.GetDimNum());
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "gamma and x", dimsMsg.c_str(),
-            "The dim num of input gamma should be less than or equal to the dim num of input x");
+            "The shape dim of input gamma must be less than or equal to that of input x");
         return ge::GRAPH_FAILED;
     }
 
     if(gammaShape != betaShape){
         std::string shapeMsg = ToString(betaShape) + " and " + ToString(gammaShape);
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "beta and gamma", shapeMsg.c_str(),
-            "The shapes of input beta and input gamma should be the same");
+            "The shapes of input beta and input gamma must be the same");
         return ge::GRAPH_FAILED;
     }
 
-    OP_CHECK_IF(
-        !isIndexValid(xShape, beginNormAxis), OP_LOGE(context_->GetNodeName(), "begin_norm_axis is invalid."),
-        return ge::GRAPH_FAILED);
+    if (!isIndexValid(xShape, beginNormAxis)) {
+        
+        std::string reasonMsg = 
+            "The value of attribute begin_norm_axis depends on the number of shape axes of input x";
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "begin_norm_axis",
+            std::to_string(beginNormAxis).c_str(), reasonMsg.c_str());
+        return ge::GRAPH_FAILED;
+    }
+        
 
-    OP_CHECK_IF(
-        !isIndexValid(xShape, beginParamsAxis), OP_LOGE(context_->GetNodeName(), "begin_params_axis is invalid."),
-        return ge::GRAPH_FAILED);
+    if (!isIndexValid(xShape, beginParamsAxis)) {
+        std::string reasonMsg = 
+            "The value of attribute begin_params_axis depends on the number of shape axes of input x";
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "begin_params_axis",
+            std::to_string(beginParamsAxis).c_str(), reasonMsg.c_str());
+        return ge::GRAPH_FAILED;
+    }
 
     beginNormAxis = beginNormAxis < 0 ? beginNormAxis + static_cast<int64_t>(xShape.GetDimNum()) : beginNormAxis;
 
@@ -106,7 +116,7 @@ ge::graphStatus LayerNormV3TilingBase::InputShapeAndAxisCheck(
     if (beginNormAxis != beginParamsAxis) {
         std::string valueMsg = std::to_string(beginNormAxis) + " and " + std::to_string(beginParamsAxis);
         OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context_->GetNodeName(), "begin_norm_axis and begin_params_axis",
-            valueMsg.c_str(), "The attr begin_norm_axis and begin_params_axis should be the same");
+            valueMsg.c_str(), "The values of attr begin_norm_axis and begin_params_axis must be the same");
         return ge::GRAPH_FAILED;
     }
 
@@ -119,9 +129,10 @@ ge::graphStatus LayerNormV3TilingBase::InputShapeAndAxisCheck(
         int64_t normDim = gammaShape.GetDim(index);
         if (normDim != inputDim) {
             std::string shapeMsg = ToString(gammaShape) + " and " + ToString(xShape);
-            std::string reasonMsg = "The shape of input gamma should match"
-                " the subshape of input x starting from axis " + std::to_string(beginNormAxis) +
-                ", where the starting axis refers to the attr begin_norm_axis";
+            std::string reasonMsg =
+                "The shape of input gamma must be the same as the shape consisting of " +
+                std::to_string(gammaShape.GetDimNum()) + " axes starting from the begin_norm_axis of input x, "
+                "where begin_norm_axis refers to the attribute begin_norm_axis";
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "gamma and x",
                 shapeMsg.c_str(), reasonMsg.c_str());
             return ge::GRAPH_FAILED;
@@ -141,14 +152,16 @@ ge::graphStatus LayerNormV3TilingBase::InputDtypeCheck(
     if (gammaDtype != betaDtype) {
         std::string dtypeMsg = ToString(gammaDtype) + " and " + ToString(betaDtype);
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "gamma and beta", dtypeMsg.c_str(),
-            "The dtypes of input gamma and input beta should be the same");
+            "The dtypes of input gamma and input beta must be the same");
         return ge::GRAPH_FAILED;
     }
 
     if((gammaDtype != xDtype) && (gammaDtype != ge::DataType::DT_FLOAT)){
         std::string dtypeMsg = ToString(gammaDtype);
+        std::string reasonMsg = "The dtype of input gamma must be FLOAT or the same as the dtype {" +
+            ToString(xDtype) + "} of input x";
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "gamma", dtypeMsg.c_str(),
-            "The dtype of input gamma should be FLOAT or the same as the dtype of input x");
+            reasonMsg.c_str());
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -171,7 +184,7 @@ ge::graphStatus LayerNormV3TilingBase::OutputShapeCheck(const gert::Shape& xShap
     if (yShape != xShape) {
         std::string shapeMsg = ToString(yShape) + " and " + ToString(xShape);
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "y and x", shapeMsg.c_str(),
-            "The shape of output y should be the same as the shape of input x");
+            "The shapes of output y and input x must be the same");
         return ge::GRAPH_FAILED;
     }
 
@@ -184,18 +197,28 @@ ge::graphStatus LayerNormV3TilingBase::OutputShapeCheck(const gert::Shape& xShap
     auto meanShapePtr = context_->GetOutputShape(OUTPUT_IDX_MEAN);
     if (meanShapePtr != nullptr && EnsureNotScalar(meanShapePtr->GetStorageShape()) != expectedShape) {
         std::string shapeMsg = ToString(EnsureNotScalar(meanShapePtr->GetStorageShape())) + " and " +
-            ToString(expectedShape);
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "mean", shapeMsg.c_str(),
-            "The shape of output mean should be [A1,...,Ai,1,...,1], A1..Ai from x's leading dims");
+            ToString(xShape);
+        std::string reasonMsg = "The shape dims of output mean and input x must be the same, "
+            "and the first " + std::to_string(beginNormAxis) + " axes of output mean must be the equal to"
+            " the first " + std::to_string(beginNormAxis) + " axes of input x, "
+            "and each axis from " + std::to_string(beginNormAxis) + "th axis to the last of output mean must be 1, "
+            "where " + std::to_string(beginNormAxis) + " depends on the value of attribute begin_norm_axis";
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "mean and x", shapeMsg.c_str(),
+            reasonMsg.c_str());
         return ge::GRAPH_FAILED;
     }
 
     auto rstdShapePtr = context_->GetOutputShape(OUTPUT_IDX_RSTD);
     if (rstdShapePtr != nullptr && EnsureNotScalar(rstdShapePtr->GetStorageShape()) != expectedShape) {
         std::string shapeMsg = ToString(EnsureNotScalar(rstdShapePtr->GetStorageShape())) + " and " +
-            ToString(expectedShape);
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "rstd(variance)", shapeMsg.c_str(),
-            "The shape of the third output (rstd or variance) should be [A1,...,Ai,1,...,1]");
+            ToString(xShape);
+        std::string reasonMsg = "The shape dims of output rstd and input x must be the same, "
+            "and the first " + std::to_string(beginNormAxis) + " axes of output rstd must be the equal to"
+            " the first " + std::to_string(beginNormAxis) + " axes of input x, "
+            "and each axis from " + std::to_string(beginNormAxis) + "th axis to the last of output rstd must be 1, "
+            "where " + std::to_string(beginNormAxis) + " depends on the value of attribute begin_norm_axis";
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "rstd and x", shapeMsg.c_str(),
+            reasonMsg.c_str());
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;

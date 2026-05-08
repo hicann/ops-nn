@@ -75,8 +75,9 @@ ge::graphStatus Tiling4InitEmbeddingHashTable(gert::TilingContext *context)
     auto *embeddingDim = attrs->GetAttrPointer<int64_t>(REQUIRED_ATTR_EMBEDDING_DIM_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, embeddingDim);
     OP_CHECK_IF(*embeddingDim < 0,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "embedding_dim",
-            std::to_string(static_cast<int64_t>(*embeddingDim)).c_str(), "embeddingDim must be greater than or equal to 0"),
+        OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "embedding_dim",
+            std::to_string(static_cast<int64_t>(*embeddingDim)).c_str(),
+            "greater than or equal to 0"),
         return ge::GRAPH_FAILED);
     OP_LOGD(context->GetNodeName(), "InitEmbeddingHashTable embeddingDim : %ld", static_cast<int64_t>(*embeddingDim));
 

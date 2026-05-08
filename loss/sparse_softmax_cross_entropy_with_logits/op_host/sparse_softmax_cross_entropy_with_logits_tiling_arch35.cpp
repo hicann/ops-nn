@@ -158,15 +158,18 @@ ge::graphStatus SparseSoftmaxCrossEntropyWithLogitsTiling::CheckInputShape()
         std::string dimNumMsg = std::to_string(labelsStorageShape.GetDimNum()) + " and " +
             std::to_string(featuresStorageShape.GetDimNum());
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "labels and features", dimNumMsg.c_str(),
-            "The number of dimensions of input labels should be one less than that of input features");
+            "The shape dim of input labels must be one less than that of input features");
         return ge::GRAPH_FAILED;
     }
 
     for (size_t i = 0; i < featuresStorageShape.GetDimNum() - 1; i++) {
         if (featuresStorageShape.GetDim(i) != labelsStorageShape.GetDim(i)) {
             std::string shapeMsg = ToString(labelsStorageShape) + " and " + ToString(featuresStorageShape);
+            std::string reasonMsg = 
+                "The shape of input labels must be the same as the shape consisting of the first " +
+                std::to_string(featuresStorageShape.GetDimNum()) + " axes of input features";
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "labels and features", shapeMsg.c_str(),
-                "The shape of input labels should be the same as the prefix shape of input features");
+                reasonMsg.c_str());
             return ge::GRAPH_FAILED;
         }
     }
@@ -376,8 +379,8 @@ ge::graphStatus SparseSoftmaxCrossEntropyWithLogitsTiling::DoTiling()
     auto outputDimNum = outputShape.GetDimNum();
     baseTiling_.r = outputShape.GetDim(outputDimNum - 1);
     if (baseTiling_.r <= 0) {
-        std::string reasonMsg = "The reduce axis of output backprop should be positive, "
-            "where reduce axis refers to the last dim";
+        std::string reasonMsg = "The reduce axis of output backprop must be a positive number, "
+            "where reduce axis is the last dim";
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "backprop",
             ToString(outputShape).c_str(), reasonMsg.c_str());
         return ge::GRAPH_FAILED;

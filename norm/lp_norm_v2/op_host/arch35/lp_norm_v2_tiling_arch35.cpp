@@ -348,9 +348,7 @@ ge::graphStatus LpNormV2Tiling::GetAndCheckReduceAxis()
         int64_t dim = axisListPtr->GetData()[i];
         if (dim < -xShapeDimNum || dim > xShapeDimNum) {
             std::string reasonMsg = 
-                "Each axis in attr axes should be in the range of [-" +
-                std::to_string(xShapeDimNum) + ", " + std::to_string(xShapeDimNum) +
-                "] for the shape of input x";
+                "Each value of attr axes depends on the number of shape axes of input x";
             std::string axesMsg = getAxesVector(axisListPtr);
             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(tilingContext_->GetNodeName(), "axes",
                 axesMsg.c_str(), reasonMsg.c_str());

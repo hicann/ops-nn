@@ -78,13 +78,13 @@ ge::graphStatus LpLossTiling::CheckShape()
     if (inputPDesc->GetDataType() != inputLDesc->GetDataType()) {
         std::string dtypeMsg = ToString(inputPDesc->GetDataType()) + " and " + ToString(inputLDesc->GetDataType());
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "predict and label",
-            dtypeMsg.c_str(), "The dtypes of input predict and input label should be the same");
+            dtypeMsg.c_str(), "The dtypes of input predict and input label must be the same");
         return ge::GRAPH_FAILED;
     }
     if (inputPShape != inputLShape) {
         std::string shapeMsg = ToString(inputPShape) + " and " + ToString(inputLShape);
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext->GetNodeName(), "predict and label",
-            shapeMsg.c_str(), "The shapes of input predict and input label should be the same");
+            shapeMsg.c_str(), "The shapes of input predict and input label must be the same");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;

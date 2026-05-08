@@ -224,8 +224,9 @@ static ge::graphStatus Tiling4NLLLossAC(gert::TilingContext* context, uint32_t m
         auto nsize = xShape.GetDimNum() == 1 ? 1 : xShape.GetDim(0);
         if (targetShape.GetDim(0) < nsize) {
             std::string reasonMsg =
-                "The 0th dim of input target should be greater than or equal to the batch of input x, "
-                "where batch is 1 when x's number of dimensions is 1, otherwise it is the value of x's 0th dim";
+                "The 0th axis of input target must be greater than or equal to the elements " +
+                std::to_string(nsize) + " of input x, "
+                "where the elements of x indicates the number of axes that require normalization computation";
             std::string shapeMsg = ToString(targetShape) + " and " + ToString(xShape);
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "target and x",
                 shapeMsg.c_str(), reasonMsg.c_str());
@@ -248,8 +249,8 @@ static ge::graphStatus Tiling4NLLLossAC(gert::TilingContext* context, uint32_t m
             return ge::GRAPH_FAILED);
         if (targetShape.GetDim(0) < nsize) {
             std::string reasonMsg =
-                "The 0th dim of input target should be greater than or equal to the N axis of input x, "
-                "where N refers to the 0th dim";
+                "The 0th axis of input target must be greater than or equal to the N-dimension of input x, "
+                "where N is the 0th axis";
             std::string shapeMsg = ToString(targetShape) + " and " + ToString(xShape);
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "target and x",
                 shapeMsg.c_str(), reasonMsg.c_str());
@@ -257,8 +258,8 @@ static ge::graphStatus Tiling4NLLLossAC(gert::TilingContext* context, uint32_t m
         }
         if (targetShape.GetDim(1) < hsize) {
             std::string reasonMsg =
-                "The 1st dim of input target should be greater than or equal to the H axis of input x, "
-                "where H refers to the 2nd dim";
+                "The 1st axis of input target must be greater than or equal to the H-dimension of input x, "
+                "where H is the 2nd axis";
             std::string shapeMsg = ToString(targetShape) + " and " + ToString(xShape);
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "target and x",
                 shapeMsg.c_str(), reasonMsg.c_str());
@@ -266,8 +267,8 @@ static ge::graphStatus Tiling4NLLLossAC(gert::TilingContext* context, uint32_t m
         }
         if (targetShape.GetDim(NUMBER_TWO) < wsize) {
             std::string reasonMsg =
-                "The 2nd dim of input target should be greater than or equal to the W axis of input x, "
-                "where W refers to the 3rd dim";
+                "The 2nd axis of input target must be greater than or equal to the W-dimension of input x, "
+                "where W is the 3rd axis";
             std::string shapeMsg = ToString(targetShape) + " and " + ToString(xShape);
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "target and x",
                 shapeMsg.c_str(), reasonMsg.c_str());

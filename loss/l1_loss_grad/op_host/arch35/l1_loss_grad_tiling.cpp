@@ -58,14 +58,14 @@ ge::graphStatus L1LossGradTiling::GetShapeAttrsInfo()
     if (inputGradsDtype != inputPredictDtype) {
         std::string dtypeMsg = ToString(inputGradsDtype) + " and " + ToString(inputPredictDtype);
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "grads and predict",
-            dtypeMsg.c_str(), "The dtypes of input grads and input predict should be the same");
+            dtypeMsg.c_str(), "The dtypes of input grads and input predict must be the same");
         return ge::GRAPH_FAILED;
     }
     
     if (inputGradsDtype != inputLabelDtype) {
         std::string dtypeMsg = ToString(inputGradsDtype) + " and " + ToString(inputLabelDtype);
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "grads and label",
-            dtypeMsg.c_str(), "The dtypes of input grads and input label should be the same");
+            dtypeMsg.c_str(), "The dtypes of input grads and input label must be the same");
         return ge::GRAPH_FAILED;
     }
    
@@ -77,7 +77,7 @@ ge::graphStatus L1LossGradTiling::GetShapeAttrsInfo()
     if (outputDtype != inputGradsDtype) {
         std::string dtypeMsg = ToString(outputDtype) + " and " + ToString(inputGradsDtype);
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "y and grads",
-            dtypeMsg.c_str(), "The dtypes of output y and input grads should be the same");
+            dtypeMsg.c_str(), "The dtypes of output y and input grads must be the same");
         return ge::GRAPH_FAILED;
     }
 
@@ -125,7 +125,7 @@ ge::graphStatus L1LossGradTiling::CaluateReduceElts()
             } else {
                 OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "label",
                     ToString(inputLabelShape).c_str(),
-                    "The shape of input label can not be an empty tensor when the attribute reduction is mean");
+                    "Input label cannot be an empty tensor");
                 return ge::GRAPH_FAILED;
             }
         }

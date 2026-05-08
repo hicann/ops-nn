@@ -121,7 +121,7 @@ ge::graphStatus SoftmaxCrossEntropyWithLogitsRegbaseTiling::CheckInputDtype()
     if (labelsDtype != featuresDtype) {
         std::string dtypeMsg = ToString(labelsDtype) + " and " + ToString(featuresDtype);
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "labels and features", dtypeMsg.c_str(),
-            "The dtypes of input labels and input features should be the same");
+            "The dtypes of input labels and input features must be the same");
         return ge::GRAPH_FAILED;
     }
     bool validDtype = featuresDtype == ge::DT_BF16 || featuresDtype == ge::DT_FLOAT || featuresDtype == ge::DT_FLOAT16;

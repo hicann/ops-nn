@@ -89,8 +89,8 @@ ge::graphStatus SigmoidCEWithLogitsV2TilingClass::DoOpTiling()
     auto reduction = attrs->GetAttrPointer<char>(REDUCTION_INDEX);
     auto iter = REDUCTION_MODE_KEY.find(reduction);
     OP_CHECK_IF(iter == REDUCTION_MODE_KEY.end(),
-                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
-                    "reduction only supports none, sum or mean is support in aclnn."),
+                    OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "reduction",
+                        reduction, "none"),
                     return ge::GRAPH_FAILED);
     // 算子本身仅实现reduction = none的情况，其他情况会在接口层面调用其他算子融合实现
     this->reduction = 0;
@@ -100,26 +100,25 @@ ge::graphStatus SigmoidCEWithLogitsV2TilingClass::DoOpTiling()
         if (this->predictDtype == ge::DT_FLOAT16 || this->predictDtype == ge::DT_BF16) {
             ret = RunBroadcastTiling<half, half>();
         } else if (this->predictDtype == ge::DT_FLOAT) {
-            ret = RunBroadcastTiling<float, float>();                                
+            ret = RunBroadcastTiling<float, float>();
         } else {
-            VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
-                "input dtype only supports fp16, bf16, fp32, while got %s!",
-                ge::TypeUtils::DataTypeToSerialString(this->predictDtype).c_str());
+            OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "predict",
+                ToString(this->predictDtype).c_str(), "FLOAT16, FLOAT or BF16");
             ret = ge::GRAPH_FAILED;
         }
     } else if (this->outputDtype == ge::DT_FLOAT) {
         if (this->predictDtype == ge::DT_FLOAT16 || this->predictDtype == ge::DT_BF16) {
             ret = RunBroadcastTiling<half, float>();
         } else if (this->predictDtype == ge::DT_FLOAT) {
-            ret = RunBroadcastTiling<float, float>();                                
+            ret = RunBroadcastTiling<float, float>();
         } else {
-            VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
-                "input dtype only supports fp16, bf16, fp32, while got %s!",
-                ge::TypeUtils::DataTypeToSerialString(this->predictDtype).c_str());
+            OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "predict",
+                ToString(this->predictDtype).c_str(), "FLOAT16, FLOAT or BF16");
             ret = ge::GRAPH_FAILED;
         }
     } else {
-        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "output dtype not support");
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "loss",
+            ToString(this->outputDtype).c_str(), "FLOAT16, FLOAT, BF16");
         ret = ge::GRAPH_FAILED;
     }
     
@@ -152,30 +151,34 @@ ge::graphStatus SigmoidCEWithLogitsV2TilingClass::CheckDtype()
     OPS_CHECK_NULL_WITH_CONTEXT(context_, predictPtr);
     this->predictDtype = predictPtr->GetDataType();
     OP_CHECK_IF(SUPPORT_DTYPE.count(this->predictDtype) == 0,
-                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
-                    "Input predict Dtype only supports FLOAT16, FLOAT32 AND BF16 "),
+                    OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "predict",
+                        ToString(this->predictDtype).c_str(), "FLOAT16, FLOAT or BF16"),
                     return ge::GRAPH_FAILED);
     
     auto targetPtr = context_->GetInputDesc(INPUT_TARGET_INDEX);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, targetPtr);
     auto targetDtype = targetPtr->GetDataType();
     OP_CHECK_IF(SUPPORT_DTYPE.count(targetDtype) == 0,
-                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
-                    "Input target Dtype only supports FLOAT16, FLOAT32 AND BF16 "),
+                    OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "target",
+                        ToString(targetDtype).c_str(), "FLOAT16, FLOAT or BF16"),
                     return ge::GRAPH_FAILED);
 
     auto outputPtr = context_->GetOutputDesc(0);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, outputPtr);
     this->outputDtype = outputPtr->GetDataType();
     OP_CHECK_IF(SUPPORT_DTYPE.count(this->outputDtype) == 0,
-                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
-                    "Output Dtype only supports FLOAT16, FLOAT32 AND BF16 "),
+                    OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "loss",
+                        ToString(this->outputDtype).c_str(), "FLOAT16, FLOAT or BF16"),
                     return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF(this->outputDtype != this->predictDtype && this->outputDtype != ge::DT_FLOAT,
-                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
-                    "Output Dtype should be the same as input Dtype or Float32. "),
-                    return ge::GRAPH_FAILED);
+    if (this->outputDtype != this->predictDtype && this->outputDtype != ge::DT_FLOAT) {
+        std::string reasonMsg =
+            "The dtype of output loss must be FLOAT or the same as the dtype {" +
+            ToString(this->predictDtype) + "} of input predict"; 
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "loss",
+            ToString(this->outputDtype).c_str(), reasonMsg.c_str());
+        return ge::GRAPH_FAILED;
+    }
 
     return ge::GRAPH_SUCCESS;
 }
@@ -190,10 +193,12 @@ ge::graphStatus SigmoidCEWithLogitsV2TilingClass::CheckShape()
     OPS_CHECK_NULL_WITH_CONTEXT(context_, targetPtr);
     auto targetShape = EnsureNotScalar(targetPtr->GetStorageShape());
 
-    OP_CHECK_IF(predictShape != targetShape,
-                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
-                    "The shape of input predict != the shape of input target, they should be the same. "),
-                    return ge::GRAPH_FAILED);
+    if (predictShape != targetShape) {
+        std::string shapeMsg = ToString(predictShape) + " and " + ToString(targetShape);
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "predict and target",
+            shapeMsg.c_str(), "The shapes of input predict and input target must be the same");
+        return ge::GRAPH_FAILED;
+    }
 
     auto weightPtr = context_->GetOptionalInputShape(INPUT_WEIGHT_INDEX);
     if (weightPtr != nullptr) {

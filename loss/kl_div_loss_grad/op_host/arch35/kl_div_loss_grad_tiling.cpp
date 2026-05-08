@@ -97,21 +97,21 @@ ge::graphStatus KlDivLossGradTiling::CalcDiffDtype()
     if (this->inputGradDtype != this->inputInputDtype) {
         std::string dtypeMsg = ToString(this->inputGradDtype) + " and " + ToString(this->inputInputDtype);
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "grad and input",
-            dtypeMsg.c_str(), "The dtypes of parameter grad and parameter input should be the same");
+            dtypeMsg.c_str(), "The dtypes of parameter grad and parameter input must be the same");
         return ge::GRAPH_FAILED;
     }
 
     if (this->inputGradDtype != this->inputTargetDtype) {
         std::string dtypeMsg = ToString(this->inputGradDtype) + " and " + ToString(this->inputTargetDtype);
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "grad and target",
-            dtypeMsg.c_str(), "The dtypes of parameter grad and parameter target should be the same");
+            dtypeMsg.c_str(), "The dtypes of parameter grad and parameter target must be the same");
         return ge::GRAPH_FAILED;
     }
 
     if (this->inputGradDtype != this->outputYDtype) {
         std::string dtypeMsg = ToString(this->inputGradDtype) + " and " + ToString(this->outputYDtype);
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "grad and y",
-            dtypeMsg.c_str(), "The dtypes of parameter grad and parameter y should be the same");
+            dtypeMsg.c_str(), "The dtypes of parameter grad and parameter y must be the same");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -130,7 +130,7 @@ ge::graphStatus KlDivLossGradTiling::CalcOutputDtype()
     if (this->outputYDtype != this->inputGradDtype) {
         std::string dtypeMsg = ToString(this->outputYDtype) + " and " + ToString(this->inputGradDtype);
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "y and grad",
-            dtypeMsg.c_str(), "The dtypes of parameter y and parameter grad should be the same");
+            dtypeMsg.c_str(), "The dtypes of parameter y and parameter grad must be the same");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -161,7 +161,7 @@ float KlDivLossGradTiling::CalcReductionCof(const gert::Shape& inputLabelShape)
             } else {
                 OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "input",
                     ToString(inputLabelShape).c_str(),
-                    "The shape of parameter input can not be an empty tensor when the attribute reduction is mean");
+                    "Parameter input cannot be an empty tensor when the attribute reduction is mean");
                 return negReductionCof;
             }
         }
@@ -170,8 +170,8 @@ float KlDivLossGradTiling::CalcReductionCof(const gert::Shape& inputLabelShape)
             dimVal = dimVal * inputLabelShape.GetDim(0);
         } else {
             std::string reasonMsg = 
-                "The N axis of parameter input can not be 0 when the attribute reduction is batchmean, "
-                "where N refers to the 0th dim";
+                "The N-dimension of parameter input cannot be 0 when the attribute reduction is batchmean, "
+                "where N is the 0th dim";
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "input",
                 ToString(inputLabelShape).c_str(), reasonMsg.c_str());
             return negReductionCof;

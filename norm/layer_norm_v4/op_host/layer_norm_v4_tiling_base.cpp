@@ -152,11 +152,14 @@ ge::graphStatus LayerNormV4TilingBase::GetShapeAttrsInfo()
     OP_CHECK_IF(
         normalizedShape.GetDimNum() > 1,
         OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "normalized_shape",
-            std::to_string(normalizedShape.GetDimNum()).c_str(), "1D"),
+            std::to_string(normalizedShape.GetDimNum()).c_str(), "0D or 1D"),
         return ge::GRAPH_FAILED);
     normalizedShapeLen = normalizedShape.IsScalar() ? 1 : normalizedShape.GetDim(0);
     if (static_cast<uint64_t>(xShape.GetDimNum()) < normalizedShapeLen) {
-        std::string reasonMsg = "The dim num of input x should be greater than or equal to the batch of input normalized_shape";
+        std::string reasonMsg =
+            "The shape dim of input x must be greater than or equal to the " +
+            std::to_string(normalizedShapeLen) + " of input normalized_shape, "
+            "where the elements of normalized_shape indicates the number of axes that require normalization computation";
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
             context_->GetNodeName(), "x", std::to_string(xShape.GetDimNum()).c_str(), reasonMsg.c_str());
         return ge::GRAPH_FAILED;

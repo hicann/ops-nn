@@ -110,7 +110,7 @@ ge::graphStatus RmsNormGradRegbaseTiling::CheckInputsShape()
     auto storageShape0 = inputShape->GetStorageShape();
     if (CheckShapeAllPositive(storageShape0) != ge::GRAPH_SUCCESS) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "dy", ToString(storageShape0).c_str(),
-            "The shape of input dy can not be an empty tensor or an invalid tensor with a negative dim");
+            "All axes of input dy must be positive numbers");
         return ge::GRAPH_FAILED;
     }
 
@@ -120,7 +120,7 @@ ge::graphStatus RmsNormGradRegbaseTiling::CheckInputsShape()
     auto storageShape1 = inputShape->GetStorageShape();
     if (CheckShapeAllPositive(storageShape1) != ge::GRAPH_SUCCESS) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x", ToString(storageShape1).c_str(),
-            "The shape of input x can not be an empty tensor or an invalid tensor with a negative dim");
+            "All axes of input x must be positive numbers");
         return ge::GRAPH_FAILED;
     }
 
@@ -128,7 +128,7 @@ ge::graphStatus RmsNormGradRegbaseTiling::CheckInputsShape()
     if (CheckShapesEqual(storageShape0, storageShape1) != ge::GRAPH_SUCCESS) {
         std::string shapeMsg = ToString(storageShape0) + " and " + ToString(storageShape1);
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "dy and x", shapeMsg.c_str(),
-            "The shapes of input dy and input x should be the same");
+            "The shapes of input dy and input x must be the same");
         return ge::GRAPH_FAILED;
     }
 
@@ -138,7 +138,7 @@ ge::graphStatus RmsNormGradRegbaseTiling::CheckInputsShape()
     auto storageShape2 = inputShape->GetStorageShape();
     if (CheckShapeAllPositive(storageShape2) != ge::GRAPH_SUCCESS) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "rstd", ToString(storageShape2).c_str(),
-            "The shape of input rstd can not be an empty tensor or an invalid tensor with a negative dim");
+            "All axes of input rstd must be positive numbers");
         return ge::GRAPH_FAILED;
     }
 
@@ -148,7 +148,7 @@ ge::graphStatus RmsNormGradRegbaseTiling::CheckInputsShape()
     auto storageShape3 = inputShape->GetStorageShape();
     if (CheckShapeAllPositive(storageShape3) != ge::GRAPH_SUCCESS) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "gamma", ToString(storageShape3).c_str(),
-            "The shape of input gamma can not be an empty tensor or an invalid tensor with a negative dim");
+            "All axes of input gamma must be positive numbers");
         return ge::GRAPH_FAILED;
     }
 
@@ -186,7 +186,7 @@ ge::graphStatus RmsNormGradRegbaseTiling::CheckInputsDtypeAndFormat()
     if (dyDtype_ != xDtype) {
         std::string dtypeMsg = ToString(xDtype) + " and " + ToString(dyDtype_);
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "x and dy", dtypeMsg.c_str(),
-            "The dtypes of input x and input dy should be the same");
+            "The dtypes of input x and input dy must be the same");
         return ge::GRAPH_FAILED;
     }
 
@@ -203,8 +203,10 @@ ge::graphStatus RmsNormGradRegbaseTiling::CheckInputsDtypeAndFormat()
     auto gammaDtype = gammaDesc->GetDataType();
     if (gammaDtype != ge::DataType::DT_FLOAT && gammaDtype != dyDtype_) {
         std::string dtypeMsg = ToString(gammaDtype);
+        std::string reasonMsg = "The dtype of input gamma must be FLOAT or the same as the dtype {" +
+            ToString(dyDtype_) + "} of input dy";
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "gamma", dtypeMsg.c_str(),
-            "The dtype of input gamma should be FLOAT or the same as the dtype of input dy");
+            reasonMsg.c_str());
         return ge::GRAPH_FAILED;
     }
 
@@ -214,7 +216,7 @@ ge::graphStatus RmsNormGradRegbaseTiling::CheckInputsDtypeAndFormat()
     if (dyDtype_ != dxDtype) {
         std::string dtypeMsg = ToString(dxDtype) + " and " + ToString(dyDtype_);
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "dx and dy", dtypeMsg.c_str(),
-            "The dtypes of output dx and input dy should be the same");
+            "The dtypes of output dx and input dy must be the same");
         return ge::GRAPH_FAILED;
     }
 

@@ -174,8 +174,8 @@ inline bool GetLengthByType(int32_t dtype, uint32_t& dsize) {
         int64_t shapeAfter = 1;
         int64_t dimNum = inShape.GetDimNum();
         if (inDim < -dimNum || inDim >= dimNum) {
-            std::string reasonMsg = "The value of attr dim should be in the range of [-" +
-                std::to_string(dimNum) + ", " + std::to_string(dimNum) + ")";
+            std::string reasonMsg =
+                "The value of attribute dim depends on the number of shape axes of input x";
             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_.c_str(), "dim",
                 std::to_string(inDim).c_str(), reasonMsg.c_str());
             return false;
@@ -189,7 +189,10 @@ inline bool GetLengthByType(int32_t dtype, uint32_t& dsize) {
         }
         // 如果shape不是2的倍数,返回
         if (shapeAfter % 2 != 0) {
-            OP_LOGE(opName_, "SetTotalShape Unsupported inDim %d, shapeAfter %ld %% 2 != 0", inDim, shapeAfter);
+            std::string reasonMsg = "The split axis of input x must be an even number, "
+                "where split axis is the " + std::to_string(splitDim) + "th axis of input x";
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName_.c_str(), "x", ToString(inShape).c_str(),
+                reasonMsg.c_str());
             return false;
         }
 
@@ -461,9 +464,9 @@ inline ge::graphStatus processEmptyTensor(gert::TilingContext* context, const ui
     auto yTotalLength = outputShape->GetStorageShape().GetShapeSize();
     OP_TILING_CHECK(
         yTotalLength != 0,
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context->GetNodeName(), "y must be an empty tensor when x is empty, but total num of y is %ld.",
-            yTotalLength),
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context->GetNodeName(), "y", ToString(outputShape->GetStorageShape()).c_str(),
+            "Output y must be an empty tensor when input x is an empty tensor"),
         return ge::GRAPH_FAILED);
     context->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
     context->SetBlockDim(totalCore);

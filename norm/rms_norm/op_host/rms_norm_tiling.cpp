@@ -124,7 +124,7 @@ static bool CheckInputShape4RmsNorm(const gert::TilingContext* context)
 
     OP_TILING_CHECK(
         xDimNum > MAX_DIM_NUM || xDimNum < MIN_DIM_X,
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x", std::to_string(xDimNum).c_str(),
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "x", std::to_string(xDimNum).c_str(),
             "in the range of [1, 8]"),
         return false);
     OP_TILING_CHECK(
@@ -135,13 +135,13 @@ static bool CheckInputShape4RmsNorm(const gert::TilingContext* context)
     if (gammaDimNum > xDimNum) {
         std::string dimsMsg = std::to_string(gammaDimNum) + " and " + std::to_string(xDimNum);
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context->GetNodeName(), "gamma and x", dimsMsg.c_str(),
-            "The dimNum of input gamma can not be greater than the dimNum of input x");
+            "The shape dim of input gamma must be less than or equal to that of input x");
         return false;
     }
     if (xDimNum != yDimNum) {
         std::string dimsMsg = std::to_string(yDimNum) + " and " + std::to_string(xDimNum);
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context->GetNodeName(), "y and x", dimsMsg.c_str(),
-            "The dim nums of input x and output y should be the same");
+            "The shape dims of input x and output y must be the same");
         return false;
     }
     for (uint32_t i = 0; i < gammaDimNum; i++) {
@@ -149,13 +149,14 @@ static bool CheckInputShape4RmsNorm(const gert::TilingContext* context)
             gammaShape->GetStorageShape().GetDim(i) == 0,
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "gamma",
                 ToString(gammaShape->GetStorageShape()).c_str(),
-                "The shape of input gamma can not be an empty tensor"),
+                "Input gamma cannot be an empty tensor"),
             return false);
         if (gammaShape->GetStorageShape().GetDim(i) != xShape->GetStorageShape().GetDim(xDimNum - gammaDimNum + i)) {
             std::string shapeMsg = ToString(gammaShape->GetStorageShape()) + " and " +
                  ToString(xShape->GetStorageShape());
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "gamma and x", shapeMsg.c_str(), 
-                "The shape of input gamma should be the same as suffix shape of input x");
+                "The shape of input gamma must be the same as the shape "
+                "consisting of the last " + std::to_string(gammaDimNum) + " axes of input x");
             return false;
         }
     }
@@ -164,18 +165,18 @@ static bool CheckInputShape4RmsNorm(const gert::TilingContext* context)
             xShape->GetStorageShape().GetDim(i) == 0,
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "x",
                 ToString(xShape->GetStorageShape()).c_str(),
-                "The shape of input x can not be an empty tensor"),
+                "Input x cannot be an empty tensor"),
             return false);
         OP_TILING_CHECK(
             yShape->GetStorageShape().GetDim(i) == 0,
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "y",
                 ToString(yShape->GetStorageShape()).c_str(),
-                "The shape of output y can not be an empty tensor"),
+                "Output y cannot be an empty tensor"),
             return false);
         if (xShape->GetStorageShape().GetDim(i) != yShape->GetStorageShape().GetDim(i)) {
             std::string shapeMsg = ToString(yShape->GetStorageShape()) + " and " + ToString(xShape->GetStorageShape());
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "y and x", shapeMsg.c_str(),
-                "The shapes of output y and input x should be the same");
+                "The shapes of output y and input x must be the same");
             return false;
         }
     }
@@ -184,13 +185,15 @@ static bool CheckInputShape4RmsNorm(const gert::TilingContext* context)
             rstdShape->GetStorageShape().GetDim(i) == 0,
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "rstd",
                 ToString(rstdShape->GetStorageShape()).c_str(),
-                "The shape of output rstd can not be an empty tensor"),
+                "Output rstd cannot be an empty tensor"),
             return false);
         if (rstdShape->GetStorageShape().GetDim(i) != xShape->GetStorageShape().GetDim(i) &&
                 rstdShape->GetStorageShape().GetDim(i) != 1) {
-            std::string shapeMsg = ToString(rstdShape->GetStorageShape()) + " and " + ToString(xShape->GetStorageShape());
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "rstd and x", shapeMsg.c_str(),
-                "Each dim of output rstd should be 1 or equal to the corresponding dim of input x");
+            std::string shapeMsg = ToString(rstdShape->GetStorageShape());
+            std::string reasonMsg = "The " + std::to_string(i) + "th axis of output rstd must be 1 or equal to the "
+                + std::to_string(i) + "th axis of input x";
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "rstd", shapeMsg.c_str(),
+                reasonMsg.c_str());
             return false;
         }
     }

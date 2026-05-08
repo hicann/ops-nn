@@ -36,7 +36,7 @@ ge::graphStatus LogSoftmaxV2TilingBase::GetAndCheckDtypes()
         std::string dtypeMsg = ToString(xDtype_) + " and " + ToString(yDtype_);
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
             context_->GetNodeName(), "logits and logsoftmax", dtypeMsg.c_str(),
-            "The dtypes of input logits and output logsoftmax should be the same");
+            "The dtypes of input logits and output logsoftmax must be the same");
         return ge::GRAPH_FAILED;
     }
     OP_CHECK_IF(xDtype_ != ge::DT_FLOAT16 && xDtype_ != ge::DT_FLOAT && xDtype_ != ge::DT_BF16,

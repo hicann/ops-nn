@@ -66,7 +66,7 @@ bool LayerNormGradTilingBase::CheckShapeSame(
     if (leftShapeVal != rightShapeVal) {
         std::string paramMsg = rightName + " and " + leftName;
         std::string shapeMsg = ToString(rightShapeVal) + " and " + ToString(leftShapeVal);
-        std::string reasonMsg = "The shapes of " + rightName + " and " + leftName + " should be the same";
+        std::string reasonMsg = "The shapes of " + rightName + " and " + leftName + " must be the same";
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), paramMsg.c_str(),
             shapeMsg.c_str(), reasonMsg.c_str());
         return false;
@@ -86,7 +86,7 @@ ge::graphStatus LayerNormGradTilingBase::InputDtypeCheck(
     if (xDtype != dyDtype) {
         std::string dtypeMsg = ToString(xDtype) + " and " + ToString(dyDtype);
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "x and dy", dtypeMsg.c_str(),
-            "The dtypes of input x and input dy should be the same");
+            "The dtypes of input x and input dy must be the same");
         return ge::GRAPH_FAILED;
     }
     OP_CHECK_IF(
@@ -99,8 +99,10 @@ ge::graphStatus LayerNormGradTilingBase::InputDtypeCheck(
         return ge::GRAPH_FAILED);
     if ((gammaDtype != dyDtype) && (gammaDtype != ge::DataType::DT_FLOAT)) {
         std::string dtypeMsg = ToString(gammaDtype);
+        std::string reasonMsg = "The dtype of input gamma must be FLOAT or the same as the dtype {" +
+            ToString(dyDtype) + "} of input dy";
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "gamma", dtypeMsg.c_str(),
-            "The dtype of input gamma should be FLOAT or the same as the dtype of input dy");
+            reasonMsg.c_str());
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -152,7 +154,7 @@ ge::graphStatus LayerNormGradTilingBase::GetShapeAttrsInfo()
     if (dyDimNum < gammaDimNum) {
         std::string dimsMsg = std::to_string(dyDimNum) + " and " + std::to_string(gammaDimNum);
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "dy and gamma", dimsMsg.c_str(),
-            "The dim num of input dy should be greater than or equal to the dim num of input gamma");
+            "The shape dim of input dy must be greater than or equal to that of input gamma");
         return ge::GRAPH_FAILED;
     }
     // fuse dims
@@ -162,14 +164,15 @@ ge::graphStatus LayerNormGradTilingBase::GetShapeAttrsInfo()
         OP_CHECK_IF(
             (dyShape.GetDim(i) <= 0),
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "dy", ToString(dyShape).c_str(),
-                "The shape of input dy can not be an empty tensor or an invalid tensor with a negative dim"),
+                "All axes of input dy must be positive numbers"),
             return ge::GRAPH_FAILED);
         if (i < dyDimNum - gammaDimNum) {
             row *= dyShape.GetDim(i);
         } else {
             if (dyShape.GetDim(i) != gammaShape.GetDim(i - dyDimNum + gammaDimNum)) {
                 std::string shapeMsg = ToString(dyShape) + " and " + ToString(gammaShape);
-                std::string reasonMsg = "The shape of input gamma should be the same as the suffix shape of input dy";
+                std::string reasonMsg = "The shape of input gamma must be the same as the shape consisting of the last " +
+                    std::to_string(gammaDimNum) + " axes of input dy";
                 OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
                     context_->GetNodeName(), "dy and gamma", shapeMsg.c_str(), reasonMsg.c_str());
                 return ge::GRAPH_FAILED;
@@ -193,7 +196,7 @@ ge::graphStatus LayerNormGradTilingBase::GetShapeAttrsInfo()
         if (commonParams.dxDtype != commonParams.dyDtype) {
             std::string dtypeMsg = ToString(commonParams.dxDtype) + " and " + ToString(commonParams.dyDtype);
             OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "pd_x and dy", dtypeMsg.c_str(),
-                "The dtypes of output pd_x and input dy should be the same");
+                "The dtypes of output pd_x and input dy must be the same");
             return ge::GRAPH_FAILED;
         }
     }
@@ -203,8 +206,10 @@ ge::graphStatus LayerNormGradTilingBase::GetShapeAttrsInfo()
         commonParams.dgammaDtype = dgammaDesc->GetDataType();
         if ((commonParams.dgammaDtype != commonParams.gammaDtype) && (commonParams.dgammaDtype != ge::DataType::DT_FLOAT)) {
             std::string dtypeMsg = ToString(commonParams.dgammaDtype);
+            std::string reasonMsg = "The dtype of output pd_gamma must be FLOAT or the same as the dtype {" +
+                ToString(commonParams.gammaDtype) + "} of input gamma";
             OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "pd_gamma", dtypeMsg.c_str(),
-                "The dtype of output pd_gamma should be FLOAT or the same as the dtype of input gamma");
+                reasonMsg.c_str());
             return ge::GRAPH_FAILED;
         }
     }
@@ -214,8 +219,10 @@ ge::graphStatus LayerNormGradTilingBase::GetShapeAttrsInfo()
         commonParams.dbetaDtype = dbetaDesc->GetDataType();
         if ((commonParams.dbetaDtype != commonParams.gammaDtype) && (commonParams.dbetaDtype != ge::DataType::DT_FLOAT)) {
             std::string dtypeMsg = ToString(commonParams.dbetaDtype);
+            std::string reasonMsg = "The dtype of output pd_beta must be FLOAT or the same as the dtype {" +
+                ToString(commonParams.gammaDtype) + "} of input gamma";
             OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "pd_beta", dtypeMsg.c_str(),
-                "The dtype of output pd_beta should be FLOAT or the same as the dtype of input gamma");
+                reasonMsg.c_str());
             return ge::GRAPH_FAILED;
         }
     }
@@ -223,7 +230,7 @@ ge::graphStatus LayerNormGradTilingBase::GetShapeAttrsInfo()
         if (commonParams.dgammaDtype != commonParams.dbetaDtype) {
             std::string dtypeMsg = ToString(commonParams.dgammaDtype) + " and " + ToString(commonParams.dbetaDtype);
             OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "pd_gamma and pd_beta", dtypeMsg.c_str(),
-                "The dtypes of output pd_gamma and output pd_beta should be the same");
+                "The dtypes of output pd_gamma and output pd_beta must be the same");
             return ge::GRAPH_FAILED;
         }
     }

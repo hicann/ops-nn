@@ -108,7 +108,7 @@ ge::graphStatus RmsNormGradEmptyTiling::CheckInputsShape()
     auto storageShape0 = EnsureNotScalar(inputShape->GetStorageShape());
     if (CheckShapeAllPositive(storageShape0) != ge::GRAPH_SUCCESS) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "dy", ToString(storageShape0).c_str(),
-            "The shape of input dy can not be an invalid tensor with a negative dim");
+            "Input dy has negative axes");
         return ge::GRAPH_FAILED;
     }
 
@@ -118,7 +118,7 @@ ge::graphStatus RmsNormGradEmptyTiling::CheckInputsShape()
     auto storageShape1 = EnsureNotScalar(inputShape->GetStorageShape());
     if (CheckShapeAllPositive(storageShape1) != ge::GRAPH_SUCCESS) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x", ToString(storageShape1).c_str(),
-            "The shape of input x can not be an invalid tensor with a negative dim");
+            "Input x has negative axes");
         return ge::GRAPH_FAILED;
     }
 
@@ -126,7 +126,7 @@ ge::graphStatus RmsNormGradEmptyTiling::CheckInputsShape()
     if (CheckShapesEqual(storageShape0, storageShape1) != ge::GRAPH_SUCCESS) {
         std::string shapeMsg = ToString(storageShape0) + " and " + ToString(storageShape1);
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "dy and x", shapeMsg.c_str(),
-            "The shapes of input dy and input x should be the same");
+            "The shapes of input dy and input x must be the same");
         return ge::GRAPH_FAILED;
     }
 
@@ -136,7 +136,7 @@ ge::graphStatus RmsNormGradEmptyTiling::CheckInputsShape()
     auto storageShape2 = EnsureNotScalar(inputShape->GetStorageShape());
     if (CheckShapeAllPositive(storageShape2) != ge::GRAPH_SUCCESS) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "rstd", ToString(storageShape2).c_str(),
-            "The shape of input rstd can not be an invalid tensor with a negative dim");
+            "Input rstd has negative axes");
         return ge::GRAPH_FAILED;
     }
 
@@ -146,7 +146,7 @@ ge::graphStatus RmsNormGradEmptyTiling::CheckInputsShape()
     auto storageShape3 = EnsureNotScalar(inputShape->GetStorageShape());
     if (CheckShapeAllPositive(storageShape3) != ge::GRAPH_SUCCESS) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "gamma", ToString(storageShape3).c_str(),
-            "The shape of input gamma can not be an invalid tensor with a negative dim");
+            "Input gamma has negative axes");
         return ge::GRAPH_FAILED;
     }
 

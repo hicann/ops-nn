@@ -98,12 +98,12 @@ ge::graphStatus NLLLossGradSimtTiling::ProcessShapeInfo() {
         OP_CHECK_IF(
             (height_ <= 0U),
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x", ToString(inShapeVal).c_str(),
-                "The H axis of input x should be positive, where H refers to the 2nd dim"),
+                "The H-dimension of input x must be a positive number, where H is the 2nd axis"),
             return ge::GRAPH_FAILED);
         OP_CHECK_IF(
             (width_ <= 0U),
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x", ToString(inShapeVal).c_str(),
-                "The W axis of input x should be positive, where W refers to the 3rd dim"),
+                "The W-dimension of input x must be a positive number, where W is the 3rd axis"),
             return ge::GRAPH_FAILED);
         tilingData_.set_batchNum(batchNum_);
         tilingData_.set_classNum(inShapeVal.GetDim(1));

@@ -58,21 +58,21 @@ ge::graphStatus SmoothL1LossGradV2TilingClass::GetShapeAttrsInfo()
     if (predictDType != labelDType) {
         std::string dtypeMsg = ToString(predictDType) + " and " + ToString(labelDType);
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "predict and label",
-            dtypeMsg.c_str(), "The dtypes of input predict and input label should be the same");
+            dtypeMsg.c_str(), "The dtypes of input predict and input label must be the same");
         return ge::GRAPH_FAILED;
     }
 
     if (predictDType != doutDType) {
         std::string dtypeMsg = ToString(predictDType) + " and " + ToString(doutDType);
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "predict and dout",
-            dtypeMsg.c_str(), "The dtypes of input predict and input dout should be the same");
+            dtypeMsg.c_str(), "The dtypes of input predict and input dout must be the same");
         return ge::GRAPH_FAILED;
     }
 
     if (predictDType != outputDType) {
         std::string dtypeMsg = ToString(predictDType) + " and " + ToString(outputDType);
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "predict and gradient",
-            dtypeMsg.c_str(), "The dtypes of input predict and output gradient should be the same");
+            dtypeMsg.c_str(), "The dtypes of input predict and output gradient must be the same");
         return ge::GRAPH_FAILED;
     }
     this->inputDtype = predictDType;
@@ -122,7 +122,7 @@ ge::graphStatus SmoothL1LossGradV2TilingClass::CalcReduceMeanCof()
             } else {
                 OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "predict",
                     ToString(inputShape).c_str(),
-                    "The shape of input predict can not be an empty tensor when the attr reduction is mean");
+                    "Input predict cannot be an empty tensor when the attribute reduction is mean");
                 return ge::GRAPH_FAILED;
             }
         }

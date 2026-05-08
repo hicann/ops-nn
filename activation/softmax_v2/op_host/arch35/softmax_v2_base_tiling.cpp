@@ -90,7 +90,7 @@ ge::graphStatus SoftmaxV2TilingBase::GetAndCheckDtypes()
             std::string dtypeMsg = ToString(xDtype_) + " and " + ToString(yDtype_);
             OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
                 context_->GetNodeName(), "x and y", dtypeMsg.c_str(),
-                "The dtypes of input x and output y should be the same when attribute half_to_float is false");
+                "The dtypes of input x and output y must be the same when attribute half_to_float is false");
             return ge::GRAPH_FAILED;
         }
         OP_CHECK_IF(xDtype_ != ge::DT_FLOAT16 && xDtype_ != ge::DT_FLOAT && xDtype_ != ge::DT_BF16,
@@ -100,8 +100,8 @@ ge::graphStatus SoftmaxV2TilingBase::GetAndCheckDtypes()
     } else {
         if (xDtype_ != ge::DT_FLOAT16 || yDtype_ != ge::DT_FLOAT) {
             std::string dtypeMsg = ToString(xDtype_) + " and " + ToString(yDtype_);
-            std::string reasonMsg = "The dtype of input x should be FLOAT16 and"
-                " the dtype of output y should be FLOAT when attribute half_to_float is true";
+            std::string reasonMsg = "The dtype of input x must be FLOAT16 and"
+                " the dtype of output y must be FLOAT when attribute half_to_float is true";
             OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
                 context_->GetNodeName(), "x and y", dtypeMsg.c_str(),
                 reasonMsg.c_str());
@@ -140,7 +140,7 @@ ge::graphStatus SoftmaxV2TilingBase::GetDimsAndCheckShapeValid()
         std::string dimsMsg = std::to_string(xShapeSize_) + " and " + std::to_string(yShapeSize);
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
             context_->GetNodeName(), "x and y", dimsMsg.c_str(),
-            "The shape dims of input x and output y should be the same");
+            "The shape dims of input x and output y must be the same");
         return ge::GRAPH_FAILED;
     }
 
@@ -153,7 +153,7 @@ ge::graphStatus SoftmaxV2TilingBase::GetDimsAndCheckShapeValid()
     OP_CHECK_IF(
         xShapeSize_ == 0,
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "x", "0",
-            "The number of dimensions of input x can not be 0, because empty tensor is not supported"),
+            "The shape dim of input x must be greater than 0"),
         return ge::GRAPH_FAILED);
     xShape_.resize(xShapeSize_);
     for (int i = 0; i < xShapeSize_; i++) {
@@ -161,13 +161,13 @@ ge::graphStatus SoftmaxV2TilingBase::GetDimsAndCheckShapeValid()
             std::string shapesMsg = ToString(xStorageShape) + " and " + ToString(yStorageShape);
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
                 context_->GetNodeName(), "x and y", shapesMsg.c_str(),
-                "The shapes of input x and output y should be the same");
+                "The shapes of input x and output y must be the same");
             return ge::GRAPH_FAILED;
         }
         OP_CHECK_IF(xStorageShape.GetDim(i) <= 0,
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
                 context_->GetNodeName(), "x", ToString(xStorageShape).c_str(),
-                "The shape of input x can not be an empty tensor or an invalid tensor with a negative dim"),
+                "All axes of input x must be positive numbers"),
             return ge::GRAPH_FAILED);
         xShape_[i] = xStorageShape.GetDim(i);
     }
@@ -190,8 +190,7 @@ ge::graphStatus SoftmaxV2TilingBase::GetAndCheckAxes()
                         return ge::GRAPH_FAILED);
         reduceAxes_ = axisListPtr->GetData()[0];
         if (reduceAxes_ < -xShapeSize_ || reduceAxes_ > xShapeSize_ - 1) {
-            std::string reasonMsg = "The value of attr axes should be in range [-" + std::to_string(xShapeSize_) + ", "
-                + std::to_string(xShapeSize_) + ")";
+            std::string reasonMsg = "The value of attribute axes depends on the number of shape axes of input x";
             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
                 context_->GetNodeName(), "axes", std::to_string(reduceAxes_).c_str(), reasonMsg.c_str());
             return ge::GRAPH_FAILED;

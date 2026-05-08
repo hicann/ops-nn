@@ -41,7 +41,7 @@ ge::graphStatus LogSoftmaxGradTilingBase::GetAndCheckDtypes()
         std::string dtypeMsg = ToString(gradDtype) + ", " + ToString(xDtype_) + " and " + ToString(yDtype_);
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
             context_->GetNodeName(), "grad, x and y", dtypeMsg.c_str(),
-            "The dtypes of input grad, input x and output y should be the same");
+            "The dtypes of input grad, input x and output y must be the same");
         return ge::GRAPH_FAILED;
     }
     OP_CHECK_IF((xDtype_ != ge::DT_FLOAT16) && (xDtype_ != ge::DT_FLOAT) && (xDtype_ != ge::DT_BF16),

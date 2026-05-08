@@ -417,7 +417,7 @@ ge::graphStatus SparseTensorDenseMatMulTilingArch35::CheckInputShapes()
     auto x1IndicesDim0 = static_cast<int64_t>(x1IndicesShape_.GetDim(0));
     auto x1IndicesDim1 = static_cast<int64_t>(x1IndicesShape_.GetDim(1));
     if (x1IndicesDim1 != DIM1_X1_INDICES) {
-        std::string reasonMsg = "The 1st dim of input x1_indices should be " + std::to_string(DIM1_X1_INDICES);
+        std::string reasonMsg = "The 1st axis of input x1_indices must be " + std::to_string(DIM1_X1_INDICES);
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
             context_->GetNodeName(), "x1_indices", ToString(x1IndicesShape_).c_str(), reasonMsg.c_str());
         return ge::GRAPH_FAILED;
@@ -436,7 +436,7 @@ ge::graphStatus SparseTensorDenseMatMulTilingArch35::CheckInputShapes()
         std::string shapeMsg = ToString(x1ValuesShape_) + " and " + ToString(x1IndicesShape_);
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
             context_->GetNodeName(), "x1_values and x1_indices", shapeMsg.c_str(),
-            "The 0th dim of input x1_values should be equal to the 0th dim of input x1_indices");
+            "The 0th axis of input x1_values must be equal to the 0th axis of input x1_indices");
         return ge::GRAPH_FAILED;
     }
 
@@ -503,7 +503,7 @@ ge::graphStatus SparseTensorDenseMatMulTilingArch35::CheckInputDTypes()
         std::string dtypeMsg = ToString(x2DType_) + " and " + ToString(x1ValuesDType_);
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
             context_->GetNodeName(), "x2 and x1_values", dtypeMsg.c_str(),
-            "The dtypes of input x2 and input x1_values should be the same");
+            "The dtypes of input x2 and input x1_values must be the same");
         return ge::GRAPH_FAILED;
     }
 
@@ -551,8 +551,7 @@ ge::graphStatus SparseTensorDenseMatMulTilingArch35::GetAndCheckInputParams()
     std::string x1Matrix = "[" + std::to_string(m_) + ", " + std::to_string(n_) + "]";
     std::string x2Matrix = "[" + std::to_string(n_) + ", " + std::to_string(p_) + "]";
     if (nnz_ < 0 || nnz_ >= INT32_MAX_INTEGER) {
-        std::string reasonMsg = "The 0th dim of input x1_indices (i.e., the number of non-zero elements of x1) "
-            "should be in the range of [0, INT32_MAX)";
+        std::string reasonMsg = "The 0th axis of input x1_indices must be in the range of [0, INT32_MAX)";
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x1_indices", ToString(x1IndicesShape_).c_str(),
             reasonMsg.c_str());
         return ge::GRAPH_FAILED;
@@ -561,7 +560,7 @@ ge::graphStatus SparseTensorDenseMatMulTilingArch35::GetAndCheckInputParams()
     if (m_ < 0 || n_ < 0 || p_ < 0 || m_ >= INT32_MAX_INTEGER || n_ >= INT32_MAX_INTEGER || p_ >= INT32_MAX_INTEGER){
         std::string shapeMsg = x1Matrix + " and " + x2Matrix;
         std::string reasonMsg = "The m, n and p (derived from x1 matrix [m, n] and x2 matrix [n, p]) "
-            "should be in the range of [0, INT32_MAX)";
+            "must be in the range of [0, INT32_MAX)";
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "x1_shape and x2", shapeMsg.c_str(),
             reasonMsg.c_str());
         return ge::GRAPH_FAILED;
@@ -602,7 +601,7 @@ ge::graphStatus SparseTensorDenseMatMulTilingArch35::GetAndCheckInputParams()
 
     if ((m_ > 0 && static_cast<double>(nnz_) / m_ > n_) || (n_ > 0 && static_cast<double>(nnz_) / n_ > m_)) {
         std::string shapeMsg = ToString(x1IndicesShape_);
-        std::string reasonMsg = "nnz can not be greater than m * n, where m and n is derived from x1 matrix [m, n]: "
+        std::string reasonMsg = "nnz cannot be greater than m * n, where m and n is derived from x1 matrix [m, n]: "
             + x1Matrix +
             ", and nnz (i.e., the number of non-zero elements of x1) is the 1st dim of input x1_indices";
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
@@ -630,7 +629,7 @@ ge::graphStatus SparseTensorDenseMatMulTilingArch35::CheckOutputShapes()
     if (yDim0 != m_) {
         std::string shapeMsg = ToString(yShape_) + " and [" + std::to_string(m_) + ", " + std::to_string(n_) + "]";
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "y and x1_shape", shapeMsg.c_str(),
-            "The 1st dim of output y should be equal to m (derived from x1 matrix [m, n])");
+            "The 1st axis of output y must be equal to m (derived from x1 matrix [m, n])");
         return ge::GRAPH_FAILED;
     }
 
@@ -638,7 +637,7 @@ ge::graphStatus SparseTensorDenseMatMulTilingArch35::CheckOutputShapes()
     if (yDim1 != p_) {
         std::string shapeMsg = ToString(yShape_) + " and [" + std::to_string(n_) + ", " + std::to_string(p_) + "]";
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "y and x2", shapeMsg.c_str(),
-            "The 2nd dim of output y should be equal to p (derived from x2 matrix [n, p])");
+            "The 2nd axis of output y must be equal to p (derived from x2 matrix [n, p])");
         return ge::GRAPH_FAILED;
     }
 
@@ -653,7 +652,7 @@ ge::graphStatus SparseTensorDenseMatMulTilingArch35::CheckOutputDTypes()
         std::string dtypeMsg = ToString(yDType_) + " and " + ToString(x1ValuesDType_);
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
             context_->GetNodeName(), "y and x1_values", dtypeMsg.c_str(), 
-            "The dtypes of output y and input x1_values should be the same");
+            "The dtypes of output y and input x1_values must be the same");
         return ge::GRAPH_FAILED;
     }
 

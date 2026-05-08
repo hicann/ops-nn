@@ -330,8 +330,8 @@ ge::graphStatus RenormTiling::GetAndCheckReduceAxis()
     // 边界检查：dim不合法（<0或>=xShapeDimNum）
     int targetDim = *targetDimPtr;
     if (targetDim < 0 || targetDim >= xShapeDimNum) {
-        std::string reasonMsg = "The attr dim should be in the range of [0, " +
-            std::to_string(xShapeDimNum) + ") for the shape of input x";
+        std::string reasonMsg =
+            "The value of attribute dim depends on the number of shape axes of input x";
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(tilingContext_->GetNodeName(), "dim",
             std::to_string(targetDim).c_str(), reasonMsg.c_str());
         return ge::GRAPH_FAILED;
