@@ -357,7 +357,9 @@ static bool CheckConvBiasDimLegal(const InferShapeContext* context, const gert::
         return true;
     }
     // Get bias channel index
-    ge::Format biasFormat = context->GetOptionalInputDesc(opInfo.paramIdx.biasIdx)->GetOriginFormat();
+    auto biasDesc = context->GetOptionalInputDesc(opInfo.paramIdx.biasIdx);
+    OPS_CHECK_NULL_WITH_CONTEXT(context, biasDesc);
+    ge::Format biasFormat = biasDesc->GetOriginFormat();
     GetConvShapeIdx(biasFormat, opInfo.biasFormatIdx);
     // Check bias other dim
     if (biasDimNum != biasDimNumExpect) {
@@ -1367,6 +1369,7 @@ static ge::graphStatus InferDataTypeQuantConv3D(gert::InferDataTypeContext* cont
     const auto attrs = context->GetAttrs();
     OPS_CHECK_NULL_WITH_CONTEXT(context, attrs);
     const int64_t *dtypeNum = attrs->GetAttrPointer<int64_t>(DTYPE_IDX_QUANT_CONV);
+    OPS_CHECK_NULL_WITH_CONTEXT(context, dtypeNum);
     ge::DataType outDtype = static_cast<ge::DataType>(*dtypeNum);
     context->SetOutputDataType(0, outDtype);
     OP_LOGD(context->GetNodeName(), "Set y dtype: %s success.", DTypeToStr(outDtype).c_str());

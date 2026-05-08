@@ -27,11 +27,11 @@ enum class L1TilingMode {
 };
 
 struct PBufferParams {
-    uint8_t pbAL1 = 1;
-    uint8_t pbBL1 = 1;
-    uint8_t pbAL0 = 1;
-    uint8_t pbBL0 = 1;
-    uint8_t pbCL0 = 1;
+    uint8_t pbAL1 = SINGLE_BUFFER_NUM;
+    uint8_t pbBL1 = SINGLE_BUFFER_NUM;
+    uint8_t pbAL0 = SINGLE_BUFFER_NUM;
+    uint8_t pbBL0 = SINGLE_BUFFER_NUM;
+    uint8_t pbCL0 = SINGLE_BUFFER_NUM;
     uint64_t pBufferFlag = 0;
 };
 
@@ -61,7 +61,7 @@ protected:
     uint64_t fMapDTypeSize = 0;
     uint64_t weightDTypeSize = 0;
     uint64_t biasDTypeSize = 0;
-    uint64_t scaleDtypeSize = 0;
+    uint64_t scaleDTypeSize = 0;
 };
 } // namespace conv_tiling
 

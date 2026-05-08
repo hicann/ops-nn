@@ -62,7 +62,7 @@ enum class Kl1MultiAxis : int8_t {
 
 class ConvTilingAlgorithmBBmode : public ConvTilingAlgorithmBase {
 public:
-    Conv2DBasicBlockInfo* conv2DBasicBlockInfoPtr;
+    Conv2DBasicBlockInfo* conv2DBasicBlockInfoPtr = nullptr;
 
     explicit ConvTilingAlgorithmBBmode(ConvTilingBase *tilingIns, Conv2DBasicBlockInfo& conv2DBasicBlockInfo) :
         ConvTilingAlgorithmBase(tilingIns), conv2DBasicBlockInfoPtr(&conv2DBasicBlockInfo) {

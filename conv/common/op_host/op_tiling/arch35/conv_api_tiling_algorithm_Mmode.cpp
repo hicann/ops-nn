@@ -288,10 +288,10 @@ void ConvTilingAlgorithmMmode::InitABL1TilingMode()
     // Check if all full load is possible
     if (IsAllFullLoadPossible(mL1ExceedInstrLimit)) {
         this->l1TilingFlag.abL1Mode = L1TilingMode::ALL_FULL_LOAD;
-        this->dbValue.pbAL1 = 1;
+        this->dbValue.pbAL1 = SINGLE_BUFFER_NUM;
         if (tilingIns_->enableInnerBatch && CeilDiv(tilingIns_->shapeInfo.singleBatch, tilingIns_->innerBatch) > 1) {
             this->l1TilingFlag.abL1Mode = L1TilingMode::FULL_LOAD_BL1;
-            this->dbValue.pbAL1 = CONST_VALUE_2;
+            this->dbValue.pbAL1 = DOUBLE_BUFFER_NUM;
         }
         return;
     }
@@ -302,10 +302,10 @@ void ConvTilingAlgorithmMmode::InitABL1TilingMode()
         return;
     } else if (IsWeightFullLoadDominant() && IsFmapFullLoadPossible(mL1ExceedInstrLimit)) {
         this->l1TilingFlag.abL1Mode = L1TilingMode::FULL_LOAD_AL1;
-        this->dbValue.pbAL1 = 1;
+        this->dbValue.pbAL1 = SINGLE_BUFFER_NUM;
         if (tilingIns_->enableInnerBatch && CeilDiv(tilingIns_->shapeInfo.singleBatch, tilingIns_->innerBatch) > 1) {
             this->l1TilingFlag.abL1Mode = L1TilingMode::NONE_FULL_LOAD;
-            this->dbValue.pbAL1 = CONST_VALUE_2;
+            this->dbValue.pbAL1 = DOUBLE_BUFFER_NUM;
         }
         return;
     }
@@ -313,15 +313,15 @@ void ConvTilingAlgorithmMmode::InitABL1TilingMode()
     // weightFullLoadL1Size is smaller than fmapFullLoadL1Size
     if (IsFmapFullLoadPossible(mL1ExceedInstrLimit)) {
         this->l1TilingFlag.abL1Mode = L1TilingMode::FULL_LOAD_AL1;
-        this->dbValue.pbAL1 = 1;
+        this->dbValue.pbAL1 = SINGLE_BUFFER_NUM;
         if (tilingIns_->enableInnerBatch && CeilDiv(tilingIns_->shapeInfo.singleBatch, tilingIns_->innerBatch) > 1) {
             if (IsWeightFullLoadPossible()) {
                 this->l1TilingFlag.abL1Mode = L1TilingMode::FULL_LOAD_BL1;
-                this->dbValue.pbAL1 = CONST_VALUE_2;
+                this->dbValue.pbAL1 = DOUBLE_BUFFER_NUM;
                 return;
             }
             this->l1TilingFlag.abL1Mode = L1TilingMode::NONE_FULL_LOAD;
-            this->dbValue.pbAL1 = CONST_VALUE_2;
+            this->dbValue.pbAL1 = DOUBLE_BUFFER_NUM;
         }
         return;
     } else if (IsWeightFullLoadPossible()) {
@@ -648,7 +648,7 @@ void ConvTilingAlgorithmMmode::BiasL1TilingDecision()
     if (!this->l1TilingFlag.isFixpFullLoad) {
         this->l1TilingFlag.isFixpFullLoad = true;
         bool exceedDataCopyLimits = tilingIns_->shapeInfo.singleCo1 * tilingIns_->cubeInfo.n0 *
-            this->scaleDtypeSize > DATACOPYPARAMS_BURSTLEN_MAX;
+            this->scaleDTypeSize > DATACOPYPARAMS_BURSTLEN_MAX;
         if (!CheckL1Buffer() || exceedDataCopyLimits) {
             this->l1TilingFlag.isFixpFullLoad = false;
         }
@@ -690,18 +690,18 @@ void ConvTilingAlgorithmMmode::UpdateL1DoubelBuffer()
 {
     if (this->l1TilingFlag.abL1Mode == L1TilingMode::ALL_FULL_LOAD ||
         this->l1TilingFlag.abL1Mode == L1TilingMode::FULL_LOAD_AL1) {
-        this->dbValue.pbAL1 = 1;
+        this->dbValue.pbAL1 = SINGLE_BUFFER_NUM;
     }
     if (this->l1TilingFlag.abL1Mode != L1TilingMode::FULL_LOAD_BL1 &&
         (this->l1TilingFlag.abL1Mode != L1TilingMode::ALL_FULL_LOAD)) {
         this->dbValue.pbBL1 = DOUBLE_BUFFER_NUM;
         if (!CheckL1Buffer()) {
-            this->dbValue.pbBL1 = 1;
+            this->dbValue.pbBL1 = SINGLE_BUFFER_NUM;
         }
     }
     if (this->l1TilingFlag.abL1Mode == L1TilingMode::ALL_FULL_LOAD ||
         this->l1TilingFlag.abL1Mode == L1TilingMode::FULL_LOAD_BL1) {
-        this->dbValue.pbBL1 = 1;
+        this->dbValue.pbBL1 = SINGLE_BUFFER_NUM;
     }
     return;
 }
@@ -782,12 +782,12 @@ void ConvTilingAlgorithmMmode::InitPingPong()
             this->dbValue.pbBL1 = DOUBLE_BUFFER_NUM;
     } else {
         this->dbValue.pbAL1 = (CalcL1SizeForL0Tiling(tilingIns_->cubeInfo.m0, tilingIns_->cubeInfo.n0) <=
-                               tilingIns_->platformInfo.l1Size) ? DOUBLE_BUFFER_NUM : 1;
-        this->dbValue.pbBL1 = 1;
+                               tilingIns_->platformInfo.l1Size) ? DOUBLE_BUFFER_NUM : SINGLE_BUFFER_NUM;
+        this->dbValue.pbBL1 = SINGLE_BUFFER_NUM;
     }
     this->dbValue.pbAL0 = DOUBLE_BUFFER_NUM;
     this->dbValue.pbBL0 = DOUBLE_BUFFER_NUM;
-    this->dbValue.pbCL0 = 1;
+    this->dbValue.pbCL0 = SINGLE_BUFFER_NUM;
 }
 
 void ConvTilingAlgorithmMmode::GetL0TilingRange()
@@ -946,23 +946,23 @@ void ConvTilingAlgorithmMmode::CheckL0CDoubleBuffer()
     bool kFullLoadFlag = l0TilingParams.kL0 == tilingIns_->shapeInfo.singlekD * tilingIns_->shapeInfo.singleCi1 *
                                                this->l1TilingCalc.ci0HkWk;
     if (kFullLoadFlag && static_cast<uint64_t>(tilingIns_->shapeInfo.singleM) <= l0TilingParams.mL0) {
-        this->dbValue.pbAL0 = 1;
+        this->dbValue.pbAL0 = SINGLE_BUFFER_NUM;
     }
 
     if (kFullLoadFlag && static_cast<uint64_t>(tilingIns_->shapeInfo.singleCo) <= l0TilingParams.nL0) {
-        this->dbValue.pbBL0 = 1;
+        this->dbValue.pbBL0 = SINGLE_BUFFER_NUM;
     }
 
     if (this->dbValue.pbAL0 == DOUBLE_BUFFER_NUM && this->dbValue.pbBL0 == DOUBLE_BUFFER_NUM && kFullLoadFlag) {
         if (tilingIns_->l1TilingInfo.iterateMNOrder == IterateMNOrder::ITER_M_FST) {
-            this->dbValue.pbBL0 = 1;
+            this->dbValue.pbBL0 = SINGLE_BUFFER_NUM;
         } else {
-            this->dbValue.pbAL0 = 1;
+            this->dbValue.pbAL0 = SINGLE_BUFFER_NUM;
         }
     }
-    if (this->dbValue.pbAL0 == DOUBLE_BUFFER_NUM && this->dbValue.pbBL0 == 1) {
+    if (this->dbValue.pbAL0 == DOUBLE_BUFFER_NUM && this->dbValue.pbBL0 == SINGLE_BUFFER_NUM) {
         tilingIns_->l1TilingInfo.iterateMNOrder = IterateMNOrder::ITER_M_FST;
-    } else if (this->dbValue.pbAL0 == 1 && this->dbValue.pbBL0 == DOUBLE_BUFFER_NUM) {
+    } else if (this->dbValue.pbAL0 == SINGLE_BUFFER_NUM && this->dbValue.pbBL0 == DOUBLE_BUFFER_NUM) {
         tilingIns_->l1TilingInfo.iterateMNOrder = IterateMNOrder::ITER_N_FST;
     }
 }

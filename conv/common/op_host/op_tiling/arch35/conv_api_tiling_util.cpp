@@ -105,7 +105,7 @@ void CalcCommFactor(const uint64_t num, const uint64_t numMax, std::vector<uint6
 void CalcCommFactorWithPowerOfTwo(const uint64_t num, const uint64_t numMax, std::vector<uint64_t> &resList)
 {
     CalcCommFactor(num, numMax, resList);
-    for (uint64_t i = 2; i <= min(num, numMax); i *= CONST_VALUE_2) {
+    for (uint64_t i = 2; i <= std::min(num, numMax); i *= CONST_VALUE_2) {
         if (std::find(resList.begin(), resList.end(), i) == resList.end()) {
             resList.emplace_back(i);
         }
@@ -115,7 +115,7 @@ void CalcCommFactorWithPowerOfTwo(const uint64_t num, const uint64_t numMax, std
 
 void CalcCommFactorOfTwoNum(const uint64_t num1, const uint64_t num2, std::vector<uint64_t> &resList)
 {
-    uint64_t minNum = min(num1, num2);
+    uint64_t minNum = std::min(num1, num2);
     for (uint64_t i = 1; i <= minNum; ++i) {
         if (num1 % i == 0 && num2 % i == 0) {
                 resList.emplace_back(i);
@@ -133,7 +133,7 @@ void VectorElementMultip(std::vector<uint64_t>& range, const uint64_t value)
 
 bool IsEqual(std::vector<ConvDtype>& arr1, const std::vector<ConvDtype>& arr2, uint32_t size)
 {
-    if (std::min(arr1.size(), arr2.size()) > size) {
+    if (std::min(arr1.size(), arr2.size()) != size) {
         return false;
     }
 

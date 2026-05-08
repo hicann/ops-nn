@@ -153,7 +153,7 @@ private:
     L1TilingCalc l1TilingCalc;
     L1TilingIdx l1TilingIdx;
     L1TilingFlag l1TilingFlag;
-    unordered_map<L1TilingMode, L1TilingIdx> l1TilingInitMap;
+    std::unordered_map<L1TilingMode, L1TilingIdx> l1TilingInitMap;
 };
 } // namespace conv_tiling_algo_m
 

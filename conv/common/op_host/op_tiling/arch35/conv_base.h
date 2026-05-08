@@ -209,7 +209,7 @@ const std::map<std::string, ShapeBound> shapeBoundTab = {
     {"kW", {MAX_KW_B8_SHAPE, MAX_KW_B16_SHAPE, MAX_KW_B32_SHAPE}}
 };
 
-const vector<string> PADMODE_WHITELIST = {
+const std::vector<std::string> PADMODE_WHITELIST = {
     "SPECIFIC",
     "SAME",
     "VALID",
@@ -225,9 +225,15 @@ struct ascendOpsCubeTypeMap {
         {{ConvDtype::UNDEFINED, ConvDtype::UNDEFINED}};
 
     ConvDtype ToBiasType(ConvDtype type) const {
+        if (static_cast<uint8_t>(type) > static_cast<uint8_t>(ConvDtype::UNDEFINED)) {
+            return ConvDtype::UNDEFINED;
+        }
         return typeMaps[static_cast<uint8_t>(type)].biasType;
     }
     ConvDtype ToMadType(ConvDtype type) const {
+        if (static_cast<uint8_t>(type) > static_cast<uint8_t>(ConvDtype::UNDEFINED)) {
+            return ConvDtype::UNDEFINED;
+        }
         return typeMaps[static_cast<uint8_t>(type)].madType;
     }
     
@@ -265,9 +271,9 @@ struct pair_hash {
     }
 };
 
-ge::graphStatus ShapeAttrSynthesisCheck(ConvAscendcOriginShapeAttrInfo oriShapeAttrInfo,
+ge::graphStatus ShapeAttrSynthesisCheck(const ConvAscendcOriginShapeAttrInfo& oriShapeAttrInfo,
                                         ConvParamInfo paramInfo, gert::TilingContext* context);
-ge::graphStatus ShapeAttrSynthesisCheckAux(const ConvAscendcOriginShapeAttrInfo oriShapeAttrInfo,
+ge::graphStatus ShapeAttrSynthesisCheckAux(const ConvAscendcOriginShapeAttrInfo& oriShapeAttrInfo,
                                            ConvParamInfo paramInfo, const gert::TilingContext* context);
 void GetSupportedDataTypes(bool hasBias, bool quantFlag, std::vector<std::vector<ge::DataType>>& supportTypes);
 void GetSupportedDataTypes(const NpuArch& socVersion, bool quantFlag,
@@ -334,7 +340,7 @@ public:
     void GetSupportedFormats(bool quantFlag, bool is2dFlag,
                              std::stringstream& ss, std::vector<std::vector<ge::Format>>& supportFormats);
     void ConvBaseInitFixpipeInfo(const FixpipeInfo& fixpipeInfo);
-    bool CheckValidString(const string &inputStr, const gert::TilingContext* context) const;
+    bool CheckValidString(const std::string &inputStr, const gert::TilingContext* context) const;
 
 private:
     gert::TilingContext* context_ = nullptr;

@@ -16,6 +16,8 @@
 #ifndef ASCENDC_TILING_CONV2D_V2_API_TILING_H
 #define ASCENDC_TILING_CONV2D_V2_API_TILING_H
 
+#include <memory>
+
 #include "conv2d_v2_api_tilingdata.h"
 #include "../../../../common/op_host/op_tiling/arch35/conv_api_tiling_base.h"
 #include "../../../../common/op_host/op_tiling/arch35/conv_api_tiling_algorithm_base.h"
@@ -110,7 +112,7 @@ public:
     void GetWeightUBTiling(ConvWeightUbTransParams& params);
     void GetDmaUbTiling(ConvDmaParams& params);
 private:
-    shared_ptr<ConvTilingAlgorithmBase> algoPtr;
+    std::shared_ptr<ConvTilingAlgorithmBase> algoPtr;
     void SetTilingData(optiling::TConv2DTiling& tiling);
     void SetAttrsTilingData(optiling::TConv2DTiling& tiling);
     void SetScalarParams(optiling::TConv2DTiling& tiling);

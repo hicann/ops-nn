@@ -190,7 +190,7 @@ private:
     void GetUbTiling();
     L1TilingCalc l1TilingCalc;
     L1TilingInit l1TilingInit;
-    unordered_map<L1TilingMode, L1TilingInit> l1TilingInitMap;
+    std::unordered_map<L1TilingMode, L1TilingInit> l1TilingInitMap;
     L1TilingRange l1TilingRange;
     L1TilingParams l1Params;
     L1TilingFlag l1Flags;

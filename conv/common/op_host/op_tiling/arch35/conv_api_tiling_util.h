@@ -27,7 +27,6 @@
 #include "conv_template_utils.h"
 
 namespace conv_tiling {
-using namespace std;
 using optiling::conv_ops_tiling::ConvDtype;
 using optiling::conv_ops_tiling::ConvFormat;
 
@@ -177,6 +176,7 @@ const std::map<ConvDtype, uint32_t> DTYPE_SIZE_TAB = {
     {ConvDtype::FLOAT8_E4M3FN, 1}
 };
 
+constexpr uint64_t SINGLE_BUFFER_NUM = 1;
 constexpr uint64_t DOUBLE_BUFFER_NUM = 2;
 constexpr uint32_t C0_BYTE_SIZE = 32;
 constexpr uint32_t MIN_BURST_SIZE = 128;
@@ -259,10 +259,16 @@ public:
     
     ConvDtype ToBiasType(ConvDtype type) const
     {
+        if (static_cast<uint8_t>(type) > static_cast<uint8_t>(ConvDtype::UNDEFINED)) {
+            return ConvDtype::UNDEFINED;
+        }
         return typeMaps[static_cast<uint8_t>(type)].biasType;
     }
     ConvDtype ToMadType(ConvDtype type) const
     {
+        if (static_cast<uint8_t>(type) > static_cast<uint8_t>(ConvDtype::UNDEFINED)) {
+            return ConvDtype::UNDEFINED;
+        }
         return typeMaps[static_cast<uint8_t>(type)].madType;
     }
 

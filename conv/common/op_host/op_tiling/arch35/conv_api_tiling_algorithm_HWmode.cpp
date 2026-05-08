@@ -21,11 +21,11 @@ using namespace std;
 namespace conv_tiling_algo_hw {
 void ConvTilingAlgorithmHWmode::InitPingPong()
 {
-    this->dbValue.pbAL1 = tilingIns_->isDmaFlag ? 1 : DOUBLE_BUFFER_NUM;
-    this->dbValue.pbBL1 = tilingIns_->isDmaFlag ? 1 : DOUBLE_BUFFER_NUM;
+    this->dbValue.pbAL1 = tilingIns_->isDmaFlag ? SINGLE_BUFFER_NUM : DOUBLE_BUFFER_NUM;
+    this->dbValue.pbBL1 = tilingIns_->isDmaFlag ? SINGLE_BUFFER_NUM : DOUBLE_BUFFER_NUM;
     this->dbValue.pbAL0 = DOUBLE_BUFFER_NUM;
     this->dbValue.pbBL0 = DOUBLE_BUFFER_NUM;
-    this->dbValue.pbCL0 = 1;
+    this->dbValue.pbCL0 = SINGLE_BUFFER_NUM;
 
     L1TilingParams inputTiling;
     inputTiling.kAL1 = tilingIns_->cubeInfo.k0;
@@ -35,8 +35,8 @@ void ConvTilingAlgorithmHWmode::InitPingPong()
     inputTiling.hoAL1 = 1;
     inputTiling.woAL1 = tilingIns_->cubeInfo.m0;
     if (CalcCurL1Size(inputTiling, tilingIns_->cubeInfo.n0) > tilingIns_->platformInfo.l1Size) {
-        this->dbValue.pbAL1 = 1;
-        this->dbValue.pbBL1 = 1;
+        this->dbValue.pbAL1 = SINGLE_BUFFER_NUM;
+        this->dbValue.pbBL1 = SINGLE_BUFFER_NUM;
     }
 }
 
@@ -157,7 +157,7 @@ void ConvTilingAlgorithmHWmode::GetHoWoNL0Tiling()
     // set L0C double buffer
     this->dbValue.pbCL0 = DOUBLE_BUFFER_NUM;
     if (CalcCL0Size(l0Params.hoL0 * l0Params.woL0, l0Params.nL0) > tilingIns_->platformInfo.l0CSize) {
-        this->dbValue.pbCL0 = 1;
+        this->dbValue.pbCL0 = SINGLE_BUFFER_NUM;
     }
 }
 
@@ -411,7 +411,7 @@ void ConvTilingAlgorithmHWmode::L0TilingRest(bool kFullLoadFlag)
         uint64_t orginNL0 = l0Params.nL0;
         UpdateNL0();
         if (l0Params.nL0 > orginNL0) {
-            this->dbValue.pbBL0 = static_cast<uint8_t>(1);
+            this->dbValue.pbBL0 = SINGLE_BUFFER_NUM;
         }
     } else {
         uint64_t orginHoL0 = l0Params.hoL0;
@@ -419,7 +419,7 @@ void ConvTilingAlgorithmHWmode::L0TilingRest(bool kFullLoadFlag)
         UpdateHoL0WoL0(l0Params.woL0, l0Params.woL0Index, l0TilingRange.woL0Range, l1Params.woAL1, l0Params.hoL0);
         UpdateHoL0WoL0(l0Params.hoL0, l0Params.hoL0Index, l0TilingRange.hoL0Range, l1Params.hoAL1, l0Params.woL0);
         if (orginHoL0 < l0Params.hoL0 || orginWoL0 < l0Params.woL0) {
-            this->dbValue.pbAL0 = static_cast<uint8_t>(1);
+            this->dbValue.pbAL0 = SINGLE_BUFFER_NUM;
         }
     }
     SetL0TilingRes();
@@ -433,12 +433,12 @@ void ConvTilingAlgorithmHWmode::CheckL0DoubleBuffer()
     if (static_cast<uint64_t>(tilingIns_->shapeInfo.singleHo) <= tilingIns_->l0TilingInfo.hoL0 &&
         static_cast<uint64_t>(tilingIns_->shapeInfo.singleWo) <= tilingIns_->l0TilingInfo.woL0 &&
         kFullLoadFlag) {
-        this->dbValue.pbAL0 = 1;
+        this->dbValue.pbAL0 = SINGLE_BUFFER_NUM;
     }
  
     if (kFullLoadFlag &&
         tilingIns_->shapeInfo.singleCo1 * tilingIns_->cubeInfo.n0 == tilingIns_->l0TilingInfo.nL0) {
-        this->dbValue.pbBL0 = 1;
+        this->dbValue.pbBL0 = SINGLE_BUFFER_NUM;
     }
 
     L0TilingRest(kFullLoadFlag);
@@ -448,9 +448,9 @@ void ConvTilingAlgorithmHWmode::CheckL0DoubleBuffer()
         this->dbValue.pbCL0 = DOUBLE_BUFFER_NUM;
     }
 
-    if (this->dbValue.pbAL0 == DOUBLE_BUFFER_NUM && this->dbValue.pbBL0 == 1) {
+    if (this->dbValue.pbAL0 == DOUBLE_BUFFER_NUM && this->dbValue.pbBL0 == SINGLE_BUFFER_NUM) {
         tilingIns_->l1TilingInfo.iterateMNOrder = IterateMNOrder::ITER_M_FST;
-    } else if (this->dbValue.pbAL0 == 1 && this->dbValue.pbBL0 == DOUBLE_BUFFER_NUM) {
+    } else if (this->dbValue.pbAL0 == SINGLE_BUFFER_NUM && this->dbValue.pbBL0 == DOUBLE_BUFFER_NUM) {
         tilingIns_->l1TilingInfo.iterateMNOrder = IterateMNOrder::ITER_N_FST;
     }
 }
@@ -1038,8 +1038,8 @@ void ConvTilingAlgorithmHWmode::CoreL1TilingNoneFullLoadDecision()
                                   this->l1TilingCalc.khL1, this->l1TilingCalc.kwL1};
     bool isExceedL1Size = CalcCurL1Size(tmpL1Params, tmpNBL1) > tilingIns_->platformInfo.l1Size;
     if (tmpKAL1 == 0 || tmpKBL1 == 0 || tmpHoAL1 == 0 || tmpWoAL1 == 0 || tmpNBL1 == 0 || isExceedL1Size) {
-        this->dbValue.pbAL1 = 1;
-        this->dbValue.pbBL1 = 1;
+        this->dbValue.pbAL1 = SINGLE_BUFFER_NUM;
+        this->dbValue.pbBL1 = SINGLE_BUFFER_NUM;
 
         l1Flags.iterateMNOrder = IterateMNOrder::ITER_M_FST;
         tmpHoAL1 = l0Params.hoL0;
@@ -1079,12 +1079,12 @@ void ConvTilingAlgorithmHWmode::UpdateBiasFixpParamsL1Fullload()
 void ConvTilingAlgorithmHWmode::UpdateAL1DoubleBufferFirst()
 {
     if (this->l1Flags.abL1Mode == L1TilingMode::ALL_FULL_LOAD) {
-        this->dbValue.pbAL1 = 1;
-        this->dbValue.pbBL1 = 1;
+        this->dbValue.pbAL1 = SINGLE_BUFFER_NUM;
+        this->dbValue.pbBL1 = SINGLE_BUFFER_NUM;
     } else if (this->l1Flags.abL1Mode == L1TilingMode::FULL_LOAD_AL1) {
-        this->dbValue.pbAL1 = 1;
+        this->dbValue.pbAL1 = SINGLE_BUFFER_NUM;
     } else if (this->l1Flags.abL1Mode == L1TilingMode::FULL_LOAD_BL1) {
-        this->dbValue.pbBL1 = 1;
+        this->dbValue.pbBL1 = SINGLE_BUFFER_NUM;
     }
 }
 
@@ -1095,7 +1095,7 @@ void ConvTilingAlgorithmHWmode::UpdateAL1DoubleBufferSecond()
     if (static_cast<uint64_t>(tilingIns_->shapeInfo.singleHo) <= l1Params.hoAL1 &&
         static_cast<uint64_t>(tilingIns_->shapeInfo.singleWo) <= l1Params.woAL1 &&
         kAl1FullLoadFlag) {
-        this->dbValue.pbAL1 = 1;
+        this->dbValue.pbAL1 = SINGLE_BUFFER_NUM;
         return;
     }
 }

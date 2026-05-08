@@ -505,7 +505,7 @@ TEST_F(TestConv2dTiling, test_algo_BB_CalcAvalibleL1Size)
     testTiling.hasBias = false;
     testTiling.hasScale = true;
     testTiling.shapeInfo.channelWiseCoeff = 4;
-    algo.scaleDtypeSize = 8;
+    algo.scaleDTypeSize = 8;
     algo.CalcAvalibleL1Size();
     EXPECT_EQ(algo.fmapL1FullLoadSize, MEM_SIZE_1K);
     EXPECT_EQ(algo.weightL1FullLoadSize, MEM_SIZE_1K + MEM_SIZE_128B);

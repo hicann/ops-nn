@@ -455,7 +455,7 @@ void ConvTilingAlgorithmBBmode::InitPingPong()
     this->dbValue.pbBL1 = DOUBLE_BUFFER_NUM;
     this->dbValue.pbAL0 = DOUBLE_BUFFER_NUM;
     this->dbValue.pbBL0 = DOUBLE_BUFFER_NUM;
-    this->dbValue.pbCL0 = 1;
+    this->dbValue.pbCL0 = SINGLE_BUFFER_NUM;
 }
 
 int64_t ConvTilingAlgorithmBBmode::Process()
@@ -534,23 +534,23 @@ void ConvTilingAlgorithmBBmode::CheckL0CDoubleBuffer()
     bool kFullLoadFlag = kL0 == tilingIns_->shapeInfo.singlekD * tilingIns_->shapeInfo.singleCi1 *
         tilingIns_->cubeInfo.k0 * tilingIns_->shapeInfo.singlekH * tilingIns_->shapeInfo.singlekW;
     if (kFullLoadFlag && static_cast<uint64_t>(tilingIns_->shapeInfo.singleM) <= mL0) {
-        this->dbValue.pbAL0 = 1;
+        this->dbValue.pbAL0 = SINGLE_BUFFER_NUM;
     }
  
     if (kFullLoadFlag && static_cast<uint64_t>(tilingIns_->shapeInfo.singleCo) <= nL0) {
-        this->dbValue.pbBL0 = 1;
+        this->dbValue.pbBL0 = SINGLE_BUFFER_NUM;
     }
  
     if (this->dbValue.pbAL0 == DOUBLE_BUFFER_NUM && this->dbValue.pbBL0 == DOUBLE_BUFFER_NUM && kFullLoadFlag) {
         if (tilingIns_->l1TilingInfo.iterateMNOrder == IterateMNOrder::ITER_M_FST) {
-            this->dbValue.pbBL0 = 1;
+            this->dbValue.pbBL0 = SINGLE_BUFFER_NUM;
         } else {
-            this->dbValue.pbAL0 = 1;
+            this->dbValue.pbAL0 = SINGLE_BUFFER_NUM;
         }
     }
-    if (this->dbValue.pbAL0 == DOUBLE_BUFFER_NUM && this->dbValue.pbBL0 == 1) {
+    if (this->dbValue.pbAL0 == DOUBLE_BUFFER_NUM && this->dbValue.pbBL0 == SINGLE_BUFFER_NUM) {
         tilingIns_->l1TilingInfo.iterateMNOrder = IterateMNOrder::ITER_M_FST;
-    } else if (this->dbValue.pbAL0 == 1 && this->dbValue.pbBL0 == DOUBLE_BUFFER_NUM) {
+    } else if (this->dbValue.pbAL0 == SINGLE_BUFFER_NUM && this->dbValue.pbBL0 == DOUBLE_BUFFER_NUM) {
         tilingIns_->l1TilingInfo.iterateMNOrder = IterateMNOrder::ITER_N_FST;
     }
 }
@@ -754,16 +754,16 @@ void ConvTilingAlgorithmBBmode::GetKABFullLoadL1TilingParams()
 
     if (conv2DBasicBlockInfoPtr->mAl1FullLoad && conv2DBasicBlockInfoPtr->nBl1FullLoad) {
         conv2DBasicBlockInfoPtr->iterateMNOrder = IterateMNOrder::ITER_M_FST;
-        this->dbValue.pbAL1 = 1;
+        this->dbValue.pbAL1 = SINGLE_BUFFER_NUM;
         if (this->tilingIns_->enableInnerBatch && this->tilingIns_->innerBatch <
             static_cast<uint32_t>(this->tilingIns_->shapeInfo.singleBatch)) {
             this->dbValue.pbAL1 = DOUBLE_BUFFER_NUM;
         }
-        this->dbValue.pbBL1 = 1;
+        this->dbValue.pbBL1 = SINGLE_BUFFER_NUM;
         l1LoadStrategyType = L1LoadStrategyType::K_AND_MAL1_FULL_LOAD;
     } else if (conv2DBasicBlockInfoPtr->mAl1FullLoad) {
         conv2DBasicBlockInfoPtr->iterateMNOrder = IterateMNOrder::ITER_N_FST;
-        this->dbValue.pbAL1 = 1;
+        this->dbValue.pbAL1 = SINGLE_BUFFER_NUM;
         if (this->tilingIns_->enableInnerBatch && this->tilingIns_->innerBatch <
             static_cast<uint32_t>(this->tilingIns_->shapeInfo.singleBatch)) {
             this->dbValue.pbAL1 = DOUBLE_BUFFER_NUM;
@@ -771,7 +771,7 @@ void ConvTilingAlgorithmBBmode::GetKABFullLoadL1TilingParams()
         l1LoadStrategyType = L1LoadStrategyType::K_AND_MAL1_FULL_LOAD;
     } else if (conv2DBasicBlockInfoPtr->nBl1FullLoad) {
         conv2DBasicBlockInfoPtr->iterateMNOrder = IterateMNOrder::ITER_M_FST;
-        this->dbValue.pbBL1 = 1;
+        this->dbValue.pbBL1 = SINGLE_BUFFER_NUM;
         l1LoadStrategyType = L1LoadStrategyType::K_AND_NBL1_FULL_LOAD;
     } else {
         conv2DBasicBlockInfoPtr->iterateMNOrder = singleCoreFmapSize > singleCoreWeightSize ? 
@@ -796,7 +796,7 @@ bool ConvTilingAlgorithmBBmode::L1LoadStrategyNFirst::GetL1LoadTilingParams(Conv
         static_cast<int64_t>(DOUBLE_BUFFER_NUM) / static_cast<int64_t>(bbPtr->conv2DBasicBlockInfoPtr->nTile)),
         cinBL1FullLoadSize); // 这个场景放大KBL1, MultiN=1，所以用nTile
     if (cinBL1 < bbPtr->tilingIns_->cubeInfo.k0) {
-        bbPtr->dbValue.pbBL1 = 1;
+        bbPtr->dbValue.pbBL1 = SINGLE_BUFFER_NUM;
         bbPtr->bL1DBNeedClose = true;
         cinBL1 = min((bbPtr->availableL1Size / static_cast<int64_t>(bbPtr->weightDTypeSize) /
             (static_cast<int64_t>(bbPtr->tilingIns_->shapeInfo.orgkH) *
@@ -816,7 +816,7 @@ bool ConvTilingAlgorithmBBmode::L1LoadStrategyNFirst::GetL1LoadTilingParams(Conv
 
 bool ConvTilingAlgorithmBBmode::FmapFullLoad::GetL1LoadTilingParams(ConvTilingAlgorithmBBmode* bbPtr)
 {
-    bbPtr->dbValue.pbAL1 = 1;
+    bbPtr->dbValue.pbAL1 = SINGLE_BUFFER_NUM;
     if (bbPtr->tilingIns_->enableInnerBatch && bbPtr->tilingIns_->innerBatch <
         static_cast<uint32_t>(bbPtr->tilingIns_->shapeInfo.singleBatch)) {
         bbPtr->dbValue.pbAL1 = DOUBLE_BUFFER_NUM;
@@ -859,7 +859,7 @@ bool ConvTilingAlgorithmBBmode::L1LoadStrategyMFirst::GetL1LoadTilingParams(Conv
         static_cast<int64_t>(DOUBLE_BUFFER_NUM) / static_cast<int64_t>(bbPtr->fMapDTypeSize) /
         bbPtr->tilingIns_->innerBatch), kAL1FullLoadSize);
     if (cinAL1 < bbPtr->tilingIns_->cubeInfo.k0) {
-        bbPtr->dbValue.pbAL1 = 1;
+        bbPtr->dbValue.pbAL1 = SINGLE_BUFFER_NUM;
         bbPtr->aL1DBNeedClose = true;
         cinAL1 = min((bbPtr->availableL1Size / static_cast<int64_t>(bbPtr->conv2DBasicBlockInfoPtr->mIn) /
             static_cast<int64_t>(bbPtr->fMapDTypeSize) / bbPtr->tilingIns_->innerBatch), kAL1FullLoadSize);
@@ -877,7 +877,7 @@ bool ConvTilingAlgorithmBBmode::L1LoadStrategyMFirst::GetL1LoadTilingParams(Conv
 
 bool ConvTilingAlgorithmBBmode::WeightFullLoad::GetL1LoadTilingParams(ConvTilingAlgorithmBBmode* bbPtr)
 {
-    bbPtr->dbValue.pbBL1 = 1;
+    bbPtr->dbValue.pbBL1 = SINGLE_BUFFER_NUM;
     uint64_t maxNBL1Iter = CeilDiv(bbPtr->conv2DBasicBlockInfoPtr->nCut, bbPtr->conv2DBasicBlockInfoPtr->nDim);
     bbPtr->multiN = maxNBL1Iter;
     bbPtr->multiM = 1;
@@ -929,11 +929,12 @@ bool ConvTilingAlgorithmBBmode::KAllSplit::GetL1LoadTilingParams(ConvTilingAlgor
         bbPtr->conv2DBasicBlockInfoPtr->iterateMNOrder = IterateMNOrder::ITER_N_FST;
     }
     uint32_t cinL1 = 0;
-    const vector<pair<int, int>> iterations = {
-        {DOUBLE_BUFFER_NUM, DOUBLE_BUFFER_NUM},
-        {(bbPtr->conv2DBasicBlockInfoPtr->iterateMNOrder == IterateMNOrder::ITER_M_FST) ? DOUBLE_BUFFER_NUM : 1,
-        (bbPtr->conv2DBasicBlockInfoPtr->iterateMNOrder == IterateMNOrder::ITER_M_FST) ? 1 : DOUBLE_BUFFER_NUM},
-        {1, 1}
+    const vector<pair<int, int>> iterations = {{DOUBLE_BUFFER_NUM, DOUBLE_BUFFER_NUM},
+        {(bbPtr->conv2DBasicBlockInfoPtr->iterateMNOrder == IterateMNOrder::ITER_M_FST) ?
+            DOUBLE_BUFFER_NUM : SINGLE_BUFFER_NUM,
+            (bbPtr->conv2DBasicBlockInfoPtr->iterateMNOrder == IterateMNOrder::ITER_M_FST) ?
+            SINGLE_BUFFER_NUM : DOUBLE_BUFFER_NUM},
+        {SINGLE_BUFFER_NUM, SINGLE_BUFFER_NUM}
     };
     for (uint64_t i = 0; i < iterations.size(); i++) {
         pair<int, int> pbABL1 = iterations[i];
@@ -944,8 +945,8 @@ bool ConvTilingAlgorithmBBmode::KAllSplit::GetL1LoadTilingParams(ConvTilingAlgor
             break;
         }
     }
-    bbPtr->aL1DBNeedClose = bbPtr->dbValue.pbAL1 == 1 ? true : false;
-    bbPtr->bL1DBNeedClose = bbPtr->dbValue.pbBL1 == 1 ? true : false;
+    bbPtr->aL1DBNeedClose = bbPtr->dbValue.pbAL1 == SINGLE_BUFFER_NUM ? true : false;
+    bbPtr->bL1DBNeedClose = bbPtr->dbValue.pbBL1 == SINGLE_BUFFER_NUM ? true : false;
     if (cinL1 == 0) {
         OP_LOGE(bbPtr->tilingIns_->nodeType, "K all split still cannot generate L1 tiling.");
         return false;
@@ -1016,7 +1017,7 @@ bool ConvTilingAlgorithmBBmode::L1LoadStrategyBase::MultiLoadKL1(ConvTilingAlgor
             bbPtr->fMapDTypeSize) * static_cast<int64_t>(bbPtr->tilingIns_->innerBatch);
         if (l1TempSize > min(bbPtr->availableL1Size, bbPtr->fmapL1FullLoadSize)) { // multi is 1
             l1TempSize /= bbPtr->dbValue.pbAL1;
-            bbPtr->dbValue.pbAL1 = 1;
+            bbPtr->dbValue.pbAL1 = SINGLE_BUFFER_NUM;
 
             if (bbPtr->l1TilingParams.kAL1 * bbPtr->tilingIns_->shapeInfo.singlekH *
                 bbPtr->tilingIns_->shapeInfo.singlekW >= MAX_16_BIT_NUM) {
@@ -1045,7 +1046,7 @@ bool ConvTilingAlgorithmBBmode::L1LoadStrategyBase::MultiLoadKL1(ConvTilingAlgor
         // DB ON cannot Load in L1
         if (l1TempSize > min(bbPtr->availableL1Size, bbPtr->weightL1FullLoadSize)) { // multi is 1
             l1TempSize /= bbPtr->dbValue.pbBL1;
-            bbPtr->dbValue.pbBL1 = 1;
+            bbPtr->dbValue.pbBL1 = SINGLE_BUFFER_NUM;
 
             if (FindMaxProductUnderLimit(l1TempSize, min(bbPtr->availableL1Size, maxSingleCoreWeightSize)) == 0) {
                 OP_LOGE(bbPtr->tilingIns_->nodeType, "BL1 space is not enough for Basic Block mode in this case.");
@@ -1097,18 +1098,18 @@ void ConvTilingAlgorithmBBmode::UpdateFinalFullLoadFlag()
 void ConvTilingAlgorithmBBmode::UpdateFinalDb()
 {
     const uint8_t pbAL1Temp = (conv2DBasicBlockInfoPtr->kAl1FullLoad && conv2DBasicBlockInfoPtr->mAl1FullLoad) ?
-        1 : DOUBLE_BUFFER_NUM;
+        SINGLE_BUFFER_NUM : DOUBLE_BUFFER_NUM;
     const uint8_t pbBL1Temp = (conv2DBasicBlockInfoPtr->kBl1FullLoad && conv2DBasicBlockInfoPtr->nBl1FullLoad) ?
-        1 : DOUBLE_BUFFER_NUM;
-    dbValue.pbAL1 = aL1DBNeedClose ? 1 : pbAL1Temp;
-    dbValue.pbBL1 = bL1DBNeedClose ? 1 : pbBL1Temp;
+        SINGLE_BUFFER_NUM : DOUBLE_BUFFER_NUM;
+    dbValue.pbAL1 = aL1DBNeedClose ? SINGLE_BUFFER_NUM : pbAL1Temp;
+    dbValue.pbBL1 = bL1DBNeedClose ? SINGLE_BUFFER_NUM : pbBL1Temp;
 }
 
 void ConvTilingAlgorithmBBmode::UpdateFinalMNOrder()
 {
-    if (dbValue.pbAL1 == 1 && dbValue.pbBL1 == DOUBLE_BUFFER_NUM) {
+    if (dbValue.pbAL1 == SINGLE_BUFFER_NUM && dbValue.pbBL1 == DOUBLE_BUFFER_NUM) {
         conv2DBasicBlockInfoPtr->iterateMNOrder = IterateMNOrder::ITER_N_FST;
-    } else if (dbValue.pbAL1 == DOUBLE_BUFFER_NUM && dbValue.pbBL1 == 1) {
+    } else if (dbValue.pbAL1 == DOUBLE_BUFFER_NUM && dbValue.pbBL1 == SINGLE_BUFFER_NUM) {
         conv2DBasicBlockInfoPtr->iterateMNOrder = IterateMNOrder::ITER_M_FST;
     }
     // fmap full load and weight not full load, set iterateMNOrder = IterateMNOrder::ITER_N_FST

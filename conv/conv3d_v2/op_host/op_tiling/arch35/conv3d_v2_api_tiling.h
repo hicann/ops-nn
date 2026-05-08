@@ -69,7 +69,7 @@ public:
     void SetRoundMode(int8_t roundMode);
     void InitFlag();
 private:
-    shared_ptr<ConvTilingAlgorithmBase> algoPtr;
+    std::shared_ptr<ConvTilingAlgorithmBase> algoPtr;
     void SetTilingData(Ops::NN::Conv3dV2::TConv3DTiling& tiling);
     void SetAttrsTilingData(Ops::NN::Conv3dV2::TConv3DTiling& tiling);
     void SetUnionDataXt(Ops::NN::Conv3dV2::TConv3DTiling& tiling);

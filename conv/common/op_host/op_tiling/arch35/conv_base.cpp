@@ -76,7 +76,7 @@ vector<int64_t> GetAttrShapeVec(const gert::TilingContext* context, size_t param
     return shapeVec;
 }
 
-ge::graphStatus ShapeAttrSynthesisCheck(ConvAscendcOriginShapeAttrInfo oriShapeAttrInfo,
+ge::graphStatus ShapeAttrSynthesisCheck(const ConvAscendcOriginShapeAttrInfo& oriShapeAttrInfo,
                                         ConvParamInfo paramInfo, gert::TilingContext* context)
 {
     int64_t cmpHo = ConvComputeHo(oriShapeAttrInfo.oriFmapH, oriShapeAttrInfo.oriWeightH, oriShapeAttrInfo.oriPadTop,
@@ -110,7 +110,7 @@ ge::graphStatus ShapeAttrSynthesisCheck(ConvAscendcOriginShapeAttrInfo oriShapeA
     return ShapeAttrSynthesisCheckAux(oriShapeAttrInfo, paramInfo, context);
 }
 
-ge::graphStatus ShapeAttrSynthesisCheckAux(const ConvAscendcOriginShapeAttrInfo oriShapeAttrInfo,
+ge::graphStatus ShapeAttrSynthesisCheckAux(const ConvAscendcOriginShapeAttrInfo& oriShapeAttrInfo,
                                            ConvParamInfo paramInfo, const gert::TilingContext* context)
 {
     auto fmStorageFormat = static_cast<ge::Format>(GetPrimaryFormat(context->GetInputDesc(0)->GetStorageFormat()));
