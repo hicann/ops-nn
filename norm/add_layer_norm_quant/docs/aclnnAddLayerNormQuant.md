@@ -184,7 +184,7 @@ aclnnStatus aclnnAddLayerNormQuant(
       <td>beta（aclTensor*）</td>
       <td>输入</td>
       <td>对应LayerNorm计算公式中的beta，表示层归一化中的beta参数。对应公式中的`beta`。</td>
-      <td><ul><li>支持空Tensor。</li><li>当quantMode = "static"时，数据类型支持FLOAT32、FLOAT16、BFLOAT16。</li><li>当quantMode = "dynamic"时，shape支持2-8维度，数据类型支持FLOAT16、BFLOAT16。</li><li>shape可以和`gamma`/`beta`或`x1`/`x2`一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>当quantMode = "static"时，数据类型支持FLOAT32、FLOAT16、BFLOAT16。</li><li>当quantMode = "dynamic"时，shape支持2-8维度，数据类型支持FLOAT16、BFLOAT16。</li><li>shape与`gamma`一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>

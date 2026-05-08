@@ -168,7 +168,7 @@ aclnnStatus aclnnLayerNormQuant(
       <td>epsilon（double）</td>
       <td>输入</td>
       <td>表示对应LayerNorm中的epsilon，添加到分母中的值，以确保数值稳定。对应公式中的`epsilon`。</td>
-      <td>-</td>
+      <td>默认值为1e-5。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
