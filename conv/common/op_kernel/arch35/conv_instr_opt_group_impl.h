@@ -60,9 +60,12 @@ public:
         }
         uint64_t gmOffset = 0;
         if constexpr (Intf::groupOptPreloadFlag) {
-            uint64_t weightOneGroupSize = self_->ctx.coPerGroup * self_->ctx.ciPerGroup * self_->ctx.enlarge;
+            uint64_t weightOneGroupSize = 0;
             if constexpr (Intf::formatOutput == ConvFormat::NCHW) {
-                weightOneGroupSize *= self_->ctx.convTilingData->convApiTiling.kernelHxkernelWxkernelD;
+                weightOneGroupSize = self_->ctx.coPerGroup * self_->ctx.ciPerGroup * self_->ctx.enlarge *
+                    self_->ctx.convTilingData->convApiTiling.kernelHxkernelWxkernelD;
+            } else {
+                weightOneGroupSize = self_->ctx.coPerGroup;
             }
             gmOffset = weightOneGroupSize * self_->ctx.groupOptIter;
         }

@@ -777,6 +777,7 @@ __aicore__ void Iterate<Intf, ImplType>::UpdateNextGroupOptIters(Intf *self, Tem
         tempIters.mAL1Iter = 0;
     } else {
         tempIters.woAL1Iter = self->ctx.woAL1Iter + 1;
+        tempIters.hoAL1Iter = self->ctx.hoAL1Iter;
         if (tempIters.woAL1Iter <= self->ctx.maxWoL1Iter) {
             return;
         }

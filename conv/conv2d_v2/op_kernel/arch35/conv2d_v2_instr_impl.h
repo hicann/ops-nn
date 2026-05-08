@@ -32,7 +32,7 @@ public:
         this->SetIntf(self);
     }
 
-    __aicore__ inline void UpdatePaddingHiWiAL1()
+    __aicore__ inline void UpdatePaddingHiWiAL1(uint64_t woAL1Iter)
     {
         paddingHiAL1 = (self_->ctx.currentHoL1 - 1) * self_->ctx.convTilingData->convApiTiling.strideH + self_->ctx.dilatedKernelH;
         if constexpr (Intf::c04Flag) {
@@ -44,8 +44,16 @@ public:
                                self_->ctx.dilatedKernelW;
             }
         } else {
-            paddingWiAL1 = (self_->ctx.currentWoL1 - 1) * self_->ctx.convTilingData->convApiTiling.strideW +
-                            self_->ctx.dilatedKernelW;
+            uint64_t curWoL1 = self_->ctx.currentWoL1;
+            if constexpr (Intf::groupOptPreloadFlag) {
+                if (woAL1Iter == self_->ctx.maxWoL1Iter && self_->ctx.woAL1Iter != 0) {
+                    curWoL1 = self_->ctx.woAL1Tail;
+                }
+                if (woAL1Iter == 0) {
+                    curWoL1 = self_->ctx.convTilingData->convApiTiling.woL1;
+                }
+            }
+            paddingWiAL1 = (curWoL1 - 1) * self_->ctx.convTilingData->convApiTiling.strideW + self_->ctx.dilatedKernelW;
         }
     }
 
@@ -260,7 +268,7 @@ public:
 
     __aicore__ inline void LoadAL1(uint64_t kAL1Iter, uint64_t woAL1Iter, uint64_t hoAL1Iter, uint64_t batchIter, uint64_t groupOptIter)
     {
-        UpdatePaddingHiWiAL1();
+        UpdatePaddingHiWiAL1(woAL1Iter);
         UpdatePadIdxAL1(woAL1Iter, hoAL1Iter);
         UpdateHiWiAL1();
         if constexpr (!Intf::groupOptPreloadFlag) {
