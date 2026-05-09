@@ -193,15 +193,19 @@ void Conv3DDequantToQuantConv3DFusionPass::SelectPostCubePassByWhiteList(std::ve
         }
 
         AscendString nodeType;
-        auto& conv3dNode = tmpPass.m_opnodes[CONV3D_INDEX];
-        FUSION_PASS_CHECK(conv3dNode.GetNode()->GetType(nodeType) != ge::GRAPH_SUCCESS,
+        auto& conv3dNode = tmpPass.m_opnodes[CONV3D_INDEX].GetNode();
+        FUSION_PASS_CHECK(conv3dNode == nullptr,
+            OP_LOGD(convDescInfo.nodeNameStr, "Conv3d node is nullptr in postCubePass."), return);
+        FUSION_PASS_CHECK(conv3dNode->GetType(nodeType) != ge::GRAPH_SUCCESS,
             OP_LOGD(convDescInfo.nodeNameStr, "Get conv3d node type failed."), return);
         if (nodeType != CONV3D) {
             continue;
         }
 
-        auto& dequantNode = tmpPass.m_opnodes[ASCEND_DEQUANT_INDEX];
-        FUSION_PASS_CHECK(dequantNode.GetNode()->GetType(nodeType) != ge::GRAPH_SUCCESS,
+        auto& dequantNode = tmpPass.m_opnodes[ASCEND_DEQUANT_INDEX].GetNode();
+        FUSION_PASS_CHECK(dequantNode == nullptr,
+            OP_LOGD(convDescInfo.nodeNameStr, "Dequant node is nullptr in postCubePass."), return);
+        FUSION_PASS_CHECK(dequantNode->GetType(nodeType) != ge::GRAPH_SUCCESS,
             OP_LOGD(convDescInfo.nodeNameStr, "Get dequant node type failed."), return);
         if (nodeType != ConvFusionUtils::ASCEND_DEQUANT) {
             continue;
