@@ -402,10 +402,10 @@ static __aicore__ inline uint64_t ComputeDstOffset(Intf *self, FixpipeParamsC310
         fixPipeParams.dstStride = self->ctx.baseUseM_;
         uint64_t singleCoreCinAlignBaseN = AlignUp(self->ctx.tiling_->singleCoreCin, self->ctx.tiling_->baseN);
         uint64_t singleCoreMAlignBaseM = AlignUp(self->ctx.tiling_->singleCoreM, self->ctx.tiling_->baseM);
-        uint64_t singleCoreWorkspaceSize = singleCoreCinAlignBaseN * singleCoreMAlignBaseM * self->ctx.tiling_->di;
+        uint64_t singleCoreWorkspaceSize = singleCoreCinAlignBaseN * singleCoreMAlignBaseM * self->ctx.tiling_->singleCoreDin;
         uint64_t realOffset = (self->ctx.curDinIdx_ - self->ctx.curDinStartIdx_) * singleCoreCinAlignBaseN * singleCoreMAlignBaseM +
-                              self->ctx.curNIdx_ * self->ctx.tiling_->baseN * singleCoreMAlignBaseM +
-                              self->ctx.curMIdx_ * self->ctx.tiling_->baseN * self->ctx.tiling_->baseM;
+                              self->ctx.curNIdx_ * self->ctx.baseUseN_ * singleCoreMAlignBaseM +
+                              self->ctx.curMIdx_ * self->ctx.baseUseN_ * self->ctx.tiling_->baseM;
         dstOffset = GetBlockIdx() * singleCoreWorkspaceSize + realOffset;
     } else {
         // loop2_dst_stride, element, c
@@ -485,10 +485,10 @@ static __aicore__ inline void LoadL0c2GmForNz2Nd(Intf *self, const GlobalTensor<
         // 计算workspace内存起始地址
         uint64_t singleCoreCinAlignBaseN = AlignUp(self->ctx.tiling_->singleCoreCin, self->ctx.tiling_->baseN);
         uint64_t singleCoreMAlignBaseM = AlignUp(self->ctx.tiling_->singleCoreM, self->ctx.tiling_->baseM);
-        uint64_t singleCoreWorkspaceSize = singleCoreCinAlignBaseN * singleCoreMAlignBaseM * self->ctx.tiling_->di;
+        uint64_t singleCoreWorkspaceSize = singleCoreCinAlignBaseN * singleCoreMAlignBaseM * self->ctx.tiling_->singleCoreDin;
         uint64_t realOffset = (self->ctx.curDinIdx_ - self->ctx.curDinStartIdx_) * singleCoreCinAlignBaseN * singleCoreMAlignBaseM +
-                              self->ctx.curNIdx_ * self->ctx.tiling_->baseN * singleCoreMAlignBaseM +
-                              self->ctx.curMIdx_ * self->ctx.tiling_->baseN * self->ctx.tiling_->baseM;
+                              self->ctx.curNIdx_ * self->ctx.baseUseN_ * singleCoreMAlignBaseM +
+                              self->ctx.curMIdx_ * self->ctx.baseUseN_ * self->ctx.tiling_->baseM;
         dstOffset = GetBlockIdx() * singleCoreWorkspaceSize + realOffset;
     } else {
         dstOffset = static_cast<uint64_t>(self->ctx.curNIdx_) * self->ctx.tiling_->baseN + // cin offset

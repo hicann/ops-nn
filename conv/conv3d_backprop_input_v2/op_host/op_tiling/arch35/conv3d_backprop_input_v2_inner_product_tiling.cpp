@@ -38,6 +38,7 @@ constexpr uint8_t ENABLE_TILING_HK = 2;
 constexpr uint8_t ENABLE_TILING_HK_WK = 3;
 constexpr uint32_t MAX_16_BIT_NUM = 65535;
 constexpr uint32_t USE_UB_SIZE = 32 * 1024;
+constexpr uint8_t SINGLE_CORE_DIN_SIZE = 1;
 }
 
 namespace Ops {
@@ -775,7 +776,7 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::GetWorkspaceSize()
     // workspace: singleCoreDin * singleCoreCin * singleCoreM * sizeof(float)
     // 每个AICore block独立slice, 故需要乘以AICore数量
     if (tilingRunInfo_.enableSplitK && tilingRunInfo_.useUbAccumForSplitK) {
-        uint64_t singleCoreDin = static_cast<uint64_t>(runInfo_.dedx_d);
+        uint64_t singleCoreDin = static_cast<uint64_t>(SINGLE_CORE_DIN_SIZE);
         uint64_t singleCoreCin = Ops::Base::CeilAlign(
             static_cast<uint64_t>(runInfo_.dedx_cin), static_cast<uint64_t>(tilingRunInfo_.n0));
         uint64_t singleCoreM = Ops::Base::CeilAlign(
@@ -1067,7 +1068,7 @@ void Conv3DDXV2InnerProductTiling::AdjustBaseMNK(L0TilingParams& l0Params, const
     uint32_t baseK = l0Params.baseK;
 
     AdjustBaseMNCommon(l0Params, tilingRunInfo, baseM, baseN, baseK);
-    
+
     baseK = CalculateOptimalBaseK(baseM, baseN, l0Params, tilingRunInfo);
     
     l0Params.baseM = baseM;
