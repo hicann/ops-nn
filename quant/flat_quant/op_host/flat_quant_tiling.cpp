@@ -311,8 +311,12 @@ bool FlatQuantTiling::CheckShapes()
     if (K > MAX_K_SIZE || M > MAX_MN_SIZE || N > MAX_MN_SIZE) {
         return false;
     }
-    if (p1Shape_.GetDim(INDEX_ZERO) != M || p1Shape_.GetDim(INDEX_ONE) != M ||
-        (hasP2_ && (p2Shape_.GetDim(INDEX_ZERO) != N || p2Shape_.GetDim(INDEX_ONE) != N))) {
+    if (p1Shape_.GetDim(INDEX_ZERO) != M || p1Shape_.GetDim(INDEX_ONE) != M) {
+        return false;
+    }
+    bool isP2ZeroShape = (p2Shape_.GetDim(INDEX_ZERO) == 0 && p2Shape_.GetDim(INDEX_ONE) == 0);
+    bool isP2NormalShape = (p2Shape_.GetDim(INDEX_ZERO) == N && p2Shape_.GetDim(INDEX_ONE) == N);
+    if (!isP2ZeroShape && !isP2NormalShape) {
         return false;
     }
     return true;
