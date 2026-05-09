@@ -170,13 +170,20 @@ TEST_P(BatchMatMulV3TilingRuntime, general_cases) {
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     map<string, string> soc_version;
+    map<string, string> aicore_memory_rates;
     GetPlatFormInfos(param.compile_info.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
     aicore_spec["cube_freq"] = "1800";
-
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(param.op_type.c_str()), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(param.op_type.c_str())->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(param.op_type.c_str())->tiling_parse;
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+    if (get_map_string(soc_version, "NpuArch") == "3510") {
+        aicore_spec["cube_freq"] = "1650";
+        aicore_memory_rates["ddr_rate"] = "31";
+        aicore_memory_rates["l2_rate"] = "100";
+        kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreMemoryRates",
+                                                                                        aicore_memory_rates);
+    }
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
@@ -1156,7 +1163,7 @@ TEST_F(BatchMatMulV3TilingRuntime, 950_transpose_non_contiguous_cases)
     map<string, string> intrinsics;
     map<string, string> soc_version;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
-    aicore_spec["cube_freq"] = "1800";
+    aicore_spec["cube_freq"] = "1650";
 
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3"), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->tiling;
@@ -1252,7 +1259,7 @@ TEST_F(BatchMatMulV3TilingRuntime, 950_transpose_non_contiguous_cases1)
     map<string, string> intrinsics;
     map<string, string> soc_version;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
-    aicore_spec["cube_freq"] = "1800";
+    aicore_spec["cube_freq"] = "1650";
 
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3"), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->tiling;
@@ -1350,9 +1357,11 @@ TEST_F(BatchMatMulV3TilingRuntime, 910d_transpose_non_contiguous_cases2)
     map<string, string> aicore_spec;
     map<string, string> intrinsics;
     map<string, string> soc_version;
+    map<string, string> aicore_memory_rates;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
-    aicore_spec["cube_freq"] = "1800";
-
+    aicore_spec["cube_freq"] = "1650";
+    aicore_memory_rates["ddr_rate"] = "31";
+    aicore_memory_rates["l2_rate"] = "100";
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3"), nullptr);
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl("BatchMatMulV3")->tiling_parse;
@@ -1360,6 +1369,8 @@ TEST_F(BatchMatMulV3TilingRuntime, 910d_transpose_non_contiguous_cases2)
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreMemoryRates",
+                                                                                            aicore_memory_rates);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("VectorCore");
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
