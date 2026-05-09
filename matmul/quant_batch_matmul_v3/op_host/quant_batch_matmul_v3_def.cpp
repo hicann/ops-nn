@@ -979,7 +979,7 @@ public:
                        ge::DT_FLOAT16,       ge::DT_FLOAT16,       ge::DT_FLOAT,         ge::DT_FLOAT16,
                        ge::DT_FLOAT16,       ge::DT_FLOAT16,       ge::DT_FLOAT16,       ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT16,
                        ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT16,
-                       ge::DT_FLOAT,         ge::DT_FLOAT,         ge::DT_FLOAT,
+                       ge::DT_FLOAT16,       ge::DT_FLOAT16,       ge::DT_FLOAT16,
                        ge::DT_BF16,          ge::DT_BF16,          ge::DT_BF16,
                        ge::DT_BF16,          ge::DT_BF16,          ge::DT_BF16,
                        ge::DT_FLOAT16,       ge::DT_FLOAT16})
