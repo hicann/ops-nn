@@ -630,7 +630,9 @@ private:
             PipeBarrier<PIPE_V>();
             SetFlag<HardEvent::V_S>(EVENT_ID0);
             WaitFlag<HardEvent::V_S>(EVENT_ID0);
-            *reduceSumMax = *reduceSumMax + reduceSumVal.GetValue(0); // S
+            *reduceSumMax = *reduceSumMax + reduceSumVal.GetValue(0);
+            SetFlag<HardEvent::MTE3_V>(EVENT_ID0);
+            WaitFlag<HardEvent::MTE3_V>(EVENT_ID0);
             SetFlag<HardEvent::MTE3_MTE2>(EVENT_ID0);
             WaitFlag<HardEvent::MTE3_MTE2>(EVENT_ID0);
         }
