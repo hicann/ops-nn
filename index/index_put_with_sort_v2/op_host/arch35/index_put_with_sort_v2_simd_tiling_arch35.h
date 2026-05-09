@@ -22,7 +22,6 @@
 #include "index_put_with_sort_v2_tiling_arch35.h"
 
 namespace optiling {
-
 class IndexPutWithSortV2SIMDTiling : public IndexPutWithSortV2Tiling
 {
 public:
@@ -36,6 +35,7 @@ protected:
     uint64_t GetTilingKey() const override;
     ge::graphStatus GetWorkspaceSize() override;
     ge::graphStatus PostTiling() override;
+    bool CheckIndexedSizesPattern();
 
     int64_t inOutUb_ = 0;
     int64_t xCastDtypeSize_ = 0;
@@ -54,6 +54,8 @@ protected:
     void LogTilingResult();
     void DoBlockTiling();
     void DoUbTiling();
+    size_t FindFirstOneIdx();
+    int64_t inputShapes_[MAX_DIM_NUM] = {0};
 };
 }  // namespace optiling
 #endif  // OPS_BUILD_IN_OP_TILING_RUNTIME_INDEX_PUT_WITH_SORT_V2_H

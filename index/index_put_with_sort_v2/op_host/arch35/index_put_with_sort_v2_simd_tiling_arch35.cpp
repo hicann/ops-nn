@@ -12,6 +12,7 @@
 * \brief IndexPutWithSortV2 regbase tiling file
 */
 
+#include <limits>
 #include "util/platform_util.h"
 #include "op_host/tiling_util.h"
 #include "index_put_with_sort_v2_simd_tiling_arch35.h"
@@ -37,13 +38,130 @@ constexpr int64_t COL_ALING = 512;
 constexpr int32_t SPLIT_LIMIT = 256;
 constexpr int64_t MIN_UB_FOR_INDICES = 8*1024; // 8K;
 
-bool IndexPutWithSortV2SIMDTiling::IsCapable()
+size_t IndexPutWithSortV2SIMDTiling::FindFirstOneIdx()
 {
-    OP_LOGI(context_->GetNodeName(), "IndexPutWithSortV2SIMDTiling IsCapable isContinous_: %ld, nonIndexedDimSize_: %ld", static_cast<int64_t>(isContinous_), nonIndexedDimSize_);
-    isContinous_ = (isContinous_ && (indexed0_ == 1));
-    return isContinous_ && (nonIndexedDimSize_ * ge::GetSizeByDataType(xDataType_) > SPLIT_LIMIT);
+    for (size_t i = 0; i < selfDimNum_; ++i) {
+        if (indexedSizes_[i] == 1) {
+            return i;
+        }
+    }
+    return selfDimNum_;
 }
 
+bool IndexPutWithSortV2SIMDTiling::IsCapable()
+{
+    constexpr int64_t MAX_SAFE_MULTIPLY = std::numeric_limits<int64_t>::max();
+    int64_t dtypeSize = ge::GetSizeByDataType(xDataType_);
+    bool requiresNonIndexed = false;
+    if (nonIndexedDimSize_ > 0 && dtypeSize > 0 && 
+        nonIndexedDimSize_ <= MAX_SAFE_MULTIPLY / dtypeSize) {
+        requiresNonIndexed = nonIndexedDimSize_ * dtypeSize > SPLIT_LIMIT;
+    }
+    
+    if (CheckIndexedSizesPattern() && requiresNonIndexed) {
+        size_t firstOneIdx = FindFirstOneIdx();
+
+        size_t newDimNum = selfDimNum_ - firstOneIdx;
+        for (size_t i = 0; i < newDimNum; ++i) {
+            if (firstOneIdx + i >= MAX_DIM_NUM || i >= MAX_DIM_NUM) {
+                OP_LOGI(context_->GetNodeName(), "IsCapable: array index out of bounds");
+                return false;
+            }
+            indexedSizes_[i] = indexedSizes_[firstOneIdx + i];
+            selfDims_[i] = selfDims_[firstOneIdx + i];
+        }
+        
+        selfDimNum_ = static_cast<uint32_t>(newDimNum);
+        
+        indexedDimNum_ = 0;
+        nonIndexedDimNum_ = 0;
+        nonIndexedDimSize_ = 1;
+        for (size_t i = 0; i < selfDimNum_; ++i) {
+            if (indexedSizes_[i] == 0) {
+                nonIdxedDims_[nonIndexedDimNum_] = selfDims_[i];
+                nonIndexedDimNum_++;
+                if (nonIndexedDimSize_ > 0 && selfDims_[i] > 0 &&
+                    nonIndexedDimSize_ <= MAX_SAFE_MULTIPLY / selfDims_[i]) {
+                    nonIndexedDimSize_ *= selfDims_[i];
+                } else {
+                    OP_LOGI(context_->GetNodeName(), "IsCapable: nonIndexedDimSize_ multiplication overflow detected");
+                    return false;
+                }
+            } else {
+                indexedDimNum_++;
+            }
+        }
+        
+        indexed0_ = indexedSizes_[0];
+        isContinous_ = true;
+        
+        OP_LOGI(context_->GetNodeName(), 
+                "SIMD adapted: firstOneIdx=%zu, newDimNum=%u, indexedDimNum=%u, nonIndexedDimNum=%u, "
+                "indexed0_=%ld, isContinous_=%d",
+                firstOneIdx, selfDimNum_, indexedDimNum_, nonIndexedDimNum_,
+                indexed0_, static_cast<int>(isContinous_));
+        
+        return true;
+    }
+    
+    OP_LOGI(context_->GetNodeName(), 
+            "IndexPutWithSortV2SIMDTiling IsCapable isContinous_: %ld, nonIndexedDimSize_: %ld", 
+            static_cast<int64_t>(isContinous_), nonIndexedDimSize_);
+    isContinous_ = (isContinous_ && (indexed0_ == 1));
+    return isContinous_ && requiresNonIndexed;
+}
+
+// [001100]
+bool IndexPutWithSortV2SIMDTiling::CheckIndexedSizesPattern()
+{
+    auto const inputShape = context_->GetInputShape(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, inputShape);
+    auto const inShapeVal = inputShape->GetStorageShape();
+    for (size_t i = 0; i < selfDimNum_; ++i) {
+        inputShapes_[i] = inShapeVal.GetDim(i);
+    }
+
+    if (selfDimNum_ == 0 || selfDimNum_ > MAX_DIM_NUM) {
+        OP_LOGI(context_->GetNodeName(), "CheckIndexedSizesPattern: invalid selfDimNum_=%u", selfDimNum_);
+        return false;
+    }
+
+    size_t firstOneIdx = FindFirstOneIdx();
+
+    if (firstOneIdx == selfDimNum_) {
+        return false;
+    }
+
+    for (size_t i = 0; i < firstOneIdx; ++i) {
+        if (indexedSizes_[i] != 0) {
+            return false;
+        }
+    }
+
+    for (size_t i = firstOneIdx; i < selfDimNum_; ++i) {
+        if (indexedSizes_[i] != 1) {
+            for (size_t j = i + 1; j < selfDimNum_; ++j) {
+                if (indexedSizes_[j] != 0) {
+                    return false;
+                }
+            }
+            break;
+        }
+    }
+
+    if (indexedSizes_[selfDimNum_ - 1] != 0) {
+        return false;
+    }
+
+    for (size_t i = 0; i < firstOneIdx; ++i) {
+        if (inputShapes_[i] != 1) {
+            return false;
+        }
+    }
+
+    OP_LOGI(context_->GetNodeName(), "CheckIndexedSizesPattern: pattern check passed");
+    return true;
+}
 
 uint64_t IndexPutWithSortV2SIMDTiling::GetTilingKey() const
 {
