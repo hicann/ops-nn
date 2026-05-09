@@ -495,8 +495,10 @@ static ge::graphStatus Tiling4RmsNormGrad(gert::TilingContext* context)
         OP_LOGD(context, "RmsNormGrad Regbase tiling start");
         return Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(context);
     }
-    OP_CHECK_IF(
-        isEmptyTensor, OP_LOGE(context, "Input dy shape can not be 0."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(isEmptyTensor,
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context->GetNodeName(), "dy", "0",
+            "Parameter dy does not support empty tensor"),
+        return ge::GRAPH_FAILED);
     uint32_t core_num = ascendc_platform.GetCoreNumAiv();
     auto data_type = context->GetInputDesc(0)->GetDataType();
     uint32_t buffer_size = BUFFER_SIZE_SPLIT_N_HIGH_PRECISION;

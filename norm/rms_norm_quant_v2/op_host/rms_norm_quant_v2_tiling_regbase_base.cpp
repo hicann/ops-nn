@@ -55,14 +55,20 @@ inline const gert::Shape &EnsureNotScalar(const gert::Shape &in_shape) {
 ge::graphStatus RmsNormQuantV2RegbaseTilingBase::CheckDtypeVaild(
     ge::DataType& srcDtype, std::vector<ge::DataType>& supportDtypeList, string srcName)
 {
+    std::string correctDtype;
+    bool isFirst = true;
     for (const auto& supportedDtype : supportDtypeList) {
         if (supportedDtype == srcDtype) {
             return ge::GRAPH_SUCCESS;
         }
+        if (!isFirst) {
+            correctDtype += ", ";
+        }
+        correctDtype += ToString(supportedDtype);
+        isFirst = false;
     }
-    OP_LOGE(
-        context_->GetNodeName(), "Dtype check invalid, %s dtype is %s, not in supportDtypeList.", srcName.c_str(),
-        Ops::Base::ToString(srcDtype).c_str());
+    OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), srcName.c_str(),
+        ToString(srcDtype).c_str(), correctDtype.c_str());
     return ge::GRAPH_FAILED;
 }
 
@@ -227,22 +233,30 @@ bool RmsNormQuantV2RegbaseTilingBase::CheckShapeSame(const gert::StorageShape* s
     size_t src1DimNum = EnsureNotScalar(src1Shape->GetStorageShape()).GetDimNum();
     size_t src2DimNum = EnsureNotScalar(src2Shape->GetStorageShape()).GetDimNum();
 
-    OP_TILING_CHECK(
-        (src1DimNum != src2DimNum),
-        OP_LOGE(
-            inNodeName.c_str(), "Dim num check invalid, %s is %lu %s is %lu, not equal.", inSrc1Name.c_str(), src1DimNum,
-            inSrc2Name.c_str(), src2DimNum),
-        return false);
+    if (src1DimNum != src2DimNum) {
+        std::string paramMsg = inSrc1Name + " and " + inSrc2Name;
+        std::string dimNumMsg = std::to_string(src1DimNum) + " and " + std::to_string(src2DimNum);
+        std::string reasonMsg = "The shape dims of parameter " + inSrc1Name +
+            " and parameter " + inSrc2Name + " must be the same";
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), paramMsg.c_str(),
+            dimNumMsg.c_str(), reasonMsg.c_str());
+        return false;
+    }
     for (size_t i = 0; i < src1DimNum; i++) {
         uint64_t src1DimValue = EnsureNotScalar(src1Shape->GetStorageShape()).GetDim(i);
         uint64_t src2DimValue = EnsureNotScalar(src2Shape->GetStorageShape()).GetDim(i);
 
-        OP_TILING_CHECK(
-            (src1DimValue != src2DimValue),
-            OP_LOGE(
-                inNodeName.c_str(), "Dim value check invalid, %s[%lu] is %lu, %s[%lu] is %lu, not equal.",
-                inSrc1Name.c_str(), i, src1DimValue, inSrc2Name.c_str(), i, src2DimValue),
-            return false);
+        if (src1DimValue != src2DimValue) {
+            std::string paramMsg = inSrc1Name + " and " + inSrc2Name;
+            std::string shapeMsg = ToString(src1Shape->GetStorageShape()) + " and " +
+                ToString(src2Shape->GetStorageShape());
+            std::string reasonMsg = "The shapes of parameter " + inSrc1Name +
+            " and parameter " + inSrc2Name + " must be the same";
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), paramMsg.c_str(),
+                shapeMsg.c_str(), reasonMsg.c_str());
+            return false;
+        }
+
     }
     return true;
 }
@@ -253,12 +267,15 @@ bool RmsNormQuantV2RegbaseTilingBase::CheckShapeBC(const gert::StorageShape* src
     size_t srcBcDimNum = EnsureNotScalar(srcBcShape->GetStorageShape()).GetDimNum();
     size_t srcDimNum = EnsureNotScalar(srcShape->GetStorageShape()).GetDimNum();
     bool isBcHeader =  true;
-    OP_TILING_CHECK(
-        (srcBcDimNum < srcDimNum),
-        OP_LOGE(
-            inNodeName.c_str(), "Dim num check invalid, %s is %lu %s is %lu, not bigger.", inSrcBcName.c_str(), srcBcDimNum,
-            inSrcName.c_str(), srcDimNum),
-        return false);
+    if (srcBcDimNum < srcDimNum) {
+        std::string paramMsg = inSrcBcName + " and " + inSrcName;
+        std::string dimNumMsg = std::to_string(srcBcDimNum) + " and " + std::to_string(srcDimNum);
+        std::string reasonMsg = "The shape dim of parameter " + inSrcBcName +
+            " must be greater than or equal to that of parameter " + inSrcName;
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), paramMsg.c_str(),
+            dimNumMsg.c_str(), reasonMsg.c_str());
+        return false;
+    }
     for (size_t i = 0; i < srcDimNum; i++) {
         uint64_t srcBcDimValue;
         if (isBcHeader) {
@@ -268,12 +285,17 @@ bool RmsNormQuantV2RegbaseTilingBase::CheckShapeBC(const gert::StorageShape* src
         }
         uint64_t srcDimValue = EnsureNotScalar(srcShape->GetStorageShape()).GetDim(i);
 
-        OP_TILING_CHECK(
-            (srcBcDimValue != srcDimValue),
-            OP_LOGE(
-                inNodeName.c_str(), "Dim value check invalid, %s[%lu] is %lu, %s[%lu] is %lu, not equal.",
-                inSrcBcName.c_str(), i, srcBcDimValue, inSrcName.c_str(), i, srcDimValue),
-            return false);
+        if (srcBcDimValue != srcDimValue) {
+            std::string paramMsg = inSrcName + " and " + inSrcBcName;
+            std::string shapeMsg = ToString(srcShape->GetStorageShape()) + " and " +
+                ToString(srcBcShape->GetStorageShape());
+            std::string reasonMsg =
+                "The shape of parameter " + inSrcName + " must be the same as the shape consisting of the last "
+                + std::to_string(srcDimNum) + " axes of parameter " + inSrcBcName;
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), paramMsg.c_str(),
+                shapeMsg.c_str(), reasonMsg.c_str());
+            return false;
+        }
     }
     return true;
 }
@@ -298,8 +320,8 @@ bool RmsNormQuantV2RegbaseTilingBase::CheckOutputDtype()
         ge::DataType::DT_FLOAT8_E5M2};
     auto y1DataType = context_->GetOutputDesc(Y1_INDEX)->GetDataType();
     auto y2DataType = context_->GetOutputDesc(Y2_INDEX)->GetDataType();
-    if ((ge::GRAPH_SUCCESS != CheckDtypeVaild(y1DataType, supportedYDtypes, "RmsNormQuantV2")) ||
-        (ge::GRAPH_SUCCESS != CheckDtypeVaild(y2DataType, supportedYDtypes, "RmsNormQuantV2")) ||
+    if ((ge::GRAPH_SUCCESS != CheckDtypeVaild(y1DataType, supportedYDtypes, "y1")) ||
+        (ge::GRAPH_SUCCESS != CheckDtypeVaild(y2DataType, supportedYDtypes, "y2")) ||
         (y1DataType != y2DataType)) {
         std::string dtypeMsg = ToString(y1DataType) + " and " + ToString(y2DataType);
         std::string reasonMsg = "The dtypes of output y1 and output y2 must be int8, fp8e4m3, fp8e5m2 or hifp8, "

@@ -122,9 +122,13 @@ ge::graphStatus LayerNormV3TilingBase::InputShapeAndAxisCheck(
 
     for (size_t index = 0; index < gammaShape.GetDimNum(); index++) {
         int64_t reduceAxis = index + beginNormAxis;
-        OP_CHECK_IF(
-            !isIndexValid(xShape, reduceAxis), OP_LOGE(context_->GetNodeName(), "begin_norm_axis is invalid."),
-            return ge::GRAPH_FAILED);
+        if (!isIndexValid(xShape, reduceAxis)) {
+            std::string reasonMsg = 
+                "The value of attribute begin_norm_axis depends on the number of shape axes of input x";
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "begin_norm_axis",
+                std::to_string(beginNormAxis).c_str(), reasonMsg.c_str());
+            return ge::GRAPH_FAILED;
+        }
         int64_t inputDim = xShape.GetDim(reduceAxis);
         int64_t normDim = gammaShape.GetDim(index);
         if (normDim != inputDim) {
