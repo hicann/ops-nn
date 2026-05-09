@@ -64,21 +64,6 @@ static const std::vector<uint64_t> DIM_RANGE_ONLY_TWO_DIM = {TWO_DIM_VALUE, TWO_
 static const std::vector<uint64_t> DIM_RANGE_ONLY_THREE_DIM = {THREE_DIM_VALUE, THREE_DIM_VALUE};
 static const std::vector<uint64_t> DIM_RANGE_OPTIONAL_INPUT = {ONE_DIM_VALUE, TWO_DIM_VALUE};
 
-static const aclTensor* SetTensorToNDFormat(const aclTensor* input)
-{
-    const aclTensor* output = nullptr;
-    if (input == nullptr) {
-        return output;
-    }
-    if (input->GetStorageFormat() != Format::FORMAT_FRACTAL_NZ) {
-        OP_LOGD("dualLevelQuantMatmul set tensor to ND format.");
-        output = l0op::ReFormat(input, op::Format::FORMAT_ND);
-    } else {
-        output = input;
-    }
-    return output;
-}
-
 static bool IsFormatSupport(const aclTensor* input, Format format, const std::string& inputName)
 {
     if (input != nullptr && input->GetStorageFormat() != format) {
@@ -279,8 +264,6 @@ static aclnnStatus CheckTensorX1(const aclTensor* x1, const bool transposeX1Attr
 
 static aclnnStatus CheckTensorX2(const aclTensor* x2, const bool transposeX2Attr)
 {
-    int64_t kX2 = x2->GetViewShape().GetDim(SECOND_DIM);
-
     OP_CHECK(
         transposeX2Attr, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "only support x2 is transposed."),
         return ACLNN_ERR_PARAM_INVALID);

@@ -80,7 +80,7 @@ bool QuantBatchMatmulV4RegBase::CustomCheck() const
             inputParams_.opName, "Invalid params, kSize must be aligned to 32 and greater than 32, but got %lu.",
             inputParams_.kSize),
         return false);
-    
+
     OP_CHECK_IF((inputParams_.cDtype != ge::DT_BF16) && (inputParams_.cDtype != ge::DT_FLOAT16),
              VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Invalid params, output only support DT_BF16 or DT_FLOAT16."),
              return false);
@@ -104,6 +104,12 @@ bool QuantBatchMatmulV4RegBase::CustomCheck() const
 
 bool QuantBatchMatmulV4RegBase::CheckCoreNum() const
 {
+    if (aivNum_ == 0 || aicNum_ == 0) {
+        OP_LOGE(
+            inputParams_.opName, "aicNum and aivNum must be greater than 0, actual aicNum: %u, aivNum: %u.", aicNum_,
+            aivNum_);
+        return false;
+    }
     if (aivNum_ != CORE_RATIO * aicNum_) {
         OP_LOGE(inputParams_.opName, "aicNum:aivNum should be 1:2, actual aicNum: %u, aivNum: %u.", aicNum_, aivNum_);
         return false;

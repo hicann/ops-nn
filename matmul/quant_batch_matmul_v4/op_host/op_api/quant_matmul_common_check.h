@@ -70,8 +70,7 @@ op::Shape GetWeightNzShape(const aclTensor *input, bool transpose);
 bool CheckWeightNzStorageShape(const op::Shape &nzShape, const op::Shape &storageShape);
 const aclTensor *SetTensorToNZFormat(const aclTensor *input, op::Shape &shape, aclOpExecutor *executor);
 
-inline bool TensorContiguousProcess(const aclTensor *&contiguousTensor, bool &transpose,
-                                           aclOpExecutor *executor);
+bool TensorContiguousProcess(const aclTensor *&contiguousTensor, bool &transpose, aclOpExecutor *executor);
 
 aclnnStatus WeightNZCaseProcess(const aclTensor *&x2, bool &transposeX2, aclOpExecutor *executor);
 aclnnStatus SetSpecilNZTensorToNormalNZFormat(const aclTensor *&input, aclOpExecutor *executor);

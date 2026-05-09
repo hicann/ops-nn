@@ -31,6 +31,7 @@ constexpr int64_t GROUP_SIZE_K = 256;
 constexpr uint64_t L2_REAL_SIZE = 168; // B4真实的L2Size大小
 constexpr uint64_t L2_FAKE_SIZE = 96;  // B4被上层修改后的L2Size大小
 constexpr const char* INT4_KG_QUANT_MODE = "int4 K-G quantification";
+constexpr size_t EXPECTED_DIM_NUM = 2;
 } // namespace
 
 const gert::Shape QuantBatchMatmulV4PergroupArch35Tiling::GetShape(const size_t index)
@@ -259,8 +260,7 @@ bool QuantBatchMatmulV4PergroupArch35Tiling::AnalyzeInputs()
 {
     auto x1Shape = GetShape(X1_IDX);
     auto x2Shape = GetShape(X2_IDX);
-
-    if (x1Shape.GetDimNum() != 2 || x2Shape.GetDimNum() != 2) {
+    if (x1Shape.GetDimNum() != EXPECTED_DIM_NUM || x2Shape.GetDimNum() != EXPECTED_DIM_NUM) {
         OP_LOGD(inputParams_.opName, "Input dims of x1/x2 should be 2 for this pergroup template.");
         return false;
     }
@@ -411,8 +411,9 @@ bool QuantBatchMatmulV4PergroupArch35Tiling::CheckPergroupDimAndOutput(
     const gert::Shape& x1Shape, const gert::Shape& x2Shape, const gert::Shape& x1ScaleShape,
     const gert::Shape& x2ScaleShape, const gert::Shape& x2OffsetShape)
 {
-    if (x1Shape.GetDimNum() != 2 || x2Shape.GetDimNum() != 2 || x1ScaleShape.GetDimNum() != 2 ||
-        x2ScaleShape.GetDimNum() != 2 || x2OffsetShape.GetDimNum() != 2) {
+    if (x1Shape.GetDimNum() != EXPECTED_DIM_NUM || x2Shape.GetDimNum() != EXPECTED_DIM_NUM ||
+        x1ScaleShape.GetDimNum() != EXPECTED_DIM_NUM || x2ScaleShape.GetDimNum() != EXPECTED_DIM_NUM ||
+        x2OffsetShape.GetDimNum() != EXPECTED_DIM_NUM) {
         OP_LOGD(
             inputParams_.opName,
             "In %s, expected dims=2 for x1/x2/x1Scale/x2Scale/x2Offset, but got [%zu, %zu, %zu, %zu, %zu].",
@@ -474,7 +475,6 @@ bool QuantBatchMatmulV4PergroupArch35Tiling::CheckPergroupInputFormat() const
         static_cast<ge::Format>(ge::GetPrimaryFormat(context_->GetOptionalInputDesc(X2_SCALE_IDX)->GetStorageFormat()));
     auto x2OffsetFormat = static_cast<ge::Format>(
         ge::GetPrimaryFormat(context_->GetOptionalInputDesc(X2_OFFSET_IDX)->GetStorageFormat()));
-
     if (x1Format != ge::FORMAT_ND || x2Format != ge::FORMAT_ND || x1ScaleFormat != ge::FORMAT_ND ||
         x2ScaleFormat != ge::FORMAT_ND || x2OffsetFormat != ge::FORMAT_ND) {
         OP_LOGD(
@@ -505,8 +505,8 @@ ge::graphStatus QuantBatchMatmulV4PergroupArch35Tiling::GetWorkspaceSize()
     constexpr uint64_t BASIC_BLOCK_SIZE_128 = 128;
     uint64_t aInt8Size = inputParams_.mSize * inputParams_.kSize;
     uint64_t bInt8Size = inputParams_.kSize * inputParams_.nSize;
-    uint64_t convertWorkspaceSize = ops::CeilAlign(aInt8Size, (uint64_t)BASIC_BLOCK_SIZE_128) +
-                                    ops::CeilAlign(bInt8Size, (uint64_t)BASIC_BLOCK_SIZE_128);
+    uint64_t convertWorkspaceSize = ops::CeilAlign(aInt8Size, static_cast<uint64_t>(BASIC_BLOCK_SIZE_128)) +
+                                    ops::CeilAlign(bInt8Size, static_cast<uint64_t>(BASIC_BLOCK_SIZE_128));
     workspaceSize_ += convertWorkspaceSize;
     workspaceSize_ += sizeof(int32_t) * static_cast<uint64_t>(tilingData_.matmulTiling.baseM) *
                       tilingData_.matmulTiling.baseN * tilingData_.matmulTiling.usedCoreNum * NUM_DB;
