@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file cross_entropy_loss.h
+ * \file cross_entropy_loss_proto.h
  * \brief
  */
 #ifndef OPS_LOSS_CROSS_ENTROPY_LOSS_H_
