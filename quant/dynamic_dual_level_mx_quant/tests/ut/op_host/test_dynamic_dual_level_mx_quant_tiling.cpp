@@ -151,7 +151,7 @@ static void ExecuteTestCase(
     EXPECT_EQ(tiling_data_result, expectTilingData);
 }
 
-void ExecuteTestCaseFailed(
+static void ExecuteTestCaseFailed(
     ge::DataType xDtype, ge::DataType yDtype, ge::DataType level0ScaleDtype, ge::DataType level1ScaleDtype,
     gert::StorageShape shape, gert::StorageShape level0ScaleShape, gert::StorageShape level1ScaleShape,
     string roundMode, int64_t level0Scale, int64_t level1Scale, ge::graphStatus status = ge::GRAPH_SUCCESS)

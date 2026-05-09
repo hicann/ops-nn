@@ -150,7 +150,7 @@ static void ExecuteTestCase(
     EXPECT_EQ(tiling_data_result, expectTilingData);
 }
 
-void ExecuteTestCaseFailed(
+static void ExecuteTestCaseFailed(
     ge::DataType inDtype, ge::DataType yDtype, ge::DataType scaleDtype, gert::StorageShape shape,
     gert::StorageShape scale1Shape, gert::StorageShape scale2Shape, string roundMode, int64_t dstDtype,
     int64_t scaleAlg, float dstTypeMax)

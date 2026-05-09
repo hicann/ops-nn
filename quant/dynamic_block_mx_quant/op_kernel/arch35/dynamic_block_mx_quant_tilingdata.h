@@ -13,6 +13,7 @@
 
 #include <cstdint>
 
+#pragma pack(push, 8)
 struct DynamicBlockMxQuantTilingData {
     int64_t tilingKey;
     int64_t totalCoreNum;               // 总核数
@@ -49,5 +50,6 @@ struct DynamicBlockMxQuantTilingData {
     int64_t colScaleNum;                // 列方向scale的数量
     float dstTypeMax;                   // 计算scale所需值
 };
+#pragma pack(pop)
 
 #endif // DYNAMIC_BLOCK_MX_QUANT_TILINGDATA_H

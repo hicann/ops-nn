@@ -107,7 +107,7 @@ private:
     uint64_t roundMode_ = 0;
     uint64_t scaleAlg_ = 0;
     gert::TilingContext* context_ = nullptr;
-    DynamicBlockMxQuantTilingData tilingData;
+    DynamicBlockMxQuantTilingData tilingData = {};
     DynamicBlockMxQuantTilingParam tilingParams;
 };
 
