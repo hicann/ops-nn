@@ -256,7 +256,7 @@ __aicore__ inline void GeGluV2Base<T>::ComputeGeluBase(
     Mul(tmpBuf, ubx2_fp32, tmpBuf, ub_num);
     Muls(tmpBuf, tmpBuf, beta, ub_num);
     Add(tmpBuf, ubx2_fp32, tmpBuf, ub_num);
-    Muls(tmpBuf, tmpBuf, alpha, ub_num); // get tan paramter tmpBuf
+    Muls(tmpBuf, tmpBuf, alpha, ub_num); // get tan parameter tmpBuf
 
     // compute x * 0.5 * (1 + tanh(tmpBuf))
     Muls(tmpBuf, tmpBuf, negativeOne, ub_num);
