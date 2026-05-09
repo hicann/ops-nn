@@ -56,6 +56,7 @@ struct L0TilingParams {
     uint32_t baseM = 16;
     uint32_t baseK = 16;
     uint32_t baseN = 16;
+    uint32_t singleCoreCin = 16;  // 每个核实际处理的 Cin 数量，不会随 baseN shrink 改变
 };
 
 struct L1TilingParams {

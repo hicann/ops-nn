@@ -21,16 +21,10 @@
 #include "lib/matmul_intf.h"
 #include "conv3d_backprop_input_v2_tiling_data.h"
 #include "../../conv3d_backprop_input_v2_arch35_tiling_key.h"
-#if (__NPU_ARCH__ == 5102)
+
 #ifndef DTYPE_BIAS
 #define DTYPE_BIAS int32_t
 #define FORMAT_BIAS FORMAT_MAX  // FORMAT_MAX意为数据格式不支持，用以表达不带bias输入场景
-#endif
-#else
-#ifndef DTYPE_BIAS
-#define DTYPE_BIAS float
-#define FORMAT_BIAS FORMAT_MAX  // FORMAT_MAX意为数据格式不支持，用以表达不带bias输入场景
-#endif
 #endif
 
 #ifndef DTYPE_SCALE
@@ -101,12 +95,13 @@ public:
         filterGm_.SetGlobalBuffer((__gm__ filterType *)filter);
         dedyGm_.SetGlobalBuffer((__gm__ dedyType *)dedy);
         yGm_.SetGlobalBuffer((__gm__ yType *)y);
-        dedx_.Init(&(tilingData->conv3DDxTiling));
-#if (__NPU_ARCH__ == 5102)
-        if constexpr (biasFormat != FORMAT_MAX) {
+
+        if (bias != nullptr) {
+            hasBias_ = true;
             biasGm_.SetGlobalBuffer((__gm__ biasType *)bias);
         }
-#endif
+        dedx_.Init(&(tilingData->conv3DDxTiling), hasBias_);
+
         if constexpr (GetScaleFormat<filterType>(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
             scaleGm_.SetGlobalBuffer((__gm__ scaleType *)scale);
         }
@@ -147,15 +142,15 @@ public:
                 dedx_.SetOutBackprop(dedyGm_[offsetA_]);
                 dedx_.SetWeight(filterGm_[offsetB_]);
                 dedx_.SetFullLoadFlag(this->tiling_->enableFullLoad);
-#if (__NPU_ARCH__ == 5102)
-                if constexpr (biasFormat != FORMAT_MAX) {
+
+                if (hasBias_) {
                     dedx_.SetBias(biasGm_[offsetBias_]);
                 }
-#endif
+
                 if constexpr (GetScaleFormat<filterType>(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
                     dedx_.SetScale(scaleGm_[offsetScale_]);
                 }
-                dedx_.IterateAll(yGm_[offsetC_], 0);  // 1 means atomic add
+                dedx_.IterateAll(yGm_[offsetC_], 0, fullLoadBiasFlag_, freeBiasFlag_);  // 1 means atomic add
                 CalcBatchOffset();
             }
         } else {
@@ -179,16 +174,16 @@ public:
                 dedx_.SetOutBackprop(dedyGm_[offsetA_]);
                 dedx_.SetWeight(filterGm_[offsetB_]);
                 dedx_.SetFullLoadFlag(this->tiling_->enableFullLoad);
-#if (__NPU_ARCH__ == 5102)
-                if constexpr (biasFormat != FORMAT_MAX) {
+
+                if (hasBias_) {
                     offsetBias_ = nCoreIdx_ * tiling_->singleCoreCin + groupIdx * tiling_->cinG;
                     dedx_.SetBias(biasGm_[offsetBias_]);
                 }
-#endif
+
                 if constexpr (GetScaleFormat<filterType>(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
                     dedx_.SetScale(scaleGm_[offsetScale_]);
                 }
-                dedx_.IterateAll(yGm_[offsetC_], 0);  // 1 means atomic add
+                dedx_.IterateAll(yGm_[offsetC_], 0, fullLoadBiasFlag_, freeBiasFlag_);  // 1 means atomic add
                 CalcGroupOffset();
             }
             CalcBatchOffset(backupOffsetA, backupOffsetB, backupOffsetC);
@@ -215,9 +210,7 @@ protected:
     GlobalTensor<filterType> filterGm_;
     GlobalTensor<dedyType> dedyGm_;
     GlobalTensor<yType> yGm_;
-#if (__NPU_ARCH__ == 5102)
     GlobalTensor<biasType> biasGm_;
-#endif
     GlobalTensor<scaleType> scaleGm_;
 
     uint64_t batchStrideA_ = 1;
@@ -232,9 +225,8 @@ protected:
     uint64_t offsetA_ = 0;
     uint64_t offsetB_ = 0;
     uint64_t offsetC_ = 0;
-#if (__NPU_ARCH__ == 5102)
     uint64_t offsetBias_ = 0;
-#endif
+    int64_t preOffsetBias_ = -1;
     uint64_t offsetScale_ = 0;
     uint32_t kSCoreIdx_ = 0;
     uint32_t batchCoreIdx_ = 0;
@@ -255,6 +247,9 @@ protected:
     uint64_t singleShapeKInGroup_ = 0;
     bool enableSplitDk_ = false;
     bool enableVecTrans_ = false;
+    bool hasBias_ = false;
+    bool fullLoadBiasFlag_ = false;
+    bool freeBiasFlag_ = false;
 
     const conv_bp_v2_kernel::TConv3DInputV2Tiling* tiling_;
     const conv_bp_v2_kernel::Conv3DBackpropInputV2Params* params_;
@@ -383,14 +378,22 @@ protected:
         offsetC_ += groupStrideC_ * groupIdx;
     }
 
-#if (__NPU_ARCH__ == 5102)
     __aicore__ inline void CalcBiasOffset(uint32_t groupIdx)
     {
-        if constexpr (biasFormat != FORMAT_MAX) {
+        if (hasBias_) {
+            // bias需要叠加额外的group偏移
             offsetBias_ = static_cast<uint64_t>(nCoreIdx_) * tiling_->singleCoreCin + groupIdx * tiling_->cinG;
         }
     }
-#endif
+
+    __aicore__ inline void CalcBiasFullLoadFlag()
+    {
+        if (hasBias_ && (offsetBias_ != preOffsetBias_)) {
+            // bias按照group全载
+            fullLoadBiasFlag_ = true;
+        }
+        preOffsetBias_ = offsetBias_;
+    }
 
     __aicore__ inline void CalcScaleOffset()
     {
@@ -408,9 +411,8 @@ protected:
         CalcBlockOffsetB();
         CalcBlockOffsetC(batchIdx);
         CalcGroupBlockOffset(groupIdx);
-#if (__NPU_ARCH__ == 5102)
+
         CalcBiasOffset(groupIdx);
-#endif
         CalcScaleOffset();
     }
 

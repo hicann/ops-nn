@@ -64,9 +64,7 @@ static __aicore__ inline void ComputeForTilingHkWk(Intf *self, LocalTensor<typen
             self->ctx.groupIterIdx_ = 0;
         }
         int64_t curDoutIdx = 0;
-        if (!CalcCurDoutIdx<Intf>(self, curInnerKdIdx, curDoutIdx)) {
-            continue;
-        }
+        if (!CalcCurDoutIdx<Intf>(self, curInnerKdIdx, curDoutIdx)) {continue;}
 
         self->ctx.curHoIdx_ += khDilation - 1; //计算，每一行hk对应的curHoIdx
         for (uint64_t curHkIdx = 0; curHkIdx < self->ctx.tiling_->hk; curHkIdx++) { // dilation时跳过空洞部分
@@ -100,6 +98,9 @@ static __aicore__ inline void ComputeForTilingHkWk(Intf *self, LocalTensor<typen
             self->ctx.curHoIdx_ -= self->ctx.tiling_->dilationH; //计算一行Hk后需更新curHoIdx，且需要跳过空洞部分
         }
         self->ctx.curHoIdx_ = curHoIdx;
+    }
+    if (!self->ctx.computeBiasOnce_ && self->ctx.hasBias_) {
+        ComputeForBias<Intf>(self, l0a, l0b, l0c, isFirstDHWk, l0PingPongFlag);
     }
 }
 

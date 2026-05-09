@@ -54,25 +54,22 @@ template <class Intf>
 static __aicore__ inline void MmadLocal(Intf *self, const LocalTensor<typename Intf::SrcAT> &l0a,
     const LocalTensor<typename Intf::SrcBT> &l0b, LocalTensor<typename Intf::L0cT> &l0c)
 {
-#if (__NPU_ARCH__ == 5102)
     // eType is bias Class
-    if constexpr (Intf::Config::eType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
-        if (self->ctx.mmad_.cmatrixInitVal) {
+    if (self->ctx.hasBias_) {
+        if (self->ctx.mmad_.cmatrixInitVal && !self->ctx.computeBiasOnce_) {
             // bias 通路，C矩阵初始值通过BT（C2）进行初始化
             self->ctx.mmad_.cmatrixInitVal = 0; //不初始化，使用bias的值
             self->ctx.mmad_.cmatrixSource = 1; // 第一次mmad，cmatrix值从BT buffer获取
             uint64_t biasOffset = self->ctx.tiling_->isBiasFullLoad ? (self->ctx.curNIdx_ * self->ctx.tiling_->baseN) : 0;
             Mmad(l0c, l0a, l0b, self->ctx.biasBTBuf_[biasOffset], self->ctx.mmad_);
             self->ctx.mmad_.cmatrixSource = 0; // 后续值从l0c读取
+            self->ctx.computeBiasOnce_ = true;
         } else {
             Mmad(l0c, l0a, l0b, self->ctx.mmad_);
         }
     } else {
         Mmad(l0c, l0a, l0b, self->ctx.mmad_);
     }
-#else
-    Mmad(l0c, l0a, l0b, self->ctx.mmad_);
-#endif
 }
 
 // 计算Load2A2的指令参数
@@ -379,6 +376,44 @@ static __aicore__ inline void LoadToA2(Intf *self, const LocalTensor<typename In
 #else
     LoadData(l0a, l1A1Matrix, self->ctx.load3d_);
 #endif
+}
+
+template <class Intf>
+static __aicore__ inline void LoadL0Zero(
+    Intf *self,
+    const LocalTensor<typename Intf::SrcAT>& l0a, uint32_t baseM,
+    const LocalTensor<typename Intf::SrcBT>& l0b, uint32_t baseN)
+{
+    LocalTensor<typename Intf::SrcAT> dummyL1(TPosition::A1, 0, 0);
+    constexpr uint8_t k0 = GetDataBlockSizeInBytes() / sizeof(typename Intf::SrcBT);
+    LoadData3DParamsV2<typename Intf::SrcBT> load3d;
+    load3d.filterW = 1;
+    load3d.filterH = 1;
+
+    //清零10240*255区域
+    load3d.padList[0] = 0;
+    load3d.padList[1] = 0;
+    load3d.padList[2] = 255;
+    load3d.padList[3] = 0;
+
+    load3d.l1H = 1;
+    load3d.l1W = 32;
+
+    load3d.channelSize = k0;
+    load3d.kStartPt = 0;
+    load3d.mStartPt = 0;
+    load3d.kExtension = k0;
+
+    LoadDataRepeatParamWithStride repeat = {};
+    repeat.repeatTime = 1;
+    //重置repeat参数
+    SetLoadDataRepeatWithStride(repeat);
+
+    load3d.mExtension = AlignUp(baseM, BLOCK_CUBE);
+    LoadDataWithStride(l0a, dummyL1, load3d);
+
+    load3d.mExtension = AlignUp(baseN, BLOCK_CUBE);
+    LoadDataWithStride(l0b, dummyL1, load3d);
 }
 
 template <class Intf>

@@ -1889,7 +1889,7 @@ bool CheckTranspose(const char* opName, const gert::TilingContext* context) {
                 OP_LOGE(opName, "cannot support offset_x attribute parameters"), return false);
     if (!IsSocVersionFuse(context) && !IsArchAfter35(context)) {
         OP_CHECK_IF(offsetWShape != nullptr && offsetWShape->GetStorageShape().GetShapeSize() != 0,
-                  OP_LOGE(opName,"cannot support offset_w input parameters"), return false);
+                OP_LOGE(opName,"cannot support offset_w input parameters"), return false);
         auto biasShape = context->GetOptionalInputShape(BAIS_INDEX);
         OP_CHECK_IF(biasShape != nullptr && biasShape->GetStorageShape().GetShapeSize() != 0,
                 OP_LOGE(opName, "cannot support bias"), return false);
@@ -1907,7 +1907,9 @@ void SetInitOutput(Conv3dBpInputV2RunInfo &runInfoV2, const optiling::OpTypeV2 o
         hoModulo > runInfoV2.pad_d ||
         runInfoV2.stride_h > otherParams.b_shape.h ||
         (opType == optiling::OpTypeV2::kConv3DTransposeV2 &&
-          (otherParams.output_padding.output_padding_d > 0 || otherParams.output_padding.output_padding_h > 0)) ||
+          (otherParams.output_padding.output_padding_d > 0 ||
+           otherParams.output_padding.output_padding_h > 0 ||
+           otherParams.output_padding.output_padding_w > 0)) ||
         runInfoV2.dilation_d > 1) {
         // 1 is init output with l0C, 2 is init output with l1, defualt is 0 means not init output
         runInfoV2.initOutputFlag = 1;

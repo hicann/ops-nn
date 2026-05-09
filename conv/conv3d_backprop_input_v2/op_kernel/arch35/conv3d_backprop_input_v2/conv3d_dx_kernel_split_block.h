@@ -52,15 +52,16 @@ public:
         }
         this->dedyGm_.SetGlobalBuffer((__gm__ dedyType *)dedy);
         this->yGm_.SetGlobalBuffer((__gm__ yType *)y);
-#if (__NPU_ARCH__ == 5102)
-        if constexpr (biasFormat != FORMAT_MAX) {
+
+        if (bias != nullptr) {
+            this->hasBias_ = true;
             this->biasGm_.SetGlobalBuffer((__gm__ biasType *)bias);
         }
-#endif
+
         if constexpr (GetScaleFormat<filterType>(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
             this->scaleGm_.SetGlobalBuffer((__gm__ scaleType *)scale);
         }
-        this->dedx_.Init(&(tilingData->conv3DDxTiling));
+        this->dedx_.Init(&(tilingData->conv3DDxTiling), this->hasBias_);
 
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || (__NPU_ARCH__ == 5102)
         InitMixCoreBuffer(workSpace);
@@ -264,11 +265,11 @@ protected:
         CalcBlockKSOffset(kernelIdx);
         this->dedx_.SetOutBackprop(this->dedyGm_[this->offsetA_]);
         this->dedx_.SetWeight(this->filterGm_[this->offsetB_]);
-#if (__NPU_ARCH__ == 5102)
-        if constexpr (biasFormat != FORMAT_MAX) {
+
+        if (this->hasBias_) {
             this->dedx_.SetBias(this->biasGm_[this->offsetBias_]);
         }
-#endif
+
         if constexpr (GetScaleFormat<filterType>(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
             this->dedx_.SetScale(this->scaleGm_[this->offsetScale_]);
         }
@@ -286,6 +287,7 @@ protected:
         uint64_t mCoreUse = 0;
         this->kSTailM_ = (static_cast<uint64_t>(this->tiling_->hi) / this->tiling_->strideH) * this->tiling_->wi;
         this->CrossCoreWaitVecTrans();
+        bool firstloadbias = false;
         for (uint64_t j = 0; j < this->calRound_; ++j) {
             CalBasicBlockIdx(j * blockNum + blockIdx);
             uint32_t kernelIdx = this->kSCoreIdx_ + kernelStartIdx;
@@ -305,7 +307,13 @@ protected:
             }
             this->SetIterateParams(mCoreUse, splitBaseHk, baseHkIter, splitTailHk, kernelIdx);
             this->dedx_.SetFullLoadFlag(this->tiling_->enableFullLoad);
-            this->dedx_.IterateAll(this->yGm_[this->offsetC_], 0);  // 1 means atomic add
+            this->CalcBiasFullLoadFlag();
+            this->freeBiasFlag_ = this->fullLoadBiasFlag_ && firstloadbias;
+            this->dedx_.IterateAll(this->yGm_[this->offsetC_], 0, this->fullLoadBiasFlag_, this->freeBiasFlag_);  // 1 means atomic add
+            if (this->fullLoadBiasFlag_) {
+                firstloadbias = true;
+            }
+            this->fullLoadBiasFlag_ = false;
         }
     }
 
@@ -327,6 +335,9 @@ protected:
                 this->dedx_.FreeB1Tensor();
             }
         }
+        // Release bias after full load.
+        // Note: Currently only the bias full-load scenario exists.
+        this->dedx_.FreeBiasTensor();
     }
 };
 }

@@ -46,9 +46,7 @@ public:
 
     DECLARE_IMPL(Config_, Convolution3DBackpropFunc, Init, Intf);
     DECLARE_IMPL(Config_, Convolution3DBackpropFunc, SetWeight, Intf);
-#if (__NPU_ARCH__ == 5102)
     DECLARE_IMPL(Config_, Convolution3DBackpropFunc, SetBias, Intf);
-#endif
     DECLARE_IMPL(Config_, Convolution3DBackpropFunc, SetScale, Intf);
     DECLARE_IMPL(Config_, Convolution3DBackpropFunc, SetOutBackprop, Intf);
     DECLARE_IMPL(Config_, Convolution3DBackpropFunc, SetKernelSplitParams, Intf);
@@ -58,6 +56,7 @@ public:
     DECLARE_IMPL(Config_, Convolution3DBackpropFunc, SetFullLoadFlag, Intf);
     DECLARE_IMPL(Config_, Convolution3DBackpropFunc, SetBatchCoreIdx, Intf);
     DECLARE_IMPL(Config_, Convolution3DBackpropFunc, FreeB1Tensor, Intf);
+    DECLARE_IMPL(Config_, Convolution3DBackpropFunc, FreeBiasTensor, Intf);
     DECLARE_SYNC_IMPL(Config_, Convolution3DBackpropFunc, Iterate, Intf);
     DECLARE_SYNC_IMPL(Config_, Convolution3DBackpropFunc, IterateAll, Intf);
     DECLARE_SYNC_IMPL(Config_, Convolution3DBackpropFunc, IterateAllForKernelSplit, Intf);
@@ -157,6 +156,8 @@ public:
         DEFINE_STUCT_FIELD(bool, enableSplitDk_);
         DEFINE_STUCT_FIELD(bool, isLastDk_);
         DEFINE_STUCT_FIELD(bool, needComputeFlag_);
+        DEFINE_STUCT_FIELD(bool, hasBias_);
+        DEFINE_STUCT_FIELD(bool, computeBiasOnce_);
         DEFINE_STUCT_FIELD(bool, enableFullLoad_);
         DEFINE_STUCT_FIELD(uint8_t, isFirstIter_);
         DEFINE_STUCT_FIELD(uint8_t, l0PingPongFlag_);

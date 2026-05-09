@@ -483,6 +483,7 @@ __aicore__ inline void LoadToA1(Intf *self, uint32_t kIdx, uint32_t curDoutIdx, 
         return;
     }
     LocalTensor<typename Intf::SrcAT> useA1Buf = self->ctx.inQueL1A_.template AllocTensor<typename Intf::SrcAT>();
+
     if constexpr (Intf::Config::cType::format == Convolution3DBackprop::CubeFormat::NCDHW) {
         LoadToA1ForDn2Nz<Intf, typename Intf::SrcAT>(self, useA1Buf, kIdx, curDoutIdx);
     } else {

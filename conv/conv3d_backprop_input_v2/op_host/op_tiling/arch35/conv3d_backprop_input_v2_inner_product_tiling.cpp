@@ -730,7 +730,7 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::DoLibApiTiling()
 
     // 核间默认不切K，只设置MN方向分核
     L1TilingParams l1Params;
-    InitL1Params(l1Params);
+    InitL1Params(l1Params, l0Params);
 
     // 设置MN和循环轴的核间切分策略，只允许调小baseMN
     CoreTilingParams coreParams;
@@ -851,21 +851,19 @@ bool Conv3DDXV2InnerProductTiling::IsL1ParamsValid(const L1TilingParams& l1Param
     }
     uint64_t aL1Size = a1PixelNum * dtypeByteL0a_ * l1Params.al1Pbuffer;
 
-    if (IsSocVersionFuse(context_)) {
-        uint64_t biasSize = 0;
-        uint64_t scaleSize = 0;
-        if (hasScaleFlag_ && runInfo_.quantMode == static_cast<uint8_t>(QuantMode::VECTOR_QUANT)) {
-            scaleSize = ge::GetSizeByDataType(ge::DT_INT64) * runInfo_.dedx_cin;
-        }
-        if (hasBiasFlag_) {
-            uint64_t dtypeByteBtBuffer = (runInfo_.a_dtype_bytes == ge::GetSizeByDataType(ge::DT_INT8)) ?
-    ge::GetSizeByDataType(ge::DT_INT32) : ge::GetSizeByDataType(ge::DT_FLOAT16);
-            // biasL1 size需要对齐32Bytes
-            biasSize = Ops::Base::CeilAlign(dtypeByteBtBuffer * runInfo_.dedx_cin, static_cast<uint64_t>(BYTE_BLOCK));
-        }
-        return aL1Size + bL1Size + biasSize + scaleSize <= platformInfo_.l1_size;
+    uint64_t biasSize = 0;
+    uint64_t scaleSize = 0;
+    if (hasScaleFlag_ && runInfo_.quantMode == static_cast<uint8_t>(QuantMode::VECTOR_QUANT)) {
+        scaleSize = ge::GetSizeByDataType(ge::DT_INT64) * l0Params.baseN;
     }
-    return aL1Size + bL1Size <= platformInfo_.l1_size;
+    if (hasBiasFlag_) {
+        uint64_t dtypeByteBtBuffer = (runInfo_.a_dtype_bytes == ge::GetSizeByDataType(ge::DT_INT8)) ?
+            ge::GetSizeByDataType(ge::DT_INT32) : ge::GetSizeByDataType(ge::DT_FLOAT16);
+        // biasL1 size需要对齐32Bytes
+        biasSize = Ops::Base::CeilAlign(dtypeByteBtBuffer * l0Params.baseN, static_cast<uint64_t>(BYTE_BLOCK));
+    }
+    // 移除 IsSocVersionFuse 条件，统一在所有场景下计算
+    return aL1Size + bL1Size + biasSize + scaleSize <= platformInfo_.l1_size;
 }
 
 void Conv3DDXV2InnerProductTiling::CloseL0PingPong(L0TilingParams& l0Params)
@@ -1078,15 +1076,11 @@ void Conv3DDXV2InnerProductTiling::AdjustBaseMNK(L0TilingParams& l0Params, const
     UpdateL0CBufferMode(l0Params);
 }
 
-void Conv3DDXV2InnerProductTiling::UpdateIsBiasFullLoad(L1TilingParams& l1Params)
+void Conv3DDXV2InnerProductTiling::UpdateIsBiasFullLoad(L1TilingParams& l1Params, const L0TilingParams& l0Params)
 {
-    if (!IsSocVersionFuse(context_)) {
-        l1Params.isBiasFullLoad = 0U;
-        return;
-    }
     uint64_t dtypeByteBtBuffer = (runInfo_.a_dtype_bytes == ge::GetSizeByDataType(ge::DT_INT8)) ?
         ge::GetSizeByDataType(ge::DT_INT32) : ge::GetSizeByDataType(ge::DT_FLOAT16);
-    if (runInfo_.dedx_cin * dtypeByteBtBuffer > BT_BUFFER_SIZE) {
+    if (l0Params.baseN * dtypeByteBtBuffer > BT_BUFFER_SIZE) {
         l1Params.isBiasFullLoad = 0U;
         OP_LOGD(opName_, "Bias too big, disable bias full load");
     } else {
@@ -1095,10 +1089,10 @@ void Conv3DDXV2InnerProductTiling::UpdateIsBiasFullLoad(L1TilingParams& l1Params
     }
 }
 
-void Conv3DDXV2InnerProductTiling::InitL1Params(L1TilingParams& l1Params)
+void Conv3DDXV2InnerProductTiling::InitL1Params(L1TilingParams& l1Params, const L0TilingParams& l0Params)
 {
     l1Params.iterateOrder = 1U; // 默认orderN, 暂无左矩阵全载逻辑
-    UpdateIsBiasFullLoad(l1Params);
+    UpdateIsBiasFullLoad(l1Params, l0Params);
 }
 
 static inline uint32_t GetMaxDivisor(uint32_t a, uint32_t b, uint32_t step)

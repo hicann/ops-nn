@@ -34,7 +34,7 @@ using namespace AscendC;
 #define CONV3D_DX_TRANSPOSE_RUN_OP(...)        \
     do {                                                \
         __VA_ARGS__ op;                                     \
-        op.Init(filter, x, y, usrWsp, &tilingData);     \
+        op.Init(filter, x, y, usrWsp, &tilingData, bias);     \
         op.Process();                                   \
     } while (0)
 

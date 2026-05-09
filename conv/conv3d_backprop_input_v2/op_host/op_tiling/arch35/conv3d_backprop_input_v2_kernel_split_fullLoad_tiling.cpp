@@ -65,7 +65,7 @@ ge::graphStatus Conv3DDXV2KernelSplitFullLoadTiling::DoLibApiTiling()
 
     // 核间默认不切K，只设置MN方向分核
     L1TilingParams l1Params;
-    Conv3DDXV2KernelSplitTiling::InitL1Params(l1Params);
+    Conv3DDXV2KernelSplitTiling::InitL1Params(l1Params, l0Params);
 
     // 设置MN和循环轴的核间切分策略
     CoreTilingParams coreParams;

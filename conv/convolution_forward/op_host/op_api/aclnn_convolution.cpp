@@ -2436,9 +2436,14 @@ static void UpdateInputDtype(
     if (bias != nullptr) {
         SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
         bool isDAV3510 = GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510;
-        if (transposed && (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93 ||
-                           isDAV3510)) {
-            upperDtype = GetUpperFloatDataType(opInfo.outputDtype, bias->GetDataType());
+        if (transposed) {
+            if (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93) {
+                upperDtype = GetUpperFloatDataType(opInfo.outputDtype, bias->GetDataType());
+            } else if (isDAV3510) {
+                // Ascend950 force convert bias to float
+                // L0C [conv3dBpInput(xDtype) + bias(float)] --> CAST [out(xDtype)]
+                upperDtype = op::DataType::DT_FLOAT;
+            }
         }
         opInfo.biasDtype = upperDtype;
         // 因为bias二进制不支持为BF16，所以得转成FP32
@@ -4935,18 +4940,19 @@ public:
             CHECK_RET(convOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
         }
 
-        if (bias) {
-            op::Shape biasShape = bias->GetViewShape();
-            int64_t biasLength = biasShape.GetDim(0);
-            if (dstFormat == op::Format::FORMAT_NDHWC) {
-                bias = l0op::Reshape(bias, {1, 1, 1, 1, biasLength}, executor);
-            } else {
-                bias = l0op::Reshape(bias, {1, biasLength, 1, 1, 1}, executor);
-            }
-            CHECK_RET(bias != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        bool isDAV3510 = GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510;
+        if (bias && !isDAV3510) { 
+            op::Shape biasShape = bias->GetViewShape(); 
+            int64_t biasLength = biasShape.GetDim(0); 
+            if (dstFormat == op::Format::FORMAT_NDHWC) { 
+                bias = l0op::Reshape(bias, {1, 1, 1, 1, biasLength}, executor); 
+            } else { 
+                bias = l0op::Reshape(bias, {1, biasLength, 1, 1, 1}, executor); 
+            } 
+            CHECK_RET(bias != nullptr, ACLNN_ERR_INNER_NULLPTR); 
 
-            convOut = l0op::Add(convOut, bias, executor);
-            CHECK_RET(convOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            convOut = l0op::Add(convOut, bias, executor); 
+            CHECK_RET(convOut != nullptr, ACLNN_ERR_INNER_NULLPTR); 
         }
 
         if (!op::IsSupportND()) {

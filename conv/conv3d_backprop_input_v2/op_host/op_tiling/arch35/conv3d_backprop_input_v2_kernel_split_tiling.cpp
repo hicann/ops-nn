@@ -147,6 +147,10 @@ void Conv3DDXV2KernelSplitTiling::SetParamForKernelSplit(bool isKernelSplitOnlyH
 
 bool Conv3DDXV2KernelSplitTiling::CheckKernelSplitHW11Enable()
 {
+    // 有 bias 场景暂不支持 1*1 kernel 拆分
+    if (hasBiasFlag_) {
+        return false;
+    }
     uint64_t mValueForCheck = static_cast<uint64_t>(runInfo_.dedx_h) * runInfo_.dedx_w;
     uint64_t nValueForCheck = static_cast<uint64_t>(runInfo_.dedx_cin1_g) * BLOCK_CUBE;
     uint64_t kValueForCheck = runInfo_.dedy_cout1_g * BASIC_BLOCK_SIZE_32 / dtypeByteL0b_;
@@ -264,6 +268,7 @@ bool Conv3DDXV2KernelSplitTiling::IsBaseShapeFitKernelSplitHW(const uint32_t bes
 bool Conv3DDXV2KernelSplitTiling::CheckKernelSplitHWEnable(
     bool isEnableKernelSplitFlag2, const int32_t kernelSplitStrideVal, const uint32_t bestBaseMN)
 {
+
   // cout=cin=1,kernel_h/w=2的场景，假设使能kernel拆分会拆成1*1的子kernel同时cin/cout极小会造成算力浪费，无明显收益，故暂不支持kernel拆分
     if (!kernelSplitPara_.isA16W8GroupNoEnlarge && runInfo_.dedx_cin_g == 1 && runInfo_.dedy_cout_g == 1 && isEnableKernelSplitFlag2) {
         return false;
@@ -501,7 +506,7 @@ ge::graphStatus Conv3DDXV2KernelSplitTiling::DoLibApiTiling()
 
     // 核间默认不切K，只设置MN方向分核
     L1TilingParams l1Params;
-    InitL1Params(l1Params);
+    InitL1Params(l1Params, l0Params);
 
     // 设置MN和循环轴的核间切分策略, 允许重写BaseMNK
     CoreTilingParams coreParams;

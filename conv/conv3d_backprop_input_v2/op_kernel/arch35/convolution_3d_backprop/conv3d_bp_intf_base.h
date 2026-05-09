@@ -46,12 +46,12 @@ public:
 public:
     __aicore__ inline ConvBpIntf() {}
 
-    __aicore__ inline void Init(const conv_bp_v2_kernel::TConv3DInputV2Tiling * tiling)
+    __aicore__ inline void Init(const conv_bp_v2_kernel::TConv3DInputV2Tiling * tiling, const bool hasBias_=false)
     {
         using Local = typename Ext::Init;
         // CheckFun检查impl是否实现了Init的call函数
-        if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, tiling)) {
-            Local::call(this, tiling);
+        if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, tiling, hasBias_)) {
+            Local::call(this, tiling, hasBias_);
         }
     }
 
@@ -79,7 +79,6 @@ public:
         }
     }
 
-#if (__NPU_ARCH__ == 5102)
     __aicore__ inline void SetBias(const GlobalTensor<BiasT> &bias)
     {
         using Local = typename Ext::SetBias;
@@ -87,7 +86,6 @@ public:
             Local::call(this, bias);
         }
     }
-#endif
 
     __aicore__ inline void SetScale(const GlobalTensor<ScaleT> &scale)
     {
@@ -157,6 +155,14 @@ public:
         }
     }
 
+    __aicore__ inline void FreeBiasTensor()
+    {
+        using Local = typename Ext::FreeBiasTensor;
+        if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this)) {
+            Local::call(this);
+        }
+    }
+
     template <bool sync = true>
     __aicore__ inline bool Iterate(bool enPartialSum = false)
     {
@@ -167,11 +173,11 @@ public:
     }
 
     template <bool sync = true>
-    __aicore__ inline void IterateAll(const GlobalTensor<DstT> &output, uint8_t enAtomic = 0)
+    __aicore__ inline void IterateAll(const GlobalTensor<DstT> &output, uint8_t enAtomic = 0, bool fullLoadBiasFlag_=false, bool freeBiasFlag_=false)
     {
         using Local = typename Ext::template IterateAll<sync>;
-        if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, output, enAtomic)) {
-            Local::call(this, output, enAtomic);
+        if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, output, enAtomic, fullLoadBiasFlag_, freeBiasFlag_)) {
+            Local::call(this, output, enAtomic, fullLoadBiasFlag_, freeBiasFlag_);
         }
     }
 

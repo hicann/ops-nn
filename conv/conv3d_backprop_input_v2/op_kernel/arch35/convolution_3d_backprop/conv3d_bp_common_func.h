@@ -121,7 +121,6 @@ static __aicore__ inline void ComputeL1BPreLoad(Intf *self, uint64_t kIdx, int64
         curKdIdx, l0bKIdx == 0);
 }
 
-#if (__NPU_ARCH__ == 5102)
 template <class Intf>
 static __aicore__ inline void ComputeBTBias(Intf *self)
 {
@@ -130,7 +129,6 @@ static __aicore__ inline void ComputeBTBias(Intf *self)
     }
     Convolution3DBackpropFunc::LoadBiasToBT<Intf>(self);
 }
-#endif
 
 template <class Intf>
 static __aicore__ inline void ComputeL0AForKernelSplit(Intf *self, uint32_t l0aKIdx,
@@ -181,12 +179,9 @@ static __aicore__ inline void ComputeL0BForTQueData(Intf *self, uint32_t l0bKIdx
         (self->ctx.isB1FullLoadFlag_ && self->ctx.isFreeB1_))) {
         self->ctx.isLoadB1_ = true;
         self->ctx.inQueL1B_.FreeTensor(self->ctx.cacheB1Buf_);
-
-#if (__NPU_ARCH__ == 5102)
-        if (!self->ctx.tiling_->isBiasFullLoad) {
+        if (self->ctx.hasBias_ && (!self->ctx.tiling_->isBiasFullLoad)) {
             self->ctx.biasBTQue_.FreeTensor(self->ctx.biasBTBuf_);
         }
-#endif
     }
 }
 
@@ -253,9 +248,9 @@ static __aicore__ inline void ComputeForKIter(Intf *self, LocalTensor<typename I
         ComputeL1B<Intf>(self, kIdx, curInnerKdIdx, l0bKIdx);
         ComputeL1APreLoad<Intf>(self, kIdx, curDoutIdx, l0aKIdx);
         ComputeL1BPreLoad<Intf>(self, kIdx, curInnerKdIdx, l0bKIdx);
-#if (__NPU_ARCH__ == 5102)
-        ComputeBTBias<Intf>(self);
-#endif
+        if (self->ctx.hasBias_) {
+            ComputeBTBias<Intf>(self);
+        }
 
         if ASCEND_IS_AIC_SCALAR {
             WaitFlag<HardEvent::M_MTE1>(l0PingPongFlag & 1);
@@ -286,6 +281,35 @@ static __aicore__ inline void ComputeForKIter(Intf *self, LocalTensor<typename I
         }
         CalcL0KIdx(l0aKIdx, l0bKIdx, curStepKa, curStepKb);
     }
+}
+
+template <class Intf>
+static __aicore__ inline void ComputeForBias(Intf *self, LocalTensor<typename Intf::SrcAT> &l0a,
+    LocalTensor<typename Intf::SrcBT> &l0b, LocalTensor<typename Intf::L0cT> &l0c,
+    bool isFirstDk, uint8_t &l0PingPongFlag)
+{
+    ComputeBTBias<Intf>(self);
+    if ASCEND_IS_AIC_SCALAR {
+        WaitFlag<HardEvent::M_MTE1>(l0PingPongFlag & 1);
+        l0a = self->ctx.l0aBuf_.template Get<typename Intf::SrcAT>();
+        l0b = self->ctx.l0bBuf_.template Get<typename Intf::SrcBT>();
+        if (l0PingPongFlag) {
+            l0a = l0a[self->ctx.l0aPingPongAddr_];
+            l0b = l0b[self->ctx.l0bPingPongAddr_];
+        }
+
+        LoadL0Zero<Intf>(self, l0a, self->ctx.tiling_->baseM, l0b, self->ctx.tiling_->baseN);
+
+        SetFlag<HardEvent::MTE1_M>(l0PingPongFlag);
+        WaitFlag<HardEvent::MTE1_M>(l0PingPongFlag);
+        CalcParamsMmad<Intf>(self, 0, isFirstDk);
+        self->ctx.mmad_.k = GetDataBlockSizeInBytes() / sizeof(typename Intf::SrcBT);
+        MmadLocal<Intf>(self, l0a, l0b, l0c);
+        self->ctx.mmad_.k = self->ctx.tiling_->baseK;
+        SetFlag<HardEvent::M_MTE1>(l0PingPongFlag);
+        l0PingPongFlag ^= self->ctx.enableL0PingPong_;
+    }
+
 }
 
 template <class Intf>

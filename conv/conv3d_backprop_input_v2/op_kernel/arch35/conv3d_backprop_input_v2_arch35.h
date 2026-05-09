@@ -65,6 +65,7 @@ __global__ __aicore__ void conv3d_backprop_input_v2_arch35(GM_ADDR input_size, G
         }
     }
 
+
     if constexpr (kernelSplitMode != TPL_NO_SPLIT_KERNEL) {
         CONV3D_DX_INPUT_RUN_OP(Conv3dDxKsBlock<DTYPE_FILTER, FORMAT_FILTER, DTYPE_OUT_BACKPROP,
                                                FORMAT_OUT_BACKPROP, DTYPE_Y, FORMAT_Y, DTYPE_BIAS, FORMAT_BIAS,

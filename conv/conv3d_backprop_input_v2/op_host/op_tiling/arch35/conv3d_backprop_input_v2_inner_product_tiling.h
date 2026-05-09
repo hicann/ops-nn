@@ -60,13 +60,13 @@ protected:
         L1TilingParams& l1Params, const L0TilingParams& l0Params, uint64_t curHiWiSize,
         bool isNeedShrinkStepKa = false);
     bool IsHkWkAligned(const L1TilingParams& l1Params, const L0TilingParams& l0Params);
-    void UpdateIsBiasFullLoad(L1TilingParams& l1Params);
+    void UpdateIsBiasFullLoad(L1TilingParams& l1Params, const L0TilingParams& l0Params);
     void CalcBL1Size(const L1TilingParams& l1Params, const L0TilingParams& l0Params, uint64_t& bL1Size);
     void SetSingleCoreInfoCore(
         CoreTilingParams& coreParams, L0TilingParams& l0Params, uint64_t hwI, uint32_t kernelDHW, uint64_t kSCnt);
 
     virtual void InitBaseMNK(L0TilingParams& l0Params);
-    virtual void InitL1Params(L1TilingParams& l1Params);
+    virtual void InitL1Params(L1TilingParams& l1Params, const L0TilingParams& l0Params);
     virtual void SetSingleCoreInfo(CoreTilingParams& coreParams, L0TilingParams& l0Params);
     virtual void CalStepK(L1TilingParams& l1Params, const L0TilingParams& l0Params);
 
