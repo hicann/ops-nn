@@ -68,15 +68,15 @@ __aicore__ inline void ScatterUpdateSIMDImpl<T, U, updatesIsScalar>::ProcessNotS
 {
     int64_t indicesOffset = 0;
     int64_t updatesOffset = 0;
-    int64_t indicesStride = this->tilingData_.processRowPerUb;
-    int64_t updatesStride = this->tilingData_.processRowPerUb * this->tilingData_.colTotal;
+    int64_t indicesStride = this->processRowPerUb_;
+    int64_t updatesStride = this->processRowPerUb_ * this->tilingData_.colTotal;
     uint32_t rowByUb = 0;
-    for (int64_t i = 0; i < this->tilingData_.rowLoopByUb; i++) {
-        rowByUb = i == this->tilingData_.rowLoopByUb - 1 ? this->tilingData_.processRowTail : this->tilingData_.processRowPerUb;
+    for (int64_t i = 0; i < this->rowLoopByUb_; i++) {
+        rowByUb = i == this->rowLoopByUb_ - 1 ? this->processRowTail_ : this->processRowPerUb_;
         this->CopyInIndices(indicesOffset, rowByUb);
         LocalTensor<U> indicesLocal = this->indicesInQueue_.template DeQue<U>();
-        this->CopyInUpdates(updatesOffset, rowByUb, this->tilingData_.processColNum);
-        ProcessUpdates(indicesLocal, rowByUb, this->tilingData_.processColNum, 0);
+        this->CopyInUpdates(updatesOffset, rowByUb, this->processColNum_);
+        ProcessUpdates(indicesLocal, rowByUb, this->processColNum_, 0);
         indicesOffset = indicesOffset + indicesStride;
         updatesOffset = updatesOffset + updatesStride;
         this->indicesInQueue_.FreeTensor(indicesLocal);
@@ -94,7 +94,7 @@ __aicore__ inline void ScatterUpdateSIMDImpl<T, U, updatesIsScalar>::ProcessUpda
         if (static_cast<int64_t>(indicesValue) < 0 || static_cast<int64_t>(indicesValue) >= this->tilingData_.varShape[0]) {
             continue;
         }
-        int64_t indicesOffset = static_cast<int64_t>(indicesValue * this->tilingData_.varStride + this->tilingData_.colBase * this->colOffset_ + oneRowOffSet);
+        int64_t indicesOffset = static_cast<int64_t>(indicesValue * this->tilingData_.varStride + this->colTotalOffset_ + oneRowOffSet);
         this->CopyOutUpdates(indicesOffset, outLen, updatesLocal[i * updatesOffset]);
     }
     this->updateInQueue_.FreeTensor(updatesLocal);
@@ -105,11 +105,11 @@ __aicore__ inline void ScatterUpdateSIMDImpl<T, U, updatesIsScalar>::ProcessSpli
 {
     int64_t indicesOffset = 0;
     int64_t updatesOffset = 0;
-    int64_t indicesStride = this->tilingData_.processRowPerUb;
+    int64_t indicesStride = this->processRowPerUb_;
     uint32_t colByUb = 0;
     uint32_t rowByUb = 0;
-    for (int64_t i = 0; i < this->tilingData_.rowLoopByUb; i++) {
-        rowByUb = i == this->tilingData_.rowLoopByUb - 1 ? this->tilingData_.processRowTail : this->tilingData_.processRowPerUb;
+    for (int64_t i = 0; i < this->rowLoopByUb_; i++) {
+        rowByUb = i == this->rowLoopByUb_ - 1 ? this->processRowTail_ : this->processRowPerUb_;
         this->CopyInIndices(indicesOffset, rowByUb);
         LocalTensor<U> indicesLocal = this->indicesInQueue_.template DeQue<U>();
         SyncMte2toS();
@@ -118,10 +118,10 @@ __aicore__ inline void ScatterUpdateSIMDImpl<T, U, updatesIsScalar>::ProcessSpli
             if (static_cast<int64_t>(indicesValue) < 0 || static_cast<int64_t>(indicesValue) >= this->tilingData_.varShape[0]) {
                 continue;
             }
-            for (int64_t j = 0; j < this->tilingData_.colLoopByUb; j++) {
-                colByUb = j == this->tilingData_.colLoopByUb - 1 ? this->tilingData_.processColTail : this->tilingData_.processColPerUb;
+            for (int64_t j = 0; j < this->colLoopByUb_; j++) {
+                colByUb = j == this->colLoopByUb_ - 1 ? this->processColTail_ : this->processColPerUb_;
                 this->CopyInUpdates(updatesOffset, INDICES_ONE, colByUb);
-                ProcessUpdatesSplit(colByUb, j * this->tilingData_.processColPerUb, indicesValue);
+                ProcessUpdatesSplit(colByUb, j * this->processColPerUb_, indicesValue);
                 updatesOffset = updatesOffset + colByUb;
             }
             updatesOffset = INDICES_ONE * this->tilingData_.colTotal * (k + 1);
@@ -137,7 +137,7 @@ __aicore__ inline void ScatterUpdateSIMDImpl<T, U, updatesIsScalar>::ProcessUpda
     LocalTensor<T> updatesLocal = this->updateInQueue_.template DeQue<T>();
     SyncMte2toS();
 
-    int64_t indicesOffset = static_cast<int64_t>(indicesValue * this->tilingData_.varStride + this->tilingData_.colBase * this->colOffset_ + oneRowOffSet);
+    int64_t indicesOffset = static_cast<int64_t>(indicesValue * this->tilingData_.varStride + this->colTotalOffset_ + oneRowOffSet);
     this->CopyOutUpdates(indicesOffset, outLen, updatesLocal);
     this->updateInQueue_.FreeTensor(updatesLocal);
 }

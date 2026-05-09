@@ -46,7 +46,7 @@ constexpr uint64_t EXTRA_BYTE_FOR_COUNT = 64;
 constexpr uint64_t UB_AGLIN_VALUE = 32;
 constexpr uint64_t SPLIT_ROW_INDICES_NUM = 64;
 constexpr uint64_t indicesFactorLimit = 1024;
-constexpr uint64_t RESERVE_ROW_SIZE = 16 * 1024;
+constexpr uint64_t RESERVE_ROW_SIZE = 64 * 1024;
 constexpr uint64_t HASH_BUCKET_SIZE = 128 * sizeof(float);
 constexpr size_t VAR_SHAPE_LENGTH = 2;
 constexpr uint64_t SIMD_MIN_SIZE_SORT_INDICES = 500;
@@ -69,6 +69,15 @@ constexpr uint64_t CASTMODE5 = 5;   // int64 Cast uint8
 constexpr uint64_t TILINGKEYOFFSET = uint64_t(10000000000000000000UL); // 10^19
 constexpr uint64_t DETERMINISTIC_MODE_ROW = 2;
 constexpr uint64_t TILING_KEY_PARAM_INTERVAL = 10;
+constexpr uint32_t ROW_UP_COL_FRONT = 0;
+constexpr uint32_t ROW_UP_COL_BACK = 1;
+constexpr uint32_t ROW_DOWN_COL_FRONT = 2;
+constexpr uint32_t ROW_DOWN_COL_BACK = 3;
+constexpr uint32_t CORE_COL_TYPE_SIZE = 2;
+constexpr int32_t CORE_NEED_SPLIT_COL = 1;
+constexpr int32_t MORE_THAN_NORM_PROCESS = 1;
+constexpr int32_t SIMD_SORT_PROCESS_START = 1;
+constexpr int32_t SIMD_ALIGN = 1;
 
 static const std::unordered_map<ge::DataType, uint64_t> INDICE_DATA_TYPE{{ge::DataType::DT_INT32, 1},
                                                                          {ge::DataType::DT_INT64, 2}};
@@ -243,6 +252,19 @@ ge::graphStatus ScatterUpdateTiling::CheckUpdatesShape(const gert::Shape& varSha
     return ge::GRAPH_SUCCESS;
 }
 
+void ScatterUpdateTiling::SetSimdTilingData(ScatterUpdateTilingData *tilingData)
+{
+    std::copy(std::begin(coreNeedSplitRow_), std::end(coreNeedSplitRow_), tilingData->coreNeedSplitRow);
+    std::copy(std::begin(simdProcessRowPerUb_), std::end(simdProcessRowPerUb_), tilingData->simdProcessRowPerUb);
+    std::copy(std::begin(rowLoopByUb_), std::end(rowLoopByUb_), tilingData->rowLoopByUb);
+    std::copy(std::begin(processRowTail_), std::end(processRowTail_), tilingData->processRowTail);
+    std::copy(std::begin(simdIndicesUbFactor_), std::end(simdIndicesUbFactor_), tilingData->simdIndicesUbFactor);
+    std::copy(std::begin(simdUpdateUbSize_), std::end(simdUpdateUbSize_), tilingData->simdUpdateUbSize);
+    std::copy(std::begin(simdProcessColPerUb_), std::end(simdProcessColPerUb_), tilingData->simdProcessColPerUb);
+    std::copy(std::begin(simdColLoopByUb_), std::end(simdColLoopByUb_), tilingData->simdColLoopByUb);
+    std::copy(std::begin(simdProcessColTail_), std::end(simdProcessColTail_), tilingData->simdProcessColTail);
+}
+
 void ScatterUpdateTiling::SetTilingData()
 {
     ScatterUpdateTilingData *tilingData = context_->GetTilingData<ScatterUpdateTilingData>();
@@ -260,8 +282,6 @@ void ScatterUpdateTiling::SetTilingData()
     tilingData->colTotal = colTotalNum_;
     tilingData->rowBase = rowNormalNum_;
     tilingData->colBase = colNormalNum_;
-    tilingData->rowTail = rowTailNum_;
-    tilingData->colTail = colTailNum_;
     tilingData->rowTileNum = rowTileNum_;
     tilingData->colTileNum = colTileNum_;
     tilingData->usedCoreNum = usedCoreNum_;
@@ -270,11 +290,9 @@ void ScatterUpdateTiling::SetTilingData()
     tilingData->tailBlockColNum = tailBlockColNum_;
     tilingData->tailBlockRowNum = tailBlockRowNum_;
     tilingData->normNeedSplitRow = normNeedSplitRow_;
+    SetSimdTilingData(tilingData);
     tilingData->tailNeedSplitRow = tailNeedSplitRow_;
     tilingData->processRowPerUb = processRowPerUb_;
-    tilingData->processColNum = processColNum_;
-    tilingData->rowLoopByUb = rowLoopByUb_;
-    tilingData->processRowTail = processRowTail_;
     tilingData->indicesUbFactor = indicesUbFactor_;
     tilingData->updateUbSize = updateUbSize_;
     tilingData->processColPerUb = processColPerUb_;
@@ -293,6 +311,8 @@ void ScatterUpdateTiling::SetTilingData()
     tilingData->maskTailBlockLen = maskTailBlockLen_;
     tilingData->isIndicesSizeInt64 = isIndicesSizeInt64_;
     tilingData->indicesCastMode = indicesCastMode_;
+    tilingData->rowFormerNum = rowFormerNum_;
+    tilingData->colFormerNum = colFormerNum_;
 }
 
 static uint64_t GetSortTmpSize(ge::DataType dataType, uint32_t lastAxisNum, bool isDescend)
@@ -541,8 +561,8 @@ ge::graphStatus ScatterUpdateTiling::DoOpTiling()
         AutoTiling();
         rowNormalNum_ = Ops::Base::FloorDiv(rowTotalNum_, rowTileNum_);
         colNormalNum_ = Ops::Base::FloorDiv(colTotalNum_, colTileNum_);
-        rowTailNum_ = rowTotalNum_ - rowNormalNum_ * rowTileNum_ + rowNormalNum_;
-        colTailNum_ = colTotalNum_ - colNormalNum_ * colTileNum_ + colNormalNum_;
+        rowFormerNum_ = rowTotalNum_ - rowNormalNum_ * rowTileNum_;
+        colFormerNum_ = colTotalNum_ - colNormalNum_ * colTileNum_;
         CalcKernelParam();
     } else {
         DoSimtTiling();
@@ -622,87 +642,75 @@ uint64_t ScatterUpdateTiling::CalBestBaseSize(uint64_t baseXoStart, uint64_t bas
     return baseXoStart;
 }
 
-void ScatterUpdateTiling::ClacColUbParam(uint64_t blockColNum)
+void ScatterUpdateTiling::ClacColUbParam(uint64_t blockColNum, int32_t coreTypeIndex)
 {
-    colLoopByUb_ = (blockColNum + processColPerUb_ - 1) / processColPerUb_;
-    processColTail_ = blockColNum - processColPerUb_ * (colLoopByUb_ - 1);
+    simdColLoopByUb_[coreTypeIndex] = (blockColNum + simdProcessColPerUb_[coreTypeIndex] - SIMD_ALIGN) / simdProcessColPerUb_[coreTypeIndex];
+    simdProcessColTail_[coreTypeIndex] = blockColNum - simdProcessColPerUb_[coreTypeIndex] * (simdColLoopByUb_[coreTypeIndex] - 1);
 }
 
-void ScatterUpdateTiling::ClacRowUbParam(uint64_t processRowPerub, uint64_t blockColNum)
+void ScatterUpdateTiling::ClacRowUbParam(uint64_t processRowPerub, uint64_t blockRowNum, int32_t coreTypeIndex)
 {
-    processRowPerUb_ = processRowPerub;
-    rowLoopByUb_ = (blockColNum + processRowPerUb_ - 1) / processRowPerUb_;
-    processRowTail_ = blockColNum - processRowPerUb_ * (rowLoopByUb_ - 1);
+    simdProcessRowPerUb_[coreTypeIndex] = processRowPerub;
+    rowLoopByUb_[coreTypeIndex] = (blockRowNum + simdProcessRowPerUb_[coreTypeIndex] - SIMD_ALIGN) / simdProcessRowPerUb_[coreTypeIndex];
+    processRowTail_[coreTypeIndex] = blockRowNum - simdProcessRowPerUb_[coreTypeIndex] * (rowLoopByUb_[coreTypeIndex] - 1);
+}
+
+void ScatterUpdateTiling::ClacSimdTilingParam(int32_t coreTypeIndex)
+{
+    uint64_t coreCols = coreTypeIndex % CORE_COL_TYPE_SIZE == 0 ? (normBlockColNum_ + MORE_THAN_NORM_PROCESS) : normBlockColNum_;
+    uint64_t coreRows = coreTypeIndex / CORE_COL_TYPE_SIZE == 0 ? (normBlockRowNum_ + MORE_THAN_NORM_PROCESS) : normBlockRowNum_;
+    uint64_t colProcessAlign = Ops::Base::CeilAlign(coreCols * varTypeSize_, UB_AGLIN_VALUE);
+    int32_t coreNeedSplitCol = coreCols * varTypeSize_ > RESERVE_ROW_SIZE ? CORE_NEED_SPLIT_COL : 0;
+    if (coreNeedSplitCol) {
+        coreNeedSplitRow_[coreTypeIndex] = true;
+        simdIndicesUbFactor_[coreTypeIndex] = CalBestBaseSize(SIMD_SORT_PROCESS_START, coreRows, 0, RESERVE_ROW_SIZE * DB_BUFFER);
+        simdProcessColPerUb_[coreTypeIndex] = RESERVE_ROW_SIZE / varTypeSize_;
+        ClacColUbParam(coreCols, coreTypeIndex);
+        simdUpdateUbSize_[coreTypeIndex] = RESERVE_ROW_SIZE;
+        ClacRowUbParam(simdIndicesUbFactor_[coreTypeIndex], coreRows, coreTypeIndex);
+    } else {
+        simdIndicesUbFactor_[coreTypeIndex] = CalBestBaseSize(SIMD_SORT_PROCESS_START, coreRows, colProcessAlign, 0);
+        ClacRowUbParam(simdIndicesUbFactor_[coreTypeIndex], coreRows, coreTypeIndex);
+        simdUpdateUbSize_[coreTypeIndex] = simdProcessRowPerUb_[coreTypeIndex] * colProcessAlign;
+    }
 }
 
 void ScatterUpdateTiling::ProcessSimdSort()
 {
-    int32_t normNeedSplitCol = normBlockColNum_ * varTypeSize_ > RESERVE_ROW_SIZE ? 1 : 0;
-    int32_t tailNeedSplitCol = tailBlockColNum_ * varTypeSize_ > RESERVE_ROW_SIZE ? 1 : 0;
-    uint64_t normColProcessAlign = Ops::Base::CeilAlign(normBlockColNum_ * varTypeSize_, UB_AGLIN_VALUE);
-    uint64_t tailColProcessAlign = Ops::Base::CeilAlign(tailBlockColNum_ * varTypeSize_, UB_AGLIN_VALUE);
     GetCastType();
-    if (normNeedSplitCol) {
-        normNeedSplitRow_ = 1;
-        indicesUbFactor_ = CalBestBaseSize(1, normBlockRowNum_, 0, RESERVE_ROW_SIZE * DB_BUFFER);
-        processColPerUb_ = RESERVE_ROW_SIZE / varTypeSize_;
-        ClacColUbParam(normBlockColNum_);
-        updateUbSize_ = RESERVE_ROW_SIZE;
-        ClacRowUbParam(indicesUbFactor_, normBlockRowNum_);
+    ClacSimdTilingParam(ROW_UP_COL_FRONT);
+    ClacSimdTilingParam(ROW_UP_COL_BACK);
+    ClacSimdTilingParam(ROW_DOWN_COL_FRONT);
+    ClacSimdTilingParam(ROW_DOWN_COL_BACK);
+}
+
+void ScatterUpdateTiling::ClacSimdTilingParamNonSort(uint64_t existNodeSize, int32_t coreTypeIndex)
+{
+    existNodeSize = existNodeSize / DOUBLE;
+    uint64_t coreCols = coreTypeIndex % CORE_COL_TYPE_SIZE == 0 ? (normBlockColNum_ + MORE_THAN_NORM_PROCESS) : normBlockColNum_;
+    uint64_t coreRows = coreTypeIndex / CORE_COL_TYPE_SIZE == 0 ? (normBlockRowNum_ + MORE_THAN_NORM_PROCESS) : normBlockRowNum_;
+    uint64_t colProcessAlign = Ops::Base::CeilAlign(coreCols * varTypeSize_, UB_AGLIN_VALUE);
+    int32_t coreNeedSplitCol = coreCols * varTypeSize_ + UB_AGLIN_VALUE > existNodeSize  ? CORE_NEED_SPLIT_COL : 0;
+    if (coreNeedSplitCol) {
+        coreNeedSplitRow_[coreTypeIndex] = true;
+        simdProcessColPerUb_[coreTypeIndex] = ((existNodeSize - SPLIT_ROW_INDICES_NUM * indicesDtypeSize_) / UB_AGLIN_VALUE * UB_AGLIN_VALUE) / varTypeSize_;
+        ClacColUbParam(coreCols, coreTypeIndex);
+        simdIndicesUbFactor_[coreTypeIndex] = SPLIT_ROW_INDICES_NUM;
+        simdUpdateUbSize_[coreTypeIndex] = simdProcessColPerUb_[coreTypeIndex] * varTypeSize_;
+        ClacRowUbParam(SPLIT_ROW_INDICES_NUM, coreRows, coreTypeIndex);
     } else {
-        processColNum_ = normBlockColNum_;
-        indicesUbFactor_ = CalBestBaseSize(1, normBlockRowNum_, normColProcessAlign, 0);
-        ClacRowUbParam(indicesUbFactor_, normBlockRowNum_);
-        updateUbSize_ = processRowPerUb_ * normColProcessAlign;
-    }
-    if (tailNeedSplitCol) {
-        tailNeedSplitRow_ = 1;
-        indicesUbFactor_ = CalBestBaseSize(1, tailBlockRowNum_, 0, RESERVE_ROW_SIZE * DB_BUFFER);
-        processColPerUb_ = RESERVE_ROW_SIZE / varTypeSize_;
-        ClacColUbParam(tailBlockColNum_);
-        updateUbSize_ = RESERVE_ROW_SIZE;
-        ClacRowUbParam(indicesUbFactor_, tailBlockRowNum_);
-    } else {
-        processColNum_ = tailBlockColNum_;
-        indicesUbFactor_ = CalBestBaseSize(1, tailBlockRowNum_, tailColProcessAlign, 0);
-        ClacRowUbParam(indicesUbFactor_, tailBlockRowNum_);
-        updateUbSize_ = processRowPerUb_ * tailColProcessAlign;
+        ClacRowUbParam((existNodeSize - UB_AGLIN_VALUE) / (colProcessAlign + indicesDtypeSize_), coreRows, coreTypeIndex);
+        simdIndicesUbFactor_[coreTypeIndex] = (simdProcessRowPerUb_[coreTypeIndex] * indicesDtypeSize_ + UB_AGLIN_VALUE - SIMD_ALIGN) / UB_AGLIN_VALUE * UB_AGLIN_VALUE / indicesDtypeSize_;
+        simdUpdateUbSize_[coreTypeIndex] = simdProcessRowPerUb_[coreTypeIndex] * colProcessAlign;
     }
 }
 
 void ScatterUpdateTiling::ProcessSimdNonSort(uint64_t existNodeSize)
 {
-    existNodeSize = existNodeSize / DOUBLE;
-    int32_t normNeedSplitCol = normBlockColNum_ * varTypeSize_ + UB_AGLIN_VALUE > existNodeSize ? 1 : 0;
-    int32_t tailNeedSplitCol = tailBlockColNum_ * varTypeSize_ + UB_AGLIN_VALUE > existNodeSize ? 1 : 0;
-    uint64_t normColProcessAlign = Ops::Base::CeilAlign(normBlockColNum_ * varTypeSize_, UB_AGLIN_VALUE);
-    uint64_t tailColProcessAlign = Ops::Base::CeilAlign(tailBlockColNum_ * varTypeSize_, UB_AGLIN_VALUE);
-    if (normNeedSplitCol) {
-        normNeedSplitRow_ = 1;
-        processColPerUb_ = ((existNodeSize - SPLIT_ROW_INDICES_NUM * indicesDtypeSize_) / UB_AGLIN_VALUE * UB_AGLIN_VALUE) / varTypeSize_;
-        ClacColUbParam(normBlockColNum_);
-        indicesUbFactor_ = SPLIT_ROW_INDICES_NUM;
-        updateUbSize_ = processColPerUb_ * varTypeSize_;
-        ClacRowUbParam(SPLIT_ROW_INDICES_NUM, normBlockRowNum_);
-    } else {
-        processColNum_ = normBlockColNum_;
-        ClacRowUbParam((existNodeSize - UB_AGLIN_VALUE) / (normColProcessAlign + indicesDtypeSize_), normBlockRowNum_);
-        indicesUbFactor_ = (processRowPerUb_ * indicesDtypeSize_ + UB_AGLIN_VALUE - 1) / UB_AGLIN_VALUE * UB_AGLIN_VALUE / indicesDtypeSize_;
-        updateUbSize_ = processRowPerUb_ * normColProcessAlign;
-    }
-    if (tailNeedSplitCol) {
-        tailNeedSplitRow_ = 1;
-        processColPerUb_ = ((existNodeSize - SPLIT_ROW_INDICES_NUM * indicesDtypeSize_) / UB_AGLIN_VALUE * UB_AGLIN_VALUE) / varTypeSize_;
-        ClacColUbParam(tailBlockColNum_);
-        indicesUbFactor_ = SPLIT_ROW_INDICES_NUM;
-        updateUbSize_ = processColPerUb_ * varTypeSize_;
-        ClacRowUbParam(SPLIT_ROW_INDICES_NUM, tailBlockRowNum_);
-    } else {
-        processColNum_ = tailBlockColNum_;
-        ClacRowUbParam((existNodeSize - UB_AGLIN_VALUE) / (tailColProcessAlign + indicesDtypeSize_), tailBlockRowNum_);
-        indicesUbFactor_ = (processRowPerUb_ * indicesDtypeSize_ + UB_AGLIN_VALUE - 1) / UB_AGLIN_VALUE * UB_AGLIN_VALUE / indicesDtypeSize_;
-        updateUbSize_ = processRowPerUb_ * tailColProcessAlign;
-    }
+    ClacSimdTilingParamNonSort(existNodeSize, ROW_UP_COL_FRONT);
+    ClacSimdTilingParamNonSort(existNodeSize, ROW_UP_COL_BACK);
+    ClacSimdTilingParamNonSort(existNodeSize, ROW_DOWN_COL_FRONT);
+    ClacSimdTilingParamNonSort(existNodeSize, ROW_DOWN_COL_BACK);
 }
 
 void ScatterUpdateTiling::CalcKernelParam()
@@ -710,8 +718,6 @@ void ScatterUpdateTiling::CalcKernelParam()
     OP_LOGD(opName, "ScatterUpdateTiling CalcKernelParam Enter.");
     normBlockColNum_ = colNormalNum_;
     normBlockRowNum_ = rowNormalNum_;
-    tailBlockColNum_ = colTailNum_;
-    tailBlockRowNum_ = rowTailNum_;
     uint64_t existNodeSize = ubSize_;
     isSort_ = normBlockRowNum_ >= SIMD_MIN_SIZE_SORT_INDICES ? isSort_ : 0;
     if (isSort_) {
@@ -770,9 +776,9 @@ void ScatterUpdateTiling::AutoTiling()
         allTiling.push_back({m, n, m * n, delta});
     }
     std::sort(allTiling.begin(), allTiling.end(), [](const std::vector<uint64_t>& a, const std::vector<uint64_t>& b) {
-        constexpr int NIndex = 1;
+        constexpr int MIndex = 0;
         constexpr int DeltaIndex = 3;
-        return std::make_pair(a[DeltaIndex], a[NIndex]) < std::make_pair(b[DeltaIndex], b[NIndex]);
+        return std::make_pair(a[MIndex], a[DeltaIndex]) < std::make_pair(b[MIndex], b[DeltaIndex]);
     });
     colTileNum_ = allTiling[0][0];
     rowTileNum_ = allTiling[0][1];
@@ -856,10 +862,24 @@ ge::graphStatus ScatterUpdateTiling::PostTiling()
     return ge::GRAPH_SUCCESS;
 }
 
+void ScatterUpdateTiling::DumpSimdTilingInfo(std::ostringstream &info)
+{
+    info << "coreNeedSplitRow: " << coreNeedSplitRow_[ROW_UP_COL_FRONT] << "," << coreNeedSplitRow_[ROW_UP_COL_BACK] << "," << coreNeedSplitRow_[ROW_DOWN_COL_FRONT] << "," << coreNeedSplitRow_[ROW_DOWN_COL_BACK] << std::endl;
+    info << "simdProcessRowPerUb: " << simdProcessRowPerUb_[ROW_UP_COL_FRONT] << "," << simdProcessRowPerUb_[ROW_UP_COL_BACK] << "," << simdProcessRowPerUb_[ROW_DOWN_COL_FRONT] << "," << simdProcessRowPerUb_[ROW_DOWN_COL_BACK] << std::endl;
+    info << "simdIndicesUbFactor: " << simdIndicesUbFactor_[ROW_UP_COL_FRONT] << "," << simdIndicesUbFactor_[ROW_UP_COL_BACK] << "," << simdIndicesUbFactor_[ROW_DOWN_COL_FRONT] << "," << simdIndicesUbFactor_[ROW_DOWN_COL_BACK] << std::endl;
+    info << "simdUpdateUbSize: " << simdUpdateUbSize_[ROW_UP_COL_FRONT] << "," << simdUpdateUbSize_[ROW_UP_COL_BACK] << "," << simdUpdateUbSize_[ROW_DOWN_COL_FRONT] << "," << simdUpdateUbSize_[ROW_DOWN_COL_BACK] << std::endl;
+    info << "simdProcessColPerUb: " << simdProcessColPerUb_[ROW_UP_COL_FRONT] << "," << simdProcessColPerUb_[ROW_UP_COL_BACK] << "," << simdProcessColPerUb_[ROW_DOWN_COL_FRONT] << "," << simdProcessColPerUb_[ROW_DOWN_COL_BACK] << std::endl;
+    info << "simdColLoopByUb: " << simdColLoopByUb_[ROW_UP_COL_FRONT] << "," << simdColLoopByUb_[ROW_UP_COL_BACK] << "," << simdColLoopByUb_[ROW_DOWN_COL_FRONT] << "," << simdColLoopByUb_[ROW_DOWN_COL_BACK] << std::endl;
+    info << "simdProcessColTail: " << simdProcessColTail_[ROW_UP_COL_FRONT] << "," << simdProcessColTail_[ROW_UP_COL_BACK] << "," << simdProcessColTail_[ROW_DOWN_COL_FRONT] << "," << simdProcessColTail_[ROW_DOWN_COL_BACK] << std::endl;
+    info << "rowLoopByUb: " << rowLoopByUb_[ROW_UP_COL_FRONT] << "," << rowLoopByUb_[ROW_UP_COL_BACK] << "," << rowLoopByUb_[ROW_DOWN_COL_FRONT] << "," << rowLoopByUb_[ROW_DOWN_COL_BACK] << std::endl;
+    info << "processRowTail: " << processRowTail_[ROW_UP_COL_FRONT] << "," << processRowTail_[ROW_UP_COL_BACK] << "," << processRowTail_[ROW_DOWN_COL_FRONT] << "," << processRowTail_[ROW_DOWN_COL_BACK] << std::endl;
+}
+
 void ScatterUpdateTiling::DumpTilingInfo()
 {
     std::ostringstream info;
     info << "varShape: " << varShape_[0] << "," << varShape_[1] << std::endl;
+    DumpSimdTilingInfo(info);
     info << "indicesSize: " << indicesSize_ << std::endl;
     info << "normBlockIndices: " << normBlockIndices_ << std::endl;
     info << "tailBlockIndices_: " << tailBlockIndices_ << std::endl;
@@ -872,8 +892,6 @@ void ScatterUpdateTiling::DumpTilingInfo()
     info << "colTotalNum: " << colTotalNum_ << std::endl;
     info << "rowNormalNum: " << rowNormalNum_ << std::endl;
     info << "colNormalNum: " << colNormalNum_ << std::endl;
-    info << "rowTailNum: " << rowTailNum_ << std::endl;
-    info << "colTailNum: " << colTailNum_ << std::endl;
     info << "rowTileNum: " << rowTileNum_ << std::endl;
     info << "colTileNum: " << colTileNum_ << std::endl;
     info << "usedCoreNum: " << usedCoreNum_ << std::endl;
@@ -884,9 +902,6 @@ void ScatterUpdateTiling::DumpTilingInfo()
     info << "normNeedSplitRow: " << normNeedSplitRow_ << std::endl;
     info << "tailNeedSplitRow: " << tailNeedSplitRow_ << std::endl;
     info << "processRowPerUb: " << processRowPerUb_ << std::endl;
-    info << "processColNum: " << processColNum_ << std::endl;
-    info << "rowLoopByUb: " << rowLoopByUb_ << std::endl;
-    info << "processRowTail: " << processRowTail_ << std::endl;
     info << "indicesUbFactor: " << indicesUbFactor_ << std::endl;
     info << "updateUbSize: " << updateUbSize_ << std::endl;
     info << "processColPerUb: " << processColPerUb_ << std::endl;

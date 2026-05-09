@@ -12,6 +12,7 @@
  * \brief
  */
 #include "aclnn_index_copy.h"
+#include "index/index_put_v2/op_api/index_put_v2.h"
 #include "aclnn_kernels/transpose.h"
 #include "scatter_update.h"
 #include "aclnn_kernels/cast.h"
@@ -259,6 +260,56 @@ static aclnnStatus ContiguousAndReshapeParams(const aclTensor* selfRef, int64_t&
     return ACLNN_SUCCESS;
 }
 
+static aclnnStatus ScatterToIndexPutV2(aclOpExecutor* uniqueExecutor, const aclTensor*& indexReShape, const aclTensor* selfRefReShape, int64_t& dim, 
+                                       const aclTensor* sourceReShape, const aclTensor*& kernelOut) {
+    FVector<const aclTensor*, 1> definedIndices;
+    definedIndices.emplace_back(indexReShape);
+    const aclTensorList *allIndicesTensorList = uniqueExecutor->AllocTensorList(definedIndices.data(), definedIndices.size());
+    auto dimSize = (int64_t)(selfRefReShape->GetViewShape().GetDimNum());
+    std::vector<int64_t> masks(dimSize);
+    for (int64_t i = 0; i < dimSize; i++) {
+      masks[i] = 0;
+      if(i == dim) {
+        masks[i] = 1;
+      }
+    }
+    auto maskArray = uniqueExecutor->AllocIntArray(masks.data(), dimSize);
+    auto maskTensor = uniqueExecutor->ConvertToTensor(maskArray, op::ToOpDataType(ACL_INT64));
+    auto selfView = uniqueExecutor->CreateView(selfRefReShape, selfRefReShape->GetViewShape(), selfRefReShape->GetViewOffset());
+    OP_CHECK(selfView != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "selfView is nullptr"), return ACLNN_ERR_INNER_NULLPTR);
+    auto sourceView = uniqueExecutor->CreateView(sourceReShape, sourceReShape->GetViewShape(), sourceReShape->GetViewOffset());
+    OP_CHECK(sourceView != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "sourceView is nullptr"), return ACLNN_ERR_INNER_NULLPTR);
+
+    if (selfRefReShape->GetDataType() == DataType::DT_COMPLEX64 || selfRefReShape->GetDataType() == DataType::DT_UINT64) {
+      selfView->SetDataType(DataType::DT_INT64);
+      sourceView->SetDataType(DataType::DT_INT64);
+      aclTensor* out = const_cast<aclTensor*>(selfView);
+      kernelOut = l0op::IndexPutV2(selfView, allIndicesTensorList, sourceView, maskTensor, false, out, uniqueExecutor);
+      OP_CHECK(kernelOut != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "kernelOut is nullptr"), return ACLNN_ERR_INNER_NULLPTR);
+      auto curKernelOut = const_cast<aclTensor*>(kernelOut);
+      if (selfRefReShape->GetDataType() == DataType::DT_COMPLEX64) {
+        curKernelOut->SetDataType(DataType::DT_COMPLEX64);
+      } else {
+        curKernelOut->SetDataType(DataType::DT_UINT64);
+      }
+      kernelOut = const_cast<const aclTensor*>(curKernelOut);
+    } else if (selfRefReShape->GetDataType() == DataType::DT_UINT32) {
+      selfView->SetDataType(DataType::DT_INT32);
+      sourceView->SetDataType(DataType::DT_INT32);
+      aclTensor* out = const_cast<aclTensor*>(selfView);
+      kernelOut = l0op::IndexPutV2(selfView, allIndicesTensorList, sourceView, maskTensor, false, out, uniqueExecutor);
+      OP_CHECK(kernelOut != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "kernelOut is nullptr"), return ACLNN_ERR_INNER_NULLPTR);
+      auto curKernelOut = const_cast<aclTensor*>(kernelOut);
+      curKernelOut->SetDataType(DataType::DT_UINT32);
+      kernelOut = const_cast<const aclTensor*>(curKernelOut);
+    } else {
+      aclTensor* out = const_cast<aclTensor*>(selfRefReShape);
+      kernelOut = l0op::IndexPutV2(selfRefReShape, allIndicesTensorList, sourceReShape, maskTensor, false, out, uniqueExecutor);
+      OP_CHECK(kernelOut != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "kernelOut is nullptr"), return ACLNN_ERR_INNER_NULLPTR);
+    }
+    return ACLNN_SUCCESS;
+}
+
 aclnnStatus ExecIndexCopyGetWorkspaceSize(aclTensor* selfRef, int64_t dim, const aclTensor* index,
                                           const aclTensor* source, aclTensor* outRef,
                                           uint64_t* workspaceSize, aclOpExecutor** executor) {
@@ -294,21 +345,24 @@ aclnnStatus ExecIndexCopyGetWorkspaceSize(aclTensor* selfRef, int64_t dim, const
   if (dim == 0) {
     // 调用ScatterUpdate算子
     kernelOut = l0op::ScatterUpdate(selfRefReShape, indexReShape, sourceReShape, uniqueExecutor.get(), false);
-    OP_CHECK(kernelOut != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "kernelOut is nullptr"), return ACLNN_ERR_INNER_NULLPTR);
   } else {
-    // 先做transpose再调用ScatterUpdate算子
-    auto selfTransposed = TransposeBySpecifiedAxis(selfRefReShape, dim, uniqueExecutor.get());
-    OP_CHECK(selfTransposed != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "selfTransposed is nullptr"), return ACLNN_ERR_INNER_NULLPTR);
-    auto sourceTransposed = TransposeBySpecifiedAxis(sourceReShape, dim, uniqueExecutor.get());
-    OP_CHECK(sourceTransposed != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "sourceTransposed is nullptr"), return ACLNN_ERR_INNER_NULLPTR);
-
-    auto transposedKernelOut = l0op::ScatterUpdate(selfTransposed, indexReShape, sourceTransposed, uniqueExecutor.get(), false);
-    OP_CHECK(transposedKernelOut != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "transposedKernelOut is nullptr"), return ACLNN_ERR_INNER_NULLPTR);
-
-    kernelOut = TransposeBySpecifiedAxis(transposedKernelOut, dim, uniqueExecutor.get());
-    OP_CHECK(kernelOut != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "kernelOut is nullptr"), return ACLNN_ERR_INNER_NULLPTR);
+    if (selfRefReShape->GetDataType() == DataType::DT_COMPLEX128) {
+      // 先做transpose再调用ScatterUpdate算子	 
+      auto selfTransposed = TransposeBySpecifiedAxis(selfRefReShape, dim, uniqueExecutor.get());	 
+      OP_CHECK(selfTransposed != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "selfTransposed is nullptr"), return ACLNN_ERR_INNER_NULLPTR);	 
+      auto sourceTransposed = TransposeBySpecifiedAxis(sourceReShape, dim, uniqueExecutor.get());	 
+      OP_CHECK(sourceTransposed != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "sourceTransposed is nullptr"), return ACLNN_ERR_INNER_NULLPTR);	 
+      auto transposedKernelOut = l0op::ScatterUpdate(selfTransposed, indexReShape, sourceTransposed, uniqueExecutor.get(), false);	 
+      OP_CHECK(transposedKernelOut != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "transposedKernelOut is nullptr"), return ACLNN_ERR_INNER_NULLPTR);	 
+      kernelOut = TransposeBySpecifiedAxis(transposedKernelOut, dim, uniqueExecutor.get());
+    } else {
+      // 非dim0轴的算子调到indexputv2上去
+      auto scatterToIndexPutV2Ret = ScatterToIndexPutV2(uniqueExecutor.get(), indexReShape, selfRefReShape, dim, sourceReShape, kernelOut);
+      CHECK_RET(scatterToIndexPutV2Ret == ACLNN_SUCCESS, scatterToIndexPutV2Ret);
+    }
   }
 
+  OP_CHECK(kernelOut != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "kernelOut is nullptr"), return ACLNN_ERR_INNER_NULLPTR);
   // 固定写法，将计算结果拷贝到输出outRef上
   auto viewCopyResult = l0op::ViewCopy(kernelOut, outRef, uniqueExecutor.get());
   OP_CHECK(viewCopyResult != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "viewCopyResult is nullptr"), return ACLNN_ERR_INNER_NULLPTR);

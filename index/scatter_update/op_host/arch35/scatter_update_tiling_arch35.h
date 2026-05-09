@@ -60,13 +60,17 @@ protected:
     ge::graphStatus PostTiling() override;
     void DumpTilingInfo() override;
     void SetTilingData();
+    void DumpSimdTilingInfo(std::ostringstream &info);
+    void SetSimdTilingData(ScatterUpdateTilingData *tilingData);
     ge::graphStatus CheckInputDtype();
     ge::graphStatus CheckUpdatesShape(const gert::Shape& varShape, const gert::Shape& indicesShape,
                                     const gert::Shape& updatesShape);
     void CalcKernelParam();
     uint64_t CalBestBaseSize(uint64_t baseXoStart, uint64_t baseXoEnd, uint64_t updatesSize, uint64_t reserveSize);
-    void ClacColUbParam(uint64_t blockColNum);
-    void ClacRowUbParam(uint64_t processRowPerub, uint64_t blockColNum);
+    void ClacColUbParam(uint64_t blockColNum, int32_t coreTypeIndex);
+    void ClacRowUbParam(uint64_t processRowPerub, uint64_t blockRowNum, int32_t coreTypeIndex);
+    void ClacSimdTilingParam(int32_t coreTypeIndex);
+    void ClacSimdTilingParamNonSort(uint64_t existNodeSize, int32_t coreTypeIndex);
     void ProcessSimdSort();
     void ProcessSimdNonSort(uint64_t existNodeSize);
     void DoMaskSimdTiling();
@@ -105,16 +109,22 @@ private:
     uint64_t tailBlockColNum_ = 0;
     uint64_t tailBlockRowNum_ = 0;
     uint64_t normNeedSplitRow_ = 0;
+    bool coreNeedSplitRow_[ScatterUpdateTilingData::CORE_TYPE] = {false};
     uint64_t tailNeedSplitRow_ = 0;
     uint64_t processRowPerUb_ = 0;
-    uint64_t processColNum_ = 0;
-    uint64_t rowLoopByUb_ = 0;
-    uint64_t processRowTail_ = 0;
+    uint64_t simdProcessRowPerUb_[ScatterUpdateTilingData::CORE_TYPE] = {0};
+    uint64_t rowLoopByUb_[ScatterUpdateTilingData::CORE_TYPE] = {0};
+    uint64_t processRowTail_[ScatterUpdateTilingData::CORE_TYPE] = {0};
     uint64_t indicesUbFactor_ = 0;
+    uint64_t simdIndicesUbFactor_[ScatterUpdateTilingData::CORE_TYPE] = {0};
     uint64_t updateUbSize_ = 0;
+    uint64_t simdUpdateUbSize_[ScatterUpdateTilingData::CORE_TYPE] = {0};
     uint64_t processColPerUb_ = 0;
+    uint64_t simdProcessColPerUb_[ScatterUpdateTilingData::CORE_TYPE] = {0};
     uint64_t colLoopByUb_ = 0;
+    uint64_t simdColLoopByUb_[ScatterUpdateTilingData::CORE_TYPE] = {0};
     uint64_t processColTail_ = 0;
+    uint64_t simdProcessColTail_[ScatterUpdateTilingData::CORE_TYPE] = {0};
     uint64_t templateKey_ = 0;
     uint64_t indicesBatchCopySizeAlign_ = 0;
     uint64_t varStride_ = 0;
@@ -133,6 +143,8 @@ private:
     bool isIndicesSizeInt64_ = false;
     uint64_t indicesCastMode_ = 0;  // 0: 不Cast；1：int32 Cast int16；2：int64 Cast int32；3：int64 Cast int16
     uint64_t indicesCastDtypeSize_ = 0;
+    int32_t rowFormerNum_ = 0;
+    int32_t colFormerNum_ = 0;
 
     ge::DataType varDtype_ = ge::DT_UNDEFINED;
     ge::DataType indicesDtype_ = ge::DT_UNDEFINED;

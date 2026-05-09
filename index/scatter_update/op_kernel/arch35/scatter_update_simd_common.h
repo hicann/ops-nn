@@ -30,6 +30,7 @@ public:
     __aicore__ inline ScatterUpdateSimdCommon(const ScatterUpdateTilingData& tilingData, TPipe& pipe) :
         tilingData_(tilingData), pipe_(pipe) {};
     __aicore__ inline void InitBase(GM_ADDR var, GM_ADDR indices, GM_ADDR updates);
+    __aicore__ inline void InitSimdTilingparam(uint64_t coreTypeIndex);
     __aicore__ inline void CopyInIndices(int64_t offset, int64_t dataLen);
     __aicore__ inline void CopyInUpdates(int64_t offset, uint32_t rowLen, uint32_t colLen);
     __aicore__ inline void CopyOutUpdates(int64_t offset, int64_t dataLen, LocalTensor<T> updatesLocal);
@@ -47,6 +48,16 @@ protected:
     static constexpr int32_t BLOCK_NUM = UB_AGLIN_VALUE_32 / sizeof(T);
     bool needSplitCol_ {true};
     int64_t colOffset_ = 0;
+    int64_t colTotalOffset_ = 0;
+    uint64_t indicesUbFactor_ = 0;
+    uint64_t updateUbSize_ = 0;
+    uint64_t processRowPerUb_ = 0;
+    uint64_t rowLoopByUb_ = 0;
+    uint64_t processRowTail_ = 0;
+    uint64_t processColNum_ = 0;
+    uint64_t processColPerUb_ = 0;
+    uint64_t colLoopByUb_ = 0;
+    uint64_t processColTail_ = 0;
 
     AscendC::GlobalTensor<T> varRefGm_;
     AscendC::GlobalTensor<U> indicesGm_;
@@ -59,19 +70,53 @@ protected:
 };
 
 template<typename T, typename U, bool updatesIsScalar>
+__aicore__ inline void ScatterUpdateSimdCommon<T, U, updatesIsScalar>::InitSimdTilingparam(uint64_t coreTypeIndex) {
+    indicesUbFactor_ = tilingData_.simdIndicesUbFactor[coreTypeIndex];
+    updateUbSize_ = tilingData_.simdUpdateUbSize[coreTypeIndex];
+    processRowPerUb_ = tilingData_.simdProcessRowPerUb[coreTypeIndex];
+    rowLoopByUb_ = tilingData_.rowLoopByUb[coreTypeIndex];
+    processRowTail_ = tilingData_.processRowTail[coreTypeIndex];
+    processColPerUb_ = tilingData_.simdProcessColPerUb[coreTypeIndex];
+    colLoopByUb_ = tilingData_.simdColLoopByUb[coreTypeIndex];
+    processColTail_ = tilingData_.simdProcessColTail[coreTypeIndex];
+}
+
+template<typename T, typename U, bool updatesIsScalar>
 __aicore__ inline void ScatterUpdateSimdCommon<T, U, updatesIsScalar>::InitBase(GM_ADDR var, GM_ADDR indices, GM_ADDR updates) {
     blockIdx_ = GetBlockIdx();
-    bool isNorm = (blockIdx_ + 1) % tilingData_.colTileNum != 0;
-    needSplitCol_ = isNorm ? tilingData_.normNeedSplitRow : tilingData_.tailNeedSplitRow;
     colOffset_ = blockIdx_ % tilingData_.colTileNum;
+    bool isColNorm = colOffset_ < tilingData_.colFormerNum;
+    needSplitCol_ = isColNorm ? tilingData_.coreNeedSplitRow[0] : tilingData_.coreNeedSplitRow[1];
     int64_t rowOffset = blockIdx_ / tilingData_.colTileNum;
-    updateStart_ = tilingData_.rowBase * rowOffset * tilingData_.colTotal + tilingData_.colBase * colOffset_;
+    // todo：updateStart_的计算需要根据不同核来改
+    if (rowOffset < tilingData_.rowFormerNum && colOffset_ < tilingData_.colFormerNum) {
+        updateStart_ = (tilingData_.rowBase + 1) * rowOffset * tilingData_.colTotal + (tilingData_.colBase + 1) * colOffset_;
+        colTotalOffset_ = (tilingData_.colBase + 1) * colOffset_;
+        processColNum_ = tilingData_.colBase + 1;
+        InitSimdTilingparam(0);
+    } else if (rowOffset < tilingData_.rowFormerNum && colOffset_ >= tilingData_.colFormerNum) {
+        updateStart_ = (tilingData_.rowBase + 1) * rowOffset * tilingData_.colTotal + tilingData_.colFormerNum + tilingData_.colBase * colOffset_;
+        colTotalOffset_ = tilingData_.colFormerNum + tilingData_.colBase * colOffset_;
+        processColNum_ = tilingData_.colBase;
+        InitSimdTilingparam(1);
+    } else if (rowOffset >= tilingData_.rowFormerNum && colOffset_ < tilingData_.colFormerNum) {
+        updateStart_ = (tilingData_.rowBase * rowOffset + tilingData_.rowFormerNum) * tilingData_.colTotal + (tilingData_.colBase + 1) * colOffset_;
+        colTotalOffset_ = (tilingData_.colBase + 1) * colOffset_;
+        processColNum_ = tilingData_.colBase + 1;
+        InitSimdTilingparam(2);
+    } else if (rowOffset >= tilingData_.rowFormerNum && colOffset_ >= tilingData_.colFormerNum) {
+        updateStart_ = (tilingData_.rowBase * rowOffset + tilingData_.rowFormerNum) * tilingData_.colTotal + tilingData_.colFormerNum + tilingData_.colBase * colOffset_;
+        colTotalOffset_ = tilingData_.colFormerNum + tilingData_.colBase * colOffset_;
+        processColNum_ = tilingData_.colBase;
+        InitSimdTilingparam(3);
+    }
 
-    pipe_.InitBuffer(indicesInQueue_, DB_BUFFER, tilingData_.indicesUbFactor * sizeof(U));
-    pipe_.InitBuffer(updateInQueue_, DB_BUFFER,  tilingData_.updateUbSize);
+    pipe_.InitBuffer(indicesInQueue_, DB_BUFFER, indicesUbFactor_ * sizeof(U));
+    pipe_.InitBuffer(updateInQueue_, DB_BUFFER,  updateUbSize_);
 
     varRefGm_.SetGlobalBuffer((__gm__ T *)(var));
-    indicesGm_.SetGlobalBuffer((__gm__ U *)(indices) + rowOffset * tilingData_.rowBase);
+    int64_t indicesGmOffset = rowOffset < tilingData_.rowFormerNum ? ((tilingData_.rowBase + 1) * rowOffset) : (tilingData_.rowBase * rowOffset + tilingData_.rowFormerNum);
+    indicesGm_.SetGlobalBuffer((__gm__ U *)(indices) + indicesGmOffset);
     if constexpr (updatesIsScalar) {
         updatesGm_.SetGlobalBuffer((__gm__ T *)(updates));
     } else {
@@ -97,7 +142,7 @@ __aicore__ inline void ScatterUpdateSimdCommon<T, U, updatesIsScalar>::CopyInUpd
         // todo:下面这个同步是updatesValue这个标量和vector之间的，因为vector使用的update
         SyncStoV();
         LocalTensor<T> updatesLocal = updateInQueue_.AllocTensor<T>();
-        Duplicate(updatesLocal, updatesValue, tilingData_.updateUbSize/sizeof(T));
+        Duplicate(updatesLocal, updatesValue, updateUbSize_/sizeof(T));
         updateInQueue_.EnQue(updatesLocal);
     } else {
         LocalTensor<T> updatesInLocal = updateInQueue_.AllocTensor<T>();

@@ -17,6 +17,7 @@
 
 class ScatterUpdateTilingData {
 public:
+    static constexpr int64_t CORE_TYPE = 4;
     uint64_t varShape[2];
     uint64_t indicesSize;
     uint64_t normBlockIndices;
@@ -40,16 +41,22 @@ public:
     uint64_t tailBlockColNum;
     uint64_t tailBlockRowNum;
     uint64_t normNeedSplitRow;
+    bool coreNeedSplitRow[CORE_TYPE];
     uint64_t tailNeedSplitRow;
     uint64_t processRowPerUb;
-    uint64_t processColNum;
-    uint64_t rowLoopByUb;
-    uint64_t processRowTail;
+    uint64_t simdProcessRowPerUb[CORE_TYPE];
+    uint64_t rowLoopByUb[CORE_TYPE];
+    uint64_t processRowTail[CORE_TYPE];
     uint64_t indicesUbFactor;
+    uint64_t simdIndicesUbFactor[CORE_TYPE];
     uint64_t updateUbSize;
+    uint64_t simdUpdateUbSize[CORE_TYPE];
     uint64_t processColPerUb;
+    uint64_t simdProcessColPerUb[CORE_TYPE];
     uint64_t colLoopByUb;
+    uint64_t simdColLoopByUb[CORE_TYPE];
     uint64_t processColTail;
+    uint64_t simdProcessColTail[CORE_TYPE];
     uint64_t indicesBatchCopySizeAlign;
     uint64_t varStride;
     uint64_t updateColUbFactor;
@@ -63,6 +70,8 @@ public:
     uint64_t maskTailBlockLen;
     bool isIndicesSizeInt64;
     uint64_t indicesCastMode;
+    int32_t rowFormerNum;
+    int32_t colFormerNum;
 };
 
 #endif

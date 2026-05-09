@@ -54,13 +54,13 @@ template<typename T, typename U, typename CAST_T, bool updatesIsScalar, uint32_t
 __aicore__ inline void ScatterUpdateSimdSort<T, U, CAST_T, updatesIsScalar, castType>::Init(GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR workspace)
 {
     this->InitBase(var, indices, updates);
-    this->pipe_.InitBuffer(updatesOriginIdexBuf_, this->tilingData_.indicesUbFactor * sizeof(uint32_t));
-    this->pipe_.InitBuffer(uniqueIdCountBuf_, ops::CeilAlign((this->tilingData_.indicesUbFactor + 1) * sizeof(int32_t), UB_AGLIN_VALUE));
+    this->pipe_.InitBuffer(updatesOriginIdexBuf_, this->indicesUbFactor_ * sizeof(uint32_t));
+    this->pipe_.InitBuffer(uniqueIdCountBuf_, ops::CeilAlign((this->indicesUbFactor_ + 1) * sizeof(int32_t), UB_AGLIN_VALUE));
     if constexpr (castType == CAST_NOT_CAST) {
-        this->pipe_.InitBuffer(sortIndicesBuf_, (this->tilingData_.indicesUbFactor * sizeof(U) + SORT_PAD_NUM * UB_AGLIN_VALUE));
+        this->pipe_.InitBuffer(sortIndicesBuf_, (this->indicesUbFactor_ * sizeof(U) + SORT_PAD_NUM * UB_AGLIN_VALUE));
  	} else {
-        this->pipe_.InitBuffer(sortIndicesBuf_, (this->tilingData_.indicesUbFactor * sizeof(CAST_T) + SORT_PAD_NUM * UB_AGLIN_VALUE));
-        this->pipe_.InitBuffer(castIndicesQue_, (this->tilingData_.indicesUbFactor * sizeof(CAST_T)));
+        this->pipe_.InitBuffer(sortIndicesBuf_, (this->indicesUbFactor_ * sizeof(CAST_T) + SORT_PAD_NUM * UB_AGLIN_VALUE));
+        this->pipe_.InitBuffer(castIndicesQue_, (this->indicesUbFactor_ * sizeof(CAST_T)));
  	}
 }
 
@@ -82,14 +82,14 @@ __aicore__ inline void ScatterUpdateSimdSort<T, U, CAST_T, updatesIsScalar, cast
 {
     int64_t indicesOffset = 0;
     int64_t updatesOffset = 0;
-    int64_t indicesStride = this->tilingData_.processRowPerUb;
-    int64_t updatesStride = this->tilingData_.processRowPerUb * this->tilingData_.colTotal;
+    int64_t indicesStride = this->processRowPerUb_;
+    int64_t updatesStride = this->processRowPerUb_ * this->tilingData_.colTotal;
     uint32_t rowByUb = 0;
     uint32_t uniqueIdNum = 0;
-    for (int64_t i = 0; i < this->tilingData_.rowLoopByUb; i++) {
-        rowByUb = i == this->tilingData_.rowLoopByUb - 1 ? this->tilingData_.processRowTail : this->tilingData_.processRowPerUb;
+    for (int64_t i = 0; i < this->rowLoopByUb_; i++) {
+        rowByUb = i == this->rowLoopByUb_ - 1 ? this->processRowTail_ : this->processRowPerUb_;
         this->CopyInIndices(indicesOffset, rowByUb);
-        this->CopyInUpdates(updatesOffset, rowByUb, this->tilingData_.processColNum);
+        this->CopyInUpdates(updatesOffset, rowByUb, this->processColNum_);
         LocalTensor<U> indicesLocal = this->indicesInQueue_.template DeQue<U>();
         LocalTensor<CAST_T> sortIndicesLocal = sortIndicesBuf_.Get<CAST_T>();
         LocalTensor<uint32_t> updatesOriginIdexLocal = updatesOriginIdexBuf_.Get<uint32_t>();
@@ -102,7 +102,7 @@ __aicore__ inline void ScatterUpdateSimdSort<T, U, CAST_T, updatesIsScalar, cast
  	        uniqueIdNum = SortAndComputeUniqueIdx<CAST_T>(
  	            rowByUb, indicesCastLocal, sortIndicesLocal, uniqueIdCountLocal, updatesOriginIdexLocal);
  	    }
-        ProcessNotSplitUpdatesWithSort(uniqueIdNum, this->tilingData_.processColNum);
+        ProcessNotSplitUpdatesWithSort(uniqueIdNum, this->processColNum_);
         indicesOffset = indicesOffset + indicesStride;
         updatesOffset = updatesOffset + updatesStride;
         this->indicesInQueue_.FreeTensor(indicesLocal);
@@ -114,12 +114,12 @@ __aicore__ inline void ScatterUpdateSimdSort<T, U, CAST_T, updatesIsScalar, cast
 {
     int64_t indicesOffset = 0;
     int64_t updatesOffset = 0;
-    int64_t indicesStride = this->tilingData_.processRowPerUb;
+    int64_t indicesStride = this->processRowPerUb_;
     uint32_t colByUb = 0;
     uint32_t rowByUb = 0;
     uint32_t uniqueIdNum = 0;
-    for (int64_t i = 0; i < this->tilingData_.rowLoopByUb; i++) {
-        rowByUb = i == this->tilingData_.rowLoopByUb - 1 ? this->tilingData_.processRowTail : this->tilingData_.processRowPerUb;
+    for (int64_t i = 0; i < this->rowLoopByUb_; i++) {
+        rowByUb = i == this->rowLoopByUb_ - 1 ? this->processRowTail_ : this->processRowPerUb_;
         this->CopyInIndices(indicesOffset, rowByUb);
         LocalTensor<U> indicesLocal = this->indicesInQueue_.template DeQue<U>();
         LocalTensor<CAST_T> sortIndicesLocal = sortIndicesBuf_.Get<CAST_T>();
@@ -158,7 +158,7 @@ __aicore__ inline void ScatterUpdateSimdSort<T, U, CAST_T, updatesIsScalar, cast
         if (static_cast<int64_t>(varIndex) < 0 || static_cast<int64_t>(varIndex) >= this->tilingData_.varShape[0]) {
             continue;
         }
-        int64_t varOffset = static_cast<int64_t>(varIndex * this->tilingData_.varStride + this->tilingData_.colBase * this->colOffset_);
+        int64_t varOffset = static_cast<int64_t>(varIndex * this->tilingData_.varStride + this->colTotalOffset_);
         int64_t updatesIndex = updatesOriginIdexLocal(unRepeatIndex) * updatesIndexOffset;
         this->CopyOutUpdates(varOffset, outLen, updatesLocal[updatesIndex]);
     }
@@ -185,11 +185,11 @@ __aicore__ inline void ScatterUpdateSimdSort<T, U, CAST_T, updatesIsScalar, cast
         }
         int64_t updatesOffset = updatesOriginIdexLocal(unRepeatIndex) * this->tilingData_.colTotal;
         // FOR循环搬运updates
-        for (int64_t j = 0; j < this->tilingData_.colLoopByUb; j++) {
-            colByUb = j == this->tilingData_.colLoopByUb - 1 ? this->tilingData_.processColTail : this->tilingData_.processColPerUb;
+        for (int64_t j = 0; j < this->colLoopByUb_; j++) {
+            colByUb = j == this->colLoopByUb_ - 1 ? this->processColTail_ : this->processColPerUb_;
             this->CopyInUpdates(updatesOffset, INDICES_ONE_SORT, colByUb);
             LocalTensor<T> updatesLocal = this->updateInQueue_.template DeQue<T>();
-            int64_t varOffset = static_cast<int64_t>(varIndex * this->tilingData_.varStride + this->tilingData_.colBase * this->colOffset_ + j * this->tilingData_.processColPerUb);
+            int64_t varOffset = static_cast<int64_t>(varIndex * this->tilingData_.varStride + this->colTotalOffset_ + j * this->processColPerUb_);
             this->CopyOutUpdates(varOffset, colByUb, updatesLocal);
             this->updateInQueue_.FreeTensor(updatesLocal);
             updatesOffset = updatesOffset + colByUb;
