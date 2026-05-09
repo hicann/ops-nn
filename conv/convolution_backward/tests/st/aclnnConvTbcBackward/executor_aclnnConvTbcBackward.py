@@ -30,11 +30,11 @@ class AscendConvTbcBackwardApi(BaseApi):
             input_data.kwargs["pad"]
         )
 
-        if gradInput != None:
+        if gradInput is not None:
             gradInput = gradInput.to(input_data.kwargs["self"].dtype)
-        if gradWeight != None:
+        if gradWeight is not None:
             gradWeight = gradWeight.to(input_data.kwargs["self"].dtype)
-        if gradBias != None:
+        if gradBias is not None:
             gradBias = gradBias.to(input_data.kwargs["self"].dtype)
         return gradInput, gradWeight, gradBias
 

@@ -140,7 +140,7 @@ class ConvGolden(BaseApi):
                 return output.cpu().to(promote_dtype)
             else:
                 output = torch.nn.functional.conv_transpose3d(fmap.float(), input_data.kwargs['weight'].float(),
-                                                              bias.float() if bias != None else None,
+                                                              bias.float() if bias is not None else None,
                                                               stride=input_data.kwargs['stride'], padding=padding,
                                                               dilation=input_data.kwargs['dilation'],
                                                               groups=input_data.kwargs['groups'],

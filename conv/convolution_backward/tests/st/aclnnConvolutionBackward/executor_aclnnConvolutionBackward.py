@@ -51,11 +51,11 @@ class AscendConvolutionBackwardInputApi(BaseApi):
             else:
                 channelIndex = 1
             grad_bias = torch.zeros(input_data.kwargs["gradOutput"].shape[channelIndex]).to(input_data.kwargs["gradOutput"].dtype)
-        if grad_input != None:
+        if grad_input is not None:
             grad_input = grad_input.to(input_data.kwargs["gradOutput"].dtype)
-        if grad_weight != None:
+        if grad_weight is not None:
             grad_weight = grad_weight.to(input_data.kwargs["gradOutput"].dtype)
-        if grad_bias != None:
+        if grad_bias is not None:
             grad_bias = grad_bias.to(input_data.kwargs["gradOutput"].dtype)
         
         return grad_input, grad_weight, grad_bias
