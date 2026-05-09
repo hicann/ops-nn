@@ -18,6 +18,7 @@
 #include "es_nn_ops.h"
 #include "../../../op_graph/fusion_pass/where_fusion_pass.h"
 #include "register/register_custom_pass.h"
+#include "opdev/platform.h"
 
 using namespace ut_util;
 using namespace std;
@@ -33,9 +34,9 @@ protected:
         fe::PlatformInfo platformInfo;
         fe::OptionalInfo optiCompilationInfo;
         platformInfo.soc_info.ai_core_cnt = 64;
-        platformInfo.str_info.short_soc_version = "Ascend910_93";
-        optiCompilationInfo.soc_version = "Ascend910_93";
-        fe::PlatformInfoManager::Instance().platform_info_map_["Ascend910_93"] = platformInfo;
+        platformInfo.str_info.short_soc_version = "Ascend950";
+        optiCompilationInfo.soc_version = "Ascend950";
+        fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
         fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
     }
 
@@ -44,11 +45,23 @@ protected:
         fe::PlatformInfo platformInfo;
         fe::OptionalInfo optiCompilationInfo;
         platformInfo.soc_info.ai_core_cnt = 64;
-        platformInfo.str_info.short_soc_version = "Ascend910_93";
-        optiCompilationInfo.soc_version = "Ascend910_93";
-        fe::PlatformInfoManager::Instance().platform_info_map_["Ascend910_93"] = platformInfo;
+        platformInfo.str_info.short_soc_version = "Ascend950";
+        optiCompilationInfo.soc_version = "Ascend950";
+        fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
         fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+
+        npuArchManager_ = new ::op::NpuArchManager(::NpuArch::DAV_3510);
     }
+
+    void TearDown() override
+    {
+        if (npuArchManager_) {
+            delete npuArchManager_;
+            npuArchManager_ = nullptr;
+        }
+    }
+
+    ::op::NpuArchManager* npuArchManager_ = nullptr;
 };
 
 TEST_F(WhereFusionPassTest, where_fusion_float_success)
@@ -255,7 +268,7 @@ TEST_F(WhereFusionPassTest, where_fusion_int32_success)
     EXPECT_EQ(findNonZero, true);
 }
 
-TEST_F(WhereFusionPassTest, where_fusion_int64_success)
+TEST_F(WhereFusionPassTest, where_fusion_int64_fail)
 {
     std::vector<int64_t> dims_x{2, 3, 4};
     Shape shape_x(dims_x);
@@ -275,7 +288,7 @@ TEST_F(WhereFusionPassTest, where_fusion_int64_success)
     CustomPassContext pass_context;
     ops::WhereFusionPass pass;
     Status status = pass.Run(graph, pass_context);
-    EXPECT_EQ(status, SUCCESS);
+    EXPECT_EQ(status, GRAPH_NOT_CHANGED);
     graph->DumpToFile(Graph::DumpFormat::kOnnx, "dump_afterpass_graph_for_where_test7");
 
     bool findNonZero = false;
@@ -286,7 +299,7 @@ TEST_F(WhereFusionPassTest, where_fusion_int64_success)
             findNonZero = true;
         }
     }
-    EXPECT_EQ(findNonZero, true);
+    EXPECT_EQ(findNonZero, false);
 }
 
 TEST_F(WhereFusionPassTest, where_fusion_uint8_success)
@@ -391,7 +404,7 @@ TEST_F(WhereFusionPassTest, where_fusion_uint32_success)
     EXPECT_EQ(findNonZero, true);
 }
 
-TEST_F(WhereFusionPassTest, where_fusion_uint64_success)
+TEST_F(WhereFusionPassTest, where_fusion_uint64_fail)
 {
     std::vector<int64_t> dims_x{2, 3, 4};
     Shape shape_x(dims_x);
@@ -411,7 +424,7 @@ TEST_F(WhereFusionPassTest, where_fusion_uint64_success)
     CustomPassContext pass_context;
     ops::WhereFusionPass pass;
     Status status = pass.Run(graph, pass_context);
-    EXPECT_EQ(status, SUCCESS);
+    EXPECT_EQ(status, GRAPH_NOT_CHANGED);
     graph->DumpToFile(Graph::DumpFormat::kOnnx, "dump_afterpass_graph_for_where_test11");
 
     bool findNonZero = false;
@@ -422,7 +435,7 @@ TEST_F(WhereFusionPassTest, where_fusion_uint64_success)
             findNonZero = true;
         }
     }
-    EXPECT_EQ(findNonZero, true);
+    EXPECT_EQ(findNonZero, false);
 }
 
 TEST_F(WhereFusionPassTest, where_fusion_bool_success)
@@ -551,6 +564,11 @@ TEST_F(WhereFusionPassTest, where_fusion_complex64_fail)
 
 TEST_F(WhereFusionPassTest, where_fusion_unsupported_platform_fail)
 {
+    // 清除SetUp中设置的NpuArch，设置一个不支持的平台
+    delete npuArchManager_;
+    npuArchManager_ = nullptr;
+    ::op::NpuArchManager nonRegbaseArchManager(::NpuArch::DAV_2201); // Ascend910B
+
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
     platformInfo.soc_info.ai_core_cnt = 64;

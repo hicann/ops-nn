@@ -29,6 +29,7 @@ protected:
 static void GetInputsInfo(const std::vector<SubgraphInput>& subGraphInputs, std::vector<Shape>& inputShapes,
     std::vector<DataType>& inputDtpyes, std::vector<Format>& inputFormats);
 static Status InferShape(const GraphUniqPtr& replaceGraph, const std::vector<SubgraphInput>& subGraphInputs);
+inline static bool IsRegBase();
 
 } //namespace ops
 #endif // NN_WHERE_FUSION_PASS_H
