@@ -169,7 +169,7 @@ def {}({}, kernel_name="{}", impl_mode=""):
     bisheng = os.environ.get('BISHENG_REAL_PATH')
     if bisheng is None:
         bisheng = shutil.which("bisheng")
-    if bisheng != None:
+    if bisheng is not None:
         bisheng_path = os.path.dirname(bisheng)
         tikcpp_path = os.path.realpath(os.path.join(bisheng_path, "..", "..", "tikcpp"))
     else:
