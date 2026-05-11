@@ -317,8 +317,17 @@ int main() {
   aclrtDestroyStream(stream);
   aclrtResetDevice(deviceId);
   aclFinalize();
-  free(diagonalMatrixData);
-  free(deqOffsetData);
-  free(deqScaleData);
+  if (diagonalMatrixData != nullptr) {
+    free(diagonalMatrixData);
+    diagonalMatrixData = nullptr;
+  }
+  if (deqOffsetData != nullptr) {
+    free(deqOffsetData);
+    diagonalMatrixData = nullptr;
+  }
+  if (deqScaleData != nullptr) {
+    free(deqScaleData);
+    diagonalMatrixData = nullptr;
+  }
   return 0;
 }
