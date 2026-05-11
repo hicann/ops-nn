@@ -2938,6 +2938,16 @@
   </tr>
   <tr>
     <td>pooling</td>
+    <td><a href="../../pooling/adaptive_max_pool2d/README.md">adaptive_max_pool2d</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>根据输入的outputSize计算每次kernel的大小，对输入self进行2维最大池化操作，输出池化后的值outputOut和索引indicesOut。aclnnAdaptiveMaxPool2d与aclnnMaxPool2d的区别在于，只需指定outputSize大小，并按outputSize的大小来划分pooling区域。</td>
+  </tr>
+  <tr>
+    <td>pooling</td>
     <td><a href="../../pooling/adaptive_max_pool3d_grad/README.md">adaptive_max_pool3d_grad</a></td>
     <td>✓</td>
     <td>✓</td>
