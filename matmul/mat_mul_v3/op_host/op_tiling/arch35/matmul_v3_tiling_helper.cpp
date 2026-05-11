@@ -486,8 +486,8 @@ void MatMulV3TilingHelper::GetRebalanceBlock(const MatmulV3CompileInfo& compileI
 double MatMulV3TilingHelper::GetHbmBW(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
                                       fe::PlatFormInfos* platformInfo)
 {
-    std::string coreCntStr = "";
-    std::string ddrRateStr = "";
+    std::string coreCntStr = "32";
+    std::string ddrRateStr = "31";
     platformInfo->GetPlatformRes("SoCInfo", "ai_core_cnt", coreCntStr);
     platformInfo->GetPlatformRes("AICoreMemoryRates", "ddr_rate", ddrRateStr);
     return GetCoreFreq(compileInfo, args, platformInfo) * std::atoi(coreCntStr.c_str()) *
@@ -497,8 +497,8 @@ double MatMulV3TilingHelper::GetHbmBW(const MatmulV3CompileInfo& compileInfo, co
 double MatMulV3TilingHelper::GetL2BW(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
                                      fe::PlatFormInfos* platformInfo)
 {
-    std::string coreCntStr = "";
-    std::string l2RateStr = "";
+    std::string coreCntStr = "32";
+    std::string l2RateStr = "100";
     platformInfo->GetPlatformRes("SoCInfo", "ai_core_cnt", coreCntStr);
     platformInfo->GetPlatformRes("AICoreMemoryRates", "l2_rate", l2RateStr);
     return GetCoreFreq(compileInfo, args, platformInfo) * std::atoi(coreCntStr.c_str()) * std::atoi(l2RateStr.c_str()) /
@@ -508,7 +508,7 @@ double MatMulV3TilingHelper::GetL2BW(const MatmulV3CompileInfo& compileInfo, con
 double MatMulV3TilingHelper::GetCoreFreq(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
                                          fe::PlatFormInfos* platformInfo)
 {
-    std::string freqStr = "";
+    std::string freqStr = "1650";
     platformInfo->GetPlatformRes("AICoreSpec", "cube_freq", freqStr);
     return std::atoi(freqStr.c_str()) / static_cast<double>(THOUSAND_NUM);
 }
