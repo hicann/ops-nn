@@ -116,3 +116,4 @@
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口 | [test_aclnn_norm](./examples/test_aclnn_norm.cpp) | 通过[aclnnNorm](docs/aclnnNorm.md)接口方式调用LpNormV2算子。 |
 | aclnn接口 | [test_aclnn_linalg_vector_norm](./examples/test_aclnn_LinalgVectorNorm.cpp) | 通过[aclnnLinalgVectorNorm](docs/aclnnLinalgVectorNorm.md)接口方式调用LpNormV2算子。 |
+| 图模式 | - | 通过[算子IR](op_graph/lp_norm_v2_proto.h)构图方式调用LpNormV2算子。 |

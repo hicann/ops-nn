@@ -2262,7 +2262,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✓</td>
+    <td>✗</td>
     <td>AI Core</td>
     <td>AdaLayerNorm算子将LayerNorm和下游的Add、Mul融合起来，通过自适应参数scale和shift来调整归一化过程。</td>
   </tr>
@@ -2282,7 +2282,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✓</td>
+    <td>✗</td>
     <td>AI Core</td>
     <td>AdaLayerNormQuant算子将AdaLayerNorm和下游的量化（目前仅支持DynamicQuant）融合起来。该算子主要是用于执行自适应层归一化的量化操作，即将输入数据进行归一化处理，并将其量化为低精度整数，以提高计算效率和减少内存占用。</td>
   </tr>
@@ -2292,7 +2292,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✓</td>
+    <td>✗</td>
     <td>AI Core</td>
     <td>AdaLayerNormV2算子将LayerNorm和下游的Add、Mul融合起来，通过自适应参数scale和shift来调整归一化过程。相比AdaLayerNorm算子，输出新增2个参数（输入的均值和输入的标准差的倒数）；weight和bias支持的数据类型增加对应约束。</td>
   </tr>
@@ -2392,7 +2392,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✓</td>
+    <td>✗</td>
     <td>AI Core</td>
     <td>RmsNorm是大模型常用的标准化操作，相比LayerNorm，其去掉了减去均值的部分。AddRmsNormQuant算子将RmsNorm前的Add算子以及RmsNorm归一化的输出给到1个或2个Quantize算子融合起来，减少搬入搬出操作。AddRmsNormQuantV2算子相较于AddRmsNormQuant在RmsNorm计算过程中增加了偏置项bias参数，即计算公式中的`bias`。</td>
   </tr>
@@ -2410,7 +2410,7 @@
     <td>norm</td>
     <td><a href="../../norm/batch_norm_elemt/README.md">batch_norm_elemt</a></td>
     <td>✗</td>
-    <td>✓</td>
+    <td>✗</td>
     <td>✓</td>
     <td>✗</td>
     <td>AI Core</td>
@@ -2439,10 +2439,10 @@
   <tr>
     <td>norm</td>
     <td><a href="../../norm/bn_training_reduce/README.md">bn_training_reduce</a></td>
+    <td>✗</td>
+    <td>✗</td>
     <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
+    <td>✗</td>
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
@@ -2490,7 +2490,7 @@
     <td>norm</td>
     <td><a href="../../norm/group_norm/README.md">group_norm</a></td>
     <td>✗</td>
-    <td>✓</td>
+    <td>✗</td>
     <td>✓</td>
     <td>✗</td>
     <td>AI Core</td>
@@ -2590,7 +2590,7 @@
     <td>norm</td>
     <td><a href="../../norm/instance_norm_v3/README.md">instance_norm_v3</a></td>
     <td>✗</td>
-    <td>✓</td>
+    <td>✗</td>
     <td>✓</td>
     <td>✗</td>
     <td>AI Core</td>
@@ -2659,10 +2659,10 @@
   <tr>
     <td>norm</td>
     <td><a href="../../norm/lp_norm_v2/README.md">lp_norm_v2</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
     <td>返回给定张量的矩阵范数或者向量范数。</td>
   </tr>
@@ -2699,7 +2699,7 @@
   <tr>
     <td>norm</td>
     <td><a href="../../norm/renorm/README.md">renorm</a></td>
-    <td>✗</td>
+    <td>✓</td>
     <td>✓</td>
     <td>✓</td>
     <td>✗</td>
@@ -2732,7 +2732,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✓</td>
+    <td>✗</td>
     <td>AI Core</td>
     <td>RmsNorm算子是大模型常用的标准化操作，相比LayerNorm算子，其去掉了减去均值的部分。RmsNormQuant算子将RmsNorm算子以及RmsNorm后的Quantize算子融合起来，减少搬入搬出操作。</td>
   </tr>
@@ -2790,7 +2790,7 @@
     <td>norm</td>
     <td><a href="../../norm/sync_batch_norm_gather_stats_with_counts/README.md">sync_batch_norm_gather_stats_with_counts</a></td>
     <td>✗</td>
-    <td>✓</td>
+    <td>✗</td>
     <td>✓</td>
     <td>✗</td>
     <td>AI Core</td>
@@ -2801,7 +2801,7 @@
     <td><a href="../../norm/sync_bn_training_update/README.md">sync_bn_training_update</a></td>
     <td>✓</td>
     <td>✓</td>
-    <td>✓</td>
+    <td>✗</td>
     <td>✓</td>
     <td>AI Core</td>
     <td>SyncBNTrainingUpdate算子用于更新在BatchNormTraining过程中的全局的均值。</td>
@@ -3081,7 +3081,7 @@
     <td><a href="../../quant/ascend_quant/README.md">ascend_quant</a></td>
     <td>✓</td>
     <td>✓</td>
-    <td>✓</td>
+    <td>✗</td>
     <td>✓</td>
     <td>AI Core</td>
     <td>根据输入的scale和offset对输入x进行量化，且scale和offset的size需要是x的最后一维或1。</td>
@@ -3299,11 +3299,11 @@
   <tr>
     <td>quant</td>
     <td><a href="../../quant/trans_quant_param/README.md">trans_quant_param</a></td>
+    <td>✗</td>
+    <td>✗</td>
     <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>AI Core</td>
+    <td>✗</td>
+    <td>AI CPU</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
   <tr>
