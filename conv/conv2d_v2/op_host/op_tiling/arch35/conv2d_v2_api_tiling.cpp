@@ -1062,6 +1062,11 @@ bool Conv2dTiling::CheckInstructionLimits()
         this->isDmaFlag = true;
     }
 
+    if (platformInfo.npuArch == NpuArch::DAV_5102 && this->isDmaFlag) {
+        OP_LOGE(nodeType, "isDmaFlag is [%d], but the DMA specifications are not supported.", this->isDmaFlag);
+        return false;
+    }
+
     if (!CheckDataCopyLimits()) {
         return false;
     }

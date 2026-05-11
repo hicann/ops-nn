@@ -284,7 +284,11 @@ __aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::
     CalcStartAddrCommon(din, dout);
 
     fmStartAddr = convOps->batchIdxStart * convOps->fmapOneBatchSize;
-    weightStartAddr = convOps->nIdxStart;
+    if constexpr (CONV::B_FORMAT == ConvFormat::FRACTAL_Z || CONV::B_FORMAT == ConvFormat::FRACTAL_Z_C04) {
+        weightStartAddr = convOps->nIdxStart * convOps->k0;
+    } else {
+        weightStartAddr = convOps->nIdxStart;
+    }
     outputStartAddr = convOps->batchIdxStart * convOps->outputOneBatchSize +
                       convOps->mIdxStart * convTilingData->convRunInfo.cout +
                       convOps->nIdxStart;
@@ -314,7 +318,11 @@ __aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::
         fmStartAddr += Max(convOps->singleCoreWiStartPos, 0) * convTilingData->convRunInfo.cin;
     }
 
-    weightStartAddr = convOps->nIdxStart;
+    if constexpr (CONV::B_FORMAT == ConvFormat::FRACTAL_Z || CONV::B_FORMAT == ConvFormat::FRACTAL_Z_C04) {
+        weightStartAddr = convOps->nIdxStart * convOps->k0;
+    } else {
+        weightStartAddr = convOps->nIdxStart;
+    }
 
     outputStartAddr = convOps->batchIdxStart * convOps->outputOneBatchSize + convOps->hoIdxStart *
                       convTilingData->convRunInfo.wout * convTilingData->convRunInfo.cout + convOps->nIdxStart;

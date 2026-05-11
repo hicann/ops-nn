@@ -101,8 +101,7 @@ CONV2D_SCALAR_OPT_SEL(CONV_NOT_SMALL_WEIGHT, CONV_FULLLOAD_KL1_NL0, CONV_WEIGHT_
 #define CONV2D_ONLY_MN_FULLLOAD_SEL()                                                                                \
 ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIC_ONLY),                                                                   \
 CONV_COMMON_ONLY_MN_FULLLOAD_SEL(),                                                                                  \
-CONV2D_COMMON_C04_TPL_UINT_SEL()                                                                                     \
-CONV2D_SCALAR_OPT_SEL(CONV_NOT_SMALL_WEIGHT)
+CONV2D_COMMON_C04_TPL_UINT_SEL()
 
 #define CONV2D_NO_FULLLOAD_AL0_OPEN_SEL()                                                                            \
 ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIC_ONLY),                                                                   \
