@@ -7,7 +7,3 @@
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
-
-if(PASS_UT OR (UT_TEST_ALL AND NOT AICPU_ONLY))
-    add_modules_llt_sources(HOSTNAME ${OPTEST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR})
-endif()

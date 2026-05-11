@@ -107,7 +107,7 @@ TEST_F(l2_soft_margin_loss_test, soft_margin_loss_bfloat16) {
   auto ut = OP_API_UT(aclnnSoftMarginLoss, INPUT(selfDesc, targetDesc, reduction), OUTPUT(outDesc));
   uint64_t workspaceSize = 0;
   aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+  EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
 // empty tensor, reduction none
