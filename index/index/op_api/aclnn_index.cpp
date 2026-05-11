@@ -434,9 +434,7 @@ const aclTensor* CallKernel(const aclTensor* self, const aclTensor* out, const I
     } else if (aicoreNotNeedTranspose) {
         bool isRegbase = Ops::NN::AclnnUtil::IsRegbase();
         bool isOutEqualSelf = (!isRegbase) && (selfContiguous->GetViewShape().GetDimNum() == 0);
-        if (isRegbase && indicesInfo.indicesNum == 1) {
-            opOut = l0op::GatherV2(selfContiguous, indicesInfo.dim, indicesInfo.allDefinedIndices[0], executor, 0, true);
-        } else if (isOutEqualSelf) {
+        if (isOutEqualSelf) {
             opOut = selfContiguous;
         } else if (chooseInfo.isNonContiguous) {
             auto newself = executor->CreateView(
