@@ -224,7 +224,7 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2(
       <td>y2Out（aclTensor*）</td>
       <td>输出</td>
       <td>表示量化输出Tensor，对应公式中的`y2Out`。</td>
-      <td><ul><li>支持空Tensor。</li><li>如果`y2Out`为有效输出时，shape和数据类型需要与`y1Out`保持一致；如果`y2Out`为无效输出时，shape为[1]。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>如果`y2Out`为有效输出时，shape和数据类型需要与`y1Out`保持一致；如果`y2Out`为无效输出时，shape为[1]或[]。</li></ul></td>
       <td>INT4、INT8、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN</td>
       <td>ND</td>
       <td>2-8</td>

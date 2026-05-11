@@ -119,7 +119,7 @@ static bool CheckDtypeValid(
     // 当y2Out为无效输出时，y2out的shape必须为[1]
     if (Ops::NN::AclnnUtil::IsRegbase() && (smoothScale1Optional == nullptr || smoothScale2Optional == nullptr)) {
         auto shape = y2Out->GetViewShape();
-        if (shape.GetDimNum() != 1 || shape.GetDim(0) != 1) {
+        if ((shape.GetDimNum() != 0) && (shape.GetDimNum() != 1 || shape.GetDim(0) != 1)) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When y2Out is an invalid output, y2Out'shape must be [1].");
             return false;
         }
