@@ -384,36 +384,56 @@ static __aicore__ inline void LoadL0Zero(
     const LocalTensor<typename Intf::SrcAT>& l0a, uint32_t baseM,
     const LocalTensor<typename Intf::SrcBT>& l0b, uint32_t baseN)
 {
-    LocalTensor<typename Intf::SrcAT> dummyL1(TPosition::A1, 0, 0);
-    constexpr uint8_t k0 = GetDataBlockSizeInBytes() / sizeof(typename Intf::SrcBT);
-    LoadData3DParamsV2<typename Intf::SrcBT> load3d;
-    load3d.filterW = 1;
-    load3d.filterH = 1;
+    LocalTensor<typename Intf::SrcAT> dummyL1A(TPosition::A1, 0, 0);
+    LocalTensor<typename Intf::SrcBT> dummyL1B(TPosition::B1, 0, 0);
+    constexpr uint8_t k0A = GetDataBlockSizeInBytes() / sizeof(typename Intf::SrcAT);
+    constexpr uint8_t k0B = GetDataBlockSizeInBytes() / sizeof(typename Intf::SrcBT);
+    LoadData3DParamsV2<typename Intf::SrcAT> load3dA;
+    LoadData3DParamsV2<typename Intf::SrcBT> load3dB;
+    load3dA.filterW = 1;
+    load3dA.filterH = 1;
 
     //清零10240*255区域
-    load3d.padList[0] = 0;
-    load3d.padList[1] = 0;
-    load3d.padList[2] = 255;
-    load3d.padList[3] = 0;
+    load3dA.padList[0] = 0;
+    load3dA.padList[1] = 0;
+    load3dA.padList[2] = 255;
+    load3dA.padList[3] = 0;
 
-    load3d.l1H = 1;
-    load3d.l1W = 32;
+    load3dA.l1H = 1;
+    load3dA.l1W = 32;
 
-    load3d.channelSize = k0;
-    load3d.kStartPt = 0;
-    load3d.mStartPt = 0;
-    load3d.kExtension = k0;
+    load3dA.channelSize = k0A;
+    load3dA.kStartPt = 0;
+    load3dA.mStartPt = 0;
+    load3dA.kExtension = k0A;
+
+    load3dB.filterW = 1;
+    load3dB.filterH = 1;
+
+    //清零10240*255区域
+    load3dB.padList[0] = 0;
+    load3dB.padList[1] = 0;
+    load3dB.padList[2] = 255;
+    load3dB.padList[3] = 0;
+
+    load3dB.l1H = 1;
+    load3dB.l1W = 32;
+
+    load3dB.channelSize = k0B;
+    load3dB.kStartPt = 0;
+    load3dB.mStartPt = 0;
+    load3dB.kExtension = k0B;
 
     LoadDataRepeatParamWithStride repeat = {};
     repeat.repeatTime = 1;
     //重置repeat参数
     SetLoadDataRepeatWithStride(repeat);
 
-    load3d.mExtension = AlignUp(baseM, BLOCK_CUBE);
-    LoadDataWithStride(l0a, dummyL1, load3d);
+    load3dA.mExtension = AlignUp(baseM, BLOCK_CUBE);
+    LoadDataWithStride(l0a, dummyL1A, load3dA);
 
-    load3d.mExtension = AlignUp(baseN, BLOCK_CUBE);
-    LoadDataWithStride(l0b, dummyL1, load3d);
+    load3dB.mExtension = AlignUp(baseN, BLOCK_CUBE);
+    LoadDataWithStride(l0b, dummyL1B, load3dB);
 }
 
 template <class Intf>
