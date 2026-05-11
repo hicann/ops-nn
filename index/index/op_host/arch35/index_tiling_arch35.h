@@ -95,6 +95,7 @@ protected:
 
 private:
     bool accumulateMode_ = false;
+    bool isLargeShape_ = false;
     uint64_t inputShapes_[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     uint64_t inputLength_ = 0;
     uint32_t inputDimNum_ = 0;

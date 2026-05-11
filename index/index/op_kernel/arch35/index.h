@@ -40,6 +40,7 @@ constexpr uint32_t THREAD_DIM_LAUNCH_BOUND = 512;
 constexpr uint32_t SMALL_THREAD_DIM_LAUNCH_BOUND = 256;
 #else
 constexpr uint32_t THREAD_DIM = 1024;
+constexpr uint32_t THREAD_DIM_SMALL = 512;
 constexpr uint32_t SMALL_THREAD_DIM = 256;
 constexpr uint32_t THREAD_DIM_LAUNCH_BOUND = 512;
 constexpr uint32_t SMALL_THREAD_DIM_LAUNCH_BOUND = 512;
@@ -56,6 +57,7 @@ constexpr uint32_t DIM_NUMS_EIGHT = 8;
 constexpr uint32_t INDEX_ZERO = 0;
 constexpr uint32_t INDEX_ONE = 1;
 constexpr uint32_t INDEX_TWO = 2;
+constexpr uint32_t INDEX_THRESHOLD = 1024;
 
 typedef int32_t int4 __attribute__((ext_vector_type(4)));
 
@@ -273,8 +275,11 @@ private:
     uint32_t indexedSizesNum_{0};
     uint32_t indexContinue_{1};
     uint64_t formerNonIndexStride_{1};
+    uint32_t threadDim_{1};
+    uint32_t smallThreadDim_{1};
     uint32_t blockId_;
     uint32_t blockNums_;
+    bool isSmallIndexSize{false};
 
     T2 thirdLoopLength_{0};
     T2 firstLoopLength_{1};
@@ -380,6 +385,15 @@ __aicore__ inline void KernelIndex<T, F, P, T2>::Init(
     this->blockId_ = GetBlockIdx();
     this->blockNums_ = GetBlockNum();
 
+    isSmallIndexSize = indexSize_ < INDEX_THRESHOLD;
+    if (isSmallIndexSize) {
+        threadDim_ = THREAD_DIM_SMALL;
+        smallThreadDim_ = SMALL_THREAD_DIM;
+    } else {
+        threadDim_ = THREAD_DIM;
+        smallThreadDim_ = SMALL_THREAD_DIM_LAUNCH_BOUND;
+    }
+
     ComputeStrides(tilingData);
     thirdLoopLength_ /= firstLoopLength_;
     secondThirdLoopLength_ = outputLength_ / firstLoopLength_;
@@ -402,45 +416,101 @@ __aicore__ inline void KernelIndex<T, F, P, T2>::Process()
     DataSyncBarrier<MemDsbT::UB>();
     if (indexContinue_) {
         if (indexedDimNum_ == DIM_NUMS_ONE) {
-            AscendC::Simt::VF_CALL<SimtComputeContinue<T, F, P, DIM_NUMS_ONE, T2, THREAD_DIM>>(
-                AscendC::Simt::Dim3{THREAD_DIM}, blockId_, outputLength_, blockNums_, secondThirdLoopLength_,
-                formerNonIndexStride_, thirdLoopLength_, (__gm__ T*)outputGm_.GetPhyAddr(),
-                (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
+            if (isSmallIndexSize) {
+                AscendC::Simt::VF_CALL<SimtComputeContinue<T, F, P, DIM_NUMS_ONE, T2, THREAD_DIM_SMALL>>(
+                    AscendC::Simt::Dim3{threadDim_}, blockId_, outputLength_, blockNums_, secondThirdLoopLength_,
+                    formerNonIndexStride_, thirdLoopLength_, (__gm__ T*)outputGm_.GetPhyAddr(),
+                    (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
+            } else {
+                AscendC::Simt::VF_CALL<SimtComputeContinue<T, F, P, DIM_NUMS_ONE, T2, THREAD_DIM>>(
+                    AscendC::Simt::Dim3{threadDim_}, blockId_, outputLength_, blockNums_, secondThirdLoopLength_,
+                    formerNonIndexStride_, thirdLoopLength_, (__gm__ T*)outputGm_.GetPhyAddr(),
+                    (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
+            }
         } else if (indexedDimNum_ == DIM_NUMS_TWO) {
-            AscendC::Simt::VF_CALL<SimtComputeContinue<T, F, P, DIM_NUMS_TWO, T2, THREAD_DIM>>(
-                AscendC::Simt::Dim3{THREAD_DIM}, blockId_, outputLength_, blockNums_, secondThirdLoopLength_,
-                formerNonIndexStride_, thirdLoopLength_, (__gm__ T*)outputGm_.GetPhyAddr(),
-                (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
+            if (isSmallIndexSize) {
+                AscendC::Simt::VF_CALL<SimtComputeContinue<T, F, P, DIM_NUMS_TWO, T2, THREAD_DIM_SMALL>>(
+                    AscendC::Simt::Dim3{threadDim_}, blockId_, outputLength_, blockNums_, secondThirdLoopLength_,
+                    formerNonIndexStride_, thirdLoopLength_, (__gm__ T*)outputGm_.GetPhyAddr(),
+                    (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
+            } else {
+                AscendC::Simt::VF_CALL<SimtComputeContinue<T, F, P, DIM_NUMS_TWO, T2, THREAD_DIM>>(
+                    AscendC::Simt::Dim3{threadDim_}, blockId_, outputLength_, blockNums_, secondThirdLoopLength_,
+                    formerNonIndexStride_, thirdLoopLength_, (__gm__ T*)outputGm_.GetPhyAddr(),
+                    (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
+            }
         } else if (indexedDimNum_ == DIM_NUMS_THREE) {
-            AscendC::Simt::VF_CALL<SimtComputeContinue<T, F, P, DIM_NUMS_THREE, T2, THREAD_DIM>>(
-                AscendC::Simt::Dim3{THREAD_DIM}, blockId_, outputLength_, blockNums_, secondThirdLoopLength_,
-                formerNonIndexStride_, thirdLoopLength_, (__gm__ T*)outputGm_.GetPhyAddr(),
-                (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
+            if(isSmallIndexSize) {
+                AscendC::Simt::VF_CALL<SimtComputeContinue<T, F, P, DIM_NUMS_THREE, T2, THREAD_DIM_SMALL>>(
+                    AscendC::Simt::Dim3{threadDim_}, blockId_, outputLength_, blockNums_, secondThirdLoopLength_,
+                    formerNonIndexStride_, thirdLoopLength_, (__gm__ T*)outputGm_.GetPhyAddr(),
+                    (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
+            } else {
+                AscendC::Simt::VF_CALL<SimtComputeContinue<T, F, P, DIM_NUMS_THREE, T2, THREAD_DIM>>(
+                    AscendC::Simt::Dim3{threadDim_}, blockId_, outputLength_, blockNums_, secondThirdLoopLength_,
+                    formerNonIndexStride_, thirdLoopLength_, (__gm__ T*)outputGm_.GetPhyAddr(),
+                    (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
+            }
         } else if (indexedDimNum_ == DIM_NUMS_FOUR) {
-            AscendC::Simt::VF_CALL<SimtComputeContinue<T, F, P, DIM_NUMS_FOUR, T2, THREAD_DIM>>(
-                AscendC::Simt::Dim3{THREAD_DIM}, blockId_, outputLength_, blockNums_, secondThirdLoopLength_,
-                formerNonIndexStride_, thirdLoopLength_, (__gm__ T*)outputGm_.GetPhyAddr(),
-                (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
+            if(isSmallIndexSize) {
+                AscendC::Simt::VF_CALL<SimtComputeContinue<T, F, P, DIM_NUMS_FOUR, T2, THREAD_DIM_SMALL>>(
+                    AscendC::Simt::Dim3{threadDim_}, blockId_, outputLength_, blockNums_, secondThirdLoopLength_,
+                    formerNonIndexStride_, thirdLoopLength_, (__gm__ T*)outputGm_.GetPhyAddr(),
+                    (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
+            } else {
+                AscendC::Simt::VF_CALL<SimtComputeContinue<T, F, P, DIM_NUMS_FOUR, T2, THREAD_DIM>>(
+                    AscendC::Simt::Dim3{threadDim_}, blockId_, outputLength_, blockNums_, secondThirdLoopLength_,
+                    formerNonIndexStride_, thirdLoopLength_, (__gm__ T*)outputGm_.GetPhyAddr(),
+                    (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
+            }
         } else if (indexedDimNum_ == DIM_NUMS_FIVE) {
-            AscendC::Simt::VF_CALL<SimtComputeContinue<T, F, P, DIM_NUMS_FIVE, T2, SMALL_THREAD_DIM_LAUNCH_BOUND>>(
-                AscendC::Simt::Dim3{SMALL_THREAD_DIM_LAUNCH_BOUND}, blockId_, outputLength_, blockNums_,
-                secondThirdLoopLength_, formerNonIndexStride_, thirdLoopLength_, (__gm__ T*)outputGm_.GetPhyAddr(),
-                (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
+            if (isSmallIndexSize) {
+                AscendC::Simt::VF_CALL<SimtComputeContinue<T, F, P, DIM_NUMS_FIVE, T2, SMALL_THREAD_DIM>>(
+                    AscendC::Simt::Dim3{smallThreadDim_}, blockId_, outputLength_, blockNums_,
+                    secondThirdLoopLength_, formerNonIndexStride_, thirdLoopLength_, (__gm__ T*)outputGm_.GetPhyAddr(),
+                    (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
+            } else {
+                AscendC::Simt::VF_CALL<SimtComputeContinue<T, F, P, DIM_NUMS_FIVE, T2, SMALL_THREAD_DIM_LAUNCH_BOUND>>(
+                    AscendC::Simt::Dim3{smallThreadDim_}, blockId_, outputLength_, blockNums_,
+                    secondThirdLoopLength_, formerNonIndexStride_, thirdLoopLength_, (__gm__ T*)outputGm_.GetPhyAddr(),
+                    (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
+            }
         } else if (indexedDimNum_ == DIM_NUMS_SIX) {
-            AscendC::Simt::VF_CALL<SimtComputeContinue<T, F, P, DIM_NUMS_SIX, T2, SMALL_THREAD_DIM_LAUNCH_BOUND>>(
-                AscendC::Simt::Dim3{SMALL_THREAD_DIM_LAUNCH_BOUND}, blockId_, outputLength_, blockNums_,
-                secondThirdLoopLength_, formerNonIndexStride_, thirdLoopLength_, (__gm__ T*)outputGm_.GetPhyAddr(),
-                (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
+            if (isSmallIndexSize) {
+                AscendC::Simt::VF_CALL<SimtComputeContinue<T, F, P, DIM_NUMS_SIX, T2, SMALL_THREAD_DIM>>(
+                    AscendC::Simt::Dim3{smallThreadDim_}, blockId_, outputLength_, blockNums_,
+                    secondThirdLoopLength_, formerNonIndexStride_, thirdLoopLength_, (__gm__ T*)outputGm_.GetPhyAddr(),
+                    (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
+            } else {
+                AscendC::Simt::VF_CALL<SimtComputeContinue<T, F, P, DIM_NUMS_SIX, T2, SMALL_THREAD_DIM_LAUNCH_BOUND>>(
+                    AscendC::Simt::Dim3{smallThreadDim_}, blockId_, outputLength_, blockNums_,
+                    secondThirdLoopLength_, formerNonIndexStride_, thirdLoopLength_, (__gm__ T*)outputGm_.GetPhyAddr(),
+                    (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
+            }
         } else if (indexedDimNum_ == DIM_NUMS_SEVEN) {
-            AscendC::Simt::VF_CALL<SimtComputeContinue<T, F, P, DIM_NUMS_SEVEN, T2, SMALL_THREAD_DIM_LAUNCH_BOUND>>(
-                AscendC::Simt::Dim3{SMALL_THREAD_DIM_LAUNCH_BOUND}, blockId_, outputLength_, blockNums_,
-                secondThirdLoopLength_, formerNonIndexStride_, thirdLoopLength_, (__gm__ T*)outputGm_.GetPhyAddr(),
-                (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
+            if (isSmallIndexSize) {
+                AscendC::Simt::VF_CALL<SimtComputeContinue<T, F, P, DIM_NUMS_SEVEN, T2, SMALL_THREAD_DIM>>(
+                    AscendC::Simt::Dim3{smallThreadDim_}, blockId_, outputLength_, blockNums_,
+                    secondThirdLoopLength_, formerNonIndexStride_, thirdLoopLength_, (__gm__ T*)outputGm_.GetPhyAddr(),
+                    (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
+            } else {
+                AscendC::Simt::VF_CALL<SimtComputeContinue<T, F, P, DIM_NUMS_SEVEN, T2, SMALL_THREAD_DIM_LAUNCH_BOUND>>(
+                    AscendC::Simt::Dim3{smallThreadDim_}, blockId_, outputLength_, blockNums_,
+                    secondThirdLoopLength_, formerNonIndexStride_, thirdLoopLength_, (__gm__ T*)outputGm_.GetPhyAddr(),
+                    (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
+            }
         } else if (indexedDimNum_ == DIM_NUMS_EIGHT) {
-            AscendC::Simt::VF_CALL<SimtComputeContinue<T, F, P, DIM_NUMS_EIGHT, T2, SMALL_THREAD_DIM_LAUNCH_BOUND>>(
-                AscendC::Simt::Dim3{SMALL_THREAD_DIM_LAUNCH_BOUND}, blockId_, outputLength_, blockNums_,
-                secondThirdLoopLength_, formerNonIndexStride_, thirdLoopLength_, (__gm__ T*)outputGm_.GetPhyAddr(),
-                (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
+            if (isSmallIndexSize) {
+                AscendC::Simt::VF_CALL<SimtComputeContinue<T, F, P, DIM_NUMS_EIGHT, T2, SMALL_THREAD_DIM>>(
+                    AscendC::Simt::Dim3{smallThreadDim_}, blockId_, outputLength_, blockNums_,
+                    secondThirdLoopLength_, formerNonIndexStride_, thirdLoopLength_, (__gm__ T*)outputGm_.GetPhyAddr(),
+                    (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
+            } else {
+                AscendC::Simt::VF_CALL<SimtComputeContinue<T, F, P, DIM_NUMS_EIGHT, T2, SMALL_THREAD_DIM_LAUNCH_BOUND>>(
+                    AscendC::Simt::Dim3{smallThreadDim_}, blockId_, outputLength_, blockNums_,
+                    secondThirdLoopLength_, formerNonIndexStride_, thirdLoopLength_, (__gm__ T*)outputGm_.GetPhyAddr(),
+                    (__gm__ T*)inputXGm_.GetPhyAddr(), calcParamsPtr_);
+            }
         }
     } else {
         if (indexedDimNum_ == DIM_NUMS_ONE && nonIndexedDimNum_ == DIM_NUMS_ONE) {

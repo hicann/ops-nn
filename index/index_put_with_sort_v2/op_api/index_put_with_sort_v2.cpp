@@ -253,7 +253,7 @@ bool IsSortV2SpecialScene(const aclTensor* selfRef,
     return true;
 }
 
-bool IsSortV2Scene(const aclTensor* selfRef, const aclTensorList* indices)
+bool IsSortV2Scene(const aclTensor* selfRef, const aclTensorList* indices, const bool& accumulate)
 {
     constexpr int64_t REPEAT_DEGREE = 100;
     constexpr int64_t MEMORY_LIMIT_BYTES = 12 * 1024 * 1024;
@@ -278,6 +278,11 @@ bool IsSortV2Scene(const aclTensor* selfRef, const aclTensorList* indices)
 
     if (indexAxisNums != selfDimNum) {
         OP_LOGD("IndexPutWithSortV2 Opt skip: No Full Index!");
+        return false;
+    }
+
+    if (!accumulate) {
+        OP_LOGD("IndexPutWithSortV2 Opt skip: accumulate is false!");
         return false;
     }
 
@@ -328,7 +333,7 @@ bool IsUseSortedV2OptScene(
         return false;
     }
     // 8. sortv2优化判断
-    if (!IsSortV2PerformanceOptimal(self, indices, values) && !IsSortV2SpecialScene(self, indices, values, usePutV2SpeOpt) && !IsSortV2Scene(self, indices)) {
+    if (!IsSortV2PerformanceOptimal(self, indices, values) && !IsSortV2SpecialScene(self, indices, values, usePutV2SpeOpt) && !IsSortV2Scene(self, indices, accumulate)) {
         return false;
     }
 

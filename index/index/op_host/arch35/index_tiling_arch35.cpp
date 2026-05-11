@@ -59,6 +59,7 @@ constexpr uint32_t ASCENDC_TOOLS_WORKSPACE = 16 * 1024 * 1024;
 constexpr int32_t DIM_2 = 2;
 constexpr uint32_t INDEX_PERF_TILING_KEY = 1000;
 constexpr uint32_t INDEX_SUPPORT_INT64_TILING_KEY = 10000;
+constexpr uint32_t LARGE_SHAPE_TILING_KEY_OFFSET = 1000;
 
 uint64_t GetDataTypeInByte(gert::TilingContext* context)
 {
@@ -189,7 +190,7 @@ ge::graphStatus IndexSimtTiling::GetParamsShapeInfo()
 
 ge::graphStatus IndexSimtTiling::GetShapeAttrsInfo()
 {
-    const char *op_type = context_->GetNodeType();
+    const char* op_type = context_->GetNodeType();
     OP_CHECK_NULL_WITH_CONTEXT(context_, op_type);
     OP_LOGD("IndexSimtTiling", "tiling for %s", op_type);
     isIndexPut_ = std::string_view(op_type) == "IndexPutV2";
@@ -214,6 +215,7 @@ ge::graphStatus IndexSimtTiling::GetShapeAttrsInfo()
     if (getResult != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
+    isLargeShape_ = (inputLength_ > UINT32_MAX) || (outputLength_ > UINT32_MAX);
     return GenerateTilingKey();
 }
 
@@ -265,13 +267,16 @@ ge::graphStatus IndexSimtTiling::GenerateTilingKey()
     } else {
         tilingKey_ = tilingKey * factor;
     }
-    OP_LOGD("IndexSimt", "tiling key is %u", tilingKey_);
     auto idxInput = context_->GetInputDesc(isIndexPut_ ? INDICES_IDX + 1 : INDICES_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, idxInput);
     auto idxDtype = idxInput->GetDataType();
     if (idxDtype == ge::DT_INT64) {
         tilingKey_ += IDX_TYPE_TILING_KEY_WEIGHT;
     }
+    if (isLargeShape_) {
+        tilingKey_ += LARGE_SHAPE_TILING_KEY_OFFSET;
+    }
+    OP_LOGD("IndexSimt", "tiling key is %u", tilingKey_);
     return ge::GRAPH_SUCCESS;
 }
 
