@@ -25,8 +25,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_MAX_THREAD_NUM) inline void ComputeB32(
     const int32_t p, __gm__ T_IDX* x1Indices, __gm__ T_VAL* x1Values, __gm__ T_VAL* x2, __gm__ T_VAL* y)
 {
     // 总共有usedCoreNum*ThreadNum个线程，每个线程所在的位置为currCoreIdx*ThreadNum+LocalThreadIdx
-    for (int32_t elemIdx = currCoreIdx * Simt::GetThreadNum() + Simt::GetThreadIdx(); elemIdx < elemNum;
-         elemIdx += usedCoreNum * Simt::GetThreadNum()) {
+    for (int32_t elemIdx = currCoreIdx * blockDim.x + threadIdx.x; elemIdx < elemNum;
+         elemIdx += usedCoreNum * blockDim.x) {
         // 计算索引i、j、k，用于找到v1=x1(i,k)和v2=x2(k,j)
         // i、j、k 统一转成int32类型
         int32_t x1VecIdx = elemIdx / p;
@@ -49,7 +49,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_MAX_THREAD_NUM) inline void ComputeB32(
         }
         // 累加到对应位置
         __gm__ T_VAL* outAddr = y + i * p + j;
-        Simt::AtomicAdd(outAddr, v1 * v2);
+        asc_atomic_add(outAddr, v1 * v2);
     }
 }
 
@@ -118,10 +118,10 @@ __aicore__ inline void SparseTensorDenseMatMulB32<T_IDX, T_VAL, ADJ_A, ADJ_B>::P
         __gm__ T_VAL* x1ValuesGmAddr = (__gm__ T_VAL*)x1ValuesGm_.GetPhyAddr();
         __gm__ T_VAL* x2GmAddr = (__gm__ T_VAL*)x2Gm_.GetPhyAddr();
         __gm__ T_VAL* yGmAddr = (__gm__ T_VAL*)yGm_.GetPhyAddr();
-        Simt::VF_CALL<ComputeB32<T_IDX, T_VAL, ADJ_A, ADJ_B>>(
-            Simt::Dim3{SIMT_MAX_THREAD_NUM, 1, 1}, tilingData_->computeUsedCoreNum, currCoreIdx_,
-            tilingData_->computeTotalElemNum, tilingData_->computeM, tilingData_->computeN,
-            tilingData_->computeP, x1IndicesGmAddr, x1ValuesGmAddr, x2GmAddr, yGmAddr);
+        asc_vf_call<ComputeB32<T_IDX, T_VAL, ADJ_A, ADJ_B>>(
+            dim3{SIMT_MAX_THREAD_NUM, 1, 1}, tilingData_->computeUsedCoreNum, currCoreIdx_,
+            tilingData_->computeTotalElemNum, tilingData_->computeM, tilingData_->computeN, tilingData_->computeP,
+            x1IndicesGmAddr, x1ValuesGmAddr, x2GmAddr, yGmAddr);
     }
 }
 

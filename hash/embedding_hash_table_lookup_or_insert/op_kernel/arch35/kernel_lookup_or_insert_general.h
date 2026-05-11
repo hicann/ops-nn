@@ -27,10 +27,10 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) void ComputeLookupOrInsert(
     __gm__ uint8_t* pTable, __gm__ int64_t* pKeys, __gm__ float* pValues, __ubuf__ int64_t* pThreadInsertCounts)
 {
     // 每core线程划分为(x,y)，每threadXNum个x对应1个y，共启动threadXNum*threadYNum个线程
-    uint32_t threadXIdx = static_cast<uint32_t>(Simt::GetThreadIdx<0>());
-    uint32_t threadYIdx = static_cast<uint32_t>(Simt::GetThreadIdx<1>());
-    uint32_t threadXNum = static_cast<uint32_t>(Simt::GetThreadNum<0>());
-    uint32_t threadYNum = static_cast<uint32_t>(Simt::GetThreadNum<1>());
+    uint32_t threadXIdx = static_cast<uint32_t>(threadIdx.x);
+    uint32_t threadYIdx = static_cast<uint32_t>(threadIdx.y);
+    uint32_t threadXNum = static_cast<uint32_t>(blockDim.x);
+    uint32_t threadYNum = static_cast<uint32_t>(blockDim.y);
 
     int64_t insertCounts = 0; // 各线程自有变量，记录insert的次数
     for (uint32_t i = threadYIdx + blockIdx * threadYNum; i < keyNum; i += blockNum * threadYNum) {
@@ -63,14 +63,14 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) void ComputeLookupOrInsert(
                 detectCounts++;
 
                 // 由于AtmoicCas限制，用int32来cas第20~23字节的BIG_ENDIAN_ONE那个位置
-                const int32_t casOrigFlag = AscendC::Simt::AtomicCas(
+                const int32_t casOrigFlag = asc_atomic_cas(
                     reinterpret_cast<__gm__ int32_t*>(pCurrBucket + TABLE_FLAG_OFFSET_FOR_B32), static_cast<int32_t>(0),
                     BIG_ENDIAN_ONE);
 
                 if (casOrigFlag == 0) {
                     // 可以插入
                     *reinterpret_cast<__gm__ int64_t*>(pCurrBucket) = insertKey;
-                    Simt::ThreadFence();
+                    __threadfence();
                     *reinterpret_cast<__gm__ int32_t*>(pCurrBucket + TABLE_STATE_OFFSET) = 1;
                     succ = true;
                     insertCounts++;
@@ -89,7 +89,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) void ComputeLookupOrInsert(
                             *reinterpret_cast<__gm__ volatile int32_t*>(pCurrBucket + TABLE_FLAG_OFFSET_FOR_B32);
                         if ((currFlag & EVICTED_FLAG_MASK) != 0) {
                             auto newFlag = currFlag ^ EVICTED_FLAG_MASK;
-                            auto oldFlag = Simt::AtomicCas(
+                            auto oldFlag = asc_atomic_cas(
                                 reinterpret_cast<__gm__ int32_t*>(pCurrBucket + TABLE_FLAG_OFFSET_FOR_B32),
                                 static_cast<int32_t>(currFlag), newFlag);
                             if ((oldFlag & EVICTED_FLAG_MASK) != 0) {
@@ -112,7 +112,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) void ComputeLookupOrInsert(
             pCurrBucket = pTable + currIdx * bucketSize;
             if (threadXIdx == 0) {
                 //  由控制线程来执行bucket的counter++操作
-                Simt::AtomicAdd(
+                asc_atomic_add(
                     reinterpret_cast<__gm__ int64_t*>(pCurrBucket + COUNTER_OFFSET), static_cast<int64_t>(1));
             }
             for (size_t j = threadXIdx; j < embeddingDim; j += threadXNum) {
@@ -141,15 +141,15 @@ public:
             reinterpret_cast<__ubuf__ int64_t*>(threadInsertCountsLocal.GetPhyAddr());
 
         if (filterKeyFlag_) {
-            Simt::VF_CALL<ComputeLookupOrInsert<true>>(
-                Simt::Dim3{threadXNum_, threadYNum_}, blockIdx_, blockNum_, bucketSize_, tableSize_, embeddingDim_,
-                keyNum_, defaultKeyOrValue_, defaultKey_, defaultValue_, filterKey_, pTableHandle_, pTable_, pKeys_,
-                pValues_, pThreadInsertCounts);
+            asc_vf_call<ComputeLookupOrInsert<true>>(
+                dim3{threadXNum_, threadYNum_}, blockIdx_, blockNum_, bucketSize_, tableSize_, embeddingDim_, keyNum_,
+                defaultKeyOrValue_, defaultKey_, defaultValue_, filterKey_, pTableHandle_, pTable_, pKeys_, pValues_,
+                pThreadInsertCounts);
         } else {
-            Simt::VF_CALL<ComputeLookupOrInsert<false>>(
-                Simt::Dim3{threadXNum_, threadYNum_}, blockIdx_, blockNum_, bucketSize_, tableSize_, embeddingDim_,
-                keyNum_, defaultKeyOrValue_, defaultKey_, defaultValue_, filterKey_, pTableHandle_, pTable_, pKeys_,
-                pValues_, pThreadInsertCounts);
+            asc_vf_call<ComputeLookupOrInsert<false>>(
+                dim3{threadXNum_, threadYNum_}, blockIdx_, blockNum_, bucketSize_, tableSize_, embeddingDim_, keyNum_,
+                defaultKeyOrValue_, defaultKey_, defaultValue_, filterKey_, pTableHandle_, pTable_, pKeys_, pValues_,
+                pThreadInsertCounts);
         }
 
         // SIMD汇总写回tableHandle的那几个统计字段的值

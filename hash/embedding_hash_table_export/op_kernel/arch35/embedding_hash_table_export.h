@@ -18,6 +18,8 @@
 
 #include "kernel_operator.h"
 #include "kernel_operator_list_tensor_intf.h"
+#include "simt_api/asc_simt.h"
+#include "simt_api/device_atomic_functions.h"
 
 namespace EmbeddingHashTableExportAicore {
 using namespace AscendC;
@@ -176,7 +178,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(1) inline void SaveToCoreSyncWorkspace(
         return;
     }
 
-    if (Simt::GetThreadIdx() == 0) {
+    if (threadIdx.x == 0) {
         coreSyncWorkspaceGm[tableIndx * maxCoreNum + blockIdx] = threadCountKeysToExportUB[maxThreadNum];
     }
 }
@@ -190,8 +192,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(1) inline void AtomicSubToGm(
         return;
     }
 
-    if (Simt::GetThreadIdx() == 0) {
-        Simt::AtomicSub(tableHandleStructGm + SIZE_ALL_NO_EXPORT_IDX, threadCountReFreshExportFlagUB[maxThreadNum]);
+    if (threadIdx.x == 0) {
+        asc_atomic_sub(tableHandleStructGm + SIZE_ALL_NO_EXPORT_IDX, threadCountReFreshExportFlagUB[maxThreadNum]);
     }
 }
 
@@ -205,20 +207,18 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_LAUNCH_BOUND) inline void CountP
         return;
     }
 
-    if (Simt::GetThreadIdx() >= maxThreadNum) {
+    if (threadIdx.x >= maxThreadNum) {
         return;
     }
 
-    int64_t curThreadProcessKeys =
-        Simt::GetThreadIdx() < (usedThreadNum - 1) ? normalThreadProcessKeys : tailThreadProcessKeys;
+    int64_t curThreadProcessKeys = threadIdx.x < (usedThreadNum - 1) ? normalThreadProcessKeys : tailThreadProcessKeys;
     int64_t keysNumToExport = 0;
-    if (Simt::GetThreadIdx() < usedThreadNum) {
+    if (threadIdx.x < usedThreadNum) {
         __gm__ uint8_t* tableAddrU8 = reinterpret_cast<__gm__ uint8_t*>(tableAddr);
 
         for (int64_t i = 0; i < curThreadProcessKeys; i++) {
             uint8_t flag = tableAddrU8
-                [keyWidthByte *
-                     (blockIdx * normalCoreProcessKeys + Simt::GetThreadIdx() * normalThreadProcessKeys + i) +
+                [keyWidthByte * (blockIdx * normalCoreProcessKeys + threadIdx.x * normalThreadProcessKeys + i) +
                  KEY_FLAG_OFFSET_OF_BYTE];
 
             if ((flag & VALID_FLAG_MASK) && !(flag & EVICTED_FLAG_MASK) &&
@@ -227,7 +227,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_LAUNCH_BOUND) inline void CountP
             }
         }
     }
-    threadCountKeysToExportUB[Simt::GetThreadIdx()] = keysNumToExport;
+    threadCountKeysToExportUB[threadIdx.x] = keysNumToExport;
 }
 
 template <typename T>
@@ -239,10 +239,10 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_LAUNCH_BOUND) inline void CalcOf
     for (int32_t i = 0; i < blockIdx; i++) {
         offset += coreSyncWorkspaceGm[tableIndx * maxCoreNum + i];
     }
-    for (int32_t i = 0; i < Simt::GetThreadIdx(); i++) {
+    for (int32_t i = 0; i < threadIdx.x; i++) {
         offset += threadCountKeysToExportUB[i];
     }
-    threadCountKeysToExportSumUB[Simt::GetThreadIdx()] = offset;
+    threadCountKeysToExportSumUB[threadIdx.x] = offset;
 }
 
 template <typename T>
@@ -258,11 +258,11 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_LAUNCH_BOUND) inline void Export
         return;
     }
 
-    if (Simt::GetThreadIdx() >= usedThreadNum) {
+    if (threadIdx.x >= usedThreadNum) {
         return;
     }
 
-    int64_t offset = threadCountKeysToExportSumUB[Simt::GetThreadIdx()];
+    int64_t offset = threadCountKeysToExportSumUB[threadIdx.x];
 
     __gm__ int64_t* tableAddrI64 = reinterpret_cast<__gm__ int64_t*>(tableAddr);
     __gm__ uint64_t* tableAddrU64 = reinterpret_cast<__gm__ uint64_t*>(tableAddr);
@@ -272,22 +272,18 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_LAUNCH_BOUND) inline void Export
     int64_t curThreadRefreshExportFlagNum = 0;
     int64_t positionIndex = 0;
 
-    int64_t curThreadProcessKeys =
-        Simt::GetThreadIdx() < (usedThreadNum - 1) ? normalThreadProcessKeys : tailThreadProcessKeys;
+    int64_t curThreadProcessKeys = threadIdx.x < (usedThreadNum - 1) ? normalThreadProcessKeys : tailThreadProcessKeys;
     for (int64_t i = 0; i < curThreadProcessKeys; i++) {
         uint8_t flag = tableAddrU8
-            [keyWidthByte * (blockIdx * normalCoreProcessKeys + Simt::GetThreadIdx() * normalThreadProcessKeys + i) +
+            [keyWidthByte * (blockIdx * normalCoreProcessKeys + threadIdx.x * normalThreadProcessKeys + i) +
              KEY_FLAG_OFFSET_OF_BYTE];
         if ((flag & VALID_FLAG_MASK) && !(flag & EVICTED_FLAG_MASK) &&
             (exportMode != 1 || !(flag & EXPORT_FLAG_MASK))) {
             int64_t key = tableAddrI64
-                [keyWidthByteD8 *
-                 (blockIdx * normalCoreProcessKeys + Simt::GetThreadIdx() * normalThreadProcessKeys + i)];
+                [keyWidthByteD8 * (blockIdx * normalCoreProcessKeys + threadIdx.x * normalThreadProcessKeys + i)];
             outKeyGm[offset + positionIndex] = key;
             uint64_t counter = tableAddrU64
-                [keyWidthByteD8 *
-                     (blockIdx * normalCoreProcessKeys + Simt::GetThreadIdx() * normalThreadProcessKeys + i) +
-                 1];
+                [keyWidthByteD8 * (blockIdx * normalCoreProcessKeys + threadIdx.x * normalThreadProcessKeys + i) + 1];
             outCounterGm[offset + positionIndex] = counter;
 
             if (FILTER_FLAG_MASK & flag) {
@@ -297,22 +293,20 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_LAUNCH_BOUND) inline void Export
             }
             for (int64_t j = 0; j < embeddingDims; j++) {
                 outValueGm[(offset + positionIndex) * embeddingDims + j] = tableAddrT
-                    [keyWidthByteDT *
-                         (blockIdx * normalCoreProcessKeys + Simt::GetThreadIdx() * normalThreadProcessKeys + i) +
+                    [keyWidthByteDT * (blockIdx * normalCoreProcessKeys + threadIdx.x * normalThreadProcessKeys + i) +
                      KEY_VALUE_OFFSET_OF_BYTE / sizeof(T) + j];
             }
             // 刷新导出flag, 只在第一次导出时刷新
             if (!(flag & EXPORT_FLAG_MASK)) {
                 tableAddrU8
-                    [keyWidthByte *
-                         (blockIdx * normalCoreProcessKeys + Simt::GetThreadIdx() * normalThreadProcessKeys + i) +
+                    [keyWidthByte * (blockIdx * normalCoreProcessKeys + threadIdx.x * normalThreadProcessKeys + i) +
                      KEY_FLAG_OFFSET_OF_BYTE] |= EXPORT_FLAG_MASK;
                 curThreadRefreshExportFlagNum++;
             }
             positionIndex++;
         }
     }
-    threadCountReFreshExportFlagUB[Simt::GetThreadIdx()] = curThreadRefreshExportFlagNum;
+    threadCountReFreshExportFlagUB[threadIdx.x] = curThreadRefreshExportFlagNum;
 }
 
 template <typename T>
@@ -322,24 +316,23 @@ __aicore__ inline void EmbeddingHashTableExport<T>::Process()
         Duplicate(threadCountKeysToExportUB_, int64_t(0), maxThreadNum_ * BUFFER_LENGTH);
         Duplicate(threadCountReFreshExportFlagUB_, int64_t(0), maxThreadNum_ * BUFFER_LENGTH);
         SingleTableCompute(tableIndx);
-        Simt::VF_CALL<CountPerThread<T>>(
-            Simt::Dim3{static_cast<uint32_t>(maxThreadNum_)}, maxCoreNum_, maxThreadNum_, blockIdx_,
-            usedCoreNum_, usedThreadNum_, normalThreadProcessKeys_, tailThreadProcessKeys_, tableAddr_, keyWidthByte_,
+        asc_vf_call<CountPerThread<T>>(
+            dim3{static_cast<uint32_t>(maxThreadNum_)}, maxCoreNum_, maxThreadNum_, blockIdx_, usedCoreNum_,
+            usedThreadNum_, normalThreadProcessKeys_, tailThreadProcessKeys_, tableAddr_, keyWidthByte_,
             normalCoreProcessKeys_, exportMode_, (__ubuf__ int64_t*)threadCountKeysToExportUB_.GetPhyAddr());
         ReduceSum<int64_t>(
             threadCountKeysToExportUB_[maxThreadNum_], threadCountKeysToExportUB_, threadCountReFreshExportFlagUB_,
             usedThreadNum_);
-        Simt::VF_CALL<SaveToCoreSyncWorkspace<T>>(
-            Simt::Dim3{static_cast<uint32_t>(1)}, maxCoreNum_, maxThreadNum_, tableIndx, blockIdx_,
-            usedCoreNum_, coreSyncWorkspaceGm_.GetPhyAddr(0),
-            (__ubuf__ int64_t*)threadCountKeysToExportUB_.GetPhyAddr());
+        asc_vf_call<SaveToCoreSyncWorkspace<T>>(
+            dim3{static_cast<uint32_t>(1)}, maxCoreNum_, maxThreadNum_, tableIndx, blockIdx_, usedCoreNum_,
+            coreSyncWorkspaceGm_.GetPhyAddr(0), (__ubuf__ int64_t*)threadCountKeysToExportUB_.GetPhyAddr());
         SyncAll();
-        Simt::VF_CALL<CalcOffset<T>>(
-            Simt::Dim3{static_cast<uint32_t>(maxThreadNum_)}, maxCoreNum_, maxThreadNum_, tableIndx,
-            blockIdx_, coreSyncWorkspaceGm_.GetPhyAddr(0), (__ubuf__ int64_t*)threadCountKeysToExportUB_.GetPhyAddr(),
+        asc_vf_call<CalcOffset<T>>(
+            dim3{static_cast<uint32_t>(maxThreadNum_)}, maxCoreNum_, maxThreadNum_, tableIndx, blockIdx_,
+            coreSyncWorkspaceGm_.GetPhyAddr(0), (__ubuf__ int64_t*)threadCountKeysToExportUB_.GetPhyAddr(),
             (__ubuf__ int64_t*)threadCountKeysToExportSumUB_.GetPhyAddr());
-        Simt::VF_CALL<ExportPerThread<T>>(
-            Simt::Dim3{static_cast<uint32_t>(maxThreadNum_)}, blockIdx_, usedCoreNum_, usedThreadNum_,
+        asc_vf_call<ExportPerThread<T>>(
+            dim3{static_cast<uint32_t>(maxThreadNum_)}, blockIdx_, usedCoreNum_, usedThreadNum_,
             normalThreadProcessKeys_, tailThreadProcessKeys_, tableAddr_, keyWidthByte_, normalCoreProcessKeys_,
             exportMode_, keyWidthByteD8_, keyWidthByteDT_, embeddingDims_, coreSyncWorkspaceGm_.GetPhyAddr(0),
             (__ubuf__ int64_t*)threadCountKeysToExportUB_.GetPhyAddr(), outKeyGm_.GetPhyAddr(0),
@@ -349,8 +342,8 @@ __aicore__ inline void EmbeddingHashTableExport<T>::Process()
         ReduceSum<int64_t>(
             threadCountReFreshExportFlagUB_[maxThreadNum_], threadCountReFreshExportFlagUB_, threadCountKeysToExportUB_,
             usedThreadNum_);
-        Simt::VF_CALL<AtomicSubToGm<T>>(
-            Simt::Dim3{static_cast<uint32_t>(1)}, maxCoreNum_, maxThreadNum_, blockIdx_, usedCoreNum_,
+        asc_vf_call<AtomicSubToGm<T>>(
+            dim3{static_cast<uint32_t>(1)}, maxCoreNum_, maxThreadNum_, blockIdx_, usedCoreNum_,
             tableHandleStructGm_.GetPhyAddr(0), (__ubuf__ int64_t*)threadCountReFreshExportFlagUB_.GetPhyAddr());
         SyncAll();
     }

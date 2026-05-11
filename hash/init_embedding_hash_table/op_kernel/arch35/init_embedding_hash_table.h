@@ -17,6 +17,7 @@
 #define OPS_BUILT_IN_TBE_IMPL_ASCENDC_INIT_EMBEDDING_HASHTABLE_INIT_EMBEDDING_HASH_TABLE_H
 
 #include "kernel_operator.h"
+#include "simt_api/asc_simt.h"
 
 namespace InitEmbeddingHashTable {
 using namespace AscendC;
@@ -43,8 +44,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void InitCompute(
     uint32_t blockIdx, uint32_t blockNum, __gm__ int64_t* tableHanldeGm, __gm__ Tvalue* sampledValuesGm,
     __gm__ uint8_t* outputGm)
 {
-    for (int64_t i = blockIdx * Simt::GetThreadNum() + Simt::GetThreadIdx(); i < bucketSize;
-         i += blockNum * Simt::GetThreadNum()) {
+    for (int64_t i = blockIdx * blockDim.x + threadIdx.x; i < bucketSize; i += blockNum * blockDim.x) {
         // SetKey(-1)
         int64_t keyOffset = (bucketLength * i + KEY_OFFSET) * INT64_PER_BYTE;
         __gm__ int64_t* key = reinterpret_cast<__gm__ int64_t*>(outputGm + keyOffset);
@@ -99,8 +99,8 @@ public:
     }
     __aicore__ inline void Process()
     {
-        Simt::VF_CALL<InitCompute<Tkey, Tvalue>>(
-            Simt::Dim3{static_cast<uint32_t>(useThreadNum)}, embeddingDim, bucketSize, bucketLength, initializerMode,
+        asc_vf_call<InitCompute<Tkey, Tvalue>>(
+            dim3{static_cast<uint32_t>(useThreadNum)}, embeddingDim, bucketSize, bucketLength, initializerMode,
             constantValue, blockIdx, blockNum, tableHanldeGm.GetPhyAddr(0), sampledValuesGm.GetPhyAddr(0),
             outputGm.GetPhyAddr(0));
     }

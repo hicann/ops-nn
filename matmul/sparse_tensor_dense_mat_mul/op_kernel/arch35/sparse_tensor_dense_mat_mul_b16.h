@@ -110,8 +110,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_MAX_THREAD_NUM) inline void ComputeB16(
     __gm__ T_SUM* workspaceGmAddr)
 {
     // 总共有usedCoreNum*ThreadNum个线程，每个线程所在的位置为currCoreIdx*ThreadNum+LocalThreadIdx
-    for (int32_t elemIdx = currCoreIdx * Simt::GetThreadNum() + Simt::GetThreadIdx(); elemIdx < elemNum;
-         elemIdx += usedCoreNum * Simt::GetThreadNum()) {
+    for (int32_t elemIdx = currCoreIdx * blockDim.x + threadIdx.x; elemIdx < elemNum;
+         elemIdx += usedCoreNum * blockDim.x) {
         // 计算索引i、j、k，用于找到v1=x1(i,k)和v2=x2GmAddr(k,j)
         // i、j、k 统一转成int32类型
         int32_t x1VecIdx = elemIdx / p;
@@ -132,7 +132,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_MAX_THREAD_NUM) inline void ComputeB16(
         }
         // 累加到对应位置
         __gm__ T_SUM* outAddr = workspaceGmAddr + i * p + j;
-        Simt::AtomicAdd(outAddr, v1 * v2);
+        asc_atomic_add(outAddr, v1 * v2);
     }
 }
 
@@ -144,10 +144,10 @@ __aicore__ inline void SparseTensorDenseMatMulB16<T_IDX, T_VAL, T_SUM, ADJ_A, AD
         __gm__ T_VAL* x1ValuesGmAddr = (__gm__ T_VAL*)x1ValuesGm_.GetPhyAddr();
         __gm__ T_VAL* x2GmAddr = (__gm__ T_VAL*)x2Gm_.GetPhyAddr();
         __gm__ T_SUM* workspaceGmAddr = (__gm__ T_SUM*)workspaceGm_.GetPhyAddr();
-        Simt::VF_CALL<ComputeB16<T_IDX, T_VAL, T_SUM, ADJ_A, ADJ_B>>(
-            Simt::Dim3{SIMT_MAX_THREAD_NUM, 1, 1}, tilingData_->computeUsedCoreNum, blockIdx_,
-            tilingData_->computeTotalElemNum, tilingData_->computeM, tilingData_->computeN,
-            tilingData_->computeP, x1IndicesGmAddr, x1ValuesGmAddr, x2GmAddr, workspaceGmAddr);
+        asc_vf_call<ComputeB16<T_IDX, T_VAL, T_SUM, ADJ_A, ADJ_B>>(
+            dim3{SIMT_MAX_THREAD_NUM, 1, 1}, tilingData_->computeUsedCoreNum, blockIdx_,
+            tilingData_->computeTotalElemNum, tilingData_->computeM, tilingData_->computeN, tilingData_->computeP,
+            x1IndicesGmAddr, x1ValuesGmAddr, x2GmAddr, workspaceGmAddr);
     }
     SyncAll();
     if (blockIdx_ < tilingData_->initAndOutUsedCoreNum) {

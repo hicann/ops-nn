@@ -18,6 +18,8 @@
 #include "kernel_operator.h"
 #include "kernel_operator_list_tensor_intf.h"
 #include "../../inc/hashtable_common.h"
+#include "simt_api/asc_simt.h"
+#include "simt_api/device_atomic_functions.h"
 
 namespace EmbeddingHashTable {
 using namespace AscendC;
@@ -155,8 +157,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SingleT
 {   
     __gm__ int64_t* tableHandle =
             reinterpret_cast<__gm__ int64_t*>(reinterpret_cast<__gm__ uint8_t*>(tableHandlesGm[tableIdx]));
-    for (int64_t i = blockIdx * Simt::GetThreadNum() + Simt::GetThreadIdx(); i < keyNum;
-         i = i + blockNum * Simt::GetThreadNum()) {
+    for (int64_t i = blockIdx * blockDim.x + threadIdx.x; i < keyNum; i = i + blockNum * blockDim.x) {
         int64_t insertKey = keyGm[i];
         uint32_t hashValue = Hashtbl::MurmurHash3(keyGm + i, INT64_TYPE_BYTES, 0);
         int64_t hashTabIdx = hashValue % bucketSize;
@@ -170,14 +171,14 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SingleT
                 break;
             }
             // 插入key值序列
-            const int32_t originalFlag = Simt::AtomicCas(
+            const int32_t originalFlag = asc_atomic_cas(
                 reinterpret_cast<__gm__ int32_t*>(tableGm + blockOffset + TABLE_FLAG_OFFSET), static_cast<int32_t>(0),
                 BIG_ENDIAN_ONE);
 
             int64_t keyOffset = blockOffset + (KEY_OFFSET * INT64_TYPE_BYTES);
             if (0 == originalFlag) {
                 *reinterpret_cast<__gm__ int64_t*>(tableGm + keyOffset) = insertKey;
-                Simt::ThreadFence();
+                __threadfence();
                 *reinterpret_cast<__gm__ int32_t*>(tableGm + keyOffset + TABLE_STATE_OFFSET) = 1;
                 isInsertSucc = true;
                 isNewKey = true;
@@ -203,13 +204,13 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SingleT
             // 更新tableHandle struct
             if (isNewKey) {
                 // 刷新total_hash_addr地址 --> (key不存在， tablesize++, noexportsize不变)
-                AscendC::Simt::AtomicAdd(tableHandle + HANDLE_SIZE_ALL_OFFSET, INT64_ONE);
+                asc_atomic_add(tableHandle + HANDLE_SIZE_ALL_OFFSET, INT64_ONE);
             } else {
                 // 刷新no_export_hash_addr地址 --> (key存在， tablesize不变, noexportsize--)
                 int64_t flagOffset = blockOffset + ((FLAG_OFFSET + 1) * INT64_TYPE_BYTES - 1);
                 __gm__ uint8_t* filterFlagValue = reinterpret_cast<__gm__ uint8_t*>(tableGm + flagOffset);
                 if (!(*filterFlagValue & EXPORT_FLAG_MASK)) { // means change flag from 0 to 1(1 means cannot be exported)
-                    AscendC::Simt::AtomicSub(tableHandle + HANDLE_SIZE_ALL_NOEXPORT_OFFSET, INT64_ONE); 
+                    asc_atomic_sub(tableHandle + HANDLE_SIZE_ALL_NOEXPORT_OFFSET, INT64_ONE);
                 }
             }
             // 插入counter值
@@ -262,9 +263,9 @@ __aicore__ inline void EmbeddingHashTableImport<T>::Process()
         filterFlagGm_.SetGlobalBuffer(reinterpret_cast<__gm__ uint8_t*>(filterFlagsListGm_.GetDataPtr<uint8_t>(idx)));
         valueGm_.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(valuesListGm_.GetDataPtr<T>(idx)));
 
-        Simt::VF_CALL<SingleTableImportCompute<T>>(
-            Simt::Dim3{static_cast<uint32_t>(THREAD_NUM)}, idx, keyNum, embeddingDim_, blockSize_, bucketSize_,
-            bitWidth_, unusedKey_, blockIdx_, blockNum_, tableHandlesGm_.GetPhyAddr(0), keyGm_.GetPhyAddr(0),
+        asc_vf_call<SingleTableImportCompute<T>>(
+            dim3{static_cast<uint32_t>(THREAD_NUM)}, idx, keyNum, embeddingDim_, blockSize_, bucketSize_, bitWidth_,
+            unusedKey_, blockIdx_, blockNum_, tableHandlesGm_.GetPhyAddr(0), keyGm_.GetPhyAddr(0),
             counterGm_.GetPhyAddr(0), filterFlagGm_.GetPhyAddr(0), valueGm_.GetPhyAddr(0), tableGm_.GetPhyAddr(0));
     }
 }

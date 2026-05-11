@@ -13,6 +13,8 @@
 
 #include "kernel_operator.h"
 #include "embedding_common.h"
+#include "simt_api/asc_simt.h"
+#include "simt_api/math_functions.h"
 
 static constexpr uint8_t VALID_FLAG_MASK = 0b00000001;
 
@@ -25,10 +27,10 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(EMBEDDING_THREAD_NUM) inline void ComputeAda
     __gm__ T* gmMaxGradNorm, __gm__ T* gmMOut, __gm__ T* gmVOut, __gm__ T* gmBeta1PowerOut, __gm__ T* gmBeta2PowerOut,
     __gm__ T* gmMaxGradNormOut)
 {
-    int32_t threadXIdx = Simt::GetThreadIdx<0>();
-    int32_t threadYIdx = Simt::GetThreadIdx<1>();
-    int32_t threadXNum = Simt::GetThreadNum<0>();
-    int32_t threadYNum = Simt::GetThreadNum<1>();
+    int32_t threadXIdx = threadIdx.x;
+    int32_t threadYIdx = threadIdx.y;
+    int32_t threadXNum = blockDim.x;
+    int32_t threadYNum = blockDim.y;
 
     int64_t tableAddr = *(reinterpret_cast<__gm__ int64_t*>(gmTableIn[0]));
     __gm__ uint8_t *table = reinterpret_cast<__gm__ uint8_t*>(tableAddr);
@@ -101,10 +103,10 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(EMBEDDING_THREAD_NUM) inline void ComputeAda
 
                 float denom = 1.0;
                 if (amsgrad != 0) {
-                    maxGradNormLocal = Simt::Max(maxGradNormLocal, vOutLocal);
-                    denom = Simt::Sqrt(-maxGradNormLocal / (beta2PowerLocal + (-1))) + epsilonLocal;
+                    maxGradNormLocal = fmaxf(maxGradNormLocal, vOutLocal);
+                    denom = sqrtf(-maxGradNormLocal / (beta2PowerLocal + (-1))) + epsilonLocal;
                 } else {
-                    denom = Simt::Sqrt(-vOutLocal / (beta2PowerLocal + (-1))) + epsilonLocal;
+                    denom = sqrtf(-vOutLocal / (beta2PowerLocal + (-1))) + epsilonLocal;
                 }
 
                 value = value + (lrLocal * mOutLocal / (beta1PowerLocal + (-1))) / denom;
@@ -183,8 +185,8 @@ public:
 
     __aicore__ inline void Process()
     {
-        Simt::VF_CALL<ComputeAdamW<T>>(
-            Simt::Dim3{static_cast<uint32_t>(blockX_), static_cast<uint32_t>(blockY_)}, tableSize_, keyNum_, unusedKey,
+        asc_vf_call<ComputeAdamW<T>>(
+            dim3{static_cast<uint32_t>(blockX_), static_cast<uint32_t>(blockY_)}, tableSize_, keyNum_, unusedKey,
             bucketSizeByte, xLoopSize_, embeddingDim_, maximize_, amsgrad_, gmTableIn_.GetPhyAddr(0),
             gmKeys_.GetPhyAddr(0), gmM_.GetPhyAddr(0), gmV_.GetPhyAddr(0), gmBeta1Power_.GetPhyAddr(0),
             gmBeta2Power_.GetPhyAddr(0), gmLr_.GetPhyAddr(0), gmWeightDecay_.GetPhyAddr(0), gmBeta1_.GetPhyAddr(0),

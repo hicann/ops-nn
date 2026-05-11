@@ -17,6 +17,9 @@
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
 #include "sparse_tensor_dense_mat_mul_tiling_def.h"
+#include "simt_api/asc_fp16.h"
+#include "simt_api/asc_simt.h"
+#include "simt_api/device_atomic_functions.h"
 
 namespace SparseTensorDenseMatMul {
 
@@ -25,4 +28,3 @@ constexpr int32_t BUFFER_NUM = 2;
 constexpr int32_t INDICES_DIM_1 = 2;
 
 } // namespace SparseTensorDenseMatMul
-

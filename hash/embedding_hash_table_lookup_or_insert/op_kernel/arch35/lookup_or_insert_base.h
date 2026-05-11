@@ -19,6 +19,8 @@
 #include "op_kernel/math_util.h"
 #include "op_kernel/platform_util.h"
 #include "../../inc/hashtable_common.h"
+#include "simt_api/asc_simt.h"
+#include "simt_api/device_atomic_functions.h"
 
 namespace Hashtbl {
 using namespace AscendC;
