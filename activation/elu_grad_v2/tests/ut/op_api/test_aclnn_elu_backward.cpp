@@ -961,11 +961,151 @@ TEST_F(l2_elu_backward_test, l2_elu_backward_normal_uncontiguous)
         aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
         OUTPUT(gradInputDesc));
 
-    // only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACLNN_SUCCESS);
 
-    // precision simulate
+    ut.TestPrecision();
+}
+
+TEST_F(l2_elu_backward_test, l2_elu_backward_normal_large_shape)
+{
+    auto gradOutputDesc = TensorDesc({1024, 1024}, ACL_FLOAT, ACL_FORMAT_ND);
+    float alpha = 1.0;
+    auto alphaDesc = ScalarDesc(alpha);
+    float scale = 1.0;
+    auto scaleDesc = ScalarDesc(scale);
+    float inputScale = 1.0;
+    auto inputScaleDesc = ScalarDesc(inputScale);
+    bool isResultDesc = true;
+    auto selfOrResultDesc = TensorDesc({1024, 1024}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto gradInputDesc = TensorDesc({1024, 1024}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(
+        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+        OUTPUT(gradInputDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+
+    ut.TestPrecision();
+}
+
+TEST_F(l2_elu_backward_test, l2_elu_backward_normal_5d_shape)
+{
+    auto gradOutputDesc = TensorDesc({2, 4, 8, 16, 32}, ACL_FLOAT16, ACL_FORMAT_NCDHW);
+    float alpha = 1.2;
+    auto alphaDesc = ScalarDesc(alpha);
+    float scale = 1.0;
+    auto scaleDesc = ScalarDesc(scale);
+    float inputScale = 1.0;
+    auto inputScaleDesc = ScalarDesc(inputScale);
+    bool isResultDesc = true;
+    auto selfOrResultDesc = TensorDesc({2, 4, 8, 16, 32}, ACL_FLOAT16, ACL_FORMAT_NCDHW);
+    auto gradInputDesc = TensorDesc({2, 4, 8, 16, 32}, ACL_FLOAT16, ACL_FORMAT_NCDHW);
+
+    auto ut = OP_API_UT(
+        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+        OUTPUT(gradInputDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+
+    ut.TestPrecision();
+}
+
+TEST_F(l2_elu_backward_test, l2_elu_backward_normal_scalar_shape)
+{
+    auto gradOutputDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND);
+    float alpha = 1.0;
+    auto alphaDesc = ScalarDesc(alpha);
+    float scale = 1.0;
+    auto scaleDesc = ScalarDesc(scale);
+    float inputScale = 1.0;
+    auto inputScaleDesc = ScalarDesc(inputScale);
+    bool isResultDesc = true;
+    auto selfOrResultDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto gradInputDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(
+        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+        OUTPUT(gradInputDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+
+    ut.TestPrecision();
+}
+
+TEST_F(l2_elu_backward_test, l2_elu_backward_normal_with_specific_values)
+{
+    auto gradOutputDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{0.5, -0.5, 1.0, -1.0});
+    float alpha = 1.0;
+    auto alphaDesc = ScalarDesc(alpha);
+    float scale = 1.0;
+    auto scaleDesc = ScalarDesc(scale);
+    float inputScale = 1.0;
+    auto inputScaleDesc = ScalarDesc(inputScale);
+    bool isResultDesc = true;
+    auto selfOrResultDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{0.1, -0.1, 0.05, -0.05});
+    auto gradInputDesc = TensorDesc({4}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(
+        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+        OUTPUT(gradInputDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+
+    ut.TestPrecision();
+}
+
+TEST_F(l2_elu_backward_test, l2_elu_backward_abnormal_dim_gt_9)
+{
+    auto gradOutputDesc = TensorDesc({2, 2, 2, 2, 2, 2, 2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_ND);
+    float alpha = 1.0;
+    auto alphaDesc = ScalarDesc(alpha);
+    float scale = 1.0;
+    auto scaleDesc = ScalarDesc(scale);
+    float inputScale = 1.0;
+    auto inputScaleDesc = ScalarDesc(inputScale);
+    bool isResultDesc = true;
+    auto selfOrResultDesc = TensorDesc({2, 2, 2, 2, 2, 2, 2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto gradInputDesc = TensorDesc({2, 2, 2, 2, 2, 2, 2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(
+        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+        OUTPUT(gradInputDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_elu_backward_test, l2_elu_backward_normal_alpha_zero)
+{
+    auto gradOutputDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
+    float alpha = 0.0;
+    auto alphaDesc = ScalarDesc(alpha);
+    float scale = 1.0;
+    auto scaleDesc = ScalarDesc(scale);
+    float inputScale = 1.0;
+    auto inputScaleDesc = ScalarDesc(inputScale);
+    bool isResultDesc = true;
+    auto selfOrResultDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto gradInputDesc = TensorDesc({2}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(
+        aclnnEluBackward, INPUT(gradOutputDesc, alphaDesc, scaleDesc, inputScaleDesc, isResultDesc, selfOrResultDesc),
+        OUTPUT(gradInputDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+
     ut.TestPrecision();
 }

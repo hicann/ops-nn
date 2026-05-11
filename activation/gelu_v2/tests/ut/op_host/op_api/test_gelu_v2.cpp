@@ -256,3 +256,160 @@ TEST_F(l2GeluV2Test, l2_gelu_v2_test_018)
     aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
 }
+
+TEST_F(l2GeluV2Test, l2_gelu_v2_test_019_large_shape)
+{
+    auto xDesc = TensorDesc({1024, 1024}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto yDesc = TensorDesc({1024, 1024}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.01, 0.01);
+
+    auto ut = OP_API_UT(aclnnGeluV2, INPUT(xDesc, 0), OUTPUT(yDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
+
+    ut.TestPrecision();
+}
+
+TEST_F(l2GeluV2Test, l2_gelu_v2_test_020_5d_shape)
+{
+    auto xDesc = TensorDesc({2, 4, 8, 16, 32}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto yDesc = TensorDesc({2, 4, 8, 16, 32}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.01, 0.01);
+
+    auto ut = OP_API_UT(aclnnGeluV2, INPUT(xDesc, 1), OUTPUT(yDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
+
+    ut.TestPrecision();
+}
+
+TEST_F(l2GeluV2Test, l2_gelu_v2_test_021_scalar)
+{
+    auto xDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto yDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.01, 0.01);
+
+    auto ut = OP_API_UT(aclnnGeluV2, INPUT(xDesc, 0), OUTPUT(yDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
+
+    ut.TestPrecision();
+}
+
+TEST_F(l2GeluV2Test, l2_gelu_v2_test_022_8d_shape)
+{
+    auto xDesc = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto yDesc = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.01, 0.01);
+
+    auto ut = OP_API_UT(aclnnGeluV2, INPUT(xDesc, 0), OUTPUT(yDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
+
+    ut.TestPrecision();
+}
+
+TEST_F(l2GeluV2Test, l2_gelu_v2_test_023_dim_gt_8)
+{
+    auto xDesc = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8, 9}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto yDesc = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8, 9}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnGeluV2, INPUT(xDesc, 0), OUTPUT(yDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2GeluV2Test, l2_gelu_v2_test_024_int8_dtype)
+{
+    auto xDesc = TensorDesc({2, 3}, ACL_INT8, ACL_FORMAT_ND);
+    auto yDesc = TensorDesc({2, 3}, ACL_INT8, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnGeluV2, INPUT(xDesc, 0), OUTPUT(yDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2GeluV2Test, l2_gelu_v2_test_025_uint8_dtype)
+{
+    auto xDesc = TensorDesc({2, 3}, ACL_UINT8, ACL_FORMAT_ND);
+    auto yDesc = TensorDesc({2, 3}, ACL_UINT8, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnGeluV2, INPUT(xDesc, 0), OUTPUT(yDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2GeluV2Test, l2_gelu_v2_test_026_inplace_float)
+{
+    auto xDesc = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+
+    auto ut = OP_API_UT(aclnnInplaceGeluV2, INPUT(xDesc, 0), OUTPUT());
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
+}
+
+TEST_F(l2GeluV2Test, l2_gelu_v2_test_027_inplace_float16)
+{
+    auto xDesc = TensorDesc({2, 4, 6, 8}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
+
+    auto ut = OP_API_UT(aclnnInplaceGeluV2, INPUT(xDesc, 1), OUTPUT());
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
+}
+
+TEST_F(l2GeluV2Test, l2_gelu_v2_test_028_1d_large)
+{
+    auto xDesc = TensorDesc({2048}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto yDesc = TensorDesc({2048}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.01, 0.01);
+
+    auto ut = OP_API_UT(aclnnGeluV2, INPUT(xDesc, 0), OUTPUT(yDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
+
+    ut.TestPrecision();
+}
+
+TEST_F(l2GeluV2Test, l2_gelu_v2_test_029_specific_values)
+{
+    auto xDesc =
+        TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{-3.0, -1.0, -0.5, 0.0, 0.5, 1.0, 2.0, 3.0});
+    auto yDesc = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.01, 0.01);
+
+    auto ut = OP_API_UT(aclnnGeluV2, INPUT(xDesc, 0), OUTPUT(yDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
+
+    ut.TestPrecision();
+}
+
+TEST_F(l2GeluV2Test, l2_gelu_v2_test_030_bf16_normal)
+{
+    auto xDesc = TensorDesc({2, 4, 6, 8}, ACL_BF16, ACL_FORMAT_ND);
+    auto yDesc = TensorDesc({2, 4, 6, 8}, ACL_BF16, ACL_FORMAT_ND).Precision(0.01, 0.01);
+
+    auto ut = OP_API_UT(aclnnGeluV2, INPUT(xDesc, 0), OUTPUT(yDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
+
+    ut.TestPrecision();
+}

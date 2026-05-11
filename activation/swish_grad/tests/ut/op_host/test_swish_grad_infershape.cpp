@@ -72,3 +72,195 @@ TEST_F(SwishGradInfershape, swish_grad_infershape_test0)
     gert::Shape expected_output_shape_0 = {2, 9};
     ASSERT_EQ(Ops::Base::ToString(*output_desc_0), Ops::Base::ToString(expected_output_shape_0));
 }
+
+TEST_F(SwishGradInfershape, swish_grad_infershape_fp32_test)
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("SwishGrad")->infer_shape;
+
+    gert::Shape gradShape = {32, 64, 128};
+    gert::Shape xShape = {32, 64, 128};
+    gert::Shape yShape = {32, 64, 128};
+    gert::Shape gradXShape = {};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&gradShape, &xShape, &yShape})
+                      .OutputShapes({&gradXShape})
+                      .NodeAttrs({{"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)}})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+}
+
+TEST_F(SwishGradInfershape, swish_grad_infershape_4d_nchw_test)
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("SwishGrad")->infer_shape;
+
+    gert::Shape gradShape = {2, 64, 112, 112};
+    gert::Shape xShape = {2, 64, 112, 112};
+    gert::Shape yShape = {2, 64, 112, 112};
+    gert::Shape gradXShape = {};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&gradShape, &xShape, &yShape})
+                      .OutputShapes({&gradXShape})
+                      .NodeAttrs({{"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)}})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
+                      .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+}
+
+TEST_F(SwishGradInfershape, swish_grad_infershape_8d_test)
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("SwishGrad")->infer_shape;
+
+    gert::Shape gradShape = {1, 2, 3, 4, 5, 6, 7, 8};
+    gert::Shape xShape = {1, 2, 3, 4, 5, 6, 7, 8};
+    gert::Shape yShape = {1, 2, 3, 4, 5, 6, 7, 8};
+    gert::Shape gradXShape = {};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&gradShape, &xShape, &yShape})
+                      .OutputShapes({&gradXShape})
+                      .NodeAttrs({{"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)}})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+}
+
+TEST_F(SwishGradInfershape, swish_grad_infershape_empty_test)
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("SwishGrad")->infer_shape;
+
+    gert::Shape gradShape = {0, 0};
+    gert::Shape xShape = {0, 0};
+    gert::Shape yShape = {0, 0};
+    gert::Shape gradXShape = {};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&gradShape, &xShape, &yShape})
+                      .OutputShapes({&gradXShape})
+                      .NodeAttrs({{"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)}})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+}
+
+TEST_F(SwishGradInfershape, swish_grad_infershape_scalar_test)
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("SwishGrad")->infer_shape;
+
+    gert::Shape gradShape = {};
+    gert::Shape xShape = {};
+    gert::Shape yShape = {};
+    gert::Shape gradXShape = {};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&gradShape, &xShape, &yShape})
+                      .OutputShapes({&gradXShape})
+                      .NodeAttrs({{"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)}})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+}
+
+TEST_F(SwishGradInfershape, swish_grad_infershape_large_test)
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("SwishGrad")->infer_shape;
+
+    gert::Shape gradShape = {1024, 1024};
+    gert::Shape xShape = {1024, 1024};
+    gert::Shape yShape = {1024, 1024};
+    gert::Shape gradXShape = {};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&gradShape, &xShape, &yShape})
+                      .OutputShapes({&gradXShape})
+                      .NodeAttrs({{"scale", Ops::NN::AnyValue::CreateFrom<float>(1.0)}})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+}

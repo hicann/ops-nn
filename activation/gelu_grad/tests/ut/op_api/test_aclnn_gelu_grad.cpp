@@ -384,8 +384,113 @@ TEST_F(l2_gelu_backward_test, gelu_backward_testcase_022_normal_broadcast_shape)
 
     auto ut = OP_API_UT(aclnnGeluBackward, INPUT(gradOutputDesc, selfDesc), OUTPUT(gradInputDesc));
 
-    // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+TEST_F(l2_gelu_backward_test, gelu_backward_testcase_023_large_shape)
+{
+    auto gradOutputDesc = TensorDesc({1024, 1024}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto selfDesc = TensorDesc({1024, 1024}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto gradInputDesc = TensorDesc(gradOutputDesc).Precision(0.001, 0.001);
+
+    auto ut = OP_API_UT(aclnnGeluBackward, INPUT(gradOutputDesc, selfDesc), OUTPUT(gradInputDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+TEST_F(l2_gelu_backward_test, gelu_backward_testcase_024_5d_shape)
+{
+    auto gradOutputDesc = TensorDesc({2, 4, 8, 16, 32}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto selfDesc = TensorDesc({2, 4, 8, 16, 32}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto gradInputDesc = TensorDesc(gradOutputDesc).Precision(0.01, 0.01);
+
+    auto ut = OP_API_UT(aclnnGeluBackward, INPUT(gradOutputDesc, selfDesc), OUTPUT(gradInputDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+TEST_F(l2_gelu_backward_test, gelu_backward_testcase_025_scalar)
+{
+    auto gradOutputDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto selfDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto gradInputDesc = TensorDesc(gradOutputDesc).Precision(0.001, 0.001);
+
+    auto ut = OP_API_UT(aclnnGeluBackward, INPUT(gradOutputDesc, selfDesc), OUTPUT(gradInputDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+TEST_F(l2_gelu_backward_test, gelu_backward_testcase_026_nchw_format)
+{
+    auto gradOutputDesc = TensorDesc({2, 64, 112, 112}, ACL_FLOAT16, ACL_FORMAT_NCHW).ValueRange(-1, 1);
+    auto selfDesc = TensorDesc({2, 64, 112, 112}, ACL_FLOAT16, ACL_FORMAT_NCHW).ValueRange(-2, 2);
+    auto gradInputDesc = TensorDesc(gradOutputDesc).Precision(0.01, 0.01);
+
+    auto ut = OP_API_UT(aclnnGeluBackward, INPUT(gradOutputDesc, selfDesc), OUTPUT(gradInputDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+TEST_F(l2_gelu_backward_test, gelu_backward_testcase_027_specific_values)
+{
+    auto gradOutputDesc =
+        TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1.0, 0.5, -0.5, 0.0, 1.0, 2.0, -1.0, 0.0});
+    auto selfDesc =
+        TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{0.5, -0.5, 1.0, -1.0, 2.0, -2.0, 0.0, 3.0});
+    auto gradInputDesc = TensorDesc(gradOutputDesc).Precision(0.001, 0.001);
+
+    auto ut = OP_API_UT(aclnnGeluBackward, INPUT(gradOutputDesc, selfDesc), OUTPUT(gradInputDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+TEST_F(l2_gelu_backward_test, gelu_backward_testcase_028_bf16_dtype)
+{
+    auto gradOutputDesc = TensorDesc({2, 4, 6, 8}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto selfDesc = TensorDesc({2, 4, 6, 8}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto gradInputDesc = TensorDesc(gradOutputDesc).Precision(0.01, 0.01);
+
+    auto ut = OP_API_UT(aclnnGeluBackward, INPUT(gradOutputDesc, selfDesc), OUTPUT(gradInputDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+TEST_F(l2_gelu_backward_test, gelu_backward_testcase_029_int_dtype)
+{
+    auto gradOutputDesc = TensorDesc({2, 4}, ACL_INT32, ACL_FORMAT_ND);
+    auto selfDesc = TensorDesc({2, 4}, ACL_INT32, ACL_FORMAT_ND);
+    auto gradInputDesc = TensorDesc(gradOutputDesc);
+
+    auto ut = OP_API_UT(aclnnGeluBackward, INPUT(gradOutputDesc, selfDesc), OUTPUT(gradInputDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_gelu_backward_test, gelu_backward_testcase_030_undefined_dtype)
+{
+    auto gradOutputDesc = TensorDesc({2, 4}, ACL_DT_UNDEFINED, ACL_FORMAT_ND);
+    auto selfDesc = TensorDesc({2, 4}, ACL_DT_UNDEFINED, ACL_FORMAT_ND);
+    auto gradInputDesc = TensorDesc(gradOutputDesc);
+
+    auto ut = OP_API_UT(aclnnGeluBackward, INPUT(gradOutputDesc, selfDesc), OUTPUT(gradInputDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }

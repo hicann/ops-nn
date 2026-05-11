@@ -171,3 +171,138 @@ TEST_F(MishProtoTest, mish_infershape_8d_test)
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }
+
+TEST_F(MishProtoTest, mish_infershape_4d_nchw_test)
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Mish")->infer_shape;
+
+    gert::Shape input_shape_0 = {2, 64, 112, 112};
+    gert::Shape output_shape_0 = {};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(1, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&input_shape_0})
+                      .OutputShapes({&output_shape_0})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+}
+
+TEST_F(MishProtoTest, mish_infershape_5d_test)
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Mish")->infer_shape;
+
+    gert::Shape input_shape_0 = {2, 4, 8, 16, 32};
+    gert::Shape output_shape_0 = {};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(1, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&input_shape_0})
+                      .OutputShapes({&output_shape_0})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+}
+
+TEST_F(MishProtoTest, mish_infershape_empty_test)
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Mish")->infer_shape;
+
+    gert::Shape input_shape_0 = {0, 0};
+    gert::Shape output_shape_0 = {};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(1, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&input_shape_0})
+                      .OutputShapes({&output_shape_0})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+}
+
+TEST_F(MishProtoTest, mish_infershape_scalar_test)
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Mish")->infer_shape;
+
+    gert::Shape input_shape_0 = {};
+    gert::Shape output_shape_0 = {};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(1, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&input_shape_0})
+                      .OutputShapes({&output_shape_0})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+}
+
+TEST_F(MishProtoTest, mish_infershape_large_test)
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Mish")->infer_shape;
+
+    gert::Shape input_shape_0 = {1024, 1024};
+    gert::Shape output_shape_0 = {};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(1, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&input_shape_0})
+                      .OutputShapes({&output_shape_0})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+}

@@ -23,16 +23,22 @@ using namespace std;
 
 class l2_sigmoid_backward_test : public testing::Test {
 protected:
-    static void SetUpTestCase() { cout << "Sigmoid Backward Test Setup" << endl; }
-    static void TearDownTestCase() { cout << "Sigmoid Backward Test TearDown" << endl; }
+    static void SetUpTestCase()
+    {
+        cout << "Sigmoid Backward Test Setup" << endl;
+    }
+    static void TearDownTestCase()
+    {
+        cout << "Sigmoid Backward Test TearDown" << endl;
+    }
 };
 
 TEST_F(l2_sigmoid_backward_test, case_1)
 {
     auto grad_output_desc = TensorDesc({1, 16, 1, 1}, ACL_FLOAT, ACL_FORMAT_ND)
-                            .Value(vector<float>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16});
+                                .Value(vector<float>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16});
     auto output_desc = TensorDesc({1, 16, 1, 1}, ACL_FLOAT, ACL_FORMAT_ND)
-                            .Value(vector<float>{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2});
+                           .Value(vector<float>{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2});
     auto grad_input_desc = TensorDesc(grad_output_desc).Precision(0.0001, 0.0001);
 
     auto ut = OP_API_UT(aclnnSigmoidBackward, INPUT(grad_output_desc, output_desc), OUTPUT(grad_input_desc));
@@ -113,19 +119,9 @@ TEST_F(l2_sigmoid_backward_test, case_5)
 TEST_F(l2_sigmoid_backward_test, case_6)
 {
     vector<aclFormat> ValidList = {
-        ACL_FORMAT_UNDEFINED,
-        ACL_FORMAT_NCHW,
-        ACL_FORMAT_NHWC,
-        ACL_FORMAT_ND,
-        ACL_FORMAT_NC1HWC0,
-        ACL_FORMAT_FRACTAL_Z,
-        ACL_FORMAT_NC1HWC0_C04,
-        ACL_FORMAT_HWCN,
-        ACL_FORMAT_NDHWC,
-        ACL_FORMAT_FRACTAL_NZ,
-        ACL_FORMAT_NCDHW,
-        ACL_FORMAT_NDC1HWC0,
-        ACL_FRACTAL_Z_3D};
+        ACL_FORMAT_UNDEFINED, ACL_FORMAT_NCHW,        ACL_FORMAT_NHWC, ACL_FORMAT_ND,    ACL_FORMAT_NC1HWC0,
+        ACL_FORMAT_FRACTAL_Z, ACL_FORMAT_NC1HWC0_C04, ACL_FORMAT_HWCN, ACL_FORMAT_NDHWC, ACL_FORMAT_FRACTAL_NZ,
+        ACL_FORMAT_NCDHW,     ACL_FORMAT_NDC1HWC0,    ACL_FRACTAL_Z_3D};
 
     int length = ValidList.size();
     for (int i = 0; i < length; i++) {
@@ -187,9 +183,9 @@ TEST_F(l2_sigmoid_backward_test, case_8)
 TEST_F(l2_sigmoid_backward_test, case_9)
 {
     auto grad_output_desc = TensorDesc({1, 16, 1, 1}, ACL_BF16, ACL_FORMAT_ND)
-                            .Value(vector<float>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16});
+                                .Value(vector<float>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16});
     auto output_desc = TensorDesc({1, 16, 1, 1}, ACL_BF16, ACL_FORMAT_ND)
-                            .Value(vector<float>{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2});
+                           .Value(vector<float>{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2});
     auto grad_input_desc = TensorDesc(grad_output_desc).Precision(0.0001, 0.0001);
 
     auto ut = OP_API_UT(aclnnSigmoidBackward, INPUT(grad_output_desc, output_desc), OUTPUT(grad_input_desc));
@@ -201,4 +197,69 @@ TEST_F(l2_sigmoid_backward_test, case_9)
     } else {
         EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
     }
+}
+
+// 正常路径，8维
+TEST_F(l2_sigmoid_backward_test, case_10)
+{
+    auto grad_output_desc = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto output_desc = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
+    auto grad_input_desc = TensorDesc(grad_output_desc).Precision(0.0001, 0.0001);
+
+    auto ut = OP_API_UT(aclnnSigmoidBackward, INPUT(grad_output_desc, output_desc), OUTPUT(grad_input_desc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// 正常路径，scalar
+TEST_F(l2_sigmoid_backward_test, case_11)
+{
+    auto grad_output_desc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto output_desc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
+    auto grad_input_desc = TensorDesc(grad_output_desc).Precision(0.0001, 0.0001);
+
+    auto ut = OP_API_UT(aclnnSigmoidBackward, INPUT(grad_output_desc, output_desc), OUTPUT(grad_input_desc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// 正常路径，large shape
+TEST_F(l2_sigmoid_backward_test, case_12)
+{
+    auto grad_output_desc = TensorDesc({1024, 1024}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto output_desc = TensorDesc({1024, 1024}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
+    auto grad_input_desc = TensorDesc(grad_output_desc).Precision(0.0001, 0.0001);
+
+    auto ut = OP_API_UT(aclnnSigmoidBackward, INPUT(grad_output_desc, output_desc), OUTPUT(grad_input_desc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// 正常路径，nchw
+TEST_F(l2_sigmoid_backward_test, case_13)
+{
+    auto grad_output_desc = TensorDesc({2, 64, 112, 112}, ACL_FLOAT16, ACL_FORMAT_NCHW).ValueRange(-1, 1);
+    auto output_desc = TensorDesc({2, 64, 112, 112}, ACL_FLOAT16, ACL_FORMAT_NCHW).ValueRange(0, 1);
+    auto grad_input_desc = TensorDesc(grad_output_desc).Precision(0.001, 0.001);
+
+    auto ut = OP_API_UT(aclnnSigmoidBackward, INPUT(grad_output_desc, output_desc), OUTPUT(grad_input_desc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// 正常路径，value range
+TEST_F(l2_sigmoid_backward_test, case_14)
+{
+    auto grad_output_desc = TensorDesc({2, 4, 6, 8}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-100, 100);
+    auto output_desc = TensorDesc({2, 4, 6, 8}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
+    auto grad_input_desc = TensorDesc(grad_output_desc).Precision(0.0001, 0.0001);
+
+    auto ut = OP_API_UT(aclnnSigmoidBackward, INPUT(grad_output_desc, output_desc), OUTPUT(grad_input_desc));
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 }

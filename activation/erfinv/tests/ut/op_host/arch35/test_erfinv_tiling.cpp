@@ -166,7 +166,8 @@ TEST_F(ErfinvTilingTest, test_erfinv_failed_diff_shape_04)
     gert::StorageShape output_shape = {{2, 1024}, {2, 1024}};
     int expect_tilingKey = 0;
     string expect_tiling_data = "";
-    DoTilingTest(input_shape, output_shape, ge::DT_FLOAT, ge::DT_FLOAT, ge::GRAPH_FAILED, expect_tilingKey, expect_tiling_data);
+    DoTilingTest(
+        input_shape, output_shape, ge::DT_FLOAT, ge::DT_FLOAT, ge::GRAPH_FAILED, expect_tilingKey, expect_tiling_data);
 }
 
 TEST_F(ErfinvTilingTest, test_erfinv_failed_diff_dtype_05)
@@ -183,4 +184,68 @@ TEST_F(ErfinvTilingTest, test_erfinv_failed_unsupported_dtype_06)
     int expect_tilingKey = 0;
     string expect_tiling_data = "";
     DoTilingTest(Shape, Shape, ge::DT_INT32, ge::DT_INT32, ge::GRAPH_FAILED, expect_tilingKey, expect_tiling_data);
+}
+
+TEST_F(ErfinvTilingTest, test_erfinv_fp16_large_shape_07)
+{
+    gert::StorageShape Shape = {{1024, 1024}, {1024, 1024}};
+    int expect_tilingKey = 3;
+    string expect_tiling_data = "1048576 15942918602816 16384 64 5 5 1536 1536 3712 1 ";
+    DoTilingTest(Shape, Shape, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::GRAPH_SUCCESS, expect_tilingKey, expect_tiling_data);
+}
+
+TEST_F(ErfinvTilingTest, test_erfinv_fp32_1d_08)
+{
+    gert::StorageShape Shape = {{8192}, {8192}};
+    int expect_tilingKey = 7;
+    string expect_tiling_data = "8192 24189255811080 1024 8 1 1 1024 1024 5632 1 ";
+    DoTilingTest(Shape, Shape, ge::DT_FLOAT, ge::DT_FLOAT, ge::GRAPH_SUCCESS, expect_tilingKey, expect_tiling_data);
+}
+
+TEST_F(ErfinvTilingTest, test_erfinv_bf16_3d_09)
+{
+    gert::StorageShape Shape = {{16, 32, 64}, {16, 32, 64}};
+    int expect_tilingKey = 5;
+    string expect_tiling_data = "32768 15942918602768 2048 16 1 1 2048 2048 3712 1 ";
+    DoTilingTest(Shape, Shape, ge::DT_BF16, ge::DT_BF16, ge::GRAPH_SUCCESS, expect_tilingKey, expect_tiling_data);
+}
+
+TEST_F(ErfinvTilingTest, test_erfinv_fp16_5d_10)
+{
+    gert::StorageShape Shape = {{2, 4, 8, 16, 32}, {2, 4, 8, 16, 32}};
+    int expect_tilingKey = 3;
+    string expect_tiling_data = "32768 15942918602768 2048 16 1 1 2048 2048 3712 1 ";
+    DoTilingTest(Shape, Shape, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::GRAPH_SUCCESS, expect_tilingKey, expect_tiling_data);
+}
+
+TEST_F(ErfinvTilingTest, test_erfinv_failed_int64_11)
+{
+    gert::StorageShape Shape = {{1, 1024}, {1, 1024}};
+    int expect_tilingKey = 0;
+    string expect_tiling_data = "";
+    DoTilingTest(Shape, Shape, ge::DT_INT64, ge::DT_INT64, ge::GRAPH_FAILED, expect_tilingKey, expect_tiling_data);
+}
+
+TEST_F(ErfinvTilingTest, test_erfinv_fp32_empty_12)
+{
+    gert::StorageShape Shape = {{0, 0}, {0, 0}};
+    int expect_tilingKey = 0;
+    string expect_tiling_data = "";
+    DoTilingTest(Shape, Shape, ge::DT_FLOAT, ge::DT_FLOAT, ge::GRAPH_FAILED, expect_tilingKey, expect_tiling_data);
+}
+
+TEST_F(ErfinvTilingTest, test_erfinv_fp32_8d_13)
+{
+    gert::StorageShape Shape = {{1, 2, 3, 4, 5, 6, 7, 8}, {1, 2, 3, 4, 5, 6, 7, 8}};
+    int expect_tilingKey = 7;
+    string expect_tiling_data = "40320 24189255811112 1024 40 1 1 1024 384 5632 1 ";
+    DoTilingTest(Shape, Shape, ge::DT_FLOAT, ge::DT_FLOAT, ge::GRAPH_SUCCESS, expect_tilingKey, expect_tiling_data);
+}
+
+TEST_F(ErfinvTilingTest, test_erfinv_fp16_nchw_14)
+{
+    gert::StorageShape Shape = {{2, 64, 112, 112}, {2, 64, 112, 112}};
+    int expect_tilingKey = 3;
+    string expect_tiling_data = "1605632 15942918602816 25088 64 7 7 2816 2816 3712 1 ";
+    DoTilingTest(Shape, Shape, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::GRAPH_SUCCESS, expect_tilingKey, expect_tiling_data);
 }

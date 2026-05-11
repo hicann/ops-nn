@@ -20,16 +20,19 @@ using namespace ge;
 
 class ReluGrad : public testing::Test {
 protected:
-    static void SetUpTestCase() {
+    static void SetUpTestCase()
+    {
         std::cout << "ReluGrad Proto Test SetUp" << std::endl;
     }
 
-    static void TearDownTestCase() {
+    static void TearDownTestCase()
+    {
         std::cout << "ReluGrad Proto Test TearDown" << std::endl;
     }
 };
 
-TEST_F(ReluGrad, relugrad_tsest_1) {
+TEST_F(ReluGrad, relugrad_tsest_1)
+{
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ReluGrad")->infer_shape;
     gert::StorageShape gradients_shape = {{16, 16}, {16, 16}};
     gert::StorageShape features_shape = {{1, 16}, {1, 16}};
@@ -50,4 +53,124 @@ TEST_F(ReluGrad, relugrad_tsest_1) {
     auto output_desc = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
     gert::Shape expected_output_shape = {16, 16};
     ASSERT_EQ(Ops::Base::ToString(*output_desc), Ops::Base::ToString(expected_output_shape));
+}
+
+TEST_F(ReluGrad, relugrad_fp16_test)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ReluGrad")->infer_shape;
+    gert::StorageShape gradients_shape = {{32, 64, 128}, {32, 64, 128}};
+    gert::StorageShape features_shape = {{32, 64, 128}, {32, 64, 128}};
+    gert::StorageShape yShape = {{}, {}};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&gradients_shape, &features_shape})
+                      .OutputShapes({&yShape})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+}
+
+TEST_F(ReluGrad, relugrad_4d_nchw_test)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ReluGrad")->infer_shape;
+    gert::StorageShape gradients_shape = {{2, 64, 112, 112}, {2, 64, 112, 112}};
+    gert::StorageShape features_shape = {{2, 64, 112, 112}, {2, 64, 112, 112}};
+    gert::StorageShape yShape = {{}, {}};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&gradients_shape, &features_shape})
+                      .OutputShapes({&yShape})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+}
+
+TEST_F(ReluGrad, relugrad_8d_test)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ReluGrad")->infer_shape;
+    gert::StorageShape gradients_shape = {{1, 2, 3, 4, 5, 6, 7, 8}, {1, 2, 3, 4, 5, 6, 7, 8}};
+    gert::StorageShape features_shape = {{1, 2, 3, 4, 5, 6, 7, 8}, {1, 2, 3, 4, 5, 6, 7, 8}};
+    gert::StorageShape yShape = {{}, {}};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&gradients_shape, &features_shape})
+                      .OutputShapes({&yShape})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+}
+
+TEST_F(ReluGrad, relugrad_empty_test)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ReluGrad")->infer_shape;
+    gert::StorageShape gradients_shape = {{0, 0}, {0, 0}};
+    gert::StorageShape features_shape = {{0, 0}, {0, 0}};
+    gert::StorageShape yShape = {{}, {}};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&gradients_shape, &features_shape})
+                      .OutputShapes({&yShape})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+}
+
+TEST_F(ReluGrad, relugrad_scalar_test)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ReluGrad")->infer_shape;
+    gert::StorageShape gradients_shape = {{}, {}};
+    gert::StorageShape features_shape = {{}, {}};
+    gert::StorageShape yShape = {{}, {}};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&gradients_shape, &features_shape})
+                      .OutputShapes({&yShape})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+}
+
+TEST_F(ReluGrad, relugrad_large_test)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("ReluGrad")->infer_shape;
+    gert::StorageShape gradients_shape = {{1024, 1024}, {1024, 1024}};
+    gert::StorageShape features_shape = {{1024, 1024}, {1024, 1024}};
+    gert::StorageShape yShape = {{}, {}};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&gradients_shape, &features_shape})
+                      .OutputShapes({&yShape})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }

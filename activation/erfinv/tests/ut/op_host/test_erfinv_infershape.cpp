@@ -125,3 +125,136 @@ TEST_F(ErfinvInferShapeUTest, erfinv_infershape_empty_tensor)
     EXPECT_EQ(context->GetOutputShape(0)->GetDimNum(), 3);
     EXPECT_EQ(context->GetOutputShape(0)->GetDim(1), 0);
 }
+
+TEST_F(ErfinvInferShapeUTest, erfinv_infershape_succ_6d)
+{
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("Erfinv"), nullptr);
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("Erfinv")->infer_shape;
+    ASSERT_NE(infer_shape_func, nullptr);
+
+    gert::StorageShape self_shape = {{2, 4, 8, 16, 32, 64}, {2, 4, 8, 16, 32, 64}};
+    gert::StorageShape out_shape = {{}, {}};
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(1, 1)
+                      .IrInputNum(1)
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .InputShapes({&self_shape})
+                      .OutputShapes({&out_shape})
+                      .Build();
+
+    auto context = holder.GetContext<gert::InferShapeContext>();
+    EXPECT_EQ(infer_shape_func(context), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(context->GetOutputShape(0)->GetDimNum(), 6);
+}
+
+TEST_F(ErfinvInferShapeUTest, erfinv_infershape_succ_fp16)
+{
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("Erfinv"), nullptr);
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("Erfinv")->infer_shape;
+    ASSERT_NE(infer_shape_func, nullptr);
+
+    gert::StorageShape self_shape = {{128, 256}, {128, 256}};
+    gert::StorageShape out_shape = {{}, {}};
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(1, 1)
+                      .IrInputNum(1)
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .InputShapes({&self_shape})
+                      .OutputShapes({&out_shape})
+                      .Build();
+
+    auto context = holder.GetContext<gert::InferShapeContext>();
+    EXPECT_EQ(infer_shape_func(context), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(context->GetOutputShape(0)->GetDimNum(), 2);
+    EXPECT_EQ(context->GetOutputShape(0)->GetDim(0), 128);
+    EXPECT_EQ(context->GetOutputShape(0)->GetDim(1), 256);
+}
+
+TEST_F(ErfinvInferShapeUTest, erfinv_infershape_succ_bf16)
+{
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("Erfinv"), nullptr);
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("Erfinv")->infer_shape;
+    ASSERT_NE(infer_shape_func, nullptr);
+
+    gert::StorageShape self_shape = {{32, 64, 128}, {32, 64, 128}};
+    gert::StorageShape out_shape = {{}, {}};
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(1, 1)
+                      .IrInputNum(1)
+                      .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .InputShapes({&self_shape})
+                      .OutputShapes({&out_shape})
+                      .Build();
+
+    auto context = holder.GetContext<gert::InferShapeContext>();
+    EXPECT_EQ(infer_shape_func(context), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(context->GetOutputShape(0)->GetDimNum(), 3);
+    EXPECT_EQ(context->GetOutputShape(0)->GetDim(0), 32);
+    EXPECT_EQ(context->GetOutputShape(0)->GetDim(1), 64);
+    EXPECT_EQ(context->GetOutputShape(0)->GetDim(2), 128);
+}
+
+TEST_F(ErfinvInferShapeUTest, erfinv_infershape_scalar)
+{
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("Erfinv"), nullptr);
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("Erfinv")->infer_shape;
+    ASSERT_NE(infer_shape_func, nullptr);
+
+    gert::StorageShape self_shape = {{}, {}};
+    gert::StorageShape out_shape = {{}, {}};
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(1, 1)
+                      .IrInputNum(1)
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .InputShapes({&self_shape})
+                      .OutputShapes({&out_shape})
+                      .Build();
+
+    auto context = holder.GetContext<gert::InferShapeContext>();
+    EXPECT_EQ(infer_shape_func(context), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(context->GetOutputShape(0)->GetDimNum(), 0);
+}
+
+TEST_F(ErfinvInferShapeUTest, erfinv_infershape_large_tensor)
+{
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("Erfinv"), nullptr);
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("Erfinv")->infer_shape;
+    ASSERT_NE(infer_shape_func, nullptr);
+
+    gert::StorageShape self_shape = {{1024, 1024}, {1024, 1024}};
+    gert::StorageShape out_shape = {{}, {}};
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(1, 1)
+                      .IrInputNum(1)
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .InputShapes({&self_shape})
+                      .OutputShapes({&out_shape})
+                      .Build();
+
+    auto context = holder.GetContext<gert::InferShapeContext>();
+    EXPECT_EQ(infer_shape_func(context), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(context->GetOutputShape(0)->GetDimNum(), 2);
+    EXPECT_EQ(context->GetOutputShape(0)->GetDim(0), 1024);
+    EXPECT_EQ(context->GetOutputShape(0)->GetDim(1), 1024);
+}
+
+TEST_F(ErfinvInferShapeUTest, erfinv_infershape_8d)
+{
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("Erfinv"), nullptr);
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("Erfinv")->infer_shape;
+    ASSERT_NE(infer_shape_func, nullptr);
+
+    gert::StorageShape self_shape = {{1, 2, 3, 4, 5, 6, 7, 8}, {1, 2, 3, 4, 5, 6, 7, 8}};
+    gert::StorageShape out_shape = {{}, {}};
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(1, 1)
+                      .IrInputNum(1)
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .InputShapes({&self_shape})
+                      .OutputShapes({&out_shape})
+                      .Build();
+
+    auto context = holder.GetContext<gert::InferShapeContext>();
+    EXPECT_EQ(infer_shape_func(context), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(context->GetOutputShape(0)->GetDimNum(), 8);
+}

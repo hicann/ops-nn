@@ -73,61 +73,249 @@ TEST_F(gelugrad, gelugrad_infershape_95_test)
     EXPECT_EQ(output_desc1.GetShape().GetDimNum(), 2);
 }
 
-TEST_F(gelugrad, gelugrad_infershape_95_test2) {
-  fe::PlatformInfo platformInfo;
-  fe::OptionalInfo optiCompilationInfo;
-  platformInfo.soc_info.ai_core_cnt = 64;
-  platformInfo.str_info.short_soc_version = "Ascend950";
-  optiCompilationInfo.soc_version = "Ascend950";
-  fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
-  fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
-  
-  auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("GeluGrad")->infer_shape;
+TEST_F(gelugrad, gelugrad_infershape_95_test2)
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
-  gert::Shape input_shape_dy = {1, 16};
-  gert::Shape input_shape_x = {16, 16};
-  gert::Shape input_shape_y = {1, 16};
-  gert::Shape output_shape_z = {16, 16};
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("GeluGrad")->infer_shape;
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(1, 1)
-                    .IrInstanceNum({1, 1})
-                    .InputShapes({&input_shape_dy, &input_shape_x, &input_shape_y})
-                    .OutputShapes({&output_shape_z})
-                    .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .Build();
-  
-  ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    gert::Shape input_shape_dy = {1, 16};
+    gert::Shape input_shape_x = {16, 16};
+    gert::Shape input_shape_y = {1, 16};
+    gert::Shape output_shape_z = {16, 16};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(1, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&input_shape_dy, &input_shape_x, &input_shape_y})
+                      .OutputShapes({&output_shape_z})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }
-TEST_F(gelugrad, gelugrad_infershape_910_93) {
-  fe::PlatformInfo platformInfo;
-  fe::OptionalInfo optiCompilationInfo;
-  platformInfo.soc_info.ai_core_cnt = 64;
-  platformInfo.str_info.short_soc_version = "Ascend910_93";
-  optiCompilationInfo.soc_version = "Ascend910_93";
-  fe::PlatformInfoManager::Instance().platform_info_map_["Ascend910_93"] = platformInfo;
-  fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
-  
-  auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("GeluGrad")->infer_shape;
+TEST_F(gelugrad, gelugrad_infershape_910_93)
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "Ascend910_93";
+    optiCompilationInfo.soc_version = "Ascend910_93";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend910_93"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
 
-  gert::Shape input_shape_dy = {1, 16};
-  gert::Shape input_shape_x = {16, 16};
-  gert::Shape input_shape_y = {1, 16};
-  gert::Shape output_shape_z = {16, 16};
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("GeluGrad")->infer_shape;
 
-  auto holder = gert::InferShapeContextFaker()
-                    .NodeIoNum(1, 1)
-                    .IrInstanceNum({1, 1})
-                    .InputShapes({&input_shape_dy, &input_shape_x, &input_shape_y})
-                    .OutputShapes({&output_shape_z})
-                    .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .Build();
-  
-  ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    gert::Shape input_shape_dy = {1, 16};
+    gert::Shape input_shape_x = {16, 16};
+    gert::Shape input_shape_y = {1, 16};
+    gert::Shape output_shape_z = {16, 16};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(1, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&input_shape_dy, &input_shape_x, &input_shape_y})
+                      .OutputShapes({&output_shape_z})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+}
+
+TEST_F(gelugrad, gelugrad_infershape_95_float16_test)
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("GeluGrad")->infer_shape;
+
+    gert::Shape input_shape_dy = {32, 64, 128};
+    gert::Shape input_shape_x = {32, 64, 128};
+    gert::Shape input_shape_y = {32, 64, 128};
+    gert::Shape output_shape_z = {};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(1, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&input_shape_dy, &input_shape_x, &input_shape_y})
+                      .OutputShapes({&output_shape_z})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+}
+
+TEST_F(gelugrad, gelugrad_infershape_95_4d_nchw_test)
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("GeluGrad")->infer_shape;
+
+    gert::Shape input_shape_dy = {2, 64, 112, 112};
+    gert::Shape input_shape_x = {2, 64, 112, 112};
+    gert::Shape input_shape_y = {2, 64, 112, 112};
+    gert::Shape output_shape_z = {};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(1, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&input_shape_dy, &input_shape_x, &input_shape_y})
+                      .OutputShapes({&output_shape_z})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
+                      .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+}
+
+TEST_F(gelugrad, gelugrad_infershape_95_5d_test)
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("GeluGrad")->infer_shape;
+
+    gert::Shape input_shape_dy = {2, 4, 8, 16, 32};
+    gert::Shape input_shape_x = {2, 4, 8, 16, 32};
+    gert::Shape input_shape_y = {2, 4, 8, 16, 32};
+    gert::Shape output_shape_z = {};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(1, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&input_shape_dy, &input_shape_x, &input_shape_y})
+                      .OutputShapes({&output_shape_z})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+}
+
+TEST_F(gelugrad, gelugrad_infershape_95_empty_test)
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("GeluGrad")->infer_shape;
+
+    gert::Shape input_shape_dy = {0, 0};
+    gert::Shape input_shape_x = {0, 0};
+    gert::Shape input_shape_y = {0, 0};
+    gert::Shape output_shape_z = {};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(1, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&input_shape_dy, &input_shape_x, &input_shape_y})
+                      .OutputShapes({&output_shape_z})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+}
+
+TEST_F(gelugrad, gelugrad_infershape_95_scalar_test)
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("GeluGrad")->infer_shape;
+
+    gert::Shape input_shape_dy = {};
+    gert::Shape input_shape_x = {};
+    gert::Shape input_shape_y = {};
+    gert::Shape output_shape_z = {};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(1, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&input_shape_dy, &input_shape_x, &input_shape_y})
+                      .OutputShapes({&output_shape_z})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+}
+
+TEST_F(gelugrad, gelugrad_infershape_95_large_test)
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "Ascend950";
+    optiCompilationInfo.soc_version = "Ascend950";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend950"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
+
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("GeluGrad")->infer_shape;
+
+    gert::Shape input_shape_dy = {1024, 1024};
+    gert::Shape input_shape_x = {1024, 1024};
+    gert::Shape input_shape_y = {1024, 1024};
+    gert::Shape output_shape_z = {};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(1, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&input_shape_dy, &input_shape_x, &input_shape_y})
+                      .OutputShapes({&output_shape_z})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
 }

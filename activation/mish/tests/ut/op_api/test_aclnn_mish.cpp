@@ -171,3 +171,87 @@ TEST_F(l2_mish_test, case_009_max_dim)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
+
+// 测试正常路径，8维
+TEST_F(l2_mish_test, case_010_8d_shape)
+{
+    auto selfDesc = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+
+    auto outDesc = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+
+    auto ut = OP_API_UT(aclnnMish, INPUT(selfDesc), OUTPUT(outDesc));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// 测试正常路径，scalar
+TEST_F(l2_mish_test, case_011_scalar)
+{
+    auto selfDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+
+    auto outDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+
+    auto ut = OP_API_UT(aclnnMish, INPUT(selfDesc), OUTPUT(outDesc));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// 测试正常路径，large shape
+TEST_F(l2_mish_test, case_012_large_shape)
+{
+    auto selfDesc = TensorDesc({1024, 1024}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+
+    auto outDesc = TensorDesc({1024, 1024}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+
+    auto ut = OP_API_UT(aclnnMish, INPUT(selfDesc), OUTPUT(outDesc));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// 测试正常路径，4d nchw
+TEST_F(l2_mish_test, case_013_nchw_format)
+{
+    auto selfDesc = TensorDesc({2, 64, 112, 112}, ACL_FLOAT16, ACL_FORMAT_NCHW).ValueRange(-1, 1);
+
+    auto outDesc = TensorDesc({2, 64, 112, 112}, ACL_FLOAT16, ACL_FORMAT_NCHW).Precision(0.0001, 0.0001);
+
+    auto ut = OP_API_UT(aclnnMish, INPUT(selfDesc), OUTPUT(outDesc));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// 测试正常路径，5d ncdhw
+TEST_F(l2_mish_test, case_014_ncdhw_format)
+{
+    auto selfDesc = TensorDesc({2, 4, 8, 16, 32}, ACL_FLOAT, ACL_FORMAT_NCDHW).ValueRange(-1, 1);
+
+    auto outDesc = TensorDesc({2, 4, 8, 16, 32}, ACL_FLOAT, ACL_FORMAT_NCDHW).Precision(0.0001, 0.0001);
+
+    auto ut = OP_API_UT(aclnnMish, INPUT(selfDesc), OUTPUT(outDesc));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// 测试正常路径，value range
+TEST_F(l2_mish_test, case_015_value_range)
+{
+    auto selfDesc = TensorDesc({2, 4, 6, 8}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-100, 100);
+
+    auto outDesc = TensorDesc({2, 4, 6, 8}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+
+    auto ut = OP_API_UT(aclnnMish, INPUT(selfDesc), OUTPUT(outDesc));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}

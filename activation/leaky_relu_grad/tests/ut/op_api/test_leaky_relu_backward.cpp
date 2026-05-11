@@ -332,3 +332,125 @@ TEST_F(l2_leaky_relu_backward_test, ascend910B2_case_dim3_FLoat16_NHWC)
 
     // ut.TestPrecision();
 }
+
+TEST_F(l2_leaky_relu_backward_test, case_large_shape)
+{
+    auto tensor_desc = TensorDesc({1024, 1024}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto scalar_desc = ScalarDesc(0.01f);
+
+    auto ut =
+        OP_API_UT(aclnnLeakyReluBackward, INPUT(tensor_desc, tensor_desc, scalar_desc, true), OUTPUT(tensor_desc));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+
+    // ut.TestPrecision();
+}
+
+TEST_F(l2_leaky_relu_backward_test, case_negative_slope)
+{
+    auto tensor_desc = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto scalar_desc = ScalarDesc(-0.1f);
+
+    auto ut =
+        OP_API_UT(aclnnLeakyReluBackward, INPUT(tensor_desc, tensor_desc, scalar_desc, false), OUTPUT(tensor_desc));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+
+    // ut.TestPrecision();
+}
+
+TEST_F(l2_leaky_relu_backward_test, case_scalar_input)
+{
+    auto tensor_desc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto scalar_desc = ScalarDesc(0.01f);
+
+    auto ut =
+        OP_API_UT(aclnnLeakyReluBackward, INPUT(tensor_desc, tensor_desc, scalar_desc, true), OUTPUT(tensor_desc));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+
+    // ut.TestPrecision();
+}
+
+TEST_F(l2_leaky_relu_backward_test, case_different_negative_slope)
+{
+    auto tensor_desc = TensorDesc({2, 3, 4}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto scalar_desc = ScalarDesc(0.5f, ACL_FLOAT16);
+
+    auto ut =
+        OP_API_UT(aclnnLeakyReluBackward, INPUT(tensor_desc, tensor_desc, scalar_desc, true), OUTPUT(tensor_desc));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+
+    // ut.TestPrecision();
+}
+
+TEST_F(l2_leaky_relu_backward_test, case_1d_large)
+{
+    auto tensor_desc = TensorDesc({2048}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto scalar_desc = ScalarDesc(0.01f);
+
+    auto ut =
+        OP_API_UT(aclnnLeakyReluBackward, INPUT(tensor_desc, tensor_desc, scalar_desc, true), OUTPUT(tensor_desc));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+
+    // ut.TestPrecision();
+}
+
+TEST_F(l2_leaky_relu_backward_test, case_specific_values)
+{
+    auto tensor_desc =
+        TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{-2.0, -1.0, -0.5, 0.0, 0.5, 1.0, 2.0, 3.0});
+    auto scalar_desc = ScalarDesc(0.1f);
+
+    auto ut =
+        OP_API_UT(aclnnLeakyReluBackward, INPUT(tensor_desc, tensor_desc, scalar_desc, true), OUTPUT(tensor_desc));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+
+    // ut.TestPrecision();
+}
+
+TEST_F(l2_leaky_relu_backward_test, case_is_result_false)
+{
+    auto grad = TensorDesc({2, 3, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto self = TensorDesc({2, 3, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto scalar_desc = ScalarDesc(0.1f);
+    auto out = TensorDesc({2, 3, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnLeakyReluBackward, INPUT(grad, self, scalar_desc, false), OUTPUT(out));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+
+    // ut.TestPrecision();
+}
+
+TEST_F(l2_leaky_relu_backward_test, case_5d_shape)
+{
+    auto tensor_desc = TensorDesc({2, 4, 8, 16, 32}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto scalar_desc = ScalarDesc(0.01f, ACL_FLOAT16);
+
+    auto ut =
+        OP_API_UT(aclnnLeakyReluBackward, INPUT(tensor_desc, tensor_desc, scalar_desc, true), OUTPUT(tensor_desc));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+
+    // ut.TestPrecision();
+}

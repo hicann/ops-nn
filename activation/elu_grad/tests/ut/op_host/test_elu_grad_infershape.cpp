@@ -21,17 +21,20 @@
 #include "../../../../../tests/ut/common/any_value.h"
 
 class elugrad : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    std::cout << "elugrad SetUp" << std::endl;
-  }
+protected:
+    static void SetUpTestCase()
+    {
+        std::cout << "elugrad SetUp" << std::endl;
+    }
 
-  static void TearDownTestCase() {
-    std::cout << "elugrad TearDown" << std::endl;
-  }
+    static void TearDownTestCase()
+    {
+        std::cout << "elugrad TearDown" << std::endl;
+    }
 };
 
-TEST_F(elugrad, elugrad_infer_shape_fp16) {
+TEST_F(elugrad, elugrad_infer_shape_fp16)
+{
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("EluGrad")->infer_shape;
     gert::StorageShape Shape = {{-1}, {-1}};
     gert::StorageShape yShape = {{}, {}};
@@ -51,7 +54,8 @@ TEST_F(elugrad, elugrad_infer_shape_fp16) {
     ASSERT_EQ(Ops::Base::ToString(*output_desc), Ops::Base::ToString(expected_output_shape));
 }
 
-TEST_F(elugrad, elugrad_infer_same_test) {
+TEST_F(elugrad, elugrad_infer_same_test)
+{
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("EluGrad")->infer_shape;
     gert::StorageShape Shape = {{1, 3, 4}, {1, 3, 4}};
     gert::StorageShape yShape = {{}, {}};
@@ -68,5 +72,110 @@ TEST_F(elugrad, elugrad_infer_same_test) {
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
     auto output_desc = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
     gert::Shape expected_output_shape = {1, 3, 4};
+    ASSERT_EQ(Ops::Base::ToString(*output_desc), Ops::Base::ToString(expected_output_shape));
+}
+
+TEST_F(elugrad, elugrad_infer_shape_fp16_2d)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("EluGrad")->infer_shape;
+    gert::StorageShape Shape = {{128, 256}, {128, 256}};
+    gert::StorageShape yShape = {{}, {}};
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&Shape, &Shape})
+                      .OutputShapes({&yShape})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output_desc = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    gert::Shape expected_output_shape = {128, 256};
+    ASSERT_EQ(Ops::Base::ToString(*output_desc), Ops::Base::ToString(expected_output_shape));
+}
+
+TEST_F(elugrad, elugrad_infer_shape_bf16_3d)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("EluGrad")->infer_shape;
+    gert::StorageShape Shape = {{32, 64, 128}, {32, 64, 128}};
+    gert::StorageShape yShape = {{}, {}};
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&Shape, &Shape})
+                      .OutputShapes({&yShape})
+                      .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output_desc = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    gert::Shape expected_output_shape = {32, 64, 128};
+    ASSERT_EQ(Ops::Base::ToString(*output_desc), Ops::Base::ToString(expected_output_shape));
+}
+
+TEST_F(elugrad, elugrad_infer_shape_empty_tensor)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("EluGrad")->infer_shape;
+    gert::StorageShape Shape = {{0, 0}, {0, 0}};
+    gert::StorageShape yShape = {{}, {}};
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&Shape, &Shape})
+                      .OutputShapes({&yShape})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output_desc = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    gert::Shape expected_output_shape = {0, 0};
+    ASSERT_EQ(Ops::Base::ToString(*output_desc), Ops::Base::ToString(expected_output_shape));
+}
+
+TEST_F(elugrad, elugrad_infer_shape_scalar)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("EluGrad")->infer_shape;
+    gert::StorageShape Shape = {{}, {}};
+    gert::StorageShape yShape = {{}, {}};
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&Shape, &Shape})
+                      .OutputShapes({&yShape})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output_desc = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    gert::Shape expected_output_shape = {};
+    ASSERT_EQ(Ops::Base::ToString(*output_desc), Ops::Base::ToString(expected_output_shape));
+}
+
+TEST_F(elugrad, elugrad_infer_shape_5d_nchw)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("EluGrad")->infer_shape;
+    gert::StorageShape Shape = {{2, 4, 8, 16, 32}, {2, 4, 8, 16, 32}};
+    gert::StorageShape yShape = {{}, {}};
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&Shape, &Shape})
+                      .OutputShapes({&yShape})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output_desc = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    gert::Shape expected_output_shape = {2, 4, 8, 16, 32};
     ASSERT_EQ(Ops::Base::ToString(*output_desc), Ops::Base::ToString(expected_output_shape));
 }

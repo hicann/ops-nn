@@ -316,3 +316,66 @@ TEST_F(LogSigmoidGradTiling, test_tiling_fp32_003)
     std::string expectStr = "256 4294967424 ";
     DoLogSigmoidGradTilingCase(inputShape1, inputShape2, outputShape, ge::DT_FLOAT, expectStr);
 }
+
+TEST_F(LogSigmoidGradTiling, test_tiling_fp16_3d_004)
+{
+    std::initializer_list<int64_t> inputShape1 = {32, 64, 128};
+    std::initializer_list<int64_t> inputShape2 = {32, 64, 128};
+    std::initializer_list<int64_t> outputShape = {32, 64, 128};
+    std::string expectStr = "262144 137438957568 ";
+    DoLogSigmoidGradTilingCase(inputShape1, inputShape2, outputShape, ge::DT_FLOAT16, expectStr);
+}
+
+TEST_F(LogSigmoidGradTiling, test_tiling_bf16_4d_005)
+{
+    std::initializer_list<int64_t> inputShape1 = {2, 64, 112, 112};
+    std::initializer_list<int64_t> inputShape2 = {2, 64, 112, 112};
+    std::initializer_list<int64_t> outputShape = {2, 64, 112, 112};
+    std::string expectStr = "1605632 171798712320 ";
+    DoLogSigmoidGradTilingCase(inputShape1, inputShape2, outputShape, ge::DT_BF16, expectStr);
+}
+
+TEST_F(LogSigmoidGradTiling, test_tiling_fp32_5d_006)
+{
+    std::initializer_list<int64_t> inputShape1 = {2, 4, 8, 16, 32};
+    std::initializer_list<int64_t> inputShape2 = {2, 4, 8, 16, 32};
+    std::initializer_list<int64_t> outputShape = {2, 4, 8, 16, 32};
+    std::string expectStr = "32768 137438953984 ";
+    DoLogSigmoidGradTilingCase(inputShape1, inputShape2, outputShape, ge::DT_FLOAT, expectStr);
+}
+
+TEST_F(LogSigmoidGradTiling, test_tiling_fp16_large_007)
+{
+    std::initializer_list<int64_t> inputShape1 = {1024, 1024};
+    std::initializer_list<int64_t> inputShape2 = {1024, 1024};
+    std::initializer_list<int64_t> outputShape = {1024, 1024};
+    std::string expectStr = "1048576 137438969856 ";
+    DoLogSigmoidGradTilingCase(inputShape1, inputShape2, outputShape, ge::DT_FLOAT16, expectStr);
+}
+
+TEST_F(LogSigmoidGradTiling, test_tiling_fp32_8d_008)
+{
+    std::initializer_list<int64_t> inputShape1 = {1, 2, 3, 4, 5, 6, 7, 8};
+    std::initializer_list<int64_t> inputShape2 = {1, 2, 3, 4, 5, 6, 7, 8};
+    std::initializer_list<int64_t> outputShape = {1, 2, 3, 4, 5, 6, 7, 8};
+    std::string expectStr = "40320 171798692352 ";
+    DoLogSigmoidGradTilingCase(inputShape1, inputShape2, outputShape, ge::DT_FLOAT, expectStr);
+}
+
+TEST_F(LogSigmoidGradTiling, test_tiling_fp16_1d_009)
+{
+    std::initializer_list<int64_t> inputShape1 = {256};
+    std::initializer_list<int64_t> inputShape2 = {256};
+    std::initializer_list<int64_t> outputShape = {256};
+    std::string expectStr = "256 4294967552 ";
+    DoLogSigmoidGradTilingCase(inputShape1, inputShape2, outputShape, ge::DT_FLOAT16, expectStr);
+}
+
+TEST_F(LogSigmoidGradTiling, test_tiling_fp32_6d_010)
+{
+    std::initializer_list<int64_t> inputShape1 = {2, 4, 6, 8, 10, 12};
+    std::initializer_list<int64_t> inputShape2 = {2, 4, 6, 8, 10, 12};
+    std::initializer_list<int64_t> outputShape = {2, 4, 6, 8, 10, 12};
+    std::string expectStr = "46080 154618823296 ";
+    DoLogSigmoidGradTilingCase(inputShape1, inputShape2, outputShape, ge::DT_FLOAT, expectStr);
+}

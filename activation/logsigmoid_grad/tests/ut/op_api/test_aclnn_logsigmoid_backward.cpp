@@ -22,16 +22,22 @@
 using namespace op;
 using namespace std;
 
-
 class l2_logsigmoid_backward_test : public testing::Test {
 protected:
-    static void SetUpTestCase() { std::cout << "logsigmoid_backward Test Setup" << std::endl; }
-    static void TearDownTestCase() { std::cout << "logsigmoid_backward Test TearDown" << std::endl; }
+    static void SetUpTestCase()
+    {
+        std::cout << "logsigmoid_backward Test Setup" << std::endl;
+    }
+    static void TearDownTestCase()
+    {
+        std::cout << "logsigmoid_backward Test TearDown" << std::endl;
+    }
 };
 
 TEST_F(l2_logsigmoid_backward_test, logsigmoid_backward_testcase_001_normal_float32)
 {
-    auto gradOutputDesc = TensorDesc({2, 5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1,1,1,1,1,1,1,1,1,1});
+    auto gradOutputDesc =
+        TensorDesc({2, 5}, ACL_FLOAT, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1, 1, 1, 1, 1, 1});
     auto selfDesc = TensorDesc({2, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto bufferDesc = TensorDesc(selfDesc);
     auto gradInputDesc = TensorDesc(gradOutputDesc).Precision(0.0001, 0.0001);
@@ -50,7 +56,8 @@ TEST_F(l2_logsigmoid_backward_test, logsigmoid_backward_testcase_001_normal_floa
 // float16
 TEST_F(l2_logsigmoid_backward_test, logsigmoid_backward_testcase_002_normal_float16)
 {
-    auto gradOutputDesc = TensorDesc({2, 5}, ACL_FLOAT16, ACL_FORMAT_ND).Value(vector<float>{1,1,1,1,1,1,1,1,1,1});
+    auto gradOutputDesc =
+        TensorDesc({2, 5}, ACL_FLOAT16, ACL_FORMAT_ND).Value(vector<float>{1, 1, 1, 1, 1, 1, 1, 1, 1, 1});
     auto selfDesc = TensorDesc({2, 5}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto bufferDesc = TensorDesc(selfDesc);
     auto gradInputDesc = TensorDesc(gradOutputDesc).Precision(0.001, 0.001);
@@ -90,7 +97,8 @@ TEST_F(l2_logsigmoid_backward_test, logsigmoid_backward_testcase_004_exception_n
     auto bufferDesc = TensorDesc(selfDesc);
     auto gradInputDesc = TensorDesc(gradOutputDesc);
 
-    auto ut = OP_API_UT(aclnnLogSigmoidBackward, INPUT((aclTensor*)nullptr, selfDesc, bufferDesc), OUTPUT(gradInputDesc));
+    auto ut =
+        OP_API_UT(aclnnLogSigmoidBackward, INPUT((aclTensor*)nullptr, selfDesc, bufferDesc), OUTPUT(gradInputDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -106,7 +114,8 @@ TEST_F(l2_logsigmoid_backward_test, logsigmoid_backward_testcase_005_exception_n
     auto bufferDesc = TensorDesc(selfDesc);
     auto gradInputDesc = TensorDesc(gradOutputDesc);
 
-    auto ut = OP_API_UT(aclnnLogSigmoidBackward, INPUT(gradOutputDesc, (aclTensor*)nullptr, bufferDesc), OUTPUT(gradInputDesc));
+    auto ut = OP_API_UT(
+        aclnnLogSigmoidBackward, INPUT(gradOutputDesc, (aclTensor*)nullptr, bufferDesc), OUTPUT(gradInputDesc));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -121,7 +130,8 @@ TEST_F(l2_logsigmoid_backward_test, logsigmoid_backward_testcase_006_exception_n
     auto selfDesc = TensorDesc({1, 16, 1, 1}, ACL_FLOAT, ACL_FORMAT_ND);
     auto bufferDesc = TensorDesc(selfDesc);
     auto gradInputDesc = (aclTensor*)nullptr;
-    auto ut = OP_API_UT(aclnnLogSigmoidBackward, INPUT(gradOutputDesc, selfDesc, bufferDesc), OUTPUT((aclTensor*)nullptr));
+    auto ut =
+        OP_API_UT(aclnnLogSigmoidBackward, INPUT(gradOutputDesc, selfDesc, bufferDesc), OUTPUT((aclTensor*)nullptr));
 
     // SAMPLE: only test GetWorkspaceSize
     uint64_t workspaceSize = 0;
@@ -183,7 +193,7 @@ TEST_F(l2_logsigmoid_backward_test, logsigmoid_backward_testcase_010_normal_form
         ACL_FORMAT_ND,
         ACL_FORMAT_NC1HWC0,
         ACL_FORMAT_FRACTAL_NZ,
-        };
+    };
 
     int length = ValidList.size();
     for (int i = 0; i < length; i++) {
@@ -191,7 +201,8 @@ TEST_F(l2_logsigmoid_backward_test, logsigmoid_backward_testcase_010_normal_form
         auto selfDesc = TensorDesc({1, 16, 1, 1}, ACL_FLOAT, ValidList[i]);
         auto bufferDesc = TensorDesc(selfDesc);
         auto gradInputDesc = TensorDesc(gradOutputDesc).Precision(0.0001, 0.0001);
-        auto ut = OP_API_UT(aclnnLogSigmoidBackward, INPUT(gradOutputDesc, selfDesc, bufferDesc), OUTPUT(gradInputDesc));
+        auto ut =
+            OP_API_UT(aclnnLogSigmoidBackward, INPUT(gradOutputDesc, selfDesc, bufferDesc), OUTPUT(gradInputDesc));
 
         // SAMPLE: only test GetWorkspaceSize
         uint64_t workspaceSize = 0;
@@ -252,8 +263,8 @@ TEST_F(l2_logsigmoid_backward_test, logsigmoid_backward_testcase_013_exception_d
 // not contiguous
 TEST_F(l2_logsigmoid_backward_test, logsigmoid_backward_testcase_014_normal_not_contiguous_float)
 {
-    auto gradOutputDesc = TensorDesc({2, 5}, ACL_FLOAT, ACL_FORMAT_ND,
-        {1, 2}, 0, {5, 2}).Value(vector<float>{1,1,1,1,1,1,1,1,1,1});
+    auto gradOutputDesc = TensorDesc({2, 5}, ACL_FLOAT, ACL_FORMAT_ND, {1, 2}, 0, {5, 2})
+                              .Value(vector<float>{1, 1, 1, 1, 1, 1, 1, 1, 1, 1});
     auto selfDesc = TensorDesc({2, 5}, ACL_FLOAT, ACL_FORMAT_ND, {1, 2}, 0, {5, 2}).ValueRange(-1, 1);
     auto bufferDesc = TensorDesc(selfDesc);
     auto gradInputDesc = TensorDesc(gradOutputDesc).Precision(0.0001, 0.0001);
@@ -269,8 +280,8 @@ TEST_F(l2_logsigmoid_backward_test, logsigmoid_backward_testcase_014_normal_not_
 // not contiguous
 TEST_F(l2_logsigmoid_backward_test, logsigmoid_backward_testcase_015_normal_not_contiguous_float16)
 {
-    auto gradOutputDesc = TensorDesc({2, 5}, ACL_FLOAT16, ACL_FORMAT_ND,
-        {1, 2}, 0, {5, 2}).Value(vector<float>{1,1,1,1,1,1,1,1,1,1});
+    auto gradOutputDesc = TensorDesc({2, 5}, ACL_FLOAT16, ACL_FORMAT_ND, {1, 2}, 0, {5, 2})
+                              .Value(vector<float>{1, 1, 1, 1, 1, 1, 1, 1, 1, 1});
     auto selfDesc = TensorDesc({2, 5}, ACL_FLOAT16, ACL_FORMAT_ND, {1, 2}, 0, {5, 2}).ValueRange(-1, 1);
     auto bufferDesc = TensorDesc(selfDesc);
     auto gradInputDesc = TensorDesc(gradOutputDesc).Precision(0.001, 0.001);
@@ -316,8 +327,8 @@ TEST_F(l2_logsigmoid_backward_test, logsigmoid_backward_testcase_017_exception_c
 // largeDim
 TEST_F(l2_logsigmoid_backward_test, logsigmoid_backward_testcase_018_normal_large_dims)
 {
-    auto gradOutputDesc = TensorDesc({1,2,3,4,5,6,7,8,9}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(1,1);
-    auto selfDesc = TensorDesc({1,2,3,4,5,6,7,8,9}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto gradOutputDesc = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8, 9}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(1, 1);
+    auto selfDesc = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8, 9}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-10, 10);
     auto bufferDesc = TensorDesc(selfDesc);
     auto gradInputDesc = TensorDesc(gradOutputDesc).Precision(0.0001, 0.0001);
     auto ut = OP_API_UT(aclnnLogSigmoidBackward, INPUT(gradOutputDesc, selfDesc, bufferDesc), OUTPUT(gradInputDesc));
@@ -363,12 +374,111 @@ TEST_F(l2_logsigmoid_backward_test, logsigmoid_backward_testcase_020_exception_g
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
-TEST_F(l2_logsigmoid_backward_test, ascend910B2_case_bf16) {
-    auto gradOutputDesc = TensorDesc({2, 5}, ACL_BF16, ACL_FORMAT_ND,
-        {1, 2}, 0, {5, 2}).Value(vector<float>{1,1,1,1,1,1,1,1,1,1});
+TEST_F(l2_logsigmoid_backward_test, ascend910B2_case_bf16)
+{
+    auto gradOutputDesc = TensorDesc({2, 5}, ACL_BF16, ACL_FORMAT_ND, {1, 2}, 0, {5, 2})
+                              .Value(vector<float>{1, 1, 1, 1, 1, 1, 1, 1, 1, 1});
     auto selfDesc = TensorDesc({2, 5}, ACL_BF16, ACL_FORMAT_ND, {1, 2}, 0, {5, 2}).ValueRange(-1, 1);
     auto bufferDesc = TensorDesc(selfDesc);
     auto gradInputDesc = TensorDesc(gradOutputDesc).Precision(0.004, 0.004);
+    auto ut = OP_API_UT(aclnnLogSigmoidBackward, INPUT(gradOutputDesc, selfDesc, bufferDesc), OUTPUT(gradInputDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+TEST_F(l2_logsigmoid_backward_test, logsigmoid_backward_testcase_021_normal_1d_shape)
+{
+    auto gradOutputDesc = TensorDesc({256}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto selfDesc = TensorDesc({256}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-5, 5);
+    auto bufferDesc = TensorDesc(selfDesc);
+    auto gradInputDesc = TensorDesc(gradOutputDesc).Precision(0.0001, 0.0001);
+
+    auto ut = OP_API_UT(aclnnLogSigmoidBackward, INPUT(gradOutputDesc, selfDesc, bufferDesc), OUTPUT(gradInputDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+TEST_F(l2_logsigmoid_backward_test, logsigmoid_backward_testcase_022_normal_7d_shape)
+{
+    auto gradOutputDesc = TensorDesc({1, 2, 3, 4, 5, 6, 7}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto selfDesc = TensorDesc({1, 2, 3, 4, 5, 6, 7}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto bufferDesc = TensorDesc(selfDesc);
+    auto gradInputDesc = TensorDesc(gradOutputDesc).Precision(0.001, 0.001);
+
+    auto ut = OP_API_UT(aclnnLogSigmoidBackward, INPUT(gradOutputDesc, selfDesc, bufferDesc), OUTPUT(gradInputDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+TEST_F(l2_logsigmoid_backward_test, logsigmoid_backward_testcase_023_normal_large_shape)
+{
+    auto gradOutputDesc = TensorDesc({1024, 1024}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
+    auto selfDesc = TensorDesc({1024, 1024}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-5, 5);
+    auto bufferDesc = TensorDesc(selfDesc);
+    auto gradInputDesc = TensorDesc(gradOutputDesc).Precision(0.0001, 0.0001);
+
+    auto ut = OP_API_UT(aclnnLogSigmoidBackward, INPUT(gradOutputDesc, selfDesc, bufferDesc), OUTPUT(gradInputDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+TEST_F(l2_logsigmoid_backward_test, logsigmoid_backward_testcase_024_normal_value_range)
+{
+    auto gradOutputDesc = TensorDesc({2, 4, 6, 8}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto selfDesc = TensorDesc({2, 4, 6, 8}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-100, 100);
+    auto bufferDesc = TensorDesc(selfDesc);
+    auto gradInputDesc = TensorDesc(gradOutputDesc).Precision(0.0001, 0.0001);
+
+    auto ut = OP_API_UT(aclnnLogSigmoidBackward, INPUT(gradOutputDesc, selfDesc, bufferDesc), OUTPUT(gradInputDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+TEST_F(l2_logsigmoid_backward_test, logsigmoid_backward_testcase_025_normal_scalar)
+{
+    auto gradOutputDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
+    auto selfDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto bufferDesc = TensorDesc(selfDesc);
+    auto gradInputDesc = TensorDesc(gradOutputDesc).Precision(0.0001, 0.0001);
+
+    auto ut = OP_API_UT(aclnnLogSigmoidBackward, INPUT(gradOutputDesc, selfDesc, bufferDesc), OUTPUT(gradInputDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+TEST_F(l2_logsigmoid_backward_test, logsigmoid_backward_testcase_026_exception_negative_dim)
+{
+    auto gradOutputDesc = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8, 9}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(1, 1);
+    auto selfDesc = TensorDesc({-1, -1}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-10, 10);
+    auto bufferDesc = TensorDesc(selfDesc);
+    auto gradInputDesc = TensorDesc(gradOutputDesc).Precision(0.0001, 0.0001);
+
+    auto ut = OP_API_UT(aclnnLogSigmoidBackward, INPUT(gradOutputDesc, selfDesc, bufferDesc), OUTPUT(gradInputDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_logsigmoid_backward_test, logsigmoid_backward_testcase_027_normal_bf16_3d)
+{
+    auto gradOutputDesc = TensorDesc({32, 64, 128}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto selfDesc = TensorDesc({32, 64, 128}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-5, 5);
+    auto bufferDesc = TensorDesc(selfDesc);
+    auto gradInputDesc = TensorDesc(gradOutputDesc).Precision(0.004, 0.004);
+
     auto ut = OP_API_UT(aclnnLogSigmoidBackward, INPUT(gradOutputDesc, selfDesc, bufferDesc), OUTPUT(gradInputDesc));
 
     uint64_t workspaceSize = 0;

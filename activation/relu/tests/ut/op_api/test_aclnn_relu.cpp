@@ -15,118 +15,209 @@
 
 class l2_relu_test : public testing::Test {
 protected:
-  static void SetUpTestCase() {
-    std::cout << "l2_relu_test SetUp" << std::endl;
-  }
+    static void SetUpTestCase()
+    {
+        std::cout << "l2_relu_test SetUp" << std::endl;
+    }
 
-  static void TearDownTestCase() { std::cout << "l2_relu_test TearDown" << std::endl; }
+    static void TearDownTestCase()
+    {
+        std::cout << "l2_relu_test TearDown" << std::endl;
+    }
 };
 
 // self的数据类型不在支持范围内
-TEST_F(l2_relu_test, l2_relu_test_001) {
-  auto selfDesc = TensorDesc({2, 3}, ACL_BOOL, ACL_FORMAT_ND);
-  auto outDesc = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND);
+TEST_F(l2_relu_test, l2_relu_test_001)
+{
+    auto selfDesc = TensorDesc({2, 3}, ACL_BOOL, ACL_FORMAT_ND);
+    auto outDesc = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND);
 
-  auto ut = OP_API_UT(aclnnRelu, INPUT(selfDesc), OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnRelu, INPUT(selfDesc), OUTPUT(outDesc));
 
-  uint64_t workspaceSize = 0;
-  aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
 }
 
 // out的数据类型不在支持范围内
-TEST_F(l2_relu_test, l2_relu_test_002) {
-  auto selfDesc = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND);
-  auto outDesc = TensorDesc({2, 3}, ACL_BOOL, ACL_FORMAT_ND);
+TEST_F(l2_relu_test, l2_relu_test_002)
+{
+    auto selfDesc = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto outDesc = TensorDesc({2, 3}, ACL_BOOL, ACL_FORMAT_ND);
 
-  auto ut = OP_API_UT(aclnnRelu, INPUT(selfDesc), OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnRelu, INPUT(selfDesc), OUTPUT(outDesc));
 
-  uint64_t workspaceSize = 0;
-  aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
 }
 
 // self和out的数据类型不一致
-TEST_F(l2_relu_test, l2_relu_test_003) {
-  auto selfDesc = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND);
-  auto outDesc = TensorDesc({2, 3}, ACL_FLOAT16, ACL_FORMAT_ND);
+TEST_F(l2_relu_test, l2_relu_test_003)
+{
+    auto selfDesc = TensorDesc({2, 3}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto outDesc = TensorDesc({2, 3}, ACL_FLOAT16, ACL_FORMAT_ND);
 
-  auto ut = OP_API_UT(aclnnRelu, INPUT(selfDesc), OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnRelu, INPUT(selfDesc), OUTPUT(outDesc));
 
-  uint64_t workspaceSize = 0;
-  aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
 }
 
 // 空tensor
-TEST_F(l2_relu_test, l2_relu_test_004) {
-  auto selfDesc = TensorDesc({2, 0}, ACL_FLOAT, ACL_FORMAT_ND);
-  auto outDesc = TensorDesc({2, 0}, ACL_FLOAT, ACL_FORMAT_ND);
+TEST_F(l2_relu_test, l2_relu_test_004)
+{
+    auto selfDesc = TensorDesc({2, 0}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto outDesc = TensorDesc({2, 0}, ACL_FLOAT, ACL_FORMAT_ND);
 
-  auto ut = OP_API_UT(aclnnRelu, INPUT(selfDesc), OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnRelu, INPUT(selfDesc), OUTPUT(outDesc));
 
-  uint64_t workspaceSize = 0;
-  aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
 }
 
 // 正常路径，float32
-TEST_F(l2_relu_test, l2_relu_test_005) {
-  auto selfDesc = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND);
-  auto outDesc = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+TEST_F(l2_relu_test, l2_relu_test_005)
+{
+    auto selfDesc = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto outDesc = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND);
 
-  auto ut = OP_API_UT(aclnnRelu, INPUT(selfDesc), OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnRelu, INPUT(selfDesc), OUTPUT(outDesc));
 
-  uint64_t workspaceSize = 0;
-  aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
 
-  //ut.TestPrecision();
+    // ut.TestPrecision();
 }
 
 // 正常路径，uint8
-TEST_F(l2_relu_test, l2_relu_test_006) {
-  auto selfDesc = TensorDesc({2, 4}, ACL_UINT8, ACL_FORMAT_ND);
-  auto outDesc = TensorDesc({2, 4}, ACL_UINT8, ACL_FORMAT_ND);
+TEST_F(l2_relu_test, l2_relu_test_006)
+{
+    auto selfDesc = TensorDesc({2, 4}, ACL_UINT8, ACL_FORMAT_ND);
+    auto outDesc = TensorDesc({2, 4}, ACL_UINT8, ACL_FORMAT_ND);
 
-  auto ut = OP_API_UT(aclnnRelu, INPUT(selfDesc), OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnRelu, INPUT(selfDesc), OUTPUT(outDesc));
 
-  uint64_t workspaceSize = 0;
-  aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
 }
 
 // 非正常路径，空指针
-TEST_F(l2_relu_test, l2_relu_test_007) {
-  auto outDesc = TensorDesc({2, 4}, ACL_UINT8, ACL_FORMAT_ND);
+TEST_F(l2_relu_test, l2_relu_test_007)
+{
+    auto outDesc = TensorDesc({2, 4}, ACL_UINT8, ACL_FORMAT_ND);
 
-  auto ut = OP_API_UT(aclnnRelu, INPUT(nullptr), OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnRelu, INPUT(nullptr), OUTPUT(outDesc));
 
-  uint64_t workspaceSize = 0;
-  aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_NULLPTR);
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_NULLPTR);
 }
 
 // 非正常路径，shape9
-TEST_F(l2_relu_test, l2_relu_test_008) {
-  auto selfDesc = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8, 9}, ACL_INT8, ACL_FORMAT_ND);
-  auto outDesc = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8, 9}, ACL_INT8, ACL_FORMAT_ND);
+TEST_F(l2_relu_test, l2_relu_test_008)
+{
+    auto selfDesc = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8, 9}, ACL_INT8, ACL_FORMAT_ND);
+    auto outDesc = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8, 9}, ACL_INT8, ACL_FORMAT_ND);
 
-  auto ut = OP_API_UT(aclnnRelu, INPUT(selfDesc), OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnRelu, INPUT(selfDesc), OUTPUT(outDesc));
 
-  uint64_t workspaceSize = 0;
-  aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
 }
 
 // 非正常路径，shape不一致
-TEST_F(l2_relu_test, l2_relu_test_009) {
-  auto selfDesc = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8, 9}, ACL_INT8, ACL_FORMAT_ND);
-  auto outDesc = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8}, ACL_INT8, ACL_FORMAT_ND);
+TEST_F(l2_relu_test, l2_relu_test_009)
+{
+    auto selfDesc = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8, 9}, ACL_INT8, ACL_FORMAT_ND);
+    auto outDesc = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8}, ACL_INT8, ACL_FORMAT_ND);
 
-  auto ut = OP_API_UT(aclnnRelu, INPUT(selfDesc), OUTPUT(outDesc));
+    auto ut = OP_API_UT(aclnnRelu, INPUT(selfDesc), OUTPUT(outDesc));
 
-  uint64_t workspaceSize = 0;
-  aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
+}
+
+// 正常路径，float16
+TEST_F(l2_relu_test, l2_relu_test_010)
+{
+    auto selfDesc = TensorDesc({2, 4}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto outDesc = TensorDesc({2, 4}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnRelu, INPUT(selfDesc), OUTPUT(outDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
+}
+
+// 正常路径，8维
+TEST_F(l2_relu_test, l2_relu_test_011)
+{
+    auto selfDesc = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto outDesc = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnRelu, INPUT(selfDesc), OUTPUT(outDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
+}
+
+// 正常路径，scalar
+TEST_F(l2_relu_test, l2_relu_test_012)
+{
+    auto selfDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto outDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnRelu, INPUT(selfDesc), OUTPUT(outDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
+}
+
+// 正常路径，large shape
+TEST_F(l2_relu_test, l2_relu_test_013)
+{
+    auto selfDesc = TensorDesc({1024, 1024}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto outDesc = TensorDesc({1024, 1024}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnRelu, INPUT(selfDesc), OUTPUT(outDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
+}
+
+// 正常路径，nchw
+TEST_F(l2_relu_test, l2_relu_test_014)
+{
+    auto selfDesc = TensorDesc({2, 64, 112, 112}, ACL_FLOAT16, ACL_FORMAT_NCHW);
+    auto outDesc = TensorDesc({2, 64, 112, 112}, ACL_FLOAT16, ACL_FORMAT_NCHW);
+
+    auto ut = OP_API_UT(aclnnRelu, INPUT(selfDesc), OUTPUT(outDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
+}
+
+// 正常路径，非连续
+TEST_F(l2_relu_test, l2_relu_test_015)
+{
+    auto selfDesc = TensorDesc({5, 4}, ACL_FLOAT, ACL_FORMAT_ND, {1, 5}, 0, {4, 5});
+    auto outDesc = TensorDesc({5, 4}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(aclnnRelu, INPUT(selfDesc), OUTPUT(outDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
 }

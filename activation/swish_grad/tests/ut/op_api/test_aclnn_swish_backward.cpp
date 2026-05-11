@@ -420,3 +420,73 @@ TEST_F(l2_swish_backward_test, swish_backward_testcase_022_exception_gradInput_i
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
+
+// 正常路径，8维
+TEST_F(l2_swish_backward_test, swish_backward_testcase_023_8d_shape)
+{
+    auto gradOutputDesc = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto selfDesc = TensorDesc({1, 2, 3, 4, 5, 6, 7, 8}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto betaDesc = ScalarDesc(1.1f, ACL_FLOAT);
+    auto gradInputDesc = TensorDesc(gradOutputDesc).Precision(0.0001, 0.0001);
+    auto ut = OP_API_UT(aclnnSwishBackward, INPUT(gradOutputDesc, selfDesc, betaDesc), OUTPUT(gradInputDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+// 正常路径，scalar
+TEST_F(l2_swish_backward_test, swish_backward_testcase_024_scalar)
+{
+    auto gradOutputDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto selfDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto betaDesc = ScalarDesc(1.1f, ACL_FLOAT);
+    auto gradInputDesc = TensorDesc(gradOutputDesc).Precision(0.0001, 0.0001);
+    auto ut = OP_API_UT(aclnnSwishBackward, INPUT(gradOutputDesc, selfDesc, betaDesc), OUTPUT(gradInputDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+// 正常路径，large shape
+TEST_F(l2_swish_backward_test, swish_backward_testcase_025_large_shape)
+{
+    auto gradOutputDesc = TensorDesc({1024, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto selfDesc = TensorDesc({1024, 1024}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-1, 1);
+    auto betaDesc = ScalarDesc(1.1f, ACL_FLOAT16);
+    auto gradInputDesc = TensorDesc(gradOutputDesc).Precision(0.001, 0.001);
+    auto ut = OP_API_UT(aclnnSwishBackward, INPUT(gradOutputDesc, selfDesc, betaDesc), OUTPUT(gradInputDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+// 正常路径，nchw
+TEST_F(l2_swish_backward_test, swish_backward_testcase_026_nchw_format)
+{
+    auto gradOutputDesc = TensorDesc({2, 64, 112, 112}, ACL_FLOAT16, ACL_FORMAT_NCHW).ValueRange(-1, 1);
+    auto selfDesc = TensorDesc({2, 64, 112, 112}, ACL_FLOAT16, ACL_FORMAT_NCHW).ValueRange(-1, 1);
+    auto betaDesc = ScalarDesc(1.1f, ACL_FLOAT16);
+    auto gradInputDesc = TensorDesc(gradOutputDesc).Precision(0.001, 0.001);
+    auto ut = OP_API_UT(aclnnSwishBackward, INPUT(gradOutputDesc, selfDesc, betaDesc), OUTPUT(gradInputDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
+
+// 正常路径，value range
+TEST_F(l2_swish_backward_test, swish_backward_testcase_027_value_range)
+{
+    auto gradOutputDesc = TensorDesc({2, 4, 6, 8}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-100, 100);
+    auto selfDesc = TensorDesc({2, 4, 6, 8}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(-100, 100);
+    auto betaDesc = ScalarDesc(1.1f, ACL_FLOAT);
+    auto gradInputDesc = TensorDesc(gradOutputDesc).Precision(0.0001, 0.0001);
+    auto ut = OP_API_UT(aclnnSwishBackward, INPUT(gradOutputDesc, selfDesc, betaDesc), OUTPUT(gradInputDesc));
+
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACLNN_SUCCESS);
+}
