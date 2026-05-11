@@ -754,7 +754,7 @@ ge::graphStatus AscendAntiQuantV2Regbase::WriteTilingData()
     errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
                             reinterpret_cast<void *>(&tilingData), tilingDataSize);
     if (ret != EOK) {
-        OP_LOGD(context_->GetNodeName(), "memcpy_s failde, ret=%d", ret);
+        OP_LOGD(context_->GetNodeName(), "memcpy_s failed, ret=%d", ret);
         return ge::GRAPH_FAILED;
     }
     context_->GetRawTilingData()->SetDataSize(tilingDataSize);
