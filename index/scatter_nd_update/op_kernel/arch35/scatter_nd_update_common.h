@@ -223,8 +223,12 @@ public:
             }
             AscendC::MicroAPI::DataCopyUnAlignPost(uniqueIdCountsAddr, uOut);
         }
-        uint32_t uniqueIdNum = ((AscendC::MicroAPI::GetSpr<AscendC::SpecialPurposeReg::AR>()) / sizeof(int32_t)) - 1;
-        return uniqueIdNum;
+        uint32_t elementCount = AscendC::MicroAPI::GetSpr<AscendC::SpecialPurposeReg::AR>() / sizeof(int32_t);
+        if (elementCount > 0) {
+          return static_cast<uint32_t>(elementCount - 1);
+        } else {
+          return 0;
+        }
     }
 
     __aicore__ inline void SortAndComputeUniqueIdx(LocalTensor<OFFSET_T> outOfstLocal, int64_t rowLen)
