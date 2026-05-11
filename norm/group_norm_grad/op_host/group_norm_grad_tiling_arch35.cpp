@@ -175,9 +175,13 @@ ge::graphStatus GroupNormGradRegBaseTiling::InputCheck(gert::Shape& dyShape)
     }
     for (uint32_t dimIdx = 0; dimIdx < dyShape.GetDimNum(); dimIdx++) {
         auto currShape = dyShape.GetDim(dimIdx);
-        OP_TILING_CHECK(
-            (currShape < 1), OP_LOGE(context_->GetNodeName(), "shape value must be at least 1."),
-            return ge::GRAPH_FAILED);
+        if (currShape < 1) {
+            std::string errMsg = Ops::Base::ToString(dyShape);
+            std::string reasonMsg = "All axes of dy must be greater or equal to 1. Currently, dim[" +
+                                    std::to_string(currShape) + "] of dy does not meet the condition";
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "dy", errMsg.c_str(), reasonMsg.c_str());
+            return ge::GRAPH_FAILED;
+        }
     }
     auto dimNum = dyShape.GetDimNum();
     if (dimNum < MIN_X_DIM) {

@@ -124,7 +124,7 @@ static ge::graphStatus CheckInputDtype(const gert::TilingContext* context, Apply
     OP_CHECK_IF(
         IsInvalidType(dtype),
         OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "v",
-            ge::TypeUtils::DataTypeToSerialString(dtype).c_str(), "fp16, fp32, bf16"),
+            ge::TypeUtils::DataTypeToSerialString(dtype).c_str(), "fp16, fp32 or bf16"),
         return ge::GRAPH_FAILED);
     tilingParam.dtypeLst.push_back(dtype);
 

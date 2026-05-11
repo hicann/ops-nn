@@ -706,9 +706,9 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::GetAttr()
   auto* attrSwigluMode = attrs->GetAttrPointer<int>(ATTR_SWIGLU_MODE_INDEX);
   swigluMode_ = (attrSwigluMode == nullptr) ? 0 : *attrSwigluMode;
   OP_CHECK_IF(swigluMode_ != 0 && swigluMode_ != 1,
-              OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-                  context_->GetNodeName(), "swigluMode",
-                  std::to_string(swigluMode_).c_str(), "swigluMode only support [0, 1]"),
+              OP_LOGE_FOR_INVALID_VALUE(
+                  context_->GetNodeName(), "swiglu_mode",
+                  std::to_string(swigluMode_).c_str(), "0 or 1"),
               return ge::GRAPH_FAILED);
   auto* attrClampLimit = attrs->GetAttrPointer<float>(ATTR_CLAMP_LIMIT_INDEX);
   clampLimit_ = (attrClampLimit == nullptr) ? CLAMP_LIMIT_DEFAULT : *attrClampLimit;

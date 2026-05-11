@@ -199,8 +199,11 @@ ge::graphStatus SparseSoftmaxCrossEntropyWithLogitsTiling::CalTilingData()
     int64_t inputByte2 = labelsDtype == ge::DT_INT32 ? DTYPE_LEN_FP32 : DTYPE_LEN_INT64;
     int64_t perBlock = ubBlockSize / inputByte1;
 	if (perBlock == 0) {
-		OP_LOGE(context_->GetNodeName(), "perBlock must not be zero.");
-		return ge::GRAPH_FAILED;
+        std::string errMsg = ge::TypeUtils::DataTypeToSerialString(featuresDtype);
+        std::string reasonMsg =
+            "The dtype size of input features must be less than or equal to " + std::to_string(ubBlockSize);
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "features", errMsg.c_str(), reasonMsg.c_str());
+        return ge::GRAPH_FAILED;
 	}
 
 	int64_t rAligned = (baseTiling_.r + perBlock - 1) / perBlock * perBlock;

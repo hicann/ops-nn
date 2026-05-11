@@ -108,7 +108,7 @@ ge::graphStatus ForeachNonFiniteCheckAndUnscaleRegbaseTiling::GetShapeAttrsInfo(
     OP_CHECK_IF(
         totalTensorCount_ > MAX_TENSOR_COUNT || totalTensorCount_ <= 0,
         OP_LOGE_FOR_INVALID_TENSORNUM(nodeName_.c_str(), "scaled_grads", totalTensorCount_,
-                                       ("within the range (0, " + std::to_string(MAX_TENSOR_COUNT) + ")").c_str()),
+                                       ("within the range (0, " + std::to_string(MAX_TENSOR_COUNT) + "]").c_str()),
         return ge::GRAPH_FAILED);
 
     // Get shape, dtype information, and the total number of data.
@@ -126,7 +126,7 @@ ge::graphStatus ForeachNonFiniteCheckAndUnscaleRegbaseTiling::GetShapeAttrsInfo(
                 dataTypeSize_ <= 0,
                 OP_LOGE_FOR_INVALID_DTYPE(nodeName_.c_str(), "scaled_grads",
                     ge::TypeUtils::DataTypeToSerialString(dataType_).c_str(),
-                    "The dtypeSize of scaled_grads must be bigger than 0"),
+                    "The dtype size of scaled_grads must be greater than 0"),
                 return ge::GRAPH_FAILED);
             elementsPerBlock_ = blockSize_ / dataTypeSize_;
         } else if (tempDtype != dataType_) {
@@ -152,12 +152,14 @@ ge::graphStatus ForeachNonFiniteCheckAndUnscaleRegbaseTiling::GetShapeAttrsInfo(
         OP_CHECK_NULL_WITH_CONTEXT(context_, inputShape);
         auto inputLength = inputShape->GetStorageShape().GetShapeSize();
         if (inputLength != 1 && j == totalTensorCount_) {
-            OP_LOGE(context_->GetNodeName(), "element num of input found_inf is %ld, which should be 1.", inputLength);
+            OP_LOGE_FOR_INVALID_SHAPESIZE(
+                context_->GetNodeName(), "found_inf", std::to_string(inputLength).c_str(), "1");
             return ge::GRAPH_FAILED;
         }
 
         if (inputLength != 1 && j == allTensorCount - 1) {
-            OP_LOGE(context_->GetNodeName(), "element num of input inv_scale is %ld, which should be 1.", inputLength);
+            OP_LOGE_FOR_INVALID_SHAPESIZE(
+                context_->GetNodeName(), "inv_scale", std::to_string(inputLength).c_str(), "1");
             return ge::GRAPH_FAILED;
         }
     }
