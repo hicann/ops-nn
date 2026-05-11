@@ -74,7 +74,7 @@ void AutoTilingRowCol(int64_t& rowTileNum, int64_t& colTileNum, int64_t usedCore
     std::sort(allTiling.begin(), allTiling.end(), [](const std::vector<int64_t>& a, const std::vector<int64_t>& b) {
         constexpr int NIndex = 1;
         constexpr int DeltaIndex = 3;
-        return std::make_pair(a[DeltaIndex], a[NIndex]) < std::make_pair(b[DeltaIndex], b[NIndex]);
+        return std::make_pair(a[NIndex], a[DeltaIndex]) < std::make_pair(b[NIndex], b[DeltaIndex]);
     });
 
     rowTileNum = static_cast<uint16_t>(allTiling[0][0]);

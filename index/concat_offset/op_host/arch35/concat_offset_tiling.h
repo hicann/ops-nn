@@ -16,7 +16,7 @@
 #ifndef AIR_CXX_RUNTIME_V2_OP_IMPL_CONCATOFFSET_H
 #define AIR_CXX_RUNTIME_V2_OP_IMPL_CONCATOFFSET_H
 
-#include "concat_offset_arch35.h"
+#include "concat_offset_tiling_arch35.h"
 #include "error_util.h"
 #include "log/log.h"
 #include "op_host/tiling_base.h"

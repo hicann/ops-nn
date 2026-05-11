@@ -10,14 +10,14 @@
 
 
 /*!
- * \file concat_offset_arch35.cpp
+ * \file concat_offset_tiling_arch35.cpp
  * \brief
  */
 
 #include "op_host/tiling_templates_registry.h"
 #include "platform/platform_info.h"
 #include "register/op_def_registry.h"
-#include "concat_offset_arch35.h"
+#include "concat_offset_tiling_arch35.h"
 #include "concat_offset_tiling.h"
 #include "register/op_impl_registry.h"
 #include "error_util.h"

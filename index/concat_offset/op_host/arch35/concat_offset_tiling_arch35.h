@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file concat_offset_arch35.h
+ * \file concat_offset_tiling_arch35.h
  * \brief
  */
 #ifndef _CONCAT_OFFSET_H_
