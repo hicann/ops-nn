@@ -60,6 +60,7 @@ public:
     uint32_t uniqueIdNum_ = 0;
     float maxScore_ = 0;
     int64_t varInAxis_ = 0;
+    int64_t simdWithSort_ = 0;
 
     AscendC::GlobalTensor<U> indicesGm_;
     AscendC::GlobalTensor<T> updatesGm_;
@@ -264,6 +265,9 @@ public:
         SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
         WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
         ComputeOutOfset(indicesLocal, outOfstLocal, rowLen, rankSize);
+        if (simdWithSort_ == 0) {
+            return;
+        }
         if constexpr (IsSameType<OFFSET_T, int32_t>::value) {
             IndexStatisticInt32(outOfstLocal, dstLocal, maxScore_, rowLen, afterAxis_);
         } else {

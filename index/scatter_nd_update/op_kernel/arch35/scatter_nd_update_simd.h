@@ -66,6 +66,7 @@ __aicore__ inline void ScatterNdUpdateSimd<T, U, OFFSET_T>::Init(
     this->indexRankSize_ = tilingData_.indexRankSize;
     this->eachCoreAfterAxisCount_ = tilingData_.eachCoreAfterAxisCount;
     this->varInAxis_ = tilingData_.outputStorageShapeSize;
+    this->simdWithSort_ = tilingData_.isSimdWithSort;
     this->InitBaseBuffer(pipe_, tilingData_.indicesFactor, indices, updates, y);
 
     curCoreIndexCount_ = (GetBlockIdx() != (tilingData_.usedCoreNumBefore - 1) ? tilingData_.eachCoreIndexCount :
@@ -127,6 +128,9 @@ __aicore__ inline void ScatterNdUpdateSimd<T, U, OFFSET_T>::CopyIndiceInSplitInd
     SetFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
     WaitFlag<HardEvent::MTE2_V>(eventIdMte2ToV);
     this->ComputeOutOfset(indicesLocal, outOfstLocal, rowLen, rankSize);
+    if (tilingData_.isSimdWithSort == 0) {
+        return;
+    }
     if constexpr (IsSameType<OFFSET_T, int32_t>::value) {
         IndexStatisticInt32(outOfstLocal, dstLocal, this->maxScore_, rowLen, tilingData_.afterAxis);
     } else {

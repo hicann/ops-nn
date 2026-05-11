@@ -60,6 +60,7 @@ public:
     int64_t isSplitAfterAxis;
     int64_t isDeterminstic;
     int64_t isSimtWithSort;
+    int64_t isSimdWithSort;
     int64_t isSimdNonDeterminstic;
     int64_t isMask;
     int64_t isSplitOneLine;

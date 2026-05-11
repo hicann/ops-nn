@@ -49,7 +49,7 @@ static constexpr int64_t MIN_SIZE_SIMD_NONDETERMINSTIC = 128;
 static constexpr int64_t INDICES_MIN_BLOCK_SIZE = 1024;
 static constexpr int64_t INT32_BYTES = 4;
 static constexpr int64_t FP32_BYTES = 4;
-static constexpr int64_t SIMT_SORT_LIMIT = 1;
+static constexpr int64_t SIMT_SORT_LIMIT = 3;
 static constexpr int64_t TWO = 2;
 static constexpr int64_t MASK_CORE = 1000;
 static constexpr int64_t MASK_VAR = 5;
@@ -59,6 +59,7 @@ static constexpr int64_t ROW_THRESH_SIZE = 4096;
 static constexpr float PARTIAL_UB = 0.1;
 static constexpr int64_t MIN_THREAD_NUM = 128;
 static constexpr int64_t MIN_SIZE_SIMD_DETERMINSTIC = 128;
+static constexpr int64_t MIN_INDICES_PER_CORE_FOR_SIMD_SORT = 64;
 
 static const std::set<ge::DataType> DETERMIN_DTYPE = {ge::DT_FLOAT, ge::DT_FLOAT16};
 
@@ -267,6 +268,17 @@ ge::graphStatus ScatterNdUpdateTiling::CalculateDerivedParams(
     if (isDeterminstic_ != 1 && afterAxis_ * varTypeSize_ >= MIN_SIZE_SIMD_NONDETERMINSTIC) {
         isSimdNonDeterminstic_ = 1;
     }
+
+    // SIMD 排序条件
+    // 1. indicesAxis_ > varInAxis_：索引数量大于原始索引数量，表示高重复度
+    // 2. 单核 indices 数量 > MIN_INDICES_PER_CORE_FOR_SIMD_SORT(64)：批次足够大
+    int64_t estimatedIndicesPerCore = Ops::Base::CeilDiv(indicesAxis_, totalCoreNum_);
+    bool highDuplication = (indicesAxis_ > varInAxis_);
+    bool enoughBatchPerCore = (estimatedIndicesPerCore > MIN_INDICES_PER_CORE_FOR_SIMD_SORT);
+    if (isSimdNonDeterminstic_ == 1 && highDuplication && enoughBatchPerCore) {
+        isSimdWithSort_ = 1;
+    }
+
     if (indicesAxis_ / varInAxis_ >= SIMT_SORT_LIMIT) {
         isSimtWithSort_ = 1;
     }
@@ -1019,6 +1031,7 @@ void ScatterNdUpdateTiling::SetTilingData()
     tilingData->ubRowFactor = ubRowFactor_;
     tilingData->isDeterminstic = isDeterminstic_;
     tilingData->isSimtWithSort = isSimtWithSort_;
+    tilingData->isSimdWithSort = isSimdWithSort_;
     tilingData->isSimdNonDeterminstic = isSimdNonDeterminstic_;
     tilingData->isMask = isMask_;
     tilingData->IsContiguous = IsContiguous_;
@@ -1062,11 +1075,13 @@ void ScatterNdUpdateTiling::DumpTilingInfo()
     info << "rankSize: " << rankSize_ << std::endl;
     info << "isMask: " << isMask_ << std::endl;
     info << "isSimtWithSort: " << isSimtWithSort_ << std::endl;
+    info << "isSimdWithSort: " << isSimdWithSort_ << std::endl;
     info << "isSimdNonDeterminstic: " << isSimdNonDeterminstic_ << std::endl;
     info << "isSplitAfterAxis: " << isSplitAfterAxis_ << std::endl;
     info << "isSplitOneLine: " << isSplitOneLine_ << std::endl;
     info << "ubRowFactor: " << ubRowFactor_ << std::endl;
     info << "ubQuantaIndxFactor: " << ubQuantaIndxFactor_ << std::endl;
+    info << "eachCoreAfterAxisCount: " << eachCoreAfterAxisCount_ << std::endl;
     OP_LOGI(opName, "Tiling info is: %s", info.str().c_str());
 }
 

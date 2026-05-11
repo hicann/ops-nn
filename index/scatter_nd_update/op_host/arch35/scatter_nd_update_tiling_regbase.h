@@ -144,6 +144,7 @@ private:
     int64_t tailCoreVarCount_ = 0;
     int64_t isDeterminstic_ = 0;
     int64_t isSimtWithSort_ = 0;
+    int64_t isSimdWithSort_ = 0;
     int64_t isMask_ = 0;
     int64_t isSimdNonDeterminstic_ = 0;
 
