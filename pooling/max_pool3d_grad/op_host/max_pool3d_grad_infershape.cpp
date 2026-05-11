@@ -19,6 +19,8 @@
 #include "log/log.h"
 #include "register/op_impl_registry.h"
 #include "util/shape_util.h"
+#include "platform/platform_infos_def.h"
+#include "platform/platform_info.h"
 
 using namespace ge;
 namespace ops {
@@ -38,6 +40,7 @@ static constexpr size_t PARAM_NUM = 4;
 static constexpr size_t SHAPE_D_DIM = 2;
 static constexpr size_t SHAPE_H_DIM = 3;
 static constexpr size_t SHAPE_W_DIM = 4;
+static constexpr size_t PADS_SIZE = 6;
 static constexpr int64_t UNKNOWN_DIM_VALUE_ = -1LL;
 
 inline ge::graphStatus SetAllUnknownDim(const int64_t rank, gert::Shape* output_shape)
@@ -52,7 +55,50 @@ inline ge::graphStatus SetAllUnknownDim(const int64_t rank, gert::Shape* output_
     OP_LOGD("SetAllUnknownDim", "set all dim = -1, output = %s", Ops::Base::ToString(*output_shape).c_str());
     return ge::GRAPH_SUCCESS;
 }
+ge::graphStatus CheckPadInfoForMaxPool3DGrad(const gert::InferShapeContext* context)
+{
+    auto attrs = context->GetAttrs();
+    OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
+    auto padsPtr = attrs->GetAttrPointer<char>(PADDING_ATTR_INDEX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, padsPtr);
+    std::string padding(padsPtr);
+    fe::PlatformInfo platform_info;
+    fe::OptionalInfo optional_info;
+    OP_CHECK_IF(
+        (fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platform_info, optional_info) !=
+         ge::GRAPH_SUCCESS),
+        OP_LOGE(context, "Cannot get platform info!"), return ge::GRAPH_FAILED);
+    OP_LOGD(context, "soc version is %s", platform_info.str_info.short_soc_version.c_str());
+    if (platform_info.str_info.short_soc_version == "Ascend950") {
+        OP_CHECK_IF(
+            padding != "SAME" && padding != "VALID",
+            OP_LOGE(context->GetNodeName(), "Pads attritube must be 'SAME' or 'VALID'"), return ge::GRAPH_FAILED);
+    } else {
+        OP_CHECK_IF(
+            padding != "SAME" && padding != "VALID" && padding != "CALCULATED",
+            OP_LOGE(context->GetNodeName(), "Pads attritube must be 'SAME' or 'VALID' or 'CALCULATED'!"),
+            return ge::GRAPH_FAILED);
+        if (padding == "CALCULATED") {
+            auto pads = attrs->GetAttrPointer<gert::ContinuousVector>(PADS_ATTR_INDEX);
+            OP_CHECK_NULL_WITH_CONTEXT(context, pads);
+            OP_CHECK_IF(
+                pads->GetSize() != PADS_SIZE,
+                OP_LOGE(context->GetNodeName(), "Length of pads %lu must be equal 6!", pads->GetSize()),
+                return ge::GRAPH_FAILED);
 
+            auto pads_data = static_cast<const int64_t*>(pads->GetData());
+            for (uint32_t i = 0; i < static_cast<uint32_t>(pads->GetSize()); i++) {
+                OP_CHECK_IF(
+                    (pads_data[i] < 0),
+                    OP_LOGE(
+                        context->GetNodeName(), "Attr value invalid, pads_data[%u] is %ld, should bigger or equal 0.",
+                        i, pads_data[i]),
+                    return ge::GRAPH_FAILED);
+            }
+        }
+    }
+    return ge::GRAPH_SUCCESS;
+}
 ge::graphStatus CheckAttrInfo(const gert::InferShapeContext* context)
 {
     auto attrs = context->GetAttrs();
@@ -79,24 +125,11 @@ ge::graphStatus CheckAttrInfo(const gert::InferShapeContext* context)
         OP_CHECK_IF((strides_data[i] <= 0),
             OP_LOGE(context->GetNodeName(), "Attr value invalid, strides_data[%u] is %ld, should bigger than 0.", i, strides_data[i]), return ge::GRAPH_FAILED);
     }
-
-    auto padsPtr = attrs->GetAttrPointer<char>(PADDING_ATTR_INDEX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, padsPtr);
-    std::string padding(padsPtr);
-    OP_CHECK_IF(padding != "SAME" && padding != "VALID" && padding != "CALCULATED",
-             OP_LOGE(context->GetNodeName(), "Pads attritube must be 'SAME' or 'VALID' or 'CALCULATED'!"), return GRAPH_FAILED);
-
-    auto pads = attrs->GetAttrPointer<gert::ContinuousVector>(PADS_ATTR_INDEX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, pads);
-    OP_CHECK_IF(pads->GetSize() != 0 && pads->GetSize() != 1 && pads->GetSize() != ATTR_LIST_SHAPE_SIZE,
-            OP_LOGE(context->GetNodeName(), "Length of pads %lu must be equal 0, 1 or 3!", pads->GetSize()), return GRAPH_FAILED);
-
-    auto pads_data = static_cast<const int64_t*>(pads->GetData());
-    for (uint32_t i = 0; i < static_cast<uint32_t>(pads->GetSize()); i++) {
-        OP_CHECK_IF((pads_data[i] < 0), OP_LOGE(context->GetNodeName(), "Attr value invalid, pads_data[%u] is %ld, should bigger or equal 0.", i, pads_data[i]),
-            return ge::GRAPH_FAILED);
-    }
-
+    auto ret = CheckPadInfoForMaxPool3DGrad(context);
+    OP_CHECK_IF(
+        ret != ge::GRAPH_SUCCESS, OP_LOGE("InferShapeForMaxPool3DGrad", "CheckAttrInfo return failure"),
+        return ge::GRAPH_FAILED);
+    
     const char* data_format = attrs->GetAttrPointer<char>(DATA_FORMAT_ATTR_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, data_format);
 
