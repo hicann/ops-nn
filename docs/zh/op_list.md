@@ -30,11 +30,21 @@
     <td>activation</td>
     <td><a href="../../activation/celu_v2/README.md">celu_v2</a></td>
     <td>✗</td>
-    <td>✓</td>
+    <td>✗</td>
     <td>✓</td>
     <td>✗</td>
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+  </tr>
+ <tr>
+    <td>activation</td>
+    <td><a href="../../activation/clipped_swiglu/README.md">clipped_swiglu</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>带截断的Swish门控线性单元激活函数，实现x的SwiGlu计算。本算子相较于SwiGlu算子，新增了部分输入参数：groupIndex、alpha、limit、bias、interleaved，用于支持GPT-OSS模型使用的变体SwiGlu以及MoE模型使用的分组场景。</td>
   </tr>
   <tr>
     <td>norm</td>
@@ -82,7 +92,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
     <td>AI Core</td>
     <td>高斯误差函数erf的反函数。</td>
   </tr>
@@ -159,10 +169,10 @@
   <tr>
     <td>activation</td>
     <td><a href="../../activation/gelu_grad_v2/README.md">gelu_grad_v2</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
@@ -181,7 +191,7 @@
     <td><a href="../../activation/gelu_quant/README.md">gelu_quant</a></td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
     <td>✓</td>
     <td>AI Core</td>
     <td>将GeluV2与DynamicQuant/AscendQuantV2进行融合，对输入的数据self进行GELU激活后，对激活的结果进行量化，输出量化后的结果。</td>
@@ -189,10 +199,10 @@
   <tr>
     <td>activation</td>
     <td><a href="../../activation/gelu_v2/README.md">gelu_v2</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
@@ -209,8 +219,8 @@
   <tr>
     <td>activation</td>
     <td><a href="../../activation/hard_shrink/README.md">hard_shrink</a></td>
-    <td>✗</td>
     <td>✓</td>
+    <td>✗</td>
     <td>✓</td>
     <td>✗</td>
     <td>AI Core</td>
@@ -220,7 +230,7 @@
     <td>activation</td>
     <td><a href="../../activation/hard_shrink_grad/README.md">hard_shrink_grad</a></td>
     <td>✗</td>
-    <td>✓</td>
+    <td>✗</td>
     <td>✓</td>
     <td>✗</td>
     <td>AI Core</td>
@@ -230,7 +240,7 @@
     <td>activation</td>
     <td><a href="../../activation/hard_sigmoid/README.md">hard_sigmoid</a></td>
     <td>✗</td>
-    <td>✓</td>
+    <td>✗</td>
     <td>✓</td>
     <td>✗</td>
     <td>AI Core</td>
@@ -240,7 +250,7 @@
     <td>activation</td>
     <td><a href="../../activation/hard_sigmoid_grad/README.md">hard_sigmoid_grad</a></td>
     <td>✗</td>
-    <td>✓</td>
+    <td>✗</td>
     <td>✓</td>
     <td>✗</td>
     <td>AI Core</td>
@@ -268,6 +278,16 @@
   </tr>
   <tr>
     <td>activation</td>
+    <td><a href="../../activation/hard_swish_grad_v2/README.md">hard_swish_grad_v2</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>aclnnHardswish的反向传播，完成张量self的梯度计算。</td>
+  </tr>
+  <tr>
+    <td>activation</td>
     <td><a href="../../activation/hardtanh_grad/README.md">hardtanh_grad</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -289,60 +309,60 @@
   <tr>
     <td>activation</td>
     <td><a href="../../activation/leaky_relu/README.md">leaky_relu</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
   <tr>
     <td>activation</td>
     <td><a href="../../activation/leaky_relu_grad/README.md">leaky_relu_grad</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
   <tr>
     <td>activation</td>
     <td><a href="../../activation/log_sigmoid/README.md">logsigmoid</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
   <tr>
     <td>activation</td>
     <td><a href="../../activation/logsigmoid_grad/README.md">logsigmoid_grad</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
     <td>对应logsigmoid操作的反向传播梯度。</td>
   </tr>
   <tr>
     <td>activation</td>
     <td><a href="../../activation/log_softmax_grad/README.md">logsoftmax_grad</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
   <tr>
     <td>activation</td>
     <td><a href="../../activation/log_softmax_v2/README.md">logsoftmax_v2</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
@@ -352,17 +372,17 @@
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
     <td>AI Core</td>
     <td>一个自正则化的非单调神经网络激活函数。</td>
   </tr>
   <tr>
     <td>activation</td>
     <td><a href="../../activation/mish_grad/README.md">mish_grad</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓✗</td>
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
@@ -381,8 +401,8 @@
     <td><a href="../../activation/p_relu_grad_reduce/README.md">p_relu_grad_reduce</a></td>
     <td>✓</td>
     <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
+    <td>✗</td>
+    <td>✗</td>
     <td>AI Core</td>
     <td>对应PRelu的的反向传播梯度实现的vector计算部分。</td>
   </tr>
@@ -399,10 +419,10 @@
   <tr>
     <td>activation</td>
     <td><a href="../../activation/relu/README.md">relu</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
@@ -440,7 +460,7 @@
     <td>activation</td>
     <td><a href="../../activation/selu/README.md">selu</a></td>
     <td>✗</td>
-    <td>✓</td>
+    <td>✗</td>
     <td>✓</td>
     <td>✗</td>
     <td>AI Core</td>
@@ -450,7 +470,7 @@
     <td>activation</td>
     <td><a href="../../activation/selu_grad/README.md">selu_grad</a></td>
     <td>✗</td>
-    <td>✓</td>
+    <td>✗</td>
     <td>✓</td>
     <td>✗</td>
     <td>AI Core</td>
@@ -460,7 +480,7 @@
     <td>activation</td>
     <td><a href="../../activation/shrink/README.md">shrink</a></td>
     <td>✗</td>
-    <td>✓</td>
+    <td>✗</td>
     <td>✓</td>
     <td>✗</td>
     <td>AI Core</td>
@@ -469,30 +489,30 @@
   <tr>
     <td>activation</td>
     <td><a href="../../activation/sigmoid/README.md">sigmoid</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
   <tr>
     <td>activation</td>
     <td><a href="../../activation/sigmoid_grad/README.md">sigmoid_grad</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
   <tr>
     <td>activation</td>
     <td><a href="../../activation/silu_grad/README.md">silu_grad</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
@@ -539,10 +559,10 @@
   <tr>
     <td>activation</td>
     <td><a href="../../activation/softplus_v2/README.md">softplus_v2</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
@@ -550,7 +570,7 @@
     <td>activation</td>
     <td><a href="../../activation/softplus_v2_grad/README.md">softplus_v2_grad</a></td>
     <td>✗</td>
-    <td>✓</td>
+    <td>✗</td>
     <td>✓</td>
     <td>✗</td>
     <td>AI Core</td>
@@ -560,7 +580,7 @@
     <td>activation</td>
     <td><a href="../../activation/softshrink/README.md">softshrink</a></td>
     <td>✗</td>
-    <td>✓</td>
+    <td>✗</td>
     <td>✓</td>
     <td>✗</td>
     <td>AI Core</td>
@@ -570,7 +590,7 @@
     <td>activation</td>
     <td><a href="../../activation/softshrink_grad/README.md">softshrink_grad</a></td>
     <td>✗</td>
-    <td>✓</td>
+    <td>✗</td>
     <td>✓</td>
     <td>✗</td>
     <td>AI Core</td>
@@ -609,10 +629,10 @@
   <tr>
     <td>activation</td>
     <td><a href="../../activation/swish/README.md">swish</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
@@ -630,9 +650,9 @@
     <td>activation</td>
     <td><a href="../../activation/threshold/README.md">threshold</a></td>
     <td>✗</td>
-    <td>✓</td>
-    <td>✓</td>
     <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
@@ -640,7 +660,7 @@
     <td>activation</td>
     <td><a href="../../activation/threshold_grad_v2_d/README.md">threshold_grad_v2_d</a></td>
     <td>✗</td>
-    <td>✓</td>
+    <td>✗</td>
     <td>✓</td>
     <td>✗</td>
     <td>AI Core</td>
