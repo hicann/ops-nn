@@ -657,56 +657,6 @@
     <td>断言给定条件为 true，如果输入张量 input_condition 判定为 false，则打印 input_data 中的张量列表。</td>
   </tr>
   <tr>
-    <td>control</td>
-    <td><a href="../../control/identity/README.md">identity</a></td>
-    <td>✗</td>
-    <td>✗</td>
-    <td>✗</td>
-    <td>✗</td>
-    <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
-  </tr>
-  <tr>
-    <td>control</td>
-    <td><a href="../../control/identity_n/README.md">identity_n</a></td>
-    <td>✗</td>
-    <td>✗</td>
-    <td>✗</td>
-    <td>✗</td>
-    <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
-  </tr>
-  <tr>
-    <td>control</td>
-    <td><a href="../../control/rank/README.md">rank</a></td>
-    <td>✗</td>
-    <td>✗</td>
-    <td>✗</td>
-    <td>✗</td>
-    <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
-  </tr>
-  <tr>
-    <td>control</td>
-    <td><a href="../../control/shape/README.md">shape</a></td>
-    <td>✗</td>
-    <td>✗</td>
-    <td>✗</td>
-    <td>✗</td>
-    <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
-  </tr>
-  <tr>
-    <td>control</td>
-    <td><a href="../../control/shape_n/README.md">shape_n</a></td>
-    <td>✗</td>
-    <td>✗</td>
-    <td>✗</td>
-    <td>✗</td>
-    <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
-  </tr>
-  <tr>
     <td>conv</td>
     <td><a href="../../conv/conv3d_backprop_filter_v2/README.md">conv3d_backprop_filter_v2</a></td>
     <td>✓</td>
