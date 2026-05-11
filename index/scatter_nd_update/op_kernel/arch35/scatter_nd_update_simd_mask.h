@@ -74,8 +74,8 @@ __aicore__ inline void ScatterNdUpdateSimdMask<T, U, OFFSET_T>::Init(
     Duplicate(maskLocal, static_cast<int8_t>(0), tilingData_.varStorageInAxis);
 
     LocalTensor<U> strideLocal = this->strideBuf_.template Get<U>();
-    for (int32_t i = 0; i < MAX_SHAPE_RANK; i++) {
-        strideLocal(i) = tilingData_.strideList[i];
+    for (int32_t i = 0; i < tilingData_.indexRankSize; i++) {
+        strideLocal(i) = tilingData_.strideList[i] / tilingData_.strideList[tilingData_.indexRankSize - 1];
     }
 }
 
@@ -139,11 +139,12 @@ __aicore__ inline void ScatterNdUpdateSimdMask<T, U, OFFSET_T>::ProcessMaskOneLi
         event_t eventIdVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
         SetFlag<HardEvent::V_S>(eventIdVToS);
         WaitFlag<HardEvent::V_S>(eventIdVToS);
-        int64_t outOfstVal = outOfstLocal(0);
+        int64_t idx = outOfstLocal(0);
+        int64_t outOfstVal = idx * tilingData_.strideList[tilingData_.indexRankSize - 1];
  	    if (outOfstVal < 0 || outOfstVal >= tilingData_.outputStorageShapeSize) {
  	        continue;
  	    }
-        if (maskLocal(outOfstVal / tilingData_.sliceSize) != 0) {
+        if (maskLocal(idx) != 0) {
             continue;
         }
 
@@ -153,7 +154,7 @@ __aicore__ inline void ScatterNdUpdateSimdMask<T, U, OFFSET_T>::ProcessMaskOneLi
             CopyUpdatesIn(rowIdx, colIdx, tilingData_.indicesFactor, colDataLen);
             CopyOutOneLine(colDataLen, colIdx);
         }
-        maskLocal(outOfstVal / tilingData_.sliceSize) = 1;
+        maskLocal(idx) = 1;
     }
 }
 
@@ -170,15 +171,16 @@ __aicore__ inline void ScatterNdUpdateSimdMask<T, U, OFFSET_T>::CopyOutMultiLine
     event_t eventIdVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
     SetFlag<HardEvent::V_S>(eventIdVToS);
     WaitFlag<HardEvent::V_S>(eventIdVToS);
-    for (int64_t i = 0; i < rowLen; i++) {
+    for (int32_t i = 0; i < rowLen; i++) {
         int64_t srcOffset = i * colLenAlignSize;
-        int64_t outOfstVal = outOfstLocal(i);
+        int64_t idx = outOfstLocal(i);
+        int64_t outOfstVal = idx * tilingData_.strideList[tilingData_.indexRankSize - 1];
  	    if (outOfstVal < 0 || outOfstVal >= tilingData_.outputStorageShapeSize) {
  	        continue;
  	    }
-        if (maskLocal(outOfstVal / tilingData_.sliceSize) == 0) {
+        if (maskLocal(idx) == 0) {
             this->template CopyOut<T>(yGm_[outOfstVal], dataLocal[srcOffset], tilingData_.afterAxis);
-            maskLocal(outOfstVal / tilingData_.sliceSize) = 1;
+            maskLocal(idx) = 1;
         }
     }
     this->dataQueue_.FreeTensor(dataLocal);
