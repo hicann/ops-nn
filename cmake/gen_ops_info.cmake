@@ -135,11 +135,17 @@ function(add_ops_impl_target)
   set(oneValueArgs TARGET OPS_INFO_DIR IMPL_DIR OUT_DIR INSTALL_DIR DEPENDS)
   cmake_parse_arguments(OPIMPL "" "${oneValueArgs}" "OPS_BATCH;OPS_ITERATE" ${ARGN})
 
+  #此处调用ascendc_impl_build.py目的是为了生成experimental算子的py文件
   add_custom_command(OUTPUT ${OPIMPL_OUT_DIR}/.impl_timestamp
     COMMAND mkdir -m 700 -p ${OPIMPL_OUT_DIR}/dynamic
+    COMMAND ${ASCEND_PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/util/ascendc_impl_build.py 
+             \"\" \"${OPIMPL_OPS_BATCH}\" \"${OPIMPL_OPS_ITERATE}\" 
+             ${OPIMPL_IMPL_DIR} ${OPIMPL_OUT_DIR}/dynamic ${ASCEND_AUTOGEN_PATH} 
+             --opsinfo-dir ${OPIMPL_OPS_INFO_DIR} ${OPIMPL_OPS_INFO_DIR}/inner ${OPIMPL_OPS_INFO_DIR}/exc
     COMMAND rm -rf ${OPIMPL_OUT_DIR}/.impl_timestamp
     COMMAND touch ${OPIMPL_OUT_DIR}/.impl_timestamp
-    DEPENDS ${OPIMPL_DEPENDS}
+    DEPENDS ${CMAKE_SOURCE_DIR}/scripts/util/ascendc_impl_build.py
+            ${OPIMPL_DEPENDS}
   )
   add_custom_target(${OPIMPL_TARGET} ALL
     DEPENDS ${OPIMPL_OUT_DIR}/.impl_timestamp

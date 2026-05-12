@@ -310,7 +310,7 @@ if [ -f "${workspace_dir}/build_out/"*.run ]; then
     fi
     chmod +x ./build_out/${compile_package_name}
     echo "exec cmd: [bash scripts/ci/check_experimental_example.sh $PR_FILELIST]"
-    echo 'y' | bash ${compile_package_name} --quiet
+    echo 'y' | bash ./build_out/${compile_package_name} --quiet
     bash scripts/ci/check_experimental_example.sh $PR_FILELIST 2>&1 | tee -a ./run_test.log
     if grep -w -e "FAIL" -e "errors" -e "fail" -e "failed" -e "error" -e "ERROR:" -e "Error" -e "error:" "./run_test.log"; then
         echo "[ERROR] run test case failed"
