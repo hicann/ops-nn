@@ -204,3 +204,27 @@ TEST_F(Conv3DDequantToQuantConv3DFusionPassTest, conv3d_complexity_fusion_succes
     EXPECT_TRUE(GraphChecker::CountNodes(graph, "QuantConv3D") == 2);
     EXPECT_TRUE(GraphChecker::CountNodes(graph, "AscendQuant") == 1);
 }
+
+// QuantConv3D from fusion resets _op_impl_mode_enum to 0x1 (default) on the fused node.
+TEST_F(Conv3DDequantToQuantConv3DFusionPassTest, quantconv3d_fused_op_impl_mode_enum_is_default_0x1)
+{
+    TestGraph testGraphBuilder("quantconv3d_fused_op_impl_mode_enum_is_default_0x1");
+
+    Conv3DConfig convCfg = Conv3DConfig::Basic("Conv3D");
+    convCfg.SetAttr("_op_impl_mode_enum", int64_t(0x40));
+
+    auto graph = testGraphBuilder.SetSocAscend950()
+        .AddConv3D(convCfg)
+        .AddAscendDequant(AscendDequantConfig::Basic("AscendDequant"))
+        .Connect("Conv3D", 0, "AscendDequant", 0)
+        .SetOutput("AscendDequant")
+        .Build();
+
+    TestTotalPass("quantconv3d_fused_op_impl_mode_enum_is_default_0x1", graph, SUCCESS);
+
+    GNode fused;
+    ASSERT_TRUE(GraphChecker::FindFirstNodeByOpType(graph, "QuantConv3D", fused));
+    int64_t implMode = static_cast<int64_t>(-1);
+    ASSERT_EQ(fused.GetAttr(AscendString("_op_impl_mode_enum"), implMode), GRAPH_SUCCESS);
+    EXPECT_EQ(implMode, int64_t{0x1});
+}

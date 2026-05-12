@@ -982,3 +982,27 @@ TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, fusion_failed_postcube_fp32_o
 
     TestConvPostCubeFusion(testGraphBuilder, "fusion_failed_postcube_fp32_out", graph, FAILED);
 }
+
+// ExtendConv2D from fusion resets _op_impl_mode_enum to 0x1 (default) on the fused node.
+TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, extendconv2d_fused_op_impl_mode_enum_is_default_0x1)
+{
+    TestGraph testGraphBuilder("extendconv2d_fused_op_impl_mode_enum_is_default_0x1");
+
+    Conv2DConfig convCfg = Conv2DConfig::Basic("Conv2D");
+    convCfg.SetAttr("_op_impl_mode_enum", int64_t(0x40));
+
+    auto graph = testGraphBuilder.SetSocAscend950()
+        .AddConv2D(convCfg)
+        .AddAscendDequant(AscendDequantConfig::Basic("AscendDequant"))
+        .Connect("Conv2D", 0, "AscendDequant", 0)
+        .SetOutput("AscendDequant")
+        .Build();
+
+    TestTotalPass("extendconv2d_fused_op_impl_mode_enum_is_default_0x1", graph, SUCCESS);
+
+    GNode fused;
+    ASSERT_TRUE(GraphChecker::FindFirstNodeByOpType(graph, "ExtendConv2D", fused));
+    int64_t implMode = static_cast<int64_t>(-1);
+    ASSERT_EQ(fused.GetAttr(AscendString("_op_impl_mode_enum"), implMode), GRAPH_SUCCESS);
+    EXPECT_EQ(implMode, int64_t{0x1});
+}

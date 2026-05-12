@@ -873,6 +873,18 @@ public:
         return count;
     }
 
+    static bool FindFirstNodeByOpType(std::shared_ptr<Graph>& graph, const std::string& opType, GNode& outNode) {
+        for (auto node : graph->GetAllNodes()) {
+            AscendString curType;
+            node.GetType(curType);
+            if (curType.GetString() == opType) {
+                outNode = node;
+                return true;
+            }
+        }
+        return false;
+    }
+
     static void Print(std::shared_ptr<Graph>& graph) {
         std::cout << "Graph: " << graph->GetName() << std::endl;
         for (auto node : graph->GetAllNodes()) {

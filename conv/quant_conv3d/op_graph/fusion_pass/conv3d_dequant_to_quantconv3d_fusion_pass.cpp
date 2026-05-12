@@ -155,6 +155,8 @@ GraphUniqPtr Conv3DDequantToQuantConv3DFusionPass::Replacement(const GNode &conv
 
     auto quantConv3DNode = quantConv3D.GetProducer();
     FUSION_PASS_CHECK_NOLOG(!UpdateQuantConv3DDesc(quantConv3DNode, postCubeOutDesc), return nullptr);
+    FUSION_PASS_CHECK(quantConv3DNode->SetAttr(OP_IMPL_MODE_ENUM, baseAttrs.opImplModeEnum) != GRAPH_SUCCESS,
+        OP_LOGE(convDescInfo.nodeNameStr, "Set _op_impl_mode_enum for QuantConv3D failed."), return nullptr);
 
     std::vector<es::EsTensorHolder> replaceOutput = {quantConv3D};
 

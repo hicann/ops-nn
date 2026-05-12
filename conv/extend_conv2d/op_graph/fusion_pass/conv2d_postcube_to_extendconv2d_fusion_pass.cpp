@@ -190,6 +190,8 @@ GraphUniqPtr Conv2DPostCubeToExtendConv2DFusionPass::Replacement(const GNode &co
     // Multi TensorHolder get from es::Op, it's GetProducer() point to one node.
     auto output0 = extendConv2D.y0.GetProducer();
     FUSION_PASS_CHECK_NOLOG(!UpdateExtendConv2DDesc(output0), return nullptr);
+    FUSION_PASS_CHECK(output0->SetAttr(OP_IMPL_MODE_ENUM, baseAttrs.opImplModeEnum) != GRAPH_SUCCESS,
+        OP_LOGE(convDescInfo.nodeNameStr, "Set _op_impl_mode_enum for ExtendConv2D failed."), return nullptr);
 
     std::vector<es::EsTensorHolder> replaceOutput = {extendConv2D.y0};
     if (dualOutput) {

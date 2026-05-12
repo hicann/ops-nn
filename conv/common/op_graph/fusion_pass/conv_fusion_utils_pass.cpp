@@ -113,9 +113,6 @@ bool ConvFusionUtilsPass::GetConvBaseAttr(const GNode &convNode, ConvBaseAttrs &
 
     // Set Node's implMode to default
     baseAttrs.opImplModeEnum = 0x1;
-    FUSION_PASS_CHECK(convNode.SetAttr(OP_IMPL_MODE_ENUM, baseAttrs.opImplModeEnum) != GRAPH_SUCCESS,
-        OP_LOGE(convDescInfo.nodeNameStr, "Set _op_impl_mode_enum for %s failed.", convDescInfo.nodeNameStr.c_str()),
-        return false);
 
     return true;
 }
