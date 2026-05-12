@@ -2922,9 +2922,19 @@
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
     <td>AI Core</td>
     <td>AdaptiveAvgPool3d的反向计算。</td>
+  </tr>
+  <tr>
+    <td>pooling</td>
+    <td><a href="../../pooling/adaptive_max_pool2d/README.md">adaptive_max_pool2d</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>根据输入的output_size计算每次kernel的大小，对输入x进行3维最大池化操作，输出池化后的值y和索引indices。</td>
   </tr>
   <tr>
     <td>pooling</td>
@@ -2932,7 +2942,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
     <td>AI Core</td>
     <td>根据输入的outputSize计算每次kernel的大小，对输入self进行3维最大池化操作，输出池化后的值outputOut和索引indicesOut。aclnnAdaptiveMaxPool3d与aclnnMaxPool3d的区别在于，只需指定outputSize大小，并按outputSize的大小来划分pooling区域。</td>
   </tr>
@@ -3042,7 +3052,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
     <td>AI Core</td>
     <td>正向最大池化的反向传播，将梯度回填到每个窗口最大值的坐标处，相同坐标处累加。</td>
   </tr>
@@ -3062,7 +3072,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
     <td>AI Core</td>
     <td>对于输入信号的输入通道，提供3维最大池化（Max pooling）操作，输出池化后的值out和索引indices。</td>
   </tr>
@@ -3351,7 +3361,7 @@
     <td><a href="../../rnn/dynamic_rnn/README.md">dynamic_rnn</a></td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
     <td>✓</td>
     <td>AI Core</td>
     <td>基础循环神经网络 (Recurrent Neural Network) 算子，用于处理序列数据。它通过隐藏状态传递时序信息，适合处理具有时间/顺序依赖性的数据。</td>
@@ -3381,8 +3391,8 @@
       <td><a href="../../rnn/single_layer_lstm_grad/README.md">single_layer_lstm_grad</a></td>
       <td>✓</td>
       <td>✓</td>
-      <td>✗</td>
       <td>✓</td>
+      <td>✗</td>
       <td>AI Core</td>
       <td>单层单向LSTM的反向传播，计算正向输入x、权重w、偏置b、初始隐藏状态initH与初始细胞状态initC的梯度。</td>
   </tr>
@@ -3401,8 +3411,8 @@
     <td><a href="../../rnn/thnn_fused_lstm_cell_grad/README.md">thnn_fused_lstm_cell_grad</a></td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
     <td>✓</td>
+    <td>✗</td>
     <td>AI Core</td>
     <td>LSTMCell中四个门中matmul后剩余计算的反向传播，计算正向输出四个门激活前的值gates、输入cx、偏置b的梯度。</td>
   </tr>
