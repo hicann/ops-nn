@@ -8,4 +8,3 @@
     --install-path=<path>           Upgrade specific ops_nn dir path
     --install-for-all               Install for all user
     --quiet                         Quiet install mode, skip human-computer interactions
-    --feature                       Nothing is currently supported

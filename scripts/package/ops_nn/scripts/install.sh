@@ -94,11 +94,11 @@ IN_FEATURE="All"
 # log functions
 # start info before shell executing
 startlog() {
-  echo "[OpsNn] [$(getdate)] [INFO]: Start Time: $(getdate)"
+  echo "[OpsNN] [$(getdate)] [INFO]: Start Time: $(getdate)"
 }
 
 exitlog() {
-  echo "[OpsNn] [$(getdate)] [INFO]: End Time: $(getdate)"
+  echo "[OpsNN] [$(getdate)] [INFO]: End Time: $(getdate)"
 }
 
 #check ascend_install.info for the change in code warning
@@ -179,13 +179,13 @@ check_opp_version_file() {
 check_docker_path() {
   docker_path="$1"
   if [ "${docker_path}" != "/"* ]; then
-    echo "[OpsNn] [ERROR]: ERR_NO:${PARAM_INVALID};ERR_DES:Parameter --docker-root\
+    echo "[OpsNN] [ERROR]: ERR_NO:${PARAM_INVALID};ERR_DES:Parameter --docker-root\
  must with absolute path that which is start with root directory /. Such as --docker-root=/${docker_path}"
     exitlog
     exit 1
   fi
   if [ ! -d "${docker_path}" ]; then
-    echo "[OpsNn] [ERROR]: ERR_NO:${FILE_NOT_EXIST}; The directory:${docker_path} not exist, please create this directory."
+    echo "[OpsNN] [ERROR]: ERR_NO:${FILE_NOT_EXIST}; The directory:${docker_path} not exist, please create this directory."
     exitlog
     exit 1
   fi
@@ -195,7 +195,7 @@ judgment_path() {
   . "${COMMON_INC_FILE}"
   check_install_path_valid "${1}"
   if [ $? -ne 0 ]; then
-    echo "[OpsNn][ERROR]: The opp install path ${1} is invalid, only characters in [a-z,A-Z,0-9,-,_] are supported!"
+    echo "[OpsNN][ERROR]: The opp install path ${1} is invalid, only characters in [a-z,A-Z,0-9,-,_] are supported!"
     exitlog
     exit 1
   fi
@@ -205,14 +205,14 @@ check_install_path() {
   TARGET_INSTALL_PATH="$1"
   # empty patch check
   if [ "x${TARGET_INSTALL_PATH}" = "x" ]; then
-    echo "[OpsNn] [ERROR]: ERR_NO:${PARAM_INVALID};ERR_DES:Parameter --install-path\
+    echo "[OpsNN] [ERROR]: ERR_NO:${PARAM_INVALID};ERR_DES:Parameter --install-path\
  not support that the install path is empty."
     exitlog
     exit 1
   fi
   # space check
   if echo "x${TARGET_INSTALL_PATH}" | grep -q " "; then
-    echo "[OpsNn] [ERROR]: ERR_NO:${PARAM_INVALID};ERR_DES:Parameter --install-path\
+    echo "[OpsNN] [ERROR]: ERR_NO:${PARAM_INVALID};ERR_DES:Parameter --install-path\
  not support that the install path contains space character."
     exitlog
     exit 1
@@ -232,7 +232,7 @@ check_install_path() {
     if [ x"${prefix}" = "x" ]; then
       TARGET_INSTALL_PATH="${RUN_PATH}/${temp_path}"
     else
-      echo "[OpsNn] [ERROR]: ERR_NO:${PARAM_INVALID};ERR_DES: Run package path is invalid: $RUN_PATH"
+      echo "[OpsNN] [ERROR]: ERR_NO:${PARAM_INVALID};ERR_DES: Run package path is invalid: $RUN_PATH"
       exitlog
       exit 1
     fi
@@ -324,7 +324,7 @@ get_opts() {
   done
 
   if [ "$*" = "" ]; then
-    echo "[OpsNn] [ERROR]: ERR_NO:${PARAM_INVALID};ERR_DES:\
+    echo "[OpsNN] [ERROR]: ERR_NO:${PARAM_INVALID};ERR_DES:\
  only support one type: full/upgrade/uninstall, operation execute failed!\
  Please use [--help] to see the usage."
     exitlog
@@ -367,7 +367,7 @@ get_opts() {
         shift
         ;;
       -*)
-        echo "[OpsNn] [ERROR]: ERR_NO:${PARAM_INVALID};ERR_DES:Unsupported parameters [$1],\
+        echo "[OpsNN] [ERROR]: ERR_NO:${PARAM_INVALID};ERR_DES:Unsupported parameters [$1],\
  operation execute failed. Please use [--help] to see the usage."
         exitlog
         exit 1
@@ -388,7 +388,7 @@ check_opts() {
   fi
 
   if [ "${CONFLICT_CMD_NUMS}" != 1 ]; then
-    echo "[OpsNn] [ERROR]: ERR_NO:${PARAM_INVALID};ERR_DES:\
+    echo "[OpsNN] [ERROR]: ERR_NO:${PARAM_INVALID};ERR_DES:\
  only support one type: full/upgrade/uninstall, operation execute failed!\
  Please use [--help] to see the usage."
     exitlog
@@ -453,7 +453,7 @@ do not support overwriting installation!"
 
   if [ "${IS_UPGRADE}" = "y" ]; then
     if [ ! -e "${INSTALL_INFO_FILE}" ]; then
-      logandprint "[ERROR]: ERR_NO:${FILE_NOT_EXIST}; The directory:${TARGET_INSTALL_PATH} not install OpsNn, upgrade failed."
+      logandprint "[ERROR]: ERR_NO:${FILE_NOT_EXIST}; The directory:${TARGET_INSTALL_PATH} not install OpsNN, upgrade failed."
       exitlog
       exit 1
     fi
@@ -542,13 +542,13 @@ install_package() {
   # use uninstall to clean the install folder
   clean_before_reinstall
   if [ "$?" != 0 ]; then
-    comm_log_operation "Install" "${IN_INSTALL_TYPE}" "OpsNn" "$?" "${CMD_LIST}"
+    comm_log_operation "Install" "${IN_INSTALL_TYPE}" "OpsNN" "$?" "${CMD_LIST}"
   fi
 
   bash "${INSTALL_SHELL_FILE}" "${TARGET_INSTALL_PATH}" "${TARGET_USERNAME}" "${TARGET_USERGROUP}" "${IN_FEATURE}" \
     "${IN_INSTALL_TYPE}" "${IS_FOR_ALL}" "${IS_SETENV}" "${IS_DOCKER_INSTALL}" "${DOCKER_ROOT}" "$PKG_VERSION_DIR"
   if [ "$?" != 0 ]; then
-    comm_log_operation "Install" "${IN_INSTALL_TYPE}" "OpsNn" "$?" "${CMD_LIST}"
+    comm_log_operation "Install" "${IN_INSTALL_TYPE}" "OpsNN" "$?" "${CMD_LIST}"
   fi
   if [ $(id -u) -eq 0 ]; then
     chown -R "root":"root" "${TARGET_SHARED_INFO_DIR}/${OPP_PLATFORM_DIR}/script" 2>/dev/null
@@ -559,7 +559,7 @@ install_package() {
     chmod -R 550 "${TARGET_SHARED_INFO_DIR}/${OPP_PLATFORM_DIR}/script" 2>/dev/null
     chmod 440 "${TARGET_SHARED_INFO_DIR}/${OPP_PLATFORM_DIR}/script/filelist.csv" 2>/dev/null
   fi
-  comm_log_operation "Install" "${IN_INSTALL_TYPE}" "OpsNn" "$?" "${CMD_LIST}"
+  comm_log_operation "Install" "${IN_INSTALL_TYPE}" "OpsNN" "$?" "${CMD_LIST}"
 }
 
 # 通用函数：删除so文件和空目录（带权限检查）
@@ -609,7 +609,7 @@ uninstall_package() {
     if [ "${uninstall_path}" = "" ]; then
       rm -rf "${TARGET_INSTALL_PATH}"
     fi
-    comm_log_operation "Uninstall" "${IN_INSTALL_TYPE}" "OpsNn" "$?" "${CMD_LIST}"
+    comm_log_operation "Uninstall" "${IN_INSTALL_TYPE}" "OpsNN" "$?" "${CMD_LIST}"
     exit 0
   fi
 
@@ -641,7 +641,7 @@ uninstall_package() {
   # remove precheck info in ${TARGET_VERSION_DIR}/bin/prereq_check.bash
   logandprint "[INFO]: Remove precheck info."
 
-  comm_log_operation "Uninstall" "${IN_INSTALL_TYPE}" "OpsNn" "$?" "${CMD_LIST}"
+  comm_log_operation "Uninstall" "${IN_INSTALL_TYPE}" "OpsNN" "$?" "${CMD_LIST}"
 }
 
 pre_check_only() {

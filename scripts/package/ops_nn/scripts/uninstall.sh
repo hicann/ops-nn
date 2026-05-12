@@ -24,9 +24,9 @@ getdate() {
 logandprint() {
     is_error_level=$(echo $1 | grep -E 'ERROR|WARN|INFO')
     if [ "${is_quiet}" != "y" ] || [ "${is_error_level}" != "" ]; then
-        echo "[OpsNn] [$(getdate)] ""$1"
+        echo "[OpsNN] [$(getdate)] ""$1"
     fi
-    echo "[OpsNn] [$(getdate)] ""$1" >> "${_INSTALL_LOG_FILE}"
+    echo "[OpsNN] [$(getdate)] ""$1" >> "${_INSTALL_LOG_FILE}"
 }
 
 if [ "$(id -u)" != "0" ]; then
@@ -54,7 +54,7 @@ install_shell="${CURR_PATH}/install.sh"
 
 # shell exist check
 if [ ! -f "${install_shell}" ]; then
-    logandprint "[ERROR]: ERR_NO:${FILE_NOT_EXIST};OpsNn module is not installed or some ops_nn source files are lost.\
+    logandprint "[ERROR]: ERR_NO:${FILE_NOT_EXIST};OpsNN module is not installed or some ops_nn source files are lost.\
 If there are any residual files, please manually remove those files."
     exit 1
 fi
