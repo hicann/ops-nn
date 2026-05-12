@@ -91,7 +91,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_NUMS) inline void SimtAtomicComp
     __gm__ uint64_t* workspaceNValue_, __local_mem__ T* xTensor, __local_mem__ U* sortedIdTensor,
     __local_mem__ uint32_t* sortedIdIndexTensor)
 {
-    for (int32_t j = Simt::GetThreadIdx(); j < innerDim_; j += Simt::GetThreadNum()) {
+    for (int32_t j = threadIdx.x; j < innerDim_; j += blockDim.x) {
         // 找第一个有效的 startSegId
         int64_t startSegId = -1;
         for (uint32_t k = 0; k < curProcessRowsNum; k++) {
@@ -116,25 +116,25 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_NUMS) inline void SimtAtomicComp
             if (curSegId < 0 || curSegId >= static_cast<int64_t>(segmentNum)) {
                 if (i == curProcessRowsNum - 1 && num > 0) {
                     if (j == 0) {
-                        Simt::AtomicAdd(workspaceNValue_ + static_cast<uint64_t>(startSegId), num);
+                        asc_atomic_add(workspaceNValue_ + static_cast<uint64_t>(startSegId), num);
                     }
-                    Simt::AtomicMax(workspaceMValue_ + static_cast<uint64_t>(startSegId) * innerDim_ + j, maxValue);
+                    asc_atomic_max(workspaceMValue_ + static_cast<uint64_t>(startSegId) * innerDim_ + j, maxValue);
                 }
                 continue;
             }
 
             int32_t tmpXIndex = sortedIdIndexTensor[i] * innerDim_ + j;
-            float tmpValue = Simt::Abs(static_cast<float>(xTensor[tmpXIndex]));
+            float tmpValue = fabsf(static_cast<float>(xTensor[tmpXIndex]));
 
             if (curSegId == startSegId) {
                 num++;
                 maxValue = maxValue > tmpValue ? maxValue : tmpValue;  
             } else {
                 if (j == 0) {
-                    Simt::AtomicAdd(workspaceNValue_ + static_cast<uint64_t>(startSegId), num);
+                    asc_atomic_add(workspaceNValue_ + static_cast<uint64_t>(startSegId), num);
                 }
 
-                Simt::AtomicMax(workspaceMValue_ + static_cast<uint64_t>(startSegId) * innerDim_ + j, maxValue);
+                asc_atomic_max(workspaceMValue_ + static_cast<uint64_t>(startSegId) * innerDim_ + j, maxValue);
                 startSegId = curSegId;
                 num = 1;
                 maxValue = tmpValue;
@@ -142,9 +142,9 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_NUMS) inline void SimtAtomicComp
 
             if (i == curProcessRowsNum - 1) {
                 if (j == 0) {
-                    Simt::AtomicAdd(workspaceNValue_ + static_cast<uint64_t>(startSegId), num);
+                    asc_atomic_add(workspaceNValue_ + static_cast<uint64_t>(startSegId), num);
                 }
-                Simt::AtomicMax(workspaceMValue_ + static_cast<uint64_t>(startSegId) * innerDim_ + j, maxValue);
+                asc_atomic_max(workspaceMValue_ + static_cast<uint64_t>(startSegId) * innerDim_ + j, maxValue);
                 break;
             }
         }
@@ -250,7 +250,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_NUMS) inline void QuantizeAndCop
 {
     float scaling = static_cast<float>(1L << 30);
 
-    for (uint32_t i = Simt::GetThreadIdx(); i < innerDim; i += Simt::GetThreadNum()) {
+    for (uint32_t i = threadIdx.x; i < innerDim; i += blockDim.x) {
         // 找第一个有效的 startSegId
         int64_t startSegId = -1;
         for (uint32_t k = 0; k < curProcessRowsNum; k++) {
@@ -280,7 +280,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_NUMS) inline void QuantizeAndCop
                     int32_t quantizedResInt =
                         AscendC::Simt::Cast<int32_t, float, RoundMode::CAST_RINT, AscendC::Simt::SatMode::SAT>(
                             sumValue);
-                    Simt::AtomicAdd(workspaceOutput32 + tmpOffset, quantizedResInt);
+                    asc_atomic_add(workspaceOutput32 + tmpOffset, quantizedResInt);
                 }
                 continue;
             }
@@ -297,7 +297,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_NUMS) inline void QuantizeAndCop
 
                 sumValue = sumValue / (mValueFloat * nValueFloat) * scaling;
                 int32_t quantizedResInt = AscendC::Simt::Cast<int32_t, float, RoundMode::CAST_RINT, AscendC::Simt::SatMode::SAT>(sumValue);
-                Simt::AtomicAdd(workspaceOutput32 + tmpOffset, quantizedResInt);
+                asc_atomic_add(workspaceOutput32 + tmpOffset, quantizedResInt);
 
                 startSegId = curSegId;
                 sumValue = tmpValue;
@@ -309,7 +309,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_NUMS) inline void QuantizeAndCop
                 float nValueFloat = static_cast<float>(nValueWorkSpace[static_cast<uint64_t>(startSegId)]);
                 sumValue = sumValue / (mValueFloat * nValueFloat) * scaling;
                 int32_t quantizedResInt = AscendC::Simt::Cast<int32_t, float, RoundMode::CAST_RINT, AscendC::Simt::SatMode::SAT>(sumValue);
-                Simt::AtomicAdd(workspaceOutput32 + tmpOffset, quantizedResInt);
+                asc_atomic_add(workspaceOutput32 + tmpOffset, quantizedResInt);
                 break;
             }
         }
@@ -329,8 +329,8 @@ __aicore__ inline void KernelUSSDeterministic<T, U>::FirstUbProcess(uint64_t cur
     AscendC::Sort<U, false, sortConfig>(sortedIdTensor, sortedIdIndexTensor, segmentIdTensor, sharedTmpTensor,
                                         static_cast<uint32_t>(curProcessRowsNum));
 
-    AscendC::Simt::VF_CALL<SimtAtomicComputeNValueAndMValue<T, U>>(
-        Simt::Dim3(MAX_THREAD), curProcessRowsNum, innerDim_, segmentNum_,
+    asc_vf_call<SimtAtomicComputeNValueAndMValue<T, U>>(
+        dim3(MAX_THREAD), curProcessRowsNum, innerDim_, segmentNum_,
         (__gm__ float*)(workspaceMValue_.GetPhyAddr()), (__gm__ uint64_t*)(workspaceNValue_.GetPhyAddr()),
         (__local_mem__ T*)(xLocal.GetPhyAddr()), (__local_mem__ U*)(sortedIdTensor.GetPhyAddr()),
         (__local_mem__ uint32_t*)(sortedIdIndexTensor.GetPhyAddr()));
@@ -352,8 +352,8 @@ __aicore__ inline void KernelUSSDeterministic<T, U>::SecondUbProcess(uint64_t cu
     AscendC::Sort<U, false, sortConfig>(sortedIdTensor, sortedIdIndexTensor, segmentIdTensor, sharedTmpTensor,
                                         static_cast<uint32_t>(curProcessRowsNum));
 
-    AscendC::Simt::VF_CALL<QuantizeAndCopyOut<T, U>>(
-        Simt::Dim3(MAX_THREAD), (__gm__ float*)(workspaceMValue_.GetPhyAddr()),
+    asc_vf_call<QuantizeAndCopyOut<T, U>>(
+        dim3(MAX_THREAD), (__gm__ float*)(workspaceMValue_.GetPhyAddr()),
         (__gm__ uint64_t*)(workspaceNValue_.GetPhyAddr()), (__gm__ int32_t*)(workspaceOutput_.GetPhyAddr()),
         (__local_mem__ T*)(xLocal.GetPhyAddr()), (__local_mem__ U*)(sortedIdTensor.GetPhyAddr()),
         (__local_mem__ uint32_t*)(sortedIdIndexTensor.GetPhyAddr()), curProcessRowsNum, innerDim_, segmentNum_);
@@ -369,8 +369,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_NUMS) inline void Dequantize(
 {
     float scaling = static_cast<float>(1L << 30);
     
-    for (uint32_t i = blockId * Simt::GetThreadNum() + Simt::GetThreadIdx(); i < segmentNum * innerDim; 
-        i += blockNum * Simt::GetThreadNum()) {  
+    for (uint32_t i = blockId * blockDim.x + threadIdx.x; i < segmentNum * innerDim; 
+        i += blockNum * blockDim.x) {  
         uint32_t row = i / innerDim;
         uint32_t col = i % innerDim;
 
@@ -387,7 +387,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_NUMS) inline void Dequantize(
 template <typename T, typename U>
 __aicore__ inline void KernelUSSDeterministic<T, U>::ThirdUbProcess()
 {
-    Simt::VF_CALL<Dequantize<T,U>>(Simt::Dim3(MAX_THREAD), (__gm__ float*)(workspaceMValue_.GetPhyAddr()), 
+    asc_vf_call<Dequantize<T,U>>(dim3(MAX_THREAD), (__gm__ float*)(workspaceMValue_.GetPhyAddr()), 
         (__gm__ uint64_t*)(workspaceNValue_.GetPhyAddr()), (__gm__ int32_t*)(workspaceOutput_.GetPhyAddr()),
         (__gm__ T*)(yGm_.GetPhyAddr()), segmentNum_, innerDim_, blockId_, usedCoreNum_);
 }

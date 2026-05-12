@@ -19,6 +19,12 @@
 #include "kernel_tiling/kernel_tiling.h"
 #include "op_kernel/platform_util.h"
 #include "op_kernel/math_util.h"
+#include "simt_api/asc_simt.h"
+#include "simt_api/device_atomic_functions.h"
+#include "simt_api/asc_fp16.h"
+#include "simt_api/asc_bf16.h"
+#include "simt_api/math_functions.h"
+#include "simt_api/device_functions.h"
 
 namespace UnsortedSegmentSum {
 using namespace AscendC;
@@ -77,8 +83,8 @@ template <typename TX>
 __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_DIM_LAUNCH_BOUND) inline void ComputeSetValue(
     __gm__ TX* outputGm, const uint32_t blockNums, const uint32_t outputLength)
 {
-    for (uint32_t outputIndex = block_idx * Simt::GetThreadNum() + Simt::GetThreadIdx(); outputIndex < outputLength;
-         outputIndex = outputIndex + blockNums * Simt::GetThreadNum()) {
+    for (uint32_t outputIndex = block_idx * blockDim.x + threadIdx.x; outputIndex < outputLength;
+         outputIndex = outputIndex + blockNums * blockDim.x) {
         outputGm[outputIndex] = static_cast<TX>(0);
     }
 }
@@ -88,15 +94,15 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SORT_THREAD_DIM_LAUNCH_BOUND) inline void Si
     __ubuf__ TX* midResPtr, __ubuf__ TX* xUbLocalPtr, __ubuf__ Index* indexUb, const uint32_t outputOuterDimSize,
     const uint32_t innerDimSize, const uint32_t needIndexOneUb, const uint32_t outputOffset)
 {
-    Index midBaseOffset = Simt::GetThreadIdx<1>() * outputOffset;
-    Index offset = Simt::GetThreadIdx<1>();
+    Index midBaseOffset = threadIdx.y * outputOffset;
+    Index offset = threadIdx.y;
     for (; offset < needIndexOneUb; offset += ROW_NUM) {
         Index indexVal = indexUb[offset];
         if (indexVal >= 0 && indexVal < outputOuterDimSize) {
             Index midResOffSet = indexVal * innerDimSize;
             Index xUbLocalOffSet = offset * innerDimSize;
-            midResPtr[midBaseOffset + midResOffSet + Simt::GetThreadIdx<0>()] +=
-                xUbLocalPtr[xUbLocalOffSet + Simt::GetThreadIdx<0>()];
+            midResPtr[midBaseOffset + midResOffSet + threadIdx.x] +=
+                xUbLocalPtr[xUbLocalOffSet + threadIdx.x];
         }
     }
 }
@@ -106,8 +112,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_DIM_LAUNCH_BOUND) inline void Si
     __gm__ TX* xGm, __gm__ Index* segmentIdsGm, __gm__ TX* outputGm, const uint32_t blockNums, const COM_T inputLength,
     const COM_T innerDimSize, const uint64_t outputOuterDimSize, const COM_T magic, const COM_T shift)
 {
-    for (COM_T inputIndex = block_idx * Simt::GetThreadNum() + Simt::GetThreadIdx(); inputIndex < inputLength;
-         inputIndex = inputIndex + blockNums * Simt::GetThreadNum()) {
+    for (COM_T inputIndex = block_idx * blockDim.x + threadIdx.x; inputIndex < inputLength;
+         inputIndex = inputIndex + blockNums * blockDim.x) {
         COM_T inputSegmentIndex = Simt::UintDiv(inputIndex, magic, shift);
         COM_T segmentOffset = inputIndex - inputSegmentIndex * innerDimSize;
         const Index outputSegmentIndex = segmentIdsGm[inputSegmentIndex];
@@ -115,7 +121,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_DIM_LAUNCH_BOUND) inline void Si
             continue;
         }
         const uint64_t outputIndex = outputSegmentIndex * innerDimSize + segmentOffset;
-        Simt::AtomicAdd(outputGm + outputIndex, xGm[inputIndex]);
+        asc_atomic_add(outputGm + outputIndex, xGm[inputIndex]);
     }
 }
 
@@ -125,10 +131,10 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SORT_THREAD_DIM_LAUNCH_BOUND) inline void Se
     __ubuf__ uint32_t* cumSumAddr, __gm__ TX* outputAddr, int32_t uniqueIndexNum, uint32_t lastDim,
     uint32_t outputOuterDimSize)
 {
-    int32_t blockIdx = Simt::GetThreadIdx<1>();
-    int32_t blockNum = Simt::GetThreadNum<1>();
-    int32_t innerOffset = Simt::GetThreadIdx<0>();
-    for (int32_t i = blockIdx; i < uniqueIndexNum; i += blockNum) {
+    int32_t blockIdxVal = threadIdx.y;
+    int32_t blockNum = blockDim.y;
+    int32_t innerOffset = threadIdx.x;
+    for (int32_t i = blockIdxVal; i < uniqueIndexNum; i += blockNum) {
         if (sortedAddr[cumSumAddr[i]] < 0 || sortedAddr[cumSumAddr[i]] >= outputOuterDimSize) {
             continue;
         }
@@ -138,7 +144,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SORT_THREAD_DIM_LAUNCH_BOUND) inline void Se
             result += inputAddr[srcOffset];
         }
         int64_t gmDstOffset = sortedAddr[cumSumAddr[i]] * lastDim + innerOffset;
-        Simt::AtomicAdd(outputAddr + gmDstOffset, result);
+        asc_atomic_add(outputAddr + gmDstOffset, result);
     }
     return;
 }

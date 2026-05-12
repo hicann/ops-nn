@@ -20,6 +20,7 @@
 #include "kernel_tiling/kernel_tiling.h"
 #include "kernel_operator.h"
 #include "op_kernel/platform_util.h"
+#include "simt_api/asc_simt.h"
 #include "index_put_with_sort_v2_struct.h"
 
 namespace AscendC
@@ -67,11 +68,11 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(LAUNCH_BOUND_LIMIT) inline void SimtIndexPut
     // 动态计算外层循环起始位置和步长
     uint64_t outerStart, outerStep;
     if constexpr (INDEXED_BLOCK_MODE) {
-        outerStart = Simt::GetBlockIdx() * Simt::GetThreadNum<0>() + Simt::GetThreadIdx<0>();
-        outerStep = Simt::GetBlockNum() * Simt::GetThreadNum<0>();
+        outerStart = blockIdx.x * blockDim.x + threadIdx.x;
+        outerStep = gridDim.x * blockDim.x;
     } else {
-        outerStart = Simt::GetThreadIdx<0>();
-        outerStep = Simt::GetThreadNum<0>();
+        outerStart = threadIdx.x;
+        outerStep = blockDim.x;
     }
     #pragma unroll
     for (uint64_t idxedIdx = outerStart; idxedIdx < indexedDimSize; idxedIdx += outerStep) {
@@ -96,11 +97,11 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(LAUNCH_BOUND_LIMIT) inline void SimtIndexPut
                 uint64_t idxedValueIdx = posIdx[curIdxedIdx] * idxedValueStride;
                 uint64_t innerStart, innerStep;
                 if constexpr (INDEXED_BLOCK_MODE) {
-                    innerStart = Simt::GetThreadIdx<1>();
-                    innerStep = Simt::GetThreadNum<1>();
+                    innerStart = threadIdx.y;
+                    innerStep = blockDim.y;
                 } else {
-                    innerStart = Simt::GetBlockIdx() * Simt::GetThreadNum<1>() + Simt::GetThreadIdx<1>();
-                    innerStep = Simt::GetBlockNum() * Simt::GetThreadNum<1>();
+                    innerStart = blockIdx.x * blockDim.y + threadIdx.y;
+                    innerStep = gridDim.x * blockDim.y;
                 }
                 for (uint64_t k = innerStart; k < nonIndexedDimSize; k += innerStep) {
                     uint64_t nonIdxedSelfIdx = 0;
@@ -167,8 +168,8 @@ public:
             calcParamsPtr->m_[i] = m, calcParamsPtr->shift_[i] = shift;
         }
         constexpr uint16_t THREAD_NUM_LIMIT = ALL_INDEXED ? THREAD_NUM_FULL : THREAD_NUM_HALF;
-        Simt::VF_CALL<SimtIndexPutV2<TX, TIDX, ACCUMULATE, ALL_INDEXED, INDEXED_BLOCK_MODE, THREAD_NUM_LIMIT>>(
-                        Simt::Dim3{tiling_->indexedThreadNum, tiling_->nonIndexedThreadNum, 1}, output, sortIndices, posIdx,
+        asc_vf_call<SimtIndexPutV2<TX, TIDX, ACCUMULATE, ALL_INDEXED, INDEXED_BLOCK_MODE, THREAD_NUM_LIMIT>>(
+                        dim3{tiling_->indexedThreadNum, tiling_->nonIndexedThreadNum, 1}, output, sortIndices, posIdx,
                         values, tilingUbAddr, calcParamsPtr);
     }
 

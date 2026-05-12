@@ -16,6 +16,7 @@
 #define GATHER_ELEMENTS_H
 
 #include "kernel_operator.h"
+#include "simt_api/asc_simt.h"
 #include "gather_elements_common.h"
 
 namespace GatherElements {
@@ -68,13 +69,13 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_2048) inline void GatherDim1Compu
     __gm__ const GatherElementsTilingData* tiling)
 {
     GET_TILING_DATA_PTR_WITH_STRUCT(GatherElementsTilingData, tilingData, tiling);
-    if (Simt::GetBlockIdx() >= tilingData->usedCore) {
+    if (blockIdx.x >= tilingData->usedCore) {
         return;
     }
-    U coreOffset = static_cast<U>(Simt::GetBlockIdx() * tilingData->perCoreNum);
-    U batchNum = static_cast<U>((Simt::GetBlockIdx() == tilingData->usedCore - 1) ? tilingData->tailCoreNum :
+    U coreOffset = static_cast<U>(blockIdx.x * tilingData->perCoreNum);
+    U batchNum = static_cast<U>((blockIdx.x == tilingData->usedCore - 1) ? tilingData->tailCoreNum :
         tilingData->perCoreNum) + coreOffset;
-    for (U i = Simt::GetThreadIdx() + coreOffset; i < batchNum; i += Simt::GetThreadNum()) {
+    for (U i = threadIdx.x + coreOffset; i < batchNum; i += blockDim.x) {
         yAddr[i] = xAddr[indexAddr[i]];
     }
 }
@@ -84,17 +85,17 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_2048) inline void GatherDim2Compu
     __gm__ const GatherElementsTilingData* tiling)
 {
     GET_TILING_DATA_PTR_WITH_STRUCT(GatherElementsTilingData, tilingData, tiling);
-    if (Simt::GetBlockIdx() >= tilingData->usedCore) {
+    if (blockIdx.x >= tilingData->usedCore) {
         return;
     }
-    U coreOffset = static_cast<U>(Simt::GetBlockIdx() * tilingData->perCoreNum);
-    U batchNum = static_cast<U>((Simt::GetBlockIdx() == tilingData->usedCore - 1) ? tilingData->tailCoreNum :
+    U coreOffset = static_cast<U>(blockIdx.x * tilingData->perCoreNum);
+    U batchNum = static_cast<U>((blockIdx.x == tilingData->usedCore - 1) ? tilingData->tailCoreNum :
         tilingData->perCoreNum) + coreOffset;
     U magic = tilingData->magic[MS_IDX6];
     U shift = tilingData->shift[MS_IDX6];
     U indexStride = tilingData->indexStrideArr[MS_IDX6];
     U xStride = tilingData->xStrideArr[MS_IDX6];
-    for (U i = Simt::GetThreadIdx() + coreOffset; i < batchNum; i += Simt::GetThreadNum()) {
+    for (U i = threadIdx.x + coreOffset; i < batchNum; i += blockDim.x) {
         U indexVal = indexAddr[i];
 
         U dim0Index = Simt::UintDiv(i, magic, shift);
@@ -112,7 +113,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_2048) inline void GatherDim3Compu
     __gm__ X_T* yGm, __gm__ X_T* xGm, U m, U shift, U m1, U shift1, U indexStride, U xStridex,
     U indexStride1, U xStridex1, U batchNum, U coreOffset)
 {
-    for (U i = Simt::GetThreadIdx() + coreOffset; i < batchNum; i += Simt::GetThreadNum()) {
+    for (U i = threadIdx.x + coreOffset; i < batchNum; i += blockDim.x) {
         U indexVal = indexGm[i];
 
         U dim0Index = Simt::UintDiv(i, m, shift);
@@ -134,7 +135,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_1024) inline void GatherDim4Compu
     __gm__ X_T* yGm, __gm__ X_T* xGm, __local_mem__ U* mAndShiftAddr, __local_mem__ U* strideAddr,
     U batchNum, U coreOffset)
 {
-    for (U i = Simt::GetThreadIdx() + coreOffset; i < batchNum; i += Simt::GetThreadNum()) {
+    for (U i = threadIdx.x + coreOffset; i < batchNum; i += blockDim.x) {
         U indexVal = indexGm[i];
 
         U dim0Index = Simt::UintDiv(i, mAndShiftAddr[MS_IDX4], mAndShiftAddr[M_SHIFT_OFFSET + MS_IDX4]);
@@ -171,7 +172,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_1024) inline void GatherDim5Compu
     __gm__ X_T* yGm, __gm__ X_T* xGm, __local_mem__ U* mAndShiftAddr, __local_mem__ U* strideAddr,
     U batchNum, U coreOffset)
 {
-    for (U i = Simt::GetThreadIdx() + coreOffset; i < batchNum; i += Simt::GetThreadNum()) {
+    for (U i = threadIdx.x + coreOffset; i < batchNum; i += blockDim.x) {
         U indexVal = indexGm[i];
 
         U dim0Index = Simt::UintDiv(i, mAndShiftAddr[MS_IDX3], mAndShiftAddr[M_SHIFT_OFFSET + MS_IDX3]);
@@ -215,7 +216,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_512) inline void GatherDim6Comput
     __gm__ X_T* yGm, __gm__ X_T* xGm, __local_mem__ U* mAndShiftAddr, __local_mem__ U* strideAddr,
     U batchNum, U coreOffset)
 {
-    for (U i = Simt::GetThreadIdx() + coreOffset; i < batchNum; i += Simt::GetThreadNum()) {
+    for (U i = threadIdx.x + coreOffset; i < batchNum; i += blockDim.x) {
         U indexVal = indexGm[i];
 
         U dim0Index = Simt::UintDiv(i, mAndShiftAddr[MS_IDX2], mAndShiftAddr[M_SHIFT_OFFSET + MS_IDX2]);
@@ -271,7 +272,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_512) inline void GatherDim7Comput
     __gm__ X_T* yGm, __gm__ X_T* xGm, __local_mem__ U* mAndShiftAddr, __local_mem__ U* strideAddr,
     U batchNum, U coreOffset)
 {
-    for (U i = Simt::GetThreadIdx() + coreOffset; i < batchNum; i += Simt::GetThreadNum()) {
+    for (U i = threadIdx.x + coreOffset; i < batchNum; i += blockDim.x) {
         U indexVal = indexGm[i];
 
         U dim0Index = Simt::UintDiv(i, mAndShiftAddr[MS_IDX1], mAndShiftAddr[M_SHIFT_OFFSET + MS_IDX1]);
@@ -336,7 +337,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_512) inline void GatherDim8Comput
     __gm__ X_T* yGm, __gm__ X_T* xGm, __local_mem__ U* mAndShiftAddr, __local_mem__ U* strideAddr,
     U batchNum, U coreOffset)
 {
-    for (U i = Simt::GetThreadIdx() + coreOffset; i < batchNum; i += Simt::GetThreadNum()) {
+    for (U i = threadIdx.x + coreOffset; i < batchNum; i += blockDim.x) {
         U indexVal = indexGm[i];
 
         U dim0Index = Simt::UintDiv(i, mAndShiftAddr[MS_IDX0], mAndShiftAddr[M_SHIFT_OFFSET + MS_IDX0]);
@@ -417,10 +418,10 @@ __aicore__ inline void GatherElementsKernel<X_T, INDEX_T, COM_T, DIM_NUM, AXIS>:
     __gm__ const GatherElementsTilingData* tilingData)
 {
     if constexpr (DIM_NUM == DIM1) {
-        Simt::VF_CALL<GatherDim1Compute<X_T, INDEX_T, COM_T>>(Simt::Dim3(THREAD_DIM_2048),
+        asc_vf_call<GatherDim1Compute<X_T, INDEX_T, COM_T>>(dim3(THREAD_DIM_2048),
             xAddr, indexAddr, yAddr, tilingData);
     } else if constexpr (DIM_NUM == DIM2) {
-        Simt::VF_CALL<GatherDim2Compute<X_T, INDEX_T, COM_T, AXIS>>(Simt::Dim3(THREAD_DIM_2048),
+        asc_vf_call<GatherDim2Compute<X_T, INDEX_T, COM_T, AXIS>>(dim3(THREAD_DIM_2048),
             xAddr, indexAddr, yAddr, tilingData);
     }
 }
@@ -455,26 +456,26 @@ __aicore__ inline void GatherElementsKernel<X_T, INDEX_T, COM_T, DIM_NUM, AXIS>:
     __local_mem__ COM_T* strideAddr = (__local_mem__ COM_T*)(strideLocal.GetPhyAddr());
 
     if constexpr (DIM_NUM == DIM3) {
-        Simt::VF_CALL<GatherDim3Compute<X_T, INDEX_T, COM_T, AXIS>>(Simt::Dim3(THREAD_DIM_2048),
+        asc_vf_call<GatherDim3Compute<X_T, INDEX_T, COM_T, AXIS>>(dim3(THREAD_DIM_2048),
             indexAddr, yAddr, xAddr, m_[MS_IDX5], shift_[MS_IDX5], m_[MS_IDX6], shift_[MS_IDX6],
             static_cast<COM_T>(tilingData_->indexStrideArr[MS_IDX5]),
             static_cast<COM_T>(tilingData_->xStrideArr[MS_IDX5]),
             static_cast<COM_T>(tilingData_->indexStrideArr[MS_IDX6]),
             static_cast<COM_T>(tilingData_->xStrideArr[MS_IDX6]), batchNum, coreOffset);
     } else if constexpr (DIM_NUM == DIM4) {
-        Simt::VF_CALL<GatherDim4Compute<X_T, INDEX_T, COM_T, AXIS>>(Simt::Dim3(THREAD_DIM_1024),
+        asc_vf_call<GatherDim4Compute<X_T, INDEX_T, COM_T, AXIS>>(dim3(THREAD_DIM_1024),
             indexAddr, yAddr, xAddr, mAndShiftAddr, strideAddr, batchNum, coreOffset);
     } else if constexpr (DIM_NUM == DIM5) {
-        Simt::VF_CALL<GatherDim5Compute<X_T, INDEX_T, COM_T, AXIS>>(Simt::Dim3(THREAD_DIM_1024),
+        asc_vf_call<GatherDim5Compute<X_T, INDEX_T, COM_T, AXIS>>(dim3(THREAD_DIM_1024),
             indexAddr, yAddr, xAddr, mAndShiftAddr, strideAddr, batchNum, coreOffset);
     } else if constexpr (DIM_NUM == DIM6) {
-        Simt::VF_CALL<GatherDim6Compute<X_T, INDEX_T, COM_T, AXIS>>(Simt::Dim3(THREAD_DIM_512),
+        asc_vf_call<GatherDim6Compute<X_T, INDEX_T, COM_T, AXIS>>(dim3(THREAD_DIM_512),
             indexAddr, yAddr, xAddr, mAndShiftAddr, strideAddr, batchNum, coreOffset);
     } else if constexpr (DIM_NUM == DIM7) {
-        Simt::VF_CALL<GatherDim7Compute<X_T, INDEX_T, COM_T, AXIS>>(Simt::Dim3(THREAD_DIM_512),
+        asc_vf_call<GatherDim7Compute<X_T, INDEX_T, COM_T, AXIS>>(dim3(THREAD_DIM_512),
             indexAddr, yAddr, xAddr, mAndShiftAddr, strideAddr, batchNum, coreOffset);
     } else {
-        Simt::VF_CALL<GatherDim8Compute<X_T, INDEX_T, COM_T, AXIS>>(Simt::Dim3(THREAD_DIM_512),
+        asc_vf_call<GatherDim8Compute<X_T, INDEX_T, COM_T, AXIS>>(dim3(THREAD_DIM_512),
             indexAddr, yAddr, xAddr, mAndShiftAddr, strideAddr, batchNum, coreOffset);
     }
 }

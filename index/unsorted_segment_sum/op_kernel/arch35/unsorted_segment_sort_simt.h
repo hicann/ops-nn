@@ -157,8 +157,8 @@ __aicore__ inline void KernelUnsortedSegmentSortSimt<TX, Index, CAST_T, castType
     __ubuf__ uint32_t* cumSumAddr = (__ubuf__ uint32_t*)cumSumLocal.GetPhyAddr();
     __gm__ TX* outputGm = (__gm__ TX*)outputGm_.GetPhyAddr();
 
-    AscendC::Simt::VF_CALL<SegmentReduceSortSimt<TX, CAST_T>>(
-        Simt::Dim3({static_cast<uint32_t>(tilingData_->innerDim), static_cast<uint32_t>(threadBlock)}), inputAddr,
+    asc_vf_call<SegmentReduceSortSimt<TX, CAST_T>>(
+        dim3({static_cast<uint32_t>(tilingData_->innerDim), static_cast<uint32_t>(threadBlock)}), inputAddr,
         sortedIndexAddr, sortedSengmentAddr, cumSumAddr, outputGm, uniqueIndexNum, tilingData_->innerDim,
         tilingData_->outputOuterDim);
 

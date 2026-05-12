@@ -134,8 +134,8 @@ public:
             __local_mem__ TX* xUbLocalPtr = (__local_mem__ TX*)xUbLocal.GetPhyAddr();
             __local_mem__ TX* midResPtr = (__local_mem__ TX*)midRes.GetPhyAddr();
             DataSyncBarrier<MemDsbT::UB>();
-            AscendC::Simt::VF_CALL<SimtGatherValue<TX, Index>>(
-                AscendC::Simt::Dim3{static_cast<uint32_t>(innerDimSize), static_cast<uint32_t>(ROW_NUM)},
+            asc_vf_call<SimtGatherValue<TX, Index>>(
+                dim3{static_cast<uint32_t>(innerDimSize), static_cast<uint32_t>(ROW_NUM)},
                 midResPtr, xUbLocalPtr, (__ubuf__ Index*)indexUb.GetPhyAddr(), outputOuterDimSize, innerDimSize,
                 needIndexOneUb, oneRowOutNumAlign);
             inQueueX.FreeTensor(xUbLocal);
