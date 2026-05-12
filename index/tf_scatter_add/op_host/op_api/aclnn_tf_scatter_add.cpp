@@ -31,6 +31,7 @@
 #include "runtime/context.h"
 #include "acl/acl_rt.h"
 #include "op_api/aclnn_util.h"
+#include "aclnn_kernels/reshape.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -204,13 +205,22 @@ static const aclTensor* DoScatterAddWithSortedForTfScatterAdd(
     auto indexSize = static_cast<int64_t>(indices->Size());
     const aclTensor* scatterAddRes = nullptr;
     if (indexSize > 1) {
-        // 直接对 indices 排序，输出 indices 类型与输入相同
-        auto indicesType = indices->GetDataType();
-        auto sortResult = l0op::Sort(indices, -1, false, true, indicesType, executor);
+        auto indicesFlat = l0op::Reshape(indices, {-1}, executor);
+        CHECK_RET(indicesFlat != nullptr, nullptr);
+        auto indicesType = indicesFlat->GetDataType();
+        auto indicesShape = indices->GetViewShape();
+
+        auto sortResult = l0op::Sort(indicesFlat, -1, false, true, indicesType, executor);
         auto sortIdxOut = std::get<0>(sortResult);
         auto posIdx = std::get<1>(sortResult);
         CHECK_RET(sortIdxOut != nullptr && posIdx != nullptr, nullptr);
-        scatterAddRes = l0op::ScatterAddWithSorted(varRef, updates, sortIdxOut, posIdx, "add", executor);
+
+        auto sortIdxOutReshape = l0op::Reshape(sortIdxOut, indicesShape, executor);
+        CHECK_RET(sortIdxOutReshape != nullptr, nullptr);
+        auto posIdxReshape = l0op::Reshape(posIdx, indicesShape, executor);
+        CHECK_RET(posIdxReshape != nullptr, nullptr);
+
+        scatterAddRes = l0op::ScatterAddWithSorted(varRef, updates, sortIdxOutReshape, posIdxReshape, "add", executor);
     } else {
         // indexSize == 1 时，不需要 Sort，直接使用原始 indices
         const aclTensor* posTensor = executor->ConvertToTensor(executor->AllocScalar(0), op::DataType::DT_INT32);
