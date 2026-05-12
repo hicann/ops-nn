@@ -19,6 +19,10 @@
 #include "atvoss/util/dag.h"
 #include "atvoss/util/vec.h"
 #include "atvoss/util/placeholder.h"
+#ifdef __CCE_AICORE__
+#include "simt_api/asc_simt.h"
+#include "simt_api/math_functions.h"
+#endif
 
 namespace ErfinvOp {
 using namespace Ops::Base;
@@ -32,8 +36,8 @@ template <typename T>
 __simt_vf__ __aicore__
 LAUNCH_BOUND(THREAD_NUM) inline void ErfinvSimtCompute(__ubuf__ T* x, __ubuf__ T* y, const int64_t totalNum)
 {
-    for (int64_t i = Simt::GetThreadIdx(); i < totalNum; i += Simt::GetThreadNum()) {
-        y[i] = Simt::Erfinv(x[i]);
+    for (int64_t i = threadIdx.x; i < totalNum; i += blockDim.x) {
+        y[i] = erfinvf(x[i]);
     }
 }
 #endif
@@ -45,7 +49,7 @@ struct ErfinvCustom : public Vec::ElemwiseUnaryOP<T, T> {
 #ifdef __CCE_AICORE__
         __ubuf__ T* srcAddr = (__ubuf__ T*)src.GetPhyAddr();
         __ubuf__ T* dstAddr = (__ubuf__ T*)dst.GetPhyAddr();
-        Simt::VF_CALL<ErfinvSimtCompute<T>>(Simt::Dim3(THREAD_NUM), srcAddr, dstAddr, count);
+        asc_vf_call<ErfinvSimtCompute<T>>(dim3(THREAD_NUM), srcAddr, dstAddr, count);
 #endif
     }
 };
