@@ -533,9 +533,7 @@ private:
     uint64_t baseNB32Align_;
     // Other
     uint32_t vfLength_{0};
-#if (__NPU_ARCH__ == 3510)
     int64_t oriOverflowMode_{0};
-#endif
 };
 } // namespace AddRmsNormDynamicQuant
 #endif // _ADD_RMS_NORM_DYNAMIC_QUANT_REGBASE_SPILT_REDUCE_H_

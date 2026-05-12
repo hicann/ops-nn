@@ -385,9 +385,7 @@ private:
     int64_t nCnt_;
     int64_t tailN_;
     int64_t baseNB8Align_;
-#if (__NPU_ARCH__ == 3510)
     int64_t oriOverflowMode_{0};
-#endif
 };
 } // namespace AddRmsNormQuant
 #endif // ADD_RMS_NORM_QUANT_REGBASE_SPLIT_REDUCE_H_

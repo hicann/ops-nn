@@ -960,9 +960,7 @@ private:
     bool isHasY2_;
     bool isHasBeta_;
     bool isNeedBrc_;
-#if (__NPU_ARCH__ == 3510)
     int64_t oriOverflowMode_{0};
-#endif
 };
 } // namespace RmsNormQuantV2
 #endif // RMS_NORM_QUANT_V2_REBASE_REDUCE_H_

@@ -763,9 +763,7 @@ private:
     // Platform
     int64_t blockIdx_{0};
     int64_t blockNum_{0};
-#if (__NPU_ARCH__ == 3510)
     int64_t oriOverflowMode_{0};
-#endif
     uint64_t mCore_;
     uint64_t mOuterCnt_;
     uint64_t tailMOuter_;

@@ -59,9 +59,7 @@ private:
     // Platform
     int64_t blockIdx{0};
     int64_t blockNum{0};
-#if (__NPU_ARCH__ == 3510)
     int64_t oriOverflowMode{0};
-#endif
     uint32_t blockSize = platform::GetUbBlockSize();
     uint32_t vectorLen = platform::GetVRegSize();
     uint32_t blockSizeB32 = platform::GetUbBlockSize() / sizeof(float);
