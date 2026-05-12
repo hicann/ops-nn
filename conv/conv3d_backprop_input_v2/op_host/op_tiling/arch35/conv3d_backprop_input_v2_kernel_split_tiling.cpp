@@ -268,7 +268,6 @@ bool Conv3DDXV2KernelSplitTiling::IsBaseShapeFitKernelSplitHW(const uint32_t bes
 bool Conv3DDXV2KernelSplitTiling::CheckKernelSplitHWEnable(
     bool isEnableKernelSplitFlag2, const int32_t kernelSplitStrideVal, const uint32_t bestBaseMN)
 {
-
   // cout=cin=1,kernel_h/w=2的场景，假设使能kernel拆分会拆成1*1的子kernel同时cin/cout极小会造成算力浪费，无明显收益，故暂不支持kernel拆分
     if (!kernelSplitPara_.isA16W8GroupNoEnlarge && runInfo_.dedx_cin_g == 1 && runInfo_.dedy_cout_g == 1 && isEnableKernelSplitFlag2) {
         return false;

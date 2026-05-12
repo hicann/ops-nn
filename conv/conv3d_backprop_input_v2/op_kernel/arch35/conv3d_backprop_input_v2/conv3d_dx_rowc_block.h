@@ -57,6 +57,12 @@ public:
             this->filterGm_.SetGlobalBuffer((__gm__ filterType *)filter);
         } else {
             this->filterGm_.SetGlobalBuffer((__gm__ filterType *)workSpace);
+            // 开启前置transpose同时使用累加轴特性需要分段使用
+            if (this->useUbAccumForSplitK_) {
+                workSpace += static_cast<uint64_t>(this->tiling_->coutG) *
+                             this->tiling_->dk * this->tiling_->hk * this->tiling_->wk *
+                             (((this->tiling_->cinG + BLOCK_CUBE - 1) >> 4) << 4) * sizeof(filterType); // 4 : 2的4次方
+            }
         }
         this->dedyGm_.SetGlobalBuffer((__gm__ dedyType *)dedy);
         this->yGm_.SetGlobalBuffer((__gm__ yType *)y);
