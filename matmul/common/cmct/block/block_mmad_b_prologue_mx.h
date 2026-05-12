@@ -554,7 +554,7 @@ private:
         dn2NzParams.dValue = height;
         dn2NzParams.nValue = CeilDiv(static_cast<uint64_t>(width), static_cast<uint64_t>(SCALE_COPY_GROUP_SIZE));
         dn2NzParams.srcDnMatrixStride = SCALE_COPY_DEFAULT_STRIDE;
-        dn2NzParams.srcDValue = CeilDiv(gScaleCol, SCALE_COPY_GROUP_SIZE);
+        dn2NzParams.srcDValue = CeilDiv(static_cast<uint64_t>(gScaleCol), static_cast<uint64_t>(SCALE_COPY_GROUP_SIZE));
         dn2NzParams.dstNzC0Stride = CeilDiv(static_cast<uint64_t>(col), static_cast<uint64_t>(SCALE_COPY_GROUP_SIZE));
         dn2NzParams.dstNzNStride = SCALE_COPY_DEFAULT_NS_STRIDE;
         dn2NzParams.dstNzMatrixStride = SCALE_COPY_DEFAULT_STRIDE;
