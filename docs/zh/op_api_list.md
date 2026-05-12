@@ -127,6 +127,7 @@
 | [aclnnEmbedding](../../index/embedding/docs/aclnnEmbedding.md) | 把数据集合映射到向量空间，进而将数据进行量化。embedding的二维权重张量为weight(m+1行，n列)，对于任意输入索引张量indices（如1行3列），输出out是一个3行n列的张量。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnEmbeddingBag](../../index/embedding_bag/docs/aclnnEmbeddingBag.md) | 根据indices从weight中获得一组被聚合的数，然后根据offsets的偏移和mode指定的聚合模式对获取的数进行max、sum、mean聚合。其余参数则更细化了计算过程的控制。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnEmbeddingDenseBackward](../../index/embedding_dense_grad_v2/docs/aclnnEmbeddingDenseBackward.md) | 实现aclnnEmbedding的反向计算, 将相同索引indices对应grad的一行累加到out上。 | 默认非确定性实现，支持配置开启 | 默认非确定性实现，支持配置开启 |
+| [aclnnExpandIntoJaggedPermute](../../index/expand_into_jagged_permute/docs/aclnnExpandIntoJaggedPermute.md) | 将稀疏数据置换索引从表维度扩展到批次维度，适用于稀疏特征在不同rank中具有不同批次大小的情况。 | 默认非确定性实现 | - |
 | [aclnnEmbeddingRenorm](../../norm/renorm/docs/aclnnEmbeddingRenorm.md) | 根据给定的maxNorm和normType返回输入tensor在指定indices下的修正结果。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnErfinv&aclnnInplaceErfinv](../../activation/erfinv/docs/aclnnErfinv&aclnnInplaceErfinv.md) | erfinv是高斯误差函数erf的反函数。返回输入Tensor中每个元素对应在标准正态分布函数的分位数。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnFakeQuantPerChannelAffineCachemask](../../quant/fake_quant_affine_cachemask/docs/aclnnFakeQuantPerChannelAffineCachemask.md) | 对于输入数据self，使用scale和zero_point对输入self在指定轴axis上进行伪量化处理，并根据quant_min和quant_max对伪量化输出进行值域更新。 | 默认确定性实现 | - |
@@ -296,7 +297,9 @@
 | [aclnnMaxPool2dWithMaskBackward](../../pooling/max_pool3d_grad_with_argmax/docs/aclnnMaxPool2dWithMaskBackward.md) | 正向最大池化aclnnMaxPool2dWithMask的反向传播。 | 默认非确定性实现，支持配置开启。 | - |
 | [aclnnMaxPool3dWithArgmax](../../pooling/max_pool3d_with_argmax_v2/docs/aclnnMaxPool3dWithArgmax.md) | 对于输入信号的输入通道，提供3维最大池化（max pooling）操作，输出池化后的值out和索引indices。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnMaxPool3dWithArgmaxBackward](../../pooling/max_pool3d_grad_with_argmax/docs/aclnnMaxPool3dWithArgmaxBackward.md) | 正向最大池化aclnnMaxPool3dWithArgmax的反向传播，将梯度回填到每个窗口最大值的坐标处，相同坐标处累加。 | 默认非确定性实现，支持配置开启。 | 默认确定性实现 |
+| [aclnnMaxUnpool2d](../../index/scatter_elements/docs/aclnnMaxUnpool2d.md) | [aclnnMaxPool](../../pooling/max_pool_v3/docs/aclnnMaxPool.md)在2d的逆运算，由outputSize决定out的H、W轴大小，并根据indices索引在out中填入self的元素值，其余位置都设置为0。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnMaxUnpool2dBackward](../../index/gather_elements/docs/aclnnMaxUnpool2dBackward.md) | MaxPool2d的逆运算aclnnMaxUnpool2d的反向传播，根据indices索引在out中填入gradOutput的元素值。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnMaxUnpool3d](../../index/scatter_elements/docs/aclnnMaxUnpool3d.md) | [aclnnMaxPool](../../pooling/max_pool_v3/docs/aclnnMaxPool.md)在3d的逆运算，由outputSize决定outRef的D、H、W轴大小，并根据indices索引在outRef中填入self的元素值，其余位置都设置为0。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnMaxUnpool3dBackward](../../index/gather_elements/docs/aclnnMaxUnpool3dBackward.md) | MaxPool3d的逆运算aclnnMaxUnpool3d的反向传播，根据indices索引在out中填入gradOutput的元素值。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnMedian](../../index/gather_v2/docs/aclnnMedian.md) | 返回所有元素的中位数。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnMedianDim](../../index/gather_v2/docs/aclnnMedianDim.md) | 返回所有元素的中位数及所在位置（若指定维度元素个数为size，则中位数对应排序后的下标为`(size - 1) // 2`）。 | 默认确定性实现 | 默认确定性实现 |

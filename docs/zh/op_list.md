@@ -1388,6 +1388,26 @@
   </tr>
   <tr>
     <td>index</td>
+    <td><a href="../../index/concat_offset/README.md">concat_offset</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+  </tr>
+  <tr>
+    <td>index</td>
+    <td><a href="../../index/embedding/README.md">embedding</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>把数据集合映射到向量空间，进而将数据进行量化。embedding的二维权重张量为weight(m+1行，n列)，对于任意输入索引张量indices（如1行3列），输出out是一个3行n列的张量。</td>
+  </tr>
+  <tr>
+    <td>index</td>
     <td><a href="../../index/embedding_bag/README.md">embedding_bag</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -1432,7 +1452,7 @@
     <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
@@ -1442,7 +1462,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✓</td>
+    <td>✗</td>
     <td>AI Core</td>
     <td>对输入tensor中指定的维度dim进行数据聚集。</td>
   </tr>
@@ -1452,7 +1472,7 @@
     <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
     <td>AI Core</td>
     <td>对于输入张量 self 和 输入张量 indices，将数据切片收集到输出张量out中。</td>
   </tr>
@@ -1476,6 +1496,16 @@
     <td>AI Core</td>
     <td>根据索引indices将输入x对应坐标的数据取出。</td>
   </tr>
+   <tr>
+    <td>index</td>
+    <td><a href="../../index/index_fill/README.md">index_fill</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>沿输入x的给定轴dim，将indices指定位置的值使用value进行非原地填充替换。</td>
+  </tr>
   <tr>
     <td>index</td>
     <td><a href="../../index/index_fill_d/README.md">index_fill_d</a></td>
@@ -1485,6 +1515,16 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>沿输入self的给定轴dim，将index指定位置的值使用value进行替换。</td>
+  </tr>
+  <tr>
+    <td>index</td>
+    <td><a href="../../index/index_put/README.md">index_put</a></td>
+    <td>✗</td>
+    <td>✗</td>
+    <td>✗</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
   <tr>
     <td>index</td>
@@ -1498,20 +1538,40 @@
   </tr>
   <tr>
     <td>index</td>
+    <td><a href="../../index/index_put_with_sort/README.md">index_put_with_sort</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>执行scatter操作，根据pos_idx的值循环对应的values，累加/替换到linear_index指向的self的位置。</td>
+  </tr>
+  <tr>
+    <td>index</td>
     <td><a href="../../index/index_put_with_sort_v2/README.md">index_put_with_sort_v2</a></td>
     <td>✓</td>
     <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
+    <td>✗</td>
+    <td>✗</td>
     <td>AI Core</td>
     <td>执行scatter操作，根据pos_idx的值循环对应的values，累加/替换到linear_index指向的self的位置。</td>
+  </tr>
+  <tr>
+    <td>index</td>
+    <td><a href="../../index/inplace_index_add/README.md">inplace_index_add</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
   <tr>
     <td>index</td>
     <td><a href="../../index/inplace_index_add_with_sorted/README.md">inplace_index_add_with_sorted</a></td>
     <td>✓</td>
     <td>✓</td>
-    <td>✓</td>
+    <td>✗</td>
     <td>✗</td>
     <td>AI Core</td>
     <td>将alpha和value相乘，并按照sorted_indices中的顺序，累加到var张量的指定axis维度中。</td>
@@ -1521,7 +1581,7 @@
     <td><a href="../../index/inplace_index_fill/README.md">inplace_index_fill</a></td>
     <td>✓</td>
     <td>✓</td>
-    <td>✓</td>
+    <td>✗</td>
     <td>✓</td>
     <td>AI Core</td>
     <td>在输入Tensor的指定维度dim，根据index填写特定的数value。</td>
@@ -1541,7 +1601,7 @@
     <td><a href="../../index/linear_index/README.md">linear_index</a></td>
     <td>✓</td>
     <td>✓</td>
-    <td>✓</td>
+    <td>✗</td>
     <td>✗</td>
     <td>AI Core</td>
     <td>将多维数组 / 矩阵的元素位置映射为单一整数的索引方式。</td>
@@ -1551,10 +1611,20 @@
     <td><a href="../../index/linear_index_v2/README.md">linear_index_v2</a></td>
     <td>✓</td>
     <td>✓</td>
-    <td>✓</td>
+    <td>✗</td>
     <td>✗</td>
     <td>AI Core</td>
     <td>将多维数组 / 矩阵的元素位置映射为单一整数的索引方式。</td>
+  </tr>
+  <tr>
+    <td>index</td>
+    <td><a href="../../index/map_index/README.md">map_index</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
   <tr>
     <td>index</td>
@@ -1562,15 +1632,25 @@
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
     <td>AI Core</td>
     <td>根据掩码(mask)张量中元素为True的位置，复制(source)中的元素到(selfRef)对应的位置上。</td>
   </tr>
   <tr>
     <td>index</td>
-    <td><a href="../../index/matrix_inverse/README.md">matrix_inverse</a></td>
+    <td><a href="../../index/masked_scatter_with_position/README.md">masked_scatter_with_position</a></td>
+    <td>✓</td>
+    <td>✓</td>
     <td>✗</td>
     <td>✓</td>
+    <td>AI Core</td>
+    <td>根据掩码(mask)张量进行模拟广播到x的shape，mask中为True位置，复制对应（updates）到输入(x)对应位置。其中position为mask广播前的前缀和张量。</td>
+  </tr>
+  <tr>
+    <td>index</td>
+    <td><a href="../../index/matrix_inverse/README.md">matrix_inverse</a></td>
+    <td>✗</td>
+    <td>✗</td>
     <td>✓</td>
     <td>✗</td>
     <td>AI Core</td>
@@ -1608,6 +1688,16 @@
   </tr>
   <tr>
     <td>index</td>
+    <td><a href="../../index/reverse_sequence/README.md">reverse_sequence</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core/AI CPU</td>
+    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+  </tr>
+  <tr>
+    <td>index</td>
     <td><a href="../../index/repeat_interleave_grad/README.md">repeat_interleave_grad</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -1622,7 +1712,7 @@
     <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
@@ -1642,7 +1732,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
     <td>AI Core</td>
     <td>将tensor src中的值按指定的轴和方向以及对应的位置关系逐个替换/累加/累乘至tensor self中。</td>
   </tr>
@@ -1651,7 +1741,7 @@
     <td><a href="../../index/scatter_add_with_sorted/README.md">scatter_add_with_sorted</a></td>
     <td>✓</td>
     <td>✓</td>
-    <td>✓</td>
+    <td>✗</td>
     <td>✗</td>
     <td>AI Core</td>
     <td>将tensor src中的值按指定的轴和方向和对应的位置关系逐个替换/累加/累乘至tensor self中。</td>
@@ -1692,9 +1782,19 @@
     <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
     <td>AI Core</td>
     <td>算子功能：拷贝data的数据至out，同时在指定indices处根据updates更新out中的数据。</td>
+  </tr>
+    <tr>
+    <td>index</td>
+    <td><a href="../../index/scatter_nd_add/README.md">scatter_nd_add</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
   <tr>
     <td>index</td>
@@ -1702,9 +1802,20 @@
     <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
     <td>AI Core</td>
     <td>算子功能：根据indices在给定变量内，将updates应用于变量的单个值或切片。</td>
+  </tr>
+  </tr>
+    <tr>
+    <td>index</td>
+    <td><a href="../../index/scatter_sub/README.md">scatter_sub</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
   <tr>
     <td>index</td>
@@ -1712,9 +1823,59 @@
     <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+  </tr>
+  <tr>
+    <td>index</td>
+    <td><a href="../../index/segment_sum/README.md">segment_sum</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+  </tr>
+  <tr>
+    <td>index</td>
+    <td><a href="../../index/sorted_sparse_segment_mean_grad/README.md">sorted_sparse_segment_mean_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+  </tr>
+  <tr>
+    <td>index</td>
+    <td><a href="../../index/sparse_segment_mean/README.md">sparse_segment_mean</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+  </tr>
+  <tr>
+    <td>index</td>
+    <td><a href="../../index/sparse_slice/README.md">sparse_slice</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+  </tr>
+  <tr>
+    <td>index</td>
+    <td><a href="../../index/sparse_to_dense/README.md">sparse_to_dense</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>将一个稀疏表示（Sparse Representation）转换为一个稠密张量。</td>
   </tr>
   <tr>
     <td>index</td>
@@ -1730,7 +1891,7 @@
     <td>index</td>
     <td><a href="../../index/tf_scatter_add/README.md">tf_scatter_add</a></td>
     <td>✗</td>
-    <td>✓</td>
+    <td>✗</td>
     <td>✓</td>
     <td>✗</td>
     <td>AI Core</td>
@@ -1770,11 +1931,41 @@
     <td>index</td>
     <td><a href="../../index/unique_with_counts_ext2/README.md">unique_with_counts_ext2</a></td>
     <td>✗</td>
-    <td>✓</td>
+    <td>✗</td>
     <td>✓</td>
     <td>✗</td>
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+  </tr>
+  <tr>
+    <td>index</td>
+    <td><a href="../../index/unsorted_segment_common/README.md">unsorted_segment_common</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+  </tr>
+  <tr>
+    <td>index</td>
+    <td><a href="../../index/unsorted_segment_min/README.md">unsorted_segment_min</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+  </tr>
+  <tr>
+    <td>index</td>
+    <td><a href="../../index/where/README.md">where</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI CPU</td>
+    <td>找出张量`x`中非零或True元素的位置，设张量`x`的维度为D，非零元素的个数为N，则返回`y`的shape为D * N，每一列表示一个非零元素的位置坐标。</td>
   </tr>
   <tr>
     <td>loss</td>
