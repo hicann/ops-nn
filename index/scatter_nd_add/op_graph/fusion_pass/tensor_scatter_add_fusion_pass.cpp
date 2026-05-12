@@ -27,13 +27,11 @@
 #include "es_nn_ops.h"
 #include "compliant_node_builder.h"
 #include "common/inc/error_util.h"
-#include "platform/platform_info.h"
 #include "ge/ge_utils.h"
 #include "ge/es_graph_builder.h"
 #include <set>
 
 using namespace ge;
-using namespace fe;
 using namespace fusion;
 
 namespace OPS {
@@ -47,21 +45,6 @@ const std::set<std::string> SUPPORTED_OP_TYPES = {"TensorScatterAdd", "ScatterNo
 // ---------------------------------------------------------------------------
 // 工具函数
 // ---------------------------------------------------------------------------
-bool IsTargetPlatform()
-{
-    PlatformInfo platformInfo;
-    OptionalInfo optionalInfo;
-    OP_LOGE_IF(
-        PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optionalInfo) != SUCCESS,
-        false, PASS_NAME.c_str(), "Get platformInfo failed.");
-    const std::string soc = platformInfo.str_info.short_soc_version;
-    bool isSupported = (soc == "Ascend950");
-    if (!isSupported) {
-        OPS_LOG_D(PASS_NAME.c_str(), "Platform %s is not supported.", soc.c_str());
-        return false;
-    }
-    return true;
-}
 
 static void GetInputsInfo(
     const std::vector<SubgraphInput>& subgraphInputs,
@@ -155,11 +138,6 @@ std::vector<PatternUniqPtr> TensorScatterAddFusionPass::Patterns()
 bool TensorScatterAddFusionPass::MeetRequirements(const std::unique_ptr<MatchResult>& matchResult)
 {
     OPS_LOG_D(PASS_NAME.c_str(), "Enter MeetRequirements for TensorScatterAddFusionPass");
-
-    if (!IsTargetPlatform()) {
-        OPS_LOG_D(PASS_NAME.c_str(), "Platform check failed, skip fusion.");
-        return false;
-    }
 
     NodeIo captured;
     OP_LOGE_IF(

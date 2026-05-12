@@ -222,7 +222,8 @@ TEST_F(TensorScatterAddFusionPassTest, tensor_scatter_add_ascend950_success)
     EXPECT_TRUE(FindNodeByType(graph, "ScatterNdAdd"));
 }
 
-TEST_F(TensorScatterAddFusionPassTest, unsupported_platform_fail)
+// 全平台融合：Ascend910B 也能融合（无平台限制，由算子注册信息兜底）
+TEST_F(TensorScatterAddFusionPassTest, all_platform_fusion_success)
 {
     fe::PlatformInfo platformInfo;
     fe::OptionalInfo optiCompilationInfo;
@@ -236,7 +237,9 @@ TEST_F(TensorScatterAddFusionPassTest, unsupported_platform_fail)
     CustomPassContext pass_context;
     OPS::NN::TensorScatterAddFusionPass pass;
     Status status = pass.Run(graph, pass_context);
-    EXPECT_EQ(status, GRAPH_NOT_CHANGED);
+    EXPECT_EQ(status, SUCCESS);
+    EXPECT_TRUE(FindNodeByType(graph, "TensorMove"));
+    EXPECT_TRUE(FindNodeByType(graph, "ScatterNdAdd"));
 }
 
 TEST_F(TensorScatterAddFusionPassTest, tensor_scatter_add_1d_success)
