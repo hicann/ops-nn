@@ -60,6 +60,9 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::GetLargeHkWkTilingMode()
         runInfo_.backprop_pad_u <= PAD_DIM_UP && runInfo_.backprop_pad_d <= PAD_DIM_UP &&
         runInfo_.dilation_h <= PAD_DIM_UP && runInfo_.dilation_w <= PAD_DIM_UP) {
         tilingRunInfo_.tilingHkWkMode = NO_TILING_HWK;
+        if (runInfo_.stride_d > runInfo_.kernel_d) {
+            runInfo_.initOutputFlag = 1;    // 存在跳过场景，默认开启清零
+        }
         return ge::GRAPH_SUCCESS;
     }
 
@@ -485,7 +488,7 @@ void Conv3DDXV2InnerProductTiling::SetCommonTilingData(
     dxt.iterateOrder = l1Params.iterateOrder;
     dxt.enableVecTrans = tilingRunInfo_.enableVecTransFlag;
     dxt.enableFullLoad = tilingRunInfo_.enableFullLoadTiling;
-    if (tilingRunInfo_.tilingHkWkMode != NO_TILING_HWK) {
+    if (tilingRunInfo_.tilingHkWkMode != NO_TILING_HWK || runInfo_.stride_d > runInfo_.kernel_d) {
         dxt.initOutputFlag = runInfo_.initOutputFlag;
     }
     dxt.isBiasFullLoad = l1Params.isBiasFullLoad;
