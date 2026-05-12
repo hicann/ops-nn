@@ -290,16 +290,11 @@ static aclnnStatus aclnnLinalgVectorA3(const aclTensor* selfContiguous, InputPar
     auto epsilon = static_cast<float>(0);
 
     const aclTensor* lpNormOut;
-    bool isOrdValid = CheckOrdValue(inputParams.ord);
     bool isPromoteValid = CheckDtypeConvertValid(inputParams.self, inputParams.out);
-    if(isOrdValid && isPromoteValid) {
-        op::DataType promoteType = op::PromoteType(inputParams.self->GetDataType(), inputParams.out->GetDataType());
-        auto selfContiguousCast = l0op::Cast(selfContiguous, promoteType, executor);
-        CHECK_RET(selfContiguousCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        lpNormOut = l0op::LpNormV2(selfContiguousCast, selfContiguousCast, inputParams.p, inputParams.dims, inputParams.keepDims, epsilon, executor);
+    if(isPromoteValid) {
+        lpNormOut = l0op::LpNormV2(selfContiguous, inputParams.out, inputParams.p, inputParams.dims, inputParams.keepDims, epsilon, executor);
         CHECK_RET(lpNormOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    } else if (CheckOrdValue(inputParams.ord) && !isPromoteValid) {
+    } else if (!isPromoteValid) {
         auto selfContiguousCast = l0op::Cast(selfContiguous, op::DataType::DT_FLOAT, executor);
         CHECK_RET(selfContiguousCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
@@ -307,18 +302,6 @@ static aclnnStatus aclnnLinalgVectorA3(const aclTensor* selfContiguous, InputPar
         CHECK_RET(lpNormOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
         lpNormOut = l0op::Cast(lpNormOut, inputParams.out->GetDataType(), executor);
-        CHECK_RET(lpNormOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    } else {
-        auto selfContiguousCast = l0op::Cast(selfContiguous, op::DataType::DT_FLOAT, executor);
-        CHECK_RET(selfContiguousCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        auto reduceOut = l0op::LpNormReduceV2(selfContiguousCast, inputParams.p, inputParams.dims, inputParams.keepDims, epsilon, executor);
-        CHECK_RET(reduceOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        auto updateOut = l0op::LpNormUpdateV2(reduceOut, inputParams.p, epsilon, executor);
-        CHECK_RET(updateOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        lpNormOut = l0op::Cast(updateOut, inputParams.out->GetDataType(), executor);
         CHECK_RET(lpNormOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
     

@@ -253,15 +253,10 @@ static aclnnStatus aclnnLinalgVectorA3(const aclTensor* selfContiguous, InputPar
 
     const aclTensor* normOut;
     bool isPromoteValid = CheckDtypeConvertValid(inputParams.self, op::ToOpDataType(inputParams.dtype), inputParams.out);
-    bool isOrdValid = CheckOrdValue(inputParams.ord);
-    if(isOrdValid && isPromoteValid) {
-        op::DataType promoteType = op::PromoteType(inputParams.self->GetDataType(), inputParams.out->GetDataType());
-        auto selfContiguousCast = l0op::Cast(selfContiguous, promoteType, executor);
-        CHECK_RET(selfContiguousCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        normOut = l0op::LpNormV2(selfContiguousCast, selfContiguousCast, CalculateOrdValue(inputParams.ord), inputParams.dims, inputParams.keepDims, epsilon, executor);
+    if(isPromoteValid) {
+        normOut = l0op::LpNormV2(selfContiguous, inputParams.out, CalculateOrdValue(inputParams.ord), inputParams.dims, inputParams.keepDims, epsilon, executor);
         CHECK_RET(normOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    } else if (CheckOrdValue(inputParams.ord) && !isPromoteValid) {
+    } else if (!isPromoteValid) {
         auto selfContiguousCast = l0op::Cast(selfContiguous, op::DataType::DT_FLOAT, executor);
         CHECK_RET(selfContiguousCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
@@ -270,20 +265,8 @@ static aclnnStatus aclnnLinalgVectorA3(const aclTensor* selfContiguous, InputPar
 
         normOut = l0op::Cast(normOut, inputParams.out->GetDataType(), executor);
         CHECK_RET(normOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    } else {
-        auto selfContiguousCast = l0op::Cast(selfContiguous, op::DataType::DT_FLOAT, executor);
-        CHECK_RET(selfContiguousCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        auto reduceOut = l0op::LpNormReduceV2(selfContiguousCast, CalculateOrdValue(inputParams.ord), inputParams.dims, inputParams.keepDims, epsilon, executor);
-        CHECK_RET(reduceOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        auto updateOut = l0op::LpNormUpdateV2(reduceOut, CalculateOrdValue(inputParams.ord), epsilon, executor);
-        CHECK_RET(updateOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        normOut = l0op::Cast(updateOut, inputParams.out->GetDataType(), executor);
-        CHECK_RET(normOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
-    
+
     auto viewCopyResult = l0op::ViewCopy(normOut, inputParams.out, executor);
     CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
     return ACLNN_SUCCESS;
