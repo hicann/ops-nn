@@ -12,6 +12,7 @@
  * \file max_pool_3d_infershape.cpp
  * \brief
  */
+#include <algorithm>
 #include "register/op_impl_registry.h"
 #include "log/log.h"
 #include "util/shape_util.h"
