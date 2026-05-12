@@ -60,7 +60,7 @@ std::vector<PatternUniqPtr> WhereFusionPass::Patterns()
     auto y = es::Where(x);
     auto graph = graphBuilder.BuildAndReset({y});
     auto pattern = std::make_unique<Pattern>(std::move(*graph));
-    pattern->CaptureTensor({*x.GetProducer(), 0});
+    pattern->CaptureTensor({*y.GetProducer(), 0});
 
     patternGraphs.emplace_back(std::move(pattern));
     return patternGraphs;
@@ -95,7 +95,7 @@ bool WhereFusionPass::MeetRequirements(const std::unique_ptr<MatchResult>& match
     auto dtypeIter = std::find(NONZERO_DTYPE_SUPPORT_LIST.begin(), NONZERO_DTYPE_SUPPORT_LIST.end(), inputDtype);
 
     if (dtypeIter == NONZERO_DTYPE_SUPPORT_LIST.end()) {
-        OPS_LOG_D(FUSION_PASS_NAME.c_str(), "%s does not support input dytpe %d.", nodeName.GetString(), inputDtype);
+        OPS_LOG_D(FUSION_PASS_NAME.c_str(), "%s does not support input dtype %d.", nodeName.GetString(), inputDtype);
         return false;
     }
 
