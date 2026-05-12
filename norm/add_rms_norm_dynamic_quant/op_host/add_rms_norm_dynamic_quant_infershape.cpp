@@ -15,6 +15,7 @@
 #include "log/log.h"
 #include "util/shape_util.h"
 #include "register/op_impl_registry.h"
+#include <algorithm>
 
 static constexpr int X1_IDX = 0;
 static constexpr int X2_IDX = 1;
