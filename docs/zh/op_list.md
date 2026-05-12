@@ -2419,6 +2419,16 @@
   </tr>
   <tr>
     <td>matmul</td>
+    <td><a href="../../matmul/sparse_tensor_dense_mat_mul/README.md">sparse_tensor_dense_mat_mul</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>完成稀疏矩阵x1乘以稠密矩阵x2，其中x1用x1_indices、x1_values、x1_shape三个Tensor来表达，x2为直接传入rank=2的Tensor（即矩阵）。</td>
+  </tr>
+  <tr>
+    <td>matmul</td>
     <td><a href="../../matmul/transpose_batch_mat_mul/README.md">transpose_batch_mat_mul</a></td>
     <td>✓</td>
     <td>✓</td>
