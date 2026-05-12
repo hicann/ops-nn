@@ -31,7 +31,7 @@
 | [aclnnAdaptiveAvgPool2d](../../pooling/adaptive_avg_pool3d/docs/aclnnAdaptiveAvgPool2d.md) | 在指定二维输出shape信息（outputSize）的情况下，完成张量self的2D自适应平均池化计算。 | 默认确定性实现 | - |
 | [aclnnAdaptiveAvgPool2dBackward](../../pooling/adaptive_avg_pool3d_grad/docs/aclnnAdaptiveAvgPool2dBackward.md) | [aclnnAdaptiveAvgPool2d](../../pooling/adaptive_avg_pool3d/docs/aclnnAdaptiveAvgPool2d.md) 的反向计算。 | 默认非确定性实现，支持配置开启 | - |
 | [aclnnAdaptiveAvgPool3d](../../pooling/adaptive_avg_pool3d/docs/aclnnAdaptiveAvgPool3d.md) | 在指定三维输出shape信息（outputSize）的情况下，完成张量self的3D自适应平均池化计算。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnAdaptiveAvgPool3dBackward]() | [aclnnAdaptiveAvgPool3d](../../pooling/adaptive_avg_pool3d/docs/aclnnAdaptiveAvgPool3d.md)的反向计算。 | 默认非确定性实现，支持配置开启 | - |
+| [aclnnAdaptiveAvgPool3dBackward](../../pooling/adaptive_avg_pool3d_grad/docs/aclnnAdaptiveAvgPool3dBackward.md) | [aclnnAdaptiveAvgPool3d](../../pooling/adaptive_avg_pool3d/docs/aclnnAdaptiveAvgPool3d.md)的反向计算。 | 默认非确定性实现，支持配置开启 | - |
 | [aclnnAdaptiveMaxPool2d](../../pooling/adaptive_max_pool2d/docs/aclnnAdaptiveMaxPool2d.md) | 根据输入的outputSize计算每次kernel的大小，对输入self进行2维最大池化操作。 | 默认确定性实现 | - |
 | [aclnnAdaptiveMaxPool2dBackward](../../pooling/adaptive_max_pool3d_grad/docs/aclnnAdaptiveMaxPool2dBackward.md) | 正向自适应最大池化的反向传播，将梯度回填到每个自适应窗口最大值的坐标处，相同坐标处累加。 | 默认非确定性实现 | - |
 | [aclnnAdaptiveMaxPool3d](../../pooling/adaptive_max_pool3d/docs/aclnnAdaptiveMaxPool3d.md) | 根据输入的outputSize计算每次kernel的大小，对输入self进行3维最大池化操作。 | 默认确定性实现 | 默认确定性实现 |
@@ -50,6 +50,7 @@
 | [aclnnAddRmsNorm](../../norm/add_rms_norm/docs/aclnnAddRmsNorm.md) | RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnAddRmsNormQuant](../../norm/add_rms_norm_quant/docs/aclnnAddRmsNormQuant.md) | 将RmsNorm前的Add算子以及RmsNorm后的Quantize算子融合起来，减少搬入搬出操作。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnAddRmsNormQuantV2](../../norm/add_rms_norm_quant_v2/docs/aclnnAddRmsNormQuantV2.md) | RmsNorm是大模型常用的标准化操作，相比LayerNorm，其去掉了减去均值的部分。 | 默认确定性实现 | - |
+| [aclnnAddRelu&aclnnInplaceAddRelu](../../activation/relu/docs/aclnnAddRelu&aclnnInplaceAddRelu.md) | 完成加法计算后得到结果再进行激活。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnAdvanceStep](../../optim/advance_step/docs/aclnnAdvanceStep.md) | 推进推理步骤，即在每个生成步骤中更新模型的状态并生成新的inputTokens、inputPositions、seqLens和slotMapping，为vLLM的推理提升效率。 | 默认确定性实现 | - |
 | [aclnnAdvanceStepV2](../../optim/advance_step/docs/aclnnAdvanceStepV2.md) | 推进推理步骤，即在每个生成步骤中更新模型的状态并生成新的inputTokens、inputPositions、seqLens和slotMapping，为vLLM的推理提升效率。 | 默认确定性实现 | - |
 | [aclnnApplyAdamW](../../optim/apply_adam_w/docs/aclnnApplyAdamW.md) | 实现adamW优化器功能。 | 默认确定性实现 | 默认确定性实现 |
