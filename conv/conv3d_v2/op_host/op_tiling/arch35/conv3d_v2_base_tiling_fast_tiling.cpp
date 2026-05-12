@@ -213,7 +213,8 @@ void Conv3dBaseTilingV2::Conv3dOpTilingSetShape()
     int64_t singleCoreHo = 0;
     int64_t singleCoreMo = 0;
     if (flagInfo_.mSplitModeFlag) {
-        singleCoreMo = ConvCeilDiv(ConvAlignB(shapeInfo_.ho * shapeInfo_.wo, convOpsConstParams_.m0), numBlocksRes.mDim);
+        singleCoreMo =
+            ConvCeilDiv(ConvAlignB(shapeInfo_.ho * shapeInfo_.wo, convOpsConstParams_.m0), numBlocksRes.mDim);
         conv3dApiTiling_.SetSingleOutputShape(singleCoreCo, singleCoreDo, singleCoreMo, singleCoreBatch);
     } else {
         singleCoreHo = ConvCeilDiv(shapeInfo_.ho, numBlocksRes.hoDim);

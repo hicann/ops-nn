@@ -38,8 +38,9 @@ public:
     __aicore__ inline void SetPadData()
     {
         if constexpr (Intf::isQuantScene) {
-            uint16_t padValue = (static_cast<uint16_t>(self_->ctx.convTilingData->convApiTiling.offsetx)) << BIT_OFFSET_8 |
-                                (static_cast<uint16_t>(self_->ctx.convTilingData->convApiTiling.offsetx));
+            uint16_t padValue = 
+                (static_cast<uint16_t>(self_->ctx.convTilingData->convApiTiling.offsetx)) << BIT_OFFSET_8 |
+                (static_cast<uint16_t>(self_->ctx.convTilingData->convApiTiling.offsetx));
             InitConstValueParams<uint16_t> params(
                 1, static_cast<uint16_t>(self_->ctx.convTilingData->convApiTiling.aL1SpaceSize / C0_SIZE), 0, padValue);
             buffAddr.bufferAddr = self_->ctx.al1.GetPhyAddr();
@@ -77,7 +78,8 @@ public:
     __aicore__ inline void SetLoad3dFMatrixForOptPreload()
     {
         if constexpr (Intf::outputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE)) {
-            SetLoad3dFMatrix(self_->ctx.convTilingData->convApiTiling.padLeft, self_->ctx.convTilingData->convApiTiling.padRight,
+            SetLoad3dFMatrix(self_->ctx.convTilingData->convApiTiling.padLeft,
+                             self_->ctx.convTilingData->convApiTiling.padRight,
                              self_->ctx.convTilingData->convApiTiling.orgWi);
         } else {
             SetLoad3dFMatrix(padLeftL1, padRightL1, wiLoadL1);
@@ -105,8 +107,10 @@ public:
     {
         self_ = self;
 
-        hiLoadL1 = (self_->ctx.convTilingData->convApiTiling.orgHo - 1) * self_->ctx.convTilingData->convApiTiling.strideH + self_->ctx.dilatedKernelH;
-        hiLoadL1 = hiLoadL1 > self_->ctx.convTilingData->convApiTiling.orgHi ? self_->ctx.convTilingData->convApiTiling.orgHi : hiLoadL1;
+        hiLoadL1 = (self_->ctx.convTilingData->convApiTiling.orgHo - 1) *
+            self_->ctx.convTilingData->convApiTiling.strideH + self_->ctx.dilatedKernelH;
+        hiLoadL1 = hiLoadL1 > self_->ctx.convTilingData->convApiTiling.orgHi ?
+            self_->ctx.convTilingData->convApiTiling.orgHi : hiLoadL1;
         realHixWi = hiLoadL1 * self_->ctx.convTilingData->convApiTiling.orgWi;
 
         padList[PAD_IDX_L] = static_cast<uint8_t>(self_->ctx.convTilingData->convApiTiling.padLeft);
@@ -127,9 +131,12 @@ public:
     {
         if constexpr (Intf::ConvParam::innerBatch == static_cast<int8_t>(ConvInnerBatch::KERNEL_1X1_MULTI_BATCH)) {
             if constexpr (Intf::formatFmap == ConvFormat::NCHW && Intf::c04Flag) {
-                Load3DSetFMatrixCal(self_->ctx.innerBatch, AlignB(C04_CIN_SIZE * self_->ctx.convTilingData->convApiTiling.orgHixWi, Intf::k0) / C04_CIN_SIZE, padList);
+                Load3DSetFMatrixCal(self_->ctx.innerBatch,
+                    AlignB(C04_CIN_SIZE * self_->ctx.convTilingData->convApiTiling.orgHixWi, Intf::k0) / C04_CIN_SIZE,
+                        padList);
             } else {
-                Load3DSetFMatrixCal(self_->ctx.innerBatch * hiLoadL1, self_->ctx.convTilingData->convApiTiling.orgWi, padList);
+                Load3DSetFMatrixCal(self_->ctx.innerBatch * hiLoadL1,
+                    self_->ctx.convTilingData->convApiTiling.orgWi, padList);
             }
         }
         if constexpr (Intf::disContinuousFlag) {
@@ -140,7 +147,8 @@ public:
                 aL1GmOffset += kAL1Iter * self_->ctx.convTilingData->convApiTiling.cinOffsetBlockInGM;
             }
             if constexpr (!Intf::isOneBatch) {
-                aL1GmOffset += batchIter * self_->ctx.convTilingData->convApiTiling.innerBatch * self_->ctx.fmapOneBatchSize;
+                aL1GmOffset += batchIter * self_->ctx.convTilingData->convApiTiling.innerBatch *
+                               self_->ctx.fmapOneBatchSize;
             }
 
             Dn2NzParams intriParams;
@@ -157,7 +165,8 @@ public:
                 aL1GmOffset += kAL1Iter * self_->ctx.convTilingData->convApiTiling.cinAInCore;
             }
             if constexpr (!Intf::isOneBatch) {
-                aL1GmOffset += batchIter * self_->ctx.convTilingData->convApiTiling.innerBatch * self_->ctx.fmapOneBatchSize;
+                aL1GmOffset += batchIter * self_->ctx.convTilingData->convApiTiling.innerBatch *
+                               self_->ctx.fmapOneBatchSize;
             }
 
             Nd2NzParams intriParams;
@@ -173,7 +182,8 @@ public:
 
     __aicore__ inline void LoadAL1InputHWNC(uint64_t kAL1Iter, uint64_t mAL1Iter, uint64_t batchIter)
     {
-        uint64_t aL1GmOffset = batchIter * self_->ctx.convTilingData->convApiTiling.innerBatch * self_->ctx.convTilingData->convApiTiling.orgCi +
+        uint64_t aL1GmOffset = batchIter * self_->ctx.convTilingData->convApiTiling.innerBatch *
+                               self_->ctx.convTilingData->convApiTiling.orgCi +
                                kAL1Iter * self_->ctx.convTilingData->convApiTiling.cinAInCore;
 
         Nd2NzParams intriParams;
@@ -188,9 +198,11 @@ private:
         intriParams.nValue = self_->ctx.convTilingData->convApiTiling.orgHixWi;
         intriParams.dValue = self_->ctx.convTilingData->convApiTiling.orgCi;
         intriParams.srcDValue = self_->ctx.convTilingData->convApiTiling.orgHixWi;
-        intriParams.srcDnMatrixStride = self_->ctx.convTilingData->convApiTiling.orgCi * self_->ctx.convTilingData->convApiTiling.orgHixWi;
+        intriParams.srcDnMatrixStride = self_->ctx.convTilingData->convApiTiling.orgCi *
+                                        self_->ctx.convTilingData->convApiTiling.orgHixWi;
         intriParams.dstNzNStride = 1;
-        intriParams.dstNzMatrixStride = AlignB(C04_CIN_SIZE * self_->ctx.convTilingData->convApiTiling.orgHixWi, Intf::k0);
+        intriParams.dstNzMatrixStride = 
+            AlignB(C04_CIN_SIZE * self_->ctx.convTilingData->convApiTiling.orgHixWi, Intf::k0);
     }
  
     __aicore__ inline void SetDn2NzIntriParams(Dn2NzParams &intriParams, uint64_t kAL1Iter)
@@ -200,14 +212,16 @@ private:
             al1Ci = self_->ctx.convTilingData->convApiTiling.cinATailInCore;
         } else {
             al1Ci = IsKAL1Tail(kAL1Iter) ?
-                self_->ctx.convTilingData->convApiTiling.cinATailInCore : self_->ctx.convTilingData->convApiTiling.cinAInCore;
+                    self_->ctx.convTilingData->convApiTiling.cinATailInCore :
+                    self_->ctx.convTilingData->convApiTiling.cinAInCore;
         }
         intriParams.dnNum = self_->ctx.innerBatch;
         intriParams.nValue = realHixWi;
         intriParams.dValue = al1Ci;
         intriParams.srcDValue = self_->ctx.convTilingData->convApiTiling.orgHixWi;
-        intriParams.srcDnMatrixStride = self_->ctx.convTilingData->convApiTiling.orgCi * self_->ctx.convTilingData->convApiTiling.orgHixWi;
         intriParams.dstNzNStride = 1;
+        intriParams.srcDnMatrixStride = self_->ctx.convTilingData->convApiTiling.orgCi *
+            self_->ctx.convTilingData->convApiTiling.orgHixWi;
 
         if constexpr (Intf::ConvParam::innerBatch == static_cast<int8_t>(ConvInnerBatch::KERNEL_1X1_MULTI_BATCH)) {
             intriParams.dstNzC0Stride = self_->ctx.innerBatch * realHixWi;
@@ -226,9 +240,11 @@ private:
         } else {
             intriParams.ndNum = self_->ctx.innerBatch;
             intriParams.nValue = self_->ctx.convTilingData->convApiTiling.orgHixWi;
-            intriParams.srcNdMatrixStride = self_->ctx.convTilingData->convApiTiling.orgCi * self_->ctx.convTilingData->convApiTiling.orgHixWi;
+            intriParams.srcNdMatrixStride = self_->ctx.convTilingData->convApiTiling.orgCi *
+                self_->ctx.convTilingData->convApiTiling.orgHixWi;
             intriParams.dstNzNStride = 1;
-            intriParams.dstNzMatrixStride = AlignB(C04_CIN_SIZE * self_->ctx.convTilingData->convApiTiling.orgHixWi, Intf::k0);
+            intriParams.dstNzMatrixStride =
+                AlignB(C04_CIN_SIZE * self_->ctx.convTilingData->convApiTiling.orgHixWi, Intf::k0);
         }
         intriParams.dValue = self_->ctx.convTilingData->convApiTiling.orgCi;
         intriParams.srcDValue = self_->ctx.convTilingData->convApiTiling.orgCi;
@@ -241,13 +257,15 @@ private:
             al1Ci = self_->ctx.convTilingData->convApiTiling.cinATailInCore;
         } else {
             al1Ci = IsKAL1Tail(kAL1Iter) ?
-                self_->ctx.convTilingData->convApiTiling.cinATailInCore : self_->ctx.convTilingData->convApiTiling.cinAInCore;
+                    self_->ctx.convTilingData->convApiTiling.cinATailInCore :
+                    self_->ctx.convTilingData->convApiTiling.cinAInCore;
         }
+        intriParams.dValue = al1Ci;
         intriParams.ndNum = self_->ctx.innerBatch;
         intriParams.nValue = self_->ctx.convTilingData->convApiTiling.orgHixWi;
-        intriParams.dValue = al1Ci;
         intriParams.srcDValue = self_->ctx.convTilingData->convApiTiling.orgCi;
-        intriParams.srcNdMatrixStride = self_->ctx.convTilingData->convApiTiling.orgCi * self_->ctx.convTilingData->convApiTiling.orgHixWi;
+        intriParams.srcNdMatrixStride = self_->ctx.convTilingData->convApiTiling.orgCi *
+            self_->ctx.convTilingData->convApiTiling.orgHixWi;
         intriParams.dstNzNStride = 1;
 
         if constexpr (Intf::ConvParam::innerBatch == static_cast<int8_t>(ConvInnerBatch::KERNEL_1X1_MULTI_BATCH)) {
@@ -262,12 +280,14 @@ private:
     __aicore__ inline void SetNd2NzIntriParamsInputHWNC(Nd2NzParams &intriParams, uint64_t kAL1Iter)
     {
         uint32_t al1Ci = IsKAL1Tail(kAL1Iter) ?
-            self_->ctx.convTilingData->convApiTiling.cinATailInCore : self_->ctx.convTilingData->convApiTiling.cinAInCore;
+            self_->ctx.convTilingData->convApiTiling.cinATailInCore :
+            self_->ctx.convTilingData->convApiTiling.cinAInCore;
         intriParams.ndNum = self_->ctx.innerBatch;
         intriParams.nValue = self_->ctx.convTilingData->convApiTiling.orgHixWi;
         intriParams.dValue = al1Ci;
         intriParams.srcNdMatrixStride = self_->ctx.convTilingData->convApiTiling.orgCi;
-        intriParams.srcDValue = self_->ctx.convTilingData->convApiTiling.orgCi * self_->ctx.convTilingData->convRunInfo.batch;
+        intriParams.srcDValue = self_->ctx.convTilingData->convApiTiling.orgCi *
+            self_->ctx.convTilingData->convRunInfo.batch;
         intriParams.dstNzNStride = 1;
 
         if constexpr (Intf::ConvParam::innerBatch == static_cast<int8_t>(ConvInnerBatch::KERNEL_1X1_MULTI_BATCH)) {
@@ -333,7 +353,9 @@ private:
         if constexpr (!Intf::hasNL1IterFlag) {
             bL1GmOffset = kBL1Iter * self_->ctx.convTilingData->convApiTiling.kBL1;
         } else {
-            bL1GmOffset = nBL1Iter * self_->ctx.convTilingData->convApiTiling.nBL1 * self_->ctx.convTilingData->convApiTiling.coutOffsetBlock +
+            bL1GmOffset = 
+                nBL1Iter * self_->ctx.convTilingData->convApiTiling.nBL1 *
+                self_->ctx.convTilingData->convApiTiling.coutOffsetBlock +
                 kBL1Iter * self_->ctx.convTilingData->convApiTiling.kBL1;
             self_->ctx.currentNBL1 = nBL1Iter == self_->ctx.maxNBL1Iter ?
                 self_->ctx.nBL1Tail : self_->ctx.convTilingData->convApiTiling.nBL1;
@@ -343,9 +365,11 @@ private:
             Nd2NzParams intriParams;
             intriParams.ndNum = 1;
             intriParams.nValue = self_->ctx.currentNBL1;
-            intriParams.dValue = kBL1Iter == self_->ctx.maxKBL1Iter ? self_->ctx.kBL1Tail : self_->ctx.convTilingData->convApiTiling.kBL1;
+            intriParams.dValue = kBL1Iter == self_->ctx.maxKBL1Iter ?
+                self_->ctx.kBL1Tail : self_->ctx.convTilingData->convApiTiling.kBL1;
             intriParams.srcNdMatrixStride = 0;
-            intriParams.srcDValue = self_->ctx.convTilingData->convApiTiling.orgCi / self_->ctx.convTilingData->convApiTiling.groups;
+            intriParams.srcDValue =
+                self_->ctx.convTilingData->convApiTiling.orgCi / self_->ctx.convTilingData->convApiTiling.groups;
             intriParams.dstNzC0Stride = self_->ctx.convTilingData->convApiTiling.nBL1;
             intriParams.dstNzNStride = 1;
             intriParams.dstNzMatrixStride = 0;
@@ -356,10 +380,12 @@ private:
         intriParams.dnNum = self_->ctx.currentNBL1;
         intriParams.nValue = self_->ctx.convTilingData->convApiTiling.kernelHxkernelW;
         intriParams.dValue = kBL1Iter == self_->ctx.maxKBL1Iter ?
-            self_->ctx.convTilingData->convApiTiling.cinBTailInCore : self_->ctx.convTilingData->convApiTiling.cinBInCore;
+            self_->ctx.convTilingData->convApiTiling.cinBTailInCore :
+            self_->ctx.convTilingData->convApiTiling.cinBInCore;
         intriParams.srcDnMatrixStride =  self_->ctx.convTilingData->convApiTiling.coutOffsetBlock;
         intriParams.srcDValue = self_->ctx.convTilingData->convApiTiling.kernelHxkernelW;
-        intriParams.dstNzC0Stride = self_->ctx.convTilingData->convApiTiling.kernelHxkernelW * self_->ctx.convTilingData->convApiTiling.nBL1;
+        intriParams.dstNzC0Stride = self_->ctx.convTilingData->convApiTiling.kernelHxkernelW *
+            self_->ctx.convTilingData->convApiTiling.nBL1;
         intriParams.dstNzNStride = self_->ctx.convTilingData->convApiTiling.nBL1;
         intriParams.dstNzMatrixStride = Intf::k0;
         DataCopy<typename Intf::WeightT>(self_->ctx.bl1, self_->ctx.bgm[bL1GmOffset], intriParams);
@@ -367,7 +393,8 @@ private:
 
     __aicore__ inline void LoadBL1DataHWC(uint64_t kBL1Iter, uint64_t nBL1Iter)
     {
-        uint64_t bL1GmOffset = kBL1Iter * self_->ctx.convTilingData->convApiTiling.cinBInCore * self_->ctx.convTilingData->convApiTiling.orgCo;
+        uint64_t bL1GmOffset = kBL1Iter * self_->ctx.convTilingData->convApiTiling.cinBInCore *
+            self_->ctx.convTilingData->convApiTiling.orgCo;
         if constexpr (Intf::hasNL1IterFlag) {
             bL1GmOffset += nBL1Iter * self_->ctx.convTilingData->convApiTiling.nBL1;
             self_->ctx.currentNBL1 = nBL1Iter == self_->ctx.maxNBL1Iter ?
@@ -378,10 +405,14 @@ private:
         intriParams.dnNum = self_->ctx.convTilingData->convApiTiling.kernelHxkernelW;
         intriParams.nValue = self_->ctx.currentNBL1;
         intriParams.dValue = kBL1Iter == self_->ctx.maxKBL1Iter ?
-            self_->ctx.convTilingData->convApiTiling.cinBTailInCore : self_->ctx.convTilingData->convApiTiling.cinBInCore;
-        intriParams.srcDnMatrixStride =  self_->ctx.convTilingData->convApiTiling.orgCi / self_->ctx.convTilingData->convApiTiling.groups * self_->ctx.convTilingData->convApiTiling.orgCo;
+            self_->ctx.convTilingData->convApiTiling.cinBTailInCore :
+            self_->ctx.convTilingData->convApiTiling.cinBInCore;
+        intriParams.srcDnMatrixStride = 
+            self_->ctx.convTilingData->convApiTiling.orgCi / self_->ctx.convTilingData->convApiTiling.groups *
+            self_->ctx.convTilingData->convApiTiling.orgCo;
         intriParams.srcDValue = self_->ctx.convTilingData->convApiTiling.orgCo;
-        intriParams.dstNzC0Stride = self_->ctx.convTilingData->convApiTiling.kernelHxkernelW * self_->ctx.convTilingData->convApiTiling.nBL1;
+        intriParams.dstNzC0Stride = self_->ctx.convTilingData->convApiTiling.kernelHxkernelW *
+            self_->ctx.convTilingData->convApiTiling.nBL1;
         intriParams.dstNzNStride = 1;
         intriParams.dstNzMatrixStride = self_->ctx.convTilingData->convApiTiling.nBL1 * Intf::k0;
         DataCopy<typename Intf::WeightT>(self_->ctx.bl1, self_->ctx.bgm[bL1GmOffset], intriParams);
@@ -391,14 +422,19 @@ private:
     {
         uint64_t bL1GmOffset;
         if constexpr (!Intf::hasNL1IterFlag) {
-            bL1GmOffset = self_->ctx.cinBL1Iter * self_->ctx.cinBL1 * self_->ctx.convTilingData->convApiTiling.kernelHxkernelW +
-                          self_->ctx.khBL1Iter * self_->ctx.convTilingData->convApiTiling.khL1 * self_->ctx.convTilingData->convApiTiling.kernelW +
-                          self_->ctx.kwBL1Iter * self_->ctx.convTilingData->convApiTiling.kwL1;
+            bL1GmOffset = 
+                self_->ctx.cinBL1Iter * self_->ctx.cinBL1 * self_->ctx.convTilingData->convApiTiling.kernelHxkernelW +
+                self_->ctx.khBL1Iter * self_->ctx.convTilingData->convApiTiling.khL1 *
+                self_->ctx.convTilingData->convApiTiling.kernelW +
+                self_->ctx.kwBL1Iter * self_->ctx.convTilingData->convApiTiling.kwL1;
         } else {
-            bL1GmOffset = nBL1Iter * self_->ctx.convTilingData->convApiTiling.nBL1 * self_->ctx.convTilingData->convApiTiling.coutOffsetBlock +
-                          self_->ctx.cinBL1Iter * self_->ctx.cinBL1 * self_->ctx.convTilingData->convApiTiling.kernelHxkernelW +
-                          self_->ctx.khBL1Iter * self_->ctx.convTilingData->convApiTiling.khL1 * self_->ctx.convTilingData->convApiTiling.kernelW +
-                          self_->ctx.kwBL1Iter * self_->ctx.convTilingData->convApiTiling.kwL1;
+            bL1GmOffset = 
+                nBL1Iter * self_->ctx.convTilingData->convApiTiling.nBL1 *
+                self_->ctx.convTilingData->convApiTiling.coutOffsetBlock +
+                self_->ctx.cinBL1Iter * self_->ctx.cinBL1 * self_->ctx.convTilingData->convApiTiling.kernelHxkernelW +
+                self_->ctx.khBL1Iter * self_->ctx.convTilingData->convApiTiling.khL1 *
+                self_->ctx.convTilingData->convApiTiling.kernelW +
+                self_->ctx.kwBL1Iter * self_->ctx.convTilingData->convApiTiling.kwL1;
             self_->ctx.currentNBL1 = nBL1Iter == self_->ctx.maxNBL1Iter ?
                 self_->ctx.nBL1Tail : self_->ctx.convTilingData->convApiTiling.nBL1;
         }
@@ -406,16 +442,19 @@ private:
         intriParams.dnNum = self_->ctx.currentNBL1;
         intriParams.nValue = self_->ctx.convTilingData->convApiTiling.kwL1;
         intriParams.dValue = self_->ctx.cinBL1Iter == self_->ctx.maxCinBL1Iter ?
-            self_->ctx.convTilingData->convApiTiling.cinBTailInCore : self_->ctx.convTilingData->convApiTiling.cinBInCore;
+            self_->ctx.convTilingData->convApiTiling.cinBTailInCore :
+            self_->ctx.convTilingData->convApiTiling.cinBInCore;
         intriParams.srcDnMatrixStride =  self_->ctx.convTilingData->convApiTiling.coutOffsetBlock;
         intriParams.srcDValue = self_->ctx.convTilingData->convApiTiling.kernelHxkernelW;
-        intriParams.dstNzC0Stride = self_->ctx.convTilingData->convApiTiling.kwL1 * self_->ctx.convTilingData->convApiTiling.khL1 *
+        intriParams.dstNzC0Stride = self_->ctx.convTilingData->convApiTiling.kwL1 *
+                                    self_->ctx.convTilingData->convApiTiling.khL1 *
                                     self_->ctx.convTilingData->convApiTiling.nBL1;
         intriParams.dstNzNStride = self_->ctx.convTilingData->convApiTiling.nBL1;
         intriParams.dstNzMatrixStride = Intf::k0;
         uint64_t bl1DstOffset = 0;
         for (uint16_t khIterIdx = 0; khIterIdx < self_->ctx.convTilingData->convApiTiling.khL1; khIterIdx++) {
-            bl1DstOffset = khIterIdx * self_->ctx.convTilingData->convApiTiling.kwL1 * self_->ctx.convTilingData->convApiTiling.nBL1 * Intf::k0;
+            bl1DstOffset = khIterIdx * self_->ctx.convTilingData->convApiTiling.kwL1 *
+                self_->ctx.convTilingData->convApiTiling.nBL1 * Intf::k0;
             DataCopy<typename Intf::WeightT>(self_->ctx.bl1[bl1DstOffset], self_->ctx.bgm[bL1GmOffset], intriParams);
             bL1GmOffset += self_->ctx.convTilingData->convApiTiling.kernelW;
         }
@@ -423,11 +462,14 @@ private:
 
     __aicore__ inline void LoadBL1DataKernelSplitHWC(uint64_t kBL1Iter, uint64_t nBL1Iter)
     {
-        uint64_t bL1GmOffset = self_->ctx.cinBL1Iter * self_->ctx.cinBL1 * self_->ctx.convTilingData->convApiTiling.orgCo +
-                               self_->ctx.khBL1Iter * self_->ctx.convTilingData->convApiTiling.khL1 * self_->ctx.convTilingData->convApiTiling.kernelW *
-                               self_->ctx.convTilingData->convApiTiling.orgCi / self_->ctx.convTilingData->convApiTiling.groups * self_->ctx.convTilingData->convApiTiling.orgCo +
-                               self_->ctx.kwBL1Iter * self_->ctx.convTilingData->convApiTiling.kwL1 * self_->ctx.convTilingData->convApiTiling.orgCi /
-                               self_->ctx.convTilingData->convApiTiling.groups * self_->ctx.convTilingData->convApiTiling.orgCo;
+        uint64_t bL1GmOffset = 
+            self_->ctx.cinBL1Iter * self_->ctx.cinBL1 * self_->ctx.convTilingData->convApiTiling.orgCo +
+            self_->ctx.khBL1Iter * self_->ctx.convTilingData->convApiTiling.khL1 *
+            self_->ctx.convTilingData->convApiTiling.kernelW * self_->ctx.convTilingData->convApiTiling.orgCi /
+            self_->ctx.convTilingData->convApiTiling.groups * self_->ctx.convTilingData->convApiTiling.orgCo +
+            self_->ctx.kwBL1Iter * self_->ctx.convTilingData->convApiTiling.kwL1 *
+            self_->ctx.convTilingData->convApiTiling.orgCi / self_->ctx.convTilingData->convApiTiling.groups *
+            self_->ctx.convTilingData->convApiTiling.orgCo;
         if constexpr (Intf::hasNL1IterFlag) {
             bL1GmOffset += nBL1Iter * self_->ctx.convTilingData->convApiTiling.nBL1;
             self_->ctx.currentNBL1 = nBL1Iter == self_->ctx.maxNBL1Iter ?
@@ -438,18 +480,23 @@ private:
         intriParams.dnNum = self_->ctx.convTilingData->convApiTiling.kwL1;
         intriParams.nValue = self_->ctx.currentNBL1;
         intriParams.dValue = self_->ctx.cinBL1Iter == self_->ctx.maxCinBL1Iter ?
-            self_->ctx.convTilingData->convApiTiling.cinBTailInCore : self_->ctx.convTilingData->convApiTiling.cinBInCore;
-        intriParams.srcDnMatrixStride =  self_->ctx.convTilingData->convApiTiling.orgCi / self_->ctx.convTilingData->convApiTiling.groups * self_->ctx.convTilingData->convApiTiling.orgCo;
+            self_->ctx.convTilingData->convApiTiling.cinBTailInCore :
+            self_->ctx.convTilingData->convApiTiling.cinBInCore;
+        intriParams.srcDnMatrixStride = self_->ctx.convTilingData->convApiTiling.orgCi /
+            self_->ctx.convTilingData->convApiTiling.groups * self_->ctx.convTilingData->convApiTiling.orgCo;
         intriParams.srcDValue = self_->ctx.convTilingData->convApiTiling.orgCo;
-        intriParams.dstNzC0Stride = self_->ctx.convTilingData->convApiTiling.khL1 * self_->ctx.convTilingData->convApiTiling.kwL1 *
-            self_->ctx.convTilingData->convApiTiling.nBL1;
+        intriParams.dstNzC0Stride = self_->ctx.convTilingData->convApiTiling.khL1 *
+            self_->ctx.convTilingData->convApiTiling.kwL1 * self_->ctx.convTilingData->convApiTiling.nBL1;
         intriParams.dstNzNStride = 1;
         intriParams.dstNzMatrixStride = self_->ctx.convTilingData->convApiTiling.nBL1 * Intf::k0;
         uint64_t bl1DstOffset = 0;
         for (uint16_t khIterIdx = 0; khIterIdx < self_->ctx.convTilingData->convApiTiling.khL1; khIterIdx++) {
-            bl1DstOffset = khIterIdx * self_->ctx.convTilingData->convApiTiling.kwL1 * self_->ctx.convTilingData->convApiTiling.nBL1 * Intf::k0;
+            bl1DstOffset = khIterIdx * self_->ctx.convTilingData->convApiTiling.kwL1 *
+                self_->ctx.convTilingData->convApiTiling.nBL1 * Intf::k0;
             DataCopy<typename Intf::WeightT>(self_->ctx.bl1[bl1DstOffset], self_->ctx.bgm[bL1GmOffset], intriParams);
-            bL1GmOffset += self_->ctx.convTilingData->convApiTiling.kernelW * self_->ctx.convTilingData->convApiTiling.orgCi / self_->ctx.convTilingData->convApiTiling.groups * self_->ctx.convTilingData->convApiTiling.orgCo;
+            bL1GmOffset +=
+                self_->ctx.convTilingData->convApiTiling.kernelW * self_->ctx.convTilingData->convApiTiling.orgCi /
+                self_->ctx.convTilingData->convApiTiling.groups * self_->ctx.convTilingData->convApiTiling.orgCo;
         }
     }
 

@@ -191,7 +191,8 @@ uint32_t Conv3dBaseTilingV2::CalcAL1SpaceSize(shared_ptr<tuningtiling::Conv3DV2T
 
     uint64_t dilatedKernelH = (convRepoTiling->kernelH - 1) * convRepoTiling->dilationH + 1;
     if (convRepoTiling->mMode == 1) {
-        uint64_t mL1Max = convRepoTiling->hoL1 < convRepoTiling->singleCoreHo ? convRepoTiling->hoL1 : convRepoTiling->singleCoreHo;
+        uint64_t mL1Max = convRepoTiling->hoL1 < convRepoTiling->singleCoreHo ?
+                          convRepoTiling->hoL1 : convRepoTiling->singleCoreHo;
         uint64_t hoL1Max = std::min(mL1Max / convRepoTiling->orgWo + CONST_VALUE_2,
             convRepoTiling->orgHo);
         uint64_t hiAL1Max = (hoL1Max - 1) * convRepoTiling->strideH + dilatedKernelH;
@@ -225,7 +226,8 @@ void Conv3dBaseTilingV2::TranslateApiTilingAux(shared_ptr<tuningtiling::Conv3DV2
     uint32_t kernelHxkernelW = convRepoTiling->kernelH * convRepoTiling->kernelW;
     uint32_t cinAInCore = convRepoTiling->kAL1 / kernelHxkernelW;
     uint32_t kAL1Tail =
-        (ConvAlignB(convRepoTiling->singleCoreCi, convOpsConstParams_.k0) * kernelHxkernelW * convRepoTiling->kernelD) %
+        (ConvAlignB(convRepoTiling->singleCoreCi, convOpsConstParams_.k0) *
+            kernelHxkernelW * convRepoTiling->kernelD) %
         convRepoTiling->kAL1;
     kAL1Tail = kAL1Tail == 0 ? convRepoTiling->kAL1 : kAL1Tail;
     uint32_t kBL1Tail = (convRepoTiling->singleCoreCi * kernelHxkernelW) % convRepoTiling->kBL1;

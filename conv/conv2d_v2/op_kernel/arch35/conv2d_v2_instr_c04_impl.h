@@ -74,23 +74,27 @@ private:
         if (unlikely(self_->ctx.isFirstIterate)) {
             // NDDMA Loop0 params
             copyParams.loopInfo.loopSize[NDDMA_LOOP0_INDEX] = self_->ctx.convTilingData->convApiTiling.singleCoreCi;
-            copyParams.loopInfo.loopSrcStride[NDDMA_LOOP0_INDEX] = self_->ctx.convTilingData->convApiTiling.kernelHxkernelW;
+            copyParams.loopInfo.loopSrcStride[NDDMA_LOOP0_INDEX] =
+                self_->ctx.convTilingData->convApiTiling.kernelHxkernelW;
             copyParams.loopInfo.loopDstStride[NDDMA_LOOP0_INDEX] = 1;
-            copyParams.loopInfo.loopRpSize[NDDMA_LOOP0_INDEX] = C04_CIN_SIZE - self_->ctx.convTilingData->convApiTiling.singleCoreCi;
+            copyParams.loopInfo.loopRpSize[NDDMA_LOOP0_INDEX] =
+                C04_CIN_SIZE - self_->ctx.convTilingData->convApiTiling.singleCoreCi;
             // NDDMA Loop1 params
             copyParams.loopInfo.loopSize[NDDMA_LOOP1_INDEX] = self_->ctx.convTilingData->convApiTiling.kernelHxkernelW;
             copyParams.loopInfo.loopSrcStride[NDDMA_LOOP1_INDEX] = 1;
             copyParams.loopInfo.loopDstStride[NDDMA_LOOP1_INDEX] = C04_CIN_SIZE;
             // NDDMA Loop2 params
             copyParams.loopInfo.loopSrcStride[NDDMA_LOOP2_INDEX] =
-                self_->ctx.convTilingData->convApiTiling.kernelHxkernelW * self_->ctx.convTilingData->convApiTiling.singleCoreCi;
+                self_->ctx.convTilingData->convApiTiling.kernelHxkernelW *
+                self_->ctx.convTilingData->convApiTiling.singleCoreCi;
             copyParams.loopInfo.loopDstStride[NDDMA_LOOP2_INDEX] = self_->ctx.convTilingData->convApiTiling.kBL1;
         }
         copyParams.loopInfo.loopSize[NDDMA_LOOP2_INDEX] = self_->ctx.currentUbNStep;
         copyParams.loopInfo.loopRpSize[NDDMA_LOOP2_INDEX] = self_->ctx.currentNLoopRpSize;
 
         srcOffset = (self_->ctx.nBL1Iter * self_->ctx.convTilingData->convApiTiling.nBL1 +
-            self_->ctx.vecNIter * self_->ctx.convTilingData->convApiTiling.bUbNStep) * self_->ctx.convTilingData->convApiTiling.coutOffsetBlock;
+            self_->ctx.vecNIter * self_->ctx.convTilingData->convApiTiling.bUbNStep) *
+            self_->ctx.convTilingData->convApiTiling.coutOffsetBlock;
         if constexpr (!Intf::bL1DBFlag) {
             if (self_->ctx.vecId == 1) {
                 srcOffset += self_->ctx.nBL1Vec0 * self_->ctx.convTilingData->convApiTiling.coutOffsetBlock;
@@ -108,7 +112,8 @@ private:
             copyParams.loopInfo.loopSize[NDDMA_LOOP1_INDEX] = self_->ctx.convTilingData->convApiTiling.singleCoreCi;
             copyParams.loopInfo.loopSrcStride[NDDMA_LOOP1_INDEX] = self_->ctx.convTilingData->convApiTiling.orgCo;
             copyParams.loopInfo.loopDstStride[NDDMA_LOOP1_INDEX] = 1;
-            copyParams.loopInfo.loopRpSize[NDDMA_LOOP1_INDEX] = C04_CIN_SIZE - self_->ctx.convTilingData->convApiTiling.singleCoreCi;
+            copyParams.loopInfo.loopRpSize[NDDMA_LOOP1_INDEX] =
+                C04_CIN_SIZE - self_->ctx.convTilingData->convApiTiling.singleCoreCi;
             // NDDMA Loop2 params
             copyParams.loopInfo.loopSize[NDDMA_LOOP2_INDEX] = self_->ctx.convTilingData->convApiTiling.kernelHxkernelW;
             copyParams.loopInfo.loopSrcStride[NDDMA_LOOP2_INDEX] =

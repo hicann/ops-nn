@@ -42,12 +42,14 @@ constexpr ConvFormat outputFormat = ConvFormat::NCHW;
 constexpr ConvFormat fmapFormat = ConvFormat::NHWC;
 constexpr ConvFormat weightFormat = ConvFormat::FRACTAL_Z;
 constexpr ConvFormat outputFormat = ConvFormat::NHWC;
-#elif defined(FORMAT_X) && FORMAT_X == FORMAT_NCHW && defined(FORMAT_FILTER) && FORMAT_FILTER == FORMAT_FRACTAL_Z_C04 && \
+#elif defined(FORMAT_X) && FORMAT_X == FORMAT_NCHW && \
+    defined(FORMAT_FILTER) && FORMAT_FILTER == FORMAT_FRACTAL_Z_C04 && \
     defined(FORMAT_Y) && FORMAT_Y == FORMAT_NCHW
 constexpr ConvFormat fmapFormat = ConvFormat::NCHW;
 constexpr ConvFormat weightFormat = ConvFormat::FRACTAL_Z_C04;
 constexpr ConvFormat outputFormat = ConvFormat::NCHW;
-#elif defined(FORMAT_X) && FORMAT_X == FORMAT_NHWC && defined(FORMAT_FILTER) && FORMAT_FILTER == FORMAT_FRACTAL_Z_C04 && \
+#elif defined(FORMAT_X) && FORMAT_X == FORMAT_NHWC && \
+    defined(FORMAT_FILTER) && FORMAT_FILTER == FORMAT_FRACTAL_Z_C04 && \
     defined(FORMAT_Y) && FORMAT_Y == FORMAT_NHWC
 constexpr ConvFormat fmapFormat = ConvFormat::NHWC;
 constexpr ConvFormat weightFormat = ConvFormat::FRACTAL_Z_C04;
@@ -62,12 +64,14 @@ constexpr ConvFormat outputFormat = ConvFormat::NHWC;
 constexpr ConvFormat fmapFormat = ConvFormat::NHWC;
 constexpr ConvFormat weightFormat = ConvFormat::FRACTAL_Z;
 constexpr ConvFormat outputFormat = ConvFormat::NCHW;
-#elif defined(FORMAT_X) && FORMAT_X == FORMAT_NCHW && defined(FORMAT_FILTER) && FORMAT_FILTER == FORMAT_FRACTAL_Z_C04 && \
+#elif defined(FORMAT_X) && FORMAT_X == FORMAT_NCHW && \
+    defined(FORMAT_FILTER) && FORMAT_FILTER == FORMAT_FRACTAL_Z_C04 && \
     defined(FORMAT_Y) && FORMAT_Y == FORMAT_NHWC
 constexpr ConvFormat fmapFormat = ConvFormat::NCHW;
 constexpr ConvFormat weightFormat = ConvFormat::FRACTAL_Z_C04;
 constexpr ConvFormat outputFormat = ConvFormat::NHWC;
-#elif defined(FORMAT_X) && FORMAT_X == FORMAT_NHWC && defined(FORMAT_FILTER) && FORMAT_FILTER == FORMAT_FRACTAL_Z_C04 && \
+#elif defined(FORMAT_X) && FORMAT_X == FORMAT_NHWC && \
+    defined(FORMAT_FILTER) && FORMAT_FILTER == FORMAT_FRACTAL_Z_C04 && \
     defined(FORMAT_Y) && FORMAT_Y == FORMAT_NCHW
 constexpr ConvFormat fmapFormat = ConvFormat::NHWC;
 constexpr ConvFormat weightFormat = ConvFormat::FRACTAL_Z_C04;

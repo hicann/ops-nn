@@ -120,7 +120,8 @@ ge::graphStatus Conv3dBaseTilingV2::CheckNullPtr()
 
     auto scaleDescPtr = context_->GetOptionalInputDesc(INPUT_SCALE_INDEX);
     auto scaleShapePtr = context_->GetOptionalInputShape(INPUT_SCALE_INDEX);
-    if ((scaleDescPtr == nullptr && scaleShapePtr != nullptr) || (scaleDescPtr != nullptr && scaleShapePtr == nullptr)) {
+    if ((scaleDescPtr == nullptr && scaleShapePtr != nullptr) ||
+        (scaleDescPtr != nullptr && scaleShapePtr == nullptr)) {
         OP_LOGE(context_->GetNodeName(), "%s AscendC: scaleDescPtr and scaleShapePtr are not consistent.",
                 paramInfo_.nodeType.c_str());
         return ge::GRAPH_FAILED;
@@ -291,7 +292,8 @@ ge::graphStatus Conv3dBaseTilingV2::DoOpTiling()
         OP_LOGD(context_->GetNodeName(), "%s AscendC: get tiling from knowledge_tiling.", paramInfo_.nodeType.c_str());
         flagInfo_.useTilingRepo = true;
         if (AddTilingToCache()) {
-            OP_LOGD(context_->GetNodeName(), "%s AscendC: success to add repo tiling to cache", paramInfo_.nodeType.c_str());
+            OP_LOGD(context_->GetNodeName(), "%s AscendC: success to add repo tiling to cache",
+                    paramInfo_.nodeType.c_str());
         }
     }
     if (flagInfo_.useTilingCache || flagInfo_.useTilingRepo) {

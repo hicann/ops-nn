@@ -50,11 +50,16 @@ ge::graphStatus Conv3dBaseTilingV2::ParseWeightShape()
             std::to_string(CONV3D_DIM_SIZE_LIMIT).c_str());
         return ge::GRAPH_FAILED;
     }
-    oriShapeAttrInfo_.oriWeightN = weightShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_N_IDX]);
-    oriShapeAttrInfo_.oriWeightC = weightShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_C_IDX]);
-    oriShapeAttrInfo_.oriWeightD = weightShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_D_IDX]);
-    oriShapeAttrInfo_.oriWeightH = weightShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_H_IDX]);
-    oriShapeAttrInfo_.oriWeightW = weightShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_W_IDX]);
+    oriShapeAttrInfo_.oriWeightN = 
+        weightShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_N_IDX]);
+    oriShapeAttrInfo_.oriWeightC = 
+        weightShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_C_IDX]);
+    oriShapeAttrInfo_.oriWeightD = 
+        weightShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_D_IDX]);
+    oriShapeAttrInfo_.oriWeightH = 
+        weightShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_H_IDX]);
+    oriShapeAttrInfo_.oriWeightW = 
+        weightShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_W_IDX]);
     shapeInfo_.kd = static_cast<uint64_t>(oriShapeAttrInfo_.oriWeightD);
     shapeInfo_.kh = static_cast<uint64_t>(oriShapeAttrInfo_.oriWeightH);
     shapeInfo_.kw = static_cast<uint64_t>(oriShapeAttrInfo_.oriWeightW);
@@ -265,11 +270,16 @@ ge::graphStatus Conv3dBaseTilingV2::ParseOutputShape()
             std::to_string(CONV3D_DIM_SIZE_LIMIT).c_str());
         return ge::GRAPH_FAILED;
     }
-    oriShapeAttrInfo_.oriOutputN = outputShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.OUT_PARAM_IDX][IDX_LIST_N_IDX]);
-    oriShapeAttrInfo_.oriOutputC = outputShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.OUT_PARAM_IDX][IDX_LIST_C_IDX]);
-    oriShapeAttrInfo_.oriOutputD = outputShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.OUT_PARAM_IDX][IDX_LIST_D_IDX]);
-    oriShapeAttrInfo_.oriOutputH = outputShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.OUT_PARAM_IDX][IDX_LIST_H_IDX]);
-    oriShapeAttrInfo_.oriOutputW = outputShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.OUT_PARAM_IDX][IDX_LIST_W_IDX]);
+    oriShapeAttrInfo_.oriOutputN =
+        outputShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.OUT_PARAM_IDX][IDX_LIST_N_IDX]);
+    oriShapeAttrInfo_.oriOutputC =
+        outputShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.OUT_PARAM_IDX][IDX_LIST_C_IDX]);
+    oriShapeAttrInfo_.oriOutputD =
+        outputShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.OUT_PARAM_IDX][IDX_LIST_D_IDX]);
+    oriShapeAttrInfo_.oriOutputH =
+        outputShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.OUT_PARAM_IDX][IDX_LIST_H_IDX]);
+    oriShapeAttrInfo_.oriOutputW =
+        outputShape.GetDim(paramInfo_.paramsIdxVec[paramInfo_.OUT_PARAM_IDX][IDX_LIST_W_IDX]);
     shapeInfo_.dout = static_cast<uint64_t>(oriShapeAttrInfo_.oriOutputD);
     shapeInfo_.ho = static_cast<uint64_t>(oriShapeAttrInfo_.oriOutputH);
     shapeInfo_.wo = static_cast<uint64_t>(oriShapeAttrInfo_.oriOutputW);

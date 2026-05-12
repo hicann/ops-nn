@@ -169,24 +169,27 @@ template <class FMAP_TYPE, class WEIGHT_TYPE, class OUTPUT_TYPE, class BIAS_TYPE
 __aicore__ inline bool Conv3dV2Base<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE, SCALE_TYPE, CONV_CFG>::
     InitSingleCoreData(uint32_t blockPerNDim, uint32_t blockPerMDim, uint32_t blockPerHoDim)
 {
-    const uint32_t dataPerBatchDim = convTilingData->convRunInfo.hoDim * convTilingData->convRunInfo.nDim * convTilingData->convRunInfo.doDim;
+    const uint32_t dataPerBatchDim = convTilingData->convRunInfo.hoDim * convTilingData->convRunInfo.nDim *
+                                     convTilingData->convRunInfo.doDim;
     DimDataToFill batchStruct(singleCoreBatch, batchIdxStart, isBatchDimTail);
-    bool isRealDim = convCommon.CalcDimData(dataPerBatchDim, convTilingData->convRunInfo.batchDim, convTilingData->convRunInfo.batch,
-                                            convTilingData->convRunInfo.batch, batchStruct);
+    bool isRealDim = convCommon.CalcDimData(dataPerBatchDim, convTilingData->convRunInfo.batchDim,
+                                            convTilingData->convRunInfo.batch, convTilingData->convRunInfo.batch,
+                                            batchStruct);
     if (unlikely(!isRealDim)) {
         return false;
     }
 
     const uint32_t dataPerDoDim = convTilingData->convRunInfo.nDim * convTilingData->convRunInfo.hoDim;
     DimDataToFill doStruct(singleCoreDout, doIdxStart, isDoDimTail);
-    isRealDim = convCommon.CalcDimData(dataPerDoDim, convTilingData->convRunInfo.doDim, convTilingData->convRunInfo.dout, convTilingData->convRunInfo.dout,
-                                       doStruct);
+    isRealDim = convCommon.CalcDimData(dataPerDoDim, convTilingData->convRunInfo.doDim,
+                                       convTilingData->convRunInfo.dout, convTilingData->convRunInfo.dout, doStruct);
     if (unlikely(!isRealDim)) {
         return false;
     }
 
     DimDataToFill nStruct(singleCoreN, nIdxStart, isNDimTail);
-    isRealDim = convCommon.CalcNDimDataAlign(blockPerNDim, convTilingData->convRunInfo.nDim, convTilingData->convRunInfo.cout, nStruct);
+    isRealDim = convCommon.CalcNDimDataAlign(blockPerNDim, convTilingData->convRunInfo.nDim,
+                                             convTilingData->convRunInfo.cout, nStruct);
     if (unlikely(!isRealDim)) {
         return false;
     }
@@ -198,8 +201,9 @@ __aicore__ inline bool Conv3dV2Base<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TY
             convCommon.AlignB(totalM, M0), totalM, mStruct);
     } else {
         DimDataToFill hoToFill(singleCoreHo, hoIdxStart, isHoDimTail);
-        isRealDim = convCommon.CalcDimData(blockPerHoDim, convTilingData->convRunInfo.hoDim, convTilingData->convRunInfo.hout,
-            convTilingData->convRunInfo.hout, hoToFill);
+        isRealDim = convCommon.CalcDimData(blockPerHoDim, convTilingData->convRunInfo.hoDim,
+                                           convTilingData->convRunInfo.hout, convTilingData->convRunInfo.hout,
+                                           hoToFill);
     }
     if (unlikely(!isRealDim)) {
         return false;
@@ -215,21 +219,23 @@ __aicore__ inline void Conv3dV2Base<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TY
     int64_t diIdxStart = doIdxStart * convTilingData->convRunInfo.strideD - convTilingData->convRunInfo.padHead;
     diIdxStart = convCommon.Max(diIdxStart, 0);
     if constexpr (A_FORMAT == ConvFormat::NCDHW && C_FORMAT == ConvFormat::NDHWC) {
-        convCommon.CalcStartAddrDeQuant(convTilingData->convRunInfo.din, convTilingData->convRunInfo.dout, convTilingData->convRunInfo.kd,
-                                        doIdxStart, diIdxStart);
+        convCommon.CalcStartAddrDeQuant(convTilingData->convRunInfo.din, convTilingData->convRunInfo.dout,
+                                        convTilingData->convRunInfo.kd, doIdxStart, diIdxStart);
     } else if constexpr (A_FORMAT == ConvFormat::NCDHW) {
         if constexpr (isMMode) {
-            convCommon.CalcStartAddrMMode(convTilingData->convRunInfo.din, convTilingData->convRunInfo.dout, convTilingData->convRunInfo.kd,
-                doIdxStart, diIdxStart);
+            convCommon.CalcStartAddrMMode(convTilingData->convRunInfo.din, convTilingData->convRunInfo.dout,
+                                          convTilingData->convRunInfo.kd, doIdxStart, diIdxStart);
         } else {
-            convCommon.CalcStartAddrHWode(convTilingData->convRunInfo.din, convTilingData->convRunInfo.dout, convTilingData->convRunInfo.kd,
-                doIdxStart, diIdxStart);
+            convCommon.CalcStartAddrHWode(convTilingData->convRunInfo.din, convTilingData->convRunInfo.dout,
+                                          convTilingData->convRunInfo.kd, doIdxStart, diIdxStart);
         }
     } else {
         if constexpr (isMMode) {
-            convCommon.CalcStartAddrMModeHWC(convTilingData->convRunInfo.din, convTilingData->convRunInfo.dout, doIdxStart, diIdxStart);
+            convCommon.CalcStartAddrMModeHWC(convTilingData->convRunInfo.din, convTilingData->convRunInfo.dout,
+                                             doIdxStart, diIdxStart);
         } else {
-            convCommon.CalcStartAddrHWodeHWC(convTilingData->convRunInfo.din, convTilingData->convRunInfo.dout, doIdxStart, diIdxStart);
+            convCommon.CalcStartAddrHWodeHWC(convTilingData->convRunInfo.din, convTilingData->convRunInfo.dout,
+                                             doIdxStart, diIdxStart);
         }
     }
     convCommon.InitBufferCommon(x, filter, bias, y, extendParams);

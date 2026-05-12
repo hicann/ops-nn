@@ -40,7 +40,8 @@ __aicore__ inline void DeQuantCalcFixpTimes(Intf *self)
         if constexpr (Intf::hasWL0IterFlag) {
             if (self->ctx.woL1SmallTail > 0) {
                 ddr2UbLoopW = (self->ctx.ddr2l1LoopW - W_TAIL_NUM) *
-                    CeilDiv(self->ctx.convTilingData->convApiTiling.woL1, self->ctx.convTilingData->convApiTiling.mUB) +
+                    CeilDiv(self->ctx.convTilingData->convApiTiling.woL1,
+                            self->ctx.convTilingData->convApiTiling.mUB) +
                     CeilDiv(self->ctx.woAL1Tail, self->ctx.convTilingData->convApiTiling.mUB) +
                     CeilDiv(self->ctx.woL1SmallTail, self->ctx.convTilingData->convApiTiling.mUB);
             } else {
@@ -56,8 +57,8 @@ __aicore__ inline void DeQuantCalcFixpTimes(Intf *self)
 template <class Intf>
 __aicore__ inline void DeQuantInitBuf(Intf *self)
 {
-    self->ctx.pipe.InitBuffer(
-        self->ctx.mmadResUbBuf, self->ctx.convTilingData->convApiTiling.mUB * self->ctx.convTilingData->convApiTiling.nUB * Intf::sizeOfL0c);
+    self->ctx.pipe.InitBuffer(self->ctx.mmadResUbBuf,
+        self->ctx.convTilingData->convApiTiling.mUB * self->ctx.convTilingData->convApiTiling.nUB * Intf::sizeOfL0c);
     self->ctx.mmadResUbTensor = self->ctx.mmadResUbBuf.template Get<typename Intf::L0cT>();
     self->ctx.outputResUbTensor = self->ctx.mmadResUbBuf.template Get<typename Intf::OutputT>();
 
@@ -65,12 +66,15 @@ __aicore__ inline void DeQuantInitBuf(Intf *self)
     self->ctx.scaleTensor = self->ctx.scaleUbBuf.template Get<typename Intf::ScaleT>();
 
     if constexpr (AscendC::IsSameType<typename Intf::BiasT, float>::value) {
-        self->ctx.pipe.InitBuffer(self->ctx.biasB32UbBuf, self->ctx.convTilingData->convApiTiling.nUB * Intf::sizeOfBias);
+        self->ctx.pipe.InitBuffer(self->ctx.biasB32UbBuf,
+            self->ctx.convTilingData->convApiTiling.nUB * Intf::sizeOfBias);
     } else {
-        self->ctx.pipe.InitBuffer(self->ctx.biasB16UbBuf, self->ctx.convTilingData->convApiTiling.nUB * Intf::sizeOfBias);
+        self->ctx.pipe.InitBuffer(self->ctx.biasB16UbBuf,
+            self->ctx.convTilingData->convApiTiling.nUB * Intf::sizeOfBias);
         self->ctx.biasB16Tensor = self->ctx.biasB16UbBuf.template Get<typename Intf::BiasT>();
 
-        self->ctx.pipe.InitBuffer(self->ctx.biasB32UbBuf, self->ctx.convTilingData->convApiTiling.nUB * DTYPE_SIZE_B32);   
+        self->ctx.pipe.InitBuffer(self->ctx.biasB32UbBuf,
+            self->ctx.convTilingData->convApiTiling.nUB * DTYPE_SIZE_B32);
     }
     self->ctx.biasB32Tensor = self->ctx.biasB32UbBuf.template Get<float>();
 }
@@ -96,7 +100,9 @@ __aicore__ inline void DeQuantVecInit(Intf *self)
     }
     InitCoDirectionValue<Intf>(self);
 
-    self->ctx.outputOneBatchSize = self->ctx.convTilingData->convApiTiling.orgCo * self->ctx.convTilingData->convApiTiling.orgHo * self->ctx.convTilingData->convApiTiling.orgWo * self->ctx.convTilingData->convApiTiling.orgDo;
+    self->ctx.outputOneBatchSize = 
+        self->ctx.convTilingData->convApiTiling.orgCo * self->ctx.convTilingData->convApiTiling.orgHo *
+        self->ctx.convTilingData->convApiTiling.orgWo * self->ctx.convTilingData->convApiTiling.orgDo;
 
     DeQuantInitBuf<Intf>(self);
 
@@ -118,7 +124,8 @@ __aicore__ inline void DeQuantUBParamsUpdate(Intf *self)
         self->ctx.maxMUbIter = self->ctx.l0C2UbLoopM - 1;
         mUbTail = currentML0 % self->ctx.convTilingData->convApiTiling.mUB;
         mUbTail = mUbTail == 0 ? self->ctx.convTilingData->convApiTiling.mUB : mUbTail;
-        self->ctx.currentMUb = self->ctx.mUbIter == self->ctx.maxMUbIter ? mUbTail : self->ctx.convTilingData->convApiTiling.mUB;
+        self->ctx.currentMUb = self->ctx.mUbIter == self->ctx.maxMUbIter ?
+                               mUbTail : self->ctx.convTilingData->convApiTiling.mUB;
     } else {
         self->ctx.currentHoL0 = self->ctx.hoL0Iter == self->ctx.maxHoL0Iter ?
             self->ctx.hoL0Tail : self->ctx.convTilingData->convApiTiling.hoL0;

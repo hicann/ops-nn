@@ -365,16 +365,19 @@ public:
 
     {
         using local = typename Ext::PreFusionProcess;
-        if constexpr (CONV_CHECK_FUN_TEMPLATE(local, Conv2dFunc, sync, this, aL1Offset, eventIdMte3ToMte1, eventIdMte1ToMte3)) {
+        if constexpr (CONV_CHECK_FUN_TEMPLATE(local, Conv2dFunc, sync, this, aL1Offset,
+                                              eventIdMte3ToMte1, eventIdMte1ToMte3)) {
             local::template call<sync>(this, aL1Offset, eventIdMte3ToMte1, eventIdMte1ToMte3);
         }
     }
 
     template <template <typename> class TensorTypeT, const FixpipeConfig &config, bool sync = true>
-    __aicore__ inline void GetTensorC(const TensorTypeT<OutputT>& output, CopyUbInfo* ubInfo = nullptr, bool enSequentialWrite = false)
+    __aicore__ inline void GetTensorC(const TensorTypeT<OutputT>& output,
+                                      CopyUbInfo* ubInfo = nullptr, bool enSequentialWrite = false)
     {
         using local = typename Ext::GetTensorC;
-        if constexpr (CONV_CHECK_FUN_THREE_TEMPLATE(local, Conv2dFunc, TensorTypeT, config, sync, this, output, ubInfo, enSequentialWrite)) {
+        if constexpr (CONV_CHECK_FUN_THREE_TEMPLATE(local, Conv2dFunc, TensorTypeT, config, sync,
+                                                    this, output, ubInfo, enSequentialWrite)) {
             local::template call<TensorTypeT, config, sync>(this, output, ubInfo, enSequentialWrite);
         }
     }
@@ -384,7 +387,8 @@ public:
                                       CopyUbInfo* ubInfo = nullptr, bool enSequentialWrite = false)
     {
         using local = typename Ext::GetTensorC;
-        if constexpr (CONV_CHECK_FUN_THREE_TEMPLATE(local, Conv2dFunc, TensorTypeT, config, sync, this, output0, output1, ubInfo, enSequentialWrite)) {
+        if constexpr (CONV_CHECK_FUN_THREE_TEMPLATE(local, Conv2dFunc, TensorTypeT, config, sync, this,
+                                                    output0, output1, ubInfo, enSequentialWrite)) {
             local::template call<TensorTypeT, config, sync>(this, output0, output1, ubInfo, enSequentialWrite);
         }
     }

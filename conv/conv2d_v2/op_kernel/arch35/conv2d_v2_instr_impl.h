@@ -34,10 +34,12 @@ public:
 
     __aicore__ inline void UpdatePaddingHiWiAL1(uint64_t woAL1Iter)
     {
-        paddingHiAL1 = (self_->ctx.currentHoL1 - 1) * self_->ctx.convTilingData->convApiTiling.strideH + self_->ctx.dilatedKernelH;
+        paddingHiAL1 = (self_->ctx.currentHoL1 - 1) * self_->ctx.convTilingData->convApiTiling.strideH +
+                       self_->ctx.dilatedKernelH;
         if constexpr (Intf::c04Flag) {
             if (self_->ctx.convTilingData->convApiTiling.orgWo <= self_->ctx.convTilingData->convApiTiling.woL1) {
-                paddingWiAL1 = self_->ctx.convTilingData->convApiTiling.orgWi + self_->ctx.convTilingData->convApiTiling.padLeft +
+                paddingWiAL1 = self_->ctx.convTilingData->convApiTiling.orgWi +
+                               self_->ctx.convTilingData->convApiTiling.padLeft +
                                self_->ctx.convTilingData->convApiTiling.padRight;
             } else {
                 paddingWiAL1 = (self_->ctx.currentWoL1 - 1) * self_->ctx.convTilingData->convApiTiling.strideW +
@@ -61,14 +63,16 @@ public:
     {
         int64_t hiRealStartPos = self_->ctx.hiStartPos > 0 ? 0 : self_->ctx.hiStartPos;
         // hiTopPadIdx is inaccurate when hiStartPos > 0
-        hiTopPadIdx = hoAL1Iter * self_->ctx.convTilingData->convApiTiling.hoL1 * self_->ctx.convTilingData->convApiTiling.strideH + hiRealStartPos;
+        hiTopPadIdx = hoAL1Iter * self_->ctx.convTilingData->convApiTiling.hoL1 *
+                      self_->ctx.convTilingData->convApiTiling.strideH + hiRealStartPos;
         int64_t wiRealStartPos = self_->ctx.wiStartPos > 0 ? 0 : self_->ctx.wiStartPos;
         // wiLeftPadIdx is inaccurate when wiStartPos > 0
         if (unlikely(self_->ctx.woL1SmallTail != 0 && woAL1Iter == self_->ctx.maxWoL1Iter)) {
             wiLeftPadIdx = ((woAL1Iter - 1) * self_->ctx.convTilingData->convApiTiling.woL1 + self_->ctx.woAL1Tail) *
                             self_->ctx.convTilingData->convApiTiling.strideW + wiRealStartPos;
         } else {
-            wiLeftPadIdx = woAL1Iter * self_->ctx.convTilingData->convApiTiling.woL1 * self_->ctx.convTilingData->convApiTiling.strideW + wiRealStartPos;
+            wiLeftPadIdx = woAL1Iter * self_->ctx.convTilingData->convApiTiling.woL1 *
+                           self_->ctx.convTilingData->convApiTiling.strideW + wiRealStartPos;
         }
         hiBottomPadIdx = hiTopPadIdx + paddingHiAL1;
         wiRightPadIdx = wiLeftPadIdx + paddingWiAL1;
@@ -79,10 +83,12 @@ public:
         // Calculate AL1 pads
         this->padTopL1 = hiTopPadIdx < 0 ? (0 - hiTopPadIdx) : 0;
         hiBottomPadIdx = self_->ctx.hiStartPos > 0 ? hiBottomPadIdx + self_->ctx.hiStartPos : hiBottomPadIdx;
-        padBottomL1 = hiBottomPadIdx > self_->ctx.convTilingData->convApiTiling.orgHi ? hiBottomPadIdx - self_->ctx.convTilingData->convApiTiling.orgHi : 0;
+        padBottomL1 = hiBottomPadIdx > self_->ctx.convTilingData->convApiTiling.orgHi ?
+                      hiBottomPadIdx - self_->ctx.convTilingData->convApiTiling.orgHi : 0;
         this->padLeftL1 = wiLeftPadIdx < 0 ? (0 - wiLeftPadIdx) : 0;
         wiRightPadIdx = self_->ctx.wiStartPos > 0 ? wiRightPadIdx + self_->ctx.wiStartPos : wiRightPadIdx;
-        this->padRightL1 = wiRightPadIdx > self_->ctx.convTilingData->convApiTiling.orgWi ? (wiRightPadIdx - self_->ctx.convTilingData->convApiTiling.orgWi) : 0;
+        this->padRightL1 = wiRightPadIdx > self_->ctx.convTilingData->convApiTiling.orgWi ?
+                           (wiRightPadIdx - self_->ctx.convTilingData->convApiTiling.orgWi) : 0;
         if (this->padTopL1 >= paddingHiAL1 || padBottomL1 >= paddingHiAL1 ||
             this->padLeftL1 >= paddingWiAL1 || this->padRightL1 >= paddingWiAL1) {
             this->allPadFlag = true;
@@ -90,7 +96,8 @@ public:
         }
         // Calculate hiAL1, wiAL1
         this->hiLoadL1 = paddingHiAL1 - this->padTopL1 - padBottomL1;
-        this->hiLoadL1 = this->hiLoadL1 > self_->ctx.convTilingData->convApiTiling.orgHi ? self_->ctx.convTilingData->convApiTiling.orgHi : this->hiLoadL1;
+        this->hiLoadL1 = this->hiLoadL1 > self_->ctx.convTilingData->convApiTiling.orgHi ?
+                         self_->ctx.convTilingData->convApiTiling.orgHi : this->hiLoadL1;
         this->wiLoadL1 = paddingWiAL1 - this->padLeftL1 - this->padRightL1;
     }
 
@@ -111,24 +118,28 @@ public:
         if constexpr (Intf::groupOptPreloadFlag) {
             uint64_t kAl1Tail = self_->ctx.kAL1Tail;
             if (groupOptIter == self_->ctx.singleGroupOpt - 1) {
-                kAl1Tail = (self_->ctx.singleCoreCi * self_->ctx.convTilingData->convApiTiling.kernelHxkernelW) % self_->ctx.convTilingData->convApiTiling.kAL1;
+                kAl1Tail = (self_->ctx.singleCoreCi * self_->ctx.convTilingData->convApiTiling.kernelHxkernelW) %
+                           self_->ctx.convTilingData->convApiTiling.kAL1;
                 kAl1Tail = kAl1Tail == 0 ? self_->ctx.convTilingData->convApiTiling.kAL1 : kAl1Tail;
             }
             intriParams.dValue = kAL1Iter == self_->ctx.maxKAL1Iter ?
-                (kAl1Tail / self_->ctx.convTilingData->convApiTiling.kernelHxkernelW) : self_->ctx.convTilingData->convApiTiling.cinAInCore;
+                                 (kAl1Tail / self_->ctx.convTilingData->convApiTiling.kernelHxkernelW) :
+                                 self_->ctx.convTilingData->convApiTiling.cinAInCore;
         } else if constexpr (Intf::groupOptFlag) {
             if constexpr (Intf::isKL1NL0FullLoad) {
                 intriParams.dValue = self_->ctx.kAL1Tail / self_->ctx.convTilingData->convApiTiling.kernelHxkernelW;
             } else {
                 intriParams.dValue = kAL1Iter == self_->ctx.maxKAL1Iter ?
-                    (self_->ctx.kAL1Tail / self_->ctx.convTilingData->convApiTiling.kernelHxkernelW) : self_->ctx.convTilingData->convApiTiling.cinAInCore;
+                                     (self_->ctx.kAL1Tail / self_->ctx.convTilingData->convApiTiling.kernelHxkernelW) :
+                                     self_->ctx.convTilingData->convApiTiling.cinAInCore;
             }
         } else {
             if constexpr (Intf::isKL1NL0FullLoad) {
                 intriParams.dValue = self_->ctx.convTilingData->convApiTiling.cinATailInCore;
             } else {
                 intriParams.dValue = kAL1Iter == self_->ctx.maxKAL1Iter ?
-                    self_->ctx.convTilingData->convApiTiling.cinATailInCore : self_->ctx.convTilingData->convApiTiling.cinAInCore;
+                                     self_->ctx.convTilingData->convApiTiling.cinATailInCore :
+                                     self_->ctx.convTilingData->convApiTiling.cinAInCore;
             }
         }
         intriParams.srcDValue = self_->ctx.convTilingData->convApiTiling.orgHixWi;
@@ -164,9 +175,11 @@ public:
             intriParams.dValue = self_->ctx.convTilingData->convApiTiling.cinATailInCore;
         } else {
             intriParams.dValue = kAL1Iter == self_->ctx.maxKAL1Iter ?
-                self_->ctx.convTilingData->convApiTiling.cinATailInCore : self_->ctx.convTilingData->convApiTiling.cinAInCore;
+                                             self_->ctx.convTilingData->convApiTiling.cinATailInCore :
+                                             self_->ctx.convTilingData->convApiTiling.cinAInCore;
         }
-        intriParams.srcNdMatrixStride = self_->ctx.convTilingData->convApiTiling.orgWi * self_->ctx.convTilingData->convApiTiling.orgCi;
+        intriParams.srcNdMatrixStride = self_->ctx.convTilingData->convApiTiling.orgWi *
+                                        self_->ctx.convTilingData->convApiTiling.orgCi;
         intriParams.srcDValue = self_->ctx.convTilingData->convApiTiling.orgCi;
         intriParams.dstNzC0Stride = this->hiLoadL1 * this->wiLoadL1;
         intriParams.dstNzNStride = 1;
@@ -178,9 +191,13 @@ public:
         intriParams.ndNum = this->hiLoadL1;
         intriParams.nValue = this->wiLoadL1;
         intriParams.dValue = kAL1Iter == self_->ctx.maxKAL1Iter ?
-            self_->ctx.convTilingData->convApiTiling.cinATailInCore : self_->ctx.convTilingData->convApiTiling.cinAInCore;
-        intriParams.srcNdMatrixStride = self_->ctx.convTilingData->convApiTiling.orgWi * self_->ctx.convTilingData->convApiTiling.orgCi * self_->ctx.convTilingData->convRunInfo.batch;
-        intriParams.srcDValue = self_->ctx.convTilingData->convApiTiling.orgCi * self_->ctx.convTilingData->convRunInfo.batch;
+            self_->ctx.convTilingData->convApiTiling.cinATailInCore :
+            self_->ctx.convTilingData->convApiTiling.cinAInCore;
+        intriParams.srcNdMatrixStride = self_->ctx.convTilingData->convApiTiling.orgWi *
+                                        self_->ctx.convTilingData->convApiTiling.orgCi *
+                                        self_->ctx.convTilingData->convRunInfo.batch;
+        intriParams.srcDValue = self_->ctx.convTilingData->convApiTiling.orgCi *
+                                self_->ctx.convTilingData->convRunInfo.batch;
         intriParams.dstNzC0Stride = this->hiLoadL1 * this->wiLoadL1;
         intriParams.dstNzNStride = 1;
         intriParams.dstNzMatrixStride = this->wiLoadL1 * Intf::k0;
@@ -191,7 +208,8 @@ public:
         intriParams.ndNum = 1;
         intriParams.nValue = this->hiLoadL1 * this->wiLoadL1;
         intriParams.dValue = self_->ctx.convTilingData->convApiTiling.orgCi;
-        intriParams.srcDValue = self_->ctx.convTilingData->convApiTiling.orgCi * self_->ctx.convTilingData->convRunInfo.batch;
+        intriParams.srcDValue = self_->ctx.convTilingData->convApiTiling.orgCi *
+                                self_->ctx.convTilingData->convRunInfo.batch;
     }
 
     __aicore__ inline void LoadAl1Data(uint64_t kAL1Iter, uint64_t batchIter, uint64_t groupOptIter)
@@ -199,8 +217,10 @@ public:
         // Calculate aL1GmOffset
         int64_t realHiTopGmIdx = hiTopPadIdx < 0 ? 0 : hiTopPadIdx;
         int64_t realWiTopGmIdx = wiLeftPadIdx < 0 ? 0 : wiLeftPadIdx;
-        int64_t aL1GmOffset = groupOptIter * self_->ctx.convTilingData->convApiTiling.singleCoreCi * self_->ctx.convTilingData->convApiTiling.orgWi * self_->ctx.convTilingData->convApiTiling.orgHi +
-            realHiTopGmIdx * self_->ctx.convTilingData->convApiTiling.orgWi + realWiTopGmIdx;
+        int64_t aL1GmOffset = groupOptIter * self_->ctx.convTilingData->convApiTiling.singleCoreCi *
+                              self_->ctx.convTilingData->convApiTiling.orgWi *
+                              self_->ctx.convTilingData->convApiTiling.orgHi + realHiTopGmIdx *
+                              self_->ctx.convTilingData->convApiTiling.orgWi + realWiTopGmIdx;
         if constexpr (!Intf::isKL1NL0FullLoad) {
             aL1GmOffset += kAL1Iter * self_->ctx.convTilingData->convApiTiling.cinOffsetBlockInGM;
         }
@@ -224,7 +244,8 @@ public:
         int64_t realHiTopGmIdx = hiTopPadIdx < 0 ? 0 : hiTopPadIdx;
         int64_t realWiTopGmIdx = wiLeftPadIdx < 0 ? 0 : wiLeftPadIdx;
         int64_t aL1GmOffset = groupOptIter * self_->ctx.convTilingData->convApiTiling.singleCoreCi +
-                              realHiTopGmIdx * self_->ctx.convTilingData->convApiTiling.orgWi * self_->ctx.convTilingData->convApiTiling.orgCi +
+                              realHiTopGmIdx * self_->ctx.convTilingData->convApiTiling.orgWi *
+                              self_->ctx.convTilingData->convApiTiling.orgCi +
                               realWiTopGmIdx * self_->ctx.convTilingData->convApiTiling.orgCi;
         if constexpr (!Intf::isKL1NL0FullLoad) {
             aL1GmOffset += kAL1Iter * self_->ctx.convTilingData->convApiTiling.cinAInCore;
@@ -247,9 +268,13 @@ public:
     {
         int64_t realHiTopGmIdx = hiTopPadIdx < 0 ? 0 : hiTopPadIdx;
         int64_t realWiTopGmIdx = wiLeftPadIdx < 0 ? 0 : wiLeftPadIdx;
-        int64_t aL1GmOffset = realHiTopGmIdx * self_->ctx.convTilingData->convApiTiling.orgWi * self_->ctx.convTilingData->convRunInfo.batch * self_->ctx.convTilingData->convApiTiling.orgCi +
-                              realWiTopGmIdx * self_->ctx.convTilingData->convRunInfo.batch * self_->ctx.convTilingData->convApiTiling.orgCi +
-                              kAL1Iter * self_->ctx.convTilingData->convApiTiling.cinAInCore + batchIter * self_->ctx.convTilingData->convApiTiling.orgCi;
+        int64_t aL1GmOffset = realHiTopGmIdx * self_->ctx.convTilingData->convApiTiling.orgWi *
+                              self_->ctx.convTilingData->convRunInfo.batch *
+                              self_->ctx.convTilingData->convApiTiling.orgCi + realWiTopGmIdx *
+                              self_->ctx.convTilingData->convRunInfo.batch *
+                              self_->ctx.convTilingData->convApiTiling.orgCi +
+                              kAL1Iter * self_->ctx.convTilingData->convApiTiling.cinAInCore +
+                              batchIter * self_->ctx.convTilingData->convApiTiling.orgCi;
 
         Nd2NzParams intriParams;
         if constexpr (Intf::c04Flag) {
@@ -263,10 +288,12 @@ public:
 
     __aicore__ inline void LoadAL1()
     {
-        LoadAL1(self_->ctx.kAL1Iter, self_->ctx.woAL1Iter, self_->ctx.hoAL1Iter, self_->ctx.batchIter, self_->ctx.groupOptIter);
+        LoadAL1(self_->ctx.kAL1Iter, self_->ctx.woAL1Iter, self_->ctx.hoAL1Iter,
+                self_->ctx.batchIter, self_->ctx.groupOptIter);
     }
 
-    __aicore__ inline void LoadAL1(uint64_t kAL1Iter, uint64_t woAL1Iter, uint64_t hoAL1Iter, uint64_t batchIter, uint64_t groupOptIter)
+    __aicore__ inline void LoadAL1(uint64_t kAL1Iter, uint64_t woAL1Iter, uint64_t hoAL1Iter,
+                                   uint64_t batchIter, uint64_t groupOptIter)
     {
         UpdatePaddingHiWiAL1(woAL1Iter);
         UpdatePadIdxAL1(woAL1Iter, hoAL1Iter);
@@ -329,7 +356,8 @@ public:
                 if constexpr (Intf::isNoPad) {
                     this->SetLoad3dFMatrixNoPad(self_->ctx.convTilingData->convApiTiling.orgWi);
                 } else {
-                    this->SetLoad3dFMatrix(self_->ctx.convTilingData->convApiTiling.padLeft, self_->ctx.convTilingData->convApiTiling.padRight,
+                    this->SetLoad3dFMatrix(self_->ctx.convTilingData->convApiTiling.padLeft,
+                                           self_->ctx.convTilingData->convApiTiling.padRight,
                                            self_->ctx.convTilingData->convApiTiling.orgWi);
                 }
             }
@@ -355,7 +383,9 @@ public:
         if constexpr (Intf::disContinuousFlag) {
             LoadAL1InputHWNC(kAL1Iter, mAL1Iter, batchIter);
         } else if constexpr (Intf::formatFmap == ConvFormat::NCHW) {
-            uint64_t aL1GmOffset = groupOptIter * self_->ctx.convTilingData->convApiTiling.singleCoreCi * self_->ctx.convTilingData->convApiTiling.orgWi * self_->ctx.convTilingData->convApiTiling.orgHi +
+            uint64_t aL1GmOffset = groupOptIter * self_->ctx.convTilingData->convApiTiling.singleCoreCi *
+                                   self_->ctx.convTilingData->convApiTiling.orgWi *
+                                   self_->ctx.convTilingData->convApiTiling.orgHi +
                                    hiIdx * self_->ctx.convTilingData->convApiTiling.orgWi;
 
             if constexpr (!Intf::isOneBatch) {
@@ -374,7 +404,8 @@ public:
             }
         } else {
             uint64_t aL1GmOffset = groupOptIter * self_->ctx.convTilingData->convApiTiling.singleCoreCi +
-                                   hiIdx * self_->ctx.convTilingData->convApiTiling.orgWi * self_->ctx.convTilingData->convApiTiling.orgCi;
+                                   hiIdx * self_->ctx.convTilingData->convApiTiling.orgWi *
+                                   self_->ctx.convTilingData->convApiTiling.orgCi;
             if constexpr (!Intf::isOneBatch) {
                 aL1GmOffset += batchIter * self_->ctx.fmapOneBatchSize;
             }
@@ -395,8 +426,11 @@ public:
 
     __aicore__ inline void LoadAL1InputHWNC(uint64_t kAL1Iter, uint64_t mAL1Iter, uint64_t batchIter)
     {
-        uint64_t aL1GmOffset = hiIdx * self_->ctx.convTilingData->convApiTiling.orgWi * self_->ctx.convTilingData->convRunInfo.batch * self_->ctx.convTilingData->convApiTiling.orgCi +
-                               kAL1Iter * self_->ctx.convTilingData->convApiTiling.cinAInCore + batchIter * self_->ctx.convTilingData->convApiTiling.orgCi;
+        uint64_t aL1GmOffset = hiIdx * self_->ctx.convTilingData->convApiTiling.orgWi *
+                               self_->ctx.convTilingData->convRunInfo.batch *
+                               self_->ctx.convTilingData->convApiTiling.orgCi +
+                               kAL1Iter * self_->ctx.convTilingData->convApiTiling.cinAInCore +
+                               batchIter * self_->ctx.convTilingData->convApiTiling.orgCi;
         Nd2NzParams intriParams;
         if constexpr (Intf::c04Flag) {
             SetNd2NzIntriParamsC04InputHWNC(intriParams);
@@ -414,7 +448,8 @@ private:
         uint64_t currentML1 = IsMAL1Tail(mAL1Iter) ? self_->ctx.mAL1Tail : self_->ctx.mAL1;
         uint64_t hoStartIdx = currentM / self_->ctx.convTilingData->convApiTiling.orgWo;
         uint64_t hoEndIdx = CeilDiv(currentM + currentML1, self_->ctx.convTilingData->convApiTiling.orgWo);
-        this->hiLoadL1 = ((hoEndIdx - hoStartIdx) - 1) * self_->ctx.convTilingData->convApiTiling.strideH + self_->ctx.dilatedKernelH;
+        this->hiLoadL1 = ((hoEndIdx - hoStartIdx) - 1) * self_->ctx.convTilingData->convApiTiling.strideH +
+                         self_->ctx.dilatedKernelH;
 
         if constexpr (Intf::isNoPad) {
             hiIdx = hoStartIdx * self_->ctx.convTilingData->convApiTiling.strideH;
@@ -424,7 +459,8 @@ private:
             hiIdx = hiStartIdxWithPad - self_->ctx.convTilingData->convApiTiling.padTop;
 
             if (hiEndIdxWithPad <= self_->ctx.convTilingData->convApiTiling.padTop ||
-                hiStartIdxWithPad >= self_->ctx.convTilingData->convApiTiling.orgHi + self_->ctx.convTilingData->convApiTiling.padTop) {
+                hiStartIdxWithPad >=
+                    self_->ctx.convTilingData->convApiTiling.orgHi + self_->ctx.convTilingData->convApiTiling.padTop) {
                 this->allPadFlag = true;
                 return;
             }
@@ -437,8 +473,11 @@ private:
                 this->hiLoadL1 -= this->padTopL1;
             }
 
-            if (hiEndIdxWithPad > self_->ctx.convTilingData->convApiTiling.orgHi + self_->ctx.convTilingData->convApiTiling.padTop) {
-                padBottomL1 = hiEndIdxWithPad - (self_->ctx.convTilingData->convApiTiling.orgHi + self_->ctx.convTilingData->convApiTiling.padTop);
+            if (hiEndIdxWithPad >
+                    self_->ctx.convTilingData->convApiTiling.orgHi + self_->ctx.convTilingData->convApiTiling.padTop) {
+                padBottomL1 = hiEndIdxWithPad -
+                    (self_->ctx.convTilingData->convApiTiling.orgHi +
+                    self_->ctx.convTilingData->convApiTiling.padTop);
                 this->hiLoadL1 -= padBottomL1;
             }
         }
@@ -453,10 +492,12 @@ private:
             uint64_t step = CeilDiv(this->hiLoadL1, hiLoadPerStep);
             uint64_t hiLoadTail = this->hiLoadL1 % hiLoadPerStep;
             if (hiLoadTail == 0) {
-                SetDn2NzIntriParamsC04(intriParams, step, hiLoadPerStep * self_->ctx.convTilingData->convApiTiling.orgWi);
+                SetDn2NzIntriParamsC04(intriParams, step,
+                    hiLoadPerStep * self_->ctx.convTilingData->convApiTiling.orgWi);
                 DataCopy<typename Intf::FmapT, true>(self_->ctx.al1, self_->ctx.agm[aL1GmOffset], intriParams);
             } else {
-                SetDn2NzIntriParamsC04(intriParams, step - 1, hiLoadPerStep * self_->ctx.convTilingData->convApiTiling.orgWi);
+                SetDn2NzIntriParamsC04(intriParams, step - 1,
+                    hiLoadPerStep * self_->ctx.convTilingData->convApiTiling.orgWi);
                 DataCopy<typename Intf::FmapT, true>(self_->ctx.al1, self_->ctx.agm[aL1GmOffset], intriParams);
 
                 // hiLoadTail
@@ -481,24 +522,28 @@ private:
         if constexpr (Intf::groupOptPreloadFlag) {
             uint64_t kAl1Tail = self_->ctx.kAL1Tail;
             if (groupOptIter == self_->ctx.singleGroupOpt - 1) {
-                kAl1Tail = (self_->ctx.singleCoreCi * self_->ctx.convTilingData->convApiTiling.kernelHxkernelW) % self_->ctx.convTilingData->convApiTiling.kAL1;
+                kAl1Tail = (self_->ctx.singleCoreCi * self_->ctx.convTilingData->convApiTiling.kernelHxkernelW) %
+                           self_->ctx.convTilingData->convApiTiling.kAL1;
                 kAl1Tail = kAl1Tail == 0 ? self_->ctx.convTilingData->convApiTiling.kAL1 : kAl1Tail;
             }
             intriParams.dValue = IsKAL1Tail(kAL1Iter) ?
-                (kAl1Tail / self_->ctx.convTilingData->convApiTiling.kernelHxkernelW) : self_->ctx.convTilingData->convApiTiling.cinAInCore;
+                (kAl1Tail / self_->ctx.convTilingData->convApiTiling.kernelHxkernelW) :
+                self_->ctx.convTilingData->convApiTiling.cinAInCore;
         } else if constexpr (Intf::groupOptFlag) {
             if constexpr (Intf::isKL1NL0FullLoad) {
                 intriParams.dValue = self_->ctx.kAL1Tail / self_->ctx.convTilingData->convApiTiling.kernelHxkernelW;
             } else {
                 intriParams.dValue = IsKAL1Tail(kAL1Iter) ?
-                    (self_->ctx.kAL1Tail / self_->ctx.convTilingData->convApiTiling.kernelHxkernelW) : self_->ctx.convTilingData->convApiTiling.cinAInCore;
+                    (self_->ctx.kAL1Tail / self_->ctx.convTilingData->convApiTiling.kernelHxkernelW) :
+                    self_->ctx.convTilingData->convApiTiling.cinAInCore;
             }
         } else {
             if constexpr (Intf::isKL1NL0FullLoad) {
                 intriParams.dValue = self_->ctx.convTilingData->convApiTiling.cinATailInCore;
             } else {
                 intriParams.dValue = IsKAL1Tail(kAL1Iter) ?
-                    self_->ctx.convTilingData->convApiTiling.cinATailInCore : self_->ctx.convTilingData->convApiTiling.cinAInCore;
+                    self_->ctx.convTilingData->convApiTiling.cinATailInCore :
+                    self_->ctx.convTilingData->convApiTiling.cinAInCore;
             }
         }
         intriParams.srcDValue = self_->ctx.convTilingData->convApiTiling.orgHixWi;
@@ -532,7 +577,8 @@ private:
             intriParams.dValue = self_->ctx.convTilingData->convApiTiling.cinATailInCore;
         } else {
             intriParams.dValue = IsKAL1Tail(kAL1Iter) ?
-                self_->ctx.convTilingData->convApiTiling.cinATailInCore : self_->ctx.convTilingData->convApiTiling.cinAInCore;
+                self_->ctx.convTilingData->convApiTiling.cinATailInCore :
+                self_->ctx.convTilingData->convApiTiling.cinAInCore;
         }
         intriParams.srcDValue = self_->ctx.convTilingData->convApiTiling.orgCi;
         intriParams.dstNzNStride = 1;
@@ -545,8 +591,10 @@ private:
         intriParams.ndNum = 1;
         intriParams.nValue = aL1Mi;
         intriParams.dValue = IsKAL1Tail(kAL1Iter) ?
-            self_->ctx.convTilingData->convApiTiling.cinATailInCore : self_->ctx.convTilingData->convApiTiling.cinAInCore;
-        intriParams.srcDValue = self_->ctx.convTilingData->convApiTiling.orgCi * self_->ctx.convTilingData->convRunInfo.batch;
+                             self_->ctx.convTilingData->convApiTiling.cinATailInCore :
+                             self_->ctx.convTilingData->convApiTiling.cinAInCore;
+        intriParams.srcDValue = self_->ctx.convTilingData->convApiTiling.orgCi *
+                                self_->ctx.convTilingData->convRunInfo.batch;
         intriParams.dstNzNStride = 1;
         intriParams.dstNzC0Stride = aL1Mi;
     }
@@ -556,7 +604,8 @@ private:
         intriParams.ndNum = 1;
         intriParams.nValue = this->hiLoadL1 * self_->ctx.convTilingData->convApiTiling.orgWi;
         intriParams.dValue = self_->ctx.convTilingData->convApiTiling.singleCoreCi;
-        intriParams.srcDValue = self_->ctx.convTilingData->convApiTiling.singleCoreCi * self_->ctx.convTilingData->convRunInfo.batch;
+        intriParams.srcDValue = self_->ctx.convTilingData->convApiTiling.singleCoreCi *
+                                self_->ctx.convTilingData->convRunInfo.batch;
     }
 
     __aicore__ inline bool IsMAL1Tail(uint64_t mAL1Iter)

@@ -51,8 +51,10 @@ private:
             copyParams.loopInfo.loopSrcStride[NDDMA_LOOP0_INDEX] = 1;
             copyParams.loopInfo.loopDstStride[NDDMA_LOOP0_INDEX] = 1;
             // NDDMA Loop1 params
-            copyParams.loopInfo.loopSrcStride[NDDMA_LOOP1_INDEX] = self_->ctx.convTilingData->convApiTiling.coutOffsetBlock;
-            copyParams.loopInfo.loopDstStride[NDDMA_LOOP1_INDEX] = self_->ctx.convTilingData->convApiTiling.bUbKStep;
+            copyParams.loopInfo.loopSrcStride[NDDMA_LOOP1_INDEX] =
+                self_->ctx.convTilingData->convApiTiling.coutOffsetBlock;
+            copyParams.loopInfo.loopDstStride[NDDMA_LOOP1_INDEX] =
+                self_->ctx.convTilingData->convApiTiling.bUbKStep;
         }
         // NDDMA Loop0 params
         copyParams.loopInfo.loopSize[NDDMA_LOOP0_INDEX] = self_->ctx.currentUbKStep;
@@ -62,8 +64,10 @@ private:
         copyParams.loopInfo.loopRpSize[NDDMA_LOOP1_INDEX] = self_->ctx.currentNLoopRpSize;
 
         uint64_t srcOffset = (self_->ctx.nBL1Iter * self_->ctx.convTilingData->convApiTiling.nBL1 +
-            self_->ctx.vecNIter * self_->ctx.convTilingData->convApiTiling.bUbNStep) * self_->ctx.convTilingData->convApiTiling.coutOffsetBlock +
-            self_->ctx.kBL1Iter * self_->ctx.convTilingData->convApiTiling.kBL1 + self_->ctx.vecKIter * self_->ctx.convTilingData->convApiTiling.bUbKStep;
+            self_->ctx.vecNIter * self_->ctx.convTilingData->convApiTiling.bUbNStep) *
+            self_->ctx.convTilingData->convApiTiling.coutOffsetBlock +
+            self_->ctx.kBL1Iter * self_->ctx.convTilingData->convApiTiling.kBL1 +
+            self_->ctx.vecKIter * self_->ctx.convTilingData->convApiTiling.bUbKStep;
 
         DataCopy<typename Intf::WeightT, NDDMA_DIMS_NO_TRANS, kDefaultMultiCopyConfig>(
             self_->ctx.ndTensor, self_->ctx.bgm[srcOffset], copyParams);
@@ -73,15 +77,18 @@ private:
     {
         if (unlikely(self_->ctx.isFirstIterate)) {
             repeatParams.blockLen = self_->ctx.convTilingData->convApiTiling.bUbKStep / Intf::k0;
-            repeatParams.srcStride = (self_->ctx.convTilingData->convApiTiling.singleCoreCi * self_->ctx.convTilingData->convApiTiling.kernelHxkernelW -
+            repeatParams.srcStride = (self_->ctx.convTilingData->convApiTiling.singleCoreCi *
+                self_->ctx.convTilingData->convApiTiling.kernelHxkernelW -
                 self_->ctx.convTilingData->convApiTiling.bUbKStep) / Intf::k0;
             repeatParams.dstStride = 0;
         }
         repeatParams.blockCount = self_->ctx.currentUbNStep;
 
         uint64_t srcOffset = (self_->ctx.nBL1Iter * self_->ctx.convTilingData->convApiTiling.nBL1 +
-            self_->ctx.vecNIter * self_->ctx.convTilingData->convApiTiling.bUbNStep) * self_->ctx.convTilingData->convApiTiling.coutOffsetBlock +
-            self_->ctx.kBL1Iter * self_->ctx.convTilingData->convApiTiling.kBL1 + self_->ctx.vecKIter * self_->ctx.convTilingData->convApiTiling.bUbKStep;
+            self_->ctx.vecNIter * self_->ctx.convTilingData->convApiTiling.bUbNStep) *
+            self_->ctx.convTilingData->convApiTiling.coutOffsetBlock +
+            self_->ctx.kBL1Iter * self_->ctx.convTilingData->convApiTiling.kBL1 +
+            self_->ctx.vecKIter * self_->ctx.convTilingData->convApiTiling.bUbKStep;
 
         DataCopy<typename Intf::WeightT>(self_->ctx.ndTensor, self_->ctx.bgm[srcOffset], repeatParams);
     }
@@ -111,12 +118,14 @@ public:
             SetIndex();
         }
 
-        uint16_t ciLoopTimes = self_->ctx.convTilingData->convApiTiling.bUbKStep / self_->ctx.convTilingData->convApiTiling.kernelHxkernelW / Intf::k0;
+        uint16_t ciLoopTimes = self_->ctx.convTilingData->convApiTiling.bUbKStep /
+            self_->ctx.convTilingData->convApiTiling.kernelHxkernelW / Intf::k0;
         uint16_t coLoopTimes = self_->ctx.currentUbNStepAilgn / BLOCK_L0_N * co0LoopTimes;
         uint16_t khkwLoopTimes = self_->ctx.convTilingData->convApiTiling.kernelHxkernelW;
         uint32_t srcCiStride = self_->ctx.convTilingData->convApiTiling.kernelHxkernelW * Intf::k0;
         uint32_t srcCoStride = coPerReg * self_->ctx.convTilingData->convApiTiling.bUbKStep;
-        uint32_t dstCiStride = self_->ctx.convTilingData->convApiTiling.kernelHxkernelW * Intf::k0 * self_->ctx.currentUbNStepAilgn;
+        uint32_t dstCiStride = self_->ctx.convTilingData->convApiTiling.kernelHxkernelW *
+            Intf::k0 * self_->ctx.currentUbNStepAilgn;
         uint32_t dstKhKwStride = Intf::k0 * self_->ctx.currentUbNStepAilgn;
         uint32_t dstCoStride = coPerReg * Intf::k0;
 
@@ -229,7 +238,8 @@ public:
         copyParams.blockLen = self_->ctx.currentUbNStepAilgn;
         copyParams.dstStride = self_->ctx.convTilingData->convApiTiling.nBL1 - self_->ctx.currentUbNStepAilgn;
 
-        uint64_t dstOffset = self_->ctx.vecKIter * self_->ctx.convTilingData->convApiTiling.nBL1 * self_->ctx.convTilingData->convApiTiling.bUbKStep +
+        uint64_t dstOffset = self_->ctx.vecKIter * self_->ctx.convTilingData->convApiTiling.nBL1 *
+                             self_->ctx.convTilingData->convApiTiling.bUbKStep +
                              self_->ctx.vecNIter * self_->ctx.convTilingData->convApiTiling.bUbNStep * Intf::k0;
 
         if (self_->ctx.vecId == 1) {

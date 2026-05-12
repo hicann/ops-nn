@@ -81,9 +81,12 @@ struct Init {
         if ASCEND_IS_AIC_CONV {
             InitTilingData(self, tiling);
             InitL1LoadParams(self);
-            self->ctx.dilatedKernelH = 1 + (self->ctx.convTilingData->convApiTiling.kernelH - 1) * self->ctx.convTilingData->convApiTiling.dilationH;
-            self->ctx.dilatedKernelW = 1 + (self->ctx.convTilingData->convApiTiling.kernelW - 1) * self->ctx.convTilingData->convApiTiling.dilationW;
-            self->ctx.dilatedKernelD = 1 + (self->ctx.convTilingData->convApiTiling.kernelD - 1) * self->ctx.convTilingData->convApiTiling.dilationD;
+            self->ctx.dilatedKernelH = 1 + (self->ctx.convTilingData->convApiTiling.kernelH - 1) *
+                                       self->ctx.convTilingData->convApiTiling.dilationH;
+            self->ctx.dilatedKernelW = 1 + (self->ctx.convTilingData->convApiTiling.kernelW - 1) *
+                                       self->ctx.convTilingData->convApiTiling.dilationW;
+            self->ctx.dilatedKernelD = 1 + (self->ctx.convTilingData->convApiTiling.kernelD - 1) *
+                                       self->ctx.convTilingData->convApiTiling.dilationD;
 
             InitBuffer<Intf>(self);
             InitKDirectionValue<Intf>(self);
@@ -100,7 +103,8 @@ struct Init {
             InitSubApiParams<Intf>(self);
 
             if constexpr (Intf::groupOptFlag) {
-                self->ctx.ciPerGroup = self->ctx.convTilingData->convApiTiling.orgCi / self->ctx.convTilingData->convApiTiling.groups;
+                self->ctx.ciPerGroup = self->ctx.convTilingData->convApiTiling.orgCi /
+                                       self->ctx.convTilingData->convApiTiling.groups;
                 self->ctx.singleGroupOpt = self->ctx.convTilingData->convApiTiling.singleCoreGroupOpt;
                 OptGroupCalcBL1LoadTimes<Intf>(self);
             }
@@ -128,11 +132,16 @@ struct Init {
         }
         self->ctx.singleCoreCi = self->ctx.convTilingData->convApiTiling.singleCoreCi;
         uint64_t alignCinKhKwKd = 
-            AlignB(self->ctx.convTilingData->convApiTiling.singleCoreCi, Intf::k0) * self->ctx.convTilingData->convApiTiling.kernelHxkernelWxkernelD;
+            AlignB(self->ctx.convTilingData->convApiTiling.singleCoreCi, Intf::k0) *
+            self->ctx.convTilingData->convApiTiling.kernelHxkernelWxkernelD;
         self->ctx.kBL1fullload = alignCinKhKwKd == self->ctx.convTilingData->convApiTiling.kBL1;
         self->ctx.kAL1fullload = alignCinKhKwKd == self->ctx.convTilingData->convApiTiling.kAL1;
-        self->ctx.fmapOneBatchSize = self->ctx.convTilingData->convApiTiling.orgCi * self->ctx.convTilingData->convApiTiling.orgHi * self->ctx.convTilingData->convApiTiling.orgWi * self->ctx.convTilingData->convApiTiling.orgDi;
-        self->ctx.outputOneBatchSize = self->ctx.convTilingData->convApiTiling.orgCo * self->ctx.convTilingData->convApiTiling.orgHo * self->ctx.convTilingData->convApiTiling.orgWo * self->ctx.convTilingData->convApiTiling.orgDo;
+        self->ctx.fmapOneBatchSize =
+            self->ctx.convTilingData->convApiTiling.orgCi * self->ctx.convTilingData->convApiTiling.orgHi *
+            self->ctx.convTilingData->convApiTiling.orgWi * self->ctx.convTilingData->convApiTiling.orgDi;
+        self->ctx.outputOneBatchSize =
+            self->ctx.convTilingData->convApiTiling.orgCo * self->ctx.convTilingData->convApiTiling.orgHo *
+            self->ctx.convTilingData->convApiTiling.orgWo * self->ctx.convTilingData->convApiTiling.orgDo;
     }
 
     static __aicore__ inline void InitL1LoadParams(Intf *self)
@@ -190,7 +199,8 @@ struct SetSingleFmapShape {
 template <class Intf, uint32_t ImplType>
 struct SetSingleOutputShape {
     static __aicore__ inline void call(
-        Intf *self, uint64_t singleCo, uint64_t singleDo, uint64_t singleHo, uint64_t singleWo, uint64_t singleCoreBatch)
+        Intf *self, uint64_t singleCo, uint64_t singleDo,
+        uint64_t singleHo, uint64_t singleWo, uint64_t singleCoreBatch)
     {
         if constexpr (Intf::outputOrder == static_cast<int8_t>(ConvOutputOrder::HW_MODE)) {
             self->ctx.singleCoreCo = singleCo;
@@ -218,7 +228,8 @@ struct SetSingleOutputShape {
         }
     }
 
-    static __aicore__ inline void call(Intf *self, uint64_t singleCo, uint64_t singleDo, uint64_t singleM, uint64_t singleCoreBatch)
+    static __aicore__ inline void call(
+        Intf *self, uint64_t singleCo, uint64_t singleDo, uint64_t singleM, uint64_t singleCoreBatch)
     {
         if constexpr (Intf::outputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE)) {
             self->ctx.singleCoreCo = singleCo;
@@ -274,7 +285,8 @@ struct SetFmapStartPosition {
 
 template <class Intf, uint32_t ImplType>
 struct SetOptGroupParams {
-    static __aicore__ inline void call(Intf *self, uint64_t singleGroups, uint64_t singleGroupOpt, uint64_t singleCoOpt)
+    static __aicore__ inline void call(
+        Intf *self, uint64_t singleGroups, uint64_t singleGroupOpt, uint64_t singleCoOpt)
     {
         self->ctx.singleGroups = singleGroups;
         self->ctx.singleGroupOpt = singleGroupOpt;

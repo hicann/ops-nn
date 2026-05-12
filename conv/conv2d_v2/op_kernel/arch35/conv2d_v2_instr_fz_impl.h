@@ -35,7 +35,8 @@ public:
         maxKBL1Iter_ = self->ctx.maxKBL1Iter;
         orgCoAlignN0 = AlignB(self_->ctx.convTilingData->convApiTiling.orgCo, BLOCK_L0_N);
         if constexpr (Intf::groupOptNZFlag) {
-            self->ctx.coPerGroup = self->ctx.convTilingData->convApiTiling.orgCo / self->ctx.convTilingData->convApiTiling.groups;
+            self->ctx.coPerGroup =
+                self->ctx.convTilingData->convApiTiling.orgCo / self->ctx.convTilingData->convApiTiling.groups;
             self->ctx.coOpt = self->ctx.coPerGroup * self->ctx.convTilingData->convApiTiling.enlarge;
             orgCoAlignN0 = AlignB(self->ctx.coOpt, BLOCK_L0_N);
         } else {
@@ -56,12 +57,14 @@ public:
         } else {
             bL1GmOffset = kBL1Iter * self_->ctx.convTilingData->convApiTiling.kBL1 * orgCoAlignN0 +
                           nBL1Iter * self_->ctx.convTilingData->convApiTiling.nBL1 * Intf::k0;
-            self_->ctx.currentNBL1 = nBL1Iter == maxNBL1Iter_ ? self_->ctx.nBL1Tail : self_->ctx.convTilingData->convApiTiling.nBL1;
+            self_->ctx.currentNBL1 = nBL1Iter == maxNBL1Iter_ ?
+                                     self_->ctx.nBL1Tail : self_->ctx.convTilingData->convApiTiling.nBL1;
         }
 
         uint64_t currentKBL1 = self_->ctx.convTilingData->convApiTiling.kBL1;
         if constexpr (!Intf::c04Flag) {
-            currentKBL1 = kBL1Iter == maxKBL1Iter_ ? self_->ctx.kBL1AlignK0Tail : self_->ctx.convTilingData->convApiTiling.kBL1;
+            currentKBL1 = kBL1Iter == maxKBL1Iter_ ?
+                          self_->ctx.kBL1AlignK0Tail : self_->ctx.convTilingData->convApiTiling.kBL1;
         }
         DataCopyPadExtParams<typename Intf::WeightT> padParams;
         DataCopyExtParams dataCopyParams;
