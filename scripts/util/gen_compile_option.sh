@@ -15,8 +15,7 @@ call_write_scripts() {
   local op_type="$1"
   local soc_version_lower="$2"
   local auto_sync="$3"
-  local compute_units="$4"
-  local compile_options="$5"
+  local compile_options="$4"
 
   local rep_cfg='{
     "batch": "",
@@ -184,15 +183,6 @@ main() {
       fi
     fi
 
-    compute_units=$(echo "$json_line" | awk '
-    match($0, /"compute_units"[[:space:]]*:[[:space:]]*\[([^]]*)\]/, arr) {
-      str = arr[1]
-      gsub(/"/, "", str)
-      gsub(/^[[:space:]]+|[[:space:]]+$/, "", str)
-      gsub(/,[[:space:]]*/, " ", str)
-      print str
-    }')
-
     if [ -z "$compile_options" ]; then
       compile_options=$(echo "$json_line" | awk '
       match($0, /"compile_options"[[:space:]]*:[[:space:]]*(\{[^}]*\})/, arr) {
@@ -200,7 +190,7 @@ main() {
       }')
     fi
 
-    call_write_scripts "$op_type" "$soc_version_lower" "$auto_sync" "$compute_units" "$compile_options"
+    call_write_scripts "$op_type" "$soc_version_lower" "$auto_sync" "$compile_options"
   done
   exit 0
 }

@@ -45,7 +45,7 @@ def merge_ini_files(ini_files, output_file):
                 else:
                     print(f"[Info] ini file {ini_file} section {section} has existed, skip")
         except Exception as e:
-            print(f"[ERROR] read ini file {ini_file} failed, skip")
+            print(f"[ERROR] read ini file {ini_file} failed, reason: {e}, skip")
             continue
 
     try:

@@ -116,6 +116,19 @@ get_pkg_name(){
     return 0
 }
 
+# 用法: check_ut_result <exit_code> <log_file> <stage_name>
+check_ut_result() {
+    local exit_code=$1
+    local log_file=$2
+    local stage_name=$3
+
+    if [[ $exit_code -ne 0 ]]; then
+        echo "[ERROR] ${stage_name} ut build failed with exit code $exit_code, check log: $log_file"
+        echo "[FAILED tests] $(grep -E '\[  FAILED  \]|FAILED TESTS' $log_file | tail -5)"
+        exit $exit_code
+    fi
+}
+
 set -e
 if [[ -z "$PR_FILELIST" ]] || [[ ! -s "$PR_FILELIST" ]]; then
     PR_FILELIST="pr_filelist.txt"
@@ -201,21 +214,31 @@ fi
 
 if [[ "$ENABLE_UTEST" == "true" ]]; then
     echo "==============================build utest start======================================"
-    echo "--------------------------build ophost ut start-----------------------------------"
-    echo "exec cmd: [bash build.sh -u --ophost -f $PR_FILELIST --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH} -j${THREAD_NUM}]"
-    bash build.sh -u --ophost -f "$PR_FILELIST" --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH} -j${THREAD_NUM}
-    echo "--------------------------build opapi ut start------------------------------------"
-    echo "exec cmd: [bash build.sh -u --opapi -f $PR_FILELIST --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH} -j${THREAD_NUM}]"
-    bash build.sh -u --opapi -f "$PR_FILELIST" --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH} -j${THREAD_NUM}
+    rm -f ut_test.log
+    rm -f ut_kernel.log
+    
+    echo "--------------------------build ophost ut start-----------------------------------" | tee -a ut_test.log
+    echo "exec cmd: [bash build.sh -u --ophost -f $PR_FILELIST --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH} -j${THREAD_NUM}]" | tee -a ut_test.log
+    bash build.sh -u --ophost -f "$PR_FILELIST" --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH} -j${THREAD_NUM} 2>&1 | tee -a ut_test.log
+    check_ut_result ${PIPESTATUS[0]} ut_test.log "ophost"
+    
+    echo "--------------------------build opapi ut start------------------------------------" | tee -a ut_test.log
+    echo "exec cmd: [bash build.sh -u --opapi -f $PR_FILELIST --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH} -j${THREAD_NUM}]" | tee -a ut_test.log
+    bash build.sh -u --opapi -f "$PR_FILELIST" --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH} -j${THREAD_NUM} 2>&1 | tee -a ut_test.log
+    check_ut_result ${PIPESTATUS[0]} ut_test.log "opapi"
+    
     if [ "$BASE_BRANCH_NAME" = "master" ]; then
-        echo "--------------------------build opgraph ut start-----------------------------------"
-        echo "exec cmd: [bash build.sh -u --opgraph -f $PR_FILELIST --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH} -j${THREAD_NUM}]"
-        bash build.sh -u --opgraph -f "$PR_FILELIST" --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH} -j${THREAD_NUM}
-        echo "--------------------------build opkernel ut start-----------------------------------"
-        echo "exec cmd: [bash scripts/ci/check_kernel_ut.sh $PR_FILELIST --no_cov]"
-        bash scripts/ci/check_kernel_ut.sh $PR_FILELIST --no_cov | tee output.txt
-        if grep -q "error happened" output.txt; then
-            echo "[ERROR] Error happened in output check log"
+        echo "--------------------------build opgraph ut start-----------------------------------" | tee -a ut_test.log
+        echo "exec cmd: [bash build.sh -u --opgraph -f $PR_FILELIST --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH} -j${THREAD_NUM}]" | tee -a ut_test.log
+        bash build.sh -u --opgraph -f "$PR_FILELIST" --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH} -j${THREAD_NUM} 2>&1 | tee -a ut_test.log
+        check_ut_result ${PIPESTATUS[0]} ut_test.log "opgraph"
+        
+        echo "--------------------------build opkernel ut start-----------------------------------" | tee -a ut_kernel.log
+        echo "exec cmd: [bash scripts/ci/check_kernel_ut.sh $PR_FILELIST --no_cov]" | tee -a ut_kernel.log
+        bash scripts/ci/check_kernel_ut.sh $PR_FILELIST --no_cov 2>&1 | tee -a ut_kernel.log
+        check_ut_result ${PIPESTATUS[0]} ut_kernel.log "kernel"
+        if grep -q "error happened" ut_kernel.log; then
+            echo "[ERROR] Error happened in output check log: ut_kernel.log"
             exit 1
         fi
     fi

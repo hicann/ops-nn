@@ -10,6 +10,7 @@
 
 cmake_minimum_required(VERSION 3.16)
 set(PKG_NAME nn)
+set(CANN_3RD_LIB_PATH ${CMAKE_CURRENT_SOURCE_DIR}/build/third_party CACHE STRING "cann third party lib path")
 include(cmake/fetch_cann_cmake.cmake)
 
 project(${PKG_NAME} VERSION 1.0.0)
@@ -61,7 +62,6 @@ option(UT_TEST_ALL "Enable all ut" OFF)
 option(ENABLE_GEN_ACLNN "Enable gen aclnn" OFF)
 
 set(BISHENG_FLAGS "" CACHE STRING "bisheng compiler flags")
-set(CANN_3RD_LIB_PATH ${PROJECT_SOURCE_DIR}/build/third_party CACHE STRING "cann third party lib path")
 
 if(ENABLE_TEST)
     set(DEFAULT_BUILD_TYPE "Debug")
