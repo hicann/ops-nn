@@ -1,4 +1,4 @@
-# Maskedscatterwithposition
+# MaskedScatterWithPosition
 
 ## 产品支持情况
 

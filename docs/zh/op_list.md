@@ -3179,6 +3179,16 @@
   </tr>
   <tr>
     <td>pooling</td>
+    <td><a href="../../pooling/avg_pool_v2_grad/README.md">avg_pool_v2_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>二维平均池化的反向传播，计算二维平均池化正向传播的输入梯度。</td>
+  </tr>
+  <tr>
+    <td>pooling</td>
     <td><a href="../../pooling/avg_pool3_d/README.md">avg_pool3_d</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -3216,6 +3226,16 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>对于3维或4维的输入张量，进行最大池化（max pooling）操作。</td>
+  </tr>
+  <tr>
+    <td>pooling</td>
+    <td><a href="../../pooling/max_pool_with_argmax/README.md">max_pool_with_argmax</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对于输入数据计算2维最大池化操作，同时输出池化后的最大值和对应位置的索引。</td>
   </tr>
   <tr>
     <td>pooling</td>
