@@ -27,6 +27,7 @@
 #include "op_host/tiling_util.h"
 #include "op_host/tiling_templates_registry.h"
 #include "op_api/op_util.h"
+#include <algorithm>
 
 namespace optiling {
 const int32_t HW_DIMS = 2;

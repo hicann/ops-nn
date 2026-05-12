@@ -18,6 +18,7 @@
 #include "exe_graph/runtime/infer_shape_context.h"
 #include "register/op_impl_registry.h"
 #include "log/log.h"
+#include <algorithm>
 
 namespace {
 constexpr size_t DIM_0 = 0;
