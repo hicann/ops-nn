@@ -26,21 +26,28 @@ using AscendC::Nd2NzParams;
 
 namespace Convolution3DBackpropFunc {
 template <class Intf, typename SrcType>
-__aicore__ inline void InitZeroValue(Intf *self, const LocalTensor<SrcType> &buf)
+__aicore__ inline void InitZeroValue(Intf *self, const LocalTensor<SrcType> &buf, bool useOffsetX = false)
 {
     uint32_t len = buf.GetSize() * sizeof(SrcType);
+    uint16_t padValue = 0;
+    if constexpr(std::is_same<SrcType, int8_t>::value) {
+        if (useOffsetX) {
+            uint8_t offsetX = static_cast<uint8_t>(self->ctx.tiling_->offsetX);
+            padValue = (static_cast<uint16_t>(offsetX)) << 8 | (static_cast<uint16_t>(offsetX));
+        }
+    }
     if constexpr(std::is_same<SrcType, hifloat8_t>::value ||
         std::is_same<SrcType, fp8_e4m3fn_t>::value ||
         std::is_same<SrcType, int8_t>::value) {
-        InitConstValue(buf.template ReinterpretCast<uint16_t>(), {1, static_cast<uint16_t>(len >> 5), 0, 0});
-        } else {
-            AscendC::InitConstValueParams<SrcType> initConstValueParams;
-            initConstValueParams.repeatTimes = 1;
-            initConstValueParams.blockNum = len >> 5;  // 除以blockSize
-            initConstValueParams.dstGap = 0;
-            initConstValueParams.initValue = (SrcType)(0);
-            InitConstValue(buf, initConstValueParams);
-        }
+        InitConstValue(buf.template ReinterpretCast<uint16_t>(), {1, static_cast<uint16_t>(len >> 5), 0, padValue});
+    } else {
+        AscendC::InitConstValueParams<SrcType> initConstValueParams;
+        initConstValueParams.repeatTimes = 1;
+        initConstValueParams.blockNum = len >> 5;
+        initConstValueParams.dstGap = 0;
+        initConstValueParams.initValue = (SrcType)(0);
+        InitConstValue(buf, initConstValueParams);
+    }
     PipeBarrier<PIPE_MTE2>();
 }
 

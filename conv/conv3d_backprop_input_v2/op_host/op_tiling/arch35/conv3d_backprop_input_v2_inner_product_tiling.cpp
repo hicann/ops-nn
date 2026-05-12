@@ -110,6 +110,9 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::GetPublicShapeAttrsInfo()
         }
     }
 
+    const auto offset = context_->GetAttrs()->GetAttrPointer<int64_t>(OFFSET_X_INDEX);
+ 	runInfo_.offsetX = (offset != nullptr) ? static_cast<int8_t>(*offset) : 0;
+
     blockSize_ = BYTE_BLOCK / runInfo_.b_dtype_bytes;
     dtypeByteL0a_ = runInfo_.a_dtype_bytes;
     dtypeByteL0b_ = runInfo_.b_dtype_bytes;

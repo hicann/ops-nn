@@ -395,7 +395,7 @@ __aicore__ inline void LoadToA1ForDn2Nz(Intf *self, LocalTensor<typename Intf::S
             strideH = 1;
         }
         if (unlikely(self->ctx.tiling_->strideW * strideH > 1)) {
-            InitZeroValue<Intf, typename Intf::SrcAT>(self, useA1Buf);
+            InitZeroValue<Intf, typename Intf::SrcAT>(self, useA1Buf, true);
         }
         CalcLoadToA1Dn2NzParams<Intf, typename Intf::SrcAT>(self, dn2NzParams, out2A1DstAddrOffset, curCoutIdx, kIdx);
         if (strideH > 1) {
@@ -442,7 +442,7 @@ __aicore__ inline void LoadToA1ForNd2Nz(Intf *self, LocalTensor<typename Intf::S
             strideH = 1;
         }
         if (unlikely(self->ctx.tiling_->strideW * strideH > 1)) {
-            InitZeroValue<Intf, typename Intf::SrcAT>(self, useA1Buf);
+            InitZeroValue<Intf, typename Intf::SrcAT>(self, useA1Buf, true);
         }
         uint32_t curCoutIdx = 0;
         if constexpr (!Intf::conv3dConfig.enableC04Flag) {

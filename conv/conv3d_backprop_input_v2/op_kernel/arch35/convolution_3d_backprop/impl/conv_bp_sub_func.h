@@ -120,6 +120,9 @@ static __aicore__ inline void InitLoadToA2Params(Intf *self)
     self->ctx.load3d_.fMatrixCtrl = 0;
     // l1 only cut cout in k
     self->ctx.load3d_.channelSize = self->ctx.channelSize_;
+    if constexpr (std::is_same<typename Intf::L0cT, int32_t>::value) {
+        self->ctx.load3d_.padValue = self->ctx.tiling_->offsetX;
+    }
 }
 
 template <class Intf>
@@ -489,8 +492,8 @@ static __aicore__ inline void LoadL0c2GmForNz2Dn(Intf *self, const GlobalTensor<
     fixPipeParams.nSize = self->ctx.baseUseN_; // N: cin
     // loop1_src_stride, c0_size, cin1
     fixPipeParams.srcStride = AlignUp16(self->ctx.baseUseM_); // src N stride, loop1_src_stride (unit: 32B)
-#if (__NPU_ARCH__ == 5102)
     fixPipeParams.reluEn = self->ctx.tiling_->enRelu;
+#if (__NPU_ARCH__ == 5102)
     fixPipeParams.preReluMode = static_cast<ReluMode>(self->ctx.tiling_->enRelu);
 #endif
     uint64_t dstOffset = ComputeDstOffset(self, fixPipeParams);
@@ -638,8 +641,8 @@ static __aicore__ inline void LoadL0c2GmForKernelSplitH(Intf *self, const Global
     fixPipeParams.srcStride = AlignUp16(self->ctx.baseUseM_); // src N stride, loop1_src_stride (unit: 32B)
     // loop2_dst_stride, element, c
     fixPipeParams.dstStride = self->ctx.diHiWi_; // dst N stride, loop2_dst_stride (unit: element)
-#if (__NPU_ARCH__ == 5102)
     fixPipeParams.reluEn = self->ctx.tiling_->enRelu;
+#if (__NPU_ARCH__ == 5102)
     fixPipeParams.preReluMode = static_cast<ReluMode>(self->ctx.tiling_->enRelu);
 #endif
     int64_t srcOffset = 0;

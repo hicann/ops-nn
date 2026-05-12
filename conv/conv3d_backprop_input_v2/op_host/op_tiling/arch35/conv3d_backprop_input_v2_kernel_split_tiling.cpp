@@ -423,6 +423,11 @@ bool Conv3DDXV2KernelSplitTiling::CheckKernelSplitEnable()
         return false;
     }
 
+    // kernel拆分不支持offsetX
+    if (runInfo_.offsetX != 0) {
+        return false;
+    }
+
     constexpr uint32_t bestBaseMN = 256;
 
     if (TryKernelSplitHW(bestBaseMN)) {

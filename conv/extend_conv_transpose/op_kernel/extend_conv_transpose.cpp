@@ -51,7 +51,7 @@ __global__ __aicore__ void extend_conv_transpose(GM_ADDR input_size, GM_ADDR x, 
 
 #if (__NPU_ARCH__ == 5102)
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIC_ONLY);
-#elif (__NPU_ARCH__ == 3510)
+#else
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIC_1_2);
 #endif
 
@@ -62,10 +62,19 @@ __global__ __aicore__ void extend_conv_transpose(GM_ADDR input_size, GM_ADDR x, 
         opInitOutput.Destroy();
     }
 
+#if (__NPU_ARCH__ == 5102)
     if (tilingData.conv3DDxTiling.enableVecTrans) {
         // VecTranspose
         EXTEND_CONV_TRANSPOSE_RUN_OP_VECTRANSPOSE(DxVecTranspose::Conv3dDxVecTranspose<DTYPE_FILTER>);
     }
+#else
+    if ASCEND_IS_AIV {
+        if (tilingData.conv3DDxTiling.enableVecTrans) {
+            // VecTranspose
+            EXTEND_CONV_TRANSPOSE_RUN_OP_VECTRANSPOSE(DxVecTranspose::Conv3dDxVecTranspose<DTYPE_FILTER>);
+        }
+    }
+#endif
 
     if constexpr (kernelSplitMode != TPL_NO_SPLIT_KERNEL) {
         EXTEND_CONV_TRANSPOSE_RUN_OP(Conv3dDxKsBlock<DTYPE_FILTER, FORMAT_FILTER, DTYPE_X, FORMAT_X, DTYPE_Y, FORMAT_Y,

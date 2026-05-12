@@ -474,8 +474,8 @@ static __aicore__ inline void LoadL0c2OutForKernelSplitHW(Intf *self, const Loca
     SetFixPipeQuantVal<Intf>(self, fixPipeParams);
     fixPipeParams.params.srcNzC0Stride = 1; // src M stride, loop0_src_stride (unit: 32B)
     fixPipeParams.nSize = self->ctx.baseUseN_; // N: cin
-#if (__NPU_ARCH__ == 5102)
     fixPipeParams.reluEn = self->ctx.tiling_->enRelu;
+#if (__NPU_ARCH__ == 5102)
     fixPipeParams.preReluMode = static_cast<ReluMode>(self->ctx.tiling_->enRelu);
 #endif
     // loop1_src_stride, c0_size, cin1

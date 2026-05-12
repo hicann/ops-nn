@@ -180,6 +180,11 @@ static bool IsArchAfter35(const gert::TilingContext *context) {
             NpuArch::DAV_3510;
 }
 
+static bool IsSupportedDtypeForOutputPadding(const ge::DataType dtype) {
+    return dtype == ge::DT_BF16 || dtype == ge::DT_FLOAT16 ||
+           dtype == ge::DT_FLOAT || dtype == ge::DT_INT8;
+}
+
 bool ValidateConvBackpropContext(const gert::TilingContext *context) {
     // 校验输入张量描述是否获取成功
     auto input_size_desc = context->GetInputDesc(INPUT_SIZE_INDEX);
@@ -421,7 +426,9 @@ bool CheckTransposeAttr(gert::TilingContext *context, OtherParams& otherParams) 
     if (attrs->GetAttrNum() > K_OFFSET_X_CONV3D_TRANSPOSE_IDX) {
       const auto offsetX = attrs->GetAttrPointer<int64_t>(K_OFFSET_X_CONV3D_TRANSPOSE_IDX);
       OP_CHECK_IF(offsetX == nullptr, OP_LOGE(context, "failed to get offsetX attrs"), return false);
-      OP_CHECK_IF(*offsetX != 0, OP_LOGE(context, "offsetX:%ld is invalid, it should be 0", *offsetX), return false);
+      if (!IsArchAfter35(context) && !IsSocVersionFuse(context)) {
+        OP_CHECK_IF(*offsetX != 0, OP_LOGE(context, "offsetX:%ld is invalid, it should be 0", *offsetX), return false);
+      }
     }
     if (IsSocVersionFuse(context)) {
       if (attrs->GetAttrNum() > K_FUSION_MODE_CONV3D_TRANSPOSE_IDX) {
@@ -527,7 +534,7 @@ static bool UpdateDtypeParams(const gert::TilingContext *context, Conv3dBpInputV
       otherParams.b_dtype == ge::DT_FLOAT8_E4M3FN &&
       otherParams.c_dtype == ge::DT_FLOAT8_E4M3FN;
     bool isInt8Flag = otherParams.a_dtype == ge::DT_INT8 &&
-      otherParams.b_dtype == ge::DT_INT8 && otherParams.c_dtype == ge::DT_FLOAT16;
+      otherParams.b_dtype == ge::DT_INT8 && (otherParams.c_dtype == ge::DT_FLOAT16 || otherParams.c_dtype == ge::DT_INT8);
     dtypeSupportFlag = isHiF8Flag || isFp8E4M3Flag || isFp16Flag || isFp32Flag || isInt8Flag;
     dtypeCheckLog = "hifloat8, float8_e4m3, int8, fp16 and fp32";
   }
@@ -1868,14 +1875,10 @@ bool CheckTranspose(const char* opName, const gert::TilingContext* context) {
             outputPaddingValue.push_back(outputPaddingData[index]);
         }
         OP_CHECK_IF((!outputPaddingAllzero) &&
-                ((context->GetInputDesc(FILTER_INDEX)->GetDataType() != ge::DT_BF16 &&
-                context->GetInputDesc(FILTER_INDEX)->GetDataType() != ge::DT_FLOAT16 &&
-                context->GetInputDesc(FILTER_INDEX)->GetDataType() != ge::DT_FLOAT) ||
-                (context->GetInputDesc(OUT_BACKPROP_INDEX)->GetDataType() != ge::DT_BF16 &&
-                context->GetInputDesc(OUT_BACKPROP_INDEX)->GetDataType() != ge::DT_FLOAT16 &&
-                context->GetInputDesc(OUT_BACKPROP_INDEX)->GetDataType() != ge::DT_FLOAT)),
+                (!IsSupportedDtypeForOutputPadding(context->GetInputDesc(FILTER_INDEX)->GetDataType()) ||
+                 !IsSupportedDtypeForOutputPadding(context->GetInputDesc(OUT_BACKPROP_INDEX)->GetDataType())),
                 CUBE_INNER_ERR_REPORT(opName,
-                "when output_padding[%s] is not all zero, op only supports bfloat16, float16 and float32 for all inputs, get filter dtype[%s], output backprop dtype[%s]",
+                "when output_padding[%s] is not all zero, op only supports bfloat16, float16, float32 and int8 for all inputs, get filter dtype[%s], output backprop dtype[%s]",
                 DebugString(outputPaddingValue).c_str(),
                 ge::TypeUtils::DataTypeToSerialString(context->GetInputDesc(FILTER_INDEX)->GetDataType()).c_str(),
                 ge::TypeUtils::DataTypeToSerialString(context->GetInputDesc(OUT_BACKPROP_INDEX)->GetDataType()).c_str()),
@@ -1885,9 +1888,9 @@ bool CheckTranspose(const char* opName, const gert::TilingContext* context) {
                 "output_padding[%s] contains negative values, op only supports all non-negative inputs.",
                 DebugString(outputPaddingValue).c_str()), return false);
     }
-    OP_CHECK_IF(offsetX != nullptr && *offsetX != 0,
-                OP_LOGE(opName, "cannot support offset_x attribute parameters"), return false);
     if (!IsSocVersionFuse(context) && !IsArchAfter35(context)) {
+        OP_CHECK_IF(offsetX != nullptr && *offsetX != 0,
+                  OP_LOGE(opName, "cannot support offset_x attribute parameters"), return false);
         OP_CHECK_IF(offsetWShape != nullptr && offsetWShape->GetStorageShape().GetShapeSize() != 0,
                 OP_LOGE(opName,"cannot support offset_w input parameters"), return false);
         auto biasShape = context->GetOptionalInputShape(BAIS_INDEX);

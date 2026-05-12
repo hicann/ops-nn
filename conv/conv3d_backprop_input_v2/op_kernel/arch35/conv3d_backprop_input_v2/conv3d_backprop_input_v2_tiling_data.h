@@ -88,6 +88,7 @@ struct TConv3DInputV2Tiling {
     uint64_t kValueSegment = 0;
     bool enableSplitK = false;
     bool useUbAccumForSplitK = false;
+    int8_t offsetX = 0;
 };
 
 struct Conv3DBackpropInputV2Params {

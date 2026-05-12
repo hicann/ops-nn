@@ -214,6 +214,9 @@ ge::graphStatus Conv3DBackpropInputV2TilingArch35::DoOpTiling()
         }
     }
 
+    const auto offset = context_->GetAttrs()->GetAttrPointer<int64_t>(OFFSET_X_INDEX);
+ 	runInfo_.offsetX = (offset != nullptr) ? static_cast<int8_t>(*offset) : 0;
+
     blockSize_ = BYTE_BLOCK / runInfo_.b_dtype_bytes;
     dtypeByteL0a_ = runInfo_.a_dtype_bytes;
     dtypeByteL0b_ = runInfo_.b_dtype_bytes;
@@ -379,7 +382,7 @@ DtypeFlags Conv3DBackpropInputV2TilingArch35::ComputeDtypeFlags(const ge::DataTy
     flags.bf16flag = outputBackpropDtype == ge::DT_BF16 && filterDtype == ge::DT_BF16 && yDtype == ge::DT_BF16;
     flags.f16flag = outputBackpropDtype == ge::DT_FLOAT16 && filterDtype == ge::DT_FLOAT16 && yDtype == ge::DT_FLOAT16;
     flags.f32flag = outputBackpropDtype == ge::DT_FLOAT && filterDtype == ge::DT_FLOAT && yDtype == ge::DT_FLOAT;
-    flags.int8flag = outputBackpropDtype == ge::DT_INT8 && filterDtype == ge::DT_INT8 && yDtype == ge::DT_FLOAT16;
+    flags.int8flag = outputBackpropDtype == ge::DT_INT8 && filterDtype == ge::DT_INT8 && (yDtype == ge::DT_FLOAT16 || yDtype == ge::DT_INT8);
     return flags;
 }
 
@@ -1047,6 +1050,7 @@ void Conv3DBackpropInputV2TilingArch35::SetRunInfoTiling(conv_bp_v2_kernel::TCon
     dxt.singleIterateDk = singleIterateDk_;
     dxt.enRelu = runInfo_.enRelu;
     dxt.quantMode = runInfo_.quantMode;
+    dxt.offsetX = runInfo_.offsetX;
 }
 
 void Conv3DBackpropInputV2TilingArch35::SetDxTilingFromTbeTiling()
