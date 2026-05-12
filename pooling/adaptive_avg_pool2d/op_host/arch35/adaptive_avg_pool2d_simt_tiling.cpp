@@ -80,7 +80,7 @@ ge::graphStatus AdaptiveAvgPool2DTilingSimt::DoOpTiling()
 uint64_t AdaptiveAvgPool2DTilingSimt::GetTilingKey() const
 {
     uint64_t divMode = static_cast<uint64_t>(maxDivUseNum_) < MAX_INT32 ? TPL_INT32_UINT32 : TPL_INT64_UINT64;
-    return GET_TPL_TILING_KEY(TPL_SIMT_KERNEL, divMode, TPL_NC_FACTOR_64);
+    return GET_TPL_TILING_KEY(TPL_SIMT_KERNEL, divMode, TPL_NC_FACTOR_64, TPL_BIG_KERNEL_NDDMA);
 }
 
 ge::graphStatus AdaptiveAvgPool2DTilingSimt::PostTiling()

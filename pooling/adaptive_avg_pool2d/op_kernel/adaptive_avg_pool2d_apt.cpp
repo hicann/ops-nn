@@ -19,7 +19,8 @@
 #include "arch35/adaptive_avg_pool2d_struct.h"
 
 using namespace AdaptiveAvgPool2dOp;
-template <uint64_t TEMPLATE_MODE = TPL_SIMT_KERNEL, uint64_t DTYPE_MODE = TPL_INT32_UINT32, uint64_t NC_FACTOR>
+template <uint64_t TEMPLATE_MODE = TPL_SIMT_KERNEL, uint64_t DTYPE_MODE = TPL_INT32_UINT32, uint64_t NC_FACTOR,
+    uint64_t BIG_KERNEL_COPY_MODE = TPL_BIG_KERNEL_NDDMA>
 __global__ __aicore__ void adaptive_avg_pool2d(
     GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
@@ -55,7 +56,7 @@ __global__ __aicore__ void adaptive_avg_pool2d(
         }
     } else if constexpr (TEMPLATE_MODE == TPL_BIG_KERNEL) {
         GET_TILING_DATA_WITH_STRUCT(AdaptivePool2dBigKernelTilingData, tilingData, tiling);
-        AdaptiveAvgPool2dBigKernel<DTYPE_X> op(tilingData, pipe);
+        AdaptiveAvgPool2dBigKernel<DTYPE_X, BIG_KERNEL_COPY_MODE> op(tilingData, pipe);
         op.Init(x, y);
         op.Process();
     }

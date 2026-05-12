@@ -75,7 +75,7 @@ __aicore__ inline void LoadXLocalToReg(const __local_mem__ void* srcAddr, MicroA
     }
 }
 
-template <typename T>
+template <typename T, uint64_t COPY_MODE>
 __aicore__ inline void PadZeroToLocalMem(const __local_mem__ void* dstAddr, uint32_t padNum, uint32_t offset, T padValue)
 {
     MicroAPI::RegTensor<T> vReg; 
@@ -102,7 +102,7 @@ __aicore__ inline void UpdateSum(MicroAPI::RegTensor<U>& res, const __local_mem_
     MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_LOAD, MicroAPI::MemType::VEC_STORE>();
 }
 
-template <typename T>
+template <typename T, uint64_t COPY_MODE>
 class AdaptiveAvgPool2dBigKernel : public AdaptivePool2dBigKernel<T>
 {
 public:
@@ -124,14 +124,16 @@ private:
     __aicore__ inline void ComputeSum(LocalTensor<T> xLocal, int64_t localCurIdx, int64_t dataCount);
     template <typename U>
     __aicore__ inline void ComputeAvg(LocalTensor<U> storeAddLocal, int64_t curIdx);
+    __aicore__ inline int64_t GetCalW();
+    __aicore__ inline int64_t GetCalHW();
 
 protected:
     TBuf<QuePosition::VECCALC> storeAddUB_;
 };
 
-template <typename T>
+template <typename T, uint64_t COPY_MODE>
 template <typename U>
-__aicore__ inline void AdaptiveAvgPool2dBigKernel<T>::InitStoreOutBuffer()
+__aicore__ inline void AdaptiveAvgPool2dBigKernel<T, COPY_MODE>::InitStoreOutBuffer()
 {
     LocalTensor<U> avgStoreOutLocal = this->storeAddUB_.template Get<U>();
     __local_mem__ U* avgStoreOutAddr = (__local_mem__ U*)avgStoreOutLocal.GetPhyAddr();
@@ -152,8 +154,8 @@ __aicore__ inline void AdaptiveAvgPool2dBigKernel<T>::InitStoreOutBuffer()
     }
 }
 
-template <typename T>
-__aicore__ inline void AdaptiveAvgPool2dBigKernel<T>::InitOutputBuffer()
+template <typename T, uint64_t COPY_MODE>
+__aicore__ inline void AdaptiveAvgPool2dBigKernel<T, COPY_MODE>::InitOutputBuffer()
 {
     event_t eventIdMTE3toV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
     SetFlag<HardEvent::MTE3_V>(eventIdMTE3toV);
@@ -177,9 +179,9 @@ __aicore__ inline void AdaptiveAvgPool2dBigKernel<T>::InitOutputBuffer()
     }
 }
 
-template<typename T>
+template<typename T, uint64_t COPY_MODE>
 template<typename U>
-__aicore__ inline void AdaptiveAvgPool2dBigKernel<T>::ComputeAvg(LocalTensor<U> storeAddLocal, int64_t curIdx)
+__aicore__ inline void AdaptiveAvgPool2dBigKernel<T, COPY_MODE>::ComputeAvg(LocalTensor<U> storeAddLocal, int64_t curIdx)
 {
     LocalTensor<T> outputLocal = this->outputUB_.template Get<T>();
     __local_mem__ U* storeLocalAddr = (__local_mem__ U*)storeAddLocal.GetPhyAddr();
@@ -200,9 +202,9 @@ __aicore__ inline void AdaptiveAvgPool2dBigKernel<T>::ComputeAvg(LocalTensor<U> 
     }
 }
 
-template <typename T>
+template <typename T, uint64_t COPY_MODE>
 template <int32_t SPLIT_MODE, typename U>
-__aicore__ inline void AdaptiveAvgPool2dBigKernel<T>::ComputeSum(
+__aicore__ inline void AdaptiveAvgPool2dBigKernel<T, COPY_MODE>::ComputeSum(
     LocalTensor<T> xLocal, int64_t localCurIdx, int64_t dataCount)
 {
     LocalTensor<U> storeAddLocal = this->storeAddUB_.template Get<U>();
@@ -234,25 +236,49 @@ __aicore__ inline void AdaptiveAvgPool2dBigKernel<T>::ComputeSum(
     }
 }
 
-template <typename T>
-__aicore__ inline void AdaptiveAvgPool2dBigKernel<T>::ComputeSplitH(int64_t curIdx)
+template <typename T, uint64_t COPY_MODE>
+__aicore__ inline int64_t AdaptiveAvgPool2dBigKernel<T, COPY_MODE>::GetCalW()
 {
-    int64_t hFactor = this->tilingData_.maxCount / this->curkW_;
+    if constexpr (COPY_MODE == TPL_BIG_KERNEL_NDDMA) {
+        return this->curkW_;
+    } else {
+        return this->alignW_;
+    }
+}
+
+template <typename T, uint64_t COPY_MODE>
+__aicore__ inline int64_t AdaptiveAvgPool2dBigKernel<T, COPY_MODE>::GetCalHW()
+{
+    if constexpr (COPY_MODE == TPL_BIG_KERNEL_NDDMA) {
+        return this->curkHW_;
+    } else {
+        return this->alignHW_;
+    }
+}
+
+template <typename T, uint64_t COPY_MODE>
+__aicore__ inline void AdaptiveAvgPool2dBigKernel<T, COPY_MODE>::ComputeSplitH(int64_t curIdx)
+{
+    int64_t hFactor = this->tilingData_.maxCount / GetCalW();
     int64_t hLoops = ops::CeilDiv(this->curkH_, hFactor);
     int64_t hTail = this->curkH_ - (hLoops - DIGHT1) * hFactor;
     int64_t inputOffset = this->curInOffset_;
     for (int64_t hLoop = 0; hLoop < hLoops; hLoop++) {
         int64_t curHFactor = hLoop == (hLoops - 1) ? hTail : hFactor;
-        AdaptivePool2dBigKernel<T>::CopyIn(inputOffset, this->curkW_, curHFactor);
+        if constexpr (COPY_MODE == TPL_BIG_KERNEL_NDDMA) {
+            AdaptivePool2dBigKernel<T>::UnAlignCopyIn(inputOffset, this->curkW_, curHFactor);
+        } else {
+            AdaptivePool2dBigKernel<T>::CopyIn(inputOffset, this->curkW_, curHFactor);
+        }
         LocalTensor<T> xLocal = this->inputQue_.template DeQue<T>();
-        ComputeSum<SPLIT_H, float>(xLocal, curIdx, this->curkW_ * curHFactor);
+        ComputeSum<SPLIT_H, float>(xLocal, curIdx, GetCalW() * curHFactor);
         inputOffset += hFactor * this->tilingData_.wInDim;
         this->inputQue_.template FreeTensor<T>(xLocal);
     }
 }
 
-template <typename T>
-__aicore__ inline void AdaptiveAvgPool2dBigKernel<T>::ComputeSplitW(int64_t curIdx)
+template <typename T, uint64_t COPY_MODE>
+__aicore__ inline void AdaptiveAvgPool2dBigKernel<T, COPY_MODE>::ComputeSplitW(int64_t curIdx)
 {
     int64_t wFactor = this->tilingData_.maxCount;
     int64_t wLoops = ops::CeilDiv(this->curkW_, wFactor);
@@ -262,7 +288,11 @@ __aicore__ inline void AdaptiveAvgPool2dBigKernel<T>::ComputeSplitW(int64_t curI
         int64_t inputOffset = dOffset + hLoop * this->tilingData_.wInDim;
         for (int64_t wLoop = 0; wLoop < wLoops; wLoop++) {
             int64_t curWFactor = wLoop == (wLoops - 1) ? wTail : wFactor;
-            AdaptivePool2dBigKernel<T>::CopyIn(inputOffset, curWFactor, DIGHT1);
+            if constexpr (COPY_MODE == TPL_BIG_KERNEL_NDDMA) {
+                AdaptivePool2dBigKernel<T>::UnAlignCopyIn(inputOffset, curWFactor, DIGHT1);
+            } else {
+                AdaptivePool2dBigKernel<T>::CopyIn(inputOffset, curWFactor, DIGHT1);
+            }
             LocalTensor<T> xLocal = this->inputQue_.template DeQue<T>();
             ComputeSum<SPLIT_W, float>(xLocal, curIdx, curWFactor);
             inputOffset += curWFactor;
@@ -271,31 +301,35 @@ __aicore__ inline void AdaptiveAvgPool2dBigKernel<T>::ComputeSplitW(int64_t curI
     }
 }
 
-template <typename T>
-__aicore__ inline void AdaptiveAvgPool2dBigKernel<T>::NoSplitProcess(int64_t curIdx)
+template <typename T, uint64_t COPY_MODE>
+__aicore__ inline void AdaptiveAvgPool2dBigKernel<T, COPY_MODE>::NoSplitProcess(int64_t curIdx)
 {
-    AdaptivePool2dBigKernel<T>::CopyIn(this->curInOffset_, this->curkW_, this->curkH_);
+    if constexpr (COPY_MODE == TPL_BIG_KERNEL_NDDMA) {
+        AdaptivePool2dBigKernel<T>::UnAlignCopyIn(this->curInOffset_, this->curkW_, this->curkH_);
+    } else {
+        AdaptivePool2dBigKernel<T>::CopyIn(this->curInOffset_, this->curkW_, this->curkH_);
+    }
     LocalTensor<T> xLocal = this->inputQue_.template DeQue<T>();
-    ComputeSum<NO_SPLIT, float>(xLocal, curIdx, this->curkHW_);
+    ComputeSum<NO_SPLIT, float>(xLocal, curIdx, GetCalHW());
     this->inputQue_.template FreeTensor<T>(xLocal);
 }
 
-template <typename T>
-__aicore__ inline void AdaptiveAvgPool2dBigKernel<T>::SplitProcess(int64_t curIdx)
+template <typename T, uint64_t COPY_MODE>
+__aicore__ inline void AdaptiveAvgPool2dBigKernel<T, COPY_MODE>::SplitProcess(int64_t curIdx)
 {
     InitStoreOutBuffer<float>();
-    if (this->curkW_ <= this->tilingData_.maxCount) {
+    if (GetCalW() <= this->tilingData_.maxCount) {
         ComputeSplitH(curIdx);
     } else {
         ComputeSplitW(curIdx);
     }
 }
 
-template <typename T>
-__aicore__ inline void AdaptiveAvgPool2dBigKernel<T>::BaseCompute(int64_t curIdx)
+template <typename T, uint64_t COPY_MODE>
+__aicore__ inline void AdaptiveAvgPool2dBigKernel<T, COPY_MODE>::BaseCompute(int64_t curIdx)
 {
     LocalTensor<float> storeAddLocal = this->storeAddUB_.template Get<float>();
-    if (this->curkHW_ <= this->tilingData_.maxCount) {
+    if (GetCalHW() <= this->tilingData_.maxCount) {
         NoSplitProcess(curIdx);
     } else {
         SplitProcess(curIdx);
@@ -303,8 +337,8 @@ __aicore__ inline void AdaptiveAvgPool2dBigKernel<T>::BaseCompute(int64_t curIdx
     ComputeAvg<float>(storeAddLocal, curIdx);
 }
 
-template <typename T>
-__aicore__ inline void AdaptiveAvgPool2dBigKernel<T>::Init(GM_ADDR x, GM_ADDR y)
+template <typename T, uint64_t COPY_MODE>
+__aicore__ inline void AdaptiveAvgPool2dBigKernel<T, COPY_MODE>::Init(GM_ADDR x, GM_ADDR y)
 {
     // AdaptivePool2dBigKernel init
     AdaptivePool2dBigKernel<T>::Init(x, y);
@@ -315,8 +349,8 @@ __aicore__ inline void AdaptiveAvgPool2dBigKernel<T>::Init(GM_ADDR x, GM_ADDR y)
     }
 }
 
-template <typename T>
-__aicore__ inline void AdaptiveAvgPool2dBigKernel<T>::Process()
+template <typename T, uint64_t COPY_MODE>
+__aicore__ inline void AdaptiveAvgPool2dBigKernel<T, COPY_MODE>::Process()
 {
     int64_t beginIdx = 0;
     int64_t endIdx = 0;

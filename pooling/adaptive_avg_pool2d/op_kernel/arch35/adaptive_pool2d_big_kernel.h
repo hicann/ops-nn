@@ -45,6 +45,7 @@ constexpr uint32_t MIN_FLOAT32 = 0xFF800000; // float32's -inf
 constexpr uint16_t MIN_FLOAT16 = 0xFC00;     // float16(half)'s -inf
 constexpr uint16_t MIN_BFLOAT16 = 0xFF80;    // bfloat16's -inf
 constexpr int32_t HALF_OVERFLOW_MODE_CTRL = 48;
+constexpr int32_t DATABLOCK = 32;
 
 constexpr MicroAPI::CastTrait CASTB4TOB2 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::NO_SAT,
                                                   MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
@@ -60,6 +61,7 @@ public:
     __aicore__ inline AdaptivePool2dBigKernel(const AdaptivePool2dBigKernelTilingData &tilingData, TPipe &pipe) :
         tilingData_(tilingData), pipe_(pipe) {};
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR y);
+    __aicore__ inline void UnAlignCopyIn(int64_t offset, int64_t blockLen, int64_t blockCount);
     __aicore__ inline void CopyIn(int64_t offset, int64_t blockLen, int64_t blockCount);
     __aicore__ inline void CalcWindowSize(int64_t curIdx);
     __aicore__ inline void CopyOut(int64_t copyCount, int64_t offset);
@@ -93,6 +95,9 @@ protected:
     int64_t curkHW_ = 1;
     int64_t curInOffset_ = 0;
 
+    int64_t alignW_ = 0;
+    int64_t alignHW_ = 0;
+
     T minValue_ = 0;
 };
 
@@ -119,6 +124,24 @@ __aicore__ inline void AdaptivePool2dBigKernel<T>::CopyIn(
     int64_t offset, int64_t blockLen, int64_t blockCount)
 {
     LocalTensor<T> xLocal = inputQue_.AllocTensor<T>();
+    DataCopyExtParams copyParamsWs;
+    copyParamsWs.blockCount = blockCount;
+    copyParamsWs.blockLen = blockLen * sizeof(T);
+    copyParamsWs.srcStride = (tilingData_.wInDim - blockLen) * sizeof(T);
+    copyParamsWs.dstStride = 0;
+
+    uint32_t rightPadLen = ops::CeilAlign(static_cast<uint32_t>(blockLen), 
+                            static_cast<uint32_t>(DATABLOCK / sizeof(T))) - blockLen;
+    DataCopyPadExtParams<T> padWs{true, 0, static_cast<uint8_t>(rightPadLen), static_cast<T>(0)};
+    DataCopyPad(xLocal, xGm_[offset], copyParamsWs, padWs);
+    inputQue_.EnQue(xLocal);
+}
+
+template <typename T>
+__aicore__ inline void AdaptivePool2dBigKernel<T>::UnAlignCopyIn(
+    int64_t offset, int64_t blockLen, int64_t blockCount)
+{
+    LocalTensor<T> xLocal = inputQue_.AllocTensor<T>();
     // NDDMA loopInfo init
     MultiCopyLoopInfo<DIM3> loopInfo;
     loopInfo.loopSize[DIM0] = blockLen;
@@ -138,7 +161,6 @@ __aicore__ inline void AdaptivePool2dBigKernel<T>::CopyIn(
     DataCopy<T, DIM3, mulConfig>(xLocal, xGm_[offset], paramsMain);
     inputQue_.EnQue(xLocal);
 }
-
 
 template <typename T>
 __aicore__ inline void AdaptivePool2dBigKernel<T>::CopyOut(int64_t copyCount, int64_t offset)
@@ -191,6 +213,8 @@ __aicore__ inline void AdaptivePool2dBigKernel<T>::CalcWindowSize(int64_t curOut
 
     curkH_ = CalEndIdx(curHo, tilingData_.hInDim, tilingData_.hOutDim) - curOriginH;
     curkW_ = CalEndIdx(curWo, tilingData_.wInDim, tilingData_.wOutDim) - curOriginW;
+    alignW_ = ops::CeilAlign(curkW_, static_cast<int64_t>(DATABLOCK / sizeof(T)));
+    alignHW_ = curkH_ * alignW_;
     curkHW_ = curkH_ * curkW_;
 
     // calc output idx offset on current nc

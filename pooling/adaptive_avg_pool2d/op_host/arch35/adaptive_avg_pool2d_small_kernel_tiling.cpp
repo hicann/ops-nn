@@ -304,7 +304,7 @@ uint64_t AdaptiveAvgPool2dSmallKernelTiling::GetTilingKey() const
     uint64_t idxTypeMode = static_cast<uint64_t>(maxIdxValue) < INT32_MAX_VALUE ? TPL_INT32_UINT32 : TPL_INT64_UINT64;
     uint64_t ncFactor = computeInfo_.ncFactor == Ops::Base::GetVRegSize(context_) / sizeof(float) ? TPL_NC_FACTOR_64 :
                                                                                                     TPL_NC_FACTOR_128;
-    return GET_TPL_TILING_KEY(TPL_SMALL_KERNEL, idxTypeMode, ncFactor);
+    return GET_TPL_TILING_KEY(TPL_SMALL_KERNEL, idxTypeMode, ncFactor, TPL_BIG_KERNEL_NDDMA);
 }
 
 ge::graphStatus AdaptiveAvgPool2dSmallKernelTiling::PostTiling()

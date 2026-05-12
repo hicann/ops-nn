@@ -35,7 +35,7 @@ struct AdaptiveAvgPool2dBigKernelInfo {
     int64_t totalIdx {0};
     int64_t coreNums {0};
     int64_t maxCount {0};
-    int64_t kernelMaxHW {0};
+    int64_t kernelMinHW {0};
     int64_t batchCount {1};
 };
 
@@ -53,8 +53,11 @@ private:
     ge::graphStatus DoOpTiling() override;
     ge::graphStatus PostTiling() override;
     uint64_t GetTilingKey() const override;
-    
+    uint64_t CalKernelSizeOneDimMin(uint64_t inSize, uint64_t outSize);
+
     AdaptiveAvgPool2dBigKernelInfo avgBigKernelInfo;
+    uint64_t kernelHMin_{0};
+    uint64_t kernelWMin_{0};
 };
 } // namespace optiling
 #endif
