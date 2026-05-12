@@ -12,22 +12,29 @@
 __input__ = {
         "kernel": {
             "weight_quant_batch_matmul_v2": "weight_quant_batch_matmul_v2_inputs"
+        },
+        "e2e": {
+            "torch_npu.npu_weight_quant_batchmatmul": "torch_weight_quant_batch_matmul_v2_inputs"
         }
 }
 
-import numpy as np
 import math
 import struct
+import torch
+import torch_npu
+import numpy as np
+from ml_dtypes import bfloat16
 
-def weight_quant_batch_matmul_v2_inputs(x1, weight, antiquant_scale, antiquant_offset = None, quant_scale =None, 
-                                        quant_offset = None, bias =None, transpose_x: bool = False, 
+
+def weight_quant_batch_matmul_v2_inputs(x1, weight, antiquant_scale, antiquant_offset=None, quant_scale=None,
+                                        quant_offset=None, bias=None, transpose_x: bool = False,
                                         transpose_weight: bool = False, antiquant_group_size: int = 0,
-                                        dtype: int = -1, inner_precise: int = 0,  **kwargs):
+                                        dtype: int = -1, inner_precise: int = 0, **kwargs):
     output_dtypes = kwargs['output_dtypes']
     input_ranges = kwargs['input_ranges']
     testcase_name = kwargs['testcase_name']
     if antiquant_offset is not None:
-        antiquant_offset = change_antiquant_dtype(antiquant_offset, x1.dtype, input_ranges[3])       # antiquant_offset 存在时修正数值范围
+        antiquant_offset = change_antiquant_dtype(antiquant_offset, x1.dtype, input_ranges[3])  # antiquant_offset 存在时修正数值范围
 
     if antiquant_scale.dtype.name == "uint64":
         antiquant_scale = weight_quant_bmmv2_uint64_antiquant_scale_generate(antiquant_scale, input_ranges, testcase_name)
@@ -36,7 +43,8 @@ def weight_quant_batch_matmul_v2_inputs(x1, weight, antiquant_scale, antiquant_o
         quant_scale = weight_quant_bmmv2_uint64_quant_scale_generate(quant_scale.shape, testcase_name)
 
     return x1, weight, antiquant_scale, antiquant_offset, quant_scale, quant_offset, bias
-    
+
+
  # 伪量化算子量化参数dtype虽然是浮点,data_range要求是整型[-128,127]
 def change_antiquant_dtype(antiquant_offset, x_dtype, input_data_range):
     input_range_left, input_range_right = input_data_range[0], input_data_range[1]
@@ -44,7 +52,7 @@ def change_antiquant_dtype(antiquant_offset, x_dtype, input_data_range):
     input_range_right = math.ceil(input_range_right)
     if input_range_right > 127:
         input_range_right = 127
-    elif input_range_left < -128: 
+    elif input_range_left < -128:
         input_range_left = -128
     if input_range_left == input_range_right:
         if x_dtype.name in ('float16', 'bfloat16'):
@@ -54,7 +62,8 @@ def change_antiquant_dtype(antiquant_offset, x_dtype, input_data_range):
             antiquant_offset = np.random.randint(input_range_left, input_range_right,
                                                  size=antiquant_offset.shape).astype(x_dtype)
     return antiquant_offset
-    
+
+
 def weight_quant_bmmv2_uint64_quant_scale_generate(scale_shape, testcase_name):
     fp32_scale = np.random.uniform(low=-5, high=5, size=scale_shape).astype(np.float32)
     fp32_quant_offset = np.random.uniform(low=-5, high=5, size=scale_shape).astype(np.float32)
@@ -65,6 +74,7 @@ def weight_quant_bmmv2_uint64_quant_scale_generate(scale_shape, testcase_name):
         quant_pre.append(get_quant_pre(fp32_scale.flatten()[idx], fp32_quant_offset.flatten()[idx]))
     quant_pre = np.array(quant_pre, dtype=np.uint64).reshape(scale_shape)
     return quant_pre
+
 
 def get_quant_pre(scale, offset):
     # convert float32 to uint32
@@ -100,6 +110,7 @@ def weight_quant_bmmv2_uint64_antiquant_scale_generate(antiquant_scale, input_da
     quant_pre = np.array(quant_pre, dtype=np.uint64).reshape(scale_shape)
     return quant_pre
 
+
 def process_quant_inf_nan(input_range_left, input_range_right, low, high):
     if ("-inf" in str(input_range_left)):
         input_range_left = low
@@ -120,3 +131,42 @@ def process_quant_inf_nan(input_range_left, input_range_right, low, high):
         input_range_right = input_range_right
 
     return input_range_left, input_range_right
+
+
+def torch_weight_quant_batch_matmul_v2_inputs(x, weight, antiquant_scale, antiquant_offset=None, quant_scale=None,
+                                              quant_offset=None, bias=None, antiquant_group_size:int = 0,
+                                              inner_precise: int = 0, weight_dtype:int = None, **kwargs):
+    x_dtype = x.dtype
+    weight_format = kwargs["tensor_formats"][1]
+    w_dtype = weight.dtype
+
+    if antiquant_offset is not None and w_dtype in [torch.int8, torch.int4, torch.int32]:
+        antiquant_offset[:] = torch_change_antiquant_dtype(antiquant_offset, w_dtype)
+        if x_dtype in [torch.float16]:
+            antiquant_offset = antiquant_offset.to(torch.float16)
+        else:
+            antiquant_offset = antiquant_offset.to(torch.bfloat16)
+
+    customize_dtype = None
+    if x_dtype in [torch.float16]:
+        customize_dtype = torch.float16
+    elif x_dtype in [torch.bfloat16]:
+        customize_dtype = torch.bfloat16
+    if (w_dtype == torch.int32 or w_dtype == "fp4_e2m1_as_fp32") and (weight_format in ["FRACTAL_NZ", "NZ"]):
+        weight = torch.from_numpy(weight).contiguous()
+        weight = torch_npu.npu_format_cast(weight.npu(), 29, customize_dtype)  # weightNZ格式
+        weight = torch_npu.npu_convert_weight_to_int4pack(weight)
+    elif (w_dtype == torch.int32 or w_dtype == "fp4_e2m1_as_fp32") and (weight_format in ["ND"]):
+        weight = torch.from_numpy(weight)
+        weight = torch_npu.npu_convert_weight_to_int4pack(weight.npu())
+
+
+# 伪量化算子量化参数 dtype为浮点， 但data_range 要求整型
+def torch_change_antiquant_dtype(antiquant_offset, w_dtype):
+    antiquant_offset_dtype = antiquant_offset.dtype
+    if w_dtype in [torch.int8]:
+        input_range_left, input_range_right = -128, 127
+    else:
+        input_range_left, input_range_right = -8, 7
+    antiquant_offset = torch.randint(input_range_left, input_range_right, size=antiquant_offset.shape, dtype=antiquant_offset_dtype)
+    return antiquant_offset

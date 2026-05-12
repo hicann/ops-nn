@@ -12,16 +12,21 @@
 __golden__ = {
         "kernel": {
             "weight_quant_batch_matmul_v2": "weight_quant_batch_matmul_v2_golden"
+        },
+        "e2e": {
+            "torch_npu.npu_weight_quant_batchmatmul": "torch_weight_quant_batch_matmul_v2_golden"
         }
 }
 
-import torch
 import copy
 import os
+import torch
 import numpy as np
+import tensorflow as tf
 
-def weight_quant_batch_matmul_v2_golden(x1, weight, antiquant_scale, antiquant_offset = None, quant_scale =None, 
-                                        quant_offset = None, bias =None, transpose_x: bool = False, 
+# kernel直调golden
+def weight_quant_batch_matmul_v2_golden(x1, weight, antiquant_scale, antiquant_offset = None, quant_scale =None,
+                                        quant_offset = None, bias =None, transpose_x: bool = False,
                                         transpose_weight: bool = False, antiquant_group_size: int = 0,
                                         dtype: int = -1, inner_precise: int = 0,  **kwargs):
 
@@ -88,7 +93,7 @@ def weight_quant_batch_matmul_v2_golden(x1, weight, antiquant_scale, antiquant_o
     if (("Ascend910B" in soc_ver) or ("Ascend910_93" in soc_ver)) and (trans_a is False) and (m <= 96) and ((weight_dtype == "int8") or (weight_dtype == "int4")) and (output_dtypes[0] != "int8") and (antiquant_scale.dtype.name != "uint64"):
         # 910B MSD-group性能优化场景(额外加限制 M<= groupsize/8, weight矩阵不转置)
 
-        is_msd = kwargs['is_msd'] 
+        is_msd = kwargs['is_msd']
         print("msd group 高性能标志开关 inner_precise: ", inner_precise)
 
         if (antiquant_mode == "antiquant_pergroup"):
@@ -517,7 +522,7 @@ def ComputeSplitK(m, n, k, weight_dtype, transB, soc_version):
     aivNum = 48
     if("Ascend910B3" in soc_version) or ("Ascend910B4" in soc_version) or ("Ascend910_93" in soc_version):
         aivNum = 40
-    
+
     kBlockNum = 1
     #n k 差距超过30倍， 需要考虑对k切多份, 该值为经验值
     if k//n >= 30 and (not transB):
@@ -531,7 +536,7 @@ def ComputeSplitK(m, n, k, weight_dtype, transB, soc_version):
             kAlignSize = 512
         else:
             kAlignSize = 1024
-    
+
     for kBlock in range (kBlockNum, 7):
         singleCoreK = np.int32(np.ceil(np.ceil(k/kBlock) / kAlignSize) * kAlignSize)
         #单core容忍的k范围有限， 根据ub切分， 最大支持的规格为12 * 1024
@@ -619,3 +624,149 @@ def CeilAlign(a, b):
 
 def CeilDiv(a, b):
     return (a + b - 1) // b
+
+
+#torch单算子golden
+def torch_weight_quant_batch_matmul_v2_golden(x, weight, antiquant_scale, antiquant_offset=None, quant_scale=None,
+                                              quant_offset=None, bias=None, antiquant_group_size:int = 0,
+                                              inner_precise: int = 0, weight_dtype:int = 0, **kwargs):
+    x = torch_to_numpy(x)
+    weight = torch_to_numpy(weight)
+    antiquant_scale = torch_to_numpy(antiquant_scale)
+    antiquant_offset = torch_to_numpy(antiquant_offset)
+    quant_scale = torch_to_numpy(quant_scale)
+    quant_offset = torch_to_numpy(quant_offset)
+    bias = torch_to_numpy(bias)
+
+    k = x.shape[1]
+    x_dtype = x.dtype
+    w_dtype = weight.dtype
+
+    antiquant_offset_dtype = antiquant_offset.dtype if antiquant_offset is not None else None
+    is_fixpipe = False
+    if antiquant_offset_dtype == "int32":
+        is_fixpipe = True
+
+    k_dim = 0
+    antiquant_mode = judge_antiquant_mode(antiquant_scale, k_dim)  # antiquant模式获取
+    # torch非连续tensor处理, 并转成numpy数据
+    x = tensor_process(x)
+    weight = tensor_process(weight)
+    antiquant_scale = tensor_process(antiquant_scale)
+    custom_splitk_flag = False
+
+    if antiquant_offset is not None:
+        antiquant_offset = tensor_process(antiquant_offset)
+
+    # weight/antiquant_scale dtype处理
+    is_f8_input = w_dtype in ["hifloat8", "float8_e5m2", "float8_e4m3fn"]
+    if (x_dtype in ["bfloat16", "bf16"]):
+        if is_f8_input:
+            weight = weight.astype(np.float32).astype(tf.bfloat16.as_numpy_dtype)
+            antiquant_scale = antiquant_scale.astype(np.float32).astype(tf.bfloat16.as_numpy_dtype)
+        else:
+            weight = weight.astype(np.float32)
+            antiquant_scale = antiquant_scale.astype(np.float32)
+    else:
+        weight = weight.astype(np.float16)
+
+    if (antiquant_mode == "antiquant_pertensor") or (antiquant_mode == "antiquant_perchannel"):
+        if (antiquant_offset is not None):
+            if (x_dtype in ["bfloat16", "bf16"]):
+                antiquant_offset = antiquant_offset.astype(np.float32)
+                if is_f8_input:
+                    antiquant_offset = antiquant_offset.astype(tf.bfloat16.as_numpy_dtype)
+            weight = weight + antiquant_offset
+
+        if is_fixpipe:
+            weight = weight.astype(np.float32)
+            weight = weight * antiquant_scale
+            weight = weight.astype(np.float16) # np的golden在fixpipe模板下先转回FP16
+        else:
+            if custom_splitk_flag:
+                if x_dtype in ["float16", "fp16"]:
+                    weight = weight * antiquant_scale
+            else:
+                weight = weight * antiquant_scale
+        if is_f8_input:
+            weight = weight.astype(x_dtype)
+    else:
+        # pergroup场景下先转numpy处理后再转回torch
+        if (antiquant_offset is not None):
+            if (x_dtype in ["bfloat16", "bf16"]):
+                antiquant_offset = antiquant_offset.astype(np.float32)
+
+        for i in range(k):
+            group_size_dim = i // antiquant_group_size
+            if (antiquant_offset is not None) and (len(antiquant_offset) != 0):
+                weight[i, :] = (weight[i, :]  + antiquant_offset[group_size_dim, :]) * antiquant_scale[group_size_dim, :]
+            else:
+                weight[i, :] = weight[i, :] * antiquant_scale[group_size_dim, :]
+
+    # 如果输入是BF16类型,给matmul前需要把x和weight都截断成BF16
+    if (x_dtype in ["bfloat16", "bf16"]):
+        weight = weight.astype(tf.bfloat16.as_numpy_dtype)
+
+    x = torch.from_numpy(x.astype(np.float32)).to(torch.float32)
+    weight = torch.from_numpy(weight.astype(np.float32)).to(torch.float32)
+
+    out = torch.matmul(x, weight).numpy()
+
+    if custom_splitk_flag and x_dtype in ["bfloat16", "bf16"]:
+        out = out * antiquant_scale
+
+    if bias is not None:
+        bias = tensor_process(bias)
+        out = out + bias.astype(np.float32)
+
+    if (x_dtype in ["bfloat16", "bf16"]):
+        out = out.astype(tf.bfloat16.as_numpy_dtype).astype(np.float32)
+
+    if quant_scale is not None:
+        # 带kv-cache部分
+        quant_scale = quant_scale.numpy()
+        out = np_f32_2_s9(out * quant_scale)
+        if quant_offset is not None:
+            quant_offset = quant_offset.numpy()
+            out = out + np_f32_2_s9(quant_offset)
+        out = np.clip(out, -128, 127)
+        out = out.astype(np.int8)
+        out = torch.from_numpy(out)
+    else:
+        out = torch.from_numpy(out)
+        if (x_dtype in ["bfloat16", "bf16"]):
+            out = out.to(torch.bfloat16)
+        else:
+            out = out.to(torch.float16)
+
+    return out
+
+
+def tensor_process(input_tmp):
+    if input_tmp.dtype == "bfloat16":
+        input_tmp = input_tmp.astype(np.float32)
+        input_tmp = input_tmp.astype(tf.bfloat16.as_numpy_dtype)
+
+    return input_tmp
+
+
+def np_f32_2_s9(array):
+    array_round = np.round(array)
+    array_round_clip = np.clip(array_round, -256, 255)
+    array_round_clip = array_round_clip.astype(np.int16)
+
+    return array_round_clip
+
+
+def torch_to_numpy(x):
+    import ml_dtypes
+    if isinstance(x, torch.Tensor):
+        if x.dtype == torch.float8_e5m2:
+            x = x.to(torch.float32).numpy().astype(ml_dtypes.float8_e5m2)
+        elif x.dtype == torch.float8_e4m3fn:
+            x = x.to(torch.float32).numpy().astype(ml_dtypes.float8_e4m3fn)
+        elif x.dtype == torch.bfloat16:
+            x = x.to(torch.float32).numpy().astype(ml_dtypes.bfloat16)
+        else:
+            x = x.numpy()
+    return x
