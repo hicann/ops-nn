@@ -395,11 +395,11 @@ protected:
         preOffsetBias_ = offsetBias_;
     }
 
-    __aicore__ inline void CalcScaleOffset()
+    __aicore__ inline void CalcScaleOffset(uint32_t groupIdx)
     {
         if constexpr (GetScaleFormat<filterType>(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
             if (tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
-                offsetScale_ = static_cast<uint64_t>(nCoreIdx_) * tiling_->singleCoreCin;
+                offsetScale_ = static_cast<uint64_t>(nCoreIdx_) * tiling_->singleCoreCin + groupIdx * tiling_->cinG;
             } else if (tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::SCALAR_QUANT)) {
                 offsetScale_ = 0;
             }            
@@ -413,7 +413,7 @@ protected:
         CalcGroupBlockOffset(groupIdx);
 
         CalcBiasOffset(groupIdx);
-        CalcScaleOffset();
+        CalcScaleOffset(groupIdx);
     }
 
     __aicore__ inline void CalcBatchOffset()
