@@ -760,7 +760,8 @@ aclnnStatus aclnnQuantMatmulV5(
   - yOffset为预留参数，当前版本不支持，需要传入nullptr或空tensor。
   - bias相关约束：
     - 可选参数，支持传入nullptr。
-    - 当out的shape为2、4、5、6维时，bias的shape支持1维(n,)或2维(1, n)。
+    - 当out的shape为2维时，bias的shape支持1维(n,)或2维(1, n)。
+    - 当out的shape为4、5、6维时，bias的shape支持1维(n,)。
     - 当out的shape为3维时，bias的shape支持1维(n,)或3维(batch, 1, n)。
   - groupSize相关约束：
     - 仅在mx、G-B、B-B、K-G、T-CG[量化模式](../../../docs/zh/context/量化介绍.md)中生效。
