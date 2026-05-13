@@ -30,6 +30,7 @@ const aclTensor* BatchMatMulV3Nd(
 {
     L0_DFX(BatchMatMulV3Nd, x1, x2, bias, offsetW, adjX1, adjX2, offsetX, enableHf32);
     auto bmmOut = executor->AllocTensor(x1->GetDataType(), op::Format::FORMAT_ND, op::Format::FORMAT_ND);
+    OP_CHECK_NULL(bmmOut, return nullptr);
     auto ret = INFER_SHAPE(
         BatchMatMulV3, OP_INPUT(x1, x2, bias, nullptr), OP_OUTPUT(bmmOut), OP_ATTR(adjX1, adjX2, offsetX, enableHf32));
     if (ret != ACLNN_SUCCESS) {
@@ -51,6 +52,7 @@ const aclTensor* BatchMatMulV3NdFp16Bf162Fp32(
 {
     L0_DFX(BatchMatMulV3NdFp16Bf162Fp32, x1, x2, bias, offsetW, adjX1, adjX2, offsetX, enableHf32);
     auto bmmOut = executor->AllocTensor(op::DataType::DT_FLOAT, op::Format::FORMAT_ND, op::Format::FORMAT_ND);
+    OP_CHECK_NULL(bmmOut, return nullptr);
     auto ret = INFER_SHAPE(
         BatchMatMulV3, OP_INPUT(x1, x2, bias, nullptr), OP_OUTPUT(bmmOut), OP_ATTR(adjX1, adjX2, offsetX, enableHf32));
     if (ret != ACLNN_SUCCESS) {
@@ -72,6 +74,7 @@ const aclTensor* BatchMatMulNd(
 {
     L0_DFX(BatchMatMulNd, x1, x2, bias, offsetW, adjX1, adjX2, offsetX);
     auto bmmOut = executor->AllocTensor(x1->GetDataType(), op::Format::FORMAT_ND, op::Format::FORMAT_ND);
+    OP_CHECK_NULL(bmmOut, return nullptr);
     auto ret = INFER_SHAPE(
         BatchMatMulV2, OP_INPUT(x1, x2, bias, nullptr), OP_OUTPUT(bmmOut),
         OP_ATTR(adjX1, adjX2, offsetX, opImplModeEnum, 0L));
@@ -94,6 +97,7 @@ const aclTensor* BatchMatMulNzFp162Fp16(
 {
     L0_DFX(BatchMatMulNzFp162Fp16, x1, x2, bias, offsetW, adjX1, adjX2, offsetX);
     auto bmmOut = executor->AllocTensor(op::DataType::DT_FLOAT16, op::Format::FORMAT_FRACTAL_NZ, op::Format::FORMAT_ND);
+    OP_CHECK_NULL(bmmOut, return nullptr);
     auto ret = INFER_SHAPE(
         BatchMatMulV2, OP_INPUT(x1, x2, bias, nullptr), OP_OUTPUT(bmmOut),
         OP_ATTR(adjX1, adjX2, offsetX, opImplModeEnum, 0L));
@@ -114,6 +118,7 @@ const aclTensor* BatchMatMulNdFp162Fp32(
 {
     L0_DFX(BatchMatMulNdFp162Fp32, x1, x2, bias, offsetW, adjX1, adjX2, offsetX);
     auto bmmOut = executor->AllocTensor(op::DataType::DT_FLOAT, op::Format::FORMAT_ND, op::Format::FORMAT_ND);
+    OP_CHECK_NULL(bmmOut, return nullptr);
     auto ret = INFER_SHAPE(
         BatchMatMulV2, OP_INPUT(x1, x2, bias, nullptr), OP_OUTPUT(bmmOut),
         OP_ATTR(adjX1, adjX2, offsetX, opImplModeEnum, 0L));
@@ -134,6 +139,7 @@ const aclTensor* BatchMatMulNzFp162Fp32(
 {
     L0_DFX(BatchMatMulNzFp162Fp32, x1, x2, bias, offsetW, adjX1, adjX2, offsetX);
     auto bmmOut = executor->AllocTensor(op::DataType::DT_FLOAT, op::Format::FORMAT_FRACTAL_NZ, op::Format::FORMAT_ND);
+    OP_CHECK_NULL(bmmOut, return nullptr);
     auto ret = INFER_SHAPE(
         BatchMatMulV2, OP_INPUT(x1, x2, bias, nullptr), OP_OUTPUT(bmmOut),
         OP_ATTR(adjX1, adjX2, offsetX, opImplModeEnum, 0L));

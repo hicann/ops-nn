@@ -78,6 +78,7 @@ static const aclTensor* ProcessEmptyTensor(const aclTensor* self, const aclTenso
     // 获取shape信息
     op::Shape bmmEmptyShape = {(self->GetViewShape())[0], (self->GetViewShape())[1], (mat2->GetViewShape())[2]};
     auto output = executor->AllocTensor(bmmEmptyShape, self->GetDataType());
+    OP_CHECK_NULL(output, return nullptr);
     if (output->IsEmpty()) {
         OP_LOGI("Returning an empty tensor without actually doing calculation.");
         return output;

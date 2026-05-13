@@ -22,6 +22,7 @@
 #include "level0/dot.h"
 #include "level0/fill.h"
 #include "matmul/common/op_host/op_api/matmul.h"
+#include "matmul/common/op_host/math_util.h"
 #include "aclnn_kernels/reshape.h"
 #include "aclnn_kernels/transdata.h"
 #include "level0/unsqueeze.h"
@@ -111,13 +112,17 @@ inline static bool CheckDtypeValid(const aclTensor* x1, const aclTensor* x2,
     return true;
 }
 
-inline static bool CheckScaleValid(const aclTensor* scale, int64_t batchN)
+inline static bool CheckScaleValid(const aclTensor* scale, int64_t batch, int64_t n)
 {
     if (scale != nullptr) {
         OP_LOGD("scale %s", op::ToString(scale->GetViewShape()).GetString());
         auto dimTensorScale = scale->GetViewShape().GetDimNum();
         int64_t scaleDim = scale->GetViewShape().GetDim(0);
-        if ((dimTensorScale != 1) || (scaleDim != batchN)) {
+        if (ops::FloorDiv(INT64_MAX, batch) < n) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, " batch mul N > INT64_MAX");
+            return false;
+        }
+        if ((dimTensorScale != 1) || (scaleDim != batch * n)) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
                     "dimTensorScale[%zu] != 1 or the length of the first dim of scale != batch mul N", dimTensorScale);
             return false;
@@ -185,9 +190,12 @@ static bool CheckShapeValid(const aclTensor* x1, const aclTensor* x2, const aclT
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When x1 is not transposed([B,M,K]), K should be less than 65536."); 
             return false; 
         }
-        if (x1_need_transpose && batchNum * x1KDim >= SUPPORTED_INNER_AXIS && (scale != nullptr || batch_split_factor != 1)) { 
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When x1 is transposed([M,B,K]) and Batch * K > 65535, input scale or batch_split_factor != 1 are not supported."); 
-            return false; 
+        if (x1_need_transpose && (x1KDim >= SUPPORTED_INNER_AXIS || batchNum * x1KDim >= SUPPORTED_INNER_AXIS) &&
+            (scale != nullptr || batch_split_factor != 1)) {
+            OP_LOGE(
+                ACLNN_ERR_PARAM_INVALID,
+                "When x1 is transposed([M,B,K]) and Batch * K > 65535, input scale or batch_split_factor != 1 are not supported.");
+            return false;
         }
         if (x2_need_transpose && (scale != nullptr || batch_split_factor != 1 || !x1_need_transpose)) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When x2 is transposed, input scale or batch_split_factor != 1 are not supported, permX1 must be [1,0,2].");
@@ -195,7 +203,7 @@ static bool CheckShapeValid(const aclTensor* x1, const aclTensor* x2, const aclT
         }
     }
 
-    return CheckScaleValid(scale, batchNum * N);
+    return CheckScaleValid(scale, batchNum, N);
 }
 
 static inline bool CheckMathType(const aclTensor* x1, const aclTensor* x2, int8_t cubeMathType)
