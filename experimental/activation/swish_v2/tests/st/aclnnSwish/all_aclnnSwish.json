@@ -1,0 +1,66 @@
+[
+  {
+    "id": 1575,
+    "name": "test_swish",
+    "aclnn_name": "aclnnSwish",
+    "triton_name": null,
+    "version": "v2.1",
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "aclnn_swish",
+    "aclnn_api_type": "aclnn_function",
+    "triton_api_type": "triton_function",
+    "fusion_api_type": "fusion_function",
+    "fusion_mode": null,
+    "dist_api_type": "dist_function",
+    "backward": false,
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_performance"
+        }
+      },
+      "perf": "not_key"
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "self",
+        "type": "tensor",
+        "required": true,
+        "dtype": "bf16",
+        "shape": [
+          19,
+          21
+        ],
+        "range_values": [
+          -5,
+          5
+        ],
+        "backward": true,
+        "align_32B": null,
+        "outlier_values": null
+      },
+      {
+        "name": "betaOptional",
+        "type": "scalar",
+        "required": true,
+        "dtype": "int32",
+        "shape": null,
+        "range_values": -1,
+        "backward": false,
+        "align_32B": null,
+        "outlier_values": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null,
+    "save_name": null,
+    "uuid": null,
+    "downloaded": false,
+    "is_boundary": false,
+    "xrun_cs_name": null,
+    "xrun_data": null
+  }
+]
