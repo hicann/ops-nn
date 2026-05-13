@@ -102,6 +102,7 @@ protected:
     void UpdateSmallMTbeTiling();
     void UpdateSmallMTbeTiling(uint64_t baseM, uint64_t baseN, uint64_t baseK);
     void SetQuantBatchMatmulRunParas(QuantBatchMatmulRunParas& runParams, const optiling::QuantBatchMatmulInfo& inputParams);
+    uint64_t CalcNeedWorkspace(uint64_t baseM, uint64_t baseN) const;
     // 新增数据成员请注意：如果是在GetShapeAttrsInfo函数过程中获取的，请放到QuantBatchMatmulInfo结构体中，或者保证在DoOpTiling赋值
     QuantBatchMatmulV3TilingData tilingDataSelf_{};
     QuantBatchMatmulV3TilingData &tilingData_;

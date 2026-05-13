@@ -588,6 +588,11 @@ void QuantBatchMatmulV3Tiling::SetQuantBatchMatmulRunParas(QuantBatchMatmulRunPa
     runParams.batchC = inputParams.batchC;
 }
 
+uint64_t QuantBatchMatmulV3Tiling::CalcNeedWorkspace(uint64_t baseM, uint64_t baseN) const {
+    return ops::CeilAlign(ops::CeilDiv(inputParams_.nSize, static_cast<uint64_t>(tbeTiling_.n_dim)), baseN) * 
+           baseM * sizeof(int32_t) * aicoreParams_.aicNum;
+}
+
 // 适用整网decode m方向被切分但每核仍计算一个baseM的场景
 bool QuantBatchMatmulV3Tiling::IsKCNetDecode() const
 {
@@ -621,6 +626,11 @@ bool QuantBatchMatmulV3Tiling::IsKCNetDecode() const
         static_cast<uint64_t>(tbeTiling_.m_l0) * BLOCK_CUBE) {
         return false;
     }
+    uint64_t baseM = static_cast<uint64_t>(tbeTiling_.m_l0) * BLOCK_CUBE;
+    uint64_t baseN = static_cast<uint64_t>(tbeTiling_.n_l0) * BLOCK_CUBE;
+    if (CalcNeedWorkspace(baseM, baseN) > WORKSPACE_LIMIT) {
+        return false;
+    }
     return true;
 }
 
@@ -632,9 +642,7 @@ void QuantBatchMatmulV3Tiling::ProcessMSmall()
                     isUbQuant_ && inputParams_.batchC == 1;
     uint64_t baseM = static_cast<uint64_t>(tbeTiling_.m_l0) * BLOCK_CUBE;
     uint64_t baseN = static_cast<uint64_t>(tbeTiling_.n_l0) * BLOCK_CUBE;
-    uint64_t needWorkspace =
-        ops::CeilAlign(ops::CeilDiv(inputParams_.nSize, static_cast<uint64_t>(tbeTiling_.n_dim)), baseN) * baseM *
-        sizeof(int32_t) * aicoreParams_.aicNum;
+    uint64_t needWorkspace = CalcNeedWorkspace(baseM, baseN);
     // 控制m方向无循环的进入增量优化模板且workspace不能超过50M限制。
     bool isPertoken = (needWorkspace < WORKSPACE_LIMIT) && inputParams_.isPertoken;
     bool isDecode = inputParams_.mSize <= baseM;
@@ -1370,7 +1378,7 @@ void QuantBatchMatmulV3Tiling::SpiltForWorkSpaceLimit(int32_t singleCoreM, int32
 
         tilingData_.matmulTiling.stepN = tbeTiling_.n_bl1;
     }
-    inputParams_.bf16ExtreWorkSpaceSize = static_cast<uint64_t>(newSingleM) * static_cast<uint64_t>(newSingleN) * 
+    inputParams_.bf16ExtreWorkSpaceSize = static_cast<uint64_t>(newSingleM) * static_cast<uint64_t>(newSingleN) *
                                             sizeof(int32_t) * static_cast<uint64_t>(blockDim);
 }
 
@@ -1527,7 +1535,7 @@ static ge::graphStatus QuantBatchMatmulV3TilingFunc(gert::TilingContext *context
         return TilingRegistry::GetInstance().DoTilingImpl(context, registerList);
     } else if (IsSocVersionArch20Pertoken(context)) {
         return QuantBatchMatmulPertokenArch20(context).DoTiling();
-    } else {  
+    } else {
         std::vector<int32_t> registerList = {0, 1, 2};
         return TilingRegistry::GetInstance().DoTilingImpl(context, registerList);
     }
