@@ -82,6 +82,7 @@
 | [aclnnBinaryCrossEntropy](../../loss/binary_cross_entropy/docs/aclnnBinaryCrossEntropy.md) | 计算self和target的二元交叉熵。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnBinaryCrossEntropyBackward](../../loss/binary_cross_entropy_grad/docs/aclnnBinaryCrossEntropyBackward.md) | 求二元交叉熵反向传播的梯度值。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnBinaryCrossEntropyWithLogits](../../loss/sigmoid_cross_entropy_with_logits_v2/docs/aclnnBinaryCrossEntropyWithLogits.md) | 计算输入logits与标签target之间的BCELoss损失。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnBinaryCrossEntropyWithLogitsBackward](../../loss/sigmoid_cross_entropy_with_logits_grad_v2/docs/aclnnBinaryCrossEntropyWithLogitsBackward.md) | 将输入self执行logits计算，将得到的值与标签值target一起进行BCELoss的反向传播计算。 | 默认确定性实现 | - |
 | [aclnnBinaryCrossEntropyWithLogitsTargetBackward](../../activation/log_sigmoid/docs/aclnnBinaryCrossEntropyWithLogitsTargetBackward.md) | 将输入self执行logits计算，将得到的值与标签值target一起进行BECLoss关于target的反向传播计算。 | 默认确定性实现 | - |
 | [aclnnBucketize](../../index/bucketize_v2/docs/aclnnBucketize.md) | 根据给定的边界数组（boundaries）确定输入张量中每个元素所属的区间索引。 | - | 默认确定性实现 |
 | [aclnnCelu&aclnnInplaceCelu](../../activation/celu_v2/docs/aclnnCelu&aclnnInplaceCelu.md) | aclnnCelu对输入张量self中的每个元素x调用连续可微指数线性单元激活函数CELU，并将得到的结果存入输出张量out中。 | 默认确定性实现 | - |
@@ -94,6 +95,7 @@
 | [aclnnConvTbc](../../conv/convolution_forward/docs/aclnnConvTbc.md) | 实现时序（TBC）一维卷积。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnConvTbcBackward](../../conv/convolution_backward/docs/aclnnConvTbcBackward.md) | 用于计算时序卷积的反向传播。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnCrossEntropyLoss](../../loss/cross_entropy_loss/docs/aclnnCrossEntropyLoss.md) | 计算输入的交叉熵损失。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnCrossEntropyLossGrad](../../loss/cross_entropy_loss_grad/docs/aclnnCrossEntropyLossGrad.md) | aclnnCrossEntropyLoss的反向传播。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnCtcLoss](../../loss/ctc_loss_v2/docs/aclnnCtcLoss.md) | 计算连接时序分类损失值。 | 默认非确定性实现，支持配置开启。 | 默认确定性实现 |
 | [aclnnCtcLossBackward](../../loss/ctc_loss_v2_grad/docs/aclnnCtcLossBackward.md) | 连接时序分类损失值反向传播。 | 默认非确定性实现，支持配置开启。 | 默认确定性实现 |
 | [aclnnDeepNorm](../../norm/deep_norm/docs/aclnnDeepNorm.md) | 对输入张量x的元素进行深度归一化，通过计算其均值和标准差，将每个元素标准化为具有零均值和单位方差的输出张量。 | 默认确定性实现 | - |
@@ -210,6 +212,7 @@
 | [aclnnForeachTan](../../foreach/foreach_tan/docs/aclnnForeachTan.md) | 对输入张量列表的每个张量进行正切函数运算。 | 默认确定性实现 | - |
 | [aclnnForeachTanh](../../foreach/foreach_tanh/docs/aclnnForeachTanh.md) | 对输入张量列表的每个张量进行双曲正切函数运算。 | 默认确定性实现 | - |
 | [aclnnForeachZeroInplace](../../foreach/foreach_zero_inplace/docs/aclnnForeachZeroInplace.md) | 原地更新输入张量列表，输入张量列表的每个张量置为0。 | 默认确定性实现 | - |
+| [aclnnFusedCrossEntropyLossWithMaxSum](../../loss/fused_cross_entropy_loss_with_max_sum/docs/aclnnFusedCrossEntropyLossWithMaxSum.md) | 词汇表并行场景下交叉熵计算模块的一部分，解决超大规模词汇表下的显存和计算效率问题，当前部分为计算loss与softMax的结果。 | 默认确定性实现 | - |
 | [aclnnFusedLinearOnlineMaxSum](../../matmul/fused_linear_online_max_sum/docs/aclnnFusedLinearOnlineMaxSum.md) | 功能等价Megatron的matmul与fused\_vocab\_parallel\_cross\_entropy的实现，支持vocabulary\_size维度切卡融合matmul与cross-entropy loss。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnFusedLinearCrossEntropyLossGrad](../../matmul/fused_linear_cross_entropy_loss_grad/docs/aclnnFusedLinearCrossEntropyLossGrad.md) | 是词汇表并行场景下交叉熵损失计算模块中的一部分，解决超大规模词汇表下的显存和计算效率问题，当前部分为梯度计算实现，用于计算叶子节点`input`和`weight`的梯度。 | 默认确定性实现 | - |
 | [aclnnFusedMatmul](../../matmul/fused_mat_mul/docs/aclnnFusedMatmul.md) | 矩阵乘与通用向量计算融合。 | 默认确定性实现 | 默认确定性实现 |

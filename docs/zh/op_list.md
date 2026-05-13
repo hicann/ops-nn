@@ -2063,7 +2063,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>✗</td>
-    <td>✓</td>
+    <td>✗</td>
     <td>AI Core</td>
     <td>计算连续（未分段）时间序列与目标序列之间的损失。</td>
   </tr>
@@ -2073,27 +2073,27 @@
     <td>✓</td>
     <td>✓</td>
     <td>✗</td>
-    <td>✓</td>
+    <td>✗</td>
     <td>AI Core</td>
     <td>计算连续（未分段）时间序列与目标序列之间的损失的反向。</td>
   </tr>
   <tr>
     <td>loss</td>
     <td><a href="../../loss/kl_div_loss_grad/README.md">kl_div_loss_grad</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
   <tr>
     <td>loss</td>
     <td><a href="../../loss/l1_loss_grad/README.md">l1_loss_grad</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
@@ -2120,10 +2120,10 @@
   <tr>
     <td>loss</td>
     <td><a href="../../loss/lp_loss/README.md">lp_loss</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>0
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
@@ -2142,7 +2142,7 @@
     <td><a href="../../loss/mse_loss_grad/README.md">mse_loss_grad</a></td>
     <td>✓</td>
     <td>✓</td>
-    <td>✓</td>
+    <td>✗</td>
     <td>✓</td>
     <td>AI Core</td>
     <td>均方误差函数aclnnMseLoss的反向传播。</td>
@@ -2153,7 +2153,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✓</td>
+    <td>✗</td>
     <td>AI Core</td>
     <td>均方误差函数aclnnMseLoss的反向传播。</td>
   </tr>
@@ -2162,8 +2162,8 @@
     <td><a href="../../loss/mse_loss_v2/README.md">mse_loss_v2</a></td>
     <td>✓</td>
     <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
+    <td>✗</td>
+    <td>✗</td>
     <td>AI Core</td>
     <td>计算输入x和目标y中每个元素之间的均方误差。</td>
   </tr>
@@ -2180,20 +2180,20 @@
   <tr>
     <td>loss</td>
     <td><a href="../../loss/nll_loss/README.md">nll_loss</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
   <tr>
     <td>loss</td>
     <td><a href="../../loss/nll_loss_grad/README.md">nll_loss_grad</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
@@ -2210,20 +2210,20 @@
   <tr>
     <td>loss</td>
     <td><a href="../../loss/sigmoid_cross_entropy_with_logits_v2/README.md">sigmoid_cross_entropy_with_logits_v2</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
     <td>计算输入logits与标签target之间的BCELoss损失</td>
   </tr>
   <tr>
     <td>loss</td>
     <td><a href="../../loss/smooth_l1_loss_grad_v2/README.md">smooth_l1_loss_grad_v2</a></td>
-    <td>✗</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
