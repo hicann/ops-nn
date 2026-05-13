@@ -17,7 +17,7 @@
 #include "opdev/shape_utils.h"
 #include "opdev/platform.h"
 #include "opdev/tensor_view_utils.h"
-
+#include "level0/fill.h"
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "aclnn_kernels/contiguous.h"
@@ -47,6 +47,35 @@ static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST_X
 
 static const std::initializer_list<op::DataType> ASCEND950_DTYPE_SUPPORT_LIST_Y_SCALE = {
     op::DataType::DT_INT8, op::DataType::DT_HIFLOAT8, op::DataType::DT_FLOAT8_E5M2, op::DataType::DT_FLOAT8_E4M3FN};
+
+
+static aclnnStatus FillScalar(aclTensor* scale1Out, aclTensor* scale2Out, float val, aclOpExecutor* executor)
+{
+    FVector<int64_t> shape;
+    size_t dimNum = scale1Out->GetViewShape().GetDimNum();
+    for (size_t idx = 0; idx < dimNum; idx++) {
+        int64_t tmpVal = scale1Out->GetViewShape().GetDim(idx);
+        shape.push_back(tmpVal);
+    }
+    auto dims = executor->ConvertToTensor(shape.data(), shape.size(), DataType::DT_INT64);
+    CHECK_RET(dims != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto shapeArray = executor->AllocIntArray(shape.data(), shape.size());
+    CHECK_RET(shapeArray != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    FVector<float> valVector = {val};
+    auto valTensor = executor->ConvertToTensor(valVector.data(), valVector.size(), scale1Out->GetDataType());
+    CHECK_RET(valTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto fillOut = l0op::Fill(dims, valTensor, shapeArray, executor);
+    CHECK_RET(fillOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    auto viewCopyResult1 = l0op::ViewCopy(fillOut, scale1Out, executor);
+    CHECK_RET(viewCopyResult1 != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    if (scale2Out->GetViewShape().GetDimNum() != 0){
+        auto viewCopyResult2 = l0op::ViewCopy(fillOut, scale2Out, executor);
+        CHECK_RET(viewCopyResult2 != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
+    return ACLNN_SUCCESS;
+}
+
 
 static bool checkLastDimCompatibility(const aclTensor* outTensor, int64_t xLastDim)
 {
@@ -120,7 +149,7 @@ static bool CheckDtypeValid(
     if (Ops::NN::AclnnUtil::IsRegbase() && (smoothScale1Optional == nullptr || smoothScale2Optional == nullptr)) {
         auto shape = y2Out->GetViewShape();
         if ((shape.GetDimNum() != 0) && (shape.GetDimNum() != 1 || shape.GetDim(0) != 1)) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When y2Out is an invalid output, y2Out'shape must be [1].");
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When y2Out is an invalid output, y2Out'shape must be [] or [1].");
             return false;
         }
     }
@@ -313,6 +342,15 @@ aclnnStatus aclnnAddRmsNormDynamicQuantV2GetWorkspaceSize(
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     // 支持空tensor
+    if (Ops::NN::AclnnUtil::IsRegbase() && gamma->IsEmpty()) {
+        ret = AddRmsNormDynamicQuantV2ACLNN::FillScalar(scale1Out, scale2Out, -std::numeric_limits<float>::infinity(), uniqueExecutor.get());
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
+        *workspaceSize = 0;
+        uniqueExecutor.ReleaseTo(executor);
+        OP_LOGD("Finish empty tensor aclnnAddRmsNormQuantGetWorkspaceSize.");
+        return ACLNN_SUCCESS;
+    }
+
     bool hasEmptyTensor = x1->IsEmpty() || x2->IsEmpty() || gamma->IsEmpty() || y2Out->IsEmpty();
     if (hasEmptyTensor) {
         OP_LOGW("Got empty tensor in aclnnAddRmsNormQuantV2!");
