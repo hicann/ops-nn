@@ -9,7 +9,9 @@
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
+
 import torch
+import tensorflow as tf
 import numpy as np
 from atk.configs.dataset_config import InputDataset
 from atk.tasks.api_execute import register
@@ -20,55 +22,51 @@ from atk.tasks.dataset.base_dataset import OpsDataset
 
 
 
-@register("ascend_scatter_update")
-class FunctionIndexAddApi(BaseApi):
+@register("ascend_scatter_add")
+class ScatterAdd(BaseApi):
+
     def __init__(self, task_result: TaskResult):
-        super(FunctionIndexAddApi, self).__init__(task_result)
-        OpsDataset.seed_everything()
-        self.change_flag = None
+        super(ScatterAdd, self).__init__(task_result)
 
     def __call__(self, input_data: InputDataset, with_output: bool = False):
-        # inplace类型接口
-        data = input_data.kwargs["data"]
+
+        varRef = input_data.kwargs["varRef"]
         indices = input_data.kwargs["indices"]
         updates = input_data.kwargs["updates"]
-        axis = input_data.kwargs["axis"]
-        data_value = data.cpu().numpy()
-        indices_value = indices.cpu().numpy()
-        updates_value = updates.cpu().numpy()
-        print(data_value.shape)
-        print(indices_value)
-        print(updates_value.shape)
-        
-        shape_0 = updates.shape[0]
-        shape_1 = updates.shape[1]
-        shape_2 = updates.shape[2]
-        shape_3 = updates.shape[3]
 
-        for i in range(shape_0):
-            indices_key = indices_value[i]
-            for j in range(shape_1):
-                for k in range(shape_2):
-                    for l in range(shape_3):
-                        data_value[i][j][indices_key + k][l] = updates_value[i][j][k][l]
+        indices_len = len(indices.shape)
+        indices_new = indices.reshape(-1)
+        updates_new_shape = (-1, *updates.shape[indices_len:])
+        updates_new = updates.reshape(updates_new_shape)
 
-        return torch.from_numpy(data_value)
+        varRef_dtype = varRef.dtype
+        if varRef_dtype == torch.float32:
+            out = varRef.index_add(0, indices_new, updates_new)
+            return out
+        elif varRef_dtype == torch.bfloat16:
+            varRef = varRef.to(torch.float32)
+            updates_new = updates_new.to(torch.float32)
+            out = varRef.index_add(0, indices_new, updates_new).to(torch.bfloat16)
+            return out
+        else :
+            varRef_np = varRef.cpu().numpy()
+            indices_np = indices_new.cpu().numpy()
+            updates_np = updates_new.cpu().numpy()
+            for i, index in enumerate(indices_np):
+                varRef_np[index] += updates_np[i]
+            return torch.from_numpy(varRef_np)
+           
 
-@register("pyaclnn_scatter_update")
-class AddAclnnApi(AclnnBaseApi):
-    def __call__(self):
-        super().__call__()
+    
+@register("pyaclnn_scatter_add")
+class ScatterNdUpdatePyaclnn(AclnnBaseApi):
 
-    def init_by_input_data(self, input_data: InputDataset):
+    def init_by_input_data(self, input_data): 
+
         input_args, output_packages = super().init_by_input_data(input_data)
         input_args.pop()
         output_packages[:] = [input_args[0]]
         return input_args, output_packages
 
-    def after_call(self, output_packages):
-        output = []
-        for output_pack in output_packages:
-            output.append(self.acl_tensor_to_torch(output_pack))
-        return output
 
 

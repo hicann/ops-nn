@@ -9,66 +9,47 @@
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
+
 import torch
-import numpy as np
 from atk.configs.dataset_config import InputDataset
+from atk.configs.results_config import TaskResult
 from atk.tasks.api_execute import register
 from atk.tasks.api_execute.base_api import BaseApi
 from atk.tasks.api_execute.aclnn_base_api import AclnnBaseApi
-from atk.configs.results_config import TaskResult
-from atk.tasks.dataset.base_dataset import OpsDataset
 
-
-
-@register("ascend_scatter_update")
-class FunctionIndexAddApi(BaseApi):
+@register("execute_addbmm")
+class addbmmApi(BaseApi):
     def __init__(self, task_result: TaskResult):
-        super(FunctionIndexAddApi, self).__init__(task_result)
-        OpsDataset.seed_everything()
-        self.change_flag = None
+        super(addbmmApi, self).__init__(task_result)
 
     def __call__(self, input_data: InputDataset, with_output: bool = False):
-        # inplace类型接口
-        data = input_data.kwargs["data"]
-        indices = input_data.kwargs["indices"]
-        updates = input_data.kwargs["updates"]
-        axis = input_data.kwargs["axis"]
-        data_value = data.cpu().numpy()
-        indices_value = indices.cpu().numpy()
-        updates_value = updates.cpu().numpy()
-        print(data_value.shape)
-        print(indices_value)
-        print(updates_value.shape)
-        
-        shape_0 = updates.shape[0]
-        shape_1 = updates.shape[1]
-        shape_2 = updates.shape[2]
-        shape_3 = updates.shape[3]
+        # 标杆计算
+        mat_input = input_data.kwargs["self"]
+        batch1 = input_data.kwargs["batch1"]
+        batch2 = input_data.kwargs["batch2"]
+        beta = input_data.kwargs["beta"]
+        alpha = input_data.kwargs["alpha"]
+        out = input_data.kwargs["out"]
+        output = torch.addbmm(mat_input, batch1, batch2, beta=beta, alpha=alpha, out=out)
+        return output
 
-        for i in range(shape_0):
-            indices_key = indices_value[i]
-            for j in range(shape_1):
-                for k in range(shape_2):
-                    for l in range(shape_3):
-                        data_value[i][j][indices_key + k][l] = updates_value[i][j][k][l]
-
-        return torch.from_numpy(data_value)
-
-@register("pyaclnn_scatter_update")
-class AddAclnnApi(AclnnBaseApi):
-    def __call__(self):
-        super().__call__()
+@register("execute_aclnn_addbmm")
+class aclnnAddbmmApi(AclnnBaseApi):
+    def __init__(self, task_result: TaskResult, backend):
+        super(aclnnAddbmmApi, self).__init__(task_result, backend)
 
     def init_by_input_data(self, input_data: InputDataset):
         input_args, output_packages = super().init_by_input_data(input_data)
+        # 输出在输入前
+        output_packages[:] = [input_args[5]]
         input_args.pop()
-        output_packages[:] = [input_args[0]]
+        # atk不支持int8 json输入，在此转换
+        import ctypes
+        input_args[-1] = ctypes.c_int8(input_data.kwargs["cubeMathType"])
         return input_args, output_packages
-
+    
     def after_call(self, output_packages):
         output = []
         for output_pack in output_packages:
             output.append(self.acl_tensor_to_torch(output_pack))
         return output
-
-

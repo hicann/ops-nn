@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# ----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------------------------------------
 # Copyright (c) 2025 Huawei Technologies Co., Ltd.
 # This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
@@ -8,54 +8,44 @@
 # THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
-# ----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------------------------------------
 import torch
-import numpy as np
+
 from atk.configs.dataset_config import InputDataset
+from atk.configs.results_config import TaskResult
 from atk.tasks.api_execute import register
 from atk.tasks.api_execute.base_api import BaseApi
 from atk.tasks.api_execute.aclnn_base_api import AclnnBaseApi
-from atk.configs.results_config import TaskResult
 from atk.tasks.dataset.base_dataset import OpsDataset
 
-
-
-@register("ascend_scatter_update")
-class FunctionIndexAddApi(BaseApi):
+@register("ascend_function_embedding_renorm")
+class AscendFunctionEmbeddingRenorm(BaseApi):
     def __init__(self, task_result: TaskResult):
-        super(FunctionIndexAddApi, self).__init__(task_result)
+        super(AscendFunctionEmbeddingRenorm, self).__init__(task_result)
         OpsDataset.seed_everything()
         self.change_flag = None
 
     def __call__(self, input_data: InputDataset, with_output: bool = False):
-        # inplace类型接口
-        data = input_data.kwargs["data"]
+
+        input_self = input_data.kwargs["selfRef"]
         indices = input_data.kwargs["indices"]
-        updates = input_data.kwargs["updates"]
-        axis = input_data.kwargs["axis"]
-        data_value = data.cpu().numpy()
-        indices_value = indices.cpu().numpy()
-        updates_value = updates.cpu().numpy()
-        print(data_value.shape)
-        print(indices_value)
-        print(updates_value.shape)
-        
-        shape_0 = updates.shape[0]
-        shape_1 = updates.shape[1]
-        shape_2 = updates.shape[2]
-        shape_3 = updates.shape[3]
+        maxNorm = input_data.kwargs["maxNorm"]
+        normType = input_data.kwargs["normType"]
 
-        for i in range(shape_0):
-            indices_key = indices_value[i]
-            for j in range(shape_1):
-                for k in range(shape_2):
-                    for l in range(shape_3):
-                        data_value[i][j][indices_key + k][l] = updates_value[i][j][k][l]
+        if self.device == "gpu":
+            device = f"cuda:{self.device_id}"
+        elif self.device == "npu":
+            device = f"{self.device}:{self.device_id}"
+        else:
+            device = "cpu"
 
-        return torch.from_numpy(data_value)
+        output = torch.embedding_renorm_(input_self.to(device), indices.to(device), maxNorm, normType)
 
-@register("pyaclnn_scatter_update")
-class AddAclnnApi(AclnnBaseApi):
+        return output
+
+
+@register("aclnn_embedding_renorm")
+class AclnnEmbeddingRenorm(AclnnBaseApi):
     def __call__(self):
         super().__call__()
 
@@ -64,11 +54,9 @@ class AddAclnnApi(AclnnBaseApi):
         input_args.pop()
         output_packages[:] = [input_args[0]]
         return input_args, output_packages
-
+    
     def after_call(self, output_packages):
         output = []
-        for output_pack in output_packages:
-            output.append(self.acl_tensor_to_torch(output_pack))
+        for output_param in output_packages:
+            output.append(self.acl_tensor_to_torch(output_param))
         return output
-
-
