@@ -60,6 +60,7 @@ option(OP_KERNEL_UT "Enable kernel ut" OFF)
 option(OP_KERNEL_AICPU_UT "Enable aicpu kernel ut" OFF)
 option(UT_TEST_ALL "Enable all ut" OFF)
 option(ENABLE_GEN_ACLNN "Enable gen aclnn" OFF)
+option(DOWNLOAD_OPS_TEST_KIT "Download ops-test-kit repository" OFF)
 
 set(BISHENG_FLAGS "" CACHE STRING "bisheng compiler flags")
 
@@ -102,6 +103,9 @@ set(CMAKE_CXX_STANDARD
     17
     CACHE STRING "c++17 is needed for this project")
 include(cmake/third_party/opbase.cmake) # 放在dependencies.cmake前面
+if(DOWNLOAD_OPS_TEST_KIT)
+  include(cmake/third_party/ops_test_kit.cmake)
+endif()
 include(cmake/dependencies.cmake)
 include(cmake/third_party/nlohmann_json.cmake)
 include(cmake/third_party/abseil-cpp.cmake)
