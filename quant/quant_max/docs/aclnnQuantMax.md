@@ -103,7 +103,7 @@ aclnnStatus aclnnQuantMax(
       <td>roundMode（char*）</td>
       <td>输入</td>
       <td>指定舍入模式。</td>
-      <td><ul><li>取值需为Cast API支持的有效舍入模式。支持"rint"、"round"、"hybrid"</li></ul></td>
+      <td><ul><li>当dstType取值为34，roundMode支持"round"、"hybrid"。</li></ul><ul><li>当dstType取值为35或者36时，roundMode支持"rint"。</li></ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
