@@ -20,6 +20,7 @@
 #include <cstdint>
 #include "kernel_operator.h"
 #include "../../inc/platform.h"
+#include "simt_api/asc_simt.h"
 
 using namespace AscendC;
 
@@ -37,7 +38,7 @@ constexpr uint32_t FOUR_NUMBER = 4;
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void SimtZeroPadTo256B(
     const uint64_t start, const uint64_t padSize, __ubuf__ float* outBuffer)
 {
-    for (uint32_t ubIdx = Simt::GetThreadIdx(); ubIdx < padSize; ubIdx += Simt::GetThreadNum()) {
+    for (uint32_t ubIdx = threadIdx.x; ubIdx < padSize; ubIdx += blockDim.x) {
         outBuffer[start + ubIdx] = static_cast<float>(0);
     }
 }
@@ -45,7 +46,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void SimtZeroPadTo256B(
 __simt_vf__ __aicore__ LAUNCH_BOUND(MIN_THREAD) inline void GetReduceValueGm(
     int64_t blockId_, __ubuf__ float* srcBuffer, __gm__ volatile float* dstBuffer)
 {
-    if (Simt::GetThreadIdx() == 0) {
+    if (threadIdx.x == 0) {
         dstBuffer[blockId_] = srcBuffer[0];
     }
 }
@@ -53,7 +54,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(MIN_THREAD) inline void GetReduceValueGm(
 __simt_vf__ __aicore__ LAUNCH_BOUND(MIN_THREAD) inline void GetReduceValue(
     uint32_t level1Idx, __ubuf__ float* srcBuffer, __ubuf__ float* dstBuffer)
 {
-    if (Simt::GetThreadIdx() == 0) {
+    if (threadIdx.x == 0) {
         dstBuffer[level1Idx] = srcBuffer[0];
     }
 }
@@ -63,7 +64,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(MIN_THREAD) inline void GetRes(
     uint32_t reduction_, __gm__ T* yGm_, __gm__ T* totalWeight_, __ubuf__ float* midOutResUB_,
     __ubuf__ float* midWeightResUB_)
 {
-    if (Simt::GetThreadIdx() == 0) {
+    if (threadIdx.x == 0) {
         if (reduction_ == 1) {
             yGm_[0] = static_cast<T>(midOutResUB_[0] / midWeightResUB_[0]);
         } else {
@@ -78,7 +79,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void SimtMeanModeCompute2
     const uint32_t maxSize, const uint64_t offset, int64_t ignoreIndex_, uint32_t xDimC_, uint32_t isWeightPresent_,
     __ubuf__ float* outBuffer, __ubuf__ float* weightbBuffer, __gm__ U* targetGm_, __gm__ T* xGm_, __gm__ T* weightGm_)
 {
-    for (uint32_t ubIdx = Simt::GetThreadIdx(); ubIdx < maxSize; ubIdx += Simt::GetThreadNum()) {
+    for (uint32_t ubIdx = threadIdx.x; ubIdx < maxSize; ubIdx += blockDim.x) {
         uint64_t i = ubIdx + offset;
         U targetIndex = targetGm_[i];
         if (targetIndex == ignoreIndex_) {
@@ -99,7 +100,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void SimtMeanModeCompute4
     int64_t xDimH_, int64_t xDimW_, uint32_t isWeightPresent_, __ubuf__ float* outBuffer, __ubuf__ float* weightbBuffer,
     __gm__ U* targetGm_, __gm__ T* xGm_, __gm__ T* weightGm_, int64_t productOfCHW_, int64_t productOfHW_)
 {
-    for (uint32_t ubIdx = Simt::GetThreadIdx(); ubIdx < maxSize; ubIdx += Simt::GetThreadNum()) {
+    for (uint32_t ubIdx = threadIdx.x; ubIdx < maxSize; ubIdx += blockDim.x) {
         uint64_t i = ubIdx + offset;
         U targetIndex = targetGm_[i];
         auto n = i / productOfHW_;
@@ -298,18 +299,18 @@ public:
         ReduceSum256(outBuffer, outBuffer, 0);
         PipeBarrier<PIPE_ALL>();
 
-        AscendC::Simt::VF_CALL<GetReduceValueGm>(
-            AscendC::Simt::Dim3{static_cast<uint32_t>(MIN_THREAD)}, blockId_, (__ubuf__ float*)outBuffer.GetPhyAddr(),
+        asc_vf_call<GetReduceValueGm>(
+            dim3{static_cast<uint32_t>(MIN_THREAD)}, blockId_, (__ubuf__ float*)outBuffer.GetPhyAddr(),
             (__gm__ volatile float*)workspace.GetPhyAddr());
     }
 
     __aicore__ inline void MeanModeSubProcess(uint32_t& level1Idx, uint32_t& level2Idx, uint32_t& level3Idx)
     {
-        AscendC::Simt::VF_CALL<GetReduceValue>(
-            AscendC::Simt::Dim3{static_cast<uint32_t>(MIN_THREAD)}, level1Idx, (__ubuf__ float*)outUB_.GetPhyAddr(),
+        asc_vf_call<GetReduceValue>(
+            dim3{static_cast<uint32_t>(MIN_THREAD)}, level1Idx, (__ubuf__ float*)outUB_.GetPhyAddr(),
             (__ubuf__ float*)level1OutUB_.GetPhyAddr());
-        AscendC::Simt::VF_CALL<GetReduceValue>(
-            AscendC::Simt::Dim3{static_cast<uint32_t>(MIN_THREAD)}, level1Idx, (__ubuf__ float*)weightUB_.GetPhyAddr(),
+        asc_vf_call<GetReduceValue>(
+            dim3{static_cast<uint32_t>(MIN_THREAD)}, level1Idx, (__ubuf__ float*)weightUB_.GetPhyAddr(),
             (__ubuf__ float*)level1WeightUB_.GetPhyAddr());
         ++level1Idx;
         PipeBarrier<PIPE_ALL>();
@@ -337,8 +338,8 @@ public:
 
     __aicore__ inline void SumModeSubProcess(uint32_t& level1Idx, uint32_t& level2Idx, uint32_t& level3Idx)
     {
-        AscendC::Simt::VF_CALL<GetReduceValue>(
-            AscendC::Simt::Dim3{static_cast<uint32_t>(MIN_THREAD)}, level1Idx, (__ubuf__ float*)outUB_.GetPhyAddr(),
+        asc_vf_call<GetReduceValue>(
+            dim3{static_cast<uint32_t>(MIN_THREAD)}, level1Idx, (__ubuf__ float*)outUB_.GetPhyAddr(),
             (__ubuf__ float*)level1OutUB_.GetPhyAddr());
         ++level1Idx;
         PipeBarrier<PIPE_ALL>();
@@ -385,17 +386,17 @@ public:
                     mainReduceLen = tailMainReduceSize_;
                     tailLen = tailRemainSize_;
                     if (tailSize_ % MID_RES_128 != 0) {
-                        AscendC::Simt::VF_CALL<SimtZeroPadTo256B>(
-                            AscendC::Simt::Dim3{static_cast<uint32_t>(THREAD_DIM)}, simtMoveSize, padSize_,
+                        asc_vf_call<SimtZeroPadTo256B>(
+                            dim3{static_cast<uint32_t>(THREAD_DIM)}, simtMoveSize, padSize_,
                             (__ubuf__ float*)outUB_.GetPhyAddr());
-                        AscendC::Simt::VF_CALL<SimtZeroPadTo256B>(
-                            AscendC::Simt::Dim3{static_cast<uint32_t>(THREAD_DIM)}, simtMoveSize, padSize_,
+                        asc_vf_call<SimtZeroPadTo256B>(
+                            dim3{static_cast<uint32_t>(THREAD_DIM)}, simtMoveSize, padSize_,
                             (__ubuf__ float*)weightUB_.GetPhyAddr());
                     }
                 }
 
-                AscendC::Simt::VF_CALL<SimtMeanModeCompute2d<U, T>>(
-                    AscendC::Simt::Dim3{static_cast<uint32_t>(THREAD_DIM)}, simtMoveSize, offset, ignoreIndex_, xDimC_,
+                asc_vf_call<SimtMeanModeCompute2d<U, T>>(
+                    dim3{static_cast<uint32_t>(THREAD_DIM)}, simtMoveSize, offset, ignoreIndex_, xDimC_,
                     isWeightPresent_, (__ubuf__ float*)outUB_.GetPhyAddr(), (__ubuf__ float*)weightUB_.GetPhyAddr(),
                     (__gm__ U*)targetGm_.GetPhyAddr(), (__gm__ T*)xGm_.GetPhyAddr(), (__gm__ T*)weightGm_.GetPhyAddr());
 
@@ -413,8 +414,8 @@ public:
                     simtMoveSize += mainReduceSize_;
                 }
 
-                AscendC::Simt::VF_CALL<SimtMeanModeCompute2d<U, T>>(
-                    AscendC::Simt::Dim3{static_cast<uint32_t>(THREAD_DIM)}, simtMoveSize, offset, ignoreIndex_, xDimC_,
+                asc_vf_call<SimtMeanModeCompute2d<U, T>>(
+                    dim3{static_cast<uint32_t>(THREAD_DIM)}, simtMoveSize, offset, ignoreIndex_, xDimC_,
                     isWeightPresent_, (__ubuf__ float*)outUB_.GetPhyAddr(), (__ubuf__ float*)weightUB_.GetPhyAddr(),
                     (__gm__ U*)targetGm_.GetPhyAddr(), (__gm__ T*)xGm_.GetPhyAddr(), (__gm__ T*)weightGm_.GetPhyAddr());
 
@@ -433,8 +434,8 @@ public:
                     simtMoveSize += mainReduceSize_;
                 }
 
-                AscendC::Simt::VF_CALL<SimtMeanModeCompute2d<U, T>>(
-                    AscendC::Simt::Dim3{static_cast<uint32_t>(THREAD_DIM)}, simtMoveSize, offset, ignoreIndex_, xDimC_,
+                asc_vf_call<SimtMeanModeCompute2d<U, T>>(
+                    dim3{static_cast<uint32_t>(THREAD_DIM)}, simtMoveSize, offset, ignoreIndex_, xDimC_,
                     isWeightPresent_, (__ubuf__ float*)outUB_.GetPhyAddr(), (__ubuf__ float*)weightUB_.GetPhyAddr(),
                     (__gm__ U*)targetGm_.GetPhyAddr(), (__gm__ T*)xGm_.GetPhyAddr(), (__gm__ T*)weightGm_.GetPhyAddr());
 
@@ -485,17 +486,17 @@ public:
                     mainReduceLen = tailMainReduceSize_;
                     tailLen = tailRemainSize_;
                     if (tailSize_ % MID_RES_128 != 0) {
-                        AscendC::Simt::VF_CALL<SimtZeroPadTo256B>(
-                            AscendC::Simt::Dim3{static_cast<uint32_t>(THREAD_DIM)}, simtMoveSize, padSize_,
+                        asc_vf_call<SimtZeroPadTo256B>(
+                            dim3{static_cast<uint32_t>(THREAD_DIM)}, simtMoveSize, padSize_,
                             (__ubuf__ float*)outUB_.GetPhyAddr());
-                        AscendC::Simt::VF_CALL<SimtZeroPadTo256B>(
-                            AscendC::Simt::Dim3{static_cast<uint32_t>(THREAD_DIM)}, simtMoveSize, padSize_,
+                        asc_vf_call<SimtZeroPadTo256B>(
+                            dim3{static_cast<uint32_t>(THREAD_DIM)}, simtMoveSize, padSize_,
                             (__ubuf__ float*)weightUB_.GetPhyAddr());
                     }
                 }
 
-                AscendC::Simt::VF_CALL<SimtMeanModeCompute4d<U, T>>(
-                    AscendC::Simt::Dim3{static_cast<uint32_t>(THREAD_DIM)}, simtMoveSize, offset, ignoreIndex_, xDimC_,
+                asc_vf_call<SimtMeanModeCompute4d<U, T>>(
+                    dim3{static_cast<uint32_t>(THREAD_DIM)}, simtMoveSize, offset, ignoreIndex_, xDimC_,
                     xDimN_, xDimH_, xDimW_, isWeightPresent_, (__ubuf__ float*)outUB_.GetPhyAddr(),
                     (__ubuf__ float*)weightUB_.GetPhyAddr(), (__gm__ U*)targetGm_.GetPhyAddr(),
                     (__gm__ T*)xGm_.GetPhyAddr(), (__gm__ T*)weightGm_.GetPhyAddr(), productOfCHW_, productOfHW_);
@@ -514,8 +515,8 @@ public:
                     simtMoveSize += mainReduceSize_;
                 }
 
-                AscendC::Simt::VF_CALL<SimtMeanModeCompute4d<U, T>>(
-                    AscendC::Simt::Dim3{static_cast<uint32_t>(THREAD_DIM)}, simtMoveSize, offset, ignoreIndex_, xDimC_,
+                asc_vf_call<SimtMeanModeCompute4d<U, T>>(
+                    dim3{static_cast<uint32_t>(THREAD_DIM)}, simtMoveSize, offset, ignoreIndex_, xDimC_,
                     xDimN_, xDimH_, xDimW_, isWeightPresent_, (__ubuf__ float*)outUB_.GetPhyAddr(),
                     (__ubuf__ float*)weightUB_.GetPhyAddr(), (__gm__ U*)targetGm_.GetPhyAddr(),
                     (__gm__ T*)xGm_.GetPhyAddr(), (__gm__ T*)weightGm_.GetPhyAddr(), productOfCHW_, productOfHW_);
@@ -535,8 +536,8 @@ public:
                     simtMoveSize += mainReduceSize_;
                 }
 
-                AscendC::Simt::VF_CALL<SimtMeanModeCompute4d<U, T>>(
-                    AscendC::Simt::Dim3{static_cast<uint32_t>(THREAD_DIM)}, simtMoveSize, offset, ignoreIndex_, xDimC_,
+                asc_vf_call<SimtMeanModeCompute4d<U, T>>(
+                    dim3{static_cast<uint32_t>(THREAD_DIM)}, simtMoveSize, offset, ignoreIndex_, xDimC_,
                     xDimN_, xDimH_, xDimW_, isWeightPresent_, (__ubuf__ float*)outUB_.GetPhyAddr(),
                     (__ubuf__ float*)weightUB_.GetPhyAddr(), (__gm__ U*)targetGm_.GetPhyAddr(),
                     (__gm__ T*)xGm_.GetPhyAddr(), (__gm__ T*)weightGm_.GetPhyAddr(), productOfCHW_, productOfHW_);
@@ -587,8 +588,8 @@ public:
             ReduceSumAmongCores(midOutResUB_, level2OutUB_, workspaceOutGm_);
             ReduceSumAmongCores(midWeightResUB_, level3OutUB_, workspaceWeightGm_);
             PipeBarrier<PIPE_ALL>();
-            AscendC::Simt::VF_CALL<GetRes<T>>(
-                AscendC::Simt::Dim3{static_cast<uint32_t>(MIN_THREAD)}, reduction_, (__gm__ T*)yGm_.GetPhyAddr(),
+            asc_vf_call<GetRes<T>>(
+                dim3{static_cast<uint32_t>(MIN_THREAD)}, reduction_, (__gm__ T*)yGm_.GetPhyAddr(),
                 (__gm__ T*)totalWeight_.GetPhyAddr(), (__ubuf__ float*)midOutResUB_.GetPhyAddr(),
                 (__ubuf__ float*)midWeightResUB_.GetPhyAddr());
         }

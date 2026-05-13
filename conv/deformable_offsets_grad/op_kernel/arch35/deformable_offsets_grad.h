@@ -15,6 +15,10 @@
 #ifndef DEFORMABLE_OFFSET_H
 #define DEFORMABLE_OFFSET_H
 #include "kernel_operator.h"
+#include "simt_api/asc_simt.h"
+#include "simt_api/device_atomic_functions.h"
+#include "simt_api/asc_fp16.h"
+#include "simt_api/asc_bf16.h"
 using namespace AscendC;
 namespace DeformableOffsetsGrad {
 const uint32_t MAX_THREAD_NUM = 512;
@@ -110,7 +114,7 @@ __simt_callee__ __aicore__ __attribute__((always_inline)) inline void BilinearIn
         T1 posOffset = lowH * inW_ * inChannel_ + lowW * inChannel_;
         for (T1 c = 0; c < channelPerGroup; c++) {
             T gradXValue1 = static_cast<T>(static_cast<float>(gradGmAddr[gradPrevIdx + c]) * gradXW1);
-            Simt::AtomicAdd(yGradXGmAddr + (yGradXIdx + posOffset + c), gradXValue1);
+            asc_atomic_add(yGradXGmAddr + (yGradXIdx + posOffset + c), gradXValue1);
             v1 = static_cast<float>(inputXGmAddr[inputXIdx + posOffset + c]);
             ComputeForGetFloorValueDeformableGrad<T, T1>(
                 gradGmAddr, c, gradPrevIdx, mask, gradOffsetsValueH, -v1, hw, gradOffsetsValueW, -v1, hh,
@@ -122,7 +126,7 @@ __simt_callee__ __aicore__ __attribute__((always_inline)) inline void BilinearIn
         T1 posOffset = lowH * inW_ * inChannel_ + HighW * inChannel_;
         for (T1 c = 0; c < channelPerGroup; c++) {
             T gradXValue2 = static_cast<T>(static_cast<float>(gradGmAddr[gradPrevIdx + c]) * gradXW2);
-            Simt::AtomicAdd(yGradXGmAddr + (yGradXIdx + posOffset + c), gradXValue2);
+            asc_atomic_add(yGradXGmAddr + (yGradXIdx + posOffset + c), gradXValue2);
             v2 = static_cast<float>(inputXGmAddr[inputXIdx + posOffset + c]);
             ComputeForGetFloorValueDeformableGrad<T, T1>(
                 gradGmAddr, c, gradPrevIdx, mask, gradOffsetsValueH, -v2, lw, gradOffsetsValueW, v2, hh,
@@ -134,7 +138,7 @@ __simt_callee__ __aicore__ __attribute__((always_inline)) inline void BilinearIn
         T1 posOffset = HighH * inW_ * inChannel_ + lowW * inChannel_;
         for (T1 c = 0; c < channelPerGroup; c++) {
             T gradXValue3 = static_cast<T>(static_cast<float>(gradGmAddr[gradPrevIdx + c]) * gradXW3);
-            Simt::AtomicAdd(yGradXGmAddr + (yGradXIdx + posOffset + c), gradXValue3);
+            asc_atomic_add(yGradXGmAddr + (yGradXIdx + posOffset + c), gradXValue3);
             v3 = static_cast<float>(inputXGmAddr[inputXIdx + posOffset + c]);
             ComputeForGetFloorValueDeformableGrad<T, T1>(
                 gradGmAddr, c, gradPrevIdx, mask, gradOffsetsValueH, v3, hw, gradOffsetsValueW, -v3, lh,
@@ -146,7 +150,7 @@ __simt_callee__ __aicore__ __attribute__((always_inline)) inline void BilinearIn
         T1 posOffset = HighH * inW_ * inChannel_ + HighW * inChannel_;
         for (T1 c = 0; c < channelPerGroup; c++) {
             T gradXValue4 = static_cast<T>(static_cast<float>(gradGmAddr[gradPrevIdx + c]) * gradXW4);
-            Simt::AtomicAdd(yGradXGmAddr + (yGradXIdx + posOffset + c), gradXValue4);
+            asc_atomic_add(yGradXGmAddr + (yGradXIdx + posOffset + c), gradXValue4);
             v4 = static_cast<float>(inputXGmAddr[inputXIdx + posOffset + c]);
             ComputeForGetFloorValueDeformableGrad<T, T1>(
                 gradGmAddr, c, gradPrevIdx, mask, gradOffsetsValueH, v4, lw, gradOffsetsValueW, v4, lh,
@@ -205,8 +209,8 @@ __simt_vf__ LAUNCH_BOUND(MAX_THREAD_NUM) __aicore__ void ComputeSetValueGradX(
     __gm__ T* gradGmAddr, __gm__ T* inputXGmAddr, __gm__ T* offsetsGmAddr, __gm__ T* yGradXGmAddr,
     __gm__ T* yGradOffsetsGmAddr, T1 blockClearProcessNum, T1 blockClearStartOffset)
 {
-    for (T1 idx = static_cast<T1>(Simt::GetThreadIdx()); idx < blockClearProcessNum;
-         idx += static_cast<T1>(Simt::GetThreadNum())) {
+    for (T1 idx = static_cast<T1>(threadIdx.x); idx < blockClearProcessNum;
+         idx += static_cast<T1>(blockDim.x)) {
         T1 curIdx = idx + blockClearStartOffset;
         yGradXGmAddr[curIdx] = static_cast<T>(0);
     }
@@ -221,8 +225,8 @@ __simt_vf__ LAUNCH_BOUND(MAX_THREAD_NUM) __aicore__ void ComputeDeformableOffset
     T1 dilationW_, T1 padsH_, T1 padsW_, T1 batchSize_)
 {
     T1 channelPerGroup = inChannel_ / deformableGroup_;
-    for (T1 idx = static_cast<T1>(Simt::GetThreadIdx()); idx < blockProcessNum;
-         idx += static_cast<T1>(Simt::GetThreadNum())) {
+    for (T1 idx = static_cast<T1>(threadIdx.x); idx < blockProcessNum;
+         idx += static_cast<T1>(blockDim.x)) {
         T1 curIdx = idx + blockStartOffset;
 
         // split multi-core and multi-thread according to the N * Ho * Wo * DeformableGroup * Kh *Kw
@@ -271,15 +275,15 @@ __aicore__ inline void DeformableOffsetGrad<T, T1>::Process()
     }
 
     if (blockId_ < tilingData_->clearGradXCoreNum) {
-        Simt::VF_CALL<ComputeSetValueGradX<T, T1>>(
-            Simt::Dim3{MAX_THREAD_NUM, 1, 1}, (__gm__ T*)gradGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(),
+        asc_vf_call<ComputeSetValueGradX<T, T1>>(
+            dim3{MAX_THREAD_NUM, 1, 1}, (__gm__ T*)gradGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(),
             (__gm__ T*)offsetsGm_.GetPhyAddr(), (__gm__ T*)yGradXGm_.GetPhyAddr(),
             (__gm__ T*)yGradOffsetsGm_.GetPhyAddr(), blockClearProcessNum, blockClearStartOffset);
     }
     SyncAll();
     if (blockId_ < tilingData_->realCoreNum) {
-        Simt::VF_CALL<ComputeDeformableOffsetGrad<T, T1>>(
-            Simt::Dim3{MAX_THREAD_NUM, 1, 1}, (__gm__ T*)gradGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(),
+        asc_vf_call<ComputeDeformableOffsetGrad<T, T1>>(
+            dim3{MAX_THREAD_NUM, 1, 1}, (__gm__ T*)gradGm_.GetPhyAddr(), (__gm__ T*)inputXGm_.GetPhyAddr(),
             (__gm__ T*)offsetsGm_.GetPhyAddr(), (__gm__ T*)yGradXGm_.GetPhyAddr(),
             (__gm__ T*)yGradOffsetsGm_.GetPhyAddr(), blockProcessNum, blockStartOffset, tilingData_->dimKHeight,
             tilingData_->dimKWidth, tilingData_->deformableGroups, offsetsChannel_, tilingData_->imgOutHeight,

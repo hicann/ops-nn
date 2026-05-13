@@ -18,6 +18,7 @@
 
 #include "kernel_operator.h"
 #include "../../inc/platform.h"
+#include "simt_api/asc_simt.h"
 
 namespace NLLLossGrad
 {
@@ -124,8 +125,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void SimtComputeNoReduce2
                                                                                 uint32_t blockNums_)
 {
     int64_t localClassNum = classNum_;
-    for (uint64_t i = blockId_ * Simt::GetThreadNum() + Simt::GetThreadIdx(); i < batchNum_;
-         i = i + blockNums_ * Simt::GetThreadNum()) {
+    for (uint64_t i = blockId_ * blockDim.x + threadIdx.x; i < batchNum_;
+         i = i + blockNums_ * blockDim.x) {
         int64_t chosenClass = target_[i];
         if (chosenClass == ignoreIdx_) {
             continue;
@@ -143,8 +144,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void SimtComputeReduceMea
 {
     int64_t localClassNum = classNum_;
     ASSERT(localTotalWeight != 0 && "Input total weight must not be 0!");
-    for (uint64_t i = blockId_ * Simt::GetThreadNum() + Simt::GetThreadIdx(); i < batchNum_;
-         i = i + blockNums_ * Simt::GetThreadNum()) {
+    for (uint64_t i = blockId_ * blockDim.x + threadIdx.x; i < batchNum_;
+         i = i + blockNums_ * blockDim.x) {
         int64_t chosenClass = target_[i];
         if (chosenClass == ignoreIdx_) {
             continue;
@@ -161,8 +162,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void SimtComputeReduceSum
     __gm__ T* outputGm_, __gm__ T* yGrad_, __gm__ T* weight_, uint32_t blockId_, uint32_t blockNums_)
 {
     int64_t localClassNum = classNum_;
-    for (uint64_t i = blockId_ * Simt::GetThreadNum() + Simt::GetThreadIdx(); i < batchNum_;
-         i = i + blockNums_ * Simt::GetThreadNum()) {
+    for (uint64_t i = blockId_ * blockDim.x + threadIdx.x; i < batchNum_;
+         i = i + blockNums_ * blockDim.x) {
         int64_t chosenClass = target_[i];
         if (chosenClass == ignoreIdx_) {
             continue;
@@ -182,8 +183,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void SimtComputeNoReduce4
                                                                                 uint32_t blockNums_, uint64_t productOfNHW_, uint64_t productOfHW_)
 {
     int64_t localClassNum = classNum_;
-    for (uint64_t i = blockId_ * Simt::GetThreadNum() + Simt::GetThreadIdx(); i < productOfNHW_;
-         i = i + blockNums_ * Simt::GetThreadNum()) {
+    for (uint64_t i = blockId_ * blockDim.x + threadIdx.x; i < productOfNHW_;
+         i = i + blockNums_ * blockDim.x) {
         int64_t chosenClass = target_[i];
         if (chosenClass == ignoreIdx_) {
             continue;
@@ -204,8 +205,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void SimtComputeReduceMea
 {
     int64_t localClassNum = classNum_;
     ASSERT(localTotalWeight != 0 && "Input total weight must not be 0!");
-    for (uint64_t i = blockId_ * Simt::GetThreadNum() + Simt::GetThreadIdx(); i < productOfNHW_;
-         i = i + blockNums_ * Simt::GetThreadNum()) {
+    for (uint64_t i = blockId_ * blockDim.x + threadIdx.x; i < productOfNHW_;
+         i = i + blockNums_ * blockDim.x) {
         int64_t chosenClass = target_[i];
         if (chosenClass == ignoreIdx_) {
             continue;
@@ -224,8 +225,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void SimtComputeReduceSum
     __gm__ T* outputGm_, __gm__ T* yGrad_, __gm__ T* weight_, uint32_t blockId_, uint32_t blockNums_, uint64_t productOfNHW_, uint64_t productOfHW_)
 {
     int64_t localClassNum = classNum_;
-    for (uint64_t i = blockId_ * Simt::GetThreadNum() + Simt::GetThreadIdx(); i < productOfNHW_;
-         i = i + blockNums_ * Simt::GetThreadNum()) {
+    for (uint64_t i = blockId_ * blockDim.x + threadIdx.x; i < productOfNHW_;
+         i = i + blockNums_ * blockDim.x) {
         int64_t chosenClass = target_[i];
         if (chosenClass == ignoreIdx_) {
             continue;
@@ -244,7 +245,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void ComputeSetValue(
     uint64_t classNum_, uint64_t batchNum_, uint32_t blockId_, uint32_t blockNums_, __ubuf__ float* singleGrad_,
     __gm__ T* outputGm_, __gm__ T* yGrad_, __ubuf__ float* localTotalWeight_, __gm__ T* total_weight_)
 {
-    if (Simt::GetThreadIdx() == 0) {
+    if (threadIdx.x == 0) {
         localTotalWeight_[0] = static_cast<float>(total_weight_[0]);
         singleGrad_[0] = static_cast<float>(yGrad_[0]);
     }
@@ -281,8 +282,8 @@ __aicore__ inline void KernelNLLLossGrad<T, F>::Process()
     tmpOut_ = tmpOutBuf_.Get<float>();
 
     if (this->isComputeCore_) {
-        AscendC::Simt::VF_CALL<ComputeSetValue<T, F>>(
-            AscendC::Simt::Dim3{usedThread_}, classNum_, batchNum_, blockId_, blockNums_,
+        asc_vf_call<ComputeSetValue<T, F>>(
+            dim3{usedThread_}, classNum_, batchNum_, blockId_, blockNums_,
             (__ubuf__ float*)singleGrad_.GetPhyAddr(), (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)yGrad_.GetPhyAddr(),
             (__ubuf__ float*)localTotalWeight_.GetPhyAddr(), (__gm__ T*)total_weight_.GetPhyAddr());
     }
@@ -297,35 +298,35 @@ __aicore__ inline void KernelNLLLossGrad<T, F>::Process()
     PipeBarrier<PIPE_ALL>();
     if(xDims_ == 1 || xDims_ == NUMBER_TWO){
         if (reductionMode_ == NONE_MODE) {
-            AscendC::Simt::VF_CALL<SimtComputeNoReduce2d<T, F>>(
-                AscendC::Simt::Dim3{usedThread_}, classNum_, batchNum_, (__gm__ F*)target_.GetPhyAddr(), ignoreIdx_,
+            asc_vf_call<SimtComputeNoReduce2d<T, F>>(
+                dim3{usedThread_}, classNum_, batchNum_, (__gm__ F*)target_.GetPhyAddr(), ignoreIdx_,
                 (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)yGrad_.GetPhyAddr(), (__gm__ T*)weight_.GetPhyAddr(),
                 blockId_, blockNums_);
         } else if (reductionMode_ == MEAN_MODE) {
-            AscendC::Simt::VF_CALL<SimtComputeReduceMean2d<T, F>>(
-                AscendC::Simt::Dim3{usedThread_}, classNum_, batchNum_, (__gm__ F*)target_.GetPhyAddr(), ignoreIdx_,
+            asc_vf_call<SimtComputeReduceMean2d<T, F>>(
+                dim3{usedThread_}, classNum_, batchNum_, (__gm__ F*)target_.GetPhyAddr(), ignoreIdx_,
                 (__ubuf__ float*)tmpOut_.GetPhyAddr(), (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)yGrad_.GetPhyAddr(),
                 (__gm__ T*)weight_.GetPhyAddr(), blockId_, blockNums_);
         } else if (reductionMode_ == SUM_MODE) {
-            AscendC::Simt::VF_CALL<SimtComputeReduceSum2d<T, F>>(
-                AscendC::Simt::Dim3{usedThread_}, classNum_, batchNum_, (__gm__ F*)target_.GetPhyAddr(), ignoreIdx_,
+            asc_vf_call<SimtComputeReduceSum2d<T, F>>(
+                dim3{usedThread_}, classNum_, batchNum_, (__gm__ F*)target_.GetPhyAddr(), ignoreIdx_,
                 (__ubuf__ float*)singleGrad_.GetPhyAddr(), (__gm__ T*)outputGm_.GetPhyAddr(),
                 (__gm__ T*)yGrad_.GetPhyAddr(), (__gm__ T*)weight_.GetPhyAddr(), blockId_, blockNums_);
         }
     }else if(xDims_ == NUMBER_FOUR){
         if (reductionMode_ == NONE_MODE) {
-            AscendC::Simt::VF_CALL<SimtComputeNoReduce4d<T, F>>(
-                AscendC::Simt::Dim3{usedThread_}, classNum_, batchNum_, height_, width_, (__gm__ F*)target_.GetPhyAddr(), ignoreIdx_,
+            asc_vf_call<SimtComputeNoReduce4d<T, F>>(
+                dim3{usedThread_}, classNum_, batchNum_, height_, width_, (__gm__ F*)target_.GetPhyAddr(), ignoreIdx_,
                 (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)yGrad_.GetPhyAddr(), (__gm__ T*)weight_.GetPhyAddr(),
                 blockId_, blockNums_, productOfNHW_, productOfHW_);
         } else if (reductionMode_ == MEAN_MODE) {
-            AscendC::Simt::VF_CALL<SimtComputeReduceMean4d<T, F>>(
-                AscendC::Simt::Dim3{usedThread_}, classNum_, batchNum_, height_, width_, (__gm__ F*)target_.GetPhyAddr(), ignoreIdx_,
+            asc_vf_call<SimtComputeReduceMean4d<T, F>>(
+                dim3{usedThread_}, classNum_, batchNum_, height_, width_, (__gm__ F*)target_.GetPhyAddr(), ignoreIdx_,
                 (__ubuf__ float*)tmpOut_.GetPhyAddr(), (__gm__ T*)outputGm_.GetPhyAddr(), (__gm__ T*)yGrad_.GetPhyAddr(),
                 (__gm__ T*)weight_.GetPhyAddr(), blockId_, blockNums_, productOfNHW_, productOfHW_);
         } else if (reductionMode_ == SUM_MODE) {
-            AscendC::Simt::VF_CALL<SimtComputeReduceSum4d<T, F>>(
-                AscendC::Simt::Dim3{usedThread_}, classNum_, batchNum_, height_, width_, (__gm__ F*)target_.GetPhyAddr(), ignoreIdx_,
+            asc_vf_call<SimtComputeReduceSum4d<T, F>>(
+                dim3{usedThread_}, classNum_, batchNum_, height_, width_, (__gm__ F*)target_.GetPhyAddr(), ignoreIdx_,
                 (__ubuf__ float*)singleGrad_.GetPhyAddr(), (__gm__ T*)outputGm_.GetPhyAddr(),
                 (__gm__ T*)yGrad_.GetPhyAddr(), (__gm__ T*)weight_.GetPhyAddr(), blockId_, blockNums_, productOfNHW_, productOfHW_);
         }

@@ -168,11 +168,11 @@ __simt_vf__ LAUNCH_BOUND(THREAD_NUM) __aicore__ void CalGradCompute(
     __gm__ float* logBetaGm, __gm__ float* tempGradGm, ThreadType maxInputLength, ThreadType batchSize,
     ThreadType symbolSet, ThreadType zeroInfinity)
 {
-    ThreadType threadIdx = AscendC::Simt::GetThreadIdx<0>();
-    ThreadType blockDimX = AscendC::Simt::GetThreadNum<0>();
+    ThreadType thread_idx = threadIdx.x;
+    ThreadType blockDimX = blockDim.x;
     ThreadType gradBatchOffset = batchSize * symbolSet;
     ThreadType length = maxInputLength * batchSize * symbolSet;
-    for (ThreadType index = threadIdx + block_idx * blockDimX; index < length; index += block_num * blockDimX) {
+    for (ThreadType index = thread_idx + block_idx * blockDimX; index < length; index += block_num * blockDimX) {
         ThreadType t = index / gradBatchOffset;
         ThreadType offset = index % gradBatchOffset;
         ThreadType b = offset / symbolSet;
@@ -201,10 +201,10 @@ __simt_vf__ LAUNCH_BOUND(THREAD_NUM) __aicore__ void UpdateLcabCompute(
     ThreadType batchSize, ThreadType symbolSet, ThreadType zeroInfinity, ThreadType blank, ThreadType logAlphaT,
     ThreadType alphaLength, ThreadType targetsDimNum, ThreadType sDimRange)
 {
-    ThreadType threadIdx = AscendC::Simt::GetThreadIdx<0>();
-    ThreadType blockDimX = AscendC::Simt::GetThreadNum<0>();
+    ThreadType thread_idx = threadIdx.x;
+    ThreadType blockDimX = blockDim.x;
     ThreadType length = maxInputLength * batchSize;
-    for (ThreadType index = threadIdx + block_idx * blockDimX; index < length; index += block_num * blockDimX) {
+    for (ThreadType index = thread_idx + block_idx * blockDimX; index < length; index += block_num * blockDimX) {
         ThreadType b = index / maxInputLength;
         ThreadType t = index % maxInputLength;
         if ((t >= maxInputLength) || (b >= batchSize)) {
@@ -271,10 +271,10 @@ __simt_vf__ LAUNCH_BOUND(THREAD_NUM) __aicore__ void LogBetaCompute(
     ThreadType targetsDimNum, ThreadType sDimRange)
 {
     constexpr float neginf = -INFINITY;
-    ThreadType threadIdy = AscendC::Simt::GetThreadIdx<1>();
-    ThreadType threadIdx = AscendC::Simt::GetThreadIdx<0>();
-    ThreadType blockDimx = AscendC::Simt::GetThreadNum<0>();
-    ThreadType blockDimy = AscendC::Simt::GetThreadNum<1>();
+    ThreadType threadIdy = threadIdx.y;
+    ThreadType thread_idx = threadIdx.x;
+    ThreadType blockDimx = blockDim.x;
+    ThreadType blockDimy = blockDim.y;
     for (ThreadType index = threadIdy + block_idx * blockDimy; index < batchSize; index += block_num * blockDimy) {
         ThreadType b = index;
         ThreadType inputLength = inputLengthsGm[b];
@@ -288,7 +288,7 @@ __simt_vf__ LAUNCH_BOUND(THREAD_NUM) __aicore__ void LogBetaCompute(
             ProcessTgBatchOffsets<T, DataType, ThreadType>(b, targetLengthsGm, targetsDimNum, sDimRange);
         for (ThreadType block_s = alphaLength - 1 - ((alphaLength - 1) % blockDimx); block_s >= 0;
              block_s -= blockDimx) {
-            ThreadType s = threadIdx + block_s;
+            ThreadType s = thread_idx + block_s;
             float lb;
             if (s == 2 * targetLength) {
                 lb = logProbsGm[logProbsBatchOffset + (inputLength - 1) * batchSize * symbolSet + blank];
@@ -305,7 +305,7 @@ __simt_vf__ LAUNCH_BOUND(THREAD_NUM) __aicore__ void LogBetaCompute(
         }
         for (ThreadType block_s = alphaLength - 1 - ((alphaLength - 1) % blockDimx); block_s >= 0;
              block_s -= blockDimx) {
-            ThreadType s = threadIdx + block_s;
+            ThreadType s = thread_idx + block_s;
             ThreadType currentTargetPrime;
             bool haveThree;
             if (s < 2 * targetLength + 1 && targetLength > 0) {
@@ -320,7 +320,7 @@ __simt_vf__ LAUNCH_BOUND(THREAD_NUM) __aicore__ void LogBetaCompute(
                 haveThree = false;
             }
             for (ThreadType t = maxInputLength - 2; t >= 0; t--) {
-                Simt::ThreadBarrier();
+                asc_syncthreads();
                 if ((t < inputLength - 1) && (s < 2 * targetLength + 1)) {
                     float lb1 = logBetaGm[logBetaBatchOffset + (t + 1) * alphaLength + s];
                     float lbmax = lb1;
@@ -360,8 +360,8 @@ __aicore__ inline void CTCLossV2Grad<T, DataType, ThreadType>::Process()
     ThreadType blockDimX = tilingData_->blockDimX;
     ThreadType blockDimY = tilingData_->blockDimY;
     if constexpr (sizeof(ThreadType) == INT_SIZE_32) {
-        Simt::VF_CALL<LogBetaCompute<T, DataType, ThreadType, THREAD_NUM_1024>>(
-            Simt::Dim3(blockDimX, blockDimY), (__gm__ T*)(gradOutGm.GetPhyAddr()), (__gm__ T*)(logProbsGm.GetPhyAddr()),
+        asc_vf_call<LogBetaCompute<T, DataType, ThreadType, THREAD_NUM_1024>>(
+            dim3(blockDimX, blockDimY), (__gm__ T*)(gradOutGm.GetPhyAddr()), (__gm__ T*)(logProbsGm.GetPhyAddr()),
             (__gm__ DataType*)(targetsGm.GetPhyAddr()), (__gm__ DataType*)(inputLengthsGm.GetPhyAddr()),
             (__gm__ DataType*)(targetLengthsGm.GetPhyAddr()), (__gm__ T*)(negLogLikelihoodGm.GetPhyAddr()),
             (__gm__ T*)(logAlphaGm.GetPhyAddr()), (__gm__ T*)(gradGm.GetPhyAddr()),
@@ -371,8 +371,8 @@ __aicore__ inline void CTCLossV2Grad<T, DataType, ThreadType>::Process()
             tilingData_->sDimRange);
 
         SyncAll();
-        Simt::VF_CALL<UpdateLcabCompute<T, DataType, ThreadType, THREAD_NUM_1024>>(
-            Simt::Dim3(tilingData_->updateLcabThreadNum, 1), (__gm__ T*)(gradOutGm.GetPhyAddr()),
+        asc_vf_call<UpdateLcabCompute<T, DataType, ThreadType, THREAD_NUM_1024>>(
+            dim3(tilingData_->updateLcabThreadNum, 1), (__gm__ T*)(gradOutGm.GetPhyAddr()),
             (__gm__ T*)(logProbsGm.GetPhyAddr()), (__gm__ DataType*)(targetsGm.GetPhyAddr()),
             (__gm__ DataType*)(inputLengthsGm.GetPhyAddr()), (__gm__ DataType*)(targetLengthsGm.GetPhyAddr()),
             (__gm__ T*)(negLogLikelihoodGm.GetPhyAddr()), (__gm__ T*)(logAlphaGm.GetPhyAddr()),
@@ -381,8 +381,8 @@ __aicore__ inline void CTCLossV2Grad<T, DataType, ThreadType>::Process()
             tilingData_->symbolSet, tilingData_->zeroInfinity, tilingData_->BLANK, tilingData_->logAlphaT,
             tilingData_->alphaLength, tilingData_->targetsDimNum, tilingData_->sDimRange);
         SyncAll();
-        Simt::VF_CALL<CalGradCompute<T, DataType, ThreadType, THREAD_NUM_1024>>(
-            Simt::Dim3(tilingData_->calGradThreadNum, 1), (__gm__ T*)(gradOutGm.GetPhyAddr()),
+        asc_vf_call<CalGradCompute<T, DataType, ThreadType, THREAD_NUM_1024>>(
+            dim3(tilingData_->calGradThreadNum, 1), (__gm__ T*)(gradOutGm.GetPhyAddr()),
             (__gm__ T*)(logProbsGm.GetPhyAddr()), (__gm__ DataType*)(targetsGm.GetPhyAddr()),
             (__gm__ DataType*)(inputLengthsGm.GetPhyAddr()), (__gm__ DataType*)(targetLengthsGm.GetPhyAddr()),
             (__gm__ T*)(negLogLikelihoodGm.GetPhyAddr()), (__gm__ T*)(logAlphaGm.GetPhyAddr()),
@@ -392,8 +392,8 @@ __aicore__ inline void CTCLossV2Grad<T, DataType, ThreadType>::Process()
     }
 
     if constexpr (sizeof(ThreadType) == INT_SIZE_64) {
-        Simt::VF_CALL<LogBetaCompute<T, DataType, ThreadType, THREAD_NUM_512>>(
-            Simt::Dim3(blockDimX, blockDimY), (__gm__ T*)(gradOutGm.GetPhyAddr()), (__gm__ T*)(logProbsGm.GetPhyAddr()),
+        asc_vf_call<LogBetaCompute<T, DataType, ThreadType, THREAD_NUM_512>>(
+            dim3(blockDimX, blockDimY), (__gm__ T*)(gradOutGm.GetPhyAddr()), (__gm__ T*)(logProbsGm.GetPhyAddr()),
             (__gm__ DataType*)(targetsGm.GetPhyAddr()), (__gm__ DataType*)(inputLengthsGm.GetPhyAddr()),
             (__gm__ DataType*)(targetLengthsGm.GetPhyAddr()), (__gm__ T*)(negLogLikelihoodGm.GetPhyAddr()),
             (__gm__ T*)(logAlphaGm.GetPhyAddr()), (__gm__ T*)(gradGm.GetPhyAddr()),
@@ -403,8 +403,8 @@ __aicore__ inline void CTCLossV2Grad<T, DataType, ThreadType>::Process()
             tilingData_->sDimRange);
 
         SyncAll();
-        Simt::VF_CALL<UpdateLcabCompute<T, DataType, ThreadType, THREAD_NUM_512>>(
-            Simt::Dim3(tilingData_->updateLcabThreadNum, 1), (__gm__ T*)(gradOutGm.GetPhyAddr()),
+        asc_vf_call<UpdateLcabCompute<T, DataType, ThreadType, THREAD_NUM_512>>(
+            dim3(tilingData_->updateLcabThreadNum, 1), (__gm__ T*)(gradOutGm.GetPhyAddr()),
             (__gm__ T*)(logProbsGm.GetPhyAddr()), (__gm__ DataType*)(targetsGm.GetPhyAddr()),
             (__gm__ DataType*)(inputLengthsGm.GetPhyAddr()), (__gm__ DataType*)(targetLengthsGm.GetPhyAddr()),
             (__gm__ T*)(negLogLikelihoodGm.GetPhyAddr()), (__gm__ T*)(logAlphaGm.GetPhyAddr()),
@@ -413,8 +413,8 @@ __aicore__ inline void CTCLossV2Grad<T, DataType, ThreadType>::Process()
             tilingData_->symbolSet, tilingData_->zeroInfinity, tilingData_->BLANK, tilingData_->logAlphaT,
             tilingData_->alphaLength, tilingData_->targetsDimNum, tilingData_->sDimRange);
         SyncAll();
-        Simt::VF_CALL<CalGradCompute<T, DataType, ThreadType, THREAD_NUM_512>>(
-            Simt::Dim3(tilingData_->calGradThreadNum, 1), (__gm__ T*)(gradOutGm.GetPhyAddr()),
+        asc_vf_call<CalGradCompute<T, DataType, ThreadType, THREAD_NUM_512>>(
+            dim3(tilingData_->calGradThreadNum, 1), (__gm__ T*)(gradOutGm.GetPhyAddr()),
             (__gm__ T*)(logProbsGm.GetPhyAddr()), (__gm__ DataType*)(targetsGm.GetPhyAddr()),
             (__gm__ DataType*)(inputLengthsGm.GetPhyAddr()), (__gm__ DataType*)(targetLengthsGm.GetPhyAddr()),
             (__gm__ T*)(negLogLikelihoodGm.GetPhyAddr()), (__gm__ T*)(logAlphaGm.GetPhyAddr()),

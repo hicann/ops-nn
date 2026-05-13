@@ -15,6 +15,7 @@
 #ifndef DEFORMABLE_OFFSET_H
 #define DEFORMABLE_OFFSET_H
 #include "kernel_operator.h"
+#include "simt_api/asc_simt.h"
 namespace DeformableOffsets {
 using namespace AscendC;
 const int32_t WIDTH_OFFSET_INDEX = 0;
@@ -127,7 +128,7 @@ __simt_vf__ LAUNCH_BOUND(VF_MAX_THREAD_NUM) __aicore__ void ComputeDeformableOff
     T1 widthOffset = WIDTH_OFFSET_INDEX * offsetKernelElementStride;
     T1 weightOffset = POINT_WEIGHT_OFFSET_INDEX * offsetKernelElementStride;
 
-    for (T1 index = blockId_ * VF_MAX_THREAD_NUM + Simt::GetThreadIdx(); index < numKernels;
+    for (T1 index = blockId_ * VF_MAX_THREAD_NUM + threadIdx.x; index < numKernels;
          index += (blockNumber * VF_MAX_THREAD_NUM)) {
         // output info (N H K_h W K_w, groups, groupC)
         T1 batchNum, heightCol, widthCol, channelIndex, groupsIndex;
@@ -185,8 +186,8 @@ __aicore__ inline void DeformableOffset<T, T1, T2>::Process()
     GetUintDivMagicAndShift(mH_, shiftH_, static_cast<T2>(tiling_->imgOutWidth * tiling_->imgChannel));
     GetUintDivMagicAndShift(mW_, shiftW_, static_cast<T2>(tiling_->imgChannel));
     GetUintDivMagicAndShift(mC_, shiftC_, static_cast<T2>(tiling_->imgChannel / tiling_->deformableGroups));
-    Simt::VF_CALL<ComputeDeformableOffset<T, T1, T2>>(
-        Simt::Dim3{VF_MAX_THREAD_NUM, 1, 1}, (__gm__ T*)(inputImgGm_.GetPhyAddr()),
+    asc_vf_call<ComputeDeformableOffset<T, T1, T2>>(
+        dim3{VF_MAX_THREAD_NUM, 1, 1}, (__gm__ T*)(inputImgGm_.GetPhyAddr()),
         (__gm__ T*)(offsetsGm_.GetPhyAddr()), (__gm__ T*)(yGm_.GetPhyAddr()), tiling_->blockNum, tiling_->numKernels,
         tiling_->imgOutWidth, tiling_->imgChannel, tiling_->imgHeight, tiling_->imgWidth, tiling_->strideHeight,
         tiling_->strideWidth, tiling_->dilationHeight, tiling_->dilationWidth, tiling_->padsHeight, tiling_->padsWidth,

@@ -19,6 +19,7 @@
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
 #include "ctc_loss_v2_tiling_key.h"
+#include "simt_api/asc_simt.h"
 
 #define INFINITY (__builtin_inff())
 #define BSALIGNSIZE 32

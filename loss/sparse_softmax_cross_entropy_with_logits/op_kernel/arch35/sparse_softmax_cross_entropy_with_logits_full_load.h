@@ -20,6 +20,7 @@
 #include "kernel_operator.h"
 #include "../inc/platform.h"
 #include "sparse_softmax_cross_entropy_with_logits_tiling_data.h"
+#include "simt_api/asc_simt.h"
 
 namespace SparseSoftmaxCrossEntropyWithLogits {
 using namespace AscendC;
@@ -34,7 +35,7 @@ using AscendC::MicroAPI::UpdateMask;
 template <typename T1, typename T2, uint64_t schId, uint64_t db>
 __simt_vf__ __aicore__ LAUNCH_BOUND(1024) inline void UbSimtComputeLoopRFullLoad(__ubuf__ float* temp1Addr, __ubuf__ float* temp2Addr, __ubuf__ T2* labelsAddr, __ubuf__ float* gatherAddr, const int64_t tileNum, const int64_t rAlign, const int64_t rMax)
 {
-    for (int64_t index = static_cast<int64_t>(Simt::GetThreadIdx()); index < tileNum; index += static_cast<int64_t>(Simt::GetThreadNum<0>())) {
+    for (int64_t index = static_cast<int64_t>(threadIdx.x); index < tileNum; index += static_cast<int64_t>(blockDim.x)) {
 		ASSERT((0 <= labelsAddr[index] && labelsAddr[index] < rMax) && "lable is not in [0, C)");
         int64_t offset = index * rAlign + labelsAddr[index];
         temp1Addr[offset] -= 1.0f;
@@ -209,7 +210,7 @@ __aicore__ inline void SparseSoftmaxCrossEntropyWithLogitsFullLoad<T1, T2, schId
 	VfBackProp(tileNum, r_, rUbNumFactor_, sumBuf, temp1Buf, logBuf, labelsBuf, backPropBuf, temp2Buf, subBuf);
     int64_t simtParam1 = rUbNumFactor_;
     int64_t simtParam2 = r_;
-    Simt::VF_CALL<UbSimtComputeLoopRFullLoad<T1, T2, schId, db>>(Simt::Dim3{1024}, (__ubuf__ float*)temp1Buf.GetPhyAddr(), (__ubuf__ float*)temp2Buf.GetPhyAddr(), (__ubuf__ T2*)labelsBuf.GetPhyAddr(), (__ubuf__ float*)maxBuf.GetPhyAddr(), tileNum, simtParam1, simtParam2);
+    asc_vf_call<UbSimtComputeLoopRFullLoad<T1, T2, schId, db>>(dim3{1024}, (__ubuf__ float*)temp1Buf.GetPhyAddr(), (__ubuf__ float*)temp2Buf.GetPhyAddr(), (__ubuf__ T2*)labelsBuf.GetPhyAddr(), (__ubuf__ float*)maxBuf.GetPhyAddr(), tileNum, simtParam1, simtParam2);
     if constexpr (sizeof(T1) == 2) {
         AscendC::Cast(backPropBuf, temp1Buf, AscendC::RoundMode::CAST_RINT, tileNum * rUbNumFactor_);
     } else {

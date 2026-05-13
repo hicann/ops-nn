@@ -19,6 +19,9 @@
 #include <cmath>
 #include <cstdint>
 #include "kernel_operator.h"
+#include "simt_api/asc_simt.h"
+#include "simt_api/asc_bf16.h"
+#include "simt_api/asc_fp16.h"
 
 using namespace AscendC;
 
@@ -50,16 +53,16 @@ __simt_callee__ __aicore__ inline void TargetCheck(const U idx, const uint32_t x
 
 __simt_callee__ __aicore__ inline void SimtComputeBinaryReduction(__ubuf__ float* tmpOut_, __ubuf__ float* tmpWeight_)
 {
-    uint32_t countBR = Simt::GetThreadNum();
+    uint32_t countBR = blockDim.x;
     while (countBR > 1) {
         uint32_t halfBR = (countBR + 1) / BINARY_HALF;
-        if (Simt::GetThreadIdx() < halfBR) {
-            tmpOut_[Simt::GetThreadIdx()] = tmpOut_[Simt::GetThreadIdx() + halfBR] + tmpOut_[Simt::GetThreadIdx()];
+        if (threadIdx.x < halfBR) {
+            tmpOut_[threadIdx.x] = tmpOut_[threadIdx.x + halfBR] + tmpOut_[threadIdx.x];
 
-            tmpWeight_[Simt::GetThreadIdx()] =
-                tmpWeight_[Simt::GetThreadIdx() + halfBR] + tmpWeight_[Simt::GetThreadIdx()];
+            tmpWeight_[threadIdx.x] =
+                tmpWeight_[threadIdx.x + halfBR] + tmpWeight_[threadIdx.x];
         }
-        Simt::ThreadBarrier();
+        asc_syncthreads();
         countBR = halfBR;
     }
 }
@@ -100,8 +103,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void SimtComputeNLLLoss2d
     int64_t blockId_, int64_t xDimN_, int64_t blockNums_, __gm__ U* targetGm_, int64_t ignoreIndex_, __gm__ T* yGm_,
     uint32_t isWeightPresent_, __gm__ T* weightGm_, __gm__ T* xGm_, uint32_t xDimC_)
 {
-    for (int64_t i = blockId_ * Simt::GetThreadNum() + Simt::GetThreadIdx(); i < xDimN_;
-         i = i + blockNums_ * Simt::GetThreadNum()) {
+    for (int64_t i = blockId_ * blockDim.x + threadIdx.x; i < xDimN_;
+         i = i + blockNums_ * blockDim.x) {
         U targetIndex = targetGm_[i];
         if (targetIndex == ignoreIndex_) {
             yGm_[i] = static_cast<T>(0);
@@ -119,10 +122,10 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void SimtComputeNLLLoss2d
     uint32_t isWeightPresent_, __gm__ T* weightGm_, __ubuf__ float* tmpOut_, __gm__ T* xGm_, __ubuf__ float* tmpWeight_,
     __gm__ volatile float* tmpSumGm_, __gm__ volatile float* tmpWeightGm_)
 {
-    for (int64_t i = blockId_ * Simt::GetThreadNum() + Simt::GetThreadIdx(); i < xDimN_;
-         i = i + blockNums_ * Simt::GetThreadNum()) {
+    for (int64_t i = blockId_ * blockDim.x + threadIdx.x; i < xDimN_;
+         i = i + blockNums_ * blockDim.x) {
         U targetIndex = targetGm_[i];
-        int64_t ubIdx = (i % (blockNums_ * Simt::GetThreadNum())) % THREAD_DIM;
+        int64_t ubIdx = (i % (blockNums_ * blockDim.x)) % THREAD_DIM;
         if (targetIndex == ignoreIndex_) {
             continue;
         }
@@ -132,10 +135,10 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void SimtComputeNLLLoss2d
             tmpOut_[ubIdx] - static_cast<float>(curWeight) * static_cast<float>(xGm_[i * xDimC_ + targetIndex]);
         tmpWeight_[ubIdx] = static_cast<float>(curWeight) + tmpWeight_[ubIdx];
     }
-    Simt::ThreadBarrier();
+    asc_syncthreads();
     SimtComputeBinaryReduction(tmpOut_, tmpWeight_);
 
-    if (Simt::GetThreadIdx() == 0) {
+    if (threadIdx.x == 0) {
         tmpSumGm_[blockId_] = tmpOut_[0];
         tmpWeightGm_[blockId_] = tmpWeight_[0];
     }
@@ -147,10 +150,10 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void SimtComputeNLLLoss2d
     __ubuf__ float* tmpOut_, __ubuf__ float* tmpWeight_, uint32_t isWeightPresent_, __gm__ T* weightGm_, __gm__ T* xGm_,
     __gm__ volatile float* tmpSumGm_, uint32_t xDimC_, __gm__ volatile float* tmpWeightGm_)
 {
-    for (int64_t i = blockId_ * Simt::GetThreadNum() + Simt::GetThreadIdx(); i < xDimN_;
-         i = i + blockNums_ * Simt::GetThreadNum()) {
+    for (int64_t i = blockId_ * blockDim.x + threadIdx.x; i < xDimN_;
+         i = i + blockNums_ * blockDim.x) {
         U targetIndex = targetGm_[i];
-        int64_t ubIdx = (i % (blockNums_ * Simt::GetThreadNum())) % THREAD_DIM;
+        int64_t ubIdx = (i % (blockNums_ * blockDim.x)) % THREAD_DIM;
         if (targetIndex == ignoreIndex_) {
             continue;
         }
@@ -160,10 +163,10 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void SimtComputeNLLLoss2d
             tmpOut_[ubIdx] - static_cast<float>(curWeight) * static_cast<float>(xGm_[i * xDimC_ + targetIndex]);
         tmpWeight_[ubIdx] = static_cast<float>(curWeight) + tmpWeight_[ubIdx];
     }
-    Simt::ThreadBarrier();
+    asc_syncthreads();
     SimtComputeBinaryReduction(tmpOut_, tmpWeight_);
 
-    if (Simt::GetThreadIdx() == 0) {
+    if (threadIdx.x == 0) {
         tmpSumGm_[blockId_] = tmpOut_[0];
         tmpWeightGm_[blockId_] = tmpWeight_[0];
     }
@@ -175,7 +178,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void SimtComputeNLLLoss4d
     __gm__ T* weightGm, __gm__ T* xGm, uint32_t xDimC, int64_t dealingNum, int64_t productOfCHW,
     int64_t productOfHW)
 {
-    for (int64_t i = Simt::GetThreadIdx(); i < dealingNum; i = i + Simt::GetThreadNum()) {
+    for (int64_t i = threadIdx.x; i < dealingNum; i = i + blockDim.x) {
         int64_t index = offset + i;
         U targetIndex = targetGm[index]; //blockid_*
         if (targetIndex == ignoreIndex) {
@@ -198,10 +201,10 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void SimtComputeNLLLoss4d
     __gm__ T* xGm_, __ubuf__ float* tmpWeight_, __gm__ volatile float* tmpSumGm_, __gm__ volatile float* tmpWeightGm_,
     int64_t productOfNHW_, int64_t productOfCHW_, int64_t productOfHW_)
 {
-    for (int64_t i = blockId_ * Simt::GetThreadNum() + Simt::GetThreadIdx(); i < productOfNHW_;
-         i = i + blockNums_ * Simt::GetThreadNum()) {
+    for (int64_t i = blockId_ * blockDim.x + threadIdx.x; i < productOfNHW_;
+         i = i + blockNums_ * blockDim.x) {
         U targetIndex = targetGm_[i];
-        int64_t ubIdx = (i % (blockNums_ * Simt::GetThreadNum())) % THREAD_DIM;
+        int64_t ubIdx = (i % (blockNums_ * blockDim.x)) % THREAD_DIM;
         if (targetIndex == ignoreIndex_) {
             continue;
         }
@@ -214,10 +217,10 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void SimtComputeNLLLoss4d
                                  static_cast<float>(xGm_[n * productOfCHW_ + targetIndex * productOfHW_ + rem]);
         tmpWeight_[ubIdx] = static_cast<float>(curWeight) + tmpWeight_[ubIdx];
     }
-    Simt::ThreadBarrier();
+    asc_syncthreads();
     SimtComputeBinaryReduction(tmpOut_, tmpWeight_);
 
-    if (Simt::GetThreadIdx() == 0) {
+    if (threadIdx.x == 0) {
         tmpSumGm_[blockId_] = tmpOut_[0];
         tmpWeightGm_[blockId_] = tmpWeight_[0];
     }
@@ -230,10 +233,10 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void SimtComputeNLLLoss4d
     __gm__ T* weightGm_, __gm__ T* xGm_, __gm__ volatile float* tmpSumGm_, uint32_t xDimC_,
     __gm__ volatile float* tmpWeightGm_, int64_t productOfNHW_, int64_t productOfCHW_, int64_t productOfHW_)
 {
-    for (int64_t i = blockId_ * Simt::GetThreadNum() + Simt::GetThreadIdx(); i < productOfNHW_;
-         i = i + blockNums_ * Simt::GetThreadNum()) {
+    for (int64_t i = blockId_ * blockDim.x + threadIdx.x; i < productOfNHW_;
+         i = i + blockNums_ * blockDim.x) {
         U targetIndex = targetGm_[i];
-        int64_t ubIdx = (i % (blockNums_ * Simt::GetThreadNum())) % THREAD_DIM;
+        int64_t ubIdx = (i % (blockNums_ * blockDim.x)) % THREAD_DIM;
         if (targetIndex == ignoreIndex_) {
             continue;
         }
@@ -246,10 +249,10 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void SimtComputeNLLLoss4d
                                  static_cast<float>(xGm_[n * productOfCHW_ + targetIndex * productOfHW_ + rem]);
         tmpWeight_[ubIdx] = static_cast<float>(curWeight) + tmpWeight_[ubIdx];
     }
-    Simt::ThreadBarrier();
+    asc_syncthreads();
     SimtComputeBinaryReduction(tmpOut_, tmpWeight_);
 
-    if (Simt::GetThreadIdx() == 0) {
+    if (threadIdx.x == 0) {
         tmpSumGm_[blockId_] = tmpOut_[0];
         tmpWeightGm_[blockId_] = tmpWeight_[0];
     }
@@ -261,27 +264,27 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void CalBinaryReductionIn
     __gm__ T* yGm_, __gm__ T* totalWeight_)
 {
     uint32_t valueLarger2Power = blockNums_ - calNumPower_;
-    if (Simt::GetThreadIdx() < valueLarger2Power) {
-        tmpSumGm_[Simt::GetThreadIdx()] =
-            tmpSumGm_[Simt::GetThreadIdx() + calNumPower_] + tmpSumGm_[Simt::GetThreadIdx()];
-        tmpWeightGm_[Simt::GetThreadIdx()] =
-            tmpWeightGm_[Simt::GetThreadIdx() + calNumPower_] + tmpWeightGm_[Simt::GetThreadIdx()];
+    if (threadIdx.x < valueLarger2Power) {
+        tmpSumGm_[threadIdx.x] =
+            tmpSumGm_[threadIdx.x + calNumPower_] + tmpSumGm_[threadIdx.x];
+        tmpWeightGm_[threadIdx.x] =
+            tmpWeightGm_[threadIdx.x + calNumPower_] + tmpWeightGm_[threadIdx.x];
     }
-    Simt::ThreadBarrier();
+    asc_syncthreads();
 
     int64_t countBR = calNumPower_;
     while (countBR > 1) {
         int64_t halfBR = (countBR + 1) / BINARY_HALF;
-        if (Simt::GetThreadIdx() < halfBR) {
-            tmpSumGm_[Simt::GetThreadIdx()] =
-                tmpSumGm_[Simt::GetThreadIdx() + halfBR] + tmpSumGm_[Simt::GetThreadIdx()];
-            tmpWeightGm_[Simt::GetThreadIdx()] =
-                tmpWeightGm_[Simt::GetThreadIdx() + halfBR] + tmpWeightGm_[Simt::GetThreadIdx()];
+        if (threadIdx.x < halfBR) {
+            tmpSumGm_[threadIdx.x] =
+                tmpSumGm_[threadIdx.x + halfBR] + tmpSumGm_[threadIdx.x];
+            tmpWeightGm_[threadIdx.x] =
+                tmpWeightGm_[threadIdx.x + halfBR] + tmpWeightGm_[threadIdx.x];
         }
-        Simt::ThreadBarrier();
+        asc_syncthreads();
         countBR = halfBR;
     }
-    if (Simt::GetThreadIdx() == 0) {
+    if (threadIdx.x == 0) {
         if constexpr (is_same<bfloat16_t, T>::value) {
             if constexpr (reduction == REDUCTION_MEAN) {
                 yGm_[0] = Simt::Cast<bfloat16_t, float, RoundMode::CAST_EVEN>((tmpSumGm_[0] / tmpWeightGm_[0]));
@@ -418,8 +421,8 @@ public:
         for (int32_t i = 0; i < loopTimes_; i++) {
             LocalTensor<T> outUb = outQueue_.AllocTensor<T>();
             int64_t offset = offsetGmY_ + i * dealingNumOnce_;
-            AscendC::Simt::VF_CALL<SimtComputeNLLLoss4dNone<U, T>>(
-                    AscendC::Simt::Dim3{static_cast<uint32_t>(THREAD_DIM)},
+            asc_vf_call<SimtComputeNLLLoss4dNone<U, T>>(
+                    dim3{static_cast<uint32_t>(THREAD_DIM)},
                     (__gm__ U*)targetGm_.GetPhyAddr(), ignoreIndex_, (__ubuf__ T*)outUb.GetPhyAddr(), offset, isWeightPresent_,
                     (__gm__ T*)weightGm_.GetPhyAddr(), (__gm__ T*)xGm_.GetPhyAddr(), xDimC_, dealingNumOnce_, productOfCHW_, productOfHW_);
             outQueue_.EnQue(outUb);
@@ -428,8 +431,8 @@ public:
         if (dealingNumTail_ != 0) {
             LocalTensor<T> outUb = outQueue_.AllocTensor<T>();
             int64_t offset = offsetGmY_ + loopTimes_ * dealingNumOnce_;
-            AscendC::Simt::VF_CALL<SimtComputeNLLLoss4dNone<U, T>>(
-                    AscendC::Simt::Dim3{static_cast<uint32_t>(THREAD_DIM)},
+            asc_vf_call<SimtComputeNLLLoss4dNone<U, T>>(
+                    dim3{static_cast<uint32_t>(THREAD_DIM)},
                     (__gm__ U*)targetGm_.GetPhyAddr(), ignoreIndex_, (__ubuf__ T*)outUb.GetPhyAddr(), offset, isWeightPresent_,
                     (__gm__ T*)weightGm_.GetPhyAddr(), (__gm__ T*)xGm_.GetPhyAddr(), xDimC_, dealingNumTail_, productOfCHW_, productOfHW_);
             outQueue_.EnQue(outUb);
@@ -440,45 +443,45 @@ public:
     __aicore__ inline void Process()
     {
         if constexpr (xDims == 1) {
-            AscendC::Simt::VF_CALL<SimtComputeNLLLoss1d<U, T, reduction>>(
-                AscendC::Simt::Dim3{static_cast<uint32_t>(THREAD_DIM)}, (__gm__ U*)targetGm_.GetPhyAddr(), ignoreIndex_,
+            asc_vf_call<SimtComputeNLLLoss1d<U, T, reduction>>(
+                dim3{static_cast<uint32_t>(THREAD_DIM)}, (__gm__ U*)targetGm_.GetPhyAddr(), ignoreIndex_,
                 (__gm__ T*)yGm_.GetPhyAddr(), (__gm__ T*)totalWeight_.GetPhyAddr(), isWeightPresent_,
                 (__gm__ T*)weightGm_.GetPhyAddr(), (__gm__ T*)xGm_.GetPhyAddr(), xDimC_);
         } else if constexpr (xDims == NUMBER_TWO) {
             if (reduction == 0) {
-                AscendC::Simt::VF_CALL<SimtComputeNLLLoss2dNone<U, T>>(
-                    AscendC::Simt::Dim3{static_cast<uint32_t>(THREAD_DIM)}, blockId_, xDimN_, blockNums_,
+                asc_vf_call<SimtComputeNLLLoss2dNone<U, T>>(
+                    dim3{static_cast<uint32_t>(THREAD_DIM)}, blockId_, xDimN_, blockNums_,
                     (__gm__ U*)targetGm_.GetPhyAddr(), ignoreIndex_, (__gm__ T*)yGm_.GetPhyAddr(), isWeightPresent_,
                     (__gm__ T*)weightGm_.GetPhyAddr(), (__gm__ T*)xGm_.GetPhyAddr(), xDimC_);
             } else if constexpr (reduction == REDUCTION_SUM) {
                 Duplicate(tmpOut_, 0.0f, THREAD_DIM);
                 Duplicate(tmpWeight_, 0.0f, THREAD_DIM);
-                AscendC::Simt::VF_CALL<SimtComputeNLLLoss2dSum<U, T>>(
-                    AscendC::Simt::Dim3{static_cast<uint32_t>(THREAD_DIM)}, blockId_, xDimN_, blockNums_,
+                asc_vf_call<SimtComputeNLLLoss2dSum<U, T>>(
+                    dim3{static_cast<uint32_t>(THREAD_DIM)}, blockId_, xDimN_, blockNums_,
                     (__gm__ U*)targetGm_.GetPhyAddr(), ignoreIndex_, xDimC_, isWeightPresent_,
                     (__gm__ T*)weightGm_.GetPhyAddr(), (__ubuf__ float*)tmpOut_.GetPhyAddr(), (__gm__ T*)xGm_.GetPhyAddr(),
                     (__ubuf__ float*)tmpWeight_.GetPhyAddr(), (__gm__ volatile float*)tmpSumGm_.GetPhyAddr(),
                     (__gm__ volatile float*)tmpWeightGm_.GetPhyAddr());
                 SyncAll();
                 if (blockId_ == 0) {
-                    AscendC::Simt::VF_CALL<CalBinaryReductionInterBlock<U, T, reduction>>(
-                        AscendC::Simt::Dim3{static_cast<uint32_t>(THREAD_DIM)}, blockNums_, calNumPower_,
+                    asc_vf_call<CalBinaryReductionInterBlock<U, T, reduction>>(
+                        dim3{static_cast<uint32_t>(THREAD_DIM)}, blockNums_, calNumPower_,
                         (__gm__ volatile float*)tmpSumGm_.GetPhyAddr(), (__gm__ volatile float*)tmpWeightGm_.GetPhyAddr(),
                         (__gm__ T*)yGm_.GetPhyAddr(), (__gm__ T*)totalWeight_.GetPhyAddr());
                 }
             } else if constexpr (reduction == REDUCTION_MEAN) {
                 Duplicate(tmpOut_, 0.0f, THREAD_DIM);
                 Duplicate(tmpWeight_, 0.0f, THREAD_DIM);
-                AscendC::Simt::VF_CALL<SimtComputeNLLLoss2dMean<U, T>>(
-                    AscendC::Simt::Dim3{static_cast<uint32_t>(THREAD_DIM)}, blockId_, xDimN_, blockNums_,
+                asc_vf_call<SimtComputeNLLLoss2dMean<U, T>>(
+                    dim3{static_cast<uint32_t>(THREAD_DIM)}, blockId_, xDimN_, blockNums_,
                     (__gm__ U*)targetGm_.GetPhyAddr(), ignoreIndex_, (__ubuf__ float*)tmpOut_.GetPhyAddr(),
                     (__ubuf__ float*)tmpWeight_.GetPhyAddr(), isWeightPresent_, (__gm__ T*)weightGm_.GetPhyAddr(),
                     (__gm__ T*)xGm_.GetPhyAddr(), (__gm__ volatile float*)tmpSumGm_.GetPhyAddr(), xDimC_,
                     (__gm__ volatile float*)tmpWeightGm_.GetPhyAddr());
                 SyncAll();
                 if (blockId_ == 0) {
-                    AscendC::Simt::VF_CALL<CalBinaryReductionInterBlock<U, T, reduction>>(
-                        AscendC::Simt::Dim3{static_cast<uint32_t>(THREAD_DIM)}, blockNums_, calNumPower_,
+                    asc_vf_call<CalBinaryReductionInterBlock<U, T, reduction>>(
+                        dim3{static_cast<uint32_t>(THREAD_DIM)}, blockNums_, calNumPower_,
                         (__gm__ volatile float*)tmpSumGm_.GetPhyAddr(), (__gm__ volatile float*)tmpWeightGm_.GetPhyAddr(),
                         (__gm__ T*)yGm_.GetPhyAddr(), (__gm__ T*)totalWeight_.GetPhyAddr());
                 }
@@ -492,8 +495,8 @@ public:
 
                 Duplicate(tmpOut_, 0.0f, THREAD_DIM);
                 Duplicate(tmpWeight_, 0.0f, THREAD_DIM);
-                AscendC::Simt::VF_CALL<SimtComputeNLLLoss4dSum<U, T>>(
-                    AscendC::Simt::Dim3{static_cast<uint32_t>(THREAD_DIM)}, blockId_, xDimN_, xDimH_, xDimW_,
+                asc_vf_call<SimtComputeNLLLoss4dSum<U, T>>(
+                    dim3{static_cast<uint32_t>(THREAD_DIM)}, blockId_, xDimN_, xDimH_, xDimW_,
                     blockNums_, (__gm__ U*)targetGm_.GetPhyAddr(), ignoreIndex_, xDimC_, isWeightPresent_,
                     (__gm__ T*)weightGm_.GetPhyAddr(), (__ubuf__ float*)tmpOut_.GetPhyAddr(),
                     (__gm__ T*)xGm_.GetPhyAddr(), (__ubuf__ float*)tmpWeight_.GetPhyAddr(),
@@ -501,16 +504,16 @@ public:
                     productOfNHW_, productOfCHW_, productOfHW_);
                 SyncAll();
                 if (blockId_ == 0) {
-                    AscendC::Simt::VF_CALL<CalBinaryReductionInterBlock<U, T, reduction>>(
-                        AscendC::Simt::Dim3{static_cast<uint32_t>(THREAD_DIM)}, blockNums_, calNumPower_,
+                    asc_vf_call<CalBinaryReductionInterBlock<U, T, reduction>>(
+                        dim3{static_cast<uint32_t>(THREAD_DIM)}, blockNums_, calNumPower_,
                         (__gm__ volatile float*)tmpSumGm_.GetPhyAddr(), (__gm__ volatile float*)tmpWeightGm_.GetPhyAddr(),
                         (__gm__ T*)yGm_.GetPhyAddr(), (__gm__ T*)totalWeight_.GetPhyAddr());
                 }
             } else if constexpr (reduction == REDUCTION_MEAN) {
                 Duplicate(tmpOut_, 0.0f, THREAD_DIM);
                 Duplicate(tmpWeight_, 0.0f, THREAD_DIM);
-                AscendC::Simt::VF_CALL<SimtComputeNLLLoss4dMean<U, T>>(
-                    AscendC::Simt::Dim3{static_cast<uint32_t>(THREAD_DIM)}, blockId_, xDimN_, xDimH_, xDimW_, blockNums_,
+                asc_vf_call<SimtComputeNLLLoss4dMean<U, T>>(
+                    dim3{static_cast<uint32_t>(THREAD_DIM)}, blockId_, xDimN_, xDimH_, xDimW_, blockNums_,
                     (__gm__ U*)targetGm_.GetPhyAddr(), ignoreIndex_, (__ubuf__ float*)tmpOut_.GetPhyAddr(),
                     (__ubuf__ float*)tmpWeight_.GetPhyAddr(), isWeightPresent_, (__gm__ T*)weightGm_.GetPhyAddr(),
                     (__gm__ T*)xGm_.GetPhyAddr(), (__gm__ volatile float*)tmpSumGm_.GetPhyAddr(), xDimC_,
@@ -518,8 +521,8 @@ public:
 
                 SyncAll();
                 if (blockId_ == 0) {
-                    AscendC::Simt::VF_CALL<CalBinaryReductionInterBlock<U, T, reduction>>(
-                        AscendC::Simt::Dim3{static_cast<uint32_t>(THREAD_DIM)}, blockNums_, calNumPower_,
+                    asc_vf_call<CalBinaryReductionInterBlock<U, T, reduction>>(
+                        dim3{static_cast<uint32_t>(THREAD_DIM)}, blockNums_, calNumPower_,
                         (__gm__ volatile float*)tmpSumGm_.GetPhyAddr(), (__gm__ volatile float*)tmpWeightGm_.GetPhyAddr(),
                         (__gm__ T*)yGm_.GetPhyAddr(), (__gm__ T*)totalWeight_.GetPhyAddr());
                 }

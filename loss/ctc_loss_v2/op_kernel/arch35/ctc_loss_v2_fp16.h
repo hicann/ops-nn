@@ -67,12 +67,12 @@ __simt_callee__  __aicore__ __attribute__((always_inline)) inline void CalcLogAl
     int32_t tgBatchStride, int32_t blank, int32_t tgTargetStride, __gm__ T *logProbsGm, __gm__ DataType *targetsGm, 
     __gm__ DataType *inputLengthsGm, __gm__ DataType *targetLengthsGm, __gm__ T *negLogLikelihoodGm, __gm__ T *logAlphaGm, __gm__ float *tmpDataGm)
 {
-    int32_t threadIdy = Simt::GetThreadIdx<1>();
-    int32_t threadIdx = Simt::GetThreadIdx<0>();
-    int32_t blockDimx = Simt::GetThreadNum<0>();
-    int32_t blockDimy = Simt::GetThreadNum<1>();
-    int32_t blkIdx = Simt::GetBlockIdx();
-    int32_t blockNum = Simt::GetBlockNum();
+    int32_t threadIdy = threadIdx.y;
+    int32_t thread_idx = threadIdx.x;
+    int32_t blockDimx = blockDim.x;
+    int32_t blockDimy = blockDim.y;
+    int32_t blkIdx = blockIdx.x;
+    int32_t blockNum = gridDim.x;
     for (int32_t b = threadIdy + blkIdx * blockDimy; b < batchSize; b += blockNum * blockDimy) {
         ThreadType inputLength = inputLengthsGm[b];
         ThreadType targetLength = targetLengthsGm[b];
@@ -81,7 +81,7 @@ __simt_callee__  __aicore__ __attribute__((always_inline)) inline void CalcLogAl
         ThreadType tgBatchOffset = ProcessTgBatchOffsetsFp16<DataType, ThreadType>(targetLengthsGm, targetsDim, tgBatchStride, b);
 
         if (inputLength == 0) {
-            if (Simt::GetThreadIdx<0>() == 0) {
+            if (threadIdx.x == 0) {
                 float log_likelihood = targetLength == 0 ? 0 : neginf;
                 negLogLikelihoodGm[b] = -static_cast<T>(log_likelihood);
             }
@@ -89,7 +89,7 @@ __simt_callee__  __aicore__ __attribute__((always_inline)) inline void CalcLogAl
         }
 
         for (int32_t block_s = 0; block_s < laInputStride; block_s += blockDimx) {
-            int32_t s = threadIdx + block_s;
+            int32_t s = thread_idx + block_s;
             float la = 0;
             switch (s) {
                 case 0:
@@ -109,7 +109,7 @@ __simt_callee__  __aicore__ __attribute__((always_inline)) inline void CalcLogAl
             }
         }
         for (int32_t block_s = 0; block_s < laInputStride; block_s += blockDimx) {
-            int32_t s = threadIdx + block_s;
+            int32_t s = thread_idx + block_s;
             int32_t currentChar;
             bool haveThree;
             if (s < 2 * targetLength + 1 && targetLength > 0) {
@@ -121,7 +121,7 @@ __simt_callee__  __aicore__ __attribute__((always_inline)) inline void CalcLogAl
                 haveThree = false;
             }
             for (int32_t t = 1; t < maxInputLength; t++) {
-                Simt::ThreadBarrier();
+                asc_syncthreads();
                 if ((t < inputLength) && (s < 2 * targetLength + 1)) {
                     float la1 = tmpDataGm[laBatchOffset + laInputStride * (t - 1) + s];
                     float lamax = la1;
@@ -147,24 +147,24 @@ __simt_callee__  __aicore__ __attribute__((always_inline)) inline void CalcLogAl
                         lamax = 0;
                     }
                     tmpDataGm[laBatchOffset + laInputStride * t + s] =
-                        Simt::Log1p(Simt::Exp(la1 - lamax) + Simt::Exp(la2 - lamax) + Simt::Exp(la3 - lamax) - 1) +
+                        log1pf(expf(la1 - lamax) + expf(la2 - lamax) + expf(la3 - lamax) - 1) +
                         lamax + static_cast<float>(logProbsGm[lpBatchOffset + t * lpInputStride + currentChar]);
                     logAlphaGm[laBatchOffset + laInputStride * t + s] =
                         static_cast<T>(tmpDataGm[laBatchOffset + laInputStride * t + s]);
                 }
             }
         }
-        Simt::ThreadBarrier();
+        asc_syncthreads();
 
         // compute the loss
-        if (threadIdx == 0) {
+        if (thread_idx == 0) {
             float l1 = tmpDataGm[laBatchOffset + laInputStride * (inputLength - 1) + (targetLength * 2)];
             float l2 = targetLength > 0 ?
                 tmpDataGm[laBatchOffset + laInputStride * (inputLength - 1) + (targetLength * 2 - 1)] :
                 neginf;
             float m = ((l1 > l2) ? l1 : l2);
             m = ((m == neginf) ? 0 : m);
-            float log_likelihood = Simt::Log1p(Simt::Exp(l1 - m) + Simt::Exp(l2 - m) - 1) + m;
+            float log_likelihood = log1pf(expf(l1 - m) + expf(l2 - m) - 1) + m;
             negLogLikelihoodGm[b] = -static_cast<T>(log_likelihood);
         }
     }
@@ -209,7 +209,7 @@ template <typename T, typename DataType, typename ThreadType> __aicore__ inline 
     int32_t tgBatchStride = this->tdPtr->tgBatchStride;
     int32_t gridY = this->tdPtr->gridY;
     if constexpr (sizeof(ThreadType) == sizeof(int32_t)) {
-        Simt::VF_CALL<SimtComputeFp16Int32<T, DataType, ThreadType>>(Simt::Dim3(blockDimX, blockDimY), batchSize, laInputStride, laBatchStride,
+        asc_vf_call<SimtComputeFp16Int32<T, DataType, ThreadType>>(dim3(blockDimX, blockDimY), batchSize, laInputStride, laBatchStride,
             lpBatchStride, maxInputLength, lpInputStride, targetsDim, tgBatchStride, blank, tgTargetStride,
             (__gm__ T *)(this->logProbsDataGm.GetPhyAddr()), (__gm__ DataType *)(this->targetsDataGm.GetPhyAddr()),
             (__gm__ DataType *)(this->inputLengthsGm.GetPhyAddr()), (__gm__ DataType *)(this->targetLengthsGm.GetPhyAddr()),
@@ -217,7 +217,7 @@ template <typename T, typename DataType, typename ThreadType> __aicore__ inline 
             (__gm__ float *)(tmpFloatData.GetPhyAddr()));
     }
     if constexpr (sizeof(ThreadType) == sizeof(int64_t)) {
-        Simt::VF_CALL<SimtComputeFp16<T, DataType, ThreadType>>(Simt::Dim3(blockDimX, blockDimY), batchSize, laInputStride, laBatchStride,
+        asc_vf_call<SimtComputeFp16<T, DataType, ThreadType>>(dim3(blockDimX, blockDimY), batchSize, laInputStride, laBatchStride,
             lpBatchStride, maxInputLength, lpInputStride, targetsDim, tgBatchStride, blank, tgTargetStride,
             (__gm__ T *)(this->logProbsDataGm.GetPhyAddr()), (__gm__ DataType *)(this->targetsDataGm.GetPhyAddr()),
             (__gm__ DataType *)(this->inputLengthsGm.GetPhyAddr()), (__gm__ DataType *)(this->targetLengthsGm.GetPhyAddr()),

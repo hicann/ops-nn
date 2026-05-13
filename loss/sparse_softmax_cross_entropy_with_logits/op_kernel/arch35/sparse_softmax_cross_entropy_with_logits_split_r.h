@@ -20,6 +20,7 @@
 #include "kernel_operator.h"
 #include "../inc/platform.h"
 #include "sparse_softmax_cross_entropy_with_logits_tiling_data.h"
+#include "simt_api/asc_simt.h"
 
 namespace SparseSoftmaxCrossEntropyWithLogits {
 using namespace AscendC;
@@ -28,7 +29,7 @@ using namespace AscendC::MicroAPI;
 template <typename T1, typename T2, uint64_t schId, uint64_t db>
 __simt_vf__ __aicore__ LAUNCH_BOUND(1024) inline void UbSimtComputeLoopRSplit(__ubuf__ T1* backPropAddr, __ubuf__ float* temp2Addr, __ubuf__ T2* labelsAddr, __ubuf__ float* gatherAddr, const int32_t tileNum, const int32_t rOnceNum, const int32_t rOnceNumAlign, const int64_t rMainNum, const int32_t ci, const int64_t cMax)
 {
-    for (int64_t index = static_cast<int64_t>(Simt::GetThreadIdx()); index < tileNum; index += static_cast<int64_t>(Simt::GetThreadNum<0>())) {
+    for (int64_t index = static_cast<int64_t>(threadIdx.x); index < tileNum; index += static_cast<int64_t>(blockDim.x)) {
 		ASSERT((0 <= labelsAddr[index] && labelsAddr[index] < cMax) && "labels is not in [0, C)");
         if (labelsAddr[index] >= rMainNum * ci && labelsAddr[index] < (rMainNum * ci + rOnceNum)) {
             int64_t offset = index * rOnceNumAlign + labelsAddr[index] - rMainNum * ci;
@@ -692,7 +693,7 @@ __aicore__ inline void SparseSoftmaxCrossEntropyWithLogitsSplitR<T1, T2, schId, 
         LocalTensor<T1> featureUb = featuresQueue_.DeQue<T1>();
 		LocalTensor<T1> backPropUb = backPropQueue_.AllocTensor<T1>();
         ComputeBackpropAndLoss(featureUb, backPropUb, lossUbFp32, tailNum, onceR, alignR, ci);
-		Simt::VF_CALL<UbSimtComputeLoopRSplit<T1, T2, schId, db>>(Simt::Dim3{1024}, (__ubuf__ T1 *)backPropUb.GetPhyAddr(), (__ubuf__ float *)lossUbFp32.GetPhyAddr(), (__ubuf__ T2 *)labelsUb.GetPhyAddr(), (__ubuf__ float *)onceMaxUb.GetPhyAddr(), tailNum, onceR, alignR, rFactor, ci, cMax);
+		asc_vf_call<UbSimtComputeLoopRSplit<T1, T2, schId, db>>(dim3{1024}, (__ubuf__ T1 *)backPropUb.GetPhyAddr(), (__ubuf__ float *)lossUbFp32.GetPhyAddr(), (__ubuf__ T2 *)labelsUb.GetPhyAddr(), (__ubuf__ float *)onceMaxUb.GetPhyAddr(), tailNum, onceR, alignR, rFactor, ci, cMax);
         featuresQueue_.FreeTensor(featureUb);
 		backPropQueue_.EnQue<T1>(backPropUb);
         CopyOutBackProb(tailNum, onceR, offset);
