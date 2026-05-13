@@ -51,12 +51,17 @@ static Status ParseParamsResize(const Message *op_src, Operator &op_dst) {
                attr.type() == ge::onnx::AttributeProto::STRING) {
       mode_value = attr.s();
     } else if (attr.name() == "antialias" && attr.type() == ge::onnx::AttributeProto::INT) {
-      OP_LOGW(GetOpName(op_dst).c_str(), "Current antialias not surpport"); 	
+      OP_LOGW(GetOpName(op_dst).c_str(), "Current antialias unsupported; expected type: int.");
     } else if (attr.name() == "axes" && attr.type() == ge::onnx::AttributeProto::INTS) {
-      OP_LOGW(GetOpName(op_dst).c_str(), "Current axes not surpport");
+      OP_LOGW(GetOpName(op_dst).c_str(), "Current axes unsupported; expected type: ints.");
     } else if (attr.name() == "keep_aspect_ratio_policy" && attr.type() == ge::onnx::AttributeProto::STRING) {
-      OP_LOGW(GetOpName(op_dst).c_str(), "Current keep_aspect_ratio_policy not surpport");
+      OP_LOGW(GetOpName(op_dst).c_str(), "Current keep_aspect_ratio_policy unsupported; expected type: string.");
     }
+  }
+
+  if (node->input_size() < INPUT_SIZES_IS_THREE){
+    OP_LOGE(GetOpName(op_dst).c_str(), "Input size is less than 3, cannot access input_roi and input_scales.");
+    return FAILED;
   }
 
   auto input_roi = node->input(1);
