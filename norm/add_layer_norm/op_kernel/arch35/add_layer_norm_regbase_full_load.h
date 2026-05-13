@@ -19,6 +19,7 @@
 #include "kernel_tiling/kernel_tiling.h"
 #include "kernel_operator.h"
 #include "add_layer_norm_regbase_common.h"
+#include "../../norm_common/reduce_common_regbase.h"
 
 namespace AddLayerNorm {
 template <
@@ -779,70 +780,6 @@ public:
         }
     }
 
-    __aicore__ inline void VFCalcRstd(__local_mem__ float* varAddr, uint32_t rowsCount)
-    {
-        uint32_t vlFp32 = vlFp32_;
-        uint16_t rowsLoopCount = CEIL_DIV(rowsCount, vlFp32);
-        float eps = eps_;
-
-        __VEC_SCOPE__
-        {
-            RegTensor<float> r;
-            RegTensor<float> y;
-            RegTensor<float> s;
-            RegTensor<float> t;
-            RegTensor<float> e;
-            RegTensor<float> scalar1;
-            RegTensor<float> scalarInf;
-            RegTensor<float> scalarZero;
-            RegTensor<float> t1;
-            RegTensor<float> t2;
-            RegTensor<float> t3;
-            RegTensor<float> t4;
-            RegTensor<float> var;
-            RegTensor<float> rstd;
-
-            RegTensor<float> one;
-            MaskReg pregMain = CreateMask<float, MaskPattern::ALL>();
-            Duplicate(one, (float)1.0, pregMain);
-
-            MaskReg cmpRegZero;
-            MaskReg cmpRegInf;
-            MaskReg pregLoop;
-            uint32_t sreg0 = rowsCount;
-            for (uint16_t j = 0; j < rowsLoopCount; j++) {
-                pregLoop = UpdateMask<float>(sreg0);
-                DataCopy(var, ((__local_mem__ float*)varAddr + j * vlFp32));
-                Duplicate(scalar1, float(SCALAR3), pregLoop);
-                Duplicate(scalarInf, POS_INF, pregLoop);
-                Duplicate(scalarZero, float(0.0), pregLoop);
-                Duplicate(t1, float(SCALAR2), pregLoop);
-                Duplicate(s, float(1.0), pregLoop);
-
-                // rstd
-                Adds(var, var, eps, pregLoop);
-                Div(r, one, var, pregLoop);
-                Sqrt(y, r, pregLoop);
-                Muls(t, var, float(SCALAR1), pregLoop);
-                Mul(t, t, y, pregLoop);                // -0.5 * x * y
-                Mula(t1, t, y, pregLoop);              // 1.5 + (-0.5 * x * y) * y
-                Mul(rstd, y, t1, pregLoop);            // y = y * (1.5 - 0.5 * x * y)
-                Muls(t3, var, float(-1.0), pregLoop);  // -1 * x
-                Mula(s, t3, r, pregLoop);              // 1 + (-1) * x * r
-                Muls(t4, rstd, float(-1.0), pregLoop); // (-1) * y
-                Mula(r, t4, rstd, pregLoop);           // r + (-1) * y * y
-                Mula(s, var, r, pregLoop);             // s + x * t
-                Mul(s, s, rstd, pregLoop);             // e * y
-                Mula(rstd, s, scalar1, pregLoop);      // y + y * e * 0.5
-                CompareScalar(cmpRegZero, var, POS_INF, pregLoop);
-                Select(rstd, scalarZero, rstd, cmpRegZero);
-                CompareScalar(cmpRegInf, var, float(0.0), pregLoop);
-                Select(rstd, scalarInf, rstd, cmpRegInf);
-                DataCopy(((__local_mem__ float*)varAddr + j * vlFp32), rstd, pregLoop);
-            }
-        }
-    }
-
     __aicore__ inline void VFCalcY(
         __local_mem__ float* x32Addr, __local_mem__ BETA_TYPE* betaAddr, __local_mem__ GAMMA_TYPE* gammaAddr,
         __local_mem__ float* meanAddr, __local_mem__ float* rstdAddr, __local_mem__ BIAS_TYPE* yOutAddr,
@@ -962,7 +899,7 @@ public:
             xQueue_.FreeTensor(xOutLocal);
 
             // calc rstd
-            VFCalcRstd(rstdAddr, rowsCount);
+            NormCommon::ComputeRstdNewtonRaphson<false>(rstdAddr, rstdAddr, rowsCount, eps_, 1.0f, vlFp32_);
 
             // copy out mean
             meanQueue_.EnQue(meanLocal);

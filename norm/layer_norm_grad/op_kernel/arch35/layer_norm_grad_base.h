@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -62,11 +62,6 @@ constexpr static int64_t CONST_SIX = 6;
 constexpr static int64_t CONST_SEVEN = 7;
 constexpr static int64_t CONST_EIGHT = 8;
 constexpr static int64_t CONST_SIXTY_THREE = 63;
-constexpr float POS_INF = 3.40282366920938E+38;
-constexpr float SCALAR1 = -0.5;
-constexpr float SCALAR2 = 1.5;
-constexpr float SCALAR3 = 0.5;
-constexpr float SCALAR0 = -99.99;
 constexpr static uint32_t VL_FP32 = static_cast<int64_t>(GetVRegSize()) / sizeof(float);
 class LayerNormGradBase {
 public:
@@ -133,9 +128,6 @@ public:
     template <typename T>
     __aicore__ inline static void StoreTensorForDtypeT(
         __local_mem__ T* dst, AscendC::MicroAPI::RegTensor<float>& src, AscendC::MicroAPI::MaskReg& preg, uint32_t offset);
-    __aicore__ inline static void CalRstdByHighPrecision(
-        RegTensor<float>& var, RegTensor<float>& rstd, const float epsilon);
-
 protected:
     TPipe* pipe_;
 }; // class LayerNormGradBase
@@ -848,7 +840,9 @@ __aicore__ inline void LayerNormGradBase::Normalize(
                 DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(meanReg, (__local_mem__ float*)mean + i);
                 DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(varReg, (__local_mem__ float*)var + i);
                 DataCopy(aReg, (__local_mem__ float*)src + i * outerLoopStride + 0 * innerLoopStride);
-                CalRstdByHighPrecision(varReg, rstdReg, epsilon);
+                AscendC::MicroAPI::MaskReg pregRstdAll1 =
+                    AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                NormCommon::ComputeRstdNewtonRaphsonReg(varReg, rstdReg, pregRstdAll1, epsilon);
                 Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(bReg, aReg, meanReg, pMask);
                 Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(cReg, bReg, rstdReg, pMask);
                 DataCopy((__local_mem__ float*)dst + i * outerLoopStride + 0 * innerLoopStride, cReg, pMask);
@@ -869,7 +863,9 @@ __aicore__ inline void LayerNormGradBase::Normalize(
                 count = static_cast<uint32_t>(colSize);
                 DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(meanReg, (__local_mem__ float*)mean + i);
                 DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(varReg, (__local_mem__ float*)var + i);
-                CalRstdByHighPrecision(varReg, rstdReg, epsilon);
+                AscendC::MicroAPI::MaskReg pregRstdAll2 =
+                    AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                NormCommon::ComputeRstdNewtonRaphsonReg(varReg, rstdReg, pregRstdAll2, epsilon);
                 for (uint16_t j = 0; j < innerLoopTimes; ++j) {
                     pMask = AscendC::MicroAPI::UpdateMask<float>(count);
                     DataCopy(aReg, (__local_mem__ float*)src + i * outerLoopStride + j * innerLoopStride);
@@ -893,57 +889,6 @@ __aicore__ inline void LayerNormGradBase::StoreTensorForDtypeT(__local_mem__ T* 
         Cast<T, float, castTraitB322B16>(xFp16, src, preg);
         DataCopy<T, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(dst + offset, xFp16, preg);
     }
-}
-
-__aicore__ inline void LayerNormGradBase::CalRstdByHighPrecision(RegTensor<float>& var, RegTensor<float>& rstd, const float epsilon)
-{
-    RegTensor<float> r;
-    RegTensor<float> y;
-    RegTensor<float> s;
-    RegTensor<float> t;
-    RegTensor<float> e;
-    RegTensor<float> one;
-    RegTensor<float> scalar1;
-    RegTensor<float> scalar2;
-    RegTensor<float> t1;
-    RegTensor<float> t2;
-    RegTensor<float> t3;
-    RegTensor<float> t4;
-    RegTensor<float> scalarInf;
-    RegTensor<float> scalarZero;
-    MaskReg cmpRegZero;
-    MaskReg cmpRegInf;
-    MaskReg pregMerge = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
-
-    Duplicate(scalarInf, POS_INF, pregMerge);
-    Duplicate(scalarZero, float(0.0), pregMerge);
-    Duplicate(one, float(1.0), pregMerge);
-    Duplicate(scalar1, SCALAR3, pregMerge);
-    Duplicate(t1, SCALAR2, pregMerge);
-    Duplicate(s, float(1.0), pregMerge);
-
-    Adds(var, var, epsilon, pregMerge);
-    // we need sqrt(1/var) = nan, when var < 0.
-    // But div donot support subnormal(when var is less -1e38, 1/var will be 0), then sqrt(1/var) is 0.
-    // So we do maxs to avoid the subnormal problem, sqrt(1/var) = nan
-    Maxs(var, var, SCALAR0, pregMerge);
-    Div(r, one, var, pregMerge);
-    Sqrt(y, r, pregMerge);
-    Muls(t, var, SCALAR1, pregMerge);
-    Mul(t, t, y, pregMerge);                 // -0.5 * x * y
-    Mula(t1, t, y, pregMerge);               // 1.5 + (-0.5 * x * y) * y
-    Mul(rstd, y, t1, pregMerge);             // y = y * (1.5 - 0.5 * x * y)
-    Muls(t3, var, float(-1.0), pregMerge);   // -1 * x
-    Mula(s, t3, r, pregMerge);               // 1 + (-1) * x * r
-    Muls(t4, rstd, float(-1.0), pregMerge);  // (-1) * y
-    Mula(r, t4, rstd, pregMerge);            // r + (-1) * y * y
-    Mula(s, var, r, pregMerge);              // s + x * t
-    Mul(s, s, rstd, pregMerge);              // e * y
-    Mula(rstd, s, scalar1, pregMerge);       // y + y * e * 0.5
-    CompareScalar(cmpRegZero, var, POS_INF, pregMerge);
-    Select(rstd, scalarZero, rstd, cmpRegZero);
-    CompareScalar(cmpRegInf, var, float(0.0), pregMerge);
-    Select(rstd, scalarInf, rstd, cmpRegInf);
 }
 
 } // namespace LayerNormGrad

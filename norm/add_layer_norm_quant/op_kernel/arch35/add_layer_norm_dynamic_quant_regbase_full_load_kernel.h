@@ -501,7 +501,7 @@ public:
             xQueue_.FreeTensor(xOutLocal);
 
             // // calc rstd
-            VFCalcRstd(rstdLocal, rowsCount, vlFp32_, EPS_);
+            NormCommon::ComputeRstdNewtonRaphson<false>(rstdLocal, rstdLocal, rowsCount, EPS_, 1.0f, vlFp32_);
 
             // copy in gamma, beta
             if (unlikely((i == 0))) {

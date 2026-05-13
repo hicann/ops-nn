@@ -19,6 +19,7 @@
 #include "kernel_operator.h"
 #include "../inc/platform.h"
 #include "../inc/kernel_utils.h"
+#include "../../norm_common/reduce_common_regbase.h"
 
 namespace BatchNormOps
 {
@@ -59,61 +60,6 @@ constexpr static AscendC::MicroAPI::CastTrait castTraitB322B16 = {
     AscendC::RoundMode::CAST_RINT,
 };
 
-static constexpr float SCALAR1 = -0.5;
-static constexpr float SCALAR2 = 1.5;
-static constexpr float SCALAR3 = 0.5;
-static constexpr float SCALAR0 = -99.99;
-
-__aicore__ inline void CalRstdByHighPrecision(RegTensor<float>& var, RegTensor<float>& rstd, float epsilon)
-{
-    RegTensor<float> r;
-    RegTensor<float> y;
-    RegTensor<float> s;
-    RegTensor<float> t;
-    RegTensor<float> e;
-    RegTensor<float> one;
-    RegTensor<float> scalar1;
-    RegTensor<float> scalar2;
-    RegTensor<float> t1;
-    RegTensor<float> t2;
-    RegTensor<float> t3;
-    RegTensor<float> t4;
-    RegTensor<float> scalarInf;
-    RegTensor<float> scalarZero;
-    MaskReg cmpRegZero;
-    MaskReg cmpRegInf;
-    MaskReg pregMerge = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
-
-    Duplicate(scalarInf, POS_INF, pregMerge);
-    Duplicate(scalarZero, zero, pregMerge);
-    Duplicate(one, float(1.0), pregMerge);
-    Duplicate(scalar1, SCALAR3, pregMerge);
-    Duplicate(t1, SCALAR2, pregMerge);
-    Duplicate(s, float(1.0), pregMerge);
-
-    Adds(var, var, epsilon, pregMerge);
-    // we need sqrt(1/var) = nan, when var < 0.
-    // But div donot support subnormal(when var is less -1e38, 1/var will be 0), then sqrt(1/var) is 0.
-    // So we do maxs to avoid the subnormal problem, sqrt(1/var) = nan
-    Maxs(var, var, SCALAR0, pregMerge);
-    Div(r, one, var, pregMerge);
-    Sqrt(y, r, pregMerge);
-    Muls(t, var, SCALAR1, pregMerge);
-    Mul(t, t, y, pregMerge);                 // -0.5 * x * y
-    Mula(t1, t, y, pregMerge);               // 1.5 + (-0.5 * x * y) * y
-    Mul(rstd, y, t1, pregMerge);             // y = y * (1.5 - 0.5 * x * y)
-    Muls(t3, var, float(-1.0), pregMerge);   // -1 * x
-    Mula(s, t3, r, pregMerge);               // 1 + (-1) * x * r
-    Muls(t4, rstd, float(-1.0), pregMerge);  // (-1) * y
-    Mula(r, t4, rstd, pregMerge);            // r + (-1) * y * y
-    Mula(s, var, r, pregMerge);              // s + x * t
-    Mul(s, s, rstd, pregMerge);              // e * y
-    Mula(rstd, s, scalar1, pregMerge);       // y + y * e * 0.5
-    CompareScalar(cmpRegZero, var, POS_INF, pregMerge);
-    Select(rstd, scalarZero, rstd, cmpRegZero);
-    CompareScalar(cmpRegInf, var, zero, pregMerge);
-    Select(rstd, scalarInf, rstd, cmpRegInf);
-}
 
 template <typename T>
 __aicore__ inline void LoadTensorForDtypeT(AscendC::MicroAPI::RegTensor<float>& dst, __local_mem__ T* src,
@@ -147,15 +93,15 @@ __aicore__ inline void LoadTwoTensorForDtypeT(RegTensor<float>& dst1, RegTensor<
                                               uint32_t src1Offset, uint32_t src2Offset)
 {
     if constexpr (IsSameType<T, half>::value) {
-        RegTensor<half> xFp16Q;
         RegTensor<half> xFp16R;
+        RegTensor<half> xFp16Q;
         DataCopy<half, LoadDist::DIST_UNPACK_B16>(xFp16Q, ((__local_mem__ half*)(src1) + (src1Offset)));
         DataCopy<half, LoadDist::DIST_UNPACK_B16>(xFp16R, ((__local_mem__ half*)(src2) + (src2Offset)));
         Cast<float, half, castTraitB162B32>(dst1, xFp16Q, dst1Preg);
         Cast<float, half, castTraitB162B32>(dst2, xFp16R, dst2Preg);
     } else if constexpr (IsSameType<T, bfloat16_t>::value) {
-        RegTensor<bfloat16_t> xFp16Q;
         RegTensor<bfloat16_t> xFp16R;
+        RegTensor<bfloat16_t> xFp16Q;
         DataCopy<bfloat16_t, LoadDist::DIST_UNPACK_B16>(xFp16Q, ((__local_mem__ bfloat16_t*)(src1) + (src1Offset)));
         DataCopy<bfloat16_t, LoadDist::DIST_UNPACK_B16>(xFp16R, ((__local_mem__ bfloat16_t*)(src2) + (src2Offset)));
         Cast<float, bfloat16_t, castTraitB162B32>(dst1, xFp16Q, dst1Preg);

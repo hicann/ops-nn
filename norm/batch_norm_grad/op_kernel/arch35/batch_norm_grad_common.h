@@ -18,6 +18,7 @@
 #include "kernel_operator.h"
 #include "../inc/platform.h"
 #include "kernel_tiling/kernel_tiling.h"
+#include "../../norm_common/reduce_common_regbase.h"
 
 namespace BatchNormGrad {
 using namespace AscendC;
@@ -219,10 +220,10 @@ __aicore__ inline void CopyIn(const LocalTensor<T> &dstTensor, const GlobalTenso
 {
     // CopyIn
     DataCopyExtParams params;
-    params.blockCount = rowSize;
     params.blockLen = colSize * sizeof(T);
-    params.srcStride = srcStride * sizeof(T) - params.blockLen;
+    params.blockCount = rowSize;
     params.dstStride = (dstStride * sizeof(T) - RoundUpOneBlock(params.blockLen)) / ONE_BLK_SIZE;
+    params.srcStride = srcStride * sizeof(T) - params.blockLen;
     DataCopyPadExtParams<T> padParams;
     padParams.isPad = false;
     DataCopyPad(dstTensor, srcTensor, params, padParams);
@@ -233,62 +234,6 @@ __aicore__ inline int64_t GetCacheID(const int64_t idx)
     return ScalarGetCountOfValue<1>(idx ^ (idx + 1)) - 1;
 }
 
-constexpr float POS_INF = 3.40282366920938E+38;
-constexpr float SCALAR1 = -0.5;
-constexpr float SCALAR2 = 1.5;
-constexpr float SCALAR3 = 0.5;
-constexpr float SCALAR0 = -99.99;
-
-__aicore__ inline void CalRstdByHighPrecision(RegTensor<float>& var, RegTensor<float>& rstd, const float epsilon)
-{
-    RegTensor<float> r;
-    RegTensor<float> y;
-    RegTensor<float> s;
-    RegTensor<float> t;
-    RegTensor<float> e;
-    RegTensor<float> one;
-    RegTensor<float> scalar1;
-    RegTensor<float> scalar2;
-    RegTensor<float> t1;
-    RegTensor<float> t2;
-    RegTensor<float> t3;
-    RegTensor<float> t4;
-    RegTensor<float> scalarInf;
-    RegTensor<float> scalarZero;
-    MaskReg cmpRegZero;
-    MaskReg cmpRegInf;
-    MaskReg pregMerge = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
-
-    Duplicate(scalarInf, POS_INF, pregMerge);
-    Duplicate(scalarZero, float(0.0), pregMerge);
-    Duplicate(one, float(1.0), pregMerge);
-    Duplicate(scalar1, SCALAR3, pregMerge);
-    Duplicate(t1, SCALAR2, pregMerge);
-    Duplicate(s, float(1.0), pregMerge);
-
-    Adds(var, var, epsilon, pregMerge);
-    // we need sqrt(1/var) = nan, when var < 0.
-    // But div donot support subnormal(when var is less -1e38, 1/var will be 0), then sqrt(1/var) is 0.
-    // So we do maxs to avoid the subnormal problem, sqrt(1/var) = nan
-    Maxs(var, var, SCALAR0, pregMerge);
-    Div(r, one, var, pregMerge);
-    Sqrt(y, r, pregMerge);
-    Muls(t, var, SCALAR1, pregMerge);
-    Mul(t, t, y, pregMerge);                 // -0.5 * x * y
-    Mula(t1, t, y, pregMerge);               // 1.5 + (-0.5 * x * y) * y
-    Mul(rstd, y, t1, pregMerge);             // y = y * (1.5 - 0.5 * x * y)
-    Muls(t3, var, float(-1.0), pregMerge);   // -1 * x
-    Mula(s, t3, r, pregMerge);               // 1 + (-1) * x * r
-    Muls(t4, rstd, float(-1.0), pregMerge);  // (-1) * y
-    Mula(r, t4, rstd, pregMerge);            // r + (-1) * y * y
-    Mula(s, var, r, pregMerge);              // s + x * t
-    Mul(s, s, rstd, pregMerge);              // e * y
-    Mula(rstd, s, scalar1, pregMerge);       // y + y * e * 0.5
-    CompareScalar(cmpRegZero, var, POS_INF, pregMerge);
-    Select(rstd, scalarZero, rstd, cmpRegZero);
-    CompareScalar(cmpRegInf, var, float(0.0), pregMerge);
-    Select(rstd, scalarInf, rstd, cmpRegInf);
-}
 
 }  // namespace BatchNormGrad
 #endif

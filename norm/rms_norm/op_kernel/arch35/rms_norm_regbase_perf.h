@@ -15,6 +15,7 @@
 #ifndef OPS_BUILT_IN_TBE_IMPL_ASCENDC_RMS_NORM_REGBASE_PERF_H
 #define OPS_BUILT_IN_TBE_IMPL_ASCENDC_RMS_NORM_REGBASE_PERF_H
 #include "rms_norm_regbase_common.h"
+#include "../../norm_common/reduce_common_regbase.h"
 
 namespace RmsNorm {
     using namespace AscendC;
@@ -118,7 +119,9 @@ namespace RmsNorm {
                 LocalTensor<float> xTmpLocal = xTmpBuf.Get<float>();
                 LocalTensor<float> xReduceTmpLocal = xReduceTmpBuf.Get<float>();
                 ComputeSquareReduceSum(xLocal, xTmpLocal, xReduceTmpLocal, curUbFactor);
-                ComputeRstd(xReduceTmpLocal, rstdLocal, curUbFactor, epsilon, avgFactor);
+                NormCommon::ComputeRstdNewtonRaphson<false, true>(
+                    xReduceTmpLocal, rstdLocal, static_cast<uint32_t>(curUbFactor), epsilon, avgFactor,
+                    VectorLenB32);
 
                 outQueueRstd.EnQue(rstdLocal);
                 outQueueRstd.DeQue<float>();
@@ -150,7 +153,7 @@ namespace RmsNorm {
 
     private:
 
-        __aicore__ inline void ComputeSquareReduceSum(LocalTensor<DX> xLocal, LocalTensor<float> xTmpLocal, 
+        __aicore__ inline void ComputeSquareReduceSum(LocalTensor<DX> xLocal, LocalTensor<float> xTmpLocal,
             LocalTensor<float> xReduceTmpLocal, uint64_t curUbFactor)
         {
             __local_mem__ DX* xLocalAddr = (__local_mem__ DX*)xLocal.GetPhyAddr();
@@ -165,69 +168,6 @@ namespace RmsNorm {
                 CalculateSquareReduceSumRCommon<NUM_ONE>(xLocalAddr, xTmpLocalUbAddr, xReduceTmpLocalUbAddr, curUbFactor, numCol, numColAlign,colFlodFactor);
             } else {
                 CalculateSquareReduceSumRCommon<NUM_TWO>(xLocalAddr, xTmpLocalUbAddr, xReduceTmpLocalUbAddr, curUbFactor, numCol, numColAlign,colFlodFactor);
-            }
-        }
-
-        __aicore__ inline void ComputeRstd(LocalTensor<float> xReduceTmpLocal, LocalTensor<float> rstdLocal, uint64_t curUbFactor, float epsilon, float avgFactor)
-        {
-            __local_mem__ float* rstdLocalUbAddr = (__local_mem__ float*)rstdLocal.GetPhyAddr();
-            __local_mem__ float* xReduceTmpLocalUbAddr = (__local_mem__ float*)xReduceTmpLocal.GetPhyAddr();
-            uint16_t aLoop = static_cast<uint16_t>((curUbFactor + VectorLenB32 - 1) / VectorLenB32);
-            __VEC_SCOPE__
-            {
-                MaskReg pregMain = CreateMask<float, MaskPattern::ALL>();
-                RegTensor<float> var;
-                RegTensor<float> one;
-                RegTensor<float> r;
-                RegTensor<float> y;
-                RegTensor<float> s;
-                RegTensor<float> t;
-                RegTensor<float> scalar1;
-                RegTensor<float> scalarInf;
-                RegTensor<float> scalarZero;
-                RegTensor<float> t1;
-                RegTensor<float> t2;
-                RegTensor<float> t3;
-                RegTensor<float> t4;
-                RegTensor<float> rstd;
-
-                MaskReg cmpRegZero;
-                MaskReg cmpRegInf;
-                MaskReg pregLoop;
-
-                Duplicate(one, 1.0, pregMain);
-                uint32_t sreg0 = static_cast<uint32_t>(curUbFactor);
-                for (uint16_t a = 0; a < aLoop; a++) {
-                    pregLoop = UpdateMask<float>(sreg0);
-                    Duplicate(scalar1, float(0.5), pregLoop);
-                    Duplicate(scalarInf, RMS_POS_INF, pregLoop);
-                    Duplicate(scalarZero, RMS_ZERO, pregLoop);
-                    Duplicate(t1, float(1.5), pregLoop);
-                    Duplicate(s, float(1.0), pregLoop);
-
-                    // rstd
-                    DataCopy(var, xReduceTmpLocalUbAddr + a * VectorLenB32);
-                    Muls(var, var, avgFactor, pregLoop);
-                    Adds(var, var, epsilon, pregLoop);
-                    Div(r, one, var, pregLoop);
-                    Sqrt(y, r, pregLoop);
-                    Muls(t, var, float(-0.5), pregLoop);
-                    Mul(t, t, y, pregLoop);                // -0.5 * x * y
-                    Mula(t1, t, y, pregLoop);              // 1.5 + (-0.5 * x * y) * y
-                    Mul(rstd, y, t1, pregLoop);            // y = y * (1.5 - 0.5 * x * y)
-                    Muls(t3, var, float(-1.0), pregLoop);  // -1 * x
-                    Mula(s, t3, r, pregLoop);              // 1 + (-1) * x * r
-                    Muls(t4, rstd, float(-1.0), pregLoop); // (-1) * y
-                    Mula(r, t4, rstd, pregLoop);           // r + (-1) * y * y
-                    Mula(s, var, r, pregLoop);             // s + x * t
-                    Mul(s, s, rstd, pregLoop);             // e * y
-                    Mula(rstd, s, scalar1, pregLoop);      // y + y * e * 0.5
-                    CompareScalar(cmpRegZero, var, RMS_POS_INF, pregLoop);
-                    Select(rstd, scalarZero, rstd, cmpRegZero);
-                    CompareScalar(cmpRegInf, var, RMS_ZERO, pregLoop);
-                    Select(rstd, scalarInf, rstd, cmpRegInf);
-                    DataCopy(rstdLocalUbAddr + a * VectorLenB32, rstd, pregLoop);
-                }
             }
         }
 
@@ -250,8 +190,6 @@ namespace RmsNorm {
                 RegTensor<float> mul1Reg;
                 RegTensor<float> mul2Reg;
 
-                MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
-                MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
 
                 for (uint16_t i = 0; i < curAloops; i++) {
                     uint32_t sregElewiseNum = numCol;
@@ -293,14 +231,14 @@ namespace RmsNorm {
             }
         }
 
-        __aicore__ inline void CalculateSquareReduceSumRLessThanTwoVL(__local_mem__ DX* xLocalAddr, 
+        __aicore__ inline void CalculateSquareReduceSumRLessThanTwoVL(__local_mem__ DX* xLocalAddr,
             __local_mem__ float* xReduceTmpLocalUbAddr,
             uint64_t curUbFactor, uint64_t numCol, uint64_t numColAlign)
         {
             uint32_t colNum = static_cast<uint32_t>(numCol);
             uint32_t colNumAlign = static_cast<uint32_t>(numColAlign);
             uint16_t curAloops = static_cast<uint16_t>(curUbFactor);
-            
+
             __VEC_SCOPE__
             {
                 RegTensor<float> xReg;
@@ -329,7 +267,7 @@ namespace RmsNorm {
 
         template <int32_t LAST_LOOP_NUMS>
         __aicore__ inline void CalculateSquareReduceSumRCommon(__local_mem__ DX* xLocalAddr,
-            __local_mem__ float* xTmpLocalUbAddr, __local_mem__ float* xReduceTmpLocalUbAddr, uint64_t curUbFactor, 
+            __local_mem__ float* xTmpLocalUbAddr, __local_mem__ float* xReduceTmpLocalUbAddr, uint64_t curUbFactor,
             uint64_t numCol, uint64_t numColAlign, uint64_t colFlodFactor)
         {
             uint32_t colNum = static_cast<uint32_t>(numCol);
@@ -363,9 +301,6 @@ namespace RmsNorm {
                 RegTensor<float> squareReg3;
                 RegTensor<float> sumReg3;
 
-                RegTensor<float> mulsReg;
-                RegTensor<float> addsReg;
-                RegTensor<float> sqrtReg;
 
                 MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
                 MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
@@ -385,7 +320,7 @@ namespace RmsNorm {
                             xTmpLocalUbAddr + static_cast<uint32_t>(i * firstVcaddNumCeilAlign + j), sumReg, pregOne);
                     }
                     for (uint16_t j = 0; j < static_cast<uint16_t>(firstFlodWithOutAddLoops); j++) {
-                        LoadTensorForDtypeTIn(xLocalAddr + firstFlodAddLoops * VectorLenB32,  xReg3, pregFull, 
+                        LoadTensorForDtypeTIn(xLocalAddr + firstFlodAddLoops * VectorLenB32,  xReg3, pregFull,
                             (i * colNumAlign + j * VectorLenB32));
                         Mul(squareReg3, xReg3, xReg3, pregFull);
                         ReduceSum(sumReg3, squareReg3, pregFull);

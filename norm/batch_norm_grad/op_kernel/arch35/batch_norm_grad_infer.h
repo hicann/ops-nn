@@ -579,7 +579,9 @@ public:
             MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(meanValue, (__local_mem__ float *)(meanAddr));
             MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(runningVarValue, (__local_mem__ float *)(varAddr));
 
-            CalRstdByHighPrecision(runningVarValue, rstdValue, epsilon);
+            AscendC::MicroAPI::MaskReg pregRstdAll1 =
+                AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+            NormCommon::ComputeRstdNewtonRaphsonReg(runningVarValue, rstdValue, pregRstdAll1, epsilon);
 
             uint32_t sreg0 = binaryAddRemainder;
             uint32_t sreg1 = tailQ;
@@ -705,7 +707,9 @@ public:
             MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(meanValue, (__local_mem__ float *)(meanAddr));
             MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(runningVarValue, (__local_mem__ float *)(varAddr));
 
-            CalRstdByHighPrecision(runningVarValue, rstdValue, epsilon);
+            AscendC::MicroAPI::MaskReg pregRstdAll2 =
+                AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+            NormCommon::ComputeRstdNewtonRaphsonReg(runningVarValue, rstdValue, pregRstdAll2, epsilon);
 
             for (uint16_t i = 0; i < binaryAddRemainderLoop; i++) {
                 MicroAPI::MaskReg pregLoop = MicroAPI::UpdateMask<float>(sreg0);
@@ -1544,7 +1548,9 @@ public:
             MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(runningVarValue, (__local_mem__ float *)(varAddr));
             MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(meanValue, (__local_mem__ float *)(meanAddr));
 
-            CalRstdByHighPrecision(runningVarValue, rstdValue, epsilon);
+            AscendC::MicroAPI::MaskReg pregRstdAll3 =
+                AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+            NormCommon::ComputeRstdNewtonRaphsonReg(runningVarValue, rstdValue, pregRstdAll3, epsilon);
 
             uint32_t sreg0 = binaryAddRemainder;
             for (uint16_t i = 0; i < binaryAddRemainderLoop; i++) {
@@ -1641,7 +1647,9 @@ public:
             MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(runningVarValue, (__local_mem__ float *)(varAddr));
             MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(meanValue, (__local_mem__ float *)(meanAddr));
 
-            CalRstdByHighPrecision(runningVarValue, rstdValue, epsilon);
+            AscendC::MicroAPI::MaskReg pregRstdAll4 =
+                AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+            NormCommon::ComputeRstdNewtonRaphsonReg(runningVarValue, rstdValue, pregRstdAll4, epsilon);
 
             uint32_t sreg0 = binaryAddRemainder;
             uint32_t sreg1 = tailMain;
@@ -1753,7 +1761,9 @@ public:
             MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(runningVarValue, (__local_mem__ float *)(varAddr));
             MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(meanValue, (__local_mem__ float *)(meanAddr));
 
-            CalRstdByHighPrecision(runningVarValue, rstdValue, epsilon);
+            AscendC::MicroAPI::MaskReg pregRstdAll5 =
+                AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+            NormCommon::ComputeRstdNewtonRaphsonReg(runningVarValue, rstdValue, pregRstdAll5, epsilon);
 
             MicroAPI::MaskReg pregLoop = MicroAPI::UpdateMask<float>(sreg0);
             LoadOneTensor<DY_TYPE>(dyAddr, y, pregLoop, 0);
@@ -1791,7 +1801,9 @@ public:
             MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(runingVarValue, (__local_mem__ float *)(varAddr));
             MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_BRC_B32>(meanValue, (__local_mem__ float *)(meanAddr));
 
-            CalRstdByHighPrecision(runingVarValue, rstdValue, epsilon);
+            AscendC::MicroAPI::MaskReg pregRstdAll6 =
+                AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+            NormCommon::ComputeRstdNewtonRaphsonReg(runingVarValue, rstdValue, pregRstdAll6, epsilon);
 
             MicroAPI::MaskReg pregLoop = MicroAPI::UpdateMask<float>(sreg0);
             MicroAPI::MaskReg pregTailLoop = MicroAPI::UpdateMask<float>(sreg1);
@@ -2182,7 +2194,9 @@ private:
             for (uint16_t i = 0; i < curTileALen; i++) {
                 // loads runningVar  1->64
                 LoadsTensorForDtypeT<T2>(varLocal, runningVar, pregMask, i);
-                CalRstdByHighPrecision(runningVar, invstd, epsilon);
+                AscendC::MicroAPI::MaskReg pregRstdAll7 =
+                    AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                NormCommon::ComputeRstdNewtonRaphsonReg(runningVar, invstd, pregRstdAll7, epsilon);
 
                 // load gamma 1->64
                 LoadsTensorForDtypeT<T2>(gammaLocal, gamma, pregMask, i);

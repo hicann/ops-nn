@@ -191,10 +191,8 @@ __aicore__ inline void GroupNormGradReCompute<T, U>::VFMode2DbetaDs(
     {
         RegTensor<float> vregDbeta;
         RegTensor<float> vregDgamma;
-        RegTensor<float> vregX;
         RegTensor<float> vregXM;
         RegTensor<float> vregXF;
-        RegTensor<float> vregDy;
         RegTensor<float> vregDyM;
         RegTensor<float> vregDyF;
         RegTensor<float> tempX;

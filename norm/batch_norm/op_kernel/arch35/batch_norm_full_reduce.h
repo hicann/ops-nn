@@ -19,6 +19,8 @@
 
 namespace BatchNormOps
 {
+constexpr static int64_t FULL_REDUCE_DICHOTOMY_ADD_COEFF = 2;
+
 template <typename T1, typename T2>
 class BatchNormFullReduce
 {
@@ -344,16 +346,15 @@ private:
         uint32_t xyUbOffset = this->r1r0Align;
         __VEC_SCOPE__
         {
-            RegTensor<float> x;
-            RegTensor<float> y;
-            RegTensor<float> mean_sum;
-            RegTensor<float> mean;
-
             RegTensor<float> x1;
             RegTensor<float> y1;
             RegTensor<float> y1Pow;
             RegTensor<float> var_sum;
             RegTensor<float> var;
+
+            RegTensor<float> x;
+            RegTensor<float> mean_sum;
+            RegTensor<float> mean;
 
             MaskReg pregMain = CreateMask<float, MaskPattern::ALL>();
             MaskReg pregMerge = CreateMask<float, MaskPattern::VL1>();
@@ -404,15 +405,19 @@ private:
         __local_mem__ float* binaryAddTensorAddr = (__local_mem__ float*)binaryAddTensor.GetPhyAddr();
         __VEC_SCOPE__
         {
-            RegTensor<float> x;
-            RegTensor<float> mean_sum;
-            RegTensor<float> mean;
-
             RegTensor<float> x1;
             RegTensor<float> y1;
             RegTensor<float> y1Pow;
             RegTensor<float> var_sum;
             RegTensor<float> var;
+
+            RegTensor<float> x;
+            RegTensor<float> mean_sum;
+            RegTensor<float> mean;
+
+            MaskReg pregMain = CreateMask<float, MaskPattern::ALL>();
+            MaskReg pregMerge = CreateMask<float, MaskPattern::VL1>();
+            MaskReg pregLoop;
 
             RegTensor<float> binaryAddQ;
             RegTensor<float> binaryAddR;
@@ -421,10 +426,6 @@ private:
             RegTensor<float> binaryAddQPow;
             RegTensor<float> binaryAddRPow;
             RegTensor<float> vlVar;
-
-            MaskReg pregMain = CreateMask<float, MaskPattern::ALL>();
-            MaskReg pregMerge = CreateMask<float, MaskPattern::VL1>();
-            MaskReg pregLoop;
 
             for (uint16_t k = 0; k < currentANum; k++) {
                 uint32_t sreg0 = binaryAddRemainder;
@@ -464,7 +465,7 @@ private:
                 LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
                 uint16_t curBinaryAddLoopMean = binaryAddLoopMean;
                 for (uint16_t i = 0; i < binaryAddKLoop; i++) {
-                    curBinaryAddLoopMean = curBinaryAddLoopMean / 2;
+                    curBinaryAddLoopMean = curBinaryAddLoopMean / FULL_REDUCE_DICHOTOMY_ADD_COEFF;
                     for (uint16_t j = 0; j < curBinaryAddLoopMean; j++) {
                         DataCopy(binaryAddQ, ((__local_mem__ float*)binaryAddTensorAddr + j * VL_FP32));
                         DataCopy(binaryAddR,
@@ -535,7 +536,7 @@ private:
                 LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
                 uint16_t curBinaryAddLoopVar = binaryAddLoopVar;
                 for (uint16_t i = 0; i < binaryAddKLoop; i++) {
-                    curBinaryAddLoopVar = curBinaryAddLoopVar / 2;
+                    curBinaryAddLoopVar = curBinaryAddLoopVar / FULL_REDUCE_DICHOTOMY_ADD_COEFF;
                     for (uint16_t j = 0; j < curBinaryAddLoopVar; j++) {
                         DataCopy(binaryAddQ, ((__local_mem__ float*)binaryAddTensorAddr + j * VL_FP32));
                         DataCopy(binaryAddR,
@@ -577,9 +578,7 @@ private:
             RegTensor<float> mean;
             RegTensor<float> var;
 
-            RegTensor<float> sqrtVar;
             RegTensor<float> one;
-            RegTensor<float> rsqrtVar;
 
             RegTensor<float> runningMean;
             RegTensor<float> saveMean;
@@ -592,12 +591,10 @@ private:
             RegTensor<float> y;
             RegTensor<float> s;
             RegTensor<float> t;
-            RegTensor<float> e;
             RegTensor<float> scalar1;
             RegTensor<float> scalarInf;
             RegTensor<float> scalarZero;
             RegTensor<float> t1;
-            RegTensor<float> t2;
             RegTensor<float> t3;
             RegTensor<float> t4;
             RegTensor<float> rstd;

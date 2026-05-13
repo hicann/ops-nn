@@ -17,6 +17,7 @@
 #define LAYER_NORM_V3_TWO_PASS_PERF_H
 
 #include "layer_norm_v3_common.h"
+#include "../../norm_common/reduce_common_regbase.h"
 
 namespace LayerNormV3 {
 using namespace AscendC;
@@ -479,76 +480,9 @@ private:
 
     __aicore__ inline void CalculateRstdVF(__local_mem__ float* rstdOutUb, uint16_t currentANum)
     {
-        uint16_t aLoop = (currentANum + VL_B32 - 1) / VL_B32;
         float epsilonLocal = tl_->epsilon;
-
-        __VEC_SCOPE__
-        {
-            RegTensor<float> mean;
-            RegTensor<float> var;
-
-            RegTensor<float> sqrtVar;
-            RegTensor<float> one;
-            RegTensor<float> rsqrtVar;
-
-            RegTensor<float> runningMean;
-            RegTensor<float> saveMean;
-            RegTensor<float> runningVar;
-            RegTensor<float> saveVar;
-
-            MaskReg pregMain = CreateMask<float, MaskPattern::ALL>();
-
-            RegTensor<float> r;
-            RegTensor<float> y;
-            RegTensor<float> s;
-            RegTensor<float> t;
-            RegTensor<float> e;
-            RegTensor<float> scalar1;
-            RegTensor<float> scalarInf;
-            RegTensor<float> scalarZero;
-            RegTensor<float> t1;
-            RegTensor<float> t2;
-            RegTensor<float> t3;
-            RegTensor<float> t4;
-            RegTensor<float> rstd;
-
-            MaskReg cmpRegZero;
-            MaskReg cmpRegInf;
-            MaskReg pregLoop;
-
-            Duplicate(one, 1.0, pregMain);
-            uint32_t sreg0 = currentANum;
-            for (uint16_t a = 0; a < aLoop; a++) {
-                pregLoop = UpdateMask<float>(sreg0);
-                Duplicate(scalar1, float(0.5), pregLoop);
-                Duplicate(scalarInf, POS_INF, pregLoop);
-                Duplicate(scalarZero, zero, pregLoop);
-                Duplicate(t1, float(1.5), pregLoop);
-                Duplicate(s, float(1.0), pregLoop);
-
-                // rstd
-                DataCopy(var, rstdOutUb + a * VL_B32);
-                Adds(var, var, epsilonLocal, pregLoop);
-                Div(r, one, var, pregLoop);
-                Sqrt(y, r, pregLoop);
-                Muls(t, var, float(-0.5), pregLoop);
-                Mul(t, t, y, pregLoop);                // -0.5 * x * y
-                Mula(t1, t, y, pregLoop);              // 1.5 + (-0.5 * x * y) * y
-                Mul(rstd, y, t1, pregLoop);            // y = y * (1.5 - 0.5 * x * y)
-                Muls(t3, var, float(-1.0), pregLoop);  // -1 * x
-                Mula(s, t3, r, pregLoop);              // 1 + (-1) * x * r
-                Muls(t4, rstd, float(-1.0), pregLoop); // (-1) * y
-                Mula(r, t4, rstd, pregLoop);           // r + (-1) * y * y
-                Mula(s, var, r, pregLoop);             // s + x * t
-                Mul(s, s, rstd, pregLoop);             // e * y
-                Mula(rstd, s, scalar1, pregLoop);      // y + y * e * 0.5
-                CompareScalar(cmpRegZero, var, POS_INF, pregLoop);
-                Select(rstd, scalarZero, rstd, cmpRegZero);
-                CompareScalar(cmpRegInf, var, zero, pregLoop);
-                Select(rstd, scalarInf, rstd, cmpRegInf);
-                DataCopy(rstdOutUb + a * VL_B32, rstd, pregLoop);
-            }
-        }
+        NormCommon::ComputeRstdNewtonRaphson<false>(
+            rstdOutUb, rstdOutUb, static_cast<uint32_t>(currentANum), epsilonLocal, 1.0f, VL_B32);
     }
 
     template <bool hasGammaFlag, bool hasBetaFlag>

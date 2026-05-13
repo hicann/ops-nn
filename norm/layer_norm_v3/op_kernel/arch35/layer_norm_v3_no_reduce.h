@@ -17,6 +17,7 @@
 #define LAYER_NORM_V3_NO_REDUCE_H
 
 #include "layer_norm_v3_common.h"
+#include "../../norm_common/reduce_common_regbase.h"
 
 namespace LayerNormV3 {
 using namespace AscendC;
@@ -29,10 +30,6 @@ using AscendC::MicroAPI::MemType;
 using AscendC::MicroAPI::RegTensor;
 using AscendC::MicroAPI::StoreDist;
 using AscendC::MicroAPI::UpdateMask;
-constexpr static float SCALAR1 = -0.5;
-constexpr static float SCALAR2 = 1.5;
-constexpr static float SCALAR3 = 0.5;
-constexpr static float SCALAR0 = -99.99;
 
 template <typename T, typename U, typename M, bool IsOutRstd>
 class LayerNormV3RegbaseNoReduce {
@@ -206,64 +203,15 @@ private:
                 if constexpr (!IsOutRstd) {
                     StoreTensorForDtypeTOut(rstdOutUb, varReg, pregLoop, (a * VL_B32));
                 }
-                CalRstdByHighPrecision(varReg, rstdReg, epsilon);
+                AscendC::MicroAPI::MaskReg pregRstdAll1 =
+                    AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                NormCommon::ComputeRstdNewtonRaphsonReg(varReg, rstdReg, pregRstdAll1, epsilon);
                 if constexpr (IsOutRstd) {
                     StoreTensorForDtypeTOut(rstdOutUb, rstdReg, pregLoop, (a * VL_B32));
                 }
                 StoreTensorForDtypeTOut(tmpUb, rstdReg, pregLoop, (a * VL_B32));
             }
         }
-    }
-
-    __aicore__ inline void CalRstdByHighPrecision(RegTensor<float>& var, RegTensor<float>& rstd, const float epsilon)
-    {
-        RegTensor<float> r;
-        RegTensor<float> y;
-        RegTensor<float> s;
-        RegTensor<float> t;
-        RegTensor<float> e;
-        RegTensor<float> one;
-        RegTensor<float> scalar1;
-        RegTensor<float> scalar2;
-        RegTensor<float> t1;
-        RegTensor<float> t2;
-        RegTensor<float> t3;
-        RegTensor<float> t4;
-        RegTensor<float> scalarInf;
-        RegTensor<float> scalarZero;
-        MaskReg cmpRegZero;
-        MaskReg cmpRegInf;
-        MaskReg pregMerge = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
-
-        Duplicate(scalarInf, POS_INF, pregMerge);
-        Duplicate(scalarZero, float(0.0), pregMerge);
-        Duplicate(one, float(1.0), pregMerge);
-        Duplicate(scalar1, SCALAR3, pregMerge);
-        Duplicate(t1, SCALAR2, pregMerge);
-        Duplicate(s, float(1.0), pregMerge);
-
-        Adds(var, var, epsilon, pregMerge);
-        // we need sqrt(1/var) = nan, when var < 0.
-        // But div donot support subnormal(when var is less -1e38, 1/var will be 0), then sqrt(1/var) is 0.
-        // So we do maxs to avoid the subnormal problem, sqrt(1/var) = nan
-        Maxs(var, var, SCALAR0, pregMerge);
-        Div(r, one, var, pregMerge);
-        Sqrt(y, r, pregMerge);
-        Muls(t, var, SCALAR1, pregMerge);
-        Mul(t, t, y, pregMerge);                // -0.5 * x * y
-        Mula(t1, t, y, pregMerge);              // 1.5 + (-0.5 * x * y) * y
-        Mul(rstd, y, t1, pregMerge);            // y = y * (1.5 - 0.5 * x * y)
-        Muls(t3, var, float(-1.0), pregMerge);  // -1 * x
-        Mula(s, t3, r, pregMerge);              // 1 + (-1) * x * r
-        Muls(t4, rstd, float(-1.0), pregMerge); // (-1) * y
-        Mula(r, t4, rstd, pregMerge);           // r + (-1) * y * y
-        Mula(s, var, r, pregMerge);             // s + x * t
-        Mul(s, s, rstd, pregMerge);             // e * y
-        Mula(rstd, s, scalar1, pregMerge);      // y + y * e * 0.5
-        CompareScalar(cmpRegZero, var, POS_INF, pregMerge);
-        Select(rstd, scalarZero, rstd, cmpRegZero);
-        CompareScalar(cmpRegInf, var, float(0.0), pregMerge);
-        Select(rstd, scalarInf, rstd, cmpRegInf);
     }
     template <bool hasGammaFlag, bool hasBetaFlag>
     __aicore__ inline void CalculateY(
@@ -276,12 +224,10 @@ private:
         {
             RegTensor<float> xReg;
             RegTensor<float> yReg;
-            RegTensor<float> varReg;
             RegTensor<float> rstdReg;
             RegTensor<float> gammaReg;
             RegTensor<float> betaReg;
             RegTensor<float> subReg;
-            RegTensor<float> mulReg;
             MaskReg pregMask = CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
             if constexpr (hasGammaFlag) {
                 LoadsTensorForDtypeT<U>(gammaInUb, gammaReg, pregMask, 1);

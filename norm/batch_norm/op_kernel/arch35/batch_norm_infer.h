@@ -269,7 +269,9 @@ private:
             for (uint16_t i = 0; i < curTileALen; i++) {
                 // loads var  1->64
                 LoadTwoTensorForDtypeTBrc<T2>(var, mean, varLocal, meanLocal, pregMask, pregMask, i, i);
-                CalRstdByHighPrecision(var, rstd, tilingData_->epsilon);
+                AscendC::MicroAPI::MaskReg pregRstdAll1 =
+                    AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                NormCommon::ComputeRstdNewtonRaphsonReg(var, rstd, pregRstdAll1, tilingData_->epsilon);
 
                 // load gamma、beta  1->64
                 LoadTwoTensorForDtypeTBrc<T2>(gamma, beta, gammaLocal, betaLocal, pregMask, pregMask, i, i);

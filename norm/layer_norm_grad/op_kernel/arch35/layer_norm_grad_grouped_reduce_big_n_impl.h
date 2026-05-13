@@ -299,7 +299,9 @@ __aicore__ inline void LayerNormGradGroupedReduceBigNGammaBeta<T, PD_GAMMA_TYPE>
                 AscendC::MicroAPI::RegTensor<float> varReg, rstdReg;
                 DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(meanReg, (__local_mem__ float*)mean + i);
                 DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(varReg, (__local_mem__ float*)var + i);
-                CalRstdByHighPrecision(varReg, rstdReg, epsilonTmp);
+                AscendC::MicroAPI::MaskReg pregRstdAll1 =
+                    AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                NormCommon::ComputeRstdNewtonRaphsonReg(varReg, rstdReg, pregRstdAll1, epsilonTmp);
 
                 AscendC::MicroAPI::RegTensor<float> xReg;
                 AscendC::MicroAPI::RegTensor<float> dyReg;
@@ -325,7 +327,9 @@ __aicore__ inline void LayerNormGradGroupedReduceBigNGammaBeta<T, PD_GAMMA_TYPE>
                 AscendC::MicroAPI::RegTensor<float> varReg, rstdReg;
                 DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(meanReg, (__local_mem__ float*)mean + i);
                 DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(varReg, (__local_mem__ float*)var + i);
-                CalRstdByHighPrecision(varReg, rstdReg, epsilonTmp);
+                AscendC::MicroAPI::MaskReg pregRstdAll2 =
+                    AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                NormCommon::ComputeRstdNewtonRaphsonReg(varReg, rstdReg, pregRstdAll2, epsilonTmp);
 
                 AscendC::MicroAPI::RegTensor<float> xReg;
                 AscendC::MicroAPI::RegTensor<float> dyReg;
@@ -364,7 +368,6 @@ __aicore__ inline void LayerNormGradGroupedReduceBigNBackward<T, U>::Init(
         MainFoldCount = td_->backwardMainFoldCountMain;
         CacheBufferCount = td_->backwardCacheBufferCountMain;
         ResultCacheID = td_->backwardResultCacheIDMain;
-
     } else {
         nToProcess_ = td_->nToProcessTail;
         Nloop = td_->backwardNloopTail;
@@ -733,7 +736,9 @@ __aicore__ inline void LayerNormGradGroupedReduceBigNBackward<T, U>::ComputeDx(
                 DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(sum1Reg, (__local_mem__ float*)sum1 + i);
                 DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(sum2Reg, (__local_mem__ float*)sum2 + i);
                 DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(varReg, (__local_mem__ float*)var + i);
-                CalRstdByHighPrecision(varReg, rstdReg, epsilonTmp);
+                AscendC::MicroAPI::MaskReg pregRstdAll3 =
+                    AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                NormCommon::ComputeRstdNewtonRaphsonReg(varReg, rstdReg, pregRstdAll3, epsilonTmp);
                 DataCopy(dyReg, (__local_mem__ float*)dy + i * outerLoopStride + 0 * innerLoopStride);
                 DataCopy(xReg, (__local_mem__ float*)x + i * outerLoopStride + 0 * innerLoopStride);
                 DataCopy(gammaReg, (__local_mem__ float*)gamma + 0 * innerLoopStride);
@@ -769,7 +774,9 @@ __aicore__ inline void LayerNormGradGroupedReduceBigNBackward<T, U>::ComputeDx(
                 DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(sum1Reg, (__local_mem__ float*)sum1 + i);
                 DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(sum2Reg, (__local_mem__ float*)sum2 + i);
                 DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(varReg, (__local_mem__ float*)var + i);
-                CalRstdByHighPrecision(varReg, rstdReg, epsilonTmp);
+                AscendC::MicroAPI::MaskReg pregRstdAll4 =
+                    AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                NormCommon::ComputeRstdNewtonRaphsonReg(varReg, rstdReg, pregRstdAll4, epsilonTmp);
                 for (uint16_t j = 0; j < innerLoopTimes; ++j) {
                     pMask = AscendC::MicroAPI::UpdateMask<float>(count);
                     DataCopy(dyReg, (__local_mem__ float*)dy + i * outerLoopStride + j * innerLoopStride);

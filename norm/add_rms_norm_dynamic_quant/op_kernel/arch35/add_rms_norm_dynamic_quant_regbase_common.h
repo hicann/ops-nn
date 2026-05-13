@@ -179,7 +179,6 @@ __aicore__ inline void ComputeYScale(
     {
         // VF1. Calc y
         RegTensor<float> yRegFp32, yRegFp32Tmp, scaleReg;
-        RegTensor<int32_t> yRegInt32;
         RegTensor<half> yRegFp16;
         RegTensor<T_Y> yReg;
         MaskReg maskReg;
@@ -306,7 +305,6 @@ __aicore__ inline void ComputeY(
     __VEC_SCOPE__
     {
         RegTensor<float> yRegFp32, yRegFp32Tmp, scaleReg;
-        RegTensor<int32_t> yRegInt32;
         RegTensor<half> yRegFp16;
         RegTensor<T_Y> yReg;
         MaskReg maskReg;

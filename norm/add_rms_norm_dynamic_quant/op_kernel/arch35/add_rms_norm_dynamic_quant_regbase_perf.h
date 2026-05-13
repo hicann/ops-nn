@@ -16,6 +16,7 @@
 #define ADD_RMS_NORM_DYNAMIC_QUANT_REGBASE_PERF_H_
 
 #include "add_rms_norm_dynamic_quant_regbase_common.h"
+#include "../../norm_common/reduce_common_regbase.h"
 
 namespace AddRmsNormDynamicQuant {
 
@@ -164,7 +165,8 @@ public:
             LocalTensor<float> rstdLocal = rstdBuf_.Get<float>();
             LocalTensor<float> xReduceLocal = xReduceTmpBuf_.Get<float>();
             CalculateSquareReduceSum(xOutTmpLocal, xReduceLocal, realM);
-            CalculateRstd(xReduceLocal, rstdLocal, realM);
+            NormCommon::ComputeRstdNewtonRaphson<true, true>(
+                xReduceLocal, rstdLocal, realM, epsilon_, avgFactor_, V_LENGTH);
 
             LocalTensor<T_Y> y1Local = outQueueY1_.AllocTensor<T_Y>();
             LocalTensor<float> y1TmpLocal = y1TmpBuf_.Get<float>();
@@ -351,12 +353,10 @@ private:
         {
             RegTensor<float> x;
             RegTensor<float> vMean;
-            RegTensor<float> rstdReg;
             RegTensor<float> onesReg;
 
             uint32_t sreg0 = baseN;
             MaskReg pregLoop = UpdateMask<float>(sreg0);
-            MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
             MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
             Duplicate(onesReg, float(1.0), pregOne);
 
@@ -377,13 +377,12 @@ private:
         {
             RegTensor<float> x;
             RegTensor<float> xFold;
+            RegTensor<float> onesReg;
             RegTensor<float> sumReg;
             RegTensor<float> vMean;
-            RegTensor<float> rstdReg;
-            RegTensor<float> onesReg;
 
-            MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
             MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
+            MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
             MaskReg pregTail = UpdateMask<float>(tailLen);
             Duplicate(onesReg, float(1.0), pregOne);
 
@@ -415,8 +414,8 @@ private:
         __VEC_SCOPE__
         {
             RegTensor<float> x1;
-            RegTensor<float> x2;
             RegTensor<float> xSum;
+            RegTensor<float> x2;
             MaskReg pregLoop;
             for (uint16_t i = 0; i < loopCount; ++i) {
                 uint32_t offset = i * V_LENGTH;
@@ -449,7 +448,6 @@ private:
             RegTensor<float> xFold;
             RegTensor<float> sumReg;
             RegTensor<float> vMean;
-            RegTensor<float> rstdReg;
             RegTensor<float> onesReg;
 
             MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
@@ -519,75 +517,6 @@ private:
                     ReduceSum(vMean, sumReg, pregFull);
                     DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(xReduceUb + i, vMean, pregOne);
                 }
-            }
-        }
-    }
-
-    __aicore__ inline void CalculateRstd(
-        LocalTensor<float>& xReduceLocal, LocalTensor<float>& rstdLocal, uint32_t realM)
-    {
-        static constexpr float POS_INF = 3.40282366920938E+38;
-        static constexpr float SCALAR1 = -0.5;
-        static constexpr float SCALAR2 = 1.5;
-        static constexpr float SCALAR3 = 0.5;
-        static constexpr float SCALAR0 = -99.99;
-
-        __local_mem__ float* rstdInUb = (__local_mem__ float*)rstdLocal.GetPhyAddr();
-        __local_mem__ float* xReduceUb = (__local_mem__ float*)xReduceLocal.GetPhyAddr();
-        uint16_t loopRows = static_cast<uint16_t>((realM + V_LENGTH - 1) / V_LENGTH);
-        __VEC_SCOPE__
-        {
-            RegTensor<float> var;
-            RegTensor<float> rstd;
-            RegTensor<float> r;
-            RegTensor<float> y;
-            RegTensor<float> s;
-            RegTensor<float> t;
-            RegTensor<float> one;
-            RegTensor<float> scalar1;
-            RegTensor<float> t1;
-            RegTensor<float> t2;
-            RegTensor<float> t3;
-            RegTensor<float> t4;
-            RegTensor<float> scalarInf;
-            RegTensor<float> scalarZero;
-            MaskReg cmpRegZero;
-            MaskReg cmpRegInf;
-            MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
-            MaskReg pregLoop;
-
-            uint32_t sreg = static_cast<uint32_t>(realM);
-            for (uint16_t i = 0; i < loopRows; ++i) {
-                pregLoop = UpdateMask<float>(sreg);
-                Duplicate(scalarInf, POS_INF, pregLoop);
-                Duplicate(scalarZero, float(0.0), pregLoop);
-                Duplicate(one, float(1.0), pregLoop);
-                Duplicate(scalar1, SCALAR3, pregLoop);
-                Duplicate(t1, SCALAR2, pregLoop);
-                Duplicate(s, float(1.0), pregLoop);
-                // rstd
-                DataCopy(var, xReduceUb + i * V_LENGTH);
-                Muls(var, var, avgFactor_, pregLoop);
-                Adds(var, var, epsilon_, pregLoop);
-                Maxs(var, var, SCALAR0, pregLoop);
-                Div(r, one, var, pregLoop);
-                Sqrt(y, r, pregLoop);
-                Muls(t, var, SCALAR1, pregLoop);
-                Mul(t, t, y, pregLoop);                // -0.5 * x * y
-                Mula(t1, t, y, pregLoop);              // 1.5 + (-0.5 * x * y) * y
-                Mul(rstd, y, t1, pregLoop);            // y = y * (1.5 - 0.5 * x * y)
-                Muls(t3, var, float(-1.0), pregLoop);  // -1 * x
-                Mula(s, t3, r, pregLoop);              // 1 + (-1) * x * r
-                Muls(t4, rstd, float(-1.0), pregLoop); // (-1) * y
-                Mula(r, t4, rstd, pregLoop);           // r + (-1) * y * y
-                Mula(s, var, r, pregLoop);             // s + x * t
-                Mul(s, s, rstd, pregLoop);             // e * y
-                Mula(rstd, s, scalar1, pregLoop);      // y + y * e * 0.5
-                CompareScalar(cmpRegZero, var, POS_INF, pregLoop);
-                Select(rstd, scalarZero, rstd, cmpRegZero);
-                CompareScalar(cmpRegInf, var, float(0.0), pregLoop);
-                Select(rstd, scalarInf, rstd, cmpRegInf);
-                DataCopy(rstdInUb + i * V_LENGTH, rstd, pregLoop);
             }
         }
     }
@@ -686,7 +615,6 @@ private:
         {
             // VF1. Calc y
             RegTensor<float> yRegFp32, yRegFp32Tmp, scaleReg;
-            RegTensor<int32_t> yRegInt32;
             RegTensor<half> yRegFp16;
             RegTensor<T_YB8> yReg;
             MaskReg maskReg;

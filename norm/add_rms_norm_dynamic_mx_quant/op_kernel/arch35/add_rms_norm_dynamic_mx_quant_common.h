@@ -22,6 +22,7 @@
 #include "../inc/platform.h"
 #include "op_kernel/platform_util.h"
 #include "add_rms_norm_dynamic_mx_quant_tiling_data.h"
+#include "../../norm_common/reduce_common_regbase.h"
 
 namespace AddRmsNormDynamicMxQuant {
 using namespace AscendC;
@@ -150,65 +151,6 @@ __aicore__ inline void StoreTensorForDtypeTOut(
         RegTensor<T_OUT> xOut;
         Cast<T_OUT, float, castTraitB322B16>(xOut, src, preg);
         DataCopy<T_OUT, StoreDist::DIST_PACK_B32>(dst + offset, xOut, preg);
-    }
-}
-
-// ===================== Rstd Computation =====================
-
-__aicore__ inline void CalculateRstd(
-    LocalTensor<float>& xReduceLocal, LocalTensor<float>& rstdLocal,
-    uint32_t curRows, float avgFactor, float epsilon)
-{
-    static constexpr float POS_INF = 3.40282366920938E+38;
-    static constexpr float SCALAR1 = -0.5;
-    static constexpr float SCALAR2 = 1.5;
-    static constexpr float SCALAR3 = 0.5;
-    static constexpr float SCALAR0 = -99.99;
-
-    __local_mem__ float* rstdInUb = (__local_mem__ float*)rstdLocal.GetPhyAddr();
-    __local_mem__ float* xReduceUb = (__local_mem__ float*)xReduceLocal.GetPhyAddr();
-    uint16_t loopRows = static_cast<uint16_t>((curRows + VL_F32 - 1) / VL_F32);
-    __VEC_SCOPE__
-    {
-        RegTensor<float> var, rstd, r, y, s, t, one, scalar1;
-        RegTensor<float> t1, t2, t3, t4, scalarInf, scalarZero;
-        MaskReg cmpRegZero, cmpRegInf;
-        MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
-        MaskReg pregLoop;
-
-        uint32_t sreg = static_cast<uint32_t>(curRows);
-        for (uint16_t i = 0; i < loopRows; ++i) {
-            pregLoop = UpdateMask<float>(sreg);
-            AscendC::MicroAPI::Duplicate(scalarInf, POS_INF, pregLoop);
-            AscendC::MicroAPI::Duplicate(scalarZero, float(0.0), pregLoop);
-            AscendC::MicroAPI::Duplicate(one, float(1.0), pregLoop);
-            AscendC::MicroAPI::Duplicate(scalar1, SCALAR3, pregLoop);
-            AscendC::MicroAPI::Duplicate(t1, SCALAR2, pregLoop);
-            AscendC::MicroAPI::Duplicate(s, float(1.0), pregLoop);
-            // rstd = 1/sqrt(mean(x^2) + eps)
-            AscendC::MicroAPI::DataCopy(var, xReduceUb + i * VL_F32);
-            AscendC::MicroAPI::Muls(var, var, avgFactor, pregLoop);
-            AscendC::MicroAPI::Adds(var, var, epsilon, pregLoop);
-            AscendC::MicroAPI::Maxs(var, var, SCALAR0, pregLoop);
-            AscendC::MicroAPI::Div(r, one, var, pregLoop);
-            AscendC::MicroAPI::Sqrt(y, r, pregLoop);
-            AscendC::MicroAPI::Muls(t, var, SCALAR1, pregLoop);
-            AscendC::MicroAPI::Mul(t, t, y, pregLoop);
-            AscendC::MicroAPI::Mula(t1, t, y, pregLoop);
-            AscendC::MicroAPI::Mul(rstd, y, t1, pregLoop);
-            AscendC::MicroAPI::Muls(t3, var, float(-1.0), pregLoop);
-            AscendC::MicroAPI::Mula(s, t3, r, pregLoop);
-            AscendC::MicroAPI::Muls(t4, rstd, float(-1.0), pregLoop);
-            AscendC::MicroAPI::Mula(r, t4, rstd, pregLoop);
-            AscendC::MicroAPI::Mula(s, var, r, pregLoop);
-            AscendC::MicroAPI::Mul(s, s, rstd, pregLoop);
-            AscendC::MicroAPI::Mula(rstd, s, scalar1, pregLoop);
-            AscendC::MicroAPI::CompareScalar(cmpRegZero, var, POS_INF, pregLoop);
-            AscendC::MicroAPI::Select(rstd, scalarZero, rstd, cmpRegZero);
-            AscendC::MicroAPI::CompareScalar(cmpRegInf, var, float(0.0), pregLoop);
-            AscendC::MicroAPI::Select(rstd, scalarInf, rstd, cmpRegInf);
-            AscendC::MicroAPI::DataCopy(rstdInUb + i * VL_F32, rstd, pregLoop);
-        }
     }
 }
 
@@ -515,7 +457,6 @@ __aicore__ inline void MxQuantComputeScalecuBLAS(
         AscendC::MicroAPI::RegTensor<uint32_t> max32;
         AscendC::MicroAPI::RegTensor<uint32_t> exp32;
         AscendC::MicroAPI::RegTensor<uint32_t> man32;
-        AscendC::MicroAPI::RegTensor<uint32_t> normalExp32;
         AscendC::MicroAPI::RegTensor<uint32_t> expAddOne32;
         AscendC::MicroAPI::RegTensor<uint32_t> extractExp;
         AscendC::MicroAPI::RegTensor<uint16_t> expOut;
@@ -608,10 +549,6 @@ __aicore__ inline void MxQuantComputeData(
         AscendC::MicroAPI::RegTensor<float> floatScaleForMul;
         AscendC::MicroAPI::RegTensor<T_X> vdExp0;
         AscendC::MicroAPI::RegTensor<T_X> vdExp1;
-        AscendC::MicroAPI::RegTensor<T_X> vdExp0Convert;
-        AscendC::MicroAPI::RegTensor<T_X> vdExp1Convert;
-        AscendC::MicroAPI::RegTensor<bfloat16_t> vdExp0BF16;
-        AscendC::MicroAPI::RegTensor<bfloat16_t> vdExp1BF16;
         AscendC::MicroAPI::RegTensor<float> vdExp0FP32Zero;
         AscendC::MicroAPI::RegTensor<float> vdExp0FP32One;
         AscendC::MicroAPI::RegTensor<float> vdExp1FP32Zero;
@@ -620,8 +557,6 @@ __aicore__ inline void MxQuantComputeData(
         AscendC::MicroAPI::RegTensor<T_Y> vdExp0FP8One;
         AscendC::MicroAPI::RegTensor<T_Y> vdExp1FP8Zero;
         AscendC::MicroAPI::RegTensor<T_Y> vdExp1FP8One;
-        AscendC::MicroAPI::RegTensor<bfloat16_t> vdBF16Exp0FP4;
-        AscendC::MicroAPI::RegTensor<bfloat16_t> vdBF16Exp1FP4;
         static constexpr AscendC::MicroAPI::CastTrait castTrait = {
             AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN,
             AscendC::MicroAPI::MaskMergeMode::ZEROING, roundMode};

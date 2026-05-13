@@ -17,6 +17,7 @@
 #define NORM_BATCH_NORM_RAR_BLOCK_SPLIT_R_H
 
 #include "batch_norm_base.h"
+#include "../../norm_common/reduce_common_regbase.h"
 
 namespace BatchNormOps {
 using namespace AscendC;
@@ -59,15 +60,14 @@ public:
                                 GM_ADDR mean_out, GM_ADDR var_out, GM_ADDR batch_mean, GM_ADDR batch_rstd,
                                 GM_ADDR workspace)
     {
-        blockIdx = GetBlockIdx();
         usedCoreNum = GetBlockNum();
-
-        int64_t xyGmOffset = 0;
+        blockIdx = GetBlockIdx();
 
         uint64_t r0LoopIdx = 1;
+        int64_t xyGmOffset = 0;
         r1EndIdx = tilingData->patternR1;
-        r0EndIdx = tilingData->patternR0;
         r1BlockInner = 1;
+        r0EndIdx = tilingData->patternR0;
         r0BlockInner = 1;
         if (tilingData->blockSplitAxis == 0) {
             // block切分轴是R1
@@ -76,8 +76,8 @@ public:
                 r1StartIdx = blockIdx * r1BlockInner;
                 r1EndIdx = r1StartIdx + r1BlockInner;
 
-                ubSplitAxis = tilingData->formerCoreUbSplitAxis;
                 ubOuter = tilingData->formerCoreUbOuter;
+                ubSplitAxis = tilingData->formerCoreUbSplitAxis;
                 ubInner = tilingData->formerCoreUbInner;
                 rFlodFactor = tilingData->formerCoreBinaryAddQuotient; // binaryAddQuotient: rUbFactor向下2的幂次
             } else {
@@ -85,8 +85,8 @@ public:
                 r1StartIdx = tilingData->formerBlockOuter * tilingData->blockInner + (blockIdx - tilingData->formerBlockOuter) * r1BlockInner;
                 r1EndIdx = r1StartIdx + r1BlockInner;
 
-                ubSplitAxis = tilingData->tailCoreUbSplitAxis;
                 ubOuter = tilingData->tailCoreUbOuter;
+                ubSplitAxis = tilingData->tailCoreUbSplitAxis;
                 ubInner = tilingData->tailCoreUbInner;
                 rFlodFactor = tilingData->tailCoreBinaryAddQuotient; // binaryAddQuotient: rUbFactor向下2的幂次
             }
@@ -104,17 +104,17 @@ public:
                 r0StartIdx = r0LoopIdx * r0BlockInner;
                 r0EndIdx = r0StartIdx + r0BlockInner;
 
-                ubSplitAxis = tilingData->formerCoreUbSplitAxis;
                 ubOuter = tilingData->formerCoreUbOuter;
+                ubSplitAxis = tilingData->formerCoreUbSplitAxis;
                 ubInner = tilingData->formerCoreUbInner;
                 rFlodFactor = tilingData->formerCoreBinaryAddQuotient; // binaryAddQuotient: rUbFactor向下2的幂次
             } else {
                 r0BlockInner = tilingData->blockInner - 1;
                 r0StartIdx = tilingData->formerBlockOuter * tilingData->blockInner + (r0LoopIdx - tilingData->formerBlockOuter) * r0BlockInner;
                 r0EndIdx = r0StartIdx + r0BlockInner;
-                
-                ubSplitAxis = tilingData->tailCoreUbSplitAxis;
+
                 ubOuter = tilingData->tailCoreUbOuter;
+                ubSplitAxis = tilingData->tailCoreUbSplitAxis;
                 ubInner = tilingData->tailCoreUbInner;
                 rFlodFactor = tilingData->tailCoreBinaryAddQuotient; // binaryAddQuotient: rUbFactor向下2的幂次
             }
@@ -123,12 +123,12 @@ public:
 
         // 计算 allcount
         uint32_t nowCoreRConut = r1BlockInner * r0BlockInner;
-        uint32_t nowCoreRConutPowOfTwo = FindCofFactor(nowCoreRConut);
         uint32_t rPowOfTwo = FindCofFactor(tilingData->patternR1 * tilingData->patternR0);
-        this->nFactor = static_cast<float>(1) / static_cast<float>(nowCoreRConutPowOfTwo);
+        uint32_t nowCoreRConutPowOfTwo = FindCofFactor(nowCoreRConut);
         this->nCorrectionFactor = static_cast<float>(nowCoreRConutPowOfTwo) / static_cast<float>(nowCoreRConut);
-        this->lastNFactor = static_cast<float>(1) / static_cast<float>(rPowOfTwo);
+        this->nFactor = static_cast<float>(1) / static_cast<float>(nowCoreRConutPowOfTwo);
         this->lastNCorrectionFactor = static_cast<float>(rPowOfTwo) / static_cast<float>(tilingData->patternR1 * tilingData->patternR0);
+        this->lastNFactor = static_cast<float>(1) / static_cast<float>(rPowOfTwo);
 
         xGm.SetGlobalBuffer((__gm__ T1*)x + xyGmOffset);
         betaGm.SetGlobalBuffer((__gm__ T2*)beta);
@@ -169,7 +169,7 @@ public:
         pipe->InitBuffer(countTbuf1, tilingData->ubFactor * sizeof(float));
         pipe->InitBuffer(countTbuf2, usedCoreNumAlign * sizeof(float));
 
-        pipe->InitBuffer(tmpTbuf3, AscendC::Std::max(static_cast<uint64_t>(usedCoreNum * tilingData->patternAAlign), 
+        pipe->InitBuffer(tmpTbuf3, AscendC::Std::max(static_cast<uint64_t>(usedCoreNum * tilingData->patternAAlign),
                                                     CEIL_ALIGN(FIRST_VCADD_RESULT_MAX_NUM, FP32_BLOCK_ALIGN_SIZE)) * sizeof(float));
     }
 
@@ -361,7 +361,8 @@ public:
         gammaTensor = gammaQueue.DeQue<T2>();
         betaTensor = betaQueue.DeQue<T2>();
         // 需要等runningMeanVar计算完成后，才能计算成Rstd
-        CalculateBatchRstd(batchRstdTensor);
+        NormCommon::ComputeRstdNewtonRaphson<false>(
+            batchRstdTensor, batchRstdTensor, static_cast<uint32_t>(currentA), tilingData->epsilon, 1.0f, VL_F32);
 
         NormalizeX(batchMeanTensor, batchRstdTensor, gammaTensor, betaTensor);
 
@@ -578,7 +579,7 @@ private:
 
         AscendC::LoopModeParams LoopParams{loop1Size,      loop2Size,      loop1SrcStride,
                                            loop1DstStride, loop2SrcStride, loop2DstStride};
-        
+
         AscendC::SetLoopModePara(LoopParams, DataCopyMVType::OUT_TO_UB);
         AscendC::DataCopyPad<T1, PaddingMode::Compact>(xInUb, xGm[offset], copyInParams, dataCopyPadExtParams);
         AscendC::ResetLoopModePara(DataCopyMVType::OUT_TO_UB);
@@ -587,7 +588,7 @@ private:
     // xTensor是AR排布(A * (r1 * r0))，R轴向32B对齐，且R轴可能有尾块处理
     // 所以formerRAlignNum是头块R对齐的长度，目标是找到meanTensor以及m2Tensor的AR排布中一行的大小，将WelfordParallelUpdate的结果放入正确的a_idx所在的行
     __aicore__ inline void WelfordParallelUpdate(
-        LocalTensor<T1>& xTensor, int64_t& count, LocalTensor<float>& meanTensor, LocalTensor<float>& m2Tensor, 
+        LocalTensor<T1>& xTensor, int64_t& count, LocalTensor<float>& meanTensor, LocalTensor<float>& m2Tensor,
         uint64_t processANum, uint64_t processR0Num, uint64_t processR1Num, uint64_t formerRAlignNum)
     {
         count += 1;
@@ -644,7 +645,7 @@ private:
     // 还需注意下rFlodNum: rUbFactorAlign向下的2幂次
     __aicore__ inline void ProcessWelfordRARFinalize(
         LocalTensor<float>& meanTensor, LocalTensor<float>& m2Tensor, LocalTensor<float>& countTensor,
-        LocalTensor<float>& finalMeanTensor, LocalTensor<float>& finalVarTensor, LocalTensor<float>& tmpTensor, 
+        LocalTensor<float>& finalMeanTensor, LocalTensor<float>& finalVarTensor, LocalTensor<float>& tmpTensor,
         uint64_t curAUbFactor, uint64_t numR, uint64_t numRAlign)
     {
         __local_mem__ float* tmpMeanLocal = (__local_mem__ float*)meanTensor.GetPhyAddr();
@@ -682,7 +683,7 @@ private:
         uint32_t firstFlodTial = static_cast<uint32_t>(rNum - rFlodFactor); // R - 向下的2幂次
         uint16_t firstFlodAddLoops = static_cast<uint16_t>((firstFlodTial + VL_F32 - 1) / VL_F32); // reg中尾块循环次数
         uint16_t firstFlodWithOutAddLoops = static_cast<uint16_t>((rFlodNum + VL_F32 - 1) / VL_F32) - firstFlodAddLoops; // 剩余循环
-        
+
         // first vcadd
         uint32_t firstVcaddNum = static_cast<uint32_t>((rFlodFactor + VL_F32 - 1 )/ VL_F32); // 最终是二分对齐点个64
         uint32_t firstVcaddNumCeilAlign = static_cast<uint32_t>((firstVcaddNum + FP32_BLOCK_ALIGN_SIZE - 1) / FP32_BLOCK_ALIGN_SIZE * FP32_BLOCK_ALIGN_SIZE);
@@ -782,7 +783,7 @@ private:
         uint32_t firstFlodTial = static_cast<uint32_t>(rNum - rFlodFactor); // R - 向下的2幂次
         uint16_t firstFlodAddLoops = static_cast<uint16_t>((firstFlodTial + VL_F32 - 1) / VL_F32); // reg中尾块循环次数
         uint16_t firstFlodWithOutAddLoops = static_cast<uint16_t>((rFlodNum + VL_F32 - 1) / VL_F32) - firstFlodAddLoops; // 剩余循环
-        
+
         // first vcadd
         uint32_t firstVcaddNum = static_cast<uint32_t>((rFlodFactor + VL_F32 - 1 )/ VL_F32); // 最终是二分对齐点个64
         uint32_t firstVcaddNumCeilAlign = static_cast<uint32_t>((firstVcaddNum + FP32_BLOCK_ALIGN_SIZE - 1) / FP32_BLOCK_ALIGN_SIZE * FP32_BLOCK_ALIGN_SIZE);
@@ -923,39 +924,37 @@ private:
         LocalTensor<float>& batchMeanTensor, LocalTensor<float>& batchRstdTensor, LocalTensor<float>& meanTensor,
         LocalTensor<float>& varTensor, LocalTensor<float>& countTensor, LocalTensor<float>& tmpTensor)
     {
-        __local_mem__ float* tmpMeanLocal = (__local_mem__ float*)meanTensor.GetPhyAddr();
-        __local_mem__ float* tmpVarLocal = (__local_mem__ float*)varTensor.GetPhyAddr();
         __local_mem__ float* tmpCountLocal = (__local_mem__ float*)countTensor.GetPhyAddr();
+        __local_mem__ float* tmpMeanLocal = (__local_mem__ float*)meanTensor.GetPhyAddr();
         __local_mem__ float* batchMeanTensorAddr = (__local_mem__ float*)batchMeanTensor.GetPhyAddr();
+        __local_mem__ float* tmpVarLocal = (__local_mem__ float*)varTensor.GetPhyAddr();
         __local_mem__ float* batchRstdTensorAddr = (__local_mem__ float*)batchRstdTensor.GetPhyAddr();
         __local_mem__ float* tmpUbAddr = (__local_mem__ float*)tmpTensor.GetPhyAddr();
-        uint16_t aLoopCount = CEIL_DIV(currentA, VL_F32);
         uint32_t rLoopStride = currentAAlign;
+        uint16_t aLoopCount = CEIL_DIV(currentA, VL_F32);
         uint16_t remainderLoopCount = (usedCoreNum - tilingData->lastBinaryAddQuotient);
         uint16_t quotientLoopCount = tilingData->lastBinaryAddQuotient - remainderLoopCount;
-        uint32_t baseLineOffset = rLoopStride;
         uint32_t remainderOffset = tilingData->lastBinaryAddQuotient * rLoopStride;
+        uint32_t baseLineOffset = rLoopStride;
         uint32_t remainderCountOffset = tilingData->lastBinaryAddQuotient;
-        uint16_t binaryAddKLoop = tilingData->lastBinaryAddK;
         uint16_t binaryAddInnerLoop = tilingData->lastBinaryAddQuotient;
+        uint16_t binaryAddKLoop = tilingData->lastBinaryAddK;
         uint16_t binaryAddLastLoop = tilingData->lastBinaryAddLast;
-        float numScale = this->lastNFactor;
         float scaleCorrection = this->lastNCorrectionFactor;
+        float numScale = this->lastNFactor;
         __VEC_SCOPE__
         {
-            RegTensor<float> tmpMean;
-            RegTensor<float> saveMean;
-            RegTensor<float> quot;
             RegTensor<float> rem;
+            RegTensor<float> quot;
             RegTensor<float> quotCount;
-            RegTensor<float> remCount;
             RegTensor<float> oriQuotMean;
+            RegTensor<float> remCount;
             RegTensor<float> oriRemMean;
-            RegTensor<float> resMean;
             RegTensor<float> resVar;
+            RegTensor<float> resMean;
 
-            MaskReg pregLoop;
             uint32_t sreg0 = currentA;
+            MaskReg pregLoop;
             for (uint16_t aIndex = 0; aIndex < aLoopCount; aIndex++) {
                 uint32_t aLoopOffset = aIndex * VL_F32;
                 pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg0);
@@ -1145,63 +1144,6 @@ private:
                 }
 
                 StoreTensorForDtypeT<T2>(runningMeanOutUbAddr, saveMean, pregLoop, k * VL_F32);
-            }
-        }
-    }
-
-    __aicore__ inline void CalculateBatchRstd(LocalTensor<float>& batchRstdTensor)
-    {
-        __local_mem__ float* batchRstdTensorTensorAddr = (__local_mem__ float*)batchRstdTensor.GetPhyAddr();
-        uint16_t aLoop = CEIL_DIV(currentA, VL_F32);
-        __VEC_SCOPE__
-        {
-            RegTensor<float> var;
-            RegTensor<float> one;
-            RegTensor<float> r;
-            RegTensor<float> y;
-            RegTensor<float> s;
-            RegTensor<float> t;
-            RegTensor<float> e;
-            RegTensor<float> scalar1;
-            RegTensor<float> scalarInf;
-            RegTensor<float> scalarZero;
-            RegTensor<float> t1;
-            RegTensor<float> t2;
-            RegTensor<float> t3;
-            RegTensor<float> rstd;
-            MaskReg pregMain = CreateMask<float, MaskPattern::ALL>();
-            MaskReg cmpRegZero;
-            MaskReg cmpRegInf;
-            MaskReg pregLoop;
-            Duplicate(one, 1.0, pregMain);
-            uint32_t sreg2 = currentA;
-            for (uint16_t k = 0; k < aLoop; k++) {
-                pregLoop = UpdateMask<float>(sreg2);
-                DataCopy(var, ((__local_mem__ float*)batchRstdTensorTensorAddr + k * VL_F32));
-                Duplicate(scalar1, float(0.5), pregLoop);
-                Duplicate(scalarInf, POS_INF, pregLoop);
-                Duplicate(scalarZero, float(0.0), pregLoop);
-                Duplicate(t1, float(1.5), pregLoop);
-                Duplicate(s, float(1.0), pregLoop);
-                Adds(var, var, tilingData->epsilon, pregLoop);
-                Div(r, one, var, pregLoop);
-                Sqrt(y, r, pregLoop);
-                Muls(t, var, float(-0.5), pregLoop);
-                Mul(t, t, y, pregLoop);                // -0.5 * x * y
-                Mula(t1, t, y, pregLoop);              // 1.5 + (-0.5 * x * y) * y
-                Mul(rstd, y, t1, pregLoop);            // y = y * (1.5 - 0.5 * x * y)
-                Muls(t2, var, float(-1.0), pregLoop);  // -1 * x
-                Mula(s, t2, r, pregLoop);              // 1 + (-1) * x * r
-                Muls(t3, rstd, float(-1.0), pregLoop); // (-1) * y
-                Mula(r, t3, rstd, pregLoop);           // r + (-1) * y * y
-                Mula(s, var, r, pregLoop);             // s + x * t
-                Mul(s, s, rstd, pregLoop);             // e * y
-                Mula(rstd, s, scalar1, pregLoop);      // y + y * e * 0.5
-                CompareScalar(cmpRegZero, var, POS_INF, pregLoop);
-                Select(rstd, scalarZero, rstd, cmpRegZero);
-                CompareScalar(cmpRegInf, var, float(0.0), pregLoop);
-                Select(rstd, scalarInf, rstd, cmpRegInf);
-                DataCopy(((__local_mem__ float*)batchRstdTensorTensorAddr + k * VL_F32), rstd, pregLoop);
             }
         }
     }
@@ -1398,7 +1340,7 @@ private:
                     }
 
                 }
-                
+
             }
         }
     }
@@ -1432,7 +1374,7 @@ private:
 
         AscendC::LoopModeParams LoopParams{loop1Size,      loop2Size,      loop1SrcStride,
                                            loop1DstStride, loop2SrcStride, loop2DstStride};
-        
+
         AscendC::SetLoopModePara(LoopParams, DataCopyMVType::UB_TO_OUT);
         AscendC::DataCopyPad<T1, PaddingMode::Compact>(yGm[offset], yOutUb, copyInParams);
         AscendC::ResetLoopModePara(DataCopyMVType::UB_TO_OUT);
@@ -1495,23 +1437,22 @@ private:
     static constexpr uint32_t ROW_TWO_OFFSET = 2;
     static constexpr uint32_t ROW_THREE_OFFSET = 3;
     static constexpr uint32_t ROW_FOUR_OFFSET = 4;
-    static constexpr float POS_INF = 3.40282366920938E+38;
     static constexpr int32_t NUM_ONE = 1;
     static constexpr int32_t NUM_TWO = 2;
     static constexpr uint32_t FIRST_VCADD_RESULT_MAX_NUM = 128;
-
-    constexpr static AscendC::MicroAPI::CastTrait castTraitB162B32 = {
-        AscendC::MicroAPI::RegLayout::ZERO,
-        AscendC::MicroAPI::SatMode::UNKNOWN,
-        AscendC::MicroAPI::MaskMergeMode::ZEROING,
-        AscendC::RoundMode::UNKNOWN,
-    };
 
     constexpr static AscendC::MicroAPI::CastTrait castTraitB322B16 = {
         AscendC::MicroAPI::RegLayout::ZERO,
         AscendC::MicroAPI::SatMode::NO_SAT,
         AscendC::MicroAPI::MaskMergeMode::ZEROING,
         AscendC::RoundMode::CAST_RINT,
+    };
+
+    constexpr static AscendC::MicroAPI::CastTrait castTraitB162B32 = {
+        AscendC::MicroAPI::RegLayout::ZERO,
+        AscendC::MicroAPI::SatMode::UNKNOWN,
+        AscendC::MicroAPI::MaskMergeMode::ZEROING,
+        AscendC::RoundMode::UNKNOWN,
     };
 
     /* ascendc variable */

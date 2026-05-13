@@ -69,6 +69,7 @@ __aicore__ inline T Aligned(T value, T alignment)
 constexpr int32_t VL_SIZE = NormCommonRegbase::GetVRegSize();
 constexpr int32_t V_LENGTH = (VL_SIZE / static_cast<int32_t>(sizeof(float)));
 constexpr uint32_t ONCE_VECTOR_SIZE = 256;
+constexpr uint16_t DICHOTOMY_ADD_COEFF = 2;
 
 constexpr AscendC::MicroAPI::CastTrait castTraitB162B32 = {
     AscendC::MicroAPI::RegLayout::ZERO,
@@ -83,6 +84,30 @@ constexpr AscendC::MicroAPI::CastTrait castTraitB322B16 = {
     AscendC::MicroAPI::MaskMergeMode::ZEROING,
     AscendC::RoundMode::CAST_RINT,
 };
+
+__aicore__ inline void DichotomyAdd(
+    RegTensor<float>& dstReg, __local_mem__ float* src, uint16_t outerLoop, uint16_t innerLoop, uint32_t lastNum)
+{
+    RegTensor<float> tmpReg1;
+    RegTensor<float> tmpReg2;
+    RegTensor<float> tmpReg3;
+    LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
+    MaskReg pregMain = CreateMask<float, MaskPattern::ALL>();
+    for (uint16_t k = 0; k < outerLoop; k++) {
+        innerLoop = innerLoop / DICHOTOMY_ADD_COEFF;
+        for (uint16_t i = 0; i < innerLoop; i++) {
+            DataCopy(tmpReg1, src + i * V_LENGTH);
+            DataCopy(tmpReg2, src + (i + innerLoop) * V_LENGTH);
+            Add(tmpReg3, tmpReg1, tmpReg2, pregMain);
+            DataCopy(src + i * V_LENGTH, tmpReg3, pregMain);
+        }
+        LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
+    }
+    uint32_t sreg0 = lastNum;
+    MaskReg pregLoop = UpdateMask<float>(sreg0);
+    DataCopy(tmpReg3, src);
+    ReduceSum(dstReg, tmpReg3, pregLoop);
+}
 
 template <typename U>
 __aicore__ inline void LoadTwoCloseRegVF(
@@ -202,7 +227,6 @@ __aicore__ inline void ReduceSumRstd(LocalTensor<float>& dstLocal, LocalTensor<U
         RegTensor<float> mainA, mainB, tailA, tailB, vSum, vDupReg;
         RegTensor<U> x1MainA, x1MainB, x1TailA, x1TailB;
         RegTensor<U> x2MainA, x2MainB, x2TailA, x2TailB;
-        MaskReg pregMain = CreateMask<float, MaskPattern::ALL>();
         MaskReg pregMerge = CreateMask<float, MaskPattern::VL1>();
         MaskReg pregLoop;
 
@@ -332,7 +356,6 @@ __aicore__ inline void ReduceSumRstdMulti(
 
     __VEC_SCOPE__
     {
-        MaskReg pregMain = CreateMask<float, MaskPattern::ALL>();
         MaskReg pregMerge = CreateMask<float, MaskPattern::VL1>();
 
         for (uint16_t row = 0; row < (uint16_t)repeatTimes; row++) {
@@ -440,6 +463,95 @@ __aicore__ inline void ReduceSumRstdMulti(
             }
         }
     }
+}
+
+template <bool NEED_MAX = true>
+__aicore__ inline void ComputeRstdNewtonRaphsonReg(
+    RegTensor<float>& var, RegTensor<float>& rstd, MaskReg& preg, float epsilon)
+{
+    static constexpr float POS_INF = 3.40282366920938E+38;
+    static constexpr float SCALAR1 = -0.5;
+    static constexpr float SCALAR2 = 1.5;
+    static constexpr float SCALAR3 = 0.5;
+    static constexpr float SCALAR0 = -99.99;
+
+    RegTensor<float> r;
+    RegTensor<float> y;
+    RegTensor<float> s;
+    RegTensor<float> t;
+    RegTensor<float> one;
+    RegTensor<float> scalar1;
+    RegTensor<float> t1;
+    RegTensor<float> t3;
+    RegTensor<float> t4;
+    RegTensor<float> scalarInf;
+    RegTensor<float> scalarZero;
+    MaskReg cmpRegZero;
+    MaskReg cmpRegInf;
+
+    Duplicate(scalarInf, POS_INF, preg);
+    Duplicate(scalarZero, float(0.0), preg);
+    Duplicate(one, float(1.0), preg);
+    Duplicate(scalar1, SCALAR3, preg);
+    Duplicate(t1, SCALAR2, preg);
+    Duplicate(s, float(1.0), preg);
+
+    Adds(var, var, epsilon, preg);
+    if constexpr (NEED_MAX) {
+        Maxs(var, var, SCALAR0, preg);
+    }
+    Div(r, one, var, preg);
+    Sqrt(y, r, preg);
+    Muls(t, var, SCALAR1, preg);
+    Mul(t, t, y, preg);
+    Mula(t1, t, y, preg);
+    Mul(rstd, y, t1, preg);
+    Muls(t3, var, float(-1.0), preg);
+    Mula(s, t3, r, preg);
+    Muls(t4, rstd, float(-1.0), preg);
+    Mula(r, t4, rstd, preg);
+    Mula(s, var, r, preg);
+    Mul(s, s, rstd, preg);
+    Mula(rstd, s, scalar1, preg);
+    CompareScalar(cmpRegZero, var, POS_INF, preg);
+    Select(rstd, scalarZero, rstd, cmpRegZero);
+    CompareScalar(cmpRegInf, var, float(0.0), preg);
+    Select(rstd, scalarInf, rstd, cmpRegInf);
+}
+
+template <bool NEED_MAX = true, bool NEED_AVG_FACTOR = false>
+__aicore__ inline void ComputeRstdNewtonRaphson(
+    __local_mem__ float* src, __local_mem__ float* dst, uint32_t rowCount, float epsilon,
+    float avgFactor = 1.0f, uint32_t vectorLen = V_LENGTH)
+{
+    uint16_t loopRows = static_cast<uint16_t>((rowCount + vectorLen - 1) / vectorLen);
+    __VEC_SCOPE__
+    {
+        RegTensor<float> var;
+        RegTensor<float> rstd;
+        MaskReg pregLoop;
+
+        uint32_t sreg = rowCount;
+        for (uint16_t i = 0; i < loopRows; ++i) {
+            pregLoop = UpdateMask<float>(sreg);
+            DataCopy(var, src + i * vectorLen);
+            if constexpr (NEED_AVG_FACTOR) {
+                Muls(var, var, avgFactor, pregLoop);
+            }
+            ComputeRstdNewtonRaphsonReg<NEED_MAX>(var, rstd, pregLoop, epsilon);
+            DataCopy(dst + i * vectorLen, rstd, pregLoop);
+        }
+    }
+}
+
+template <bool NEED_MAX = true, bool NEED_AVG_FACTOR = false>
+__aicore__ inline void ComputeRstdNewtonRaphson(
+    LocalTensor<float> srcLocal, LocalTensor<float> dstLocal, uint32_t rowCount, float epsilon,
+    float avgFactor = 1.0f, uint32_t vectorLen = V_LENGTH)
+{
+    __local_mem__ float* src = (__local_mem__ float*)srcLocal.GetPhyAddr();
+    __local_mem__ float* dst = (__local_mem__ float*)dstLocal.GetPhyAddr();
+    ComputeRstdNewtonRaphson<NEED_MAX, NEED_AVG_FACTOR>(src, dst, rowCount, epsilon, avgFactor, vectorLen);
 }
 
 /*!

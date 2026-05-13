@@ -153,7 +153,8 @@ private:
         CalculateSquareReduceSum(xFp32Local, xReduceLocal, curRows);
 
         // --- Rstd = 1/sqrt(mean + epsilon_) ---
-        CalculateRstd(xReduceLocal, rstdLocal, curRows, avgFactor_, epsilon_);
+        NormCommon::ComputeRstdNewtonRaphson<true, true>(
+            xReduceLocal, rstdLocal, curRows, epsilon_, avgFactor_, VL_F32);
         outQueueRstd.EnQue<float>(rstdLocal);
 
         // --- CopyOut rstd ---

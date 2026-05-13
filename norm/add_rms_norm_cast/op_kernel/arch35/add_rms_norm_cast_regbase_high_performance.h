@@ -17,6 +17,7 @@
 #include "add_rms_norm_cast_regbase_common.h"
 #include "../../rms_norm/rms_norm_base.h"
 #include "../inc/platform.h"
+#include "../../norm_common/reduce_common_regbase.h"
 
 namespace AddRmsNormCast {
 
@@ -76,9 +77,9 @@ public:
         pPipe->InitBuffer(inQueueX1, DOUBLE_BUFFER_NUM, numColAlign * sizeof(T) * rowFactor);
         pPipe->InitBuffer(inQueueX2, DOUBLE_BUFFER_NUM, numColAlign * sizeof(T) * rowFactor);
         pPipe->InitBuffer(inQueueGamma, 1, numColAlign * sizeof(T));
-        pPipe->InitBuffer(outQueueY1, DOUBLE_BUFFER_NUM, numColAlign * sizeof(float) * rowFactor);
-        pPipe->InitBuffer(outQueueY2, DOUBLE_BUFFER_NUM, numColAlign * sizeof(T) * rowFactor);
         pPipe->InitBuffer(outQueueX, DOUBLE_BUFFER_NUM, numColAlign * sizeof(T) * rowFactor);
+        pPipe->InitBuffer(outQueueY2, DOUBLE_BUFFER_NUM, numColAlign * sizeof(T) * rowFactor);
+        pPipe->InitBuffer(outQueueY1, DOUBLE_BUFFER_NUM, numColAlign * sizeof(float) * rowFactor);
         pPipe->InitBuffer(outQueueRstd, DOUBLE_BUFFER_NUM, rstdUbSizeAlignSize);
         pPipe->InitBuffer(xReduceBuff, rstdUbSizeAlignSize);
         pPipe->InitBuffer(xFp32Buff, numColAlign * sizeof(float) * rowFactor);
@@ -117,7 +118,8 @@ private:
         LocalTensor<float> rstdLocal = outQueueRstd.AllocTensor<float>();
         LocalTensor<float> xReduceLocal = xReduceBuff.Get<float>();
         CalculateSquareReduceSum(xFp32Local, xReduceLocal, curRows, numColAlign, numCol);
-        CalculateRstd(xReduceLocal, rstdLocal, curRows, avgFactor, epsilon);
+        NormCommon::ComputeRstdNewtonRaphson<true, true>(
+            xReduceLocal, rstdLocal, curRows, epsilon, avgFactor, VL_FP32);
         outQueueRstd.EnQue<float>(rstdLocal);
 
         rstdLocal = outQueueRstd.DeQue<float>();
@@ -187,16 +189,14 @@ private:
         __VEC_SCOPE__ {
             RegTensor<float> x1Reg;
             RegTensor<float> x2Reg;
-            RegTensor<float> gammaReg;
             RegTensor<float> rstd1Reg;
             RegTensor<float> rstd2Reg;
+            RegTensor<float> gammaReg;
             RegTensor<float> mul1Reg;
-            RegTensor<float> mul1UnrollReg;
             RegTensor<float> mul2Reg;
+            RegTensor<float> mul1UnrollReg;
             RegTensor<float> mul2UnrollReg;
 
-            MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
-            MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
             for (uint16_t i = 0; i < loopRowsFold; ++i) {
                 uint32_t sregCount = reduceNum;
                 DataCopy<float, LoadDist::DIST_BRC_B32>(rstd1Reg, rstdInUb + NUM_TWO * i);
@@ -261,14 +261,13 @@ private:
     {
         __VEC_SCOPE__
         {
+            RegTensor<float> onesReg;
             RegTensor<float> x;
             RegTensor<float> vMean;
-            RegTensor<float> onesReg;
 
+            MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
             uint32_t sreg0 = reduceNum;
             MaskReg pregLoop = UpdateMask<float>(sreg0);
-            MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
-            MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
             Duplicate(onesReg, float(1.0), pregOne);
 
             for (uint16_t i = 0; i < curRows; i++) {
@@ -289,13 +288,13 @@ private:
         {
             RegTensor<float> x;
             RegTensor<float> xFold;
+            RegTensor<float> onesReg;
             RegTensor<float> sumReg;
             RegTensor<float> vMean;
-            RegTensor<float> onesReg;
 
             MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
-            MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
             MaskReg pregTail = UpdateMask<float>(tailLen);
+            MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
             Duplicate(onesReg, float(1.0), pregOne);
 
             for (uint16_t i = 0; i < curRows; ++i) {
@@ -316,15 +315,15 @@ private:
         __local_mem__ float* xFp32Tmp, __local_mem__ float* xReduceUb, __local_mem__ float* tmpUb, uint16_t curRows,
         uint32_t numColAlign, uint32_t reduceNum)
     {
-        uint32_t binaryAddQuotient = binAddQuotient; 
-        uint16_t binaryAddQuotientLoop = (binaryAddQuotient + VL_FP32 - 1) / VL_FP32; 
+        uint32_t binaryAddQuotient = binAddQuotient;
+        uint16_t binaryAddQuotientLoop = (binaryAddQuotient + VL_FP32 - 1) / VL_FP32;
 
-        uint32_t lastBinaryAddNum = binaryAddQuotient / VL_FP32; 
-        uint32_t lastBinaryAddNumAlign = (binaryAddQuotientLoop + BLK_B32 - 1) / BLK_B32 * BLK_B32; 
+        uint32_t lastBinaryAddNum = binaryAddQuotient / VL_FP32;
+        uint32_t lastBinaryAddNumAlign = (binaryAddQuotientLoop + BLK_B32 - 1) / BLK_B32 * BLK_B32;
 
-        uint32_t binaryAddRemainder = reduceNum - binaryAddQuotient; 
-        uint16_t binaryAddRemainderCeilLoop = (binaryAddRemainder + VL_FP32 - 1) / VL_FP32; 
-        uint16_t binaryAddRemainderFloorLoop = binaryAddRemainder / VL_FP32; 
+        uint32_t binaryAddRemainder = reduceNum - binaryAddQuotient;
+        uint16_t binaryAddRemainderCeilLoop = (binaryAddRemainder + VL_FP32 - 1) / VL_FP32;
+        uint16_t binaryAddRemainderFloorLoop = binaryAddRemainder / VL_FP32;
         __VEC_SCOPE__
         {
             RegTensor<float> x;
@@ -402,80 +401,8 @@ private:
         }
     }
 
-    __aicore__ inline void CalculateRstd(
-        LocalTensor<float>& xReduceLocal, LocalTensor<float>& rstdLocal, uint32_t curRows, float avgFactor,
-        float epsilon)
-    {
-        static constexpr float POS_INF = 3.40282366920938E+38;
-        static constexpr float SCALAR1 = -0.5;
-        static constexpr float SCALAR2 = 1.5;
-        static constexpr float SCALAR3 = 0.5;
-        static constexpr float SCALAR0 = -99.99;
-
-        __local_mem__ float* rstdInUb = (__local_mem__ float*)rstdLocal.GetPhyAddr();
-        __local_mem__ float* xReduceUb = (__local_mem__ float*)xReduceLocal.GetPhyAddr();
-        uint16_t loopRows = static_cast<uint16_t>((curRows + VL_FP32 - 1) / VL_FP32);
-        __VEC_SCOPE__
-        {
-            RegTensor<float> var;
-            RegTensor<float> rstd;
-            RegTensor<float> r;
-            RegTensor<float> y;
-            RegTensor<float> s;
-            RegTensor<float> t;
-            RegTensor<float> one;
-            RegTensor<float> scalar1;
-            RegTensor<float> t1;
-            RegTensor<float> t2;
-            RegTensor<float> t3;
-            RegTensor<float> t4;
-            RegTensor<float> scalarInf;
-            RegTensor<float> scalarZero;
-            MaskReg cmpRegZero;
-            MaskReg cmpRegInf;
-            MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
-            MaskReg pregLoop;
-
-            uint32_t sreg = static_cast<uint32_t>(curRows);
-            for (uint16_t i = 0; i < loopRows; ++i) {
-                pregLoop = UpdateMask<float>(sreg);
-                Duplicate(scalarInf, POS_INF, pregLoop);
-                Duplicate(scalarZero, float(0.0), pregLoop);
-                Duplicate(one, float(1.0), pregLoop);
-                Duplicate(scalar1, SCALAR3, pregLoop);
-                Duplicate(t1, SCALAR2, pregLoop);
-                Duplicate(s, float(1.0), pregLoop);
-                // rstd
-                DataCopy(var, xReduceUb + i * VL_FP32);
-                Muls(var, var, avgFactor, pregLoop);
-                Adds(var, var, epsilon, pregLoop);
-                Maxs(var, var, SCALAR0, pregLoop);
-                Div(r, one, var, pregLoop);
-                Sqrt(y, r, pregLoop);
-                Muls(t, var, SCALAR1, pregLoop);
-                Mul(t, t, y, pregLoop);                // -0.5 * x * y
-                Mula(t1, t, y, pregLoop);              // 1.5 + (-0.5 * x * y) * y
-                Mul(rstd, y, t1, pregLoop);            // y = y * (1.5 - 0.5 * x * y)
-                Muls(t3, var, float(-1.0), pregLoop);  // -1 * x
-                Mula(s, t3, r, pregLoop);              // 1 + (-1) * x * r
-                Muls(t4, rstd, float(-1.0), pregLoop); // (-1) * y
-                Mula(r, t4, rstd, pregLoop);           // r + (-1) * y * y
-                Mula(s, var, r, pregLoop);             // s + x * t
-                Mul(s, s, rstd, pregLoop);             // e * y
-                Mula(rstd, s, scalar1, pregLoop);      // y + y * e * 0.5
-                CompareScalar(cmpRegZero, var, POS_INF, pregLoop);
-                Select(rstd, scalarZero, rstd, cmpRegZero);
-                CompareScalar(cmpRegInf, var, float(0.0), pregLoop);
-                Select(rstd, scalarInf, rstd, cmpRegInf);
-                DataCopy(rstdInUb + i * VL_FP32, rstd, pregLoop);
-            }
-        }
-    }
-
     __aicore__ inline void CopyInXMutiMoveAlign(uint64_t offset, uint32_t curCols, uint32_t curRows = 0)
     {
-        LocalTensor<T> xLocal1 = inQueueX1.AllocTensor<T>();
-        LocalTensor<T> xLocal2 = inQueueX2.AllocTensor<T>();
         DataCopyExtParams extParams{
             static_cast<uint16_t>(curRows),                                               // blockCount
             static_cast<uint32_t>(numCol * sizeof(T)),                                    // blockLen
@@ -489,6 +416,8 @@ private:
             static_cast<uint8_t>(0), // rightPadding
             static_cast<T>(0.0)      // paddingValue
         };
+        LocalTensor<T> xLocal1 = inQueueX1.AllocTensor<T>();
+        LocalTensor<T> xLocal2 = inQueueX2.AllocTensor<T>();
         DataCopyPad(xLocal1, xGm1[offset], extParams, padParams);
         DataCopyPad(xLocal2, xGm2[offset], extParams, padParams);
         inQueueX1.EnQue(xLocal1);
@@ -497,7 +426,6 @@ private:
 
     __aicore__ inline void CopyInGamma()
     {
-        LocalTensor<T> gammaLocal = inQueueGamma.AllocTensor<T>();
         DataCopyExtParams copyParams{
             static_cast<uint16_t>(1),                  // blockCount
             static_cast<uint32_t>(numCol * sizeof(T)), // blockLen
@@ -511,6 +439,7 @@ private:
             static_cast<uint8_t>(0), // rightPadding
             static_cast<T>(0.0)      // paddingValue
         };
+        LocalTensor<T> gammaLocal = inQueueGamma.AllocTensor<T>();
         DataCopyPad(gammaLocal, gammaGm, copyParams, padParams);
         inQueueGamma.EnQue(gammaLocal);
     }

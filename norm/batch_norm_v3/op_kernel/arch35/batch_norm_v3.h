@@ -17,6 +17,7 @@
 
 #include "kernel_tiling/kernel_tiling.h"
 #include "kernel_operator.h"
+#include "../../norm_common/reduce_common_regbase.h"
 
 namespace BatchNormV3Ops {
 using namespace AscendC;
@@ -42,6 +43,7 @@ constexpr static int64_t NDDMA_THRESHOLD = 32;
 constexpr static int64_t NDDMA_SECOND_DIM = 1;
 constexpr static int64_t NDDMA_THIRD_DIM = 2;
 constexpr static int64_t NDDMA_DIM_NUM = 3;
+constexpr static int64_t DICHOTOMY_ADD_COEFF = 2;
 constexpr static AscendC::MicroAPI::CastTrait castTraitB162B32 = {
     AscendC::MicroAPI::RegLayout::ZERO,
     AscendC::MicroAPI::SatMode::UNKNOWN,
@@ -56,10 +58,6 @@ constexpr static AscendC::MicroAPI::CastTrait castTraitB322B16 = {
     AscendC::RoundMode::CAST_RINT,
 };
 
-static constexpr float SCALAR1 = -0.5f;
-static constexpr float SCALAR2 = 1.5f;
-static constexpr float SCALAR3 = 0.5f;
-static constexpr float SCALAR0 = -99.99f;
 
 __aicore__ inline constexpr uint32_t GetUbBlockSize()
 {
@@ -87,57 +85,6 @@ __aicore__ inline T CeilDiv(T a, T b)
     using type = typename std::conditional<sizeof(T) == sizeof(uint8_t) || sizeof(T) == sizeof(uint16_t), uint32_t, uint64_t>::type;
     type res = (static_cast<type>(a) + static_cast<type>(b) - 1) / static_cast<type>(b);
     return static_cast<T>(res);
-}
-
-__aicore__ inline void CalRstdByHighPrecision(RegTensor<float>& var, RegTensor<float>& rstd, float epsilon)
-{
-    RegTensor<float> r;
-    RegTensor<float> y;
-    RegTensor<float> s;
-    RegTensor<float> t;
-    RegTensor<float> e;
-    RegTensor<float> one;
-    RegTensor<float> scalar1;
-    RegTensor<float> scalar2;
-    RegTensor<float> t1;
-    RegTensor<float> t2;
-    RegTensor<float> t3;
-    RegTensor<float> t4;
-    RegTensor<float> scalarInf;
-    RegTensor<float> scalarZero;
-    MaskReg cmpRegZero;
-    MaskReg cmpRegInf;
-    MaskReg pregMerge = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
-
-    Duplicate(scalarInf, POS_INF, pregMerge);
-    Duplicate(scalarZero, ZERO, pregMerge);
-    Duplicate(one, float(1.0), pregMerge);
-    Duplicate(scalar1, SCALAR3, pregMerge);
-    Duplicate(t1, SCALAR2, pregMerge);
-    Duplicate(s, float(1.0), pregMerge);
-
-    Adds(var, var, epsilon, pregMerge);
-    // we need sqrt(1/var) = nan, when var < 0.
-    // But div donot support subnormal(when var is less -1e38, 1/var will be 0), then sqrt(1/var) is 0.
-    // So we do maxs to avoid the subnormal problem, sqrt(1/var) = nan
-    Maxs(var, var, SCALAR0, pregMerge);
-    Div(r, one, var, pregMerge);
-    Sqrt(y, r, pregMerge);
-    Muls(t, var, SCALAR1, pregMerge);
-    Mul(t, t, y, pregMerge);                // -0.5 * x * y
-    Mula(t1, t, y, pregMerge);              // 1.5 + (-0.5 * x * y) * y
-    Mul(rstd, y, t1, pregMerge);            // y = y * (1.5 - 0.5 * x * y)
-    Muls(t3, var, float(-1.0), pregMerge);  // -1 * x
-    Mula(s, t3, r, pregMerge);              // 1 + (-1) * x * r
-    Muls(t4, rstd, float(-1.0), pregMerge); // (-1) * y
-    Mula(r, t4, rstd, pregMerge);           // r + (-1) * y * y
-    Mula(s, var, r, pregMerge);             // s + x * t
-    Mul(s, s, rstd, pregMerge);             // e * y
-    Mula(rstd, s, scalar1, pregMerge);      // y + y * e * 0.5
-    CompareScalar(cmpRegZero, var, POS_INF, pregMerge);
-    Select(rstd, scalarZero, rstd, cmpRegZero);
-    CompareScalar(cmpRegInf, var, ZERO, pregMerge);
-    Select(rstd, scalarInf, rstd, cmpRegInf);
 }
 
 template <typename T, typename T_BETA, typename T_RUNNING_MEAN>
@@ -519,16 +466,16 @@ private:
         uint32_t xyUbOffset = this->r1r0Align;
         __VEC_SCOPE__
         {
+            RegTensor<float> var_sum;
+            RegTensor<float> var;
+
             RegTensor<float> x;
-            RegTensor<float> y;
             RegTensor<float> mean_sum;
             RegTensor<float> mean;
 
             RegTensor<float> x1;
             RegTensor<float> y1;
             RegTensor<float> y1Pow;
-            RegTensor<float> var_sum;
-            RegTensor<float> var;
 
             MaskReg pregMain = CreateMask<float, MaskPattern::ALL>();
             MaskReg pregMerge = CreateMask<float, MaskPattern::VL1>();
@@ -579,6 +526,9 @@ private:
         __local_mem__ float* binaryAddTensorAddr = (__local_mem__ float*)binaryAddTensor.GetPhyAddr();
         __VEC_SCOPE__
         {
+            RegTensor<float> var_sum;
+            RegTensor<float> var;
+
             RegTensor<float> x;
             RegTensor<float> mean_sum;
             RegTensor<float> mean;
@@ -586,16 +536,15 @@ private:
             RegTensor<float> x1;
             RegTensor<float> y1;
             RegTensor<float> y1Pow;
-            RegTensor<float> var_sum;
-            RegTensor<float> var;
+
+            RegTensor<float> vlMean;
+            RegTensor<float> vlVar;
 
             RegTensor<float> binaryAddQ;
             RegTensor<float> binaryAddR;
-            RegTensor<float> vlMean;
 
             RegTensor<float> binaryAddQPow;
             RegTensor<float> binaryAddRPow;
-            RegTensor<float> vlVar;
 
             MaskReg pregMain = CreateMask<float, MaskPattern::ALL>();
             MaskReg pregMerge = CreateMask<float, MaskPattern::VL1>();
@@ -639,7 +588,7 @@ private:
                 LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
                 uint16_t curBinaryAddLoopMean = binaryAddLoopMean;
                 for (uint16_t i = 0; i < binaryAddKLoop; i++) {
-                    curBinaryAddLoopMean = curBinaryAddLoopMean / 2;
+                    curBinaryAddLoopMean = curBinaryAddLoopMean / DICHOTOMY_ADD_COEFF;
                     for (uint16_t j = 0; j < curBinaryAddLoopMean; j++) {
                         DataCopy(binaryAddQ, ((__local_mem__ float*)binaryAddTensorAddr + j * VL_F32));
                         DataCopy(
@@ -651,8 +600,8 @@ private:
                     LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
                 }
                 {
-                    uint32_t sreg2 = this->binaryAddLastNum;
-                    pregLoop = UpdateMask<float>(sreg2);
+                    uint32_t binaryAddLastNum = this->binaryAddLastNum;
+                    pregLoop = UpdateMask<float>(binaryAddLastNum);
                     DataCopy(mean_sum, ((__local_mem__ float*)binaryAddTensorAddr));
                     ReduceSum(mean, mean_sum, pregLoop);
                     Muls(mean, mean, nCorrectionFactor, pregMerge);
@@ -711,7 +660,7 @@ private:
                 LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
                 uint16_t curBinaryAddLoopVar = binaryAddLoopVar;
                 for (uint16_t i = 0; i < binaryAddKLoop; i++) {
-                    curBinaryAddLoopVar = curBinaryAddLoopVar / 2;
+                    curBinaryAddLoopVar = curBinaryAddLoopVar / DICHOTOMY_ADD_COEFF;
                     for (uint16_t j = 0; j < curBinaryAddLoopVar; j++) {
                         DataCopy(binaryAddQ, ((__local_mem__ float*)binaryAddTensorAddr + j * VL_F32));
                         DataCopy(
@@ -748,9 +697,7 @@ private:
             RegTensor<float> mean;
             RegTensor<float> var;
 
-            RegTensor<float> sqrtVar;
             RegTensor<float> one;
-            RegTensor<float> rsqrtVar;
 
             RegTensor<float> runningMean;
             RegTensor<float> saveMean;
@@ -763,12 +710,10 @@ private:
             RegTensor<float> y;
             RegTensor<float> s;
             RegTensor<float> t;
-            RegTensor<float> e;
             RegTensor<float> scalar1;
             RegTensor<float> scalarInf;
             RegTensor<float> scalarZero;
             RegTensor<float> t1;
-            RegTensor<float> t2;
             RegTensor<float> t3;
             RegTensor<float> t4;
             RegTensor<float> rstd;

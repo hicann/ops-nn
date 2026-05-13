@@ -307,7 +307,6 @@ private:
             RegTensor<float> delta2;
             RegTensor<float> delta3;
             RegTensor<float> delat4;
-            MaskReg pregMain = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
             MaskReg pregLoop;
             uint32_t sreg0 = calLen;
             for (uint16_t i = 0; i < loopCount; i++) {
@@ -415,8 +414,6 @@ private:
         uint32_t sevenRLoopSize = ROW_SEVEN_OFFSET * rLoopStride;
         __VEC_SCOPE__
         {
-            RegTensor<float> tmpMean;
-            RegTensor<float> saveMean;
 
             RegTensor<float> x1;
             RegTensor<float> x2;
@@ -432,10 +429,6 @@ private:
             RegTensor<float> remCount;
             RegTensor<float> nextRemCount;
 
-            RegTensor<float> rowM2;
-            RegTensor<float> nextRowM2;
-            RegTensor<float> remM2;
-            RegTensor<float> nextRemM2;
 
             MaskReg pregLoop;
             uint32_t sreg0 = currentANum;
@@ -515,9 +508,7 @@ private:
         uint32_t sevenRLoopSize = ROW_SEVEN_OFFSET * rLoopStride;
         __VEC_SCOPE__
         {
-            RegTensor<float> tmpMean;
             RegTensor<float> saveMean;
-            RegTensor<float> saveVar;
 
             RegTensor<float> x1;
             RegTensor<float> x2;
@@ -773,9 +764,7 @@ private:
             RegTensor<float> mean;
             RegTensor<float> var;
 
-            RegTensor<float> sqrtVar;
             RegTensor<float> one;
-            RegTensor<float> rsqrtVar;
 
             RegTensor<float> runningMean;
             RegTensor<float> saveMean;
@@ -788,12 +777,10 @@ private:
             RegTensor<float> y;
             RegTensor<float> s;
             RegTensor<float> t;
-            RegTensor<float> e;
             RegTensor<float> scalar1;
             RegTensor<float> scalarInf;
             RegTensor<float> scalarZero;
             RegTensor<float> t1;
-            RegTensor<float> t2;
             RegTensor<float> t3;
             RegTensor<float> t4;
             RegTensor<float> rstd;

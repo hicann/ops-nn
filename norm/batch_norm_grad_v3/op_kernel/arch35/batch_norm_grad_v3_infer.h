@@ -202,7 +202,9 @@ private:
             for (uint16_t i = 0; i < curTileALen; i++) {
                 // loads runningVar  1->64
                 LoadsTensorForDtypeT<T3>(varLocal, runningVar, pregMask, i);
-                CalRstdByHighPrecision(runningVar, invstd, epsilonTmp);
+                AscendC::MicroAPI::MaskReg pregRstdAll1 =
+                    AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                NormCommon::ComputeRstdNewtonRaphsonReg(runningVar, invstd, pregRstdAll1, epsilonTmp);
 
                 // load gamma 1->64
                 LoadsTensorForDtypeT<T2>(gammaLocal, gamma, pregMask, i);

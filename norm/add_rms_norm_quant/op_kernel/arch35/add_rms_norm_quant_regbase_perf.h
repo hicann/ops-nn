@@ -63,7 +63,7 @@ public:
         zeroPointsAlign = CeilDiv(baseN, static_cast<int64_t>(zeroPointsDtypeSize)) * static_cast<int64_t>(zeroPointsDtypeSize);
         yAlign = CeilDiv(baseN, static_cast<int64_t>(yDtypeSize)) * static_cast<int64_t>(yDtypeSize);
         rstdAlign = CeilDiv(baseM, static_cast<int64_t>(blockSizeB32)) * static_cast<int64_t>(blockSizeB32);
-        
+
         blockNum = GetBlockNum();
         blockIdx = GetBlockIdx();
         oriOverflowMode = GetOverflowMode<T_Y>();
@@ -92,7 +92,7 @@ public:
         // gamma + scales1
         gammaGm.SetGlobalBuffer((__gm__ T_X*)gamma, numN);
         scales1Gm.SetGlobalBuffer((__gm__ T_SCALES*)scales1, numN);
-        
+
         int64_t preloadDataSize = xGammaAlign * sizeof(T_X) + scalesAlign * sizeof(T_SCALES);
         if constexpr (HAS_SCALE2) {
             scales2Gm.SetGlobalBuffer((__gm__ T_SCALES*)scales2, numN);
@@ -133,7 +133,7 @@ public:
     }
 
     __aicore__ inline void Process()
-    {        
+    {
         // copy other input (gamma scales zeropints)
         LocalTensor<uint8_t> otherLocal = inQueueOther.AllocTensor<uint8_t>();
         CopyInOthers(otherLocal);
@@ -150,7 +150,7 @@ public:
             LocalTensor<T_X> xLocal1 = inQueueX1.DeQue<T_X>();
             LocalTensor<T_X> xLocal2 = inQueueX2.DeQue<T_X>();
             LocalTensor<T_X> xLocal = outQueueX.AllocTensor<T_X>();
-            LocalTensor<float> xOutTmpLocal = xOutTmpBuf.Get<float>();            
+            LocalTensor<float> xOutTmpLocal = xOutTmpBuf.Get<float>();
             CalculateXAdd(xLocal1, xLocal2, xLocal, xOutTmpLocal, realM);
             inQueueX1.FreeTensor(xLocal1);
             inQueueX2.FreeTensor(xLocal2);
@@ -161,7 +161,8 @@ public:
             LocalTensor<float> rstdLocal = rstdBuf.Get<float>();
             LocalTensor<float> reduceTmpLocal = reduceTmpBuf.Get<float>();
             CalculateSquareReduceSum(xOutTmpLocal, reduceTmpLocal, realM);
-            CalculateRstd(reduceTmpLocal, rstdLocal, realM);
+            NormCommon::ComputeRstdNewtonRaphson<true, true>(
+                reduceTmpLocal, rstdLocal, realM, epsilon, avgFactor, V_LENGTH);
 
             LocalTensor<T_Y> y1Local = outQueueY1.AllocTensor<T_Y>();
             LocalTensor<T_Y> y2Local;
@@ -228,7 +229,7 @@ private:
         copyInParamszeroPoints.blockLen = zeroPointsAlign * sizeof(T_ZEROPOINTS);
         copyInParamszeroPoints.srcStride = 0;
         copyInParamszeroPoints.dstStride = 0;
-                
+
         if constexpr (HAS_SCALE2) {
             // LocalTensor<T_SCALES> scales2Local;
             scales2Local = otherLocal[localOffset].ReinterpretCast<T_SCALES>();
@@ -324,7 +325,7 @@ __aicore__ inline void StoreTensorForDtypeTOut(
     }else {
         RegTensor<T_OUT> xOut;
         Cast<T_OUT, float, castTraitB322B16>(xOut, xRegFp32, preg);
-        DataCopy<T_OUT, StoreDist::DIST_PACK_B32>(dst + offset, xOut, preg);        
+        DataCopy<T_OUT, StoreDist::DIST_PACK_B32>(dst + offset, xOut, preg);
     }
 }
 
@@ -384,7 +385,7 @@ __aicore__ inline void StoreTensorForDtypeTOut(
                 LoadTensorForDtypeTIn<T_X>(x2InUb, x2, pregLoop, offset);
                 Add(xSum, x1, x2, pregLoop);
                 StoreTensorForDtypeTOut<T_X>(xOutInUb, xSum, pregLoop, offset);
-                DataCopy<float, StoreDist::DIST_NORM_B32>(xOutTmp + offset, xSum, pregLoop);   
+                DataCopy<float, StoreDist::DIST_NORM_B32>(xOutTmp + offset, xSum, pregLoop);
             }
         }
     }
@@ -414,12 +415,10 @@ __aicore__ inline void StoreTensorForDtypeTOut(
         {
             RegTensor<float> x;
             RegTensor<float> vMean;
-            RegTensor<float> rstdReg;
             RegTensor<float> onesReg;
 
             uint32_t sreg0 = baseN;
             MaskReg pregLoop = UpdateMask<float>(sreg0);
-            MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
             MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
             Duplicate(onesReg, float(1.0), pregOne);
 
@@ -440,13 +439,12 @@ __aicore__ inline void StoreTensorForDtypeTOut(
         {
             RegTensor<float> x;
             RegTensor<float> xFold;
-            RegTensor<float> sumReg;
             RegTensor<float> vMean;
-            RegTensor<float> rstdReg;
             RegTensor<float> onesReg;
+            RegTensor<float> sumReg;
 
-            MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
             MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
+            MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
             MaskReg pregTail = UpdateMask<float>(tailLen);
             Duplicate(onesReg, float(1.0), pregOne);
 
@@ -482,7 +480,6 @@ __aicore__ inline void StoreTensorForDtypeTOut(
             RegTensor<float> xFold;
             RegTensor<float> sumReg;
             RegTensor<float> vMean;
-            RegTensor<float> rstdReg;
             RegTensor<float> onesReg;
 
             MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
@@ -556,82 +553,13 @@ __aicore__ inline void StoreTensorForDtypeTOut(
         }
     }
 
-    __aicore__ inline void CalculateRstd(
-        LocalTensor<float>& xReduceLocal, LocalTensor<float>& rstdLocal, uint32_t realM)
-    {
-        static constexpr float POS_INF = 3.40282366920938E+38;
-        static constexpr float SCALAR1 = -0.5;
-        static constexpr float SCALAR2 = 1.5;
-        static constexpr float SCALAR3 = 0.5;
-        static constexpr float SCALAR0 = -99.99;
-
-        __local_mem__ float* rstdInUb = (__local_mem__ float*)rstdLocal.GetPhyAddr();
-        __local_mem__ float* xReduceUb = (__local_mem__ float*)xReduceLocal.GetPhyAddr();
-        uint16_t loopRows = static_cast<uint16_t>((realM + V_LENGTH - 1) / V_LENGTH);
-        __VEC_SCOPE__
-        {
-            RegTensor<float> var;
-            RegTensor<float> rstd;
-            RegTensor<float> r;
-            RegTensor<float> y;
-            RegTensor<float> s;
-            RegTensor<float> t;
-            RegTensor<float> one;
-            RegTensor<float> scalar1;
-            RegTensor<float> t1;
-            RegTensor<float> t2;
-            RegTensor<float> t3;
-            RegTensor<float> t4;
-            RegTensor<float> scalarInf;
-            RegTensor<float> scalarZero;
-            MaskReg cmpRegZero;
-            MaskReg cmpRegInf;
-            MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
-            MaskReg pregLoop;
-
-            uint32_t sreg = static_cast<uint32_t>(realM);
-            for (uint16_t i = 0; i < loopRows; ++i) {
-                pregLoop = UpdateMask<float>(sreg);
-                Duplicate(scalarInf, POS_INF, pregLoop);
-                Duplicate(scalarZero, float(0.0), pregLoop);
-                Duplicate(one, float(1.0), pregLoop);
-                Duplicate(scalar1, SCALAR3, pregLoop);
-                Duplicate(t1, SCALAR2, pregLoop);
-                Duplicate(s, float(1.0), pregLoop);
-                // rstd
-                DataCopy(var, xReduceUb + i * V_LENGTH);
-                Muls(var, var, avgFactor, pregLoop);
-                Adds(var, var, epsilon, pregLoop);
-                Maxs(var, var, SCALAR0, pregLoop);
-                Div(r, one, var, pregLoop);
-                Sqrt(y, r, pregLoop);
-                Muls(t, var, SCALAR1, pregLoop);
-                Mul(t, t, y, pregLoop);                // -0.5 * x * y
-                Mula(t1, t, y, pregLoop);              // 1.5 + (-0.5 * x * y) * y
-                Mul(rstd, y, t1, pregLoop);            // y = y * (1.5 - 0.5 * x * y)
-                Muls(t3, var, float(-1.0), pregLoop);  // -1 * x
-                Mula(s, t3, r, pregLoop);              // 1 + (-1) * x * r
-                Muls(t4, rstd, float(-1.0), pregLoop); // (-1) * y
-                Mula(r, t4, rstd, pregLoop);           // r + (-1) * y * y
-                Mula(s, var, r, pregLoop);             // s + x * t
-                Mul(s, s, rstd, pregLoop);             // e * y
-                Mula(rstd, s, scalar1, pregLoop);      // y + y * e * 0.5
-                CompareScalar(cmpRegZero, var, POS_INF, pregLoop);
-                Select(rstd, scalarZero, rstd, cmpRegZero);
-                CompareScalar(cmpRegInf, var, float(0.0), pregLoop);
-                Select(rstd, scalarInf, rstd, cmpRegInf);
-                DataCopy(rstdInUb + i * V_LENGTH, rstd, pregLoop);
-            }
-        }
-    }
-
     // template <bool HAS_ZEROPOINTS2, bool HAS_ZEROPOINTS1, bool HAS_SCALE2, bool DIV_MODE>
-    __aicore__ inline void CalculateQuant(LocalTensor<float> xLocal, LocalTensor<float> rstdLocal, 
+    __aicore__ inline void CalculateQuant(LocalTensor<float> xLocal, LocalTensor<float> rstdLocal,
         LocalTensor<T_X> gammaLocal, LocalTensor<T_X> betaLocal,
-        LocalTensor<T_SCALES> scales1Local, LocalTensor<T_SCALES> scales2Local, 
-        LocalTensor<T_ZEROPOINTS> zeroPoints1Local, LocalTensor<T_ZEROPOINTS> zeroPoints2Local, 
-        LocalTensor<T_Y> y1Local, LocalTensor<T_Y> y2Local, 
-        int64_t realM, int64_t baseN, int64_t xGammaAlign, int64_t scalesAlign, 
+        LocalTensor<T_SCALES> scales1Local, LocalTensor<T_SCALES> scales2Local,
+        LocalTensor<T_ZEROPOINTS> zeroPoints1Local, LocalTensor<T_ZEROPOINTS> zeroPoints2Local,
+        LocalTensor<T_Y> y1Local, LocalTensor<T_Y> y2Local,
+        int64_t realM, int64_t baseN, int64_t xGammaAlign, int64_t scalesAlign,
         int64_t zeroPointsAlign, int64_t yAlign)
     {
         uint16_t loopsA = static_cast<uint16_t>(realM);
@@ -661,7 +589,7 @@ __aicore__ inline void StoreTensorForDtypeTOut(
         }
         if constexpr (HAS_BETA) {
             betaAddr = (__ubuf__ T_X*)betaLocal.GetPhyAddr();
-        }       
+        }
         if constexpr((HAS_Y2)) {
             y2Addr = (__ubuf__ T_Y*)y2Local.GetPhyAddr();
         }
@@ -672,8 +600,6 @@ __aicore__ inline void StoreTensorForDtypeTOut(
             RegTensor<float> scales1Reg, zeroPoints1Reg, scales2Reg, zeroPoints2Reg;
             RegTensor<float> mul1Reg, mul2Reg;
             RegTensor<float> scales1ResultReg, scales2ResultReg;
-            MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
-            MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
             // ld scales and zeropoints
             for (uint16_t i = 0; i < loopsA; i++) {
                 // ld rstd
@@ -691,14 +617,14 @@ __aicore__ inline void StoreTensorForDtypeTOut(
                     }
                     LoadTensorForDtypeTIn(scales1Addr, scales1Reg, pregCurLoop, j * vectorLenB32);
                     if (divMode) {
-                        Div(scales1ResultReg, mul2Reg, scales1Reg, pregCurLoop); 
+                        Div(scales1ResultReg, mul2Reg, scales1Reg, pregCurLoop);
                     } else {
-                        Mul(scales1ResultReg, mul2Reg, scales1Reg, pregCurLoop); 
+                        Mul(scales1ResultReg, mul2Reg, scales1Reg, pregCurLoop);
                     }
 
                     if constexpr(HAS_ZEROPOINTS1) {
                         LoadTensorForDtypeTIn(zeroPoints1Addr, zeroPoints1Reg, pregCurLoop, j * vectorLenB32);
-                        Add(scales1ResultReg, scales1ResultReg, zeroPoints1Reg, pregCurLoop); 
+                        Add(scales1ResultReg, scales1ResultReg, zeroPoints1Reg, pregCurLoop);
                     }
 
                     StoreTensorForDtypeTOut(y1Addr, scales1ResultReg, pregCurLoop, (i * sregyAlign + j * vectorLenB32));
@@ -707,16 +633,16 @@ __aicore__ inline void StoreTensorForDtypeTOut(
                         if constexpr(HAS_SCALE2) {
                             LoadTensorForDtypeTIn(scales2Addr, scales2Reg, pregCurLoop, j * vectorLenB32);
                             if (divMode) {
-                                Div(scales2ResultReg, mul2Reg, scales2Reg, pregCurLoop); 
+                                Div(scales2ResultReg, mul2Reg, scales2Reg, pregCurLoop);
                             } else {
-                                Mul(scales2ResultReg, mul2Reg, scales2Reg, pregCurLoop); 
+                                Mul(scales2ResultReg, mul2Reg, scales2Reg, pregCurLoop);
                             }
                         }else {
                             Muls(scales2ResultReg, mul2Reg, float(1.0), pregCurLoop);
                         }
                         if constexpr(HAS_ZEROPOINTS2) {
                             LoadTensorForDtypeTIn(zeroPoints2Addr, zeroPoints2Reg, pregCurLoop, j * vectorLenB32);
-                            Add(scales2ResultReg, scales2ResultReg, zeroPoints2Reg, pregCurLoop); 
+                            Add(scales2ResultReg, scales2ResultReg, zeroPoints2Reg, pregCurLoop);
                         }
                         StoreTensorForDtypeTOut(y2Addr, scales2ResultReg, pregCurLoop, (i * sregyAlign + j * vectorLenB32));
                     }
@@ -778,7 +704,7 @@ private:
     uint32_t xDtypeSize{1};
     uint32_t scalesDtypeSize{1};
     uint32_t zeroPointsDtypeSize{1};
-    uint32_t yDtypeSize{1}; 
+    uint32_t yDtypeSize{1};
 
     // align value
     int64_t xGammaAlign{32};

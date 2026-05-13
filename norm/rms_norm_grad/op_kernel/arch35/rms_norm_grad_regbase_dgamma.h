@@ -129,7 +129,6 @@ public:
         __VEC_SCOPE__
         {
             RegTensor<float> tempReg;
-            MaskReg pregMain = CreateMask<float, MaskPattern::ALL>();
             uint32_t sreg0 = padRowsLen;
             MaskReg pregLoop = UpdateMask<float>(sreg0);
             // 填充数据

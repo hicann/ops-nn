@@ -126,7 +126,8 @@ public:
                 int64_t gmRowOffset = (i * baseM_ + j) * numCol_;
                 ComputeOneLineXSquareSum(rstdLocal, gmRowOffset, j);
             }
-            CalculateRstd(rstdLocal, rstdLocal, curM, avgFactor_, epsilon_);
+            NormCommon::ComputeRstdNewtonRaphson<true, true>(
+                rstdLocal, rstdLocal, curM, epsilon_, avgFactor_, VL_F32);
             outQueueRstd.EnQue<float>(rstdLocal);
             rstdLocal = outQueueRstd.DeQue<float>();
 

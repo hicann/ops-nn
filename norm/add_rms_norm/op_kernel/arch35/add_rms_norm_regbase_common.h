@@ -420,7 +420,6 @@ __aicore__ inline void ComputeFormerImplV2(
     __VEC_SCOPE__
     {
         RegTensor<float> mainA, mainB, tailA, tailB, vMean, vDupReg, rstdReg;
-        MaskReg pregMain = CreateMask<float, MaskPattern::ALL>();
         MaskReg pregMerge = CreateMask<float, MaskPattern::VL1>();
         MaskReg pregLoop;
 
@@ -522,7 +521,6 @@ __aicore__ inline void ComputeFormerImplV1MultiN(
             uint32_t mergeSreg = mergeTile;
             uint32_t meanSreg = meanTile;
             RegTensor<float> mainA, mainB, tailA, tailB, vMean, vDupReg, rstdReg;
-            MaskReg pregMain = CreateMask<float, MaskPattern::ALL>();
             MaskReg pregMerge = CreateMask<float, MaskPattern::VL1>();
             MaskReg pregLoop;
 

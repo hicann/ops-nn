@@ -1463,7 +1463,6 @@ __aicore__ inline void GroupNormGradBase<T, U>::FlodSumDgammaVF(__local_mem__ fl
     {
         RegTensor<float> src1Reg;
         RegTensor<float> src2Reg;
-        RegTensor<float> tempReg;
         MaskReg mask;
         uint16_t flodTimes = CeilDivision(num, vlFp32);
         uint32_t width = num;

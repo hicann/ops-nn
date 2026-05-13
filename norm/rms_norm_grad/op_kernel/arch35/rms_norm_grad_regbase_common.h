@@ -231,7 +231,6 @@ __aicore__ inline void ReduceSumImpl(
     __VEC_SCOPE__
     {
         RegTensor<float> mainA, mainB, tailA, tailB, vMean;
-        MaskReg pregMain = CreateMask<float, MaskPattern::ALL>();
         MaskReg pregMerge = CreateMask<float, MaskPattern::VL1>();
         MaskReg pregLoop;
 
@@ -318,7 +317,6 @@ __aicore__ inline void MultiReduceSumImpl(
             __local_mem__ float* masterAddr =
                 (__ubuf__ float*)srcLocal.GetPhyAddr() + r * colsAlign2VL + int64_t(remainTile);
 
-            MaskReg pregMain = CreateMask<float, MaskPattern::ALL>();
             MaskReg pregMerge = CreateMask<float, MaskPattern::VL1>();
             MaskReg pregLoop;
 

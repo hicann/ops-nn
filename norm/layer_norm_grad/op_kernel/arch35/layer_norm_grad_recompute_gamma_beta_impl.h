@@ -297,7 +297,9 @@ __aicore__ inline void LayerNormGradRecomputeGammaBeta<T, PD_GAMMA_TYPE>::Comput
                 AscendC::MicroAPI::RegTensor<float> varReg, rstdReg;
                 DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(meanReg, (__local_mem__ float*)mean + i);
                 DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(varReg, (__local_mem__ float*)var + i);
-                CalRstdByHighPrecision(varReg, rstdReg, epsilonTmp);
+                AscendC::MicroAPI::MaskReg pregRstdAll1 =
+                    AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                NormCommon::ComputeRstdNewtonRaphsonReg(varReg, rstdReg, pregRstdAll1, epsilonTmp);
 
                 AscendC::MicroAPI::RegTensor<float> xReg;
                 AscendC::MicroAPI::RegTensor<float> dyReg;
@@ -323,7 +325,9 @@ __aicore__ inline void LayerNormGradRecomputeGammaBeta<T, PD_GAMMA_TYPE>::Comput
                 AscendC::MicroAPI::RegTensor<float> varReg, rstdReg;
                 DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(meanReg, (__local_mem__ float*)mean + i);
                 DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(varReg, (__local_mem__ float*)var + i);
-                CalRstdByHighPrecision(varReg, rstdReg, epsilonTmp);
+                AscendC::MicroAPI::MaskReg pregRstdAll2 =
+                    AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                NormCommon::ComputeRstdNewtonRaphsonReg(varReg, rstdReg, pregRstdAll2, epsilonTmp);
 
                 AscendC::MicroAPI::RegTensor<float> xReg;
                 AscendC::MicroAPI::RegTensor<float> dyReg;

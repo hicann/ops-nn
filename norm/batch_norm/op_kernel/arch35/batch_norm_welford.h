@@ -16,6 +16,7 @@
 #define NORM_BATCH_NORM_WELFORD_H
 
 #include "batch_norm_base.h"
+#include "../../norm_common/reduce_common_regbase.h"
 namespace BatchNormOps
 {
 using namespace AscendC;
@@ -36,9 +37,6 @@ class BatchNormWelford
     static constexpr int32_t INDEX_3 = 3;
 
     static constexpr int32_t DICHOTOMY_ADD_COEFF = 2;
-    static constexpr float SCALAR1 = -0.5;
-    static constexpr float SCALAR2 = 1.5;
-    static constexpr float SCALAR3 = 0.5;
 
 public:
     __aicore__ inline BatchNormWelford(){};
@@ -359,43 +357,6 @@ private:
         ReduceSum(dstReg, tmpReg3, pregLoop);
     }
 
-    __aicore__ inline void CalRstdByHighPrecision(RegTensor<float>& var, RegTensor<float>& rstd, float epsilon)
-    {
-        RegTensor<float> r;
-        RegTensor<float> y;
-        RegTensor<float> s;
-        RegTensor<float> t;
-        RegTensor<float> e;
-        RegTensor<float> one;
-        RegTensor<float> scalar1;
-        RegTensor<float> scalar2;
-        RegTensor<float> t1;
-        RegTensor<float> t2;
-        RegTensor<float> t3;
-        RegTensor<float> t4;
-        MaskReg pregMerge = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::VL1>();
-
-        Duplicate(one, float(1.0), pregMerge);
-        Duplicate(scalar1, SCALAR3, pregMerge);
-        Duplicate(t1, SCALAR2, pregMerge);
-        Duplicate(s, float(1.0), pregMerge);
-
-        Adds(var, var, epsilon, pregMerge);
-        Div(r, one, var, pregMerge);
-        Sqrt(y, r, pregMerge);
-        Muls(t, var, SCALAR1, pregMerge);
-        Mul(t, t, y, pregMerge);                 // -0.5 * x * y
-        Mula(t1, t, y, pregMerge);               // 1.5 + (-0.5 * x * y) * y
-        Mul(rstd, y, t1, pregMerge);             // y = y * (1.5 - 0.5 * x * y)
-        Muls(t3, var, float(-1.0), pregMerge);   // -1 * x
-        Mula(s, t3, r, pregMerge);               // 1 + (-1) * x * r
-        Muls(t4, rstd, float(-1.0), pregMerge);  // (-1) * y
-        Mula(r, t4, rstd, pregMerge);            // r + (-1) * y * y
-        Mula(s, var, r, pregMerge);              // s + x * t
-        Mul(s, s, rstd, pregMerge);              // e * y
-        Mula(rstd, s, scalar1, pregMerge);       // y + y * e * 0.5
-    }
-
     __aicore__ inline void ProcessSplitWelfordUpdate(__local_mem__ float* tmpMeanLocal,
                                                      __local_mem__ float* tmpVarLocal, int64_t index, int64_t nBurst,
                                                      int64_t burstLen, int64_t count, bool isFirstStep)
@@ -617,7 +578,6 @@ private:
             RegTensor<float> delta2;
             RegTensor<float> delta3;
             RegTensor<float> delat4;
-            MaskReg pregMain = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
             MaskReg pregLoop;
             uint32_t sreg0 = calLen;
             for (uint16_t i = 0; i < loopCount; i++) {
@@ -753,7 +713,7 @@ private:
             DichotomyAdd(var, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
             Muls(var, var, reduceScale1, pregMerge);
             DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(varLocal + offset, var, pregMerge);
-            CalRstdByHighPrecision(var, rstd, eps);
+            NormCommon::ComputeRstdNewtonRaphsonReg<false>(var, rstd, pregMerge, eps);
             DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(rstdLocal + offset, rstd, pregMerge);
         }
     }
@@ -980,7 +940,7 @@ private:
             DichotomyAdd(var, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
             Muls(var, var, reduceScale1, pregMerge);
             DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(varLocal + offset, var, pregMerge);
-            CalRstdByHighPrecision(var, rstd, eps);
+            NormCommon::ComputeRstdNewtonRaphsonReg<false>(var, rstd, pregMerge, eps);
             DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(rstdLocal + offset, rstd, pregMerge);
         }
     }
@@ -1186,7 +1146,7 @@ private:
             DichotomyAdd(var, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
             Muls(var, var, reduceScale1, pregMerge);
             DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(varLocal + offset, var, pregMerge);
-            CalRstdByHighPrecision(var, rstd, eps);
+            NormCommon::ComputeRstdNewtonRaphsonReg<false>(var, rstd, pregMerge, eps);
             DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(rstdLocal + offset, rstd, pregMerge);
         }
     }
@@ -1368,7 +1328,7 @@ private:
             DichotomyAdd(var, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
             Muls(var, var, reduceScale1, pregMerge);
             DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(varLocal + offset, var, pregMerge);
-            CalRstdByHighPrecision(var, rstd, eps);
+            NormCommon::ComputeRstdNewtonRaphsonReg<false>(var, rstd, pregMerge, eps);
             DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(rstdLocal + offset, rstd, pregMerge);
         }
     }

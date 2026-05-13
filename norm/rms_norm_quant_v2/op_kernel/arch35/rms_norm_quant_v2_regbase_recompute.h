@@ -16,6 +16,7 @@
 #define RMS_NORM_QUANT_V2_REBASE_REDUCE_H_
 
 #include "rms_norm_quant_v2_regbase_common.h"
+#include "../../norm_common/reduce_common_regbase.h"
 
 namespace RmsNormQuantV2 {
 // T_X:          x, gamma, beta
@@ -133,7 +134,8 @@ public:
                 ComputeOneLineXSquareSum(rstdLocal, xGmOffset, j);
             }
             // 计算 rstd
-            CalculateRstd(rstdLocal, rstdLocal, curM, avgFactor_, epsilon_);
+            NormCommon::ComputeRstdNewtonRaphson<true, true>(
+                rstdLocal, rstdLocal, curM, epsilon_, avgFactor_, VL_FP32);
             // 计算 Y
             DataCopyPadParams padParams{false, 0, 0, 0};
             DataCopyParams xDataCopyParams;
@@ -697,14 +699,12 @@ private:
         __VEC_SCOPE__
         {
             RegTensor<float> x;
-            RegTensor<float> vMean;
-            RegTensor<float> rstdReg;
             RegTensor<float> onesReg;
+            RegTensor<float> vMean;
 
+            MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
             uint32_t sreg0 = reduceNum;
             MaskReg pregLoop = UpdateMask<float>(sreg0);
-            MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
-            MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
             Duplicate(onesReg, float(1.0), pregOne);
 
             LoadTensorForDtypeTIn<float>(xFp32Tmp, x, pregLoop, 0);
@@ -719,16 +719,15 @@ private:
         uint32_t tailLen = reduceNum - VL_FP32;
         __VEC_SCOPE__
         {
-            RegTensor<float> x;
             RegTensor<float> xFold;
-            RegTensor<float> sumReg;
-            RegTensor<float> vMean;
-            RegTensor<float> rstdReg;
+            RegTensor<float> x;
             RegTensor<float> onesReg;
+            RegTensor<float> vMean;
+            RegTensor<float> sumReg;
 
-            MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
-            MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
             MaskReg pregTail = UpdateMask<float>(tailLen);
+            MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
+            MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
             Duplicate(onesReg, float(1.0), pregOne);
 
             LoadTensorForDtypeTIn<float>(xFp32Tmp, x, pregFull, 0);
@@ -757,7 +756,6 @@ private:
             RegTensor<float> xFold;
             RegTensor<float> sumReg;
             RegTensor<float> vMean;
-            RegTensor<float> rstdReg;
             RegTensor<float> onesReg;
 
             MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
@@ -808,76 +806,6 @@ private:
                 Add(sumReg, x, xFold, pregFull);
                 ReduceSum(vMean, sumReg, pregFull);
                 DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(xReduceUb, vMean, pregOne);
-            }
-        }
-    }
-
-    __aicore__ inline void CalculateRstd(
-        LocalTensor<float>& xReduceLocal, LocalTensor<float>& rstdLocal, uint32_t curRows, float avgFactor,
-        float epsilon)
-    {
-        static constexpr float POS_INF = 3.40282366920938E+38;
-        static constexpr float SCALAR1 = -0.5;
-        static constexpr float SCALAR2 = 1.5;
-        static constexpr float SCALAR3 = 0.5;
-        static constexpr float SCALAR0 = -99.99;
-
-        __local_mem__ float* rstdInUb = (__local_mem__ float*)rstdLocal.GetPhyAddr();
-        __local_mem__ float* xReduceUb = (__local_mem__ float*)xReduceLocal.GetPhyAddr();
-        uint16_t loopRows = static_cast<uint16_t>((curRows + VL_FP32 - 1) / VL_FP32);
-        __VEC_SCOPE__
-        {
-            RegTensor<float> var;
-            RegTensor<float> rstd;
-            RegTensor<float> r;
-            RegTensor<float> y;
-            RegTensor<float> s;
-            RegTensor<float> t;
-            RegTensor<float> one;
-            RegTensor<float> scalar1;
-            RegTensor<float> t1;
-            RegTensor<float> t2;
-            RegTensor<float> t3;
-            RegTensor<float> t4;
-            RegTensor<float> scalarInf;
-            RegTensor<float> scalarZero;
-            MaskReg cmpRegZero;
-            MaskReg cmpRegInf;
-            MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
-            MaskReg pregLoop;
-
-            uint32_t sreg = static_cast<uint32_t>(curRows);
-            for (uint16_t i = 0; i < loopRows; ++i) {
-                pregLoop = UpdateMask<float>(sreg);
-                Duplicate(scalarInf, POS_INF, pregLoop);
-                Duplicate(scalarZero, float(0.0), pregLoop);
-                Duplicate(one, float(1.0), pregLoop);
-                Duplicate(scalar1, SCALAR3, pregLoop);
-                Duplicate(t1, SCALAR2, pregLoop);
-                Duplicate(s, float(1.0), pregLoop);
-                // rstd
-                DataCopy(var, xReduceUb + i * VL_FP32);
-                Muls(var, var, avgFactor, pregLoop);
-                Adds(var, var, epsilon, pregLoop);
-                Maxs(var, var, SCALAR0, pregLoop);
-                Div(r, one, var, pregLoop);
-                Sqrt(y, r, pregLoop);
-                Muls(t, var, SCALAR1, pregLoop);
-                Mul(t, t, y, pregLoop);                // -0.5 * x * y
-                Mula(t1, t, y, pregLoop);              // 1.5 + (-0.5 * x * y) * y
-                Mul(rstd, y, t1, pregLoop);            // y = y * (1.5 - 0.5 * x * y)
-                Muls(t3, var, float(-1.0), pregLoop);  // -1 * x
-                Mula(s, t3, r, pregLoop);              // 1 + (-1) * x * r
-                Muls(t4, rstd, float(-1.0), pregLoop); // (-1) * y
-                Mula(r, t4, rstd, pregLoop);           // r + (-1) * y * y
-                Mula(s, var, r, pregLoop);             // s + x * t
-                Mul(s, s, rstd, pregLoop);             // e * y
-                Mula(rstd, s, scalar1, pregLoop);      // y + y * e * 0.5
-                CompareScalar(cmpRegZero, var, POS_INF, pregLoop);
-                Select(rstd, scalarZero, rstd, cmpRegZero);
-                CompareScalar(cmpRegInf, var, float(0.0), pregLoop);
-                Select(rstd, scalarInf, rstd, cmpRegInf);
-                DataCopy(rstdInUb + i * VL_FP32, rstd, pregLoop);
             }
         }
     }

@@ -274,7 +274,6 @@ public:
             MicroAPI::RegTensor<float> x;
             MicroAPI::RegTensor<float> sum;
 
-            MicroAPI::MaskReg pregMain = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
             MicroAPI::MaskReg pregMerge = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::VL1>();
             for (uint16_t k = 0; k < static_cast<uint16_t>(a); k++) {
                 uint32_t aOffset = k * rAlign;
@@ -452,7 +451,6 @@ public:
             MicroAPI::RegTensor<float> sum;
             MicroAPI::RegTensor<float> rstdValue;
 
-            MicroAPI::MaskReg pregMain = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
             MicroAPI::MaskReg pregMerge = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::VL1>();
             for (uint16_t k = 0; k < static_cast<uint16_t>(a); k++) {
                 uint32_t aOffset = k * rAlign;

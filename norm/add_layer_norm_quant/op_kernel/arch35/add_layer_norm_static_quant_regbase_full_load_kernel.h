@@ -404,7 +404,7 @@ public:
             xQueue_.FreeTensor(xOutLocal);
 
             // // calc rstd
-            VFCalcRstd(rstdLocal, rowsCount, vlFp32_, eps_);
+            NormCommon::ComputeRstdNewtonRaphson<false>(rstdLocal, rstdLocal, rowsCount, eps_, 1.0f, vlFp32_);
 
             // copy in gamma, beta
             if (i == 0) {

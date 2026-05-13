@@ -20,6 +20,7 @@
 #include "op_kernel/platform_util.h"
 #include "../inc/kernel_utils.h"
 #include "rms_norm_dynamic_mx_quant_tiling_data.h"
+#include "../../norm_common/reduce_common_regbase.h"
 
 namespace RmsNormDynamicMxQuantNs {
 
@@ -91,71 +92,6 @@ constexpr static CastTrait CAST_B32_TO_B16 = {
     RoundMode::CAST_RINT,
 };
 
-__aicore__ inline void ComputeRstd(
-    LocalTensor<float> xReduceTmpLocal, LocalTensor<float> rstdLocal, uint64_t curUbFactor, float epsilon,
-    float avgFactor)
-{
-    __local_mem__ float* rstdLocalUbAddr = (__local_mem__ float*)rstdLocal.GetPhyAddr();
-    __local_mem__ float* xReduceTmpLocalUbAddr = (__local_mem__ float*)xReduceTmpLocal.GetPhyAddr();
-    uint16_t aLoop = static_cast<uint16_t>((curUbFactor + VL_FP32 - 1) / VL_FP32);
-    __VEC_SCOPE__
-    {
-        MaskReg pregMain = CreateMask<float, MaskPattern::ALL>();
-        RegTensor<float> var;
-        RegTensor<float> one;
-        RegTensor<float> r;
-        RegTensor<float> y;
-        RegTensor<float> s;
-        RegTensor<float> t;
-        RegTensor<float> scalar1;
-        RegTensor<float> scalarInf;
-        RegTensor<float> scalarZero;
-        RegTensor<float> t1;
-        RegTensor<float> t2;
-        RegTensor<float> t3;
-        RegTensor<float> t4;
-        RegTensor<float> rstd;
-
-        MaskReg cmpRegZero;
-        MaskReg cmpRegInf;
-        MaskReg pregLoop;
-
-        Duplicate(one, 1.0, pregMain);
-        uint32_t sreg0 = static_cast<uint32_t>(curUbFactor);
-        for (uint16_t a = 0; a < aLoop; a++) {
-            pregLoop = UpdateMask<float>(sreg0);
-            Duplicate(scalar1, float(0.5), pregLoop);
-            Duplicate(scalarInf, RMS_POS_INF, pregLoop);
-            Duplicate(scalarZero, RMS_ZERO, pregLoop);
-            Duplicate(t1, float(1.5), pregLoop);
-            Duplicate(s, float(1.0), pregLoop);
-
-            // rstd
-            DataCopy(var, xReduceTmpLocalUbAddr + a * VL_FP32);
-            Muls(var, var, avgFactor, pregLoop);
-            Adds(var, var, epsilon, pregLoop);
-            Div(r, one, var, pregLoop);
-            Sqrt(y, r, pregLoop);
-            Muls(t, var, float(-0.5), pregLoop);
-            Mul(t, t, y, pregLoop);                // -0.5 * x * y
-            Mula(t1, t, y, pregLoop);              // 1.5 + (-0.5 * x * y) * y
-            Mul(rstd, y, t1, pregLoop);            // y = y * (1.5 - 0.5 * x * y)
-            Muls(t3, var, float(-1.0), pregLoop);  // -1 * x
-            Mula(s, t3, r, pregLoop);              // 1 + (-1) * x * r
-            Muls(t4, rstd, float(-1.0), pregLoop); // (-1) * y
-            Mula(r, t4, rstd, pregLoop);           // r + (-1) * y * y
-            Mula(s, var, r, pregLoop);             // s + x * t
-            Mul(s, s, rstd, pregLoop);             // e * y
-            Mula(rstd, s, scalar1, pregLoop);      // y + y * e * 0.5
-            CompareScalar(cmpRegZero, var, RMS_POS_INF, pregLoop);
-            Select(rstd, scalarZero, rstd, cmpRegZero);
-            CompareScalar(cmpRegInf, var, RMS_ZERO, pregLoop);
-            Select(rstd, scalarInf, rstd, cmpRegInf);
-            DataCopy(rstdLocalUbAddr + a * VL_FP32, rstd, pregLoop);
-        }
-    }
-}
-
 template <typename T>
 __aicore__ inline void LoadTensorForDtypeT(__local_mem__ T* src, RegTensor<float>& dst, MaskReg& preg, uint32_t offset)
 {
@@ -200,10 +136,6 @@ __aicore__ inline void ComputeData(
         AscendC::MicroAPI::RegTensor<float> floatScaleForMul;
         AscendC::MicroAPI::RegTensor<T1> vdExp0;
         AscendC::MicroAPI::RegTensor<T1> vdExp1;
-        AscendC::MicroAPI::RegTensor<T1> vdExp0Convert;
-        AscendC::MicroAPI::RegTensor<T1> vdExp1Convert;
-        AscendC::MicroAPI::RegTensor<bfloat16_t> vdExp0BF16;
-        AscendC::MicroAPI::RegTensor<bfloat16_t> vdExp1BF16;
         AscendC::MicroAPI::RegTensor<float> vdExp0FP32Zero;
         AscendC::MicroAPI::RegTensor<float> vdExp0FP32One;
         AscendC::MicroAPI::RegTensor<float> vdExp1FP32Zero;
@@ -212,8 +144,6 @@ __aicore__ inline void ComputeData(
         AscendC::MicroAPI::RegTensor<T2> vdExp0FP8One;
         AscendC::MicroAPI::RegTensor<T2> vdExp1FP8Zero;
         AscendC::MicroAPI::RegTensor<T2> vdExp1FP8One;
-        AscendC::MicroAPI::RegTensor<bfloat16_t> vdBF16Exp0FP4;
-        AscendC::MicroAPI::RegTensor<bfloat16_t> vdBF16Exp1FP4;
         static constexpr AscendC::MicroAPI::CastTrait castTrait = {
             AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN,
             AscendC::MicroAPI::MaskMergeMode::ZEROING, roundMode};
@@ -391,17 +321,12 @@ __aicore__ inline void ComputeScaleOCP(
 
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::RegTensor<uint16_t> expMask;
-        AscendC::MicroAPI::Duplicate(expMask, MAX_EXP_FOR_BF16);
         AscendC::MicroAPI::RegTensor<uint16_t> vdMaxExp;
-
-        AscendC::MicroAPI::RegTensor<T1> vdExp0;
-        AscendC::MicroAPI::RegTensor<T1> vdExp1;
-
         AscendC::MicroAPI::MaskReg cmpResult;
+        AscendC::MicroAPI::RegTensor<uint16_t> expMask;
         AscendC::MicroAPI::MaskReg zeroMask;
-        AscendC::MicroAPI::MaskReg cmpResultSub;
         AscendC::MicroAPI::MaskReg preMaskScale;
+        AscendC::MicroAPI::Duplicate(expMask, MAX_EXP_FOR_BF16);
         AscendC::MicroAPI::RegTensor<uint16_t> maxExpValue;
         AscendC::MicroAPI::Duplicate(maxExpValue, dtypeEmax);
         AscendC::MicroAPI::RegTensor<uint16_t> sharedExp;
@@ -509,30 +434,21 @@ __aicore__ inline void ComputeScalecuBLAS(
     __VEC_SCOPE__
     {
         AscendC::MicroAPI::RegTensor<uint16_t> max16;
+        AscendC::MicroAPI::RegTensor<uint16_t> expOut;
+        AscendC::MicroAPI::RegTensor<uint16_t> recExpOut;
         AscendC::MicroAPI::RegTensor<uint32_t> max32;
         AscendC::MicroAPI::RegTensor<uint32_t> exp32;
         AscendC::MicroAPI::RegTensor<uint32_t> man32;
-        AscendC::MicroAPI::RegTensor<uint32_t> normalExp32;
         AscendC::MicroAPI::RegTensor<uint32_t> expAddOne32;
         AscendC::MicroAPI::RegTensor<uint32_t> extractExp;
-        AscendC::MicroAPI::RegTensor<uint16_t> expOut;
         AscendC::MicroAPI::RegTensor<uint32_t> halfScale;
-        AscendC::MicroAPI::RegTensor<uint16_t> recExpOut;
-
         AscendC::MicroAPI::RegTensor<uint32_t> invMax;
-        AscendC::MicroAPI::Duplicate(invMax, dtypeMax);
         AscendC::MicroAPI::RegTensor<uint32_t> manMaskFP32;
-        AscendC::MicroAPI::Duplicate(manMaskFP32, MAN_MASK_FLOAT);
         AscendC::MicroAPI::RegTensor<uint32_t> expMask;
-        AscendC::MicroAPI::Duplicate(expMask, MAX_EXP_FOR_FP32);
         AscendC::MicroAPI::RegTensor<uint32_t> zeroRegTensor32;
-        AscendC::MicroAPI::Duplicate(zeroRegTensor32, 0);
         AscendC::MicroAPI::RegTensor<uint32_t> scaleBias;
-        AscendC::MicroAPI::Duplicate(scaleBias, FP32_EXP_BIAS_CUBLAS);
         AscendC::MicroAPI::RegTensor<uint32_t> nanRegTensor;
-        AscendC::MicroAPI::Duplicate(nanRegTensor, NAN_CUSTOMIZATION_PACK);
         AscendC::MicroAPI::RegTensor<uint32_t> fp8NanRegTensor;
-        AscendC::MicroAPI::Duplicate(fp8NanRegTensor, MAX_EXP_FOR_FP8_IN_FP32);
 
         AscendC::MicroAPI::MaskReg cmpResult;
         AscendC::MicroAPI::MaskReg zeroMask;
@@ -541,6 +457,13 @@ __aicore__ inline void ComputeScalecuBLAS(
         AscendC::MicroAPI::MaskReg p2;
         AscendC::MicroAPI::MaskReg preMaskScale;
         AscendC::MicroAPI::MaskReg maskHalf;
+        AscendC::MicroAPI::Duplicate(invMax, dtypeMax);
+        AscendC::MicroAPI::Duplicate(manMaskFP32, MAN_MASK_FLOAT);
+        AscendC::MicroAPI::Duplicate(expMask, MAX_EXP_FOR_FP32);
+        AscendC::MicroAPI::Duplicate(zeroRegTensor32, 0);
+        AscendC::MicroAPI::Duplicate(scaleBias, FP32_EXP_BIAS_CUBLAS);
+        AscendC::MicroAPI::Duplicate(nanRegTensor, NAN_CUSTOMIZATION_PACK);
+        AscendC::MicroAPI::Duplicate(fp8NanRegTensor, MAX_EXP_FOR_FP8_IN_FP32);
         preMaskScale = AscendC::MicroAPI::CreateMask<uint32_t>();
         maskHalf = AscendC::MicroAPI::CreateMask<uint16_t>();
         static constexpr AscendC::MicroAPI::CastTrait castTraitHalf2Float = {
@@ -683,8 +606,6 @@ __aicore__ inline void ComputeDataMxfp4General(
         AscendC::MicroAPI::RegTensor<uint16_t> halfScaleForMul;
         AscendC::MicroAPI::RegTensor<T1> vdExp0;
         AscendC::MicroAPI::RegTensor<T1> vdExp1;
-        AscendC::MicroAPI::RegTensor<T1> vdExp0Convert;
-        AscendC::MicroAPI::RegTensor<T1> vdExp1Convert;
 
         AscendC::MicroAPI::RegTensor<bfloat16_t> vdExp0BF16;
         AscendC::MicroAPI::RegTensor<bfloat16_t> vdExp1BF16;
@@ -692,8 +613,6 @@ __aicore__ inline void ComputeDataMxfp4General(
         AscendC::MicroAPI::RegTensor<T2> vdExp0FP4;
         AscendC::MicroAPI::RegTensor<T2> vdExp1FP4;
 
-        AscendC::MicroAPI::RegTensor<bfloat16_t> vdBF16Exp0FP4;
-        AscendC::MicroAPI::RegTensor<bfloat16_t> vdBF16Exp1FP4;
         static constexpr AscendC::MicroAPI::CastTrait castTrait = {
             AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN,
             AscendC::MicroAPI::MaskMergeMode::ZEROING, roundMode};
@@ -753,8 +672,6 @@ __aicore__ inline void ComputeDataMxfp4Optimize(
         AscendC::MicroAPI::RegTensor<uint16_t> halfScaleForMul;
         AscendC::MicroAPI::RegTensor<T1> vdExp0;
         AscendC::MicroAPI::RegTensor<T1> vdExp1;
-        AscendC::MicroAPI::RegTensor<T1> vdExp0Convert;
-        AscendC::MicroAPI::RegTensor<T1> vdExp1Convert;
         MicroAPI::RegTensor<float> halfScaleForMulFP32;
         MicroAPI::RegTensor<float> vdExp0ZeroFP32;
         MicroAPI::RegTensor<float> vdExp0OneFP32;
@@ -765,14 +682,10 @@ __aicore__ inline void ComputeDataMxfp4Optimize(
         MicroAPI::RegTensor<bfloat16_t> vdExp1ZeroBF16;
         MicroAPI::RegTensor<bfloat16_t> vdExp1OneBF16;
 
-        AscendC::MicroAPI::RegTensor<bfloat16_t> vdExp0BF16;
-        AscendC::MicroAPI::RegTensor<bfloat16_t> vdExp1BF16;
 
         AscendC::MicroAPI::RegTensor<T2> vdExp0FP4;
         AscendC::MicroAPI::RegTensor<T2> vdExp1FP4;
 
-        AscendC::MicroAPI::RegTensor<bfloat16_t> vdBF16Exp0FP4;
-        AscendC::MicroAPI::RegTensor<bfloat16_t> vdBF16Exp1FP4;
 
         MicroAPI::MaskReg dataMaskB16 = MicroAPI::CreateMask<half>();
         MicroAPI::MaskReg dataMaskB32 = MicroAPI::CreateMask<float>();

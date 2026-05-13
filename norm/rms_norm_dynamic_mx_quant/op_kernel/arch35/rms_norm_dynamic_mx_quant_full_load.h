@@ -183,7 +183,9 @@ public:
         LocalTensor<float> xReduceTmpLocal = xReduceTmpBuffer_.Get<float>();
         LocalTensor<float> xReduceOutTmpLocal = xReduceOutBuffer_.Get<float>();
         ComputeSquareReduceSum(xLocal, xReduceTmpLocal, xReduceOutTmpLocal, curM);
-        ComputeRstd(xReduceOutTmpLocal, rstdLocal, curM, tilingData_->epsilon, tilingData_->avgFactor);
+        NormCommon::ComputeRstdNewtonRaphson<false, true>(
+            xReduceOutTmpLocal, rstdLocal, static_cast<uint32_t>(curM), tilingData_->epsilon,
+            tilingData_->avgFactor, VL_FP32);
         rstdOutQueue_.EnQue(rstdLocal);
         rstdLocal = rstdOutQueue_.DeQue<float>();
         if (tilingData_->hasOutputRstd) {
@@ -273,24 +275,24 @@ public:
         __local_mem__ T_X* xLocalAddr, __local_mem__ float* xReduceTmpLocalUbAddr, uint64_t curUbFactor,
         uint64_t numCol, uint64_t numColAlign)
     {
-        uint32_t colNum = static_cast<uint32_t>(numCol);
-        uint32_t colNumAlign = static_cast<uint32_t>(numColAlign);
         uint16_t curAloops = static_cast<uint16_t>(curUbFactor);
+        uint32_t colNumAlign = static_cast<uint32_t>(numColAlign);
+        uint32_t colNum = static_cast<uint32_t>(numCol);
 
         __VEC_SCOPE__
         {
-            RegTensor<float> xReg;
-            RegTensor<float> xTailReg;
-            RegTensor<float> squareReg;
             RegTensor<float> squareTailReg;
-            RegTensor<float> addReg;
+            RegTensor<float> squareReg;
             RegTensor<float> sumReg;
+            RegTensor<float> addReg;
+            RegTensor<float> xTailReg;
+            RegTensor<float> xReg;
 
-            MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
-            MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
             // 64 CHANGE dtype need check
             uint32_t colTailSreg = colNum - VL_FP32;
             MaskReg pregTail = UpdateMask<float>(colTailSreg);
+            MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
+            MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
             for (uint16_t i = 0; i < curAloops; i++) {
                 LoadTensorForDtypeT(xLocalAddr, xReg, pregFull, (i * colNumAlign));
                 Mul(squareReg, xReg, xReg, pregFull);
@@ -326,24 +328,21 @@ public:
 
         __VEC_SCOPE__
         {
-            RegTensor<float> xReg1;
-            RegTensor<float> xReg2;
-            RegTensor<float> squareReg1;
-            RegTensor<float> squareReg2;
-            RegTensor<float> addReg;
-            RegTensor<float> sumReg;
-
-            RegTensor<float> xReg3;
-            RegTensor<float> squareReg3;
             RegTensor<float> sumReg3;
+            RegTensor<float> squareReg3;
+            RegTensor<float> xReg3;
 
-            RegTensor<float> mulsReg;
-            RegTensor<float> addsReg;
-            RegTensor<float> sqrtReg;
+            RegTensor<float> sumReg;
+            RegTensor<float> addReg;
+            RegTensor<float> squareReg2;
+            RegTensor<float> squareReg1;
+            RegTensor<float> xReg2;
+            RegTensor<float> xReg1;
 
-            MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
-            MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
+
             MaskReg pregLoop;
+            MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
+            MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
 
             for (uint16_t i = 0; i < curAloops; i++) {
                 uint32_t sregfirstFlodTial = firstFlodTial;

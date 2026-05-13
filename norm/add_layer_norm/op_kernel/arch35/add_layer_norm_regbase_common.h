@@ -18,6 +18,7 @@
 
 #include "kernel_tiling/kernel_tiling.h"
 #include "kernel_operator.h"
+#include "../../norm_common/reduce_common_regbase.h"
 
 namespace AddLayerNorm {
 using namespace AscendC;
@@ -46,12 +47,7 @@ constexpr AscendC::MicroAPI::CastTrait castTraitB322B16 = {
 };
 
 constexpr int64_t TWO = 2;
-constexpr int32_t BINARY_ADD_COEFF = 2;
 constexpr int32_t VL_FP32 = VECTOR_REG_WIDTH / sizeof(float);
-constexpr float SCALAR1 = -0.5f;
-constexpr float SCALAR2 = 1.5f;
-constexpr float SCALAR3 = 0.5f;
-constexpr float POS_INF = 3.40282366920938E+38;
 
 #define IS_BIAS_ELEWISE ((TILING_KEY % 10) == 1)
 #define IS_BIAS_BROADCAST ((TILING_KEY % 10) == 2)
@@ -214,74 +210,5 @@ __aicore__ inline void StoreRegToOutput(__local_mem__ T* dstAddr, RegTensor<floa
     }
 }
 
-__aicore__ inline void DichotomyAdd(
-    RegTensor<float>& dstReg, __local_mem__ float* src, uint16_t outerLoop, uint16_t innerLoop, uint32_t lastNum)
-{
-    RegTensor<float> tmpReg1;
-    RegTensor<float> tmpReg2;
-    RegTensor<float> tmpReg3;
-    LocalMemBar<AscendC::MicroAPI::MemType::VEC_STORE, AscendC::MicroAPI::MemType::VEC_LOAD>();
-    MaskReg pregMain = CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
-    for (uint16_t k = 0; k < outerLoop; k++) {
-        innerLoop = innerLoop / BINARY_ADD_COEFF;
-        for (uint16_t i = 0; i < innerLoop; i++) {
-            DataCopy(tmpReg1, src + i * VL_FP32);
-            DataCopy(tmpReg2, src + (i + innerLoop) * VL_FP32);
-            Add(tmpReg3, tmpReg1, tmpReg2, pregMain);
-            DataCopy(src + i * VL_FP32, tmpReg3, pregMain);
-        }
-        LocalMemBar<AscendC::MicroAPI::MemType::VEC_STORE, AscendC::MicroAPI::MemType::VEC_LOAD>();
-    }
-    uint32_t sreg0 = lastNum;
-    MaskReg pregLoop = UpdateMask<float>(sreg0);
-    DataCopy(tmpReg3, src);
-    ReduceSum(dstReg, tmpReg3, pregLoop);
-}
-
-__aicore__ inline void CalRstdByHighPrecision(RegTensor<float>& var, RegTensor<float>& rstd, float epsilon)
-{
-    RegTensor<float> r;
-    RegTensor<float> y;
-    RegTensor<float> s;
-    RegTensor<float> t;
-    RegTensor<float> e;
-    RegTensor<float> one;
-    RegTensor<float> scalar1;
-    RegTensor<float> scalar2;
-    RegTensor<float> scalar3;
-    RegTensor<float> t1;
-    RegTensor<float> t2;
-    RegTensor<float> t3;
-    RegTensor<float> t4;
-    MaskReg cmpReg1;
-    MaskReg cmpReg2;
-    MaskReg pregMerge = CreateMask<float, AscendC::MicroAPI::MaskPattern::VL1>();
-
-    Duplicate(one, float(1.0), pregMerge);
-    Duplicate(scalar1, SCALAR3, pregMerge);
-    Duplicate(scalar2, POS_INF, pregMerge);
-    Duplicate(scalar3, float(0.0), pregMerge);
-    Duplicate(t1, SCALAR2, pregMerge);
-    Duplicate(s, float(1.0), pregMerge);
-
-    Adds(var, var, epsilon, pregMerge);
-    Div(r, one, var, pregMerge);
-    Sqrt(y, r, pregMerge);
-    Muls(t, var, SCALAR1, pregMerge);
-    Mul(t, t, y, pregMerge);                // -0.5 * x * y
-    Mula(t1, t, y, pregMerge);              // 1.5 + (-0.5 * x * y) * y
-    Mul(rstd, y, t1, pregMerge);            // y = y * (1.5 - 0.5 * x * y)
-    Muls(t3, var, float(-1.0), pregMerge);  // -1 * x
-    Mula(s, t3, r, pregMerge);              // 1 + (-1) * x * r
-    Muls(t4, rstd, float(-1.0), pregMerge); // (-1) * y
-    Mula(r, t4, rstd, pregMerge);           // r + (-1) * y * y
-    Mula(s, var, r, pregMerge);             // s + x * t
-    Mul(s, s, rstd, pregMerge);             // e * y
-    Mula(rstd, s, scalar1, pregMerge);      // y + y * e * 0.5
-    CompareScalar(cmpReg1, var, POS_INF, pregMerge);
-    Select(rstd, scalar3, rstd, cmpReg1);
-    CompareScalar(cmpReg2, var, float(0.0), pregMerge);
-    Select(rstd, scalar2, rstd, cmpReg2);
-}
 } // namespace AddLayerNorm
 #endif // ADD_LAYER_NORM_REGBASE_COMMON_H

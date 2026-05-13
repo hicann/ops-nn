@@ -142,7 +142,8 @@ private:
         LocalTensor<float> xReduceLocal = xReduceBuff.Get<float>();
         CalculateSquareReduceSum(xFp32Local, xReduceLocal, curRows);
 
-        CalculateRstd(xReduceLocal, rstdLocal, curRows, avgFactor_, epsilon_);
+        NormCommon::ComputeRstdNewtonRaphson<true, true>(
+            xReduceLocal, rstdLocal, curRows, epsilon_, avgFactor_, VL_F32);
         outQueueRstd.EnQue<float>(rstdLocal);
 
         rstdLocal = outQueueRstd.DeQue<float>();
@@ -328,12 +329,12 @@ private:
         {
             RegTensor<float> x;
             RegTensor<float> xFold;
-            RegTensor<float> sumReg;
-            RegTensor<float> vMean;
             RegTensor<float> onesReg;
+            RegTensor<float> vMean;
+            RegTensor<float> sumReg;
 
-            MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
             MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
+            MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
             MaskReg pregTail = UpdateMask<float>(tailLen);
             AscendC::MicroAPI::Duplicate(onesReg, float(1.0), pregOne);
 

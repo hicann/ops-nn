@@ -1016,9 +1016,7 @@ private:
             RegTensor<float> mean;
             RegTensor<float> var;
 
-            RegTensor<float> sqrtVar;
             RegTensor<float> one;
-            RegTensor<float> rsqrtVar;
 
             RegTensor<float> runningMean;
             RegTensor<float> saveMean;
@@ -1031,12 +1029,10 @@ private:
             RegTensor<float> y;
             RegTensor<float> s;
             RegTensor<float> t;
-            RegTensor<float> e;
             RegTensor<float> scalar1;
             RegTensor<float> scalarInf;
             RegTensor<float> scalarZero;
             RegTensor<float> t1;
-            RegTensor<float> t2;
             RegTensor<float> t3;
             RegTensor<float> t4;
             RegTensor<float> rstd;

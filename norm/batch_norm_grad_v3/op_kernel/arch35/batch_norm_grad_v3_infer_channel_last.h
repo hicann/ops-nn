@@ -192,7 +192,9 @@ private:
 
                 // load runningVar, gamma
                 LoadOneTensor<T3>(varLocal, runningVar, pregMaskFp32, offset);
-                CalRstdByHighPrecision(runningVar, invstd, epsilonTmp);
+                AscendC::MicroAPI::MaskReg pregRstdAll1 =
+                    AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                NormCommon::ComputeRstdNewtonRaphsonReg(runningVar, invstd, pregRstdAll1, epsilonTmp);
 
                 LoadOneTensor<T2>(gammaLocal, gamma, pregMaskFp32, offset);
 

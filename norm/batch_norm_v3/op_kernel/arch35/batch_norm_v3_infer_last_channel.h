@@ -229,7 +229,9 @@ private:
                     AscendC::MicroAPI::DataCopy<float, LoadDist::DIST_NORM>(var, varLocal + offset);
                 }
 
-                CalRstdByHighPrecision(var, rstd, tilingData_->epsilon);
+                AscendC::MicroAPI::MaskReg pregRstdAll1 =
+                    AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                NormCommon::ComputeRstdNewtonRaphsonReg(var, rstd, pregRstdAll1, tilingData_->epsilon);
 
                 // load mean
                 if constexpr (!IsSameType<T_RUNNING_MEAN, float>::value) {

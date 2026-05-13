@@ -21,6 +21,7 @@
 #include "kernel_operator.h"
 #include "../inc/kernel_utils.h"
 #include "batch_norm_grad_common.h"
+#include "../../norm_common/reduce_common_regbase.h"
 
 namespace BatchNormGrad {
 using namespace AscendC;
@@ -202,7 +203,9 @@ private:
 
                 // load runningVar, gamma
                 LoadOneTensor<T2>(varLocal, runningVar, pregMaskFp32, offset);
-                CalRstdByHighPrecision(runningVar, invstd, epsilonTmp);
+                AscendC::MicroAPI::MaskReg pregRstdAll1 =
+                    AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                NormCommon::ComputeRstdNewtonRaphsonReg(runningVar, invstd, pregRstdAll1, epsilonTmp);
 
                 LoadOneTensor<T2>(gammaLocal, gamma, pregMaskFp32, offset);
 
@@ -347,7 +350,7 @@ public:
             cacheTensorDgamma_ = cacheBufferDgamma_.Get<float>();
             mean_ = meanQueue_.DeQue<float>();
             var_ = varQueue_.DeQue<float>();
-            ComputeRstd(curALen, meanOffset, vlLoopNum);
+            NormCommon::ComputeRstdNewtonRaphson(var_, var_, static_cast<uint32_t>(curALen), epsilon, 1.0f, VL_FP32);
         }
 
         if constexpr (!IsSameType<T1, float>::value) {
@@ -396,30 +399,6 @@ public:
             dgammaQueue_.EnQue(dgamma);
         }
         CopyOutDbetaAndDgamma(meanOffset, curALen);
-    }
-
-    __aicore__ inline void ComputeRstd(const int64_t curALen, const int64_t gmOffset, uint16_t vlLoopNum)
-    {
-        __local_mem__ float* var = (__local_mem__ float*)var_.GetPhyAddr();
-        __VEC_SCOPE__
-        {
-            MaskReg pregMask;
-            uint32_t sreg = curALen;
-            uint16_t loopNum = vlLoopNum;
-
-            RegTensor<float> varReg;
-            RegTensor<float> rstdReg;
-
-            for (uint16_t j = 0; j < loopNum; ++j) {
-                pregMask = UpdateMask<float>(sreg);
-                uint32_t varOffset = j * VL_FP32;
-                LoadOneTensor<float>(var, varReg, pregMask, varOffset);
-
-                CalRstdByHighPrecision(varReg, rstdReg, epsilon);
-
-                StoreOneTensor<float>(var, rstdReg, pregMask, varOffset);
-            }
-        }
     }
 
     // copy to main
@@ -814,7 +793,6 @@ private:
     bool enableDgamma;
     bool enableDbeta;
 };
-
 } // namespace BatchNormGrad
 
 #endif

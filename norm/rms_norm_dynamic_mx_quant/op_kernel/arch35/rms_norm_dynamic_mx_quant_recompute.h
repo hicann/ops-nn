@@ -124,7 +124,8 @@ private:
             int64_t rowGmOffset = batchOffset + rowIdx * tilingData_->numN;
             ComputeOneLineXSquareSum(rstdLocal, rowGmOffset, rowIdx);
         }
-        ComputeRstd(rstdLocal, rstdLocal, static_cast<uint64_t>(curM), tilingData_->epsilon, tilingData_->avgFactor);
+        NormCommon::ComputeRstdNewtonRaphson<false, true>(
+            rstdLocal, rstdLocal, static_cast<uint32_t>(curM), tilingData_->epsilon, tilingData_->avgFactor, VL_FP32);
         rstdOutQueue_.EnQue(rstdLocal);
         rstdLocal = rstdOutQueue_.DeQue<float>();
     }

@@ -251,7 +251,9 @@ private:
                     AscendC::MicroAPI::DataCopy<float, LoadDist::DIST_BRC_B32>(
                         var, ((__local_mem__ float*)(varLocal) + i));
                 }
-                CalRstdByHighPrecision(var, rstd, tilingData_->epsilon);
+                AscendC::MicroAPI::MaskReg pregRstdAll1 =
+                    AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                NormCommon::ComputeRstdNewtonRaphsonReg(var, rstd, pregRstdAll1, tilingData_->epsilon);
                 // load mean
                 DataCopy<float, LoadDist::DIST_BRC_B32>(mean, ((__local_mem__ float*)(meanLocal) + i));
                 if constexpr (!IsSameType<T_RUNNING_MEAN, float>::value) {
