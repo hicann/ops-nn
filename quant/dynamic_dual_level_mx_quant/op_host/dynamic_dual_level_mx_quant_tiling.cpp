@@ -32,9 +32,9 @@ constexpr int64_t INDEX_ATTR_LEVEL1_BLOCK_SIZE = 2;
 constexpr int64_t N_BUFFER = 2;
 constexpr int64_t DIGIT_ONE = 1;
 constexpr int64_t DIGIT_TWO = 2;
-constexpr int64_t DIGIT_32 = 32;
-constexpr int64_t DIGIT_64 = 64;
-constexpr int64_t DIGIT_128 = 128;
+constexpr int64_t UB_ALIGN_BYTES = 32;
+constexpr int64_t LEVEL1_SCALE_DIVISOR = 64;
+constexpr int64_t TAIL_ALIGN_BYTES = 128;
 constexpr int64_t BLOCK_SIZE = 512;
 constexpr int64_t DEFAULT_LEVEL0_BLOCK_SIZE = 512;
 constexpr int64_t DEFAULT_LEVEL1_BLOCK_SIZE = 32;
@@ -60,6 +60,22 @@ RoundModeList DynamicDualLevelMxQuantTiling::GetRoundMode(const std::string& rou
     return RoundModeList::MODE_UNDEFINED;
 }
 
+template <typename T>
+ge::graphStatus DynamicDualLevelMxQuantTiling::GetAndValidateAttr(
+    const gert::RuntimeAttrs* attrs, int64_t index, T& target, T expectedValue, const std::string& attrName,
+    const std::string& expectedMsg) const
+{
+    auto* attrPtr = attrs->GetAttrPointer<T>(index);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, attrPtr);
+    target = static_cast<T>(*attrPtr);
+    OP_CHECK_IF(
+        target != expectedValue,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context_->GetNodeName(), attrName.c_str(), std::to_string(target).c_str(), expectedMsg.c_str()),
+        return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
+
 ge::graphStatus DynamicDualLevelMxQuantTiling::GetAttr()
 {
     auto* attrs = context_->GetAttrs();
@@ -77,24 +93,18 @@ ge::graphStatus DynamicDualLevelMxQuantTiling::GetAttr()
         return ge::GRAPH_FAILED);
     tilingParams.roundMode = static_cast<int64_t>(roundMode);
 
-    auto* attrLevel0BlockSize = attrs->GetAttrPointer<int64_t>(INDEX_ATTR_LEVEL0_BLOCK_SIZE);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, attrLevel0BlockSize);
-    tilingParams.level0BlockSize = static_cast<int64_t>(*attrLevel0BlockSize);
     OP_CHECK_IF(
-        tilingParams.level0BlockSize != DEFAULT_LEVEL0_BLOCK_SIZE,
-        OP_LOGE_FOR_INVALID_VALUE(
-            context_->GetNodeName(), "level0_block_size",
-            std::to_string(tilingParams.level0BlockSize).c_str(), "512"),
+        GetAndValidateAttr(
+            attrs, INDEX_ATTR_LEVEL0_BLOCK_SIZE, tilingParams.level0BlockSize, DEFAULT_LEVEL0_BLOCK_SIZE,
+            "level0_block_size", "level0_block_size should be 512") != ge::GRAPH_SUCCESS,
+            OP_LOGE(context_->GetNodeName(), "level0_block_size is invalid, please check."),
         return ge::GRAPH_FAILED);
 
-    auto* attrLevel1BlockSize = attrs->GetAttrPointer<int64_t>(INDEX_ATTR_LEVEL1_BLOCK_SIZE);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, attrLevel1BlockSize);
-    tilingParams.level1BlockSize = static_cast<int64_t>(*attrLevel1BlockSize);
     OP_CHECK_IF(
-        tilingParams.level1BlockSize != DEFAULT_LEVEL1_BLOCK_SIZE,
-        OP_LOGE_FOR_INVALID_VALUE(
-            context_->GetNodeName(), "level1_block_size",
-            std::to_string(tilingParams.level1BlockSize).c_str(), "32"),
+        GetAndValidateAttr(
+            attrs, INDEX_ATTR_LEVEL1_BLOCK_SIZE, tilingParams.level1BlockSize, DEFAULT_LEVEL1_BLOCK_SIZE,
+            "level1_block_size", "level1_block_size should be 32") != ge::GRAPH_SUCCESS,
+            OP_LOGE(context_->GetNodeName(), "level1_block_size is invalid, please check."),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -108,8 +118,7 @@ ge::graphStatus DynamicDualLevelMxQuantTiling::CheckRequiredDtype() const
     OP_CHECK_IF(
         INPUT_SUPPORT_DTYPE_SET.count(xDtype) == 0,
         OP_LOGE_FOR_INVALID_DTYPE(
-            context_->GetNodeName(), "x",
-            ge::TypeUtils::DataTypeToSerialString(xDtype).c_str(), "FLOAT16 or BFLOAT16"),
+            context_->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(xDtype).c_str(), "FLOAT16 or BFLOAT16"),
         return ge::GRAPH_FAILED);
     auto outputYPtr = context_->GetOutputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputYPtr);
@@ -117,8 +126,7 @@ ge::graphStatus DynamicDualLevelMxQuantTiling::CheckRequiredDtype() const
     OP_CHECK_IF(
         Y_SUPPORT_DTYPE_FP4_SET.count(yDtype) == 0,
         OP_LOGE_FOR_INVALID_DTYPE(
-            context_->GetNodeName(), "y",
-            ge::TypeUtils::DataTypeToSerialString(yDtype).c_str(), "FLOAT4_E2M1"),
+            context_->GetNodeName(), "y", ge::TypeUtils::DataTypeToSerialString(yDtype).c_str(), "FLOAT4_E2M1"),
         return ge::GRAPH_FAILED);
 
     auto outputLevel0ScalePtr = context_->GetOutputDesc(1);
@@ -127,18 +135,18 @@ ge::graphStatus DynamicDualLevelMxQuantTiling::CheckRequiredDtype() const
     OP_CHECK_IF(
         LEVEL0_SCALE_OUTPUT_SUPPORT_DTYPE_SET.count(Level0ScaleDtype) == 0,
         OP_LOGE_FOR_INVALID_DTYPE(
-            context_->GetNodeName(), "level0_scale",
-            ge::TypeUtils::DataTypeToSerialString(Level0ScaleDtype).c_str(), "DT_FLOAT"),
+            context_->GetNodeName(), "level0_scale", ge::TypeUtils::DataTypeToSerialString(Level0ScaleDtype).c_str(),
+            "DT_FLOAT"),
         return ge::GRAPH_FAILED);
 
-    auto outputLevel1ScalePtr = context_->GetOutputDesc(2);
+    auto outputLevel1ScalePtr = context_->GetOutputDesc(DIGIT_TWO);
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputLevel1ScalePtr);
     auto Level1ScaleDtype = outputLevel1ScalePtr->GetDataType();
     OP_CHECK_IF(
         LEVEL1_SCALE_OUTPUT_SUPPORT_DTYPE_SET.count(Level1ScaleDtype) == 0,
         OP_LOGE_FOR_INVALID_DTYPE(
-            context_->GetNodeName(), "level1_scale",
-            ge::TypeUtils::DataTypeToSerialString(Level1ScaleDtype).c_str(), "FLOAT8_E8M0"),
+            context_->GetNodeName(), "level1_scale", ge::TypeUtils::DataTypeToSerialString(Level1ScaleDtype).c_str(),
+            "FLOAT8_E8M0"),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -149,12 +157,13 @@ ge::graphStatus DynamicDualLevelMxQuantTiling::CheckRequiredShape() const
     auto xShapePtr = context_->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, xShapePtr);
     auto xShape = xShapePtr->GetStorageShape();
+    dimNum_ = xShape.GetDimNum();
+    lastDim_ = xShape.GetDim(dimNum_ - 1);
 
     OP_CHECK_IF(
-        xShape.GetDim(xShape.GetDimNum() - 1) % DIGIT_TWO != 0,
+        lastDim_ % DIGIT_TWO != 0,
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-            context_->GetNodeName(), "x",
-            std::to_string(xShape.GetDim(xShape.GetDimNum() - 1)).c_str(),
+            context_->GetNodeName(), "x", std::to_string(lastDim_).c_str(),
             "The last axis of x should be even when the dtype of y is FLOAT4_E2M1"),
         return ge::GRAPH_FAILED);
 
@@ -179,25 +188,21 @@ ge::graphStatus DynamicDualLevelMxQuantTiling::CheckRequiredShape() const
     auto level1ScaleShape = level1ScaleShapePtr->GetStorageShape();
 
     auto newScale0Shape = xShape;
-    newScale0Shape.SetDim(
-        xShape.GetDimNum() - 1, Ops::Base::CeilDiv(xShape.GetDim(xShape.GetDimNum() - 1), BLOCK_SIZE));
-    auto newScale1Shape = xShape;
-    newScale1Shape.SetDim(xShape.GetDimNum() - 1, Ops::Base::CeilDiv(xShape.GetDim(xShape.GetDimNum() - 1), DIGIT_64));
-    newScale1Shape.AppendDim(DIGIT_TWO);
-
+    newScale0Shape.SetDim(dimNum_ - 1, Ops::Base::CeilDiv(lastDim_, BLOCK_SIZE));
     OP_CHECK_IF(
         newScale0Shape != level0ScaleShape,
         OP_LOGE_FOR_INVALID_SHAPE(
-            context_->GetNodeName(), "level0_scale",
-            Ops::Base::ToString(level0ScaleShape).c_str(),
+            context_->GetNodeName(), "level0_scale", Ops::Base::ToString(level0ScaleShape).c_str(),
             Ops::Base::ToString(newScale0Shape).c_str()),
         return ge::GRAPH_FAILED);
 
+    auto newScale1Shape = xShape;
+    newScale1Shape.SetDim(dimNum_ - 1, Ops::Base::CeilDiv(lastDim_, LEVEL1_SCALE_DIVISOR));
+    newScale1Shape.AppendDim(DIGIT_TWO);
     OP_CHECK_IF(
         newScale1Shape != level1ScaleShape,
         OP_LOGE_FOR_INVALID_SHAPE(
-            context_->GetNodeName(), "level1_scale",
-            Ops::Base::ToString(level1ScaleShape).c_str(),
+            context_->GetNodeName(), "level1_scale", Ops::Base::ToString(level1ScaleShape).c_str(),
             Ops::Base::ToString(newScale1Shape).c_str()),
         return ge::GRAPH_FAILED);
 
@@ -223,13 +228,11 @@ ge::graphStatus DynamicDualLevelMxQuantTiling::CheckSmoothScaleDtypeShape()
             return ge::GRAPH_FAILED);
         auto smoothScaleShape = smoothScale->GetStorageShape();
         OP_CHECK_IF(
-            smoothScaleShape.IsScalar() || smoothScaleShape.GetDimNum() != 1 ||
-                smoothScaleShape.GetDim(0) != xShape.GetDim(xShape.GetDimNum() - 1),
+            smoothScaleShape.IsScalar() || smoothScaleShape.GetDimNum() != 1 || smoothScaleShape.GetDim(0) != lastDim_,
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-                context_->GetNodeName(), "smooth_scale",
-                Ops::Base::ToString(smoothScaleShape).c_str(),
+                context_->GetNodeName(), "smooth_scale", Ops::Base::ToString(smoothScaleShape).c_str(),
                 ("smooth_scale can NOT be scalar and the shape size of smooth_scale should be same as the last axis of x " +
-                 std::to_string(xShape.GetDim(xShape.GetDimNum() - 1))).c_str()),
+                 std::to_string(lastDim_)).c_str()),
             return ge::GRAPH_FAILED);
         needSmoothScale = true;
     }
@@ -266,17 +269,17 @@ ge::graphStatus DynamicDualLevelMxQuantTiling::MergeAxis()
     OP_CHECK_NULL_WITH_CONTEXT(context_, xShapePtr);
     auto xShape = xShapePtr->GetStorageShape();
 
-    for (size_t i = 0; i < xShape.GetDimNum() - 1; i++) {
+    for (size_t i = 0; i < dimNum_ - 1; i++) {
         tilingParams.colSize *= xShape.GetDim(i);
     }
-    tilingParams.rowSize = xShape.GetDim(xShape.GetDimNum() - 1);
+    tilingParams.rowSize = lastDim_;
     tilingParams.rowBlockNum = Ops::Base::CeilDiv(tilingParams.rowSize, tilingParams.blockSizeRow);
     tilingParams.colBlockNum = Ops::Base::CeilDiv(tilingParams.colSize, tilingParams.blockSizeCol);
 
     return ge::GRAPH_SUCCESS;
 }
 
-std::set<int64_t> FindShapeCut(int64_t usedCoreNum)
+static std::set<int64_t> FindShapeCut(int64_t usedCoreNum)
 {
     std::set<int64_t> result;
     int64_t upbound = std::ceil(std::sqrt(usedCoreNum) + 1);
@@ -291,7 +294,7 @@ std::set<int64_t> FindShapeCut(int64_t usedCoreNum)
 
 ge::graphStatus DynamicDualLevelMxQuantTiling::AutoTiling()
 {
-    OP_LOGD("AutoTiling", "DynamicDualLevelMxQuant AutoTiling Enter.");
+    OP_LOGD(context_->GetNodeName(), "DynamicDualLevelMxQuant AutoTiling Enter.");
 
     // 计算可用核数
     tilingParams.usedCoreNum = std::min(tilingParams.totalCoreNum, tilingParams.rowBlockNum * tilingParams.colBlockNum);
@@ -358,19 +361,18 @@ ge::graphStatus DynamicDualLevelMxQuantTiling::SplitCore()
     uint64_t tempXUbSize = BLOCK_SIZE * BYTES_OF_INPUT_TYPE;
     uint64_t smoothScaleUbSize = needSmoothScale ? BLOCK_SIZE * BYTES_OF_INPUT_TYPE * N_BUFFER : 0;
     // ceilAlign(512/512,32)
-    uint64_t level0ScaleUbSize = DIGIT_32 * N_BUFFER;
+    uint64_t level0ScaleUbSize = UB_ALIGN_BYTES * N_BUFFER;
     // ceilAlign(512/32,32)
-    uint64_t level1ScaleUbSize = DIGIT_32 * N_BUFFER;
+    uint64_t level1ScaleUbSize = UB_ALIGN_BYTES * N_BUFFER;
     // ceilAlign(2*512/32,32)
-    uint64_t level1ScaleReciprocalUbSize = DIGIT_32;
-    tilingParams.ubFactor =
-        (tilingParams.ubSize - RESERVED_UB_SIZE) /
-        (xUbSize + yUbSize + tempXUbSize + smoothScaleUbSize + level0ScaleUbSize + level1ScaleUbSize + level1ScaleReciprocalUbSize);
+    uint64_t level1ScaleReciprocalUbSize = UB_ALIGN_BYTES;
+    tilingParams.ubFactor = (tilingParams.ubSize - RESERVED_UB_SIZE) /
+                            (xUbSize + yUbSize + tempXUbSize + smoothScaleUbSize + level0ScaleUbSize +
+                             level1ScaleUbSize + level1ScaleReciprocalUbSize);
     OP_CHECK_IF(
         tilingParams.ubSize <= RESERVED_UB_SIZE || tilingParams.ubFactor <= 0,
         OP_LOGE(
-            context_->GetNodeName(),
-            "Invalid ubSize/ubFactor for SplitCore: ubSize: %ld, ubFactor: %ld",
+            context_->GetNodeName(), "Invalid ubSize/ubFactor for SplitCore: ubSize: %ld, ubFactor: %ld",
             tilingParams.ubSize, tilingParams.ubFactor),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
@@ -429,7 +431,7 @@ ge::graphStatus DynamicDualLevelMxQuantTiling::SetTilingParams()
         tilingParams.tailTileRowLoopNum = Ops::Base::CeilDiv(tilingParams.tailTileRowBlockNum, tilingParams.ubFactor);
         tilingParams.tailTileColLoopNum = tilingParams.tailTileColBlockNum;
     }
-    tilingParams.tailAlignNum = Ops::Base::CeilDiv(tilingParams.tailTileRowSize % BLOCK_SIZE, DIGIT_128);
+    tilingParams.tailAlignNum = Ops::Base::CeilDiv(tilingParams.tailTileRowSize % BLOCK_SIZE, TAIL_ALIGN_BYTES);
     tilingParams.needSmoothScale = needSmoothScale;
 
     return ge::GRAPH_SUCCESS;
@@ -464,18 +466,15 @@ ge::graphStatus DynamicDualLevelMxQuantTiling::DoTiling()
         OP_LOGE(context_->GetNodeName(), "DynamicDualLevelMxQuantTiling SetTilingParams failed"),
         return ge::GRAPH_FAILED);
 
+    tilingData = context_->GetTilingData<DynamicDualLevelMxQuantTilingData>();
+    OP_CHECK_IF(
+        (tilingData == nullptr),
+        OP_LOGE(context_->GetNodeName(), "Get DynamicDualLevelMxQuantTilingData from context failed"),
+        return ge::GRAPH_FAILED);
+
     SetTilingKey();
     SetTilingData();
     PrintTilingData();
-
-    OP_CHECK_NULL_WITH_CONTEXT(context_, context_->GetRawTilingData());
-    auto rawTilingData = context_->GetRawTilingData();
-    if (tilingData.GetDataSize() > rawTilingData->GetCapacity()) {
-        OP_LOGE(context_->GetNodeName(), "Tiling DataSize Greater than capacity, please check.");
-        return ge::GRAPH_FAILED;
-    }
-    tilingData.SaveToBuffer(rawTilingData->GetData(), rawTilingData->GetCapacity());
-    context_->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
 
     OP_LOGD(context_->GetNodeName(), "Tiling usedCoreNum is %ld.", tilingParams.usedCoreNum);
     context_->SetBlockDim(tilingParams.usedCoreNum);
@@ -504,34 +503,34 @@ void DynamicDualLevelMxQuantTiling::SetTilingKey()
 
 void DynamicDualLevelMxQuantTiling::SetTilingData()
 {
-    tilingData.set_tilingKey(tilingParams.tilingKey);
-    tilingData.set_totalCoreNum(tilingParams.totalCoreNum);
-    tilingData.set_usedCoreNum(tilingParams.usedCoreNum);
-    tilingData.set_roundMode(tilingParams.roundMode);
-    tilingData.set_level0BlockSize(tilingParams.level0BlockSize);
-    tilingData.set_level1BlockSize(tilingParams.level1BlockSize);
-    tilingData.set_rowSize(tilingParams.rowSize);
-    tilingData.set_colSize(tilingParams.colSize);
-    tilingData.set_blockSizeRow(tilingParams.blockSizeRow);
-    tilingData.set_blockSizeCol(tilingParams.blockSizeCol);
-    tilingData.set_rowBlockNum(tilingParams.rowBlockNum);
-    tilingData.set_colBlockNum(tilingParams.colBlockNum);
-    tilingData.set_rowTileNum(tilingParams.rowTileNum);
-    tilingData.set_colTileNum(tilingParams.colTileNum);
-    tilingData.set_normalTileRowBlockNum(tilingParams.normalTileRowBlockNum);
-    tilingData.set_normalTileColBlockNum(tilingParams.normalTileColBlockNum);
-    tilingData.set_tailTileRowBlockNum(tilingParams.tailTileRowBlockNum);
-    tilingData.set_tailTileColBlockNum(tilingParams.tailTileColBlockNum);
-    tilingData.set_normalTileRowSize(tilingParams.normalTileRowSize);
-    tilingData.set_tailTileRowSize(tilingParams.tailTileRowSize);
-    tilingData.set_normalTileRowLoopNum(tilingParams.normalTileRowLoopNum);
-    tilingData.set_normalTileColLoopNum(tilingParams.normalTileColLoopNum);
-    tilingData.set_tailTileRowLoopNum(tilingParams.tailTileRowLoopNum);
-    tilingData.set_tailTileColLoopNum(tilingParams.tailTileColLoopNum);
-    tilingData.set_ubFactor(tilingParams.ubFactor);
-    tilingData.set_tailAlignNum(tilingParams.tailAlignNum);
-    tilingData.set_copyMethod(tilingParams.copyMethod);
-    tilingData.set_needSmoothScale(tilingParams.needSmoothScale);
+    tilingData->tilingKey = tilingParams.tilingKey;
+    tilingData->totalCoreNum = tilingParams.totalCoreNum;
+    tilingData->usedCoreNum = tilingParams.usedCoreNum;
+    tilingData->roundMode = tilingParams.roundMode;
+    tilingData->level0BlockSize = tilingParams.level0BlockSize;
+    tilingData->level1BlockSize = tilingParams.level1BlockSize;
+    tilingData->rowSize = tilingParams.rowSize;
+    tilingData->colSize = tilingParams.colSize;
+    tilingData->blockSizeRow = tilingParams.blockSizeRow;
+    tilingData->blockSizeCol = tilingParams.blockSizeCol;
+    tilingData->rowBlockNum = tilingParams.rowBlockNum;
+    tilingData->colBlockNum = tilingParams.colBlockNum;
+    tilingData->rowTileNum = tilingParams.rowTileNum;
+    tilingData->colTileNum = tilingParams.colTileNum;
+    tilingData->normalTileRowBlockNum = tilingParams.normalTileRowBlockNum;
+    tilingData->normalTileColBlockNum = tilingParams.normalTileColBlockNum;
+    tilingData->tailTileRowBlockNum = tilingParams.tailTileRowBlockNum;
+    tilingData->tailTileColBlockNum = tilingParams.tailTileColBlockNum;
+    tilingData->normalTileRowSize = tilingParams.normalTileRowSize;
+    tilingData->tailTileRowSize = tilingParams.tailTileRowSize;
+    tilingData->normalTileRowLoopNum = tilingParams.normalTileRowLoopNum;
+    tilingData->normalTileColLoopNum = tilingParams.normalTileColLoopNum;
+    tilingData->tailTileRowLoopNum = tilingParams.tailTileRowLoopNum;
+    tilingData->tailTileColLoopNum = tilingParams.tailTileColLoopNum;
+    tilingData->ubFactor = tilingParams.ubFactor;
+    tilingData->tailAlignNum = tilingParams.tailAlignNum;
+    tilingData->copyMethod = tilingParams.copyMethod;
+    tilingData->needSmoothScale = tilingParams.needSmoothScale;
 }
 
 void DynamicDualLevelMxQuantTiling::PrintTilingData()
@@ -545,16 +544,14 @@ void DynamicDualLevelMxQuantTiling::PrintTilingData()
         "tailTileRowBlockNum: %ld, tailTileColBlockNum: %ld, normalTileRowSize: %ld, "
         "tailTileRowSize: %ld, normalTileRowLoopNum: %ld, normalTileColLoopNum: %ld, tailTileRowLoopNum: %ld, "
         "tailTileColLoopNum: %ld, ubFactor: %ld, tailAlignNum: %ld, copyMethod: %ld, needSmoothScale: %ld",
-        tilingData.get_tilingKey(), tilingData.get_totalCoreNum(), tilingData.get_usedCoreNum(),
-        tilingData.get_roundMode(), tilingData.get_level0BlockSize(), tilingData.get_level1BlockSize(),
-        tilingData.get_rowSize(), tilingData.get_colSize(), tilingData.get_blockSizeRow(),
-        tilingData.get_blockSizeCol(), tilingData.get_rowBlockNum(), tilingData.get_colBlockNum(),
-        tilingData.get_rowTileNum(), tilingData.get_colTileNum(), tilingData.get_normalTileRowBlockNum(),
-        tilingData.get_normalTileColBlockNum(), tilingData.get_tailTileRowBlockNum(),
-        tilingData.get_tailTileColBlockNum(), tilingData.get_normalTileRowSize(), tilingData.get_tailTileRowSize(),
-        tilingData.get_normalTileRowLoopNum(), tilingData.get_normalTileColLoopNum(),
-        tilingData.get_tailTileRowLoopNum(), tilingData.get_tailTileColLoopNum(), tilingData.get_ubFactor(),
-        tilingData.get_tailAlignNum(), tilingData.get_copyMethod(), tilingData.get_needSmoothScale());
+        tilingData->tilingKey, tilingData->totalCoreNum, tilingData->usedCoreNum, tilingData->roundMode,
+        tilingData->level0BlockSize, tilingData->level1BlockSize, tilingData->rowSize, tilingData->colSize,
+        tilingData->blockSizeRow, tilingData->blockSizeCol, tilingData->rowBlockNum, tilingData->colBlockNum,
+        tilingData->rowTileNum, tilingData->colTileNum, tilingData->normalTileRowBlockNum,
+        tilingData->normalTileColBlockNum, tilingData->tailTileRowBlockNum, tilingData->tailTileColBlockNum,
+        tilingData->normalTileRowSize, tilingData->tailTileRowSize, tilingData->normalTileRowLoopNum,
+        tilingData->normalTileColLoopNum, tilingData->tailTileRowLoopNum, tilingData->tailTileColLoopNum,
+        tilingData->ubFactor, tilingData->tailAlignNum, tilingData->copyMethod, tilingData->needSmoothScale);
 }
 
 static ge::graphStatus TilingForDynamicDualLevelMxQuant(gert::TilingContext* context)
@@ -562,8 +559,7 @@ static ge::graphStatus TilingForDynamicDualLevelMxQuant(gert::TilingContext* con
     OP_LOGD("DynamicDualLevelMxQuantTiling", "Enter TilingForDynamicDualLevelMxQuantTiling");
 
     OP_CHECK_IF(
-        context == nullptr, OP_LOGE("DynamicDualLevelMxQuantTiling", "Tiling context is null."),
-        return ge::GRAPH_FAILED);
+        context == nullptr, OP_LOGE("DynamicDualLevelMxQuantTiling", "Tiling context is null."), return ge::GRAPH_FAILED);
 
     DynamicDualLevelMxQuantTiling dualLevelMxQunatTiling(context);
     return dualLevelMxQunatTiling.DoTiling();
@@ -574,8 +570,7 @@ static ge::graphStatus TilingPrepareForDynamicDualLevelMxQuant(gert::TilingParse
     OP_LOGD("DynamicDualLevelMxQuantTiling", "Enter TilingPrepareForDynamicDualLevelMxQuantTiling");
 
     OP_CHECK_IF(
-        context == nullptr, OP_LOGE("DynamicDualLevelMxQuantTiling", "TilingParse context is null."),
-        return ge::GRAPH_FAILED);
+        context == nullptr, OP_LOGE("DynamicDualLevelMxQuantTiling", "TilingParse context is null."), return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }

@@ -20,40 +20,9 @@
 #include "op_host/tiling_util.h"
 #include "register/op_impl_registry.h"
 #include "op_host/tiling_templates_registry.h"
+#include "../op_kernel/arch35/dynamic_dual_level_mx_quant_tiling_data.h"
 
 namespace optiling {
-BEGIN_TILING_DATA_DEF(DynamicDualLevelMxQuantTilingData)
-TILING_DATA_FIELD_DEF(int64_t, tilingKey);
-TILING_DATA_FIELD_DEF(int64_t, totalCoreNum);          // 总核数
-TILING_DATA_FIELD_DEF(int64_t, usedCoreNum);           // 实际使用的核数
-TILING_DATA_FIELD_DEF(int64_t, roundMode);             // 数据类型转换的模式
-TILING_DATA_FIELD_DEF(int64_t, level0BlockSize);       // level0量化的块大小
-TILING_DATA_FIELD_DEF(int64_t, level1BlockSize);       // level1量化的块大小
-TILING_DATA_FIELD_DEF(int64_t, rowSize);               // 行长度
-TILING_DATA_FIELD_DEF(int64_t, colSize);               // 列长度
-TILING_DATA_FIELD_DEF(int64_t, blockSizeRow);          // 行方向的基本块大小 512
-TILING_DATA_FIELD_DEF(int64_t, blockSizeCol);          // 列方向的基本块大小 1
-TILING_DATA_FIELD_DEF(int64_t, rowBlockNum);           // 行方向基本块的个数
-TILING_DATA_FIELD_DEF(int64_t, colBlockNum);           // 列方向基本块的个数
-TILING_DATA_FIELD_DEF(int64_t, rowTileNum);            // 行方向分核循环次数
-TILING_DATA_FIELD_DEF(int64_t, colTileNum);            // 列方向分核循环次数
-TILING_DATA_FIELD_DEF(int64_t, normalTileRowBlockNum); // 正常核行方向基本块个数
-TILING_DATA_FIELD_DEF(int64_t, normalTileColBlockNum); // 正常核列方向基本块个数
-TILING_DATA_FIELD_DEF(int64_t, tailTileRowBlockNum);   // 尾块核行方向基本块个数
-TILING_DATA_FIELD_DEF(int64_t, tailTileColBlockNum);   // 尾块核列方向基本块个数
-TILING_DATA_FIELD_DEF(int64_t, normalTileRowSize);     // 正常核行方向长度
-TILING_DATA_FIELD_DEF(int64_t, tailTileRowSize);       // 尾块核行方向长度
-TILING_DATA_FIELD_DEF(int64_t, normalTileRowLoopNum);  // 正常核内行方向循环次数
-TILING_DATA_FIELD_DEF(int64_t, normalTileColLoopNum);  // 正常核内列方向循环次数
-TILING_DATA_FIELD_DEF(int64_t, tailTileRowLoopNum);    // 尾块核内行方向循环次数
-TILING_DATA_FIELD_DEF(int64_t, tailTileColLoopNum);    // 尾块核内列方向尾循环次数
-TILING_DATA_FIELD_DEF(int64_t, ubFactor);              // ub内最多处理多少个基本块
-TILING_DATA_FIELD_DEF(int64_t, tailAlignNum);          // 尾核尾块补齐个数 0-整除，1-128，2-256，3-384，4-512
-TILING_DATA_FIELD_DEF(int64_t, copyMethod);            // 核内搬入模式 0-多行搬入，1-单行搬入
-TILING_DATA_FIELD_DEF(int64_t, needSmoothScale);       // 是否需要进行smooth scale
-END_TILING_DATA_DEF;
-
-REGISTER_TILING_DATA_CLASS(DynamicDualLevelMxQuant, DynamicDualLevelMxQuantTilingData)
 
 struct DynamicDualLevelMxQuantCompileInfo {
     int64_t coreNum = 0;
@@ -93,8 +62,7 @@ struct DynamicDualLevelMxQuantTilingParam {
     int64_t workspaceSize = 0;
 };
 
-enum class RoundModeList
-{
+enum class RoundModeList {
     MODE_ROUND = 0,
     MODE_FLOOR = 1,
     MODE_CEIL = 2,
@@ -106,10 +74,8 @@ enum class RoundModeList
 
 class DynamicDualLevelMxQuantTiling {
 public:
-    explicit DynamicDualLevelMxQuantTiling(gert::TilingContext* context) : context_(context)
-    {}
-    ~DynamicDualLevelMxQuantTiling()
-    {}
+    explicit DynamicDualLevelMxQuantTiling(gert::TilingContext* context) : context_(context) {};
+    ~DynamicDualLevelMxQuantTiling() {};
     ge::graphStatus DoTiling();
 
 private:
@@ -129,12 +95,19 @@ private:
 
     RoundModeList GetRoundMode(const std::string& roundMode);
 
+    template <typename T>
+    ge::graphStatus GetAndValidateAttr(
+        const gert::RuntimeAttrs* attrs, int64_t index, T& target, T expectedValue, const std::string& attrName,
+        const std::string& expectedMsg) const;
+
 private:
     uint64_t roundMode_ = 0;
     gert::TilingContext* context_ = nullptr;
-    DynamicDualLevelMxQuantTilingData tilingData;
-    DynamicDualLevelMxQuantTilingParam tilingParams;
+    DynamicDualLevelMxQuantTilingData* tilingData = nullptr;
+    DynamicDualLevelMxQuantTilingParam tilingParams{};
     bool needSmoothScale = false;
+    mutable size_t dimNum_ = 0;
+    mutable int64_t lastDim_ = 0;
 };
 
 } // namespace optiling

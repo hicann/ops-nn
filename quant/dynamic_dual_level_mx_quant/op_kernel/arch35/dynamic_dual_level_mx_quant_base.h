@@ -23,6 +23,7 @@
 #include "../inc/platform.h"
 #include "../inc/kernel_utils.h"
 #include "dynamic_dual_level_mx_quant_struct.h"
+#include "dynamic_dual_level_mx_quant_tiling_data.h"
 
 namespace DynamicDualLevelMxQuant {
 using namespace AscendC;
@@ -101,7 +102,7 @@ protected:
 
 private:
     // tiling data
-    const DynamicDualLevelMxQuantTilingData* tilingData_;
+    const DynamicDualLevelMxQuantTilingData* tilingData_{};
 
     // pipe & queue & buf
     TPipe* pipe_;

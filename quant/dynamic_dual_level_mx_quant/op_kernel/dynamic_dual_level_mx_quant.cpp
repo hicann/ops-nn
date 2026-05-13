@@ -14,6 +14,7 @@
  */
 
 #include "arch35/dynamic_dual_level_mx_quant_base.h"
+#include "arch35/dynamic_dual_level_mx_quant_tiling_data.h"
 
 #define FLOAT_OVERFLOW_MODE_CTRL 60
 
@@ -46,7 +47,7 @@ __global__ __aicore__ void dynamic_dual_level_mx_quant(
 #if (__NPU_ARCH__ == 3510)
     int64_t oriOverflowMode = AscendC::GetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>();
 #endif
-
+    REGISTER_TILING_DEFAULT(DynamicDualLevelMxQuantTilingData);
     GET_TILING_DATA_WITH_STRUCT(DynamicDualLevelMxQuantTilingData, tilingData, tiling);
     TPipe pipe;
     if (tilingData.needSmoothScale == 0) {

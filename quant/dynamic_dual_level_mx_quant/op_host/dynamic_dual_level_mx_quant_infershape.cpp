@@ -64,15 +64,15 @@ graphStatus InferShapeForDynamicDualLevelMxQuant(gert::InferShapeContext* contex
 
     auto attrsPtr = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrsPtr);
-    const int32_t* level0BlockSize = attrsPtr->GetAttrPointer<int32_t>(INDEX_ATTR_BLOCK0_SIZE);
+    const int64_t* level0BlockSize = attrsPtr->GetAttrPointer<int64_t>(INDEX_ATTR_BLOCK0_SIZE);
     OP_CHECK_NULL_WITH_CONTEXT(context, level0BlockSize);
-    const int32_t* level1BlockSize = attrsPtr->GetAttrPointer<int32_t>(INDEX_ATTR_BLOCK1_SIZE);
+    const int64_t* level1BlockSize = attrsPtr->GetAttrPointer<int64_t>(INDEX_ATTR_BLOCK1_SIZE);
     OP_CHECK_NULL_WITH_CONTEXT(context, level1BlockSize);
     size_t dim1 = static_cast<size_t>(xShape->GetDimNum() - 1);
 
     int64_t dimSize1 = UNKNOWN_DIM_VALUE_;
     if (xShape->GetDim(dim1) != UNKNOWN_DIM_VALUE_) {
-        dimSize1 = Ops::Base::CeilDiv(xShape->GetDim(dim1), static_cast<int64_t>(*level0BlockSize));
+        dimSize1 = Ops::Base::CeilDiv(xShape->GetDim(dim1), *level0BlockSize);
     }
 
     *level0ScaleShape = *xShape;
@@ -82,11 +82,9 @@ graphStatus InferShapeForDynamicDualLevelMxQuant(gert::InferShapeContext* contex
         context->GetNodeName(), "x shape is : %s, level0Scale shape is %s.", Shape2String(*xShape).c_str(),
         Shape2String(*level0ScaleShape).c_str());
 
-    int64_t dimSize2 = 0;
-    if (xShape->GetDim(dim1) == UNKNOWN_DIM_VALUE_) {
-        dimSize2 = UNKNOWN_DIM_VALUE_;
-    } else {
-        dimSize2 = Ops::Base::CeilDiv(xShape->GetDim(dim1), static_cast<int64_t>(*level1BlockSize));
+    int64_t dimSize2 = UNKNOWN_DIM_VALUE_;
+    if (xShape->GetDim(dim1) != UNKNOWN_DIM_VALUE_) {
+        dimSize2 = Ops::Base::CeilDiv(xShape->GetDim(dim1), *level1BlockSize);
         dimSize2 = (dimSize2 + ALIGN_NUM - 1) / ALIGN_NUM;
     }
 
