@@ -1,0 +1,75 @@
+[
+  {
+    "id": 1,
+    "name": "torch.nn.Sigmoid fp32",
+    "aclnn_name": "aclnnSigmoid",
+    "version": "v1.0",
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "aclnn_sigmoid",
+    "aclnn_api_type": "aclnn_function",
+    "backward": false,
+    "standard": {
+      "acc": "default",
+      "perf": "not_key"
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "x",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [
+          128
+        ],
+        "range_values": [
+          -8,
+          8
+        ],
+        "backward": false,
+        "align_32B": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null
+  },
+  {
+    "id": 2,
+    "name": "torch.nn.Sigmoid bf16",
+    "aclnn_name": "aclnnSigmoid",
+    "version": "v1.0",
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "aclnn_sigmoid",
+    "aclnn_api_type": "aclnn_function",
+    "backward": false,
+    "standard": {
+      "acc": "default",
+      "perf": "not_key"
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "x",
+        "type": "tensor",
+        "required": true,
+        "dtype": "bf16",
+        "shape": [
+          32,
+          128
+        ],
+        "range_values": [
+          -8,
+          8
+        ],
+        "backward": false,
+        "align_32B": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null
+  }
+]
