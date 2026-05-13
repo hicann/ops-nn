@@ -389,7 +389,7 @@ if (UT_TEST_ALL OR OP_KERNEL_UT)
     set(fastOpTestSocVersions "" CACHE STRING "fastOp Test SocVersions")
 endif()
 
-# supportedSocVersion: ascend310p ascend910B1 ascend950pr_9599
+# supportedSocVersion: ascend310p ascend910B1 ascend950pr_9599 ascend350_355e
 function(AddOpTestCase opName supportedSocVersion otherCompileOptions)
     set(DEPENDENCY_OPS "")
     set(temp_ops "")

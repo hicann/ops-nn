@@ -12,7 +12,7 @@
 set -e
 
 declare -A SOC_TO_ARCH
-SOC_TO_ARCH=(["ascend910_93"]="2201" ["ascend910b"]="2201" ["ascend950"]="3510")
+SOC_TO_ARCH=(["ascend910_93"]="2201" ["ascend910b"]="2201" ["ascend950"]="3510" ["ascend350"]="3510")
 
 COMPILED_OPS=""
 THREAD_NUM=8
@@ -87,7 +87,7 @@ export PE_BUILD_JOBS=${THREAD_NUM}
 
 if [ -n "$SOC_VERSION" ]; then
   if [ -z "${SOC_TO_ARCH[$SOC_VERSION]+x}" ]; then
-    echo "Warning: soc '$SOC_VERSION' is not supported. Only support: ascend910b, ascend910_93, ascend950."
+    echo "Warning: soc '$SOC_VERSION' is not supported. Only support: ascend910b, ascend910_93, ascend950, ascend350."
     exit 0
   fi
   echo "NPU_ARCH: $SOC_VERSION"
