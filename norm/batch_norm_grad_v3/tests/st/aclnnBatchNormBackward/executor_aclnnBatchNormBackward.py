@@ -53,7 +53,7 @@ class aclnnBatchNormBackwardExecutor(BaseApi):
 
         res_list = []
         for i in range(3):
-            if res[i] != None:
+            if res[i] is not None:
                 res_list.append(res[i])
             else:
                 res_list.append(torch.zeros(shape_list[i]).to(dtype_list[i]))
