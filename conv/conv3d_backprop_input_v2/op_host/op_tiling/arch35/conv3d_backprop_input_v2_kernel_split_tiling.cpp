@@ -327,7 +327,7 @@ bool Conv3DDXV2KernelSplitTiling::CheckDtypeCompatibility()
 
     size_t filterIndex = FILTER_INDEX;
     size_t outputBackpropIndex = OUTPUT_BP_INDEX;
-    if (opType_ == optiling::OpTypeV2::kConv3DTransposeV2) {
+    if (opType_ == optiling::OpTypeV2::kConv3DTransposeV2 || opType_ == optiling::OpTypeV2::kExtendConvTranspose) {
         outputBackpropIndex = FILTER_INDEX;
         filterIndex = OUTPUT_BP_INDEX;
     }

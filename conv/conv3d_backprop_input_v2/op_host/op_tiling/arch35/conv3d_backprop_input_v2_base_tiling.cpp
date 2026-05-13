@@ -131,7 +131,7 @@ bool Conv3DBackpropInputV2TilingArch35::GetShapeFormatInfo()
     size_t aMatrixIndex = OUTPUT_BP_INDEX;
     size_t bMatrixIndex = FILTER_INDEX;
 
-    if (opType_ == optiling::OpTypeV2::kConv3DTransposeV2) {
+    if (opType_ == optiling::OpTypeV2::kConv3DTransposeV2 || opType_ == optiling::OpTypeV2::kExtendConvTranspose) {
         aMatrixIndex = FILTER_INDEX;
         bMatrixIndex = OUTPUT_BP_INDEX;
     }
@@ -227,8 +227,8 @@ ge::graphStatus Conv3DBackpropInputV2TilingArch35::DoOpTiling()
 
 bool Conv3DBackpropInputV2TilingArch35::PrintInputsAttrs(conv_bp_v2_kernel::TConv3DInputV2Tiling& tiling){
     const auto op_name = context_->GetNodeName();
-    size_t weight_index = (opType_ == optiling::OpTypeV2::kConv3DTransposeV2) ? TRANSPOSE_FILTER_INDEX : FILTER_INDEX; // dx filter idx 1 | transpose filter idx 2
-    size_t dedy_x_index = (opType_ == optiling::OpTypeV2::kConv3DTransposeV2) ? TRANSPOSE_X_INDEX : OUTPUT_BP_INDEX; // dx dedy idx 2 | transpose x idx 1
+    size_t weight_index = (opType_ == optiling::OpTypeV2::kConv3DTransposeV2 || opType_ == optiling::OpTypeV2::kExtendConvTranspose) ? TRANSPOSE_FILTER_INDEX : FILTER_INDEX; // dx filter idx 1 | transpose filter idx 2
+    size_t dedy_x_index = (opType_ == optiling::OpTypeV2::kConv3DTransposeV2 || opType_ == optiling::OpTypeV2::kExtendConvTranspose) ? TRANSPOSE_X_INDEX : OUTPUT_BP_INDEX; // dx dedy idx 2 | transpose x idx 1
     auto inputSizeInfo = GetTensorInfo(context_, INPUT_SIZE_INDEX, true, kInputSizeDim); // input_size dim=1
     auto weightInfo = GetTensorInfo(context_, weight_index, true, kConv3DbpDim);
     auto dedyInfo = GetTensorInfo(context_, dedy_x_index, true, kConv3DbpDim);
@@ -252,10 +252,10 @@ bool Conv3DBackpropInputV2TilingArch35::PrintInputsAttrs(conv_bp_v2_kernel::TCon
     
     auto attrs = context_->GetAttrs();
     const auto groups = attrs->GetAttrPointer<int64_t>(groupIndex);
-    size_t enable_hf32_index = (opType_ == optiling::OpTypeV2::kConv3DTransposeV2) ? TRANSPOSE_ENABLE_HF32_INDEX : ENABLE_HF32_INDEX; // dx hf32 idx 5 | transpose hf32 idx 7
+    size_t enable_hf32_index = (opType_ == optiling::OpTypeV2::kConv3DTransposeV2 || opType_ == optiling::OpTypeV2::kExtendConvTranspose) ? TRANSPOSE_ENABLE_HF32_INDEX : ENABLE_HF32_INDEX; // dx hf32 idx 5 | transpose hf32 idx 7
     const auto enableHf32 = attrs->GetAttrPointer<bool>(enable_hf32_index);
     OP_CHECK_IF(groups == nullptr, OP_LOGE(op_name, "get groups from context fail."), return false);
-    if (opType_ == optiling::OpTypeV2::kConv3DTransposeV2){
+    if (opType_ == optiling::OpTypeV2::kConv3DTransposeV2 || opType_ == optiling::OpTypeV2::kExtendConvTranspose){
         auto output_paddingShape = GetAttrVector(context_, OUTPUT_PADDING_INDEX, kConv3DbpDim, "output_padding");
         const auto offset = attrs->GetAttrPointer<bool>(OFFSET_X_INDEX);
         OP_LOGD(op_name, "Attrs stride: %s, pads: %s, dilation: %s, groups: %ld, enable_hf32: %d, output_padding: %s, offset_x: %ld", 
@@ -392,7 +392,7 @@ bool Conv3DBackpropInputV2TilingArch35::AnalyzeDtype() const
     size_t outputBackpropIndex = OUTPUT_BP_INDEX;
     size_t filterIndex = FILTER_INDEX;
 
-    if (opType_ == optiling::OpTypeV2::kConv3DTransposeV2) {
+    if (opType_ == optiling::OpTypeV2::kConv3DTransposeV2 || opType_ == optiling::OpTypeV2::kExtendConvTranspose) {
         outputBackpropIndex = FILTER_INDEX;
         filterIndex = OUTPUT_BP_INDEX;
     }
@@ -425,7 +425,7 @@ bool Conv3DBackpropInputV2TilingArch35::AnalyzeDtype() const
     }
 
     OP_TILING_CHECK(
-        opType_ == optiling::OpTypeV2::kConv3DTransposeV2 && inputSizeDtype != ge::DT_INT32 && inputSizeDtype != ge::DT_INT64,
+        (opType_ == optiling::OpTypeV2::kConv3DTransposeV2 || opType_ == optiling::OpTypeV2::kExtendConvTranspose) && inputSizeDtype != ge::DT_INT32 && inputSizeDtype != ge::DT_INT64,
         CUBE_INNER_ERR_REPORT(
             opName_, "input_size dtype should be int32 or int64, but actually get inputSizeDtype is [%s]",
             ge::TypeUtils::DataTypeToSerialString(inputSizeDtype).c_str()),
@@ -721,7 +721,7 @@ bool Conv3DBackpropInputV2TilingArch35::CheckBaseBlockTiling(TilingValueDavid& t
                                   tilingParams.stepKa * tilingParams.baseK / (runInfo_.kernel_h * runInfo_.kernel_w) +
                               static_cast<uint64_t>(tilingParams.bl1Pbuffer) * dtypeByteL0b_ * tilingParams.stepKb *
                                   tilingParams.baseN * tilingParams.baseK;
-        if (opType_ == optiling::OpTypeV2::kConv3DTransposeV2) {
+        if (opType_ == optiling::OpTypeV2::kConv3DTransposeV2 || opType_ == optiling::OpTypeV2::kExtendConvTranspose) {
             isBiasFullLoad_ = biasFullLoadSize <= L1_BIAS_SIZE && (biasFullLoadSize + l1UsedSize <= platformInfo_.l1_size);
             if (isBiasFullLoad_ || (biasNonFullLoadSize + l1UsedSize) <= platformInfo_.l1_size) {
                 break;

@@ -31,7 +31,7 @@ public:
     explicit ExtendConvTransposeTiling(gert::TilingContext *context) : Conv3DBackpropInputV2TilingArch35(context)
     {
         Reset();
-        opType_ = optiling::OpTypeV2::kConv3DTransposeV2;
+        opType_ = optiling::OpTypeV2::kExtendConvTranspose;
     }
     ~ExtendConvTransposeTiling() override = default;
 };
@@ -41,7 +41,7 @@ class ExtendConvTransposeSmallShapeTiling : public Conv3DDXV2SmallShapeTiling {
         explicit ExtendConvTransposeSmallShapeTiling(gert::TilingContext *context) : Conv3DDXV2SmallShapeTiling(context)
         {
             Reset();
-            opType_ = optiling::OpTypeV2::kConv3DTransposeV2;
+            opType_ = optiling::OpTypeV2::kExtendConvTranspose;
         }
         ~ExtendConvTransposeSmallShapeTiling() override = default;
 };
@@ -51,7 +51,7 @@ class ExtendConvTransposeFullLoadTiling : public Conv3DDXV2FullLoadTiling {
         explicit ExtendConvTransposeFullLoadTiling(gert::TilingContext *context) : Conv3DDXV2FullLoadTiling(context)
         {
             Reset();
-            opType_ = optiling::OpTypeV2::kConv3DTransposeV2;
+            opType_ = optiling::OpTypeV2::kExtendConvTranspose;
         }
         ~ExtendConvTransposeFullLoadTiling() override = default;
 };
@@ -61,7 +61,7 @@ class ExtendConvTransposeInnerProductTiling : public Conv3DDXV2InnerProductTilin
         explicit ExtendConvTransposeInnerProductTiling(gert::TilingContext *context) : Conv3DDXV2InnerProductTiling(context)
         {
             Reset();
-            opType_ = optiling::OpTypeV2::kConv3DTransposeV2;
+            opType_ = optiling::OpTypeV2::kExtendConvTranspose;
         }
         ~ExtendConvTransposeInnerProductTiling() override = default;
 };
@@ -71,7 +71,7 @@ class ExtendConvTransposeKernelSplitTiling : public Conv3DDXV2KernelSplitTiling 
         explicit ExtendConvTransposeKernelSplitTiling(gert::TilingContext *context) : Conv3DDXV2KernelSplitTiling(context)
         {
             Reset();
-            opType_ = optiling::OpTypeV2::kConv3DTransposeV2;
+            opType_ = optiling::OpTypeV2::kExtendConvTranspose;
         }
         ~ExtendConvTransposeKernelSplitTiling() override = default;
 };
@@ -81,7 +81,7 @@ class ExtendConvTransposeKernelSplitFullLoadTiling : public Conv3DDXV2KernelSpli
         explicit ExtendConvTransposeKernelSplitFullLoadTiling(gert::TilingContext *context) : Conv3DDXV2KernelSplitFullLoadTiling(context)
         {
             Reset();
-            opType_ = optiling::OpTypeV2::kConv3DTransposeV2;
+            opType_ = optiling::OpTypeV2::kExtendConvTranspose;
         }
         ~ExtendConvTransposeKernelSplitFullLoadTiling() override = default;
 };

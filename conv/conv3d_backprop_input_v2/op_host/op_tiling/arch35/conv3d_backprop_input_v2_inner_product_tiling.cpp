@@ -911,7 +911,7 @@ void Conv3DDXV2InnerProductTiling::InitBaseMNK(L0TilingParams& l0Params)
     uint64_t alignedWiAl1 = std::max(static_cast<uint64_t>(l0Params.baseM) / runInfo_.dedx_w, ONE_U64) * runInfo_.dedx_w;
     if (runInfo_.kernel_h == ENABLE_TILING_HK_WK && runInfo_.kernel_w == ENABLE_TILING_HK_WK &&
         l0Params.baseM == BASIC_BLOCK_SIZE_512 && l0Params.baseK <= BASIC_BLOCK_SIZE_16 && totalCnt >= coreNum_ * TOTAL_CNT_LOWER_RATIO && totalCnt <= coreNum_ * TOTAL_CNT_UPPER_RATIO) {
-        if (opType_ != optiling::OpTypeV2::kConv3DTransposeV2 && hwi>= BASIC_BLOCK_SIZE_512
+        if ((opType_ != optiling::OpTypeV2::kConv3DTransposeV2 && opType_ != optiling::OpTypeV2::kExtendConvTranspose) && hwi>= BASIC_BLOCK_SIZE_512
             && (alignedWiAl1 * mCnt < tilingRunInfo_.mValue || alignedWiAl1 >= BASIC_BLOCK_SIZE_512)) {
             l0Params.baseM = BASIC_BLOCK_SIZE_256;
             OP_LOGD(opName_, "Special adjust: totalCnt=%lu, baseM=%u, alignedWiAl1=%u",

@@ -53,6 +53,7 @@ enum OpTypeV2 : size_t
     kConv3DBackpropFilterV2,
     kConv3DBackpropInputV2,
     kConv3DTransposeV2,
+    kExtendConvTranspose,
 };
 
 // 兼容opp整包、静态库和子包场景，向算子业务侧代码屏蔽差异：
