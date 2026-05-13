@@ -18,6 +18,7 @@
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
 #include "masked_scatter_with_position_tiling_struct.h"
+#include "simt_api/asc_simt.h"
 
 namespace MaskedScatterWithPosition {
 
@@ -80,11 +81,11 @@ __aicore__ inline void MaskedScatterWithPositionSimt<T, U, PATTERN_TYPE>::Proces
     GetUintDivMagicAndShift(magic, shift, static_cast<U>(xInner));
 
     if constexpr (PATTERN_TYPE == PATTERN_AB) {  // AB
-        Simt::VF_CALL<MaskedScatterWithPositionSimtAB<T, U, PATTERN_TYPE>>(Simt::Dim3(USED_THREAD_NUMS),
+        asc_vf_call<MaskedScatterWithPositionSimtAB<T, U, PATTERN_TYPE>>(dim3(USED_THREAD_NUMS),
         (__gm__ T*)(xGm_.GetPhyAddr()), (__gm__ bool*)(maskGm_.GetPhyAddr()), (__gm__ int64_t*)(positionGm_.GetPhyAddr()), (__gm__ T*)(updatesGm_.GetPhyAddr()),
         magic, shift, xNum, xInner);
     } else {  // BA
-        Simt::VF_CALL<MaskedScatterWithPositionSimtBA<T, U, PATTERN_TYPE>>(Simt::Dim3(USED_THREAD_NUMS),
+        asc_vf_call<MaskedScatterWithPositionSimtBA<T, U, PATTERN_TYPE>>(dim3(USED_THREAD_NUMS),
         (__gm__ T*)(xGm_.GetPhyAddr()), (__gm__ bool*)(maskGm_.GetPhyAddr()), (__gm__ int64_t*)(positionGm_.GetPhyAddr()), (__gm__ T*)(updatesGm_.GetPhyAddr()),
         magic, shift, xNum, xInner);
     }
@@ -95,7 +96,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_LAUNCH) inline void MaskedScatterWith
      __gm__ T* xGm, __gm__ bool* maskGm, __gm__ int64_t* positionGm, __gm__ T* updatesGm, U magic, U shift, U xNum, U xInner
      )
 {
-    for (U i = Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx(); i < xNum; i += Simt::GetBlockNum() * Simt::GetThreadNum()) {
+    for (U i = blockIdx.x * blockDim.x + threadIdx.x; i < xNum; i += gridDim.x * blockDim.x) {
         U rowidx = Simt::UintDiv(i, magic, shift);
         U colidx = i - rowidx * xInner;
         if (maskGm[rowidx] == true) {
@@ -110,7 +111,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_LAUNCH) inline void MaskedScatterWith
      __gm__ T* xGm, __gm__ bool* maskGm, __gm__ int64_t* positionGm, __gm__ T* updatesGm, U magic, U shift, U xNum, U xInner
      )
 {
-    for (U i = Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx(); i < xNum; i += Simt::GetBlockNum() * Simt::GetThreadNum()) {
+    for (U i = blockIdx.x * blockDim.x + threadIdx.x; i < xNum; i += gridDim.x * blockDim.x) {
         U rowidx = Simt::UintDiv(i, magic, shift);
         U colidx = i - rowidx * xInner;
         if (maskGm[i % xInner] == true) {

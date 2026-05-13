@@ -21,6 +21,7 @@
 #include "../inc/platform.h"
 #include "../inc/kernel_utils.h"
 #include "max_pool3d_grad_with_argmax_struct.h"
+#include "simt_api/asc_simt.h"
 
 using namespace AscendC;
 
@@ -111,8 +112,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void MaxPool3DGradWithArg
     OFFSET_T shiftStrideW = simtParams[MAGIC_STRIDE_W_IDX + 1];
     using DIV_T = typename std::conditional<std::is_same<OFFSET_T, int32_t>::value, uint32_t, uint64_t>::type;
     DIV_T count = nDims * cDims * dDims * hDims * wDims;
-    for (DIV_T index = Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx(); index < count;
-         index += Simt::GetBlockNum() * Simt::GetThreadNum()) {
+    for (DIV_T index = blockIdx.x * blockDim.x + threadIdx.x; index < count;
+         index += gridDim.x * blockDim.x) {
         DIV_T temp1 = Simt::UintDiv(index, static_cast<DIV_T>(magicW), static_cast<DIV_T>(shiftW));
         DIV_T w = index - temp1 * static_cast<DIV_T>(wDims);
         DIV_T temp2 = Simt::UintDiv(temp1, static_cast<DIV_T>(magicH), static_cast<DIV_T>(shiftH));
@@ -172,8 +173,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void MaxPool3DGradWithArg
     OFFSET_T shiftStrideW = simtParam[MAGIC_STRIDE_W_IDX + 1];
     using DIV_T = typename std::conditional<std::is_same<OFFSET_T, int32_t>::value, uint32_t, uint64_t>::type;
     DIV_T count = nDims * cDims * dDims * hDims * wDims;
-    for (DIV_T index = Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx(); index < count;
-         index += Simt::GetBlockNum() * Simt::GetThreadNum()) {
+    for (DIV_T index = blockIdx.x * blockDim.x + threadIdx.x; index < count;
+         index += gridDim.x * blockDim.x) {
         DIV_T temp1 = Simt::UintDiv(index, static_cast<DIV_T>(magicC), static_cast<DIV_T>(shiftC));
         DIV_T c = index - temp1 * static_cast<DIV_T>(cDims);
         DIV_T temp2 = Simt::UintDiv(temp1, static_cast<DIV_T>(magicW), static_cast<DIV_T>(shiftW));
@@ -268,15 +269,15 @@ __aicore__ inline void MaxPool3DGradWithArgmaxSimt<VALUE_T, INDICES_T, OFFSET_T,
     auto indicesData = (__gm__ INDICES_T *)argmax_.GetPhyAddr();
 
     if constexpr (CHANNEL_LAST == 1) {
-        Simt::VF_CALL<MaxPool3DGradWithArgmaxNdhwc<VALUE_T, INDICES_T, OFFSET_T>>(
-            Simt::Dim3(THREAD_DIM), (__ubuf__ OFFSET_T *)simtParam.GetPhyAddr(), gradData, simtTilingData(0),
+        asc_vf_call<MaxPool3DGradWithArgmaxNdhwc<VALUE_T, INDICES_T, OFFSET_T>>(
+            dim3(THREAD_DIM), (__ubuf__ OFFSET_T *)simtParam.GetPhyAddr(), gradData, simtTilingData(0),
             simtTilingData(1), simtTilingData(2), simtTilingData(3), simtTilingData(4), simtTilingData(5),
             simtTilingData(6), simtTilingData(7), simtTilingData(8), simtTilingData(9), simtTilingData(10),
             simtTilingData(14), simtTilingData(15), simtTilingData(16), simtTilingData(17), simtTilingData(18),
             simtTilingData(19), outputData, indicesData);
     } else {
-        Simt::VF_CALL<MaxPool3DGradWithArgmaxNcdhw<VALUE_T, INDICES_T, OFFSET_T>>(
-            Simt::Dim3(THREAD_DIM), (__ubuf__ OFFSET_T *)simtParam.GetPhyAddr(), gradData, simtTilingData(0),
+        asc_vf_call<MaxPool3DGradWithArgmaxNcdhw<VALUE_T, INDICES_T, OFFSET_T>>(
+            dim3(THREAD_DIM), (__ubuf__ OFFSET_T *)simtParam.GetPhyAddr(), gradData, simtTilingData(0),
             simtTilingData(1), simtTilingData(2), simtTilingData(3), simtTilingData(4), simtTilingData(5),
             simtTilingData(6), simtTilingData(7), simtTilingData(8), simtTilingData(9), simtTilingData(10),
             simtTilingData(14), simtTilingData(15), simtTilingData(16), simtTilingData(17), simtTilingData(18),

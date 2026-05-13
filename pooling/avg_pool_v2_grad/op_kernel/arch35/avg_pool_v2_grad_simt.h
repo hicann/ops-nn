@@ -19,6 +19,7 @@
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
 #include "avg_pool_v2_grad_tiling_data.h"
+#include "simt_api/asc_simt.h"
 
 #ifdef __CCE_KT_TEST__
 #define LAUNCH_BOUND(threads)
@@ -104,13 +105,13 @@ __simt_callee__ __aicore__ inline static void CycleUpdateGradValue(
         for (IDX_T j = pwStart; j < pwEnd ; ++j) {
             IDX_T hStart = i * strideH - padHL;
             IDX_T wStart = j * strideW - padWL;
-            IDX_T hEnd = Simt::Min(hStart + kernelH, height + padHR);
-            IDX_T wEnd = Simt::Min(wStart + kernelW, width + padWR);
+            IDX_T hEnd = min(hStart + kernelH, height + padHR);
+            IDX_T wEnd = min(wStart + kernelW, width + padWR);
             IDX_T poolSize = (hEnd - hStart) * (wEnd - wStart);
-            hStart = Simt::Max(hStart, static_cast<IDX_T>(0));
-            wStart = Simt::Max(wStart, static_cast<IDX_T>(0));
-            hEnd = Simt::Min(hEnd, height);
-            wEnd = Simt::Min(wEnd, width);
+            hStart = max(hStart, static_cast<IDX_T>(0));
+            wStart = max(wStart, static_cast<IDX_T>(0));
+            hEnd = min(hEnd, height);
+            wEnd = min(wEnd, width);
 
             if (hStart >= hEnd || wStart >= wEnd) {
                 continue;
@@ -160,8 +161,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AvgPoolV2GradSimtNch
     const auto& padWR = tilingDataParam[PAD_WR_IDX];
     const auto& divisorOverride = tilingDataParam[DIV_IDX];
 
-    for (IDX_T index = Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx(); index < count;
-         index = index + Simt::GetBlockNum() * Simt::GetThreadNum()) {
+    for (IDX_T index = blockIdx.x * blockDim.x + threadIdx.x; index < count;
+         index = index + gridDim.x * blockDim.x) {
         UIDX_T dim0Idx = Simt::UintDiv(static_cast<UIDX_T>(index), magicW, shiftW);
         IDX_T w = index - dim0Idx * static_cast<UIDX_T>(width);
         UIDX_T dim1Idx = Simt::UintDiv(dim0Idx, magicH, shiftH);
@@ -172,9 +173,9 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AvgPoolV2GradSimtNch
         w += padWL;
 
         IDX_T phStart = (h < kernelH) ? 0 : (h - kernelH) / strideH + 1;
-        IDX_T phEnd = Simt::Min(h / strideH + 1, static_cast<IDX_T>(pooledHeight));
+        IDX_T phEnd = min(h / strideH + 1, static_cast<IDX_T>(pooledHeight));
         IDX_T pwStart = (w < kernelW) ? 0 : (w - kernelW) / strideW + 1;
-        IDX_T pwEnd = Simt::Min(w / strideW + 1, static_cast<IDX_T>(pooledWidth));
+        IDX_T pwEnd = min(w / strideW + 1, static_cast<IDX_T>(pooledWidth));
 
         ACC_VALUE_T gradient = 0;
         const __gm__ VALUE_T* xDataSlice = xData + n * pooledHeight * pooledWidth;
@@ -211,8 +212,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AvgPoolV2GradSimtNhw
     const auto& padWR = tilingDataParam[PAD_WR_IDX];
     const auto& divisorOverride = tilingDataParam[DIV_IDX];
 
-    for (IDX_T index = Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx(); index < count;
-         index = index + Simt::GetBlockNum() * Simt::GetThreadNum()) {
+    for (IDX_T index = blockIdx.x * blockDim.x + threadIdx.x; index < count;
+         index = index + gridDim.x * blockDim.x) {
         UIDX_T dim0Idx = Simt::UintDiv(static_cast<UIDX_T>(index), magicC, shiftC);
         IDX_T c = index - dim0Idx * static_cast<UIDX_T>(channels);
         UIDX_T dim1Idx = Simt::UintDiv(dim0Idx, magicW, shiftW);
@@ -224,9 +225,9 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AvgPoolV2GradSimtNhw
         w += padWL;
 
         IDX_T phStart = (h < kernelH) ? 0 : (h - kernelH) / strideH + 1;
-        IDX_T phEnd = Simt::Min(h / strideH + 1, static_cast<IDX_T>(pooledHeight));
+        IDX_T phEnd = min(h / strideH + 1, static_cast<IDX_T>(pooledHeight));
         IDX_T pwStart = (w < kernelW) ? 0 : (w - kernelW) / strideW + 1;
-        IDX_T pwEnd = Simt::Min(w / strideW + 1, static_cast<IDX_T>(pooledWidth));
+        IDX_T pwEnd = min(w / strideW + 1, static_cast<IDX_T>(pooledWidth));
 
         ACC_VALUE_T gradient = 0;
         const __gm__ VALUE_T* xDataSlice = xData + n * channels * pooledHeight * pooledWidth + c;
@@ -299,15 +300,15 @@ __aicore__ inline void AvgPoolV2GradSimt<VALUE_T, IDX_T, FORMAT_T, COUNTPAD_T, D
     DataSyncBarrier<MemDsbT::UB>();
 
     if constexpr (FORMAT_T == FORMAT_NCHW_TYPE) {
-        Simt::VF_CALL<AvgPoolV2GradSimtNchwKernel<VALUE_T, IDX_T, UIDX_T, float, COUNTPAD_T, DIV_T>>(
-            Simt::Dim3(THREAD_DIM), count,
+        asc_vf_call<AvgPoolV2GradSimtNchwKernel<VALUE_T, IDX_T, UIDX_T, float, COUNTPAD_T, DIV_T>>(
+            dim3(THREAD_DIM), count,
             (__ubuf__ UIDX_T*)simtParam.GetPhyAddr(),
             (__ubuf__ int32_t*)tilingDataParam.GetPhyAddr(),
             xAddr, inputChannel, inputHeight, inputWidth,
             pooledHeight, pooledWidth, yAddr);
     } else {
-        Simt::VF_CALL<AvgPoolV2GradSimtNhwcKernel<VALUE_T, IDX_T, UIDX_T, float, COUNTPAD_T, DIV_T>>(
-            Simt::Dim3(THREAD_DIM), count,
+        asc_vf_call<AvgPoolV2GradSimtNhwcKernel<VALUE_T, IDX_T, UIDX_T, float, COUNTPAD_T, DIV_T>>(
+            dim3(THREAD_DIM), count,
             (__ubuf__ UIDX_T*)simtParam.GetPhyAddr(),
             (__ubuf__ int32_t*)tilingDataParam.GetPhyAddr(),
             xAddr, inputChannel, inputHeight, inputWidth,
