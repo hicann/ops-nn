@@ -40,6 +40,8 @@ constexpr int64_t RA_BINARY_ADD_THRESHOLD = 4;
 constexpr int64_t WSP_RESERVED_SIZE = 16L * 1024L * 1024L;
 constexpr int64_t CACHE_LINE_SIZE = 256;
 constexpr int64_t SPLIT_R_TEMPLATE_A_THRESHOLD = 256;
+constexpr int64_t SPLIT_R_TEMPLATE_R_THRESHOLD = 256 * 16;
+constexpr int64_t SPLIT_R_TEMPLATE_BIG_A_THRESHOLD = 512;
 
 } // namespace
 static int64_t FindBinaryQuotient(int64_t len)
@@ -74,7 +76,10 @@ protected:
                 return false;
             }
         }
-        if (a > SPLIT_R_TEMPLATE_A_THRESHOLD) {
+        if (a > SPLIT_R_TEMPLATE_A_THRESHOLD && r1 <= SPLIT_R_TEMPLATE_R_THRESHOLD) {
+            return false;
+        }
+        if (a > SPLIT_R_TEMPLATE_BIG_A_THRESHOLD) {
             return false;
         }
         return true;
