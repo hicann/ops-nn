@@ -27,6 +27,7 @@ if(UT_TEST_ALL OR OP_KERNEL_UT)
             test_op_kernel_main.cpp
         )
         target_include_directories(${OP_KERNEL_UT_EXE}_${socVersion} PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}
             ${ASCEND_DIR}/${SYSTEM_PREFIX}/pkg_inc
         )
         get_property(lib_list GLOBAL PROPERTY OPKERNEL_OBJECT_LIBS)

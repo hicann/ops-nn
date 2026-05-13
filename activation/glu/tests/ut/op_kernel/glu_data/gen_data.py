@@ -12,13 +12,11 @@
 import sys
 import numpy as np
 import torch
-import tensorflow as tf
 
 def gen_golden_data_simple(n, c, l, dim, dtype):
     dtype_dict = {
         "float32": np.float32,
         "float16": np.float16,
-        "bfloat16": tf.bfloat16.as_numpy_dtype
     }
     dtype = dtype_dict[dtype]
 

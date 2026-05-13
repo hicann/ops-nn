@@ -631,7 +631,7 @@ UT编写指导如下，如需查看详细实现，请参考样例UT实现[test_a
     - 直接引用`op_host/${op_name}_tiling.h`
     - 或在UT目录提供轻量适配头（如`examples/add_example/tests/ut/op_kernel/add_example_tiling.h`）
     - 若Kernel为模板函数，可在UT中直接`#include "../../../op_kernel/${op_name}.cpp"`触发实例化（参考`AddExample`）
-- **测试类**：继承`testing::Test`，实现`SetUpTestCase/TearDownTestCase`统一做数据准备与清理（如拷贝数据目录、chmod、生成bin）。
+- **测试类**：继承`testing::Test`，实现`SetUpTestCase/TearDownTestCase`统一做数据准备与清理（如拷贝数据目录、chmod、生成bin）。推荐使用公共测试数据框架 `kernel_ut_data_helper.h` 进行数据准备与清理，避免直接调用 `system()` 执行 shell 命令。
 - **命名**：测试类建议`${OpName}KernelTest`，用例名建议`test_case_xxx`，可读性更高。
 
 测试类示例：
@@ -727,6 +727,77 @@ clipped_swiglu_data/gen_data.py)、
   [compare_data.py](../../../activation/fatrelu_mul/tests/ut/op_kernel/fatrelu_mul_data/compare_data.py)。
 - 简单算子可直接在UT中计算期望值并比对。
     - 浮点比较建议使用`EXPECT_NEAR/ASSERT_NEAR`并设置合理容差。
+    - 若使用公共框架需要确保脚本路径正确，框架会检查脚本存在性。
+
+**5. 使用公共测试数据框架**
+
+ops-nn 提供了统一的 Kernel UT 测试数据框架，简化数据准备流程。公共框架位于 `tests/ut/op_kernel_helper/` 目录。
+
+**核心组件：**
+
+| 文件 | 功能 |
+|------|------|
+| `kernel_ut_data_helper.h/cpp` | 路径定位、目录拷贝、bin清理 |
+| `kernel_ut_data_executor.h/cpp` | 统一调用 gen_data.py/compare_data.py |
+
+**基本使用示例：**
+
+```CPP
+#include "kernel_ut_data_helper.h"
+#include "kernel_ut_data_executor.h"
+
+class MyOpKernelTest : public testing::Test {
+protected:
+    static void SetUpTestCase() {
+        // 一站式准备：拷贝数据目录 + 清理旧产物 + 设置权限
+        kernel_ut::SetupTestEnvironment(
+            "my_op/tests/ut/op_kernel/my_op_data", "my_op_data");
+    }
+};
+
+TEST_F(MyOpKernelTest, test_case_basic) {
+    // 生成测试数据
+    kernel_ut::RunGenData("./my_op_data", {"arg1", "arg2"});
+    
+    // 申请内存、设置tiling、执行kernel
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(...);
+    // ...
+    ICPU_RUN_KF(my_op, blockDim, x, y, workspace, tiling);
+    
+    // 结果比对
+    kernel_ut::RunCompareData("./my_op_data", {"dtype"});
+    
+    // 释放资源
+    AscendC::GmFree(x);
+}
+```
+
+**公共框架提供的能力：**
+
+| 函数 | 功能 | 替代方案 |
+|------|------|----------|
+| `SetupTestEnvironment()` | 环境准备 | `system("cp -r") + system("chmod") + system("rm -rf")` |
+| `GetTestWorkDir()` | 获取工作目录 | `get_current_dir_name()` (GNU扩展) |
+| `RunGenData()` | 调用 gen_data.py | `system("python3 gen_data.py")` |
+| `RunCompareData()` | 调用 compare_data.py | `system("python3 compare_data.py")` |
+
+**数据目录组织建议：**
+
+建议命名为 `${op_name}_data`，放置在 `tests/ut/op_kernel/` 下：
+
+```
+tests/ut/op_kernel/
+├── my_op_data/
+│   ├── gen_data.py        # 生成输入数据和golden数据
+│   ├── compare_data.py    # 比对kernel输出与golden数据
+│   ├── *.bin              # 测试数据（运行时生成）
+└── ...
+```
+
+**已迁移示例参考：**
+
+- [activation/glu/tests/ut/op_kernel/test_glu.cpp](../../../activation/glu/tests/ut/op_kernel/test_glu.cpp)
+- [quant/flat_quant/tests/ut/op_kernel/test_flat_quant.cpp](../../../quant/flat_quant/tests/ut/op_kernel/test_flat_quant.cpp)
 
 ### aclnn调用验证
 

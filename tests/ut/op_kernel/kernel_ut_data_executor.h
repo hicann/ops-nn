@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -7,21 +7,25 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-#ifndef TEST_UT_OP_KERNEL_DATA_UTILS_H
-#define TEST_UT_OP_KERNEL_DATA_UTILS_H
-#include <iostream>
-#include <fstream>
-#include <cstdio>
+
+#ifndef KERNEL_UT_DATA_EXECUTOR_H
+#define KERNEL_UT_DATA_EXECUTOR_H
+
 #include <string>
 #include <vector>
-#include <iomanip>
-#include <fcntl.h>
-#include <unistd.h>
-#include <sys/stat.h>
-
+#include <sstream>
 #include "kernel_ut_log.h"
 
-bool ReadFile(const std::string& filePath, size_t& fileSize, void* buffer, size_t bufferSize);
-bool WriteFile(const std::string& filePath, const void* buffer, size_t size);
+namespace kernel_ut {
+
+bool CheckScriptExists(const std::string& scriptPath);
+
+int ExecuteCommand(const std::string& command, const std::string& workDir = "");
+
+bool RunGenData(const std::string& dataDir, const std::vector<std::string>& args);
+
+bool RunCompareData(const std::string& dataDir, const std::vector<std::string>& args);
+
+} // namespace kernel_ut
 
 #endif

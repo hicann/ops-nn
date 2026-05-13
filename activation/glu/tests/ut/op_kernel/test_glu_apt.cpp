@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 #include <array>
@@ -16,6 +16,8 @@
 #include "tikicpulib.h"
 #include "glu_tiling_def.h"
 #include "data_utils.h"
+#include "kernel_ut_data_helper.h"
+#include "kernel_ut_data_executor.h"
 
 #include <cstdint>
 
@@ -23,17 +25,10 @@ using namespace std;
 
 extern "C" __global__ __aicore__ void glu(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
 
-class glu_test : public testing::Test
-{
+class glu_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "glu_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "glu_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "glu_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "glu_test TearDown\n" << endl; }
 };
 
 TEST_F(glu_test, test_glu_case_1)
@@ -41,22 +36,20 @@ TEST_F(glu_test, test_glu_case_1)
 #undef DTYPE_INPUT
 #define DTYPE_INPUT DT_FP32
 
+    kernel_ut::SetupTestEnvironment("activation/glu/tests/ut/op_kernel/glu_data", "glu_data");
+    kernel_ut::RunGenData("./glu_data", {"24", "2", "1", "1", "float32"});
+
     size_t inputByteSize = 24 * 2 * 1 * sizeof(float);
     size_t outputByteSize = 24 * 1 * 1 * sizeof(float);
     size_t tiling_data_size = sizeof(GluTilingData);
 
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(inputByteSize);
     uint8_t* y = (uint8_t*)AscendC::GmAlloc(outputByteSize);
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(6*1024*1024+40*32*4);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(6 * 1024 * 1024 + 40 * 32 * 4);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 40;
-    system("cp -r ../../../../activation/glu/tests/ut/op_kernel/glu_data ./");
-    system("chmod -R 755 ./glu_data/");
-    system("cd ./glu_data/ && rm -rf ./*bin");
-    system("cd ./glu_data/ && python3 gen_data.py 24 2 1 1 float32");
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
 
     GluTilingData* tilingDatafromBin = reinterpret_cast<GluTilingData*>(tiling);
 
@@ -82,8 +75,7 @@ TEST_F(glu_test, test_glu_case_1)
     AscendC::GmFree(y);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    system("cd ./glu_data/ && python3 compare_data.py 'float32'");
-    free(path_);
+    kernel_ut::RunCompareData("./glu_data", {"float32"});
 }
 
 TEST_F(glu_test, test_glu_case_2)
@@ -91,22 +83,20 @@ TEST_F(glu_test, test_glu_case_2)
 #undef DTYPE_INPUT
 #define DTYPE_INPUT DT_FP32
 
+    kernel_ut::SetupTestEnvironment("activation/glu/tests/ut/op_kernel/glu_data", "glu_data");
+    kernel_ut::RunGenData("./glu_data", {"1", "80", "2560", "2", "float32"});
+
     size_t inputByteSize = 1 * 80 * 2560 * sizeof(float);
     size_t outputByteSize = 1 * 80 * 1280 * sizeof(float);
     size_t tiling_data_size = sizeof(GluTilingData);
 
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(inputByteSize);
     uint8_t* y = (uint8_t*)AscendC::GmAlloc(outputByteSize);
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(6*1024*1024+40*32*4);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(6 * 1024 * 1024 + 40 * 32 * 4);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 40;
-    system("cp -r ../../../../activation/glu/tests/ut/op_kernel/glu_data ./");
-    system("chmod -R 755 ./glu_data/");
-    system("cd ./glu_data/ && rm -rf ./*bin");
-    system("cd ./glu_data/ && python3 gen_data.py 1 80 2560 2 float32");
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
 
     GluTilingData* tilingDatafromBin = reinterpret_cast<GluTilingData*>(tiling);
 
@@ -132,8 +122,7 @@ TEST_F(glu_test, test_glu_case_2)
     AscendC::GmFree(y);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    system("cd ./glu_data/ && python3 compare_data.py 'float32'");
-    free(path_);
+    kernel_ut::RunCompareData("./glu_data", {"float32"});
 }
 
 TEST_F(glu_test, test_glu_case_3)
@@ -141,22 +130,20 @@ TEST_F(glu_test, test_glu_case_3)
 #undef DTYPE_INPUT
 #define DTYPE_INPUT DT_FP32
 
+    kernel_ut::SetupTestEnvironment("activation/glu/tests/ut/op_kernel/glu_data", "glu_data");
+    kernel_ut::RunGenData("./glu_data", {"1", "8", "2560", "1", "float32"});
+
     size_t inputByteSize = 1 * 8 * 2560 * sizeof(float);
     size_t outputByteSize = 1 * 4 * 2560 * sizeof(float);
     size_t tiling_data_size = sizeof(GluTilingData);
 
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(inputByteSize);
     uint8_t* y = (uint8_t*)AscendC::GmAlloc(outputByteSize);
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(6*1024*1024+40*32*4);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(6 * 1024 * 1024 + 40 * 32 * 4);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 40;
-    system("cp -r ../../../../activation/glu/tests/ut/op_kernel/glu_data ./");
-    system("chmod -R 755 ./glu_data/");
-    system("cd ./glu_data/ && rm -rf ./*bin");
-    system("cd ./glu_data/ && python3 gen_data.py 1 8 2560 1 float32");
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
 
     GluTilingData* tilingDatafromBin = reinterpret_cast<GluTilingData*>(tiling);
 
@@ -182,6 +169,5 @@ TEST_F(glu_test, test_glu_case_3)
     AscendC::GmFree(y);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    system("cd ./glu_data/ && python3 compare_data.py 'float32'");
-    free(path_);
+    kernel_ut::RunCompareData("./glu_data", {"float32"});
 }

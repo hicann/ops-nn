@@ -14,9 +14,7 @@ import os
 import numpy as np
 import re
 import torch
-import tensorflow as tf
 
-bfp16 = tf.bfloat16.as_numpy_dtype
 
 def parse_str_to_shape_list(shape_str):
     shape_str = shape_str.strip('(').strip(')')
@@ -33,11 +31,9 @@ def do_golden(x, kronecker_p1, kronecker_p2):
 def gen_data_and_golden(x_shape_str, kronecker_p1_shape_str, kronecker_p2_shape_str, d_type="float16"):
     d_type_dict = {
         "float16": np.float16,
-        "bfloat16": bfp16,
     }
     torch_type_dict = {
         "float16": torch.float16,
-        "bfloat16": torch.bfloat16,
     }
     np_type = d_type_dict[d_type]
     torch_type = torch_type_dict[d_type]

@@ -9,15 +9,34 @@
  */
 
 #include <gtest/gtest.h>
+#include <cstdlib>
 #include "base/registry/op_impl_space_registry_v2.h"
+#include "kernel_ut_log.h"
 
 using namespace std;
+
+bool CheckPython3Available()
+{
+    int result = system("python3 --version > /dev/null 2>&1");
+    if (result != 0) {
+        KERNEL_UT_LOG_ERROR("[OpKernelUT] python3 is not available in the environment");
+        return false;
+    }
+    KERNEL_UT_LOG_INFO("[OpKernelUT] python3 is available");
+    return true;
+}
 
 class OpKernelUtEnvironment : public testing::Environment {
 public:
     OpKernelUtEnvironment() {}
-    virtual void SetUp() {
+    virtual void SetUp()
+    {
         cout << "Global Environment SetpUp." << endl;
+
+        // Check Python3 availability once at startup
+        if (!CheckPython3Available()) {
+            cout << "Warning: python3 is not available, some tests may fail." << endl;
+        }
 
         /* load libnn_op_kernel_ut_${socversion}_ut.so for init tiling funcs and infershape funcs */
         const char* buildPath = std::getenv("BUILD_PATH");
@@ -37,12 +56,10 @@ public:
         gert::DefaultOpImplSpaceRegistryV2::GetInstance().SetSpaceRegistry(opImplSpaceRegistryV2);
     }
 
-    virtual void TearDown() {
-        cout << "Global Environment TearDown" << endl;
-    }
+    virtual void TearDown() { cout << "Global Environment TearDown" << endl; }
 };
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
     testing::InitGoogleTest(&argc, argv);
     testing::AddGlobalTestEnvironment(new OpKernelUtEnvironment());

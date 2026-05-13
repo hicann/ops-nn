@@ -154,13 +154,16 @@ endfunction()
 function(add_opkernel_ut_modules OP_KERNEL_MODULE_NAME)
     # set variables
     set(UT_COMMON_INC ${CMAKE_CURRENT_SOURCE_DIR}/../common CACHE STRING "ut common include path" FORCE)
+    set(UT_KERNEL_INC ${PROJECT_SOURCE_DIR}/tests/ut/op_kernel CACHE STRING "ut kernel include path" FORCE)
 
     ## add opkernel ut common object: nn_op_kernel_ut_common_obj
     add_library(${OP_KERNEL_MODULE_NAME}_common_obj OBJECT)
     add_dependencies(${OP_KERNEL_MODULE_NAME}_common_obj json)
     file(GLOB OP_KERNEL_UT_COMMON_SRC
         ${UT_COMMON_INC}/test_cube_util.cpp
-        ${PROJECT_SOURCE_DIR}/tests/ut/op_kernel/data_utils.cpp
+        ${UT_KERNEL_INC}/data_utils.cpp
+        ${UT_KERNEL_INC}/kernel_ut_data_helper.cpp
+        ${UT_KERNEL_INC}/kernel_ut_data_executor.cpp
     )
     target_sources(${OP_KERNEL_MODULE_NAME}_common_obj PRIVATE
         ${OP_KERNEL_UT_COMMON_SRC}
@@ -169,6 +172,7 @@ function(add_opkernel_ut_modules OP_KERNEL_MODULE_NAME)
         ${JSON_INCLUDE}
         ${GTEST_INCLUDE}
         ${ASCEND_DIR}/include/base/context_builder
+        ${UT_KERNEL_INC}
     )
     target_link_libraries(${OP_KERNEL_MODULE_NAME}_common_obj PRIVATE
         $<BUILD_INTERFACE:intf_llt_pub_asan_cxx17>

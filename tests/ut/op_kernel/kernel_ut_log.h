@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -7,21 +7,19 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-#ifndef TEST_UT_OP_KERNEL_DATA_UTILS_H
-#define TEST_UT_OP_KERNEL_DATA_UTILS_H
-#include <iostream>
-#include <fstream>
+
+#ifndef KERNEL_UT_LOG_H
+#define KERNEL_UT_LOG_H
+
 #include <cstdio>
-#include <string>
-#include <vector>
-#include <iomanip>
-#include <fcntl.h>
-#include <unistd.h>
-#include <sys/stat.h>
 
-#include "kernel_ut_log.h"
+/**
+ * Kernel UT 独立日志宏定义
+ * 完全独立，不依赖 pkg_inc 或 data_utils.h
+ */
 
-bool ReadFile(const std::string& filePath, size_t& fileSize, void* buffer, size_t bufferSize);
-bool WriteFile(const std::string& filePath, const void* buffer, size_t size);
+#define KERNEL_UT_LOG_INFO(fmt, args...) fprintf(stdout, "[INFO]  " fmt "\n", ##args)
+#define KERNEL_UT_LOG_WARN(fmt, args...) fprintf(stdout, "[WARN]  " fmt "\n", ##args)
+#define KERNEL_UT_LOG_ERROR(fmt, args...) fprintf(stdout, "[ERROR] " fmt "\n", ##args)
 
-#endif
+#endif // KERNEL_UT_LOG_H

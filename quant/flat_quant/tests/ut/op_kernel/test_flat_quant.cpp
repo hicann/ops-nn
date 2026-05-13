@@ -22,29 +22,23 @@
 #include "tikicpulib.h"
 #include "data_utils.h"
 #include "flat_quant_tiling_def.h"
+#include "kernel_ut_data_helper.h"
+#include "kernel_ut_data_executor.h"
 
 extern "C" __global__ __aicore__ void flat_quant(
-    GM_ADDR x, GM_ADDR kronecker_p1, GM_ADDR kronecker_p2, GM_ADDR out, GM_ADDR quant_scale, GM_ADDR workspace, GM_ADDR tiling);
+    GM_ADDR x, GM_ADDR kronecker_p1, GM_ADDR kronecker_p2, GM_ADDR out, GM_ADDR quant_scale, GM_ADDR workspace,
+    GM_ADDR tiling);
 
 class flat_quant_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "flat_quant_test SetUp\n" << std::endl;
-    }
-    static void TearDownTestCase()
-    {
-        std::cout << "flat_quant_test TearDown\n" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "flat_quant_test SetUp\n" << std::endl; }
+    static void TearDownTestCase() { std::cout << "flat_quant_test TearDown\n" << std::endl; }
 };
 
 TEST_F(flat_quant_test, test_case_float16_1)
 {
-    system(
-        "cp -rf "
-        "../../../../quant/flat_quant/tests/ut/op_kernel/flat_quant_data ./");
-    system("chmod -R 755 ./flat_quant_data/");
-    system("cd ./flat_quant_data/ && python3 gen_data.py '(1, 128, 128)' '(128, 128)' '(128, 128)' 'float16'");
+    kernel_ut::SetupTestEnvironment("quant/flat_quant/tests/ut/op_kernel/flat_quant_data", "flat_quant_data");
+    kernel_ut::RunGenData("./flat_quant_data", {"'(1, 128, 128)'", "'(128, 128)'", "'(128, 128)'", "'float16'"});
 
     size_t xByteSize = 1 * 128 * 128 * sizeof(half);
     size_t p1ByteSize = 128 * 128 * sizeof(half);
@@ -91,16 +85,13 @@ TEST_F(flat_quant_test, test_case_float16_1)
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
 
-    system("cd ./flat_quant_data/ && python3 compare_data.py");
+    kernel_ut::RunCompareData("./flat_quant_data", {});
 }
 
 TEST_F(flat_quant_test, test_case_float16_2)
 {
-    system(
-        "cp -rf "
-        "../../../../quant/flat_quant/tests/ut/op_kernel/flat_quant_data ./");
-    system("chmod -R 755 ./flat_quant_data/");
-    system("cd ./flat_quant_data/ && python3 gen_data.py '(4, 16, 16)' '(16, 16)' '(16, 16)' 'float16'");
+    kernel_ut::SetupTestEnvironment("quant/flat_quant/tests/ut/op_kernel/flat_quant_data", "flat_quant_data");
+    kernel_ut::RunGenData("./flat_quant_data", {"'(4, 16, 16)'", "'(16, 16)'", "'(16, 16)'", "'float16'"});
 
     size_t xByteSize = 4 * 16 * 16 * sizeof(half);
     size_t p1ByteSize = 16 * 16 * sizeof(half);
@@ -147,16 +138,13 @@ TEST_F(flat_quant_test, test_case_float16_2)
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
 
-    system("cd ./flat_quant_data/ && python3 compare_data.py");
+    kernel_ut::RunCompareData("./flat_quant_data", {});
 }
 
 TEST_F(flat_quant_test, test_case_float16_3)
 {
-    system(
-        "cp -rf "
-        "../../../../quant/flat_quant/tests/ut/op_kernel/flat_quant_data ./");
-    system("chmod -R 755 ./flat_quant_data/");
-    system("cd ./flat_quant_data/ && python3 gen_data.py '(1, 160, 128)' '(160, 160)' '(128, 128)' 'float16'");
+    kernel_ut::SetupTestEnvironment("quant/flat_quant/tests/ut/op_kernel/flat_quant_data", "flat_quant_data");
+    kernel_ut::RunGenData("./flat_quant_data", {"'(1, 160, 128)'", "'(160, 160)'", "'(128, 128)'", "'float16'"});
 
     size_t xByteSize = 1 * 160 * 128 * sizeof(half);
     size_t p1ByteSize = 160 * 160 * sizeof(half);
@@ -203,16 +191,13 @@ TEST_F(flat_quant_test, test_case_float16_3)
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
 
-    system("cd ./flat_quant_data/ && python3 compare_data.py");
+    kernel_ut::RunCompareData("./flat_quant_data", {});
 }
 
 TEST_F(flat_quant_test, test_case_float16_4)
 {
-    system(
-        "cp -rf "
-        "../../../../quant/flat_quant/tests/ut/op_kernel/flat_quant_data ./");
-    system("chmod -R 755 ./flat_quant_data/");
-    system("cd ./flat_quant_data/ && python3 gen_data.py '(1, 256, 256)' '(256, 256)' '(256, 256)' 'float16'");
+    kernel_ut::SetupTestEnvironment("quant/flat_quant/tests/ut/op_kernel/flat_quant_data", "flat_quant_data");
+    kernel_ut::RunGenData("./flat_quant_data", {"'(1, 256, 256)'", "'(256, 256)'", "'(256, 256)'", "'float16'"});
 
     size_t xByteSize = 1 * 256 * 256 * sizeof(half);
     size_t p1ByteSize = 256 * 256 * sizeof(half);
@@ -307,16 +292,13 @@ TEST_F(flat_quant_test, test_case_float16_4)
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
 
-    system("cd ./flat_quant_data/ && python3 compare_data.py");
+    kernel_ut::RunCompareData("./flat_quant_data", {});
 }
 
 TEST_F(flat_quant_test, test_case_float16_5)
 {
-    system(
-        "cp -rf "
-        "../../../../quant/flat_quant/tests/ut/op_kernel/flat_quant_data ./");
-    system("chmod -R 755 ./flat_quant_data/");
-    system("cd ./flat_quant_data/ && python3 gen_data.py '(2, 1, 16)' '(1, 1)' '(16, 16)' 'float16'");
+    kernel_ut::SetupTestEnvironment("quant/flat_quant/tests/ut/op_kernel/flat_quant_data", "flat_quant_data");
+    kernel_ut::RunGenData("./flat_quant_data", {"'(2, 1, 16)'", "'(1, 1)'", "'(16, 16)'", "'float16'"});
 
     size_t xByteSize = 2 * 1 * 16 * sizeof(half);
     size_t p1ByteSize = 1 * 1 * sizeof(half);
@@ -363,5 +345,5 @@ TEST_F(flat_quant_test, test_case_float16_5)
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
 
-    system("cd ./flat_quant_data/ && python3 compare_data.py");
+    kernel_ut::RunCompareData("./flat_quant_data", {});
 }

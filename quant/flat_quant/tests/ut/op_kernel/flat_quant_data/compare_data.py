@@ -14,13 +14,11 @@ import numpy as np
 import glob
 import os
 import math
-import torch
-import tensorflow as tf
 
 curr_dir = os.path.dirname(os.path.realpath(__file__))
 
 def compare_data(golden_file_lists, output_file_lists):
-    np_dtype = tf.float32.as_numpy_dtype
+    np_dtype = np.float32
     precision = 1/100
 
     data_same = True
