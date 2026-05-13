@@ -2278,6 +2278,29 @@ REG_OP(Resize)
     .OP_END_FACTORY_REG(Resize)
 
 /**
+* @brief According to the indices and indices_mask, return the value.
+
+* @par Inputs:
+* Four inputs, including:
+* @li x: A ND tensor. Must be one of the following types:
+*     float, float16, int64, int32, bool, uint8, int8.
+* @li indices: Dynamic input. A ND tensor of int64. return the value according to the indices.
+
+* @par Attributes:
+*
+* @li indices_mask: A list int. Indicates which dimensions of input needs to be indexed.
+
+* @par Outputs:
+* @li y: The indexed output tensor. Has the same type and format as input "x".
+*/
+REG_OP(IndexByTensor)
+    .INPUT(x, TensorType({TensorType::BasicType(), DT_BOOL}))
+    .DYNAMIC_INPUT(indices, TensorType({DT_INT64}))
+    .OUTPUT(y, TensorType({TensorType::BasicType(), DT_BOOL}))
+    .ATTR(indices_mask, ListInt, {})
+    .OP_END_FACTORY_REG(IndexByTensor)
+
+/**
 * @brief Gather slices from "params" according to "indices"."indices" must be
     an integer tensor of any dimension(usually 0-D or 1-D).
     Produces an output tensor with shape "indices.shape + params.shape[1:]" .
