@@ -79,14 +79,6 @@ static bool CheckShape(const aclTensor* self, const aclTensor* vec, const aclTen
     return true;
 }
 
-static inline bool CheckMathType(const aclTensor* self, const aclTensor* mat2, int8_t cubeMathType)
-{
-    bool selfFloat = self->GetDataType() == DataType::DT_FLOAT;
-    bool mat2Float = mat2->GetDataType() == DataType::DT_FLOAT;
-    auto promoteType = selfFloat || mat2Float ? DataType::DT_FLOAT : self->GetDataType();
-    return CheckCubeMathTypeForMm(promoteType, cubeMathType);
-}
-
 static aclnnStatus CheckInputParams(const aclTensor* self, const aclTensor* vec, aclTensor* out, int8_t cubeMathType)
 {
     // 1. 检查参数是否为空指针

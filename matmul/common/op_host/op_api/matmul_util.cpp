@@ -2299,7 +2299,12 @@ bool Dav2201MatMulRule::CheckInput(
         if (!dtypeVaild) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Unsupported data types for Cube");
         }
-        return dtypeVaild;
+
+        bool matAFloat = matA->GetDataType() == DataType::DT_FLOAT;
+        bool matBFloat = matB->GetDataType() == DataType::DT_FLOAT;
+        auto promoteType = matAFloat || matBFloat ? DataType::DT_FLOAT : matA->GetDataType();
+
+        return dtypeVaild && CheckCubeMathTypeForMm(promoteType, cubeMathType);
 }
 
 aclnnStatus Dav2201MatMulRule::PromoteDtype(
