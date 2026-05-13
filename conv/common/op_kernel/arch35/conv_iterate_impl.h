@@ -951,11 +951,9 @@ __aicore__ void Iterate<Intf, ImplType>::IterateBiasScale(Intf *self)
 
     if (!self->ctx.convTilingData->convApiTiling.fixpParamsFullLoadFlag) {
         if (self->ctx.enableVectorQuant || self->ctx.enableVectorRelu) {
-            if constexpr (Intf::groupType != static_cast<int8_t>(ConvGroupType::NORMAL_CONV)) {
-                event_t eventId = static_cast<event_t>(self->ctx.pipe.FetchEventID(HardEvent::FIX_MTE2));
-                SetFlag<HardEvent::FIX_MTE2>(eventId);
-                WaitFlag<HardEvent::FIX_MTE2>(eventId);
-            }
+            event_t eventId = static_cast<event_t>(self->ctx.pipe.FetchEventID(HardEvent::FIX_MTE2));
+            SetFlag<HardEvent::FIX_MTE2>(eventId);
+            WaitFlag<HardEvent::FIX_MTE2>(eventId);
         }
         if (self->ctx.enableVectorQuant) {
             self->ctx.scaleL1 = self->ctx.queueScaleL1.template AllocTensor<typename Intf::ScaleT>();
@@ -988,6 +986,11 @@ __aicore__ void Iterate<Intf, ImplType>::IterateBiasScale(Intf *self)
                 self->ctx.queueReluWeightL1.EnQue(self->ctx.reluWeightL1);
                 self->ctx.reluWeightL1 = self->ctx.queueReluWeightL1.template DeQue<typename Intf::ReluWeightT>();
             }
+        }
+        if (self->ctx.enableVectorQuant || self->ctx.enableVectorRelu) {
+            event_t eventId = static_cast<event_t>(self->ctx.pipe.FetchEventID(HardEvent::MTE2_FIX));
+            SetFlag<HardEvent::MTE2_FIX>(eventId);
+            WaitFlag<HardEvent::MTE2_FIX>(eventId);
         }
     }
 }

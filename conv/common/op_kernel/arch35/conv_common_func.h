@@ -214,11 +214,9 @@ struct ConvPreProcess {
                 }
                 if (self->ctx.convTilingData->convApiTiling.fixpParamsFullLoadFlag) {
                     if (self->ctx.enableVectorQuant || self->ctx.enableVectorRelu) {
-                        if constexpr (Intf::groupType != static_cast<int8_t>(ConvGroupType::NORMAL_CONV)) {
-                            event_t eventId = static_cast<event_t>(self->ctx.pipe.FetchEventID(HardEvent::FIX_MTE2));
-                            SetFlag<HardEvent::FIX_MTE2>(eventId);
-                            WaitFlag<HardEvent::FIX_MTE2>(eventId);
-                        }
+                        event_t eventId = static_cast<event_t>(self->ctx.pipe.FetchEventID(HardEvent::FIX_MTE2));
+                        SetFlag<HardEvent::FIX_MTE2>(eventId);
+                        WaitFlag<HardEvent::FIX_MTE2>(eventId);
                     }
                     uint64_t scaleLoadNum = self->ctx.singleCoreCo;
                     if constexpr (Intf::groupOptPreloadFlag) {
@@ -256,6 +254,11 @@ struct ConvPreProcess {
                                     self->ctx.reluWeight1GM, scaleLoadNum, 0);
                             }
                         }
+                    }
+                    if (self->ctx.enableVectorQuant || self->ctx.enableVectorRelu) {
+                        event_t eventId = static_cast<event_t>(self->ctx.pipe.FetchEventID(HardEvent::MTE2_FIX));
+                        SetFlag<HardEvent::MTE2_FIX>(eventId);
+                        WaitFlag<HardEvent::MTE2_FIX>(eventId);
                     }
                 }
             }
