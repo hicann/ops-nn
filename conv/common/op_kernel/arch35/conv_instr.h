@@ -23,4 +23,4 @@
     #include "conv_instr_opt_group_impl.h"
 #endif
 
-#endif // CONV_INSTR_IMPL_H
+#endif // CONV_INSTR_H

@@ -1284,7 +1284,6 @@ static aclnnStatus ConvTranspose3dWithFlag(const aclTensor *input, const aclTens
                                           dataFormat, outputPad5, 0, useHf32, paddingP, hf32),
                                           OP_MODE(execMode));
         }
-        
     } else {
         ret = ADD_TO_LAUNCHER_LIST_AICORE(Conv3DTranspose, OP_INPUT(inputSize, input, weight), OP_OUTPUT(output),
                                           OP_ATTR(stride5, pad5, dilation5, groups,
