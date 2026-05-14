@@ -248,9 +248,9 @@
 | [aclnnHardshrinkBackward](../../activation/hard_shrink_grad/docs/aclnnHardshrinkBackward.md) | aclnnHardshrink计算反向传播的梯度gradInput。 | 默认确定性实现 | - |
 | [aclnnHardsigmoid&aclnnInplaceHardsigmoid](../../activation/hard_sigmoid/docs/aclnnHardsigmoid&aclnnInplaceHardsigmoid.md) | 激活函数变种，根据公式返回一个新的tensor。结果的形状与输入tensor相同。 | 默认确定性实现 | - |
 | [aclnnHardsigmoidBackward](../../activation/hard_sigmoid_grad/docs/aclnnHardsigmoidBackward.md) | aclnnHardsigmoid的反向传播。 | 默认确定性实现 | - |
-| [aclnnHardswishBackward](../../activation/hard_swish_grad/docs/aclnnHardswishBackward.md) | aclnnHardswish的反向传播，完成张量self的梯度计算。 | 默认确定性实现 | - |
-| [aclnnHardswishBackwardV2](../../activation/hard_swish_grad_v2/docs/aclnnHardswishBackwardV2.md) | aclnnHardswish的反向传播，完成张量self的梯度计算。 | 默认确定性实现 | - |
-| [aclnnHardswish&aclnnInplaceHardswish](../../activation/hard_swish/docs/aclnnHardswish&aclnnInplaceHardswish.md) | 激活函数，返回与输入tensor shape相同的输出tensor，输入的value小于-3时取0，大于3时取该value，其余时刻取value加3的和乘上value再除以6。 | 默认确定性实现 | - |
+| [aclnnHardswishBackward](../../activation/hard_swish_grad/docs/aclnnHardswishBackward.md) | aclnnHardswish的反向传播，完成张量self的梯度计算。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnHardswishBackwardV2](../../activation/hard_swish_grad_v2/docs/aclnnHardswishBackwardV2.md) | aclnnHardswish的反向传播，完成张量self的梯度计算。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnHardswish&aclnnInplaceHardswish](../../activation/hard_swish/docs/aclnnHardswish&aclnnInplaceHardswish.md) | 激活函数，返回与输入tensor shape相同的输出tensor，输入的value小于等于-3时取0，大于等于3时取该value，其余时刻取value加3的和乘上value再除以6。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnHardtanhBackward](../../activation/hardtanh_grad/docs/aclnnHardtanhBackward.md) | 激活函数aclnnHardtanh的反向。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnHeaviside](../../activation/heaviside/docs/aclnnHeaviside.md) | 计算输入input中每个元素的Heaviside阶跃函数，作为模型的激活函数。 | 默认确定性实现 | - |
 | [aclnnIndex](../../index/index/docs/aclnnIndex.md) | 根据索引indices将输入x对应坐标的数据取出。 | 默认确定性实现 | 默认确定性实现 |

@@ -72,6 +72,36 @@ public:
         .DynamicShapeSupportFlag(true);
 
     this->AICore().AddConfig("ascend910", config910A);
+
+    OpAICoreConfig config950;
+    config950.Input("gradOutput")
+        .ParamType(REQUIRED)
+        .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
+        .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+        .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+        .AutoContiguous();
+    config950.Input("self")
+        .ParamType(REQUIRED)
+        .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
+        .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+        .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+        .AutoContiguous();
+    config950.Output("out")
+        .ParamType(REQUIRED)
+        .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
+        .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+        .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+        .AutoContiguous();
+
+    config950.DynamicCompileStaticFlag(true)
+        .DynamicFormatFlag(false)
+        .DynamicRankSupportFlag(true)
+        .DynamicShapeSupportFlag(true)
+        .NeedCheckSupportFlag(false)
+        .PrecisionReduceFlag(true)
+        .ExtendCfgInfo("opFile.value", "hard_swish_grad_v2_apt");
+    this->AICore().AddConfig("mc62cm12a", config950);    
+    this->AICore().AddConfig("ascend950", config950);
   }
 };
 

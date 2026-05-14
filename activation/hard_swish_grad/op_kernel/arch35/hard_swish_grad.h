@@ -155,12 +155,12 @@ __aicore__ inline void HardSwishGrad<T, BUFFER_MODE>::Compute(
            // Muls & Compares both read selfFp32
         Muls(derivFp32, selfFp32, (1.0f / 3.0f), alignedNum);
         Adds(derivFp32, derivFp32, 0.5f, alignedNum);                     // chain on derivFp32
-        Compares(maskLocal, selfFp32, -3.0f, CMPMODE::GT, alignedNum);    // reads selfFp32 only
+        Compares(maskLocal, selfFp32, -3.0f, CMPMODE::GE, alignedNum);    // reads selfFp32 only
            // Select reads both derivFp32 and maskLocal
 
         // Group 2: first Select + second Compares (WAR on mask, independent of deriv write)
         Select(derivFp32, maskLocal, derivFp32, 0.0f, SELMODE::VSEL_TENSOR_SCALAR_MODE, alignedNum);
-        Compares(maskLocal, selfFp32, 3.0f, CMPMODE::LT, alignedNum);
+        Compares(maskLocal, selfFp32, 3.0f, CMPMODE::LE, alignedNum);
            // next Select reads both mask and deriv
 
         // Group 3: second Select, then reuse selfFp32 for gradOut cast
@@ -178,12 +178,12 @@ __aicore__ inline void HardSwishGrad<T, BUFFER_MODE>::Compute(
         // Group 1: linear part + first Compares (Compares reads selfLocal, independent of deriv)
         Muls(derivLocal, selfLocal, (T)(1.0 / 3.0), alignedNum);
         Adds(derivLocal, derivLocal, (T)0.5, alignedNum);                   // chain on derivLocal
-        Compares(maskLocal, selfLocal, (T)(-3.0), CMPMODE::GT, alignedNum); // reads selfLocal only
+        Compares(maskLocal, selfLocal, (T)(-3.0), CMPMODE::GE, alignedNum); // reads selfLocal only
            // Select reads both derivLocal and maskLocal
 
         // Group 2: first Select + second Compares (WAR on mask)
         Select(derivLocal, maskLocal, derivLocal, (T)0.0, SELMODE::VSEL_TENSOR_SCALAR_MODE, alignedNum);
-        Compares(maskLocal, selfLocal, (T)3.0, CMPMODE::LT, alignedNum);
+        Compares(maskLocal, selfLocal, (T)3.0, CMPMODE::LE, alignedNum);
            // next Select reads both mask and deriv
 
         // Group 3: second Select + final multiply
