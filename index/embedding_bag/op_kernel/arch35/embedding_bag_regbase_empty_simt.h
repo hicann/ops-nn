@@ -19,6 +19,7 @@
 #include "../inc/kernel_utils.h"
 #include "../inc/platform.h"
 #include "embedding_bag_regbase_common.h"
+#include "simt_api/asc_simt.h"
 
 namespace EmbeddingBag {
 using namespace AscendC;
@@ -27,8 +28,8 @@ template <typename P, typename COMP_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_NUM) inline void SimtComputeOffst2Bag(
     __gm__ P* offset2bag, COMP_T numIndices)
 {
-    for (COMP_T i = Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx(); i < numIndices;
-         i += Simt::GetBlockNum() * Simt::GetThreadNum()) {
+    for (COMP_T i = blockIdx.x * blockDim.x + threadIdx.x; i < numIndices;
+         i += gridDim.x * blockDim.x) {
         offset2bag[i] = 0;
     }
 }
@@ -37,8 +38,8 @@ template <typename P, typename COMP_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_NUM) inline void SimtComputeBagSize(
     __gm__ P* bagSize, COMP_T numBags)
 {
-    for (COMP_T i = Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx(); i < numBags;
-         i += Simt::GetBlockNum() * Simt::GetThreadNum()) {
+    for (COMP_T i = blockIdx.x * blockDim.x + threadIdx.x; i < numBags;
+         i += gridDim.x * blockDim.x) {
         bagSize[i] = 0;
     }
 }
@@ -71,13 +72,13 @@ __aicore__ inline void EmbeddingBagRegBaseSimtEmpty<P, COMP_T>::Process()
     COMP_T numBags = tilingData_.nBags;
     COMP_T numIndices = tilingData_.indicesNumel;
 
-    Simt::VF_CALL<SimtComputeOffst2Bag<P, COMP_T>>(Simt::Dim3{USED_THREAD_NUM}, 
+    asc_vf_call<SimtComputeOffst2Bag<P, COMP_T>>(dim3{USED_THREAD_NUM}, 
             (__gm__ P*)(offset2bagGm_.GetPhyAddr()), numIndices);
 
     if (tilingData_.inclueLastOfst) {
         numBags += 1;
     }
-    Simt::VF_CALL<SimtComputeBagSize<P, COMP_T>>(Simt::Dim3{USED_THREAD_NUM}, 
+    asc_vf_call<SimtComputeBagSize<P, COMP_T>>(dim3{USED_THREAD_NUM}, 
             (__gm__ P*)(bagSizeGm_.GetPhyAddr()), numBags);
 }
 }

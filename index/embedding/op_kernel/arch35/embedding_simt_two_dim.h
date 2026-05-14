@@ -20,6 +20,7 @@
 #endif
 
 #include "kernel_operator.h"
+#include "simt_api/asc_simt.h"
 
 #ifdef __DAV_FPGA__
 constexpr uint32_t THREAD_NUM_LAUNCH_BOUND_TWO_DIM = 512;
@@ -55,8 +56,8 @@ template <typename X_T, typename INDICES_T, typename INDEX_SIZE_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND_TWO_DIM) inline void EmbeddingSimtTwoDim<X_T, INDICES_T, INDEX_SIZE_T>::GatherSimt(const INDEX_SIZE_T yIndexBase,
   INDEX_SIZE_T currentCoreElements, INDEX_SIZE_T m0, INDEX_SIZE_T shift0, INDEX_SIZE_T innerSize,
   INDEX_SIZE_T gatherDimSize, __gm__ X_T* x, __gm__ INDICES_T* indices, __gm__ volatile X_T* y) {
-  for (INDEX_SIZE_T index = static_cast<INDEX_SIZE_T>(Simt::GetThreadIdx()); index < currentCoreElements;
-      index += static_cast<INDEX_SIZE_T>(Simt::GetThreadNum())) {
+  for (INDEX_SIZE_T index = static_cast<INDEX_SIZE_T>(threadIdx.x); index < currentCoreElements;
+      index += static_cast<INDEX_SIZE_T>(blockDim.x)) {
     INDEX_SIZE_T yIndex = yIndexBase + index;
     INDEX_SIZE_T gatherI = Simt::UintDiv(yIndex, m0, shift0);
     INDEX_SIZE_T innerI = yIndex  - gatherI * innerSize;
@@ -96,7 +97,7 @@ __aicore__ inline void EmbeddingSimtTwoDim<X_T, INDICES_T, INDEX_SIZE_T>::Proces
 
   if (blockIdx < needCoreNum) {
     INDEX_SIZE_T yIndexBase = blockIdx * tilingData_->perCoreElements;
-    AscendC::Simt::VF_CALL<GatherSimt>(Simt::Dim3(threadNum), yIndexBase, currentCoreElements, m0, shift0,
+    asc_vf_call<GatherSimt>(dim3(threadNum), yIndexBase, currentCoreElements, m0, shift0,
                   innerSize, gatherDimSize, (__gm__ X_T*) (xGm_.GetPhyAddr()),
                   (__gm__ INDICES_T*) (indicesGm_.GetPhyAddr()), (__gm__ volatile X_T*) (yGm_.GetPhyAddr()));
   }

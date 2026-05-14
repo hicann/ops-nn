@@ -19,6 +19,7 @@
 #include "../inc/kernel_utils.h"
 #include "../inc/platform.h"
 #include "embedding_bag_regbase_common.h"
+#include "simt_api/asc_simt.h"
 
 namespace EmbeddingBag {
 using namespace AscendC;
@@ -31,13 +32,13 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_NUM) inline void SimtComputeSumW
     COMP_T embeddingDimSize, COMP_T paddingIdx)
 {
     COMP_T numChunks = numBags * chunkPerBag;
-    COMP_T chunkStride = Simt::GetBlockNum() * Simt::GetThreadNum<1>();
-    COMP_T chunkOffset = Simt::GetBlockIdx() * Simt::GetThreadNum<1>() + Simt::GetThreadIdx<1>();
+    COMP_T chunkStride = gridDim.x * blockDim.y;
+    COMP_T chunkOffset = blockIdx.x * blockDim.y + threadIdx.y;
 
     for (COMP_T chunk = chunkOffset; chunk < numChunks; chunk += chunkStride) {
         COMP_T quotient = Simt::UintDiv(chunk, magic, shift);
         COMP_T reminder = chunk - quotient * chunkPerBag;
-        COMP_T featureDim = reminder * Simt::GetThreadNum<0>() + Simt::GetThreadIdx<0>();
+        COMP_T featureDim = reminder * blockDim.x + threadIdx.x;
         if (featureDim < embeddingDimSize) {
             COMP_T bag = Simt::UintDiv(chunk, magic, shift);
             COMP_T eachBagSize = 0;
@@ -69,14 +70,14 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_NUM) inline void SimtComputeSum2
     COMP_T numBags, COMP_T numIndices, COMP_T indicesSize, COMP_T chunkPerBag, COMP_T magic, COMP_T shift,
     COMP_T embeddingDimSize, COMP_T paddingIdx)
 {
-    COMP_T chunkOffset = Simt::GetBlockIdx() * Simt::GetThreadNum<1>() + Simt::GetThreadIdx<1>();
-    COMP_T chunkStride = Simt::GetBlockNum() * Simt::GetThreadNum<1>();
+    COMP_T chunkOffset = blockIdx.x * blockDim.y + threadIdx.y;
+    COMP_T chunkStride = gridDim.x * blockDim.y;
     COMP_T numChunks = numBags * chunkPerBag;
 
     for (COMP_T chunk = chunkOffset; chunk < numChunks; chunk += chunkStride) {
         COMP_T quotient = Simt::UintDiv(chunk, magic, shift);
         COMP_T reminder = chunk - quotient * chunkPerBag;
-        COMP_T featureDim = reminder * Simt::GetThreadNum<0>() + Simt::GetThreadIdx<0>();
+        COMP_T featureDim = reminder * blockDim.x + threadIdx.x;
         if (featureDim < embeddingDimSize) {
             COMP_T eachBagSize = 0;
             COMP_T bag = Simt::UintDiv(chunk, magic, shift);
@@ -108,13 +109,13 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_NUM) inline void SimtComputeMean
     COMP_T embeddingDimSize, COMP_T paddingIdx)
 {
     COMP_T numChunks = numBags * chunkPerBag;
-    COMP_T chunkOffset = Simt::GetBlockIdx() * Simt::GetThreadNum<1>() + Simt::GetThreadIdx<1>();
-    COMP_T chunkStride = Simt::GetBlockNum() * Simt::GetThreadNum<1>();
+    COMP_T chunkOffset = blockIdx.x * blockDim.y + threadIdx.y;
+    COMP_T chunkStride = gridDim.x * blockDim.y;
 
     for (COMP_T chunk = chunkOffset; chunk < numChunks; chunk += chunkStride) {
         COMP_T quotient = Simt::UintDiv(chunk, magic, shift);
         COMP_T reminder = chunk - quotient * chunkPerBag;
-        COMP_T featureDim = reminder * Simt::GetThreadNum<0>() + Simt::GetThreadIdx<0>();
+        COMP_T featureDim = reminder * blockDim.x + threadIdx.x;
         if (featureDim < embeddingDimSize) {
             COMP_T bag = Simt::UintDiv(chunk, magic, shift);
             COMP_T begin = bag * indicesSize;
@@ -148,14 +149,14 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_NUM) inline void SimtComputeMax2
     COMP_T numBags, COMP_T numIndices, COMP_T indicesSize, COMP_T chunkPerBag, COMP_T magic, COMP_T shift,
     COMP_T embeddingDimSize, COMP_T paddingIdx)
 {
-    COMP_T chunkStride = Simt::GetBlockNum() * Simt::GetThreadNum<1>();
+    COMP_T chunkStride = gridDim.x * blockDim.y;
     COMP_T numChunks = numBags * chunkPerBag;
-    COMP_T chunkOffset = Simt::GetBlockIdx() * Simt::GetThreadNum<1>() + Simt::GetThreadIdx<1>();
+    COMP_T chunkOffset = blockIdx.x * blockDim.y + threadIdx.y;
 
     for (COMP_T chunk = chunkOffset; chunk < numChunks; chunk += chunkStride) {
         COMP_T quotient = Simt::UintDiv(chunk, magic, shift);
         COMP_T reminder = chunk - quotient * chunkPerBag;
-        COMP_T featureDim = reminder * Simt::GetThreadNum<0>() + Simt::GetThreadIdx<0>();
+        COMP_T featureDim = reminder * blockDim.x + threadIdx.x;
         if (featureDim < embeddingDimSize) {
             COMP_T bag = Simt::UintDiv(chunk, magic, shift);
             COMP_T eachBagSize = 0;
@@ -238,7 +239,7 @@ __aicore__ inline void EmbeddingBagRegBaseSimt2D<W, I, O, P, COMP_T>::Process()
     GetUintDivMagicAndShift(magic, shift, chunkPerBag);
 
     if (mode == MODE_MAX) {
-        Simt::VF_CALL<SimtComputeMax2D<W, I, O, P, COMP_T>>(Simt::Dim3{BLOCK_DIM_0, BLOCK_DIM_1}, 
+        asc_vf_call<SimtComputeMax2D<W, I, O, P, COMP_T>>(dim3{BLOCK_DIM_0, BLOCK_DIM_1}, 
                 (__gm__ W*)(weightGm_.GetPhyAddr()), 
                 (__gm__ I*)(indicesGm_.GetPhyAddr()),
                 (__gm__ W*)(yGm_.GetPhyAddr()),
@@ -248,7 +249,7 @@ __aicore__ inline void EmbeddingBagRegBaseSimt2D<W, I, O, P, COMP_T>::Process()
                 numBags, numIndices, indicesSize, chunkPerBag, magic, shift,
                 embeddingDimSize, paddingIdx);
     } else if (mode == MODE_MEAN) {
-        Simt::VF_CALL<SimtComputeMean2D<W, I, O, P, COMP_T>>(Simt::Dim3{BLOCK_DIM_0, BLOCK_DIM_1}, 
+        asc_vf_call<SimtComputeMean2D<W, I, O, P, COMP_T>>(dim3{BLOCK_DIM_0, BLOCK_DIM_1}, 
                 (__gm__ W*)(weightGm_.GetPhyAddr()), 
                 (__gm__ I*)(indicesGm_.GetPhyAddr()),
                 (__gm__ W*)(yGm_.GetPhyAddr()),
@@ -257,7 +258,7 @@ __aicore__ inline void EmbeddingBagRegBaseSimt2D<W, I, O, P, COMP_T>::Process()
                 numBags, numIndices, indicesSize, chunkPerBag, magic, shift,
                 embeddingDimSize, paddingIdx);
     } else if (mode == MODE_SUM && isNeedSampleWeight == 0) {
-        Simt::VF_CALL<SimtComputeSum2D<W, I, O, P, COMP_T>>(Simt::Dim3{BLOCK_DIM_0, BLOCK_DIM_1}, 
+        asc_vf_call<SimtComputeSum2D<W, I, O, P, COMP_T>>(dim3{BLOCK_DIM_0, BLOCK_DIM_1}, 
                 (__gm__ W*)(weightGm_.GetPhyAddr()), 
                 (__gm__ I*)(indicesGm_.GetPhyAddr()),
                 (__gm__ W*)(yGm_.GetPhyAddr()),
@@ -266,7 +267,7 @@ __aicore__ inline void EmbeddingBagRegBaseSimt2D<W, I, O, P, COMP_T>::Process()
                 numBags, numIndices, indicesSize, chunkPerBag, magic, shift,
                 embeddingDimSize, paddingIdx);
     } else {
-        Simt::VF_CALL<SimtComputeSumWithPerSample2D<W, I, O, P, COMP_T>>(Simt::Dim3{BLOCK_DIM_0, BLOCK_DIM_1}, 
+        asc_vf_call<SimtComputeSumWithPerSample2D<W, I, O, P, COMP_T>>(dim3{BLOCK_DIM_0, BLOCK_DIM_1}, 
                 (__gm__ W*)(weightGm_.GetPhyAddr()), 
                 (__gm__ I*)(indicesGm_.GetPhyAddr()),
                 (__gm__ W*)(perSampleWeightsGm_.GetPhyAddr()),

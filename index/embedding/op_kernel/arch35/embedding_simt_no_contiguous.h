@@ -18,6 +18,7 @@
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
  #include "../inc/platform.h"
+#include "simt_api/asc_simt.h"
 
 namespace Embedding {
 using namespace AscendC;
@@ -54,8 +55,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void Compute
     COM_T indicesDim1Size, COM_T indicesDim0Stride, COM_T indicesDim1Stride, COM_T gatherSize, COM_T innerSize,
     COM_T xDim0Stride, COM_T xDim1Stride)
 {
-    for (COM_T index = static_cast<COM_T>(Simt::GetThreadIdx()); index < curIndicesNum;
-         index += static_cast<COM_T>(Simt::GetThreadNum())) {
+    for (COM_T index = static_cast<COM_T>(threadIdx.x); index < curIndicesNum;
+         index += static_cast<COM_T>(blockDim.x)) {
         COM_T idsIndex = indicesBase + index;
         // get indices dim0 dim1 index
         COM_T dim0Idx = Simt::UintDiv(idsIndex, m1, shift1);
@@ -65,10 +66,10 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void Compute
         indicesUb[index] = indicesGm[indicesIdx];
     }
 
-    AscendC::Simt::ThreadBarrier();
+    asc_syncthreads();
 
-    for (COM_T index = static_cast<COM_T>(Simt::GetThreadIdx()); index < currentCoreElements;
-         index += static_cast<COM_T>(Simt::GetThreadNum())) {
+    for (COM_T index = static_cast<COM_T>(threadIdx.x); index < currentCoreElements;
+         index += static_cast<COM_T>(blockDim.x)) {
         COM_T yIndex = yIndexBase + index;
         // get x dim0 dim1 index
         COM_T gatherIdx = Simt::UintDiv(yIndex, m0, shift0);
@@ -112,8 +113,8 @@ __aicore__ inline void EmbeddingKernelNoContiguous<X_T, INDICES_T, COM_T>::Proce
     GetUintDivMagicAndShift(m1, shift1, static_cast<COM_T>(tilingData_->indicesDim1Size));
     LocalTensor<INDICES_T> idsLocal = idsBuf_.Get<INDICES_T>();
 
-    AscendC::Simt::VF_CALL<ComputeSimt<X_T, INDICES_T, COM_T>>(
-        Simt::Dim3(tilingData_->threadNum), (__gm__ X_T*)(xGm_.GetPhyAddr()),
+    asc_vf_call<ComputeSimt<X_T, INDICES_T, COM_T>>(
+        dim3(tilingData_->threadNum), (__gm__ X_T*)(xGm_.GetPhyAddr()),
         (__gm__ INDICES_T*)(indicesGm_.GetPhyAddr()), (__ubuf__ INDICES_T*)(idsLocal.GetPhyAddr()),
         (__gm__ X_T*)(yGm_.GetPhyAddr()), yIndexStart_, currentCoreElements_, indicesStart_, curIndicesNum_,
         static_cast<COM_T>(m0), static_cast<COM_T>(shift0), static_cast<COM_T>(m1), static_cast<COM_T>(shift1),
