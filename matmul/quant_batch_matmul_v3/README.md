@@ -56,16 +56,28 @@
       $$
   
   - <term>Atlas 推理系列产品</term>：
-    - 无bias：
+    - 无pertoken、无bias：
 
       $$
       out = x1@x2 * scale + offset
       $$
 
-    - bias int32：
+    - 无pertoken、bias INT32：
 
       $$
       out = (x1@x2 + bias) * scale + offset
+      $$
+    
+    - 有pertoken、无bias
+
+      $$
+      out = x1@x2 * scale * pertokenScaleOptional
+      $$
+
+    - 有pertoken、bias INT32
+
+      $$
+      out = (x1@x2 + bias) * scale * pertokenScaleOptional
       $$
 
 ## 参数说明
@@ -141,10 +153,10 @@
 - <term>Atlas 推理系列产品</term>：
   - x1只支持INT8数据类型。
   - x2只支持INT8数据类型。
-  - scale只支持UINT64数据类型。
+  - scale只支持UINT64、FLOAT32数据类型。
   - bias只支持INT32数据类型。
+  - pertoken_scale只支持FLOAT32数据类型。
   - y只支持FLOAT16和INT32数据类型。
-  - pertoken_scale暂不支持。
 - Kirin X90/Kirin 9030处理器系列产品：
   - x1、x2只支持INT8数据类型。
   - scale只支持UINT64、INT64数据类型。
