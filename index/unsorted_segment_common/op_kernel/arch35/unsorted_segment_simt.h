@@ -53,8 +53,8 @@ public:
         COM_T magic = 1;
         COM_T shift = 1;
         GetUintDivMagicAndShift(magic, shift, static_cast<COM_T>(innerDimSizeTmp));
-        AscendC::Simt::VF_CALL<SimtComputeSegment<T, Index, COM_T, Mode>>(
-            Simt::Dim3(static_cast<uint32_t>(td_->maxThread)), input, segmentIds, output, blockNums, inputLength,
+        asc_vf_call<SimtComputeSegment<T, Index, COM_T, Mode>>(
+            dim3(static_cast<uint32_t>(td_->maxThread)), input, segmentIds, output, blockNums, inputLength,
             innerDimSizeTmp, outputOuterDimSizeTmp, magic, shift);
     }
 

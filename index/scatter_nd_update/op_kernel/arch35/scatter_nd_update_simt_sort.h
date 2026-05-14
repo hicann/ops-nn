@@ -28,7 +28,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SortSim
     const __ubuf__ uint32_t* updatesOriginIdexLocalAddr, const __ubuf__ int32_t* uniqueIdCountLocalAddr,
     TYPE_T sliceSize, uint32_t uniqueIdNum, TYPE_T indiceBlockOffSet, int64_t varSize, TYPE_T magic, TYPE_T shift)
 {
-    for (TYPE_T index = Simt::GetThreadIdx(); index < uniqueIdNum * sliceSize; index += Simt::GetThreadNum()) {
+    for (TYPE_T index = threadIdx.x; index < uniqueIdNum * sliceSize; index += blockDim.x) {
         TYPE_T rowIndex = Simt::UintDiv(index, magic, shift);
         TYPE_T sliceIndex = index - rowIndex * sliceSize;
 
@@ -53,7 +53,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void NoSortS
     TYPE_T sliceSize, uint32_t currUbTilingSize, TYPE_T indiceBlockOffSet, int64_t varSize, TYPE_T magic,
     TYPE_T shift)
 {
-    for (TYPE_T index = Simt::GetThreadIdx(); index < currUbTilingSize * sliceSize; index += Simt::GetThreadNum()) {
+    for (TYPE_T index = threadIdx.x; index < currUbTilingSize * sliceSize; index += blockDim.x) {
         TYPE_T rowIndex = Simt::UintDiv(index, magic, shift);
         TYPE_T sliceIndex = index - rowIndex * sliceSize;
 
@@ -211,8 +211,8 @@ __aicore__ inline void ScatterNdUpdateSimtSort<PARAMS_T, INDICES_T, TYPE_T, OFFS
     TYPE_T shift = 0;
 
     GetUintDivMagicAndShift(magic, shift, sliceSize);
-    AscendC::Simt::VF_CALL<SortSimtCompute<OFFSET_T, PARAMS_T, TYPE_T>>(
-        Simt::Dim3(THREAD_NUM), (__gm__ PARAMS_T*)(updateGm.GetPhyAddr()), (__gm__ PARAMS_T*)(varGm.GetPhyAddr()),
+    asc_vf_call<SortSimtCompute<OFFSET_T, PARAMS_T, TYPE_T>>(
+        dim3(THREAD_NUM), (__gm__ PARAMS_T*)(updateGm.GetPhyAddr()), (__gm__ PARAMS_T*)(varGm.GetPhyAddr()),
         (__ubuf__ OFFSET_T*)shiftSortLocal.GetPhyAddr(), (__ubuf__ uint32_t*)updatesOriginIndexLocal.GetPhyAddr(),
         (__ubuf__ int32_t*)uniqueIdCountLocal.GetPhyAddr(), sliceSize, uniqueIdNum, indiceBlockOffSets, varSize, magic,
         shift);
@@ -231,8 +231,8 @@ __aicore__ inline void ScatterNdUpdateSimtSort<PARAMS_T, INDICES_T, TYPE_T, OFFS
     TYPE_T magic = 0;
     TYPE_T shift = 0;
     GetUintDivMagicAndShift(magic, shift, sliceSize);
-    AscendC::Simt::VF_CALL<NoSortSimtCompute<OFFSET_T, PARAMS_T, TYPE_T>>(
-        Simt::Dim3(THREAD_NUM), (__gm__ PARAMS_T*)(updateGm.GetPhyAddr()), (__gm__ PARAMS_T*)(varGm.GetPhyAddr()),
+    asc_vf_call<NoSortSimtCompute<OFFSET_T, PARAMS_T, TYPE_T>>(
+        dim3(THREAD_NUM), (__gm__ PARAMS_T*)(updateGm.GetPhyAddr()), (__gm__ PARAMS_T*)(varGm.GetPhyAddr()),
         (__ubuf__ OFFSET_T*)varIndexLocal.GetPhyAddr(), sliceSize, currUbTilingSize, indiceBlockOffSets,
         varSize, magic, shift);
     this->indiceBlockOffSet = this->indiceBlockOffSet + currUbTilingSize;

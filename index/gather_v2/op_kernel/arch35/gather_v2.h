@@ -20,6 +20,7 @@
 #endif
 
 #include "kernel_operator.h"
+#include "simt_api/asc_simt.h"
 #include "basic_api/kernel_vec_intf.h"
 
 #ifdef __DAV_FPGA__
@@ -59,8 +60,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void Gatherv
   INDEX_SIZE_T currentCoreElements, INDEX_SIZE_T m0, INDEX_SIZE_T shift0, INDEX_SIZE_T m1, INDEX_SIZE_T shift1, INDEX_SIZE_T m2,
   INDEX_SIZE_T shift2, INDEX_SIZE_T gatherSize, INDEX_SIZE_T outerSize, INDEX_SIZE_T innerSize,
   INDEX_SIZE_T gatherDimSize, __gm__ X_T* x, __gm__ INDICES_T* indices, __gm__ volatile X_T* y) {
-  for (INDEX_SIZE_T index = static_cast<INDEX_SIZE_T>(Simt::GetThreadIdx()); index < currentCoreElements;
-      index += static_cast<INDEX_SIZE_T>(Simt::GetThreadNum())) {
+  for (INDEX_SIZE_T index = static_cast<INDEX_SIZE_T>(threadIdx.x); index < currentCoreElements;
+      index += static_cast<INDEX_SIZE_T>(blockDim.x)) {
     INDEX_SIZE_T yIndex = yIndexBase + index;
 
     INDEX_SIZE_T tmp = Simt::UintDiv(yIndex, m0, shift0);
@@ -126,11 +127,11 @@ __aicore__ inline void Gatherv2<X_T, INDICES_T, INDEX_SIZE_T>::Process() {
   if (blockIdx < needCoreNum) {
     INDEX_SIZE_T yIndexBase = blockIdx * tilingData_->perCoreElements;
     if (unlikely(negativeIndexSupport)) {
-      AscendC::Simt::VF_CALL<GatherSimt<true>>(Simt::Dim3(threadNum), yIndexBase, currentCoreElements, m0, shift0, m1, shift1, m2, shift2,
+      asc_vf_call<GatherSimt<true>>(dim3(threadNum), yIndexBase, currentCoreElements, m0, shift0, m1, shift1, m2, shift2,
                   gatherSize, outerSize, innerSize, gatherDimSize, (__gm__ X_T*) (xGm_.GetPhyAddr()),
                   (__gm__ INDICES_T*) (indicesGm_.GetPhyAddr()), (__gm__ volatile X_T*) (yGm_.GetPhyAddr()));
     } else {
-      AscendC::Simt::VF_CALL<GatherSimt<false>>(Simt::Dim3(threadNum), yIndexBase, currentCoreElements, m0, shift0, m1, shift1, m2, shift2,
+      asc_vf_call<GatherSimt<false>>(dim3(threadNum), yIndexBase, currentCoreElements, m0, shift0, m1, shift1, m2, shift2,
                   gatherSize, outerSize, innerSize, gatherDimSize, (__gm__ X_T*) (xGm_.GetPhyAddr()),
                   (__gm__ INDICES_T*) (indicesGm_.GetPhyAddr()), (__gm__ volatile X_T*) (yGm_.GetPhyAddr()));
     }

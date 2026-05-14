@@ -17,6 +17,7 @@
 #define ASCENDC_REVERSE_V2_SIMT_H
 
 #include "kernel_operator.h"
+#include "simt_api/asc_simt.h"
 
 namespace ReverseV2 {
 using namespace AscendC;
@@ -419,7 +420,7 @@ __simt_vf__ __aicore__ inline void ReverseV2Simt<T1, T2, isReverse, dimNum>::Sim
     T1 y5 = 0;
     T1 y6 = 0;
     T1 inputIdx = 0;
-    for (T1 idx = blockIdx * blockFactor + Simt::GetThreadIdx(); idx < curCoreEndIdx; idx += Simt::GetThreadNum()) {
+    for (T1 idx = blockIdx * blockFactor + threadIdx.x; idx < curCoreEndIdx; idx += blockDim.x) {
         if constexpr (dimNum == DIM8) {
             ProcDim8(input, output, param0, param1, param2, param3, param4, param5, param6, dim0, dim1,
                      dim2, dim3, dim4, dim5, dim6, dim7, fastDivParam, idx0, idx1, idx2,
@@ -523,7 +524,7 @@ __aicore__ inline void ReverseV2Simt<T1, T2, isReverse, dimNum>::Process()
     simtParamLocal(static_cast<uint32_t>(SIMT_PARAM_INDEX::SIMT_PARAM_INDEX30)) = fastDivParam.shift6;
 
     DataSyncBarrier<MemDsbT::UB>();
-    Simt::VF_CALL<SimtCompute>(Simt::Dim3(LAUNCH_THREAD_NUM), (__gm__ T2*)(inputGm_.GetPhyAddr()), (__gm__ T2*)(outputGm_.GetPhyAddr()),
+    asc_vf_call<SimtCompute>(dim3(LAUNCH_THREAD_NUM), (__gm__ T2*)(inputGm_.GetPhyAddr()), (__gm__ T2*)(outputGm_.GetPhyAddr()),
             blockIdx_, (__local_mem__ T1*)(simtParamLocal.GetPhyAddr()));
 }
 } // namespace ReverseV2

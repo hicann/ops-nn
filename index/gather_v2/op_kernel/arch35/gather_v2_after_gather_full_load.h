@@ -20,6 +20,7 @@
 #if ASC_DEVKIT_MAJOR >=9
 #include "basic_api/kernel_vec_intf.h"
 #endif
+#include "simt_api/asc_simt.h"
 #include "op_kernel/platform_util.h"
 
 #ifdef __DAV_FPGA__
@@ -83,8 +84,8 @@ template <const bool NIS>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_BOUND) inline void Gatherv2FullLoad<T, INDICES_T, U>::GatherSimt3D(const U yIndexBase,
   U currentCoreElements, U m0, U shift0, U m1, U shift1, int64_t pOffset, U gatherSize, U innerSize,
   U gatherDimSize, __ubuf__ T* srcTensor, __gm__ INDICES_T* indices, __gm__ volatile T* y) {
-  for (U index = static_cast<U>(Simt::GetThreadIdx()); index < currentCoreElements;
-      index += static_cast<U>(Simt::GetThreadNum())) {
+  for (U index = static_cast<U>(threadIdx.x); index < currentCoreElements;
+      index += static_cast<U>(blockDim.x)) {
 
     U yIndex = yIndexBase + index;
     U tmp = Simt::UintDiv(yIndex, m0, shift0);
@@ -112,8 +113,8 @@ template <const bool NIS>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_BOUND) inline void Gatherv2FullLoad<T, INDICES_T, U>::GatherSimt2D(const U yIndexBase,
   U currentCoreElements, U m0, U shift0, U innerSize, U gatherDimSize, __ubuf__ T* srcTensor, 
   __gm__ INDICES_T* indices, __gm__ volatile T* y) {
-  for (U index = static_cast<U>(Simt::GetThreadIdx()); index < currentCoreElements;
-      index += static_cast<U>(Simt::GetThreadNum())) {
+  for (U index = static_cast<U>(threadIdx.x); index < currentCoreElements;
+      index += static_cast<U>(blockDim.x)) {
 
     U yIndex = yIndexBase + index;
     U gatherI = Simt::UintDiv(yIndex, m0, shift0);
@@ -207,11 +208,11 @@ __aicore__ inline void Gatherv2FullLoad<T, INDICES_T, U>::LoopColProcess()
     inQueue_.EnQue(gaBuffer);
     inQueue_.DeQue<T>();
     if (unlikely(negativeIndexSupport_)) {
-      AscendC::Simt::VF_CALL<GatherSimt3D<true>>(Simt::Dim3(threadNum_), yIndexBase, currentCoreElements_, m0, shift0, m1, shift1, pOffset,
+      asc_vf_call<GatherSimt3D<true>>(dim3(threadNum_), yIndexBase, currentCoreElements_, m0, shift0, m1, shift1, pOffset,
                   gatherSize_, innerSize_, gatherDimSize_, (__ubuf__ T*)(gaBuffer.GetPhyAddr()),
                   (__gm__ INDICES_T*) (indicesGm_.GetPhyAddr()), (__gm__ volatile T*) (yGm_.GetPhyAddr()));
     } else {
-      AscendC::Simt::VF_CALL<GatherSimt3D<false>>(Simt::Dim3(threadNum_), yIndexBase, currentCoreElements_, m0, shift0, m1, shift1, pOffset,
+      asc_vf_call<GatherSimt3D<false>>(dim3(threadNum_), yIndexBase, currentCoreElements_, m0, shift0, m1, shift1, pOffset,
                   gatherSize_, innerSize_, gatherDimSize_, (__ubuf__ T*)(gaBuffer.GetPhyAddr()),
                   (__gm__ INDICES_T*) (indicesGm_.GetPhyAddr()), (__gm__ volatile T*) (yGm_.GetPhyAddr()));
     }
@@ -240,11 +241,11 @@ __aicore__ inline void Gatherv2FullLoad<T, INDICES_T, U>::NoLoopProcess()
     inQueue_.DeQue<T>();
     U yIndexBase = blockIdx_ * tilingData_->perCoreElements * innerSize_;
     if (unlikely(negativeIndexSupport_)) {
-      AscendC::Simt::VF_CALL<GatherSimt2D<true>>(Simt::Dim3(threadNum_), yIndexBase, currentCoreElements_, m0, shift0,
+      asc_vf_call<GatherSimt2D<true>>(dim3(threadNum_), yIndexBase, currentCoreElements_, m0, shift0,
                   innerSize_, gatherDimSize_, (__ubuf__ T*)(gaBuffer.GetPhyAddr()),
                   (__gm__ INDICES_T*) (indicesGm_.GetPhyAddr()), (__gm__ volatile T*) (yGm_.GetPhyAddr()));
     } else {
-      AscendC::Simt::VF_CALL<GatherSimt2D<false>>(Simt::Dim3(threadNum_), yIndexBase, currentCoreElements_, m0, shift0,
+      asc_vf_call<GatherSimt2D<false>>(dim3(threadNum_), yIndexBase, currentCoreElements_, m0, shift0,
                   innerSize_, gatherDimSize_, (__ubuf__ T*)(gaBuffer.GetPhyAddr()),
                   (__gm__ INDICES_T*) (indicesGm_.GetPhyAddr()), (__gm__ volatile T*) (yGm_.GetPhyAddr()));
     }

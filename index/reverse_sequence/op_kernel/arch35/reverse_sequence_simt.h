@@ -19,6 +19,7 @@
 #include "../inc/platform.h"
 #include "../inc/kernel_utils.h"
 #include "reverse_sequence_struct.h"
+#include "simt_api/asc_simt.h"
 
 namespace ReverseSequence {
 using namespace AscendC;
@@ -92,7 +93,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD) inline void ReverseSimtCompute(
     __gm__ T* xGm, __gm__ SeqType* seqGm, __local_mem__ T* outLocal, CompType curOffset, CompType xUbSize,
     CompType batchDim, CompType seqDim, CompType reverseSize, CompType m0, CompType m1, CompType m2, CompType m3, CompType shift0, CompType shift1, CompType shift2, CompType shift3)
 {
-    for (CompType i = Simt::GetThreadIdx(); i < xUbSize; i += Simt::GetThreadNum()) {
+    for (CompType i = threadIdx.x; i < xUbSize; i += blockDim.x) {
         CompType xOffset = curOffset + i;
         CompType batchPreAxis = Simt::UintDiv(xOffset, m0, shift0);
         CompType batchIdx = Simt::UintDiv(batchPreAxis, m1, shift1);
@@ -130,8 +131,8 @@ __aicore__ inline void ReverseSequenceSimt<T, SeqType, CompType>::ReverseCompute
     GetUintDivMagicAndShift(params.m2, params.shift2, static_cast<CompType>(tilingData_->reverseSize));
     GetUintDivMagicAndShift(params.m3, params.shift3, static_cast<CompType>(tilingData_->seqDim));
 
-    Simt::VF_CALL<ReverseSimtCompute<T, SeqType, CompType>>(
-        Simt::Dim3(USED_THREAD), (__gm__ T*)(xGm_.GetPhyAddr()), (__gm__ SeqType*)(seqGm_.GetPhyAddr()),
+    asc_vf_call<ReverseSimtCompute<T, SeqType, CompType>>(
+        dim3(USED_THREAD), (__gm__ T*)(xGm_.GetPhyAddr()), (__gm__ SeqType*)(seqGm_.GetPhyAddr()),
         (__local_mem__ T*)(outLocal.GetPhyAddr()), curOffset, xUBSize, tilingData_->batchDim, tilingData_->seqDim, 
         tilingData_->reverseSize, params.m0, params.m1, params.m2, params.m3, params.shift0, params.shift1, params.shift2, params.shift3);
     

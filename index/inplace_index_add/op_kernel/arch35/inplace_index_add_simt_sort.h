@@ -205,9 +205,9 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_SORT) inline void SimtCompute(
     }
     float alphaValueFloat = static_cast<float>(alphaValue);
 
-    uint32_t threadBlockIdx = Simt::GetThreadIdx<1>();
-    uint32_t threadBlockNum = Simt::GetThreadNum<1>();
-    uint32_t innerOffset = Simt::GetThreadIdx<0>();
+    uint32_t threadBlockIdx = threadIdx.y;
+    uint32_t threadBlockNum = blockDim.y;
+    uint32_t innerOffset = threadIdx.x;
     
     for(uint32_t i = threadBlockIdx; i < uniqueIdNum * updatesPreNum; i += threadBlockNum) {  // 每个循环对应多个pre中其中一行updates
         uint32_t preInternalIdx = Simt::UintDiv(i, m0, shift0);  // 计算当前线程处于当前pre循环第几个pre
@@ -235,9 +235,9 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_SORT) inline void SimtCompute(
 
         int64_t gmDstOffset = varStride * (preIdx + preInternalIdx) + sortedAddr[uniqueIdCountAddr[idx]] * afterAxis + innerOffset;
         if constexpr (IsSameType<VAR_T, bfloat16_t>::value || IsSameType<VAR_T, half>::value) {
-            Simt::AtomicAdd(varAddr + gmDstOffset, static_cast<VAR_T>(reslut_f));
+            asc_atomic_add(varAddr + gmDstOffset, static_cast<VAR_T>(reslut_f));
         } else {
-            Simt::AtomicAdd(varAddr + gmDstOffset, result);
+            asc_atomic_add(varAddr + gmDstOffset, result);
         }
     }
 }
@@ -255,9 +255,9 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_SORT) inline void InplaceIndexAd
     }
     float alphaValueFloat = static_cast<float>(alphaValue);
 
-    uint32_t threadBlockIdx = Simt::GetThreadIdx<1>();
-    uint32_t threadBlockNum = Simt::GetThreadNum<1>();
-    uint32_t innerOffset = Simt::GetThreadIdx<0>();
+    uint32_t threadBlockIdx = threadIdx.y;
+    uint32_t threadBlockNum = blockDim.y;
+    uint32_t innerOffset = threadIdx.x;
 
     for(uint32_t i = threadBlockIdx; i < indicesCount * preAxis; i += threadBlockNum) {  // 每个循环对应其中一行updates
         uint32_t preIdx = Simt::UintDiv(i, m1, shift1);                                      // 计算当前线程处于第几个pre
@@ -284,9 +284,9 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_SORT) inline void InplaceIndexAd
 
         int64_t gmDstOffset = varStride * preIdx + indicesLocalAddr[indicesLocalIdx] * afterAxis + innerOffset;
         if constexpr (IsSameType<VAR_T, bfloat16_t>::value || IsSameType<VAR_T, half>::value) {
-            Simt::AtomicAdd(varAddr + gmDstOffset, static_cast<VAR_T>(reslut_f));
+            asc_atomic_add(varAddr + gmDstOffset, static_cast<VAR_T>(reslut_f));
         } else {
-            Simt::AtomicAdd(varAddr + gmDstOffset, result);
+            asc_atomic_add(varAddr + gmDstOffset, result);
         }
     }
 }
@@ -318,8 +318,8 @@ __aicore__ inline void InplaceIndexAddSimtSort<VAR_T, IDX_T, COMP_T, WITH_ALPHA,
     uint32_t threadBlock = currentMaxThread / afterAxis;
     threadBlock = threadBlock < uniqueIdNum * updatesPreNum ? threadBlock : uniqueIdNum * updatesPreNum;
 
-    Simt::VF_CALL<SimtCompute<VAR_T, CAST_T, COMP_T, WITH_ALPHA, IS_CONTIGUOUS, CAST_MODE>>(
-        Simt::Dim3({afterAxis, threadBlock}), varInAxis, afterAxis, uniqueIdNum, updatesPreNum, updatesLocalStride,
+    asc_vf_call<SimtCompute<VAR_T, CAST_T, COMP_T, WITH_ALPHA, IS_CONTIGUOUS, CAST_MODE>>(
+        dim3({afterAxis, threadBlock}), varInAxis, afterAxis, uniqueIdNum, updatesPreNum, updatesLocalStride,
         preIdx, indicesSortedPtr, updatesOriginIdxPtr, uniqueIdCountPtr, updatesLocalPtr,
         (__gm__ VAR_T*)(var_.GetPhyAddr()), (__gm__ VAR_T*)(alpha_.GetPhyAddr()), m0, shift0);
 
@@ -347,7 +347,7 @@ __aicore__ inline void InplaceIndexAddSimtSort<VAR_T, IDX_T, COMP_T, WITH_ALPHA,
     uint32_t threadBlock = currentMaxThread / afterAxis;
     threadBlock = threadBlock < indicesCount * preAxis ? threadBlock : indicesCount * preAxis ;
 
-    Simt::VF_CALL<InplaceIndexAddSimtSort<VAR_T, IDX_T, COMP_T, WITH_ALPHA, IS_CONTIGUOUS, CAST_MODE>::SimtComputeNoSort>(Simt::Dim3({afterAxis, threadBlock}),
+    asc_vf_call<InplaceIndexAddSimtSort<VAR_T, IDX_T, COMP_T, WITH_ALPHA, IS_CONTIGUOUS, CAST_MODE>::SimtComputeNoSort>(dim3({afterAxis, threadBlock}),
         varInAxis, afterAxis, preAxis, updatesInAxis, indicesOffset, indicesCount, indicesLocalPtr,
         (__gm__ VAR_T*)(var_.GetPhyAddr()), (__gm__ VAR_T*)(updates_.GetPhyAddr()), (__gm__ VAR_T*)(alpha_.GetPhyAddr()), m1, shift1);
 }

@@ -247,8 +247,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void ScatterAddSimtComput
     __gm__ IDX_T* indices, __gm__ VAR_T* updates, __gm__ CAST_T* varWorkspaceGm, ADDR_T blockIdx, ADDR_T blockNum)
 {
     ADDR_T totalSize = indicesSize * totalCol;
-    for (ADDR_T i = blockIdx * Simt::GetThreadNum() + Simt::GetThreadIdx(); i < totalSize;
-         i += blockNum * Simt::GetThreadNum()) {
+    for (ADDR_T i = blockIdx * blockDim.x + threadIdx.x; i < totalSize;
+         i += blockNum * blockDim.x) {
         ADDR_T indiceRow = Simt::UintDiv(i, magic, shift);
         IDX_T varRow = indices[indiceRow];
         if (!(varRow >= 0 && varRow < varFirstDimSize)) {
@@ -260,29 +260,29 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void ScatterAddSimtComput
         if constexpr (scatterOp == ADD) {
             if constexpr (IsSameType<VAR_T, int8_t>::value || IsSameType<VAR_T, uint8_t>::value) {
                 if constexpr (isUpdateScalar) {
-                    Simt::AtomicAdd(varWorkspaceGm + varDataIdx, static_cast<CAST_T>(updates[0]));
+                    asc_atomic_add(varWorkspaceGm + varDataIdx, static_cast<CAST_T>(updates[0]));
                 } else {
-                    Simt::AtomicAdd(varWorkspaceGm + varDataIdx, static_cast<CAST_T>(updates[i]));
+                    asc_atomic_add(varWorkspaceGm + varDataIdx, static_cast<CAST_T>(updates[i]));
                 }
             } else {
                 if constexpr (isUpdateScalar) {
-                    Simt::AtomicAdd(var + varDataIdx, static_cast<VAR_T>(updates[0]));
+                    asc_atomic_add(var + varDataIdx, static_cast<VAR_T>(updates[0]));
                 } else {
-                    Simt::AtomicAdd(var + varDataIdx, static_cast<VAR_T>(updates[i]));
+                    asc_atomic_add(var + varDataIdx, static_cast<VAR_T>(updates[i]));
                 }
             }
         } else if constexpr (scatterOp == SUB) {
             if constexpr (IsSameType<VAR_T, int8_t>::value || IsSameType<VAR_T, uint8_t>::value) {
                 if constexpr (isUpdateScalar) {
-                    Simt::AtomicAdd(varWorkspaceGm + varDataIdx, static_cast<CAST_T>(-updates[0]));
+                    asc_atomic_add(varWorkspaceGm + varDataIdx, static_cast<CAST_T>(-updates[0]));
                 } else {
-                    Simt::AtomicAdd(varWorkspaceGm + varDataIdx, static_cast<CAST_T>(-updates[i]));
+                    asc_atomic_add(varWorkspaceGm + varDataIdx, static_cast<CAST_T>(-updates[i]));
                 }
             } else {
                 if constexpr (isUpdateScalar) {
-                    Simt::AtomicAdd(var + varDataIdx, static_cast<VAR_T>(-updates[0]));
+                    asc_atomic_add(var + varDataIdx, static_cast<VAR_T>(-updates[0]));
                 } else {
-                    Simt::AtomicAdd(var + varDataIdx, static_cast<VAR_T>(-updates[i]));
+                    asc_atomic_add(var + varDataIdx, static_cast<VAR_T>(-updates[i]));
                 }
             }
         }
@@ -306,7 +306,7 @@ __aicore__ inline void ScatterAddSimt<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScal
     ADDR_T shift = 0;
     GetUintDivMagicAndShift(magic, shift, totalCol);
 
-    Simt::VF_CALL<ScatterAddSimtCompute<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScalar, scatterOp>>(Simt::Dim3(THREAD_NUM), 
+    asc_vf_call<ScatterAddSimtCompute<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScalar, scatterOp>>(dim3(THREAD_NUM), 
             totalCol, indicesSize, varFirstDimSize, magic, shift, (__gm__ VAR_T*)(var_.GetPhyAddr()),
             (__gm__ IDX_T*)(indices_.GetPhyAddr()), (__gm__ VAR_T*)(updates_.GetPhyAddr()),
             (__gm__ CAST_T*)(varWorkspaceGm_.GetPhyAddr()), blockIdx_, blockNum_);

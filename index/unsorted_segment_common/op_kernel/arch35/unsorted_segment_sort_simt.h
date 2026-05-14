@@ -180,8 +180,8 @@ __aicore__ inline void KernelUnsortedSegmentSortSimt<TX, Index, Mode>::ProcessEa
     __ubuf__ uint32_t* cumSumAddr = (__ubuf__ uint32_t*)cumSumLocal.GetPhyAddr();
     __gm__ TX* outputGm = (__gm__ TX*)outputGm_.GetPhyAddr();
 
-    AscendC::Simt::VF_CALL<SegmentReduceSortSimt<TX, Index, Mode>>(
-        Simt::Dim3({static_cast<uint32_t>(tilingData_->innerDim), static_cast<uint32_t>(threadBlock)}), inputAddr,
+    asc_vf_call<SegmentReduceSortSimt<TX, Index, Mode>>(
+        dim3({static_cast<uint32_t>(tilingData_->innerDim), static_cast<uint32_t>(threadBlock)}), inputAddr,
         sortedIndexAddr, sortedSengmentAddr, cumSumAddr, outputGm, uniqueIndexNum, tilingData_->innerDim,
         tilingData_->outputOuterDim);
 
@@ -192,19 +192,19 @@ __aicore__ inline void KernelUnsortedSegmentSortSimt<TX, Index, Mode>::ProcessEa
 template <typename TX, typename Index, uint8_t Mode>
 __aicore__ inline void KernelUnsortedSegmentSortSimt<TX, Index, Mode>::Process()
 {
-    int64_t blockIdx = GetBlockIdx();
-    if (blockIdx >= tilingData_->usedCoreNum) {
+    int64_t block_idx = GetBlockIdx();
+    if (block_idx >= tilingData_->usedCoreNum) {
         return;
     }
 
     int64_t currLoopTimes =
-        (blockIdx == tilingData_->usedCoreNum - 1) ? tilingData_->tailCoreUbLoopTimes : tilingData_->oneCoreUbLoopTimes;
+        (block_idx == tilingData_->usedCoreNum - 1) ? tilingData_->tailCoreUbLoopTimes : tilingData_->oneCoreUbLoopTimes;
     int64_t baseCoreOffset =
-        blockIdx * tilingData_->oneCoreUbLoopTimes * tilingData_->maxIndexNum * tilingData_->innerDim;
-    int64_t baseCoreOffsetIndex = blockIdx * tilingData_->oneCoreUbLoopTimes * tilingData_->maxIndexNum;
+        block_idx * tilingData_->oneCoreUbLoopTimes * tilingData_->maxIndexNum * tilingData_->innerDim;
+    int64_t baseCoreOffsetIndex = block_idx * tilingData_->oneCoreUbLoopTimes * tilingData_->maxIndexNum;
     int64_t length = tilingData_->maxIndexNum * tilingData_->innerDim;
     uint32_t tailSize =
-        (blockIdx == tilingData_->usedCoreNum - 1) ? tilingData_->tailIndexNum : tilingData_->maxIndexNum;
+        (block_idx == tilingData_->usedCoreNum - 1) ? tilingData_->tailIndexNum : tilingData_->maxIndexNum;
     for (int64_t i = 0; i < currLoopTimes - 1; i++) {
         CopyInX(baseCoreOffset, i, length, length);
         CopyInIndex(baseCoreOffsetIndex, i, tilingData_->maxIndexNum, tilingData_->maxIndexNum);

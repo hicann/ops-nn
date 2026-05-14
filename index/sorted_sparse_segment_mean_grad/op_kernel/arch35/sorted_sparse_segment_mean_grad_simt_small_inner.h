@@ -24,6 +24,7 @@
 #include "sorted_sparse_segment_mean_grad_simt_base.h"
 #include "kernel_operator.h"
 
+#include "simt_api/asc_simt.h"
 constexpr uint32_t TBUF_SIZE = 512;
 
 namespace SparseSegmentMeanGradNameSpace {
@@ -110,16 +111,16 @@ __aicore__ inline void SortedSparseSegmentMeanGradSimtSmallInner<X_T, INDICES_T,
     uint32_t indexThreadNumY = static_cast<uint32_t>(tilingData_->indexThreadNumY);
     INNER_T innerSize = static_cast<INNER_T>(tilingData_->innerSize);
 
-    AscendC::Simt::VF_CALL<SimtGetSegmentOffset<SEGMENTIDS_T, OUTTER_T>>(Simt::Dim3(segThreadNumY, segThreadNumX), blockIdx_, outterSize, blockNums_, segmentNum_, 
+    asc_vf_call<SimtGetSegmentOffset<SEGMENTIDS_T, OUTTER_T>>(dim3(segThreadNumY, segThreadNumX), blockIdx_, outterSize, blockNums_, segmentNum_, 
                                                                (__gm__ OUTTER_T*) (workspaceSegmentOffset_.GetPhyAddr()), (__gm__ SEGMENTIDS_T*) (segmentIdsGm_.GetPhyAddr()));
     SyncAll();
-    AscendC::Simt::VF_CALL<SimtCalcWeight<SEGMENTIDS_T, OUTTER_T>>(Simt::Dim3(MAX_SIMPLE_THREAD_NUM), blockIdx_, blockNums_, segmentNum_,
+    asc_vf_call<SimtCalcWeight<SEGMENTIDS_T, OUTTER_T>>(dim3(MAX_SIMPLE_THREAD_NUM), blockIdx_, blockNums_, segmentNum_,
                                                                (__gm__ OUTTER_T*) (workspaceSegmentOffset_.GetPhyAddr()), (__gm__ float*) (workspaceWeight_.GetPhyAddr(segmentNum_ + 1)));
-    AscendC::Simt::VF_CALL<SimtGetSegmentOffset<INDICES_T, OUTTER_T>>(Simt::Dim3(indexThreadNumY, indexThreadNumX), blockIdx_, outterSize, blockNums_, static_cast<INDICES_T>(tilingData_->outputDim0),
+    asc_vf_call<SimtGetSegmentOffset<INDICES_T, OUTTER_T>>(dim3(indexThreadNumY, indexThreadNumX), blockIdx_, outterSize, blockNums_, static_cast<INDICES_T>(tilingData_->outputDim0),
                                                                (__gm__ OUTTER_T*) (workspaceIndicesOffset_.GetPhyAddr(2 * (segmentNum_ + 1))), (__gm__ INDICES_T*) (indicesGm_.GetPhyAddr()));
     SyncAll();
 
-    AscendC::Simt::VF_CALL<SimtSmallInnerComputer<X_T, LOCATION_T, SEGMENTIDS_T, OUTTER_T, INNER_T>>(Simt::Dim3{threadNumX, threadNumY}, indicesOffsetBase_, curCoreIndices_, threadNumY, innerSize, segmentNum_, threadNumX,
+    asc_vf_call<SimtSmallInnerComputer<X_T, LOCATION_T, SEGMENTIDS_T, OUTTER_T, INNER_T>>(dim3{threadNumX, threadNumY}, indicesOffsetBase_, curCoreIndices_, threadNumY, innerSize, segmentNum_, threadNumX,
                                                                    (__local_mem__ float*) (tmpLocal.GetPhyAddr()), (__gm__ X_T*) (xGm_.GetPhyAddr()), (__gm__ volatile X_T*) (yGm_.GetPhyAddr()),
                                                                    (__gm__ OUTTER_T*) (workspaceIndicesOffset_.GetPhyAddr(2 * (segmentNum_ + 1))), (__gm__ SEGMENTIDS_T*) (segmentIdsGm_.GetPhyAddr()),
                                                                    (__gm__ LOCATION_T*) (locationGm_.GetPhyAddr()), (__gm__ float*) (workspaceWeight_.GetPhyAddr(segmentNum_ + 1)),

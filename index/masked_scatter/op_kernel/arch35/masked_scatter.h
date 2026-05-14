@@ -19,6 +19,7 @@
 #include "kernel_operator.h"
 #include "op_kernel/platform_util.h"
 #include "op_kernel/math_util.h"
+#include "simt_api/asc_simt.h"
 
 namespace MaskedScatter {
 using namespace AscendC;
@@ -32,7 +33,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_NUMS) inline void MaskedScatterS
     U preCoreMaskSum, __gm__ T* xGm, __gm__ bool* maskGm, __gm__ T* updatesGm,
     __gm__ T* yGm, __gm__ U* prefixSumGm)
 {
-    for (int64_t i = Simt::GetThreadIdx(); i < curCoreHandleData; i += Simt::GetThreadNum()) {
+    for (int64_t i = threadIdx.x; i < curCoreHandleData; i += blockDim.x) {
         if (maskGm[i] == 0) {
             yGm[i] = xGm[i];
         } else {
@@ -46,7 +47,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_NUMS) void MaskedScatterToUBSimt
     U preCoreMaskSum, __local_mem__ T* x, __local_mem__ bool* mask, __gm__ T* updatesGm,
     __local_mem__ T* y, __gm__ U* prefixSumGm)
 {
-    for (int64_t i = Simt::GetThreadIdx(); i < curLoopHandleData; i += Simt::GetThreadNum()) {
+    for (int64_t i = threadIdx.x; i < curLoopHandleData; i += blockDim.x) {
         if (mask[i] == 0) {
             y[i] = x[i];
         } else {
@@ -335,7 +336,7 @@ __aicore__ inline void MaskedScatterImpl<T, U>::MaskedScatterToUB(int64_t offset
     LocalTensor<bool> maskLocal = maskQueue_.DeQue<bool>();
     LocalTensor<T> yLocal = yQueue_.AllocTensor<T>();
     auto curLoopPrefixSumGm = prefixSumGm_[offset];
-    Simt::VF_CALL<MaskedScatterToUBSimt<T, U>>(Simt::Dim3(USED_THREAD_NUMS), dataLen, preCoreMaskSum_,
+    asc_vf_call<MaskedScatterToUBSimt<T, U>>(dim3(USED_THREAD_NUMS), dataLen, preCoreMaskSum_,
         (__local_mem__ T*)(xLocal.GetPhyAddr()), (__local_mem__ bool*)(maskLocal.GetPhyAddr()), (__gm__ T*)(updatesGm_.GetPhyAddr()),
         (__local_mem__ T*)(yLocal.GetPhyAddr()), (__gm__ U*)(curLoopPrefixSumGm.GetPhyAddr()));
     yQueue_.EnQue(yLocal);
@@ -409,7 +410,7 @@ __aicore__ inline void MaskedScatterImpl<T, U>::Process()
         ProcessLowBit(curCoreHandleData);
     } else {
         ComputePreCoreMaskSum();
-        Simt::VF_CALL<MaskedScatterSimt<T, U>>(Simt::Dim3(USED_THREAD_NUMS), curCoreHandleData, preCoreMaskSum_,
+        asc_vf_call<MaskedScatterSimt<T, U>>(dim3(USED_THREAD_NUMS), curCoreHandleData, preCoreMaskSum_,
             (__gm__ T*)(xGm_.GetPhyAddr()), (__gm__ bool*)(maskGm_.GetPhyAddr()), (__gm__ T*)(updatesGm_.GetPhyAddr()),
             (__gm__ T*)(yGm_.GetPhyAddr()), (__gm__ U*)(prefixSumGm_.GetPhyAddr()));
     }

@@ -35,7 +35,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtCom
     const __ubuf__ TYPE_T* strideListAddr, const __ubuf__ TYPE_T* outputShapeAddr, uint32_t currUbTilingSize,
     TYPE_T xOffSet, TYPE_T sliceSize, uint32_t rankSize, OFFSET_T indiceOffSet, TYPE_T magic, TYPE_T shift)
 {
-    for (uint32_t index = Simt::GetThreadIdx(); index < currUbTilingSize; index += Simt::GetThreadNum()) {
+    for (uint32_t index = threadIdx.x; index < currUbTilingSize; index += blockDim.x) {
         TYPE_T globalIdx = xOffSet + index;
         TYPE_T quotient = Simt::UintDiv(globalIdx, magic, shift);
         TYPE_T currIndiceIdx = quotient * rankSize;
@@ -61,7 +61,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtCom
     uint32_t currUbTilingSize, TYPE_T xOffSet, TYPE_T sliceSize, uint32_t rankSize, TYPE_T sliceStride,
     OFFSET_T indiceOffSet, int64_t varInAxis, TYPE_T magic, TYPE_T shift)
 {
-    for (uint32_t index = Simt::GetThreadIdx(); index < currUbTilingSize; index += Simt::GetThreadNum()) {
+    for (uint32_t index = threadIdx.x; index < currUbTilingSize; index += blockDim.x) {
         TYPE_T globalIdx = xOffSet + index;
         TYPE_T quotient = Simt::UintDiv(globalIdx, magic, shift);
         TYPE_T currIndiceIdx = quotient * rankSize;
@@ -180,8 +180,8 @@ __aicore__ inline void ScatterNdUpdateSimt<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T
     TYPE_T magic = 0;
     TYPE_T shift = 0;
     GetUintDivMagicAndShift(magic, shift, sliceSize);
-    AscendC::Simt::VF_CALL<SimtCompute<INDICES_T, PARAMS_T, TYPE_T, OFFSET_T>>(
-        Simt::Dim3(THREAD_NUM), (__ubuf__ INDICES_T*)idxLocal.GetPhyAddr(), (__ubuf__ PARAMS_T*)xLocal.GetPhyAddr(),
+    asc_vf_call<SimtCompute<INDICES_T, PARAMS_T, TYPE_T, OFFSET_T>>(
+        dim3(THREAD_NUM), (__ubuf__ INDICES_T*)idxLocal.GetPhyAddr(), (__ubuf__ PARAMS_T*)xLocal.GetPhyAddr(),
         (__gm__ PARAMS_T*)(outputGm.GetPhyAddr()), (__ubuf__ TYPE_T*)strideList.GetPhyAddr(),
         (__ubuf__ TYPE_T*)outputShape.GetPhyAddr(), currUbTilingSize, xOffSet, sliceSize, rankSize, indiceOffSet, magic,
         shift);
@@ -204,8 +204,8 @@ __aicore__ inline void ScatterNdUpdateSimt<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T
     TYPE_T magic = 0;
     TYPE_T shift = 0;
     GetUintDivMagicAndShift(magic, shift, sliceSize);
-    AscendC::Simt::VF_CALL<SimtComputeDimensionOne<INDICES_T, PARAMS_T, TYPE_T, OFFSET_T>>(
-        Simt::Dim3(THREAD_NUM), (__gm__ INDICES_T*)(idxGm.GetPhyAddr()), (__ubuf__ PARAMS_T*)xLocal.GetPhyAddr(),
+    asc_vf_call<SimtComputeDimensionOne<INDICES_T, PARAMS_T, TYPE_T, OFFSET_T>>(
+        dim3(THREAD_NUM), (__gm__ INDICES_T*)(idxGm.GetPhyAddr()), (__ubuf__ PARAMS_T*)xLocal.GetPhyAddr(),
         (__gm__ PARAMS_T*)(outputGm.GetPhyAddr()), currUbTilingSize, xOffSet, sliceSize, rankSize, sliceStride, indiceOffSet,
         varInAxis, magic, shift);
     inQueX.FreeTensor(xLocal);

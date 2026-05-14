@@ -20,6 +20,7 @@
 #include "../inc/kernel_utils.h"
 #include "scatter_update_common.h"
 #include "scatter_update_struct.h"
+#include "simt_api/asc_simt.h"
 
 namespace ScatterUpdate
 {
@@ -110,7 +111,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_SORT) inline void ScatterUpdateSi
 {
     ADDR_T totalSizeCurr = uniqueIdNum * totalCol;
 
-    for (ADDR_T i = Simt::GetThreadIdx(); i < totalSizeCurr; i += Simt::GetThreadNum()) {
+    for (ADDR_T i = threadIdx.x; i < totalSizeCurr; i += blockDim.x) {
         ADDR_T indiceRow = Simt::UintDiv(i, magic, shift);        // 当前线程对应当前分块indices行
         ADDR_T tailRowIdx = i - indiceRow * totalCol;             // 获取当前indices对应updates行中的数，在当前updates行中的索引
         
@@ -137,7 +138,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void ScatterUpdateSimtNoS
 {
     ADDR_T totalSizeCurr = currIndicesSize * totalCol;
 
-    for (ADDR_T i = Simt::GetThreadIdx(); i < totalSizeCurr; i += Simt::GetThreadNum()) {
+    for (ADDR_T i = threadIdx.x; i < totalSizeCurr; i += blockDim.x) {
         ADDR_T indiceRow = Simt::UintDiv(i, magic, shift);
         ADDR_T tailRowIdx = i - indiceRow * totalCol;
         ADDR_T varRow = static_cast<ADDR_T>(indices[indiceRow]);
@@ -206,12 +207,12 @@ __aicore__ inline void ScatterUpdateSimtSort<IDX_T, VAR_T, CAST_T, ADDR_T, isUpd
  	                        indicesCount, indicesCastLocal, indicesSortedLocal, uniqueIdCountLocal, updatesOriginIdxLocal);
         }
          
-        Simt::VF_CALL<ScatterUpdateSimtSortCompute<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScalar, castType>>(Simt::Dim3(THREAD_NUM_SORT),
+        asc_vf_call<ScatterUpdateSimtSortCompute<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScalar, castType>>(dim3(THREAD_NUM_SORT),
             varFirstDimSize, magic, shift, (__gm__ VAR_T*)(var_.GetPhyAddr()), currCalcUpdates, indicesSortedPtr,
             (__local_mem__ uint32_t*)(updatesOriginIdxLocal.GetPhyAddr()), (__local_mem__ int32_t*)(uniqueIdCountLocal.GetPhyAddr()),
             blockIdx_, uniqueIdNum, totalCol, updateScalarValue, varStride);
     } else {
-        Simt::VF_CALL<ScatterUpdateSimtNoSortCompute<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScalar, castType>>(Simt::Dim3(THREAD_NUM), 
+        asc_vf_call<ScatterUpdateSimtNoSortCompute<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScalar, castType>>(dim3(THREAD_NUM), 
             totalCol, indicesCount, varFirstDimSize, magic, shift, (__gm__ VAR_T*)(var_.GetPhyAddr()),
             (__local_mem__ IDX_T*)(indicesLocal.GetPhyAddr()), currCalcUpdates, updateScalarValue, varStride);
     }

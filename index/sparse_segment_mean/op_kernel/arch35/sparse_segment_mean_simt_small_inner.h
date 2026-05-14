@@ -122,12 +122,12 @@ __aicore__ inline void SparseSegmentMeanSimtSmallInner<X_T, INDICES_T, SEGMENTID
     uint32_t threadNumY = static_cast<uint32_t>(tilingData_->threadNumY);
     uint32_t innerSize = static_cast<uint32_t>(tilingData_->innerSize);
 
-    AscendC::Simt::VF_CALL<SimtGetSegmentOffset<SEGMENTIDS_T>>(Simt::Dim3(MAX_THREAD_NUM), blockIdx_, outterSize, blockNums_, segmentNum_,
+    asc_vf_call<SimtGetSegmentOffset<SEGMENTIDS_T>>(dim3(MAX_THREAD_NUM), blockIdx_, outterSize, blockNums_, segmentNum_,
                                                                (__gm__ uint32_t*) (workspaceSegmentOffset_.GetPhyAddr()), (__gm__ SEGMENTIDS_T*) (segmentIdsGm_.GetPhyAddr()));
     
     SyncAll();
 
-    AscendC::Simt::VF_CALL<SimtSmallInnerComputer<X_T, INDICES_T>>(Simt::Dim3{threadNumX, threadNumY, threadNumZ_}, segOffsetBase_, curCoreSegments_, innerSize,
+    asc_vf_call<SimtSmallInnerComputer<X_T, INDICES_T>>(dim3{threadNumX, threadNumY, threadNumZ_}, segOffsetBase_, curCoreSegments_, innerSize,
                                                                    (__local_mem__ float*) (tmpLocal.GetPhyAddr()), (__gm__ X_T*) (xGm_.GetPhyAddr()), (__gm__ volatile X_T*) (yGm_.GetPhyAddr()),
                                                                    (__gm__ uint32_t*) (workspaceSegmentOffset_.GetPhyAddr()), (__gm__ INDICES_T*) (indicesGm_.GetPhyAddr()));
 }

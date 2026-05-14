@@ -19,6 +19,7 @@
 #include "scatter_update_struct.h"
 #include "../inc/kernel_utils.h"
 #include "../inc/platform.h"
+#include "simt_api/asc_simt.h"
 
 namespace ScatterUpdate {
 using namespace AscendC;
@@ -40,7 +41,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_DETERMINISTIC) inline void Scatte
     uint64_t varStride, uint32_t totalCol, uint64_t magic, uint64_t shift, __gm__ MASK_T* workspaceMaskAddr,
     __gm__ U* indicesAddr, __gm__ T* varAddr, __gm__ T* updatesAddr)
 {
-    for (uint64_t i = Simt::GetThreadIdx(); i < updatesBlockCount; i += Simt::GetThreadNum()) {
+    for (uint64_t i = threadIdx.x; i < updatesBlockCount; i += blockDim.x) {
         uint64_t indicesBlockRow = Simt::UintDiv(i, magic, shift);        // 当前线程对应的indices行
         U indicesValue = indicesAddr[indicesBlockOffset + indicesBlockRow];
         if (indicesValue < 0 || indicesValue >= varFirstDimSize) {
@@ -79,7 +80,7 @@ __aicore__ inline void ScatterUpdateDeterministicSimt<T, U, MASK_T, splitCol, CA
     uint64_t shift = 0;
     GetUintDivMagicAndShift(magic, shift, static_cast<uint64_t>(totalCol));
 
-    Simt::VF_CALL<ScatterUpdateSimtCompute<T, U, MASK_T>>(Simt::Dim3(THREAD_NUM_DETERMINISTIC), 
+    asc_vf_call<ScatterUpdateSimtCompute<T, U, MASK_T>>(dim3(THREAD_NUM_DETERMINISTIC), 
             varFirstDimSize, updatesBlockCount, indicesBlockOffset, updatesBlockOffset, varStride, totalCol, magic, shift,
             (__gm__ MASK_T*)(this->workspaceMask_.GetPhyAddr()), (__gm__ U*)(this->indicesGm_.GetPhyAddr()),
             (__gm__ T*)(this->varGm_.GetPhyAddr()), (__gm__ T*)(this->updatesGm_.GetPhyAddr()));

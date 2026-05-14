@@ -20,6 +20,10 @@
 #include "../inc/kernel_utils.h"
 #include "../inc/load_store_utils.h"
 #include "./indices_sort_utils.h"
+#include "simt_api/asc_simt.h"
+#include "simt_api/device_atomic_functions.h"
+#include "simt_api/asc_fp16.h"
+#include "simt_api/asc_bf16.h"
 
 
 namespace InplaceIndexAdd

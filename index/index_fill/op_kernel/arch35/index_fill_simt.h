@@ -20,6 +20,7 @@
 #include "kernel_tiling/kernel_tiling.h"
 #include "index_fill_struct.h"
 
+#include "simt_api/asc_simt.h"
 namespace IndexFill {
 using namespace AscendC;
 constexpr uint32_t THREAD_NUM = 2048;
@@ -160,18 +161,19 @@ __aicore__ inline void IndexFillSimtImpl<T, INDEX_TYPE, COM_T>::Process(__gm__ T
     GetUintDivMagicAndShift(magic_q, shift_q, q);
 
     // 执行index_fill核心逻辑
-    AscendC::Simt::VF_CALL<IndexFillSimtCompute<T, INDEX_TYPE, COM_T>>(AscendC::Simt::Dim3{THREAD_NUM}, y,
-        (__gm__ INDEX_TYPE*)indices_.GetPhyAddr(), fillValue, process_num, p, n, q, slice_size, shift, magic, shift_q, magic_q);
+    asc_vf_call<IndexFillSimtCompute<T, INDEX_TYPE, COM_T>>(
+        dim3{THREAD_NUM}, y, (__gm__ INDEX_TYPE*)indices_.GetPhyAddr(), fillValue, process_num, p, n, q,
+        slice_size, shift, magic, shift_q, magic_q);
 }
 
 template <typename T, typename INDEX_TYPE, typename COM_T>
  __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void IndexFillSimtCompute(__gm__ T* y, __gm__ INDEX_TYPE* indices, T value, COM_T total_num, COM_T p, COM_T n, COM_T q, 
     COM_T slice_size, COM_T shift, COM_T magic, COM_T shift_q, COM_T magic_q)
 {
-    COM_T threadIdx = static_cast<COM_T>(Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx());
-    COM_T threadNum = static_cast<COM_T>(Simt::GetBlockNum() * Simt::GetThreadNum());
+    COM_T threadIdxLocal = static_cast<COM_T>(blockIdx.x * blockDim.x + threadIdx.x);
+    COM_T threadNum = static_cast<COM_T>(gridDim.x * blockDim.x);
 
-    for (COM_T i = threadIdx; i < total_num; i += threadNum) {
+    for (COM_T i = threadIdxLocal; i < total_num; i += threadNum) {
         COM_T sliceId = Simt::UintDiv(i, magic, shift);
         COM_T innerId = i - (sliceId * slice_size);
         INDEX_TYPE nIdx = static_cast<INDEX_TYPE>(indices[sliceId]);

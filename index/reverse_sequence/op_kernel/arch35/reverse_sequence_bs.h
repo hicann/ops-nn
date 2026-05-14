@@ -19,6 +19,7 @@
 #include "../inc/platform.h"
 #include "../inc/kernel_utils.h"
 #include "reverse_sequence_struct.h"
+#include "simt_api/asc_simt.h"
 
 namespace ReverseSequence {
 using namespace AscendC;
@@ -205,7 +206,7 @@ template <typename T, typename SeqType, typename CompType>
 __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREADS) inline void ReverseSSimtCompute(
     __gm__ T* xGm, __gm__ SeqType* seqGm, __local_mem__ T* xLocal, __local_mem__ T* outLocal, CompType sStart, CompType seqLen, CompType dimNum)
 {
-    for (CompType i = Simt::GetThreadIdx(); i < dimNum; i += Simt::GetThreadNum()) {
+    for (CompType i = threadIdx.x; i < dimNum; i += blockDim.x) {
         CompType seqIdx = i + sStart; // i % dimSNum
 
         if (seqIdx < seqLen) {
@@ -221,8 +222,8 @@ __aicore__ inline void ReverseSequenceBS<T, SeqType, CompType>::ReverseSCompute(
     LocalTensor<T> outLocal = outQue_.AllocTensor<T>();
     LocalTensor<T> xLocal = inputQue_.DeQue<T>();
 
-    Simt::VF_CALL<ReverseSSimtCompute<T, SeqType, CompType>>(
-        Simt::Dim3(USED_THREADS), (__gm__ T*)(xGm_.GetPhyAddr()), (__gm__ SeqType*)(seqGm_.GetPhyAddr()), (__local_mem__ T*)(xLocal.GetPhyAddr()),
+    asc_vf_call<ReverseSSimtCompute<T, SeqType, CompType>>(
+        dim3(USED_THREADS), (__gm__ T*)(xGm_.GetPhyAddr()), (__gm__ SeqType*)(seqGm_.GetPhyAddr()), (__local_mem__ T*)(xLocal.GetPhyAddr()),
         (__local_mem__ T*)(outLocal.GetPhyAddr()), static_cast<CompType>(sStart), static_cast<CompType>(seqLen), static_cast<CompType>(dimNum));
     
     outQue_.EnQue(outLocal);
@@ -270,7 +271,7 @@ template <typename T, typename SeqType, typename CompType>
 __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREADS) inline void ReverseBSSimtCompute(__gm__ T* xGm, __gm__ SeqType* seqGm, __local_mem__ T* xLocal, 
     __local_mem__ T* outLocal, CompType bStart, CompType dimNum, CompType dimSNum, CompType m0, CompType shift0)
 {
-    for (CompType i = Simt::GetThreadIdx(); i < dimNum; i += Simt::GetThreadNum()) {
+    for (CompType i = threadIdx.x; i < dimNum; i += blockDim.x) {
         CompType curBIdx = bStart;
         CompType bOffset = Simt::UintDiv(i, m0, shift0); // i / dimSNum
         curBIdx += bOffset;
@@ -302,8 +303,8 @@ __aicore__ inline void ReverseSequenceBS<T, SeqType, CompType>::ReverseBSCompute
     CompType shift0 = 0;
     GetUintDivMagicAndShift(m0, shift0, static_cast<CompType>(dimSNum));
 
-    Simt::VF_CALL<ReverseBSSimtCompute<T, SeqType, CompType>>(
-        Simt::Dim3(USED_THREADS), (__gm__ T*)(xGm_.GetPhyAddr()), (__gm__ SeqType*)(seqGm_.GetPhyAddr()), (__local_mem__ T*)(xLocal.GetPhyAddr()),
+    asc_vf_call<ReverseBSSimtCompute<T, SeqType, CompType>>(
+        dim3(USED_THREADS), (__gm__ T*)(xGm_.GetPhyAddr()), (__gm__ SeqType*)(seqGm_.GetPhyAddr()), (__local_mem__ T*)(xLocal.GetPhyAddr()),
         (__local_mem__ T*)(outLocal.GetPhyAddr()), static_cast<CompType>(bStart), static_cast<CompType>(dimNum), 
         static_cast<CompType>(dimSNum), m0, shift0);
     
@@ -329,7 +330,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREADS) inline void ReverseABSSimtComp
     __gm__ T* xGm, __gm__ SeqType* seqGm, __local_mem__ T* xLocal, __local_mem__ T* outLocal, CompType dimNum, CompType dimBSNum, 
     CompType dimSNum, CompType m0, CompType m1, CompType shift0, CompType shift1)
 {
-    for (CompType i = Simt::GetThreadIdx(); i < dimNum; i += Simt::GetThreadNum()) {
+    for (CompType i = threadIdx.x; i < dimNum; i += blockDim.x) {
         CompType curAIdx = Simt::UintDiv(i, m0, shift0); // i / dimBSNum
         CompType curBS = i - curAIdx * dimBSNum;  // // i % dimBSNum
         CompType curBIdx = Simt::UintDiv(curBS, m1, shift1); // i % dimBSNum / dimSNum
@@ -364,8 +365,8 @@ __aicore__ inline void ReverseSequenceBS<T, SeqType, CompType>::ReverseABSComput
     GetUintDivMagicAndShift(m0, shift0, static_cast<CompType>(dimBSNum));
     GetUintDivMagicAndShift(m1, shift1, static_cast<CompType>(dimSNum));
 
-    Simt::VF_CALL<ReverseABSSimtCompute<T, SeqType, CompType>>(
-        Simt::Dim3(USED_THREADS), (__gm__ T*)(xGm_.GetPhyAddr()), (__gm__ SeqType*)(seqGm_.GetPhyAddr()), (__local_mem__ T*)(xLocal.GetPhyAddr()),
+    asc_vf_call<ReverseABSSimtCompute<T, SeqType, CompType>>(
+        dim3(USED_THREADS), (__gm__ T*)(xGm_.GetPhyAddr()), (__gm__ SeqType*)(seqGm_.GetPhyAddr()), (__local_mem__ T*)(xLocal.GetPhyAddr()),
         (__local_mem__ T*)(outLocal.GetPhyAddr()), static_cast<CompType>(dimNum), static_cast<CompType>(dimBSNum),
         static_cast<CompType>(dimSNum), m0,  m1, shift0, shift1);
     

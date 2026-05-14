@@ -41,16 +41,16 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(FULL_LOAD_SMALL_INNER_THREAD_NUM) inline voi
     __local_mem__ float* tmpLocal, __local_mem__ X_T* xLocal, __gm__ volatile X_T* y, __gm__ uint32_t* segment_offset,
     __local_mem__ INDICES_T* indicesTensor)
 {
-    uint32_t threadIdxX = Simt::GetThreadIdx<0>();
-    uint32_t threadIdxY = Simt::GetThreadIdx<1>();
-    uint32_t threadIdxZ = Simt::GetThreadIdx<2>();
+    uint32_t threadIdxX = threadIdx.x;
+    uint32_t threadIdxY = threadIdx.y;
+    uint32_t threadIdxZ = threadIdx.z;
     bool xValid = (threadIdxX < innerSize);
-    for (int64_t seg = 0; seg < curCoreSegments; seg += Simt::GetThreadNum<2>()) {
+    for (int64_t seg = 0; seg < curCoreSegments; seg += blockDim.z) {
         int64_t globalSeg = segOffsetBase + seg + threadIdxZ;
         uint32_t begin = segment_offset[globalSeg];
         uint32_t end = segment_offset[globalSeg + 1];
         float res = 0;
-        for (uint32_t yOffset = begin; yOffset < end; yOffset += Simt::GetThreadNum<1>()) {
+        for (uint32_t yOffset = begin; yOffset < end; yOffset += blockDim.y) {
             uint32_t idxOffset = yOffset + threadIdxY;
             bool yValid = (idxOffset < end);
             INDICES_T idx = yValid ? indicesTensor[idxOffset] : 0;
@@ -58,7 +58,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(FULL_LOAD_SMALL_INNER_THREAD_NUM) inline voi
             bool valid = xValid && yValid;
             float value = valid ? xLocal[inputIdx] : float(0);
 
-            value = BinaryAdd(value, Simt::GetThreadNum<1>(), valid, threadIdxY, threadIdxX, Simt::GetThreadNum<0>(), tmpLocal, threadIdxZ);
+            value = BinaryAdd(value, blockDim.y, valid, threadIdxY, threadIdxX, blockDim.x, tmpLocal, threadIdxZ);
 
             // thready_0 is the reduce sum
             if (threadIdxY == 0 && xValid) {
@@ -195,8 +195,8 @@ __aicore__ inline void SparseSegmentMeanFullLoadSmallInner<X_T, INDICES_T, SEGME
     uint32_t threadNumY = static_cast<uint32_t>(tilingData_.threadNumY);
     uint32_t innerSize = static_cast<uint32_t>(tilingData_.innerSize);
 
-    AscendC::Simt::VF_CALL<SimtGetSegmentOffset<SEGMENTIDS_T>>(
-        Simt::Dim3(MAX_THREAD_NUM), blockIdx_, outterSize, blockNums_, segmentNum_,
+    asc_vf_call<SimtGetSegmentOffset<SEGMENTIDS_T>>(
+        dim3(MAX_THREAD_NUM), blockIdx_, outterSize, blockNums_, segmentNum_,
         (__gm__ uint32_t*)(workspaceSegmentOffset_.GetPhyAddr()), (__gm__ SEGMENTIDS_T*)(segmentIdsGm_.GetPhyAddr()));
 
     SyncAll();
@@ -214,8 +214,8 @@ __aicore__ inline void SparseSegmentMeanFullLoadSmallInner<X_T, INDICES_T, SEGME
     LocalTensor<float> tmpLocal = tmpBuf_.Get<float>();
     Duplicate<float>(tmpLocal, 0, TBUF_SIZE / sizeof(float));
 
-    AscendC::Simt::VF_CALL<FullLoadBinaryAddComputer<X_T, INDICES_T>>(
-        Simt::Dim3{threadNumX, threadNumY, threadNumZ_}, segOffsetBase_, curCoreSegments_, innerSize,
+    asc_vf_call<FullLoadBinaryAddComputer<X_T, INDICES_T>>(
+        dim3{threadNumX, threadNumY, threadNumZ_}, segOffsetBase_, curCoreSegments_, innerSize,
         (__local_mem__ float*)(tmpLocal.GetPhyAddr()), (__local_mem__ X_T*)(xLocal.GetPhyAddr()),
         (__gm__ volatile X_T*)(yGm_.GetPhyAddr()), (__gm__ uint32_t*)(workspaceSegmentOffset_.GetPhyAddr()),
         (__local_mem__ INDICES_T*)(indicesTensor.GetPhyAddr()));

@@ -17,6 +17,10 @@
 #define SCATTER_ND_SMIT_H
 
 #include "kernel_operator.h"
+#include "simt_api/asc_simt.h"
+#include "simt_api/device_atomic_functions.h"
+#include "simt_api/asc_fp16.h"
+#include "simt_api/asc_bf16.h"
 
 namespace ScatterNdSimt {
 using namespace AscendC;
@@ -48,7 +52,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtCom
     const uint32_t currUbTilingSize, const TYPE_T xOffSet,
     const TYPE_T sliceSize, const uint32_t rankSize, const TYPE_T indiceOffSet, const TYPE_T magic, const TYPE_T shift)
 {
-  for (uint32_t index = Simt::GetThreadIdx(); index < currUbTilingSize; index += Simt::GetThreadNum()) {
+  for (uint32_t index = threadIdx.x; index < currUbTilingSize; index += blockDim.x) {
     TYPE_T globalIdx = xOffSet + index;
     TYPE_T quotient = Simt::UintDiv(globalIdx, magic, shift);
     TYPE_T currIndiceIdx = quotient * rankSize;
@@ -62,7 +66,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtCom
     }
     if (!outOfBound) {
       uint64_t dst = static_cast<uint64_t>(idx * sliceSize + scatterAxisIdx);
-      Simt::AtomicAdd(outputGmAddr + dst, xLocalAddr[index]);
+      asc_atomic_add(outputGmAddr + dst, xLocalAddr[index]);
     }
   }
 }
@@ -198,8 +202,8 @@ __aicore__ inline void ScatterNd<INDICES_T, PARAMS_T, TYPE_T>::Process(const Sca
       }
       DataSyncBarrier<MemDsbT::UB>();
       
-      AscendC::Simt::VF_CALL<SimtCompute<INDICES_T, PARAMS_T, TYPE_T>>(
-          Simt::Dim3(THREAD_NUM), idx, (__ubuf__ INDICES_T*)idxLocal.GetPhyAddr(),
+      asc_vf_call<SimtCompute<INDICES_T, PARAMS_T, TYPE_T>>(
+          dim3(THREAD_NUM), idx, (__ubuf__ INDICES_T*)idxLocal.GetPhyAddr(),
           (__ubuf__ PARAMS_T*)xLocal.GetPhyAddr(), (__gm__ PARAMS_T*)(outputGm.GetPhyAddr()),
           (__ubuf__ TYPE_T *)strideList.GetPhyAddr(),
           (__ubuf__ TYPE_T *)outputShape.GetPhyAddr(),

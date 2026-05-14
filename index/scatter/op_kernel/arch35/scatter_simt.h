@@ -18,6 +18,7 @@
 
 #include "kernel_operator.h"
 #include "op_kernel/platform_util.h"
+#include "simt_api/asc_simt.h"
 
 namespace SCATTER {
 using namespace AscendC;
@@ -27,7 +28,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SimtOneCoreCompute0(
                                                                          __gm__ T1* outputGm, __local_mem__ T3* factorArr, __local_mem__ T3* coefArr, 
                                                                          __local_mem__ T3* shiftArr, __local_mem__ T3* mArr,
                                                                          int64_t startOffset, int32_t batchNum) {
-  for (uint32_t idx = Simt::GetThreadIdx(); idx < batchNum; idx += Simt::GetThreadNum()) {
+  for (uint32_t idx = threadIdx.x; idx < batchNum; idx += blockDim.x) {
     // Todo: change int32_t to int64_t
     int32_t addr = startOffset + idx;
     uint32_t i;
@@ -43,7 +44,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SimtOneCoreCompute1(
                                                                          __gm__ T1* outputGm, __local_mem__ T3* factorArr, __local_mem__ T3* coefArr, 
                                                                          __local_mem__ T3* shiftArr, __local_mem__ T3* mArr,
                                                                          int64_t startOffset, int32_t batchNum) {
-  for (uint32_t idx = Simt::GetThreadIdx(); idx < batchNum; idx += Simt::GetThreadNum()) {
+  for (uint32_t idx = threadIdx.x; idx < batchNum; idx += blockDim.x) {
     // Todo: change int32_t to int64_t
     int32_t addr = startOffset + idx;
     uint32_t i;
@@ -61,7 +62,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SimtOneCoreCompute2(
                                                                          __gm__ T1* outputGm, __local_mem__ T3* factorArr, __local_mem__ T3* coefArr, 
                                                                          __local_mem__ T3* shiftArr, __local_mem__ T3* mArr,
                                                                          int64_t startOffset, int32_t batchNum) {
-  for (uint32_t idx = Simt::GetThreadIdx(); idx < batchNum; idx += Simt::GetThreadNum()) {
+  for (uint32_t idx = threadIdx.x; idx < batchNum; idx += blockDim.x) {
     // Todo: change int32_t to int64_t
     int32_t addr = startOffset + idx;
     uint32_t i;
@@ -78,7 +79,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SimtOneCoreCompute3(
                                                                          __gm__ T1* outputGm, __local_mem__ T3* factorArr, __local_mem__ T3* coefArr, 
                                                                          __local_mem__ T3* shiftArr, __local_mem__ T3* mArr,
                                                                          int64_t startOffset, int32_t batchNum) {
-  for (uint32_t idx = Simt::GetThreadIdx(); idx < batchNum; idx += Simt::GetThreadNum()) {
+  for (uint32_t idx = threadIdx.x; idx < batchNum; idx += blockDim.x) {
     // Todo: change int32_t to int64_t
     int32_t addr = startOffset + idx;
     uint32_t i;
@@ -100,18 +101,18 @@ class ScatterSimt {
                                               __local_mem__ T3* shiftArr, __local_mem__ T3* mArr, int64_t startOffset, int32_t batchNum) {
     if (tiling->indicesDim == 1) {
       if (tiling->axis == SECOND_LAST_DIM) {
-        Simt::VF_CALL<SimtOneCoreCompute0<T1, T2, T3>>(Simt::Dim3(THREAD_NUM), (__gm__ T1*)(updatesGm.GetPhyAddr()), (__gm__ T2*)(indicesGm.GetPhyAddr()),
+        asc_vf_call<SimtOneCoreCompute0<T1, T2, T3>>(dim3(THREAD_NUM), (__gm__ T1*)(updatesGm.GetPhyAddr()), (__gm__ T2*)(indicesGm.GetPhyAddr()),
                                                 (__gm__ T1*)(outputGm.GetPhyAddr()), factorArr, coefArr, shiftArr, mArr, startOffset, batchNum);
       } else {
-        Simt::VF_CALL<SimtOneCoreCompute1<T1, T2, T3>>(Simt::Dim3(THREAD_NUM), (__gm__ T1*)(updatesGm.GetPhyAddr()), (__gm__ T2*)(indicesGm.GetPhyAddr()),
+        asc_vf_call<SimtOneCoreCompute1<T1, T2, T3>>(dim3(THREAD_NUM), (__gm__ T1*)(updatesGm.GetPhyAddr()), (__gm__ T2*)(indicesGm.GetPhyAddr()),
                                                 (__gm__ T1*)(outputGm.GetPhyAddr()), factorArr, coefArr, shiftArr, mArr, startOffset, batchNum);
       }
     } else {
       if (tiling->axis == SECOND_LAST_DIM) {
-        Simt::VF_CALL<SimtOneCoreCompute2<T1, T2, T3>>(Simt::Dim3(THREAD_NUM), (__gm__ T1*)(updatesGm.GetPhyAddr()), (__gm__ T2*)(indicesGm.GetPhyAddr()),
+        asc_vf_call<SimtOneCoreCompute2<T1, T2, T3>>(dim3(THREAD_NUM), (__gm__ T1*)(updatesGm.GetPhyAddr()), (__gm__ T2*)(indicesGm.GetPhyAddr()),
                                                 (__gm__ T1*)(outputGm.GetPhyAddr()), factorArr, coefArr, shiftArr, mArr, startOffset, batchNum);
       } else {
-        Simt::VF_CALL<SimtOneCoreCompute3<T1, T2, T3>>(Simt::Dim3(THREAD_NUM), (__gm__ T1*)(updatesGm.GetPhyAddr()), (__gm__ T2*)(indicesGm.GetPhyAddr()),
+        asc_vf_call<SimtOneCoreCompute3<T1, T2, T3>>(dim3(THREAD_NUM), (__gm__ T1*)(updatesGm.GetPhyAddr()), (__gm__ T2*)(indicesGm.GetPhyAddr()),
                                                 (__gm__ T1*)(outputGm.GetPhyAddr()), factorArr, coefArr, shiftArr, mArr, startOffset, batchNum);
       }
     }
@@ -145,8 +146,8 @@ class ScatterSimt {
     perCoreNum = static_cast<uint64_t>(tiling->simtPerCoreNum);
     tailCoreNum = static_cast<uint64_t>(tiling->simtTailCoreNum);
 
-    blockIdx = GetBlockIdx();
-    batchNum = (blockIdx == this->usedCore - 1) ? this->tailCoreNum : this->perCoreNum;
+    blockIdxLocal = GetBlockIdx();
+    batchNum = (blockIdxLocal == this->usedCore - 1) ? this->tailCoreNum : this->perCoreNum;
 
     factor0 = (T3)(tiling->updatesDim1 * tiling->updatesDim2 * tiling->updatesDim3);
     factor1 = (T3)(tiling->updatesDim2 * tiling->updatesDim3);
@@ -170,7 +171,7 @@ class ScatterSimt {
     using U = std::conditional_t<IsSameType<T3, uint32_t>::value, int32_t, int64_t>;
     // 整块核个数
     int32_t blockCoreNum = usedCore - 1;
-    if (blockIdx < usedCore) {
+    if (blockIdxLocal < usedCore) {
       // 修改simt函数中的结构体入参为ub指针传入。
       LocalTensor<T3> factorArr = simtBuf_.Get<T3>(FACTOR_ARR_LEN);
       LocalTensor<T3> coefArr = simtBuf_.GetWithOffset<T3>(COEF_ARR_LEN, FACTOR_ARR_LEN * sizeof(T3));
@@ -195,7 +196,7 @@ class ScatterSimt {
       mArr(INDEX_TWO) = m4;
       DataSyncBarrier<MemDsbT::UB>();
         
-      U startOffset = perCoreNum * blockIdx;
+      U startOffset = perCoreNum * blockIdxLocal;
       if(sizeof(T3) == sizeof(uint32_t)) {
       ScatterOneCoreComputeUint32(updatesGm, indicesGm, (__local_mem__ T3*)(factorArr.GetPhyAddr()), (__local_mem__ T3*)(coefArr.GetPhyAddr()), 
         (__local_mem__ T3*)(shiftArr.GetPhyAddr()), (__local_mem__ T3*)(mArr.GetPhyAddr()), startOffset, batchNum);
@@ -227,7 +228,7 @@ class ScatterSimt {
   int64_t tailCoreNum;
 
   uint64_t batchNum{ 0 };
-  uint64_t blockIdx{ 0 };
+  uint64_t blockIdxLocal{ 0 };
 
   constexpr static uint32_t SIMT_BUF_SIZE = 1024;
 

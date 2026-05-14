@@ -38,7 +38,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtOut
     TYPE_T magic, 
     TYPE_T shift)
 {
-    for (TYPE_T index = Simt::GetThreadIdx(); index < afterAxisFactor * uniqueIdNum; index += Simt::GetThreadNum()) {
+    for (TYPE_T index = threadIdx.x; index < afterAxisFactor * uniqueIdNum; index += blockDim.x) {
         
         TYPE_T quotient = Simt::UintDiv(index, magic, shift);
         TYPE_T updateAxisIdx = index - quotient * afterAxisFactor;
@@ -57,7 +57,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtOut
                         varGmAddr[varOfset] = value;
                     }
                 } else {
-                    Simt::AtomicAdd(varGmAddr + varOfset, updateLocalAddr[index]);
+                    asc_atomic_add(varGmAddr + varOfset, updateLocalAddr[index]);
                 }
             }
         }
@@ -122,8 +122,8 @@ __aicore__ inline void ScatterNdAddSimtSort<PARAMS_T, INDICES_T, TYPE_T, CAST_T,
         SetFlag<HardEvent::V_MTE3>(eventIdVToMte3);
         WaitFlag<HardEvent::V_MTE3>(eventIdVToMte3);
         
-        AscendC::Simt::VF_CALL<SimtOut<INDICES_T, PARAMS_T, TYPE_T>>(
-        Simt::Dim3(THREAD_NUM), 
+        asc_vf_call<SimtOut<INDICES_T, PARAMS_T, TYPE_T>>(
+        dim3(THREAD_NUM), 
         (__gm__ PARAMS_T*)(this->yGm_.GetPhyAddr()), 
         (__ubuf__ INDICES_T*)updateSumIdxLocal.GetPhyAddr(),
         (__ubuf__ PARAMS_T*)updatesLocal.GetPhyAddr(),
@@ -139,8 +139,8 @@ __aicore__ inline void ScatterNdAddSimtSort<PARAMS_T, INDICES_T, TYPE_T, CAST_T,
     } else {
         LocalTensor<PARAMS_T> updateSumLocal = this->updateSumQue_.template DeQue<PARAMS_T>();
 
-        AscendC::Simt::VF_CALL<SimtOut<INDICES_T, PARAMS_T, TYPE_T>>(
-        Simt::Dim3(THREAD_NUM), 
+        asc_vf_call<SimtOut<INDICES_T, PARAMS_T, TYPE_T>>(
+        dim3(THREAD_NUM), 
         (__gm__ PARAMS_T*)(this->yGm_.GetPhyAddr()), 
         (__ubuf__ INDICES_T*)updateSumIdxLocal.GetPhyAddr(),
         (__ubuf__ PARAMS_T*)updateSumLocal.GetPhyAddr(),
@@ -179,8 +179,8 @@ __aicore__ inline void ScatterNdAddSimtSort<PARAMS_T, INDICES_T, TYPE_T, CAST_T,
 
     GetUintDivMagicAndShift(magic, shift, static_cast<TYPE_T>(afterAxisFactor));
 
-    AscendC::Simt::VF_CALL<SimtOut<INDICES_T, PARAMS_T, TYPE_T>>(
-        Simt::Dim3(THREAD_NUM), (__gm__ PARAMS_T*)(this->yGm_.GetPhyAddr()),
+    asc_vf_call<SimtOut<INDICES_T, PARAMS_T, TYPE_T>>(
+        dim3(THREAD_NUM), (__gm__ PARAMS_T*)(this->yGm_.GetPhyAddr()),
         (__ubuf__ INDICES_T*)outOfstLocal.GetPhyAddr(), (__ubuf__ PARAMS_T*)updatesLocal.GetPhyAddr(), colLen,
         uniqueIdNum, updateOfset, afterAxisFactor, afterAxis, varInAxis, magic, shift);
 

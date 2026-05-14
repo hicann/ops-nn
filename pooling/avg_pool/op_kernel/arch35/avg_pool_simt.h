@@ -20,6 +20,7 @@
 #include "kernel_tiling/kernel_tiling.h"
 #include "avg_pool_struct.h"
 
+#include "simt_api/asc_simt.h"
 namespace AvgPoolSimt {
 using namespace AscendC;
 
@@ -105,13 +106,13 @@ __aicore__ inline void AvgPoolSimtImpl<X_T, TYPE_T, FORMAT_TYPE>::Process()
 
     DataSyncBarrier<MemDsbT::UB>();
     if constexpr (FORMAT_TYPE == 0) {
-        Simt::VF_CALL<AvgPoolNcSimtCompute<X_T, TYPE_T, FORMAT_TYPE>>(Simt::Dim3(THREAD_NUM), 
+        asc_vf_call<AvgPoolNcSimtCompute<X_T, TYPE_T, FORMAT_TYPE>>(dim3(THREAD_NUM), 
             (__gm__ X_T*)x_.GetPhyAddr(), (__gm__ X_T*)y_.GetPhyAddr(), (__ubuf__ AvgPool::AvgPoolSimtTilingData*)(SimtTilingData.GetPhyAddr()),
             (__ubuf__ TYPE_T*)(AvgPoolSimtParam.GetPhyAddr()), SimtTilingData(2), SimtTilingData(3), SimtTilingData(4), SimtTilingData(5), 
             SimtTilingData(8), SimtTilingData(9), SimtTilingData(12), SimtTilingData(14), SimtTilingData(13), SimtTilingData(15), 
             SimtTilingData(16), SimtTilingData(17));
     } else if constexpr (FORMAT_TYPE == 1) {
-        Simt::VF_CALL<AvgPoolNdSimtCompute<X_T, TYPE_T, FORMAT_TYPE>>(Simt::Dim3(THREAD_NUM), 
+        asc_vf_call<AvgPoolNdSimtCompute<X_T, TYPE_T, FORMAT_TYPE>>(dim3(THREAD_NUM), 
             (__gm__ X_T*)x_.GetPhyAddr(), (__gm__ X_T*)y_.GetPhyAddr(), (__ubuf__ AvgPool::AvgPoolSimtTilingData*)(SimtTilingData.GetPhyAddr()),
             (__ubuf__ TYPE_T*)(AvgPoolSimtParam.GetPhyAddr()),SimtTilingData(2), SimtTilingData(3), SimtTilingData(4), SimtTilingData(5), 
             SimtTilingData(8), SimtTilingData(9), SimtTilingData(12), SimtTilingData(14), SimtTilingData(13), SimtTilingData(15), 
@@ -133,8 +134,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void AvgPoolNcSimtCompute
     TYPE_T cOffset = hInDim * wInDim;
     using DIV_T = typename std::conditional<std::is_same<TYPE_T, int32_t>::value, uint32_t, uint64_t>::type;
     TYPE_T outSize = SimtTilingData->nDim * SimtTilingData->cDim * hOutDim * wOutDim;
-    for (DIV_T i = Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx(); i < outSize;
-        i += Simt::GetBlockNum() * Simt::GetThreadNum()) {
+    for (DIV_T i = blockIdx.x * blockDim.x + threadIdx.x; i < outSize;
+        i += gridDim.x * blockDim.x) {
         DIV_T quotientW = Simt::UintDiv<DIV_T>(i, magicW, shiftW);
         DIV_T quotientH = Simt::UintDiv<DIV_T>(quotientW, magicH, shiftH);
         TYPE_T pnc = quotientH;
@@ -142,13 +143,13 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void AvgPoolNcSimtCompute
         TYPE_T hStart = (quotientW - quotientH * hOutDim) * sH - tPad;
         // pw = i - quotientW * wOutDim
         TYPE_T wStart = (i - quotientW * wOutDim) * sW - lPad;
-        TYPE_T hEnd = Simt::Min(hStart + (TYPE_T)SimtTilingData->kH, (TYPE_T)hInDim + (TYPE_T)bPad);
-        TYPE_T wEnd = Simt::Min(wStart + (TYPE_T)SimtTilingData->kW, (TYPE_T)wInDim + (TYPE_T)rPad);
+        TYPE_T hEnd = min(hStart + (TYPE_T)SimtTilingData->kH, (TYPE_T)hInDim + (TYPE_T)bPad);
+        TYPE_T wEnd = min(wStart + (TYPE_T)SimtTilingData->kW, (TYPE_T)wInDim + (TYPE_T)rPad);
         TYPE_T poolSize = (hEnd - hStart) * (wEnd - wStart);
-        hStart = Simt::Max(hStart, (TYPE_T)0);
-        wStart = Simt::Max(wStart, (TYPE_T)0);
-        hEnd = Simt::Min(hEnd, (TYPE_T)hInDim);
-        wEnd = Simt::Min(wEnd, (TYPE_T)wInDim);
+        hStart = max(hStart, (TYPE_T)0);
+        wStart = max(wStart, (TYPE_T)0);
+        hEnd = min(hEnd, (TYPE_T)hInDim);
+        wEnd = min(wEnd, (TYPE_T)wInDim);
         if(hStart >= hEnd || wStart >= wEnd) {
             y[i] = 0;
             continue;
@@ -185,8 +186,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void AvgPoolNdSimtCompute
     TYPE_T divisorFactor = divisorOverride;
     using DIV_T = typename std::conditional<std::is_same<TYPE_T, int32_t>::value, uint32_t, uint64_t>::type;
     TYPE_T outSize = SimtTilingData->nDim * cDim * hOutDim * wOutDim;
-    for (DIV_T i = Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx(); i < outSize;
-        i += Simt::GetBlockNum() * Simt::GetThreadNum()) {
+    for (DIV_T i = blockIdx.x * blockDim.x + threadIdx.x; i < outSize;
+        i += gridDim.x * blockDim.x) {
         DIV_T quotientC = Simt::UintDiv<DIV_T>(i, magicC, shiftC);
         DIV_T quotientW = Simt::UintDiv<DIV_T>(quotientC, magicW, shiftW);
         DIV_T quotientH = Simt::UintDiv<DIV_T>(quotientW, magicH, shiftH);
@@ -195,13 +196,13 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void AvgPoolNdSimtCompute
         TYPE_T hStart = (quotientW - quotientH * hOutDim) * sH - tPad;
         // pw = quotientC - quotientW * wOutDim
         TYPE_T wStart = (quotientC - quotientW * wOutDim) * sW - lPad;
-        TYPE_T hEnd = Simt::Min(hStart + (TYPE_T)SimtTilingData->kH, (TYPE_T)hInDim + (TYPE_T)bPad);
-        TYPE_T wEnd = Simt::Min(wStart + (TYPE_T)SimtTilingData->kW, (TYPE_T)wInDim + (TYPE_T)rPad);
+        TYPE_T hEnd = min(hStart + (TYPE_T)SimtTilingData->kH, (TYPE_T)hInDim + (TYPE_T)bPad);
+        TYPE_T wEnd = min(wStart + (TYPE_T)SimtTilingData->kW, (TYPE_T)wInDim + (TYPE_T)rPad);
         TYPE_T poolSize = (hEnd - hStart) * (wEnd - wStart);
-        hStart = Simt::Max(hStart, (TYPE_T)0);
-        wStart = Simt::Max(wStart, (TYPE_T)0);
-        hEnd = Simt::Min(hEnd, (TYPE_T)hInDim);
-        wEnd = Simt::Min(wEnd, (TYPE_T)wInDim);
+        hStart = max(hStart, (TYPE_T)0);
+        wStart = max(wStart, (TYPE_T)0);
+        hEnd = min(hEnd, (TYPE_T)hInDim);
+        wEnd = min(wEnd, (TYPE_T)wInDim);
         if(hStart >= hEnd || wStart >= wEnd) {
             y[i] = 0;
             continue;

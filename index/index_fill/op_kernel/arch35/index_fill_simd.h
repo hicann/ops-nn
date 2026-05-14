@@ -20,6 +20,7 @@
 #include "kernel_operator.h"
 #include "../inc/kernel_utils.h"
 #include "index_fill_struct.h"
+#include "simt_api/asc_simt.h"
 
 namespace IndexFill {
 using namespace AscendC;
@@ -140,9 +141,9 @@ template<typename T, typename INDEX_TYPE, typename COM_T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void IndexFillSimdImpl<T, INDEX_TYPE, COM_T>::IndexFillSimtMaskFill(uint64_t blockIdx, uint64_t blockNum,
 __gm__ INDEX_TYPE* indices, __gm__ int8_t* mask, COM_T indicesNum, uint64_t n)
 {
-    COM_T threadIdx = static_cast<COM_T>(blockIdx * Simt::GetThreadNum() + Simt::GetThreadIdx());
-    COM_T threadNum = static_cast<COM_T>(blockNum * Simt::GetThreadNum());
-    for (COM_T idx = threadIdx; idx < indicesNum; idx += threadNum) {
+    COM_T threadIdxLocal = static_cast<COM_T>(blockIdx * blockDim.x + threadIdx.x);
+    COM_T threadNum = static_cast<COM_T>(blockNum * blockDim.x);
+    for (COM_T idx = threadIdxLocal; idx < indicesNum; idx += threadNum) {
         INDEX_TYPE nIdx = static_cast<INDEX_TYPE>(indices[idx]);
         nIdx = nIdx >= 0 ? nIdx : nIdx + n;
         if (nIdx < 0 || nIdx >= n) {
@@ -325,8 +326,8 @@ __aicore__ inline void IndexFillSimdImpl<T, INDEX_TYPE, COM_T>::Process()
     }
     uint64_t n = tilingData_.n;
     COM_T indicesNum = static_cast<COM_T>(tilingData_.indicesNum);
-    AscendC::Simt::VF_CALL<IndexFillSimdImpl<T, INDEX_TYPE, COM_T>::IndexFillSimtMaskFill>(
-        AscendC::Simt::Dim3(THREAD_NUM), blockIdx_, blockNum_, (__gm__ INDEX_TYPE*)(indicesGm_.GetPhyAddr()), (__gm__ int8_t*)(maskGm_.GetPhyAddr()), indicesNum, n);
+    asc_vf_call<IndexFillSimdImpl<T, INDEX_TYPE, COM_T>::IndexFillSimtMaskFill>(
+        dim3(THREAD_NUM), blockIdx_, blockNum_, (__gm__ INDEX_TYPE*)(indicesGm_.GetPhyAddr()), (__gm__ int8_t*)(maskGm_.GetPhyAddr()), indicesNum, n);
     SyncAll();
 
     ProcessCopy();

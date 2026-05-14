@@ -21,6 +21,10 @@
 #include "scatter_nd_update_struct.h"
 #include "indices_sort_utils.h"
 #include "op_kernel/math_util.h"
+#include "simt_api/asc_simt.h"
+#include "simt_api/device_atomic_functions.h"
+#include "simt_api/asc_fp16.h"
+#include "simt_api/asc_bf16.h"
 namespace ScatterNdUpdate {
 using namespace AscendC;
 
@@ -345,7 +349,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SimtCalcMask(
     const __ubuf__ TYPE_T* strideListAddr, const __ubuf__ TYPE_T* outputShapeAddr, TYPE_T indiceBlockOffSet,
     uint32_t rankSize, uint32_t currBlockHandleIdx, int64_t varInAxis, __gm__ TYPE_T* varIdxGmAddr)
 {
-    for (uint32_t index = Simt::GetThreadIdx(); index < currBlockHandleIdx; index += Simt::GetThreadNum()) {
+    for (uint32_t index = threadIdx.x; index < currBlockHandleIdx; index += blockDim.x) {
         TYPE_T globalIndiceRowOffset = indiceBlockOffSet + index;
         INDICES_T idx = 0;
         bool outOfBound = false;
@@ -356,7 +360,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SimtCalcMask(
         }
         if (!outOfBound) {
             if (idx >= 0 && idx < varInAxis) {
-                Simt::AtomicMax(maskGmAddr + idx, globalIndiceRowOffset);
+                asc_atomic_max(maskGmAddr + idx, globalIndiceRowOffset);
                 varIdxGmAddr[globalIndiceRowOffset] = idx;
             }
         }
@@ -368,12 +372,12 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_DETERMINISTIC) inline void Scatte
     uint32_t indicesCount, int64_t varFullDimSize, uint64_t indicesStartGmOffset, __gm__ TYPE_T* workspaceMaskAddr,
     __gm__ TYPE_T* varIdxGmAddr, __local_mem__ OFFSET_T* indicesLocalAddr, uint32_t sliceSize)
 {
-    for (uint32_t i = Simt::GetThreadIdx(); i < indicesCount; i += Simt::GetThreadNum()) {
+    for (uint32_t i = threadIdx.x; i < indicesCount; i += blockDim.x) {
         OFFSET_T indicesValue = indicesLocalAddr[i];
         if (!(indicesValue >= 0 && indicesValue < varFullDimSize)) {
             continue;
         }
-        Simt::AtomicMax(workspaceMaskAddr + indicesValue / sliceSize, static_cast<TYPE_T>(indicesStartGmOffset + i));
+        asc_atomic_max(workspaceMaskAddr + indicesValue / sliceSize, static_cast<TYPE_T>(indicesStartGmOffset + i));
         varIdxGmAddr[indicesStartGmOffset + i] = static_cast<TYPE_T>(indicesValue);
     }
 }
@@ -384,7 +388,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_DETERMINISTIC) inline void Scatte
     __local_mem__ OFFSET_T* indicesSortedPtr, __local_mem__ uint32_t* updatesOriginIdxAddr,
     __local_mem__ int32_t* uniqueIdCountAddr,uint32_t sliceSize)
 {
-    for (uint32_t i = Simt::GetThreadIdx(); i < uniqueIdNum; i += Simt::GetThreadNum()) {
+    for (uint32_t i = threadIdx.x; i < uniqueIdNum; i += blockDim.x) {
         int32_t repeatTimes = uniqueIdCountAddr[i + 1] - uniqueIdCountAddr[i];
         int32_t lastIndicesIdx = uniqueIdCountAddr[i] + repeatTimes - 1;
         OFFSET_T indicesValue = indicesSortedPtr[lastIndicesIdx];
@@ -394,7 +398,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_DETERMINISTIC) inline void Scatte
         }
 
         uint32_t indicesLocalOffset = updatesOriginIdxAddr[lastIndicesIdx];
-        Simt::AtomicMax(
+        asc_atomic_max(
             workspaceMaskAddr + indicesValue, static_cast<TYPE_T>(indicesStartGmOffset + indicesLocalOffset));
     }
 }
@@ -404,7 +408,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_DETERMINISTIC) inline void Scatte
     uint32_t indicesCount, int64_t varFullDimSize, uint64_t indicesStartGmOffset, __gm__ TYPE_T* varIdxGmAddr,
     __local_mem__ OFFSET_T* indicesLocalAddr)
 {
-    for (uint32_t i = Simt::GetThreadIdx(); i < indicesCount; i += Simt::GetThreadNum()) {
+    for (uint32_t i = threadIdx.x; i < indicesCount; i += blockDim.x) {
         OFFSET_T indicesValue = indicesLocalAddr[i];
         if (indicesValue >= 0 && indicesValue < varFullDimSize) {
             varIdxGmAddr[indicesStartGmOffset + i] = static_cast<TYPE_T>(indicesValue);
@@ -592,8 +596,8 @@ __aicore__ inline void ScatterNdUpdateDeterministicCommon<PARAMS_T, INDICES_T, T
         __local_mem__ OFFSET_T* flatOfstAddr = (__local_mem__ OFFSET_T*)(flatOfstLocal.GetPhyAddr());
 
         if (maxScore > SORT_HIST_THRESHOLD) {
-            Simt::VF_CALL<ScatterNdUpdateSimtWriteVarIdx<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>>(
-                Simt::Dim3(THREAD_NUM_DETERMINISTIC), indicesCount, varFullDimSize, indicesStartGmOffset, varIdxGmAddr,
+            asc_vf_call<ScatterNdUpdateSimtWriteVarIdx<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>>(
+                dim3(THREAD_NUM_DETERMINISTIC), indicesCount, varFullDimSize, indicesStartGmOffset, varIdxGmAddr,
                 flatOfstAddr);
 
             LocalTensor<OFFSET_T> indicesSortedLocal = this->sortIndicesQue_.template Get<OFFSET_T>();
@@ -607,12 +611,12 @@ __aicore__ inline void ScatterNdUpdateDeterministicCommon<PARAMS_T, INDICES_T, T
             uint32_t uniqueIdNum = this->DeterministicSortAndComputeUniqueIdx(
                 indicesCount, flatOfstLocal, indicesSortedLocal, uniqueIdCountLocal, updatesOriginIdxLocal);
 
-            Simt::VF_CALL<ScatterNdUpdateSimtCalcMaskSort<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>>(
-                Simt::Dim3(THREAD_NUM_DETERMINISTIC), uniqueIdNum, varFirstDimSize, indicesStartGmOffset,
+            asc_vf_call<ScatterNdUpdateSimtCalcMaskSort<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>>(
+                dim3(THREAD_NUM_DETERMINISTIC), uniqueIdNum, varFirstDimSize, indicesStartGmOffset,
                 workspaceMaskAddr, indicesSortedPtr, updatesOriginIdxAddr, uniqueIdCountAddr, this->tiling_.sliceSize);
         } else {
-            Simt::VF_CALL<ScatterNdUpdateSimtCalcMaskUnSort<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>>(
-                Simt::Dim3(THREAD_NUM_DETERMINISTIC), indicesCount, varFullDimSize, indicesStartGmOffset,
+            asc_vf_call<ScatterNdUpdateSimtCalcMaskUnSort<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>>(
+                dim3(THREAD_NUM_DETERMINISTIC), indicesCount, varFullDimSize, indicesStartGmOffset,
                 workspaceMaskAddr, varIdxGmAddr, flatOfstAddr, this->tiling_.sliceSize);
         }
     }

@@ -28,7 +28,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SimtComputeData(
     __gm__ TYPE_T* varIdxGmAddr, uint32_t updateCount, TYPE_T updateOffSet, TYPE_T sliceSize, uint32_t rankSize,
     int64_t varSize, TYPE_T magic, TYPE_T shift)
 {
-    for (uint32_t i = Simt::GetThreadIdx(); i < updateCount; i += Simt::GetThreadNum()) {
+    for (uint32_t i = threadIdx.x; i < updateCount; i += blockDim.x) {
         TYPE_T globalUpdateIdx = updateOffSet + i;
         TYPE_T quotient = Simt::UintDiv(globalUpdateIdx, magic, shift);
         
@@ -85,8 +85,8 @@ __aicore__ inline void ScatterNdUpdateDeterministicSimt<PARAMS_T, INDICES_T, TYP
     TYPE_T magic = 0;
     TYPE_T shift = 0;
     GetUintDivMagicAndShift(magic, shift, sliceSize);
-    AscendC::Simt::VF_CALL<SimtComputeData<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>>(
-        Simt::Dim3(THREAD_NUM), (__ubuf__ PARAMS_T*)updateLocal.GetPhyAddr(), (__gm__ PARAMS_T*)(this->outputGm.GetPhyAddr()),
+    asc_vf_call<SimtComputeData<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>>(
+        dim3(THREAD_NUM), (__ubuf__ PARAMS_T*)updateLocal.GetPhyAddr(), (__gm__ PARAMS_T*)(this->outputGm.GetPhyAddr()),
         (__gm__ TYPE_T*)this->maskGm.GetPhyAddr(), (__gm__ TYPE_T*)this->varIdxGm.GetPhyAddr(), updateCount, updateOffSet,
         sliceSize, rankSize, varSize, magic, shift);
     this->inQueX. template FreeTensor(updateLocal);

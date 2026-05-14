@@ -19,6 +19,7 @@
 #include "../inc/platform.h"
 #include "../inc/kernel_utils.h"
 #include "scatter_update_struct.h"
+#include "simt_api/asc_simt.h"
 
 namespace ScatterUpdate
 {
@@ -69,8 +70,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void ScatterUpdateSimtCom
     ADDR_T totalSize = indicesSize * totalCol;
     VAR_T updateScalarValue = static_cast<VAR_T>(updates[0]);
 
-    for (ADDR_T i = blockIdx * Simt::GetThreadNum() + Simt::GetThreadIdx(); i < totalSize;
-         i += blockNum * Simt::GetThreadNum()) {
+    for (ADDR_T i = blockIdx * blockDim.x + threadIdx.x; i < totalSize;
+         i += blockNum * blockDim.x) {
         ADDR_T indiceRow = Simt::UintDiv(i, magic, shift);        // 当前线程对应indices行
         ADDR_T varRow = static_cast<ADDR_T>(indices[indiceRow]);  // 通过indices索引确定var对应行
         ADDR_T tailRowIdx = i - indiceRow * totalCol;             // 获取当前线程对应updates中的数，在当前行中的索引
@@ -97,7 +98,7 @@ __aicore__ inline void ScatterUpdateSimt<IDX_T, VAR_T, ADDR_T, isUpdateScalar>::
     ADDR_T shift = 0;
     GetUintDivMagicAndShift(magic, shift, totalCol);
 
-    Simt::VF_CALL<ScatterUpdateSimtCompute<IDX_T, VAR_T, ADDR_T, isUpdateScalar>>(Simt::Dim3(THREAD_NUM), 
+    asc_vf_call<ScatterUpdateSimtCompute<IDX_T, VAR_T, ADDR_T, isUpdateScalar>>(dim3(THREAD_NUM), 
             totalCol, indicesSize, varFirstDimSize, magic, shift, (__gm__ VAR_T*)(var_.GetPhyAddr()),
             (__gm__ IDX_T*)(indices_.GetPhyAddr()), (__gm__ VAR_T*)(updates_.GetPhyAddr()), blockIdx_, blockNum_, varStride);
 }

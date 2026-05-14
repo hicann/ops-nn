@@ -24,6 +24,10 @@
 #include "../inc/platform.h"
 #include "../inc/kernel_utils.h"
 
+#include "simt_api/asc_simt.h"
+#include "simt_api/device_atomic_functions.h"
+#include "simt_api/asc_fp16.h"
+#include "simt_api/asc_bf16.h"
 namespace ScatterElements
 {
 using namespace AscendC;
@@ -486,9 +490,9 @@ __simt_callee__  __aicore__ inline void ReplaceOut(__gm__ DATA_T* updates, __gm_
     if constexpr (REDU == REDU_ADD) {
         if constexpr (IsSameType<DATA_T, int8_t>::value || IsSameType<DATA_T, uint8_t>::value ||
                       IsSameType<DATA_T, int16_t>::value) {
-            Simt::AtomicAdd(xWorkspaceGm + yOffset, updatesWorkspaceGm[updatesOffset]);
+            asc_atomic_add(xWorkspaceGm + yOffset, updatesWorkspaceGm[updatesOffset]);
         } else {
-            Simt::AtomicAdd(y + yOffset, updates[updatesOffset]);
+            asc_atomic_add(y + yOffset, updates[updatesOffset]);
         }
     } else if constexpr (REDU == REDU_MUL) {
         y[yOffset] = y[yOffset] * updates[updatesOffset];
@@ -502,8 +506,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD) inline void SimtComputeDim1(
     __gm__ IDX_T* indices, __gm__ DATA_T* updates, __gm__ DATA_T* y, __gm__ CAST_T* updatesWorkspaceGm,
     __gm__ CAST_T* xWorkspaceGm, COMP_T allAxis)
 {
-    for (COMP_T i = Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx(); i < allAxis;
-         i += Simt::GetBlockNum() * Simt::GetThreadNum()) {
+    for (COMP_T i = blockIdx.x * blockDim.x + threadIdx.x; i < allAxis;
+         i += gridDim.x * blockDim.x) {
         COMP_T yOffset = static_cast<COMP_T>(indices[i]);
         ReplaceOut<DATA_T, COMP_T, CAST_T, REDU>(updates, y, updatesWorkspaceGm, xWorkspaceGm, yOffset, i);
     }
@@ -527,8 +531,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD) inline void SimtComputeDim2(
         }
     }
 
-    for (COMP_T i = Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx(); i < allAxis;
-         i += Simt::GetBlockNum() * Simt::GetThreadNum()) {
+    for (COMP_T i = blockIdx.x * blockDim.x + threadIdx.x; i < allAxis;
+         i += gridDim.x * blockDim.x) {
         COMP_T dim0Idx = Simt::UintDiv(i, m0, shift0);
         COMP_T dim1Idx = i - dim0Idx * indicesStride[0];
 
@@ -562,8 +566,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD) inline void SimtComputeDim3(
         }
     }
 
-    for (COMP_T i = Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx(); i < allAxis;
-         i += Simt::GetBlockNum() * Simt::GetThreadNum()) {
+    for (COMP_T i = blockIdx.x * blockDim.x + threadIdx.x; i < allAxis;
+         i += gridDim.x * blockDim.x) {
         COMP_T dim0Idx = Simt::UintDiv(i, m0, shift0);
         COMP_T dim0Rem = i - dim0Idx * indicesStride[0];
 
@@ -605,8 +609,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD) inline void SimtComputeDim4(
         }
     }
 
-    for (COMP_T i = Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx(); i < allAxis;
-         i += Simt::GetBlockNum() * Simt::GetThreadNum()) {
+    for (COMP_T i = blockIdx.x * blockDim.x + threadIdx.x; i < allAxis;
+         i += gridDim.x * blockDim.x) {
         COMP_T dim0Idx = Simt::UintDiv(i, m0, shift0);
         COMP_T dim0Rem = i - dim0Idx * indicesStride[0];
 
@@ -663,8 +667,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD) inline void SimtComputeDim5(
     COMP_T shift2 = params[6];
     COMP_T shift3 = params[7];
 
-    for (COMP_T i = Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx(); i < allAxis;
-         i += Simt::GetBlockNum() * Simt::GetThreadNum()) {
+    for (COMP_T i = blockIdx.x * blockDim.x + threadIdx.x; i < allAxis;
+         i += gridDim.x * blockDim.x) {
         COMP_T dim0Idx = Simt::UintDiv(i, m0, shift0);
         COMP_T dim0Rem = i - dim0Idx * indicesStride[0];
 
@@ -733,8 +737,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD) inline void SimtComputeDim6(
     COMP_T shift3 = params[8];
     COMP_T shift4 = params[9];
 
-    for (COMP_T i = Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx(); i < allAxis;
-         i += Simt::GetBlockNum() * Simt::GetThreadNum()) {
+    for (COMP_T i = blockIdx.x * blockDim.x + threadIdx.x; i < allAxis;
+         i += gridDim.x * blockDim.x) {
         COMP_T dim0Idx = Simt::UintDiv(i, m0, shift0);
         COMP_T dim0Rem = i - dim0Idx * indicesStride[0];
 
@@ -815,8 +819,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD) inline void SimtComputeDim7(
     COMP_T shift4 = params[10];
     COMP_T shift5 = params[11];
 
-    for (COMP_T i = Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx(); i < allAxis;
-         i += Simt::GetBlockNum() * Simt::GetThreadNum()) {
+    for (COMP_T i = blockIdx.x * blockDim.x + threadIdx.x; i < allAxis;
+         i += gridDim.x * blockDim.x) {
         COMP_T dim0Idx = Simt::UintDiv(i, m0, shift0);
         COMP_T dim0Rem = i - dim0Idx * indicesStride[0];
 
@@ -911,8 +915,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD) inline void SimtComputeDim8(
     COMP_T shift5 = params[12];
     COMP_T shift6 = params[13];
 
-    for (COMP_T i = Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx(); i < allAxis;
-         i += Simt::GetBlockNum() * Simt::GetThreadNum()) {
+    for (COMP_T i = blockIdx.x * blockDim.x + threadIdx.x; i < allAxis;
+         i += gridDim.x * blockDim.x) {
         COMP_T dim0Idx = Simt::UintDiv(i, m0, shift0);
         COMP_T dim0Rem = i - dim0Idx * indicesStride[0];
 
@@ -1021,8 +1025,8 @@ __aicore__ inline void KernelScatterElements<DATA_T, IDX_T, COMP_T, CAST_T, REDU
     }
     DataSyncBarrier<MemDsbT::UB>();
     if (tilingData_->rank == DIM_1) {
-        Simt::VF_CALL<SimtComputeDim1<DATA_T, IDX_T, COMP_T, CAST_T, REDU>>(
-            Simt::Dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
+        asc_vf_call<SimtComputeDim1<DATA_T, IDX_T, COMP_T, CAST_T, REDU>>(
+            dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()), (__gm__ DATA_T*)(updates_.GetPhyAddr()),
             (__gm__ DATA_T*)(y_.GetPhyAddr()), (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()),
             (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()), allAxis_);
     } else if (tilingData_->rank == DIM_2) {
@@ -1030,14 +1034,14 @@ __aicore__ inline void KernelScatterElements<DATA_T, IDX_T, COMP_T, CAST_T, REDU
         COMP_T shift0 = 1;
         GetUintDivMagicAndShift(m0, shift0, static_cast<COMP_T>(tilingData_->indicesStride[0]));
         if (tilingData_->dim == 0) {
-            Simt::VF_CALL<SimtComputeDim2<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 0>>(
-                Simt::Dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
+            asc_vf_call<SimtComputeDim2<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 0>>(
+                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
                 (__gm__ DATA_T*)(updates_.GetPhyAddr()), (__gm__ DATA_T*)(y_.GetPhyAddr()),
                 (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()), (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()),
                 (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), allAxis_, m0, shift0);
         } else {
-            Simt::VF_CALL<SimtComputeDim2<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 1>>(
-                Simt::Dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
+            asc_vf_call<SimtComputeDim2<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 1>>(
+                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
                 (__gm__ DATA_T*)(updates_.GetPhyAddr()), (__gm__ DATA_T*)(y_.GetPhyAddr()),
                 (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()), (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()),
                 (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), allAxis_, m0, shift0);
@@ -1048,20 +1052,20 @@ __aicore__ inline void KernelScatterElements<DATA_T, IDX_T, COMP_T, CAST_T, REDU
         GetUintDivMagicAndShift(m_[0], shift_[0], static_cast<COMP_T>(tilingData_->indicesStride[0]));
         GetUintDivMagicAndShift(m_[DIM_1], shift_[DIM_1], static_cast<COMP_T>(tilingData_->indicesStride[DIM_1]));
         if (tilingData_->dim == 0) {
-            Simt::VF_CALL<SimtComputeDim3<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 0>>(
-                Simt::Dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
+            asc_vf_call<SimtComputeDim3<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 0>>(
+                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
                 (__gm__ DATA_T*)(updates_.GetPhyAddr()), (__gm__ DATA_T*)(y_.GetPhyAddr()),
                 (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()), (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()),
                 (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), allAxis_, m_[0], shift_[0], m_[DIM_1], shift_[DIM_1]);
         } else if (tilingData_->dim == 1) {
-            Simt::VF_CALL<SimtComputeDim3<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 1>>(
-                Simt::Dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
+            asc_vf_call<SimtComputeDim3<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 1>>(
+                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
                 (__gm__ DATA_T*)(updates_.GetPhyAddr()), (__gm__ DATA_T*)(y_.GetPhyAddr()),
                 (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()), (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()),
                 (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), allAxis_, m_[0], shift_[0], m_[DIM_1], shift_[DIM_1]);
         } else {
-            Simt::VF_CALL<SimtComputeDim3<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 2>>(
-                Simt::Dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
+            asc_vf_call<SimtComputeDim3<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 2>>(
+                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
                 (__gm__ DATA_T*)(updates_.GetPhyAddr()), (__gm__ DATA_T*)(y_.GetPhyAddr()),
                 (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()), (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()),
                 (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), allAxis_, m_[0], shift_[0], m_[DIM_1], shift_[DIM_1]);
@@ -1073,29 +1077,29 @@ __aicore__ inline void KernelScatterElements<DATA_T, IDX_T, COMP_T, CAST_T, REDU
         GetUintDivMagicAndShift(m_[DIM_1], shift_[DIM_1], static_cast<COMP_T>(tilingData_->indicesStride[DIM_1]));
         GetUintDivMagicAndShift(m_[DIM_2], shift_[DIM_2], static_cast<COMP_T>(tilingData_->indicesStride[DIM_2]));
         if (tilingData_->dim == 0) {
-            Simt::VF_CALL<SimtComputeDim4<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 0>>(
-                Simt::Dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
+            asc_vf_call<SimtComputeDim4<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 0>>(
+                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
                 (__gm__ DATA_T*)(updates_.GetPhyAddr()), (__gm__ DATA_T*)(y_.GetPhyAddr()),
                 (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()), (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()),
                 (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), allAxis_, m_[0], shift_[0], m_[DIM_1], shift_[DIM_1],
                 m_[DIM_2], shift_[DIM_2]);
         } else if (tilingData_->dim == 1) {
-            Simt::VF_CALL<SimtComputeDim4<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 1>>(
-                Simt::Dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
+            asc_vf_call<SimtComputeDim4<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 1>>(
+                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
                 (__gm__ DATA_T*)(updates_.GetPhyAddr()), (__gm__ DATA_T*)(y_.GetPhyAddr()),
                 (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()), (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()),
                 (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), allAxis_, m_[0], shift_[0], m_[DIM_1], shift_[DIM_1],
                 m_[DIM_2], shift_[DIM_2]);
         } else if (tilingData_->dim == 2) {
-            Simt::VF_CALL<SimtComputeDim4<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 2>>(
-                Simt::Dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
+            asc_vf_call<SimtComputeDim4<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 2>>(
+                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
                 (__gm__ DATA_T*)(updates_.GetPhyAddr()), (__gm__ DATA_T*)(y_.GetPhyAddr()),
                 (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()), (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()),
                 (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), allAxis_, m_[0], shift_[0], m_[DIM_1], shift_[DIM_1],
                 m_[DIM_2], shift_[DIM_2]);
         } else {
-            Simt::VF_CALL<SimtComputeDim4<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 3>>(
-                Simt::Dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
+            asc_vf_call<SimtComputeDim4<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 3>>(
+                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
                 (__gm__ DATA_T*)(updates_.GetPhyAddr()), (__gm__ DATA_T*)(y_.GetPhyAddr()),
                 (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()), (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()),
                 (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), allAxis_, m_[0], shift_[0], m_[DIM_1], shift_[DIM_1],
@@ -1113,32 +1117,32 @@ __aicore__ inline void KernelScatterElements<DATA_T, IDX_T, COMP_T, CAST_T, REDU
         }
         DataSyncBarrier<MemDsbT::UB>();
         if (tilingData_->dim == 0) {
-            Simt::VF_CALL<SimtComputeDim5<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 0>>(
-                Simt::Dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
+            asc_vf_call<SimtComputeDim5<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 0>>(
+                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
                 (__gm__ DATA_T*)(updates_.GetPhyAddr()), (__gm__ DATA_T*)(y_.GetPhyAddr()),
                 (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()), (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()),
                 (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), allAxis_, (__ubuf__ COMP_T*)(ParamDim5Ub.GetPhyAddr()));
         } else if (tilingData_->dim == 1) {
-            Simt::VF_CALL<SimtComputeDim5<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 1>>(
-                Simt::Dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
+            asc_vf_call<SimtComputeDim5<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 1>>(
+                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
                 (__gm__ DATA_T*)(updates_.GetPhyAddr()), (__gm__ DATA_T*)(y_.GetPhyAddr()),
                 (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()), (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()),
                 (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), allAxis_, (__ubuf__ COMP_T*)(ParamDim5Ub.GetPhyAddr()));
         } else if (tilingData_->dim == 2) {
-            Simt::VF_CALL<SimtComputeDim5<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 2>>(
-                Simt::Dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
+            asc_vf_call<SimtComputeDim5<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 2>>(
+                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
                 (__gm__ DATA_T*)(updates_.GetPhyAddr()), (__gm__ DATA_T*)(y_.GetPhyAddr()),
                 (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()), (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()),
                 (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), allAxis_, (__ubuf__ COMP_T*)(ParamDim5Ub.GetPhyAddr()));
         } else if (tilingData_->dim == 3) {
-            Simt::VF_CALL<SimtComputeDim5<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 3>>(
-                Simt::Dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
+            asc_vf_call<SimtComputeDim5<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 3>>(
+                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
                 (__gm__ DATA_T*)(updates_.GetPhyAddr()), (__gm__ DATA_T*)(y_.GetPhyAddr()),
                 (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()), (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()),
                 (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), allAxis_, (__ubuf__ COMP_T*)(ParamDim5Ub.GetPhyAddr()));
         } else {
-            Simt::VF_CALL<SimtComputeDim5<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 4>>(
-                Simt::Dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
+            asc_vf_call<SimtComputeDim5<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 4>>(
+                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
                 (__gm__ DATA_T*)(updates_.GetPhyAddr()), (__gm__ DATA_T*)(y_.GetPhyAddr()),
                 (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()), (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()),
                 (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), allAxis_, (__ubuf__ COMP_T*)(ParamDim5Ub.GetPhyAddr()));
@@ -1156,38 +1160,38 @@ __aicore__ inline void KernelScatterElements<DATA_T, IDX_T, COMP_T, CAST_T, REDU
         }
         DataSyncBarrier<MemDsbT::UB>();
         if (tilingData_->dim == 0) {
-            Simt::VF_CALL<SimtComputeDim6<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 0>>(
-                Simt::Dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
+            asc_vf_call<SimtComputeDim6<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 0>>(
+                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
                 (__gm__ DATA_T*)(updates_.GetPhyAddr()), (__gm__ DATA_T*)(y_.GetPhyAddr()),
                 (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()), (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()),
                 (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), allAxis_, (__ubuf__ COMP_T*)(ParamDim6Ub.GetPhyAddr()));
         } else if (tilingData_->dim == 1) {
-            Simt::VF_CALL<SimtComputeDim6<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 1>>(
-                Simt::Dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
+            asc_vf_call<SimtComputeDim6<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 1>>(
+                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
                 (__gm__ DATA_T*)(updates_.GetPhyAddr()), (__gm__ DATA_T*)(y_.GetPhyAddr()),
                 (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()), (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()),
                 (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), allAxis_, (__ubuf__ COMP_T*)(ParamDim6Ub.GetPhyAddr()));
         } else if (tilingData_->dim == 2) {
-            Simt::VF_CALL<SimtComputeDim6<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 2>>(
-                Simt::Dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
+            asc_vf_call<SimtComputeDim6<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 2>>(
+                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
                 (__gm__ DATA_T*)(updates_.GetPhyAddr()), (__gm__ DATA_T*)(y_.GetPhyAddr()),
                 (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()), (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()),
                 (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), allAxis_, (__ubuf__ COMP_T*)(ParamDim6Ub.GetPhyAddr()));
         } else if (tilingData_->dim == 3) {
-            Simt::VF_CALL<SimtComputeDim6<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 3>>(
-                Simt::Dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
+            asc_vf_call<SimtComputeDim6<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 3>>(
+                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
                 (__gm__ DATA_T*)(updates_.GetPhyAddr()), (__gm__ DATA_T*)(y_.GetPhyAddr()),
                 (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()), (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()),
                 (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), allAxis_, (__ubuf__ COMP_T*)(ParamDim6Ub.GetPhyAddr()));
         } else if (tilingData_->dim == 4) {
-            Simt::VF_CALL<SimtComputeDim6<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 4>>(
-                Simt::Dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
+            asc_vf_call<SimtComputeDim6<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 4>>(
+                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
                 (__gm__ DATA_T*)(updates_.GetPhyAddr()), (__gm__ DATA_T*)(y_.GetPhyAddr()),
                 (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()), (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()),
                 (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), allAxis_, (__ubuf__ COMP_T*)(ParamDim6Ub.GetPhyAddr()));
         } else {
-            Simt::VF_CALL<SimtComputeDim6<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 5>>(
-                Simt::Dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
+            asc_vf_call<SimtComputeDim6<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 5>>(
+                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
                 (__gm__ DATA_T*)(updates_.GetPhyAddr()), (__gm__ DATA_T*)(y_.GetPhyAddr()),
                 (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()), (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()),
                 (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), allAxis_, (__ubuf__ COMP_T*)(ParamDim6Ub.GetPhyAddr()));
@@ -1206,44 +1210,44 @@ __aicore__ inline void KernelScatterElements<DATA_T, IDX_T, COMP_T, CAST_T, REDU
         }
         DataSyncBarrier<MemDsbT::UB>();
         if (tilingData_->dim == 0) {
-            Simt::VF_CALL<SimtComputeDim7<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 0>>(
-                Simt::Dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
+            asc_vf_call<SimtComputeDim7<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 0>>(
+                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
                 (__gm__ DATA_T*)(updates_.GetPhyAddr()), (__gm__ DATA_T*)(y_.GetPhyAddr()),
                 (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()), (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()),
                 (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), allAxis_, (__ubuf__ COMP_T*)(ParamDim7Ub.GetPhyAddr()));
         } else if (tilingData_->dim == 1) {
-            Simt::VF_CALL<SimtComputeDim7<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 1>>(
-                Simt::Dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
+            asc_vf_call<SimtComputeDim7<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 1>>(
+                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
                 (__gm__ DATA_T*)(updates_.GetPhyAddr()), (__gm__ DATA_T*)(y_.GetPhyAddr()),
                 (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()), (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()),
                 (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), allAxis_, (__ubuf__ COMP_T*)(ParamDim7Ub.GetPhyAddr()));
         } else if (tilingData_->dim == 2) {
-            Simt::VF_CALL<SimtComputeDim7<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 2>>(
-                Simt::Dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
+            asc_vf_call<SimtComputeDim7<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 2>>(
+                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
                 (__gm__ DATA_T*)(updates_.GetPhyAddr()), (__gm__ DATA_T*)(y_.GetPhyAddr()),
                 (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()), (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()),
                 (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), allAxis_, (__ubuf__ COMP_T*)(ParamDim7Ub.GetPhyAddr()));
         } else if (tilingData_->dim == 3) {
-            Simt::VF_CALL<SimtComputeDim7<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 3>>(
-                Simt::Dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
+            asc_vf_call<SimtComputeDim7<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 3>>(
+                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
                 (__gm__ DATA_T*)(updates_.GetPhyAddr()), (__gm__ DATA_T*)(y_.GetPhyAddr()),
                 (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()), (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()),
                 (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), allAxis_, (__ubuf__ COMP_T*)(ParamDim7Ub.GetPhyAddr()));
         } else if (tilingData_->dim == 4) {
-            Simt::VF_CALL<SimtComputeDim7<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 4>>(
-                Simt::Dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
+            asc_vf_call<SimtComputeDim7<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 4>>(
+                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
                 (__gm__ DATA_T*)(updates_.GetPhyAddr()), (__gm__ DATA_T*)(y_.GetPhyAddr()),
                 (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()), (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()),
                 (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), allAxis_, (__ubuf__ COMP_T*)(ParamDim7Ub.GetPhyAddr()));
         } else if (tilingData_->dim == 5) {
-            Simt::VF_CALL<SimtComputeDim7<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 5>>(
-                Simt::Dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
+            asc_vf_call<SimtComputeDim7<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 5>>(
+                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
                 (__gm__ DATA_T*)(updates_.GetPhyAddr()), (__gm__ DATA_T*)(y_.GetPhyAddr()),
                 (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()), (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()),
                 (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), allAxis_, (__ubuf__ COMP_T*)(ParamDim7Ub.GetPhyAddr()));
         } else {
-            Simt::VF_CALL<SimtComputeDim7<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 6>>(
-                Simt::Dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
+            asc_vf_call<SimtComputeDim7<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 6>>(
+                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
                 (__gm__ DATA_T*)(updates_.GetPhyAddr()), (__gm__ DATA_T*)(y_.GetPhyAddr()),
                 (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()), (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()),
                 (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), allAxis_, (__ubuf__ COMP_T*)(ParamDim7Ub.GetPhyAddr()));
@@ -1263,50 +1267,50 @@ __aicore__ inline void KernelScatterElements<DATA_T, IDX_T, COMP_T, CAST_T, REDU
         }
         DataSyncBarrier<MemDsbT::UB>();
         if (tilingData_->dim == 0) {
-            Simt::VF_CALL<SimtComputeDim8<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 0>>(
-                Simt::Dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
+            asc_vf_call<SimtComputeDim8<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 0>>(
+                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
                 (__gm__ DATA_T*)(updates_.GetPhyAddr()), (__gm__ DATA_T*)(y_.GetPhyAddr()),
                 (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()), (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()),
                 (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), allAxis_, (__ubuf__ COMP_T*)(ParamDim8Ub.GetPhyAddr()));
         } else if (tilingData_->dim == 1) {
-            Simt::VF_CALL<SimtComputeDim8<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 1>>(
-                Simt::Dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
+            asc_vf_call<SimtComputeDim8<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 1>>(
+                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
                 (__gm__ DATA_T*)(updates_.GetPhyAddr()), (__gm__ DATA_T*)(y_.GetPhyAddr()),
                 (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()), (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()),
                 (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), allAxis_, (__ubuf__ COMP_T*)(ParamDim8Ub.GetPhyAddr()));
         } else if (tilingData_->dim == 2) {
-            Simt::VF_CALL<SimtComputeDim8<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 2>>(
-                Simt::Dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
+            asc_vf_call<SimtComputeDim8<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 2>>(
+                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
                 (__gm__ DATA_T*)(updates_.GetPhyAddr()), (__gm__ DATA_T*)(y_.GetPhyAddr()),
                 (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()), (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()),
                 (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), allAxis_, (__ubuf__ COMP_T*)(ParamDim8Ub.GetPhyAddr()));
         } else if (tilingData_->dim == 3) {
-            Simt::VF_CALL<SimtComputeDim8<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 3>>(
-                Simt::Dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
+            asc_vf_call<SimtComputeDim8<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 3>>(
+                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
                 (__gm__ DATA_T*)(updates_.GetPhyAddr()), (__gm__ DATA_T*)(y_.GetPhyAddr()),
                 (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()), (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()),
                 (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), allAxis_, (__ubuf__ COMP_T*)(ParamDim8Ub.GetPhyAddr()));
         } else if (tilingData_->dim == 4) {
-            Simt::VF_CALL<SimtComputeDim8<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 4>>(
-                Simt::Dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
+            asc_vf_call<SimtComputeDim8<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 4>>(
+                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
                 (__gm__ DATA_T*)(updates_.GetPhyAddr()), (__gm__ DATA_T*)(y_.GetPhyAddr()),
                 (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()), (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()),
                 (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), allAxis_, (__ubuf__ COMP_T*)(ParamDim8Ub.GetPhyAddr()));
         } else if (tilingData_->dim == 5) {
-            Simt::VF_CALL<SimtComputeDim8<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 5>>(
-                Simt::Dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
+            asc_vf_call<SimtComputeDim8<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 5>>(
+                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
                 (__gm__ DATA_T*)(updates_.GetPhyAddr()), (__gm__ DATA_T*)(y_.GetPhyAddr()),
                 (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()), (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()),
                 (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), allAxis_, (__ubuf__ COMP_T*)(ParamDim8Ub.GetPhyAddr()));
         } else if (tilingData_->dim == 6) {
-            Simt::VF_CALL<SimtComputeDim8<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 6>>(
-                Simt::Dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
+            asc_vf_call<SimtComputeDim8<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 6>>(
+                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
                 (__gm__ DATA_T*)(updates_.GetPhyAddr()), (__gm__ DATA_T*)(y_.GetPhyAddr()),
                 (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()), (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()),
                 (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), allAxis_, (__ubuf__ COMP_T*)(ParamDim8Ub.GetPhyAddr()));
         } else {
-            Simt::VF_CALL<SimtComputeDim8<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 7>>(
-                Simt::Dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
+            asc_vf_call<SimtComputeDim8<DATA_T, IDX_T, COMP_T, CAST_T, REDU, 7>>(
+                dim3(USED_THREAD), (__gm__ IDX_T*)(indices_.GetPhyAddr()),
                 (__gm__ DATA_T*)(updates_.GetPhyAddr()), (__gm__ DATA_T*)(y_.GetPhyAddr()),
                 (__gm__ CAST_T*)(updatesWorkspaceGm_.GetPhyAddr()), (__gm__ CAST_T*)(xWorkspaceGm_.GetPhyAddr()),
                 (__ubuf__ uint64_t*)(TilingUint64Ub.GetPhyAddr()), allAxis_, (__ubuf__ COMP_T*)(ParamDim8Ub.GetPhyAddr()));

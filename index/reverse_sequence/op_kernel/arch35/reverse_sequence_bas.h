@@ -19,6 +19,7 @@
 #include "../inc/platform.h"
 #include "../inc/kernel_utils.h"
 #include "reverse_sequence_struct.h"
+#include "simt_api/asc_simt.h"
 
 namespace ReverseSequence {
 
@@ -165,7 +166,7 @@ __aicore__ inline void ReverseSequenceBAS<T, SeqType>::CopyOutSingleDim(int64_t 
 template <typename T, typename SeqType>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SimtSplitSReverse(__local_mem__ T* xLocal, __local_mem__ T* yLocal, uint32_t dimSNum)
 {
-    for (uint32_t i = Simt::GetThreadIdx(); i < dimSNum; i += Simt::GetThreadNum()) {
+    for (uint32_t i = threadIdx.x; i < dimSNum; i += blockDim.x) {
         yLocal[i] = xLocal[dimSNum - i - 1];
     }
 }
@@ -178,8 +179,8 @@ __aicore__ inline void ReverseSequenceBAS<T, SeqType>::ComputeSplitSReverse(
     LocalTensor<T> yLocal = outQue_.AllocTensor<T>();
     LocalTensor<T> xLocal = inputQue_.DeQue<T>();
 
-    Simt::VF_CALL<SimtSplitSReverse<T, SeqType>>(
-        Simt::Dim3(THREAD_NUM), (__local_mem__ T*)(xLocal.GetPhyAddr()), (__local_mem__ T*)(yLocal.GetPhyAddr()), dimSNum);
+    asc_vf_call<SimtSplitSReverse<T, SeqType>>(
+        dim3(THREAD_NUM), (__local_mem__ T*)(xLocal.GetPhyAddr()), (__local_mem__ T*)(yLocal.GetPhyAddr()), dimSNum);
     
     inputQue_.FreeTensor(xLocal);
     outQue_.EnQue(yLocal);
@@ -239,7 +240,7 @@ __aicore__ inline void ReverseSequenceBAS<T, SeqType>::ComputeSplitS(
 template <typename T, typename SeqType>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SimtSplitAReverse(__local_mem__ T* xLocal, __local_mem__ T* yLocal, uint32_t totalNum, uint32_t seqLen_, uint32_t m0, uint32_t shift0, uint32_t sDim)
 {
-    for (uint32_t i = Simt::GetThreadIdx(); i < totalNum; i += Simt::GetThreadNum()) {
+    for (uint32_t i = threadIdx.x; i < totalNum; i += blockDim.x) {
         uint32_t dimAIdx = Simt::UintDiv(i, m0, shift0);
         uint32_t curAOffset = dimAIdx * sDim;
         uint32_t dimSIdx = i - curAOffset;
@@ -260,8 +261,8 @@ __aicore__ inline void ReverseSequenceBAS<T, SeqType>::ComputeSplitA(
     uint32_t shift0 = 1;
     GetUintDivMagicAndShift(m0, shift0, static_cast<uint32_t>(tilingData_->sDim));
     uint32_t totalNum = dimANum * tilingData_->sDim;
-    Simt::VF_CALL<SimtSplitAReverse<T, SeqType>>(
-        Simt::Dim3(THREAD_NUM), (__local_mem__ T*)(xLocal.GetPhyAddr()), (__local_mem__ T*)(yLocal.GetPhyAddr()), totalNum, seqLen_, m0, shift0, tilingData_->sDim);
+    asc_vf_call<SimtSplitAReverse<T, SeqType>>(
+        dim3(THREAD_NUM), (__local_mem__ T*)(xLocal.GetPhyAddr()), (__local_mem__ T*)(yLocal.GetPhyAddr()), totalNum, seqLen_, m0, shift0, tilingData_->sDim);
     
     inputQue_.FreeTensor(xLocal);
     outQue_.EnQue(yLocal);
@@ -271,10 +272,10 @@ __aicore__ inline void ReverseSequenceBAS<T, SeqType>::ComputeSplitA(
 template <typename T, typename SeqType>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void SimtSplitBReverse(__local_mem__ T* xLocal, __local_mem__ SeqType* seqLocal, __local_mem__ T* yLocal, uint32_t asNum, uint32_t m0, uint32_t shift0, uint32_t sDim, uint32_t dimBNum)
 {
-    for (uint32_t dimBIdx = Simt::GetThreadIdx<1>(); dimBIdx < dimBNum; dimBIdx += Simt::GetThreadNum<1>()) {
+    for (uint32_t dimBIdx = threadIdx.y; dimBIdx < dimBNum; dimBIdx += blockDim.y) {
         SeqType seqLen = seqLocal[dimBIdx];
         uint32_t curBOffset = dimBIdx * asNum;
-        for (uint32_t i = Simt::GetThreadIdx<0>(); i < asNum; i += Simt::GetThreadNum<0>()) {
+        for (uint32_t i = threadIdx.x; i < asNum; i += blockDim.x) {
             uint32_t dimAIdx = Simt::UintDiv(i, m0, shift0);
             uint32_t curAOffset = dimAIdx * sDim;
             uint32_t dimSIdx = i - curAOffset;
@@ -298,8 +299,8 @@ __aicore__ inline void ReverseSequenceBAS<T, SeqType>::ComputeSplitB(int64_t src
     uint32_t threadNumX = static_cast<uint32_t>(tilingData_->threadNumX);
     uint32_t threadNumY = THREAD_NUM / threadNumX;
     uint32_t asNum = tilingData_->aDim * tilingData_->sDim;
-    Simt::VF_CALL<SimtSplitBReverse<T, SeqType>>(
-        Simt::Dim3({threadNumX, threadNumY}), (__local_mem__ T*)(xLocal.GetPhyAddr()), (__local_mem__ SeqType*)(seqLocal.GetPhyAddr()),
+    asc_vf_call<SimtSplitBReverse<T, SeqType>>(
+        dim3({threadNumX, threadNumY}), (__local_mem__ T*)(xLocal.GetPhyAddr()), (__local_mem__ SeqType*)(seqLocal.GetPhyAddr()),
         (__local_mem__ T*)(yLocal.GetPhyAddr()), asNum, m0, shift0, tilingData_->sDim, dimBNum);
     
     inputQue_.FreeTensor(xLocal);

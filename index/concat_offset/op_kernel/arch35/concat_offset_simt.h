@@ -22,6 +22,7 @@
 
 #include "concat_offset_struct.h"
 #include "kernel_operator.h"
+#include "simt_api/asc_simt.h"
 
 #ifdef __DAV_FPGA__
 constexpr uint32_t THREAD_NUM_LAUNCH_BOUND = 512;
@@ -39,7 +40,7 @@ template <typename T>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtComputer(GM_ADDR x, GM_ADDR y, uint32_t m0, uint32_t shift0, __local_mem__ T* tmpLocal,
                                                      uint32_t perTensorShapeSize, uint32_t concatDim, uint32_t needCalNum)
 {
-    for (uint32_t curCalIdx = static_cast<uint32_t>(Simt::GetThreadIdx()); curCalIdx < needCalNum; curCalIdx += static_cast<uint32_t>(Simt::GetThreadNum()))
+    for (uint32_t curCalIdx = static_cast<uint32_t>(threadIdx.x); curCalIdx < needCalNum; curCalIdx += static_cast<uint32_t>(blockDim.x))
     {
         uint32_t curCalIdx_y = Simt::UintDiv(curCalIdx, m0, shift0);  // threadIdx_y
         uint32_t curCalIdx_x = curCalIdx - perTensorShapeSize * curCalIdx_y; // threadIdx_x
@@ -50,7 +51,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtCom
 
             tmpLocal[curCalIdx_y] = reinterpret_cast<__gm__ T*>(*(xDataPtr + curCalIdx_y))[concatDim];
         }
-        Simt::ThreadBarrier();
+        asc_syncthreads();
         T value = 0;
         if (curCalIdx_x == concatDim) {
             for (int32_t i = 0; i < curCalIdx_y; ++i) {
@@ -91,8 +92,8 @@ __aicore__ inline void ConcatOffsetSimt<T>::Init(const ConcatOffsetTilingData* t
 template <typename T>
 __aicore__ inline void ConcatOffsetSimt<T>::Process(GM_ADDR x, GM_ADDR y)
 {
-    int32_t blockIdx = static_cast<int32_t>(GetBlockIdx());
-    if (blockIdx >= 1) {
+    int32_t blockIdxLocal = static_cast<int32_t>(GetBlockIdx());
+    if (blockIdxLocal >= 1) {
         return;
     }
 
@@ -108,7 +109,7 @@ __aicore__ inline void ConcatOffsetSimt<T>::Process(GM_ADDR x, GM_ADDR y)
     uint32_t needCalNum = static_cast<uint32_t>(tilingData_->needCalNum);
     int32_t threadNum = static_cast<int32_t>(tilingData_->threadNum);
 
-    AscendC::Simt::VF_CALL<SimtComputer<T>>(Simt::Dim3(threadNum), x, y, m0, shift0, (__local_mem__ T*) (tmpLocal.GetPhyAddr()),
+    asc_vf_call<SimtComputer<T>>(dim3(threadNum), x, y, m0, shift0, (__local_mem__ T*) (tmpLocal.GetPhyAddr()),
                                                                          perTensorShapeSize, concatDim, needCalNum);
 }
 

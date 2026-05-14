@@ -18,6 +18,7 @@
 #include "kernel_operator.h"
 #include "../inc/platform.h"
 
+#include "simt_api/asc_simt.h"
 namespace GatherNd
 {
 using namespace AscendC;
@@ -55,14 +56,14 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIMS) inline void SimtDim(
     const T3 curSize, const T3 curBegin, const T3 indicesRank, const T3 lastDimSize, const uint32_t rank,
     const T3 shift, const T3 m)
 {
-    for (T3 idx = Simt::GetThreadIdx(); idx < curSize; idx += Simt::GetThreadNum()) {
+    for (T3 idx = threadIdx.x; idx < curSize; idx += blockDim.x) {
         bool idxOutOfBound = false;
         T3 outputGlobalIdx = idx + curBegin;
         T3 gatherAxisIdx = 0;
         T3 indicesCurrentIdx = 0;
         T2 srcIdx = 0;
         if constexpr (IsSameType<T3, uint32_t>::value) {
-            T3 t1 = Simt::MulHi(outputGlobalIdx, m);
+            T3 t1 = __umulhi(outputGlobalIdx, m);
             t1 += outputGlobalIdx;
             T3 indicesIdx = t1 >> shift;
             indicesCurrentIdx = indicesIdx - indicesRank;
@@ -242,7 +243,7 @@ __aicore__ inline void GatherNdSimt<T1, T2, T3, NIS>::Process()
         vecInQue.DeQue<T2>();
         LocalTensor<T1> outputBuffer = vecOutQue.AllocTensor<T1>();
 
-        Simt::VF_CALL<SimtDim<T1, T2, T3, NIS>>(Simt::Dim3(static_cast<uint32_t>(THREAD_DIMS)),
+        asc_vf_call<SimtDim<T1, T2, T3, NIS>>(dim3(static_cast<uint32_t>(THREAD_DIMS)),
                                                 (__ubuf__ T1*)outputBuffer.GetPhyAddr(),
                                                 (__ubuf__ T2*)indicesBuffer.GetPhyAddr(),
                                                 (__ubuf__ T3*)xInShape.GetPhyAddr(),

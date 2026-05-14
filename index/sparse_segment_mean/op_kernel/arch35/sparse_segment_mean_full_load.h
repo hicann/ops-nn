@@ -40,11 +40,11 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(FULL_LOAD_THREAD_NUM) inline void FullLoadOr
     uint32_t innerSize, uint32_t gatherSize, __local_mem__ X_T* xLocal, __gm__ volatile X_T* y,
     __gm__ uint32_t* segment_offset, __local_mem__ INDICES_T* indicesTensor)
 {
-    uint32_t threadIdxX = Simt::GetThreadIdx<0>();
-    uint32_t threadIdxY = Simt::GetThreadIdx<1>();
-    for (int64_t seg = threadIdxY; seg < curCoreSegments; seg += Simt::GetThreadNum<1>())
+    uint32_t threadIdxX = threadIdx.x;
+    uint32_t threadIdxY = threadIdx.y;
+    for (int64_t seg = threadIdxY; seg < curCoreSegments; seg += blockDim.y)
     {
-        for (uint32_t curXIdx = threadIdxX; curXIdx < innerSize; curXIdx += Simt::GetThreadNum<0>()) {
+        for (uint32_t curXIdx = threadIdxX; curXIdx < innerSize; curXIdx += blockDim.x) {
             int64_t globalSeg = segOffsetBase + seg;
             uint32_t begin = segment_offset[globalSeg];
             uint32_t end = segment_offset[globalSeg + 1];
@@ -161,8 +161,8 @@ __aicore__ inline void SparseSegmentMeanFullLoad<X_T, INDICES_T, SEGMENTIDS_T>::
     uint32_t gatherSize = static_cast<uint32_t>(tilingData_.gatherSize);
     uint32_t innerSize = static_cast<uint32_t>(tilingData_.innerSize);
 
-    AscendC::Simt::VF_CALL<SimtGetSegmentOffset<SEGMENTIDS_T>>(
-        Simt::Dim3(MAX_THREAD_NUM), blockIdx_, outterSize, blockNums_, segmentNum_,
+    asc_vf_call<SimtGetSegmentOffset<SEGMENTIDS_T>>(
+        dim3(MAX_THREAD_NUM), blockIdx_, outterSize, blockNums_, segmentNum_,
         (__gm__ uint32_t*)(workspaceSegmentOffset_.GetPhyAddr()), (__gm__ SEGMENTIDS_T*)(segmentIdsGm_.GetPhyAddr()));
 
     SyncAll();
@@ -177,8 +177,8 @@ __aicore__ inline void SparseSegmentMeanFullLoad<X_T, INDICES_T, SEGMENTIDS_T>::
     SetFlag<HardEvent::MTE2_V>(eventIdMTE2toV);
     WaitFlag<HardEvent::MTE2_V>(eventIdMTE2toV);
 
-    AscendC::Simt::VF_CALL<FullLoadOrderAddComputer<X_T, INDICES_T>>(
-        Simt::Dim3{threadNumX, threadNumY}, segOffsetBase_, curCoreSegments_, innerSize,
+    asc_vf_call<FullLoadOrderAddComputer<X_T, INDICES_T>>(
+        dim3{threadNumX, threadNumY}, segOffsetBase_, curCoreSegments_, innerSize,
         gatherSize, (__local_mem__ X_T*)(xLocal.GetPhyAddr()), (__gm__ volatile X_T*)(yGm_.GetPhyAddr()),
         (__gm__ uint32_t*)(workspaceSegmentOffset_.GetPhyAddr()),
         (__local_mem__ INDICES_T*)(indicesTensor.GetPhyAddr()));

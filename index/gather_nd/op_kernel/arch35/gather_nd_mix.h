@@ -18,6 +18,7 @@
 #include "kernel_operator.h"
 #include "../inc/platform.h"
 
+#include "simt_api/asc_simt.h"
 namespace GatherNd
 {
 using namespace AscendC;
@@ -52,7 +53,7 @@ template <typename T1, typename T2, typename T3>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUMS) inline void MixSimt( __ubuf__ T1 *yAddr, __ubuf__ T3 *indicesAddr,  __gm__ T1 *xAddr, 
     const T2 yCount,  const T3 aMergeAxisSize, const T2 shift, const T2 m)
 {
-    for (T2 idx = Simt::GetThreadIdx(); idx < yCount; idx += Simt::GetThreadNum()) {
+    for (T2 idx = threadIdx.x; idx < yCount; idx += blockDim.x) {
         T3 indicesCurrentIdx = Simt::UintDiv(idx, m, shift);
         T3 colOffset = idx - indicesCurrentIdx * aMergeAxisSize;
 
@@ -67,7 +68,7 @@ template <typename T1, typename T2, typename T3>
 __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUMS) inline void MixSimtWithLastAxisOne( __ubuf__ T1 *yAddr, __ubuf__ T3 *indicesAddr,  __gm__ T1 *xAddr, 
     const T2 yCount)
 {
-    for (T2 idx = Simt::GetThreadIdx(); idx < yCount; idx += Simt::GetThreadNum()) {
+    for (T2 idx = threadIdx.x; idx < yCount; idx += blockDim.x) {
         T3 rowStart = indicesAddr[idx];
         bool idxOutOfBound = rowStart < 0;
         yAddr[idx] = idxOutOfBound ? 0 : xAddr[rowStart];
@@ -301,13 +302,13 @@ __aicore__ inline void GatherNdMixKernel<T1, T2, T3>::Process()
 
         uint32_t yCount = indicesNumPro * aMergeAxisSize;
         if (isLastAxisOne) {
-            Simt::VF_CALL<MixSimtWithLastAxisOne<T1, conditionalType, T3>>(Simt::Dim3(static_cast<uint32_t>(THREAD_NUMS)),
+            asc_vf_call<MixSimtWithLastAxisOne<T1, conditionalType, T3>>(dim3(static_cast<uint32_t>(THREAD_NUMS)),
                                                     (__ubuf__ T1*)yTensor.GetPhyAddr(),
                                                     (__ubuf__ T3*)indicesTensor.GetPhyAddr(),
                                                     (__gm__ T1*)xGm_.GetPhyAddr(),
                                                     yCount);
         } else {
-            Simt::VF_CALL<MixSimt<T1, conditionalType, T3>>(Simt::Dim3(static_cast<uint32_t>(THREAD_NUMS)),
+            asc_vf_call<MixSimt<T1, conditionalType, T3>>(dim3(static_cast<uint32_t>(THREAD_NUMS)),
                                                     (__ubuf__ T1*)yTensor.GetPhyAddr(),
                                                     (__ubuf__ T3*)indicesTensor.GetPhyAddr(),
                                                     (__gm__ T1*)xGm_.GetPhyAddr(),

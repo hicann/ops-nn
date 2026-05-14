@@ -16,6 +16,7 @@
 #define LINEAR_INDEX_V2_SIMT_H
 #include "kernel_operator.h"
 #include "linear_index_v2_common.h"
+#include "simt_api/asc_simt.h"
 using namespace AscendC;
 
 constexpr int64_t THREAD_DIM = 1024;
@@ -30,7 +31,7 @@ __aicore__ inline void SimtLinearIndexProcess(
     int tensorId, __gm__ int* strideAddr, __gm__ int* valueSizeAddr, __gm__ T* indexAddr, __ubuf__ T* outputUbAddr,
     uint64_t calcNum)
 {
-    for (int64_t i = Simt::GetThreadIdx(); i < calcNum; i = i + Simt::GetThreadNum()) {
+    for (int64_t i = threadIdx.x; i < calcNum; i = i + blockDim.x) {
         T indexValue = indexAddr[i];
         int stride = strideAddr[tensorId];
         int valueSize = valueSizeAddr[tensorId];
@@ -79,8 +80,8 @@ private:
             }
             indexGm_.SetGlobalBuffer(GetTensorAddr(indexList_, i) + idxAddrOffset_ + loopIdx * ubThres_);
             __gm__ T* indexAddr = (__gm__ T*)indexGm_.GetPhyAddr();
-            Simt::VF_CALL<SimtLinearIndexProcess<T>>(
-                Simt::Dim3(THREAD_DIM), i, strideAddr, valueSizeAddr, indexAddr, outputUbAddr, calcNum);
+            asc_vf_call<SimtLinearIndexProcess<T>>(
+                dim3(THREAD_DIM), i, strideAddr, valueSizeAddr, indexAddr, outputUbAddr, calcNum);
         }
         auto mte3WaitVEventID = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
         SetFlag<HardEvent::V_MTE3>(mte3WaitVEventID);

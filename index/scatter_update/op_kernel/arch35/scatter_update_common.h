@@ -22,6 +22,10 @@
 #include "op_kernel/math_util.h"
 #include "../inc/load_store_utils.h"
 #include "scatter_update_struct.h"
+#include "simt_api/asc_simt.h"
+#include "simt_api/device_atomic_functions.h"
+#include "simt_api/asc_fp16.h"
+#include "simt_api/asc_bf16.h"
 
 namespace ScatterUpdate {
 using namespace AscendC;
@@ -245,12 +249,12 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_DETERMINISTIC) inline void Scatte
     uint32_t indicesCount, uint64_t varFirstDimSize, uint64_t indicesStartGmOffset,
     __gm__ MASK_T* workspaceMaskAddr, __local_mem__ U* indicesLocalAddr)
 {
-    for (uint32_t i = Simt::GetThreadIdx(); i < indicesCount; i += Simt::GetThreadNum()) {
+    for (uint32_t i = threadIdx.x; i < indicesCount; i += blockDim.x) {
         U indicesValue = indicesLocalAddr[i];
         if (!(indicesValue >= 0 && indicesValue < varFirstDimSize)) {
             continue;
         }
-        Simt::AtomicMax(workspaceMaskAddr + indicesValue, static_cast<MASK_T>(indicesStartGmOffset + i));
+        asc_atomic_max(workspaceMaskAddr + indicesValue, static_cast<MASK_T>(indicesStartGmOffset + i));
     }
 }
 
@@ -259,7 +263,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_DETERMINISTIC) inline void Scatte
     uint32_t uniqueIdNum, uint64_t varFirstDimSize, uint64_t indicesStartGmOffset, __gm__ MASK_T* workspaceMaskAddr,
     __local_mem__ U* indicesSortedPtr, __local_mem__ uint32_t* updatesOriginIdxAddr, __local_mem__ int32_t* uniqueIdCountAddr)
 {
-    for (uint32_t i = Simt::GetThreadIdx(); i < uniqueIdNum; i += Simt::GetThreadNum()) {
+    for (uint32_t i = threadIdx.x; i < uniqueIdNum; i += blockDim.x) {
         int32_t repeatTimes = uniqueIdCountAddr[i + 1] - uniqueIdCountAddr[i];
         int32_t lastIndicesIdx = uniqueIdCountAddr[i] + repeatTimes - 1;
         U indicesValue = indicesSortedPtr[lastIndicesIdx];
@@ -268,7 +272,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_DETERMINISTIC) inline void Scatte
         }
 
         uint32_t indicesLocalOffset = updatesOriginIdxAddr[lastIndicesIdx];
-        Simt::AtomicMax(workspaceMaskAddr + indicesValue,
+        asc_atomic_max(workspaceMaskAddr + indicesValue,
                         static_cast<MASK_T>(indicesStartGmOffset + indicesLocalOffset));
     }
 }
@@ -402,12 +406,12 @@ __aicore__ inline void ScatterUpdateDeterministicCommon<T, U, MASK_T, splitCol, 
  	                            indicesCount, indicesCastLocal, indicesSortedLocal, uniqueIdCountLocal, updatesOriginIdxLocal);
             }
 
-            Simt::VF_CALL<ScatterUpdateSimtCalcMaskSort<T, CAST_T, MASK_T>>(Simt::Dim3(THREAD_NUM_DETERMINISTIC), 
+            asc_vf_call<ScatterUpdateSimtCalcMaskSort<T, CAST_T, MASK_T>>(dim3(THREAD_NUM_DETERMINISTIC), 
                     uniqueIdNum, varFirstDimSize, indicesStartGmOffset, workspaceMaskAddr, indicesSortedPtr,
                     updatesOriginIdxAddr, uniqueIdCountAddr);
         } else {
             __local_mem__ U* indicesLocalAddr = (__local_mem__ U*)(indicesLocal.GetPhyAddr());
-            Simt::VF_CALL<ScatterUpdateSimtCalcMaskUnSort<T, U, MASK_T>>(Simt::Dim3(THREAD_NUM_DETERMINISTIC), 
+            asc_vf_call<ScatterUpdateSimtCalcMaskUnSort<T, U, MASK_T>>(dim3(THREAD_NUM_DETERMINISTIC), 
                     indicesCount, varFirstDimSize, indicesStartGmOffset, workspaceMaskAddr, indicesLocalAddr);
         }
 

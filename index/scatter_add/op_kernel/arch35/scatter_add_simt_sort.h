@@ -106,10 +106,10 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_SORT) inline void ScatterAddSimtS
     __local_mem__ CAST_T* sortedAddr, __local_mem__ uint32_t* sortedOriginIndexAddr, __local_mem__ int32_t* cumSumAddr,
     uint32_t uniqueIndexNum, ADDR_T lastDim, VAR_T updateScalarValue)
 {
-    int32_t blockIdx = Simt::GetThreadIdx<1>();
-    int32_t blockNum = Simt::GetThreadNum<1>();
-    int32_t innerOffset = Simt::GetThreadIdx<0>();
-    for(int32_t i = blockIdx; i < uniqueIndexNum; i += blockNum) {
+    int32_t addBlockIdx = threadIdx.y;
+    int32_t blockNum = blockDim.y;
+    int32_t innerOffset = threadIdx.x;
+    for(int32_t i = addBlockIdx; i < uniqueIndexNum; i += blockNum) {
         if (sortedAddr[cumSumAddr[i]] < 0 || sortedAddr[cumSumAddr[i]] >= outputOuterDimSize) {
             continue;
         }
@@ -124,10 +124,10 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_SORT) inline void ScatterAddSimtS
         }
         int64_t gmDstOffset = sortedAddr[cumSumAddr[i]] * lastDim + innerOffset;
         if constexpr (scatterOp == ADD) {
-            Simt::AtomicAdd(outputAddr + gmDstOffset, result);
+            asc_atomic_add(outputAddr + gmDstOffset, result);
         } else if constexpr (scatterOp == SUB) {
             result = -result;
-            Simt::AtomicAdd(outputAddr + gmDstOffset, result);
+            asc_atomic_add(outputAddr + gmDstOffset, result);
         }
     }
 }
@@ -187,8 +187,8 @@ __aicore__ inline void ScatterAddSimtSort<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdate
     int32_t threadBlock = currentMaxThread / totalCol;
     threadBlock = threadBlock < uniqueIdNum ? threadBlock : uniqueIdNum;
 
-    Simt::VF_CALL<ScatterAddSimtSortCompute<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScalar, scatterOp>>(
-        Simt::Dim3({static_cast<uint32_t>(totalCol), static_cast<uint32_t>(threadBlock)}),
+    asc_vf_call<ScatterAddSimtSortCompute<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScalar, scatterOp>>(
+        dim3({static_cast<uint32_t>(totalCol), static_cast<uint32_t>(threadBlock)}),
         varFirstDimSize, (__gm__ VAR_T*)(var_.GetPhyAddr()), updatesLocalPtr, indicesSortedPtr,
         (__local_mem__ uint32_t*)(updatesOriginIdxLocal.GetPhyAddr()),
         (__local_mem__ int32_t*)(uniqueIdCountLocal.GetPhyAddr()), uniqueIdNum, totalCol, updateScalarValue);
