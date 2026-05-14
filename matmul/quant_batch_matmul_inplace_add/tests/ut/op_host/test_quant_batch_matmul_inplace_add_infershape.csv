@@ -1,0 +1,2 @@
+caseGroup,caseName,x1Shape,x2Shape,x2ScaleShape,yShape,x1ScaleShape,transposeX1,transposeX2,groupSize,expectRet,expectOutShape
+general,quant_batch_matmul_inplace_add_infershape_check,64 128,64 256,1 256 2,64 256,1 128 2,true,false,4295032864,GRAPH_SUCCESS,64 256

@@ -11,10 +11,13 @@
 #include <gtest/gtest.h>
 #include <stdlib.h>
 
-#include <iostream>
-#include <vector>
-#include <string>
 #include <algorithm>
+#include <cctype>
+#include <fstream>
+#include <iostream>
+#include <map>
+#include <string>
+#include <vector>
 
 #include "log/log.h"
 
@@ -29,8 +32,10 @@
 #include "ut_op_util.h"
 #include "../../../op_host/op_tiling/quant_batch_matmul_inplace_add_tiling.h"
 #include "../../../../common/op_host/math_util.h"
+#include "../../../../../tests/ut/common/ut_string_utils.h"
 
 using namespace std;
+using namespace ut_str;
 
 namespace {
 
@@ -50,34 +55,129 @@ struct QuantBatchMatmulInplaceAddCompileInfo {
 };
 
 struct QuantBatchMatmulInplaceAddTilingTestParam {
+    string caseGroup;
     string caseName;
-    // output
-    uint32_t blockDim;
-    ge::graphStatus tilingResult;
-    uint64_t tilingKey;
+    string socVersion;
+    int64_t m;
+    int64_t k;
+    int64_t n;
+    bool transA;
+    bool transB;
+    int64_t groupSize;
+    ge::Format x1Format;
+    ge::Format x2Format;
+    ge::DataType x1Dtype;
+    ge::DataType x2Dtype;
+    bool hasX1Scale;
+    ge::DataType x1ScaleDtype;
+    bool hasX2Scale;
+    ge::DataType x2ScaleDtype;
+    ge::DataType yDtype;
+    uint32_t aicNum;
+    uint32_t aivNum;
+    uint32_t expectBlockDim;
+    ge::graphStatus expectTilingResult;
+    uint64_t expectTilingKey;
 };
 
-static void SplitStr2Vec(const string &input, const string &delimiter, vector<string> &output)
+struct QuantBatchMatmulInplaceAddTilingCsvLoadResult {
+    vector<QuantBatchMatmulInplaceAddTilingTestParam> params;
+    vector<string> errors;
+};
+
+static QuantBatchMatmulInplaceAddTilingCsvLoadResult LoadParams()
 {
-    auto delimiterLen = delimiter.size();
-    std::string::size_type currPos = 0;
-    std::string::size_type nextPos = input.find(delimiter, currPos);
-    while (nextPos != std::string::npos) {
-        output.emplace_back(input.substr(currPos, nextPos - currPos));
-        currPos = nextPos + delimiterLen;
-        nextPos = input.find(delimiter, currPos);
+    QuantBatchMatmulInplaceAddTilingCsvLoadResult result;
+    string rootPath(ut_str::GetExeDirPath() + "../../../../");
+    string casePath(
+        rootPath + "matmul/quant_batch_matmul_inplace_add/tests/ut/op_host/test_quant_batch_matmul_inplace_add_tiling.csv");
+    ifstream csvData(casePath, ios::in);
+    if (!csvData.is_open()) {
+        result.errors.push_back("cannot open case file: " + casePath);
+        return result;
     }
 
-    if (currPos < input.size()) {
-        output.emplace_back(input.substr(currPos));
+    string line;
+    bool skipHeader = true;
+    constexpr size_t kExpectedCols = 23UL;
+    size_t lineNo = 0UL;
+    while (getline(csvData, line)) {
+        ++lineNo;
+        const string trimLine = Trim(line);
+        if (trimLine.empty() || trimLine[0] == '#') {
+            continue;
+        }
+        if (skipHeader) {
+            skipHeader = false;
+            continue;
+        }
+
+        vector<string> cols;
+        SplitStr2Vec(line, ",", cols);
+        if (cols.size() < kExpectedCols) {
+            result.errors.push_back("skip invalid csv line " + std::to_string(lineNo) + " in " + casePath +
+                                    ": expected at least " + std::to_string(kExpectedCols) + " columns, got " +
+                                    std::to_string(cols.size()));
+            continue;
+        }
+
+        size_t idx = 0UL;
+        QuantBatchMatmulInplaceAddTilingTestParam param;
+        param.caseGroup = Trim(cols[idx++]);
+        param.caseName = Trim(cols[idx++]);
+        param.socVersion = Trim(cols[idx++]);
+        param.m = ParseInt64OrDefault(cols[idx++], 0);
+        param.k = ParseInt64OrDefault(cols[idx++], 0);
+        param.n = ParseInt64OrDefault(cols[idx++], 0);
+        param.transA = ParseBool(cols[idx++]);
+        param.transB = ParseBool(cols[idx++]);
+        param.groupSize = ParseInt64OrDefault(cols[idx++], 0);
+        param.x1Format = ParseFormat(cols[idx++]);
+        param.x2Format = ParseFormat(cols[idx++]);
+        param.x1Dtype = ParseDtype(cols[idx++]);
+        param.x2Dtype = ParseDtype(cols[idx++]);
+        param.hasX1Scale = ParseBool(cols[idx++]);
+        param.x1ScaleDtype = ParseDtype(cols[idx++]);
+        param.hasX2Scale = ParseBool(cols[idx++]);
+        param.x2ScaleDtype = ParseDtype(cols[idx++]);
+        param.yDtype = ParseDtype(cols[idx++]);
+        param.aicNum = static_cast<uint32_t>(ParseIntOrDefault(cols[idx++], 0));
+        param.aivNum = static_cast<uint32_t>(ParseIntOrDefault(cols[idx++], 0));
+        param.expectBlockDim = static_cast<uint32_t>(ParseIntOrDefault(cols[idx++], 0));
+        param.expectTilingResult = ParseGraphStatus(cols[idx++]);
+        param.expectTilingKey = static_cast<uint64_t>(ParseInt64OrDefault(cols[idx++], 0));
+        result.params.push_back(param);
     }
+    if (result.params.empty()) {
+        result.errors.push_back("no valid tiling cases loaded from: " + casePath);
+    }
+    return result;
+}
+
+static const QuantBatchMatmulInplaceAddTilingCsvLoadResult &GetParamsLoadResult()
+{
+    static const QuantBatchMatmulInplaceAddTilingCsvLoadResult result = LoadParams();
+    return result;
+}
+
+static vector<QuantBatchMatmulInplaceAddTilingTestParam> GetParams()
+{
+    return GetParamsLoadResult().params;
+}
+
+static string SanitizeCaseName(const testing::TestParamInfo<QuantBatchMatmulInplaceAddTilingTestParam> &info)
+{
+    string name = info.param.caseName;
+    for (char &ch : name) {
+        if (!std::isalnum(static_cast<unsigned char>(ch))) {
+            ch = '_';
+        }
+    }
+    return name;
 }
 
 class QuantBatchMatmulInplaceAddTiling : public testing::TestWithParam<QuantBatchMatmulInplaceAddTilingTestParam> {
-    virtual void SetUp()
-    {}
-
-protected:
+ protected:
     static void SetUpTestCase()
     {
         std::cout << "QuantBatchMatmulInplaceAddTiling SetUp" << std::endl;
@@ -89,79 +189,23 @@ protected:
     }
 };
 
-class QuantBatchMatmulInplaceAddTilingRegbase
-    : public testing::TestWithParam<QuantBatchMatmulInplaceAddTilingTestParam> {};
-
+TEST(QuantBatchMatmulInplaceAddTilingCsv, ShouldLoadValidCases)
+{
+    const auto &loadResult = GetParamsLoadResult();
+    for (const auto &error : loadResult.errors) {
+        ADD_FAILURE() << error;
+    }
+    EXPECT_FALSE(loadResult.params.empty());
+}
 
 static void TestOneParamCase(const QuantBatchMatmulInplaceAddTilingTestParam &param)
 {
     std::cout << "run case " << param.caseName << std::endl;
-    std::vector<string> testParam;
-    SplitStr2Vec(param.caseName.substr(param.caseName.find_first_of('_') + 1), "_", testParam);
-    map<string, ge::DataType> dtypeMap = {
-        {"FP16", ge::DT_FLOAT16},
-        {"FP32", ge::DT_FLOAT},
-        {"BF16", ge::DT_BF16},
-        {"INT8", ge::DT_INT8},
-        {"INT4", ge::DT_INT4},
-        {"UINT64", ge::DT_UINT64},
-        {"FP8-E8M0", ge::DT_FLOAT8_E8M0},
-        {"FP8-E4M3", ge::DT_FLOAT8_E4M3FN},
-        {"FP8-E5M2", ge::DT_FLOAT8_E5M2},
-        {"FP4-E2M1", ge::DT_FLOAT4_E2M1},
-        {"FP4-E1M2", ge::DT_FLOAT4_E1M2}
-    };
+    const int64_t k0 = 64;
+    const int64_t k1 = ops::CeilDiv(param.k, k0);
+    const int64_t n0 = 64;
+    const int64_t n1 = ops::CeilDiv(param.n, n0);
 
-    map<string, ge::Format> formatMap = {
-        {"ND", ge::FORMAT_ND},
-        {"NZ", ge::FORMAT_FRACTAL_NZ}
-    };
-
-    size_t idx = 0;
-    string socVersion = testParam[idx++];
-    std::replace(socVersion.begin(), socVersion.end(), '-', '_');
-    int64_t m = stol(testParam[idx++]);
-    int64_t k = stol(testParam[idx++]);
-    int64_t k0 = 64;
-    int64_t k1 = ops::CeilDiv(k, k0);
-    int64_t n = stol(testParam[idx++]);
-    int64_t n0 = 64;
-    int64_t n1 = ops::CeilDiv(n, n0);
-    int64_t transA = stol(testParam[idx++]);
-    int64_t transB = stol(testParam[idx++]);
-    int64_t group = stol(testParam[idx++]);
-    ge::Format x1Format = formatMap[testParam[idx++]];
-    ge::Format x2Format = formatMap[testParam[idx++]];
-    ge::DataType x1Dtype = dtypeMap[testParam[idx++]];
-    ge::DataType x2Dtype = dtypeMap[testParam[idx++]];
-
-    bool hasX1Scale = true;
-    ge::DataType x1ScaleDtype = ge::DT_FLOAT;
-    string x1ScaleDtypeStr = testParam[idx++];
-    if (x1ScaleDtypeStr == "NULL") {
-        hasX1Scale = false;
-    } else {
-        x1ScaleDtype = dtypeMap[x1ScaleDtypeStr];
-    }
-
-    bool hasX2Scale = true;
-    ge::DataType x2ScaleDtype = ge::DT_FLOAT;
-    string x2ScaleDtypeStr = testParam[idx++];
-    if (x2ScaleDtypeStr == "NULL") {
-        hasX2Scale = false;
-    } else {
-        x2ScaleDtype = dtypeMap[x2ScaleDtypeStr];
-    }
-
-    // Keep the legacy fields in caseName to avoid rewriting all existing cases.
-    string unusedYScaleDtypeStr = testParam[idx++];
-    string unusedX2TableDtypeStr = testParam[idx++];
-    (void)unusedYScaleDtypeStr;
-    (void)unusedX2TableDtypeStr;
-
-    ge::DataType yDtype = dtypeMap[testParam[idx++]];
-    uint32_t aicNum = stoul(testParam[idx++]);
-    uint32_t aivNum = stoul(testParam[idx++]);
     string compileInfoStr = R"({
          "hardware_info": {"BT_SIZE": 1024, "load3d_constraints": "0",
                            "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": true,
@@ -177,70 +221,67 @@ static void TestOneParamCase(const QuantBatchMatmulInplaceAddTilingTestParam &pa
     gert::StorageShape x1ScaleShape;
     gert::StorageShape x2ScaleShape;
     gert::StorageShape yInputShape;
-    gert::StorageShape outputShape({m, n}, {m, n});
+    gert::StorageShape outputShape({param.m, param.n}, {param.m, param.n});
 
-    if (transA) {
-        x1Shape.MutableStorageShape() = gert::Shape({k, m});
+    if (param.transA) {
+        x1Shape.MutableStorageShape() = gert::Shape({param.k, param.m});
     } else {
-        x1Shape.MutableStorageShape() = gert::Shape({m, k});
+        x1Shape.MutableStorageShape() = gert::Shape({param.m, param.k});
     }
     x1Shape.MutableOriginShape() = x1Shape.MutableStorageShape();
-    if (x2Format == ge::FORMAT_ND) {
-        if (transB) {
-            x2Shape.MutableStorageShape() = gert::Shape({n, k});
+    if (param.x2Format == ge::FORMAT_ND) {
+        if (param.transB) {
+            x2Shape.MutableStorageShape() = gert::Shape({param.n, param.k});
         } else {
-            x2Shape.MutableStorageShape() = gert::Shape({k, n});
+            x2Shape.MutableStorageShape() = gert::Shape({param.k, param.n});
         }
         x2Shape.MutableOriginShape() = x2Shape.MutableStorageShape();
-    } else if (x2Format == ge::FORMAT_FRACTAL_NZ) {
-        if (transB) {
-            x2Shape.MutableOriginShape() = gert::Shape({n, k});
+    } else if (param.x2Format == ge::FORMAT_FRACTAL_NZ) {
+        if (param.transB) {
+            x2Shape.MutableOriginShape() = gert::Shape({param.n, param.k});
             x2Shape.MutableStorageShape() = gert::Shape({k1, n1, n0, k0});
         } else {
-            x2Shape.MutableOriginShape() = gert::Shape({k, n});
+            x2Shape.MutableOriginShape() = gert::Shape({param.k, param.n});
             x2Shape.MutableStorageShape() = gert::Shape({n1, k1, k0, n0});
         }
     }
+
     int64_t groupSize = 0;
-    if (group > 0) {
-        groupSize = group;
-        int64_t groupNum = (k + group - 1) / group;
-        x1ScaleShape.MutableStorageShape() = gert::Shape({m, groupNum, 2});
-        if (transB) {
-            x2ScaleShape.MutableStorageShape() = gert::Shape({n, groupNum, 2});
+    if (param.groupSize > 0) {
+        groupSize = param.groupSize;
+        const int64_t groupNum = (param.k + param.groupSize - 1) / param.groupSize;
+        x1ScaleShape.MutableStorageShape() = gert::Shape({param.m, groupNum, 2});
+        if (param.transB) {
+            x2ScaleShape.MutableStorageShape() = gert::Shape({param.n, groupNum, 2});
         } else {
-            x2ScaleShape.MutableStorageShape() = gert::Shape({groupNum, n, 2});
+            x2ScaleShape.MutableStorageShape() = gert::Shape({groupNum, param.n, 2});
         }
     }
-    yInputShape.MutableOriginShape() = gert::Shape({m, n});
-    yInputShape.MutableStorageShape() = gert::Shape({m, n});
-    x1ScaleShape.MutableOriginShape() = gert::Shape({k1, m, 2});
-    x1ScaleShape.MutableStorageShape() = gert::Shape({k1, m, 2});
-    x2ScaleShape.MutableOriginShape() = gert::Shape({k1, n, 2});
-    x2ScaleShape.MutableStorageShape() = gert::Shape({k1, n, 2});
+    yInputShape.MutableOriginShape() = gert::Shape({param.m, param.n});
+    yInputShape.MutableStorageShape() = gert::Shape({param.m, param.n});
+    x1ScaleShape.MutableOriginShape() = gert::Shape({k1, param.m, 2});
+    x1ScaleShape.MutableStorageShape() = gert::Shape({k1, param.m, 2});
+    x2ScaleShape.MutableOriginShape() = gert::Shape({k1, param.n, 2});
+    x2ScaleShape.MutableStorageShape() = gert::Shape({k1, param.n, 2});
 
     map<string, string> socInfos;
     map<string, string> aicoreSpec;
     map<string, string> intrinsics;
-    // 6为替换原aicNum字符串的长度，配置CORE_NUM
-    compileInfoStr = compileInfoStr.replace(compileInfoStr.find("aicNum"), 6, to_string(aicNum));
-    // 6为替换原aicNum字符串的长度，配置cube_core_cnt
-    compileInfoStr = compileInfoStr.replace(compileInfoStr.find("aicNum"), 6, to_string(aicNum));
-    // 6为替换原aivNum字符串的长度，配置vector_core_cnt
-    compileInfoStr = compileInfoStr.replace(compileInfoStr.find("aivNum"), 6, to_string(aivNum));
+    compileInfoStr = compileInfoStr.replace(compileInfoStr.find("aicNum"), 6, to_string(param.aicNum));
+    compileInfoStr = compileInfoStr.replace(compileInfoStr.find("aicNum"), 6, to_string(param.aicNum));
+    compileInfoStr = compileInfoStr.replace(compileInfoStr.find("aivNum"), 6, to_string(param.aivNum));
     GetPlatFormInfos(compileInfoStr.c_str(), socInfos, aicoreSpec, intrinsics);
     aicoreSpec["cube_freq"] = "1800";
 
-    // platform info
     fe::PlatFormInfos platformInfo;
     platformInfo.Init();
     QuantBatchMatmulInplaceAddCompileInfo compileInfo;
 
     auto kernelHold = gert::KernelRunContextFaker()
-                            .KernelIONum(2, 1)
-                            .Inputs({const_cast<char*>(compileInfoStr.c_str()), reinterpret_cast<void*>(&platformInfo)})
-                            .Outputs({&compileInfo})
-                            .Build();
+                          .KernelIONum(2, 1)
+                          .Inputs({const_cast<char*>(compileInfoStr.c_str()), reinterpret_cast<void*>(&platformInfo)})
+                          .Outputs({&compileInfo})
+                          .Build();
 
     std::string opType("QuantBatchMatmulInplaceAdd");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str()), nullptr);
@@ -252,19 +293,19 @@ static void TestOneParamCase(const QuantBatchMatmulInplaceAddTilingTestParam &pa
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(5, 1)
                       .IrInstanceNum({1, 1, 1, 1, 1})
-                      .InputShapes({&x1Shape, &x2Shape, hasX2Scale ? &x2ScaleShape : nullptr,
-                                    &yInputShape, hasX1Scale ? &x1ScaleShape : nullptr})
+                      .InputShapes({&x1Shape, &x2Shape, param.hasX2Scale ? &x2ScaleShape : nullptr,
+                                    &yInputShape, param.hasX1Scale ? &x1ScaleShape : nullptr})
                       .OutputShapes({&outputShape})
                       .CompileInfo(&compileInfo)
                       .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
-                      .NodeInputTd(0, x1Dtype, x1Format, x1Format)
-                      .NodeInputTd(1, x2Dtype, x2Format, x2Format)
-                      .NodeInputTd(2, x2ScaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(3, yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeInputTd(4, x1ScaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeOutputTd(0, yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-                      .NodeAttrs({{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(transA)},
-                                  {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(transB)},
+                      .NodeInputTd(0, param.x1Dtype, param.x1Format, param.x1Format)
+                      .NodeInputTd(1, param.x2Dtype, param.x2Format, param.x2Format)
+                      .NodeInputTd(2, param.x2ScaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, param.yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, param.x1ScaleDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, param.yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(param.transA)},
+                                  {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(param.transB)},
                                   {"group_size", Ops::NN::AnyValue::CreateFrom<int64_t>(groupSize)}})
                       .TilingData(rawTilingData.get())
                       .Workspace(workspace)
@@ -277,9 +318,10 @@ static void TestOneParamCase(const QuantBatchMatmulInplaceAddTilingTestParam &pa
     tilingContext->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     tilingContext->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     tilingContext->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
-    map<string, string> soc_version_infos;
-    soc_version_infos.insert(make_pair("Short_SoC_version", socVersion));
-    tilingContext->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
+    map<string, string> socVersionInfos;
+    socVersionInfos.insert(make_pair("Short_SoC_version", param.socVersion));
+    tilingContext->GetPlatformInfo()->SetPlatformRes("version", socVersionInfos);
+
     auto tilingParseFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling_parse;
     ASSERT_NE(tilingParseFunc, nullptr);
     ASSERT_EQ(tilingParseFunc(kernelHold.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
@@ -287,31 +329,21 @@ static void TestOneParamCase(const QuantBatchMatmulInplaceAddTilingTestParam &pa
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
     ASSERT_NE(tilingFunc, nullptr);
     ge::graphStatus ret = tilingFunc(tilingContext);
-    ASSERT_EQ(ret, param.tilingResult);
+    ASSERT_EQ(ret, param.expectTilingResult);
     if (ret == ge::GRAPH_SUCCESS) {
-        ASSERT_EQ(tilingContext->GetTilingKey(), param.tilingKey);
-        ASSERT_EQ(tilingContext->GetBlockDim(), param.blockDim);
+        ASSERT_EQ(tilingContext->GetTilingKey(), param.expectTilingKey);
+        ASSERT_EQ(tilingContext->GetBlockDim(), param.expectBlockDim);
     }
 }
 
 TEST_P(QuantBatchMatmulInplaceAddTiling, generalTest)
 {
-    QuantBatchMatmulInplaceAddTilingTestParam param = GetParam();
-    TestOneParamCase(param);
+    TestOneParamCase(GetParam());
 }
 
-// format: caseName m k n transA transB groupSize x1Format x2Format x1Dtype x2Dtype x1ScaleDtype
-//         x2ScaleDtype legacyYScale legacyX2Table yDtype aicNum aivNum platform
-static QuantBatchMatmulInplaceAddTilingTestParam casesParams[] = {
+INSTANTIATE_TEST_SUITE_P(QuantBatchMatmulInplaceAdd950,
+                         QuantBatchMatmulInplaceAddTiling,
+                         testing::ValuesIn(GetParams()),
+                         SanitizeCaseName);
 
-    // MX ND
-    {"mx-test1_Ascend950_128_512_128_1_0_32_ND_ND_FP8-E4M3_FP8-E5M2_FP8-E8M0_FP8-E8M0_UINT64_NULL_FP32_32_64", 16, ge::GRAPH_SUCCESS, 1UL},
-    {"mx-2_Ascend950_1024_512_1024_1_0_32_ND_ND_FP8-E5M2_FP8-E5M2_FP8-E8M0_FP8-E8M0_UINT64_NULL_FP32_32_64", 32, ge::GRAPH_SUCCESS, 1UL},
-    {"mx-3_Ascend950_128_512_128_1_0_32_ND_ND_FP8-E5M2_FP8-E5M2_FP8-E8M0_FP8-E8M0_UINT64_NULL_FP32_32_64", 16, ge::GRAPH_SUCCESS, 1UL},
-    {"mx-4_Ascend950_1024_512_1024_1_0_32_ND_ND_FP8-E4M3_FP8-E4M3_FP8-E8M0_FP8-E8M0_UINT64_NULL_FP32_32_64", 32, ge::GRAPH_SUCCESS, 1UL},
-
- };
-
-INSTANTIATE_TEST_CASE_P(QuantBatchMatmulInplaceAdd950, QuantBatchMatmulInplaceAddTiling, testing::ValuesIn(casesParams));
-
-} // using namespace
+} // namespace
