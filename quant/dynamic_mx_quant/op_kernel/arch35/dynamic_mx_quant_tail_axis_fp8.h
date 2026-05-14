@@ -417,20 +417,19 @@ __aicore__ inline void DynamicMxQuantTailAxisFP8<T, U, SCALE_ALG>::ComputeScaleO
             Reg::LoadAlign<uint16_t, Reg::PostLiteral::POST_MODE_UPDATE>(
                 vdMaxExp, maxExpAddr, vfLen16);
             Reg::Compare<uint16_t, CMPMODE::NE>(cmpResult, vdMaxExp, expMask, preMaskScale); // INF/NAN
-            Reg::Compare<uint16_t, CMPMODE::NE>(zeroMask, vdMaxExp, zeroRegTensor, preMaskScale);
             Reg::Compare<uint16_t, CMPMODE::LE>(invalidDataMask, vdMaxExp, maxExpValue, preMaskScale);
 
             Reg::Select<uint16_t>(vdMaxExp, maxExpValue, vdMaxExp, invalidDataMask);
 
             Reg::Sub(sharedExp, vdMaxExp, maxExpValue, preMaskScale);
             Reg::ShiftRights(scaleValue, sharedExp, SHR_NUM_FOR_BF16, preMaskScale);
-
             Reg::Select<uint16_t>(scaleValue, scaleValue, fp8NanRegTensor, cmpResult);
-            Reg::Select<uint16_t>(scaleValue, scaleValue, zeroRegTensor, zeroMask);
 
             Reg::StoreAlign<uint16_t, Reg::PostLiteral::POST_MODE_UPDATE, Reg::StoreDist::DIST_PACK_B16>(
                 mxScaleLocalAddr, scaleValue, vfLen32, preMaskScale);           // 128 个scale，占用 128 * 1 Btyes = vfLen32 * sizeof(uint16_t)
 
+            Reg::Compare<uint16_t, CMPMODE::NE>(zeroMask, sharedExp, zeroRegTensor, preMaskScale);
+            
             Reg::Compare<uint16_t, CMPMODE::EQ>(specialDataMask, sharedExp, scaleBias, preMaskScale);
             Reg::Sub(halfScale, scaleBias, sharedExp, preMaskScale);
             Reg::Select<uint16_t>(halfScale, halfScale, nanRegTensor, cmpResult);

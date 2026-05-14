@@ -492,7 +492,6 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeScale(__u
             Reg::LoadAlign<uint16_t, Reg::PostLiteral::POST_MODE_UPDATE>(
                 vdMaxExp, maxExpAddr, vfLen16);
             Reg::Compare<uint16_t, CMPMODE::NE>(cmpResult, vdMaxExp, expMask, preMaskScale); // INF/NAN
-            Reg::Compare<uint16_t, CMPMODE::NE>(zeroMask, vdMaxExp, zeroRegTensor, preMaskScale);
             Reg::Compare<uint16_t, CMPMODE::LE>(invalidDataMask, vdMaxExp, maxExpValue, preMaskScale);
 
             Reg::Select<uint16_t>(vdMaxExp, maxExpValue, vdMaxExp, invalidDataMask);
@@ -501,11 +500,11 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeScale(__u
             Reg::ShiftRights(scaleValue, sharedExp, SHR_NUM_FOR_BF16, preMaskScale);
 
             Reg::Select<uint16_t>(scaleValue, scaleValue, fp8NanRegTensor, cmpResult);
-            Reg::Select<uint16_t>(scaleValue, scaleValue, zeroRegTensor, zeroMask);
 
             Reg::StoreAlign<uint16_t, Reg::PostLiteral::POST_MODE_UPDATE, Reg::StoreDist::DIST_PACK_B16>(
                 mxScaleLocalAddr, scaleValue, vfLen32, preMaskScale);           // 128 个scale，占用 128 * 1 Btyes = vfLen32 * sizeof(uint16_t)
 
+            Reg::Compare<uint16_t, CMPMODE::NE>(zeroMask, sharedExp, zeroRegTensor, preMaskScale);
             Reg::Compare<uint16_t, CMPMODE::EQ>(specialDataMask, sharedExp, scaleBias, preMaskScale);
             Reg::Sub(halfScale, scaleBias, sharedExp, preMaskScale);
             Reg::Select<uint16_t>(halfScale, halfScale, nanRegTensor, cmpResult);
@@ -559,7 +558,6 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeScaleDyna
                 vdMaxExp, maxExpAddr, vfLen16);
             Reg::And(vdMaxExpOnly, vdMaxExp, expMask, preMaskScale);  // 提取指数位
             Reg::Compare<uint16_t, CMPMODE::NE>(cmpResult, vdMaxExpOnly, expMask, preMaskScale); // INF/NAN
-            Reg::Compare<uint16_t, CMPMODE::NE>(zeroMask, vdMaxExpOnly, zeroRegTensor, preMaskScale);
             Reg::Compare<uint16_t, CMPMODE::LT>(invalidDataMask, vdMaxExpOnly, maxExpValue, preMaskScale);
             
             Reg::Add(vdMaxExpAdd, vdMaxExp, addValue, preMaskScale);     // 进位后的结果
@@ -569,11 +567,11 @@ __aicore__ inline void DynamicMxQuantTailAxis<T, U, SCALE_ALG>::ComputeScaleDyna
 
             Reg::ShiftRights(scaleValue, sharedExp, SHR_NUM_FOR_BF16, preMaskScale);
             Reg::Select<uint16_t>(scaleValue, scaleValue, fp8NanRegTensor, cmpResult);
-            Reg::Select<uint16_t>(scaleValue, scaleValue, zeroRegTensor, zeroMask);
 
             Reg::StoreAlign<uint16_t, Reg::PostLiteral::POST_MODE_UPDATE, Reg::StoreDist::DIST_PACK_B16>(
                 mxScaleLocalAddr, scaleValue, vfLen32, preMaskScale);
 
+            Reg::Compare<uint16_t, CMPMODE::NE>(zeroMask, sharedExp, zeroRegTensor, preMaskScale);
             Reg::Compare<uint16_t, CMPMODE::EQ>(specialDataMask, sharedExp, scaleBias, preMaskScale);
             Reg::Sub(halfScale, scaleBias, sharedExp, preMaskScale);
             Reg::Select<uint16_t>(halfScale, halfScale, nanRegTensor, cmpResult);

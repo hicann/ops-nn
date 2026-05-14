@@ -462,9 +462,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimize<T, U, ISTAIL>::ComputeO
             mask = AscendC::MicroAPI::UpdateMask<calcTypeInt>(maskNum);
             // calcMode=1时，前面求 数的最大值，现提取指数
             AscendC::MicroAPI::And(expMaxReg, xMaxReg, infForXReg, mask);
-
             AscendC::MicroAPI::Compare<calcTypeInt, CMPMODE::NE>(infMask, expMaxReg, infForXReg, mask);
-            AscendC::MicroAPI::Compare<calcTypeInt, CMPMODE::NE>(zeroMask, expMaxReg, zeroReg, mask);
+           
             if constexpr (IsSame<U, fp4x2_e2m1_t>::value) {
                 AscendC::MicroAPI::Compare<calcTypeInt, CMPMODE::LT>(invalidDataMask, expMaxReg, fp4MaxExpReg, mask);
                 AscendC::MicroAPI::Sub(expMaxReg, xMaxReg, subNumForScale, mask);
@@ -509,7 +508,6 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimize<T, U, ISTAIL>::ComputeO
             maskNum = static_cast<uint32_t>(dataLen);
             mask = AscendC::MicroAPI::UpdateMask<calcTypeInt>(maskNum);
             AscendC::MicroAPI::Compare<calcTypeInt, CMPMODE::NE>(infMask, expMaxReg, infForXReg, mask);
-            AscendC::MicroAPI::Compare<calcTypeInt, CMPMODE::NE>(zeroMask, expMaxReg, zeroReg, mask);
             if constexpr (IsSame<U, fp4x2_e2m1_t>::value) {
                 AscendC::MicroAPI::Compare<calcTypeInt, CMPMODE::LT>(invalidDataMask, expMaxReg, fp4MaxExpReg, mask);
                 AscendC::MicroAPI::Select<calcTypeInt>(expMaxReg, fp4MaxExpReg, expMaxReg, invalidDataMask);
@@ -518,7 +516,6 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimize<T, U, ISTAIL>::ComputeO
         }
         AscendC::MicroAPI::ShiftRights(mxScaleReg, expMaxReg, this->shrNum_, mask);
         AscendC::MicroAPI::Select<calcTypeInt>(mxScaleReg, mxScaleReg, fp8NanRegTensor, infMask);
-        AscendC::MicroAPI::Select<calcTypeInt>(mxScaleReg, mxScaleReg, zeroReg, zeroMask);
         if constexpr (IsSame<T, half>::value) {
             AscendC::MicroAPI::Pack(fp16MxScale, mxScaleReg);
             AscendC::MicroAPI::Pack(mxScale, fp16MxScale);
@@ -529,6 +526,7 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimize<T, U, ISTAIL>::ComputeO
         AscendC::MicroAPI::DataCopyUnAlignPost(mxScaleAddr, u1, 0);
 
         // 求1/scale
+        AscendC::MicroAPI::Compare<calcTypeInt, CMPMODE::NE>(zeroMask, expMaxReg, zeroReg, mask);
         AscendC::MicroAPI::Compare<calcTypeInt, CMPMODE::EQ>(specialDataMask, expMaxReg, biasRegTensor, mask);
         AscendC::MicroAPI::Sub(scaleReprocal, biasRegTensor, expMaxReg, mask);
         AscendC::MicroAPI::Select<calcTypeInt>(scaleReprocal, scaleReprocal, nanRegTensor, infMask);

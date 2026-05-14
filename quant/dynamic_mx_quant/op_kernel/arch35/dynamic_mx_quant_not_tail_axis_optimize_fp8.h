@@ -297,19 +297,18 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeFP8<T, U, isTail>::Compu
         maskNum = static_cast<uint32_t>(dataLen);
         mask = AscendC::MicroAPI::UpdateMask<uint16_t>(maskNum);
         AscendC::MicroAPI::Compare<uint16_t, CMPMODE::NE>(infMask, expMaxRegTensor, maxEleRegTensor, mask);
-        AscendC::MicroAPI::Compare<uint16_t, CMPMODE::NE>(zeroMask, expMaxRegTensor, zeroRegTensor, mask);
         AscendC::MicroAPI::Compare<uint16_t, CMPMODE::LT>(invalidDataMask, expMaxRegTensor, fp8MaxExpRegTensor,
             mask);
         AscendC::MicroAPI::Select<uint16_t>(expMaxRegTensor, fp8MaxExpRegTensor, expMaxRegTensor, invalidDataMask);
         AscendC::MicroAPI::Sub(expMaxRegTensor, expMaxRegTensor, fp8MaxExpRegTensor, mask);
         AscendC::MicroAPI::ShiftRights(mxScaleRegTensor, expMaxRegTensor, SHR_NUM_FOR_BF16, mask);
         AscendC::MicroAPI::Select<uint16_t>(mxScaleRegTensor, mxScaleRegTensor, fp8NanRegTensor, infMask);
-        AscendC::MicroAPI::Select<uint16_t>(mxScaleRegTensor, mxScaleRegTensor, zeroRegTensor, zeroMask);
         AscendC::MicroAPI::Pack(mxScale, mxScaleRegTensor);
         AscendC::MicroAPI::DataCopyUnAlign(mxScaleAddr, mxScale, u1, dataLen);
         AscendC::MicroAPI::DataCopyUnAlignPost(mxScaleAddr, u1, 0);
 
         // 求1/scale
+        AscendC::MicroAPI::Compare<uint16_t, CMPMODE::NE>(zeroMask, expMaxRegTensor, zeroRegTensor, mask);
         AscendC::MicroAPI::Compare<uint16_t, CMPMODE::EQ>(specialDataMask, expMaxRegTensor, biasRegTensor, mask);
         AscendC::MicroAPI::Sub(reversedShareExpRegTensor, biasRegTensor, expMaxRegTensor, mask);
         AscendC::MicroAPI::Select<uint16_t>(reversedShareExpRegTensor, reversedShareExpRegTensor, nanRegTensor,

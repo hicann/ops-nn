@@ -638,10 +638,16 @@ DynamicMxQuantNotTailAxisOptimizeHighPerf<xDtype, yDtype, roundMode, calcMode>::
             Regs.mxScaleRegTensor, Regs.mxScaleRegTensor1, Regs.mxScaleRegTensor, Regs.mxScaleRegTensor1);
 
         AscendC::MicroAPI::ShiftLefts(Regs.expMaxRegTensor, Regs.mxScaleRegTensor, SHR_NUM_FOR_BF16, auxRegs.p0);
-
+        // Calculate 1/scale
         AscendC::MicroAPI::Compare<uint16_t, CMPMODE::EQ>(
             auxRegs.infMask, Regs.expMaxRegTensor, auxRegs.maxEleRegTensor, auxRegs.p0);
-
+        AscendC::MicroAPI::Compare<uint16_t, CMPMODE::EQ>(
+            auxRegs.specialMask, Regs.expMaxRegTensor, auxRegs.biasRegTensor, auxRegs.p0);
+        AscendC::MicroAPI::Sub(Regs.expMaxRegTensor, auxRegs.biasRegTensor, Regs.expMaxRegTensor, auxRegs.p0);
+        AscendC::MicroAPI::Select<uint16_t>(
+            Regs.expMaxRegTensor, auxRegs.nanRegTensor, Regs.expMaxRegTensor, auxRegs.infMask);
+        AscendC::MicroAPI::Select<uint16_t>(
+            Regs.expMaxRegTensor, auxRegs.specialExpRegTensor, Regs.expMaxRegTensor, auxRegs.specialMask);
     } else {
         if constexpr (calcMode == ModeTwo) {
             AscendC::MicroAPI::And(Regs.expMaxRegTensor, Regs.absMaxRegTensor, auxRegs.maxEleRegTensor, auxRegs.p0);
@@ -672,19 +678,19 @@ DynamicMxQuantNotTailAxisOptimizeHighPerf<xDtype, yDtype, roundMode, calcMode>::
             AscendC::MicroAPI::Select<uint16_t>(
                 Regs.mxScaleRegTensor, auxRegs.fp8NanRegTensor, Regs.mxScaleRegTensor, auxRegs.infMask);
         }
+        // Calculate 1/scale
+        AscendC::MicroAPI::Compare<uint16_t, CMPMODE::EQ>(
+            auxRegs.zeroMask, Regs.expMaxRegTensor, auxRegs.zeroRegTensor, auxRegs.p0);
+        AscendC::MicroAPI::Compare<uint16_t, CMPMODE::EQ>(
+            auxRegs.specialMask, Regs.expMaxRegTensor, auxRegs.biasRegTensor, auxRegs.p0);
+        AscendC::MicroAPI::Sub(Regs.expMaxRegTensor, auxRegs.biasRegTensor, Regs.expMaxRegTensor, auxRegs.p0);
+        AscendC::MicroAPI::Select<uint16_t>(
+            Regs.expMaxRegTensor, auxRegs.nanRegTensor, Regs.expMaxRegTensor, auxRegs.infMask);
+        AscendC::MicroAPI::Select<uint16_t>(
+            Regs.expMaxRegTensor, auxRegs.zeroRegTensor, Regs.expMaxRegTensor, auxRegs.zeroMask);
+        AscendC::MicroAPI::Select<uint16_t>(
+            Regs.expMaxRegTensor, auxRegs.specialExpRegTensor, Regs.expMaxRegTensor, auxRegs.specialMask);
     }
-    // Calculate 1/scale
-    AscendC::MicroAPI::Compare<uint16_t, CMPMODE::EQ>(
-        auxRegs.zeroMask, Regs.expMaxRegTensor, auxRegs.zeroRegTensor, auxRegs.p0);
-    AscendC::MicroAPI::Compare<uint16_t, CMPMODE::EQ>(
-        auxRegs.specialMask, Regs.expMaxRegTensor, auxRegs.biasRegTensor, auxRegs.p0);
-    AscendC::MicroAPI::Sub(Regs.expMaxRegTensor, auxRegs.biasRegTensor, Regs.expMaxRegTensor, auxRegs.p0);
-    AscendC::MicroAPI::Select<uint16_t>(
-        Regs.expMaxRegTensor, auxRegs.nanRegTensor, Regs.expMaxRegTensor, auxRegs.infMask);
-    AscendC::MicroAPI::Select<uint16_t>(
-        Regs.expMaxRegTensor, auxRegs.zeroRegTensor, Regs.expMaxRegTensor, auxRegs.zeroMask);
-    AscendC::MicroAPI::Select<uint16_t>(
-        Regs.expMaxRegTensor, auxRegs.specialExpRegTensor, Regs.expMaxRegTensor, auxRegs.specialMask);
 }
 
 template <typename xDtype, typename yDtype, RoundMode roundMode, const int64_t calcMode>

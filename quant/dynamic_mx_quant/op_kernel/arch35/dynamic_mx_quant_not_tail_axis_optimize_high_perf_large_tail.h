@@ -692,7 +692,6 @@ __aicore__ inline void DynamicMxQuantHP2000<xDtype, yDtype, roundMode, calcMode>
 
         // 求1/scale
         AscendC::MicroAPI::Compare<uint16_t, CMPMODE::NE>(zeroMask, expMaxRegTensor, zeroRegTensor, pregAll16);
-
         AscendC::MicroAPI::Compare<uint16_t, CMPMODE::EQ>(invalidDataMask, expMaxRegTensor, biasRegTensor, pregAll16);
         AscendC::MicroAPI::Sub(reversedShareExpRegTensor, biasRegTensor, expMaxRegTensor, pregAll16);
         AscendC::MicroAPI::Select<uint16_t>(
