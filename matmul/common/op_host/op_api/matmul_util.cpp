@@ -215,6 +215,7 @@ static const aclTensor* ProcessEmptyTensor(const aclTensor* self, const aclTenso
     op::Shape mat2Shape = mat2->GetViewShape();
     op::Shape outShape = {selfShape.GetDim(0), mat2Shape.GetDim(1)};
     auto out = executor->AllocTensor(outShape, self->GetDataType());
+    OP_CHECK_NULL(out, return nullptr);
     if (out->IsEmpty()) {
         OP_LOGI("Returning an empty tensor without actually doing calculation");
         return out;
@@ -238,6 +239,7 @@ static const aclTensor* ProcessEmptyTensorWithTrans(
     auto nDim = (transMat2 != 0LL) ? mat2Shape.GetDim(0) : mat2Shape.GetDim(1);
     op::Shape outShape = {mDim, nDim};
     auto out = executor->AllocTensor(outShape, self->GetDataType());
+    OP_CHECK_NULL(out, return nullptr);
     if (out->IsEmpty()) {
         OP_LOGI("Returning an empty tensor without actually doing calculation");
         return out;

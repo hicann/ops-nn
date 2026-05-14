@@ -265,10 +265,15 @@ static const aclTensor* ProcessEmptyTensor(const aclTensor* self, const aclTenso
     }
     FVector<int64_t> fillShape = GetShape(output);
     const aclTensor* dims = executor->ConvertToTensor(fillShape.data(), fillShape.size(), op::DataType::DT_INT64);
+    OP_CHECK_NULL(dims, return nullptr);
     aclIntArray* shapeArray = executor->AllocIntArray(fillShape.data(), fillShape.size());
+    OP_CHECK_NULL(shapeArray, return nullptr);
     const aclScalar* valueScalar = executor->AllocScalar(0);
+    OP_CHECK_NULL(valueScalar, return nullptr);
     const aclTensor* valueTensor = executor->ConvertToTensor(valueScalar, out->GetDataType());
+    OP_CHECK_NULL(valueTensor, return nullptr);
     auto fillTensor = l0op::Fill(dims, valueTensor, shapeArray, executor);
+    OP_CHECK_NULL(fillTensor, return nullptr);
     return fillTensor;
 }
 
@@ -463,7 +468,7 @@ static const aclTensor* BuildMatMulWeightNzGraph(
     mat2 = SetTensorToNZFormat(mat2, weightNzShape, executor);
     CHECK_RET(mat2 != nullptr, nullptr);
 
-    // 固定selt二维 mat2四维
+    // 固定self二维 mat2四维
     matmulOut = ExecMmOpWithBias(self, mat2, nullptr, out, cubeMathType, executor, transposeX2);
     CHECK_RET(matmulOut != nullptr, nullptr);
 

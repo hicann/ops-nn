@@ -120,6 +120,7 @@ aclnnStatus aclnnMvGetWorkspaceSize(
     // mv (n x m, m) -> n 。n不为0时，返回全为0的tensor
     if (self->IsEmpty()) {
         auto output = uniqueExecutor.get()->AllocTensor(out->GetViewShape(), out->GetDataType());
+        OP_CHECK_NULL(output, return ACLNN_ERR_PARAM_NULLPTR);
         auto zeroOut = l0op::ZerosLike(output, uniqueExecutor.get());
         CHECK_RET(zeroOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
         auto viewCopyOut = l0op::ViewCopy(zeroOut, out, uniqueExecutor.get());
@@ -135,6 +136,7 @@ aclnnStatus aclnnMvGetWorkspaceSize(
     CHECK_RET(vecContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
     FVector<int64_t> dimData{-1};
     auto dims = uniqueExecutor.get()->AllocIntArray(dimData.data(), dimData.size());
+    OP_CHECK_NULL(dims, return ACLNN_ERR_PARAM_NULLPTR);
     vecContiguous = l0op::UnsqueezeNd(vecContiguous, dims, uniqueExecutor.get());
     CHECK_RET(vecContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 

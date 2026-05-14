@@ -258,6 +258,7 @@ const aclTensor* GetMatMulResult(
     // 调用matmul之前需要把vec转换成2维矩阵
     const int64_t appendDim[] = {1};
     aclIntArray* vecToMatShape = executor->AllocIntArray(appendDim, 1);
+    OP_CHECK_NULL(vecToMatShape, return nullptr);
     auto mat2 = l0op::UnsqueezeNd(vecContiguous, vecToMatShape, executor);
 
     // 调用matmul之前需要对mat和vec做数据类型转换，以满足运算条件
@@ -313,6 +314,7 @@ const aclTensor* GetMulResult(
     // 将矩阵乘结果转换为vec
     const int64_t reduceDim[] = {1};
     aclIntArray* reduceDimArray = executor->AllocIntArray(reduceDim, 1);
+    OP_CHECK_NULL(reduceDimArray, return nullptr);
     const aclTensor* vecResult = nullptr;
     if (promoteType == DataType::DT_BOOL) {
         vecResult = l0op::ReduceAny(matMulOut, reduceDimArray, false, executor);
