@@ -41,7 +41,6 @@ public:
     uint64_t tailBlockColNum;
     uint64_t tailBlockRowNum;
     uint64_t normNeedSplitRow;
-    bool coreNeedSplitRow[CORE_TYPE];
     uint64_t tailNeedSplitRow;
     uint64_t processRowPerUb;
     uint64_t simdProcessRowPerUb[CORE_TYPE];
@@ -68,10 +67,11 @@ public:
     uint64_t updatesTailBlockTailLoopSize;
     uint64_t maskNormBlockLen;
     uint64_t maskTailBlockLen;
-    bool isIndicesSizeInt64;
     uint64_t indicesCastMode;
     int32_t rowFormerNum;
     int32_t colFormerNum;
+    bool coreNeedSplitRow[CORE_TYPE];
+    bool isIndicesSizeInt64;
 };
 
 #endif
