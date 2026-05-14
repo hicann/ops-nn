@@ -44,6 +44,7 @@ constexpr uint32_t MIN_FLOAT32 = 0xFF800000; // float32's -inf
 constexpr uint16_t MIN_FLOAT16 = 0xFC00;     // float16(half)'s -inf
 constexpr uint16_t MIN_BFLOAT16 = 0xFF80;    // bfloat16's -inf
 constexpr int32_t HALF_OVERFLOW_MODE_CTRL = 48;
+constexpr int32_t ALIGNBLOCK = 32;
 
 constexpr MicroAPI::CastTrait CASTB4TOB2 = {MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::NO_SAT,
                                                   MicroAPI::MaskMergeMode::ZEROING, RoundMode::CAST_RINT};
@@ -95,6 +96,10 @@ protected:
     int64_t curkHW_ = 1;
     int64_t curkDHW_ = 1;
     int64_t curInOffset_ = 0;
+    int64_t AlignW = 1;
+    int64_t AlignHW = 1;
+    int64_t AlignDHW = 1;
+    int64_t AlignBlockLen = 1;
 
     T minValue_ = 0;
 };
@@ -122,23 +127,27 @@ __aicore__ inline void AdaptivePool3dBigKernel<T>::CopyIn(
     int64_t offset, int64_t blockLen, int64_t blockCount, int64_t loopCount)
 {
     LocalTensor<T> xLocal = inputQue_.AllocTensor<T>();
-    // NDDMA loopInfo init
-    MultiCopyLoopInfo<DIM3> loopInfo;
-    loopInfo.loopSize[DIM0] = blockLen;
-    loopInfo.loopSize[DIM1] = blockCount;
-    loopInfo.loopSize[DIM2] = loopCount;
+    AlignBlockLen = ops::CeilAlign(blockLen, static_cast<int64_t>(ALIGNBLOCK/sizeof(T)));
+    LoopModeParams loopModeParams;
+    loopModeParams.loop1Size = loopCount;
+    loopModeParams.loop2Size = 1;
+    loopModeParams.loop1SrcStride = inHW_ * sizeof(T);
+    loopModeParams.loop2SrcStride = inDHW_ * sizeof(T);
+    loopModeParams.loop1DstStride = AlignBlockLen * blockCount * sizeof(T);
+    loopModeParams.loop2DstStride = loopCount * AlignBlockLen * blockCount * sizeof(T);
 
-    loopInfo.loopSrcStride[DIM0] = DIGHT1;
-    loopInfo.loopSrcStride[DIM1] = tilingData_.wInDim;
-    loopInfo.loopSrcStride[DIM2] = inHW_;
+    DataCopyPadExtParams<T> padParams = {true, 0, static_cast<uint8_t>(AlignBlockLen - blockLen), 0};
+    DataCopyExtParams copyParams;
 
-    loopInfo.loopDstStride[DIM0] = DIGHT1;
-    loopInfo.loopDstStride[DIM1] = blockLen;
-    loopInfo.loopDstStride[DIM2] = blockLen * blockCount;
+    copyParams.blockCount = blockCount;
+    copyParams.blockLen = blockLen * sizeof(T);
+    copyParams.srcStride = (tilingData_.wInDim - blockLen) * sizeof(T);
+    copyParams.dstStride = 0;
 
-    static constexpr MultiCopyConfig mulConfig = { false };
-    MultiCopyParams<T, DIM3> paramsMain = { loopInfo };
-    DataCopy<T, DIM3, mulConfig>(xLocal, xGm_[offset], paramsMain);
+    SetLoopModePara(loopModeParams, DataCopyMVType::OUT_TO_UB);
+    DataCopyPad(xLocal, xGm_[offset], copyParams, padParams);
+
+    ResetLoopModePara(DataCopyMVType::OUT_TO_UB);
     inputQue_.EnQue(xLocal);
 }
 
@@ -185,6 +194,11 @@ __aicore__ inline void AdaptivePool3dBigKernel<T>::CalcWindowSize(int64_t curOut
         curkHW_ = curkH_ * curkW_;
         curkDHW_ = curkD_ * curkHW_;
         curInOffset_ = curNc_ * inDHW_;
+
+        AlignW = ops::CeilAlign(curkW_, static_cast<int64_t>(ALIGNBLOCK/sizeof(T)));
+        AlignHW = curkH_ * AlignW;
+        AlignDHW = AlignHW * curkD_;
+
         return;
     }
     curNc_ = curOutIdx / outDHW_;
@@ -202,6 +216,11 @@ __aicore__ inline void AdaptivePool3dBigKernel<T>::CalcWindowSize(int64_t curOut
     curkD_ = CalEndIdx(curDo, tilingData_.dInDim, tilingData_.dOutDim) - curOriginD;
     curkH_ = CalEndIdx(curHo, tilingData_.hInDim, tilingData_.hOutDim) - curOriginH;
     curkW_ = CalEndIdx(curWo, tilingData_.wInDim, tilingData_.wOutDim) - curOriginW;
+
+    AlignW = ops::CeilAlign(curkW_, static_cast<int64_t>(ALIGNBLOCK/sizeof(T)));
+    AlignHW = curkH_ * AlignW;
+    AlignDHW = AlignHW * curkD_;
+
     curkHW_ = curkH_ * curkW_;
     curkDHW_ = curkD_ * curkHW_;
 

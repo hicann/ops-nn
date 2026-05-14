@@ -225,7 +225,7 @@ __aicore__ inline void AdaptiveAvgPool3dBigKernel<T>::ComputeSum(
 template <typename T>
 __aicore__ inline void AdaptiveAvgPool3dBigKernel<T>::ComputeSplitD(int64_t curIdx)
 {
-    int64_t dFactor = this->tilingData_.maxCount / this->curkHW_;
+    int64_t dFactor = this->tilingData_.maxCount / this->AlignHW;
     int64_t dLoops = ops::CeilDiv(this->curkD_, dFactor);
     int64_t dTail = this->curkD_ - (dLoops - DIGHT1) * dFactor;
     int64_t inputOffset = this->curInOffset_;
@@ -233,7 +233,7 @@ __aicore__ inline void AdaptiveAvgPool3dBigKernel<T>::ComputeSplitD(int64_t curI
         int32_t curDFactor = dLoop == (dLoops - 1) ? dTail : dFactor;
         AdaptivePool3dBigKernel<T>::CopyIn(inputOffset, this->curkW_, this->curkH_, curDFactor);
         LocalTensor<T> xLocal = this->inputQue_.template DeQue<T>();
-        ComputeSum<SPLIT_D, float>(xLocal, curIdx, this->curkHW_ * curDFactor);
+        ComputeSum<SPLIT_D, float>(xLocal, curIdx, this->AlignHW * curDFactor);
         inputOffset += curDFactor * this->inHW_;
         this->inputQue_.template FreeTensor<T>(xLocal);
     }
@@ -242,7 +242,7 @@ __aicore__ inline void AdaptiveAvgPool3dBigKernel<T>::ComputeSplitD(int64_t curI
 template <typename T>
 __aicore__ inline void AdaptiveAvgPool3dBigKernel<T>::ComputeSplitH(int64_t curIdx)
 {
-    int64_t hFactor = this->tilingData_.maxCount / this->curkW_;
+    int64_t hFactor = this->tilingData_.maxCount / this->AlignW;
     int64_t hLoops = ops::CeilDiv(this->curkH_, hFactor);
     int64_t hTail = this->curkH_ - (hLoops - DIGHT1) * hFactor;
     for (int64_t dLoop = 0; dLoop < this->curkD_; dLoop++) {
@@ -251,7 +251,7 @@ __aicore__ inline void AdaptiveAvgPool3dBigKernel<T>::ComputeSplitH(int64_t curI
             int64_t curHFactor = hLoop == (hLoops - 1) ? hTail : hFactor;
             AdaptivePool3dBigKernel<T>::CopyIn(inputOffset, this->curkW_, curHFactor, DIGHT1);
             LocalTensor<T> xLocal = this->inputQue_.template DeQue<T>();
-            ComputeSum<SPLIT_H, float>(xLocal, curIdx, this->curkW_ * curHFactor);
+            ComputeSum<SPLIT_H, float>(xLocal, curIdx, this->AlignW * curHFactor);
             inputOffset += hFactor * this->tilingData_.wInDim;
             this->inputQue_.template FreeTensor<T>(xLocal);
         }
@@ -285,7 +285,7 @@ __aicore__ inline void AdaptiveAvgPool3dBigKernel<T>::NoSplitProcess(int64_t cur
 {
     AdaptivePool3dBigKernel<T>::CopyIn(this->curInOffset_, this->curkW_, this->curkH_, this->curkD_);
     LocalTensor<T> xLocal = this->inputQue_.template DeQue<T>();
-    ComputeSum<NO_SPLIT, float>(xLocal, curIdx, this->curkDHW_);
+    ComputeSum<NO_SPLIT, float>(xLocal, curIdx, this->AlignDHW);
     this->inputQue_.template FreeTensor<T>(xLocal);
 }
 
@@ -293,9 +293,9 @@ template <typename T>
 __aicore__ inline void AdaptiveAvgPool3dBigKernel<T>::SplitProcess(int64_t curIdx)
 {
     InitStoreOutBuffer<float>();
-    if (this->curkHW_ <= this->tilingData_.maxCount) {
+    if (this->AlignHW <= this->tilingData_.maxCount) {
         ComputeSplitD(curIdx);
-    } else if (this->curkW_ <= this->tilingData_.maxCount) {
+    } else if (this->AlignW <= this->tilingData_.maxCount) {
         ComputeSplitH(curIdx);
     } else {
         ComputeSplitW(curIdx);
@@ -306,7 +306,7 @@ template <typename T>
 __aicore__ inline void AdaptiveAvgPool3dBigKernel<T>::BaseCompute(int64_t curIdx)
 {
     LocalTensor<float> storeAddLocal = this->storeAddUB_.template Get<float>();
-    if (this->curkDHW_ <= this->tilingData_.maxCount) {
+    if (this->AlignDHW <= this->tilingData_.maxCount) {
         NoSplitProcess(curIdx);
     } else {
         SplitProcess(curIdx);

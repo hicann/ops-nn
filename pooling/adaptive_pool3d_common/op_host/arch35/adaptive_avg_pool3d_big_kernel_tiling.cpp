@@ -28,7 +28,7 @@
 
 namespace optiling {
 
-static constexpr int64_t ADAPTIVE_AVG_POOL3D_BIG_KERNEL_THERSHOLD = 128;
+static constexpr int64_t ADAPTIVE_AVG_POOL3D_BIG_KERNEL_THERSHOLD = 350;
 static constexpr int64_t UB_MAX_INDICES_USE_COUNT = 1024;
 static constexpr int64_t BUFFER_NUM = 2;
 static constexpr int64_t FLOAT16_BYTPES = 2;

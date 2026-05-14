@@ -16,12 +16,13 @@
 #include <cstdint>
 #include "adaptive_avg_pool3d_para_tiling.h"
 
-constexpr uint64_t KERNEL_SIZE_LIMIT = 128;
+constexpr uint64_t KERNEL_SIZE_LIMIT = 350;
 constexpr uint64_t RESERVE_UB_SIZE = 0;
 constexpr uint64_t MAX_UB_BUFFER_NUM = 2;
 constexpr uint64_t INT32_MAX_VALUE = 2147483647UL;
 constexpr uint64_t DOUBLE = 2;
 constexpr uint64_t TRANS_ADDR_LEN = 16;
+constexpr uint64_t UB_UTIL_RATE = 224 * 1024;
 
 namespace optiling {
 
@@ -56,7 +57,21 @@ bool AdaptiveAvgPool3dParaPoolTiling::IsCapable()
     /* 计算只处理一个窗口占用的UB */
     auto occupyUbSize = CalOccupySize();
     bool isUbSizeEnough = (occupyUbSize <= avgComptuteInfo_.availableUbSize);
-    bool isCapable = isKernelSizeMeet && isNcLenEnough && isUbSizeEnough;
+
+    /* 数据量足够大时，UB使用率不能低于阈值 */
+    avgComptuteInfo_.woFactor = input_.wOut;
+    avgComptuteInfo_.hoFactor = input_.hOut;
+    avgComptuteInfo_.doFactor = input_.dOut;
+    auto outSize = CalOccupySize();
+    bool ubUseEnough = outSize >= UB_UTIL_RATE;
+    DoTilingForUbFactor();
+    occupyUbSize = CalOccupySize();
+    ubUseEnough = ubUseEnough ? occupyUbSize >= UB_UTIL_RATE : true;
+
+    auto wiDataLen = avgComptuteInfo_.woFactor * avgComptuteInfo_.kernelWMax;
+    ubUseEnough = ubUseEnough && (wiDataLen % avgComptuteInfo_.alignNum) > (avgComptuteInfo_.alignNum / 2);
+
+    bool isCapable = isKernelSizeMeet && isNcLenEnough && isUbSizeEnough && ubUseEnough;
     OP_LOGD(
         context_->GetNodeName(), "AdaptiveAvgPool3dParaPoolTiling IsCapable check: %s", isCapable ? "true" : "false");
     return isCapable;
@@ -223,9 +238,8 @@ ge::graphStatus AdaptiveAvgPool3dParaPoolTiling::InitUbFactor()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus AdaptiveAvgPool3dParaPoolTiling::DoOpTiling()
+ge::graphStatus AdaptiveAvgPool3dParaPoolTiling::DoTilingForUbFactor()
 {
-    OP_LOGD(context_->GetNodeName(), "AdaptiveAvgPool3dParaPoolTiling DoOpTiling start.");
     OP_CHECK_IF(
         InitUbFactor() != ge::GRAPH_SUCCESS,
         OP_LOGE(context_->GetNodeName(), "AdaptiveAvgPool3dParaPoolTiling init ubfactor failed"),
@@ -243,8 +257,14 @@ ge::graphStatus AdaptiveAvgPool3dParaPoolTiling::DoOpTiling()
 
     CalUbBlockFactor();
     CalMaxUbSplitSize();
+    return ge::GRAPH_SUCCESS;
+}
 
+ge::graphStatus AdaptiveAvgPool3dParaPoolTiling::DoOpTiling()
+{
+    OP_LOGD(context_->GetNodeName(), "AdaptiveAvgPool3dParaPoolTiling DoOpTiling start.");
     SetTilingData();
+    PrintTilingData();
     return ge::GRAPH_SUCCESS;
 }
 

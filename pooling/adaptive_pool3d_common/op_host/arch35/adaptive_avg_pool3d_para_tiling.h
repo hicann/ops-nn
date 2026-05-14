@@ -78,6 +78,7 @@ private:
     ge::graphStatus InitUbFactor();
     ge::graphStatus SearchUbFactor();
     ge::graphStatus SearchOuter();
+    ge::graphStatus DoTilingForUbFactor();
     void SetTilingData();
     void PrintTilingData() const;
     ComputeInfo avgComptuteInfo_;
