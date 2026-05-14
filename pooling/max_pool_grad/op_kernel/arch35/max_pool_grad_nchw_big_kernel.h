@@ -24,24 +24,23 @@
 namespace MaxPoolGradNCHWBigKernelNameSpace {
 using namespace AscendC;
 using MaxPoolGradNCHWTilingCommonData = MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNCHWTilingCommonData;
-using PoolBigKernelUtils::CalcRealIndex;   
-using PoolBigKernelUtils::DuplicateNegInf; 
-using PoolBigKernelUtils::LoadOneElement;  
+using PoolBigKernelUtils::CalcRealIndex;
+using PoolBigKernelUtils::DuplicateNegInf;
+using PoolBigKernelUtils::LoadOneElement;
 using PoolBigKernelUtils::LoadOneTensor;
-using PoolBigKernelUtils::ReduceMaxWithIndex; 
-using PoolBigKernelUtils::StoreOneElement;    
+using PoolBigKernelUtils::ReduceMaxWithIndex;
+using PoolBigKernelUtils::StoreOneElement;
 
 constexpr int32_t BK_BUFFER_NUM = 2;
 constexpr int32_t MERGE_BUF_ALIGN = 32;
 
-template <typename T1, typename T2, typename T3, const uint32_t IS_CHECK_RANGE>
+template <typename T1, const uint32_t IS_CHECK_RANGE>
 class MaxPoolGradNCHWBigKernel
-    : public MaxPoolGradNCHWBackwardBaseNameSpace::MaxPoolGradNCHWBackwardBase<T1, T2, T3, IS_CHECK_RANGE> {
-    using Base = MaxPoolGradNCHWBackwardBaseNameSpace::MaxPoolGradNCHWBackwardBase<T1, T2, T3, IS_CHECK_RANGE>;
+    : public MaxPoolGradNCHWBackwardBaseNameSpace::MaxPoolGradNCHWBackwardBase<T1, IS_CHECK_RANGE> {
+    using Base = MaxPoolGradNCHWBackwardBaseNameSpace::MaxPoolGradNCHWBackwardBase<T1, IS_CHECK_RANGE>;
 
 public:
-    __aicore__ inline MaxPoolGradNCHWBigKernel()
-    {}
+    __aicore__ inline MaxPoolGradNCHWBigKernel() {}
 
     __aicore__ inline void Init(
         GM_ADDR x, GM_ADDR origY, GM_ADDR grad, GM_ADDR y, TPipe& pipeIn,
@@ -131,8 +130,8 @@ private:
 
     __aicore__ inline void ForwardComputeTile()
     {
-        LocalTensor<T2> argmaxLocal = Base::argmaxBuf_.template Get<T2>();
-        Duplicate(argmaxLocal, T2(-1), Base::argmaxBufferSize_ / sizeof(T2));
+        LocalTensor<int32_t> argmaxLocal = Base::argmaxBuf_.template Get<int32_t>();
+        Duplicate(argmaxLocal, int32_t(-1), Base::argmaxBufferSize_ / sizeof(int32_t));
         PipeBarrier<PIPE_ALL>();
 
         const int64_t tileHW = Base::hArgmaxActual_ * Base::wArgmaxActual_;
@@ -170,10 +169,10 @@ private:
         PipeBarrier<PIPE_ALL>();
 
         LocalTensor<T1> gradLocal = Base::gradQue_.template DeQue<T1>();
-        LocalTensor<T2> argmaxLocal = Base::argmaxBuf_.template Get<T2>();
+        LocalTensor<int32_t> argmaxLocal = Base::argmaxBuf_.template Get<int32_t>();
         __local_mem__ computeType* yAddr = (__local_mem__ computeType*)yLocal.GetPhyAddr();
         __local_mem__ T1* gradAddr = (__local_mem__ T1*)gradLocal.GetPhyAddr();
-        __local_mem__ T2* argmaxAddr = (__local_mem__ T2*)argmaxLocal.GetPhyAddr();
+        __local_mem__ int32_t* argmaxAddr = (__local_mem__ int32_t*)argmaxLocal.GetPhyAddr();
 
         Base::BackwardCompute(yAddr, gradAddr, argmaxAddr);
         PipeBarrier<PIPE_ALL>();
@@ -216,8 +215,8 @@ private:
             curkW = Base::wOutput_ - curOriginW;
         }
 
-        curOriginIndex = curOriginH * Base::wOutput_ + curOriginW; 
-        curInOffset = ncOffset * inHW_ + curOriginIndex;           
+        curOriginIndex = curOriginH * Base::wOutput_ + curOriginW;
+        curInOffset = ncOffset * inHW_ + curOriginIndex;
     }
 
     __aicore__ inline void CopyInMultiRows(int64_t offset, int64_t blockLen, int64_t blockCount)
@@ -296,8 +295,7 @@ private:
                 for (int64_t wLoop = 0; wLoop < wLoops; ++wLoop) {
                     const int64_t curFactor = (wLoop == wLoops - 1) ? wTail : wFactor;
                     CopyInSingleRow(inputOffset, curFactor);
-                    ComputeSingleArgmax<true, true>(
-                        curFactor, ((curkW > 0) ? curkW : 1), kernelOffset, bufferOffset);
+                    ComputeSingleArgmax<true, true>(curFactor, ((curkW > 0) ? curkW : 1), kernelOffset, bufferOffset);
                     PipeBarrier<PIPE_ALL>();
                     inputOffset += curFactor;
                     kernelOffset += curFactor;
@@ -308,8 +306,8 @@ private:
 
     __aicore__ inline void InitMergeBuffer(int64_t bufferOffset, int64_t initIndex)
     {
-        LocalTensor<T2> argmaxLocal = Base::argmaxBuf_.template Get<T2>();
-        __local_mem__ T2* argmaxAddr = (__local_mem__ T2*)argmaxLocal.GetPhyAddr();
+        LocalTensor<int32_t> argmaxLocal = Base::argmaxBuf_.template Get<int32_t>();
+        __local_mem__ int32_t* argmaxAddr = (__local_mem__ int32_t*)argmaxLocal.GetPhyAddr();
 
         LocalTensor<float> maxValLocal = maxValBuf_.template Get<float>();
         __local_mem__ float* maxValAddr = (__local_mem__ float*)maxValLocal.GetPhyAddr();
@@ -323,9 +321,9 @@ private:
             MicroAPI::MaskReg pregOne = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::VL1>();
             StoreOneElement<float, float>(maxValAddr, negInfVal, pregOne, 0);
 
-            MicroAPI::RegTensor<T2> initResIndex;
-            MicroAPI::Duplicate(initResIndex, static_cast<T2>(initIndex));
-            StoreOneElement<T2, T2>(argmaxAddr, initResIndex, pregOne, bufferOffset);
+            MicroAPI::RegTensor<int32_t> initResIndex;
+            MicroAPI::Duplicate(initResIndex, static_cast<int32_t>(initIndex));
+            StoreOneElement<int32_t, int32_t>(argmaxAddr, initResIndex, pregOne, bufferOffset);
         }
         PipeBarrier<PIPE_ALL>();
     }
@@ -338,32 +336,31 @@ private:
 
         __local_mem__ T1* xLocalAddr = (__local_mem__ T1*)xLocal.GetPhyAddr();
 
-        LocalTensor<T2> argmaxLocal = Base::argmaxBuf_.template Get<T2>();
-        __local_mem__ T2* argmaxAddr = (__local_mem__ T2*)argmaxLocal.GetPhyAddr();
+        LocalTensor<int32_t> argmaxLocal = Base::argmaxBuf_.template Get<int32_t>();
+        __local_mem__ int32_t* argmaxAddr = (__local_mem__ int32_t*)argmaxLocal.GetPhyAddr();
 
         LocalTensor<float> maxValLocal = maxValBuf_.template Get<float>();
         __local_mem__ float* maxValAddr = (__local_mem__ float*)maxValLocal.GetPhyAddr();
 
         const float negInf = AscendC::NumericLimits<float>::NegativeInfinity();
 
-        constexpr uint32_t repeatElm = platform::GetVRegSize() / sizeof(float); 
-        const uint16_t repeatTimes =
-            static_cast<uint16_t>((dataCount + repeatElm - 1) / repeatElm); 
-        uint32_t num = repeatTimes * repeatElm;                            
-        const uint32_t padNum = num - dataCount;                            
+        constexpr uint32_t repeatElm = platform::GetVRegSize() / sizeof(float);
+        const uint16_t repeatTimes = static_cast<uint16_t>((dataCount + repeatElm - 1) / repeatElm);
+        uint32_t num = repeatTimes * repeatElm;
+        const uint32_t padNum = num - dataCount;
         constexpr int32_t padIndex = -1;
 
         __VEC_SCOPE__
         {
             DuplicateNegInf<T1>(xLocalAddr, padNum, dataCount);
 
-            MicroAPI::RegTensor<float> res;        
-            MicroAPI::RegTensor<int32_t> resIndex; 
+            MicroAPI::RegTensor<float> res;
+            MicroAPI::RegTensor<int32_t> resIndex;
             MicroAPI::RegTensor<int32_t> index;
             MicroAPI::RegTensor<float> vd0;
 
-            MicroAPI::MaskReg nanMaskReg; 
-            MicroAPI::MaskReg cmpMaskReg; 
+            MicroAPI::MaskReg nanMaskReg;
+            MicroAPI::MaskReg cmpMaskReg;
             MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::ALL>();
 
             MicroAPI::Duplicate(resIndex, padIndex);
@@ -376,9 +373,9 @@ private:
                 MicroAPI::AddrReg offset = MicroAPI::CreateAddrReg<T1>(i, repeatElm);
                 LoadOneTensor<T1>(xLocalAddr, vd0, p0, offset);
 
-                MicroAPI::Compare<float, CMPMODE::NE>(nanMaskReg, vd0, vd0, maskAll); 
-                MicroAPI::Compare<float, CMPMODE::GT>(cmpMaskReg, vd0, res, maskAll); 
-                MicroAPI::MaskXor(cmpMaskReg, cmpMaskReg, nanMaskReg, maskAll);      
+                MicroAPI::Compare<float, CMPMODE::NE>(nanMaskReg, vd0, vd0, maskAll);
+                MicroAPI::Compare<float, CMPMODE::GT>(cmpMaskReg, vd0, res, maskAll);
+                MicroAPI::MaskXor(cmpMaskReg, cmpMaskReg, nanMaskReg, maskAll);
                 MicroAPI::Select(res, vd0, res, cmpMaskReg);
                 MicroAPI::Select(resIndex, index, resIndex, cmpMaskReg);
                 MicroAPI::Adds(index, index, repeatElm, maskAll);
@@ -387,13 +384,13 @@ private:
             ReduceMaxWithIndex<float>(res, index, res, resIndex, padIndex);
 
             MicroAPI::MaskReg pregOne = MicroAPI::CreateMask<float, MicroAPI::MaskPattern::VL1>();
-            MicroAPI::RegTensor<T2> realResIndex;
+            MicroAPI::RegTensor<int32_t> realResIndex;
 
-            CalcRealIndex<T2, SPLITKW>(realResIndex, index, curKw, Base::wOutput_, curOriginIndex);
+            CalcRealIndex<int32_t, SPLITKW>(realResIndex, index, curKw, Base::wOutput_, curOriginIndex);
 
             if constexpr (MERGE) {
-                MicroAPI::RegTensor<T2> lastResIndex;
-                LoadOneElement<T2, T2>(argmaxAddr, lastResIndex, pregOne, bufferOffset);
+                MicroAPI::RegTensor<int32_t> lastResIndex;
+                LoadOneElement<int32_t, int32_t>(argmaxAddr, lastResIndex, pregOne, bufferOffset);
 
                 MicroAPI::RegTensor<float> lastRes;
                 LoadOneElement<float, float>(maxValAddr, lastRes, pregOne, 0);
@@ -411,7 +408,7 @@ private:
                 MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_LOAD, MicroAPI::MemType::VEC_STORE>();
             }
 
-            StoreOneElement<T2, T2>(argmaxAddr, realResIndex, pregOne, bufferOffset);
+            StoreOneElement<int32_t, int32_t>(argmaxAddr, realResIndex, pregOne, bufferOffset);
             if constexpr (MERGE) {
                 StoreOneElement<float, float>(maxValAddr, res, pregOne, 0);
             }

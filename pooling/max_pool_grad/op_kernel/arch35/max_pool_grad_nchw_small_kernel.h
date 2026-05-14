@@ -18,22 +18,26 @@
 #include "max_pool_grad_nchw_backward_base.h"
 #include "../../max_pool_with_argmax_v3/arch35/max_pool_with_argmax_v3_base.h"
 #include "../pool_3d_common/arch35/pool_big_kernel_utils.h"
+#include "../pool_3d_common/arch35/pool_3d_common.h"
+#include "simt_api/asc_simt.h"
 
 namespace MaxPoolGradNCHWSmallKernelNameSpace {
 using namespace AscendC;
+using ::DuplicateNegInfRegVF;
+using ::GenGatterIndex3DVF;
+using MaxPoolGradNCHWNameSpace::ConvertIndexInt32FastDiv;
+using MaxPoolGradNCHWNameSpace::ConvertIndexInt32FastDivVF;
+using MaxPoolGradNCHWNameSpace::ConvertIndexNcInt32FastDivVF;
 using MaxPoolGradNCHWNameSpace::GenInitial1DIndices;
-using MaxPoolGradNCHWNameSpace::GenInitial2DIndices;
-using MaxPoolGradNCHWNameSpace::GenInitial3DIndices;
 using MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNCHWTilingCommonData;
 
 constexpr uint32_t BUFFER_NUM = 2;
 constexpr int64_t RATIO = 2;
 
-template <typename TYPE_ORIG_X, typename TYPE_ARGMAX, typename T3, const uint32_t IS_CHECK_RANGE>
-class PoolGradNCHWSmallKernel : public MaxPoolGradNCHWBackwardBaseNameSpace::MaxPoolGradNCHWBackwardBase<
-                                    TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CHECK_RANGE> {
-    using Base =
-        MaxPoolGradNCHWBackwardBaseNameSpace::MaxPoolGradNCHWBackwardBase<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CHECK_RANGE>;
+template <typename TYPE_ORIG_X, const uint32_t IS_CHECK_RANGE>
+class PoolGradNCHWSmallKernel
+    : public MaxPoolGradNCHWBackwardBaseNameSpace::MaxPoolGradNCHWBackwardBase<TYPE_ORIG_X, IS_CHECK_RANGE> {
+    using Base = MaxPoolGradNCHWBackwardBaseNameSpace::MaxPoolGradNCHWBackwardBase<TYPE_ORIG_X, IS_CHECK_RANGE>;
 
 public:
     __aicore__ inline PoolGradNCHWSmallKernel(
@@ -44,22 +48,32 @@ public:
     __aicore__ inline void Init(GM_ADDR orig_x, GM_ADDR orig_y, GM_ADDR grads, GM_ADDR y);
     __aicore__ inline void Process();
     __aicore__ inline void ForwardScalarCompute();
-    __aicore__ inline void ConvertIndexWithoutPadAlign(
-        MicroAPI::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset, TYPE_ARGMAX left, TYPE_ARGMAX wInput,
-        TYPE_ARGMAX hIndexBase, MicroAPI::RegTensor<TYPE_ARGMAX>& dstReg, int32_t ncInputOffset);
-    __aicore__ inline void ProcessW(
+    __aicore__ inline void ConvertIndexWithoutPadAlignInt32(
+        MicroAPI::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset, int32_t left, int32_t wInput, int32_t hIndexBase,
+        MicroAPI::RegTensor<int32_t>& dstReg, int32_t ncInputOffset, uint32_t magic, uint32_t shift);
+    __simd_callee__ inline void ConvertIndexWithoutPadAlignInt32VF(
+        MicroAPI::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset, int32_t left, int32_t wInput, int32_t hIndexBase,
+        MicroAPI::RegTensor<int32_t>& dstReg, int32_t ncInputOffset, uint32_t magic, uint32_t shift);
+    __simd_callee__ inline void ConvertIndexWithoutPadAlignNcInt32(
+        MicroAPI::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset, int32_t left, int32_t wInput, int32_t hIndexBase,
+        MicroAPI::RegTensor<int32_t>& dstReg, int32_t ncInputOffset, int32_t ncOutputCount, int32_t inputNcSize,
+        uint32_t magicNc, uint32_t shiftNc, uint32_t magicWStride, uint32_t shiftWStride);
+
+    __simd_callee__ inline void ProcessW(
         __local_mem__ TYPE_ORIG_X* computeAddr, int32_t hOffset, uint16_t wStrideOffset,
         MicroAPI::RegTensor<int32_t>& indexReg, uint16_t hKernel, uint16_t wKernel, uint16_t repeatElem,
         MicroAPI::RegTensor<int32_t>& maxIndexReg, uint32_t hDilation, uint32_t wDilation);
-    __aicore__ inline void ConvertIndexWithoutPadAlignNc(
-        MicroAPI::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset, TYPE_ARGMAX left, TYPE_ARGMAX wInput,
-        TYPE_ARGMAX hIndexBase, MicroAPI::RegTensor<TYPE_ARGMAX>& dstReg, int32_t ncInputOffset, int32_t ncOutputCount,
-        int32_t inputNcSize);
-    __aicore__ inline void MultiRowGather(
-        __local_mem__ TYPE_ORIG_X* computeAddr, __local_mem__ TYPE_ARGMAX* argmaxAddr);
-    __aicore__ inline void SingleRowGather(
-        __local_mem__ TYPE_ORIG_X* computeAddr, __local_mem__ TYPE_ARGMAX* argmaxAddr);
-    __aicore__ inline void MultiNcGather(__local_mem__ TYPE_ORIG_X* computeAddr, __local_mem__ TYPE_ARGMAX* argmaxAddr);
+
+    __simd_vf__ inline void ProcessSingleNcBatch(
+        __ubuf__ TYPE_ORIG_X* computeAddr, __ubuf__ int32_t* argmaxAddr, uint32_t ncInputOffset, int32_t hOffset,
+        uint16_t repeatsElem, uint16_t hKernel, uint16_t wKernel, uint16_t wInputActualAlignedPad, int32_t rate3D,
+        int32_t num2D, int32_t rate2D, int32_t wOutputActual, int32_t wStride, int32_t left, int32_t wInput,
+        int32_t hIndexBase, int32_t ncOutputCount, int32_t inputNcSize, uint32_t hDilation, uint32_t wDilation,
+        uint32_t magicNc, uint32_t shiftNc, uint32_t magicWStride, uint32_t shiftWStride);
+
+    __aicore__ inline void MultiRowGather(__local_mem__ TYPE_ORIG_X* computeAddr, __local_mem__ int32_t* argmaxAddr);
+    __aicore__ inline void SingleRowGather(__local_mem__ TYPE_ORIG_X* computeAddr, __local_mem__ int32_t* argmaxAddr);
+    __aicore__ inline void MultiNcGather(__local_mem__ TYPE_ORIG_X* computeAddr, __local_mem__ int32_t* argmaxAddr);
     __aicore__ inline void DupBufferNegInf(
         __local_mem__ TYPE_ORIG_X* dstAddr, uint32_t repeatElm, uint16_t loop, uint32_t tail);
     __aicore__ inline void CopyToCalcBuffer(
@@ -71,6 +85,7 @@ public:
     __aicore__ inline void ForwardCopyIn();
     __aicore__ inline void Forward();
     __aicore__ inline void Backward();
+    __aicore__ inline void IdentityCopyGradToOutput();
 
     TPipe& pipe_;
     const MaxPoolGradWithArgmaxNCHWTilingCommonData& tilingData_;
@@ -102,13 +117,13 @@ public:
     constexpr static int32_t BLOCK_SIZE = platform::GetUbBlockSize();
     constexpr static int32_t V_REG_SIZE = platform::GetVRegSize();
     constexpr static int64_t MAX_DATA_NUM_IN_ONE_BLOCK =
-        BLOCK_SIZE / sizeof(TYPE_ORIG_X) >= BLOCK_SIZE / sizeof(TYPE_ARGMAX) ? BLOCK_SIZE / sizeof(TYPE_ORIG_X) :
-                                                                               BLOCK_SIZE / sizeof(TYPE_ARGMAX);
+        BLOCK_SIZE / sizeof(TYPE_ORIG_X) >= BLOCK_SIZE / sizeof(int32_t) ? BLOCK_SIZE / sizeof(TYPE_ORIG_X) :
+                                                                           BLOCK_SIZE / sizeof(int32_t);
     constexpr static uint16_t vlT1_ = platform::GetVRegSize() / sizeof(TYPE_ORIG_X);
 };
 
-template <typename TYPE_ORIG_X, typename TYPE_ARGMAX, typename T3, const uint32_t IS_CHECK_RANGE>
-__aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CHECK_RANGE>::Init(
+template <typename TYPE_ORIG_X, const uint32_t IS_CHECK_RANGE>
+__aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, IS_CHECK_RANGE>::Init(
     GM_ADDR orig_x, GM_ADDR orig_y, GM_ADDR grads, GM_ADDR y)
 {
     Base::ParseTilingData(tilingData_);
@@ -135,8 +150,8 @@ __aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_
     pipe_.InitBuffer(Base::helpBuf_, HELP_BUFFER);
 }
 
-template <typename TYPE_ORIG_X, typename TYPE_ARGMAX, typename T3, const uint32_t IS_CHECK_RANGE>
-__aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CHECK_RANGE>::Forward()
+template <typename TYPE_ORIG_X, const uint32_t IS_CHECK_RANGE>
+__aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, IS_CHECK_RANGE>::Forward()
 {
     LocalTensor<TYPE_ORIG_X> inputLocal = inputQue_.template DeQue<TYPE_ORIG_X>();
     __local_mem__ TYPE_ORIG_X* inputQueAddr = (__local_mem__ TYPE_ORIG_X*)inputLocal.GetPhyAddr();
@@ -147,12 +162,12 @@ __aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_
         DupAndCopyToCalcBuffer(inputBuffAddr, inputQueAddr);
         computeAddr = inputBuffAddr;
     }
-    LocalTensor<TYPE_ARGMAX> argmaxLocal = argmaxBuff_.template Get<TYPE_ARGMAX>();
-    __local_mem__ TYPE_ARGMAX* argmaxAddr = (__local_mem__ TYPE_ARGMAX*)argmaxLocal.GetPhyAddr();
+    LocalTensor<int32_t> argmaxLocal = argmaxBuff_.template Get<int32_t>();
+    __local_mem__ int32_t* argmaxAddr = (__local_mem__ int32_t*)argmaxLocal.GetPhyAddr();
 
-    if (Base::wArgmaxActual_ * RATIO > Base::vlT2_) {
+    if (Base::wArgmaxActual_ * RATIO > Base::vlArgmax_) {
         SingleRowGather(computeAddr, argmaxAddr);
-    } else if (Base::hArgmaxActual_ * Base::wArgmaxActual_ * RATIO > Base::vlT2_) {
+    } else if (Base::hArgmaxActual_ * Base::wArgmaxActual_ * RATIO > Base::vlArgmax_) {
         MultiRowGather(computeAddr, argmaxAddr);
     } else {
         MultiNcGather(computeAddr, argmaxAddr);
@@ -161,17 +176,17 @@ __aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_
     inputQue_.FreeTensor(inputLocal);
 }
 
-template <typename TYPE_ORIG_X, typename TYPE_ARGMAX, typename T3, const uint32_t IS_CHECK_RANGE>
-__aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CHECK_RANGE>::Backward()
+template <typename TYPE_ORIG_X, const uint32_t IS_CHECK_RANGE>
+__aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, IS_CHECK_RANGE>::Backward()
 {
     uint32_t calCount = Base::outputBufferSize_ / sizeof(computeType);
     LocalTensor<computeType> yLocal = Base::outputQue_.template AllocTensor<computeType>();
     Duplicate(yLocal, computeType(0), calCount);
     LocalTensor<TYPE_ORIG_X> gradLocal = Base::gradQue_.template DeQue<TYPE_ORIG_X>();
-    LocalTensor<TYPE_ARGMAX> argmaxLocal = argmaxBuff_.template Get<TYPE_ARGMAX>();
+    LocalTensor<int32_t> argmaxLocal = argmaxBuff_.template Get<int32_t>();
     __local_mem__ computeType* yAddr = (__local_mem__ computeType*)yLocal.GetPhyAddr();
     __local_mem__ TYPE_ORIG_X* gradAddr = (__local_mem__ TYPE_ORIG_X*)gradLocal.GetPhyAddr();
-    __local_mem__ TYPE_ARGMAX* argmaxAddr = (__local_mem__ TYPE_ARGMAX*)argmaxLocal.GetPhyAddr();
+    __local_mem__ int32_t* argmaxAddr = (__local_mem__ int32_t*)argmaxLocal.GetPhyAddr();
 
     Base::BackwardCompute(yAddr, gradAddr, argmaxAddr);
 
@@ -182,8 +197,8 @@ __aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_
     Base::gradQue_.FreeTensor(gradLocal);
 }
 
-template <typename TYPE_ORIG_X, typename TYPE_ARGMAX, typename T3, const uint32_t IS_CHECK_RANGE>
-__aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CHECK_RANGE>::ForwardScalarCompute()
+template <typename TYPE_ORIG_X, const uint32_t IS_CHECK_RANGE>
+__aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, IS_CHECK_RANGE>::ForwardScalarCompute()
 {
     forwardHighAxisIndex_ = Base::highAxisIndex_;
     forwardhighAxisActual_ = Base::highAxisActual_;
@@ -224,8 +239,8 @@ __aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_
     }
 }
 
-template <typename TYPE_ORIG_X, typename TYPE_ARGMAX, typename T3, const uint32_t IS_CHECK_RANGE>
-__aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CHECK_RANGE>::ForwardCopyIn()
+template <typename TYPE_ORIG_X, const uint32_t IS_CHECK_RANGE>
+__aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, IS_CHECK_RANGE>::ForwardCopyIn()
 {
     LocalTensor<TYPE_ORIG_X> xLocal = inputQue_.template AllocTensor<TYPE_ORIG_X>();
     int64_t xGmOffset = highInputOffset_ + forwardhInputOffset_ + forwardwInputOffset_;
@@ -269,12 +284,15 @@ __aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_
     inputQue_.EnQue(xLocal);
 }
 
-template <typename TYPE_ORIG_X, typename TYPE_ARGMAX, typename T3, const uint32_t IS_CHECK_RANGE>
-__aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CHECK_RANGE>::Process()
+template <typename TYPE_ORIG_X, const uint32_t IS_CHECK_RANGE>
+__aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, IS_CHECK_RANGE>::Process()
 {
     if (Base::blockIdx_ >= Base::usedCoreNum_) {
         return;
     }
+
+    bool isIdentity =
+        (tilingData_.hKernel == 1 && tilingData_.wKernel == 1 && tilingData_.hStride == 1 && tilingData_.wStride == 1);
 
     for (int64_t loopNum = 0; loopNum < Base::curCoreProcessNum_; loopNum++) {
         Base::ScalarCompute(loopNum);
@@ -283,32 +301,37 @@ __aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_
             Base::ProcessNoArgmaxBlock();
             continue;
         }
-        ForwardScalarCompute();
-        ForwardCopyIn();
-        Forward();
-        Base::CopyInGrad();
-        Backward();
-        Base::CopyOut();
+        if (isIdentity) {
+            Base::CopyInGrad();
+            IdentityCopyGradToOutput();
+            Base::CopyOut();
+        } else {
+            ForwardScalarCompute();
+            ForwardCopyIn();
+            Forward();
+            Base::CopyInGrad();
+            Backward();
+            Base::CopyOut();
+        }
     }
 }
 
-template <typename TYPE_ORIG_X, typename TYPE_ARGMAX, typename T3, const uint32_t IS_CHECK_RANGE>
-__aicore__ inline void
-PoolGradNCHWSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CHECK_RANGE>::ConvertIndexWithoutPadAlign(
-    MicroAPI::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset, TYPE_ARGMAX left, TYPE_ARGMAX wInput,
-    TYPE_ARGMAX hIndexBase, MicroAPI::RegTensor<TYPE_ARGMAX>& dstReg, int32_t ncInputOffset)
+template <typename TYPE_ORIG_X, const uint32_t IS_CHECK_RANGE>
+__simd_callee__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, IS_CHECK_RANGE>::ConvertIndexWithoutPadAlignInt32VF(
+    MicroAPI::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset, int32_t left, int32_t wInput, int32_t hIndexBase,
+    MicroAPI::RegTensor<int32_t>& dstReg, int32_t ncInputOffset, uint32_t magic, uint32_t shift)
 {
     if (isPad_) {
-        ConvertIndexWithoutPadAlignCommon<TYPE_ARGMAX, 1>(
-            srcReg, wStrideOffset, left, wInput, hIndexBase, dstReg, ncInputOffset);
+        ConvertIndexInt32FastDivVF<1>(
+            srcReg, wStrideOffset, left, wInput, hIndexBase, dstReg, ncInputOffset, magic, shift);
     } else {
-        ConvertIndexWithoutPadAlignCommon<TYPE_ARGMAX, 0>(
-            srcReg, wStrideOffset, left, wInput, hIndexBase, dstReg, ncInputOffset);
+        ConvertIndexInt32FastDivVF<0>(
+            srcReg, wStrideOffset, left, wInput, hIndexBase, dstReg, ncInputOffset, magic, shift);
     }
 }
 
-template <typename TYPE_ORIG_X, typename TYPE_ARGMAX, typename T3, const uint32_t IS_CHECK_RANGE>
-__aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CHECK_RANGE>::ProcessW(
+template <typename TYPE_ORIG_X, const uint32_t IS_CHECK_RANGE>
+__simd_callee__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, IS_CHECK_RANGE>::ProcessW(
     __local_mem__ TYPE_ORIG_X* computeAddr, int32_t hOffset, uint16_t wStrideOffset,
     MicroAPI::RegTensor<int32_t>& indexReg, uint16_t hKernel, uint16_t wKernel, uint16_t repeatElem,
     MicroAPI::RegTensor<int32_t>& maxIndexReg, uint32_t hDilation, uint32_t wDilation)
@@ -316,6 +339,7 @@ __aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_
     MicroAPI::RegTensor<int32_t> indexWithOffset;
     MicroAPI::RegTensor<TYPE_ORIG_X> calcReg;
     MicroAPI::RegTensor<int32_t> calcMaxIndexReg;
+    MicroAPI::RegTensor<uint16_t> indexConvert;
     uint32_t maskCount = repeatElem;
     MicroAPI::MaskReg allMaskU32 = MicroAPI::CreateMask<int32_t, MicroAPI::MaskPattern::ALL>();
     MicroAPI::MaskReg gatherMask = MicroAPI::UpdateMask<TYPE_ORIG_X>(maskCount);
@@ -324,7 +348,7 @@ __aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_
     MicroAPI::MaskReg gtMask;
     MicroAPI::MaskReg tmpMask;
     MicroAPI::UnalignReg u0;
-    DuplicateNegInfReg<TYPE_ORIG_X>(maxReg);
+    DuplicateNegInfRegVF<TYPE_ORIG_X>(maxReg);
 
     MicroAPI::Adds(maxIndexReg, indexReg, hOffset, allMaskU32);
     for (int32_t hIndex = 0; hIndex < hKernel; hIndex++) {
@@ -336,7 +360,6 @@ __aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_
                 MicroAPI::DataCopyGather(
                     calcReg, computeAddr, (MicroAPI::RegTensor<uint32_t>&)indexWithOffset, gatherMask);
             } else {
-                MicroAPI::RegTensor<uint16_t> indexConvert;
                 MicroAPI::Pack(indexConvert, indexWithOffset);
                 MicroAPI::DataCopyGather(calcReg, computeAddr, indexConvert, gatherMask);
             }
@@ -356,29 +379,44 @@ __aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_
     }
 }
 
-template <typename TYPE_ORIG_X, typename TYPE_ARGMAX, typename T3, const uint32_t IS_CHECK_RANGE>
-__aicore__ inline void
-PoolGradNCHWSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CHECK_RANGE>::ConvertIndexWithoutPadAlignNc(
-    MicroAPI::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset, TYPE_ARGMAX left, TYPE_ARGMAX wInput,
-    TYPE_ARGMAX hIndexBase, MicroAPI::RegTensor<TYPE_ARGMAX>& dstReg, int32_t ncInputOffset, int32_t ncOutputCount,
-    int32_t inputNcSize)
+template <typename TYPE_ORIG_X, const uint32_t IS_CHECK_RANGE>
+__aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, IS_CHECK_RANGE>::ConvertIndexWithoutPadAlignInt32(
+    MicroAPI::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset, int32_t left, int32_t wInput, int32_t hIndexBase,
+    MicroAPI::RegTensor<int32_t>& dstReg, int32_t ncInputOffset, uint32_t magic, uint32_t shift)
 {
     if (isPad_) {
-        ConvertIndexWithoutPadAlignNcCommon<TYPE_ARGMAX, 1>(
-            srcReg, wStrideOffset, left, wInput, hIndexBase, dstReg, ncInputOffset, ncOutputCount, inputNcSize);
+        ConvertIndexInt32FastDiv<1>(
+            srcReg, wStrideOffset, left, wInput, hIndexBase, dstReg, ncInputOffset, magic, shift);
     } else {
-        ConvertIndexWithoutPadAlignNcCommon<TYPE_ARGMAX, 0>(
-            srcReg, wStrideOffset, left, wInput, hIndexBase, dstReg, ncInputOffset, ncOutputCount, inputNcSize);
+        ConvertIndexInt32FastDiv<0>(
+            srcReg, wStrideOffset, left, wInput, hIndexBase, dstReg, ncInputOffset, magic, shift);
     }
 }
 
-template <typename TYPE_ORIG_X, typename TYPE_ARGMAX, typename T3, const uint32_t IS_CHECK_RANGE>
-__aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CHECK_RANGE>::SingleRowGather(
-    __local_mem__ TYPE_ORIG_X* computeAddr, __local_mem__ TYPE_ARGMAX* argmaxAddr)
+template <typename TYPE_ORIG_X, const uint32_t IS_CHECK_RANGE>
+__simd_callee__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, IS_CHECK_RANGE>::ConvertIndexWithoutPadAlignNcInt32(
+    MicroAPI::RegTensor<int32_t>& srcReg, uint32_t wStrideOffset, int32_t left, int32_t wInput, int32_t hIndexBase,
+    MicroAPI::RegTensor<int32_t>& dstReg, int32_t ncInputOffset, int32_t ncOutputCount, int32_t inputNcSize,
+    uint32_t magicNc, uint32_t shiftNc, uint32_t magicWStride, uint32_t shiftWStride)
 {
-    uint16_t loopW = static_cast<uint16_t>(Base::wArgmaxActual_) / Base::vlT2_;
-    uint16_t repeatsElem = Base::vlT2_;
-    uint16_t tailRepeatsElem = static_cast<uint16_t>(Base::wArgmaxActual_) - loopW * Base::vlT2_;
+    if (isPad_) {
+        ConvertIndexNcInt32FastDivVF<1>(
+            srcReg, wStrideOffset, left, wInput, hIndexBase, dstReg, ncInputOffset, ncOutputCount, inputNcSize, magicNc,
+            shiftNc, magicWStride, shiftWStride);
+    } else {
+        ConvertIndexNcInt32FastDivVF<0>(
+            srcReg, wStrideOffset, left, wInput, hIndexBase, dstReg, ncInputOffset, ncOutputCount, inputNcSize, magicNc,
+            shiftNc, magicWStride, shiftWStride);
+    }
+}
+
+template <typename TYPE_ORIG_X, const uint32_t IS_CHECK_RANGE>
+__aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, IS_CHECK_RANGE>::SingleRowGather(
+    __local_mem__ TYPE_ORIG_X* computeAddr, __local_mem__ int32_t* argmaxAddr)
+{
+    uint16_t loopW = static_cast<uint16_t>(Base::wArgmaxActual_) / Base::vlArgmax_;
+    uint16_t repeatsElem = Base::vlArgmax_;
+    uint16_t tailRepeatsElem = static_cast<uint16_t>(Base::wArgmaxActual_) - loopW * Base::vlArgmax_;
     if (tailRepeatsElem == 0) {
         loopW = loopW - 1;
         tailRepeatsElem = repeatsElem;
@@ -386,9 +424,6 @@ __aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_
     uint16_t hKernel = Base::kernelH_;
     uint16_t wKernel = Base::kernelW_;
     uint32_t wStride = Base::strideW_;
-    TYPE_ARGMAX left = static_cast<TYPE_ARGMAX>(Base::wArgmaxActualStart_ * wStride - Base::padW_);
-    TYPE_ARGMAX hIndexBase = static_cast<TYPE_ARGMAX>(Base::hArgmaxActualStart_ * Base::strideH_ - Base::padH_);
-    TYPE_ARGMAX wInput = static_cast<TYPE_ARGMAX>(Base::wOutput_);
     uint32_t highAxisActual = static_cast<uint32_t>(forwardhighAxisActual_);
     uint32_t hOutputActual = static_cast<uint32_t>(Base::hArgmaxActual_);
     uint32_t wOutputActual = static_cast<uint32_t>(Base::wArgmaxActual_);
@@ -396,32 +431,40 @@ __aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_
     uint32_t wInputActualAlignedPad = static_cast<uint32_t>(wInputActualAlignedPad_);
     uint32_t hDilation = Base::dilationH_;
     uint32_t wDilation = Base::dilationW_;
+    int32_t left = static_cast<int32_t>(Base::wArgmaxActualStart_ * wStride - Base::padW_);
+    int32_t hIndexBase = static_cast<int32_t>(Base::hArgmaxActualStart_ * Base::strideH_ - Base::padH_);
+    int32_t wInput = static_cast<int32_t>(Base::wOutput_);
 
-    for (uint16_t nc = 0; nc < static_cast<uint16_t>(highAxisActual); nc++) {
-        for (uint16_t hLoop = 0; hLoop < static_cast<uint16_t>(hOutputActual); hLoop++) {
-            __VEC_SCOPE__
-            {
+    uint32_t magic = 0;
+    uint32_t shift = 0;
+    GetUintDivMagicAndShift<uint32_t>(magic, shift, wInputActualAlignedPad);
+
+    __VEC_SCOPE__
+    {
+        MicroAPI::RegTensor<int32_t> indexRegInit;
+        MicroAPI::MaskReg allMaskI32 = AscendC::MicroAPI::CreateMask<int32_t, AscendC::MicroAPI::MaskPattern::ALL>();
+        GenInitial1DIndices<int32_t>(indexRegInit, static_cast<int64_t>(wStride));
+
+        for (uint16_t nc = 0; nc < static_cast<uint16_t>(highAxisActual); nc++) {
+            for (uint16_t hLoop = 0; hLoop < static_cast<uint16_t>(hOutputActual); hLoop++) {
                 MicroAPI::RegTensor<int32_t> indexReg;
                 MicroAPI::RegTensor<int32_t> maxIndexReg;
-                MicroAPI::RegTensor<TYPE_ARGMAX> maxIndexConvertReg;
+                MicroAPI::RegTensor<int32_t> maxIndexConvertReg;
                 MicroAPI::UnalignReg u1;
-                MicroAPI::Arange(indexReg, static_cast<int32_t>(0));
-                AscendC::MicroAPI::MaskReg allMaskI32 =
-                    AscendC::MicroAPI::CreateMask<int32_t, AscendC::MicroAPI::MaskPattern::ALL>();
-                MicroAPI::Muls(indexReg, indexReg, static_cast<int32_t>(wStride), allMaskI32);
+                MicroAPI::Copy(indexReg, indexRegInit, allMaskI32);
                 int32_t ncInputOffset = nc * hInputActualPad * wInputActualAlignedPad;
                 int32_t ncOutOffset = nc * hOutputActual * wOutputActual;
                 int32_t vfMaxAddrOffset = ncOutOffset + hLoop * wOutputActual;
-                __local_mem__ TYPE_ARGMAX* argmaxAddrLocal = argmaxAddr + vfMaxAddrOffset;
+                __local_mem__ int32_t* argmaxAddrLocal = argmaxAddr + vfMaxAddrOffset;
                 for (uint16_t wLoop = 0; wLoop < loopW; wLoop++) {
                     int32_t wOffset =
                         ncInputOffset + hLoop * wInputActualAlignedPad * Base::strideH_ + wLoop * repeatsElem * wStride;
                     ProcessW(
                         computeAddr, wOffset, static_cast<uint16_t>(wInputActualAlignedPad), indexReg, hKernel, wKernel,
                         repeatsElem, maxIndexReg, hDilation, wDilation);
-                    ConvertIndexWithoutPadAlign(
+                    ConvertIndexWithoutPadAlignInt32(
                         maxIndexReg, static_cast<uint32_t>(wInputActualAlignedPad), left, wInput, hIndexBase,
-                        maxIndexConvertReg, ncInputOffset);
+                        maxIndexConvertReg, ncInputOffset, magic, shift);
                     MicroAPI::DataCopyUnAlign(argmaxAddrLocal, maxIndexConvertReg, u1, repeatsElem);
                     MicroAPI::DataCopyUnAlignPost(argmaxAddrLocal, u1, 0);
                 }
@@ -430,9 +473,9 @@ __aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_
                 ProcessW(
                     computeAddr, wOffsetTail, static_cast<uint16_t>(wInputActualAlignedPad), indexReg, hKernel, wKernel,
                     tailRepeatsElem, maxIndexReg, hDilation, wDilation);
-                ConvertIndexWithoutPadAlign(
+                ConvertIndexWithoutPadAlignInt32(
                     maxIndexReg, static_cast<uint32_t>(wInputActualAlignedPad), left, wInput, hIndexBase,
-                    maxIndexConvertReg, ncInputOffset);
+                    maxIndexConvertReg, ncInputOffset, magic, shift);
                 MicroAPI::DataCopyUnAlign(argmaxAddrLocal, maxIndexConvertReg, u1, tailRepeatsElem);
                 MicroAPI::DataCopyUnAlignPost(argmaxAddrLocal, u1, 0);
             }
@@ -441,16 +484,16 @@ __aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_
     return;
 }
 
-template <typename TYPE_ORIG_X, typename TYPE_ARGMAX, typename T3, const uint32_t IS_CHECK_RANGE>
-__aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CHECK_RANGE>::MultiRowGather(
-    __local_mem__ TYPE_ORIG_X* computeAddr, __local_mem__ TYPE_ARGMAX* argmaxAddr)
+template <typename TYPE_ORIG_X, const uint32_t IS_CHECK_RANGE>
+__aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, IS_CHECK_RANGE>::MultiRowGather(
+    __local_mem__ TYPE_ORIG_X* computeAddr, __local_mem__ int32_t* argmaxAddr)
 {
     uint32_t wOutputActual = static_cast<uint32_t>(Base::wArgmaxActual_);
     uint16_t hKernel = Base::kernelH_;
     uint16_t wKernel = Base::kernelW_;
     uint32_t wStride = Base::strideW_;
     uint32_t rate2D = wInputActualAlignedPad_ * Base::strideH_;
-    uint16_t hBatchCount = Base::vlT2_ / wOutputActual;
+    uint16_t hBatchCount = Base::vlArgmax_ / wOutputActual;
     uint16_t hLoopTimes = static_cast<uint16_t>(Base::hArgmaxActual_) / hBatchCount;
     uint16_t hTail = static_cast<uint16_t>(Base::hArgmaxActual_) - hLoopTimes * hBatchCount;
     if (hTail == 0) {
@@ -459,46 +502,49 @@ __aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_
     }
     uint16_t repeatsElem = hBatchCount * wOutputActual;
     uint16_t tailRepeatsElem = hTail * wOutputActual;
-    TYPE_ARGMAX left = static_cast<TYPE_ARGMAX>(Base::wArgmaxActualStart_ * wStride - Base::padW_);
-    TYPE_ARGMAX hIndexBase = static_cast<TYPE_ARGMAX>(Base::hArgmaxActualStart_ * Base::strideH_ - Base::padH_);
-    TYPE_ARGMAX wInput = static_cast<TYPE_ARGMAX>(Base::wOutput_);
     uint32_t highAxisActual = static_cast<uint32_t>(Base::highAxisActual_);
     uint32_t hInputActualPad = static_cast<uint32_t>(hInputActualPad_);
     uint32_t wInputActualAlignedPad = static_cast<uint32_t>(wInputActualAlignedPad_);
     uint32_t hOutputActual = static_cast<uint32_t>(Base::hArgmaxActual_);
-    uint32_t hStride = Base::strideH_;
     uint32_t hDilation = Base::dilationH_;
     uint32_t wDilation = Base::dilationW_;
+    int32_t left = static_cast<int32_t>(Base::wArgmaxActualStart_ * wStride - Base::padW_);
+    int32_t hIndexBase = static_cast<int32_t>(Base::hArgmaxActualStart_ * Base::strideH_ - Base::padH_);
+    int32_t wInput = static_cast<int32_t>(Base::wOutput_);
+
+    uint32_t magic = 0;
+    uint32_t shift = 0;
+    GetUintDivMagicAndShift<uint32_t>(magic, shift, wInputActualAlignedPad);
 
     __VEC_SCOPE__
     {
         MicroAPI::RegTensor<int32_t> indexReg;
         MicroAPI::RegTensor<int32_t> maxIndexReg;
-        MicroAPI::RegTensor<TYPE_ARGMAX> maxIndexConvertReg;
+        MicroAPI::RegTensor<int32_t> maxIndexConvertReg;
         MicroAPI::UnalignReg u1;
-        __local_mem__ TYPE_ARGMAX* argmaxAddrLocal = argmaxAddr;
+        __local_mem__ int32_t* argmaxAddrLocal = argmaxAddr;
         GenGatterIndex2D<int32_t>(
             indexReg, static_cast<int32_t>(rate2D), static_cast<int32_t>(wOutputActual), static_cast<int32_t>(wStride));
         for (uint16_t nc = 0; nc < static_cast<uint16_t>(highAxisActual); nc++) {
             int32_t ncInputOffset = nc * hInputActualPad * wInputActualAlignedPad;
             for (uint16_t hLoop = 0; hLoop < hLoopTimes; hLoop++) {
-                int32_t wOffset = ncInputOffset + hLoop * hBatchCount * hStride * wInputActualAlignedPad;
+                int32_t wOffset = ncInputOffset + hLoop * hBatchCount * rate2D;
                 ProcessW(
                     computeAddr, wOffset, static_cast<uint16_t>(wInputActualAlignedPad), indexReg, hKernel, wKernel,
                     repeatsElem, maxIndexReg, hDilation, wDilation);
-                ConvertIndexWithoutPadAlign(
+                ConvertIndexWithoutPadAlignInt32(
                     maxIndexReg, static_cast<uint32_t>(wInputActualAlignedPad), left, wInput, hIndexBase,
-                    maxIndexConvertReg, ncInputOffset);
+                    maxIndexConvertReg, ncInputOffset, magic, shift);
                 MicroAPI::DataCopyUnAlign(argmaxAddrLocal, maxIndexConvertReg, u1, repeatsElem);
                 MicroAPI::DataCopyUnAlignPost(argmaxAddrLocal, u1, 0);
             }
-            int32_t wOffsetTail = ncInputOffset + hLoopTimes * hBatchCount * hStride * wInputActualAlignedPad;
+            int32_t wOffsetTail = ncInputOffset + hLoopTimes * hBatchCount * rate2D;
             ProcessW(
                 computeAddr, wOffsetTail, static_cast<uint16_t>(wInputActualAlignedPad), indexReg, hKernel, wKernel,
                 tailRepeatsElem, maxIndexReg, hDilation, wDilation);
-            ConvertIndexWithoutPadAlign(
+            ConvertIndexWithoutPadAlignInt32(
                 maxIndexReg, static_cast<uint32_t>(wInputActualAlignedPad), left, wInput, hIndexBase,
-                maxIndexConvertReg, ncInputOffset);
+                maxIndexConvertReg, ncInputOffset, magic, shift);
             MicroAPI::DataCopyUnAlign(argmaxAddrLocal, maxIndexConvertReg, u1, tailRepeatsElem);
             MicroAPI::DataCopyUnAlignPost(argmaxAddrLocal, u1, 0);
         }
@@ -506,9 +552,36 @@ __aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_
     return;
 }
 
-template <typename TYPE_ORIG_X, typename TYPE_ARGMAX, typename T3, const uint32_t IS_CHECK_RANGE>
-__aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CHECK_RANGE>::MultiNcGather(
-    __local_mem__ TYPE_ORIG_X* computeAddr, __local_mem__ TYPE_ARGMAX* argmaxAddr)
+template <typename TYPE_ORIG_X, const uint32_t IS_CHECK_RANGE>
+__simd_vf__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, IS_CHECK_RANGE>::ProcessSingleNcBatch(
+    __ubuf__ TYPE_ORIG_X* computeAddr, __ubuf__ int32_t* argmaxAddr, uint32_t ncInputOffset, int32_t hOffset,
+    uint16_t repeatsElem, uint16_t hKernel, uint16_t wKernel, uint16_t wInputActualAlignedPad, int32_t rate3D,
+    int32_t num2D, int32_t rate2D, int32_t wOutputActual, int32_t wStride, int32_t left, int32_t wInput,
+    int32_t hIndexBase, int32_t ncOutputCount, int32_t inputNcSize, uint32_t hDilation, uint32_t wDilation,
+    uint32_t magicNc, uint32_t shiftNc, uint32_t magicWStride, uint32_t shiftWStride)
+{
+    MicroAPI::RegTensor<int32_t> indexReg;
+    MicroAPI::RegTensor<int32_t> maxIndexReg;
+    MicroAPI::RegTensor<int32_t> maxIndexConvertReg;
+    MicroAPI::UnalignReg u1;
+
+    GenGatterIndex3DVF<int32_t>(indexReg, rate3D, num2D, rate2D, wOutputActual, wStride);
+
+    ProcessW(
+        (__local_mem__ TYPE_ORIG_X*)computeAddr, hOffset, wInputActualAlignedPad, indexReg, hKernel, wKernel,
+        repeatsElem, maxIndexReg, hDilation, wDilation);
+
+    ConvertIndexWithoutPadAlignNcInt32(
+        maxIndexReg, static_cast<uint32_t>(wInputActualAlignedPad), left, wInput, hIndexBase, maxIndexConvertReg,
+        static_cast<int32_t>(ncInputOffset), ncOutputCount, inputNcSize, magicNc, shiftNc, magicWStride, shiftWStride);
+
+    MicroAPI::DataCopyUnAlign(argmaxAddr, maxIndexConvertReg, u1, repeatsElem);
+    MicroAPI::DataCopyUnAlignPost(argmaxAddr, u1, 0);
+}
+
+template <typename TYPE_ORIG_X, const uint32_t IS_CHECK_RANGE>
+__aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, IS_CHECK_RANGE>::MultiNcGather(
+    __local_mem__ TYPE_ORIG_X* computeAddr, __local_mem__ int32_t* argmaxAddr)
 {
     uint16_t wKernel = Base::kernelW_;
     uint16_t hKernel = Base::kernelH_;
@@ -518,7 +591,7 @@ __aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_
     uint16_t rate2D = Base::strideH_ * wInputActualAlignedPad_;
     uint16_t wOutputActual = static_cast<uint16_t>(Base::wArgmaxActual_);
     uint16_t eachBatchCount = static_cast<uint16_t>(Base::hArgmaxActual_ * Base::wArgmaxActual_);
-    uint16_t ncBatchCount = Base::vlT2_ / eachBatchCount;
+    uint16_t ncBatchCount = Base::vlArgmax_ / eachBatchCount;
     uint16_t ncLoopTimes = static_cast<uint16_t>(forwardhighAxisActual_) / ncBatchCount;
     uint16_t ncTail = static_cast<uint16_t>(forwardhighAxisActual_) - ncLoopTimes * ncBatchCount;
     if (ncTail == 0) {
@@ -527,60 +600,57 @@ __aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_
     }
     uint16_t repeatsElem = ncBatchCount * eachBatchCount;
     uint16_t tailRepeatsElem = ncTail * eachBatchCount;
-    TYPE_ARGMAX left = static_cast<TYPE_ARGMAX>(Base::wArgmaxActualStart_ * wStride - Base::padW_);
-    TYPE_ARGMAX hIndexBase = static_cast<TYPE_ARGMAX>(Base::hArgmaxActualStart_ * Base::strideH_ - Base::padH_);
-    TYPE_ARGMAX wInput = static_cast<TYPE_ARGMAX>(Base::wOutput_);
     uint32_t hInputActualPad = static_cast<uint32_t>(hInputActualPad_);
     uint32_t wInputActualAlignedPad = static_cast<uint32_t>(wInputActualAlignedPad_);
     uint32_t hOutputActual = static_cast<uint32_t>(Base::hArgmaxActual_);
     uint32_t hDilation = Base::dilationH_;
     uint32_t wDilation = Base::dilationW_;
+    int32_t left = static_cast<int32_t>(Base::wArgmaxActualStart_ * wStride - Base::padW_);
+    int32_t hIndexBase = static_cast<int32_t>(Base::hArgmaxActualStart_ * Base::strideH_ - Base::padH_);
+    int32_t wInput = static_cast<int32_t>(Base::wOutput_);
+    int32_t inputNcSize = static_cast<int32_t>(rate3D);
 
-    __VEC_SCOPE__
-    {
-        MicroAPI::RegTensor<int32_t> indexReg;
-        MicroAPI::RegTensor<int32_t> maxIndexReg;
-        MicroAPI::RegTensor<TYPE_ARGMAX> maxIndexConvertReg;
-        MicroAPI::UnalignReg u1;
-        __local_mem__ TYPE_ARGMAX* argmaxAddrLocal = argmaxAddr;
-        GenGatterIndex3D<int32_t>(
-            indexReg, static_cast<int32_t>(rate3D), static_cast<int32_t>(num2D), static_cast<int32_t>(rate2D),
-            static_cast<int32_t>(wOutputActual), static_cast<int32_t>(wStride));
-        for (uint16_t nc = 0; nc < ncLoopTimes; nc++) {
-            uint32_t ncInputOffset = nc * ncBatchCount * hInputActualPad * wInputActualAlignedPad;
-            int32_t hOffset = static_cast<int32_t>(nc) * ncBatchCount * rate3D;
-            ProcessW(
-                computeAddr, hOffset, static_cast<uint16_t>(wInputActualAlignedPad), indexReg, hKernel, wKernel,
-                repeatsElem, maxIndexReg, hDilation, wDilation);
-            ConvertIndexWithoutPadAlignNc(
-                maxIndexReg, static_cast<uint32_t>(wInputActualAlignedPad), left, wInput, hIndexBase,
-                maxIndexConvertReg, ncInputOffset, num2D, rate3D);
-            MicroAPI::DataCopyUnAlign(argmaxAddrLocal, maxIndexConvertReg, u1, repeatsElem);
-            MicroAPI::DataCopyUnAlignPost(argmaxAddrLocal, u1, 0);
-        }
-        uint32_t ncInputOffsetTail = ncLoopTimes * ncBatchCount * hInputActualPad * wInputActualAlignedPad;
-        int32_t hOffset = static_cast<int32_t>(ncLoopTimes) * ncBatchCount * rate3D;
-        ProcessW(
-            computeAddr, hOffset, static_cast<uint16_t>(wInputActualAlignedPad), indexReg, hKernel, wKernel,
-            tailRepeatsElem, maxIndexReg, hDilation, wDilation);
-        ConvertIndexWithoutPadAlignNc(
-            maxIndexReg, static_cast<uint32_t>(wInputActualAlignedPad), left, wInput, hIndexBase, maxIndexConvertReg,
-            ncInputOffsetTail, num2D, rate3D);
-        MicroAPI::DataCopyUnAlign(argmaxAddrLocal, maxIndexConvertReg, u1, tailRepeatsElem);
-        MicroAPI::DataCopyUnAlignPost(argmaxAddrLocal, u1, 0);
+    uint32_t magicWStride = 0;
+    uint32_t shiftWStride = 0;
+    uint32_t magicNc = 0;
+    uint32_t shiftNc = 0;
+    GetUintDivMagicAndShift<uint32_t>(magicWStride, shiftWStride, wInputActualAlignedPad);
+    GetUintDivMagicAndShift<uint32_t>(magicNc, shiftNc, static_cast<uint32_t>(num2D));
+
+    for (uint16_t nc = 0; nc < ncLoopTimes; nc++) {
+        uint32_t ncInputOffset = nc * ncBatchCount * hInputActualPad * wInputActualAlignedPad;
+        int32_t hOffset = static_cast<int32_t>(nc) * ncBatchCount * rate3D;
+
+        ProcessSingleNcBatch(
+            (__ubuf__ TYPE_ORIG_X*)computeAddr, (__ubuf__ int32_t*)(argmaxAddr + nc * repeatsElem), ncInputOffset,
+            hOffset, repeatsElem, hKernel, wKernel, static_cast<uint16_t>(wInputActualAlignedPad),
+            static_cast<int32_t>(rate3D), static_cast<int32_t>(num2D), static_cast<int32_t>(rate2D),
+            static_cast<int32_t>(wOutputActual), static_cast<int32_t>(wStride), left, wInput, hIndexBase,
+            static_cast<int32_t>(num2D), inputNcSize, hDilation, wDilation, magicNc, shiftNc, magicWStride,
+            shiftWStride);
     }
+
+    uint32_t ncInputOffsetTail = ncLoopTimes * ncBatchCount * hInputActualPad * wInputActualAlignedPad;
+    int32_t hOffset = static_cast<int32_t>(ncLoopTimes) * ncBatchCount * rate3D;
+
+    ProcessSingleNcBatch(
+        (__ubuf__ TYPE_ORIG_X*)computeAddr, (__ubuf__ int32_t*)(argmaxAddr + ncLoopTimes * repeatsElem),
+        ncInputOffsetTail, hOffset, tailRepeatsElem, hKernel, wKernel, static_cast<uint16_t>(wInputActualAlignedPad),
+        static_cast<int32_t>(rate3D), static_cast<int32_t>(num2D), static_cast<int32_t>(rate2D),
+        static_cast<int32_t>(wOutputActual), static_cast<int32_t>(wStride), left, wInput, hIndexBase,
+        static_cast<int32_t>(num2D), inputNcSize, hDilation, wDilation, magicNc, shiftNc, magicWStride, shiftWStride);
     return;
 }
 
-template <typename TYPE_ORIG_X, typename TYPE_ARGMAX, typename T3, const uint32_t IS_CHECK_RANGE>
-__aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CHECK_RANGE>::DupBufferNegInf(
+template <typename TYPE_ORIG_X, const uint32_t IS_CHECK_RANGE>
+__aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, IS_CHECK_RANGE>::DupBufferNegInf(
     __local_mem__ TYPE_ORIG_X* dstAddr, uint32_t repeatElm, uint16_t loop, uint32_t tail)
 {
     DupBufferNegInfCommon<TYPE_ORIG_X>(dstAddr, repeatElm, loop, tail);
 }
 
-template <typename TYPE_ORIG_X, typename TYPE_ARGMAX, typename T3, const uint32_t IS_CHECK_RANGE>
-__aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CHECK_RANGE>::CopyToCalcBuffer(
+template <typename TYPE_ORIG_X, const uint32_t IS_CHECK_RANGE>
+__aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, IS_CHECK_RANGE>::CopyToCalcBuffer(
     __local_mem__ TYPE_ORIG_X* dstAddr, __local_mem__ TYPE_ORIG_X* srcAddr, uint16_t batch, uint16_t rows,
     uint16_t loopCols, uint16_t tailCols, uint32_t repeatElm, uint32_t srcBatchStride, uint32_t srcRowStride,
     uint32_t dstBatchStride, uint32_t dstRowStride, uint32_t dstRowOffset, uint32_t dstColOffset)
@@ -590,8 +660,8 @@ __aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_
         dstRowStride, dstRowOffset, dstColOffset);
 }
 
-template <typename TYPE_ORIG_X, typename TYPE_ARGMAX, typename T3, const uint32_t IS_CHECK_RANGE>
-__aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_CHECK_RANGE>::DupAndCopyToCalcBuffer(
+template <typename TYPE_ORIG_X, const uint32_t IS_CHECK_RANGE>
+__aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, IS_CHECK_RANGE>::DupAndCopyToCalcBuffer(
     __local_mem__ TYPE_ORIG_X* dstAddr, __local_mem__ TYPE_ORIG_X* srcAddr)
 {
     uint32_t wInputPadActualAlign =
@@ -619,6 +689,23 @@ __aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, TYPE_ARGMAX, T3, IS_
             dstBatchStride, dstRowStride, hPad, wPad);
     }
 };
+
+template <typename TYPE_ORIG_X, const uint32_t IS_CHECK_RANGE>
+__aicore__ inline void PoolGradNCHWSmallKernel<TYPE_ORIG_X, IS_CHECK_RANGE>::IdentityCopyGradToOutput()
+{
+    LocalTensor<TYPE_ORIG_X> gradLocal = Base::gradQue_.template DeQue<TYPE_ORIG_X>();
+    LocalTensor<computeType> yLocal = Base::outputQue_.template AllocTensor<computeType>();
+    uint32_t calCount = Base::outputBufferSize_ / sizeof(computeType);
+
+    if constexpr (std::is_same<TYPE_ORIG_X, computeType>::value) {
+        DataCopy(yLocal, gradLocal, calCount);
+    } else {
+        Cast(yLocal, gradLocal, RoundMode::CAST_RINT, calCount);
+    }
+
+    Base::outputQue_.EnQue(yLocal);
+    Base::gradQue_.FreeTensor(gradLocal);
+}
 
 } // namespace MaxPoolGradNCHWSmallKernelNameSpace
 #endif // MAX_POOL_GRAD_SMALL_KERNEL_H

@@ -113,12 +113,11 @@ bool MaxPoolGradNCHWTiling::IsCapable()
 
 uint64_t MaxPoolGradNCHWTiling::GetTilingKey() const
 {
-    uint32_t indicesDtype = (inputData.hX * inputData.wX <= static_cast<int64_t>(MAX_INT32)) ? TPL_INT32 : TPL_INT64;
     uint32_t format = TPL_NCHW_FORMAT;
     uint32_t isCheckRange = commonTiling.GetSplitData().isCheckRange;
     uint32_t kernelMode =
         (inputData.hKernel * inputData.wKernel >= KSIZE_THRESHOLD) ? TPL_NCHW_BIG_KERNEL : TPL_NCHW_SMALL_KERNEL;
-    return GET_TPL_TILING_KEY(kernelMode, format, indicesDtype, isCheckRange);
+    return GET_TPL_TILING_KEY(kernelMode, format, TPL_INT32, isCheckRange);
 }
 
 ge::graphStatus MaxPoolGradNCHWTiling::DoOpTiling()
