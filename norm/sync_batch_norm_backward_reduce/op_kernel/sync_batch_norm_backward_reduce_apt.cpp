@@ -20,14 +20,17 @@
 #include "atvoss/util/dfx.h"
 #include "../inc/platform.h"
 
+using namespace Ops::Base;
 using namespace AscendC;
+using SyncBatchNormBackwardReduceNs::SyncBatchNormBackwardReduceTilingData;
+using SyncBatchNormBackwardReduce::SyncBatchNormBackwardReduceDag;
 
 extern "C" __global__ __aicore__ void sync_batch_norm_backward_reduce(GM_ADDR sumDy, GM_ADDR sumDyDxPad, GM_ADDR mean, 
                                                                       GM_ADDR invertStd, GM_ADDR sumDyXmu, GM_ADDR y,
                                                                       GM_ADDR workspace, GM_ADDR tiling)
 {
     REGISTER_TILING_DEFAULT(SyncBatchNormBackwardReduceTilingData);
-    GET_TILING_DATA(tilingData, tiling);
+    GET_TILING_DATA_WITH_STRUCT(SyncBatchNormBackwardReduceTilingData, tilingData, tiling);
     TPipe pipe;
     if (TILING_KEY_IS(0UL)) {
         ElementwiseSch<0UL, SyncBatchNormBackwardReduceDag<DTYPE_SUM_DY>::OpDag> sch(&(tilingData.baseTiling), &pipe);

@@ -23,6 +23,9 @@
 #include "op_host/tiling_templates_registry.h"
 
 using namespace ge;
+using namespace Ops::Base;
+using SyncBatchNormBackwardElemt::SyncBatchNormBackwardElemtDag;
+using SyncBatchNormBackwardElemtNs::SyncBatchNormBackwardElemtTilingData;
 
 namespace optiling {
 constexpr uint64_t SYNC_BATCH_NORM_BACKWARD_ELEMT_TILING_KEY_ELEMENTWISE = 0UL;

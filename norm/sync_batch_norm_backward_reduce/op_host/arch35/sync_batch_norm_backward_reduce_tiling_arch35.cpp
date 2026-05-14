@@ -26,6 +26,9 @@
 
 using namespace AscendC;
 using namespace ge;
+using namespace Ops::Base;
+using SyncBatchNormBackwardReduce::SyncBatchNormBackwardReduceDag;
+using SyncBatchNormBackwardReduceNs::SyncBatchNormBackwardReduceTilingData;
 
 namespace optiling {
 constexpr uint64_t SYNC_BATCH_NORM_BACKWARD_REDUCE_TILING_KEY_ELEMENTWISE = 0;

@@ -21,6 +21,9 @@
 #include "register/tilingdata_base.h"
 #include "tiling/tiling_api.h"
 #include "op_host/tiling_base.h"
+
+using SyncBatchNormBackwardElemtNs::SyncBatchNormBackwardElemtTilingData;
+
 namespace optiling {
 class SyncBatchNormBackwardElemtTiling {
 public:

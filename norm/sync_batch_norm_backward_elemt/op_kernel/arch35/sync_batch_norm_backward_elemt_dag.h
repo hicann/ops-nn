@@ -19,7 +19,9 @@
 #include "atvoss/util/vec.h"
 #include "atvoss/util/placeholder.h"
 
+namespace SyncBatchNormBackwardElemt {
 using namespace Ops::Base;
+using namespace AscendC;
 
 constexpr int CAST_NONE = 0;
 constexpr int CAST_RINT = 1;
@@ -59,4 +61,5 @@ struct SyncBatchNormBackwardElemtDag {
     using OpDag = DAGSch<Outputs, void, MemCfg>;
 };
 
+} // namespace SyncBatchNormBackwardElemt
 #endif  // SYNC_BATCH_NORM_BACKWARD_ELEMT_DAG_H

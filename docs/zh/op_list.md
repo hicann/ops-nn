@@ -47,7 +47,7 @@
     <td>带截断的Swish门控线性单元激活函数，实现x的SwiGlu计算。本算子相较于SwiGlu算子，新增了部分输入参数：groupIndex、alpha、limit、bias、interleaved，用于支持GPT-OSS模型使用的变体SwiGlu以及MoE模型使用的分组场景。</td>
   </tr>
   <tr>
-    <td>norm</td>
+    <td>activation</td>
     <td><a href="../../activation/confusion_softmax_grad/README.md">confusion_softmax_grad</a></td>
     <td>✓</td>
     <td>✓</td>

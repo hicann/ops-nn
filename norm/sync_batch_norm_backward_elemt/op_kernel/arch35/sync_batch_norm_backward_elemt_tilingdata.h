@@ -16,9 +16,11 @@
 #define SYNC_BATCH_NORM_BACKWARD_ELEMT_TILINGDATA_H
 #include "atvoss/elewise/elewise_base_struct.h"
 
+namespace SyncBatchNormBackwardElemtNs {
 using namespace Ops::Base;
 
 struct SyncBatchNormBackwardElemtTilingData {
     EleBaseTilingData baseTiling;
 };
+} // namespace SyncBatchNormBackwardElemtNs
 #endif // SYNC_BATCH_NORM_BACKWARD_ELEMT_TILINGDATA_H

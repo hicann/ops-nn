@@ -19,6 +19,7 @@
 #include "atvoss/util/vec.h"
 #include "atvoss/util/placeholder.h"
 
+namespace SyncBatchNormBackwardReduce {
 using namespace Ops::Base;
 
 template <typename U>
@@ -47,4 +48,6 @@ struct SyncBatchNormBackwardReduceDag {
     using MemCfg = MemOptCfg<MemLevel::LEVEL_2>;
     using OpDag = DAGSch<Outputs, void, MemCfg>;
 };
-#endif
+
+} // namespace SyncBatchNormBackwardReduce
+#endif // SYNC_BATCH_NORM_BACKWARD_REDUCE_DAG_H
