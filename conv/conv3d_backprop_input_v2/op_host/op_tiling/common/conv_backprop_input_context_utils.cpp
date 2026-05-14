@@ -568,7 +568,18 @@ static bool UpdateDtypeParams(const gert::TilingContext *context, Conv3dBpInputV
   return true;
 }
 
-static bool CheckStorageFormat(const gert::TilingContext *context, size_t filter_input_index, size_t out_backprop_input_index) {
+static std::string FormatSetToString(const std::unordered_set<ge::Format> &format_set) {
+  std::string result;
+  for (const auto &fmt : format_set) {
+    if (!result.empty()) {
+      result += "/";
+    }
+    result += ge::TypeUtils::FormatToSerialString(fmt);
+  }
+  return result;
+}
+
+static bool CheckStorageFormat(const gert::TilingContext *context, size_t filter_input_index, size_t out_backprop_input_index, optiling::OpTypeV2 op_type) {
   // 获取输入输出的描述信息
   const auto out_backprop_desc = context->GetInputDesc(out_backprop_input_index);
   const auto filter_desc = context->GetInputDesc(filter_input_index);
@@ -579,24 +590,41 @@ static bool CheckStorageFormat(const gert::TilingContext *context, size_t filter
   auto y_format = static_cast<ge::Format>(ge::GetPrimaryFormat(y_desc->GetStorageFormat()));
   const auto op_name = context->GetNodeName();
 
-  const std::unordered_set<ge::Format> valid_out_bp_format = {ge::FORMAT_NCDHW, ge::FORMAT_NDHWC};
+  std::unordered_set<ge::Format> valid_out_bp_format;
+  if (IsArchAfter35(context) && op_type == optiling::OpTypeV2::kExtendConvTranspose) {
+    valid_out_bp_format = {ge::FORMAT_NCDHW};
+  } else {
+    valid_out_bp_format = {ge::FORMAT_NCDHW, ge::FORMAT_NDHWC};
+  }
+
   std::unordered_set<ge::Format> valid_filter_format;
   if (IsSocVersionFuse(context)) {
-      valid_filter_format = {ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, ge::FORMAT_DHWCN, ge::FORMAT_FRACTAL_Z};
+    valid_filter_format = {ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, ge::FORMAT_DHWCN, ge::FORMAT_FRACTAL_Z};
+  } else if (op_type == optiling::OpTypeV2::kExtendConvTranspose) {
+    valid_filter_format = {ge::FORMAT_NCDHW};
   } else {
-      valid_filter_format = {ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, ge::FORMAT_DHWCN};
+    valid_filter_format = {ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, ge::FORMAT_DHWCN};
   }
-  const std::unordered_set<ge::Format> valid_y_format = {ge::FORMAT_NCDHW, ge::FORMAT_NDHWC};
+
+  std::unordered_set<ge::Format> valid_y_format;
+  if (IsArchAfter35(context) && op_type == optiling::OpTypeV2::kExtendConvTranspose) {
+    valid_y_format = {ge::FORMAT_NCDHW};
+  } else {
+    valid_y_format = {ge::FORMAT_NCDHW, ge::FORMAT_NDHWC};
+  }
+
   bool invalid_tag = valid_out_bp_format.count(out_backprop_format) == 0 || valid_filter_format.count(filter_format) == 0 ||
                      valid_y_format.count(y_format) == 0;
-  if (IsArchAfter35(context) || IsSocVersionFuse(context)) {
-    OP_CHECK_IF(invalid_tag,
-                OP_LOGE(op_name, "out_backprop format[%s] and y format[%s] should be NCDHW/NDHWC, filter format[%s] should be NCDHW/NDHWC/DHWCN.",
-                        ge::TypeUtils::FormatToSerialString(out_backprop_format).c_str(),
-                        ge::TypeUtils::FormatToSerialString(y_format).c_str(),
-                        ge::TypeUtils::FormatToSerialString(filter_format).c_str()),
-                return false);
+  if (invalid_tag) {
+      OP_LOGE(op_name, "out_backprop format[%s] and y format[%s] should be [%s], filter format[%s] should be [%s].",
+              ge::TypeUtils::FormatToSerialString(out_backprop_format).c_str(),
+              ge::TypeUtils::FormatToSerialString(y_format).c_str(),
+              FormatSetToString(valid_out_bp_format).c_str(),
+              ge::TypeUtils::FormatToSerialString(filter_format).c_str(),
+              FormatSetToString(valid_filter_format).c_str());
+    return false;
   }
+
   return true;
 }
 
@@ -762,7 +790,7 @@ static bool GetShapeParams(gert::TilingContext *context, Conv3dBpInputV2RunInfo 
                 OP_LOGE(op_name, "filter origin format[%s] should be NDHWC/NCDHW/DHWCN.",
                         ge::TypeUtils::FormatToSerialString(filter_ori_format).c_str()),
                 return false);
-    OP_CHECK_IF(!CheckStorageFormat(context, filter_input_index, out_backprop_input_index),
+    OP_CHECK_IF(!CheckStorageFormat(context, filter_input_index, out_backprop_input_index, op_type),
                 OP_LOGE(op_name, "Check storage format From Desc fail."), return false);
   } else {
     OP_CHECK_IF(filter_ori_format != ge::FORMAT_NDHWC && filter_ori_format != ge::FORMAT_NCDHW && filter_ori_format != ge::FORMAT_DHWCN,
