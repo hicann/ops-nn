@@ -17,7 +17,7 @@
 namespace FastGeluDag {
 using namespace Ops::Base;
 
-template <class T>
+template <class T, bool highPrecisionDiv>
 struct FastGeluCustom : public Vec::ElemwiseUnaryOP<T, T> {
     __aicore__ inline FastGeluCustom(LocalTensor<T>& dst, LocalTensor<T>& src, uint32_t count)
     {
@@ -38,7 +38,7 @@ struct FastGeluCustom : public Vec::ElemwiseUnaryOP<T, T> {
             AscendC::MicroAPI::RegTensor<T, AscendC::MicroAPI::RegTraitNumOne> denominator;
             AscendC::MicroAPI::RegTensor<T, AscendC::MicroAPI::RegTraitNumOne> result;
             static constexpr AscendC::MicroAPI::DivSpecificMode mode = {
-                AscendC::MicroAPI::MaskMergeMode::ZEROING, true};
+                AscendC::MicroAPI::MaskMergeMode::ZEROING, highPrecisionDiv};
             AscendC::MicroAPI::MaskReg mask;
 
             for (uint16_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
@@ -61,7 +61,7 @@ template <typename T>
 struct FastGeluNoCast {
     // 通过Compute构造计算图
     using OpCopyIn = Bind<Vec::CopyIn<T>, Placeholder::In0<T>>;
-    using OpFastGelu = Bind<FastGeluCustom<float>, OpCopyIn>;
+    using OpFastGelu = Bind<FastGeluCustom<float, true>, OpCopyIn>;
 
     using OpCopyOut = Bind<Vec::CopyOut<T>, Placeholder::Out0<T>, OpFastGelu>;
     // 指定输出节点
@@ -74,7 +74,7 @@ struct FastGeluNeedCast {
     // 通过Compute构造计算图
     using OpCopyIn = Bind<Vec::CopyIn<T>, Placeholder::In0<T>>; // x
     using CastIn = Bind<Vec::Cast<float, T, 0>, OpCopyIn>;
-    using OpFastGelu = Bind<FastGeluCustom<float>, CastIn>;
+    using OpFastGelu = Bind<FastGeluCustom<float, false>, CastIn>;
 
     using CastOut = Bind<Vec::Cast<T, float, 1>, OpFastGelu>;
     using OpCopyOut = Bind<Vec::CopyOut<T>, Placeholder::Out0<T>, CastOut>;
