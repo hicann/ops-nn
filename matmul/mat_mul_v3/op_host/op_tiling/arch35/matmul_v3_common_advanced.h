@@ -54,6 +54,8 @@ constexpr uint64_t L1_SINGLE_SIZE_LIMIT = 48 * 1024UL;
 constexpr uint64_t THOUSAND_NUM = 1000;
 constexpr uint64_t KB_SIZE = 1024;
 constexpr uint64_t MIN_TATL_BLOCK_SIZE = 1024;
+constexpr double CUBE_BOUND_RATIO = 0.85;
+constexpr double EPSILON = 1e-9;
 
 struct BatchMatMulV3RunInfo {
     uint64_t iterBatch = 0UL;

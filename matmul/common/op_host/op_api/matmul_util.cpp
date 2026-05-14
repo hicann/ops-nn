@@ -2449,7 +2449,7 @@ bool DefaultMatMulRule::CheckInput(const aclTensor* matA, const aclTensor* matB,
 
 aclnnStatus DefaultMatMulRule::PromoteDtype(
     const aclTensor* matA, const aclTensor* matB, const aclTensor* bias, const aclTensor* out, int8_t cubeMathType,
-    struct MmOpInfo& mmOpInfo, bool isFusion) {
+    struct MmOpInfo& mmOpInfo, [[maybe_unused]] bool isFusion) {
         // 输入数据类型
         mmOpInfo.ori_info.self_dtype = matA->GetDataType();
         mmOpInfo.ori_info.mat2_dtype = matB->GetDataType();

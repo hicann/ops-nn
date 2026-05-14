@@ -13,6 +13,7 @@
  * \brief
  */
 
+#include <cmath>
 #include "matmul_v3_tiling_helper.h"
 #include "matmul/common/op_host/math_util.h"
 #include "platform/platform_infos_def.h"
@@ -215,8 +216,8 @@ const static std::map<NpuArch, GetStepSmallKFunc> GetStepSmallKFuncMap = {
     {NpuArch::DAV_3510, GetStepSmallKDav3510},
 };
 
-uint64_t GetMaxBaseWithLimit(
-    const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args, const MatMulV3RunInfo& runInfo,
+static uint64_t GetMaxBaseWithLimit(
+    const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
     uint64_t baseMNBufferLimit, uint64_t baseAlignUnit, bool isRightMatrix, bool isMemoryBound)
 {
     uint64_t shapeValue = isRightMatrix ? args.nValue : args.mValue;
@@ -246,7 +247,7 @@ uint64_t GetMaxBaseWithLimit(
     return maxBaseBlock;
 }
 
-double GetBalanceRateWithTail(const MatMulV3Args& args, uint64_t usedCoreNum, uint64_t baseM, uint64_t baseN)
+static double GetBalanceRateWithTail(const MatMulV3Args& args, uint64_t usedCoreNum, uint64_t baseM, uint64_t baseN)
 {
     // 考虑尾轮优化负载均衡率，仅针对cubebound场景生效
     uint64_t batch = args.batchInfo == nullptr ? 1 : args.batchInfo->batchA;
@@ -265,7 +266,7 @@ double GetBalanceRateWithTail(const MatMulV3Args& args, uint64_t usedCoreNum, ui
     return (static_cast<double>(args.mValue) * args.nValue / usedCoreNum) / ((mainRound + tailRound) * baseM * baseN);
 }
 
-void GetBaseK(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args, MatMulV3RunInfo& runInfo)
+static void GetBaseK(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args, MatMulV3RunInfo& runInfo)
 {
     uint64_t kValueAlign = ops::CeilAlign(static_cast<uint64_t>(args.kValue), BASIC_BLOCK_SIZE_16);
     uint64_t maxBaseK = compileInfo.l0ASize / DB_SIZE / args.aDtypeSize / std::max(runInfo.baseM, runInfo.baseN);
@@ -398,9 +399,9 @@ void MatMulV3TilingHelper::GetRebalanceBlock(const MatmulV3CompileInfo& compileI
         OP_LOGE(context->GetNodeName(), "platformInfo is null");
         return;
     }
-    double hbmBW = GetHbmBW(compileInfo, args, platformInfo);
-    double l2BW = GetL2BW(compileInfo, args, platformInfo);
-    double singleCoreComputePower = GetCoreFreq(compileInfo, args, platformInfo) * NUM_EIGHT;
+    double hbmBW = GetHbmBW(platformInfo);
+    double l2BW = GetL2BW(platformInfo);
+    double singleCoreComputePower = GetCoreFreq(platformInfo) * NUM_EIGHT;
     // balanceRateEdge用于判断是否取得最优解，进行减枝
     double balanceRateEdge = 0.9;
     double cmr = (static_cast<double>(args.mValue) + args.nValue) / (static_cast<double>(args.mValue) * args.nValue);
@@ -428,24 +429,24 @@ void MatMulV3TilingHelper::GetRebalanceBlock(const MatmulV3CompileInfo& compileI
     uint64_t innerAlignUnit = isMemoryBound ? BASIC_BLOCK_SIZE_128 : BASIC_BLOCK_SIZE_64;
 
     // fixpipe bound场景下，要求baseN是256B对齐，发挥搬出带宽
-    uint64_t fixpBoundEdge = (args.mValue * args.nValue * hbmBW) / ((args.mValue + args.nValue) * l2BW);
+    double fixpBoundEdge = (args.mValue * args.nValue * hbmBW) / ((args.mValue + args.nValue) * l2BW);
     uint64_t baseMAlignUnit = args.isATrans ? innerAlignUnit / args.aDtypeSize : BASIC_BLOCK_SIZE_16;
-    uint64_t baseNAlignUnit = (args.kValue < fixpBoundEdge) ?
+    uint64_t baseNAlignUnit = (static_cast<double>(args.kValue) < fixpBoundEdge) ?
                                   (BASIC_BLOCK_K_256_BYTE / args.bDtypeSize) :
                                   (args.isBTrans ? BASIC_BLOCK_SIZE_16 : innerAlignUnit / args.bDtypeSize);
 
     // 计算候选解集的上界
     uint64_t maxBaseM =
-        GetMaxBaseWithLimit(compileInfo, args, runInfo, baseMNBufferLimit, baseMAlignUnit, false, isMemoryBound);
+        GetMaxBaseWithLimit(compileInfo, args, baseMNBufferLimit, baseMAlignUnit, false, isMemoryBound);
     uint64_t maxBaseN =
-        GetMaxBaseWithLimit(compileInfo, args, runInfo, baseMNBufferLimit, baseNAlignUnit, true, isMemoryBound);
+        GetMaxBaseWithLimit(compileInfo, args, baseMNBufferLimit, baseNAlignUnit, true, isMemoryBound);
 
     runInfo.baseM = std::max(BASIC_BLOCK_SIZE_16, std::min(maxBaseM, BASIC_BLOCK_SIZE_256));
     runInfo.baseN = std::max(
         BASIC_BLOCK_SIZE_16,
         std::min(maxBaseN, ops::FloorAlign(baseMNBufferLimit / DATA_SIZE_FP32 / runInfo.baseM, baseNAlignUnit)));
     runInfo.cubeBoundParam = (1.0 / runInfo.baseM) + (1.0 / runInfo.baseN);
-    runInfo.cubeBoundEdge = runInfo.cubeBoundEdge * 0.85;
+    runInfo.cubeBoundEdge = runInfo.cubeBoundEdge * CUBE_BOUND_RATIO;
     double balanceRate = GetBalanceRateWithTail(args, runInfo.usedCoreNum, runInfo.baseM, runInfo.baseN);
 
     for (uint64_t curBaseM = maxBaseM; curBaseM >= 1 && curBaseM <= maxBaseM; curBaseM -= baseMAlignUnit) {
@@ -463,7 +464,7 @@ void MatMulV3TilingHelper::GetRebalanceBlock(const MatmulV3CompileInfo& compileI
             bool cubeBoundCond = curCubeBoundParam <= runInfo.cubeBoundEdge && curBalanceRate > balanceRate;
             // 综合评选负载均衡和计算访存能力
             bool balanceCond = ((curCubeBoundParam / curBalanceRate) < (runInfo.cubeBoundParam / balanceRate)) ||
-                               ((curCubeBoundParam / curBalanceRate == runInfo.cubeBoundParam / balanceRate) &&
+                               ((std::abs(curCubeBoundParam / curBalanceRate - runInfo.cubeBoundParam / balanceRate) < EPSILON) &&
                                 curBalanceRate > balanceRate);
             if (cubeBoundCond || balanceCond) {
                 runInfo.baseM = curBaseM;
@@ -483,30 +484,25 @@ void MatMulV3TilingHelper::GetRebalanceBlock(const MatmulV3CompileInfo& compileI
     runInfo.mixInfo.ubDB = runInfo.baseM * runInfo.baseN * DATA_SIZE_FP32 <= compileInfo.ubSize ? DB_SIZE : 1UL;
 }
 
-double MatMulV3TilingHelper::GetHbmBW(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
-                                      fe::PlatFormInfos* platformInfo)
+double MatMulV3TilingHelper::GetHbmBW(fe::PlatFormInfos* platformInfo)
 {
     std::string coreCntStr = "32";
     std::string ddrRateStr = "31";
     platformInfo->GetPlatformRes("SoCInfo", "ai_core_cnt", coreCntStr);
     platformInfo->GetPlatformRes("AICoreMemoryRates", "ddr_rate", ddrRateStr);
-    return GetCoreFreq(compileInfo, args, platformInfo) * std::atoi(coreCntStr.c_str()) *
-           std::atoi(ddrRateStr.c_str()) / KB_SIZE;
+    return GetCoreFreq(platformInfo) * std::atoi(coreCntStr.c_str()) * std::atoi(ddrRateStr.c_str()) / KB_SIZE;
 }
 
-double MatMulV3TilingHelper::GetL2BW(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
-                                     fe::PlatFormInfos* platformInfo)
+double MatMulV3TilingHelper::GetL2BW(fe::PlatFormInfos* platformInfo)
 {
     std::string coreCntStr = "32";
     std::string l2RateStr = "100";
     platformInfo->GetPlatformRes("SoCInfo", "ai_core_cnt", coreCntStr);
     platformInfo->GetPlatformRes("AICoreMemoryRates", "l2_rate", l2RateStr);
-    return GetCoreFreq(compileInfo, args, platformInfo) * std::atoi(coreCntStr.c_str()) * std::atoi(l2RateStr.c_str()) /
-           KB_SIZE;
+    return GetCoreFreq(platformInfo) * std::atoi(coreCntStr.c_str()) * std::atoi(l2RateStr.c_str()) / KB_SIZE;
 }
 
-double MatMulV3TilingHelper::GetCoreFreq(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
-                                         fe::PlatFormInfos* platformInfo)
+double MatMulV3TilingHelper::GetCoreFreq(fe::PlatFormInfos* platformInfo)
 {
     std::string freqStr = "1650";
     platformInfo->GetPlatformRes("AICoreSpec", "cube_freq", freqStr);

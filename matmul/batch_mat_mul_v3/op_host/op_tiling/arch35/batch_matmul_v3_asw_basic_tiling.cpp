@@ -159,6 +159,7 @@ void BatchMatMulV3AswBasicTiling::CalL1Tiling(const MatmulV3CompileInfo& compile
         uint64_t curKL1 = runInfo.baseK * stepK;
         uint64_t aL1Size = runInfo.baseM * curKL1 * args.aDtypeSize;
         uint64_t bL1Size = runInfo.baseN * curKL1 * args.bDtypeSize;
+        //表达式中的2代表让aL1/bL1仅使用一半的L1 Size，避免bank冲突
         if ((aL1Size + bL1Size) * DB_SIZE > totalL1Size ||
             std::max(aL1Size, bL1Size) * DB_SIZE * 2 > compileInfo.l1Size) {
             break;
