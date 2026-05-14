@@ -22,6 +22,7 @@
 #include "../inc/kernel_utils.h"
 #include "adaptive_avg_pool2d_struct.h"
 
+#include "simt_api/asc_simt.h"
 using namespace AscendC;
 
 namespace AdaptiveAvgPool2dOp {
@@ -80,8 +81,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AdaptiveAvgPool2dNch
    )
 {
     OFFSET_T count = nDims * cDims * outH * outW;
-    for (OFFSET_T index = Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx(); index < count;
-         index += Simt::GetBlockNum() * Simt::GetThreadNum()) {
+    for (OFFSET_T index = blockIdx.x * blockDim.x + threadIdx.x; index < count;
+         index += gridDim.x * blockDim.x) {
         OFFSET_T wDiv = Simt::UintDiv(index, magicOW, shiftOW);
         OFFSET_T wOutIndex = index - wDiv * outW;      //w= index % outW
         OFFSET_T hDiv = Simt::UintDiv(wDiv, magicOH, shiftOH);
@@ -133,8 +134,8 @@ __aicore__ inline void AdaptiveAvgPool2dSimt<VALUE_T, OFFSET_T>::Process()
     auto xData = (__gm__ VALUE_T *)x_.GetPhyAddr();
     auto yData = (__gm__ VALUE_T *)y_.GetPhyAddr();
 
-    Simt::VF_CALL<AdaptiveAvgPool2dNchw<VALUE_T, OFFSET_T>>(
-        Simt::Dim3(tilingData_->threads),
+    asc_vf_call<AdaptiveAvgPool2dNchw<VALUE_T, OFFSET_T>>(
+        dim3(tilingData_->threads),
         xData, yData,
         magicOsizeH, shiftOsizeH,
         magicOsizeW, shiftOsizeW,

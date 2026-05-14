@@ -20,6 +20,7 @@
 #include "../inc/platform.h"
 #include "max_pool3d_grad_struct.h"
 
+#include "simt_api/asc_simt.h"
 #ifdef __CCE_KT_TEST__
 #define LAUNCH_BOUND(threads)
 #endif
@@ -46,7 +47,7 @@ namespace MaxPool3DGrad {
     template <typename VALUE_T, typename PROCESS_T>
     __simt_callee__ __aicore__ inline static void CycleUpdate(VALUE_T val, PROCESS_T idxOffset, VALUE_T *maxVal, PROCESS_T *maxIdx)
     {
-        if ((static_cast<VALUE_T>(val) > *maxVal) || Simt::IsNan(static_cast<float>(val))) {
+        if ((static_cast<VALUE_T>(val) > *maxVal) || isnan(static_cast<float>(val))) {
             *maxIdx = idxOffset;
             *maxVal = val;
         }
@@ -104,8 +105,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void MaxPool3DNcdhw(const
                                                                                __gm__ VAL_T* topData, __gm__ IDX_T* topMask, int32_t blockIdx, int32_t blockNum, FASTDIV_T m0, FASTDIV_T shift0,
                                                                                FASTDIV_T m1, FASTDIV_T shift1, FASTDIV_T m2, FASTDIV_T shift2)
 {
-    for (FASTDIV_T index = blockIdx * Simt::GetThreadNum() + Simt::GetThreadIdx(); index < count;
-         index = index + blockNum * Simt::GetThreadNum()) {
+    for (FASTDIV_T index = blockIdx * blockDim.x + threadIdx.x; index < count;
+         index = index + blockNum * blockDim.x) {
         FASTDIV_T dim0Idx = Simt::UintDiv(index, m0, shift0);
         FASTDIV_T pw = index - dim0Idx * outputWidth;
         FASTDIV_T dim1Idx = Simt::UintDiv(dim0Idx, m1, shift1);
@@ -152,8 +153,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void MaxPool3DNdhwc(const
                                                                                __gm__ VAL_T* topData, __gm__ IDX_T* topMask, int32_t blockIdx, int32_t blockNum, FASTDIV_T m0, FASTDIV_T shift0,
                                                                                FASTDIV_T m1, FASTDIV_T shift1, FASTDIV_T m2, FASTDIV_T shift2, FASTDIV_T m3, FASTDIV_T shift3)
 {
-    for (FASTDIV_T index = blockIdx * Simt::GetThreadNum() + Simt::GetThreadIdx(); index < count;
-         index = index + blockNum * Simt::GetThreadNum()) {
+    for (FASTDIV_T index = blockIdx * blockDim.x + threadIdx.x; index < count;
+         index = index + blockNum * blockDim.x) {
         FASTDIV_T dim0Idx = Simt::UintDiv(index, m0, shift0);
         FASTDIV_T c = index - dim0Idx * channels;
         FASTDIV_T dim1Idx = Simt::UintDiv(dim0Idx, m1, shift1);
@@ -240,8 +241,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void MaxPool3DGradWithArg
     OFFSET_T shiftStrideW = simtParams[MAGIC_STRIDE_W_IDX + 1];
     using DIV_T = typename std::conditional<std::is_same<OFFSET_T, int32_t>::value, uint32_t, uint64_t>::type;
     DIV_T count = tilingData_->nDim * tilingData_->cDim * tilingData_->dInDim * tilingData_->hInDim * tilingData_->wInDim;
-    for (DIV_T index = Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx(); index < count;
-         index += Simt::GetBlockNum() * Simt::GetThreadNum()) {
+    for (DIV_T index = blockIdx.x * blockDim.x + threadIdx.x; index < count;
+         index += gridDim.x * blockDim.x) {
         DIV_T temp1 = Simt::UintDiv(index, static_cast<DIV_T>(magicW), static_cast<DIV_T>(shiftW));
         DIV_T w = index - temp1 * static_cast<DIV_T>(tilingData_->wInDim);
         DIV_T temp2 = Simt::UintDiv(temp1, static_cast<DIV_T>(magicH), static_cast<DIV_T>(shiftH));
@@ -296,8 +297,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void MaxPool3DGradWithArg
     OFFSET_T shiftStrideW = simtParam[MAGIC_STRIDE_W_IDX + 1];
     using DIV_T = typename std::conditional<std::is_same<OFFSET_T, int32_t>::value, uint32_t, uint64_t>::type;
     DIV_T count = tilingData_->nDim * tilingData_->cDim * tilingData_->dInDim * tilingData_->hInDim * tilingData_->wInDim;
-    for (DIV_T index = Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx(); index < count;
-         index += Simt::GetBlockNum() * Simt::GetThreadNum()) {
+    for (DIV_T index = blockIdx.x * blockDim.x + threadIdx.x; index < count;
+         index += gridDim.x * blockDim.x) {
         DIV_T temp1 = Simt::UintDiv(index, static_cast<DIV_T>(magicC), static_cast<DIV_T>(shiftC));
         DIV_T c = index - temp1 * static_cast<DIV_T>(tilingData_->cDim);
         DIV_T temp2 = Simt::UintDiv(temp1, static_cast<DIV_T>(magicW), static_cast<DIV_T>(shiftW));
@@ -345,7 +346,7 @@ __aicore__ inline void MaxPool3DGradSimtKernel<VALUE_T, INDICES_T, Format_T, use
         GetUintDivMagicAndShift(m_[DIM_0], shift_[DIM_0], static_cast<uint32_t>(tilingData_->wOutDim));
         GetUintDivMagicAndShift(m_[DIM_1], shift_[DIM_1], static_cast<uint32_t>(tilingData_->hOutDim));
         GetUintDivMagicAndShift(m_[DIM_2], shift_[DIM_2], static_cast<uint32_t>(tilingData_->dOutDim));
-        Simt::VF_CALL<MaxPool3DNcdhw<VALUE_T, INDICES_T, int32_t, uint32_t>>(Simt::Dim3(THREAD_DIM),
+        asc_vf_call<MaxPool3DNcdhw<VALUE_T, INDICES_T, int32_t, uint32_t>>(dim3(THREAD_DIM),
                                                                         totalSize, inputData, 
                                                                         tilingData_->dInDim, tilingData_->hInDim, tilingData_->wInDim, 
                                                                         tilingData_->dOutDim, tilingData_->hOutDim, tilingData_->wOutDim, 
@@ -362,7 +363,7 @@ __aicore__ inline void MaxPool3DGradSimtKernel<VALUE_T, INDICES_T, Format_T, use
         GetUintDivMagicAndShift(m_[DIM_1], shift_[DIM_1], static_cast<uint32_t>(tilingData_->wOutDim));
         GetUintDivMagicAndShift(m_[DIM_2], shift_[DIM_2], static_cast<uint32_t>(tilingData_->hOutDim));
         GetUintDivMagicAndShift(m_[DIM_3], shift_[DIM_3], static_cast<uint32_t>(tilingData_->dOutDim));
-        Simt::VF_CALL<MaxPool3DNdhwc<VALUE_T, INDICES_T, int32_t, uint32_t>>(Simt::Dim3(THREAD_DIM),
+        asc_vf_call<MaxPool3DNdhwc<VALUE_T, INDICES_T, int32_t, uint32_t>>(dim3(THREAD_DIM),
                                                                         totalSize, inputData, tilingData_->cDim, 
                                                                         tilingData_->dInDim, tilingData_->hInDim, tilingData_->wInDim, 
                                                                         tilingData_->dOutDim, tilingData_->hOutDim, tilingData_->wOutDim, 
@@ -378,7 +379,7 @@ __aicore__ inline void MaxPool3DGradSimtKernel<VALUE_T, INDICES_T, Format_T, use
         GetUintDivMagicAndShift(m_[DIM_0], shift_[DIM_0], static_cast<uint64_t>(tilingData_->wOutDim));
         GetUintDivMagicAndShift(m_[DIM_1], shift_[DIM_1], static_cast<uint64_t>(tilingData_->hOutDim));
         GetUintDivMagicAndShift(m_[DIM_2], shift_[DIM_2], static_cast<uint64_t>(tilingData_->dOutDim));
-        Simt::VF_CALL<MaxPool3DNcdhw<VALUE_T, INDICES_T, int64_t, uint64_t>>(Simt::Dim3(THREAD_DIM),
+        asc_vf_call<MaxPool3DNcdhw<VALUE_T, INDICES_T, int64_t, uint64_t>>(dim3(THREAD_DIM),
                                                                         totalSize, inputData, 
                                                                         tilingData_->dInDim, tilingData_->hInDim, tilingData_->wInDim, 
                                                                         tilingData_->dOutDim, tilingData_->hOutDim, tilingData_->wOutDim, 
@@ -395,7 +396,7 @@ __aicore__ inline void MaxPool3DGradSimtKernel<VALUE_T, INDICES_T, Format_T, use
         GetUintDivMagicAndShift(m_[DIM_1], shift_[DIM_1], static_cast<uint64_t>(tilingData_->wOutDim));
         GetUintDivMagicAndShift(m_[DIM_2], shift_[DIM_2], static_cast<uint64_t>(tilingData_->hOutDim));
         GetUintDivMagicAndShift(m_[DIM_3], shift_[DIM_3], static_cast<uint64_t>(tilingData_->dOutDim));
-        Simt::VF_CALL<MaxPool3DNdhwc<VALUE_T, INDICES_T, int64_t, uint64_t>>(Simt::Dim3(THREAD_DIM),
+        asc_vf_call<MaxPool3DNdhwc<VALUE_T, INDICES_T, int64_t, uint64_t>>(dim3(THREAD_DIM),
                                                                         totalSize, inputData, tilingData_->cDim, 
                                                                         tilingData_->dInDim, tilingData_->hInDim, tilingData_->wInDim, 
                                                                         tilingData_->dOutDim, tilingData_->hOutDim, tilingData_->wOutDim, 
@@ -455,11 +456,11 @@ __aicore__ inline void MaxPool3DGradSimtKernel<VALUE_T, INDICES_T, Format_T, use
     auto indicesData = (__gm__ INDICES_T *)argmax_.GetPhyAddr();
 
     if constexpr (Format_T == 1) {
-        Simt::VF_CALL<MaxPool3DGradWithArgmaxNdhwc<VALUE_T, INDICES_T, OFFSET_T>>(
-            Simt::Dim3(THREAD_DIM), (__ubuf__ OFFSET_T *)simtParam.GetPhyAddr(), gradData, (__ubuf__ Pool3DGradNameSpace::MaxPool3DGradSimtTilingData*)(simtTilingData.GetPhyAddr()), outputData, indicesData);
+        asc_vf_call<MaxPool3DGradWithArgmaxNdhwc<VALUE_T, INDICES_T, OFFSET_T>>(
+            dim3(THREAD_DIM), (__ubuf__ OFFSET_T *)simtParam.GetPhyAddr(), gradData, (__ubuf__ Pool3DGradNameSpace::MaxPool3DGradSimtTilingData*)(simtTilingData.GetPhyAddr()), outputData, indicesData);
     } else if (Format_T == 0) {
-        Simt::VF_CALL<MaxPool3DGradWithArgmaxNcdhw<VALUE_T, INDICES_T, OFFSET_T>>(
-            Simt::Dim3(THREAD_DIM), (__ubuf__ OFFSET_T *)simtParam.GetPhyAddr(), gradData, (__ubuf__ Pool3DGradNameSpace::MaxPool3DGradSimtTilingData*)(simtTilingData.GetPhyAddr()), outputData, indicesData);
+        asc_vf_call<MaxPool3DGradWithArgmaxNcdhw<VALUE_T, INDICES_T, OFFSET_T>>(
+            dim3(THREAD_DIM), (__ubuf__ OFFSET_T *)simtParam.GetPhyAddr(), gradData, (__ubuf__ Pool3DGradNameSpace::MaxPool3DGradSimtTilingData*)(simtTilingData.GetPhyAddr()), outputData, indicesData);
     }
 }
 

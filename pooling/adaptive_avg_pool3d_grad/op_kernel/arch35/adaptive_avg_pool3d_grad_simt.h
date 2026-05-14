@@ -17,6 +17,7 @@
 #define ADAPTIVE_AVG_POOL3D_GRAD_SIMT_H
 
 #include "kernel_operator.h"
+#include "simt_api/asc_simt.h"
 #include "../inc/load_store_utils.h"
 #include "../inc/platform.h"
 #include "../inc/kernel_utils.h"
@@ -142,10 +143,10 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AdaptiveAvgPool3dGra
         static_cast<INDEX_T>(inW);
 
     const INDEX_T threadStart =
-        static_cast<INDEX_T>(Simt::GetBlockIdx()) * static_cast<INDEX_T>(Simt::GetThreadNum()) +
-        static_cast<INDEX_T>(Simt::GetThreadIdx());
+        static_cast<INDEX_T>(blockIdx.x) * static_cast<INDEX_T>(blockDim.x) +
+        static_cast<INDEX_T>(threadIdx.x);
     const INDEX_T threadStride =
-        static_cast<INDEX_T>(Simt::GetBlockNum()) * static_cast<INDEX_T>(Simt::GetThreadNum());
+        static_cast<INDEX_T>(gridDim.x) * static_cast<INDEX_T>(blockDim.x);
 
     for (INDEX_T index = threadStart; index < count; index += threadStride) {
         const INDEX_T temp1 = index / static_cast<INDEX_T>(inW);
@@ -240,10 +241,10 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void AdaptiveAvgPool3dGra
         static_cast<INDEX_T>(cDims);
 
     const INDEX_T threadStart =
-        static_cast<INDEX_T>(Simt::GetBlockIdx()) * static_cast<INDEX_T>(Simt::GetThreadNum()) +
-        static_cast<INDEX_T>(Simt::GetThreadIdx());
+        static_cast<INDEX_T>(blockIdx.x) * static_cast<INDEX_T>(blockDim.x) +
+        static_cast<INDEX_T>(threadIdx.x);
     const INDEX_T threadStride =
-        static_cast<INDEX_T>(Simt::GetBlockNum()) * static_cast<INDEX_T>(Simt::GetThreadNum());
+        static_cast<INDEX_T>(gridDim.x) * static_cast<INDEX_T>(blockDim.x);
 
     for (INDEX_T index = threadStart; index < count; index += threadStride) {
         const INDEX_T temp1 = index / static_cast<INDEX_T>(cDims);
@@ -312,11 +313,11 @@ __aicore__ inline void LaunchAdaptiveAvgPool3dGradSimtKernel(
     __gm__ VALUE_T* gradX)
 {
     if constexpr (CHANNEL_LAST == 1) {
-        Simt::VF_CALL<AdaptiveAvgPool3dGradNdhwc<VALUE_T, OFFSET_T>>(
-            Simt::Dim3(THREAD_DIM), simtParams, gradY, nDims, cDims, inD, inH, inW, outD, outH, outW, gradX);
+        asc_vf_call<AdaptiveAvgPool3dGradNdhwc<VALUE_T, OFFSET_T>>(
+            dim3(THREAD_DIM), simtParams, gradY, nDims, cDims, inD, inH, inW, outD, outH, outW, gradX);
     } else {
-        Simt::VF_CALL<AdaptiveAvgPool3dGradNcdhw<VALUE_T, OFFSET_T>>(
-            Simt::Dim3(THREAD_DIM), simtParams, gradY, nDims, cDims, inD, inH, inW, outD, outH, outW, gradX);
+        asc_vf_call<AdaptiveAvgPool3dGradNcdhw<VALUE_T, OFFSET_T>>(
+            dim3(THREAD_DIM), simtParams, gradY, nDims, cDims, inD, inH, inW, outD, outH, outW, gradX);
     }
 }
 

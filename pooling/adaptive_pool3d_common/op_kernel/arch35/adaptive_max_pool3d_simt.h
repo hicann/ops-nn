@@ -21,6 +21,7 @@
 #include "../inc/platform.h"
 #include "../inc/kernel_utils.h"
 #include "adaptive_pool3d_tiling_struct.h"
+#include "simt_api/asc_simt.h"
 
 #ifdef __CCE_KT_TEST__
 #define LAUNCH_BOUND(threads)
@@ -56,8 +57,8 @@ namespace AdaptivePool3DWithSimt{
                                                                                 FORMAT_T height, FORMAT_T width, FORMAT_T outputNc, FORMAT_T outputDep,  FORMAT_T outputHeight, FORMAT_T outputWidth, 
                                                                                __gm__ VALUE_T* valueData, __gm__ INDICES_T* indicesData,
                                                                                DIV_T magicDHW, DIV_T shiftDHW, DIV_T magicD, DIV_T shiftD, DIV_T magicH, DIV_T shiftH, DIV_T magicW, DIV_T shiftW) {
-        for (DIV_T index = Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx(); index < count;
-            index += Simt::GetBlockNum() * Simt::GetThreadNum()) {
+        for (DIV_T index = blockIdx.x * blockDim.x + threadIdx.x; index < count;
+            index += gridDim.x * blockDim.x) {
             DIV_T ncId = Simt::UintDiv<DIV_T>(index, magicDHW, shiftDHW); 
             DIV_T indexIdx = index - ncId * outputNc;
             DIV_T dim0Idx = Simt::UintDiv<DIV_T>(indexIdx, magicW, shiftW); 
@@ -80,7 +81,7 @@ namespace AdaptivePool3DWithSimt{
                     for (FORMAT_T w = startInW; w < endInW; ++w) {
                         FORMAT_T idxOffset = d * height * width + h * width + w;
                         VALUE_T val = static_cast<VALUE_T>(ncStartData[idxOffset]);
-                        if ((static_cast<VALUE_T>(val) > maxVal) || Simt::IsNan(static_cast<float>(val))) {
+                        if ((static_cast<VALUE_T>(val) > maxVal) || isnan(static_cast<float>(val))) {
                             maxIdx = idxOffset;
                             maxVal = val;
                         }
@@ -173,7 +174,7 @@ __aicore__ inline void AdaptivePool3DSimt<VALUE_T, INDICES_T, FORMAT_T, DIV_T>::
     GetUintDivMagicAndShift<DIV_T>(magicH, shiftH, tilingData_->hOutDim);
     GetUintDivMagicAndShift<DIV_T>(magicW, shiftW, tilingData_->wOutDim);
     if constexpr (std::is_same<FORMAT_T, int32_t>::value && std::is_same<DIV_T, uint32_t>::value){
-        Simt::VF_CALL<AdaptiveMaxPool3DNcdhwFunc<VALUE_T, INDICES_T, FORMAT_T, DIV_T>>(Simt::Dim3(THREAD_DIM), static_cast<FORMAT_T>(totalSize), inputData, ncSize, static_cast<FORMAT_T>(tilingData_->dInDim), static_cast<FORMAT_T>(tilingData_->hInDim), static_cast<FORMAT_T>(tilingData_->wInDim),
+        asc_vf_call<AdaptiveMaxPool3DNcdhwFunc<VALUE_T, INDICES_T, FORMAT_T, DIV_T>>(dim3(THREAD_DIM), static_cast<FORMAT_T>(totalSize), inputData, ncSize, static_cast<FORMAT_T>(tilingData_->dInDim), static_cast<FORMAT_T>(tilingData_->hInDim), static_cast<FORMAT_T>(tilingData_->wInDim),
                                                                         static_cast<FORMAT_T>(dhw), static_cast<FORMAT_T>(tilingData_->dOutDim), static_cast<FORMAT_T>(tilingData_->hOutDim), static_cast<FORMAT_T>(tilingData_->wOutDim), outputData, indicesData,
                                                                         magicDHW, shiftDHW, magicD, shiftD, magicH, shiftH, magicW, shiftW
                                                                         );
@@ -188,7 +189,7 @@ __aicore__ inline void AdaptivePool3DSimt<VALUE_T, INDICES_T, FORMAT_T, DIV_T>::
         SimtParam.SetValue(DIV_W_IDX, static_cast<DIV_T>(magicW));
         SimtParam.SetValue(DIV_W_IDX + 1, static_cast<DIV_T>(shiftW));
         DataSyncBarrier<MemDsbT::UB>();
-        Simt::VF_CALL<AdaptiveMaxPool3DNcdhwUb<VALUE_T, INDICES_T, FORMAT_T, DIV_T>>(Simt::Dim3(THREAD_DIM),static_cast<FORMAT_T>(totalSize), inputData, ncSize, static_cast<FORMAT_T>(tilingData_->dInDim), static_cast<FORMAT_T>(tilingData_->hInDim), static_cast<FORMAT_T>(tilingData_->wInDim),
+        asc_vf_call<AdaptiveMaxPool3DNcdhwUb<VALUE_T, INDICES_T, FORMAT_T, DIV_T>>(dim3(THREAD_DIM),static_cast<FORMAT_T>(totalSize), inputData, ncSize, static_cast<FORMAT_T>(tilingData_->dInDim), static_cast<FORMAT_T>(tilingData_->hInDim), static_cast<FORMAT_T>(tilingData_->wInDim),
                                                                         static_cast<FORMAT_T>(dhw), static_cast<FORMAT_T>(tilingData_->dOutDim), static_cast<FORMAT_T>(tilingData_->hOutDim), static_cast<FORMAT_T>(tilingData_->wOutDim), outputData, indicesData,
                                                                         (__ubuf__ DIV_T*)SimtParam.GetPhyAddr()
                                                                         );

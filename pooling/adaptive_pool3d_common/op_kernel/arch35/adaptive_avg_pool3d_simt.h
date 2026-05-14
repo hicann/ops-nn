@@ -21,6 +21,7 @@
 #include "../inc/platform.h"
 #include "../inc/kernel_utils.h"
 #include "adaptive_pool3d_tiling_struct.h"
+#include "simt_api/asc_simt.h"
 
 #ifdef __CCE_KT_TEST__
 #define LAUNCH_BOUND(threads)
@@ -60,8 +61,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USE_THREAD_NUM) inline void AdaptiveAvgPool3
     __ubuf__ AdaptivePool3DTiling::AdaptivePool3DSimtTilingData* tilingData, __ubuf__ DIV_T* uintDivData)
 {
     DIV_T outputSize = tilingData->nDim * tilingData->cDim * tilingData->dOutDim * tilingData->hOutDim * tilingData->wOutDim;
-    for (DIV_T idxOut = Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx(); idxOut < outputSize;
-        idxOut += Simt::GetBlockNum() * Simt::GetThreadNum()) {
+    for (DIV_T idxOut = blockIdx.x * blockDim.x + threadIdx.x; idxOut < outputSize;
+        idxOut += gridDim.x * blockDim.x) {
         DIV_T divW = Simt::UintDiv<DIV_T>(idxOut, uintDivData[IDX0], uintDivData[IDX1]);
         DIV_T divH = Simt::UintDiv<DIV_T>(divW, uintDivData[IDX2], uintDivData[IDX3]);
         DIV_T divD = Simt::UintDiv<DIV_T>(divH, uintDivData[IDX4], uintDivData[IDX5]);
@@ -96,8 +97,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USE_THREAD_NUM) inline void AdaptiveAvgPool3
     __ubuf__ AdaptivePool3DTiling::AdaptivePool3DSimtTilingData* tilingData, __ubuf__ DIV_T* uintDivData)
 {
     DIV_T outputSize = tilingData->nDim * tilingData->cDim * tilingData->dOutDim * tilingData->hOutDim * tilingData->wOutDim;
-    for (DIV_T idxOut = Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx(); idxOut < outputSize;
-        idxOut += Simt::GetBlockNum() * Simt::GetThreadNum()) {
+    for (DIV_T idxOut = blockIdx.x * blockDim.x + threadIdx.x; idxOut < outputSize;
+        idxOut += gridDim.x * blockDim.x) {
         DIV_T divC = Simt::UintDiv<DIV_T>(idxOut, uintDivData[IDX6], uintDivData[IDX7]);
         DIV_T divW = Simt::UintDiv<DIV_T>(divC, uintDivData[IDX0], uintDivData[IDX1]);
         DIV_T divH = Simt::UintDiv<DIV_T>(divW, uintDivData[IDX2], uintDivData[IDX3]);
@@ -192,12 +193,12 @@ __aicore__ inline void AdaptiveAvgPool3DSimt<X_T, DIV_T, FORMAT_TYPE>::Process()
         GetUintDivMagicAndShift<DIV_T>(magicC, shiftC, tilingDataLocal(IDX1));
         uintDivLocal.SetValue(IDX6, static_cast<DIV_T>(magicC));
         uintDivLocal.SetValue(IDX7, static_cast<DIV_T>(shiftC));
-        Simt::VF_CALL<AdaptiveAvgPool3DNdSimtCompute<X_T, DIV_T>>(Simt::Dim3(USE_THREAD_NUM), 
+        asc_vf_call<AdaptiveAvgPool3DNdSimtCompute<X_T, DIV_T>>(dim3(USE_THREAD_NUM), 
             (__gm__ X_T*)x_.GetPhyAddr(), (__gm__ X_T*)y_.GetPhyAddr(), 
             (__ubuf__ AdaptivePool3DTiling::AdaptivePool3DSimtTilingData*)(tilingDataLocal.GetPhyAddr()),
             (__ubuf__ DIV_T*)(uintDivLocal.GetPhyAddr()));
     } else if constexpr (FORMAT_TYPE == 1) {
-        Simt::VF_CALL<AdaptiveAvgPool3DNcSimtCompute<X_T, DIV_T>>(Simt::Dim3(USE_THREAD_NUM), 
+        asc_vf_call<AdaptiveAvgPool3DNcSimtCompute<X_T, DIV_T>>(dim3(USE_THREAD_NUM), 
             (__gm__ X_T*)x_.GetPhyAddr(), (__gm__ X_T*)y_.GetPhyAddr(), 
             (__ubuf__ AdaptivePool3DTiling::AdaptivePool3DSimtTilingData*)(tilingDataLocal.GetPhyAddr()),
             (__ubuf__ DIV_T*)(uintDivLocal.GetPhyAddr()));
