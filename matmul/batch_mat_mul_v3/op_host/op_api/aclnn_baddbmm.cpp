@@ -213,6 +213,7 @@ static const aclTensor* bmmProcessEmptyTensor(const aclTensor* self, const aclTe
     // 获取self的第1维度、第2维度和mat2的最后1维度作为输出shape
     op::Shape outShape = {selfShape.GetDim(0), selfShape.GetDim(1), mat2Shape.GetDim(2)};
     auto out = executor->AllocTensor(outShape, self->GetDataType());
+    OP_CHECK_NULL(out, return nullptr);
     OP_LOGI("Returning an empty tensor without actually doing calculation");
     return out;
 }

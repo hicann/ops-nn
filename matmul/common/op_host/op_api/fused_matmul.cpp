@@ -29,6 +29,7 @@ static const aclTensor* FusedMatMulCommon(
 {
     L0_DFX(FusedMatMulCommon, x1, x2, bias, x3, transposeX1, transposeX2, enableHf32, fusedOpType);
     auto mm_out = executor->AllocTensor(output_dtype, output_format, output_ori_format);
+    OP_CHECK_NULL(mm_out, return nullptr);
     auto ret = INFER_SHAPE(
         FusedMatMul, OP_INPUT(x1, x2, bias, x3), OP_OUTPUT(mm_out),
         OP_ATTR(transposeX1, transposeX2, enableHf32, fusedOpType));

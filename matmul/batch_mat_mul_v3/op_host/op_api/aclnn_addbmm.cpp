@@ -221,6 +221,7 @@ static const aclTensor* addBmmProcessEmptyTensor(const aclTensor* self, const ac
     // 获取self的第2维度和mat2的最后1维度作为输出shape
     op::Shape outShape = {selfShape.GetDim(1), mat2Shape.GetDim(2)};
     auto out = executor->AllocTensor(outShape, self->GetDataType());
+    OP_CHECK_NULL(out, return nullptr);
     OP_LOGI("Returning an empty tensor without actually doing calculation");
     return out;
 }
@@ -231,7 +232,9 @@ const aclTensor* addBmmProcessBroadcastSelf(
     std::vector<int64_t> tensorShape{(batch1->GetViewShape())[SECOND_DIM], (batch2->GetViewShape())[THIRD_DIM]};
     int64_t tensorSize = tensorShape.size();
     auto outShape = executor->AllocIntArray(tensorShape.data(), tensorSize);
+    OP_CHECK_NULL(outShape, return nullptr);
     auto out = l0op::BroadcastTo(self, outShape, executor);
+    OP_CHECK_NULL(out, return nullptr);
     return out;
 }
 
@@ -242,9 +245,9 @@ static const aclTensor* SelfMulsBetaProcess(const aclTensor* self, const aclScal
     if (self != nullptr && self->GetDataType() == op::DataType::DT_BF16) {
         selfContiguous = l0op::Cast(selfContiguous, op::DataType::DT_FLOAT, executor);
     }
-    CHECK_RET(selfContiguous != nullptr, nullptr);
+    OP_CHECK_NULL(selfContiguous, return nullptr);
     const aclTensor* mulOut = l0op::Muls(selfContiguous, beta->ToFloat(), executor);
-    CHECK_RET(mulOut != nullptr, nullptr);
+    OP_CHECK_NULL(mulOut, return nullptr);
     return mulOut;
 }
 
