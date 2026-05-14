@@ -487,8 +487,9 @@
 
 ## 约束说明
 
-- 确定性计算：
-  - aclnnScatterValue&aclnnInplaceScatterValue默认确定性实现。
+确定性说明:
+- <term>Ascend 950PR/Ascend 950DT</term>： 默认非确定性, 支持通过aclrtCtxSetSysParamOpt开启确定性（当reduciton为累乘场景，开启确定性也不生效，依旧为非确定性）。
+- <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：默认确定性。 
 
 ## 调用示例
 
