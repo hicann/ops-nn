@@ -17,6 +17,7 @@
 
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
+#include "simt_api/asc_simt.h"
 
 namespace MaxPool3DSimt {
 using namespace AscendC;
@@ -133,11 +134,11 @@ __aicore__ inline void MaxPool3DSimtImpl<X_T, TYPE_T, FORMAT_TYPE>::Process()
 
     DataSyncBarrier<MemDsbT::UB>();
     if constexpr (FORMAT_TYPE == 0) {
-        Simt::VF_CALL<MaxPool3dNcSimtCompute<X_T, TYPE_T, FORMAT_TYPE>>(Simt::Dim3(THREAD_NUM), 
+        asc_vf_call<MaxPool3dNcSimtCompute<X_T, TYPE_T, FORMAT_TYPE>>(dim3(THREAD_NUM), 
             (__gm__ X_T*)x_.GetPhyAddr(), (__gm__ X_T*)y_.GetPhyAddr(), (__ubuf__ MaxPool3DSimtTilingData*)(SimtTilingData.GetPhyAddr()),
             (__ubuf__ TYPE_T*)(MaxPool3DSimtParam.GetPhyAddr()));
     } else if constexpr (FORMAT_TYPE == 1) {
-        Simt::VF_CALL<MaxPool3dNdSimtCompute<X_T, TYPE_T, FORMAT_TYPE>>(Simt::Dim3(THREAD_NUM), 
+        asc_vf_call<MaxPool3dNdSimtCompute<X_T, TYPE_T, FORMAT_TYPE>>(dim3(THREAD_NUM), 
             (__gm__ X_T*)x_.GetPhyAddr(), (__gm__ X_T*)y_.GetPhyAddr(), (__ubuf__ MaxPool3DSimtTilingData*)(SimtTilingData.GetPhyAddr()),
             (__ubuf__ TYPE_T*)(MaxPool3DSimtParam.GetPhyAddr()));
     }
@@ -156,8 +157,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void MaxPool3dNcSimtCompu
 
     using DIV_T = typename std::conditional<std::is_same<TYPE_T, int32_t>::value, uint32_t, uint64_t>::type;
     TYPE_T outSize = SimtTilingData->nDim * SimtTilingData->cDim * SimtTilingData->dOutDim * SimtTilingData->hOutDim * SimtTilingData->wOutDim;
-    for (DIV_T i = Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx(); i < outSize;
-        i += Simt::GetBlockNum() * Simt::GetThreadNum()) {
+    for (DIV_T i = blockIdx.x * blockDim.x + threadIdx.x; i < outSize;
+        i += gridDim.x * blockDim.x) {
         DIV_T quotientW = Simt::UintDiv<DIV_T>(i, magicW, shiftW);
         DIV_T quotientH = Simt::UintDiv<DIV_T>(quotientW, magicH, shiftH);
         DIV_T quotientD = Simt::UintDiv<DIV_T>(quotientH, magicD, shiftD);
@@ -168,9 +169,9 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void MaxPool3dNcSimtCompu
         TYPE_T dStart = pd * SimtTilingData->sD - SimtTilingData->fPad;
         TYPE_T hStart = ph * SimtTilingData->sH - SimtTilingData->tPad;
         TYPE_T wStart = pw * SimtTilingData->sW - SimtTilingData->lPad;
-        TYPE_T dEnd = Simt::Min(dStart + (TYPE_T)(SimtTilingData->kD - 1) * (TYPE_T)SimtTilingData->dD + 1, (TYPE_T)SimtTilingData->dInDim);
-        TYPE_T hEnd = Simt::Min(hStart + (TYPE_T)(SimtTilingData->kH - 1) * (TYPE_T)SimtTilingData->dH + 1, (TYPE_T)SimtTilingData->hInDim);
-        TYPE_T wEnd = Simt::Min(wStart + (TYPE_T)(SimtTilingData->kW - 1) * (TYPE_T)SimtTilingData->dW + 1, (TYPE_T)SimtTilingData->wInDim);
+        TYPE_T dEnd = min(dStart + (TYPE_T)(SimtTilingData->kD - 1) * (TYPE_T)SimtTilingData->dD + 1, (TYPE_T)SimtTilingData->dInDim);
+        TYPE_T hEnd = min(hStart + (TYPE_T)(SimtTilingData->kH - 1) * (TYPE_T)SimtTilingData->dH + 1, (TYPE_T)SimtTilingData->hInDim);
+        TYPE_T wEnd = min(wStart + (TYPE_T)(SimtTilingData->kW - 1) * (TYPE_T)SimtTilingData->dW + 1, (TYPE_T)SimtTilingData->wInDim);
 
         while (dStart < 0)
             dStart += SimtTilingData->dD;
@@ -186,7 +187,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void MaxPool3dNcSimtCompu
                 for (TYPE_T w = wStart; w < wEnd; w += SimtTilingData->dW) {
                     TYPE_T idxOffset = d * SimtTilingData->hInDim * SimtTilingData->wInDim + h * SimtTilingData->wInDim + w;
                     float val = static_cast<float>(xData[idxOffset]);
-                    if ((static_cast<float>(val) > maxval) || Simt::IsNan<float>(val)) {
+                    if ((static_cast<float>(val) > maxval) || isnan(val)) {
                         maxval = val;
                     }
                 }
@@ -211,8 +212,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void MaxPool3dNdSimtCompu
 
     using DIV_T = typename std::conditional<std::is_same<TYPE_T, int32_t>::value, uint32_t, uint64_t>::type;
     TYPE_T outSize = SimtTilingData->nDim * SimtTilingData->cDim * SimtTilingData->dOutDim * SimtTilingData->hOutDim * SimtTilingData->wOutDim;
-    for (DIV_T i = Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx(); i < outSize;
-        i += Simt::GetBlockNum() * Simt::GetThreadNum()) {
+    for (DIV_T i = blockIdx.x * blockDim.x + threadIdx.x; i < outSize;
+        i += gridDim.x * blockDim.x) {
         DIV_T quotientC = Simt::UintDiv<DIV_T>(i, magicC, shiftC);
         DIV_T quotientW = Simt::UintDiv<DIV_T>(quotientC, magicW, shiftW);
         DIV_T quotientH = Simt::UintDiv<DIV_T>(quotientW, magicH, shiftH);
@@ -225,9 +226,9 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void MaxPool3dNdSimtCompu
         TYPE_T dStart = pd * SimtTilingData->sD - SimtTilingData->fPad;
         TYPE_T hStart = ph * SimtTilingData->sH - SimtTilingData->tPad;
         TYPE_T wStart = pw * SimtTilingData->sW - SimtTilingData->lPad;
-        TYPE_T dEnd = Simt::Min(dStart + (TYPE_T)(SimtTilingData->kD - 1) * (TYPE_T)SimtTilingData->dD + 1, (TYPE_T)SimtTilingData->dInDim);
-        TYPE_T hEnd = Simt::Min(hStart + (TYPE_T)(SimtTilingData->kH - 1) * (TYPE_T)SimtTilingData->dH + 1, (TYPE_T)SimtTilingData->hInDim);
-        TYPE_T wEnd = Simt::Min(wStart + (TYPE_T)(SimtTilingData->kW - 1) * (TYPE_T)SimtTilingData->dW + 1, (TYPE_T)SimtTilingData->wInDim);
+        TYPE_T dEnd = min(dStart + (TYPE_T)(SimtTilingData->kD - 1) * (TYPE_T)SimtTilingData->dD + 1, (TYPE_T)SimtTilingData->dInDim);
+        TYPE_T hEnd = min(hStart + (TYPE_T)(SimtTilingData->kH - 1) * (TYPE_T)SimtTilingData->dH + 1, (TYPE_T)SimtTilingData->hInDim);
+        TYPE_T wEnd = min(wStart + (TYPE_T)(SimtTilingData->kW - 1) * (TYPE_T)SimtTilingData->dW + 1, (TYPE_T)SimtTilingData->wInDim);
 
         while (dStart < 0)
             dStart += SimtTilingData->dD;
@@ -243,7 +244,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM) inline void MaxPool3dNdSimtCompu
                 for (TYPE_T w = wStart; w < wEnd; w += SimtTilingData->dW) {
                     TYPE_T idxOffset = d * SimtTilingData->hInDim * SimtTilingData->wInDim + h * SimtTilingData->wInDim + w;
                     float val = static_cast<float>(xData[idxOffset * SimtTilingData->cDim + pc]);
-                    if ((static_cast<float>(val) > maxval) || Simt::IsNan<float>(val)) {
+                    if ((static_cast<float>(val) > maxval) || isnan(val)) {
                         maxval = val;
                     }
                 }
