@@ -18,6 +18,7 @@
 
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
+#include "simt_api/asc_simt.h"
 #ifdef __CCE_KT_TEST__
 #define LAUNCH_BOUND(threads)
 #endif
@@ -156,14 +157,14 @@ __aicore__ inline void MaxPoolGradWithArgmaxSimt<VALUE_T, INDICES_T, Format_T, F
     auto indicesData = (__gm__ INDICES_T*)argmax_.GetPhyAddr();
 
     if constexpr (Format_T == NCHW_FORMAT) {
-        Simt::VF_CALL<MaxPoolGradWithArgmaxNchw<VALUE_T, INDICES_T, FORMAT_TYPE>>(
-            Simt::Dim3(SimtProc::THREAD_DIM),
+        asc_vf_call<MaxPoolGradWithArgmaxNchw<VALUE_T, INDICES_T, FORMAT_TYPE>>(
+            dim3(SimtProc::THREAD_DIM),
             (__ubuf__ FORMAT_TYPE*)SimtParam.GetPhyAddr(), gradData, SimtTilingData(0), SimtTilingData(1), SimtTilingData(2), SimtTilingData(3),  
             SimtTilingData(4), SimtTilingData(5), SimtTilingData(6), SimtTilingData(7), SimtTilingData(8), SimtTilingData(9), SimtTilingData(10), 
             SimtTilingData(11), outputData, indicesData);
     } else if constexpr (Format_T == NHWC_FORMAT) {
-        Simt::VF_CALL<MaxPoolGradWithArgmaxNhwc<VALUE_T, INDICES_T, FORMAT_TYPE>>(
-            Simt::Dim3(SimtProc::THREAD_DIM),
+        asc_vf_call<MaxPoolGradWithArgmaxNhwc<VALUE_T, INDICES_T, FORMAT_TYPE>>(
+            dim3(SimtProc::THREAD_DIM),
             (__ubuf__ FORMAT_TYPE*)SimtParam.GetPhyAddr(), gradData, SimtTilingData(0), SimtTilingData(1), SimtTilingData(2), SimtTilingData(3),  
             SimtTilingData(4), SimtTilingData(5), SimtTilingData(6), SimtTilingData(7), SimtTilingData(8), SimtTilingData(9), SimtTilingData(10), 
             SimtTilingData(11), outputData, indicesData);
@@ -195,9 +196,9 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SimtProc::THREAD_DIM) inline void MaxPoolGra
     FORMAT_TYPE shiftC       = SimtParam[9];
     using DIV_T = typename std::conditional<std::is_same<FORMAT_TYPE, int32_t>::value, uint32_t, uint64_t>::type;
     DIV_T count = nDims * cDims * hDims * wDims;
-    for (DIV_T index = Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx();
+    for (DIV_T index = blockIdx.x * blockDim.x + threadIdx.x;
         index < count;
-        index += Simt::GetBlockNum() * Simt::GetThreadNum()) {
+        index += gridDim.x * blockDim.x) {
 
         DIV_T temp1 = Simt::UintDiv(index, static_cast<DIV_T>(magicW), static_cast<DIV_T>(shiftW));
         DIV_T w = index - temp1 * static_cast<DIV_T>(wDims);
@@ -251,8 +252,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SimtProc::THREAD_DIM) inline void MaxPoolGra
     FORMAT_TYPE shiftStrideW = SimtParam[7];
 
     DIV_T count = nDim * hDim * cDim * wDim;
-    for (DIV_T index = Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx(); index < count;
-        index += Simt::GetBlockNum() * Simt::GetThreadNum()) {
+    for (DIV_T index = blockIdx.x * blockDim.x + threadIdx.x; index < count;
+        index += gridDim.x * blockDim.x) {
                 
         DIV_T spatial_idx = Simt::UintDiv(index, static_cast<DIV_T>(magicC), static_cast<DIV_T>(shiftC));
         DIV_T c = index - spatial_idx * static_cast<DIV_T>(cDim);

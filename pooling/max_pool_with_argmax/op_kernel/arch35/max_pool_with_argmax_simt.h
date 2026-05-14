@@ -20,6 +20,7 @@
 #include "kernel_tiling/kernel_tiling.h"
 
 #include "max_pool_with_argmax_struct_common.h"
+#include "simt_api/asc_simt.h"
 
 #ifdef __CCE_KT_TEST__
 #define LAUNCH_BOUND(threads)
@@ -55,7 +56,7 @@ class MaxPoolWithArgmaxSimt {
 public:
     __aicore__ inline MaxPoolWithArgmaxSimt(
         const MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData* __restrict tilingData)
-        : tilingData_(tilingData), blockIdx_(GetBlockIdx()), blockNum_(GetBlockNum())
+        : tilingData_(tilingData), blockIdxVal_(GetBlockIdx()), blockNumVal_(GetBlockNum())
     {}
 
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR argmax);
@@ -76,8 +77,8 @@ private:
     AscendC::GlobalTensor<VALUE_T> y_;
     AscendC::GlobalTensor<INDICES_T> argmax_;
     const MaxPoolWithArgmaxCommonStructNameSpace::MaxPoolWithArgmaxSimtTilingCommonData* tilingData_;
-    uint32_t blockIdx_ = 0;
-    uint32_t blockNum_ = 1;
+    uint32_t blockIdxVal_ = 0;
+    uint32_t blockNumVal_ = 1;
 };
 
 template <typename VALUE_T, typename INDICES_T, const uint32_t FORMAT_T, const bool ISINT64INDEX, const uint32_t NANPROP_T>
@@ -100,10 +101,10 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SimtProc::THREAD_DIM) inline void MaxPoolFor
     const int64_t count, const __gm__ VALUE_T* bottomData, const int64_t channels, const int64_t height,
     const int64_t width, const int64_t outputHeight, const int64_t outputWidth, const int64_t kernelH, const int64_t kernelW,
     const int64_t strideH, const int64_t strideW, const int64_t padH, const int64_t padW, __gm__ VALUE_T* topData,
-    __gm__ INDICES_T* topMask, uint32_t blockIdx, uint32_t blockNum, const int64_t includeBatchInIndex)
+    __gm__ INDICES_T* topMask, uint32_t blockIdxVal, uint32_t blockNumVal, const int64_t includeBatchInIndex)
 {
-    for (TYPE_T index = blockIdx * Simt::GetThreadNum() + Simt::GetThreadIdx(); index < count;
-         index = index + blockNum * Simt::GetThreadNum()) {
+    for (TYPE_T index = blockIdxVal * blockDim.x + threadIdx.x; index < count;
+         index = index + blockNumVal * blockDim.x) {
         TYPE_T pw = index % outputWidth;
         TYPE_T ph = (index / outputWidth) % outputHeight;
         TYPE_T c = (index / outputWidth / outputHeight) % channels;
@@ -136,10 +137,10 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SimtProc::THREAD_DIM) inline void MaxPoolFor
     const int64_t count, const __gm__ VALUE_T* bottomData, const int64_t channels, const int64_t height,
     const int64_t width, const int64_t outputHeight, const int64_t outputWidth, const int64_t kernelH, const int64_t kernelW,
     const int64_t strideH, const int64_t strideW, const int64_t padH, const int64_t padW, __gm__ VALUE_T* topData,
-    __gm__ INDICES_T* topMask, uint32_t blockIdx, uint32_t blockNum, const int64_t includeBatchInIndex)
+    __gm__ INDICES_T* topMask, uint32_t blockIdxVal, uint32_t blockNumVal, const int64_t includeBatchInIndex)
 {
-    for (TYPE_T index = blockIdx * Simt::GetThreadNum() + Simt::GetThreadIdx(); index < count;
-         index = index + blockNum * Simt::GetThreadNum()) {
+    for (TYPE_T index = blockIdxVal * blockDim.x + threadIdx.x; index < count;
+         index = index + blockNumVal * blockDim.x) {
         TYPE_T c = index % channels;
         TYPE_T pw = (index / channels) % outputWidth;
         TYPE_T ph = (index / channels / outputWidth) % outputHeight;
@@ -194,24 +195,24 @@ __aicore__ inline void MaxPoolWithArgmaxSimt<VALUE_T, INDICES_T, FORMAT_T, ISINT
     auto indicesData = (__gm__ INDICES_T*)argmax_.GetPhyAddr();
     int64_t count = nbatch * channels * outputHeight * outputWidth;
     if constexpr (FORMAT_T == 0 && !ISINT64INDEX) {
-        Simt::VF_CALL<MaxPoolForwardNchw<VALUE_T, INDICES_T, int32_t, NANPROP_T>>(
-            Simt::Dim3(SimtProc::THREAD_DIM), count, inputData, channels, height, width, outputHeight,
-            outputWidth, kSizeH, kSizeW, stridesH, stridesW, padH, padW, outputData, indicesData, blockIdx_, blockNum_,
+        asc_vf_call<MaxPoolForwardNchw<VALUE_T, INDICES_T, int32_t, NANPROP_T>>(
+            dim3(SimtProc::THREAD_DIM), count, inputData, channels, height, width, outputHeight,
+            outputWidth, kSizeH, kSizeW, stridesH, stridesW, padH, padW, outputData, indicesData, blockIdxVal_, blockNumVal_,
             includeBatchInIndex);
     } else if constexpr (FORMAT_T == 1 && !ISINT64INDEX) {
-        Simt::VF_CALL<MaxPoolForwardNhwc<VALUE_T, INDICES_T, int32_t, NANPROP_T>>(
-            Simt::Dim3(SimtProc::THREAD_DIM), count, inputData, channels, height, width, outputHeight,
-            outputWidth, kSizeH, kSizeW, stridesH, stridesW, padH, padW, outputData, indicesData, blockIdx_, blockNum_,
+        asc_vf_call<MaxPoolForwardNhwc<VALUE_T, INDICES_T, int32_t, NANPROP_T>>(
+            dim3(SimtProc::THREAD_DIM), count, inputData, channels, height, width, outputHeight,
+            outputWidth, kSizeH, kSizeW, stridesH, stridesW, padH, padW, outputData, indicesData, blockIdxVal_, blockNumVal_,
             includeBatchInIndex);
     } else if constexpr (FORMAT_T == 0 && ISINT64INDEX) {
-        Simt::VF_CALL<MaxPoolForwardNchw<VALUE_T, INDICES_T, int64_t, NANPROP_T>>(
-            Simt::Dim3(SimtProc::THREAD_DIM), count, inputData, channels, height, width, outputHeight,
-            outputWidth, kSizeH, kSizeW, stridesH, stridesW, padH, padW, outputData, indicesData, blockIdx_, blockNum_,
+        asc_vf_call<MaxPoolForwardNchw<VALUE_T, INDICES_T, int64_t, NANPROP_T>>(
+            dim3(SimtProc::THREAD_DIM), count, inputData, channels, height, width, outputHeight,
+            outputWidth, kSizeH, kSizeW, stridesH, stridesW, padH, padW, outputData, indicesData, blockIdxVal_, blockNumVal_,
             includeBatchInIndex);
     } else if constexpr (FORMAT_T == 1 && ISINT64INDEX) {
-        Simt::VF_CALL<MaxPoolForwardNhwc<VALUE_T, INDICES_T, int64_t, NANPROP_T>>(
-            Simt::Dim3(SimtProc::THREAD_DIM), count, inputData, channels, height, width, outputHeight,
-            outputWidth, kSizeH, kSizeW, stridesH, stridesW, padH, padW, outputData, indicesData, blockIdx_, blockNum_,
+        asc_vf_call<MaxPoolForwardNhwc<VALUE_T, INDICES_T, int64_t, NANPROP_T>>(
+            dim3(SimtProc::THREAD_DIM), count, inputData, channels, height, width, outputHeight,
+            outputWidth, kSizeH, kSizeW, stridesH, stridesW, padH, padW, outputData, indicesData, blockIdxVal_, blockNumVal_,
             includeBatchInIndex);
     }
 }

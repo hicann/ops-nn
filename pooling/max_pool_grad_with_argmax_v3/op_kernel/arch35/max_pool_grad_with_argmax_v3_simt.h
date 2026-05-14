@@ -19,6 +19,7 @@
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
 
+#include "simt_api/asc_simt.h"
 #ifdef __CCE_KT_TEST__
 #define LAUNCH_BOUND(threads)
 #endif
@@ -121,8 +122,8 @@ __aicore__ inline void MaxPoolGradWithArgmaxV3Simt<VALUE_T, INDICES_T, Format_T,
     auto gradData = (__gm__ VALUE_T*)grad_.GetPhyAddr();
     auto outputData = (__gm__ VALUE_T*)y_.GetPhyAddr();
     auto indicesData = (__gm__ INDICES_T*)argmax_.GetPhyAddr();
-    Simt::VF_CALL<MaxPoolGradWithArgmaxNchw<VALUE_T, INDICES_T, FORMAT_TYPE, DIV_T>>(
-        Simt::Dim3(SimtProc::THREAD_DIM), (__ubuf__ DIV_T*)SimtParam.GetPhyAddr(), gradData, count,
+    asc_vf_call<MaxPoolGradWithArgmaxNchw<VALUE_T, INDICES_T, FORMAT_TYPE, DIV_T>>(
+        dim3(SimtProc::THREAD_DIM), (__ubuf__ DIV_T*)SimtParam.GetPhyAddr(), gradData, count,
         static_cast<FORMAT_TYPE>(tilingData_->hInDim), static_cast<FORMAT_TYPE>(tilingData_->wInDim),
         static_cast<FORMAT_TYPE>(tilingData_->hOutDim), static_cast<FORMAT_TYPE>(tilingData_->wOutDim),
         static_cast<FORMAT_TYPE>(tilingData_->kSizeH), static_cast<FORMAT_TYPE>(tilingData_->kSizeW),
@@ -146,8 +147,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SimtProc::THREAD_DIM) inline void MaxPoolGra
     DIV_T magicStrideW = SimtParam[6];
     DIV_T shiftStrideW = SimtParam[7];
 
-    for (FORMAT_TYPE index = Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx(); index < count;
-        index = index + Simt::GetBlockNum() * Simt::GetThreadNum()) {
+    for (FORMAT_TYPE index = blockIdx.x * blockDim.x + threadIdx.x; index < count;
+        index = index + gridDim.x * blockDim.x) {
         DIV_T nc = Simt::UintDiv<DIV_T>(index, magicHW, shiftHW);
         DIV_T tempH = index - nc * hDim * wDim;
         DIV_T h = Simt::UintDiv<DIV_T>(tempH, magicW, shiftW);
