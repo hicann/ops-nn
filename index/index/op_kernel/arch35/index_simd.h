@@ -209,7 +209,7 @@ template <typename INDICES_T>
 __aicore__ inline uint64_t IndexSimd<INDICES_T>::GetIndicesEndIdx(uint64_t (&shapeI)[8])
 {
     if (tilingData_->isZeroOneZero && shapeI[0] > 0) {
-        return tilingData_->indexSize;
+        return tilingData_->indexSize - 1;
     } else {
         for (int32_t i = 0; i < tilingData_->mergeOutputShapeDim - 1; i++) {
             if (tilingData_->mergeOutToInput[i] == -1) {
@@ -217,7 +217,7 @@ __aicore__ inline uint64_t IndexSimd<INDICES_T>::GetIndicesEndIdx(uint64_t (&sha
             }
         }
     }
-    return tilingData_->indexSize;
+    return tilingData_->indexSize - 1;
 }
 
 template <typename INDICES_T>
@@ -227,7 +227,7 @@ __aicore__ inline void IndexSimd<INDICES_T>::NoSplitColProcess(int64_t colsAlign
     int64_t loopNum = (currentCoreElements_ + onceMaxRows - 1) / onceMaxRows;
 
     int64_t yStart = yOffsetBase_;
-    int64_t yEnd = yOffsetBase_ + currentCoreElements_;
+    int64_t yEnd = yOffsetBase_ + currentCoreElements_ - 1;
     uint64_t shapeI[8]{};
     SetShapeI(shapeI, yEnd);
     uint64_t indiceEndIdx = GetIndicesEndIdx(shapeI);
@@ -292,7 +292,7 @@ template <typename INDICES_T>
 __aicore__ inline void IndexSimd<INDICES_T>::SplitColProcess(int64_t colsAlign)
 {
     int64_t yStart = yOffsetBase_;
-    int64_t yEnd = yOffsetBase_ + currentCoreElements_;
+    int64_t yEnd = yOffsetBase_ + currentCoreElements_ - 1;
     uint64_t shapeI[8]{};
     SetShapeI(shapeI, yEnd);
     uint64_t indiceEndIdx = GetIndicesEndIdx(shapeI);
