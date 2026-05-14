@@ -214,7 +214,6 @@ using GetStepSmallKFunc = uint64_t (*)(const MatMulV3Args&, const MatMulV3RunInf
 const static std::map<NpuArch, GetStepSmallKFunc> GetStepSmallKFuncMap = {
     {NpuArch::DAV_3510, GetStepSmallKDav3510},
 };
-}  // namespace
 
 uint64_t GetMaxBaseWithLimit(
     const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args, const MatMulV3RunInfo& runInfo,
@@ -290,6 +289,7 @@ void GetBaseK(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args, 
         }
     }
 }
+}  // namespace
 
 namespace optiling {
 namespace matmul_v3_advanced {
