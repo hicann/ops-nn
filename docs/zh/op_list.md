@@ -2303,9 +2303,29 @@
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
     <td>AI Core</td>
     <td>完成二级量化mxfp4的矩阵乘计算。</td>
+  </tr>
+  <tr>
+    <td>matmul</td>
+    <td><a href="../../matmul/fused_linear_cross_entropy_loss_grad/README.md">fused_linear_cross_entropy_loss_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>词汇表并行场景下交叉熵损失中的梯度计算实现。</td>
+  </tr>
+  <tr>
+    <td>matmul</td>
+    <td><a href="../../matmul/fused_linear_online_max_sum/README.md">fused_linear_online_max_sum</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>功能等价Megatron的matmul与fused_vocab_parallel_cross_entropy的实现。</td>
   </tr>
   <tr>
     <td>matmul</td>
@@ -2313,7 +2333,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
     <td>AI Core</td>
     <td>矩阵乘与通用向量计算融合。</td>
   </tr>
@@ -2323,7 +2343,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
     <td>AI Core</td>
     <td>量化矩阵乘与通用向量计算融合。</td>
   </tr>
@@ -2369,6 +2389,16 @@
   </tr>
   <tr>
     <td>matmul</td>
+    <td><a href="../../matmul/matmul_compress/README.md">matmul_compress</a></td>
+    <td>✗</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>完成无损压缩矩阵乘计算。</td>
+  </tr>
+  <tr>
+    <td>matmul</td>
     <td><a href="../../matmul/mv/README.md">mv</a></td>
     <td>✗</td>
     <td>✓</td>
@@ -2382,7 +2412,7 @@
     <td><a href="../../matmul/quant_batch_matmul_v3/README.md">quant_batch_matmul_v3</a></td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
     <td>✓</td>
     <td>AI Core</td>
     <td>完成量化的矩阵乘计算，最小支持输入维度为2维，最大支持输入维度为6维。</td>
@@ -2403,9 +2433,29 @@
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✓</td>
+    <td>✗</td>
     <td>AI Core</td>
     <td>完成量化的矩阵乘计算和原地累加。</td>
+  </tr>
+  <tr>
+    <td>matmul</td>
+    <td><a href="../../matmul/quant_matmul/README.md">quant_matmul</a></td>
+    <td>✗</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>完成量化的矩阵乘计算。</td>
+  </tr>
+  <tr>
+    <td>matmul</td>
+    <td><a href="../../matmul/quant_matmul_dequant/README.md">quant_matmul_dequant</a></td>
+    <td>✗</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>完成量化的矩阵乘计算后，进行反量化。</td>
   </tr>
   <tr>
     <td>matmul</td>
@@ -2439,6 +2489,16 @@
   </tr>
   <tr>
     <td>matmul</td>
+    <td><a href="../../matmul/sparse4to2quant_matmul/README.md">sparse4to2quant_matmul</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>完成稀疏4:2量化的矩阵乘计算。</td>
+  </tr>
+  <tr>
+    <td>matmul</td>
     <td><a href="../../matmul/transpose_batch_mat_mul/README.md">transpose_batch_mat_mul</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -2453,9 +2513,19 @@
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
     <td>AI Core</td>
     <td>完成张量x1与张量x2量化的矩阵乘计算。仅支持三维的Tensor传入。Tensor支持转置，转置序列根据传入的序列进行变更。permX1代表张量x1的转置序列，permX2代表张量x2的转置序列，序列值为0的是batch维度，其余两个维度做矩阵乘法。</td>
+  </tr>
+  <tr>
+    <td>matmul</td>
+    <td><a href="../../matmul/weight_quant_batch_matmul/README.md">weight_quant_batch_matmul</a></td>
+    <td>✗</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>完成一个输入为伪量化场景的矩阵乘计算，并可以实现对于输出的量化计算。</td>
   </tr>
   <tr>
     <td>matmul</td>
