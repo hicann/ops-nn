@@ -58,6 +58,7 @@ void IndexFillSimdTiling::CalcUsedCoreNum()
     }
 
     blockFactorQ_ = Ops::Base::CeilDiv(inputData.Q, usedCoreNumQ_);
+    usedCoreNumQ_ = Ops::Base::CeilDiv(inputData.Q, blockFactorQ_);
     blockTailQ_ = inputData.Q - blockFactorQ_ * (usedCoreNumQ_ - 1);
 
     usedCoreNum_ = usedCoreNumPN_ * usedCoreNumQ_;

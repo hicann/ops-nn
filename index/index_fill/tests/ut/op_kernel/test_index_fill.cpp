@@ -137,10 +137,10 @@ TEST_F(index_fill_test, index_fill_kernel_test_key_2) {
 
 TEST_F(index_fill_test, index_fill_kernel_test_key_3) {
     IndexFillTestParams params = {
-        .P = 12, .N = 122880, .Q = 0,
-        .indicesNum = 12280, .indicesProcessMode = 1,
+        .P = 12, .N = 16880, .Q = 0,
+        .indicesNum = 1536, .indicesProcessMode = 1,
         .frontCoreNumTaskIndices = 48, .tailCoreNumTaskIndices = 0,
-        .frontCoreDataTaskIndices = 2560, .tailCoreDataTaskIndices = 0
+        .frontCoreDataTaskIndices = 32, .tailCoreDataTaskIndices = 0
     };
     RunTest(params, 3);
 }

@@ -1508,6 +1508,16 @@
   </tr>
   <tr>
     <td>index</td>
+    <td><a href="../../index/index_fill/README.md">index_fill</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>在输入Tensor副本上指定维度dim，根据index填写特定的数value。</td>
+  </tr>
+  <tr>
+    <td>index</td>
     <td><a href="../../index/index_fill_d/README.md">index_fill_d</a></td>
     <td>✓</td>
     <td>✓</td>
