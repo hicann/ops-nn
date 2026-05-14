@@ -40,7 +40,6 @@ class Softplus : public OpDef {
                 .PrecisionReduceFlag(true)
                 .ExtendCfgInfo("opFile.value", "softplus_apt");
             this->AICore().AddConfig("ascend950", aicoreConfig);
-            this->AICore().AddConfig("mc62cm12a", aicoreConfig);
         }
 };
 

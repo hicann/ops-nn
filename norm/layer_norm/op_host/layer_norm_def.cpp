@@ -58,7 +58,6 @@ public:
               .DynamicShapeSupportFlag(true)
               .ExtendCfgInfo("opFile.value", "layer_norm_apt");
     this->AICore().AddConfig("ascend950", regbaseCfg);
-    this->AICore().AddConfig("mc62cm12a", regbaseCfg);
   }
 };
 

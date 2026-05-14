@@ -60,7 +60,6 @@ class ScatterNdAdd : public OpDef {
       .PrecisionReduceFlag(true)
       .ExtendCfgInfo("opFile.value", "scatter_nd_add_apt");
     this->AICore().AddConfig("ascend950", aicore_config);
-    this->AICore().AddConfig("mc62cm12a", aicore_config);
   }
 };
 

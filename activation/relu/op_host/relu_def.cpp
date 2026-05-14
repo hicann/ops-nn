@@ -42,7 +42,6 @@ class Relu : public OpDef {
                 .PrecisionReduceFlag(true)
                 .ExtendCfgInfo("opFile.value", "relu_apt");
             this->AICore().AddConfig("ascend950", aicoreConfig);
-            this->AICore().AddConfig("mc62cm12a", aicoreConfig);
         }
 };
 

@@ -53,7 +53,6 @@ public:
             .NeedCheckSupportFlag(false)
             .ExtendCfgInfo("opFile.value", "ascend_quant_apt");
         this->AICore().AddConfig("ascend950", config_950);
-        this->AICore().AddConfig("mc62cm12a", config_950);
     }
 };
 
