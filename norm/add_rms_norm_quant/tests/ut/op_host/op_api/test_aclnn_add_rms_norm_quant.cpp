@@ -432,3 +432,26 @@ TEST_F(l2_add_rms_norm_quant_test, ascend950PR_9589_case_stc_004)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
+
+// 测试只有zeroPoints2但没有scales2的场景
+TEST_F(l2_add_rms_norm_quant_test, ascend950PR_zeroPoints2_only_no_scales2)
+{
+    auto tensor_desc_x1 = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_x2 = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_gamma = TensorDesc({64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_s1 = TensorDesc({64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_z2 = TensorDesc({64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    
+    auto tensor_desc_y1 = TensorDesc({8, 64}, ACL_INT8, ACL_FORMAT_ND);
+    auto tensor_desc_y2 = TensorDesc({8, 64}, ACL_INT8, ACL_FORMAT_ND);
+    auto tensor_desc_x = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto ut = OP_API_UT(
+        aclnnAddRmsNormQuant,
+        INPUT(tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_s1,
+              (aclTensor*)nullptr, (aclTensor*)nullptr, tensor_desc_z2, -1, 1e-5, true),
+        OUTPUT(tensor_desc_y1, tensor_desc_y2, tensor_desc_x));
+
+    uint64_t workspace_size = 0;
+    EXPECT_EQ(ut.TestGetWorkspaceSize(&workspace_size), ACL_SUCCESS);
+}

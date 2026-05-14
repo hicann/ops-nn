@@ -9,6 +9,7 @@
  */
 
 #include "add_rms_norm_quant.h"
+#include "op_api/aclnn_util.h"
 #include "opdev/make_op_executor.h"
 #include "opdev/op_def.h"
 #include "opdev/op_dfx.h"
@@ -28,7 +29,9 @@ const std::array<aclTensor*, ADD_RMS_NORM_QUANT_OUT_NUM> AddRmsNormQuantInner(
     const aclTensor* scales2Optional, const aclTensor* zeroPoints1Optional, const aclTensor* zeroPoints2Optional,
     const aclTensor* betaOptional, int64_t axis, double epsilon, bool divMode, int dstType, aclOpExecutor* executor) 
 {
-    bool isDual = (nullptr != scales2Optional);
+    bool isDual = Ops::NN::AclnnUtil::IsRegbase()
+        ? ((nullptr != scales2Optional) || (nullptr != zeroPoints2Optional))
+        : (nullptr != scales2Optional);
     Shape dummyShape({1});
 
     auto y1Out = executor->AllocTensor(x1->GetViewShape(), op::DataType(dstType), op::Format::FORMAT_ND);
@@ -83,7 +86,9 @@ const std::array<aclTensor*, ADD_RMS_NORM_QUANT_OUT_NUM_V2> AddRmsNormQuantV2(
     int64_t axis, double epsilon, bool divMode, aclOpExecutor* executor)
 {
     OP_LOGD("AddRmsNormQuantV2 L0 Start.");
-    bool isDual = (nullptr != scales2Optional);
+    bool isDual = Ops::NN::AclnnUtil::IsRegbase()
+        ? ((nullptr != scales2Optional) || (nullptr != zeroPoints2Optional))
+        : (nullptr != scales2Optional);
     Shape dummyShape({1});
 
     L0_DFX(AddRmsNormQuantV2, x1, x2, gamma, bias, scales1, scales2Optional,
