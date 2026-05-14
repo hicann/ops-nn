@@ -352,9 +352,8 @@ bool Conv3DDXV2KernelSplitTiling::CheckBasicConstraints()
         return false;
     }
 
-    if (runInfo_.outBackpropFormat != ge::FORMAT_NCDHW || runInfo_.yFormat != ge::FORMAT_NCDHW ||
-        (runInfo_.filterFormat != ge::FORMAT_NCDHW && runInfo_.filterFormat != ge::FORMAT_NDHWC)) {
-        return false; // kernelsplit only support fmap_format and output_format NCDHW
+    if (runInfo_.filterFormat != ge::FORMAT_NCDHW && runInfo_.filterFormat != ge::FORMAT_NDHWC) {
+        return false;
     }
 
     bool isPadAlign = (runInfo_.pad_u == runInfo_.pad_d && runInfo_.pad_l == runInfo_.pad_r);
@@ -383,6 +382,10 @@ bool Conv3DDXV2KernelSplitTiling::CheckKernelSizeStrideMatch(
 
 bool Conv3DDXV2KernelSplitTiling::TryKernelSplitHW(uint32_t bestBaseMN)
 {
+    // 因为ub重排后搬出GM（NCDHW->NDHWC），数据必须32B对齐，无法实现
+    if (runInfo_.outBackpropFormat != ge::FORMAT_NCDHW || runInfo_.yFormat != ge::FORMAT_NCDHW) {
+        return false;
+    }
     constexpr int32_t kernelSplitStrideVal = 2; // 2:当前仅stride等于2的kernel拆分
     constexpr uint32_t splitKernelSize1 = 1;    // 1:当前支持kernel等于1, stride等于2的kernel拆分
     constexpr uint32_t splitKernelSize2 = 2;    // 2:当前支持kernel等于2, stride等于2的kernel拆分

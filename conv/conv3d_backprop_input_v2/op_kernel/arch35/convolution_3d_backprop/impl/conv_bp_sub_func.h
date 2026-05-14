@@ -562,7 +562,7 @@ static __aicore__ inline void LoadL0c2GmForNz2Nd(Intf *self, const GlobalTensor<
 
     // loop1_src_stride, c0_size,cin1
     fixPipeParams.srcStride = AlignUp16(self->ctx.baseUseM_); // src N stride, loop1_src_stride (unit: 32B)
-    // loop2_dst_stride, element, c
+    // loop2_dst_stride, element
     fixPipeParams.dstStride = self->ctx.tiling_->cin; // dst N stride, loop2_dst_stride (unit: element)
 
     if constexpr(std::is_same<typename Intf::DstT, bfloat16_t>::value) {
@@ -619,7 +619,23 @@ static __aicore__ inline void LoadL0c2GmForKernelSplitHFixPipe(Intf *self, const
 }
 
 template <class Intf>
-static __aicore__ inline void LoadL0c2GmForKernelSplitH(Intf *self, const GlobalTensor<typename Intf::DstT> &output,
+static __aicore__ inline void LoadL0c2GmRowForKernelSplitHFixPipe(Intf *self, const int64_t srcOffset, const int64_t dstOffset,
+    const GlobalTensor<typename Intf::DstT> &output, LocalTensor<typename Intf::L0cT> &useC1Buf,
+    FixpipeParamsC310<CO2Layout::ROW_MAJOR> &fixPipeParams)
+{
+    if (Intf::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT &&
+        self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
+        uint64_t scaleAddr = self->ctx.curNIdx_ * self->ctx.tiling_->baseN;
+        Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_ROW_MAJOR>(output[dstOffset],
+            useC1Buf[srcOffset], self->ctx.scaleL1Buf_[scaleAddr], fixPipeParams);
+    } else {
+        Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_ROW_MAJOR>(output[dstOffset],
+            useC1Buf[srcOffset], fixPipeParams);
+    }
+}
+
+template <class Intf>
+static __aicore__ inline void LoadL0c2GmDnForKernelSplitH(Intf *self, const GlobalTensor<typename Intf::DstT> &output,
     LocalTensor<typename Intf::L0cT> &useC1Buf)
 {
     // NZ (1, cin1, splithi, wi, cin0) -> DN (n, cin, di, splithi, wi)
@@ -646,7 +662,7 @@ static __aicore__ inline void LoadL0c2GmForKernelSplitH(Intf *self, const Global
     fixPipeParams.preReluMode = static_cast<ReluMode>(self->ctx.tiling_->enRelu);
 #endif
     int64_t srcOffset = 0;
-    // fixpipe->ub 需要分首块，中间块，尾块分别对齐到16，然后再搬到ub
+    // fixpipe->gm 需要分首块，中间块，尾块分别对齐到16，然后再搬到gm
     if (self->ctx.headWi_ != 0) { // 需要首块
         fixPipeParams.params.dnNum = 1; // not use
         fixPipeParams.params.srcNzMatrixStride = 0; // loop3_src_stride
@@ -654,7 +670,7 @@ static __aicore__ inline void LoadL0c2GmForKernelSplitH(Intf *self, const Global
 
         fixPipeParams.mSize = self->ctx.headWi_; // M: 首块的长度
         LoadL0c2GmForKernelSplitHFixPipe(self, srcOffset, dstOffset, output, useC1Buf, fixPipeParams);
-        // BLOCK_CUBE: MMAD一次计算为16*16, fixpipe搬到ub的时候取L0c的数据应该固定c0为16，不能随数据类型变化
+        // BLOCK_CUBE: MMAD一次计算为16*16, fixpipe搬到gm的时候取L0c的数据应该固定c0为16，不能随数据类型变化
         srcOffset += self->ctx.headWi_ * BLOCK_CUBE; // headWi_/2是一个子kernel首块w的长度
         dstOffset += self->ctx.headWi_ + skipDstOffset;
     }
@@ -666,7 +682,7 @@ static __aicore__ inline void LoadL0c2GmForKernelSplitH(Intf *self, const Global
 
         fixPipeParams.mSize = srcWi; // M: 中间块一行的长度
         LoadL0c2GmForKernelSplitHFixPipe(self, srcOffset, dstOffset, output, useC1Buf, fixPipeParams);
-        // BLOCK_CUBE: MMAD一次计算为16*16, fixpipe搬到ub的时候取L0c的数据应该固定c0为16，不能随数据类型变化
+        // BLOCK_CUBE: MMAD一次计算为16*16, fixpipe搬到gm的时候取L0c的数据应该固定c0为16，不能随数据类型变化
         srcOffset += self->ctx.midHi_ * srcWi * BLOCK_CUBE; // srcWi是一个子kernel中间块w的长度
         dstOffset += self->ctx.midHi_ * (fixPipeParams.params.dstDnMatrixStride);
     }
@@ -678,6 +694,71 @@ static __aicore__ inline void LoadL0c2GmForKernelSplitH(Intf *self, const Global
 
         fixPipeParams.mSize = self->ctx.tailWi_; // M: 尾块的长度
         LoadL0c2GmForKernelSplitHFixPipe(self, srcOffset, dstOffset, output, useC1Buf, fixPipeParams);
+    }
+}
+
+template <class Intf>
+static __aicore__ inline void LoadL0c2GmNdForKernelSplitH(
+    Intf* self, const GlobalTensor<typename Intf::DstT>& output, LocalTensor<typename Intf::L0cT>& useC1Buf)
+{
+    // NZ (1, cin1, splithi, wi, cin0) -> ND (n, di, splithi, wi, cin)
+    uint32_t mSize = self->ctx.curMIdx_ * self->ctx.tiling_->baseM;
+    int64_t skipDstOffset = self->ctx.tiling_->wi * (self->ctx.tiling_->strideH - 1) * self->ctx.tiling_->cin;
+    uint32_t curSkipMSize = (mSize / self->ctx.tiling_->wi) * skipDstOffset;
+    int64_t dstOffset = self->ctx.curNIdx_ * self->ctx.tiling_->baseN + // cin offset
+                        self->ctx.curDinIdx_ * self->ctx.hiWi_ * self->ctx.tiling_->cin + // di offset
+                        mSize * self->ctx.tiling_->cin + curSkipMSize; // hi&wi offset
+
+    uint64_t srcWi = (self->ctx.baseUseM_ < self->ctx.splitWi_) ? self->ctx.baseUseM_ : self->ctx.splitWi_;
+    CalcCutInWIndexForOnlyH<Intf>(self);
+
+    FixpipeParamsC310<CO2Layout::ROW_MAJOR> fixPipeParams;
+    SetFixPipeQuantVal<Intf, CO2Layout::ROW_MAJOR>(self, fixPipeParams);
+    fixPipeParams.nSize = self->ctx.baseUseN_; // N: cin
+    // loop1_src_stride, c0_size, cin1
+    fixPipeParams.srcStride = AlignUp16(self->ctx.baseUseM_); // src N stride, loop1_src_stride (unit: 32B)
+    // loop2_dst_stride, element, c
+    fixPipeParams.dstStride = self->ctx.tiling_->cin; // dst N stride, loop2_dst_stride (unit: element)
+#if (__NPU_ARCH__ == 5102)
+    fixPipeParams.reluEn = self->ctx.tiling_->enRelu;
+    fixPipeParams.preReluMode = static_cast<ReluMode>(self->ctx.tiling_->enRelu);
+#endif
+    int64_t srcOffset = 0;
+    if (self->ctx.headWi_ != 0) {             // 需要首块
+        fixPipeParams.params.ndNum = 1;       // not use
+        fixPipeParams.params.srcNdStride = 0; // loop3_src_stride
+        fixPipeParams.params.dstNdStride = 0; // loop3_dst_stride
+
+        fixPipeParams.mSize = self->ctx.headWi_; // M: 首块的长度
+        LoadL0c2GmRowForKernelSplitHFixPipe(
+            self, srcOffset, dstOffset, output, useC1Buf, fixPipeParams);
+        // BLOCK_CUBE: MMAD一次计算为16*16, fixpipe搬到gm的时候取L0c的数据应该固定c0为16，不能随数据类型变化
+        srcOffset += self->ctx.headWi_ * BLOCK_CUBE; // headWi_/2是一个子kernel首块w的长度
+        dstOffset += self->ctx.headWi_ * self->ctx.tiling_->cin + skipDstOffset;
+    }
+
+    if (self->ctx.midHi_ != 0) {                       // 需要中间块
+        fixPipeParams.params.ndNum = self->ctx.midHi_; // 循环中间块的行数
+        fixPipeParams.params.srcNdStride = srcWi;      // loop3_src_stride
+        fixPipeParams.params.dstNdStride =
+            skipDstOffset + self->ctx.tiling_->wi * self->ctx.tiling_->cin; // loop3_dst_stride
+
+        fixPipeParams.mSize = srcWi; // M: 中间块一行的长度
+        LoadL0c2GmRowForKernelSplitHFixPipe(
+            self, srcOffset, dstOffset, output, useC1Buf, fixPipeParams);
+        // BLOCK_CUBE: MMAD一次计算为16*16, fixpipe搬到gm的时候取L0c的数据应该固定c0为16，不能随数据类型变化
+        srcOffset += self->ctx.midHi_ * srcWi * BLOCK_CUBE; // srcWi是一个子kernel中间块w的长度
+        dstOffset += self->ctx.midHi_ * (fixPipeParams.params.dstNdStride);
+    }
+
+    if (self->ctx.tailWi_ != 0) {             // 需要尾块
+        fixPipeParams.params.ndNum = 1;       // not use
+        fixPipeParams.params.srcNdStride = 0; // loop3_src_stride
+        fixPipeParams.params.dstNdStride = 0; // loop3_dst_stride
+
+        fixPipeParams.mSize = self->ctx.tailWi_; // M: 尾块的长度
+        LoadL0c2GmRowForKernelSplitHFixPipe(
+            self, srcOffset, dstOffset, output, useC1Buf, fixPipeParams);
     }
 }
 
@@ -801,7 +882,7 @@ static __aicore__ inline void LoadL0c2OutForNz2Dn(Intf *self, const GlobalTensor
     if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
         LoadL0c2OutForKernelSplitHW<Intf>(self, useC1Buf);
     } else if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_H) {
-        LoadL0c2GmForKernelSplitH<Intf>(self, output, useC1Buf);
+        LoadL0c2GmDnForKernelSplitH<Intf>(self, output, useC1Buf);
     } else {
         LoadL0c2GmForNz2Dn<Intf>(self, output, useC1Buf);
     }
@@ -832,6 +913,17 @@ static __aicore__ inline void SetEnAtomic(Intf *self, uint8_t enAtomic)
 }
 
 template <class Intf>
+static __aicore__ inline void LoadL0c2OutForNz2Nd(Intf *self, const GlobalTensor<typename Intf::DstT> &output,
+    LocalTensor<typename Intf::L0cT> &useC1Buf)
+{
+    if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_H) {
+        LoadL0c2GmNdForKernelSplitH<Intf>(self, output, useC1Buf);
+    } else {
+        LoadL0c2GmForNz2Nd<Intf>(self, output, useC1Buf);
+    }
+}
+
+template <class Intf>
 static __aicore__ inline void LoadL0c2Gm(Intf *self, const GlobalTensor<typename Intf::DstT> &output,
                                          uint8_t enAtomic = 0, bool enSequentialWrite = false)
 {
@@ -858,7 +950,7 @@ static __aicore__ inline void LoadL0c2Gm(Intf *self, const GlobalTensor<typename
     } else {
 #if (__NPU_ARCH__ != 5102)
         if (!enSequentialWrite) {
-            LoadL0c2GmForNz2Nd<Intf>(self, output, useC1Buf);
+            LoadL0c2OutForNz2Nd<Intf>(self, output, useC1Buf);
         } else {
             return;
         }

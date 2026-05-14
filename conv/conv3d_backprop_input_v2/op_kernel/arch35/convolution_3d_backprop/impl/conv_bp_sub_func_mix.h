@@ -414,8 +414,8 @@ static __aicore__ inline void LoadL0c2UbForKernelSplitInner(Intf *self, const Lo
     }
 }
 
-template <class Intf>
-static __aicore__ inline void SetQuantInt32ToHalf(Intf *self, FixpipeParamsC310<CO2Layout::COLUMN_MAJOR> &fixPipeParams) {
+template <class Intf, CO2Layout layout = CO2Layout::COLUMN_MAJOR>
+static __aicore__ inline void SetQuantInt32ToHalf(Intf *self, FixpipeParamsC310<layout> &fixPipeParams) {
     if constexpr (Intf::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
         if (self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
             fixPipeParams.quantPre = QuantMode_t::VDEQF16;  // int32 -> fp16 tensor quant
@@ -429,8 +429,8 @@ static __aicore__ inline void SetQuantInt32ToHalf(Intf *self, FixpipeParamsC310<
     }
 }
 
-template <class Intf>
-static __aicore__ inline void SetQuantInt8(Intf *self, FixpipeParamsC310<CO2Layout::COLUMN_MAJOR> &fixPipeParams) {
+template <class Intf, CO2Layout layout = CO2Layout::COLUMN_MAJOR>
+static __aicore__ inline void SetQuantInt8(Intf *self, FixpipeParamsC310<layout> &fixPipeParams) {
     if (self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
         fixPipeParams.quantPre = QuantMode_t::VREQ8;
     } else {
@@ -439,14 +439,14 @@ static __aicore__ inline void SetQuantInt8(Intf *self, FixpipeParamsC310<CO2Layo
     }
 }
 
-template <class Intf>
-static __aicore__ inline void SetFixPipeQuantVal(Intf *self, FixpipeParamsC310<CO2Layout::COLUMN_MAJOR> &fixPipeParams)
+template <class Intf, CO2Layout layout = CO2Layout::COLUMN_MAJOR>
+static __aicore__ inline void SetFixPipeQuantVal(Intf *self, FixpipeParamsC310<layout> &fixPipeParams)
 {
     if constexpr(std::is_same<typename Intf::DstT, bfloat16_t>::value) {
         fixPipeParams.quantPre = QuantMode_t::F322BF16;
     } else if constexpr((std::is_same<typename Intf::L0cT, int32_t>::value) &&
         (std::is_same<typename Intf::DstT, half>::value)) {
-        SetQuantInt32ToHalf(self, fixPipeParams);
+        SetQuantInt32ToHalf<Intf, layout>(self, fixPipeParams);
     } else if constexpr(std::is_same<typename Intf::DstT, half>::value) {
         fixPipeParams.quantPre = QuantMode_t::F322F16;
     } else if constexpr(std::is_same<typename Intf::DstT, hifloat8_t>::value) {
@@ -456,7 +456,7 @@ static __aicore__ inline void SetFixPipeQuantVal(Intf *self, FixpipeParamsC310<C
         fixPipeParams.quantPre = QuantMode_t::QF322FP8_PRE;
         fixPipeParams.deqScalar = DQ_SCALAR_ONE;
     } else if constexpr(std::is_same<typename Intf::DstT, int8_t>::value) {
-        SetQuantInt8(self, fixPipeParams);
+        SetQuantInt8<Intf, layout>(self, fixPipeParams);
     }
 }
 
