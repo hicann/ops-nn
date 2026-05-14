@@ -313,7 +313,7 @@ aclnnStatus aclnnDynamicQuantV3(
 - 确定性计算：
   - aclnnDynamicQuantV3默认确定性实现。
 
-  yOut的数据类型为INT4时，需满足x和yOut的最后一维能被2整除。
+  yOut的数据类型为INT4时，需满足x和yOut的最后一维能被2整除。不支持非连续场景。
   yOut的数据类型为INT32时，需满足x的最后一维能被8整除。
   当有groupIndexOptional时，专家数不超过x剔除最后一维的各个维度乘积。groupIndexOptional的值需要是一组不小于零且非递减的数组，且最后一个值和x剔除最后一维的各个维度乘积相等。若不满足该条件，结果无实际意义。
 

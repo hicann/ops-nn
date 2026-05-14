@@ -251,7 +251,7 @@ aclnnStatus aclnnDynamicQuant(
 ## 约束说明
 
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：
-  - yOut的数据类型为INT4时，需满足x和yOut的最后一维能被2整除。
+  - yOut的数据类型为INT4时，需满足x和yOut的最后一维能被2整除。不支持非连续场景。
   - yOut的数据类型为INT32时，需满足x的最后一维能被8整除。
 - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：输入x的最后一维需满足被32整除，暂时只支持对称量化，不支持BFLOAT16数据类型。
 - 确定性计算：
