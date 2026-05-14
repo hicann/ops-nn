@@ -331,7 +331,7 @@ __aicore__ inline void GeGluGradV2TanhBase<T>::CopyInDyAndGelu(
         DataCopy(ubDY[ubOffset], dyGm[gmOffset], copyInParams);
     } else {
         copyInParams.blockLen = dataCount * dtypeSize;
-        struct DataCopyPadParams padParams = {true, 0, 0, 1};
+        struct DataCopyPadParams padParams = {true, 0, 0, 0};
         padParams.rightPadding = CeilAlignA2B(dataCount, perBlockCount) - dataCount;
         DataCopyPad(ubGelu[ubOffset], geluGm[gmOffset], copyInParams, padParams);
         DataCopyPad(ubDY[ubOffset], dyGm[gmOffset], copyInParams, padParams);
@@ -357,7 +357,7 @@ __aicore__ inline void GeGluGradV2TanhBase<T>::CopyInX(
     } else {
         copyInParams.blockLen = dataCount * dtypeSize;
         copyInParams.srcStride = copyInParams.blockLen;
-        struct DataCopyPadParams padParams = {true, 0, 0, 1};
+        struct DataCopyPadParams padParams = {true, 0, 0, 0};
         padParams.rightPadding = CeilAlignA2B(dataCount, perBlockCount) - dataCount;
         DataCopyPad(ubX1, xGm[x1GmOffset], copyInParams, padParams);
         DataCopyPad(ubX2, xGm[x2GmOffset], copyInParams, padParams);
@@ -383,7 +383,7 @@ __aicore__ inline void GeGluGradV2TanhBase<T>::CopyInXPerf(const int64_t& gmOffs
         DataCopy(t0, xGm[gmOffset], copyInParams);
     } else {
         copyInParams.blockLen = dataCount * dtypeSize;
-        struct DataCopyPadParams padParams = {true, 0, 0, 1};
+        struct DataCopyPadParams padParams = {true, 0, 0, 0};
         padParams.rightPadding = CeilAlignA2B(dataCount, perBlockCount) - dataCount;
         DataCopyPad(t0, xGm[gmOffset], copyInParams, padParams);
     }
