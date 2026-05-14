@@ -136,8 +136,8 @@ private:
             LocalTensor<float> gammaLocal = inQueueGamma.AllocTensor<float>();
             LocalTensor<T_GAMMA> gammaIn = sqxBuf.Get<T_GAMMA>();
             DataCopyCustom<T_GAMMA>(gammaIn, gammaGm, numCol);
-            SetFlag<HardEvent::MTE2_S>(eventMTE2V_1);
-            WaitFlag<HardEvent::MTE2_S>(eventMTE2V_1);
+            SetFlag<HardEvent::MTE2_V>(eventMTE2V_1);
+            WaitFlag<HardEvent::MTE2_V>(eventMTE2V_1);
             Cast(gammaLocal, gammaIn, RoundMode::CAST_NONE, numCol);
             PipeBarrier<PIPE_V>();
             inQueueGamma.EnQue(gammaLocal);

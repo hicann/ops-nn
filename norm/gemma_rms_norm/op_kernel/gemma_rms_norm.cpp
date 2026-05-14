@@ -30,8 +30,11 @@ extern "C" __global__ __aicore__ void gemma_rms_norm(
     GM_ADDR x, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling)
 {
     GET_TILING_DATA(tilingData, tiling);
+    GM_ADDR usrWorkspace = AscendC::GetUserWorkspace(workspace);
     if (TILING_KEY_IS(0)) {
-        GENERAL_OP_IMPL(KernelRmsNorm, DTYPE_X, DTYPE_GAMMA);
+        KernelRmsNorm<DTYPE_X, DTYPE_GAMMA> rms_norm_normal;
+        rms_norm_normal.Init(x, gamma, y, rstd, &tilingData, usrWorkspace);
+        rms_norm_normal.Process();
     } else if (TILING_KEY_IS(1)) {
         GENERAL_OP_IMPL(KernelRmsNormSplitD, DTYPE_X, DTYPE_GAMMA);
     }
