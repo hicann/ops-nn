@@ -48,9 +48,11 @@ bool LayerNormGradV3RecomputeTiling::IsCapable()
 ge::graphStatus LayerNormGradV3RecomputeTiling::GammaBetaKernelTiling()
 {
     // 沿M轴做reduce（输入形状为(M, N)）
-    constexpr int64_t mFactor = DEFAULT_GAMMA_BETA_M_FACTOR;
     int64_t rowSize = static_cast<int64_t>(commonParams.rowSize);
     int64_t colSize = static_cast<int64_t>(commonParams.colSize);
+    
+    // 动态调整 mFactor：小M场景使用实际大小，避免 UB 空间浪费
+    int64_t mFactor = std::min(DEFAULT_GAMMA_BETA_M_FACTOR, rowSize);
 
     // M方向分块参数计算（二分累加）
     int64_t mLoop = ops::FloorDiv(rowSize, mFactor);
@@ -76,8 +78,9 @@ ge::graphStatus LayerNormGradV3RecomputeTiling::GammaBetaKernelTiling()
     OP_TILING_CHECK(nFactorMax < nFactorBase,
                     OP_LOGI(context_->GetNodeName(),
                             "Recompute template is not capable. merged shape is (%lu, %lu), ub size: %luB, "
-                            "nFactorMax: %ld.",
-                            commonParams.rowSize, commonParams.colSize, commonParams.ubSizePlatForm, nFactorMax),
+                            "mFactor: %ld, cacheBufferCount: %ld, nFactorMax: %ld.",
+                            commonParams.rowSize, commonParams.colSize, commonParams.ubSizePlatForm,
+                            mFactor, cacheBufferCount, nFactorMax),
                     return ge::GRAPH_PARAM_INVALID);
 
     int64_t nFactor = ops::FloorAlign(nFactorMax, nFactorBase);
