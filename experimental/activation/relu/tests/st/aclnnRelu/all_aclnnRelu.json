@@ -1,0 +1,75 @@
+[
+  {
+    "id": 1,
+    "name": "torch.relu fp16",
+    "aclnn_name": "aclnnRelu",
+    "version": "v1.0",
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "aclnn_relu",
+    "aclnn_api_type": "aclnn_function",
+    "backward": false,
+    "standard": {
+      "acc": "cv_fused_double_benchmark",
+      "perf": "not_key"
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "x",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp16",
+        "shape": [
+          128
+        ],
+        "range_values": [
+          -10,
+          10
+        ],
+        "backward": false,
+        "align_32B": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null
+  },
+  {
+    "id": 2,
+    "name": "torch.relu bf16",
+    "aclnn_name": "aclnnRelu",
+    "version": "v1.0",
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "aclnn_relu",
+    "aclnn_api_type": "aclnn_function",
+    "backward": false,
+    "standard": {
+      "acc": "cv_fused_double_benchmark",
+      "perf": "not_key"
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "x",
+        "type": "tensor",
+        "required": true,
+        "dtype": "bf16",
+        "shape": [
+          64,
+          256
+        ],
+        "range_values": [
+          -10,
+          10
+        ],
+        "backward": false,
+        "align_32B": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null
+  }
+]
