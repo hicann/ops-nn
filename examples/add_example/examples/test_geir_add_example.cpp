@@ -14,10 +14,9 @@
 #include "ge_error_codes.h"
 #include "ge_api_types.h"
 #include "ge_api.h"
-#include "array_ops.h"
+#include "ops_proto_legacy.h"
 #include "ge_ir_build.h"
 
-#include "nn_other.h"
 #include "../op_graph/add_example_proto.h"
 
 #define FAILED -1
@@ -280,6 +279,7 @@ int main(int argc, char *argv[])
     std::cout << "Warning message: " << warning_str << std::endl;
     printf("%s - INFO - [XIR]: Precision is ok\n", GetTime().c_str());
     printf("%s - INFO - [XIR]: Start to finalize ir graph session\n", GetTime().c_str());
+    delete session;
     ret = ge::GEFinalize();
     if (ret != SUCCESS) {
         printf("%s - INFO - [XIR]: Finalize ir graph session failed\n", GetTime().c_str());

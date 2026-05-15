@@ -9,6 +9,7 @@
  */
 
 #include <iostream>
+#include <memory>
 #include <vector>
 #include "acl/acl.h"
 #include "aclnn_add_example.h"
@@ -88,11 +89,9 @@ int CreateAclTensor(
     return 0;
 }
 
-int main()
+int aclnnAddExampleTest(int32_t deviceId, aclrtStream& stream)
 {
     // 1. 调用acl进行device/stream初始化
-    int32_t deviceId = 0;
-    aclrtStream stream;
     auto ret = Init(deviceId, &stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
@@ -103,6 +102,9 @@ int main()
     std::vector<int64_t> selfXShape = {32, 4, 4, 4};
     std::vector<float> selfXHostData(2048, 1);
     ret = CreateAclTensor(selfXHostData, selfXShape, &selfXDeviceAddr, aclDataType::ACL_FLOAT, &selfX);
+    // 通过智能指针自动释放aclTensor和device资源
+    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> selfXPtr(selfX, aclDestroyTensor);
+    std::unique_ptr<void, aclError (*)(void*)> selfXDeviceAddrPtr(selfXDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     aclTensor* selfY = nullptr;
@@ -110,6 +112,8 @@ int main()
     std::vector<int64_t> selfYShape = {32, 4, 4, 4};
     std::vector<float> selfYHostData(2048, 1);
     ret = CreateAclTensor(selfYHostData, selfYShape, &selfYDeviceAddr, aclDataType::ACL_FLOAT, &selfY);
+    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> selfYPtr(selfY, aclDestroyTensor);
+    std::unique_ptr<void, aclError (*)(void*)> selfYDeviceAddrPtr(selfYDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     aclTensor* out = nullptr;
@@ -117,6 +121,8 @@ int main()
     std::vector<int64_t> outShape = {32, 4, 4, 4};
     std::vector<float> outHostData(2048, 1);
     ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_FLOAT, &out);
+    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> outPtr(out, aclDestroyTensor);
+    std::unique_ptr<void, aclError (*)(void*)> outDeviceAddrPtr(outDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     // 3. 调用CANN算子库API，需要修改为具体的Api名称
@@ -129,9 +135,11 @@ int main()
 
     // 根据第一段接口计算出的workspaceSize申请device内存
     void* workspaceAddr = nullptr;
+    std::unique_ptr<void, aclError (*)(void *)> workspaceAddrPtr(nullptr, aclrtFree);
     if (workspaceSize > static_cast<uint64_t>(0)) {
         ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
         CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
+        workspaceAddrPtr.reset(workspaceAddr);
     }
 
     // 5. 调用aclnnAddExample第二段接口
@@ -142,26 +150,23 @@ int main()
     ret = aclrtSynchronizeStream(stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
-    // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
+    // 7. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
     PrintOutResult(outShape, &outDeviceAddr, selfXHostData, selfYHostData);
+    return ACL_SUCCESS;
+}
 
-    // 7. 释放aclTensor，需要根据具体API的接口定义修改
-    aclDestroyTensor(selfX);
-    aclDestroyTensor(selfY);
-    aclDestroyTensor(out);
-
-    // 8. 释放device资源
-    aclrtFree(selfXDeviceAddr);
-    aclrtFree(selfYDeviceAddr);
-    aclrtFree(outDeviceAddr);
-    if (workspaceSize > static_cast<uint64_t>(0)) {
-        aclrtFree(workspaceAddr);
-    }
+int main()
+{
+    int32_t deviceId = 0;
+    aclrtStream stream;
+    
+    auto ret = aclnnAddExampleTest(deviceId, stream);
+    // 释放device资源以及acl去初始化
     aclrtDestroyStream(stream);
     aclrtResetDevice(deviceId);
-
-    // 9. acl去初始化
     aclFinalize();
+
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnAddExampleTest failed. ERROR: %d\n", ret); return ret);
 
     return 0;
 }
