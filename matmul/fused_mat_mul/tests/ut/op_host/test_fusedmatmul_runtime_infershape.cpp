@@ -9,6 +9,7 @@
  */
 #include <cstdlib>
 #include <tuple>
+#include <algorithm>
 
 #include "test_case_infershape.h"
 #include "error_util.h"

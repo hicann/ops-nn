@@ -9,6 +9,7 @@
  */
 
 #include "tiling_context_faker.h"
+#include <algorithm>
 
 namespace gert {
 TilingContextFaker& TilingContextFaker::operator=(TilingContextFaker&& faker)
