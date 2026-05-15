@@ -450,7 +450,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
     // dlog_setlevel(0, 3, 0);
 }
 
-TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_tiling_130)
+TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_tiling_132)
 {
     // dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape = {{4096, 1, 9703}, {4096, 1, 9703}};
@@ -551,7 +551,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 130);
+    ASSERT_EQ(tiling_key, 132);
     // dlog_setlevel(0, 3, 0);
 }
 
@@ -2550,7 +2550,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
     // dlog_setlevel(0, 3, 0);
 }
 
-TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_tiling_131_with_beta)
+TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_tiling_with_beta)
 {
     // dlog_setlevel(0, 0, 0);
     gert::StorageShape input_shape = {{4096, 1, 9703}, {4096, 1, 9703}};
@@ -2652,6 +2652,6 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 171);
+    ASSERT_EQ(tiling_key, 172);
     // dlog_setlevel(0, 3, 0);
 }

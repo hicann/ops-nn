@@ -397,7 +397,6 @@ int64_t AddRmsNormDynamicQuantRegbaseTiling::CalFullLoadBaseM(uint64_t baseN, in
 
     if (tilingParams.hasY2Scale2) {
         mutilBaseM += DOUBLE_BUFFER * baseNB8Align * sizeof(int8_t) + // y2 * double
-                      baseNB32Align * sizeof(float) +                 // y2Tmp
                       DOUBLE_BUFFER * sizeof(float);                  // Scale2 * double
     }
     int64_t fullLoadBaseM = LastUbSize / mutilBaseM;
@@ -427,8 +426,7 @@ uint64_t AddRmsNormDynamicQuantRegbaseTiling::CalUsedSize(
     totalSize += DOUBLE_BUFFER * ubFactorRstd * sizeof(float);                                     // Scale1 * double
     totalSize += baseM * firstVcaddLength * sizeof(float);                                         // xTmp
     if (tilingParams.hasY2Scale2) {
-        totalSize += baseM * (baseNB8Align * sizeof(int8_t) * DOUBLE_BUFFER + // y2 * double
-                              baseNB32Align * sizeof(float));                 // y2Tmp
+        totalSize += baseM * (baseNB8Align * sizeof(int8_t) * DOUBLE_BUFFER); // y2 * double
         totalSize += DOUBLE_BUFFER * ubFactorRstd * sizeof(float);            // Scale2 * double
     }
     if(tilingParams.hasBeta){

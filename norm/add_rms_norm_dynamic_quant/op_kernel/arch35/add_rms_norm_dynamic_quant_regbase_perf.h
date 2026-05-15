@@ -115,7 +115,6 @@ public:
         if constexpr (HAS_Y2_SCALE2) {
             pipe_->InitBuffer(outQueueY2_, DOUBLE_BUFFER, baseM_ * baseNB8Align_ * sizeof(T_Y));
             pipe_->InitBuffer(outQueueScale2_, DOUBLE_BUFFER, ubFactorRstd * sizeof(float));
-            pipe_->InitBuffer(y2TmpBuf_, baseM_ * baseNB32Align_ * sizeof(float));
         }
         if constexpr (HAS_BETA) {
             pipe_->InitBuffer(inQueueBeta_, 1, baseNDtypeAlign_ * sizeof(T_X));
@@ -171,10 +170,8 @@ public:
             LocalTensor<T_Y> y1Local = outQueueY1_.AllocTensor<T_Y>();
             LocalTensor<float> y1TmpLocal = y1TmpBuf_.Get<float>();
             LocalTensor<T_Y> y2Local;
-            LocalTensor<float> y2TmpLocal;
             if constexpr (HAS_Y2_SCALE2) {
                 y2Local = outQueueY2_.AllocTensor<T_Y>();
-                y2TmpLocal = y2TmpBuf_.Get<float>();
             }
             SetOverflowMode<T_Y>(0);
             ComputeMutlScale<float, T_X, T_SMOOTH_SCALE, HAS_SMOOTH_SCALE1, T_Y>(
@@ -183,9 +180,9 @@ public:
             ComputeMutlY<T_Y>(y1Local, scale1Local, y1TmpLocal, baseN_, realM);
             if constexpr (HAS_SMOOTH_SCALE2) {
                 ComputeMutlScale<float, T_X, T_SMOOTH_SCALE, HAS_SMOOTH_SCALE2, T_Y>(
-                    scale2Local, xOutTmpLocal, rstdLocal, gammaLocal, betaLocal, smoothScale2Local, y2TmpLocal, baseN_, realM, baseN_, baseNDtypeAlign_);
+                    scale2Local, xOutTmpLocal, rstdLocal, gammaLocal, betaLocal, smoothScale2Local, y1TmpLocal, baseN_, realM, baseN_, baseNDtypeAlign_);
                 PipeBarrier<PIPE_V>();
-                ComputeMutlY<T_Y>(y2Local, scale2Local, y2TmpLocal, baseN_, realM);
+                ComputeMutlY<T_Y>(y2Local, scale2Local, y1TmpLocal, baseN_, realM);
             }
             SetOverflowMode<T_Y>(oriOverflowMode_);
 
@@ -670,7 +667,6 @@ private:
     TQue<QuePosition::VECOUT, 1> outQueueScale2_;
     TBuf<TPosition::VECCALC> rstdBuf_;
     TBuf<TPosition::VECCALC> y1TmpBuf_;
-    TBuf<TPosition::VECCALC> y2TmpBuf_;
     TBuf<TPosition::VECCALC> xOutTmpBuf_;
     TBuf<TPosition::VECCALC> xReduceTmpBuf_;
     TBuf<TPosition::VECCALC> xTmpBuf_;
