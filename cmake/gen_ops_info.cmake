@@ -55,14 +55,14 @@ function(kernel_src_copy)
       COMMAND
         bash -c "cp -r ${OPBASE_SOURCE_PATH}/pkg_inc/op_common/atvoss ${KNCPY_DST_DIR}/common"
       COMMAND
-        bash -c "cp -r ${OPBASE_SOURCE_PATH}/pkg_inc/op_common/op_kernel ${KNCPY_DST_DIR}/common"
+        bash -c "cp -r ${OPBASE_SOURCE_PATH}/include/op_common/op_kernel ${KNCPY_DST_DIR}/common"
       VERBATIM
     )
     add_dependencies(${KNCPY_TARGET} atvoss_src_copy)
   endif()
   if(ENABLE_PACKAGE)
     install(DIRECTORY ${OPBASE_SOURCE_PATH}/pkg_inc/op_common/atvoss DESTINATION ${IMPL_INSTALL_DIR}/common)
-    install(DIRECTORY ${OPBASE_SOURCE_PATH}/pkg_inc/op_common/op_kernel DESTINATION ${IMPL_INSTALL_DIR}/common)
+    install(DIRECTORY ${OPBASE_SOURCE_PATH}/include/op_common/op_kernel DESTINATION ${IMPL_INSTALL_DIR}/common)
   endif()
 endfunction()
 

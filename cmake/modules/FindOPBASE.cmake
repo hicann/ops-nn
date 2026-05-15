@@ -16,7 +16,9 @@ endif()
 include(FindPackageHandleStandardArgs)
 
 set(OPBASE_HEAD_SEARCH_PATHS
+  ${OPBASE_SOURCE_PATH}/include
   ${OPBASE_SOURCE_PATH}/pkg_inc
+  ${TOP_DIR}/ops-base/include
   ${TOP_DIR}/ops-base/pkg_inc             # compile with ci
 )
 
@@ -41,5 +43,8 @@ if(OPBASE_FOUND)
     ${OPBASE_INC_DIR}
     ${OPBASE_INC_DIR}/op_common
     ${OPBASE_INC_DIR}/op_common/op_host
+    ${OPBASE_INC_DIR}/../pkg_inc
+    ${OPBASE_INC_DIR}/../pkg_inc/op_common
+    ${OPBASE_INC_DIR}/../pkg_inc/op_common/op_host
   )
 endif()
