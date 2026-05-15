@@ -203,6 +203,7 @@ aclnnStatus aclnnNanMedian(
 - self的数据类型不为FLOAT、FLOAT16、BFLOAT16时，tensor size过大可能会导致算子执行超时（aicpu error类型报错，报错 reason=[aicpu timeout]）具体类型最大size(与机器具体剩余内存强相关) 限制如下：
    - INT64 类型：150000000
    - UINT8、INT8、INT16、INT32 类型：725000000
+- 当self为BFLOAT16数据类型时，不支持尾轴为1。
 
 ## 调用示例
 
