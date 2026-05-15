@@ -31,6 +31,7 @@ constexpr uint32_t NUM_FIVE = 5;
 constexpr uint32_t MAX_K_VALUE_SPLIT_K = 32768;
 // 暂定切HkWk准入为8192
 constexpr uint32_t MAX_K_VALUE_TILING_KERNEL = 8192;
+constexpr uint32_t MAX_K_VALUE_FP32_DN = 2048;
 
 class Conv3DDXV2InnerProductTiling : public Conv3DBackpropInputV2TilingArch35 {
 public:

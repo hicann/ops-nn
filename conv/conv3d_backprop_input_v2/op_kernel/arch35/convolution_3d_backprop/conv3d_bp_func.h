@@ -989,7 +989,7 @@ struct IterateAll {
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, Convolution3DBackpropFunc);
     static __aicore__ inline void call(Intf *self, const GlobalTensor<typename Intf::DstT> &output, uint8_t enAtomic, bool fullLoadBiasFlag_, bool freeBiasFlag_)
     {
-        //freebias
+        //free bias
         if (freeBiasFlag_) {
             if (self->ctx.tiling_->isBiasFullLoad && self->ctx.hasBias_) {
                 if ASCEND_IS_AIC_SCALAR {
@@ -999,7 +999,6 @@ struct IterateAll {
             } 
         }
         if (self->ctx.tiling_->isBiasFullLoad && self->ctx.hasBias_ && fullLoadBiasFlag_) {
-            // 
             Convolution3DBackpropFunc::FullLoadBias<Intf>(self);
         }
         SetDequantScale<Intf>(self);

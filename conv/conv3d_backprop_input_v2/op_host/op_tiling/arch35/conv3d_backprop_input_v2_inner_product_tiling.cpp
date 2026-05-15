@@ -140,6 +140,10 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::CalcKSegment() {
     // 超出累加阈值准入
     uint64_t kValue = static_cast<uint64_t>(runInfo_.dedy_cout1_g) * tilingRunInfo_.lenHkWkC0;
     uint32_t kValueThreshold = (tilingRunInfo_.tilingHkWkMode == NO_TILING_HWK) ? MAX_K_VALUE_SPLIT_K : MAX_K_VALUE_TILING_KERNEL;
+    if (static_cast<int32_t>(runInfo_.c_dtype_bytes) == ge::GetSizeByDataType(ge::DT_FLOAT)
+        && runInfo_.outBackpropFormat == ge::FORMAT_NCDHW && runInfo_.yFormat == ge::FORMAT_NCDHW) {
+        kValueThreshold = MAX_K_VALUE_FP32_DN;
+    }
     if (kValue < kValueThreshold) {
         return ge::GRAPH_FAILED;
     }
@@ -153,16 +157,14 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::CalcKSegment() {
         hkWk = static_cast<uint32_t>(runInfo_.kernel_h) * runInfo_.kernel_w;
     }
 
-    // CoutThreshold: 每个K段能容纳的Cout数量
-    // CoutThreshold = FloorAlign(65536 / HkWk, k0)
+    // CoutThreshold: 每个K段能容纳的Cout数量 -> CoutThreshold = FloorAlign(65536 / HkWk, k0)
     uint32_t coutThreshold =
         (hkWk >= kValueThreshold) ?
             runInfo_.dedy_cout_g :
             std::max(Ops::Base::FloorDiv(kValueThreshold, hkWk), ONE_U32);
     coutThreshold = std::max(Ops::Base::FloorAlign(coutThreshold, tilingRunInfo_.k0), ONE_U32);
 
-    // CoutSegmentCount: Cout方向的分段数量
-    // CoutSegmentCount = ceil(Cout / CoutThreshold)
+    // CoutSegmentCount: Cout方向的分段数量 -> CoutSegmentCount = ceil(Cout / CoutThreshold)
     uint32_t coutSegmentCount =
         std::max(Ops::Base::CeilDiv(static_cast<uint32_t>(runInfo_.dedy_cout_g), coutThreshold), ONE_U32);
 
