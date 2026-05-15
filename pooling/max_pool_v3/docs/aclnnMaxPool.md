@@ -134,7 +134,7 @@ aclnnStatus aclnnMaxPool(
       <td>pads</td>
       <td>输入</td>
       <td>沿着空间轴方向开始和结束的位置填充，对应公式中的padding_size。</td>
-      <td>长度为0、1、2或4。</td>
+      <td>长度为0、1、2或4。当长度为2时， padding = {上, 下} ，4时，padding = {上, 左, 右, 下}</td>
       <td>INT64</td>
       <td>-</td>
       <td>-</td>
