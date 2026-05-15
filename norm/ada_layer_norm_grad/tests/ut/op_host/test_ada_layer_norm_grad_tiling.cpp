@@ -28,6 +28,8 @@ using namespace ge;
 struct AdaLayerNormGradCompileInfo {
     uint64_t coreNum = 0;
     uint64_t ubSizePlatForm = 0;
+    int64_t blockSize = 0;
+    int64_t vlFp32 = 0;
     bool isRegBase = false;
 };
 
@@ -46,7 +48,6 @@ protected:
 
 TEST_F(AdaLayerNormGradTiling, ada_layer_norm_grad_tiling_000)
 {
-    // dlog_setlevel(0, 0, 0);
     gert::StorageShape input0_shape = {{4, 16, 4096}, {4, 16, 4096}};
     gert::StorageShape input1_shape = {{4, 16, 4096}, {4, 16, 4096}};
     gert::StorageShape input2_shape = {{4, 16}, {4, 16}};
@@ -72,10 +73,8 @@ TEST_F(AdaLayerNormGradTiling, ada_layer_norm_grad_tiling_000)
     map<string, string> intrinsics;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
-    // platform info
     fe::PlatFormInfos platform_info;
     platform_info.Init();
-    // compile info
     AdaLayerNormGradCompileInfo compile_info;
 
     std::string op_type("AdaLayerNormGrad");
@@ -83,7 +82,6 @@ TEST_F(AdaLayerNormGradTiling, ada_layer_norm_grad_tiling_000)
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
-    // tilingParseFunc simulate
     auto kernel_holder =
         gert::KernelRunContextFaker()
             .KernelIONum(2, 1)
@@ -100,7 +98,6 @@ TEST_F(AdaLayerNormGradTiling, ada_layer_norm_grad_tiling_000)
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
-    // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
@@ -136,18 +133,15 @@ TEST_F(AdaLayerNormGradTiling, ada_layer_norm_grad_tiling_000)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 
-    // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 411);
     auto block_dim = tiling_context->GetBlockDim();
     ASSERT_EQ(block_dim, 48);
-    // dlog_setlevel(static_cast<int>(OP), 0, 1);
 }
 
 TEST_F(AdaLayerNormGradTiling, ada_layer_norm_grad_tiling_001)
 {
-    // dlog_setlevel(0, 0, 0);
     gert::StorageShape input0_shape = {{4, 16, 128}, {4, 16, 128}};
     gert::StorageShape input1_shape = {{4, 16, 128}, {4, 16, 128}};
     gert::StorageShape input2_shape = {{4, 16}, {4, 16}};
@@ -173,10 +167,8 @@ TEST_F(AdaLayerNormGradTiling, ada_layer_norm_grad_tiling_001)
     map<string, string> intrinsics;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
-    // platform info
     fe::PlatFormInfos platform_info;
     platform_info.Init();
-    // compile info
     AdaLayerNormGradCompileInfo compile_info;
 
     std::string op_type("AdaLayerNormGrad");
@@ -184,7 +176,6 @@ TEST_F(AdaLayerNormGradTiling, ada_layer_norm_grad_tiling_001)
     auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
-    // tilingParseFunc simulate
     auto kernel_holder =
         gert::KernelRunContextFaker()
             .KernelIONum(2, 1)
@@ -201,7 +192,6 @@ TEST_F(AdaLayerNormGradTiling, ada_layer_norm_grad_tiling_001)
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
-    // tilingFunc simulate
     auto param = gert::TilingData::CreateCap(4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
@@ -237,11 +227,197 @@ TEST_F(AdaLayerNormGradTiling, ada_layer_norm_grad_tiling_001)
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 
-    // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, 211);
     auto block_dim = tiling_context->GetBlockDim();
     ASSERT_EQ(block_dim, 48);
-    //(static_cast<int>(OP), 0, 1);
+}
+
+TEST_F(AdaLayerNormGradTiling, ada_layer_norm_grad_tiling_002)
+{
+    gert::StorageShape input0_shape = {{4, 16, 4096}, {4, 16, 4096}};
+    gert::StorageShape input1_shape = {{4, 16, 4096}, {4, 16, 4096}};
+    gert::StorageShape input2_shape = {{4, 16}, {4, 16}};
+    gert::StorageShape input3_shape = {{4, 16}, {4, 16}};
+    gert::StorageShape input4_shape = {{4, 4096}, {4, 4096}};
+    gert::StorageShape input5_shape = {{4096}, {4096}};
+    gert::StorageShape input6_shape = {{4096}, {4096}};
+    gert::StorageShape output0_shape = {{4, 16, 4096}, {4, 16, 4096}};
+    gert::StorageShape output1_shape = {{4, 4096}, {4, 4096}};
+    gert::StorageShape output2_shape = {{4, 4096}, {4, 4096}};
+    gert::StorageShape output3_shape = {{4096}, {4096}};
+    gert::StorageShape output4_shape = {{4096}, {4096}};
+
+    string compile_info_string = R"({
+       "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
+                         "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
+                         "UB_SIZE": 196608, "L2_SIZE": 33554432, "L1_SIZE": 524288,
+                         "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
+                         "CORE_NUM": 48}
+                         })";
+    map<string, string> soc_infos;
+    map<string, string> aicore_spec;
+    map<string, string> intrinsics;
+    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
+
+    fe::PlatFormInfos platform_info;
+    platform_info.Init();
+    AdaLayerNormGradCompileInfo compile_info;
+
+    std::string op_type("AdaLayerNormGrad");
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
+    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
+    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
+
+    auto kernel_holder =
+        gert::KernelRunContextFaker()
+            .KernelIONum(2, 1)
+            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
+            .Outputs({&compile_info})
+            .Build();
+
+    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
+        "AICoreintrinsicDtypeMap", intrinsics);
+
+    ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+
+    auto param = gert::TilingData::CreateCap(4096);
+    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    ASSERT_NE(param, nullptr);
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType("AdaLayerNormGrad")
+                      .NodeIoNum(7, 5)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&input0_shape, &input1_shape, &input2_shape, &input3_shape, &input4_shape, &input5_shape, &input6_shape})
+                      .OutputShapes({&output0_shape, &output1_shape, &output2_shape, &output3_shape, &output4_shape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(5, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(4, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
+
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
+    auto tiling_key = tiling_context->GetTilingKey();
+    ASSERT_EQ(tiling_key, 412);
+    auto block_dim = tiling_context->GetBlockDim();
+    ASSERT_EQ(block_dim, 48);
+}
+
+TEST_F(AdaLayerNormGradTiling, ada_layer_norm_grad_tiling_003)
+{
+    gert::StorageShape input0_shape = {{4, 16, 4096}, {4, 16, 4096}};
+    gert::StorageShape input1_shape = {{4, 16, 4096}, {4, 16, 4096}};
+    gert::StorageShape input2_shape = {{4, 16}, {4, 16}};
+    gert::StorageShape input3_shape = {{4, 16}, {4, 16}};
+    gert::StorageShape input4_shape = {{4, 4096}, {4, 4096}};
+    gert::StorageShape input5_shape = {{4096}, {4096}};
+    gert::StorageShape input6_shape = {{4096}, {4096}};
+    gert::StorageShape output0_shape = {{4, 16, 4096}, {4, 16, 4096}};
+    gert::StorageShape output1_shape = {{4, 4096}, {4, 4096}};
+    gert::StorageShape output2_shape = {{4, 4096}, {4, 4096}};
+    gert::StorageShape output3_shape = {{4096}, {4096}};
+    gert::StorageShape output4_shape = {{4096}, {4096}};
+
+    string compile_info_string = R"({
+       "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
+                         "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
+                         "UB_SIZE": 196608, "L2_SIZE": 33554432, "L1_SIZE": 524288,
+                         "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
+                         "CORE_NUM": 48}
+                         })";
+    map<string, string> soc_infos;
+    map<string, string> aicore_spec;
+    map<string, string> intrinsics;
+    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
+
+    fe::PlatFormInfos platform_info;
+    platform_info.Init();
+    AdaLayerNormGradCompileInfo compile_info;
+
+    std::string op_type("AdaLayerNormGrad");
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
+    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
+    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
+
+    auto kernel_holder =
+        gert::KernelRunContextFaker()
+            .KernelIONum(2, 1)
+            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
+            .Outputs({&compile_info})
+            .Build();
+
+    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
+        "AICoreintrinsicDtypeMap", intrinsics);
+
+    ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+
+    auto param = gert::TilingData::CreateCap(4096);
+    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    ASSERT_NE(param, nullptr);
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType("AdaLayerNormGrad")
+                      .NodeIoNum(7, 5)
+                      .IrInstanceNum({1, 1, 1, 1, 1, 1, 1})
+                      .InputShapes({&input0_shape, &input1_shape, &input2_shape, &input3_shape, &input4_shape, &input5_shape, &input6_shape})
+                      .OutputShapes({&output0_shape, &output1_shape, &output2_shape, &output3_shape, &output4_shape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(3, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(4, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(5, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(6, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(2, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(3, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(4, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
+
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
+    auto tiling_key = tiling_context->GetTilingKey();
+    ASSERT_EQ(tiling_key, 414);
+    auto block_dim = tiling_context->GetBlockDim();
+    ASSERT_EQ(block_dim, 48);
 }
