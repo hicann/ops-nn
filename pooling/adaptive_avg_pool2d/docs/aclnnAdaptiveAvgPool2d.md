@@ -157,6 +157,9 @@ aclnnStatus aclnnAdaptiveAvgPool2d(
       <td>outputSize的维度不等于2。</td>
     </tr>
     <tr>
+      <td>self或out的shape的除第一维度以外不大于0。</td>
+    </tr>
+    <tr>
       <td>self和out维度不一致。</td>
     </tr>
     <tr>
