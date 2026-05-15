@@ -376,8 +376,7 @@ const uint64_t &currentKL0, const uint64_t &posK, const uint64_t &KStartPosition
         bl0 = 
             self->ctx.wholeBl0Tensor[kIter * self->ctx.convTilingData->convApiTiling.nL0 * self->ctx.convTilingData->convApiTiling.kL0];
     } else {
-        bl0 =
-            self->ctx.wholeBl0Tensor[(bl0PingPongFlag) * L0B_HALF_SIZE / Intf::sizeOfWeight];
+        bl0 = self->ctx.wholeBl0Tensor[(bl0PingPongFlag) * L0B_HALF_SIZE / Intf::sizeOfWeight];
         self->ctx.loadBL0Ins.LoadBL0(KStartPosition, kStep, bl0);
     }
 
@@ -484,9 +483,9 @@ __aicore__ inline void SetMNBeforeIterateK(Intf *self, MmadParams &mmadParams)
 
     if constexpr (Intf::ConvParam::innerBatch == static_cast<int8_t>(ConvInnerBatch::KERNEL_1X1_MULTI_BATCH)) {
         mmadParams.m = self->ctx.innerBatch * currentML0;
-     } else {
+    } else {
         mmadParams.m = self->ctx.currentML0Align;
-     }
+    }
     mmadParams.n = self->ctx.currentNL0Align;
 
     if constexpr (Intf::isDeQuantFlag) {
