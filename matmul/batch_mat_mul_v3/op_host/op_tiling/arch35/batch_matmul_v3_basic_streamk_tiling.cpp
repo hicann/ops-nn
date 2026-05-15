@@ -54,7 +54,7 @@ bool BatchMatMulV3BasicStreamKTiling::CheckStreamKSKTiling() const
     if (args_.aDtypeSize == DATA_SIZE_FP32 && !args_.isHf32) {
         alignValue = BLOCK_BYTE_SIZE; // 如果是Fp32 基本块判断要用32
     }
-    // 判断mn是否需要已经能切32份及以上
+    // 判断bmn是否需要已经能切16份及以上
     uint64_t mCnt = MathUtil::CeilDivision(args_.mValue, alignValue);
     uint64_t nCnt = MathUtil::CeilDivision(args_.nValue, alignValue);
     if (batchInfo_->batchC * mCnt * nCnt > compileInfo_.aicNum / NUM_TWO) {

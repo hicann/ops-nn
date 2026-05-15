@@ -561,6 +561,47 @@ bool CheckMergeBatchNonContiguousShapeSupport(
     return true;
 }
 
+bool CheckStreamKNonContiguousShapeSupport(const aclTensor* self, const aclTensor* mat2, int8_t cubeMathType)
+{
+    bool batchEqual = IsBatchEqual(GetBatchDim(self), GetBatchDim(mat2));
+    if (!batchEqual) {
+        return false;
+    }
+    uint64_t batchNum = GetBatchDimAll(self);
+    uint64_t aicoreNum = static_cast<uint64_t>(GetCurrentPlatformInfo().GetCubeCoreNum());
+    uint64_t aivNum = static_cast<uint64_t>(GetCurrentPlatformInfo().GetVectorCoreNum());
+    if (aivNum != (aicoreNum * NUM_TWO)) {
+        return false;
+    }
+    uint64_t adtypeSize = static_cast<uint64_t>(op::TypeSize(self->GetDataType()));
+    constexpr uint64_t maxKThreshold = 2000000UL;
+    constexpr uint64_t floatSize = 4UL;
+    uint64_t mDim = self->GetViewShape()[self->GetViewShape().GetDimNum() - NUM_TWO];
+    uint64_t nDim = mat2->GetViewShape()[mat2->GetViewShape().GetDimNum() - 1]; // 非连续场景viewshape一定是bkn格式
+    uint64_t kDim = self->GetViewShape()[self->GetViewShape().GetDimNum() - 1];
+    bool isHf32 = (cubeMathType == ALLOW_FP32_DOWN_PRECISION) || (cubeMathType == USE_HF32);
+    // 如果dtype是fp32且k轴大于200万 则走基础模板来保证fp32的精度
+    if (adtypeSize == floatSize && !isHf32 && kDim > maxKThreshold) {
+        return false;
+    }
+    constexpr uint64_t kThreshold = 8192UL;
+    if (CeilAlign(kDim, BLOCK_SIZE_256) < FloorDiv(std::max(kThreshold, aicoreNum * BLOCK_SIZE_256), adtypeSize)) {
+        return false;
+    }
+
+    uint64_t alignValue = BLOCK_SIZE_256;
+    if (adtypeSize == floatSize && !isHf32) {
+        alignValue = BLOCK_BYTE_SIZE; // 如果是Fp32 基本块判断要用32
+    }
+    // 判断bmn是否需要已经能切16份及以上
+    uint64_t mCnt = CeilDiv(mDim, alignValue);
+    uint64_t nCnt = CeilDiv(nDim, alignValue);
+    if (batchNum * mCnt * nCnt > aicoreNum / NUM_TWO) {
+        return false;
+    }
+    return true;
+}
+
 NonContiguousMode CheckNonContiguousTranspose(
     const aclTensor* self, const aclTensor* mat2, bool& isANeedSwapInnerTwoDim, bool& isBNeedSwapInnerTwoDim,
     const aclTensor* bias, bool adjX1, bool adjX2, int8_t cubeMathType)
@@ -579,6 +620,11 @@ NonContiguousMode CheckNonContiguousTranspose(
     if (mat2->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ ||
         self->GetStorageFormat() == op::Format::FORMAT_FRACTAL_NZ) {
         OP_LOGI("Format NZ is not supported for transpose.");
+        return NonContiguousMode::CONTINUOUS;
+    }
+     // 对shape校验，当前没有非连续场景支持streamk
+    if (CheckStreamKNonContiguousShapeSupport(self, mat2, cubeMathType)) {
+        OP_LOGI("Shape is not supported for transpose. It match the streamk.");
         return NonContiguousMode::CONTINUOUS;
     }
     // transpose场景下，增加dtype判断，仅支持左右矩阵dtype相同
