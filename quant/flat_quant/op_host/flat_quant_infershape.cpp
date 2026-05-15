@@ -26,6 +26,7 @@ static constexpr size_t FLATQUANT_K_IDX = 0;
 static constexpr size_t FLATQUANT_M_IDX = 1;
 static constexpr size_t FLATQUANT_N_IDX = 2;
 static constexpr size_t FLATQUANT_ATTRS_NUM_TWO = 2;
+static constexpr size_t FLATQUANT_ATTRS_NUM_THREE = 3;
 static constexpr size_t FLATQUANT_MX_N_OUT_DIM = 2;
 static constexpr size_t FLATQUANT_N_IS_EVEN = 2;
 static constexpr size_t FLATQUANT_DOUBLE_CEIL_SIZE = 64;
@@ -63,7 +64,10 @@ static ge::graphStatus InferShape4FlatQuant(gert::InferShapeContext* context)
 
     if (IsFlatQuantMxFp4DavidSupport()) { // Only for 950
         // Validate dst_type_max parameter if provided
-        const float* dstTypeMax = attrs->GetAttrPointer<float>(ATTR_INDEX_OF_DST_TYPE_MAX);
+        const float* dstTypeMax = nullptr;
+        if (attrs->GetAttrNum() >= FLATQUANT_ATTRS_NUM_THREE) {
+            dstTypeMax = attrs->GetAttrPointer<float>(ATTR_INDEX_OF_DST_TYPE_MAX);
+        }
         if (dstTypeMax != nullptr) {
             OP_CHECK_IF(
                 (*dstTypeMax != ZERO_FLOAT) && (*dstTypeMax < SIX_FLOAT || *dstTypeMax > TWELVE_FLOAT),
