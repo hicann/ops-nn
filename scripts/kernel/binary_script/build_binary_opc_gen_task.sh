@@ -111,7 +111,7 @@ main() {
   echo "[INFO] excute file: $0"
   if [ $# -lt 8 ]; then
     echo "[ERROR] input error"
-    echo "[ERROR] bash $0 {op_type} {soc_version} {output_path} {task_path} {enable_debug} {enable_oom} {enable_dump_cce} {enable_mssanitizer} bisheng_flags={bisheng_flags} kernel_template_input={kernel_template_input}"
+    echo "[ERROR] bash $0 {op_type} {soc_version} {output_path} {task_path} {cmake_build_type} {enable_oom} {enable_dump_cce} {enable_mssanitizer} bisheng_flags={bisheng_flags} kernel_template_input={kernel_template_input}"
     exit 1
   fi
   local workdir=$(
@@ -125,7 +125,7 @@ main() {
   local soc_version_lower=${soc_version,,}
   local output_path=$3
   local task_path=$4
-  local enable_debug=$5
+  local cmake_build_type=$5
   local enable_oom=$6
   local enable_dump_cce=$7
   local enable_mssanitizer=$8
@@ -326,6 +326,9 @@ main() {
           cmd="asc_opc ${op_python_path} --main_func=${op_func} --input_param=${new_file} --soc_version=${opc_soc_version} --output=${binary_bin_path} --impl_mode=${impl_mode_default} ${simplified_key_param} --op_mode=dynamic"
         else
           cmd="asc_opc ${op_python_path} --main_func=${op_func} --input_param=${new_file} --soc_version=${opc_soc_version} --output=${binary_bin_path} --impl_mode=${impl_mode} ${simplified_key_param} --op_mode=dynamic"
+        fi
+        if [ "${cmake_build_type}" = "Debug" ]; then
+          cmd="${cmd} -g"
         fi
         if [[ -n "$bisheng_flags" ]]; then
           echo "bisheng_flags is: ${bisheng_flags}"
