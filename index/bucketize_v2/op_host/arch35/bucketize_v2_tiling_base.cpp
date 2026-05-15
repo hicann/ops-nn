@@ -37,7 +37,7 @@ ge::graphStatus BucketizeV2BaseTiling::GetPlatformInfo()
         ubSize_ = compileInfoPtr->ubSize;
     } else {
         auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformPtr);
-        coreNum_ = ascendcPlatform.GetCoreNum();
+        coreNum_ = ascendcPlatform.GetCoreNumAiv();
 
         uint64_t ubSizePlatform;
         ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatform);
