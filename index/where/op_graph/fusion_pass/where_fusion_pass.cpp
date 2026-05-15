@@ -70,7 +70,10 @@ bool WhereFusionPass::MeetRequirements(const std::unique_ptr<MatchResult>& match
 {
     OPS_LOG_D(FUSION_PASS_NAME.c_str(), "Enter MeetRequirements for WhereFusionPass");
 
-    OP_LOGE_IF(!IsRegBase(), false, FUSION_PASS_NAME.c_str(), "WhereFusionPass can only support regbase arch, do nothing.");
+    if (!IsRegBase()) {
+        OPS_LOG_W(FUSION_PASS_NAME.c_str(), "WhereFusionPass can only support regbase arch, do nothing.");
+        return false;
+    }
 
     NodeIo input;
     OP_LOGE_IF(
