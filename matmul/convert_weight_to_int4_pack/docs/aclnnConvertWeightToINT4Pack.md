@@ -71,7 +71,7 @@ aclnnStatus aclnnConvertWeightToINT4Pack(
       <td>Matmul类算子的低比特量化后的权重，由32bit类型承载4bit的权重值</td>
       <td>-</td>
       <td>INT32</td>
-      <td>ND,FRACTAL_NZ</td>
+      <td>ND</td>
       <td>2-3</td>
       <td>-</td>
     </tr>
