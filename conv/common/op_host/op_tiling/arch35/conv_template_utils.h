@@ -213,6 +213,8 @@ constexpr uint64_t L1_PB_BL1_OPEN = 2;
 constexpr uint64_t L1_PB_ALL_OPEN = 3;
 // load3dv2 win max value
 constexpr uint64_t LOAD3DV2_WIN_LIMIT_VALUE = 32767;
+constexpr uint64_t ADDR_ALIGN_SIZE = 32;
+constexpr uint64_t N_VALUE_MAX = 65535;
 constexpr uint64_t WEIGHT_UB_TRANS_CLOSE = 0;
 constexpr uint64_t WEIGHT_UB_TRANS_OPEN = 1;
 constexpr uint64_t FMAP_LOAD3D_MODE = 0;

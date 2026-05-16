@@ -179,6 +179,15 @@ ge::graphStatus ConvBaseDeci::SelectNumBlocksMode()
 
 bool ConvBaseDeci::CheckInstrLimitsMmode()
 {
+    uint64_t c04AlignSize = ADDR_ALIGN_SIZE / (dtypeSizeTab.at(descInfo_.fMapDtype) * C04_CIN_SIZE);
+    if (flagInfo_.enableC04Flag && shapeInfo_.wi * c04AlignSize > N_VALUE_MAX) {
+        stringstream ss;
+        ss << nodeInfo_.nodeType.c_str() <<
+            " AscendC: Fmap can't enable m split mode due to C04 address align limits: "
+            "wi(" << shapeInfo_.wi << ") < " << N_VALUE_MAX / c04AlignSize << ".";
+        OP_LOGD(nodeInfo_.nodeName, "%s", ss.str().c_str());
+        return false;
+    }
     if (descInfo_.fMapFormat == ge::Format::FORMAT_NDHWC) {
         uint64_t loadAL1SrcNdMatixStride = shapeInfo_.ci * shapeInfo_.hi * shapeInfo_.wi * attrInfo_.dilationD;
         if (loadAL1SrcNdMatixStride > MAX_40_BIT_NUM) {

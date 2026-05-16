@@ -489,6 +489,8 @@ private:
         uint64_t aL1Mi = this->hiLoadL1 * self_->ctx.convTilingData->convApiTiling.orgWi;
         if (aL1Mi > N_VALUE_MAX) {
             uint64_t hiLoadPerStep = N_VALUE_MAX / self_->ctx.convTilingData->convApiTiling.orgWi;
+            uint64_t c04AlignSize = ADDR_ALIGN_SIZE / (C04_CIN_SIZE * sizeof(typename Intf::FmapT));
+            hiLoadPerStep = hiLoadPerStep / c04AlignSize * c04AlignSize;
             uint64_t step = CeilDiv(this->hiLoadL1, hiLoadPerStep);
             uint64_t hiLoadTail = this->hiLoadL1 % hiLoadPerStep;
             if (hiLoadTail == 0) {
