@@ -74,7 +74,7 @@ ACLNN_API aclnnStatus aclnnQuantConvolutionGetWorkspaceSize(const aclTensor* inp
                                                             const char* roundMode, aclTensor* output,
                                                             uint64_t* workspaceSize, aclOpExecutor** executor);
 /**
- * @brief quant convolution接口，进行kernellaunch
+ * @brief quant convolution接口，进行kernel launch
  *
  * @param [in] workspace: 在npu device侧申请的workspace内存起址。
  * @param [in] workspaceSize: 在npu device侧申请的workspace大小，由aclnnQuantConvolutionGetWorkspaceSize获取。
@@ -101,7 +101,7 @@ ACLNN_API aclnnStatus aclnnQuantConvolutionWeightNzGetWorkspaceSize(const aclTen
                                                             const char* roundMode, aclTensor* output,
                                                             uint64_t* workspaceSize, aclOpExecutor** executor);
 /**
- * @brief quant convolution weightNz接口，进行kernellaunch
+ * @brief quant convolution weightNz接口，进行kernel launch
  *
  * @param [in] workspace: 在npu device侧申请的workspace内存起址。
  * @param [in] workspaceSize: 在npu device侧申请的workspace大小，由aclnnQuantConvolutionWeightNzGetWorkspaceSize获取。

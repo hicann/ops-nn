@@ -61,7 +61,7 @@ struct Conv3DAttrInfo {
     uint32_t hf32Mode = 0;
 };
 
-struct Conv3DOrignalFormat {
+struct Conv3DOriginalFormat {
     // for fmap
     uint32_t FORMAT_FMAP_N_INDEX = Conv3dApiTiling::INITIAL_INDEX;
     uint32_t FORMAT_FMAP_C_INDEX = Conv3dApiTiling::INITIAL_INDEX;
@@ -156,8 +156,8 @@ protected:
 
     bool GetTilingFromRepo();
     bool TranslateAoeTiling(tuningtiling::TuningTilingDefPtr &tuningTiling);
-    void TranslateApiTiling(std::shared_ptr<tuningtiling::Conv3DTunnerTiling> aoeTiling);
-    void TranslateRunInfo(std::shared_ptr<tuningtiling::Conv3DTunnerTiling> aoeTiling);
+    void TranslateApiTiling(std::shared_ptr<tuningtiling::Conv3DTunerTiling> aoeTiling);
+    void TranslateRunInfo(std::shared_ptr<tuningtiling::Conv3DTunerTiling> aoeTiling);
     bool GetTilingInputArgs(std::shared_ptr<void> &inputArgs, size_t &size);
     void SetAdditionalTilingInfo();
 
@@ -170,21 +170,19 @@ private:
     Ops::NN::Conv3dV2::Conv3DV2TilingData tilingData_;
     Conv3DDescInfo descInfo_;
     Conv3DTilingFlag flagInfo_;
-    Conv3DOrignalFormat originalFormat_;
+    Conv3DOriginalFormat originalFormat_;
 
     // numblocks decision
     NumBlocksRes numBlocksRes;
 
     bool useTilingRepo_ = false;
-    bool isPointWise = false;
     int8_t outputOrder_ = 0;
 
     private:
       ge::graphStatus SetTilingKey();
       void InitConv3dOriginFormat();
-      void InitPointWiseFlag();
       void GetShapeInfo();
-      void GetAttrsInfo();
+      bool SyncAttrInfoFromEngine();
       void GetDescInfo();
       void PrintTilingInfo();
       void GetConv3DParasHf32Mode(const uint32_t enableHf32Idx, uint32_t& hf32Mode);

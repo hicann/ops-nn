@@ -92,10 +92,10 @@ static aclnnStatus ExtendConv2dL0Inner(const aclTensor *input, const aclTensor *
     aclIntArray *dilation4;
     aclIntArray *pad4;
     FVector<int64_t> newStrides{1, 1, (*stride)[0], (*stride)[1]};
-    FVector<int64_t> newDilaition{1, 1, (*dilation)[0], (*dilation)[1]};
+    FVector<int64_t> newDilation{1, 1, (*dilation)[0], (*dilation)[1]};
 
     stride4 = executor->AllocIntArray(newStrides.data(), QUANT_CONV2D_DIM);
-    dilation4 = executor->AllocIntArray(newDilaition.data(), QUANT_CONV2D_DIM);
+    dilation4 = executor->AllocIntArray(newDilation.data(), QUANT_CONV2D_DIM);
     pad4 = ConstructQuantConvNewPad(padding, executor);
     if (pad4->Size() != QUANT_CONV2D_PAD_DIM_4) {
         OP_LOGE(ACLNN_ERR_INNER, "L0 func construct quant conv2d new pad failed.");
@@ -147,9 +147,9 @@ static aclnnStatus QuantConv3dL0Inner(const aclTensor *input, const aclTensor *w
     aclIntArray *dilation5;
     aclIntArray *pad6;
     FVector<int64_t> newStrides{1, 1, (*stride)[0], (*stride)[1], (*stride)[2]};
-    FVector<int64_t> newDilaition{1, 1, (*dilation)[0], (*dilation)[1], (*dilation)[2]};
+    FVector<int64_t> newDilation{1, 1, (*dilation)[0], (*dilation)[1], (*dilation)[2]};
     stride5 = executor->AllocIntArray(newStrides.data(), QUANT_CONV3D_DIM);
-    dilation5 = executor->AllocIntArray(newDilaition.data(), QUANT_CONV3D_DIM);
+    dilation5 = executor->AllocIntArray(newDilation.data(), QUANT_CONV3D_DIM);
     pad6 = ConstructQuantConvNewPad(padding, executor);
     if (pad6->Size() != QUANT_CONV3D_PAD_DIM_6) {
         OP_LOGE(ACLNN_ERR_INNER, "L0 func construct quant conv3d new pad failed.");

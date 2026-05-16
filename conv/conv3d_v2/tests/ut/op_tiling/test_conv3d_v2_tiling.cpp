@@ -569,7 +569,6 @@ TEST_F(Conv3DV2TilingRuntime, TestConv3DV2CheckPointWiseSuccess)
     gert::TilingContext *tilingContext = holder.GetContext<gert::TilingContext>();
 
     optiling::Conv3dOpsTiling::Conv3dBaseTiling conv3dBT(tilingContext);
-    conv3dBT.isPointWise = true;
     conv3dBT.shapeInfo_.kh = 1;
     conv3dBT.shapeInfo_.kw = 1;
     conv3dBT.shapeInfo_.kd = 1;
@@ -1331,7 +1330,8 @@ static Conv3dTilingEngine BuildEngineFromBase(const optiling::Conv3dOpsTiling::C
     engine.attrInfo_.groups = static_cast<int64_t>(base.attrInfo_.groups);
     engine.attrInfo_.groupOpt = static_cast<int64_t>(base.attrInfo_.groupOpt);
     engine.outputOrder_ = base.outputOrder_;
-    engine.isPointWise = base.isPointWise;
+    engine.outputBatch_ = static_cast<int64_t>(base.shapeInfo_.batch);
+    engine.outputCOut_ = static_cast<int64_t>(base.shapeInfo_.cOut);
 
     // Default dtype/format for tests (align with BF16 NCDHW setup)
     engine.descInfo_.fMapDtype = Conv3dApiTiling::ConvDtype::BF16;
@@ -1340,6 +1340,8 @@ static Conv3dTilingEngine BuildEngineFromBase(const optiling::Conv3dOpsTiling::C
     engine.descInfo_.fMapFormat = Conv3dApiTiling::ConvFormat::NCDHW;
     engine.descInfo_.weightFormat = Conv3dApiTiling::ConvFormat::NCDHW;
     engine.descInfo_.outFormat = Conv3dApiTiling::ConvFormat::NCDHW;
+    engine.kernelPointWise_ = engine.shapeInfo_.kd == 1 && engine.shapeInfo_.kh == 1 && engine.shapeInfo_.kw == 1;
+    engine.UpdatePointWiseMode();
     return engine;
 }
 

@@ -56,31 +56,29 @@ ge::graphStatus Conv3dBaseTiling::GetPlatformInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-void Conv3dBaseTiling::GetAttrsInfo()
+bool Conv3dBaseTiling::SyncAttrInfoFromEngine()
 {
-    auto stridePtr = context_->GetAttrs()->GetListInt(ATTR_STRIDE_INDEX);
-    attrInfo_.strideH = static_cast<uint32_t>(stridePtr->GetData()[originalFormat_.FORMAT_DATA_H_INDEX]);
-    attrInfo_.strideW = static_cast<uint32_t>(stridePtr->GetData()[originalFormat_.FORMAT_DATA_W_INDEX]);
-    attrInfo_.strideD = static_cast<uint32_t>(stridePtr->GetData()[originalFormat_.FORMAT_DATA_D_INDEX]);
-
-    auto padPtr = context_->GetAttrs()->GetListInt(ATTR_PAD_INDEX);
-    attrInfo_.padh = static_cast<uint32_t>(padPtr->GetData()[PAD_HEAD_INDEX]);
-    attrInfo_.padt = static_cast<uint32_t>(padPtr->GetData()[PAD_TAIL_INDEX]);
-    attrInfo_.padu = static_cast<uint32_t>(padPtr->GetData()[PAD_UP_INDEX]);
-    attrInfo_.padd = static_cast<uint32_t>(padPtr->GetData()[PAD_DOWN_INDEX]);
-    attrInfo_.padl = static_cast<uint32_t>(padPtr->GetData()[PAD_LEFT_INDEX]);
-    attrInfo_.padr = static_cast<uint32_t>(padPtr->GetData()[PAD_RIGHT_INDEX]);
-
-    auto dilationPtr = context_->GetAttrs()->GetListInt(ATTR_DILATION_INDEX);
-    if (dilationPtr != nullptr) {
-        attrInfo_.dilationH = static_cast<uint32_t>(dilationPtr->GetData()[originalFormat_.FORMAT_DATA_H_INDEX]);
-        attrInfo_.dilationW = static_cast<uint32_t>(dilationPtr->GetData()[originalFormat_.FORMAT_DATA_W_INDEX]);
-        attrInfo_.dilationD = static_cast<uint32_t>(dilationPtr->GetData()[originalFormat_.FORMAT_DATA_D_INDEX]);
+    if (engine_ == nullptr) {
+        OP_LOGE(context_->GetNodeName(), "Conv3D AscendC: engine is null when syncing attr info.");
+        return false;
     }
-    auto groupPtr = context_->GetAttrs()->GetInt(ATTR_GROUP_INDEX);
-    if (groupPtr != nullptr) {
-        attrInfo_.groups = static_cast<uint32_t>(*groupPtr);
-    }
+
+    attrInfo_.strideH = static_cast<uint32_t>(engine_->attrInfo_.strideH);
+    attrInfo_.strideW = static_cast<uint32_t>(engine_->attrInfo_.strideW);
+    attrInfo_.strideD = static_cast<uint32_t>(engine_->attrInfo_.strideD);
+
+    attrInfo_.padh = static_cast<uint32_t>(engine_->attrInfo_.padHead);
+    attrInfo_.padt = static_cast<uint32_t>(engine_->attrInfo_.padTail);
+    attrInfo_.padu = static_cast<uint32_t>(engine_->attrInfo_.padTop);
+    attrInfo_.padd = static_cast<uint32_t>(engine_->attrInfo_.padBottom);
+    attrInfo_.padl = static_cast<uint32_t>(engine_->attrInfo_.padLeft);
+    attrInfo_.padr = static_cast<uint32_t>(engine_->attrInfo_.padRight);
+
+    attrInfo_.dilationH = static_cast<uint32_t>(engine_->attrInfo_.dilationH);
+    attrInfo_.dilationW = static_cast<uint32_t>(engine_->attrInfo_.dilationW);
+    attrInfo_.dilationD = static_cast<uint32_t>(engine_->attrInfo_.dilationD);
+    attrInfo_.groups = static_cast<uint32_t>(engine_->attrInfo_.groups);
+    return true;
 }
 
 void Conv3dBaseTiling::GetConv3DParasHf32Mode(const uint32_t enableHf32Idx, uint32_t& hf32Mode)
@@ -447,14 +445,6 @@ ge::graphStatus Conv3dBaseTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-void Conv3dBaseTiling::InitPointWiseFlag() {
-    auto fMapDesc = context_->GetInputDesc(INPUT_FMAP_INDEX);
-    ge::Format storageFmapFormat = static_cast<ge::Format>(GetPrimaryFormat(fMapDesc->GetStorageFormat()));
-    if (storageFmapFormat == ge::Format::FORMAT_NCDHW) {
-        isPointWise = true;
-    }
-}
-
 bool Conv3dBaseTiling::ExtractAndPassParamsToEngine()
 {
     // Set shapes
@@ -512,7 +502,6 @@ ge::graphStatus Conv3dBaseTiling::GetShapeAttrsInfo()
 
     // Step 2: Parse original format (NCDHW vs NDHWC index mapping)
     InitConv3dOriginFormat();
-    InitPointWiseFlag();
 
     // Step 3: Extract parameters from GE context and pass to Engine
     if (!ExtractAndPassParamsToEngine()) {
@@ -520,14 +509,13 @@ ge::graphStatus Conv3dBaseTiling::GetShapeAttrsInfo()
     }
 
     // Step 4: Sync Base copies for legacy paths (AOE repo, PrintTilingInfo, GetTilingInputArgs)
-    GetAttrsInfo();
+    if (!SyncAttrInfoFromEngine()) {
+        return ge::GRAPH_FAILED;
+    }
     GetShapeInfo();
     GetDescInfo();
 
-    // Step 5: Sync isPointWise flag to Engine
-    engine_->isPointWise = isPointWise;
-
-    // Step 6: Run Engine parameter validation (includes format, shape, dtype checks via CheckInputFormat())
+    // Step 5: Run Engine parameter validation (includes format, shape, dtype checks via CheckInputFormat())
     if (!engine_->CheckAllParams()) {
         OP_LOGE(context_->GetNodeName(), "Conv3D AscendC: Engine parameter check failed in GetShapeAttrsInfo.");
         return ge::GRAPH_FAILED;
@@ -607,7 +595,7 @@ bool Conv3dBaseTiling::GetTilingInputArgs(std::shared_ptr<void> &inputArgs, size
 
 bool Conv3dBaseTiling::TranslateAoeTiling(tuningtiling::TuningTilingDefPtr &tuningTiling)
 {
-    auto aoeTiling = std::static_pointer_cast<tuningtiling::Conv3DTunnerTiling>(tuningTiling);
+    auto aoeTiling = std::static_pointer_cast<tuningtiling::Conv3DTunerTiling>(tuningTiling);
     if (aoeTiling == nullptr) {
         return false;
     }
@@ -618,7 +606,7 @@ bool Conv3dBaseTiling::TranslateAoeTiling(tuningtiling::TuningTilingDefPtr &tuni
     return true;
 }
 
-void Conv3dBaseTiling::TranslateApiTiling(std::shared_ptr<tuningtiling::Conv3DTunnerTiling> aoeTiling)
+void Conv3dBaseTiling::TranslateApiTiling(std::shared_ptr<tuningtiling::Conv3DTunerTiling> aoeTiling)
 {
     tilingData_.convApiTiling.groups = aoeTiling->groups;
     tilingData_.convApiTiling.orgCi = aoeTiling->orgCi;
@@ -664,7 +652,7 @@ void Conv3dBaseTiling::TranslateApiTiling(std::shared_ptr<tuningtiling::Conv3DTu
     tilingData_.convApiTiling.offsetx = aoeTiling->offsetx;
 }
 
-void Conv3dBaseTiling::TranslateRunInfo(std::shared_ptr<tuningtiling::Conv3DTunnerTiling> aoeTiling)
+void Conv3dBaseTiling::TranslateRunInfo(std::shared_ptr<tuningtiling::Conv3DTunerTiling> aoeTiling)
 {
     tilingData_.convRunInfo.batch = shapeInfo_.batch;
     tilingData_.convRunInfo.cin = aoeTiling->orgCi;

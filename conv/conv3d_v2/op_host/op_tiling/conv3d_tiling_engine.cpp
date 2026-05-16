@@ -39,6 +39,9 @@ Conv3dTilingEngine::Conv3dTilingEngine(const std::string &logTag)
     numBlocksRes_.minCost = MAX_64_BIT_NUM;
 
     isPointWise = false;
+    kernelPointWise_ = false;
+    outputBatch_ = -1;
+    outputCOut_ = -1;
     outputOrder_ = static_cast<uint8_t>(Conv3dApiTiling::M_Mode);
 
     OP_LOGD(logTag_.c_str(), "Conv3dTilingEngine constructed, call Init() to initialize platform info");
@@ -69,6 +72,19 @@ bool Conv3dTilingEngine::IsInitialized() const
 uint8_t Conv3dTilingEngine::GetOutputOrder() const
 {
     return outputOrder_;
+}
+
+bool Conv3dTilingEngine::UsesPointWisePath() const
+{
+    return kernelPointWise_ &&
+        descInfo_.fMapFormat == Conv3dApiTiling::ConvFormat::NCDHW &&
+        descInfo_.weightFormat == Conv3dApiTiling::ConvFormat::NCDHW &&
+        descInfo_.outFormat == Conv3dApiTiling::ConvFormat::NCDHW;
+}
+
+void Conv3dTilingEngine::UpdatePointWiseMode()
+{
+    isPointWise = UsesPointWisePath();
 }
 
 bool Conv3dTilingEngine::InitPlatformInfoFromAscendC()
@@ -145,8 +161,9 @@ void Conv3dTilingEngine::SetOrgWeightShape(const std::vector<int64_t> &orgWeight
     shapeInfo_.kh = static_cast<uint32_t>(orgWeightShapeList[FORMAT_NCDHW_H_INDEX]);
     shapeInfo_.kw = static_cast<uint32_t>(orgWeightShapeList[FORMAT_NCDHW_W_INDEX]);
 
-    // Update pointwise flag - pointwise convolution has 1x1x1 kernel
-    isPointWise = (shapeInfo_.kd == 1 && shapeInfo_.kh == 1 && shapeInfo_.kw == 1);
+    // Pointwise path is only valid when both kernel shape and tensor formats match the pointwise contract.
+    kernelPointWise_ = (shapeInfo_.kd == 1 && shapeInfo_.kh == 1 && shapeInfo_.kw == 1);
+    UpdatePointWiseMode();
 }
 
 void Conv3dTilingEngine::SetOrgFmapShape(const std::vector<int64_t> &orgFmapShapeList)
@@ -174,6 +191,8 @@ void Conv3dTilingEngine::SetOrgOutputShape(const std::vector<int64_t> &orgOutput
         return;
     }
 
+    outputBatch_ = orgOutputShapeList[FORMAT_NCDHW_N_INDEX];
+    outputCOut_ = orgOutputShapeList[FORMAT_NCDHW_C_INDEX];
     shapeInfo_.dOut = static_cast<uint32_t>(orgOutputShapeList[FORMAT_NCDHW_D_INDEX]);
     shapeInfo_.ho = static_cast<uint64_t>(orgOutputShapeList[FORMAT_NCDHW_H_INDEX]);
     shapeInfo_.wo = static_cast<uint64_t>(orgOutputShapeList[FORMAT_NCDHW_W_INDEX]);
@@ -257,6 +276,8 @@ void Conv3dTilingEngine::SetFormat(Conv3dApiTiling::ConvFormat fmapFormat,
             Conv3dApiTiling::g_formatToStr.at(fmapFormat).c_str(),
             Conv3dApiTiling::g_formatToStr.at(weightFormat).c_str(),
             Conv3dApiTiling::g_formatToStr.at(outFormat).c_str());
+
+    UpdatePointWiseMode();
 }
 
 void Conv3dTilingEngine::SetBias(bool hasBias, Conv3dApiTiling::ConvDtype biasDtype)
@@ -679,7 +700,7 @@ bool CheckPointWiseParamsDtypeWithBias(const char *logTag, const Conv3DEngineDes
     }
 
     OP_LOGE(logTag,
-            "[PointWise] unSupported params data type [fmap, weight, bias, output]: [%s, %s, %s, %s].",
+            "[PointWise] Unsupported params data type [fmap, weight, bias, output]: [%s, %s, %s, %s].",
             g_convDtypeToStr[descInfo.fMapDtype].c_str(),
             g_convDtypeToStr[descInfo.weightDtype].c_str(),
             g_convDtypeToStr[descInfo.biasDtype].c_str(),
@@ -701,7 +722,7 @@ bool CheckPointWiseParamsDtypeWithoutBias(const char *logTag, const Conv3DEngine
         return true;
     }
 
-    OP_LOGE(logTag, "[PointWise] unSupported params data type [fmap, weight, output]: [%s, %s, %s].",
+    OP_LOGE(logTag, "[PointWise] Unsupported params data type [fmap, weight, output]: [%s, %s, %s].",
             g_convDtypeToStr[descInfo.fMapDtype].c_str(),
             g_convDtypeToStr[descInfo.weightDtype].c_str(),
             g_convDtypeToStr[descInfo.outDtype].c_str());
@@ -727,7 +748,7 @@ bool CheckParamsDtypeWithScale(const char *logTag, const Conv3DEngineDescInfo &d
     }
 
     OP_LOGE(logTag,
-            "unSupported params data type [fmap, weight, bias, scale, output]: [%s, %s, %s, %s, %s].",
+            "Unsupported params data type [fmap, weight, bias, scale, output]: [%s, %s, %s, %s, %s].",
             g_convDtypeToStr[descInfo.fMapDtype].c_str(),
             g_convDtypeToStr[descInfo.weightDtype].c_str(),
             g_convDtypeToStr[descInfo.biasDtype].c_str(),
@@ -752,7 +773,7 @@ bool CheckParamsDtypeWithBias(const char *logTag, const Conv3DEngineDescInfo &de
         return true;
     }
 
-    OP_LOGE(logTag, "unSupported params data type [fmap, weight, bias, output]: [%s, %s, %s, %s].",
+    OP_LOGE(logTag, "Unsupported params data type [fmap, weight, bias, output]: [%s, %s, %s, %s].",
             g_convDtypeToStr[descInfo.fMapDtype].c_str(),
             g_convDtypeToStr[descInfo.weightDtype].c_str(),
             g_convDtypeToStr[descInfo.biasDtype].c_str(),
@@ -774,7 +795,7 @@ bool CheckParamsDtypeWithoutBias(const char *logTag, const Conv3DEngineDescInfo 
         return true;
     }
 
-    OP_LOGE(logTag, "unSupported params data type [fmap, weight, output]: [%s, %s, %s].",
+    OP_LOGE(logTag, "Unsupported params data type [fmap, weight, output]: [%s, %s, %s].",
             g_convDtypeToStr[descInfo.fMapDtype].c_str(),
             g_convDtypeToStr[descInfo.weightDtype].c_str(),
             g_convDtypeToStr[descInfo.outDtype].c_str());
@@ -831,7 +852,7 @@ bool Conv3dTilingEngine::CheckInputFormat()
             isPointWise ? "Pointwise" : (flagInfo_.hasScale ? "Quant" : "Regular"));
 
     // Validate based on pointwise mode
-    if (isPointWise) { 
+    if (isPointWise) {
         // Pointwise mode: all tensors must be NCDHW
         if(!CheckValidFormatCombo(
             Conv3dApiTiling::ConvFormat::NCDHW,
@@ -978,6 +999,39 @@ bool Conv3dTilingEngine::CheckInputShapeWithPad()
                 "Fmap size(DHW) after padding should be >= filter size(DHW). "
                 "idPad %ld, ihPad %ld, iwPad %ld",
                 idPad, ihPad, iwPad);
+        return false;
+    }
+
+    return true;
+}
+
+bool Conv3dTilingEngine::CheckOutputShapeConsistency()
+{
+    int64_t expectDo = (static_cast<int64_t>(shapeInfo_.di) +
+                        attrInfo_.padHead + attrInfo_.padTail -
+                        attrInfo_.dilationD * (static_cast<int64_t>(shapeInfo_.kd) - 1LL) - 1LL) /
+                        attrInfo_.strideD + 1LL;
+    int64_t expectHo = (static_cast<int64_t>(shapeInfo_.hi) +
+                        attrInfo_.padTop + attrInfo_.padBottom -
+                        attrInfo_.dilationH * (static_cast<int64_t>(shapeInfo_.kh) - 1LL) - 1LL) /
+                        attrInfo_.strideH + 1LL;
+    int64_t expectWo = (static_cast<int64_t>(shapeInfo_.wi) +
+                        attrInfo_.padLeft + attrInfo_.padRight -
+                        attrInfo_.dilationW * (static_cast<int64_t>(shapeInfo_.kw) - 1LL) - 1LL) /
+                        attrInfo_.strideW + 1LL;
+
+    if (outputBatch_ != static_cast<int64_t>(shapeInfo_.batch) ||
+        outputCOut_ != static_cast<int64_t>(shapeInfo_.cOut) ||
+        expectDo != static_cast<int64_t>(shapeInfo_.dOut) ||
+        expectHo != static_cast<int64_t>(shapeInfo_.ho) ||
+        expectWo != static_cast<int64_t>(shapeInfo_.wo)) {
+        OP_LOGE(logTag_.c_str(),
+                "Conv3D AscendC: output shape mismatch. expect [N,C,D,H,W]=[%ld,%ld,%ld,%ld,%ld], "
+                "actual [%ld,%ld,%ld,%ld,%ld].",
+                static_cast<int64_t>(shapeInfo_.batch), static_cast<int64_t>(shapeInfo_.cOut),
+                expectDo, expectHo, expectWo,
+                outputBatch_, outputCOut_, static_cast<int64_t>(shapeInfo_.dOut),
+                static_cast<int64_t>(shapeInfo_.ho), static_cast<int64_t>(shapeInfo_.wo));
         return false;
     }
 
@@ -1197,6 +1251,8 @@ bool Conv3dTilingEngine::CheckAllParams()
         // Cross-parameter consistency + hardware limit checks.
         {&Conv3dTilingEngine::CheckInputShapeWithPad,
          "CheckAllParams failed: input shape incompatible with pad/dilation/stride."},
+        {&Conv3dTilingEngine::CheckOutputShapeConsistency,
+         "CheckAllParams failed: output shape is inconsistent with input/weight/attrs."},
         {&Conv3dTilingEngine::CheckLoad3DLimits,
          "CheckAllParams failed: configuration violates LOAD3D hardware limits."},
     };
@@ -1376,11 +1432,11 @@ void Conv3dTilingEngine::CoreNumBlocksDecision()
     numBlocksRes_ = numBlocksResTmp;
 
     /**
-     * An optimized core partitioning logic is implemented here to ensure that the dout axis partitioning (doDim) is 
+     * An optimized core partitioning logic is implemented here to ensure that the dout axis partitioning (doDim) is
      * used as fully as possible on the kernel side.
      * In order to ensure that part of the logic entering this optimized core partitioning does not degrade performance,
      * the following two constraints are implemented:
-     * ** 1. This logic only updates the inter-core allocation for different axes (such as doDim) and the amount of 
+     * ** 1. This logic only updates the inter-core allocation for different axes (such as doDim) and the amount of
      *       data that each core needs to process (such as singleCoreDo)
      * ** 2. Optimized core partitioning is only performed for cases that meet DO_DIM_FILTER_THRESHOLD
     */
@@ -1390,11 +1446,11 @@ void Conv3dTilingEngine::CoreNumBlocksDecision()
     allRanges[NUMBLOCKS_DO_IDX] = numBlocksRanges_.doRange;
     NumBlocksDecisionBackTrack(numBlocksResTmp, allRanges, NUMBLOCKS_BATCH_IDX, dimsRecord);
     if (numBlocksRes_.doDim > DO_DIM_FILTER_THRESHOLD) {
-        OP_LOGD(logTag_.c_str(), "Using original block dimensions: doDim (%u) > threshold (%u), keeping original block dimensions", 
+        OP_LOGD(logTag_.c_str(), "Using original block dimensions: doDim (%u) > threshold (%u), keeping original block dimensions",
                 numBlocksRes_.doDim, DO_DIM_FILTER_THRESHOLD);
         numBlocksResOpt_ = numBlocksRes_;
     } else {
-        OP_LOGD(logTag_.c_str(), "Entering block dimension optimization logic: original doDim (%u) <= threshold (%u), using filtered optimized doDim (%u)", 
+        OP_LOGD(logTag_.c_str(), "Entering block dimension optimization logic: original doDim (%u) <= threshold (%u), using filtered optimized doDim (%u)",
                 numBlocksRes_.doDim, DO_DIM_FILTER_THRESHOLD, numBlocksResTmp.doDim);
         numBlocksResOpt_ = numBlocksResTmp;
     }

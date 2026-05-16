@@ -191,9 +191,9 @@ void Conv3dTilingBase::SetHF32(bool hf32Enable, bool hf32TransMode = false)
 bool Conv3dTilingBase::CalOptGroupParams(const Conv3DOriGroupInfo &oriGroupInfo,
                                                         Conv3DGroupOptInfo &groupOptInfo) const
 {
-    // user need to pass correct parms.
+    // user need to pass correct params.
     if (oriGroupInfo.groups < 1 || oriGroupInfo.cin < 1 || oriGroupInfo.cout < 1) {
-        TILING_DEBUG_LOG("Conv3D AscendC: unSupported parms in groupOpt:" \
+        TILING_DEBUG_LOG("Conv3D AscendC: Unsupported params in groupOpt:" \
                         " groups: %ld, cin: %ld, cout: %ld, only support greater than zero",
                         oriGroupInfo.groups, oriGroupInfo.cin, oriGroupInfo.cout);
         return false;
@@ -304,7 +304,7 @@ bool Conv3dTilingBase::CheckInputAttr() const
         this->attrInfo.padHead < 0 || this->attrInfo.padTail < 0);
     if (padInvalidFlag) {
         TILING_ERROR_LOG(
-            "Illlegal attrs have set: padTop=%ld, padBottom=%ld, padLeft=%ld, padRight=%ld, padHead=%ld, padTail=%ld,\
+            "Illegal attrs have set: padTop=%ld, padBottom=%ld, padLeft=%ld, padRight=%ld, padHead=%ld, padTail=%ld,\
             which must >= 0.", this->attrInfo.padTop, this->attrInfo.padBottom, this->attrInfo.padLeft,
             this->attrInfo.padRight, this->attrInfo.padHead, this->attrInfo.padTail);
         return false;
@@ -333,7 +333,7 @@ bool Conv3dTilingBase::CheckInputAttrPointWise() const
 {
     if (this->attrInfo.groups != 1) {
         TILING_ERROR_LOG(
-            "[PointWise] Illlegal attrs have set: groups=%ld.",
+            "[PointWise] Illegal attrs have set: groups=%ld.",
             this->attrInfo.groups);
         return false;
     }
@@ -346,7 +346,7 @@ bool Conv3dTilingBase::CheckInputAttrPointWise() const
         this->attrInfo.padTail != 0);
     if (padInvalidFlag) {
         TILING_ERROR_LOG(
-            "[PointWise] Illlegal attrs have set: padTop=%ld, padBottom=%ld, padLeft=%ld, padRight=%ld, padHead=%ld, padTail=%ld,\
+            "[PointWise] Illegal attrs have set: padTop=%ld, padBottom=%ld, padLeft=%ld, padRight=%ld, padHead=%ld, padTail=%ld,\
             which must = 0.", this->attrInfo.padTop, this->attrInfo.padBottom, this->attrInfo.padLeft,
             this->attrInfo.padRight, this->attrInfo.padHead, this->attrInfo.padTail);
         return false;
@@ -528,13 +528,13 @@ bool Conv3dTilingBase::CheckInputShapePointWise() const
 bool Conv3dTilingBase::CheckInputFormat() const
 {
     if (this->descInfo.weightType.format != ConvFormat::FRACTAL_Z_3D) {
-        TILING_ERROR_LOG("unSupported weight format: %s.",
+        TILING_ERROR_LOG("Unsupported weight format: %s.",
                          g_formatToStr.at(this->descInfo.weightType.format).c_str());
         return false;
     }
 
     if (this->descInfo.fMapType.format != ConvFormat::NDC1HWC0) {
-        TILING_ERROR_LOG("unSupported feature map format: %s.",
+        TILING_ERROR_LOG("Unsupported feature map format: %s.",
                          g_formatToStr.at(this->descInfo.fMapType.format).c_str());
         return false;
     }
@@ -571,7 +571,7 @@ bool Conv3dTilingBase::CheckParamsDtypeHasQuantScale() const
             return true;
         }
     }
-    TILING_ERROR_LOG("unSupported params data type [fmap, weight, bias, scale, output]: [%s, %s, %s, %s, %s].",
+    TILING_ERROR_LOG("Unsupported params data type [fmap, weight, bias, scale, output]: [%s, %s, %s, %s, %s].",
         g_dtypeToStr.at(this->descInfo.fMapType.dtype).c_str(),
         g_dtypeToStr.at(this->descInfo.weightType.dtype).c_str(),
         g_dtypeToStr.at(this->descInfo.biasType.dtype).c_str(),
@@ -592,7 +592,7 @@ bool Conv3dTilingBase::CheckParamsDtypeHasBias() const
             return true;
         }
     }
-    TILING_ERROR_LOG("unSupported params data type [fmap, weight, bias, output]: [%s, %s, %s, %s].",
+    TILING_ERROR_LOG("Unsupported params data type [fmap, weight, bias, output]: [%s, %s, %s, %s].",
         g_dtypeToStr.at(this->descInfo.fMapType.dtype).c_str(),
         g_dtypeToStr.at(this->descInfo.weightType.dtype).c_str(),
         g_dtypeToStr.at(this->descInfo.biasType.dtype).c_str(),
@@ -611,7 +611,7 @@ bool Conv3dTilingBase::CheckParamsDtypeEssential() const
             return true;
         }
     }
-    TILING_ERROR_LOG("unSupported params data type [fmap, weight, output]: [%s, %s, %s].",
+    TILING_ERROR_LOG("Unsupported params data type [fmap, weight, output]: [%s, %s, %s].",
         g_dtypeToStr.at(this->descInfo.fMapType.dtype).c_str(),
         g_dtypeToStr.at(this->descInfo.weightType.dtype).c_str(),
         g_dtypeToStr.at(this->descInfo.outputType.dtype).c_str());
@@ -641,7 +641,7 @@ bool Conv3dTilingBase::CheckParamsDtypePointWise() const
                 return true;
             }
         }
-        TILING_ERROR_LOG("[PointWise] unSupported params data type [fmap, weight, bias, output]: [%s, %s, %s, %s].",
+        TILING_ERROR_LOG("[PointWise] Unsupported params data type [fmap, weight, bias, output]: [%s, %s, %s, %s].",
             g_dtypeToStr.at(this->descInfo.fMapType.dtype).c_str(),
             g_dtypeToStr.at(this->descInfo.weightType.dtype).c_str(),
             g_dtypeToStr.at(this->descInfo.biasType.dtype).c_str(),
@@ -657,7 +657,7 @@ bool Conv3dTilingBase::CheckParamsDtypePointWise() const
                 return true;
             }
         }
-        TILING_ERROR_LOG("[PointWise] unSupported params data type [fmap, weight, output]: [%s, %s, %s].",
+        TILING_ERROR_LOG("[PointWise] Unsupported params data type [fmap, weight, output]: [%s, %s, %s].",
             g_dtypeToStr.at(this->descInfo.fMapType.dtype).c_str(),
             g_dtypeToStr.at(this->descInfo.weightType.dtype).c_str(),
             g_dtypeToStr.at(this->descInfo.outputType.dtype).c_str());

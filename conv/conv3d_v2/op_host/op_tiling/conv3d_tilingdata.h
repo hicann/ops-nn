@@ -21,7 +21,7 @@
 #include "tiling/tiling_base.h"
 #include "register/op_impl_registry.h"
 
-// sizeof(TConv3DTiling) must algin with 8Byte, type sort
+// sizeof(TConv3DTiling) must align with 8Byte, type sort
 namespace optiling {
 }  // namespace optiling
 

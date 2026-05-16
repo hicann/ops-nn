@@ -78,7 +78,7 @@ aclnnStatus ChangeConv2dAttrToConv3d(const aclIntArray* &stride, const aclIntArr
 aclnnStatus ChangeConv2dInputToConv3d(const aclTensor* &input, const aclTensor* &weight, aclOpExecutor* executor);
 const aclTensor* View4dAs5dForInput(const aclTensor* input, aclOpExecutor* executor);
 const aclTensor* View5dAs4dForOutput(const aclTensor* input, aclOpExecutor* executor);
-aclIntArray* View2dAs3dForAttr(const aclIntArray* intArray, int64_t expendValue, aclOpExecutor* executor, bool isPad);
+aclIntArray* View2dAs3dForAttr(const aclIntArray* intArray, int64_t expandValue, aclOpExecutor* executor, bool isPad);
 aclIntArray* View2DSwapHWForAttr(const aclIntArray* intArray, aclOpExecutor* executor);
 const aclTensor* View4DSwapHWForTensor(const aclTensor* input, aclOpExecutor* executor);
 bool CheckDisContinuousStride(const aclTensor* input, const std::vector<int64_t>& newStrides, uint32_t dims);

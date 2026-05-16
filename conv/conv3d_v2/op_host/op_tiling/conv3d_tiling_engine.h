@@ -166,10 +166,15 @@ public:
 private:
     std::string logTag_ {"Conv3DV2"};
     bool initOk_ = false;
+    bool kernelPointWise_ = false;
+    int64_t outputBatch_ = -1;
+    int64_t outputCOut_ = -1;
     std::vector<int64_t> biasShape_;
     std::vector<int64_t> scaleShape_;
 
     bool InitPlatformInfoFromAscendC();
+    void UpdatePointWiseMode();
+    bool UsesPointWisePath() const;
 
 public:
     bool CheckStrideLegal();
@@ -182,6 +187,7 @@ public:
     bool CheckPointWiseParams();
     bool CheckLoad3DLimits();
     bool CheckInputShapeWithPad();
+    bool CheckOutputShapeConsistency();
     bool CheckBiasShape();
     bool CheckScaleShape();
     bool CheckParamsOverflow();

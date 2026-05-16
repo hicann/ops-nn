@@ -224,7 +224,7 @@ bool Conv2DSplitWInfo::CheckLoadL1InSplitW(const aclTensor* bias, aclTensor* out
     return true;
 }
 
-aclIntArray* View2dAs3dForAttr(const aclIntArray* intArray, int64_t expendValue, aclOpExecutor* executor, bool isPad)
+aclIntArray* View2dAs3dForAttr(const aclIntArray* intArray, int64_t expandValue, aclOpExecutor* executor, bool isPad)
 {
     int64_t data[SplitWInfo::CONV3D_ATTR_NUM];
     uint64_t size = intArray->Size();
@@ -232,7 +232,7 @@ aclIntArray* View2dAs3dForAttr(const aclIntArray* intArray, int64_t expendValue,
     if (!isPad && (size != static_cast<uint64_t>(SplitWInfo::CONV3D_ATTR_NUM - 1))) {
         return nullptr;
     }
-    data[0] = expendValue;
+    data[0] = expandValue;
     data[1] = (*intArray)[0];
     if (isPad) {
         data[SplitWInfo::W_INDEX_ATTR_CONV3D] = (*intArray)[SplitWInfo::LEFT_INDEX_ATTR];
@@ -272,12 +272,12 @@ const aclTensor* View4DSwapHWForTensor(const aclTensor* input, aclOpExecutor* ex
 
 const aclTensor* View4dAs5dForInput(const aclTensor* input, aclOpExecutor* executor)
 {
-    // input NCHW->contigious->unsqueeze(2)->reformat NCDHW
-    // 非连续转连续contigious
+    // input NCHW->contiguous->unsqueeze(2)->reformat NCDHW
+    // 非连续转连续contiguous
     auto contiguousInput = l0op::Contiguous(input, executor);
     CHECK_RET(contiguousInput != nullptr, nullptr);
 
-    // unsqeeze(2)
+    // unsqueeze(2)
     const int64_t appendDim[] = {SplitWInfo::HI_INDEX};
     aclIntArray* dim = executor->AllocIntArray(appendDim, 1);
     CHECK_RET(dim != nullptr, nullptr);
@@ -314,11 +314,11 @@ aclnnStatus ChangeConv2dInputToConv3d(const aclTensor* &input, const aclTensor* 
 
 const aclTensor* View5dAs4dForOutput(const aclTensor* input, aclOpExecutor* executor)
 {
-    // input NCDHW->contigious->squeeze(2)->reformat NCHW
-    // 非连续转连续contigious
+    // input NCDHW->contiguous->squeeze(2)->reformat NCHW
+    // 非连续转连续contiguous
     auto contiguousInput = l0op::Contiguous(input, executor);
     CHECK_RET(contiguousInput != nullptr, nullptr);
-    // sqeeze(2)
+    // squeeze(2)
     const int64_t appendDim[] = {SplitWInfo::HI_INDEX};
     aclIntArray* dim = executor->AllocIntArray(appendDim, 1);
     CHECK_RET(dim != nullptr, nullptr);

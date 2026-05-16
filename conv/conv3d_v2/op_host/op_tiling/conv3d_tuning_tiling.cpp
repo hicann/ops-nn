@@ -17,5 +17,5 @@ DECLARE_STRUCT_RELATE_WITH_OP_V2(Conv3D, Conv3DInputArgs, aDtype, bDtype, cDtype
                               strideH, strideW, dilationD, dilationH, dilationW, padHead, padTail, padTop,
                               padBottom, padLeft, padRight, biasFlag);
 
-REGISTER_TUNING_TILING_CLASS(Conv3D, Conv3DTunnerTiling);
+REGISTER_TUNING_TILING_CLASS(Conv3D, Conv3DTunerTiling);
 }  // namespace tuningtiling

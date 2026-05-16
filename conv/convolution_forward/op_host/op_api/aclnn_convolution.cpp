@@ -1449,12 +1449,12 @@ private:
         FVector<int64_t>& padding, bool transposed)
     {
         FVector<int64_t> inputShape, weightShape;
-        bool inputChannleLast, weightChannleLast;
+        bool inputChannelLast, weightChannelLast;
         int64_t inputSpaceDimIndex, weightSpaceDimIndex;
         size_t inputSpaceDimNum, weightSpaceDimNum;
 
-        GetSpatialDimInfo(input, inputChannleLast, inputSpaceDimIndex, inputSpaceDimNum, inputShape);
-        GetSpatialDimInfo(weight, weightChannleLast, weightSpaceDimIndex, weightSpaceDimNum, weightShape);
+        GetSpatialDimInfo(input, inputChannelLast, inputSpaceDimIndex, inputSpaceDimNum, inputShape);
+        GetSpatialDimInfo(weight, weightChannelLast, weightSpaceDimIndex, weightSpaceDimNum, weightShape);
 
         auto newpad = ConstructPad(padding, inputShape);
         for (size_t i = 0; i < inputSpaceDimNum; ++i) {
@@ -1480,7 +1480,7 @@ private:
                 if (inputShapeValueAfterPad < 0) {
                     OP_LOGE(
                         ACLNN_ERR_PARAM_INVALID,
-                        "after pad and dilation, expect input shape[%zu] should be greater than kernerl shape[%zu], "
+                        "after pad and dilation, expect input shape[%zu] should be greater than kernel shape[%zu], "
                         "(input + pad - dilation * (weight - 1) - 1) should >= 0, actual get: %ld",
                         i, i, inputShapeValueAfterPad);
                     return ACLNN_ERR_PARAM_INVALID;
@@ -1583,13 +1583,13 @@ private:
 
         // check space(d h w or l)
         FVector<int64_t> inputShape = input.shape;
-        bool inputChannleLast = input.ChannelLast();
-        int64_t inputSpaceDimIndex = inputChannleLast ? 1 : 2; // 空间维度在shape中的起始位置，C维度后置时为1，否则为2
+        bool inputChannelLast = input.ChannelLast();
+        int64_t inputSpaceDimIndex = inputChannelLast ? 1 : 2; // 空间维度在shape中的起始位置，C维度后置时为1，否则为2
         size_t inputSpaceDimNum = input.shape.size() - 2;      // 空间维度大小，1d卷积时为1，2d为2，3d为3
 
         FVector<int64_t> weightShape = weight.shape;
-        bool weightChannleLast = weight.ChannelLast();
-        int64_t weightSpaceDimIndex = weightChannleLast ? 1 : 2; // 空间维度在shape中的起始位置，C维度后置时为1，否则为2
+        bool weightChannelLast = weight.ChannelLast();
+        int64_t weightSpaceDimIndex = weightChannelLast ? 1 : 2; // 空间维度在shape中的起始位置，C维度后置时为1，否则为2
 
         // 假设是NCL，判断L的值。假设是NCHW，判断HW的值
         for (size_t i = 0; i < inputSpaceDimNum; ++i) {
@@ -1649,7 +1649,7 @@ public:
 
 private:
     /*
-    input weight output 的shape均瑶大于等于0
+    input weight output 的shape均需大于等于0
     bias（一维）的值要等于channel_out
     */
     aclnnStatus CheckShapeTbc(TensorMeta& input, TensorMeta& weight, TensorMeta& output) const
@@ -1769,12 +1769,12 @@ private:
 
         // check space(d h w or l)
         FVector<int64_t> inputShape, weightShape;
-        bool inputChannleLast, weightChannleLast;
+        bool inputChannelLast, weightChannelLast;
         int64_t inputSpaceDimIndex, weightSpaceDimIndex;
         size_t inputSpaceDimNum, weightSpaceDimNum;
 
-        GetSpatialDimInfo(input, inputChannleLast, inputSpaceDimIndex, inputSpaceDimNum, inputShape);
-        GetSpatialDimInfo(weight, weightChannleLast, weightSpaceDimIndex, weightSpaceDimNum, weightShape);
+        GetSpatialDimInfo(input, inputChannelLast, inputSpaceDimIndex, inputSpaceDimNum, inputShape);
+        GetSpatialDimInfo(weight, weightChannelLast, weightSpaceDimIndex, weightSpaceDimNum, weightShape);
         for (size_t i = 0; i < inputSpaceDimNum; ++i) {
             int64_t inputShapeSpace = inputShape[i + inputSpaceDimIndex]; // 空间维度的值
             if (inputShapeSpace < 0) {
@@ -1810,12 +1810,12 @@ private:
         const FVector<int64_t>& padding, bool transposed)
     {
         FVector<int64_t> inputShape, weightShape;
-        bool inputChannleLast, weightChannleLast;
+        bool inputChannelLast, weightChannelLast;
         int64_t inputSpaceDimIndex, weightSpaceDimIndex;
         size_t inputSpaceDimNum, weightSpaceDimNum;
 
-        GetSpatialDimInfo(input, inputChannleLast, inputSpaceDimIndex, inputSpaceDimNum, inputShape);
-        GetSpatialDimInfo(weight, weightChannleLast, weightSpaceDimIndex, weightSpaceDimNum, weightShape);
+        GetSpatialDimInfo(input, inputChannelLast, inputSpaceDimIndex, inputSpaceDimNum, inputShape);
+        GetSpatialDimInfo(weight, weightChannelLast, weightSpaceDimIndex, weightSpaceDimNum, weightShape);
 
         for (size_t i = 0; i < inputSpaceDimNum; ++i) {
             auto inputShapeValue = inputShape[i + inputSpaceDimIndex];
@@ -3553,12 +3553,12 @@ aclIntArray* ViewValueAs1d(const int64_t value, aclOpExecutor* executor)
 
 const aclTensor* View1dAs4d(const aclTensor* input, aclOpExecutor* executor)
 {
-    // input NCL->contigious->unsqueeze(2)->reformat NCHW
-    // 非连续转连续contigious
+    // input NCL->contiguous->unsqueeze(2)->reformat NCHW
+    // 非连续转连续contiguous
     auto contiguousInput = l0op::Contiguous(input, executor);
     CHECK_RET(contiguousInput != nullptr, nullptr);
 
-    // unsqeeze(2)
+    // unsqueeze(2)
     constexpr int64_t appendDim[] = {0, 2, 3};
     aclIntArray* dim = executor->AllocIntArray(appendDim, 3);
     auto unsqueezedInput = l0op::UnsqueezeNd(contiguousInput, dim, executor);
@@ -3573,12 +3573,12 @@ const aclTensor* View1dAs4d(const aclTensor* input, aclOpExecutor* executor)
 
 static const aclTensor* View3dAs4d(const aclTensor* input, aclOpExecutor* executor)
 {
-    // input NCL->contigious->unsqueeze(2)->reformat NCHW
-    // 非连续转连续contigious
+    // input NCL->contiguous->unsqueeze(2)->reformat NCHW
+    // 非连续转连续contiguous
     auto contiguousInput = l0op::Contiguous(input, executor);
     CHECK_RET(contiguousInput != nullptr, nullptr);
 
-    // unsqeeze(2)
+    // unsqueeze(2)
     constexpr int64_t appendDim[] = {2};
     aclIntArray* dim = executor->AllocIntArray(appendDim, 1);
     auto unsqueezedInput = l0op::UnsqueezeNd(contiguousInput, dim, executor);
@@ -3593,12 +3593,12 @@ static const aclTensor* View3dAs4d(const aclTensor* input, aclOpExecutor* execut
 
 static const aclTensor* View3dAs4dw(const aclTensor* input, aclOpExecutor* executor)
 {
-    // input NCL->contigious->unsqueeze(2)->reshape->reformat NCHW
-    // 非连续转连续contigious
+    // input NCL->contiguous->unsqueeze(2)->reshape->reformat NCHW
+    // 非连续转连续contiguous
     auto contiguousInput = l0op::Contiguous(input, executor);
     CHECK_RET(contiguousInput != nullptr, nullptr);
 
-    // unsqeeze(2) 扩w维度
+    // unsqueeze(2) 扩w维度
     constexpr int64_t appendDim[] = {2};
     aclIntArray* dim = executor->AllocIntArray(appendDim, 1);
     auto unsqueezedInput = l0op::UnsqueezeNd(contiguousInput, dim, executor);
@@ -3622,11 +3622,11 @@ static const aclTensor* View3dAs4dw(const aclTensor* input, aclOpExecutor* execu
 
 static const aclTensor* View4dAs3d(const aclTensor* input, aclOpExecutor* executor)
 {
-    // input NCL->contigious->unsqueeze(2)->reformat NCHW
-    // 非连续转连续contigious
+    // input NCL->contiguous->unsqueeze(2)->reformat NCHW
+    // 非连续转连续contiguous
     auto contiguousInput = l0op::Contiguous(input, executor);
     CHECK_RET(contiguousInput != nullptr, nullptr);
-    // sqeeze(2)
+    // squeeze(2)
     constexpr int64_t appendDim[] = {2};
     aclIntArray* dim = executor->AllocIntArray(appendDim, 1);
     CHECK_RET(dim != nullptr, nullptr);
@@ -3642,8 +3642,8 @@ static const aclTensor* View4dAs3d(const aclTensor* input, aclOpExecutor* execut
 
 static const aclTensor* View4dAs3dw(const aclTensor* input, aclOpExecutor* executor)
 {
-    // input NCL->contigious->Reshape->unsqueeze(2)->reformat NCHW
-    // 非连续转连续contigious
+    // input NCL->contiguous->Reshape->unsqueeze(2)->reformat NCHW
+    // 非连续转连续contiguous
     auto contiguousInput = l0op::Contiguous(input, executor);
     CHECK_RET(contiguousInput != nullptr, nullptr);
 
@@ -3655,7 +3655,7 @@ static const aclTensor* View4dAs3dw(const aclTensor* input, aclOpExecutor* execu
     CHECK_RET(shapeArray != nullptr, nullptr);
     contiguousInput = l0op::Reshape(contiguousInput, shapeArray, executor);
     CHECK_RET(contiguousInput != nullptr, nullptr);
-    // sqeeze(3)
+    // squeeze(3)
     constexpr int64_t appendDim[] = {2};
     aclIntArray* dim = executor->AllocIntArray(appendDim, 1);
     CHECK_RET(dim != nullptr, nullptr);
@@ -3671,7 +3671,7 @@ static const aclTensor* View4dAs3dw(const aclTensor* input, aclOpExecutor* execu
 
 static const aclTensor* Permute(const aclTensor* input, FVector<int64_t> dims, aclOpExecutor* executor)
 {
-    // contigious
+    // contiguous
     auto contiguousInput = l0op::Contiguous(input, executor);
     CHECK_RET(contiguousInput != nullptr, nullptr);
     // Transpose

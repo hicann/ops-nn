@@ -698,9 +698,40 @@ TEST(TestConv3dTilingEngine, CheckAttrLimits_MixedBoundaryValues)
     EXPECT_TRUE(engine.CheckDilationLegal());
 }
 
-// Note about CheckOutputShape:
-// CheckOutputShape is declared in the header file but not implemented in the cpp file.
-// Unit tests for this method are skipped to avoid linking issues or relying on dead declarations.
+TEST(TestConv3dTilingEngine, CheckOutputShapeConsistency_Positive)
+{
+    Conv3dTilingEngine engine;
+    InitSimpleConv3dEngine(engine);
+
+    EXPECT_TRUE(engine.CheckOutputShapeConsistency());
+}
+
+TEST(TestConv3dTilingEngine, CheckOutputShapeConsistency_DimensionMismatch)
+{
+    Conv3dTilingEngine engine;
+    InitSimpleConv3dEngine(engine);
+
+    engine.SetOrgOutputShape({1, 16, 2, 1, 1});
+    EXPECT_FALSE(engine.CheckOutputShapeConsistency());
+}
+
+TEST(TestConv3dTilingEngine, CheckOutputShapeConsistency_BatchOrChannelMismatch)
+{
+    Conv3dTilingEngine engine;
+    InitSimpleConv3dEngine(engine);
+
+    engine.SetOrgOutputShape({2, 8, 1, 1, 1});
+    EXPECT_FALSE(engine.CheckOutputShapeConsistency());
+}
+
+TEST(TestConv3dTilingEngine, CheckAllParams_FailsOnOutputShapeMismatch)
+{
+    Conv3dTilingEngine engine;
+    InitSimpleConv3dEngine(engine);
+
+    engine.SetOrgOutputShape({1, 16, 2, 1, 1});
+    EXPECT_FALSE(engine.CheckAllParams());
+}
 
 TEST(TestConv3dTilingEngine, CheckParameterConsistency_GroupChannelMismatch)
 {
@@ -1536,6 +1567,19 @@ TEST(TestConv3dTilingEngine, CheckInputFormat_PointwiseModeDetection)
 
     // Valid format for regular mode
     engine.SetFormat(ConvFormat::NDC1HWC0, ConvFormat::FRACTAL_Z_3D, ConvFormat::NDC1HWC0);
+    EXPECT_TRUE(engine.CheckInputFormat());
+}
+
+TEST(TestConv3dTilingEngine, CheckInputFormat_OneByOneByOneRegularFormatsStaysRegularMode)
+{
+    using Conv3dApiTiling::ConvFormat;
+
+    Conv3dTilingEngine engine;
+    InitSimpleConv3dEngine(engine);
+
+    engine.SetFormat(ConvFormat::NDC1HWC0, ConvFormat::FRACTAL_Z_3D, ConvFormat::NDC1HWC0);
+
+    EXPECT_FALSE(engine.isPointWise);
     EXPECT_TRUE(engine.CheckInputFormat());
 }
 

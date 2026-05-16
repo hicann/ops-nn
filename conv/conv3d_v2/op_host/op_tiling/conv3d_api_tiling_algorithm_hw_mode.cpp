@@ -245,14 +245,14 @@ int64_t Conv3dTilingAlgorithmHwMode::ProcessAllL1FullLoad()
 
 int64_t Conv3dTilingAlgorithmHwMode::ProcessFmapL1FullLoad()
 {
-    // when only fmap full load in L1, nfirset and iter kbl1 then nbl1
+    // when only fmap full load in L1, nfirst and iter kbl1 then nbl1
     this->l1TilingParams.kAL1 = static_cast<uint64_t>(tilingIns_->shapeInfo.singlekD) *
                                 tilingIns_->shapeCalc.singleCi1 * this->l1TilingCalc.ci0HkWk;
     this->l1TilingParams.woAL1Value = static_cast<uint64_t>(tilingIns_->shapeInfo.singleWo) /
                                       static_cast<uint64_t>(tilingIns_->cubeInfo.m0) *
                                       static_cast<uint64_t>(tilingIns_->cubeInfo.m0);
     this->l1TilingFlag.iterateMNOrder = IterateMNOrder::ITER_N_FST;
-    // speical case, when min weight can not load in L1, bypass
+    // special case, when min weight can not load in L1, bypass
     if (CoreL1TilingMinWeightBypass()) {
         this->l1TilingParams.kBL1 = INITIAL_SIZE;
         this->l1TilingParams.nBL1Value = INITIAL_SIZE;

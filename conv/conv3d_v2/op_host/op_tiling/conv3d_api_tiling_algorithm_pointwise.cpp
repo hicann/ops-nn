@@ -70,10 +70,10 @@ int64_t Conv3dTilingAlgorithmPointWise::InitCalcL1Params()
                                                static_cast<uint64_t>(tilingIns_->shapeInfo.orgkH *
                                                tilingIns_->shapeInfo.orgkW * tilingIns_->shapeInfo.orgkD);
     // cal fmap weight full load in L1 size
-    uint64_t fampSizeInL1 = static_cast<uint64_t>(tilingIns_->shapeInfo.singlekD) * tilingIns_->shapeCalc.singleCi1 *
+    uint64_t fmapSizeInL1 = static_cast<uint64_t>(tilingIns_->shapeInfo.singlekD) * tilingIns_->shapeCalc.singleCi1 *
         tilingIns_->shapeCalc.singleM1 * static_cast<uint64_t>(tilingIns_->cubeInfo.m0 * tilingIns_->cubeInfo.k0);
-    if ((fampSizeInL1 * this->fMapDTypeSize) / this->fMapDTypeSize != fampSizeInL1) {
-        TILING_ERROR_LOG("fmap size in l1 is overflow uint64, initcalc l1 params failed!");
+    if ((fmapSizeInL1 * this->fMapDTypeSize) / this->fMapDTypeSize != fmapSizeInL1) {
+        TILING_ERROR_LOG("fmap size in l1 is overflow uint64, InitCalc l1 params failed!");
         return INVALID_VALUE;
     }
     this->l1TilingCalc.fmapFullLoadL1Size = static_cast<uint64_t>(tilingIns_->shapeInfo.singlekD) *
@@ -82,7 +82,7 @@ int64_t Conv3dTilingAlgorithmPointWise::InitCalcL1Params()
     uint64_t weightSizeInL1 = static_cast<uint64_t>(tilingIns_->shapeInfo.singlekD) * tilingIns_->shapeCalc.singleCi1 *
         this->l1TilingCalc.ci0HkWk * tilingIns_->shapeCalc.singleCo1 * static_cast<uint64_t>(tilingIns_->cubeInfo.n0);
     if ((weightSizeInL1 * this->weightDTypeSize) / weightDTypeSize != weightSizeInL1) {
-        TILING_ERROR_LOG("weight size in l1 is overflow uint64, initcalc l1 params failed!");
+        TILING_ERROR_LOG("weight size in l1 is overflow uint64, InitCalc l1 params failed!");
         return INVALID_VALUE;
     }
     this->l1TilingCalc.weightFullLoadL1Size = static_cast<uint64_t>(tilingIns_->shapeInfo.singlekD) *
@@ -98,7 +98,7 @@ int64_t Conv3dTilingAlgorithmPointWise::InitCalcL1Params()
     this->l1TilingCalc.fmapKL1FullLoadSize = static_cast<uint64_t>(tilingIns_->shapeInfo.singlekD) * tilingIns_->shapeCalc.singleCi1 *
         static_cast<uint64_t>(tilingIns_->cubeInfo.k0) * this->l0TilingParams.mL0 * static_cast<uint64_t>(this->doubleBufferValue.pbAL1) *
         this->fMapDTypeSize;
-    // cal min/kfullload weiht size in L1
+    // cal min/kfullload weight size in L1
     this->l1TilingCalc.weightMinLoadL1Size = this->l1TilingCalc.ci0HkWk * this->l0TilingParams.nL0 *
         this->doubleBufferValue.pbBL1 * this->weightDTypeSize * multiK0;
     this->l1TilingCalc.weightKL1FullLoadSize = static_cast<uint64_t>(tilingIns_->shapeInfo.singlekD) * tilingIns_->shapeCalc.singleCi1 *

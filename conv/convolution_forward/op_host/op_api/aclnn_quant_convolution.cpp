@@ -357,8 +357,8 @@ private:
         FVector<int64_t> weightShape = meta.weight.shape;
 
         auto newPad = ConstructPadding(meta.padding, inputShape);
-        int64_t inferedShapeSize = inputShape.size() - 2;
-        for (int64_t i = 0; i < inferedShapeSize; ++i) {
+        int64_t inferredShapeSize = inputShape.size() - 2;
+        for (int64_t i = 0; i < inferredShapeSize; ++i) {
             int64_t xOut = (inputShape[i + INPUT_C_INDEX + 1] + newPad[i] - meta.dilation[i] *
                             (weightShape[i + INPUT_C_INDEX + 1] - 1) - 1) / meta.stride[i] + 1;
             output.push_back(xOut);
@@ -657,17 +657,17 @@ public:
         return ACLNN_ERR_PARAM_INVALID;
     }
 private:
-    bool QuantConvDtypesMatch(const std::vector<DataType>& matchedList, const std::vector<DataType>& supporedList,
+    bool QuantConvDtypesMatch(const std::vector<DataType>& matchedList, const std::vector<DataType>& supportedList,
                               size_t checkedLength) const
     {
-        if (matchedList.size() > supporedList.size()) {
+        if (matchedList.size() > supportedList.size()) {
             return false;
         }
-        if (checkedLength > supporedList.size()) {
+        if (checkedLength > supportedList.size()) {
             return false;
         }
         for (size_t i = 0; i < checkedLength; i++) {
-            if (matchedList[i] != supporedList[i]) {
+            if (matchedList[i] != supportedList[i]) {
                 return false;
             }
         }
@@ -721,7 +721,7 @@ private:
         return ACLNN_SUCCESS;
     }
 
-    static aclnnStatus CheckVaildString(const string &inputStr)
+    static aclnnStatus CheckValidString(const string &inputStr)
     {
         if (inputStr.empty()) {
             return ACLNN_SUCCESS;
@@ -771,7 +771,7 @@ private:
                 }
                 OP_LOGW("the input roundMode is suggested to be set as a nullptr");
                 roundModeStr = std::string(engine.params.roundMode);
-                if (CheckVaildString(roundModeStr) != ACLNN_SUCCESS) {
+                if (CheckValidString(roundModeStr) != ACLNN_SUCCESS) {
                     OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the input roundMode has invalid str");
                     return ACLNN_ERR_PARAM_INVALID;
                 }
@@ -830,7 +830,7 @@ private:
     static aclnnStatus CheckShapeValue(QuantConvEngine &engine)
     {
         int64_t inputDimN = engine.meta.input.N();
-        int64_t iuputDimC = engine.meta.input.C();
+        int64_t inputDimC = engine.meta.input.C();
         int64_t inputDimD = engine.meta.input.D();
         int64_t inputDimH = engine.meta.input.H();
         int64_t inputDimW = engine.meta.input.W();
@@ -840,14 +840,14 @@ private:
         int64_t weightDimH = engine.meta.weight.H();
         int64_t weightDimW = engine.meta.weight.W();
 
-        // enbale empty tensor
+        // enable empty tensor
         CHECK_PARAMS_GT(inputDimN, 0L);
         CHECK_PARAMS_GT(inputDimD, 0L);
         CHECK_PARAMS_GT(inputDimH, 0L);
         CHECK_PARAMS_GT(inputDimW, 0L);
         CHECK_PARAMS_GT(weightDimN, 0L);
 
-        CHECK_PARAMS_GT(iuputDimC, 0L);
+        CHECK_PARAMS_GT(inputDimC, 0L);
         CHECK_PARAMS_GT(weightDimC, 0L);
         CHECK_PARAMS_GT(weightDimD, 0L);
         CHECK_PARAMS_GT(weightDimH, 0L);
@@ -932,11 +932,11 @@ private:
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "check output value greater than 0 failed");
             return ACLNN_ERR_PARAM_INVALID;
         }
-        auto inferedOutputShape = engine.CalcOutputShape();
-        for (size_t i = 0; i < inferedOutputShape.size(); i++) {
-            if (inferedOutputShape[i] != outputShape[i]) {
+        auto inferredOutputShape = engine.CalcOutputShape();
+        for (size_t i = 0; i < inferredOutputShape.size(); i++) {
+            if (inferredOutputShape[i] != outputShape[i]) {
                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "expected output %zuth dim equal %ld, get %ld", i + 1,
-                    inferedOutputShape[i], outputShape[i]);
+                    inferredOutputShape[i], outputShape[i]);
                 return ACLNN_ERR_PARAM_INVALID;
             }
         }

@@ -63,7 +63,7 @@ int64_t Conv3dTilingAlgorithm::GetL1Tiling()
     BiasL1TilingDecision();
     // get kl0 tiling decision
     GetKL0TilingDecision();
-    // get if weight can by pass in L1
+    // get if weight can bypass in L1
     WeightBypassDecision();
     SetL1TilingRes();
 
@@ -393,12 +393,12 @@ int64_t Conv3dTilingAlgorithm::ProcessAllL1FullLoad()
 
 int64_t Conv3dTilingAlgorithm::ProcessFmapL1FullLoad()
 {
-    // when only fmap full load in L1, nfirset and iter kbl1 then nbl1
+    // when only fmap full load in L1, nfirst and iter kbl1 then nbl1
     this->l1TilingParams.kAL1 = static_cast<uint64_t>(tilingIns_->shapeInfo.singlekD) * tilingIns_->shapeCalc.singleCi1 *
                                 this->l1TilingCalc.ci0HkWk;
     this->l1TilingParams.mAL1Value = tilingIns_->cubeInfo.m0 * tilingIns_->shapeCalc.singleM1;
     this->l1TilingFlag.iterateMNOrder = IterateMNOrder::ITER_N_FST;
-    // speical case, when min weight can not load in L1, bypass
+    // special case, when min weight can not load in L1, bypass
     if (CoreL1TilingMinWeightBypass()) {
         this->l1TilingFlag.isWeightBypass = true;
         this->l1TilingParams.kBL1 = DISABLE_DOUBLE_BUFFER;
@@ -412,7 +412,7 @@ int64_t Conv3dTilingAlgorithm::ProcessFmapL1FullLoad()
 
 int64_t Conv3dTilingAlgorithm::ProcessWeightL1FullLoad()
 {
-    // when only weight full load in L1, mfirset and iter kal1 then mal1
+    // when only weight full load in L1, mfirst and iter kal1 then mal1
     this->l1TilingParams.kBL1 = static_cast<uint64_t>(tilingIns_->shapeInfo.singlekD) * tilingIns_->shapeCalc.singleCi1 *
         this->l1TilingCalc.ci0HkWk;
     this->l1TilingParams.nBL1Value = tilingIns_->cubeInfo.n0 * tilingIns_->shapeCalc.singleCo1;
@@ -761,9 +761,9 @@ void Conv3dTilingAlgorithm::WeightBypassDecision()
     if (!this->l1TilingFlag.isWeightBypass) {
         return;
     }
-    // when weight can by pass, BL1 db set to default 1
+    // when weight can bypass, BL1 db set to default 1
     this->doubleBufferValue.pbBL1 = 1;
-    // update L1 Tiling when weight by pass
+    // update L1 Tiling when weight bypass
     // iter kAL1
     uint64_t tmpKAL1Idx = this->l1TilingIdx.kAL1Idx;
     for (this->l1TilingIdx.kAL1Idx = this->l1TilingRange.kAL1Range.size() - 1; this->l1TilingIdx.kAL1Idx >= tmpKAL1Idx;
@@ -1004,13 +1004,13 @@ void Conv3dTilingAlgorithm::GetVecTiling() const
 
     uint32_t maxLoadSize = QUANT_VEC_MAX_LOAD;
     uint64_t scaleAndBiasDTypeSize = this->scaleDTypeSize + this->biasDTypeSize;
-    uint64_t scaleAndbiasLoadLength = INITIAL_SIZE;
+    uint64_t scaleAndBiasLoadLength = INITIAL_SIZE;
     if (scaleAndBiasDTypeSize * tilingIns_->shapeInfo.singleCo <= maxLoadSize) {
         tilingIns_->ubTilingInfo.scaleAndBiasLoadType = SINGLECO_LOAD;
-        scaleAndbiasLoadLength = tilingIns_->shapeInfo.singleCo;
+        scaleAndBiasLoadLength = tilingIns_->shapeInfo.singleCo;
     } else if (scaleAndBiasDTypeSize * tilingIns_->l0TilingInfo.nL0 <= maxLoadSize) {
         tilingIns_->ubTilingInfo.scaleAndBiasLoadType = NL0_LOAD;
-        scaleAndbiasLoadLength = tilingIns_->l0TilingInfo.nL0;
+        scaleAndBiasLoadLength = tilingIns_->l0TilingInfo.nL0;
     } else {
         tilingIns_->ubTilingInfo.scaleAndBiasLoadType = NUB_LOAD;
     }
@@ -1023,12 +1023,12 @@ void Conv3dTilingAlgorithm::GetVecTiling() const
             uint64_t usedInSize = this->ubInDTypeSize * mUB * nUB;
             uint64_t usedOutSize = this->outputDTypeSize * mUB * nUB;
             if (tilingIns_->ubTilingInfo.scaleAndBiasLoadType == NUB_LOAD) {
-                scaleAndbiasLoadLength = nUB;
+                scaleAndBiasLoadLength = nUB;
             }
-            uint64_t usedScaleAndBiasSize = scaleAndBiasDTypeSize * scaleAndbiasLoadLength;
+            uint64_t usedScaleAndBiasSize = scaleAndBiasDTypeSize * scaleAndBiasLoadLength;
             if (tilingIns_->descInfo.biasType.dtype == ConvDtype::BF16 || // bf16 to fp32
                 tilingIns_->descInfo.biasType.dtype == ConvDtype::FLOAT16) { // fp16 to fp32
-                usedScaleAndBiasSize += g_dtypeSizeTab.at(ConvDtype::FLOAT32) * scaleAndbiasLoadLength;
+                usedScaleAndBiasSize += g_dtypeSizeTab.at(ConvDtype::FLOAT32) * scaleAndBiasLoadLength;
             }
             uint64_t usedUBSize = usedInSize + usedOutSize + usedScaleAndBiasSize;
 

@@ -102,7 +102,7 @@ const vector<vector<int64_t>> CONV2D_TRANSPOSE_V2_WHITE_LIST =
     4, 320, 80, 80,     // input shape
     320, 320, 3, 3,     // filter shape
     4, 320, 80, 80,     // outBackprop shape
-    1, 1,               // stide
+    1, 1,               // stride
     1, 1,               // padding
     1, 1,               // dilation
     0, 0,               // output padding
@@ -117,7 +117,7 @@ const vector<vector<int64_t>> CONV3D_TRANSPOSE_V2_WHITE_LIST =
     1, 256, 62, 66, 66,    // input shape
     256, 256, 4, 4, 4,     // filter shape
     1, 256, 120, 128, 128, // outBackprop shape
-    2, 2, 2,               // stide
+    2, 2, 2,               // stride
     3, 3, 3,               // padding
     1, 1, 1,               // dilation
     0, 0, 0,               // output padding
@@ -473,17 +473,17 @@ static aclIntArray* ConstructConv2DNewStride(const aclTensor *input, const aclIn
 
 static aclIntArray* ConstructConv2DNewDilation(const aclTensor *input, const aclIntArray *dilation, aclOpExecutor *executor)
 {
-    FVector<int64_t> newDalition;
+    FVector<int64_t> newDilation;
     if (dilation->Size() < DIM_2) {
-        newDalition = {0};
-        return executor->AllocIntArray(newDalition.data(), newDalition.size());
+        newDilation = {0};
+        return executor->AllocIntArray(newDilation.data(), newDilation.size());
     }
     if (input->GetOriginalFormat() == op::Format::FORMAT_NCHW) {
-        newDalition = {1, 1, (*dilation)[0], (*dilation)[1]};
+        newDilation = {1, 1, (*dilation)[0], (*dilation)[1]};
     } else {
-        newDalition = {1, (*dilation)[0], (*dilation)[1], 1};
+        newDilation = {1, (*dilation)[0], (*dilation)[1], 1};
     }
-    return executor->AllocIntArray(newDalition.data(), conv2dDimNum);
+    return executor->AllocIntArray(newDilation.data(), conv2dDimNum);
 }
 
 static aclnnStatus Conv2dV2InferShapeAndAddLauncher(const aclTensor *input, const aclTensor *weight,
@@ -632,14 +632,14 @@ static aclnnStatus Conv3dWithFlag(const aclTensor *input, const aclTensor *weigh
     aclIntArray *dilation5;
     if (input->GetOriginalFormat() == op::Format::FORMAT_NCDHW) {
         FVector<int64_t> newStrides{1, 1, (*stride)[0], (*stride)[1], (*stride)[2]};
-        FVector<int64_t> newDalition{1, 1, (*dilation)[0], (*dilation)[1], (*dilation)[2]};
+        FVector<int64_t> newDilation{1, 1, (*dilation)[0], (*dilation)[1], (*dilation)[2]};
         stride5 = executor->AllocIntArray(newStrides.data(), conv3dDimNum);
-        dilation5 = executor->AllocIntArray(newDalition.data(), conv3dDimNum);
+        dilation5 = executor->AllocIntArray(newDilation.data(), conv3dDimNum);
     } else {
         FVector<int64_t> newStrides{1, (*stride)[0], (*stride)[1], (*stride)[2], 1};
-        FVector<int64_t> newDalition{1, (*dilation)[0], (*dilation)[1], (*dilation)[2], 1};
+        FVector<int64_t> newDilation{1, (*dilation)[0], (*dilation)[1], (*dilation)[2], 1};
         stride5 = executor->AllocIntArray(newStrides.data(), conv3dDimNum);
-        dilation5 = executor->AllocIntArray(newDalition.data(), conv3dDimNum);
+        dilation5 = executor->AllocIntArray(newDilation.data(), conv3dDimNum);
     }
 
     FVector<int64_t> newPad{(*padding)[0], (*padding)[0], (*padding)[1], (*padding)[1], (*padding)[2], (*padding)[2]};
@@ -731,9 +731,9 @@ static aclnnStatus Conv3dv2WithFlag(const aclTensor *input, const aclTensor *wei
         return ACLNN_ERR_INNER;
     }
     FVector<int64_t> newStrides{1, 1, (*stride)[0], (*stride)[1], (*stride)[2]};
-    FVector<int64_t> newDalition{1, 1, (*dilation)[0], (*dilation)[1], (*dilation)[2]};
+    FVector<int64_t> newDilation{1, 1, (*dilation)[0], (*dilation)[1], (*dilation)[2]};
     stride5 = executor->AllocIntArray(newStrides.data(), conv3dDimNum);
-    dilation5 = executor->AllocIntArray(newDalition.data(), conv3dDimNum);
+    dilation5 = executor->AllocIntArray(newDilation.data(), conv3dDimNum);
 
     aclIntArray *pad6 = ConstructConv3DNewPad(padding, executor);
     if (pad6->Size() != PAD_DIM_6) {
