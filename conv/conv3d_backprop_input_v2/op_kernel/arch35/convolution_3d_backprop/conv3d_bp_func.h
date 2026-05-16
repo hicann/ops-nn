@@ -748,6 +748,34 @@ static __aicore__ inline void SetDequantScale(Intf *self)
     }
 }
 
+template <class Intf, bool sync>
+static __aicore__ inline void CalcSplitK_(Intf *self, uint8_t &enAtomic, const GlobalTensor<typename Intf::DstT> &output)
+{
+    // calRound多轮场景重置标志位
+    self->ctx.isLastKSegment_ = false;
+    // bias 需计算singlecoreM部分
+    int32_t computeBiasTimes = (self->ctx.tiling_->singleCoreM - 1) / self->ctx.tiling_->baseM;
+    self->ctx.computeBiasOnce_ = false;
+    for (uint32_t kIdx = self->ctx.curCoutStartIdx_; kIdx < self->ctx.tiling_->coutG; kIdx += self->ctx.kSegment_) {
+        self->ctx.curCoutStartIdx_ = kIdx;
+        UpdateSplitKTail<Intf>(self, kIdx);
+        // fp32: 使用atomic累加到GM; 非fp32: 使用atomic累加到workspace
+        enAtomic = (kIdx == 0) ? 0 : 1;
+        uint32_t iterCnt = 0;
+        while (self->template Iterate<sync>()) {
+            self->ctx.realMSize_ = (iterCnt++ != 0) ? self->ctx.tiling_->singleCoreM : self->ctx.baseUseM_;
+            self->template GetTensorC<sync>(output, enAtomic);
+            if (computeBiasTimes > 0) {
+                self->ctx.computeBiasOnce_ = false;
+                computeBiasTimes -= 1;
+            }
+        }
+        self->template VecPostProcess<sync>(output, enAtomic);
+        self->ctx.isFirstIter_ = true;
+    }
+    CalcInWorkspace<Intf>(self, output);
+}
+
 template <class Intf>
 struct Init {
     // 定义call函数的默认重载函数，支持任意类型任意数量的参数
@@ -989,39 +1017,21 @@ struct IterateAll {
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, Convolution3DBackpropFunc);
     static __aicore__ inline void call(Intf *self, const GlobalTensor<typename Intf::DstT> &output, uint8_t enAtomic, bool fullLoadBiasFlag_, bool freeBiasFlag_)
     {
-        //free bias
-        if (freeBiasFlag_) {
-            if (self->ctx.tiling_->isBiasFullLoad && self->ctx.hasBias_) {
+        if (self->ctx.hasBias_ && self->ctx.tiling_->isBiasFullLoad) {
+            if (freeBiasFlag_) {
                 if ASCEND_IS_AIC_SCALAR {
                     self->ctx.biasL1Que_.FreeTensor(self->ctx.biasL1Buf_);
                     self->ctx.biasBTQue_.FreeTensor(self->ctx.biasBTBuf_);
                 }
-            } 
-        }
-        if (self->ctx.tiling_->isBiasFullLoad && self->ctx.hasBias_ && fullLoadBiasFlag_) {
-            Convolution3DBackpropFunc::FullLoadBias<Intf>(self);
+            }
+            if (fullLoadBiasFlag_) {
+                Convolution3DBackpropFunc::FullLoadBias<Intf>(self);
+            }
         }
         SetDequantScale<Intf>(self);
         if constexpr (Intf::conv3dConfig.kernelSplitMode != TPL_SPLIT_KERNEL_HW) {
             if (self->ctx.enableSplitK_) {
-                // calRound多轮场景重置标志位
-                self->ctx.isLastKSegment_ = false;
-                //bias 仅计算一次
-                self->ctx.computeBiasOnce_ = false;
-                for (uint32_t kIdx = self->ctx.curCoutStartIdx_; kIdx < self->ctx.tiling_->coutG; kIdx += self->ctx.kSegment_) {
-                    self->ctx.curCoutStartIdx_ = kIdx;
-                    UpdateSplitKTail<Intf>(self, kIdx);
-                    // fp32: 使用atomic累加到GM; 非fp32: 使用atomic累加到workspace
-                    enAtomic = (kIdx == 0) ? 0 : 1;
-                    uint32_t iterCnt = 0;
-                    while (self->template Iterate<sync>()) {
-                        self->ctx.realMSize_ = (iterCnt++ != 0) ? self->ctx.tiling_->singleCoreM : self->ctx.baseUseM_;
-                        self->template GetTensorC<sync>(output, enAtomic);
-                    }
-                    self->template VecPostProcess<sync>(output, enAtomic);
-                    self->ctx.isFirstIter_ = true;
-                }
-                CalcInWorkspace<Intf>(self, output);
+                CalcSplitK_<Intf, sync>(self, enAtomic, output);
             } else {
                 while (self->template Iterate<sync>()) {
                     self->template VecPreProcess<sync>(output, enAtomic);

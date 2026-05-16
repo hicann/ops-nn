@@ -233,8 +233,12 @@ bool Conv3DBackpropInputV2TilingArch35::PrintInputsAttrs(conv_bp_v2_kernel::TCon
     auto weightInfo = GetTensorInfo(context_, weight_index, true, kConv3DbpDim);
     auto dedyInfo = GetTensorInfo(context_, dedy_x_index, true, kConv3DbpDim);
     auto outputInfo = GetTensorInfo(context_, Y_INDEX, false, kConv3DbpDim);
-
-    OP_LOGD(op_name, "input_size shape: %s, format: %s, dtype: %s; filter shape: %s, format: %s, dtype: %s; out_backprop/x shape: %s, format: %s, dtype: %s; y shape: %s, format: %s, dtype: %s;", 
+    auto biasShape = context_->GetOptionalInputShape(BAIS_INDEX);
+    TensorInfo biasInfo;
+    if (biasShape != nullptr && biasShape->GetStorageShape().GetShapeSize() != 0) {
+        biasInfo = GetTensorInfo(context_, BAIS_INDEX, true, 1);
+    }
+    OP_LOGD(op_name, "input_size shape: %s, format: %s, dtype: %s; filter shape: %s, format: %s, dtype: %s; out_backprop/x shape: %s, format: %s, dtype: %s; y shape: %s, format: %s, dtype: %s; bias shape: %s, format: %s, dtype: %s;", 
             DebugString(inputSizeInfo.shape).c_str(), ge::TypeUtils::FormatToSerialString(inputSizeInfo.format).c_str(), 
             ge::TypeUtils::DataTypeToSerialString(inputSizeInfo.dtype).c_str(),
             DebugString(weightInfo.shape).c_str(), ge::TypeUtils::FormatToSerialString(weightInfo.format).c_str(), 
@@ -242,7 +246,9 @@ bool Conv3DBackpropInputV2TilingArch35::PrintInputsAttrs(conv_bp_v2_kernel::TCon
             DebugString(dedyInfo.shape).c_str(), ge::TypeUtils::FormatToSerialString(dedyInfo.format).c_str(), 
             ge::TypeUtils::DataTypeToSerialString(dedyInfo.dtype).c_str(),
             DebugString(outputInfo.shape).c_str(), ge::TypeUtils::FormatToSerialString(outputInfo.format).c_str(), 
-            ge::TypeUtils::DataTypeToSerialString(outputInfo.dtype).c_str()
+            ge::TypeUtils::DataTypeToSerialString(outputInfo.dtype).c_str(),
+            DebugString(biasInfo.shape).c_str(), ge::TypeUtils::FormatToSerialString(biasInfo.format).c_str(), 
+            ge::TypeUtils::DataTypeToSerialString(biasInfo.dtype).c_str()
     );
     
     auto stridesShape = GetAttrVector(context_, strideIndex, kConv3DbpDim, "strides");
