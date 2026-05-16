@@ -30,7 +30,9 @@ def torch_npu_npu_transpose_quant_batchmatmul_golden(x1, x2, dtype, *, bias=None
     x2_scale = torch_to_numpy(x2_scale)
     x1_dtype = str(x1.dtype)
     x2_dtype = str(x2.dtype)
-    x1_scale_dtype = str(x1_scale.dtype)
+    x1_scale_dtype = ""
+    if isinstance(x1_scale, torch.Tensor):
+        x1_scale_dtype = str(x1_scale.dtype)
     pertoken_flag = (x1_scale is not None 
                     and x1_dtype in ("int8", "float8_e4m3fn", "float8_e5m2")
                     and x1_scale_dtype in ("float32",))
@@ -40,9 +42,10 @@ def torch_npu_npu_transpose_quant_batchmatmul_golden(x1, x2, dtype, *, bias=None
 
     x1 = x_dtype_cope(x1, x1_dtype)
     x2 = x_dtype_cope(x2, x2_dtype)
-
     if pertoken_flag:
         out = pertoken_calculation(x1, x2, x1_scale, x2_scale, bias, is_bias_epilogue=False, output_dtype=dtype)
+    else:
+        raise TypeError("Please check whether this quantitative method is supported")
     out = transpose_(out, perm_y)
     out = out_dtype_cope(out, dtype)
     return out
