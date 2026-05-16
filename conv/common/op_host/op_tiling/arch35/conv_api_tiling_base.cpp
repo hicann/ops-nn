@@ -13,9 +13,10 @@
  * \brief
  */
 
+#include "conv_api_tiling_base.h"
 #include <cstdint>
 #include <unordered_set>
-#include "conv_api_tiling_base.h"
+#include <sstream>
 
 using namespace std;
 
@@ -194,41 +195,64 @@ vector<vector<ConvDtype>> ConvTilingBase::GetSupportedDataTypes() const
 
 bool ConvTilingBase::CheckLoad3DLimits()
 {
+    auto LogHelper = [this](const std::string& paramName, const std::string& actualValue,
+                            const std::string& reason) {
+        if (platformInfo.npuArch == NpuArch::DAV_5102) {
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(nodeType.c_str(), paramName.c_str(),
+                actualValue.c_str(), reason.c_str());
+        } else {
+            OP_LOGD(nodeType, "%s AscendC: %s", nodeType.c_str(), reason.c_str());
+        }
+    };
+
     if (static_cast<uint32_t>(attrInfo.strideH) > LOAD3D_MAX_STRIDE_H_W ||
         static_cast<uint32_t>(attrInfo.strideW) > LOAD3D_MAX_STRIDE_H_W) {
-        OP_LOGD(nodeType,
-            "Attrs not satisfying load3d's limits: strideH=%d, strideW=%d, which must <= %u.",
-            attrInfo.strideH, attrInfo.strideW, LOAD3D_MAX_STRIDE_H_W);
+        std::stringstream ssActual, ssReason;
+        ssActual << "strideH=" << attrInfo.strideH << ", strideW=" << attrInfo.strideW;
+        ssReason << "Attrs does not satisfy Load3D's limits: strideH=" << attrInfo.strideH
+                 << ", strideW=" << attrInfo.strideW << ", which must <= " << LOAD3D_MAX_STRIDE_H_W;
+        LogHelper("strides", ssActual.str(), ssReason.str());
         return false;
     }
     if (static_cast<uint32_t>(attrInfo.dilationH) > LOAD3D_MAX_DILATION_H_W ||
         static_cast<uint32_t>(attrInfo.dilationW) > LOAD3D_MAX_DILATION_H_W) {
-        OP_LOGD(nodeType,
-            "Attrs not satisfying load3d's limits: dilationH=%d, dilationW=%d, which must <= %u.",
-            attrInfo.dilationH, attrInfo.dilationW, LOAD3D_MAX_DILATION_H_W);
+        std::stringstream ssActual, ssReason;
+        ssActual << "dilationH=" << attrInfo.dilationH << ", dilationW=" << attrInfo.dilationW;
+        ssReason << "Attrs does not satisfy Load3D's limits: dilationH=" << attrInfo.dilationH
+                 << ", dilationW=" << attrInfo.dilationW << ", which must <= " << LOAD3D_MAX_DILATION_H_W;
+        LogHelper("dilations", ssActual.str(), ssReason.str());
         return false;
     }
     if (static_cast<uint32_t>(attrInfo.padLeft) > LOAD3D_MAX_PAD ||
         static_cast<uint32_t>(attrInfo.padRight) > LOAD3D_MAX_PAD ||
         static_cast<uint32_t>(attrInfo.padTop) > LOAD3D_MAX_PAD ||
         static_cast<uint32_t>(attrInfo.padBottom) > LOAD3D_MAX_PAD) {
-        OP_LOGD(nodeType,
-            "Attrs not satisfying load3d's limits: padTop=%d, padBottom=%d, padLeft=%d, padRight=%d, which must <= %u.",
-            attrInfo.padTop, attrInfo.padBottom, attrInfo.padLeft, attrInfo.padRight,
-            LOAD3D_MAX_PAD);
+        std::stringstream ssActual, ssReason;
+        ssActual << "padTop=" << attrInfo.padTop << ", padBottom=" << attrInfo.padBottom
+                 << ", padLeft=" << attrInfo.padLeft << ", padRight=" << attrInfo.padRight;
+        ssReason << "Attrs does not satisfy Load3D's limits: padTop=" << attrInfo.padTop
+                 << ", padBottom=" << attrInfo.padBottom << ", padLeft=" << attrInfo.padLeft
+                 << ", padRight=" << attrInfo.padRight << ", which must <= " << LOAD3D_MAX_PAD;
+        LogHelper("pads", ssActual.str(), ssReason.str());
         return false;
     }
     if (static_cast<uint64_t>(shapeInfo.orgkH) > LOAD3D_MAX_FILTER_H_W ||
         static_cast<uint64_t>(shapeInfo.orgkW) > LOAD3D_MAX_FILTER_H_W) {
-        OP_LOGD(nodeType, "Weight shape does not satisfy Load3D's limits: kh=%ld, kw=%ld, which must <= %u.",
-            shapeInfo.orgkH, shapeInfo.orgkW, LOAD3D_MAX_FILTER_H_W);
+        std::stringstream ssActual, ssReason;
+        ssActual << "kh=" << shapeInfo.orgkH << ", kw=" << shapeInfo.orgkW;
+        ssReason << "Weight shape does not satisfy Load3D's limits: kh=" << shapeInfo.orgkH
+                 << ", kw=" << shapeInfo.orgkW << ", which must <= " << LOAD3D_MAX_FILTER_H_W;
+        LogHelper("filter", ssActual.str(), ssReason.str());
         return false;
     }
     auto k0 = CUBE_MKN_TAB.GetMKN(descInfo.weightType.dtype, MKN_K_INDEX);
     uint64_t tmpkHWSize = static_cast<uint64_t>(shapeInfo.orgkH) * static_cast<uint64_t>(shapeInfo.orgkW) * k0;
     if (tmpkHWSize > LOAD3D_MAX_DDR2L1_SIZE) {
-        OP_LOGD(nodeType, "Weight shape not satisfying load3d's limits: kH*kW*k0=%lu, which must <= %u.",
-            tmpkHWSize, LOAD3D_MAX_DDR2L1_SIZE);
+        std::stringstream ssActual, ssReason;
+        ssActual << "kH*kW*k0=" << tmpkHWSize;
+        ssReason << "Weight shape does not satisfy Load3D's limits: kH*kW*k0=" << tmpkHWSize
+                 << ", which must <= " << LOAD3D_MAX_DDR2L1_SIZE;
+        LogHelper("filter", ssActual.str(), ssReason.str());
         return false;
     }
     return true;

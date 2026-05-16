@@ -21,10 +21,12 @@
 #include "common/op_host/op_tiling/arch35/conv_api_tiling_algorithm_HWmode.h"
 #include "common/op_host/op_tiling/arch35/conv_api_tiling_algorithm_Mmode.h"
 #include "common/op_host/op_tiling/arch35/conv_api_tiling_algorithm_BBmode.h"
+#include "common/op_host/op_tiling/arch35/conv_base_numblocks_decision.h"
 
 using namespace conv_tiling_algo_m;
 using namespace conv_tiling_algo_hw;
 using namespace conv_tiling_algo_bb;
+using namespace optiling::conv_ops_tiling;
 using namespace std;
 #define UNUSED __attribute__((unused))
 
@@ -1048,9 +1050,18 @@ bool Conv2dTiling::CheckL1SizeLimitsKernelFullLoad(bool isC04)
     fmapUsedL1Size = AlignB(hiAL1min * wiAL1min * kAL1min * fMapDtypeSize, C0_SIZE) * innerBatch;
 
     uint64_t minL1LoadSize = biasUsedL1Size + scaleUsedL1Size + fmapUsedL1Size + weightUsedL1Size;
+    std::vector<int64_t> xShape = {shapeInfo.singleBatch, shapeInfo.orgCi, shapeInfo.orgHi, shapeInfo.orgWi};
+    std::vector<int64_t> filterShape = {shapeInfo.orgCo, shapeInfo.orgCi, shapeInfo.orgkH, shapeInfo.orgkW};
     if (minL1LoadSize > platformInfo.l1Size) {
-        OP_LOGD(nodeType, "KernelSplitMinL1LoadSize > L1size, current L1size: %lu, maxL1Size: %lu",
-            minL1LoadSize, platformInfo.l1Size);
+        if (platformInfo.npuArch == NpuArch::DAV_5102) {
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(nodeType.c_str(), "x, filter",
+                VectorsToString(std::vector<std::vector<int64_t>>{xShape, filterShape}, IntToString<int64_t>).c_str(),
+                FormatString("KernelSplitMinL1LoadSize > L1size, current L1size: %lu, maxL1Size: %lu",
+                    minL1LoadSize, platformInfo.l1Size).c_str());
+        } else {
+            OP_LOGD(nodeType, "%s AscendC: KernelSplitMinL1LoadSize > L1size, current L1size: %lu, maxL1Size: %lu",
+                nodeType.c_str(), minL1LoadSize, platformInfo.l1Size);
+        }
         return false;
     }
     return true;
@@ -1060,11 +1071,12 @@ bool Conv2dTiling::CheckInstructionLimits()
 {
     if (!CheckLoad3DLimits() || !CheckL1SizeLimitsKernelFullLoad(isC04Flag)) {
         this->isDmaFlag = true;
-    }
-
-    if (platformInfo.npuArch == NpuArch::DAV_5102 && this->isDmaFlag) {
-        OP_LOGE(nodeType, "isDmaFlag is [%d], but the DMA specifications are not supported.", this->isDmaFlag);
-        return false;
+        if (platformInfo.npuArch == NpuArch::DAV_5102) {
+            OP_LOGE(nodeType,
+                "Conv2d does not support DMA mode. "
+                "Please adjust the parameters to satisfy Load3D constraints (see above error details).");
+            return false;
+        }
     }
 
     if (!CheckDataCopyLimits()) {
