@@ -3349,6 +3349,16 @@
   </tr>
   <tr>
     <td>pooling</td>
+    <td><a href="../../pooling/max_pool_grad_with_argmax/README.md">max_pool_grad_with_argmax</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>正向最大池化MaxPoolWithArgmax的反向梯度计算。</td>
+  </tr>
+  <tr>
+    <td>pooling</td>
     <td><a href="../../pooling/max_pool_grad_with_argmax_v3/README.md">max_pool_grad_with_argmax_v3</a></td>
     <td>✓</td>
     <td>✓</td>
