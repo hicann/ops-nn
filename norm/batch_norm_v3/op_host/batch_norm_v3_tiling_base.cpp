@@ -16,6 +16,7 @@
 #include "batch_norm_v3_tiling.h"
 #include "op_host/tiling_templates_registry.h"
 
+static constexpr int64_t MIN_ND_DIM_NUM = 2;
 static constexpr int64_t NCHW_DIM_NUM = 4;
 static constexpr int64_t NCDHW_DIM_NUM = 5;
 static constexpr int64_t X_INPUT_IDX = 0;
@@ -120,7 +121,18 @@ bool BatchNormV3TilingBase::CheckInputShape()
     auto bnVarStorageShape = bnVarShape->GetStorageShape();
     auto xDesc = context_->GetInputDesc(X_INPUT_IDX);
     auto format = xDesc->GetFormat().GetStorageFormat();
-    if (format == FORMAT_NCHW) {
+    if (format == FORMAT_ND) {
+        OP_CHECK_IF(
+            xStorageShape.GetDimNum() < MIN_ND_DIM_NUM,
+            OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x",
+                std::to_string(xStorageShape.GetDimNum()).c_str(), "at least 2D with ND format"), return false);
+        commonParams.patternR1 = xStorageShape.GetDim(DIM_0);
+        commonParams.patternA = xStorageShape.GetDim(DIM_1);
+        commonParams.patternR0 = 1;
+        for (size_t i = static_cast<size_t>(DIM_2); i < xStorageShape.GetDimNum(); ++i) {
+            commonParams.patternR0 *= xStorageShape.GetDim(i);
+        }
+    } else if (format == FORMAT_NCHW) {
         OP_CHECK_IF(
             xStorageShape.GetDimNum() != NCHW_DIM_NUM,
             OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x",
@@ -139,7 +151,7 @@ bool BatchNormV3TilingBase::CheckInputShape()
             xStorageShape.GetDim(DIM_2) * xStorageShape.GetDim(DIM_3) * xStorageShape.GetDim(DIM_4);
     } else {
         OP_LOGE_FOR_INVALID_FORMAT(context_->GetNodeName(), "x",
-            ge::TypeUtils::FormatToSerialString(format).c_str(), "NCHW and NCDHW");
+            ge::TypeUtils::FormatToSerialString(format).c_str(), "ND, NCHW and NCDHW");
         return false;
     }
     OP_CHECK_IF(

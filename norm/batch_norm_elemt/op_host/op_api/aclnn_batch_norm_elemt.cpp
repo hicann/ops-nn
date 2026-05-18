@@ -48,11 +48,12 @@ template <typename T, typename... Ts>
 static bool CheckDtypeValid(const T& t, const Ts&... args)
 {
     if constexpr (std::is_same_v<T, aclTensor*> || std::is_same_v<T, const aclTensor*>) {
-        bool isAscend910BSocVersion =
+        bool isBf16SupportedSocVersion =
             (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-             GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E);
+             GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) ||
+            GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND950;
         const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST =
-            isAscend910BSocVersion ? ASCEND910B_DTYPE_SUPPORT_LIST : ASCEND910_DTYPE_SUPPORT_LIST;
+            isBf16SupportedSocVersion ? ASCEND910B_DTYPE_SUPPORT_LIST : ASCEND910_DTYPE_SUPPORT_LIST;
         if (t && !CheckType(t->GetDataType(), DTYPE_SUPPORT_LIST)) {
             OP_LOGE(
                 ACLNN_ERR_PARAM_INVALID, "input not implemented for %s, should be in dtype support list %s.",

@@ -3752,6 +3752,944 @@
             "value": null
           }
         ]
+      },
+      {
+        "bin_filename": "BatchNormV3_bfloat16_param_bfloat16_ND",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "weight",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          },
+          {
+            "name": "bias",
+            "index": 2,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          },
+          {
+            "name": "running_mean",
+            "index": 3,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          },
+          {
+            "name": "running_var",
+            "index": 4,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "running_mean",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          },
+          {
+            "name": "running_var",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          },
+          {
+            "name": "save_mean",
+            "index": 3,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          },
+          {
+            "name": "save_rstd",
+            "index": 4,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "epsilon",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "momentum",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "is_training",
+            "dtype": "bool",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "BatchNormV3_float16_param_float16_ND",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "weight",
+            "index": 1,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          },
+          {
+            "name": "bias",
+            "index": 2,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          },
+          {
+            "name": "running_mean",
+            "index": 3,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          },
+          {
+            "name": "running_var",
+            "index": 4,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "running_mean",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          },
+          {
+            "name": "running_var",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          },
+          {
+            "name": "save_mean",
+            "index": 3,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          },
+          {
+            "name": "save_rstd",
+            "index": 4,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "epsilon",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "momentum",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "is_training",
+            "dtype": "bool",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "BatchNormV3_float32_ND",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "weight",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          },
+          {
+            "name": "bias",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          },
+          {
+            "name": "running_mean",
+            "index": 3,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          },
+          {
+            "name": "running_var",
+            "index": 4,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "running_mean",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          },
+          {
+            "name": "running_var",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          },
+          {
+            "name": "save_mean",
+            "index": 3,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          },
+          {
+            "name": "save_rstd",
+            "index": 4,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "epsilon",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "momentum",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "is_training",
+            "dtype": "bool",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "BatchNormV3_float16_ND",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "weight",
+            "index": 1,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          },
+          {
+            "name": "bias",
+            "index": 2,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          },
+          {
+            "name": "running_mean",
+            "index": 3,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          },
+          {
+            "name": "running_var",
+            "index": 4,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "running_mean",
+            "index": 1,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          },
+          {
+            "name": "running_var",
+            "index": 2,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          },
+          {
+            "name": "save_mean",
+            "index": 3,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          },
+          {
+            "name": "save_rstd",
+            "index": 4,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "epsilon",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "momentum",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "is_training",
+            "dtype": "bool",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "BatchNormV3_bfloat16_ND",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "weight",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          },
+          {
+            "name": "bias",
+            "index": 2,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          },
+          {
+            "name": "running_mean",
+            "index": 3,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          },
+          {
+            "name": "running_var",
+            "index": 4,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "running_mean",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          },
+          {
+            "name": "running_var",
+            "index": 2,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          },
+          {
+            "name": "save_mean",
+            "index": 3,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          },
+          {
+            "name": "save_rstd",
+            "index": 4,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "epsilon",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "momentum",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "is_training",
+            "dtype": "bool",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "BatchNormV3_float16_float32_ND",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "weight",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          },
+          {
+            "name": "bias",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          },
+          {
+            "name": "running_mean",
+            "index": 3,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          },
+          {
+            "name": "running_var",
+            "index": 4,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "running_mean",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          },
+          {
+            "name": "running_var",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          },
+          {
+            "name": "save_mean",
+            "index": 3,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          },
+          {
+            "name": "save_rstd",
+            "index": 4,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "epsilon",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "momentum",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "is_training",
+            "dtype": "bool",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "BatchNormV3_bfloat16_float32_ND",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "weight",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          },
+          {
+            "name": "bias",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          },
+          {
+            "name": "running_mean",
+            "index": 3,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          },
+          {
+            "name": "running_var",
+            "index": 4,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatFixed"
+          },
+          {
+            "name": "running_mean",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          },
+          {
+            "name": "running_var",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          },
+          {
+            "name": "save_mean",
+            "index": 3,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          },
+          {
+            "name": "save_rstd",
+            "index": 4,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatDefault"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "epsilon",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "momentum",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "is_training",
+            "dtype": "bool",
+            "value": null
+          }
+        ]
       }
     ]
 }

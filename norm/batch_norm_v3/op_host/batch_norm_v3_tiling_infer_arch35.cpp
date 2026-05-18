@@ -22,6 +22,7 @@ constexpr int64_t TILINGKEY_INFER = 910000;
 
 constexpr int64_t DIM_NUM_4 = 4;
 constexpr int64_t DIM_NUM_5 = 5;
+constexpr int64_t MIN_ND_DIM_NUM = 2;
 constexpr int64_t WEIGHT_BIAS_NUM = 2;
 constexpr int64_t MEAN_VAR_NUM = 2;
 constexpr int64_t INPUT_OUTPUT_NUM = 2;
@@ -186,7 +187,19 @@ ge::graphStatus BatchNormV3InferTiling::GetShapeAttrsInfo()
         return ge::GRAPH_PARAM_INVALID;
     }
 
-    if (format == FORMAT_NCHW) {
+    if (format == FORMAT_ND) {
+        OP_CHECK_IF(
+            xStorageShape.GetDimNum() < MIN_ND_DIM_NUM,
+            OP_LOGE_FOR_INVALID_SHAPEDIM(opName, "x",
+                std::to_string(xStorageShape.GetDimNum()).c_str(), "at least 2D with ND format"),
+            return ge::GRAPH_FAILED);
+        fusedB0Len_ = xStorageShape.GetDim(DIM_0);
+        fusedALen_ = xStorageShape.GetDim(DIM_1);
+        fusedB1Len_ = 1;
+        for (size_t i = static_cast<size_t>(DIM_2); i < xStorageShape.GetDimNum(); ++i) {
+            fusedB1Len_ *= xStorageShape.GetDim(i);
+        }
+    } else if (format == FORMAT_NCHW) {
         OP_CHECK_IF(
             xStorageShape.GetDimNum() != DIM_NUM_4,
             OP_LOGE_FOR_INVALID_SHAPEDIM(opName, "x",
@@ -205,7 +218,7 @@ ge::graphStatus BatchNormV3InferTiling::GetShapeAttrsInfo()
         fusedALen_ = xStorageShape.GetDim(DIM_1);
         fusedB1Len_ = xStorageShape.GetDim(DIM_2) * xStorageShape.GetDim(DIM_3) * xStorageShape.GetDim(DIM_4);
     } else {
-        OP_LOGI(context_->GetNodeName(), "Only supported infer NHWC & NDHWC.");
+        OP_LOGI(context_->GetNodeName(), "Only supported infer ND, NCHW or NCDHW.");
         return ge::GRAPH_PARAM_INVALID;
     }
 
