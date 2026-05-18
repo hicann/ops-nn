@@ -336,6 +336,9 @@ aclnnStatus aclnnBatchMatMulGetWorkspaceSize(
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
+    // 路由cubeMathType4到cubeMathType0, 该接口不支持cubeMathType=4的场景
+    cubeMathType = routeCubeMathType4ToCubeMathType0DAV_2201(cubeMathType);
+
     // 固定写法，参数检查
     auto ret = CheckParamsV2(self, mat2, out, cubeMathType);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
@@ -378,6 +381,9 @@ aclnnStatus aclnnBatchMatMulWeightNzGetWorkspaceSize(
     // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
+
+    // 路由cubeMathType4到cubeMathType0, 该接口不支持cubeMathType=4的场景
+    cubeMathType = routeCubeMathType4ToCubeMathType0DAV_2201(cubeMathType);
 
     // 固定写法，参数检查
     auto ret = CheckParamsWeightNz(self, mat2, out, cubeMathType);

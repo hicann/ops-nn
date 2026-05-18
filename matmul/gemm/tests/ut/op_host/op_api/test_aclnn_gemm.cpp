@@ -476,3 +476,31 @@ TEST_F(l2_gemm_test, case_empty_tensor_3)
         {2, 0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {0, 0}, ACL_FLOAT, ACL_FORMAT_ND, {-5, 5}, {1, 1}, ACL_FLOAT,
         ACL_FORMAT_ND, {-5, 5}, {0, 0}, ACL_FLOAT, ACL_FORMAT_ND, alpha, beta, transA, transB, cubeMathType);
 }
+
+// cubeMathType = USE_FP32_ADD 测试用例
+TEST_F(l2_gemm_test, case_cubeMathType_USE_FP32_ADD)
+{
+    float alpha = 1.0;
+    float beta = 1.0;
+    int64_t transA = 0;
+    int64_t transB = 0;
+    int8_t cubeMathType = USE_FP32_ADD;
+    test_run(
+        {16, 16}, ACL_FLOAT16, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_FLOAT16, ACL_FORMAT_ND, {0, 2}, {16, 16},
+        ACL_FLOAT16, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_FLOAT16, ACL_FORMAT_ND, 
+        alpha, beta, transA, transB, cubeMathType);
+}
+
+// cubeMathType = KEEP_DTYPE 测试用例
+TEST_F(l2_gemm_test, case_cubeMathType_KEEP_DTYPE)
+{
+    float alpha = 1.0;
+    float beta = 1.0;
+    int64_t transA = 0;
+    int64_t transB = 0;
+    int8_t cubeMathType = KEEP_DTYPE;
+    test_run(
+        {16, 16}, ACL_FLOAT16, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_FLOAT16, ACL_FORMAT_ND, {0, 2}, {16, 16},
+        ACL_FLOAT16, ACL_FORMAT_ND, {0, 2}, {16, 16}, ACL_FLOAT16, ACL_FORMAT_ND, 
+        alpha, beta, transA, transB, cubeMathType);
+}

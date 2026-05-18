@@ -761,6 +761,9 @@ ACLNN_API aclnnStatus aclnnAddmmWeightNzGetWorkspaceSize(
 
     AclnnAddmmTensor addmmTensor = {self, mat1, mat2, beta, alpha, out};
 
+    // 路由cubeMathType4到cubeMathType0, 该接口不支持cubeMathType=4的场景
+    cubeMathType = routeCubeMathType4ToCubeMathType0DAV_2201(cubeMathType);
+
     auto ret = AddmmCheckWeightNzParam(addmmTensor, cubeMathType);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
     auto uniqueExecutor = CREATE_EXECUTOR();

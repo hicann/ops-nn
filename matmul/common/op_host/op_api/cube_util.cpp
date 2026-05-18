@@ -63,8 +63,23 @@ bool CheckUnSupportDtype(const aclTensor *input, const aclTensor *weight) {
     return false;
 }
 
+// 路由cubeMathType4到cubeMathType0, 供不支持cubeMathType4的场景使用, 仅在DAV_2201场景下生效
+// 该函数是考虑在部分算子中， 在DAV_2201架构下，cubeMathType = 4的场景并不被支持（具体可以参考资料），
+// 但是用户可以提供该输入；出于易用性考虑，以及为了保持API的一致性，在DAV_2201场景下
+// cubeMathType = 4的场景会被路由到cubeMathType = 0的场景
+int8_t routeCubeMathType4ToCubeMathType0DAV_2201(int8_t cubeMathType)
+{
+    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 && cubeMathType == USE_FP32_ADD) {
+        OP_LOGD("The cubeMathType is USE_FP32_ADD for which the API does not support temporarily, "
+                "route to KEEP_DTYPE instead.");
+        return KEEP_DTYPE;
+    }
+    return cubeMathType;
+}
+
 // 校验cubeMathType的值是否符合预期
 bool CheckCubeMathType(const op::DataType cubeTensorDtype, int8_t cubeMathType) {
+    OP_LOGD("The cubeMathType is %d.", cubeMathType);
     switch (cubeMathType) {
         case KEEP_DTYPE:
             OP_LOGD("The cubeMathType is KEEP_DTYPE.");

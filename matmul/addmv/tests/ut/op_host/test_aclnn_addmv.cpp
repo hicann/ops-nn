@@ -184,3 +184,51 @@ TEST_F(l2_addmv_test, mat_empty)
     // SAMPLE: precision simulate
     ut.TestPrecision();
 }
+
+TEST_F(l2_addmv_test, mat_empty_keep_dtype)
+{
+    auto input_tensor_desc = TensorDesc({10}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto mat_tensor_desc = TensorDesc({10, 0}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto vec_tensor_desc = TensorDesc({0}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto alpha_scalar_desc = ScalarDesc(1.0f);
+    auto beta_scalar_desc = ScalarDesc(1.0f);
+
+    auto out_tensor_desc = TensorDesc(input_tensor_desc).Precision(0.005, 0.005);
+    int8_t cubeMathType = KEEP_DTYPE;
+
+    auto ut = OP_API_UT(
+        aclnnAddmv, INPUT(input_tensor_desc, mat_tensor_desc, vec_tensor_desc, alpha_scalar_desc, beta_scalar_desc),
+        OUTPUT(out_tensor_desc), cubeMathType);
+
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+
+    // SAMPLE: precision simulate
+    ut.TestPrecision();
+}
+
+TEST_F(l2_addmv_test, mat_empty_use_fp32_add)
+{
+    auto input_tensor_desc = TensorDesc({10}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto mat_tensor_desc = TensorDesc({10, 0}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto vec_tensor_desc = TensorDesc({0}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto alpha_scalar_desc = ScalarDesc(1.0f);
+    auto beta_scalar_desc = ScalarDesc(1.0f);
+
+    auto out_tensor_desc = TensorDesc(input_tensor_desc).Precision(0.005, 0.005);
+    int8_t cubeMathType = USE_FP32_ADD;
+
+    auto ut = OP_API_UT(
+        aclnnAddmv, INPUT(input_tensor_desc, mat_tensor_desc, vec_tensor_desc, alpha_scalar_desc, beta_scalar_desc),
+        OUTPUT(out_tensor_desc), cubeMathType);
+
+    // SAMPLE: only test GetWorkspaceSize
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+
+    // SAMPLE: precision simulate
+    ut.TestPrecision();
+}

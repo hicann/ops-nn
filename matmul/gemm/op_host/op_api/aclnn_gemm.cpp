@@ -231,6 +231,9 @@ aclnnStatus aclnnGemmGetWorkspaceSize(
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
+    // 路由cubeMathType4到cubeMathType0, 该接口不支持cubeMathType=4的场景
+    cubeMathType = routeCubeMathType4ToCubeMathType0DAV_2201(cubeMathType);
+    
     auto ret = CheckParams(A, B, C, transA, transB, out, cubeMathType);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 

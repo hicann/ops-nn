@@ -264,6 +264,40 @@ TEST_F(l2_addbmm_test, case_only_one_empty_tensor)
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
 
+TEST_F(l2_addbmm_test, addbmm_910b_case_two_empty_tensor_keep_dtype)
+{
+    auto self = TensorDesc({3, 0}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto batch1 = TensorDesc({2, 3, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto batch2 = TensorDesc({2, 5, 0}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto out = TensorDesc({3, 0}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto beta = ScalarDesc(1.0f);
+    auto alpha = ScalarDesc(1.0f);
+    int8_t cubeMathType = KEEP_DTYPE;
+
+    auto ut = OP_API_UT(aclnnAddbmm, INPUT(self, batch1, batch2, beta, alpha), OUTPUT(out), cubeMathType);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+TEST_F(l2_addbmm_test, addbmm_910b_case_two_empty_tensor_use_fp32_add)
+{
+    auto self = TensorDesc({3, 0}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto batch1 = TensorDesc({2, 3, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto batch2 = TensorDesc({2, 5, 0}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto out = TensorDesc({3, 0}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto beta = ScalarDesc(1.0f);
+    auto alpha = ScalarDesc(1.0f);
+    int8_t cubeMathType = USE_FP32_ADD;
+
+    auto ut = OP_API_UT(aclnnAddbmm, INPUT(self, batch1, batch2, beta, alpha), OUTPUT(out), cubeMathType);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
 TEST_F(l2_addbmm_test, addbmm_950_case_two_empty_tensor)
 {
     op::SocVersionManager versionManager(op::SocVersion::ASCEND950);
@@ -600,6 +634,40 @@ TEST_F(l2_addbmm_test, case_inplace)
     auto beta = ScalarDesc(1.0f);
     auto alpha = ScalarDesc(1.0f);
     int8_t cubeMathType = ALLOW_FP32_DOWN_PRECISION;
+
+    auto ut = OP_API_UT(aclnnInplaceAddbmm, INPUT(self, batch1, batch2, beta, alpha), OUTPUT(), cubeMathType);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// 检查原地操作
+TEST_F(l2_addbmm_test, case_inplace_keep_dtype)
+{
+    auto self = TensorDesc({3, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto batch1 = TensorDesc({1, 3, 4}, ACL_FLOAT, ACL_FORMAT_ND, {12, 1, 3}, 0, {12}).ValueRange(0, 2);
+    auto batch2 = TensorDesc({1, 4, 5}, ACL_FLOAT, ACL_FORMAT_ND, {20, 1, 4}, 0, {20}).ValueRange(0, 2);
+    auto beta = ScalarDesc(1.0f);
+    auto alpha = ScalarDesc(1.0f);
+    int8_t cubeMathType = KEEP_DTYPE;
+
+    auto ut = OP_API_UT(aclnnInplaceAddbmm, INPUT(self, batch1, batch2, beta, alpha), OUTPUT(), cubeMathType);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// 检查原地操作
+TEST_F(l2_addbmm_test, case_inplace_use_fp32_add)
+{
+    auto self = TensorDesc({3, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto batch1 = TensorDesc({1, 3, 4}, ACL_FLOAT, ACL_FORMAT_ND, {12, 1, 3}, 0, {12}).ValueRange(0, 2);
+    auto batch2 = TensorDesc({1, 4, 5}, ACL_FLOAT, ACL_FORMAT_ND, {20, 1, 4}, 0, {20}).ValueRange(0, 2);
+    auto beta = ScalarDesc(1.0f);
+    auto alpha = ScalarDesc(1.0f);
+    int8_t cubeMathType = USE_FP32_ADD;
 
     auto ut = OP_API_UT(aclnnInplaceAddbmm, INPUT(self, batch1, batch2, beta, alpha), OUTPUT(), cubeMathType);
 

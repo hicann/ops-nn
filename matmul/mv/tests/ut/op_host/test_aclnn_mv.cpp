@@ -66,7 +66,7 @@ protected:
     }
 };
 
-// self + other + out: 不支持double、complex64、complex128 + bool、uint8、int8、int16、int32、int64、bfloat16、
+// // self + other + out: 不支持double、complex64、complex128 + bool、uint8、int8、int16、int32、int64、bfloat16、
 TEST_F(l2_mv_test, l2_mv_test_03)
 {
     test_run_invalid(
@@ -162,4 +162,46 @@ TEST_F(l2_mv_test, l2_mv_test_06)
     test_run_invalid(
         {3, 0}, ACL_FLOAT16, ACL_FORMAT_ND, {-10, 10}, {0}, ACL_FLOAT16, ACL_FORMAT_ND, {-15, -10}, {3}, ACL_BOOL,
         ACL_FORMAT_ND, 1);
+}
+
+// self + other + out: fp32 910B支持FP32, cubeMathType为0/1/2/3正常运行, 4会路由到0
+TEST_F(l2_mv_test, ascend910B_fp32_cubeMathType0_to_4)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910B);
+    test_run(
+        {2, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {2}, ACL_FLOAT,
+        ACL_FORMAT_ND, 0);
+    test_run(
+        {2, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {2}, ACL_FLOAT,
+        ACL_FORMAT_ND, 1);
+    test_run(
+        {2, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {2}, ACL_FLOAT,
+        ACL_FORMAT_ND, 2);
+    test_run(
+        {2, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {2}, ACL_FLOAT,
+        ACL_FORMAT_ND, 3);
+    test_run(
+        {2, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {2}, ACL_FLOAT,
+        ACL_FORMAT_ND, 4);
+}
+
+// self + other + out: fp32 910B支持FP32, cubeMathType为4，全部会路由到0
+TEST_F(l2_mv_test, ascend910B_fp32_cubeMathType_all4)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910B);
+    test_run(
+        {3, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {3}, ACL_FLOAT,
+        ACL_FORMAT_ND, 4);
+    test_run(
+        {2, 5}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {5}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {2}, ACL_FLOAT,
+        ACL_FORMAT_ND, 4);
+    test_run(
+        {5, 3}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {3}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {5}, ACL_FLOAT,
+        ACL_FORMAT_ND, 4);
+    test_run(
+        {10, 10}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {10}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {10}, ACL_FLOAT,
+        ACL_FORMAT_ND, 4);
+    test_run(
+        {101, 301}, ACL_FLOAT, ACL_FORMAT_ND, {-10, 10}, {301}, ACL_FLOAT, ACL_FORMAT_ND, {-15, -10}, {101}, ACL_FLOAT,
+        ACL_FORMAT_ND, 4);
 }

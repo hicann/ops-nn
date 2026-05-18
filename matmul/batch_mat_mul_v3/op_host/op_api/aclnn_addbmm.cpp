@@ -490,6 +490,9 @@ aclnnStatus aclnnAddbmmGetWorkspaceSize(
 {
     L2_DFX_PHASE_1(aclnnAddbmm, DFX_IN(self, batch1, batch2, beta, alpha, cubeMathType), DFX_OUT(out));
 
+    // 路由cubeMathType4到cubeMathType0, 该接口不支持cubeMathType=4的场景
+    cubeMathType = routeCubeMathType4ToCubeMathType0DAV_2201(cubeMathType);
+
     // 参数检查
     auto ret = CheckInputParams(self, batch1, batch2, beta, alpha, out, cubeMathType);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);

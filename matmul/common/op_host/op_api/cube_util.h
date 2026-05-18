@@ -17,6 +17,9 @@
 namespace Ops {
 namespace NN {
 using namespace op;
+// 路由cubeMathType4到cubeMathType0, 供不支持cubeMathType4的场景使用
+int8_t routeCubeMathType4ToCubeMathType0DAV_2201(int8_t cubeMathType);
+
 // 校验针对cube tensor的dtype，cubeMathType的值是否符合预期
 bool CheckCubeMathType(const op::DataType cubeTensorDtype, int8_t cubeMathType);
 
