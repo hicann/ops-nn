@@ -941,6 +941,11 @@ static __aicore__ inline void LoadL0c2Gm(Intf *self, const GlobalTensor<typename
     LocalTensor<typename Intf::L0cT> useC1Buf;
     L0CDeQue<Intf>(self, useC1Buf);
     SetEnAtomic<Intf>(self, enAtomic);
+    if (self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
+        event_t eventId = static_cast<event_t>(self->ctx.pipe_.FetchEventID(HardEvent::MTE2_FIX));
+        SetFlag<HardEvent::MTE2_FIX>(eventId);
+        WaitFlag<HardEvent::MTE2_FIX>(eventId);
+    }
     if constexpr (Intf::Config::dType::format == Convolution3DBackprop::CubeFormat::NCDHW) {
         if (!enSequentialWrite) {
             LoadL0c2OutForNz2Dn<Intf>(self, output, useC1Buf);

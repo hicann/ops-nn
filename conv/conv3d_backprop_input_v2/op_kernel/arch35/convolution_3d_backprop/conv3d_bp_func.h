@@ -741,6 +741,9 @@ static __aicore__ inline void SetDequantScale(Intf *self)
 {
     if constexpr (Intf::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
         if (self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
+            event_t eventId = static_cast<event_t>(self->ctx.pipe_.FetchEventID(HardEvent::FIX_MTE2));
+ 	        SetFlag<HardEvent::FIX_MTE2>(eventId);
+ 	        WaitFlag<HardEvent::FIX_MTE2>(eventId);
             Convolution3DBackpropFunc::FullLoadToScaleL1<Intf>(self);
         } else if (self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::SCALAR_QUANT)) {
             self->ctx.deqScalar_ = self->ctx.scaleGlobal_.GetValue(0);
