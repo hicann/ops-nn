@@ -55,7 +55,7 @@ __global__ __aicore__ void conv3d_backprop_input_v2_arch35(GM_ADDR input_size, G
         opInitOutput.Destroy();
     }
 
-    if ASCEND_IS_AIV {
+    if ASCEND_IS_AIV_SCALAR {
         if (tilingData.conv3DDxTiling.enableVecTrans) {
             // VecTranspose
             DxVecTranspose::Conv3dDxVecTranspose<DTYPE_FILTER> opVecTranspose;

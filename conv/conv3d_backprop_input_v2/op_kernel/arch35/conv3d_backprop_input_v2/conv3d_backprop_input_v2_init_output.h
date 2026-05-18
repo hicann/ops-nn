@@ -76,10 +76,10 @@ public:
 
     __aicore__ inline void Process(GM_ADDR y)
     {
-        if ASCEND_IS_AIV {
+        if ASCEND_IS_AIV_SCALAR {
             ProcessWithL0(y);
         }
-        if ASCEND_IS_AIC {
+        if ASCEND_IS_AIC_SCALAR {
         #if (__NPU_ARCH__ == 5102)
             AscendC::TQueSync<PIPE_MTE1, PIPE_MTE3> sync;
             sync.WaitFlag(VEC_FALG_ID);
