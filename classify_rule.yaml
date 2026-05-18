@@ -603,6 +603,10 @@ conv_backward-c@ops-nn:
         - ops/ops-nn/common/inc/
         - ops/ops-nn/common/stub/
         - ops/ops-nn/common/src/legacy_common_manager.cpp
+        - ops/ops-nn/matmul/quant_batch_matmul_v3/examples/
+        - ops/ops-nn/matmul/quant_batch_matmul_v3/tests/
+        - ops/ops-nn/matmul/quant_batch_matmul_v4/examples/
+        - ops/ops-nn/matmul/quant_batch_matmul_v4/tests/
       non_delivery: null
       open_source: null
 conv_forward_ascendc@ops-nn:
