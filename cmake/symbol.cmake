@@ -333,10 +333,25 @@ function(gen_cust_proto_symbol)
     )
 endfunction()
 
+function(gen_aicpu_op_def_symbol)
+  get_property(ALL_AICPU_OPDEF_FILES GLOBAL PROPERTY AICPU_OP_DEF_FILES)
+  if(NOT ALL_AICPU_OPDEF_FILES)
+    message(STATUS "No AICPU OpDef files found, skip opdef ini generation.")
+    return()
+  endif()
+
+  gen_aicpu_ini_from_opdef(
+    OPS_SRC ${ALL_AICPU_OPDEF_FILES}
+    OUT_DIR ${ASCEND_AUTOGEN_PATH}
+  )
+  set(AICPU_OPDEF_INI ${OPBUILD_AICPU_INI} PARENT_SCOPE)
+endfunction()
+
 function(gen_aicpu_json_symbol enable_built_in)
   get_property(ALL_AICPU_JSON_FILES GLOBAL PROPERTY AICPU_JSON_FILES)
-  if(NOT ALL_AICPU_JSON_FILES)
-    message(STATUS "No aicpu json files to merge, skipping.")
+  get_property(ALL_AICPU_OP_DEF_FILES GLOBAL PROPERTY AICPU_OP_DEF_FILES)
+  if(NOT ALL_AICPU_OP_DEF_FILES AND NOT ALL_AICPU_JSON_FILES)
+    message(STATUS "No aicpu opdef/json files to merge, skipping.")
     return()
   endif()
 
@@ -344,14 +359,39 @@ function(gen_aicpu_json_symbol enable_built_in)
   if(enable_built_in)
     set(MERGED_JSON ${CMAKE_BINARY_DIR}/aicpu_nn.json)
   endif()
+  set(INPUT_JSONS "")
+
+  if(ALL_AICPU_OP_DEF_FILES)
+    gen_aicpu_op_def_symbol()
+    set(OPDEF_INI ${AICPU_OPDEF_INI})
+    set(OPDEF_JSON ${CMAKE_BINARY_DIR}/aicpu_opdef_kernel.json)
+    if(enable_built_in)
+      set(OPDEF_JSON ${CMAKE_BINARY_DIR}/aicpu_nn_opdef_kernel.json)
+    endif()
+    add_custom_command(
+      OUTPUT ${OPDEF_JSON}
+      COMMAND ${ASCEND_PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/kernel/binary_script/aicpu_parser_ini_to_json.py
+              ${OPDEF_INI} ${OPDEF_JSON}
+      DEPENDS ${ALL_AICPU_OP_DEF_FILES} ${OPDEF_INI}
+      COMMENT "Generating ${OPDEF_JSON} from aicpu_kernel.ini"
+      VERBATIM
+    )
+    list(APPEND INPUT_JSONS ${OPDEF_JSON})
+  endif()
+
+  if(ALL_AICPU_JSON_FILES)
+    list(APPEND INPUT_JSONS ${ALL_AICPU_JSON_FILES})
+  endif()
 
   add_custom_command(
     OUTPUT ${MERGED_JSON}
-    COMMAND bash ${CMAKE_SOURCE_DIR}/scripts/util/merge_aicpu_info_json.sh ${CMAKE_SOURCE_DIR} ${MERGED_JSON} ${ALL_AICPU_JSON_FILES}
-    DEPENDS ${ALL_AICPU_JSON_FILES}
-    COMMENT "Merging Json files into ${MERGED_JSON}"
+    COMMAND bash ${CMAKE_SOURCE_DIR}/scripts/util/merge_aicpu_info_json.sh
+            ${CMAKE_SOURCE_DIR} ${MERGED_JSON} ${INPUT_JSONS}
+    DEPENDS ${INPUT_JSONS}
+    COMMENT "Merging aicpu json inputs into ${MERGED_JSON}"
     VERBATIM
   )
+  add_custom_target(gen_aicpu_json_from_opdef DEPENDS ${MERGED_JSON})
   add_custom_target(merge_aicpu_json ALL DEPENDS ${MERGED_JSON})
   install(
     FILES ${MERGED_JSON}

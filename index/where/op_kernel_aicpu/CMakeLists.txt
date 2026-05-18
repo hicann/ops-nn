@@ -21,12 +21,11 @@ if (BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG)
     add_definitions(-D_GLIBCXX_USE_CXX11_ABI=1)
     set(CMAKE_CXX_COMPILER ${ASCEND_DIR}/toolkit/toolchain/hcc/bin/aarch64-target-linux-gnu-g++)
   endif()
-  # aicpu json
-  file(GLOB_RECURSE JSON_FILE ${CMAKE_CURRENT_SOURCE_DIR}/*.json)
-  set_property(GLOBAL APPEND PROPERTY AICPU_JSON_FILES ${JSON_FILE})
 
   # aicpu cust kernel
-  file(GLOB AICPU_SRC ${CMAKE_CURRENT_SOURCE_DIR}/*_aicpu*.cpp)
+  file(GLOB AICPU_SRC ${CMAKE_CURRENT_SOURCE_DIR}/*_aicpu.cpp)
+  file(GLOB AICPU_OPDEF_SRC ${CMAKE_CURRENT_SOURCE_DIR}/*_aicpu_def.cpp)
+  set_property(GLOBAL APPEND PROPERTY AICPU_OP_DEF_FILES ${AICPU_OPDEF_SRC})
   message(STATUS "[where] Found aicpu sources: ${AICPU_SRC}, ascend dir: ${ASCEND_DIR}, ophsot name: ${OPHOST_NAME}")
 
   set(OBJ_NAME where_cust_obj)

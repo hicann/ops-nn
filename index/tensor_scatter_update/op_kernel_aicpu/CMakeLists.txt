@@ -22,10 +22,9 @@ if (BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG)
     set(CMAKE_CXX_COMPILER ${ASCEND_DIR}/toolkit/toolchain/hcc/bin/aarch64-target-linux-gnu-g++)
   endif()
 
-  file(GLOB_RECURSE JSON_FILE ${CMAKE_CURRENT_SOURCE_DIR}/*.json)
-  set_property(GLOBAL APPEND PROPERTY AICPU_JSON_FILES ${JSON_FILE})
-
-  file(GLOB AICPU_SRC ${CMAKE_CURRENT_SOURCE_DIR}/*_aicpu*.cpp)
+  file(GLOB AICPU_SRC ${CMAKE_CURRENT_SOURCE_DIR}/*_aicpu.cpp)
+  file(GLOB AICPU_OPDEF_SRC ${CMAKE_CURRENT_SOURCE_DIR}/*_aicpu_def.cpp)
+  set_property(GLOBAL APPEND PROPERTY AICPU_OP_DEF_FILES ${AICPU_OPDEF_SRC})
   set(OBJ_NAME tensor_scatter_update_cust_obj)
   add_aicpu_cust_kernel_modules(${OBJ_NAME})
   target_sources(${OBJ_NAME} PRIVATE ${AICPU_SRC})

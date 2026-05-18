@@ -136,3 +136,60 @@ function(gen_aclnn_with_opdef)
     target_include_directories(opbuild_gen_aclnn_all PRIVATE ${OPAPI_INCLUDE})
   endif()
 endfunction()
+
+function(gen_aicpu_ini_from_opdef)
+  message(STATUS "Opbuild generating AICPU ini/json from OpDef")
+  cmake_parse_arguments(OPBUILD "" "OUT_DIR;PROJECT_NAME;ACCESS_PREFIX;ENABLE_SOURCE" "OPS_SRC" ${ARGN})
+  if(NOT OPBUILD_OPS_SRC)
+    message(STATUS "No AICPU OpDef sources, skip.")
+    return()
+  endif()
+
+  file(MAKE_DIRECTORY ${OPBUILD_OUT_DIR})
+
+  if(NOT TARGET intf_pub)
+    message(FATAL_ERROR "intf_pub target is required for AICPU OpDef build")
+  endif()
+
+  set(aicpu_opdef_target opbuild_aicpu_ops)
+  set(aicpu_opdef_so ${OPBUILD_OUT_DIR}/libaicpu_ops.so)
+  set(aicpu_opdef_ini ${OPBUILD_OUT_DIR}/aicpu_kernel.ini)
+
+  if(NOT TARGET ${aicpu_opdef_target})
+    add_library(${aicpu_opdef_target} SHARED ${OPBUILD_OPS_SRC})
+    target_include_directories(${aicpu_opdef_target} PRIVATE ${ASCEND_CANN_PACKAGE_PATH}/include)
+    target_link_directories(${aicpu_opdef_target} PRIVATE ${ASCEND_CANN_PACKAGE_PATH}/lib64)
+    target_link_libraries(
+      ${aicpu_opdef_target}
+      PRIVATE intf_pub
+              exe_graph
+              register
+              tiling_api
+    )
+    set_target_properties(${aicpu_opdef_target} PROPERTIES
+      OUTPUT_NAME aicpu_ops
+      LIBRARY_OUTPUT_DIRECTORY ${OPBUILD_OUT_DIR}
+    )
+  endif()
+
+  set(opbuild_env "")
+  if(NOT "${OPBUILD_PROJECT_NAME}x" STREQUAL "x")
+    list(APPEND opbuild_env "OPS_PROJECT_NAME=${OPBUILD_PROJECT_NAME}")
+  endif()
+  if(NOT "${OPBUILD_ACCESS_PREFIX}x" STREQUAL "x")
+    list(APPEND opbuild_env "OPS_DIRECT_ACCESS_PREFIX=${OPBUILD_ACCESS_PREFIX}")
+  endif()
+
+  add_custom_command(
+    OUTPUT ${aicpu_opdef_ini}
+    COMMAND
+      ${CMAKE_COMMAND} -E env ENABLE_SOURCE_PACKAGE=${OPBUILD_ENABLE_SOURCE} ${opbuild_env}
+      ${ASCEND_CANN_PACKAGE_PATH}/toolkit/tools/opbuild/op_build $<TARGET_FILE:${aicpu_opdef_target}> ${OPBUILD_OUT_DIR} --aicpu
+    DEPENDS ${aicpu_opdef_target}
+    COMMENT "Generating ${aicpu_opdef_ini} from ${aicpu_opdef_so}"
+    VERBATIM
+  )
+
+  message(STATUS "Opbuild generating AICPU ini/json from OpDef - done")
+  set(OPBUILD_AICPU_INI ${aicpu_opdef_ini} PARENT_SCOPE)
+endfunction()

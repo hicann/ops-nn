@@ -541,7 +541,7 @@ function(add_modules_sources)
   find_value_by_key("${MODULE_COMPUTE_UNIT}" "${MODULE_TILING_DIR}" "${ASCEND_COMPUTE_UNIT}" tiling_dir)
   add_tiling_sources("${SOURCE_DIR}" "${tiling_dir}" "${MODULE_DISABLE_IN_OPP}")
 
-  file(GLOB AICPU_SRCS ${SOURCE_DIR}/*_aicpu*.cpp)
+  file(GLOB AICPU_SRCS ${SOURCE_DIR}/*_aicpu.cpp)
   if(AICPU_SRCS)
     add_aicpu_kernel_modules()
     target_sources(${OPHOST_NAME}_aicpu_obj PRIVATE ${AICPU_SRCS})
