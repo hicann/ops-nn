@@ -731,8 +731,8 @@ static bool CheckOutputZeroTensor(const InferShapeContext* context, ConvOpInfo& 
     if (!opInfo.isInputZeroTensor) {
         return true;
     }
-    bool conv2dNegFlag = opInfo.in < 0 || opInfo.kn < 0 || opInfo.oh < 0 || opInfo.ow < 0;
-    bool conv2dNoneZeroFlag = opInfo.in != 0 && opInfo.kn != 0 && opInfo.oh != 0 && opInfo.ow != 0;
+    bool conv2dNegFlag = opInfo.on < 0 || opInfo.oc < 0 || opInfo.oh < 0 || opInfo.ow < 0;
+    bool conv2dNoneZeroFlag = opInfo.on != 0 && opInfo.oc != 0 && opInfo.oh != 0 && opInfo.ow != 0;
     std::stringstream convLogStr;
     if (opInfo.isConv2DLike) {
         if (conv2dNegFlag) {

@@ -60,11 +60,11 @@ bool ConvFusionUtilsPass::CheckSocSupport(const std::map<std::string, NpuArch> &
     OptionalInfo optionalInfo;
     FUSION_PASS_CHECK(
         PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optionalInfo) != GRAPH_SUCCESS,
-        OP_LOGE(UTIL_NAME, "Get platform_info failed."), return false);
+        OP_LOGW(UTIL_NAME, "Get platform_info failed."), return false);
     const std::string soc = platformInfo.str_info.short_soc_version;
 
     FUSION_PASS_CHECK(supportSocList.find(soc) == supportSocList.end(),
-        OP_LOGE(UTIL_NAME, "Current soc %s not supported.", soc.c_str()), return false);
+        OP_LOGD(UTIL_NAME, "Current soc %s not supported.", soc.c_str()), return false);
 
     npuArch = supportSocList.at(soc);
     OP_LOGD(UTIL_NAME, "Current NpuArch is DAV_%u.", npuArch);
