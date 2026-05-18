@@ -138,6 +138,7 @@ public:
 
     constexpr static ConvFormat A_FORMAT = FMAP_TYPE::format;
     constexpr static ConvFormat B_FORMAT = WEIGHT_TYPE::format;
+    constexpr static ConvFormat C_FORMAT = OUTPUT_TYPE::format;
     constexpr static bool isMMode = CONV_CFG::outputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE);
     constexpr static bool isQuant = (IsSameType<FMAP_T, int8_t>::value && IsSameType<OUTPUT_T, half>::value) ||
                                     (IsSameType<FMAP_T, int8_t>::value && IsSameType<OUTPUT_T, int8_t>::value) ||
