@@ -11,9 +11,12 @@
 #ifndef OPS_NN_TESTS_UT_COMMON_TILING_CASE_EXECUTOR_H
 #define OPS_NN_TESTS_UT_COMMON_TILING_CASE_EXECUTOR_H
 
-#include "tiling_context_faker.h"
+#include "kernel_run_context_facker.h"
+#include "platform/platform_infos_def.h"
 
 using namespace std;
+
+const string EMPTY_EXPECT_TILING_DATA = "EMPTY_EXPECT_TILING_DATA";
 
 struct TilingInfo {
     int64_t tilingKey = -1;
@@ -28,6 +31,16 @@ void ExecuteTestCase(const gert::TilingContextPara& tilingContextPara,
                      uint64_t                       expectTilingKey = 0, 
                      const string&                  expectTilingData = "",
                      const std::vector<size_t>&     expectWorkspaces = {});
+
+void ExecuteTestCase(const gert::TilingContextPara& tilingContextPara,
+                     ge::graphStatus                expectResult,
+                     uint64_t                       expectTilingKey,
+                     const std::vector<size_t>&     expectWorkspaces);
+
+void ExecuteTestCaseForEle(
+    const gert::TilingContextPara& tilingContextPara, ge::graphStatus expectResult, bool needCheckTilingKey,
+    uint64_t expectTilingKey, bool needCheckTilingData, const string& expectTilingData,
+    const std::vector<size_t>& expectWorkspaces);
 
 bool ExecuteTiling(const gert::TilingContextPara& tilingContextPara, TilingInfo& tilingInfo);
 

@@ -13,6 +13,10 @@ if(UT_TEST_ALL OR OP_HOST_UT)
     # add op tiling ut common obj
     add_library(${OP_TILING_MODULE_NAME}_common_obj OBJECT)
     add_dependencies(${OP_TILING_MODULE_NAME}_common_obj json)
+    target_compile_definitions(${OP_TILING_MODULE_NAME}_common_obj PRIVATE
+        BUILD_SOC_VERSION=${ASCEND_COMPUTE_UNIT}
+        _GLIBCXX_USE_CXX11_ABI=0
+    )
 
     # add op tiling ut common obj
     add_library(${OP_INFERSHAPE_MODULE_NAME}_common_obj OBJECT)
@@ -21,6 +25,7 @@ if(UT_TEST_ALL OR OP_HOST_UT)
         ${CMAKE_CURRENT_SOURCE_DIR}/tiling_context_faker.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/tiling_parse_context_faker.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/test_cube_util.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/tiling_case_executor.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/legacy_common_manager_stub.cpp
     )
     target_sources(${OP_TILING_MODULE_NAME}_common_obj PRIVATE
@@ -56,6 +61,7 @@ if(UT_TEST_ALL OR OP_HOST_UT)
         ${CMAKE_CURRENT_SOURCE_DIR}/infer_shape_context_faker.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/infer_shaperange_context_faker.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/infer_datatype_context_faker.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/infershape_case_executor.cpp
     )
     target_sources(${OP_INFERSHAPE_MODULE_NAME}_common_obj PRIVATE
         ${OP_INFERSHAPE_UT_COMMON_SRC}

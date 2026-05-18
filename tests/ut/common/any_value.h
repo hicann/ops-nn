@@ -12,8 +12,8 @@
  * \file any_value.h
  */
 
-#ifndef OPS_NN_DEV_TESTS_UT_COMMON_ANY_VALUE_H
-#define OPS_NN_DEV_TESTS_UT_COMMON_ANY_VALUE_H
+#ifndef OPS_NN_TESTS_UT_COMMON_ANY_VALUE_H
+#define OPS_NN_TESTS_UT_COMMON_ANY_VALUE_H
 
 #include <memory>
 #include <cstdint>
@@ -153,4 +153,4 @@ inline AnyValue AnyValue::CreateFrom<std::vector<std::vector<int64_t>>>(const st
 }
 } // namespace NN
 } // namespace Ops
-#endif // OPS_NN_DEV_TESTS_UT_COMMON_ANY_VALUE_H
+#endif // OPS_NN_TESTS_UT_COMMON_ANY_VALUE_H

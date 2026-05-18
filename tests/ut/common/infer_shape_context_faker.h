@@ -8,8 +8,8 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#ifndef OPS_NN_DEV_TESTS_UT_COMMON_INFER_SHAPE_CONTEXT_FAKER_H
-#define OPS_NN_DEV_TESTS_UT_COMMON_INFER_SHAPE_CONTEXT_FAKER_H
+#ifndef OPS_NN_TESTS_UT_COMMON_INFER_SHAPE_CONTEXT_FAKER_H
+#define OPS_NN_TESTS_UT_COMMON_INFER_SHAPE_CONTEXT_FAKER_H
 
 #include <vector>
 #include <string>
@@ -18,6 +18,62 @@
 #include "any_value.h"
 
 namespace gert {
+class InfershapeContextPara {
+public:
+    class TensorDescription {
+    public:
+        TensorDescription(const gert::StorageShape& shape, ge::DataType dtype, ge::Format format, bool isConst = false,
+            void* constValue = nullptr) :
+            shape_(shape), dtype_(dtype), format_(format), isConst_(isConst), constValue_(constValue) {}
+    public:
+        gert::StorageShape shape_;
+        ge::DataType dtype_ = ge::DT_FLOAT;
+        ge::Format format_ = ge::FORMAT_ND;
+        bool isConst_ = false;
+        void* constValue_ = nullptr;
+    };
+
+    class OpAttr {
+    public:
+        OpAttr(const std::string& attrName, const Ops::NN::AnyValue& attr) : attrName_(attrName), attr_(attr) {}
+    public:
+        std::string attrName_;
+        Ops::NN::AnyValue attr_;
+    };
+public:
+    InfershapeContextPara(const std::string& opName,
+                          const std::vector<TensorDescription>& inputTensorDesc,
+                          const std::vector<TensorDescription>& outputTensorDesc,
+                          const std::vector<OpAttr>& attrs,
+                          const std::vector<uint32_t>& inputInstanceNum = {},
+                          const std::vector<uint32_t>& outputInstanceNum = {}) : 
+                          opName_(opName),
+                          inputTensorDesc_(inputTensorDesc),
+                          outputTensorDesc_(outputTensorDesc),
+                          attrs_(attrs),
+                          inputInstanceNum_(inputInstanceNum),
+                          outputInstanceNum_(outputInstanceNum) {}
+
+    InfershapeContextPara(const std::string& opName,
+                          const std::vector<TensorDescription>& inputTensorDesc,
+                          const std::vector<TensorDescription>& outputTensorDesc,
+                          const std::vector<uint32_t>& inputInstanceNum = {},
+                          const std::vector<uint32_t>& outputInstanceNum = {}) : 
+                          opName_(opName),
+                          inputTensorDesc_(inputTensorDesc),
+                          outputTensorDesc_(outputTensorDesc),
+                          inputInstanceNum_(inputInstanceNum),
+                          outputInstanceNum_(outputInstanceNum) {}
+
+public:
+    std::string opName_;
+    std::vector<uint32_t> inputInstanceNum_;
+    std::vector<uint32_t> outputInstanceNum_;
+    std::vector<TensorDescription> inputTensorDesc_;
+    std::vector<TensorDescription> outputTensorDesc_;
+    std::vector<OpAttr> attrs_;
+};
+
 class InferShapeContextFaker : public OpInferShapeContextBuilder, public KernelRunContextHolder {
 public:
     InferShapeContextFaker() = default;
@@ -73,4 +129,4 @@ public:
     KernelRunContextHolder Build();
 };
 } // namespace gert
-#endif // OPS_NN_DEV_TESTS_UT_COMMON_INFER_SHAPE_CONTEXT_FAKER_H
+#endif // OPS_NN_TESTS_UT_COMMON_INFER_SHAPE_CONTEXT_FAKER_H

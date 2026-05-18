@@ -8,8 +8,8 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#ifndef OPS_NN_DEV_TESTS_UT_COMMON_OP_IMPL_REGISTRY_H
-#define OPS_NN_DEV_TESTS_UT_COMMON_OP_IMPL_REGISTRY_H
+#ifndef OPS_NN_TESTS_UT_COMMON_OP_IMPL_REGISTRY_H
+#define OPS_NN_TESTS_UT_COMMON_OP_IMPL_REGISTRY_H
 
 #include "base/registry/op_impl_space_registry_v2.h"
 
@@ -47,4 +47,4 @@ namespace gert {
     using OpImplRegistry = Ops::NN::OpImplRegistry;
 }
 
-#endif  // OPS_NN_DEV_TESTS_UT_COMMON_OP_IMPL_REGISTRY_H
+#endif  // OPS_NN_TESTS_UT_COMMON_OP_IMPL_REGISTRY_H

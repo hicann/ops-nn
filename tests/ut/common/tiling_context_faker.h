@@ -8,8 +8,8 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#ifndef OPS_MATH_DEV_TESTS_UT_COMMON_TILING_CONTEXT_FAKER_H
-#define OPS_MATH_DEV_TESTS_UT_COMMON_TILING_CONTEXT_FAKER_H
+#ifndef OPS_NN_TESTS_UT_COMMON_TILING_CONTEXT_FAKER_H
+#define OPS_NN_TESTS_UT_COMMON_TILING_CONTEXT_FAKER_H
 
 #include <vector>
 #include <string>
@@ -27,12 +27,14 @@ public:
                           ge::DataType dtype, 
                           ge::Format format, 
                           bool isConst = false, 
-                          void* constValue = nullptr) :
-            shape_(shape), dtype_(dtype), format_(format), isConst_(isConst), constValue_(constValue) {}
+                          void* constValue = nullptr,
+                          ge::Format originFormat = ge::FORMAT_ND) :
+            shape_(shape), dtype_(dtype), format_(format), originFormat_(originFormat), isConst_(isConst), constValue_(constValue) {}
     public:
         gert::StorageShape shape_;
         ge::DataType dtype_ = ge::DT_FLOAT;
         ge::Format format_ = ge::FORMAT_ND;
+        ge::Format originFormat_ = ge::FORMAT_ND;
         bool isConst_ = false;
         void* constValue_ = nullptr;
     };
@@ -50,7 +52,6 @@ public:
                       const std::vector<TensorDescription>& outputTensorDesc,
                       const std::vector<OpAttr>& attrs,
                       void* compileInfo = nullptr,
-                      std::string socVersion = "Ascend910b",
                       uint64_t coreNum = 64,
                       uint64_t ubSize = 262144,
                       uint64_t tilingDataSize = 4096) : 
@@ -59,7 +60,6 @@ public:
                       outputTensorDesc_(outputTensorDesc),
                       attrs_(attrs),
                       compileInfo_(compileInfo),
-                      socVersion_(socVersion),
                       coreNum_(coreNum),
                       ubSize_(ubSize),
                       tilingDataSize_(tilingDataSize) {}
@@ -68,7 +68,6 @@ public:
                       const std::vector<TensorDescription>& inputTensorDesc,
                       const std::vector<TensorDescription>& outputTensorDesc,
                       void* compileInfo = nullptr,
-                      std::string socVersion = "Ascend910b",
                       uint64_t coreNum = 64,
                       uint64_t ubSize = 262144,
                       uint64_t tilingDataSize = 4096) : 
@@ -76,7 +75,6 @@ public:
                       inputTensorDesc_(inputTensorDesc),
                       outputTensorDesc_(outputTensorDesc),
                       compileInfo_(compileInfo),
-                      socVersion_(socVersion),
                       coreNum_(coreNum),
                       ubSize_(ubSize),
                       tilingDataSize_(tilingDataSize) {}
@@ -88,7 +86,6 @@ public:
                       const std::vector<uint32_t>& inputInstanceNum,
                       const std::vector<uint32_t>& outputInstanceNum,
                       void* compileInfo = nullptr,
-                      std::string socVersion = "Ascend910b",
                       uint64_t coreNum = 64,
                       uint64_t ubSize = 262144,
                       uint64_t tilingDataSize = 4096) : 
@@ -99,7 +96,6 @@ public:
                       inputInstanceNum_(inputInstanceNum),
                       outputInstanceNum_(outputInstanceNum),
                       compileInfo_(compileInfo),
-                      socVersion_(socVersion),
                       coreNum_(coreNum),
                       ubSize_(ubSize),
                       tilingDataSize_(tilingDataSize) {}
@@ -110,7 +106,6 @@ public:
                       const std::vector<uint32_t>& inputInstanceNum,
                       const std::vector<uint32_t>& outputInstanceNum,
                       void* compileInfo = nullptr,
-                      std::string socVersion = "Ascend910b",
                       uint64_t coreNum = 64,
                       uint64_t ubSize = 262144,
                       uint64_t tilingDataSize = 4096) : 
@@ -120,7 +115,6 @@ public:
                       inputInstanceNum_(inputInstanceNum),
                       outputInstanceNum_(outputInstanceNum),
                       compileInfo_(compileInfo),
-                      socVersion_(socVersion),
                       coreNum_(coreNum),
                       ubSize_(ubSize),
                       tilingDataSize_(tilingDataSize) {}
@@ -134,7 +128,6 @@ public:
     uint64_t coreNum_        = 64;
     uint64_t ubSize_         = 262144;
     uint64_t tilingDataSize_ = 4096;
-    std::string socVersion_ = "Ascend910b";
     void* compileInfo_ = nullptr;
 };
 
@@ -214,4 +207,4 @@ public:
     bool inputTensorFlag_ = false;
 };
 } // namespace gert
-#endif // OPS_MATH_DEV_TESTS_UT_COMMON_INFERSHAPE_CONTEXT_FAKER_H
+#endif // OPS_NN_TESTS_UT_COMMON_INFERSHAPE_CONTEXT_FAKER_H

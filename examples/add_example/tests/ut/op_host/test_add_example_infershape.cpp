@@ -10,11 +10,7 @@
 
 #include <gtest/gtest.h>
 
-#include "log/log.h"
-#include "exe_graph/runtime/storage_format.h"
-#include "exe_graph/runtime/storage_shape.h"
-#include "kernel_run_context_facker.h"
-#include "register/op_impl_registry.h"
+#include "infershape_case_executor.h"
 
 class AddExampleInfershape : public testing::Test
 {
@@ -32,23 +28,17 @@ protected:
 
 TEST_F(AddExampleInfershape, add_example_infershape_test1)
 {
-    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("AddExample")->infer_shape;
-    ASSERT_NE(inferShapeFunc, nullptr);
-
-    gert::StorageShape x1Shape = {{1, -1, -1, 64}, {1, -1, -1, 64}};
-    gert::StorageShape x2Shape = {{1, -1, -1, 64}, {1, -1, -1, 64}};
-    gert::StorageShape outputShape;
-
-    int64_t dtype = static_cast<int64_t> (ge::DT_FLOAT16);
-    auto holder =
-        gert::InferShapeContextFaker()
-            .NodeIoNum(2, 1)
-            .IrInstanceNum({1, 1})
-            .InputShapes({&x1Shape, &x2Shape})
-            .OutputShapes({&outputShape})
-            .Build();
-
-    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-    ASSERT_EQ(Ops::Base::ToString(*output), "[1, -1, -1, 64]");
+    gert::InfershapeContextPara infershapeContextPara(
+        "AddExample",
+        {
+            {{{1, -1, -1, 64}, {1, -1, -1, 64}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+            {{{1, -1, -1, 64}, {1, -1, -1, 64}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+        },
+        {
+            {{{}, {}}, ge::DT_FLOAT16, ge::FORMAT_ND},
+        });
+    std::vector<std::vector<int64_t>> expectOutputShape = {
+        {1, -1, -1, 64},
+    };
+    ExecuteTestCase(infershapeContextPara, ge::GRAPH_SUCCESS, expectOutputShape);
 }

@@ -9,8 +9,8 @@
  * the software repository for the full text of the License.
  */
 
-#ifndef OPS_NN_DEV_TESTS_UT_COMMON_INFER_SHAPERANGE_CONTEXT_FAKER_H
-#define OPS_NN_DEV_TESTS_UT_COMMON_INFER_SHAPERANGE_CONTEXT_FAKER_H
+#ifndef OPS_NN_TESTS_UT_COMMON_INFER_SHAPERANGE_CONTEXT_FAKER_H
+#define OPS_NN_TESTS_UT_COMMON_INFER_SHAPERANGE_CONTEXT_FAKER_H
 
 #include <vector>
 #include <string>
@@ -57,4 +57,4 @@ public:
     KernelRunContextHolder Build();
 };
 } // namespace gert
-#endif // OPS_NN_DEV_TESTS_UT_COMMON_INFERSHAPERANGE_CONTEXT_FAKER_H
+#endif // OPS_NN_TESTS_UT_COMMON_INFERSHAPERANGE_CONTEXT_FAKER_H

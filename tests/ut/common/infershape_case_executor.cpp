@@ -80,7 +80,7 @@
     auto spaceRegistry = gert::DefaultOpImplSpaceRegistryV2::GetInstance().GetSpaceRegistry();                         \
     auto infershapeFunc = spaceRegistry->GetOpImpl(infershapeContextPara.opName_.c_str())->infer_shape;                \
     /* 3. check infershape func */                                                                                     \
-    auto infershapeRet = infershapeFunc(contextHolder.GetContext());
+    auto infershapeRet = infershapeFunc(contextHolder.GetContext<gert::InferShapeContext>());
 
 static std::vector<int64_t> ToVector(const gert::Shape& shape) {
     size_t shapeSize = shape.GetDimNum();
@@ -106,6 +106,6 @@ void ExecuteTestCase(gert::InfershapeContextPara&             infershapeContextP
 
     // check output shape
     for (int i = 0; i < expectOutputShape.size(); i++) {
-        EXPECT_EQ(ToVector(*contextHolder.GetContext()->GetOutputShape(i)), expectOutputShape[i]);
+        EXPECT_EQ(ToVector(*contextHolder.GetContext<gert::InferShapeContext>()->GetOutputShape(i)), expectOutputShape[i]);
     }
 }

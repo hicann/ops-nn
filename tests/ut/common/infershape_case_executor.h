@@ -11,7 +11,7 @@
 #ifndef OPS_NN_TESTS_UT_COMMON_INFERSHAPE_CASE_EXECUTOR_H
 #define OPS_NN_TESTS_UT_COMMON_INFERSHAPE_CASE_EXECUTOR_H
 
-#include "infershape_context_faker.h"
+#include "infer_shape_context_faker.h"
 
 void ExecuteTestCase(gert::InfershapeContextPara&             infershapeContextPara, 
                      ge::graphStatus                          expectResult = ge::GRAPH_FAILED,
