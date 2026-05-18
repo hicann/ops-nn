@@ -215,8 +215,8 @@ ge::graphStatus SwigluMxQuantWithDualAxisTiling::CheckScaleShape(const gert::Sha
         std::to_string(tilingParams_.isGroupIdx) + " numGroups is " +
         std::to_string(tilingParams_.numGroups) +
         " M represents the 0th dimension of x shape, numGroups represents the 0th dimension of group_index shape, "
-        "isGroupIdx indicates whether input group_index exists, when group_index exists, dim0 = CeilDiv(M, 64) + "
-        "numGroups, when not exists, dim0 = FloorDiv(M, 64)";
+        "isGroupIdx indicates whether input group_index exists, when group_index exists, dim0 = FloorDiv(M, 64) + "
+        "numGroups, when not exists, dim0 = CeilDiv(M, 64)";
     OP_CHECK_IF(mxScale2Shape.GetDim(0) != mxScaleShapeDim2,
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "mx_scale2",
         Ops::Base::ToString(mxScale2Shape).c_str(), reasonScale2MsgDim0.c_str()),
