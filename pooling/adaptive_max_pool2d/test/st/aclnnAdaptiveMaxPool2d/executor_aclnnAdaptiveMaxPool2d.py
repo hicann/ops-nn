@@ -26,8 +26,8 @@ class AclnnAdaptiveMaxPool2dApi(BaseApi):
         if self.device == 'cpu':
             dtype = input_data.kwargs['self'].dtype
             m = torch.nn.AdaptiveMaxPool2d(input_data.kwargs['output_size'], True)
-            output , indices = m(input_data.kwargs['self'].to(torch.float32))
-            return output.to(dtype) , indices.to(torch.int64)
+            output, indices = m(input_data.kwargs['self'].to(torch.float32))
+            return output.to(dtype), indices.to(torch.int64)
         return output
         
     def get_format(self, input_data: InputDataset, index=None, name=None):

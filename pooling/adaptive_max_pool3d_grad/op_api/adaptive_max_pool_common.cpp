@@ -156,21 +156,20 @@ const aclTensor* selectLevelZeroOperation(
     }
 
     if (useMaxPool3DGradWithArgmax) {
-        aclIntArray* calculatedKernelSize = aclCreateIntArray(kernelSize.data(), KERNEL_SIZE_DIM_NUM);
-        aclIntArray* calculatedStride = aclCreateIntArray(stride.data(), STRIDE_DIM_NUM);
+        aclIntArray* calculatedKernelSize = executor->AllocIntArray(kernelSize.data(), KERNEL_SIZE_DIM_NUM);
+        CHECK_RET(calculatedKernelSize != nullptr, nullptr);
+        aclIntArray* calculatedStride = executor->AllocIntArray(stride.data(), STRIDE_DIM_NUM);
+        CHECK_RET(calculatedStride != nullptr, nullptr);
         const int64_t paddingData[PADDING_DIM_NUM] = {0, 0, 0};
         const int64_t dilationData[DILATION_DIM_NUM] = {1, 1, 1};
-        aclIntArray* padding = aclCreateIntArray(paddingData, PADDING_DIM_NUM);
-        aclIntArray* dilation = aclCreateIntArray(dilationData, DILATION_DIM_NUM);
+        aclIntArray* padding = executor->AllocIntArray(paddingData, PADDING_DIM_NUM);
+        CHECK_RET(padding != nullptr, nullptr);
+        aclIntArray* dilation = executor->AllocIntArray(dilationData, DILATION_DIM_NUM);
+        CHECK_RET(dilation != nullptr, nullptr);
         bool ceilMode = false;
 
         auto gradInputResult = l0op::MaxPool3DGradWithArgmax(
             gradOutput, self, indices, calculatedKernelSize, calculatedStride, padding, dilation, ceilMode, executor);
-
-        aclDestroyIntArray(calculatedKernelSize);
-        aclDestroyIntArray(calculatedStride);
-        aclDestroyIntArray(padding);
-        aclDestroyIntArray(dilation);
 
         return gradInputResult;
     } else {

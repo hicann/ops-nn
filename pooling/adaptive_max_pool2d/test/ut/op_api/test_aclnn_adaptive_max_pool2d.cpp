@@ -12,7 +12,7 @@
 #include <vector>
 
 #include "opdev/op_log.h"
-#include "../../op_api/aclnn_adaptive_max_pool2d.h"
+#include "../../../op_api/aclnn_adaptive_max_pool2d.h"
 #include "op_api_ut_common/array_desc.h"
 #include "op_api_ut_common/inner/types.h"
 #include "op_api_ut_common/op_api_ut.h"

@@ -236,12 +236,16 @@ static aclnnStatus HandleMaxPool3DCase(
     aclTensor* indicesOut,
     aclOpExecutor* executor)
 {
-    const aclIntArray* kernelSize = aclCreateIntArray(kernelSizeArr.data(), kernelSizeArr.size());
-    const aclIntArray* stride = aclCreateIntArray(kernelSizeArr.data(), kernelSizeArr.size());
+    const aclIntArray* kernelSize = executor->AllocIntArray(kernelSizeArr.data(), kernelSizeArr.size());
+    CHECK_RET(kernelSize != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    const aclIntArray* stride = executor->AllocIntArray(kernelSizeArr.data(), kernelSizeArr.size());
+    CHECK_RET(stride != nullptr, ACLNN_ERR_INNER_NULLPTR);
     std::vector<int64_t> paddingArr = {0, 0, 0};
-    const aclIntArray* padding = aclCreateIntArray(paddingArr.data(), paddingArr.size());
+    const aclIntArray* padding = executor->AllocIntArray(paddingArr.data(), paddingArr.size());
+    CHECK_RET(padding != nullptr, ACLNN_ERR_INNER_NULLPTR);
     std::vector<int64_t> dilationArr = {1, 1, 1};
-    const aclIntArray* dilation = aclCreateIntArray(dilationArr.data(), dilationArr.size());
+    const aclIntArray* dilation = executor->AllocIntArray(dilationArr.data(), dilationArr.size());
+    CHECK_RET(dilation != nullptr, ACLNN_ERR_INNER_NULLPTR);
     bool ceilMode = false;
     std::string dataFormat = "NCDHW";
 
@@ -261,10 +265,6 @@ static aclnnStatus HandleMaxPool3DCase(
     if (ret != ACLNN_SUCCESS) {
         return ret;
     }
-    aclDestroyIntArray(kernelSize);
-    aclDestroyIntArray(stride);
-    aclDestroyIntArray(padding);
-    aclDestroyIntArray(dilation);
     
     return ACLNN_SUCCESS;
 }
