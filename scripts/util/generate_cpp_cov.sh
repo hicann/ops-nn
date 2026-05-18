@@ -50,8 +50,9 @@ generate_coverage() {
     mk_dir "${_path_to_gen}"
   fi
 
-  lcov -c -d "${_source_dir}" -o "${_coverage_file}"
-  lcov --ignore-errors inconsistent -r "${_coverage_file}" "${ASCEND_PARENT_PATH}/*" -o "${_coverage_file}"
+  lcov --ignore-errors empty,mismatch,negative,source -c -d "${_source_dir}" -o "${_coverage_file}"
+  lcov --ignore-errors empty,inconsistent,mismatch,unused,negative,source -r "${_coverage_file}" "${ASCEND_PARENT_PATH}/*" -o "${_coverage_file}"
+ 	
   logging "generated coverage file ${_coverage_file}"
 }
 
@@ -77,7 +78,7 @@ filter_coverage() {
                                     '*/opensource/*' \
                                     '*/common/*'    \
                                     '*/ops-nn-dev/tests/*'  \
-                                    '*/ops-nn-dev/*/*/tests/*' -o "${_filtered_file}" --ignore-errors inconsistent
+                                    '*/ops-nn-dev/*/*/tests/*' -o "${_filtered_file}" --ignore-errors inconsistent,mismatch,unused,empty,negative,source
 }
 
 # generate html report
