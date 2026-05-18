@@ -19,6 +19,55 @@ mk_dir() {
   logging "Created ${create_dir}"
 }
 
+get_lcov_version() {
+  local version
+  version=$(lcov --version 2>&1 | grep -oP 'version \K[0-9]+\.[0-9]+' | head -1)
+  echo "$version"
+}
+
+version_ge() {
+  local v1="$1"
+  local v2="$2"
+  
+  local v1_major v1_minor v2_major v2_minor
+  v1_major=$(echo "$v1" | cut -d. -f1)
+  v1_minor=$(echo "$v1" | cut -d. -f2)
+  v2_major=$(echo "$v2" | cut -d. -f1)
+  v2_minor=$(echo "$v2" | cut -d. -f2)
+  
+  if [[ $v1_major -gt $v2_major ]]; then
+    return 0
+  elif [[ $v1_major -eq $v2_major && $v1_minor -ge $v2_minor ]]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+build_ignore_errors() {
+  local base_errors="mismatch,negative,source"
+  local version
+  version=$(get_lcov_version)
+  
+  if [[ -n "$version" ]] && version_ge "$version" "1.14"; then
+    echo "empty,$base_errors"
+  else
+    echo "$base_errors"
+  fi
+}
+
+build_ignore_errors_remove() {
+  local base_errors="inconsistent,mismatch,unused,negative,source"
+  local version
+  version=$(get_lcov_version)
+  
+  if [[ -n "$version" ]] && version_ge "$version" "1.14"; then
+    echo "empty,$base_errors"
+  else
+    echo "$base_errors"
+  fi
+}
+
 # using lcov to generate coverage for cpp files
 generate_coverage() {
   local _source_dir="$1"
@@ -50,8 +99,13 @@ generate_coverage() {
     mk_dir "${_path_to_gen}"
   fi
 
-  lcov --ignore-errors empty,mismatch,negative,source -c -d "${_source_dir}" -o "${_coverage_file}"
-  lcov --ignore-errors empty,inconsistent,mismatch,unused,negative,source -r "${_coverage_file}" "${ASCEND_PARENT_PATH}/*" -o "${_coverage_file}"
+  local _ignore_errors
+  _ignore_errors=$(build_ignore_errors)
+  local _ignore_errors_remove
+  _ignore_errors_remove=$(build_ignore_errors_remove)
+
+  lcov --ignore-errors ${_ignore_errors} -c -d "${_source_dir}" -o "${_coverage_file}"
+  lcov --ignore-errors ${_ignore_errors_remove} -r "${_coverage_file}" "${ASCEND_PARENT_PATH}/*" -o "${_coverage_file}"
  	
   logging "generated coverage file ${_coverage_file}"
 }
@@ -72,13 +126,16 @@ filter_coverage() {
     exit 1
   fi
 
+  local _ignore_errors_remove
+  _ignore_errors_remove=$(build_ignore_errors_remove)
+
   lcov --remove "${_coverage_file}" '${ASCEND_PARENT_PATH}/*'\
                                     '/usr/include/*'          \
                                     '*/third_party/*' \
                                     '*/opensource/*' \
                                     '*/common/*'    \
                                     '*/ops-nn-dev/tests/*'  \
-                                    '*/ops-nn-dev/*/*/tests/*' -o "${_filtered_file}" --ignore-errors inconsistent,mismatch,unused,empty,negative,source
+                                    '*/ops-nn-dev/*/*/tests/*' -o "${_filtered_file}" --ignore-errors ${_ignore_errors_remove}
 }
 
 # generate html report
