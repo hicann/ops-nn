@@ -28,6 +28,8 @@ using namespace ge;
 struct LayerNormGradV3CompileInfo {
     uint64_t coreNum = 0;
     uint64_t ubSizePlatForm = 0;
+    int64_t blockSize = 0;
+    int64_t vlFp32 = 0;
     bool isRegBase = false;
 };
 
@@ -1348,7 +1350,7 @@ TEST_F(LayerNormGradV3Tiling, layer_norm_grad_v3_tiling_bigm_01)
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 600);
+    ASSERT_EQ(tiling_key, 312);
     auto block_dim = tiling_context->GetBlockDim();
     ASSERT_EQ(block_dim, 64);
 }
@@ -1444,7 +1446,7 @@ TEST_F(LayerNormGradV3Tiling, layer_norm_grad_v3_tiling_bign_01)
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 700);
+    ASSERT_EQ(tiling_key, 112);
     auto block_dim = tiling_context->GetBlockDim();
     ASSERT_EQ(block_dim, 64);
 }
