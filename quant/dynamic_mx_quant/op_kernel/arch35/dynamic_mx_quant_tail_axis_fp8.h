@@ -395,7 +395,7 @@ __aicore__ inline void DynamicMxQuantTailAxisFP8<T, U, SCALE_ALG>::ComputeScaleO
         Reg::RegTensor<uint16_t> maxExpValue;
         Reg::Duplicate(maxExpValue, f8Emax_);
         Reg::RegTensor<uint16_t> scaleBias;
-        Reg::Duplicate(scaleBias, BF16_EXP_BIAS);
+        Reg::Duplicate(scaleBias, EXP_BF16_BIAS);
         Reg::RegTensor<uint16_t> fp8NanRegTensor;
         Reg::Duplicate(fp8NanRegTensor, MAX_EXP_FOR_FP8);
         Reg::RegTensor<uint16_t> zeroRegTensor;

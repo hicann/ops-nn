@@ -500,7 +500,7 @@ DynamicMxQuantNotTailAxisOptimizeHighPerf<xDtype, yDtype, roundMode, calcMode>::
     AscendC::MicroAPI::Duplicate(regs.maxEleRegTensor, MAX_EXP_FOR_BF16);
     AscendC::MicroAPI::Duplicate(regs.maxEleRegTensorHalf, HALF_INF);
     AscendC::MicroAPI::Duplicate(regs.fp8NanRegTensor, MAX_EXP_FOR_FP8);
-    AscendC::MicroAPI::Duplicate(regs.biasRegTensor, BF16_EXP_BIAS);
+    AscendC::MicroAPI::Duplicate(regs.biasRegTensor, EXP_BF16_BIAS);
     AscendC::MicroAPI::Duplicate(regs.zeroRegTensor, 0);
     AscendC::MicroAPI::Duplicate(regs.nanRegTensor, NAN_CUSTOMIZATION);
     AscendC::MicroAPI::Duplicate(regs.specialExpRegTensor, SPECIAL_EXP_THRESHOLD);

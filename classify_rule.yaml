@@ -1836,6 +1836,8 @@ VC1@ops-nn:
         - ops/ops-nn/quant/dynamic_quant/tests/
         - ops/ops-nn/quant/dynamic_quant_v2/examples/
         - ops/ops-nn/quant/dynamic_quant_v2/tests/
+        - ops/ops-nn/quant/dynamic_quant_update_scatter/examples/
+        - ops/ops-nn/quant/dynamic_quant_update_scatter/tests/
         - ops/ops-nn/quant/grouped_dynamic_mx_quant/examples/
         - ops/ops-nn/quant/grouped_dynamic_mx_quant/tests/
         - ops/ops-nn/quant/quantize/examples/

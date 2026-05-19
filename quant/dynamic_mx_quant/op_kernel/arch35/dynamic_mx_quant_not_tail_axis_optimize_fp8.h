@@ -224,7 +224,7 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeFP8<T, U, isTail>::Compu
         AscendC::MicroAPI::Duplicate(maxEleRegTensor, MAX_EXP_FOR_BF16);
         AscendC::MicroAPI::Duplicate(nanRegTensor, NAN_CUSTOMIZATION);
         AscendC::MicroAPI::Duplicate(fp8NanRegTensor, MAX_EXP_FOR_FP8);
-        AscendC::MicroAPI::Duplicate(biasRegTensor, BF16_EXP_BIAS);
+        AscendC::MicroAPI::Duplicate(biasRegTensor, EXP_BF16_BIAS);
         AscendC::MicroAPI::Duplicate(zeroRegTensor, 0);
         AscendC::MicroAPI::Duplicate(specialExpRegTensor, SPECIAL_EXP_THRESHOLD);
         AscendC::MicroAPI::Duplicate(invalidMaskFp16, INVALID_FLOAT16);
@@ -471,7 +471,7 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeFP8<T, U, isTail>::Compu
         AscendC::MicroAPI::Duplicate(invMaxRegTensor, INV_DTYPE_MAX);
         AscendC::MicroAPI::Duplicate(fp32ZeroRegTensor, 0);
         AscendC::MicroAPI::Duplicate(manFP32RegTensor, MAN_MASK_FP32);
-        AscendC::MicroAPI::Duplicate(scaleBias, FP32_EXP_BIAS);
+        AscendC::MicroAPI::Duplicate(scaleBias, EXP_FP32_BIAS);
 
         uint32_t pnum = dataLenSingleLoop;
         uint32_t tailPnum = dataLenTailLoop;

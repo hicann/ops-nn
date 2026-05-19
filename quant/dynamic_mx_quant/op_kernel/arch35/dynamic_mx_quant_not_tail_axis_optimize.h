@@ -183,8 +183,12 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimize<T, U, ISTAIL>::ComputeC
         AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN,
         AscendC::MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
     constexpr uint32_t vfLen = Ops::Base::GetVRegSize() / sizeof(calcType); // 寄存器单次处理能处理的长度
-    uint16_t rowsSingleLoop =
-        static_cast<uint16_t>(min(blockCount, static_cast<int64_t>(vfLen) / dataLen)); // 单次处理能处理的行数
+    uint16_t rowsSingleLoop = 0;
+    if (blockCount < static_cast<int64_t>(vfLen) / dataLen) {
+        rowsSingleLoop = static_cast<uint16_t>(blockCount);
+    } else {
+        rowsSingleLoop = static_cast<uint16_t>(static_cast<int64_t>(vfLen) / dataLen);
+    } // 单次处理能处理的行数 
     uint16_t dataLenSingleLoop = rowsSingleLoop * static_cast<uint16_t>(dataLen);      // 单次处理长度
     uint16_t regLoop = Ceil(static_cast<uint16_t>(blockCount), rowsSingleLoop);        // 循环数
     uint16_t rowsTailLoop = static_cast<uint16_t>(blockCount) % rowsSingleLoop;        // 尾循环处理的行数
@@ -355,8 +359,12 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimize<T, U, ISTAIL>::ComputeO
     int64_t dataLen, int64_t blockCount, __ubuf__ T* xAddr, __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint8_t* yAddr)
 {
     constexpr uint32_t vfLen = Ops::Base::GetVRegSize() / sizeof(calcType); // 寄存器单次处理能处理的长度
-    uint16_t rowsSingleLoop =
-        static_cast<uint16_t>(min(blockCount, static_cast<int64_t>(vfLen) / dataLen)); // 单次处理能处理的行数
+    uint16_t rowsSingleLoop = 0;
+    if (blockCount < static_cast<int64_t>(vfLen) / dataLen) {
+        rowsSingleLoop = static_cast<uint16_t>(blockCount);
+    } else {
+        rowsSingleLoop = static_cast<uint16_t>(static_cast<int64_t>(vfLen) / dataLen);
+    } // 单次处理能处理的行数
     uint16_t dataLenSingleLoop = rowsSingleLoop * static_cast<uint16_t>(dataLen);      // 单次处理长度
     uint16_t regLoop = Ceil(static_cast<uint16_t>(blockCount), rowsSingleLoop);        // 循环数
     uint16_t rowsTailLoop = static_cast<uint16_t>(blockCount) % rowsSingleLoop;        // 尾循环处理的行数

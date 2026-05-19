@@ -77,8 +77,8 @@ constexpr int16_t SHR_NUM_FOR_BF16 = 7;
 constexpr int16_t SHR_NUM_FOR_FP32 = 23;
 constexpr uint16_t FP4_E2M1_BF16_MAX_EXP = 0x0100;
 constexpr uint32_t FP4_E2M1_FP32_MAX_EXP = 0x01000000;
-constexpr uint16_t BF16_EXP_BIAS = 0x7f00;
-constexpr uint32_t FP32_EXP_BIAS = 0x7f000000;
+constexpr uint16_t EXP_BF16_BIAS = 0x7f00;
+constexpr uint32_t EXP_FP32_BIAS = 0x7f000000;
 constexpr int64_t MODE_ROUND = 0;
 constexpr int64_t MODE_FLOOR = 1;
 constexpr int64_t MODE_RINT = 4;
@@ -183,9 +183,9 @@ template <typename T>
 __aicore__ inline constexpr T GetMaxBias()
 {
     if constexpr (IsSame<T, uint16_t>::value) {
-        return BF16_EXP_BIAS;
+        return EXP_BF16_BIAS;
     } else {
-        return FP32_EXP_BIAS;
+        return EXP_FP32_BIAS;
     }
 }
 

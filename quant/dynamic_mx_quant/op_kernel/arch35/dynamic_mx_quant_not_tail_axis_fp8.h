@@ -300,7 +300,7 @@ __aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::ComputeOCP(
         AscendC::MicroAPI::Duplicate(maxEleRegTensor, MAX_EXP_FOR_BF16);
         AscendC::MicroAPI::Duplicate(fp8MaxExpRegTensor, FP8_BF16_MAX_EXP);
         AscendC::MicroAPI::Duplicate(fp8NanRegTensor, MAX_EXP_FOR_FP8);
-        AscendC::MicroAPI::Duplicate(biasRegTensor, BF16_EXP_BIAS);
+        AscendC::MicroAPI::Duplicate(biasRegTensor, EXP_BF16_BIAS);
         AscendC::MicroAPI::Duplicate(zeroRegTensor, 0);
         AscendC::MicroAPI::Duplicate(nanRegTensor, NAN_CUSTOMIZATION);
         AscendC::MicroAPI::Duplicate(specialExpRegTensor, SPECIAL_EXP_THRESHOLD);

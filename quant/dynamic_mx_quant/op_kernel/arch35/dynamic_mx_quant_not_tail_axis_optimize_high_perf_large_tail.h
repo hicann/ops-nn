@@ -396,7 +396,7 @@ __aicore__ inline void DynamicMxQuantHP2000<xDtype, yDtype, roundMode, calcMode>
         AscendC::MicroAPI::Duplicate(dstTypeMaxReg, invDstTypeMax_);
         AscendC::MicroAPI::Duplicate(maxRegTensor, 0);
         AscendC::MicroAPI::Duplicate(maxEleRegTensor, MAX_EXP_FOR_BF16);
-        AscendC::MicroAPI::Duplicate(biasRegTensor, BF16_EXP_BIAS);
+        AscendC::MicroAPI::Duplicate(biasRegTensor, EXP_BF16_BIAS);
         AscendC::MicroAPI::Duplicate(zeroRegTensor, 0);
         AscendC::MicroAPI::Duplicate(nanRegTensor, NAN_CUSTOMIZATION);
         AscendC::MicroAPI::Duplicate(specialExpRegTensor, SPECIAL_EXP_THRESHOLD);
@@ -545,7 +545,7 @@ __aicore__ inline void DynamicMxQuantHP2000<xDtype, yDtype, roundMode, calcMode>
         AscendC::MicroAPI::Duplicate(absForX, ABS_FOR_UINT16);
         AscendC::MicroAPI::Duplicate(dtypeYMaxExp, DTYPE_Y_MAX_EXP);
         AscendC::MicroAPI::Duplicate(fp8NanRegTensor, MAX_EXP_FOR_FP8);
-        AscendC::MicroAPI::Duplicate(biasRegTensor, BF16_EXP_BIAS);
+        AscendC::MicroAPI::Duplicate(biasRegTensor, EXP_BF16_BIAS);
         AscendC::MicroAPI::Duplicate(zeroRegTensor, 0);
         AscendC::MicroAPI::Duplicate(nanRegTensor, NAN_CUSTOMIZATION);
         AscendC::MicroAPI::Duplicate(specialExpRegTensor, SPECIAL_EXP_THRESHOLD);
@@ -647,7 +647,7 @@ __aicore__ inline void DynamicMxQuantHP2000<xDtype, yDtype, roundMode, calcMode>
         AscendC::MicroAPI::Duplicate(maxEleRegTensorFP16, HALF_INF);
         AscendC::MicroAPI::Duplicate(dtypeYMaxExp, DTYPE_Y_MAX_EXP);
         AscendC::MicroAPI::Duplicate(fp8NanRegTensor, MAX_EXP_FOR_FP8);
-        AscendC::MicroAPI::Duplicate(biasRegTensor, BF16_EXP_BIAS);
+        AscendC::MicroAPI::Duplicate(biasRegTensor, EXP_BF16_BIAS);
         AscendC::MicroAPI::Duplicate(zeroRegTensor, 0);
         AscendC::MicroAPI::Duplicate(nanRegTensor, NAN_CUSTOMIZATION);
         AscendC::MicroAPI::Duplicate(specialExpRegTensor, SPECIAL_EXP_THRESHOLD);
