@@ -149,6 +149,75 @@ static bool IsPaddingValidFor3D(const aclTensor *weight, const ConvolutionBackwa
     return true;
 }
 
+static bool IsExceedL1For3DDw(const aclTensor *gradOutput, const aclTensor *input,
+                          const aclTensor *weight, const ConvolutionBackwardParams &params) {
+    constexpr int64_t kDefaultC0 = 16;
+    constexpr int64_t kFp32BlockReduce = 8;
+
+    auto gradOutputShape = gradOutput->GetViewShape();
+    auto weightShape = weight->GetViewShape();
+    auto inputShape = input->GetViewShape();
+
+    int64_t wOut = gradOutputShape.GetDim(kWDimNCHWIdx);
+    int64_t wIn = inputShape.GetDim(kWDimNCHWIdx);
+
+    int64_t kernelH = weightShape.GetDim(kHDimNCHWIdx);
+    int64_t strideH = (*params.stride)[kSTRIDEHIdx];
+    int64_t dilationH = (*params.dilation)[kDILATIONHIdx];
+    int64_t kernelHDilation = (kernelH - 1) * dilationH + 1;
+
+    int64_t padU = (*params.padding)[0];
+    int64_t padD = (params.padding->Size() == 4) ? (*params.padding)[1] : padU;
+
+    bool strideHRead = (padU == 0 && padD == 0) && (strideH > kernelH && kernelH == 1);
+    int32_t tempStrideH = static_cast<int32_t>(strideHRead ? kernelH : strideH);
+
+    DataType gradOutputDtype = gradOutput->GetDataType();
+    DataType inputDtype = input->GetDataType();
+    int32_t aDtypeBytes = static_cast<int32_t>(ge::GetSizeByDataType(gradOutputDtype));
+    int32_t bDtypeBytes = static_cast<int32_t>(ge::GetSizeByDataType(inputDtype));
+
+    int32_t k0 = kDefaultC0;
+    int32_t minKL0 = 1;
+    if (inputDtype == DataType::DT_FLOAT) {
+        k0 = kFp32BlockReduce;
+        minKL0 = 2;
+    }
+
+    int32_t al1MinSize = kDefaultC0 * k0 * aDtypeBytes * minKL0;
+    int32_t kl1Min = static_cast<int32_t>(wIn);
+    int32_t bl1MinSize = 0;
+
+    if (wOut >= kDefaultC0) {
+        if (wOut % kDefaultC0 == 0) {
+            bl1MinSize = kernelHDilation * kl1Min * minKL0 * k0 * bDtypeBytes;
+        } else {
+            bl1MinSize = (kernelHDilation + tempStrideH) * kl1Min * minKL0 * k0 * bDtypeBytes;
+        }
+    } else {
+        wOut = std::max(1, static_cast<int32_t>(wOut));
+        int32_t bl1AlignFactor = (kDefaultC0 + static_cast<int32_t>(wOut) - 1) / static_cast<int32_t>(wOut);
+        bl1AlignFactor += (kDefaultC0 % wOut != 0) ? 1 : 0;
+        int64_t raw = (kernelHDilation + (bl1AlignFactor - 1) * tempStrideH) * kl1Min;
+        int32_t alignedVal = (raw + kDefaultC0 - 1) / kDefaultC0 * kDefaultC0;
+        bl1MinSize = alignedVal * minKL0 * k0 * bDtypeBytes;
+    }
+
+    uint64_t l1Size = 0;
+    auto platformInfo = GetCurrentPlatformInfo().GetPlatformInfos();
+    if (platformInfo != nullptr) {
+        platformInfo->GetLocalMemSize(fe::LocalMemType::L1, l1Size);
+    }
+
+    OP_LOGD("IsExceedL1For3DDw: al1=%d, bl1=%d, l1=%lu", al1MinSize, bl1MinSize, l1Size);
+    return static_cast<uint64_t>(al1MinSize + bl1MinSize) > l1Size;
+}
+
+static bool isConv3dDwV2Valid(const aclTensor *gradOutput, const aclTensor *input,
+                                        const aclTensor *weight, const ConvolutionBackwardParams &params) {
+    return IsPaddingValidFor3D(weight, params) && !IsExceedL1For3DDw(gradOutput, input, weight, params);
+}
+
 static bool ConvBackGoHf32(const ConvolutionBackwardInputTensor& inputTensor, int8_t cubeMathType) {
   auto promoteType = op::PromoteType(inputTensor.input->GetDataType(), inputTensor.weight->GetDataType());
   if (inputTensor.gradOutput != nullptr) {
@@ -1323,7 +1392,8 @@ static aclnnStatus CalculateConv2DBackward(ConvolutionBackwardInputTensor &input
 
       int64_t deterministicValue = GetDeterministicValue();
 
-      if (deterministicValue && IsPaddingValidFor3D(inputTensor.weight, params)) {
+      if (deterministicValue && curArch == NpuArch::DAV_2201 &&
+        isConv3dDwV2Valid(inputTensor.gradOutput, inputTensor.input, inputTensor.weight, params)) {
           FVector<int64_t> newStride = {1, (*params.stride)[0], (*params.stride)[1]};
           FVector<int64_t> newDilation = {1, (*params.dilation)[0], (*params.dilation)[1]};
           FVector<int64_t> newPadding = {0, 0, (*params.padding)[0], (*params.padding)[0], (*params.padding)[1], (*params.padding)[1]};
@@ -1402,6 +1472,7 @@ static aclnnStatus CalcConv2DBackTransposeInputGrad(ConvolutionBackwardInputTens
 static aclnnStatus CalculateConv2DTransposeBackward(ConvolutionBackwardInputTensor &inputTensor,
                                                     ConvolutionBackwardResult &outputTensor,
                                                     ConvolutionBackwardParams &params, aclOpExecutor *executor) {
+  auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
   // 950：无2D原型，直接抛错
   OP_CHECK(!(Ops::NN::AclnnUtil::IsRegbase()),
            OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "No kernel for Conv2DBackwardFiler"),
@@ -1435,7 +1506,8 @@ static aclnnStatus CalculateConv2DTransposeBackward(ConvolutionBackwardInputTens
       const aclTensor *gradWeightFZ = nullptr;
       
       int64_t deterministicValue = GetDeterministicValue();
-      if (deterministicValue && IsPaddingValidFor3D(inputTensor.weight, params)) {
+      if (deterministicValue && curArch == NpuArch::DAV_2201 &&
+        isConv3dDwV2Valid(inputTensor.input, inputTensor.gradOutput, inputTensor.weight, params)) {
           FVector<int64_t> newStride = {1, (*params.stride)[0], (*params.stride)[1]};
           FVector<int64_t> newDilation = {1, (*params.dilation)[0], (*params.dilation)[1]};
           FVector<int64_t> newPadding = {0, 0, (*params.padding)[0], (*params.padding)[0], (*params.padding)[1], (*params.padding)[1]};
@@ -2668,7 +2740,7 @@ static bool isConv2dTo3d(const ConvolutionBackwardInputTensor &inputTensor,
   if (curArch == NpuArch::DAV_2201) {
       int64_t deterministicValue = GetDeterministicValue();
       if (deterministicValue && (*params.outputMask)[1] && (!(*params.outputMask)[0])) {
-          if (!IsPaddingValidFor3D(inputTensor.weight, params)) {
+          if (!isConv3dDwV2Valid(inputTensor.gradOutput, inputTensor.input, inputTensor.weight, params)) {
               return false;
           }
           return true;
