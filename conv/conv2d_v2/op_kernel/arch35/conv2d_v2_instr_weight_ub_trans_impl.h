@@ -75,14 +75,12 @@ private:
 
     __aicore__ inline void LoadGM2UBAlign()
     {
-        if (unlikely(self_->ctx.isFirstIterate)) {
-            repeatParams.blockLen = self_->ctx.convTilingData->convApiTiling.bUbKStep / Intf::k0;
-            repeatParams.srcStride = (self_->ctx.convTilingData->convApiTiling.singleCoreCi *
-                self_->ctx.convTilingData->convApiTiling.kernelHxkernelW -
-                self_->ctx.convTilingData->convApiTiling.bUbKStep) / Intf::k0;
-            repeatParams.dstStride = 0;
-        }
+        repeatParams.blockLen = self_->ctx.currentUbKStep / Intf::k0;
         repeatParams.blockCount = self_->ctx.currentUbNStep;
+        repeatParams.srcStride = (self_->ctx.convTilingData->convApiTiling.singleCoreCi *
+            self_->ctx.convTilingData->convApiTiling.kernelHxkernelW - self_->ctx.currentUbKStep) / Intf::k0;
+        repeatParams.dstStride = 
+            (self_->ctx.convTilingData->convApiTiling.bUbKStep - self_->ctx.currentUbKStep) / Intf::k0;
 
         uint64_t srcOffset = (self_->ctx.nBL1Iter * self_->ctx.convTilingData->convApiTiling.nBL1 +
             self_->ctx.vecNIter * self_->ctx.convTilingData->convApiTiling.bUbNStep) *
