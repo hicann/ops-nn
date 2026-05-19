@@ -368,7 +368,7 @@
 | [aclnnSiluBackward](../../activation/silu_grad/docs/aclnnSiluBackward.md) | aclnnSilu的反向传播，根据silu反向传播梯度与正向输出计算silu的梯度输入。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnSmoothL1Loss](../../loss/smooth_l1_loss_v2/docs/aclnnSmoothL1Loss.md) | 计算SmoothL1损失函数。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnSmoothL1LossBackward](../../loss/smooth_l1_loss_grad_v2/docs/aclnnSmoothL1LossBackward.md) | 计算aclnnSmoothL1Loss api的反向传播。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnSoftMarginLoss](../../loss/soft_margin_loss/docs/aclnnSoftMarginLoss.md) | 计算输入self和目标target的二分类逻辑损失函数。 | 默认确定性实现 | - |
+| [aclnnSoftMarginLoss](../../loss/soft_margin_loss/docs/aclnnSoftMarginLoss.md) | 计算输入self和目标target的二分类逻辑损失函数。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnSoftMarginLossBackward](../../loss/soft_margin_loss_grad/docs/aclnnSoftMarginLossBackward.md) | 计算aclnnSoftMarginLoss二分类逻辑损失函数的反向传播。 | 默认确定性实现 | - |
 | [aclnnSoftmax](../../activation/softmax_v2/docs/aclnnSoftmax.md) | 对输入张量计算softmax值。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnSoftmaxBackward](../../activation/softmax_grad/docs/aclnnSoftmaxBackward.md) | 完成softmax的反向传播。 | 默认确定性实现 | 默认确定性实现 |

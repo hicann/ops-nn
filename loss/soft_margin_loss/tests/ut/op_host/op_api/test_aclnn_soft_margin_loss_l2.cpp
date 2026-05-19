@@ -11,7 +11,7 @@
 #include <array>
 #include <vector>
 
-#include "../../../../op_host/op_api/aclnn_soft_margin_loss.h"
+#include "../../../../op_api/aclnn_soft_margin_loss.h"
 
 #include "op_api_ut_common/op_api_ut.h"
 #include "op_api_ut_common/scalar_desc.h"

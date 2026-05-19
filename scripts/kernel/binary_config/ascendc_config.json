@@ -110,6 +110,7 @@
     {"name":"Unpack", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : ""},
     {"name":"Split", "compute_units": ["ascend950"], "auto_sync" : false},
     {"name":"SplitV", "compute_units": ["ascend950"], "auto_sync" : false},
+    {"name": "SoftMarginLoss","compute_units": ["ascend950"],"auto_sync": false},
     {"name":"StatelessDropOutGenMask", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : ""},
     {"name":"StatelessBernoulli", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : ""},
     {"name":"Modulate", "compute_units": ["ascend910b", "ascend910_93", "ascend950"], "auto_sync" : true},

@@ -2270,7 +2270,7 @@
   <tr>
     <td>loss</td>
     <td><a href="../../loss/soft_margin_loss/README.md">soft_margin_loss</a></td>
-    <td>✗</td>
+    <td>✓</td>
     <td>✓</td>
     <td>✓</td>
     <td>✗</td>
