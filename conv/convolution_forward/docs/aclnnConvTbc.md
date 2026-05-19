@@ -264,9 +264,11 @@ aclnnStatus aclnnConvTbc(
    </tr>
    <tr>
      <th scope="row">bias</th>
-     <td>-</td>
      <td>
-        当 self 数据类型为 HIFLOAT8 时，bias 数据类型最终会转成 FLOAT 参与计算。
+          数据格式无强校验，可传入 ND、NCL 等格式，但 shape 和维度大小仍需满足约束。
+     </td>
+     <td>
+          当 self 数据类型为 HIFLOAT8 时，bias 数据类型最终会转成 FLOAT 参与计算。
      </td>
    </tr>
    <tr>
