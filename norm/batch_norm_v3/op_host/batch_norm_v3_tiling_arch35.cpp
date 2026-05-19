@@ -34,6 +34,7 @@ constexpr int64_t NCHW_DIM_NUM = 4;
 constexpr int64_t NCDHW_DIM_NUM = 5;
 constexpr int64_t NHWC_DIM_NUM = 4;
 constexpr int64_t NDHWC_DIM_NUM = 5;
+constexpr int64_t MIN_ND_DIM_NUM = 2;
 constexpr int64_t BINARY_ADD_COEF = 2;
 constexpr int64_t BINARY_ADD_COEF_FOUR = 4;
 constexpr int64_t RA_BINARY_ADD_THRESHOLD = 8;
@@ -119,7 +120,19 @@ ge::graphStatus BatchNormV3RegbaseTilingBase::GetShapeAttrsInfo()
 
     weightDataType = weightDesc->GetDataType();
     format = xDesc->GetFormat().GetStorageFormat();
-    if (format == FORMAT_NCHW) {
+    if (format == FORMAT_ND) {
+        OP_CHECK_IF(
+            xStorageShape.GetDimNum() < MIN_ND_DIM_NUM,
+            OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x",
+                std::to_string(xStorageShape.GetDimNum()).c_str(), "at least 2D with ND format"),
+            return ge::GRAPH_FAILED);
+        r1 = xStorageShape.GetDim(DIM_0);
+        a = xStorageShape.GetDim(DIM_1);
+        r0 = 1;
+        for (size_t i = static_cast<size_t>(DIM_2); i < xStorageShape.GetDimNum(); ++i) {
+            r0 *= xStorageShape.GetDim(i);
+        }
+    } else if (format == FORMAT_NCHW) {
         OP_CHECK_IF(
             xStorageShape.GetDimNum() != NCHW_DIM_NUM,
             OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x",
@@ -154,7 +167,7 @@ ge::graphStatus BatchNormV3RegbaseTilingBase::GetShapeAttrsInfo()
         r0 = 0;
     } else {
         OP_LOGE_FOR_INVALID_FORMAT(context_->GetNodeName(), "x",
-            ge::TypeUtils::FormatToSerialString(format).c_str(), "NCHW, NCDHW, NHWC or NDHWC");
+            ge::TypeUtils::FormatToSerialString(format).c_str(), "ND, NCHW, NCDHW, NHWC or NDHWC");
         return ge::GRAPH_FAILED;
     }
 
@@ -428,7 +441,7 @@ public:
 protected:
     bool IsCapable() override
     {
-        if (format != FORMAT_NCHW && format != FORMAT_NCDHW) {
+        if (format != FORMAT_ND && format != FORMAT_NCHW && format != FORMAT_NCDHW) {
             return false;
         }
         int64_t elemSize = FP32_BYTE;
