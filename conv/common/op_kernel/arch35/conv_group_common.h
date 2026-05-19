@@ -32,6 +32,7 @@ public:
 
     __aicore__ __forceinline__ void UpdateRealCoutOptGroup();
 
+    __aicore__ __forceinline__ void CalcOutputStartAddrOptGroup(const uint64_t doIdxStart);
     __aicore__ __forceinline__ void CalcStartAddrOptGroup(const uint64_t din, const uint64_t dout, const uint32_t kd,
                                                           const uint64_t doIdxStart = 0, const int64_t diIdxStart = 0);
     __aicore__ __forceinline__ void CalcStartAddrOptGroupCHW(const uint64_t doIdxStart, const int64_t diIdxStart, const uint32_t kd);
@@ -283,6 +284,49 @@ __aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
 
 template <class CONV, class CONV_TILING>
 __aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
+    CalcOutputStartAddrOptGroup(const uint64_t doIdxStart)
+{
+    if constexpr (CONV::C_FORMAT == ConvFormat::NDHWC || CONV::C_FORMAT == ConvFormat::NHWC) {
+        outputOneGroupSize = convTilingData->convRunInfo.coutOpt;
+        outputStartAddr = convOps->batchIdxStart * convOps->outputOneBatchSize +
+                          convOps->groupIdxStart * convTilingData->convRunInfo.coutOpt +
+                          convOps->nIdxStart;
+
+        if constexpr (CONV::C_FORMAT == ConvFormat::NDHWC) {
+            outputStartAddr += doIdxStart * hwOut * convTilingData->convRunInfo.cout;
+        }
+
+        if constexpr (CONV::isMMode) {
+            outputStartAddr += convOps->mIdxStart * convTilingData->convRunInfo.cout;
+        } else {
+            outputStartAddr += convOps->hoIdxStart * convTilingData->convRunInfo.wout * convTilingData->convRunInfo.cout;
+            if constexpr (CONV::C_FORMAT == ConvFormat::NHWC) {
+                outputStartAddr += convOps->woIdxStart * convTilingData->convRunInfo.cout;
+            }
+        }
+    } else if constexpr (CONV::C_FORMAT == ConvFormat::NCDHW || CONV::C_FORMAT == ConvFormat::NCHW) {
+        outputOneGroupSize = convTilingData->convRunInfo.coutOpt * dhwOut;
+        outputStartAddr = convOps->batchIdxStart * convOps->outputOneBatchSize +
+                          convOps->groupIdxStart * outputOneGroupSize +
+                          convOps->nIdxStart * dhwOut;
+
+        if constexpr (CONV::C_FORMAT == ConvFormat::NCDHW) {
+            outputStartAddr += doIdxStart * hwOut;
+        }
+
+        if constexpr (CONV::isMMode) {
+            outputStartAddr += convOps->mIdxStart;
+        } else {
+            outputStartAddr += convOps->hoIdxStart * convTilingData->convRunInfo.wout;
+            if constexpr (CONV::C_FORMAT == ConvFormat::NCHW) {
+                outputStartAddr += convOps->woIdxStart;
+            }
+        }
+    }
+}
+
+template <class CONV, class CONV_TILING>
+__aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
     CalcStartAddrOptGroupCHW(const uint64_t doIdxStart, const int64_t diIdxStart, const uint32_t kd)
 {
     // fmap: Batch -> Group(enlarge) -> Ci_opt -> Di -> HiWi
@@ -298,23 +342,12 @@ __aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
         weightOneGroupSize = convTilingData->convRunInfo.coutOpt * convOps->ciPerGroup * kd * convTilingData->convRunInfo.kh * convTilingData->convRunInfo.kw;
         weightStartAddr = convOps->groupIdxStart * weightOneGroupSize;
     }
-    outputStartAddr = convOps->batchIdxStart * convOps->outputOneBatchSize +
-                      convOps->groupIdxStart * outputOneGroupSize +
-                      convOps->nIdxStart * dhwOut;
 
     if constexpr (CONV::A_FORMAT == ConvFormat::NCDHW) {
         fmStartAddr += diIdxStart * hwIn;
-        outputStartAddr += doIdxStart * hwOut;
     }
 
-    if constexpr (CONV::isMMode) {
-        outputStartAddr += convOps->mIdxStart;
-    } else {
-        outputStartAddr += convOps->hoIdxStart * convTilingData->convRunInfo.wout;
-        if constexpr (CONV::A_FORMAT == ConvFormat::NCHW) {
-            outputStartAddr += convOps->woIdxStart;
-        }
-    }
+    CalcOutputStartAddrOptGroup(doIdxStart);
 }
 
 template <class CONV, class CONV_TILING>
@@ -334,23 +367,12 @@ __aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
         weightOneGroupSize = convTilingData->convRunInfo.coutOpt;
         weightStartAddr = convOps->groupIdxStart * convTilingData->convRunInfo.coutOpt;
     }
-    outputStartAddr = convOps->batchIdxStart * convOps->outputOneBatchSize +
-                      convOps->groupIdxStart * convTilingData->convRunInfo.coutOpt +
-                      convOps->nIdxStart;
 
     if constexpr (CONV::A_FORMAT == ConvFormat::NDHWC) {
         fmStartAddr += diIdxStart * hwIn * convTilingData->convRunInfo.cin;
-        outputStartAddr += doIdxStart * hwOut * convTilingData->convRunInfo.cout;
     }
 
-    if constexpr (CONV::isMMode) {
-        outputStartAddr += convOps->mIdxStart * convTilingData->convRunInfo.cout;
-    } else {
-        outputStartAddr += convOps->hoIdxStart * convTilingData->convRunInfo.wout * convTilingData->convRunInfo.cout;
-        if constexpr (CONV::A_FORMAT == ConvFormat::NHWC) {
-            outputStartAddr += convOps->woIdxStart * convTilingData->convRunInfo.cout;
-        }
-    }
+    CalcOutputStartAddrOptGroup(doIdxStart);
 }
 
 template <class CONV, class CONV_TILING>
@@ -366,11 +388,9 @@ __aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
     convOps->outputOneBatchSize = convTilingData->convRunInfo.cout * dhwOut;
     if constexpr (CONV::A_FORMAT == ConvFormat::NDHWC || CONV::A_FORMAT == ConvFormat::NHWC) {
         fmapOneGroupSize = convTilingData->convRunInfo.cinOpt;
-        outputOneGroupSize = convTilingData->convRunInfo.coutOpt;
         CalcStartAddrOptGroupHWC(doIdxStart, diIdxStart, kd);
     } else {
         fmapOneGroupSize = convTilingData->convRunInfo.cinOpt * dhwIn;
-        outputOneGroupSize = convTilingData->convRunInfo.coutOpt * dhwOut;
         CalcStartAddrOptGroupCHW(doIdxStart, diIdxStart, kd);
     }
 
