@@ -63,19 +63,17 @@ const int64_t kIdxGrad = 1L;
 const int64_t kIdxPool = 2L;
 const size_t kListSize4 = 4U;
 
-bool CheckPlatformSupport()
+inline static bool IsRegbaseSoc()
 {
-    PlatformInfo platformInfo;
-    OptionalInfo optionalInfo;
+    PlatformInfo platform_info;
+    OptionalInfo optional_info;
     OP_LOGE_IF(
-        PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optionalInfo) != SUCCESS, false,
-        kPassName.c_str(), "Get platform_info failed.");
-    const std::string soc = platformInfo.str_info.short_soc_version;
-    if (soc != "Ascend950") {
-        OPS_LOG_D(kPassName.c_str(), "Platform %s is not supported.", soc.c_str());
-        return false;
-    }
-    return true;
+        PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platform_info, optional_info) != SUCCESS,
+        false, kPassName.c_str(), "Get platform_info failed.");
+    const std::string socName = platform_info.str_info.short_soc_version;
+    bool isRegbaseSoc = (socName == "Ascend950" || socName == "MC62CM12A");
+    OPS_LOG_D(kPassName.c_str(), "Platform short soc: %s, is_regbase: %d", socName.c_str(), isRegbaseSoc);
+    return isRegbaseSoc;
 }
 
 bool ValidateInputDtype(const DataType dtype)
@@ -280,9 +278,7 @@ std::vector<PatternUniqPtr> MaxPoolGradWithArgmaxV3FusionPass::Patterns()
 
 bool MaxPoolGradWithArgmaxV3FusionPass::MeetRequirements(const std::unique_ptr<MatchResult>& matchResult)
 {
-    if (!CheckPlatformSupport()) {
-        return false;
-    }
+    OP_LOGE_IF(!IsRegbaseSoc(), false, kPassName.c_str(), "MaxPoolGradWithArgmaxV3FusionPass can only support regbase arch, do nothing.");
 
     NodeIo inputIo;
     OP_LOGE_IF(
@@ -327,6 +323,8 @@ bool MaxPoolGradWithArgmaxV3FusionPass::MeetRequirements(const std::unique_ptr<M
 
 GraphUniqPtr MaxPoolGradWithArgmaxV3FusionPass::Replacement(const std::unique_ptr<MatchResult>& matchResult)
 {
+    OPS_LOG_D(kPassName.c_str(), "Enter Replacement for MaxPoolGradWithArgmaxV3FusionPass");
+
     NodeIo inputIo;
     OP_LOGE_IF(matchResult->GetCapturedTensor(kIdxInput, inputIo) != SUCCESS, nullptr, kPassName.c_str(), "Get captured input failed.");
     TensorDesc inputDesc;
