@@ -658,6 +658,16 @@
   </tr>
   <tr>
     <td>activation</td>
+    <td><a href="../../activation/threshold_v2/README.md">threshold_v2</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对输入x进行阈值操作。当x中的elements大于threshold时，返回elements；否则，返回value。</td>
+  </tr>
+  <tr>
+    <td>activation</td>
     <td><a href="../../activation/threshold_grad_v2_d/README.md">threshold_grad_v2_d</a></td>
     <td>✗</td>
     <td>✗</td>

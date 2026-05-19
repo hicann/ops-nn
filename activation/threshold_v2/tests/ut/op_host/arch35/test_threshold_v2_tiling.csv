@@ -1,0 +1,23 @@
+socVersion,caseName,kernelUtDir,prefix,coreNum,dim,d1,d2,d3,d4,dtype,dtypeThreshold,dtypeValue,dtypeOutput,shapeX,shapeThreshold,shapeValue,shapeOutput,result,numBlocks,tilingKey,comment
+Ascend950,ThresholdV2Arch35/TestThresholdV2Tiling.generalTest/0,,fp16_basic,64,4,1,64,2,64,FLOAT16,FLOAT16,FLOAT16,FLOAT16,1_64_2_64,1_64_2_64,1_64_2_64,1_64_2_64,TRUE,4,7,fp16 basic case
+Ascend950,ThresholdV2Arch35/TestThresholdV2Tiling.generalTest/1,,bf16_basic,64,4,1,64,2,64,BF16,BF16,BF16,BF16,1_64_2_64,1_64_2_64,1_64_2_64,1_64_2_64,TRUE,4,11,bf16 basic case
+Ascend950,ThresholdV2Arch35/TestThresholdV2Tiling.generalTest/2,,fp32_basic,64,4,1,64,2,64,FLOAT,FLOAT,FLOAT,FLOAT,1_64_2_64,1_64_2_64,1_64_2_64,1_64_2_64,TRUE,8,15,fp32 basic case
+Ascend950,ThresholdV2Arch35/TestThresholdV2Tiling.generalTest/3,,int8_basic,64,4,1,64,2,64,INT8,INT8,INT8,INT8,1_64_2_64,1_64_2_64,1_64_2_64,1_64_2_64,TRUE,2,19,int8 basic case
+Ascend950,ThresholdV2Arch35/TestThresholdV2Tiling.generalTest/4,,uint8_basic,64,4,1,64,2,64,UINT8,UINT8,UINT8,UINT8,1_64_2_64,1_64_2_64,1_64_2_64,1_64_2_64,TRUE,2,23,uint8 basic case
+Ascend950,ThresholdV2Arch35/TestThresholdV2Tiling.generalTest/5,,int32_basic,64,4,1,64,2,64,INT32,INT32,INT32,INT32,1_64_2_64,1_64_2_64,1_64_2_64,1_64_2_64,TRUE,8,27,int32 basic case
+Ascend950,ThresholdV2Arch35/TestThresholdV2Tiling.generalTest/6,,int64_basic,64,4,1,64,2,64,INT64,INT64,INT64,INT64,1_64_2_64,1_64_2_64,1_64_2_64,1_64_2_64,TRUE,16,31,int64 basic case
+Ascend950,ThresholdV2Arch35/TestThresholdV2Tiling.generalTest/7,,fp16_2d,64,2,1024,512,,,FLOAT16,FLOAT16,FLOAT16,FLOAT16,1024_512,1024_512,1024_512,1024_512,TRUE,8,7,fp16 2d case
+Ascend950,ThresholdV2Arch35/TestThresholdV2Tiling.generalTest/8,,bf16_2d,64,2,1024,512,,,BF16,BF16,BF16,BF16,1024_512,1024_512,1024_512,1024_512,TRUE,8,11,bf16 2d case
+Ascend950,ThresholdV2Arch35/TestThresholdV2Tiling.generalTest/9,,fp32_2d,64,2,1024,512,,,FLOAT,FLOAT,FLOAT,FLOAT,1024_512,1024_512,1024_512,1024_512,TRUE,16,15,fp32 2d case
+Ascend950,ThresholdV2Arch35/TestThresholdV2Tiling.generalTest/10,,fp16_large,64,4,256,256,256,256,FLOAT16,FLOAT16,FLOAT16,FLOAT16,256_256_256_256,256_256_256_256,256_256_256_256,256_256_256_256,TRUE,64,7,fp16 large case
+Ascend950,ThresholdV2Arch35/TestThresholdV2Tiling.generalTest/11,,dtype_diff_input_output,64,4,1,64,2,64,FLOAT,FLOAT,FLOAT,BF16,1_64_2_64,1_64_2_64,1_64_2_64,1_64_2_64,FALSE,0,0,dtype diff between input and output
+Ascend950,ThresholdV2Arch35/TestThresholdV2Tiling.generalTest/12,,dtype_diff_threshold,64,4,1,64,2,64,FLOAT16,FLOAT,FLOAT16,FLOAT16,1_64_2_64,1_64_2_64,1_64_2_64,1_64_2_64,TRUE,0,7,dtype diff between x and threshold
+Ascend950,ThresholdV2Arch35/TestThresholdV2Tiling.generalTest/13,,dtype_diff_value,64,4,1,64,2,64,FLOAT16,FLOAT16,FLOAT,FLOAT16,1_64_2_64,1_64_2_64,1_64_2_64,1_64_2_64,TRUE,0,7,dtype diff between x and value
+Ascend950,ThresholdV2Arch35/TestThresholdV2Tiling.generalTest/14,,shape_diff_output,64,4,1,64,2,64,FLOAT,FLOAT,FLOAT,FLOAT,1_64_2_64,1_64_2_64,1_64_2_64,1_64_2_32,FALSE,0,0,shape diff between input and output
+Ascend950,ThresholdV2Arch35/TestThresholdV2Tiling.generalTest/15,,empty_tensor,64,4,0,64,2,64,FLOAT,FLOAT,FLOAT,FLOAT,0_64_2_64,0_64_2_64,0_64_2_64,0_64_2_64,FALSE,0,0,empty tensor case
+Ascend950,ThresholdV2Arch35/TestThresholdV2Tiling.generalTest/16,,unsupported_dtype,64,4,1,64,2,64,DOUBLE,DOUBLE,DOUBLE,DOUBLE,1_64_2_64,1_64_2_64,1_64_2_64,1_64_2_64,FALSE,0,0,unsupported dtype case
+Ascend950,ThresholdV2Arch35/TestThresholdV2Tiling.generalTest/17,,shape_diff_threshold,64,4,1,64,2,64,FLOAT,FLOAT,FLOAT,FLOAT,1_64_2_64,1_32_2_64,1_64_2_64,1_64_2_64,FALSE,0,0,shape diff between x and threshold
+Ascend950,ThresholdV2Arch35/TestThresholdV2Tiling.generalTest/18,,shape_diff_value,64,4,1,64,2,64,FLOAT,FLOAT,FLOAT,FLOAT,1_64_2_64,1_64_2_64,1_32_2_64,1_64_2_64,FALSE,0,0,shape diff between x and value
+Ascend950,ThresholdV2Arch35/TestThresholdV2Tiling.generalTest/19,,fp16_1d,64,1,8192,,,,FLOAT16,FLOAT16,FLOAT16,FLOAT16,8192,8192,8192,8192,TRUE,8,7,fp16 1d case
+Ascend950,ThresholdV2Arch35/TestThresholdV2Tiling.generalTest/20,,fp32_1d,64,1,8192,,,,FLOAT,FLOAT,FLOAT,FLOAT,8192,8192,8192,8192,TRUE,16,15,fp32 1d case
+Ascend950,ThresholdV2Arch35/TestThresholdV2Tiling.generalTest/21,,int8_1d,64,1,8192,,,,INT8,INT8,INT8,INT8,8192,8192,8192,8192,TRUE,2,19,int8 1d case

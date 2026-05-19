@@ -696,5 +696,6 @@
     {"name":"SparseSoftmaxCrossEntropyWithLogits", "compute_units": ["ascend950"], "auto_sync" : true},
     {"name":"ApplyAdamWQuant", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : true},
     {"name":"ForeachEXp", "compute_units": ["ascend910_93"], "auto_sync" : true},
-    {"name":"IFMR", "compute_units": ["ascend950"], "auto_sync" : true}
+    {"name":"IFMR", "compute_units": ["ascend950"], "auto_sync" : true},
+    {"name":"ThresholdV2", "compute_units": ["ascend950"], "auto_sync" : false}
 ]
