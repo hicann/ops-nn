@@ -99,7 +99,7 @@ aclnnStatus aclnnCtcLoss(
         <td>输入</td>
         <td>表示输出的对数概率，公式中的y。</td>
         <td>-</td>
-        <td>FLOAT16、FLOAT、BFLOAT16</td>
+        <td>FLOAT16、FLOAT、BFLOAT16、DOUBLE</td>
         <td>ND</td>
         <td>(T,N,C)或(T,C)<br>T为输入长度，N为批处理大小，C为类别数，必须大于0，包括空白标识</td>
         <td>√</td>
@@ -109,7 +109,7 @@ aclnnStatus aclnnCtcLoss(
         <td>输入</td>
         <td>表示包含目标序列的标签，公式中的π。</td>
         <td>当shape为(N,S)，S为不小于targetLengths中的最大值的值；或者shape为(SUM(targetLengths))，假设targets是未填充的而且在1维内级联的。当logProbs为2维时，N=1。</td>
-        <td>INT64、INT32</td>
+        <td>INT64、INT32、BOOL、FLOAT、FLOAT16</td>
         <td>ND</td>
         <td>-</td>
         <td>√</td>
