@@ -221,6 +221,14 @@ aclnnStatus aclnnAddRmsNormGetWorkspaceSize(
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
+    // 参数检查
+    AddRmsNormACLNN::AddRmsNormInputTensor inputTensorOri = {x1, x2, gamma};
+    AddRmsNormACLNN::AddRmsNormOutputTensor outputTensor = {yOut, rstdOut, xOut};
+
+    int64_t mode = AddRmsNormACLNN::ADD_RMS_NORM_MODE; // 0为addrmsnorm，1为preRmsNorm, 2为postRmsNorm
+    auto ret = CheckParams(inputTensorOri, outputTensor, mode);
+    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+
     // 支持空tensor
     bool anyEmptyTensor = x1->IsEmpty() || gamma->IsEmpty();
     if (anyEmptyTensor) {
@@ -229,14 +237,6 @@ aclnnStatus aclnnAddRmsNormGetWorkspaceSize(
         uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
     }
-
-    // 参数检查
-    AddRmsNormACLNN::AddRmsNormInputTensor inputTensorOri = {x1, x2, gamma};
-    AddRmsNormACLNN::AddRmsNormOutputTensor outputTensor = {yOut, rstdOut, xOut};
-
-    int64_t mode = AddRmsNormACLNN::ADD_RMS_NORM_MODE; // 0为addrmsnorm，1为preRmsNorm, 2为postRmsNorm
-    auto ret = CheckParams(inputTensorOri, outputTensor, mode);
-    CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     // 固定写法，将输入转换成连续的tensor，可选输入不做判空校验
     auto x1Cont = l0op::Contiguous(x1, uniqueExecutor.get());
