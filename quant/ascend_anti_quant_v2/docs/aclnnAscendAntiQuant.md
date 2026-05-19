@@ -209,8 +209,8 @@ aclnnStatus aclnnAscendAntiQuant(
       <td>传入的x、scale、y是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="4">161002</td>
+      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="5">161002</td>
       <td>x、scale、offset、y的数据类型或数据格式不在支持的范围之内。</td>
     </tr>
     <tr>
@@ -218,7 +218,10 @@ aclnnStatus aclnnAscendAntiQuant(
     </tr>
     <tr>
       <td>x的数据类型为INT4时，x的反量化轴大小不是偶数。</td>
-      </tr>
+    </tr>
+    <tr>
+      <td>x的数据类型为INT4时，x为非连续Tensor。</td>
+    </tr>
     <tr>
       <td>x的数据类型为INT32时，y的反量化轴不是x的反量化轴大小的8倍，或者x与y的其他轴大小不一致。</td>
     </tr>
@@ -269,6 +272,7 @@ aclnnStatus aclnnAscendAntiQuant(
 
 ## 约束说明
 
+- 当输入x的数据类型为INT4时，x不支持非连续Tensor。
 - 确定性计算：
   - aclnnAscendAntiQuant默认确定性实现。
 
