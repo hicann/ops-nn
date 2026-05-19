@@ -1,0 +1,236 @@
+/**
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+
+/**
+ * NOTE: Portions of this code were AI-generated and have been
+ * technically reviewed for functional accuracy and security
+ */
+
+/*!
+ * \file hard_shrink_grad_tiling.cpp
+ * \brief HardShrinkGrad Tiling 实现 (arch35)
+ */
+
+#include "register/op_def_registry.h"
+#include "op_common/log/log.h"
+#include "op_common/op_host/util/math_util.h"
+#include "op_common/op_host/util/platform_util.h"
+#include "../../op_kernel/arch35/hard_shrink_grad_tiling_data.h"
+#include "../../op_kernel/arch35/hard_shrink_grad_tiling_key.h"
+
+#include <cmath>
+
+namespace optiling {
+
+using Ops::Base::CeilDiv;
+using Ops::Base::FloorDiv;
+using Ops::Base::FloorAlign;
+using Ops::Base::GetUbBlockSize;
+
+constexpr uint32_t WS_SYS_SIZE = 0U;
+// 双缓冲阈值：数据量大于此值时启用双缓冲
+constexpr int64_t MIN_SPLIT_THRESHOLD = 1024;
+
+static const gert::Shape g_vec_1_shape = {1};
+
+static inline const gert::Shape EnsureNotScalar(const gert::Shape& in_shape) {
+    if (in_shape.GetDimNum() == 0) {
+        return g_vec_1_shape;
+    }
+    return in_shape;
+}
+
+static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& ubSize, int64_t& coreNum)
+{
+    fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context, platformInfoPtr);
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
+    coreNum = ascendcPlatform.GetCoreNumAiv();
+    OP_CHECK_IF(coreNum == 0, OP_LOGE(context, "coreNum is 0"), return ge::GRAPH_FAILED);
+    ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
+    OP_CHECK_IF(ubSize == 0, OP_LOGE(context, "ubSize is 0"), return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
+
+static ge::graphStatus GetShapeAttrsInfo(gert::TilingContext* context,
+                                         int64_t& totalIdx,
+                                         ge::DataType& dataType,
+                                         float& lambd)
+{
+    // 获取输入 shape 信息 (gradients)
+    auto inputGrad = context->GetInputShape(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, inputGrad);
+    auto inputShapeGrad = EnsureNotScalar(inputGrad->GetStorageShape());
+
+    auto inputSelf = context->GetInputShape(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context, inputSelf);
+    auto inputShapeSelf = EnsureNotScalar(inputSelf->GetStorageShape());
+
+    auto output = context->GetOutputShape(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, output);
+    auto outShape = EnsureNotScalar(output->GetStorageShape());
+
+    // shape 校验
+    OP_CHECK_IF(
+        inputShapeGrad.GetShapeSize() != inputShapeSelf.GetShapeSize() ||
+            inputShapeGrad.GetShapeSize() != outShape.GetShapeSize(),
+        OP_LOGE(context, "HardShrinkGrad: shape size mismatch: gradients=%ld, features=%ld, backprops=%ld",
+                inputShapeGrad.GetShapeSize(), inputShapeSelf.GetShapeSize(), outShape.GetShapeSize()),
+        return ge::GRAPH_FAILED);
+
+    totalIdx = inputShapeGrad.GetShapeSize();
+
+    // dtype 校验
+    const std::set<ge::DataType> supportedDtype = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16};
+    auto inputDesc = context->GetInputDesc(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
+    dataType = inputDesc->GetDataType();
+    if (supportedDtype.count(dataType) == 0) {
+        OP_LOGE(context, "HardShrinkGrad: invalid dtype %d", static_cast<int>(dataType));
+        return ge::GRAPH_FAILED;
+    }
+
+    // 获取 lambd 属性
+    auto attrs = context->GetAttrs();
+    OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
+    const float* lambdPtr = attrs->GetAttrPointer<float>(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, lambdPtr);
+    lambd = *lambdPtr;
+
+    return ge::GRAPH_SUCCESS;
+}
+
+static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
+{
+    size_t* currentWorkspace = context->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context, currentWorkspace);
+    currentWorkspace[0] = WS_SYS_SIZE;
+    return ge::GRAPH_SUCCESS;
+}
+
+static ge::graphStatus HardShrinkGradTilingFunc(gert::TilingContext* context)
+{
+    OP_LOGD(context->GetNodeName(), "Enter HardShrinkGradTilingFunc");
+    // 1. 获取平台信息
+    uint64_t ubSize = 0;
+    int64_t coreNum = 0;
+    OP_CHECK_IF(
+        GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+        OP_LOGE(context, "GetPlatformInfo error"),
+        return ge::GRAPH_FAILED);
+
+    // 2. 获取 shape、属性信息
+    int64_t totalIdx;
+    ge::DataType dataType;
+    float lambd;
+    OP_CHECK_IF(
+        GetShapeAttrsInfo(context, totalIdx, dataType, lambd) != ge::GRAPH_SUCCESS,
+        OP_LOGE(context, "GetShapeAttrsInfo error"),
+        return ge::GRAPH_FAILED);
+
+    // 3. 获取 WorkspaceSize
+    OP_CHECK_IF(
+        GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
+        OP_LOGE(context, "GetWorkspaceSize error"),
+        return ge::GRAPH_FAILED);
+
+    // 4. 设置 TilingData
+    HardShrinkGradTilingData* tiling = context->GetTilingData<HardShrinkGradTilingData>();
+    OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
+    OP_CHECK_IF(
+        memset_s(tiling, sizeof(HardShrinkGradTilingData), 0, sizeof(HardShrinkGradTilingData)) != EOK,
+        OP_LOGE(context, "set tiling data error"),
+        return ge::GRAPH_FAILED);
+
+    // 多核切分
+    tiling->totalNum = totalIdx;
+    tiling->blockFactor = CeilDiv(totalIdx, coreNum);
+    int64_t usedCoreNum = CeilDiv(totalIdx, tiling->blockFactor);
+
+    // lambd 预处理：非负数处理，lambd < 0 时取 0
+    tiling->lambd = (lambd < 0.0f) ? 0.0f : lambd;
+
+    // UB 切分
+    // 根据 dtype 确定类型大小和计算对齐
+    int64_t typeSize;
+    int64_t computeAlignment;
+    if (dataType == ge::DT_FLOAT16) {
+        typeSize = 2;
+        computeAlignment = 256 / typeSize;  // 128 元素
+    } else if (dataType == ge::DT_FLOAT) {
+        typeSize = 4;
+        computeAlignment = 256 / typeSize;  // 64 元素
+    } else {
+        // bf16: 存储 2B, 计算在 float(4B)
+        typeSize = 2;
+        computeAlignment = 256 / 4;  // 64 元素 (按 float 对齐)
+    }
+
+    int64_t ubBlockSize = GetUbBlockSize(context);
+    uint64_t useDoubleBuffer = (totalIdx > MIN_SPLIT_THRESHOLD) ? 1 : 0;
+
+    // 精确扣除系统/API 固定开销，最大化每元素 buffer 预算
+    //   8KB: TPipe + 队列管理等系统保留（DESIGN §3.4.7）
+    //   8KB: Select 模式1 内部预留（DESIGN §3.4.6 / §3.5.6 / §3.6.7）
+    int64_t systemOverhead = 16 * 1024;
+    int64_t availableUb = static_cast<int64_t>(ubSize) - systemOverhead;
+
+    // Buffer layout per element (aligned with probe-validated kernel):
+    //   fp16/fp32: 3 TQue(T) x BUFFER_NUM + mask(~0)
+    //     fp16 double: 3*2*2 = 12 bytes/elem
+    //     fp16 single: 3*1*2 = 6 bytes/elem
+    //     fp32 double: 3*2*4 = 24 bytes/elem
+    //     fp32 single: 3*1*4 = 12 bytes/elem
+    //
+    //   bf16: 3 TQue(bf16) x BUFFER_NUM + 2 float TBuf(selfFloat + gradFloat) + mask(~0)
+    //     bf16 double: 3*2*2 + 2*4 = 20 bytes/elem
+    //     bf16 single: 3*1*2 + 2*4 = 14 bytes/elem
+    int64_t bufferBytes;
+    int64_t numTQueBuffers = useDoubleBuffer ? 2 : 1;
+    if (dataType == ge::DT_BF16) {
+        // bf16: 3 queues * BUFFER_NUM * 2B + 2 float TBuf * 4B
+        bufferBytes = 3 * numTQueBuffers * typeSize + 2 * static_cast<int64_t>(sizeof(float));
+    } else {
+        // fp16/fp32: 3 queues * BUFFER_NUM * typeSize
+        bufferBytes = 3 * numTQueBuffers * typeSize;
+    }
+    int64_t rawUbFactor = FloorDiv(availableUb, bufferBytes);
+    int64_t alignFactor = (ubBlockSize > computeAlignment) ? ubBlockSize : computeAlignment;
+    int64_t ubFactorAligned = FloorAlign(rawUbFactor, alignFactor);
+
+    // Cap ubFactor by totalIdx to avoid allocating more than necessary.
+    // For small data, ubFactor = ceil(totalIdx / alignFactor) * alignFactor.
+    if (totalIdx < ubFactorAligned) {
+        int64_t needed = CeilDiv(totalIdx, alignFactor) * alignFactor;
+        ubFactorAligned = needed;
+    }
+    tiling->ubFactor = ubFactorAligned;
+
+    context->SetBlockDim(usedCoreNum);
+
+    // 5. 设置 TilingKey
+    uint32_t dTypeX = static_cast<uint32_t>(dataType);
+    ASCENDC_TPL_SEL_PARAM(context, dTypeX, useDoubleBuffer);
+
+    return ge::GRAPH_SUCCESS;
+}
+
+static ge::graphStatus TilingParseForHardShrinkGrad([[maybe_unused]] gert::TilingParseContext* context)
+{
+    return ge::GRAPH_SUCCESS;
+}
+
+struct HardShrinkGradCompileInfo {};
+
+IMPL_OP_OPTILING(HardShrinkGrad)
+    .Tiling(HardShrinkGradTilingFunc)
+    .TilingParse<HardShrinkGradCompileInfo>(TilingParseForHardShrinkGrad);
+
+} // namespace optiling
