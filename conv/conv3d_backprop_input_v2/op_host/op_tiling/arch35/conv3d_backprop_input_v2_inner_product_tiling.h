@@ -100,6 +100,7 @@ protected:
 
 private:
     bool CheckC04Enable();
+    bool CheckBasicKSplitKCondition();
     bool CheckVecTrans16bitPlus(const CoreTilingParams& coreParams, const L0TilingParams& l0Params);
     bool CheckVecTransEnable(
         const CoreTilingParams& coreParams, const L1TilingParams& l1Params, const L0TilingParams& l0Params);

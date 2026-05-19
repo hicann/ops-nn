@@ -129,11 +129,22 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::GetPublicShapeAttrsInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus Conv3DDXV2InnerProductTiling::CalcKSegment() {
-    // 拦截c04场景和group场景
-    if (tilingRunInfo_.enableC04Flag || (unlikely(runInfo_.groups > 1))) {
+bool Conv3DDXV2InnerProductTiling::CheckBasicKSplitKCondition()
+{
+    // 拦截c04场景,group场景和8bit场景
+    if (tilingRunInfo_.enableC04Flag || (unlikely(runInfo_.groups > 1)) ||
+        static_cast<int32_t>(runInfo_.c_dtype_bytes) == ge::GetSizeByDataType(ge::DT_HIFLOAT8) ||
+        static_cast<int32_t>(runInfo_.c_dtype_bytes) == ge::GetSizeByDataType(ge::DT_FLOAT8_E4M3FN)) {
         splitKMode_ = 0;
         tilingRunInfo_.enableSplitK = splitKMode_;
+        return false;
+    }
+    return true;
+}
+
+ge::graphStatus Conv3DDXV2InnerProductTiling::CalcKSegment()
+{
+    if (!CheckBasicKSplitKCondition()) {
         return ge::GRAPH_FAILED;
     }
 
