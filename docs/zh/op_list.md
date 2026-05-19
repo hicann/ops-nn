@@ -1518,6 +1518,16 @@
   </tr>
   <tr>
     <td>index</td>
+    <td><a href="../../index/index_check/README.md">index_check</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>检查索引是否越界。</td>
+  </tr>
+  <tr>
+    <td>index</td>
     <td><a href="../../index/index_fill_d/README.md">index_fill_d</a></td>
     <td>✓</td>
     <td>✓</td>
