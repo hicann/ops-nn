@@ -534,10 +534,6 @@ function(gen_ops_info_and_python)
   add_custom_target(common_copy
     COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/tbe/ascendc/common/cmct
     COMMAND cp -r ${PROJECT_SOURCE_DIR}/matmul/common/cmct/* ${CMAKE_BINARY_DIR}/tbe/ascendc/common/cmct
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/tbe/ascendc/common/blaze
-    COMMAND cp -r ${BLAZE}/* ${CMAKE_BINARY_DIR}/tbe/ascendc/common/blaze
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/tbe/ascendc/common/tensor_api
-    COMMAND cp -r ${TENSOR_API}/* ${CMAKE_BINARY_DIR}/tbe/ascendc/common/tensor_api
     COMMAND cp -r ${PROJECT_SOURCE_DIR}/conv/common/op_kernel/* ${CMAKE_BINARY_DIR}/tbe/ascendc/common
     COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/tbe/ascendc/inc
     COMMAND cp -r ${PROJECT_SOURCE_DIR}/common/inc/op_kernel/* ${CMAKE_BINARY_DIR}/tbe/ascendc/inc
@@ -547,14 +543,6 @@ function(gen_ops_info_and_python)
     install(
       DIRECTORY ${CMAKE_BINARY_DIR}/tbe/ascendc/common/cmct/
       DESTINATION ${IMPL_INSTALL_DIR}/common/cmct
-    )
-    install(
-      DIRECTORY ${CMAKE_BINARY_DIR}/tbe/ascendc/common/blaze/
-      DESTINATION ${IMPL_INSTALL_DIR}/common/blaze
-    )
-    install(
-      DIRECTORY ${CMAKE_BINARY_DIR}/tbe/ascendc/common/tensor_api/
-      DESTINATION ${IMPL_INSTALL_DIR}/common/tensor_api
     )
     install(
       DIRECTORY ${CMAKE_BINARY_DIR}/tbe/ascendc/common/arch35/

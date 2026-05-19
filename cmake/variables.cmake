@@ -54,16 +54,14 @@ set(auto_sync_list CACHE STRING "kernel compile auto sync list" FORCE)
 set(option_list CACHE STRING "kernel compile options list" FORCE)
 
 # src path
-get_filename_component(OPS_NN_CMAKE_DIR           "${OPS_NN_DIR}/cmake"                           REALPATH)
+get_filename_component(OPS_NN_CMAKE_DIR           "${OPS_NN_DIR}/cmake"                               REALPATH)
 get_filename_component(OPS_NN_COMMON_INC          "${OPS_NN_DIR}/common/inc"                      REALPATH)
-get_filename_component(OPS_NN_COMMON_INC_COMMON   "${OPS_NN_COMMON_INC}/common"                   REALPATH)
-get_filename_component(OPS_NN_COMMON_INC_EXTERNAL "${OPS_NN_COMMON_INC}/external"                 REALPATH)
-get_filename_component(OPS_NN_COMMON_INC_HEADERS  "${OPS_NN_COMMON_INC_EXTERNAL}/aclnn_kernels"   REALPATH)
-get_filename_component(OPS_KERNEL_BINARY_SCRIPT   "${OPS_NN_DIR}/scripts/kernel/binary_script"    REALPATH)
-get_filename_component(OPS_KERNEL_BINARY_CONFIG   "${OPS_NN_DIR}/scripts/kernel/binary_config"    REALPATH)
-get_filename_component(OPS_CMCT                   "${OPS_NN_DIR}/matmul/common/cmct"              REALPATH)
-get_filename_component(BLAZE                      "${OPTENSOR_SOURCE_PATH}/include/blaze"         REALPATH)
-get_filename_component(TENSOR_API                 "${OPTENSOR_SOURCE_PATH}/include/tensor_api"    REALPATH)
+get_filename_component(OPS_NN_COMMON_INC_COMMON   "${OPS_NN_COMMON_INC}/common"                       REALPATH)
+get_filename_component(OPS_NN_COMMON_INC_EXTERNAL "${OPS_NN_COMMON_INC}/external"                     REALPATH)
+get_filename_component(OPS_NN_COMMON_INC_HEADERS  "${OPS_NN_COMMON_INC_EXTERNAL}/aclnn_kernels"       REALPATH)
+get_filename_component(OPS_KERNEL_BINARY_SCRIPT     "${OPS_NN_DIR}/scripts/kernel/binary_script"       REALPATH)
+get_filename_component(OPS_KERNEL_BINARY_CONFIG     "${OPS_NN_DIR}/scripts/kernel/binary_config"       REALPATH)
+get_filename_component(OPS_CMCT               "${OPS_NN_DIR}/matmul/common/cmct"           REALPATH)
 
 # python
 if(NOT DEFINED ASCEND_PYTHON_EXECUTABLE)

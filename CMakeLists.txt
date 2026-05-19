@@ -11,7 +11,7 @@
 cmake_minimum_required(VERSION 3.16)
 set(PKG_NAME nn)
 set(CANN_3RD_LIB_PATH ${CMAKE_CURRENT_SOURCE_DIR}/build/third_party CACHE STRING "cann third party lib path")
-include(cmake/third_party/fetch_cann_cmake.cmake)
+include(cmake/fetch_cann_cmake.cmake)
 
 project(${PKG_NAME} VERSION 1.0.0)
 
@@ -103,7 +103,6 @@ set(CMAKE_CXX_STANDARD
     17
     CACHE STRING "c++17 is needed for this project")
 include(cmake/third_party/opbase.cmake) # 放在dependencies.cmake前面
-include(cmake/third_party/ops-tensor.cmake)
 if(DOWNLOAD_OPS_TEST_KIT)
   include(cmake/third_party/ops_test_kit.cmake)
 endif()
@@ -207,3 +206,7 @@ if(ENABLE_PACKAGE)
     pack_built_in()
   endif()
 endif()
+
+install(DIRECTORY ${OPS_CMCT}/
+        DESTINATION ${IMPL_INSTALL_DIR}/common/cmct/
+)
