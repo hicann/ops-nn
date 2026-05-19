@@ -21,17 +21,17 @@ class HardtanhGrad : public OpDef {
     public:
         explicit HardtanhGrad(const char* name) : OpDef(name)
         {
-            this->Input("gradOutput")
+            this->Input("result")
                 .ParamType(REQUIRED)
                 .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
                 .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
                 .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            this->Input("self")
+            this->Input("grad")
                 .ParamType(REQUIRED)
                 .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
                 .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
                 .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-            this->Output("out")
+            this->Output("y")
                 .ParamType(REQUIRED)
                 .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
                 .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})

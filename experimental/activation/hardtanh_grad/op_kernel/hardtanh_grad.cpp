@@ -21,23 +21,23 @@ enum class HardtanhGradTilingKey : uint32_t
     TILING_KEY_EXAMPLE_DOUBLE_BUFFER = 1,
 };
 template <uint32_t schMode>
-__global__ __aicore__ void hardtanh_grad(GM_ADDR gradOutput, GM_ADDR self, GM_ADDR out, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void hardtanh_grad(GM_ADDR result, GM_ADDR grad, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
      REGISTER_TILING_DEFAULT(HardtanhGradTilingData);
      GET_TILING_DATA_WITH_STRUCT(HardtanhGradTilingData, tilingData, tiling);
      AscendC::TPipe pipe;
-     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY); 
+     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     
     if constexpr (schMode == static_cast<uint32_t>(HardtanhGradTilingKey::TILING_KEY_EXAMPLE_DOUBLE_BUFFER)) 
     {
-         MyHardtanhGrad::KernelHardtanhGrad<DTYPE_SELF, DTYPE_OUT> op; 
-         op.Init(gradOutput, self, out, 
-                 &tilingData, &pipe);   //   // 算子kernel实例初始化
-         op.Process();  
+         MyHardtanhGrad::KernelHardtanhGrad<DTYPE_GRAD, DTYPE_Y> op;
+         op.Init(result, grad, y,
+                 &tilingData, &pipe);   // 算子kernel实例初始化
+         op.Process();
     }
     if constexpr (schMode == static_cast<uint32_t>(HardtanhGradTilingKey::TILING_KEY_EXAMPLE_SINGLE_BUFFER)) {
-         MyHardtanhGrad::KernelHardtanhGrad_NoDB<DTYPE_SELF, DTYPE_OUT> op; 
-         op.Init(gradOutput, self, out, 
-                 &tilingData, &pipe);   //   // 算子kernel实例初始化
-    }    
+         MyHardtanhGrad::KernelHardtanhGrad_NoDB<DTYPE_GRAD, DTYPE_Y> op;
+         op.Init(result, grad, y,
+                 &tilingData, &pipe);   // 算子kernel实例初始化
+    }
 }

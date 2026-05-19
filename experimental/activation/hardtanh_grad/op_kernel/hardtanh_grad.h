@@ -34,7 +34,7 @@ public:
     __aicore__ inline KernelHardtanhGrad(){};
 
     __aicore__ inline void Init(
-        GM_ADDR gradOutput, GM_ADDR self, GM_ADDR out, 
+        GM_ADDR result, GM_ADDR grad, GM_ADDR y, 
         const HardtanhGradTilingData* tilingData, TPipe* pipeIn);
     __aicore__ inline void Process();
 
@@ -51,8 +51,8 @@ private:
     AscendC::TQue<AscendC::QuePosition::VECOUT, BUFFER_NUM> outQueueY;
     AscendC::TBuf<AscendC::QuePosition::VECCALC> maskBuf, tmpBuf, calcBuf;
 
-    AscendC::GlobalTensor<TYPE_X> gradOutputGm, selfGm;
-    AscendC::GlobalTensor<TYPE_Y> outGm;
+    AscendC::GlobalTensor<TYPE_X> resultGm, gradGm;
+    AscendC::GlobalTensor<TYPE_Y> yGm;
     uint64_t coreDataNum;
     uint64_t tileNum;
     uint64_t tileDataNum;
@@ -65,7 +65,7 @@ private:
 
 template <typename TYPE_X, typename TYPE_Y>
 __aicore__ inline void KernelHardtanhGrad<TYPE_X, TYPE_Y>::Init(
-    GM_ADDR gradOutput, GM_ADDR self, GM_ADDR out, const HardtanhGradTilingData* tilingData, TPipe* pipeIn)
+    GM_ADDR result, GM_ADDR grad, GM_ADDR y, const HardtanhGradTilingData* tilingData, TPipe* pipeIn)
 {
     ASSERT(AscendC::GetBlockNum() != 0 && "block dim can not be zero!");
     uint64_t coreId = AscendC::GetBlockIdx();
@@ -85,9 +85,9 @@ __aicore__ inline void KernelHardtanhGrad<TYPE_X, TYPE_Y>::Init(
     this->min = tilingData->min;
     this->max = tilingData->max;
 
-    gradOutputGm.SetGlobalBuffer((__gm__ TYPE_Y*)gradOutput + globalBufferIndex, this->coreDataNum);
-    selfGm.SetGlobalBuffer((__gm__ TYPE_Y*)self + globalBufferIndex, this->coreDataNum);
-    outGm.SetGlobalBuffer((__gm__ TYPE_Y*)out + globalBufferIndex, this->coreDataNum);
+    resultGm.SetGlobalBuffer((__gm__ TYPE_Y*)result + globalBufferIndex, this->coreDataNum);
+    gradGm.SetGlobalBuffer((__gm__ TYPE_Y*)grad + globalBufferIndex, this->coreDataNum);
+    yGm.SetGlobalBuffer((__gm__ TYPE_Y*)y + globalBufferIndex, this->coreDataNum);
 
     pipeIn->InitBuffer(inQueueX, BUFFER_NUM, 2 * this->tileDataNum * sizeof(TYPE_Y));
     pipeIn->InitBuffer(outQueueY, BUFFER_NUM, this->tileDataNum * sizeof(TYPE_Y));
@@ -103,8 +103,8 @@ __aicore__ inline void KernelHardtanhGrad<TYPE_X, TYPE_Y>::CopyIn(int32_t progre
 {
     LocalTensor<TYPE_Y> xLocal = inQueueX.AllocTensor<TYPE_Y>();
 
-    DataCopy(xLocal, gradOutputGm[progress * this->tileDataNum], this->processDataNum);
-    DataCopy(xLocal[this->tileDataNum], selfGm[progress * this->tileDataNum], this->processDataNum);
+    DataCopy(xLocal, resultGm[progress * this->tileDataNum], this->processDataNum);
+    DataCopy(xLocal[this->tileDataNum], gradGm[progress * this->tileDataNum], this->processDataNum);
 
     inQueueX.EnQue(xLocal);
 }
@@ -114,7 +114,7 @@ __aicore__ inline void KernelHardtanhGrad<TYPE_X, TYPE_Y>::CopyOut(int32_t progr
 {
     LocalTensor<TYPE_Y> yLocal = outQueueY.DeQue<TYPE_Y>();
 
-    DataCopy(outGm[progress * this->tileDataNum], yLocal, this->processDataNum);
+    DataCopy(yGm[progress * this->tileDataNum], yLocal, this->processDataNum);
 
     outQueueY.FreeTensor(yLocal);
 }
@@ -195,15 +195,15 @@ class KernelHardtanhGrad_NoDB {
 public:
     __aicore__ inline KernelHardtanhGrad_NoDB(){};
     __aicore__ inline void Init(
-        GM_ADDR gradOutput, GM_ADDR self, GM_ADDR out, 
+        GM_ADDR result, GM_ADDR grad, GM_ADDR y, 
         const HardtanhGradTilingData* tilingData, 
         TPipe* pipeIn);
 private:
     AscendC::TQue<AscendC::QuePosition::VECIN, 1> inQueueC, inQueueX;
     AscendC::TQue<AscendC::QuePosition::VECOUT, 1> outQueueY;
     AscendC::TBuf<AscendC::QuePosition::VECCALC> maskBuf, tmpBuf, calcBuf;
-    AscendC::GlobalTensor<TYPE_X> gradOutputGm, selfGm;
-    AscendC::GlobalTensor<TYPE_Y> outGm;
+    AscendC::GlobalTensor<TYPE_X> resultGm, gradGm;
+    AscendC::GlobalTensor<TYPE_Y> yGm;
     uint64_t processDataNum;
     uint32_t maskTileDataNum;
     float min;
@@ -212,7 +212,7 @@ private:
 
 template <typename TYPE_X, typename TYPE_Y>
 __aicore__ inline void KernelHardtanhGrad_NoDB<TYPE_X, TYPE_Y>::Init(
-        GM_ADDR gradOutput, GM_ADDR self, GM_ADDR out, 
+        GM_ADDR result, GM_ADDR grad, GM_ADDR y, 
         const HardtanhGradTilingData* tilingData, 
         TPipe* pipeIn)
 {
@@ -232,9 +232,9 @@ __aicore__ inline void KernelHardtanhGrad_NoDB<TYPE_X, TYPE_Y>::Init(
     this->min = tilingData->min;
     this->max = tilingData->max;
 
-    gradOutputGm.SetGlobalBuffer((__gm__ TYPE_Y*)gradOutput + globalBufferIndex, tilingData->tileDataNum);
-    selfGm.SetGlobalBuffer((__gm__ TYPE_Y*)self + globalBufferIndex, tilingData->tileDataNum);
-    outGm.SetGlobalBuffer((__gm__ TYPE_Y*)out + globalBufferIndex, tilingData->tileDataNum);
+    resultGm.SetGlobalBuffer((__gm__ TYPE_Y*)result + globalBufferIndex, tilingData->tileDataNum);
+    gradGm.SetGlobalBuffer((__gm__ TYPE_Y*)grad + globalBufferIndex, tilingData->tileDataNum);
+    yGm.SetGlobalBuffer((__gm__ TYPE_Y*)y + globalBufferIndex, tilingData->tileDataNum);
 
     pipeIn->InitBuffer(inQueueX, BUFFER_NUM, 2 * MAX_TILEDATA * sizeof(TYPE_Y));
     pipeIn->InitBuffer(outQueueY, BUFFER_NUM, MAX_TILEDATA * sizeof(TYPE_Y));
@@ -245,8 +245,8 @@ __aicore__ inline void KernelHardtanhGrad_NoDB<TYPE_X, TYPE_Y>::Init(
     }
     LocalTensor<TYPE_Y> xLocal = inQueueX.AllocTensor<TYPE_Y>();
 
-    DataCopy(xLocal, gradOutputGm, this->processDataNum);
-    DataCopy(xLocal[MAX_TILEDATA], selfGm, this->processDataNum);
+    DataCopy(xLocal, resultGm, this->processDataNum);
+    DataCopy(xLocal[MAX_TILEDATA], gradGm, this->processDataNum);
 
     event_t eventId1 = static_cast<event_t>(pipeIn->FetchEventID(HardEvent::MTE2_V));
     SetFlag<HardEvent::MTE2_V>(eventId1);
@@ -283,7 +283,7 @@ __aicore__ inline void KernelHardtanhGrad_NoDB<TYPE_X, TYPE_Y>::Init(
         SetFlag<HardEvent::V_MTE3>(eventId2);
         inQueueX.FreeTensor(xLocal);
         WaitFlag<HardEvent::V_MTE3>(eventId2);
-        DataCopy(outGm, yLocal, this->processDataNum);
+        DataCopy(yGm, yLocal, this->processDataNum);
         outQueueY.FreeTensor(yLocal);            
     }
 
@@ -316,7 +316,7 @@ __aicore__ inline void KernelHardtanhGrad_NoDB<TYPE_X, TYPE_Y>::Init(
         inQueueX.FreeTensor(xLocal);
         WaitFlag<HardEvent::V_MTE3>(eventId2);
 
-        DataCopy(outGm, yLocal, this->processDataNum);
+        DataCopy(yGm, yLocal, this->processDataNum);
         outQueueY.FreeTensor(yLocal);            
     }
 
@@ -348,7 +348,7 @@ __aicore__ inline void KernelHardtanhGrad_NoDB<TYPE_X, TYPE_Y>::Init(
         inQueueX.FreeTensor(xLocal);
         WaitFlag<HardEvent::V_MTE3>(eventId2);
 
-        DataCopy(outGm, yLocal, this->processDataNum);
+        DataCopy(yGm, yLocal, this->processDataNum);
         outQueueY.FreeTensor(yLocal);        
     }
 }    
