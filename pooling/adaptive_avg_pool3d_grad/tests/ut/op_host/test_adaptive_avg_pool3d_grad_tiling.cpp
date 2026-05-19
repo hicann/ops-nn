@@ -348,7 +348,7 @@ TEST_F(AdaptiveAvgPool3dGradTiling950Test, adaptive_avg_pool3d_grad_tilingkey_25
         xShape,
         xGradShape,
         ge::DT_FLOAT,
-        17);
+        33);
 }
 
 TEST_F(AdaptiveAvgPool3dGradTiling950Test, adaptive_avg_pool3d_grad_tilingkey_257_ascend950)

@@ -313,7 +313,13 @@ ge::graphStatus AdaptiveAvgPool3dGradTilingBigKernel::GetWorkspaceSize()
 uint64_t AdaptiveAvgPool3dGradTilingBigKernel::GetTilingKey() const
 {
     int64_t outDataCount = inputData.nX * inputData.cX * inputData.dX * inputData.hX * inputData.wX;
-    uint32_t idxDtype = outDataCount <= static_cast<int64_t>(MAX_INT32) ? TPL_INT32 : TPL_INT64;
+    int64_t inDataCount = inputData.nGrad * inputData.cGrad * inputData.dGrad * inputData.hGrad * inputData.wGrad;
+    bool needInt64 = (outDataCount > static_cast<int64_t>(MAX_INT32) ||
+                      inDataCount > static_cast<int64_t>(MAX_INT32) ||
+                      inputData.dGrad * inputData.dX > static_cast<int64_t>(MAX_INT32) ||
+                      inputData.hGrad * inputData.hX > static_cast<int64_t>(MAX_INT32) ||
+                      inputData.wGrad * inputData.wX > static_cast<int64_t>(MAX_INT32));
+    uint32_t idxDtype = needInt64 ? TPL_INT64 : TPL_INT32;
     uint32_t isChannelLast = 0;
     return GET_TPL_TILING_KEY(TPL_BIG_KERNEL, idxDtype, isChannelLast);
 }
