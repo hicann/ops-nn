@@ -1,0 +1,95 @@
+{
+  "op_type": "MatMulV2CompressDequant",
+  "op_list": [
+    {
+      "bin_filename": "MatmulV2CompressDequant_Int8",
+      "inputs": [
+        {
+          "name": "x1",
+          "index": 0,
+          "dtype": "int8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [-2]
+        },
+        {
+          "name": "x2",
+          "index": 1,
+          "dtype": "int8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [-2]
+        },
+        {
+          "name": "compress_index",
+          "index": 2,
+          "dtype": "int8",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [-2]
+        },
+        {
+          "name": "deq_scale",
+          "index": 3,
+          "dtype": "uint64",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [-2]
+        },
+        {
+          "name": "bias",
+          "index": 4,
+          "dtype": "int32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [-2]
+        },
+        {
+          "name": "offset_w",
+          "index": 5,
+          "dtype": "int8",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [-2]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "out",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [-2]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "transpose_x1",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "transpose_x2",
+          "dtype": "bool",
+          "value": null
+        },
+        {
+          "name": "compress_info",
+          "dtype": "list_int",
+          "value": null
+        },
+        {
+          "name": "offset_x",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "alg",
+          "dtype": "string",
+          "value": null
+        }
+      ]
+    }
+  ]
+}
