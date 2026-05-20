@@ -20,6 +20,8 @@
 #include "opdev/shape_utils.h"
 #include "opdev/op_def.h"
 #include "opdev/op_dfx.h"
+#include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 
@@ -30,8 +32,14 @@ OP_TYPE_REGISTER(IndexCheck);
 void IndexCheck(
     const aclTensor* bounds, const aclTensorList* indices, aclOpExecutor* executor)
 {
+    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
+    if (socVersion != SocVersion::ASCEND910B && socVersion != SocVersion::ASCEND910_93) {
+        OP_LOGD("IndexCheck only support ASCEND910B and ASCEND910_93, skip.");
+        return;
+    }
+
     L0_DFX(IndexCheck, bounds, indices);
-    
+
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
         IndexCheck, 
         OP_INPUT(bounds, indices)
