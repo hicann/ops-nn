@@ -17,18 +17,18 @@ namespace Ops {
 namespace NN {
 
 // 910B额外支持BF16，其余只支持FP16 + FP32
-static const std::initializer_list<DataType> V100_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT,
-    DataType::DT_FLOAT16};
-static const std::initializer_list<DataType> V200_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT,
-    DataType::DT_FLOAT16, DataType::DT_BF16};
+static const std::initializer_list<DataType> V100_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16};
+static const std::initializer_list<DataType> V200_DTYPE_SUPPORT_LIST = {
+    DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16};
 namespace {
-static const std::initializer_list<DataType> DAV_3510_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT,
-            DataType::DT_FLOAT16, DataType::DT_BF16, DataType::DT_HIFLOAT8};
-static const std::initializer_list<DataType> DAV_3510_CONVBP_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT,
-    DataType::DT_FLOAT16, DataType::DT_BF16, DataType::DT_HIFLOAT8, DataType::DT_FLOAT8_E4M3FN};
-}
+static const std::initializer_list<DataType> DAV_3510_DTYPE_SUPPORT_LIST = {
+    DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16, DataType::DT_HIFLOAT8};
+static const std::initializer_list<DataType> DAV_3510_CONVBP_DTYPE_SUPPORT_LIST = {
+    DataType::DT_FLOAT, DataType::DT_FLOAT16, DataType::DT_BF16, DataType::DT_HIFLOAT8, DataType::DT_FLOAT8_E4M3FN};
+} // namespace
 // 根据dtype进行初步拦截，后续需要再和cubemathtype + 芯片再进行一次拦截
-const std::initializer_list<DataType>& GetDtypeSupportListBySocVersion() {
+const std::initializer_list<DataType>& GetDtypeSupportListBySocVersion()
+{
     auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
     if (npuArch == NpuArch::DAV_3510) {
         return DAV_3510_DTYPE_SUPPORT_LIST;
@@ -36,26 +36,33 @@ const std::initializer_list<DataType>& GetDtypeSupportListBySocVersion() {
     return (IsCubeSupportFp32()) ? V200_DTYPE_SUPPORT_LIST : V100_DTYPE_SUPPORT_LIST;
 }
 
-const std::initializer_list<DataType>& GetDtypeSupportListBySocVersion4ConvBackward(bool transposed) {
+const std::initializer_list<DataType>& GetDtypeSupportListBySocVersion4ConvBackward(bool transposed)
+{
     auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
     if (npuArch == NpuArch::DAV_3510) {
-		return transposed ? DAV_3510_DTYPE_SUPPORT_LIST : DAV_3510_CONVBP_DTYPE_SUPPORT_LIST;
+        return transposed ? DAV_3510_DTYPE_SUPPORT_LIST : DAV_3510_CONVBP_DTYPE_SUPPORT_LIST;
     }
     return (IsCubeSupportFp32()) ? V200_DTYPE_SUPPORT_LIST : V100_DTYPE_SUPPORT_LIST;
 }
 
 // 检查芯片是否支持输入的dtype allowFp32为True：芯片不允许输入为BF16   allowFp32为False：芯片不允许输入为BF16和FP32
-static bool CheckSocSupportDtype(const op::DataType cubeTensorDtype, bool allowFp32) {
+static bool CheckSocSupportDtype(const op::DataType cubeTensorDtype, bool allowFp32)
+{
     bool dtypeValid = allowFp32 ? (cubeTensorDtype == DataType::DT_BF16) :
                                   (cubeTensorDtype == DataType::DT_FLOAT || cubeTensorDtype == DataType::DT_BF16);
     // 如果芯片不支持FP32 + dtype为FP32 / BF16，报错
-    OP_CHECK(!(dtypeValid && !IsCubeSupportFp32()), OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+    OP_CHECK(
+        !(dtypeValid && !IsCubeSupportFp32()),
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID,
             "The soc version does not support bf16 / fp32 for calculations, please change the setting of "
-            "cubeMathType or the Dtype of input tensor."), return false);
+            "cubeMathType or the Dtype of input tensor."),
+        return false);
     return true;
 }
 
-bool CheckUnSupportDtype(const aclTensor *input, const aclTensor *weight) {
+bool CheckUnSupportDtype(const aclTensor* input, const aclTensor* weight)
+{
     if ((input->GetDataType() == op::DataType::DT_HIFLOAT8) != (weight->GetDataType() == op::DataType::DT_HIFLOAT8)) {
         OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "Hif8 not in aclnn framework support dtype list");
         return true;
@@ -78,7 +85,8 @@ int8_t routeCubeMathType4ToCubeMathType0DAV_2201(int8_t cubeMathType)
 }
 
 // 校验cubeMathType的值是否符合预期
-bool CheckCubeMathType(const op::DataType cubeTensorDtype, int8_t cubeMathType) {
+bool CheckCubeMathType(const op::DataType cubeTensorDtype, int8_t cubeMathType)
+{
     OP_LOGD("The cubeMathType is %d.", cubeMathType);
     switch (cubeMathType) {
         case KEEP_DTYPE:
@@ -98,24 +106,23 @@ bool CheckCubeMathType(const op::DataType cubeTensorDtype, int8_t cubeMathType) 
         case USE_FP32_ADD:
             OP_LOGD("The cubeMathType is USE_FP32_ADD.");
             return CheckSocSupportDtype(cubeTensorDtype, false);
-        case USE_HIGH_PREC_MODE:
-            OP_LOGD("The cubeMathType is USE_HIGH_PREC_MODE.");
-            return true;
         default:
-          OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                  "The value of cubeMathType only support {0: KEEP_DTYPE, 1: "
-                  "ALLOW_FP32_DOWN_PRECISION, 2: USE_FP16, 3: USE_HF32, 4: USE_FP32_ADD, 5: USE_HIGH_PREC_MODE}, but got %d",
-                  cubeMathType);
-          return false;
+            OP_LOGE(
+                ACLNN_ERR_PARAM_INVALID,
+                "The value of cubeMathType only support {0: KEEP_DTYPE, 1: "
+                "ALLOW_FP32_DOWN_PRECISION, 2: USE_FP16, 3: USE_HF32, 4: USE_FP32_ADD}, but got %d",
+                cubeMathType);
+            return false;
     }
 }
 
 // 校验mm算子cubeMathType的值是否符合预期
-bool CheckCubeMathTypeForMm(const op::DataType cubeTensorDtype, int8_t cubeMathType) {
+bool CheckCubeMathTypeForMm(const op::DataType cubeTensorDtype, int8_t cubeMathType)
+{
     if (cubeMathType == USE_FP16 && cubeTensorDtype == DataType::DT_BF16) {
         OP_LOGW("The cubeMathType is USE_FP16. For input BF16, it will not be enabled.");
-    } else if (cubeMathType == USE_HF32 &&
-               (cubeTensorDtype == DataType::DT_BF16 || cubeTensorDtype == DataType::DT_FLOAT16)) {
+    } else if (
+        cubeMathType == USE_HF32 && (cubeTensorDtype == DataType::DT_BF16 || cubeTensorDtype == DataType::DT_FLOAT16)) {
         OP_LOGW("The cubeMathType is USE_HF32. For input FP16/BF16, it will not be enabled.");
     }
 
@@ -127,26 +134,25 @@ bool CheckCubeMathTypeForMm(const op::DataType cubeTensorDtype, int8_t cubeMathT
     }
 }
 
-bool CheckCubeMathTypeForAddMm(const aclTensor* mat1, const aclTensor* mat2, const aclTensor* self,
-    const aclTensor* out, int8_t cubeMathType)
-{   
+bool CheckCubeMathTypeForAddMm(
+    const aclTensor* mat1, const aclTensor* mat2, const aclTensor* self, const aclTensor* out, int8_t cubeMathType)
+{
     (void)out;
     if (cubeMathType > USE_FP32_ADD) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                  "The value of cubeMathType only support {0: KEEP_DTYPE, 1: "
-                  "ALLOW_FP32_DOWN_PRECISION, 2: USE_FP16, 3: USE_HF32, 4: USE_FP32_ADD}, but got %d",
-                  cubeMathType);
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID,
+            "The value of cubeMathType only support {0: KEEP_DTYPE, 1: "
+            "ALLOW_FP32_DOWN_PRECISION, 2: USE_FP16, 3: USE_HF32, 4: USE_FP32_ADD}, but got %d",
+            cubeMathType);
         return false;
     }
     if (cubeMathType != USE_FP32_ADD) {
         return true;
     }
     // 平台校验
-    if (GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_2201 && 
+    if (GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_2201 &&
         GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "current platform not support cubeMathType = 4: USE_FP32_ADD.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "current platform not support cubeMathType = 4: USE_FP32_ADD.");
         return false;
     }
     // A2平台上，当cubeMathType=USE_FP32_ADD时，当前不支持self与mmout broadcast
@@ -163,13 +169,17 @@ bool CheckCubeMathTypeForAddMm(const aclTensor* mat1, const aclTensor* mat2, con
         const op::Shape mat1Shape = mat1->GetViewShape();
         const op::Shape mat2Shape = mat2->GetViewShape();
         if (dimNum == 3UL) {
-            OP_CHECK(selfShape[0] == mat1Shape[0] && selfShape[1] == mat1Shape[1] && selfShape[2] == mat2Shape[2],
-                OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+            OP_CHECK(
+                selfShape[0] == mat1Shape[0] && selfShape[1] == mat1Shape[1] && selfShape[2] == mat2Shape[2],
+                OP_LOGE(
+                    ACLNN_ERR_PARAM_INVALID,
                     "when cubeMathType = 4:USE_FP32_ADD, self shape should equal to matmul out shape."),
                 return false);
         } else if (dimNum == 2UL) {
-            OP_CHECK(selfShape[0] == mat1Shape[0] && selfShape[1] == mat2Shape[1],
-                OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+            OP_CHECK(
+                selfShape[0] == mat1Shape[0] && selfShape[1] == mat2Shape[1],
+                OP_LOGE(
+                    ACLNN_ERR_PARAM_INVALID,
                     "when cubeMathType = 4:USE_FP32_ADD, self shape should equal to matmul out shape."),
                 return false);
         }
@@ -178,7 +188,8 @@ bool CheckCubeMathTypeForAddMm(const aclTensor* mat1, const aclTensor* mat2, con
 }
 
 // 根据promote type + cubemathtype的组合算出最终算子应用的dtype
-DataType CalcPromoteTypeCubemathtype(const DataType cubeTensorPromoteType, int8_t cubeMathType) {
+DataType CalcPromoteTypeCubemathtype(const DataType cubeTensorPromoteType, int8_t cubeMathType)
+{
     bool cubeSupportFp32Flag = IsCubeSupportFp32();
     // USE_FP16场景，如果promote type为bf16，提示不支持该选项
     if (cubeMathType == USE_FP16) {
@@ -192,56 +203,65 @@ DataType CalcPromoteTypeCubemathtype(const DataType cubeTensorPromoteType, int8_
         case DataType::DT_FLOAT16:
             return DataType::DT_FLOAT16;
         case DataType::DT_FLOAT:
-            return cubeSupportFp32Flag ? DataType::DT_FLOAT: DataType::DT_FLOAT16;
+            return cubeSupportFp32Flag ? DataType::DT_FLOAT : DataType::DT_FLOAT16;
         case DataType::DT_BF16:
-            return cubeSupportFp32Flag ? DataType::DT_BF16: DataType::DT_FLOAT16;
+            return cubeSupportFp32Flag ? DataType::DT_BF16 : DataType::DT_FLOAT16;
         default:
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Cube only support FP16, FP32, BF16, but got %s",
+            OP_LOGE(
+                ACLNN_ERR_PARAM_INVALID, "Cube only support FP16, FP32, BF16, but got %s",
                 op::ToString(cubeTensorPromoteType).GetString());
             return DataType::DT_UNDEFINED;
     }
 }
 
-DataType CalcUseFp16PromoteType(const DataType cubeTensorPromoteType) {
+DataType CalcUseFp16PromoteType(const DataType cubeTensorPromoteType)
+{
     switch (cubeTensorPromoteType) {
         case DataType::DT_FLOAT16:
         case DataType::DT_FLOAT:
             return DataType::DT_FLOAT16;
         case DataType::DT_BF16:
-            OP_LOGW("Cube cannot support dtype: %s when cubeMathType is USE_FP16.",
+            OP_LOGW(
+                "Cube cannot support dtype: %s when cubeMathType is USE_FP16.",
                 op::ToString(cubeTensorPromoteType).GetString());
             return DataType::DT_FLOAT16;
         case DataType::DT_HIFLOAT8:
         case DataType::DT_FLOAT8_E4M3FN:
-            OP_LOGW("Cube cannot support dtype: %s when cubeMathType is USE_FP16.",
+            OP_LOGW(
+                "Cube cannot support dtype: %s when cubeMathType is USE_FP16.",
                 op::ToString(cubeTensorPromoteType).GetString());
             return cubeTensorPromoteType;
         default:
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Cube only support FP16, FP32, BF16, HIF8, FP8_E4M3FN, but got %s.",
+            OP_LOGE(
+                ACLNN_ERR_PARAM_INVALID, "Cube only support FP16, FP32, BF16, HIF8, FP8_E4M3FN, but got %s.",
                 op::ToString(cubeTensorPromoteType).GetString());
             return DataType::DT_UNDEFINED;
     }
 }
 
-DataType CalcUseHf32PromoteType(const DataType cubeTensorPromoteType) {
+DataType CalcUseHf32PromoteType(const DataType cubeTensorPromoteType)
+{
     switch (cubeTensorPromoteType) {
         case DataType::DT_FLOAT16:
         case DataType::DT_BF16:
         case DataType::DT_HIFLOAT8:
         case DataType::DT_FLOAT8_E4M3FN:
-            OP_LOGW("Cube cannot support dtype: %s when cubeMathType is USE_HF32.",
+            OP_LOGW(
+                "Cube cannot support dtype: %s when cubeMathType is USE_HF32.",
                 op::ToString(cubeTensorPromoteType).GetString());
             return cubeTensorPromoteType;
         case DataType::DT_FLOAT:
             return DataType::DT_FLOAT;
         default:
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Cube only support FP16, FP32, BF16, HIF8, FP8_E4M3FN, but got %s.",
+            OP_LOGE(
+                ACLNN_ERR_PARAM_INVALID, "Cube only support FP16, FP32, BF16, HIF8, FP8_E4M3FN, but got %s.",
                 op::ToString(cubeTensorPromoteType).GetString());
             return DataType::DT_UNDEFINED;
     }
 }
 
-DataType CalcAllowFp32DownPrecisionPromoteType(const DataType cubeTensorPromoteType) {
+DataType CalcAllowFp32DownPrecisionPromoteType(const DataType cubeTensorPromoteType)
+{
     switch (cubeTensorPromoteType) {
         case DataType::DT_FLOAT16:
         case DataType::DT_BF16:
@@ -255,17 +275,20 @@ DataType CalcAllowFp32DownPrecisionPromoteType(const DataType cubeTensorPromoteT
             return DataType::DT_FLOAT16;
         case DataType::DT_HIFLOAT8:
         case DataType::DT_FLOAT8_E4M3FN:
-            OP_LOGW("Cube cannot support dtype: %s when cubeMathType is ALLOW_FP32_DOWN_PRECISION.",
+            OP_LOGW(
+                "Cube cannot support dtype: %s when cubeMathType is ALLOW_FP32_DOWN_PRECISION.",
                 op::ToString(cubeTensorPromoteType).GetString());
             return cubeTensorPromoteType;
         default:
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Cube only support FP16, FP32, BF16, HIF8, FP8_E4M3FN, but got %s.",
+            OP_LOGE(
+                ACLNN_ERR_PARAM_INVALID, "Cube only support FP16, FP32, BF16, HIF8, FP8_E4M3FN, but got %s.",
                 op::ToString(cubeTensorPromoteType).GetString());
             return DataType::DT_UNDEFINED;
     }
 }
 
-DataType CalcKeepDtypePromoteType(const DataType cubeTensorPromoteType) {
+DataType CalcKeepDtypePromoteType(const DataType cubeTensorPromoteType)
+{
     switch (cubeTensorPromoteType) {
         case DataType::DT_FLOAT16:
         case DataType::DT_BF16:
@@ -274,25 +297,29 @@ DataType CalcKeepDtypePromoteType(const DataType cubeTensorPromoteType) {
         case DataType::DT_FLOAT8_E4M3FN:
             return cubeTensorPromoteType;
         default:
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Cube only support FP16, FP32, BF16, HIF8, FP8_E4M3FN, but got %s.",
+            OP_LOGE(
+                ACLNN_ERR_PARAM_INVALID, "Cube only support FP16, FP32, BF16, HIF8, FP8_E4M3FN, but got %s.",
                 op::ToString(cubeTensorPromoteType).GetString());
             return cubeTensorPromoteType;
     }
 }
 
-DataType CalcForceGrpAccForFp32PromoteType(const DataType cubeTensorPromoteType) {
+DataType CalcForceGrpAccForFp32PromoteType(const DataType cubeTensorPromoteType)
+{
     switch (cubeTensorPromoteType) {
         case DataType::DT_FLOAT:
             return cubeTensorPromoteType;
         default:
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Cube only support FP32, but got %s.",
+            OP_LOGE(
+                ACLNN_ERR_PARAM_INVALID, "Cube only support FP32, but got %s.",
                 op::ToString(cubeTensorPromoteType).GetString());
             return cubeTensorPromoteType;
     }
 }
 
 // 根据promote type + cubemathtype的组合算出最终算子应用的dtype
-DataType CalcPromoteTypeCubeMathTypeNew(const DataType cubeTensorPromoteType, int8_t cubeMathType) {
+DataType CalcPromoteTypeCubeMathTypeNew(const DataType cubeTensorPromoteType, int8_t cubeMathType)
+{
     // USE_FP16场景，无论什么dtype + 芯片，均用FP16进行计算
     if (cubeMathType == USE_FP16) {
         return CalcUseFp16PromoteType(cubeTensorPromoteType);
@@ -310,7 +337,8 @@ DataType CalcPromoteTypeCubeMathTypeNew(const DataType cubeTensorPromoteType, in
 }
 
 // 根据promoteType + cubeMathType 判断是否要走HF32分支
-bool NeedCubeGoHF32(const DataType cubeTensorPromoteType, int8_t cubeMathType) {
+bool NeedCubeGoHF32(const DataType cubeTensorPromoteType, int8_t cubeMathType)
+{
     // USE_HF32场景，如果promoteType为BF16或FP16时，提示不支持该选项
     if (cubeMathType == USE_HF32) {
         if (cubeTensorPromoteType == DataType::DT_BF16) {

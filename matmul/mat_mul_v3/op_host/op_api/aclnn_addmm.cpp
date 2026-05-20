@@ -517,7 +517,8 @@ public:
         if (((matA->GetDataType() == DataType::DT_FLOAT16 && matB->GetDataType() == DataType::DT_FLOAT16) || 
             (matA->GetDataType() == DataType::DT_BF16 && matB->GetDataType() == DataType::DT_BF16)) &&
             (cubeMathType == KEEP_DTYPE || cubeMathType == USE_HF32) && isSupportNpuArch) {
-            cubeMathType = USE_HIGH_PREC_MODE;
+            cubeMathType = USE_FP32_ADD;
+            OP_LOGD("AddmmMatmulGraph: cubeMathType now transfers to USE_FP32_ADD");
         }
         const aclTensor* out2 = MatmulProcess(matA, matB, output, cubeMathType, opInfo, executor);
         CHECK_RET(out2 != nullptr, ACLNN_ERR_INNER_NULLPTR);
