@@ -1763,6 +1763,7 @@ VC1@ops-nn:
         - ops/ops-nn/quant/dynamic_dual_level_mx_quant/op_kernel/arch35/dynamic_dual_level_mx_quant_base.h
         - ops/ops-nn/quant/grouped_dynamic_mx_quant/
         - ops/ops-nn/quant/quantize/
+        - ops/ops-nn/quant/ascend_anti_quant_v2/
         - ops/ops-nn/quant/trans_quant_param_v2/op_kernel/trans_quant_param_v2.h
         - ops/ops-nn/index/quant_update_scatter/
         - ops/ops-nn/index/sparse_slice/
