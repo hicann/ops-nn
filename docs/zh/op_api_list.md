@@ -377,7 +377,7 @@
 | [aclnnSoftplus](../../activation/softplus_v2/docs/aclnnSoftplus.md) | 激活函数softplus。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnSoftplusBackward](../../activation/softplus_v2_grad/docs/aclnnSoftplusBackward.md) | aclnnSoftplus的反向传播。 | 默认确定性实现 | - |
 | [aclnnSoftshrink](../../activation/softshrink/docs/aclnnSoftshrink.md) | 以元素为单位，强制收缩λ范围内的元素。 | 默认确定性实现 | - |
-| [aclnnSoftshrinkBackward](../../activation/softshrink_grad/docs/aclnnSoftshrinkBackward.md) | 完成Softshrink函数的反向接口。 | 默认确定性实现 | - |
+| [aclnnSoftshrinkBackward](../../activation/softshrink_grad/docs/aclnnSoftshrinkBackward.md) | 完成Softshrink函数的反向接口。 | 默认确定性实现 | 确定性实现 |
 | [aclnnSparse4to2QuantMatmulWeightNz](../../matmul/sparse4to2quant_matmul/docs/aclnnSparse4to2QuantMatmulWeightNz.md) | 实现稀疏4:2量化的矩阵乘计算。 | 默认确定性实现 | - |
 | [aclnnSquaredRelu](../../activation/squared_relu/docs/aclnnSquaredRelu.md) | SquaredReLU 函数是一个基于标准ReLU函数的变体，其主要特点是对ReLU函数的输出进行平方，常作为模型的激活函数。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnSwiGlu](../../activation/swi_glu/docs/aclnnSwiGlu.md) | Swish门控线性单元激活函数，实现x的SwiGlu计算。 | 默认确定性实现 | 默认确定性实现 |
