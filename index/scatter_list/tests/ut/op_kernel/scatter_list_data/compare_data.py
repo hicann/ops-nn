@@ -10,15 +10,13 @@
 
 import sys
 import numpy as np
-import torch
-import tensorflow as tf
 
 def compare_data(tensor_count):
     data_same = True
     print("===============compare data start==============")
     for i in range(int(tensor_count)):
-        tmp_output = np.fromfile(f"output_{i}.bin", np,int8)
-        tmp_golden = np.fromfile(f"golden_{i}.bin", np,int8)
+        tmp_output = np.fromfile(f"output_{i}.bin", np.int8)
+        tmp_golden = np.fromfile(f"golden_{i}.bin", np.int8)
         precision_value = 1/1000
         print(f"===============tensor[{i}]==============")
         for j in range(len(tmp_golden)):

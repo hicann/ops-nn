@@ -15,6 +15,8 @@
 #include "gtest/gtest.h"
 #include "tikicpulib.h"
 #include "data_utils.h"
+#include "kernel_ut_data_helper.h"
+#include "kernel_ut_data_executor.h"
 
 #include "../../../op_kernel/elu_grad_v2_apt.cpp"
 #include <cstdint>
@@ -23,8 +25,7 @@ using namespace std;
 
 extern "C" __global__ __aicore__ void elu_grad_v2(GM_ADDR grads, GM_ADDR activations, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
 
-class elu_grad_v2_test : public testing::Test
-{
+class elu_grad_v2_test : public testing::Test {
 protected:
     static void SetUpTestCase()
     {
@@ -32,9 +33,11 @@ protected:
     }
     static void TearDownTestCase()
     {
-        cout << "elu_grad_v2_test TearDown\n" << endl;
+        cout << "elu_grad_v2 TearDown\n" << endl;
+        kernel_ut::CleanGeneratedBinFiles("./elu_grad_v2_data");
     }
 };
+
 
 TEST_F(elu_grad_v2_test, test_case_fp32_is_result_true)
 {
@@ -49,13 +52,10 @@ TEST_F(elu_grad_v2_test, test_case_fp32_is_result_true)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16*1024*1024);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 1;
-    system("cp -r ../../../../activation/elu_grad_v2/tests/ut/op_kernel/elu_grad_v2_data ./");
-    system("chmod -R 755 ./elu_grad_v2_data/");
-    system("cd ./elu_grad_v2_data/ && rm -rf ./*bin");
-    system("cd ./elu_grad_v2_data/ && python3 gen_data.py '(256)' float32 1.0 1.0 1.0 True");
+    kernel_ut::SetupTestEnvironment("activation/elu_grad_v2/tests/ut/op_kernel/elu_grad_v2_data", "elu_grad_v2_data");
+    kernel_ut::RunGenData("./elu_grad_v2_data", {"'(256)'", "float32", "1.0", "1.0", "1.0", "True"});
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    std::string path = kernel_ut::GetTestWorkDir();
 
     EluGradV2Ns::EluGradV2TilingData* tilingDatafromBin = reinterpret_cast<EluGradV2Ns::EluGradV2TilingData*>(tiling);
 
@@ -90,5 +90,4 @@ TEST_F(elu_grad_v2_test, test_case_fp32_is_result_true)
     AscendC::GmFree(y);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }

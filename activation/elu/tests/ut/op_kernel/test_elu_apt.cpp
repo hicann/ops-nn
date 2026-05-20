@@ -15,6 +15,8 @@
 #include "gtest/gtest.h"
 #include "tikicpulib.h"
 #include "data_utils.h"
+#include "kernel_ut_data_helper.h"
+#include "kernel_ut_data_executor.h"
 
 #include <cstdint>
 
@@ -39,8 +41,7 @@ struct EluTilingData {
     float inputScale;
 };
 
-class elu_test : public testing::Test
-{
+class elu_test : public testing::Test {
 protected:
     static void SetUpTestCase()
     {
@@ -48,9 +49,11 @@ protected:
     }
     static void TearDownTestCase()
     {
-        cout << "elu_test TearDown\n" << endl;
+        cout << "elu TearDown\n" << endl;
+        kernel_ut::CleanGeneratedBinFiles("./elu_data");
     }
 };
+
 
 TEST_F(elu_test, test_case_fp32_1)
 {
@@ -63,13 +66,10 @@ TEST_F(elu_test, test_case_fp32_1)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16*1024*1024);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 1;
-    system("cp -r ../../../../activation/elu/tests/ut/op_kernel/elu_data ./");
-    system("chmod -R 755 ./elu_data/");
-    system("cd ./elu_data/ && rm -rf ./*bin");
-    system("cd ./elu_data/ && python3 gen_data.py '(10)' 1.0 1.0 float32");
+    kernel_ut::SetupTestEnvironment("activation/elu/tests/ut/op_kernel/elu_data", "elu_data");
+    kernel_ut::RunGenData("./elu_data", {"'(10)'", "1.0", "1.0", "float32"});
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    std::string path = kernel_ut::GetTestWorkDir();
 
     EluTilingData* tilingDatafromBin = reinterpret_cast<EluTilingData*>(tiling);
 
@@ -99,7 +99,6 @@ TEST_F(elu_test, test_case_fp32_1)
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
     //system("cd ./elu_data/ && python3 compare_data.py 'float32'");
-    free(path_);
 }
 
 TEST_F(elu_test, test_case_fp32_2)
@@ -113,13 +112,10 @@ TEST_F(elu_test, test_case_fp32_2)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16*1024*1024);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 1;
-    system("cp -r ../../../../activation/elu/tests/ut/op_kernel/elu_data ./");
-    system("chmod -R 755 ./elu_data/");
-    system("cd ./elu_data/ && rm -rf ./*bin");
-    system("cd ./elu_data/ && python3 gen_data.py '(12, 4)' 1.0 1.0 float32");
+    kernel_ut::SetupTestEnvironment("activation/elu/tests/ut/op_kernel/elu_data", "elu_data");
+    kernel_ut::RunGenData("./elu_data", {"'(12, 4)'", "1.0", "1.0", "float32"});
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    std::string path = kernel_ut::GetTestWorkDir();
 
     EluTilingData* tilingDatafromBin = reinterpret_cast<EluTilingData*>(tiling);
 
@@ -149,7 +145,6 @@ TEST_F(elu_test, test_case_fp32_2)
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
     //system("cd ./elu_data/ && python3 compare_data.py 'float32'");
-    free(path_);
 }
 
 TEST_F(elu_test, test_case_fp16_1)
@@ -163,13 +158,10 @@ TEST_F(elu_test, test_case_fp16_1)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16*1024*1024);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 1;
-    system("cp -r ../../../../activation/elu/tests/ut/op_kernel/elu_data ./");
-    system("chmod -R 755 ./elu_data/");
-    system("cd ./elu_data/ && rm -rf ./*bin");
-    system("cd ./elu_data/ && python3 gen_data.py '(2, 32)' 1.0 1.0 float16");
+    kernel_ut::SetupTestEnvironment("activation/elu/tests/ut/op_kernel/elu_data", "elu_data");
+    kernel_ut::RunGenData("./elu_data", {"'(2, 32)'", "1.0", "1.0", "float16"});
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    std::string path = kernel_ut::GetTestWorkDir();
 
     EluTilingData* tilingDatafromBin = reinterpret_cast<EluTilingData*>(tiling);
 
@@ -199,5 +191,4 @@ TEST_F(elu_test, test_case_fp16_1)
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
     //system("cd ./elu_data/ && python3 compare_data.py 'float16'");
-    free(path_);
 }

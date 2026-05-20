@@ -115,4 +115,29 @@ bool RunCompareData(const std::string& dataDir, const std::vector<std::string>& 
     return true;
 }
 
+bool RunGenTiling(const std::string& dataDir, const std::string& caseName)
+{
+    KERNEL_UT_LOG_INFO("[KernelUTExecutor] Running gen_tiling.py in directory: %s", dataDir.c_str());
+
+    std::string genTilingScript = dataDir + "/gen_tiling.py";
+    if (!CheckScriptExists(genTilingScript)) {
+        KERNEL_UT_LOG_WARN(
+            "[KernelUTExecutor] Cannot run gen_tiling.py: script not found at %s", genTilingScript.c_str());
+        return false;
+    }
+
+    std::ostringstream cmdBuilder;
+    cmdBuilder << "python3 gen_tiling.py " << caseName;
+
+    int result = ExecuteCommand(cmdBuilder.str(), dataDir);
+
+    if (result == -1) {
+        KERNEL_UT_LOG_WARN("[KernelUTExecutor] gen_tiling.py execution failed");
+        return false;
+    }
+
+    KERNEL_UT_LOG_INFO("[KernelUTExecutor] gen_tiling.py completed successfully");
+    return true;
+}
+
 } // namespace kernel_ut

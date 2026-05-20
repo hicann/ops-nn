@@ -731,7 +731,7 @@ clipped_swiglu_data/gen_data.py)、
 
 **5. 使用公共测试数据框架**
 
-ops-nn 提供了统一的 Kernel UT 测试数据框架，简化数据准备流程。公共框架位于 `tests/ut/op_kernel_helper/` 目录。
+ops-nn 提供了统一的 Kernel UT 测试数据框架，简化数据准备流程。公共框架位于 `tests/ut/op_kernel/` 目录。
 
 **核心组件：**
 

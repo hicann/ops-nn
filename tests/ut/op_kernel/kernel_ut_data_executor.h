@@ -26,6 +26,8 @@ bool RunGenData(const std::string& dataDir, const std::vector<std::string>& args
 
 bool RunCompareData(const std::string& dataDir, const std::vector<std::string>& args);
 
+bool RunGenTiling(const std::string& dataDir, const std::string& caseName);
+
 } // namespace kernel_ut
 
 #endif
