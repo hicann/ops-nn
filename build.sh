@@ -138,7 +138,7 @@ export EAGER_LIBRARY_OPP_PATH="${ASCEND_OPP_PATH}/lib64"
 export EAGER_LIBRARY_PATH="${ASCEND_HOME_PATH}/lib64"
 export GRAPH_LIBRARY_STUB_PATH="${ASCEND_HOME_PATH}/lib64/stub"
 export GRAPH_LIBRARY_PATH="${ASCEND_HOME_PATH}/lib64"
-CANN_3RD_LIB_PATH="${BUILD_PATH}/third_party"
+CANN_3RD_LIB_PATH="${BASE_PATH}/third_party"
 # print usage message
 usage() {
   local specific_help="$1"
@@ -618,7 +618,16 @@ make_clean() {
 make_clean_all() {
   clean_build
   clean_build_out
+  clean_third_party
   print_success "make clean all success!"
+}
+
+clean_third_party() {
+  THIRD_PARTY_PATH=${BASE_PATH}/third_party
+  if [ -d "${THIRD_PARTY_PATH}" ]; then
+    rm -rf ${THIRD_PARTY_PATH}/abseil-cpp
+    rm -rf ${THIRD_PARTY_PATH}/ascend_protobuf
+  fi
 }
 
 checkopts() {
@@ -1342,13 +1351,24 @@ build_single_example() {
       if [[ "${VENDOR_NAME}" == "" ]]; then
         VENDOR_NAME="custom"
       fi
-      export CUST_LIBRARY_PATH="${ASCEND_HOME_PATH}/opp/vendors/${VENDOR_NAME}_nn/op_api/lib"     # 仅自定义算子需要
-      export CUST_INCLUDE_PATH="${ASCEND_HOME_PATH}/opp/vendors/${VENDOR_NAME}_nn/op_api/include" # 仅自定义算子需要
-      export LD_LIBRARY_PATH=${CUST_LIBRARY_PATH}:${LD_LIBRARY_PATH}
-      if [ -f ${EAGER_LIBRARY_PATH}/libascendcl.so ]; then
-        g++ ${file} -I ${CUST_INCLUDE_PATH} -I ${INCLUDE_PATH} -I ${INCLUDE_PATH}/aclnnop -L ${CUST_LIBRARY_PATH} -L ${EAGER_LIBRARY_PATH} -lcust_opapi -lopapi_math -lascendcl -lnnopbase -o test_aclnn_${example} -Wl,-rpath=${CUST_LIBRARY_PATH}
+      if [[ -n "${ASCEND_CUSTOM_OPP_PATH}" ]]; then
+        IFS=':' read -ra PATH_ARRAY <<< "${ASCEND_CUSTOM_OPP_PATH}"
+        for path in "${PATH_ARRAY[@]}"; do
+          cust_include_flags="${cust_include_flags} -I ${path}/op_api/include"
+          cust_library_flags="${cust_library_flags} -L ${path}/op_api/lib"
+          cust_rpath_flags="${cust_rpath_flags}:${path}/op_api/lib"
+        done
+        cust_rpath_flags="${cust_rpath_flags#:}"
       else
-        g++ ${file} -I ${CUST_INCLUDE_PATH} -I ${INCLUDE_PATH} -I ${INCLUDE_PATH}/aclnnop -L ${CUST_LIBRARY_PATH} -L ${EAGER_LIBRARY_PATH} -lcust_opapi -lopapi_math -lacl_rt -lnnopbase -o test_aclnn_${example} -Wl,-rpath=${CUST_LIBRARY_PATH}
+        cust_include_flags="-I ${ASCEND_HOME_PATH}/opp/vendors/${VENDOR_NAME}_nn/op_api/include"
+        cust_library_flags="-L ${ASCEND_HOME_PATH}/opp/vendors/${VENDOR_NAME}_nn/op_api/lib"
+        cust_rpath_flags="${ASCEND_HOME_PATH}/opp/vendors/${VENDOR_NAME}_nn/op_api/lib"
+      fi
+      export LD_LIBRARY_PATH=${cust_rpath_flags}:${LD_LIBRARY_PATH}
+      if [ -f ${EAGER_LIBRARY_PATH}/libascendcl.so ]; then
+        g++ ${file} ${cust_include_flags} -I ${INCLUDE_PATH} -I ${INCLUDE_PATH}/aclnnop ${cust_library_flags} -L ${EAGER_LIBRARY_PATH} -lcust_opapi -lopapi_math -lascendcl -lnnopbase -o test_aclnn_${example} -Wl,-rpath=${cust_rpath_flags}
+      else
+        g++ ${file} ${cust_include_flags} -I ${INCLUDE_PATH} -I ${INCLUDE_PATH}/aclnnop ${cust_library_flags} -L ${EAGER_LIBRARY_PATH} -lcust_opapi -lopapi_math -lacl_rt -lnnopbase -o test_aclnn_${example} -Wl,-rpath=${cust_rpath_flags}
       fi
     elif [[ "${PKG_MODE}" == "" ]]; then
       if [ -f ${EAGER_LIBRARY_PATH}/libascendcl.so ] || [ -f ${EAGER_LIBRARY_OPP_PATH}/libascendcl.so]; then
