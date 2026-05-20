@@ -126,10 +126,6 @@ static bool CheckDataSize(const aclTensor* selfRef, const aclTensorList* indices
     auto indicesSize = indices->Size();
     int64_t shapeProd = 1;
     for (size_t i = 0; i < indicesSize; i++) {
-        if (selfRef->GetViewShape().GetDim(i) > CAST_MAX_NUM) {
-            OP_LOGD("IndexPutWithSortV2 Op not support dim value of selfRef greater than %ld!", CAST_MAX_NUM);
-            return false;
-        }
         shapeProd *= selfRef->GetViewShape().GetDim(i);
     }
     if (shapeProd > INT32_MAX_LIMIT) {
