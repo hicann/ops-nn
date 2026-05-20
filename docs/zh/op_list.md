@@ -3429,6 +3429,16 @@
   </tr>
   <tr>
     <td>quant</td>
+    <td><a href="../../quant/ascend_anti_quant/README.md">ascend_anti_quant</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>根据输入的scale和offset对输入x进行反量化。</td>
+  </tr>
+  <tr>
+    <td>quant</td>
     <td><a href="../../quant/ascend_anti_quant_v2/README.md">ascend_anti_quant_v2</a></td>
     <td>✓</td>
     <td>✓</td>
