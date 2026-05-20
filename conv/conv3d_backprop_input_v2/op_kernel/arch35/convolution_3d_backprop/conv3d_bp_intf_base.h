@@ -164,11 +164,11 @@ public:
     }
 
     template <bool sync = true>
-    __aicore__ inline bool Iterate(bool enPartialSum = false)
+    __aicore__ inline bool Iterate(bool enPartialSum = false, bool hasBias = false)
     {
         using Local = typename Ext::template Iterate<sync>;
-        if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, enPartialSum)) {
-            return Local::call(this, enPartialSum);
+        if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, enPartialSum, hasBias)) {
+            return Local::call(this, enPartialSum, hasBias);
         }
     }
 

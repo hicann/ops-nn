@@ -48,7 +48,7 @@ static __aicore__ inline bool ComputeForWkLoop(Intf *self, uint32_t kwDilation,
     return true;
 }
 
-template <class Intf>
+template <class Intf, bool hasBias>
 static __aicore__ inline void ComputeForTilingHkWk(Intf *self, LocalTensor<typename Intf::SrcAT> &l0a,
     LocalTensor<typename Intf::SrcBT> &l0b, LocalTensor<typename Intf::L0cT> &l0c, uint8_t &l0PingPongFlag)
 {
@@ -92,15 +92,15 @@ static __aicore__ inline void ComputeForTilingHkWk(Intf *self, LocalTensor<typen
                 if (!ComputeForWkLoop<Intf>(self, kwDilation, woExpand, woStartIdx, curWkIdx)) {
                     continue;
                 }
-                ComputeForKIter<Intf>(self, l0a, l0b, l0c, curInnerKdIdx, curDoutIdx, isFirstDHWk, l0PingPongFlag);
+                ComputeForKIter<Intf, hasBias>(self, l0a, l0b, l0c, curInnerKdIdx, curDoutIdx, isFirstDHWk, l0PingPongFlag);
                 isFirstDHWk = false;
             }
             self->ctx.curHoIdx_ -= self->ctx.tiling_->dilationH; //计算一行Hk后需更新curHoIdx，且需要跳过空洞部分
         }
         self->ctx.curHoIdx_ = curHoIdx;
     }
-    if (!self->ctx.computeBiasOnce_ && self->ctx.hasBias_) {
-        ComputeForBias<Intf>(self, l0a, l0b, l0c, isFirstDHWk, l0PingPongFlag);
+    if (hasBias && !self->ctx.computeBiasOnce_) {
+        ComputeForBias<Intf, true>(self, l0a, l0b, l0c, isFirstDHWk, l0PingPongFlag);
     }
 }
 

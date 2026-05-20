@@ -50,12 +50,12 @@ static __aicore__ inline void CalcParamsMmad(Intf *self, uint32_t kPos, bool isF
     self->ctx.mmad_.cmatrixInitVal = (kPos == 0 && isFirstDk);
 }
 
-template <class Intf>
+template <class Intf, bool hasBias>
 static __aicore__ inline void MmadLocal(Intf *self, const LocalTensor<typename Intf::SrcAT> &l0a,
     const LocalTensor<typename Intf::SrcBT> &l0b, LocalTensor<typename Intf::L0cT> &l0c)
 {
     // eType is bias Class
-    if (self->ctx.hasBias_) {
+    if (hasBias) {
         if (self->ctx.mmad_.cmatrixInitVal && !self->ctx.computeBiasOnce_) {
             // bias 通路，C矩阵初始值通过BT（C2）进行初始化
             self->ctx.mmad_.cmatrixInitVal = 0; //不初始化，使用bias的值
