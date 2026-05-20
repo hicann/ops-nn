@@ -241,6 +241,10 @@ __aicore__ inline void QuantBmmAswBlock::UpdateBlockParams(uint64_t roundIdx)
                                     tilingData_->adaptiveSlidingWin.mTailTile;
         uint64_t singleCoreNSplit = (params_.singleCoreN + tilingData_->adaptiveSlidingWin.nTailTile - 1) /
                                     tilingData_->adaptiveSlidingWin.nTailTile;
+#if (ORIG_DTYPE_X2 == DT_INT4)
+        // weight INT4时，N轴切分必须为偶数，向上对齐到2的倍数
+        singleCoreNSplit = DequantBmm::Align(singleCoreNSplit, 2);
+#endif
         if constexpr (formatX2 !=  CubeFormat::ND) {
             if constexpr (bTrans) {
                 singleCoreNSplit = DequantBmm::Align(singleCoreNSplit, CUBE_BLOCK);
@@ -297,6 +301,10 @@ __aicore__ inline void QuantBmmAswBlock::UpdateBlockParams4AL1FullLoad(uint64_t 
         uint64_t singleCoreMSplit = tilingData_->matmulTiling.baseM;
         uint64_t singleCoreNSplit = (params_.singleCoreN + tilingData_->adaptiveSlidingWin.nTailTile - 1) /
                                     tilingData_->adaptiveSlidingWin.nTailTile;
+#if (ORIG_DTYPE_X2 == DT_INT4)
+        // weight INT4时，N轴切分必须为偶数，向上对齐到2的倍数
+        singleCoreNSplit = DequantBmm::Align(singleCoreNSplit, 2);
+#endif
         if constexpr (formatX2 !=  CubeFormat::ND) {
             if constexpr (bTrans) {
                 singleCoreNSplit = DequantBmm::Align(singleCoreNSplit, CUBE_BLOCK);
@@ -338,6 +346,10 @@ __aicore__ inline void QuantBmmAswBlock::UpdateBlockParams4BL1FullLoad(uint64_t 
         // 有尾块
         uint64_t singleCoreMSplit = DequantBmm::CeilDiv(params_.singleCoreM, tilingData_->adaptiveSlidingWin.mTailTile);
         uint64_t singleCoreNSplit = tilingData_->matmulTiling.baseN;
+#if (ORIG_DTYPE_X2 == DT_INT4)
+        // weight INT4时，N轴切分必须为偶数，向上对齐到2的倍数
+        singleCoreNSplit = DequantBmm::Align(singleCoreNSplit, 2);
+#endif
 
         // 防止weightNZ下，尾块切分不对齐
         if constexpr (formatX2 != CubeFormat::ND) {
