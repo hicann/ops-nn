@@ -116,7 +116,9 @@ std::vector<PatternUniqPtr> MaxPoolFusionPass::Patterns()
 
 bool MaxPoolFusionPass::MeetRequirements(const std::unique_ptr<MatchResult>& matchResult)
 {
-    OP_LOGE_IF(!IsRegbasePlatform(), false, kPassName.c_str(), "MaxPoolFusionPass can only support regbase arch, do nothing.");
+    if (!IsRegbasePlatform()) {
+        return false;
+    }
 
     NodeIo inputIo;
     OP_LOGE_IF(matchResult->GetCapturedTensor(kCaptureInput, inputIo) != SUCCESS, false, kPassName.c_str(),

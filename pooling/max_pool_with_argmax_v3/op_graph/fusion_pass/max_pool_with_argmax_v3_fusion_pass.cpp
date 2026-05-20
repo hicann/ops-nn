@@ -266,7 +266,9 @@ std::vector<PatternUniqPtr> MaxPoolWithArgmaxV3FusionPass::Patterns()
 
 bool MaxPoolWithArgmaxV3FusionPass::MeetRequirements(const std::unique_ptr<MatchResult>& matchResult)
 {
-    OP_LOGE_IF(!IsRegbaseArch(), false, kPassName.c_str(), "MaxPoolWithArgmaxV3FusionPass can only support regbase arch, do nothing.");
+    if (!IsRegbaseArch()) {
+        return false;
+    }
 
     NodeIo inputIo;
     OP_LOGE_IF(
