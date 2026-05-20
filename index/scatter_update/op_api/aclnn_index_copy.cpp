@@ -11,6 +11,7 @@
  * \file aclnn_index_copy.cpp
  * \brief
  */
+#include <unordered_map>
 #include "aclnn_index_copy.h"
 #include "index/index_put_v2/op_api/index_put_v2.h"
 #include "aclnn_kernels/transpose.h"
@@ -76,6 +77,13 @@ static const std::initializer_list<op::DataType> SELF_DTYPE_SUPPORT_LIST_950 = {
 
 static const std::initializer_list<op::DataType> INDEX_DTYPE_SUPPORT_LIST = {
   op::DataType::DT_INT64, op::DataType::DT_INT32};
+
+static const std::unordered_map<op::DataType, op::DataType> dtypeConversionMap = {
+        {op::DataType::DT_COMPLEX64, op::DataType::DT_INT64},
+        {op::DataType::DT_UINT64, op::DataType::DT_INT64},
+        {op::DataType::DT_DOUBLE, op::DataType::DT_INT64},
+        {op::DataType::DT_UINT32, op::DataType::DT_INT32},
+        {op::DataType::DT_INT16, op::DataType::DT_FLOAT16}};
 
 static inline bool CheckNotNull(const aclTensor* self, const aclTensor* index, const aclTensor* source,
                                 const aclTensor* out) {
@@ -260,52 +268,63 @@ static aclnnStatus ContiguousAndReshapeParams(const aclTensor* selfRef, int64_t&
     return ACLNN_SUCCESS;
 }
 
-static aclnnStatus ScatterToIndexPutV2(aclOpExecutor* uniqueExecutor, const aclTensor*& indexReShape, const aclTensor* selfRefReShape, int64_t& dim, 
-                                       const aclTensor* sourceReShape, const aclTensor*& kernelOut) {
+static const aclTensor* HandleIndexPutV2WithTypeConversion(
+    aclOpExecutor* executor, const aclTensor* selfView, const aclTensor* sourceView, const aclTensorList* indicesList,
+    const aclTensor* maskTensor, DataType originalDtype, DataType intermediateDtype)
+{
+    const_cast<aclTensor*>(selfView)->SetDataType(intermediateDtype);
+    const_cast<aclTensor*>(sourceView)->SetDataType(intermediateDtype);
+
+    aclTensor* out = const_cast<aclTensor*>(selfView);
+    const aclTensor* kernelOut = l0op::IndexPutV2(selfView, indicesList, sourceView, maskTensor, false, out, executor);
+    if (kernelOut != nullptr) {
+        const_cast<aclTensor*>(kernelOut)->SetDataType(originalDtype);
+    }
+    return kernelOut;
+}
+
+static aclnnStatus ScatterToIndexPutV2(
+    aclOpExecutor* uniqueExecutor, const aclTensor*& indexReShape, const aclTensor* selfRefReShape, int64_t& dim,
+    const aclTensor* sourceReShape, const aclTensor*& kernelOut)
+{
     FVector<const aclTensor*, 1> definedIndices;
     definedIndices.emplace_back(indexReShape);
-    const aclTensorList *allIndicesTensorList = uniqueExecutor->AllocTensorList(definedIndices.data(), definedIndices.size());
+    const aclTensorList* allIndicesTensorList =
+        uniqueExecutor->AllocTensorList(definedIndices.data(), definedIndices.size());
+
     auto dimSize = (int64_t)(selfRefReShape->GetViewShape().GetDimNum());
-    std::vector<int64_t> masks(dimSize);
-    for (int64_t i = 0; i < dimSize; i++) {
-      masks[i] = 0;
-      if(i == dim) {
-        masks[i] = 1;
-      }
-    }
+    std::vector<int64_t> masks(dimSize, 0);
+    masks[dim] = 1;
     auto maskArray = uniqueExecutor->AllocIntArray(masks.data(), dimSize);
     auto maskTensor = uniqueExecutor->ConvertToTensor(maskArray, op::ToOpDataType(ACL_INT64));
-    auto selfView = uniqueExecutor->CreateView(selfRefReShape, selfRefReShape->GetViewShape(), selfRefReShape->GetViewOffset());
-    OP_CHECK(selfView != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "selfView is nullptr"), return ACLNN_ERR_INNER_NULLPTR);
-    auto sourceView = uniqueExecutor->CreateView(sourceReShape, sourceReShape->GetViewShape(), sourceReShape->GetViewOffset());
-    OP_CHECK(sourceView != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "sourceView is nullptr"), return ACLNN_ERR_INNER_NULLPTR);
 
-    if (selfRefReShape->GetDataType() == DataType::DT_COMPLEX64 || selfRefReShape->GetDataType() == DataType::DT_UINT64) {
-      selfView->SetDataType(DataType::DT_INT64);
-      sourceView->SetDataType(DataType::DT_INT64);
-      aclTensor* out = const_cast<aclTensor*>(selfView);
-      kernelOut = l0op::IndexPutV2(selfView, allIndicesTensorList, sourceView, maskTensor, false, out, uniqueExecutor);
-      OP_CHECK(kernelOut != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "kernelOut is nullptr"), return ACLNN_ERR_INNER_NULLPTR);
-      auto curKernelOut = const_cast<aclTensor*>(kernelOut);
-      if (selfRefReShape->GetDataType() == DataType::DT_COMPLEX64) {
-        curKernelOut->SetDataType(DataType::DT_COMPLEX64);
-      } else {
-        curKernelOut->SetDataType(DataType::DT_UINT64);
-      }
-      kernelOut = const_cast<const aclTensor*>(curKernelOut);
-    } else if (selfRefReShape->GetDataType() == DataType::DT_UINT32) {
-      selfView->SetDataType(DataType::DT_INT32);
-      sourceView->SetDataType(DataType::DT_INT32);
-      aclTensor* out = const_cast<aclTensor*>(selfView);
-      kernelOut = l0op::IndexPutV2(selfView, allIndicesTensorList, sourceView, maskTensor, false, out, uniqueExecutor);
-      OP_CHECK(kernelOut != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "kernelOut is nullptr"), return ACLNN_ERR_INNER_NULLPTR);
-      auto curKernelOut = const_cast<aclTensor*>(kernelOut);
-      curKernelOut->SetDataType(DataType::DT_UINT32);
-      kernelOut = const_cast<const aclTensor*>(curKernelOut);
+    auto selfView =
+        uniqueExecutor->CreateView(selfRefReShape, selfRefReShape->GetViewShape(), selfRefReShape->GetViewOffset());
+    OP_CHECK(
+        selfView != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "selfView is nullptr"), return ACLNN_ERR_INNER_NULLPTR);
+    auto sourceView =
+        uniqueExecutor->CreateView(sourceReShape, sourceReShape->GetViewShape(), sourceReShape->GetViewOffset());
+    OP_CHECK(
+        sourceView != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "sourceView is nullptr"),
+        return ACLNN_ERR_INNER_NULLPTR);
+
+    DataType originalDtype = selfRefReShape->GetDataType();
+    
+
+    auto it = dtypeConversionMap.find(originalDtype);
+    if (it != dtypeConversionMap.end()) {
+        kernelOut = HandleIndexPutV2WithTypeConversion(
+            uniqueExecutor, selfView, sourceView, allIndicesTensorList, maskTensor, originalDtype, it->second);
+        OP_CHECK(
+            kernelOut != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "kernelOut is nullptr"),
+            return ACLNN_ERR_INNER_NULLPTR);
     } else {
-      aclTensor* out = const_cast<aclTensor*>(selfRefReShape);
-      kernelOut = l0op::IndexPutV2(selfRefReShape, allIndicesTensorList, sourceReShape, maskTensor, false, out, uniqueExecutor);
-      OP_CHECK(kernelOut != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "kernelOut is nullptr"), return ACLNN_ERR_INNER_NULLPTR);
+        aclTensor* out = const_cast<aclTensor*>(selfRefReShape);
+        kernelOut = l0op::IndexPutV2(
+            selfRefReShape, allIndicesTensorList, sourceReShape, maskTensor, false, out, uniqueExecutor);
+        OP_CHECK(
+            kernelOut != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "kernelOut is nullptr"),
+            return ACLNN_ERR_INNER_NULLPTR);
     }
     return ACLNN_SUCCESS;
 }
