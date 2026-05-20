@@ -13,6 +13,7 @@
 #include "opdev/op_log.h"
 #include "opdev/op_dfx.h"
 #include "opdev/common_types.h"
+#include "opdev/tensor_view_utils.h"
 #include "opdev/data_type_utils.h"
 #include "opdev/format_utils.h"
 #include "opdev/make_op_executor.h"
@@ -178,6 +179,11 @@ static bool CheckDim(const aclTensor* y, const aclTensor* scale, const aclTensor
 
 static bool CheckXAndScaleDim(const aclTensor* x, const aclTensor* scale)
 {
+    if (scale->IsEmpty()) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "scale cannot be an empty tensor.");
+        return false;
+    }
+
     if (x->GetDataType() != op::DataType::DT_INT32) {
         return true;
     }
@@ -399,6 +405,11 @@ aclnnStatus aclnnAscendAntiQuantGetWorkspaceSize(
         *workspaceSize = 0;
         uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
+    }
+
+    if (x->GetDataType() == op::DataType::DT_INT4 && !IsContiguous(x)) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "when x is of type int4, it must be contiguous");
+        return ACLNN_ERR_PARAM_INVALID;
     }
 
     // input参数如果非连续，需要转连续
