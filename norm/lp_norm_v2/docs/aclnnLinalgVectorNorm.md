@@ -250,6 +250,17 @@ aclnnStatus aclnnLinalgVectorNorm(
 
 - 确定性计算
   - aclnnLinalgVectorNorm默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
+- 参数`self`、`dtype`、`out`支持的数据类型组合：
+  
+  | `self`数据类型 | `dtype`数据类型 | `out`数据类型 |
+  | ----------- | ----------- | -------------- |
+  | FLOAT32     | FLOAT32     | FLOAT32        |
+  | FLOAT32     | FLOAT16     | FLOAT16        |
+  | FLOAT32     | BFLOAT16    | BFLOAT16       |
+  | FLOAT16     | FLOAT32     | FLOAT32        |
+  | FLOAT16     | FLOAT16     | FLOAT16        |
+  | BFLOAT16    | FLOAT32     | FLOAT32        |
+  | BFLOAT16    | BFLOAT16    | BFLOAT16       |
 
 ## 调用示例
 
