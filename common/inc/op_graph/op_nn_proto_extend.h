@@ -943,7 +943,6 @@ REG_OP(AscendAntiQuantV2)
     .ATTR(sqrt_mode, Bool, false)
     .OP_END_FACTORY_REG(AscendAntiQuantV2)
 
-// === 从文件: ./ops-nn-dev-1211/common/inc/op_graph/npu_geglu_proto.h 提取的内容 ===
 /**
  * @brief Compute the GeGluV2,
  * where the activations function in GLU is Gelu.
