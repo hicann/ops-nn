@@ -78,7 +78,7 @@ aclnnStatus aclnnGlu(
       <td><ul><li>支持空Tensor。</li><li>Tensor的维度必须大于0，且shape必须在入参dim对应的维度上可以整除2，shape表示为$(*_1,N,*_2)$其中$*$表示任何数量的附加维，$N$表示dim指定的维度大小。</li></ul></td>
       <td>DOUBLE、FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>0-8</td>
+      <td>1-8</td>
       <td>√</td>
     </tr>
       <tr>
@@ -98,7 +98,7 @@ aclnnStatus aclnnGlu(
       <td>数据类型必须可以由self cast得到，shape为$(*_1,M,*_2)$其中$*$表示self中对应维度，$M = N /2$。</td>
       <td>DOUBLE、FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
-      <td>0-8</td>
+      <td>1-8</td>
       <td>√</td>
     </tr>
       <tr>
