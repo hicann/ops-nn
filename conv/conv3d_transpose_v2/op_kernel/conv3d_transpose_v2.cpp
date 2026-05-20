@@ -19,10 +19,12 @@
 #endif
 #else
 #ifdef __CCE_KT_TEST__
+#include "../op_kernel/arch32/conv3d_dx_v2_basic_block.h"
 #include "../op_kernel/arch32/conv3d_backprop_input_v2.h"
 #include "../op_kernel/arch32/conv3d_backprop_input_v2_init_output.h"
 #include "../op_kernel/arch32/conv3d_backprop_input_v2_tiling_data.h"
 #else
+#include "../conv3d_backprop_input_v2/arch32/conv3d_dx_v2_basic_block.h"
 #include "../conv3d_backprop_input_v2/arch32/conv3d_backprop_input_v2.h"
 #include "../conv3d_backprop_input_v2/arch32/conv3d_backprop_input_v2_init_output.h"
 #include "../conv3d_backprop_input_v2/arch32/conv3d_backprop_input_v2_tiling_data.h"
@@ -77,6 +79,10 @@ __global__ __aicore__ void conv3d_transpose_v2(
     }
     if (useBasicBlock == false) {
         Conv3dDx<DTYPE_FILTER, FORMAT_FILTER, DTYPE_X, FORMAT_X, DTYPE_Y, FORMAT_Y, loadB2Condition, enableKernelSplit> op;
+        op.Init(filter, x, y, usrWsp, &tilingData);
+        op.Process();
+    } else {
+        Conv3dDxBasicBlockSplitMN<DTYPE_FILTER, FORMAT_FILTER, DTYPE_X, FORMAT_X, DTYPE_Y, FORMAT_Y, loadB2Condition, enableKernelSplit> op;
         op.Init(filter, x, y, usrWsp, &tilingData);
         op.Process();
     }

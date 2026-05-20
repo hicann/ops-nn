@@ -67,7 +67,7 @@ TEST_F(conv3d_transpose_v2_test, test_conv3d_dx_17) {
     ReadFile(path + "/conv3d_transpose_v2_data/tiling.bin", tiling_data_size, tiling, tiling_data_size);
 
     auto Conv3DTrransposeKernel = [](GM_ADDR input_size, GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR offset_w, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling) {
-        ::conv3d_transpose_v2<1,1,1>(input_size, x, filter, bias, offset_w, y, workSpace, tiling);
+        ::conv3d_transpose_v2<0,0,0>(input_size, x, filter, bias, offset_w, y, workSpace, tiling);
     };
     ICPU_SET_TILING_KEY(0);
     ICPU_RUN_KF(Conv3DTrransposeKernel, 24, input_shape, x, filter, nullptr, nullptr, y, workspace, tiling);
@@ -150,7 +150,7 @@ TEST_F(conv3d_transpose_v2_test, params_conv3d_dx_17_hf32) {
     ReadFile(path + "/conv3d_transpose_v2_data/tiling.bin", tiling_data_size, tiling, tiling_data_size);
 
     auto Conv3DTrransposeKernel = [](GM_ADDR input_size, GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR offset_w, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling) {
-        ::conv3d_transpose_v2<1,1,1>(input_size, x, filter, bias, offset_w, y, workSpace, tiling);
+        ::conv3d_transpose_v2<0,0,0>(input_size, x, filter, bias, offset_w, y, workSpace, tiling);
     };
     ICPU_SET_TILING_KEY(0);
     ICPU_RUN_KF(Conv3DTrransposeKernel, 24, input_shape, x, filter, nullptr, nullptr, y, workspace, tiling);
@@ -233,7 +233,7 @@ TEST_F(conv3d_transpose_v2_test, test_group_1) {
     ReadFile(path + "/conv3d_transpose_v2_data/tiling.bin", tiling_data_size, tiling, tiling_data_size);
 
     auto Conv3DTrransposeKernel = [](GM_ADDR input_size, GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR offset_w, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling) {
-        ::conv3d_transpose_v2<1,1,1>(input_size, x, filter, bias, offset_w, y, workSpace, tiling);
+        ::conv3d_transpose_v2<0,0,0>(input_size, x, filter, bias, offset_w, y, workSpace, tiling);
     };
     ICPU_SET_TILING_KEY(0);
     ICPU_RUN_KF(Conv3DTrransposeKernel, 8, input_shape, x, filter, nullptr, nullptr, y, workspace, tiling);
