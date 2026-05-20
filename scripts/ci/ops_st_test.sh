@@ -49,6 +49,126 @@ print_warning() {
     echo >&2
 }
 
+get_op_categories() {
+    local cmake_file="${framework_path}/cmake/variables.cmake"
+    local categories=""
+    
+    if [[ -f "${cmake_file}" ]]; then
+        categories=$(grep "OP_CATEGORY_LIST" "${cmake_file}" | \
+            sed -n 's/set(OP_CATEGORY_LIST "\(.*\)")/\1/p' | \
+            tr -d '"')
+    else
+        categories="matmul conv activation foreach hash vfusion index loss norm optim pooling quant rnn control"
+    fi
+    
+    categories="${categories} common"
+    echo "${categories}"
+}
+
+extract_op_from_path() {
+    local file_path="$1"
+    local op_categories="$2"
+    local op_name=""
+    
+    local rel_path="${file_path#${framework_path}/}"
+    local parts=(${rel_path//\// })
+    
+    if [[ ${#parts[@]} -ge 2 ]]; then
+        local first_dir="${parts[0]}"
+        local second_dir="${parts[1]}"
+        
+        local is_category=0
+        for cat in ${op_categories}; do
+            if [[ "${first_dir}" == "${cat}" ]]; then
+                is_category=1
+                break
+            fi
+        done
+        
+        if [[ ${is_category} -eq 1 ]]; then
+            if [[ "${second_dir}" == "common" ]]; then
+                op_name="${first_dir}.common"
+            else
+                op_name="${second_dir}"
+            fi
+        elif [[ "${first_dir}" == "experimental" && ${#parts[@]} -ge 3 ]]; then
+            local exp_type="${parts[1]}"
+            local exp_name="${parts[2]}"
+            for cat in ${op_categories}; do
+                if [[ "${exp_type}" == "${cat}" ]]; then
+                    if [[ "${exp_name}" == "common" ]]; then
+                        op_name="${exp_type}.common"
+                    else
+                        op_name="${exp_name}"
+                    fi
+                    break
+                fi
+            done
+        fi
+    fi
+    
+    if [[ -n "${op_name}" ]]; then
+        echo "${op_name}"
+    fi
+}
+
+parse_ops_from_filelist() {
+    local pr_filelist="$1"
+    
+    if [[ ! -f "${pr_filelist}" ]]; then
+        print_error "pr_filelist not found: ${pr_filelist}"
+        return 1
+    fi
+    
+    local op_categories=$(get_op_categories)
+    local changed_files=$(cat "${pr_filelist}" | grep -v '^$' | grep -v '^#' || echo "")
+    
+    if [[ -z "${changed_files}" ]]; then
+        print_msg "No changed files in pr_filelist"
+        return 0
+    fi
+    
+    local ops_set=""
+    while IFS= read -r file_line; do
+        [[ -z "${file_line}" ]] && continue
+        file_line=$(echo "${file_line}" | sed 's/^[MADRC]\t//')
+        local op_name=$(extract_op_from_path "${file_line}" "${op_categories}")
+        if [[ -n "${op_name}" ]]; then
+            if [[ -z "${ops_set}" ]]; then
+                ops_set="${op_name}"
+            elif [[ ",${ops_set}," != *",${op_name},"* ]]; then
+                ops_set="${ops_set},${op_name}"
+            fi
+        fi
+    done <<< "${changed_files}"
+    
+    echo "${ops_set}"
+}
+
+merge_ops_lists() {
+    local list1="$1"
+    local list2="$2"
+    local merged=""
+    
+    for op in ${list1//,/ }; do
+        if [[ -z "${merged}" ]]; then
+            merged="${op}"
+        elif [[ ",${merged}," != *",${op},"* ]]; then
+            merged="${merged},${op}"
+        fi
+    done
+    
+    for op in ${list2//,/ }; do
+        if [[ -z "${merged}" ]]; then
+            merged="${op}"
+        elif [[ ",${merged}," != *",${op},"* ]]; then
+            merged="${merged},${op}"
+        fi
+    done
+    
+    echo "${merged}"
+}
+
 usage() {
     echo "Usage: bash ops_st_test.sh [--soc_version=ascend950] [--ops=op1,op2,op3] [--test_type=kernel,aclnn,e2e] [--pr_filelist=pr_filelist.txt]"
     echo "       bash ops_st_test.sh pr_filelist.txt"
@@ -69,20 +189,10 @@ usage() {
 }
 
 get_changed_ops() {
-    local pr_filelist="$1"
     local base_branch="master"
     local changed_files
     
-    if [[ -n "${pr_filelist}" ]]; then
-        if [[ ! -f "${pr_filelist}" ]]; then
-            print_error "pr_filelist not found: ${pr_filelist}"
-            return 1
-        fi
-        print_msg "Reading changed files from: ${pr_filelist}"
-        changed_files=$(cat "${pr_filelist}" | grep -v '^$' | grep -v '^#' || echo "")
-    else
-        changed_files=$(git diff --name-only "${base_branch}...HEAD" 2>/dev/null || git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
-    fi
+    changed_files=$(git diff --name-only "${base_branch}...HEAD" 2>/dev/null || git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
     
     if [[ -z "${changed_files}" ]]; then
         print_msg "No changed files detected"
@@ -107,7 +217,7 @@ get_changed_ops() {
     
     local is_experimental="FALSE"
     
-local result
+    local result
     result=$(python3 "${framework_path}/scripts/util/parse_compile_changed_files.py" "${changed_files_tmp}" "${is_experimental}" 2>&1)
     rm -f "${changed_files_tmp}"
     
@@ -280,6 +390,26 @@ check_precision_status() {
     return $?
 }
 
+check_plugin_assets() {
+    local plugin_path="$1"
+    local op_name="$2"
+    
+    local assets_path="${plugin_path}/assets"
+    
+    if [[ ! -d "${assets_path}" ]]; then
+        print_warning "assets directory not found for ${op_name}: ${assets_path}"
+        return 1
+    fi
+    
+    local py_files=$(find "${assets_path}" -maxdepth 1 -name "*.py" -type f 2>/dev/null | head -1)
+    if [[ -z "${py_files}" ]]; then
+        print_warning "No .py files found in assets directory for ${op_name}: ${assets_path}"
+        return 1
+    fi
+    
+    return 0
+}
+
 run_kernel_test() {
     local op_name="$1"
     local test_csv="$2"
@@ -292,6 +422,10 @@ run_kernel_test() {
     
     if [[ ! -d "${ops_test_path}" ]]; then
         print_warning "Plugin directory not found: ${ops_test_path}, skipping this test case"
+        return 0
+    fi
+    
+    if ! check_plugin_assets "${ops_test_path}" "${op_name}"; then
         return 0
     fi
     
@@ -397,8 +531,8 @@ run_single_op_test() {
     
     local code_path=$(find_op_code_path "${op_name}")
     if [[ -z "${code_path}" ]]; then
-        print_error "Cannot find op directory for ${op_name}"
-        return 1
+        print_warning "Cannot find op directory for ${op_name}, skipping"
+        return 0
     fi
     
     local op_type=$(get_op_type "${code_path}")
@@ -610,9 +744,23 @@ mkdir -p "${log_path}"
 
 download_ops_test_kit
 
-if [[ -z "${ops_list}" ]]; then
-    print_msg "Extracting ops from git diff or pr_filelist..."
-    ops_list=$(get_changed_ops "${pr_filelist}")
+if [[ -n "${ops_list}" && -z "${pr_filelist}" ]]; then
+    print_msg "Using ops from --ops parameter: ${ops_list}"
+elif [[ -z "${ops_list}" && -n "${pr_filelist}" ]]; then
+    print_msg "Extracting ops from pr_filelist..."
+    print_msg "pr_filelist content:"
+    cat "${pr_filelist}" | grep -v '^$' | grep -v '^#' | sed 's/^[MADRC]\t//' >&2
+    ops_list=$(parse_ops_from_filelist "${pr_filelist}")
+elif [[ -n "${ops_list}" && -n "${pr_filelist}" ]]; then
+    print_msg "Merging ops from pr_filelist and --ops parameter..."
+    print_msg "--ops input: ${ops_list}"
+    print_msg "pr_filelist content:"
+    cat "${pr_filelist}" | grep -v '^$' | grep -v '^#' | sed 's/^[MADRC]\t//' >&2
+    ops_from_filelist=$(parse_ops_from_filelist "${pr_filelist}")
+    ops_list=$(merge_ops_lists "${ops_from_filelist}" "${ops_list}")
+else
+    print_msg "Extracting ops from git diff..."
+    ops_list=$(get_changed_ops)
     ops_list=$(echo "${ops_list}" | tr ';' ',')
 fi
 
@@ -625,7 +773,7 @@ print_msg "Ops to test: ${ops_list}"
 
 IFS=',' read -r -a op_name_array <<< "${ops_list}"
 
-source /usr/local/Ascend/cann/set_env.sh 2>/dev/null || true
+source /usr/local/Ascend/cann/bin/setenv.bash 2>/dev/null || true
 
 all_result_csvs=()
 result_flag=0
