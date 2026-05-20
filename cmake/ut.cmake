@@ -433,6 +433,10 @@ function(AddOpTestCase opName supportedSocVersion otherCompileOptions)
         add_custom_target(${KERNEL_COMMON_COPY_TARGET}
             COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/tbe/ascendc/common/cmct
             COMMAND cp -r ${PROJECT_SOURCE_DIR}/matmul/common/cmct/* ${CMAKE_BINARY_DIR}/tbe/ascendc/common/cmct
+            COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/tbe/ascendc/common/blaze
+            COMMAND cp -r ${BLAZE}/* ${CMAKE_BINARY_DIR}/tbe/ascendc/common/blaze
+            COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/tbe/ascendc/common/tensor_api
+            COMMAND cp -r ${TENSOR_API}/* ${CMAKE_BINARY_DIR}/tbe/ascendc/common/tensor_api
             COMMAND cp -r ${PROJECT_SOURCE_DIR}/conv/common/op_kernel/* ${CMAKE_BINARY_DIR}/tbe/ascendc/common
             COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/tbe/ascendc/inc
             COMMAND cp -r ${PROJECT_SOURCE_DIR}/common/inc/op_kernel/* ${CMAKE_BINARY_DIR}/tbe/ascendc/inc
