@@ -22,6 +22,7 @@
 #include "matmul_v3_tiling_helper.h"
 #include "matmul_v3_tiling_key.h"
 #include "matmul_v3_tiling_data.h"
+#include "error_util.h"
 
 namespace optiling {
 namespace matmul_v3_advanced {
@@ -371,16 +372,20 @@ protected:
         tilingData.mTailMain = runInfo_.tailInfo.mTailMain;
         tilingData.nTailMain = runInfo_.tailInfo.nTailMain;
         tilingData.l2CacheDisable = SetDisableL2cache(tilingData.mL1, tilingData.kL1, tilingData.kL1, tilingData.nL1);
-        auto selfViewShape = context_->GetInputShape(0)->GetOriginShape();
-        auto mat2Shape = context_->GetInputShape(1)->GetOriginShape();
-        auto selfStorageShape = context_->GetInputShape(0)->GetStorageShape();
+        auto selfInputShape = context_->GetInputShape(0);
+        auto mat2InputShape = context_->GetInputShape(1);
+        OP_CHECK_NULL_WITH_CONTEXT(context_, selfInputShape);
+        OP_CHECK_NULL_WITH_CONTEXT(context_, mat2InputShape);
+        auto selfViewShape = selfInputShape->GetOriginShape();
+        auto mat2Shape = mat2InputShape->GetOriginShape();
+        auto selfStorageShape = selfInputShape->GetStorageShape();
         // 非连续Slice校验
         // TensorV2 & 3d && storageShape 1d
         if (context_->InputIsView(0) && selfViewShape.GetDimNum() == 3 && mat2Shape.GetDimNum() == 2 &&
             selfStorageShape.GetDimNum() == 1) {
             auto selfViewStride = context_->GetInputStride(0);
-            tilingData.sliceM = selfViewShape[1];                  // sliceM=self[1], ndNum = baseM/sliceM
-            tilingData.srcNdStride = selfViewStride->GetStride(0); // oriM * srcK
+            tilingData.sliceM = static_cast<uint32_t>(selfViewShape[1]);                  // sliceM=self[1], ndNum = baseM/sliceM
+            tilingData.srcNdStride = static_cast<uint32_t>(selfViewStride->GetStride(0)); // oriM * srcK
         } else {
             tilingData.sliceM = runInfo_.baseM;
             tilingData.srcNdStride = 1;
