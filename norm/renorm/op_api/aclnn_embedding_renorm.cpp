@@ -8,7 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-
+#include "acl/acl_rt.h"
 #include "aclnn_embedding_renorm.h"
 #include "level0/arange.h"
 #include "aclnn_kernels/reshape.h"
@@ -104,7 +104,8 @@ static bool CheckNotNull(const aclTensor *self, const aclTensor *indices) {
 }
 
 static const std::initializer_list<DataType>& GetDtypeSupportList() {
-  if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201) {
+  auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
+  if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
     return DTYPE_DTYPE_SUPPORT_LIST_WITH_BF16;
   } else {
     return DTYPE_DTYPE_SUPPORT_LIST;
@@ -160,7 +161,9 @@ aclnnStatus aclnnEmbeddingRenormGetWorkspaceSize(aclTensor *selfRef,
                                                  uint64_t *workspaceSize,
                                                  aclOpExecutor **executor) {
   OP_CHECK_COMM_INPUT(workspaceSize, executor);
-
+  if (Ops::NN::AclnnUtil::IsRegbase()) {
+    aclrtSetSysParamOpt(ACL_OPT_DETERMINISTIC, 1);
+  }
   L2_DFX_PHASE_1(aclnnEmbeddingRenorm, DFX_IN(selfRef, indices, maxNorm, normType), DFX_OUT(selfRef));
 
   // 固定写法，参数检查
@@ -207,6 +210,11 @@ aclnnStatus aclnnEmbeddingRenormGetWorkspaceSize(aclTensor *selfRef,
       maxNorm = std::numeric_limits<float>::infinity();
   }
 
+  if (Ops::NN::AclnnUtil::IsRegbase()) {
+    firstGatherV2 = l0op::Cast(firstGatherV2, op::DataType::DT_FLOAT, uniqueExecutor.get());
+    CHECK_RET(firstGatherV2 != nullptr, ACLNN_ERR_INNER_NULLPTR);
+  }
+
   // 调用l0算子Renorm进行计算，mid_output-> embeddingRenormRenorm
   auto renorm = l0op::Renorm(firstGatherV2, static_cast<float>(normType), EMBEDDING_RENORM_RENORM_DEFAULT_DIM,
                              static_cast<float>(maxNorm), uniqueExecutor.get());
@@ -233,6 +241,11 @@ aclnnStatus aclnnEmbeddingRenormGetWorkspaceSize(aclTensor *selfRef,
   // 进行Mul计算
   auto update = l0op::Mul(firstGatherV2, secondGatherV2, uniqueExecutor.get());
   CHECK_RET(update != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+  if (Ops::NN::AclnnUtil::IsRegbase()) {
+    update = l0op::Cast(update, selfRef->GetDataType(), uniqueExecutor.get());
+    CHECK_RET(update != nullptr, ACLNN_ERR_INNER_NULLPTR);
+  }
 
   // 调用l0算子ScatterUpdate进行计算
   auto embeddingRenormScatterUpdate = l0op::ScatterUpdate(selfRefContiguous, indicesReshape, update,

@@ -92,9 +92,6 @@ static inline bool CheckRenormShape(const aclTensor* self, const aclTensor* out)
 static inline bool IsSupportPValue(const aclScalar* p)
 {
     float x = p->ToFloat();
-    if (Ops::NN::AclnnUtil::IsRegbase() && x <= 0) {
-        return false;
-    }
     if (x < 0) {
         return false;
     }
@@ -180,6 +177,11 @@ aclnnStatus aclnnRenormGetWorkspaceSize(
         dim += dimNum;
     }
 
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        selfContiguous = l0op::Cast(selfContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
+        CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
+
     // 进行Renorm计算
     auto renormOpOut = l0op::Renorm(selfContiguous, p->ToFloat(), dim, maxNorm->ToFloat(), uniqueExecutor.get());
     CHECK_RET(renormOpOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -197,6 +199,11 @@ aclnnStatus aclnnRenormGetWorkspaceSize(
     // 用self和broadcastto的结果做点乘，得到输出
     auto mulOut = l0op::Mul(selfContiguous, broadcastOut, uniqueExecutor.get());
     CHECK_RET(mulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        mulOut = l0op::Cast(mulOut, out->GetDataType(), uniqueExecutor.get());
+        CHECK_RET(mulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
 
     // 固定写法，将计算结果拷贝到输出out上，out可能是非连续的tensor
     auto viewCopyResult = l0op::ViewCopy(mulOut, out, uniqueExecutor.get());
