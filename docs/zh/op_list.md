@@ -1459,7 +1459,7 @@
   <tr>
     <td>index</td>
     <td><a href="../../index/gather_elements/README.md">gather_elements</a></td>
-    <td>✗</td>
+    <td>✓</td>
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
@@ -1479,7 +1479,7 @@
   <tr>
     <td>index</td>
     <td><a href="../../index/gather_nd/README.md">gather_nd</a></td>
-    <td>✗</td>
+    <td>✓</td>
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
@@ -1551,7 +1551,7 @@
     <td><a href="../../index/index_put/README.md">index_put</a></td>
     <td>✗</td>
     <td>✗</td>
-    <td>✗</td>
+    <td>✓</td>
     <td>✗</td>
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
@@ -1739,7 +1739,7 @@
   <tr>
     <td>index</td>
     <td><a href="../../index/reverse_v2/README.md">reverse_v2</a></td>
-    <td>✗</td>
+    <td>✓</td>
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
@@ -1779,7 +1779,7 @@
   <tr>
     <td>index</td>
     <td><a href="../../index/scatter_elements/README.md">scatter_elements</a></td>
-    <td>✗</td>
+    <td>✓</td>
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
@@ -1809,7 +1809,7 @@
   <tr>
     <td>index</td>
     <td><a href="../../index/scatter_nd/README.md">scatter_nd</a></td>
-    <td>✗</td>
+    <td>✓</td>
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
@@ -1829,7 +1829,7 @@
   <tr>
     <td>index</td>
     <td><a href="../../index/scatter_nd_update/README.md">scatter_nd_update</a></td>
-    <td>✗</td>
+    <td>✓</td>
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
@@ -1850,7 +1850,7 @@
   <tr>
     <td>index</td>
     <td><a href="../../index/scatter_update/README.md">scatter_update</a></td>
-    <td>✗</td>
+    <td>✓</td>
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
