@@ -84,7 +84,7 @@ ge::graphStatus IndexCheckTiling::Init()
     }
     tilingKey_ = (idxDtype == ge::DT_INT32) ? 1 : 0;
 
-    tensorLens_.resize(tensorId_);
+    tensorLens_.resize(8, 0);
     uint64_t maxTensorLen = 0;
     for (uint64_t i = 0; i < tensorId_; i++) {
         auto idxTensorShapePtr = tilingContext_->GetDynamicInputShape(1, i);
