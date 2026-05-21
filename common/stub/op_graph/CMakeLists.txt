@@ -28,6 +28,7 @@ target_link_libraries(
                 -Wl,--whole-archive
                 rt2_registry_static
                 -Wl,--no-whole-archive
+                mmpa
         )
  # 生成 es_math 
   add_es_library_and_whl(
