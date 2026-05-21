@@ -111,7 +111,7 @@ private:
     int64_t loopTimesDim0_ = 0;
     int64_t tailDim0_ = 0;
     uint16_t f4Emax_ = 0;
-    uint32_t dtypeMax = 0;
+    uint32_t dtypeMax_ = 0;
     uint16_t f8Emax_ = 0;
     int64_t outputScaleRowBytes_ = 0;
     uint32_t vfLenT_ = Ops::Base::GetVRegSize() / sizeof(T);
@@ -333,18 +333,18 @@ __aicore__ inline void SwigluMxQuantLastLast<T, U, T_IDX, isGroupIndex>::Init(GM
     }
     if constexpr (IsSame<U, fp8_e4m3fn_t>::value) {
         f8Emax_ = FP8_E4M3_MAX_EXP;
-        dtypeMax = FP8_E4M3_MAX;
+        dtypeMax_ = FP8_E4M3_MAX;
     }
     if constexpr (IsSame<U, fp8_e5m2_t>::value) {
         f8Emax_ = FP8_E5M2_MAX_EXP;
-        dtypeMax = FP8_E5M2_MAX;
+        dtypeMax_ = FP8_E5M2_MAX;
     }
 }
 
 template <typename T, typename U, typename T_IDX, bool isGroupIndex>
 __aicore__ inline void SwigluMxQuantLastLast<T, U, T_IDX, isGroupIndex>::Process()
 {
-    if (blockIdx_ > realCoreNum_) {
+    if (blockIdx_ >= realCoreNum_) {
         return;
     }
     int64_t dim1Size = factorDim1Size_ * QUANT_ONCE_NUM;
@@ -751,7 +751,7 @@ __aicore__ inline void SwigluMxQuantLastLast<T, U, T_IDX, isGroupIndex>::Compute
         AscendC::MicroAPI::RegTensor<uint16_t> recExpOut;
 
         AscendC::MicroAPI::RegTensor<uint32_t> invMax;
-        AscendC::MicroAPI::Duplicate(invMax, dtypeMax);
+        AscendC::MicroAPI::Duplicate(invMax, dtypeMax_);
         AscendC::MicroAPI::RegTensor<uint32_t> manMaskFP32;
         AscendC::MicroAPI::Duplicate(manMaskFP32, manMaskFloat);
         AscendC::MicroAPI::RegTensor<uint32_t> expMask;
