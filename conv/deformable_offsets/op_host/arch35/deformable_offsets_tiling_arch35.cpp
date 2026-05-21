@@ -159,7 +159,7 @@ ge::graphStatus CheckDeformableOffsetAttrs(gert::TilingContext* context, Deforma
     auto strides = attrs->GetAttrPointer<gert::ContinuousVector>(STRIDES_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, strides);
     OP_CHECK_IF(strides->GetSize() != DIM_NUM_4D,
-        OP_LOGE_WITH_INVALID_ATTR_SIZE(context->GetNodeName(), "strides",
+        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "strides",
             std::to_string(strides->GetSize()).c_str(), "4"),
         return ge::GRAPH_FAILED);
     const int64_t* stridesData = static_cast<const int64_t*>(strides->GetData());
@@ -167,7 +167,7 @@ ge::graphStatus CheckDeformableOffsetAttrs(gert::TilingContext* context, Deforma
     auto pads = attrs->GetAttrPointer<gert::ContinuousVector>(PADS_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, pads);
     OP_CHECK_IF(pads->GetSize() != DIM_NUM_4D,
-        OP_LOGE_WITH_INVALID_ATTR_SIZE(context->GetNodeName(), "pads",
+        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "pads",
             std::to_string(pads->GetSize()).c_str(), "4"),
         return ge::GRAPH_FAILED);
     const int64_t* padsData = static_cast<const int64_t*>(pads->GetData());
@@ -175,7 +175,7 @@ ge::graphStatus CheckDeformableOffsetAttrs(gert::TilingContext* context, Deforma
     auto ksizes = attrs->GetAttrPointer<gert::ContinuousVector>(KSIZE_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, ksizes);
     OP_CHECK_IF(ksizes->GetSize() != EXCEPTED_KERNEL_SIZE,
-        OP_LOGE_WITH_INVALID_ATTR_SIZE(context->GetNodeName(), "ksize",
+        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "ksize",
             std::to_string(ksizes->GetSize()).c_str(), "2"),
         return ge::GRAPH_FAILED);
     const int64_t* ksizesData = static_cast<const int64_t*>(ksizes->GetData());
@@ -184,7 +184,7 @@ ge::graphStatus CheckDeformableOffsetAttrs(gert::TilingContext* context, Deforma
     OP_CHECK_NULL_WITH_CONTEXT(context, dilates);
     OP_CHECK_IF(
         dilates->GetSize() != DIM_NUM_4D,
-        OP_LOGE_WITH_INVALID_ATTR_SIZE(context->GetNodeName(), "dilations",
+        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "dilations",
             std::to_string(dilates->GetSize()).c_str(), "4"),
         return ge::GRAPH_FAILED);
     const int64_t* dilatesData = static_cast<const int64_t*>(dilates->GetData());

@@ -360,7 +360,7 @@ ge::graphStatus BatchNormGradInferBase::GetShapeAttrsInfo()
         enableDgamma = false;
         enableDbeta = false;
     } else {
-        OP_CHECK_IF(outputMask->GetSize() != 3, OP_LOGE_WITH_INVALID_ATTR_SIZE(context_->GetNodeName(), "output_mask",
+        OP_CHECK_IF(outputMask->GetSize() != 3, OP_LOGE_FOR_INVALID_LISTSIZE(context_->GetNodeName(), "output_mask",
                     std::to_string(outputMask->GetSize()).c_str(), "3"),
                     return ge::GRAPH_PARAM_INVALID);
         auto outputMaskData = static_cast<const bool*>(outputMask->GetData());

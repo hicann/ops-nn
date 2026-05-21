@@ -134,13 +134,13 @@ ge::graphStatus RmsNormDynamicMxQuantTilingBase::CheckDtype()
     // 暂不支持fp4的cublass方案
     OP_CHECK_IF(
         scaleAlg_ == 1 && Y_SUPPORT_DTYPE_FP4_SET.count(yDtype_) != 0,
-        OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "scale_alg", std::to_string(scaleAlg_).c_str(), "0"),
+        OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "scale_alg", std::to_string(scaleAlg_).c_str(), "0"),
         return ge::GRAPH_FAILED);
 
     // y输出为fp8时只支持rint
     OP_CHECK_IF(
         Y_SUPPORT_DTYPE_FP8_SET.count(yDtype_) != 0 && roundMode_ != static_cast<int64_t>(RoundModeList::MODE_RINT),
-        OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "round_mode", std::to_string(roundMode_).c_str(), "rint"),
+        OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "round_mode", std::to_string(roundMode_).c_str(), "rint"),
         return ge::GRAPH_FAILED);
 
     auto outputMxScalePtr = context_->GetOutputDesc(1);
@@ -181,7 +181,7 @@ ge::graphStatus RmsNormDynamicMxQuantTilingBase::GetAttr()
     scaleAlg_ = (scaleAlgPtr != nullptr) ? static_cast<int64_t>(*scaleAlgPtr) : SCALE_ALG_DEFAULT;
     OP_CHECK_IF(
         scaleAlg_ != 0 && scaleAlg_ != 1,
-        OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "scale_alg", std::to_string(scaleAlg_).c_str(), "0 or 1"),
+        OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "scale_alg", std::to_string(scaleAlg_).c_str(), "0 or 1"),
         return ge::GRAPH_FAILED);
 
     const char* roundModePtr = attrs->GetAttrPointer<char>(2);
@@ -190,7 +190,7 @@ ge::graphStatus RmsNormDynamicMxQuantTilingBase::GetAttr()
         RoundModeList roundMode = GetRoundMode(roundModeStr);
         OP_CHECK_IF(
             roundMode == RoundModeList::MODE_UNDEFINED,
-            OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "round_mode", roundModePtr, "rint, round or floor"),
+            OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "round_mode", roundModePtr, "rint, round or floor"),
             return ge::GRAPH_FAILED);
 
         roundMode_ = static_cast<int64_t>(roundMode);

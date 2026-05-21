@@ -112,8 +112,8 @@ static graphStatus InferShape4RepeatInterleave(gert::InferShapeContext* context)
                 yShape->SetDim(axisAttr, GetOutputAxisLen<int64_t>(xShape, repeatsShape, repeatsInput, axisAttr));
                 break;
             default:
-                OP_LOGE_WITH_INVALID_INPUT_DTYPE(
-                    context->GetNodeName(), "repeats", Ops::Base::ToString(repeatsDtype).c_str(), "[int32_t, int64_t]");
+                OP_LOGE_FOR_INVALID_DTYPE(
+                    context->GetNodeName(), "repeats", Ops::Base::ToString(repeatsDtype).c_str(), "int32_t or int64_t");
                 return ge::GRAPH_FAILED;
         }
     } else {

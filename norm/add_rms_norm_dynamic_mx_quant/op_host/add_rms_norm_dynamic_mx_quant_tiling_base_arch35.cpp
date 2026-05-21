@@ -256,13 +256,13 @@ ge::graphStatus AddRmsNormDynamicMxQuantRegbaseTilingBase::CheckMxQuantParams()
 
     OP_CHECK_IF(
         (rm == MxRoundMode::UNDEFINED),
-        OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "round_mode", roundModeStr, "rint, round or floor"),
+        OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "round_mode", roundModeStr, "rint, round or floor"),
         return ge::GRAPH_FAILED);
 
     // FP8输出类型仅支持rint
     OP_CHECK_IF(
         (Y_SUPPORT_DTYPE_FP8_SET.count(yDtype_) != 0 && rm != MxRoundMode::RINT),
-        OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "round_mode", roundModeStr, "rint"),
+        OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "round_mode", roundModeStr, "rint"),
         return ge::GRAPH_FAILED);
 
     // 2. dst_type校验：必须与y的dtype对应
@@ -286,12 +286,12 @@ ge::graphStatus AddRmsNormDynamicMxQuantRegbaseTilingBase::CheckMxQuantParams()
         int64_t quantAlg = *quantAlgPtr;
         OP_CHECK_IF(
             quantAlg < 0 || quantAlg > 1,
-            OP_LOGE_WITH_INVALID_ATTR(
+            OP_LOGE_FOR_INVALID_VALUE(
                 context_->GetNodeName(), "quant_alg", std::to_string(quantAlg).c_str(), "0 or 1"),
             return ge::GRAPH_FAILED);
         OP_CHECK_IF(
             quantAlg == 1 && Y_SUPPORT_DTYPE_FP4_SET.count(yDtype_) != 0,
-            OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "quant_alg", std::to_string(quantAlg).c_str(), "0"),
+            OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "quant_alg", std::to_string(quantAlg).c_str(), "0"),
             return ge::GRAPH_FAILED);
     }
 

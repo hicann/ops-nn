@@ -289,7 +289,7 @@ ge::graphStatus DeformableOffsetsGradAscendCTilingImpl::GetAttrInfoAndCheck() {
     OP_CHECK_NULL_WITH_CONTEXT(context_, strides);
     OP_CHECK_IF(
         strides->GetSize() != DIM_NUM_4D,
-        OP_LOGE_WITH_INVALID_ATTR_SIZE(context_->GetNodeName(), "strides",
+        OP_LOGE_FOR_INVALID_LISTSIZE(context_->GetNodeName(), "strides",
             std::to_string(strides->GetSize()).c_str(), "4"),
         return ge::GRAPH_FAILED);
     const int64_t* stridesData = static_cast<const int64_t*>(strides->GetData());
@@ -300,7 +300,7 @@ ge::graphStatus DeformableOffsetsGradAscendCTilingImpl::GetAttrInfoAndCheck() {
     OP_CHECK_NULL_WITH_CONTEXT(context_, pads);
     OP_CHECK_IF(
         pads->GetSize() != DIM_NUM_4D,
-        OP_LOGE_WITH_INVALID_ATTR_SIZE(context_->GetNodeName(), "pads",
+        OP_LOGE_FOR_INVALID_LISTSIZE(context_->GetNodeName(), "pads",
             std::to_string(pads->GetSize()).c_str(), "4"),
         return ge::GRAPH_FAILED);
     const int64_t* padsData = static_cast<const int64_t*>(pads->GetData());
@@ -308,7 +308,7 @@ ge::graphStatus DeformableOffsetsGradAscendCTilingImpl::GetAttrInfoAndCheck() {
     OP_CHECK_NULL_WITH_CONTEXT(context_, ksizes);
     OP_CHECK_IF(
         ksizes->GetSize() != EXCEPTED_KERNEL_SIZE,
-        OP_LOGE_WITH_INVALID_ATTR_SIZE(context_->GetNodeName(), "ksize",
+        OP_LOGE_FOR_INVALID_LISTSIZE(context_->GetNodeName(), "ksize",
             std::to_string(ksizes->GetSize()).c_str(), "2"),
         return ge::GRAPH_FAILED);
     const int64_t* ksizesData = static_cast<const int64_t*>(ksizes->GetData());
@@ -316,7 +316,7 @@ ge::graphStatus DeformableOffsetsGradAscendCTilingImpl::GetAttrInfoAndCheck() {
     OP_CHECK_NULL_WITH_CONTEXT(context_, dilates);
     OP_CHECK_IF(
         dilates->GetSize() != DIM_NUM_4D,
-        OP_LOGE_WITH_INVALID_ATTR_SIZE(context_->GetNodeName(), "dilations",
+        OP_LOGE_FOR_INVALID_LISTSIZE(context_->GetNodeName(), "dilations",
             std::to_string(dilates->GetSize()).c_str(), "4"),
         return ge::GRAPH_FAILED);
     const int64_t* dilatesData = static_cast<const int64_t*>(dilates->GetData());

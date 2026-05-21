@@ -82,7 +82,7 @@ ge::graphStatus SwigluMxQuantWithDualAxisTiling::GetAttr()
     std::string roundModeStr = attrRoundMode;
     RoundModeList roundMode = GetRoundMode(roundModeStr);
     OP_CHECK_IF(roundMode == RoundModeList::MODE_UNDEFINED,
-        OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "round_mode", roundModeStr.c_str(), "[rint, floor, round]"),
+        OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "round_mode", roundModeStr.c_str(), "rint, floor or round"),
         return ge::GRAPH_FAILED);
 
     // FP8 round_mode validation: FP8 only supports rint on Ascend950
@@ -97,8 +97,8 @@ ge::graphStatus SwigluMxQuantWithDualAxisTiling::GetAttr()
     OP_CHECK_NULL_WITH_CONTEXT(context_, attrScaleAlg);
     tilingParams_.scaleAlg = static_cast<int64_t>(*attrScaleAlg);
     OP_CHECK_IF(tilingParams_.scaleAlg != 0 && tilingParams_.scaleAlg != 1,
-        OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "scale_alg", std::to_string(tilingParams_.scaleAlg).c_str(),
-        "[0, 1]"),
+        OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "scale_alg", std::to_string(tilingParams_.scaleAlg).c_str(),
+        "0 or 1"),
         return ge::GRAPH_FAILED);
     // FP4 output only supports scaleAlg=0 (OCP); scaleAlg=1 (CLUB) requires FP8 output
     OP_CHECK_IF((Y_SUPPORT_DTYPE_FP4_SET.count(tilingParams_.yDtype) != 0 && tilingParams_.scaleAlg != 0),
