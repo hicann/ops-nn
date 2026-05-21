@@ -1,0 +1,132 @@
+/**
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+
+/*!
+ * \file foreach_maximum_scalar_list_simt.h
+ * \brief SIMT kernel implementation for foreach_maximum_scalar_list
+ */
+
+#ifndef FOREACH_MAXIMUM_SCALAR_LIST_SIMT_H
+#define FOREACH_MAXIMUM_SCALAR_LIST_SIMT_H
+
+#include "kernel_operator.h"
+#include "kernel_tiling/kernel_tiling.h"
+#include "simt_api/math_functions.h"
+#include "foreach_maximum_scalar_list_tiling_data.h"
+#include "foreach_maximum_scalar_list_tiling_key.h"
+
+namespace NsForeachMaximumScalarList {
+
+using namespace AscendC;
+
+constexpr uint32_t THREAD_NUM = 1024;
+
+template <typename T>
+__simt_callee__ inline __gm__ T* SimtGetTensorAddr(GM_ADDR tensorListPtr, int64_t idx)
+{
+    __gm__ uint64_t* dataAddr = reinterpret_cast<__gm__ uint64_t*>(tensorListPtr);
+    uint64_t tensorPtrOffset = *dataAddr;
+    __gm__ uint64_t* tensorPtr = dataAddr + (tensorPtrOffset >> 3);
+    return reinterpret_cast<__gm__ T*>(*(tensorPtr + idx));
+}
+
+template <typename T>
+struct ComputeType { using type = T; };
+template <> struct ComputeType<half> { using type = float; };
+template <> struct ComputeType<bfloat16_t> { using type = float; };
+template <> struct ComputeType<int32_t> { using type = int64_t; };
+
+__simt_callee__ inline float SimtMaximum(float a, float b)
+{
+    if (isnan(a)) {
+        return a;
+    }
+    if (isnan(b)) {
+        return b;
+    }
+    if (a > b) {
+        return a;
+    }
+    if (b > a) {
+        return b;
+    }
+    if (a == 0.0f) {
+        return a + b;
+    }
+    return a;
+}
+
+__simt_callee__ inline int64_t SimtMaximum(int64_t a, int64_t b)
+{
+    return (a >= b) ? a : b;
+}
+
+template <typename T, typename S>
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM)
+inline void OpForeachMaximumScalarListSimt(
+    int32_t tensorCount,
+    __gm__ int64_t* tensorElements,
+    GM_ADDR xList,
+    GM_ADDR scalars,
+    GM_ADDR yList)
+{
+    using C = typename ComputeType<T>::type;
+
+    for (int32_t t = 0; t < tensorCount; t++) {
+        int64_t count = tensorElements[t];
+        if (count == 0) {
+            continue;
+        }
+
+        __gm__ T* xData = SimtGetTensorAddr<T>(xList, t);
+        __gm__ T* yData = SimtGetTensorAddr<T>(yList, t);
+
+        __gm__ S* scalarsGm = reinterpret_cast<__gm__ S*>(scalars);
+        S scalarVal = scalarsGm[t];
+
+        uint64_t tid = static_cast<uint64_t>(
+            AscendC::Simt::GetBlockIdx() * AscendC::Simt::GetThreadNum() +
+            AscendC::Simt::GetThreadIdx());
+        uint64_t stride = static_cast<uint64_t>(
+            AscendC::Simt::GetThreadNum() * AscendC::Simt::GetBlockNum());
+
+        for (uint64_t idx = tid; idx < static_cast<uint64_t>(count); idx += stride) {
+            C xVal = static_cast<C>(xData[idx]);
+            C sVal = static_cast<C>(scalarVal);
+            C result = SimtMaximum(xVal, sVal);
+            yData[idx] = static_cast<T>(result);
+        }
+    }
+}
+
+template <typename T, typename S>
+__aicore__ inline void Process(
+    GM_ADDR x, GM_ADDR scalars, GM_ADDR y,
+    const __gm__ ForeachMaximumScalarListTilingData* tilingGm)
+{
+    __gm__ int64_t* elemCounts = reinterpret_cast<__gm__ int64_t*>(
+        reinterpret_cast<__gm__ char*>(
+            const_cast<__gm__ ForeachMaximumScalarListTilingData*>(tilingGm)) +
+        offsetof(ForeachMaximumScalarListTilingData, tensorElements));
+
+    int32_t tensorCount = tilingGm->tensorCount;
+
+    AscendC::Simt::VF_CALL<OpForeachMaximumScalarListSimt<T, S>>(
+        AscendC::Simt::Dim3(THREAD_NUM),
+        tensorCount,
+        elemCounts,
+        x,
+        scalars,
+        y);
+}
+
+} // namespace NsForeachMaximumScalarList
+
+#endif // FOREACH_MAXIMUM_SCALAR_LIST_SIMT_H

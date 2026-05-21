@@ -10,4 +10,6 @@
 
 message(STATUS "=== Debug: start ops.foreach.foreach_atan.op_host.CMakeLists.txt ")
 
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE foreach_atan ACLNNTYPE aclnn DEPENDENCIES foreach_utils)
+set(SUPPORT_COMPUTE_UNIT "ascend910_93" "ascend910b" "kirinx90" "kirin9030" "ascend950")
+set(SUPPORT_TILING_DIR "arch22" "arch22" "arch22" "arch22" "arch35")
+add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE foreach_atan ACLNNTYPE aclnn COMPUTE_UNIT ${SUPPORT_COMPUTE_UNIT} TILING_DIR ${SUPPORT_TILING_DIR} DEPENDENCIES foreach_utils)

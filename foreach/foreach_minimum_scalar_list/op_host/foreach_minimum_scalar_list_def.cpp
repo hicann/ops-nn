@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -45,7 +45,16 @@ public:
             .Format(format_list)
             .UnknownShapeFormat(format_list)
             .AutoContiguous();
-        this->AICore().AddConfig("ascend950");
+        OpAICoreConfig aicoreConfig;
+        aicoreConfig.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(false)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .PrecisionReduceFlag(true)
+            .ExtendCfgInfo("opFile.value", "foreach_minimum_scalar_list_apt");
+        this->AICore().AddConfig("ascend950", aicoreConfig);
+
         this->AICore().AddConfig("ascend910_93");
         this->AICore().AddConfig("ascend910b");
 
