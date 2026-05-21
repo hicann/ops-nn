@@ -60,7 +60,7 @@ public:
     __aicore__ inline AdaptivePool3dBigKernel(const AdaptivePool3DTiling::AdaptivePool3dBigKernelTilingData &tilingData, TPipe &pipe) :
         tilingData_(tilingData), pipe_(pipe) {};
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR y);
-    __aicore__ inline void CopyIn(int64_t offset, int64_t blockLen, int64_t blockCount, int64_t loopCount);
+    __aicore__ inline void CopyIn(int64_t offset, int64_t blockLen, int64_t blockCount, int64_t loopCount, T padValue = static_cast<T>(0));
     __aicore__ inline void CalcWindowSize(int64_t curIdx);
     __aicore__ inline void CopyOut(int64_t copyCount, int64_t offset);
     __aicore__ inline void CalcBatchWindowSize(int64_t startOutIdx, int64_t endOutIdx);
@@ -124,7 +124,7 @@ __aicore__ inline U AdaptivePool3dBigKernel<T>::GetDtypeMinValue()
 
 template <typename T>
 __aicore__ inline void AdaptivePool3dBigKernel<T>::CopyIn(
-    int64_t offset, int64_t blockLen, int64_t blockCount, int64_t loopCount)
+    int64_t offset, int64_t blockLen, int64_t blockCount, int64_t loopCount, T padValue)
 {
     LocalTensor<T> xLocal = inputQue_.AllocTensor<T>();
     AlignBlockLen = ops::CeilAlign(blockLen, static_cast<int64_t>(ALIGNBLOCK/sizeof(T)));
@@ -136,9 +136,10 @@ __aicore__ inline void AdaptivePool3dBigKernel<T>::CopyIn(
     loopModeParams.loop1DstStride = AlignBlockLen * blockCount * sizeof(T);
     loopModeParams.loop2DstStride = loopCount * AlignBlockLen * blockCount * sizeof(T);
 
-    DataCopyPadExtParams<T> padParams = {true, 0, static_cast<uint8_t>(AlignBlockLen - blockLen), 0};
-    DataCopyExtParams copyParams;
+    DataCopyPadExtParams<T> padParams =
+        DataCopyPadExtParams<T>(true, 0, static_cast<uint8_t>(AlignBlockLen - blockLen), padValue);
 
+    DataCopyExtParams copyParams;
     copyParams.blockCount = blockCount;
     copyParams.blockLen = blockLen * sizeof(T);
     copyParams.srcStride = (tilingData_.wInDim - blockLen) * sizeof(T);

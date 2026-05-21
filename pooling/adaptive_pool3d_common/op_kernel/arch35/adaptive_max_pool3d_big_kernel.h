@@ -318,8 +318,8 @@ __aicore__ inline void AdaptiveMaxPool3dBigKernel<T, TINDEX>::ComputeMax(
     curOffset = curOffset - this->curNc_ * this->inDHW_;
     TINDEX inHW = this->inHW_;
     TINDEX wInDim = this->tilingData_.wInDim;
-    TINDEX curkHW = this->curkHW_;
-    TINDEX curkW = this->curkW_;
+    TINDEX alignHW = this->AlignHW;
+    TINDEX alignW = this->AlignW;
 
     __VEC_SCOPE__
     {
@@ -353,7 +353,7 @@ __aicore__ inline void AdaptiveMaxPool3dBigKernel<T, TINDEX>::ComputeMax(
         // calc max value and temp index
         CalcMaxAndIndex<U, UINDEX>(res, dstIndex, res, resIndex, idxDefaultValue);
         // calc real indexa
-        CalcRealIndex<TINDEX, UINDEX, SPLIT_MODE>(realResIndex, dstIndex, wInDim, inHW, curkW, curkHW, curOffset);
+        CalcRealIndex<TINDEX, UINDEX, SPLIT_MODE>(realResIndex, dstIndex, wInDim, inHW, alignW, alignHW, curOffset);
         // no split need compare maxUB value and current value
         if constexpr (SPLIT_MODE != NO_SPLIT) {
             UpdateMaxAndIndex<T, U, TINDEX>(res, realResIndex, dstLocalAddr, indicesLocalAddr, localCurIdx, idxDefaultValue);
@@ -373,7 +373,7 @@ __aicore__ inline void AdaptiveMaxPool3dBigKernel<T, TINDEX>::ComputeSplitD(int6
     int64_t inputOffset = this->curInOffset_;
     for (int64_t dLoop = 0; dLoop < dLoops; dLoop++) {
         int32_t curDFactor = dLoop == (dLoops - 1) ? dTail : dFactor;
-        AdaptivePool3dBigKernel<T>::CopyIn(inputOffset, this->curkW_, this->curkH_, curDFactor);
+        AdaptivePool3dBigKernel<T>::CopyIn(inputOffset, this->curkW_, this->curkH_, curDFactor, this->minValue_);
         LocalTensor<T> xLocal = this->inputQue_.template DeQue<T>();
         if constexpr (IsSameType<T, half>::value) {
             ComputeMax<SPLIT_D, half, int16_t>(xLocal, curIdx, this->AlignHW * curDFactor, inputOffset);
@@ -395,7 +395,7 @@ __aicore__ inline void AdaptiveMaxPool3dBigKernel<T, TINDEX>::ComputeSplitH(int6
         int64_t inputOffset = this->curInOffset_ + dLoop * this->inHW_;
         for (int64_t hLoop = 0; hLoop < hLoops; hLoop++) {
             int64_t curHFactor = hLoop == (hLoops - 1) ? hTail : hFactor;
-            AdaptivePool3dBigKernel<T>::CopyIn(inputOffset, this->curkW_, curHFactor, DIGHT1);
+            AdaptivePool3dBigKernel<T>::CopyIn(inputOffset, this->curkW_, curHFactor, DIGHT1, this->minValue_);
             LocalTensor<T> xLocal = this->inputQue_.template DeQue<T>();
             if constexpr (IsSameType<T, half>::value) {
                 ComputeMax<SPLIT_H, half, int16_t>(xLocal, curIdx, this->AlignW * curHFactor, inputOffset);
@@ -420,7 +420,7 @@ __aicore__ inline void AdaptiveMaxPool3dBigKernel<T, TINDEX>::ComputeSplitW(int6
             int64_t inputOffset = dOffset + hLoop * this->tilingData_.wInDim;
             for (int64_t wLoop = 0; wLoop < wLoops; wLoop++) {
                 int64_t curWFactor = wLoop == (wLoops - 1) ? wTail : wFactor;
-                AdaptivePool3dBigKernel<T>::CopyIn(inputOffset, curWFactor, DIGHT1, DIGHT1);
+                AdaptivePool3dBigKernel<T>::CopyIn(inputOffset, curWFactor, DIGHT1, DIGHT1, this->minValue_);
                 LocalTensor<T> xLocal = this->inputQue_.template DeQue<T>();
                 if constexpr (IsSameType<T, half>::value) {
                     ComputeMax<SPLIT_W, half, int16_t>(xLocal, curIdx, curWFactor, inputOffset);
@@ -437,12 +437,12 @@ __aicore__ inline void AdaptiveMaxPool3dBigKernel<T, TINDEX>::ComputeSplitW(int6
 template <typename T, typename TINDEX>
 __aicore__ inline void AdaptiveMaxPool3dBigKernel<T, TINDEX>::NoSplitProcess(int64_t curIdx)
 {
-    AdaptivePool3dBigKernel<T>::CopyIn(this->curInOffset_, this->curkW_, this->curkH_, this->curkD_);
+    AdaptivePool3dBigKernel<T>::CopyIn(this->curInOffset_, this->curkW_, this->curkH_, this->curkD_, this->minValue_);
     LocalTensor<T> xLocal = this->inputQue_.template DeQue<T>();
     if constexpr (IsSameType<T, half>::value) {
-        ComputeMax<NO_SPLIT, half, int16_t>(xLocal, curIdx, this->curkDHW_, this->curInOffset_);
+        ComputeMax<NO_SPLIT, half, int16_t>(xLocal, curIdx, this->AlignDHW, this->curInOffset_);
     } else {
-        ComputeMax<NO_SPLIT, float, int32_t>(xLocal, curIdx, this->curkDHW_, this->curInOffset_);
+        ComputeMax<NO_SPLIT, float, int32_t>(xLocal, curIdx, this->AlignDHW, this->curInOffset_);
     }
     this->inputQue_.template FreeTensor<T>(xLocal);
 }
