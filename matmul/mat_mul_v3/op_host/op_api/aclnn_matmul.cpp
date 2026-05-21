@@ -68,14 +68,6 @@ static inline bool CheckNpuArchIsSupportBf16(void)
     return (npuArch == NpuArch::DAV_2201) || (npuArch == NpuArch::DAV_3510);
 }
 
-static inline bool CheckMathType(const aclTensor* self, const aclTensor* mat2, int8_t cubeMathType)
-{
-    bool selfFloat = self->GetDataType() == DataType::DT_FLOAT;
-    bool mat2Float = mat2->GetDataType() == DataType::DT_FLOAT;
-    auto promoteType = selfFloat || mat2Float ? DataType::DT_FLOAT : self->GetDataType();
-    return CheckCubeMathTypeForMm(promoteType, cubeMathType);
-}
-
 static bool CheckWeightNzDtype(const aclTensor* self, const aclTensor* mat2)
 {
     if (mat2->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
@@ -196,21 +188,6 @@ static bool CheckShapeValid(const aclTensor* self, const aclTensor* mat2)
     }
 
     return true;
-}
-
-inline static aclnnStatus CheckParam(
-    const aclTensor* self, const aclTensor* mat2, const aclTensor* out, int8_t cubeMathType)
-{
-    // 1. 检查参数是否为空指针
-    CHECK_RET(CheckNotNull(self, mat2, out), ACLNN_ERR_PARAM_NULLPTR);
-    // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
-    CHECK_RET(CheckWeightNzDtypeValid(self, mat2, out, cubeMathType), ACLNN_ERR_PARAM_INVALID);
-    // 3. 检查Shape是否支持
-    CHECK_RET(CheckShapeValid(self, mat2), ACLNN_ERR_PARAM_INVALID);
-    // 4. 检查cubeMathType
-    CHECK_RET(CheckMathType(self, mat2, cubeMathType), ACLNN_ERR_PARAM_INVALID);
-
-    return ACLNN_SUCCESS;
 }
 
 static bool CheckFormat(
@@ -477,14 +454,6 @@ static const aclTensor* BuildMatMulWeightNzGraph(
     CHECK_RET(matReshape != nullptr, nullptr);
 
     return matReshape;
-}
-
-static inline const aclTensor* BuildBatchMatmulGraph(
-    const aclTensor* self, const aclTensor* mat2, const aclTensor* out, int8_t cubeMathType, aclOpExecutor* executor)
-{
-    auto matmulOut = ExecBmmOp(self, mat2, out, cubeMathType, executor);
-    CHECK_RET(matmulOut != nullptr, nullptr);
-    return matmulOut;
 }
 
 // ===========================================================================================
@@ -770,44 +739,6 @@ public:
     };
 
     ~MatMulDimNumBothGe3Graph() override = default;
-};
-
-class MatMulWeightNzGraph : public Ops::NN::MatmulGraphImpl{
-public:
-    using MatmulGraphImpl::MatmulGraphImpl;
-
-    aclnnStatus Impl() override{
-        // adpat for weightNz transpose scene
-        bool transposeX2 = GetTransposeAttrValue(matB);
-        // swap last two dims value
-        if (transposeX2) {
-            const_cast<aclTensor *>(matB)->SetViewShape(SwapLastTwoDimValue(matB->GetViewShape()));
-        }
-        // Check storage shape Nz shape
-        op::Shape weightNzShape = GetWeightNzShape(matB, transposeX2);
-        if (!CheckWeightNzStorageShape(weightNzShape, matB->GetStorageShape())) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "mat2'format only support NZ, but now mat2's format is not NZ, please convert the input format to NZ.");
-            return ACLNN_ERR_PARAM_INVALID;
-        }
-
-        // Set Nz format
-        matB = SetTensorToNZFormat(matB, weightNzShape, executor);
-        CHECK_RET(matB != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        // 执行 Matmul: out = matA @ matB
-        const aclTensor* out = MatmulCommonProcess(matA, matB, nullptr, output, cubeMathType, opInfo, executor, transposeX2);
-        CHECK_RET(out != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        convOut = out;
-        return ACLNN_SUCCESS;
-    };
-
-    aclnnStatus PostProcess() override{
-        return CommonPostProcessWithReshape();
-    };
-
-    ~MatMulWeightNzGraph() override = default;
 };
 
 // 创建Matmul计算图

@@ -46,7 +46,6 @@ static const std::initializer_list<op::DataType> OUT_DTYPE_SUPPORT_LIST = {DataT
 static constexpr size_t EXPECTED_DIM = 3;
 static constexpr int EXPECTED_NZ_DIM = 5;
 
-static constexpr int BLOCK_SIZE = 16;
 static constexpr int SUPPORTED_INNER_AXIS = 65536;
 
 inline static bool CheckNotNull(const aclTensor* x1, const aclTensor* x2, const aclTensor* out,

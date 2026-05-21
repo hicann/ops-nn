@@ -31,9 +31,6 @@
 using namespace Ops::NN;
 using namespace op;
 
-static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_FLOAT16, op::DataType::DT_BF16, op::DataType::DT_FLOAT};
-
 namespace{
     inline bool CheckNotNull(const aclTensor* self, const aclTensor* vec, const aclTensor* out)
     {
