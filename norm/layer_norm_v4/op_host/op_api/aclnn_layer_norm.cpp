@@ -78,7 +78,7 @@ static bool CheckMeanRstdOutputShape(
     const aclTensor* input, const aclIntArray* normalizedShape, const aclTensor* meanOrRstdOptional,
     const char* tensorName)
 {
-    if (meanOrRstdOptional == nullptr) {
+    if (meanOrRstdOptional == nullptr || meanOrRstdOptional->IsEmpty()) {
         return true;
     }
 
