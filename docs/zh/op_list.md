@@ -2823,7 +2823,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
-    <td>x</td>
+    <td>✗</td>
     <td>AI Core</td>
     <td>计算输入self的组归一化，均值meanOut，标准差的倒数rstdOut，以及对silu的输出进行量化的结果out。</td>
   </tr>
