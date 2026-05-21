@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 #include <array>
@@ -25,17 +25,10 @@ extern "C" __global__ __aicore__ void silu_grad(GM_ADDR dy, GM_ADDR x, GM_ADDR d
 #define SILU_GRAD_BF16_NDDMA_WITHOUT_LOOPS_TILING_KEY 200000001000100
 #define SILU_GRAD_F32_NDDMA_WITHOUT_LOOPS_TILING_KEY 300000001000100
 
-class silu_grad_test : public testing::Test
-{
+class silu_grad_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "silu_grad_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "silu_grad_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "silu_grad_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "silu_grad_test TearDown\n" << endl; }
 };
 
 TEST_F(silu_grad_test, test_case_fp32_1)
@@ -48,12 +41,9 @@ TEST_F(silu_grad_test, test_case_fp32_1)
     uint8_t* dy = (uint8_t*)AscendC::GmAlloc(inputByteSize);
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(xByteSize);
     uint8_t* dx = (uint8_t*)AscendC::GmAlloc(outputByteSize);
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16*1024*1024);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 1;
-
-    char* path_ = get_current_dir_name();
-    string path(path_);
 
     SiluGradTilingData* tilingDatafromBin = reinterpret_cast<SiluGradTilingData*>(tiling);
 
@@ -82,5 +72,4 @@ TEST_F(silu_grad_test, test_case_fp32_1)
     AscendC::GmFree(dx);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }

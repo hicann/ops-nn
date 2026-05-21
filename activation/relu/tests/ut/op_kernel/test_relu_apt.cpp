@@ -15,6 +15,8 @@
 #include "gtest/gtest.h"
 #include "tikicpulib.h"
 #include "data_utils.h"
+#include "kernel_ut_data_helper.h"
+#include "kernel_ut_data_executor.h"
 #include "atvoss/elewise/elewise_sch_16b.h"
 #include <cstdint>
 
@@ -23,8 +25,7 @@ using namespace Ops::Base;
 
 extern "C" __global__ __aicore__ void relu(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
 
-class relu_test : public testing::Test
-{
+class relu_test : public testing::Test {
 protected:
     static void SetUpTestCase()
     {
@@ -32,9 +33,11 @@ protected:
     }
     static void TearDownTestCase()
     {
-        cout << "relu_test TearDown\n" << endl;
+        cout << "relu TearDown\n" << endl;
+        kernel_ut::CleanGeneratedBinFiles("./relu_data");
     }
 };
+
 
 TEST_F(relu_test, test_case_fp32_1)
 {
@@ -47,13 +50,10 @@ TEST_F(relu_test, test_case_fp32_1)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16*1024*1024);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 1;
-    system("cp -r ../../../../activation/relu/tests/ut/op_kernel/relu_data ./");
-    system("chmod -R 755 ./relu_data/");
-    system("cd ./relu_data/ && rm -rf ./*bin");
-    system("cd ./relu_data/ && python3 gen_data.py '(256)' float32");
+    kernel_ut::SetupTestEnvironment("activation/relu/tests/ut/op_kernel/relu_data", "relu_data");
+    kernel_ut::RunGenData("./relu_data", {"'(256)'", "float32"});
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    std::string path = kernel_ut::GetTestWorkDir();
 
     EleBaseTilingData16B* tilingDatafromBin = reinterpret_cast<EleBaseTilingData16B*>(tiling);
 
@@ -74,5 +74,4 @@ TEST_F(relu_test, test_case_fp32_1)
     AscendC::GmFree(y);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }

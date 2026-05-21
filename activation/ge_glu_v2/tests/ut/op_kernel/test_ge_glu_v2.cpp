@@ -16,6 +16,8 @@
 #include "tikicpulib.h"
 #include "ge_glu_v2_tiling_def.h"
 #include "data_utils.h"
+#include "kernel_ut_data_helper.h"
+#include "kernel_ut_data_executor.h"
 
 #include <cstdint>
 

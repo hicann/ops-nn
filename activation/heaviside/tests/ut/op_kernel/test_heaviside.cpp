@@ -16,6 +16,8 @@
 #include "tikicpulib.h"
 #include "heaviside_tiling_def.h"
 #include "data_utils.h"
+#include "kernel_ut_data_helper.h"
+#include "kernel_ut_data_executor.h"
 
 #include <cstdint>
 
@@ -23,29 +25,29 @@ using namespace std;
 
 extern "C" __global__ __aicore__ void heaviside(
     GM_ADDR input, GM_ADDR values, GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling);
-class heaviside_test : public testing::Test
-{
+class heaviside_test : public testing::Test {
 protected:
+
     static void SetUpTestCase()
     {
         cout << "heaviside SetUp\n" << endl;
     }
+
     static void TearDownTestCase()
     {
         cout << "heaviside TearDown\n" << endl;
+        kernel_ut::CleanGeneratedBinFiles("./heaviside_data");
     }
 };
+
 
 TEST_F(heaviside_test, test_heaviside_float_0)
 {
 #undef DTYPE_INPUT
 #define DTYPE_INPUT DT_FP32
 
-    system(
-        "cp -rf "
-        "../../../../activation/heaviside/tests/ut/op_kernel/heaviside_data ./ ");
-    system("chmod -R 755 ./heaviside_data/");
-    system("cd ./heaviside_data/ && python3 gen_data.py '(2, 4)' '(2, 4)' 'float32'");
+    kernel_ut::SetupTestEnvironment("activation/heaviside/tests/ut/op_kernel/heaviside_data", "heaviside_data");
+    kernel_ut::RunGenData("./heaviside_data", {"'(2, 4)'", "'(2, 4)'", "'float32'"});
     size_t M = 2;
     size_t N = 4;
 
@@ -85,7 +87,7 @@ TEST_F(heaviside_test, test_heaviside_float_0)
     AscendC::GmFree((void*)y);
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
-    system("cd ./heaviside_data/ && python3 compare_data.py 'float32'");
+    kernel_ut::RunCompareData("./heaviside_data", {"'float32'"});
 }
 
 TEST_F(heaviside_test, test_heaviside_float16_1)
@@ -93,11 +95,8 @@ TEST_F(heaviside_test, test_heaviside_float16_1)
 #undef DTYPE_INPUT
 #define DTYPE_INPUT DT_FP16
 
-    system(
-        "cp -rf "
-        "../../../../activation/heaviside/tests/ut/op_kernel/heaviside_data ./");
-    system("chmod -R 755 ./heaviside_data/");
-    system("cd ./heaviside_data/ && python3 gen_data.py '(2, 4)' '(2, 4)' 'float16'");
+    kernel_ut::SetupTestEnvironment("activation/heaviside/tests/ut/op_kernel/heaviside_data", "heaviside_data");
+    kernel_ut::RunGenData("./heaviside_data", {"'(2, 4)'", "'(2, 4)'", "'float16'"});
     size_t M = 2;
     size_t N = 4;
 
@@ -137,7 +136,7 @@ TEST_F(heaviside_test, test_heaviside_float16_1)
     AscendC::GmFree((void*)y);
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
-    system("cd ./heaviside_data/ && python3 compare_data.py 'float16'");
+    kernel_ut::RunCompareData("./heaviside_data", {"'float16'"});
 }
 
 TEST_F(heaviside_test, test_heaviside_bfloat16_2)
@@ -145,11 +144,8 @@ TEST_F(heaviside_test, test_heaviside_bfloat16_2)
 #undef DTYPE_INPUT
 #define DTYPE_INPUT DT_BF16
 
-    system(
-        "cp -rf "
-        "../../../../activation/heaviside/tests/ut/op_kernel/heaviside_data ./");
-    system("chmod -R 755 ./heaviside_data/");
-    system("cd ./heaviside_data/ && python3 gen_data.py '(2, 4)' '(2, 4)' 'bfloat16_t'");
+    kernel_ut::SetupTestEnvironment("activation/heaviside/tests/ut/op_kernel/heaviside_data", "heaviside_data");
+    kernel_ut::RunGenData("./heaviside_data", {"'(2, 4)'", "'(2, 4)'", "'bfloat16_t'"});
     size_t M = 2;
     size_t N = 4;
 
@@ -189,5 +185,5 @@ TEST_F(heaviside_test, test_heaviside_bfloat16_2)
     AscendC::GmFree((void*)y);
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
-    system("cd ./heaviside_data/ && python3 compare_data.py 'bfloat16_t'");
+    kernel_ut::RunCompareData("./heaviside_data", {"'bfloat16_t'"});
 }

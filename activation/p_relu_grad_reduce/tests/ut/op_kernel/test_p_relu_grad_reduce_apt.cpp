@@ -15,6 +15,8 @@
 #include "gtest/gtest.h"
 #include "tikicpulib.h"
 #include "data_utils.h"
+#include "kernel_ut_data_helper.h"
+#include "kernel_ut_data_executor.h"
 
 #include "../../../op_kernel/p_relu_grad_reduce_apt.cpp"
 #include <cstdint>
@@ -24,8 +26,7 @@ using namespace std;
 extern "C" __global__ __aicore__ void prelu_grad_reduce(GM_ADDR grads, GM_ADDR features, GM_ADDR weights,
                                                         GM_ADDR updates, GM_ADDR da, GM_ADDR workspace, GM_ADDR tiling);
 
-class p_relu_grad_reduce_test : public testing::Test
-{
+class p_relu_grad_reduce_test : public testing::Test {
 protected:
     static void SetUpTestCase()
     {
@@ -33,9 +34,11 @@ protected:
     }
     static void TearDownTestCase()
     {
-        cout << "p_relu_grad_reduce_test TearDown\n" << endl;
+        cout << "p_relu_grad_reduce TearDown\n" << endl;
+        kernel_ut::CleanGeneratedBinFiles("./p_relu_grad_reduce_data");
     }
 };
+
 
 TEST_F(p_relu_grad_reduce_test, test_case_fp32_1)
 {
@@ -55,13 +58,10 @@ TEST_F(p_relu_grad_reduce_test, test_case_fp32_1)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 1;
     
-    system("cp -r ../../../../activation/p_relu_grad_reduce/tests/ut/op_kernel/p_relu_grad_reduce_data ./");
-    system("chmod -R 755 ./p_relu_grad_reduce_data/");
-    system("cd ./p_relu_grad_reduce_data/ && rm -rf ./*bin");
-    system("cd ./p_relu_grad_reduce_data/ && python3 gen_data.py '(256)' float32");
+    kernel_ut::SetupTestEnvironment("activation/p_relu_grad_reduce/tests/ut/op_kernel/p_relu_grad_reduce_data", "p_relu_grad_reduce_data");
+    kernel_ut::RunGenData("./p_relu_grad_reduce_data", {"'(256)'", "float32"});
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    std::string path = kernel_ut::GetTestWorkDir();
 
     Ops::Base::ReduceOpTilingData* tilingDatafromBin = reinterpret_cast<Ops::Base::ReduceOpTilingData*>(tiling);
 
@@ -106,5 +106,4 @@ TEST_F(p_relu_grad_reduce_test, test_case_fp32_1)
     AscendC::GmFree(da);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }

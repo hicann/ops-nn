@@ -31,14 +31,8 @@ extern "C" __global__ __aicore__ void sigmoid(GM_ADDR x, GM_ADDR y, GM_ADDR work
 
 class sigmoid_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "sigmoid_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "sigmoid_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "sigmoid_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "sigmoid_test TearDown\n" << endl; }
 };
 
 TEST_F(sigmoid_test, test_case_fp32)
@@ -52,9 +46,6 @@ TEST_F(sigmoid_test, test_case_fp32)
     uint8_t* y = (uint8_t*)AscendC::GmAlloc(yByteSize);
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 1024 * 16);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-
-    char* path_ = get_current_dir_name();
-    string path(path_);
 
     SigmoidTilingData* tilingDatafromBin = reinterpret_cast<SigmoidTilingData*>(tiling);
 
@@ -73,13 +64,12 @@ TEST_F(sigmoid_test, test_case_fp32)
 
     ICPU_SET_TILING_KEY(SIGMOID_F32_TILING_KEY);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(KernelSigmoid, blockDim, x, y, workspace, (uint8_t *)(tilingDatafromBin));
+    ICPU_RUN_KF(KernelSigmoid, blockDim, x, y, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(y);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }
 
 TEST_F(sigmoid_test, test_case_fp16)
@@ -93,9 +83,6 @@ TEST_F(sigmoid_test, test_case_fp16)
     uint8_t* y = (uint8_t*)AscendC::GmAlloc(yByteSize);
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 1024 * 16);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-
-    char* path_ = get_current_dir_name();
-    string path(path_);
 
     SigmoidTilingData* tilingDatafromBin = reinterpret_cast<SigmoidTilingData*>(tiling);
 
@@ -114,13 +101,12 @@ TEST_F(sigmoid_test, test_case_fp16)
 
     ICPU_SET_TILING_KEY(SIGMOID_F16_TILING_KEY);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(KernelSigmoid, blockDim, x, y, workspace, (uint8_t *)(tilingDatafromBin));
+    ICPU_RUN_KF(KernelSigmoid, blockDim, x, y, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(y);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }
 
 TEST_F(sigmoid_test, test_case_bf16)
@@ -134,9 +120,6 @@ TEST_F(sigmoid_test, test_case_bf16)
     uint8_t* y = (uint8_t*)AscendC::GmAlloc(yByteSize);
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 1024 * 16);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-
-    char* path_ = get_current_dir_name();
-    string path(path_);
 
     SigmoidTilingData* tilingDatafromBin = reinterpret_cast<SigmoidTilingData*>(tiling);
 
@@ -155,13 +138,12 @@ TEST_F(sigmoid_test, test_case_bf16)
 
     ICPU_SET_TILING_KEY(SIGMOID_BF16_TILING_KEY);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(KernelSigmoid, blockDim, x, y, workspace, (uint8_t *)(tilingDatafromBin));
+    ICPU_RUN_KF(KernelSigmoid, blockDim, x, y, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(y);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }
 
 TEST_F(sigmoid_test, test_case_fp32_large)
@@ -175,9 +157,6 @@ TEST_F(sigmoid_test, test_case_fp32_large)
     uint8_t* y = (uint8_t*)AscendC::GmAlloc(yByteSize);
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 1024 * 16);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-
-    char* path_ = get_current_dir_name();
-    string path(path_);
 
     SigmoidTilingData* tilingDatafromBin = reinterpret_cast<SigmoidTilingData*>(tiling);
 
@@ -196,13 +175,12 @@ TEST_F(sigmoid_test, test_case_fp32_large)
 
     ICPU_SET_TILING_KEY(SIGMOID_F32_TILING_KEY);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(KernelSigmoid, blockDim, x, y, workspace, (uint8_t *)(tilingDatafromBin));
+    ICPU_RUN_KF(KernelSigmoid, blockDim, x, y, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(y);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }
 
 TEST_F(sigmoid_test, test_case_fp16_large)
@@ -216,9 +194,6 @@ TEST_F(sigmoid_test, test_case_fp16_large)
     uint8_t* y = (uint8_t*)AscendC::GmAlloc(yByteSize);
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 1024 * 16);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-
-    char* path_ = get_current_dir_name();
-    string path(path_);
 
     SigmoidTilingData* tilingDatafromBin = reinterpret_cast<SigmoidTilingData*>(tiling);
 
@@ -237,11 +212,10 @@ TEST_F(sigmoid_test, test_case_fp16_large)
 
     ICPU_SET_TILING_KEY(SIGMOID_F16_TILING_KEY);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(KernelSigmoid, blockDim, x, y, workspace, (uint8_t *)(tilingDatafromBin));
+    ICPU_RUN_KF(KernelSigmoid, blockDim, x, y, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(x);
     AscendC::GmFree(y);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }

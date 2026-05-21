@@ -14,6 +14,8 @@
 #include <string>
 #include <cstdint>
 #include "gtest/gtest.h"
+#include "kernel_ut_data_helper.h"
+#include "kernel_ut_data_executor.h"
 #include "tikicpulib.h"
 #include "swi_glu_grad_tiling_def.h"
 
@@ -54,8 +56,7 @@ TEST_F(swi_glu_grad_test, test_case_fp16) {
     // system("cd ./rms_norm_data/ && python3 gen_data.py 1 80 2560 float16");
     // system("cd ./rms_norm_data/ && python3 gen_tiling.py case0");
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    std::string path = kernel_ut::GetTestWorkDir();
 
     SwiGluTilingData* tilingDatafromBin = reinterpret_cast<SwiGluTilingData*>(tiling);
 
@@ -75,7 +76,6 @@ TEST_F(swi_glu_grad_test, test_case_fp16) {
     AscendC::GmFree(x_grad);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }
 
 TEST_F(swi_glu_grad_test, test_case_fp32) {
@@ -98,8 +98,7 @@ TEST_F(swi_glu_grad_test, test_case_fp32) {
     // system("cd ./rms_norm_data/ && python3 gen_data.py 1 80 2560 float16");
     // system("cd ./rms_norm_data/ && python3 gen_tiling.py case0");
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    std::string path = kernel_ut::GetTestWorkDir();
 
     SwiGluTilingData* tilingDatafromBin = reinterpret_cast<SwiGluTilingData*>(tiling);
 
@@ -119,7 +118,6 @@ TEST_F(swi_glu_grad_test, test_case_fp32) {
     AscendC::GmFree(x_grad);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }
 
 TEST_F(swi_glu_grad_test, test_case_bf16) {
@@ -142,8 +140,7 @@ TEST_F(swi_glu_grad_test, test_case_bf16) {
     // system("cd ./rms_norm_data/ && python3 gen_data.py 1 80 2560 float16");
     // system("cd ./rms_norm_data/ && python3 gen_tiling.py case0");
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    std::string path = kernel_ut::GetTestWorkDir();
 
     SwiGluTilingData* tilingDatafromBin = reinterpret_cast<SwiGluTilingData*>(tiling);
 
@@ -163,7 +160,6 @@ TEST_F(swi_glu_grad_test, test_case_bf16) {
     AscendC::GmFree(x_grad);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }
 
 TEST_F(swi_glu_grad_test, test_case_fp16_noalign) {
@@ -186,8 +182,7 @@ TEST_F(swi_glu_grad_test, test_case_fp16_noalign) {
     // system("cd ./rms_norm_data/ && python3 gen_data.py 1 80 2560 float16");
     // system("cd ./rms_norm_data/ && python3 gen_tiling.py case0");
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    std::string path = kernel_ut::GetTestWorkDir();
 
     SwiGluTilingData* tilingDatafromBin = reinterpret_cast<SwiGluTilingData*>(tiling);
 
@@ -207,7 +202,6 @@ TEST_F(swi_glu_grad_test, test_case_fp16_noalign) {
     AscendC::GmFree(x_grad);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }
 
 TEST_F(swi_glu_grad_test, test_case_fp32_noalign) {
@@ -230,8 +224,7 @@ TEST_F(swi_glu_grad_test, test_case_fp32_noalign) {
     // system("cd ./rms_norm_data/ && python3 gen_data.py 1 80 2560 float16");
     // system("cd ./rms_norm_data/ && python3 gen_tiling.py case0");
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    std::string path = kernel_ut::GetTestWorkDir();
 
     SwiGluTilingData* tilingDatafromBin = reinterpret_cast<SwiGluTilingData*>(tiling);
 
@@ -251,7 +244,6 @@ TEST_F(swi_glu_grad_test, test_case_fp32_noalign) {
     AscendC::GmFree(x_grad);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }
 
 TEST_F(swi_glu_grad_test, test_case_bf16_noalign) {
@@ -274,8 +266,7 @@ TEST_F(swi_glu_grad_test, test_case_bf16_noalign) {
     // system("cd ./rms_norm_data/ && python3 gen_data.py 1 80 2560 float16");
     // system("cd ./rms_norm_data/ && python3 gen_tiling.py case0");
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    std::string path = kernel_ut::GetTestWorkDir();
 
     SwiGluTilingData* tilingDatafromBin = reinterpret_cast<SwiGluTilingData*>(tiling);
 
@@ -295,7 +286,6 @@ TEST_F(swi_glu_grad_test, test_case_bf16_noalign) {
     AscendC::GmFree(x_grad);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }
 
 TEST_F(swi_glu_grad_test, test_case_fp16_no_buffer) {
@@ -318,8 +308,7 @@ TEST_F(swi_glu_grad_test, test_case_fp16_no_buffer) {
     // system("cd ./rms_norm_data/ && python3 gen_data.py 1 80 2560 float16");
     // system("cd ./rms_norm_data/ && python3 gen_tiling.py case0");
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    std::string path = kernel_ut::GetTestWorkDir();
 
     SwiGluTilingData* tilingDatafromBin = reinterpret_cast<SwiGluTilingData*>(tiling);
 
@@ -339,7 +328,6 @@ TEST_F(swi_glu_grad_test, test_case_fp16_no_buffer) {
     AscendC::GmFree(x_grad);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }
 
 TEST_F(swi_glu_grad_test, test_case_fp32_no_buffer) {
@@ -362,8 +350,7 @@ TEST_F(swi_glu_grad_test, test_case_fp32_no_buffer) {
     // system("cd ./rms_norm_data/ && python3 gen_data.py 1 80 2560 float16");
     // system("cd ./rms_norm_data/ && python3 gen_tiling.py case0");
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    std::string path = kernel_ut::GetTestWorkDir();
 
     SwiGluTilingData* tilingDatafromBin = reinterpret_cast<SwiGluTilingData*>(tiling);
 
@@ -383,7 +370,6 @@ TEST_F(swi_glu_grad_test, test_case_fp32_no_buffer) {
     AscendC::GmFree(x_grad);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }
 
 TEST_F(swi_glu_grad_test, test_case_bf16_no_buffer) {
@@ -406,8 +392,7 @@ TEST_F(swi_glu_grad_test, test_case_bf16_no_buffer) {
     // system("cd ./rms_norm_data/ && python3 gen_data.py 1 80 2560 float16");
     // system("cd ./rms_norm_data/ && python3 gen_tiling.py case0");
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    std::string path = kernel_ut::GetTestWorkDir();
 
     SwiGluTilingData* tilingDatafromBin = reinterpret_cast<SwiGluTilingData*>(tiling);
 
@@ -427,7 +412,6 @@ TEST_F(swi_glu_grad_test, test_case_bf16_no_buffer) {
     AscendC::GmFree(x_grad);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }
 
 TEST_F(swi_glu_grad_test, test_case_fp16_noalign_no_buffer) {
@@ -450,8 +434,7 @@ TEST_F(swi_glu_grad_test, test_case_fp16_noalign_no_buffer) {
     // system("cd ./rms_norm_data/ && python3 gen_data.py 1 80 2560 float16");
     // system("cd ./rms_norm_data/ && python3 gen_tiling.py case0");
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    std::string path = kernel_ut::GetTestWorkDir();
 
     SwiGluTilingData* tilingDatafromBin = reinterpret_cast<SwiGluTilingData*>(tiling);
 
@@ -471,7 +454,6 @@ TEST_F(swi_glu_grad_test, test_case_fp16_noalign_no_buffer) {
     AscendC::GmFree(x_grad);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }
 
 TEST_F(swi_glu_grad_test, test_case_fp32_noalign_no_buffer) {
@@ -494,8 +476,7 @@ TEST_F(swi_glu_grad_test, test_case_fp32_noalign_no_buffer) {
     // system("cd ./rms_norm_data/ && python3 gen_data.py 1 80 2560 float16");
     // system("cd ./rms_norm_data/ && python3 gen_tiling.py case0");
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    std::string path = kernel_ut::GetTestWorkDir();
 
     SwiGluTilingData* tilingDatafromBin = reinterpret_cast<SwiGluTilingData*>(tiling);
 
@@ -515,7 +496,6 @@ TEST_F(swi_glu_grad_test, test_case_fp32_noalign_no_buffer) {
     AscendC::GmFree(x_grad);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }
 
 TEST_F(swi_glu_grad_test, test_case_bf16_noalign_no_buffer) {
@@ -538,8 +518,7 @@ TEST_F(swi_glu_grad_test, test_case_bf16_noalign_no_buffer) {
     // system("cd ./rms_norm_data/ && python3 gen_data.py 1 80 2560 float16");
     // system("cd ./rms_norm_data/ && python3 gen_tiling.py case0");
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    std::string path = kernel_ut::GetTestWorkDir();
 
     SwiGluTilingData* tilingDatafromBin = reinterpret_cast<SwiGluTilingData*>(tiling);
 
@@ -559,5 +538,4 @@ TEST_F(swi_glu_grad_test, test_case_bf16_noalign_no_buffer) {
     AscendC::GmFree(x_grad);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }

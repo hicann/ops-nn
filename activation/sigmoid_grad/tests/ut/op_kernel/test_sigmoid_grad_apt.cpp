@@ -31,14 +31,8 @@ extern "C" __global__ __aicore__ void sigmoid_grad(GM_ADDR y, GM_ADDR dy, GM_ADD
 
 class sigmoid_grad_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "sigmoid_grad_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "sigmoid_grad_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "sigmoid_grad_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "sigmoid_grad_test TearDown\n" << endl; }
 };
 
 TEST_F(sigmoid_grad_test, test_case_fp32)
@@ -54,9 +48,6 @@ TEST_F(sigmoid_grad_test, test_case_fp32)
     uint8_t* z = (uint8_t*)AscendC::GmAlloc(zByteSize);
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 1024 * 16);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-
-    char* path_ = get_current_dir_name();
-    string path(path_);
 
     SigmoidGradTilingData* tilingDatafromBin = reinterpret_cast<SigmoidGradTilingData*>(tiling);
 
@@ -75,14 +66,13 @@ TEST_F(sigmoid_grad_test, test_case_fp32)
 
     ICPU_SET_TILING_KEY(SIGMOID_GRAD_F32_TILING_KEY);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(KernelSigmoidGrad, blockDim, y, dy, z, workspace, (uint8_t *)(tilingDatafromBin));
+    ICPU_RUN_KF(KernelSigmoidGrad, blockDim, y, dy, z, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(y);
     AscendC::GmFree(dy);
     AscendC::GmFree(z);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }
 
 TEST_F(sigmoid_grad_test, test_case_fp16)
@@ -98,9 +88,6 @@ TEST_F(sigmoid_grad_test, test_case_fp16)
     uint8_t* z = (uint8_t*)AscendC::GmAlloc(zByteSize);
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 1024 * 16);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-
-    char* path_ = get_current_dir_name();
-    string path(path_);
 
     SigmoidGradTilingData* tilingDatafromBin = reinterpret_cast<SigmoidGradTilingData*>(tiling);
 
@@ -119,14 +106,13 @@ TEST_F(sigmoid_grad_test, test_case_fp16)
 
     ICPU_SET_TILING_KEY(SIGMOID_GRAD_F16_TILING_KEY);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(KernelSigmoidGrad, blockDim, y, dy, z, workspace, (uint8_t *)(tilingDatafromBin));
+    ICPU_RUN_KF(KernelSigmoidGrad, blockDim, y, dy, z, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(y);
     AscendC::GmFree(dy);
     AscendC::GmFree(z);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }
 
 TEST_F(sigmoid_grad_test, test_case_bf16)
@@ -142,9 +128,6 @@ TEST_F(sigmoid_grad_test, test_case_bf16)
     uint8_t* z = (uint8_t*)AscendC::GmAlloc(zByteSize);
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 1024 * 16);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-
-    char* path_ = get_current_dir_name();
-    string path(path_);
 
     SigmoidGradTilingData* tilingDatafromBin = reinterpret_cast<SigmoidGradTilingData*>(tiling);
 
@@ -163,14 +146,13 @@ TEST_F(sigmoid_grad_test, test_case_bf16)
 
     ICPU_SET_TILING_KEY(SIGMOID_GRAD_BF16_TILING_KEY);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(KernelSigmoidGrad, blockDim, y, dy, z, workspace, (uint8_t *)(tilingDatafromBin));
+    ICPU_RUN_KF(KernelSigmoidGrad, blockDim, y, dy, z, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(y);
     AscendC::GmFree(dy);
     AscendC::GmFree(z);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }
 
 TEST_F(sigmoid_grad_test, test_case_fp32_large)
@@ -186,9 +168,6 @@ TEST_F(sigmoid_grad_test, test_case_fp32_large)
     uint8_t* z = (uint8_t*)AscendC::GmAlloc(zByteSize);
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 1024 * 16);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-
-    char* path_ = get_current_dir_name();
-    string path(path_);
 
     SigmoidGradTilingData* tilingDatafromBin = reinterpret_cast<SigmoidGradTilingData*>(tiling);
 
@@ -207,14 +186,13 @@ TEST_F(sigmoid_grad_test, test_case_fp32_large)
 
     ICPU_SET_TILING_KEY(SIGMOID_GRAD_F32_TILING_KEY);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(KernelSigmoidGrad, blockDim, y, dy, z, workspace, (uint8_t *)(tilingDatafromBin));
+    ICPU_RUN_KF(KernelSigmoidGrad, blockDim, y, dy, z, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(y);
     AscendC::GmFree(dy);
     AscendC::GmFree(z);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }
 
 TEST_F(sigmoid_grad_test, test_case_fp16_large)
@@ -230,9 +208,6 @@ TEST_F(sigmoid_grad_test, test_case_fp16_large)
     uint8_t* z = (uint8_t*)AscendC::GmAlloc(zByteSize);
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 1024 * 16);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-
-    char* path_ = get_current_dir_name();
-    string path(path_);
 
     SigmoidGradTilingData* tilingDatafromBin = reinterpret_cast<SigmoidGradTilingData*>(tiling);
 
@@ -251,12 +226,11 @@ TEST_F(sigmoid_grad_test, test_case_fp16_large)
 
     ICPU_SET_TILING_KEY(SIGMOID_GRAD_F16_TILING_KEY);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(KernelSigmoidGrad, blockDim, y, dy, z, workspace, (uint8_t *)(tilingDatafromBin));
+    ICPU_RUN_KF(KernelSigmoidGrad, blockDim, y, dy, z, workspace, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(y);
     AscendC::GmFree(dy);
     AscendC::GmFree(z);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }

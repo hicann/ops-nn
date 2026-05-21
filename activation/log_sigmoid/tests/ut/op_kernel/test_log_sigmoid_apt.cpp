@@ -15,6 +15,8 @@
 #include "gtest/gtest.h"
 #include "tikicpulib.h"
 #include "data_utils.h"
+#include "kernel_ut_data_helper.h"
+#include "kernel_ut_data_executor.h"
 
 #include "../../../op_kernel/log_sigmoid_apt.cpp"
 #include <cstdint>
@@ -23,8 +25,7 @@ using namespace std;
 
 extern "C" __global__ __aicore__ void log_sigmoid(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
 
-class log_sigmoid_test : public testing::Test
-{
+class log_sigmoid_test : public testing::Test {
 protected:
     static void SetUpTestCase()
     {
@@ -32,9 +33,11 @@ protected:
     }
     static void TearDownTestCase()
     {
-        cout << "log_sigmoid_test TearDown\n" << endl;
+        cout << "log_sigmoid TearDown\n" << endl;
+        kernel_ut::CleanGeneratedBinFiles("./log_sigmoid_data");
     }
 };
+
 
 TEST_F(log_sigmoid_test, test_case_fp32_1)
 {
@@ -47,13 +50,10 @@ TEST_F(log_sigmoid_test, test_case_fp32_1)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16*1024*1024);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 1;
-    system("cp -r ../../../../activation/log_sigmoid/tests/ut/op_kernel/log_sigmoid_data ./");
-    system("chmod -R 755 ./log_sigmoid_data/");
-    system("cd ./log_sigmoid_data/ && rm -rf ./*bin");
-    system("cd ./log_sigmoid_data/ && python3 gen_data.py '(256)' float32");
+    kernel_ut::SetupTestEnvironment("activation/log_sigmoid/tests/ut/op_kernel/log_sigmoid_data", "log_sigmoid_data");
+    kernel_ut::RunGenData("./log_sigmoid_data", {"'(256)'", "float32"});
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    std::string path = kernel_ut::GetTestWorkDir();
 
     EleBaseTilingDataV2* tilingDatafromBin = reinterpret_cast<EleBaseTilingDataV2*>(tiling);
 
@@ -81,5 +81,4 @@ TEST_F(log_sigmoid_test, test_case_fp32_1)
     AscendC::GmFree(y);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }

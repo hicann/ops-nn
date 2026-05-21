@@ -16,6 +16,8 @@
 #include "tikicpulib.h"
 #include "tiling_function_def.h"
 #include "data_utils.h"
+#include "kernel_ut_data_helper.h"
+#include "kernel_ut_data_executor.h"
 
 extern "C" __global__ __aicore__ void ge_glu_grad_v2(
     GM_ADDR dy, GM_ADDR x, GM_ADDR g_gelu, GM_ADDR dx, GM_ADDR workspace, GM_ADDR tiling);
@@ -51,18 +53,11 @@ int64_t GetShapeSize(const std::vector<std::vector<int64_t>>& shapeInfo, const s
     return shapeSize;
 }
 
-class ge_glu_grad_v2_test : public testing::Test
-{
+class ge_glu_grad_v2_test : public testing::Test {
 protected:
-    static void SetUpTestSuite()
-    {
-        std::cout << "ge_glu_grad_v2_test SetUpTestSuite" << std::endl;
-    }
+    static void SetUpTestSuite() { std::cout << "ge_glu_grad_v2_test SetUpTestSuite" << std::endl; }
 
-    static void TearDownTestSuite()
-    {
-        std::cout << "ge_glu_grad_v2_test SetUpTestSuite" << std::endl;
-    }
+    static void TearDownTestSuite() { std::cout << "ge_glu_grad_v2_test SetUpTestSuite" << std::endl; }
 
     template <typename T>
     void SingleCallOperator(
@@ -74,11 +69,11 @@ protected:
         tilingObject.RunTiling4GeGluGradV2();
         int32_t tilingKey = tilingObject.GetTilingKey();
 
-        system("cp -r ../../../../activation/ge_glu_grad_v2/tests/ut/op_kernel/ge_glu_grad_v2_data ./");
-        system("chmod -R 755 ./ge_glu_grad_v2_data/ && rm -rf ./ge_glu_grad_v2_data/*bin");
-        std::string genCMD = "cd ./ge_glu_grad_v2_data/ && python3 gen_data.py '" + GetShapesString(shapeInfos) +
-                             "' '" + GetShapesString(attrInfos) + "' " + std::to_string(tilingKey);
-        EXPECT_EQ(system(genCMD.c_str()), 0);
+        kernel_ut::SetupTestEnvironment(
+            "activation/ge_glu_grad_v2/tests/ut/op_kernel/ge_glu_grad_v2_data", "ge_glu_grad_v2_data");
+        kernel_ut::RunGenData(
+            "./ge_glu_grad_v2_data", {"'" + GetShapesString(shapeInfos) + "'", "'" + GetShapesString(attrInfos) + "'",
+                                      std::to_string(tilingKey)});
         size_t usrWorkspaceSize = 4096;
         uint8_t* usrWorkSpace = (uint8_t*)AscendC::GmAlloc(usrWorkspaceSize);
         size_t tilingSize = sizeof(GeGluGradV2TilingData);
@@ -112,8 +107,7 @@ protected:
         AscendC::GmFree((void*)tiling);
         AscendC::GmFree((void*)usrWorkSpace);
         if (needCompare) {
-            std::string cmpCMD = "cd ./ge_glu_grad_v2_data/ && python3 compare_data.py " + std::to_string(tilingKey);
-            EXPECT_EQ(system(cmpCMD.c_str()), 0);
+            kernel_ut::RunCompareData("./ge_glu_grad_v2_data", {std::to_string(tilingKey)});
         }
     }
 };

@@ -16,6 +16,8 @@
 #include "tikicpulib.h"
 #include "fatrelu_mul_tiling_def.h"
 #include "data_utils.h"
+#include "kernel_ut_data_helper.h"
+#include "kernel_ut_data_executor.h"
 
 #include <cstdint>
 
@@ -23,26 +25,26 @@ using namespace std;
 
 extern "C" __global__ __aicore__ void fatrelu_mul(
     GM_ADDR input, GM_ADDR scalar, GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling);
-class fatrelu_mul_test : public testing::Test
-{
+class fatrelu_mul_test : public testing::Test {
 protected:
+
     static void SetUpTestCase()
     {
         cout << "fatrelu_mul SetUp\n" << endl;
     }
+
     static void TearDownTestCase()
     {
         cout << "fatrelu_mul TearDown\n" << endl;
+        kernel_ut::CleanGeneratedBinFiles("./fatrelu_mul_data");
     }
 };
 
+
 TEST_F(fatrelu_mul_test, test_fatrelu_mul_float_0)
 {
-    system(
-        "cp -rf "
-        "../../../../activation/fatrelu_mul/tests/ut/op_kernel/fatrelu_mul_data ./");
-    system("chmod -R 755 ./fatrelu_mul_data/");
-    system("cd ./fatrelu_mul_data/ && python3 gen_data.py '(2, 4)' '(2, 2)' 'float32'");
+    kernel_ut::SetupTestEnvironment("activation/fatrelu_mul/tests/ut/op_kernel/fatrelu_mul_data", "fatrelu_mul_data");
+    kernel_ut::RunGenData("./fatrelu_mul_data", {"'(2, 4)'", "'(2, 2)'", "'float32'"});
     size_t M = 2;
     size_t N = 4;
     size_t D = N / 2;
@@ -83,16 +85,13 @@ TEST_F(fatrelu_mul_test, test_fatrelu_mul_float_0)
     AscendC::GmFree((void*)threshold);
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
-    system("cd ./fatrelu_mul_data/ && python3 compare_data.py 'float32'");
+    kernel_ut::RunCompareData("./fatrelu_mul_data", {"'float32'"});
 }
 
 TEST_F(fatrelu_mul_test, test_fatrelu_mul_float16_1)
 {
-    system(
-        "cp -rf "
-        "../../../../activation/fatrelu_mul/tests/ut/op_kernel/fatrelu_mul_data ./");
-    system("chmod -R 755 ./fatrelu_mul_data/");
-    system("cd ./fatrelu_mul_data/ && python3 gen_data.py '(2, 4)' '(2, 2)' 'float16'");
+    kernel_ut::SetupTestEnvironment("activation/fatrelu_mul/tests/ut/op_kernel/fatrelu_mul_data", "fatrelu_mul_data");
+    kernel_ut::RunGenData("./fatrelu_mul_data", {"'(2, 4)'", "'(2, 2)'", "'float16'"});
     size_t M = 2;
     size_t N = 4;
     size_t D = N / 2;
@@ -133,16 +132,13 @@ TEST_F(fatrelu_mul_test, test_fatrelu_mul_float16_1)
     AscendC::GmFree((void*)threshold);
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
-    system("cd ./fatrelu_mul_data/ && python3 compare_data.py 'float16'");
+    kernel_ut::RunCompareData("./fatrelu_mul_data", {"'float16'"});
 }
 
 TEST_F(fatrelu_mul_test, test_fatrelu_mul_bfloat16_2)
 {
-    system(
-        "cp -rf "
-        "../../../../activation/fatrelu_mul/tests/ut/op_kernel/fatrelu_mul_data ./");
-    system("chmod -R 755 ./fatrelu_mul_data/");
-    system("cd ./fatrelu_mul_data/ && python3 gen_data.py '(2, 4)' '(2, 2)' 'bfloat16_t'");
+    kernel_ut::SetupTestEnvironment("activation/fatrelu_mul/tests/ut/op_kernel/fatrelu_mul_data", "fatrelu_mul_data");
+    kernel_ut::RunGenData("./fatrelu_mul_data", {"'(2, 4)'", "'(2, 2)'", "'bfloat16_t'"});
     size_t M = 2;
     size_t N = 4;
     size_t D = N / 2;
@@ -183,5 +179,5 @@ TEST_F(fatrelu_mul_test, test_fatrelu_mul_bfloat16_2)
     AscendC::GmFree((void*)threshold);
     AscendC::GmFree((void*)workspace);
     AscendC::GmFree((void*)tiling);
-    system("cd ./fatrelu_mul_data/ && python3 compare_data.py 'bfloat16_t'");
+    kernel_ut::RunCompareData("./fatrelu_mul_data", {"'bfloat16_t'"});
 }

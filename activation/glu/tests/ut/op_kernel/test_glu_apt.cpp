@@ -28,8 +28,13 @@ extern "C" __global__ __aicore__ void glu(GM_ADDR x, GM_ADDR y, GM_ADDR workspac
 class glu_test : public testing::Test {
 protected:
     static void SetUpTestCase() { cout << "glu_test SetUp\n" << endl; }
-    static void TearDownTestCase() { cout << "glu_test TearDown\n" << endl; }
+    static void TearDownTestCase()
+    {
+        cout << "glu TearDown" << endl;
+        kernel_ut::CleanGeneratedBinFiles("./glu_data");
+    }
 };
+
 
 TEST_F(glu_test, test_glu_case_1)
 {

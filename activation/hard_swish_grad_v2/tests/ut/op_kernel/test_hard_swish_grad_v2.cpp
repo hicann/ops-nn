@@ -16,48 +16,51 @@
 #include "gtest/gtest.h"
 #include "tikicpulib.h"
 #include "data_utils.h"
+#include "kernel_ut_data_helper.h"
+#include "kernel_ut_data_executor.h"
 
 #include <cstdint>
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void hard_swish_grad_v2(GM_ADDR grad,
-                                            GM_ADDR self,
-                                            GM_ADDR out,
-                                            GM_ADDR workspace,
-                                            GM_ADDR tiling);
+extern "C" __global__ __aicore__ void hard_swish_grad_v2(
+    GM_ADDR grad, GM_ADDR self, GM_ADDR out, GM_ADDR workspace, GM_ADDR tiling);
 
 class hard_swish_grad_v2_test : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    cout << "hard_swish_grad_v2 SetUp\n" << endl;
-  }
-  static void TearDownTestCase() {
-    cout << "hard_swish_grad_v2 TearDown\n" << endl;
-  }
+protected:
+
+    static void SetUpTestCase()
+    {
+        cout << "hard_swish_grad_v2 SetUp\n" << endl;
+    }
+
+    static void TearDownTestCase()
+    {
+        cout << "hard_swish_grad_v2 TearDown\n" << endl;
+        kernel_ut::CleanGeneratedBinFiles("./hard_swish_grad_v2_data");
+    }
 };
+
 
 TEST_F(hard_swish_grad_v2_test, test_hard_swish_grad_v2_float_0)
 {
-    system(
-        "cp -rf "
-        "../../../../activation/hard_swish_grad_v2/tests/ut/op_kernel/hard_swish_grad_v2_data ./");
-    system("chmod -R 755 ./hard_swish_grad_v2_data/");
-    system("cd ./hard_swish_grad_v2_data/ && python3 gen_data.py '(2, 4)' 'float32'");
+    kernel_ut::SetupTestEnvironment(
+        "activation/hard_swish_grad_v2/tests/ut/op_kernel/hard_swish_grad_v2_data", "hard_swish_grad_v2_data");
+    kernel_ut::RunGenData("./hard_swish_grad_v2_data", {"'(2, 4)'", "'float32'"});
     size_t M = 2;
     size_t N = 4;
     size_t inputShapeSize = M * N * sizeof(float);
 
-    uint8_t *gradOutput = (uint8_t *)AscendC::GmAlloc(inputShapeSize);
-    uint8_t *self = (uint8_t *)AscendC::GmAlloc(inputShapeSize);
-    uint8_t *out = (uint8_t *)AscendC::GmAlloc(inputShapeSize);
+    uint8_t* gradOutput = (uint8_t*)AscendC::GmAlloc(inputShapeSize);
+    uint8_t* self = (uint8_t*)AscendC::GmAlloc(inputShapeSize);
+    uint8_t* out = (uint8_t*)AscendC::GmAlloc(inputShapeSize);
 
     uint64_t tilingKey = 0;
     uint32_t blockDim = 1;
     size_t workspaceFileSize = 16781184;
     size_t tilingDataSize = sizeof(HardSwishGradV2TilingData);
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceFileSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
     std::string gradOutputFileName = "./hard_swish_grad_v2_data/float32_grad_output.bin";
     std::string selfFileName = "./hard_swish_grad_v2_data/float32_self.bin";
@@ -66,7 +69,7 @@ TEST_F(hard_swish_grad_v2_test, test_hard_swish_grad_v2_float_0)
     ReadFile(selfFileName, inputShapeSize, self, inputShapeSize);
 
     HardSwishGradV2TilingData* tilingDatafromBin = reinterpret_cast<HardSwishGradV2TilingData*>(tiling);
-    tilingDatafromBin->elementNum = M * N ;
+    tilingDatafromBin->elementNum = M * N;
     tilingDatafromBin->needCoreNum = 1;
     tilingDatafromBin->ubSize = 192 * 1024;
     tilingDatafromBin->elementNumEachCore = 8 * 1024;
@@ -76,35 +79,33 @@ TEST_F(hard_swish_grad_v2_test, test_hard_swish_grad_v2_float_0)
     std::string outFileName = "./hard_swish_grad_v2_data/float32_npuout.bin";
     WriteFile(outFileName, out, inputShapeSize);
 
-    AscendC::GmFree((void *)gradOutput);
-    AscendC::GmFree((void *)self);
-    AscendC::GmFree((void *)out);
-    AscendC::GmFree((void *)workspace);
-    AscendC::GmFree((void *)tiling);
-    system("cd ./hard_swish_grad_v2_data/ && python3 compare_data.py 'float32'");
+    AscendC::GmFree((void*)gradOutput);
+    AscendC::GmFree((void*)self);
+    AscendC::GmFree((void*)out);
+    AscendC::GmFree((void*)workspace);
+    AscendC::GmFree((void*)tiling);
+    kernel_ut::RunCompareData("./hard_swish_grad_v2_data", {"'float32'"});
 }
 
 TEST_F(hard_swish_grad_v2_test, test_hard_swish_grad_v2_float16_1)
 {
-    system(
-        "cp -rf "
-        "../../../../activation/hard_swish_grad_v2/tests/ut/op_kernel/hard_swish_grad_v2_data ./");
-    system("chmod -R 755 ./hard_swish_grad_v2_data/");
-    system("cd ./hard_swish_grad_v2_data/ && python3 gen_data.py '(2, 4)' 'float16'");
+    kernel_ut::SetupTestEnvironment(
+        "activation/hard_swish_grad_v2/tests/ut/op_kernel/hard_swish_grad_v2_data", "hard_swish_grad_v2_data");
+    kernel_ut::RunGenData("./hard_swish_grad_v2_data", {"'(2, 4)'", "'float16'"});
     size_t M = 2;
     size_t N = 4;
     size_t inputShapeSize = M * N * sizeof(float);
 
-    uint8_t *gradOutput = (uint8_t *)AscendC::GmAlloc(inputShapeSize);
-    uint8_t *self = (uint8_t *)AscendC::GmAlloc(inputShapeSize);
-    uint8_t *out = (uint8_t *)AscendC::GmAlloc(inputShapeSize);
+    uint8_t* gradOutput = (uint8_t*)AscendC::GmAlloc(inputShapeSize);
+    uint8_t* self = (uint8_t*)AscendC::GmAlloc(inputShapeSize);
+    uint8_t* out = (uint8_t*)AscendC::GmAlloc(inputShapeSize);
 
     uint64_t tilingKey = 0;
     uint32_t blockDim = 1;
     size_t workspaceFileSize = 16781184;
     size_t tilingDataSize = sizeof(HardSwishGradV2TilingData);
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceFileSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
     std::string gradOutputFileName = "./hard_swish_grad_v2_data/float16_grad_output.bin";
     std::string selfFileName = "./hard_swish_grad_v2_data/float16_self.bin";
@@ -113,7 +114,7 @@ TEST_F(hard_swish_grad_v2_test, test_hard_swish_grad_v2_float16_1)
     ReadFile(selfFileName, inputShapeSize, self, inputShapeSize);
 
     HardSwishGradV2TilingData* tilingDatafromBin = reinterpret_cast<HardSwishGradV2TilingData*>(tiling);
-    tilingDatafromBin->elementNum = M * N ;
+    tilingDatafromBin->elementNum = M * N;
     tilingDatafromBin->needCoreNum = 1;
     tilingDatafromBin->ubSize = 192 * 1024;
     tilingDatafromBin->elementNumEachCore = 8 * 1024;
@@ -123,35 +124,33 @@ TEST_F(hard_swish_grad_v2_test, test_hard_swish_grad_v2_float16_1)
     std::string outFileName = "./hard_swish_grad_v2_data/float16_npuout.bin";
     WriteFile(outFileName, out, inputShapeSize);
 
-    AscendC::GmFree((void *)gradOutput);
-    AscendC::GmFree((void *)self);
-    AscendC::GmFree((void *)out);
-    AscendC::GmFree((void *)workspace);
-    AscendC::GmFree((void *)tiling);
-    system("cd ./hard_swish_grad_v2_data/ && python3 compare_data.py 'float16'");
+    AscendC::GmFree((void*)gradOutput);
+    AscendC::GmFree((void*)self);
+    AscendC::GmFree((void*)out);
+    AscendC::GmFree((void*)workspace);
+    AscendC::GmFree((void*)tiling);
+    kernel_ut::RunCompareData("./hard_swish_grad_v2_data", {"'float16'"});
 }
 
 TEST_F(hard_swish_grad_v2_test, test_hard_swish_grad_v2_bfloat16_t_2)
 {
-    system(
-        "cp -rf "
-        "../../../../activation/hard_swish_grad_v2/tests/ut/op_kernel/hard_swish_grad_v2_data ./");
-    system("chmod -R 755 ./hard_swish_grad_v2_data/");
-    system("cd ./hard_swish_grad_v2_data/ && python3 gen_data.py '(2, 4)' 'bfloat16_t'");
+    kernel_ut::SetupTestEnvironment(
+        "activation/hard_swish_grad_v2/tests/ut/op_kernel/hard_swish_grad_v2_data", "hard_swish_grad_v2_data");
+    kernel_ut::RunGenData("./hard_swish_grad_v2_data", {"'(2, 4)'", "'bfloat16_t'"});
     size_t M = 2;
     size_t N = 4;
     size_t inputShapeSize = M * N * sizeof(float);
 
-    uint8_t *gradOutput = (uint8_t *)AscendC::GmAlloc(inputShapeSize);
-    uint8_t *self = (uint8_t *)AscendC::GmAlloc(inputShapeSize);
-    uint8_t *out = (uint8_t *)AscendC::GmAlloc(inputShapeSize);
+    uint8_t* gradOutput = (uint8_t*)AscendC::GmAlloc(inputShapeSize);
+    uint8_t* self = (uint8_t*)AscendC::GmAlloc(inputShapeSize);
+    uint8_t* out = (uint8_t*)AscendC::GmAlloc(inputShapeSize);
 
     uint64_t tilingKey = 0;
     uint32_t blockDim = 1;
     size_t workspaceFileSize = 16781184;
     size_t tilingDataSize = sizeof(HardSwishGradV2TilingData);
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceFileSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
     std::string gradOutputFileName = "./hard_swish_grad_v2_data/bfloat16_t_grad_output.bin";
     std::string selfFileName = "./hard_swish_grad_v2_data/bfloat16_t_self.bin";
@@ -160,7 +159,7 @@ TEST_F(hard_swish_grad_v2_test, test_hard_swish_grad_v2_bfloat16_t_2)
     ReadFile(selfFileName, inputShapeSize, self, inputShapeSize);
 
     HardSwishGradV2TilingData* tilingDatafromBin = reinterpret_cast<HardSwishGradV2TilingData*>(tiling);
-    tilingDatafromBin->elementNum = M * N ;
+    tilingDatafromBin->elementNum = M * N;
     tilingDatafromBin->needCoreNum = 1;
     tilingDatafromBin->ubSize = 192 * 1024;
     tilingDatafromBin->elementNumEachCore = 8 * 1024;
@@ -170,10 +169,10 @@ TEST_F(hard_swish_grad_v2_test, test_hard_swish_grad_v2_bfloat16_t_2)
     std::string outFileName = "./hard_swish_grad_v2_data/bfloat16_t_npuout.bin";
     WriteFile(outFileName, out, inputShapeSize);
 
-    AscendC::GmFree((void *)gradOutput);
-    AscendC::GmFree((void *)self);
-    AscendC::GmFree((void *)out);
-    AscendC::GmFree((void *)workspace);
-    AscendC::GmFree((void *)tiling);
-    system("cd ./hard_swish_grad_v2_data/ && python3 compare_data.py 'bfloat16_t'");
+    AscendC::GmFree((void*)gradOutput);
+    AscendC::GmFree((void*)self);
+    AscendC::GmFree((void*)out);
+    AscendC::GmFree((void*)workspace);
+    AscendC::GmFree((void*)tiling);
+    kernel_ut::RunCompareData("./hard_swish_grad_v2_data", {"'bfloat16_t'"});
 }

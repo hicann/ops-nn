@@ -15,6 +15,8 @@
 #include "gtest/gtest.h"
 #include "tikicpulib.h"
 #include "data_utils.h"
+#include "kernel_ut_data_helper.h"
+#include "kernel_ut_data_executor.h"
 
 #include "../../../op_kernel/p_relu_grad_update_apt.cpp"
 #include <cstdint>
@@ -23,8 +25,7 @@ using namespace std;
 
 extern "C" __global__ __aicore__ void prelu_grad_update(GM_ADDR grads, GM_ADDR features, GM_ADDR weights, GM_ADDR dx, GM_ADDR update, GM_ADDR workspace, GM_ADDR tiling);
 
-class p_relu_grad_update_test : public testing::Test
-{
+class p_relu_grad_update_test : public testing::Test {
 protected:
     static void SetUpTestCase()
     {
@@ -32,9 +33,11 @@ protected:
     }
     static void TearDownTestCase()
     {
-        cout << "p_relu_grad_update_test TearDown\n" << endl;
+        cout << "p_relu_grad_update TearDown\n" << endl;
+        kernel_ut::CleanGeneratedBinFiles("./p_relu_grad_update_data");
     }
 };
+
 
 TEST_F(p_relu_grad_update_test, test_case_fp32_1)
 {
@@ -53,13 +56,10 @@ TEST_F(p_relu_grad_update_test, test_case_fp32_1)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16*1024*1024);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 1;
-    system("cp -r ../../../../activation/p_relu_grad_update/tests/ut/op_kernel/p_relu_grad_update_data ./");
-    system("chmod -R 755 ./p_relu_grad_update_data/");
-    system("cd ./p_relu_grad_update_data/ && rm -rf ./*bin");
-    system("cd ./p_relu_grad_update_data/ && python3 gen_data.py '(256)' float32");
+    kernel_ut::SetupTestEnvironment("activation/p_relu_grad_update/tests/ut/op_kernel/p_relu_grad_update_data", "p_relu_grad_update_data");
+    kernel_ut::RunGenData("./p_relu_grad_update_data", {"'(256)'", "float32"});
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    std::string path = kernel_ut::GetTestWorkDir();
 
     BroadcastOneDimTilingDataAdvance* tilingDatafromBin = reinterpret_cast<BroadcastOneDimTilingDataAdvance*>(tiling);
 
@@ -86,5 +86,4 @@ TEST_F(p_relu_grad_update_test, test_case_fp32_1)
     AscendC::GmFree(update);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }

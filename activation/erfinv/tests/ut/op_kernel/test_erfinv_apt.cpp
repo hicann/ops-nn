@@ -15,6 +15,8 @@
 #include "gtest/gtest.h"
 #include "tikicpulib.h"
 #include "data_utils.h"
+#include "kernel_ut_data_helper.h"
+#include "kernel_ut_data_executor.h"
 
 #include "../../../op_kernel/erfinv_apt.cpp"
 #include <cstdint>
@@ -23,8 +25,7 @@ using namespace std;
 
 extern "C" __global__ __aicore__ void erfinv(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
 
-class erfinv_test : public testing::Test
-{
+class erfinv_test : public testing::Test {
 protected:
     static void SetUpTestCase()
     {
@@ -32,9 +33,11 @@ protected:
     }
     static void TearDownTestCase()
     {
-        cout << "erfinv_test TearDown\n" << endl;
+        cout << "erfinv TearDown\n" << endl;
+        kernel_ut::CleanGeneratedBinFiles("./erfinv_data");
     }
 };
+
 
 TEST_F(erfinv_test, test_case_fp32_1)
 {
@@ -47,13 +50,10 @@ TEST_F(erfinv_test, test_case_fp32_1)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16*1024*1024);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 1;
-    system("cp -r ../../../../activation/erfinv/tests/ut/op_kernel/erfinv_data ./");
-    system("chmod -R 755 ./erfinv_data/");
-    system("cd ./erfinv_data/ && rm -rf ./*bin");
-    system("cd ./erfinv_data/ && python3 gen_data.py '(256)' float32");
+    kernel_ut::SetupTestEnvironment("activation/erfinv/tests/ut/op_kernel/erfinv_data", "erfinv_data");
+    kernel_ut::RunGenData("./erfinv_data", {"'(256)'", "float32"});
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    std::string path = kernel_ut::GetTestWorkDir();
 
     EleBaseTilingDataV2* tilingDatafromBin = reinterpret_cast<EleBaseTilingDataV2*>(tiling);
 
@@ -81,5 +81,4 @@ TEST_F(erfinv_test, test_case_fp32_1)
     AscendC::GmFree(y);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }

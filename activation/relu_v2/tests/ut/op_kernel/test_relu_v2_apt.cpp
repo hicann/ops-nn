@@ -15,6 +15,8 @@
 #include "gtest/gtest.h"
 #include "tikicpulib.h"
 #include "data_utils.h"
+#include "kernel_ut_data_helper.h"
+#include "kernel_ut_data_executor.h"
 
 #include "atvoss/elewise/elewise_sch_16b.h"
 #include <cstdint>
@@ -38,8 +40,7 @@ struct ReluV2TilingData {
     uint64_t scheMode;
 };
 
-class relu_v2_test : public testing::Test
-{
+class relu_v2_test : public testing::Test {
 protected:
     static void SetUpTestCase()
     {
@@ -47,9 +48,11 @@ protected:
     }
     static void TearDownTestCase()
     {
-        cout << "relu_v2_test TearDown\n" << endl;
+        cout << "relu_v2 TearDown\n" << endl;
+        kernel_ut::CleanGeneratedBinFiles("./relu_v2_data");
     }
 };
+
 
 TEST_F(relu_v2_test, test_case_fp32_1)
 {
@@ -64,13 +67,10 @@ TEST_F(relu_v2_test, test_case_fp32_1)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16*1024*1024);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 1;
-    system("cp -r ../../../../activation/relu_v2/tests/ut/op_kernel/relu_v2_data ./");
-    system("chmod -R 755 ./relu_v2_data/");
-    system("cd ./relu_v2_data/ && rm -rf ./*bin");
-    system("cd ./relu_v2_data/ && python3 gen_data.py '(256)' float32");
+    kernel_ut::SetupTestEnvironment("activation/relu_v2/tests/ut/op_kernel/relu_v2_data", "relu_v2_data");
+    kernel_ut::RunGenData("./relu_v2_data", {"'(256)'", "float32"});
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    std::string path = kernel_ut::GetTestWorkDir();
 
     ReluV2TilingData* tilingDatafromBin = reinterpret_cast<ReluV2TilingData*>(tiling);
 
@@ -98,7 +98,6 @@ TEST_F(relu_v2_test, test_case_fp32_1)
     AscendC::GmFree(z);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }
 
 TEST_F(relu_v2_test, test_case_fp16_1)
@@ -114,13 +113,10 @@ TEST_F(relu_v2_test, test_case_fp16_1)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16*1024*1024);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 1;
-    system("cp -r ../../../../activation/relu_v2/tests/ut/op_kernel/relu_v2_data ./");
-    system("chmod -R 755 ./relu_v2_data/");
-    system("cd ./relu_v2_data/ && rm -rf ./*bin");
-    system("cd ./relu_v2_data/ && python3 gen_data.py '(256)' float16");
+    kernel_ut::SetupTestEnvironment("activation/relu_v2/tests/ut/op_kernel/relu_v2_data", "relu_v2_data");
+    kernel_ut::RunGenData("./relu_v2_data", {"'(256)'", "float16"});
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    std::string path = kernel_ut::GetTestWorkDir();
 
     ReluV2TilingData* tilingDatafromBin = reinterpret_cast<ReluV2TilingData*>(tiling);
 
@@ -148,5 +144,4 @@ TEST_F(relu_v2_test, test_case_fp16_1)
     AscendC::GmFree(z);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }

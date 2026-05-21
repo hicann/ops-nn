@@ -16,31 +16,34 @@
 #include "tikicpulib.h"
 #include "gelu_mul_tiling_def.h"
 #include "data_utils.h"
+#include "kernel_ut_data_helper.h"
+#include "kernel_ut_data_executor.h"
 
 #include <cstdint>
 
 using namespace std;
 
-
-extern "C" __global__ __aicore__ void gelu_mul(GM_ADDR input, GM_ADDR output,
-                                                      GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void gelu_mul(GM_ADDR input, GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling);
 class gelu_mul_test : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    cout << "gelu_mul SetUp\n" << endl;
-  }
-  static void TearDownTestCase() {
-    cout << "gelu_mul TearDown\n" << endl;
-  }
+protected:
+
+    static void SetUpTestCase()
+    {
+        cout << "gelu_mul SetUp\n" << endl;
+    }
+
+    static void TearDownTestCase()
+    {
+        cout << "gelu_mul TearDown\n" << endl;
+        kernel_ut::CleanGeneratedBinFiles("./gelu_mul_data");
+    }
 };
+
 
 TEST_F(gelu_mul_test, test_gelu_mul_float_0)
 {
-    system(
-        "cp -rf "
-        "../../../../activation/gelu_mul/tests/ut/op_kernel/gelu_mul_data ./");
-    system("chmod -R 755 ./gelu_mul_data/");
-    system("cd ./gelu_mul_data/ && python3 gen_data.py '(2, 4)' '(2, 2)' 'float32'");
+    kernel_ut::SetupTestEnvironment("activation/gelu_mul/tests/ut/op_kernel/gelu_mul_data", "gelu_mul_data");
+    kernel_ut::RunGenData("./gelu_mul_data", {"'(2, 4)'", "'(2, 2)'", "'float32'"});
     size_t M = 2;
     size_t N = 4;
     size_t D = N / 2;
@@ -49,16 +52,16 @@ TEST_F(gelu_mul_test, test_gelu_mul_float_0)
 
     size_t yFileSize = M * D * sizeof(float);
 
-    uint8_t *x = (uint8_t *)AscendC::GmAlloc(xFileSize);
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(xFileSize);
 
-    uint8_t *y = (uint8_t *)AscendC::GmAlloc(yFileSize);
+    uint8_t* y = (uint8_t*)AscendC::GmAlloc(yFileSize);
 
     uint64_t tilingKey = 2;
     uint32_t blockDim = 1;
     size_t workspaceFileSize = 16781184;
     size_t tilingDataSize = sizeof(GeluMulTilingData);
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceFileSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
     std::string fileName = "./gelu_mul_data/float32_input_gelu_mul.bin";
 
@@ -73,20 +76,17 @@ TEST_F(gelu_mul_test, test_gelu_mul_float_0)
     fileName = "./gelu_mul_data/float32_output_gelu_mul.bin";
     WriteFile(fileName, y, yFileSize);
 
-    AscendC::GmFree((void *)x);
-    AscendC::GmFree((void *)y);
-    AscendC::GmFree((void *)workspace);
-    AscendC::GmFree((void *)tiling);
-    system("cd ./gelu_mul_data/ && python3 compare_data.py 'float32'");
+    AscendC::GmFree((void*)x);
+    AscendC::GmFree((void*)y);
+    AscendC::GmFree((void*)workspace);
+    AscendC::GmFree((void*)tiling);
+    kernel_ut::RunCompareData("./gelu_mul_data", {"'float32'"});
 }
 
 TEST_F(gelu_mul_test, test_gelu_mul_float16_1)
 {
-    system(
-        "cp -rf "
-        "../../../../activation/gelu_mul/tests/ut/op_kernel/gelu_mul_data ./");
-    system("chmod -R 755 ./gelu_mul_data/");
-    system("cd ./gelu_mul_data/ && python3 gen_data.py '(2, 4)' '(2, 2)' 'float16'");
+    kernel_ut::SetupTestEnvironment("activation/gelu_mul/tests/ut/op_kernel/gelu_mul_data", "gelu_mul_data");
+    kernel_ut::RunGenData("./gelu_mul_data", {"'(2, 4)'", "'(2, 2)'", "'float16'"});
     size_t M = 2;
     size_t N = 4;
     size_t D = N / 2;
@@ -95,16 +95,16 @@ TEST_F(gelu_mul_test, test_gelu_mul_float16_1)
 
     size_t yFileSize = M * D * sizeof(half);
 
-    uint8_t *x = (uint8_t *)AscendC::GmAlloc(xFileSize);
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(xFileSize);
 
-    uint8_t *y = (uint8_t *)AscendC::GmAlloc(yFileSize);
+    uint8_t* y = (uint8_t*)AscendC::GmAlloc(yFileSize);
 
     uint64_t tilingKey = 1;
     uint32_t blockDim = 1;
     size_t workspaceFileSize = 16781184;
     size_t tilingDataSize = sizeof(GeluMulTilingData);
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceFileSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
     std::string fileName = "./gelu_mul_data/float16_input_gelu_mul.bin";
 
@@ -119,20 +119,17 @@ TEST_F(gelu_mul_test, test_gelu_mul_float16_1)
     fileName = "./gelu_mul_data/float16_output_gelu_mul.bin";
     WriteFile(fileName, y, yFileSize);
 
-    AscendC::GmFree((void *)x);
-    AscendC::GmFree((void *)y);
-    AscendC::GmFree((void *)workspace);
-    AscendC::GmFree((void *)tiling);
-    system("cd ./gelu_mul_data/ && python3 compare_data.py 'float16'");
+    AscendC::GmFree((void*)x);
+    AscendC::GmFree((void*)y);
+    AscendC::GmFree((void*)workspace);
+    AscendC::GmFree((void*)tiling);
+    kernel_ut::RunCompareData("./gelu_mul_data", {"'float16'"});
 }
 
 TEST_F(gelu_mul_test, test_gelu_mul_bfloat16_2)
 {
-    system(
-        "cp -rf "
-        "../../../../activation/gelu_mul/tests/ut/op_kernel/gelu_mul_data ./");
-    system("chmod -R 755 ./gelu_mul_data/");
-    system("cd ./gelu_mul_data/ && python3 gen_data.py '(2, 4)' '(2, 2)' 'bfloat16_t'");
+    kernel_ut::SetupTestEnvironment("activation/gelu_mul/tests/ut/op_kernel/gelu_mul_data", "gelu_mul_data");
+    kernel_ut::RunGenData("./gelu_mul_data", {"'(2, 4)'", "'(2, 2)'", "'bfloat16_t'"});
     size_t M = 2;
     size_t N = 4;
     size_t D = N / 2;
@@ -141,16 +138,16 @@ TEST_F(gelu_mul_test, test_gelu_mul_bfloat16_2)
 
     size_t yFileSize = M * D * sizeof(bfloat16_t);
 
-    uint8_t *x = (uint8_t *)AscendC::GmAlloc(xFileSize);
+    uint8_t* x = (uint8_t*)AscendC::GmAlloc(xFileSize);
 
-    uint8_t *y = (uint8_t *)AscendC::GmAlloc(yFileSize);
+    uint8_t* y = (uint8_t*)AscendC::GmAlloc(yFileSize);
 
     uint64_t tilingKey = 3;
     uint32_t blockDim = 1;
     size_t workspaceFileSize = 16781184;
     size_t tilingDataSize = sizeof(GeluMulTilingData);
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceFileSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
     std::string fileName = "./gelu_mul_data/bfloat16_t_input_gelu_mul.bin";
 
@@ -165,10 +162,9 @@ TEST_F(gelu_mul_test, test_gelu_mul_bfloat16_2)
     fileName = "./gelu_mul_data/bfloat16_t_output_gelu_mul.bin";
     WriteFile(fileName, y, yFileSize);
 
-
-    AscendC::GmFree((void *)x);
-    AscendC::GmFree((void *)y);
-    AscendC::GmFree((void *)workspace);
-    AscendC::GmFree((void *)tiling);
-    system("cd ./gelu_mul_data/ && python3 compare_data.py 'bfloat16_t'");
+    AscendC::GmFree((void*)x);
+    AscendC::GmFree((void*)y);
+    AscendC::GmFree((void*)workspace);
+    AscendC::GmFree((void*)tiling);
+    kernel_ut::RunCompareData("./gelu_mul_data", {"'bfloat16_t'"});
 }

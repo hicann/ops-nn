@@ -15,6 +15,8 @@
 #include "gtest/gtest.h"
 #include "tikicpulib.h"
 #include "data_utils.h"
+#include "kernel_ut_data_helper.h"
+#include "kernel_ut_data_executor.h"
 
 #include "../../../op_kernel/gelu_grad_v2_apt.cpp"
 #include <cstdint>
@@ -23,8 +25,7 @@ using namespace std;
 
 extern "C" __global__ __aicore__ void gelu_grad_v2(GM_ADDR dy, GM_ADDR x, GM_ADDR z, GM_ADDR workspace, GM_ADDR tiling);
 
-class gelu_grad_v2_test : public testing::Test
-{
+class gelu_grad_v2_test : public testing::Test {
 protected:
     static void SetUpTestCase()
     {
@@ -32,9 +33,11 @@ protected:
     }
     static void TearDownTestCase()
     {
-        cout << "gelu_grad_v2_test TearDown\n" << endl;
+        cout << "gelu_grad_v2 TearDown\n" << endl;
+        kernel_ut::CleanGeneratedBinFiles("./gelu_grad_v2_data");
     }
 };
+
 
 TEST_F(gelu_grad_v2_test, test_case_fp32_tanh)
 {
@@ -49,13 +52,10 @@ TEST_F(gelu_grad_v2_test, test_case_fp32_tanh)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16*1024*1024);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 1;
-    system("cp -r ../../../../activation/gelu_grad_v2/tests/ut/op_kernel/gelu_grad_v2_data ./");
-    system("chmod -R 755 ./gelu_grad_v2_data/");
-    system("cd ./gelu_grad_v2_data/ && rm -rf ./*bin");
-    system("cd ./gelu_grad_v2_data/ && python3 gen_data.py '(256)' float32 tanh");
+    kernel_ut::SetupTestEnvironment("activation/gelu_grad_v2/tests/ut/op_kernel/gelu_grad_v2_data", "gelu_grad_v2_data");
+    kernel_ut::RunGenData("./gelu_grad_v2_data", {"'(256)'", "float32", "tanh"});
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    std::string path = kernel_ut::GetTestWorkDir();
 
     BroadcastOneDimTilingDataAdvance* tilingDatafromBin = reinterpret_cast<BroadcastOneDimTilingDataAdvance*>(tiling);
 
@@ -78,5 +78,4 @@ TEST_F(gelu_grad_v2_test, test_case_fp32_tanh)
     AscendC::GmFree(z);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }

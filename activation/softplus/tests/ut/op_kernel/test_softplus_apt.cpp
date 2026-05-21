@@ -4,7 +4,7 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. 
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 #include <array>
@@ -36,17 +36,10 @@ struct SoftplusTilingData {
     uint64_t scheMode;
 };
 
-class softplus_test : public testing::Test
-{
+class softplus_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "softplus_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "softplus_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "softplus_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "softplus_test TearDown\n" << endl; }
 };
 
 TEST_F(softplus_test, test_case_fp32_1)
@@ -57,12 +50,9 @@ TEST_F(softplus_test, test_case_fp32_1)
 
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(inputByteSize);
     uint8_t* y = (uint8_t*)AscendC::GmAlloc(outputByteSize);
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16*1024*1024);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 1;
-
-    char* path_ = get_current_dir_name();
-    string path(path_);
 
     SoftplusTilingData* tilingDatafromBin = reinterpret_cast<SoftplusTilingData*>(tiling);
 
@@ -86,5 +76,4 @@ TEST_F(softplus_test, test_case_fp32_1)
     AscendC::GmFree(y);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }

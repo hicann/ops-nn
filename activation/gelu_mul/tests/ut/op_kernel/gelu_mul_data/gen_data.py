@@ -14,8 +14,8 @@ import sys
 import os
 import numpy as np
 import re
-import torch
 import tensorflow as tf
+import torch
 
 
 def parse_str_to_shape_list(shape_str):
