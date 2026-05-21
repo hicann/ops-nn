@@ -20,14 +20,9 @@
 
 namespace AddRmsNormDynamicQuant {
 
-template <typename T_X, typename T_Y, uint64_t TILING_KEY>
+template <typename T_X, typename T_Y>
 class KernelAddRmsNormDynamicQuantRegbasePerf {
-#define INPUT_KEY ((TILING_KEY % 100) / 10)
-#define HAS_SMOOTH_SCALE1 ((INPUT_KEY >> 1) % 2 == 1)
-#define HAS_SMOOTH_SCALE2 (INPUT_KEY % 2 == 1)
-#define HAS_BETA (INPUT_KEY > 3)
-#define HAS_Y2_SCALE2 HAS_SMOOTH_SCALE2
-#define T_SMOOTH_SCALE T_X
+using T_SMOOTH_SCALE = T_X;
 public:
     __aicore__ inline KernelAddRmsNormDynamicQuantRegbasePerf(TPipe* pipe)
     {
@@ -40,6 +35,10 @@ public:
     {
         InitTiling(numM_, numN_, baseM_, baseN_, baseNDtypeAlign_, baseNReduceAlign_, powerSplit_,
                    mPerCore_, mLastCore_, epsilon_, avgFactor_, tilingData);
+        hasSmoothScale1_ = tilingData->hasSmoothScale1;
+        hasSmoothScale2_ = tilingData->hasSmoothScale2;
+        hasBeta_ = tilingData->hasBeta;
+        hasY2Scale2_ = hasSmoothScale2_;
         blockNum_ = GetBlockNum();
         blockIdx_ = GetBlockIdx();
         oriOverflowMode_ = GetOverflowMode<T_Y>();
@@ -70,17 +69,17 @@ public:
         y1Gm_.SetGlobalBuffer((__gm__ T_Y*)y1 + gmOffset, gmLen);
         xGm_.SetGlobalBuffer((__gm__ T_X*)x + gmOffset, gmLen);
         scale1Gm_.SetGlobalBuffer((__gm__ float*)scale1 + scalesGmOffset, mCore_);
-        if constexpr (HAS_SMOOTH_SCALE1) {
+        if (hasSmoothScale1_) {
             smoothScale1Gm_.SetGlobalBuffer((__gm__ T_SMOOTH_SCALE*)smooathScale1, numN_);
         }
-        if constexpr (HAS_SMOOTH_SCALE2) {
+        if (hasSmoothScale2_) {
             smoothScale2Gm_.SetGlobalBuffer((__gm__ T_SMOOTH_SCALE*)smooathScale2, numN_);
         }
-        if constexpr (HAS_Y2_SCALE2) {
+        if (hasY2Scale2_) {
             y2Gm_.SetGlobalBuffer((__gm__ T_Y*)y2 + gmOffset, gmLen);
             scale2Gm_.SetGlobalBuffer((__gm__ float*)scale2 + scalesGmOffset, mCore_);
         }
-        if constexpr (HAS_BETA) {
+        if (hasBeta_) {
             betaGm_.SetGlobalBuffer((__gm__ T_X*)beta, numN_);
         }
 
@@ -106,17 +105,17 @@ public:
         pipe_->InitBuffer(rstdBuf_, ubFactorRstd * sizeof(float));
         pipe_->InitBuffer(xReduceTmpBuf_, ubFactorRstd * sizeof(float));
         pipe_->InitBuffer(xTmpBuf_, firstVcaddResult * sizeof(float));
-        if constexpr (HAS_SMOOTH_SCALE1) {
+        if (hasSmoothScale1_) {
             pipe_->InitBuffer(inQueueSmoothScale1_, 1, ubFactorQuant * sizeof(T_SMOOTH_SCALE));
         }
-        if constexpr (HAS_SMOOTH_SCALE2) {
+        if (hasSmoothScale2_) {
             pipe_->InitBuffer(inQueueSmoothScale2_, 1, ubFactorQuant * sizeof(T_SMOOTH_SCALE));
         }
-        if constexpr (HAS_Y2_SCALE2) {
+        if (hasY2Scale2_) {
             pipe_->InitBuffer(outQueueY2_, DOUBLE_BUFFER, baseM_ * baseNB8Align_ * sizeof(T_Y));
             pipe_->InitBuffer(outQueueScale2_, DOUBLE_BUFFER, ubFactorRstd * sizeof(float));
         }
-        if constexpr (HAS_BETA) {
+        if (hasBeta_) {
             pipe_->InitBuffer(inQueueBeta_, 1, baseNDtypeAlign_ * sizeof(T_X));
         }
     }
@@ -128,13 +127,13 @@ public:
         LocalTensor<T_SMOOTH_SCALE> smoothScale1Local;
         LocalTensor<T_SMOOTH_SCALE> smoothScale2Local;
         LocalTensor<T_X> betaLocal;
-        if constexpr (HAS_SMOOTH_SCALE1) {
+        if (hasSmoothScale1_) {
             smoothScale1Local = inQueueSmoothScale1_.DeQue<T_SMOOTH_SCALE>();
         }
-        if constexpr (HAS_SMOOTH_SCALE2) {
+        if (hasSmoothScale2_) {
             smoothScale2Local = inQueueSmoothScale2_.DeQue<T_SMOOTH_SCALE>();
         }
-        if constexpr (HAS_BETA) {
+        if (hasBeta_) {
             CopyInBeta();
             betaLocal = inQueueBeta_.DeQue<T_X>();
         }
@@ -145,7 +144,7 @@ public:
             uint64_t gmOffset = mOuterOffset * baseN_;
             LocalTensor<float> scale1Local = outQueueScale1_.AllocTensor<float>();
             LocalTensor<float> scale2Local;
-            if constexpr (HAS_Y2_SCALE2) {
+            if (hasY2Scale2_) {
                 scale2Local = outQueueScale2_.AllocTensor<float>();
             }
             // 1.x1 + x2
@@ -170,45 +169,45 @@ public:
             LocalTensor<T_Y> y1Local = outQueueY1_.AllocTensor<T_Y>();
             LocalTensor<float> y1TmpLocal = y1TmpBuf_.Get<float>();
             LocalTensor<T_Y> y2Local;
-            if constexpr (HAS_Y2_SCALE2) {
+            if (hasY2Scale2_) {
                 y2Local = outQueueY2_.AllocTensor<T_Y>();
             }
             SetOverflowMode<T_Y>(0);
-            ComputeMutlScale<float, T_X, T_SMOOTH_SCALE, HAS_SMOOTH_SCALE1, T_Y>(
-                scale1Local, xOutTmpLocal, rstdLocal, gammaLocal, betaLocal, smoothScale1Local, y1TmpLocal, baseN_, realM, baseN_, baseNDtypeAlign_);
+            DispatchMutlScale<T_X, T_SMOOTH_SCALE, T_Y>(
+                scale1Local, xOutTmpLocal, rstdLocal, gammaLocal, betaLocal, smoothScale1Local, y1TmpLocal, baseN_, realM, baseN_, baseNDtypeAlign_, hasSmoothScale1_, hasBeta_);
             PipeBarrier<PIPE_V>();
             ComputeMutlY<T_Y>(y1Local, scale1Local, y1TmpLocal, baseN_, realM);
-            if constexpr (HAS_SMOOTH_SCALE2) {
-                ComputeMutlScale<float, T_X, T_SMOOTH_SCALE, HAS_SMOOTH_SCALE2, T_Y>(
-                    scale2Local, xOutTmpLocal, rstdLocal, gammaLocal, betaLocal, smoothScale2Local, y1TmpLocal, baseN_, realM, baseN_, baseNDtypeAlign_);
+            if (hasSmoothScale2_) {
+                DispatchMutlScale<T_X, T_SMOOTH_SCALE, T_Y>(
+                    scale2Local, xOutTmpLocal, rstdLocal, gammaLocal, betaLocal, smoothScale2Local, y1TmpLocal, baseN_, realM, baseN_, baseNDtypeAlign_, hasSmoothScale2_, hasBeta_);
                 PipeBarrier<PIPE_V>();
                 ComputeMutlY<T_Y>(y2Local, scale2Local, y1TmpLocal, baseN_, realM);
             }
             SetOverflowMode<T_Y>(oriOverflowMode_);
 
             outQueueY1_.EnQue<T_Y>(y1Local);
-            if constexpr (HAS_Y2_SCALE2) {
+            if (hasY2Scale2_) {
                 outQueueY2_.EnQue<T_Y>(y2Local);
             }
             CopyOutY(gmOffset, realM);
 
             outQueueScale1_.EnQue<float>(scale1Local);
-            if constexpr (HAS_Y2_SCALE2) {
+            if (hasY2Scale2_) {
                 outQueueScale2_.EnQue<float>(scale2Local);
             }
             CopyOutScale(scale1Gm_, outQueueScale1_, mOuterOffset, realM);
-            if constexpr (HAS_Y2_SCALE2) {
+            if (hasY2Scale2_) {
                 CopyOutScale(scale2Gm_, outQueueScale2_, mOuterOffset, realM);
             }
         }
         inQueueGamma_.FreeTensor(gammaLocal);
-        if constexpr (HAS_SMOOTH_SCALE1) {
+        if (hasSmoothScale1_) {
             inQueueSmoothScale1_.FreeTensor(smoothScale1Local);
         }
-        if constexpr (HAS_SMOOTH_SCALE2) {
+        if (hasSmoothScale2_) {
             inQueueSmoothScale2_.FreeTensor(smoothScale2Local);
         }
-        if constexpr (HAS_BETA) {
+        if (hasBeta_) {
             inQueueBeta_.FreeTensor(betaLocal);
         }
     }
@@ -289,7 +288,7 @@ private:
         };
         DataCopyPad(y1Gm_[offset], y1Local, copyParams);
         outQueueY1_.FreeTensor(y1Local);
-        if constexpr (HAS_Y2_SCALE2) {
+        if (hasY2Scale2_) {
             LocalTensor<T_Y> y2Local = outQueueY2_.DeQue<T_Y>();
             DataCopyPad(y2Gm_[offset], y2Local, copyParams);
             outQueueY2_.FreeTensor(y2Local);
@@ -312,12 +311,12 @@ private:
 
     __aicore__ inline void CopyInDynamicQuant()
     {
-        if constexpr (HAS_SMOOTH_SCALE1) {
+        if (hasSmoothScale1_) {
             LocalTensor<T_SMOOTH_SCALE> smoothScale1Local = inQueueSmoothScale1_.AllocTensor<T_SMOOTH_SCALE>();
             RmsNorm::DataCopyImpl<T_SMOOTH_SCALE>(smoothScale1Local, smoothScale1Gm_, 1, numN_);
             inQueueSmoothScale1_.EnQue(smoothScale1Local);
         }
-        if constexpr (HAS_SMOOTH_SCALE2) {
+        if (hasSmoothScale2_) {
             LocalTensor<T_SMOOTH_SCALE> smoothScale2Local = inQueueSmoothScale2_.AllocTensor<T_SMOOTH_SCALE>();
             RmsNorm::DataCopyImpl<T_SMOOTH_SCALE>(smoothScale2Local, smoothScale2Gm_, 1, numN_);
             inQueueSmoothScale2_.EnQue(smoothScale2Local);
@@ -520,7 +519,7 @@ private:
 
     template <
         typename T_XPF32, typename T_GAMMA, typename T_SMOOTHSCALE = float, bool HAS_SMOOTH_SCALE = true,
-        typename T_YB8>
+        bool HAS_BETA = false, typename T_YB8>
     __aicore__ inline void ComputeMutlScale(
         LocalTensor<float>& scaleLocal, LocalTensor<T_XPF32>& xLocal, LocalTensor<float>& rstdLocal,
         LocalTensor<T_GAMMA>& gammaLocal, LocalTensor<T_GAMMA>& betaLocal, LocalTensor<T_SMOOTHSCALE>& smoothScaleLocal,
@@ -639,6 +638,32 @@ private:
         }
     }
 
+    template <typename T_GAMMA, typename T_SMOOTHSCALE, typename T_YB8>
+    __aicore__ inline void DispatchMutlScale(
+        LocalTensor<float>& scaleLocal, LocalTensor<float>& xLocal, LocalTensor<float>& rstdLocal,
+        LocalTensor<T_GAMMA>& gammaLocal, LocalTensor<T_GAMMA>& betaLocal, LocalTensor<T_SMOOTHSCALE>& smoothScaleLocal,
+        LocalTensor<float>& yTmpLocal, uint32_t calCount, uint32_t realM, uint64_t baseN, uint64_t baseNDtypeAlign,
+        bool hasSmoothScale, bool hasBeta)
+    {
+        if (hasSmoothScale) {
+            if (hasBeta) {
+                ComputeMutlScale<float, T_GAMMA, T_SMOOTHSCALE, true, true, T_YB8>(
+                    scaleLocal, xLocal, rstdLocal, gammaLocal, betaLocal, smoothScaleLocal, yTmpLocal, calCount, realM, baseN, baseNDtypeAlign);
+            } else {
+                ComputeMutlScale<float, T_GAMMA, T_SMOOTHSCALE, true, false, T_YB8>(
+                    scaleLocal, xLocal, rstdLocal, gammaLocal, betaLocal, smoothScaleLocal, yTmpLocal, calCount, realM, baseN, baseNDtypeAlign);
+            }
+        } else {
+            if (hasBeta) {
+                ComputeMutlScale<float, T_GAMMA, T_SMOOTHSCALE, false, true, T_YB8>(
+                    scaleLocal, xLocal, rstdLocal, gammaLocal, betaLocal, smoothScaleLocal, yTmpLocal, calCount, realM, baseN, baseNDtypeAlign);
+            } else {
+                ComputeMutlScale<float, T_GAMMA, T_SMOOTHSCALE, false, false, T_YB8>(
+                    scaleLocal, xLocal, rstdLocal, gammaLocal, betaLocal, smoothScaleLocal, yTmpLocal, calCount, realM, baseN, baseNDtypeAlign);
+            }
+        }
+    }
+
 private:
     TPipe* pipe_ = nullptr;
     // GM Buffer
@@ -684,6 +709,10 @@ private:
     uint64_t mLastCore_{0};
     float epsilon_{0};
     float avgFactor_{0};
+    bool hasSmoothScale1_{false};
+    bool hasSmoothScale2_{false};
+    bool hasBeta_{false};
+    bool hasY2Scale2_{false};
     // Platform
     int64_t blockIdx_{0};
     int64_t blockNum_{0};
@@ -693,7 +722,6 @@ private:
     uint64_t tailMOuter_;
     uint64_t baseNB8Align_;
     // Other
-    uint32_t vfLength_{0};
 };
 } // namespace AddRmsNormDynamicQuant
-#endif // _ADD_RMS_NORM_DYNAMIC_QUANT_REGBASE_H_
+#endif // ADD_RMS_NORM_DYNAMIC_QUANT_REGBASE_PERF_H_

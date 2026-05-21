@@ -57,41 +57,26 @@ TILING_DATA_FIELD_DEF(uint64_t, mPerCore);
 TILING_DATA_FIELD_DEF(uint64_t, mLastCore);
 TILING_DATA_FIELD_DEF(float, epsilon);
 TILING_DATA_FIELD_DEF(float, avgFactor);
+TILING_DATA_FIELD_DEF(uint32_t, hasSmoothScale1);
+TILING_DATA_FIELD_DEF(uint32_t, hasSmoothScale2);
+TILING_DATA_FIELD_DEF(uint32_t, hasBeta);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(AddRmsNormDynamicQuant, AddRmsNormDynamicQuantTilingData)
 REGISTER_TILING_DATA_CLASS(AddRmsNormDynamicQuant_100, AddRmsNormDynamicQuantRegbaseTilingData)
-REGISTER_TILING_DATA_CLASS(AddRmsNormDynamicQuant_120, AddRmsNormDynamicQuantRegbaseTilingData)
-REGISTER_TILING_DATA_CLASS(AddRmsNormDynamicQuant_130, AddRmsNormDynamicQuantRegbaseTilingData)
-REGISTER_TILING_DATA_CLASS(AddRmsNormDynamicQuant_140, AddRmsNormDynamicQuantRegbaseTilingData)
-REGISTER_TILING_DATA_CLASS(AddRmsNormDynamicQuant_160, AddRmsNormDynamicQuantRegbaseTilingData)
-REGISTER_TILING_DATA_CLASS(AddRmsNormDynamicQuant_170, AddRmsNormDynamicQuantRegbaseTilingData)
-
 REGISTER_TILING_DATA_CLASS(AddRmsNormDynamicQuant_101, AddRmsNormDynamicQuantRegbaseTilingData)
-REGISTER_TILING_DATA_CLASS(AddRmsNormDynamicQuant_121, AddRmsNormDynamicQuantRegbaseTilingData)
-REGISTER_TILING_DATA_CLASS(AddRmsNormDynamicQuant_131, AddRmsNormDynamicQuantRegbaseTilingData)
-REGISTER_TILING_DATA_CLASS(AddRmsNormDynamicQuant_141, AddRmsNormDynamicQuantRegbaseTilingData)
-REGISTER_TILING_DATA_CLASS(AddRmsNormDynamicQuant_161, AddRmsNormDynamicQuantRegbaseTilingData)
-REGISTER_TILING_DATA_CLASS(AddRmsNormDynamicQuant_171, AddRmsNormDynamicQuantRegbaseTilingData)
-
 REGISTER_TILING_DATA_CLASS(AddRmsNormDynamicQuant_102, AddRmsNormDynamicQuantRegbaseTilingData)
-REGISTER_TILING_DATA_CLASS(AddRmsNormDynamicQuant_122, AddRmsNormDynamicQuantRegbaseTilingData)
-REGISTER_TILING_DATA_CLASS(AddRmsNormDynamicQuant_132, AddRmsNormDynamicQuantRegbaseTilingData)
-REGISTER_TILING_DATA_CLASS(AddRmsNormDynamicQuant_142, AddRmsNormDynamicQuantRegbaseTilingData)
-REGISTER_TILING_DATA_CLASS(AddRmsNormDynamicQuant_162, AddRmsNormDynamicQuantRegbaseTilingData)
-REGISTER_TILING_DATA_CLASS(AddRmsNormDynamicQuant_172, AddRmsNormDynamicQuantRegbaseTilingData)
-
 REGISTER_TILING_DATA_CLASS(AddRmsNormDynamicQuant_199, AddRmsNormDynamicQuantRegbaseTilingData)
 
 BEGIN_TILING_DATA_DEF(AddRmsNormDynamicQuantEmptyTilingData)
 TILING_DATA_FIELD_DEF(uint64_t, numM);
 TILING_DATA_FIELD_DEF(uint64_t, hasSmoothScale1);
 TILING_DATA_FIELD_DEF(uint64_t, hasSmoothScale2);
-TILING_DATA_FIELD_DEF(uint64_t, usedCoreNum)
+TILING_DATA_FIELD_DEF(uint64_t, usedCoreNum);
 TILING_DATA_FIELD_DEF(uint64_t, mPerCore);
 TILING_DATA_FIELD_DEF(uint64_t, mLastCore);
 TILING_DATA_FIELD_DEF(uint64_t, ubSize);
-TILING_DATA_FIELD_DEF(uint64_t, mPerUB)
+TILING_DATA_FIELD_DEF(uint64_t, mPerUB);
 TILING_DATA_FIELD_DEF(uint64_t, coreUbBlockCount);
 TILING_DATA_FIELD_DEF(uint64_t, lastCoreBlockCount);
 TILING_DATA_FIELD_DEF(uint64_t, mTailUb);
@@ -102,8 +87,6 @@ REGISTER_TILING_DATA_CLASS(AddRmsNormDynamicQuant_500, AddRmsNormDynamicQuantEmp
 constexpr uint32_t TILING_TYPE_NORMAL = 0;
 constexpr uint32_t TILING_TYPE_SPILT = 1;
 constexpr uint32_t TILING_TYPE_PERF = 2;
-constexpr uint32_t TILING_OFFSET_HAS_QUANT = 10;
-constexpr uint32_t TILING_HAS_BETA = 40;
 constexpr uint32_t TILING_OFFSET_REGBASE = 100;
 constexpr uint64_t TILING_KEY_UNRUN = 199;
 

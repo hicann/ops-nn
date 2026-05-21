@@ -341,7 +341,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 132);
+    ASSERT_EQ(tiling_key, 102);
     // dlog_setlevel(0, 3, 0);
 }
 
@@ -446,7 +446,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 132);
+    ASSERT_EQ(tiling_key, 102);
     // dlog_setlevel(0, 3, 0);
 }
 
@@ -551,7 +551,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 132);
+    ASSERT_EQ(tiling_key, 102);
     // dlog_setlevel(0, 3, 0);
 }
 
@@ -656,7 +656,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 131);
+    ASSERT_EQ(tiling_key, 101);
     // dlog_setlevel(0, 3, 0);
 }
 
@@ -761,7 +761,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 132);
+    ASSERT_EQ(tiling_key, 102);
     // dlog_setlevel(0, 3, 0);
 }
 
@@ -1076,7 +1076,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 132);
+    ASSERT_EQ(tiling_key, 102);
     // dlog_setlevel(0, 3, 0);
 }
 
@@ -1181,7 +1181,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 132);
+    ASSERT_EQ(tiling_key, 102);
     // dlog_setlevel(0, 3, 0);
 }
 
@@ -1286,7 +1286,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 131);
+    ASSERT_EQ(tiling_key, 101);
     // dlog_setlevel(0, 3, 0);
 }
 
@@ -1391,7 +1391,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 132);
+    ASSERT_EQ(tiling_key, 102);
     // dlog_setlevel(0, 3, 0);
 }
 
@@ -1601,7 +1601,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 132);
+    ASSERT_EQ(tiling_key, 102);
     // dlog_setlevel(0, 3, 0);
 }
 
@@ -1706,7 +1706,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 132);
+    ASSERT_EQ(tiling_key, 102);
     // dlog_setlevel(0, 3, 0);
 }
 
@@ -1811,7 +1811,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 131);
+    ASSERT_EQ(tiling_key, 101);
     // dlog_setlevel(0, 3, 0);
 }
 
@@ -1916,7 +1916,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 132);
+    ASSERT_EQ(tiling_key, 102);
     // dlog_setlevel(0, 3, 0);
 }
 
@@ -2126,7 +2126,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 132);
+    ASSERT_EQ(tiling_key, 102);
     // dlog_setlevel(0, 3, 0);
 }
 
@@ -2231,7 +2231,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 132);
+    ASSERT_EQ(tiling_key, 102);
     // dlog_setlevel(0, 3, 0);
 }
 
@@ -2336,7 +2336,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 131);
+    ASSERT_EQ(tiling_key, 101);
     // dlog_setlevel(0, 3, 0);
 }
 
@@ -2441,7 +2441,7 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 132);
+    ASSERT_EQ(tiling_key, 102);
     // dlog_setlevel(0, 3, 0);
 }
 
@@ -2652,6 +2652,6 @@ TEST_F(AddRmsNormDynamicQuantTiling, add_rms_norm_dynamic_quant_tiling_regbase_t
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
 
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 172);
+    ASSERT_EQ(tiling_key, 102);
     // dlog_setlevel(0, 3, 0);
 }

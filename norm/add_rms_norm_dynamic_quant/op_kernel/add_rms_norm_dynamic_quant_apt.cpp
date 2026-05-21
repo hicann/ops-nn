@@ -11,37 +11,21 @@
  * \file add_rms_norm_dynamic_quant_apt.cpp
  * \brief
  */
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 310
 #include "arch35/add_rms_norm_dynamic_quant_regbase.h"
 #include "arch35/add_rms_norm_dynamic_quant_regbase_perf.h"
 #include "arch35/add_rms_norm_dynamic_quant_regbase_split_reduce.h"
 #include "arch35/add_rms_norm_dynamic_quant_empty.h"
-#else
-#include "add_rms_norm_dynamic_quant_normal_kernel.h"
-#include "add_rms_norm_dynamic_quant_single_row_kernel.h"
-#include "add_rms_norm_dynamic_quant_cut_d_kernel.h"
-#endif
 
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 310
 using namespace AddRmsNormDynamicQuant;
-#endif
 using namespace AscendC;
 
 #define TILING_KEY_UNRUN 199
 
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 310
 #define INIT_AND_PROCESS_WORKSPACE                                                                                    \
     do {                                                                                                              \
         op.Init(x1, x2, gamma, smooathScale1, smooathScale2, beta, y1, y2, x, scale1, scale2, workspace, tilingData); \
         op.Process();                                                                                                 \
     } while (0)
-#else
-#define INIT_AND_PROCESS_WORKSPACE                                                                                 \
-    do {                                                                                                           \
-        op.Init(x1, x2, gamma, smooathScale1, smooathScale2, y1, y2, x, scale1, scale2, usrWorkspace, tilingData); \
-        op.Process();                                                                                              \
-    } while (0)
-#endif
 
 #define INIT_AND_PROCESS                                                                             \
     do {                                                                                             \
@@ -60,90 +44,26 @@ extern "C" __global__ __aicore__ void add_rms_norm_dynamic_quant(
     GM_ADDR y2, GM_ADDR x, GM_ADDR scale1, GM_ADDR scale2, GM_ADDR workspace, GM_ADDR tiling)
 {
     TPipe pipe;
-#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 310
     if (TILING_KEY_IS(500)) {
         GET_TILING_DATA_WITH_STRUCT(AddRmsNormDynamicQuantEmptyTilingData, tilingDataIn, tiling);
         const AddRmsNormDynamicQuantEmptyTilingData* __restrict tilingData = &tilingDataIn;
         KernelAddRmsNormDynamicQuantEmpty<2> op(&pipe, tilingData);
         INIT_AND_PROCESS_EMPTY;
+    } else if (TILING_KEY_IS(TILING_KEY_UNRUN)) {
+        // Do nothing
     } else {
         KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
         GET_TILING_DATA_WITH_STRUCT(AddRmsNormDynamicQuantRegbaseTilingData, tilingDataIn, tiling);
         const AddRmsNormDynamicQuantRegbaseTilingData* __restrict tilingData = &tilingDataIn;
         if (TILING_KEY_IS(100)) {
-            KernelAddRmsNormDynamicQuantRegbase<DTYPE_X1, DTYPE_Y1, 100> op(&pipe);
-            INIT_AND_PROCESS;
-        } else if (TILING_KEY_IS(120)) {
-            KernelAddRmsNormDynamicQuantRegbase<DTYPE_X1, DTYPE_Y1, 120> op(&pipe);
-            INIT_AND_PROCESS;
-        } else if (TILING_KEY_IS(130)) {
-            KernelAddRmsNormDynamicQuantRegbase<DTYPE_X1, DTYPE_Y1, 130> op(&pipe);
-            INIT_AND_PROCESS;
-        } else if (TILING_KEY_IS(140)) {
-            KernelAddRmsNormDynamicQuantRegbase<DTYPE_X1, DTYPE_Y1, 140> op(&pipe);
-            INIT_AND_PROCESS;
-        } else if (TILING_KEY_IS(160)) {
-            KernelAddRmsNormDynamicQuantRegbase<DTYPE_X1, DTYPE_Y1, 160> op(&pipe);
-            INIT_AND_PROCESS;
-        } else if (TILING_KEY_IS(170)) {
-            KernelAddRmsNormDynamicQuantRegbase<DTYPE_X1, DTYPE_Y1, 170> op(&pipe);
+            KernelAddRmsNormDynamicQuantRegbase<DTYPE_X1, DTYPE_Y1> op(&pipe);
             INIT_AND_PROCESS;
         } else if (TILING_KEY_IS(101)) {
-            KernelAddRmsNormDynamicQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, 101> op(&pipe);
-            INIT_AND_PROCESS_WORKSPACE;
-        } else if (TILING_KEY_IS(121)) {
-            KernelAddRmsNormDynamicQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, 121> op(&pipe);
-            INIT_AND_PROCESS_WORKSPACE;
-        } else if (TILING_KEY_IS(131)) {
-            KernelAddRmsNormDynamicQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, 131> op(&pipe);
-            INIT_AND_PROCESS_WORKSPACE;
-        } else if (TILING_KEY_IS(141)) {
-            KernelAddRmsNormDynamicQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, 141> op(&pipe);
-            INIT_AND_PROCESS_WORKSPACE;
-        } else if (TILING_KEY_IS(161)) {
-            KernelAddRmsNormDynamicQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, 161> op(&pipe);
-            INIT_AND_PROCESS_WORKSPACE;
-        } else if (TILING_KEY_IS(171)) {
-            KernelAddRmsNormDynamicQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1, 171> op(&pipe);
+            KernelAddRmsNormDynamicQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1> op(&pipe);
             INIT_AND_PROCESS_WORKSPACE;
         } else if (TILING_KEY_IS(102)) {
-            KernelAddRmsNormDynamicQuantRegbasePerf<DTYPE_X1, DTYPE_Y1, 102> op(&pipe);
+            KernelAddRmsNormDynamicQuantRegbasePerf<DTYPE_X1, DTYPE_Y1> op(&pipe);
             INIT_AND_PROCESS;
-        } else if (TILING_KEY_IS(122)) {
-            KernelAddRmsNormDynamicQuantRegbasePerf<DTYPE_X1, DTYPE_Y1, 122> op(&pipe);
-            INIT_AND_PROCESS;
-        } else if (TILING_KEY_IS(132)) {
-            KernelAddRmsNormDynamicQuantRegbasePerf<DTYPE_X1, DTYPE_Y1, 132> op(&pipe);
-            INIT_AND_PROCESS;
-        } else if (TILING_KEY_IS(142)) {
-            KernelAddRmsNormDynamicQuantRegbasePerf<DTYPE_X1, DTYPE_Y1, 142> op(&pipe);
-            INIT_AND_PROCESS;
-        } else if (TILING_KEY_IS(162)) {
-            KernelAddRmsNormDynamicQuantRegbasePerf<DTYPE_X1, DTYPE_Y1, 162> op(&pipe);
-            INIT_AND_PROCESS;
-        } else if (TILING_KEY_IS(172)) {
-            KernelAddRmsNormDynamicQuantRegbasePerf<DTYPE_X1, DTYPE_Y1, 172> op(&pipe);
-            INIT_AND_PROCESS;
-        } else if (TILING_KEY_IS(TILING_KEY_UNRUN)) {
-            // Do nothing
         }
     }
-
-#else
-    GET_TILING_DATA_WITH_STRUCT(AddRmsNormDynamicQuantTilingData, tilingDataIn, tiling);
-    const AddRmsNormDynamicQuantTilingData* __restrict tilingData = &tilingDataIn;
-    GM_ADDR usrWorkspace = AscendC::GetUserWorkspace(workspace);
-    if (TILING_KEY_IS(0)) {
-        // 0 Tiling, Do Nothing.
-    } else if (TILING_KEY_IS(1)) {
-        KernelAddRmsNormDynamicQuantNormal<DTYPE_X1, DTYPE_Y1, 1> op(&pipe);
-        INIT_AND_PROCESS_WORKSPACE;
-    } else if (TILING_KEY_IS(2)) {
-        KernelAddRmsNormDynamicQuantSingleRow<DTYPE_X1, DTYPE_Y1, 2> op(&pipe);
-        INIT_AND_PROCESS_WORKSPACE;
-    } else if (TILING_KEY_IS(3)) {
-        KernelAddRmsNormDynamicQuantSliceD<DTYPE_X1, DTYPE_Y1, 3> op(&pipe);
-        INIT_AND_PROCESS_WORKSPACE;
-    }
-#endif
 }

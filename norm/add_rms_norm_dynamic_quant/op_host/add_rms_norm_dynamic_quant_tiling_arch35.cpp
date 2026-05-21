@@ -31,8 +31,6 @@ constexpr uint64_t X_INDEX = 2;
 constexpr uint64_t SCALE1_INDEX = 3;
 constexpr uint64_t SCALE2_INDEX = 4;
 constexpr uint64_t EPS_ATTR_INDEX = 0;
-constexpr uint64_t DST_TYPE__ATTR_INDEX = 2;
-
 constexpr uint32_t LOG_2 = 2;
 constexpr uint32_t NUM_TWO = 2;
 constexpr uint32_t MAX_DIM_CNT = 8;
@@ -45,7 +43,6 @@ constexpr uint32_t DEFAULT_SYS_WORKSPACE = 16 * 1024 * 1024;
 
 constexpr uint32_t LEVEL_BUFFER_CNT = 3;
 constexpr uint32_t MULTI_FACTOR_2 = 2;
-constexpr uint32_t SMOOTH_SCALE1_BIN_OFFSET = 1;
 constexpr uint32_t FULL_LOAD_R_MAX = 16384;
 constexpr uint32_t ALIGN_SPACE = 1 * 1024;
 constexpr uint32_t DOUBLE_BUFFER = 2;
@@ -547,6 +544,9 @@ void AddRmsNormDynamicQuantRegbaseTiling::SetTilingData()
     tilingData.set_mLastCore(tilingParams.mLastCore);
     tilingData.set_epsilon(tilingParams.epsilon);
     tilingData.set_avgFactor(tilingParams.avgFactor);
+    tilingData.set_hasSmoothScale1(static_cast<uint32_t>(tilingParams.hasSmoothScale1));
+    tilingData.set_hasSmoothScale2(static_cast<uint32_t>(tilingParams.hasSmoothScale2));
+    tilingData.set_hasBeta(static_cast<uint32_t>(tilingParams.hasBeta));
 }
 
 void AddRmsNormDynamicQuantRegbaseTiling::PrintTilingData()
@@ -555,12 +555,13 @@ void AddRmsNormDynamicQuantRegbaseTiling::PrintTilingData()
         nodeName.c_str(),
         "TilingData numM: %lu, numN: %lu, baseM: %lu, baseN: %lu, "
         "baseNDtypeAlign: %lu, baseNReduceAlign: %lu, powerSplit: %lu, powerLoop: %lu, "
-        "mPerCore: %lu, mLastCore: %lu"
-        "epsilon: %f, avgFactor: %f.",
+        "mPerCore: %lu, mLastCore: %lu, "
+        "hasS1: %u, hasS2: %u, hasBeta: %u, epsilon: %f, avgFactor: %f.",
         tilingData.get_numM(), tilingData.get_numN(), tilingData.get_baseM(), tilingData.get_baseN(),
         tilingData.get_baseNDtypeAlign(), tilingData.get_baseNReduceAlign(), tilingData.get_powerSplit(),
-        tilingData.get_powerLoop(), tilingData.get_mPerCore(), tilingData.get_mLastCore(), tilingData.get_epsilon(),
-        tilingData.get_avgFactor());
+        tilingData.get_powerLoop(), tilingData.get_mPerCore(), tilingData.get_mLastCore(),
+        tilingData.get_hasSmoothScale1(), tilingData.get_hasSmoothScale2(), tilingData.get_hasBeta(),
+        tilingData.get_epsilon(), tilingData.get_avgFactor());
 }
 
 ge::graphStatus AddRmsNormDynamicQuantRegbaseTiling::DoLibApiTiling()
@@ -594,13 +595,7 @@ ge::graphStatus AddRmsNormDynamicQuantRegbaseTiling::PostTiling()
 
 uint64_t AddRmsNormDynamicQuantRegbaseTiling::GetTilingKey() const
 {
-    uint64_t tilingKey = TILING_OFFSET_REGBASE;
-    tilingKey += TILING_OFFSET_HAS_QUANT *
-                 ((tilingParams.hasSmoothScale1 << SMOOTH_SCALE1_BIN_OFFSET) | tilingParams.hasSmoothScale2);
-    if(tilingParams.hasBeta){
-        tilingKey += TILING_HAS_BETA;
-    }
-    tilingKey += tilingParams.tilingType;
+    uint64_t tilingKey = TILING_OFFSET_REGBASE + tilingParams.tilingType;
     if (!tilingParams.needRun) {
         tilingKey = TILING_KEY_UNRUN;
     }
