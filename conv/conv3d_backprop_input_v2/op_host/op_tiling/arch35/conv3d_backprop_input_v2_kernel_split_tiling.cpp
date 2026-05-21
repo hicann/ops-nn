@@ -254,7 +254,8 @@ bool Conv3DDXV2KernelSplitTiling::IsBaseShapeFitKernelSplitHW(const uint32_t bes
                       (runInfo_.dedy_d == 1 || runInfo_.kernel_d == 1);
 
     // A B矩阵都全载时，才会在cout全载模板, A B全载时，若cin较小，则转为NDHWC性能较差，仍走cout全载模板
-    if (aBFullLoad && !bestBlockEnable && runInfo_.groups == 1) {
+    if (aBFullLoad && !bestBlockEnable && runInfo_.groups == 1
+        && static_cast<uint32_t>(runInfo_.dedy_cout_g) <= BASIC_BLOCK_SIZE_256) {
         kSCoutFullLoad_ = true;
     }
 
