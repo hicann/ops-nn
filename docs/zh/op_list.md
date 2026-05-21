@@ -588,6 +588,16 @@
   </tr>
   <tr>
     <td>activation</td>
+    <td><a href="../../activation/softsign_grad/README.md">softshrink</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>完成softsign的反向传播。</td>
+  </tr>
+  <tr>
+    <td>activation</td>
     <td><a href="../../activation/softshrink_grad/README.md">softshrink_grad</a></td>
     <td>✗</td>
     <td>✗</td>
