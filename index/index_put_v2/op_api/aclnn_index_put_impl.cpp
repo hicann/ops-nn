@@ -14,7 +14,6 @@
  */
 #include "aclnn_index_put_impl.h"
 #include "index/index_put/op_host/op_api/index_put.h"
-#include "index/index_check/op_api/index_check.h"
 #include "index_put_v2.h"
 #include "acl/acl_rt.h"
 #include "index/linear_index_v2/op_host/op_api/linear_index_v2.h"
@@ -462,26 +461,12 @@ static const aclTensor* AicoreCompute(const aclTensor *selfCast, const FVector<c
     }
     auto maskarray = executor->AllocIntArray(masks_final.data(), indicesNum);
     auto masktensor_trans = executor->ConvertToTensor(maskarray, op::ToOpDataType(ACL_INT64));
-    FVector<int64_t, DIMLIMIT> boundsVec;
-    for (size_t i = 0; i < selfCast->GetViewShape().GetDimNum(); i++) {
-      boundsVec.emplace_back(selfCast->GetViewShape().GetDim(i));
-    }
-    auto boundsArray = executor->AllocIntArray(boundsVec.data(), boundsVec.size());
-    auto boundsTensor = executor->ConvertToTensor(boundsArray, op::ToOpDataType(ACL_INT64));
-    l0op::IndexCheck(boundsTensor, indicesTensorList, executor);
     indexPutOpOut = l0op::IndexPutV2(selfCast, indicesTensorList, valueBroadcast, masktensor_trans,
                                      accumulate, out, executor);
     auto permback = GetPermBack(masksNum, indicesNum, selfDimNum, executor);
     indexPutOpOut = l0op::Transpose(indexPutOpOut, permback, executor);
   } else {
     aclTensor* out = const_cast<aclTensor*>(selfCast);
-    FVector<int64_t, DIMLIMIT> boundsVec;
-    for (size_t i = 0; i < selfCast->GetViewShape().GetDimNum(); i++) {
-      boundsVec.emplace_back(selfCast->GetViewShape().GetDim(i));
-    }
-    auto boundsArray = executor->AllocIntArray(boundsVec.data(), boundsVec.size());
-    auto boundsTensor = executor->ConvertToTensor(boundsArray, op::ToOpDataType(ACL_INT64));
-    l0op::IndexCheck(boundsTensor, indicesTensorList, executor);
     indexPutOpOut = l0op::IndexPutV2(selfCast, indicesTensorList, valueBroadcast, maskTensor,
                                      accumulate, out, executor);
   }
@@ -1395,22 +1380,6 @@ aclnnStatus aclnnIndexPutImplGetWorkspaceSize(aclTensor *selfRef,
     // 调用IndexPut算子kernel
     bool isSupportAiCpu = IsAiCPUSupport(selfRef, allDefinedIndices, values, accumulate, masks);
     if (isSupportAiCpu) {
-      bool hasBoolIndices = false;
-      for (size_t i = 0; i < allDefinedIndices.size(); i++) {
-        if (allDefinedIndices[i]->GetDataType() == op::DataType::DT_BOOL) {
-          hasBoolIndices = true;
-          break;
-        }
-      }
-      if (!hasBoolIndices) {
-        FVector<int64_t, DIMLIMIT> boundsVec;
-        for (size_t i = 0; i < selfCast->GetViewShape().GetDimNum(); i++) {
-          boundsVec.emplace_back(selfCast->GetViewShape().GetDim(i));
-        }
-        auto boundsArray = uniqueExecutor.get()->AllocIntArray(boundsVec.data(), boundsVec.size());
-        auto boundsTensor = uniqueExecutor.get()->ConvertToTensor(boundsArray, op::ToOpDataType(ACL_INT64));
-        l0op::IndexCheck(boundsTensor, indicesTensorList, uniqueExecutor.get());
-      }
       aclTensor* out = const_cast<aclTensor*>(selfCast);
       if(deterministicValue != 0) {
           indexPutOpOut = l0op::IndexPutV3(selfCast, indicesTensorList, valuesCast, maskTensor,
@@ -1459,25 +1428,6 @@ aclnnStatus aclnnIndexPutImplGetWorkspaceSize(aclTensor *selfRef,
     }
     // values做broadcast操作
     auto valueBroadcast = valuesToBroadcast(indicesSize, selfCast, indices, definedIndices, valuesCast, uniqueExecutor.get());
-
-    // 添加IndexCheck，确保索引不越界
-    bool hasBoolIndices = false;
-    for (size_t i = 0; i < definedIndices.size(); i++) {
-        if (definedIndices[i]->GetDataType() == op::DataType::DT_BOOL) {
-            hasBoolIndices = true;
-            break;
-        }
-    }
-    if (!hasBoolIndices) {
-        FVector<int64_t, DIMLIMIT> boundsVec;
-        for (size_t i = 0; i < selfCast->GetViewShape().GetDimNum(); i++) {
-            boundsVec.emplace_back(selfCast->GetViewShape().GetDim(i));
-        }
-        auto boundsArray = uniqueExecutor.get()->AllocIntArray(boundsVec.data(), boundsVec.size());
-        auto boundsTensor = uniqueExecutor.get()->ConvertToTensor(boundsArray, op::ToOpDataType(ACL_INT64));
-        auto definedIndicesTensorList = uniqueExecutor.get()->AllocTensorList(definedIndices.data(), definedIndices.size());
-        l0op::IndexCheck(boundsTensor, definedIndicesTensorList, uniqueExecutor.get());
-    }
 
     auto strideTensor = uniqueExecutor.get()->ConvertToTensor(strideTail.data(), strideTail.size(), DataType::DT_INT32);
     auto valueSizeTensor = uniqueExecutor.get()->ConvertToTensor(valueSizeTail.data(), valueSizeTail.size(), DataType::DT_INT32);
