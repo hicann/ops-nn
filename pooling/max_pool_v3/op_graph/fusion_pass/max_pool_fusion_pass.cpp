@@ -46,19 +46,17 @@ const int64_t kCaptureInput = 0L;
 const int64_t kCapturePool = 1L;
 const size_t kShapeAttrSize = 4U;
 
-bool IsTargetPlatform()
+inline static bool IsRegbasePlatform()
 {
-    PlatformInfo platformInfo;
-    OptionalInfo optionalInfo;
+    PlatformInfo info;
+    OptionalInfo optInfo;
     OP_LOGE_IF(
-        PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optionalInfo) != SUCCESS,
+        PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(info, optInfo) != SUCCESS,
         false, kPassName.c_str(), "Get platform_info failed.");
-    const std::string soc = platformInfo.str_info.short_soc_version;
-    if (soc != "Ascend950") {
-        OPS_LOG_D(kPassName.c_str(), "Platform %s is not supported.", soc.c_str());
-        return false;
-    }
-    return true;
+    const std::string socVersion = info.str_info.short_soc_version;
+    bool isRegbasePlatform = (socVersion == "Ascend950" || socVersion == "MC62CM12A");
+    OPS_LOG_D(kPassName.c_str(), "Platform short soc: %s, is_regbase: %d", socVersion.c_str(), isRegbasePlatform);
+    return isRegbasePlatform;
 }
 
 bool IsSupportedDtype(const DataType dtype)
@@ -118,7 +116,7 @@ std::vector<PatternUniqPtr> MaxPoolFusionPass::Patterns()
 
 bool MaxPoolFusionPass::MeetRequirements(const std::unique_ptr<MatchResult>& matchResult)
 {
-    if (!IsTargetPlatform()) {
+    if (!IsRegbasePlatform()) {
         return false;
     }
 
@@ -163,6 +161,8 @@ bool MaxPoolFusionPass::MeetRequirements(const std::unique_ptr<MatchResult>& mat
 
 GraphUniqPtr MaxPoolFusionPass::Replacement(const std::unique_ptr<MatchResult>& matchResult)
 {
+    OPS_LOG_D(kPassName.c_str(), "Enter Replacement for MaxPoolFusionPass");
+
     NodeIo inputIo;
     OP_LOGE_IF(matchResult->GetCapturedTensor(kCaptureInput, inputIo) != SUCCESS, nullptr, kPassName.c_str(),
         "Get captured input failed.");
