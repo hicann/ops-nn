@@ -395,7 +395,8 @@ struct IterateAllForKernelSplit {
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, Convolution3DBackpropFunc);
     static __aicore__ inline void call(Intf *self, const GlobalTensor<typename Intf::DstT> &output, uint8_t enAtomic)
     {
-        while (self->template Iterate<sync>()) {
+        bool hasBias = self->ctx.hasBias_;
+        while (self->template Iterate<sync>(false, hasBias)) {
             if (unlikely(self->ctx.tiling_->wk == 1 && self->ctx.tiling_->hk == 1 && self->ctx.rearrangeHIndex_ != 0)) {
                 continue;
             }

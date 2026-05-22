@@ -53,7 +53,7 @@ public:
         this->dedyGm_.SetGlobalBuffer((__gm__ dedyType *)dedy);
         this->yGm_.SetGlobalBuffer((__gm__ yType *)y);
 
-        if (bias != nullptr) {
+        if (unlikely(bias != nullptr)) {
             this->hasBias_ = true;
             this->biasGm_.SetGlobalBuffer((__gm__ biasType *)bias);
         }
@@ -271,7 +271,7 @@ protected:
         this->dedx_.SetOutBackprop(this->dedyGm_[this->offsetA_]);
         this->dedx_.SetWeight(this->filterGm_[this->offsetB_]);
 
-        if (this->hasBias_) {
+        if (unlikely(this->hasBias_)) {
             this->dedx_.SetBias(this->biasGm_[this->offsetBias_]);
         }
 
@@ -342,7 +342,9 @@ protected:
         }
         // Release bias after full load.
         // Note: Currently only the bias full-load scenario exists.
-        this->dedx_.FreeBiasTensor();
+        if (unlikely(this->tiling_->isBiasFullLoad && this->hasBias_)) {
+            this->dedx_.FreeBiasTensor();
+        }
     }
 };
 }

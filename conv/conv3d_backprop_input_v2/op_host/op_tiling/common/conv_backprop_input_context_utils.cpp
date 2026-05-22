@@ -1933,6 +1933,40 @@ bool CheckTranspose(const char* opName, const gert::TilingContext* context) {
     return true;
 }
 
+static bool CheckBiasParams(gert::TilingContext *context, const OtherParams& otherParams,
+                            optiling::OpTypeV2 opType) {
+    if (!IsArchAfter35(context)) {
+        return true;
+    }
+
+    auto biasShape = context->GetOptionalInputShape(BAIS_INDEX);
+    if (biasShape == nullptr || biasShape->GetStorageShape().GetShapeSize() == 0) {
+        return true;
+    }
+
+    const auto op_name = context->GetNodeName();
+    auto biasDesc = context->GetOptionalInputDesc(BAIS_INDEX);
+    OP_CHECK_IF(biasDesc == nullptr,
+                OP_LOGE(op_name, "failed to get bias tensor desc from context"), return false);
+
+    const auto& storageShape = biasShape->GetStorageShape();
+    OP_CHECK_IF(storageShape.GetDimNum() != 1,
+                OP_LOGE(op_name, "bias dim num[%zu] is invalid, should be 1D tensor",
+                        storageShape.GetDimNum()), return false);
+
+    int64_t biasCin = storageShape.GetDim(0);
+    OP_CHECK_IF(biasCin != otherParams.c_shape.c,
+                OP_LOGE(op_name, "bias shape[0]=[%ld] should equal to dedx_cin=[%d]",
+                        biasCin, otherParams.c_shape.c), return false);
+
+    ge::DataType biasDtype = biasDesc->GetDataType();
+    OP_CHECK_IF(biasDtype != ge::DT_FLOAT,
+                OP_LOGE(op_name, "bias dtype[%s] only supports FP32",
+                        ge::TypeUtils::DataTypeToSerialString(biasDtype).c_str()), return false);
+
+    return true;
+}
+
 void SetInitOutput(Conv3dBpInputV2RunInfo &runInfoV2, const optiling::OpTypeV2 opType, const OtherParams& otherParams) {
     int32_t doModulo = (otherParams.fmap_d_padding - otherParams.filter_d_dilation) %
                         runInfoV2.stride_d;
@@ -1943,8 +1977,7 @@ void SetInitOutput(Conv3dBpInputV2RunInfo &runInfoV2, const optiling::OpTypeV2 o
         runInfoV2.stride_h > otherParams.b_shape.h ||
         ((opType == optiling::OpTypeV2::kConv3DTransposeV2 || opType == optiling::OpTypeV2::kExtendConvTranspose) &&
           (otherParams.output_padding.output_padding_d > 0 ||
-           otherParams.output_padding.output_padding_h > 0 ||
-           otherParams.output_padding.output_padding_w > 0)) ||
+           otherParams.output_padding.output_padding_h > 0 )) ||
         runInfoV2.dilation_d > 1) {
         // 1 is init output with l0C, 2 is init output with l1, defualt is 0 means not init output
         runInfoV2.initOutputFlag = 1;
@@ -1983,12 +2016,14 @@ bool SetRunInfoToV2(gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInf
             OP_LOGE(context, "failed to get impl mode"), return false);
 
     if (!CheckCalPads(context, runInfoV2, opType, otherParams) || !CheckParams(runInfoV2, context, otherParams) ||
-        !CheckAttrs(context, runInfoV2, context->GetNodeName(), otherParams) || !CheckPadRange(context, runInfoV2, context->GetNodeName())) {
+        !CheckAttrs(context, runInfoV2, context->GetNodeName(), otherParams) ||
+        !CheckPadRange(context, runInfoV2, context->GetNodeName())) {
         OP_LOGE(context, "params is invalid");
         return false;
     }
 
-    if ((opType == optiling::OpTypeV2::kConv3DTransposeV2 || opType == optiling::OpTypeV2::kExtendConvTranspose) && !CheckTranspose(context->GetNodeName(), context)) {
+    if ((opType == optiling::OpTypeV2::kConv3DTransposeV2 || opType == optiling::OpTypeV2::kExtendConvTranspose) 
+        && (!CheckTranspose(context->GetNodeName(), context) || !CheckBiasParams(context, otherParams, opType))) {
         OP_LOGE(context, "params is invalid");
         return false;
     }

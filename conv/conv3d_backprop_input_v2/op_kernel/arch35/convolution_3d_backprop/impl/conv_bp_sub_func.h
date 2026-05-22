@@ -50,12 +50,12 @@ static __aicore__ inline void CalcParamsMmad(Intf *self, uint32_t kPos, bool isF
     self->ctx.mmad_.cmatrixInitVal = (kPos == 0 && isFirstDk);
 }
 
-template <class Intf>
+template <class Intf, bool hasBias>
 static __aicore__ inline void MmadLocal(Intf *self, const LocalTensor<typename Intf::SrcAT> &l0a,
     const LocalTensor<typename Intf::SrcBT> &l0b, LocalTensor<typename Intf::L0cT> &l0c)
 {
     // eType is bias Class
-    if (self->ctx.hasBias_) {
+    if (hasBias) {
         if (self->ctx.mmad_.cmatrixInitVal && !self->ctx.computeBiasOnce_) {
             // bias 通路，C矩阵初始值通过BT（C2）进行初始化
             self->ctx.mmad_.cmatrixInitVal = 0; //不初始化，使用bias的值
@@ -941,6 +941,11 @@ static __aicore__ inline void LoadL0c2Gm(Intf *self, const GlobalTensor<typename
     LocalTensor<typename Intf::L0cT> useC1Buf;
     L0CDeQue<Intf>(self, useC1Buf);
     SetEnAtomic<Intf>(self, enAtomic);
+    if (self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
+        event_t eventId = static_cast<event_t>(self->ctx.pipe_.FetchEventID(HardEvent::MTE2_FIX));
+        SetFlag<HardEvent::MTE2_FIX>(eventId);
+        WaitFlag<HardEvent::MTE2_FIX>(eventId);
+    }
     if constexpr (Intf::Config::dType::format == Convolution3DBackprop::CubeFormat::NCDHW) {
         if (!enSequentialWrite) {
             LoadL0c2OutForNz2Dn<Intf>(self, output, useC1Buf);

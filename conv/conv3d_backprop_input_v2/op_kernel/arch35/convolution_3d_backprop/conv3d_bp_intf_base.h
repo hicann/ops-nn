@@ -46,12 +46,12 @@ public:
 public:
     __aicore__ inline ConvBpIntf() {}
 
-    __aicore__ inline void Init(const conv_bp_v2_kernel::TConv3DInputV2Tiling * tiling, const bool hasBias_=false)
+    __aicore__ inline void Init(const conv_bp_v2_kernel::TConv3DInputV2Tiling * tiling, const bool hasBias=false)
     {
         using Local = typename Ext::Init;
         // CheckFun检查impl是否实现了Init的call函数
-        if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, tiling, hasBias_)) {
-            Local::call(this, tiling, hasBias_);
+        if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, tiling, hasBias)) {
+            Local::call(this, tiling, hasBias);
         }
     }
 
@@ -164,11 +164,11 @@ public:
     }
 
     template <bool sync = true>
-    __aicore__ inline bool Iterate(bool enPartialSum = false)
+    __aicore__ inline bool Iterate(bool enPartialSum = false, bool hasBias = false)
     {
         using Local = typename Ext::template Iterate<sync>;
-        if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, enPartialSum)) {
-            return Local::call(this, enPartialSum);
+        if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, enPartialSum, hasBias)) {
+            return Local::call(this, enPartialSum, hasBias);
         }
     }
 

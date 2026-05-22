@@ -96,7 +96,7 @@ public:
         dedyGm_.SetGlobalBuffer((__gm__ dedyType *)dedy);
         yGm_.SetGlobalBuffer((__gm__ yType *)y);
 
-        if (bias != nullptr) {
+        if (unlikely(bias != nullptr)) {
             hasBias_ = true;
             biasGm_.SetGlobalBuffer((__gm__ biasType *)bias);
         }
@@ -143,7 +143,7 @@ public:
                 dedx_.SetWeight(filterGm_[offsetB_]);
                 dedx_.SetFullLoadFlag(this->tiling_->enableFullLoad);
 
-                if (hasBias_) {
+                if (unlikely(hasBias_)) {
                     dedx_.SetBias(biasGm_[offsetBias_]);
                 }
 
@@ -175,7 +175,7 @@ public:
                 dedx_.SetWeight(filterGm_[offsetB_]);
                 dedx_.SetFullLoadFlag(this->tiling_->enableFullLoad);
 
-                if (hasBias_) {
+                if (unlikely(hasBias_)) {
                     offsetBias_ = nCoreIdx_ * tiling_->singleCoreCin + groupIdx * tiling_->cinG;
                     dedx_.SetBias(biasGm_[offsetBias_]);
                 }
@@ -380,7 +380,7 @@ protected:
 
     __aicore__ inline void CalcBiasOffset(uint32_t groupIdx)
     {
-        if (hasBias_) {
+        if (unlikely(hasBias_)) {
             // bias需要叠加额外的group偏移
             offsetBias_ = static_cast<uint64_t>(nCoreIdx_) * tiling_->singleCoreCin + groupIdx * tiling_->cinG;
         }
@@ -388,7 +388,7 @@ protected:
 
     __aicore__ inline void CalcBiasFullLoadFlag()
     {
-        if (hasBias_ && (offsetBias_ != preOffsetBias_)) {
+        if (unlikely(hasBias_ && (offsetBias_ != preOffsetBias_))) {
             // bias按照group全载
             fullLoadBiasFlag_ = true;
         }

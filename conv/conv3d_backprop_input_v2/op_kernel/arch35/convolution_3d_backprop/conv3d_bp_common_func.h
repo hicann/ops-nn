@@ -163,7 +163,7 @@ static __aicore__ inline void ComputeL0A(Intf *self, uint32_t l0aKIdx, uint32_t 
     }
 }
 
-template <class Intf>
+template <class Intf, bool hasBias>
 static __aicore__ inline void ComputeL0BForTQueData(Intf *self, uint32_t l0bKIdx,
         uint32_t curStepKb, LocalTensor<typename Intf::SrcBT> &l0b)
 {
@@ -179,7 +179,7 @@ static __aicore__ inline void ComputeL0BForTQueData(Intf *self, uint32_t l0bKIdx
         (self->ctx.isB1FullLoadFlag_ && self->ctx.isFreeB1_))) {
         self->ctx.isLoadB1_ = true;
         self->ctx.inQueL1B_.FreeTensor(self->ctx.cacheB1Buf_);
-        if (self->ctx.hasBias_ && (!self->ctx.tiling_->isBiasFullLoad)) {
+        if (hasBias && (!self->ctx.tiling_->isBiasFullLoad)) {
             self->ctx.biasBTQue_.FreeTensor(self->ctx.biasBTBuf_);
         }
     }
@@ -211,7 +211,7 @@ static __aicore__ inline void ComputeL0BForTBufData(Intf *self, uint32_t l0bKIdx
     }
 }
 
-template <class Intf>
+template <class Intf, bool hasBias>
 static __aicore__ inline void ComputeL0B(Intf *self, uint32_t l0bKIdx,
     uint64_t curKdIdx, uint32_t curStepKb, LocalTensor<typename Intf::SrcBT> &l0b, uint64_t kIdx)
 {
@@ -227,13 +227,13 @@ static __aicore__ inline void ComputeL0B(Intf *self, uint32_t l0bKIdx,
         if ASCEND_IS_AIV_SHOULD_RETURN {
             return;
         }
-        ComputeL0BForTQueData<Intf>(self, l0bKIdx, curStepKb, l0b);
+        ComputeL0BForTQueData<Intf, hasBias>(self, l0bKIdx, curStepKb, l0b);
     } else {
         ComputeL0BForTBufData<Intf>(self, l0bKIdx, curKdIdx, curStepKb, l0b, kIdx);
     }
 }
 
-template <class Intf>
+template <class Intf, bool hasBias>
 static __aicore__ inline void ComputeForKIter(Intf *self, LocalTensor<typename Intf::SrcAT> &l0a,
     LocalTensor<typename Intf::SrcBT> &l0b, LocalTensor<typename Intf::L0cT> &l0c,
     uint64_t curInnerKdIdx, int64_t curDoutIdx, bool isFirstDk, uint8_t &l0PingPongFlag)
@@ -248,7 +248,7 @@ static __aicore__ inline void ComputeForKIter(Intf *self, LocalTensor<typename I
         ComputeL1B<Intf>(self, kIdx, curInnerKdIdx, l0bKIdx);
         ComputeL1APreLoad<Intf>(self, kIdx, curDoutIdx, l0aKIdx);
         ComputeL1BPreLoad<Intf>(self, kIdx, curInnerKdIdx, l0bKIdx);
-        if (self->ctx.hasBias_) {
+        if (hasBias) {
             ComputeBTBias<Intf>(self);
         }
 
@@ -269,12 +269,12 @@ static __aicore__ inline void ComputeForKIter(Intf *self, LocalTensor<typename I
             }
         }
 
-        ComputeL0B<Intf>(self, l0bKIdx, curInnerKdIdx, curStepKb, l0b, kIdx);
+        ComputeL0B<Intf, hasBias>(self, l0bKIdx, curInnerKdIdx, curStepKb, l0b, kIdx);
         if ASCEND_IS_AIC_SCALAR {
             SetFlag<HardEvent::MTE1_M>(l0PingPongFlag);
             WaitFlag<HardEvent::MTE1_M>(l0PingPongFlag);
             CalcParamsMmad<Intf>(self, kIdx, isFirstDk);
-            MmadLocal<Intf>(self, l0a, l0b, l0c);
+            MmadLocal<Intf, hasBias>(self, l0a, l0b, l0c);
             SetFlag<HardEvent::M_MTE1>(l0PingPongFlag);
 
             l0PingPongFlag ^= self->ctx.enableL0PingPong_;
@@ -283,7 +283,7 @@ static __aicore__ inline void ComputeForKIter(Intf *self, LocalTensor<typename I
     }
 }
 
-template <class Intf>
+template <class Intf, bool hasBias>
 static __aicore__ inline void ComputeForBias(Intf *self, LocalTensor<typename Intf::SrcAT> &l0a,
     LocalTensor<typename Intf::SrcBT> &l0b, LocalTensor<typename Intf::L0cT> &l0c,
     bool isFirstDk, uint8_t &l0PingPongFlag)
@@ -304,7 +304,7 @@ static __aicore__ inline void ComputeForBias(Intf *self, LocalTensor<typename In
         WaitFlag<HardEvent::MTE1_M>(l0PingPongFlag);
         CalcParamsMmad<Intf>(self, 0, isFirstDk);
         self->ctx.mmad_.k = GetDataBlockSizeInBytes() / sizeof(typename Intf::SrcBT);
-        MmadLocal<Intf>(self, l0a, l0b, l0c);
+        MmadLocal<Intf, hasBias>(self, l0a, l0b, l0c);
         self->ctx.mmad_.k = self->ctx.tiling_->baseK;
         SetFlag<HardEvent::M_MTE1>(l0PingPongFlag);
         l0PingPongFlag ^= self->ctx.enableL0PingPong_;

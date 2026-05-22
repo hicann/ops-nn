@@ -129,11 +129,22 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::GetPublicShapeAttrsInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus Conv3DDXV2InnerProductTiling::CalcKSegment() {
-    // 拦截c04场景和group场景
-    if (tilingRunInfo_.enableC04Flag || (unlikely(runInfo_.groups > 1))) {
+bool Conv3DDXV2InnerProductTiling::CheckBasicKSplitKCondition()
+{
+    // 拦截c04场景,group场景和8bit场景
+    if (tilingRunInfo_.enableC04Flag || (unlikely(runInfo_.groups > 1)) ||
+        static_cast<int32_t>(runInfo_.c_dtype_bytes) == ge::GetSizeByDataType(ge::DT_HIFLOAT8) ||
+        static_cast<int32_t>(runInfo_.c_dtype_bytes) == ge::GetSizeByDataType(ge::DT_FLOAT8_E4M3FN)) {
         splitKMode_ = 0;
         tilingRunInfo_.enableSplitK = splitKMode_;
+        return false;
+    }
+    return true;
+}
+
+ge::graphStatus Conv3DDXV2InnerProductTiling::CalcKSegment()
+{
+    if (!CheckBasicKSplitKCondition()) {
         return ge::GRAPH_FAILED;
     }
 
@@ -738,7 +749,9 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::DoLibApiTiling()
 
     // 核间默认不切K，只设置MN方向分核
     L1TilingParams l1Params;
-    InitL1Params(l1Params, l0Params);
+    if (!InitL1Params(l1Params, l0Params)) {
+        return ge::GRAPH_FAILED;
+    }
 
     // 设置MN和循环轴的核间切分策略，只允许调小baseMN
     CoreTilingParams coreParams;
@@ -1084,23 +1097,29 @@ void Conv3DDXV2InnerProductTiling::AdjustBaseMNK(L0TilingParams& l0Params, const
     UpdateL0CBufferMode(l0Params);
 }
 
-void Conv3DDXV2InnerProductTiling::UpdateIsBiasFullLoad(L1TilingParams& l1Params, const L0TilingParams& l0Params)
+bool Conv3DDXV2InnerProductTiling::UpdateIsBiasFullLoad(L1TilingParams& l1Params, const L0TilingParams& l0Params)
 {
     uint64_t dtypeByteBtBuffer = (runInfo_.a_dtype_bytes == ge::GetSizeByDataType(ge::DT_INT8)) ?
         ge::GetSizeByDataType(ge::DT_INT32) : ge::GetSizeByDataType(ge::DT_FLOAT16);
-    if (l0Params.baseN * dtypeByteBtBuffer > BT_BUFFER_SIZE) {
+    uint64_t biasSize = l0Params.baseN * dtypeByteBtBuffer;
+    if (biasSize > BT_BUFFER_SIZE) {
         l1Params.isBiasFullLoad = 0U;
-        OP_LOGD(opName_, "Bias too big, disable bias full load");
+        OP_LOGD(opName_, "biasSize: %lu, BT_BUFFER_SIZE: %lu, isBiasFullLoad: false", biasSize, BT_BUFFER_SIZE);
+        if (hasBiasFlag_ && context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->npuArch == NpuArch::DAV_3510) {
+            OP_LOGE(opName_, "bias size exceeds BT buffer limit, not support");
+            return false;
+        }
     } else {
         l1Params.isBiasFullLoad = 1U;
-        OP_LOGD(opName_, "Enable bias full load");
+        OP_LOGD(opName_, "biasSize: %lu, BT_BUFFER_SIZE: %lu, isBiasFullLoad: true", biasSize, BT_BUFFER_SIZE);
     }
+    return true;
 }
 
-void Conv3DDXV2InnerProductTiling::InitL1Params(L1TilingParams& l1Params, const L0TilingParams& l0Params)
+bool Conv3DDXV2InnerProductTiling::InitL1Params(L1TilingParams& l1Params, const L0TilingParams& l0Params)
 {
     l1Params.iterateOrder = 1U; // 默认orderN, 暂无左矩阵全载逻辑
-    UpdateIsBiasFullLoad(l1Params, l0Params);
+    return UpdateIsBiasFullLoad(l1Params, l0Params);
 }
 
 static inline uint32_t GetMaxDivisor(uint32_t a, uint32_t b, uint32_t step)

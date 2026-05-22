@@ -396,14 +396,12 @@ __aicore__ inline void CalcMatrixByteSize(Intf *self, uint32_t &aMatrixByteSize,
 template <class Intf>
 __aicore__ inline void InitBiasTque(Intf *self)
 {
-    if (self->ctx.hasBias_) {
-        // 64: BT Buffer 需要64B对齐，加63后右移6位代替乘64
-        uint32_t biasSize = self->ctx.tiling_->isBiasFullLoad
-                                ? (DivCeil(self->ctx.tiling_->singleCoreCin * sizeof(typename Intf::BiasT), 64) << 6)
-                                : (DivCeil(self->ctx.tiling_->baseN * sizeof(typename Intf::BiasT), 64) << 6);
-        self->ctx.pipe_.InitBuffer(self->ctx.biasL1Que_, 1, biasSize);
-        self->ctx.pipe_.InitBuffer(self->ctx.biasBTQue_, 1, biasSize);
-    }
+    // 64: BT Buffer 需要64B对齐，加63后右移6位代替乘64
+    uint32_t biasSize = self->ctx.tiling_->isBiasFullLoad
+                            ? (DivCeil(self->ctx.tiling_->singleCoreCin * sizeof(typename Intf::BiasT), 64) << 6)
+                            : (DivCeil(self->ctx.tiling_->baseN * sizeof(typename Intf::BiasT), 64) << 6);
+    self->ctx.pipe_.InitBuffer(self->ctx.biasL1Que_, 1, biasSize);
+    self->ctx.pipe_.InitBuffer(self->ctx.biasBTQue_, 1, biasSize);
 }
 
 template <class Intf>
@@ -418,7 +416,7 @@ __aicore__ inline void InitScaleTque(Intf *self)
 }
 
 template <class Intf>
-__aicore__ inline void InitTque(Intf *self)
+__aicore__ inline void InitTque(Intf *self, const bool hasBias)
 {
     uint32_t bMatrixByteSize = 0;
     uint32_t aMatrixByteSize = 0;
@@ -457,7 +455,9 @@ __aicore__ inline void InitTque(Intf *self)
         }
         self->ctx.pipe_.InitBuffer(self->ctx.l0aBuf_, TOTAL_L0A_SIZE);
         self->ctx.pipe_.InitBuffer(self->ctx.l0bBuf_, TOTAL_L0B_SIZE);
-        InitBiasTque(self);
+        if (hasBias) {
+            InitBiasTque(self);
+        }
         InitScaleTque(self);
     }
 
@@ -480,7 +480,7 @@ static __aicore__ inline void FreeFullLoadL1Tensor(Intf *self) {
     }
 }
 
-template <class Intf>
+template <class Intf, bool hasBias>
 static __aicore__ inline void ComputeForNoTilingHWk(Intf *self, LocalTensor<typename Intf::SrcAT> &l0a,
     LocalTensor<typename Intf::SrcBT> &l0b, LocalTensor<typename Intf::L0cT> &l0c, uint8_t &l0PingPongFlag)
 {
@@ -494,11 +494,13 @@ static __aicore__ inline void ComputeForNoTilingHWk(Intf *self, LocalTensor<type
         if (!CalcCurDoutIdx<Intf>(self, curInnerKdIdx, curDoutIdx)) {
             continue;
         }
-        ComputeForKIter<Intf>(self,l0a, l0b, l0c, curInnerKdIdx, curDoutIdx, isFirstDk, l0PingPongFlag);
+        ComputeForKIter<Intf, hasBias>(self,l0a, l0b, l0c, curInnerKdIdx, curDoutIdx, isFirstDk, l0PingPongFlag);
         isFirstDk = false;
     }
-    if (!self->ctx.computeBiasOnce_ && self->ctx.hasBias_) {
-        ComputeForBias<Intf>(self, l0a, l0b, l0c, isFirstDk, l0PingPongFlag);
+    if (hasBias) {
+        if (!self->ctx.computeBiasOnce_) {
+            ComputeForBias<Intf, hasBias>(self, l0a, l0b, l0c, isFirstDk, l0PingPongFlag);
+        }
     }
 }
 
@@ -534,10 +536,10 @@ static __aicore__ inline void ComputeEnd(Intf *self, LocalTensor<typename Intf::
     CrossCoreWaitTail<Intf>(self);
 }
 
-template <class Intf>
-static __aicore__ inline void Compute(Intf *self)
+template <class Intf, bool hasBias>
+static __aicore__ inline void NoNeedComputeHandle(Intf *self)
 {
-    if (!self->ctx.needComputeFlag_ && !self->ctx.hasBias_) {
+    if (!hasBias) {
         FreeFullLoadL1Tensor<Intf>(self);
         return;
     }
@@ -548,16 +550,29 @@ static __aicore__ inline void Compute(Intf *self)
     ComputeStart<Intf>(self, l0c);
     uint8_t l0PingPongFlag = self->ctx.l0PingPongFlag_;
     //有bias场景 加bias再退出
+    ComputeForBias<Intf, hasBias>(self, l0a, l0b, l0c, 1, l0PingPongFlag);
+    self->ctx.needComputeFlag_ = true;
+    FreeFullLoadL1Tensor<Intf>(self);
+    ComputeEnd<Intf>(self, l0c, l0PingPongFlag);
+}
+
+template <class Intf, bool hasBias>
+static __aicore__ inline void Compute(Intf *self)
+{
     if (!self->ctx.needComputeFlag_) {
-        ComputeForBias<Intf>(self, l0a, l0b, l0c, 1, l0PingPongFlag);
-        self->ctx.needComputeFlag_ = true;
-        FreeFullLoadL1Tensor<Intf>(self);
+        NoNeedComputeHandle<Intf, hasBias>(self);
+        return;
+    }
+
+    LocalTensor<typename Intf::SrcAT> l0a;
+    LocalTensor<typename Intf::SrcBT> l0b;
+    LocalTensor<typename Intf::L0cT> l0c;
+    ComputeStart<Intf>(self, l0c);
+    uint8_t l0PingPongFlag = self->ctx.l0PingPongFlag_;
+    if constexpr (Intf::conv3dConfig.loadB1Condition == TPL_GM_TO_L1) {
+        ComputeForNoTilingHWk<Intf, hasBias>(self, l0a, l0b, l0c, l0PingPongFlag);
     } else {
-        if constexpr (Intf::conv3dConfig.loadB1Condition == TPL_GM_TO_L1) {
-            ComputeForNoTilingHWk<Intf>(self, l0a, l0b, l0c, l0PingPongFlag);
-        } else {
-            ComputeForTilingHkWk<Intf>(self, l0a, l0b, l0c, l0PingPongFlag);
-        }
+        ComputeForTilingHkWk<Intf, hasBias>(self, l0a, l0b, l0c, l0PingPongFlag);
     }
     ComputeEnd<Intf>(self, l0c, l0PingPongFlag);
 }
@@ -741,6 +756,9 @@ static __aicore__ inline void SetDequantScale(Intf *self)
 {
     if constexpr (Intf::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
         if (self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
+            event_t eventId = static_cast<event_t>(self->ctx.pipe_.FetchEventID(HardEvent::FIX_MTE2));
+ 	        SetFlag<HardEvent::FIX_MTE2>(eventId);
+ 	        WaitFlag<HardEvent::FIX_MTE2>(eventId);
             Convolution3DBackpropFunc::FullLoadToScaleL1<Intf>(self);
         } else if (self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::SCALAR_QUANT)) {
             self->ctx.deqScalar_ = self->ctx.scaleGlobal_.GetValue(0);
@@ -748,20 +766,48 @@ static __aicore__ inline void SetDequantScale(Intf *self)
     }
 }
 
+template <class Intf, bool sync>
+static __aicore__ inline void CalcSplitK_(Intf *self, uint8_t &enAtomic, const GlobalTensor<typename Intf::DstT> &output, bool hasBias)
+{
+    // calRound多轮场景重置标志位
+    self->ctx.isLastKSegment_ = false;
+    // bias 需计算singlecoreM部分
+    int32_t computeBiasTimes = (self->ctx.tiling_->singleCoreM - 1) / self->ctx.tiling_->baseM;
+    self->ctx.computeBiasOnce_ = false;
+    for (uint32_t kIdx = self->ctx.curCoutStartIdx_; kIdx < self->ctx.tiling_->coutG; kIdx += self->ctx.kSegment_) {
+        self->ctx.curCoutStartIdx_ = kIdx;
+        UpdateSplitKTail<Intf>(self, kIdx);
+        // fp32: 使用atomic累加到GM; 非fp32: 使用atomic累加到workspace
+        enAtomic = (kIdx == 0) ? 0 : 1;
+        uint32_t iterCnt = 0;
+        while (self->template Iterate<sync>(false, hasBias)) {
+            self->ctx.realMSize_ = (iterCnt++ != 0) ? self->ctx.tiling_->singleCoreM : self->ctx.baseUseM_;
+            self->template GetTensorC<sync>(output, enAtomic);
+            if (computeBiasTimes > 0) {
+                self->ctx.computeBiasOnce_ = false;
+                computeBiasTimes -= 1;
+            }
+        }
+        self->template VecPostProcess<sync>(output, enAtomic);
+        self->ctx.isFirstIter_ = true;
+    }
+    CalcInWorkspace<Intf>(self, output);
+}
+
 template <class Intf>
 struct Init {
     // 定义call函数的默认重载函数，支持任意类型任意数量的参数
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, Convolution3DBackpropFunc);
-    static __aicore__ inline void call(Intf *self, const conv_bp_v2_kernel::TConv3DInputV2Tiling * tiling, const bool hasBias_)
+    static __aicore__ inline void call(Intf *self, const conv_bp_v2_kernel::TConv3DInputV2Tiling * tiling, const bool hasBias)
     {
-        self->ctx.hasBias_ = hasBias_;
+        self->ctx.hasBias_ = hasBias;
         self->ctx.tiling_ = tiling;
-        if (self->ctx.tiling_->hf32Flag) {
+        if (tiling->hf32Flag) {
             SetHF32Mode(true);
         }
         CheckTiling<Intf>(self);
         InitParams<Intf>(self);
-        InitTque<Intf>(self);
+        InitTque<Intf>(self, hasBias);
         // kernel拆分、切Dk、C04场景，Init()先空下一个CrossCoreSetFlag()来保证End()里下的CrossCoreWaitFlag()可以成对
         CrossCoreSetHeadForMix<Intf>(self);
     }
@@ -772,11 +818,9 @@ struct FreeBiasTensor {
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, Convolution3DBackpropFunc);
     static __aicore__ inline void call(Intf *self)
     {
-        if (self->ctx.tiling_->isBiasFullLoad && self->ctx.hasBias_) {
-            if ASCEND_IS_AIC_SCALAR {
-                self->ctx.biasL1Que_.FreeTensor(self->ctx.biasL1Buf_);
-                self->ctx.biasBTQue_.FreeTensor(self->ctx.biasBTBuf_);
-            }
+        if ASCEND_IS_AIC_SCALAR {
+            self->ctx.biasL1Que_.FreeTensor(self->ctx.biasL1Buf_);
+            self->ctx.biasBTQue_.FreeTensor(self->ctx.biasBTBuf_);
         }
     }
 };
@@ -897,11 +941,79 @@ struct SetBatchCoreIdx {
     }
 };
 
+template <class Intf>
+static __aicore__ inline void InitFirstIterState(Intf *self)
+{
+    if constexpr (Intf::conv3dConfig.groupMode == TPL_GROUP_MODE_ENLARGE) {
+        self->ctx.groupIterIdx_ = 0;
+    }
+    self->ctx.needComputeFlag_ = true;
+    self->ctx.curMIdx_ = 0;
+    self->ctx.curNIdx_ = 0;
+    self->ctx.curDinIdx_ = self->ctx.curDinStartIdx_;
+    self->ctx.curDkIdx_ = 0;
+    self->ctx.curHoIdx_ = self->ctx.curHoStartIdx_;
+    self->ctx.isFirstIter_ = false;
+    self->ctx.isLoadA1_ = true;
+    self->ctx.isFreeA1_ = false;
+    if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
+        self->ctx.rearrangeHIndex_ = 0;
+        self->ctx.rearrangeWIndex_ = 0;
+        self->ctx.splitHIndex_ = self->ctx.splitHStartIndex_;
+        self->ctx.splitWIndex_ = self->ctx.splitWStartIndex_;
+        if (self->ctx.tiling_->dk > 1) {    // dk等于1时，全载时无需重复加载B矩阵
+            self->ctx.isLoadB1_ = true;
+            self->ctx.isFreeB1_ = false;
+        }
+    } else {
+        if (!self->ctx.isB1FullLoadFlag_ || self->ctx.tiling_->dk > 1 ||
+            Intf::conv3dConfig.enableC04Flag || !self->ctx.enableFullLoad_ || self->ctx.tiling_->group != 1) {
+            self->ctx.isLoadB1_ = true;
+            self->ctx.isFreeB1_ = false;
+        }
+    }
+}
+
+template <class Intf>
+static __aicore__ inline bool ProcessKernelSplitIteration(Intf *self, bool hasBias)
+{
+    if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
+        if (IterateForKernelSplit<Intf>(self)) {
+            UpdateFullLoadL1Status<Intf>(self);
+            if (unlikely(self->ctx.tiling_->hk == 1)) {
+                return true;
+            }
+            if (hasBias) {
+                Compute<Intf, true>(self);
+            } else {
+                Compute<Intf, false>(self);
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
+template <class Intf>
+static __aicore__ inline bool AdvanceIterIndices(Intf *self)
+{
+    if (++self->ctx.curMIdx_ >= self->ctx.mIter_) {
+        self->ctx.curMIdx_ = 0;
+        if (++self->ctx.curNIdx_ >= self->ctx.nIter_) {
+            self->ctx.curNIdx_ = 0;
+            if (++self->ctx.curDinIdx_ >= self->ctx.curDinStartIdx_ + self->ctx.singleShapeDin_) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 template <class Intf, bool sync>
 struct Iterate {
     // 一次iterate计算(baseM, baseN, baseD)，当前baseD=1
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, Convolution3DBackpropFunc);
-    static __aicore__ inline bool call(Intf *self, bool enPartialSum)
+    static __aicore__ inline bool call(Intf *self, bool enPartialSum, bool hasBias)
     {
         /*
         |   <---------singleShapeM------->        |
@@ -928,58 +1040,22 @@ struct Iterate {
             self->ctx.computeBiasOnce_ = false;
         }
         if (unlikely(self->ctx.isFirstIter_)) {
-            if constexpr (Intf::conv3dConfig.groupMode == TPL_GROUP_MODE_ENLARGE) {
-                self->ctx.groupIterIdx_ = 0;
-            }
-            self->ctx.needComputeFlag_ = true;
-            self->ctx.curMIdx_ = 0;
-            self->ctx.curNIdx_ = 0;
-            self->ctx.curDinIdx_ = self->ctx.curDinStartIdx_;
-            self->ctx.curDkIdx_ = 0;
-            self->ctx.curHoIdx_ = self->ctx.curHoStartIdx_;
-            self->ctx.isFirstIter_ = false;
-            self->ctx.isLoadA1_ = true;
-            self->ctx.isFreeA1_ = false;
-            if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
-                self->ctx.rearrangeHIndex_ = 0;
-                self->ctx.rearrangeWIndex_ = 0;
-                self->ctx.splitHIndex_ = self->ctx.splitHStartIndex_;
-                self->ctx.splitWIndex_ = self->ctx.splitWStartIndex_;
-                if (self->ctx.tiling_->dk > 1) {    // dk等于1时，全载时无需重复加载B矩阵
-                    self->ctx.isLoadB1_ = true;
-                    self->ctx.isFreeB1_ = false;
-                }
-            } else {
-                if (!self->ctx.isB1FullLoadFlag_ || self->ctx.tiling_->dk > 1 ||
-                Intf::conv3dConfig.enableC04Flag || !self->ctx.enableFullLoad_ || self->ctx.tiling_->group != 1) {
-                    self->ctx.isLoadB1_ = true;
-                    self->ctx.isFreeB1_ = false;
-                }
-            }
+            InitFirstIterState<Intf>(self);
         } else {
-            if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
-                if (IterateForKernelSplit<Intf>(self)) {
-                    UpdateFullLoadL1Status<Intf>(self);
-                    if (unlikely(self->ctx.tiling_->hk == 1)) {
-                        return true;
-                    }
-                    Compute<Intf>(self);
-                    return true;
-                }
+            if (ProcessKernelSplitIteration<Intf>(self, hasBias)) {
+                return true;
             }
-            if (++self->ctx.curMIdx_ >= self->ctx.mIter_) {
-                self->ctx.curMIdx_ = 0;
-                if (++self->ctx.curNIdx_ >= self->ctx.nIter_) {
-                    self->ctx.curNIdx_ = 0;
-                    if (++self->ctx.curDinIdx_ >= self->ctx.curDinStartIdx_ + self->ctx.singleShapeDin_) {
-                        return false;
-                    }
-                }
+            if (!AdvanceIterIndices<Intf>(self)) {
+                return false;
             }
         }
 
         UpdateL1ComputeInfo<Intf>(self);
-        Compute<Intf>(self);
+        if (hasBias) {
+            Compute<Intf, true>(self);
+        } else {
+            Compute<Intf, false>(self);
+        }
         return true;
     }
 };
@@ -989,41 +1065,24 @@ struct IterateAll {
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, Convolution3DBackpropFunc);
     static __aicore__ inline void call(Intf *self, const GlobalTensor<typename Intf::DstT> &output, uint8_t enAtomic, bool fullLoadBiasFlag_, bool freeBiasFlag_)
     {
-        //free bias
-        if (freeBiasFlag_) {
-            if (self->ctx.tiling_->isBiasFullLoad && self->ctx.hasBias_) {
+        bool hasBias = self->ctx.hasBias_;
+        if (hasBias && self->ctx.tiling_->isBiasFullLoad) {
+            if (freeBiasFlag_) {
                 if ASCEND_IS_AIC_SCALAR {
                     self->ctx.biasL1Que_.FreeTensor(self->ctx.biasL1Buf_);
                     self->ctx.biasBTQue_.FreeTensor(self->ctx.biasBTBuf_);
                 }
-            } 
-        }
-        if (self->ctx.tiling_->isBiasFullLoad && self->ctx.hasBias_ && fullLoadBiasFlag_) {
-            Convolution3DBackpropFunc::FullLoadBias<Intf>(self);
+            }
+            if (fullLoadBiasFlag_) {
+                Convolution3DBackpropFunc::FullLoadBias<Intf>(self);
+            }
         }
         SetDequantScale<Intf>(self);
         if constexpr (Intf::conv3dConfig.kernelSplitMode != TPL_SPLIT_KERNEL_HW) {
             if (self->ctx.enableSplitK_) {
-                // calRound多轮场景重置标志位
-                self->ctx.isLastKSegment_ = false;
-                //bias 仅计算一次
-                self->ctx.computeBiasOnce_ = false;
-                for (uint32_t kIdx = self->ctx.curCoutStartIdx_; kIdx < self->ctx.tiling_->coutG; kIdx += self->ctx.kSegment_) {
-                    self->ctx.curCoutStartIdx_ = kIdx;
-                    UpdateSplitKTail<Intf>(self, kIdx);
-                    // fp32: 使用atomic累加到GM; 非fp32: 使用atomic累加到workspace
-                    enAtomic = (kIdx == 0) ? 0 : 1;
-                    uint32_t iterCnt = 0;
-                    while (self->template Iterate<sync>()) {
-                        self->ctx.realMSize_ = (iterCnt++ != 0) ? self->ctx.tiling_->singleCoreM : self->ctx.baseUseM_;
-                        self->template GetTensorC<sync>(output, enAtomic);
-                    }
-                    self->template VecPostProcess<sync>(output, enAtomic);
-                    self->ctx.isFirstIter_ = true;
-                }
-                CalcInWorkspace<Intf>(self, output);
+                CalcSplitK_<Intf, sync>(self, enAtomic, output, hasBias);
             } else {
-                while (self->template Iterate<sync>()) {
+                while (self->template Iterate<sync>(false, hasBias)) {
                     self->template VecPreProcess<sync>(output, enAtomic);
                     self->template GetTensorC<sync>(output, enAtomic);
                     self->template VecPostProcess<sync>(output, enAtomic);
