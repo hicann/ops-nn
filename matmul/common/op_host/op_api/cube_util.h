@@ -26,6 +26,9 @@ bool CheckCubeMathType(const op::DataType cubeTensorDtype, int8_t cubeMathType);
 // 校验针对mm算子 tensor的dtype，cubeMathType的值是否符合预期
 bool CheckCubeMathTypeForMm(const op::DataType cubeTensorDtype, int8_t cubeMathType);
 
+// 校验针对addmm算子的输入shape检验其是否需要广播，是否可以广播需要预先校验
+bool CheckAddmmTensorShapeNeedBroadcast(const aclTensor* mat1, const aclTensor* mat2, const aclTensor* self);
+
 // 校验针对Addmm算子的cubeMathType和平台是否符合预期
 bool CheckCubeMathTypeForAddMm(const aclTensor* mat1, const aclTensor* mat2, const aclTensor* self,
     const aclTensor* out, int8_t cubeMathType);
