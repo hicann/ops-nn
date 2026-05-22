@@ -577,6 +577,8 @@ static __aicore__ inline void LoadL0c2GmForNz2Nd(Intf *self, const GlobalTensor<
     }
     if (self->ctx.useUbAccumForSplitK_) {
 #if (__NPU_ARCH__ != 5102)
+        // 写入workspace需要保证数据连续便于UB搬运和Cast
+        fixPipeParams.dstStride = self->ctx.baseUseN_;
         Fixpipe<float, float, CFG_ROW_MAJOR>(self->ctx.l0cOutGm_[dstOffset], useC1Buf, fixPipeParams);
 #endif
     } else {

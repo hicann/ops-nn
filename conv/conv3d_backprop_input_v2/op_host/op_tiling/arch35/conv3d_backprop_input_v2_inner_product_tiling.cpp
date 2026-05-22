@@ -884,7 +884,7 @@ bool Conv3DDXV2InnerProductTiling::IsL1ParamsValid(const L1TilingParams& l1Param
         biasSize = Ops::Base::CeilAlign(dtypeByteBtBuffer * l0Params.baseN, static_cast<uint64_t>(BYTE_BLOCK));
     }
     // 移除 IsSocVersionFuse 条件，统一在所有场景下计算
-    return aL1Size + bL1Size + biasSize + scaleSize <= platformInfo_.l1_size;
+    return aL1Size + bL1Size + biasSize + scaleSize < platformInfo_.l1_size;
 }
 
 void Conv3DDXV2InnerProductTiling::CloseL0PingPong(L0TilingParams& l0Params)
