@@ -20,10 +20,10 @@
 #include "../quant_batch_matmul_v3/quant_batch_matmul_v3_base.h"
 
 #define FUSED_SWIGLU_TEMPLATE_CLASS_PARAMS                                                                                    \
-    template <class x1Type, class x2Type, class scaleType, class biasType, class yType, CubeFormat formatX1,           \
-              CubeFormat formatX2, CubeFormat formatY, bool aTrans, bool bTrans>
+    template <class x1Type, class x2Type, class biasType, class yType, CubeFormat formatX1, CubeFormat formatX2,              \
+              CubeFormat formatY, bool aTrans, bool bTrans>
 #define FUSED_SWIGLU_TEMPLATE_FUNC_PARAMS                                                                                     \
-    x1Type, x2Type, scaleType, biasType, yType, formatX1, formatX2, formatY, aTrans, bTrans
+    x1Type, x2Type, biasType, yType, formatX1, formatX2, formatY, aTrans, bTrans
 
 namespace AscendC {
 
@@ -140,7 +140,7 @@ __aicore__ inline void FusedQuantMatmulSwiglu<FUSED_SWIGLU_TEMPLATE_FUNC_PARAMS>
     xGm.SetGlobalBuffer((__gm__ x1Type *)x);
     wGm.SetGlobalBuffer((__gm__ x2Type *)w);
     bGm.SetGlobalBuffer((__gm__ biasType *)b);
-    deQuantScaleGm.SetGlobalBuffer((__gm__ scaleType *)deQuantScale);
+    deQuantScaleGm.SetGlobalBuffer((__gm__ uint64_t *)deQuantScale);
     quantScaleGm.SetGlobalBuffer((__gm__ float*)quantScale);
     yGm.SetGlobalBuffer((__gm__ yType *)y);
 

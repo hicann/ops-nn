@@ -110,7 +110,7 @@ __global__ __aicore__ void fused_quant_mat_mul(
         GET_TILING_DATA_WITH_STRUCT(FusedQuantMatmulSwigluTilingData, tilingData, tiling);
         KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIC_ONLY);
         FusedQuantMatmulSwiglu<
-            DTYPE_X1, DTYPE_X2, DTYPE_X2_SCALE, DTYPE_BIAS, DTYPE_Y, format_x1, format_x2, format_y,
+            DTYPE_X1, DTYPE_X2, DTYPE_BIAS, DTYPE_Y, format_x1, format_x2, format_y,
             static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS)>
             op;
         op.Init(x1, x2, bias, x2Scale, x3, y, user, &tilingData, &tPipe);
