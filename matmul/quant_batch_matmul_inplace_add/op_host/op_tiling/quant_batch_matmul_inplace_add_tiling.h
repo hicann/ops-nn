@@ -10,52 +10,12 @@
 
 /*!
  * \file quant_batch_matmul_inplace_add_tiling.h
- * \brief
+ * \brief QuantBatchMatmulInplaceAdd tiling entry declarations.
  */
 #ifndef QUANT_BATCH_MATMUL_INPLACE_ADD_TILING_H
 #define QUANT_BATCH_MATMUL_INPLACE_ADD_TILING_H
 
-#include <exe_graph/runtime/tiling_context.h>
-#include <graph/utils/type_utils.h>
-#include "register/tilingdata_base.h"
-#include "tiling/tiling_api.h"
-#include "op_host/tiling_base.h"
-#include "../quant_batch_matmul_inplace_add_host_utils.h"
-#include "../../op_kernel/arch35/quant_batch_matmul_inplace_add_tiling_data.h"
-#include "../../op_kernel/arch35/quant_batch_matmul_inplace_add_tiling_key.h"
-#include "../../../quant_batch_matmul_v3/op_host/op_tiling/arch35/adaptive_sliding_window_basic_api_tiling.h"
-
-namespace optiling {
-
-class QuantBatchMatmulInplaceAddTiling : public AdaptiveSlidingWindowBasicAPITiling {
-public:
-    explicit QuantBatchMatmulInplaceAddTiling(gert::TilingContext* context);
-    QuantBatchMatmulInplaceAddTiling(gert::TilingContext* context, QMMIA::QuantBatchMatmulInplaceAddTilingData* out);
-    ~QuantBatchMatmulInplaceAddTiling() override = default;
-
-protected:
-    // 2、获取INPUT/OUTPUT/ATTR信息
-    ge::graphStatus GetShapeAttrsInfo() override;
-    // 5、 计算TilingKey
-    uint64_t GetTilingKey() const override;
-    void Reset();
-
-private:
-    bool AnalyzeAttrs() override;
-    bool AnalyzeDtype() override;
-    bool AnalyzeInputs() override;
-    bool CheckDtype();
-    bool IsFp8Dtype(const ge::DataType dtype) const;
-    bool IsHiFloat8Dtype(const ge::DataType dtype) const;
-    bool CheckParamsForMxQuant(const gert::Shape &x1ScaleShape, const gert::Shape &x2ScaleShape) const;
-    bool CheckParamsForPerTensorQuant(const gert::Shape &x1ScaleShape, const gert::Shape &x2ScaleShape) const;
-    bool CheckShapeVaild(const gert::Shape &x1Shape, const gert::Shape &x2Shape) const;
-    bool InitMatmulSize(const gert::Shape &x1Shape, const gert::Shape &x2Shape);
-    bool ValidateQuantParams(const gert::Shape &x1ScaleShape, const gert::Shape &scaleShape);
-    uint64_t GetKernelType() const override;
-    QMMIA::QuantBatchMatmulInplaceAddTilingData tilingDataSelf_;
-    QMMIA::QuantBatchMatmulInplaceAddTilingData& tilingData_;
-};
-} // namespace optiling
+#include "quant_batch_matmul_inplace_add_mx_basic_api_tiling.h"
+#include "quant_batch_matmul_inplace_add_cube_basic_api_tiling.h"
 
 #endif

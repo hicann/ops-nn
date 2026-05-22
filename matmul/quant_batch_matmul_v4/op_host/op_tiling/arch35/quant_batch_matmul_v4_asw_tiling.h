@@ -13,7 +13,7 @@
  * \brief
  */
 #pragma once
-#include "../../../../quant_batch_matmul_v3/op_host/op_tiling/arch35/adaptive_sliding_window_tiling.h"
+#include "../../../../quant_batch_matmul_v3/op_host/op_tiling/arch35/adaptive_sliding_window_cube_tiling.h"
 #include "../quant_batch_matmul_v4_compile_info.h"
 
 
@@ -21,9 +21,13 @@ namespace optiling {
 
 constexpr uint64_t STEP_K_VALUE_4 = 4;
 
-class AdaptiveSlidingWindowTilingV4 : public AdaptiveSlidingWindowTiling {
+class AdaptiveSlidingWindowTilingV4 : public AdaptiveSlidingWindowCubeTiling {
 public:
-    explicit AdaptiveSlidingWindowTilingV4(gert::TilingContext *context) : AdaptiveSlidingWindowTiling(context) {}
+    explicit AdaptiveSlidingWindowTilingV4(gert::TilingContext *context) : AdaptiveSlidingWindowCubeTiling(context)
+    {
+        inputParams_.Reset();
+        ResetAdaptiveSlidingWindowPlatformInfoCache();
+    }
     ~AdaptiveSlidingWindowTilingV4() override = default;
     uint64_t GetTilingKey() const override;
 
@@ -68,8 +72,8 @@ protected:
     bool AnalyzeDtype() override;
     bool AnalyzeInputs() override;
     bool CalcBasicBlock() override;
-    void IsABFullLoad() override;
-    void IsBFullLoad() override;
+    void UpdateABFullLoadStatus() override;
+    void UpdateBFullLoadStatus() override;
     void CalcTailBasicBlockAfullLoad() override;
     void CalcTailBasicBlock() override;
     bool IsCalL1TilingDepth4MmadS8S4() const override;
@@ -86,4 +90,3 @@ protected:
     std::unique_ptr<QuantBatchMatmulV4CompileInfo> compileInfoPtr_;
 };
 }  // namespace optiling
-

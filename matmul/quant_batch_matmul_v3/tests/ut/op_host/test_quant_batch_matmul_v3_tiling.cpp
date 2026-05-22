@@ -125,7 +125,7 @@ protected:
 static void InitPlatformInfo(const std::string &socVersion, gert::TilingContext *tilingContext, string &compileInfoStr,
                              int64_t aicNum = -1, int64_t aivNum = -1)
 {
-    map<string, string> soc_version_infos = {{"SoC_version", socVersion},};
+    map<string, string> soc_version_infos = {{"SoC_version", socVersion}, {"Short_SoC_version", socVersion}};
     map<string, string> soc2Arch = {
         {"Ascend910B2", "2201"},
         {"Ascend910B4", "2201"},
@@ -133,6 +133,10 @@ static void InitPlatformInfo(const std::string &socVersion, gert::TilingContext 
         {"Ascend950", "3510"},
         {"MC62CM12AA", "5102"},
     };
+    auto soc2ArchIter = soc2Arch.find(socVersion);
+    if (soc2ArchIter != soc2Arch.end()) {
+        soc_version_infos["NpuArch"] = soc2ArchIter->second;
+    }
     map<string, string> socInfos;
     map<string, string> aicoreSpec;
     map<string, string> intrinsics;
@@ -661,6 +665,7 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
 
     string compileInfoStr;
     gert::TilingContext *tilingContext = holder.GetContext<gert::TilingContext>();
+    InitPlatformInfo(socVersion, tilingContext, compileInfoStr, aicNum, aivNum);
 
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
     ASSERT_NE(tilingFunc, nullptr) << "socVersion is: " << socVersion << ", caseName is: " << caseName

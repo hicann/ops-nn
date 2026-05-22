@@ -14,42 +14,56 @@
  */
 #include "quant_batch_matmul_v3_tiling_util.h"
 
-namespace optiling {
+#include <new>
+#include "error_util.h"
+#include "quant_batch_matmul_v3_checker.h"
+#include "quant_batch_matmul_v3_checker_for_mmads8s4.h"
 
-void QuantBatchMatMulV3TilingUtil::SetBasicTilingData(const QuantBatchMatmulInfo &inputParams,
-                                                             const BasicRunInfoTiling &basicTiling,
-                                                             DequantBmm::QuantBatchMatmulV3TilingDataParams &tilingData)
+namespace optiling {
+namespace {
+template <typename Checker>
+bool CheckDtypeWithChecker(gert::TilingContext *context, const QuantBatchMatmulInfo& inputParams)
 {
-    tilingData.params.batchA = inputParams.batchA;
-    tilingData.params.batchB = inputParams.batchB;
-    tilingData.params.batchC = inputParams.batchC;
-    tilingData.params.batchA1 = inputParams.batchA1;
-    tilingData.params.batchA2 = inputParams.batchA2;
-    tilingData.params.batchA3 = inputParams.batchA3;
-    tilingData.params.batchA4 = inputParams.batchA4;
-    tilingData.params.batchB1 = inputParams.batchB1;
-    tilingData.params.batchB2 = inputParams.batchB2;
-    tilingData.params.batchB3 = inputParams.batchB3;
-    tilingData.params.batchB4 = inputParams.batchB4;
-    tilingData.params.batchC1 = inputParams.batchC1;
-    tilingData.params.batchC2 = inputParams.batchC2;
-    tilingData.params.batchC3 = inputParams.batchC3;
-    tilingData.params.batchC4 = inputParams.batchC4;
+    auto *qmmV3Checker = new (std::nothrow) Checker(context, inputParams);
+    OP_TILING_CHECK(
+        qmmV3Checker == nullptr, CUBE_INNER_ERR_REPORT(inputParams.opName, "Failed to instantiate qmmV3Checker."),
+        return false);
+    bool res = qmmV3Checker->CheckDtype();
+    delete qmmV3Checker;
+    return res;
+}
+
+template <typename Checker>
+bool CheckShapeWithChecker(
+    gert::TilingContext *context, const QuantBatchMatmulInfo& inputParams,
+    const std::vector<gert::Shape *>& mandatoryShape, const gert::StorageShape *biasShape,
+    const gert::StorageShape *pertokenShape, const std::vector<int64_t>& dimValueOfMKN)
+{
+    auto *qmmV3Checker = new (std::nothrow) Checker(context, inputParams);
+    OP_TILING_CHECK(
+        qmmV3Checker == nullptr, CUBE_INNER_ERR_REPORT(inputParams.opName, "Failed to instantiate qmmV3Checker."),
+        return false);
+    bool res = qmmV3Checker->CheckShape(mandatoryShape, biasShape, pertokenShape, dimValueOfMKN);
+    delete qmmV3Checker;
+    return res;
+}
+} // namespace
+
+void QuantBatchMatMulV3TilingUtil::SetBasicTilingData(
+    const QuantBatchMatmulInfo& inputParams, const BasicRunInfoTiling& basicTiling,
+    DequantBmm::QuantBatchMatmulV3TilingDataParams& tilingData)
+{
+    SetCommonTilingData(inputParams, tilingData);
     tilingData.params.ubCalcN = basicTiling.ubCalcN;
     tilingData.params.ubCalcM = basicTiling.ubCalcM;
-    tilingData.params.biasDtype = static_cast<uint32_t>(inputParams.biasDtype);
     tilingData.params.isPerTensor = static_cast<uint32_t>(inputParams.isPerTensor);
     tilingData.params.isPertoken = static_cast<uint32_t>(inputParams.isPertoken);
     tilingData.params.isDoubleScale = static_cast<uint32_t>(inputParams.isDoubleScale);
-    tilingData.params.biasThreeDim = static_cast<uint32_t>(inputParams.batchBias > 1UL);
-    tilingData.params.groupSizeM = static_cast<uint32_t>(inputParams.groupSizeM);
-    tilingData.params.groupSizeN = static_cast<uint32_t>(inputParams.groupSizeN);
-    tilingData.params.groupSizeK = static_cast<uint32_t>(inputParams.groupSizeK);
 }
 
-void QuantBatchMatMulV3TilingUtil::SetBasicLibApiTiling(const QuantBatchMatmulInfo &inputParams,
-                                                        const BasicRunInfoTiling &basicTiling,
-                                                        DequantBmm::QuantBatchMatmulV3TilingDataParams &tilingData)
+void QuantBatchMatMulV3TilingUtil::SetBasicLibApiTiling(const QuantBatchMatmulInfo& inputParams,
+                                                        const BasicRunInfoTiling& basicTiling,
+                                                        DequantBmm::QuantBatchMatmulV3TilingDataParams& tilingData)
 {
     tilingData.matmulTiling.M = inputParams.mSize;
     tilingData.matmulTiling.N = inputParams.nSize;
@@ -70,12 +84,46 @@ void QuantBatchMatMulV3TilingUtil::SetBasicLibApiTiling(const QuantBatchMatmulIn
     tilingData.matmulTiling.stepKb = basicTiling.stepKb;
     tilingData.matmulTiling.isBias = inputParams.hasBias ? 1 : 0;
     tilingData.matmulTiling.iterateOrder = basicTiling.iterateOrder;
-    tilingData.matmulTiling.dbL0A = 2;  // db switch, 1: off, 2: on
-    tilingData.matmulTiling.dbL0B = 2;  // db switch, 1: off, 2: on
+    tilingData.matmulTiling.dbL0A = 2;  // Double buffer flag: 1 disables DB, 2 enables DB.
+    tilingData.matmulTiling.dbL0B = 2;  // Double buffer flag: 1 disables DB, 2 enables DB.
     tilingData.matmulTiling.dbL0C = basicTiling.dbL0c;
 }
 
-uint64_t QuantBatchMatMulV3TilingUtil::GetBiasMode(const QuantBatchMatmulInfo &inputParams)
+bool QuantBatchMatMulV3TilingUtil::CheckDtype(
+    gert::TilingContext *context, const QuantBatchMatmulInfo& inputParams,
+    const QuantBatchMatmulV3CompileInfo& compileInfo)
+{
+    switch (compileInfo.npuArch) {
+        case NpuArch::DAV_3510:
+            return CheckDtypeWithChecker<QuantBatchMatmulV3Checker>(context, inputParams);
+        case NpuArch::DAV_RESV:
+            return CheckDtypeWithChecker<QuantBatchMatmulV3Checker4MmadS8S4>(context, inputParams);
+        default:
+            CUBE_INNER_ERR_REPORT(inputParams.opName, "Failed to find CheckDtype function for current NPU architecture.");
+            return false;
+    }
+}
+
+bool QuantBatchMatMulV3TilingUtil::CheckShape(
+    gert::TilingContext *context, const QuantBatchMatmulInfo& inputParams,
+    const QuantBatchMatmulV3CompileInfo& compileInfo, const std::vector<gert::Shape *>& mandatoryShape,
+    const gert::StorageShape *biasShape, const gert::StorageShape *pertokenShape,
+    const std::vector<int64_t>& dimValueOfMKN)
+{
+    switch (compileInfo.npuArch) {
+        case NpuArch::DAV_3510:
+            return CheckShapeWithChecker<QuantBatchMatmulV3Checker>(
+                context, inputParams, mandatoryShape, biasShape, pertokenShape, dimValueOfMKN);
+        case NpuArch::DAV_RESV:
+            return CheckShapeWithChecker<QuantBatchMatmulV3Checker4MmadS8S4>(
+                context, inputParams, mandatoryShape, biasShape, pertokenShape, dimValueOfMKN);
+        default:
+            CUBE_INNER_ERR_REPORT(inputParams.opName, "Failed to find CheckShape function for current NPU architecture.");
+            return false;
+    }
+}
+
+uint64_t QuantBatchMatMulV3TilingUtil::GetBiasMode(const QuantBatchMatmulInfo& inputParams)
 {
     uint64_t biasMode = 0UL;
     if (!inputParams.hasBias) {
@@ -94,8 +142,8 @@ uint64_t QuantBatchMatMulV3TilingUtil::GetBiasMode(const QuantBatchMatmulInfo &i
     return biasMode;
 }
 
-uint64_t QuantBatchMatMulV3TilingUtil::GetKernelType(const QuantBatchMatmulInfo &inputParams,
-                                                    const BasicRunInfoTiling &basicTiling,  bool isBf16Mix,
+uint64_t QuantBatchMatMulV3TilingUtil::GetKernelType(const QuantBatchMatmulInfo& inputParams,
+                                                    const BasicRunInfoTiling& basicTiling,  bool isBf16Mix,
                                                     bool isAFullLoad, bool isBFullLoad, bool isABFullLoad)
 {
     uint64_t kernelType = 0UL;

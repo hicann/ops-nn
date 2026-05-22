@@ -126,18 +126,27 @@ class PyAclnnFusedQuantMatmul(AclnnBaseApi):
         input_args = []  # 算子的入参列表
         output_packages = []  # 算子的出参数据包列表
 
+        transpose_x1 = input_data.kwargs.pop("transposeX1")
+        transpose_x2 = input_data.kwargs.pop("transposeX2")
+        input_data.kwargs.pop("isNz")
+        input_data.kwargs.pop("out")
+
+        if transpose_x1:
+            input_data.kwargs['x1'] = input_data.kwargs['x1'].transpose(-2, -1)
+
         x1 = input_data.kwargs['x1']
         if x1.dtype == torch.int32:
-            x1_npu = torch_npu.npu_convert_weight_to_int4pack(x1.npu())
+            x1_npu = torch_npu.npu_convert_weight_to_int4pack(x1.contiguous().npu())
             input_data.kwargs['x1'] = x1_npu
 
         x2 = input_data.kwargs['x2']
         if x2.dtype == torch.int32:
-            x2_npu = torch_npu.npu_convert_weight_to_int4pack(x2.npu())
+            x2_npu = torch_npu.npu_convert_weight_to_int4pack(x2.contiguous().npu())
+            if transpose_x2:
+                x2_npu = x2_npu.transpose(-2, -1)
             input_data.kwargs['x2'] = x2_npu
-
-        input_data.kwargs.pop("isNz")
-        input_data.kwargs.pop("out")
+        elif transpose_x2:
+            input_data.kwargs['x2'] = x2.transpose(-2, -1)
 
         for i, arg in enumerate(input_data.args):
             data = self.backend.convert_input_data(arg, index=i)
@@ -160,7 +169,7 @@ class PyAclnnFusedQuantMatmul(AclnnBaseApi):
             input_args[8] = TensorPtr()
         
         input_args[9] = TensorPtr()
-        input_args[13] = ctypes.c_long(0) # groupSize
+        input_args[11] = ctypes.c_long(0) # groupSize
             
         input_args.extend(output_packages)
         return input_args, output_packages

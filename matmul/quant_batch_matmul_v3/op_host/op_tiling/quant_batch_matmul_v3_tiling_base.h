@@ -129,6 +129,8 @@ enum class BasicQuantMode : uint32_t {
     PERGROUP_MODE = 0x1U << 5,
 };
 
+void ResetQuantBatchMatmulV3InputParams();
+
 class QuantBatchMatmulV3TilingBase : public Ops::NN::Optiling::TilingBaseClass {
 public:
     explicit QuantBatchMatmulV3TilingBase(gert::TilingContext *context, bool isTilingOut);

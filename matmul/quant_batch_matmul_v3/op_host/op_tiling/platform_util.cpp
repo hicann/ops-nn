@@ -36,6 +36,11 @@ void PlatformUtil::GetLocalMemSize(fe::PlatFormInfos &platform_info, const strin
   }
 }
 
+bool PlatformUtil::IsAdvancedArch(NpuArch arch)
+{
+  return std::find(AdvancedArch.begin(), AdvancedArch.end(), arch) != AdvancedArch.end();
+}
+
 void PlatformUtil::ParseRuntimePlatformInfo(optiling::QuantBatchMatmulV3CompileInfo& compileInfo, const char *op_name, fe::PlatFormInfos &platform_info) {
   (void) op_name;
   platform_info.GetLocalMemSize(fe::LocalMemType::UB, compileInfo.ubSize);

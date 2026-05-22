@@ -30,45 +30,45 @@ bool QuantBatchMatmulV3Checker4MmadS8S4::CheckDtypesInRange() const
     static const std::vector<ge::DataType> legalInputX1Dtypes = {ge::DT_INT8, ge::DT_INT4};
     static const std::vector<ge::DataType> legalInputX2Dtypes = {ge::DT_INT8, ge::DT_INT4, ge::DT_INT32};
     static const std::vector<ge::DataType> legalOutputDtypes = {ge::DT_INT8, ge::DT_FLOAT16};
-    // x1可取INT8, INT4
+    // x1 supports INT8 and INT4.
     OP_TILING_CHECK(std::find(legalInputX1Dtypes.begin(), legalInputX1Dtypes.end(), inputParams_.aDtype) ==
                         legalInputX1Dtypes.end(),
                     CUBE_INNER_ERR_REPORT(inputParams_.opName, "The x1 dtype must be INT8/INT4, actual is %s.",
                                           ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype).c_str()),
                     return false);
-    // x2可取INT8, INT4, INT32
+    // x2 supports INT8, INT4, and INT32.
     OP_TILING_CHECK(std::find(legalInputX2Dtypes.begin(), legalInputX2Dtypes.end(), inputParams_.bDtype) ==
                         legalInputX2Dtypes.end(),
                     CUBE_INNER_ERR_REPORT(inputParams_.opName, "The x2 dtype must be INT8/INT4/INT32, actual is %s.",
                                           ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str()),
                     return false);
-    // output可取INT8, FLOAT16
+    // Output supports INT8 and FLOAT16.
     OP_TILING_CHECK(
         std::find(legalOutputDtypes.begin(), legalOutputDtypes.end(), inputParams_.cDtype) == legalOutputDtypes.end(),
         CUBE_INNER_ERR_REPORT(inputParams_.opName, "Output dtype must be INT8/FLOAT16, actual is %s.",
                               ge::TypeUtils::DataTypeToSerialString(inputParams_.cDtype).c_str()),
         return false);
-    // offset可取FLOAT
+    // offset supports FLOAT only.
     auto offsetDesc = context_->GetOptionalInputDesc(GetOffsetIdx());
     OP_TILING_CHECK((offsetDesc && context_->GetOptionalInputShape(GetOffsetIdx()) != nullptr) &&
                         offsetDesc->GetDataType() != ge::DT_FLOAT,
                     CUBE_INNER_ERR_REPORT(inputParams_.opName, "The offset dtype should be FLOAT, actual dtype is %s.",
                                           ge::TypeUtils::DataTypeToSerialString(offsetDesc->GetDataType()).c_str()),
                     return false);
-    // scale可取UINT64, INT64
+    // scale supports UINT64 and INT64 only.
     OP_TILING_CHECK(
         !(inputParams_.scaleDtype == ge::DT_UINT64 || inputParams_.scaleDtype == ge::DT_INT64),
         CUBE_INNER_ERR_REPORT(inputParams_.opName, "Scale dtype should be UINT64/INT64, actual dtype is %s.",
                               ge::TypeUtils::DataTypeToSerialString(inputParams_.scaleDtype).c_str()),
         return false);
-    // bias可取INT32
+    // bias supports INT32 only.
     OP_TILING_CHECK((context_->GetOptionalInputDesc(GetBiasIdx()) != nullptr &&
                      context_->GetOptionalInputShape(GetBiasIdx()) != nullptr) &&
                         inputParams_.biasDtype != ge::DT_INT32,
                     CUBE_INNER_ERR_REPORT(inputParams_.opName, "Bias dtype should be INT32, actual dtype is %s.",
                                           ge::TypeUtils::DataTypeToSerialString(inputParams_.biasDtype).c_str()),
                     return false);
-    // pertokenScale不存在
+    // pertokenScale is not supported in the mmad S8S4 path.
     OP_TILING_CHECK((context_->GetOptionalInputDesc(GetPertokenIdx()) != nullptr &&
                      context_->GetOptionalInputShape(GetPertokenIdx()) != nullptr),
                     CUBE_INNER_ERR_REPORT(inputParams_.opName, "PertokenScale should be null."), return false);
@@ -77,7 +77,7 @@ bool QuantBatchMatmulV3Checker4MmadS8S4::CheckDtypesInRange() const
 
 bool QuantBatchMatmulV3Checker4MmadS8S4::CheckABDtypes() const
 {
-    // 当x为INT8, x2必须是INT8, INT4, INT32
+    // INT8 x1 accepts INT8, INT4, or INT32 x2.
     OP_TILING_CHECK(inputParams_.aDtype == ge::DT_INT8 &&
                         !(inputParams_.bDtype == ge::DT_INT8 || inputParams_.bDtype == ge::DT_INT4 ||
                           inputParams_.bDtype == ge::DT_INT32),
@@ -86,7 +86,7 @@ bool QuantBatchMatmulV3Checker4MmadS8S4::CheckABDtypes() const
                                           ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str()),
                     return false);
 
-    // 当x为INT4, x2必须是INT4, INT32
+    // INT4 x1 accepts INT4 or INT32 x2.
     OP_TILING_CHECK(
         inputParams_.aDtype == ge::DT_INT4 &&
             !(inputParams_.bDtype == ge::DT_INT4 || inputParams_.bDtype == ge::DT_INT32),
@@ -109,7 +109,7 @@ bool QuantBatchMatmulV3Checker4MmadS8S4::CheckDtype() const
 
 bool QuantBatchMatmulV3Checker4MmadS8S4::CheckBias(const gert::StorageShape* biasShape) const
 {
-    // bias维数只能是1维
+    // Bias must be 1D in this path.
     if (biasShape != nullptr) {
         auto biasDimNum = biasShape->GetStorageShape().GetDimNum();
         OP_TILING_CHECK(
@@ -124,14 +124,15 @@ bool QuantBatchMatmulV3Checker4MmadS8S4::CheckBias(const gert::StorageShape* bia
 bool QuantBatchMatmulV3Checker4MmadS8S4::CheckOffset(const gert::StorageShape *offsetShape) const
 {
     if (offsetShape != nullptr) {
-        // 当outDtype不为INT8时，offset不存在
+        // offset is only allowed when the output dtype is INT8.
         OP_TILING_CHECK(inputParams_.cDtype != ge::DT_INT8,
-                        CUBE_INNER_ERR_REPORT(inputParams_.opName, "When outputDtype is not INT8, offset must be null"),
+                        CUBE_INNER_ERR_REPORT(inputParams_.opName,
+                                              "When outputDtype is not INT8, offset must be null."),
                         return false);
-        // offset维数只能是1维
+        // offset must be 1D.
         OP_TILING_CHECK(
             offsetShape->GetStorageShape().GetDimNum() != 1,
-            CUBE_INNER_ERR_REPORT(inputParams_.opName, "The offset shape should be 1 dimension, but it is %zu",
+            CUBE_INNER_ERR_REPORT(inputParams_.opName, "The offset shape should be 1 dimension, but it is %zu.",
                                   offsetShape->GetStorageShape().GetDimNum()),
             return false);
     }
@@ -152,14 +153,14 @@ bool QuantBatchMatmulV3Checker4MmadS8S4::CheckShapeInBoundary(const gert::Shape 
     for (size_t i = 0; i < shape.GetDimNum(); ++i) {
         int64_t curDim = shape.GetDim(i);
 
-        // x1或x2的shape每一维元素数不超过INT32_MAX
+        // Each x1/x2 dimension must stay within INT32 range.
         OP_TILING_CHECK(
             curDim <= 0 || curDim > static_cast<int64_t>(INT32_MAX),
             CUBE_INNER_ERR_REPORT(inputParams_.opName,
                                   "Input shape must be within the range of [1,%d], actual %zu dimension of %s is %ld.",
                                   INT32_MAX, i, dimName, curDim),
             return false);
-        // x1或x2的shape总元素数不超过INT64_MAX
+        // The total element count must stay within INT64 range.
         mulBound = curDim * mul;
         OP_TILING_CHECK(mulBound / curDim != mul,
                         CUBE_INNER_ERR_REPORT(inputParams_.opName,
@@ -172,21 +173,21 @@ bool QuantBatchMatmulV3Checker4MmadS8S4::CheckShapeInBoundary(const gert::Shape 
 
 bool QuantBatchMatmulV3Checker4MmadS8S4::ExtraInputCheck() const
 {
-    // 当x1为INT4, transA必须为false
+    // INT4 x1 does not support transA.
     OP_TILING_CHECK(
         inputParams_.aDtype == ge::DT_INT4 && inputParams_.transA,
-        CUBE_INNER_ERR_REPORT(inputParams_.opName, "When input dtype is INT4, trans_a should be false, actual [%s]",
+        CUBE_INNER_ERR_REPORT(inputParams_.opName, "When input dtype is INT4, transA should be false, actual is %s.",
                               inputParams_.transA ? "true" : "false"),
         return false);
 
-    // x1必须为ND
+    // x1 must use ND format.
     auto x1Desc = context_->GetInputDesc(GetX1Idx());
     auto x1Format = static_cast<ge::Format>(ge::GetPrimaryFormat(x1Desc->GetStorageFormat()));
     OP_TILING_CHECK(x1Format != ge::Format::FORMAT_ND,
                     CUBE_INNER_ERR_REPORT(inputParams_.opName, "Input x1 format should be ND, actual is %s.",
                                           ge::TypeUtils::FormatToSerialString(x1Format).c_str()),
                     return false);
-    // 当x1为INT4时，x2必须是NZ
+    // INT4 x1 requires x2 to use FRACTAL_NZ.
     auto x2Desc = context_->GetInputDesc(GetX2Idx());
     auto x2Format = static_cast<ge::Format>(ge::GetPrimaryFormat(x2Desc->GetStorageFormat()));
     OP_TILING_CHECK(inputParams_.aDtype == ge::DT_INT4 && x2Format != ge::Format::FORMAT_FRACTAL_NZ,
@@ -202,25 +203,25 @@ bool QuantBatchMatmulV3Checker4MmadS8S4::CheckDimValue(const gert::Shape &scaleS
                                                        const gert::StorageShape *offsetShape,
                                                        const std::vector<int64_t> &dimValueOfMKN) const
 {
-    // x1,x2 shapeK必须相等
-    auto x1Inner = dimValueOfMKN[0];  // using index 0 to get x1Inner
-    auto x2Inner = dimValueOfMKN[2];  // using index 2 to get x2Inner
-    auto x2Outer = dimValueOfMKN[3];  // using index 3 to get x2Outer
+    // dimValueOfMKN stores x1 inner, x1 outer, x2 inner, and x2 outer.
+    auto x1Inner = dimValueOfMKN[0];
+    auto x2Inner = dimValueOfMKN[2];
+    auto x2Outer = dimValueOfMKN[3];
     auto kBSize = static_cast<uint64_t>(inputParams_.transB ? x2Inner : x2Outer);
     OP_TILING_CHECK(inputParams_.kSize != kBSize,
                     CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                          "The size of k dimension of x1[%lu] is not equal to \
-the size of k dimension of x2[%lu]",
+                                          "The K dimension of x1[%lu] is not equal to \
+the K dimension of x2[%lu].",
                                           inputParams_.kSize, kBSize),
                     return false);
-    // bias shape必须等于shapeN
+    // Bias shape must match N.
     OP_TILING_CHECK(
         biasShape != nullptr && static_cast<uint64_t>(biasShape->GetStorageShape().GetDim(0)) != inputParams_.nSize,
         CUBE_INNER_ERR_REPORT(inputParams_.opName,
                               "Input bias dimension shape should equal n, but it is %ld while n is %lu.",
                               biasShape->GetStorageShape().GetDim(0), inputParams_.nSize),
         return false);
-    // offset shape必须是1或shapeN
+    // offset shape must be 1 or N.
     OP_TILING_CHECK(
         offsetShape != nullptr &&
             !(offsetShape->GetStorageShape().GetDim(0) == 1 ||
@@ -228,23 +229,23 @@ the size of k dimension of x2[%lu]",
         CUBE_INNER_ERR_REPORT(inputParams_.opName, "The offset dimension value must be 1 or n[%lu], but it is %ld.",
                               inputParams_.nSize, offsetShape->GetStorageShape().GetDim(0)),
         return false);
-    // scale维数必须是1维
+    // scale must be 1D.
     OP_TILING_CHECK(scaleShape.GetDimNum() != 1,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "Scale's dimension must be 1, actually is : %zu",
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "Scale dimension must be 1, but it is %zu.",
                                           scaleShape.GetDimNum()),
                     return false);
-    // 当x1为INT8时，支持pertensor和perchannel量化模式
+    // INT8 x1 supports PerTensor and PerChannel.
     OP_TILING_CHECK(
         inputParams_.aDtype == ge::DT_INT8 && !(inputParams_.isPerTensor || inputParams_.isPerChannel),
         CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                              "When x1 dtype is INT8, the only supported quant modes are Pertensor/PerChannel"),
+                              "When x1 dtype is INT8, the only supported quant modes are PerTensor/PerChannel."),
         return false);
-    // 当x1为INT4时，支持perchannel量化模式
+    // INT4 x1 supports PerChannel only.
     OP_TILING_CHECK(inputParams_.aDtype == ge::DT_INT4 && !inputParams_.isPerChannel,
                     CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                          "When x1 dtype is INT4, the only supported quant modes are PerChannel"),
+                                          "When x1 dtype is INT4, the only supported quant mode is PerChannel."),
                     return false);
-    // 当x1为int4时，x1内轴必须是偶数
+    // INT4 x1 requires an even inner axis.
     OP_TILING_CHECK(
         inputParams_.aDtype == ge::DT_INT4 && (x1Inner < 0 || x1Inner % 2 != 0),
         CUBE_INNER_ERR_REPORT(
@@ -252,7 +253,7 @@ the size of k dimension of x2[%lu]",
             "if x1 dtype is int4, last axis of input x1 has to be a positive even number, but actual is [%ld].",
             x1Inner),
         return false);
-    // 当x2为int4时，x2内轴必须是偶数
+    // INT4 x2 requires an even inner axis.
     OP_TILING_CHECK(
         inputParams_.bDtype == ge::DT_INT4 && (x2Inner < 0 || x2Inner % 2 != 0),
         CUBE_INNER_ERR_REPORT(
@@ -267,9 +268,9 @@ bool QuantBatchMatmulV3Checker4MmadS8S4::CheckShape(
     const std::vector<gert::Shape*>& mandtoryShape, const gert::StorageShape* biasShape,
     const gert::StorageShape* /* pertokenShape */, const std::vector<int64_t>& dimValueOfMKN) const
 {
-    auto &x1Shape = *mandtoryShape[0];     // using index 0 to get x1Shape
-    auto &x2Shape = *mandtoryShape[1];     // using index 1 to get x2Shape
-    auto &scaleShape = *mandtoryShape[2];  // using index 2 to get scaleShape
+    auto& x1Shape = *mandtoryShape[0];
+    auto& x2Shape = *mandtoryShape[1];
+    auto& scaleShape = *mandtoryShape[2];
     auto offsetShape = context_->GetOptionalInputShape(GetOffsetIdx());
     if (!CheckShapeInRangeForOptionalInputs(biasShape, offsetShape) ||
         !CheckDimValue(scaleShape, biasShape, offsetShape, dimValueOfMKN) ||

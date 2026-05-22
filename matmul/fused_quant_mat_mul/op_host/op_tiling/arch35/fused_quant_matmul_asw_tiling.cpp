@@ -334,6 +334,12 @@ bool FusedQuantMatMulASWTiling::CheckShapeInRangeForMandtoryInputs(size_t x1Shap
     return true;
 }
 
+bool FusedQuantMatMulASWTiling::IsCapable()
+{
+    // FQMM ASW is selected by FusedQuantMatMulTilingFunc; keep its original capability surface.
+    return true;
+}
+
 uint64_t FusedQuantMatMulASWTiling::GetTilingKey() const {
     auto biasMode = GetBiasMode();
     auto kernelType = GetKernelType();

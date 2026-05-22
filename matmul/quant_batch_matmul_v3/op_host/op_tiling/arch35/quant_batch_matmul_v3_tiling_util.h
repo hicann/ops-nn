@@ -14,8 +14,12 @@
  */
 #pragma once
 
+#include <vector>
+
+#include "tiling/platform/platform_ascendc.h"
+
 #include "../quant_batch_matmul_v3_tiling_base.h"
-#include "../../../op_kernel/arch35/quant_batch_matmul_v3_tiling_data.h"
+#include "matmul/quant_batch_matmul_v3/op_kernel/arch35/quant_batch_matmul_v3_tiling_data.h"
 
 namespace optiling {
 
@@ -62,13 +66,44 @@ enum class QMMKernelType : uint32_t {
 
 class QuantBatchMatMulV3TilingUtil {
 public:
-    static void SetBasicTilingData(const QuantBatchMatmulInfo &inputParams, const BasicRunInfoTiling &basicTiling,
-                                   DequantBmm::QuantBatchMatmulV3TilingDataParams &tilingData);
-    static void SetBasicLibApiTiling(const QuantBatchMatmulInfo &inputParams, const BasicRunInfoTiling &basicTiling,
-                                     DequantBmm::QuantBatchMatmulV3TilingDataParams &tilingData);
-    static uint64_t GetKernelType(const QuantBatchMatmulInfo &inputParams, const BasicRunInfoTiling &basicTiling,
+    template <typename TilingData>
+    static void SetCommonTilingData(const QuantBatchMatmulInfo& inputParams, TilingData& tilingData)
+    {
+        tilingData.params.batchA = inputParams.batchA;
+        tilingData.params.batchB = inputParams.batchB;
+        tilingData.params.batchC = inputParams.batchC;
+        tilingData.params.batchA1 = inputParams.batchA1;
+        tilingData.params.batchA2 = inputParams.batchA2;
+        tilingData.params.batchA3 = inputParams.batchA3;
+        tilingData.params.batchA4 = inputParams.batchA4;
+        tilingData.params.batchB1 = inputParams.batchB1;
+        tilingData.params.batchB2 = inputParams.batchB2;
+        tilingData.params.batchB3 = inputParams.batchB3;
+        tilingData.params.batchB4 = inputParams.batchB4;
+        tilingData.params.batchC1 = inputParams.batchC1;
+        tilingData.params.batchC2 = inputParams.batchC2;
+        tilingData.params.batchC3 = inputParams.batchC3;
+        tilingData.params.batchC4 = inputParams.batchC4;
+        tilingData.params.biasDtype = static_cast<uint32_t>(inputParams.biasDtype);
+        tilingData.params.biasThreeDim = static_cast<uint32_t>(inputParams.batchBias > 1UL);
+        tilingData.params.groupSizeM = static_cast<uint32_t>(inputParams.groupSizeM);
+        tilingData.params.groupSizeN = static_cast<uint32_t>(inputParams.groupSizeN);
+        tilingData.params.groupSizeK = static_cast<uint32_t>(inputParams.groupSizeK);
+    }
+    static void SetBasicTilingData(const QuantBatchMatmulInfo& inputParams, const BasicRunInfoTiling& basicTiling,
+                                   DequantBmm::QuantBatchMatmulV3TilingDataParams& tilingData);
+    static void SetBasicLibApiTiling(const QuantBatchMatmulInfo& inputParams, const BasicRunInfoTiling& basicTiling,
+                                     DequantBmm::QuantBatchMatmulV3TilingDataParams& tilingData);
+    static bool CheckDtype(
+        gert::TilingContext *context, const QuantBatchMatmulInfo& inputParams,
+        const QuantBatchMatmulV3CompileInfo& compileInfo);
+    static bool CheckShape(
+        gert::TilingContext *context, const QuantBatchMatmulInfo& inputParams,
+        const QuantBatchMatmulV3CompileInfo& compileInfo, const std::vector<gert::Shape *>& mandatoryShape,
+        const gert::StorageShape *biasShape, const gert::StorageShape *pertokenShape,
+        const std::vector<int64_t>& dimValueOfMKN);
+    static uint64_t GetKernelType(const QuantBatchMatmulInfo& inputParams, const BasicRunInfoTiling& basicTiling,
                                   bool isBf16Mix, bool isAFullLoad, bool isBFullLoad, bool isABFullLoad);
-    static uint64_t GetBiasMode(const QuantBatchMatmulInfo &inputParams);
+    static uint64_t GetBiasMode(const QuantBatchMatmulInfo& inputParams);
 };
 } // namespace optiling
-

@@ -111,6 +111,11 @@ QuantBatchMatmulV3TilingBase::QuantBatchMatmulV3TilingBase(gert::TilingContext *
 {
 }
 
+void ResetQuantBatchMatmulV3InputParams()
+{
+    g_quantBatchMatmulInfoFactory.Get()->Reset();
+}
+
 ge::graphStatus QuantBatchMatmulV3TilingBase::GetShapeAttrsInfo()
 {
     OP_LOGE_IF(!SetPlatformInfoForTiling(), ge::GRAPH_FAILED, inputParams_.opName, "Set PlatformInfoFortiling fail");
@@ -799,6 +804,7 @@ void QuantBatchMatmulV3TilingBase::InitCompileInfo()
     compileInfo_.supportL12BtBf16 = (platformRes.find("bf16") != std::string::npos);
     platformInfoPtr->GetPlatformRes("AICoreintrinsicDtypeMap", "Intrinsic_mmad", platformRes);
     compileInfo_.supportMmadS8S4 = (platformRes.find("s8s4") != std::string::npos);
+    compileInfo_.npuArch = compileInfo_.supportMmadS8S4 ? NpuArch::DAV_RESV : ascendcPlatform.GetCurNpuArch();
     TilingPrepareForOpCache(context_);
     compileInfoInit_ = true;
 }

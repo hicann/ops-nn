@@ -18,14 +18,18 @@
 #include <cstdint>
 #include <string>
 #include <tiling/platform/platform_ascendc.h>
+#include "platform/soc_spec.h"
 #include "quant_batch_matmul_v3_compile_info.h"
 
 namespace optiling {
-class PlatformUtil {
- public:
-  static void ParseRuntimePlatformInfo(optiling::QuantBatchMatmulV3CompileInfo& compileInfo, const char *op_name, fe::PlatFormInfos &platform_info);
+const std::initializer_list<NpuArch> AdvancedArch = {NpuArch::DAV_3510, NpuArch::DAV_RESV};
 
- private:
-  static void GetLocalMemSize(fe::PlatFormInfos &platform_info, const std::string &lable, const std::string &mem_type, uint64_t &size);
+class PlatformUtil {
+  public:
+    static void ParseRuntimePlatformInfo(optiling::QuantBatchMatmulV3CompileInfo& compileInfo, const char *op_name, fe::PlatFormInfos &platform_info);
+    static bool IsAdvancedArch(NpuArch arch);
+
+  private:
+    static void GetLocalMemSize(fe::PlatFormInfos &platform_info, const std::string &lable, const std::string &mem_type, uint64_t &size);
 };
-}
+} // namespace optiling

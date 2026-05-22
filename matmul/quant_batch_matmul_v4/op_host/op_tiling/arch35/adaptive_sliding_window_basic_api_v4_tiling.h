@@ -13,16 +13,21 @@
  * \brief
  */
 #pragma once
-#include "../../../../quant_batch_matmul_v3/op_host/op_tiling/arch35/adaptive_sliding_window_basic_api_tiling.h"
+#include "../../../../quant_batch_matmul_v3/op_host/op_tiling/arch35/adaptive_sliding_window_perblock_basic_api_tiling.h"
 #include "../quant_batch_matmul_v4_compile_info.h"
 
 
 namespace optiling {
 
 
-class AdaptiveSlidingWindowBasicTilingV4 : public AdaptiveSlidingWindowBasicAPITiling {
+class AdaptiveSlidingWindowBasicTilingV4 : public AdaptiveSlidingWindowPerblockBasicAPITiling {
 public:
-    explicit AdaptiveSlidingWindowBasicTilingV4(gert::TilingContext *context) : AdaptiveSlidingWindowBasicAPITiling(context) {}
+    explicit AdaptiveSlidingWindowBasicTilingV4(gert::TilingContext *context)
+        : AdaptiveSlidingWindowPerblockBasicAPITiling(context)
+        {
+            inputParams_.Reset();
+            ResetAdaptiveSlidingWindowPlatformInfoCache();
+        }
     ~AdaptiveSlidingWindowBasicTilingV4() override = default;
     uint64_t GetTilingKey() const override;
 
@@ -81,4 +86,3 @@ protected:
     std::unique_ptr<QuantBatchMatmulV4CompileInfo> compileInfoPtr_;
 };
 }  // namespace optiling
-

@@ -108,6 +108,8 @@ ge::graphStatus FusedQuantMatMulSwigluTiling::GetShapeAttrsInfo()
             inputParams_.mSize, inputParams_.kSize, inputParams_.nSize, inputParams_.transA ? "true" : "false",
             inputParams_.transB ? "true" : "false", inputParams_.hasBias ? "true" : "false");
 
+    OP_LOGE_IF(!SetPlatformInfoForTiling(), ge::GRAPH_FAILED, inputParams_.opName, "SetPlatformInfoForTiling fail");
+
     return ge::GRAPH_SUCCESS;
 }
 

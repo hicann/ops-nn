@@ -250,14 +250,14 @@ bool AdaptiveSlidingWindowTilingV4::SetPlatformInfoForTiling()
     return true;
 }
 
-void AdaptiveSlidingWindowTilingV4::IsABFullLoad()
+void AdaptiveSlidingWindowTilingV4::UpdateABFullLoadStatus()
 {
     // supportMmadS8S4平台 LUT 场景不支持AB全载
     isABFullLoad_ = false;
     return;
 }
 
-void AdaptiveSlidingWindowTilingV4::IsBFullLoad()
+void AdaptiveSlidingWindowTilingV4::UpdateBFullLoadStatus()
 {
     // supportMmadS8S4平台 LUT 场景不支持B全载
     isBFullLoad_ = false;
@@ -288,7 +288,7 @@ void AdaptiveSlidingWindowTilingV4::CalcTailBasicBlock()
 
 bool AdaptiveSlidingWindowTilingV4::IsCalL1TilingDepth4MmadS8S4() const
 {
-    // LUT场景 L1 depth计算逻辑由CalL1TilingDepth4MmadS8S4函数确定
+    // LUT scenario uses the specialized L1 depth calculation.
     return true;
 }
 

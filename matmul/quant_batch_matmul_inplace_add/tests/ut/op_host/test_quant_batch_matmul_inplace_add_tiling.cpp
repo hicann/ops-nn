@@ -32,6 +32,7 @@
 #include "ut_op_util.h"
 #include "../../../op_host/op_tiling/quant_batch_matmul_inplace_add_tiling.h"
 #include "../../../../common/op_host/math_util.h"
+#include "../../../../quant_batch_matmul_v3/op_host/op_tiling/quant_batch_matmul_v3_compile_info.h"
 #include "../../../../../tests/ut/common/ut_string_utils.h"
 
 using namespace std;
@@ -39,20 +40,7 @@ using namespace ut_str;
 
 namespace {
 
-struct QuantBatchMatmulInplaceAddCompileInfo {
-    uint64_t ubSize;
-    uint64_t l1Size;
-    uint64_t l0cSize;
-    uint64_t l0aSize;
-    uint64_t l0bSize;
-    uint32_t workspaceNum;
-    uint32_t aivNum;
-    uint32_t aicNum;
-    bool supportL0c2Out;
-    bool supportL12BtBf16;
-    bool supportMmadS8S4;
-    platform_ascendc::SocVersion socVersion;
-};
+using QuantBatchMatmulInplaceAddCompileInfo = optiling::QuantBatchMatmulV3CompileInfo;
 
 struct QuantBatchMatmulInplaceAddTilingTestParam {
     string caseGroup;
@@ -259,10 +247,18 @@ static void TestOneParamCase(const QuantBatchMatmulInplaceAddTilingTestParam &pa
     }
     yInputShape.MutableOriginShape() = gert::Shape({param.m, param.n});
     yInputShape.MutableStorageShape() = gert::Shape({param.m, param.n});
-    x1ScaleShape.MutableOriginShape() = gert::Shape({k1, param.m, 2});
-    x1ScaleShape.MutableStorageShape() = gert::Shape({k1, param.m, 2});
-    x2ScaleShape.MutableOriginShape() = gert::Shape({k1, param.n, 2});
-    x2ScaleShape.MutableStorageShape() = gert::Shape({k1, param.n, 2});
+    if (param.x1Dtype == ge::DT_HIFLOAT8 && param.x2Dtype == ge::DT_HIFLOAT8 &&
+        param.x1ScaleDtype == ge::DT_FLOAT && param.x2ScaleDtype == ge::DT_FLOAT) {
+        x1ScaleShape.MutableOriginShape() = gert::Shape({1});
+        x1ScaleShape.MutableStorageShape() = gert::Shape({1});
+        x2ScaleShape.MutableOriginShape() = gert::Shape({1});
+        x2ScaleShape.MutableStorageShape() = gert::Shape({1});
+    } else {
+        x1ScaleShape.MutableOriginShape() = gert::Shape({k1, param.m, 2});
+        x1ScaleShape.MutableStorageShape() = gert::Shape({k1, param.m, 2});
+        x2ScaleShape.MutableOriginShape() = gert::Shape({k1, param.n, 2});
+        x2ScaleShape.MutableStorageShape() = gert::Shape({k1, param.n, 2});
+    }
 
     map<string, string> socInfos;
     map<string, string> aicoreSpec;
@@ -318,8 +314,15 @@ static void TestOneParamCase(const QuantBatchMatmulInplaceAddTilingTestParam &pa
     tilingContext->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     tilingContext->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
     tilingContext->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
-    map<string, string> socVersionInfos;
-    socVersionInfos.insert(make_pair("Short_SoC_version", param.socVersion));
+    map<string, string> socVersionInfos = {
+        {"Short_SoC_version", param.socVersion},
+        {"SoC_version", param.socVersion},
+    };
+    const map<string, string> soc2Arch = {{"Ascend950", "3510"}};
+    auto soc2ArchIter = soc2Arch.find(param.socVersion);
+    if (soc2ArchIter != soc2Arch.end()) {
+        socVersionInfos["NpuArch"] = soc2ArchIter->second;
+    }
     tilingContext->GetPlatformInfo()->SetPlatformRes("version", socVersionInfos);
 
     auto tilingParseFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling_parse;

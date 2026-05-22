@@ -15,6 +15,7 @@
 #ifndef __OP_HOST_QUANT_BATCH_MATMUL_V3_COMPILE_INFO_H__
 #define __OP_HOST_QUANT_BATCH_MATMUL_V3_COMPILE_INFO_H__
 #include "tiling/platform/platform_ascendc.h"
+#include "platform/soc_spec.h"
 
 namespace optiling {
 
@@ -32,6 +33,7 @@ struct QuantBatchMatmulV3CompileInfo {
     bool supportL12BtBf16;
     bool supportMmadS8S4;
     platform_ascendc::SocVersion socVersion;
+    NpuArch npuArch;
     std::string socVersionStr = "";
 };
 

@@ -144,7 +144,6 @@ bool AdaptiveSlidingWindowBasicTilingV4::IsCapable()
     auto x1ScaleOriginShape = x1ScaleShape->GetOriginShape();
     auto x2ScaleOriginShape = x2ScaleShape->GetOriginShape();
     CheckPerTileShape(x1OriginShape, x2OriginShape, x1ScaleOriginShape, x2ScaleOriginShape);
-
     return true;
 }
 

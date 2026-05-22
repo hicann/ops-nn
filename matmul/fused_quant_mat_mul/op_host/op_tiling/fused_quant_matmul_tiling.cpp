@@ -73,6 +73,7 @@ ge::graphStatus TilingParseForFusedQuantMatMul(gert::TilingParseContext *context
     compileInfoPtr->supportL12BtBf16 = (platformRes.find("bf16") != std::string::npos);
     platformInfoPtr->GetPlatformRes("AICoreintrinsicDtypeMap", "Intrinsic_mmad", platformRes);
     compileInfoPtr->supportMmadS8S4 = (platformRes.find("s8s4") != std::string::npos);
+    compileInfoPtr->npuArch = compileInfoPtr->supportMmadS8S4 ? NpuArch::DAV_RESV : ascendcPlatform.GetCurNpuArch();
     platformInfoPtr->GetPlatformRes("version", "SoC_version", compileInfoPtr->socVersionStr);
     if (!TilingPrepareForOpCache(context)) {
         return ge::GRAPH_FAILED;

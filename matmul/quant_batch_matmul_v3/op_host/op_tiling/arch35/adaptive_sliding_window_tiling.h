@@ -10,146 +10,114 @@
 
 /*!
  * \file adaptive_sliding_window_tiling.h
- * \brief
+ * \brief Adaptive sliding-window tiling base definitions.
  */
 #pragma once
-#include "util/math_util.h"
+#include <vector>
+
 #include "../quant_batch_matmul_v3_tiling_base.h"
 #include "quant_batch_matmul_v3_tiling_util.h"
-#include "../../../op_kernel/arch35/quant_batch_matmul_v3_tiling_data.h"
-#include "../../../op_kernel/arch35/quant_batch_matmul_v3_apt_tiling_key.h"
+#include "matmul/quant_batch_matmul_v3/op_kernel/arch35/quant_batch_matmul_v3_tiling_data.h"
 
 namespace optiling {
 
+void ResetAdaptiveSlidingWindowPlatformInfoCache();
+
 struct AdaptiveSlidingWindow {
-    uint64_t baseM = 0; // 主窗口基本块大小
-    uint64_t baseN = 0; // 主窗口基本块大小
-    uint64_t baseK = 0;
-    uint64_t mBlockCnt = 0;       // m方向基本块数量
-    uint64_t nBlockCnt = 0;       // n方向基本块数量
-    uint64_t totalBlockCnt = 0;   // 基本块总数
-    uint64_t mTail = 0;           // m方向尾块的有效行数
-    uint64_t nTail = 0;           // n方向尾块的有效列数
-    uint64_t singleWinM = 0;      // 主窗口的m边长
-    uint64_t singleWinN = 0;      // 主窗口的n边长
-    uint64_t totalWinCnt = 0;     // 窗口总数，及核执行最大轮数
-    uint64_t mainRow = 0;         // 主窗口行数（以窗口为单位，一个窗口为一行）
-    uint64_t tailWinBlockCnt = 0; // 尾窗口包含的基本块数量
-    uint64_t mTailTile = 1;       // 尾部窗口基本块m方向重切粒度
-    uint64_t nTailTile = 1;       // 尾部窗口基本块n方向重切粒度
-    uint64_t mBaseTailSplitCnt = 1;
-    uint64_t nBaseTailSplitCnt = 1;
-    uint64_t mTailMain = 0;
-    uint64_t nTailMain = 0;
-    bool useTailWinLogic = true; // 是否使用尾窗口处理逻辑
+    uint64_t baseM = 0;             // Base M block size for the main window.
+    uint64_t baseN = 0;             // Base N block size for the main window.
+    uint64_t baseK = 0;             // Base K block size.
+    uint64_t mBlockCnt = 0;         // Number of base blocks along M.
+    uint64_t nBlockCnt = 0;         // Number of base blocks along N.
+    uint64_t totalBlockCnt = 0;     // Total number of base blocks.
+    uint64_t mTail = 0;             // Effective M size of the tail block.
+    uint64_t nTail = 0;             // Effective N size of the tail block.
+    uint64_t singleWinM = 0;        // M span covered by one window.
+    uint64_t singleWinN = 0;        // N span covered by one window.
+    uint64_t totalWinCnt = 0;       // Total number of windows, also the max execution rounds.
+    uint64_t mainRow = 0;           // Number of rows in the main window layout.
+    uint64_t tailWinBlockCnt = 0;   // Number of base blocks contained in the tail window.
+    uint64_t mTailTile = 1;         // Extra split factor along M for the tail window.
+    uint64_t nTailTile = 1;         // Extra split factor along N for the tail window.
+    uint64_t mBaseTailSplitCnt = 1; // Number of merged base blocks for M-tail balancing.
+    uint64_t nBaseTailSplitCnt = 1; // Number of merged base blocks for N-tail balancing.
+    uint64_t mTailMain = 0;         // Rebalanced M size for the tail window.
+    uint64_t nTailMain = 0;         // Rebalanced N size for the tail window.
+    bool useTailWinLogic = true;    // Whether tail-window specific logic is enabled.
 };
 
 class AdaptiveSlidingWindowTiling : public QuantBatchMatmulV3TilingBase {
 public:
-    explicit AdaptiveSlidingWindowTiling(gert::TilingContext *context);
-    AdaptiveSlidingWindowTiling(gert::TilingContext *context, DequantBmm::QuantBatchMatmulV3TilingDataParams *out);
+    explicit AdaptiveSlidingWindowTiling(gert::TilingContext* context);
+    AdaptiveSlidingWindowTiling(gert::TilingContext* context, DequantBmm::QuantBatchMatmulV3TilingDataParams* out);
     ~AdaptiveSlidingWindowTiling() override = default;
 
-    // 1、获取平台信息比如CoreNum、UB/L1/L0C资源大小
+    // 1. Query platform information such as core count and memory sizes.
     ge::graphStatus GetPlatformInfo() override;
-    // 2、获取INPUT/OUTPUT/ATTR信息
+    // 2. Parse input shapes, dtypes and attributes.
     ge::graphStatus GetShapeAttrsInfo() override;
-    // 3、计算数据切分TilingData
+    // 3. Compute operator tiling data.
     ge::graphStatus DoOpTiling() override;
-    // 4、计算高阶API的TilingData，mc2使用的直接接口
+    // 4. Compute libapi tiling data for direct consumers such as MC2.
     ge::graphStatus DoLibApiTiling() override;
-    // 5、计算TilingKey
+    // 5. Compute the tiling key.
     uint64_t GetTilingKey() const override;
-    // 6、计算Workspace 大小
+    // 6. Compute workspace size.
     ge::graphStatus GetWorkspaceSize() override;
-    // 7、保存Tiling数据
+    // 7. Persist tiling data to the runtime context.
     ge::graphStatus PostTiling() override;
 
-private:
-    void Reset();
-
 protected:
+    void Reset();
     ge::graphStatus CalcUbTiling() override;
     virtual uint64_t GetBatchCoreCnt() const;
+    virtual const void* GetTilingData() const;
     bool CheckDtype() const override;
-    bool CheckShape(const std::vector<gert::Shape *>& mandtoryShape, const gert::StorageShape* biasShape,
-                    const gert::StorageShape* pertokenShape,
-                    const std::vector<int64_t> &dimValueOfMKN) const override;
-    void CalL1Tiling();
+    bool SetPlatformInfoForTiling() override;
+    bool CheckShape(
+        const std::vector<gert::Shape*>& mandtoryShape, const gert::StorageShape* biasShape,
+        const gert::StorageShape* pertokenShape, const std::vector<int64_t>& dimValueOfMKN) const override;
+    bool AnalyzeInputs() override;
+    void CalcBlockWindowInfo();
+    virtual bool CalL1Tiling() = 0;
     bool CheckBiasAndScale(uint64_t baseN, uint64_t dbL0c) const;
-    virtual bool AnalyseSlidingWinInfo();
-    void AdjustBasicBlock();
-    void AdjustPertileBasicBlock(uint64_t coreNumMN);
-    void AdjustPerblockBasicBlock();
-    void AdjustBasicBlock4MmadS8S4(uint64_t oriBlock);
-    bool CalculateOptimalSplit(uint64_t &baseM, uint64_t &baseN, uint64_t baseMAlignNum, uint64_t baseNAlignNum,
-                               uint64_t baseKAlignNum);
+    bool AnalyseSlidingWinInfo();
     void SetBf16Compat();
     virtual void SetTilingData();
     uint32_t CalUsedCoreNum();
-    virtual bool CalcBasicBlock();
+    virtual bool CalcBasicBlock() = 0;
     virtual void CalcTailBasicBlock();
     virtual void CalcTailBasicBlockAfullLoad();
-    void CalcTailBasicBlockBfullLoad();
-    void CalcTailBasicBlock4MmadS8S4();
     uint64_t GetTailBasicBlockSplitMax(bool isMSplit, uint64_t tileMax, uint64_t splitSize) const;
     bool CanIncreaseTailSplit(bool isPreSplitM, bool isPreSplit, uint64_t preSplit, uint64_t secSplit,
                               uint64_t splitMax);
     uint64_t GetTailSplitState(bool isPreSplitM, bool isPreSplit, uint64_t split, uint64_t splitSize) const;
     void CalcTailBasicBlockSplit(bool isPreSplitM, uint64_t preSplitMax, uint64_t secSplitMax,
                                  uint64_t preSplitSize, uint64_t secSplitSize);
+    virtual void AnalyseFullLoadInfo() = 0;
+    virtual void CalcTailRoundBasicBlockSplit() = 0;
     uint32_t CalUsedCoreNum(uint32_t mTile, uint32_t nTile);
-    uint64_t GetDepthA1B1(uint64_t leftSize, uint64_t perDepthSize, uint64_t depthInit);
-    uint64_t GetDepthB1AfullLoad(uint64_t leftSize);
-    uint64_t GetScaleFactorBAfullLoad(uint64_t leftSize);
-    void CalScaleFactors(uint64_t baseASize, uint64_t baseBSize, uint64_t baseScaleASize, uint64_t baseScaleBSize);
-    void CalStepKs();
-    bool isA8W8GB() const;
     bool IsMxKOdd() const;
     bool IsMxBackwardTrans() const;
-    virtual void IsAFullLoad();
-    virtual void IsBFullLoad();
-    virtual void IsABFullLoad();
-    void CalL1TilingDepthAfullload(uint64_t leftL1Size);
-    void CalL1TilingDepthNotfullload(uint64_t leftL1Size);
     uint64_t GetBiasMode() const;
     virtual uint64_t GetKernelType() const;
-    virtual bool IsCalL1TilingDepth4MmadS8S4() const;
-    virtual void CalL1TilingDepth4MmadS8S4(uint64_t leftL1Size);
 
     bool IsInValidWeighNzTailSplit(uint64_t splitCnt, bool isPreSplit) const;
 
     void LoadBalanceDataReset();
     bool OptimizeEdgeBasicBlock();
-    uint64_t CalculateCurrentPerf(uint64_t mergeLen, uint64_t nTail, uint64_t mCnt, uint64_t nCnt,
-                                  uint64_t& newTailMain);
-    bool GetOuterMAxisTailCnt(uint64_t& baseTailSplitCnt, uint64_t& tailMain);
-    bool GetOuterNAxisTailCnt(uint64_t& baseTailSplitCnt, uint64_t& tailMain);
+    void CalculateCurrentPerf(uint64_t mergeLen, uint64_t nTail, uint64_t& newTailMain, uint64_t& curPerf);
+    void GetOuterMAxisTailCnt(uint64_t& baseTailSplitCnt, uint64_t& tailMain);
+    void GetOuterNAxisTailCnt(uint64_t& baseTailSplitCnt, uint64_t& tailMain);
     virtual bool CheckCoreNum() const;
 
     DequantBmm::QuantBatchMatmulV3TilingDataParams tilingDataSelf_;
-    DequantBmm::QuantBatchMatmulV3TilingDataParams &tilingData_;
+    DequantBmm::QuantBatchMatmulV3TilingDataParams& tilingData_;
     AdaptiveSlidingWindow adaptiveWin_;
     BasicRunInfoTiling basicTiling_;
     bool isAFullLoad_ = false;
     bool isBFullLoad_ = false;
     bool isABFullLoad_ = false;
     bool isBf16Mix_ = false;
-    uint64_t singleCoreASizeWithFullLoad_ = 0;
-    uint64_t singleCoreBSizeWithFullLoad_ = 0;
-    bool isSupportS4S4_ = false;
-
-    bool CheckL1Size(uint64_t leftL1Size, uint64_t tempStepKa, uint64_t tempStepKb) const;
-    void AdjustStepK(uint64_t leftL1Size, uint64_t &tempStepKa, uint64_t &tempStepKb, bool isStepKa) const;
-    // 调整stepKa stepKb, 使其搬运量可以打满带宽
-    void CarryDataSizePass(uint64_t leftL1Size, uint64_t maxStepK);
-    // 调整stepKa stepKb, 使其相等或满足倍数关系
-    void BalanceStepKPass(uint64_t leftL1Size);
-    // 调整stepKa stepKb, 使其内轴对齐cacheline
-    void PostCacheLinePass(uint64_t leftL1Size, uint64_t maxStepK);
-    // L1全载和非全载下的CacheLine对齐优化
-    void L1FullLoadCacheLinePass(uint64_t &tempStepKa, uint64_t &tempStepKb, uint64_t aCacheLine, uint64_t bCacheLine);
-    void NONL1FullLoadCacheLinePass(uint64_t &tempStepKa, uint64_t &tempStepKb, uint64_t aCacheLine,
-                                    uint64_t bCacheLine);
 };
-}  // namespace optiling
+} // namespace optiling

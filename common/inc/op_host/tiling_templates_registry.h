@@ -21,6 +21,7 @@
 #include "exe_graph/runtime/tiling_context.h"
 #include "op_host/tiling_base.h"
 #include "op_host/static_register_symbol.h"
+#include "platform/platform_infos_def.h"
 #include "log/log.h"
 
 namespace Ops {
@@ -125,6 +126,79 @@ public:
             }
         }
         OP_LOGE(opType, "Do op tiling failed, no valid template is found.");
+        return ge::GRAPH_FAILED;
+    }
+
+    ge::graphStatus DoTilingImpl(gert::TilingContext* context, const std::vector<int32_t>& priorities)
+    {
+        int32_t arch = static_cast<int32_t>(NpuArch::DAV_RESV);
+        const char* opType = context->GetNodeType();
+        if (opType == nullptr) {
+            opType = "Unknown op";
+        }
+        auto platformInfoPtr = context->GetPlatformInfo();
+        if (platformInfoPtr == nullptr) {
+            OP_LOGE(opType, "Do op tiling failed, cannot get platformInfo.");
+            return ge::GRAPH_FAILED;
+        } else {
+            auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
+            std::string platformRes;
+            platformInfoPtr->GetPlatformRes("AICoreintrinsicDtypeMap", "Intrinsic_mmad", platformRes);
+            bool supportMmadS8S4 = (platformRes.find("s8s4") != std::string::npos);
+            arch = static_cast<int32_t>(supportMmadS8S4 ? NpuArch::DAV_RESV : ascendcPlatform.GetCurNpuArch());
+            OP_LOGD(context, "NpuArch is %d", arch);
+            if (!supportMmadS8S4 && arch == static_cast<int32_t>(NpuArch::DAV_RESV)) {
+                OP_LOGE(opType, "Do op tiling failed, cannot find npu arch.");
+                return ge::GRAPH_FAILED;
+            }
+        }
+        auto tilingTemplateRegistryMap = GetTilingTemplates(opType, arch);
+        for (auto priorityId : priorities) {
+            auto tilingCaseIter = tilingTemplateRegistryMap.find(priorityId);
+            if (tilingCaseIter != tilingTemplateRegistryMap.end()) {
+                auto templateFunc = tilingCaseIter->second(context);
+                if (templateFunc != nullptr) {
+                    ge::graphStatus status = templateFunc->DoTiling();
+                    if (status == ge::GRAPH_SUCCESS) {
+                        OP_LOGD(context, "Do general op tiling success priority=%d", priorityId);
+                        return status;
+                    }
+                    if (status != ge::GRAPH_PARAM_INVALID) {
+                        OP_LOGD(context, "Do op tiling failed");
+                        return status;
+                    }
+                    OP_LOGD(context, "Ignore general op tiling priority=%d", priorityId);
+                }
+            }
+        }
+        return ge::GRAPH_FAILED;
+    }
+
+    ge::graphStatus DoTilingImpl(gert::TilingContext* context, const std::vector<int32_t>& priorities, int32_t arch)
+    {
+        const char* opType = context->GetNodeType();
+        if (opType == nullptr) {
+            opType = "Unknown op";
+        }
+        const auto& tilingTemplateRegistryMap = GetTilingTemplates(opType, arch);
+        for (auto priorityId : priorities) {
+            auto tilingCaseIter = tilingTemplateRegistryMap.find(priorityId);
+            if (tilingCaseIter != tilingTemplateRegistryMap.end()) {
+                auto templateFunc = tilingCaseIter->second(context);
+                if (templateFunc != nullptr) {
+                    ge::graphStatus status = templateFunc->DoTiling();
+                    if (status == ge::GRAPH_SUCCESS) {
+                        OP_LOGD(context, "Do general op tiling success priority=%d", priorityId);
+                        return status;
+                    }
+                    if (status != ge::GRAPH_PARAM_INVALID) {
+                        OP_LOGD(context, "Do op tiling failed");
+                        return status;
+                    }
+                    OP_LOGD(context, "Ignore general op tiling priority=%d", priorityId);
+                }
+            }
+        }
         return ge::GRAPH_FAILED;
     }
 
@@ -440,22 +514,22 @@ private:
 };
 // op_type: 算子名称， class_name: 注册的 tiling 类, arch：芯片架构号
 // priority: tiling 类的优先级, 越小表示优先级越高, 即会优先选择这个tiling类
-#define REGISTER_TILING_TEMPLATE_WITH_ARCH(op_type, class_name, archs, priority)    \
-    [[maybe_unused]] uint32_t op_impl_register_template_##op_type##_##class_name##priority;      \
+#define REGISTER_TILING_TEMPLATE_WITH_ARCH(op_type, class_name, archs, priority)                \
+    [[maybe_unused]] uint32_t op_impl_register_template_##op_type##_##class_name##priority;     \
     static Ops::NN::Optiling::RegisterArch VAR_UNUSED##op_type##class_name##priority_register = \
         Ops::NN::Optiling::RegisterArch(#op_type).tiling<class_name>(priority, archs)
 
 // op_type: 算子名称， class_name: 注册的 tiling 类, soc_version：芯片版本号
 // priority: tiling 类的优先级, 越小表示优先级越高, 即会优先选择这个tiling类
 #define REGISTER_TILING_TEMPLATE_WITH_SOCVERSION(op_type, class_name, soc_versions, priority)  \
-    GLOBAL_REGISTER_SYMBOL(op_type, class_name, priority, __COUNTER__, __LINE__);                \
+    GLOBAL_REGISTER_SYMBOL(op_type, class_name, priority, __COUNTER__, __LINE__);              \
     static Ops::NN::Optiling::RegisterNew VAR_UNUSED##op_type##class_name##priority_register = \
         Ops::NN::Optiling::RegisterNew(#op_type).tiling<class_name>(priority, soc_versions)
 
 // op_type: 算子名称， class_name: 注册的 tiling 类,
 // priority: tiling 类的优先级, 越小表示优先级越高, 即被选中的概率越大
 #define REGISTER_TILING_TEMPLATE(op_type, class_name, priority)                              \
-    GLOBAL_REGISTER_STR_SYMBOL(op_type, class_name, priority, __COUNTER__, __LINE__);         \
+    GLOBAL_REGISTER_STR_SYMBOL(op_type, class_name, priority, __COUNTER__, __LINE__);        \
     static Ops::NN::Optiling::Register VAR_UNUSED##op_type_##class_name##priority_register = \
         Ops::NN::Optiling::Register(op_type).tiling<class_name>(priority)
 
@@ -463,7 +537,7 @@ private:
 // soc_version: soc版本，用于区分不同的soc
 // priority: tiling 类的优先级, 越小表示优先级越高, 即会优先选择这个tiling类
 #define REGISTER_TILING_TEMPLATE_NEW(op_type, class_name, soc_version, priority)               \
-    GLOBAL_REGISTER_SYMBOL(op_type, class_name, priority, __COUNTER__, __LINE__);                \
+    GLOBAL_REGISTER_SYMBOL(op_type, class_name, priority, __COUNTER__, __LINE__);              \
     static Ops::NN::Optiling::RegisterNew VAR_UNUSED##op_type##class_name##priority_register = \
         Ops::NN::Optiling::RegisterNew(#op_type).tiling<class_name>(priority, soc_version)
 
@@ -471,7 +545,7 @@ private:
 // priority: tiling 类的优先级, 越小表示优先级越高, 即被选中的概率越大
 // 取代 REGISTER_TILING_TEMPLATE , 传入的op_type如果是字符串常量，需要去掉引号
 #define REGISTER_OPS_TILING_TEMPLATE(op_type, class_name, priority)                       \
-    GLOBAL_REGISTER_SYMBOL(op_type, class_name, priority, __COUNTER__, __LINE__);                \
+    GLOBAL_REGISTER_SYMBOL(op_type, class_name, priority, __COUNTER__, __LINE__);         \
     static Ops::NN::Optiling::Register                                                    \
         __attribute__((unused)) tiling_##op_type##_##class_name##_##priority##_register = \
             Ops::NN::Optiling::Register(#op_type).tiling<class_name>(priority)

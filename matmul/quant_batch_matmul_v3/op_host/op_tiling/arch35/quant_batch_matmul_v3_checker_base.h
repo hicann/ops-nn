@@ -10,7 +10,7 @@
 
 /*!
  * \file quant_batch_matmul_v3_checker_base.h
- * \brief
+ * \brief Base checker utilities for QuantBatchMatmulV3 tiling.
  */
 #pragma once
 #include "../quant_batch_matmul_v3_tiling_base.h"
@@ -24,7 +24,7 @@ namespace optiling {
 
 class QuantBatchMatmulV3CheckerBase {
 public:
-    explicit QuantBatchMatmulV3CheckerBase(gert::TilingContext *context, const QuantBatchMatmulInfo &inputParams)
+    explicit QuantBatchMatmulV3CheckerBase(gert::TilingContext* context, const QuantBatchMatmulInfo& inputParams)
         : context_(context), inputParams_(inputParams)
     {
     }
@@ -42,10 +42,10 @@ public:
     }
 
 protected:
-    gert::TilingContext *context_ = nullptr;
+    gert::TilingContext* context_ = nullptr;
     QuantBatchMatmulInfo inputParams_;
 
-    // input index
+    // Default input indices for the V3 signature.
     constexpr static uint32_t X1_INDEX = 0;
     constexpr static uint32_t X2_INDEX = 1;
     constexpr static uint32_t SCALE_INDEX = 2;
@@ -53,7 +53,7 @@ protected:
     constexpr static uint32_t BIAS_INDEX = 4;
     constexpr static uint32_t PERTOKEN_SCALE_INDEX = 5;
 
-    // 根据V3/V4原型获取输入index
+    // Override these helpers when the V4 signature uses different input indices.
     virtual uint32_t GetX1Idx() const
     {
         return X1_INDEX;
@@ -80,4 +80,3 @@ protected:
     }
 };
 }  // namespace optiling
-

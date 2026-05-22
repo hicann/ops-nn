@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file quant_batch_matmul_v3_checker.cc
+ * \file quant_batch_matmul_v3_checker.cpp
  * \brief
  */
 
@@ -193,7 +193,8 @@ bool QuantBatchMatmulV3Checker::CheckScalesDtype() const
     if (context_->GetOptionalInputDesc(GetPertokenIdx()) != nullptr &&
         context_->GetOptionalInputShape(GetPertokenIdx()) != nullptr) {
         OP_TILING_CHECK(!CheckScaleDtypeWithPertoken(),
-            CUBE_INNER_ERR_REPORT(inputParams_.opName, "Check scale dtype with pertoken failed"), return false);
+            CUBE_INNER_ERR_REPORT(inputParams_.opName, "Failed to check scale dtype with pertokenScale."),
+            return false);
     } else {
         OP_TILING_CHECK(
             isFp4,
@@ -651,7 +652,7 @@ actual is [%ld].",
 
 bool QuantBatchMatmulV3Checker::CheckKAxisGreaterThanTwo() const
 {
-    if (inputParams_.kSize <= 2UL) { // k axis cannot be less than 2 in 4B case
+    if (inputParams_.kSize <= 2UL) { // FLOAT4 input requires K to be greater than 2.
         CUBE_INNER_ERR_REPORT(
             inputParams_.opName,
             "When input dtype is FLOAT4_E2M1, k axis must be greater than 2, actual is %ld.",
@@ -663,7 +664,7 @@ bool QuantBatchMatmulV3Checker::CheckKAxisGreaterThanTwo() const
 
 bool QuantBatchMatmulV3Checker::CheckInnerAxisIsEven(const std::vector<int64_t> &dimValueOfMKN) const
 {
-    // mod by 2 to check if it is an even number
+    // Both inner axes must be even for FLOAT4 packing.
     OP_TILING_CHECK(dimValueOfMKN[X2_INNER_IDX] % 2 != 0 || dimValueOfMKN[X1_INNER_IDX] % 2 != 0,
                     CUBE_INNER_ERR_REPORT(inputParams_.opName,
                                           "The x1 inner[%ld] or x2 inner[%ld] is not even \
@@ -738,14 +739,15 @@ bool QuantBatchMatmulV3Checker::CheckShapeInRangeForOptionalInputs(const gert::S
     if (offsetShape != nullptr) {
         OP_TILING_CHECK(inputParams_.aDtype == ge::DT_INT8 && inputParams_.cDtype != ge::DT_INT8,
                         CUBE_INNER_ERR_REPORT(inputParams_.opName, "When inputDtype is INT8 and outputDtype is not \
-INT8, offset must be null"), return false);
+INT8, offset must be null."), return false);
         OP_TILING_CHECK(inputParams_.cDtype == ge::DT_INT8 && offsetShape->GetStorageShape().GetDimNum() != 1,
-                        CUBE_INNER_ERR_REPORT(inputParams_.opName, "The offset shape should be 1 dimension, but it is %zu",
+                        CUBE_INNER_ERR_REPORT(inputParams_.opName,
+                                              "The offset shape should be 1 dimension, but it is %zu.",
                                                                    offsetShape->GetStorageShape().GetDimNum()),
                         return false);
         OP_TILING_CHECK(
             inputParams_.scaleDtype != ge::DT_UINT64 && inputParams_.scaleDtype != ge::DT_INT64,
-            CUBE_INNER_ERR_REPORT(inputParams_.opName, "When scaleDtype isn't UINT64 or INT64, offset must be null"),
+            CUBE_INNER_ERR_REPORT(inputParams_.opName, "When scaleDtype is not UINT64/INT64, offset must be null."),
             return false);
     }
     if (pertokenShape != nullptr) {
@@ -789,11 +791,11 @@ bool QuantBatchMatmulV3Checker::BiasShapeCheck(const gert::Shape &biasShape, con
                                                const gert::StorageShape *pertokenShape) const
 {
     auto biasDimNum = biasShape.GetDimNum();
-    // 3 dim bias case
+    // Validate the [batch, 1, n] bias layout.
     if (biasDimNum == BIAS_THREE_DIM) {
-        auto biasFirstDim = static_cast<uint64_t>(biasShape.GetDim(0)); // using index 0 to get bias first dim value
-        auto biasSecondDim = static_cast<uint64_t>(biasShape.GetDim(1)); // using index 1 to get bias second dim value
-        auto biasThirdDim = static_cast<uint64_t>(biasShape.GetDim(2)); // using index 2 to get bias third dim value
+        auto biasFirstDim = static_cast<uint64_t>(biasShape.GetDim(0));
+        auto biasSecondDim = static_cast<uint64_t>(biasShape.GetDim(1));
+        auto biasThirdDim = static_cast<uint64_t>(biasShape.GetDim(2));
         OP_TILING_CHECK(biasFirstDim != inputParams_.batchC,
                         CUBE_INNER_ERR_REPORT(inputParams_.opName,
                                               "Input bias 1st dimension shape should equal to batchC[%lu], \
@@ -831,7 +833,7 @@ bool QuantBatchMatmulV3Checker::ExtraInputCheck() const
 {
     OP_TILING_CHECK(IsLowFloatInputType(inputParams_.aDtype) &&
                     context_->GetOptionalInputShape(GetOffsetIdx()) != nullptr,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "Not support offset with input dtype(%s) yet.",
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "Offset is not supported with input dtype(%s) yet.",
                                           ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype).c_str()),
                     return false);
     return true;
@@ -888,8 +890,8 @@ bool QuantBatchMatmulV3Checker::CheckDimValue(const gert::Shape & scaleShape, co
     auto x2Outer = dimValueOfMKN[X2_OUTER_IDX];
     auto kBSize = static_cast<uint64_t>(inputParams_.transB ? x2Inner : x2Outer);
     OP_TILING_CHECK(inputParams_.kSize != kBSize,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "The size of k dimension of x1[%lu] is not equal to \
-the size of k dimension of x2[%lu]",
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "The K dimension of x1[%lu] is not equal to \
+the K dimension of x2[%lu].",
                                           inputParams_.kSize, kBSize),
                     return false);
     if (biasShape != nullptr && !BiasShapeCheck(biasShape->GetStorageShape(), scaleShape, pertokenShape)) {
@@ -910,11 +912,12 @@ but it is %ld.",
             (inputParams_.scaleDtype == ge::DT_UINT64 || inputParams_.scaleDtype == ge::DT_INT64 || pertokenShape == nullptr),
         CUBE_INNER_ERR_REPORT(
             inputParams_.opName,
-            "When scaleDtype is UINT64 or INT64 or pertokenScale is None, scale's dimension must be 1, actually is : %zu",
+            "When scaleDtype is UINT64/INT64 or pertokenScale is null, scale dimension must be 1, but it is %zu.",
             scaleShapeLen), return false);
     if (pertokenShape != nullptr) {
         OP_TILING_CHECK(!PerTokenDimValueCheck(scaleShape, pertokenShape),
-                        CUBE_INNER_ERR_REPORT(inputParams_.opName, "Check perTokenShape failed"), return false);
+                        CUBE_INNER_ERR_REPORT(inputParams_.opName, "Failed to check perTokenScale shape."),
+                        return false);
     }
 
     if (inputParams_.aDtype == ge::DT_INT4 && inputParams_.bDtype == ge::DT_INT4) {
@@ -939,9 +942,9 @@ bool QuantBatchMatmulV3Checker::CheckShape(const std::vector<gert::Shape *> &man
                                            const gert::StorageShape *pertokenShape,
                                            const std::vector<int64_t> &dimValueOfMKN) const
 {
-    auto &x1Shape = *mandatoryShape[0]; // using index 0 to get x1Shape
-    auto &x2Shape = *mandatoryShape[1]; // using index 1 to get x2Shape
-    auto &scaleShape = *mandatoryShape[2]; // using index 2 to get scaleShape
+    auto& x1Shape = *mandatoryShape[0];
+    auto& x2Shape = *mandatoryShape[1];
+    auto& scaleShape = *mandatoryShape[2];
     auto offsetShape = context_->GetOptionalInputShape(GetOffsetIdx());
     size_t outDimNum = std::max(x1Shape.GetDimNum(), x2Shape.GetDimNum());
     if (!CheckShapeInRangeForOptionalInputs(scaleShape, biasShape, pertokenShape, offsetShape, outDimNum) ||

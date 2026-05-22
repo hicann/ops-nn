@@ -16,16 +16,20 @@
 
 
 #include "../fused_quant_matmul_common.h"
-#include "matmul/quant_batch_matmul_v3/op_host/op_tiling/arch35/adaptive_sliding_window_tiling.h"
+#include "matmul/quant_batch_matmul_v3/op_host/op_tiling/arch35/adaptive_sliding_window_cube_tiling.h"
 #include "../../../op_kernel/arch35/fused_quant_mat_mul_tilingkey.h"
 
 namespace optiling {
 
 using FusedQuantMatMulCompileInfo = QuantBatchMatmulV3CompileInfo;
 
-class FusedQuantMatMulASWTiling : public AdaptiveSlidingWindowTiling {
+class FusedQuantMatMulASWTiling : public AdaptiveSlidingWindowCubeTiling {
 public:
-    explicit FusedQuantMatMulASWTiling(gert::TilingContext *context) : AdaptiveSlidingWindowTiling(context) {}
+    explicit FusedQuantMatMulASWTiling(gert::TilingContext *context) : AdaptiveSlidingWindowCubeTiling(context)
+    {
+        inputParams_.Reset();
+        ResetAdaptiveSlidingWindowPlatformInfoCache();
+    }
     ~FusedQuantMatMulASWTiling() override = default;
 
     uint64_t GetTilingKey() const override;
@@ -54,7 +58,7 @@ protected:
     bool AnalyzeInputs() override;
     bool CheckShapeInRangeForMandtoryInputs(size_t x1ShapeLen, size_t x2ShapeLen) const;
     bool AnalyzeAttrs() override;
+    bool IsCapable() override;
     uint64_t fusedOpType_ = 0UL;
 };
 } // namespace optiling
-

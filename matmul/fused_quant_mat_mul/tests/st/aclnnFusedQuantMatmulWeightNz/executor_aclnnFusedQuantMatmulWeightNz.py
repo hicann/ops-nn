@@ -31,6 +31,26 @@ from atk.tasks.backends.lib_interface.acl_wrapper import AclFormat, Int64, AclTe
 logging = Logger().get_logger()
 
 
+def _is_transpose_last_two_dims(tensor):
+    if tensor.dim() < 2 or tensor.dim() > 6:
+        return False
+
+    dim1 = tensor.dim() - 1
+    dim2 = tensor.dim() - 2
+    shape = tensor.shape
+    strides = tensor.stride()
+    if strides[dim2] != 1 or strides[dim1] != shape[dim2]:
+        return False
+
+    tmp_nx_d = shape[dim1] * shape[dim2]
+    for batch_dim in range(tensor.dim() - 3, -1, -1):
+        if strides[batch_dim] != tmp_nx_d:
+            return False
+        tmp_nx_d *= shape[batch_dim]
+
+    return not (shape[dim1] == 1 and shape[dim2] == 1)
+
+
 @register("execute_fused_quantmatmul_weightnz")
 class AclnnFusedQuantMatmulWeightNz(BaseApi):
     def __init__(self, task_result: TaskResult):
@@ -127,20 +147,27 @@ class PyAclnnFusedQuantMatmulWeightNz(AclnnBaseApi):
         input_args = []  # 算子的入参列表
         output_packages = []  # 算子的出参数据包列表
 
+        transpose_x1 = input_data.kwargs.pop("transposeX1")
+        transpose_x2 = input_data.kwargs.pop("transposeX2")
+        self.is_nz = input_data.kwargs.pop("isNz")
+        input_data.kwargs.pop("out")
+
+        if transpose_x1:
+            input_data.kwargs['x1'] = input_data.kwargs['x1'].transpose(-2, -1)
+
         x1 = input_data.kwargs['x1']
         if x1.dtype == torch.int32:
-            x1_npu = torch_npu.npu_convert_weight_to_int4pack(x1.npu())
+            x1_npu = torch_npu.npu_convert_weight_to_int4pack(x1.contiguous().npu())
             input_data.kwargs['x1'] = x1_npu
 
         x2 = input_data.kwargs['x2']
         if x2.dtype == torch.int32:
-            x2_npu = torch_npu.npu_convert_weight_to_int4pack(x2.npu())
+            x2_npu = torch_npu.npu_convert_weight_to_int4pack(x2.contiguous().npu())
+            if transpose_x2:
+                x2_npu = x2_npu.transpose(-2, -1)
             input_data.kwargs['x2'] = x2_npu
-        x2 = input_data.kwargs['x2']
-
-        self.is_nz = input_data.kwargs['isNz']
-        input_data.kwargs.pop("isNz")
-        input_data.kwargs.pop("out")
+        elif transpose_x2:
+            input_data.kwargs['x2'] = x2.transpose(-2, -1)
 
         for i, arg in enumerate(input_data.args):
             data = self.backend.convert_input_data(arg, index=i)
@@ -163,23 +190,23 @@ class PyAclnnFusedQuantMatmulWeightNz(AclnnBaseApi):
             input_args[8] = TensorPtr()
         
         input_args[9] = TensorPtr()
-        input_args[13] = ctypes.c_long(0) # groupSize
+        input_args[11] = ctypes.c_long(0) # groupSize
         
         input_args.extend(output_packages)
         return input_args, output_packages
     
     def get_storage_shape(self, input_data: InputDataset, index=None, name=None):
         if name == "x2":
-            mat2_nd_shape = input_data.kwargs[name].shape
-
             b = input_data.kwargs['x1'].shape[:-2]
-            if input_data.kwargs['transposeX2']:
-                n, k = input_data.kwargs['x2'].shape[-2:]
-            else:
-                k, n = input_data.kwargs['x2'].shape[-2:]
+            x2 = input_data.kwargs['x2']
+            k, n = x2.shape[-2:]
+            transpose_x2 = _is_transpose_last_two_dims(x2)
+            nz_k0_value_trans = 64 if x2.dtype == torch.int32 else 32
 
-            mat2_nd_shape = torch.Size([*b, (k + 32 - 1) // 32, (n + 16 - 1) // 16, 16, 32]) if input_data.kwargs['transposeX2'] else \
-                torch.Size([*b, (n + 32 - 1) // 32, (k + 16 - 1) // 16, 16, 32])
+            mat2_nd_shape = torch.Size([*b, (k + nz_k0_value_trans - 1) // nz_k0_value_trans,
+                                         (n + 16 - 1) // 16, 16, nz_k0_value_trans]) if transpose_x2 else \
+                torch.Size([*b, (n + nz_k0_value_trans - 1) // nz_k0_value_trans,
+                            (k + 16 - 1) // 16, 16, nz_k0_value_trans])
             return mat2_nd_shape
         elif name is not None:
             return input_data.kwargs[name].shape
