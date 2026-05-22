@@ -312,13 +312,8 @@ protected:
             }
             this->SetIterateParams(mCoreUse, splitBaseHk, baseHkIter, splitTailHk, kernelIdx);
             this->dedx_.SetFullLoadFlag(this->tiling_->enableFullLoad);
-            this->CalcBiasFullLoadFlag();
-            this->freeBiasFlag_ = this->fullLoadBiasFlag_ && firstloadbias;
-            this->dedx_.IterateAll(this->yGm_[this->offsetC_], 0, this->fullLoadBiasFlag_, this->freeBiasFlag_);  // 1 means atomic add
-            if (this->fullLoadBiasFlag_) {
-                firstloadbias = true;
-            }
-            this->fullLoadBiasFlag_ = false;
+
+            this->DoIterateALL(firstloadbias);
         }
     }
 

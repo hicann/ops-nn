@@ -455,7 +455,7 @@ __aicore__ inline void InitTque(Intf *self, const bool hasBias)
         }
         self->ctx.pipe_.InitBuffer(self->ctx.l0aBuf_, TOTAL_L0A_SIZE);
         self->ctx.pipe_.InitBuffer(self->ctx.l0bBuf_, TOTAL_L0B_SIZE);
-        if (hasBias) {
+        if (unlikely(hasBias)) {
             InitBiasTque(self);
         }
         InitScaleTque(self);
@@ -779,7 +779,10 @@ static __aicore__ inline void CalcSplitK_(Intf *self, uint8_t &enAtomic, const G
     self->ctx.isLastKSegment_ = false;
     // bias 需计算singlecoreM部分
     int32_t computeBiasTimes = (self->ctx.tiling_->singleCoreM - 1) / self->ctx.tiling_->baseM;
-    self->ctx.computeBiasOnce_ = false;
+
+    if (unlikely(hasBias)) {
+        self->ctx.computeBiasOnce_ = false;
+    }    
     for (uint32_t kIdx = self->ctx.curCoutStartIdx_; kIdx < self->ctx.tiling_->coutG; kIdx += self->ctx.kSegment_) {
         self->ctx.curCoutStartIdx_ = kIdx;
         UpdateSplitKTail<Intf>(self, kIdx);
@@ -789,7 +792,7 @@ static __aicore__ inline void CalcSplitK_(Intf *self, uint8_t &enAtomic, const G
         while (self->template Iterate<sync>(false, hasBias)) {
             self->ctx.realMSize_ = (iterCnt++ != 0) ? self->ctx.tiling_->singleCoreM : self->ctx.baseUseM_;
             self->template GetTensorC<sync>(output, enAtomic);
-            if (computeBiasTimes > 0) {
+            if (unlikely(hasBias && computeBiasTimes > 0)) {
                 self->ctx.computeBiasOnce_ = false;
                 computeBiasTimes -= 1;
             }
@@ -989,7 +992,7 @@ static __aicore__ inline bool ProcessKernelSplitIteration(Intf *self, bool hasBi
             if (unlikely(self->ctx.tiling_->hk == 1)) {
                 return true;
             }
-            if (hasBias) {
+            if (unlikely(hasBias)) {
                 Compute<Intf, true>(self);
             } else {
                 Compute<Intf, false>(self);
@@ -1042,7 +1045,7 @@ struct Iterate {
         L0A3*L0B3，L0A1*L0B4，L0A1*L0B5 …… L0A6*L0B6
         */
         // 更新idx，用L1、L1step、L0三个指针控制走位和计算offset，表示计算第几个mL0 * baseN
-        if (!self->ctx.enableSplitK_) {
+        if (unlikely(hasBias && !self->ctx.enableSplitK_)) {
             self->ctx.computeBiasOnce_ = false;
         }
         if (unlikely(self->ctx.isFirstIter_)) {
@@ -1057,7 +1060,7 @@ struct Iterate {
         }
 
         UpdateL1ComputeInfo<Intf>(self);
-        if (hasBias) {
+        if (unlikely(hasBias)) {
             Compute<Intf, true>(self);
         } else {
             Compute<Intf, false>(self);
@@ -1072,7 +1075,7 @@ struct IterateAll {
     static __aicore__ inline void call(Intf *self, const GlobalTensor<typename Intf::DstT> &output, uint8_t enAtomic, bool fullLoadBiasFlag_, bool freeBiasFlag_)
     {
         bool hasBias = self->ctx.hasBias_;
-        if (hasBias && self->ctx.tiling_->isBiasFullLoad) {
+        if (unlikely(hasBias && self->ctx.tiling_->isBiasFullLoad)) {
             if (freeBiasFlag_) {
                 if ASCEND_IS_AIC_SCALAR {
                     self->ctx.biasL1Que_.FreeTensor(self->ctx.biasL1Buf_);
@@ -1188,7 +1191,7 @@ struct End {
             self->ctx.l0cPong_.FreeAllEvent();
         }
 
-        if (self->ctx.hasBias_) {
+        if (unlikely(self->ctx.hasBias_)) {
             self->ctx.biasL1Que_.FreeAllEvent();
             self->ctx.biasBTQue_.FreeAllEvent();
         }
