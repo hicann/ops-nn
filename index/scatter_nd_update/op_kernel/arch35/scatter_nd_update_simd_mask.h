@@ -63,7 +63,7 @@ __aicore__ inline void ScatterNdUpdateSimdMask<T, U, OFFSET_T>::Init(
                                                                                : tilingData_.tailCoreIndexCount);
 
     pipe_.InitBuffer(maskBuf_,
-        Ops::Base::CeilAlign(tilingData_.varStorageInAxis * sizeof(int8_t), static_cast<uint64_t>(Ops::Base::GetUbBlockSize())));
+        Ops::Base::CeilAlign(tilingData_.varInAxis * sizeof(int8_t), static_cast<uint64_t>(Ops::Base::GetUbBlockSize())));
     pipe_.InitBuffer(this->outOfstBuf_, tilingData_.indicesFactor * sizeof(OFFSET_T));
     pipe_.InitBuffer(this->indicesBuf_, tilingData_.indicesFactor * tilingData_.indexRankSize * sizeof(U));
     pipe_.InitBuffer(this->strideBuf_, MAX_SHAPE_RANK * sizeof(U));
