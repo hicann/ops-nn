@@ -23,9 +23,9 @@ extern "C" {
  *
  * 算子功能：激活函数hardsigmoid的反向计算。
  *
- * @param [in] gradOutput(aclTensor*, 计算输入): 数据类型支持FLOAT、FLOAT16，支持非连续的Tensor，数据格式支持ND。
- * @param [in] self(aclTensor*, 计算输入): 数据类型支持FLOAT、FLOAT16，支持非连续的Tensor，数据格式支持ND。
- * @param [out] out(aclTensor*, 计算输出): 数据类型支持FLOAT、FLOAT16，支持非连续的Tensor，数据格式支持ND。
+ * @param [in] gradOutput(aclTensor*, 计算输入): 数据类型支持FLOAT、FLOAT16、BFLOAT16，支持非连续的Tensor，数据格式支持ND。
+ * @param [in] self(aclTensor*, 计算输入): 数据类型支持FLOAT、FLOAT16、BFLOAT16，支持非连续的Tensor，数据格式支持ND。
+ * @param [out] out(aclTensor*, 计算输出): 数据类型支持FLOAT、FLOAT16、BFLOAT16，支持非连续的Tensor，数据格式支持ND。
  * @param [out] workspace_size(uint64_t*, 出参): 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor(aclOpExecutor**, 出参): 返回op执行器，包含算子计算流程。
  * @return aclnnStatus: 返回状态码。
