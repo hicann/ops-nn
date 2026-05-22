@@ -21,7 +21,7 @@
 #include "opdev/platform.h"
 #include "matmul/common/op_host/op_api/matmul_util.h"
 #include "quant_matmul_v3.h"
-#include "matmul/quant_batch_matmul_v4/op_host/op_api/quant_matmul_v4.h"
+#include "matmul/common/op_host/op_api/quant_matmul_v4.h"
 #include "aclnn_kernels/transdata.h"
 #include "aclnn_kernels/transpose.h"
 #include "aclnn_kernels/contiguous.h"

@@ -19,7 +19,7 @@
 #include "aclnn_kernels/contiguous.h"
 #include "aclnn_kernels/reshape.h"
 #include "matmul/quant_batch_matmul_v3/op_api/quant_matmul_v3.h"
-#include "quant_matmul_v4.h"
+#include "matmul/common/op_host/op_api/quant_matmul_v4.h"
 #include "opdev/common_types.h"
 #include "opdev/op_dfx.h"
 #include "opdev/op_executor.h"
