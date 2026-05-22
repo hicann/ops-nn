@@ -152,6 +152,7 @@ public:
                                  ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
         aicConfig.PrecisionReduceFlag(true);
         this->AICore().AddConfig("ascend950", aicConfig);
+        this->AICore().AddConfig("ascend350", aicConfig);
         this->AICore().AddConfig("ascend910_55", aicConfig);
 
         OpAICoreConfig config_kirin = GetKirinCoreConfig();

@@ -76,6 +76,7 @@ public:
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(true);
         this->AICore().AddConfig("ascend950", config);
+        this->AICore().AddConfig("ascend350", config);
     }
 };
 

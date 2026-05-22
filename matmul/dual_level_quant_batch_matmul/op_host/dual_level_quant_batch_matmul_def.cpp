@@ -75,6 +75,7 @@ public:
             .PrecisionReduceFlag(true)
             .ExtendCfgInfo("aclnnSupport.value", "support_aclnn");
         this->AICore().AddConfig("ascend950", config950);
+        this->AICore().AddConfig("ascend350", config950);
     }
 
     static constexpr int64_t LEVEL0_GROUP_SIZE = 512L;

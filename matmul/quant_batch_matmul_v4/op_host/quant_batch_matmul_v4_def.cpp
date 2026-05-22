@@ -989,6 +989,7 @@ public:
             .ExtendCfgInfo("aclnnSupport.value", "support_aclnn");
 
         this->AICore().AddConfig("ascend950", aicore_config);
+        this->AICore().AddConfig("ascend350", aicore_config);
 
         OpAICoreConfig config_910BC;
         config_910BC.Input("x1")

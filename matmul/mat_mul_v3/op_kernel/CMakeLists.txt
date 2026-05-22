@@ -26,7 +26,7 @@ add_kernel_sources(
 
 add_kernel_sources(
     KERNEL_SRC arch35/mat_mul_v3.cpp
-    COMPUTE_UNITS ascend950
+    COMPUTE_UNITS ascend950 ascend350
     SIMPLIFIED_KEY None
     AUTO_SYNC false
     OPTIONS "--cce-no-dcache-flush" "-DENABLE_CV_COMM_VIA_SSBUF=true"

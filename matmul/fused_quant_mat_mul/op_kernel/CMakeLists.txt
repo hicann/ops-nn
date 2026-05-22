@@ -10,5 +10,5 @@
 
 add_kernel_sources(
     KERNEL_SRC arch35/fused_quant_mat_mul.cpp
-    COMPUTE_UNITS ascend950 mc62cm12a
+    COMPUTE_UNITS mc62cm12a
 )

@@ -10,5 +10,5 @@
 
 add_kernel_sources(
     KERNEL_SRC arch35/dual_level_quant_batch_matmul.cpp
-    COMPUTE_UNITS ascend950
+    COMPUTE_UNITS ascend950 ascend350
 )
