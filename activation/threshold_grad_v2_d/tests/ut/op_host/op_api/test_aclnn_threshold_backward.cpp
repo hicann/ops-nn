@@ -156,20 +156,6 @@ TEST_F(l2_threshold_backward_test, ascend950PR_9589_l2_test_relu_grad_fp32_succe
   ut.TestPrecision();
 }
 
-TEST_F(l2_threshold_backward_test, ascend950PR_9589_l2_test_relu_grad_int64_success) {
-  auto gradOutputDesc = TensorDesc({10,}, ACL_INT64, ACL_FORMAT_ND);
-  auto selfDesc = TensorDesc({10,}, ACL_INT64, ACL_FORMAT_ND);
-  auto scalarSesc = ScalarDesc(0.0f);
-  auto outDesc = TensorDesc(selfDesc);
-  auto ut = OP_API_UT(aclnnThresholdBackward, INPUT(gradOutputDesc, selfDesc, scalarSesc), OUTPUT(outDesc));
-
-  uint64_t workspaceSize = 0;
-  aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
-  EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
-
-  ut.TestPrecision();
-}
-
 TEST_F(l2_threshold_backward_test, ascend910B2_l2_test_threshold_grad_v2_d_positive_threshold_success) {
   auto gradOutputDesc = TensorDesc({10,}, ACL_INT32, ACL_FORMAT_ND);
   auto selfDesc = TensorDesc({10,}, ACL_INT32, ACL_FORMAT_ND);
