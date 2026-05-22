@@ -223,7 +223,7 @@ static __aicore__ inline void ComputeL0B(Intf *self, uint32_t l0bKIdx,
         UpdateLoadToB2ParamsK<Intf>(self, l0bKIdx);
     }
 
-    if (IsL1bUseTQue<Intf>(self)) {
+    if constexpr (Intf::conv3dConfig.groupMode != TPL_GROUP_MODE_ENLARGE && !Intf::conv3dConfig.enableC04Flag) {
         if ASCEND_IS_AIV_SHOULD_RETURN {
             return;
         }
@@ -242,7 +242,8 @@ static __aicore__ inline void ComputeForKIter(Intf *self, LocalTensor<typename I
     uint32_t curStepKb = self->ctx.curStepKb_;
     uint32_t l0aKIdx = 0;
     uint32_t l0bKIdx = 0;
-    for (uint64_t kIdx = 0; kIdx < self->ctx.kIter_; kIdx++) {
+    const uint64_t kIter = self->ctx.kIter_;
+    for (uint64_t kIdx = 0; kIdx < kIter; kIdx++) {
         UpdateL1KParams<Intf>(self, kIdx, curStepKa, curStepKb);
         ComputeL1A<Intf>(self, kIdx, curDoutIdx, l0aKIdx);
         ComputeL1B<Intf>(self, kIdx, curInnerKdIdx, l0bKIdx);

@@ -128,7 +128,7 @@ static __aicore__ inline void InitLoadToA2Params(Intf *self)
 template <class Intf>
 static __aicore__ inline void UpdateL1KParams(Intf *self, const uint64_t kIdx, uint32_t &curStepKa, uint32_t &curStepKb)
 {
-    if (kIdx == 0) {
+    if (unlikely(kIdx == 0)) {
         self->ctx.curLoadKbl1_ = self->ctx.curStepKb_ * self->ctx.tiling_->baseK;
         self->ctx.baseUseK_ = self->ctx.tiling_->baseK;
         self->ctx.load3d_.kExtension = self->ctx.tiling_->baseK;

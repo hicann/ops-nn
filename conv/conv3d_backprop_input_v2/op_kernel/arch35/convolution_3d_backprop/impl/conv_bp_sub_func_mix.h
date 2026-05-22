@@ -1570,16 +1570,6 @@ __aicore__ inline void InitUbByteSize(Intf *self)
 }
 
 template <class Intf>
-__aicore__ inline bool IsL1bUseTQue(Intf *self)
-{
-    if constexpr (Intf::conv3dConfig.groupMode != TPL_GROUP_MODE_ENLARGE &&
-        !Intf::conv3dConfig.enableC04Flag) {
-        return true;
-    }
-    return false;
-}
-
-template <class Intf>
 __aicore__ inline void CrossCoreSetHead(Intf *self)
 {
 #ifndef __CCE_KT_TEST__

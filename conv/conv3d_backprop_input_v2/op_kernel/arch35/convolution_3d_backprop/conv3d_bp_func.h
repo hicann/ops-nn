@@ -426,7 +426,7 @@ __aicore__ inline void InitTque(Intf *self, const bool hasBias)
     ascendc_assert((usedBufferSize <= TOTAL_L1_SIZE), "l1 size exceeds limit");
 #endif
 
-    if (IsL1bUseTQue<Intf>(self)) {
+    if constexpr (Intf::conv3dConfig.groupMode != TPL_GROUP_MODE_ENLARGE && !Intf::conv3dConfig.enableC04Flag) {
         if ASCEND_IS_AIC_SCALAR {
             self->ctx.pipe_.InitBuffer(self->ctx.inQueL1B_, self->ctx.tiling_->bl1Pbuffer, bMatrixByteSize);
         }
@@ -485,15 +485,19 @@ static __aicore__ inline void ComputeForNoTilingHWk(Intf *self, LocalTensor<type
     LocalTensor<typename Intf::SrcBT> &l0b, LocalTensor<typename Intf::L0cT> &l0c, uint8_t &l0PingPongFlag)
 {
     bool isFirstDk = (self->ctx.curDkIdx_ == 0);
+    const uint32_t strideD = self->ctx.tiling_->strideD;
+    const int64_t strideDMulDout = self->ctx.tiling_->dout * strideD;
+    const bool strideDgtOne = strideD > 1;
     for (uint64_t curInnerKdIdx = self->ctx.curDkIdx_; curInnerKdIdx < self->ctx.curDkIdx_ + self->ctx.tiling_->singleIterateDk; curInnerKdIdx++) {
         if constexpr (Intf::conv3dConfig.groupMode == TPL_GROUP_MODE_ENLARGE) {
             self->ctx.groupIterIdx_ = 0;
         }
 
-        int64_t curDoutIdx = 0;
-        if (!CalcCurDoutIdx<Intf>(self, curInnerKdIdx, curDoutIdx)) {
+        int64_t dTmp = self->ctx.curDinIdx_ + self->ctx.tiling_->padFront - curInnerKdIdx * self->ctx.tiling_->dilationD;
+        if (dTmp < 0 || (strideDgtOne && (dTmp % strideD > 0)) || dTmp >= strideDMulDout) {
             continue;
         }
+        int64_t curDoutIdx = strideDgtOne ? (dTmp / strideD) : dTmp;
         ComputeForKIter<Intf, hasBias>(self,l0a, l0b, l0c, curInnerKdIdx, curDoutIdx, isFirstDk, l0PingPongFlag);
         isFirstDk = false;
     }
@@ -610,13 +614,15 @@ static __aicore__ inline void UpdateKComputeStatus(Intf *self)
         // 其他方向要跳过计算，K可以不判断了
         return;
     }
-
+    const uint32_t strideD = self->ctx.tiling_->strideD;
+    const int64_t strideDThreshold = self->ctx.tiling_->dout * strideD;
+    const bool strideDgtOne = strideD > 1;
+    const int64_t DkThreshold = self->ctx.curDkIdx_ + self->ctx.tiling_->singleIterateDk;
     bool isKNeedCompute = false;
-    for (uint64_t curKdIdx = self->ctx.curDkIdx_; curKdIdx < self->ctx.curDkIdx_ + self->ctx.tiling_->singleIterateDk; curKdIdx++) {
+    for (uint64_t curKdIdx = self->ctx.curDkIdx_; curKdIdx < DkThreshold; curKdIdx++) {
         // 由于膨胀卷积使dk的位置发生改变，求解dout_idx时，dk_idx需乘上膨胀系数再参与计算，才能求取正确的索引
         int64_t dTmp = self->ctx.curDinIdx_ + self->ctx.tiling_->padFront - curKdIdx * self->ctx.tiling_->dilationD;
-        if (dTmp < 0 || (self->ctx.tiling_->strideD > 1 && (dTmp % self->ctx.tiling_->strideD > 0)) ||
-            dTmp >= self->ctx.tiling_->dout * self->ctx.tiling_->strideD) {
+        if (dTmp < 0 || (strideDgtOne && (dTmp % strideD > 0)) || dTmp >= strideDThreshold) {
             continue;
         }
         isKNeedCompute = true;
