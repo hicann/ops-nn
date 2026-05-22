@@ -80,9 +80,15 @@ ge::graphStatus LayerNormQuantTiling::GetTilingSliceInfo()
         uint32_t oneRepeatElemCount = 256U / 2;
         uint32_t elementSize = roundDown((maxUbSize - MEAN_AND_VAR_SIZE) / (singleRowSizePerElem + multiRowSizePerElem),
                                       oneRepeatElemCount);
+        uint32_t tailSize = numCol - (CeilDiv(numCol, elementSize) - 1) * elementSize;
+        while (tailSize < 32) {
+            elementSize = elementSize - 32;
+            tailSize = numCol - (CeilDiv(numCol, elementSize) - 1) * elementSize;
+        }
+        
         tilingData.set_sliceNum(CeilDiv(numCol, elementSize));
         tilingData.set_sliceSize(elementSize);
-        tilingData.set_tailSliceSize(numCol - (tilingData.get_sliceNum() - 1) * elementSize);
+        tilingData.set_tailSliceSize(tailSize);
     } else {
         tilingData.set_sliceNum(1);
         tilingData.set_sliceSize(colsAligned);
