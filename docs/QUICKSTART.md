@@ -45,7 +45,9 @@
 
 ### 2. 编译AddExample算子
 
-编译指定的算子，通用编译命令格式：`bash build.sh --pkg --soc=<芯片版本> --ops=<算子名>`。
+本指南默认采用**单算子编译**：仅构建目标算子，编译时间短，适合快速入门与日常开发。通用命令格式：`bash build.sh --pkg --soc=<芯片版本> --ops=<算子名>`。
+
+> 若需编译整个算子库（省略 `--ops`），请参阅 [源码构建指南 · 全量编译（ops-nn包）](zh/install/compile.md#ops-nn包)。
 
 以AddExample算子为例，编译命令如下：
 

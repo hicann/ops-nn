@@ -25,10 +25,25 @@
 #include <unistd.h>
 #endif
 
-#if __has_include("aclnn/aclnn_base.h") && __has_include("opdev/platform.h")
+#if __has_include("aclnn/aclnn_base.h")
 #include "aclnn/aclnn_base.h"
+#if __has_include("opdev/op_errno.h")
+#include "opdev/op_errno.h"
+#endif
+#if __has_include("opdev/platform.h")
 #include "opdev/platform.h"
+#endif
 #define NN_TESTS_UT_COMMON_HAS_ACLNN_TYPES
+// Prefer aclnn status codes from opdev/op_errno.h; fall back to CANN doc values if absent.
+#ifndef ACLNN_SUCCESS
+#define ACLNN_SUCCESS static_cast<aclnnStatus>(0)
+#endif
+#ifndef ACLNN_ERR_PARAM_NULLPTR
+#define ACLNN_ERR_PARAM_NULLPTR static_cast<aclnnStatus>(161001)
+#endif
+#ifndef ACLNN_ERR_PARAM_INVALID
+#define ACLNN_ERR_PARAM_INVALID static_cast<aclnnStatus>(161002)
+#endif
 #endif
 
 #if __has_include("exe_graph/runtime/shape.h") && __has_include("exe_graph/runtime/storage_shape.h") && \

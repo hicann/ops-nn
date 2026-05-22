@@ -42,6 +42,86 @@ version_ge() {
     return 0
 }
 
+debian_gcc_pkg_available() {
+    local ver="$1"
+    apt-cache show "gcc-${ver}" &>/dev/null || return 1
+    local candidate
+    candidate=$(apt-cache policy "gcc-${ver}" 2>/dev/null | awk '/Candidate:/ {print $2}')
+    [[ -n "$candidate" && "$candidate" != "(none)" ]]
+}
+
+debian_gcc_max_alternative_priority() {
+    local max_pri=0
+    local query_out
+    if ! query_out=$(update-alternatives --query gcc 2>/dev/null); then
+        echo 0
+        return 0
+    fi
+    max_pri=$(echo "$query_out" | awk '
+        /[Pp]riority:/ {
+            line = $0
+            sub(/.*[Pp]riority:[[:space:]]*/, "", line)
+            if ((line + 0) > m) m = line + 0
+        }
+        END { print m + 0 }
+    ')
+    echo "${max_pri:-0}"
+}
+
+debian_set_gcc_alternative() {
+    local ver="$1"
+    local gcc_path="/usr/bin/gcc-${ver}"
+    local gpp_path="/usr/bin/g++-${ver}"
+    local max_pri new_pri
+
+    max_pri=$(debian_gcc_max_alternative_priority)
+    new_pri=$((max_pri + 1))
+    echo "Registering ${gcc_path} with priority ${new_pri} (current max: ${max_pri})"
+
+    run_command sudo update-alternatives --install /usr/bin/gcc gcc "$gcc_path" "$new_pri" \
+        --slave /usr/bin/g++ g++ "$gpp_path"
+    run_command sudo update-alternatives --set gcc "$gcc_path"
+}
+
+install_gcc_debian() {
+    local req_ver="$1"
+    run_command sudo $PKG_MANAGER update
+    run_command sudo $PKG_MANAGER install -y gcc g++ build-essential
+
+    if command -v gcc &> /dev/null; then
+        local curr_ver
+        curr_ver=$(gcc --version | awk '/^gcc/ {print $NF}')
+        if version_ge "$curr_ver" "$req_ver"; then
+            echo "GCC installed via gcc/g++ packages ($curr_ver)"
+            return 0
+        fi
+    fi
+
+    echo "Trying versioned GCC packages (gcc >= ${req_ver})..."
+    local ver gcc_path installed_ver
+    for ver in 14 13 12 11 10 9 8 7; do
+        if ! debian_gcc_pkg_available "$ver"; then
+            continue
+        fi
+        run_command sudo $PKG_MANAGER install -y "gcc-${ver}" "g++-${ver}"
+        gcc_path="/usr/bin/gcc-${ver}"
+        if [[ ! -x "$gcc_path" ]]; then
+            continue
+        fi
+        installed_ver=$("$gcc_path" --version | awk '/^gcc/ {print $NF}')
+        if ! version_ge "$installed_ver" "$req_ver"; then
+            echo "gcc-${ver} is ${installed_ver} (< ${req_ver}), trying next..."
+            continue
+        fi
+        debian_set_gcc_alternative "$ver"
+        echo "GCC set to ${installed_ver} via ${gcc_path}"
+        return 0
+    done
+
+    echo "No GCC package found that meets version >= ${req_ver}. Please install manually."
+    exit 1
+}
+
 detect_os() {
     # OS detection, supports debian (uses apt), rhel (uses dnf or yum), macos
     if [[ "$(uname -s)" == "Linux" ]]; then
@@ -151,10 +231,7 @@ install_gcc() {
     echo "Installing GCC..."
     case "$OS" in
         debian)
-            run_command sudo $PKG_MANAGER update
-            run_command sudo $PKG_MANAGER install -y gcc-9 g++-9
-            run_command sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 90 \
-                --slave /usr/bin/g++ g++ /usr/bin/g++-9
+            install_gcc_debian "$req_ver"
             ;;
         rhel)
             if grep -q "release 7" /etc/redhat-release; then
