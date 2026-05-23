@@ -49,6 +49,9 @@ using namespace op;
 extern "C" {
 #endif
 
+static constexpr size_t MIN_INDICES_FOR_SORTED = 32;
+static constexpr size_t MIN_UPDATES_FOR_SORTED = 512;
+
 static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_UINT8,  op::DataType::DT_INT8,      op::DataType::DT_INT16,     op::DataType::DT_INT32,
     op::DataType::DT_INT64,  op::DataType::DT_BOOL,      op::DataType::DT_FLOAT16,   op::DataType::DT_FLOAT,
@@ -80,8 +83,14 @@ static const std::initializer_list<op::DataType> SCATTER_ADD_AICORE_REGBASE_DTYP
 static const std::initializer_list<op::DataType> SCATTER_ADD_WITH_SORTED_950_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16,  op::DataType::DT_BF16};
 
-static bool IsUseScatterAddWithSorted(const aclTensor* varRef)
+static bool IsUseScatterAddWithSorted(const aclTensor* varRef, const aclTensor* indices, const aclTensor* updates)
 {
+    int64_t indexSize = static_cast<int64_t>(indices->Size());
+    int64_t updatesSize = static_cast<int64_t>(updates->Size());
+    if (indexSize <= MIN_INDICES_FOR_SORTED && updatesSize <= MIN_UPDATES_FOR_SORTED) {
+        return false;
+    }
+
     int64_t deterministicValue = 0;
     rtError_t retRts = aclrtGetSysParamOpt(ACL_OPT_DETERMINISTIC, &deterministicValue);
     if (retRts != RT_ERROR_NONE) {
@@ -646,7 +655,7 @@ static aclnnStatus ExecScatterBase(
         indexTmp->SetDataType(index->GetDataType());
 
         const aclTensor* scatterRes = nullptr;
-        if (IsUseScatterAddWithSorted(selfContiguous)) {
+        if (IsUseScatterAddWithSorted(selfContiguous, indexTmp, srcContiguous)) {
             auto indexSize = static_cast<int64_t>(indexTmp->Size());
             if (indexSize > 1) {
                 auto indicesType = indexTmp->GetDataType();
