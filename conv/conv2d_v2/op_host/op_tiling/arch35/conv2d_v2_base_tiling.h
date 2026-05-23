@@ -240,6 +240,7 @@ private:
     ge::graphStatus CheckExtendDtypeLegal();
     ge::graphStatus CheckExtendDualOutputShape();
     ge::graphStatus ParseExtendDualOutputShape();
+    ge::graphStatus CheckC04Mdc();
     void GetCacheTilingInputArgsExtend();
     void SetFixpipeTiling();
     bool CheckScaleLegal(uint32_t scaleIndex, uint8_t& quantMode, const std::string& scaleType);

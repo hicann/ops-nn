@@ -17,6 +17,45 @@
 namespace optiling {
 namespace conv_ops_tiling {
 
+ge::graphStatus Conv2dBaseTiling::CheckC04Mdc()
+{
+    if (!IsMdcSoc(opInfo_->npuArch)) {
+        return ge::GRAPH_SUCCESS;
+    }
+
+    if (descInfo_.weightFormat != ge::Format::FORMAT_FRACTAL_Z_C04) {
+        return ge::GRAPH_SUCCESS;
+    }
+
+    if (descInfo_.weightDtype != ge::DataType::DT_FLOAT && descInfo_.weightDtype != ge::DataType::DT_FLOAT16 &&
+        descInfo_.weightDtype != ge::DataType::DT_BF16) {
+        std::string reasonMsg = "If the format of input filter is " + Ops::Base::ToString(descInfo_.weightFormat) +
+            ", the dtype of input filter must be float16 or float32 or bfloat16";
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeType(), "filter",
+            Ops::Base::ToString(descInfo_.weightDtype).c_str(), reasonMsg.c_str());
+        return ge::GRAPH_FAILED;
+    }
+    if (attrInfo_.groups > 1) {
+        std::string reasonMsg = "If the format of input filter is " + Ops::Base::ToString(descInfo_.weightFormat) +
+                    ", parameter groups must be 1";
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeType(), "groups",
+            std::to_string(attrInfo_.groups).c_str(), reasonMsg.c_str());
+        return ge::GRAPH_FAILED;
+    }
+
+    if (shapeInfo_.ci > C04_CIN_SIZE) {
+        stringstream ss;
+        ss << "If the format of input filter is %s, ";
+        ss << "the shape[%zu] of input filter must be less than or equal to %lu";
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeType(), "filter",
+            VectorToString(GetInputShapeVec(context_, INPUT_WEIGHT_INDEX), IntToString<int64_t>).c_str(),
+            FormatString(ss.str().c_str(), Ops::Base::ToString(descInfo_.weightFormat).c_str(),
+            paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_C_IDX], C04_CIN_SIZE).c_str());
+        return ge::GRAPH_FAILED;
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
 ge::graphStatus Conv2dBaseTiling::CheckLoad3DLimits()
 {
     // LOAD3D limits

@@ -147,7 +147,7 @@ ge::graphStatus ShapeAttrSynthesisCheckAux(const ConvAscendcOriginShapeAttrInfo&
                 IntToString<int64_t>).c_str(),
             FormatString("Shape[%zu] of %s must be equal to shape[%zu] of %s multiplied by %s %ld",
                 paramInfo.paramsIdxVec[paramInfo.FMAP_PARAM_IDX][IDX_LIST_C_IDX], "x",
-                paramInfo.paramsIdxVec[paramInfo.WEIGHT_PARAM_IDX][IDX_LIST_C_IDX], "filter"
+                paramInfo.paramsIdxVec[paramInfo.WEIGHT_PARAM_IDX][IDX_LIST_C_IDX], "filter",
                 "groups", oriShapeAttrInfo.oriGroups).c_str());
         return ge::GRAPH_FAILED;
     }

@@ -37,6 +37,9 @@ ge::graphStatus Conv2dBaseTiling::PrepareTiling()
     if (CheckInstructionLimits() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
+    if (CheckC04Mdc() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
     if (Conv2DInfoInitAndCheck() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
