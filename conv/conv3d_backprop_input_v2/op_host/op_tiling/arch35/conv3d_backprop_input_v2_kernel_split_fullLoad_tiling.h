@@ -42,6 +42,9 @@ protected:
     void InitBaseMNK(L0TilingParams& tilingParams) override;
     void AdjustBaseMNK(L0TilingParams& l0Params, const TilingRunInfo tilingRunInfo) override;
     void CalStepK(L1TilingParams& l1Params, const L0TilingParams& l0Params) override;
+
+private:
+    void ApplyL0CapacityLimit(uint32_t& baseM, uint32_t& baseN, uint32_t& baseK, uint32_t l0abMaxNum, uint32_t l0cMaxNum);
 };
 
 } // namespace Conv

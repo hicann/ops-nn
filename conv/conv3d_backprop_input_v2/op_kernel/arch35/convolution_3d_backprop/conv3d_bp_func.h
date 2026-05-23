@@ -426,7 +426,7 @@ __aicore__ inline void InitTque(Intf *self, const bool hasBias)
     ascendc_assert((usedBufferSize <= TOTAL_L1_SIZE), "l1 size exceeds limit");
 #endif
 
-    if (IsL1bUseTQue<Intf>(self)) {
+    if constexpr (Intf::conv3dConfig.groupMode != TPL_GROUP_MODE_ENLARGE && !Intf::conv3dConfig.enableC04Flag) {
         if ASCEND_IS_AIC_SCALAR {
             self->ctx.pipe_.InitBuffer(self->ctx.inQueL1B_, self->ctx.tiling_->bl1Pbuffer, bMatrixByteSize);
         }
@@ -455,7 +455,7 @@ __aicore__ inline void InitTque(Intf *self, const bool hasBias)
         }
         self->ctx.pipe_.InitBuffer(self->ctx.l0aBuf_, TOTAL_L0A_SIZE);
         self->ctx.pipe_.InitBuffer(self->ctx.l0bBuf_, TOTAL_L0B_SIZE);
-        if (hasBias) {
+        if (unlikely(hasBias)) {
             InitBiasTque(self);
         }
         InitScaleTque(self);
@@ -485,15 +485,19 @@ static __aicore__ inline void ComputeForNoTilingHWk(Intf *self, LocalTensor<type
     LocalTensor<typename Intf::SrcBT> &l0b, LocalTensor<typename Intf::L0cT> &l0c, uint8_t &l0PingPongFlag)
 {
     bool isFirstDk = (self->ctx.curDkIdx_ == 0);
+    const uint32_t strideD = self->ctx.tiling_->strideD;
+    const int64_t strideDMulDout = self->ctx.tiling_->dout * strideD;
+    const bool strideDgtOne = strideD > 1;
     for (uint64_t curInnerKdIdx = self->ctx.curDkIdx_; curInnerKdIdx < self->ctx.curDkIdx_ + self->ctx.tiling_->singleIterateDk; curInnerKdIdx++) {
         if constexpr (Intf::conv3dConfig.groupMode == TPL_GROUP_MODE_ENLARGE) {
             self->ctx.groupIterIdx_ = 0;
         }
 
-        int64_t curDoutIdx = 0;
-        if (!CalcCurDoutIdx<Intf>(self, curInnerKdIdx, curDoutIdx)) {
+        int64_t dTmp = self->ctx.curDinIdx_ + self->ctx.tiling_->padFront - curInnerKdIdx * self->ctx.tiling_->dilationD;
+        if (dTmp < 0 || (strideDgtOne && (dTmp % strideD > 0)) || dTmp >= strideDMulDout) {
             continue;
         }
+        int64_t curDoutIdx = strideDgtOne ? (dTmp / strideD) : dTmp;
         ComputeForKIter<Intf, hasBias>(self,l0a, l0b, l0c, curInnerKdIdx, curDoutIdx, isFirstDk, l0PingPongFlag);
         isFirstDk = false;
     }
@@ -610,13 +614,15 @@ static __aicore__ inline void UpdateKComputeStatus(Intf *self)
         // 其他方向要跳过计算，K可以不判断了
         return;
     }
-
+    const uint32_t strideD = self->ctx.tiling_->strideD;
+    const int64_t strideDThreshold = self->ctx.tiling_->dout * strideD;
+    const bool strideDgtOne = strideD > 1;
+    const int64_t DkThreshold = self->ctx.curDkIdx_ + self->ctx.tiling_->singleIterateDk;
     bool isKNeedCompute = false;
-    for (uint64_t curKdIdx = self->ctx.curDkIdx_; curKdIdx < self->ctx.curDkIdx_ + self->ctx.tiling_->singleIterateDk; curKdIdx++) {
+    for (uint64_t curKdIdx = self->ctx.curDkIdx_; curKdIdx < DkThreshold; curKdIdx++) {
         // 由于膨胀卷积使dk的位置发生改变，求解dout_idx时，dk_idx需乘上膨胀系数再参与计算，才能求取正确的索引
         int64_t dTmp = self->ctx.curDinIdx_ + self->ctx.tiling_->padFront - curKdIdx * self->ctx.tiling_->dilationD;
-        if (dTmp < 0 || (self->ctx.tiling_->strideD > 1 && (dTmp % self->ctx.tiling_->strideD > 0)) ||
-            dTmp >= self->ctx.tiling_->dout * self->ctx.tiling_->strideD) {
+        if (dTmp < 0 || (strideDgtOne && (dTmp % strideD > 0)) || dTmp >= strideDThreshold) {
             continue;
         }
         isKNeedCompute = true;
@@ -773,7 +779,10 @@ static __aicore__ inline void CalcSplitK_(Intf *self, uint8_t &enAtomic, const G
     self->ctx.isLastKSegment_ = false;
     // bias 需计算singlecoreM部分
     int32_t computeBiasTimes = (self->ctx.tiling_->singleCoreM - 1) / self->ctx.tiling_->baseM;
-    self->ctx.computeBiasOnce_ = false;
+
+    if (unlikely(hasBias)) {
+        self->ctx.computeBiasOnce_ = false;
+    }    
     for (uint32_t kIdx = self->ctx.curCoutStartIdx_; kIdx < self->ctx.tiling_->coutG; kIdx += self->ctx.kSegment_) {
         self->ctx.curCoutStartIdx_ = kIdx;
         UpdateSplitKTail<Intf>(self, kIdx);
@@ -783,7 +792,7 @@ static __aicore__ inline void CalcSplitK_(Intf *self, uint8_t &enAtomic, const G
         while (self->template Iterate<sync>(false, hasBias)) {
             self->ctx.realMSize_ = (iterCnt++ != 0) ? self->ctx.tiling_->singleCoreM : self->ctx.baseUseM_;
             self->template GetTensorC<sync>(output, enAtomic);
-            if (computeBiasTimes > 0) {
+            if (unlikely(hasBias && computeBiasTimes > 0)) {
                 self->ctx.computeBiasOnce_ = false;
                 computeBiasTimes -= 1;
             }
@@ -983,7 +992,7 @@ static __aicore__ inline bool ProcessKernelSplitIteration(Intf *self, bool hasBi
             if (unlikely(self->ctx.tiling_->hk == 1)) {
                 return true;
             }
-            if (hasBias) {
+            if (unlikely(hasBias)) {
                 Compute<Intf, true>(self);
             } else {
                 Compute<Intf, false>(self);
@@ -1036,7 +1045,7 @@ struct Iterate {
         L0A3*L0B3，L0A1*L0B4，L0A1*L0B5 …… L0A6*L0B6
         */
         // 更新idx，用L1、L1step、L0三个指针控制走位和计算offset，表示计算第几个mL0 * baseN
-        if (!self->ctx.enableSplitK_) {
+        if (unlikely(hasBias && !self->ctx.enableSplitK_)) {
             self->ctx.computeBiasOnce_ = false;
         }
         if (unlikely(self->ctx.isFirstIter_)) {
@@ -1051,7 +1060,7 @@ struct Iterate {
         }
 
         UpdateL1ComputeInfo<Intf>(self);
-        if (hasBias) {
+        if (unlikely(hasBias)) {
             Compute<Intf, true>(self);
         } else {
             Compute<Intf, false>(self);
@@ -1066,7 +1075,7 @@ struct IterateAll {
     static __aicore__ inline void call(Intf *self, const GlobalTensor<typename Intf::DstT> &output, uint8_t enAtomic, bool fullLoadBiasFlag_, bool freeBiasFlag_)
     {
         bool hasBias = self->ctx.hasBias_;
-        if (hasBias && self->ctx.tiling_->isBiasFullLoad) {
+        if (unlikely(hasBias && self->ctx.tiling_->isBiasFullLoad)) {
             if (freeBiasFlag_) {
                 if ASCEND_IS_AIC_SCALAR {
                     self->ctx.biasL1Que_.FreeTensor(self->ctx.biasL1Buf_);
@@ -1182,7 +1191,7 @@ struct End {
             self->ctx.l0cPong_.FreeAllEvent();
         }
 
-        if (self->ctx.hasBias_) {
+        if (unlikely(self->ctx.hasBias_)) {
             self->ctx.biasL1Que_.FreeAllEvent();
             self->ctx.biasBTQue_.FreeAllEvent();
         }

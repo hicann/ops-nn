@@ -478,6 +478,16 @@ static void GetNCDHWShape(const T &origin_shape, Shape &ncdhw_shape, const ge::F
 
 static bool CheckTransposeOutputdingRange(gert::TilingContext *context, Conv3dBpInputV2RunInfo& runInfoV2, OtherParams& otherParams)
 {
+  // mdc场景不支持outputPadding>1
+  if (IsSocVersionFuse(context)) {
+    OP_CHECK_IF
+      (otherParams.output_padding.output_padding_d != 0 ||
+       otherParams.output_padding.output_padding_h != 0 || 
+       otherParams.output_padding.output_padding_w != 0,
+          OP_LOGE(context, "output_padding_d [%d] output_padding_h [%d] or output_padding_w [%d] must all equal to zero",
+            otherParams.output_padding.output_padding_d, otherParams.output_padding.output_padding_h, otherParams.output_padding.output_padding_w),
+            return false);
+  }
   // outputPadding值需要小于同维度dilation或stride
   OP_CHECK_IF(
     (otherParams.output_padding.output_padding_d >= runInfoV2.stride_d && otherParams.output_padding.output_padding_d >= runInfoV2.dilation_d),
@@ -494,7 +504,6 @@ static bool CheckTransposeOutputdingRange(gert::TilingContext *context, Conv3dBp
     OP_LOGE(context, "output_padding_w value[%d] should smaller than dilation_w[%d] or stride_w[%d]",
             otherParams.output_padding.output_padding_w, runInfoV2.dilation_w, runInfoV2.stride_w),
     return false);
-
   return true;
 }
 
@@ -591,7 +600,7 @@ static bool CheckStorageFormat(const gert::TilingContext *context, size_t filter
   const auto op_name = context->GetNodeName();
 
   std::unordered_set<ge::Format> valid_out_bp_format;
-  if (IsArchAfter35(context) && op_type == optiling::OpTypeV2::kExtendConvTranspose) {
+  if ((IsArchAfter35(context) || IsSocVersionFuse(context)) && op_type == optiling::OpTypeV2::kExtendConvTranspose) {
     valid_out_bp_format = {ge::FORMAT_NCDHW};
   } else {
     valid_out_bp_format = {ge::FORMAT_NCDHW, ge::FORMAT_NDHWC};
@@ -599,7 +608,7 @@ static bool CheckStorageFormat(const gert::TilingContext *context, size_t filter
 
   std::unordered_set<ge::Format> valid_filter_format;
   if (IsSocVersionFuse(context)) {
-    valid_filter_format = {ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, ge::FORMAT_DHWCN, ge::FORMAT_FRACTAL_Z};
+    valid_filter_format = {ge::FORMAT_NDHWC, ge::FORMAT_FRACTAL_Z};
   } else if (op_type == optiling::OpTypeV2::kExtendConvTranspose) {
     valid_filter_format = {ge::FORMAT_NCDHW};
   } else {
@@ -607,7 +616,7 @@ static bool CheckStorageFormat(const gert::TilingContext *context, size_t filter
   }
 
   std::unordered_set<ge::Format> valid_y_format;
-  if (IsArchAfter35(context) && op_type == optiling::OpTypeV2::kExtendConvTranspose) {
+  if ((IsArchAfter35(context) || IsSocVersionFuse(context)) && op_type == optiling::OpTypeV2::kExtendConvTranspose) {
     valid_y_format = {ge::FORMAT_NCDHW};
   } else {
     valid_y_format = {ge::FORMAT_NCDHW, ge::FORMAT_NDHWC};
@@ -1249,13 +1258,17 @@ bool CheckPadParamsWithLog(const Conv3dBpInputV2RunInfo &runInfoV2, const gert::
   return true;
 }
 
-bool CheckParamsWithLog(Conv3dBpInputV2RunInfo &runInfoV2, gert::TilingContext *context, OtherParams& otherParams) {
+bool CheckParamsWithLog(Conv3dBpInputV2RunInfo &runInfoV2, gert::TilingContext *context, 
+                        OtherParams& otherParams) {
   const auto op_name = context->GetNodeName();
   int32_t kStrideHWUpTmp = kDimUp;
   int32_t kStrideDUpTmp = kDimUp;
   int32_t kDilationUpTmp = kDilationUp;
-  if (IsArchAfter35(context) || IsSocVersionFuse(context)) {
+  if (IsArchAfter35(context)) {
     kDilationUpTmp = kDimUp;
+  }
+  if (IsSocVersionFuse(context)) {
+    kStrideHWUpTmp = kStrideHWUp;
   }
   OP_CHECK_IF(!CheckRange(runInfoV2.dilation_h, kDilationLow, kDilationUpTmp),
               OP_LOGE(op_name, "dilation_h value [%d] is invalid, support range [%d, %d]", runInfoV2.dilation_h, kDilationLow, kDilationUpTmp),
@@ -1672,7 +1685,7 @@ bool CheckParams(Conv3dBpInputV2RunInfo &runInfoV2, gert::TilingContext *context
   int32_t kFilterDimHWUpTmp = kFilterDimHWUp;
   int32_t kPadUpTmp = kPadUp;
   int32_t kDilationUpTmp = kDilationUp;
-  if (IsArchAfter35(context) || IsSocVersionFuse(context)) {
+  if (IsArchAfter35(context)) {
     kFilterDimHWUpTmp = kDimUp;
     kPadUpTmp = kDimUp;
     kDilationUpTmp = kDimUp;

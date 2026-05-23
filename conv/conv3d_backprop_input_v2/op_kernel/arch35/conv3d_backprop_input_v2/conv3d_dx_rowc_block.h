@@ -293,8 +293,22 @@ protected:
          this->preEnableFullLoad = this->tiling_->enableFullLoad;
      }
 
-    __aicore__ inline void CalBasicBlockCore(uint64_t blockIdx, uint64_t blockNum) {
-        bool firstloadbias = false;
+    __aicore__ inline void DoIterateALL(bool& firstloadbias) {
+         if (unlikely(this->hasBias_)) {
+             this->CalcBiasFullLoadFlag();
+             this->freeBiasFlag_ = this->fullLoadBiasFlag_ && firstloadbias;
+             this->dedx_.IterateAll(this->yGm_[this->offsetC_], 0, this->fullLoadBiasFlag_, this->freeBiasFlag_);
+             if (this->fullLoadBiasFlag_) {
+                 firstloadbias = true;
+             }
+             this->fullLoadBiasFlag_ = false;
+         } else {
+             this->dedx_.IterateAll(this->yGm_[this->offsetC_], 0, false, false);
+         }
+     }
+
+     __aicore__ inline void CalBasicBlockCore(uint64_t blockIdx, uint64_t blockNum) {
+         bool firstloadbias = false;
         for (uint64_t j = 0; j < this->calRound_; ++j) {
             this->CalBasicBlockIdx(j * blockNum + blockIdx);
             uint64_t mCoreUse = (this->mCoreIdx_ == (this->mCnt_ - 1)) ? this->mCoreTail_ : this->singleShapeM_;
@@ -332,13 +346,8 @@ protected:
             if (j == 0) {
                 this->CrossCoreWaitVecTrans();
             }
-            this->CalcBiasFullLoadFlag();
-            this->freeBiasFlag_ = this->fullLoadBiasFlag_ && firstloadbias;
-            this->dedx_.IterateAll(this->yGm_[this->offsetC_], 0, this->fullLoadBiasFlag_, this->freeBiasFlag_);  // 1 means atomic add
-            if (this->fullLoadBiasFlag_) {
-                firstloadbias = true;
-            }
-            this->fullLoadBiasFlag_ = false;
+
+            this->DoIterateALL(firstloadbias);
         }
     }
 

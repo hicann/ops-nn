@@ -47,6 +47,12 @@ bool Conv3DDXV2KernelSplitFullLoadTiling::IsCapable()
         return false;
     }
 
+    // Cout>256时会导致baseM/N过小，性能劣化明显, 需要走正常Kernel Split模板和重置kSCoutFullLoad_标志
+    if (static_cast<uint32_t>(runInfo_.dedy_cout_g) > BASIC_BLOCK_SIZE_256) {
+        kSCoutFullLoad_ = false;
+        return false;
+    }
+
     return true;
 }
 
@@ -109,9 +115,34 @@ void Conv3DDXV2KernelSplitFullLoadTiling::InitBaseMNK(L0TilingParams& l0Params)
 
     l0Params.baseM = BASIC_BLOCK_SIZE_256;
     l0Params.baseN = BASIC_BLOCK_SIZE_256;
-    l0Params.baseK = BASIC_BLOCK_SIZE_128 / dtypeByteL0b_;
+    // kernel加载要求baseK至少能容纳一个HkWkC0
+    uint32_t coutAligned = static_cast<uint32_t>(kernelSplitPara_.subSplitHkWkC0);
+    l0Params.baseK = std::max(BASIC_BLOCK_SIZE_128 / dtypeByteL0b_, coutAligned);
 
     AdjustBaseMNK(l0Params, tilingRunInfo_);
+}
+
+void Conv3DDXV2KernelSplitFullLoadTiling::ApplyL0CapacityLimit(uint32_t& baseM, uint32_t& baseN, uint32_t& baseK,
+                                                               uint32_t l0abMaxNum, uint32_t l0cMaxNum)
+{
+    uint64_t coutAlignedClamped = std::min(kernelSplitPara_.subSplitHkWkC0, tilingRunInfo_.kValue);
+    baseK = std::max(baseK, static_cast<uint32_t>(coutAlignedClamped));
+
+    // 保证基本块大小不超过L0A/L0B/L0C的大小
+    uint32_t safeBaseK = std::max(baseK, tilingRunInfo_.k0);
+    safeBaseK = (safeBaseK <= 0) ? tilingRunInfo_.k0 : safeBaseK;
+    uint32_t maxBaseMByL0a =
+        std::max(l0abMaxNum / std::max(safeBaseK, ONE_U32) / tilingRunInfo_.m0, ONE_U32) * tilingRunInfo_.m0;
+    uint32_t maxBaseNByL0b =
+        std::max(l0abMaxNum / std::max(safeBaseK, ONE_U32) / tilingRunInfo_.n0, ONE_U32) * tilingRunInfo_.n0;
+    baseM = std::min(baseM, maxBaseMByL0a);
+    baseN = std::min(baseN, maxBaseNByL0b);
+
+    if (static_cast<uint64_t>(baseM) * baseN > l0cMaxNum) {
+        uint32_t maxBaseNByL0c =
+            std::max(l0cMaxNum / std::max(baseM, ONE_U32) / tilingRunInfo_.n0, ONE_U32) * tilingRunInfo_.n0;
+        baseN = std::min(baseN, maxBaseNByL0c);
+    }
 }
 
 void Conv3DDXV2KernelSplitFullLoadTiling::AdjustBaseMNK(L0TilingParams& l0Params, const TilingRunInfo tilingRunInfo)
@@ -160,6 +191,8 @@ void Conv3DDXV2KernelSplitFullLoadTiling::AdjustBaseMNK(L0TilingParams& l0Params
         }
         maxBaseK = std::max(maxBaseK - tilingRunInfo_.k0, static_cast<uint32_t>(tilingRunInfo_.k0));
     }
+
+    ApplyL0CapacityLimit(baseM, baseN, baseK, l0abMaxNum, l0cMaxNum);
 
     l0Params.baseK = baseK;
     l0Params.baseM = baseM;

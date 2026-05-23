@@ -128,7 +128,7 @@ static __aicore__ inline void InitLoadToA2Params(Intf *self)
 template <class Intf>
 static __aicore__ inline void UpdateL1KParams(Intf *self, const uint64_t kIdx, uint32_t &curStepKa, uint32_t &curStepKb)
 {
-    if (kIdx == 0) {
+    if (unlikely(kIdx == 0)) {
         self->ctx.curLoadKbl1_ = self->ctx.curStepKb_ * self->ctx.tiling_->baseK;
         self->ctx.baseUseK_ = self->ctx.tiling_->baseK;
         self->ctx.load3d_.kExtension = self->ctx.tiling_->baseK;
@@ -577,6 +577,8 @@ static __aicore__ inline void LoadL0c2GmForNz2Nd(Intf *self, const GlobalTensor<
     }
     if (self->ctx.useUbAccumForSplitK_) {
 #if (__NPU_ARCH__ != 5102)
+        // 写入workspace需要保证数据连续便于UB搬运和Cast
+        fixPipeParams.dstStride = self->ctx.baseUseN_;
         Fixpipe<float, float, CFG_ROW_MAJOR>(self->ctx.l0cOutGm_[dstOffset], useC1Buf, fixPipeParams);
 #endif
     } else {

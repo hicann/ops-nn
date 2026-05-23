@@ -395,20 +395,21 @@ struct IterateAllForKernelSplit {
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, Convolution3DBackpropFunc);
     static __aicore__ inline void call(Intf *self, const GlobalTensor<typename Intf::DstT> &output, uint8_t enAtomic)
     {
+        const bool isKernel1x1 = (self->ctx.tiling_->wk == 1 && self->ctx.tiling_->hk == 1);
+        const uint32_t lastRearrangeW = self->ctx.tiling_->strideW - 1;
         bool hasBias = self->ctx.hasBias_;
         while (self->template Iterate<sync>(false, hasBias)) {
-            if (unlikely(self->ctx.tiling_->wk == 1 && self->ctx.tiling_->hk == 1 && self->ctx.rearrangeHIndex_ != 0)) {
+            if (unlikely(isKernel1x1 && self->ctx.rearrangeHIndex_ != 0)) {
                 continue;
             }
             if ASCEND_IS_AIC_SCALAR {    
                 if (self->ctx.rearrangeWIndex_ == 0) {
                     CrossCoreCWaitVForKS<Intf>(self);
                 }
-                if (self->ctx.tiling_->wk != 1 || self->ctx.tiling_->hk != 1 || self->ctx.rearrangeWIndex_ == 0) {
-                // kernel = 1*1 跳过判断，只处理第一个子kernel的计算
+                if (!isKernel1x1 || self->ctx.rearrangeWIndex_ == 0) {
                     self->template GetTensorC<sync>(output, enAtomic);
                 }
-                if (self->ctx.rearrangeWIndex_ == self->ctx.tiling_->strideW - 1) {
+                if (self->ctx.rearrangeWIndex_ == lastRearrangeW) {
                     CrossCoreCSeitVForKS<Intf>(self);
                 }
             }
@@ -416,7 +417,7 @@ struct IterateAllForKernelSplit {
                 if (GetSubBlockIdx() != 0) {
                     continue;
                 }
-                if (self->ctx.rearrangeWIndex_ == self->ctx.tiling_->strideW - 1) {
+                if (self->ctx.rearrangeWIndex_ == lastRearrangeW) {
                     CrossCoreVWaitCForKS<Intf>(self);
                     if (self->ctx.needComputeFlag_) {
                         self->template VecPostProcess<sync>(output, enAtomic);
