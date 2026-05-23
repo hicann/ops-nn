@@ -34,7 +34,7 @@
     <td>✓</td>
     <td>✗</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>正数直接输出，负数用平滑指数曲线输出。</td>
   </tr>
  <tr>
     <td>activation</td>
@@ -115,6 +115,16 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>FastGelu反向传播。</td>
+  </tr>
+  <tr>
+    <td>activation</td>
+    <td><a href="../../activation/fast_gelu_v2/README.md">fast_gelu</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对输入特征做非线性激活，用轻量化指数 /sigmoid 近似替代原版 GELU 的复杂计算。</td>
   </tr>
   <tr>
     <td>activation</td>

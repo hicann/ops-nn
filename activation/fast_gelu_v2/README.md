@@ -1,4 +1,4 @@
-# CeluV2
+# FastGeluV2
 
  ## 产品支持情况
  	 
@@ -13,16 +13,15 @@
 
 ## 功能说明
 
-- 算子功能：激活函数Celu（Continuously Differentiable Exponential Linear Units）。
-- 计算公式：
+- 算子功能：计算FastGelu激活函数。
+- 计算公式:
 
 $$
-CELU(x) = \max(0,x) + \min(0, \alpha \ast (\exp(x/\alpha) - 1))
+FastGelu(x_i) = \frac{x_i}{1 + \exp(-1.702 \times |x_i|)} \times \exp(0.851 \times (x_i - |x_i|))
 $$
 
 其中：
 - x: 输入张量
-- alpha: CELU公式中的激活系数，默认值为1.0
 
 ## 参数说明
 
@@ -40,22 +39,15 @@ $$
     <tr>
     <td>x</td>
     <td>输入</td>
-    <td>公式中的'x'，表示CELU激活函数的输入张量。支持空Tensor，支持非连续Tensor，维度支持0-8。</td>
-    <td>FLOAT16、FLOAT32、DT_BF16</td>
+    <td>公式中的'x'，表示FastGelu激活函数的输入张量。</td>
+    <td>BFLOAT16、FLOAT16、FLOAT32</td>
     <td>ND</td>
-    </tr>
-    <tr>
-    <td>alpha</td>
-    <td>属性</td>
-    <td>CELU公式中的激活系数，默认值为1.0，不能为0。</td>
-    <td>FLOAT</td>
-    <td>-</td>
     </tr>
     <tr>
     <td>y</td>
     <td>输出</td>
-    <td>表示x经CELU计算得到的输出张量，shape和dtype与输入x一致。支持非连续Tensor。</td>
-    <td>FLOAT16、FLOAT32、DT_BF16</td>
+    <td>表示x经FastGeluV2计算得到的输出张量。</td>
+    <td>BFLOAT16、FLOAT16、FLOAT32</td>
     <td>ND</td>
     </tr>
 </tbody></table>
@@ -68,4 +60,4 @@ $$
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_celu.cpp](examples/test_aclnn_celu.cpp) | 通过aclnnCelu接口方式调用CeluV2算子。 |
+| 图模式  | [test_geir_fast_gelu_v2.cpp](examples/arch35/test_geir_fast_gelu_v2.cpp) | 通过GE IR图模式方式调用FastGeluV2算子。 |
