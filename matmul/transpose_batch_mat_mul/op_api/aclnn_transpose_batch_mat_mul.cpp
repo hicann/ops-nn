@@ -224,7 +224,7 @@ static inline bool CheckNzStorageShape(const aclTensor* x2)
     }
     OP_CHECK(
         storageShapeDim == EXPECTED_NZ_DIM,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Only support x2 storageShapeDim is 5, which are [%zu].", storageShapeDim),
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Only supports x2 storageShapeDim is 5, which are [%zu].", storageShapeDim),
         return false);
     return true;
 }
@@ -252,7 +252,7 @@ inline static aclnnStatus CheckParams(const aclTensor* x1, const aclTensor* x2, 
     }
     CHECK_RET(CheckMathType(x1, x2, cubeMathType), ACLNN_ERR_PARAM_INVALID);
     if (scale != nullptr && batch_split_factor != 1) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batchSplitFactor should be 1 when the scale is not null.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batch_split_factor should be 1 when the scale is not null.");
         return ACLNN_ERR_PARAM_INVALID;
     }
 
@@ -285,20 +285,20 @@ static const aclTensor* BuildTransposeBatchMatMulGraph(const aclTensor* x1, cons
     // 连续性转换
     auto contiguousX1 = l0op::Contiguous(x1, executor);
     OP_CHECK(contiguousX1 != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
-             "The input x1 perprocess failed, contiguouse return nullptr."),
+             "The input x1 preprocess failed, contiguous return nullptr."),
              return nullptr);
     auto reformX1 = l0op::ReFormat(contiguousX1, op::Format::FORMAT_ND);
     OP_CHECK(reformX1 != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
-             "The input x1 perprocess failed, reformat return nullptr."),
+             "The input x1 preprocess failed, reformat return nullptr."),
              return nullptr);
 
     auto contiguousX2 = l0op::Contiguous(x2, executor);
     OP_CHECK(contiguousX2 != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
-             "The input x2 perprocess failed, contiguouse return nullptr."),
+             "The input x2 preprocess failed, contiguous return nullptr."),
              return nullptr);
     auto reformX2 = l0op::ReFormat(contiguousX2, op::Format::FORMAT_ND);
     OP_CHECK(reformX2 != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
-             "The input x2 perprocess failed, reformat return nullptr."),
+             "The input x2 preprocess failed, reformat return nullptr."),
              return nullptr);
 
     // scale非连续转连续以及转换dtype
@@ -306,7 +306,7 @@ static const aclTensor* BuildTransposeBatchMatMulGraph(const aclTensor* x1, cons
     if (contiguousScale != nullptr) {
         contiguousScale = l0op::Contiguous(scale, executor);
         OP_CHECK(contiguousScale != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
-                 "The input scale perprocess failed, contiguouse return nullptr."),
+                 "The input scale preprocess failed, contiguous return nullptr."),
                  return nullptr);
     }
 
@@ -324,17 +324,17 @@ static const aclTensor* BuildTransposeBatchMatMulWeightNzGraph(const aclTensor* 
     // 连续性转换
     auto contiguousX1 = l0op::Contiguous(x1, executor);
     OP_CHECK(contiguousX1 != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
-             "The input x1 perprocess failed, contiguouse return nullptr."),
+             "The input x1 preprocess failed, contiguous return nullptr."),
              return nullptr);
     auto reformX1 = l0op::ReFormat(contiguousX1, op::Format::FORMAT_ND);
     OP_CHECK(reformX1 != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
-             "The input x1 perprocess failed, reformat return nullptr."),
+             "The input x1 preprocess failed, reformat return nullptr."),
              return nullptr);
 
     // 原始方法传入
     auto contiguousX2 = l0op::Contiguous(x2, executor);
     OP_CHECK(contiguousX2 != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
-             "The input x2 perprocess failed, contiguouse return nullptr."),
+             "The input x2 preprocess failed, contiguous return nullptr."),
              return nullptr);
 
     // weightnz storageshape刷新
@@ -347,7 +347,7 @@ static const aclTensor* BuildTransposeBatchMatMulWeightNzGraph(const aclTensor* 
     if (contiguousScale != nullptr) {
         contiguousScale = l0op::Contiguous(scale, executor);
         OP_CHECK(contiguousScale != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
-                 "The input scale perprocess failed, contiguouse return nullptr."),
+                 "The input scale preprocess failed, contiguous return nullptr."),
                  return nullptr);
     }
 

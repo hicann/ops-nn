@@ -586,7 +586,7 @@ ge::graphStatus MatmulV3BaseTiling::SelectNZTiling()
         if (tilingSelect_ == TilingCalcSelect::ALL) { 
             tilingSelect_ = TilingCalcSelect::BASE; 
         } else if (tilingSelect_ != TilingCalcSelect::BASE) { 
-            OP_LOGE(args_.opName, "weightNz don't support this tiling select yet."); 
+            OP_LOGE(args_.opName, "weightNz doesn't support this tiling select yet."); 
             return ge::GRAPH_FAILED; 
         } 
     } 

@@ -125,7 +125,7 @@ ge::graphStatus GetInputDims(const gert::Shape& storageShape, const gert::Shape&
         int64_t storageShape1 = storageShape[dimNum - FOUR_BATCH_DIM] * storageShape[dimNum - ONE_BATCH_DIM];
         if (ops::CeilAlign(dims[0], static_cast<int64_t>(BASIC_BLOCK_SIZE_16)) != storageShape0 ||
             ops::CeilAlign(dims[1], static_cast<int64_t>(BLOCK_BYTE_SIZE / dtypeSize)) != storageShape1) {
-            OP_LOGE("MatMulV3", "NZ aligned oriShape (%ld, %ld) is not equal to storageShape (%ld, %ld))", dims[0],
+            OP_LOGE("MatMulV3", "NZ aligned oriShape (%ld, %ld) is not equal to storageShape (%ld, %ld)", dims[0],
                     dims[1], storageShape0, storageShape1);
             return ge::GRAPH_FAILED;
         }

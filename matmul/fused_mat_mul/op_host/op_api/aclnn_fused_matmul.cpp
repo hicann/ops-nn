@@ -92,7 +92,7 @@ static inline bool CheckMathType(const aclTensor* self, const aclTensor* mat2, i
     bool mat2Float = mat2->GetDataType() == DataType::DT_FLOAT;
     auto promoteType = selfFloat || mat2Float ? DataType::DT_FLOAT : self->GetDataType();
     if (cubeMathType != USE_HF32 && promoteType == DataType::DT_FLOAT) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "fusedmatmul is only supported bf16/fp16/hf32, do not surrport fp32.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "fusedmatmul is only supported bf16/fp16/hf32, does not support fp32.");
         return false;
     }
     return CheckCubeMathTypeForMm(promoteType, cubeMathType);
@@ -104,20 +104,20 @@ static bool CheckFormat(
 {
     if (x->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ || x2->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ ||
         y->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format not support NZ");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format does not support NZ");
         return false;
     }
 
     if (bias != nullptr) {
         if (bias->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format not support NZ");
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format does not support NZ");
             return false;
         }
     }
 
     if (x3 != nullptr) {
         if (x3->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format not support NZ");
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format does not support NZ");
             return false;
         }
     }
@@ -181,7 +181,7 @@ static inline bool CheckShape(const aclTensor* x, const aclTensor* x2, const acl
     if (y->GetViewShape().GetDimNum() != x->GetViewShape().GetDimNum()) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID,
-            "x dimension and x2 dimension should be the same, but x dimension is %d, y dimension is %d.",
+            "x dimension and y dimension should be the same, but x dimension is %d, y dimension is %d.",
             x->GetViewShape().GetDimNum(), y->GetViewShape().GetDimNum());
         return false;
     }

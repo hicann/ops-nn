@@ -146,7 +146,7 @@ static bool CheckFormat(
     if (noSupportFormat) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID,
-            " The 'self' or 'out' tensor currently not supports NZ format"
+            " The 'self' or 'out' tensor currently does not support NZ format"
             "format");
         return false;
     }

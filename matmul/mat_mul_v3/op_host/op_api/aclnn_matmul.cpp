@@ -200,7 +200,7 @@ static bool CheckFormat(
     if (noSupportFormat) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID,
-            " The 'self' or 'out' tensor currently not supports NZ format");
+            " The 'self' or 'out' tensor currently does not support NZ format");
         return false;
     }
     return true;
@@ -313,7 +313,7 @@ bool CheckWeightNzShapeValid(const aclTensor* self, const aclTensor* mat2)
     op::Shape mat2Shape = mat2->GetViewShape();
     if (mat2Shape.GetDim(0) == 1 || mat2Shape.GetDim(1) == 1) { // 不支持N=1 or K = 1
         OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Not support mat2 n = 1 or k = 1 when foramt is FRACTAL_NZ, mat2: %s",
+            ACLNN_ERR_PARAM_INVALID, "Not supported mat2 n = 1 or k = 1 when format is FRACTAL_NZ, mat2: %s",
             op::ToString(mat2Shape).GetString());
         return false;
     }
@@ -437,7 +437,7 @@ static const aclTensor* BuildMatMulWeightNzGraph(
     if (!CheckWeightNzStorageShape(weightNzShape, mat2->GetStorageShape())) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID,
-            "mat2'format only support NZ, but now mat2's format is not NZ, please convert the input format to NZ.");
+            "mat2's format only supports NZ, but now mat2's format is not NZ, please convert the input format to NZ.");
         return nullptr;
     }
 
