@@ -1,0 +1,76 @@
+/**
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+
+/**
+ * NOTE: Portions of this code were AI-generated and have been
+ * technically reviewed for functional accuracy and security
+ */
+
+/*!
+ * \file hard_shrink_tiling_key.h
+ * \brief HardShrink TilingKey 模板参数定义
+ *
+ * 模板参数：
+ *   - D_T: IO 数据类型 (half/float/bfloat16_t)
+ *   - BUFFER_MODE: 缓冲模式 (0=单缓冲, 1=双缓冲)
+ *   - NEED_UPCAST: 是否升精到 fp32 计算（0=fp32 直通, 1=fp16/bf16 升精到 fp32）
+ */
+
+#ifndef __HARD_SHRINK_TILING_KEY_H__
+#define __HARD_SHRINK_TILING_KEY_H__
+
+#include "ascendc/host_api/tiling/template_argument.h"
+
+ASCENDC_TPL_ARGS_DECL(HardShrink,
+    ASCENDC_TPL_DATATYPE_DECL(D_T, C_DT_FLOAT16, C_DT_FLOAT, C_DT_BF16, ASCENDC_TPL_INPUT(0)),
+    ASCENDC_TPL_UINT_DECL(BUFFER_MODE, 8, ASCENDC_TPL_UI_LIST, 0, 1),
+    ASCENDC_TPL_UINT_DECL(NEED_UPCAST, 8, ASCENDC_TPL_UI_LIST, 0, 1)
+);
+
+ASCENDC_TPL_SEL(
+    // fp16 单缓冲（NEED_UPCAST=1，FP16 走 FP32 中间计算）
+    ASCENDC_TPL_ARGS_SEL(
+        ASCENDC_TPL_DATATYPE_SEL(D_T, C_DT_FLOAT16),
+        ASCENDC_TPL_UINT_SEL(BUFFER_MODE, ASCENDC_TPL_UI_LIST, 0),
+        ASCENDC_TPL_UINT_SEL(NEED_UPCAST, ASCENDC_TPL_UI_LIST, 1)
+    ),
+    // fp16 双缓冲
+    ASCENDC_TPL_ARGS_SEL(
+        ASCENDC_TPL_DATATYPE_SEL(D_T, C_DT_FLOAT16),
+        ASCENDC_TPL_UINT_SEL(BUFFER_MODE, ASCENDC_TPL_UI_LIST, 1),
+        ASCENDC_TPL_UINT_SEL(NEED_UPCAST, ASCENDC_TPL_UI_LIST, 1)
+    ),
+    // fp32 单缓冲（NEED_UPCAST=0，直通）
+    ASCENDC_TPL_ARGS_SEL(
+        ASCENDC_TPL_DATATYPE_SEL(D_T, C_DT_FLOAT),
+        ASCENDC_TPL_UINT_SEL(BUFFER_MODE, ASCENDC_TPL_UI_LIST, 0),
+        ASCENDC_TPL_UINT_SEL(NEED_UPCAST, ASCENDC_TPL_UI_LIST, 0)
+    ),
+    // fp32 双缓冲
+    ASCENDC_TPL_ARGS_SEL(
+        ASCENDC_TPL_DATATYPE_SEL(D_T, C_DT_FLOAT),
+        ASCENDC_TPL_UINT_SEL(BUFFER_MODE, ASCENDC_TPL_UI_LIST, 1),
+        ASCENDC_TPL_UINT_SEL(NEED_UPCAST, ASCENDC_TPL_UI_LIST, 0)
+    ),
+    // bf16 单缓冲（NEED_UPCAST=1，bf16 → fp32 计算）
+    ASCENDC_TPL_ARGS_SEL(
+        ASCENDC_TPL_DATATYPE_SEL(D_T, C_DT_BF16),
+        ASCENDC_TPL_UINT_SEL(BUFFER_MODE, ASCENDC_TPL_UI_LIST, 0),
+        ASCENDC_TPL_UINT_SEL(NEED_UPCAST, ASCENDC_TPL_UI_LIST, 1)
+    ),
+    // bf16 双缓冲
+    ASCENDC_TPL_ARGS_SEL(
+        ASCENDC_TPL_DATATYPE_SEL(D_T, C_DT_BF16),
+        ASCENDC_TPL_UINT_SEL(BUFFER_MODE, ASCENDC_TPL_UI_LIST, 1),
+        ASCENDC_TPL_UINT_SEL(NEED_UPCAST, ASCENDC_TPL_UI_LIST, 1)
+    ),
+);
+
+#endif

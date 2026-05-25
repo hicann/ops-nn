@@ -230,11 +230,11 @@
     <td>activation</td>
     <td><a href="../../activation/hard_shrink/README.md">hard_shrink</a></td>
     <td>✓</td>
-    <td>✗</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>将输入张量中绝对值小于等于阈值 lambd 的元素置零，大于阈值的元素保持不变。</td>
   </tr>
   <tr>
     <td>activation</td>
