@@ -151,6 +151,20 @@ execute_process(
 # pack path
 set(CMAKE_INSTALL_PREFIX ${CMAKE_SOURCE_DIR}/build_out)
 
+if(BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG)
+  set(JSON_INCLUDE ${JSON_SOURCE_PATH}/include)
+  if (EXISTS "${PROTOBUF_INCLUDE_DIRS}")
+    set(Protobuf_INCLUDE ${PROTOBUF_INCLUDE_DIRS})
+  else()
+    set(Protobuf_INCLUDE ${PROTOBUF_SRC_DIR}/src)
+  endif()
+  if (TARGET host_protoc)
+    get_target_property(Protobuf_PROTOC_EXECUTABLE host_protoc IMPORTED_LOCATION)
+  else()
+    set(Protobuf_PROTOC_EXECUTABLE ${CMAKE_BINARY_DIR}/bin/protoc)
+  endif()
+endif()
+
 set(OPAPI_INCLUDE
   ${C_SEC_INCLUDE}
   ${PLATFORM_INC_DIRS}
@@ -207,13 +221,6 @@ set(AICPU_INCLUDE
   ${METADEF_INCLUDE_DIRS}
 )
 
-set(ONNX_PLUGIN_COMMON_INCLUDE
-  ${OPS_NN_DIR}
-  ${OPS_NN_DIR}/common/inc/framework
-  ${OPS_NN_DIR}/common/stub/inc/framework
-  ${OPS_NN_DIR}/common/inc/op_graph
-)
-
 set(AICPU_DEFINITIONS
   -O2
   -std=c++14
@@ -238,10 +245,22 @@ set(TF_PLUGIN_INCLUDE
   ${Protobuf_PATH} 
   ${CMAKE_BINARY_DIR}/proto 
   ${JSON_INCLUDE} 
-  ${ABSL_SOURCE_DIR}
+  ${ABS_INSTALL_DIR}
   ${OPS_NN_DIR}
   ${OPS_NN_DIR}/common/inc/framework
   ${OPS_NN_DIR}/common/stub/inc/framework
   ${OPS_NN_DIR}/common/inc/op_graph
 )
 
+set(ONNX_PLUGIN_INCLUDE
+  ${OP_PROTO_INCLUDE} 
+  ${Protobuf_INCLUDE} 
+  ${Protobuf_PATH} 
+  ${CMAKE_BINARY_DIR}/proto 
+  ${JSON_INCLUDE} 
+  ${ABS_INSTALL_DIR}
+  ${OPS_NN_DIR}
+  ${OPS_NN_DIR}/common/inc/framework
+  ${OPS_NN_DIR}/common/stub/inc/framework
+  ${OPS_NN_DIR}/common/inc/op_graph
+)

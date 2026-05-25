@@ -7,6 +7,7 @@
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
+add_library(gtest ALIAS GTest::gtest)
 function(add_opbase_ut_common)
     if(TARGET opbase_ut_common)
         return()
@@ -276,7 +277,7 @@ if(UT_TEST_ALL OR OP_KERNEL_AICPU_UT)
         $<BUILD_INTERFACE:intf_llt_pub_asan_cxx17>
         gtest
         c_sec
-        Eigen3::EigenNn
+        Eigen3::Eigen
     )
 
     ## add opkernel ut cases object: nn_aicpu_op_kernel_ut_cases_obj
@@ -306,7 +307,7 @@ if(UT_TEST_ALL OR OP_KERNEL_AICPU_UT)
         -Wl,--no-whole-archive
         -Wl,-Bsymbolic
         -Wl,--exclude-libs=libhost_ascend_protobuf.a
-        Eigen3::EigenNn
+        Eigen3::Eigen
         ${AICPU_OP_KERNEL_MODULE_NAME}_common_obj
         ${AICPU_OP_KERNEL_MODULE_NAME}_cases_obj
     )
@@ -754,7 +755,7 @@ if(UT_TEST_ALL OR OP_KERNEL_AICPU_UT)
             -ldl
             gtest
             c_sec
-            Eigen3::EigenNn
+            Eigen3::Eigen
             )
 
     ## add object: nn_op_kernel_ut_cases_obj
@@ -774,7 +775,7 @@ if(UT_TEST_ALL OR OP_KERNEL_AICPU_UT)
             $<TARGET_OBJECTS:${opName}_cases_obj>
             gtest
             c_sec
-            Eigen3::EigenNn
+            Eigen3::Eigen
             )
   endfunction()
 endif()

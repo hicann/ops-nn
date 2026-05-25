@@ -18,6 +18,9 @@ from pathlib import Path
 
 git_repo_urls = []
 current_dir = os.path.dirname(os.path.abspath(__file__))
+# 创建子目录（例如：downloads）
+download_dir = os.path.join(current_dir, "cann_3rd_lib_path_download")
+os.makedirs(download_dir, exist_ok=True)  # 如果目录不存在则创建
 
 
 def execute_process(cmd_list: list, cwd=None):
@@ -27,7 +30,6 @@ def execute_process(cmd_list: list, cwd=None):
 
 
 def git_download():
-    download_dir = os.path.join(current_dir, "cann_3rd_lib_path_download")
     for url in list(set(git_repo_urls)):
         file_name = url.split('/')[-1]
         file_name = file_name.rsplit(".git", 1)[0]
@@ -42,10 +44,6 @@ def git_download():
 
 
 def down_files_native(url_list):
-    # 创建子目录（例如：downloads）
-    download_dir = os.path.join(current_dir, "cann_3rd_lib_path_download")
-    os.makedirs(download_dir, exist_ok=True)  # 如果目录不存在则创建
-
     for url in url_list:
 
         file_name = url.split('/')[-1]
@@ -151,5 +149,12 @@ if __name__ == "__main__":
     script_path = Path(__file__).resolve()
     cmake_dir = script_path.parent.parent.parent / "cmake" / "third_party"
     all_urls = get_all_urls(cmake_dir)
-    down_files_native(all_urls)
     git_download()
+    execute_process(['rf', '-fr', 'cann-cmake'], cwd=download_dir)
+    execute_process(['mv', 'cmake', 'cann-cmake'], cwd=download_dir)
+    third_partys = ['json', 'abseil-cpp', 'eigen', 'gtest', 'protobuf', 'makeself-fetch']
+    for third_lib in third_partys:
+        path = script_path.parent.parent.parent / "third_party" / "cann-cmake" / "third_party" / f"{third_lib}.cmake"
+        (urls, repo_urls) = extract_urls_from_cmake(path)
+        down_files_native(urls)
+

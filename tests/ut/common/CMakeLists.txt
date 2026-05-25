@@ -38,11 +38,13 @@ if(UT_TEST_ALL OR OP_HOST_UT)
         ${ASCEND_DIR}/include/exe_graph
         ${ASCEND_DIR}/include/base/context_builder
         ${OP_TILING_INCLUDE}
+        ${GTEST_INCLUDE}
         )
     target_link_libraries(${OP_TILING_MODULE_NAME}_common_obj PRIVATE
         $<BUILD_INTERFACE:intf_llt_pub_asan_cxx17>
         $<BUILD_INTERFACE:dlog_headers>
         c_sec
+        gtest
     )
 
     target_compile_options(${OP_TILING_MODULE_NAME}_common_obj PRIVATE
@@ -73,6 +75,7 @@ if(UT_TEST_ALL OR OP_HOST_UT)
         ${ASCEND_DIR}/include/exe_graph
         ${ASCEND_DIR}/include/base/context_builder
         ${CMAKE_CURRENT_SOURCE_DIR}/
+        ${GTEST_INCLUDE}
     )
 
     target_compile_options(${OP_INFERSHAPE_MODULE_NAME}_common_obj PRIVATE
@@ -87,5 +90,6 @@ if(UT_TEST_ALL OR OP_HOST_UT)
     target_link_libraries(${OP_INFERSHAPE_MODULE_NAME}_common_obj PRIVATE
         $<BUILD_INTERFACE:intf_llt_pub_asan_cxx17>
         c_sec
+        gtest
     )
 endif()
