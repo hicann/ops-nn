@@ -121,8 +121,8 @@
 | [aclnnDynamicBlockQuantV2](../../quant/dynamic_block_quant/docs/aclnnDynamicBlockQuantV2.md)|对输入张量，通过给定的rowBlockSize和colBlockSize将输入划分成多个数据块，以数据块为基本粒度进行量化。在每个块中，先计算出当前块对应的量化参数scaleOut，并根据scaleOut对输入进行量化。输出最终的量化结果，以及每个块的量化参数scaleOut。在目标数据类型为HIFLOAT8时，可以根据dstTypeMax设置目标数据类型的最大值。| 默认确定性实现 | 默认确定性实现 |
 | [aclnnDynamicQuant](../../quant/dynamic_quant/docs/aclnnDynamicQuant.md) | 对输入张量进行per-token对称动态量化。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnDynamicQuantV2](../../quant/dynamic_quant_v2/docs/aclnnDynamicQuantV2.md) | 为输入张量进行per-token对称/非对称动态量化。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnDynamicQuantV3](../../quant/dynamic_quant/docs/aclnnDynamicQuantV3.md) | 为输入张量进行动态量化。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnDynamicQuantV4](../../quant/dynamic_quant/docs/aclnnDynamicQuantV4.md) | 为输入张量进行动态量化。支持设置量化结果范围。 | 默认确定性实现 | 默认确定性实现  |
+| [aclnnDynamicQuantV3](../../quant/dynamic_quant/docs/aclnnDynamicQuantV3.md) | 为输入张量进行动态量化。 | - | 默认确定性实现 |
+| [aclnnDynamicQuantV4](../../quant/dynamic_quant/docs/aclnnDynamicQuantV4.md) | 为输入张量进行动态量化。支持设置量化结果范围。 | - | 默认确定性实现  |
 | [aclnnEinsum](../../matmul/batch_mat_mul_v3/docs/aclnnEinsum.md) | 使用爱因斯坦求和约定执行张量计算，形式为“term1, term2 -> output-term”，按照以下等式生成输出张量，其中reduce-sum对出现在输入项(term1, term2)中但未出现在输出项中的所有索引执行求和。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnElu&aclnnInplaceElu](../../activation/elu/docs/aclnnElu&aclnnInplaceElu.md) | 对输入张量self中的每个元素x调用指数线性单元激活函数ELU，并将得到的结果存入输出张量out中。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnEluBackward](../../activation/elu_grad_v2/docs/aclnnEluBackward.md) | aclnnElu激活函数的反向计算，输出ELU激活函数正向输入的梯度。 | 默认确定性实现 | 默认确定性实现 |
@@ -230,7 +230,7 @@
 | [aclnnGeluBackward](../../activation/gelu_grad/docs/aclnnGeluBackward.md) | 完成aclnnGelu的反向。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnGeluBackwardV2](../../activation/gelu_grad_v2/docs/aclnnGeluBackwardV2.md) | 完成aclnnGeluV2的反向。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnGeluMul](../../activation/gelu_mul/docs/aclnnGeluMul.md) | 将输入Tensor按照最后一个维度分为左右两个Tensor：x1和x2，对左边的x1进行Gelu计算，将计算结果与x2相乘。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnGeluQuant](../../activation/gelu_quant/docs/aclnnGeluQuant.md) | 将GeluV2与DynamicQuant/AscendQuantV2进行融合，对输入的数据self进行gelu激活后，对激活的结果进行量化，输出量化后的结果。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnGeluQuant](../../activation/gelu_quant/docs/aclnnGeluQuant.md) | 将GeluV2与DynamicQuant/AscendQuantV2进行融合，对输入的数据self进行gelu激活后，对激活的结果进行量化，输出量化后的结果。 | - | 默认确定性实现 |
 | [aclnnGeluV2](../../activation/gelu_v2/docs/aclnnGeluV2.md) | 高斯误差线性单元激活函数。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnGemm](../../matmul/gemm/docs/aclnnGemm.md) | 计算α 乘以A与B的乘积，再与β 和input C的乘积求和。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnGemmaRmsNorm](../../norm/gemma_rms_norm/docs/aclnnGemmaRmsNorm.md) | GemmaRmsNorm算子是大模型常用的归一化操作，相比RmsNorm算子，在计算时对gamma执行了+1操作。 | 默认确定性实现 | - |
@@ -377,7 +377,7 @@
 | [aclnnSoftmaxCrossEntropyWithLogits](../../activation/softmax_cross_entropy_with_logits/docs/aclnnSoftmaxCrossEntropyWithLogits.md) | 计算softmax和cross entropy的交叉熵损失，并给出对输入logits的反向梯度。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnSoftplus](../../activation/softplus_v2/docs/aclnnSoftplus.md) | 激活函数softplus。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnSoftplusBackward](../../activation/softplus_v2_grad/docs/aclnnSoftplusBackward.md) | aclnnSoftplus的反向传播。 | 默认确定性实现 | - |
-| [aclnnSoftshrink](../../activation/softshrink/docs/aclnnSoftshrink.md) | 以元素为单位，强制收缩λ范围内的元素。 | 默认确定性实现 | - |
+| [aclnnSoftshrink](../../activation/softshrink/docs/aclnnSoftshrink.md) | 以元素为单位，强制收缩λ范围内的元素。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnSoftshrinkBackward](../../activation/softshrink_grad/docs/aclnnSoftshrinkBackward.md) | 完成Softshrink函数的反向接口。 | 默认确定性实现 | 确定性实现 |
 | [aclnnSparse4to2QuantMatmulWeightNz](../../matmul/sparse4to2quant_matmul/docs/aclnnSparse4to2QuantMatmulWeightNz.md) | 实现稀疏4:2量化的矩阵乘计算。 | 默认确定性实现 | - |
 | [aclnnSquaredRelu](../../activation/squared_relu/docs/aclnnSquaredRelu.md) | SquaredReLU 函数是一个基于标准ReLU函数的变体，其主要特点是对ReLU函数的输出进行平方，常作为模型的激活函数。 | 默认确定性实现 | 默认确定性实现 |

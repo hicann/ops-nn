@@ -588,23 +588,13 @@
   </tr>
   <tr>
     <td>activation</td>
-    <td><a href="../../activation/softshrink/README.md">softshrink</a></td>
-    <td>✗</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
-  </tr>
-  <tr>
-    <td>activation</td>
     <td><a href="../../activation/softsign_grad/README.md">softshrink</a></td>
     <td>✓</td>
     <td>✓</td>
     <td>✗</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>完成softsign的反向传播。</td>
+    <td>对输入张量应用Softshrink激活函数。</td>
   </tr>
   <tr>
     <td>activation</td>
@@ -615,6 +605,16 @@
     <td>✗</td>
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+  </tr>
+  <tr>
+    <td>activation</td>
+    <td><a href="../../activation/softsign_grad/README.md">softsign_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>完成Softsign激活函数的反向梯度计算。给定上游梯度gradients和前向输入特征features，按元素计算输出梯度。</td>
   </tr>
   <tr>
     <td>activation</td>
@@ -3649,13 +3649,13 @@
   </tr>
   <tr>
     <td>quant</td>
-    <td><a href="../../quant/quant_max/README.md">group_quant</a></td>
+    <td><a href="../../quant/quant_max/README.md">group_max</a></td>
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>对输入张量x进行量化处理，并得到x绝对值的最大值。</td>
+    <td>根据输入的scale对输入x进行量化，并计算输入x的绝对值的最大值amax。</td>
   </tr>
   <tr>
     <td>quant</td>
