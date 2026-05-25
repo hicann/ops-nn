@@ -15,6 +15,8 @@
 #ifdef __CCE_KT_TEST__
 #include "tikicpulib.h"
 #include "data_utils.h"
+#include "kernel_ut_data_helper.h"
+#include "kernel_ut_data_executor.h"
 #include "string.h"
 #include <iostream>
 #include <string>
@@ -33,6 +35,8 @@ class conv3d_backprop_filter_v2_test : public testing::Test {
     }
     static void TearDownTestCase() {
         cout << "conv3d_backprop_filter_v2_test TearDown\n" << endl;
+        kernel_ut::CleanGeneratedBinFiles("./conv3d_backprop_filter_v2_data");
+        kernel_ut::CleanGeneratedBinFiles("./conv3d_backprop_filter_v2_fp32_data");
     }
 };
 
@@ -53,14 +57,11 @@ TEST_F(conv3d_backprop_filter_v2_test, conv_stdit_01_bf16) {
 
     memset(workspace, 0, 16 * 1024 * 1024);
 
-    system("cp -r ../../../../conv/conv3d_backprop_filter_v2/tests/ut/op_kernel/conv3d_backprop_filter_v2_data ./");
-    system("chmod -R 755 ./conv3d_backprop_filter_v2_data/");
-    system("cd ./conv3d_backprop_filter_v2_data/ && rm -rf ./*bin");
-    system("cd ./conv3d_backprop_filter_v2_data/ && python3 gen_data.py 1 4 1152 1 16 16 1 32 32 1 2 2");
-    system("cd ./conv3d_backprop_filter_v2_data/ && python3 gen_tiling.py conv_stdit_01_bf16");
+    kernel_ut::SetupTestEnvironment("conv/conv3d_backprop_filter_v2/tests/ut/op_kernel/conv3d_backprop_filter_v2_data", "conv3d_backprop_filter_v2_data");
+    kernel_ut::RunGenData("./conv3d_backprop_filter_v2_data", {"1", "4", "1152", "1", "16", "16", "1", "32", "32", "1", "2", "2"});
+    kernel_ut::RunGenTiling("./conv3d_backprop_filter_v2_data", "conv_stdit_01_bf16");
 
-    char * path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/conv3d_backprop_filter_v2_data/x.bin", shape_x, x, shape_x);
     ReadFile(path + "/conv3d_backprop_filter_v2_data/filter_size.bin", shape_filter_size, filter_size, shape_filter_size);
     ReadFile(path + "/conv3d_backprop_filter_v2_data/dedy.bin", shape_dedy, dedy, shape_dedy);
@@ -78,7 +79,6 @@ TEST_F(conv3d_backprop_filter_v2_test, conv_stdit_01_bf16) {
     AscendC::GmFree(y);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }
 
 TEST_F(conv3d_backprop_filter_v2_test, c256_depthwise) {
@@ -97,14 +97,11 @@ TEST_F(conv3d_backprop_filter_v2_test, c256_depthwise) {
 
     memset(workspace, 0, 16 * 1024 * 1024);
 
-    system("cp -r ../../../../conv/conv3d_backprop_filter_v2/tests/ut/op_kernel/conv3d_backprop_filter_v2_data ./");
-    system("chmod -R 755 ./conv3d_backprop_filter_v2_data/");
-    system("cd ./conv3d_backprop_filter_v2_data/ && rm -rf ./*bin");
-    system("cd ./conv3d_backprop_filter_v2_data/ && python3 gen_data.py 1 256 256 9 64 64 11 64 64 3 3 3");
-    system("cd ./conv3d_backprop_filter_v2_data/ && python3 gen_tiling.py c256_depthwise");
+    kernel_ut::SetupTestEnvironment("conv/conv3d_backprop_filter_v2/tests/ut/op_kernel/conv3d_backprop_filter_v2_data", "conv3d_backprop_filter_v2_data");
+    kernel_ut::RunGenData("./conv3d_backprop_filter_v2_data", {"1", "256", "256", "9", "64", "64", "11", "64", "64", "3", "3", "3"});
+    kernel_ut::RunGenTiling("./conv3d_backprop_filter_v2_data", "c256_depthwise");
 
-    char * path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/conv3d_backprop_filter_v2_data/x.bin", shape_x, x, shape_x);
     ReadFile(path + "/conv3d_backprop_filter_v2_data/filter_size.bin", shape_filter_size, filter_size, shape_filter_size);
     ReadFile(path + "/conv3d_backprop_filter_v2_data/dedy.bin", shape_dedy, dedy, shape_dedy);
@@ -122,7 +119,6 @@ TEST_F(conv3d_backprop_filter_v2_test, c256_depthwise) {
     AscendC::GmFree(y);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }
 
 TEST_F(conv3d_backprop_filter_v2_test, conv_net_ID_03_b16) {
@@ -141,14 +137,11 @@ TEST_F(conv3d_backprop_filter_v2_test, conv_net_ID_03_b16) {
 
     memset(workspace, 0, 16 * 1024 * 1024);
 
-    system("cp -r ../../../../conv/conv3d_backprop_filter_v2/tests/ut/op_kernel/conv3d_backprop_filter_v2_data ./");
-    system("chmod -R 755 ./conv3d_backprop_filter_v2_data/");
-    system("cd ./conv3d_backprop_filter_v2_data/ && rm -rf ./*bin");
-    system("cd ./conv3d_backprop_filter_v2_data/ && python3 gen_data.py 4 256 1364 4 64 64 4 64 64 1 1 1");
-    system("cd ./conv3d_backprop_filter_v2_data/ && python3 gen_tiling.py conv_net_ID_03_b16");
+    kernel_ut::SetupTestEnvironment("conv/conv3d_backprop_filter_v2/tests/ut/op_kernel/conv3d_backprop_filter_v2_data", "conv3d_backprop_filter_v2_data");
+    kernel_ut::RunGenData("./conv3d_backprop_filter_v2_data", {"4", "256", "1364", "4", "64", "64", "4", "64", "64", "1", "1", "1"});
+    kernel_ut::RunGenTiling("./conv3d_backprop_filter_v2_data", "conv_net_ID_03_b16");
 
-    char * path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/conv3d_backprop_filter_v2_data/x.bin", shape_x, x, shape_x);
     ReadFile(path + "/conv3d_backprop_filter_v2_data/filter_size.bin", shape_filter_size, filter_size, shape_filter_size);
     ReadFile(path + "/conv3d_backprop_filter_v2_data/dedy.bin", shape_dedy, dedy, shape_dedy);
@@ -166,7 +159,6 @@ TEST_F(conv3d_backprop_filter_v2_test, conv_net_ID_03_b16) {
     AscendC::GmFree(y);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }
 
 TEST_F(conv3d_backprop_filter_v2_test, conv_03_b16) {
@@ -185,14 +177,11 @@ TEST_F(conv3d_backprop_filter_v2_test, conv_03_b16) {
 
     memset(workspace, 0, 16 * 1024 * 1024);
 
-    system("cp -r ../../../../conv/conv3d_backprop_filter_v2/tests/ut/op_kernel/conv3d_backprop_filter_v2_data ./");
-    system("chmod -R 755 ./conv3d_backprop_filter_v2_data/");
-    system("cd ./conv3d_backprop_filter_v2_data/ && rm -rf ./*bin");
-    system("cd ./conv3d_backprop_filter_v2_data/ && python3 gen_data.py 1 256 128 17 128 128 17 128 128 1 1 1");
-    system("cd ./conv3d_backprop_filter_v2_data/ && python3 gen_tiling.py conv_03_b16");
+    kernel_ut::SetupTestEnvironment("conv/conv3d_backprop_filter_v2/tests/ut/op_kernel/conv3d_backprop_filter_v2_data", "conv3d_backprop_filter_v2_data");
+    kernel_ut::RunGenData("./conv3d_backprop_filter_v2_data", {"1", "256", "128", "17", "128", "128", "17", "128", "128", "1", "1", "1"});
+    kernel_ut::RunGenTiling("./conv3d_backprop_filter_v2_data", "conv_03_b16");
 
-    char * path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/conv3d_backprop_filter_v2_data/x.bin", shape_x, x, shape_x);
     ReadFile(path + "/conv3d_backprop_filter_v2_data/filter_size.bin", shape_filter_size, filter_size, shape_filter_size);
     ReadFile(path + "/conv3d_backprop_filter_v2_data/dedy.bin", shape_dedy, dedy, shape_dedy);
@@ -210,7 +199,6 @@ TEST_F(conv3d_backprop_filter_v2_test, conv_03_b16) {
     AscendC::GmFree(y);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }
 
 TEST_F(conv3d_backprop_filter_v2_test, conv_stdit_01_fp32) {
@@ -229,14 +217,11 @@ TEST_F(conv3d_backprop_filter_v2_test, conv_stdit_01_fp32) {
 
     memset(workspace, 0, 16 * 1024 * 1024);
 
-    system("cp -r ../../../../conv/conv3d_backprop_filter_v2/tests/ut/op_kernel/conv3d_backprop_filter_v2_fp32_data ./");
-    system("chmod -R 755 ./conv3d_backprop_filter_v2_fp32_data/");
-    system("cd ./conv3d_backprop_filter_v2_fp32_data/ && rm -rf ./*bin");
-    system("cd ./conv3d_backprop_filter_v2_fp32_data/ && python3 gen_data.py 1 4 1152 1 16 16 1 32 32 1 2 2");
-    system("cd ./conv3d_backprop_filter_v2_fp32_data/ && python3 gen_tiling.py conv_stdit_01_fp32");
+    kernel_ut::SetupTestEnvironment("conv/conv3d_backprop_filter_v2/tests/ut/op_kernel/conv3d_backprop_filter_v2_fp32_data", "conv3d_backprop_filter_v2_fp32_data");
+    kernel_ut::RunGenData("./conv3d_backprop_filter_v2_fp32_data", {"1", "4", "1152", "1", "16", "16", "1", "32", "32", "1", "2", "2"});
+    kernel_ut::RunGenTiling("./conv3d_backprop_filter_v2_fp32_data", "conv_stdit_01_fp32");
 
-    char * path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/conv3d_backprop_filter_v2_fp32_data/x.bin", shape_x, x, shape_x);
     ReadFile(path + "/conv3d_backprop_filter_v2_fp32_data/filter_size.bin", shape_filter_size, filter_size, shape_filter_size);
     ReadFile(path + "/conv3d_backprop_filter_v2_fp32_data/dedy.bin", shape_dedy, dedy, shape_dedy);
@@ -254,5 +239,4 @@ TEST_F(conv3d_backprop_filter_v2_test, conv_stdit_01_fp32) {
     AscendC::GmFree(y);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }

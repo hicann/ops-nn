@@ -23,6 +23,7 @@
 #include "tikicpulib.h"
 #include "conv3d_v2_tiling_def.h"
 #include "data_utils.h"
+#include "kernel_ut_data_helper.h"
 
 #ifndef CONV_KERNEL
 #include "../../../op_kernel/conv3d_v2.cpp"
@@ -112,8 +113,7 @@ void CallSimpleKernel(
 
     memset(workspace, 0, 16 * 1024 * 1024);
 
-    char* path_ = get_current_dir_name();
-    std::string path(path_);
+    std::string path = kernel_ut::GetTestWorkDir();
 
     Ops::NN::Conv3dV2::Conv3DV2TilingData* tilingDataFromBin = reinterpret_cast<Ops::NN::Conv3dV2::Conv3DV2TilingData*>(tiling);
 
@@ -226,7 +226,6 @@ void CallSimpleKernel(
     AscendC::GmFree(output);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }
 
 TEST_F(KernelConv3DV2PointWise_test, test_conv3dv2_base)

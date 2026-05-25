@@ -15,6 +15,8 @@
 #ifdef __CCE_KT_TEST__
 #include "tikicpulib.h"
 #include "data_utils.h"
+#include "kernel_ut_data_helper.h"
+#include "kernel_ut_data_executor.h"
 #include "string.h"
 #include <iostream>
 #include <string>
@@ -33,6 +35,7 @@ class conv3d_transpose_v2_test : public testing::Test {
     }
     static void TearDownTestCase() {
         cout << "conv3d_transpose_v2_test TearDown\n" << endl;
+        kernel_ut::CleanGeneratedBinFiles("./conv3d_transpose_v2_data");
     }
 };
 
@@ -53,14 +56,11 @@ TEST_F(conv3d_transpose_v2_test, test_conv3d_dx_17) {
 
     memset(workspace, 0, 16 * 1024 * 1024);
 
-    system("cp -r ../../../../conv/conv3d_transpose_v2/tests/ut/op_kernel/conv3d_transpose_v2_data ./");
-    system("chmod -R 755 ./conv3d_transpose_v2_data/");
-    system("cd ./conv3d_transpose_v2_data/ && rm -rf ./*bin");
-    system("cd ./conv3d_transpose_v2_data/ && python3 gen_data.py 1 512 512 5 32 32 5 32 32 1 1 1");
-    system("cd ./conv3d_transpose_v2_data/ && python3 gen_tiling.py test_conv3d_dx_17");
+    kernel_ut::SetupTestEnvironment("conv/conv3d_transpose_v2/tests/ut/op_kernel/conv3d_transpose_v2_data", "conv3d_transpose_v2_data");
+    kernel_ut::RunGenData("./conv3d_transpose_v2_data", {"1", "512", "512", "5", "32", "32", "5", "32", "32", "1", "1", "1"});
+    kernel_ut::RunGenTiling("./conv3d_transpose_v2_data", "test_conv3d_dx_17");
 
-    char * path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/conv3d_transpose_v2_data/input_size.bin", input_shape_size, input_shape, input_shape_size);
     ReadFile(path + "/conv3d_transpose_v2_data/filter.bin", filter_size, filter, filter_size);
     ReadFile(path + "/conv3d_transpose_v2_data/x.bin", x_size, x, x_size);
@@ -117,7 +117,6 @@ TEST_F(conv3d_transpose_v2_test, test_conv3d_dx_17) {
     AscendC::GmFree(y);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }
 
 TEST_F(conv3d_transpose_v2_test, params_conv3d_dx_17_hf32) {
@@ -136,14 +135,11 @@ TEST_F(conv3d_transpose_v2_test, params_conv3d_dx_17_hf32) {
 
     memset(workspace, 0, 16 * 1024 * 1024);
 
-    system("cp -r ../../../../conv/conv3d_transpose_v2/tests/ut/op_kernel/conv3d_transpose_v2_data ./");
-    system("chmod -R 755 ./conv3d_transpose_v2_data/");
-    system("cd ./conv3d_transpose_v2_data/ && rm -rf ./*bin");
-    system("cd ./conv3d_transpose_v2_data/ && python3 gen_data.py 1 512 512 5 32 32 5 32 32 1 1 1");
-    system("cd ./conv3d_transpose_v2_data/ && python3 gen_tiling.py params_conv3d_dx_17_hf32");
+    kernel_ut::SetupTestEnvironment("conv/conv3d_transpose_v2/tests/ut/op_kernel/conv3d_transpose_v2_data", "conv3d_transpose_v2_data");
+    kernel_ut::RunGenData("./conv3d_transpose_v2_data", {"1", "512", "512", "5", "32", "32", "5", "32", "32", "1", "1", "1"});
+    kernel_ut::RunGenTiling("./conv3d_transpose_v2_data", "params_conv3d_dx_17_hf32");
 
-    char * path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/conv3d_transpose_v2_data/input_size.bin", input_shape_size, input_shape, input_shape_size);
     ReadFile(path + "/conv3d_transpose_v2_data/filter.bin", filter_size, filter, filter_size);
     ReadFile(path + "/conv3d_transpose_v2_data/x.bin", x_size, x, x_size);
@@ -200,7 +196,6 @@ TEST_F(conv3d_transpose_v2_test, params_conv3d_dx_17_hf32) {
     AscendC::GmFree(y);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }
 
 TEST_F(conv3d_transpose_v2_test, test_group_1) {
@@ -219,14 +214,11 @@ TEST_F(conv3d_transpose_v2_test, test_group_1) {
 
     memset(workspace, 0, 16 * 1024 * 1024);
 
-    system("cp -r ../../../../conv/conv3d_transpose_v2/tests/ut/op_kernel/conv3d_transpose_v2_data ./");
-    system("chmod -R 755 ./conv3d_transpose_v2_data/");
-    system("cd ./conv3d_transpose_v2_data/ && rm -rf ./*bin");
-    system("cd ./conv3d_transpose_v2_data/ && python3 gen_data.py 2 256 256 1 4 4 1 8 8 1 2 2");
-    system("cd ./conv3d_transpose_v2_data/ && python3 gen_tiling.py test_group_1");
+    kernel_ut::SetupTestEnvironment("conv/conv3d_transpose_v2/tests/ut/op_kernel/conv3d_transpose_v2_data", "conv3d_transpose_v2_data");
+    kernel_ut::RunGenData("./conv3d_transpose_v2_data", {"2", "256", "256", "1", "4", "4", "1", "8", "8", "1", "2", "2"});
+    kernel_ut::RunGenTiling("./conv3d_transpose_v2_data", "test_group_1");
 
-    char * path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/conv3d_transpose_v2_data/input_size.bin", input_shape_size, input_shape, input_shape_size);
     ReadFile(path + "/conv3d_transpose_v2_data/filter.bin", filter_size, filter, filter_size);
     ReadFile(path + "/conv3d_transpose_v2_data/x.bin", x_size, x, x_size);
@@ -283,5 +275,4 @@ TEST_F(conv3d_transpose_v2_test, test_group_1) {
     AscendC::GmFree(y);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }
