@@ -949,8 +949,25 @@ static const aclTensor* SortedIndexPutProcess(const aclTensor* selfCast, const a
     FVector<const aclTensor*, DIMLIMIT> allIndices;
     ConstructStrideAndValue(selfCast, valueSize, stride);
     bool iscontiguousIdx = CheckIfContiguous(indices, definedIndices, allIndices, executor);
-    auto strideTensor = executor->ConvertToTensor(stride.data(), stride.size(), DataType::DT_INT32);
-    auto valueSizeTensor = executor->ConvertToTensor(valueSize.data(), valueSize.size(), DataType::DT_INT32);
+    FVector<int64_t, DIMLIMIT> definedStride;
+    FVector<int64_t, DIMLIMIT> definedValueSize;
+    int64_t indicesSize = static_cast<int64_t>(indices->Size());
+    for (int64_t i = 0; i < indicesSize && i < selfSize; i++) {
+        if ((*indices)[i] && (*indices)[i]->GetViewShape().GetShapeSize() != 0) {
+            definedStride.emplace_back(stride[i]);
+            definedValueSize.emplace_back(valueSize[i]);
+        }
+    }
+    OP_LOGI("definedStride size: %ld", static_cast<int64_t>(definedStride.size()));
+    for (int64_t i = 0; i < static_cast<int64_t>(definedStride.size()); i++) {
+        OP_LOGI("definedStride[%ld] = %ld", i, definedStride[i]);
+    }
+    OP_LOGI("definedValueSize size: %ld", static_cast<int64_t>(definedValueSize.size()));
+    for (int64_t i = 0; i < static_cast<int64_t>(definedValueSize.size()); i++) {
+        OP_LOGI("definedValueSize[%ld] = %ld", i, definedValueSize[i]);
+    }
+    auto strideTensor = executor->ConvertToTensor(definedStride.data(), definedStride.size(), DataType::DT_INT32);
+    auto valueSizeTensor = executor->ConvertToTensor(definedValueSize.data(), definedValueSize.size(), DataType::DT_INT32);
 
     // Indices Broadcast
     auto ret = IndicesBroadcastUndeter(definedIndices, executor);   // scalar tensor will be broadcast
