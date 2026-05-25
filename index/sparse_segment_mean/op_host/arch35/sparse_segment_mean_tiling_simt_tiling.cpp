@@ -84,7 +84,7 @@ void SparseSegmentMeanSimtTiling::CalcThreadTiling()
                 normalCoreSegmentNum_ = tmpOneCoreMaxSegNumUp16;
                 secondToLastCoreSegmentNum_ = Ops::Base::FloorAlign(resSegNum, MAX_THREAD_BLOCKS);
                 lastCoreSegmentNum_ = resSegNum - secondToLastCoreSegmentNum_;
-                needCoreNum_ = inputData.segmentNum / tmpOneCoreMaxSegNumUp16 + 2;
+                needCoreNum_ = inputData.segmentNum / tmpOneCoreMaxSegNumUp16 + NUM_TWO;
             } else {
                 // 剩下的seg数量小于等于16，只需还要1个核处理剩余seg
                 needCoreNum_ = inputData.segmentNum / oneCoreMaxSegNumUp16 + 1;
