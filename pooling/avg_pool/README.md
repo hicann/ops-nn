@@ -97,4 +97,6 @@
 
 ## 调用说明
 
-无。
+| 调用方式   | 样例代码           | 说明                                         |
+| ---------------- | --------------------------- | --------------------------------------------------- |
+| 图模式接口 | [test_geir_avg_pool](examples/arch35/test_geir_avg_pool.cpp) | 通过IR [AvgPool](./op_graph/avg_pool_proto.h)构图方式调用AvgPool算子。 |

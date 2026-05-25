@@ -134,4 +134,5 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
+| 图模式接口 | [test_geir_avg_pool_v2](examples/arch35/test_geir_avg_pool_v2.cpp) | 通过IR [AvgPool](./op_graph/avg_pool_v2_proto.h)构图方式调用AvgPoolV2算子。 |
 | aclnn接口  | [test_aclnn_avgpool2d.cpp](../avg_pool3_d/examples/test_aclnn_avgpool2d.cpp) | 通过[aclnnAvgPool2d](../../pooling/avg_pool3_d/docs/aclnnAvgPool2d.md)接口方式调用AvgPoolV2算子。
