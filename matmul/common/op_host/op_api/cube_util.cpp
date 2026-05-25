@@ -134,30 +134,6 @@ bool CheckCubeMathTypeForMm(const op::DataType cubeTensorDtype, int8_t cubeMathT
     }
 }
 
-bool CheckAddmmTensorShapeNeedBroadcast(const aclTensor* mat1, const aclTensor* mat2, const aclTensor* self)
-{
-    uint64_t dimNum = mat1->GetViewShape().GetDimNum();
-    uint64_t selfDimNum = self->GetViewShape().GetDimNum();
-    if (dimNum != selfDimNum) {
-        OP_LOGI("self's dimnum != matmul out's dimnum.");
-        return true;
-    }
-    const op::Shape selfShape = self->GetViewShape();
-    const op::Shape mat1Shape = mat1->GetViewShape();
-    const op::Shape mat2Shape = mat2->GetViewShape();
-    if (dimNum == 3UL) {
-        OP_CHECK(selfShape[0] == mat1Shape[0] && selfShape[1] == mat1Shape[1] && selfShape[2] == mat2Shape[2],
-            OP_LOGI("self shape not equal to matmul out shape."),
-            return true);
-    } else if (dimNum == 2UL) {
-        OP_CHECK(selfShape[0] == mat1Shape[0] && selfShape[1] == mat2Shape[1],
-            OP_LOGI("self shape not equal to matmul out shape."),
-            return true);
-    }
-    return false;
-}
-
-
 bool CheckCubeMathTypeForAddMm(
     const aclTensor* mat1, const aclTensor* mat2, const aclTensor* self, const aclTensor* out, int8_t cubeMathType)
 {
@@ -170,26 +146,43 @@ bool CheckCubeMathTypeForAddMm(
             cubeMathType);
         return false;
     }
-
-    auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
     if (cubeMathType != USE_FP32_ADD) {
         return true;
     }
     // 平台校验
-    if (npuArch != NpuArch::DAV_2201 && npuArch != NpuArch::DAV_3510) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "current platform not support cubeMathType = 4: USE_FP32_ADD.");
+    if (GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_2201 &&
+        GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "current platform not support cubeMathType = 4: USE_FP32_ADD.");
         return false;
     }
     // A2平台上，当cubeMathType=USE_FP32_ADD时，当前不支持self与mmout broadcast
-    if (npuArch == NpuArch::DAV_2201) {
-        bool needBroadcast = CheckAddmmTensorShapeNeedBroadcast(mat1, mat2, self);
-        OP_CHECK(!needBroadcast,
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "when cubeMathType = 4:USE_FP32_ADD, do not support broadcast between self and mmout."),
+    uint64_t dimNum = mat1->GetViewShape().GetDimNum();
+    uint64_t selfDimNum = self->GetViewShape().GetDimNum();
+    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201) {
+        if (dimNum != selfDimNum) {
+            OP_LOGE(
+                ACLNN_ERR_PARAM_INVALID,
+                "when cubeMathType = 4:USE_FP32_ADD, do not support self's dimnum != matmul out's dimnum.");
             return false;
-        );
+        }
+        const op::Shape selfShape = self->GetViewShape();
+        const op::Shape mat1Shape = mat1->GetViewShape();
+        const op::Shape mat2Shape = mat2->GetViewShape();
+        if (dimNum == 3UL) {
+            OP_CHECK(
+                selfShape[0] == mat1Shape[0] && selfShape[1] == mat1Shape[1] && selfShape[2] == mat2Shape[2],
+                OP_LOGE(
+                    ACLNN_ERR_PARAM_INVALID,
+                    "when cubeMathType = 4:USE_FP32_ADD, self shape should equal to matmul out shape."),
+                return false);
+        } else if (dimNum == 2UL) {
+            OP_CHECK(
+                selfShape[0] == mat1Shape[0] && selfShape[1] == mat2Shape[1],
+                OP_LOGE(
+                    ACLNN_ERR_PARAM_INVALID,
+                    "when cubeMathType = 4:USE_FP32_ADD, self shape should equal to matmul out shape."),
+                return false);
+        }
     }
     return true;
 }
