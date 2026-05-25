@@ -11,12 +11,12 @@
  # ----------------------------------------------------------------------------
 
 import torch
-import torch_npu
 import ctypes
 import logging
 import numpy as np
 import random
 from torch.nn.functional import gelu as torch_gelu
+import copy
 
 from atk.common.log import Logger
 from atk.configs.dataset_config import InputDataset
@@ -30,31 +30,10 @@ from atk.tasks.backends.lib_interface.acl_wrapper import AclFormat, Int64, AclTe
 
 logging = Logger().get_logger()
 
-
-def _is_transpose_last_two_dims(tensor):
-    if tensor.dim() < 2 or tensor.dim() > 6:
-        return False
-
-    dim1 = tensor.dim() - 1
-    dim2 = tensor.dim() - 2
-    shape = tensor.shape
-    strides = tensor.stride()
-    if strides[dim2] != 1 or strides[dim1] != shape[dim2]:
-        return False
-
-    tmp_nx_d = shape[dim1] * shape[dim2]
-    for batch_dim in range(tensor.dim() - 3, -1, -1):
-        if strides[batch_dim] != tmp_nx_d:
-            return False
-        tmp_nx_d *= shape[batch_dim]
-
-    return not (shape[dim1] == 1 and shape[dim2] == 1)
-
-
-@register("execute_fused_quantmatmul_weightnz")
-class AclnnFusedQuantMatmulWeightNz(BaseApi):
+@register("execute_fused_quantmatmul")
+class AclnnFusedQuantMatmul(BaseApi):
     def __init__(self, task_result: TaskResult):
-        super(AclnnFusedQuantMatmulWeightNz, self).__init__(task_result)
+        super(AclnnFusedQuantMatmul, self).__init__(task_result)
         self.x1 = None
         self.x2 = None
         self.x1scale = None
@@ -74,22 +53,19 @@ class AclnnFusedQuantMatmulWeightNz(BaseApi):
         value_max = 127 if self.x1.dtype == torch.int8 else 7
 
         if self.device == "cpu":
-            if self.bias is None:
+            if self.bias == None:
                 logging.info(f"用例 id: {self.task_result.case_config.id} | 场景 0:  bias - 无")
-                # out = x1 @ x2 ∗ x2scale * x1scale
-                out = torch.matmul(self.x1, self.x2).to(torch.float32) * self.x2scale.to(torch.float32)
+                out = torch.matmul(self.x1.to(torch.int32), self.x2.to(torch.int32)).to(torch.float32) * self.x2scale.to(torch.float32)
                 out = out.to(torch.float32) * self.x1scale.unsqueeze(-1).to(torch.float32)
 
             elif self.bias.dtype == torch.int32:
                 logging.info(f"用例 id: {self.task_result.case_config.id} | 场景 1: bias - INT32")
-                # out = (x1 @ x2 + bias) ∗ x2scale * x1scale
-                out = (torch.matmul(self.x1, self.x2) + self.bias).to(torch.float32) * self.x2scale.to(torch.float32)
+                out = (torch.matmul(self.x1.to(torch.int32), self.x2.to(torch.int32)) + self.bias).to(torch.float32) * self.x2scale.to(torch.float32)
                 out = out.to(torch.float32) * self.x1scale.unsqueeze(-1).to(torch.float32)
 
             elif self.bias.dtype in [torch.bfloat16, torch.float16, torch.float32]:
                 logging.info(f"用例 id: {self.task_result.case_config.id} | 场景 2: bias - BFLOAT16/FLOAT16/FLOAT32")
-                # out = x1 @ x2 ∗ x2scale * x1scale + bias
-                out = torch.matmul(self.x1, self.x2)
+                out = torch.matmul(self.x1.to(torch.int32), self.x2.to(torch.int32))
                 out = out.to(torch.float32) * self.x2scale.to(torch.float32)
                 out = out.to(torch.float32) * self.x1scale.unsqueeze(-1).to(torch.float32)
                 out = out.to(torch.float32) + self.bias.to(torch.float32)
@@ -101,10 +77,10 @@ class AclnnFusedQuantMatmulWeightNz(BaseApi):
             # gelu计算
             if self.fusedoptype == "gelu_erf":
                 logging.info(f"用例 id: {self.task_result.case_config.id} | 后处理 gelu_erf")
-                out = torch_gelu(out.to(torch.float32), approximate='none') # erf
+                out = torch_gelu(out.to(torch.float32), approximate='none') #erf
             elif self.fusedoptype == "gelu_tanh":
                 logging.info(f"用例 id: {self.task_result.case_config.id} | 后处理 gelu_tanh")
-                out = torch_gelu(out.to(torch.float32), approximate='tanh') # tanh
+                out = torch_gelu(out.to(torch.float32), approximate='tanh') #tanh
 
             return out.to(self.out_dtype)
 
@@ -140,34 +116,36 @@ class AclnnFusedQuantMatmulWeightNz(BaseApi):
         
         self.out_dtype = input_data.kwargs['out'].dtype
 
-
-@register("execute_aclnn_fused_quantmatmul_weightnz")
-class PyAclnnFusedQuantMatmulWeightNz(AclnnBaseApi):
+@register("execute_aclnn_fused_quantmatmul")
+class PyAclnnFusedQuantMatmul(AclnnBaseApi):
     def init_by_input_data(self, input_data: InputDataset): 
         input_args = []  # 算子的入参列表
         output_packages = []  # 算子的出参数据包列表
-
-        transpose_x1 = input_data.kwargs.pop("transposeX1")
-        transpose_x2 = input_data.kwargs.pop("transposeX2")
-        self.is_nz = input_data.kwargs.pop("isNz")
-        input_data.kwargs.pop("out")
-
-        if transpose_x1:
-            input_data.kwargs['x1'] = input_data.kwargs['x1'].transpose(-2, -1)
-
+        import torch_npu
         x1 = input_data.kwargs['x1']
         if x1.dtype == torch.int32:
-            x1_npu = torch_npu.npu_convert_weight_to_int4pack(x1.contiguous().npu())
+            x1_npu = torch_npu.npu_convert_weight_to_int4pack(x1.npu())
             input_data.kwargs['x1'] = x1_npu
 
         x2 = input_data.kwargs['x2']
         if x2.dtype == torch.int32:
-            x2_npu = torch_npu.npu_convert_weight_to_int4pack(x2.contiguous().npu())
-            if transpose_x2:
-                x2_npu = x2_npu.transpose(-2, -1)
+            x2_npu = torch_npu.npu_convert_weight_to_int4pack(x2.npu())
             input_data.kwargs['x2'] = x2_npu
-        elif transpose_x2:
-            input_data.kwargs['x2'] = x2.transpose(-2, -1)
+        
+        # 记录原始 storage shape, 兼容非连续 Tensor
+        self.ori_input_data = copy.deepcopy(input_data)
+        
+        # 当用例要求为非连续 Tensor 时, 转置为非连续
+        if input_data.kwargs['transposeX1'] == 1:
+            input_data.kwargs['x1'] = input_data.kwargs['x1'].transpose(-1, -2)
+        if input_data.kwargs['transposeX2'] == 1:
+            input_data.kwargs['x2'] = input_data.kwargs['x2'].transpose(-1, -2)
+
+        self.is_nz = input_data.kwargs['isNz']
+        input_data.kwargs.pop("isNz")
+        input_data.kwargs.pop("out")
+        input_data.kwargs.pop("transposeX1")
+        input_data.kwargs.pop("transposeX2")
 
         for i, arg in enumerate(input_data.args):
             data = self.backend.convert_input_data(arg, index=i)
@@ -197,19 +175,23 @@ class PyAclnnFusedQuantMatmulWeightNz(AclnnBaseApi):
     
     def get_storage_shape(self, input_data: InputDataset, index=None, name=None):
         if name == "x2":
-            b = input_data.kwargs['x1'].shape[:-2]
-            x2 = input_data.kwargs['x2']
-            k, n = x2.shape[-2:]
-            transpose_x2 = _is_transpose_last_two_dims(x2)
-            nz_k0_value_trans = 64 if x2.dtype == torch.int32 else 32
+            mat2NdShape = self.ori_input_data.kwargs[name].shape
 
-            mat2_nd_shape = torch.Size([*b, (k + nz_k0_value_trans - 1) // nz_k0_value_trans,
-                                         (n + 16 - 1) // 16, 16, nz_k0_value_trans]) if transpose_x2 else \
-                torch.Size([*b, (n + nz_k0_value_trans - 1) // nz_k0_value_trans,
-                            (k + 16 - 1) // 16, 16, nz_k0_value_trans])
-            return mat2_nd_shape
+            b = self.ori_input_data.kwargs['x1'].shape[:-2]
+            if self.ori_input_data.kwargs['transposeX2']:
+                n, k = self.ori_input_data.kwargs['x2'].shape[-2:]
+            else:
+                k, n = self.ori_input_data.kwargs['x2'].shape[-2:]
+            # 此处无需对齐，已经在 init_by_input_data 中修改过 input_data.kwargs['x2'] 的维度
+            if self.ori_input_data.kwargs['x1'].dtype == torch.int8:
+                mat2NzShape = torch.Size([*b, (k + 32 - 1)//32, (n + 16 - 1)//16, 16, 32]) if self.ori_input_data.kwargs['transposeX2'] else \
+                    torch.Size([*b, (n + 32 - 1)//32, (k + 16 - 1)//16, 16, 32])
+            elif self.ori_input_data.kwargs['x1'].dtype == torch.int32:
+                mat2NzShape = torch.Size([*b, (k + 64 - 1)//64, (n + 16 - 1)//16, 16, 64]) if self.ori_input_data.kwargs['transposeX2'] else \
+                    torch.Size([*b, (n + 64 - 1)//64, (k + 16 - 1)//16, 16, 64])
+            return mat2NzShape
         elif name is not None:
-            return input_data.kwargs[name].shape
+            return self.ori_input_data.kwargs[name].shape
 
     def get_storage_format(self, input_data: InputDataset, index=None, name=None):
         """
@@ -223,3 +205,20 @@ class PyAclnnFusedQuantMatmulWeightNz(AclnnBaseApi):
             return AclFormat.ACL_FORMAT_FRACTAL_NZ
         else:
             return AclFormat.ACL_FORMAT_ND
+            
+    def get_cpp_func_signature_type(self):
+        return ("aclnnStatus aclnnFusedQuantMatmulWeightNzGetWorkspaceSize(const aclTensor *x1, \
+                                                                const aclTensor *x2, \
+                                                                const aclTensor *x1Scale, \
+                                                                const aclTensor *x2Scale, \
+                                                                const aclTensor *yScale, \
+                                                                const aclTensor *x1Offset, \
+                                                                const aclTensor *x2Offset, \
+                                                                const aclTensor *yOffset, \
+                                                                const aclTensor *bias, \
+                                                                const aclTensor *x3, \
+                                                                const char *fusedOpType, \
+                                                                int64_t groupSize, \
+                                                                const aclTensor *out, \
+                                                                uint64_t *workspaceSize, \
+                                                                aclOpExecutor **executor)")

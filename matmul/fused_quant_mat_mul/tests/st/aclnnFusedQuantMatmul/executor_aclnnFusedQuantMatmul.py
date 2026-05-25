@@ -11,12 +11,12 @@
  # ----------------------------------------------------------------------------
 
 import torch
-import torch_npu
 import ctypes
 import logging
 import numpy as np
 import random
 from torch.nn.functional import gelu as torch_gelu
+import copy
 
 from atk.common.log import Logger
 from atk.configs.dataset_config import InputDataset
@@ -26,7 +26,7 @@ from atk.tasks.api_execute.base_api import BaseApi
 from atk.tasks.dataset.base_dataset import OpsDataset
 from atk.tasks.api_execute.aclnn_base_api import AclnnBaseApi
 from atk.tasks.backends.lib_interface.acl_wrapper import TensorPtr
-from atk.tasks.backends.lib_interface.acl_wrapper import AclFormat, Int64, AclTensorList, AclIntArray, AclTensor
+from atk.tasks.backends.lib_interface.acl_wrapper import AclFormat, Int64, AclTensorList, AclIntArray, AclTensor, nnopbase
 
 logging = Logger().get_logger()
 
@@ -54,22 +54,20 @@ class AclnnFusedQuantMatmul(BaseApi):
         value_max = 127 if self.x1.dtype == torch.int8 else 7
 
         if self.device == "cpu":
-            if self.bias is None:
+            if self.bias == None:
                 logging.info(f"用例 id: {self.task_result.case_config.id} | 场景 0:  bias - 无")
-                # out = x1 @ x2 ∗ x2scale * x1scale
-                out = torch.matmul(self.x1, self.x2).to(torch.float32) * self.x2scale.to(torch.float32)
+                out = torch.matmul(self.x1.to(torch.int32), self.x2.to(torch.int32)).to(torch.float32) * self.x2scale.to(torch.float32)
                 out = out.to(torch.float32) * self.x1scale.unsqueeze(-1).to(torch.float32)
 
             elif self.bias.dtype == torch.int32:
                 logging.info(f"用例 id: {self.task_result.case_config.id} | 场景 1: bias - INT32")
-                # out = (x1 @ x2 + bias) ∗ x2scale * x1scale
-                out = (torch.matmul(self.x1, self.x2) + self.bias).to(torch.float32) * self.x2scale.to(torch.float32)
+                out = (torch.matmul(self.x1.to(torch.int32), self.x2.to(torch.int32)) + self.bias).to(torch.float32) * self.x2scale.to(torch.float32)
                 out = out.to(torch.float32) * self.x1scale.unsqueeze(-1).to(torch.float32)
+                logging.info(f"用例 id: {self.task_result.case_config.id} | after matmul x1scale")
 
             elif self.bias.dtype in [torch.bfloat16, torch.float16, torch.float32]:
                 logging.info(f"用例 id: {self.task_result.case_config.id} | 场景 2: bias - BFLOAT16/FLOAT16/FLOAT32")
-                # out = x1 @ x2 ∗ x2scale * x1scale + bias
-                out = torch.matmul(self.x1, self.x2)
+                out = torch.matmul(self.x1.to(torch.int32), self.x2.to(torch.int32))
                 out = out.to(torch.float32) * self.x2scale.to(torch.float32)
                 out = out.to(torch.float32) * self.x1scale.unsqueeze(-1).to(torch.float32)
                 out = out.to(torch.float32) + self.bias.to(torch.float32)
@@ -77,15 +75,17 @@ class AclnnFusedQuantMatmul(BaseApi):
             else:
                 logging.error("输入 dtype 组合无效.")
                 raise ValueError
-
+            
+            logging.info(f"用例 id: {self.task_result.case_config.id} | before gelu")
             # gelu计算
             if self.fusedoptype == "gelu_erf":
                 logging.info(f"用例 id: {self.task_result.case_config.id} | 后处理 gelu_erf")
-                out = torch_gelu(out, approximate='none') # erf
+                out = torch_gelu(out, approximate='none') #erf
             elif self.fusedoptype == "gelu_tanh":
                 logging.info(f"用例 id: {self.task_result.case_config.id} | 后处理 gelu_tanh")
-                out = torch_gelu(out, approximate='tanh') # tanh
-
+                out = torch_gelu(out, approximate='tanh') #tanh
+                logging.info(f"用例 id: {self.task_result.case_config.id} | after gelutanh")
+                
             return out.to(self.out_dtype)
 
         if self.device == "npu":
@@ -119,34 +119,36 @@ class AclnnFusedQuantMatmul(BaseApi):
         
         self.out_dtype = input_data.kwargs['out'].dtype
 
-
 @register("execute_aclnn_fused_quantmatmul")
 class PyAclnnFusedQuantMatmul(AclnnBaseApi):
     def init_by_input_data(self, input_data: InputDataset): 
         input_args = []  # 算子的入参列表
         output_packages = []  # 算子的出参数据包列表
-
-        transpose_x1 = input_data.kwargs.pop("transposeX1")
-        transpose_x2 = input_data.kwargs.pop("transposeX2")
-        input_data.kwargs.pop("isNz")
-        input_data.kwargs.pop("out")
-
-        if transpose_x1:
-            input_data.kwargs['x1'] = input_data.kwargs['x1'].transpose(-2, -1)
-
+        import torch_npu
+        # 处理int32pack
         x1 = input_data.kwargs['x1']
         if x1.dtype == torch.int32:
-            x1_npu = torch_npu.npu_convert_weight_to_int4pack(x1.contiguous().npu())
+            x1_npu = torch_npu.npu_convert_weight_to_int4pack(x1.npu())
             input_data.kwargs['x1'] = x1_npu
 
         x2 = input_data.kwargs['x2']
         if x2.dtype == torch.int32:
-            x2_npu = torch_npu.npu_convert_weight_to_int4pack(x2.contiguous().npu())
-            if transpose_x2:
-                x2_npu = x2_npu.transpose(-2, -1)
+            x2_npu = torch_npu.npu_convert_weight_to_int4pack(x2.npu())
             input_data.kwargs['x2'] = x2_npu
-        elif transpose_x2:
-            input_data.kwargs['x2'] = x2.transpose(-2, -1)
+
+        # 记录原始 storage shape, 兼容非连续 Tensor
+        self.ori_input_data = copy.deepcopy(input_data)
+
+        # 当用例要求为非连续 Tensor 时, 转置为非连续
+        if input_data.kwargs['transposeX1'] == 1:
+            input_data.kwargs['x1'] = input_data.kwargs['x1'].transpose(-1, -2)
+        if input_data.kwargs['transposeX2'] == 1:
+            input_data.kwargs['x2'] = input_data.kwargs['x2'].transpose(-1, -2)
+
+        input_data.kwargs.pop("isNz")
+        input_data.kwargs.pop("out")
+        input_data.kwargs.pop("transposeX1")
+        input_data.kwargs.pop("transposeX2")
 
         for i, arg in enumerate(input_data.args):
             data = self.backend.convert_input_data(arg, index=i)
@@ -168,8 +170,32 @@ class PyAclnnFusedQuantMatmul(AclnnBaseApi):
         if len(input_data.kwargs['bias'].shape) == 0:
             input_args[8] = TensorPtr()
         
-        input_args[9] = TensorPtr()
+        input_args[9] = TensorPtr() #x3
         input_args[11] = ctypes.c_long(0) # groupSize
             
         input_args.extend(output_packages)
         return input_args, output_packages
+    
+    def get_storage_shape(self, input_data: InputDataset, index=None, name=None):
+        if name is not None:
+            # 处理非连续 Tensor 数据 storage shape
+            return self.ori_input_data.kwargs[name].shape
+        else:
+            return None
+
+    def get_cpp_func_signature_type(self):
+        return ("aclnnStatus aclnnFusedQuantMatmulGetWorkspaceSize(const aclTensor *x1, \
+                                                                const aclTensor *x2, \
+                                                                const aclTensor *x1Scale, \
+                                                                const aclTensor *x2Scale, \
+                                                                const aclTensor *yScale, \
+                                                                const aclTensor *x1Offset, \
+                                                                const aclTensor *x2Offset, \
+                                                                const aclTensor *yOffset, \
+                                                                const aclTensor *bias, \
+                                                                const aclTensor *x3, \
+                                                                const char *fusedOpType, \
+                                                                int64_t groupSize, \
+                                                                const aclTensor *out, \
+                                                                uint64_t *workspaceSize, \
+                                                                aclOpExecutor **executor)")
