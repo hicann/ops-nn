@@ -93,14 +93,16 @@ public:
             this->ifFind = 0;
             this->topPNum = 0;
             uint32_t maxIndex{0};
-            float maxValue{0.0f};
+            float maxValue{FLOAT_MIN};
             params.softmaxLoopTime = this->softmaxLoopTime;
             params.softmaxLoopEleTail = this->softmaxLoopEleTail;
             params.softmaxLoopEleTailPad = this->softmaxLoopEleTailPad;
             const bool doTopKSample = (this->k > 0 && this->k <= AscendC::Std::min(this->rowLen, this->ksMAX));
             const bool doTopPSample = (fp32P > 0 && fp32P < TOPP_MAX);
+            noTopKPMinP = (!doTopKSample && !doTopPSample && !hasMinP);
             const bool doGuessTopK = !doTopKSample && doTopPSample;
             bool isInLocalTensor = false;
+            hasCopyOutLogits = false;
             
             if (doTopKSample || fp32P <= 0) {
                 kCount = this->k;
@@ -126,12 +128,20 @@ public:
                     maxValue = sampleLogitsLocal.GetValue(static_cast<uint32_t>(0));
                 } else if(!doTopPSample) {
                     // 从logitsGlobal copyin进来，cast完后，SoftMax一整行，存放在logitsGlobalUser里
-                    float rowMax{0};
+                    float rowMax{FLOAT_MIN};
                     float reduceSumMax{0};
                     GetRowMax(rowId, &rowMax, logitsGlobal); // 将cast后未做排序的logits存入logitsGlobalUser，更新rowMax
                     oriMaxValue = rowMax;
                     SoftMaxFstCompute(rowId, rowMax, &reduceSumMax, true); // 将exp(x - max)结果存储到logitsGlobalUser里，更新reduceSumMax
-                    SoftMaxFullCompute(rowId, reduceSumMax); // 将softmax结果存储到logitsGlobalUser里
+                    SoftMaxFullCompute(rowId, reduceSumMax, maxIndex); // 将softmax结果存储到logitsGlobalUser里
+                    if (noTopKPMinP && this->ifQSampleCompute) {
+                        LocalTensor<uint64_t> sampleIndexLocal = buf4.Get<uint64_t>();
+                        sampleIndexLocal.SetValue(0, maxIndex);
+                        SetWaitFlag<HardEvent::S_MTE3>(HardEvent::S_MTE3);
+                        DataCopyExtParams copyIndexOutParams{1, (uint32_t)sizeof(uint64_t), 0, 0, 0};
+                        DataCopyPad(dstIndexGlobal[rowId], sampleIndexLocal, copyIndexOutParams);
+                        continue;
+                    }
                 } else {
                     LogitsCast(rowId);
                 }
@@ -191,7 +201,7 @@ public:
                     params.rowLen = this->rowLen;
                     params.rowId = rowId;
 
-                    float rowMax{0};
+                    float rowMax{FLOAT_MIN};
                     float reduceSumMax{0};
                     GetRowMax(rowId, &rowMax, logitsGlobal); // 将cast后未做排序的logits存入logitsGlobalUser，更新rowMax
                     oriMaxValue = rowMax;
@@ -245,7 +255,9 @@ public:
                     CopyOutLogits(rowId, this->topPNum);
                 } else {
                     // 根据srcIndexGlobalUser和toppnum，logitsGlobal cast成float后 copyout
-                    CopyOutLogitsGlobal(rowId, this->topPNum, srcIndexGlobalUser);
+                    if (!hasCopyOutLogits) {
+                        CopyOutLogitsGlobal(rowId, this->topPNum, srcIndexGlobalUser);
+                    }
                 }
             }
 
@@ -417,6 +429,10 @@ private:
                 SetWaitFlag<HardEvent::V_MTE3>(HardEvent::V_MTE3);
             }
             DataCopyPad(logitsGlobalUser[gmOffset], localValueCast, {1, (uint32_t)(countLen * SIZEOF_FP32), 0, 0, 0});
+            if (noTopKPMinP && this->isNeedLogits) {
+                DataCopyPad(dstLogitsGlobal[gmOffset], localValueCast, {1, (uint32_t)(countLen * SIZEOF_FP32), 0, 0, 0});
+                hasCopyOutLogits = true;
+            }
             gmOffset += innerCopyLen;
             SetWaitFlag<HardEvent::MTE3_MTE2>(HardEvent::MTE3_MTE2);
         }
@@ -586,6 +602,11 @@ private:
                 PipeBarrier<PIPE_V>();
             }
             GetRowMaxInner(valueLocalCast, reduceMaxMiddle, countLen, rowMax, logitsGlobalUser[gmOffset]);
+            if (noTopKPMinP && this->isNeedLogits) {
+                DataCopyPad(
+                    dstLogitsGlobal[gmOffset], valueLocalCast, {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0});
+                hasCopyOutLogits = true;
+            }
             SetFlag<HardEvent::MTE3_MTE2>(EVENT_ID0);
             WaitFlag<HardEvent::MTE3_MTE2>(EVENT_ID0);
         }
@@ -652,14 +673,16 @@ private:
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void SoftMaxFullCompute(uint32_t rowId, float reduceSumMax)
+    __aicore__ inline void SoftMaxFullCompute(uint32_t rowId, float reduceSumMax, uint32_t& maxIndextemp)
     {
         uint32_t innerCopyLen = INNER_LOOP_ELE;
         uint32_t countLen = INNER_LOOP_ELE;
         uint32_t startIndex = rowId * this->rowLen;
+        uint32_t indexOffset = 0;
+        float maxValueTemp{FLOAT_MIN};
 
         LocalTensor<float> localValueCast = buf3.Get<float>();
-
+        LocalTensor<float> sampleDistTemp = buf4.Get<float>();
         uint32_t gmOffset = startIndex;
 
         for (int32_t innerLoopCount = 0; innerLoopCount < this->innerLoopTime; ++innerLoopCount) {
@@ -669,9 +692,32 @@ private:
                 countLen = this->innerLoopEleTail;
             }
             SoftMaxSecCompute(localValueCast, reduceSumMax, gmOffset, innerCopyLen, countLen); // localValueCast存放归一化后的softmax值
-            SetWaitFlag<HardEvent::V_MTE3>(HardEvent::V_MTE3); // It should be ok to use SetWaitFlag for flows share the same EVENT_ID.
-            DataCopyPad(logitsGlobalUser[gmOffset], localValueCast, {1, static_cast<uint32_t>(countLen * SIZEOF_FP32), 0, 0,0});
-            SetWaitFlag<HardEvent::MTE3_MTE2>(HardEvent::MTE3_MTE2);
+            if (!(noTopKPMinP && this->ifQSampleCompute)) {
+                SetWaitFlag<HardEvent::V_MTE3>(HardEvent::V_MTE3); // It should be ok to use SetWaitFlag for flows share the same EVENT_ID.
+                DataCopyPad(logitsGlobalUser[gmOffset], localValueCast, {1, static_cast<uint32_t>(countLen * SIZEOF_FP32), 0, 0,0});
+                SetWaitFlag<HardEvent::MTE3_MTE2>(HardEvent::MTE3_MTE2);
+            } else{
+                DataCopy(sampleDistTemp, qGlobal[gmOffset], innerCopyLen);
+                SetWaitFlag<HardEvent::MTE2_V>(HardEvent::MTE2_V);
+                Abs(sampleDistTemp, sampleDistTemp, countLen);
+                PipeBarrier<PIPE_V>();
+                Adds(sampleDistTemp, sampleDistTemp, this->eps, countLen);
+                PipeBarrier<PIPE_V>();
+                Div(localValueCast, localValueCast, sampleDistTemp, countLen);
+                PipeBarrier<PIPE_V>();
+                ReduceMax(localValueCast, localValueCast, localValueCast, countLen, true);
+                PipeBarrier<PIPE_V>();
+                SetWaitFlag<HardEvent::V_S>(HardEvent::V_S);
+                float valueLocalFP = localValueCast.GetValue(0);
+                float indexLocalFP = localValueCast.GetValue(1);
+                auto tempIndex = *reinterpret_cast<uint32_t*>(&indexLocalFP);
+                if (valueLocalFP > maxValueTemp){
+                    maxIndextemp = indexOffset + tempIndex;
+                }
+                maxValueTemp = maxValueTemp > valueLocalFP ? maxValueTemp : valueLocalFP;
+                SetWaitFlag<HardEvent::S_MTE2>(HardEvent::S_MTE2);
+                indexOffset += countLen;
+            }
             // 将softmax结果存储到logitsGlobalUser里
             gmOffset += innerCopyLen;
         }
@@ -908,7 +954,7 @@ private:
         uint32_t gmOffset = startIndex;
         LocalTensor<float> localValueCast = buf2.Get<float>();
         LocalTensor<float> sampleDist = buf4.Get<float>();
-        float maxValue{0};
+        float maxValue{FLOAT_MIN};
         params.softmaxLoopTime = SafeCeil(this->topPNum, SOFTMAX_PER_LEN); //(params.toppNum + SOFTMAX_PER_LEN - 1) / SOFTMAX_PER_LEN;
         params.softmaxLoopEleTail = this->topPNum % SOFTMAX_PER_LEN;
         params.softmaxLoopEleTailPad = (params.softmaxLoopEleTail + THIRTY_ONE) / THIRTY_TWO * THIRTY_TWO;
@@ -1142,6 +1188,8 @@ private:
     uint32_t inputIsLogits{0};
     bool isInputMinPs = false;
     uint32_t isNeedSampleResult{0};
+    bool hasCopyOutLogits = false;
+    bool noTopKPMinP = false;
 
     const float* FP32_NEG_INF_PTR = reinterpret_cast<const float*>(&FP32_NEG_INF_BITS);
     const float SEL_LOGITS_DEF_VAL = *FP32_NEG_INF_PTR;
