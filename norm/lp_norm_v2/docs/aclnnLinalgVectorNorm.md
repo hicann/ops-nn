@@ -250,6 +250,11 @@ aclnnStatus aclnnLinalgVectorNorm(
 
 - 确定性计算
   - aclnnLinalgVectorNorm默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
+
+- 确定性计算
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas 200I/500 A2 推理产品</term>、<term>Atlas 训练系列产品</term>：aclnnLinalgVectorNorm默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
+  - <term>Ascend 950PR/Ascend 950DT</term>：aclnnLinalgVectorNorm默认确定性实现。
+
 - 参数`self`、`dtype`、`out`支持的数据类型组合：
   
   | `self`数据类型 | `dtype`数据类型 | `out`数据类型 |

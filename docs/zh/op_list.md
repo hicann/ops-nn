@@ -3009,6 +3009,17 @@
   </tr>
   <tr>
     <td>norm</td>
+    <td><a href="../../norm/multi_add_rms_norm_dynamic_quant/README.md">multi_add_rms_norm_dynamic_quant</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>RmsNorm算子是大模型常用的归一化操作。DynamicQuant算子则是为输入张量进行对称动态量化的算子。MultiAddRmsNormDynamicQuant算子将RmsNorm前的n个Add算子和RmsNorm归一化输出给到的DynamicQuant算子融合起来，减少搬入搬出操作（n支持0到4）。
+    </td>
+  </tr>
+  <tr>
+    <td>norm</td>
     <td><a href="../../norm/quantize_add_layer_norm/README.md">quantize_add_layer_norm</a></td>
     <td>✓</td>
     <td>✓</td>
