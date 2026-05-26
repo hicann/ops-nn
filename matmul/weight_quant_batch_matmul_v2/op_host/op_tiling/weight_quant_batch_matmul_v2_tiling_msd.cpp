@@ -138,11 +138,11 @@ bool WeightQuantBatchMatmulV2Msd::IsCapable()
                 {matmulInfoPtr_->mSize, matmulInfoPtr_->kSize, matmulInfoPtr_->nSize, matmulInfoPtr_->hasBias,
                  matmulInfoPtr_->transA, matmulInfoPtr_->transB, 1});
             if (MSD_HIGH_PRECISION_LIST.find(shape) != MSD_HIGH_PRECISION_LIST.end()) {
-                OP_LOGI(opName_, "The case matched msd high precison");
+                OP_LOGI(opName_, "The case matched msd high precision");
                 highPrecision_ = true;
             }
         }
-        OP_LOGI(opName_, "Check msd fo perchannel succ");
+        OP_LOGI(opName_, "Check msd for perchannel succ");
     }
     if (matmulInfoPtr_->antiQuantType == QuantType::PER_GROUP) {
         OP_TILING_CHECK(
@@ -162,7 +162,7 @@ bool WeightQuantBatchMatmulV2Msd::IsCapable()
         // Expansion times of w4 is 3
         order_ = 3;
         splitKFlag_ = true;
-        OP_LOGI(opName_, "Check msd fo pergroup succ");
+        OP_LOGI(opName_, "Check msd for pergroup succ");
     }
     return true;
 }

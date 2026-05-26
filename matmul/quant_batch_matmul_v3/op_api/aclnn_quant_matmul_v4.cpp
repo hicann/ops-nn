@@ -248,7 +248,7 @@ static inline bool CheckDtypeValidOnOnlyL0c2outForA4W4(TupleTensor mandatoryTens
     }
 
     if (x1->GetDataType() != op::DataType::DT_INT4 || x2->GetDataType() != op::DataType::DT_INT4) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Iutput x1 x2 dtype should be INT4 in a4w4 scenario, actual dtype is %s %s.",
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input x1 x2 dtype should be INT4 in a4w4 scenario, actual dtype is %s %s.",
                 op::ToString(x1->GetDataType()).GetString(), op::ToString(x2->GetDataType()).GetString());
         return false;
     }
@@ -717,12 +717,12 @@ static inline bool CheckShapeInt4(const aclTensor *x1, const aclTensor *x2, bool
     std::tie(x1KDim, x1MDim, x2KDim, x2NDim) = GetX1X2DimValue(x1, x2, transposeX1, transposeX2);
     if (!IsAligned<int64_t>(x1KDim, INT4_NUMS_IN_INT8)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "x1_k should be a positive even number in a4w4/a8w4 senario, but now x1_k is %ld.", x1KDim);
+                "x1_k should be a positive even number in a4w4/a8w4 scenario, but now x1_k is %ld.", x1KDim);
         return false;
     }
     if (transposeX2 && !IsAligned<int64_t>(x2KDim, INT4_NUMS_IN_INT8)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "x2_k should be a positive even number when transposeX2 is true in a4w4 senario, but now x2_k is %ld.", x2KDim);
+                "x2_k should be a positive even number when transposeX2 is true in a4w4 scenario, but now x2_k is %ld.", x2KDim);
         return false;
     }
     if (isA8W4Int(x1, x2) && x1KDim > MAX_SHAPE_SIZE_A8W4_INT) {
@@ -732,12 +732,12 @@ static inline bool CheckShapeInt4(const aclTensor *x1, const aclTensor *x2, bool
     }
     if (!transposeX2 && !IsAligned<int64_t>(x2NDim, INT4_NUMS_IN_INT8)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "x2_n should be a positive even number when transposeX2 is false in a4w4 senario, but now x2_n is %ld.", x2NDim);
+                "x2_n should be a positive even number when transposeX2 is false in a4w4 scenario, but now x2_n is %ld.", x2NDim);
         return false;
     }
     if (transposeX1) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "TransposeX1 should be false in a4w4/a8w4 senario, but now is true.");
+                "TransposeX1 should be false in a4w4/a8w4 scenario, but now is true.");
         return false;
     }
     if (x2->GetViewShape().GetDimNum() != X2_FIXED_DIM_NUM_A4W4) {
@@ -1297,7 +1297,7 @@ static aclnnStatus CheckSupportSocVersion(bool isA4W4) {
                 break;
             default: {
                 OP_LOGE(ACLNN_ERR_RUNTIME_ERROR,
-                        "QuantBatchMatmul support for %s is not implemented in a4w4 senario.",
+                        "QuantBatchMatmul support for %s is not implemented in a4w4 scenario.",
                         op::ToString(socVersion).GetString());
                 return ACLNN_ERR_RUNTIME_ERROR;
             }
@@ -1310,7 +1310,7 @@ static aclnnStatus CheckSupportSocVersion(bool isA4W4) {
                 break;
             default: {
                 OP_LOGE(ACLNN_ERR_RUNTIME_ERROR,
-                        "QuantBatchMatmul support for %s is not implemented in a8w8 senario.",
+                        "QuantBatchMatmul support for %s is not implemented in a8w8 scenario.",
                         op::ToString(socVersion).GetString());
                 return ACLNN_ERR_RUNTIME_ERROR;
             }

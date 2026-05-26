@@ -904,26 +904,26 @@ bool QuantMatmulChecker::CheckShapeInt4() const
     if (!IsAligned<int64_t>(x1KDim_, INT4_NUMS_IN_INT8)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
                 "The size of x1's k dimension should be a positive even number \
-in a4w4 senario, but now it is %ld.", x1KDim_);
+in a4w4 scenario, but now it is %ld.", x1KDim_);
         return false;
     }
     if (transposeX2_ && !IsAligned<int64_t>(x2KDim_, INT4_NUMS_IN_INT8)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
                 "The size of x2's k dimension should be a positive even number \
-when transposeX2 is true in a4w4 senario, but now it is %ld.",
+when transposeX2 is true in a4w4 scenario, but now it is %ld.",
                 x2KDim_);
         return false;
     }
     if (!transposeX2_ && !IsAligned<int64_t>(x2NDim_, INT4_NUMS_IN_INT8)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
                 "The size of x2's n dimension should be a positive even number \
-when transposeX2 is false in a4w4 senario, but now it is %ld.",
+when transposeX2 is false in a4w4 scenario, but now it is %ld.",
                 x2NDim_);
         return false;
     }
     if (transposeX1_) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "TransposeX1 should be false in a4w4 senario, but now is true.");
+                "TransposeX1 should be false in a4w4 scenario, but now is true.");
         return false;
     }
     if (x2_->GetViewShape().GetDimNum() != X2_FIXED_DIM_NUM_A4W4) {
@@ -1276,7 +1276,7 @@ aclnnStatus QuantMatmulChecker::CheckDtypeOnlyL0c2ub() const
 {
     if (isA4W4_) {
         OP_LOGE(ACLNN_ERR_RUNTIME_ERROR,
-                "QuantBatchMatmul support for %s is not implemented in a4w4 senario.",
+                "QuantBatchMatmul support for %s is not implemented in a4w4 scenario.",
                 op::ToString(socVersion_).GetString());
     }
     if (x1Scale_ != nullptr) {
@@ -1475,7 +1475,7 @@ bool QuantMatmulChecker::CheckDoubleScaleAndFp8Hif8PertokenPerblock() const
     CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, OUT_NAME, out_, FP8_AND_HIF8_COMMON_OUT_TYPE_SUPPORT_LIST), false);
     if (IsPerblock(x1_, x2_, x1Scale_, x2Scale_)) {
         if (bias_ != nullptr) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input bias is unsupported in perblock scenarion.");
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input bias is unsupported in perblock scenario.");
             return false;
         }
     }

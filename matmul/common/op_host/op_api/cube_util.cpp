@@ -194,7 +194,7 @@ DataType CalcPromoteTypeCubemathtype(const DataType cubeTensorPromoteType, int8_
     // USE_FP16场景，如果promote type为bf16，提示不支持该选项
     if (cubeMathType == USE_FP16) {
         if (cubeTensorPromoteType == DataType::DT_BF16) {
-            OP_LOGW("The cubeMathType cann't be set to USE_FP16 when the dtype is BF16.");
+            OP_LOGW("The cubeMathType can't be set to USE_FP16 when the dtype is BF16.");
         }
         return DataType::DT_FLOAT16;
     }
@@ -332,7 +332,7 @@ DataType CalcPromoteTypeCubeMathTypeNew(const DataType cubeTensorPromoteType, in
     } else if (cubeMathType == USE_FP32_ADD) {
         return CalcForceGrpAccForFp32PromoteType(cubeTensorPromoteType);
     }
-    OP_LOGW("The cubeMathType: %d cann't be matched.", static_cast<int32_t>(cubeMathType));
+    OP_LOGW("The cubeMathType: %d can't be matched.", static_cast<int32_t>(cubeMathType));
     return cubeTensorPromoteType;
 }
 
@@ -342,10 +342,10 @@ bool NeedCubeGoHF32(const DataType cubeTensorPromoteType, int8_t cubeMathType)
     // USE_HF32场景，如果promoteType为BF16或FP16时，提示不支持该选项
     if (cubeMathType == USE_HF32) {
         if (cubeTensorPromoteType == DataType::DT_BF16) {
-            OP_LOGW("The cubeMathType cann't be set to USE_HF32 when the dtype is BF16.");
+            OP_LOGW("The cubeMathType can't be set to USE_HF32 when the dtype is BF16.");
         }
         if (cubeTensorPromoteType == DataType::DT_FLOAT16) {
-            OP_LOGW("The cubeMathType cann't be set to USE_HF32 when the dtype is FP16.");
+            OP_LOGW("The cubeMathType can't be set to USE_HF32 when the dtype is FP16.");
         }
     }
 

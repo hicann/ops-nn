@@ -304,7 +304,7 @@ int8_t QuantBatchMatmulV3TilingBase::CheckFusionBatchA(const gert::Shape& x1Shap
         if (IsMicroScaling()) {
             return 0;
         }
-        OP_LOGD(inputParams_.opName, "CheckFusionBatchA success, start fusion batch A to m dimendion.");
+        OP_LOGD(inputParams_.opName, "CheckFusionBatchA success, start fusion batch A to m dimension.");
         return OUTPUT_INFER_SUCCESS;
     }
     return 0;

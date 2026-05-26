@@ -546,7 +546,7 @@ bool WeightQuantBatchMatmulV2TilingAS::CheckWeightMicroscalingFp4Scene() const
 {
     if (matmulInfoPtr_->antiQuantScaleDtype == ge::DT_FLOAT8_E8M0 &&
         (matmulInfoPtr_->bDtype == ge::DT_FLOAT4_E2M1)) {
-        OP_LOGD(opName_, "current shape match microscaling fromats scene, bDtype is FP4.");
+        OP_LOGD(opName_, "current shape match microscaling formats scene, bDtype is FP4.");
         return true;
     }
     return false;

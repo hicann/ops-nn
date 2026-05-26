@@ -166,7 +166,7 @@ static bool CheckTensorDimAndSize(
          (selfShape.GetDim(0) != 1 || std::abs(alpha->ToFloat() - 0.0f) <= std::numeric_limits<float>::epsilon()))) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID,
-            "Input tensor shape not statisify, current shape : self [%s], mat [%s], vec [%s], out [%s].",
+            "Input tensor shape not satisfy, current shape : self [%s], mat [%s], vec [%s], out [%s].",
             op::ToString(selfShape).GetString(), op::ToString(matShape).GetString(), op::ToString(vecShape).GetString(),
             op::ToString(outShape).GetString());
         return false;

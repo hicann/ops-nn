@@ -70,7 +70,7 @@ ge::graphStatus InferShapeForFusedMatMul(InferShapeContext* context)
     ge::DataType dtype = tensor_a->GetDataType();
     OP_CHECK_IF(
         dtype == ge::DT_FLOAT && !(*enable_hf32),
-        CUBE_INNER_ERR_REPORT(op_name, "fusedmatmul is only supported bf16/fp16/hf32, do not surrport fp32."),
+        CUBE_INNER_ERR_REPORT(op_name, "fusedmatmul is only supported bf16/fp16/hf32, do not support fp32."),
         return ge::GRAPH_FAILED);
     // OpType合法性校验
     OP_CHECK_IF(

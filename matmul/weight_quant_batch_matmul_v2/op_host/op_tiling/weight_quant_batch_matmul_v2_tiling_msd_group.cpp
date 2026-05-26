@@ -79,12 +79,12 @@ bool WeightQuantBatchMatmulV2TilingMsdGroup::IsCapable()
     if (matmulInfoPtr_->bDtype == ge::DT_INT4) {
         OP_TILING_CHECK(
             matmulInfoPtr_->groupSize != 64 && matmulInfoPtr_->groupSize != 128,
-            OP_LOGI(opName_, "GroupSize support 64 or 128 for W4, bu is [%lu]", matmulInfoPtr_->groupSize),
+            OP_LOGI(opName_, "GroupSize support 64 or 128 for W4, but is [%lu]", matmulInfoPtr_->groupSize),
             return false);
     } else {
         OP_TILING_CHECK(
             matmulInfoPtr_->groupSize != 64,
-            OP_LOGI(opName_, "GroupSize support 64 for W8, bu is [%lu]", matmulInfoPtr_->groupSize), return false);
+            OP_LOGI(opName_, "GroupSize support 64 for W8, but is [%lu]", matmulInfoPtr_->groupSize), return false);
     }
     // 防止N方向分的核数超过aicNum_   2048:N方向cube上切分SingleCoreN固定为2048
     uint64_t maxNSize = compileInfoPtr_->aicNum * 2048UL;

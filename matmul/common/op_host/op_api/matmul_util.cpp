@@ -1255,7 +1255,7 @@ const aclTensor* ExecMmOpWithBias(
     bool needFoldBatch = false;
     // 校验非连续Slice场景shape
     if (isSelfSlice && !CheckNonContiguousShapeSupport(mmOpInfo)) {
-        OP_LOGI("Curruent shape is not supported for slice.");
+        OP_LOGI("Current shape is not supported for slice.");
         isSelfSlice = false;
         needFoldBatch = true;
     }
@@ -1403,7 +1403,7 @@ const aclTensor* MatmulCommonProcess(
     bool needFoldBatch = false;
     // 校验非连续Slice场景shape
     if (isSelfSlice && !CheckNonContiguousShapeSupport(mmOpInfo)) {
-        OP_LOGI("Curruent shape is not supported for slice.");
+        OP_LOGI("Current shape is not supported for slice.");
         isSelfSlice = false;
         needFoldBatch = true;
     }
@@ -1680,8 +1680,8 @@ bool CheckGemmV3Support(
 const aclTensor* ExecGemmV3Op(
     const aclTensor* self, const aclTensor* mat2, const aclTensor* c, MmOpInfo& mmOpInfo, aclOpExecutor* executor)
 {
-    OP_LOGD("Format of self orign is [%s].", op::ToString(self->GetStorageShape()).GetString());
-    OP_LOGD("Format of mat2 orign is [%s].", op::ToString(mat2->GetStorageShape()).GetString());
+    OP_LOGD("Format of self origin is [%s].", op::ToString(self->GetStorageShape()).GetString());
+    OP_LOGD("Format of mat2 origin is [%s].", op::ToString(mat2->GetStorageShape()).GetString());
     // gemmv3只处理ND格式，reformat全部转成ND
     self = l0op::ReFormat(self, op::Format::FORMAT_ND);
     CHECK_RET(self != nullptr, nullptr);
@@ -1933,7 +1933,7 @@ bool IsNdToNzOnTheFly(const aclTensor* self, const aclTensor* mat2)
         // too small tensor size
         return true;
     }
-    OP_LOGD("Check IsNdToNzOnTheFly, if k=1 scenerio then remains ND.");
+    OP_LOGD("Check IsNdToNzOnTheFly, if k=1 scenario then remains ND.");
     if (kAxis == kAxisLengthOne) {
         return true;
     }

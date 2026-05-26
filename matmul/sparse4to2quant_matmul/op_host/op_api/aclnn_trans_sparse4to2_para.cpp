@@ -155,7 +155,7 @@ bool SetOneBlockDense(
         sparseWeightBlock.push_back(0);
     }
     if (!ProcessWeightBlock(sparseWeightBlock, compressedWeightBlock, weightIndexBlock)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Data of weight not satisfy 50%% spatsity rate.");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Data of weight not satisfy 50%% sparsity rate.");
         return false;
     }
     for (uint64_t i = 0; i < SPARSE_INDEX_MULTI; i++) {

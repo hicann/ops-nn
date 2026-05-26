@@ -169,7 +169,7 @@ public:
     {
         auto tilingCases = MMTilingRegistry::GetInstance().RegisterOp(opType_, npuArch);
         OPS_ERR_IF(tilingCases == nullptr,
-            OPS_REPORT_VECTOR_INNER_ERR(opType_, "Register op tiling failed, please the op name."), return *this);
+            OPS_REPORT_VECTOR_INNER_ERR(opType_, "Register op tiling failed, please check the op name."), return *this);
         tilingCases->AddTiling<T>(priority);
         return *this;
     }

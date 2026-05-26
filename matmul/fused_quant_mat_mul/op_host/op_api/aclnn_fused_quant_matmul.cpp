@@ -173,7 +173,7 @@ bool CheckInputDtypeValid(const aclTensor *&x1, const aclTensor *&x2)
     bool isA8W8 = x1->GetDataType() == DataType::DT_INT8 && x2->GetDataType() == DataType::DT_INT8;
     bool isA4W4 = x1->GetDataType() == DataType::DT_INT4 && x2->GetDataType() == DataType::DT_INT4;
     if (!isA8W8 && !isA4W4) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "aclnnfusedQuantMatmul only support A8W8/A4W4 senario, but got x1: %s \
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "aclnnfusedQuantMatmul only support A8W8/A4W4 scenario, but got x1: %s \
         x2: %s", op::ToString(x1->GetDataType()).GetString(), op::ToString(x2->GetDataType()).GetString());
         return false;
     }

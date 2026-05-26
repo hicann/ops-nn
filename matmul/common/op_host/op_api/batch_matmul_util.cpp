@@ -501,7 +501,7 @@ bool CheckTransNonContiguousShapeSupport(const aclTensor* self, const aclTensor*
             iterBatchL1);                                              // calculate one of the core load max batch
         double balanceRateOfBatch = avgIterBatch / actualMaxIterBatch; // calculate fb rate of batch
         if (balanceRateOfBatch < defaultBalanceOfBatch) {              // balance of batch lower than 0.8
-            OP_LOGI("FormulteBalanceRate lower than 0.8, unable to enter in bmm iterbatch module.");
+            OP_LOGI("FormulateBalanceRate lower than 0.8, unable to enter in bmm iterbatch module.");
             return false;
         }
     }

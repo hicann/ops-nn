@@ -177,7 +177,7 @@ bool BatchMatMulV3IterBatchBasicApiTiling::IsCapable()
                                     compileInfo_.aicNum) * iterBatchL1_); // calculate one of the core load max batch
         double balanceRateOfBatch = avgIterBatch / actualMaxIterBatch; // calculate fb rate of batch
         if (balanceRateOfBatch < defaultBalanceOfBatch) { // balance of batch lower than 0.8
-            OP_LOGI(args_.opName, "FormulteBalanceRate lower than 0.8, unable to enter in bmm iterbatch module");
+            OP_LOGI(args_.opName, "FormulateBalanceRate lower than 0.8, unable to enter in bmm iterbatch module");
             return false;
         }
     }

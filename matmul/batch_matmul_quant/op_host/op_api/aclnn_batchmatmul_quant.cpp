@@ -167,7 +167,7 @@ static aclnnStatus PreInputProcess(const aclTensor* inputTensor, aclOpExecutor* 
         inputTensor = l0op::Contiguous(inputTensor, executor);
         OP_CHECK(
             inputTensor != nullptr,
-            OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input perprocess failed, contiguouse return nullptr."),
+            OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input perprocess failed, contiguous return nullptr."),
             return ACLNN_ERR_INNER_NULLPTR);
         inputTensor = l0op::ReFormat(inputTensor, op::Format::FORMAT_ND);
         OP_CHECK(
