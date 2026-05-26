@@ -2,36 +2,14 @@
 
 ## 产品支持情况
 
-<table>
-<tr>
-<th style="text-align:left">产品</th>
-<th style="text-align:center; width:100px">是否支持</th>
-</tr>
-<tr>
-<td><term>Ascend 950PR/Ascend 950DT </term></td>
-<td style="text-align:center">√</td>
-</tr>
-<tr>
-<td><term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term></td>
-<td style="text-align:center">×</td>
-</tr>
-<tr>
-<td><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term></td>
-<td style="text-align:center">×</td>
-</tr>
-<tr>
-<td><term>Atlas 200I/500 A2 推理产品</term></td>
-<td style="text-align:center">×</td>
-</tr>
-<tr>
-<td><term>Atlas 推理系列产品 </term></td>
-<td style="text-align:center">×</td>
-</tr>
-<tr>
-<td><term>Atlas 训练系列产品</term></td>
-<td style="text-align:center">×</td>
-</tr>
-</table>
+| 产品 | 是否支持 |
+| :----------------------------------------------------------- | :------: |
+| <term>Ascend 950PR/Ascend 950DT</term> | √ |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term> | × |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> | × |
+| <term>Atlas 200I/500 A2 推理产品</term> | × |
+| <term>Atlas 推理系列产品</term> | × |
+| <term>Atlas 训练系列产品</term> | × |
 
 ## 功能说明
 
@@ -45,8 +23,8 @@
 
   $$
     \text{out}(N_i, C_{\text{out}_j}) = \text{bias}(C_{\text{out}_j}) + \sum_{k = 0}^{C_{\text{in}} - 1} \text{filter}(C_{\text{out}_j}, k) \star \text{x}(N_i, k)\\
-    \text{y0}(N_i, C_{\text{out}_j}) = \text{out}(N_i, C_{\text{out}_j}) \times\text{scale0}(C_{\text{out}_j})\\
-    \text{y1}(N_i, C_{\text{out}_j}) = \text{out}(N_i, C_{\text{out}_j}) \times\text{scale1}(C_{\text{out}_j})   
+    \text{y0}(N_i, C_{\text{out}_j}) = \text{out}(N_i, C_{\text{out}_j}) \times \text{scale0}(C_{\text{out}_j})\\
+    \text{y1}(N_i, C_{\text{out}_j}) = \text{out}(N_i, C_{\text{out}_j}) \times \text{scale1}(C_{\text{out}_j})   
   $$
   如果启用relu，那么：
   $$
@@ -103,13 +81,13 @@
 <td>scale0</td>
 <td>可选输入</td>
 <td>输出0的量化参数 scale0。</td>
-<td>INT64，UINT64</td>
+<td>INT64、UINT64</td>
 <td>ND</td>
 </tr>
 <tr>
 <td>relu_weight0</td>
 <td>可选输入</td>
-<td>输出0对应的relu斜率参数relu_weight0。</td>
+<td>输出0对应的relu斜率参数 relu_weight0。</td>
 <td>FLOAT</td>
 <td>ND</td>
 </tr>
@@ -124,13 +102,13 @@
 <td>scale1</td>
 <td>可选输入</td>
 <td>输出1的量化参数 scale1。</td>
-<td>INT64，UINT64</td>
+<td>INT64、UINT64</td>
 <td>ND</td>
 </tr>
 <tr>
 <td>relu_weight1</td>
 <td>可选输入</td>
-<td>输出1对应的relu斜率参数relu_weight1。</td>
+<td>输出1对应的relu斜率参数 relu_weight1。</td>
 <td>FLOAT</td>
 <td>ND</td>
 </tr>
@@ -179,7 +157,7 @@
 <tr>
 <td>groups</td>
 <td>可选属性</td>
-<td>从输入通道到输出通道的块链接个数，必须满足 groups × filter 的 in_channels 维度 = x 的 in_channels 维度，以及filter的out_channels必须是groups的倍数。支持范围 [1, 65535]。</td>
+<td>从输入通道到输出通道的块链接个数，必须满足 groups × filter 的 in_channels 维度 = x 的 in_channels 维度，且 filter 的 out_channels 必须是 groups 的倍数。支持范围 [1, 65535]。</td>
 <td>INT32</td>
 <td>-</td>
 </tr>
@@ -207,7 +185,7 @@
 <tr>
 <td>pad_mode</td>
 <td>可选属性</td>
-<td>填充模式，支持 "SPECIFIC"、"SAME"、"VALID"、"SAME_UPPER", "SAME_LOWER"。</td>
+<td>填充模式，支持 "SPECIFIC"、"SAME"、"VALID"、"SAME_UPPER"、"SAME_LOWER"。</td>
 <td>STRING</td>
 <td>-</td>
 </tr>
@@ -242,14 +220,14 @@
 <tr>
 <td>dtype0</td>
 <td>可选属性</td>
-<td>表示输出 y0 的数据类型。支持的列表包括 [-1(默认)，0(FLOAT)，1(FLOAT16)，2(INT8)，27(BFLOAT16)， 34(HIFLOAT8), 36(FLOAT8_E4M3FN)]。</td>
+<td>表示输出 y0 的数据类型。支持的列表包括 [-1(默认)，0(FLOAT)，1(FLOAT16)，2(INT8)，27(BFLOAT16)， 34(HIFLOAT8)，36(FLOAT8_E4M3FN)]。</td>
 <td>BOOL</td>
 <td>-</td>
 </tr>
 <tr>
 <td>dtype1</td>
 <td>可选属性</td>
-<td>表示输出 y1 的数据类型。支持的列表包括 [-1(默认)，0(FLOAT)，1(FLOAT16)，2(INT8)，27(BFLOAT16)， 34(HIFLOAT8), 36(FLOAT8_E4M3FN)]</td>
+<td>表示输出 y1 的数据类型。支持的列表包括 [-1(默认)，0(FLOAT)，1(FLOAT16)，2(INT8)，27(BFLOAT16)， 34(HIFLOAT8), 36(FLOAT8_E4M3FN)]。</td>
 <td>BOOL</td>
 <td>-</td>
 </tr>
@@ -257,10 +235,10 @@
 
 ## 约束说明
 
-- Ascend 950PR/Ascend 950DT ：
+- Ascend 950PR/Ascend 950DT：
   - `x` 的数据类型必须与 `filter` 一致。`N` 维度大小应该大于等于 0。`H`、`W` 维度大小应该大于等于 0（等于 0 的场景仅在输出 `y` 的 `H`、`W` 维度也等于 0 时支持）。`C` 维度大小应该大于等于 0（等于 0 的场景仅在输出 `y` 的任意维度也等于 0 时支持）。
   - 对于 `filter` 输入，`H`、`W` 的大小应该在 [1, 511] 的范围内。`N` 维度大小应该大于等于 0（等于 0 的场景仅在 `bias`、`output` 的 `N` 维度也等于 0 时支持），`C` 维度大小的支持情况与输入 `x` 的 `C` 维度一致。
-  - `bias`和`scale`维度大小应该与`filter`的`N`维度大小一致。
+  - `bias` 和 `scale`维度大小应该与 `filter` 的 `N` 维度大小一致。
 
   <table>
   <tr>
@@ -268,8 +246,8 @@
   <th style="text-align:center; width:150px">x</th>
   <th style="text-align:center; width:150px">filter</th>
   <th style="text-align:center; width:100px">bias</th>
-   <th style="text-align:center; width:150px">scale0/1</th>
-   <th style="text-align:center; width:150px">clip_value0/1</th>
+  <th style="text-align:center; width:150px">scale0/1</th>
+  <th style="text-align:center; width:150px">clip_value0/1</th>
   <th style="text-align:center; width:150px">y0/1</th>
   </tr>
   <tr>
