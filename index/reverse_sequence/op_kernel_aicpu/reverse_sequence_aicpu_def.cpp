@@ -24,6 +24,7 @@ public:
         this->Output("y").ParamType(REQUIRED).DataType(data_types);
 
         ApplyNnAicpuDefaultCfg(*this);
+        this->AICPU().ExtendCfgInfo(OP_INFO_OPS_FLAG.c_str(), OPEN_OPS_FLAG.c_str());
     }
 };
 
