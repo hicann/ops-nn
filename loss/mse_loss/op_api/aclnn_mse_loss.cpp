@@ -29,7 +29,7 @@
 #include "opdev/shape_utils.h"
 #include "opdev/tensor_view_utils.h"
 #include "opdev/platform.h"
-#include "op_api/level2_base_loss.h"
+#include "loss/common/level2_base_loss.h"
 
 using namespace op;
 #ifdef __cplusplus

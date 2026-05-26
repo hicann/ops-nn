@@ -23,7 +23,7 @@
 #include "opdev/tensor_view_utils.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "op_api/op_api_def.h"
-#include "op_api/level2_base_loss.h"
+#include "loss/common/level2_base_loss.h"
 
 using namespace op;
 #ifdef __cplusplus
