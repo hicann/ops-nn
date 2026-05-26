@@ -9,11 +9,11 @@
  */
 
 /*!
- * \file conv3d_backprop_filter_v2_basic_block_tiling.cpp
+ * \file conv3d_backprop_filter_v2_basic_block_tiling_arch35.cpp
  * \brief
  */
 
-#include "conv3d_backprop_filter_v2_basic_block_tiling.h"
+#include "conv3d_backprop_filter_v2_basic_block_tiling_arch35.h"
 #include <map>
 #include <numeric>
 #include <util/math_util.h>
@@ -21,8 +21,8 @@
 #include <platform/soc_spec.h>
 #include "error_util.h"
 #include "op_host/tiling_templates_registry.h"
-#include "common/op_host/op_tiling/platform_util.h"
-#include "common/op_host/op_tiling/math_util.h"
+#include "common/op_host/op_tiling/conv_platform_util.h"
+#include "common/op_host/op_tiling/conv_math_util.h"
 #include "conv/conv3d_backprop_filter_v2/op_kernel/arch35/conv3d_backprop_filter_v2/conv3d_backprop_filter_v2_tiling_data.h"
 #include "conv/conv3d_backprop_filter_v2/op_kernel/arch35/conv3d_backprop_filter_v2/conv3d_backprop_filter_v2_tiling_key.h"
 #include "conv/common/op_host/op_tiling/convbp_tiling_debug_util.h"

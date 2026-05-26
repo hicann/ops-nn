@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file math_util.h
+ * \file conv_math_util.h
  * \brief
  */
 #pragma once

@@ -25,7 +25,7 @@
 #include "kernel_run_context_facker.h"
 #include "register/op_impl_registry.h"
 #include "test_cube_util.h"
-#include "../../../../common/op_host/op_tiling/platform_util.h"
+#include "../../../../common/op_host/op_tiling/conv_platform_util.h"
 
 using namespace std;
 using namespace ge;

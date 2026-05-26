@@ -9,14 +9,14 @@
  */
 
 /*!
- * \file math_util.cc
+ * \file conv_math_util.cc
  * \brief function of math_util
  */
 
 #include <algorithm>
 #include <cmath>
 #include <numeric>
-#include "math_util.h"
+#include "conv_math_util.h"
 
 namespace Ops {
 namespace NN {

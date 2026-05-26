@@ -9,13 +9,13 @@
  */
 
 /*!
- * \file conv_bp_sub_func.h
+ * \file conv_bp_filter_sub_func.h
  * \brief
  */
 
 #ifndef CONV3D_BP_FILTER_SUB_FUNC_H
 #define CONV3D_BP_FILTER_SUB_FUNC_H
-#include "conv_bp_sub_func_load_gm_to_l1.h"
+#include "conv_bp_filter_sub_func_load_gm_to_l1.h"
 #include "conv_bp_sub_func_deterministic_common.h"
 
 namespace ConvolutionBackpropFunc {

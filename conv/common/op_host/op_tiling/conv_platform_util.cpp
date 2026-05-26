@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file platform_util.cc
+ * \file conv_platform_util.cc
  * \brief function of platform_util
  */
 
@@ -17,7 +17,7 @@
 #include <cmath>
 #include "platform/platform_info.h"
 #include "log/log.h"
-#include "platform_util.h"
+#include "conv_platform_util.h"
 
 namespace Ops {
 namespace NN {

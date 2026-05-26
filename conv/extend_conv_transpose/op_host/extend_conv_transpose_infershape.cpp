@@ -17,7 +17,7 @@
 #include <graph/utils/type_utils.h>
 #include "error_util.h"
 #include "conv/common/op_host/conv_backprop_infershape.h"
-#include "conv/common/op_host/cube_util.h"
+#include "conv/common/op_host/conv_common_cube_util.h"
 
 using namespace std;
 

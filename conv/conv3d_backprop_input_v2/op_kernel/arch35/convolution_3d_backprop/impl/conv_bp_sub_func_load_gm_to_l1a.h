@@ -17,7 +17,7 @@
 #define CONV3D_BP_INPUT_SUB_FUNC_LOAD_GM_TO_L1A_ADVANCE_H
 
 #include "conv_bp_sub_func_mix.h"
-#include "conv_bp_sub_func_load_gm_to_l1.h"
+#include "conv_bp_input_sub_func_load_gm_to_l1.h"
 
 using AscendC::DivCeil;
 using AscendC::GlobalTensor;

@@ -12,7 +12,7 @@
  * \file conv_common_infer.cpp
  * \brief
  */
-#include "cube_util.h"
+#include "conv_common_cube_util.h"
 #include "util/shape_util.h"
 #include "error_util.h"
 #include "graph/utils/type_utils.h"

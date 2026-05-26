@@ -9,11 +9,11 @@
  */
 
 /*!
- * \file cube_util.h
+ * \file conv_common_cube_util.h
  * \brief
  */
-#ifndef OPS_CONV_OP_PROTO_CUBE_UTIL_H_
-#define OPS_CONV_OP_PROTO_CUBE_UTIL_H_
+#ifndef OPS_CONV_OP_PROTO_CONV_COMMON_CUBE_UTIL_H_
+#define OPS_CONV_OP_PROTO_CONV_COMMON_CUBE_UTIL_H_
 
 #include "error_util.h"
 #include "runtime/infer_shape_context.h"
@@ -156,4 +156,4 @@ inline bool IsUnknownRank(const gert::Shape* check_shape) {
 }  // namespace NN
 }  // namespace Ops
 
-#endif // OPS_CONV_OP_PROTO_CUBE_UTIL_H_
+#endif // OPS_CONV_OP_PROTO_CONV_COMMON_CUBE_UTIL_H_

@@ -19,7 +19,7 @@
 #include "conv3d_backprop_filter_v2_base_tiling.h"
 #include "../../../op_kernel/arch32/conv3d_backprop_filter_v2_tiling_data.h"
 #include "op_host/tiling_base.h"
-#include "conv/common/op_host/op_tiling/math_util.h"
+#include "conv/common/op_host/op_tiling/conv_math_util.h"
 
 namespace Ops {
 namespace NN {

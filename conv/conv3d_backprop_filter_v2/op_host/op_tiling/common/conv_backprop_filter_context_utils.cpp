@@ -15,10 +15,9 @@
 
 #include <log/log.h>
 #include <util/math_util.h>
-#include "conv/common/op_host/op_tiling/math_util.h"
-#include "conv/common/op_host/op_tiling/platform_util.h"
+#include "conv/common/op_host/op_tiling/conv_math_util.h"
+#include "conv/common/op_host/op_tiling/conv_platform_util.h"
 #include "conv_backprop_filter_context_utils.h"
-#include "conv/common/op_host/op_tiling/platform_util.h"
 
 namespace {
     constexpr size_t NCDHW_N_INDEX = 0;

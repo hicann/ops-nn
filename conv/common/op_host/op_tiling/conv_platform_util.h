@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file platform_util.h
+ * \file conv_platform_util.h
  * \brief
  */
 #pragma once

@@ -9,14 +9,14 @@
  */
 
 /*!
- * \file conv_bp_sub_func.h
+ * \file conv_bp_input_sub_func.h
  * \brief
  */
 
 #ifndef CONV3D_BP_INPUT_SUB_FUNC_ADVANCE_H
 #define CONV3D_BP_INPUT_SUB_FUNC_ADVANCE_H
 
-#include "conv_bp_sub_func_load_gm_to_l1.h"
+#include "conv_bp_input_sub_func_load_gm_to_l1.h"
 #include "conv_bp_sub_func_load_gm_to_l1a.h"
 
 using AscendC::DivCeil;

@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file conv_bp_sub_func_load_gm_to_l1.h
+ * \file conv_bp_filter_sub_func_load_gm_to_l1.h
  * \brief
  */
 

@@ -22,7 +22,7 @@
 #include <graph/utils/type_utils.h>
 #include "op_host/tiling_templates_registry.h"
 #include "op_host/tiling_key.h"
-#include "conv/common/op_host/op_tiling/platform_util.h"
+#include "conv/common/op_host/op_tiling/conv_platform_util.h"
 #include "conv/conv3d_backprop_input_v2/op_kernel/conv3d_backprop_input_v2_arch35_tiling_key.h"
 
 using Ops::NN::Optiling::RecursiveSum;

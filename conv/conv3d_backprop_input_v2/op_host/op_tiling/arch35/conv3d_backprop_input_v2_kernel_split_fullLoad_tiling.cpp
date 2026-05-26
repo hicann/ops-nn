@@ -20,7 +20,7 @@
 #include <register/op_impl_registry.h>
 #include <graph/utils/type_utils.h>
 #include "op_host/tiling_templates_registry.h"
-#include "conv/common/op_host/op_tiling/platform_util.h"
+#include "conv/common/op_host/op_tiling/conv_platform_util.h"
 #include "conv3d_backprop_input_v2_kernel_split_fullLoad_tiling.h"
 
 namespace Ops {

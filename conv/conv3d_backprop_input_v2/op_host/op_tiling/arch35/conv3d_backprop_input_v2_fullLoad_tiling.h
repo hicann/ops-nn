@@ -18,7 +18,7 @@
 #include <register/tilingdata_base.h>
 #include <tiling/tiling_api.h>
 #include "op_host/tiling_base.h"
-#include "conv3d_backprop_input_v2_base_tiling.h"
+#include "conv3d_backprop_input_v2_base_tiling_arch35.h"
 #include "conv3d_backprop_input_v2_inner_product_tiling.h"
 #include "conv3d_backprop_input_v2_common.h"
 

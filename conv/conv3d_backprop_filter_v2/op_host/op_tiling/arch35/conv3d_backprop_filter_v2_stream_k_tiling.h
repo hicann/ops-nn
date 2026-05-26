@@ -17,7 +17,7 @@
 
 #include <register/tilingdata_base.h>
 #include <tiling/tiling_api.h>
-#include "conv3d_backprop_filter_v2_basic_block_tiling.h"
+#include "conv3d_backprop_filter_v2_basic_block_tiling_arch35.h"
 #include "conv3d_backprop_filter_v2_common.h"
 
 namespace Ops {

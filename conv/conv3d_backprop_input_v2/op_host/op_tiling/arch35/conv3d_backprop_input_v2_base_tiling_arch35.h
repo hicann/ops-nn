@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file conv3d_backprop_input_v2_base_tiling.h
+ * \file conv3d_backprop_input_v2_base_tiling_arch35.h
  * \brief
  */
 #ifndef CONV3D_BACKPROP_INPUT_V2_TILING_ADVANCE_H

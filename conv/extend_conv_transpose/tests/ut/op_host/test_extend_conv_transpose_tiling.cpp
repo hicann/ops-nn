@@ -25,7 +25,7 @@
 #include "platform/platform_infos_def.h"
 #include "register/op_impl_registry.h"
 #include "kernel_run_context_facker.h"
-#include "../../../../common/op_host/op_tiling/platform_util.h"
+#include "../../../../common/op_host/op_tiling/conv_platform_util.h"
 #include "test_cube_util.h"
 
 #define SUCCESS 0

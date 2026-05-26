@@ -18,8 +18,8 @@
 #include <util/math_util.h>
 #include <unordered_set>
 #include "error_util.h"
-#include "conv/common/op_host/op_tiling/math_util.h"
-#include "conv/common/op_host/op_tiling/platform_util.h"
+#include "conv/common/op_host/op_tiling/conv_math_util.h"
+#include "conv/common/op_host/op_tiling/conv_platform_util.h"
 
 namespace Ops {
 namespace NN {
