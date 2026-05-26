@@ -265,13 +265,13 @@ protected:
     DynamicQuantTilingData tilingData_;
 
     /* variable */
-    uint32_t blockIdx, sizeFloatLen, sizeHalfLen, outAlignLen, multiRowNum;
-    uint32_t rowPerHeadCore, rowPerTailCore;
-    uint32_t lenHead, lenTail, lenMultiRow, lenGMMultiRow, outLen;
-    uint32_t outInt8PaddingLen, outInt4PaddingLen;
-    uint32_t outLenHead, outLenTail, originOutSize;
-    uint32_t loopCnt = 0;
-    uint32_t remainRow = 0;
+    uint64_t blockIdx, sizeFloatLen, sizeHalfLen, outAlignLen, multiRowNum;
+    uint64_t rowPerHeadCore, rowPerTailCore;
+    uint64_t lenHead, lenTail, lenMultiRow, lenGMMultiRow, outLen;
+    uint64_t outInt8PaddingLen, outInt4PaddingLen;
+    uint64_t outLenHead, outLenTail, originOutSize;
+    uint64_t loopCnt = 0;
+    uint64_t remainRow = 0;
     uint8_t rightPadding = 0;
     bool isPad = false;
     bool isAsymmetrical = false;
