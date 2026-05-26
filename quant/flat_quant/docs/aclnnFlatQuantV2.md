@@ -242,7 +242,7 @@ aclnnStatus aclnnFlatQuantV2(
       <td>quantScale（aclTensor*）</td>
       <td>输出</td>
       <td>输出的量化因子，对应公式中的quantScale。</td>
-      <td><ul><li>不支持空Tensor。</li><li>输出类型为INT4或INT32时，shape为[K]，K与x中K维一致。</li><li>输出类型为FLOAT8_E8M0时，shape为[K,ceilDiv(M*N,64),2]</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>量化输出类型为INT4或INT32时，shape为[K],K与x中K维度一致，类型为FLOAT32。</li><li>量化输出类型为float4_e2m1时，shape为[K,ceildiv(M*N,64),2]，类型为Float_e8m0。</li></ul></td>
       <td>FLOAT32、 FLOAT_E8M0</td>
       <td>ND</td>
       <td>1或3</td>
