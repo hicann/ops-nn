@@ -259,23 +259,23 @@ std::vector<PatternUniqPtr> AddLayerNormFusionPass::Patterns()
 {
     std::vector<PatternUniqPtr> pattern_graphs;
     // 传入所有情况的bool值
-    pattern_graphs.emplace_back(MakePatternForLayernorm(false,true,true));
-    pattern_graphs.emplace_back(MakePatternForLayernorm(false,true,false));
     pattern_graphs.emplace_back(MakePatternForLayernorm(false,false,true));
     pattern_graphs.emplace_back(MakePatternForLayernorm(false,false,false));
-    pattern_graphs.emplace_back(MakePatternForLayernorm(true,true,true));
-    pattern_graphs.emplace_back(MakePatternForLayernorm(true,true,false));
+    pattern_graphs.emplace_back(MakePatternForLayernorm(false,true,true));
+    pattern_graphs.emplace_back(MakePatternForLayernorm(false,true,false));
     pattern_graphs.emplace_back(MakePatternForLayernorm(true,false,true));
     pattern_graphs.emplace_back(MakePatternForLayernorm(true,false,false));
+    pattern_graphs.emplace_back(MakePatternForLayernorm(true,true,true));
+    pattern_graphs.emplace_back(MakePatternForLayernorm(true,true,false));
 
-    pattern_graphs.emplace_back(MakePatternForLayernormV3(false,true,true));
-    pattern_graphs.emplace_back(MakePatternForLayernormV3(false,true,false));
     pattern_graphs.emplace_back(MakePatternForLayernormV3(false,false,true));
     pattern_graphs.emplace_back(MakePatternForLayernormV3(false,false,false));
-    pattern_graphs.emplace_back(MakePatternForLayernormV3(true,true,true));
-    pattern_graphs.emplace_back(MakePatternForLayernormV3(true,true,false));
+    pattern_graphs.emplace_back(MakePatternForLayernormV3(false,true,true));
+    pattern_graphs.emplace_back(MakePatternForLayernormV3(false,true,false));
     pattern_graphs.emplace_back(MakePatternForLayernormV3(true,false,true));
     pattern_graphs.emplace_back(MakePatternForLayernormV3(true,false,false));
+    pattern_graphs.emplace_back(MakePatternForLayernormV3(true,true,true));
+    pattern_graphs.emplace_back(MakePatternForLayernormV3(true,true,false));
     return pattern_graphs;
 }
 
