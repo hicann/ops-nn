@@ -22,6 +22,7 @@
 extern "C" __global__ __aicore__ void ge_glu_grad_v2(
     GM_ADDR dy, GM_ADDR x, GM_ADDR g_gelu, GM_ADDR dx, GM_ADDR workspace, GM_ADDR tiling);
 
+namespace{
 std::string GetShapesString(const std::vector<std::vector<int64_t>>& shapeInfo)
 {
     std::string ret = "{";
@@ -51,6 +52,7 @@ int64_t GetShapeSize(const std::vector<std::vector<int64_t>>& shapeInfo, const s
         shapeSize *= shape;
     }
     return shapeSize;
+}
 }
 
 class ge_glu_grad_v2_test : public testing::Test {
