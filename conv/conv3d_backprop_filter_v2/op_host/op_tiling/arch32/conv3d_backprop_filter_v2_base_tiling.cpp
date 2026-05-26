@@ -403,14 +403,14 @@ void Conv3DBackpropFilterV2Tiling::InitCalTilingValue(TilingValueDw& tilingParam
         tilingParams.bl1Pbuffer = 1;
     }
 
-    // Temperary fix for current logic: When k cannot be fully loaded
+    // Temporary fix for current logic: When k cannot be fully loaded
     // into BL1, kIter / stepKb > bl1Pbuffer, the buffer in N direction
     // cannot be fully utilized. Thus stepN should be set to be 1. However,
     // this fix should be removed once different iteration direction is
     // allowed in kernel, e.g. Iterate K direction first then iterate M/N
     // direction. Also, the same problem may appear in AL1, but currently
     // it is too troublesome to find a testcase to hit the condition. As
-    // this is a temperary solution, we keep the fix for Bl1 only.
+    // this is a temporary solution, we keep the fix for Bl1 only.
     if (tilingParams.stepN > 1 && Ops::Base::CeilDiv(kIter, static_cast<uint64_t>(tilingParams.stepKb)) >
         tilingParams.bl1Pbuffer) {
         tilingParams.stepN = 1;

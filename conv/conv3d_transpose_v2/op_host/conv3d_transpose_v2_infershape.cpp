@@ -260,9 +260,9 @@ static bool GetConv3DTransposeOutputPadding(const gert::InferShapeContext* const
                                             size_t output_padding_length)
 {
     constexpr size_t output_padding_length_limit = 3;
-    OP_LOGE_IF(output_padding == nullptr, false, context->GetNodeName(), "utput_padding is nullptr");
+    OP_LOGE_IF(output_padding == nullptr, false, context->GetNodeName(), "output_padding is nullptr");
     OP_LOGE_IF(output_padding_length < output_padding_length_limit, false, context->GetNodeName(),
-              "output_padding_length is less 3");
+              "output_padding_length is less than 3");
     // 3: DHW
     const auto runtime_attrs = context->GetAttrs();
     OP_LOGE_IF(runtime_attrs == nullptr, false, context->GetNodeName(), "failed to get runtime attrs");

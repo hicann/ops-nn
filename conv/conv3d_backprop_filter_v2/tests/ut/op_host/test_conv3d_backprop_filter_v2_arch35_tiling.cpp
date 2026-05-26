@@ -297,7 +297,7 @@ Conv3DBpFilterV2TilingTestParam cases_params_950[] = {
     {1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0}, {1, 1, 1, 1, 1}, 6, "NDHWC", "VALID", 1,
     true, true, 32, 2, "1 720 720 120 120 1 16 16 1 16 16 1 1 1 6 6 1 1 1 0 0 0 0 0 0 1 1 1 16 2 2 2 2 2 128 128 128 16 16 16 1 1 2 2 0 32768 32768 0 1 1 128 16 16 0 32 128 128 256 1 0 128 0 1 0 "},
 
-     // groupEnlarge dose not allow to adjust baseBlock
+     // groupEnlarge does not allow to adjust baseBlock
     {"3DDW_group_enlarge_baseM80", "3510", "3510", COMPILE_INFO_STR_950,
      {17, 14, 1, 1, 240}, {17, 14, 1, 1, 240}, {78, 7, 1, 1, 1}, {78, 7, 1, 1, 1}, {17, 78, 1, 1, 240}, {17, 78, 1, 1, 240},
      ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, ge::DT_FLOAT16,

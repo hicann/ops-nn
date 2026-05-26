@@ -552,7 +552,7 @@ static aclnnStatus InputPreProcess(const aclTensor *&inputTensor, const string &
                                    aclOpExecutor *executor, bool c04Flag = false, bool transDataFlag = true) {
   // API输入预处理 l0ResultTensor -> l0op::Contiguous -> l0op::Cast -> l0op::TransData -> inputTensor
   inputTensor = l0op::Contiguous(inputTensor, executor);
-  OP_CHECK(inputTensor != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input perprocess failed, "
+  OP_CHECK(inputTensor != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input preprocess failed, "
           "%s with Contiguous return nullptr.", tensorName.c_str()), return ACLNN_ERR_INNER_NULLPTR);
   bool useFp16Input =
       (params.cubeMathType == USE_FP16 || (!IsInputSupportFp32Local() && params.cubeMathType == ALLOW_FP32_DOWN_PRECISION));
@@ -564,12 +564,12 @@ static aclnnStatus InputPreProcess(const aclTensor *&inputTensor, const string &
     } else {
       OP_LOGD("According to the configuration of cubeMathType, use Fp16 to calculation.");
       inputTensor = l0op::Cast(inputTensor, DataType::DT_FLOAT16, executor);
-      OP_CHECK(inputTensor != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input perprocess failed, "
+      OP_CHECK(inputTensor != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input preprocess failed, "
                "%s with Cast return nullptr.", tensorName.c_str()), return ACLNN_ERR_INNER_NULLPTR);
     }
   } else {
     inputTensor = l0op::Cast(inputTensor, promoteDtype, executor);
-    OP_CHECK(inputTensor != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input perprocess failed,"
+    OP_CHECK(inputTensor != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input preprocess failed,"
              " %s with Cast return nullptr.", tensorName.c_str()), return ACLNN_ERR_INNER_NULLPTR);
   }
   auto inputDim = inputTensor->GetViewShape().GetDimNum();
@@ -596,7 +596,7 @@ static aclnnStatus InputPreProcess(const aclTensor *&inputTensor, const string &
       inputTensor = l0op::TransData(inputTensor, Format::FORMAT_NC1HWC0, params.groups, executor);
     }
   }
-  OP_CHECK(inputTensor != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input perprocess failed, %s with TransData"
+  OP_CHECK(inputTensor != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The input preprocess failed, %s with TransData"
            " return nullptr.", tensorName.c_str()), return ACLNN_ERR_INNER_NULLPTR);
   return ACLNN_SUCCESS;
 }

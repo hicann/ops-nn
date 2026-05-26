@@ -1969,7 +1969,7 @@ static bool CheckBiasParams(gert::TilingContext *context, const OtherParams& oth
 
     int64_t biasCin = storageShape.GetDim(0);
     OP_CHECK_IF(biasCin != otherParams.c_shape.c,
-                OP_LOGE(op_name, "bias shape[0]=[%ld] should equal to dedx_cin=[%d]",
+                OP_LOGE(op_name, "bias shape[0]=[%ld] should be equal to dedx_cin=[%d]",
                         biasCin, otherParams.c_shape.c), return false);
 
     ge::DataType biasDtype = biasDesc->GetDataType();
