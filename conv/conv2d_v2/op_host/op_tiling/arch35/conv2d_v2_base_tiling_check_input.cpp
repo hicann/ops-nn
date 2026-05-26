@@ -456,7 +456,7 @@ ge::graphStatus Conv2dBaseTiling::CheckParamsDtypeWithBias(std::vector<std::vect
     OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeType(), "x, filter, bias, y",
         incorrectDtypes.c_str(),
         FormatString("The dtypes of these parameters support only the following combinations: %s",
-            VectorsToString(supportedTypesList, GeDtypeToString)).c_str());
+            VectorsToString(supportedTypesList, GeDtypeToString).c_str()).c_str());
     return ge::GRAPH_FAILED;
 }
 
