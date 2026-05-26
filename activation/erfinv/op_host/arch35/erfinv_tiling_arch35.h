@@ -15,8 +15,10 @@
 #ifndef OP_NN_ACTIVATION_ERFINV_OP_HOST_ARCH35_TILING_H
 #define OP_NN_ACTIVATION_ERFINV_OP_HOST_ARCH35_TILING_H
 
+#include <cstdint>
 #include "register/tilingdata_base.h"
 #include "register/op_impl_registry.h"
+#include "atvoss/elewise/elewise_base_struct.h"
 
 namespace optiling {
 using namespace Ops::Base;
@@ -29,8 +31,8 @@ public:
 protected:
     ge::graphStatus CalcOutputDtype();
     ge::graphStatus CalcInputDtype();
-    ge::graphStatus CheckShape();
-    ge::graphStatus SetTilingData();
+    ge::graphStatus CheckShape() const;
+    ge::graphStatus SetTilingData() const;
 
 private:
     EleBaseTilingDataV2* tiling = nullptr;

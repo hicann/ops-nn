@@ -31,10 +31,11 @@ const int64_t ASCEND_WORKSPACE = 16777216; // 16M
 const int64_t ASCEND_API_BUFFER = 122880;  // 120K
 const int64_t DCACHE_SIZE = 32768;
 
-ge::graphStatus ErfinvTiling::SetTilingData()
+ge::graphStatus ErfinvTiling::SetTilingData() const
 {
     OP_LOGD(tilingContext->GetNodeName(), "ErfinvTiling SetTilingData enter.");
     size_t* currentWorkspace = tilingContext->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, currentWorkspace);
     currentWorkspace[0] = ASCEND_WORKSPACE;
 
     const uint64_t tilingKey = GET_TPL_TILING_KEY(tiling->scheMode, dType);
@@ -45,7 +46,7 @@ ge::graphStatus ErfinvTiling::SetTilingData()
     uint64_t ubSize = 0;
     auto platformInfo = tilingContext->GetPlatformInfo();
     if (platformInfo == nullptr) {
-        auto compileInfoPtr = reinterpret_cast<const ElewiseCompileInfo*>(tilingContext->GetCompileInfo());
+        auto compileInfoPtr = tilingContext->GetCompileInfo<ElewiseCompileInfo>();
         OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE(tilingContext, "compile info is null"), return ge::GRAPH_FAILED);
         ubSize = compileInfoPtr->ubSize;
     } else {
@@ -74,7 +75,7 @@ ge::graphStatus ErfinvTiling::CalcInputDtype()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus ErfinvTiling::CheckShape()
+ge::graphStatus ErfinvTiling::CheckShape() const
 {
     OP_LOGD(tilingContext->GetNodeName(), "ErfinvTiling CheckShape enter.");
     auto inputStorageShape = tilingContext->GetInputShape(0);
@@ -147,7 +148,7 @@ ge::graphStatus ErfinvTiling::RunTiling()
 static ge::graphStatus Tiling4Erfinv(gert::TilingContext* tilingContextGen)
 {
     OP_LOGD(tilingContextGen->GetNodeName(), "Tiling4Erfinv rt2.0 is running.");
-    auto compileInfo = reinterpret_cast<const ElewiseCompileInfo*>(tilingContextGen->GetCompileInfo());
+    auto compileInfo = tilingContextGen->GetCompileInfo<ElewiseCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(tilingContextGen, compileInfo);
     ErfinvTiling baseOpTiling(tilingContextGen);
     return baseOpTiling.RunTiling();

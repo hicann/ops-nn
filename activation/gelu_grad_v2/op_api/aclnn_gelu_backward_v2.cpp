@@ -111,7 +111,7 @@ static aclnnStatus CheckParams(
 // getBroadcastShape for l0op::BroadcastTo
 static aclIntArray* GetShape(const op::Shape shapeBroadcast, aclOpExecutor* executor)
 {
-    int64_t tensorSize = (int64_t)(shapeBroadcast.GetDimNum());
+    int64_t tensorSize = static_cast<int64_t>(shapeBroadcast.GetDimNum());
     std::vector<int64_t> tensorShape(tensorSize);
     for (int i = 0; i < tensorSize; i++) {
         tensorShape[i] = shapeBroadcast[i];

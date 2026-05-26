@@ -138,8 +138,8 @@ ge::graphStatus DynamicMxQuantOptimzieTiling::SetCalcMode()
     } else if (tilingParam_.scaleAlg == NUM_ONE) {
         tilingParam_.calcMode = MODE_ONE;
     } else if (tilingParam_.scaleAlg == NUM_TWO) {
-        if (tilingParam_.dstTypeMax == NUM_ZERO || tilingParam_.dstTypeMax == NUM_SIX_FLOAT ||
-            tilingParam_.dstTypeMax == NUM_SEVEN_FLOAT) {
+        if (tilingParam_.dstTypeMax == NUM_ZERO || Ops::Base::IsFloatEqual(tilingParam_.dstTypeMax, NUM_SIX_FLOAT) ||
+            Ops::Base::IsFloatEqual(tilingParam_.dstTypeMax, NUM_SEVEN_FLOAT)) {
             tilingParam_.calcMode = MODE_TWO;
         } else {
             tilingParam_.calcMode = MODE_THREE;
@@ -150,7 +150,7 @@ ge::graphStatus DynamicMxQuantOptimzieTiling::SetCalcMode()
     }
 
     if (tilingParam_.calcMode == MODE_TWO) {
-        if (tilingParam_.dstTypeMax == NUM_ZERO || tilingParam_.dstTypeMax == NUM_SIX_FLOAT) {
+        if (tilingParam_.dstTypeMax == NUM_ZERO || Ops::Base::IsFloatEqual(tilingParam_.dstTypeMax, NUM_SIX_FLOAT)) {
             tilingParam_.subNumForScale = 0x000000c1;
         } else {
             tilingParam_.subNumForScale = 0x000000e1;

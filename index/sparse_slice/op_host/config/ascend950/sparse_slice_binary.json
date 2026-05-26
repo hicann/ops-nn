@@ -168,7 +168,7 @@
                     "format_match_mode": "FormatAgnostic"
                 },
                 {
-                    "name": "y_value",
+                    "name": "y_values",
                     "index": 1,
                     "dtype": "float16",
                     "format": "ND",
@@ -263,7 +263,7 @@
                     "format_match_mode": "FormatAgnostic"
                 },
                 {
-                    "name": "y_value",
+                    "name": "y_values",
                     "index": 1,
                     "dtype": "bfloat16",
                     "format": "ND",
@@ -358,7 +358,7 @@
                     "format_match_mode": "FormatAgnostic"
                 },
                 {
-                    "name": "y_value",
+                    "name": "y_values",
                     "index": 1,
                     "dtype": "uint8",
                     "format": "ND",
@@ -453,7 +453,7 @@
                     "format_match_mode": "FormatAgnostic"
                 },
                 {
-                    "name": "y_value",
+                    "name": "y_values",
                     "index": 1,
                     "dtype": "int8",
                     "format": "ND",
@@ -548,7 +548,7 @@
                     "format_match_mode": "FormatAgnostic"
                 },
                 {
-                    "name": "y_value",
+                    "name": "y_values",
                     "index": 1,
                     "dtype": "int16",
                     "format": "ND",
@@ -643,7 +643,7 @@
                     "format_match_mode": "FormatAgnostic"
                 },
                 {
-                    "name": "y_value",
+                    "name": "y_values",
                     "index": 1,
                     "dtype": "int32",
                     "format": "ND",
@@ -738,7 +738,7 @@
                     "format_match_mode": "FormatAgnostic"
                 },
                 {
-                    "name": "y_value",
+                    "name": "y_values",
                     "index": 1,
                     "dtype": "int64",
                     "format": "ND",
@@ -833,7 +833,7 @@
                     "format_match_mode": "FormatAgnostic"
                 },
                 {
-                    "name": "y_value",
+                    "name": "y_values",
                     "index": 1,
                     "dtype": "bool",
                     "format": "ND",
@@ -928,7 +928,7 @@
                     "format_match_mode": "FormatAgnostic"
                 },
                 {
-                    "name": "y_value",
+                    "name": "y_values",
                     "index": 1,
                     "dtype": "uint16",
                     "format": "ND",

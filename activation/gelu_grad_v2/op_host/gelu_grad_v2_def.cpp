@@ -13,41 +13,41 @@
  * \brief gelu_grad_v2 def
  */
 
- #include "register/op_def_registry.h"
+#include "register/op_def_registry.h"
 
- namespace ops {
- class GeluGradV2 : public OpDef {
- public:
-     explicit GeluGradV2(const char* name) : OpDef(name)
-     {
-         this->Input("dy")
-             .ParamType(REQUIRED)
-             .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
-             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-         this->Input("x")
-             .ParamType(REQUIRED)
-             .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
-             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-         this->Output("z")
-             .ParamType(REQUIRED)
-             .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
-             .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-             .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
-         this->Attr("approximate").AttrType(OPTIONAL).String("none");
-         
-         OpAICoreConfig aicoreConfig;
-         aicoreConfig.DynamicCompileStaticFlag(true)
-             .DynamicFormatFlag(false)
-             .DynamicRankSupportFlag(true)
-             .DynamicShapeSupportFlag(true)
-             .NeedCheckSupportFlag(false)
-             .PrecisionReduceFlag(true)
-             .ExtendCfgInfo("opFile.value", "gelu_grad_v2_apt");
-         this->AICore().AddConfig("ascend950", aicoreConfig);
-     }
- };
- 
- OP_ADD(GeluGradV2);
- }  // namespace ops
+namespace ops {
+class GeluGradV2 : public OpDef {
+public:
+    explicit GeluGradV2(const char* name) : OpDef(name)
+    {
+        this->Input("dy")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Input("x")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Output("z")
+            .ParamType(REQUIRED)
+            .DataType({ge::DT_BF16, ge::DT_FLOAT16, ge::DT_FLOAT})
+            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
+            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+        this->Attr("approximate").AttrType(OPTIONAL).String("none");
+
+        OpAICoreConfig aicoreConfig;
+        aicoreConfig.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(false)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .PrecisionReduceFlag(true)
+            .ExtendCfgInfo("opFile.value", "gelu_grad_v2_apt");
+        this->AICore().AddConfig("ascend950", aicoreConfig);
+    }
+};
+
+OP_ADD(GeluGradV2);
+} // namespace ops

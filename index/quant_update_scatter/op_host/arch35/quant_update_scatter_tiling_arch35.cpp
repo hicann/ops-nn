@@ -70,7 +70,7 @@ double QuantUpdateScatterRegbaseTiling::GetUpdateUbRatio(bool isLittleQuant) con
     return ratio;
 }
 
-bool QuantUpdateScatterRegbaseTiling::CheckRoundMode(ge::DataType type, string mode)
+bool QuantUpdateScatterRegbaseTiling::CheckRoundMode(ge::DataType type, string mode) const
 {
     auto it = DTYPE_ROUND_MODE_MAP.find(type);
     if (it == DTYPE_ROUND_MODE_MAP.end()) {
@@ -387,7 +387,7 @@ ge::graphStatus QuantUpdateScatterRegbaseTiling::PrepareTilingParams()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus QuantUpdateScatterRegbaseTiling::VerifyNullTenosr()
+ge::graphStatus QuantUpdateScatterRegbaseTiling::VerifyNullTenosr() const
 {
     OP_CHECK_IF(
         varOriginShape_.GetDimNum() != updateOriginShape_.GetDimNum(),
@@ -412,7 +412,7 @@ ge::graphStatus QuantUpdateScatterRegbaseTiling::VerifyNullTenosr()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus QuantUpdateScatterRegbaseTiling::VerifyParamsDtype()
+ge::graphStatus QuantUpdateScatterRegbaseTiling::VerifyParamsDtype() const
 {
     OP_CHECK_IF(
         INPUT_VAR_SUPPORT_DTYPE_SET.count(varDtype_) == 0,
@@ -568,7 +568,7 @@ ge::graphStatus QuantUpdateScatterRegbaseTiling::MergeDims()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus QuantUpdateScatterRegbaseTiling::VerifyTilingParams()
+ge::graphStatus QuantUpdateScatterRegbaseTiling::VerifyTilingParams() const
 {
     OP_CHECK_IF(
         updateOriginShape_[0] != indicesOriginShape_[0],

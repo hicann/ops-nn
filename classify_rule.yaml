@@ -1277,7 +1277,6 @@ norm-c@ops-nn:
         - ops/ops-nn/norm/sync_batch_norm_backward_reduce/
         - ops/ops-nn/norm/sync_batch_norm_gather_stats/
         - ops/ops-nn/norm/sync_batch_norm_gather_stats_with_counts/
-        - ops/ops-nn/norm/softmax_grad_ext/
         - ops/ops-nn/norm/group_norm_swish_grad/op_kernel/arch35/group_norm_swish_grad.h
         - ops/ops-nn/norm/group_norm_swish_grad/op_host/config/ascend950/group_norm_swish_grad_simplified_key.ini
         - ops/ops-nn/norm/group_norm_swish_grad/op_kernel/group_norm_swish_grad_apt.cpp
@@ -1703,6 +1702,7 @@ VC1@ops-nn:
         - ops/ops-nn/activation/sigmoid/
         - ops/ops-nn/activation/sigmoid_grad/
         - ops/ops-nn/activation/silu_grad/
+        - ops/ops-nn/activation/softmax_grad_ext/
         - ops/ops-nn/activation/swi_glu_grad/op_graph/
         - ops/ops-nn/activation/swi_glu_grad/op_host/config/ascend950/
         - ops/ops-nn/activation/swi_glu_grad/op_host/swi_glu_grad_def.cpp

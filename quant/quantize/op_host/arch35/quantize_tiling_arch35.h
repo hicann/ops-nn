@@ -49,7 +49,7 @@ protected:
     void CalcTiling();
     int64_t CalcMaxBaseLen(int64_t ubSize) const;
     int64_t CalcPerChannelMaxN(int64_t ubSize, int64_t base) const;
-    uint32_t GetCoreNumDoubleCut(int64_t shapeDim0, int64_t shapeDim1, int64_t coreNum);
+    uint32_t GetCoreNumDoubleCut(int64_t shapeDim0, int64_t shapeDim1, int64_t coreNum) const;
     void CalTilingKey();
     void WriteTilingData();
 

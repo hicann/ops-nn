@@ -145,7 +145,7 @@ private:
 
     int64_t NewAxis(int64_t axis) const;
     double GetUpdateUbRatio(bool isLittleQuant) const;
-    bool CheckRoundMode(ge::DataType type, std::string mode);
+    bool CheckRoundMode(ge::DataType type, std::string mode) const;
     std::string GetErrMsg(ge::DataType type) const;
     void CalcTilingDataForLargeBatchLargeQuant();
     void CalcTilingDataForLargeBatchLittleQuant();
@@ -156,11 +156,11 @@ private:
     void UpdateTilingParam();
     ge::graphStatus GetTilingParam();
     ge::graphStatus PrepareTilingParams();
-    ge::graphStatus VerifyNullTenosr();
-    ge::graphStatus VerifyParamsDtype();
+    ge::graphStatus VerifyNullTenosr() const;
+    ge::graphStatus VerifyParamsDtype() const;
     ge::graphStatus VerifyTilingQuantParams();
     ge::graphStatus MergeDims();
-    ge::graphStatus VerifyTilingParams();
+    ge::graphStatus VerifyTilingParams() const;
     void PrintDebugInfo();
 
 };

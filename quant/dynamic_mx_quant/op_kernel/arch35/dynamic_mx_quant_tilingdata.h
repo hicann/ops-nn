@@ -15,7 +15,6 @@
 
 #ifndef OPS_NN_DYNAMIC_MX_QUANT_H
 #define OPS_NN_DYNAMIC_MX_QUANT_H
-
 #include <cstdint>
 
 struct DynamicMxQuantTilingData {

@@ -16,7 +16,6 @@
 #ifndef AIR_CXX_RUNTIME_V2_OP_IMPL_DYNAMIC_MX_QUANT_H
 #define AIR_CXX_RUNTIME_V2_OP_IMPL_DYNAMIC_MX_QUANT_H
 #include <cstdint>
-#include <vector>
 #include <string>
 #include "register/op_def_registry.h"
 #include "register/tilingdata_base.h"
@@ -155,7 +154,7 @@ private:
     void CalcTilingKeyForTail();
     void CalcAxisSize(const gert::Shape& xShape);
     ge::graphStatus AutoTiling();
-    std::set<int64_t> FindSplitCombo(int64_t usedCoreNum);
+    std::set<int64_t> FindSplitCombo(int64_t usedCoreNum) const;
     ge::graphStatus SetTilingDataForTailAxis();
     void PrintTilingDataForTailAxis();
 

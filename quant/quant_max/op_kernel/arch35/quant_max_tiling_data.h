@@ -15,6 +15,7 @@
 
 #ifndef _QUANT_MAX_TILING_DATA_H_
 #define _QUANT_MAX_TILING_DATA_H_
+#include <cstdint>
 
 class QuantMaxTilingData {
 public:

@@ -519,7 +519,6 @@ std::unique_ptr<Graph> AscendQuantV2ScatterFusionPass::Replacement(const std::un
     auto quant_update_scatter = BuildQuantUpdateScatter(
         replaceGraphBuilder, inputs, hasOffset, reduce, axis);
     auto replaceGraph = replaceGraphBuilder.BuildAndReset({quant_update_scatter});
-
     // Infer shape
     if (InferShape(replaceGraph, subgraphInputs) != SUCCESS) {
         OPS_LOG_E(kPassName.c_str(), "InferShape for replacement failed.");

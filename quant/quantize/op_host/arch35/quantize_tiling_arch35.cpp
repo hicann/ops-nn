@@ -603,7 +603,7 @@ void Quantize::CalcPerHeadUBFactor(int64_t cacheLineNum)
     }
 }
 
-uint32_t Quantize::GetCoreNumDoubleCut(int64_t shapeDim0, int64_t shapeDim1, int64_t coreNum)
+uint32_t Quantize::GetCoreNumDoubleCut(int64_t shapeDim0, int64_t shapeDim1, int64_t coreNum) const
 {
     int64_t yCoreNum = coreNum / shapeDim0;
     if (yCoreNum == 0) {

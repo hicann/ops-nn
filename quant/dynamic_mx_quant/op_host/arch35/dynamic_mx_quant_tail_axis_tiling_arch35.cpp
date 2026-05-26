@@ -15,7 +15,6 @@
  */
 
 #include "dynamic_mx_quant_tiling_arch35.h"
-#include "../op_kernel/arch35/dynamic_mx_quant_tilingdata.h"
 #include <cmath>
 #include "platform/platform_info.h"
 
@@ -35,6 +34,7 @@ constexpr int64_t BYTES_OF_MAX_VALUE_TYPE = 2;
 constexpr int64_t BYTES_OF_SCALE_TYPE = 1;
 constexpr int64_t BYTES_OF_INVERSE_SCALE_TYPE = 2;
 constexpr int64_t DB_BUFFER = 2;
+constexpr float LOAD_BALANCE_THRESHOLD = 0.75; // 负载均衡的阈值
 
 ge::graphStatus DynamicMxQuantTailAxisTiling::SetTilingDataForTailAxis()
 {
@@ -84,10 +84,10 @@ void DynamicMxQuantTailAxisTiling::PrintTilingDataForTailAxis()
         tilingData_.invDstTypeMax);
 }
 
-std::set<int64_t> DynamicMxQuantTailAxisTiling::FindSplitCombo(int64_t usedCoreNum)
+std::set<int64_t> DynamicMxQuantTailAxisTiling::FindSplitCombo(int64_t usedCoreNum) const
 {
     std::set<int64_t> result;
-    int64_t upbound = std::ceil(std::sqrt(usedCoreNum) + 1);
+    int64_t upbound = static_cast<int64_t>(std::ceil(std::sqrt(usedCoreNum) + 1));
 
     for (int64_t m = 1; m < upbound; m++) {
         int64_t y = usedCoreNum / m;
@@ -180,7 +180,7 @@ ge::graphStatus DynamicMxQuantTailAxisTiling::DoTiling()
     CalcAxisSize(xShape);
 
     int64_t sliceSize = SLICE_SIZE_512;
-    if (tilingParam_.rowNum * Ops::Base::CeilDiv(tilingParam_.colNum, sliceSize) <= tilingParam_.totalCoreNum * 0.75) {
+    if (tilingParam_.rowNum * Ops::Base::CeilDiv(tilingParam_.colNum, sliceSize) <= tilingParam_.totalCoreNum * LOAD_BALANCE_THRESHOLD) {
         sliceSize = SLICE_SIZE_256;
     }
     tilingParam_.rowBlockLoopNum = Ops::Base::CeilDiv(tilingParam_.rowNum, DIGIT_ONE);
@@ -206,12 +206,12 @@ ge::graphStatus DynamicMxQuantTailAxisTiling::DoTiling()
     // maxUbBlockNum * DIGIT_EIGHT * (BYTES_OF_MAX_VALUE_TYPE + BYTES_OF_SCALE_TYPE * DB_BUFFER +
     // BYTES_OF_INVERSE_SCALE_TYPE)
     // <= ubSize
-    if (tilingParam_.dstType == 40 || tilingParam_.dstType == 41) { // Y FP4
+    if (tilingParam_.dstType == ge::DT_FLOAT4_E2M1 || tilingParam_.dstType == ge::DT_FLOAT4_E1M2) { // Y FP4
         tilingParam_.maxUbBlockNum =
             tilingParam_.ubSize /
             (SLICE_SIZE_256 * (BYTES_OF_INPUT_UINT16_DB_BUFFER_TYPE + BYTES_OF_OUTPUT_FP4_DB_BUFFER_TYPE) +
              DIGIT_EIGHT * (BYTES_OF_MAX_VALUE_TYPE + BYTES_OF_SCALE_TYPE * DB_BUFFER + BYTES_OF_INVERSE_SCALE_TYPE));
-    } else if (tilingParam_.dstType == 35 || tilingParam_.dstType == 36) { // Y FP8
+    } else if (tilingParam_.dstType == ge::DT_FLOAT8_E5M2 || tilingParam_.dstType == ge::DT_FLOAT8_E4M3FN) { // Y FP8
         tilingParam_.maxUbBlockNum =
             tilingParam_.ubSize /
             (SLICE_SIZE_256 * (BYTES_OF_INPUT_UINT16_DB_BUFFER_TYPE + BYTES_OF_OUTPUT_FP8_DB_BUFFER_TYPE) +

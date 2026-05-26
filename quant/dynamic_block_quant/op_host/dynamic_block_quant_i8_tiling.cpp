@@ -153,9 +153,10 @@ ge::graphStatus DynamicBlockQuantI8::GetAttr(DynamicBlockQuantTilingParam& tilin
 
     auto* attrDstTypeMax = attrs->GetAttrPointer<float>(INDEX_ATTR_DST_DTYPE_MAX);
     tilingParam.dstTypeMax = (attrDstTypeMax != nullptr) ? static_cast<float>(*attrDstTypeMax) : 0;
-    OP_CHECK_IF((tilingParam.dstTypeMax != 0.0),
-            OP_LOGE(context, "invalid dst_type_max: %f. dst_type_max only supported 0.0", tilingParam.dstTypeMax),
-            return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        !Ops::Base::IsFloatEqual(tilingParam.dstTypeMax, 0.0f),
+        OP_LOGE(context, "invalid dst_type_max: %f. dst_type_max only supported 0.0", tilingParam.dstTypeMax),
+        return ge::GRAPH_FAILED);
 
     return GetAttrBlock(tilingParam);
 }

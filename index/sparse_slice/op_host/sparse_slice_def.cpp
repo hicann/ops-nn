@@ -13,7 +13,6 @@
  * \brief sparse_slice
  */
 
-#include <cstdint>
 #include "register/op_def_registry.h"
 
 namespace ops {

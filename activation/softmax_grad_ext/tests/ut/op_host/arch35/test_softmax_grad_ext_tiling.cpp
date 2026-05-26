@@ -19,7 +19,7 @@
 #include <gtest/gtest.h>
 #include "log/log.h"
 #include "ut_op_util.h"
-#include "norm/softmax_grad_ext/op_host/arch35/softmax_grad_ext_tiling.h"
+#include "activation/softmax_grad_ext/op_host/arch35/softmax_grad_ext_tiling.h"
 #include "kernel_run_context_facker.h"
 #include "test_cube_util.h"
 #include "exe_graph/runtime/storage_format.h"

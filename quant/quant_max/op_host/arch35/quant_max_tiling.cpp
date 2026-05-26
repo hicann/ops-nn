@@ -249,7 +249,7 @@ ge::graphStatus QuantMaxRegbase::GetOpParam()
     OP_CHECK_NULL_WITH_CONTEXT(context_, amaxOutput);
     const gert::Shape& amaxOutputShape = Ops::Base::EnsureNotScalar(amaxOutput->GetStorageShape());
 
-    size_t xSizeNum = xInputShape.GetShapeSize();
+    int64_t xSizeNum = xInputShape.GetShapeSize();
     if (xSizeNum == 0ULL) {
         OP_LOGE(context_->GetNodeName(), "ascend_quant does not support empty tensor.");
         return ge::GRAPH_FAILED;

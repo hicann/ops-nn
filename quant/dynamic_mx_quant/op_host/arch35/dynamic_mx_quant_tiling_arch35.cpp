@@ -125,8 +125,7 @@ inline static ge::graphStatus DynamicMxQuantSetTilingData(
 inline static void PrintTilingData(const gert::TilingContext* context, DynamicMxQuantTilingData& tilingData)
 {
     OP_LOGI(
-        context->GetNodeName(),
-        "tilingData is totalCoreNum:%ld, usedCoreNum:%ld,  ubFactor:%ld, \
+        context->GetNodeName(), "tilingData is totalCoreNum:%ld, usedCoreNum:%ld,  ubFactor:%ld, \
         tailUbFactor:%ld, blockFactor:%ld, tailBlockFactor:%ld, uo:%ld, ubDim:%ld, dstType:%ld, blockSize:%ld, scaleAlg:%ld, \
         blockSizeNumInAxis:%ld, tailBlockSize:%ld, isPad:%ld, postAxisSize:%ld, tilingKey:%ld, calcMode: %ld, \
         subNumForScale: %d, subNumForFP16Scale: %d,dstTypeMax:%f, invDstTypeMax:%f.",
@@ -182,11 +181,12 @@ static ge::graphStatus GetAttr(const gert::TilingContext* context, DynamicMxQuan
     auto* attrDstType = attrs->GetAttrPointer<int64_t>(INDEX_ATTR_DST_DTYPE);
     OP_CHECK_NULL_WITH_CONTEXT(context, attrDstType);
     tilingParam.dstType = static_cast<int64_t>(*attrDstType);
-    int checkDstType = static_cast<int>(*attrDstType);
+    int64_t checkDstType = static_cast<int64_t>(*attrDstType);
     OP_CHECK_IF(
-        (yDtype == ge::DT_FLOAT4_E2M1 && checkDstType != 40) || (yDtype == ge::DT_FLOAT4_E1M2 && checkDstType != 41) ||
-            (yDtype == ge::DT_FLOAT8_E4M3FN && checkDstType != 36) ||
-            (yDtype == ge::DT_FLOAT8_E5M2 && checkDstType != 35),
+        (yDtype == ge::DT_FLOAT4_E2M1 && checkDstType != ge::DT_FLOAT4_E2M1) ||
+            (yDtype == ge::DT_FLOAT4_E1M2 && checkDstType != ge::DT_FLOAT4_E1M2) ||
+            (yDtype == ge::DT_FLOAT8_E4M3FN && checkDstType != ge::DT_FLOAT8_E4M3FN) ||
+            (yDtype == ge::DT_FLOAT8_E5M2 && checkDstType != ge::DT_FLOAT8_E5M2),
         OP_LOGE(
             context->GetNodeName(),
             "y's data type[%s] and dst_type[%d] is not corresponded, y's data type: "
@@ -246,7 +246,7 @@ static ge::graphStatus GetAttr(const gert::TilingContext* context, DynamicMxQuan
     OP_CHECK_NULL_WITH_CONTEXT(context, attrDstTypeMax);
     tilingParam.dstTypeMax = static_cast<float>(*attrDstTypeMax);
 
-    if (tilingParam.dstTypeMax != 0.0) {
+    if (!Ops::Base::IsFloatEqual(tilingParam.dstTypeMax, 0.0f)) {
         tilingParam.invDstTypeMax = 1.0 / tilingParam.dstTypeMax;
     } else {
         // 当dstTypeMax=0时，默认使用目标数据类型最大值，当前为FP4E2M1最大值6
@@ -395,8 +395,8 @@ static ge::graphStatus SetCalcMode(const gert::TilingContext* context, DynamicMx
     } else if (tilingParam.scaleAlg == NUM_ONE) {
         tilingParam.calcMode = MODE_ONE;
     } else if (tilingParam.scaleAlg == NUM_TWO) {
-        if (tilingParam.dstTypeMax == NUM_ZERO || tilingParam.dstTypeMax == NUM_SIX_FLOAT ||
-            tilingParam.dstTypeMax == NUM_SEVEN_FLOAT) {
+        if (tilingParam.dstTypeMax == NUM_ZERO || Ops::Base::IsFloatEqual(tilingParam.dstTypeMax, NUM_SIX_FLOAT) ||
+            Ops::Base::IsFloatEqual(tilingParam.dstTypeMax, NUM_SEVEN_FLOAT)) {
             tilingParam.calcMode = MODE_TWO;
         } else {
             tilingParam.calcMode = MODE_THREE;
@@ -407,7 +407,7 @@ static ge::graphStatus SetCalcMode(const gert::TilingContext* context, DynamicMx
     }
 
     if (tilingParam.calcMode == MODE_TWO) {
-        if (tilingParam.dstTypeMax == NUM_ZERO || tilingParam.dstTypeMax == NUM_SIX_FLOAT) {
+        if (tilingParam.dstTypeMax == NUM_ZERO || Ops::Base::IsFloatEqual(tilingParam.dstTypeMax, NUM_SIX_FLOAT)) {
             tilingParam.subNumForScale = 0x000000c1;
             tilingParam.subNumForFP16Scale = 0x00c00001;
         } else {
@@ -616,7 +616,7 @@ static bool IsOptForNotLastQuantAxis(const gert::TilingContext* context, const D
     return true;
 }
 
-static bool IsTailAxisAndBlockSize32(const gert::TilingContext* context, DynamicMxQuantTilingParam& tilingParam)
+static bool IsTailAxisAndBlockSize32(DynamicMxQuantTilingParam& tilingParam)
 {
     if (tilingParam.isTailAxis && tilingParam.isBlockSize32) {
         tilingParam.blockSize = ATTR_BLOCK_SIZE;
@@ -703,7 +703,7 @@ ge::graphStatus Tiling4DynamicMxQuant(gert::TilingContext* context)
         return regbaseTiling.DoTiling();
     }
 
-    bool IsTailAnd32 = IsTailAxisAndBlockSize32(context, tilingParam);
+    bool IsTailAnd32 = IsTailAxisAndBlockSize32(tilingParam);
     // 当量化轴是尾轴，且BlockSize为32时，进入尾轴负载均衡模板
     if (IsTailAnd32) {
         DynamicMxQuantTailAxisTiling tailAxisTiling(context, tilingParam);

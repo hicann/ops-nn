@@ -21,11 +21,11 @@
 using namespace AscendC;
 using namespace GeluGradV2Op;
 
-template <uint64_t schMode,uint64_t approximate>
-__global__ __aicore__ void gelu_grad_v2(GM_ADDR dy, GM_ADDR x, GM_ADDR z, GM_ADDR workspace, GM_ADDR tiling) {
-    
+template <uint64_t schMode, uint64_t approximate>
+__global__ __aicore__ void gelu_grad_v2(GM_ADDR dy, GM_ADDR x, GM_ADDR z, GM_ADDR workspace, GM_ADDR tiling)
+{
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
-    if constexpr(approximate == TPL_NONE) {
+    if constexpr (approximate == TPL_NONE) {
         if constexpr (IsSameType<DTYPE_DY, float32_t>::value) {
             using OpDag = GeluGradV2None32DAG<DTYPE_DY>::OpDag;
             BroadcastSch<schMode, OpDag> sch(tiling);
@@ -33,7 +33,7 @@ __global__ __aicore__ void gelu_grad_v2(GM_ADDR dy, GM_ADDR x, GM_ADDR z, GM_ADD
         } else {
             using OpDag = GeluGradV2None16DAG<DTYPE_DY>::OpDag;
             BroadcastSch<schMode, OpDag> sch(tiling);
-            sch.Process(dy, x, z);     
+            sch.Process(dy, x, z);
         }
     } else if (approximate == TPL_TANH) {
         using OpDag = GeluGradV2TanhDAG<DTYPE_DY>::OpDag;

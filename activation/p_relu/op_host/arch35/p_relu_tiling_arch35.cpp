@@ -154,7 +154,7 @@ ge::graphStatus Tiling4PRelu(gert::TilingContext* context)
         OP_LOGE("PreluTiling", "Tiling context is null");
         return ge::GRAPH_FAILED;
     }
-    auto compileInfo = reinterpret_cast<const BroadcastCompileInfo*>(context->GetCompileInfo());
+    auto compileInfo = context->GetCompileInfo<Ops::Base::BroadcastCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
     PreluTiling tiling(context);
     return tiling.DoTiling();
