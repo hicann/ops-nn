@@ -1105,7 +1105,7 @@ static bool CalRealG(gert::TilingContext *context, Conv3dBpInputV2RunInfo &runIn
         otherParams.multiple_extend * otherParams.b_shape.c, static_cast<int64_t>(kBlockSize));
     otherParams.co1g = Ops::Base::CeilDiv(
         otherParams.multiple_extend * otherParams.b_shape.batch / runInfoV2.groups,
-        otherParams.c_shape.c0);
+        otherParams.b_shape.c0);
 
     size_t filter_input_idx = static_cast<size_t>(FILTER_INDEX);
     size_t out_backprop_input_idx = static_cast<size_t>(OUT_BACKPROP_INDEX);
@@ -1126,7 +1126,7 @@ static bool CalRealG(gert::TilingContext *context, Conv3dBpInputV2RunInfo &runIn
       otherParams.multiple_extend = 1;
       runInfoV2.real_g = runInfoV2.groups;
       otherParams.ci1g = Ops::Base::CeilDiv(otherParams.b_shape.c, static_cast<int64_t>(kBlockSize));
-      otherParams.co1g = Ops::Base::CeilDiv(otherParams.b_shape.batch / runInfoV2.groups, otherParams.c_shape.c0);
+      otherParams.co1g = Ops::Base::CeilDiv(otherParams.b_shape.batch / runInfoV2.groups, otherParams.b_shape.c0);
     }
   }
 
