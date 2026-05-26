@@ -60,9 +60,18 @@ constexpr uint64_t FLOAT16_DTYPE_BYTES = 2;
 constexpr uint64_t EIGHT_BLOCK = 8;
 constexpr uint64_t SPLIT_COUNT = 2;
 constexpr uint64_t STEP_SIZE = 64;
+constexpr uint32_t BATCH_MODE = 1;
+constexpr uint64_t DATA_COPY_MAX_BLOCK_COUNT = 65535;
+constexpr uint64_t STAGE2_KAHAN_BUFFER_COUNT = 3;
 } // namespace
 
 namespace optiling {
+
+static bool IsArch3510(gert::TilingContext* tilingContext)
+{
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(tilingContext->GetPlatformInfo());
+    return ascendcPlatform.GetCurNpuArch() == NpuArch::DAV_3510;
+}
 
 class GroupNormSwishGradTiling
 {
@@ -224,8 +233,9 @@ ge::graphStatus GroupNormSwishGradTiling::ComputeAllocUBStage2(uint64_t coreBatc
         VECTOR_INNER_ERR_REPORT_TILIING(
             tilingContext->GetNodeName(), "Error:[ComputeAllocUBStage2] castEleNum is zero!"),
         return ge::GRAPH_FAILED);
-    tilingParams->coreBatchParts =
-        std::min(availableSpace / (tilingParams->castEleNum * FLOAT_DTYPE_BYTES), coreBatchCounts);
+    uint64_t coreBatchCapacity = availableSpace / (tilingParams->castEleNum * FLOAT_DTYPE_BYTES);
+    coreBatchCapacity = std::min(coreBatchCapacity, DATA_COPY_MAX_BLOCK_COUNT);
+    tilingParams->coreBatchParts = std::min(coreBatchCapacity, coreBatchCounts);
     OP_CHECK_IF(
         tilingParams->coreBatchParts == 0,
         VECTOR_INNER_ERR_REPORT_TILIING(
@@ -256,15 +266,23 @@ ge::graphStatus GroupNormSwishGradTiling::CalStage2TilingInfo(ge::DataType dtype
         usrWorkspaceSize = WORKSPACE_COPIES * tilingParams->workSpaceSize * FLOAT_DTYPE_BYTES;
         if (dtypeStrLocal == ge::DT_FLOAT) {
             // task ReduceSum
-            tilingParams->castEleNum =
+            uint64_t preferredCastEleNum =
                 Ceil(DivCeil(tilingParams->c, tilingParams->coreNumUsed / SPLIT_COUNT), STEP_SIZE);
+            // Per output, stage2 needs Kahan buffers plus at least one workspace row in UB.
+            uint64_t maxCastEleNumByUb = Floor(
+                availableSpace / ((STAGE2_KAHAN_BUFFER_COUNT + 1) * FLOAT_DTYPE_BYTES), STEP_SIZE);
+            OP_CHECK_IF(
+                maxCastEleNumByUb == 0,
+                VECTOR_INNER_ERR_REPORT_TILIING(tilingContext->GetNodeName(), "UB space is not enough for Stage2"),
+                return ge::GRAPH_FAILED);
+            tilingParams->castEleNum = std::min(preferredCastEleNum, maxCastEleNumByUb);
             tilingParams->stage2CoreUsed = DivCeil(tilingParams->c, tilingParams->castEleNum);
             tilingParams->tailCastNum =
                 (tilingParams->stage2CoreUsed == 1) ?
                     tilingParams->c :
                     tilingParams->c - (tilingParams->stage2CoreUsed - 1) * tilingParams->castEleNum;
-            // UB allocation
-            availableSpace = availableSpace - tilingParams->castEleNum * FLOAT_DTYPE_BYTES;
+            uint64_t stage2ReduceSpace = tilingParams->castEleNum * STAGE2_KAHAN_BUFFER_COUNT * FLOAT_DTYPE_BYTES;
+            availableSpace = availableSpace - stage2ReduceSpace;
             coreBatchCounts = DivCeil(DivCeil(tilingParams->n, SPLIT_COUNT), SPLIT_COUNT);
             OP_CHECK_IF(
                 ComputeAllocUBStage2(coreBatchCounts, availableSpace) != ge::GRAPH_SUCCESS,
@@ -272,14 +290,25 @@ ge::graphStatus GroupNormSwishGradTiling::CalStage2TilingInfo(ge::DataType dtype
                 return ge::GRAPH_FAILED);
         } else {
             // task ReduceSum and Cast
-            tilingParams->castEleNum = Ceil(DivCeil(tilingParams->c, tilingParams->coreNumUsed), STEP_SIZE);
+            uint64_t preferredCastEleNum = Ceil(DivCeil(tilingParams->c, tilingParams->coreNumUsed), STEP_SIZE);
+            // Per output, stage2 needs Kahan buffers, one cast buffer, and at least one workspace row in UB.
+            uint64_t maxCastEleNumByUb = Floor(
+                availableSpace /
+                    (STAGE2_KAHAN_BUFFER_COUNT * FLOAT_DTYPE_BYTES + FLOAT16_DTYPE_BYTES + FLOAT_DTYPE_BYTES),
+                STEP_SIZE);
+            OP_CHECK_IF(
+                maxCastEleNumByUb == 0,
+                VECTOR_INNER_ERR_REPORT_TILIING(tilingContext->GetNodeName(), "UB space is not enough for Stage2"),
+                return ge::GRAPH_FAILED);
+            tilingParams->castEleNum = std::min(preferredCastEleNum, maxCastEleNumByUb);
             tilingParams->stage2CoreUsed = DivCeil(tilingParams->c, tilingParams->castEleNum);
             tilingParams->tailCastNum =
                 (tilingParams->stage2CoreUsed == 1) ?
                     tilingParams->c :
                     tilingParams->c - (tilingParams->stage2CoreUsed - 1) * tilingParams->castEleNum;
-            // UB allocation
-            availableSpace = availableSpace - tilingParams->castEleNum * (FLOAT_DTYPE_BYTES + FLOAT16_DTYPE_BYTES);
+            uint64_t stage2ReduceCastSpace = tilingParams->castEleNum *
+                                             (STAGE2_KAHAN_BUFFER_COUNT * FLOAT_DTYPE_BYTES + FLOAT16_DTYPE_BYTES);
+            availableSpace = availableSpace - stage2ReduceCastSpace;
             coreBatchCounts = DivCeil(tilingParams->n, SPLIT_COUNT);
             OP_CHECK_IF(
                 ComputeAllocUBStage2(coreBatchCounts, availableSpace) != ge::GRAPH_SUCCESS,
@@ -486,12 +515,22 @@ ge::graphStatus GroupNormSwishGradTiling::Init()
         CalStage1TilingInfo(reserveSpace) != ge::GRAPH_SUCCESS,
         VECTOR_INNER_ERR_REPORT_TILIING(tilingContext->GetNodeName(), "fail to calculate Stage1 TilingInfo"),
         return ge::GRAPH_FAILED);
-    // Because the accumulation axis is the N axis, there is no deterministic problem when N<=2
-    uint64_t isDeterministicKey = (tilingContext->GetDeterministic() == 1 && tilingParams->n > 2) ? 1 : 0;
+    // Because the accumulation axis is the N axis, there is no deterministic problem when N<=2.
+    // On A5, use deterministic accumulation by default; an explicit deterministic=0 keeps the fast path.
+    uint64_t isDeterministicKey = 0;
+    if (tilingParams->n > 2) {
+        const auto deterministic = tilingContext->GetDeterministic();
+        // A5 does defualt support deterministic accumulation, so isDeterministicKey is forced to 1; on other platforms, it depends on the deterministic attribute.
+        isDeterministicKey = IsArch3510(tilingContext) ? 1 : (deterministic == 1 ? 1 : 0);
+    }
     OP_CHECK_IF(
         !(isDeterministicKey == 0 || isDeterministicKey == 1),
         VECTOR_INNER_ERR_REPORT_TILIING(tilingContext->GetNodeName(), "Error: isDeterministicKey must be 0 or 1!"),
         return ge::GRAPH_FAILED);
+    // Set schedule mode to BATCH_MODE when isDeterministicKey is true.
+    if(isDeterministicKey){
+        tilingContext->SetScheduleMode(BATCH_MODE);
+    }
     // Set TilingKey mode
     OP_CHECK_IF(
         SetTilingKeyMode(this->dtypeStr, isDeterministicKey) != ge::GRAPH_SUCCESS,

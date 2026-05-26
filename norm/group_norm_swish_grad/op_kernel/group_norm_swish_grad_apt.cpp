@@ -14,6 +14,10 @@
  */
 
 #include "arch35/group_norm_swish_grad.h"
+#include "arch35/group_norm_swish_grad_utils.h"
+#include "arch35/group_norm_swish_grad_group_fit_ub.h"
+#include "arch35/group_norm_swish_grad_channel_fit_ub.h"
+#include "arch35/group_norm_swish_grad_channel_split_ub.h"
 
 extern "C" __global__ __aicore__ void group_norm_swish_grad(
     GM_ADDR dy, GM_ADDR mean, GM_ADDR rstd, GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR dx, GM_ADDR dgamma,
