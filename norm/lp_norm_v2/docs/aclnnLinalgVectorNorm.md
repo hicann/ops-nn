@@ -255,8 +255,6 @@ aclnnStatus aclnnLinalgVectorNorm(
   | `self`数据类型 | `dtype`数据类型 | `out`数据类型 |
   | ----------- | ----------- | -------------- |
   | FLOAT32     | FLOAT32     | FLOAT32        |
-  | FLOAT32     | FLOAT16     | FLOAT16        |
-  | FLOAT32     | BFLOAT16    | BFLOAT16       |
   | FLOAT16     | FLOAT32     | FLOAT32        |
   | FLOAT16     | FLOAT16     | FLOAT16        |
   | BFLOAT16    | FLOAT32     | FLOAT32        |
