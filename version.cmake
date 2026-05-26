@@ -8,13 +8,12 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # -----------------------------------------------------------------------------------------------------------
 
-set_cann_package(ops-nn VERSION "9.0.0")
+set_cann_package(ops-nn VERSION "9.1.0")
 
 set_cann_build_dependencies(runtime ">=8.5")
 set_cann_build_dependencies(opbase ">=8.5")
 set_cann_build_dependencies(bisheng-compiler ">=8.5")
 set_cann_build_dependencies(asc-devkit ">=8.5")
-set_cann_build_dependencies(asc-tools ">=8.5")
 set_cann_build_dependencies(metadef ">=8.5")
 set_cann_build_dependencies(ge-executor ">=8.5")
 
