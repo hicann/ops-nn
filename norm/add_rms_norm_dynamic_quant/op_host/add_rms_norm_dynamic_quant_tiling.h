@@ -84,7 +84,7 @@ TILING_DATA_FIELD_DEF(uint64_t, mlastCoreTailUb);
 END_TILING_DATA_DEF;
 REGISTER_TILING_DATA_CLASS(AddRmsNormDynamicQuant_500, AddRmsNormDynamicQuantEmptyTilingData)
 
-constexpr uint32_t TILING_TYPE_NORMAL = 0;
+constexpr uint32_t TILING_TYPE_SINGLE_ROW = 0;
 constexpr uint32_t TILING_TYPE_SPILT = 1;
 constexpr uint32_t TILING_TYPE_PERF = 2;
 constexpr uint32_t TILING_OFFSET_REGBASE = 100;

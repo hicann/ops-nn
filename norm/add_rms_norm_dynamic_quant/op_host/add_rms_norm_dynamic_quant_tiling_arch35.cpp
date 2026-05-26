@@ -322,7 +322,7 @@ bool AddRmsNormDynamicQuantRegbaseTiling::IsCapable()
  * @return Bytes of UBSize
  */
 uint64_t AddRmsNormDynamicQuantRegbaseTiling::CalUBTotalSize(
-    uint64_t baseM, uint64_t baseN, const uint32_t tilingType = TILING_TYPE_NORMAL)
+    uint64_t baseM, uint64_t baseN, const uint32_t tilingType)
 {
     uint64_t baseMB32Align = Ops::Base::CeilAlign(baseM, static_cast<uint64_t>(B32_BLOCK_NUM));
     uint64_t baseNB8Align = Ops::Base::CeilAlign(baseN, static_cast<uint64_t>(BLOCK_SIZE));
@@ -350,19 +350,12 @@ uint64_t AddRmsNormDynamicQuantRegbaseTiling::CalUBTotalSize(
         totalSize += 1 * baseNB32Align * sizeof(float); // y2Tmp
     }
 
-    if (TILING_TYPE_NORMAL == tilingType) {
-        totalSize += NUM_TWO * baseMB32Align * sizeof(float); // rstd/scale1
-        if (tilingParams.hasY2Scale2) {
-            totalSize += 1 * baseMB32Align * sizeof(float); // scale2
-        }
-    } else {
-        totalSize += NUM_TWO * B32_BLOCK_NUM * sizeof(float); // rstd/scale1
-        if (tilingParams.hasY2Scale2) {
-            totalSize += 1 * B32_BLOCK_NUM * sizeof(float); // scale2
-        }
-        totalSize += LEVEL_BUFFER_CNT * ONCE_VECTOR_SIZE * sizeof(float); // levelbuf
-        totalSize += 1 * tilingParams.vecLength * sizeof(float);          // tempBuf
+    totalSize += NUM_TWO * B32_BLOCK_NUM * sizeof(float); // rstd/scale1
+    if (tilingParams.hasY2Scale2) {
+        totalSize += 1 * B32_BLOCK_NUM * sizeof(float); // scale2
     }
+    totalSize += LEVEL_BUFFER_CNT * ONCE_VECTOR_SIZE * sizeof(float); // levelbuf
+    totalSize += 1 * tilingParams.vecLength * sizeof(float);          // tempBuf
 
     return totalSize;
 }
@@ -432,6 +425,17 @@ uint64_t AddRmsNormDynamicQuantRegbaseTiling::CalUsedSize(
     return totalSize;
 }
 
+static uint64_t GetSingleRowPowerSplit(uint64_t n)
+{
+    n |= n >> 1;
+    n |= n >> 2;
+    n |= n >> 4;
+    n |= n >> 8;
+    n |= n >> 16;
+    n |= n >> 32;
+    return (n + 1) >> 1;
+}
+
 ge::graphStatus AddRmsNormDynamicQuantRegbaseTiling::SetTilingParams()
 {
     OP_LOGD(nodeName.c_str(), "Enter AddRmsNormDynamicQuantRegbaseTiling SetTilingParams.");
@@ -449,29 +453,20 @@ ge::graphStatus AddRmsNormDynamicQuantRegbaseTiling::SetTilingParams()
         return ge::GRAPH_SUCCESS;
     }
 
-    // 2.全载性能模版未覆盖到的部分走原来的模版
-    tmpUBSize = CalUBTotalSize(1, tilingParams.numN);
-    if (tmpUBSize <= tilingParams.maxUbSize) {
-        tilingParams.baseN = tilingParams.numN;
-        uint64_t justNUBSize = CalUBTotalSize(0, tilingParams.baseN);
-        uint64_t rstdCount = tilingParams.hasY2Scale2 ? 3 : 2; // rstd/scale1/scale2
-        uint64_t rstdRemainUBSize = rstdCount * BLOCK_SIZE;
-        // Note: CalUBTotalSize(M, N) can be see as:
-        //       CalUBTotalSize(M, N) = rstdCount*AlignB32(M) + b*Align1(N) + c*M*Align2(N)
-        //       CalUBTotalSize(1, N) = rstdCount*BLOCK_SIZE + b*Align1(N) + c*Align2(N)
-        //       CalUBTotalSize(0, N) = b*Align1(N)
-        // Note:
-        //       rstdCount*M*sizeof(float) + b*Align1(N) + c*M*Align2(N) ~= UBSize - rstdCount*BLOCK_SIZE
-        //       baseM ~= (UBSize - rstdCount*BLOCK_SIZE - b*Align1(N)) / (c*Align2(N) + rstdCount*sizeof(float))
-        //       baseM ~= (UBSize - rstdCount*BLOCK_SIZE - CalUBTotalSize(1, N)) /
-        //                (CalUBTotalSize(1, N) - rstdCount*BLOCK_SIZE - CalUBTotalSize(0, N) + rstdCount*sizeof(float))
-        tilingParams.baseM = 1;
-        if (rstdRemainUBSize + justNUBSize <= tilingParams.maxUbSize) {
-            tilingParams.baseM = (tilingParams.maxUbSize - rstdRemainUBSize - justNUBSize) /
-                                 (tmpUBSize - rstdRemainUBSize - justNUBSize + rstdCount * sizeof(float));
+    // 2. SingleRow: UB = 16 * D_aligned + 1024 (1024 = 2 * ROW_FACTOR * sizeof(float), ROW_FACTOR=128)
+    {
+        auto yDataType = context_->GetOutputDesc(Y1_INDEX)->GetDataType();
+        uint64_t yDtypeSize = GetSizeByDataType(yDataType);
+        uint64_t outputAlign = (yDtypeSize > 0) ? (BLOCK_SIZE / yDtypeSize) : 32;
+        uint64_t D_aligned = Ops::Base::CeilAlign(tilingParams.numN, outputAlign);
+        uint64_t singleRowUbSize = 16 * D_aligned + 1024;
+        if (singleRowUbSize <= tilingParams.maxUbSize) {
+            tilingParams.baseN = tilingParams.numN;
+            tilingParams.baseM = 1;
+            tilingParams.tilingType = TILING_TYPE_SINGLE_ROW;
+            tilingParams.powerSplit = GetSingleRowPowerSplit(tilingParams.numN);
+            return ge::GRAPH_SUCCESS;
         }
-        tilingParams.tilingType = TILING_TYPE_NORMAL;
-        return ge::GRAPH_SUCCESS;
     }
 
     // 3. Cut n
@@ -519,11 +514,6 @@ ge::graphStatus AddRmsNormDynamicQuantRegbaseTiling::DoOpTiling()
     tilingParams.baseNReduceAlign = Ops::Base::CeilAlign(tilingParams.baseN, tilingParams.xReduceAlignNum);
     uint64_t reduceBufLen = tilingParams.baseNReduceAlign / (2 * tilingParams.vecLength);
     tilingParams.reduceBufLenAlign = Ops::Base::CeilAlign(reduceBufLen, static_cast<uint64_t>(B32_BLOCK_NUM));
-
-    if (TILING_TYPE_NORMAL == tilingParams.tilingType) {
-        uint64_t tmpPower = std::floor(std::log(tilingParams.baseNReduceAlign) / std::log(LOG_2));
-        tilingParams.powerSplit = std::pow(LOG_2, tmpPower);
-    }
 
     SetTilingData();
     PrintTilingData();

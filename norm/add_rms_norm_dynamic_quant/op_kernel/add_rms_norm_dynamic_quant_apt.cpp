@@ -11,9 +11,9 @@
  * \file add_rms_norm_dynamic_quant_apt.cpp
  * \brief
  */
-#include "arch35/add_rms_norm_dynamic_quant_regbase.h"
 #include "arch35/add_rms_norm_dynamic_quant_regbase_perf.h"
 #include "arch35/add_rms_norm_dynamic_quant_regbase_split_reduce.h"
+#include "arch35/add_rms_norm_dynamic_quant_regbase_single_row.h"
 #include "arch35/add_rms_norm_dynamic_quant_empty.h"
 
 using namespace AddRmsNormDynamicQuant;
@@ -56,7 +56,7 @@ extern "C" __global__ __aicore__ void add_rms_norm_dynamic_quant(
         GET_TILING_DATA_WITH_STRUCT(AddRmsNormDynamicQuantRegbaseTilingData, tilingDataIn, tiling);
         const AddRmsNormDynamicQuantRegbaseTilingData* __restrict tilingData = &tilingDataIn;
         if (TILING_KEY_IS(100)) {
-            KernelAddRmsNormDynamicQuantRegbase<DTYPE_X1, DTYPE_Y1> op(&pipe);
+            KernelAddRmsNormDynamicQuantRegbaseSingleRow<DTYPE_X1, DTYPE_Y1> op(&pipe);
             INIT_AND_PROCESS;
         } else if (TILING_KEY_IS(101)) {
             KernelAddRmsNormDynamicQuantRegbaseSpiltReduce<DTYPE_X1, DTYPE_Y1> op(&pipe);
