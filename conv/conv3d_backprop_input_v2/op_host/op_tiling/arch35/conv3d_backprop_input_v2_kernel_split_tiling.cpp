@@ -604,6 +604,17 @@ void Conv3DDXV2KernelSplitTiling::InitBaseMNK(L0TilingParams& l0Params)
     AdjustBaseMNK(l0Params, tilingRunInfo_);
 }
 
+void Conv3DDXV2KernelSplitTiling::UpdateL0CBufferMode(L0TilingParams& l0Params)
+{
+    // 在baseM*baseN*DB_ON等于L0c大小时，切H场景有偶现的aic问题，经测试关掉db性能无影响
+    l0Params.cl0Pbuffer = DB_OFF;
+    uint32_t usedL0cSize = l0Params.baseM * l0Params.baseN * ge::GetSizeByDataType(ge::DT_FLOAT) * DB_ON;
+    if (usedL0cSize < platformInfo_.l0_c_size ||
+        (kernelSplitMode_ == KERNEL_SPLIT_HW && usedL0cSize == platformInfo_.l0_c_size)) {
+        l0Params.cl0Pbuffer = DB_ON;
+    }
+}
+
 void Conv3DDXV2KernelSplitTiling::EqualL1MatchStepMNK(L1TilingParams& l1Params, const L0TilingParams& l0Params)
 {
     uint32_t hoCal = CalFmapHForKernelSplit(l0Params.baseM, kernelSplitPara_.isKernelSplitOnlyH); // 此处默认stepM=1

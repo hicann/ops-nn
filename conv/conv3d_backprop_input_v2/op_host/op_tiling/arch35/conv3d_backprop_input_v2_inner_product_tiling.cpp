@@ -129,7 +129,7 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::GetPublicShapeAttrsInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-bool Conv3DDXV2InnerProductTiling::CheckBasicKSplitKCondition()
+bool Conv3DDXV2InnerProductTiling::CheckBasicSplitKCondition()
 {
     // 拦截c04场景,group场景和8bit场景
     if (tilingRunInfo_.enableC04Flag || (unlikely(runInfo_.groups > 1)) ||
@@ -144,7 +144,7 @@ bool Conv3DDXV2InnerProductTiling::CheckBasicKSplitKCondition()
 
 ge::graphStatus Conv3DDXV2InnerProductTiling::CalcKSegment()
 {
-    if (!CheckBasicKSplitKCondition()) {
+    if (!CheckBasicSplitKCondition()) {
         return ge::GRAPH_FAILED;
     }
 

@@ -439,15 +439,8 @@ __aicore__ inline void InitTque(Intf *self, const bool hasBias)
 
     if ASCEND_IS_AIC_SCALAR {
         self->ctx.pipe_.InitBuffer(self->ctx.inQueL1A_, self->ctx.tiling_->al1Pbuffer, aMatrixByteSize);
-
-        uint32_t baseMN = self->ctx.tiling_->baseM * self->ctx.tiling_->baseN;
-
         if (self->ctx.tiling_->cl0Pbuffer > 1) {
             uint32_t l0cSize = TOTAL_L0C_SIZE >> 1;
-            // L0c搬运UB需要做32Byte对齐，需要确保在L0c也做32Byte对齐，否则会有Fixpipe越界读到Pong块风险
-            if (Intf::conv3dConfig.kernelSplitMode != TPL_NO_SPLIT_KERNEL && !self->ctx.kSUseWorkSpace_) {
-                l0cSize = l0cSize / ONE_BLK_SIZE * ONE_BLK_SIZE;
-            }
             self->ctx.pipe_.InitBuffer(self->ctx.l0cPing_, 1, l0cSize);
             self->ctx.pipe_.InitBuffer(self->ctx.l0cPong_, 1, l0cSize);
         } else {

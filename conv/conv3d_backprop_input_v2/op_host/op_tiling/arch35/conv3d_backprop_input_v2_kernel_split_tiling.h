@@ -72,6 +72,7 @@ protected:
         const CoreTilingParams& coreParams, const L1TilingParams& l1Params, const L0TilingParams& l0Params) override;
     void LegalProtection(L1TilingParams& l1Params, L0TilingParams& l0Params) override;
     bool ShrinkBaseMN(L1TilingParams& l1Params, L0TilingParams& l0Params) override;
+    void UpdateL0CBufferMode(L0TilingParams& l0Params) override;
 
     bool CheckKernelSplitEnable();
     bool CheckDtypeCompatibility();

@@ -83,6 +83,7 @@ protected:
     virtual void SetTilingCondition(
         const CoreTilingParams& coreParams, const L1TilingParams& l1Params, const L0TilingParams& l0Params);
     virtual bool ShrinkBaseMN(L1TilingParams& l1Params, L0TilingParams& l0Params);
+    virtual void UpdateL0CBufferMode(L0TilingParams& l0Params);
     void SetCommonTilingData(
         const CoreTilingParams& coreParams, const L1TilingParams& l1Params, const L0TilingParams& l0Params);
     void AlignCout1(uint32_t& cout1A, uint32_t& cout1B, bool adaptFP32);
@@ -100,7 +101,7 @@ protected:
 
 private:
     bool CheckC04Enable();
-    bool CheckBasicKSplitKCondition();
+    bool CheckBasicSplitKCondition();
     bool CheckVecTrans16bitPlus(const CoreTilingParams& coreParams, const L0TilingParams& l0Params);
     bool CheckVecTransEnable(
         const CoreTilingParams& coreParams, const L1TilingParams& l1Params, const L0TilingParams& l0Params);
@@ -114,7 +115,6 @@ private:
     void AdjustBaseMNCommon(L0TilingParams& l0Params, const TilingRunInfo& tilingRunInfo, uint32_t& baseM, uint32_t& baseN, uint32_t& baseK);
     void AdjustBaseKForSplitK(L0TilingParams& l0Params, const TilingRunInfo tilingRunInfo);
     uint32_t CalculateOptimalBaseK(uint32_t baseM, uint32_t baseN, const L0TilingParams& l0Params, const TilingRunInfo& tilingRunInfo);
-    void UpdateL0CBufferMode(L0TilingParams& l0Params);
     uint32_t GetLoadB1Condition();
     uint32_t GetLoadB2Condition(const L1TilingParams& l1Params, const L0TilingParams& l0Params);
     uint32_t GetLoadB2ConditionByFormatAndKernel(const L0TilingParams& l0Params);
