@@ -120,8 +120,8 @@ class AsceneGroupNormSwishGradApi(BaseApi):
                         dswish_res_i = dy_new_i * (-swish_scale)
                         dswish_res_i = torch.exp(dswish_res_i)
                         dswish_res_i = dswish_res_i + 1.0
-                        tmp_res = dy_new_i / dswish_res_i
-                        tmp_res = dy_new_i - tmp_res
+                        tmp_res = swish_scale * dy_new_i / dswish_res_i
+                        tmp_res = swish_scale * dy_new_i - tmp_res
                         tmp_res = tmp_res + 1.0
                         dswish_res_i = tmp_res / dswish_res_i
                         # dy_new_i 等于激活函数的结果

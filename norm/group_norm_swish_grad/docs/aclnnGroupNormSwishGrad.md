@@ -23,11 +23,11 @@ dYTemp_i = \hat{x_i} \cdot gamma + beta
 $$
 
 $$
-dSwishTemp_i = dYTemp_i  - \frac{dYTemp_i}{ \exp {dYTemp_i * (-swishScale)} + 1} + 1
+dSwishTemp_i = swishScale \cdot dYTemp_i - \frac{swishScale \cdot dYTemp_i}{\exp(-swishScale \cdot dYTemp_i) + 1} + 1
 $$
 
 $$
-dYNew_i = \frac{dSwishTemp_i}{ \exp (- dYTemp_i * swishScale) + 1} * dy
+dYNew_i = \frac{dSwishTemp_i}{\exp(-swishScale \cdot dYTemp_i) + 1} \cdot dy
 $$
 
 $$

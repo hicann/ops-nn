@@ -220,6 +220,7 @@ private:
                 Adds(dswish_res, dswish_res, float(1.0), this->ele_num_per_channel);
                 Div(temp_hxw_local, dy_new, dswish_res, this->ele_num_per_channel);
                 Sub(temp_hxw_local, dy_new, temp_hxw_local, this->ele_num_per_channel);
+                Muls(temp_hxw_local, temp_hxw_local, this->swish_scale, this->ele_num_per_channel);
                 Adds(temp_hxw_local, temp_hxw_local, float(1.0), this->ele_num_per_channel);
                 Div(dswish_res, temp_hxw_local, dswish_res, this->ele_num_per_channel);
                 Mul(dy_new, dswish_res, dy_local[offset], this->ele_num_per_channel);
@@ -248,6 +249,7 @@ private:
                 Adds(dswish_res, dswish_res, float(1.0), this->ele_num_per_channel);
                 Div(temp_hxw_local, dy_new, dswish_res, this->ele_num_per_channel);
                 Sub(temp_hxw_local, dy_new, temp_hxw_local, this->ele_num_per_channel);
+                Muls(temp_hxw_local, temp_hxw_local, this->swish_scale, this->ele_num_per_channel);
                 Adds(temp_hxw_local, temp_hxw_local, float(1.0), this->ele_num_per_channel);
                 Div(dswish_res, temp_hxw_local, dswish_res, this->ele_num_per_channel);
                 Mul(unalign_channel_dy, dswish_res, unalign_channel_dy, this->ele_num_per_channel);
@@ -285,6 +287,7 @@ private:
                 Adds(dswish_res, dswish_res, float(1.0), this->ele_num_per_channel);
                 Div(temp_hxw_local, dy_new, dswish_res, this->ele_num_per_channel);
                 Sub(temp_hxw_local, dy_new, temp_hxw_local, this->ele_num_per_channel);
+                Muls(temp_hxw_local, temp_hxw_local, this->swish_scale, this->ele_num_per_channel);
                 Adds(temp_hxw_local, temp_hxw_local, float(1.0), this->ele_num_per_channel);
                 Div(dswish_res, temp_hxw_local, dswish_res, this->ele_num_per_channel);
                 Mul(dy_new, dswish_res, dy_local[offset], this->ele_num_per_channel);
@@ -315,6 +318,7 @@ private:
                 Adds(dswish_res, dswish_res, float(1.0), this->ele_num_per_channel);
                 Div(temp_hxw_local, dy_new, dswish_res, this->ele_num_per_channel);
                 Sub(temp_hxw_local, dy_new, temp_hxw_local, this->ele_num_per_channel);
+                Muls(temp_hxw_local, temp_hxw_local, this->swish_scale, this->ele_num_per_channel);
                 Adds(temp_hxw_local, temp_hxw_local, float(1.0), this->ele_num_per_channel);
                 Div(dswish_res, temp_hxw_local, dswish_res, this->ele_num_per_channel);
                 Mul(dy_new, dswish_res, dy_local[offset], this->ele_num_per_channel);
@@ -392,6 +396,7 @@ private:
             Adds(dswish_res, dswish_res, float(1.0), this->ele_num_per_channel);
             Div(temp_hxw_local, dy_new, dswish_res, this->ele_num_per_channel);
             Sub(temp_hxw_local, dy_new, temp_hxw_local, this->ele_num_per_channel);
+            Muls(temp_hxw_local, temp_hxw_local, this->swish_scale, this->ele_num_per_channel);
             Adds(temp_hxw_local, temp_hxw_local, float(1.0), this->ele_num_per_channel);
             Div(dswish_res, temp_hxw_local, dswish_res, this->ele_num_per_channel);
             Mul(dy_new, dswish_res, dy_local, this->ele_num_per_channel);
@@ -436,6 +441,7 @@ private:
             Adds(dswish_res, dswish_res, float(1.0), this->ele_num_per_channel);
             Div(temp_hxw_local, dy_new, dswish_res, this->ele_num_per_channel);
             Sub(temp_hxw_local, dy_new, temp_hxw_local, this->ele_num_per_channel);
+            Muls(temp_hxw_local, temp_hxw_local, this->swish_scale, this->ele_num_per_channel);
             Adds(temp_hxw_local, temp_hxw_local, float(1.0), this->ele_num_per_channel);
             Div(dswish_res, temp_hxw_local, dswish_res, this->ele_num_per_channel);
             Mul(dy_new, dswish_res, dy_local, this->ele_num_per_channel);
@@ -498,6 +504,7 @@ private:
         Adds(dswish_res, dswish_res, float(1.0), process_num);
         Div(temp_hxw_local, dy_new, dswish_res, process_num);
         Sub(temp_hxw_local, dy_new, temp_hxw_local, process_num);
+        Muls(temp_hxw_local, temp_hxw_local, this->swish_scale, process_num);
         Adds(temp_hxw_local, temp_hxw_local, float(1.0), process_num);
         Div(dswish_res, temp_hxw_local, dswish_res, process_num);
         Mul(dy_new, dswish_res, dy_local, process_num);
@@ -575,6 +582,7 @@ private:
                 Adds(dswish_res, dswish_res, float(1.0), this->mode2_ub_capacity_ele);
                 Div(temp_hxw_local, dy_new, dswish_res, this->mode2_ub_capacity_ele);
                 Sub(temp_hxw_local, dy_new, temp_hxw_local, this->mode2_ub_capacity_ele);
+                Muls(temp_hxw_local, temp_hxw_local, this->swish_scale, this->mode2_ub_capacity_ele);
                 Adds(temp_hxw_local, temp_hxw_local, float(1.0), this->mode2_ub_capacity_ele);
                 Div(dswish_res, temp_hxw_local, dswish_res, this->mode2_ub_capacity_ele);
                 Mul(dy_new, dswish_res, dy_local, this->mode2_ub_capacity_ele);
@@ -604,6 +612,7 @@ private:
                 Adds(dswish_res, dswish_res, float(1.0), this->mode2_ub_tail_num);
                 Div(temp_hxw_local, dy_new, dswish_res, this->mode2_ub_tail_num);
                 Sub(temp_hxw_local, dy_new, temp_hxw_local, this->mode2_ub_tail_num);
+                Muls(temp_hxw_local, temp_hxw_local, this->swish_scale, this->mode2_ub_tail_num);
                 Adds(temp_hxw_local, temp_hxw_local, float(1.0), this->mode2_ub_tail_num);
                 Div(dswish_res, temp_hxw_local, dswish_res, this->mode2_ub_tail_num);
                 Mul(dy_new, dswish_res, dy_local, this->mode2_ub_tail_num);
