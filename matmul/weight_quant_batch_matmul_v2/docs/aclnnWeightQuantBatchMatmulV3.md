@@ -393,6 +393,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulV3(
       - pergroup[量化模式](../../../docs/zh/context/量化介绍.md)：输入shape为(⌈k/group_size⌉, n)，其中group_size表示k要分组的每组的大小。
       - mx[量化模式](../../../docs/zh/context/量化介绍.md)：输入shape为(⌈k/group_size⌉, n)，其中group_size表示k要分组的每组的大小，仅支持32。
     - `quantScaleOptional`和`quantOffsetOptional`为预留参数，暂未使用，固定传入空指针。
+    - `innerPrecise`参数不生效。
 
     <a id="a16w8场景约束"></a>
 
