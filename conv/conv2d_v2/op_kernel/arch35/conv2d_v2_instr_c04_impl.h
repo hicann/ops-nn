@@ -88,6 +88,7 @@ private:
                 self_->ctx.convTilingData->convApiTiling.kernelHxkernelW *
                 self_->ctx.convTilingData->convApiTiling.singleCoreCi;
             copyParams.loopInfo.loopDstStride[NDDMA_LOOP2_INDEX] = self_->ctx.convTilingData->convApiTiling.kBL1;
+            copyParams.constantValue = 0;
         }
         copyParams.loopInfo.loopSize[NDDMA_LOOP2_INDEX] = self_->ctx.currentUbNStep;
         copyParams.loopInfo.loopRpSize[NDDMA_LOOP2_INDEX] = self_->ctx.currentNLoopRpSize;
@@ -119,6 +120,7 @@ private:
             copyParams.loopInfo.loopSrcStride[NDDMA_LOOP2_INDEX] =
                 self_->ctx.convTilingData->convApiTiling.orgCo * self_->ctx.convTilingData->convApiTiling.singleCoreCi;
             copyParams.loopInfo.loopDstStride[NDDMA_LOOP2_INDEX] = C04_CIN_SIZE;
+            copyParams.constantValue = 0;
         }
         copyParams.loopInfo.loopSize[NDDMA_LOOP0_INDEX] = self_->ctx.currentUbNStep;
         copyParams.loopInfo.loopRpSize[NDDMA_LOOP0_INDEX] = self_->ctx.currentNLoopRpSize;
