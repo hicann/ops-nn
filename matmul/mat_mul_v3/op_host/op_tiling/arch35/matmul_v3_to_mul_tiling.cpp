@@ -31,8 +31,8 @@ bool MatMulV3ToMulTiling::IsCapable()
     if (!args_.isForceGrpAccForFp32) {
         return false;
     }
-    // m=1 || n=1 || m!=1 n!=1 but BTrans
-    if (args_.mValue != 1UL && args_.nValue != 1UL && (args_.isATrans || !args_.isBTrans)) {
+    // m=1 || n=1
+    if (args_.mValue != 1UL && args_.nValue != 1UL) {
         return false;
     }
     if (args_.aDtypeSize != sizeof(float) || args_.bDtypeSize != sizeof(float)) {
@@ -47,10 +47,6 @@ bool MatMulV3ToMulTiling::IsCapable()
 ge::graphStatus MatMulV3ToMulTiling::DoOpTiling()
 {
     uint64_t m = args_.mValue;
-    if (args_.mValue != 1 && args_.nValue != 1) {
-        runInfo_.mmToMulInfo.loopM = args_.mValue;
-        m = 1;
-    }
     uint64_t n = args_.nValue;
     uint64_t k = args_.kValue;
     uint64_t shapeMN = n * m;

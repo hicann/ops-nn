@@ -193,8 +193,19 @@ struct MatMulToMulBasicTilingData{
     uint32_t baseK = 0;
     uint32_t tailK = 0;
     uint32_t loopK = 1;
-    uint32_t loopM = 1;
     bool dataCopyMode = false;
+};
+#pragma pack(pop)
+
+#pragma pack(push, 8)
+struct MatMulToVectorBasicTilingData{
+    uint32_t usedCoreNum = 1;
+    uint32_t m = 1;
+    uint32_t n = 1;
+    uint32_t k = 1;
+    uint32_t baseM = 0;
+    uint32_t baseN = 0;
+    uint32_t baseK = 0;
 };
 #pragma pack(pop)
 

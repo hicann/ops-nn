@@ -35,5 +35,6 @@ struct QuantBatchMatmulV3Scheduler {
 };
 struct BuiltInFlatQuantScheduler {};
 struct BuiltInMulScheduler {};
+struct BuiltInVectorScheduler {};
 } // namespace Gemm
 } // namespace Cmct

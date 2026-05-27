@@ -30,6 +30,7 @@ using namespace std;
 #endif
 
 const uint64_t NUM_TWO = 2;
+const uint64_t NUM_THREE = 3;
 const uint64_t NUM_FOUR = 4;
 const uint64_t NUM_256 = 256;
 const uint64_t DATA_SIZE_FP16 = 2;

@@ -1125,7 +1125,7 @@ static TilingTestParam ascend950_cases_params[] = {
       "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "socVersion": "Ascend950" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, false, false, 0, 4, {1, 4096}, {4096, 4096}, {1, 4096}, {1, 4096}, {4096, 4096}, {1, 4096}, false, 0, 0, 64, 12289UL,
-    "64 64 1 4096 4096 64 0 198 136 21 1 1 ", ge::DT_FLOAT, ge::DT_FLOAT
+    "64 64 1 4096 4096 64 0 198 136 21 1 ", ge::DT_FLOAT, ge::DT_FLOAT
   },
   {
     "MatMulV3_950_bias", "MatMulV3", R"({"_pattern": "MatMul", "attrs":{"transpose_a":true,"transpose_b":false, "offset_x":0, "opImplMode":0},
@@ -1146,6 +1146,15 @@ static TilingTestParam ascend950_cases_params[] = {
     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, false, false, 0, 0, {1, 9398}, {9398, 135021}, {1, 135021}, {1, 9398}, {9398, 135021}, {1, 135021}, false, 0, 0, 32, 65537UL,
     "32 1 135021 9398 16 256 128 16 256 64 9398 1 2 1 1 0 0 16908800 0 16 1 0 ",
     DT_FLOAT16, DT_FLOAT16, {}, {}, {}, true, ge::FORMAT_ND, ge::FORMAT_ND, {135021}, {135021}, DT_FLOAT16
+  },
+  {
+    "MatMulV3_950_matmul_to_multi_mul", "MatMulV3", R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":true},
+      "binary_attrs":{"bias_flag":false, "nd_flag":true, "split_k_flag":false, "zero_flag":false, "weight_nz": false, "l2_size":134217728},"binary_mode_flag":true,
+      "block_dim":{"CORE_NUM":32, "vector_core_cnt": 64},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
+      "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "socVersion": "Ascend950" },
+      "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, false, true, 0, 4, {10, 4096}, {192, 4096}, {10, 192}, {10, 4096}, {192, 4096}, {10, 192}, false, 0, 0, 64, 16449UL,
+    "64 10 192 4096 5 6 64 ", ge::DT_FLOAT, ge::DT_FLOAT
   }
 };
 INSTANTIATE_TEST_CASE_P(MatMulV3Ascend910B, MatMulV3TilingRuntime, testing::ValuesIn(ascend910B_cases_params));

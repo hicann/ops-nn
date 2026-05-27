@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file kernel_matmul_to_mul.h
+ * \file kernel_matmul_to_multi_mul.h
  * \brief
  */
 
@@ -28,7 +28,7 @@
 #include "../utils/coord_utils.h"
 #include "../utils/tensor_utils.h"
 #include "../utils/status_utils.h"
-#include "../block/block_mmad_to_mul.h"
+#include "../block/block_mmad_to_multi_mul.h"
 #include "../block/block_mmad_builder.h"
 #include "../block/block_scheduler_utils.h"
 #include "../block/block_scheduler_policy.h"
@@ -38,19 +38,20 @@ namespace Cmct {
 namespace Gemm {
 namespace Kernel {
 
-template <class ProblemShape_, class BlockMmadBuilder_, class BlockEpilogue_, class BlockScheduler_,
-          typename Enable_ = void>
-class KernelMatmulToMul {
-    static_assert(AscendC::Std::always_false_v<BlockEpilogue_>,
-                  "KernelMatmulToMul is not implemented for this BlockEpilogue");
+template <
+    class ProblemShape_, class BlockMmadBuilder_, class BlockEpilogue_, class BlockScheduler_, typename Enable_ = void>
+class KernelMatmulToVector {
+    static_assert(
+        AscendC::Std::always_false_v<BlockEpilogue_>, "KernelMatmulToVector is not implemented for this BlockEpilogue");
 };
 
 template <class ProblemShape_, class BlockMmadBuilder_, class BlockEpilogue_, class BlockScheduler_>
-class KernelMatmulToMul<ProblemShape_, BlockMmadBuilder_, BlockEpilogue_, BlockScheduler_,
-                             std::enable_if_t<std::is_same_v<BlockEpilogue_, Block::BlockEpilogueEmpty>>> {
+class KernelMatmulToVector<
+    ProblemShape_, BlockMmadBuilder_, BlockEpilogue_, BlockScheduler_,
+    std::enable_if_t<std::is_same_v<BlockEpilogue_, Block::BlockEpilogueEmpty>>> {
 public:
-    __aicore__ inline KernelMatmulToMul() {}
-    __aicore__ inline ~KernelMatmulToMul() {}
+    __aicore__ inline KernelMatmulToVector() {}
+    __aicore__ inline ~KernelMatmulToVector() {}
 
     using BlockMmadBuilder = BlockMmadBuilder_;
     using ProblemShape = ProblemShape_;
@@ -61,10 +62,9 @@ public:
     static constexpr bool transB = BlockMmadBuilder::transB;
 
     // schedulerOp
-    using BlockSchedulerOp =
-        typename Block::BlockSchedulerSelector<ProblemShape, typename BlockMmadBuilder::L1TileShape,
-                                               typename BlockMmadBuilder::L0TileShape, BlockScheduler, transA,
-                                               transB>::SchedulerOp;
+    using BlockSchedulerOp = typename Block::BlockSchedulerSelector<
+        ProblemShape, typename BlockMmadBuilder::L1TileShape, typename BlockMmadBuilder::L0TileShape, BlockScheduler,
+        transA, transB>::SchedulerOp;
     // mmadOp
     using BlockMmadOp = typename BlockMmadBuilder::BlockMmadOp;
     using BlockMmadArguments = typename BlockMmadBuilder::Arguments;
@@ -112,8 +112,7 @@ public:
         Params() = default;
     };
 
-    __aicore__ inline static TupleShape
-    ToShapeTuple(const ProblemShape& shape)
+    __aicore__ inline static TupleShape ToShapeTuple(const ProblemShape& shape)
     {
         return {shape.m, shape.n, shape.k, shape.b};
     }
@@ -153,90 +152,43 @@ public:
 
         BlockSchedulerOp bs(params.problemShape, params.schParams);
         int64_t realBlockNum = bs.GetRealBlockNum();
+        TupleShape blockInfo = bs.GetBlockInfo();
+        TupleShape tailInfo = bs.GetTailInfo();
+        uint64_t baseM = Get<0>(blockInfo);
+        uint64_t baseN = Get<1>(blockInfo);
+        // 获取m分块数
+        uint64_t mTileNum = Get<2>(blockInfo);
+        // 获取n分块数
+        uint64_t nTileNum = Get<3>(blockInfo);
+        uint64_t tailM = Get<0>(tailInfo);
+        uint64_t tailN = Get<1>(tailInfo);
+        // 获取k方向尾块大小
+        uint64_t tailK = Get<2>(tailInfo);
+        // 获取k方向切分轮次
+        uint64_t loopK = Get<3>(tailInfo);
         if (curBlockIdx >= realBlockNum) {
             return;
         }
-        TupleShape blockInfo = bs.GetBlockInfo();
-        int64_t baseMN = Get<MNK_M>(blockInfo);
-        int64_t tailMN = Get<MNK_N>(blockInfo) == 0 ? baseMN : Get<MNK_N>(blockInfo);
-        int64_t baseK = Get<MNK_K>(blockInfo);
-        int64_t tailK = Get<MNK_B>(blockInfo);
+        blockMmadOp.Init(problemShape_, blockInfo, tailK, loopK, hasBias_);
         int64_t tileNum = bs.GetTileNum();
-        int64_t loopK = bs.GetLoopK();
-        bool dataCopyMode = bs.GetDataCopyMode();
-        blockMmadOp.Init(problemShape_, blockInfo, loopK, hasBias_, dataCopyMode);
-        int64_t loopOffsetA = baseMN;
-        int64_t loopOffsetB = baseMN;
-        if (m_ == 1 && transB) {
-            loopOffsetB = baseMN * k_;
-        }
-        if (n_ == 1 && !transA) {
-            loopOffsetA = baseMN * k_;
-        }
         for (int64_t tileIdx = curBlockIdx; tileIdx < tileNum; tileIdx += blockNum) {
-            if (tileIdx == tileNum - 1) {
-                blockMmadOp.SetTailMN(tailMN);
+            int64_t tileIdxN = tileIdx % nTileNum;
+            int64_t tileIdxM = tileIdx / nTileNum;
+            if (tileIdxM == mTileNum - 1) {
+                blockMmadOp.SetTailM(tailM);
+            } else {
+                blockMmadOp.SetTailM(baseM);
             }
-            int64_t offsetA = m_ == 1 ? 0 : tileIdx * loopOffsetA;
-            int64_t offsetB = n_ == 1 ? 0 : tileIdx * loopOffsetB;
-            int64_t offsetC = tileIdx * baseMN;
-            int64_t offsetBias = m_ == 1 ? tileIdx * baseMN : 0;
-            blockMmadOp(cGlobal_[offsetC], aGlobal_[offsetA], bGlobal_[offsetB], biasGlobal_[offsetBias]);
+            if (tileIdxN == nTileNum - 1) {
+                blockMmadOp.SetTailN(tailN);
+            } else {
+                blockMmadOp.SetTailN(baseN);
+            }
+            int64_t offsetA = tileIdxM * baseM * k_;
+            int64_t offsetB = tileIdxN * baseN * k_;
+            int64_t offsetC = tileIdxM * baseM * n_ + tileIdxN * baseN;
+            blockMmadOp(cGlobal_[offsetC], aGlobal_[offsetA], bGlobal_[offsetB]);
         }
-    }
-
-    __host_aicore__ static Status CheckShape(const ProblemShape& shape)
-    {
-        int64_t m = shape.m;
-        int64_t n = shape.n;
-        int64_t k = shape.k;
-        int64_t b = shape.b;
-        if (b > INT32_MAX) {
-            return Status::batchErrorExcceedsLimit;
-        }
-        // Check m,n,k overlimit data type
-        if (m > INT32_MAX || n > INT32_MAX || k > INT32_MAX) {
-            return Status::mnkErrorExceedsLimit;
-        }
-        // Check matrix size exceeds limit
-        if (!transA && k > MATRIX_INNER_DIM_LIMIT_SIZE) { // mk matrix k limit
-            return Status::mkErrorMatrixExceedsLimit;
-        }
-        if (transA && m > MATRIX_INNER_DIM_LIMIT_SIZE) { // km matrix m limit
-            return Status::kmErrorMatrixExceedsLimit;
-        }
-        if (!transB && n > MATRIX_INNER_DIM_LIMIT_SIZE) { // kn matrix n limit
-            return Status::knErrorMatrixExceedsLimit;
-        }
-        if (transB && k > MATRIX_INNER_DIM_LIMIT_SIZE) { // nk matrix k limit
-            return Status::nkErrorMatrixExceedsLimit;
-        }
-        return Status::success;
-    }
-
-    __host_aicore__ static Status CheckArgs(const Arguments& args)
-    {
-        // Check shape in kernel
-        CHECK_AND_RETURN(CheckShape(args.problemShape));
-        // Check mmad args
-        CHECK_AND_RETURN(BlockMmadBuilder::CheckArgs(args.mmadArgs));
-        return Status::success;
-    }
-
-    __host_aicore__ static size_t GetWorkSpaceSize(ProblemShape shape, int64_t blockNum)
-    {
-        size_t workSpaceSize = 0;
-        // Calculate extra workspace size for mmad
-        workSpaceSize += BlockMmadBuilder::GetWorkSpaceSize();
-        return workSpaceSize;
-    }
-
-    __host_aicore__ static Params InitParams(const Arguments& args, GM_ADDR workspace)
-    {
-        BlockMmadParams mmadParams = BlockMmadBuilder::InitParams(args.mmadArgs);
-        // mmad params with epiligue takes workspaceGm as output
-        Params params = {args.problemShape, mmadParams, {}};
-        return params;
     }
 
     __aicore__ inline void operator()(const Params& params)
@@ -248,4 +200,3 @@ public:
 } // namespace Kernel
 } // namespace Gemm
 } // namespace Cmct
-

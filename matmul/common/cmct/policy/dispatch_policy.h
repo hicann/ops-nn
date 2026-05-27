@@ -34,6 +34,7 @@ struct KernelBatchMatMulToMul {};  // BatchMatmul to mul
 struct KernelMixWithWeightPrologue {};
 struct KernelMatMulToMul {};
 struct KernelFlatQuant {};
+struct KernelMatmulToVector {}; 
 
 enum class MatMulL0C2Out : std::uint8_t
 {
@@ -340,6 +341,17 @@ struct MmadAPrefetchBAntiquantScmc {
 template <class SingleCoreShape = AscendC::Shape<_0, _0, _0, _0>>
 struct MatmulToMul {
     using ScheduleType = KernelMatMulToMul;
+    using SingleShape = SingleCoreShape;
+};
+
+/**
+ * @struct MatmulToVector
+ * @brief Matrix multiplication policy for converting a matmul operation to vector (when BTrans)
+ * @param [in] SingleCoreShape: the shape of a single core, default is AscendC::Shape<_0, _0, _0, _0>
+ */
+template <class SingleCoreShape = AscendC::Shape<_0, _0, _0, _0>>
+struct MatmulToVector {
+    using ScheduleType = KernelMatmulToVector;
     using SingleShape = SingleCoreShape;
 };
 
