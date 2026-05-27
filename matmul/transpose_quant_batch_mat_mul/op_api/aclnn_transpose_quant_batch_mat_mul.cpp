@@ -286,12 +286,11 @@ static inline bool InferGroupSize(int64_t& groupSize, bool isMxFp)
     if (isMxFp && !validGroupSize(groupSizeM, groupSizeN, groupSizeK)) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID,
-            "The valid groupSizeM and groupSizeN must be 0 or 1,the valid groupSizeK must be 32.", groupSizeM,
-            groupSizeN);
+            "The valid groupSizeM and groupSizeN must be 0 or 1,the valid groupSizeK must be 32.");
         return false;
     }
     OP_LOGD(
-        "Infered groupSize: groupSizeM: %lu, groupSizeN: %lu, groupSizeK: %lu.", groupSizeM, groupSizeN, groupSizeK);
+        "Inferred groupSize: groupSizeM: %lu, groupSizeN: %lu, groupSizeK: %lu.", groupSizeM, groupSizeN, groupSizeK);
     groupSize = groupSizeK;
     return true;
 }
@@ -328,7 +327,7 @@ inline static aclnnStatus CheckParams(
     // MxFp8场景groupSize判断
     CHECK_RET(InferGroupSize(groupSize, isMxFp), ACLNN_ERR_PARAM_INVALID);
     if (batch_split_factor != 1) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Batch_split_factor should be 1 currently.", batch_split_factor);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Batch_split_factor should be 1 currently: [%d].", batch_split_factor);
         return ACLNN_ERR_PARAM_INVALID;
     }
     return ACLNN_SUCCESS;

@@ -245,7 +245,7 @@ ge::graphStatus TransposeQuantBatchMatMulTiling::CheckScale(
             scaleX1ShapePtr->GetStorageShape().GetDim(1) != b ||
             scaleX1ShapePtr->GetStorageShape().GetDim(2) != numGroup ||
             scaleX1ShapePtr->GetStorageShape().GetDim(NUM_THREE) != NUM_TWO) {
-            OP_LOGE(args_.opName, "MXFp8 Dim of x1ScaleDim != 4 or The x1scale shape invaild");
+            OP_LOGE(args_.opName, "MXFp8 Dim of x1ScaleDim != 4 or The x1scale shape invalid");
             return ge::GRAPH_FAILED;
         }
         int64_t scaleN = scaleX2ShapePtr->GetStorageShape().GetDim(bPerm[NUM_TWO]);
@@ -253,7 +253,7 @@ ge::graphStatus TransposeQuantBatchMatMulTiling::CheckScale(
         if (scaleX2DimNum != EXPECTED_MX_SCALE_DIM || scaleX2ShapePtr->GetStorageShape().GetDim(0) != b ||
             scaleN != n || scaleGroupNum != numGroup ||
             scaleX2ShapePtr->GetStorageShape().GetDim(NUM_THREE) != NUM_TWO) {
-            OP_LOGE(args_.opName, "MXFp8 Dim of x2ScaleDim != 4 or The x2scale shape invaild");
+            OP_LOGE(args_.opName, "MXFp8 Dim of x2ScaleDim != 4 or The x2scale shape invalid");
             return ge::GRAPH_FAILED;
         }
     } else {
