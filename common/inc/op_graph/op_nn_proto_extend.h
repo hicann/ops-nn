@@ -1844,7 +1844,7 @@ REG_OP(Rsqrt)
 
 *@par Inputs:
 *One input, including: \n
-* x: A ND Tensor. Must be one of the following types:int32,int16, float16, float32, bfloat16. \n
+* x: A ND Tensor. Must be one of the following types:int32,int16, float16, float32, bfloat16,int64. \n
 
 *@par Attributes:
 *value: A scale. Must be float. \n
@@ -1859,8 +1859,8 @@ REG_OP(Rsqrt)
 * precision loss occurs when the parameter value exceeds 2^24. it is recommended to use Add.
 */
 REG_OP(Adds)
-    .INPUT(x, TensorType({DT_FLOAT, DT_INT16, DT_INT32, DT_FLOAT16, DT_BF16}))
-    .OUTPUT(y, TensorType({DT_FLOAT, DT_INT16, DT_INT32, DT_FLOAT16, DT_BF16}))
+    .INPUT(x, TensorType({DT_FLOAT, DT_INT16, DT_INT32, DT_FLOAT16, DT_BF16, DT_INT64}))
+    .OUTPUT(y, TensorType({DT_FLOAT, DT_INT16, DT_INT32, DT_FLOAT16, DT_BF16, DT_INT64}))
     .REQUIRED_ATTR(value, Float)
     .OP_END_FACTORY_REG(Adds)
 
