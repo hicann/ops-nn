@@ -103,6 +103,7 @@ general,Ascend910B2,ascend910B2_test_quant_bmm_v3_A8W8INT32_false_false_scale_bf
 general,Ascend910B2,ascend910B2_test_quant_bmm_v3_A8W8INT32_false_false_scale_bf16,16 32,32 16,16,,16,16 16,32 1,16 1,ACL_BF16,ACL_INT32,ACLNN_SUCCESS,,,,,,,,,,,,,,,,,,,
 general,Ascend910B2,ascend910B2_test_quant_bmm_v3_A8W8INT32_false_false_wrong_scale,16 32,32 16,16,,,16 16,32 1,16 1,ACL_UINT64,ACL_INT32,ACLNN_ERR_PARAM_INVALID,,,,,,,,,,,,,,,,,,,
 general,Ascend910B2,ascend910B2_test_quant_bmm_v3_A8W8_x1_speical_out_case,16 32,32 16,16,,16,16 1 16,32 1,1 16,ACL_UINT64,ACL_FLOAT16,ACLNN_SUCCESS,,,,,,,,,,,,,,,,,,,
+general,Ascend910B2,ascend910B2_test_quant_bmm_v3_A8W8_dim_over_65535,16 32,32 65536,65536,,,16 65536,32 1,65536 1,ACL_FLOAT,ACL_FLOAT16,ACLNN_SUCCESS,,,,,,,,,,,,,,,,,,,
 general,Ascend950,ascend950_test_quant_bmm_v3_A8W8CB16_pertoken_scale_bfloat16_bias_bfloat16,16 32,32 16,16,,16,16 16,32 1,16 1,ACL_BF16,ACL_BF16,ACLNN_SUCCESS,,,,,,,,,,,,,,,,,,,
 general,Ascend950,ascend950_test_quant_bmm_v3_A8W8CB16_pertoken_scale_bfloat16_bias_float,16 32,32 16,1,,16,16 16,32 1,16 1,ACL_BF16,ACL_BF16,ACLNN_SUCCESS,,,,,,,,,,,,,,,,,,,
 general,Ascend950,ascend950_test_quant_bmm_v3_A8W8CB16_pertoken_scale_bfloat16_bias_int32,16 32,32 16,16,,16,16 16,32 1,16 1,ACL_BF16,ACL_BF16,ACLNN_SUCCESS,,,,,,,,,,,,,,,,,,,

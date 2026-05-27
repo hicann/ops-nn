@@ -78,7 +78,7 @@ constexpr MatmulConfig MM_CFG_MULTI_BATCH_NO_BATCH_OUT = GetMMConfig<configMode>
 constexpr MatmulConfig MM_CFG_NO_PRELOAD_OPEN_UNIT_FLAG =
     GetMDLConfig(false, false, 0, false, false, false, true, true, false, false, false, true);
 constexpr MatmulConfig MM_DEFAULT_MDL_CFG =
-    GetMDLConfig(false, false, 0, false, false, false, false, true, true, false, false, true);
+    GetMDLConfig(true, false, 0, false, false, false, false, true, true, false, false, true);
 #else
 constexpr MatmulConfig MM_CFG_NO_PRELOAD_OPEN_UNIT_FLAG =
     GetMDLConfig(false, false, 0, false, false, false, true, true, false, false, false);

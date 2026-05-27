@@ -778,8 +778,9 @@ static inline bool CheckShape(TupleTensor &mandatoryTensors, TupleOptional &opti
     OP_CHECK(x1KDim == x2KDim,
              OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x1 k dim and x2 k dim should be same, but x1 is %ld, x2 is %ld.",
                      x1KDim, x2KDim), return false);
-
-    CHECK_RET(MaxDimCheck(x1DimNum, x2DimNum, x1Shape, x2Shape), false);
+    if (op::GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_2201) {
+        CHECK_RET(MaxDimCheck(x1DimNum, x2DimNum, x1Shape, x2Shape), false);
+    }
 
     if (static_cast<ge::Format>(ge::GetPrimaryFormat(x2->GetStorageFormat())) == Format::FORMAT_FRACTAL_NZ) {
         CHECK_RET(CheckShapeForWeightNz(x1, x2, transposeX1, transposeX2), false);

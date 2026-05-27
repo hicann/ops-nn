@@ -543,21 +543,23 @@ bool QuantBatchMatmulV3Tiling::CheckShapeInBoundary(const gert::Shape &shape, ui
     int64_t mul = 1;
     int64_t mulBound = 1;
     const char* dimName = shapeIdx == X1_INDEX ? "x1" : "x2";
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(context_->GetPlatformInfo());
+    auto npuArch = ascendcPlatform.GetCurNpuArch();
     for (size_t i = 0; i < shape.GetDimNum(); ++i) {
         int64_t curDim = shape.GetDim(i);
-
-        OP_TILING_CHECK(i == shape.GetDimNum() - LAST_FIRST_DIM_INDEX && curDim > LAST_AXIS_LIMIT,
-                        CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                              "Last dimension of %s should not be larger than 65535 but atcual is %ld. \
-                                               If user is using the graph mode to call the method, please enable \
-                                               the QuantBatchMatmulV3TransposeFusionPass.",
-                                              dimName, curDim),
-                        return false);
-
+        if (npuArch != NpuArch::DAV_2201) {
+            OP_TILING_CHECK(i == shape.GetDimNum() - LAST_FIRST_DIM_INDEX && curDim > LAST_AXIS_LIMIT,
+                            CUBE_INNER_ERR_REPORT(inputParams_.opName,
+                                                "Last dimension of %s should not be larger than 65535 \
+                                                but atcual is %ld. If user is using the graph mode to call the method, \
+                                                please enable the QuantBatchMatmulV3TransposeFusionPass.",
+                                                dimName, curDim),
+                            return false);
+        }
         OP_TILING_CHECK(curDim <= 0 || curDim > static_cast<int64_t>(INT32_MAX),
                         CUBE_INNER_ERR_REPORT(inputParams_.opName,
                                               "Shape must be within the range [1, %d], \
-but atcual %zu dimension of %s is %ld.",
+                                              but atcual %zu dimension of %s is %ld.",
                                               INT32_MAX, i, dimName, curDim),
                         return false);
 
