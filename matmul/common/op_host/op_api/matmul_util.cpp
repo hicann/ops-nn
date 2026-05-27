@@ -827,7 +827,8 @@ bool CheckNonContiguousShapeSupport(MmOpInfo& mmOpInfo)
 bool CheckGemmV3WithAlphaBeta(const aclTensor* bias, const aclTensor* self, const aclTensor* mat2, int8_t cubeMathType)
 {
     // cubeMathType需要为USE_FP32_ADD
-    if (cubeMathType != USE_FP32_ADD) {
+    auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
+    if (cubeMathType != USE_FP32_ADD || npuArch != NpuArch::DAV_2201) {
         return false;
     }
     // 仅支持fp16、bf16输入
