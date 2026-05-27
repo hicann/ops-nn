@@ -13,9 +13,7 @@
  * \brief
  */
 
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
 #define K_MAX_SHAPE_DIM 0
-#endif
 
 #include "../conv2d_v2/arch35/conv2d_v2.h"
 #include "../conv2d_v2/arch35/conv2d_v2_group.h"

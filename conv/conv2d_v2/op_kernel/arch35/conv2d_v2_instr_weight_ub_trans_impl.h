@@ -55,6 +55,9 @@ private:
                 self_->ctx.convTilingData->convApiTiling.coutOffsetBlock;
             copyParams.loopInfo.loopDstStride[NDDMA_LOOP1_INDEX] =
                 self_->ctx.convTilingData->convApiTiling.bUbKStep;
+            if constexpr (sizeof(typename Intf::WeightT) != 1) {    
+                copyParams.constantValue = 0;
+            }
         }
         // NDDMA Loop0 params
         copyParams.loopInfo.loopSize[NDDMA_LOOP0_INDEX] = self_->ctx.currentUbKStep;
