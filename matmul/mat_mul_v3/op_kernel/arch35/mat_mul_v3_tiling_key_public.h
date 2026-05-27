@@ -17,7 +17,6 @@
 
 #define MAT_MUL_BASIC_LEVEL 1 // 数据类型定义
 #define MAT_MUL_HIGH_LEVEL 0
-#define MAT_MUL_TENSOR_LEVEL 2
 
 #define MAT_MUL_NO_TRANS 0 //  数据格式定义
 #define MAT_MUL_TRANS 1
@@ -58,8 +57,7 @@ enum class MatMulV3BTrans : std::uint8_t
 enum class MatMulV3ApiLevel : std::uint8_t
 {
     HIGH_LEVEL = MAT_MUL_HIGH_LEVEL,
-    BASIC_LEVEL = MAT_MUL_BASIC_LEVEL,
-    TENSOR_LEVEL = MAT_MUL_TENSOR_LEVEL
+    BASIC_LEVEL = MAT_MUL_BASIC_LEVEL
 };
 
 enum class MatMulV3BatchModel : std::uint8_t
