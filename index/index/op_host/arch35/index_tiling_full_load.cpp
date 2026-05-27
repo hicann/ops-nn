@@ -44,7 +44,8 @@ static constexpr uint8_t MASK_MODE_1 = 1;
 static constexpr uint8_t MASK_MODE_INVALID = 127;
 
 static const std::set<ge::DataType> SUPPORT_DTYPE = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_INT32, ge::DT_INT64,
-                                                     ge::DT_BOOL,  ge::DT_BF16,    ge::DT_INT8,  ge::DT_UINT8};
+                                                     ge::DT_BOOL,  ge::DT_BF16,    ge::DT_INT8,  ge::DT_UINT8,
+                                                     ge::DT_COMPLEX64};
 inline static bool IsSupportDtype(const std::set<ge::DataType>& supportDtype, const ge::DataType dtype)
 {
     return (supportDtype.count(dtype) != 0);

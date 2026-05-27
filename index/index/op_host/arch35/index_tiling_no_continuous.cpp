@@ -68,7 +68,8 @@ constexpr uint64_t DTYPE_UINT8 = 0;
 std::map<ge::DataType, uint64_t> typeMap =  {{ge::DT_INT64, DTYPE_INT64}, {ge::DT_INT32, DTYPE_INT32}, 
                                             {ge::DT_FLOAT, DTYPE_F32}, {ge::DT_FLOAT16, DTYPE_F16}, 
                                             {ge::DT_BF16, DTYPE_BF16}, {ge::DT_INT8, DTYPE_INT8},
-                                            {ge::DT_BOOL, DTYPE_BOOL}, {ge::DT_UINT8, DTYPE_UINT8}};
+                                            {ge::DT_BOOL, DTYPE_BOOL}, {ge::DT_UINT8, DTYPE_UINT8},
+                                            {ge::DT_COMPLEX64, DTYPE_INT64}};
 
 uint64_t IndexNonContinuousTiling::GetDataTypeInByte(gert::TilingContext *context) {  
   auto paramsDesc = context->GetInputDesc(0);
@@ -83,7 +84,8 @@ inline bool IndexNonContinuousTiling::ParamTypeIsInvalid(ge::DataType &x)
 {
     std::set<ge::DataType> supportedDtype = {
         ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16,  ge::DT_BOOL,
-        ge::DT_INT8,  ge::DT_UINT8,   ge::DT_INT32, ge::DT_INT64};
+        ge::DT_INT8,  ge::DT_UINT8,   ge::DT_INT32, ge::DT_INT64,
+        ge::DT_COMPLEX64};
     return supportedDtype.count(x) == 0;
 }
 

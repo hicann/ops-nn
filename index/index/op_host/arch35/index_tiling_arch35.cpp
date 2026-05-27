@@ -65,7 +65,7 @@ uint64_t GetDataTypeInByte(gert::TilingContext* context)
 {
     auto paramsDtype = context->GetInputDesc(0)->GetDataType();
     uint64_t tilingKey{0};
-    if (paramsDtype == ge::DT_INT64) {
+    if (paramsDtype == ge::DT_INT64 || paramsDtype == ge::DT_COMPLEX64) {
         tilingKey = INPUT_DTYPE_B64;
     } else if ((paramsDtype == ge::DT_INT32) || (paramsDtype == ge::DT_FLOAT)) {
         tilingKey = INPUT_DTYPE_B32;
@@ -294,7 +294,7 @@ ge::graphStatus IndexSimtTiling::GenIndexTilingKey()
     OP_CHECK_NULL_WITH_CONTEXT(context_, firstInput);
     auto paramsDtype = firstInput->GetDataType();
     uint64_t tilingKey;
-    if (paramsDtype == ge::DT_INT64) {
+    if (paramsDtype == ge::DT_INT64 || paramsDtype == ge::DT_COMPLEX64) {
         tilingKey = DTYPE_INT64;
     } else if (paramsDtype == ge::DT_INT32 || paramsDtype == ge::DT_FLOAT) {
         tilingKey = DTYPE_INT32;

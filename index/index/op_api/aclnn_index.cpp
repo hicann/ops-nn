@@ -90,9 +90,15 @@ static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {
     op::DataType::DT_BOOL,   op::DataType::DT_INT8,    op::DataType::DT_UINT8, op::DataType::DT_BF16,
     op::DataType::DT_DOUBLE, op::DataType::DT_INT16};
 
+static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_REGBASE = {
+    op::DataType::DT_FLOAT,  op::DataType::DT_FLOAT16, op::DataType::DT_INT64, op::DataType::DT_INT32,
+    op::DataType::DT_BOOL,   op::DataType::DT_INT8,    op::DataType::DT_UINT8, op::DataType::DT_BF16,
+    op::DataType::DT_DOUBLE, op::DataType::DT_INT16,   op::DataType::DT_COMPLEX64};
+
 static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST_REGBASE = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT64, op::DataType::DT_INT32,
-    op::DataType::DT_BOOL,  op::DataType::DT_INT8,    op::DataType::DT_UINT8, op::DataType::DT_BF16};
+    op::DataType::DT_BOOL,  op::DataType::DT_INT8,    op::DataType::DT_UINT8, op::DataType::DT_BF16,
+    op::DataType::DT_COMPLEX64};
 
 static const std::initializer_list<op::DataType> INDICES_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_INT64, op::DataType::DT_INT32, op::DataType::DT_BOOL};
@@ -117,8 +123,9 @@ static bool CheckDtypeValid(const aclTensor* self, const aclTensorList* indices,
         return false;
     }
     OP_CHECK_DTYPE_NOT_MATCH(self, out->GetDataType(), return false);
-    // 检查数据类型
-    OP_CHECK_DTYPE_NOT_SUPPORT(self, DTYPE_SUPPORT_LIST, return false);
+    // 检查数据类型，按芯片选用不同的支持列表
+    const auto& dtypeSupportList = Ops::NN::AclnnUtil::IsRegbase() ? DTYPE_SUPPORT_LIST_REGBASE : DTYPE_SUPPORT_LIST;
+    OP_CHECK_DTYPE_NOT_SUPPORT(self, dtypeSupportList, return false);
 
     for (size_t i = 0; i < indices->Size(); i++) {
         if ((*indices)[i]->GetViewShape().GetShapeSize() != 0) {
@@ -446,6 +453,10 @@ const aclTensor* CallKernel(const aclTensor* self, const aclTensor* out, const I
                 selfContiguous, indexedSizes, indexedStrides, chooseInfo.outputShape, IndicesTensorList, executor);
         }
     } else {
+        if (self->GetDataType() == op::DataType::DT_COMPLEX64) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "AICPU does not support DT_COMPLEX64 for Index.");
+            return nullptr;
+        }
         if (selfContiguous->GetViewShape().GetDimNum() == 0) {
             opOut = selfContiguous;
         } else {

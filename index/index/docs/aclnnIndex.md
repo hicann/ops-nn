@@ -74,7 +74,7 @@ aclnnStatus aclnnIndex(
         <td>输入</td>
         <td>输入张量。</td>
         <td>-</td>
-        <td>FLOAT、FLOAT16、BFLOAT16、DOUBLE、INT32、INT64、INT16、INT8、UINT8、BOOL</td>
+        <td>FLOAT、FLOAT16、BFLOAT16、DOUBLE、INT32、INT64、INT16、INT8、UINT8、BOOL、COMPLEX64</td>
         <td>ND</td>
         <td>1-8</td>
         <td>√</td>
@@ -121,7 +121,8 @@ aclnnStatus aclnnIndex(
       </tr>
     </tbody></table>
 
-    - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：数据类型不支持BFLOAT16。
+  - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：数据类型不支持BFLOAT16、COMPLEX64。
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：不支持COMPLEX64。
 
 - **返回值**
 

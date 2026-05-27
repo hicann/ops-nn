@@ -18,7 +18,8 @@ namespace ge {
 
 * @par Inputs:
 * Four inputs, including:
-* @li x: A ND Tensor. Must be one of the following types: int64, int32, float32, float16, bfloat16, int8, uint8, bool.
+* @li x: A ND Tensor. Must be one of the following types: int64, int32, float32, float16, bfloat16, int8, uint8, bool,
+complex64.
 * @li indexed_sizes: A 1D Tensor of int64 with shape (N). Sizes for each one of the indexed data.
 * @li indexed_strides: A 1D Tensor of int64 with shape (N). Strides for each one of the indexed data.
 * @li indices: Dynamic input. A ND Tensor of int64/int32. return the value according to the indices.

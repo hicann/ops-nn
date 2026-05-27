@@ -399,6 +399,24 @@ extern "C" __global__ __aicore__ void index(GM_ADDR inputX, GM_ADDR indexedSizes
           op.Init(inputX, indexedSizes, indices, output);
           op.Process();
       }
+  } else if constexpr (sizeof(DTYPE_X) == sizeof(int64_t) && !IsSameType<DTYPE_X, int64_t>::value) {
+      using FullLoadXType = int64_t;
+      if (TILING_KEY_IS(TILING_KEY_FULL_LOAD_DIM1_MODE1)) {
+          GET_TILING_DATA_WITH_STRUCT(IndexFullLoadTilingData, tilingData, tiling);
+          KernelIndexFullLoad<FullLoadXType, int32_t, DTYPE_INDICES, 1, 1> op(tPipe, tilingData);
+          op.Init(inputX, indexedSizes, indices, output);
+          op.Process();
+      } else if (TILING_KEY_IS(TILING_KEY_FULL_LOAD_DIM2_MODE0)) {
+          GET_TILING_DATA_WITH_STRUCT(IndexFullLoadTilingData, tilingData, tiling);
+          KernelIndexFullLoad<FullLoadXType, int32_t, DTYPE_INDICES, 0, DIM2> op(tPipe, tilingData);
+          op.Init(inputX, indexedSizes, indices, output);
+          op.Process();
+      } else if (TILING_KEY_IS(TILING_KEY_FULL_LOAD_DIM2_MODE1)) {
+          GET_TILING_DATA_WITH_STRUCT(IndexFullLoadTilingData, tilingData, tiling);
+          KernelIndexFullLoad<FullLoadXType, int32_t, DTYPE_INDICES, 1, DIM2> op(tPipe, tilingData);
+          op.Init(inputX, indexedSizes, indices, output);
+          op.Process();
+      }
   } else if (TILING_KEY_IS(TILING_KEY_FULL_LOAD_DIM1_MODE1)) {
       GET_TILING_DATA_WITH_STRUCT(IndexFullLoadTilingData, tilingData, tiling);
       KernelIndexFullLoad<DTYPE_X, int32_t, DTYPE_INDICES, 1, 1> op(tPipe, tilingData);

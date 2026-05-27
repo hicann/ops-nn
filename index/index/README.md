@@ -37,7 +37,7 @@
       <td>x</td>
       <td>输入</td>
       <td>输入数据。</td>
-      <td>FLOAT、FLOAT16、BFLOAT16、INT32、INT64、INT8、UINT8、BOOL</td>
+      <td>FLOAT、FLOAT16、BFLOAT16、INT32、INT64、INT8、UINT8、BOOL、COMPLEX64</td>
       <td>ND</td>
     </tr>
     <tr>
@@ -65,10 +65,13 @@
       <td>y</td>
       <td>输出</td>
       <td>根据索引取出后的数据。</td>
-      <td>FLOAT、FLOAT16、BFLOAT16、INT32、INT64、INT8、UINT8、BOOL</td>
+      <td>FLOAT、FLOAT16、BFLOAT16、INT32、INT64、INT8、UINT8、BOOL、COMPLEX64</td>
       <td>ND</td>
     </tr>
   </tbody></table>
+
+- <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：数据类型不支持BFLOAT16、COMPLEX64。
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：不支持COMPLEX64。
 
 ## 约束说明
 
