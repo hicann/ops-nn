@@ -1740,6 +1740,7 @@ VC1@ops-nn:
         - ops/ops-nn/quant/dynamic_block_quant/op_kernel/dynamic_block_quant_apt.cpp
         - ops/ops-nn/quant/grouped_dynamic_block_quant/
         - ops/ops-nn/quant/dynamic_mx_quant/
+        - ops/ops-nn/quant/anti_mx_quant/
         - ops/ops-nn/quant/dynamic_mx_quant_with_dual_axis/
         - ops/ops-nn/quant/dynamic_quant/docs/
         - ops/ops-nn/quant/dynamic_quant/framework/

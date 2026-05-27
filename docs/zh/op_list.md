@@ -3460,6 +3460,16 @@
   </tr>
   <tr>
     <td>quant</td>
+    <td><a href="../../quant/anti_mx_quant/README.md">anti_mx_quant</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>将调用DynamicMxQuant量化得到的FLOAT4/FLOAT8的Tensor反量化为FLOAT16/BFLOAT16/FLOAT32格式。</td>
+  </tr>
+  <tr>
+    <td>quant</td>
     <td><a href="../../quant/ascend_anti_quant/README.md">ascend_anti_quant</a></td>
     <td>✓</td>
     <td>✓</td>
