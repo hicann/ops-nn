@@ -41,8 +41,10 @@ static inline const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_INT32, op::DataType::DT_INT8};
 
 static const std::initializer_list<DataType>& GetDtypeSupportList() {
-  if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
-      GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
+  // Ascend950 (arch35, IsRegbase) 与 910B 同样支持 bfloat16 / float / float16 / int32 / int8
+  if (Ops::NN::AclnnUtil::IsRegbase() ||
+      (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
+       GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E)) {
     return ASCEND910B_DTYPE_SUPPORT_LIST;
   } else {
     return ASCEND910_DTYPE_SUPPORT_LIST;

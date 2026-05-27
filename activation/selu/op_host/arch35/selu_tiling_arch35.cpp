@@ -1,0 +1,192 @@
+/**
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+
+/**
+ * NOTE: Portions of this code were AI-generated and have been
+ * technically reviewed for functional accuracy and security
+ */
+
+/**
+ * \file selu_tiling_arch35.cpp
+ * \brief Selu tiling implementation (arch35, Ascend950)
+ *
+ * Tiling strategy:
+ *   1. Multi-core: divide total elements evenly across AI Cores
+ *   2. UB: divide per-core elements into UB-sized chunks
+ *   3. Buffer layout: inputQueue(1 buf) + outputQueue(1 buf) + tmpBuf1 + tmpBuf2
+ *
+ * 用户约定：所有非 fp32 dtype（FP16/BF16/INT32/INT8）统一走 cast-to-fp32 路径，
+ * 因此中间计算 buffer 大小始终 = ubFactor * sizeof(float)。
+ *
+ * ubDivisor by dtype (in units of sizeof(T)):
+ *   FLOAT32:  (2*4 + 2*4) / 4 = 4
+ *   FLOAT16:  (2*2 + 2*4) / 2 = 6   ← 由 (2*2+2*2)/2=4 改为 (2*2+2*4)/2=6（FP16 中间走 fp32）
+ *   BFLOAT16: (2*2 + 2*4) / 2 = 6
+ *   INT32:    (2*4 + 2*4) / 4 = 4
+ *   INT8:     (2*1 + 2*4) / 1 = 10
+ */
+
+#include "register/op_def_registry.h"
+#include "op_common/log/log.h"
+#include "op_common/op_host/util/math_util.h"
+#include "op_common/op_host/util/platform_util.h"
+#include "../../op_kernel/arch35/selu_tiling_data.h"
+#include "../../op_kernel/arch35/selu_tiling_key.h"
+
+namespace optiling {
+
+using Ops::Base::CeilDiv;
+using Ops::Base::FloorDiv;
+using Ops::Base::FloorAlign;
+using Ops::Base::GetUbBlockSize;
+using Ops::Base::GetAivCoreNum;
+using Ops::Base::GetUbSize;
+
+constexpr uint32_t WS_SYS_SIZE = 0U;
+
+static const gert::Shape g_vec_1_shape = {1};
+
+static inline const gert::Shape EnsureNotScalar(const gert::Shape& in_shape)
+{
+    if (in_shape.GetDimNum() == 0) {
+        return g_vec_1_shape;
+    }
+    return in_shape;
+}
+
+static ge::graphStatus GetShapeInfo(gert::TilingContext* context, int64_t& totalElements,
+                                    ge::DataType& dataType)
+{
+    auto inputX = context->GetInputShape(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, inputX);
+    auto inputShape = EnsureNotScalar(inputX->GetStorageShape());
+    totalElements = inputShape.GetShapeSize();
+
+    auto inputDesc = context->GetInputDesc(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
+    dataType = inputDesc->GetDataType();
+    const std::set<ge::DataType> supportedDtype = {
+        ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_INT32, ge::DT_INT8
+    };
+    if (supportedDtype.count(dataType) == 0) {
+        OP_LOGE(context, "Selu: unsupported dtype %d", static_cast<int>(dataType));
+        return ge::GRAPH_FAILED;
+    }
+
+    return ge::GRAPH_SUCCESS;
+}
+
+static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
+{
+    size_t* currentWorkspace = context->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context, currentWorkspace);
+    currentWorkspace[0] = WS_SYS_SIZE;
+    return ge::GRAPH_SUCCESS;
+}
+
+// Empty tensor (totalElements=0): blockDim=1，kernel 内提前返回
+static void SetEmptyTensorTiling(gert::TilingContext* context, SeluTilingData* tiling, ge::DataType dataType)
+{
+    tiling->totalElements = 0;
+    tiling->blockFactor = 0;
+    tiling->ubFactor = 0;
+    context->SetBlockDim(1);
+    uint32_t dTypeX = static_cast<uint32_t>(dataType);
+    ASCENDC_TPL_SEL_PARAM(context, dTypeX);
+}
+
+// dtype 推导与 UB 切分在同一函数内，确保 typeSize ∈ {1,2,4} 的常量约束对所有除法可见。
+// Buffer layout per element: inputQueue + outputQueue (typeSize) + tmpBuf1 + tmpBuf2 (computeTypeSize=4)
+//   ubDivisor = (2*typeSize + 2*computeTypeSize) / typeSize
+static ge::graphStatus ComputeTiling(gert::TilingContext* context, SeluTilingData* tiling,
+                                      ge::DataType dataType, int64_t totalElements,
+                                      uint64_t ubSize, int64_t coreNum)
+{
+    // 用户约定：所有非 fp32 dtype 中间都走 cast-to-fp32，computeTypeSize 固定为 4
+    int64_t typeSize = 4;
+    int64_t computeTypeSize = 4;
+    switch (dataType) {
+        case ge::DT_FLOAT:
+        case ge::DT_INT32:
+            typeSize = 4;
+            break;
+        case ge::DT_FLOAT16:
+        case ge::DT_BF16:
+            typeSize = 2;
+            break;
+        case ge::DT_INT8:
+            typeSize = 1;
+            break;
+        default:
+            OP_LOGE(context, "Selu: unexpected dtype %d", static_cast<int>(dataType));
+            return ge::GRAPH_FAILED;
+    }
+
+    int64_t ubBlockSize = 32 / typeSize; // 32-byte alignment in elements
+    int64_t blockFactor = CeilDiv(totalElements, coreNum);
+    blockFactor = ((blockFactor + ubBlockSize - 1) / ubBlockSize) * ubBlockSize;
+    int64_t usedCoreNum = CeilDiv(totalElements, blockFactor);
+    int64_t ubDivisor = (2 * typeSize + 2 * computeTypeSize) / typeSize;
+    int64_t ubFactor = FloorAlign(
+        FloorDiv(static_cast<int64_t>(ubSize) / typeSize, ubDivisor),
+        ubBlockSize);
+    OP_CHECK_IF(ubFactor <= 0, OP_LOGE(context, "Selu: ubFactor is %ld, UB too small", ubFactor),
+                return ge::GRAPH_FAILED);
+
+    tiling->totalElements = totalElements;
+    tiling->blockFactor = blockFactor;
+    tiling->ubFactor = ubFactor;
+    context->SetBlockDim(usedCoreNum);
+    return ge::GRAPH_SUCCESS;
+}
+
+static ge::graphStatus SeluTilingFunc(gert::TilingContext* context)
+{
+    int64_t coreNum = static_cast<int64_t>(GetAivCoreNum(context));
+    OP_CHECK_IF(coreNum == 0, OP_LOGE(context, "coreNum is 0"), return ge::GRAPH_FAILED);
+    uint64_t ubSize = static_cast<uint64_t>(GetUbSize(context));
+    OP_CHECK_IF(ubSize == 0, OP_LOGE(context, "ubSize is 0"), return ge::GRAPH_FAILED);
+
+    int64_t totalElements = 0;
+    ge::DataType dataType = ge::DT_FLOAT;
+    OP_CHECK_IF(GetShapeInfo(context, totalElements, dataType) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetShapeInfo error"), return ge::GRAPH_FAILED);
+
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetWorkspaceSize error"), return ge::GRAPH_FAILED);
+
+    SeluTilingData* tiling = context->GetTilingData<SeluTilingData>();
+    OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
+    OP_CHECK_IF(memset_s(tiling, sizeof(SeluTilingData), 0, sizeof(SeluTilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+
+    if (totalElements == 0) {
+        SetEmptyTensorTiling(context, tiling, dataType);
+        return ge::GRAPH_SUCCESS;
+    }
+
+    OP_CHECK_IF(ComputeTiling(context, tiling, dataType, totalElements, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "ComputeTiling error"), return ge::GRAPH_FAILED);
+
+    uint32_t dTypeX = static_cast<uint32_t>(dataType);
+    ASCENDC_TPL_SEL_PARAM(context, dTypeX);
+    return ge::GRAPH_SUCCESS;
+}
+
+static ge::graphStatus TilingParseForSelu([[maybe_unused]] gert::TilingParseContext* context)
+{
+    return ge::GRAPH_SUCCESS;
+}
+
+struct SeluCompileInfo {};
+
+IMPL_OP_OPTILING(Selu).Tiling(SeluTilingFunc).TilingParse<SeluCompileInfo>(TilingParseForSelu);
+
+} // namespace optiling

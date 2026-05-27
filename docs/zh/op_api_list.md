@@ -363,7 +363,7 @@
 | [aclnnScatterValue&aclnnInplaceScatterValue](../../index/scatter_elements_v2/docs/aclnnScatterValue&aclnnInplaceScatterValue.md) | 将scalar value中的值按指定的轴和方向和对应的位置关系逐个填入tensor self中。 | 默认确定性实现 | 默认非确定性实现，支持配置开启 |
 | [aclnnScaledMaskedSoftmax](../../vfusion/scaled_masked_softmax_v2/docs/aclnnScaledMaskedSoftmax.md) | 将输入的数据x先进行scale缩放和mask，然后执行softmax的输出。 | 默认确定性实现 | - |
 | [aclnnScaledMaskedSoftmaxBackward](../../vfusion/scaled_masked_softmax_grad_v2/docs/aclnnScaledMaskedSoftmaxBackward.md) | softmax的反向传播，并对结果进行缩放以及掩码。 | 默认非确定性实现，支持配置开启。 | - |
-| [aclnnSelu&aclnnInplaceSelu](../../activation/selu/docs/aclnnSelu&aclnnInplaceSelu.md) | 对输入tensor逐元素进行Selu符号函数的运算并输出结果tensor。 | 默认确定性实现 | - |
+| [aclnnSelu&aclnnInplaceSelu](../../activation/selu/docs/aclnnSelu&aclnnInplaceSelu.md) | 对输入Tensor逐元素计算SELU（Scaled Exponential Linear Unit）激活函数。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnSeluBackward](../../activation/selu_grad/docs/aclnnSeluBackward.md) | 完成aclnnSelu的反向。 | 默认确定性实现 | - |
 | [aclnnShrink](../../activation/shrink/docs/aclnnShrink.md) | 对输入张量进行非线性变换，根据输入值self与阈值lambd的关系，对输入通过偏移量bias进行缩放和偏移处理。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnSigmoid&aclnnInplaceSigmoid](../../activation/sigmoid/docs/aclnnSigmoid&aclnnInplaceSigmoid.md) | 对输入Tensor完成sigmoid运算。 | 默认确定性实现 | 默认确定性实现 |

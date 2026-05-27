@@ -469,12 +469,12 @@
   <tr>
     <td>activation</td>
     <td><a href="../../activation/selu/README.md">selu</a></td>
-    <td>✗</td>
-    <td>✗</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>对输入Tensor逐元素计算SELU（Scaled Exponential Linear Unit）激活函数。</td>
   </tr>
   <tr>
     <td>activation</td>
