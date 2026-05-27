@@ -377,15 +377,14 @@ static __aicore__ inline void Rearrange2Gm(Intf *self, const GlobalTensor<typena
     if (enAtomic == 1) {
         SetAtomicAdd<typename Intf::DstT>();
     }
-    
+
     self->ctx.vecOutBuf_ = self->ctx.vecBuf_.template Get<typename Intf::DstT>();
     if (self->ctx.tiling_->group != self->ctx.tiling_->cin || self->ctx.tiling_->group != self->ctx.tiling_->cout) {
         Rearrange2GmNormalGroup(self, output, isCoutNumAligned);
-    } else if (self->ctx.tiling_->group == self->ctx.tiling_->cin &&
-        self->ctx.tiling_->group == self->ctx.tiling_->cout) {
+    } else if (self->ctx.tiling_->group == self->ctx.tiling_->cin && self->ctx.tiling_->group == self->ctx.tiling_->cout) {
         Rearrange2GmDepthwise(self, output);
     }
-    
+
     if (enAtomic == 1) {
         SetAtomicNone();
     }
@@ -613,7 +612,7 @@ static __aicore__ inline void UBRearrange2Gm(Intf *self, const GlobalTensor<type
     cutMNSize.isNTail = deterShape.isNTail[self->ctx.subCoreInx_];
 
     uint32_t hwNum = ShiftCeilM0(cutMNSize.curNSize, BLOCK_CUBE);
-    if (self->ctx.tiling_->group != self->ctx.tiling_->realGroup) {
+    if constexpr (Intf::conv3ddwConfig.groupEnlarge) {
         Rearrange2Gm(self, output, 1, 0);
     } else if ((self->ctx.tiling_->dk == 1 && hwNum < self->ctx.hwK_) || (self->ctx.tiling_->dk != 1)) {
         uint32_t srcStride = hwNum;
@@ -642,8 +641,8 @@ static __aicore__ inline void GetCutShape(Intf *self, DeterMinisticShape &deterS
     uint64_t splitedCin1 = ShiftCeilM0(Ceil(
         Ceil(self->ctx.baseUseN_, self->ctx.curSingleCoreDk_), self->ctx.hwK_), BLOCK_CUBE);
     uint64_t splitedCout1 = ShiftCeilM0(self->ctx.baseUseM_, BLOCK_CUBE);
-    // group != realgroup是扩维场景，扩维场景在host侧已经保证的数据不超UBsize，因此不需要对数据做切分
-    if(self->ctx.tiling_->group == self->ctx.tiling_->realGroup){
+    // 扩维场景在host侧已经保证的数据不超UBsize，因此不需要对数据做切分
+    if constexpr (!Intf::conv3ddwConfig.groupEnlarge) {
         // 默认切2份，L0C不开double buffer时切4份
         DivTwoNumersInHalf(splitedCin1, splitedCout1);
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
@@ -683,8 +682,8 @@ static __aicore__ inline void MovOutL0cForDeterministicRefactor(Intf *self, Loca
     uint64_t splitedCin1 =
         ShiftCeilM0(Ceil(Ceil(self->ctx.baseUseN_, self->ctx.curSingleCoreDk_), self->ctx.hwK_), BLOCK_CUBE);
     uint64_t splitedCout1 = ShiftCeilM0(self->ctx.baseUseM_, BLOCK_CUBE);
-    // group != realgroup是扩维场景，扩维场景在host侧已经保证的数据不超UBsize，因此不需要对数据做切分
-    if(self->ctx.tiling_->group == self->ctx.tiling_->realGroup){
+    // 扩维场景在host侧已经保证的数据不超UBsize，因此不需要对数据做切分
+    if constexpr (!Intf::conv3ddwConfig.groupEnlarge) {
         // 默认切2份，L0C不开double buffer时切4份
         DivTwoNumersInHalf(splitedCin1, splitedCout1);
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)

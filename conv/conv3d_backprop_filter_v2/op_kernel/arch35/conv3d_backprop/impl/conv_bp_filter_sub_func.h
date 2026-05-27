@@ -41,7 +41,7 @@ static __aicore__ inline void InitLoadToA2Params(Intf *self)
     self->ctx.load2dv2_.srcStride = 0;
     self->ctx.load2dv2_.dstStride = 0;
     self->ctx.load2dv2_.ifTranspose = 1;
-    if constexpr (IsSameType<typename Intf::SrcT, float>::value || IsSameType<typename Intf::SrcT, hifloat8_t>::value) {
+    if constexpr (IsSameType<typename Intf::SrcT, float>::value) {
         self->ctx.alignedL1UseM_ = 0;
     }
 }
@@ -120,9 +120,9 @@ static __aicore__ inline void CalcParamsL12L0a(Intf *self)
     // (m1, k1, k0, m0) Zn -> (k1, m1, m0, k0) Nz
     // mStartPosition/mStep(continuous axis): k1
     // kStartPosition/kStep(non-continuous axis): m1
-    if constexpr (IsSameType<typename Intf::SrcT, float>::value || IsSameType<typename Intf::SrcT, hifloat8_t>::value) {
+    if constexpr (IsSameType<typename Intf::SrcT, float>::value) {
     // (N, (Ho*Wo)/C8, Co1, Co0, C8) -> (N, (Ho*Wo)/C8, Co1, Co0, C8)
-        if (!self->ctx.isSplitWo_) {
+        if (likely(!self->ctx.isSplitWo_)) {
             self->ctx.load2dv2_.ifTranspose = 0;
             self->ctx.load2dv2_.mStep = ShiftCeilM0(self->ctx.baseUseM_, self->ctx.tiling_->m0);
             self->ctx.load2dv2_.srcStride = self->ctx.load2dv2_.mStep;
@@ -151,8 +151,7 @@ template <class Intf>
 __aicore__ inline void CalcParamsL12L0b(Intf *self)
 {
     // load3dStepK
-    if ((self->ctx.dhwK_ != 1) &&
-        (IsSameType<typename Intf::SrcT, float>::value || IsSameType<typename Intf::SrcT, hifloat8_t>::value)) {
+    if ((self->ctx.dhwK_ != 1) && (IsSameType<typename Intf::SrcT, float>::value)) {
         self->ctx.load3d_.kExtension = self->ctx.tiling_->channelSize;
     } else {
         self->ctx.load3d_.kExtension = self->ctx.baseUseN_;
@@ -191,8 +190,8 @@ static __aicore__ inline void LoadL12L0a(Intf *self, const LocalTensor<typename 
         kOffset = ShiftDivM0((kPos % self->ctx.tiling_->stepKa) * self->ctx.tiling_->baseK, self->ctx.tiling_->m0);
     }
 
-    if constexpr (IsSameType<typename Intf::SrcT, float>::value || IsSameType<typename Intf::SrcT, hifloat8_t>::value) {
-        if (!self->ctx.isSplitWo_) {
+    if constexpr (IsSameType<typename Intf::SrcT, float>::value) {
+        if (likely(!self->ctx.isSplitWo_)) {
             self->ctx.load2dv2_.kStep = ShiftCeilChannelSize<Intf>(self->ctx.baseUseK_, self->ctx.tiling_->k0);
             self->ctx.srcL12L0aOffset_ =
                 (mOffset * self->ctx.tiling_->m0 + kOffset * self->ctx.alignedL1UseM_) * self->ctx.tiling_->k0;
@@ -209,7 +208,7 @@ static __aicore__ inline void LoadL12L0a(Intf *self, const LocalTensor<typename 
     } else {
         self->ctx.load2dv2_.srcStride = ShiftDivM0(self->ctx.alignedL1UseKa_, self->ctx.tiling_->k0);
         self->ctx.load2dv2_.mStep = ShiftCeilM0(self->ctx.baseUseK_, self->ctx.tiling_->k0);
-        if (!self->ctx.isSplitWo_) {
+        if (likely(!self->ctx.isSplitWo_)) {
             self->ctx.srcL12L0aOffset_ =
                 (mOffset * self->ctx.alignedL1UseKa_ + kOffset * self->ctx.tiling_->k0) * self->ctx.tiling_->m0;
         } else {
@@ -273,58 +272,6 @@ __aicore__ inline void LoadL12L0bFp32(Intf *self, const LocalTensor<typename Int
 }
 
 template <class Intf>
-__aicore__ inline void LoadL12L0bFp8(Intf *self, const LocalTensor<typename Intf::SrcT> &l1BMatrix,
-                                  LocalTensor<typename Intf::SrcT> &l0b)
-{
-    self->ctx.load3d_.mExtension = self->ctx.baseUseK_ > self->ctx.tiling_->k0 ? self->ctx.tiling_->k0 :
-        self->ctx.baseUseK_;
-    // 由于fp8的c0为32，即dkc12hkwkc11c0，先加载c0上的数据， 使用k_repeat方式来加载hkwk个数，循环dkc12c11次
-    // 每个c0之间间隔c1数据，kStartPt需考虑下一次加载的是c0数据还是c1数据
-    bool baseNNoAllHkWk = ((self->ctx.tiling_->baseN >> 4) % self->ctx.hwK_ != 0);
-    uint32_t curNL0Idx = (self->ctx.enableStepNTail_) ? (self->ctx.curNL0Idx_ % self->ctx.cinHkWkLoop_) :
-        self->ctx.curNL0Idx_;
-    uint32_t curStepN = (self->ctx.enableStepNIncludeDkNocinhwk_) ? (self->ctx.tiling_->stepN /
-        self->ctx.cinHkWkLoop_ * self->ctx.cinHkWkLoop_) : self->ctx.tiling_->stepN;
-    uint32_t calculatedL1N = (curNL0Idx % curStepN) * self->ctx.tiling_->baseN;
-    uint32_t hkwk16 = self->ctx.hwK_ * self->ctx.tiling_->n0;
-    // kStartPt为BL1到BL0的起始跳过的地址，它由两部分组成，一部分是baseN，一部分是StepN
-    // kStartPt的位置可能是wk、hk、等多种情况，以下计算确定hkwk的位置
-    self->ctx.load3d_.kStartPt = ((self->ctx.curNL1Idx_ * self->ctx.tiling_->baseN) %
-        hkwk16) * DOUBLE + (calculatedL1N % hkwk16) * DOUBLE;
-
-#if defined(ASC_DEVKIT_VERSION_NUM) && (ASC_DEVKIT_VERSION_NUM >= 90000000)
-    LoadDataRepeatParamWithStride repeatParam = {0, 1, 0, 0};
-    SetLoadDataRepeatWithStride(repeatParam);
-#else
-    LoadDataRepeatParam repeatParam = {0, 1, 0, 0};
-    SetLoadDataRepeat(repeatParam);
-#endif
-    uint32_t mLoopTime = ShiftCeilChannelSize<Intf>(self->ctx.baseUseK_, self->ctx.tiling_->k0);
-    uint32_t hwkLoopTime = self->ctx.hwK_;
-    if (baseNNoAllHkWk) {
-        hwkLoopTime = ShiftCeilM0(self->ctx.baseUseN_, self->ctx.tiling_->n0) % self->ctx.hwK_;
-    }
-    constexpr uint32_t baseBlock = 512;
-    uint32_t l0bDstStride = 0;
-    auto kStartPt = self->ctx.load3d_.kStartPt;
-
-    for (uint16_t i = 0; i < mLoopTime; i++) {
-        self->ctx.load3d_.kStartPt = kStartPt;
-        for (uint16_t j = 0; j < hwkLoopTime; j++) {
-#if defined(ASC_DEVKIT_VERSION_NUM) && (ASC_DEVKIT_VERSION_NUM >= 90000000)
-            LoadDataWithStride(l0b[l0bDstStride], l1BMatrix, self->ctx.load3d_);
-#else
-            LoadData(l0b[l0bDstStride], l1BMatrix, self->ctx.load3d_);
-#endif
-            AscendC::PipeBarrier<PIPE_MTE1>();
-            l0bDstStride += baseBlock;
-            self->ctx.load3d_.kStartPt += self->ctx.tiling_->k0;
-        }
-        self->ctx.load3d_.mStartPt += self->ctx.tiling_->k0;
-    }
-}
-
-template <class Intf>
 __aicore__ inline void LoadL12L0b(Intf *self, const LocalTensor<typename Intf::SrcT> &l1BMatrix,
                                   LocalTensor<typename Intf::SrcT> &l0b)
 {
@@ -345,8 +292,6 @@ __aicore__ inline void LoadL12L0b(Intf *self, const LocalTensor<typename Intf::S
             LoadData(l0b, l1BMatrix, self->ctx.load3d_);
 #endif
         }
-    } else if ((self->ctx.dhwK_ != 1) && (IsSameType<typename Intf::SrcT, hifloat8_t>::value)) {
-        LoadL12L0bFp8(self, l1BMatrix, l0b);
     } else {
 #if defined(ASC_DEVKIT_VERSION_NUM) && (ASC_DEVKIT_VERSION_NUM >= 90000000)
         LoadDataRepeatParamWithStride repeatParam = {0, 1, 0,
@@ -832,7 +777,7 @@ static __aicore__ inline void LoadL0c2GmForTransFormatNCDHW(Intf *self, const Gl
     LocalTensor<typename Intf::L0cT> &l0c, bool enSequentialWrite = false)
 {
     if (!enSequentialWrite) {
-        if (self->ctx.tiling_->group != self->ctx.tiling_->realGroup) {
+        if constexpr (Intf::conv3ddwConfig.groupEnlarge) {
             LoadL0c2UbForGroup(self, l0c);
         } else if (self->ctx.dhwK_ == 1) {
             LoadL0c2GmDkhkwkEqOne(self, output, l0c);

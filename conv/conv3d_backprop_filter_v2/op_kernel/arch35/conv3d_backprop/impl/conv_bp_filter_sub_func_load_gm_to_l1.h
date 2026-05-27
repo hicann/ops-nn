@@ -50,17 +50,14 @@ __aicore__ inline void InitZeroValue(Intf *self, const LocalTensor<typename Intf
 {
     uint32_t len = buf.GetSize() * sizeof(typename Intf::SrcT);
     constexpr int32_t SHIFT_BITS_5 = 5;
-    if constexpr(std::is_same<typename Intf::SrcT, hifloat8_t>::value ||
-        std::is_same<typename Intf::SrcT, fp8_e4m3fn_t>::value) {
-        InitConstValue(buf.template ReinterpretCast<uint16_t>(), {1, static_cast<uint16_t>(len >> SHIFT_BITS_5), 0, 0});
-    } else {
-        AscendC::InitConstValueParams<typename Intf::SrcT> initConstValueParams;
-        initConstValueParams.repeatTimes = 1;
-        initConstValueParams.blockNum = len >> SHIFT_BITS_5;  // 除以blockSize
-        initConstValueParams.dstGap = 0;
-        initConstValueParams.initValue = (typename Intf::SrcT)(0);
-        InitConstValue(buf, initConstValueParams);
-    }
+
+    AscendC::InitConstValueParams<typename Intf::SrcT> initConstValueParams;
+    initConstValueParams.repeatTimes = 1;
+    initConstValueParams.blockNum = len >> SHIFT_BITS_5;  // 除以blockSize
+    initConstValueParams.dstGap = 0;
+    initConstValueParams.initValue = (typename Intf::SrcT)(0);
+    InitConstValue(buf, initConstValueParams);
+
     PipeBarrier<PIPE_MTE2>();
 }
 
@@ -150,7 +147,7 @@ template <class Intf>
 static __aicore__ inline void LoadToA1Fp32Nd2Nz(Intf *self, uint64_t kaIdx,
     const Out2L1ScalarParams& params, uint64_t kaStepIdx, Nd2NzParams& nd2NzParams)
 {
-    if (!self->ctx.isSplitWo_) {
+    if (likely(!self->ctx.isSplitWo_)) {
         // fp32 时，使用nd2nz实现DN规格，主要是将D轴变为HoWo，N轴变为Cout
         /* B N D ==> D1 N B D0 */
         /* (HoWo), Cout ==> (HoWo)/C8, (Cout1, Cout0), C8 */
@@ -214,7 +211,7 @@ template <class Intf>
 static __aicore__ inline void LoadToA1Fp16Dn2Nz(Intf *self, uint64_t kaIdx,
     const Out2L1ScalarParams& params, uint64_t kaStepIdx, Dn2NzParams& dn2NzParams)
 {
-    if (!self->ctx.isSplitWo_) {
+    if (likely(!self->ctx.isSplitWo_)) {
         dn2NzParams.dnNum = 1;
         if (self->ctx.stepKaRound == (kaStepIdx + 1)) {
             // 最后一块kAL1，考虑tailK, 32表示32Byte
@@ -246,7 +243,7 @@ template <class Intf>
 static __aicore__ inline void LoadToA1Fp32Dn2Nz(Intf *self, uint64_t kaIdx,
     const Out2L1ScalarParams& params, uint64_t kaStepIdx, Dn2NzParams& dn2NzParams)
 {
-    if (!self->ctx.isSplitWo_) {
+    if (likely(!self->ctx.isSplitWo_)) {
         // fp32 时，使用dn2nz实现ND规格，主要是将D轴变为HoWo，N轴变为Cout
         /* B D N ==> D1 N B D0 */
         /* Cout, (HoWo), 1 ==> (HoWo)/C8, 1, (Cout1, Cout0), C8 */
@@ -337,7 +334,7 @@ template <class Intf>
 static __aicore__ inline void LoadToA1Fp16Nd2Nz(Intf *self, uint64_t kaIdx,
     const Out2L1ScalarParams& params, uint64_t kaStepIdx, Nd2NzParams& nd2NzParams)
 {
-    if (!self->ctx.isSplitWo_) {
+    if (likely(!self->ctx.isSplitWo_)) {
         LoadToA1Nd2NzNormal(self, kaIdx, params, kaStepIdx, nd2NzParams);
     } else {
         SplitWLoadToA1Nd2Nz(self, kaIdx, params, kaStepIdx, nd2NzParams);
@@ -419,18 +416,17 @@ static __aicore__ inline void LoadToA1ForTransFormat(Intf *self, uint64_t kaIdx,
     } else {
         if constexpr (Intf::Config::cType::format == ConvolutionBackprop::CubeFormat::NCDHW) {
             uint64_t offset = kaStepIdx * self->ctx.kal1_;
-            if (self->ctx.isSplitWo_) {
+            if (unlikely(self->ctx.isSplitWo_)) {
                 offset = (kaStepIdx * self->ctx.kal1_ / self->ctx.singleShapeWo_ * self->ctx.tiling_->wo);
             }
             uint64_t out2A1SrcAddrOffset = params.out2A1SrcAddr + offset;
-            if constexpr (IsSameType<typename Intf::SrcT, float>::value ||
-                IsSameType<typename Intf::SrcT, hifloat8_t>::value) {
-                if (!self->ctx.isSplitWo_) {
+            if constexpr (IsSameType<typename Intf::SrcT, float>::value) {
+                if (likely(!self->ctx.isSplitWo_)) {
                     // fp32 时，使用nd2nz实现DN规格，主要是将D轴变为HoWo，N轴变为Cout
                     Nd2NzParams nd2NzParams;
                     LoadToA1Fp32Nd2Nz<Intf>(self, kaIdx, params, kaStepIdx, nd2NzParams);
                     DataCopy(useA1Buf, self->ctx.outBackPropGlobal_[out2A1SrcAddrOffset], nd2NzParams);
-                } else { //hifloat8_t 类型暂不支持,在tiling侧已拦截，一定走的是不切W分支
+                } else {
                     Dn2NzParams dn2NzParams;
                     LoadToA1Fp32Dn2Nz<Intf>(self, kaIdx, params, kaStepIdx, dn2NzParams);
                     DataCopy(useA1Buf, self->ctx.outBackPropGlobal_[out2A1SrcAddrOffset], dn2NzParams);
@@ -442,14 +438,12 @@ static __aicore__ inline void LoadToA1ForTransFormat(Intf *self, uint64_t kaIdx,
             }
         } else {
             uint64_t offset = kaStepIdx * self->ctx.kal1_ * self->ctx.tiling_->cout;
-            if (self->ctx.isSplitWo_) {
-                offset = (kaStepIdx * self->ctx.kal1_ / self->ctx.singleShapeWo_ * self->ctx.tiling_->wo) * 
-                            self->ctx.tiling_->cout;
+            if (unlikely(self->ctx.isSplitWo_)) {
+                offset = (kaStepIdx * self->ctx.kal1_ / self->ctx.singleShapeWo_ * self->ctx.tiling_->wo) * self->ctx.tiling_->cout;
             }
             uint64_t out2A1SrcAddrOffset = params.out2A1SrcAddr + offset;
-            if constexpr (IsSameType<typename Intf::SrcT, float>::value ||
-                IsSameType<typename Intf::SrcT, hifloat8_t>::value) {
-                if (!self->ctx.isSplitWo_) {
+            if constexpr (IsSameType<typename Intf::SrcT, float>::value) {
+                if (likely(!self->ctx.isSplitWo_)) {
                     // fp32 时，使用dn2nz实现ND规格，主要是将D轴变为HoWo，N轴变为Cout
                     Dn2NzParams dn2NzParams;
                     LoadToA1Fp32Dn2Nz<Intf>(self, kaIdx, params, kaStepIdx, dn2NzParams);
@@ -482,7 +476,7 @@ __aicore__ inline void LoadToA1(Intf *self, bool cachePosA1, uint64_t kaIdx, con
         self->ctx.tiling_->baseK : self->ctx.tiling_->stepKa * self->ctx.tiling_->baseK;
     self->ctx.alignedL1UseKa_ = ShiftCeilChannelSize<Intf>(l1UseKa_, self->ctx.tiling_->k0) * self->ctx.tiling_->k0;
 
-    if constexpr (IsSameType<typename Intf::SrcT, float>::value || IsSameType<typename Intf::SrcT, hifloat8_t>::value) {
+    if constexpr (IsSameType<typename Intf::SrcT, float>::value) {
         if (self->ctx.baseUseM_ != 1) {
             auto l1UseM = params.isLastMAL1 ?
                 ((self->ctx.curStepM_ - 1) * self->ctx.tiling_->baseM + self->ctx.tailM_) :
@@ -513,7 +507,7 @@ template <class Intf>
 static __aicore__ inline void LoadToB1Dn2Nz(Intf *self, const uint32_t hiCopyLen,
     const uint64_t out2B1SrcAddrOffset, const Out2L1ScalarParams &params, LocalTensor<typename Intf::SrcT> &useB1Buf)
 {
-    if (!self->ctx.isSplitWo_) {
+    if (likely(!self->ctx.isSplitWo_)) {
         Dn2NzParams dn2NzParams;
         dn2NzParams.dnNum = self->ctx.curSingleCoreDk_;
         // 若curStepN_大于cinHkWkLoop_，则说明StepN上包含dk，因此在加载L1时，需要加载stepN/cinHkWkLoop_个dk
@@ -553,7 +547,7 @@ template <class Intf>
 static __aicore__ inline void LoadToB1Nd2Nz(Intf *self, const uint32_t hiCopyLen,
     const uint64_t out2B1SrcAddrOffset, const Out2L1ScalarParams &params, LocalTensor<typename Intf::SrcT> &useB1Buf)
 {
-    if (!self->ctx.isSplitWo_) {
+    if (likely(!self->ctx.isSplitWo_)) {
         Nd2NzParams nd2NzParams;
         nd2NzParams.ndNum = self->ctx.curSingleCoreDk_;
         // 若curStepN_大于cinHkWkLoop_，则说明StepN上包含dk，因此在加载L1时，需要加载stepN/cinHkWkLoop_个dk

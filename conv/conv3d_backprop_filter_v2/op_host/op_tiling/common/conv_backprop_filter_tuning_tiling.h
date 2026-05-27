@@ -92,6 +92,7 @@ TUNING_TILING_DATA_FIELD_DEF(uint32_t, singleCoreM);
 TUNING_TILING_DATA_FIELD_DEF(uint32_t, singleCoreN);
 TUNING_TILING_DATA_FIELD_DEF(uint32_t, singleCoreK);
 TUNING_TILING_DATA_FIELD_DEF(bool, isSplitKernelHW);
+TUNING_TILING_DATA_FIELD_DEF(bool, groupEnlarge);
 TUNING_TILING_DATA_FIELD_DEF(uint32_t, coreBindDirection);
 END_TUNING_TILING_DEF
 
@@ -132,6 +133,7 @@ DECLARE_SCHEMA(Conv3DBackpropFilterTunerTiling,
   FIELD(Conv3DBackpropFilterTunerTiling, singleCoreN),
   FIELD(Conv3DBackpropFilterTunerTiling, singleCoreK),
   FIELD(Conv3DBackpropFilterTunerTiling, isSplitKernelHW),
+  FIELD(Conv3DBackpropFilterTunerTiling, groupEnlarge),
   FIELD(Conv3DBackpropFilterTunerTiling, coreBindDirection));
 }  // namespace tuningtiling
 #endif

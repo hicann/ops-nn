@@ -134,8 +134,6 @@ static __aicore__ inline uint64_t ShiftDivChannelSize(uint64_t a, uint32_t chann
         return a >> 4; // 4: bit
     } else if constexpr (AscendC::IsSameType<typename Intf::SrcT, bfloat16_t>::value) {
         return a >> 4; // 4: bit
-    } else if constexpr (AscendC::IsSameType<typename Intf::SrcT, hifloat8_t>::value) {
-        return a >> 5; // 5: bit
     } else {
         return a >> 4; // 4: bit
     }
@@ -150,8 +148,6 @@ static __aicore__ inline uint64_t ShiftCeilChannelSize(uint64_t a, uint32_t chan
         return (a + 15) >> 4; // (a + channelSize - 1) / channelSize
     } else if constexpr (AscendC::IsSameType<typename Intf::SrcT, bfloat16_t>::value) {
         return (a + 15) >> 4; // (a + channelSize - 1) / channelSize
-    } else if constexpr (AscendC::IsSameType<typename Intf::SrcT, hifloat8_t>::value) {
-        return (a + 31) >> 5; // (a + channelSize - 1) / channelSize
     } else {
         return (a + 15) >> 4; // (a + channelSize - 1) / channelSize
     }

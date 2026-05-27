@@ -333,7 +333,7 @@ __aicore__ inline void ComputeNormal(Intf *self, Out2L1ScalarParams& out2L1Param
 
         for (int32_t splitWoIdx = 0; splitWoIdx < woIterateTimes; splitWoIdx++) {
             updateSingleShapeWoI(self, out2L1Params, woIterateTimes, splitWoIdx, splitWo);
-            if (self->ctx.isSplitWo_) {
+            if (unlikely(self->ctx.isSplitWo_)) {
                 updateParasForSplitW(self, out2L1Params, splitWoIdx * splitWo, out2A1SrcAddrStart, out2B1SrcAddrStart);
             }
             if (!self->ctx.load3d_.l1W) {
@@ -643,10 +643,17 @@ struct UpdateMNIdx {
             out2L1Params.isLoad2L1B = true;
             out2L1Params.isFreeBL1  = true;
         } else {
-            out2L1Params.isLoad2L1A = kIterCeilStepKaGreaterAl1Pbuffer || self->ctx.singleShapeBatch_ > 1 || self->ctx.isSplitWo_ == 1;
-            out2L1Params.isFreeAL1  = kIterCeilStepKaGreaterAl1Pbuffer || self->ctx.singleShapeBatch_ > 1 || self->ctx.isSplitWo_ == 1;
-            out2L1Params.isLoad2L1B = kIterCeilStepKbGreaterBl1Pbuffer || self->ctx.singleShapeBatch_ > 1 || self->ctx.isSplitWo_ == 1;
-            out2L1Params.isFreeBL1  = kIterCeilStepKbGreaterBl1Pbuffer || self->ctx.singleShapeBatch_ > 1 || self->ctx.isSplitWo_ == 1;
+            if (unlikely(self->ctx.isSplitWo_)) {
+                out2L1Params.isLoad2L1A = true;
+                out2L1Params.isFreeAL1  = true;
+                out2L1Params.isLoad2L1B = true;
+                out2L1Params.isFreeBL1  = true;
+            } else {
+                out2L1Params.isLoad2L1A = kIterCeilStepKaGreaterAl1Pbuffer || self->ctx.singleShapeBatch_ > 1;
+                out2L1Params.isFreeAL1  = kIterCeilStepKaGreaterAl1Pbuffer || self->ctx.singleShapeBatch_ > 1;
+                out2L1Params.isLoad2L1B = kIterCeilStepKbGreaterBl1Pbuffer || self->ctx.singleShapeBatch_ > 1;
+                out2L1Params.isFreeBL1  = kIterCeilStepKbGreaterBl1Pbuffer || self->ctx.singleShapeBatch_ > 1;
+            }
         }
 
         if (unlikely(self->ctx.isFirstIter_)) {
@@ -757,7 +764,7 @@ struct IterateAll {
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, ConvolutionBackpropFunc);
     static __aicore__ inline void call(Intf *self, const GlobalTensor<typename Intf::DstT> &output, uint8_t enAtomic)
     {
-        if (self->ctx.tiling_->group == self->ctx.tiling_->realGroup) {
+        if constexpr (!Intf::conv3ddwConfig.groupEnlarge) {
             while (self->template Iterate<sync>()) {
                 self->template GetTensorC<sync>(output, enAtomic);
             }

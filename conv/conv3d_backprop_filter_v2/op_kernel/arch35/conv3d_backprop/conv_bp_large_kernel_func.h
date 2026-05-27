@@ -433,7 +433,7 @@ __aicore__ inline void ComputeSplitKernelHW(Intf* self, Out2L1ScalarParams& out2
             calculateWoIterTimes(self, woIterateTimes, splitWo);
             for (int32_t splitWoIdx = 0; splitWoIdx < woIterateTimes; splitWoIdx++) {
                 updateSingleShapeWoI(self, out2L1Params, woIterateTimes, splitWoIdx, splitWo);
-                if (self->ctx.isSplitWo_) {
+                if (unlikely(self->ctx.isSplitWo_)) {
                     updateParasForSplitW(
                         self, out2L1Params, splitWoIdx * splitWo, out2A1SrcAddrStart, out2B1SrcAddrStart);
                 }

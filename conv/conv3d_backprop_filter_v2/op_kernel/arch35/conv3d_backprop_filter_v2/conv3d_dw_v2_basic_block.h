@@ -31,8 +31,8 @@ constexpr uint64_t HUGE_PADDING_HO_THRESHOLD = 256;
 namespace AscendC {
 using Conv3ddwConfig = typename ConvolutionBackprop::Conv3ddwConfig;
 
-template <typename xType, int xFormat, typename dedyType, int dedyFormat, typename yType, int yFormat, bool isSplitKernelHW>
-class Conv3dDwBasicBlockMNStreamK : public Conv3dDw<xType, xFormat, dedyType, dedyFormat, yType, yFormat, isSplitKernelHW> {
+template <typename xType, int xFormat, typename dedyType, int dedyFormat, typename yType, int yFormat, bool isSplitKernelHW, bool groupEnlarge>
+class Conv3dDwBasicBlockMNStreamK : public Conv3dDw<xType, xFormat, dedyType, dedyFormat, yType, yFormat, isSplitKernelHW, groupEnlarge> {
 public:
     __aicore__ inline Conv3dDwBasicBlockMNStreamK()
     {
@@ -105,7 +105,7 @@ protected:
 
     __aicore__ void InitCommonTilingData(const conv_bp_v2_kernel::Conv3DBackpropFilterV2TilingData* tilingData)
     {
-        Conv3dDw<xType, xFormat, dedyType, dedyFormat, yType, yFormat, isSplitKernelHW>::InitTilingData(tilingData);
+        Conv3dDw<xType, xFormat, dedyType, dedyFormat, yType, yFormat, isSplitKernelHW, groupEnlarge>::InitTilingData(tilingData);
         usedCoreNum_ = tilingData->dwTiling.usedCoreNum;
         streamkType_ = tilingData->dwTiling.streamkType;
         singleCoreBatch_ = tilingData->dwTiling.singleCoreBatchDout;
@@ -426,8 +426,8 @@ protected:
     }
 };
 
-template <typename xType, int xFormat, typename dedyType, int dedyFormat, typename yType, int yFormat, bool isSplitKernelHW>
-class Conv3dDwBasicBlockStreamK : public Conv3dDwBasicBlockMNStreamK<xType, xFormat, dedyType, dedyFormat, yType, yFormat, isSplitKernelHW> {
+template <typename xType, int xFormat, typename dedyType, int dedyFormat, typename yType, int yFormat, bool isSplitKernelHW, bool groupEnlarge>
+class Conv3dDwBasicBlockStreamK : public Conv3dDwBasicBlockMNStreamK<xType, xFormat, dedyType, dedyFormat, yType, yFormat, isSplitKernelHW, groupEnlarge> {
 public:
     __aicore__ inline Conv3dDwBasicBlockStreamK()
     {

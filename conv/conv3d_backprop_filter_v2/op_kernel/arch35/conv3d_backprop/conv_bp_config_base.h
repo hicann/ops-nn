@@ -61,11 +61,6 @@ struct GetDstType<bfloat16_t> {
     using Type = float;
 };
 
-template <>
-struct GetDstType<hifloat8_t> {
-    using Type = float;
-};
-
 // ConvType，定义卷积输入输出对象的属性
 template <TPosition POSITION, CubeFormat FORMAT, typename T>
 struct ConvType {
@@ -76,7 +71,7 @@ struct ConvType {
 
 struct Conv3ddwConfig {
     bool isSplitKernelHW = false;
-    uint32_t l0cCondition = TPL_STREAM_DFL;
+    bool groupEnlarge = false;
 };
 
 // 该函数提供默认的模板参数，完成最基本的算子功能场景，尽量泛化
@@ -84,7 +79,7 @@ __aicore__ constexpr Conv3ddwConfig GetDefaultConfig()
 {
     return {
         .isSplitKernelHW = false,
-        .l0cCondition = TPL_STREAM_DFL,
+        .groupEnlarge = false,
     };
 }
 

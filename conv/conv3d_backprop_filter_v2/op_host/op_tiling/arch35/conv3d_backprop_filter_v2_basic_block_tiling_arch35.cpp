@@ -219,7 +219,7 @@ void Conv3DDWV2BasicBlockTilingArch35::CalcRealGroup()
     runInfo_.cout1_g = Ops::Base::CeilDiv(static_cast<int32_t>(runInfo_.mag_factor * runInfo_.co / groups), BLOCK_CUBE);
     runInfo_.real_g = static_cast<int32_t>((groups + runInfo_.mag_factor - 1) / runInfo_.mag_factor);
     // 扩维标识，默认0：不扩维，1：扩维
-    blockTiling_.groupEnlarge = 1U;
+    blockTiling_.groupEnlarge = true;
 }
 
 // 不使能扩维方案
@@ -983,6 +983,7 @@ bool Conv3DDWV2BasicBlockTilingArch35::TranslateTunerTiling(tuningtiling::Tuning
     dwt.singleCoreK = tunerTiling->singleCoreK;
     blockTiling_.coreBindDirection = tunerTiling->coreBindDirection;
     blockTiling_.isSplitKernelHW = tunerTiling->isSplitKernelHW;
+    blockTiling_.groupEnlarge = tunerTiling->groupEnlarge;
 }
 
 ge::graphStatus Conv3DDWV2BasicBlockTilingArch35::DoOpTiling()
@@ -1030,10 +1031,10 @@ ge::graphStatus Conv3DDWV2BasicBlockTilingArch35::DoLibApiTiling()
 
 uint64_t Conv3DDWV2BasicBlockTilingArch35::GetTilingKey() const
 {
-    const uint64_t tilingKey = GET_TPL_TILING_KEY(blockTiling_.coreBindDirection, blockTiling_.isSplitKernelHW);
+    const uint64_t tilingKey = GET_TPL_TILING_KEY(blockTiling_.coreBindDirection, blockTiling_.isSplitKernelHW, blockTiling_.groupEnlarge);
     OP_LOGD(context_->GetNodeName(), "tilingKey is: [%lu]", tilingKey);
-    OP_LOGD(context_->GetNodeName(), "coreBindDirection is: [%u], isSplitKernelHW is: [%u]",
-        blockTiling_.coreBindDirection, blockTiling_.isSplitKernelHW);
+    OP_LOGD(context_->GetNodeName(), "coreBindDirection is: [%u], isSplitKernelHW is: [%u], groupEnlarge is: [%u]",
+        blockTiling_.coreBindDirection, blockTiling_.isSplitKernelHW, blockTiling_.groupEnlarge);
     return tilingKey;
 }
 
