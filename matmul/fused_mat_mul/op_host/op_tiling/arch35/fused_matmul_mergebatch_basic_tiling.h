@@ -9,28 +9,29 @@
  */
 
 /* !
- * \file fused_matmul_asw_basic_tiling.h
+ * \file fused_matmul_mergebatch_basic_tiling.h
  * \brief
  */
+
 #pragma once
 
-#include "batch_mat_mul_v3/op_host/op_tiling/arch35/batch_matmul_v3_asw_basic_tiling.h"
+#include "batch_mat_mul_v3/op_host/op_tiling/arch35/batch_matmul_v3_mergebatch_basicapi_tiling.h"
 
 namespace optiling {
 namespace fused_matmul {
-using batch_matmul_v3_advanced::BatchMatMulV3AswBasicTiling;
+using batch_matmul_v3_advanced::BatchMatMulV3MergeBatchBasicApiTiling;
 
-class FusedMatMulBatchAswBasicApiTiling : public BatchMatMulV3AswBasicTiling {
+class FusedMatMulMergeBatchBasicApiTiling : public BatchMatMulV3MergeBatchBasicApiTiling {
 public:
-    FusedMatMulBatchAswBasicApiTiling(gert::TilingContext* context, MatMulTilingCfg& cfg)
-        : BatchMatMulV3AswBasicTiling(context, cfg){};
+    FusedMatMulMergeBatchBasicApiTiling(gert::TilingContext* context, MatMulTilingCfg& cfg)
+        : BatchMatMulV3MergeBatchBasicApiTiling(context, cfg){};
 
-    ~FusedMatMulBatchAswBasicApiTiling() override = default;
+    ~FusedMatMulMergeBatchBasicApiTiling() override = default;
 
 protected:
     bool IsCapable() override;
-
     uint64_t GetTilingKey() const override;
 };
 } // namespace fused_matmul
 } // namespace optiling
+

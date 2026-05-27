@@ -28,6 +28,8 @@ public:
     ~FusedMatMulBatchAswAL1FullLoadBasicTiling() override = default;
 
 protected:
+    bool IsCapable() override;
+
     uint64_t GetTilingKey() const override;
 };
 } // namespace fused_matmul

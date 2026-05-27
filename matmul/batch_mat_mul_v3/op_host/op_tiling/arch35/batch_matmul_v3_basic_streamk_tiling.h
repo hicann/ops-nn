@@ -39,9 +39,10 @@ protected:
 
     ge::graphStatus GetTilingData(TilingResult& tiling) const override;
 
+    MatMulV3L0C2Out GetL0C2OutFlag() const;
+
 private:
     bool CheckStreamKSKTiling() const;
-    MatMulV3L0C2Out GetL0C2OutFlag() const;
 
     uint64_t mCnt_{1};
     uint64_t nCnt_{1};

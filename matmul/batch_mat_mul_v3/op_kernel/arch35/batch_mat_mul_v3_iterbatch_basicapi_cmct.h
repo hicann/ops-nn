@@ -38,6 +38,11 @@ struct BlockEpilogueSelector<MatMulL0C2Out::ND_FIXPIPE_1_2, OutType, InType, OP_
     using type = Block::BlockEpilogueIterbatch<OutType, InType, Block::FusionAdd<OutType, InType>>;
 };
 
+template <class OutType, class InType>
+struct BlockEpilogueSelector<MatMulL0C2Out::ND_FIXPIPE_1_2, OutType, InType, OP_TYPE_RELU> {
+    using type = Block::BlockEpilogueIterbatch<OutType, InType, Block::DefaultFusion<OutType, InType>>;
+};
+
 template <
     class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class A_LAYOUT, class B_LAYOUT, class C_LAYOUT,
     MatMulL0C2Out FIXPIPE_OPT = MatMulL0C2Out::ON_THE_FLY, uint64_t FUSED_OPTYPE = 0>

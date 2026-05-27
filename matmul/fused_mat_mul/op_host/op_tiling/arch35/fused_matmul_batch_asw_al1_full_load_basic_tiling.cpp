@@ -22,7 +22,26 @@ namespace optiling {
 namespace fused_matmul {
 using namespace strategy;
 MM_REGISTER_TILING_TEMPLATE(
+    FusedMatMul, FusedMatMulBatchAswAL1FullLoadBasicTiling, DAV_3510, AL1_FULL_LOAD_BASIC_INHERITED_FROM_BMMV3);
+MM_REGISTER_TILING_TEMPLATE(
     FusedMatMul, FusedMatMulBatchAswAL1FullLoadBasicTiling, DAV_RESV, AL1_FULL_LOAD_BASIC_INHERITED_FROM_BMMV3);
+
+bool FusedMatMulBatchAswAL1FullLoadBasicTiling::IsCapable()
+{
+    if (!IsFusedMatMulBmmShape(context_)) {
+        return false;
+    }
+    if (compileInfo_.npuArch == NpuArch::DAV_RESV) {
+        return BatchMatMulV3AswAL1FullLoadBasicTiling::IsCapable();
+    }
+    auto attrs = context_->GetAttrs();
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs);
+    std::string opType = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
+    if (opType != "relu" && !opType.empty()) {
+        return false;
+    }
+    return BatchMatMulV3AswAL1FullLoadBasicTiling::IsCapable();
+}
 
 uint64_t FusedMatMulBatchAswAL1FullLoadBasicTiling::GetTilingKey() const
 {

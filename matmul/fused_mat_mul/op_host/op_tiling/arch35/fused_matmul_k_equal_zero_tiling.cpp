@@ -4,53 +4,47 @@
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-/* !
- * \file fused_matmul_batch_asw_basic_tiling.cpp
+/*!
+ * \file fused_matmul_k_equal_zero_tiling.cpp
  * \brief
  */
-#include "fused_matmul_batch_asw_basic_tiling.h"
+#include "fused_matmul_k_equal_zero_tiling.h"
+
 #include "fused_matmul_builtin_tiling_strategy.h"
 #include "fused_matmul_common.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_tiling_registry.h"
-#include "matmul/common/op_host/math_util.h"
 
 namespace optiling {
 namespace fused_matmul {
 using namespace strategy;
-MM_REGISTER_TILING_TEMPLATE(FusedMatMul, FusedMatMulBatchAswBasicApiTiling, DAV_3510, ASWT_BASIC_INHERITED_FROM_BMMV3);
-MM_REGISTER_TILING_TEMPLATE(FusedMatMul, FusedMatMulBatchAswBasicApiTiling, DAV_RESV, ASWT_BASIC_INHERITED_FROM_BMMV3);
+MM_REGISTER_TILING_TEMPLATE(FusedMatMul, FusedMatMulKEqZeroTiling, DAV_3510, INPUT_K_EQUAL_ZERO_INHERITED_FROM_BMMV3);
 
-bool FusedMatMulBatchAswBasicApiTiling::IsCapable()
+bool FusedMatMulKEqZeroTiling::IsCapable()
 {
-    if (!IsFusedMatMulBmmShape(context_)) {
-        return false;
-    }
-    if (compileInfo_.npuArch == NpuArch::DAV_RESV) {
-        return BatchMatMulV3AswBasicTiling::IsCapable();
-    }
     auto attrs = context_->GetAttrs();
     OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs);
     std::string opType = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
     if (opType != "relu" && !opType.empty()) {
         return false;
     }
-    return BatchMatMulV3AswBasicTiling::IsCapable();
+    return BatchMatMulV3KEqZeroTiling::IsCapable();
 }
 
-uint64_t FusedMatMulBatchAswBasicApiTiling::GetTilingKey() const
+uint64_t FusedMatMulKEqZeroTiling::GetTilingKey() const
 {
     MatMulV3TilingKey tmp = MatMulV3TilingKey();
     MatMulV3TilingKey& tilingKey = tilingKeyObj == nullptr ? tmp : *tilingKeyObj;
-    return tilingKey.SetTrans(args_.isATrans, args_.isBTrans)
-        .SetModel(MatMulV3Model::BASIC)
-        .SetBatchModel(MatMulV3BatchModel::FUSED_BATCH_MODEL)
-        .SetApiLevel(MatMulV3ApiLevel::BASIC_LEVEL)
+    return tilingKey.SetTrans(false, false)
+        .SetApiLevel(MatMulV3ApiLevel::HIGH_LEVEL)
+        .SetBatchModel(MatMulV3BatchModel::BATCH_MODEL)
+        .SetModel(MatMulV3Model::K_EQUAL_ZERO)
+        .SetFullLoad(MatMulV3FullLoad::NONE_FULL_LOAD)
+        .SetL0C2Out(MatMulV3L0C2Out::ON_THE_FLY)
         .GetTilingKey();
 }
-
 } // namespace fused_matmul
 } // namespace optiling

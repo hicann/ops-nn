@@ -198,11 +198,12 @@ struct MatmulIterBatch {
     constexpr static bool enableRelu = (FUSED_OPTYPE_ == OP_TYPE_RELU);
 };
 
-template <class SingleCoreShape = AscendC::Shape<_0, _0, _0, _0>>
+template <class SingleCoreShape = AscendC::Shape<_0, _0, _0, _0>, uint64_t FUSED_OPTYPE_ = OP_TYPE_EMPTY>
 struct MatmulMergeBatch {
     using ScheduleType = KernelMergeBatch;
     using SingleShape = SingleCoreShape;
     constexpr static bool enableInputDataLenCheck = false;
+    constexpr static bool enableRelu = (FUSED_OPTYPE_ == OP_TYPE_RELU);
 };
 
 template <class SingleCoreShape = AscendC::Shape<_0, _0, _0, _0>>

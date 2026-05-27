@@ -109,7 +109,7 @@ aclnnStatus aclnnFusedMatmul(
         <td><li>数据类型需要与x2满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li></td>
         <td>FLOAT16、BFLOAT16、FLOAT32</td>
         <td>ND</td>
-        <td>2</td>
+        <td>2-6（fusedOpType为""、"relu"时）；2（其他取值）</td>
         <td>√</td>
       </tr>
       <tr>
@@ -119,7 +119,7 @@ aclnnStatus aclnnFusedMatmul(
         <td><li>数据类型需要与x1满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li></td>
         <td>数据类型与x1保持一致</td>
         <td>ND</td>
-        <td>2</td>
+        <td>2-6（fusedOpType为""、"relu"时）；2（其他取值）</td>
         <td>√</td>
       </tr>
       <tr>
@@ -149,7 +149,7 @@ aclnnStatus aclnnFusedMatmul(
         <td><li>数据类型需要与x1和x2推导后的数据类型一致（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li></td>
         <td>FLOAT16、BFLOAT16、FLOAT32</td>
         <td>ND</td>
-        <td>2</td>
+        <td>2-6（fusedOpType为""、"relu"时）；2（其他取值）</td>
         <td>√</td>
       </tr>
     <tr>
@@ -243,7 +243,7 @@ aclnnStatus aclnnFusedMatmul(
         <td>x1、x2或y的数据格式不在支持的范围内。</td>
       </tr>
       <tr>
-        <td>x1和x2的维度不是二维。</td>
+        <td>x1、x2或y的维度不满足要求：fusedOpType为""、"relu"时支持2-6维，其他取值支持二维。</td>
       </tr>
       <tr>
         <td>fusedOpType为add、mul时，x3的shape不跟输出shape保持一致。</td>
@@ -306,6 +306,7 @@ aclnnStatus aclnnFusedMatmul(
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnFusedMatmul默认确定性实现。
 
 - 当fusedOpType取值为"gelu_erf"、"gelu_tanh"时，x1、x2、x3的数据类型必须为BFLOAT16、FLOAT16;当fusedOpType为""、"relu"、"add"、"mul"时, x1、x2、x3的数据类型必须为FLOAT32(cubeMathType只支持3)、BFLOAT16、FLOAT16。
+- 当fusedOpType取值为""、"relu"时，在多维场景下，不满足broadcast场景，batch维度需要一致。
 - 当fusedOpType取值为"16cast32"时，输出y的数据类型必须为FLOAT32。
 
 ## 调用示例

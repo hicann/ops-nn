@@ -15,6 +15,7 @@
 #pragma once
 #include <map>
 #include <set>
+#include "exe_graph/runtime/tiling_context.h"
 #include "matmul/fused_mat_mul/op_kernel/arch35/fused_mat_mul_tilingkey.h"
 
 namespace optiling {
@@ -31,6 +32,7 @@ constexpr size_t ATTR_ENABLE_HF32_IDX = 2UL;
 constexpr size_t ATTR_OP_TYPE_IDX = 3UL;
 
 constexpr size_t TRANS_MODE_BIT_WIDTH = 4UL;
+constexpr size_t FUSED_MATMUL_MATMUL_DIM_NUM = 2UL;
 
 enum class FusedMatmulTrans : std::uint8_t
 {
@@ -61,6 +63,17 @@ const std::map<std::string, FusedOpType> FUSED_OP_TYPE_MAP = {
     {"16cast32", FusedOpType::CAST32}};
 
 const std::set<std::string> FusedOpTypeSupportStreamK = {"", "relu", "16cast32"};
+
+inline bool IsFusedMatMulBmmShape(const gert::TilingContext* context)
+{
+    if (context == nullptr || context->GetInputShape(INPUT_X1_IDX) == nullptr ||
+        context->GetInputShape(INPUT_X2_IDX) == nullptr || context->GetOutputShape(0) == nullptr) {
+        return false;
+    }
+    return context->GetInputShape(INPUT_X1_IDX)->GetOriginShape().GetDimNum() > FUSED_MATMUL_MATMUL_DIM_NUM ||
+           context->GetInputShape(INPUT_X2_IDX)->GetOriginShape().GetDimNum() > FUSED_MATMUL_MATMUL_DIM_NUM ||
+           context->GetOutputShape(0)->GetOriginShape().GetDimNum() > FUSED_MATMUL_MATMUL_DIM_NUM;
+}
 
 } // namespace optiling
 

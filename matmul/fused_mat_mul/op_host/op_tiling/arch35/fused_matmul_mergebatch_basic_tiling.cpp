@@ -9,45 +9,51 @@
  */
 
 /* !
- * \file fused_matmul_batch_asw_basic_tiling.cpp
+ * \file fused_matmul_mergebatch_basic_tiling.cpp
  * \brief
  */
-#include "fused_matmul_batch_asw_basic_tiling.h"
+
+#include "fused_matmul_mergebatch_basic_tiling.h"
 #include "fused_matmul_builtin_tiling_strategy.h"
 #include "fused_matmul_common.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_tiling_registry.h"
-#include "matmul/common/op_host/math_util.h"
 
 namespace optiling {
 namespace fused_matmul {
+using namespace matmul_v3_advanced;
 using namespace strategy;
-MM_REGISTER_TILING_TEMPLATE(FusedMatMul, FusedMatMulBatchAswBasicApiTiling, DAV_3510, ASWT_BASIC_INHERITED_FROM_BMMV3);
-MM_REGISTER_TILING_TEMPLATE(FusedMatMul, FusedMatMulBatchAswBasicApiTiling, DAV_RESV, ASWT_BASIC_INHERITED_FROM_BMMV3);
 
-bool FusedMatMulBatchAswBasicApiTiling::IsCapable()
+MM_REGISTER_TILING_TEMPLATE(
+    FusedMatMul, FusedMatMulMergeBatchBasicApiTiling, DAV_3510, MERGE_BATCH_BASICAPI_INHERITED_FROM_BMMV3);
+
+bool FusedMatMulMergeBatchBasicApiTiling::IsCapable()
 {
-    if (!IsFusedMatMulBmmShape(context_)) {
-        return false;
-    }
-    if (compileInfo_.npuArch == NpuArch::DAV_RESV) {
-        return BatchMatMulV3AswBasicTiling::IsCapable();
-    }
     auto attrs = context_->GetAttrs();
     OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs);
     std::string opType = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
     if (opType != "relu" && !opType.empty()) {
+        OP_LOGD(args_.opName, "MergeBatch model only supports relu or empty op type in FusedMatMul");
         return false;
     }
-    return BatchMatMulV3AswBasicTiling::IsCapable();
+    bool status = BatchMatMulV3MergeBatchBasicApiTiling::IsCapable();
+    if (!status) {
+        OP_LOGD(args_.opName, "MergeBatch model is not supported for this shape");
+        return false;
+    }
+    OP_LOGI(args_.opName, "FusedMatMul tiling enable mergebatch basic api");
+    return true;
 }
 
-uint64_t FusedMatMulBatchAswBasicApiTiling::GetTilingKey() const
+uint64_t FusedMatMulMergeBatchBasicApiTiling::GetTilingKey() const
 {
     MatMulV3TilingKey tmp = MatMulV3TilingKey();
     MatMulV3TilingKey& tilingKey = tilingKeyObj == nullptr ? tmp : *tilingKeyObj;
-    return tilingKey.SetTrans(args_.isATrans, args_.isBTrans)
+    bool transA = args_.isATrans && args_.mValue > 1;
+    return tilingKey.SetTrans(transA, args_.isBTrans)
+        .SetBatchModel(MatMulV3BatchModel::MERGE_BATCH_MODEL)
         .SetModel(MatMulV3Model::BASIC)
-        .SetBatchModel(MatMulV3BatchModel::FUSED_BATCH_MODEL)
+        .SetFullLoad(MatMulV3FullLoad::NONE_FULL_LOAD)
+        .SetL0C2Out(MatMulV3L0C2Out::ON_THE_FLY)
         .SetApiLevel(MatMulV3ApiLevel::BASIC_LEVEL)
         .GetTilingKey();
 }

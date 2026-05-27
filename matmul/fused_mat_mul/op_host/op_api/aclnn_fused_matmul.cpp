@@ -36,6 +36,7 @@ const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_BUILT_IN = {
     op::DataType::DT_BF16, op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT};
 static constexpr size_t DIM_LEN_MIN = 2;
 static constexpr size_t DIM_LEN_MAX = 3;
+static constexpr size_t DIM_LEN_MAX_RELU = 6;
 
 static const std::vector<const char*> kAllSupportedOpTypes = {"", "16cast32", "add", "mul", "gelu_erf", 
     "gelu_tanh", "relu"};
@@ -158,14 +159,36 @@ static bool CheckDtypeValid(
     return true;
 }
 
-static inline bool CheckShape(const aclTensor* x, const aclTensor* x2, const aclTensor* x3, const aclTensor* y)
+static bool CheckNoBroadcastBatchShape(const aclTensor* x, const aclTensor* x2, const aclTensor* y)
 {
-    // check x dims number is 2 or 3(bmm)
-    OP_CHECK_MAX_DIM(x, DIM_LEN_MAX, return false);
+    const auto& xShape = x->GetViewShape();
+    const auto& x2Shape = x2->GetViewShape();
+    const auto& yShape = y->GetViewShape();
+    size_t batchDimNum = xShape.GetDimNum() - DIM_LEN_MIN;
+    for (size_t i = 0; i < batchDimNum; ++i) {
+        if (xShape[i] != x2Shape[i] || xShape[i] != yShape[i]) {
+            OP_LOGE(
+                ACLNN_ERR_PARAM_INVALID,
+                "relu or empty op type only supports no-broadcast batch shape, but x batch dim[%zu] is %ld, "
+                "x2 batch dim[%zu] is %ld, y batch dim[%zu] is %ld.",
+                i, xShape[i], i, x2Shape[i], i, yShape[i]);
+            return false;
+        }
+    }
+    return true;
+}
+
+static inline bool CheckShape(
+    const aclTensor* x, const aclTensor* x2, const aclTensor* x3, const char* fusedOpType, const aclTensor* y)
+{
+    bool isReluOrEmpty = (strcmp(fusedOpType, "relu") == 0 || strcmp(fusedOpType, "") == 0);
+    size_t dimLenMax = isReluOrEmpty ? DIM_LEN_MAX_RELU : DIM_LEN_MAX;
+    // check x dims number
+    OP_CHECK_MAX_DIM(x, dimLenMax, return false);
     OP_CHECK_MIN_DIM(x, DIM_LEN_MIN, return false);
 
-    // check x2 dims number is 2 or 3(bmm)
-    OP_CHECK_MAX_DIM(x2, DIM_LEN_MAX, return false);
+    // check x2 dims number
+    OP_CHECK_MAX_DIM(x2, dimLenMax, return false);
     OP_CHECK_MIN_DIM(x2, DIM_LEN_MIN, return false);
 
     // check dimensions of x and x2 must be same
@@ -184,6 +207,10 @@ static inline bool CheckShape(const aclTensor* x, const aclTensor* x2, const acl
             "x dimension and y dimension should be the same, but x dimension is %d, y dimension is %d.",
             x->GetViewShape().GetDimNum(), y->GetViewShape().GetDimNum());
         return false;
+    }
+
+    if (isReluOrEmpty) {
+        CHECK_RET(CheckNoBroadcastBatchShape(x, x2, y), false);
     }
 
     if (x3 != nullptr) {
@@ -221,7 +248,7 @@ static aclnnStatus CheckParams(
     CHECK_RET(CheckNotNull(x, x2, bias, x3, fusedOpType, y), ACLNN_ERR_PARAM_NULLPTR);
     
     // 2. 检查A和B是否为2维，且是否满足matmul shape MN 与传入的x3 shape Mn相同
-    CHECK_RET(CheckShape(x, x2, x3, y), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckShape(x, x2, x3, fusedOpType, y), ACLNN_ERR_PARAM_INVALID);
 
     // 3. 检查输入的数据类型是否在支持的数据类型之内
     CHECK_RET(CheckDtypeValid(x, x2, bias, x3, fusedOpType, y), ACLNN_ERR_PARAM_INVALID);
@@ -253,8 +280,9 @@ static const aclTensor* BuildFusedMatMulGraph(
     const aclTensor* x, const aclTensor* x2, const aclTensor* bias, const aclTensor* x3, const aclTensor* y,
     const char* fusedOpType, int8_t cubeMathType, aclOpExecutor* executor)
 {
-    // 空tensor 处理
-    if (x->IsEmpty() || x2->IsEmpty()) {
+    // 空tensor 处理，对于relu或者空的场景放开空tensor，其余不支持
+    bool allowEmptyTensor = (strcmp(fusedOpType, "relu") == 0 || strcmp(fusedOpType, "") == 0);
+    if (!allowEmptyTensor && (x->IsEmpty() || x2->IsEmpty())) {
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "fused matmul is not supported empty tensor handle");
         return nullptr;
     }

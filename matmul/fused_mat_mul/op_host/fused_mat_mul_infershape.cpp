@@ -24,6 +24,7 @@ const int kMatMulX3Idx = 2;
 const int kMatmulV2BiasShapeSize = 1;
 const int kMatmulV2MinShapeSize = 2;
 const int kMatmulV2MaxShapeSize = 3;
+const int kMatmulV2ReluMaxShapeSize = 6;
 const int kFusedMatMulX3Idx = 3;
 const int kOutputIdx = 0;
 const int DIM_SIZE_TWO = 2;
@@ -107,10 +108,23 @@ ge::graphStatus InferShapeForFusedMatMul(InferShapeContext* context)
     OP_LOGD(op_name, "check the input shape length.");
     int dim_a = shape_a->GetDimNum();
     int dim_b = shape_b->GetDimNum();
+    bool is_relu_or_empty = strcmp(fused_op_type, "relu") == 0 || strcmp(fused_op_type, "") == 0;
+    int max_dim = is_relu_or_empty ? kMatmulV2ReluMaxShapeSize : kMatmulV2MaxShapeSize;
     OP_CHECK_IF(
-        (dim_a < kMatmulV2MinShapeSize || dim_a > kMatmulV2MaxShapeSize || dim_a != dim_b),
-        CUBE_INNER_ERR_REPORT(op_name, "input dim num[%d] [%d] is not 2 or 3!", dim_a, dim_b),
+        (dim_a < kMatmulV2MinShapeSize || dim_a > max_dim || dim_a != dim_b),
+        CUBE_INNER_ERR_REPORT(op_name, "input dim num[%d] [%d] is illegal!", dim_a, dim_b),
         return ge::GRAPH_FAILED);
+    if (is_relu_or_empty) {
+        for (int i = 0; i < dim_a - kMatmulV2MinShapeSize; ++i) {
+            OP_CHECK_IF(
+                shape_a->GetDim(i) != shape_b->GetDim(i),
+                CUBE_INNER_ERR_REPORT(
+                    op_name, "relu or empty op type only supports no-broadcast batch shape, but a batch dim[%d] "
+                    "is %ld, b batch dim[%d] is %ld",
+                    i, shape_a->GetDim(i), i, shape_b->GetDim(i)),
+                return ge::GRAPH_FAILED);
+        }
+    }
 
     int idx_m = *trans_a ? 0 : 1;
     int idx_k_a = *trans_a ? 1 : 0;
@@ -173,15 +187,11 @@ ge::graphStatus InferShapeForFusedMatMul(InferShapeContext* context)
             return ge::GRAPH_FAILED);
     }
     shape_out->SetDimNum(dim_a);
-    if (dim_a == kMatmulV2MinShapeSize) {
-        shape_out->SetDim(0, a_m);
-        shape_out->SetDim(1, b_n);
+    for (int i = 0; i < dim_a - kMatmulV2MinShapeSize; ++i) {
+        shape_out->SetDim(i, shape_a->GetDim(i));
     }
-    if (dim_a == kMatmulV2MaxShapeSize) {
-        shape_out->SetDim(0, shape_a->GetDim(0));
-        shape_out->SetDim(1, a_m);
-        shape_out->SetDim(kMatMulX3Idx, b_n);
-    }
+    shape_out->SetDim(dim_a - DIM_SIZE_TWO, a_m);
+    shape_out->SetDim(dim_a - 1, b_n);
 
     OP_LOGI(op_name, "end infershape.");
     return ge::GRAPH_SUCCESS;

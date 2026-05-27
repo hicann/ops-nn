@@ -35,6 +35,8 @@ class BlockMmad<
         AscendC::Std::is_base_of_v<MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2,
             AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_EMPTY>, DispatchPolicy_> ||
         AscendC::Std::is_base_of_v<MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2,
+            AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_RELU>, DispatchPolicy_> ||
+        AscendC::Std::is_base_of_v<MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2,
             AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_ADD>, DispatchPolicy_>>> {
 public:
 // supportMmadS8S4平台L0c和biasBt的dtype为int32_t
@@ -339,6 +341,11 @@ public:
         } else if (AscendC::IsSameType<C_T, half>::value) {	
             intriParams.quantPre = QuantMode_t::F322F16;	
         }	
+        if constexpr (DispatchPolicy::enableRelu) {
+            intriParams.reluPre = 1;
+        } else {
+            intriParams.reluPre = 0;
+        }
         intriParams.nz2ndEn = true;	
         intriParams.unitFlag = 0;	
 
@@ -379,6 +386,11 @@ public:
             Align(mInGM, AscendC::BLOCK_CUBE) * Align(nInGM, AscendC::BLOCK_CUBE) / AscendC::BLOCK_CUBE;
         fixpipeParams.params.dstNdStride = mInGM * Align(nInGM, AscendC::BLOCK_CUBE);
         fixpipeParams.subBlockId = (l0CEventID_ & 0x1);
+        if constexpr (DispatchPolicy::enableRelu) {
+            fixpipeParams.reluEn = 1;
+        } else {
+            fixpipeParams.reluEn = 0;
+        }
         AscendC::Fixpipe<C_T, L0cType, AscendC::Impl::CFG_ROW_MAJOR_UB>(dstLocal, l0c, fixpipeParams);
     }
 

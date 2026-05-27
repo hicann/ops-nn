@@ -58,7 +58,7 @@ class KernelMatMulIterBatch {
 template <class ProblemShape_, class BlockMmadBuilder_, class BlockEpilogue_, class BlockScheduler_>
 class KernelMatMulIterBatch<
     ProblemShape_, BlockMmadBuilder_, BlockEpilogue_, BlockScheduler_,
-    // ON_THE_FLY: EMPYT/RELU    ND_FIXPIPE_1_2: EMPYT/ADD
+    // ON_THE_FLY: EMPYT/RELU    ND_FIXPIPE_1_2: EMPYT/ADD/RELU
     AscendC::Std::enable_if_t<
         (AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueEmpty> &&
          (AscendC::Std::is_same_v<
@@ -86,6 +86,9 @@ class KernelMatMulIterBatch<
                typename BlockMmadBuilder_::BlockMatmulPolicy> ||
            AscendC::Std::is_same_v<
                MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2, AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_ADD>,
+               typename BlockMmadBuilder_::BlockMatmulPolicy> ||
+           AscendC::Std::is_same_v<
+               MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2, AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_RELU>,
                typename BlockMmadBuilder_::BlockMatmulPolicy>))>> {
 public:
     __aicore__ inline KernelMatMulIterBatch() {}

@@ -34,4 +34,6 @@
 
 #define MAT_MUL_FOR_BATCH 0
 #define MAT_MUL_ITER_BATCH_SINGLE_BIAS 1
+#define MAT_MUL_BATCH_MATMUL_TO_MUL 2
+#define MAT_MUL_MERGE_BATCH 3
 #define MAT_MUL_FOR_FUSED_BATCH 4 // define成4的原因是为了和enum class MatMulV3BatchModel保持一致

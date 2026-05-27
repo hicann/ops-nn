@@ -22,9 +22,15 @@
 namespace Cmct {
 namespace Gemm {
 namespace Block {
-template <class L1TileShape_, class L0TileShape_, class AType_, class BType_, class CType_, class BiasType_,
-          class TileCopy_>
-class BlockMmad<MatmulMergeBatch<>, L1TileShape_, L0TileShape_, AType_, BType_, CType_, BiasType_, TileCopy_> {
+template <class DispatchPolicy_, class L1TileShape_, class L0TileShape_, class AType_, class BType_, class CType_,
+          class BiasType_, class TileCopy_>
+class BlockMmad<
+    DispatchPolicy_, L1TileShape_, L0TileShape_, AType_, BType_, CType_, BiasType_, TileCopy_,
+    AscendC::Std::enable_if_t<
+        AscendC::Std::is_base_of_v<MatmulMergeBatch<AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_EMPTY>,
+                                   DispatchPolicy_> ||
+        AscendC::Std::is_base_of_v<MatmulMergeBatch<AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_RELU>,
+                                   DispatchPolicy_>>> {
 public:
     using AType = AType_;
     using BType = BType_;
@@ -32,7 +38,7 @@ public:
     using A_T = typename AType::T;
     using B_T = typename BType::T;
     using C_T = typename CType::T;
-    using DispatchPolicy = MatmulMergeBatch<>;
+    using DispatchPolicy = DispatchPolicy_;
     using TupleShape = AscendC::Shape<int64_t, int64_t, int64_t, int64_t>;
 
     __aicore__ inline BlockMmad()
@@ -244,7 +250,11 @@ public:
         } else if constexpr (AscendC::IsSameType<C_T, bfloat16_t>::value) {
             fixpParams.quantPre = QuantMode_t::F322BF16;
         }
-        fixpParams.reluEn = false;
+        if constexpr (DispatchPolicy::enableRelu) {
+            fixpParams.reluEn = true;
+        } else {
+            fixpParams.reluEn = false;
+        }
         fixpParams.params.ndNum = curBatchAL1_;
         fixpParams.params.srcNdStride = CeilAlign(curBatchAL1_ * m_, AscendC::BLOCK_CUBE) *
             CeilDiv(n_, AscendC::BLOCK_CUBE) + m_;

@@ -15,10 +15,12 @@
 #pragma once
 
 #include "mat_mul_v3/op_host/op_tiling/arch35/matmul_v3_basic_streamk_tiling.h"
+#include "matmul/batch_mat_mul_v3/op_host/op_tiling/arch35/batch_matmul_v3_basic_streamk_tiling.h"
 
 namespace optiling {
 namespace fused_matmul {
 using matmul_v3_advanced::MatMulV3BasicStreamKTiling;
+using batch_matmul_v3_advanced::BatchMatMulV3BasicStreamKTiling;
 
 class FusedMatMulStreamKTiling : public MatMulV3BasicStreamKTiling {
 public:
@@ -30,6 +32,18 @@ public:
 protected:
     bool IsCapable() override;
 };
+
+class FusedMatMulBatchStreamKTiling : public BatchMatMulV3BasicStreamKTiling {
+public:
+    FusedMatMulBatchStreamKTiling(gert::TilingContext* context, MatMulTilingCfg& cfg)
+        : BatchMatMulV3BasicStreamKTiling(context, cfg){};
+
+    ~FusedMatMulBatchStreamKTiling() override = default;
+
+protected:
+    bool IsCapable() override;
+
+    uint64_t GetTilingKey() const override;
+};
 } // namespace fused_matmul
 } // namespace optiling
-

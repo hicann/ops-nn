@@ -83,13 +83,17 @@ class BlockMmadBuilder<
             MatmulIterBatch<MatMulL0C2Out::ON_THE_FLY, AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_RELU>,
             BlockMatmulPolicy_> ||
         AscendC::Std::is_base_of_v<MatmulMergeBatch<>, BlockMatmulPolicy_> ||
+        AscendC::Std::is_base_of_v<MatmulMergeBatch<AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_RELU>,
+                                   BlockMatmulPolicy_> ||
         AscendC::Std::is_base_of_v<
             MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2, AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_EMPTY>,
             BlockMatmulPolicy_> ||
         AscendC::Std::is_base_of_v<
             MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2, AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_ADD>,
             BlockMatmulPolicy_> ||
-        AscendC::Std::is_base_of_v<MatmulMergeBatch<>, BlockMatmulPolicy_> ||
+        AscendC::Std::is_base_of_v<
+            MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2, AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_RELU>,
+            BlockMatmulPolicy_> ||
         AscendC::Std::is_base_of_v<MatmulMultiBlock<>, BlockMatmulPolicy_> ||
         AscendC::Std::is_base_of_v<MatmulFlatQuant<>, BlockMatmulPolicy_> ||
         AscendC::Std::is_base_of_v<MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY>, BlockMatmulPolicy_> ||
