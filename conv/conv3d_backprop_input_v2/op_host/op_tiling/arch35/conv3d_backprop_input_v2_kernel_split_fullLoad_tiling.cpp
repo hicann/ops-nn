@@ -137,7 +137,6 @@ void Conv3DDXV2KernelSplitFullLoadTiling::ApplyL0CapacityLimit(uint32_t& baseM, 
         std::max(l0abMaxNum / std::max(safeBaseK, ONE_U32) / tilingRunInfo_.n0, ONE_U32) * tilingRunInfo_.n0;
     baseM = std::min(baseM, maxBaseMByL0a);
     baseN = std::min(baseN, maxBaseNByL0b);
-
     if (static_cast<uint64_t>(baseM) * baseN > l0cMaxNum) {
         uint32_t maxBaseNByL0c =
             std::max(l0cMaxNum / std::max(baseM, ONE_U32) / tilingRunInfo_.n0, ONE_U32) * tilingRunInfo_.n0;

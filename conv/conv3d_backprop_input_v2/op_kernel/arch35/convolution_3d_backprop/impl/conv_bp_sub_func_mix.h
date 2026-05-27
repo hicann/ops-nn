@@ -904,7 +904,7 @@ __aicore__ inline void MoveFromUsrSpaceToUbCast(Intf *self,
 
             // fp32 → DstT cast
             Cast(self->ctx.castVecTensor_.template ReinterpretCast<typename Intf::SrcT>(), self->ctx.castVecTensor_,
-                 RoundMode::CAST_RINT,
+                 std::is_same<typename Intf::DstT, hifloat8_t>::value ? RoundMode::CAST_ROUND : RoundMode::CAST_RINT,
                  curSegM * self->ctx.baseUseN_);
 
             SetFlag<HardEvent::V_MTE3>(eventIdVecToMte3);

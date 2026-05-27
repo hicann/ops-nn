@@ -132,9 +132,7 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::GetPublicShapeAttrsInfo()
 bool Conv3DDXV2InnerProductTiling::CheckBasicSplitKCondition()
 {
     // 拦截c04场景,group场景和8bit场景
-    if (tilingRunInfo_.enableC04Flag || (unlikely(runInfo_.groups > 1)) ||
-        static_cast<int32_t>(runInfo_.c_dtype_bytes) == ge::GetSizeByDataType(ge::DT_HIFLOAT8) ||
-        static_cast<int32_t>(runInfo_.c_dtype_bytes) == ge::GetSizeByDataType(ge::DT_FLOAT8_E4M3FN)) {
+    if (tilingRunInfo_.enableC04Flag || (unlikely(runInfo_.groups > 1)) || context_->GetOutputDesc(Y_INDEX)->GetDataType() == ge::DT_INT8) {
         splitKMode_ = 0;
         tilingRunInfo_.enableSplitK = splitKMode_;
         return false;
@@ -174,14 +172,12 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::CalcKSegment()
             runInfo_.dedy_cout_g :
             std::max(Ops::Base::FloorDiv(kValueThreshold, hkWk), ONE_U32);
     coutThreshold = std::max(Ops::Base::FloorAlign(coutThreshold, tilingRunInfo_.k0), ONE_U32);
-
     // CoutSegmentCount: Cout方向的分段数量 -> CoutSegmentCount = ceil(Cout / CoutThreshold)
     uint32_t coutSegmentCount =
         std::max(Ops::Base::CeilDiv(static_cast<uint32_t>(runInfo_.dedy_cout_g), coutThreshold), ONE_U32);
 
     tilingRunInfo_.kSegment = static_cast<uint64_t>(coutThreshold);
     tilingRunInfo_.kSegmentTail = runInfo_.dedy_cout_g - (coutSegmentCount - 1) * tilingRunInfo_.kSegment;
-
     // kValueSegment: 每次循环计算的 K 大小 = kSegment * HkWk，对齐到k0
     tilingRunInfo_.kValueSegment = Ops::Base::CeilAlign(tilingRunInfo_.kSegment * hkWk, static_cast<uint64_t>(tilingRunInfo_.k0));
 
@@ -190,8 +186,8 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::CalcKSegment()
 
     if (tilingRunInfo_.enableSplitK) {
         // workspace累加支持fp16、bf16
-        if (static_cast<int32_t>(runInfo_.c_dtype_bytes) == ge::GetSizeByDataType(ge::DT_FLOAT16) ||
-            static_cast<int32_t>(runInfo_.c_dtype_bytes) == ge::GetSizeByDataType(ge::DT_BF16)) {
+        if (static_cast<int32_t>(runInfo_.c_dtype_bytes) == ge::GetSizeByDataType(ge::DT_FLOAT16) || static_cast<int32_t>(runInfo_.c_dtype_bytes) == ge::GetSizeByDataType(ge::DT_BF16) ||
+            static_cast<int32_t>(runInfo_.c_dtype_bytes) == ge::GetSizeByDataType(ge::DT_HIFLOAT8) || static_cast<int32_t>(runInfo_.c_dtype_bytes) == ge::GetSizeByDataType(ge::DT_FLOAT8_E4M3FN)) {
             tilingRunInfo_.useUbAccumForSplitK = true;
         }
     } else {

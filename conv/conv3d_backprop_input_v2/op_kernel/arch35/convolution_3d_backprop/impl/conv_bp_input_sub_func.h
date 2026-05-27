@@ -507,12 +507,12 @@ static __aicore__ inline void LoadL0c2GmForNz2Dn(Intf *self, const GlobalTensor<
         fixPipeParams.quantPre = (self->ctx.enableSplitDk_ || self->ctx.useUbAccumForSplitK_) ?
                                      QuantMode_t::NoQuant : QuantMode_t::F322F16;
     } else if constexpr(std::is_same<typename Intf::DstT, hifloat8_t>::value) {
-        fixPipeParams.quantPre = QuantMode_t::QF322HIF8_PRE; // Half to Away Round
+        fixPipeParams.quantPre = (self->ctx.useUbAccumForSplitK_) ? QuantMode_t::NoQuant : QuantMode_t::QF322HIF8_PRE; // Half to Away Round
         fixPipeParams.deqScalar = DQ_SCALAR_ONE;
     } else if constexpr(std::is_same<typename Intf::DstT, int8_t>::value) {
         SetQuantInt8(self, fixPipeParams);
     } else if constexpr(std::is_same<typename Intf::DstT, fp8_e4m3fn_t>::value) {
-        fixPipeParams.quantPre = QuantMode_t::QF322FP8_PRE;
+        fixPipeParams.quantPre = (self->ctx.useUbAccumForSplitK_) ? QuantMode_t::NoQuant : QuantMode_t::QF322FP8_PRE;
         fixPipeParams.deqScalar = DQ_SCALAR_ONE;
     }
     if (self->ctx.enableSplitDk_ || self->ctx.useUbAccumForSplitK_) {
@@ -572,7 +572,10 @@ static __aicore__ inline void LoadL0c2GmForNz2Nd(Intf *self, const GlobalTensor<
         fixPipeParams.quantPre = (self->ctx.enableSplitDk_ || self->ctx.useUbAccumForSplitK_) ?
                                      QuantMode_t::NoQuant : QuantMode_t::F322F16;
     } else if constexpr(std::is_same<typename Intf::DstT, hifloat8_t>::value) {
-        fixPipeParams.quantPre = QuantMode_t::QF322HIF8_PRE; // Half to Away Round
+        fixPipeParams.quantPre = (self->ctx.useUbAccumForSplitK_) ? QuantMode_t::NoQuant : QuantMode_t::QF322HIF8_PRE; // Half to Away Round
+        fixPipeParams.deqScalar = DQ_SCALAR_ONE;
+    } else if constexpr(std::is_same<typename Intf::DstT, fp8_e4m3fn_t>::value) {
+        fixPipeParams.quantPre = (self->ctx.useUbAccumForSplitK_) ? QuantMode_t::NoQuant : QuantMode_t::QF322FP8_PRE;
         fixPipeParams.deqScalar = DQ_SCALAR_ONE;
     }
     if (self->ctx.useUbAccumForSplitK_) {
@@ -897,7 +900,8 @@ static __aicore__ inline void SetEnAtomic(Intf *self, uint8_t enAtomic)
         if (enAtomic == 1) {
             SetAtomicAdd<typename Intf::DstT>();
         }
-    } else if constexpr(std::is_same<typename Intf::DstT, bfloat16_t>::value || std::is_same<typename Intf::DstT, half>::value) {
+    } else if constexpr(std::is_same<typename Intf::DstT, bfloat16_t>::value || std::is_same<typename Intf::DstT, half>::value ||
+    std::is_same<typename Intf::DstT, hifloat8_t>::value || std::is_same<typename Intf::DstT, fp8_e4m3fn_t>::value) {
         if (self->ctx.enableSplitDk_) {
             // 满足此条件时当前Din不是第一次计算，开启累加
             enAtomic = (self->ctx.curDkIdx_ > 0) &&
