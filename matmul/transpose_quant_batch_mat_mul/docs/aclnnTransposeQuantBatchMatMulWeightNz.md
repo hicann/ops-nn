@@ -1,31 +1,31 @@
-# aclnnTransposeQuantBatchMatMul
+# aclnnTransposeQuantBatchMatMulWeightNz
 
 [📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/matmul/transpose_quant_batch_mat_mul)
 
 ## 产品支持情况
 
-| 产品                                                         |  是否支持   |
-| :----------------------------------------------------------- |:-------:|
-| <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    ×    |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    ×    |
-|  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-|  <term>Atlas 推理系列产品</term>    |     ×    |
-|  <term>Atlas 训练系列产品</term>    |     ×    |
+| 产品 | 是否支持 |
+| :--- | :---: |
+| <term>Ascend 950PR/Ascend 950DT</term> | √ |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term> | × |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> | × |
+| <term>Atlas 200I/500 A2 推理产品</term> | × |
+| <term>Atlas 推理系列产品</term> | × |
+| <term>Atlas 训练系列产品</term> | × |
 
 ## 功能说明
 
-- 接口功能：完成张量x1与张量x2量化的矩阵乘计算，支持K-C、MX[量化模式](../../../docs/zh/context/量化介绍.md)。仅支持三维的Tensor传入。Tensor支持转置，转置序列根据传入的数列进行变更。permX1代表张量x1的转置序列，permX2代表张量x2的转置序列，序列值为0的是batch维度，其余两个维度做矩阵乘法。
+- 接口功能：完成张量x1与张量x2量化的矩阵乘计算，相较于原有aclnnTransposeQuantBatchMatMul接口，新接口仅支持x1为ND格式，x2为NZ格式，只支持x1为3维，x2为5维。支持MX[量化模式](../../../docs/zh/context/量化介绍.md)。Tensor支持转置，转置序列根据传入的数列进行变更。permX1代表张量x1的转置序列，permX2代表张量x2的转置序列，序列值为0的是batch维度，其余两个维度做矩阵乘法。
 
-- 示例：
-  假设x1的shape是(M, B, K)，x2的shape是(B, K, N)，x1Scale和x2Scale不为None，batchSplitFactor等于1时，计算输出out的shape是(M, B, N)。
+- 示例：（x2的NZ转换为ND对应的viewshape视角）
+  - 假设x1的shape是(M, B, K)，x2的shape是(B, K, N)，x1Scale和x2Scale不为None，batchSplitFactor等于1时，计算输出out的shape是(M, B, N)。
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnTransposeQuantBatchMatMulGetWorkspaceSize”接口获取入参并根据流程计算所需workspace大小，再调用“aclnnTransposeQuantBatchMatMul”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用 “aclnnTransposeQuantBatchMatMulWeightNzGetWorkspaceSize” 获取 workspace 大小，再调用 “aclnnTransposeQuantBatchMatMulWeightNz” 执行计算。
 
 ```cpp
-aclnnStatus aclnnTransposeQuantBatchMatMulGetWorkspaceSize(
+aclnnStatus aclnnTransposeQuantBatchMatMulWeightNzGetWorkspaceSize(
     const aclTensor   *x1, 
     const aclTensor   *x2, 
     const aclTensor   *bias, 
@@ -43,17 +43,16 @@ aclnnStatus aclnnTransposeQuantBatchMatMulGetWorkspaceSize(
 ```
 
 ```cpp
-aclnnStatus aclnnTransposeQuantBatchMatMul(
-    void               *workspace, 
-    uint64_t            workspaceSize,
-    aclOpExecutor      *executor,
-    const aclrtStream   stream)
+aclnnStatus aclnnTransposeQuantBatchMatMulWeightNz(
+    void              *workspace,
+    uint64_t           workspaceSize,
+    aclOpExecutor     *executor,
+    const aclrtStream  stream);
 ```
 
-## aclnnTransposeQuantBatchMatMulGetWorkSpaceSize
+## aclnnTransposeQuantBatchMatMulWeightNzGetWorkspaceSize
 
 - **参数说明：**
-
   <table style="undefined;table-layout: fixed;width: 1545px"><colgroup>
     <col style="width: 170px">
     <col style="width: 120px">
@@ -82,12 +81,9 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
         <td>输入</td>
         <td>表示矩阵乘的第一个矩阵。</td>
         <td>
-          <ul>
-            <li>数据类型需要与x2满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
-            <li>数据类型当前仅支持FLOAT8_E5M2、FLOAT8_E4M3FN。</li>
-          </ul>
+          数据类型需要与x2满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。
         </td>
-        <td>FLOAT8_E5M2、FLOAT8_E4M3FN</td>
+        <td>FLOAT8_E4M3FN</td>
         <td>ND</td>
         <td>3</td>
         <td>√</td>
@@ -99,13 +95,12 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
         <td>
         <ul>
             <li>数据类型需要与x1满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
-            <li>x2的k维度需要与x1的k维度大小相等。</li>
-            <li>数据类型当前仅支持FLOAT8_E5M2、FLOAT8_E4M3FN。</li>
+            <li>x2的k维度需要与x1的K维度大小相等。</li>
         </ul>
         </td>
-        <td>FLOAT8_E5M2、FLOAT8_E4M3FN</td>
-        <td>ND</td>
-        <td>3</td>
+        <td>FLOAT8_E4M3FN</td>
+        <td>NZ</td>
+        <td>5</td>
         <td>√</td>
       </tr>
       <tr>
@@ -123,29 +118,24 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
         <td>输入</td>
         <td>表示左矩阵的量化系数。</td>
         <td>        
-        <ul>
-          <li>K-C量化场景，shape支持一维且需要等于[m]。</li>
-          <li>MX量化场景，shape支持四维。</li>
-        </ul>
+          shape要求为(M, B, K/64, 2)
         </td>
-        <td>FLOAT32、FLOAT8_E8M0</td>
+        <td>FLOAT8_E8M0</td>
         <td>ND</td>
-        <td>-</td>
+        <td>4</td>
         <td>√</td>
       </tr>
       <tr>
       <td>x2Scale（aclTensor*）</td>
         <td>输入</td>
         <td>表示右矩阵的量化系数。</td>
-        <td>        
-        <ul>
-          <li>K-C量化场景，shape支持一维且需要等于[n]。</li>
-          <li>MX量化场景，shape支持四维。</li>
-        </ul>
+        <td> 
+          <li>permX2为[0, 1, 2]时，shape要求为(B, K/64, N, 2)</li>
+          <li>permX2为[0, 2, 1]时，shape要求为(B, N, K/64, 2)</li>       
         </td>
-        <td>FLOAT32、FLOAT8_E8M0</td>
+        <td>FLOAT8_E8M0</td>
         <td>ND</td>
-        <td>-</td>
+        <td>4</td>
         <td>√</td>
       </tr>
       <tr>
@@ -166,7 +156,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
       <tr>
         <td>groupSize（int64_t）</td>
         <td>输入</td>
-        <td>用于输入m、n、k方向上的量化分组大小。</td>
+        <td>用于输入  M、N、K方向上的量化分组大小。</td>
         <td>
         由3个方向的groupSizeM，groupSizeN，groupSizeK 三个值拼接组成，每个值占16位，共占用int64_t类型groupSize的低48位（groupSize中的高16位的数值无效）
         </td>
@@ -190,10 +180,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
         <td>输入</td>
         <td>表示矩阵乘的第二个矩阵的转置序列，host侧的aclIntArray。</td>
         <td>  
-        <ul>        
-          <li>K-C量化场景，支持[0, 1, 2]。</li>
-          <li>MX量化场景，支持[0, 1, 2]或[0, 2, 1]。</li>
-        </ul> 
+          支持[0, 1, 2]或[0, 2, 1]。
         </td>
         <td>INT64</td>
         <td>-</td>
@@ -232,7 +219,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
         <td>3</td>
         <td>√</td>
       </tr>
-            <tr>
+      <tr>
         <td>workspaceSize</td>
         <td>输出</td>
         <td>返回需要在Device侧申请的workspace大小。</td>
@@ -254,7 +241,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
       </tr>
       </tbody>
       </table>
-  
+
 - **返回值：**
 
   aclnnStatus: 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
@@ -288,7 +275,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
       <td>x1、x2、x1Scale、x2Scale或out的shape不满足校验条件。</td>
     </tr>
     <tr>
-      <td>x1、x2、permX1、permX2、permY的维度大小不等于3。</td>
+      <td>x1或x2的ViewShape的维度大小不等于3。</td>
     </tr>
     <tr>
       <td>batchSplitFactor不在支持的范围内</td>
@@ -296,10 +283,13 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
     <tr>
       <td>permX1、permX2、permY的取值不在支持的范围内。</td>
     </tr>
+    <tr>
+      <td>x2的StorageFormat不为FORMAT_FRACTAL_NZ格式。</td>
+    </tr>
   </tbody>
   </table>
 
-## aclnnTransposeQuantBatchMatMul
+## aclnnTransposeQuantBatchMatMulWeightNz
 
 - **参数说明：**
 
@@ -324,7 +314,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
     <tr>
       <td>workspaceSize</td>
       <td>输入</td>
-      <td>在Device侧申请的workspace大小，由第一段接口aclnnTransposeQuantBatchMatMulGetWorkspaceSize获取。</td>
+      <td>在Device侧申请的workspace大小，由第一段接口aclnnTransposeQuantBatchMatMulWeightNzGetWorkspaceSize获取。</td>
     </tr>
     <tr>
       <td>executor</td>
@@ -346,19 +336,19 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
 
 ## 约束说明
 
-- 确定性说明： aclnnTransposeQuantBatchMatMul默认确定性实现。
+- 确定性说明： aclnnTransposeQuantBatchMatMulWeightNz默认确定性实现。
 
 - <term>Ascend 950PR/Ascend 950DT</term>：
-    - K-C量化场景，K仅支持512，N仅支持128。x1Scale和x2Scale仅支持1维，并且x1Scale要求shape为(M,), x2Scale要求shape为(N,)，group_size仅支持配置为0，其他取值不生效。
-    - MX量化场景，K仅支持64的倍数。 x1Scale和x2Scale仅支持4维，并且x1Scale要求shape为(M, B, K/64, 2), 当permX2为[0, 1, 2]时，x2Scale要求shape为(B, K/64, N, 2)；当permX2为[0, 2, 1]时，x2Scale要求shape为(B, N, K/64, 2)。group_size的groupSizeM和groupSizeN仅支持0或1，groupSizeK仅支持32。
-    - groupSize相关约束：
-      - 仅在MX量化场景中生效。
-      - 传入的groupSize内部会按如下公式分解得到groupSizeM、groupSizeN、groupSizeK，当其中有1个或多个为0，会根据x1/x2/x1Scale/x2Scale输入shape重新设置groupSizeM、groupSizeN、groupSizeK用于计算。原理：假设groupSizeM=0，表示M方向量化分组值由接口推断，推断公式为groupSizeM = M / scaleM（需保证M能被scaleM整除），其中M与x1 shape中的M一致，scaleM与x1Scale shape中的M一致。
-      
-    $$
-    groupSize = groupSizeK | groupSizeN << 16 | groupSizeM << 32
-    $$
+  - x1只支持3维, x2只支持昇腾私有格式，调用此接口之前，必须完成x2从ND到昇腾私有格式的转换。
+  - K仅支持64的倍数。group_size的groupSizeM和groupSizeN仅支持0或1，groupSizeK仅支持32。
+  - groupSize相关约束：
+    - 仅在MX量化场景中生效。
+    - 传入的groupSize内部会按如下公式分解得到groupSizeM、groupSizeN、groupSizeK，当其中有1个或多个为0，会根据x1/x2/x1Scale/x2Scale输入shape重新设置groupSizeM、groupSizeN、groupSizeK用于计算。原理：假设groupSizeM=0，表示M方向量化分组值由接口推断，推断公式为groupSizeM = M / scaleM（需保证M能被scaleM整除），其中M与x1 shape中的M一致，scaleM与x1Scale shape中的M一致。
     
+  $$
+  groupSize = groupSizeK | groupSizeN << 16 | groupSizeM << 32
+  $$
+
 ## 调用示例
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
@@ -371,6 +361,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
 #include <cmath>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_transpose_quant_batch_mat_mul.h"
+#include "aclnnop/aclnn_npu_format_cast.h"
 
 #define CHECK_RET(cond, return_expr) \
     do {                             \
@@ -478,7 +469,31 @@ void Finalize(int32_t deviceId, aclrtStream stream)
     aclFinalize();
 }
 
-int AclnnTransposeQuantBatchMatmulTest(int32_t deviceId, aclrtStream& stream)
+template <typename T>
+int CreateAclTensorWithFormat(
+    const std::vector<T>& hostData, const std::vector<int64_t>& shape, int64_t** storageShape,
+    uint64_t* storageShapeSize, void** deviceAddr, aclDataType dataType, aclTensor** tensor, aclFormat format)
+{
+    auto size = hostData.size() * sizeof(T);
+    // 调用aclrtMalloc申请device侧内存
+    auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMalloc failed. ERROR: %d\n", ret); return ret);
+    // 调用aclrtMemcpy将host侧数据拷贝到device侧内存上
+    ret = aclrtMemcpy(*deviceAddr, size, hostData.data(), size, ACL_MEMCPY_HOST_TO_DEVICE);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); return ret);
+
+    // 计算连续tensor的strides
+    std::vector<int64_t> strides(shape.size(), 1);
+    for (int64_t i = shape.size() - 2; i >= 0; i--) {
+        strides[i] = shape[i + 1] * strides[i + 1];
+    }
+
+    *tensor = aclCreateTensor(
+        shape.data(), shape.size(), dataType, strides.data(), 0, format, *storageShape, *storageShapeSize, *deviceAddr);
+    return 0;
+}
+
+int AclnnTransposeQuantBatchMatMulWeightNzTest(int32_t deviceId, aclrtStream& stream)
 {
     auto ret = Init(deviceId, &stream);
     // check根据自己的需要处理
@@ -491,8 +506,8 @@ int AclnnTransposeQuantBatchMatmulTest(int32_t deviceId, aclrtStream& stream)
     int32_t Batch = 16;
     std::vector<int64_t> x1Shape = {M, Batch, K};
     std::vector<int64_t> x2Shape = {Batch, K, N};
-    std::vector<int64_t> x1ScaleShape = {M};
-    std::vector<int64_t> x2ScaleShape = {N};
+    std::vector<int64_t> x1ScaleShape = {M, Batch, static_cast<int64_t>(K / 64), 2};
+    std::vector<int64_t> x2ScaleShape = {Batch, static_cast<int64_t>(K / 64), N, 2};
     std::vector<int64_t> outShape = {M, Batch, N};
     std::vector<int64_t> permX1Series = {1, 0, 2};
     std::vector<int64_t> permX2Series = {0, 1, 2};
@@ -502,11 +517,13 @@ int AclnnTransposeQuantBatchMatmulTest(int32_t deviceId, aclrtStream& stream)
     void* x1ScaleDeviceAddr = nullptr;
     void* x2ScaleDeviceAddr = nullptr;
     void* outDeviceAddr = nullptr;
+    void* x2NzDeviceAddr = nullptr;
     aclTensor* x1 = nullptr;
     aclTensor* x2 = nullptr;
     aclTensor* x1Scale = nullptr;
     aclTensor* x2Scale = nullptr;
     aclTensor* out = nullptr;
+    aclTensor* x2NZ = nullptr;
     std::vector<int8_t> x1HostData(GetShapeSize(x1Shape), 0x38);
     std::vector<int8_t> x2HostData(GetShapeSize(x2Shape), 0x38);
     std::vector<float> x1ScaleHostData(GetShapeSize(x1ScaleShape), 1);
@@ -525,13 +542,13 @@ int AclnnTransposeQuantBatchMatmulTest(int32_t deviceId, aclrtStream& stream)
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     // 创建x1Scale aclTensor
-    ret = CreateAclTensor(x1ScaleHostData, x1ScaleShape, &x1ScaleDeviceAddr, aclDataType::ACL_FLOAT, &x1Scale);
+    ret = CreateAclTensor(x1ScaleHostData, x1ScaleShape, &x1ScaleDeviceAddr, aclDataType::ACL_FLOAT8_E8M0, &x1Scale);
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> x1ScaleTensorPtr(x1Scale, aclDestroyTensor);
     std::unique_ptr<void, aclError (*)(void*)> x1ScaledeviceAddrPtr(x1ScaleDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     // 创建x2Scale aclTensor
-    ret = CreateAclTensor(x2ScaleHostData, x2ScaleShape, &x2ScaleDeviceAddr, aclDataType::ACL_FLOAT, &x2Scale);
+    ret = CreateAclTensor(x2ScaleHostData, x2ScaleShape, &x2ScaleDeviceAddr, aclDataType::ACL_FLOAT8_E8M0, &x2Scale);
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> x2ScaleTensorPtr(x2Scale, aclDestroyTensor);
     std::unique_ptr<void, aclError (*)(void*)> x2ScaledeviceAddrPtr(x2ScaleDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
@@ -545,32 +562,72 @@ int AclnnTransposeQuantBatchMatmulTest(int32_t deviceId, aclrtStream& stream)
     aclIntArray* permX1 = aclCreateIntArray(permX1Series.data(), permX1Series.size());
     aclIntArray* permX2 = aclCreateIntArray(permX2Series.data(), permX2Series.size());
     aclIntArray* permY = aclCreateIntArray(permYSeries.data(), permYSeries.size());
-    uint64_t workspaceSize = 0;
+
+    // 3. weight tensor ND转NZ，调用npu_foramt_cast接口
+    aclDataType additionalDtype = aclDataType::ACL_FLOAT8_E4M3FN;
+    aclDataType srcDtype = aclDataType::ACL_FLOAT8_E4M3FN;
+    int64_t* dstShape = nullptr;
+    uint64_t dstShapeSize = 0;
+    int actualFormat;
     aclOpExecutor* executor = nullptr;
+
+    uint64_t formatCastWorkspaceSize = 0;
+    void* formatCastWorkspaceAddr = nullptr;
+    // 计算目标tensor的shape和format
+    ret = aclnnNpuFormatCastCalculateSizeAndFormat(x2, 29, additionalDtype, &dstShape, &dstShapeSize, &actualFormat);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnNpuFormatCastCalculateSizeAndFormat failed. ERROR: %d\n", ret);
+              return ret);
+
+    ret = CreateAclTensorWithFormat(
+        x2HostData, x2Shape, &dstShape, &dstShapeSize, &x2NzDeviceAddr, srcDtype, &x2NZ,
+        static_cast<aclFormat>(actualFormat));
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("CreateAclTensorWithFormat failed. ERROR: %d\n", ret); return ret);
+
+    // 调用aclnnNpuFormatCastGetWorkspaceSize第一段接口
+    ret = aclnnNpuFormatCastGetWorkspaceSize(x2, x2NZ, &formatCastWorkspaceSize, &executor);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnNpuFormatCastGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+
+    // 根据第一段接口计算出的workspaceSize申请device内存
+    if (formatCastWorkspaceSize > 0) {
+        ret = aclrtMalloc(&formatCastWorkspaceAddr, formatCastWorkspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
+        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate format cast workspace failed. ERROR: %d\n", ret); return ret);
+    }
+
+    // 调用aclnnNpuFormatCast第二段接口
+    ret = aclnnNpuFormatCast(formatCastWorkspaceAddr, formatCastWorkspaceSize, executor, stream);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnNpuFormatCast failed. ERROR: %d\n", ret); return ret);
+
+    // 4. 同步等待格式转换任务执行结束
+    ret = aclrtSynchronizeStream(stream);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
+
+    uint64_t tqbmmWorkspaceSize = 0;
     std::unique_ptr<void, aclError (*)(void*)> executorAddrPtr(nullptr, aclrtFree);
 
     int32_t batchSplitFactor = 1;
-    int32_t groupSize = 0;
+    int32_t groupSize = 32;
     int32_t dtype = 27; // bf16
 
-    // aclnnTransposeQuantBatchMatMul接口调用示例
+    // aclnnTransposeQuantBatchMatMulWeightNz接口调用示例
     // 3. 调用CANN算子库API，需要修改为具体的API名称
-    // 调用aclnnTransposeQuantBatchMatMul第一段接口
-    ret = aclnnTransposeQuantBatchMatMulGetWorkspaceSize(
-        x1, x2, (const aclTensor*)nullptr, x1Scale, x2Scale, dtype, groupSize, permX1, permX2, permY, batchSplitFactor,
-        out, &workspaceSize, &executor);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTransposeQuantBatchMatMulGetWorkspaceSize failed. ERROR: %d\n", ret);
+    // 调用aclnnTransposeQuantBatchMatMulWeightNz第一段接口
+    ret = aclnnTransposeQuantBatchMatMulWeightNzGetWorkspaceSize(
+        x1, x2NZ, (const aclTensor*)nullptr, x1Scale, x2Scale, dtype, groupSize, permX1, permX2, permY,
+        batchSplitFactor, out, &tqbmmWorkspaceSize, &executor);
+    CHECK_RET(ret == ACL_SUCCESS,
+              LOG_PRINT("aclnnTransposeQuantBatchMatMulWeightNzGetWorkspaceSize failed. ERROR: %d\n", ret);
               return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
     void* workspaceAddr = nullptr;
-    if (workspaceSize > 0) {
-        ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
+    if (tqbmmWorkspaceSize > 0) {
+        ret = aclrtMalloc(&workspaceAddr, tqbmmWorkspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
         CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
         executorAddrPtr.reset(workspaceAddr);
     }
-    // 调用aclnnTransposeQuantBatchMatMul第二段接口
-    ret = aclnnTransposeQuantBatchMatMul(workspaceAddr, workspaceSize, executor, stream);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTransposeQuantBatchMatMul failed. ERROR: %d\n", ret); return ret);
+    // 调用aclnnTransposeQuantBatchMatMulWeightNz第二段接口
+    ret = aclnnTransposeQuantBatchMatMulWeightNz(workspaceAddr, tqbmmWorkspaceSize, executor, stream);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTransposeQuantBatchMatMulWeightNz failed. ERROR: %d\n", ret);
+              return ret);
 
     // 4. （固定写法）同步等待任务执行结束
     ret = aclrtSynchronizeStream(stream);
@@ -598,10 +655,11 @@ int main()
     // 根据自己的实际device填写deviceId
     int32_t deviceId = 0;
     aclrtStream stream;
-    auto ret = AclnnTransposeQuantBatchMatmulTest(deviceId, stream);
-    CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTransposeQuantBatchMatMulTest failed. ERROR: %d\n", ret);
+    auto ret = AclnnTransposeQuantBatchMatMulWeightNzTest(deviceId, stream);
+    CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTransposeQuantBatchMatMulWeightNzTest failed. ERROR: %d\n", ret);
                    return ret);
     Finalize(deviceId, stream);
     return 0;
 }
 ```
+

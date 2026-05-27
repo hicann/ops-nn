@@ -1801,6 +1801,206 @@
           "value": 1
         }
       ]
-    }  
+    },
+    {
+      "bin_filename": "TransposeQuantBatchMatMul_ND_NZ_ND_ND_ND_ND_FP8_E4M3FN_FP8_E4M3FN_FP32_FP8_E8M0_FP8_E8M0_FP16",
+      "simplified_key": "diy,2/29/2/2/2/2/36/36/0/37/37/1",
+      "inputs": [
+        {
+          "name": "x1",
+          "index": 0,
+          "dtype": "float8_e4m3fn",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x2",
+          "index": 1,
+          "dtype": "float8_e4m3fn",
+          "format": "FRACTAL_NZ",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "bias",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x1_scale",
+          "index": 3,
+          "dtype": "float8_e8m0",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x2_scale",
+          "index": 4,
+          "dtype": "float8_e8m0",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "dtype",
+          "dtype": "int",
+          "value": 1
+        },
+        {
+          "name": "group_size",
+          "dtype": "int",
+          "value": 32
+        },
+        {
+          "name": "perm_x1",
+          "dtype": "list_int",
+          "value": [1,0,2]
+        },
+        {
+          "name": "perm_x2",
+          "dtype": "list_int",
+          "value": [0,1,2]
+        },
+        {
+          "name": "perm_y",
+          "dtype": "list_int",
+          "value": [1,0,2]
+        },
+        {
+          "name": "batch_split_factor",
+          "dtype": "int",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "bin_filename": "TransposeQuantBatchMatMul_ND_NZ_ND_ND_ND_ND_FP8_E4M3FN_FP8_E4M3FN_FP32_FP8_E8M0_FP8_E8M0_BF16",
+      "simplified_key": "diy,2/29/2/2/2/2/36/36/0/37/37/27",
+      "inputs": [
+        {
+          "name": "x1",
+          "index": 0,
+          "dtype": "float8_e4m3fn",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x2",
+          "index": 1,
+          "dtype": "float8_e4m3fn",
+          "format": "FRACTAL_NZ",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "bias",
+          "index": 2,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x1_scale",
+          "index": 3,
+          "dtype": "float8_e8m0",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        },
+        {
+          "name": "x2_scale",
+          "index": 4,
+          "dtype": "float8_e8m0",
+          "format": "ND",
+          "paramType": "optional",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "bfloat16",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ]
+        }
+      ],
+      "attrs": [
+        {
+          "name": "dtype",
+          "dtype": "int",
+          "value": 27
+        },
+        {
+          "name": "group_size",
+          "dtype": "int",
+          "value": 32
+        },
+        {
+          "name": "perm_x1",
+          "dtype": "list_int",
+          "value": [1,0,2]
+        },
+        {
+          "name": "perm_x2",
+          "dtype": "list_int",
+          "value": [0,1,2]
+        },
+        {
+          "name": "perm_y",
+          "dtype": "list_int",
+          "value": [1,0,2]
+        },
+        {
+          "name": "batch_split_factor",
+          "dtype": "int",
+          "value": 1
+        }
+      ]
+    }
   ]
 }

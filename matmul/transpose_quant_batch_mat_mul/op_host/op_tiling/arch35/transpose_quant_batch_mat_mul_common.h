@@ -3,7 +3,7 @@
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
@@ -32,14 +32,15 @@ constexpr size_t SCALE_X2_IDX = 4;
 constexpr size_t PERM_X1_IDX = 2;
 constexpr size_t PERM_X2_IDX = 3;
 constexpr size_t PERM_Y_IDX = 4;
+constexpr size_t GROUP_SIZE_IDX = 1;
 constexpr size_t ATTR_NUM = 6;
 constexpr size_t ALLOW_DIM = 3;
 constexpr size_t EXPECTED_SCALE_DIM = 1;
 constexpr size_t EXPECTED_MX_SCALE_DIM = 4;
 constexpr size_t TQBMM_VALID_K = 512;
 constexpr size_t TQBMM_VALID_N = 128;
-constexpr uint64_t  L1_ALIGN_SIZE = 32;
-constexpr uint64_t  L2_ALIGN_SIZE = 128;
+constexpr uint64_t L1_ALIGN_SIZE = 32;
+constexpr uint64_t L2_ALIGN_SIZE = 128;
 constexpr uint64_t CUBE_REDUCE_BLOCK = 32UL;
 constexpr uint64_t CUBE_BLOCK = 16UL;
 constexpr uint64_t BASIC_BLOCK_SIZE_32 = 32UL;
@@ -63,15 +64,17 @@ constexpr uint32_t BASIC_BLOCK_SIZE_512 = 512;
 constexpr uint32_t BASIC_BLOCK_SIZE_256 = 256;
 constexpr uint64_t MX_GROUP_SIZE = 32;
 constexpr uint64_t K_ALIGNMENT64 = 64UL;
+static const uint64_t GROUP_M_OFFSET = 32;
+static const uint64_t GROUP_N_OFFSET = 16;
+static const uint64_t GROUP_MNK_BIT_SIZE = 0xFFFF;
+static constexpr size_t EXPECTED_NZ_DIM = 5;
 
 bool inline IsMicroScaling(const gert::CompileTimeTensorDesc* x1Scale, const gert::CompileTimeTensorDesc* x2Scale)
 {
     if (x1Scale == nullptr || x2Scale == nullptr) {
         return false;
     }
-    return x1Scale->GetDataType() == ge::DT_FLOAT8_E8M0 &&
-           x2Scale->GetDataType() == ge::DT_FLOAT8_E8M0;
+    return x1Scale->GetDataType() == ge::DT_FLOAT8_E8M0 && x2Scale->GetDataType() == ge::DT_FLOAT8_E8M0;
 }
 } // namespace transpose_quant_batch_mat_mul_advanced
 } // namespace optiling
-

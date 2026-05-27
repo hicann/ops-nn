@@ -923,6 +923,7 @@ matmul@ops-nn:
         - ops/ops-nn/matmul/transpose_batch_mat_mul/op_api/
         - ops/ops-nn/matmul/transpose_batch_mat_mul/op_host/op_tiling/arch35/
         - ops/ops-nn/matmul/transpose_batch_mat_mul/op_kernel/arch35/
+        - ops/ops-nn/matmul/transpose_quant_batch_mat_mul/
       opensource_style: null
       kernel_style: null
     unrelease:

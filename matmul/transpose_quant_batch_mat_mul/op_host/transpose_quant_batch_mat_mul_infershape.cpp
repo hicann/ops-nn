@@ -3,7 +3,7 @@
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
@@ -38,6 +38,66 @@ const size_t VALID_BATCH_SPLIT_FACTOR = 1;
 constexpr static int64_t UNKNOWN_DIM_NUM = static_cast<int64_t>(-2);
 constexpr static int64_t N_DIM_NUM = 2;
 constexpr static size_t PERM_DIM_NUM = 3;
+const std::initializer_list<ge::DataType> OUT_TYPE_LIST = {ge::DT_FLOAT16, ge::DT_BF16};
+constexpr size_t ATTR_INDEX_DST_TYPE = 0;
+constexpr int64_t Y_INDEX = 0;
+
+static inline bool IsMicroScaling(const ge::DataType& dtypeX1Scale, const ge::DataType& dtypeX2Scale)
+{
+    return dtypeX1Scale == ge::DT_FLOAT8_E8M0 && dtypeX2Scale == ge::DT_FLOAT8_E8M0;
+}
+
+static bool CheckDtypeValid(
+    const ge::DataType& dtypeX1, const ge::DataType& dtypeX2, const ge::DataType& dtypeX1Scale,
+    const ge::DataType& dtypeX2Scale)
+{
+    if (!IsMicroScaling(dtypeX1Scale, dtypeX2Scale)) {
+        CHECK(
+            (dtypeX1 != ge::DT_FLOAT8_E4M3FN && dtypeX1 != ge::DT_FLOAT8_E5M2) ||
+                (dtypeX2 != ge::DT_FLOAT8_E4M3FN && dtypeX2 != ge::DT_FLOAT8_E5M2),
+            CUBE_INNER_ERR_REPORT("TQBMM", "the dtype of input is only supported FLOAT8_E4M3FN or FLOAT8_E5M2."),
+            return ge::GRAPH_FAILED);
+    } else {
+        CHECK(
+            dtypeX1 != ge::DT_FLOAT8_E4M3FN || dtypeX2 != ge::DT_FLOAT8_E4M3FN,
+            CUBE_INNER_ERR_REPORT("TQBMM", "the dtype of input is only supported FLOAT8_E4M3FN."),
+            return ge::GRAPH_FAILED);
+    }
+    CHECK(
+        (dtypeX1Scale != ge::DT_FLOAT && dtypeX1Scale != ge::DT_FLOAT8_E8M0) ||
+            (dtypeX1Scale != ge::DT_FLOAT && dtypeX1Scale != ge::DT_FLOAT8_E8M0),
+        CUBE_INNER_ERR_REPORT("TQBMM", "the dtype of scale is only supported FLOAT or FLOAT8_E8M0."),
+        return ge::GRAPH_FAILED);
+    return true;
+}
+
+static bool CheckPerm(
+    const TypedContinuousVector<int64_t>* permX1, const TypedContinuousVector<int64_t>* permX2,
+    const TypedContinuousVector<int64_t>* permY)
+{
+    CHECK(
+        permX1 == nullptr || permX2 == nullptr || permY == nullptr,
+        CUBE_INNER_ERR_REPORT("TQBMM", "[Infershape] attr is nullptr."), return false);
+
+    CHECK(
+        permX1->GetSize() != PERM_DIM_NUM || permX2->GetSize() != PERM_DIM_NUM || permY->GetSize() != PERM_DIM_NUM,
+        CUBE_INNER_ERR_REPORT("TQBMM", "[InferShape] The dims of the perm intArray should be 3"), return false);
+    const auto permX1Attr = permX1->GetData();
+    auto checkPermX1 = (*permX1Attr == 1 && *(permX1Attr + 1) == 0 && *(permX1Attr + 2) == 2);
+    CHECK(!checkPermX1, CUBE_INNER_ERR_REPORT("TQBMM", "[InferShape] perm_x1 should be {1, 0, 2}"), return false);
+
+    const auto permX2Attr = permX2->GetData();
+    auto checkPermX2 = (*permX2Attr == 0 && *(permX2Attr + 1) == 1 && *(permX2Attr + 2) == 2) ||
+                       (*permX2Attr == 0 && *(permX2Attr + 1) == 2 && *(permX2Attr + 2) == 1);
+    CHECK(
+        !checkPermX2, CUBE_INNER_ERR_REPORT("TQBMM", "[InferShape] perm_x2 should be {0, 1, 2} or {0, 2, 1}"),
+        return false);
+
+    const auto permYAttr = permY->GetData();
+    auto checkPermY = *permYAttr == 1 && *(permYAttr + 1) == 0 && *(permYAttr + 2) == 2;
+    CHECK(!checkPermY, CUBE_INNER_ERR_REPORT("TQBMM", "[InferShape] perm_y should {1, 0, 2}"), return false);
+    return true;
+}
 
 static bool TransposeShape(const Shape& src, const TypedContinuousVector<int64_t>& perm, Shape& dst)
 {
@@ -111,9 +171,8 @@ static ge::graphStatus InferShapeForTransposeQuantBatchMatMul(InferShapeContext*
     const auto permY = attrs->GetListInt(4);                         // permY index is 4
     const auto batchSplitFactor = attrs->GetAttrPointer<int32_t>(5); // batchSplitFactor index is 5
     CHECK(
-        permX1 == nullptr || permX2 == nullptr || permY == nullptr,
-        CUBE_INNER_ERR_REPORT(nameOp, "[Infershape] attr is nullptr."), return ge::GRAPH_FAILED);
-
+        !CheckPerm(permX1, permX2, permY), CUBE_INNER_ERR_REPORT(nameOp, "[InferShape] Failed to check perm"),
+        return ge::GRAPH_FAILED);
     Shape shapeX1Transposed;
     Shape shapeX2Transposed;
     CHECK(
@@ -127,8 +186,8 @@ static ge::graphStatus InferShapeForTransposeQuantBatchMatMul(InferShapeContext*
     CHECK(
         (shapeX1Transposed.GetDimNum() != PERM_DIM_NUM) || (shapeX2Transposed.GetDimNum() != PERM_DIM_NUM),
         CUBE_INNER_ERR_REPORT(
-            nameOp, "The dims of the two inputs should be 3, now x1 dims: %zu and x2 dims: %zu.", shapeX1Transposed.GetDimNum(),
-            shapeX2Transposed.GetDimNum()),
+            nameOp, "The dims of the two inputs should be 3, now x1 dims: %zu and x2 dims: %zu.",
+            shapeX1Transposed.GetDimNum(), shapeX2Transposed.GetDimNum()),
         return ge::GRAPH_FAILED);
     // check x1 and x2 k-axis
     CHECK(
@@ -142,12 +201,24 @@ static ge::graphStatus InferShapeForTransposeQuantBatchMatMul(InferShapeContext*
             Ops::Base::ToString(shapeX1Transposed).c_str(), Ops::Base::ToString(shapeX2Transposed).c_str()),
         return ge::GRAPH_FAILED);
 
-    auto* x1Scale = context->GetOptionalInputShape(kX1ScaleIdx);
-    auto* x2Scale = context->GetOptionalInputShape(kX2ScaleIdx);
-    // 当前不允许x1Scale或者x2Scale为空
+    auto tensorX1 = context->GetInputDesc(0);
+    auto tensorX2 = context->GetInputDesc(1);
     CHECK(
-        x1Scale == nullptr || x2Scale == nullptr, CUBE_INNER_ERR_REPORT(nameOp, "X1Scale or x2Scale is null."),
+        tensorX1 == nullptr || tensorX2 == nullptr, CUBE_INNER_ERR_REPORT(nameOp, "x1 or x2 is null."),
         return ge::GRAPH_FAILED);
+    // 当前不允许x1Scale或者x2Scale为空
+    auto tensorX1Scale = context->GetOptionalInputDesc(kX1ScaleIdx);
+    auto tensorX2Scale = context->GetOptionalInputDesc(kX2ScaleIdx);
+    CHECK(
+        tensorX1Scale == nullptr || tensorX2Scale == nullptr,
+        CUBE_INNER_ERR_REPORT(nameOp, "X1Scale or x2Scale is null."), return ge::GRAPH_FAILED);
+    ge::DataType dtypeX1 = tensorX1->GetDataType();
+    ge::DataType dtypeX2 = tensorX2->GetDataType();
+    ge::DataType dtypeX1Scale = tensorX1Scale->GetDataType();
+    ge::DataType dtypeX2Scale = tensorX2Scale->GetDataType();
+    CHECK(
+        !CheckDtypeValid(dtypeX1, dtypeX2, dtypeX1Scale, dtypeX2Scale),
+        CUBE_INNER_ERR_REPORT(nameOp, "[InferShape] Failed to check dtype"), return ge::GRAPH_FAILED);
     // batchSplitFactor only support 1
     CHECK(
         batchSplitFactor != nullptr && *batchSplitFactor != VALID_BATCH_SPLIT_FACTOR,
@@ -165,6 +236,33 @@ static ge::graphStatus InferShapeForTransposeQuantBatchMatMul(InferShapeContext*
 
 } // namespace
 
+static ge::graphStatus TransposeQuantBatchMatMulInferDataType(gert::InferDataTypeContext* context)
+{
+    if (context == nullptr) {
+        return ge::GRAPH_FAILED;
+    }
+
+    OP_LOGD(context, "TransposeQuantBatchMatMulInferDataType begin");
+    auto nameOp = context->GetNodeName();
+    auto* attrs = context->GetAttrs();
+    CHECK(attrs == nullptr, CUBE_INNER_ERR_REPORT(nameOp, "[Infershape] attr is nullptr."), return ge::GRAPH_FAILED);
+    const int32_t* dtype = attrs->GetAttrPointer<int32_t>(ATTR_INDEX_DST_TYPE);
+    CHECK(dtype == nullptr, CUBE_INNER_ERR_REPORT(nameOp, "[Infershape] dtype is nullptr."), return ge::GRAPH_FAILED);
+    int32_t dstDtype = *dtype;
+    ge::DataType yDtype = static_cast<ge::DataType>(dstDtype);
+
+    OP_CHECK_IF(
+        std::find(OUT_TYPE_LIST.begin(), OUT_TYPE_LIST.end(), yDtype) == OUT_TYPE_LIST.end(),
+        OP_LOGE(context, "attr dtype only support float16, bfloat16"), return ge::GRAPH_FAILED);
+
+    context->SetOutputDataType(Y_INDEX, yDtype);
+
+    OP_LOGD(context, "TransposeQuantBatchMatMulInferDataType end");
+    return ge::GRAPH_SUCCESS;
+}
+
 namespace Ops::NN::MatMul {
-IMPL_OP_INFERSHAPE(TransposeQuantBatchMatMul).InferShape(InferShapeForTransposeQuantBatchMatMul);
+IMPL_OP_INFERSHAPE(TransposeQuantBatchMatMul)
+    .InferShape(InferShapeForTransposeQuantBatchMatMul)
+    .InferDataType(TransposeQuantBatchMatMulInferDataType);
 }

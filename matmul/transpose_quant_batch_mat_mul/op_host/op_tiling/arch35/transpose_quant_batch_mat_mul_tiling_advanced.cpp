@@ -3,7 +3,7 @@
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
@@ -27,16 +27,69 @@ using namespace optiling::transpose_quant_batch_mat_mul_advanced;
 using namespace optiling::matmul_v3_advanced;
 static inline void TQBMMGetDtype(const gert::TilingContext& context, MatMulV3Args& args)
 {
-    args.aType = context.GetInputDesc(0)->GetDataType();
-    args.bType = context.GetInputDesc(1)->GetDataType();
+    args.aType = context.GetInputDesc(X1_IDX)->GetDataType();
+    args.bType = context.GetInputDesc(X2_IDX)->GetDataType();
     args.cType = context.GetOutputDesc(0)->GetDataType();
     args.aDtypeSize = ge::GetSizeByDataType(args.aType);
     args.bDtypeSize = ge::GetSizeByDataType(args.bType);
 }
 
-ge::graphStatus TQBMMGetShapeMKN(const gert::Shape& aShape, const gert::Shape& bShape,
-                                 const gert::ContinuousVector* aPermList, const gert::ContinuousVector* bPermList,
-                                 MatMulV3Args& args, bool isMxfp8)
+static inline void TQBMMGetFormat(const gert::TilingContext& context, MatMulV3Args& args)
+{
+    ge::Format formatA =
+        static_cast<ge::Format>(ge::GetPrimaryFormat(context.GetInputDesc(X1_IDX)->GetStorageFormat()));
+    ge::Format formatB =
+        static_cast<ge::Format>(ge::GetPrimaryFormat(context.GetInputDesc(X2_IDX)->GetStorageFormat()));
+    ge::Format formatOut = static_cast<ge::Format>(ge::GetPrimaryFormat(context.GetOutputDesc(0)->GetStorageFormat()));
+    args.aFormat = (formatA != ge::FORMAT_FRACTAL_NZ) ? ge::FORMAT_ND : formatA;
+    args.bFormat = (formatB != ge::FORMAT_FRACTAL_NZ) ? ge::FORMAT_ND : formatB;
+    args.outFormat = (formatOut != ge::FORMAT_FRACTAL_NZ) ? ge::FORMAT_ND : formatOut;
+}
+
+static inline ge::graphStatus CheckWeightNz(const gert::TilingContext& context, MatMulV3Args& args, bool isMxFp)
+{
+    if (!isMxFp) {
+        OP_LOGE(args.opName, "NZ format of x2 only supports mxfp8 mode (x1_scale/x2_scale is e8m0).");
+        return ge::GRAPH_FAILED;
+    }
+    auto bShape = context.GetInputShape(X2_IDX)->GetOriginShape();
+    size_t bDims = bShape.GetDimNum();
+    OP_TILING_CHECK(
+        bDims == EXPECTED_NZ_DIM,
+        CUBE_INNER_ERR_REPORT(args.opName, "Only support x2 storageShapeDim is 5, which are [%zu].", bDims),
+        return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
+
+static inline ge::graphStatus CheckNotNull(const gert::TilingContext* context)
+{
+    OPS_CHECK_NULL_WITH_CONTEXT(context, context->GetAttrs());
+    OPS_CHECK_NULL_WITH_CONTEXT(context, context->GetInputDesc(X1_IDX));
+    OPS_CHECK_NULL_WITH_CONTEXT(context, context->GetInputShape(X1_IDX));
+    OPS_CHECK_NULL_WITH_CONTEXT(context, context->GetInputDesc(X2_IDX));
+    OPS_CHECK_NULL_WITH_CONTEXT(context, context->GetInputShape(X2_IDX));
+    OPS_CHECK_NULL_WITH_CONTEXT(context, context->GetOutputDesc(0));
+    return ge::GRAPH_SUCCESS;
+}
+
+static inline ge::graphStatus IsValidGroupSize(const int64_t groupSize, bool isMxFp, MatMulV3Args& args)
+{
+    uint64_t groupSizeK = static_cast<uint64_t>(groupSize) & GROUP_MNK_BIT_SIZE;
+    uint64_t groupSizeN = (static_cast<uint64_t>(groupSize) >> GROUP_N_OFFSET) & GROUP_MNK_BIT_SIZE;
+    uint64_t groupSizeM = (static_cast<uint64_t>(groupSize) >> GROUP_M_OFFSET) & GROUP_MNK_BIT_SIZE;
+    if (isMxFp && !((groupSizeM == 0 || groupSizeM == 1) && (groupSizeN == 0 || groupSizeN == 1) &&
+                    groupSizeK == SUPPORTED_GROUP_SIZE)) {
+        OP_LOGE(
+            args.opName, "The valid groupSizeM and groupSizeN must be 0 or 1,the valid groupSizeK must be 32.",
+            groupSizeM, groupSizeN);
+        return ge::GRAPH_FAILED;
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus TQBMMGetShapeMKN(
+    const gert::Shape& aShape, const gert::Shape& bShape, const gert::ContinuousVector* aPermList,
+    const gert::ContinuousVector* bPermList, MatMulV3Args& args, bool isMxfp8)
 {
     const int64_t* aPerm = static_cast<const int64_t*>(aPermList->GetData());
     const int64_t* bPerm = static_cast<const int64_t*>(bPermList->GetData());
@@ -52,7 +105,7 @@ ge::graphStatus TQBMMGetShapeMKN(const gert::Shape& aShape, const gert::Shape& b
         OP_LOGE(args.opName, "illegal value: m[%ld], k[%ld], n[%ld]", m, kA, n);
         return ge::GRAPH_FAILED;
     }
-    if (isMxfp8 && (kA % K_ALIGNMENT64 != 0)){
+    if (isMxfp8 && (kA % K_ALIGNMENT64 != 0)) {
         OP_LOGE(args.opName, "K must be a multiple of 64, now K are %ld", kA);
         return ge::GRAPH_FAILED;
     }
@@ -93,15 +146,16 @@ ge::graphStatus TQBMMGetShape(const gert::TilingContext& context, MatMulV3Args& 
     const int64_t* yPerm = static_cast<const int64_t*>(yPermList->GetData());
     bool yPermCheck = (yPerm[BATCH_IDX] == 1L) && (yPerm[M_IDX] == 0L) && (yPerm[N_IDX] == 2L); // yPerm is [1,0,2]
     OP_TILING_CHECK(!yPermCheck, CUBE_INNER_ERR_REPORT(args.opName, "unsupport yPerm value"), return ge::GRAPH_FAILED);
-    OP_TILING_CHECK((TQBMMGetShapeMKN(aShape, bShape, aPermList, bPermList, args, isMxfp8) != ge::GRAPH_SUCCESS),
-                    CUBE_INNER_ERR_REPORT(args.opName, "get m/k/n failed"), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        (TQBMMGetShapeMKN(aShape, bShape, aPermList, bPermList, args, isMxfp8) != ge::GRAPH_SUCCESS),
+        CUBE_INNER_ERR_REPORT(args.opName, "get m/k/n failed"), return ge::GRAPH_FAILED);
 
     if (attrs->GetAttrNum() >= ATTR_NUM) {
         int32_t batchSplitFactor = *(attrs->GetAttrPointer<int32_t>(ATTR_NUM - 1));
         bool batchSplitFactorPermCheck = (batchSplitFactor == 1);
-        OP_TILING_CHECK(!batchSplitFactorPermCheck,
-                        CUBE_INNER_ERR_REPORT(args.opName, "batch_split_factor is not supported"),
-                        return ge::GRAPH_FAILED);
+        OP_TILING_CHECK(
+            !batchSplitFactorPermCheck, CUBE_INNER_ERR_REPORT(args.opName, "batch_split_factor is not supported"),
+            return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -134,11 +188,27 @@ ge::graphStatus IsValidDtype(const gert::TilingContext& context, const MatMulV3A
             return ge::GRAPH_SUCCESS;
         }
     }
-    OP_LOGE(args.opName, "Unsupported data type: x1[%s], x2[%s], scale_x1[%s], scale_x2[%s], y[%s]",
-            Ops::Base::ToString(args.aType).c_str(), Ops::Base::ToString(args.bType).c_str(),
-            Ops::Base::ToString(scaleX1Dtype).c_str(), Ops::Base::ToString(scaleX2Dtype).c_str(),
-            Ops::Base::ToString(args.cType).c_str());
+    OP_LOGE(
+        args.opName, "Unsupported data type: x1[%s], x2[%s], scale_x1[%s], scale_x2[%s], y[%s]",
+        Ops::Base::ToString(args.aType).c_str(), Ops::Base::ToString(args.bType).c_str(),
+        Ops::Base::ToString(scaleX1Dtype).c_str(), Ops::Base::ToString(scaleX2Dtype).c_str(),
+        Ops::Base::ToString(args.cType).c_str());
     return ge::GRAPH_FAILED;
+}
+
+ge::graphStatus IsValidFormat(const gert::TilingContext& context, const MatMulV3Args& args)
+{
+    bool isMxfp8 =
+        IsMicroScaling(context.GetOptionalInputDesc(SCALE_X1_IDX), context.GetOptionalInputDesc(SCALE_X2_IDX));
+    if (args.aFormat == ge::FORMAT_FRACTAL_NZ || args.outFormat == ge::FORMAT_FRACTAL_NZ) {
+        OP_LOGE(args.opName, "invalid input/output format.");
+        return ge::GRAPH_FAILED;
+    }
+    if (args.bFormat == ge::FORMAT_FRACTAL_NZ && !isMxfp8) {
+        OP_LOGE(args.opName, "x2 in FRACTAL_NZ only supports mxfp8 mode.");
+        return ge::GRAPH_FAILED;
+    }
+    return ge::GRAPH_SUCCESS;
 }
 } // namespace
 
@@ -146,16 +216,19 @@ namespace optiling {
 namespace transpose_quant_batch_mat_mul_advanced {
 ge::graphStatus TransposeQuantBatchMatMulTiling::GetArgs()
 {
+    TQBMMGetFormat(*context_, args_);
     TQBMMGetDtype(*context_, args_);
     if (TQBMMGetShape(*context_, args_) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    if (IsValidFormat(*context_, args_) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
     return IsValidDtype(*context_, args_);
 }
 
-
-ge::graphStatus TransposeQuantBatchMatMulTiling::CheckScale(const int64_t b, const int64_t m, const int64_t n,
-                                                            const int64_t k, const int64_t* bPerm) const
+ge::graphStatus TransposeQuantBatchMatMulTiling::CheckScale(
+    const int64_t b, const int64_t m, const int64_t n, const int64_t k, const int64_t* bPerm) const
 {
     // scale
     auto scaleX1ShapePtr = context_->GetOptionalInputShape(SCALE_X1_IDX);
@@ -198,12 +271,10 @@ ge::graphStatus TransposeQuantBatchMatMulTiling::CheckScale(const int64_t b, con
 
 ge::graphStatus TransposeQuantBatchMatMulTiling::CheckArgs()
 {
+    OP_TILING_CHECK(
+        (CheckNotNull(context_) != ge::GRAPH_SUCCESS),
+        CUBE_INNER_ERR_REPORT(args_.opName, "parameter should not be nullptr"), return ge::GRAPH_FAILED);
     auto attrs = context_->GetAttrs();
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs);
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetInputDesc(X1_IDX));
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetInputShape(X1_IDX));
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetInputDesc(X2_IDX));
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetInputShape(X2_IDX));
     const gert::ContinuousVector* aPermList = attrs->GetAttrPointer<gert::ContinuousVector>(PERM_X1_IDX);
     const gert::ContinuousVector* bPermList = attrs->GetAttrPointer<gert::ContinuousVector>(PERM_X2_IDX);
     const gert::ContinuousVector* yPermList = attrs->GetAttrPointer<gert::ContinuousVector>(PERM_Y_IDX);
@@ -218,42 +289,52 @@ ge::graphStatus TransposeQuantBatchMatMulTiling::CheckArgs()
     const gert::Shape& aShape = context_->GetInputShape(X1_IDX)->GetOriginShape();
     const gert::Shape& bShape = context_->GetInputShape(X2_IDX)->GetOriginShape();
     const gert::Shape& cShape = context_->GetOutputShape(0)->GetOriginShape();
-    const size_t aDimNum = aShape.GetDimNum();
-    const size_t bDimNum = bShape.GetDimNum();
-    const size_t cDimNum = cShape.GetDimNum();
-    if ((aDimNum != ALLOW_DIM) || (bDimNum != ALLOW_DIM) || (cDimNum != ALLOW_DIM)) {
+    if ((aShape.GetDimNum() != ALLOW_DIM) || (bShape.GetDimNum() != ALLOW_DIM) || (cShape.GetDimNum() != ALLOW_DIM)) {
         OP_LOGE(args_.opName, "invalid input/output dim num");
         return ge::GRAPH_FAILED;
     }
     const int64_t* aPerm = static_cast<const int64_t*>(aPermList->GetData());
     const int64_t* bPerm = static_cast<const int64_t*>(bPermList->GetData());
-    int64_t b = aShape[aPerm[BATCH_IDX]];
-    int64_t m = aShape[aPerm[M_IDX]];
-    int64_t n = bShape[bPerm[N_IDX]];
-    int64_t k = aShape[aPerm[KA_IDX]];
-    //scale
-    OP_TILING_CHECK((CheckScale(b, m, n, k, bPerm) != ge::GRAPH_SUCCESS), CUBE_INNER_ERR_REPORT(args_.opName, "invalid scale"),
-                    return ge::GRAPH_FAILED);
-    // bias
-    if (context_->GetOptionalInputShape(BIAS_IDX) != nullptr) {
-        OP_LOGE(args_.opName, "bias is not supported");
-        return ge::GRAPH_FAILED;
+    // scale
+    OP_TILING_CHECK(
+        (CheckScale(
+             aShape[aPerm[BATCH_IDX]], aShape[aPerm[M_IDX]], bShape[bPerm[N_IDX]], aShape[aPerm[KA_IDX]], bPerm) !=
+         ge::GRAPH_SUCCESS),
+        CUBE_INNER_ERR_REPORT(args_.opName, "invalid scale"), return ge::GRAPH_FAILED);
+    // check group_size
+    bool isMxfp8 =
+        IsMicroScaling(context_->GetOptionalInputDesc(SCALE_X1_IDX), context_->GetOptionalInputDesc(SCALE_X2_IDX));
+    const int64_t* groupSize = attrs->GetAttrPointer<int64_t>(GROUP_SIZE_IDX);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, groupSize);
+    OP_TILING_CHECK(
+        (IsValidGroupSize(*groupSize, isMxfp8, args_) != ge::GRAPH_SUCCESS),
+        CUBE_INNER_ERR_REPORT(args_.opName, "invalid group_size"), return ge::GRAPH_FAILED);
+    // check format
+    if (ge::GetPrimaryFormat(context_->GetInputDesc(1)->GetStorageFormat()) == ge::FORMAT_FRACTAL_NZ) {
+        OP_TILING_CHECK(
+            (CheckWeightNz(*context_, args_, isMxfp8) != ge::GRAPH_SUCCESS),
+            CUBE_INNER_ERR_REPORT(args_.opName, "invalid weightNz"), return ge::GRAPH_FAILED);
     }
+    // bias
+    OP_TILING_CHECK(
+        (context_->GetOptionalInputShape(BIAS_IDX) != nullptr),
+        CUBE_INNER_ERR_REPORT(args_.opName, "bias is not supported"), return ge::GRAPH_FAILED);
     if (attrs->GetAttrNum() >= ATTR_NUM) {
         OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs->GetAttrPointer<int32_t>(ATTR_NUM - 1));
     }
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetOutputDesc(0));
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus TransposeQuantBatchMatMulTiling::GetShapeAttrsInfo()
 {
     args_.opName = context_->GetNodeName();
-    OP_TILING_CHECK(args_.opName == nullptr, CUBE_INNER_ERR_REPORT("TransposeQuantBatchMatMul", "get op name invalid"),
-                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        args_.opName == nullptr, CUBE_INNER_ERR_REPORT("TransposeQuantBatchMatMul", "get op name invalid"),
+        return ge::GRAPH_FAILED);
     OP_LOGI(args_.opName, "TilingContext: %s", Ops::NN::DebugTilingContext(context_).c_str());
-    OP_TILING_CHECK((CheckArgs() != ge::GRAPH_SUCCESS) || (GetArgs() != ge::GRAPH_SUCCESS),
-                    CUBE_INNER_ERR_REPORT(args_.opName, "invalid context"), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        (CheckArgs() != ge::GRAPH_SUCCESS) || (GetArgs() != ge::GRAPH_SUCCESS),
+        CUBE_INNER_ERR_REPORT(args_.opName, "invalid context"), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -263,23 +344,23 @@ ge::graphStatus TransposeQuantBatchMatMulTiling::DoTiling()
         return ge::GRAPH_FAILED;
     }
     MatMulV3BatchInfo tempBatchInfo;
-    OP_TILING_CHECK((GetBatchInfo(*context_, args_, tempBatchInfo) != ge::GRAPH_SUCCESS),
-                    CUBE_INNER_ERR_REPORT(args_.opName, "GetBatchInfo failed"), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        (GetBatchInfo(*context_, args_, tempBatchInfo) != ge::GRAPH_SUCCESS),
+        CUBE_INNER_ERR_REPORT(args_.opName, "GetBatchInfo failed"), return ge::GRAPH_FAILED);
     args_.batchInfo = &tempBatchInfo;
     MatMulTilingCfg tilingCfg(false, context_->GetCompileInfo(), static_cast<void*>(&args_));
     OPS_CHECK_NULL_WITH_CONTEXT(context_, tilingCfg.compileInfo);
-    NpuArch npuArch =
-        static_cast<const MatmulV3CompileInfo*>(tilingCfg.compileInfo)->npuArch;
-    MMRegisterCfg registerCfg{"TransposeQuantBatchMatMul", npuArch,
-                              strategy::GetTransposeQuantBatchMatMulPriorities(npuArch)};
+    NpuArch npuArch = static_cast<const MatmulV3CompileInfo*>(tilingCfg.compileInfo)->npuArch;
+    MMRegisterCfg registerCfg{
+        "TransposeQuantBatchMatMul", npuArch, strategy::GetTransposeQuantBatchMatMulPriorities(npuArch)};
     return MMTilingRegistry::GetInstance().DoTilingImpl(context_, tilingCfg, registerCfg);
 }
 
-ge::graphStatus TransposeQuantBatchMatMulTiling::GetBatchInfo(const gert::TilingContext& context, MatMulV3Args& args,
-                                                              MatMulV3BatchInfo& batchInfo) const
+ge::graphStatus TransposeQuantBatchMatMulTiling::GetBatchInfo(
+    const gert::TilingContext& context, MatMulV3Args& args, MatMulV3BatchInfo& batchInfo) const
 {
-    const gert::Shape& aShape = context.GetInputShape(0)->GetOriginShape();
-    const gert::Shape& bShape = context.GetInputShape(1)->GetOriginShape();
+    const gert::Shape& aShape = context.GetInputShape(X1_IDX)->GetOriginShape();
+    const gert::Shape& bShape = context.GetInputShape(X2_IDX)->GetOriginShape();
 
     auto attrs = context.GetAttrs();
     const gert::ContinuousVector* aPermList = attrs->GetAttrPointer<gert::ContinuousVector>(PERM_X1_IDX);
@@ -291,8 +372,8 @@ ge::graphStatus TransposeQuantBatchMatMulTiling::GetBatchInfo(const gert::Tiling
     batchA = aShape[aPerm[BATCH_IDX]];
     const int64_t* bPerm = static_cast<const int64_t*>(bPermList->GetData());
     batchB = bShape[bPerm[BATCH_IDX]];
-    OP_TILING_CHECK(batchA != batchB, CUBE_INNER_ERR_REPORT(args.opName, "unequal input batch values"),
-                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        batchA != batchB, CUBE_INNER_ERR_REPORT(args.opName, "unequal input batch values"), return ge::GRAPH_FAILED);
     batchInfo.batchA3 = batchA;
     batchInfo.batchB3 = batchA;
     batchInfo.batchC3 = batchA;

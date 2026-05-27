@@ -3,7 +3,7 @@
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
@@ -37,8 +37,9 @@ namespace ge {
 
 * @par Attributes:
 * Six attributes, including:
-* @li dtype: An int. Declare the output type, supports  1(float16), 27(bfloat16). Default: 1(float16).
-* @li group_size: An optional int. Indicating the ratio between x1_scale/x2_scale and x1/x2 in group dequantization. Default to be 0.
+* @li dtype: An int. Declare the output type, supports  1(float16), 27(bfloat16).
+* @li group_size: An optional int. Indicating the ratio between x1_scale/x2_scale and x1/x2 in group dequantization.
+Default to be 0.
 * @li perm_x1: A list int. "x1" is permuted to shape [B, M, K] before multiplication, the default value is [1, 0, 2].
 * @li perm_x2: A list int. "x2" is permuted to shape [B, K, N] before multiplication, the default value is [0, 1, 2].
 * @li perm_y: A list int. "y" is permuted after multiplication, the default value is [1, 0, 2].
@@ -46,17 +47,17 @@ namespace ge {
 
 * @par Outputs:
 * One output, including:
-* y: A matrix Tensor. Must be one of the following types: float16, bfloat16. 
+* y: A matrix Tensor. Must be one of the following types: float16, bfloat16.
   The format supports ND. The shape dim must be 3D. \n
 */
 REG_OP(TransposeQuantBatchMatMul)
-    .INPUT(x1, TensorType({DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN}))
-    .INPUT(x2, TensorType({DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN}))
+    .INPUT(x1, TensorType({DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2}))
+    .INPUT(x2, TensorType({DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2}))
     .OPTIONAL_INPUT(bias, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
     .OPTIONAL_INPUT(x1_scale, TensorType({DT_FLOAT, DT_FLOAT8_E8M0}))
-    .OPTIONAL_INPUT(x2_scale, TensorType({DT_FLOAT,DT_FLOAT8_E8M0}))
+    .OPTIONAL_INPUT(x2_scale, TensorType({DT_FLOAT, DT_FLOAT8_E8M0}))
     .OUTPUT(y, TensorType({DT_FLOAT16, DT_BF16}))
-    .ATTR(dtype, Int, 1)
+    .REQUIRED_ATTR(dtype, Int)
     .ATTR(group_size, Int, 0)
     .ATTR(perm_x1, ListInt, {1, 0, 2})
     .ATTR(perm_x2, ListInt, {0, 1, 2})

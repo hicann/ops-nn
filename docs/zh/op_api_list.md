@@ -398,6 +398,7 @@
 | [aclnnTransposeBatchMatMul](../../matmul/transpose_batch_mat_mul/docs/aclnnTransposeBatchMatMul.md) | 完成张量x1与张量x2的矩阵乘计算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnTransposeBatchMatMulWeightNz](../../matmul/transpose_batch_mat_mul/docs/aclnnTransposeBatchMatMulWeightNZ.md) | 完成张量x1与张量x2的矩阵乘计算。x2仅支持昇腾亲和数据排布格式NZ，只支持x1为3维, x2为5维。 | 默认确定性实现 | - |
 | [aclnnTransposeQuantBatchMatMul](../../matmul/transpose_quant_batch_mat_mul/docs/aclnnTransposeQuantBatchMatMul.md) | 完成张量x1与张量x2量化的矩阵乘计算。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnTransposeQuantBatchMatMulWeightNz](../../matmul/transpose_quant_batch_mat_mul/docs/aclnnTransposeQuantBatchMatMulWeightNz.md) | 完成张量x1与张量x2量化的矩阵乘计算。x2仅支持昇腾亲和数据排布格式NZ，只支持x1为3维, x2为5维。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnTransQuantParam](../../quant/trans_quant_param/docs/aclnnTransQuantParam.md) | 将输入scale数据从FLOAT32类型转换为硬件需要的UINT64类型，并存储到quantParam中。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnTransQuantParamV2](../../quant/trans_quant_param_v2/docs/aclnnTransQuantParamV2.md) | 完成量化计算参数scale数据类型的转换，将FLOAT32的数据类型转换为硬件需要的UINT64，INT64类型。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnTransQuantParamV3](../../quant/trans_quant_param_v2/docs/aclnnTransQuantParamV3.md) | 完成量化计算参数scale数据类型的转换，将Float32的数据类型转换为硬件需要的UINT64，INT64类型。 | 默认确定性实现 | 默认确定性实现 |
