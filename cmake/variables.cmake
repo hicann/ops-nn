@@ -153,11 +153,6 @@ set(CMAKE_INSTALL_PREFIX ${CMAKE_SOURCE_DIR}/build_out)
 
 if(BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG)
   set(JSON_INCLUDE ${JSON_SOURCE_PATH}/include)
-  if (EXISTS "${PROTOBUF_INCLUDE_DIRS}")
-    set(Protobuf_INCLUDE ${PROTOBUF_INCLUDE_DIRS})
-  else()
-    set(Protobuf_INCLUDE ${PROTOBUF_SRC_DIR}/src)
-  endif()
   if (TARGET host_protoc)
     get_target_property(Protobuf_PROTOC_EXECUTABLE host_protoc IMPORTED_LOCATION)
   else()
@@ -241,7 +236,6 @@ set(AICPU_DEFINITIONS
 
 set(TF_PLUGIN_INCLUDE
   ${OP_PROTO_INCLUDE} 
-  ${Protobuf_INCLUDE} 
   ${Protobuf_PATH} 
   ${CMAKE_BINARY_DIR}/proto 
   ${JSON_INCLUDE} 
@@ -254,7 +248,6 @@ set(TF_PLUGIN_INCLUDE
 
 set(ONNX_PLUGIN_INCLUDE
   ${OP_PROTO_INCLUDE} 
-  ${Protobuf_INCLUDE} 
   ${Protobuf_PATH} 
   ${CMAKE_BINARY_DIR}/proto 
   ${JSON_INCLUDE} 

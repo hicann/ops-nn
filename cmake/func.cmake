@@ -934,6 +934,7 @@ function(add_onnx_plugin_modules)
               $<BUILD_INTERFACE:dlog_headers>
               $<$<TARGET_EXISTS:opbase_util_objs>:$<TARGET_OBJECTS:opbase_util_objs>>
               $<$<TARGET_EXISTS:opbase_infer_objs>:$<TARGET_OBJECTS:opbase_infer_objs>>
+              ascend_protobuf_static
       )
   endif()
 endfunction()
@@ -1060,6 +1061,7 @@ function(init_tf_plugin_modules)
             $<BUILD_INTERFACE:dlog_headers>
             $<$<TARGET_EXISTS:opbase_util_objs>:$<TARGET_OBJECTS:opbase_util_objs>>
             $<$<TARGET_EXISTS:opbase_infer_objs>:$<TARGET_OBJECTS:opbase_infer_objs>>
+            ascend_protobuf_static
   )
 endfunction()
 
