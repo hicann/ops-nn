@@ -114,21 +114,21 @@
     <tr>
       <td>round_mode</td>
       <td>属性</td>
-      <td>舍入模式，用于量化时的类型转换。<br>当dst_type为FLOAT8_E4M3FN 时，仅支持"rint"。默认值为"rint"。</td>
+      <td>舍入模式，用于量化时的类型转换。<br>当dst_type为FLOAT8_E5M2/FLOAT8_E4M3FN时，仅支持"rint"；当dst_type为FLOAT4_E2M1/FLOAT4_E1M2时，支持"rint"、"floor"、"round"。默认值为"rint"。</td>
       <td>STRING</td>
       <td>-</td>
     </tr>
     <tr>
       <td>scale_alg</td>
       <td>属性</td>
-      <td>缩放算法：取值为1时，表示使用cuBLAS算法。取值为0时，表示使用OCP算法。默认值为0。<br>仅支持scale_alg=1。</td>
+      <td>缩放算法：取值为1时，表示使用cuBLAS算法；取值为0时，表示使用OCP算法。默认值为0。<br>当dst_type为FLOAT4_E2M1/FLOAT4_E1M2时仅支持scale_alg=0。</td>
       <td>INT64</td>
       <td>-</td>
     </tr>
     <tr>
       <td>dst_type</td>
       <td>属性</td>
-      <td>目标量化类型：36=FLOAT8_E4M3FN。默认值为 35。</td>
+      <td>目标量化类型：35=FLOAT8_E5M2、36=FLOAT8_E4M3FN、40=FLOAT4_E2M1、41=FLOAT4_E1M2。默认值为35。</td>
       <td>INT64</td>
       <td>-</td>
     </tr>
@@ -143,7 +143,7 @@
       <td>y1</td>
       <td>输出</td>
       <td>-1轴量化后的输出张量，形状为[M, N]（SwiGLU 输出的一半）</td>
-      <td>FLOAT8_E4M3FN</td>
+      <td>FLOAT8_E5M2、FLOAT8_E4M3FN、FLOAT4_E2M1、FLOAT4_E1M2</td>
       <td>ND</td>
     </tr>
     <tr>
@@ -157,7 +157,7 @@
       <td>y2</td>
       <td>输出</td>
       <td>-2轴量化后的输出张量，形状为[M, N]</td>
-      <td>FLOAT8_E4M3FN</td>
+      <td>FLOAT8_E5M2、FLOAT8_E4M3FN、FLOAT4_E2M1、FLOAT4_E1M2</td>
       <td>ND</td>
     </tr>
     <tr>
@@ -172,7 +172,8 @@
 ## 约束说明
 
 - 输入x必须为2维张量，最后一维必须能被2整除（shape为[M, 2N]）。
-- FP8输出类型（FLOAT8_E4M3FN）仅支持"rint"舍入模式。
+- FP8输出类型（FLOAT8_E5M2/FLOAT8_E4M3FN）仅支持"rint"舍入模式；FP4输出类型（FLOAT4_E2M1/FLOAT4_E1M2）支持"rint"、"floor"、"round"舍入模式。
+- 当dst_type为FLOAT4_E2M1/FLOAT4_E1M2时，仅支持scale_alg=0（OCP实现）。
 - 当group_index存在时，采用cumsum模式，每个值表示对应group的行数累积值，group_index的每个元素值需要大于0且最后一个元素值要等于M。
 
 ## 调用说明
