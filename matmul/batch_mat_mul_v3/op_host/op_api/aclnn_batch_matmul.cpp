@@ -144,10 +144,7 @@ static bool CheckFormat(
     bool noSupportFormat =
         ((selfFormat == Format::FORMAT_FRACTAL_NZ) || (outTensorFormat == Format::FORMAT_FRACTAL_NZ));
     if (noSupportFormat) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            " The 'self' or 'out' tensor currently does not support NZ format"
-            "format");
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, " The 'self' or 'out' tensor currently does not support NZ format");
         return false;
     }
     return true;

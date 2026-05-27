@@ -401,7 +401,7 @@ static inline bool CheckMatmulWeightNz(const aclTensor* mat1, const aclTensor* m
     if (!CheckWeightNzStorageShape(weightNzShape, mat2->GetStorageShape())) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID,
-            "mat2'format only support NZ, but now mat2's format is not NZ, please convert the input format to NZ.");
+            "mat2's format only supports NZ, but now mat2's format is not NZ, please convert the input format to NZ.");
         return false;
     }
 
