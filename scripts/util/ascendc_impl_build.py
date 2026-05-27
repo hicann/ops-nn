@@ -174,13 +174,14 @@ def {}({}, kernel_name="{}", impl_mode=""):
         tikcpp_path = os.path.realpath(os.path.join(bisheng_path, "..", "..", "tikcpp"))
     else:
         tikcpp_path = os.path.realpath("/usr/local/Ascend/cann/compiler/tikcpp")
+    options.append("-I" + os.path.join(PYF_PATH, "..", "ascendc", "common", "tensor_api", "include"))
     options.append("-I" + os.path.join(PYF_PATH, "..", "ascendc", "common", "tensor_api"))
     options.append("-I" + tikcpp_path)
     options.append("-I" + os.path.join(tikcpp_path, "..", "..", "include"))
     options.append("-I" + os.path.join(tikcpp_path, "tikcfw"))
     options.append("-I" + os.path.join(tikcpp_path, "tikcfw", "impl"))
     options.append("-I" + os.path.join(tikcpp_path, "tikcfw", "interface"))
-    options.append("-I" + os.path.join(tikcpp_path, 
+    options.append("-I" + os.path.join(tikcpp_path,
         "..", "..", "..", "latest", os.uname().machine+"-linux", "asc", "atcos"))
     options.append("-I" + os.path.join(PYF_PATH, "..", "ascendc", "common"))
 

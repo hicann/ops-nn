@@ -56,6 +56,7 @@ constexpr uint64_t KB_SIZE = 1024;
 constexpr uint64_t MIN_TATL_BLOCK_SIZE = 1024;
 constexpr double CUBE_BOUND_RATIO = 0.85;
 constexpr double EPSILON = 1e-9;
+constexpr uint64_t SK_SPLITK_THRESHOLD = 1024UL;
 
 struct BatchMatMulV3RunInfo {
     uint64_t iterBatch = 0UL;
@@ -171,8 +172,8 @@ struct MatMulV3RunInfo {
     double defaultBalance = 0.0;    // 默认负载均衡率
     double redundantData = 0.0;    // 默认重复搬运量
     uint64_t totalDataAmount = 1UL;
-    uint64_t mergeBatchAL1 = 1UL; 
-    uint64_t mergeBatchBL1 = 1UL; 
+    uint64_t mergeBatchAL1 = 1UL;
+    uint64_t mergeBatchBL1 = 1UL;
     uint64_t mergeBatchL0 = 1UL;
     bool needNdDma = false;
     double cubeBoundParam = 0.0;

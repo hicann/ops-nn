@@ -88,12 +88,12 @@ protected:
 
     bool CheckBasicApiTilingKey(uint64_t tilingkey) const
     {
-        return MatMulV3TilingKey().GetApiLevel(tilingkey) == MatMulV3ApiLevel::BASIC_LEVEL;
+        return MatMulV3TilingKey().GetApiLevel(tilingkey) != MatMulV3ApiLevel::HIGH_LEVEL;
     }
 
     bool CheckIterBatchBasicApi(uint64_t tilingkey) const
     {
-        return (MatMulV3TilingKey().GetApiLevel(tilingkey) == MatMulV3ApiLevel::BASIC_LEVEL &&
+        return (MatMulV3TilingKey().GetApiLevel(tilingkey) != MatMulV3ApiLevel::HIGH_LEVEL &&
                 MatMulV3TilingKey().GetBatchModel(tilingkey) == MatMulV3BatchModel::SINGLE_BIAS_MODEL);
     }
 
@@ -114,17 +114,17 @@ protected:
         bool flagB =
             args_.isBTrans ? (kbL1 * args_.bDtypeSize % ALIGN_128 == 0) : (nL1 * args_.bDtypeSize % ALIGN_128 == 0);
 
-        uint64_t totalSize = args_.mValue * args_.nValue * ge::GetSizeByDataType(args_.cType) + 
+        uint64_t totalSize = args_.mValue * args_.nValue * ge::GetSizeByDataType(args_.cType) +
                              args_.mValue * args_.kValue * args_.aDtypeSize +
                              args_.kValue * args_.nValue * args_.bDtypeSize;
         if (batchInfo_ != nullptr) {
-            totalSize = args_.mValue * args_.nValue * ge::GetSizeByDataType(args_.cType) * batchInfo_->batchC + 
+            totalSize = args_.mValue * args_.nValue * ge::GetSizeByDataType(args_.cType) * batchInfo_->batchC +
                         args_.mValue * args_.kValue * args_.aDtypeSize * batchInfo_->batchA +
                         args_.kValue * args_.nValue * args_.bDtypeSize * batchInfo_->batchB;
         }
 
         OP_LOGD("MatMulV3", "Input + Output totalSize: %lu, l2Size:%lu.", totalSize, compileInfo_.l2Size);
-        if (totalSize < compileInfo_.l2Size) {          
+        if (totalSize < compileInfo_.l2Size) {
             return cacheMode;
         }
         // 左矩阵UNCACHE
@@ -141,8 +141,8 @@ protected:
         } else if (rightNotL2Cache) {
             cacheMode = L2CacheMode::B_L2_CACHE_DISABLE;
         }
-        OP_LOGD("MatMulV3", "L2 cache params: flagA:%d, flagB:%d, leftNotL2Cache:%d, rightNotL2Cache:%d, cacheMode:%d.", 
-            static_cast<int32_t>(flagA), static_cast<int32_t>(flagB), static_cast<int32_t>(leftNotL2Cache), 
+        OP_LOGD("MatMulV3", "L2 cache params: flagA:%d, flagB:%d, leftNotL2Cache:%d, rightNotL2Cache:%d, cacheMode:%d.",
+            static_cast<int32_t>(flagA), static_cast<int32_t>(flagB), static_cast<int32_t>(leftNotL2Cache),
             static_cast<int32_t>(rightNotL2Cache), static_cast<int32_t>(cacheMode));
 
         return cacheMode;
@@ -175,7 +175,7 @@ protected:
         tiling.tilingKey = GetTilingKey();
         tiling.workspaceSize = GetWorkspaceSize();
         tiling.numBlocks = GetNumBlocks();
-        ge::graphStatus getTilingRet = ge::GRAPH_SUCCESS;  
+        ge::graphStatus getTilingRet = ge::GRAPH_SUCCESS;
  	    getTilingRet = GetTilingData(tiling);
         if (getTilingRet == ge::GRAPH_FAILED) {
             OP_LOGE(context_->GetNodeName(), "Get tiling data from api failed");
@@ -338,7 +338,7 @@ protected:
     };
 
     virtual ge::graphStatus GetTilingDataProcess(BatchMatMulV3BasicTilingData &tilingData) const
-    {   
+    {
         // A全载和B全载基础API当前只支持单边batch, 后续放开后不能再用batchC
         tilingData.batchDimAll = batchInfo_->batchC;
         return GetTilingDataProcess(tilingData.matMulTilingData);
@@ -429,7 +429,7 @@ protected:
         mergebatchTilingBasicData.isHf32 = args_.isHf32;
         mergebatchTilingBasicData.l2CacheDisable =
             SetDisableL2cache(args_.mValue, mergebatchTilingBasicData.kL1, mergebatchTilingBasicData.kL1, args_.nValue);
-        return ge::GRAPH_SUCCESS; 
+        return ge::GRAPH_SUCCESS;
     };
 
     virtual ge::graphStatus GetTilingDataProcess(BatchMatMulToMulBasicTilingData &bmmToMulBasicData) const
