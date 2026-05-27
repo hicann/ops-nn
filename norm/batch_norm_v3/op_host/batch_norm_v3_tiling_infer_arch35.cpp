@@ -250,6 +250,18 @@ ge::graphStatus BatchNormV3InferTiling::DoOpTiling()
     factorMax = factorMax / b0Inner;
     int64_t aFactorMax = fusedALen_;
     aInner = factorMax <= aFactorMax ? factorMax : aFactorMax;
+    int64_t maxAInnerByUb =
+        aicoreParams_.ubSize / DOUBLE_BUFFER /
+        (INPUT_OUTPUT_NUM * b0Inner * b1Inner * aTileBase_ * bytesPerElement_ +
+         WEIGHT_BIAS_NUM * bytesPerWeightElement_ + MEAN_VAR_NUM * FLOAT32_BYTES);
+    aInner = std::min(aInner, maxAInnerByUb);
+    OP_CHECK_IF(aInner <= 0,
+                OP_LOGE(context_->GetNodeName(),
+                    "Invalid tiling params, aInner: %ld, b0Inner: %ld, b1Inner: %ld, aTileBase: %ld, "
+                    "bytesPerElement: %ld, bytesPerWeightElement: %ld, ubSize: %lu",
+                    aInner, b0Inner, b1Inner, aTileBase_, bytesPerElement_, bytesPerWeightElement_,
+                    aicoreParams_.ubSize),
+                return ge::GRAPH_FAILED);
     int64_t aOuter = CeilDiv(fusedALen_, aInner);
 
     int64_t totalTiles = b0Outer * aOuter * b1Outer;
