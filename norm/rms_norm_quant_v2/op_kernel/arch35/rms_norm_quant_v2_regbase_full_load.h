@@ -31,11 +31,13 @@ private:
     GlobalTensor<T_SCALES> scales1Gm, scales2Gm;
     GlobalTensor<T_ZEROPOINTS> zeroPoints1Gm, zeroPoints2Gm;
     GlobalTensor<yDtype> y1Gm, y2Gm;
+    GlobalTensor<float> rstdGm;
     // UB Buffer
     TQue<QuePosition::VECIN, 1> inQueueX;
     // gamma beta scales0 scales1 zero_points0 zero_point1 all in this queue
     TQue<QuePosition::VECIN, 1> inQueueOhter;
     TQue<QuePosition::VECOUT, 1> outQueueY1, outQueueY2;
+    TQue<QuePosition::VECOUT, 1> outQueueRstd;
     TBuf<TPosition::VECCALC> rstdBuf;
     TBuf<TPosition::VECCALC> reduceTmpBuf;
 
@@ -89,6 +91,7 @@ private:
     bool hasZeroPoints2{false};
     bool hasBeta{false};
     bool hasY2{false};
+    uint32_t rstdFlag_{0};
 
     // option mask const value
     static constexpr uint32_t SCALES2_MASK = 0b0001;
@@ -108,7 +111,8 @@ public:
 
     __aicore__ inline void Init(
         GM_ADDR x, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2, GM_ADDR zeroPoints1,
-        GM_ADDR zeroPoints2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, const RmsNormQuantV2RegbaseFullLoadTilingData* tilingData)
+        GM_ADDR zeroPoints2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd,
+        const RmsNormQuantV2RegbaseFullLoadTilingData* tilingData)
     {
         // Tiling data
         numA = tilingData->a;
@@ -122,6 +126,7 @@ public:
         isScaleDiv = tilingData->divMode == 1;
         epsilon = tilingData->epsilon;
         avgFactor = tilingData->avgFactor;
+        rstdFlag_ = tilingData->rstdFlag;
 
         // dtype size
         xDtypeSize = blockSize / sizeof(T_X);
@@ -163,12 +168,12 @@ public:
         curUbLoops = CeilDiv(curBlockFactor, ubFactor);
         ubFactorTail = curBlockFactor - (curUbLoops - 1) * ubFactor;
 
-        InitBuffer(x, gamma, scales1, scales2, zeroPoints1, zeroPoints2, beta, y1, y2);
+        InitBuffer(x, gamma, scales1, scales2, zeroPoints1, zeroPoints2, beta, y1, y2, rstd);
     }
 
     __aicore__ inline void InitBuffer(
         GM_ADDR x, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2, GM_ADDR zeroPoints1,
-        GM_ADDR zeroPoints2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2)
+        GM_ADDR zeroPoints2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd)
     {
         // GM BUFFER
         int64_t xOffset = blockIdx * blockFactor * numR;
@@ -207,6 +212,11 @@ public:
         if (hasY2) {
             y2Gm.SetGlobalBuffer((__gm__ yDtype*)y2 + yOffset, yLen);
         }
+        if (rstdFlag_ != 0) {
+            int64_t rstdOffset = blockIdx * blockFactor;
+            int64_t rstdLen = curBlockFactor;
+            rstdGm.SetGlobalBuffer((__gm__ float*)rstd + rstdOffset, rstdLen);
+        }
 
         pipe_->InitBuffer(inQueueX, DOUBLE_BUFFER_NUM, ubFactor * xGammaBetaAlign * sizeof(T_X));
         // preload data
@@ -219,8 +229,11 @@ public:
         if (hasScales2) {
             pipe_->InitBuffer(outQueueY2, DOUBLE_BUFFER_NUM, yQueueSize);
         }
-
-        pipe_->InitBuffer(rstdBuf, rstdAlign * sizeof(float));
+        if (rstdFlag_ != 0) {
+            pipe_->InitBuffer(outQueueRstd, DOUBLE_BUFFER_NUM, rstdAlign * sizeof(float));
+        } else {
+            pipe_->InitBuffer(rstdBuf, rstdAlign * sizeof(float));
+        }
         // reduceTmpBuffer
         int64_t reduceTmpBufferSize = ubFactor * CeilDiv(CeilDiv(binaryAdd, static_cast<int64_t>(vectorLenB32)), static_cast<int64_t>(blockSizeB32)) * blockSizeB32;
         pipe_->InitBuffer(reduceTmpBuf, reduceTmpBufferSize);
@@ -252,13 +265,28 @@ public:
             DataCopyPad(xLocal, xGm[offsetBase], copyInParamsX, dataCopyPadExtParamsX);
             inQueueX.EnQue(xLocal);
             inQueueX.DeQue<T_X>();
-            // compute square reduceSum
-            LocalTensor<float> rstdLocal = rstdBuf.Get<float>();
+            // compute square reduceSum & rstd
             LocalTensor<float> reduceTmpLocal = reduceTmpBuf.Get<float>();
-            ComputeSquareReduceSum(xLocal, reduceTmpLocal, rstdLocal, curUbFactor, numR, xGammaBetaAlign, binaryAdd);
-            // compute rstd
+            LocalTensor<float> rstdLocal;
+            if (rstdFlag_ != 0) {
+                rstdLocal = outQueueRstd.AllocTensor<float>();
+            } else {
+                rstdLocal = rstdBuf.Get<float>();
+            }
+            ComputeSquareReduceSum(
+                xLocal, reduceTmpLocal, rstdLocal, curUbFactor, numR, xGammaBetaAlign, binaryAdd);
             NormCommon::ComputeRstdNewtonRaphson<false, true>(
                 rstdLocal, rstdLocal, static_cast<uint32_t>(curUbFactor), epsilon, avgFactor, vectorLenB32);
+            if (rstdFlag_ != 0) {
+                outQueueRstd.EnQue(rstdLocal);
+                rstdLocal = outQueueRstd.DeQue<float>();
+                DataCopyExtParams copyOutParamsRstd;
+                copyOutParamsRstd.blockCount = 1;
+                copyOutParamsRstd.blockLen = curUbFactor * sizeof(float);
+                copyOutParamsRstd.srcStride = 0;
+                copyOutParamsRstd.dstStride = 0;
+                DataCopyPad(rstdGm[i * ubFactor], rstdLocal, copyOutParamsRstd);
+            }
 
             LocalTensor<yDtype> y1Local = outQueueY1.AllocTensor<yDtype>();
             LocalTensor<yDtype> y2Local;
@@ -271,6 +299,9 @@ public:
             QuantRoute(optionMask,xLocal,rstdLocal,gammaLocal,betaLocal,scales1Local,scales2Local,zeroPoints1Local,zeroPoints2Local,y1Local,y2Local,curUbFactor,numR,numQ,xGammaBetaAlign,scalesAlign,zeroPointsAlign,yAlign);
             SetOverflowMode<T_Y>(oriOverflowMode);
             inQueueX.FreeTensor(xLocal);
+            if (rstdFlag_ != 0) {
+                outQueueRstd.FreeTensor(rstdLocal);
+            }
 
             outQueueY1.EnQue(y1Local);
             outQueueY1.DeQue<yDtype>();

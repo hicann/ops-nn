@@ -352,6 +352,7 @@
 | [aclnnRmsNorm](../../norm/rms_norm/docs/aclnnRmsNorm.md) | RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnRmsNormGrad](../../norm/rms_norm_grad/docs/aclnnRmsNormGrad.md) | [aclnnRmsNorm](../../norm/rms_norm/docs/aclnnRmsNorm.md)的反向计算。用于计算RMSNorm的梯度，即在反向传播过程中计算输入张量的梯度。 | 默认非确定性实现，支持配置开启 | 默认非确定性实现，支持配置开启 |
 | [aclnnRmsNormQuant](../../norm/rms_norm_quant/docs/aclnnRmsNormQuant.md) | aclnnRmsNormQuant算子将aclnnRmsNorm前的Add算子以及aclnnRmsNorm后的Quantize算子融合起来，减少搬入搬出操作。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnRmsNormQuantV3](../../norm/rms_norm_quant_v3/docs/aclnnRmsNormQuantV3.md) | aclnnRmsNormQuantV3将aclnnRmsNorm以及aclnnRmsNorm后的Quantize算子融合起来，减少搬入搬出操作。同时在aclnnRmsNormQuant的基础上支持Rstd的可选输出。| - | 默认确定性实现 |
 | [aclnnRotateQuant](../../matmul/rotate_quant/docs/aclnnRotateQuant.md) | 对张量x进行旋转变换，再执行对称动态量化。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnRReluWithNoise&aclnnInplaceRReluWithNoise](../../activation/leaky_relu/docs/aclnnRReluWithNoise&aclnnInplaceRReluWithNoise.md) | 实现了带噪声的随机修正线性单元激活函数，它在输入小于等于0时，斜率为a；输入大于0时斜率为1。 | 默认确定性实现 | - |
 | [aclnnScatter&aclnnInplaceScatter](../../index/scatter_elements_v2/docs/aclnnScatter&aclnnInplaceScatter.md) | 将tensor src中的值按指定的轴和方向和对应的位置关系逐个替换/累加/累乘至tensor self中。 | 默认确定性实现 | 默认非确定性实现，支持配置开启 |

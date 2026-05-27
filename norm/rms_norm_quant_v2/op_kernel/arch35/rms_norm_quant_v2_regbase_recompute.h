@@ -35,7 +35,7 @@ public:
 
     __aicore__ inline void Init(
         GM_ADDR x, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2, GM_ADDR zeroPoints1, GM_ADDR zeroPoints2,
-        GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, const RmsNormQuantV2RegbaseRecomputeTilingData* tilingData)
+        GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd, const RmsNormQuantV2RegbaseRecomputeTilingData* tilingData)
     {
         numM_ = tilingData->numM;
         numN_ = tilingData->numN;
@@ -58,6 +58,7 @@ public:
 
         epsilon_ = tilingData->epsilon;
         avgFactor_ = tilingData->avgFactor;
+        rstdFlag_ = tilingData->rstdFlag;
 
         mCurCore_ = GetBlockIdx() == (GetBlockNum() - 1) ? mLastCore_ : mPerCore_;
         oriOverflowMode_ = GetOverflowMode<T_Y>();
@@ -112,9 +113,16 @@ public:
         if (isHasY2_) {
             pipe_->InitBuffer(outQueueY2_, DOUBLE_BUFFER_NUM, yQueueSize);
         }
-
+        if (rstdFlag_ != 0) {
+            int64_t rstdOffset = GetBlockIdx() * mPerCore_;
+            int64_t rstdLen = mCurCore_;
+            rstdGm_.SetGlobalBuffer((__gm__ float*)rstd + rstdOffset, rstdLen);
+            int64_t rstdAlign = Aligned(static_cast<int64_t>(baseM_ * sizeof(float)), BLOCK_SIZE);
+            pipe_->InitBuffer(outQueueRstd_, DOUBLE_BUFFER_NUM, rstdAlign);
+        } else {
+            pipe_->InitBuffer(rstdBuf_, Aligned(static_cast<int64_t>(baseM_ * sizeof(float)), BLOCK_SIZE));
+        }
         // tmp buffer allocate
-        pipe_->InitBuffer(rstdBuf_, Aligned(static_cast<int64_t>(baseM_ * sizeof(float)), BLOCK_SIZE));
         pipe_->InitBuffer(
             cacheBuf_,
             Aligned(static_cast<int64_t>((resultCacheID_ + NUM_ONE) * sizeof(float)) * AR_RECOMPUTE_SUM_LEN, BLOCK_SIZE));
@@ -127,7 +135,12 @@ public:
         uint32_t mCnt = CeilDiv(mCurCore_, baseM_);
         for (int64_t i = 0; i < mCnt; ++i) {
             uint32_t curM = (i == mCnt - 1) ? (mCurCore_ - (mCnt - 1) * baseM_) : baseM_;
-            LocalTensor<float> rstdLocal = rstdBuf_.Get<float>();
+            LocalTensor<float> rstdLocal;
+            if (rstdFlag_ != 0) {
+                rstdLocal = outQueueRstd_.AllocTensor<float>();
+            } else {
+                rstdLocal = rstdBuf_.Get<float>();
+            }
             for (uint32_t j = 0; j < curM; ++j) {
                 // 逐行 ub间二分累加
                 int64_t xGmOffset = (i * baseM_ + j) * numN_;
@@ -136,6 +149,10 @@ public:
             // 计算 rstd
             NormCommon::ComputeRstdNewtonRaphson<true, true>(
                 rstdLocal, rstdLocal, curM, epsilon_, avgFactor_, VL_FP32);
+            if (rstdFlag_ != 0) {
+                outQueueRstd_.EnQue<float>(rstdLocal);
+                rstdLocal = outQueueRstd_.DeQue<float>();
+            }
             // 计算 Y
             DataCopyPadParams padParams{false, 0, 0, 0};
             DataCopyParams xDataCopyParams;
@@ -296,6 +313,14 @@ public:
                 if (isHasZeroPoint2_) {
                     inQueueZeroPoints2_.FreeTensor(zeroPoints2Local);
                 }
+            }
+            // CopyOut rstd
+            if (rstdFlag_ != 0) {
+                DataCopyExtParams copyParams{
+                    static_cast<uint16_t>(1), static_cast<uint32_t>(curM * sizeof(float)), static_cast<uint32_t>(0),
+                    static_cast<uint32_t>(0), 0};
+                DataCopyPad(rstdGm_[i * baseM_], rstdLocal, copyParams);
+                outQueueRstd_.FreeTensor(rstdLocal);
             }
         }
     }
@@ -849,12 +874,14 @@ private:
     GlobalTensor<T_SCALES> scales1Gm_, scales2Gm_;
     GlobalTensor<T_ZEROPOINTS> zeroPoints1Gm_, zeroPoints2Gm_;
     GlobalTensor<yCopyDtype> y1Gm_, y2Gm_;
+    GlobalTensor<float> rstdGm_;
 
     // UB Buffer
     TQue<QuePosition::VECIN, 1> inQueueX_, inQueueXFold_, inQueueGamma_, inQueueBeta_;
     TQue<QuePosition::VECIN, 1> inQueueScales1_, inQueueScales2_;
     TQue<QuePosition::VECIN, 1> inQueueZeroPoints1_, inQueueZeroPoints2_;
     TQue<QuePosition::VECOUT, 1> outQueueY1_, outQueueY2_;
+    TQue<QuePosition::VECOUT, 1> outQueueRstd_;
 
     TBuf<TPosition::VECCALC> rstdBuf_;
     TBuf<TPosition::VECCALC> binaryAddBuf_; // 整块 ub 二分累加
@@ -879,6 +906,7 @@ private:
     uint32_t dst_type_;
     float epsilon_{0};
     float avgFactor_{0};
+    uint32_t rstdFlag_{0};
 
     // Cal params
     int64_t mCurCore_;

@@ -3090,6 +3090,16 @@
   </tr>
     <tr>
     <td>norm</td>
+    <td><a href="../../norm/rms_norm_quant_v3/README.md">rms_norm_quant_v3</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>RmsNorm算子是大模型常用的标准化操作，相比LayerNorm算子，其去掉了减去均值的部分。RmsNormQuantV3算子将RmsNorm算子以及RmsNorm归一化的输出给到1个或2个Quantize算子融合起来，减少搬入搬出操作。同时在RmsNormQuantV2算子的基础上新增了Rstd的输出。</td>
+  </tr>
+    <tr>
+    <td>norm</td>
     <td><a href="../../norm/rms_norm_dynamic_mx_quant/README.md">rms_norm_dynamic_mx_quant</a></td>
     <td>✓</td>
     <td>✓</td>

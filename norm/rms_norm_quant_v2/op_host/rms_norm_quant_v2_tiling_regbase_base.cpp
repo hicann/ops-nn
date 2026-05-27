@@ -312,6 +312,58 @@ bool RmsNormQuantV2RegbaseTilingBase::CheckAllDimsAreOne(const gert::StorageShap
     return true;
 }
 
+bool RmsNormQuantV2RegbaseTilingBase::CheckOutputShape()
+{
+    OP_LOGD(context_->GetNodeName(), "Enter RmsNormQuantV2RegbaseTiling CheckOutputShape.");
+    if (tilingParams.rstdFlag) {
+        const gert::StorageShape* xShape = context_->GetInputShape(X_INDEX);
+        const gert::StorageShape* gammaShape = context_->GetInputShape(GAMMA_INDEX);
+        const gert::StorageShape* rstdShape = context_->GetOutputShape(RSTD_INDEX);
+        OP_CHECK_IF(rstdShape == nullptr, OP_LOGE(context_->GetNodeName(), "Output rstd shape is null."), return false);
+
+        auto xShapeVal = EnsureNotScalar(xShape->GetStorageShape());
+        auto gammaShapeVal = EnsureNotScalar(gammaShape->GetStorageShape());
+        auto rstdShapeVal = EnsureNotScalar(rstdShape->GetStorageShape());
+
+        size_t xDimNum = xShapeVal.GetDimNum();
+        size_t gammaDimNum = gammaShapeVal.GetDimNum();
+        size_t rstdDimNum = rstdShapeVal.GetDimNum();
+        if (rstdDimNum != xDimNum) {
+            std::string paramMsg = "rstd and x";
+            std::string shapeMsg = ToString(rstdShapeVal) + " and " + ToString(xShapeVal);
+            std::string reasonMsg = "The shape dims of parameter rstd and parameter x must be the same";
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                context_->GetNodeName(), paramMsg.c_str(), shapeMsg.c_str(), reasonMsg.c_str());
+            return false;
+        }
+
+        for (size_t i = 0; i < xDimNum; i++) {
+            uint64_t xDimValue = xShapeVal.GetDim(i);
+            uint64_t rstdDimValue = rstdShapeVal.GetDim(i);
+            if (i >= xDimNum - gammaDimNum) {
+                if (rstdDimValue != 1) {
+                    std::string paramMsg = "rstd";
+                    std::string shapeMsg = ToString(rstdShapeVal);
+                    std::string reasonMsg = "norm dims should be 1";
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                        context_->GetNodeName(), paramMsg.c_str(), shapeMsg.c_str(), reasonMsg.c_str());
+                    return false;
+                }
+            } else {
+                if (rstdDimValue != xDimValue) {
+                    std::string paramMsg = "rstd and x";
+                    std::string shapeMsg = ToString(rstdShapeVal) + " and " + ToString(xShapeVal);
+                    std::string reasonMsg = "batch dims should match x";
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                        context_->GetNodeName(), paramMsg.c_str(), shapeMsg.c_str(), reasonMsg.c_str());
+                    return false;
+                }
+            }
+        }
+    }
+    return true;
+}
+
 bool RmsNormQuantV2RegbaseTilingBase::CheckOutputDtype()
 {
     OP_LOGD(context_->GetNodeName(), "Enter RmsNormQuantV2RegbaseTiling CheckOutputDtype.");
@@ -332,6 +384,17 @@ bool RmsNormQuantV2RegbaseTilingBase::CheckOutputDtype()
             dtypeMsg.c_str(),
             reasonMsg.c_str());
         return false;
+    }
+    if (tilingParams.rstdFlag) {
+        auto rstdDesc = context_->GetOutputDesc(RSTD_INDEX);
+        OP_CHECK_IF(rstdDesc == nullptr, OP_LOGE(context_->GetNodeName(), "Output rstd desc is null."), return false);
+        ge::DataType rstdDtype = rstdDesc->GetDataType();
+        if (rstdDtype != ge::DT_FLOAT) {
+            std::string dtypeMsg = ToString(rstdDtype);
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                context_->GetNodeName(), "rstd", dtypeMsg.c_str(), "The dtype of output rstd must be float");
+            return false;
+        }
     }
     // if yDtype=int4 , last dim of x should be even
     if (y1DataType == ge::DataType::DT_INT4) {
@@ -531,10 +594,17 @@ ge::graphStatus RmsNormQuantV2RegbaseTilingBase::SetInputParams()
     tilingParams.r = 1;
     tilingParams.q = 1;
     
+    for (size_t i = 0; i < xDimNum; i++) {
+        if (0 == xShape.GetDim(i)) {
+            OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "x",
+                std::to_string(xShape.GetDim(i)).c_str(),
+                "Input x does not support empty tensor");
+            return ge::GRAPH_FAILED;
+        }
+    }
     for (size_t i = 0; i < xDimNum - gammaDimNum; i++) {
         tilingParams.a *= xShape.GetDim(i);
     }
-    if (0 == tilingParams.a) tilingParams.a=1; //x轴全为r轴，a轴为1
     for (size_t i = 0; i < gammaDimNum; i++) {
         tilingParams.r *= gammaShape.GetDim(i);
     }
@@ -584,6 +654,10 @@ ge::graphStatus RmsNormQuantV2RegbaseTilingBase::SetInputParams()
          (static_cast<uint64_t>(tilingParams.q == 1 ? 1 : 0) << 4));
     const bool* divModePtr = attrs->GetBool(DIV_MODE_ATTR_INDEX); // 添加类型判断
     tilingParams.divMode = (divModePtr == nullptr) ? DEFAULT_DIVMODE : *divModePtr;
+     // 读取 output_rstd 属性（V2 无此属性返回 nullptr，rstdFlag=0；V3 有此属性）
+    const bool* outputRstdPtr = attrs->GetBool(OUTPUT_RSTD_ATTR_INDEX);
+    tilingParams.rstdFlag = (outputRstdPtr != nullptr && *outputRstdPtr) ? 1 : 0;
+
     return ge::GRAPH_SUCCESS;
 }
 
@@ -605,10 +679,12 @@ ge::graphStatus RmsNormQuantV2RegbaseTilingBase::GetShapeAttrsInfo()
     OP_CHECK_IF(
         !CheckInputDtype(), OP_LOGE(context_->GetNodeName(), "The input dtype is invalid."), return ge::GRAPH_FAILED);
     OP_CHECK_IF(
-        !CheckOutputDtype(), OP_LOGE(context_->GetNodeName(), "The output dtype is invalid."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
         ge::GRAPH_SUCCESS != SetInputParams(), OP_LOGE(context_->GetNodeName(), "Set input shape failed."),
         return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        !CheckOutputDtype(), OP_LOGE(context_->GetNodeName(), "The output dtype is invalid."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        !CheckOutputShape(), OP_LOGE(context_->GetNodeName(), "Set Output shape failed."), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 

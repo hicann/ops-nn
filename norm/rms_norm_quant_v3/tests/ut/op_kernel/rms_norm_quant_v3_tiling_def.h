@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -8,35 +8,17 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#ifndef RMS_NORM_QUANT_V2_TILING_H_
-#define RMS_NORM_QUANT_V2_TILING_H_
+#ifndef RMS_NORM_QUANT_V3_TILING_H_
+#define RMS_NORM_QUANT_V3_TILING_H_
 
 #include "kernel_tiling/kernel_tiling.h"
 #include <climits>
 
-// #define DT_BF16 bfloat16_t
-// #define ORIG_DTYPE_START DT_BF16
 #define __CCE_UT_TEST__
 
 #pragma pack(1)
-
-struct RmsNormQuantV2TilingData {
-    uint32_t reverse;
-};
-
+#include "../../../../rms_norm_quant_v2/op_kernel/arch35/rms_norm_quant_v2_tiling_data.h"
 #pragma pack()
-
-#define CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
-    __ubuf__ tilingStruct* tilingDataPointer =                              \
-        reinterpret_cast<__ubuf__ tilingStruct*>((__ubuf__ uint8_t*)(tilingPointer));
-
-#define INIT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer) \
-    CONVERT_TILING_DATA(tilingStruct, tilingDataPointer, tilingPointer);
-
-#define GET_TILING_DATA(tilingData, tilingPointer)                                \
-    RmsNormQuantV2TilingData tilingData;                                          \
-    INIT_TILING_DATA(RmsNormQuantV2TilingData, tilingDataPointer, tilingPointer); \
-    (tilingData).reverse = tilingDataPointer->reverse;
 
 template <typename T>
 inline void InitTilingData(uint8_t* tiling, T* const_data)

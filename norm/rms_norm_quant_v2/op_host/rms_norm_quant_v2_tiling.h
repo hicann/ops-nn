@@ -24,53 +24,13 @@
 #include "op_host/tiling_base.h"
 #include "op_common/op_host/util/platform_util.h"
 #include "op_host/tiling_templates_registry.h"
+#include "../op_kernel/arch35/rms_norm_quant_v2_tiling_data.h"
 
 using namespace Ops::NN::Optiling;
 namespace optiling {
-BEGIN_TILING_DATA_DEF(RmsNormQuantV2TilingData)
-TILING_DATA_FIELD_DEF(uint32_t, reverse);
-END_TILING_DATA_DEF;
-
-BEGIN_TILING_DATA_DEF(RmsNormQuantV2RegbaseFullLoadTilingData)
-TILING_DATA_FIELD_DEF(int64_t, a);           // a
-TILING_DATA_FIELD_DEF(int64_t, r);           // r
-TILING_DATA_FIELD_DEF(int64_t, q);           // q 传入的scales值，1或者R
-TILING_DATA_FIELD_DEF(int64_t, blockFactor); //单核处理a行数
-TILING_DATA_FIELD_DEF(int64_t, blockTail);   //尾核处理a行数
-TILING_DATA_FIELD_DEF(int64_t, ubFactor);    // ub处理a行数
-TILING_DATA_FIELD_DEF(int64_t, binaryAdd);   // r轴二分累加折叠点
-TILING_DATA_FIELD_DEF(uint64_t, optionMask); // scales2  zero_points1  zero_points2 beta是否存在
-TILING_DATA_FIELD_DEF(int64_t, divMode);     //量化参数
-TILING_DATA_FIELD_DEF(int64_t, dstDtype);    //输出类型
-TILING_DATA_FIELD_DEF(float, epsilon);
-TILING_DATA_FIELD_DEF(float, avgFactor); // avg_value  1/R
-END_TILING_DATA_DEF;
-
-BEGIN_TILING_DATA_DEF(RmsNormQuantV2RegbaseRecomputeTilingData)
-TILING_DATA_FIELD_DEF(int64_t, numM);
-TILING_DATA_FIELD_DEF(int64_t, numN);
-TILING_DATA_FIELD_DEF(int64_t, baseM);
-TILING_DATA_FIELD_DEF(int64_t, baseN);
-TILING_DATA_FIELD_DEF(int64_t, mPerCore);       // 单核处理 A 行数
-TILING_DATA_FIELD_DEF(int64_t, mLastCore);      // 尾核处理 A 行数
-TILING_DATA_FIELD_DEF(int64_t, nUbLoops);       // ub 处理 r 轴循环次数
-TILING_DATA_FIELD_DEF(int64_t, binAddQuotient); // ub整块二分累加折叠点
-TILING_DATA_FIELD_DEF(int64_t, powerSplit);     // R 轴 二分点
-TILING_DATA_FIELD_DEF(int64_t, mainFoldCount);  // 折叠部分的主块长度
-TILING_DATA_FIELD_DEF(int64_t, foldTail);       // 折叠部分的尾块
-TILING_DATA_FIELD_DEF(uint64_t, optionMask); // 5个可选参数. needBrc | scales2 | zero_points1 | zero_points2 | beta
-TILING_DATA_FIELD_DEF(uint64_t, divMode);  // 量化模式
-TILING_DATA_FIELD_DEF(uint64_t, dstDtype); // 输出类型
-TILING_DATA_FIELD_DEF(float, epsilon);
-TILING_DATA_FIELD_DEF(float, avgFactor);   // 1 / R
-END_TILING_DATA_DEF;
 
 constexpr uint32_t RMSNORMQUANTV2_REGBASE_NORMAL = 5000;
 constexpr uint32_t RMSNORMQUANTV2_REGBASE_RECOMPUTE = 6000;
-
-REGISTER_TILING_DATA_CLASS(RmsNormQuantV2, RmsNormQuantV2TilingData)
-REGISTER_TILING_DATA_CLASS(RmsNormQuantV2_5000, RmsNormQuantV2RegbaseFullLoadTilingData)
-REGISTER_TILING_DATA_CLASS(RmsNormQuantV2_6000, RmsNormQuantV2RegbaseRecomputeTilingData)
 
 constexpr int64_t X_INDEX = 0;
 constexpr int64_t GAMMA_INDEX = 1;
@@ -81,9 +41,12 @@ constexpr int64_t ZERO_POINTS2_INDEX = 5;
 constexpr int64_t BETA_INDEX = 6;
 constexpr int64_t Y1_INDEX = 0;
 constexpr int64_t Y2_INDEX = 1;
+constexpr int64_t RSTD_INDEX = 2;
 
 constexpr int64_t EPS_ATTR_INDEX = 0;
 constexpr int64_t DIV_MODE_ATTR_INDEX = 1;
+constexpr int64_t DST_TYPE_ATTR_INDEX = 2;
+constexpr int64_t OUTPUT_RSTD_ATTR_INDEX = 3;
 
 struct RmsNormQuantV2CompileInfo {
     NpuArch curSocVersion = NpuArch::DAV_3510;
@@ -137,6 +100,7 @@ struct RmsNormQuantV2RegbaseTilingParams {
     bool hasBeta{false};
     bool hasY2{false};
     bool needGetCompileInfo{false};
+    uint32_t rstdFlag{0};
 };
 
 class RmsNormQuantV2RegbaseTilingBase : public Ops::NN::Optiling::TilingBaseClass {
@@ -154,6 +118,7 @@ public:
     bool CheckInputShapeValue();
     bool CheckInputDtype();
     bool CheckOutputDtype();
+    bool CheckOutputShape();
     bool CheckShapeSame(const gert::StorageShape* src1Shape, const gert::StorageShape* src2Shape,
         string inNodeName, string inSrc1Name, string inSrc2Name);
     bool CheckShapeBC(const gert::StorageShape* srcBcShape, const gert::StorageShape* srcShape,

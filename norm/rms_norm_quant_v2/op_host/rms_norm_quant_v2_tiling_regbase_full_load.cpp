@@ -49,17 +49,18 @@ bool RmsNormQuantV2RegbaseTilingFullLoad::IsCapable()
     int64_t yNum           = tilingParams.hasY2 ? CONST_TWO : CONST_ONE;
     int64_t r = tilingParams.rAlign;
     int64_t yDtypeSize = context_->GetOutputDesc(Y1_INDEX)->GetDataType() == ge::DT_INT4 ? 1 : ge::GetSizeByDataType(context_->GetOutputDesc(Y1_INDEX)->GetDataType());
-    tilingParams.ubFactor = ((static_cast<int64_t>(tilingParams.maxUbSize) - RETAINED_SIZE_256 - r * tilingParams.xDtypeSize - r * betaNum * tilingParams.xDtypeSize 
+    int64_t rstdBufSizePerRow = (tilingParams.rstdFlag != 0) ? (DOUBLE_BUFFER * FLOAT_SIZE) : FLOAT_SIZE;
+    tilingParams.ubFactor = ((static_cast<int64_t>(tilingParams.maxUbSize) - RETAINED_SIZE_256 - r * tilingParams.xDtypeSize - r * betaNum * tilingParams.xDtypeSize
                              - r * scalesNum * tilingParams.scaleDtypeSize - r * zeroPointsNum * tilingParams.zeroPointDtypeSize)/
                              (DOUBLE_BUFFER * r * tilingParams.xDtypeSize + DOUBLE_BUFFER * r * yNum * yDtypeSize
-                             + FLOAT_SIZE + tmpUBSize));
+                             + rstdBufSizePerRow + tmpUBSize));
     OP_CHECK_IF(tilingParams.r > R_MAX_VALUE,
                     OP_LOGI(context_->GetNodeName(),
                             "AR full load template is not capable. actual r is %ld, larger than %ld", tilingParams.r, R_MAX_VALUE),
                     return false);
     OP_CHECK_IF(tilingParams.ubFactor < CONST_ONE,
                     OP_LOGI(context_->GetNodeName(),
-                            "AR full load template is not capable. actual ubFactor is %ld", tilingParams.ubFactor, R_MAX_VALUE),
+                            "AR full load template is not capable. actual ubFactor is %ld, can not full load ", tilingParams.ubFactor),
                     return false);
     return true;
 }
@@ -88,45 +89,62 @@ ge::graphStatus RmsNormQuantV2RegbaseTilingFullLoad::DoOpTiling()
 
 void RmsNormQuantV2RegbaseTilingFullLoad::SetTilingData()
 {
-    tilingData.set_a(tilingParams.a);
-    tilingData.set_r(tilingParams.r);
-    tilingData.set_q(tilingParams.q);
-    tilingData.set_blockFactor(tilingParams.blockFactor);
-    tilingData.set_blockTail(tilingParams.blockTail);
-    tilingData.set_ubFactor(tilingParams.ubFactor);
-    tilingData.set_binaryAdd(tilingParams.binaryAdd);
-    tilingData.set_optionMask(tilingParams.optionMask);
-    tilingData.set_divMode(tilingParams.divMode);
-    tilingData.set_dstDtype(tilingParams.dstDtype);
-    tilingData.set_epsilon(tilingParams.epsilon);
-    tilingData.set_avgFactor(tilingParams.avgFactor);
+    tilingData.a = tilingParams.a;
+    tilingData.r = tilingParams.r;
+    tilingData.q = tilingParams.q;
+    tilingData.blockFactor = tilingParams.blockFactor;
+    tilingData.blockTail = tilingParams.blockTail;
+    tilingData.ubFactor = tilingParams.ubFactor;
+    tilingData.binaryAdd = tilingParams.binaryAdd;
+    tilingData.optionMask = tilingParams.optionMask;
+    tilingData.divMode = tilingParams.divMode;
+    tilingData.dstDtype = tilingParams.dstDtype;
+    tilingData.epsilon = tilingParams.epsilon;
+    tilingData.avgFactor = tilingParams.avgFactor;
+    tilingData.rstdFlag = tilingParams.rstdFlag;
 }
 
 void RmsNormQuantV2RegbaseTilingFullLoad::PrintTilingData()
 {
     OP_LOGI(
         nodeName.c_str(),
-        "TilingData a: %lu, r: %lu, q: %lu, blockFactor: %lu, "
-        "blockTail: %lu, ubFactor: %lu, binaryAdd: %lu, "
-        "optionMask: %lu, divMode: %lu, dstDtype: %lu, "
-        "epsilon: %f, avgFactor: %f.",
-        tilingData.get_a(), tilingData.get_r(), tilingData.get_q(), tilingData.get_blockFactor(),
-        tilingData.get_blockTail(), tilingData.get_ubFactor(), tilingData.get_binaryAdd(),
-        tilingData.get_optionMask(), tilingData.get_divMode(), tilingData.get_dstDtype(), 
-        tilingData.get_epsilon(), tilingData.get_avgFactor());
+        "TilingData a: %ld, r: %ld, q: %ld, blockFactor: %ld, "
+        "blockTail: %ld, ubFactor: %ld, binaryAdd: %ld, "
+        "optionMask: %lu, divMode: %ld, dstDtype: %ld, "
+        "epsilon: %f, avgFactor: %f, rstdFlag: %u.",
+        tilingData.a, tilingData.r, tilingData.q, tilingData.blockFactor,
+        tilingData.blockTail, tilingData.ubFactor, tilingData.binaryAdd,
+        tilingData.optionMask, tilingData.divMode, tilingData.dstDtype,
+        tilingData.epsilon, tilingData.avgFactor, tilingData.rstdFlag);
 }
+
 ge::graphStatus RmsNormQuantV2RegbaseTilingFullLoad::PostTiling()
 {
-    OP_LOGD(nodeName.c_str(), "Tiling usedCoreNum is %lu.", tilingParams.usedCoreNum);
+    OP_LOGD(nodeName.c_str(), "Tiling usedCoreNum is %ld.", tilingParams.usedCoreNum);
     context_->SetBlockDim(tilingParams.usedCoreNum);
-    tilingData.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
-    context_->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
+    size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context_->GetPlatformInfo());
-
     size_t usrWorkspaceSize = tilingParams.workspaceSize;
     size_t sysWorkSpaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
-    size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
     currentWorkspace[0] = usrWorkspaceSize + sysWorkSpaceSize;
+
+    auto rawTilingData = context_->GetRawTilingData();
+    OP_CHECK_IF(
+        sizeof(tilingData) > rawTilingData->GetCapacity(),
+        OP_LOGE(
+            context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu", sizeof(tilingData),
+            rawTilingData->GetCapacity()),
+        return ge::GRAPH_FAILED);
+    auto capSize = rawTilingData->GetCapacity();
+    void* ptrData = rawTilingData->GetData();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, ptrData);
+    void* ptrStruct = static_cast<void*>(&tilingData);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, ptrStruct);
+    OP_CHECK_IF(
+        memcpy_s(ptrData, capSize, ptrStruct, sizeof(tilingData)) != 0,
+        OP_LOGE(context_->GetNodeName(), "Set tiling data is failed!"), return ge::GRAPH_FAILED);
+    rawTilingData->SetDataSize(sizeof(tilingData));
     return ge::GRAPH_SUCCESS;
 }
 uint64_t RmsNormQuantV2RegbaseTilingFullLoad::GetTilingKey() const
@@ -137,4 +155,5 @@ uint64_t RmsNormQuantV2RegbaseTilingFullLoad::GetTilingKey() const
 }
 
 REGISTER_OPS_TILING_TEMPLATE(RmsNormQuantV2, RmsNormQuantV2RegbaseTilingFullLoad, 100);
+REGISTER_OPS_TILING_TEMPLATE(RmsNormQuantV3, RmsNormQuantV2RegbaseTilingFullLoad, 100);
 } // namespace optiling

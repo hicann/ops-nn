@@ -19,6 +19,7 @@
 #include "../inc/platform.h"
 #include "../../norm_common/reduce_common_regbase.h"
 #include "../../rms_norm/arch35/rms_norm_regbase_common.h"
+#include "rms_norm_quant_v2_tiling_data.h"
 
 #ifndef FLOAT_OVERFLOW_MODE_CTRL
 #define FLOAT_OVERFLOW_MODE_CTRL 60

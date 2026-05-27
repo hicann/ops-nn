@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -9,14 +9,14 @@
  */
 
 /*!
- * \file rms_norm_quant_v2_apt.cpp
+ * \file rms_norm_quant_v3_apt.cpp
  * \brief
  */
-#include "rms_norm_quant_v2_apt.h"
+#include "../rms_norm_quant_v2/rms_norm_quant_v2_apt.h"
 
-extern "C" __global__ __aicore__ void rms_norm_quant_v2(
+extern "C" __global__ __aicore__ void rms_norm_quant_v3(
     GM_ADDR x, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2, GM_ADDR zero_points1, GM_ADDR zero_points2,
-    GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR workspace, GM_ADDR tiling)
+    GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling)
 {
-    rms_norm_quant_v2_impl(x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1, y2, nullptr, workspace, tiling);
+    rms_norm_quant_v2_impl(x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1, y2, rstd, workspace, tiling);
 }

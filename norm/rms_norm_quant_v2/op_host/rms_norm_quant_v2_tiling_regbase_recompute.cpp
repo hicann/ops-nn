@@ -76,6 +76,10 @@ ge::graphStatus RmsNormQuantV2RegbaseTilingRecompute::DoOpTiling()
     // binaryAddBuf_:                   Aligned(binAddQuotient_ * sizeof(float), BLOCK_SIZE)
     // xFp32TmpBuf_:                    Aligned(baseN_ * sizeof(float), BLOCK_SIZE)
     int64_t rstdBufSize = CeilDiv(static_cast<int64_t>(baseM * sizeof(float)), tilingParams.ubBlockSize) * tilingParams.ubBlockSize;
+    // 当 rstdFlag=1 时，rstd 使用 outQueue(Double Buffer) 而非 TBuf，需要额外一倍空间
+    if (tilingParams.rstdFlag != 0) {
+        rstdBufSize = rstdBufSize * DOUBLE_BUFFER;
+    }
     int64_t binaryAddBufSize = tilingParams.vecLength * CONST_TWO * sizeof(float);
 
     auto GetMaxBaseN = [=](int64_t initialN) -> int64_t {
@@ -87,7 +91,7 @@ ge::graphStatus RmsNormQuantV2RegbaseTilingRecompute::DoOpTiling()
                 static_cast<uint64_t>(tilingParams.maxUbSize - RETAINED_SIZE_256 - (rstdBufSize + cacheBuffSize + binaryAddBufSize))) {
             initialN = 2 * initialN;
             powerSplit = GetPowerSplit(initialN);
-            cacheBuffSize = powerSplit * tilingParams.ubBlockSize;
+            cacheBuffSize = (GetCacheID(powerSplit - 1) + 1) * tilingParams.ubBlockSize;
         }
         return initialN;
     };
@@ -108,22 +112,23 @@ ge::graphStatus RmsNormQuantV2RegbaseTilingRecompute::DoOpTiling()
     uint32_t mainFoldCount = powerSplit * baseN > tilingParams.r ? 0 : (tilingParams.r - powerSplit * baseN) / baseN;
     uint32_t foldTail = tilingParams.r % baseN; // 折叠后  非ub整块的长度
     
-    tilingData.set_numM(tilingParams.a);
-    tilingData.set_numN(tilingParams.r);
-    tilingData.set_baseM(baseM);
-    tilingData.set_baseN(baseN);
-    tilingData.set_mPerCore(tilingParams.blockFactor);
-    tilingData.set_mLastCore(tilingParams.blockTail);
-    tilingData.set_nUbLoops(ubLoops);
-    tilingData.set_binAddQuotient(binAddQuotient); // ub 整块二分折叠点
-    tilingData.set_powerSplit(powerSplit);       // 小于 ubLoops 的最大二次幂
-    tilingData.set_mainFoldCount(mainFoldCount); // 折叠后的  折叠瓣 的 ub整块数
-    tilingData.set_foldTail(foldTail);
-    tilingData.set_optionMask(tilingParams.optionMask);
-    tilingData.set_divMode(tilingParams.divMode);
-    tilingData.set_dstDtype(tilingParams.dstDtype);
-    tilingData.set_epsilon(tilingParams.epsilon);
-    tilingData.set_avgFactor(tilingParams.avgFactor);
+    tilingData.numM = tilingParams.a;
+    tilingData.numN = tilingParams.r;
+    tilingData.baseM = baseM;
+    tilingData.baseN = baseN;
+    tilingData.mPerCore = tilingParams.blockFactor;
+    tilingData.mLastCore = tilingParams.blockTail;
+    tilingData.nUbLoops = ubLoops;
+    tilingData.binAddQuotient = binAddQuotient; // ub 整块二分折叠点
+    tilingData.powerSplit = powerSplit;       // 小于 ubLoops 的最大二次幂
+    tilingData.mainFoldCount = mainFoldCount; // 折叠后的  折叠瓣 的 ub整块数
+    tilingData.foldTail = foldTail;
+    tilingData.optionMask = tilingParams.optionMask;
+    tilingData.divMode = tilingParams.divMode;
+    tilingData.dstDtype = tilingParams.dstDtype;
+    tilingData.epsilon = tilingParams.epsilon;
+    tilingData.avgFactor = tilingParams.avgFactor;
+    tilingData.rstdFlag = tilingParams.rstdFlag;
     PrintTilingData();
     return ge::GRAPH_SUCCESS;
 }
@@ -132,30 +137,45 @@ void RmsNormQuantV2RegbaseTilingRecompute::PrintTilingData()
 {
     OP_LOGI(
         nodeName.c_str(),
-        "TilingData numM: %lu, numN: %lu, baseM: %lu, baseN: %lu, "
-        "mPerCore: %lu, mLastCore: %lu, nUbLoops: %lu, "
-        "binAddQuotient: %lu, powerSplit: %lu, mainFoldCount: %lu, foldTail: %lu, "
+        "TilingData numM: %ld, numN: %ld, baseM: %ld, baseN: %ld, "
+        "mPerCore: %ld, mLastCore: %ld, nUbLoops: %ld, "
+        "binAddQuotient: %ld, powerSplit: %ld, mainFoldCount: %ld, foldTail: %ld, "
         "optionMask: %lu, divMode: %lu, dstDtype: %lu, "
-        "epsilon: %f, avgFactor: %f.",
-        tilingData.get_numM(), tilingData.get_numN(), tilingData.get_baseM(), tilingData.get_baseN(),
-        tilingData.get_mPerCore(), tilingData.get_mLastCore(), tilingData.get_nUbLoops(),
-        tilingData.get_binAddQuotient(), tilingData.get_powerSplit(), tilingData.get_mainFoldCount(),
-        tilingData.get_foldTail(), tilingData.get_optionMask(), tilingData.get_divMode(), tilingData.get_dstDtype(),
-        tilingData.get_epsilon(), tilingData.get_avgFactor());
+        "epsilon: %f, avgFactor: %f, rstdFlag: %u.",
+        tilingData.numM, tilingData.numN, tilingData.baseM, tilingData.baseN,
+        tilingData.mPerCore, tilingData.mLastCore, tilingData.nUbLoops,
+        tilingData.binAddQuotient, tilingData.powerSplit, tilingData.mainFoldCount,
+        tilingData.foldTail, tilingData.optionMask, tilingData.divMode, tilingData.dstDtype,
+        tilingData.epsilon, tilingData.avgFactor, tilingData.rstdFlag);
 }
 
 ge::graphStatus RmsNormQuantV2RegbaseTilingRecompute::PostTiling()
 {
-    OP_LOGD(nodeName.c_str(), "Tiling usedCoreNum is %lu.", tilingParams.usedCoreNum);
+    OP_LOGD(nodeName.c_str(), "Tiling usedCoreNum is %ld.", tilingParams.usedCoreNum);
     context_->SetBlockDim(tilingParams.usedCoreNum);
-    tilingData.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
-    context_->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());
+    size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context_->GetPlatformInfo());
-
     size_t usrWorkspaceSize = tilingParams.workspaceSize;
     size_t sysWorkSpaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
-    size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
     currentWorkspace[0] = usrWorkspaceSize + sysWorkSpaceSize;
+
+    auto rawTilingData = context_->GetRawTilingData();
+    OP_CHECK_IF(
+        sizeof(tilingData) > rawTilingData->GetCapacity(),
+        OP_LOGE(
+            context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu", sizeof(tilingData),
+            rawTilingData->GetCapacity()),
+        return ge::GRAPH_FAILED);
+    auto capSize = rawTilingData->GetCapacity();
+    void* ptrData = rawTilingData->GetData();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, ptrData);
+    void* ptrStruct = static_cast<void*>(&tilingData);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, ptrStruct);
+    OP_CHECK_IF(
+        memcpy_s(ptrData, capSize, ptrStruct, sizeof(tilingData)) != 0,
+        OP_LOGE(context_->GetNodeName(), "Set tiling data is failed!"), return ge::GRAPH_FAILED);
+    rawTilingData->SetDataSize(sizeof(tilingData));
     return ge::GRAPH_SUCCESS;
 }
 uint64_t RmsNormQuantV2RegbaseTilingRecompute::GetTilingKey() const
@@ -166,4 +186,5 @@ uint64_t RmsNormQuantV2RegbaseTilingRecompute::GetTilingKey() const
 }
 
 REGISTER_OPS_TILING_TEMPLATE(RmsNormQuantV2, RmsNormQuantV2RegbaseTilingRecompute, 200);
+REGISTER_OPS_TILING_TEMPLATE(RmsNormQuantV3, RmsNormQuantV2RegbaseTilingRecompute, 200);
 } // namespace optiling
