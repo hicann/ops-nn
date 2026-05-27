@@ -3,7 +3,7 @@
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
@@ -65,7 +65,8 @@ inline static bool CheckNotNull(const aclTensor* x1, const aclTensor* x2, const 
     return true;
 }
 
-static inline bool IsMicroScaling(const aclTensor *x1Scale, const aclTensor *x2Scale) {
+static inline bool IsMicroScaling(const aclTensor *x1Scale, const aclTensor *x2Scale)
+{
     if (x1Scale == nullptr || x2Scale == nullptr) {
         return false;
     }
@@ -192,7 +193,7 @@ static bool CheckPermValid(const aclIntArray* permX1, const aclIntArray* permX2,
     if (isMxFp) {
         allowedPermX2 = allowedPermX2 || ((*permX2)[0] == 0 && (*permX2)[1] == 2 && (*permX2)[2] == 1);
         permX2ErrorInfo = "[0, 1, 2] or [0, 2, 1].";
-    } 
+    }
 
     if (!allowedPermX1) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm of x1 should be [1, 0, 2].");
@@ -255,11 +256,10 @@ static inline bool InferGroupSize(int64_t& groupSize, bool isMxFp)
     uint64_t groupSizeM = (static_cast<uint64_t>(groupSize) >> GROUP_M_OFFSET) & GROUP_MNK_BIT_SIZE;
     if (isMxFp && !validGroupSize(groupSizeM, groupSizeN, groupSizeK)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "The valid groupSizeM and groupSizeN must be 0 or 1,the valid groupSizeK must be 32.", groupSizeM,
-                groupSizeN);
+                "The valid groupSizeM and groupSizeN must be 0 or 1,the valid groupSizeK must be 32.");
         return false;
     }
-    OP_LOGD("Infered groupSize: groupSizeM: %lu, groupSizeN: %lu, groupSizeK: %lu.", groupSizeM, groupSizeN,
+    OP_LOGD("Inferred groupSize: groupSizeM: %lu, groupSizeN: %lu, groupSizeK: %lu.", groupSizeM, groupSizeN,
             groupSizeK);
     groupSize = groupSizeK;
     return true;
@@ -296,10 +296,10 @@ inline static aclnnStatus CheckParams(
     if ((x1Shape.GetDimNum() != EXPECTED_DIM) || (x2Shape.GetDimNum() != EXPECTED_DIM)) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The dims of the two inputs should be 3, now they are %s and %s",
                 op::ToString(x1Shape).GetString(), op::ToString(x2Shape).GetString());
-        return false;
+        return ACLNN_ERR_PARAM_INVALID;
     }
     if (batch_split_factor != 1) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Batch_split_factor should be 1 currently.", batch_split_factor);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Batch_split_factor should be 1 currently: [%d].", batch_split_factor);
         return ACLNN_ERR_PARAM_INVALID;
     }
     CHECK_RET(CheckDtypeValid(x1, x2, x1Scale, x2Scale, out, dtype), ACLNN_ERR_PARAM_INVALID);

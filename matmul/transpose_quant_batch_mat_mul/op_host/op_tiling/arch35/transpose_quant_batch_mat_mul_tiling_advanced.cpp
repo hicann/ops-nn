@@ -3,7 +3,7 @@
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
@@ -172,7 +172,7 @@ ge::graphStatus TransposeQuantBatchMatMulTiling::CheckScale(const int64_t b, con
             scaleX1ShapePtr->GetStorageShape().GetDim(1) != b ||
             scaleX1ShapePtr->GetStorageShape().GetDim(2) != numGroup ||
             scaleX1ShapePtr->GetStorageShape().GetDim(NUM_THREE) != NUM_TWO) {
-            OP_LOGE(args_.opName, "MXFp8 Dim of x1ScaleDim != 4 or The x1scale shape invaild");
+            OP_LOGE(args_.opName, "MXFp8 Dim of x1ScaleDim != 4 or The x1scale shape invalid");
             return ge::GRAPH_FAILED;
         }
         int64_t scaleN = scaleX2ShapePtr->GetStorageShape().GetDim(bPerm[NUM_TWO]);
@@ -180,7 +180,7 @@ ge::graphStatus TransposeQuantBatchMatMulTiling::CheckScale(const int64_t b, con
         if (scaleX2DimNum != EXPECTED_MX_SCALE_DIM || scaleX2ShapePtr->GetStorageShape().GetDim(0) != b ||
             scaleN != n || scaleGroupNum != numGroup ||
             scaleX2ShapePtr->GetStorageShape().GetDim(NUM_THREE) != NUM_TWO) {
-            OP_LOGE(args_.opName, "MXFp8 Dim of x2ScaleDim != 4 or The x2scale shape invaild");
+            OP_LOGE(args_.opName, "MXFp8 Dim of x2ScaleDim != 4 or The x2scale shape invalid");
             return ge::GRAPH_FAILED;
         }
     } else {
