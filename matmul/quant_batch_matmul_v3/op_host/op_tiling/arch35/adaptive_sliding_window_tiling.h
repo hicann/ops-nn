@@ -69,6 +69,7 @@ public:
 
 protected:
     void Reset();
+    ge::graphStatus CheckContext() override;
     ge::graphStatus CalcUbTiling() override;
     virtual uint64_t GetBatchCoreCnt() const;
     virtual const void* GetTilingData() const;

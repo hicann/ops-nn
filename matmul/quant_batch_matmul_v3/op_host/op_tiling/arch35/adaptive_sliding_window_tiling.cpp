@@ -117,6 +117,36 @@ ge::graphStatus AdaptiveSlidingWindowTiling::GetShapeAttrsInfo()
     return QuantBatchMatmulV3TilingBase::GetShapeAttrsInfo();
 }
 
+ge::graphStatus AdaptiveSlidingWindowTiling::CheckContext()
+{
+    auto x1Shape = context_->GetInputShape(GetX1Idx());
+    auto x1Desc = context_->GetInputDesc(GetX1Idx());
+    auto x2Shape = context_->GetInputShape(GetX2Idx());
+    auto x2Desc = context_->GetInputDesc(GetX2Idx());
+    auto scaleShape = context_->GetInputShape(GetScaleIdx());
+    auto scaleDesc = context_->GetInputDesc(GetScaleIdx());
+    auto outputShape = context_->GetOutputShape(0);
+    auto outputDesc = context_->GetOutputDesc(0);
+    auto attrs = context_->GetAttrs();
+    OP_TILING_CHECK(attrs == nullptr,
+                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "Function context_->GetAttrs() failed!"),
+                    return ge::GRAPH_FAILED);
+    auto dtypeAttr = attrs->GetAttrPointer<int64_t>(0);
+
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, x1Shape);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, x1Desc);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, x2Shape);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, x2Desc);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, scaleShape);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, scaleDesc);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, outputShape);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, outputDesc);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, dtypeAttr);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetRawTilingData());
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetRawTilingData()->GetData());
+    return ge::GRAPH_SUCCESS;
+}
+
 void AdaptiveSlidingWindowTiling::LoadBalanceDataReset()
 {
     adaptiveWin_.mBaseTailSplitCnt = 1UL;
@@ -246,6 +276,11 @@ ge::graphStatus AdaptiveSlidingWindowTiling::PostTiling()
     OP_TILING_CHECK(
         tilingDataSize_ % sizeof(uint64_t) != 0UL,
         CUBE_INNER_ERR_REPORT(inputParams_.opName, "Tiling data size[%zu] is not aligned to 8.", tilingDataSize_),
+        return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        context_->GetRawTilingData()->GetCapacity() < tilingDataSize_,
+        CUBE_INNER_ERR_REPORT(inputParams_.opName, "context tiling data capacity %zu < actual tiling data size %zu.",
+                              context_->GetRawTilingData()->GetCapacity(), tilingDataSize_),
         return ge::GRAPH_FAILED);
     errno_t ret = memcpy_s(
         context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(), GetTilingData(),
