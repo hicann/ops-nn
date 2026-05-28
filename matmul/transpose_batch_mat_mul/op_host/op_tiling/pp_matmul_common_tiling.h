@@ -104,8 +104,7 @@ inline uint64_t GetN0TilingLimit(bool compressFlag, uint64_t tilingN, const plat
 }
 
 template <typename OpShareType>
-inline uint64_t GetN0TilingInit(const OpShareType &opShape, bool compressFlag,
-                                                               uint64_t tilingN)
+inline uint64_t GetN0TilingInit(const OpShareType &opShape, bool compressFlag, uint64_t tilingN)
 {
     const uint64_t RND = 16UL;
     if (compressFlag) {
@@ -182,14 +181,14 @@ void TilingFunc(OpShareType &opShape, TilingType &tilingParam, const HardwareTyp
     uint64_t n0TilingLimit = GetN0TilingLimit(compressFlag, tilingN, platformType);
     uint64_t priAxes0Init = PRI_FLAG ? BLOCK_SIZE : n0TilingInit;
     uint64_t axes0Init = PRI_FLAG ? n0TilingInit : BLOCK_SIZE;
-    bool isAscend310P = platformType == platform_ascendc::SocVersion::ASCEND310P;
+    bool isNpuArch2002 = platformType == platform_ascendc::SocVersion::ASCEND310P;
     for (uint64_t priAxes0 = priAxes0Init; priAxes0 <= priAxes && priAxes0 <= axes0Max; priAxes0 *= BASE_BLOCK_STEP) {
         for (uint64_t axes0 = axes0Init; axes0 <= axes && axes0 <= axes0Max; axes0 *= BASE_BLOCK_STEP) {
             uint64_t basicBlockSize = priAxes0 * axes0 * FP32_SIZE;
             if (basicBlockSize > hwInfor.l0cSize) {
                 continue;
             }
-            if (mmInfo.isInt8 &&
+            if ((mmInfo.isInt8 || mmInfo.isCompress) &&
                 IsExceedTilingLimit<PRI_FLAG>(axes0, priAxes0, n0TilingLimit, platformType, basicBlockSize, mmInfo.isPertokenArch20)) {
                 continue;
             }
@@ -199,7 +198,7 @@ void TilingFunc(OpShareType &opShape, TilingType &tilingParam, const HardwareTyp
                 continue;
             }
             costMin = cost;
-            tilingParam.SetBaseOp(hwInfor.coreNum, hwInfor.l0cSize, opShape.m0, opShape.n0, mmInfo, isAscend310P);
+            tilingParam.SetBaseOp(hwInfor.coreNum, hwInfor.l0cSize, opShape.m0, opShape.n0, mmInfo, isNpuArch2002);
         }
     }
 }

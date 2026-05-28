@@ -12,7 +12,7 @@
 #include <float.h>
 #include "gtest/gtest.h"
 
-#include "../../../op_host/op_api/aclnn_matmul_compress.h"
+#include "../../../op_api/aclnn_matmul_compress.h"
 #include "op_api/op_api_def.h"
 
 #include "op_api_ut_common/tensor_desc.h"
@@ -50,7 +50,7 @@ TEST_F(l2_matmul_compress_test, test_fp16)
 {
     // 使用**Desc描述host api输入输出
     TensorDesc x_desc = TensorDesc({1024, 1024}, ACL_FLOAT16, ACL_FORMAT_ND);
-    TensorDesc weight_desc = TensorDesc({1024, 1024}, ACL_FLOAT16, ACL_FORMAT_ND);
+    TensorDesc weight_desc = TensorDesc({1024, 1024}, ACL_INT8, ACL_FORMAT_ND);
     TensorDesc bias_desc = TensorDesc({1024}, ACL_FLOAT, ACL_FORMAT_ND);
     TensorDesc compressIndex_desc = TensorDesc({1024}, ACL_INT8, ACL_FORMAT_ND);
     TensorDesc out_desc = TensorDesc({1024, 1024}, ACL_FLOAT16, ACL_FORMAT_ND);

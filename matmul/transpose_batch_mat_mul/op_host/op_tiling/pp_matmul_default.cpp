@@ -45,8 +45,10 @@ constexpr uint32_t MAX_ATTRS_NUM = 4;
 constexpr uint32_t EN_SHUFFFLE_IDX_ATB = 7;
 
 constexpr uint32_t ALIGNMENT_16 = 16;
+constexpr uint64_t BLOCK_SIZE_INT8_K = 32;
 constexpr uint32_t ALIGNMENT_256 = 256;
 constexpr uint32_t L0AB_PINGPONG_BUFFER_LEN_FP16 = 131072;
+constexpr uint64_t L1AB_PINGPONG_BUFFER_LEN_INT8_SPARSE = 160*1024;
 constexpr uint32_t TRANS_B_MASK = 0b001000;
 }
 
@@ -60,7 +62,7 @@ void PpMatmulDefaultTilingData::SetBaseShape(uint64_t batchSize, uint64_t m, uin
     opShape.n = n;
 }
 
-void PpMatmulDefaultTilingData::SetBaseOp(uint64_t coreNum, uint64_t l0cSize, uint64_t mBase, uint64_t nBase, const MatMulInfo &mmInfo, bool isAscend310P) {
+void PpMatmulDefaultTilingData::SetBaseOp(uint64_t coreNum, uint64_t l0cSize, uint64_t mBase, uint64_t nBase, const MatMulInfo &mmInfo, bool isNpuArch2002) {
     opShape.m0 = mBase;
     opShape.n0 = nBase;
     mLoop = CeilDiv(opShape.m, opShape.m0);
@@ -68,21 +70,18 @@ void PpMatmulDefaultTilingData::SetBaseOp(uint64_t coreNum, uint64_t l0cSize, ui
     coreLoop = opShape.batchSize * mLoop * nLoop;
     if (mmInfo.isQuantBatchMatmulV3) {
         bool transB = tilingKey & TRANS_B_MASK;
-        if (mLoop == 1 && (0 == 0) && transB && coreLoop % coreNum < coreNum / CONST_4 * CONST_3) {
+        if (mLoop == 1 && (tilingK == 0) && transB && coreLoop % coreNum < coreNum / CONST_4 * CONST_3) {
             uint32_t x = CeilDiv(opShape.n, coreNum);
             uint32_t y = CeilDiv(x, CONST_256);
             nBase = RoundUp(CeilDiv(x, y), CONST_16);
-            uint32_t baseLimitSize = l0cSize;
-            if (mBase * nBase * sizeof(float) < baseLimitSize) {
+            if (mBase * nBase * sizeof(float) < l0cSize) {
                 opShape.n0 = nBase;
                 nLoop = CeilDiv(opShape.n, opShape.n0);
                 coreLoop = opShape.batchSize * nLoop;
             }
         }
-        blockDim = std::min(coreLoop, coreNum);
-        return;
     }
-    if (!isAscend310P && mLoop == 1UL && mmInfo.transB && static_cast<uint64_t>(coreLoop % coreNum) <
+    if (!isNpuArch2002 && mLoop == 1UL && mmInfo.transB && static_cast<uint64_t>(coreLoop % coreNum) <
         static_cast<uint64_t>(coreNum / CONST_4) * CONST_3) {
         mBase = RoundUp(opShape.m, CONST_16);
         opShape.m0 = mBase;
@@ -101,32 +100,38 @@ void PpMatmulDefaultTilingData::SetBaseOp(uint64_t coreNum, uint64_t l0cSize, ui
     blockDim = std::min(coreLoop, coreNum);
 }
 
-void PpMatmulDefaultTilingData::End(const MatMulInfo &mmInfo, bool isAscend310P) {
-    if (mmInfo.isQuantBatchMatmulV3) {
-        uint32_t l1AbPpBuffLen = L0AB_PINGPONG_BUFFER_LEN_FP16;
-        uint32_t shapeCount = opShape.m0 + opShape.n0;
-        uint32_t k0Max = (shapeCount == 0) ? l1AbPpBuffLen : (l1AbPpBuffLen / shapeCount);
-        uint32_t k0Init = ALIGNMENT_256;
-        opShape.k0 = k0Max < k0Init ? k0Max / ALIGNMENT_16 * ALIGNMENT_16 : k0Max / k0Init * k0Init;
-        kLoop = CeilDiv(opShape.k, opShape.k0);
-        return;
-    }
+void PpMatmulDefaultTilingData::End(const MatMulInfo &mmInfo, bool isNpuArch2002) {
     uint64_t shapeSum = opShape.m0 + opShape.n0;
-    if (!isAscend310P) {
+    if (isNpuArch2002) {
+        uint32_t l1AbPpBuffLen = L0AB_PINGPONG_BUFFER_LEN_FP16;
+        if (mmInfo.isCompress) {
+            l1AbPpBuffLen = L1AB_PINGPONG_BUFFER_LEN_INT8_SPARSE;
+            uint32_t compressNTile = CeilDiv((opShape.n % opShape.n0), CONST_16) % mmInfo.tilingN;
+            compressOverlapN = compressNTile == 0 ? 0 : mmInfo.tilingN - compressNTile;
+            tilingK = mmInfo.tilingK;
+            tilingN = mmInfo.tilingN;
+        }
+        uint32_t k0Max = (shapeSum == 0) ? l1AbPpBuffLen : (l1AbPpBuffLen / shapeSum);
+        uint32_t k0Init = mmInfo.isCompress ? mmInfo.tilingK * BLOCK_SIZE_INT8_K : ALIGNMENT_256;
+        opShape.k0 = k0Max < k0Init ? k0Max / ALIGNMENT_16 * ALIGNMENT_16 : k0Max / k0Init * k0Init;
+    }
+    if (!isNpuArch2002) {
+        uint64_t cubeBlockSize = mmInfo.isInt8 ? CUBE_BLOCK_SIZE_INT8 : CUBE_BLOCK_SIZE;
+        uint64_t kBlockSize = mmInfo.isInt8 ? BLOCK_SIZE_INT8_K : BLOCK_SIZE;
+        uint64_t scaleBlockSize = mmInfo.isInt8 ? L1_DESCALE_BUFFER_SIZE_MAX : 0UL;
+        if (mmInfo.isInt8 && (mmInfo.transA || !mmInfo.transB)) {
+            shapeSum = RoundUp(opShape.m0, CONST_32) + RoundUp(opShape.n0, CONST_32);
+        }
         uint64_t k0Max = shapeSum == 0UL
                         ? L1AB_PINGPONG_BUFFER_SIZE
-                        : static_cast<uint64_t>(static_cast<float>(L1AB_PINGPONG_BUFFER_SIZE)
+                        : static_cast<uint64_t>(static_cast<float>(L1AB_PINGPONG_BUFFER_SIZE - scaleBlockSize)
                             / (shapeSum * mmInfo.sizeInDtype));
-        opShape.k0 = k0Max < CUBE_BLOCK_SIZE ? RoundDown(k0Max, BLOCK_SIZE) : RoundDown(k0Max, CUBE_BLOCK_SIZE);
+        opShape.k0 = k0Max < cubeBlockSize ? RoundDown(k0Max, kBlockSize) : RoundDown(k0Max, cubeBlockSize);
         if (opShape.k0 > CONST_512) {
             opShape.k0 = RoundDown(opShape.k0, CONST_512);
         }
-    } else {
-        uint32_t k0Max = (shapeSum == 0UL) ? UB_LIMIT_SIZE_910A : (UB_LIMIT_SIZE_910A / shapeSum);
-        opShape.k0 = k0Max < CUBE_BLOCK_SIZE ? k0Max / BLOCK_SIZE * BLOCK_SIZE : \
-            k0Max / CUBE_BLOCK_SIZE * CUBE_BLOCK_SIZE; // k0Max less than 256, matrix 16
     }
-        kLoop = CeilDiv(opShape.k, opShape.k0);
+    kLoop = CeilDiv(opShape.k, opShape.k0);
 }
 
 
@@ -158,9 +163,9 @@ bool PpMatMulDefault::GetMatMulTilingData()
     ppMatmulDefaultTilingData_.SetBaseShape(matMulInfo_.batchSize, matMulInfo_.m, matMulInfo_.k, matMulInfo_.n);
     OpShape opShape = ppMatmulDefaultTilingData_.opShape;
     if (opShape.m < opShape.n) {
-        TilingFunc<false, OpShape, PpMatmulDefaultTilingData, HardwareInfo, MatMulInfo>(opShape, ppMatmulDefaultTilingData_, hardwareInfo_, matMulInfo_);
+        TilingFunc<false, OpShape, PpMatmulDefaultTilingData, HardwareInfo, MatMulInfo>(opShape, ppMatmulDefaultTilingData_, hardwareInfo_, matMulInfo_, matMulInfo_.isCompress, matMulInfo_.tilingN);
     } else {
-        TilingFunc<true, OpShape, PpMatmulDefaultTilingData, HardwareInfo, MatMulInfo>(opShape, ppMatmulDefaultTilingData_, hardwareInfo_, matMulInfo_);
+        TilingFunc<true, OpShape, PpMatmulDefaultTilingData, HardwareInfo, MatMulInfo>(opShape, ppMatmulDefaultTilingData_, hardwareInfo_, matMulInfo_, matMulInfo_.isCompress, matMulInfo_.tilingN);
     }
     Swizzle<PpMatmulDefaultTilingData>(ppMatmulDefaultTilingData_);
     ppMatmulDefaultTilingData_.End(matMulInfo_, hardwareInfo_.socVersion == platform_ascendc::SocVersion::ASCEND310P);

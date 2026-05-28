@@ -30,7 +30,7 @@
 #include "platform/platform_infos_def.h"
 #include "../../op_kernel/quant_batch_matmul_v3_tiling_key.h"
 #include "platform_util.h"
-#include "quant_batch_matmul_v3_tiling_arch20.h"
+#include "arch20/quant_batch_matmul_v3_tiling_arch20.h"
 
 
 using AscendC::BLOCK_CUBE;    // uint32_t 16

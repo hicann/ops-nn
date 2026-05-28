@@ -7,6 +7,7 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
+
 #include "aclnn_matmul_compress.h"
 #include "matmul_compress.h"
 #include "aclnn_kernels/common/op_error_check.h"
@@ -21,7 +22,8 @@
 
 using namespace op;
 namespace {
-static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> X1_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT16};
+static const std::initializer_list<op::DataType> X2_DTYPE_SUPPORT_LIST = {DataType::DT_INT8};
 static const std::initializer_list<op::DataType> BIAS_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT};
 static const std::initializer_list<op::DataType> COMPRESSINDEX_DTYPE_SUPPORT_LIST = {DataType::DT_INT8};
 static const std::initializer_list<op::DataType> OUT_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT16};
@@ -40,8 +42,8 @@ inline static bool CheckNotNull(const aclTensor* x, const aclTensor* weight, con
 inline static bool CheckDtypeValid(const aclTensor* x, const aclTensor* weight, const aclTensor* bias,
                                    const aclTensor* compressIndex, const aclTensor *out)
 {
-    OP_CHECK_DTYPE_NOT_SUPPORT(x, DTYPE_SUPPORT_LIST, return false);
-    OP_CHECK_DTYPE_NOT_SUPPORT(weight, DTYPE_SUPPORT_LIST, return false);
+    OP_CHECK_DTYPE_NOT_SUPPORT(x, X1_DTYPE_SUPPORT_LIST, return false);
+    OP_CHECK_DTYPE_NOT_SUPPORT(weight, X2_DTYPE_SUPPORT_LIST, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(bias, BIAS_DTYPE_SUPPORT_LIST, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(compressIndex, COMPRESSINDEX_DTYPE_SUPPORT_LIST, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(out, OUT_DTYPE_SUPPORT_LIST, return false);
@@ -138,8 +140,8 @@ aclnnStatus aclnnMatmulCompressGetWorkspaceSize(const aclTensor* x, const aclTen
     const aclTensor *xNZReshape = PreProcessX(xNZ, uniqueExecutor.get());
     const aclTensor *weightNZ = PreProcessWeight(weight, op::Format::FORMAT_FRACTAL_NZ, uniqueExecutor.get());
     if (bias != nullptr) {
-            bias = l0op::Contiguous(bias, uniqueExecutor.get());
-            CHECK_RET(bias != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        bias = l0op::Contiguous(bias, uniqueExecutor.get());
+        CHECK_RET(bias != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
     // 调用MatmulCompress算子Kernel
     auto outC = l0op::MatmulCompress(xNZReshape, weightNZ, bias, compressIndex, false, true, 8, 8, uniqueExecutor.get());

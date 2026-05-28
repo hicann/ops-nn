@@ -43,6 +43,9 @@ struct MatMulInfo {
     bool isPertokenArch20{0};
     float sizeInDtype{0};
     float sizeOutDtype{0};
+    bool isCompress{0};
+    uint32_t tilingK{0};
+    uint32_t tilingN{0};
 };
 
 struct HardwareInfo {
@@ -81,10 +84,13 @@ struct PpMatmulDefaultTilingData {
     uint64_t splitk{0};
     uint64_t enShuffleK{0};
     bool isQuantBatchMatmulV3{false};
+    uint32_t tilingK{0};
+    uint32_t tilingN{0};
+    uint32_t compressOverlapN{0};
 
     void SetBaseShape(uint64_t batchSize, uint64_t m, uint64_t k, uint64_t n);
-    void SetBaseOp(uint64_t coreNum, uint64_t l0cSize, uint64_t mBase, uint64_t nBase, const MatMulInfo &mmInfo, bool isAscend310P);
-    void End(const MatMulInfo &mmInfo, bool isAscend310P);
+    void SetBaseOp(uint64_t coreNum, uint64_t l0cSize, uint64_t mBase, uint64_t nBase, const MatMulInfo &mmInfo, bool isNpuArch2002);
+    void End(const MatMulInfo &mmInfo, bool isNpuArch2002);
 };
 
 } // namespace pp_matmul
