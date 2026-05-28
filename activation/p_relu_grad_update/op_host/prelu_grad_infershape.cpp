@@ -37,7 +37,6 @@ static ge::graphStatus InferShape4PReluGrad(gert::InferShapeContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, da_shape);
     *da_shape = *weights_shape;
     return ge::GRAPH_SUCCESS;
-
 }
 
 static ge::graphStatus InferDataType4PReluGrad(gert::InferDataTypeContext* context)

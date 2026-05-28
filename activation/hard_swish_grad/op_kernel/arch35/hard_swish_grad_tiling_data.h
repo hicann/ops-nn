@@ -19,6 +19,8 @@
 #ifndef _HARD_SWISH_GRAD_TILING_DATA_H_
 #define _HARD_SWISH_GRAD_TILING_DATA_H_
 
+#include <cstdint>
+
 struct HardSwishGradTilingData {
     int64_t totalNum = 0;      // total number of elements
     int64_t blockFactor = 0;   // number of elements per AI Core

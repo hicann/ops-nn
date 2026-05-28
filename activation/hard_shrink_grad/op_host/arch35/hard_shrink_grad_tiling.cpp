@@ -37,6 +37,9 @@ using Ops::Base::GetUbBlockSize;
 constexpr uint32_t WS_SYS_SIZE = 0U;
 // 双缓冲阈值：数据量大于此值时启用双缓冲
 constexpr int64_t MIN_SPLIT_THRESHOLD = 1024;
+constexpr int64_t SIZE_2 = 2;
+constexpr int64_t SIZE_4 = 4;
+constexpr int64_t SIZE_256 = 256;
 
 static const gert::Shape g_vec_1_shape = {1};
 
@@ -162,19 +165,19 @@ static ge::graphStatus HardShrinkGradTilingFunc(gert::TilingContext* context)
     int64_t typeSize;
     int64_t computeAlignment;
     if (dataType == ge::DT_FLOAT16) {
-        typeSize = 2;
-        computeAlignment = 256 / typeSize;  // 128 元素
+        typeSize = SIZE_2;
+        computeAlignment = SIZE_256 / typeSize;  // 128 元素
     } else if (dataType == ge::DT_FLOAT) {
-        typeSize = 4;
-        computeAlignment = 256 / typeSize;  // 64 元素
+        typeSize = SIZE_4;
+        computeAlignment = SIZE_256 / typeSize;  // 64 元素
     } else {
         // bf16: 存储 2B, 计算在 float(4B)
-        typeSize = 2;
-        computeAlignment = 256 / 4;  // 64 元素 (按 float 对齐)
+        typeSize = SIZE_2;
+        computeAlignment = SIZE_256 / SIZE_4;  // 64 元素 (按 float 对齐)
     }
 
     int64_t ubBlockSize = GetUbBlockSize(context);
-    uint64_t useDoubleBuffer = (totalIdx > MIN_SPLIT_THRESHOLD) ? 1 : 0;
+    uint64_t useDoubleBuffer = totalIdx > MIN_SPLIT_THRESHOLD;
 
     // 精确扣除系统/API 固定开销，最大化每元素 buffer 预算
     //   8KB: TPipe + 队列管理等系统保留（DESIGN §3.4.7）
@@ -193,7 +196,7 @@ static ge::graphStatus HardShrinkGradTilingFunc(gert::TilingContext* context)
     //     bf16 double: 3*2*2 + 2*4 = 20 bytes/elem
     //     bf16 single: 3*1*2 + 2*4 = 14 bytes/elem
     int64_t bufferBytes;
-    int64_t numTQueBuffers = useDoubleBuffer ? 2 : 1;
+    int64_t numTQueBuffers = (useDoubleBuffer != 0) ? 2 : 1;
     if (dataType == ge::DT_BF16) {
         // bf16: 3 queues * BUFFER_NUM * 2B + 2 float TBuf * 4B
         bufferBytes = 3 * numTQueBuffers * typeSize + 2 * static_cast<int64_t>(sizeof(float));
@@ -204,7 +207,6 @@ static ge::graphStatus HardShrinkGradTilingFunc(gert::TilingContext* context)
     int64_t rawUbFactor = FloorDiv(availableUb, bufferBytes);
     int64_t alignFactor = (ubBlockSize > computeAlignment) ? ubBlockSize : computeAlignment;
     int64_t ubFactorAligned = FloorAlign(rawUbFactor, alignFactor);
-
     // Cap ubFactor by totalIdx to avoid allocating more than necessary.
     // For small data, ubFactor = ceil(totalIdx / alignFactor) * alignFactor.
     if (totalIdx < ubFactorAligned) {

@@ -23,8 +23,9 @@ using namespace glu_common;
 
 static const int64_t BUFFER_SIZE_FACTOR = 6; // UB size divided by 6 for buffer allocation
 constexpr int64_t RESERVED_SIZE_8K = 8 * 1024;
+constexpr int64_t SIZE_2 = 2;
 
-ge::graphStatus GluRegbaseTiling::RunFusionKernelTiling(gert::TilingContext* context)
+ge::graphStatus GluRegbaseTiling::RunFusionKernelTiling(gert::TilingContext* context) const
 {
     OP_LOGD(context, "RunFusionKernelTiling enter.");
 
@@ -38,7 +39,7 @@ ge::graphStatus GluRegbaseTiling::RunFusionKernelTiling(gert::TilingContext* con
     int64_t commonBufferSize = ubSizePlatForm / (BUFFER_SIZE_FACTOR * sizeof(float));
     auto dtype = context->GetInputDesc(INPUT_IDX)->GetDataType();
     if (dtype == ge::DT_BF16) {
-        commonBufferSize = commonBufferSize * 2;
+        commonBufferSize = commonBufferSize * SIZE_2;
     }
 
     OP_LOGD(context, "RunFusionKernelTiling ubSize: %ld, commonBufferSize: %ld", ubSizePlatForm, commonBufferSize);

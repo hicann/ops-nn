@@ -39,6 +39,9 @@ using Ops::Base::GetUbBlockSize;
 
 constexpr uint32_t WS_SYS_SIZE = 0U;
 constexpr int64_t MIN_SPLIT_THRESHOLD = 1024;
+constexpr int64_t SIZE_5 = 5;
+constexpr int64_t SIZE_8 = 8;
+constexpr int64_t SIZE_11 = 11;
 
 static const gert::Shape g_vec_1_shape = {1};
 
@@ -140,12 +143,12 @@ static ge::graphStatus HardSwishGradTilingFunc(gert::TilingContext* context)
     tiling->blockFactor = CeilDiv(totalIdx, coreNum);
     int64_t usedCoreNum = CeilDiv(totalIdx, tiling->blockFactor);
 
-    uint64_t useDoubleBuffer = (totalIdx > MIN_SPLIT_THRESHOLD) ? 1 : 0;
+    uint64_t useDoubleBuffer = totalIdx > MIN_SPLIT_THRESHOLD;
     int64_t bufferNum;
     if (dataType == ge::DT_FLOAT) {
-        bufferNum = useDoubleBuffer ? 8 : 5;
+        bufferNum = (useDoubleBuffer != 0) ? SIZE_8 : SIZE_5;
     } else {
-        bufferNum = useDoubleBuffer ? 11 : 8;
+        bufferNum = (useDoubleBuffer != 0) ? SIZE_11 : SIZE_8;
     }
 
     constexpr int64_t VECTOR_ALIGN_ELEM = 256 / static_cast<int64_t>(sizeof(float));
@@ -155,7 +158,7 @@ static ge::graphStatus HardSwishGradTilingFunc(gert::TilingContext* context)
         FloorDiv((static_cast<int64_t>(ubSize) / typeSize), bufferNum),
         alignUnit);
 
-    context->SetBlockDim(usedCoreNum);
+    context->SetBlockDim(static_cast<uint32_t>(usedCoreNum));
 
     uint32_t dTypeX = static_cast<uint32_t>(dataType);
     ASCENDC_TPL_SEL_PARAM(context, dTypeX, useDoubleBuffer);

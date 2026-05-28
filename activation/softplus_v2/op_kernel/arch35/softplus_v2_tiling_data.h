@@ -21,6 +21,8 @@
 #ifndef _SOFTPLUS_V2_TILING_DATA_H_
 #define _SOFTPLUS_V2_TILING_DATA_H_
 
+#include <cstdint>
+
 struct SoftplusV2TilingData {
     int64_t totalLength;      // total number of elements
     int64_t blockFactor;      // elements per core

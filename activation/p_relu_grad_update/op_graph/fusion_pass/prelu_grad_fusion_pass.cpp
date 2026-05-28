@@ -36,6 +36,8 @@ using namespace fusion;
 
 namespace ops {
 
+const int64_t SIZE_2 = 2;
+const int64_t SIZE_3 = 3;
 static const std::string PASS_NAME = "PReluGradFusionPass";
 const int64_t CAPTURE_TENSOR_IDX_PRELU_GRAD = 0l;
 
@@ -65,7 +67,7 @@ std::vector<es::EsTensorHolder> CreatePatternPreluGrad(
         es::AddEdgeAndUpdatePeerDesc(*graph, *x.GetProducer(), x.GetProducerOutIndex(), prelu_grad, 1) != GRAPH_SUCCESS,
         default_res, PASS_NAME.c_str(), "AddEdgeAndUpdatePeerDesc failed.");
     OP_LOGE_IF(
-        es::AddEdgeAndUpdatePeerDesc(*graph, *weight.GetProducer(), weight.GetProducerOutIndex(), prelu_grad, 2) != GRAPH_SUCCESS,
+        es::AddEdgeAndUpdatePeerDesc(*graph, *weight.GetProducer(), weight.GetProducerOutIndex(), prelu_grad, SIZE_2) != GRAPH_SUCCESS,
         default_res, PASS_NAME.c_str(), "AddEdgeAndUpdatePeerDesc failed.");
     
     auto *dx_holder = graph_builder.GetCGraphBuilder()->GetTensorHolderFromNode(prelu_grad, 0);
@@ -94,7 +96,7 @@ std::vector<es::EsTensorHolder> BuildUpdateNode(
     // Connect input to ReduceSum node using AddEdgeAndUpdatePeerDesc
     es::AddEdgeAndUpdatePeerDesc(*replace_graph, *r_dy.GetProducer(), r_dy.GetProducerOutIndex(), prelu_grad_update, 0);
     es::AddEdgeAndUpdatePeerDesc(*replace_graph, *r_x.GetProducer(), r_x.GetProducerOutIndex(), prelu_grad_update, 1);
-    es::AddEdgeAndUpdatePeerDesc(*replace_graph, *r_weight.GetProducer(), r_weight.GetProducerOutIndex(), prelu_grad_update, 2);
+    es::AddEdgeAndUpdatePeerDesc(*replace_graph, *r_weight.GetProducer(), r_weight.GetProducerOutIndex(), prelu_grad_update, SIZE_2);
     
     auto res = {es::EsTensorHolder(graph_builder.GetCGraphBuilder()->GetTensorHolderFromNode(prelu_grad_update, 0)),
                 es::EsTensorHolder(graph_builder.GetCGraphBuilder()->GetTensorHolderFromNode(prelu_grad_update, 1))};
@@ -123,8 +125,8 @@ es::EsTensorHolder BuildReduceNode(
 
     es::AddEdgeAndUpdatePeerDesc(*replace_graph, *r_dy.GetProducer(), r_dy.GetProducerOutIndex(), prelu_grad_reduce, 0);
     es::AddEdgeAndUpdatePeerDesc(*replace_graph, *r_x.GetProducer(), r_x.GetProducerOutIndex(), prelu_grad_reduce, 1);
-    es::AddEdgeAndUpdatePeerDesc(*replace_graph, *r_weight.GetProducer(), r_weight.GetProducerOutIndex(), prelu_grad_reduce, 2);
-    es::AddEdgeAndUpdatePeerDesc(*replace_graph, *update_holder.GetProducer(), update_holder.GetProducerOutIndex(), prelu_grad_reduce, 3);
+    es::AddEdgeAndUpdatePeerDesc(*replace_graph, *r_weight.GetProducer(), r_weight.GetProducerOutIndex(), prelu_grad_reduce, SIZE_2);
+    es::AddEdgeAndUpdatePeerDesc(*replace_graph, *update_holder.GetProducer(), update_holder.GetProducerOutIndex(), prelu_grad_reduce, SIZE_3);
 
     return es::EsTensorHolder(graph_builder.GetCGraphBuilder()->GetTensorHolderFromNode(prelu_grad_reduce, 0));
 }
@@ -193,14 +195,14 @@ static void SetSubNodeDesc(GNode& update_node, GNode& reduce_node,
     
     update_node.UpdateInputDesc(0, dy_desc);
     update_node.UpdateInputDesc(1, x_desc);
-    update_node.UpdateInputDesc(2, w_desc);
+    update_node.UpdateInputDesc(SIZE_2, w_desc);
     update_node.UpdateOutputDesc(0, x_desc);
     update_node.UpdateOutputDesc(1, x_desc);
 
     reduce_node.UpdateInputDesc(0, dy_desc);
     reduce_node.UpdateInputDesc(1, x_desc);
-    reduce_node.UpdateInputDesc(2, w_desc);
-    reduce_node.UpdateInputDesc(3, x_desc);
+    reduce_node.UpdateInputDesc(SIZE_2, w_desc);
+    reduce_node.UpdateInputDesc(SIZE_3, x_desc);
     reduce_node.UpdateOutputDesc(0, w_desc);
 } 
 
@@ -239,16 +241,16 @@ GraphUniqPtr PReluGradFusionPass::Replacement(const std::unique_ptr<MatchResult>
 }
 
 static void GetInputsInfo(
-    const std::vector<SubgraphInput>& subgraph_inputs, std::vector<Shape>& input_shape,
-    std::vector<DataType>& input_dtype, std::vector<Format>& input_format)
+    const std::vector<SubgraphInput>& subgraph_inputs, std::vector<Shape>& input_shapes,
+    std::vector<DataType>& input_dtypes, std::vector<Format>& input_formats)
 {
     for (const auto& sub_input : subgraph_inputs) {
         auto match_node = sub_input.GetAllInputs().at(0);
         TensorDesc tensor_desc;
         match_node.node.GetInputDesc(match_node.index, tensor_desc);
-        input_shape.emplace_back(tensor_desc.GetShape());
-        input_dtype.emplace_back(tensor_desc.GetDataType());
-        input_format.emplace_back(tensor_desc.GetFormat());
+        input_shapes.emplace_back(tensor_desc.GetShape());
+        input_dtypes.emplace_back(tensor_desc.GetDataType());
+        input_formats.emplace_back(tensor_desc.GetFormat());
     }
 }
 

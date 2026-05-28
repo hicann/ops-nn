@@ -8,10 +8,10 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#include "ge/fusion/pass/pattern_fusion_pass.h"
+#ifndef PRELU_GRAD_FUSION_PASS_H
+#define PRELU_GRAD_FUSION_PASS_H
 
-#ifndef NN_PRELU_GRAD_FUSION_PASS_H
-#define NN_PRELU_GRAD_FUSION_PASS_H
+#include "ge/fusion/pass/pattern_fusion_pass.h"
 
 namespace ops {
 using namespace ge;
@@ -31,4 +31,4 @@ static void GetInputsInfo(const std::vector<SubgraphInput>& subgraph_inputs, std
 static Status InferShape(const GraphUniqPtr& replace_graph, const std::vector<SubgraphInput>& subgraph_inputs);
 
 } //namespace ops
-#endif // NN_PRELU_GRAD_FUSION_PASS_H
+#endif // PRELU_GRAD_FUSION_PASS_H

@@ -22,6 +22,7 @@
 #include <map>
 #include <cstdlib>
 #include <ctime>
+#include <random>
 #include "assert.h"
 #include "graph.h"
 #include "types.h"
@@ -90,7 +91,7 @@ using std::vector;
     graph.AddOp(placeholder##intputIndex);                                                                  \
     thresholdV21.set_input_##intputName(placeholder##intputIndex);                                         \
     thresholdV21.update_input_desc_##intputName(placeholder##intputIndex##_desc);                          \
-    inputs.push_back(placeholder##intputIndex);
+    inputs.push_back(placeholder##intputIndex)
 
 #define ADD_OUTPUT(outputIndex, outputName, outputDtype, outputShape)                                        \
     TensorDesc outputName##outputIndex##_desc_ = TensorDesc(ge::Shape(outputShape), FORMAT_ND, outputDtype); \
@@ -153,9 +154,10 @@ int32_t GenRandomDataFloat32(vector<int64_t> shapes,
     uint32_t byteSizeFloat32 = 4;
     uint32_t data_len = size * byteSizeFloat32;
     float* pData = new (std::nothrow) float[size];
-
+    std::mt19937 gen(0);
+    std::uniform_real_distribution<float> distrib(0.0f, 1.0f);
     for (size_t i = 0; i < size; ++i) {
-        *(pData + i) = minVal + static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * (maxVal - minVal);
+        *(pData + i) = minVal + static_cast<float>(rand()) / static_cast<float>(distrib(gen)) * (maxVal - minVal);
     }
     input_tensor = Tensor(input_tensor_desc, (uint8_t*)pData, data_len);
     return SUCCESS;

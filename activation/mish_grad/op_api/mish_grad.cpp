@@ -41,7 +41,7 @@ const aclTensor* MishGradWithTanhX(const aclTensor* gradOutput, const aclTensor*
   L0_DFX(MishGradWithTanhX, gradOutput, self);
   auto out = executor->AllocTensor(self->GetViewShape(), self->GetDataType(), self->GetStorageFormat());
   CHECK_RET(out != nullptr, nullptr);
-  auto ret = ADD_TO_LAUNCHER_LIST_AICORE(MishGrad, OP_INPUT(gradOutput, self, nullptr), OP_OUTPUT(out));
+  auto ret = ADD_TO_LAUNCHER_LIST_AICORE(MishGrad, OP_INPUT(gradOutput, self, tanhx), OP_OUTPUT(out));
   OP_CHECK(ret ==  ACLNN_SUCCESS, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "MishGradWithTanhXAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
     return nullptr);
   return out;

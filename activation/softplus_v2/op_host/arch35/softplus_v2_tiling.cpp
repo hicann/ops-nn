@@ -33,13 +33,14 @@ using Ops::Base::FloorDiv;
 using Ops::Base::FloorAlign;
 
 constexpr uint32_t WS_SYS_SIZE = 0U;
+constexpr uint32_t SIZE_8 = 8;
 constexpr uint64_t UB_SIZE_BYTES = 192ULL * 1024; // 192KB
 
 static const gert::Shape g_vec_1_shape = {1};
 
 static inline float SafeInvBeta(float beta)
 {
-    if (beta == 0.0f) {
+    if (std::fabs(beta) <= std::numeric_limits<float>::epsilon()) {
         return std::numeric_limits<float>::infinity();
     }
     return 1.0f / beta;
@@ -103,7 +104,7 @@ static uint32_t ComputeFp32TileLength(uint64_t ubSize)
     uint64_t totalBytes = static_cast<uint64_t>(BUFFER_NUM) * maxTile * TYPE_SIZE + cmpMaskSize + SELECT_RESERVE;
     while (totalBytes > ubSize && maxTile > ELEM_ALIGN) {
         maxTile -= ELEM_ALIGN;
-        cmpMaskSize = ((maxTile / 8 + CMP_ALIGN - 1) / CMP_ALIGN) * CMP_ALIGN;
+        cmpMaskSize = ((maxTile / SIZE_8 + CMP_ALIGN - 1) / CMP_ALIGN) * CMP_ALIGN;
         totalBytes = static_cast<uint64_t>(BUFFER_NUM) * maxTile * TYPE_SIZE + cmpMaskSize + SELECT_RESERVE;
     }
 
@@ -137,7 +138,7 @@ static uint32_t ComputeFp16TileLength(uint64_t ubSize)
     uint64_t totalBytes = static_cast<uint64_t>(BYTES_PER_ELEM) * maxTile + cmpMaskSize + SELECT_RESERVE;
     while (totalBytes > ubSize && maxTile > ELEM_ALIGN) {
         maxTile -= ELEM_ALIGN;
-        cmpMaskSize = ((maxTile / 8 + CMP_ALIGN - 1) / CMP_ALIGN) * CMP_ALIGN;
+        cmpMaskSize = ((maxTile / SIZE_8 + CMP_ALIGN - 1) / CMP_ALIGN) * CMP_ALIGN;
         totalBytes = static_cast<uint64_t>(BYTES_PER_ELEM) * maxTile + cmpMaskSize + SELECT_RESERVE;
     }
 

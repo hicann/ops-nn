@@ -135,7 +135,6 @@ ge::graphStatus SoftmaxV2TilingBase::GetDimsAndCheckShapeValid()
     OP_CHECK_NULL_WITH_CONTEXT(context_, yShape);
     auto yStorageShape = EnsureNotScalar(yShape->GetStorageShape());
     int64_t yShapeSize = yStorageShape.GetDimNum();
-
     if (xShapeSize_ != yShapeSize) {
         std::string dimsMsg = std::to_string(xShapeSize_) + " and " + std::to_string(yShapeSize);
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
@@ -239,7 +238,7 @@ ge::graphStatus SoftmaxV2TilingBase::GetShapeAttrsInfo()
 
 ge::graphStatus SoftmaxV2TilingBase::GetPlatformInfo()
 {
-    auto compileInfo = reinterpret_cast<const SoftmaxV2CompileInfo*>(context_->GetCompileInfo());
+    auto compileInfo = static_cast<const SoftmaxV2CompileInfo*>(context_->GetCompileInfo());
     OP_CHECK_NULL_WITH_CONTEXT(context_, compileInfo);
     blockSize_ = static_cast<uint64_t>(compileInfo->blockSize);
     vlFp32_ = static_cast<uint64_t>(compileInfo->vlFp32);
@@ -302,7 +301,7 @@ ge::graphStatus TilingForSoftmaxV2(gert::TilingContext* context)
         return ge::GRAPH_FAILED;
     }
     OP_LOGD(context->GetNodeName(), "TilingForSoftmaxV2 enter");
-    auto compileInfo = reinterpret_cast<const SoftmaxV2CompileInfo*>(context->GetCompileInfo());
+    auto compileInfo = static_cast<const SoftmaxV2CompileInfo*>(context->GetCompileInfo());
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
     OP_LOGD(context->GetNodeName(), "SoftmaxV2TilingBase Ascendc enter");
     return TilingRegistry::GetInstance().DoTilingImpl(context);

@@ -16,8 +16,8 @@
 #define OPS_BUILD_IN_OP_TILING_RUNTIME_LOGSIGMOID_GRAD_TILING_H
 
 #include "op_host/tiling_base.h"
-using namespace Ops::NN::Optiling;
 namespace optiling {
+using namespace Ops::NN::Optiling;
 class LogSigmoidGradTiling : public TilingBaseClass {
 public:
     explicit LogSigmoidGradTiling(gert::TilingContext* context) : TilingBaseClass(context)

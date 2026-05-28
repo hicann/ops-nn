@@ -26,6 +26,8 @@
 #ifndef _HARD_SWISH_TILING_DATA_H_
 #define _HARD_SWISH_TILING_DATA_H_
 
+#include <cstdint>
+
 struct HardSwishTilingData {
     int64_t totalNum = 0;
     int64_t blockFactor = 0;

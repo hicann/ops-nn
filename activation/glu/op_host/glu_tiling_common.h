@@ -19,6 +19,7 @@
 #include "register/tilingdata_base.h"
 #include "log/log.h"
 #include "util/math_util.h"
+#include "glu_tiling.h"
 
 namespace optiling {
 namespace glu_common {

@@ -31,7 +31,6 @@ ge::graphStatus LogSoftmaxV2TilingBase::GetAndCheckDtypes()
     auto yDesc = context_->GetOutputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, yDesc);
     yDtype_ = yDesc->GetDataType();
-
     if (xDtype_ != yDtype_) {
         std::string dtypeMsg = ToString(xDtype_) + " and " + ToString(yDtype_);
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(

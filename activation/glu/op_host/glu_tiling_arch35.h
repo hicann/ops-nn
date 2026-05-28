@@ -15,10 +15,8 @@
 #ifndef GLU_TILING_ARCH35_H
 #define GLU_TILING_ARCH35_H
 
-#include "register/tilingdata_base.h"
 #include "register/op_impl_registry.h"
 #include "log/log.h"
-#include "util/math_util.h"
 #include "glu_tiling.h"
 
 namespace optiling {
@@ -29,7 +27,7 @@ public:
     GluRegbaseTiling() = default;
     ~GluRegbaseTiling() = default;
     GluTilingData tilingData;
-    ge::graphStatus RunFusionKernelTiling(gert::TilingContext* context);
+    ge::graphStatus RunFusionKernelTiling(gert::TilingContext* context) const;
 };
 
 } // namespace optiling

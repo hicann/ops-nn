@@ -36,7 +36,6 @@ ge::graphStatus LogSoftmaxGradTilingBase::GetAndCheckDtypes()
     auto yDesc = context_->GetOutputDesc(CONST_ZERO);
     OP_CHECK_NULL_WITH_CONTEXT(context_, yDesc);
     yDtype_ = yDesc->GetDataType();
-
     if ((gradDtype != yDtype_) || (xDtype_ != yDtype_)) {
         std::string dtypeMsg = ToString(gradDtype) + ", " + ToString(xDtype_) + " and " + ToString(yDtype_);
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(

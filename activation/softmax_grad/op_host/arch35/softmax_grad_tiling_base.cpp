@@ -59,7 +59,6 @@ ge::graphStatus SoftmaxGradTilingBase::GetAndCheckDtypes()
     auto yDesc = context_->GetOutputDesc(CONST_ZERO);
     OP_CHECK_NULL_WITH_CONTEXT(context_, yDesc);
     yDtype_ = yDesc->GetDataType();
-
     if (xDtype_ != yDtype_ || xDtype_ != xDtype1) {
         std::string dtypeMsg = ToString(xDtype_) + ", " + ToString(xDtype1) + " and " + ToString(yDtype_);
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
@@ -100,7 +99,6 @@ ge::graphStatus SoftmaxGradTilingBase::GetDimsAndCheckShapeValid()
     OP_CHECK_NULL_WITH_CONTEXT(context_, yShape);
     auto yStorageShape = Ops::Base::EnsureNotScalar(yShape->GetStorageShape());
     int64_t yShapeSize = yStorageShape.GetDimNum();
-
     if (xShapeSize_ != yShapeSize || xShapeSize_ != xShapeSize1) {
         std::string dimNumMsg = std::to_string(xShapeSize_) + ", " + std::to_string(xShapeSize1) + " and " + std::to_string(yShapeSize);
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(

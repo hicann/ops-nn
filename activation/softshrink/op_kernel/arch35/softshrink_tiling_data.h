@@ -21,6 +21,8 @@
 #ifndef _SOFTSHRINK_TILING_DATA_H_
 #define _SOFTSHRINK_TILING_DATA_H_
 
+#include <cstdint>
+
 struct SoftshrinkTilingData {
     int64_t totalNum = 0;     // 总元素数量
     int64_t blockFactor = 0;  // 每个核处理的元素数量

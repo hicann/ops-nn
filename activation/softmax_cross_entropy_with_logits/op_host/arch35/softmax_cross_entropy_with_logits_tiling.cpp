@@ -117,7 +117,6 @@ ge::graphStatus SoftmaxCrossEntropyWithLogitsRegbaseTiling::CheckInputDtype()
     input = context_->GetInputDesc(INPUT_LABELS_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, input);
     auto labelsDtype = input->GetDataType();
-
     if (labelsDtype != featuresDtype) {
         std::string dtypeMsg = ToString(labelsDtype) + " and " + ToString(featuresDtype);
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "labels and features", dtypeMsg.c_str(),

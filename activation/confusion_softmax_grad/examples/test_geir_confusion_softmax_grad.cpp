@@ -57,9 +57,9 @@ using std::vector;
     input.push_back(tensor_placeholder##inputIndex);                                                         \
     graph.AddOp(placeholder##inputIndex);                                                                    \
     confusionSoftmaxGrad_1.set_input_##inputName(placeholder##inputIndex);                                            \
-    inputs.push_back(placeholder##inputIndex);
+    inputs.push_back(placeholder##inputIndex)
 
-#define ADD_INPUT_ATTR(attrName, attrValue) confusionSoftmaxGrad_1.set_attr_##attrName(attrValue);
+#define ADD_INPUT_ATTR(attrName, attrValue) confusionSoftmaxGrad_1.set_attr_##attrName(attrValue)
 
 #define ADD_CONST_INPUT(inputIndex, inputName, inputDtype, inputShape)                                               \
     vector<int64_t> placeholder##inputIndex##_shape = inputShape;                                                    \
@@ -81,11 +81,11 @@ using std::vector;
     graph.AddOp(placeholder##inputIndex);                                                                            \
     confusionSoftmaxGrad_1.set_input_##inputName(placeholder##inputIndex);                                                    \
     confusionSoftmaxGrad_1.update_input_desc_##inputName(placeholder##inputIndex##_desc);                                     \
-    inputs.push_back(placeholder##inputIndex);
+    inputs.push_back(placeholder##inputIndex)
 
 #define ADD_OUTPUT(outputIndex, outputName, outputDtype, outputShape)                                        \
     TensorDesc outputName##outputIndex##_desc_ = TensorDesc(ge::Shape(outputShape), FORMAT_ND, outputDtype); \
-    confusionSoftmaxGrad_1.update_output_desc_##outputName(outputName##outputIndex##_desc_);
+    confusionSoftmaxGrad_1.update_output_desc_##outputName(outputName##outputIndex##_desc_)
 
 #define LOG_PRINT(message, ...)         \
     do {                                \
@@ -170,8 +170,7 @@ int32_t GenOnesData(
 
 int32_t WriteDataToFile(string bin_file, uint64_t data_size, uint8_t* inputData)
 {
-    FILE* fp;
-    fp = fopen(bin_file.c_str(), "w");
+    FILE* fp = fopen(bin_file.c_str(), "w");
     fwrite(inputData, sizeof(uint8_t), data_size, fp);
     fclose(fp);
     return SUCCESS;
@@ -212,7 +211,6 @@ int main(int argc, char* argv[])
     std::vector<Operator> outputs{};
 
     std::cout << argv[1] << std::endl;
-    char* endptr;
 
     DataType inDtype = DT_FLOAT;
 

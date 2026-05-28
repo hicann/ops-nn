@@ -29,7 +29,7 @@ constexpr int CMPMODE_LE = 3;
 
 template <typename U, typename T>
 struct ToFloatScalar : public Vec::ElemwiseUnaryOP<U, T> {
-    __aicore__ inline ToFloatScalar(U& dst, T& scalar, int count)
+    __aicore__ inline ToFloatScalar(U& dst, T& scalar, int /*count*/)
     {
 #ifdef __CCE_AICORE__
         dst = ToFloat(scalar);

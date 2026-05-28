@@ -23,9 +23,9 @@
 #include <vector>
 #include <exe_graph/runtime/tiling_context.h>
 
-using namespace Ops::NN::Optiling;
 namespace optiling
 {
+using namespace Ops::NN::Optiling;
 // ar小尾轴
 BEGIN_TILING_DATA_DEF(SoftmaxV2ArSmallRTilingData)
 TILING_DATA_FIELD_DEF(int64_t, totalA0Len);     // A轴大小

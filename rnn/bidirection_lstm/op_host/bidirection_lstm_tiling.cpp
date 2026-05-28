@@ -391,14 +391,14 @@ void BidirectionLSTMTiling::GetIntraCoreMMTilingData(uint32_t BaseMNFractalN, ui
     BaseMNum = 1;
     BaseNNum = 1;
   } else {
-    float MNPieces = (float)MNFractalN / (float)BaseMNFractalN;
-    float MDivN = (float)_Params.IHSingleCoreM/(float)_Params.IHSingleCoreN;
+    float MNPieces = static_cast<float>(MNFractalN) / static_cast<float>(BaseMNFractalN);
+    float MDivN = static_cast<float>(_Params.IHSingleCoreM)/static_cast<float>(_Params.IHSingleCoreN);
     float tmp = std::sqrt(MNPieces / MDivN);
-    uint32_t baseM = static_cast<uint32_t>(floor((float)_Params.IHSingleCoreM / (MDivN * tmp)));
+    uint32_t baseM = static_cast<uint32_t>(floor(static_cast<float>(_Params.IHSingleCoreM) / (MDivN * tmp)));
     if(tmp == 0){
       return;
     }
-    uint32_t baseN = static_cast<uint32_t>(floor((float)_Params.IHSingleCoreN / tmp));
+    uint32_t baseN = static_cast<uint32_t>(floor(static_cast<float>(_Params.IHSingleCoreN) / tmp));
     BaseMNum = (_Params.IHSingleCoreM + baseM - 1) / baseM;
     BaseNNum = (_Params.IHSingleCoreN + baseN - 1) / baseN;
     if(BaseMNum == 0){
@@ -485,9 +485,9 @@ void BidirectionLSTMTiling::GetMMTilingDataBaseK() {
     if (MKFractalN <= _Params.BaseMKFractalN && NKFractalN <= _Params.BaseNKFractalN) {
       _Params.IHBaseKNum = 1;
     } else {
-      float MKPieces = (float)MKFractalN / (float)_Params.BaseMKFractalN;
-      float NKPieces = (float)NKFractalN / (float)_Params.BaseNKFractalN;
-      uint32_t baseK = static_cast<uint32_t>(floor((float)_Params.IHSingleCoreK / (MKPieces > NKPieces ? MKPieces : NKPieces)));
+      float MKPieces = static_cast<float>(MKFractalN) / static_cast<float>(_Params.BaseMKFractalN);
+      float NKPieces = static_cast<float>(NKFractalN) / static_cast<float>(_Params.BaseNKFractalN);
+      uint32_t baseK = static_cast<uint32_t>(floor(static_cast<float>(_Params.IHSingleCoreK) / (MKPieces > NKPieces ? MKPieces : NKPieces)));
       _Params.IHBaseKNum = (_Params.IHSingleCoreK + baseK - 1) / baseK;
     }
 
@@ -497,9 +497,9 @@ void BidirectionLSTMTiling::GetMMTilingDataBaseK() {
     if (MKFractalN <= _Params.BaseMKFractalN && NKFractalN <= _Params.BaseNKFractalN) {
       _Params.HHBaseKNum = 1;
     } else {
-      float MKPieces = (float)MKFractalN / (float)_Params.BaseMKFractalN;
-      float NKPieces = (float)NKFractalN / (float)_Params.BaseNKFractalN;
-      uint32_t baseK = static_cast<uint32_t>(floor((float)_Params.HHSingleCoreK / (MKPieces > NKPieces ? MKPieces : NKPieces)));
+      float MKPieces = static_cast<float>(MKFractalN) / static_cast<float>(_Params.BaseMKFractalN);
+      float NKPieces = static_cast<float>(NKFractalN) / static_cast<float>(_Params.BaseNKFractalN);
+      uint32_t baseK = static_cast<uint32_t>(floor(static_cast<float>(_Params.HHSingleCoreK) / (MKPieces > NKPieces ? MKPieces : NKPieces)));
       _Params.HHBaseKNum = (_Params.HHSingleCoreK + baseK - 1) / baseK;
     }
 }

@@ -122,7 +122,7 @@ ge::graphStatus TilingForLogSigmoidGrad(gert::TilingContext* context)
         OP_LOGE("LogSigmoidGrad", "Tiling context is null");
         return ge::GRAPH_FAILED;
     }
-    auto compileInfo = reinterpret_cast<const BroadcastCompileInfo*>(context->GetCompileInfo());
+    auto compileInfo = static_cast<const BroadcastCompileInfo*>(context->GetCompileInfo());
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
     OP_LOGD("LogSigmoidGradTiling", "Enter ascendc LogSigmoidGradTiling");
     LogSigmoidGradTiling tiling(context);
