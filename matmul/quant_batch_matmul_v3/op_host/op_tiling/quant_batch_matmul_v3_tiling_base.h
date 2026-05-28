@@ -190,6 +190,7 @@ protected:
         uint64_t x2StorageLastFourthDim) const;
     void SetTransAttr(QuantBatchMatmulV3Trans &trans) const;
     virtual bool SetPlatformInfoForTiling();
+    virtual const char *GetDefaultOpName() const;
 
     template<typename T>
     inline bool CheckNumberIsValid(const T &num, const std::string &opName, const std::string &description) const {

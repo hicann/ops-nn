@@ -42,6 +42,7 @@ constexpr size_t SCALE_PERGROUP_MIN_DIM_NUM = 2;
 
 static constexpr int8_t OUTPUT_INFER_FAIL = static_cast<int8_t>(-1);
 static constexpr int8_t OUTPUT_INFER_SUCCESS = 1;
+constexpr const char *DEFAULT_OP_NAME = "QuantBatchMatmulV3";
 
 // QuantBatchMatmulV3 input index, mc2 is not same
 constexpr uint32_t X1_INDEX = 0;
@@ -52,6 +53,23 @@ constexpr uint32_t BIAS_INDEX = 4;
 constexpr uint32_t PERTOKEN_SCALE_INDEX = 5;
 
 static optiling::QuantBatchMatmulInfoFactory g_quantBatchMatmulInfoFactory;
+
+const char *GetValidOpName(gert::TilingContext *context, const char *defaultOpName)
+{
+    const char *fallbackName = (defaultOpName != nullptr && defaultOpName[0] != '\0') ? defaultOpName : DEFAULT_OP_NAME;
+    if (context == nullptr) {
+        return fallbackName;
+    }
+    const char *nodeName = context->GetNodeName();
+    if (nodeName != nullptr && nodeName[0] != '\0') {
+        return nodeName;
+    }
+    const char *nodeType = context->GetNodeType();
+    if (nodeType != nullptr && nodeType[0] != '\0') {
+        return nodeType;
+    }
+    return fallbackName;
+}
 }
 
 namespace optiling {
@@ -118,13 +136,13 @@ void ResetQuantBatchMatmulV3InputParams()
 
 ge::graphStatus QuantBatchMatmulV3TilingBase::GetShapeAttrsInfo()
 {
+    inputParams_.opName = GetValidOpName(context_, GetDefaultOpName());
     OP_LOGE_IF(!SetPlatformInfoForTiling(), ge::GRAPH_FAILED, inputParams_.opName, "Set PlatformInfoFortiling fail");
     if (inputParams_.initFlag) {
         OP_LOGD(inputParams_.opName, "No need to get shape and attrs from tiling context again");
         return ge::GRAPH_SUCCESS;
     }
 
-    inputParams_.opName = context_->GetNodeName();
     OPS_LOG_D(inputParams_.opName, "TilingContext: %s", Ops::NN::DebugTilingContext(context_).c_str());
     OP_TILING_CHECK(CheckContext() != ge::GRAPH_SUCCESS, CUBE_INNER_ERR_REPORT(inputParams_.opName, "Invalid context."),
                     return ge::GRAPH_FAILED);
@@ -141,6 +159,11 @@ ge::graphStatus QuantBatchMatmulV3TilingBase::GetShapeAttrsInfo()
 
     inputParams_.initFlag = true;
     return ge::GRAPH_SUCCESS;
+}
+
+const char *QuantBatchMatmulV3TilingBase::GetDefaultOpName() const
+{
+    return DEFAULT_OP_NAME;
 }
 
 ge::graphStatus QuantBatchMatmulV3TilingBase::CheckContext()

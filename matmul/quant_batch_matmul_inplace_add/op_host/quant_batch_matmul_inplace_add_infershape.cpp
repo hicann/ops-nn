@@ -12,7 +12,11 @@
  * \file quant_batch_matmul_inplace_add_infershape.cpp
  * \brief
  */
+#include <string>
+
 #include "common/op_host/matmul_common_infershape.h"
+#include "log/log.h"
+#include "matmul/common/op_host/log_format_util.h"
 #include "runtime/infer_datatype_context.h"
 
 
@@ -23,6 +27,19 @@ constexpr uint32_t X1_SCALE_INDEX = 2;
 constexpr uint32_t YREF_INDEX = 3;
 constexpr uint32_t X2_SCALE_INDEX = 4;
 constexpr size_t QUANT_BATCH_MATMUL_V3_MIN_SHAPE_SIZE = 2;
+constexpr const char *OP_NAME = "QuantBatchMatmulInplaceAdd";
+
+const char *GetValidOpName(gert::InferShapeContext *context)
+{
+    if (context == nullptr) {
+        return OP_NAME;
+    }
+    const char *nodeName = context->GetNodeName();
+    if (nodeName != nullptr && nodeName[0] != '\0') {
+        return nodeName;
+    }
+    return OP_NAME;
+}
 
 static ge::graphStatus IsInputTensorNull(gert::InferShapeContext* context)
 {
@@ -37,9 +54,13 @@ static ge::graphStatus IsInputTensorNull(gert::InferShapeContext* context)
 static ge::graphStatus InferShape4QuantBatchMatmulInplaceAdd(gert::InferShapeContext* context)
 {
     OP_CHECK_NULL_WITH_CONTEXT(context, context);
+    const char *opName = GetValidOpName(context);
     OP_CHECK_IF(
         IsInputTensorNull(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context->GetNodeName(), "Some of the required inputs are null."), return ge::GRAPH_FAILED);
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            opName, "x1, x2, x2Scale, y, x1Scale", "null",
+            "x1, x2, x2Scale, y and x1Scale can not be null"),
+        return ge::GRAPH_FAILED);
 
     auto shape_x1 = context->GetInputShape(X1_INDEX);
     auto shape_x2 = context->GetInputShape(X2_INDEX);
@@ -48,11 +69,14 @@ static ge::graphStatus InferShape4QuantBatchMatmulInplaceAdd(gert::InferShapeCon
     bool any_unknow_rank = Ops::NN::CheckIsUnknownDimNum(*shape_x1) || Ops::NN::CheckIsUnknownDimNum(*shape_x2);
     if (!any_unknow_rank &&
         (dim_a != QUANT_BATCH_MATMUL_V3_MIN_SHAPE_SIZE || dim_b != QUANT_BATCH_MATMUL_V3_MIN_SHAPE_SIZE)) {
-        OP_LOGE(context->GetNodeName(), "[InferShape] The shape can only be in the range of 2.");
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            opName, "x1, x2",
+            Ops::NN::FormatString("%zuD, %zuD", dim_a, dim_b).c_str(),
+            "the shape dims of x1 and x2 must be 2");
         return ge::GRAPH_FAILED;
     }
     OP_LOGD(
-        context->GetNodeName(), "x1_shape: %s", "x2_shape: %s",
+        opName, "x1_shape: %s", "x2_shape: %s",
         Ops::Base::ToString(*shape_x1).c_str(), Ops::Base::ToString(*shape_x2).c_str());
 
     auto yShape = context->GetInputShape(YREF_INDEX);
@@ -60,7 +84,7 @@ static ge::graphStatus InferShape4QuantBatchMatmulInplaceAdd(gert::InferShapeCon
     auto outShape = context->GetOutputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, outShape);
     *outShape = *yShape;
-    OP_LOGD(context->GetNodeName(), "output shape: %s", Ops::Base::ToString(*(context->GetOutputShape(0))).c_str());
+    OP_LOGD(opName, "output shape: %s", Ops::Base::ToString(*(context->GetOutputShape(0))).c_str());
     return ge::GRAPH_SUCCESS;
 }
 

@@ -13,6 +13,8 @@
  * \brief
  */
 #include "common/op_host/matmul_common_infershape.h"
+#include "log/log.h"
+#include "matmul/common/op_host/log_format_util.h"
 #include "runtime/infer_datatype_context.h"
 
 namespace {
@@ -26,14 +28,16 @@ static ge::graphStatus InferShapeForQuantBatchMatmulV3(gert::InferShapeContext* 
     auto dim_a = shape_x1->GetDimNum();
     auto dim_b = shape_x2->GetDimNum();
     if (scale == nullptr) {
-        OP_LOGE(context->GetNodeName(), "[InferShape] scale is null");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "scale", "null", "scale can not be null");
         return ge::GRAPH_FAILED;
     }
     bool any_unknow_rank = Ops::NN::CheckIsUnknownDimNum(*shape_x1) || Ops::NN::CheckIsUnknownDimNum(*shape_x2);
     if (!any_unknow_rank &&
         (dim_a < QUANT_BATCH_MATMUL_V3_MIN_SHAPE_SIZE || dim_a > QUANT_BATCH_MATMUL_V3_MAX_SHAPE_SIZE ||
          dim_b < QUANT_BATCH_MATMUL_V3_MIN_SHAPE_SIZE || dim_b > QUANT_BATCH_MATMUL_V3_MAX_SHAPE_SIZE)) {
-        OP_LOGE(context->GetNodeName(), "[InferShape] The shape can only be in the range of 2 to 6.");
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            context->GetNodeName(), "x1, x2", Ops::NN::FormatString("%zuD, %zuD", dim_a, dim_b).c_str(),
+            "the shape dims of x1 and x2 must be in the range of 2 to 6");
         return ge::GRAPH_FAILED;
     }
     // first transpose attr is transpose_x1, its index is 1 and bias input tensor index is 4

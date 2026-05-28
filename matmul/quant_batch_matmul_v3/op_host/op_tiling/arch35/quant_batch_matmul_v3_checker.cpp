@@ -15,6 +15,7 @@
 
 #include "common/op_host/op_tiling/tiling_type.h"
 #include "log/log.h"
+#include "matmul/common/op_host/log_format_util.h"
 #include "quant_batch_matmul_v3_checker.h"
 #include "error_util.h"
 
@@ -64,6 +65,8 @@ const std::vector<ge::DataType> AB_DTYPE_LIST = {
 
 namespace optiling {
 
+using Ops::NN::FormatString;
+
 bool QuantBatchMatmulV3Checker::LogicXOR(bool cond1, bool cond2) const
 {
     uint64_t result = static_cast<uint64_t>(cond1) ^ static_cast<uint64_t>(cond2);
@@ -74,44 +77,49 @@ bool QuantBatchMatmulV3Checker::CheckABDtypesSame() const
 {
     OP_TILING_CHECK(
         LogicXOR(inputParams_.aDtype == ge::DT_INT4, inputParams_.bDtype == ge::DT_INT4),
-        CUBE_INNER_ERR_REPORT(
-            inputParams_.opName,
-            "When one input dtype is INT4, then the other input dtype must be INT4, actual x1 is %s, x2 is %s.",
-            ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype).c_str(),
-            ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            inputParams_.opName, "x1, x2",
+            FormatString("%s, %s",
+                ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype).c_str(),
+                ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str()).c_str(),
+            "when the dtype of one input is INT4, the dtype of the other input must be INT4"),
         return false);
     OP_TILING_CHECK(
         LogicXOR(inputParams_.aDtype == ge::DT_INT8, inputParams_.bDtype == ge::DT_INT8),
-        CUBE_INNER_ERR_REPORT(
-            inputParams_.opName,
-            "When one input dtype is INT8, then the other input dtype must be INT8, actual x1 is %s, x2 is %s.",
-            ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype).c_str(),
-            ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            inputParams_.opName, "x1, x2",
+            FormatString("%s, %s",
+                ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype).c_str(),
+                ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str()).c_str(),
+            "when the dtype of one input is INT8, the dtype of the other input must be INT8"),
         return false);
     OP_TILING_CHECK(
         LogicXOR(inputParams_.aDtype == ge::DT_HIFLOAT8, inputParams_.bDtype == ge::DT_HIFLOAT8),
-        CUBE_INNER_ERR_REPORT(
-            inputParams_.opName,
-            "When one input dtype is HIFLOAT8, then the other input dtype must be HIFLOAT8, actual x1 is %s, x2 is %s.",
-            ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype).c_str(),
-            ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            inputParams_.opName, "x1, x2",
+            FormatString("%s, %s",
+                ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype).c_str(),
+                ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str()).c_str(),
+            "when the dtype of one input is HIFLOAT8, the dtype of the other input must be HIFLOAT8"),
         return false);
     OP_TILING_CHECK(
         LogicXOR(inputParams_.aDtype == ge::DT_FLOAT4_E2M1, inputParams_.bDtype == ge::DT_FLOAT4_E2M1),
-        CUBE_INNER_ERR_REPORT(
-            inputParams_.opName,
-            "When one input dtype is FLOAT4, then the other input dtype must be FLOAT4, actual x1 is %s, x2 is %s.",
-            ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype).c_str(),
-            ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            inputParams_.opName, "x1, x2",
+            FormatString("%s, %s",
+                ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype).c_str(),
+                ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str()).c_str(),
+            "when the dtype of one input is FLOAT4, the dtype of the other input must be FLOAT4"),
         return false);
     OP_TILING_CHECK(
         LogicXOR((inputParams_.aDtype == ge::DT_FLOAT8_E4M3FN || inputParams_.aDtype == ge::DT_FLOAT8_E5M2),
                  (inputParams_.bDtype == ge::DT_FLOAT8_E4M3FN || inputParams_.bDtype == ge::DT_FLOAT8_E5M2)),
-        CUBE_INNER_ERR_REPORT(
-            inputParams_.opName,
-            "When one input dtype is FLOAT8, then the other input dtype must be FLOAT8, actual x1 is %s, x2 is %s.",
-            ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype).c_str(),
-            ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            inputParams_.opName, "x1, x2",
+            FormatString("%s, %s",
+                ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype).c_str(),
+                ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str()).c_str(),
+            "when the dtype of one input is FLOAT8, the dtype of the other input must be FLOAT8"),
         return false);
     return true;
 }
@@ -126,12 +134,14 @@ bool QuantBatchMatmulV3Checker::CheckABDtypes() const
         OP_TILING_CHECK(
             std::find(AB_DTYPE_LIST.begin(), AB_DTYPE_LIST.end(), inputParams_.aDtype) == AB_DTYPE_LIST.end() ||
             std::find(AB_DTYPE_LIST.begin(), AB_DTYPE_LIST.end(), inputParams_.bDtype) == AB_DTYPE_LIST.end(),
-                        CUBE_INNER_ERR_REPORT(
-                            inputParams_.opName,
-                            "Input dtypes should be INT4/INT8/FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8, actual are %s and %s.",
-                            ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype).c_str(),
-                            ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str()),
-                        return false);
+            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                inputParams_.opName, "x1, x2",
+                FormatString(
+                    "%s, %s",
+                    ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype).c_str(),
+                    ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str()).c_str(),
+                "the dtypes of x1 and x2 must be INT4/INT8/FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8"),
+            return false);
     }
     return true;
 }
@@ -142,47 +152,47 @@ bool QuantBatchMatmulV3Checker::CheckScaleDtypeWithPertoken() const
     bool isFp8 = inputParams_.aDtype == ge::DT_FLOAT8_E5M2 || inputParams_.aDtype == ge::DT_FLOAT8_E4M3FN;
     OP_TILING_CHECK(inputParams_.aDtype != ge::DT_INT4 && inputParams_.aDtype != ge::DT_INT8 &&
                     inputParams_.perTokenScaleDtype != inputParams_.scaleDtype,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                          "When input is not INT4/INT8, pertokenScale and scale should have the same \
-dtypes, actual pertokeScale is %s and scale is %s.",
-                                          ge::TypeUtils::DataTypeToSerialString(inputParams_.perTokenScaleDtype).c_str(),
-                                          ge::TypeUtils::DataTypeToSerialString(inputParams_.scaleDtype).c_str()),
+                    OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                        inputParams_.opName, "pertokenScale, scale",
+                        FormatString(
+                            "%s, %s",
+                            ge::TypeUtils::DataTypeToSerialString(inputParams_.perTokenScaleDtype).c_str(),
+                            ge::TypeUtils::DataTypeToSerialString(inputParams_.scaleDtype).c_str()).c_str(),
+                        "when the dtype of input is not INT4/INT8, the dtypes of pertokenScale and scale must be the same"),
                     return false);
     OP_TILING_CHECK(
         isFp4 && inputParams_.scaleDtype != ge::DT_FLOAT8_E8M0,
-        CUBE_INNER_ERR_REPORT(
-            inputParams_.opName,
-            "When input is FLOAT4 with pertokenScale, scale must be FLOAT8_E8M0, actual is %s.",
-            ge::TypeUtils::DataTypeToSerialString(inputParams_.scaleDtype).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            inputParams_.opName, "scale", ge::TypeUtils::DataTypeToSerialString(inputParams_.scaleDtype).c_str(),
+            "when the dtype of input is FLOAT4 and pertokenScale exists, the dtype of scale must be FLOAT8_E8M0"),
         return false);
     OP_TILING_CHECK(isFp8 &&
                     (inputParams_.scaleDtype != ge::DT_FLOAT && inputParams_.scaleDtype != ge::DT_FLOAT8_E8M0),
-                    CUBE_INNER_ERR_REPORT(
-                        inputParams_.opName,
-                        "When input is FLOAT8 with pertokenScale, scale must be FLOAT or FLOAT8_E8M0, actual is %s.",
-                        ge::TypeUtils::DataTypeToSerialString(inputParams_.scaleDtype).c_str()),
+                    OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                        inputParams_.opName, "scale",
+                        ge::TypeUtils::DataTypeToSerialString(inputParams_.scaleDtype).c_str(),
+                        "when the dtype of input is FLOAT8 and pertokenScale exists, the dtype of scale must be FLOAT or FLOAT8_E8M0"),
                     return false);
     OP_TILING_CHECK(!(isFp4 || isFp8)  && inputParams_.perTokenScaleDtype != ge::DT_FLOAT,
-                    CUBE_INNER_ERR_REPORT(
-                        inputParams_.opName,
-                        "When input is INT8/HIFLOAT8, pertokenScale should be FLOAT, actual dtype is %s.",
-                        ge::TypeUtils::DataTypeToSerialString(inputParams_.perTokenScaleDtype).c_str()),
+                    OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                        inputParams_.opName, "pertokenScale",
+                        ge::TypeUtils::DataTypeToSerialString(inputParams_.perTokenScaleDtype).c_str(),
+                        "when the dtype of input is INT8/HIFLOAT8, the dtype of pertokenScale must be FLOAT"),
                     return false);
 
     OP_TILING_CHECK((inputParams_.aDtype == ge::DT_INT4 || inputParams_.aDtype == ge::DT_INT8) &&
                     inputParams_.cDtype == ge::DT_FLOAT16 && inputParams_.scaleDtype != ge::DT_FLOAT,
-        CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                              "When input is INT4/INT8 and output is FLOAT16 with pertokenScale, scale dtype should be \
-FLOAT, actual dtype is %s.",
-                              ge::TypeUtils::DataTypeToSerialString(inputParams_.scaleDtype).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            inputParams_.opName, "scale", ge::TypeUtils::DataTypeToSerialString(inputParams_.scaleDtype).c_str(),
+            "when the dtype of input is INT4/INT8, the dtype of output is FLOAT16, and pertokenScale exists, the dtype of scale must be FLOAT"),
         return false);
     OP_TILING_CHECK((inputParams_.aDtype == ge::DT_INT4 || inputParams_.aDtype == ge::DT_INT8) &&
                     inputParams_.cDtype == ge::DT_BF16 &&
                     !(inputParams_.scaleDtype == ge::DT_FLOAT || inputParams_.scaleDtype == ge::DT_BF16),
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                          "When input is INT4/INT8 and output is BFLOAT16 with pertokenScale, scale dtype \
-should be FLOAT/BFLOAT16, actual dtype is %s.",
-                                          ge::TypeUtils::DataTypeToSerialString(inputParams_.scaleDtype).c_str()),
+                    OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                        inputParams_.opName, "scale",
+                        ge::TypeUtils::DataTypeToSerialString(inputParams_.scaleDtype).c_str(),
+                        "when the dtype of input is INT4/INT8, the dtype of output is BFLOAT16, and pertokenScale exists, the dtype of scale must be FLOAT/BFLOAT16"),
                     return false);
     return true;
 }
@@ -198,32 +208,33 @@ bool QuantBatchMatmulV3Checker::CheckScalesDtype() const
     } else {
         OP_TILING_CHECK(
             isFp4,
-            CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                  "When input is FLOAT4, pertokenScale should not be null."),
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                inputParams_.opName, "pertokenScale", "null",
+                "when the dtype of input is FLOAT4, pertokenScale can not be null"),
             return false);
         OP_TILING_CHECK(
             inputParams_.aDtype != ge::DT_INT8 &&
             !(inputParams_.scaleDtype == ge::DT_UINT64 || inputParams_.scaleDtype == ge::DT_INT64),
-            CUBE_INNER_ERR_REPORT(
-                inputParams_.opName,
-                "When input is not INT8 without pertokenScale, scale dtype should be UINT64/INT64, actual dtype is %s.",
-                ge::TypeUtils::DataTypeToSerialString(inputParams_.scaleDtype).c_str()),
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                inputParams_.opName, "scale",
+                ge::TypeUtils::DataTypeToSerialString(inputParams_.scaleDtype).c_str(),
+                "when the dtype of input is not INT8 and pertokenScale does not exist, the dtype of scale must be UINT64/INT64"),
             return false);
         OP_TILING_CHECK(inputParams_.aDtype == ge::DT_INT8 &&
                             (inputParams_.cDtype == ge::DT_INT8 || inputParams_.cDtype == ge::DT_FLOAT16) &&
                             !(inputParams_.scaleDtype == ge::DT_UINT64 || inputParams_.scaleDtype == ge::DT_INT64),
-                        CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                              "When input is INT8 and output is INT8 or FLOAT16 without pertokenScale, \
-scale dtype should be UINT64/INT64, actual dtype is %s.",
-                                              ge::TypeUtils::DataTypeToSerialString(inputParams_.scaleDtype).c_str()),
+                        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                            inputParams_.opName, "scale",
+                            ge::TypeUtils::DataTypeToSerialString(inputParams_.scaleDtype).c_str(),
+                            "when the dtype of input is INT8, the dtype of output is INT8 or FLOAT16, and pertokenScale does not exist, the dtype of scale must be UINT64/INT64"),
                         return false);
         OP_TILING_CHECK(inputParams_.aDtype == ge::DT_INT8 && inputParams_.cDtype == ge::DT_BF16 &&
                             !(inputParams_.scaleDtype == ge::DT_UINT64 || inputParams_.scaleDtype == ge::DT_FLOAT ||
                               inputParams_.scaleDtype == ge::DT_BF16 || inputParams_.scaleDtype == ge::DT_INT64),
-                        CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                              "When input is INT8 and output is BFLOAT16 without pertokenScale, scale \
-dtype should be UINT64/FLOAT/BFLOAT16/INT64, actual dtype is %s.",
-                                              ge::TypeUtils::DataTypeToSerialString(inputParams_.scaleDtype).c_str()),
+                        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                            inputParams_.opName, "scale",
+                            ge::TypeUtils::DataTypeToSerialString(inputParams_.scaleDtype).c_str(),
+                            "when the dtype of input is INT8, the dtype of output is BFLOAT16, and pertokenScale does not exist, the dtype of scale must be UINT64/FLOAT/BFLOAT16/INT64"),
                         return false);
     }
     return true;
@@ -235,10 +246,9 @@ bool QuantBatchMatmulV3Checker::CheckBiasDtype() const
     OP_TILING_CHECK(
         biasDesc != nullptr && inputParams_.biasDtype != ge::DT_FLOAT &&
         inputParams_.aDtype != ge::DT_INT4 && inputParams_.aDtype != ge::DT_INT8,
-        CUBE_INNER_ERR_REPORT(
-            inputParams_.opName,
-            "When input dtype is not INT4/INT8, bias dtype should be FLOAT, actual dtype is %s.",
-            ge::TypeUtils::DataTypeToSerialString(inputParams_.biasDtype).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            inputParams_.opName, "bias", ge::TypeUtils::DataTypeToSerialString(inputParams_.biasDtype).c_str(),
+            "when the dtype of input is not INT4/INT8, the dtype of bias must be FLOAT"),
         return false);
 
     OP_TILING_CHECK(
@@ -246,10 +256,9 @@ bool QuantBatchMatmulV3Checker::CheckBiasDtype() const
             (inputParams_.cDtype == ge::DT_INT8 || inputParams_.cDtype == ge::DT_FLOAT16 || inputParams_.cDtype == ge::DT_BF16) &&
             (inputParams_.scaleDtype == ge::DT_UINT64 || inputParams_.scaleDtype == ge::DT_INT64) &&
             inputParams_.biasDtype != ge::DT_INT32,
-        CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                              "When input dtype is INT4/INT8, output is INT8/FLOAT16/BFLOAT16, and scale is UINT64/INT64, \
-the bias dtype should be INT32, actual dtype is %s.",
-                              ge::TypeUtils::DataTypeToSerialString(inputParams_.biasDtype).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            inputParams_.opName, "bias", ge::TypeUtils::DataTypeToSerialString(inputParams_.biasDtype).c_str(),
+            "when the dtype of input is INT4/INT8, the dtype of output is INT8/FLOAT16/BFLOAT16, and the dtype of scale is UINT64/INT64, the dtype of bias must be INT32"),
         return false);
 
     OP_TILING_CHECK(biasDesc != nullptr && (inputParams_.aDtype == ge::DT_INT4 || inputParams_.aDtype == ge::DT_INT8) &&
@@ -257,10 +266,10 @@ the bias dtype should be INT32, actual dtype is %s.",
                     !(inputParams_.biasDtype == ge::DT_INT32 ||
                         inputParams_.biasDtype == ge::DT_FLOAT ||
                         inputParams_.biasDtype == ge::DT_FLOAT16),
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                          "When input dtype is INT4/INT8, output is FLOAT16, and scale is FLOAT, bias dtype \
-should be INT32/FLOAT/FLOAT16, actual dtype is %s.",
-                                          ge::TypeUtils::DataTypeToSerialString(inputParams_.biasDtype).c_str()),
+                    OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                        inputParams_.opName, "bias",
+                        ge::TypeUtils::DataTypeToSerialString(inputParams_.biasDtype).c_str(),
+                        "when the dtype of input is INT4/INT8, the dtype of output is FLOAT16, and the dtype of scale is FLOAT, the dtype of bias must be INT32/FLOAT/FLOAT16"),
                     return false);
 
     OP_TILING_CHECK(biasDesc != nullptr && (inputParams_.aDtype == ge::DT_INT4 || inputParams_.aDtype == ge::DT_INT8) &&
@@ -269,10 +278,10 @@ should be INT32/FLOAT/FLOAT16, actual dtype is %s.",
                     !(inputParams_.biasDtype == ge::DT_INT32 ||
                         inputParams_.biasDtype == ge::DT_FLOAT ||
                         inputParams_.biasDtype == ge::DT_BF16),
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                          "When input dtype is INT4/INT8, output is BFLOAT16, and scale is FLOAT/BFLOAT16, \
-bias dtype should be INT32/FLOAT/BFLOAT16, actual dtype is %s.",
-                                          ge::TypeUtils::DataTypeToSerialString(inputParams_.biasDtype).c_str()),
+                    OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                        inputParams_.opName, "bias",
+                        ge::TypeUtils::DataTypeToSerialString(inputParams_.biasDtype).c_str(),
+                        "when the dtype of input is INT4/INT8, the dtype of output is BFLOAT16, and the dtype of scale is FLOAT/BFLOAT16, the dtype of bias must be INT32/FLOAT/BFLOAT16"),
                     return false);
 
     return true;
@@ -284,19 +293,21 @@ bool QuantBatchMatmulV3Checker::CheckOutputDtype() const
         (inputParams_.aDtype == ge::DT_FLOAT8_E5M2 || inputParams_.aDtype == ge::DT_FLOAT8_E4M3FN ||
             inputParams_.aDtype == ge::DT_FLOAT8_E8M0 || inputParams_.aDtype == ge::DT_FLOAT4_E2M1) &&
             inputParams_.cDtype == ge::DT_INT8,
-        CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                "When input dtype is FLOAT8/FLOAT4, output dtype must not be INT8, actual is %s.",
-                                ge::TypeUtils::DataTypeToSerialString(inputParams_.cDtype).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            inputParams_.opName, "output", ge::TypeUtils::DataTypeToSerialString(inputParams_.cDtype).c_str(),
+            "when the dtype of input is FLOAT8/FLOAT4, the dtype of output can not be INT8"),
         return false);
     OP_TILING_CHECK(inputParams_.aDtype == ge::DT_HIFLOAT8 && inputParams_.cDtype == ge::DT_INT8,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                            "When input dtype is HIFLOAT8, output must not be INT8, actual is %s.",
-                                            ge::TypeUtils::DataTypeToSerialString(inputParams_.cDtype).c_str()),
+                    OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                        inputParams_.opName, "output",
+                        ge::TypeUtils::DataTypeToSerialString(inputParams_.cDtype).c_str(),
+                        "when the dtype of input is HIFLOAT8, the dtype of output can not be INT8"),
                     return false);
     OP_TILING_CHECK(inputParams_.aDtype == ge::DT_INT4 && inputParams_.cDtype == ge::DT_INT32,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                            "When input dtype is INT4, output must not be INT32, actual is %s.",
-                                            ge::TypeUtils::DataTypeToSerialString(inputParams_.cDtype).c_str()),
+                    OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                        inputParams_.opName, "output",
+                        ge::TypeUtils::DataTypeToSerialString(inputParams_.cDtype).c_str(),
+                        "when the dtype of input is INT4, the dtype of output can not be INT32"),
                     return false);
     bool isFp4 = inputParams_.aDtype == ge::DT_FLOAT4_E2M1;
     bool isFp8 = inputParams_.aDtype == ge::DT_HIFLOAT8 || inputParams_.aDtype == ge::DT_FLOAT8_E5M2 ||
@@ -306,24 +317,22 @@ bool QuantBatchMatmulV3Checker::CheckOutputDtype() const
         OP_TILING_CHECK(
             (isFp8 || isFp4) && !(inputParams_.cDtype == ge::DT_FLOAT || inputParams_.cDtype == ge::DT_FLOAT16 ||
                                     inputParams_.cDtype == ge::DT_BF16),
-            CUBE_INNER_ERR_REPORT(
-                inputParams_.opName,
-                "When input is FLOAT8/FLOAT4 with pertokenScale, output must be FLOAT/FLOAT16/BFLOAT16, actual is %s.",
-                ge::TypeUtils::DataTypeToSerialString(inputParams_.cDtype).c_str()),
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                inputParams_.opName, "output", ge::TypeUtils::DataTypeToSerialString(inputParams_.cDtype).c_str(),
+                "when the dtype of input is FLOAT8/FLOAT4 and pertokenScale exists, the dtype of output must be FLOAT/FLOAT16/BFLOAT16"),
             return false);
         OP_TILING_CHECK(
             !(isFp8 || isFp4) && !(inputParams_.cDtype == ge::DT_FLOAT16 || inputParams_.cDtype == ge::DT_BF16),
-            CUBE_INNER_ERR_REPORT(
-                inputParams_.opName,
-                "When input is INT4/INT8 with pertokenScale, output dtype should be FLOAT16/BFLOAT16 actual is %s.",
-                ge::TypeUtils::DataTypeToSerialString(inputParams_.cDtype).c_str()),
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                inputParams_.opName, "output", ge::TypeUtils::DataTypeToSerialString(inputParams_.cDtype).c_str(),
+                "when the dtype of input is INT4/INT8 and pertokenScale exists, the dtype of output must be FLOAT16/BFLOAT16"),
             return false);
         OP_TILING_CHECK(
             !(inputParams_.cDtype == ge::DT_FLOAT || inputParams_.cDtype == ge::DT_FLOAT16 ||
                 inputParams_.cDtype == ge::DT_BF16),
-            CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                    "Output dtype should be FLOAT/FLOAT16/BFLOAT16 with pertokenScale, actual is %s.",
-                                    ge::TypeUtils::DataTypeToSerialString(inputParams_.cDtype).c_str()),
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                inputParams_.opName, "output", ge::TypeUtils::DataTypeToSerialString(inputParams_.cDtype).c_str(),
+                "when pertokenScale exists, the dtype of output must be FLOAT/FLOAT16/BFLOAT16"),
             return false);
     }
     return true;
@@ -337,34 +346,37 @@ bool QuantBatchMatmulV3Checker::CheckDtypesInRange() const
                                                                 ge::DT_FLOAT, ge::DT_INT32};
     OP_TILING_CHECK(
         std::find(legalInputDtypes.begin(), legalInputDtypes.end(), inputParams_.aDtype) == legalInputDtypes.end(),
-        CUBE_INNER_ERR_REPORT(
-            inputParams_.opName,
-            "The x1 dtype must be INT4/INT8/FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8/FLOAT4_E2M1, actual is %s.",
-            ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            inputParams_.opName, "x1", ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype).c_str(),
+            "the dtype of x1 must be INT4/INT8/FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8/FLOAT4_E2M1"),
         return false);
     OP_TILING_CHECK(
         std::find(legalInputDtypes.begin(), legalInputDtypes.end(), inputParams_.bDtype) == legalInputDtypes.end(),
-        CUBE_INNER_ERR_REPORT(
-            inputParams_.opName,
-            "The x2 dtype must be INT4/INT8/FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8/FLOAT4_E2M1, actual is %s.",
-            ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            inputParams_.opName, "x2", ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str(),
+            "the dtype of x2 must be INT4/INT8/FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8/FLOAT4_E2M1"),
         return false);
     OP_TILING_CHECK(
         std::find(legalOutputDtypes.begin(), legalOutputDtypes.end(), inputParams_.cDtype) == legalOutputDtypes.end(),
-        CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                "Output dtype must be INT8/FLOAT16/BFLOAT16/FLOAT, actual is %s.",
-                                ge::TypeUtils::DataTypeToSerialString(inputParams_.cDtype).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            inputParams_.opName, "output", ge::TypeUtils::DataTypeToSerialString(inputParams_.cDtype).c_str(),
+            "the dtype of output must be INT8/FLOAT16/BFLOAT16/FLOAT/INT32"),
         return false);
     OP_TILING_CHECK(
         inputParams_.cDtype == ge::DT_INT32 && (inputParams_.aDtype != ge::DT_INT8 || inputParams_.bDtype != ge::DT_INT8),
-        CUBE_INNER_ERR_REPORT(inputParams_.opName, "When out is INT32, x1 and x2 should be INT8, actual are %s and %s.",
-                            ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype).c_str(),
-                            ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            inputParams_.opName, "x1, x2",
+            FormatString(
+                "%s, %s",
+                ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype).c_str(),
+                ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str()).c_str(),
+            "when the dtype of output is INT32, the dtypes of x1 and x2 must be INT8"),
         return false);
     auto offsetDesc = context_->GetOptionalInputDesc(GetOffsetIdx());
     OP_TILING_CHECK(offsetDesc != nullptr && offsetDesc->GetDataType() != ge::DT_FLOAT,
-        CUBE_INNER_ERR_REPORT(inputParams_.opName, "The offset dtype should be FLOAT, actual dtype is %s.",
-                                ge::TypeUtils::DataTypeToSerialString(offsetDesc->GetDataType()).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            inputParams_.opName, "offset", ge::TypeUtils::DataTypeToSerialString(offsetDesc->GetDataType()).c_str(),
+            "the dtype of offset must be FLOAT"),
         return false);
     return true;
 }
@@ -378,28 +390,30 @@ bool QuantBatchMatmulV3Checker::CheckDtype4WeightNz() const
     bool isFp4Pair = IsFp4Pair(inputParams_.aDtype, inputParams_.bDtype);
     OP_TILING_CHECK(
         !(isInt8Pair || isHifloat8Pair || isFp4Pair || isFp8E4M3Pair),
-        CUBE_INNER_ERR_REPORT(
-            inputParams_.opName,
-            "When format of x2 is FRACTAL_NZ, input dtype must be INT8/HIFLOAT8/FLOAT8_E4M3FN/FLOAT4_E2M1, \
-actual x1 is %s, x2 is %s.",
-            ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype).c_str(),
-            ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            inputParams_.opName, "x1, x2",
+            FormatString(
+                "%s, %s",
+                ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype).c_str(),
+                ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str()).c_str(),
+            "when the format of x2 is FRACTAL_NZ, the dtype of input must be INT8/HIFLOAT8/FLOAT8_E4M3FN/FLOAT4_E2M1"),
         return false);
     OP_TILING_CHECK(
         (isFp8E4M3Pair || isFp4Pair) &&
             !(inputParams_.scaleDtype == ge::DT_FLOAT8_E8M0 && inputParams_.perTokenScaleDtype == ge::DT_FLOAT8_E8M0),
-        CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                              "When format of x2 is FRACTAL_NZ and input dtype is FLOAT8_E4M3FN or FLOAT4_E2M1, scale \
-and pertokenScale are FLOAT8_E8M0, actual scale is %s, pertokenScale is %s.",
-                              ge::TypeUtils::DataTypeToSerialString(inputParams_.scaleDtype).c_str(),
-                              ge::TypeUtils::DataTypeToSerialString(inputParams_.perTokenScaleDtype).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            inputParams_.opName, "scale, pertokenScale",
+            FormatString(
+                "%s, %s",
+                ge::TypeUtils::DataTypeToSerialString(inputParams_.scaleDtype).c_str(),
+                ge::TypeUtils::DataTypeToSerialString(inputParams_.perTokenScaleDtype).c_str()).c_str(),
+            "when the format of x2 is FRACTAL_NZ and the dtype of input is FLOAT8_E4M3FN/FLOAT4_E2M1, the dtypes of scale and pertokenScale must be FLOAT8_E8M0"),
         return false);
     OP_TILING_CHECK(
         isHifloat8Pair && !isHifloat8Scale,
-        CUBE_INNER_ERR_REPORT(
-            inputParams_.opName,
-            "When format of x2 is FRACTAL_NZ and input dtype is HIFLOAT8, scale must be UINT64/INT64, actual scale is %s.",
-            ge::TypeUtils::DataTypeToSerialString(inputParams_.scaleDtype).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            inputParams_.opName, "scale", ge::TypeUtils::DataTypeToSerialString(inputParams_.scaleDtype).c_str(),
+            "when the format of x2 is FRACTAL_NZ and the dtype of input is HIFLOAT8, the dtype of scale must be UINT64/INT64"),
         return false);
     return true;
 }
@@ -436,7 +450,9 @@ bool QuantBatchMatmulV3Checker::CheckInputValidInPerblockMode(const gert::Shape&
        return true;
     }
     OP_TILING_CHECK(inputParams_.hasBias,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "In perblock mode, bias is not supported yet."),
+                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                        inputParams_.opName, "bias", "not null",
+                        "when the quant mode is G-B or B-B, bias must be null"),
                     return false);
     auto scaleShapeLen = scaleShape.GetDimNum();
     auto x2ShapeLen = x2Shape.GetDimNum();
@@ -464,25 +480,19 @@ bool QuantBatchMatmulV3Checker::CheckInputValidInPerblockMode(const gert::Shape&
 bool QuantBatchMatmulV3Checker::CheckGroupValidInPerblockMode() const
 {
     OP_TILING_CHECK(inputParams_.groupSizeM != PER_BLOCK_SIZE && inputParams_.groupSizeM != 1UL,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                          "When scale dtype is not FLOAT8_E8M0, \
-input or infered groupSizeM should be 128 or 1, but now is %lu, \
-groupSizeM = (groupSize >> 32) & 0xFFFF.",
-                                          inputParams_.groupSizeM),
+                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                        inputParams_.opName, "groupSizeM", std::to_string(inputParams_.groupSizeM).c_str(),
+                        "when the quant mode is G-B or B-B, input or inferred groupSizeM must be 128 or 1, groupSizeM = (groupSize >> 32) & 0xFFFF"),
                     return false);
     OP_TILING_CHECK(inputParams_.groupSizeK != PER_BLOCK_SIZE,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                          "When scale dtype is not FLOAT8_E8M0, \
-input or infered groupSizeK should be 128, but now is %lu, \
-groupSizeK = groupSize & 0xFFFF.",
-                                          inputParams_.groupSizeK),
+                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                        inputParams_.opName, "groupSizeK", std::to_string(inputParams_.groupSizeK).c_str(),
+                        "when the quant mode is G-B or B-B, input or inferred groupSizeK must be 128, groupSizeK = groupSize & 0xFFFF"),
                     return false);
     OP_TILING_CHECK(inputParams_.groupSizeN != PER_BLOCK_SIZE,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                          "When scale dtype is not FLOAT8_E8M0, \
-input or infered groupSizeN should be 128, but now is %lu, \
-groupSizeN = (groupSize >> 16) & 0xFFFF.",
-                                          inputParams_.groupSizeN),
+                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                        inputParams_.opName, "groupSizeN", std::to_string(inputParams_.groupSizeN).c_str(),
+                        "when the quant mode is G-B or B-B, input or inferred groupSizeN must be 128, groupSizeN = (groupSize >> 16) & 0xFFFF"),
                     return false);
   return true;
 }
@@ -498,13 +508,12 @@ bool QuantBatchMatmulV3Checker::CheckShapeValidInPerblockMode(const gert::Shape&
              static_cast<uint64_t>(scaleShape.GetDim(x2ShapeLen - 2)) ||
          ops::CeilDiv(static_cast<uint64_t>(x2Shape.GetDim(x2ShapeLen - 1)), PER_BLOCK_SIZE) !=
              static_cast<uint64_t>(scaleShape.GetDim(x2ShapeLen - 1))),
-        CUBE_INNER_ERR_REPORT(
-            inputParams_.opName,
-            "In G-B or B-B quantification, the size of last two dimensions of scale should be both equal to \
-the size of last two dimensions of x2 ceildivided by groupSize 128, but now, \
-scaleShape[-1] is %ld, x2Shape[-1] is %ld, scaleShape[-2] is %ld, x2Shape[-2] is %ld.",
-            scaleShape.GetDim(x2ShapeLen - 1), x2Shape.GetDim(x2ShapeLen - 1),
-            scaleShape.GetDim(x2ShapeLen - 2), x2Shape.GetDim(x2ShapeLen - 2)),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            inputParams_.opName, "scale, x2",
+            FormatString("[%ld, %ld], [%ld, %ld]",
+                         scaleShape.GetDim(x2ShapeLen - 2), scaleShape.GetDim(x2ShapeLen - 1),
+                         x2Shape.GetDim(x2ShapeLen - 2), x2Shape.GetDim(x2ShapeLen - 1)).c_str(),
+            "when the quant mode is G-B or B-B, the last two dimensions of scale must be equal to the last two dimensions of x2 ceildivided by groupSize 128"),
         return false);
     int64_t x1MIndex = inputParams_.transA ? (x1ShapeLen - 1) : (x1ShapeLen - 2);
     int64_t x1KIndex = inputParams_.transA ? (x1ShapeLen - 2) : (x1ShapeLen - 1);
@@ -514,21 +523,17 @@ scaleShape[-1] is %ld, x2Shape[-1] is %ld, scaleShape[-2] is %ld, x2Shape[-2] is
     uint64_t scaleX1K = pertoken.GetDim(x1KIndex);
     OP_TILING_CHECK(
         (ops::CeilDiv(x1M, inputParams_.groupSizeM) != scaleX1M),
-        CUBE_INNER_ERR_REPORT(
-            inputParams_.opName,
-            "In G-B or B-B quantification, the m dimension size of x1 ceildivided by groupSizeM should be equal to \
-the m dimension size of pertokenScale, but now, groupSizeM is %lu, \
-m dimension size of pertokenScale is %lu, m dimension size of x1Shape is %lu.",
-            inputParams_.groupSizeM, scaleX1M, x1M),
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            inputParams_.opName, "groupSizeM, pertokenScaleM, x1M",
+            FormatString("%lu, %lu, %lu", inputParams_.groupSizeM, scaleX1M, x1M).c_str(),
+            "when the quant mode is G-B or B-B, the m dimension size of pertokenScale must be equal to the m dimension size of x1 ceildivided by groupSizeM"),
         return false);
     OP_TILING_CHECK(
         (ops::CeilDiv(x1K, inputParams_.groupSizeK) != scaleX1K),
-        CUBE_INNER_ERR_REPORT(
-            inputParams_.opName,
-            "In G-B or B-B quantification, the k dimension size of x1 ceildivided by groupSizeK should be equal to \
-the k dimension size of pertokenScale, but now, groupSizeK is %lu, \
-k dimension size of pertokenScale is %lu, k dimension size of x1Shape is %lu.",
-            inputParams_.groupSizeK, scaleX1K, x1K),
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            inputParams_.opName, "groupSizeK, pertokenScaleK, x1K",
+            FormatString("%lu, %lu, %lu", inputParams_.groupSizeK, scaleX1K, x1K).c_str(),
+            "when the quant mode is G-B or B-B, the k dimension size of pertokenScale must be equal to the k dimension size of x1 ceildivided by groupSizeK"),
         return false);
     return true;
 }
@@ -537,19 +542,17 @@ bool QuantBatchMatmulV3Checker::CheckDimValidInPerblockMode(size_t x1ShapeLen, s
                                                             size_t pertokenShapeLen, size_t scaleShapeLen) const
 {
     OP_TILING_CHECK(scaleShapeLen != x2ShapeLen,
-                    CUBE_INNER_ERR_REPORT(
-                        inputParams_.opName,
-                        "In G-B or B-B quantification, x2 dimension and scale dimension should be equal, \
-but x2 dimension is: %zu, scale dimension is: %zu.",
-                        x2ShapeLen, scaleShapeLen),
+                    OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+                        inputParams_.opName, "x2, scale",
+                        FormatString("%zuD, %zuD", x2ShapeLen, scaleShapeLen).c_str(),
+                        "when the quant mode is G-B or B-B, the dimension of scale must be equal to the dimension of x2"),
                     return false);
     OP_TILING_CHECK(
         pertokenShapeLen != x1ShapeLen,
-        CUBE_INNER_ERR_REPORT(
-            inputParams_.opName,
-            "In G-B or B-B quantification, x1 dimension and pertoken dimension should be equal, \
-but x1 dimension is: %zu, pertoken dimension is: %zu.",
-            x1ShapeLen, pertokenShapeLen),
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            inputParams_.opName, "x1, pertokenScale",
+            FormatString("%zuD, %zuD", x1ShapeLen, pertokenShapeLen).c_str(),
+            "when the quant mode is G-B or B-B, the dimension of pertokenScale must be equal to the dimension of x1"),
         return false);
     return true;
 }
@@ -563,19 +566,21 @@ bool QuantBatchMatmulV3Checker::CheckBatchValidInPerblockMode(const gert::Shape&
     if (x2ShapeLen > DIM_NUM_TWO) {
         for (size_t i = 0; i < x2ShapeLen - DIM_NUM_TWO; ++i) {
             OP_TILING_CHECK(scaleShape.GetDim(i) != x2Shape.GetDim(i),
-                            CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                                  "In G-B or B-B quantification, x2 batch and scale batch should be equal,"
-                                                  "but at dimension %zu, x2 batch: %ld, scale batch: %ld.",
-                                                  i, x2Shape.GetDim(i), scaleShape.GetDim(i)), return false);
+                            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                                inputParams_.opName, "dimIndex, x2Batch, scaleBatch",
+                                FormatString("%zu, %ld, %ld", i, x2Shape.GetDim(i), scaleShape.GetDim(i)).c_str(),
+                                "when the quant mode is G-B or B-B, the batch dimension of scale must be equal to the batch dimension of x2"),
+                            return false);
         }
     }
     if (x1ShapeLen > DIM_NUM_TWO) {
         for (size_t i = 0; i < x1ShapeLen - DIM_NUM_TWO; ++i) {
             OP_TILING_CHECK(pertoken.GetDim(i) != x1Shape.GetDim(i),
-                            CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                                  "In G-B or B-B quantification, x1 batch and pertoken batch should be equal,"
-                                                  "but at dimension %zu, x1 batch: %ld, pertoken batch: %ld.",
-                                                  i, x1Shape.GetDim(i), pertoken.GetDim(i)), return false);
+                            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                                inputParams_.opName, "dimIndex, x1Batch, pertokenBatch",
+                                FormatString("%zu, %ld, %ld", i, x1Shape.GetDim(i), pertoken.GetDim(i)).c_str(),
+                                "when the quant mode is G-B or B-B, the batch dimension of pertokenScale must be equal to the batch dimension of x1"),
+                            return false);
         }
     }
     return true;
@@ -586,32 +591,30 @@ bool QuantBatchMatmulV3Checker::MxPertokenScaleShapeCheck(const gert::StorageSha
     auto &pertoken = pertokenShape->GetStorageShape();
     auto pertokenShapeLen = pertoken.GetDimNum();
     OP_TILING_CHECK(pertokenShapeLen != SCALE_THREE_DIM,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                          "In mx quantification, pertokenScale's dimension must be 3, but it is %zu.",
-                                          pertokenShapeLen),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                        inputParams_.opName, "pertokenScale", FormatString("%zuD", pertokenShapeLen).c_str(),
+                        "when the quant mode is mx, the shape dim of pertokenScale must be 3"),
                     return false);
     auto mDimIdx = inputParams_.transA ? 1 : 0;
     auto kDimIdx = inputParams_.transA ? 0 : 1;
     OP_TILING_CHECK(
         static_cast<uint64_t>(pertoken.GetDim(kDimIdx)) != ops::CeilDiv(inputParams_.kSize, MXFP_DIVISOR_SIZE),
-        CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                              "In mx quantification, when x1's transposition is %s, pertokenScale's dimension %d shape \
-should be equal to x1 k dimension size[%lu] ceil div 64, but actual is [%ld].",
-                              inputParams_.transA ? "true" : "false", kDimIdx, inputParams_.kSize,
-                              pertoken.GetDim(kDimIdx)),
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            inputParams_.opName, "x1K, pertokenScaleK",
+            FormatString("%lu, %ld", inputParams_.kSize, pertoken.GetDim(kDimIdx)).c_str(),
+            "when the quant mode is mx, the k dimension of pertokenScale must be equal to the k dimension size of x1 ceildivided by 64"),
         return false);
     OP_TILING_CHECK(static_cast<uint64_t>(pertoken.GetDim(mDimIdx)) != inputParams_.mSize,
-                    CUBE_INNER_ERR_REPORT(
-                        inputParams_.opName,
-                        "In mx quantification, when x1's transposition is %s, pertokenScale's dimension %d shape \
-should be equal to x1 m dimension size[%lu], but actual is [%ld].",
-                        inputParams_.transA ? "true" : "false", mDimIdx, inputParams_.mSize, pertoken.GetDim(mDimIdx)),
+                    OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                        inputParams_.opName, "x1M, pertokenScaleM",
+                        FormatString("%lu, %ld", inputParams_.mSize, pertoken.GetDim(mDimIdx)).c_str(),
+                        "when the quant mode is mx, the m dimension of pertokenScale must be equal to the m dimension size of x1"),
                     return false);
     OP_TILING_CHECK(static_cast<uint64_t>(pertoken.GetDim(pertokenShapeLen - 1)) != MXFP_MULTI_BASE_SIZE,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                          "In mx quantification, pertokenScale's last dimension \
-should be equal to 2, but actual is [%ld].",
-                                          pertoken.GetDim(pertokenShapeLen - 1)),
+                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                        inputParams_.opName, "pertokenScale last dimension",
+                        std::to_string(pertoken.GetDim(pertokenShapeLen - 1)).c_str(),
+                        "when the quant mode is mx, the last dimension of pertokenScale must be equal to 2"),
                     return false);
     return true;
 }
@@ -621,31 +624,30 @@ bool QuantBatchMatmulV3Checker::MxScaleShapeCheck(const gert::Shape &scaleShape)
     auto scaleShapeLen = scaleShape.GetDimNum();
     OP_TILING_CHECK(
         scaleShapeLen != SCALE_THREE_DIM,
-        CUBE_INNER_ERR_REPORT(inputParams_.opName, "In mx quantification, scale's dimension must be 3, but it is %zu.",
-                              scaleShapeLen),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            inputParams_.opName, "scale", FormatString("%zuD", scaleShapeLen).c_str(),
+            "when the quant mode is mx, the shape dim of scale must be 3"),
         return false);
     auto kDimIdx = inputParams_.transB ? 1 : 0;
     auto nDimIdx = inputParams_.transB ? 0 : 1;
     OP_TILING_CHECK(
         static_cast<uint64_t>(scaleShape.GetDim(kDimIdx)) != ops::CeilDiv(inputParams_.kSize, MXFP_DIVISOR_SIZE),
-        CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                              "In mx quantification, when x2's transposition is %s, scale's dimension %d shape should \
-be equal to x2 k dimension size[%lu] ceil div 64, but actual is [%ld].",
-                              inputParams_.transB ? "true" : "false", kDimIdx, inputParams_.kSize,
-                              scaleShape.GetDim(kDimIdx)),
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            inputParams_.opName, "x2K, scaleK",
+            FormatString("%lu, %ld", inputParams_.kSize, scaleShape.GetDim(kDimIdx)).c_str(),
+            "when the quant mode is mx, the k dimension of scale must be equal to the k dimension size of x2 ceildivided by 64"),
         return false);
     OP_TILING_CHECK(static_cast<uint64_t>(scaleShape.GetDim(nDimIdx)) != inputParams_.nSize,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                          "In mx quantification, when x2's transposition is %s, scale's dimension %d \
-shape should be equal to x2 n dimension size[%lu], but actual is [%ld].",
-                                          inputParams_.transB ? "true" : "false", nDimIdx, inputParams_.nSize,
-                                          scaleShape.GetDim(nDimIdx)),
+                    OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                        inputParams_.opName, "x2N, scaleN",
+                        FormatString("%lu, %ld", inputParams_.nSize, scaleShape.GetDim(nDimIdx)).c_str(),
+                        "when the quant mode is mx, the n dimension of scale must be equal to the n dimension size of x2"),
                     return false);
     OP_TILING_CHECK(static_cast<uint64_t>(scaleShape.GetDim(scaleShapeLen - 1)) != MXFP_MULTI_BASE_SIZE,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                          "In mx quantification, scale's dimension 2 shape should be equal to 2, but \
-actual is [%ld].",
-                                          scaleShape.GetDim(scaleShapeLen - 1)),
+                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                        inputParams_.opName, "scale dimension 2",
+                        std::to_string(scaleShape.GetDim(scaleShapeLen - 1)).c_str(),
+                        "when the quant mode is mx, dimension 2 of scale must be equal to 2"),
                     return false);
     return true;
 }
@@ -653,10 +655,9 @@ actual is [%ld].",
 bool QuantBatchMatmulV3Checker::CheckKAxisGreaterThanTwo() const
 {
     if (inputParams_.kSize <= 2UL) { // FLOAT4 input requires K to be greater than 2.
-        CUBE_INNER_ERR_REPORT(
-            inputParams_.opName,
-            "When input dtype is FLOAT4_E2M1, k axis must be greater than 2, actual is %ld.",
-            inputParams_.kSize);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            inputParams_.opName, "k", std::to_string(inputParams_.kSize).c_str(),
+            "when the dtype of input is FLOAT4_E2M1, the K dimension must be greater than 2");
         return false;
     }
     return true;
@@ -666,10 +667,11 @@ bool QuantBatchMatmulV3Checker::CheckInnerAxisIsEven(const std::vector<int64_t> 
 {
     // Both inner axes must be even for FLOAT4 packing.
     OP_TILING_CHECK(dimValueOfMKN[X2_INNER_IDX] % 2 != 0 || dimValueOfMKN[X1_INNER_IDX] % 2 != 0,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                          "The x1 inner[%ld] or x2 inner[%ld] is not even \
-number when input type is FLOAT4.",
-                                          dimValueOfMKN[X1_INNER_IDX], dimValueOfMKN[X2_INNER_IDX]), return false);
+                    OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                        inputParams_.opName, "x1 inner, x2 inner",
+                        FormatString("%ld, %ld", dimValueOfMKN[X1_INNER_IDX], dimValueOfMKN[X2_INNER_IDX]).c_str(),
+                            "when the dtype of input is FLOAT4, the inner axis of x1 and x2 must be an even number"),
+                    return false);
     return true;
 }
 
@@ -694,17 +696,16 @@ bool QuantBatchMatmulV3Checker::CheckInputValidInMxPerGroupMode(const gert::Shap
         return true;
     }
     OP_TILING_CHECK(inputParams_.groupSizeM != 1UL || inputParams_.groupSizeN != 1UL || inputParams_.groupSizeK != 32UL,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                          "When scale dtype is FLOAT8_E8M0, \
-input or infered [groupSizeM, groupSizeN ,groupSizeK] should be [1, 1, 32], \
-but now [groupSizeM, groupSizeN ,groupSizeK] is [%lu, %lu, %lu], \
-groupSize = groupSizeK | groupSizeN << 16 | groupSizeM << 32.",
-                                          inputParams_.groupSizeM, inputParams_.groupSizeN, inputParams_.groupSizeK),
+                    OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                        inputParams_.opName, "groupSizeM, groupSizeN, groupSizeK",
+                        FormatString("%lu, %lu, %lu", inputParams_.groupSizeM, inputParams_.groupSizeN,
+                                     inputParams_.groupSizeK).c_str(),
+                        "when the quant mode is mx, input or inferred [groupSizeM, groupSizeN, groupSizeK] must be [1, 1, 32], groupSize = groupSizeK | groupSizeN << 16 | groupSizeM << 32"),
                     return false);
     if (pertokenShape == nullptr) {
-        CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                              "The pertokenScale is required input when scale dtype is FLOAT8_E8M0, \
-but pertoken is null.");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            inputParams_.opName, "pertokenScale", "null",
+            "when the quant mode is mx, pertokenScale can not be null");
         return false;
     }
     OP_TILING_CHECK(!MxPertokenScaleShapeCheck(pertokenShape),
@@ -728,26 +729,33 @@ bool QuantBatchMatmulV3Checker::CheckShapeInRangeForOptionalInputs(const gert::S
     if (biasShape != nullptr) {
         auto biasDimNum = biasShape->GetStorageShape().GetDimNum();
         OP_TILING_CHECK(!(biasDimNum == 1 || biasDimNum == BIAS_THREE_DIM),
-                        CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                              "The bias dimension should equal to 1 or 3, but it is %zu.",
-                                              biasDimNum), return false);
+                        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                            inputParams_.opName, "bias", FormatString("%zuD", biasDimNum).c_str(),
+                            "the shape dim of bias must be 1 or 3"),
+                        return false);
         OP_TILING_CHECK(biasDimNum == BIAS_THREE_DIM && outDimNum != biasDimNum,
-                        CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                              "When bias dimension equal to 3, output dimension must be 3, but it is %zu.",
-                                              outDimNum), return false);
+                        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                            inputParams_.opName, "output", FormatString("%zuD", outDimNum).c_str(),
+                            "when the shape dim of bias is 3, the shape dim of output must be 3"),
+                        return false);
     }
     if (offsetShape != nullptr) {
         OP_TILING_CHECK(inputParams_.aDtype == ge::DT_INT8 && inputParams_.cDtype != ge::DT_INT8,
-                        CUBE_INNER_ERR_REPORT(inputParams_.opName, "When inputDtype is INT8 and outputDtype is not \
-INT8, offset must be null."), return false);
+                        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                            inputParams_.opName, "offset", "not null",
+                            "when the dtype of input is INT8 and the dtype of output is not INT8, offset must be null"),
+                        return false);
         OP_TILING_CHECK(inputParams_.cDtype == ge::DT_INT8 && offsetShape->GetStorageShape().GetDimNum() != 1,
-                        CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                              "The offset shape should be 1 dimension, but it is %zu.",
-                                                                   offsetShape->GetStorageShape().GetDimNum()),
+                        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                            inputParams_.opName, "offset",
+                            FormatString("%zuD", offsetShape->GetStorageShape().GetDimNum()).c_str(),
+                            "the shape dim of offset must be 1"),
                         return false);
         OP_TILING_CHECK(
             inputParams_.scaleDtype != ge::DT_UINT64 && inputParams_.scaleDtype != ge::DT_INT64,
-            CUBE_INNER_ERR_REPORT(inputParams_.opName, "When scaleDtype is not UINT64/INT64, offset must be null."),
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                inputParams_.opName, "offset", "not null",
+                "when the dtype of scale is not UINT64/INT64, offset must be null"),
             return false);
     }
     if (pertokenShape != nullptr) {
@@ -755,10 +763,11 @@ INT8, offset must be null."), return false);
         OP_TILING_CHECK(
             !inputParams_.isPerBlock && !inputParams_.isMxPerGroup &&
             (pertokenDimNum != 1 || scaleShape.GetDimNum() != 1),
-            CUBE_INNER_ERR_REPORT(
-                inputParams_.opName,
-                "When not G-B, B-B quantification or mx quantification, dimNum of pertokenScale and \
-Scale must be 1, actual are [%zu] and [%zu]", pertokenDimNum, scaleShape.GetDimNum()), return false);
+            OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+                inputParams_.opName, "pertokenScale, scale",
+                FormatString("%zuD, %zuD", pertokenDimNum, scaleShape.GetDimNum()).c_str(),
+                "when the quant mode is not G-B, B-B or mx, the shape dim of pertokenScale and scale must be 1"),
+            return false);
     }
     return true;
 }
@@ -772,16 +781,19 @@ bool QuantBatchMatmulV3Checker::CheckShapeInBoundary(const gert::Shape &shape, u
         int64_t curDim = shape.GetDim(i);
 
         OP_TILING_CHECK(curDim <= 0 || curDim > static_cast<int64_t>(INT32_MAX),
-                        CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                              "Input shape must be within the range of [1,%d], \
-actual %zu dimension of %s is %ld.",
-                                              INT32_MAX, i, dimName, curDim), return false);
+                        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                            inputParams_.opName, FormatString("%s dimension %zu", dimName, i).c_str(),
+                            std::to_string(curDim).c_str(),
+                            FormatString("the dimension value of %s must be within the range of [1,%d]",
+                                         dimName, INT32_MAX).c_str()),
+                        return false);
 
         mulBound = curDim * mul;
         OP_TILING_CHECK(mulBound / curDim != mul,
-                        CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                              "Multiple of %s shape dims should be in boundary of INT64_MAX.",
-                                              dimName), return false);
+                        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                            inputParams_.opName, dimName, Shape2String(shape).c_str(),
+                            "the product of shape dimensions must be within the range of INT64_MAX"),
+                        return false);
         mul = mulBound;
     }
     return true;
@@ -797,26 +809,30 @@ bool QuantBatchMatmulV3Checker::BiasShapeCheck(const gert::Shape &biasShape, con
         auto biasSecondDim = static_cast<uint64_t>(biasShape.GetDim(1));
         auto biasThirdDim = static_cast<uint64_t>(biasShape.GetDim(2));
         OP_TILING_CHECK(biasFirstDim != inputParams_.batchC,
-                        CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                              "Input bias 1st dimension shape should equal to batchC[%lu], \
-but it is %zu.",
-                                              inputParams_.batchC, biasFirstDim), return false);
+                        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                            inputParams_.opName, "biasFirstDim, batchC",
+                            FormatString("%lu, %lu", biasFirstDim, inputParams_.batchC).c_str(),
+                            "dimension 1 of bias must be equal to batchC"),
+                        return false);
         OP_TILING_CHECK(biasSecondDim != 1UL,
-                        CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                              "Input bias 2nd dimension shape should equal to 1, but it is %zu.",
-                                              biasSecondDim), return false);
+                        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                            inputParams_.opName, "biasSecondDim", std::to_string(biasSecondDim).c_str(),
+                            "dimension 2 of bias must be equal to 1"),
+                        return false);
         OP_TILING_CHECK(biasThirdDim != inputParams_.nSize,
-                        CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                              "Input bias 3rd dimension shape should equal to inputParams_.nSize, \
-but it is %zu while n is %lu.",
-                                              biasThirdDim, inputParams_.nSize), return false);
+                        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                            inputParams_.opName, "biasThirdDim, n",
+                            FormatString("%lu, %lu", biasThirdDim, inputParams_.nSize).c_str(),
+                            "dimension 3 of bias must be equal to n"),
+                        return false);
     }
     if (biasDimNum == 1) {
         OP_TILING_CHECK(static_cast<uint64_t>(biasShape.GetDim(0)) != inputParams_.nSize,
-                        CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                              "Input bias dimension shape should equal n, but it is %ld while n is %lu.",
-                                              biasShape.GetDim(0), inputParams_.nSize),
-                                              return false);
+                        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                            inputParams_.opName, "biasDim, n",
+                            FormatString("%ld, %lu", biasShape.GetDim(0), inputParams_.nSize).c_str(),
+                            "dimension 1 of bias must be equal to n"),
+                                               return false);
     }
     OP_TILING_CHECK(
         (inputParams_.aDtype == ge::DT_FLOAT8_E4M3FN || inputParams_.aDtype == ge::DT_FLOAT8_E5M2 ||
@@ -824,7 +840,10 @@ but it is %zu while n is %lu.",
             inputParams_.scaleDtype == ge::DT_FLOAT && static_cast<uint64_t>(scaleShape.GetDim(0)) == inputParams_.nSize &&
             inputParams_.nSize != 1UL && pertokenShape != nullptr && inputParams_.perTokenScaleDtype == ge::DT_FLOAT &&
             pertokenShape->GetStorageShape().GetDim(0) == 1L && inputParams_.mSize != 1UL,
-        CUBE_INNER_ERR_REPORT(inputParams_.opName, "Input bias is unsupported."), return false);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            inputParams_.opName, "bias", "not null",
+            "when the dtype of input is FLOAT8/HIFLOAT8, the dtype of scale is FLOAT, scale dimension 0 is n, pertokenScale exists, the dtype of pertokenScale is FLOAT, pertokenScale dimension 0 is 1, and m and n are not 1, bias must be null"),
+        return false);
 
     return true;
 }
@@ -833,8 +852,9 @@ bool QuantBatchMatmulV3Checker::ExtraInputCheck() const
 {
     OP_TILING_CHECK(IsLowFloatInputType(inputParams_.aDtype) &&
                     context_->GetOptionalInputShape(GetOffsetIdx()) != nullptr,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "Offset is not supported with input dtype(%s) yet.",
-                                          ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype).c_str()),
+                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                        inputParams_.opName, "offset", "not null",
+                        "when the dtype of input is HIFLOAT8/FLOAT8_E4M3FN/FLOAT8_E5M2/FLOAT4_E2M1, offset must be null"),
                     return false);
     return true;
 }
@@ -849,34 +869,35 @@ bool QuantBatchMatmulV3Checker::PerTokenDimValueCheck(const gert::Shape &scaleSh
     OP_TILING_CHECK(
         isFp8HiF8 && !inputParams_.isMxPerGroup && (perTokenDim0 != 1UL && perTokenDim0 != inputParams_.mSize) &&
         pertoken.GetDimNum() == 1 && scaleShape.GetDimNum() == 1 && scaleShape.GetDim(0) == 1,
-        CUBE_INNER_ERR_REPORT(
-            inputParams_.opName,
-            "When the quantization mode is not mx, when scale's dimension 0 size equal to 1, pertokenScale \
-dimension 0 size must be equal to m[%lu] or 1, actual is [%ld].",
-            inputParams_.mSize, pertoken.GetDim(0)), return false);
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            inputParams_.opName, "m, pertokenScaleDim0",
+            FormatString("%lu, %ld", inputParams_.mSize, pertoken.GetDim(0)).c_str(),
+            "when the quant mode is not mx and dimension 0 of scale is 1, dimension 0 of pertokenScale must be equal to m or 1"),
+        return false);
     OP_TILING_CHECK(
         isFp8HiF8 && !inputParams_.isMxPerGroup && inputParams_.mSize != 1UL && perTokenDim0 == 1UL &&
             pertoken.GetDimNum() == 1 && scaleShape.GetDimNum() == 1 &&
             (scaleShape.GetDim(0) != 1L && static_cast<uint64_t>(scaleShape.GetDim(0)) != inputParams_.nSize),
-        CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                              "When the quantization mode is not mx, perTokenScale dimension 0 size equal to \
-1, m not equal to 1, scale dimension 0 size must be equal to 1 or n[%lu], actual is [%ld].",
-                              inputParams_.nSize, scaleShape.GetDim(0)),
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            inputParams_.opName, "n, scaleDim0",
+            FormatString("%lu, %ld", inputParams_.nSize, scaleShape.GetDim(0)).c_str(),
+            "when the quant mode is not mx, dimension 0 of pertokenScale is 1, and m is not 1, dimension 0 of scale must be equal to 1 or n"),
         return false);
     OP_TILING_CHECK(
         pertoken.GetDimNum() == 1 && static_cast<uint64_t>(perTokenDim0) == inputParams_.mSize &&
         scaleShape.GetDimNum() == 1 &&
         (scaleShape.GetDim(0) != 1L && static_cast<uint64_t>(scaleShape.GetDim(0)) != inputParams_.nSize),
-        CUBE_INNER_ERR_REPORT(
-            inputParams_.opName,
-            "PerTokenScale dimension 0 size equal to m[%lu], scale dimension 0 size must be equal to 1 or n[%lu], \
-actual is [%ld].",
-            inputParams_.mSize, inputParams_.nSize, scaleShape.GetDim(0)), return false);
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            inputParams_.opName, "m, n, scaleDim0",
+            FormatString("%lu, %lu, %ld", inputParams_.mSize, inputParams_.nSize, scaleShape.GetDim(0)).c_str(),
+            "when dimension 0 of pertokenScale is m, dimension 0 of scale must be equal to 1 or n"),
+        return false);
     OP_TILING_CHECK(perTokenDim0 != inputParams_.mSize && inputParams_.aDtype == ge::DT_INT8,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                            "PertokenScale dimension 0 shape should be equal to m[%lu] \
-but actual is [%ld].",
-                                            inputParams_.mSize, pertoken.GetDim(0)), return false);
+                    OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                        inputParams_.opName, "m, pertokenScaleDim0",
+                        FormatString("%lu, %ld", inputParams_.mSize, pertoken.GetDim(0)).c_str(),
+                        "dimension 0 of pertokenScale must be equal to m"),
+                    return false);
     return true;
 }
 
@@ -890,30 +911,30 @@ bool QuantBatchMatmulV3Checker::CheckDimValue(const gert::Shape & scaleShape, co
     auto x2Outer = dimValueOfMKN[X2_OUTER_IDX];
     auto kBSize = static_cast<uint64_t>(inputParams_.transB ? x2Inner : x2Outer);
     OP_TILING_CHECK(inputParams_.kSize != kBSize,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "The K dimension of x1[%lu] is not equal to \
-the K dimension of x2[%lu].",
-                                          inputParams_.kSize, kBSize),
-                    return false);
+                    OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                        inputParams_.opName, "x1 K, x2 K",
+                        FormatString("%lu, %lu", inputParams_.kSize, kBSize).c_str(),
+                        "the K dimension of x1 must be equal to the K dimension of x2"), return false);
     if (biasShape != nullptr && !BiasShapeCheck(biasShape->GetStorageShape(), scaleShape, pertokenShape)) {
         return false;
     }
     if (offsetShape != nullptr) {
         OP_TILING_CHECK(inputParams_.cDtype == ge::DT_INT8 && !(offsetShape->GetStorageShape().GetDim(0) == 1L ||
-                         static_cast<uint64_t>(offsetShape->GetStorageShape().GetDim(0)) == inputParams_.nSize),
-                        CUBE_INNER_ERR_REPORT(inputParams_.opName, "The offset dimension value must be 1 or n[%lu], \
-but it is %ld.",
-                                                                   inputParams_.nSize,
-                                                                   offsetShape->GetStorageShape().GetDim(0)),
-                        return false);
+                        static_cast<uint64_t>(offsetShape->GetStorageShape().GetDim(0)) == inputParams_.nSize),
+                        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                            inputParams_.opName, "n, offsetDim",
+                            FormatString("%lu, %ld",
+                                         inputParams_.nSize, offsetShape->GetStorageShape().GetDim(0)).c_str(),
+                            "dimension 0 of offset must be 1 or n"), return false);
     }
     auto scaleShapeLen = scaleShape.GetDimNum();
     OP_TILING_CHECK(
         scaleShapeLen != 1 &&
             (inputParams_.scaleDtype == ge::DT_UINT64 || inputParams_.scaleDtype == ge::DT_INT64 || pertokenShape == nullptr),
-        CUBE_INNER_ERR_REPORT(
-            inputParams_.opName,
-            "When scaleDtype is UINT64/INT64 or pertokenScale is null, scale dimension must be 1, but it is %zu.",
-            scaleShapeLen), return false);
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            inputParams_.opName, "scale", FormatString("%zuD", scaleShapeLen).c_str(),
+            "when the dtype of scale is UINT64/INT64 or pertokenScale does not exist, the shape dim of scale must be 1"),
+        return false);
     if (pertokenShape != nullptr) {
         OP_TILING_CHECK(!PerTokenDimValueCheck(scaleShape, pertokenShape),
                         CUBE_INNER_ERR_REPORT(inputParams_.opName, "Failed to check perTokenScale shape."),
@@ -923,17 +944,17 @@ but it is %ld.",
     if (inputParams_.aDtype == ge::DT_INT4 && inputParams_.bDtype == ge::DT_INT4) {
         // remainder by 2 to check if it is a even number
         OP_TILING_CHECK(x1Inner < 0 || x1Inner % 2 != 0 || x2Inner < 0 || x2Inner % 2 != 0,
-                        CUBE_INNER_ERR_REPORT(inputParams_.opName, "When input dtype is int4, \
-last axis of input x1 and x2 should be a positive even number, \
-but atcually last axis of x1 is [%ld], last axis of x2 is [%ld].",
-                                              x1Inner, x2Inner), return false);
+                        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                            inputParams_.opName, "x1 last axis, x2 last axis",
+                            FormatString("%ld, %ld", x1Inner, x2Inner).c_str(),
+                            "when the dtype of input is INT4, the last axis of x1 and x2 must be a positive even number"),
+                        return false);
         // 当输入为INT4, transA必须为false
         OP_TILING_CHECK(inputParams_.transA,
-                        CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                              "When input dtype is INT4, transposeX1 should be false, actually is true."),
-                                              return false);
+                        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                            inputParams_.opName, "transposeX1", "true",
+                            "when the dtype of input is INT4, transposeX1 must be false"), return false);
     }
-    
     return true;
 }
 
