@@ -478,16 +478,6 @@ static void GetNCDHWShape(const T &origin_shape, Shape &ncdhw_shape, const ge::F
 
 static bool CheckTransposeOutputdingRange(gert::TilingContext *context, Conv3dBpInputV2RunInfo& runInfoV2, OtherParams& otherParams)
 {
-  // mdc场景不支持outputPadding>1
-  if (IsSocVersionFuse(context)) {
-    OP_CHECK_IF
-      (otherParams.output_padding.output_padding_d != 0 ||
-       otherParams.output_padding.output_padding_h != 0 || 
-       otherParams.output_padding.output_padding_w != 0,
-          OP_LOGE(context, "output_padding_d [%d] output_padding_h [%d] or output_padding_w [%d] must all equal to zero",
-            otherParams.output_padding.output_padding_d, otherParams.output_padding.output_padding_h, otherParams.output_padding.output_padding_w),
-            return false);
-  }
   // outputPadding值需要小于同维度dilation或stride
   OP_CHECK_IF(
     (otherParams.output_padding.output_padding_d >= runInfoV2.stride_d && otherParams.output_padding.output_padding_d >= runInfoV2.dilation_d),
