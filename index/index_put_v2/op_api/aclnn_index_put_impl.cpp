@@ -1353,8 +1353,10 @@ aclnnStatus aclnnIndexPutImplGetWorkspaceSize(aclTensor *selfRef,
         CHECK_RET(arch3510Result != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
     // 固定写法，将计算结果拷贝到输出out上，out可能是非连续的tensor
-    auto viewCopyResult = l0op::ViewCopy(arch3510Result, selfRef, uniqueExecutor.get());
-    CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    if (!isNonContiguous) {
+      auto viewCopyResult = l0op::ViewCopy(arch3510Result, selfRef, uniqueExecutor.get());
+      CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
 
     // 固定写法，获取计算过程中需要使用的workspace大小
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();
