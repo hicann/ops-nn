@@ -184,7 +184,7 @@ function(gen_aicpu_ini_from_opdef)
     OUTPUT ${aicpu_opdef_ini}
     COMMAND
       ${CMAKE_COMMAND} -E env ENABLE_SOURCE_PACKAGE=${OPBUILD_ENABLE_SOURCE} ${opbuild_env}
-      ${ASCEND_CANN_PACKAGE_PATH}/toolkit/tools/opbuild/op_build $<TARGET_FILE:${aicpu_opdef_target}> ${OPBUILD_OUT_DIR} --aicpu
+      ${OP_BUILD_TOOL} $<TARGET_FILE:${aicpu_opdef_target}> ${OPBUILD_OUT_DIR} --aicpu
     DEPENDS ${aicpu_opdef_target}
     COMMENT "Generating ${aicpu_opdef_ini} from ${aicpu_opdef_so}"
     VERBATIM
