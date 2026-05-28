@@ -557,7 +557,9 @@ private:
         intriParams.nValue = nValue;
         intriParams.dValue = self_->ctx.convTilingData->convApiTiling.singleCoreCi;
         intriParams.srcDValue = self_->ctx.convTilingData->convApiTiling.orgHixWi;
+        intriParams.srcDnMatrixStride = nValue;
         intriParams.dstNzNStride = 1;
+        intriParams.dstNzMatrixStride = nValue * C04_CIN_SIZE;
     }
 
     __aicore__ inline void SetNd2NzIntriParamsC04(Nd2NzParams &intriParams)

@@ -80,7 +80,7 @@ std::string IntToString(const T& intValue)
     return std::to_string(intValue);
 }
 
-constexpr size_t LIMIT_MESSAGE_SIZE = 1024U;
+constexpr size_t LIMIT_MESSAGE_SIZE = 4096U;
 #define FORMAT_STRING(fmt, ...) FormatString(fmt, ##__VA_ARGS__)
 inline std::string FormatString(const char* fmt, ...) {
     if (fmt == nullptr) {

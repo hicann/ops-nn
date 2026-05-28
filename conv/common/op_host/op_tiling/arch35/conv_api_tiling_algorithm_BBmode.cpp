@@ -59,8 +59,8 @@ void ConvTilingAlgorithmBBmode::AdjustN()
         tilingIns_->cubeInfo.n0;
     // fixpipe buffer limit
     nTileAdjusted = tilingIns_->shapeInfo.channelWiseCoeff > 0 ? min((tilingIns_->platformInfo.fbSize /
-        static_cast<uint64_t>(tilingIns_->shapeInfo.channelWiseCoeff * FP16_DTYPE_SIZE)), nTileAdjusted) :
-        nTileAdjusted;
+        static_cast<uint64_t>(tilingIns_->shapeInfo.channelWiseCoeff * FP16_DTYPE_SIZE)) /
+        tilingIns_->cubeInfo.n0 * tilingIns_->cubeInfo.n0, nTileAdjusted) : nTileAdjusted;
     nTileAdjusted = tilingIns_->hasBias ? min((tilingIns_->platformInfo.btSize / this->biasDTypeSize), nTileAdjusted) :
         nTileAdjusted; // bias table limit
     uint64_t nCutAdjusted = CeilDiv(tilingIns_->shapeInfo.orgCo, nTileAdjusted);

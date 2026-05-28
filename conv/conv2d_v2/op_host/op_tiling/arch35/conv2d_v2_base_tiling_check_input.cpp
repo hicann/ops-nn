@@ -305,10 +305,16 @@ bool Conv2dBaseTiling::GetPosByFormat(const ge::Format format, const std::string
 {
     string formatStr = formatToStrTab[format];
     // util func illegal scene protect, not a useful dfx
-    OP_LOGE_IF(formatStr.length() != CONV2D_DIM_SIZE_LIMIT, false, context_->GetNodeName(),
-        "%s AscendC: %s format is not 4D.", paramInfo_.nodeType.c_str(), inputStr.c_str());
-    OP_LOGE_IF(pos.length() != 1 || formatStr.find(pos) == string::npos, false, context_->GetNodeName(),
-        "%s AscendC: %s position %s not in 4d format: %s.", paramInfo_.nodeType.c_str(), inputStr.c_str(), pos.c_str(), formatStr.c_str());
+    if (formatStr.length() != CONV2D_DIM_SIZE_LIMIT) {
+        OP_LOGE_FOR_INVALID_FORMAT(context_->GetNodeType(), inputStr.c_str(), formatStr.c_str(),
+            "4D format (for example NCHW)");
+        return false;
+    }
+    if (pos.length() != 1 || formatStr.find(pos) == string::npos) {
+        std::string expect = "containing " + pos;
+        OP_LOGE_FOR_INVALID_FORMAT(context_->GetNodeType(), inputStr.c_str(), formatStr.c_str(), expect.c_str());
+        return false;
+    }
     posIdx = formatStr.find(pos);
     return true;
 }
@@ -451,7 +457,7 @@ ge::graphStatus Conv2dBaseTiling::CheckParamsDtypeWithBias(std::vector<std::vect
     OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeType(), "x, filter, bias, y",
         incorrectDtypes.c_str(),
         FormatString("The dtypes of these parameters support only the following combinations: %s",
-            VectorsToString(supportedTypesList, GeDtypeToString)).c_str());
+            VectorsToString(supportedTypesList, GeDtypeToString).c_str()).c_str());
     return ge::GRAPH_FAILED;
 }
 

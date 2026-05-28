@@ -298,10 +298,10 @@ ge::graphStatus Conv2dBaseTiling::GetConv2DAxisPosInfo()
     auto fMapDesc = context_->GetInputDesc(INPUT_FMAP_INDEX);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, fMapDesc);
     string fmapOriFormat = ge::TypeUtils::FormatToSerialString(fMapDesc->GetOriginFormat());
-    OP_TILING_CHECK(fmapOriFormat != "NCHW" && fmapOriFormat != "NHWC",
-                    OP_LOGE(context_->GetNodeName(), "%s AscendC: unsupported fmapOriFormat %s.",
-                            paramInfo_.nodeType.c_str(), fmapOriFormat.c_str()),
-                    return ge::GRAPH_FAILED);
+    if (fmapOriFormat != "NCHW" && fmapOriFormat != "NHWC") {
+        OP_LOGE_FOR_INVALID_FORMAT(context_->GetNodeType(), "x", fmapOriFormat.c_str(), "NCHW or NHWC");
+        return ge::GRAPH_FAILED;
+    }
 
     conv2dOriginFormatAixsPosInfo_.nIndex = fmapOriFormat.find('N');
     conv2dOriginFormatAixsPosInfo_.cIndex = fmapOriFormat.find('C');

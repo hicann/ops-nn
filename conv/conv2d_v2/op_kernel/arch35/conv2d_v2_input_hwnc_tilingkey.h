@@ -36,7 +36,8 @@ ASCENDC_TPL_UINT_SEL(FmapCopyMode, ASCENDC_TPL_UI_LIST,                         
 ASCENDC_TPL_UINT_SEL(InnerBatch, ASCENDC_TPL_UI_LIST,                                                                \
     CONV_INNER_BATCH_SINGLE),                                                                                        \
 ASCENDC_TPL_UINT_SEL(DisContinuous, ASCENDC_TPL_UI_LIST,                                                             \
-    CONV_DIS_CONTINUOUS_INPUT_HWNC)
+    CONV_DIS_CONTINUOUS_INPUT_HWNC),                                                                                 \
+CONV2D_SCALAR_OPT_SEL(CONV_NOT_SMALL_WEIGHT, CONV_FULLLOAD_KL1_NL0, CONV_WEIGHT_SMALLER_THAN_BL0)
 
 #define CONV2D_INPUT_HWNC_ONLY_MN_FULLLOAD_SEL()                                                                     \
 ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIC_ONLY),                                                                   \
@@ -91,7 +92,8 @@ ASCENDC_TPL_UINT_SEL(FmapCopyMode, ASCENDC_TPL_UI_LIST,                         
 ASCENDC_TPL_UINT_SEL(InnerBatch, ASCENDC_TPL_UI_LIST,                                                                \
     CONV_INNER_BATCH_KERNEL_1X1_MULTI, CONV_INNER_BATCH_MULTI),                                                      \
 ASCENDC_TPL_UINT_SEL(DisContinuous, ASCENDC_TPL_UI_LIST,                                                             \
-    CONV_DIS_CONTINUOUS_INPUT_HWNC)
+    CONV_DIS_CONTINUOUS_INPUT_HWNC),                                                                                 \
+CONV2D_SCALAR_OPT_SEL(CONV_NOT_SMALL_WEIGHT, CONV_FULLLOAD_KL1_NL0, CONV_WEIGHT_SMALLER_THAN_BL0)
 
 #define CONV2D_INNER_BATCH_INPUT_HWNC_ONLY_MN_FULLLOAD_SEL()                                                         \
 ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIC_ONLY),                                                                   \
