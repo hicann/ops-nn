@@ -62,7 +62,7 @@ static ge::graphStatus InferShape4AdaptiveAvgPool2d(gert::InferShapeContext* con
     }
     const int64_t* output_size = static_cast<const int64_t*>(output_size_ptr->GetData());
     for (int i = 0; i < output_size_num; i++) {
-        y_shape->AppendDim((int64_t)output_size[i]);
+        y_shape->AppendDim(static_cast<int64_t>(output_size[i]));
     }
     OP_LOGD(context->GetNodeName(), "runtime2.0 AdaptiveAvgPool2d infershape run success.");
     return ge::GRAPH_SUCCESS;

@@ -44,7 +44,7 @@ static inline void SetAllUnknownDim(const int64_t rank, gert::Shape* output_shap
     }
 }
 
-static ge::graphStatus CheckAttrsValid(gert::InferShapeContext* context)
+static ge::graphStatus CheckAttrsValid(const gert::InferShapeContext* context)
 {
     auto attrs = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
@@ -71,7 +71,7 @@ static ge::graphStatus CheckAttrsValid(gert::InferShapeContext* context)
 }
 
 static ge::graphStatus HandleUnknownShape(
-    gert::InferShapeContext* context, const gert::Shape* x1Shape, const gert::Shape* x2Shape,
+    const gert::InferShapeContext* context, const gert::Shape* x1Shape, const gert::Shape* x2Shape,
     const gert::Shape* gradShape, gert::Shape* yShape)
 {
     size_t x1DimNum = x1Shape->GetDimNum();

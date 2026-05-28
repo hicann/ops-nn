@@ -224,4 +224,177 @@ TEST_F(MaxPoolGradInfer, max_pool_grad_inferdatatype_fp16)
     }
 }
 
+// ======================== Unknown Shape ========================
+TEST_F(MaxPoolGradInfer, max_pool_grad_infershape_unknown_shape)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("MaxPoolGrad")->infer_shape;
+
+    gert::StorageShape x1Shape = {{1, 1, -1, -1}, {}};
+    gert::StorageShape x2Shape = {{1, 1, 2, 2}, {}};
+    gert::StorageShape gradShape = {{1, 1, 2, 2}, {}};
+    gert::StorageShape yShape = {{}, {}};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs(
+                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 1})},
+                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 1})},
+                           {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("VALID")},
+                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")}})
+                      .InputShapes({&x1Shape, &x2Shape, &gradShape})
+                      .OutputShapes({&yShape})
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    gert::Shape* output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    ASSERT_EQ(Shape2String(*output), "[-1, -1, -1, -1]");
+}
+
+// ======================== Unknown Rank ========================
+TEST_F(MaxPoolGradInfer, max_pool_grad_infershape_unknown_rank)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("MaxPoolGrad")->infer_shape;
+
+    gert::StorageShape x1Shape = {{-2}, {}};
+    gert::StorageShape x2Shape = {{1, 1, 2, 2}, {}};
+    gert::StorageShape gradShape = {{1, 1, 2, 2}, {}};
+    gert::StorageShape yShape = {{}, {}};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs(
+                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 1})},
+                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 1})},
+                           {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("VALID")},
+                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")}})
+                      .InputShapes({&x1Shape, &x2Shape, &gradShape})
+                      .OutputShapes({&yShape})
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+}
+
+// ======================== Failure Cases ========================
+TEST_F(MaxPoolGradInfer, max_pool_grad_infershape_fail_invalid_format)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("MaxPoolGrad")->infer_shape;
+
+    gert::StorageShape x1Shape = {{1, 1, 4, 4}, {}};
+    gert::StorageShape x2Shape = {{1, 1, 2, 2}, {}};
+    gert::StorageShape gradShape = {{1, 1, 2, 2}, {}};
+    gert::StorageShape yShape = {{}, {}};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_FRACTAL_NZ, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::Format::FORMAT_FRACTAL_NZ, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::Format::FORMAT_FRACTAL_NZ, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs(
+                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 1})},
+                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 1})},
+                           {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("VALID")},
+                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")}})
+                      .InputShapes({&x1Shape, &x2Shape, &gradShape})
+                      .OutputShapes({&yShape})
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+}
+
+TEST_F(MaxPoolGradInfer, max_pool_grad_infershape_fail_invalid_ksize_length)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("MaxPoolGrad")->infer_shape;
+
+    gert::StorageShape x1Shape = {{1, 1, 4, 4}, {}};
+    gert::StorageShape x2Shape = {{1, 1, 2, 2}, {}};
+    gert::StorageShape gradShape = {{1, 1, 2, 2}, {}};
+    gert::StorageShape yShape = {{}, {}};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs(
+                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2})},
+                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 1})},
+                           {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("VALID")},
+                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")}})
+                      .InputShapes({&x1Shape, &x2Shape, &gradShape})
+                      .OutputShapes({&yShape})
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+}
+
+TEST_F(MaxPoolGradInfer, max_pool_grad_infershape_fail_invalid_strides_length)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("MaxPoolGrad")->infer_shape;
+
+    gert::StorageShape x1Shape = {{1, 1, 4, 4}, {}};
+    gert::StorageShape x2Shape = {{1, 1, 2, 2}, {}};
+    gert::StorageShape gradShape = {{1, 1, 2, 2}, {}};
+    gert::StorageShape yShape = {{}, {}};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs(
+                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 1})},
+                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({2, 2, 1})},
+                           {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("VALID")},
+                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")}})
+                      .InputShapes({&x1Shape, &x2Shape, &gradShape})
+                      .OutputShapes({&yShape})
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+}
+
+TEST_F(MaxPoolGradInfer, max_pool_grad_infershape_fail_invalid_padding)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("MaxPoolGrad")->infer_shape;
+
+    gert::StorageShape x1Shape = {{1, 1, 4, 4}, {}};
+    gert::StorageShape x2Shape = {{1, 1, 2, 2}, {}};
+    gert::StorageShape gradShape = {{1, 1, 2, 2}, {}};
+    gert::StorageShape yShape = {{}, {}};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs(
+                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 1})},
+                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({1, 2, 2, 1})},
+                           {"padding", Ops::NN::AnyValue::CreateFrom<std::string>("CALCULATED")},
+                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>("NCHW")}})
+                      .InputShapes({&x1Shape, &x2Shape, &gradShape})
+                      .OutputShapes({&yShape})
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+}
+
 } // namespace
