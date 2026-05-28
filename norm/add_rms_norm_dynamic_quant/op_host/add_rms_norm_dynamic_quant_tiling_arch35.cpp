@@ -350,12 +350,19 @@ uint64_t AddRmsNormDynamicQuantRegbaseTiling::CalUBTotalSize(
         totalSize += 1 * baseNB32Align * sizeof(float); // y2Tmp
     }
 
-    totalSize += NUM_TWO * B32_BLOCK_NUM * sizeof(float); // rstd/scale1
-    if (tilingParams.hasY2Scale2) {
-        totalSize += 1 * B32_BLOCK_NUM * sizeof(float); // scale2
+    if (TILING_TYPE_NORMAL == tilingType) {
+        totalSize += NUM_TWO * baseMB32Align * sizeof(float); // rstd/scale1
+        if (tilingParams.hasY2Scale2) {
+            totalSize += 1 * baseMB32Align * sizeof(float); // scale2
+        }
+    } else {
+        totalSize += NUM_TWO * B32_BLOCK_NUM * sizeof(float); // rstd/scale1
+        if (tilingParams.hasY2Scale2) {
+            totalSize += 1 * B32_BLOCK_NUM * sizeof(float); // scale2
+        }
+        totalSize += LEVEL_BUFFER_CNT * ONCE_VECTOR_SIZE * sizeof(float); // levelbuf
+        totalSize += 1 * tilingParams.vecLength * sizeof(float);          // tempBuf
     }
-    totalSize += LEVEL_BUFFER_CNT * ONCE_VECTOR_SIZE * sizeof(float); // levelbuf
-    totalSize += 1 * tilingParams.vecLength * sizeof(float);          // tempBuf
 
     return totalSize;
 }
@@ -439,10 +446,18 @@ static uint64_t GetSingleRowPowerSplit(uint64_t n)
 ge::graphStatus AddRmsNormDynamicQuantRegbaseTiling::SetTilingParams()
 {
     OP_LOGD(nodeName.c_str(), "Enter AddRmsNormDynamicQuantRegbaseTiling SetTilingParams.");
-    uint64_t tmpUBSize;
     tilingParams.powerLoop = 1;
 
-    // 1. 全载模版切分修改 全载选择条件修改为新UB buffer分配方式 perf
+    if (TryPerfTiling() || TryNormTiling() || TrySingleRowTiling() || TrySplitTiling()) {
+        return ge::GRAPH_SUCCESS;
+    }
+
+    OP_LOGE(nodeName.c_str(), "Can not find one tiling.");
+    return ge::GRAPH_FAILED;
+}
+
+bool AddRmsNormDynamicQuantRegbaseTiling::TryPerfTiling()
+{
     int64_t tmpPower = 0;
     int64_t fullLoadBaseM = CalFullLoadBaseM(tilingParams.numN, tmpPower);
     if (fullLoadBaseM >= 1 && tilingParams.numN <= FULL_LOAD_R_MAX) {
@@ -450,27 +465,50 @@ ge::graphStatus AddRmsNormDynamicQuantRegbaseTiling::SetTilingParams()
         tilingParams.baseM = std::min(fullLoadBaseM, static_cast<int64_t>(tilingParams.mPerCore));
         tilingParams.powerSplit = tmpPower;
         tilingParams.tilingType = TILING_TYPE_PERF;
-        return ge::GRAPH_SUCCESS;
+        return true;
     }
+    return false;
+}
 
-    // 2. SingleRow: UB = 16 * D_aligned + 1024 (1024 = 2 * ROW_FACTOR * sizeof(float), ROW_FACTOR=128)
-    {
-        auto yDataType = context_->GetOutputDesc(Y1_INDEX)->GetDataType();
-        uint64_t yDtypeSize = GetSizeByDataType(yDataType);
-        uint64_t outputAlign = (yDtypeSize > 0) ? (BLOCK_SIZE / yDtypeSize) : 32;
-        uint64_t D_aligned = Ops::Base::CeilAlign(tilingParams.numN, outputAlign);
-        uint64_t singleRowUbSize = 16 * D_aligned + 1024;
-        if (singleRowUbSize <= tilingParams.maxUbSize) {
-            tilingParams.baseN = tilingParams.numN;
-            tilingParams.baseM = 1;
-            tilingParams.tilingType = TILING_TYPE_SINGLE_ROW;
-            tilingParams.powerSplit = GetSingleRowPowerSplit(tilingParams.numN);
-            return ge::GRAPH_SUCCESS;
+bool AddRmsNormDynamicQuantRegbaseTiling::TryNormTiling()
+{
+    uint64_t tmpUBSize = CalUBTotalSize(1, tilingParams.numN, TILING_TYPE_NORMAL);
+    if (tmpUBSize <= tilingParams.maxUbSize) {
+        tilingParams.baseN = tilingParams.numN;
+        uint64_t justNUBSize = CalUBTotalSize(0, tilingParams.baseN, TILING_TYPE_NORMAL);
+        uint64_t rstdCount = tilingParams.hasY2Scale2 ? 3 : 2; // rstd/scale1/scale2
+        uint64_t rstdRemainUBSize = rstdCount * BLOCK_SIZE;
+        tilingParams.baseM = 1;
+        if (rstdRemainUBSize + justNUBSize <= tilingParams.maxUbSize) {
+            tilingParams.baseM = (tilingParams.maxUbSize - rstdRemainUBSize - justNUBSize) /
+                                 (tmpUBSize - rstdRemainUBSize - justNUBSize + rstdCount * sizeof(float));
         }
+        tilingParams.tilingType = TILING_TYPE_NORMAL;
+        return true;
     }
+    return false;
+}
 
-    // 3. Cut n
-    tmpUBSize = CalUBTotalSize(1, tilingParams.xReduceAlignNum, TILING_TYPE_SPILT);
+bool AddRmsNormDynamicQuantRegbaseTiling::TrySingleRowTiling()
+{
+    auto yDataType = context_->GetOutputDesc(Y1_INDEX)->GetDataType();
+    uint64_t yDtypeSize = GetSizeByDataType(yDataType);
+    uint64_t outputAlign = (yDtypeSize > 0) ? (BLOCK_SIZE / yDtypeSize) : 32;
+    uint64_t D_aligned = Ops::Base::CeilAlign(tilingParams.numN, outputAlign);
+    uint64_t singleRowUbSize = 16 * D_aligned + 1024;
+    if (singleRowUbSize <= tilingParams.maxUbSize) {
+        tilingParams.baseN = tilingParams.numN;
+        tilingParams.baseM = 1;
+        tilingParams.tilingType = TILING_TYPE_SINGLE_ROW;
+        tilingParams.powerSplit = GetSingleRowPowerSplit(tilingParams.numN);
+        return true;
+    }
+    return false;
+}
+
+bool AddRmsNormDynamicQuantRegbaseTiling::TrySplitTiling()
+{
+    uint64_t tmpUBSize = CalUBTotalSize(1, tilingParams.xReduceAlignNum, TILING_TYPE_SPILT);
     if (tmpUBSize <= tilingParams.maxUbSize) {
         uint64_t tmpPowerCutN = tilingParams.xReduceAlignNum;
         while (CalUBTotalSize(1, tmpPowerCutN * MULTI_FACTOR_2, TILING_TYPE_SPILT) <= tilingParams.maxUbSize) {
@@ -485,11 +523,9 @@ ge::graphStatus AddRmsNormDynamicQuantRegbaseTiling::SetTilingParams()
         tilingParams.baseM = 1;
         tilingParams.baseN = tilingParams.powerSplit;
         tilingParams.tilingType = TILING_TYPE_SPILT;
-        return ge::GRAPH_SUCCESS;
+        return true;
     }
-
-    OP_LOGE(nodeName.c_str(), "Can not find one tiling.");
-    return ge::GRAPH_FAILED;
+    return false;
 }
 
 ge::graphStatus AddRmsNormDynamicQuantRegbaseTiling::DoOpTiling()
@@ -514,6 +550,11 @@ ge::graphStatus AddRmsNormDynamicQuantRegbaseTiling::DoOpTiling()
     tilingParams.baseNReduceAlign = Ops::Base::CeilAlign(tilingParams.baseN, tilingParams.xReduceAlignNum);
     uint64_t reduceBufLen = tilingParams.baseNReduceAlign / (2 * tilingParams.vecLength);
     tilingParams.reduceBufLenAlign = Ops::Base::CeilAlign(reduceBufLen, static_cast<uint64_t>(B32_BLOCK_NUM));
+
+    if (TILING_TYPE_NORMAL == tilingParams.tilingType) {
+        uint64_t tmpPower = std::floor(std::log(tilingParams.baseNReduceAlign) / std::log(LOG_2));
+        tilingParams.powerSplit = std::pow(LOG_2, tmpPower);
+    }
 
     SetTilingData();
     PrintTilingData();
