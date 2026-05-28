@@ -953,7 +953,7 @@ aclnnStatus CreateMatmulOpInfo(const aclTensor* self, const aclTensor* mat2, con
         mmOpInfo.shapeInfo.dtypeBSize);
 
     // 解析当前规格matmulop支持的dtype能力
-    std::shared_ptr<SocMatMulRuleBase> socRule = SocMatMulRule::getInstance();
+    std::shared_ptr<SocMatMulRuleBase> socRule = BuildRule();
     aclnnStatus status = socRule -> PromoteDtype(self, mat2, bias, out, cubeMathType, mmOpInfo);
     CHECK_RET(status == ACLNN_SUCCESS, status);
 
@@ -2114,7 +2114,7 @@ aclnnStatus SocMatMulRuleBase::GetUpperDtype(const aclTensor* matA, const aclTen
 
         PromoteResult result = GetUpperDtypeByLookUpTable(inputCase, cubeMathType);
         // process result
-        if (result.isError) {
+        if (result.logMessage != nullptr && result.isError) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "%s", result.logMessage);
             return ACLNN_ERR_PARAM_INVALID;
         }
@@ -2352,9 +2352,7 @@ op::DataType Ascend310AMatMulRule::PromoteOutputAndBiasDtype(op::DataType output
         return op::DataType::DT_FLOAT16;
 }
 
-std::shared_ptr<SocMatMulRuleBase> SocMatMulRule::instance = nullptr;
-
-std::shared_ptr<SocMatMulRuleBase> SocMatMulRule::BuildRule() {
+std::shared_ptr<SocMatMulRuleBase> BuildRule() {
         op::SocVersion soc_version = GetCurrentPlatformInfo().GetSocVersion();
         if (soc_version == op::SocVersion::ASCEND910B ||
             soc_version == op::SocVersion::ASCEND910_93 ||
