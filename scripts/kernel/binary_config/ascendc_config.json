@@ -638,6 +638,7 @@
     {"name":"Dot", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : ""},
     {"name":"AdjacentDifference", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : ""},
     {"name":"UniqueConsecutive", "compute_units": ["ascend910b","ascend950"], "auto_sync" : false, "impl_mode" : "", "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},
+    {"name":"UniqueDim", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : "", "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},
     {"name":"SquareSumV1", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : ""},
     {"name":"ReduceMax", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : ""},
     {"name":"ReduceMean", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : ""},

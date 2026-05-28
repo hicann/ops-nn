@@ -21,15 +21,61 @@
 #include "opdev/op_executor.h"
 #include "opdev/op_log.h"
 #include "opdev/shape_utils.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 
 namespace l0op {
 OP_TYPE_REGISTER(UniqueWithCountsExt2);
+OP_TYPE_REGISTER(UniqueDim);
+
+constexpr int64_t OUT_SHAPE_SIZE = 27;
+
+static const std::initializer_list<op::DataType> X_DTYPE_SUPPORT_LIST_ASCEND950 = {
+    op::DataType::DT_UINT8,      op::DataType::DT_INT8,  op::DataType::DT_UINT16,  op::DataType::DT_INT16,
+    op::DataType::DT_UINT32,     op::DataType::DT_INT32, op::DataType::DT_UINT64,  op::DataType::DT_INT64,
+    op::DataType::DT_DOUBLE,     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16,
+    op::DataType::DT_BOOL};
+
+static bool CheckSupport4UniqueDim(const aclTensor* self, int64_t dim)
+{
+    OP_CHECK(Ops::NN::AclnnUtil::IsRegbase(),
+             OP_LOGW("UniqueDim AICore only support ASCEND950."),
+             return false);
+    OP_CHECK(CheckType(self->GetDataType(), X_DTYPE_SUPPORT_LIST_ASCEND950),
+             OP_LOGW("UniqueDim AICore only support bf16/fp16/fp32 input."),
+             return false);
+    return true;
+}
+
+static aclnnStatus UniqueDimAiCore(const aclTensor* self, bool sorted, bool returnInverse, int64_t dim,
+                                   aclTensor* valueOut, aclTensor* inverseOut, aclTensor* countsOut,
+                                   aclOpExecutor* executor)
+{
+    L0_DFX(UniqueDimAiCore, self, sorted, returnInverse, dim, valueOut, inverseOut, countsOut);
+
+    Shape outShapeShape{OUT_SHAPE_SIZE};
+    auto outShapeTensor = executor->AllocTensor(outShapeShape, DataType::DT_INT64, Format::FORMAT_ND);
+
+    aclnnStatus ret = ACLNN_SUCCESS;
+    ret = ADD_TO_LAUNCHER_LIST_AICORE(UniqueDim,
+                                      OP_INPUT(self),
+                                      OP_OUTPUT(valueOut, inverseOut, countsOut),
+                                      OP_ATTR(dim, sorted, returnInverse, true),
+                                      OP_OUTSHAPE({outShapeTensor, 0}),
+                                      OP_OUTSHAPE({outShapeTensor, 1}),
+                                      OP_OUTSHAPE({outShapeTensor, 2})
+    );
+    return ret;
+}
 
 aclnnStatus UniqueWithCountsExt2(const aclTensor* self, bool sorted, bool returnInverse, int64_t dim, aclTensor* valueOut,
                                  aclTensor* inverseOut, aclTensor* countsOut, aclOpExecutor* executor) {
   L0_DFX(UniqueWithCountsExt2, self, sorted, returnInverse, dim, valueOut, inverseOut, countsOut);
+
+  if (CheckSupport4UniqueDim(self, dim)) {
+    return UniqueDimAiCore(self, sorted, returnInverse, dim, valueOut, inverseOut, countsOut, executor);
+  }
 
   const aclScalar *dimScalar = executor->AllocScalar(dim);
   const aclTensor *dimTensor = executor->ConvertToTensor(dimScalar, op::DataType::DT_INT64);

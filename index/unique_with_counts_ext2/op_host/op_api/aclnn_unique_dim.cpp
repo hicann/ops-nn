@@ -23,6 +23,7 @@
 #include "opdev/op_executor.h"
 #include "opdev/op_log.h"
 #include "opdev/tensor_view_utils.h"
+#include "op_api/aclnn_util.h"
 #include "opdev/make_op_executor.h"
 #include "unique_with_counts_ext2.h"
 #include "aclnn_kernels/contiguous.h"
@@ -48,7 +49,8 @@ static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST =
 
 static const std::initializer_list<DataType>& GetDtypeSupportList() {
   if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
-      GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) {
+      GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93 ||
+      Ops::NN::AclnnUtil::IsRegbase()) {
     return ASCEND910B_DTYPE_SUPPORT_LIST;
   } else {
     return ASCEND910_DTYPE_SUPPORT_LIST;
