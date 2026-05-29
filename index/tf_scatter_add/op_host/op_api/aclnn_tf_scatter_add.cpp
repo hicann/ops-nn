@@ -40,6 +40,8 @@ extern "C" {
 
 static constexpr size_t MIN_INPUT_DIM_NUM = 1;
 static constexpr size_t MAX_INPUT_DIM_MUM = 8;
+static constexpr size_t MIN_INDICES_FOR_SORTED = 32;
+static constexpr size_t MIN_UPDATES_FOR_SORTED = 512;
 
 // 根据API定义，需要列出所能支持的所有dtype
 static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST = {
@@ -54,8 +56,14 @@ static const std::initializer_list<op::DataType> NULL_SUPPORT_LIST = {};
 static const std::initializer_list<op::DataType> SCATTER_ADD_WITH_SORTED_950_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16};
 
-static bool IsUseScatterAddWithSorted(const aclTensor* varRef)
+static bool IsUseScatterAddWithSorted(const aclTensor* varRef, const aclTensor* indices, const aclTensor* updates)
 {
+    int64_t indexSize = static_cast<int64_t>(indices->Size());
+ 	int64_t updatesSize = static_cast<int64_t>(updates->Size());
+ 	if (indexSize <= MIN_INDICES_FOR_SORTED && updatesSize <= MIN_UPDATES_FOR_SORTED) {
+ 	    return false;
+ 	}
+
     int64_t deterministicValue = 0;
     rtError_t retRts = aclrtGetSysParamOpt(ACL_OPT_DETERMINISTIC, &deterministicValue);
     if (retRts != RT_ERROR_NONE) {
@@ -273,7 +281,7 @@ aclnnStatus aclnnTfScatterAddGetWorkspaceSize(
         CHECK_RET(updatesContiguousFloat != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
          const aclTensor* scatterAddResFloat = nullptr;
-        if (!useScatterNd && IsUseScatterAddWithSorted(varRefContiguousFloat)) {
+        if (!useScatterNd && IsUseScatterAddWithSorted(varRefContiguousFloat, indicesContiguous, updatesContiguousFloat)) {
             scatterAddResFloat = DoScatterAddWithSortedForTfScatterAdd(
                 varRefContiguousFloat, indicesContiguous, updatesContiguousFloat, uniqueExecutor.get());
         } else {
@@ -289,7 +297,7 @@ aclnnStatus aclnnTfScatterAddGetWorkspaceSize(
         scatterAddRes = l0op::Cast(scatterAddResFloat, op::DataType::DT_BF16, uniqueExecutor.get());
         CHECK_RET(scatterAddRes != nullptr, ACLNN_ERR_INNER_NULLPTR);
     } else {
-        if (!useScatterNd && IsUseScatterAddWithSorted(varRefContiguous)) {
+        if (!useScatterNd && IsUseScatterAddWithSorted(varRefContiguous, indicesContiguous, updatesContiguous)) {
             scatterAddRes = DoScatterAddWithSortedForTfScatterAdd(
                 varRefContiguous, indicesContiguous, updatesContiguous, uniqueExecutor.get());
         } else {
