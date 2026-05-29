@@ -28,6 +28,16 @@
 <tbody>
   <tr>
     <td>activation</td>
+    <td><a href="../../activation/celu/README.md">celu_v2</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>标准 CeLU 激活函数的昇腾硬件优化实现，用于网络非线性建模，保障训练稳定并提升运行效率。</td>
+  </tr>
+  <tr>
+    <td>activation</td>
     <td><a href="../../activation/celu_v2/README.md">celu_v2</a></td>
     <td>✗</td>
     <td>✗</td>
@@ -55,6 +65,16 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>融合算子，将mul、sum、sub三个算子进行融合。</td>
+  </tr>
+    <tr>
+    <td>activation</td>
+    <td><a href="../../activation/bnll/README.md">bnll</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>计算BNLL (Binomial Normal Log Likelihood) 激活函数，即数值稳定版本的softplus：y = ln(1 + exp(x))。</td>
   </tr>
   <tr>
     <td>activation</td>
@@ -465,6 +485,16 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>激活函数，返回与输入tensor shape相同的tensor，tensor中value大于等于0时，取该value，小于0，取0。</td>
+  </tr>
+    <tr>
+    <td>activation</td>
+    <td><a href="../../activation/relu6/README.md">relu_v2</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>ReLU6 是受限版 ReLU 激活函数，将输出钳位在 [0, 6] 区间，具备数值稳定、抗溢出、适合量化与端侧推理的特点，广泛用于轻量级卷积神经网络。</td>
   </tr>
   <tr>
     <td>activation</td>
@@ -3190,6 +3220,36 @@
   </tr>
   <tr>
     <td>optim</td>
+    <td><a href="../../optim/apply_adadelta/README.md">apply_adadelta</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>执行Adadelta优化器的单步参数更新，根据当前梯度、梯度平方累积accum和更新量平方累积accum_update，原地更新权重参数var以及accum、accum_update。</td>
+  </tr>
+  <tr>
+    <td>optim</td>
+    <td><a href="../../optim/apply_adamax/README.md">apply_adamax</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>执行AdaMax优化器的单步参数更新，基于无穷范数的Adam变种，根据当前梯度更新一阶矩m和无穷范数v，原地更新权重参数var以及m、v。</td>
+  </tr>
+  <tr>
+    <td>optim</td>
+    <td><a href="../../optim/apply_rms_prop/README.md">apply_rms_prop</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>执行RMSProp优化器（非centered版本）的单步参数更新，根据当前梯度更新梯度平方移动平均ms和动量累积mom，原地更新权重参数var以及ms、mom。对标TensorFlow的tf.raw_ops.ApplyRMSProp接口。</td>
+  </tr>
+  <tr>
+    <td>optim</td>
     <td><a href="../../optim/apply_adagrad_d/README.md">apply_adagrad_d</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -3947,6 +4007,16 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>实现momentum优化器功能。</td>
+  </tr>
+    <tr>
+    <td>optim</td>
+    <td><a href="../../optim/apply_proximal_gradient_descent/README.md">apply_proximal_gradient_descent</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>实现带L1/L2正则化的近端梯度下降一步更新，常用于带稀疏正则的优化场景。</td>
   </tr>
   <tr>
     <td>hash</td>
