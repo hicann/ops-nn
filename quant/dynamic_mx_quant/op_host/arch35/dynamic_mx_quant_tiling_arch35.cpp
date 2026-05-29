@@ -30,6 +30,7 @@ constexpr int64_t INDEX_ATTR_DST_DTYPE_MAX = 5;
 constexpr int64_t NUM_ZERO = 0;
 constexpr int64_t NUM_ONE = 1;
 constexpr int64_t NUM_TWO = 2;
+constexpr float DST_TYPE_DEFAULT = 0.0;
 constexpr float NUM_SIX_FLOAT = 6.0;
 constexpr float NUM_SEVEN_FLOAT = 7.0;
 constexpr int64_t MODE_ZERO = 0;
@@ -395,7 +396,8 @@ static ge::graphStatus SetCalcMode(const gert::TilingContext* context, DynamicMx
     } else if (tilingParam.scaleAlg == NUM_ONE) {
         tilingParam.calcMode = MODE_ONE;
     } else if (tilingParam.scaleAlg == NUM_TWO) {
-        if (tilingParam.dstTypeMax == NUM_ZERO || Ops::Base::IsFloatEqual(tilingParam.dstTypeMax, NUM_SIX_FLOAT) ||
+        if (Ops::Base::IsFloatEqual(tilingParam.dstTypeMax, DST_TYPE_DEFAULT) ||
+            Ops::Base::IsFloatEqual(tilingParam.dstTypeMax, NUM_SIX_FLOAT) ||
             Ops::Base::IsFloatEqual(tilingParam.dstTypeMax, NUM_SEVEN_FLOAT)) {
             tilingParam.calcMode = MODE_TWO;
         } else {
@@ -407,7 +409,8 @@ static ge::graphStatus SetCalcMode(const gert::TilingContext* context, DynamicMx
     }
 
     if (tilingParam.calcMode == MODE_TWO) {
-        if (tilingParam.dstTypeMax == NUM_ZERO || Ops::Base::IsFloatEqual(tilingParam.dstTypeMax, NUM_SIX_FLOAT)) {
+        if (Ops::Base::IsFloatEqual(tilingParam.dstTypeMax, DST_TYPE_DEFAULT) ||
+            Ops::Base::IsFloatEqual(tilingParam.dstTypeMax, NUM_SIX_FLOAT)) {
             tilingParam.subNumForScale = 0x000000c1;
             tilingParam.subNumForFP16Scale = 0x00c00001;
         } else {

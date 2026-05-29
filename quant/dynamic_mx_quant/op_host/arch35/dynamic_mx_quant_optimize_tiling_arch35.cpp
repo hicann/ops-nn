@@ -25,6 +25,7 @@ namespace optiling {
 constexpr int64_t NUM_ZERO = 0;
 constexpr int64_t NUM_ONE = 1;
 constexpr int64_t NUM_TWO = 2;
+constexpr float DST_TYPE_DEFAULT = 0.0;
 constexpr float NUM_SIX_FLOAT = 6.0;
 constexpr float NUM_SEVEN_FLOAT = 7.0;
 constexpr int64_t NUM_TEN = 10;
@@ -138,7 +139,8 @@ ge::graphStatus DynamicMxQuantOptimzieTiling::SetCalcMode()
     } else if (tilingParam_.scaleAlg == NUM_ONE) {
         tilingParam_.calcMode = MODE_ONE;
     } else if (tilingParam_.scaleAlg == NUM_TWO) {
-        if (tilingParam_.dstTypeMax == NUM_ZERO || Ops::Base::IsFloatEqual(tilingParam_.dstTypeMax, NUM_SIX_FLOAT) ||
+        if (Ops::Base::IsFloatEqual(tilingParam_.dstTypeMax, DST_TYPE_DEFAULT) ||
+            Ops::Base::IsFloatEqual(tilingParam_.dstTypeMax, NUM_SIX_FLOAT) ||
             Ops::Base::IsFloatEqual(tilingParam_.dstTypeMax, NUM_SEVEN_FLOAT)) {
             tilingParam_.calcMode = MODE_TWO;
         } else {
@@ -150,7 +152,8 @@ ge::graphStatus DynamicMxQuantOptimzieTiling::SetCalcMode()
     }
 
     if (tilingParam_.calcMode == MODE_TWO) {
-        if (tilingParam_.dstTypeMax == NUM_ZERO || Ops::Base::IsFloatEqual(tilingParam_.dstTypeMax, NUM_SIX_FLOAT)) {
+        if (Ops::Base::IsFloatEqual(tilingParam_.dstTypeMax, DST_TYPE_DEFAULT) ||
+            Ops::Base::IsFloatEqual(tilingParam_.dstTypeMax, NUM_SIX_FLOAT)) {
             tilingParam_.subNumForScale = 0x000000c1;
         } else {
             tilingParam_.subNumForScale = 0x000000e1;
