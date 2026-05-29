@@ -10,8 +10,10 @@
 #include <numeric>
 #include <vector>
 #include "aclnn/aclnn_base.h"
+#include "aclnn_adaptive_avg_pool3d_backward.h"
 #include "aclnn_adaptive_avg_pool2d_backward.h"
 #include "adaptive_avg_pool3d_backward.h"
+#include "adaptive_avg_pool2d_backward.h"
 #include "level0/adaptive_avg_pool2d_assist_matrix.h"
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"
@@ -239,6 +241,13 @@ static inline aclnnStatus checkRetReFormat(bool cond, aclnnStatus status, const 
 static aclnnStatus DoFusionAdaptiveAvgPool2DBackward(
     const aclTensor* gradOutput, const aclTensor* self, aclTensor* out, aclOpExecutor* executor)
 {
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        //Get Shape for self
+        auto result = l0op::AdaptiveAvgPool2dGrad(gradOutput, self, executor);
+        auto viewCopyResult = l0op::ViewCopy(result, out, executor);
+        CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        return ACLNN_SUCCESS;
+    }
     if (GetCurrentPlatformInfo().GetSocVersion() >= SocVersion::ASCEND910B &&
         GetCurrentPlatformInfo().GetSocVersion() <= SocVersion::ASCEND910E) {
         // 将2d参数转换为3d可以使用的参数
