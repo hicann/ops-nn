@@ -28,7 +28,7 @@
 <tbody>
   <tr>
     <td>activation</td>
-    <td><a href="../../activation/celu/README.md">celu_v2</a></td>
+    <td><a href="../../activation/celu/README.md">celu</a></td>
     <td>✓</td>
     <td>✓</td>
     <td>✗</td>
@@ -488,7 +488,7 @@
   </tr>
     <tr>
     <td>activation</td>
-    <td><a href="../../activation/relu6/README.md">relu_v2</a></td>
+    <td><a href="../../activation/relu6/README.md">relu6</a></td>
     <td>✓</td>
     <td>✓</td>
     <td>✗</td>
