@@ -945,7 +945,8 @@ void ConvTilingAlgorithmMmode::CheckL0CDoubleBuffer()
     }
     bool kFullLoadFlag = l0TilingParams.kL0 == tilingIns_->shapeInfo.singlekD * tilingIns_->shapeInfo.singleCi1 *
                                                this->l1TilingCalc.ci0HkWk;
-    if (kFullLoadFlag && static_cast<uint64_t>(tilingIns_->shapeInfo.singleM) <= l0TilingParams.mL0) {
+    if (kFullLoadFlag && static_cast<uint64_t>(tilingIns_->shapeInfo.singleM) <= l0TilingParams.mL0 &&
+        tilingIns_->innerBatch >= static_cast<uint64_t>(tilingIns_->shapeInfo.singleBatch)) {
         this->dbValue.pbAL0 = SINGLE_BUFFER_NUM;
     }
 
