@@ -267,7 +267,6 @@ bool Conv3DBackpropInputV2TilingArch35::PrintInputsAttrs(conv_bp_v2_kernel::TCon
         OP_LOGD(op_name, "Attrs stride: %s, pads: %s, dilation: %s, groups: %ld, enable_hf32: %d, output_padding: %s, offset_x: %ld", 
         DebugString(stridesShape).c_str(), DebugString(padsShape).c_str(), DebugString(dilationsShape).c_str(), 
         *groups, *enableHf32, DebugString(output_paddingShape).c_str(), *offset);
-
     } else {
         OP_LOGD(op_name, "Attrs stride: %s, pads: %s, dilation: %s, groups: %ld, enable_hf32: %d.", 
         DebugString(stridesShape).c_str(), DebugString(padsShape).c_str(), DebugString(dilationsShape).c_str(), 
@@ -317,7 +316,7 @@ ge::graphStatus Conv3DBackpropInputV2TilingArch35::PostTiling()
         dstStride > MAX_UINT16, CUBE_INNER_ERR_REPORT(opName_, "dstStride > MAX_UINT16"), return ge::GRAPH_FAILED);
     context_->SetBlockDim(tilingData_.params.coreNum);
     errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
-                           reinterpret_cast<void *>(&tilingData_), sizeof(conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData));
+                           &tilingData_, sizeof(conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData));
     if (ret != EOK) {
         OP_LOGE(context_->GetNodeName(), "memcpy_s failed, ret=%d", ret);
         return ge::GRAPH_FAILED;

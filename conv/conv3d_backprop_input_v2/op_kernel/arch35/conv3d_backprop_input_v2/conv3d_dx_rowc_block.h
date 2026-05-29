@@ -293,29 +293,29 @@ protected:
          this->preEnableFullLoad = this->tiling_->enableFullLoad;
      }
 
-    __aicore__ inline void DoIterateALL(bool& firstloadbias) {
-         if (unlikely(this->hasBias_)) {
-             this->CalcBiasFullLoadFlag();
-             this->freeBiasFlag_ = this->fullLoadBiasFlag_ && firstloadbias;
-             this->dedx_.IterateAll(this->yGm_[this->offsetC_], 0, this->fullLoadBiasFlag_, this->freeBiasFlag_);
-             if (this->fullLoadBiasFlag_) {
-                 firstloadbias = true;
-             }
-             this->fullLoadBiasFlag_ = false;
-         } else {
-             this->dedx_.IterateAll(this->yGm_[this->offsetC_], 0, false, false);
-         }
+    __aicore__ inline void IterateAllForBias(bool& firstloadbias) {
+        this->CalcBiasFullLoadFlag();
+        this->freeBiasFlag_ = this->fullLoadBiasFlag_ && firstloadbias;
+        this->dedx_.IterateAll(this->yGm_[this->offsetC_], 0, this->fullLoadBiasFlag_, this->freeBiasFlag_);
+        if (this->fullLoadBiasFlag_) {
+            firstloadbias = true;
+        }
+        this->fullLoadBiasFlag_ = false;
      }
 
      __aicore__ inline void CalBasicBlockCore(uint64_t blockIdx, uint64_t blockNum) {
-         bool firstloadbias = false;
+        bool firstloadbias = false;
+        uint64_t basicIdx = blockIdx;
+
         for (uint64_t j = 0; j < this->calRound_; ++j) {
-            this->CalBasicBlockIdx(j * blockNum + blockIdx);
+            this->CalBasicBlockIdx(basicIdx);
+            basicIdx += blockNum;
+
             uint64_t mCoreUse = (this->mCoreIdx_ == (this->mCnt_ - 1)) ? this->mCoreTail_ : this->singleShapeM_;
             uint64_t nCoreUse = (this->nCoreIdx_ == (this->nCnt_ - 1)) ? this->nCoreTail_ : this->singleShapeN_;
             uint64_t dinCoreUse = (this->dCoreIdx_ == (this->dinCnt_ - 1)) ? this->dinCoreTail_ : this->singleShapeDin_;
             uint64_t coutCoreUse = this->singleShapeK_;
-            if (this->tiling_->group > 1) {
+            if (unlikely(this->tiling_->group > 1)) {
                 coutCoreUse = (this->groupCoreIdx_ == (this->tiling_->group - 1)) ? this->coutGroupTail_ : coutCoreUse;
                 if (unlikely(this->tiling_->cin % this->tiling_->cinG != 0 && this->groupCoreIdx_ == (this->tiling_->group - 1))) {
                     if (this->nCoreIdx_ == this->nTailCnt_ - 1) {
@@ -336,18 +336,20 @@ protected:
             this->CheckFullLoadEnable();
             this->dedx_.SetFullLoadFlag(this->tiling_->enableFullLoad);
 
-            if (unlikely(this->hasBias_)) {
-                this->dedx_.SetBias(this->biasGm_[this->offsetBias_]);
-            }
-
             if constexpr (GetScaleFormat<filterType>(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
                 this->dedx_.SetScale(this->scaleGm_[this->offsetScale_]);
             }
+
             if (j == 0) {
                 this->CrossCoreWaitVecTrans();
             }
 
-            this->DoIterateALL(firstloadbias);
+            if (unlikely(this->hasBias_)) {
+                this->dedx_.SetBias(this->biasGm_[this->offsetBias_]);
+                this->IterateAllForBias(firstloadbias);
+            } else {
+                this->dedx_.IterateAll(this->yGm_[this->offsetC_], 0, false, false);
+            }
         }
     }
 

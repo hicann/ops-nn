@@ -242,8 +242,7 @@ static __aicore__ inline void ComputeForKIter(Intf *self, LocalTensor<typename I
     uint32_t curStepKb = self->ctx.curStepKb_;
     uint32_t l0aKIdx = 0;
     uint32_t l0bKIdx = 0;
-    const uint64_t kIter = self->ctx.kIter_;
-    for (uint64_t kIdx = 0; kIdx < kIter; kIdx++) {
+    for (uint64_t kIdx = 0; kIdx < self->ctx.kIter_; kIdx++) {
         UpdateL1KParams<Intf>(self, kIdx, curStepKa, curStepKb);
         ComputeL1A<Intf>(self, kIdx, curDoutIdx, l0aKIdx);
         ComputeL1B<Intf>(self, kIdx, curInnerKdIdx, l0bKIdx);

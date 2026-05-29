@@ -313,7 +313,11 @@ protected:
             this->SetIterateParams(mCoreUse, splitBaseHk, baseHkIter, splitTailHk, kernelIdx);
             this->dedx_.SetFullLoadFlag(this->tiling_->enableFullLoad);
 
-            this->DoIterateALL(firstloadbias);
+            if (unlikely(this->hasBias_)) {
+                this->IterateAllForBias(firstloadbias);
+            } else {
+                this->dedx_.IterateAll(this->yGm_[this->offsetC_], 0, false, false);
+            }
         }
     }
 
