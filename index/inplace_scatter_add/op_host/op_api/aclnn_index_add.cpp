@@ -300,7 +300,8 @@ aclnnStatus aclnnIndexAddGetWorkspaceSize(const aclTensor *self, const int64_t d
   bool is91095 = Ops::NN::AclnnUtil::IsRegbase();
   bool useNewOp = (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
     GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) && dim == 0 &&
-    self->GetViewShape().GetDim(0) < MAX_SORT_SHAPE_DIM && self->GetDataType() == op::DataType::DT_BF16 &&
+    self->GetViewShape().GetDim(0) < MAX_SORT_SHAPE_DIM &&
+    (self->GetDataType() == op::DataType::DT_BF16 || self->GetDataType() == op::DataType::DT_FLOAT16) &&
     (!(self->GetViewShape().GetDimNum() == 0 && index->GetViewShape().GetShapeSize() == 1));
   if (self->GetDataType() == op::DataType::DT_BF16 && !useNewOp && !is91095) {
     selfContiguous = l0op::Cast(selfContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());

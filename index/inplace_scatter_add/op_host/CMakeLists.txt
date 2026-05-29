@@ -8,4 +8,4 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 #/
 
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE inplace_scatter_add ACLNNTYPE aclnn_exclude)
+add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE inplace_scatter_add ACLNNTYPE aclnn_exclude DEPENDENCIES inplace_index_add inplace_index_add_with_sorted)
