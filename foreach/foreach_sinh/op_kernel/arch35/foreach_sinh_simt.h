@@ -1,0 +1,87 @@
+/**
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+
+/*!
+ * \file foreach_sinh_simt.h
+ * \brief SIMT kernel implementation for foreach_sinh
+ */
+
+#ifndef FOREACH_SINH_SIMT_H
+#define FOREACH_SINH_SIMT_H
+
+#include "kernel_operator.h"
+#include "kernel_tiling/kernel_tiling.h"
+#include "kernel_operator_list_tensor_intf.h"
+#include "simt_api/math_functions.h"
+#include "foreach_sinh_tiling_data.h"
+#include "foreach_sinh_tiling_key.h"
+
+namespace NsForeachSinh {
+
+using namespace AscendC;
+
+constexpr uint32_t THREAD_NUM = 512;
+
+/**
+ * @brief Compute sinh with float32 intermediate precision
+ * @note Aligns with PyTorch opmath_t strategy for float16/bfloat16
+ */
+template <typename T>
+__simt_callee__ inline T ComputeSinh(T val)
+{
+    float fval = static_cast<float>(val);
+    float result = sinhf(fval);
+    return static_cast<T>(result);
+}
+
+/**
+ * @brief SIMT VF function: grid-stride parallel sinh for a single tensor
+ */
+template <typename T>
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM)
+inline void OpForeachSinhSimt(
+    __gm__ T* xPtr, __gm__ T* yPtr, int64_t elemCount)
+{
+    for (uint64_t idx = static_cast<uint64_t>(
+             Simt::GetBlockIdx() * Simt::GetThreadNum() + Simt::GetThreadIdx());
+         idx < static_cast<uint64_t>(elemCount);
+         idx += static_cast<uint64_t>(Simt::GetThreadNum() * Simt::GetBlockNum())) {
+        T val = xPtr[idx];
+        yPtr[idx] = ComputeSinh(val);
+    }
+}
+
+/**
+ * @brief Process entry: iterate over TensorList and dispatch each tensor to VF
+ */
+template <typename T>
+__aicore__ inline void Process(
+    GM_ADDR x, GM_ADDR y, const ForeachSinhTilingData* tilingData)
+{
+    ListTensorDesc xList(reinterpret_cast<__gm__ void*>(x));
+    ListTensorDesc yList(reinterpret_cast<__gm__ void*>(y));
+
+    for (int32_t i = 0; i < tilingData->tensorNum; i++) {
+        int64_t count = tilingData->tensorElements[i];
+        if (count == 0) {
+            continue;
+        }
+
+        __gm__ T* xPtr = xList.GetDataPtr<T>(i);
+        __gm__ T* yPtr = yList.GetDataPtr<T>(i);
+
+        Simt::VF_CALL<OpForeachSinhSimt<T>>(
+            Simt::Dim3(THREAD_NUM), xPtr, yPtr, count);
+    }
+}
+
+} // namespace NsForeachSinh
+
+#endif

@@ -151,7 +151,7 @@
 | [aclnnForeachAddcdivScalarV2](../../foreach/foreach_addcdiv_scalar/docs/aclnnForeachAddcdivScalarV2.md) | 对多个张量进行逐元素加、乘、除操作，$x2_{i}$和$x3_{i}$进行逐元素相除，并将结果乘以scalar，再与$x1_{i}$相加。 | 默认确定性实现 | - |
 | [aclnnForeachAddcmulList](../../foreach/foreach_addcmul_list/docs/aclnnForeachAddcmulList.md) | 先对张量列表x2和张量列表x3执行逐元素乘法，并将结果乘以张量scalars，最后将之前计算的结果与张量列表x1执行逐元素相加。 | 默认确定性实现 | - |
 | [aclnnForeachAddcmulScalar](../../foreach/foreach_addcmul_scalar/docs/aclnnForeachAddcmulScalar.md) | 先对张量列表x2和张量列表x3执行逐元素乘法，再乘以张量scalar，最后将之前计算的结果与张量列表x1执行逐元素相加。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnForeachAddcmulScalarList](../../foreach/foreach_addcmul_scalar_list/docs/aclnnForeachAddcmulScalarList.md) | 先对张量列表x2和张量列表x3执行逐元素乘法，再与张量scalars进行逐元素乘法，最后将之前计算的结果与张量列表x1执行逐元素相加。 | 默认确定性实现 | - |
+| [aclnnForeachAddcmulScalarList](../../foreach/foreach_addcmul_scalar_list/docs/aclnnForeachAddcmulScalarList.md) | 先对张量列表x2和张量列表x3执行逐元素乘法，再与张量scalars进行逐元素乘法，最后将之前计算的结果与张量列表x1执行逐元素相加。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachAddcmulScalarV2](../../foreach/foreach_addcmul_scalar/docs/aclnnForeachAddcmulScalarV2.md) | 先对张量列表x2和张量列表x3执行逐元素乘法，再乘以标量scalar，最后将之前计算的结果与张量列表x1执行逐元素相加。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachAddList](../../foreach/foreach_add_list/docs/aclnnForeachAddList.md) | 两个Tensor列表中的元素逐个相加，并可以通过alpha参数调整相加系数。 | 默认确定性实现 | - |
 | [aclnnForeachAddListV2](../../foreach/foreach_add_list/docs/aclnnForeachAddListV2.md) | 两个Tensor列表中的元素逐个相加，并可以通过alpha参数调整相加系数。 | 默认确定性实现 | - |
@@ -170,13 +170,13 @@
 | [aclnnForeachErf](../../foreach/foreach_erf/docs/aclnnForeachErf.md) | 按元素进行误差函数运算（也称之为高斯误差函数，error function or Gaussian error function）。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachErfc](../../foreach/foreach_erfc/docs/aclnnForeachErfc.md) | 按元素执行从x到无穷大积分的互补误差函数运算。 | 默认确定性实现 | - |
 | [aclnnForeachExp](../../foreach/foreach_exp/docs/aclnnForeachExp.md) | 对输入张量列表的每个张量进行指数运算。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnForeachExpm1](../../foreach/foreach_expm1/docs/aclnnForeachExpm1.md) | 对输入张量列表的每个张量执行指数运算，然后将得到的结果减1。 | 默认确定性实现 | - |
+| [aclnnForeachExpm1](../../foreach/foreach_expm1/docs/aclnnForeachExpm1.md) | 对输入张量列表的每个张量执行指数运算，然后将得到的结果减1。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachLerpList](../../foreach/foreach_lerp_list/docs/aclnnForeachLerpList.md) | 对两个张量列表对应位置元素执行插值计算，其中张量列表weight是插值系数。 | 默认确定性实现 | - |
 | [aclnnForeachLerpScalar](../../foreach/foreach_lerp_scalar/docs/aclnnForeachLerpScalar.md) | 对两个张量列表对应位置元素执行插值计算，其中标量weight是插值系数。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnForeachLog](../../foreach/foreach_log/docs/aclnnForeachLog.md) | 对张量列表执行逐元素自然对数运算（ln(x)）。 | 默认确定性实现 | - |
-| [aclnnForeachLog1p](../../foreach/foreach_log1p/docs/aclnnForeachLog1p.md) | 对张量列表中的每一个元素执行先加一再以e为底的对数函数运算。 | 默认确定性实现 | - |
-| [aclnnForeachLog2](../../foreach/foreach_log2/docs/aclnnForeachLog2.md) | 对张量列表中的每一个元素执行以2为底的对数函数运算。 | 默认确定性实现 | - |
-| [aclnnForeachLog10](../../foreach/foreach_log10/docs/aclnnForeachLog10.md) | 对张量列表中的每一个元素执行以10为底的对数函数运算。 | 默认确定性实现 | - |
+| [aclnnForeachLog](../../foreach/foreach_log/docs/aclnnForeachLog.md) | 对张量列表执行逐元素自然对数运算（ln(x)）。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnForeachLog1p](../../foreach/foreach_log1p/docs/aclnnForeachLog1p.md) | 对张量列表中的每一个元素执行先加一再以e为底的对数函数运算。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnForeachLog2](../../foreach/foreach_log2/docs/aclnnForeachLog2.md) | 对张量列表中的每一个元素执行以2为底的对数函数运算。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnForeachLog10](../../foreach/foreach_log10/docs/aclnnForeachLog10.md) | 对张量列表中的每一个元素执行以10为底的对数函数运算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachMaximumList](../../foreach/foreach_maximum_list/docs/aclnnForeachMaximumList.md) | 对张量列表x1和张量列表x2执行逐元素比较，计算每个元素对应的最大值。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachMaximumScalar](../../foreach/foreach_maximum_scalar/docs/aclnnForeachMaximumScalar.md) | 对张量列表和张量scalar执行逐元素比较，计算每个元素对应的最大值。 | 默认确定性实现 | - |
 | [aclnnForeachMaximumScalarList](../../foreach/foreach_maximum_scalar_list/docs/aclnnForeachMaximumScalarList.md) | 对张量列表x和标量列表scalars执行逐元素比较，计算每个元素对应的最大值。 | 默认确定性实现 | 默认确定性实现 |
@@ -189,7 +189,7 @@
 | [aclnnForeachMulScalar](../../foreach/foreach_mul_scalar/docs/aclnnForeachMulScalar.md) | 对输入张量列表的每个张量与张量scalar执行相乘运算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachMulScalarList](../../foreach/foreach_mul_scalar_list/docs/aclnnForeachMulScalarList.md) | 对输入张量列表与标量列表执行逐元素相乘运算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachMulScalarV2](../../foreach/foreach_mul_scalar/docs/aclnnForeachMulScalarV2.md) | 对输入张量列表的每个张量与标量scalar执行相乘运算。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnForeachNeg](../../foreach/foreach_neg/docs/aclnnForeachNeg.md) | 计算输入张量列表中每个张量的相反数。 | 默认确定性实现 | - |
+| [aclnnForeachNeg](../../foreach/foreach_neg/docs/aclnnForeachNeg.md) | 计算输入张量列表中每个张量的相反数。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachNonFiniteCheckAndUnscale](../../foreach/foreach_non_finite_check_and_unscale/docs/aclnnForeachNonFiniteCheckAndUnscale.md) | 遍历scaledGrads中的所有Tensor，检查是否存在Inf或NaN，如果存在则将foundInf设置为1.0，否则foundInf保持不变，并对scaledGrads中的所有Tensor进行反缩放。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachNorm](../../foreach/foreach_norm/docs/aclnnForeachNorm.md) | 对输入张量列表的每个张量进行范数运算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachPowList](../../foreach/foreach_pow_list/docs/aclnnForeachPowList.md) | 对输入张量列表的每个张量进行x2次方运算。 | 默认确定性实现 | - |
@@ -197,21 +197,21 @@
 | [aclnnForeachPowScalarV2](../../foreach/foreach_pow_scalar/docs/aclnnForeachPowScalarV2.md) | 对输入张量列表x中的每个张量进行指数运算，指数为标量exponent。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachPowScalarAndTensor](../../foreach/foreach_pow_scalar_and_tensor/docs/aclnnForeachPowScalarAndTensor.md) | 对输入张量列表x中的每个张量进行指数运算，底数为输入的标量scalar。 | 默认确定性实现 | - |
 | [aclnnForeachPowScalarList](../../foreach/foreach_pow_scalar_list/docs/aclnnForeachPowScalarList.md) | 对输入张量列表x中的每个张量进行指数运算，指数为标量列表exponent中对应的标量。 | 默认确定性实现 | - |
-| [aclnnForeachReciprocal](../../foreach/foreach_reciprocal/docs/aclnnForeachReciprocal.md) | 对输入张量列表的每个张量进行倒数运算。 | 默认确定性实现 | - |
+| [aclnnForeachReciprocal](../../foreach/foreach_reciprocal/docs/aclnnForeachReciprocal.md) | 对输入张量列表的每个张量进行倒数运算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachRoundOffNumber](../../foreach/foreach_round_off_number/docs/aclnnForeachRoundOffNumber.md) | 对输入张量列表的每个张量执行指定精度的四舍五入运算，可通过roundMode指定舍入方式。 | 默认确定性实现 | - |
 | [aclnnForeachRoundOffNumberV2](../../foreach/foreach_round_off_number/docs/aclnnForeachRoundOffNumberV2.md) | 对输入张量列表的每个张量执行指定精度的四舍五入运算，可通过roundMode指定舍入方式。 | 默认确定性实现 | - |
-| [aclnnForeachSigmoid](../../foreach/foreach_sigmoid/docs/aclnnForeachSigmoid.md) | 对输入张量列表的每个张量进行Sigmoid函数运算。 | 默认确定性实现 | - |
-| [aclnnForeachSign](../../foreach/foreach_sign/docs/aclnnForeachSign.md) | 计算输入张量列表中每个张量的符号值。 | 默认确定性实现 | - |
-| [aclnnForeachSin](../../foreach/foreach_sin/docs/aclnnForeachSin.md) | 对输入张量列表的每个张量进行正弦函数运算。 | 默认确定性实现 | - |
-| [aclnnForeachSinh](../../foreach/foreach_sinh/docs/aclnnForeachSinh.md) | 对输入张量列表的每个张量进行双曲正弦函数运算。 | 默认确定性实现 | - |
+| [aclnnForeachSigmoid](../../foreach/foreach_sigmoid/docs/aclnnForeachSigmoid.md) | 对输入张量列表的每个张量进行Sigmoid函数运算。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnForeachSign](../../foreach/foreach_sign/docs/aclnnForeachSign.md) | 计算输入张量列表中每个张量的符号值。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnForeachSin](../../foreach/foreach_sin/docs/aclnnForeachSin.md) | 对输入张量列表的每个张量进行正弦函数运算。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnForeachSinh](../../foreach/foreach_sinh/docs/aclnnForeachSinh.md) | 对输入张量列表的每个张量进行双曲正弦函数运算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachSqrt](../../foreach/foreach_sqrt/docs/aclnnForeachSqrt.md) | 对输入张量列表的每个张量进行平方根运算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachSubList](../../foreach/foreach_sub_list/docs/aclnnForeachSubList.md) | 对输入的两个张量列表执行逐元素相减运算，并可以通过alpha参数调整相减系数。 | 默认确定性实现 | - |
 | [aclnnForeachSubListV2](../../foreach/foreach_sub_list/docs/aclnnForeachSubListV2.md) | 对两个张量列表中的元素执行逐个相减，并可以通过alpha参数调整相减系数。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachSubScalar](../../foreach/foreach_sub_scalar/docs/aclnnForeachSubScalar.md) | 对输入张量列表的每个张量与张量scalar执行相减运算。 | 默认确定性实现 | - |
 | [aclnnForeachSubScalarList](../../foreach/foreach_sub_scalar_list/docs/aclnnForeachSubScalarList.md) | 对输入张量列表的每个张量与标量列表scalars的每个标量逐元素执行相减运算。 | 默认确定性实现 | - |
 | [aclnnForeachSubScalarV2](../../foreach/foreach_sub_scalar/docs/aclnnForeachSubScalarV2.md) | 对输入张量列表的每个张量与标量scalar执行相减运算。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnForeachTan](../../foreach/foreach_tan/docs/aclnnForeachTan.md) | 对输入张量列表的每个张量进行正切函数运算。 | 默认确定性实现 | - |
-| [aclnnForeachTanh](../../foreach/foreach_tanh/docs/aclnnForeachTanh.md) | 对输入张量列表的每个张量进行双曲正切函数运算。 | 默认确定性实现 | - |
+| [aclnnForeachTan](../../foreach/foreach_tan/docs/aclnnForeachTan.md) | 对输入张量列表的每个张量进行正切函数运算。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnForeachTanh](../../foreach/foreach_tanh/docs/aclnnForeachTanh.md) | 对输入张量列表的每个张量进行双曲正切函数运算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachZeroInplace](../../foreach/foreach_zero_inplace/docs/aclnnForeachZeroInplace.md) | 原地更新输入张量列表，输入张量列表的每个张量置为0。 | 默认确定性实现 | - |
 | [aclnnFusedCrossEntropyLossWithMaxSum](../../loss/fused_cross_entropy_loss_with_max_sum/docs/aclnnFusedCrossEntropyLossWithMaxSum.md) | 词汇表并行场景下交叉熵计算模块的一部分，解决超大规模词汇表下的显存和计算效率问题，当前部分为计算loss与softMax的结果。 | 默认确定性实现 | - |
 | [aclnnFusedLinearOnlineMaxSum](../../matmul/fused_linear_online_max_sum/docs/aclnnFusedLinearOnlineMaxSum.md) | 功能等价Megatron的matmul与fused\_vocab\_parallel\_cross\_entropy的实现，支持vocabulary\_size维度切卡融合matmul与cross-entropy loss。 | 默认确定性实现 | 默认确定性实现 |
