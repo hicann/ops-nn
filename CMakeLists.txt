@@ -12,6 +12,8 @@ cmake_minimum_required(VERSION 3.16)
 set(PKG_NAME nn)
 set(CANN_3RD_LIB_PATH ${CMAKE_CURRENT_SOURCE_DIR}/third_party CACHE STRING "cann third party lib path")
 include(cmake/third_party/fetch_cann_cmake.cmake)
+set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ${RULE_LAUNCH})
+set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ${RULE_LAUNCH})
 
 project(${PKG_NAME} VERSION 1.0.0)
 
