@@ -95,6 +95,89 @@ static AdaptiveMaxPool3dProtoTestParam general_cases_params[] = {
       {-1}, {-1}, FORMAT_NCDHW, FORMAT_NCDHW,
       {}, 3, true
     },
+    { "AdaptiveMaxPool3dInfershapeInvalidDim6d",
+      {1, 2, 3, 4, 5, 6}, {1, 2, 3, 4, 5, 6}, FORMAT_NCDHW, FORMAT_NCDHW,
+      {1, 1, 1}, 3, false
+    },
+    { "AdaptiveMaxPool3dInfershapeInvalidDim2d",
+      {1, 2}, {1, 2}, FORMAT_NCDHW, FORMAT_NCDHW,
+      {1, 1, 1}, 3, false
+    },
 };
 
 INSTANTIATE_TEST_CASE_P(AdaptiveMaxPool3d, AdaptiveMaxPool3dRuntimeProtoTest, testing::ValuesIn(general_cases_params));
+
+// ======================== Failure: Missing Attrs ========================
+
+TEST(AdaptiveMaxPool3dInfer, fail_missing_all_attrs)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("AdaptiveMaxPool3d")->infer_shape;
+
+    gert::StorageShape xShape = {{1, 2, 3, 4, 5}, {}};
+    gert::StorageShape yShape = {{}, {}};
+    gert::StorageShape indicesShape = {{}, {}};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(1, 2)
+                      .IrInstanceNum({1, 2})
+                      .NodeInputTd(0, ge::DT_FLOAT16, FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(1, ge::DT_INT32, FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .InputShapes({&xShape})
+                      .OutputShapes({&yShape, &indicesShape})
+                      .Build();
+
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+}
+
+TEST(AdaptiveMaxPool3dInfer, fail_missing_output_size)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("AdaptiveMaxPool3d")->infer_shape;
+
+    gert::StorageShape xShape = {{1, 2, 3, 4, 5}, {}};
+    gert::StorageShape yShape = {{}, {}};
+    gert::StorageShape indicesShape = {{}, {}};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(1, 2)
+                      .IrInstanceNum({1, 2})
+                      .NodeInputTd(0, ge::DT_FLOAT16, FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(1, ge::DT_INT32, FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({{"indices_dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(3)}})
+                      .InputShapes({&xShape})
+                      .OutputShapes({&yShape, &indicesShape})
+                      .Build();
+
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+}
+
+TEST(AdaptiveMaxPool3dInfer, fail_missing_indices_dtype)
+{
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("AdaptiveMaxPool3d")->infer_shape;
+
+    gert::StorageShape xShape = {{1, 2, 3, 4, 5}, {}};
+    gert::StorageShape yShape = {{}, {}};
+    gert::StorageShape indicesShape = {{}, {}};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(1, 2)
+                      .IrInstanceNum({1, 2})
+                      .NodeInputTd(0, ge::DT_FLOAT16, FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(1, ge::DT_INT32, FORMAT_NCDHW, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs({{"output_size",
+                                   Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(
+                                       std::vector<int64_t>{1, 1, 1})}})
+                      .InputShapes({&xShape})
+                      .OutputShapes({&yShape, &indicesShape})
+                      .Build();
+
+    ASSERT_EQ(infer_shape_func(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+}
+
+TEST(AdaptiveMaxPool3dInfer, infer_dtype_null_context)
+{
+    auto infer_dtype_func = gert::OpImplRegistry::GetInstance().GetOpImpl("AdaptiveMaxPool3d")->infer_datatype;
+    ASSERT_EQ(infer_dtype_func(nullptr), ge::GRAPH_FAILED);
+}

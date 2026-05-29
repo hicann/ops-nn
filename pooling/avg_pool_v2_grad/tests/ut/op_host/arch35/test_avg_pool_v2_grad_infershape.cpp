@@ -443,6 +443,69 @@ TEST_F(AvgPoolV2GradInfershape, fail_nhwc_strides0_not_one)
         "");
 }
 
+// ======================== Unknown Dim Values (Dynamic Shape) ========================
+
+TEST_F(AvgPoolV2GradInfershape, infer_shape_unknown_dim_3d)
+{
+    ExecuteAvgPoolV2GradInfershapeTest(
+        {-1, -1, -1},
+        {{-1, -1, -1}, {-1, -1, -1}},
+        ge::FORMAT_ND,
+        ge::DT_FLOAT16,
+        "NCHW",
+        "CALCULATED",
+        {1, 1, 2, 2},
+        {1, 1, 2, 2},
+        {0, 0, 0, 0},
+        false, false, true, 0,
+        ge::GRAPH_SUCCESS,
+        "[-1, -1, -1]");
+}
+
+TEST_F(AvgPoolV2GradInfershape, infer_shape_unknown_dim_4d)
+{
+    ExecuteAvgPoolV2GradInfershapeTest(
+        {-1, -1, -1, -1},
+        {{-1, -1, -1, -1}, {-1, -1, -1, -1}},
+        ge::FORMAT_NCHW,
+        ge::DT_FLOAT16,
+        "NCHW",
+        "CALCULATED",
+        {1, 1, 2, 2},
+        {1, 1, 2, 2},
+        {0, 0, 0, 0},
+        false, false, true, 0,
+        ge::GRAPH_SUCCESS,
+        "[-1, -1, -1, -1]");
+}
+
+// ======================== DataFormat Fall-Through (ND data_format) ========================
+
+TEST_F(AvgPoolV2GradInfershape, infer_shape_dataformat_nd_fallback)
+{
+    ExecuteAvgPoolV2GradInfershapeTest(
+        {3, 8, 8},
+        {{3, 8, 8}, {3, 8, 8}},
+        ge::FORMAT_ND,
+        ge::DT_FLOAT16,
+        "ND",
+        "CALCULATED",
+        {1, 1, 2, 2},
+        {1, 1, 2, 2},
+        {0, 0, 0, 0},
+        false, false, true, 0,
+        ge::GRAPH_SUCCESS,
+        "[3, 8, 8]");
+}
+
+// ======================== Null Context Tests ========================
+
+TEST_F(AvgPoolV2GradInfershape, infer_shape_null_context)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("AvgPoolV2Grad")->infer_shape;
+    ASSERT_EQ(inferShapeFunc(nullptr), ge::GRAPH_FAILED);
+}
+
 // ======================== InferDataType ========================
 
 TEST_F(AvgPoolV2GradInfershape, infer_dtype_basic)
@@ -484,4 +547,10 @@ TEST_F(AvgPoolV2GradInfershape, infer_dtype_float32)
     auto context = holder.GetContext<gert::InferDataTypeContext>();
     ASSERT_EQ(inferDtypeFunc(context), ge::GRAPH_SUCCESS);
     EXPECT_EQ(context->GetOutputDataType(0), ge::DT_FLOAT);
+}
+
+TEST_F(AvgPoolV2GradInfershape, infer_dtype_null_context)
+{
+    auto inferDtypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("AvgPoolV2Grad")->infer_datatype;
+    ASSERT_EQ(inferDtypeFunc(nullptr), ge::GRAPH_FAILED);
 }
