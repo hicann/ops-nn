@@ -88,12 +88,12 @@ protected:
 
     bool CheckBasicApiTilingKey(uint64_t tilingkey) const
     {
-        return MatMulV3TilingKey().GetApiLevel(tilingkey) == MatMulV3ApiLevel::BASIC_LEVEL;
+        return MatMulV3TilingKey().GetApiLevel(tilingkey) != MatMulV3ApiLevel::HIGH_LEVEL;
     }
 
     bool CheckIterBatchBasicApi(uint64_t tilingkey) const
     {
-        return (MatMulV3TilingKey().GetApiLevel(tilingkey) == MatMulV3ApiLevel::BASIC_LEVEL &&
+        return (MatMulV3TilingKey().GetApiLevel(tilingkey) != MatMulV3ApiLevel::HIGH_LEVEL &&
                 MatMulV3TilingKey().GetBatchModel(tilingkey) == MatMulV3BatchModel::SINGLE_BIAS_MODEL);
     }
 

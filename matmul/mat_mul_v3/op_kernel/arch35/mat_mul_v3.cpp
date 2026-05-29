@@ -13,6 +13,12 @@
  * \brief
  */
 
+#if ASC_DEVKIT_MAJOR < 9 || (ASC_DEVKIT_MAJOR == 9 && ASC_DEVKIT_MINOR <= 0)
+#define IS_BLAZE false
+#else
+#define IS_BLAZE true
+#endif
+
 #include "mat_mul_tiling_key.h"
 #include "../mat_mul_v3_common.h"
 #include "mat_mul_asw_kernel.h"
@@ -25,6 +31,9 @@
 #include "mat_mul_input_k_eq_zero_clear_output.h"
 #include "mat_mul_streamk_basic_cmct.h"
 #include "mat_mul_fixpipe_opti_basic_cmct.h"
+#if IS_BLAZE
+#include "mat_mul_streamk.h"
+#endif
 #endif
 
 #include "mat_mul_pingpong_basic_cmct.h"
@@ -91,6 +100,15 @@ __global__ __aicore__ void mat_mul_v3(
     using bLayout = std::conditional_t<
         (format_x2 == CubeFormat::NZ), std::conditional_t<bTran, layout::Zn, layout::Nz>,
         std::conditional_t<bTran, layout::ColumnMajor, layout::RowMajor>>;
+#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)) && IS_BLAZE
+    using layoutA = AscendC::Std::conditional_t<aTran, AscendC::Te::DNExtLayoutPtn, AscendC::Te::NDExtLayoutPtn>;
+    using layoutB = AscendC::Std::conditional_t<
+        bTran,
+        AscendC::Std::conditional_t<
+            (format_x2 == CubeFormat::NZ), AscendC::Te::ZNLayoutPtn, AscendC::Te::DNExtLayoutPtn>,
+        AscendC::Std::conditional_t<
+            (format_x2 == CubeFormat::NZ), AscendC::Te::NZLayoutPtn, AscendC::Te::NDExtLayoutPtn>>;
+#endif
 
     REGISTER_TILING_DEFAULT(MatMulV3TilingDataCopy);
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIC_ONLY);
@@ -116,6 +134,32 @@ __global__ __aicore__ void mat_mul_v3(
             DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor, A_FULL_LOAD_MODE>(
             aGM, bGM, biasGM, cGM, nullptr, tilingData);
 #if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
+    } else if constexpr (
+        API_LEVEL == MAT_MUL_TENSOR_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD && MODEL == MAT_MUL_STREAM_K &&
+        L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) {
+        GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
+#if IS_BLAZE
+        MatmulV3Advanced::MatMulStreamKKernel<
+            DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, layoutA, layoutB, Blaze::Gemm::MatMulL0C2Out::ON_THE_FLY>(
+            aGM, bGM, biasGM, cGM, workspaceGM, tilingData);
+#else
+        MatMulStreamKActKernel<
+            DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor, MatMulL0C2Out::ON_THE_FLY>(
+            aGM, bGM, biasGM, cGM, workspaceGM, tilingData);
+#endif
+    } else if constexpr (
+        API_LEVEL == MAT_MUL_TENSOR_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD && MODEL == MAT_MUL_STREAM_K &&
+        L0C2OUT_MODEL == MAT_MUL_1V2_ND_ALIG_FIXPIPE) {
+        GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
+#if IS_BLAZE
+        MatmulV3Advanced::MatMulStreamKKernel<
+            DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, layoutA, layoutB, Blaze::Gemm::MatMulL0C2Out::ND_FIXPIPE_1_2>(
+            aGM, bGM, biasGM, cGM, workspaceGM, tilingData);
+#else
+        MatMulStreamKActKernel<
+            DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor, MatMulL0C2Out::ND_FIXPIPE_1_2>(
+            aGM, bGM, biasGM, cGM, workspaceGM, tilingData);
+#endif
     } else if constexpr (
         API_LEVEL == MAT_MUL_BASIC_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD && MODEL == MAT_MUL_STREAM_K &&
         L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) {
