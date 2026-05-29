@@ -1,6 +1,6 @@
 /**
  * This program is free software, you can redistribute it and/or modify.
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -10,7 +10,7 @@
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"
-#include "aclnnop/aclnn_binary_cross_entropy_with_logits_target_backward.h"
+#include "aclnnop/aclnn_binary_cross_entropy_with_logits_backward.h"
 
 #define CHECK_RET(cond, return_expr) \
   do {                               \
@@ -82,17 +82,17 @@ int main() {
   std::vector<int64_t> targetShape = {2, 2};
   std::vector<int64_t> weightShape = {2, 2};
   std::vector<int64_t> posWeightShape = {2, 2};
-  std::vector<int64_t> gradTargetShape = {2, 2};
+  std::vector<int64_t> outShape = {2, 2};
   void* gradOutputDeviceAddr = nullptr;
   void* selfDeviceAddr = nullptr;
   void* targetDeviceAddr = nullptr;
   void* weightDeviceAddr = nullptr;
   void* posWeightDeviceAddr = nullptr;
-  void* gradTargetDeviceAddr = nullptr;
+  void* outDeviceAddr = nullptr;
   aclTensor* gradOutput = nullptr;
   aclTensor* self = nullptr;
   aclTensor* target = nullptr;
-  aclTensor* gradTarget = nullptr;
+  aclTensor* out = nullptr;
   aclTensor* weight = nullptr;
   aclTensor* posWeight = nullptr;
   std::vector<float> gradOutputHostData = {0, 1, 2, 3};
@@ -100,7 +100,7 @@ int main() {
   std::vector<float> targetHostData = {0.1, 0.1, 0.1, 0.1};
   std::vector<float> weightHostData = {0, 1, 2, 3};
   std::vector<float> posWeightHostData = {0, 1, 2, 3};
-  std::vector<float> gradTargetHostData = {0, 0, 0, 0};
+  std::vector<float> outHostData = {0, 0, 0, 0};
   int64_t reduction = 0;
 
   // 创建gradOutput aclTensor
@@ -118,19 +118,19 @@ int main() {
   // 创建posWeight aclTensor
   ret = CreateAclTensor(posWeightHostData, posWeightShape, &posWeightDeviceAddr, aclDataType::ACL_FLOAT, &posWeight);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
-  // 创建gradTarget aclTensor
-  ret = CreateAclTensor(gradTargetHostData, gradTargetShape, &gradTargetDeviceAddr, aclDataType::ACL_FLOAT, &gradTarget);
+  // 创建out aclTensor
+  ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_FLOAT, &out);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
   uint64_t workspaceSize = 0;
   aclOpExecutor* executor;
 
-  // aclnnBinaryCrossEntropyWithLogitsTargetBackward接口调用示例
+  // aclnnBinaryCrossEntropyWithLogitsBackward接口调用示例
   // 3. 调用CANN算子库API，需要修改为具体的API名称
-  // 调用aclnnBinaryCrossEntropyWithLogitsTargetBackward第一段接口
-  ret = aclnnBinaryCrossEntropyWithLogitsTargetBackwardGetWorkspaceSize(gradOutput, self, target, weight, posWeight,
-      reduction, gradTarget, &workspaceSize, &executor);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnBinaryCrossEntropyWithLogitsTargetBackwardGetWorkspaceSize failed. ERROR: %d\n",
+  // 调用aclnnBinaryCrossEntropyWithLogitsBackward第一段接口
+  ret = aclnnBinaryCrossEntropyWithLogitsBackwardGetWorkspaceSize(gradOutput, self, target, weight, posWeight,
+      reduction, out, &workspaceSize, &executor);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnBinaryCrossEntropyWithLogitsBackwardGetWorkspaceSize failed. ERROR: %d\n",
                                           ret); return ret);
   // 根据第一段接口计算出的workspaceSize申请device内存
   void* workspaceAddr = nullptr;
@@ -138,18 +138,18 @@ int main() {
     ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
   }
-  // 调用aclnnBinaryCrossEntropyWithLogitsTargetBackward第二段接口
-  ret = aclnnBinaryCrossEntropyWithLogitsTargetBackward(workspaceAddr, workspaceSize, executor, stream);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnBinaryCrossEntropyWithLogitsTargetBackward failed. ERROR: %d\n", ret); return ret);
+  // 调用aclnnBinaryCrossEntropyWithLogitsBackward第二段接口
+  ret = aclnnBinaryCrossEntropyWithLogitsBackward(workspaceAddr, workspaceSize, executor, stream);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnBinaryCrossEntropyWithLogitsBackward failed. ERROR: %d\n", ret); return ret);
 
   // 4. （固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
   // 5. 获取输出的值，将Device侧内存上的结果拷贝至Host侧，需要根据具体API的接口定义修改
-  auto size = GetShapeSize(gradTargetShape);
+  auto size = GetShapeSize(outShape);
   std::vector<float> resultData(size, 0);
-  ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), gradTargetDeviceAddr,
+  ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), outDeviceAddr,
                     size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
   for (int64_t i = 0; i < size; i++) {
@@ -162,7 +162,7 @@ int main() {
   aclDestroyTensor(target);
   aclDestroyTensor(weight);
   aclDestroyTensor(posWeight);
-  aclDestroyTensor(gradTarget);
+  aclDestroyTensor(out);
 
   // 7. 释放device资源，需要根据具体API的接口定义修改
   aclrtFree(gradOutputDeviceAddr);
@@ -170,7 +170,7 @@ int main() {
   aclrtFree(targetDeviceAddr);
   aclrtFree(weightDeviceAddr);
   aclrtFree(posWeightDeviceAddr);
-  aclrtFree(gradTargetDeviceAddr);
+  aclrtFree(outDeviceAddr);
   if (workspaceSize > 0) {
     aclrtFree(workspaceAddr);
   }
