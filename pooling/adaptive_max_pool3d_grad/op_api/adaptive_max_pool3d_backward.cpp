@@ -38,7 +38,7 @@ const inline aclTensor* AdaptiveMaxPool3DGradAiCore(
     return gradInput;
 }
 
-const aclTensor* AdaptiveMaxPool3DGrad(
+const aclTensor* AdaptiveMaxPool3DGrad( 
     const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices, aclOpExecutor* executor)
 {
     auto gradInput = executor->AllocTensor(self->GetViewShape(), self->GetDataType(), op::Format::FORMAT_NCDHW);

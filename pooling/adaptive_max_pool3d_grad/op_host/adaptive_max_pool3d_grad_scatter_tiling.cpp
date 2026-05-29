@@ -80,5 +80,5 @@ ge::graphStatus AdaptiveMaxPool3DGradScatterTiling::DoOpTiling()
 }
 
 // 注册
-REGISTER_TILING_TEMPLATE("AdaptiveMaxPool3DGrad", AdaptiveMaxPool3DGradScatterTiling, 2);
+REGISTER_TILING_TEMPLATE("AdaptiveMaxPool3DGrad", AdaptiveMaxPool3DGradScatterTiling, 20);
 } // namespace optiling

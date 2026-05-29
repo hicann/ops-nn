@@ -57,6 +57,9 @@ bool CheckNotNullPtr(
 const std::initializer_list<op::DataType> GetDtypeSupportListBySocVersion()
 {
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        return GRAD_DTYPE_SUPPORT_LIST;
+    }
     switch (socVersion) {
         case SocVersion::ASCEND910_93:
         case SocVersion::ASCEND910B: {

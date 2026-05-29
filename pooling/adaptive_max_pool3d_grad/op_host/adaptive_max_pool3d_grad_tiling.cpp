@@ -13,6 +13,7 @@
  * \brief
  */
 #include "adaptive_max_pool3d_grad_tiling.h"
+#include "adaptive_max_pool3d_grad_tiling_arch35.h"
 #include <iostream>
 
 using Ops::NN::Optiling::TilingRegistry;

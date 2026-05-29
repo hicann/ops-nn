@@ -35,6 +35,9 @@ static const int D_DIM = -3;
 static const int64_t MAX_INT32 = 2147483647;
 static const std::initializer_list<op::DataType> POOL3D_INDICES_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_INT32};
+static const std::initializer_list<op::DataType> POOL3D_INDICES_DAV_DTYPE_SUPPORT_LIST = {
+    op::DataType::DT_INT32,
+    op::DataType::DT_INT64};
 
 static bool CheckFormat(
     const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices, const aclTensor* gradInput)
@@ -114,7 +117,6 @@ aclnnStatus aclnnAdaptiveMaxPool3dBackwardGetWorkspaceSize(
     uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnAdaptiveMaxPool3dBackward, DFX_IN(gradOutput, self, indices), DFX_OUT(gradInput));
-    OP_LOGD("AdaptiveMaxPool3DGrad: getWorkspaceSize");
 
     // Create an OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
@@ -125,8 +127,12 @@ aclnnStatus aclnnAdaptiveMaxPool3dBackwardGetWorkspaceSize(
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
     CHECK_RET(CheckSelfShapeSupport(self), ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckFormat(gradOutput, self, indices, gradInput), ACLNN_ERR_PARAM_INVALID);
-    OP_CHECK_DTYPE_NOT_SUPPORT(indices, POOL3D_INDICES_DTYPE_SUPPORT_LIST, return ACLNN_ERR_PARAM_INVALID);
-
+    
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        OP_CHECK_DTYPE_NOT_SUPPORT(indices, POOL3D_INDICES_DAV_DTYPE_SUPPORT_LIST, return ACLNN_ERR_PARAM_INVALID);
+    } else {
+        OP_CHECK_DTYPE_NOT_SUPPORT(indices, POOL3D_INDICES_DTYPE_SUPPORT_LIST, return ACLNN_ERR_PARAM_INVALID);
+    }
     // Check whether the tensor is empty (the operator does not support empty tensors)
     if (gradOutput->IsEmpty() || self->IsEmpty() || indices->IsEmpty()) {
         *workspaceSize = 0;
@@ -135,7 +141,6 @@ aclnnStatus aclnnAdaptiveMaxPool3dBackwardGetWorkspaceSize(
     }
 
     // Convert the self, gradOutput, indices into consecutive tensor
-
     auto gradOutputContiguous = l0op::Contiguous(gradOutput, uniqueExecutor.get());
     CHECK_RET(gradOutputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 

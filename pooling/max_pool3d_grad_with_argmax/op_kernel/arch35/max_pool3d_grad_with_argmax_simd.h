@@ -52,7 +52,7 @@ constexpr AscendC::MicroAPI::CastTrait castTraitI64I32 = {
     AscendC::MicroAPI::MaskMergeMode::ZEROING,
     AscendC::RoundMode::CAST_ROUND,
 };
-
+  
 constexpr AscendC::MicroAPI::CastTrait castTraitU32U16 = {
     AscendC::MicroAPI::RegLayout::ZERO,
     AscendC::MicroAPI::SatMode::NO_SAT,

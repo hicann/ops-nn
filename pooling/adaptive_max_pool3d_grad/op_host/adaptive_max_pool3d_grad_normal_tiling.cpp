@@ -205,5 +205,5 @@ ge::graphStatus AdaptiveMaxPool3DGradNormalTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-REGISTER_TILING_TEMPLATE("AdaptiveMaxPool3DGrad", AdaptiveMaxPool3DGradNormalTiling, 0);
+REGISTER_TILING_TEMPLATE("AdaptiveMaxPool3DGrad", AdaptiveMaxPool3DGradNormalTiling, 10);
 } // namespace optiling

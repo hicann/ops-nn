@@ -6,7 +6,7 @@
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
-| <term>Ascend 950PR/Ascend 950DT</term>                             |    ×     |
+| <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    √     |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
 | <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
@@ -126,7 +126,7 @@ aclnnStatus aclnnAdaptiveMaxPool3dBackward(
       <td>输入</td>
       <td>正向输入中最大元素的索引位置。</td>
       <td>shape与gradOutput一致。</td>
-      <td>INT32</td>
+      <td>INT32、INT64</td>
       <td>ND</td>
       <td>4-5</td>
       <td>√</td>
@@ -199,7 +199,7 @@ aclnnStatus aclnnAdaptiveMaxPool3dBackward(
         <td>gradOutput与indices的shape不一致，self和gradInput的shape不一致。</td>
       </tr>
       <tr>
-        <td>depth * height * width > max int32，超出了indices的表示范围。</td>
+        <td>A2、A3的depth * height * width > max int32，超出了indices的表示范围。</td>
       </tr>
     </tbody>
     </table>
@@ -251,7 +251,7 @@ aclnnStatus aclnnAdaptiveMaxPool3dBackward(
 - 确定性计算：
   - aclnnAdaptiveMaxPool3dBackward默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
 
-- 非整除场景下，shape不超过2的24次方。整除场景下，没有这个限制。
+- A2、A3非整除场景下，shape不超过2的24次方。整除场景下，没有这个限制。
 
 ## 调用示例
 
