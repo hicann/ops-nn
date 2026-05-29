@@ -17,10 +17,14 @@
 #include <log/log.h>
 #include <util/math_util.h>
 #include <unordered_set>
+#include <cstdarg>
 #include "error_util.h"
 #include "conv/common/op_host/op_tiling/conv_math_util.h"
 #include "conv/common/op_host/op_tiling/conv_platform_util.h"
+#include "securec.h"
+#include "conv/common/op_host/op_tiling/arch35/conv_base_numblocks_decision.h"
 
+using namespace optiling::conv_ops_tiling;
 namespace Ops {
 namespace NN {
 namespace Conv {
@@ -407,17 +411,17 @@ bool CheckTransposeAttr(gert::TilingContext *context, OtherParams& otherParams) 
     auto attrs = context->GetAttrs();
     auto outputPadding = attrs->GetAttrPointer<gert::ContinuousVector>(K_OUTPUT_PADDING_CONV3D_TRANSPOSE_IDX);
     OP_CHECK_IF(outputPadding == nullptr, OP_LOGE(context, "failed to get output_padding attrs"), return false);
-    OP_CHECK_IF(outputPadding->GetSize() != K_ORI_SHAPE_DIM_3D,
-      OP_LOGE(context, "The output_padding should be 5d, actual dim num: %zu", outputPadding->GetSize()), return false);
+    OP_CHECK_IF(outputPadding->GetSize() != K_ORI_SHAPE_DIM_3D, 
+        OP_LOGE(context, "The output_padding should be 5d, actual dim num: %zu", outputPadding->GetSize()), return false);
     const auto outputPaddingData = static_cast<const int64_t *>(outputPadding->GetData());
     if (yDesc->GetOriginFormat() == ge::FORMAT_NCDHW) {
       OP_CHECK_IF(outputPaddingData[K_N_DIM_NCDHW] != 0 || outputPaddingData[K_C_DIM_NCDHW] != 0,
-        OP_LOGE(context, "N/C output_padding should be zero.\n"), return false);
+          OP_LOGE(context, "N/C output_padding should be zero.\n"), return false);
       otherParams.output_padding.output_padding_d = outputPaddingData[K_D_DIM_NCDHW];
       otherParams.output_padding.output_padding_h = outputPaddingData[K_H_DIM_NCDHW];
       otherParams.output_padding.output_padding_w = outputPaddingData[K_W_DIM_NCDHW];
     } else {  // yDesc->GetOriginFormat() == ge::FORMAT_NDHWC
-      OP_CHECK_IF(outputPaddingData[K_N_DIM_NDHWC] != 0 || outputPaddingData[K_C_DIM_NDHWC] != 0,
+    OP_CHECK_IF(outputPaddingData[K_N_DIM_NDHWC] != 0 || outputPaddingData[K_C_DIM_NDHWC] != 0,
         OP_LOGE(context, "N/C output_padding should be zero.\n"), return false);
       otherParams.output_padding.output_padding_d = outputPaddingData[K_D_DIM_NDHWC];
       otherParams.output_padding.output_padding_h = outputPaddingData[K_H_DIM_NDHWC];
@@ -556,13 +560,13 @@ static bool UpdateDtypeParams(const gert::TilingContext *context, Conv3dBpInputV
 
   runInfoV2.a_dtype_bytes = ge::GetSizeByDataType(otherParams.a_dtype);
   OP_CHECK_IF(runInfoV2.a_dtype_bytes == -1,
-    OP_LOGE(op_name, "out_backprop dtype size is invalid"), return false);
+      OP_LOGE(op_name, "out_backprop dtype size is invalid"), return false);
   runInfoV2.b_dtype_bytes = ge::GetSizeByDataType(otherParams.b_dtype);
   OP_CHECK_IF(runInfoV2.b_dtype_bytes == -1,
-    OP_LOGE(op_name, "filter dtype size is invalid"), return false);
+      OP_LOGE(op_name, "filter dtype size is invalid"), return false);
   runInfoV2.c_dtype_bytes = ge::GetSizeByDataType(otherParams.c_dtype);
   OP_CHECK_IF(runInfoV2.c_dtype_bytes == -1,
-    OP_LOGE(op_name, "y dtype size is invalid"), return false);
+      OP_LOGE(op_name, "y dtype size is invalid"), return false);
 
   return true;
 }
@@ -890,9 +894,11 @@ static bool CheckAllZero(const T *tensor_data, size_t dim_size) {
 
 static bool CheckInputSizeAllZero(gert::TilingContext *context, bool &allzero) {
   auto input_size = context->GetInputTensor(INPUT_SIZE_INDEX);
-  OP_CHECK_IF(input_size == nullptr, OP_LOGE(context, "get input size fail"), return false);
+  OP_CHECK_IF(input_size == nullptr, OP_LOGE(context, "get input size fail"),
+      return false);
   size_t input_size_dim_num = static_cast<size_t>(input_size->GetOriginShape().GetShapeSize());
-  OP_CHECK_IF(input_size_dim_num != K_ORI_SHAPE_DIM_3D && input_size_dim_num != K_ORI_SHAPE_DIM_2D, OP_LOGE(context, "input_size_dim_num=[%zu], input_size must be 4d or 5d", input_size_dim_num), return false);
+  OP_CHECK_IF(input_size_dim_num != K_ORI_SHAPE_DIM_3D && input_size_dim_num != K_ORI_SHAPE_DIM_2D, OP_LOGE(context, "input_size_dim_num=[%zu], input_size must be 4d or 5d", input_size_dim_num),
+      return false);
   auto dtype = context->GetInputDesc(INPUT_SIZE_INDEX)->GetDataType();
   if (dtype == ge::DT_INT32) {
     auto tensor_data = input_size->GetData<int32_t>();
@@ -1048,7 +1054,8 @@ static bool IsNeedTilingHkWk(gert::TilingContext *context, const Conv3dBpInputV2
     uint64_t l1_size  = 0;
 
     fe::PlatFormInfos* platformInfo = context->GetPlatformInfo();
-    OP_CHECK_IF(platformInfo == nullptr, OP_LOGE(context, "platformInfoPtr is null"), return false);
+    OP_CHECK_IF(platformInfo == nullptr, OP_LOGE(context, "platformInfoPtr is null"),
+        return false);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L1, l1_size);
 
@@ -1422,41 +1429,42 @@ bool GetAttrAndDtypeParams(gert::TilingContext *context, Conv3dBpInputV2RunInfo&
 
     const auto op_name = context->GetNodeName();
     // stridesDim == 5
-    OP_CHECK_IF(strides == nullptr, OP_LOGE(op_name, "get strides from context fail."), return false);
-    OP_CHECK_IF(strides->GetSize() != kStridesDim, OP_LOGE(op_name, "strides of context dim len is invalid."), return false);
+    OP_CHECK_IF(strides == nullptr, OP_LOGE_WITH_INVALID_ATTR(op_name, "strides", "null", "non_empty_value"), return false);
+    OP_CHECK_IF(strides->GetSize() != kStridesDim, 
+        OP_LOGE_WITH_INVALID_ATTR(op_name, "strides", std::to_string(strides->GetSize()), std::to_string(kStridesDim)), return false);
     // padsDim == 6
-    OP_CHECK_IF(pads == nullptr, OP_LOGE(op_name, "get pads from context fail."), return false);
-    OP_CHECK_IF(pads->GetSize() != kPadsDim, OP_LOGE(op_name, "pads of context dim len is invalid."), return false);
+    OP_CHECK_IF(pads == nullptr, OP_LOGE_WITH_INVALID_ATTR(op_name, "pads", "null", "non_empty_value"), return false);
+    OP_CHECK_IF(pads->GetSize() != kPadsDim, 
+        OP_LOGE_WITH_INVALID_ATTR(op_name, "pads", std::to_string(pads->GetSize()), std::to_string(kPadsDim)), return false);
     // dilationsDim == 5
-    OP_CHECK_IF(dilations == nullptr, OP_LOGE(op_name, "get dilations from context fail."), return false);
-    OP_CHECK_IF(dilations->GetSize() != kDilationsDim, OP_LOGE(op_name, "dilations of context dim len is invalid."), return false);
-    OP_CHECK_IF(groups == nullptr, OP_LOGE(op_name, "get groups from context fail."), return false);
+    OP_CHECK_IF(dilations == nullptr, OP_LOGE_WITH_INVALID_ATTR(op_name, "dilations", "null", "non_empty_value"), return false);
+    OP_CHECK_IF(dilations->GetSize() != kDilationsDim, 
+        OP_LOGE_FOR_INVALID_SHAPEDIM(op_name, "dilations", std::to_string(dilations->GetSize()), std::to_string(kDilationsDim)), return false);
+    OP_CHECK_IF(groups == nullptr, OP_LOGE_WITH_INVALID_ATTR(op_name, "groups", "null", "non_empty_value"), return false);
 
     const auto strides_data = static_cast<const int64_t *>(strides->GetData());
     const auto pads_data = static_cast<const int64_t *>(pads->GetData());
     const auto dilations_data = static_cast<const int64_t *>(dilations->GetData());
     OP_CHECK_IF(!CheckAttrRange(context, strides_data, pads_data, dilations_data, groups),
-      OP_LOGE(context, "check attr range failed"), return false);
+      OP_LOGW(context, "check attr range failed"), return false);
 
     Shape strides_ncdhw;
     Shape dilations_ncdhw;
     ge::Format data_format = context->GetInputDesc(OUT_BACKPROP_INDEX)->GetOriginFormat();
     if (op_type == optiling::OpTypeV2::kConv3DTransposeV2 || op_type == optiling::OpTypeV2::kExtendConvTranspose) {
-      OP_CHECK_IF(!CheckTransposeAttr(context, otherParams), OP_LOGE(context, "check transpose attr failed"), return false);
+      OP_CHECK_IF(!CheckTransposeAttr(context, otherParams), OP_LOGW(context, "check transpose attr failed"), return false);
       data_format = context->GetInputDesc(FILTER_INDEX)->GetOriginFormat();
     }
 
     GetNCDHWShape(strides_data, strides_ncdhw, data_format);
     GetNCDHWShape(dilations_data, dilations_ncdhw, data_format);
 
-    OP_CHECK_IF(strides_ncdhw.batch != 1,
-      OP_LOGE(op_name, "strides N[%ld] is invalid, must be 1.", strides_ncdhw.batch), return false);
-    OP_CHECK_IF(strides_ncdhw.c != 1,
-      OP_LOGE(op_name, "strides C[%ld] is invalid, must be 1.", strides_ncdhw.c), return false);
+    OP_CHECK_IF(strides_ncdhw.batch != 1, OP_LOGE_FOR_INVALID_VALUE(op_name, "strides N", std::to_string(strides_ncdhw.batch), "1"), return false);
+    OP_CHECK_IF(strides_ncdhw.c != 1, OP_LOGE_FOR_INVALID_VALUE(op_name, "strides C", std::to_string(strides_ncdhw.c), "1"), return false);
 
     SetConvAttrs(runInfoV2, pads_data, strides_ncdhw, dilations_ncdhw, groups, otherParams);
     if (op_type == optiling::OpTypeV2::kConv3DTransposeV2 || op_type == optiling::OpTypeV2::kExtendConvTranspose) {
-      OP_CHECK_IF(!CheckTransposeOutputdingRange(context, runInfoV2, otherParams), OP_LOGE(context, "check transpose attr failed"), return false);
+      OP_CHECK_IF(!CheckTransposeOutputdingRange(context, runInfoV2, otherParams), OP_LOGW(context, "check transpose attr failed"), return false);
     }
     return UpdateDtypeParams(context, runInfoV2, op_type, otherParams);
 }
@@ -1494,11 +1502,14 @@ bool GetInputOutputFormat(const gert::TilingContext* context, Conv3dBpInputV2Run
 }
 
 bool CalScale(const gert::TilingContext *context, const Conv3dBpInputV2RunInfo &runInfoV2, const OtherParams& otherParams) {
-	if (!IsSocVersionFuse(context)) {
-		return true;
-	}
+	  if (!IsSocVersionFuse(context)) {
+		  return true;
+	  }
+    const char* opName = context->GetNodeName();
     if (otherParams.a_dtype == ge::DT_INT8) {
         if (static_cast<uint64_t>(runInfoV2.dedx_cin) * ge::GetSizeByDataType(ge::DT_INT64) > FB_BUFFER_SIZE) {
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName, "scale_size", std::to_string(runInfoV2.dedx_cin * ge::GetSizeByDataType(ge::DT_INT64)),
+                FormatString("The value of scale_size must be less than or equal to FB_BUFFER_SIZE(%d)", FB_BUFFER_SIZE).c_str());
             return false;
         }
     }
@@ -1508,16 +1519,16 @@ bool CalScale(const gert::TilingContext *context, const Conv3dBpInputV2RunInfo &
 bool Conv3DBackpropInputParseFunc(gert::TilingContext *context, optiling::OpTypeV2 opType,
                                   Conv3dBpInputV2RunInfo& runInfoV2, OtherParams& otherParams, bool isV2Impl) {
     const auto op_name = context->GetNodeName();
-    OP_CHECK_IF(!GetAttrAndDtypeParams(context, runInfoV2, opType, otherParams), OP_LOGE(op_name, "Get attrs and dtype Failed."), return false);
-    OP_CHECK_IF(!GetShapeParams(context, runInfoV2, opType, isV2Impl, otherParams), OP_LOGE(op_name, "Set shape params failed."), return false);
+    OP_CHECK_IF(!GetAttrAndDtypeParams(context, runInfoV2, opType, otherParams), OP_LOGW(op_name, "Get attrs and dtype Failed."), return false);
+    OP_CHECK_IF(!GetShapeParams(context, runInfoV2, opType, isV2Impl, otherParams), OP_LOGW(op_name, "Set shape params failed."), return false);
     ReCalDilation(context, runInfoV2, otherParams);
     OP_CHECK_IF(!GetInputOutputFormat(context, runInfoV2, opType),
-                OP_LOGE(context, "failed to get input output format"), return false);
-    OP_CHECK_IF(!CalGroups(context, otherParams, runInfoV2), OP_LOGE(op_name, "Calc groups failed."), return false);
-    OP_CHECK_IF(!CalPads(context, runInfoV2, opType, otherParams), OP_LOGE(op_name, "Calc pads failed."), return false);
-    OP_CHECK_IF(!CalModify(context, runInfoV2, otherParams), OP_LOGE(op_name, "Modify pad failed."), return false);
-    OP_CHECK_IF(!CalRealG(context, runInfoV2, otherParams), OP_LOGE(op_name, "Calc real_g failed."), return false);
-    OP_CHECK_IF(!CalScale(context, runInfoV2, otherParams), OP_LOGE(op_name, "Scale size too big, not support."), return false);
+                OP_LOGW(op_name, "failed to get input output format"), return false);
+    OP_CHECK_IF(!CalGroups(context, otherParams, runInfoV2), OP_LOGW(op_name, "Calc groups failed."), return false);
+    OP_CHECK_IF(!CalPads(context, runInfoV2, opType, otherParams), OP_LOGW(op_name, "Calc pads failed."), return false);
+    OP_CHECK_IF(!CalModify(context, runInfoV2, otherParams), OP_LOGW(op_name, "Modify pad failed."), return false);
+    OP_CHECK_IF(!CalRealG(context, runInfoV2, otherParams), OP_LOGW(op_name, "Calc real_g failed."), return false);
+    OP_CHECK_IF(!CalScale(context, runInfoV2, otherParams), OP_LOGW(op_name, "Scale size too big, not support."), return false);
     return true;
 }
 
@@ -1528,9 +1539,7 @@ bool GetFusionMode(Conv3dBpInputV2RunInfo &runInfoV2, const char* opName,
         return true;
     }
     auto attrs = context->GetAttrs();
-    OP_CHECK_IF(attrs == nullptr,
-                OP_LOGE(context, "failed to get runtime attrs"),
-                return false);
+    OP_CHECK_IF(attrs == nullptr, OP_LOGE_WITH_INVALID_ATTR(opName, "attrs", "null", "non_empty_value"), return false);
     size_t idx = K_FUSION_MODE_CONV3D_TRANSPOSE_IDX;
     if (idx < attrs->GetAttrNum()) {
         const int32_t *fusionMode = attrs->GetAttrPointer<int32_t>(idx);
@@ -1552,14 +1561,9 @@ bool GetImplMode(Conv3dBpInputV2RunInfo &runInfoV2, const char* opName,
     }
 
     auto attrs = context->GetAttrs();
-    OP_CHECK_IF(attrs == nullptr,
-                OP_LOGE(context, "failed to get runtime attrs"),
-                return false);
+    OP_CHECK_IF(attrs == nullptr, OP_LOGE_WITH_INVALID_ATTR(opName, "attrs", "null", "non_empty_value"), return false);
     auto inputDesc = context->GetInputDesc(OUT_BACKPROP_INDEX);
-    OP_CHECK_IF(inputDesc == nullptr,
-        OP_LOGE(opName, "failed to get out_backprop tensor desc from context"),
-        return false
-    );
+    OP_CHECK_IF(inputDesc == nullptr, OP_LOGE_WITH_INVALID_ATTR(opName, "out_backprop", "null", "non_empty_value"), return false);
     ge::DataType aDtype = inputDesc->GetDataType();
     size_t enableHf32Index = 5U; // dx enablehf32 idx is 5
     if (opType == optiling::OpTypeV2::kConv3DTransposeV2) {
@@ -1567,11 +1571,53 @@ bool GetImplMode(Conv3dBpInputV2RunInfo &runInfoV2, const char* opName,
     }
     if (aDtype == ge::DT_FLOAT && enableHf32Index < attrs->GetAttrNum()) {
         auto enableHf32Ptr = attrs->GetBool(enableHf32Index);
-        OP_CHECK_IF(enableHf32Ptr == nullptr, OP_LOGE(opName, "failed to get enable_hf32 attr from context"), return false);
+        if (enableHf32Ptr == nullptr) {
+            OP_LOGE_WITH_INVALID_ATTR(opName, "enable_hf32", "null", "non_empty_value");
+            return false;
+        }
         bool enableHf32 = *enableHf32Ptr;
         OP_LOGD(opName, "attr idx[%zu] enable_hf32 = %d", enableHf32Index, enableHf32);
         runInfoV2.hf32_flag = static_cast<uint32_t>(enableHf32 ? 1 : 0);
- 	  }
+  }
+    return true;
+}
+
+static bool CheckFilterShapeHW(const char* op_name, const OtherParams& otherParams, int32_t kFilterDimHWUpTmp)
+{
+    OP_CHECK_IF(!CheckRange(otherParams.b_shape.h, kDimLow, kFilterDimHWUpTmp), 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(op_name, "filter_h", std::to_string(otherParams.b_shape.h), FormatString("the value of filter_h must be equal to [%d, %d]", kDimLow, kFilterDimHWUpTmp).c_str()), return false);
+    OP_CHECK_IF(!CheckRange(otherParams.b_shape.w, kDimLow, kFilterDimHWUpTmp), 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(op_name, "filter_w", std::to_string(otherParams.b_shape.w), FormatString("the value of filter_w must be equal to [%d, %d]", kDimLow, kFilterDimHWUpTmp).c_str()), return false);
+    OP_CHECK_IF(!CheckRange(otherParams.b_shape.d, kDimLow, kDimBatchUp), 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(op_name, "filter_d", std::to_string(otherParams.b_shape.d), FormatString("the value of filter_d must be equal to [%d, %d]", kDimLow, kDimBatchUp).c_str()), return false);
+    return true;
+}
+
+static bool CheckAShapeParams(const char* op_name, const OtherParams& otherParams)
+{
+    OP_CHECK_IF(!CheckRange(otherParams.a_shape.batch, kDimLow, kDimBatchUp), 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(op_name, "batch", std::to_string(otherParams.a_shape.batch), FormatString("the value of batch must be equal to [%d, %d]", kDimLow, kDimBatchUp).c_str()), return false);
+    OP_CHECK_IF(!CheckRange(otherParams.a_shape.d, kDimLow, kDimUp), 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(op_name, "dout", std::to_string(otherParams.a_shape.d), FormatString("the value of dout must be equal to [%d, %d]", kDimLow, kDimUp).c_str()), return false);
+    OP_CHECK_IF(!CheckRange(otherParams.a_shape.h, kDimLow, kDimUp), 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(op_name, "hout", std::to_string(otherParams.a_shape.h), FormatString("the value of hout must be equal to [%d, %d]", kDimLow, kDimUp).c_str()), return false);
+    OP_CHECK_IF(!CheckRange(otherParams.a_shape.w, kDimLow, kDimUp), 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(op_name, "wout", std::to_string(otherParams.a_shape.w), FormatString("the value of wout must be equal to [%d, %d]", kDimLow, kDimUp).c_str()), return false);
+    return true;
+}
+
+static bool CheckCShapeParams(const char* op_name, const OtherParams& otherParams)
+{
+    OP_CHECK_IF(!CheckLowerBound(otherParams.a_shape.c, kDimLow), 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(op_name, "cout", std::to_string(otherParams.a_shape.c), FormatString("the value of cout must be greater than or equal to [%d]", kDimLow).c_str()), return false);
+    OP_CHECK_IF(!CheckLowerBound(otherParams.a_shape.c1, kDimLow), 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(op_name, "cout1", std::to_string(otherParams.a_shape.c1), FormatString("the value of cout1 must be greater than or equal to [%d]", kDimLow).c_str()), return false);
+    OP_CHECK_IF(!CheckLowerBound(otherParams.c_shape.c1, kDimLow), 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(op_name, "cin1", std::to_string(otherParams.c_shape.c1), FormatString("the value of cin1 must be greater than or equal to [%d]", kDimLow).c_str()), return false);
+    OP_CHECK_IF(!CheckLowerBound(otherParams.c_shape.c, kDimLow), 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(op_name, "cin", std::to_string(otherParams.c_shape.c), FormatString("the value of cin must be greater than or equal to [%d]", kDimLow).c_str()), return false);
+    OP_CHECK_IF(!CheckLowerBound(otherParams.c_shape.d, kDimLow), 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(op_name, "din", std::to_string(otherParams.c_shape.d), FormatString("the value of din must be greater than or equal to [%d]", kDimLow).c_str()), return false);
     return true;
 }
 
@@ -1583,45 +1629,19 @@ bool CheckShapeValidWithLog(const gert::TilingContext *context, const OtherParam
     kGroupUpTmp = kGroupUp;
     kFilterDimHWUpTmp = kDimUp;
   }
-  OP_CHECK_IF(!CheckRange(runInfoV2.groups, kDimLow, kGroupUpTmp),
-              OP_LOGE(op_name, "group value [%d] is invalid, support range [%d, %d]", runInfoV2.groups, kDimLow, kGroupUpTmp),
-              return false);
-  OP_CHECK_IF(!CheckRange(otherParams.b_shape.h, kDimLow, kFilterDimHWUpTmp),
-              OP_LOGE(op_name, "the H dim of filter [%ld] is invalid, support range [%d, %d]", otherParams.b_shape.h, kDimLow, kFilterDimHWUpTmp),
-              return false);
-  OP_CHECK_IF(!CheckRange(otherParams.b_shape.w, kDimLow, kFilterDimHWUpTmp),
-              OP_LOGE(op_name, "the W dim of filter [%ld] is invalid, support range [%d, %d]", otherParams.b_shape.w, kDimLow, kFilterDimHWUpTmp),
-              return false);
-  OP_CHECK_IF(!CheckRange(otherParams.b_shape.d, kDimLow, kDimBatchUp),
-              OP_LOGE(op_name, "the D dim of filter [%ld] is invalid, support range [%d, %d]", otherParams.b_shape.d, kDimLow, kDimBatchUp),
-              return false);
-  OP_CHECK_IF(!CheckRange(otherParams.a_shape.batch, kDimLow, kDimBatchUp),
-              OP_LOGE(op_name, "batch value [%ld] is invalid, support range [%d, %d]", otherParams.a_shape.batch, kDimLow, kDimBatchUp),
-              return false);
-  OP_CHECK_IF(!CheckRange(otherParams.a_shape.d, kDimLow, kDimUp),
-              OP_LOGE(op_name, "dout value [%ld] is invalid, support range [%d, %d]", otherParams.a_shape.d, kDimLow, kDimUp),
-              return false);
-  OP_CHECK_IF(!CheckRange(otherParams.a_shape.h, kDimLow, kDimUp),
-              OP_LOGE(op_name, "hout value [%ld] is invalid, supports range [%d, %d]", otherParams.a_shape.h, kDimLow, kDimUp),
-              return false);
-  OP_CHECK_IF(!CheckRange(otherParams.a_shape.w, kDimLow, kDimUp),
-              OP_LOGE(op_name, "wout value [%ld] is invalid, supports range [%d, %d]", otherParams.a_shape.w, kDimLow, kDimUp),
-              return false);
-  OP_CHECK_IF(!CheckLowerBound(otherParams.a_shape.c, kDimLow),
-              OP_LOGE(op_name, "cout value [%ld] is invalid, should not be less than [%d]", otherParams.a_shape.c, kDimLow),
-              return false);
-  OP_CHECK_IF(!CheckLowerBound(otherParams.a_shape.c1, kDimLow),
-              OP_LOGE(op_name, "cout1 value [%ld] is invalid, should not be less than [%d]", otherParams.a_shape.c1, kDimLow),
-              return false);
-  OP_CHECK_IF(!CheckLowerBound(otherParams.c_shape.c1, kDimLow),
-              OP_LOGE(op_name, "cin1 value [%ld] is invalid, should not be less than [%d]", otherParams.c_shape.c1, kDimLow),
-              return false);
-  OP_CHECK_IF(!CheckLowerBound(otherParams.c_shape.c, kDimLow),
-              OP_LOGE(op_name, "cin value [%ld] is invalid, should not be less than [%d]", otherParams.c_shape.c, kDimLow),
-              return false);
-  OP_CHECK_IF(!CheckLowerBound(otherParams.c_shape.d, kDimLow),
-              OP_LOGE(op_name, "din value [%ld] is invalid, should not be less than [%d]", otherParams.c_shape.d, kDimLow),
-              return false);
+  if (!CheckRange(runInfoV2.groups, kDimLow, kGroupUpTmp)) {
+      OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "groups", std::to_string(runInfoV2.groups), FormatString("the value of groups must be in range [%d, %d]", kDimLow, kGroupUpTmp).c_str());
+      return false;
+  }
+  if (!CheckFilterShapeHW(op_name, otherParams, kFilterDimHWUpTmp)) {
+      return false;
+  }
+  if (!CheckAShapeParams(op_name, otherParams)) {
+      return false;
+  }
+  if (!CheckCShapeParams(op_name, otherParams)) {
+      return false;
+  }
   return true;
 }
 
@@ -1635,160 +1655,244 @@ static inline string IntToBinary(uint64_t &n) {
   return ans;
 }
 
-static inline void OutputErrorMsg(const vector<string> &error_info, string &error_flag) {
-  string msg;
-  for (size_t i = 0; i < error_flag.length(); i++) {
-    if (error_flag[i] == '1' && i < error_info.size()) {
-      msg = error_info[i];
-      OP_LOGE("Conv3DBackpropInput", "Error msg is: %s", msg.c_str());
-      break;
-    }
-  }
+static void CalculateAlignAndSize(const OtherParams& otherParams, const Conv3dBpInputV2RunInfo& runInfoV2,
+    int64_t& dedy_c_align, int64_t& dedx_c_align, int64_t& filter_c_align, int64_t& filter_n_align,
+    int64_t& dedy_size, int64_t& dedx_size, int64_t& filter_size)
+{
+    dedy_c_align = Ops::Base::CeilAlign(otherParams.a_shape.c, otherParams.a_shape.c0);
+    dedx_c_align = Ops::Base::CeilAlign(otherParams.c_shape.c, otherParams.c_shape.c0);
+    filter_c_align = Ops::Base::CeilAlign(otherParams.b_shape.c, static_cast<int64_t>(otherParams.filter_ci0));
+    filter_n_align = Ops::Base::CeilAlign(otherParams.b_shape.batch, static_cast<int64_t>(otherParams.filter_co0));
+    dedy_size = otherParams.a_shape.batch * dedy_c_align * otherParams.a_shape.d * otherParams.a_shape.w * otherParams.a_shape.h * runInfoV2.a_dtype_bytes;
+    dedx_size = otherParams.a_shape.batch * dedx_c_align * otherParams.c_shape.d * otherParams.c_shape.w * otherParams.c_shape.h * runInfoV2.c_dtype_bytes;
+    filter_size = filter_n_align * filter_c_align * otherParams.filter_d_dilation * otherParams.b_shape.w * otherParams.b_shape.h * runInfoV2.b_dtype_bytes;
+}
+
+static void SetFmapPaddingParams(OtherParams& otherParams, const Conv3dBpInputV2RunInfo& runInfoV2)
+{
+    otherParams.fmap_d_padding = otherParams.c_shape.d + runInfoV2.pad_h + runInfoV2.pad_t;
+    otherParams.fmap_h_padding = otherParams.c_shape.h + runInfoV2.pad_u + runInfoV2.pad_d;
+    otherParams.fmap_w_padding = otherParams.c_shape.w + runInfoV2.pad_l + runInfoV2.pad_r;
+}
+
+static bool CheckGroupsAndFilterRange(const char* opName, const Conv3dBpInputV2RunInfo& runInfoV2, const OtherParams& otherParams, int32_t kFilterDimHWUpTmp)
+{
+    OP_CHECK_IF(!CheckRange(runInfoV2.groups, kDimLow, kDimUp), 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, "groups", std::to_string(runInfoV2.groups), FormatString("groups must be within the range [%d, %d]", kDimLow, kDimUp).c_str()),
+        return false);
+    OP_CHECK_IF(!CheckRange(otherParams.b_shape.h, kDimLow, kFilterDimHWUpTmp), 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, "filter_h", std::to_string(otherParams.b_shape.h), FormatString("filter_h must be within the range [%d, %d]", kDimLow, kFilterDimHWUpTmp).c_str()),
+        return false);
+    OP_CHECK_IF(!CheckRange(otherParams.b_shape.w, kDimLow, kFilterDimHWUpTmp), 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, "filter_w", std::to_string(otherParams.b_shape.w), FormatString("filter_w must be within the range [%d, %d]", kDimLow, kFilterDimHWUpTmp).c_str()),
+        return false);
+    OP_CHECK_IF(!CheckRange(otherParams.b_shape.d, kDimLow, kDimBatchUp), 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, "filter_d", std::to_string(otherParams.b_shape.d), FormatString("filter_d must be within the range [%d, %d]", kDimLow, kDimBatchUp).c_str()),
+        return false);
+    return true;
+}
+
+static bool CheckAShapeRangeInParams(const char* opName, const OtherParams& otherParams)
+{
+    OP_CHECK_IF(!CheckRange(otherParams.a_shape.batch, kDimLow, kDimBatchUp), 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, "batch", std::to_string(otherParams.a_shape.batch), FormatString("batch must be within the range [%d, %d]", kDimLow, kDimBatchUp).c_str()),
+        return false);
+    OP_CHECK_IF (!CheckLowerBound(otherParams.a_shape.c1, kDimLow), 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, "co1", std::to_string(otherParams.a_shape.c1), FormatString("co1 must be greater than or equal to %d", kDimLow).c_str()),
+        return false);
+    OP_CHECK_IF(!CheckRange(otherParams.a_shape.d, kDimLow, kDimUp), 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, "dout", std::to_string(otherParams.a_shape.d), FormatString("dout must be within the range [%d, %d]", kDimLow, kDimUp).c_str()),
+        return false);
+    OP_CHECK_IF(!CheckRange(otherParams.a_shape.h, kDimLow, kDimUp), 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, "hout", std::to_string(otherParams.a_shape.h), FormatString("hout must be within the range [%d, %d]", kDimLow, kDimUp).c_str()),
+        return false);
+    OP_CHECK_IF(!CheckRange(otherParams.a_shape.w, kDimLow, kDimUp), 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, "wout", std::to_string(otherParams.a_shape.w), FormatString("wout must be within the range [%d, %d]", kDimLow, kDimUp).c_str()),
+        return false);
+    OP_CHECK_IF(!CheckLowerBound(otherParams.a_shape.c, kDimLow), 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, "co", std::to_string(otherParams.a_shape.c), FormatString("co must be greater than or equal to %d", kDimLow).c_str()),
+        return false);
+    return true;
+}
+
+static bool CheckCShapeRangeInParams(const char* opName, const OtherParams& otherParams)
+{
+    OP_CHECK_IF(!CheckLowerBound(otherParams.c_shape.c1, kDimLow), 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, "c1", std::to_string(otherParams.c_shape.c1), FormatString("c1 must be greater than or equal to %d", kDimLow).c_str()),
+        return false);
+    OP_CHECK_IF(!CheckLowerBound(otherParams.c_shape.c, kDimLow), 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, "cin", std::to_string(otherParams.c_shape.c), FormatString("cin must be greater than or equal to %d", kDimLow).c_str()),
+        return false);
+    OP_CHECK_IF(!CheckLowerBound(otherParams.c_shape.d, kDimLow), 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, "din", std::to_string(otherParams.c_shape.d), FormatString("din must be greater than or equal to %d", kDimLow).c_str()),
+        return false);
+    OP_CHECK_IF(!CheckRange(otherParams.c_shape.h, kDimLow, kDimUp), 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, "hin", std::to_string(otherParams.c_shape.h), FormatString("the value of hin must be within the range [%d, %d]", kDimLow, kDimUp).c_str()),
+        return false);
+    OP_CHECK_IF(!CheckRange(otherParams.c_shape.w, kDimLow, kDimUp), 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, "win", std::to_string(otherParams.c_shape.w), FormatString("the value of win must be within the range [%d, %d]", kDimLow, kDimUp).c_str()),
+        return false);
+    return true;
+}
+
+static bool CheckDilationsRangeInParams(const char* opName, const Conv3dBpInputV2RunInfo& runInfoV2, int32_t kDilationUpTmp)
+{
+    OP_CHECK_IF(!CheckRange(runInfoV2.dilation_h, kDilationLow, kDilationUpTmp), 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, "h_dilation", std::to_string(runInfoV2.dilation_h), FormatString("h_dilation must be within the range [%d, %d]", kDilationLow, kDilationUpTmp).c_str()),
+        return false);
+    OP_CHECK_IF(!CheckRange(runInfoV2.dilation_w, kDilationLow, kDilationUpTmp), 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, "w_dilation", std::to_string(runInfoV2.dilation_w), FormatString("w_dilation must be within the range [%d, %d]", kDilationLow, kDilationUpTmp).c_str()),
+        return false);
+    OP_CHECK_IF(!CheckRange(runInfoV2.dilation_d, kDilationLow, kDilationUpTmp), 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, "d_dilation", std::to_string(runInfoV2.dilation_d), FormatString("d_dilation must be within the range [%d, %d]", kDilationLow, kDilationUpTmp).c_str()),
+        return false);
+    return true;
+}
+
+static bool CheckStridesExpandRange(const char* opName, const OtherParams& otherParams, const Conv3dBpInputV2RunInfo& runInfoV2)
+{
+    OP_CHECK_IF(!CheckRange(otherParams.a_shape.h * runInfoV2.stride_h, kDimLow, kDimUp), 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, "hout", std::to_string(otherParams.a_shape.h * runInfoV2.stride_h), FormatString("hout must be within the range [%d, %d]", kDimLow, kDimUp).c_str()),
+        return false);
+    OP_CHECK_IF(!CheckRange(otherParams.a_shape.w * runInfoV2.stride_w, kDimLow, kDimUp), 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, "wout", std::to_string(otherParams.a_shape.w * runInfoV2.stride_w), FormatString("wout must be within the range [%d, %d]", kDimLow, kDimUp).c_str()),
+        return false);
+    OP_CHECK_IF(!CheckRange(otherParams.a_shape.d * runInfoV2.stride_d, kDimLow, kDimUp), 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, "dout", std::to_string(otherParams.a_shape.d * runInfoV2.stride_d), FormatString("dout must be within the range [%d, %d]", kDimLow, kDimUp).c_str()),
+        return false);
+    return true;
+}
+
+static bool CheckGroupsDivisibility(const char* opName, const OtherParams& otherParams, const Conv3dBpInputV2RunInfo& runInfoV2)
+{
+    OP_CHECK_IF(!CheckValue(static_cast<int32_t>(otherParams.a_shape.c % static_cast<int64_t>(runInfoV2.groups)), 0), 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, "cout", std::to_string(otherParams.a_shape.c), "cout must be exactly divisible by groups"),
+        return false);
+    OP_CHECK_IF(!CheckValue(static_cast<int32_t>(otherParams.c_shape.c % static_cast<int64_t>(runInfoV2.groups)), 0), 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, "cin", std::to_string(otherParams.c_shape.c), "cin must be exactly divisible by groups"),
+        return false);
+    OP_CHECK_IF(!CheckValue(static_cast<int32_t>(otherParams.c_shape.c), static_cast<int32_t>(otherParams.b_shape.c * static_cast<int64_t>(runInfoV2.groups))), 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, "cout", std::to_string(otherParams.c_shape.c), "c dim of fmap must be equal with filter c multiplied groups"),
+        return false);
+    return true;
+}
+
+static bool CheckBatchConsistency(const char* opName, const OtherParams& otherParams)
+{
+    OP_CHECK_IF(!CheckValue(otherParams.a_shape.c, otherParams.b_shape.batch), 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, "a_shape.c", std::to_string(otherParams.a_shape.c), FormatString("a_shape.c must be equal to b_shape.batch[%d]", otherParams.b_shape.batch).c_str()),
+        return false);
+    OP_CHECK_IF(!CheckValue(otherParams.a_shape.batch, otherParams.c_shape.batch), 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, "a_shape.batch", std::to_string(otherParams.a_shape.batch), FormatString("a_shape.batch must be equal to c_shape.batch[%d]", otherParams.c_shape.batch).c_str()),
+        return false);
+    return true;
+}
+
+static bool CheckFilterDilationVsPadding(const char* opName, const OtherParams& otherParams)
+{
+    OP_CHECK_IF(otherParams.filter_d_dilation > otherParams.fmap_d_padding, 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, "filter_d_dilation or fmap_d_padding", std::to_string(otherParams.filter_d_dilation)+" or "+std::to_string(otherParams.fmap_d_padding), 
+            FormatString("filter_d_dilation must be less than or equal to fmap_d_padding[%d]", otherParams.fmap_d_padding).c_str()),
+        return false);
+    OP_CHECK_IF(otherParams.filter_h_dilation > otherParams.fmap_h_padding, 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, "filter_h_dilation or fmap_h_padding", std::to_string(otherParams.filter_h_dilation)+" or "+std::to_string(otherParams.fmap_h_padding), 
+            FormatString("filter_h_dilation must be less than or equal to fmap_h_padding[%d]", otherParams.fmap_h_padding).c_str()),
+        return false);
+    OP_CHECK_IF(otherParams.filter_w_dilation > otherParams.fmap_w_padding, 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, "filter_w_dilation or fmap_w_padding", std::to_string(otherParams.filter_w_dilation)+" or "+std::to_string(otherParams.fmap_w_padding), 
+            FormatString("filter_w_dilation must be less than or equal to fmap_w_padding[%d]", otherParams.fmap_w_padding).c_str()),
+        return false);
+    return true;
+}
+
+static bool CheckOutputShapeMatch(const char* opName, const OtherParams& otherParams, const Conv3dBpInputV2RunInfo& runInfoV2)
+{
+    int64_t do_temp = (otherParams.fmap_d_padding - otherParams.filter_d_dilation) / runInfoV2.stride_d + 1;
+    int64_t ho_temp = (otherParams.fmap_h_padding - otherParams.filter_h_dilation) / runInfoV2.stride_h + 1;
+    int64_t wo_temp = (otherParams.fmap_w_padding - otherParams.filter_w_dilation) / runInfoV2.stride_w + 1;
+    OP_CHECK_IF(do_temp != otherParams.a_shape.d, 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, "dout", std::to_string(otherParams.a_shape.d), FormatString("the value of dout must be equal to (fmap_d + pad_h + pad_t - filter_d_dilation) / stride_d + 1").c_str()),
+        return false);
+    OP_CHECK_IF(ho_temp != otherParams.a_shape.h, 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, "hout", std::to_string(otherParams.a_shape.h), FormatString("the value of hout must be equal to (fmap_h + pad_u + pad_d - filter_h_dilation) / stride_h + 1").c_str()),
+        return false);
+    OP_CHECK_IF(wo_temp != otherParams.a_shape.w, 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, "wout", std::to_string(otherParams.a_shape.w), FormatString("the value of wout must be equal to (fmap_w + pad_l + pad_r - filter_w_dilation) / stride_w + 1").c_str()),
+        return false);
+    return true;
+}
+
+static bool CheckAlignAndSizeLimits(const char* opName, int64_t dedy_c_align, int64_t dedx_c_align, 
+    int64_t filter_c_align, int64_t filter_n_align, int64_t dedy_size, int64_t dedx_size, int64_t filter_size)
+{
+    OP_CHECK_IF(dedy_c_align == 0 || dedx_c_align == 0 || filter_c_align == 0 || filter_n_align == 0, 
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(opName, "{dedy_c_align, dedx_c_align, filter_c_align, filter_n_align}", 
+            "{"+std::to_string(dedy_c_align)+", "+std::to_string(dedx_c_align)+", "+std::to_string(filter_c_align)+", "+std::to_string(filter_n_align)+"}",
+            FormatString("{dedy_c_align, dedx_c_align, filter_c_align, filter_n_align} cannot be 0").c_str()),
+        return false);
+    OP_CHECK_IF(dedy_size > kDataSizeMax, 
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(opName, "out_backprop_size", std::to_string(dedy_size), FormatString("the shape size of out_backprop must be less than or equal to %d", kDataSizeMax).c_str()),
+        return false);
+    OP_CHECK_IF(dedx_size > kDataSizeMax, 
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(opName, "fmap_size", std::to_string(dedx_size), FormatString("the shape size of fmap_size must be less than or equal to %d", kDataSizeMax).c_str()),
+        return false);
+    OP_CHECK_IF(filter_size > kDataSizeMax, 
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(opName, "filter_size", std::to_string(filter_size), FormatString("the shape size of filter_size must be less than or equal to %d", kDataSizeMax).c_str()),
+        return false);
+    return true;
+}
+
+static bool CheckBackpropPadRange(const char* opName, const OtherParams& otherParams, int32_t kPadUpTmp)
+{
+    OP_CHECK_IF(otherParams.pad_up_before > kPadUpTmp, 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, "pad_u", std::to_string(otherParams.pad_up_before), FormatString("the value of pad_u must be equal to or less than %d", kPadUpTmp).c_str()),
+        return false);
+    OP_CHECK_IF(otherParams.pad_left_before > kPadUpTmp, 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, "pad_l", std::to_string(otherParams.pad_left_before), FormatString("the value of pad_l must be equal to or less than %d", kPadUpTmp).c_str()),
+        return false);
+    OP_CHECK_IF(otherParams.pad_down_after > kPadUpTmp, 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, "pad_d", std::to_string(otherParams.pad_down_after), FormatString("the value of pad_d must be equal to or less than %d", kPadUpTmp).c_str()),
+        return false);
+    OP_CHECK_IF(otherParams.pad_right_after > kPadUpTmp, 
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, "pad_r", std::to_string(otherParams.pad_right_after), FormatString("the value of pad_r must be equal to or less than %d", kPadUpTmp).c_str()),
+        return false);
+    return true;
 }
 
 bool CheckParams(Conv3dBpInputV2RunInfo &runInfoV2, gert::TilingContext *context, OtherParams& otherParams) {
-  int64_t dedy_c_align = Ops::Base::CeilAlign(otherParams.a_shape.c, otherParams.a_shape.c0);
-  int64_t dedx_c_align = Ops::Base::CeilAlign(otherParams.c_shape.c, otherParams.c_shape.c0);
-  int64_t filter_c_align = Ops::Base::CeilAlign(otherParams.b_shape.c, static_cast<int64_t>(otherParams.filter_ci0));
-  int64_t filter_n_align = Ops::Base::CeilAlign(otherParams.b_shape.batch, static_cast<int64_t>(otherParams.filter_co0));
+    int64_t dedy_c_align, dedx_c_align, filter_c_align, filter_n_align;
+    int64_t dedy_size, dedx_size, filter_size;
+    CalculateAlignAndSize(otherParams, runInfoV2, dedy_c_align, dedx_c_align, filter_c_align, filter_n_align, dedy_size, dedx_size, filter_size);
+    SetFmapPaddingParams(otherParams, runInfoV2);
 
-  int64_t dedy_size = otherParams.a_shape.batch * dedy_c_align * otherParams.a_shape.d *
-                      otherParams.a_shape.w * otherParams.a_shape.h *
-                      runInfoV2.a_dtype_bytes;
-  int64_t dedx_size = otherParams.a_shape.batch * dedx_c_align * otherParams.c_shape.d *
-                      otherParams.c_shape.w * otherParams.c_shape.h *
-                      runInfoV2.c_dtype_bytes;
-  int64_t filter_size = filter_n_align * filter_c_align * otherParams.filter_d_dilation *
-                        otherParams.b_shape.w * otherParams.b_shape.h *
-                        runInfoV2.b_dtype_bytes;
-  otherParams.fmap_d_padding =
-      otherParams.c_shape.d + runInfoV2.pad_h + runInfoV2.pad_t;
-  otherParams.fmap_h_padding =
-      otherParams.c_shape.h + runInfoV2.pad_u + runInfoV2.pad_d;
-  otherParams.fmap_w_padding =
-      otherParams.c_shape.w + runInfoV2.pad_l + runInfoV2.pad_r;
+    if (!CheckParamsWithLog(runInfoV2, context, otherParams) || !CheckShapeValidWithLog(context, otherParams, runInfoV2)) {
+        return false;
+    }
 
-  if (!CheckParamsWithLog(runInfoV2, context, otherParams) || !CheckShapeValidWithLog(context, otherParams, runInfoV2)) {
-    return false;
-  }
+    int32_t kFilterDimHWUpTmp = kFilterDimHWUp;
+    int32_t kPadUpTmp = kPadUp;
+    int32_t kDilationUpTmp = kDilationUp;
+    if (IsArchAfter35(context)) {
+        kFilterDimHWUpTmp = kDimUp;
+        kPadUpTmp = kDimUp;
+        kDilationUpTmp = kDimUp;
+    }
 
-  int32_t kFilterDimHWUpTmp = kFilterDimHWUp;
-  int32_t kPadUpTmp = kPadUp;
-  int32_t kDilationUpTmp = kDilationUp;
-  if (IsArchAfter35(context)) {
-    kFilterDimHWUpTmp = kDimUp;
-    kPadUpTmp = kDimUp;
-    kDilationUpTmp = kDimUp;
-  }
-  uint32_t shift = 0;
-  uint64_t invalid = (static_cast<uint64_t>(!CheckRange(runInfoV2.groups, kDimLow, kDimUp)) << shift++);
-  invalid = invalid + (static_cast<uint64_t>(!CheckRange(otherParams.b_shape.h, kDimLow, kFilterDimHWUpTmp)) << shift++);
-  invalid = invalid + (static_cast<uint64_t>(!CheckRange(otherParams.b_shape.w, kDimLow, kFilterDimHWUpTmp)) << shift++);
-  invalid = invalid + (static_cast<uint64_t>(!CheckRange(otherParams.b_shape.d, kDimLow, kDimBatchUp)) << shift++);
-  invalid = invalid + (static_cast<uint64_t>(!CheckRange(otherParams.a_shape.batch, kDimLow, kDimBatchUp)) << shift++);
-  invalid = invalid + (static_cast<uint64_t>(!CheckLowerBound(otherParams.a_shape.c1, kDimLow)) << shift++);
-  invalid = invalid + (static_cast<uint64_t>(!CheckRange(otherParams.a_shape.d, kDimLow, kDimUp)) << shift++);
-  invalid = invalid + (static_cast<uint64_t>(!CheckRange(otherParams.a_shape.h, kDimLow, kDimUp)) << shift++);
-  invalid = invalid + (static_cast<uint64_t>(!CheckRange(otherParams.a_shape.w, kDimLow, kDimUp)) << shift++);
-  invalid = invalid + (static_cast<uint64_t>(!CheckLowerBound(otherParams.a_shape.c, kDimLow)) << shift++);
-  invalid = invalid + (static_cast<uint64_t>(!CheckLowerBound(otherParams.c_shape.c1, kDimLow)) << shift++);
-  invalid = invalid + (static_cast<uint64_t>(!CheckLowerBound(otherParams.c_shape.c, kDimLow)) << shift++);
-  invalid = invalid + (static_cast<uint64_t>(!CheckLowerBound(otherParams.c_shape.d, kDimLow)) << shift++);
-  invalid = invalid + (static_cast<uint64_t>((!CheckRange(runInfoV2.dilation_h, kDilationLow, kDilationUpTmp) ||
-                        !CheckRange(runInfoV2.dilation_w, kDilationLow, kDilationUpTmp) ||
-                        !CheckRange(runInfoV2.dilation_d, kDilationLow, kDilationUpTmp)))
-                       << shift++);
-  invalid = invalid +
-            (static_cast<uint64_t>(!CheckRange(otherParams.a_shape.h * runInfoV2.stride_h, kDimLow, kDimUp))
-             << shift++);
-  invalid = invalid +
-            (static_cast<uint64_t>(!CheckRange(otherParams.a_shape.w * runInfoV2.stride_w, kDimLow, kDimUp))
-             << shift++);
-  // Co % g == 0
-  invalid =
-      invalid + (static_cast<uint64_t>(!CheckValue(static_cast<int32_t>(
-          otherParams.a_shape.c % static_cast<int64_t>(runInfoV2.groups)
-      ), 0)) << shift++);
-  // Ci % g == 0
-  invalid =
-      invalid + (static_cast<uint64_t>(!CheckValue(static_cast<int32_t>(
-          otherParams.c_shape.c % static_cast<int64_t>(runInfoV2.groups)
-      ), 0)) << shift++);
-  // Ci == Ci / g * g
-  invalid = invalid + (static_cast<uint64_t>(!CheckValue(
-          static_cast<int32_t>(otherParams.c_shape.c),
-          static_cast<int32_t>(otherParams.b_shape.c * static_cast<int64_t>(runInfoV2.groups))
-      )) << shift++);
-  invalid = invalid +
-            (static_cast<uint64_t>(!CheckValue(otherParams.a_shape.c, otherParams.b_shape.batch)) << shift++);
-  invalid = invalid + (static_cast<uint64_t>(!CheckValue(otherParams.a_shape.batch, otherParams.c_shape.batch))
-                       << shift++);
-  invalid = invalid + (static_cast<uint64_t>(otherParams.filter_d_dilation > otherParams.fmap_d_padding) << shift++);
-  invalid = invalid + (static_cast<uint64_t>(otherParams.filter_h_dilation > otherParams.fmap_h_padding) << shift++);
-  invalid = invalid + (static_cast<uint64_t>(otherParams.filter_w_dilation > otherParams.fmap_w_padding) << shift++);
-  invalid = invalid + (static_cast<uint64_t>(!CheckRange(otherParams.c_shape.h, kDimLow, kDimUp)) << shift++);
-  invalid = invalid + (static_cast<uint64_t>(!CheckRange(otherParams.c_shape.w, kDimLow, kDimUp)) << shift++);
-  int64_t do_temp = (otherParams.fmap_d_padding - otherParams.filter_d_dilation) /
-                    runInfoV2.stride_d + 1;
-  int64_t ho_temp = (otherParams.fmap_h_padding - otherParams.filter_h_dilation) /
-                    runInfoV2.stride_h + 1;
-  int64_t wo_temp = (otherParams.fmap_w_padding - otherParams.filter_w_dilation) /
-                    runInfoV2.stride_w + 1;
-  invalid = invalid + (static_cast<uint64_t>(do_temp != otherParams.a_shape.d) << shift++);
-  invalid = invalid + (static_cast<uint64_t>(ho_temp != otherParams.a_shape.h) << shift++);
-  invalid = invalid + (static_cast<uint64_t>(wo_temp != otherParams.a_shape.w) << shift++);
-  invalid =
-      invalid + (static_cast<uint64_t>(dedy_c_align == 0 || dedx_c_align == 0 || filter_c_align == 0 || filter_n_align == 0) << shift++);
-  invalid = invalid + (static_cast<uint64_t>(dedy_size > kDataSizeMax) << shift++);
-  invalid = invalid + (static_cast<uint64_t>((dedx_size > kDataSizeMax)) << shift++);
-  // 左移flag超过int32范围，需要加int64强转
-  invalid = invalid + (static_cast<uint64_t>((filter_size > kDataSizeMax)) << shift++);
-  invalid = invalid + (static_cast<uint64_t>(!CheckL1SizeLimit(runInfoV2, context, otherParams)) << shift++);
-  invalid = invalid +
-            (static_cast<uint64_t>(otherParams.pad_up_before > kPadUpTmp || otherParams.pad_left_before > kPadUpTmp ||
-                                  otherParams.pad_down_after > kPadUpTmp || otherParams.pad_right_after > kPadUpTmp)
-             << shift++);
-  if (invalid != 0) {
-    vector<string> error_info = {"groups must be equal 1",
-                                  "kh value invalid",
-                                  "kw value invalid",
-                                  "kd value invalid",
-                                  "batch value invalid",
-                                  "co1 value invalid",
-                                  "dout value invalid",
-                                  "ho value invalid",
-                                  "wo value invalid",
-                                  "co value invalid",
-                                  "c1 value invalid",
-                                  "cin value invalid",
-                                  "din value invalid",
-                                  "h, w, d dilations value invalid",
-                                  "out_backprop's H after expands is invalid",
-                                  "out_backprop's W after expands is invalid",
-                                  "c dim of out_backprop must be div by groups",
-                                  "c dim of fmap must be div by groups",
-                                  "c dim of fmap must be equal with filter c multi groups",
-                                  "c dim of out_backprop must be equal with filter n",
-                                  "fmap batch not equal with out_backprop batch",
-                                  "filter_d_dilation or fmap_d_padding invalid",
-                                  "filter_h_dilation or fmap_h_padding invalid",
-                                  "filter_w_dilation or fmap_w_padding invalid",
-                                  "hin value invalid",
-                                  "win value invalid",
-                                  "fmap_d does not match out_backprop_d",
-                                  "fmap_h does not match out_backprop_h",
-                                  "fmap_w does not match out_backprop_w",
-                                  "ci or co is invalid",
-                                  "out_backprop size larger than int64",
-                                  "fmap size larger than int64",
-                                  "filter size larger than int64",
-                                  "this case may exceed size",
-                                  "backprop pad value invalid"};
-    string error_flag = IntToBinary(invalid);
-    OutputErrorMsg(error_info, error_flag);
-    return false;
-  }
-  return true;
+    const char* opName = context->GetNodeName();
+    if (!CheckGroupsAndFilterRange(opName, runInfoV2, otherParams, kFilterDimHWUpTmp)) { return false; }
+    if (!CheckAShapeRangeInParams(opName, otherParams)) { return false; }
+    if (!CheckCShapeRangeInParams(opName, otherParams)) { return false; }
+    if (!CheckDilationsRangeInParams(opName, runInfoV2, kDilationUpTmp)) { return false; }
+    if (!CheckStridesExpandRange(opName, otherParams, runInfoV2)) { return false; }
+    if (!CheckGroupsDivisibility(opName, otherParams, runInfoV2)) { return false; }
+    if (!CheckBatchConsistency(opName, otherParams)) { return false; }
+    if (!CheckFilterDilationVsPadding(opName, otherParams)) { return false; }
+    if (!CheckOutputShapeMatch(opName, otherParams, runInfoV2)) { return false; }
+    if (!CheckAlignAndSizeLimits(opName, dedy_c_align, dedx_c_align, filter_c_align, filter_n_align, dedy_size, dedx_size, filter_size)) { return false; }
+    OP_CHECK_IF(!CheckL1SizeLimit(runInfoV2, context, otherParams), OP_LOGW("this case may exceed size"), return false);
+    if (!CheckBackpropPadRange(opName, otherParams, kPadUpTmp)) { return false; }
+
+    return true;
 }
 
 bool CheckAttrs(const gert::TilingContext *context, Conv3dBpInputV2RunInfo &runInfoV2, const char* opName, OtherParams& otherParams) {
@@ -1805,42 +1909,41 @@ bool CheckAttrs(const gert::TilingContext *context, Conv3dBpInputV2RunInfo &runI
   }
 
   OP_CHECK_IF(dilationDFlag,
-      CUBE_INNER_ERR_REPORT(opName, "cannot support dilation_d: [%d] != 1 while kernel_d: [%ld] = 1",
-      runInfoV2.dilation_d, otherParams.b_shape.d), return false);
-
+      CUBE_INNER_ERR_REPORT(opName, "cannot support dilation_d: [%s] != 1 while kernel_d: [%s] = 1",
+      std::to_string(runInfoV2.dilation_d).c_str(), std::to_string(otherParams.b_shape.d).c_str()), return false);
   OP_CHECK_IF(dilationHFlag,
-      CUBE_INNER_ERR_REPORT(opName, "cannot support dilation_h: [%d] != 1 while kernel_h: [%ld] = 1",
-      runInfoV2.dilation_h, otherParams.b_shape.h), return false);
-
+      CUBE_INNER_ERR_REPORT(opName, "cannot support dilation_h: [%s] != 1 while kernel_h: [%s] = 1",
+      std::to_string(runInfoV2.dilation_h).c_str(), std::to_string(otherParams.b_shape.h).c_str()), return false);
   OP_CHECK_IF(dilationWFlag,
-      CUBE_INNER_ERR_REPORT(opName, "cannot support dilation_w: [%d] != 1 while kernel_w: [%ld] = 1",
-      runInfoV2.dilation_w, otherParams.b_shape.w), return false);
+      CUBE_INNER_ERR_REPORT(opName, "cannot support dilation_w: [%s] != 1 while kernel_w: [%s] = 1",
+      std::to_string(runInfoV2.dilation_w).c_str(), std::to_string(otherParams.b_shape.w).c_str()), return false);
 
   if (!IsArchAfter35(context)) {
-      OP_CHECK_IF(runInfoV2.stride_d > otherParams.b_shape.d,
-      OP_LOGE(opName, "cannot support stride_d: %d > kernel_d: %ld", runInfoV2.stride_d, otherParams.b_shape.d),
-      return false);
+      if (runInfoV2.stride_d > otherParams.b_shape.d) {
+          OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, "stride_d", std::to_string(runInfoV2.stride_d), FormatString("cannot support stride_d > kernel_d: %ld", otherParams.b_shape.d).c_str());
+          return false;
+      }
   }
 
   OP_CHECK_IF(CheckRange(runInfoV2.stride_h, DIM_LOW, strideHwUp) == false,
-      OP_LOGE(opName, "stride_h: %d is invalid, support range [%d, %d]", runInfoV2.stride_h, DIM_LOW, strideHwUp),
+      OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName, "stride_h", std::to_string(runInfoV2.stride_h), FormatString("the value of stride_h must be in range [%d, %d]", DIM_LOW, strideHwUp).c_str()),
       return false);
 
   OP_CHECK_IF(CheckRange(runInfoV2.stride_w, DIM_LOW, strideHwUp) == false,
-      OP_LOGE(opName, "stride_w: %d is invalid, support range [%d, %d]", runInfoV2.stride_w, DIM_LOW, strideHwUp),
+      OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName, "stride_w", std::to_string(runInfoV2.stride_w), FormatString("the value of stride_w must be in range [%d, %d]", DIM_LOW, strideHwUp).c_str()),
       return false);
 
   OP_CHECK_IF(CheckRange(runInfoV2.stride_d, DIM_LOW, strideDUp) == false,
-      OP_LOGE(opName, "stride_d: %d is invalid, support range [%d, %d]", runInfoV2.stride_d, DIM_LOW, strideDUp),
-      return false);
-  uint64_t curL0CDstStride = static_cast<uint64_t>(otherParams.c_shape.h) * otherParams.c_shape.w;
-  OP_CHECK_IF(curL0CDstStride > UINT32_MAX,
-      OP_LOGE(opName, "cannot support hi * wi=%lu over %u", curL0CDstStride, UINT32_MAX),
+      OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName, "stride_d", std::to_string(runInfoV2.stride_d), FormatString("the value of stride_d must be in range [%d, %d]", DIM_LOW, strideDUp).c_str()),
       return false);
 
-  OP_CHECK_IF(
-      CheckRange(runInfoV2.groups, GROUPS_LOW, GROUPS_UP) == false,
-      OP_LOGE(opName, "only support groups(%d) in range [%d, %d]", runInfoV2.groups, GROUPS_LOW, GROUPS_UP),
+  uint64_t curL0CDstStride = static_cast<uint64_t>(otherParams.c_shape.h) * otherParams.c_shape.w;
+  OP_CHECK_IF(curL0CDstStride > UINT32_MAX, 
+      OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName, "curL0CDstStride", std::to_string(curL0CDstStride), FormatString("the value of hi * wi=%lu must be less than or equal to %u", curL0CDstStride, UINT32_MAX).c_str()), 
+      return false);
+
+  OP_CHECK_IF(CheckRange(runInfoV2.groups, GROUPS_LOW, GROUPS_UP) == false,
+      OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName, "groups", std::to_string(runInfoV2.groups), FormatString("the value of groups must be in range [%d, %d]", GROUPS_LOW, GROUPS_UP).c_str()),
       return false);
   return true;
 }
@@ -1851,23 +1954,23 @@ bool CheckPadRange(const gert::TilingContext *context, Conv3dBpInputV2RunInfo &r
         padDimUp = kDimUp;
     }
     OP_CHECK_IF(CheckRange(runInfoV2.pad_h, PAD_DIM_LOW, padDimUp) == false,
-                OP_LOGE(opName, "pad head: %d invalid, it should be in [%d, %d]", runInfoV2.pad_h, PAD_DIM_LOW, padDimUp),
-                return false);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName, "pad_h", std::to_string(runInfoV2.pad_h), FormatString("the value of pad_h must be in range [%d, %d]", PAD_DIM_LOW, padDimUp).c_str()),
+        return false);
     OP_CHECK_IF(CheckRange(runInfoV2.pad_t, PAD_DIM_LOW, padDimUp) == false,
-                OP_LOGE(opName, "pad tail: %d invalid, it should be in [%d, %d]", runInfoV2.pad_t, PAD_DIM_LOW, padDimUp),
-                return false);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName, "pad_t", std::to_string(runInfoV2.pad_t), FormatString("the value of pad_t must be in range [%d, %d]", PAD_DIM_LOW, padDimUp).c_str()),
+        return false);
     OP_CHECK_IF(CheckRange(runInfoV2.pad_u, PAD_DIM_LOW, padDimUp) == false,
-                OP_LOGE(opName, "pad up: %d invalid, it should be in [%d, %d]", runInfoV2.pad_u, PAD_DIM_LOW, padDimUp),
-                return false);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName, "pad_u", std::to_string(runInfoV2.pad_u), FormatString("the value of pad_u must be in range [%d, %d]", PAD_DIM_LOW, padDimUp).c_str()),
+        return false);
     OP_CHECK_IF(CheckRange(runInfoV2.pad_d, PAD_DIM_LOW, padDimUp) == false,
-                OP_LOGE(opName, "pad down: %d invalid, it should be in [%d, %d]", runInfoV2.pad_d, PAD_DIM_LOW, padDimUp),
-                return false);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName, "pad_d", std::to_string(runInfoV2.pad_d), FormatString("the value of pad_d must be in range [%d, %d]", PAD_DIM_LOW, padDimUp).c_str()),
+        return false);
     OP_CHECK_IF(CheckRange(runInfoV2.pad_l, PAD_DIM_LOW, padDimUp) == false,
-                OP_LOGE(opName, "pad left: %d invalid, it should be in [%d, %d]", runInfoV2.pad_l, PAD_DIM_LOW, padDimUp),
-                return false);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName, "pad_l", std::to_string(runInfoV2.pad_l), FormatString("the value of pad_l must be in range [%d, %d]", PAD_DIM_LOW, padDimUp).c_str()),
+        return false);
     OP_CHECK_IF(CheckRange(runInfoV2.pad_r, PAD_DIM_LOW, padDimUp) == false,
-                OP_LOGE(opName, "pad right: %d invalid, it should be in [%d, %d]", runInfoV2.pad_r, PAD_DIM_LOW, padDimUp),
-                return false);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName, "pad_r", std::to_string(runInfoV2.pad_r), FormatString("the value of pad_r must be in range [%d, %d]", PAD_DIM_LOW, padDimUp).c_str()),
+        return false);
     return true;
 }
 
@@ -1885,54 +1988,87 @@ std::string DebugString(const std::vector<T>& v) {
   return oss.str();
 }
 
-bool CheckTranspose(const char* opName, const gert::TilingContext* context) {
-    auto offsetWShape = context->GetOptionalInputShape(OFFSET_W_INDEX);
+static bool ValidateOutputPaddingData(const char* opName, const gert::ContinuousVector* outputPadding, 
+    bool& outputPaddingAllzero, bool& outputPaddingAllNonNegative, std::vector<int64_t>& outputPaddingValue)
+{
+    OP_CHECK_IF(outputPadding->GetData() == nullptr,
+        OP_LOGE_WITH_INVALID_ATTR(opName, "output_padding GetData", "null", "non_empty_value"),
+        return false);
+    OP_CHECK_IF(outputPadding->GetSize() != OUTPUT_PADDING_DIM,
+        OP_LOGE_WITH_INVALID_ATTR_SIZE(opName, "output_padding", std::to_string(outputPadding->GetSize()), std::to_string(OUTPUT_PADDING_DIM)),
+        return false);
+    const auto outputPaddingData = static_cast<const int64_t *>(outputPadding->GetData());
+    outputPaddingAllzero = true;
+    outputPaddingAllNonNegative = true;
+    for (size_t index = 0; index < outputPadding->GetSize(); index++) {
+        outputPaddingAllzero = outputPaddingData[index] != 0 ? false : outputPaddingAllzero;
+        outputPaddingAllNonNegative = outputPaddingData[index] < 0 ? false : outputPaddingAllNonNegative;
+        outputPaddingValue.push_back(outputPaddingData[index]);
+    }
+    return true;
+}
 
-    auto attrs = context->GetAttrs();
-    OP_CHECK_IF(attrs == nullptr, OP_LOGE(opName, "attrs is null"), return false);
+static bool CheckOutputPaddingDtype(const char* opName, const gert::TilingContext* context, 
+    const std::vector<int64_t>& outputPaddingValue, bool outputPaddingAllzero, bool outputPaddingAllNonNegative)
+{
+    OP_CHECK_IF((!outputPaddingAllzero) &&
+            (!IsSupportedDtypeForOutputPadding(context->GetInputDesc(FILTER_INDEX)->GetDataType()) ||
+             !IsSupportedDtypeForOutputPadding(context->GetInputDesc(OUT_BACKPROP_INDEX)->GetDataType())),
+            CUBE_INNER_ERR_REPORT(opName,
+            "when output_padding[%s] is not all zero, op only supports bfloat16, float16, float32 and int8 for all inputs, get filter dtype[%s], output backprop dtype[%s]",
+            DebugString(outputPaddingValue).c_str(),
+            ge::TypeUtils::DataTypeToSerialString(context->GetInputDesc(FILTER_INDEX)->GetDataType()).c_str(),
+            ge::TypeUtils::DataTypeToSerialString(context->GetInputDesc(OUT_BACKPROP_INDEX)->GetDataType()).c_str()),
+            return false);
+    OP_CHECK_IF(!outputPaddingAllNonNegative && IsArchAfter35(context),
+            CUBE_INNER_ERR_REPORT(opName,
+            "output_padding[%s] contains negative values, op only supports all non-negative inputs.",
+            DebugString(outputPaddingValue).c_str()), return false);
+    return true;
+}
 
+static bool CheckOffsetXAndOffsetW(const char* opName, const gert::TilingContext* context, const gert::RuntimeAttrs* attrs)
+{
     const auto offsetX = attrs->GetAttrPointer<int64_t>(OFFSET_X_INDEX);
-    auto outputPadding = attrs->GetAttrPointer<gert::ContinuousVector>(OUTPUT_PADDING_INDEX);
+    OP_CHECK_IF(offsetX != nullptr && *offsetX != 0,
+        OP_LOGE_WITH_INVALID_ATTR(opName, "offset_x", "null", "non_empty_value"),
+        return false);
+    auto offsetWShape = context->GetOptionalInputShape(OFFSET_W_INDEX);
+    OP_CHECK_IF(offsetWShape != nullptr && offsetWShape->GetStorageShape().GetShapeSize() != 0,
+        OP_LOGE_WITH_INVALID_ATTR(opName, "offset_w", "null", "non_empty_value"),
+        return false);
+    return true;
+}
 
+bool CheckTranspose(const char* opName, const gert::TilingContext* context) {
+    auto attrs = context->GetAttrs();
+    OP_CHECK_IF(attrs == nullptr,
+        OP_LOGE_WITH_INVALID_ATTR(opName, "attrs", "null", "non_empty_value"),
+        return false);
+
+    auto outputPadding = attrs->GetAttrPointer<gert::ContinuousVector>(OUTPUT_PADDING_INDEX);
     if (outputPadding != nullptr) {
-        OP_CHECK_IF(outputPadding->GetData() == nullptr,
-                    OP_LOGE(opName, "output_padding GetData is null"), return false);
-        OP_CHECK_IF(outputPadding->GetSize() != OUTPUT_PADDING_DIM,
-                    OP_LOGE(opName, "the output padding:%zu is invalid, it should be 5d", outputPadding->GetSize()),
-                    return false);
-        const auto outputPaddingData = static_cast<const int64_t *>(outputPadding->GetData());
         bool outputPaddingAllzero = true;
         bool outputPaddingAllNonNegative = true;
         std::vector<int64_t> outputPaddingValue;
-        for (size_t index = 0; index < outputPadding->GetSize(); index++) {
-            outputPaddingAllzero = outputPaddingData[index] != 0 ? false : outputPaddingAllzero;
-            outputPaddingAllNonNegative = outputPaddingData[index] < 0 ? false : outputPaddingAllNonNegative;
-            outputPaddingValue.push_back(outputPaddingData[index]);
+        if (!ValidateOutputPaddingData(opName, outputPadding, outputPaddingAllzero, outputPaddingAllNonNegative, outputPaddingValue)) {
+            return false;
         }
-        OP_CHECK_IF((!outputPaddingAllzero) &&
-                (!IsSupportedDtypeForOutputPadding(context->GetInputDesc(FILTER_INDEX)->GetDataType()) ||
-                 !IsSupportedDtypeForOutputPadding(context->GetInputDesc(OUT_BACKPROP_INDEX)->GetDataType())),
-                CUBE_INNER_ERR_REPORT(opName,
-                "when output_padding[%s] is not all zero, op only supports bfloat16, float16, float32 and int8 for all inputs, get filter dtype[%s], output backprop dtype[%s]",
-                DebugString(outputPaddingValue).c_str(),
-                ge::TypeUtils::DataTypeToSerialString(context->GetInputDesc(FILTER_INDEX)->GetDataType()).c_str(),
-                ge::TypeUtils::DataTypeToSerialString(context->GetInputDesc(OUT_BACKPROP_INDEX)->GetDataType()).c_str()),
-                return false);
-        OP_CHECK_IF(!outputPaddingAllNonNegative && IsArchAfter35(context),
-                CUBE_INNER_ERR_REPORT(opName,
-                "output_padding[%s] contains negative values, op only supports all non-negative inputs.",
-                DebugString(outputPaddingValue).c_str()), return false);
-    }
-    if (!IsSocVersionFuse(context) && !IsArchAfter35(context)) {
-        OP_CHECK_IF(offsetX != nullptr && *offsetX != 0,
-                  OP_LOGE(opName, "cannot support offset_x attribute parameters"), return false);
-        OP_CHECK_IF(offsetWShape != nullptr && offsetWShape->GetStorageShape().GetShapeSize() != 0,
-                OP_LOGE(opName,"cannot support offset_w input parameters"), return false);
-        auto biasShape = context->GetOptionalInputShape(BAIS_INDEX);
-        OP_CHECK_IF(biasShape != nullptr && biasShape->GetStorageShape().GetShapeSize() != 0,
-                OP_LOGE(opName, "cannot support bias"), return false);
+        if (!CheckOutputPaddingDtype(opName, context, outputPaddingValue, outputPaddingAllzero, outputPaddingAllNonNegative)) {
+            return false;
+        }
     }
 
+    if (!IsSocVersionFuse(context) && !IsArchAfter35(context)) {
+        if (!CheckOffsetXAndOffsetW(opName, context, attrs)) {
+            return false;
+        }
+        auto biasShape = context->GetOptionalInputShape(BAIS_INDEX);
+        if (biasShape != nullptr && biasShape->GetStorageShape().GetShapeSize() != 0) {
+            OP_LOGE_WITH_INVALID_ATTR(opName, "biasShape", "null", "non_empty_value");
+            return false;
+        }
+    }
     return true;
 }
 
@@ -1949,23 +2085,26 @@ static bool CheckBiasParams(gert::TilingContext *context, const OtherParams& oth
 
     const auto op_name = context->GetNodeName();
     auto biasDesc = context->GetOptionalInputDesc(BAIS_INDEX);
-    OP_CHECK_IF(biasDesc == nullptr,
-                OP_LOGE(op_name, "failed to get bias tensor desc from context"), return false);
+    if (biasDesc == nullptr) {
+        CUBE_INNER_ERR_REPORT(op_name, "failed to get bias tensor desc from context");
+        return false;
+    }
 
     const auto& storageShape = biasShape->GetStorageShape();
     OP_CHECK_IF(storageShape.GetDimNum() != 1,
-                OP_LOGE(op_name, "bias dim num[%zu] is invalid, should be 1D tensor",
-                        storageShape.GetDimNum()), return false);
+        OP_LOGE_FOR_INVALID_SHAPEDIM(op_name, "bias", std::to_string(storageShape.GetDimNum()), FormatString("bias has incorrect shape dim %zu, should be 1D tensor", storageShape.GetDimNum()).c_str()),
+        return false);
 
     int64_t biasCin = storageShape.GetDim(0);
     OP_CHECK_IF(biasCin != otherParams.c_shape.c,
-                OP_LOGE(op_name, "bias shape[0]=[%ld] should be equal to dedx_cin=[%d]",
-                        biasCin, otherParams.c_shape.c), return false);
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(op_name, "biasCin", std::to_string(biasCin), FormatString("bias shape[0] should be equal to dedx_cin[%d]", otherParams.c_shape.c).c_str()),
+        return false);
 
     ge::DataType biasDtype = biasDesc->GetDataType();
     OP_CHECK_IF(biasDtype != ge::DT_FLOAT,
-                OP_LOGE(op_name, "bias dtype[%s] only supports FP32",
-                        ge::TypeUtils::DataTypeToSerialString(biasDtype).c_str()), return false);
+        OP_LOGE_FOR_INVALID_DTYPE(op_name, "biasDtype", ge::TypeUtils::DataTypeToSerialString(biasDtype).c_str(), 
+            FormatString("bias dtype has incorrect value %s, should be FP32", ge::TypeUtils::DataTypeToSerialString(biasDtype).c_str()).c_str()),
+        return false);
 
     return true;
 }
@@ -1991,13 +2130,22 @@ void SetInitOutput(Conv3dBpInputV2RunInfo &runInfoV2, const optiling::OpTypeV2 o
 bool IsSocVersionFuse(const gert::TilingContext *context)
 {
     const auto op_name = context->GetNodeName();
-    OP_CHECK_IF(context == nullptr, OP_LOGE(op_name, "context is null"), return false);
+    if (context == nullptr) {
+        CUBE_INNER_ERR_REPORT(op_name, "context is null");
+        return false;
+    }
     fe::PlatFormInfos *platformInfo = context->GetPlatformInfo();
-    OP_CHECK_IF(platformInfo == nullptr, OP_LOGE(op_name, "platformInfoPtr is null"), return false);
+    if (platformInfo == nullptr) {
+        CUBE_INNER_ERR_REPORT(op_name, "platformInfoPtr is null");
+        return false;
+    }
 
     std::string cube_vec_state_str;
     platformInfo->GetPlatformRes("SoCInfo", "cube_vector_combine", cube_vec_state_str);
-    OP_CHECK_IF(cube_vec_state_str.empty(), OP_LOGE(op_name, "get cube_vector_combine failed"), return false);
+    if (cube_vec_state_str.empty()) {
+        CUBE_INNER_ERR_REPORT(op_name, "get cube_vector_combine failed");
+        return false;
+    }
     if (cube_vec_state_str == "fuse") {
       return true;
     }
@@ -2008,26 +2156,26 @@ bool SetRunInfoToV2(gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInf
                     optiling::OpTypeV2 opType) {
     OtherParams otherParams;
     OP_CHECK_IF(!ValidateConvBackpropContext(context),
-                OP_LOGE(context->GetNodeName(), "failed to parse params"), return false);
+                OP_LOGW(context->GetNodeName(), "failed to parse params"), return false);
     OP_CHECK_IF(!Conv3DBackpropInputParseFunc(context, opType, runInfoV2, otherParams, true),
-                OP_LOGE(context->GetNodeName(), "failed to parse context"), return false);
+                OP_LOGW(context->GetNodeName(), "failed to parse context"), return false);
 
     OP_CHECK_IF(!GetFusionMode(runInfoV2, context->GetNodeName(), context, opType),
-                OP_LOGE(context, "failed to get enRelu flag"), return false);
+                OP_LOGW(context, "failed to get enRelu flag"), return false);
 
     OP_CHECK_IF(!GetImplMode(runInfoV2, context->GetNodeName(), context, opType),
-            OP_LOGE(context, "failed to get impl mode"), return false);
+            OP_LOGW(context, "failed to get impl mode"), return false);
 
     if (!CheckCalPads(context, runInfoV2, opType, otherParams) || !CheckParams(runInfoV2, context, otherParams) ||
         !CheckAttrs(context, runInfoV2, context->GetNodeName(), otherParams) ||
         !CheckPadRange(context, runInfoV2, context->GetNodeName())) {
-        OP_LOGE(context, "params is invalid");
+        OP_LOGW(context, "params is invalid");
         return false;
     }
 
     if ((opType == optiling::OpTypeV2::kConv3DTransposeV2 || opType == optiling::OpTypeV2::kExtendConvTranspose) 
         && (!CheckTranspose(context->GetNodeName(), context) || !CheckBiasParams(context, otherParams, opType))) {
-        OP_LOGE(context, "params is invalid");
+        OP_LOGW(context, "params is invalid");
         return false;
     }
     SetInitOutput(runInfoV2, opType, otherParams);
