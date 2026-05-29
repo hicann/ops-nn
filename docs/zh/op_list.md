@@ -3740,6 +3740,26 @@
   </tr>
   <tr>
     <td>quant</td>
+    <td><a href="../../quant/fake_quant_with_min_max_args/README.md">fake_quant_with_min_max_args</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对输入x进行per-tensor假量化（Fake Quantization），通过Nudge算法将min/max调整为量化步长的整数倍后，执行量化-反量化操作。</td>
+  </tr>
+  <tr>
+    <td>quant</td>
+    <td><a href="../../quant/fake_quant_with_min_max_args_gradient/README.md">fake_quant_with_min_max_args_gradient</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>FakeQuantWithMinMaxArgs的反向梯度算子，通过Nudge后的nudgedMin/nudgedMax构建0/1 mask，对梯度进行乘法门控。</td>
+  </tr>
+  <tr>
+    <td>quant</td>
     <td><a href="../../quant/flat_quant/README.md">flat_quant</a></td>
     <td>✓</td>
     <td>✓</td>

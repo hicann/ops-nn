@@ -1,0 +1,67 @@
+{
+  "op_type": "FakeQuantWithMinMaxArgsGradient",
+  "op_list": [
+    {
+      "bin_filename": "FakeQuantWithMinMaxArgsGradient_fp32",
+      "inputs": [
+        {
+          "name": "gradients",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        },
+        {
+          "name": "x",
+          "index": 1,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "y",
+          "index": 0,
+          "dtype": "float32",
+          "format": "ND",
+          "paramType": "required",
+          "shape": [
+            -2
+          ],
+          "format_match_mode": "FormatAgnostic"
+        }
+      ],
+      "attrs": [
+        {
+          "name": "min",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "max",
+          "dtype": "float",
+          "value": null
+        },
+        {
+          "name": "num_bits",
+          "dtype": "int",
+          "value": null
+        },
+        {
+          "name": "narrow_range",
+          "dtype": "bool",
+          "value": null
+        }
+      ]
+    }
+  ]
+}
