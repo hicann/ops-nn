@@ -71,7 +71,8 @@ uint64_t MaxPool3DGradWithArgmaxTilingSimt::GetTilingKey() const
     uint32_t isChannelLast = (inputData.inputFormat == ge::Format::FORMAT_NDHWC) ? 1 : 0;
     uint32_t isSimt = 1;
     uint32_t isCheckRange = 0;
-    return GET_TPL_TILING_KEY(idxDtype, isSimt, isChannelLast, isCheckRange);
+    uint32_t isFull = 0;
+    return GET_TPL_TILING_KEY(idxDtype, isSimt, isChannelLast, isCheckRange, isFull);
 }
 
 REGISTER_TILING_TEMPLATE("MaxPool3DGradWithArgmax", MaxPool3DGradWithArgmaxTilingSimt, 5);

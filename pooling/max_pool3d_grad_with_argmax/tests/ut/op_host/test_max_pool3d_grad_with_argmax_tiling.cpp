@@ -726,7 +726,7 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, MaxPool3DGradWithArgmax_tiling_simd_test_0
     int64_t index_dtype = 3;
     bool ceil_mode = false;
     std::string data_format = "NCDHW";
-    uint64_t except_tilingkey = 1;
+    uint64_t except_tilingkey = 2049;
     std::string expect = " ";
     ExecuteTestCase(xShape, gradShape, argmaxShape,  yShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,
                     data_format, except_tilingkey, expect);

@@ -84,6 +84,7 @@ struct MaxPool3DGradWithArgmaxNCDHWBaseInfo {
 struct MaxPool3DGradWithArgmaxNCDHWSplitInfo {
     // DoUBTiling
     uint32_t isCheckRange{0};
+    uint32_t isFull{0};
 
     int64_t highAxisInner{0};
     int64_t highAxisTail{0};
