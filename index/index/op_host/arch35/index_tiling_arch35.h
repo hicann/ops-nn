@@ -9,91 +9,38 @@
  */
 
 /*!
- * \file index_tiling.h
- * \brief ac index tiling h
+ * \file index_tiling_arch35.h
+ * \brief SIMT tiling class for Index/IndexPutV2 operators
  */
 
-#ifndef AIR_CXX_RUNTIME_V2_OP_IMPL_INDEX_TILING_H_
-#define AIR_CXX_RUNTIME_V2_OP_IMPL_INDEX_TILING_H_
-#pragma once
-#include "index_tiling_common.h"
+#ifndef INDEX_TILING_ARCH35_H
+#define INDEX_TILING_ARCH35_H
+
 #include "register/tilingdata_base.h"
 #include "tiling/tiling_api.h"
+#include "../../op_kernel/arch35/index_tiling_data.h"
+#include "index_tiling.h"
 
 namespace optiling {
-
-/////////////////////////////////////
-// tilingdata define
-/////////////////////////////////////
-BEGIN_TILING_DATA_DEF(IndexDefaultTilingData)
-TILING_DATA_FIELD_DEF(uint64_t, inputLength);
-END_TILING_DATA_DEF;
-
-BEGIN_TILING_DATA_DEF(IndexSimtTilingData)
-TILING_DATA_FIELD_DEF(uint64_t, inputLength);
-TILING_DATA_FIELD_DEF(uint64_t, outputLength);
-TILING_DATA_FIELD_DEF(uint64_t, indexSize);
-TILING_DATA_FIELD_DEF(uint32_t, inputDimNum);
-TILING_DATA_FIELD_DEF(uint32_t, indexedDimNum);
-TILING_DATA_FIELD_DEF(uint32_t, indexedSizesNum);
-TILING_DATA_FIELD_DEF(uint32_t, accumulateMode);
-TILING_DATA_FIELD_DEF_ARR(uint64_t, 8, inputShape);
-END_TILING_DATA_DEF;
-
-BEGIN_TILING_DATA_DEF(IndexPerfSimtTilingData)
-TILING_DATA_FIELD_DEF(uint64_t, outputLength);
-TILING_DATA_FIELD_DEF(uint64_t, inputShape0);
-TILING_DATA_FIELD_DEF(uint64_t, inputShape1);
-END_TILING_DATA_DEF;
-
-// simt template ascendc tools
-REGISTER_TILING_DATA_CLASS(Index, IndexDefaultTilingData);
-REGISTER_TILING_DATA_CLASS(Index_1001, IndexPerfSimtTilingData);
-REGISTER_TILING_DATA_CLASS(Index_1002, IndexPerfSimtTilingData);
-REGISTER_TILING_DATA_CLASS(Index_1004, IndexPerfSimtTilingData);
-REGISTER_TILING_DATA_CLASS(Index_1008, IndexPerfSimtTilingData);
-REGISTER_TILING_DATA_CLASS(Index_11001, IndexPerfSimtTilingData);
-REGISTER_TILING_DATA_CLASS(Index_11002, IndexPerfSimtTilingData);
-REGISTER_TILING_DATA_CLASS(Index_11004, IndexPerfSimtTilingData);
-REGISTER_TILING_DATA_CLASS(Index_11008, IndexPerfSimtTilingData);
-REGISTER_TILING_DATA_CLASS(Index_1, IndexSimtTilingData);
-REGISTER_TILING_DATA_CLASS(Index_2, IndexSimtTilingData);
-REGISTER_TILING_DATA_CLASS(Index_4, IndexSimtTilingData);
-REGISTER_TILING_DATA_CLASS(Index_8, IndexSimtTilingData);
-REGISTER_TILING_DATA_CLASS(Index_16, IndexSimtTilingData);
-REGISTER_TILING_DATA_CLASS(Index_10001, IndexSimtTilingData);
-REGISTER_TILING_DATA_CLASS(Index_10002, IndexSimtTilingData);
-REGISTER_TILING_DATA_CLASS(Index_10004, IndexSimtTilingData);
-REGISTER_TILING_DATA_CLASS(Index_10008, IndexSimtTilingData);
-REGISTER_TILING_DATA_CLASS(Index_10016, IndexSimtTilingData);
-REGISTER_TILING_DATA_CLASS(IndexPutV2, IndexSimtTilingData);
+using namespace Index;
 
 class IndexSimtTiling : public IndexTilingCommon {
 public:
     explicit IndexSimtTiling(gert::TilingContext* context) : IndexTilingCommon(context)
     {}
-    bool isIndexPut_{false};
 
 protected:
-    bool IsCapable() override
-    {
-        return true;
-    }
     ge::graphStatus GetShapeAttrsInfo() override;
-    ge::graphStatus DoOpTiling() override;
-    ge::graphStatus DoLibApiTiling() override;
     uint64_t GetTilingKey() const override;
-    ge::graphStatus GetWorkspaceSize() override;
     ge::graphStatus PostTiling() override;
 
     // customized functions
     ge::graphStatus GetParamsShapeInfo();
     uint32_t ParamsDtypeImprove(uint32_t lastDimSize, uint32_t dataTypeBytes);
     uint64_t UpdateTilingData();
-    ge::graphStatus GenerateTilingKey();
-    ge::graphStatus GenIndexTilingKey();
 
 private:
+    bool isIndexPut_{false};
     bool accumulateMode_ = false;
     bool isLargeShape_ = false;
     uint64_t inputShapes_[8] = {0, 0, 0, 0, 0, 0, 0, 0};
@@ -101,11 +48,15 @@ private:
     uint32_t inputDimNum_ = 0;
     uint64_t outputLength_ = 0;
     uint32_t indexedDimNum_ = 0;
-    uint32_t tilingKey_ = 0;
+    uint32_t indicesNum_ = 0;
+    uint32_t indexedSizesNum_ = 0;
+    uint64_t indexLength_ = 0;
     bool isPerfTemplate_{false};
-    IndexSimtTilingData tilingData_;
-    IndexPerfSimtTilingData PerfTilingData_;
+    uint64_t factor4Index_ = 1;
+    uint64_t xDtype_ = 0;
+    IndexSimtTilingData* tilingData_{nullptr};
+    IndexPerfSimtTilingData* perfTilingData_{nullptr};
 };
 
 } // namespace optiling
-#endif // AIR_CXX_RUNTIME_V2_OP_IMPL_INDEX_TILING_H_
+#endif // INDEX_TILING_ARCH35_H

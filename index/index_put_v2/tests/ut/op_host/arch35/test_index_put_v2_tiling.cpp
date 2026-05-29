@@ -23,7 +23,7 @@
 #include "exe_graph/runtime/storage_shape.h"
 #include "platform/platform_infos_def.h"
 #include "ut_op_util.h"
-#include "../../../../op_host/arch35/index_put_v2_tiling.h"
+#include "../../../../../index/op_host/arch35/index_tiling.h"
 #include "any_value.h"
 
 using namespace ut_util;
@@ -101,7 +101,7 @@ TEST_F(IndexPutV2Tiling, IndexPutV2_AC_tiling_fp16_continue_0) {
     fe::PlatFormInfos platform_info;
     platform_info.Init();
     // compile info
-    optiling::IndexPutV2CompileInfo compile_info; 
+    optiling::IndexCompileInfo compile_info;
 
     std::string op_type("IndexPutV2");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
@@ -156,7 +156,7 @@ TEST_F(IndexPutV2Tiling, IndexPutV2_AC_tiling_fp16_continue_0) {
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     // todo check tiling result
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 102);
+    ASSERT_EQ(tiling_key, 524290);
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData());
     std::string expect_tiling = "26214400 0 4096 0 4096 0 2 1 2 1 4096 0 6400 0 0 0 0 0 0 0 0 0 0 0 0 0 ";
     ASSERT_EQ(expect_tiling, tiling_data_result);

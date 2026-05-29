@@ -21,7 +21,7 @@
 #include "op_kernel/platform_util.h"
 #include "op_kernel/math_util.h"
 #include "kernel_operator_list_tensor_intf.h"
-
+#include "index_tiling_data.h"
 struct SimtParams {
     uint64_t indexedStride[4][4] = {{0, 0, 0, 0}, {0, 0, 0, 0},
                                         {0, 0, 0, 0}, {0, 0, 0, 0}};

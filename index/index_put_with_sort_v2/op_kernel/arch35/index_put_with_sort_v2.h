@@ -74,7 +74,6 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(LAUNCH_BOUND_LIMIT) inline void SimtIndexPut
         outerStart = threadIdx.x;
         outerStep = blockDim.x;
     }
-    #pragma unroll
     for (uint64_t idxedIdx = outerStart; idxedIdx < indexedDimSize; idxedIdx += outerStep) {
         uint64_t curIdxedIdx = idxedIdx;
         uint64_t idxedSelfIdx = sortIndices[curIdxedIdx];
@@ -109,7 +108,6 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(LAUNCH_BOUND_LIMIT) inline void SimtIndexPut
                     uint64_t remaining = k;
 
                     // 将一维索引k分解为多维索引
-                    #pragma unroll
                     for (uint64_t i = 0; i < nonIndexedDimNum; i++) {
                         const uint64_t idxI = AscendC::Simt::UintDiv(remaining, calcParamsPtr->m_[i], calcParamsPtr->shift_[i]);
                         remaining = remaining - idxI * nonIdxedStride[i]; // 剩余索引
@@ -160,7 +158,6 @@ public:
         LocalTensor<uint64_t> calcParamsUb = Buf_.Get<uint64_t>();
         __ubuf__ calcParams<uint64_t>* calcParamsPtr = (__ubuf__ calcParams<uint64_t>*)calcParamsUb.GetPhyAddr();
         int64_t nonIndexedDimNum = tilingUbAddr[0];
-        #pragma unroll
         for (int64_t i = 0; i < nonIndexedDimNum; i++) {
             uint64_t m{0}, shift{0};
             uint64_t divisor = static_cast<uint64_t>(nonIdxedStride[i]);

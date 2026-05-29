@@ -22,6 +22,7 @@
 #include "kernel_operator.h"
 #include "op_kernel/platform_util.h"
 #include "kernel_operator_list_tensor_intf.h"
+#include "index_tiling_data.h"
 
 namespace Index {
 using namespace AscendC;

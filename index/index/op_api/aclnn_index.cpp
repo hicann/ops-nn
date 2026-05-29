@@ -30,7 +30,6 @@
 #include "opdev/make_op_executor.h"
 #include "opdev/platform.h"
 #include "op_api/aclnn_util.h"
-#include "index/gather_v2/op_api/gather_v2.h"
 
 /* AdvancedIndex operator's flow as:
  *      self          indexed_sizes     indexed_strides     indices_0                 indices_1   ...

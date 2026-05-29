@@ -19,7 +19,7 @@
 #include "kernel_operator.h"
 #include "simt_api/asc_simt.h"
 #include "op_kernel/platform_util.h"
-
+#include "index_tiling_data.h"
 namespace Index {
 using namespace AscendC;
 

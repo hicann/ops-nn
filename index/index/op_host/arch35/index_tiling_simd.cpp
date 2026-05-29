@@ -10,36 +10,31 @@
 
 /*!
  * \file index_tiling_simd.cpp
- * \brief ac index tiling using simd
+ * \brief SIMD tiling implementation for Index operator
  */
 
+#include "log/log.h"
+#include "op_common/op_host/util/platform_util.h"
+#include "op_host/tiling_util.h"
 #include "op_host/tiling_templates_registry.h"
+#include "platform/platform_info.h"
 #include "register/op_def_registry.h"
 #include "tiling/tiling_api.h"
-#include "platform/platform_info.h"
-#include "log/log.h"
-#include "op_common/atvoss/broadcast/broadcast_tiling.h"
+#include "../../op_kernel/arch35/index_tiling_key.h"
 #include "index_tiling.h"
 #include "index_tiling_simd.h"
 
-using namespace AscendC;
-
+using namespace Index;
 namespace optiling {
-
-static constexpr uint32_t SIMD_TILING_KEY = 3001;
-
 static constexpr size_t X_INPUT_IDX = 0;
 static constexpr size_t MASK_INPUT_IDX = 1;
 static constexpr size_t INDICES_IDX = 3;
 static constexpr size_t Y_OUTPUT_IDX = 0;
-// static constexpr size_t INDEXED_SIZES_IDX = 1;
 static constexpr uint32_t MAX_DIM = 8;
-static constexpr uint32_t ASCENDC_TOOLS_WORKSPACE = static_cast<uint32_t>(16 * 1024 * 1024);
 static constexpr int32_t INDICES_SIZE = 8192;
 static constexpr int32_t BUFFER_NUM = 2;
 static constexpr uint64_t SIMD_THRES = 256;
 static constexpr int32_t NUM_TWO = 2;
-static constexpr uint32_t MASK_DIM_NUM = 1;
 static constexpr int32_t NUM_ZERO = 0;
 static constexpr int32_t NUM_ONE = 1;
 static constexpr uint32_t MERGE_OUTPUT_SHAPE_DIM = 3;
@@ -48,13 +43,13 @@ ge::graphStatus IndexTilingSimd::CheckShapeInfo()
 {
     auto xInputShape = context_->GetInputShape(X_INPUT_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, xInputShape);
-    inputShapes_ = Ops::Base::EnsureNotScalar(xInputShape->GetStorageShape());
+    inputShapes_ = Ops::NN::OpTiling::EnsureNotScalar(xInputShape->GetStorageShape());
     auto maskInputShape = context_->GetInputShape(MASK_INPUT_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, maskInputShape);
-    maskShape_ = Ops::Base::EnsureNotScalar(maskInputShape->GetStorageShape());
+    maskShape_ = Ops::NN::OpTiling::EnsureNotScalar(maskInputShape->GetStorageShape());
     auto yOutputShape = context_->GetOutputShape(Y_OUTPUT_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, yOutputShape);
-    auto outputShape = Ops::Base::EnsureNotScalar(yOutputShape->GetStorageShape());
+    auto outputShape = Ops::NN::OpTiling::EnsureNotScalar(yOutputShape->GetStorageShape());
     outputLength_ = outputShape.GetShapeSize();
     return ge::GRAPH_SUCCESS;
 }
@@ -65,7 +60,6 @@ ge::graphStatus IndexTilingSimd::GetShapeDtypeSize()
     OP_CHECK_NULL_WITH_CONTEXT(context_, xInput);
     inputDtypeSize_ = ge::GetSizeByDataType(xInput->GetDataType());
 
-    uint64_t curIndexSize = 0;
     for (size_t i = 0; i < MAX_DIM; ++i) {
         auto curTensor = context_->GetDynamicInputTensor(INDICES_IDX, i);
         if (curTensor == nullptr) {
@@ -75,9 +69,8 @@ ge::graphStatus IndexTilingSimd::GetShapeDtypeSize()
         } else {
             auto curIndexShape = context_->GetDynamicInputShape(INDICES_IDX, i);
             OP_CHECK_NULL_WITH_CONTEXT(context_, curIndexShape);
-            auto indexShape = Ops::Base::EnsureNotScalar(curIndexShape->GetStorageShape());
-            curIndexSize = indexShape.GetShapeSize();
-            indexSize_ = curIndexSize;
+            auto indexShape = Ops::NN::OpTiling::EnsureNotScalar(curIndexShape->GetStorageShape());
+            indexSize_ = indexShape.GetShapeSize();
         }
     }
     if (context_->GetDynamicInputTensor(INDICES_IDX, NUM_ZERO) != nullptr && indexedDimNum_ == 0) {
@@ -88,6 +81,13 @@ ge::graphStatus IndexTilingSimd::GetShapeDtypeSize()
 
 ge::graphStatus IndexTilingSimd::GetShapeAttrsInfo()
 {
+    // 获取 tiling 数据
+    simdTilingData_ = context_->GetTilingData<IndexSimdTilingData>();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, simdTilingData_);
+    OP_CHECK_IF(
+        memset_s(simdTilingData_, sizeof(IndexSimdTilingData), 0, sizeof(IndexSimdTilingData)) != EOK,
+        OP_LOGE(context_->GetNodeName(), "set tiling data error"), return ge::GRAPH_FAILED);
+
     if (CheckShapeInfo() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
@@ -95,14 +95,8 @@ ge::graphStatus IndexTilingSimd::GetShapeAttrsInfo()
         return ge::GRAPH_FAILED;
     }
 
-    uint32_t maskIndices = 0;
     maskTensor_ = context_->GetInputTensor(MASK_INPUT_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, maskTensor_);
-    for (int64_t i = 0; i < maskShape_.GetDim(NUM_ZERO); i++) {
-        if (maskTensor_->GetData<int64_t>()[i] == NUM_ONE) {
-            maskIndices++;
-        }
-    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -132,7 +126,7 @@ bool IndexTilingSimd::MargeInputAxis()
     return true;
 }
 
-bool IndexTilingSimd::IsSimd()
+bool IndexTilingSimd::IsCapable()
 {
     if (!MargeInputAxis()) {
         OP_LOGE(context_->GetNodeName(), "merge input shape error!");
@@ -147,13 +141,7 @@ bool IndexTilingSimd::IsSimd()
           indexSize_ >= coreNum_ / static_cast<uint64_t>(NUM_TWO))) {
         return false;
     }
-    isSimdTemplate_ = true;
     return true;
-}
-
-bool IndexTilingSimd::IsCapable()
-{
-    return IsSimd();
 }
 
 void IndexTilingSimd::CalcSimdTiling()
@@ -165,29 +153,32 @@ void IndexTilingSimd::CalcSimdTiling()
         static_cast<int64_t>(outputLength_) / static_cast<int64_t>(mergeOutputShape_[mergeOutputShapeDim_ - 1]) -
         blockFactor * static_cast<int64_t>(coreNum_);
     int64_t ubBlockSize = static_cast<int64_t>(Ops::Base::GetUbBlockSize(context_));
-    int64_t ubAviable = (static_cast<int64_t>(ubSize_) - static_cast<int64_t>(indexedDimNum_) * INDICES_SIZE) /
-                        ubBlockSize * ubBlockSize / static_cast<int64_t>(inputDtypeSize_) / BUFFER_NUM;
+    int64_t ubAvailable = (static_cast<int64_t>(ubSize_) - static_cast<int64_t>(indexedDimNum_) * INDICES_SIZE) /
+                          ubBlockSize * ubBlockSize / static_cast<int64_t>(inputDtypeSize_) / BUFFER_NUM;
     needCoreNum_ = tailBlockFactor;
     if (blockFactor > 0) {
         needCoreNum_ = static_cast<int64_t>(coreNum_);
     }
 
-    simdTilingData_.set_needCoreNum(needCoreNum_);
-    simdTilingData_.set_perCoreElements(blockFactor);
-    simdTilingData_.set_lastCoreElements(tailBlockFactor);
-    simdTilingData_.set_maxElement(ubAviable);
-    simdTilingData_.set_indiceUbSize(indexedDimNum_ * INDICES_SIZE);
-    simdTilingData_.set_inputDtypeSize(inputDtypeSize_);
-    simdTilingData_.set_indexedDimNum(indexedDimNum_);
-    simdTilingData_.set_mergeInputShape(mergeInputShape_);
-    simdTilingData_.set_mergeInputIndexed(mergeInputIndexed_);
-    simdTilingData_.set_mergeInputShapeDim(mergeInputShapeDim_);
-    simdTilingData_.set_mergeOutputShape(mergeOutputShape_);
-    simdTilingData_.set_mergeOutToInput(mergeOutToInput_);
-    simdTilingData_.set_indicesToInput(indicesToInput_);
-    simdTilingData_.set_mergeOutputShapeDim(mergeOutputShapeDim_);
-    simdTilingData_.set_isZeroOneZero(isZeroOneZero_);
-    simdTilingData_.set_indexSize(indexSize_);
+    // simdTilingData_ 已经在 GetShapeAttrsInfo 中初始化
+    simdTilingData_->needCoreNum = needCoreNum_;
+    simdTilingData_->perCoreElements = blockFactor;
+    simdTilingData_->lastCoreElements = tailBlockFactor;
+    simdTilingData_->maxElement = ubAvailable;
+    simdTilingData_->indiceUbSize = indexedDimNum_ * INDICES_SIZE;
+    simdTilingData_->inputDtypeSize = inputDtypeSize_;
+    simdTilingData_->indexedDimNum = indexedDimNum_;
+    for (int i = 0; i < 8; i++) {
+        simdTilingData_->mergeInputShape[i] = mergeInputShape_[i];
+        simdTilingData_->mergeInputIndexed[i] = mergeInputIndexed_[i];
+        simdTilingData_->mergeOutputShape[i] = mergeOutputShape_[i];
+        simdTilingData_->mergeOutToInput[i] = mergeOutToInput_[i];
+        simdTilingData_->indicesToInput[i] = indicesToInput_[i];
+    }
+    simdTilingData_->mergeInputShapeDim = mergeInputShapeDim_;
+    simdTilingData_->mergeOutputShapeDim = mergeOutputShapeDim_;
+    simdTilingData_->isZeroOneZero = isZeroOneZero_;
+    simdTilingData_->indexSize = indexSize_;
 }
 
 bool IndexTilingSimd::IsIndexContinue()
@@ -267,34 +258,17 @@ ge::graphStatus IndexTilingSimd::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus IndexTilingSimd::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
-
 uint64_t IndexTilingSimd::GetTilingKey() const
 {
-    return SIMD_TILING_KEY;
-}
-
-ge::graphStatus IndexTilingSimd::GetWorkspaceSize()
-{
-    size_t* workspace = context_->GetWorkspaceSizes(1);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, workspace);
-    workspace[0] = ASCENDC_TOOLS_WORKSPACE;
-    return ge::GRAPH_SUCCESS;
+    return GET_TPL_TILING_KEY(0, 0, 0, 1, 0, 0, 0);
 }
 
 ge::graphStatus IndexTilingSimd::PostTiling()
 {
     context_->SetBlockDim(needCoreNum_);
     OP_CHECK_NULL_WITH_CONTEXT(context_, context_->GetRawTilingData());
-    if (simdTilingData_.GetDataSize() > context_->GetRawTilingData()->GetCapacity()) {
-        return ge::GRAPH_FAILED;
-    }
-    simdTilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
-    context_->GetRawTilingData()->SetDataSize(simdTilingData_.GetDataSize());
     return ge::GRAPH_SUCCESS;
 }
+
 REGISTER_OPS_TILING_TEMPLATE(Index, IndexTilingSimd, 20);
 } // namespace optiling

@@ -20,6 +20,7 @@
 #include "op_kernel/platform_util.h"
 #include "op_kernel/math_util.h"
 #include "kernel_operator_list_tensor_intf.h"
+#include "index_put_v2_tiling_data.h"
 
 namespace IndexPutV2 {
 using namespace AscendC;

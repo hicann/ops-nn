@@ -12,44 +12,35 @@
  * \file index_put_v2_simd_tiling.cpp
  * \brief
  */
-#include "util/platform_util.h"
+#include <algorithm>
+#include <cmath>
+#include <set>
+#include <utility>
+#include <vector>
+#include "op_common/op_host/util/math_util.h"
+#include "op_common/op_host/util/platform_util.h"
 #include "op_host/tiling_util.h"
+#include "op_host/tiling_templates_registry.h"
+#include "log/log.h"
+#include "register/op_def_registry.h"
+#include "../../op_kernel/arch35/index_put_v2_tiling_key.h"
 #include "index_put_v2_simd_tiling.h"
 
-using namespace AscendC; 
+using namespace IndexPutV2;
 
 namespace optiling {
-
 constexpr size_t VALUE_IDX = 1;
 constexpr size_t INDICES_IDX = 4;
 constexpr size_t MAX_DIM = 8;
 constexpr size_t INDEXED_SIZES_IDX = 2;
 static constexpr int64_t BASE_BLOCK_ALIGN = 512;
 static constexpr int64_t SINGLE_CORE_THRESHOLD = 4 * 1024;
-static constexpr int64_t NUM_FOUR = 4;
-static constexpr uint32_t ASCENDC_TOOLS_WORKSPACE = 16 * 1024 * 1024;
-
-constexpr uint32_t IDX_TYPE_TILING_KEY_WEIGHT = 100;
-constexpr uint32_t SIMD_OFFSET = 3000;
-constexpr uint32_t ACCU_OFFSET = 1000;
 constexpr uint32_t TWO = 2;
-constexpr uint64_t DTYPE_UINT8 = 0;
-constexpr uint64_t DTYPE_INT8 = 1;
-constexpr uint64_t DTYPE_F16 = 2;
-constexpr uint64_t DTYPE_BF16 = 3;
-constexpr uint64_t DTYPE_INT32 = 4;
-constexpr uint64_t DTYPE_F32 = 5;
-constexpr uint64_t DTYPE_INT64 = 6;
-constexpr uint64_t DTYPE_BOOL = 7;
-static std::map<ge::DataType, uint64_t> typeMap =  {{ge::DT_INT64, DTYPE_INT64}, {ge::DT_INT32, DTYPE_INT32}, 
-                                            {ge::DT_FLOAT, DTYPE_F32}, {ge::DT_FLOAT16, DTYPE_F16}, 
-                                            {ge::DT_BF16, DTYPE_BF16}, {ge::DT_INT8, DTYPE_INT8},
-                                            {ge::DT_BOOL, DTYPE_BOOL}, {ge::DT_UINT8, DTYPE_UINT8}};
 
 bool IndexPutV2SimdTiling::IsCapable()
 {
-    valueType = context_->GetInputDesc(VALUE_IDX)->GetDataType();
-    indicesType = context_->GetInputDesc(INDICES_IDX)->GetDataType();
+    auto valueType = context_->GetInputDesc(VALUE_IDX)->GetDataType();
+    auto indicesType = context_->GetInputDesc(INDICES_IDX)->GetDataType();
     valueTypeSize = ge::GetSizeByDataType(valueType);
     indicesTypeSize = ge::GetSizeByDataType(indicesType);
 
@@ -65,7 +56,7 @@ bool IndexPutV2SimdTiling::IsCapable()
 
 bool IndexPutV2SimdTiling::IsContinuous()
 {
-    size_t firstZeroPos = indexedSizesNum_;
+    int64_t firstZeroPos = indexedSizesNum_;
     // 找到第一个0值对应的位置
     for (int64_t i = 0; i < indexedSizesNum_; i++) {
         if (indexedSizes_[i] == 0) {
@@ -90,7 +81,7 @@ bool IndexPutV2SimdTiling::IsContinuous()
 
 bool IndexPutV2SimdTiling::CheckInputDtype()
 {
-    std::set<ge::DataType> supportType = {ge::DT_BOOL, ge::DT_INT8, ge::DT_UINT8, ge::DT_FLOAT16,  
+    std::set<ge::DataType> supportType = {ge::DT_BOOL, ge::DT_INT8, ge::DT_UINT8, ge::DT_FLOAT16,
                                           ge::DT_BF16, ge::DT_INT32, ge::DT_FLOAT, ge::DT_INT64};
     std::set<ge::DataType> atomicAddSupportType = {ge::DT_INT8, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_INT32, ge::DT_FLOAT};
     auto const attrs = context_->GetAttrs();
@@ -109,32 +100,6 @@ bool IndexPutV2SimdTiling::CheckInputDtype()
         }
     }
     return true;
-}
-
-ge::graphStatus IndexPutV2SimdTiling::GetPlatformInfo()
-{
-    auto platformPtr = context_->GetPlatformInfo();
-    if (platformPtr == nullptr) {
-        auto compileInfoPtr =
-            reinterpret_cast<const IndexPutV2SimdCompileInfo*>(context_->GetCompileInfo());
-        OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE(context_, "compile info is null"), return ge::GRAPH_FAILED);
-        totalCoreNum_ = compileInfoPtr->coreNum;
-        ubSize_ = compileInfoPtr->ubSize;
-    } else {
-        auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformPtr);
-        totalCoreNum_ = ascendcPlatform.GetCoreNumAiv();
-
-        uint64_t ubSizePlatform;
-        ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatform);
-        ubSize_ = static_cast<uint64_t>(ubSizePlatform);
-    }
-    OP_CHECK_IF(
-        (totalCoreNum_ <= 0 || ubSize_ <= 0),
-        OP_LOGE(
-            context_, "coreNum and ubSize should not be smaller than 0, but got coreNum [%ld] and ubSize [%ld]",
-            totalCoreNum_, ubSize_),
-        return ge::GRAPH_FAILED);
-    return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus IndexPutV2SimdTiling::GetShapeAttrsInfo()
@@ -167,26 +132,6 @@ ge::graphStatus IndexPutV2SimdTiling::GetShapeAttrsInfo()
     indexedSizesNum_ = indexedSizesShape.GetDim(0);
     OP_LOGI("IndexPutV2Simd", "input indexed_sizes size: %ld", indexedSizesNum_);
 
-    // 获取索引、索引轴大小
-    auto paramIndicesIdx = INDICES_IDX;
-    int32_t indicesNum = 0;
-    for (size_t i = 0; i < MAX_DIM; ++i) {
-        auto curTensor = context_->GetDynamicInputTensor(paramIndicesIdx, i);
-        if (curTensor == nullptr) {
-            indicesNum = i;
-            break;
-        }
-    }
-    if (context_->GetDynamicInputTensor(paramIndicesIdx, 0) != nullptr && indicesNum == 0) {
-        indicesNum = MAX_DIM;
-    }
-
-    // 获取索引轴的shape及其索引长度
-    auto curIndexShape = context_->GetDynamicInputShape(paramIndicesIdx, 0);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, curIndexShape);
-    auto const indexShapeVal = curIndexShape->GetStorageShape();
-    uint64_t indexLength = indexShapeVal.GetShapeSize();
-
     // 获取indexedSize的值
     const gert::Tensor* mask_tensor = context_->GetInputTensor(INDEXED_SIZES_IDX);
     const int64_t* mask_arr = mask_tensor->GetData<int64_t>();
@@ -203,14 +148,12 @@ ge::graphStatus IndexPutV2SimdTiling::GetShapeAttrsInfo()
     // value的n为非索引轴合轴的维度乘积
     for (int i = 0; i < indexedSizesNum_; i++) {
         if (indexedSizes_[i] == 0) {
-            nonIndexDims_[nonIndexedDimNum_] = inputShapes_[i];
             nonIndexedDimNum_++;
-            nonIndexedLength_ *= inputShapes_[i]; 
+            nonIndexedLength_ *= inputShapes_[i];
         }
     }
     indexedDimNum_ = indexedSizesNum_ - nonIndexedDimNum_;
 
-    OP_LOGD("IndexSimd", "indices number: %d, index length: %lu", indicesNum, indexLength);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -224,60 +167,33 @@ ge::graphStatus IndexPutV2SimdTiling::SetTilingData()
         accumulateMode_ = 0;
     }
 
-    int64_t inputShapes[MAX_DIM] = {0, 0, 0, 0, 0, 0, 0, 0};
-    int64_t indexedStrides[MAX_DIM] = {0, 0, 0, 0, 0, 0, 0, 0};
-    for (int i = 0; i < MAX_DIM; i++) {
-        inputShapes[i] = inputShapes_[i];
-        indexedStrides[i] = indexedStrides_[i];
+    for (size_t i = 0; i < MAX_DIM; i++) {
+        tilingData_->inputShapes[i] = inputShapes_[i];
+        tilingData_->indexedStrides[i] = indexedStrides_[i];
     }
-    tilingData_.set_inputLength(inputLength_);
-    tilingData_.set_valueLength(valueLength_);
-    tilingData_.set_inputDimNum(inputDimNum_);
-    tilingData_.set_indexedSizesNum(indexedSizesNum_);
-    tilingData_.set_indexedDimNum(indexedDimNum_);
-    tilingData_.set_nonIndexedDimNum(nonIndexedDimNum_);
-    tilingData_.set_accumulateMode(static_cast<int64_t>(accumulateMode_));
-    tilingData_.set_indexedLength(indexedLength_);
-    tilingData_.set_nonIndexedLength(nonIndexedLength_);
-    tilingData_.set_normalCoreRowsNum(normalCoreRowsNum_);
-    tilingData_.set_normalCoreColsNum(normalCoreColsNum_);
-    tilingData_.set_tailCoreRowsNum(tailCoreRowsNum_);
-    tilingData_.set_tailCoreColsNum(tailCoreColsNum_);
-    tilingData_.set_blockNumInRow(blockNumInRow_);
-    tilingData_.set_blockNumInCol(blockNumInCol_);
-    tilingData_.set_rowsFactor(rowsFactor_);
-    tilingData_.set_colsFactor(colsFactor_);
-    tilingData_.set_coreNum(needCoreNum_);
-    tilingData_.set_inputShapes(inputShapes);
-    tilingData_.set_indexedStrides(indexedStrides);
+    tilingData_->inputLength = inputLength_;
+    tilingData_->valueLength = valueLength_;
+    tilingData_->inputDimNum = inputDimNum_;
+    tilingData_->indexedSizesNum = indexedSizesNum_;
+    tilingData_->indexedDimNum = indexedDimNum_;
+    tilingData_->nonIndexedDimNum = nonIndexedDimNum_;
+    tilingData_->accumulateMode = static_cast<int64_t>(accumulateMode_);
+    tilingData_->indexedLength = indexedLength_;
+    tilingData_->nonIndexedLength = nonIndexedLength_;
+    tilingData_->normalCoreRowsNum = normalCoreRowsNum_;
+    tilingData_->normalCoreColsNum = normalCoreColsNum_;
+    tilingData_->tailCoreRowsNum = tailCoreRowsNum_;
+    tilingData_->tailCoreColsNum = tailCoreColsNum_;
+    tilingData_->blockNumInRow = blockNumInRow_;
+    tilingData_->blockNumInCol = blockNumInCol_;
+    tilingData_->rowsFactor = rowsFactor_;
+    tilingData_->colsFactor = colsFactor_;
+    tilingData_->coreNum = needCoreNum_;
     return ge::GRAPH_SUCCESS;
 }
 
-void IndexPutV2SimdTiling::GenIndexSimdTilingKey() {
-    uint64_t simdKey = 0;
-    auto firstInput = context_->GetInputDesc(0);
-    auto paramsDtype = firstInput->GetDataType();
-    if (typeMap.find(paramsDtype) != typeMap.end()) {
-        simdKey = typeMap[paramsDtype];
-    } else {
-        OP_LOGE("IndexPutV2Simd", "input x dtype error!");
-    }
-    
-    auto paramIndicesIdx = INDICES_IDX;
-    auto idxInput = context_->GetInputDesc(paramIndicesIdx);
-    auto idxDtype = idxInput->GetDataType();
-    if (idxDtype == ge::DT_INT64) {
-        simdKey += IDX_TYPE_TILING_KEY_WEIGHT;
-    }
-    if (accumulateMode_) {
-        simdKey += ACCU_OFFSET;
-    }
-    tilingKey_ = simdKey + SIMD_OFFSET;
-    OP_LOGI("IndexPutV2Simd", "tiling key: %lu", tilingKey_);
-}
-
 uint64_t IndexPutV2SimdTiling::GetTilingKey() const {
-    return tilingKey_;
+    return GET_TPL_TILING_KEY(0, 0, 0, 1, 0, static_cast<uint64_t>(accumulateMode_), 0);
 }
 
 std::set<int64_t> IndexListFactors(int64_t usedCoreNum)
@@ -342,11 +258,11 @@ void IndexPutV2SimdTiling::AutoTilingRowCol(int64_t& rowTileNum, int64_t& colTil
 // 核间切UB
 void IndexPutV2SimdTiling::DoUBTiling()
 {
-    int64_t availableUbsize =  ubSize_ - MAX_DIM * MAX_DIM * TWO;
+    uint64_t availableUbsize =  ubSize_ - MAX_DIM * MAX_DIM * TWO;
     int64_t minRows = 8;
     int64_t doubleB = 2;
     int32_t rankDim = 0;
-    int64_t oneRowBuffer = 0;
+    uint64_t oneRowBuffer = 0;
     uint64_t ubBlockSize = static_cast<uint64_t>(Ops::Base::GetUbBlockSize(context_));
 
     for (int64_t i = 0; i < indexedSizesNum_; i++) {
@@ -356,10 +272,10 @@ void IndexPutV2SimdTiling::DoUBTiling()
     }
 
     minRows = std::min(minRows, normalCoreRowsNum_);
-    tmp_buf = minRows * Ops::Base::CeilAlign(normalCoreColsNum_ * valueTypeSize, ubBlockSize) * doubleB
-              + Ops::Base::CeilAlign(minRows * indicesTypeSize, ubBlockSize) * (rankDim * doubleB + 1);     // 处理minRows行value需要用到的UB空间
+    uint64_t tmpBuf = minRows * Ops::Base::CeilAlign(normalCoreColsNum_ * valueTypeSize, ubBlockSize) * doubleB
+                      + Ops::Base::CeilAlign(minRows * indicesTypeSize, ubBlockSize) * (rankDim * doubleB + 1);
 
-    if (tmp_buf < availableUbsize) {
+    if (tmpBuf < availableUbsize) {
         colsFactor_ = normalCoreColsNum_;
         oneRowBuffer = Ops::Base::CeilAlign(normalCoreColsNum_ * valueTypeSize, ubBlockSize) * doubleB
                      + Ops::Base::CeilAlign(indicesTypeSize, ubBlockSize) * (rankDim * doubleB + 1);
@@ -380,7 +296,7 @@ ge::graphStatus IndexPutV2SimdTiling::DoOpTiling()
     auto const indexSizeVal = curIndexShape->GetStorageShape();
     indexedLength_ = indexSizeVal.GetShapeSize();
 
-    AutoTilingRowCol(blockNumInRow_, blockNumInCol_, totalCoreNum_, indexedLength_, nonIndexedLength_);
+    AutoTilingRowCol(blockNumInRow_, blockNumInCol_, coreNum_, indexedLength_, nonIndexedLength_);
 
     normalCoreRowsNum_ = Ops::Base::CeilDiv(indexedLength_, blockNumInRow_);
     blockNumInRow_ = Ops::Base::CeilDiv(indexedLength_, normalCoreRowsNum_);
@@ -392,33 +308,22 @@ ge::graphStatus IndexPutV2SimdTiling::DoOpTiling()
 
     needCoreNum_ = blockNumInRow_ * blockNumInCol_;
 
+    tilingData_ = context_->GetTilingData<IndexPutV2SimdTilingData>();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, tilingData_);
+    OP_CHECK_IF(
+    memset_s(tilingData_, sizeof(IndexPutV2SimdTilingData), 0, sizeof(IndexPutV2SimdTilingData)) != EOK,
+    OP_LOGE(context_->GetNodeName(), "set tiling data error"), return ge::GRAPH_FAILED);
+
     DoUBTiling();
     SetTilingData();
-    GenIndexSimdTilingKey();
-    return ge::GRAPH_SUCCESS;
-}
-
-ge::graphStatus IndexPutV2SimdTiling::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
-
-ge::graphStatus IndexPutV2SimdTiling::GetWorkspaceSize()
-{
-    size_t* workspace = context_->GetWorkspaceSizes(1);
-    OP_CHECK_NULL_WITH_CONTEXT(context_, workspace);
-    workspace[0] = ASCENDC_TOOLS_WORKSPACE;
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus IndexPutV2SimdTiling::PostTiling()
 {
-    tilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
-    context_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
     context_->SetBlockDim(needCoreNum_);
     return ge::GRAPH_SUCCESS;
 }
 
 REGISTER_OPS_TILING_TEMPLATE(IndexPutV2, IndexPutV2SimdTiling, 10);
-
 } // namespace optiling

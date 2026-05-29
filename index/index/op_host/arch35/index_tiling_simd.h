@@ -10,44 +10,21 @@
 
 /*!
  * \file index_tiling_simd.h
- * \brief ac index tiling h
+ * \brief SIMD tiling class for Index operator
  */
 
-#ifndef AIR_CXX_RUNTIME_V2_OP_IMPL_INDEX_TILING_SIMD_H_
-#define AIR_CXX_RUNTIME_V2_OP_IMPL_INDEX_TILING_SIMD_H_
-#pragma once
+#ifndef INDEX_TILING_SIMD_H
+#define INDEX_TILING_SIMD_H
 
-#include "index_tiling_common.h"
 #include "register/tilingdata_base.h"
 #include "tiling/tiling_api.h"
+#include "../../op_kernel/arch35/index_tiling_data.h"
+#include "index_tiling.h"
 
 namespace optiling {
+using namespace Index;
+
 constexpr int64_t MAX_DIM_NUM = 8;
-
-/////////////////////////////////////
-// tilingdata define
-/////////////////////////////////////
-BEGIN_TILING_DATA_DEF(IndexSimdTilingData)
-TILING_DATA_FIELD_DEF(uint32_t, indexedDimNum);
-TILING_DATA_FIELD_DEF_ARR(uint64_t, MAX_DIM_NUM, mergeInputShape);
-TILING_DATA_FIELD_DEF_ARR(uint32_t, MAX_DIM_NUM, mergeInputIndexed);
-TILING_DATA_FIELD_DEF(uint32_t, mergeInputShapeDim);
-TILING_DATA_FIELD_DEF_ARR(uint64_t, MAX_DIM_NUM, mergeOutputShape);
-TILING_DATA_FIELD_DEF_ARR(int32_t, MAX_DIM_NUM, mergeOutToInput);
-TILING_DATA_FIELD_DEF_ARR(int32_t, MAX_DIM_NUM, indicesToInput);
-TILING_DATA_FIELD_DEF(uint32_t, mergeOutputShapeDim);
-TILING_DATA_FIELD_DEF(int64_t, needCoreNum);
-TILING_DATA_FIELD_DEF(int64_t, perCoreElements);
-TILING_DATA_FIELD_DEF(int64_t, lastCoreElements);
-TILING_DATA_FIELD_DEF(int64_t, maxElement);
-TILING_DATA_FIELD_DEF(int64_t, indiceUbSize);
-TILING_DATA_FIELD_DEF(int64_t, inputDtypeSize);
-TILING_DATA_FIELD_DEF(uint64_t, indexSize);
-TILING_DATA_FIELD_DEF(int32_t, isZeroOneZero);
-END_TILING_DATA_DEF;
-
-// simt template ascendc tools
-REGISTER_TILING_DATA_CLASS(Index_3001, IndexSimdTilingData);
 
 class IndexTilingSimd : public IndexTilingCommon {
 public:
@@ -58,16 +35,12 @@ private:
     bool IsCapable() override;
     ge::graphStatus GetShapeAttrsInfo() override;
     ge::graphStatus DoOpTiling() override;
-    ge::graphStatus DoLibApiTiling() override;
     uint64_t GetTilingKey() const override;
-    ge::graphStatus GetWorkspaceSize() override;
     ge::graphStatus PostTiling() override;
 
     // customized functions
     ge::graphStatus CheckShapeInfo();
     ge::graphStatus GetShapeDtypeSize();
-    ge::graphStatus GetParamsShapeInfo();
-    bool IsSimd();
     void CalcSimdTiling();
     bool IsIndexContinue();
     bool MargeInputAxis();
@@ -86,15 +59,11 @@ private:
     uint32_t mergeOutputShapeDim_{0};
     uint64_t indexSize_{0};
     uint32_t inputDtypeSize_{0};
-    uint64_t inputLength_{0};
     uint64_t outputLength_{0};
     uint32_t indexedDimNum_{0};
     int64_t needCoreNum_{0};
-    uint32_t tilingKey_{0};
-    bool isSimdTemplate_{false};
     int32_t isZeroOneZero_{0};
-    IndexSimdTilingData simdTilingData_;
+    IndexSimdTilingData* simdTilingData_;
 };
-
 } // namespace optiling
-#endif // AIR_CXX_RUNTIME_V2_OP_IMPL_INDEX_TILING_SIMD_H_
+#endif // INDEX_TILING_SIMD_H

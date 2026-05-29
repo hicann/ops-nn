@@ -18,6 +18,7 @@
 
 #include "kernel_operator.h"
 #include "op_kernel/platform_util.h"
+#include "index_tiling_data.h"
 
 #include "simt_api/asc_simt.h"
 #include "simt_api/device_atomic_functions.h"
