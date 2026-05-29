@@ -35,11 +35,16 @@ bool IndexFillSimtTiling::IsCapable()
 
 int64_t IndexFillSimtTiling::CalcSimtUsedCoreNum()
 {
+    // 如果输入x大小很小(此时很容易被全量cache)或者indicesNum远远小于n时，才使用p * indicesNum * q做simt遍历; 否则走p * n * q simt遍历
+    simtComputeMode_ = (inputData.numel * inputData.dtypeSize < 256 || inputData.indicesNum <= inputData.N / 5) ? SIMT_COMPUTE_MODE_BY_INDICES : SIMT_COMPUTE_MODE_BY_N;
+
     int64_t threadNum = MAX_THREAD_NUM;
-    int64_t simtUsedCoreNum = std::min(coreNum_, inputData.numel / threadNum);
+    int64_t numelByIndices = static_cast<int64_t>(inputData.P * inputData.Q * inputData.indicesNum);
+    int64_t numel = (simtComputeMode_ == SIMT_COMPUTE_MODE_BY_N) ? inputData.numel : numelByIndices;
+    int64_t simtUsedCoreNum = std::min(coreNum_, numel / threadNum);
     while ((simtUsedCoreNum < (coreNum_ / 2)) && (threadNum > MIN_THREAD_NUM)) {
         threadNum = threadNum / 2;
-        simtUsedCoreNum = std::min(coreNum_, inputData.numel / threadNum);
+        simtUsedCoreNum = std::min(coreNum_, numel / threadNum);
     }
 
     return simtUsedCoreNum;
@@ -111,7 +116,11 @@ ge::graphStatus IndexFillSimtTiling::GetWorkspaceSize()
 {
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
-    currentWorkspace[0] = sysWorkspaceSize_;
+    if (simtComputeMode_ == SIMT_COMPUTE_MODE_BY_N) {
+        currentWorkspace[0] = (inputData.N * sizeof(int8_t)) + sysWorkspaceSize_; // workspace上申请额外申请一片内存，用于存放索引位图
+    } else {
+        currentWorkspace[0] = sysWorkspaceSize_;
+    }
 
     // 涉及到核间同步，需要设置该模式.
     context_->SetScheduleMode(1);
@@ -151,6 +160,7 @@ void IndexFillSimtTiling::SetTilingData()
     tilingData->tailBlockSize = inputData.tailBlockSize;
     tilingData->loopsPerFrontCore = inputData.loopsPerFrontCore;
     tilingData->loopsPerTailCore = inputData.loopsPerTailCore;
+    tilingData->simtComputeMode = simtComputeMode_;
     tilingData->tilingKey = GetTilingKey();
 }
 

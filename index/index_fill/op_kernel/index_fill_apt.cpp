@@ -12,10 +12,11 @@
  * \file index_fill_apt.cpp
  * \brief
  */
-#include "arch35/index_fill_simt.h"
-#include "arch35/index_fill_simd.h"
 #include "arch35/index_fill_tiling_key.h"
 #include "arch35/index_fill_struct.h"
+#include "arch35/index_fill_simt.h"
+#include "arch35/index_fill_simd.h"
+#include "arch35/index_fill_simt_dense_indices.h"
 
 using namespace IndexFill;
 
@@ -41,19 +42,33 @@ __global__ __aicore__ void index_fill(GM_ADDR x, GM_ADDR indices, GM_ADDR value,
         IndexFillSimdImpl<T, DTYPE_INDICES, uint64_t> op(tilingData, tpipe);
         op.Init(x, indices, value, y, workspace);
         op.Process();
+    } else if constexpr (TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMT_DENSE_INDICES && DYTPE_MODE == TPL_MODE_DTYPE_B32) {
+        // simt为indices重复度高模板
+        REGISTER_TILING_FOR_TILINGKEY("TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMT_DENSE_INDICES && DYTPE_MODE == TPL_MODE_DTYPE_B32", IndexFillSimtDenseIndicesTilingData);
+        GET_TILING_DATA_WITH_STRUCT(IndexFillSimtDenseIndicesTilingData, tilingData, tiling);
+        IndexFillSimtDenseIndicesImpl<T, DTYPE_INDICES, uint32_t> op(&tilingData, &tpipe);
+        op.Init(x, y, indices, value, workspace);
+        op.Process((__gm__ T*)y);
+    } else if constexpr (TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMT_DENSE_INDICES && DYTPE_MODE == TPL_MODE_DTYPE_B64) {
+        // simt为indices重复度高模板
+        REGISTER_TILING_FOR_TILINGKEY("TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMT_DENSE_INDICES && DYTPE_MODE == TPL_MODE_DTYPE_B64", IndexFillSimtDenseIndicesTilingData);
+        GET_TILING_DATA_WITH_STRUCT(IndexFillSimtDenseIndicesTilingData, tilingData, tiling);
+        IndexFillSimtDenseIndicesImpl<T, DTYPE_INDICES, uint64_t> op(&tilingData, &tpipe);
+        op.Init(x, y, indices, value, workspace);
+        op.Process((__gm__ T*)y);
     } else if constexpr (TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMT && DYTPE_MODE == TPL_MODE_DTYPE_B32) {
         // simt为全功能模板
         REGISTER_TILING_FOR_TILINGKEY("TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMT && DYTPE_MODE == TPL_MODE_DTYPE_B32", IndexFillSimtTilingData);
         GET_TILING_DATA_WITH_STRUCT(IndexFillSimtTilingData, tilingData, tiling);
         IndexFillSimtImpl<T, DTYPE_INDICES, uint32_t> op(&tilingData, &tpipe);
-        op.Init(x, y, indices, value);
-        op.Process((__gm__ T*)y);
+        op.Init(x, y, indices, value, workspace);
+        op.Process((__gm__ T*)y, workspace);
     } else if constexpr (TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMT && DYTPE_MODE == TPL_MODE_DTYPE_B64) {
         // simt为全功能模板
         REGISTER_TILING_FOR_TILINGKEY("TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMT && DYTPE_MODE == TPL_MODE_DTYPE_B64", IndexFillSimtTilingData);
         GET_TILING_DATA_WITH_STRUCT(IndexFillSimtTilingData, tilingData, tiling);
         IndexFillSimtImpl<T, DTYPE_INDICES, uint64_t> op(&tilingData, &tpipe);
-        op.Init(x, y, indices, value);
-        op.Process((__gm__ T*)y);
+        op.Init(x, y, indices, value, workspace);
+        op.Process((__gm__ T*)y, workspace);
     }
 }

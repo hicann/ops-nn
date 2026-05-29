@@ -25,6 +25,13 @@ constexpr uint64_t B16 = 2;
 constexpr uint64_t B32 = 4;
 constexpr uint64_t B64 = 8;
 
+constexpr int32_t MASK_THRESHPLD = 512;
+constexpr uint32_t THREAD_NUM = 2048;
+constexpr uint8_t DB_BUFFER = 2;
+
+constexpr int64_t SIMT_COMPUTE_MODE_BY_INDICES = 1;
+constexpr int64_t SIMT_COMPUTE_MODE_BY_N = 0;
+
 template <typename T>
 struct ComputeTypeGet {
     using type = typename std::conditional<
@@ -71,6 +78,7 @@ public:
     int64_t tailBlockSize;         // 表示尾块中有多少个元素
     int64_t loopsPerFrontCore;     // 前frontCoreNum个核的单核循环次数
     int64_t loopsPerTailCore;      // 尾部这(usedCoreNum-frontCoreNum)个核的单核循环次数
+    int64_t simtComputeMode;       // 枚举值,0:表示根据p*n*q进行simt遍历 1:表示根据p*indicesNum*q进行simt遍历
 
 public:
     std::string ToString() const {
@@ -89,6 +97,19 @@ public:
         result += ", tailBlockSize: " + std::to_string(tailBlockSize);
         result += ", loopsPerFrontCore: " + std::to_string(loopsPerFrontCore);
         result += ", loopsPerTailCore: " + std::to_string(loopsPerTailCore);
+        return result;
+    }
+};
+
+class IndexFillSimtDenseIndicesTilingData : public IndexFillSimtTilingData {
+public:
+    int64_t indicesUbFactor;        // ub中每次加载的indicesNum数量
+
+public:
+    std::string ToString() const {
+        std::string result;
+        result += IndexFillSimtTilingData::ToString();
+        result += ", indicesUbFactor: " + std::to_string(indicesUbFactor);
         return result;
     }
 };

@@ -95,6 +95,12 @@ ge::graphStatus GetIndexFillShapeAttrsInfo(gert::TilingContext* context, IndexFi
     inputData.indicesNum = indicesNum;
     inputData.numel = xShape.GetShapeSize();
 
+    auto indicesDesc = context->GetInputDesc(INDEX_INPUT_INDICES);
+    OP_CHECK_NULL_WITH_CONTEXT(context, indicesDesc);
+    ge::DataType indicesDtype = indicesDesc->GetDataType();
+    inputData.indicesDtype = indicesDtype;
+    inputData.indicesDtypeSize = ge::GetSizeByDataType(indicesDtype);
+
     return ge::GRAPH_SUCCESS;
 }
 

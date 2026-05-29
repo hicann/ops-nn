@@ -26,7 +26,6 @@ namespace IndexFill {
 using namespace AscendC;
 
 constexpr int32_t DOUBLE_BUFFER = 2;
-constexpr int32_t MASK_THRESHPLD = 512;
 
 template<typename T, typename INDEX_TYPE, typename COM_T>
 class IndexFillSimdImpl {

@@ -9,47 +9,42 @@
  */
 
 /* !
- * \file index_fill_tiling_simt.h
+ * \file index_fill_tiling_simt_dense_indices.h
  * \brief
  */
 
-#ifndef INDEX_FILL_TILING_SIMT_H_
-#define INDEX_FILL_TILING_SIMT_H_
+#ifndef INDEX_FILL_TILING_SIMT_DENSE_INDICES_H_
+#define INDEX_FILL_TILING_SIMT_DENSE_INDICES_H_
 
-#include "index_fill_tiling_common.h"
+#include "index_fill_tiling_simt.h"
 
 namespace optiling
 {
-class IndexFillSimtTiling : public IndexFillCommonTiling
+class IndexFillSimtDenseIndicesTiling : public IndexFillSimtTiling
 {
 public:
-    explicit IndexFillSimtTiling(gert::TilingContext* context) : IndexFillCommonTiling(context)
+    explicit IndexFillSimtDenseIndicesTiling(gert::TilingContext* context) : IndexFillSimtTiling(context)
     {
     }
-    ~IndexFillSimtTiling() override
+    ~IndexFillSimtDenseIndicesTiling() override
     {
     }
 
 protected:
     bool IsCapable() override;
     ge::graphStatus DoOpTiling() override;
+    ge::graphStatus PostTiling() override;
     ge::graphStatus GetWorkspaceSize() override;
     void SetTilingData() override;
     uint64_t GetTilingKey() const override;
     void DumpTilingInfo() override;
 
-protected:
-    void DoUBTiling();
 private:
-    int64_t CalcSimtUsedCoreNum();
-
-protected:
-    int64_t simdUsedCoreNum_ = 0;
-    int64_t simtUsedCoreNum_ = 0;
-    int64_t simtComputeMode_;
+    void DoIndicesTilingTask();
+    int64_t GetOptimalIndiceUBFactor(int64_t indicesUbFactor, int64_t indicesNum, int64_t n);
+    uint32_t GetSortTmpSize(ge::DataType indicesDtype, uint32_t shapeSize, bool isDescend);
+    int64_t CalcUsedBufSize(int64_t indicesUbFactor, ge::DataType indicesDtype);
 };
 
-ge::graphStatus Tiling4IndexFillSupportSimt(gert::TilingContext* context);
-
 }  // namespace optiling
-#endif  // INDEX_FILL_TILING_SIMT_H_
+#endif  // INDEX_FILL_TILING_SIMT_DENSE_INDICES_H_
