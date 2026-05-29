@@ -13,6 +13,7 @@
  * \brief
  */
 #include <string>
+#include <algorithm>
 
 #include "error_util.h"
 #include "common/op_host/matmul_common_infershape.h"
