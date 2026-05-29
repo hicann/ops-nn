@@ -95,19 +95,24 @@ static aclnnStatus CheckParams(aclTensor *varRef, const aclTensor *indices, cons
 
 // 判断指定轴范围是否连续
 // startAxis: 起始轴（包含），endAxis: 结束轴（不包含）
+// 当 startAxis == endAxis 时区间为空，视为平凡连续返回 true（不影响 arch35 的调用点，
+// 那两个点外层都已 guard 住空区间；专门给 arch32 的 1D 场景放行非连续优化路径）。
 static bool IsAxesContiguous(const aclTensor *tensor, int64_t startAxis, int64_t endAxis) {
-  if (tensor == nullptr || startAxis < 0 || endAxis < 0 || startAxis >= endAxis) {
+  if (tensor == nullptr || startAxis < 0 || endAxis < 0 || startAxis > endAxis) {
     return false;
   }
-  
+  if (startAxis == endAxis) {
+    return true;
+  }
+
   auto viewShape = tensor->GetViewShape();
   auto viewStrides = tensor->GetViewStrides();
   int64_t dimNum = viewShape.GetDimNum();
-  
+
   if (endAxis > dimNum) {
     return false;
   }
-  
+
   int64_t validStride = 1;
   for (int64_t i = endAxis - 1; i >= startAxis; i--) {
     if (viewShape.GetDim(i) == 1) {
@@ -119,6 +124,30 @@ static bool IsAxesContiguous(const aclTensor *tensor, int64_t startAxis, int64_t
     validStride *= viewShape.GetDim(i);
   }
   return true;
+}
+
+// arch32 (910b/910_93) 仅支持 var.stride[0] 非连续、其余 stride 全部连续的窄子集。
+// 校验：dim>=1 全连续，dim 0 stride 大于 contiguous 期望值。
+static bool IsSupportNonContiguousArch32(const aclTensor *varRef, int64_t indexAxisNum) {
+  if (varRef == nullptr || indexAxisNum < 1) {
+    return false;
+  }
+  auto viewShape = varRef->GetViewShape();
+  auto viewStrides = varRef->GetViewStrides();
+  int64_t varRefDimNum = viewShape.GetDimNum();
+  if (indexAxisNum > varRefDimNum) {
+    return false;
+  }
+  // dim>=1 必须全部连续
+  if (!IsAxesContiguous(varRef, 1, varRefDimNum)) {
+    return false;
+  }
+  // dim 0 的 stride 必须 >= contiguous 期望值（>= 而非 ==，等于的退回连续路径）
+  int64_t expectedStride0 = 1;
+  for (int64_t i = 1; i < varRefDimNum; ++i) {
+    expectedStride0 *= viewShape.GetDim(i);
+  }
+  return viewStrides[0] > expectedStride0;
 }
 
 // 判断 varRef 是否满足：总体非连续，非索引轴部分连续
@@ -254,15 +283,15 @@ aclnnStatus aclnnScatterNdUpdateGetWorkspaceSize(aclTensor *varRef, const aclTen
   auto socVersion = platformInfo.GetCurNpuArch();
   
   // 检查是否满足准入条件
-  bool archCheck = (socVersion == NpuArch::DAV_3510);
   bool dimCheck = (indicesDimNum > 0 && indexAxisNum <= MAX_INDICES_RANK);
-  
-  if (archCheck && dimCheck) {
-    // 判断是否满足：非索引轴部分连续，索引轴部分非连续
-    bool isSpecialCase = IsSupportNonContiguous(varRef, indexAxisNum);
-    if (isSpecialCase) {
-      // 满足条件：非索引轴部分连续，索引轴部分非连续，且 indices rank <= 4
-      // 执行优化路径
+
+  if (dimCheck) {
+    if (socVersion == NpuArch::DAV_3510 && IsSupportNonContiguous(varRef, indexAxisNum)) {
+      // arch35：非索引轴连续，索引轴非连续 → 通用 view 优化路径
+      return ProcessNonContiguousCase(varRef, indices, updates, workspaceSize, executor, uniqueExecutor);
+    }
+    if (socVersion == NpuArch::DAV_2201 && IsSupportNonContiguousArch32(varRef, indexAxisNum)) {
+      // arch32：仅支持 var.stride[0] 非连续、其余 stride 连续 → 透传给 arch32 tiling/kernel
       return ProcessNonContiguousCase(varRef, indices, updates, workspaceSize, executor, uniqueExecutor);
     }
   }

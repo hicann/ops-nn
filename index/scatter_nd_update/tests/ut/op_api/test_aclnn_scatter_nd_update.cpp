@@ -268,3 +268,30 @@ TEST_F(l2_scatter_nd_update_test, ascend910B2_case_14)
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
 }
+
+// arch32 view: var.stride[0] 大于连续期望，indexDim=1，indices=int32
+TEST_F(l2_scatter_nd_update_test, ascend910B2_case_view_stride0_indexdim1_int32)
+{
+    // view shape {3, 4}，contiguous stride[0]=4，这里 stride[0]=8 来自更大 storage 的窄视
+    auto varRef_desc = TensorDesc({3, 4}, ACL_FLOAT, ACL_FORMAT_ND, {8, 1}, 0, {6, 4}).ValueRange(0, 1);
+    auto indice_desc = TensorDesc({2, 1}, ACL_INT32, ACL_FORMAT_ND).ValueRange(0, 3);
+    auto updates_desc = TensorDesc({2, 4}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
+    auto ut = OP_API_UT(aclnnScatterNdUpdate, INPUT(varRef_desc, indice_desc, updates_desc), OUTPUT());
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+// arch32 view: indexDim=2，indices=int64
+TEST_F(l2_scatter_nd_update_test, ascend910B2_case_view_stride0_indexdim2_int64)
+{
+    // view shape {3, 4, 5}，contiguous stride[0]=20，这里 stride[0]=40
+    auto varRef_desc = TensorDesc({3, 4, 5}, ACL_FLOAT, ACL_FORMAT_ND, {40, 5, 1}, 0, {6, 4, 5}).ValueRange(0, 1);
+    auto indice_desc = TensorDesc({2, 2}, ACL_INT64, ACL_FORMAT_ND).ValueRange(0, 3);
+    auto updates_desc = TensorDesc({2, 5}, ACL_FLOAT, ACL_FORMAT_ND).ValueRange(0, 1);
+    auto ut = OP_API_UT(aclnnScatterNdUpdate, INPUT(varRef_desc, indice_desc, updates_desc), OUTPUT());
+    uint64_t workspaceSize = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
