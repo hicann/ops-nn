@@ -170,7 +170,7 @@ private:
             PipeBarrier<PIPE_V>();
             ReduceMaxInplace(temp, tilingData_.rowLen);
             PipeBarrier<PIPE_V>();
-            Div(temp, constScale, temp, MAX_VALUE_NUM);
+            Div(temp, constScale, temp, 1);
             event_t event_v_s = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
             SetFlag<HardEvent::V_S>(event_v_s);
             WaitFlag<HardEvent::V_S>(event_v_s);
