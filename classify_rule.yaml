@@ -196,11 +196,9 @@ ops-nn:
       - quant/dynamic_quant_update_scatter/tests/ut/graph_plugin/CMakeLists.txt
       - quant/dynamic_quant_update_scatter/tests/ut/graph_plugin/fusion_pass/CMakeLists.txt
       - matmul/fused_mat_mul/op_kernel/fused_mat_mul.cpp
-      - matmul/weight_quant_batch_matmul_v2/op_host/op_tiling/arch35/weight_quant_batch_matmul_v2_basic_block_table.cpp
       - matmul/sparse4to2quant_matmul/op_kernel/*
       - matmul/mat_mul_v3/op_kernel/mat_mul_base_kernel.h
       - matmul/mat_mul_v3/op_kernel/mat_mul_multi_core_splitk_kernel.h
-      - matmul/weight_quant_batch_matmul_v2/op_kernel/tool.h
       - matmul/mat_mul_v3/op_kernel/mat_mul_unaligned_sc_splitk_kernel.h
       - matmul/mat_mul_v3/op_kernel/mat_mul_nd2nz_util.h
       - matmul/mat_mul_v3/op_kernel/mat_mul_deterministic_splitk_kernel.h
@@ -972,6 +970,7 @@ matmul-weight-quant@ops-nn:
         - ops/ops-nn/matmul/weight_quant_batch_matmul_v2/op_host/op_api/
         - ops/ops-nn/matmul/weight_quant_batch_matmul_v2/op_host/op_tiling/arch35/
         - ops/ops-nn/matmul/weight_quant_batch_matmul_v2/op_kernel/arch35/
+        - ops/ops-nn/matmul/weight_quant_batch_matmul_v2/op_kernel/tool.h
         - ops/ops-nn/matmul/dual_level_quant_batch_matmul/op_graph/
         - ops/ops-nn/matmul/dual_level_quant_batch_matmul/op_host/op_api/
         - ops/ops-nn/matmul/dual_level_quant_batch_matmul/op_host/op_tiling/arch35/
