@@ -545,7 +545,7 @@ TEST_F(Conv3DV2TilingRuntime, TestConv3DV2InitOutputOrderMMode)
     engine.numBlocksRes_.nDim = 1;
     engine.numBlocksRes_.doDim = 1;
     engine.numBlocksRes_.groupDim = 1;
-    engine.SetSingleOutputShapeByMode();
+    engine.SetSingleOutputShapeByMode(engine.numBlocksRes_);
     EXPECT_EQ(engine.conv3dApiTiling_.shapeInfo.singleCo, static_cast<int64_t>(shapeInfo.cOut));
     EXPECT_EQ(engine.conv3dApiTiling_.shapeInfo.singleDo, static_cast<int64_t>(shapeInfo.dOut));
     uint64_t expectedSingleM = optiling::Conv3dOpsTiling::CeilDiv(
@@ -1351,9 +1351,7 @@ static optiling::Conv3dOpsTiling::NumBlocksRes ComputeNumBlocksViaEngine(
     engine.GetNumBlocksInit();
     engine.CoreNumBlocksDecision();
 
-    optiling::Conv3dOpsTiling::NumBlocksRes res;
-    engine.GetNumBlocksDetail(res.batchDim, res.mDim, res.nDim, res.doDim, res.groupDim);
-    return res;
+    return engine.numBlocksResOpt_;
 }
 
 // ============================================================================
