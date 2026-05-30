@@ -176,6 +176,7 @@ set(OPAPI_INCLUDE
   ${TOP_DIR}/output/${PRODUCT}/aclnnop_resource
   ${OPS_NN_DIR}/common/stub/op_api
   ${ASCEND_AUTOGEN_PATH}/inner
+  ${TOP_DIR}/runtime/include/dfx
 )
 
 set(OP_TILING_INCLUDE
@@ -190,6 +191,7 @@ set(OP_TILING_INCLUDE
   ${OPS_NN_DIR}/common/inc
   ${OPS_NN_DIR}/common/inc/op_host
   ${ASCEND_DIR}/include
+  ${TOP_DIR}/runtime/include/dfx
 )
 
 set(OP_PROTO_INCLUDE

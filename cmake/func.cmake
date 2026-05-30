@@ -175,7 +175,9 @@ function(add_opapi_modules)
     set(ENABLE_DLOPEN_LEGACY OFF)
     if (BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG AND NOT ENABLE_STATIC)
       if(NOT UT_TEST_ALL AND NOT OP_API_UT)  # ut场景下LegacyCommonMgr要打桩，通过环境变量查找legacy so
-        target_sources(${OPHOST_NAME}_opapi_obj PRIVATE ${OPS_NN_DIR}/common/src/legacy_common_manager.cpp)
+        set(LEGACY_COMMON_MANAGER_SRC ${OPS_NN_DIR}/common/src/legacy_common_manager.cpp)
+        target_sources(${OPHOST_NAME}_opapi_obj PRIVATE ${LEGACY_COMMON_MANAGER_SRC})
+        set_source_files_properties(${LEGACY_COMMON_MANAGER_SRC} PROPERTIES COMPILE_OPTIONS "-UOP_LOG_LIBOPAPI_ONLY")
       endif()
       set(ENABLE_DLOPEN_LEGACY ON)
     endif()
@@ -187,7 +189,7 @@ function(add_opapi_modules)
             ${opapi_ut_depends_inc}
             ${OPAPI_INCLUDE})
     target_include_directories(${OPHOST_NAME}_opapi_obj PRIVATE ${OPAPI_INCLUDE})
-    target_compile_options(${OPHOST_NAME}_opapi_obj PRIVATE -Dgoogle=ascend_private -DACLNN_LOG_FMT_CHECK)
+    target_compile_options(${OPHOST_NAME}_opapi_obj PRIVATE -Dgoogle=ascend_private -DACLNN_LOG_FMT_CHECK -DOP_LOG_LIBOPAPI_ONLY)
     target_compile_definitions(${OPHOST_NAME}_opapi_obj PRIVATE
                                LOG_CPP
                                $<$<BOOL:${ENABLE_DLOPEN_LEGACY}>:NN_ENABLE_DLOPEN_LEGACY>
@@ -196,6 +198,7 @@ function(add_opapi_modules)
       ${OPHOST_NAME}_opapi_obj
       PUBLIC $<BUILD_INTERFACE:$<IF:$<BOOL:${ENABLE_TEST}>,intf_llt_pub_asan_cxx17,intf_pub_cxx17>>
       PRIVATE $<BUILD_INTERFACE:adump_headers> $<BUILD_INTERFACE:dlog_headers>
+              $<$<TARGET_EXISTS:opbase_util_objs>:$<TARGET_OBJECTS:opbase_util_objs>>
       )
   endif()
 endfunction()

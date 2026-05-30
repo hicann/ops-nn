@@ -51,12 +51,15 @@ private:
     aclnnStatus CheckDtypeOnlyL0c2out() const;
     aclnnStatus CheckDtypeOnlyL0c2ub() const;
     bool CheckOnlyL0c2outPertoken() const;
+    bool CheckFloat16OutBiasAndOffset() const;
     bool CheckL0c2outAndL0c2ubPertensorPerchannel() const;
     bool CheckL0c2outPertensorPerchannel() const;
     bool CheckOnlyL0c2ubPertoken() const;
     bool CheckFormat() const;
     bool CheckShape() const;
     bool CheckScaleDimRange() const;
+    bool CheckMxScaleDimRange(size_t x1ScaleDim, size_t x2ScaleDim) const;
+    bool CheckNormalScaleDimRange(size_t x1ScaleDim, size_t x2ScaleDim) const;
     bool CheckGroupSize() const;
     bool CheckOutShape(bool twoDimMatmulCaseFlag, const std::vector<int64_t> &batchRecord) const;
     bool CheckBiasShape(const std::vector<int64_t> &batchRecord, int64_t inferedOutbatchValue) const;
