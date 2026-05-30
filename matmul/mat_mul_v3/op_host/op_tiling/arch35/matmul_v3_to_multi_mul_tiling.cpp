@@ -64,7 +64,7 @@ void MatMulV3ToVectorTiling::CalcBasicBlock()
         runInfo_.baseM = ops::CeilDiv(args_.mValue, mCore);
     }
 
-    while (runInfo_.baseN >= runInfo_.baseM * NUM_TWO && nCore < runInfo_.usedCoreNum / NUM_TWO) {
+    while (runInfo_.baseN >= runInfo_.baseM * NUM_TWO && nCore > 0UL && nCore < runInfo_.usedCoreNum / NUM_TWO) {
         nCore = nCore * NUM_TWO;
         mCore = runInfo_.usedCoreNum / nCore;
         runInfo_.baseM = ops::CeilDiv(args_.mValue, mCore);
@@ -73,7 +73,7 @@ void MatMulV3ToVectorTiling::CalcBasicBlock()
         nCore = ops::CeilDiv(args_.nValue, static_cast<uint64_t>(runInfo_.baseN));
     }
 
-    while (runInfo_.baseM >= runInfo_.baseN * NUM_TWO && mCore < runInfo_.usedCoreNum / NUM_TWO) {
+    while (runInfo_.baseM >= runInfo_.baseN * NUM_TWO && mCore > 0UL && mCore < runInfo_.usedCoreNum / NUM_TWO) {
         mCore = mCore * NUM_TWO;
         nCore = runInfo_.usedCoreNum / mCore;
         runInfo_.baseM = ops::CeilDiv(args_.mValue, mCore);
