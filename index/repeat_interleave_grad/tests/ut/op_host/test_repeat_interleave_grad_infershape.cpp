@@ -19,18 +19,11 @@
 #include "infershape_test_util.h"
 #include "ut_op_common.h"
 
-class RepeatInterleaveGrad : public testing::Test
-{
+class RepeatInterleaveGrad : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "RepeatInterleaveGrad SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "RepeatInterleaveGrad SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "RepeatInterleaveGrad TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "RepeatInterleaveGrad TearDown" << std::endl; }
 };
 
 TEST_F(RepeatInterleaveGrad, RepeatInterleaveGrad_infershape_test_fp16_int32)
@@ -47,9 +40,7 @@ TEST_F(RepeatInterleaveGrad, RepeatInterleaveGrad_infershape_test_fp16_int32)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT32, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
-                      .NodeAttrs({
-                          {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}
-                      })
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -71,9 +62,7 @@ TEST_F(RepeatInterleaveGrad, RepeatInterleaveGrad_infershape_test_fp16_int64)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT64, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
-                      .NodeAttrs({
-                          {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}
-                      })
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -95,9 +84,7 @@ TEST_F(RepeatInterleaveGrad, RepeatInterleaveGrad_infershape_test_fp32_int32)
                       .NodeInputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT32, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
-                      .NodeAttrs({
-                          {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}
-                      })
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -119,9 +106,7 @@ TEST_F(RepeatInterleaveGrad, RepeatInterleaveGrad_infershape_test_fp32_int64)
                       .NodeInputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT64, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
-                      .NodeAttrs({
-                          {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}
-                      })
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -143,9 +128,7 @@ TEST_F(RepeatInterleaveGrad, RepeatInterleaveGrad_infershape_test_scalar_repeat_
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT32, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
-                      .NodeAttrs({
-                          {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}
-                      })
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -167,9 +150,7 @@ TEST_F(RepeatInterleaveGrad, RepeatInterleaveGrad_infershape_test_scalar_repeat_
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT64, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
-                      .NodeAttrs({
-                          {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}
-                      })
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -191,9 +172,7 @@ TEST_F(RepeatInterleaveGrad, RepeatInterleaveGrad_infershape_test_negative_axis)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT32, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
-                      .NodeAttrs({
-                          {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-2)}
-                      })
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(-2)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -215,9 +194,7 @@ TEST_F(RepeatInterleaveGrad, RepeatInterleaveGrad_infershape_test_axis0)
                       .NodeInputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT32, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
-                      .NodeAttrs({
-                          {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}
-                      })
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -239,9 +216,7 @@ TEST_F(RepeatInterleaveGrad, RepeatInterleaveGrad_infershape_test_axis_last)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT32, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
-                      .NodeAttrs({
-                          {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}
-                      })
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -263,9 +238,7 @@ TEST_F(RepeatInterleaveGrad, RepeatInterleaveGrad_infershape_test_4d)
                       .NodeInputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT32, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
-                      .NodeAttrs({
-                          {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}
-                      })
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(2)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -287,9 +260,7 @@ TEST_F(RepeatInterleaveGrad, RepeatInterleaveGrad_infershape_test_bf16_int32)
                       .NodeInputTd(0, ge::DT_BF16, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT32, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_BF16, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
-                      .NodeAttrs({
-                          {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}
-                      })
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -311,9 +282,7 @@ TEST_F(RepeatInterleaveGrad, RepeatInterleaveGrad_infershape_test_bf16_int64)
                       .NodeInputTd(0, ge::DT_BF16, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT64, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_BF16, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
-                      .NodeAttrs({
-                          {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}
-                      })
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -335,9 +304,7 @@ TEST_F(RepeatInterleaveGrad, RepeatInterleaveGrad_infershape_test_1d_input)
                       .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT32, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
-                      .NodeAttrs({
-                          {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}
-                      })
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
@@ -359,12 +326,58 @@ TEST_F(RepeatInterleaveGrad, RepeatInterleaveGrad_infershape_test_large_batch)
                       .NodeInputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeInputTd(1, ge::DT_INT32, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
                       .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
-                      .NodeAttrs({
-                          {"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}
-                      })
+                      .NodeAttrs({{"axis", Ops::NN::AnyValue::CreateFrom<int64_t>(1)}})
                       .InputShapes({&xShape, &wShape})
                       .OutputShapes({&yShape})
                       .Build();
 
     ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+}
+
+TEST_F(RepeatInterleaveGrad, RepeatInterleaveGrad_inferdatatype_test_fp16)
+{
+    auto inferDataTypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("RepeatInterleaveGrad")->infer_datatype;
+
+    auto holder = gert::InferDataTypeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT32, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferDataTypeFunc(holder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(holder.GetContext<gert::InferDataTypeContext>()->GetOutputDataType(0), ge::DT_FLOAT16);
+}
+
+TEST_F(RepeatInterleaveGrad, RepeatInterleaveGrad_inferdatatype_test_fp32)
+{
+    auto inferDataTypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("RepeatInterleaveGrad")->infer_datatype;
+
+    auto holder = gert::InferDataTypeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT64, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferDataTypeFunc(holder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(holder.GetContext<gert::InferDataTypeContext>()->GetOutputDataType(0), ge::DT_FLOAT);
+}
+
+TEST_F(RepeatInterleaveGrad, RepeatInterleaveGrad_inferdatatype_test_bf16)
+{
+    auto inferDataTypeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("RepeatInterleaveGrad")->infer_datatype;
+
+    auto holder = gert::InferDataTypeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, ge::DT_BF16, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT32, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_BF16, ge::Format::FORMAT_ND, ge::Format::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferDataTypeFunc(holder.GetContext<gert::InferDataTypeContext>()), ge::GRAPH_SUCCESS);
+    ASSERT_EQ(holder.GetContext<gert::InferDataTypeContext>()->GetOutputDataType(0), ge::DT_BF16);
 }
