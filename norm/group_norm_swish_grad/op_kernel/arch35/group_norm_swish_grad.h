@@ -80,11 +80,11 @@ private:
 
     // One channel HxW is split into multiple UB-sized segments.
     __aicore__ inline void CopyInChannelSplitUb(
-        uint32_t offset, uint32_t processNum, const LocalTensor<float>& meanRstdLocal);
+        uint64_t offset, uint32_t processNum, const LocalTensor<float>& meanRstdLocal);
 
     __aicore__ inline void ComputeDgammaDbetaChannelSplitUb(int32_t iterCGIdx,
         const LocalTensor<float>& temp1Local, const LocalTensor<float>& temp2Local,
-        const LocalTensor<float>& gammaLocal, const LocalTensor<float>& betaLocal, uint32_t offset,
+        const LocalTensor<float>& gammaLocal, const LocalTensor<float>& betaLocal, uint64_t offset,
         uint32_t processNum);
 
     __aicore__ inline void ComputeChannelSplitUb(int32_t taskIdx);
@@ -100,18 +100,18 @@ private:
 
     __aicore__ inline void CustomDataCopyIn(
         const LocalTensor<float>& inLocal, TQue<QuePosition::VECIN, 1>& inQue, const GlobalTensor<T>& gm,
-        const uint32_t offset, const uint32_t count);
+        const uint64_t offset, const uint32_t count);
 
     __aicore__ inline void CustomDataCopyOut(
-        LocalTensor<float>& outLocal, const uint32_t gmOffset, TQue<QuePosition::VECOUT, 1>& outQue,
+        LocalTensor<float>& outLocal, const uint64_t gmOffset, TQue<QuePosition::VECOUT, 1>& outQue,
         const uint32_t count);
 
     __aicore__ inline void CustomDataCopyOut(
-        LocalTensor<float>& outLocal, const uint32_t ubOffset, const uint32_t gmOffset,
+        LocalTensor<float>& outLocal, const uint32_t ubOffset, const uint64_t gmOffset,
         TQue<QuePosition::VECOUT, 1>& outQue, const uint32_t count);
 
     __aicore__ inline void CustomDataCopyOut(
-        LocalTensor<float>& outLocal, GlobalTensor<T>& gmOut, const uint32_t gmOffset,
+        LocalTensor<float>& outLocal, GlobalTensor<T>& gmOut, const uint64_t gmOffset,
         TQue<QuePosition::VECOUT, 1>& outQue,
         const uint32_t count);
 
@@ -198,18 +198,18 @@ private:
     // Deterministic non-float stage-2 reduction uses both reduce queues and cast buffers.
     __aicore__ inline void InitBufferForStage2ReduceCast();
 
-    __aicore__ inline void CastDgammaDbetaWsp2Gm(uint32_t channelIdx, uint32_t count);
+    __aicore__ inline void CastDgammaDbetaWsp2Gm(uint64_t channelIdx, uint32_t count);
 
     __aicore__ inline void ReduceAxisNWsp2Ub(
-        TQue<QuePosition::VECIN, 1>& vecInQue, const GlobalTensor<float>& workspace, uint32_t workspaceOffset,
+        TQue<QuePosition::VECIN, 1>& vecInQue, const GlobalTensor<float>& workspace, uint64_t workspaceOffset,
         uint32_t repeatTime, uint32_t count, const LocalTensor<float>& sumLocal,
         const LocalTensor<float>& compensationLocal);
 
     __aicore__ inline void ReduceDgammaDbetaWsp2Gm(
-        uint32_t startOffset, uint32_t channelIdx, uint32_t count, uint32_t reduceAxisNum);
+        uint64_t startOffset, uint64_t channelIdx, uint32_t count, uint32_t reduceAxisNum);
 
     __aicore__ inline void ReduceCastDgammaDbetaWsp2Gm(
-        uint32_t channelIdx, uint32_t count, uint32_t reduceAxisNum);
+        uint64_t channelIdx, uint32_t count, uint32_t reduceAxisNum);
 
 private:
     // Pipe object
@@ -250,11 +250,11 @@ private:
     uint32_t hxw;
     uint32_t nxg;
     uint32_t cG;
-    uint32_t allEleNum;
+    uint64_t allEleNum;
     // number of calculations on each core
-    uint32_t eleNumPerGroup;
+    uint64_t eleNumPerGroup;
     // number of tiles on each core
-    uint32_t eleNumPerChannel;
+    uint64_t eleNumPerChannel;
     uint32_t taskIdx;
     // number of calculations in each tile
     uint32_t tileLength;
@@ -314,8 +314,8 @@ __aicore__ inline GroupNormSwishGrad<T, isDeterministic>::GroupNormSwishGrad(
     this->taskNumPerTailCore = tilingData->task_num_per_tail_core;
     this->tailCore = tilingData->tail_core;
     this->workspaceSize = tilingData->workSpaceSize;
-    this->allEleNum = n * c * hxw;
-    this->eleNumPerGroup = cG * hxw;
+    this->allEleNum = static_cast<uint64_t>(n) * c * hxw;
+    this->eleNumPerGroup = static_cast<uint64_t>(cG) * hxw;
     this->eleNumPerChannel = hxw;
     this->dgammaIsRequire = static_cast<bool>(tilingData->dgamma_is_require);
     this->dbetaIsRequire = static_cast<bool>(tilingData->dbeta_is_require);
@@ -383,9 +383,9 @@ __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::Process()
             InitBufferForStage2Cast();
             // Cast workspace values to the output GM type.
             if (curBlockIdx < stage2CoreUsed - 1) {
-                CastDgammaDbetaWsp2Gm(curBlockIdx * castEleNum, castEleNum);
+                CastDgammaDbetaWsp2Gm(static_cast<uint64_t>(curBlockIdx) * castEleNum, castEleNum);
             } else if (curBlockIdx == stage2CoreUsed - 1) {
-                CastDgammaDbetaWsp2Gm(curBlockIdx * castEleNum, tailCastNum);
+                CastDgammaDbetaWsp2Gm(static_cast<uint64_t>(curBlockIdx) * castEleNum, tailCastNum);
             }
         }
     } else if constexpr (isDeterministic && IsSameType<T, float>::value) {
@@ -396,17 +396,17 @@ __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::Process()
         InitBufferForStage2Reduce();
         if (curBlockIdx < stage2CoreUsed - 1) {
             ReduceDgammaDbetaWsp2Gm(
-                0, curBlockIdx * castEleNum, castEleNum, DivCeil(DivCeil(n, splitCount), splitCount));
+                0, static_cast<uint64_t>(curBlockIdx) * castEleNum, castEleNum, DivCeil(DivCeil(n, splitCount), splitCount));
         } else if (stage2CoreUsed <= curBlockIdx && curBlockIdx < splitCount * stage2CoreUsed - 1) {
             ReduceDgammaDbetaWsp2Gm(
-                DivCeil(DivCeil(n, splitCount), splitCount) * c, (curBlockIdx % stage2CoreUsed) * castEleNum,
+                static_cast<uint64_t>(DivCeil(DivCeil(n, splitCount), splitCount)) * c, static_cast<uint64_t>(curBlockIdx % stage2CoreUsed) * castEleNum,
                 castEleNum, (DivCeil(n, splitCount) - DivCeil(DivCeil(n, splitCount), splitCount)));
         } else if (curBlockIdx == stage2CoreUsed - 1) {
             ReduceDgammaDbetaWsp2Gm(
-                0, curBlockIdx * castEleNum, tailCastNum, DivCeil(DivCeil(n, splitCount), splitCount));
+                0, static_cast<uint64_t>(curBlockIdx) * castEleNum, tailCastNum, DivCeil(DivCeil(n, splitCount), splitCount));
         } else if (curBlockIdx == splitCount * stage2CoreUsed - 1) {
             ReduceDgammaDbetaWsp2Gm(
-                DivCeil(DivCeil(n, splitCount), splitCount) * c, (curBlockIdx % stage2CoreUsed) * castEleNum,
+                static_cast<uint64_t>(DivCeil(DivCeil(n, splitCount), splitCount)) * c, static_cast<uint64_t>(curBlockIdx % stage2CoreUsed) * castEleNum,
                 tailCastNum, (DivCeil(n, splitCount) - DivCeil(DivCeil(n, splitCount), splitCount)));
         }
     } else if constexpr (isDeterministic && !IsSameType<T, float>::value) {
@@ -416,9 +416,9 @@ __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::Process()
 #endif
         InitBufferForStage2ReduceCast();
         if (curBlockIdx < stage2CoreUsed - 1) {
-            ReduceCastDgammaDbetaWsp2Gm(curBlockIdx * castEleNum, castEleNum, DivCeil(n, splitCount));
+            ReduceCastDgammaDbetaWsp2Gm(static_cast<uint64_t>(curBlockIdx) * castEleNum, castEleNum, DivCeil(n, splitCount));
         } else if (curBlockIdx == stage2CoreUsed - 1) {
-            ReduceCastDgammaDbetaWsp2Gm(curBlockIdx * castEleNum, tailCastNum, DivCeil(n, splitCount));
+            ReduceCastDgammaDbetaWsp2Gm(static_cast<uint64_t>(curBlockIdx) * castEleNum, tailCastNum, DivCeil(n, splitCount));
         }
     }
 }

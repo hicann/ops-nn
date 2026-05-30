@@ -65,7 +65,7 @@ __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::InitChannelSplitU
 // channelTile* fields describe tile capacity, tile count, and tail size.
 template <typename T, bool isDeterministic>
 __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::CopyInChannelSplitUb(
-    uint32_t offset, uint32_t processNum, const LocalTensor<float>& meanRstdLocal)
+    uint64_t offset, uint32_t processNum, const LocalTensor<float>& meanRstdLocal)
 {
     LocalTensor<float> xLocal = inQueueX.AllocTensor<float>();
     LocalTensor<float> dyLocal = inQueueDy.AllocTensor<float>();
@@ -80,7 +80,7 @@ __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::CopyInChannelSpli
 template <typename T, bool isDeterministic>
 __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::ComputeDgammaDbetaChannelSplitUb(int32_t iterCGIdx,
     const LocalTensor<float>& temp1Local, const LocalTensor<float>& temp2Local,
-    const LocalTensor<float>& gammaLocal, const LocalTensor<float>& betaLocal, uint32_t offset, uint32_t processNum)
+    const LocalTensor<float>& gammaLocal, const LocalTensor<float>& betaLocal, uint64_t offset, uint32_t processNum)
 {
     LocalTensor<float> xLocal = inQueueX.DeQue<float>();
     LocalTensor<float> dyLocal = inQueueDy.DeQue<float>();
@@ -113,9 +113,9 @@ __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::ComputeChannelSpl
     CustomDataCopyIn(gammaLocal, inQueueGammaT, gammaGm, channelIdx, this->cG);
     CustomDataCopyIn(betaLocal, inQueueBetaT, betaGm, channelIdx, this->cG);
     for (int32_t iterCGIdx = 0; iterCGIdx < this->cG * this->channelTileIterationNum; iterCGIdx++) {
-        uint32_t offset = taskIdx * this->eleNumPerGroup +
-                          iterCGIdx / this->channelTileIterationNum * this->eleNumPerChannel +
-                          iterCGIdx % this->channelTileIterationNum * this->channelTileCapacityEle;
+        uint64_t offset = static_cast<uint64_t>(taskIdx) * this->eleNumPerGroup +
+                          static_cast<uint64_t>(iterCGIdx / this->channelTileIterationNum) * this->eleNumPerChannel +
+                          static_cast<uint64_t>(iterCGIdx % this->channelTileIterationNum) * this->channelTileCapacityEle;
         if (iterCGIdx % this->channelTileIterationNum != this->channelTileIterationNum - 1) {
             CopyInChannelSplitUb(offset, this->channelTileCapacityEle, meanRstdLocal);
             ComputeDgammaDbetaChannelSplitUb(iterCGIdx, temp1Local, temp2Local, gammaLocal, betaLocal, offset,
@@ -133,9 +133,9 @@ __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::ComputeChannelSpl
     float swishScaleValue = this->swishScale;
     MulReduceSumTemplate(temp1Local, temp2Local, gammaLocal, cG);
     for (int32_t iterCGIdx = 0; iterCGIdx < this->cG * this->channelTileIterationNum; iterCGIdx++) {
-        uint32_t offset = taskIdx * this->eleNumPerGroup +
-                          iterCGIdx / this->channelTileIterationNum * this->eleNumPerChannel +
-                          iterCGIdx % this->channelTileIterationNum * this->channelTileCapacityEle;
+        uint64_t offset = static_cast<uint64_t>(taskIdx) * this->eleNumPerGroup +
+                          static_cast<uint64_t>(iterCGIdx / this->channelTileIterationNum) * this->eleNumPerChannel +
+                          static_cast<uint64_t>(iterCGIdx % this->channelTileIterationNum) * this->channelTileCapacityEle;
         uint32_t cGIdx = static_cast<uint32_t>(iterCGIdx / this->channelTileIterationNum);
         if (iterCGIdx % this->channelTileIterationNum != this->channelTileIterationNum - 1) {
             LocalTensor<float> tempHxwLocal = tempQueueHxw.AllocTensor<float>();

@@ -64,8 +64,8 @@ __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::InitGroupFitUbBuf
 template <typename T, bool isDeterministic>
 __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::CopyInGroupFitUb(int32_t taskIdx)
 {
-    uint32_t offset = taskIdx * this->eleNumPerGroup;
-    uint32_t onceProcessEleNum = this->eleNumPerGroup;
+    uint64_t offset = static_cast<uint64_t>(taskIdx) * this->eleNumPerGroup;
+    uint32_t onceProcessEleNum = static_cast<uint32_t>(this->eleNumPerGroup);
     LocalTensor<float> dyLocal = inQueueDy.AllocTensor<float>();
     CustomDataCopyIn(dyLocal, inQueueDyT, dyGm, offset, onceProcessEleNum);
     inQueueDy.EnQue(dyLocal);
@@ -122,7 +122,7 @@ __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::ComputeGroupFitUb
     SetFlag<HardEvent::MTE3_V>(eventIdMte3ToV);
     for (int32_t cGIdx = 0; cGIdx < this->cG; cGIdx++) {
         int32_t isAlign = (cGIdx * this->eleNumPerChannel) % this->tPerBlock;
-        uint32_t gmOffset = taskIdx * this->eleNumPerGroup + cGIdx * this->eleNumPerChannel;
+        uint64_t gmOffset = static_cast<uint64_t>(taskIdx) * this->eleNumPerGroup + static_cast<uint64_t>(cGIdx) * this->eleNumPerChannel;
         WaitFlag<HardEvent::MTE3_V>(eventIdMte3ToV);
         if (isAlign == 0) {
             uint32_t offset = cGIdx * this->eleNumPerChannel;

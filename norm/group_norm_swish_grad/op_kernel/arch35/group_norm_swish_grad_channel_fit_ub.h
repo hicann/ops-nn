@@ -64,8 +64,8 @@ __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::ComputeChannelFit
 {
     LocalTensor<float> temp1Local = outQueueDbeta.AllocTensor<float>();
     LocalTensor<float> temp2Local = outQueueDgamma.AllocTensor<float>();
-    uint32_t baseOffset = taskIdx * this->eleNumPerGroup;
-    uint32_t onceProcessEleNum = this->eleNumPerChannel;
+    uint64_t baseOffset = static_cast<uint64_t>(taskIdx) * this->eleNumPerGroup;
+    uint32_t onceProcessEleNum = static_cast<uint32_t>(this->eleNumPerChannel);
     uint32_t channelIdx = (taskIdx % this->g) * this->cG;
 
     LocalTensor<float> dyLocal;
@@ -84,7 +84,7 @@ __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::ComputeChannelFit
     CustomDataCopyIn(betaLocal, inQueueBetaT, betaGm, channelIdx, this->cG);
     float swishScaleValue = this->swishScale;
     for (int32_t cGIdx = 0; cGIdx < this->cG; cGIdx++) {
-        uint32_t offset = baseOffset + cGIdx * this->eleNumPerChannel;
+        uint64_t offset = baseOffset + static_cast<uint64_t>(cGIdx) * this->eleNumPerChannel;
         xLocal = inQueueX.AllocTensor<float>();
         dyLocal = inQueueDy.AllocTensor<float>();
         CustomDataCopyIn(xLocal, inQueueXT, xGm, offset, onceProcessEleNum);
@@ -101,7 +101,7 @@ __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::ComputeChannelFit
     ModeSelection(taskIdx, temp2Local, temp1Local);
     MulReduceSumTemplate(temp1Local, temp2Local, gammaLocal, cG);
     for (int32_t cGIdx = 0; cGIdx < this->cG; cGIdx++) {
-        uint32_t offset = baseOffset + cGIdx * this->eleNumPerChannel;
+        uint64_t offset = baseOffset + static_cast<uint64_t>(cGIdx) * this->eleNumPerChannel;
         xLocal = inQueueX.AllocTensor<float>();
         dyLocal = inQueueDy.AllocTensor<float>();
         tempHxwLocal = tempQueueHxw.AllocTensor<float>();

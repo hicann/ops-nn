@@ -90,7 +90,7 @@ __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::CopyMeanRstdToUb(
 template <typename T, bool isDeterministic>
 __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::CustomDataCopyIn(
     const LocalTensor<float>& inLocal, TQue<QuePosition::VECIN, 1>& inQue, const GlobalTensor<T>& gm,
-    const uint32_t offset, const uint32_t count)
+    const uint64_t offset, const uint32_t count)
 {
     DataCopyExtParams copyParams{1, static_cast<uint32_t>(count * sizeof(T)), 0, 0, 0};
     DataCopyPadExtParams<T> padParams{false, 0, 0, 0};
@@ -113,7 +113,7 @@ __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::CustomDataCopyIn(
 
 template <typename T, bool isDeterministic>
 __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::CustomDataCopyOut(
-    LocalTensor<float>& outLocal, const uint32_t gmOffset, TQue<QuePosition::VECOUT, 1>& outQue,
+    LocalTensor<float>& outLocal, const uint64_t gmOffset, TQue<QuePosition::VECOUT, 1>& outQue,
     const uint32_t count)
 {
     DataCopyExtParams copyParams{1, static_cast<uint32_t>(count * sizeof(T)), 0, 0, 0};
@@ -133,7 +133,7 @@ __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::CustomDataCopyOut
 
 template <typename T, bool isDeterministic>
 __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::CustomDataCopyOut(
-    LocalTensor<float>& outLocal, const uint32_t ubOffset, const uint32_t gmOffset,
+    LocalTensor<float>& outLocal, const uint32_t ubOffset, const uint64_t gmOffset,
     TQue<QuePosition::VECOUT, 1>& outQue, const uint32_t count)
 {
     DataCopyExtParams copyParams{1, static_cast<uint32_t>(count * sizeof(T)), 0, 0, 0};
@@ -153,7 +153,7 @@ __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::CustomDataCopyOut
 
 template <typename T, bool isDeterministic>
 __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::CustomDataCopyOut(
-    LocalTensor<float>& outLocal, GlobalTensor<T>& gmOut, const uint32_t gmOffset,
+    LocalTensor<float>& outLocal, GlobalTensor<T>& gmOut, const uint64_t gmOffset,
     TQue<QuePosition::VECOUT, 1>& outQue,
     const uint32_t count)
 {
@@ -386,7 +386,7 @@ __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::InitBufferForStag
 }
 
 template <typename T, bool isDeterministic>
-__aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::CastDgammaDbetaWsp2Gm(uint32_t channelIdx, uint32_t count)
+__aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::CastDgammaDbetaWsp2Gm(uint64_t channelIdx, uint32_t count)
 {
     DataCopyExtParams copyParamsFp16{1, static_cast<uint32_t>(count * sizeof(half)), 0, 0, 0};
     DataCopyExtParams copyParamsFp32{1, static_cast<uint32_t>(count * sizeof(float)), 0, 0, 0};
@@ -425,7 +425,7 @@ __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::CastDgammaDbetaWs
 
 template <typename T, bool isDeterministic>
 __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::ReduceAxisNWsp2Ub(
-    TQue<QuePosition::VECIN, 1>& vecInQue, const GlobalTensor<float>& workspace, uint32_t workspaceOffset,
+    TQue<QuePosition::VECIN, 1>& vecInQue, const GlobalTensor<float>& workspace, uint64_t workspaceOffset,
     uint32_t repeatTime, uint32_t count, const LocalTensor<float>& sumLocal,
     const LocalTensor<float>& compensationLocal)
 {
@@ -457,7 +457,7 @@ __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::ReduceAxisNWsp2Ub
 
 template <typename T, bool isDeterministic>
 __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::ReduceDgammaDbetaWsp2Gm(
-    uint32_t startOffset, uint32_t channelIdx, uint32_t count, uint32_t reduceAxisNum)
+    uint64_t startOffset, uint64_t channelIdx, uint32_t count, uint32_t reduceAxisNum)
 {
     uint32_t repeatTime = 0;
     LocalTensor<float> dbetaReduceLocal = calQueueDbetaReduce.AllocTensor<float>();
@@ -472,7 +472,7 @@ __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::ReduceDgammaDbeta
     Duplicate<float>(dgammaCompLocal, 0.0f, castEleNum);
     PipeBarrier<PIPE_V>();
     for (uint32_t loopIdx = 0; loopIdx < DivCeil(reduceAxisNum, coreBatchParts); loopIdx++) {
-        uint32_t loopOffset = loopIdx * coreBatchParts * c;
+        uint64_t loopOffset = static_cast<uint64_t>(loopIdx) * coreBatchParts * c;
         if (loopIdx < DivCeil(reduceAxisNum, coreBatchParts) - 1) {
             repeatTime = coreBatchParts;
         } else if (loopIdx == DivCeil(reduceAxisNum, coreBatchParts) - 1) {
@@ -515,7 +515,7 @@ __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::ReduceDgammaDbeta
 
 template <typename T, bool isDeterministic>
 __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::ReduceCastDgammaDbetaWsp2Gm(
-    uint32_t channelIdx, uint32_t count, uint32_t reduceAxisNum)
+    uint64_t channelIdx, uint32_t count, uint32_t reduceAxisNum)
 {
     uint32_t repeatTime = 0;
     LocalTensor<float> dbetaReduceLocal = calQueueDbetaReduce.AllocTensor<float>();
@@ -530,7 +530,7 @@ __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::ReduceCastDgammaD
     Duplicate<float>(dgammaCompLocal, 0.0f, castEleNum);
     PipeBarrier<PIPE_V>();
     for (uint32_t loopIdx = 0; loopIdx < DivCeil(reduceAxisNum, coreBatchParts); loopIdx++) {
-        uint32_t loopOffset = loopIdx * coreBatchParts * c;
+        uint64_t loopOffset = static_cast<uint64_t>(loopIdx) * coreBatchParts * c;
         if (loopIdx < DivCeil(reduceAxisNum, coreBatchParts) - 1) {
             repeatTime = coreBatchParts;
         } else if (loopIdx == DivCeil(reduceAxisNum, coreBatchParts) - 1) {

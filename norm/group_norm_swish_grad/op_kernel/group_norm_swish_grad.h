@@ -39,8 +39,8 @@ public:
         this->task_num_per_tail_core = tiling_data->task_num_per_tail_core;
         this->tail_core = tiling_data->tail_core;
         this->workSpaceSize = tiling_data->workSpaceSize;
-        this->all_ele_num = N * C * HXW;
-        this->ele_num_per_group = C_G * HXW;
+        this->all_ele_num = static_cast<uint64_t>(N) * C * HXW;
+        this->ele_num_per_group = static_cast<uint64_t>(C_G) * HXW;
         this->ele_num_per_channel = HXW;
         this->dgamma_is_require = static_cast<bool>(tiling_data->dgamma_is_require);
         this->dbeta_is_require = static_cast<bool>(tiling_data->dbeta_is_require);
@@ -108,9 +108,9 @@ public:
                 Initbuffer4stage2_mode0();
                 // cast TO GM
                 if (curBlockIdx < stage2CoreUsed - 1) {
-                    cast_dgamma_dbeta_WSP2GM(curBlockIdx * castEleNum, castEleNum);
+                    cast_dgamma_dbeta_WSP2GM(static_cast<uint64_t>(curBlockIdx) * castEleNum, castEleNum);
                 } else if (curBlockIdx == stage2CoreUsed - 1) {
-                    cast_dgamma_dbeta_WSP2GM(curBlockIdx * castEleNum, tailCastNum);
+                    cast_dgamma_dbeta_WSP2GM(static_cast<uint64_t>(curBlockIdx) * castEleNum, tailCastNum);
                 }
             }
         } else if constexpr (isDeterministic && IsSameType<T, float>::value) {
@@ -123,23 +123,23 @@ public:
             //  0 ~ stage2CoreUsed - 2
             if (curBlockIdx < stage2CoreUsed - 1) {
                 reduce_dgamma_dbeta_WSP2GM(
-                    0, curBlockIdx * castEleNum, castEleNum, divceil(divceil(N, SPLIT_COUNT), SPLIT_COUNT));
+                    0, static_cast<uint64_t>(curBlockIdx) * castEleNum, castEleNum, divceil(divceil(N, SPLIT_COUNT), SPLIT_COUNT));
             }
             // stage2CoreUsed ~ 2 * stage2CoreUsed -1
             else if (stage2CoreUsed <= curBlockIdx && curBlockIdx < SPLIT_COUNT * stage2CoreUsed - 1) {
                 reduce_dgamma_dbeta_WSP2GM(
-                    divceil(divceil(N, SPLIT_COUNT), SPLIT_COUNT) * C, (curBlockIdx % stage2CoreUsed) * castEleNum,
+                    static_cast<uint64_t>(divceil(divceil(N, SPLIT_COUNT), SPLIT_COUNT)) * C, static_cast<uint64_t>(curBlockIdx % stage2CoreUsed) * castEleNum,
                     castEleNum, (divceil(N, SPLIT_COUNT) - divceil(divceil(N, SPLIT_COUNT), SPLIT_COUNT)));
             }
             // stage2CoreUsed -1
             else if (curBlockIdx == stage2CoreUsed - 1) {
                 reduce_dgamma_dbeta_WSP2GM(
-                    0, curBlockIdx * castEleNum, tailCastNum, divceil(divceil(N, SPLIT_COUNT), SPLIT_COUNT));
+                    0, static_cast<uint64_t>(curBlockIdx) * castEleNum, tailCastNum, divceil(divceil(N, SPLIT_COUNT), SPLIT_COUNT));
             }
             // 2 * stage2CoreUsed -1
             else if (curBlockIdx == SPLIT_COUNT * stage2CoreUsed - 1) {
                 reduce_dgamma_dbeta_WSP2GM(
-                    divceil(divceil(N, SPLIT_COUNT), SPLIT_COUNT) * C, (curBlockIdx % stage2CoreUsed) * castEleNum,
+                    static_cast<uint64_t>(divceil(divceil(N, SPLIT_COUNT), SPLIT_COUNT)) * C, static_cast<uint64_t>(curBlockIdx % stage2CoreUsed) * castEleNum,
                     tailCastNum, (divceil(N, SPLIT_COUNT) - divceil(divceil(N, SPLIT_COUNT), SPLIT_COUNT)));
             }
         } else if constexpr (isDeterministic && !IsSameType<T, float>::value) {
@@ -150,9 +150,9 @@ public:
             Initbuffer4stage2_mode2();
             // reduceSUM And Cast TO GM
             if (curBlockIdx < stage2CoreUsed - 1) {
-                reduce_cast_dgamma_dbeta_WSP2GM(curBlockIdx * castEleNum, castEleNum, divceil(N, SPLIT_COUNT));
+                reduce_cast_dgamma_dbeta_WSP2GM(static_cast<uint64_t>(curBlockIdx) * castEleNum, castEleNum, divceil(N, SPLIT_COUNT));
             } else if (curBlockIdx == stage2CoreUsed - 1) {
-                reduce_cast_dgamma_dbeta_WSP2GM(curBlockIdx * castEleNum, tailCastNum, divceil(N, SPLIT_COUNT));
+                reduce_cast_dgamma_dbeta_WSP2GM(static_cast<uint64_t>(curBlockIdx) * castEleNum, tailCastNum, divceil(N, SPLIT_COUNT));
             }
         }
     }
@@ -162,8 +162,8 @@ private:
     __aicore__ inline void CopyIn_Mode_0(int32_t task_idx)
     {
         // alloc tensor from queue memory
-        uint32_t offset = task_idx * this->ele_num_per_group;
-        uint32_t once_process_ele_num = this->ele_num_per_group;
+        uint64_t offset = static_cast<uint64_t>(task_idx) * this->ele_num_per_group;
+        uint32_t once_process_ele_num = static_cast<uint32_t>(this->ele_num_per_group);
         LocalTensor<float> dy_local = in_queue_dy.AllocTensor<float>();
         Custom_DataCopy_In(dy_local, in_tbuf_dy_T, dy_gm, offset, once_process_ele_num);
         in_queue_dy.EnQue(dy_local);
@@ -231,7 +231,7 @@ private:
                     ReduceSum_template(temp_hxw_local, temp_hxw_local, temp_hxw_local, this->ele_num_per_channel);
                 temp_2_local.SetValue(C_G_idx, temp2I);
             } else {
-                uint32_t gm_offset = task_idx * this->ele_num_per_group + C_G_idx * this->ele_num_per_channel;
+                uint64_t gm_offset = static_cast<uint64_t>(task_idx) * this->ele_num_per_group + static_cast<uint64_t>(C_G_idx) * this->ele_num_per_channel;
                 LocalTensor<float> unalign_channel_x = in_temp_x.Get<float>(this->ele_num_per_channel);
                 LocalTensor<float> unalign_channel_dy = in_temp_dy.Get<float>(this->ele_num_per_channel);
                 Custom_DataCopy_In(unalign_channel_x, in_tbuf_x_T, x_gm, gm_offset, this->ele_num_per_channel);
@@ -271,7 +271,7 @@ private:
         SetFlag<HardEvent::MTE3_V>(eventIDMTE3ToV);
         for (int32_t C_G_idx = 0; C_G_idx < this->C_G; C_G_idx++) {
             int32_t is_align = (C_G_idx * this->ele_num_per_channel) % this->T_per_block;
-            uint32_t gm_offset = task_idx * this->ele_num_per_group + C_G_idx * this->ele_num_per_channel;
+            uint64_t gm_offset = static_cast<uint64_t>(task_idx) * this->ele_num_per_group + static_cast<uint64_t>(C_G_idx) * this->ele_num_per_channel;
             gamma = gamma_local.GetValue(C_G_idx);
             beta = beta_local.GetValue(C_G_idx);
             WaitFlag<HardEvent::MTE3_V>(eventIDMTE3ToV);
@@ -350,8 +350,8 @@ private:
     {
         LocalTensor<float> temp_1_local = out_queue_dbeta.AllocTensor<float>();
         LocalTensor<float> temp_2_local = out_queue_dgamma.AllocTensor<float>();
-        uint32_t base_offset = task_idx * this->ele_num_per_group;
-        uint32_t once_process_ele_num = this->ele_num_per_channel;
+        uint64_t base_offset = static_cast<uint64_t>(task_idx) * this->ele_num_per_group;
+        uint32_t once_process_ele_num = static_cast<uint32_t>(this->ele_num_per_channel);
         uint32_t channel_idx = (task_idx % this->G) * this->C_G;
 
         LocalTensor<T> dy_T_local;
@@ -372,7 +372,7 @@ private:
         float beta = 0;
         float scale_factor = this->swish_scale * float(-1.0);
         for (int32_t C_G_idx = 0; C_G_idx < this->C_G; C_G_idx++) {
-            uint32_t offset = base_offset + C_G_idx * this->ele_num_per_channel;
+            uint64_t offset = base_offset + static_cast<uint64_t>(C_G_idx) * this->ele_num_per_channel;
             x_local = in_queue_x.AllocTensor<float>();
             dy_local = in_queue_dy.AllocTensor<float>();
             temp_hxw_local = temp_queue_HXW.AllocTensor<float>();
@@ -417,7 +417,7 @@ private:
         out_queue_dbeta.FreeTensor(temp_1_local);
         out_queue_dgamma.FreeTensor(temp_2_local);
         for (int32_t C_G_idx = 0; C_G_idx < this->C_G; C_G_idx++) {
-            uint32_t offset = base_offset + C_G_idx * this->ele_num_per_channel;
+            uint64_t offset = base_offset + static_cast<uint64_t>(C_G_idx) * this->ele_num_per_channel;
             x_local = in_queue_x.AllocTensor<float>();
             dy_local = in_queue_dy.AllocTensor<float>();
             temp_hxw_local = temp_queue_HXW.AllocTensor<float>();
@@ -462,7 +462,7 @@ private:
     }
 
     //----------------------------------------------MODE3--------------------------------------//
-    __aicore__ inline void CopyIn_x(uint32_t offset, uint32_t process_num)
+    __aicore__ inline void CopyIn_x(uint64_t offset, uint32_t process_num)
     {
         LocalTensor<float> x_local = in_queue_x.AllocTensor<float>();
         LocalTensor<float> dy_local = in_queue_dy.AllocTensor<float>();
@@ -479,7 +479,7 @@ private:
     }
 
     __aicore__ inline void compute_dgamma(
-        uint32_t channel_idx, int32_t iter_C_G_idx, float& temp1I, float& temp2I, uint32_t offset, uint32_t process_num)
+        uint32_t channel_idx, int32_t iter_C_G_idx, float& temp1I, float& temp2I, uint64_t offset, uint32_t process_num)
     {
         LocalTensor<float> x_local = in_queue_x.DeQue<float>();
         LocalTensor<float> dy_local = in_queue_dy.DeQue<float>();
@@ -534,9 +534,9 @@ private:
         in_queue_gamma.EnQue(gamma_local);
         in_queue_beta.EnQue(beta_local);
         for (int32_t iter_C_G_idx = 0; iter_C_G_idx < this->C_G * this->mode2_ub_iteration_num; iter_C_G_idx++) {
-            uint32_t offset = task_idx * this->ele_num_per_group +
-                              iter_C_G_idx / this->mode2_ub_iteration_num * this->ele_num_per_channel +
-                              iter_C_G_idx % this->mode2_ub_iteration_num * this->mode2_ub_capacity_ele;
+            uint64_t offset = static_cast<uint64_t>(task_idx) * this->ele_num_per_group +
+                              static_cast<uint64_t>(iter_C_G_idx / this->mode2_ub_iteration_num) * this->ele_num_per_channel +
+                              static_cast<uint64_t>(iter_C_G_idx % this->mode2_ub_iteration_num) * this->mode2_ub_capacity_ele;
             if (iter_C_G_idx % this->mode2_ub_iteration_num != this->mode2_ub_iteration_num - 1) {
                 CopyIn_x(offset, this->mode2_ub_capacity_ele);
                 compute_dgamma(channel_idx, iter_C_G_idx, temp1I, temp2I, offset, this->mode2_ub_capacity_ele);
@@ -559,9 +559,9 @@ private:
         out_queue_dbeta.FreeTensor(temp_1_local);
         out_queue_dgamma.FreeTensor(temp_2_local);
         for (int32_t iter_C_G_idx = 0; iter_C_G_idx < this->C_G * this->mode2_ub_iteration_num; iter_C_G_idx++) {
-            uint32_t offset = task_idx * this->ele_num_per_group +
-                              iter_C_G_idx / this->mode2_ub_iteration_num * this->ele_num_per_channel +
-                              iter_C_G_idx % this->mode2_ub_iteration_num * this->mode2_ub_capacity_ele;
+            uint64_t offset = static_cast<uint64_t>(task_idx) * this->ele_num_per_group +
+                              static_cast<uint64_t>(iter_C_G_idx / this->mode2_ub_iteration_num) * this->ele_num_per_channel +
+                              static_cast<uint64_t>(iter_C_G_idx % this->mode2_ub_iteration_num) * this->mode2_ub_capacity_ele;
             gamma = (float)gamma_local.GetValue(iter_C_G_idx / this->mode2_ub_iteration_num);
             beta = (float)beta_local.GetValue(iter_C_G_idx / this->mode2_ub_iteration_num);
             event_t eventIDSToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::S_V));
@@ -807,7 +807,7 @@ private:
     }
 
     __aicore__ inline void Custom_DataCopy_In(
-        const LocalTensor<float>& _in, TBuf<TPosition::VECCALC>& tbuf, const GlobalTensor<T>& gm, const uint32_t offset,
+        const LocalTensor<float>& _in, TBuf<TPosition::VECCALC>& tbuf, const GlobalTensor<T>& gm, const uint64_t offset,
         const uint32_t count)
     {
         DataCopyExtParams copyParams{1, static_cast<uint32_t>(count * sizeof(T)), 0, 0, 0};
@@ -824,7 +824,7 @@ private:
 
     __aicore__ inline void Custom_DataCopy_In(
         LocalTensor<float>& _in, const uint32_t ub_offset, TBuf<TPosition::VECCALC>& tbuf, GlobalTensor<T>& gm,
-        const uint32_t gm_offset, const uint32_t count)
+        const uint64_t gm_offset, const uint32_t count)
     {
         DataCopyExtParams copyParams{1, static_cast<uint32_t>(count * sizeof(T)), 0, 0, 0};
         DataCopyPadExtParams<T> padParams{false, 0, 0, 0};
@@ -839,7 +839,7 @@ private:
     }
 
     __aicore__ inline void Custom_DataCopy_Out(
-        LocalTensor<float>& _out, const uint32_t gm_offset, TBuf<TPosition::VECCALC>& tbuf, const uint32_t count)
+        LocalTensor<float>& _out, const uint64_t gm_offset, TBuf<TPosition::VECCALC>& tbuf, const uint32_t count)
     {
         DataCopyParams copyParams{1, (uint16_t)(count * sizeof(T)), 0, 0};
         if constexpr (IsSameType<T, float>::value) {
@@ -856,7 +856,7 @@ private:
     }
 
     __aicore__ inline void Custom_DataCopy_Out(
-        LocalTensor<float>& _out, const uint32_t ub_offset, const uint32_t gm_offset, TBuf<TPosition::VECCALC>& tbuf,
+        LocalTensor<float>& _out, const uint32_t ub_offset, const uint64_t gm_offset, TBuf<TPosition::VECCALC>& tbuf,
         const uint32_t count)
     {
         DataCopyParams copyParams{1, (uint16_t)(count * sizeof(T)), 0, 0};
@@ -874,7 +874,7 @@ private:
     }
 
     __aicore__ inline void Custom_DataCopy_Out(
-        LocalTensor<float>& _out, GlobalTensor<T>& gm_out, const uint32_t gm_offset, TBuf<TPosition::VECCALC>& tbuf,
+        LocalTensor<float>& _out, GlobalTensor<T>& gm_out, const uint64_t gm_offset, TBuf<TPosition::VECCALC>& tbuf,
         const uint32_t count)
     {
         DataCopyParams copyParams{1, (uint16_t)(count * sizeof(T)), 0, 0};
@@ -1054,7 +1054,7 @@ private:
         pipe.InitBuffer(out_tbuf_dbeta_channel_T, castEleNum * sizeof(T));
     }
 
-    __aicore__ inline void cast_dgamma_dbeta_WSP2GM(uint32_t channel_idx, uint32_t count)
+    __aicore__ inline void cast_dgamma_dbeta_WSP2GM(uint64_t channel_idx, uint32_t count)
     {
         DataCopyExtParams copyParams_fp16{1, (uint16_t)(count * sizeof(half)), 0, 0, 0};
         DataCopyExtParams copyParams_fp32{1, (uint16_t)(count * sizeof(float)), 0, 0, 0};
@@ -1090,7 +1090,7 @@ private:
     }
 
     __aicore__ inline void reduce_axis_n_WSP2UB(
-        TQue<QuePosition::VECIN, 1>& vecInQue, const GlobalTensor<float>& workspace, uint32_t workSpaceOffset,
+        TQue<QuePosition::VECIN, 1>& vecInQue, const GlobalTensor<float>& workspace, uint64_t workSpaceOffset,
         uint32_t repeatTime, uint32_t count, const LocalTensor<float>& dstLocal)
     {
         LocalTensor<float> vecInLocal = vecInQue.AllocTensor<float>();
@@ -1113,7 +1113,7 @@ private:
     }
 
     __aicore__ inline void reduce_dgamma_dbeta_WSP2GM(
-        uint32_t start_offset, uint32_t channel_idx, uint32_t count, uint32_t reduce_axis_num)
+        uint64_t start_offset, uint64_t channel_idx, uint32_t count, uint32_t reduce_axis_num)
     {
         uint32_t repeatTime = 0;
         LocalTensor<float> dbeta_sum_Local = cal_queue_dbeta_reduce.AllocTensor<float>();
@@ -1122,7 +1122,7 @@ private:
         Duplicate<float>(dgamma_sum_Local, 0.0f, castEleNum);
         PipeBarrier<PIPE_V>();
         for (uint32_t loop_idx = 0; loop_idx < divceil(reduce_axis_num, coreBatchParts); loop_idx++) {
-            uint32_t loop_offset = loop_idx * coreBatchParts * C;
+            uint64_t loop_offset = static_cast<uint64_t>(loop_idx) * coreBatchParts * C;
             if (loop_idx < divceil(reduce_axis_num, coreBatchParts) - 1) {
                 repeatTime = coreBatchParts;
             } else if (loop_idx == divceil(reduce_axis_num, coreBatchParts) - 1) {
@@ -1158,7 +1158,7 @@ private:
     }
 
     __aicore__ inline void reduce_cast_dgamma_dbeta_WSP2GM(
-        uint32_t channel_idx, uint32_t count, uint32_t reduce_axis_num)
+        uint64_t channel_idx, uint32_t count, uint32_t reduce_axis_num)
     {
         uint32_t repeatTime = 0;
         LocalTensor<float> dbeta_sum_Local = cal_queue_dbeta_reduce.AllocTensor<float>();
@@ -1167,7 +1167,7 @@ private:
         Duplicate<float>(dgamma_sum_Local, 0.0f, castEleNum);
         PipeBarrier<PIPE_V>();
         for (uint32_t loop_idx = 0; loop_idx < divceil(reduce_axis_num, coreBatchParts); loop_idx++) {
-            uint32_t loop_offset = loop_idx * coreBatchParts * C;
+            uint64_t loop_offset = static_cast<uint64_t>(loop_idx) * coreBatchParts * C;
             if (loop_idx < divceil(reduce_axis_num, coreBatchParts) - 1) {
                 repeatTime = coreBatchParts;
             } else if (loop_idx == divceil(reduce_axis_num, coreBatchParts) - 1) {
@@ -1223,11 +1223,11 @@ private:
     uint32_t HXW;
     uint32_t NXG;
     uint32_t C_G;
-    uint32_t all_ele_num;
+    uint64_t all_ele_num;
     // number of calculations on each core
-    uint32_t ele_num_per_group;
+    uint64_t ele_num_per_group;
     // number of tiles on each core
-    uint32_t ele_num_per_channel;
+    uint64_t ele_num_per_channel;
     uint32_t task_idx;
     // number of calculations in each tile
     uint32_t tileLength;
