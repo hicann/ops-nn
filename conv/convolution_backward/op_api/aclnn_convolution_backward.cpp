@@ -44,6 +44,8 @@
 #include "acl/acl_rt.h"
 #include "deformable_conv2d_backward_checker.h"
 #include "../../deformable_offsets_grad/op_api/deformable_offsets_grad.h"
+#include "log/log.h"
+#include "matmul/common/op_host/log_format_util.h"
 
 using namespace op;
 using namespace l0op;
@@ -52,6 +54,8 @@ using namespace Ops::NN;
 extern "C" {
 #endif
 
+static constexpr const char* ACLNN_CONVOLUTION_BACKWARD_NAME = "aclnnConvolutionBackwardGetWorkspaceSize";
+static constexpr const char* ACLNN_CONV_TBC_BACKWARD_NAME = "aclnnConvTbcBackwardGetWorkspaceSize";
 constexpr int64_t DILATION_45 = 45;
 const std::vector<DataType> REDUCESUM_SUPPORTED_DTYPES = {
   DataType::DT_FLOAT16, DataType::DT_FLOAT, DataType::DT_BF16
@@ -111,10 +115,10 @@ static bool IsPostInsertDilation(const aclTensor *weight, const ConvolutionBackw
 
 static bool CheckDeterministic(const int64_t deterministicValue, int groups) {
     OP_CHECK(!((deterministicValue == 1) && (groups > 1)),
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Conv3DBackpropFilter cannot support groups(%d) > 1 "
-                "in deterministic calculations.", groups),
-        return false;
-    );
+    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, "groups",
+        (std::to_string(groups)).c_str(),
+        "the value of groups must be less than or equal to 1 when in deterministic calculations"),
+        return false);
     return true;
 }
 
@@ -288,18 +292,21 @@ static bool CheckSupportedForConv3dBackpropFilter(ConvolutionBackwardInputTensor
   }
 
   if (params.cubeMathType == USE_FP16) {
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "It is not supported for Conv3DBackpropFilter when promoted input dtype is fp16/bf16, "
-      "output dtype is fp32 and group > 1. cubeMathType=%d, please consider to change the cubeMathType to 0, 1 or 3."
-      , params.cubeMathType);
+    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, "cubeMathType", 
+      std::to_string(params.cubeMathType).c_str(), "the value of cubeMathType must be 0 or 1 or 3,"
+      "when promoted input dtype is fp16/bf16 and output dtype is fp32 and group > 1");
     return false;
   }
 
   auto promoteType = CalcPromoteType(inputTensor);
   if (promoteType == DataType::DT_FLOAT16 || promoteType == DataType::DT_BF16) {
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "It is not supported for Conv3DBackpropFilter when promoted input dtype is fp16/bf16, "
-      "output dtype is fp32 and group > 1. gradOutputDtype=%d, inputDtype=%d, weightDtype=%d, "
-      "please consider to change the input dtype to fp32."
-      , (inputTensor.gradOutput)->GetDataType(), (inputTensor.input)->GetDataType(), (inputTensor.weight)->GetDataType());
+    OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, 
+        "gradOutput, input, weight", 
+        FormatString("[%d,%d,%d]",inputTensor.gradOutput->GetDataType(),
+        inputTensor.input->GetDataType(),inputTensor.weight->GetDataType()),
+        "when promoted input dtype is fp16/bf16, output dtype is fp32 and group > 1"
+        "is not supported,please consider to change the input dtype to fp32"
+    );
     return false;
   }
 
@@ -467,7 +474,6 @@ static const aclTensor *ViewFZasFZ3D(const aclTensor *input, aclOpExecutor *exec
 
     op::Strides newViewStride = op::Strides({viewStride[0], viewStride[1], viewStride[1], viewStride[2], viewStride[3]});
     op::Shape newOriginalShape = op::Shape({originalShape[0], originalShape[1], 1, originalShape[2], originalShape[3]});
-    
     return CreateTensorView(input, newOriginalShape, storageShape, newViewStride,
                            Format::FORMAT_NCDHW, Format::FORMAT_NCDHW, newStorageFormat, executor);
 }
@@ -537,13 +543,15 @@ static aclnnStatus AttrPreProcess(ConvolutionBackwardParams &params, aclOpExecut
   } else if (params.padding->Size() == CONV2DINPUTDIM) {
     params.padding = ViewPad4dAs6d(params.padding, 0, executor);
   }
-  OP_CHECK(params.stride != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "stride preprocess failed, get nullptr."),
+  OP_CHECK(params.stride != nullptr, 
+      OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "stride preprocess failed, get nullptr."),
            return ACLNN_ERR_INNER_NULLPTR);
-  OP_CHECK(params.padding != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "padding preprocess failed, get nullptr."),
+  OP_CHECK(params.padding != nullptr, 
+      OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "padding preprocess failed, get nullptr."),
            return ACLNN_ERR_INNER_NULLPTR);
-  OP_CHECK(params.dilation != nullptr, OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "dilation preprocess failed, get nullptr."),
+  OP_CHECK(params.dilation != nullptr, 
+      OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "dilation preprocess failed, get nullptr."),
            return ACLNN_ERR_INNER_NULLPTR);
-
   return ACLNN_SUCCESS;
 }
 
@@ -731,8 +739,8 @@ static aclIntArray *View1dAs2d(const aclIntArray *intArray, int64_t expendValue,
   int64_t data[newDimSize];
   uint64_t arraySize = intArray->Size();
   OP_CHECK(arraySize == 1,
-           OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The %s's dimension can only be set to 1 with Conv1D, actually is %ld.",
-                   tensorName.c_str(), arraySize),
+        OP_LOGE_FOR_INVALID_SHAPEDIM(ACLNN_CONVOLUTION_BACKWARD_NAME, tensorName.c_str(), 
+           std::to_string(arraySize).c_str(), "1"),
            return nullptr);
 
   data[0] = expendValue;
@@ -803,8 +811,8 @@ static aclIntArray* View1dAs2dWithGroups(
     uint64_t arraySize = intArray->Size();
     OP_CHECK(
         arraySize == 1,
-        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "The %s's dimension must be set to 1 for Conv1D, but the current value is %ld",
-                tensorName.c_str(), arraySize),
+        OP_LOGE_FOR_INVALID_SHAPEDIM(ACLNN_CONVOLUTION_BACKWARD_NAME, tensorName.c_str(), 
+                   std::to_string(arraySize).c_str(), "1"),
                 return nullptr);
     if (groups == 1) {
         data[0] = expendValue;
@@ -1078,10 +1086,9 @@ static aclnnStatus CalculateBiasGrad(ConvolutionBackwardInputTensor &inputTensor
         bool biasSupport = std::find(REDUCESUM_SUPPORTED_DTYPES.begin(), REDUCESUM_SUPPORTED_DTYPES.end(),
                                     outputTensor.gradBias->GetDataType()) != REDUCESUM_SUPPORTED_DTYPES.end();
         OP_CHECK(biasSupport,
-            OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
-              "When outputMask[2] = True, the gradBias current dataType[%s] is not supported. "
-              "The supported dataType include: DT_FLOAT16, DT_FLOAT, DT_BF16. Please try set outputMask[2] = False",
-              op::ToString(outputTensor.gradBias->GetDataType()).GetString()),
+            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, 
+              "gradBias", op::ToString(outputTensor.gradBias->GetDataType()).GetString(),
+              "When outputMask[2] = True, the gradBias dataType must be [DT_FLOAT16, DT_FLOAT, DT_BF16]"),
             return ACLNN_ERR_INNER_NULLPTR);
     }
 
@@ -1322,7 +1329,8 @@ static aclnnStatus CalculateConv2DBackward(ConvolutionBackwardInputTensor &input
   auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
   // 950：无2D原型，直接抛错
   OP_CHECK(!(Ops::NN::AclnnUtil::IsRegbase(curArch)),
-           OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "No kernel for Conv2DBackwardFiler"),
+           OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, "npuarch",
+           std::to_string(static_cast<uint32_t>(curArch)).c_str(), "the value of npuarch must not be 3510, No kernel for Conv2DBackwardFiler"),
            return ACLNN_ERR_INNER_NULLPTR);
   // Index 为 2：进行bias grad运算
   aclnnStatus ret = CalculateBiasGrad(inputTensor, outputTensor, params, executor);
@@ -1475,7 +1483,9 @@ static aclnnStatus CalculateConv2DTransposeBackward(ConvolutionBackwardInputTens
   auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
   // 950：无2D原型，直接抛错
   OP_CHECK(!(Ops::NN::AclnnUtil::IsRegbase()),
-           OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "No kernel for Conv2DBackwardFiler"),
+          OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, "npuarch",
+           std::to_string(static_cast<uint32_t>(curArch)).c_str(), 
+           "the value of npuarch must not be 3510, No kernel for Conv2DBackwardFiler"),
            return ACLNN_ERR_INNER_NULLPTR);
   // Index 为 2：进行bias grad运算
   aclnnStatus ret = CalculateBiasGrad(inputTensor, outputTensor, params, executor);
@@ -2905,7 +2915,8 @@ static aclnnStatus CalculateConv3DBp(ConvolutionBackwardInputTensor &inputTensor
 {
   auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
   OP_CHECK(curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch),
-           OP_LOGE(ACLNN_ERR_PARAM_INVALID, "not implemented for %u", static_cast<uint32_t>(curArch)),
+           OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, "npuArch",
+           std::to_string(static_cast<uint32_t>(curArch)).c_str(), "the value of npuarch must not be 2201 or 3510"),
            return ACLNN_ERR_PARAM_INVALID);
   auto ret = CheckCubeMathTypeFor3D(inputTensor, params);
   CHECK_RET(ret == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
@@ -3026,8 +3037,8 @@ static aclnnStatus CalculateConvolutionBackward(ConvolutionBackwardInputTensor &
     auto ret = CalculateConv3DBp(inputTensor, resultTensor, params, executor);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
   } else {
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-            "aclnnConvolutionBackward only supports input with dimensions 3, 4, or 5, Actually is %ld.", inputDim);
+    OP_LOGE_FOR_INVALID_SHAPEDIM(ACLNN_CONVOLUTION_BACKWARD_NAME, "input", 
+            std::to_string(inputDim).c_str(), "3 or 4 or 5");
     return ACLNN_ERR_PARAM_INVALID;
   }
   auto ret = OutputViewProcess(resultTensor, outputTensor, params.outputMask, executor);
@@ -3106,8 +3117,8 @@ static aclnnStatus CalculateConvolutionTbcBackward(ConvolutionBackwardInputTenso
       CHECK_RET(ret == ACLNN_SUCCESS, ACLNN_ERR_PARAM_NULLPTR);
     }
   } else {
-    OP_LOGE(ACLNN_ERR_INNER_NULLPTR,
-            "ConvolutionTbcBackward only supports input with dimensions 3, Actually is %ld.", inputDim);
+    OP_LOGE_FOR_INVALID_SHAPEDIM(ACLNN_CONV_TBC_BACKWARD_NAME, "input", 
+            std::to_string(inputDim).c_str(), "3");
     return ACLNN_ERR_INNER_NULLPTR;
   }
   // recover NCL to TBC

@@ -22,6 +22,7 @@
 #include "runtime/context.h"
 #include "aclnn_kernels/transpose.h"
 #include "acl/acl_rt.h"
+#include "log/log.h"
 
 using namespace op;
 
@@ -65,6 +66,7 @@ constexpr int64_t BATCH_TRANSPOSE_LIMIT = 2;
 constexpr int64_t C_IN_TRANSPOSE_LIMIT_MIN = 16;
 constexpr int64_t C_IN_TRANSPOSE_LIMIT_MAX = 256;
 constexpr float MAX_CIN_MULTIPLIER = 1.5f;
+static constexpr const char* ACLNN_CONV_TBC_BACKWARD_NAME = "aclnnConvTbcBackward";
 
 static void AddAclIntArrayToCaseInfo(const aclIntArray &seg, vector<int64_t> &caseInfo)
 {
@@ -424,7 +426,7 @@ static aclnnStatus Conv2DBackpropInputWithFlag(const aclTensor *input, const acl
   auto ret = INFER_SHAPE(Conv2DBackpropInput, OP_INPUT(inputSize, weight, outBackprop), OP_OUTPUT(output),
                          OP_ATTR(stride4, pad4, dilation4, groups, dataFormat, paddingString, useHf32Flag));
   if (ret != ACLNN_SUCCESS) {
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Conv2DBackpropInput InferShape failed.");
+    OP_LOGE(ACLNN_ERR_INNER_INFERSHAPE_ERROR, "Conv2DBackpropInput InferShape failed.");
     return ACLNN_ERR_INNER_INFERSHAPE_ERROR;
   }
   // useHf32Flag的值为0x40 : 表示HF32
@@ -534,7 +536,7 @@ static aclnnStatus Conv2DBackpropFilterWithFlag(const aclTensor *input, const ac
       INFER_SHAPE(Conv2DBackpropFilter, OP_INPUT(input, weightSize, outBackprop), OP_OUTPUT(output),
                   OP_ATTR(stride4, pad4, dilation4, groups, dataFormat, paddingString, fromDepthwise, useHf32Flag));
   if (ret != ACLNN_SUCCESS) {
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Conv2DBackpropFilter InferShape failed.");
+    OP_LOGE(ACLNN_ERR_INNER_INFERSHAPE_ERROR, "Conv2DBackpropFilter InferShape failed.");
     return ACLNN_ERR_INNER_INFERSHAPE_ERROR;
   }
   // useHf32Flag的值为0x40 : 表示HF32
@@ -643,8 +645,9 @@ static void GetConv3DBackpropAdapterParam(const aclTensor *input, const aclIntAr
     params->adaptPad = executor->AllocIntArray(newPad.data(), 6); // conv3D Pad dim = 6;
     OP_CHECK(params->adaptPad != nullptr, OP_LOGD("newPad alloc failed."), return);
   } else {
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "GetConv3DBackpropAdapterParam not support: %s with input dim:%ld",
-            op::ToString(socVersion).GetString(), stride->Size());
+    OP_LOGE_FOR_INVALID_SHAPEDIM(ACLNN_CONV_TBC_BACKWARD_NAME, "stride", 
+        std::to_string(stride->Size()).c_str(), std::to_string(DIM_3).c_str()
+    );
   }
 }
 
@@ -839,7 +842,7 @@ static aclnnStatus Conv3DBackpropFilterWithFlag(const aclTensor *input, const ac
       INFER_SHAPE(Conv3DBackpropFilter, OP_INPUT(input, weightSize, outBackprop), OP_OUTPUT(output),
                   OP_ATTR(stride5, pad6, dilation5, groups, dataFormat, paddingString, useHf32));
   if (ret != ACLNN_SUCCESS) {
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Conv3DBackpropFilter InferShape failed.");
+    OP_LOGE(ACLNN_ERR_INNER_INFERSHAPE_ERROR, "Conv3DBackpropFilter InferShape failed.");
     output = nullptr;
     return ACLNN_ERR_INNER_INFERSHAPE_ERROR;
   }
@@ -910,7 +913,7 @@ const aclTensor *Conv3DBackpropFilterFp162Fp32(const aclTensor *input, const acl
   OP_CHECK(
     Conv3DBackpropFilterWithFlag(input, weight, outBackprop, stride, padding,
                                  dilation, groups, useHf32, output, executor) == ACLNN_SUCCESS,
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Conv3DBackpropFilterFp162Fp32 fail due to Conv3DBackpropFilterWithFlag error."),
+    OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Conv3DBackpropFilterFp162Fp32 fail due to Conv3DBackpropFilterWithFlag error."),
     return nullptr
   );
   return output;
@@ -927,7 +930,7 @@ const aclTensor *Conv3DBackpropFilterFp322Fp32(const aclTensor *input, const acl
   OP_CHECK(
     Conv3DBackpropFilterWithFlag(input, weight, outBackprop, stride, padding,
                                  dilation, groups, useHf32, output, executor) == ACLNN_SUCCESS,
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Conv3DBackpropFilterWithFlag failed."),
+    OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Conv3DBackpropFilterWithFlag failed."),
     return nullptr
   );
   return output;
@@ -944,7 +947,7 @@ const aclTensor *Conv3DBackpropFilterHf32(const aclTensor *input, const aclTenso
   OP_CHECK(
     Conv3DBackpropFilterWithFlag(input, weight, outBackprop, stride, padding,
                                  dilation, groups, useHf32, output, executor) == ACLNN_SUCCESS,
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Conv3DBackpropFilterHf32 fail due to Conv3DBackpropFilterWithFlag error."),
+    OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Conv3DBackpropFilterHf32 fail due to Conv3DBackpropFilterWithFlag error."),
     return nullptr
   );
   return output;
@@ -961,7 +964,7 @@ const aclTensor *Conv3DBackpropFilterBf162Fp32(const aclTensor *input, const acl
   OP_CHECK(
     Conv3DBackpropFilterWithFlag(input, weight, outBackprop, stride, padding,
                                  dilation, groups, useHf32, output, executor) == ACLNN_SUCCESS,
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Conv3DBackpropFilterBf162Fp32 fail due to Conv3DBackpropFilterWithFlag error."),
+    OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Conv3DBackpropFilterBf162Fp32 fail due to Conv3DBackpropFilterWithFlag error."),
     return nullptr
   );
   return output;
@@ -981,7 +984,7 @@ const aclTensor *Conv3DBackpropFilter(ConvolutionBackwardInputTensor &inputTenso
     Conv3DBackpropFilterWithFlag(inputTensor.input, inputTensor.weight, inputTensor.gradOutput,
                                params.stride, params.padding, params.dilation, params.groups,
                                useHf32, output, executor) == ACLNN_SUCCESS,
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Conv3DBackpropFilterBf162Fp32 fail due to Conv3DBackpropFilterWithFlag error."),
+    OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Conv3DBackpropFilterBf162Fp32 fail due to Conv3DBackpropFilterWithFlag error."),
     return nullptr
   );
   return output;
@@ -1198,7 +1201,7 @@ static aclnnStatus Conv3DBackpropInputWithFlag(const aclTensor *input, const acl
       INFER_SHAPE(Conv3DBackpropInput, OP_INPUT(inputSize, weight, outBackprop), OP_OUTPUT(output),
                   OP_ATTR(stride5, pad6, dilation5, groups, dataFormat, paddingString, useHf32Flag));
   if (ret != ACLNN_SUCCESS) {
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Conv3DBackpropInput InferShape failed.");
+    OP_LOGE(ACLNN_ERR_INNER_INFERSHAPE_ERROR, "Conv3DBackpropInput InferShape failed.");
     output = nullptr;
     return ACLNN_ERR_INNER_INFERSHAPE_ERROR;
   }
@@ -1208,7 +1211,7 @@ static aclnnStatus Conv3DBackpropInputWithFlag(const aclTensor *input, const acl
   if (Ops::NN::AclnnUtil::IsRegbase() && CheckN2HEnable(weight, output, stride5, dilation5, pad6, groups)) {
       ret = N2HOptimize(weight, outBackprop, output, stride5, executor);
       if (ret != ACLNN_SUCCESS) {
-          OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Conv3DBackpropInput N2HOptimize failed.");
+          OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Conv3DBackpropInput N2HOptimize failed.");
           output = nullptr;
           return ACLNN_ERR_INNER_NULLPTR;
       }
@@ -1258,7 +1261,7 @@ const aclTensor *Conv3DBackpropInputFp162Fp16(const aclTensor *input, const aclT
   OP_CHECK(
     Conv3DBackpropInputWithFlag(input, weight, outBackprop, stride, padding, dilation, groups,
                                 useHf32Flag, output, executor) == ACLNN_SUCCESS,
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Conv3DBackpropInputFp162Fp16 fail due to Conv3DBackpropInputWithFlag error."),
+    OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Conv3DBackpropInputFp162Fp16 fail due to Conv3DBackpropInputWithFlag error."),
     return nullptr
   );
   return output;
@@ -1275,7 +1278,7 @@ const aclTensor *Conv3DBackpropInputFp322Fp32(const aclTensor *input, const aclT
   OP_CHECK(
     Conv3DBackpropInputWithFlag(input, weight, outBackprop, stride, padding, dilation, groups,
                                 useHf32Flag, output, executor) == ACLNN_SUCCESS,
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Conv3DBackpropInputFp322Fp32 due to Conv3DBackpropInputWithFlag error."),
+    OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Conv3DBackpropInputFp322Fp32 due to Conv3DBackpropInputWithFlag error."),
     return nullptr
   );
   return output;
@@ -1291,7 +1294,7 @@ const aclTensor *Conv3DBackpropInputHf32(const aclTensor *input, const aclTensor
   OP_CHECK(
     Conv3DBackpropInputWithFlag(input, weight, outBackprop, stride, padding, dilation, groups,
                                 useHf32Flag, output, executor) == ACLNN_SUCCESS,
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Conv3DBackpropInputHf32 fail due to Conv3DBackpropInputWithFlag error."),
+    OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Conv3DBackpropInputHf32 fail due to Conv3DBackpropInputWithFlag error."),
     return nullptr
   );
   return output;
@@ -1308,7 +1311,7 @@ const aclTensor *Conv3DBackpropInputBf162Bf16(const aclTensor *input, const aclT
   OP_CHECK(
     Conv3DBackpropInputWithFlag(input, weight, outBackprop, stride, padding, dilation, groups,
                                 useHf32Flag, output, executor) == ACLNN_SUCCESS,
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Conv3DBackpropInputBf162Bf16 fail due to Conv3DBackpropInputWithFlag error."),
+    OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Conv3DBackpropInputBf162Bf16 fail due to Conv3DBackpropInputWithFlag error."),
     return nullptr
   );
   return output;
@@ -1327,7 +1330,7 @@ const aclTensor *Conv3DBackpropInput(ConvolutionBackwardInputTensor &inputTensor
     Conv3DBackpropInputWithFlag(inputTensor.input, inputTensor.weight, inputTensor.gradOutput,
                               params.stride, params.padding, params.dilation, params.groups,
                               useHf32, output, executor) == ACLNN_SUCCESS,
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Conv3DBackpropInput fail due to Conv3DBackpropInputWithFlag error."),
+    OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Conv3DBackpropInput fail due to Conv3DBackpropInputWithFlag error."),
     return nullptr
   );
   return output;

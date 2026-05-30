@@ -8,14 +8,18 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 #include "convolution_backward_checker.h"
+#include "matmul/common/op_host/log_format_util.h"
 
 using namespace op;
 using namespace l0op;
 using namespace Ops::NN;
 #include "op_api/aclnn_util.h"
+#include "log/log.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+static constexpr const char* ACLNN_CONVOLUTION_BACKWARD_NAME = "aclnnConvolutionBackwardGetWorkspaceSize";
 // 工具方法----------------------------------------------------------------------------------------------------------
 bool CheckDtypeValid(const aclTensor *inputTensor, bool transposed) {
   // 检查输入aclTensor的数据类型是否在ConvolutionBackward支持列表内
@@ -48,20 +52,23 @@ bool CheckFormatValid(const aclTensor *inputTensor, const string &tensorName) {
     auto inputDim = inputTensor->GetViewShape().GetDimNum();
     if (inputDim == CONV1DINPUTDIM) {
         OP_CHECK(inputFormat == op::Format::FORMAT_ND || inputFormat == op::Format::FORMAT_NCL,
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "In 1D scenes, the %s format only supports ND and NCL, but received %s.",
-              tensorName.c_str(), inputFormatStr.c_str()), return false);
+            OP_LOGE_FOR_INVALID_FORMAT(ACLNN_CONVOLUTION_BACKWARD_NAME, tensorName.c_str(),
+                inputFormatStr.c_str(),"ND or NCL"),
+            return false);
     } else if (inputDim == CONV2DINPUTDIM) {
         OP_CHECK(inputFormat == op::Format::FORMAT_NCHW,
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "In 2D scenes, the %s format only supports NCHW, but received %s.",
-              tensorName.c_str(), inputFormatStr.c_str()), return false);
+            OP_LOGE_FOR_INVALID_FORMAT(ACLNN_CONVOLUTION_BACKWARD_NAME, tensorName.c_str(),
+                inputFormatStr.c_str(),"NCHW"),
+            return false);
     } else if (inputDim == CONV3DINPUTDIM) {
         OP_CHECK(inputFormat == op::Format::FORMAT_NCDHW,
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "In 3D scenes, the %s format only supports NCDHW, but received %s.",
-              tensorName.c_str(), inputFormatStr.c_str()), return false);
+            OP_LOGE_FOR_INVALID_FORMAT(ACLNN_CONVOLUTION_BACKWARD_NAME, tensorName.c_str(),
+                inputFormatStr.c_str(),"NCDHW"),
+            return false);
     } else {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "The %s tensor dimension of this API only supports 3~5 dimensions.",
-              tensorName.c_str());
+        OP_LOGE_FOR_INVALID_SHAPEDIM(ACLNN_CONVOLUTION_BACKWARD_NAME, tensorName.c_str(), 
+          std::to_string(inputDim).c_str(), "3 or 4 or 5"
+        );
         return false;
     }
     return true;
@@ -94,9 +101,12 @@ bool CheckResolutionGEKernelShape(const op::Shape &inputShape, const op::Shape &
   int64_t dimInput = inputShape.GetDim(dimIdx) + (*params.padding)[dimOrder] * 2 - filterDimDilation; // 2 : pad two dim
   bool dimInputExpect = dimInput >= 0;
   OP_CHECK(dimInputExpect,
-      OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-      "(in_dim(%ld) + pad_dim(%ld) * 2) should >= ((weight_shape(%ld) - 1) * dilation(%ld) + 1)",
-      inputShape.GetDim(dimIdx), (*params.padding)[dimOrder], weightShape[dimIdx], (*params.dilation)[dimOrder]),
+      OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, "input, padding",
+        FormatString("%ld,%ld", inputShape.GetDim(dimIdx), (*params.padding)[dimOrder]),
+        FormatString("(in_dim + pad_dim * 2) should be greater than or equal to "
+          "((weight_shape - 1) * dilation + 1), current in_dim=%d, pad_dim=%d, weight_shape=%d, dilation=%d",
+          inputShape.GetDim(dimIdx), (*params.padding)[dimOrder], weightShape[dimIdx], (*params.dilation)[dimOrder]
+        )),
       return false);
   return true;
 }
@@ -148,9 +158,12 @@ bool CheckResolutionGEKernelShape_95(int64_t inputVal, int64_t weightVal, int64_
   int64_t dimInput = inputVal + (*params.padding)[dimOrder] * 2 - filterDimDilation; // 2 : pad two dim
   bool dimInputExpect = dimInput >= 0;
   OP_CHECK(dimInputExpect,
-      OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-      "(in_dim(%ld) + pad_dim(%ld) * 2) should >= ((weight_shape(%ld) - 1) * dilation(%ld) + 1)",
-      inputVal, (*params.padding)[dimOrder], weightVal, (*params.dilation)[dimOrder]),
+      OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, "input, padding",
+        FormatString("%ld,%ld", inputVal, (*params.padding)[dimOrder]),
+        FormatString("(in_dim + pad_dim * 2) should be greater than or equal to "
+          "((weight_shape - 1) * dilation + 1), current in_dim=%d, pad_dim=%d, weight_shape=%d, dilation=%d",
+          inputVal, (*params.padding)[dimOrder], weightVal, (*params.dilation)[dimOrder]
+        )),
       return false);
   return true;
 }
@@ -239,9 +252,10 @@ bool ConvolutionBackwardChecker::CheckDataTypeValidForGradInput() {
       return true;
   }
   OP_CHECK(outputTensor_.gradInput->GetDataType() == inputTensor_.input->GetDataType(),
-    OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "gradInput data type[%s] should be equal to input data type[%s]",
-      op::ToString(outputTensor_.gradInput->GetDataType()).GetString(),
-      op::ToString(inputTensor_.input->GetDataType()).GetString()), return false);
+    OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, "gradInput, input", 
+        FormatString("%s,%s", outputTensor_.gradInput->GetDataType(), inputTensor_.input->GetDataType()),
+        "the dtypes of [gradInput, input] must be the same"),
+    return false);
   return true;
 }
 
@@ -255,9 +269,10 @@ bool ConvolutionBackwardChecker::CheckDataTypeValidForGradWeight() {
   }
 
   OP_CHECK(outputTensor_.gradWeight->GetDataType() == inputTensor_.weight->GetDataType(),
-    OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "gradWeight data type[%s] should be equal to weight data type[%s]",
-      op::ToString(outputTensor_.gradWeight->GetDataType()).GetString(),
-      op::ToString(inputTensor_.weight->GetDataType()).GetString()), return false);
+    OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, "gradWeight, weight", 
+      FormatString("%s,%s", outputTensor_.gradWeight->GetDataType(), inputTensor_.weight->GetDataType()),
+      "the dtypes of [gradWeight, weight] must be the same"),  
+      return false);
   return true;
 }
 
@@ -266,9 +281,11 @@ bool ConvolutionBackwardChecker::CheckDataTypeValidForGradBias() {
       return true;
   }
   OP_CHECK(outputTensor_.gradBias->GetDataType() == inputTensor_.gradOutput->GetDataType(),
-    OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "gradBias data type[%s] should be equal to gradOutput data type[%s]",
-      op::ToString(outputTensor_.gradBias->GetDataType()).GetString(),
-      op::ToString(inputTensor_.gradOutput->GetDataType()).GetString()), return false);
+    OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, "gradBias, gradOutput", 
+      FormatString("%s,%s",op::ToString(outputTensor_.gradBias->GetDataType()).GetString(),
+      op::ToString(inputTensor_.gradOutput->GetDataType()).GetString()),
+      "the dtypes of [gradBias, gradOutput] must be the same"),    
+      return false);
   return true;
 }
 
@@ -281,19 +298,19 @@ bool ConvolutionBackwardChecker::CheckParamsValidForBpFilter8bit() {
   // check outputpadding for transposed
   if (params_.transposed) {
     OP_CHECK(CheckParamsValueAllZero(params_.outputPadding),
-      OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When transpose is true and the input data type is %s or %s, "
-      "the value of outputPadding[%s] must be all 0",
-      op::ToString(DataType::DT_HIFLOAT8).GetString(),
-      op::ToString(DataType::DT_FLOAT8_E4M3FN).GetString(),
-      AclarrayToString(params_.outputPadding).c_str()), return false);
+      OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, "outputPadding",
+      AclarrayToString(params_.outputPadding).c_str(),
+      "When transpose is true and the input data type is DT_HIFLOAT8 or DT_FLOAT8_E4M3FN,the value of outputPadding must be all 0"
+      ), return false);
   }
 
   // check groups
   OP_CHECK(params_.groups == 1,
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When outputMask[1] = True, %s dtype only supports groups = 1, currently is %ld",
-      op::ToString(inputTensor_.input->GetDataType()).GetString(), params_.groups),
+    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, "groups",
+      std::to_string(params_.groups).c_str(),
+      FormatString("When outputMask[1] = True and dtype = %s,the value of groups must be 1", op::ToString(inputTensor_.input->GetDataType()))
+      ),
     return false);
-
   return true;
 }
 
@@ -306,18 +323,15 @@ bool ConvolutionBackwardChecker::InterceptConvFor8bit()
   if((outputTensor_.gradInput != nullptr)&& (outputTensor_.gradWeight !=nullptr)){
       if (IsConv8bit(inputTensor_.gradOutput->GetDataType()) || IsConv8bit(inputTensor_.input->GetDataType()) ||
         IsConv8bit(inputTensor_.weight->GetDataType()) || IsConv8bit(outputTensor_.gradInput->GetDataType()) ||
-        IsConv8bit(outputTensor_.gradWeight->GetDataType())) {
-      OP_LOGE(
-          ACLNN_ERR_PARAM_INVALID,
-          "The dtype of DT_HIFLOAT8 or DT_FLOAT8_E4M3FN is not supported now, "
-          "currently gradOutput is %s, input is %s, weight is %s, gradInput is %s, "
-          "gradWeight is %s. ",
-          op::ToString(inputTensor_.gradOutput->GetDataType()).GetString(),
-          op::ToString(inputTensor_.input->GetDataType()).GetString(),
-          op::ToString(inputTensor_.weight->GetDataType()).GetString(),
-          op::ToString(outputTensor_.gradInput->GetDataType()).GetString(),
-          op::ToString(outputTensor_.gradWeight->GetDataType()).GetString());
-      return false;
+        IsConv8bit(outputTensor_.gradWeight->GetDataType())) {     
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, 
+          "gradOutput, input, weight, gradInput, gradWeight",
+          FormatString("%s,%s,%s,%s,%s", inputTensor_.gradOutput->GetDataType(),
+          inputTensor_.input->GetDataType(), inputTensor_.weight->GetDataType(),
+          outputTensor_.gradInput->GetDataType(), outputTensor_.gradWeight->GetDataType()
+          ),
+          "the dtypes of [gradBias, gradOutput] must not be the DT_HIFLOAT8 or DT_FLOAT8_E4M3FN");
+        return false;
     }
   }
   
@@ -343,25 +357,24 @@ bool ConvolutionBackwardChecker::CheckDtypeValidFor8bit(const DataType& dType) {
   }
 
   if (outputTensor_.gradBias != nullptr) {
-    OP_CHECK(!is8bitFlag || all8bitFlag,
-      OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When any input or output data types is %s, all of them must be %s, "
-      "currently gradOutput is %s, input is %s, weight is %s, gradInput is %s, gradBias is %s",
-      op::ToString(dType).GetString(), op::ToString(dType).GetString(),
-      op::ToString(inputTensor_.gradOutput->GetDataType()).GetString(),
-      op::ToString(inputTensor_.input->GetDataType()).GetString(),
-      op::ToString(inputTensor_.weight->GetDataType()).GetString(),
-      op::ToString(outputTensor_.gradInput->GetDataType()).GetString(),
-      op::ToString(outputTensor_.gradBias->GetDataType()).GetString()),
+    OP_CHECK(!is8bitFlag || all8bitFlag, 
+      OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, 
+        "gradOutput, input, weight, gradInput, gradBias", 
+        FormatString("%s,%s,%s,%s,%s", inputTensor_.gradOutput->GetDataType(),
+        inputTensor_.input->GetDataType(), inputTensor_.weight->GetDataType(),
+        outputTensor_.gradInput->GetDataType(), outputTensor_.gradBias->GetDataType()
+        ), FormatString("the dtypes of [gradOutput, input, weight, gradInput, gradBias] must be the %s,"
+        "when any input or output data types is %s", op::ToString(dType).GetString(), op::ToString(dType).GetString())),
       return false);
   } else {
     OP_CHECK(!is8bitFlag || all8bitFlag,
-      OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When any input or output data types is %s, all of them must be %s, "
-      "currently gradOutput is %s, input is %s, weight is %s, gradInput is %s",
-      op::ToString(dType).GetString(), op::ToString(dType).GetString(),
-      op::ToString(inputTensor_.gradOutput->GetDataType()).GetString(),
-      op::ToString(inputTensor_.input->GetDataType()).GetString(),
-      op::ToString(inputTensor_.weight->GetDataType()).GetString(),
-      op::ToString(outputTensor_.gradInput->GetDataType()).GetString()),
+      OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, 
+        "gradOutput, input, weight, gradInput", 
+        FormatString("%s,%s,%s,%s", inputTensor_.gradOutput->GetDataType(),
+        inputTensor_.input->GetDataType(), inputTensor_.weight->GetDataType(),
+        outputTensor_.gradInput->GetDataType()), 
+        FormatString("the dtypes of [gradOutput, input, weight, gradInput] must be the %s,"
+        "when any input or output data types is %s", op::ToString(dType).GetString(), op::ToString(dType).GetString())),
       return false);
   }
   return true;
@@ -381,27 +394,24 @@ bool ConvolutionBackwardChecker::CheckDtypeValidForBpFilter8bit(const DataType& 
   }
 
   if (outputTensor_.gradBias != nullptr) {
-    OP_CHECK(!is8bitFlag || all8bitFlag,
-      OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When outputMask[1] = true, any input or gradBias data types is %s, "
-      "all input and gradBias data types must be %s, and gradWeight data type must be %s, "
-      "currently gradOutput is %s, input is %s, weight is %s, gradWeight is %s, gradBias is %s",
-      op::ToString(dType).GetString(), op::ToString(dType).GetString(), op::ToString(DataType::DT_FLOAT).GetString(),
-      op::ToString(inputTensor_.gradOutput->GetDataType()).GetString(),
-      op::ToString(inputTensor_.input->GetDataType()).GetString(),
-      op::ToString(inputTensor_.weight->GetDataType()).GetString(),
-      op::ToString(outputTensor_.gradWeight->GetDataType()).GetString(),
-      op::ToString(outputTensor_.gradBias->GetDataType()).GetString()),
-      return false);
+    OP_CHECK(!is8bitFlag || all8bitFlag, 
+      OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, 
+        "gradOutput, input, weight, gradWeight, gradBias", 
+        FormatString("%s,%s,%s,%s,%s", inputTensor_.gradOutput->GetDataType(),
+        inputTensor_.input->GetDataType(), inputTensor_.weight->GetDataType(),
+        outputTensor_.gradWeight->GetDataType(), outputTensor_.gradBias->GetDataType()
+        ), FormatString("the dtypes of [gradOutput, input, weight, gradWeight, gradBias] must be the %s,"
+        "when outputMask[1] = true, any input or gradBias data types is is %s",
+         op::ToString(dType).GetString(), op::ToString(dType).GetString())), return false);
   } else {
-    OP_CHECK(!is8bitFlag || all8bitFlag,
-      OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When outputMask[1] = true, any input data types is %s, "
-      "all input data types must be %s, and gradWeight data type must be %s, "
-      "currently gradOutput is %s, input is %s, weight is %s, gradWeight is %s",
-      op::ToString(dType).GetString(), op::ToString(dType).GetString(), op::ToString(DataType::DT_FLOAT).GetString(),
-      op::ToString(inputTensor_.gradOutput->GetDataType()).GetString(),
-      op::ToString(inputTensor_.input->GetDataType()).GetString(),
-      op::ToString(inputTensor_.weight->GetDataType()).GetString(),
-      op::ToString(outputTensor_.gradWeight->GetDataType()).GetString()),
+    OP_CHECK(!is8bitFlag || all8bitFlag, 
+      OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, 
+        "gradOutput, input, weight, gradWeight", 
+        FormatString("%s,%s,%s,%s", inputTensor_.gradOutput->GetDataType(),
+        inputTensor_.input->GetDataType(), inputTensor_.weight->GetDataType(),
+        outputTensor_.gradWeight->GetDataType()
+        ), FormatString("the dtypes of [gradOutput, input, weight, gradWeight] must be the %s,"
+        "when one of them dtype is %s", op::ToString(dType).GetString(), op::ToString(dType).GetString())),
       return false);
   }
 
@@ -415,56 +425,69 @@ bool ConvolutionBackwardChecker::CheckDtypeValidForBpFilter8bit(const DataType& 
   }
   
   bool isFp8Flag = isGradOutputFp8 || isInputFp8 || isWeightFp8 || isGradWeightFp8 || isGradBiasFp8;
-  OP_CHECK(!isFp8Flag,
-    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When outputMask[1] = true, not support dataType of all input and output being DT_FLOAT8_E4M3FN now"), return false);
+  OP_CHECK(!isFp8Flag, OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, 
+        "gradOutput, input, weight, gradWeight, gradBias", 
+        FormatString("%s,%s,%s,%s,%s", inputTensor_.gradOutput->GetDataType(),
+        inputTensor_.input->GetDataType(), inputTensor_.weight->GetDataType(),
+        outputTensor_.gradWeight->GetDataType(), outputTensor_.gradBias->GetDataType()),
+        "the dtypes of [gradOutput, input, weight, gradWeight, gradBias] must not be DT_FLOAT8_E4M3FN"),
+    return false);
   return true;
 }
 
 bool ConvolutionBackwardChecker::CheckConvParams(size_t inputDim) {
     // stride >= 1
     OP_CHECK(CheckParamsValue(params_.stride, false),
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The value of stride[%s] must be greater than or equal to 1.",
-             AclarrayToString(params_.stride).c_str()),
-             return false);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, "stride",
+          AclarrayToString(params_.stride).c_str(),
+          "the value of stride must be greater than or equal to 1"
+          ), return false);
 
     // padding >= 0
     OP_CHECK(CheckParamsValue(params_.padding, true),
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The value of padding[%s] must be greater than or equal to 0.",
-             AclarrayToString(params_.padding).c_str()),
-             return false);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, "padding",
+          AclarrayToString(params_.padding).c_str(),
+          "the value of padding must be greater than or equal to 0"
+          ), return false);
 
     // dilation >= 1
     OP_CHECK(CheckParamsValue(params_.dilation, false),
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The value of dilation[%s] must be greater than or equal to 1.",
-             AclarrayToString(params_.dilation).c_str()),
-             return false);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, "dilation",
+          AclarrayToString(params_.dilation).c_str(),
+          "the value of dilation must be greater than or equal to 1"
+          ), return false);
     // outputPadding >= 0
     if (params_.transposed) {
       OP_CHECK(CheckParamsValue(params_.outputPadding, true),
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The value of outputPadding[%s] must be greater than or equal to 0 if transposed",
-             AclarrayToString(params_.outputPadding).c_str()),
-             return false);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, "outputPadding",
+          AclarrayToString(params_.outputPadding).c_str(),
+          "when transposed=true, the value of outputPadding must be greater than or equal to 0"
+          ), return false);
       if (inputDim == CONV3DINPUTDIM) {
         for (uint64_t i = 0; i < params_.outputPadding->Size(); ++i) {
           OP_CHECK((*params_.outputPadding)[i] < (*params_.stride)[i],
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The value of outputPadding[%s] should be smaller than stride[%s]",
-              AclarrayToString(params_.outputPadding).c_str(), AclarrayToString(params_.stride).c_str()),
-              return false);
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, "outputPadding",
+              AclarrayToString(params_.outputPadding).c_str(),
+              "when transposed=true, the value of outputPadding must be less than or equal to stride"
+              ), return false);
         }
       }
     } else if (params_.outputPadding != nullptr) { // !transposed, outputPadding value is unneeded
       for (uint64_t i = 0; i < params_.outputPadding->Size(); ++i) {
         OP_CHECK((*params_.outputPadding)[i] == 0,
-          OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The value of outputPadding[%s] must be 0 if not transposed",
-            AclarrayToString(params_.outputPadding).c_str()),
-            return false);
+          OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, "outputPadding",
+              AclarrayToString(params_.outputPadding).c_str(),
+              "when transposed=false, the value of outputPadding must be 0"
+              ), return false);
       }
     }
 
     // group >= 1
     OP_CHECK(params_.groups >= 1,
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The group[%d] must be greater than or equal to 1.", params_.groups),
-             return false);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, "group",
+              std::to_string(params_.groups).c_str(),
+              "the value of groups must be greater than or equal to 1"
+              ), return false);
     return true;
 }
 
@@ -490,13 +513,24 @@ bool ConvolutionBackwardChecker::CheckConvShape() {
     auto weightDim = inputTensor_.weight->GetViewShape().GetDimNum();
 
     OP_CHECK(gradOutputDim == inputDim,
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The dim of gradOutput and input should be equal."), return false);
+              OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, "gradOutput, input",
+              (std::to_string(gradOutputDim) + "," + std::to_string(inputDim)).c_str(),
+              "the shape dim of [gradOutput, input] must be the same"
+              ),             
+             return false);
 
-    OP_CHECK(inputDim == weightDim, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The dim of input and weight should be equal."),
+    OP_CHECK(inputDim == weightDim, 
+             OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, "input, weight",
+              (std::to_string(inputDim) + "," + std::to_string(weightDim)).c_str(),
+              "the shape dim of [input, weight] must be the same"
+              ),
              return false);
     // 检查gradOutput和weight是否为空tensor
     OP_CHECK(inputTensor_.gradOutput->Size() != 0 && inputTensor_.weight->Size() != 0,
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The gradOutput and weight cannot be empty tensor."),
+             OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+              ACLNN_CONVOLUTION_BACKWARD_NAME, "gradOutput,weight",
+              FormatString("%ld,%ld", inputTensor_.gradOutput->Size(), inputTensor_.weight->Size()),
+              "[gradOutput,weight] do not support empty tensors"),
              return false);
     if (outputTensor_.gradInput != nullptr) {
         OP_CHECK_SHAPE_NOT_EQUAL(inputTensor_.input, outputTensor_.gradInput, return false);
@@ -512,22 +546,29 @@ bool ConvolutionBackwardChecker::CheckConvShape() {
     int64_t cOut = inputTensor_.gradOutput->GetViewShape().GetDim(channelOutIdx);
     if (outputTensor_.gradBias != nullptr) {
         OP_CHECK(outputTensor_.gradBias->GetViewShape().GetDimNum() == 1,
-                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The dimension of gradBias only supports 1."), return false);
+                 OP_LOGE_FOR_INVALID_SHAPEDIM(ACLNN_CONVOLUTION_BACKWARD_NAME, "gradBias", 
+                    std::to_string(outputTensor_.gradBias->GetViewShape().GetDimNum()).c_str(), "1"),
+                 return false);
         OP_CHECK(outputTensor_.gradBias->GetViewShape().GetDim(0) == cOut,
-                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The gradBias shape should be equal [%ld].", cOut), return false);
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, "gradBias", 
+                    FormatString("[%ld]", outputTensor_.gradBias->GetViewShape().GetDim(0)), 
+                    FormatString("The gradBias shape should be equal [%ld]", cOut)),
+                 return false);
     }
 
     int64_t paramsDim = inputDim - 2;  // 参数维度应该等于输入tensor维度-2
     int64_t strideDim = params_.stride->Size();
     OP_CHECK(strideDim == paramsDim,
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When the input dimension is %ld, the dimension of stride should be %ld.",
-                     inputDim, paramsDim),
+             OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, "stride, input",
+             FormatString("%ld, %ld", strideDim, inputDim),
+              "the shape dim of [stride] must be 2 less than the shape dim of input"),
              return false);
 
     int64_t dilationDim = params_.dilation->Size();
     OP_CHECK(dilationDim == paramsDim,
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                     "When the input dimension is %ld, the dimension of dilation should be %ld.", inputDim, paramsDim),
+             OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, "dilation, input",
+             FormatString("%ld, %ld", dilationDim, inputDim),
+              "the shape dim of [dilation] must be 2 less the shape dim of input"),
              return false);
 
     int64_t paddingDim = params_.padding->Size();
@@ -535,28 +576,33 @@ bool ConvolutionBackwardChecker::CheckConvShape() {
     if (inputDim == CONV2DINPUTDIM) {
         // padding类支持4维输入
         OP_CHECK(paddingDim == paramsDim || paddingDim == CONV2DINPUTDIM,
-                 OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                         "When the input dimension is %ld, the dimension of padding should be %ld or %d.", inputDim,
-                         paramsDim, CONV2DINPUTDIM),
+                 OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, "padding, input",
+                 FormatString("%ld,%ld", paddingDim, inputDim),
+                 FormatString("the shape dim of [dilation] must be %ld or %ld, when dim of input is %ld",
+                 paramsDim, CONV2DINPUTDIM, inputDim)),
                  return false);
 
         OP_CHECK(outputPaddingDim == paramsDim || outputPaddingDim == CONV2DINPUTDIM,
-                 OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                         "When the input dimension is %ld, the dimension of outputPadding should be %ld or %d.",
-                         inputDim, paramsDim, CONV2DINPUTDIM),
+                 OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, "outputPadding, input",
+                  FormatString("%ld,%ld", outputPaddingDim, inputDim),
+                  FormatString("the shape dim of [outputPadding] must be %ld or %ld, when dim of input is %ld",
+                  paramsDim, CONV2DINPUTDIM, inputDim)),
                  return false);
     } else {
         OP_CHECK(
             paddingDim == paramsDim,
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When the input dimension is %ld, the dimension of padding should be %ld.",
-                    inputDim, paramsDim),
+            OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, "padding, input",
+                  FormatString("%ld,%ld", paddingDim, inputDim),
+                  FormatString("the shape dim of [paddingDim] must be %ld, when dim of input is %ld",
+                  paramsDim, inputDim)),
             return false);
 
         OP_CHECK(outputPaddingDim == paramsDim,
-                 OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                         "When the input dimension is %ld, the dimension of outputPadding should be %ld.", inputDim,
-                         paramsDim),
-                 return false);
+            OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, "outputPadding, input",
+                  FormatString("%ld,%ld", outputPaddingDim, inputDim),
+                  FormatString("the shape dim of [outputPadding] must be %ld, when dim of input is %ld",
+                  paramsDim, inputDim)),
+            return false);
     }
 
     return true;
@@ -581,35 +627,39 @@ bool ConvolutionBackwardChecker::CheckConvChannelAndGroup() {
       GetChannleIndex(weightShape, weightFormat, weightCinIdx);
     }
     OP_CHECK(gradOutShape.GetDim(gradOutputChannelIdx) == weightShape.GetDim(weightCoutIdx), // 0: NCHW, the order of N(out_channel)
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "gradOutput_channel(%ld) != weight_N_dim(%ld)",
-        gradOutShape.GetDim(gradOutputChannelIdx), weightShape.GetDim(weightCoutIdx)),
-        return false);
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, FormatString("gradOutShape[%ld], weight[%ld]", 
+        gradOutputChannelIdx, weightCoutIdx), FormatString("%ld, %ld", gradOutShape.GetDim(gradOutputChannelIdx), 
+        weightShape.GetDim(weightCoutIdx)), "the shape dim of [gradOutShape[1], weight[0]] must be the same."), return false);
 
     bool channelCheck = weightShape.GetDim(weightCinIdx) == 0 ||
-        inputShape.GetDim(inputChannelIdx) % weightShape.GetDim(weightCinIdx) != 0;
-    OP_CHECK(!channelCheck,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "input_channel(%ld) %% weight_channel(%ld) != 0",
-        inputShape.GetDim(inputChannelIdx), weightShape.GetDim(weightCinIdx)),
-        return false);
+      inputShape.GetDim(inputChannelIdx) % weightShape.GetDim(weightCinIdx) != 0;
+    OP_CHECK(!channelCheck, OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, 
+        FormatString("inputShape[%ld], weight[%ld]", inputChannelIdx, weightCinIdx), FormatString("%ld,%ld", 
+        inputShape.GetDim(inputChannelIdx), weightShape.GetDim(weightCinIdx)), FormatString("the shape dim of inputShape[%ld] "
+        "must be divisable by the shape dim of weight[%ld]", inputChannelIdx, weightCinIdx)), return false);
 
     int32_t groups = inputShape.GetDim(inputChannelIdx) / weightShape.GetDim(weightCinIdx);
     bool groupCheck = groups == params_.groups;
-    OP_CHECK(groupCheck,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "input_channel(%ld) / weight_channel(%ld) != groups(%ld)",
-        inputShape.GetDim(inputChannelIdx), weightShape.GetDim(weightCinIdx), params_.groups),
-        return false);
+    OP_CHECK(groupCheck, OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME,
+        FormatString("inputShape[%ld], weight[%ld]", inputChannelIdx, weightCinIdx),
+        FormatString("%ld,%ld", inputShape.GetDim(inputChannelIdx), weightShape.GetDim(weightCinIdx)),
+        FormatString("the shape dim of inputShape[%ld] must equal to (the shape dim of weight[%ld] times the value of groups).",
+        inputChannelIdx, weightCinIdx)), return false);
 
-    if (inputShape.GetDim(inputChannelIdx) == params_.groups && (!Ops::NN::AclnnUtil::IsRegbase())){
+    if (inputShape.GetDim(inputChannelIdx) == params_.groups && (!Ops::NN::AclnnUtil::IsRegbase())) {
       auto outChannel = gradOutShape.GetDim(inputChannelIdx);
-      OP_CHECK(outChannel >= params_.groups,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "when input_channel(%ld) == groups(%ld), output_channel(%ld) need bigger groups",
-        inputShape.GetDim(inputChannelIdx),  params_.groups, outChannel),
-        return false);
+      OP_CHECK(outChannel >= params_.groups, OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME,
+        FormatString("gradOutShape[%ld], inputShape[%ld]", inputChannelIdx, inputChannelIdx),
+        FormatString("%ld,%ld", gradOutShape.GetDim(inputChannelIdx), inputShape.GetDim(inputChannelIdx)),
+        FormatString("the shape dim of gradOutShape[%ld] must be greater than or equal to the value of groups,"
+        "when the shape dim of inputShape[%ld] == the value of groups", inputChannelIdx, inputChannelIdx)), return false);
 
       OP_CHECK(gradOutShape.GetDim(inputChannelIdx) % params_.groups == 0,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "when input_channel(%ld) == groups(%ld), output_channel(%ld) need k times input_channel",
-        inputShape.GetDim(inputChannelIdx),  params_.groups, outChannel),
-        return false);
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, 
+        FormatString("gradOutShape[%ld], inputShape[%ld]", inputChannelIdx, inputChannelIdx),
+        FormatString("%ld,%ld", gradOutShape.GetDim(inputChannelIdx), inputShape.GetDim(inputChannelIdx)),
+        FormatString("the shape dim of gradOutShape[%ld] must be divisible by the value of groups,"
+        "when the shape dim of inputShape[%ld] equals to the value of groups", inputChannelIdx, inputChannelIdx)),return false);
     }
 
     return true;
@@ -656,10 +706,13 @@ bool ConvolutionBackwardChecker::CheckConvShapePlus() {
               expectCheck = (expectValue.doExpect == gradOutputDVal) && (expectValue.hoExpect == gradOutputHVal) &&
                             (expectValue.woExpect == gradOutputWVal);
           }
-          OP_CHECK(expectCheck, OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-              "gradOutput's shape%s is not equal to inferred shape[%ld,%ld,%ld,%ld,%ld]",
-              op::ToString(gradOutShape).GetString(), gradOutShape.GetDim(0), gradOutputCout,
-              expectValue.doExpect, expectValue.hoExpect, expectValue.woExpect), return false);
+          
+          OP_CHECK(expectCheck, 
+              OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, "gradOutput", op::ToString(gradOutShape).GetString(),
+              FormatString("shape of gradOutput should equal to [%ld, %ld,%ld,%ld,%ld]",
+              gradOutShape.GetDim(0), gradOutputCout, expectValue.doExpect, expectValue.hoExpect, expectValue.woExpect
+              )),
+              return false);
     }
     return true;
 }
@@ -676,7 +729,9 @@ inline bool ConvolutionBackwardChecker::CheckNotNull() {
 
     int64_t outputMaskDim = params_.outputMask->Size();
     // outputMask的维度必须为3
-    OP_CHECK(outputMaskDim == 3, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The dim of outputMask must be equal 3."),
+    OP_CHECK(outputMaskDim == 3, 
+            OP_LOGE_FOR_INVALID_SHAPEDIM(ACLNN_CONVOLUTION_BACKWARD_NAME, "outputMask", 
+                    std::to_string(outputMaskDim).c_str(), "3"),
              return false);
     if ((*params_.outputMask)[0]) {
         OP_CHECK_NULL(outputTensor_.gradInput, return false);
@@ -746,8 +801,9 @@ aclnnStatus ConvolutionBackwardChecker::CheckParams() {
     if (!params_.transposed && outputTensor_.gradBias != nullptr) {
       if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
         OP_CHECK(outputTensor_.gradBias->GetStorageFormat() == op::Format::FORMAT_ND,
-          OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "gradBias format only supports ND, but get [%s].",
-            op::ToString(outputTensor_.gradBias->GetStorageFormat()).GetString()), return ACLNN_ERR_PARAM_INVALID);
+          OP_LOGE_FOR_INVALID_FORMAT(ACLNN_CONVOLUTION_BACKWARD_NAME, "gradBias",
+                op::ToString(outputTensor_.gradBias->GetStorageFormat()).GetString(),"ND"),
+            return ACLNN_ERR_PARAM_INVALID);
       }
     }
 
@@ -767,9 +823,11 @@ bool ConvolutionBackwardChecker::CheckParamsDim() {
   auto inputDim = inputTensor_.input->GetViewShape().GetDimNum();
   uint64_t paramsDim = inputDim - 2; // 参数维度应该等于输入tensor维度-2
   auto validDim = [inputDim, paramsDim](bool condition, const char* paramName) -> bool {
+    std::string paramNameStr = paramName;
     OP_CHECK(condition,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When the input dimension is %ld, the dimension of %s should be %ld.",
-                inputDim,  paramName, paramsDim),
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, FormatString("%s,input", paramNameStr),
+              FormatString("%ld, %ld", paramsDim, inputDim), FormatString("the shape dim of %s must be %ld,"
+              ". when the input dim of input is %ld", paramNameStr, paramsDim, inputDim)),
         return false);
     return true;
   };
@@ -791,8 +849,9 @@ bool ConvolutionBackwardChecker::CheckParamsGroup() {
   auto weightCin = weightShape.GetDim(1);
   int64_t weightCout = weightShape.GetDim(0);
   OP_CHECK((params_.groups != 0 && weightCout % params_.groups == 0),
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "output_channel(%ld) %% groups(%ld) != 0",
-                weightCout,  params_.groups),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, "weight[0]", 
+            FormatString("%ld", weightCout),
+             "the dim of weight[0] should be divisible by groups when the value of groups is not 0"),
         return false);
 
   if (params_.transposed && gradOutShape[0] == 0) {
@@ -802,9 +861,9 @@ bool ConvolutionBackwardChecker::CheckParamsGroup() {
   if (inputChannel != 0 || weightCin != 0) {
     bool channelCheck = (weightCin == 0 || inputChannel % weightCin != 0 || inputChannel / weightCin != params_.groups);
     OP_CHECK(!channelCheck,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "%s(%ld) need groups(%ld) times weight_channel(%ld)",
-                params_.transposed ? "gradOutput_channel": "inputChannel",
-                inputChannel,  params_.groups, weightCin),
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, "input[1], weight[1]", 
+             FormatString("%ld, %ld", inputChannel, weightCin),
+             "the dim of input[1] must equals to (the dim of weight[1] times the value of groups)"),
         return false);
   }
 
@@ -821,9 +880,12 @@ bool ConvolutionBackwardChecker::CheckShape() {
     int64_t filterDimDilation = (weightShape[i] - 1) * (*params_.dilation)[index] + 1;
     int64_t dimInput = inputShape.GetDim(i) + (*params_.padding)[index] * 2 - filterDimDilation; // 2: pad two dim
     OP_CHECK(dimInput >= 0,
-      OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-      "At dimension %ld, (in_dim(%ld) + pad_dim(%ld) * 2) should >= ((weight_shape(%ld) - 1) * dilation(%ld) + 1)",
-      i, inputShape.GetDim(i), (*params_.padding)[index], weightShape[i], (*params_.dilation)[index]),
+      OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, FormatString("input[%ld]",i),
+              (std::to_string(inputShape.GetDim(i))).c_str(),
+              FormatString("(in_dim + pad_dim * 2) should >= ((weight_shape - 1) * dilation + 1) when at dimension %ld,"
+              "current in_dim=%ld, pad_dim=%ld, weight_shape=%ld, dilation=%ld"
+              , i, inputShape.GetDim(i), (*params_.padding)[index], weightShape[i], (*params_.dilation)[index])
+      ),
       return false);
   }
   return true;
@@ -833,10 +895,12 @@ bool ConvolutionBackwardChecker::CheckShapeTransposed() {
   int64_t inputC = inputTensor_.input->GetViewShape().GetDim(1);
   int64_t weightCo = inputTensor_.weight->GetViewShape().GetDim(0);
   OP_CHECK(weightCo > 0,
-           OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Weight Cout should be greater than 0."),
+          OP_LOGE_FOR_INVALID_SHAPEDIM(ACLNN_CONVOLUTION_BACKWARD_NAME, "weightCo", std::to_string(weightCo).c_str()
+             , "0"),
            return false);
   OP_CHECK(weightCo == inputC,
-           OP_LOGE(ACLNN_ERR_PARAM_INVALID, "weight Cout should be %ld, but get %ld", inputC, weightCo),
+          OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, "inputC, weightCo", 
+              (std::to_string(inputC) + "," + std::to_string(weightCo)).c_str() , "inputC"),
            return false);
   return true;
 }
@@ -857,22 +921,26 @@ bool ConvolutionBackwardChecker::CheckEmptyTensor() {
     // 空tensor场景且需要计算gradBias, biasSizes不能为nullptr
     if ((*params_.outputMask)[2]) {
         OP_CHECK(params_.biasSizes != nullptr,
-                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The biasSizes cannot be nullptr with empty tensor calculation."),
+                 OP_LOGE_WITH_INVALID_ATTR(ACLNN_CONVOLUTION_BACKWARD_NAME, "biasSizes", "nullptr", "not nullptr"),
                  return false);
         OP_CHECK(params_.biasSizes->Size() == 1,
-                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The biasSizes size must be 1, actually is %ld.",
-                         params_.biasSizes->Size()),
+                 OP_LOGE_WITH_INVALID_ATTR_SIZE(ACLNN_CONVOLUTION_BACKWARD_NAME, "biasSizes",
+                    std::to_string(params_.biasSizes->Size()).c_str() , "1"),
                  return false);
         int64_t channelOutDim = 1;  // NCHW
         int64_t Cout = inputTensor_.gradOutput->GetViewShape().GetDim(channelOutDim);
         if (!params_.transposed) {
           OP_CHECK((*params_.biasSizes)[0] == Cout,
-                   OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The biasSizes should be equal %ld.", Cout), return false);
+                  OP_LOGE_WITH_INVALID_ATTR(ACLNN_CONVOLUTION_BACKWARD_NAME, "biasSizes", 
+                    std::to_string((*params_.biasSizes)[0]).c_str(), std::to_string(Cout).c_str()),
+                 return false);
         } else {
           // transposed=true: bias = weight[Cin] * group
           auto size = inputTensor_.weight->GetViewShape().GetDim(1) * params_.groups;
           OP_CHECK((*params_.biasSizes)[0] == size,
-                   OP_LOGE(ACLNN_ERR_PARAM_INVALID, "When transposed=true, the biasSizes should be equal %ld.", size), return false);
+                   OP_LOGE_WITH_INVALID_ATTR(ACLNN_CONVOLUTION_BACKWARD_NAME, "biasSizes", 
+                    std::to_string((*params_.biasSizes)[0]).c_str(), std::to_string(size).c_str()),
+                  return false);
         }
     }
 
@@ -881,14 +949,14 @@ bool ConvolutionBackwardChecker::CheckEmptyTensor() {
        auto inputShape = inputTensor_.input->GetViewShape();
       // 确保input的shape大于2
       OP_CHECK(inputShape.GetDimNum() > 2,
-              OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The input shape must be greater than 2, but now is %ld",
-                      inputShape.GetDimNum()),
+              OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, "inputShape", 
+                  std::to_string(inputShape.GetDimNum()).c_str(), "Dim of inputshape must be greater than 2"),
               return false);
 
       OP_CHECK(inputShape[0] == 0 || inputShape[1] == 0,
-              OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                     "When the input tensors contain an empty tensor, aclnnConvolutionBackward only supports zero batch or zero channel with input, but got input shape is %s",
-                      op::ToString(inputShape).GetString()),
+              OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, "inputShape[0],inputShape[1]",
+              (std::to_string(inputShape[0]) + "," + std::to_string(inputShape[1]).c_str()), 
+              "inputShape[0] or inputShape[1] should be 0"),
               return false);
     }
     auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();

@@ -9,12 +9,15 @@
  */
 
 #include "convtbc_backward_checker.h"
+#include "log/log.h"
+#include "matmul/common/op_host/log_format_util.h"
 
 using namespace op;
 
 namespace Ops {
 namespace NN {
 namespace Conv {
+static constexpr const char* ACLNN_CONV_TBC_BACKWARD_NAME = "aclnnConvTbcBackwardGetWorkspaceSize";
 
 inline bool ConvTbcBackwardChecker::CheckTbcNotNull() {
     OP_CHECK_NULL(inputTensor_.self, return false);
@@ -49,16 +52,16 @@ bool ConvTbcBackwardChecker::CheckDtypeValidBf16Allowed(const aclTensor *inputTe
 bool ConvTbcBackwardChecker::CheckTbcFormat(const aclTensor *inputTensor, const string &tensorName) const {
     OP_CHECK(inputTensor->GetStorageFormat() == op::Format::FORMAT_ND ||
                  inputTensor->GetStorageFormat() == op::Format::FORMAT_NCL,
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "%s format only supports ND or NCL, but got %s.", tensorName.c_str(),
-                     op::ToString(inputTensor->GetStorageFormat()).GetString()),
+             OP_LOGE_FOR_INVALID_FORMAT(ACLNN_CONV_TBC_BACKWARD_NAME, tensorName.c_str(),
+                op::ToString(inputTensor->GetStorageFormat()).GetString(),"ND or NCL"),
              return false);
     return true;
 }
 
 bool ConvTbcBackwardChecker::CheckTbcBiasFormat(const aclTensor *inputTensor, const string &tensorName) const {
     OP_CHECK(inputTensor->GetStorageFormat() == op::Format::FORMAT_ND,
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "%s format only supports ND, but got %s.", tensorName.c_str(),
-                     op::ToString(inputTensor->GetStorageFormat()).GetString()),
+             OP_LOGE_FOR_INVALID_FORMAT(ACLNN_CONV_TBC_BACKWARD_NAME, tensorName.c_str(),
+                op::ToString(inputTensor->GetStorageFormat()).GetString(),"ND"),
              return false);
     return true;
 }
@@ -66,10 +69,8 @@ bool ConvTbcBackwardChecker::CheckTbcBiasFormat(const aclTensor *inputTensor, co
 bool ConvTbcBackwardChecker::CheckTbcShape() {
   auto validDim = [](const aclTensor *tensor, int64_t dims, const char* paramName) -> bool {
     int64_t curDims = tensor->GetViewShape().GetDimNum();
-    OP_CHECK(curDims == dims,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the dimension of %s should be %ld, but get %ld.",
-                paramName, dims, curDims),
-        return false);
+    OP_CHECK(curDims == dims, OP_LOGE_FOR_INVALID_SHAPEDIM(ACLNN_CONV_TBC_BACKWARD_NAME, paramName, 
+        std::to_string(curDims).c_str(), std::to_string(dims).c_str()), return false);
     return true;
   };
   constexpr int64_t tbcDims = 3;
@@ -84,33 +85,34 @@ bool ConvTbcBackwardChecker::CheckTbcShape() {
 
   // input(TBC1) weigth(LC1C0) bias(C0):
   OP_CHECK(inputTensor_.input->GetViewShape().GetDim(2) == inputTensor_.weight->GetViewShape().GetDim(1),
-           OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input dim 2 (Input Channels) is not == dim 1 in the weight tensor."),
-           return false);
+           OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(ACLNN_CONV_TBC_BACKWARD_NAME, "Input[2] , weight[1]",
+           (std::to_string(inputTensor_.input->GetViewShape().GetDim(2)) + "," 
+              + std::to_string(inputTensor_.weight->GetViewShape().GetDim(2))).c_str(), 
+              "the dim of Input[2] and the dim of weight[1] must be the same"), return false);
   OP_CHECK(inputTensor_.bias->GetViewShape().GetDim(0) == inputTensor_.weight->GetViewShape().GetDim(2),
-           OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Bias should be [%ld], but get [%ld]",
-                   inputTensor_.weight->GetViewShape().GetDim(2), inputTensor_.bias->GetViewShape().GetDim(0)),
-           return false);
+      OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(ACLNN_CONV_TBC_BACKWARD_NAME, "bias, weight", 
+      (std::to_string(inputTensor_.bias->GetViewShape().GetDim(0)) + "," 
+      + std::to_string(inputTensor_.weight->GetViewShape().GetDim(2))).c_str(), 
+      "Dim of bias and weight[2] must be the same"), return false);
   // pad >= 0
   OP_CHECK(params_.pad >= 0,
-           OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The pad must be greater than or equal to 0, but get %ld.", params_.pad),
-           return false);
+           OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(ACLNN_CONV_TBC_BACKWARD_NAME, "pad",
+           std::to_string(params_.pad).c_str(), "the value of pad must be greater or equal to 0"),return false);
   // self 与input, weight shape 必须满足约束
   // 约束1：self shape必须与conv_tbc计算出的output match： self(T+2*pad+1-L,B,C0)
   auto t = inputTensor_.input->GetViewShape().GetDim(0) + 2 * params_.pad + 1 - inputTensor_.weight->GetViewShape().GetDim(0);
   auto b = inputTensor_.input->GetViewShape().GetDim(1);
   auto c0 = inputTensor_.weight->GetViewShape().GetDim(2);
-  OP_CHECK(t >= 0,
-           OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-           "Try to create tensor with negative dimension %ld:[%ld, %ld, %ld]",
-           t, t, b, c0),
-           return false);
+  OP_CHECK(t >= 0, OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(ACLNN_CONV_TBC_BACKWARD_NAME, "input[0], weight[0]",
+              (std::to_string(inputTensor_.input->GetViewShape().GetDim(0)) + "," 
+               + std::to_string(inputTensor_.weight->GetViewShape().GetDim(0))).c_str(),
+              "(dim of input[0]) + 2*pad + 1 - (dim of weight[0]) should be greater than or equal to 0"),return false);
   OP_CHECK(inputTensor_.self->GetViewShape().GetDim(0) == t && inputTensor_.self->GetViewShape().GetDim(1) == b &&
            inputTensor_.self->GetViewShape().GetDim(2) == c0,
-           OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                   "Mismatch in shape: grad_output has a shape of %s but output has a shape of [%ld, %ld, %ld],"
-                   "which output shape is deduced from the input and the weight",
-                   op::ToString(inputTensor_.self->GetViewShape()).GetString(), t, b, c0),
-           return false);
+           OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(ACLNN_CONV_TBC_BACKWARD_NAME, "self",
+            op::ToString(inputTensor_.self->GetViewShape()).GetString(),
+            ("the shape of self should be [" + std::to_string(t) +  "," + std::to_string(b) + ","
+             + std::to_string(c0) + "]").c_str()),return false);
 
   // input和gradInput的shape必须一致
   OP_CHECK_SHAPE_NOT_EQUAL(inputTensor_.input, outputTensor_.gradInput, return false);
@@ -155,8 +157,12 @@ aclnnStatus ConvTbcBackwardChecker::CheckTbcParams() {
     CHECK_RET(CheckTbcBiasFormat(outputTensor_.gradBias, "gradBias"), ACLNN_ERR_PARAM_INVALID);
 
     // 4. 检查self不能为空
-    OP_CHECK(inputTensor_.self->Size() != 0, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The self can not be empty tensor."),
-             return ACLNN_ERR_PARAM_INVALID);
+    OP_CHECK(inputTensor_.self->Size() != 0, 
+        OP_LOGE_FOR_INVALID_SHAPESIZE(ACLNN_CONV_TBC_BACKWARD_NAME,
+        "self",std::to_string(inputTensor_.self->Size()).c_str(),
+        "greater than 0"
+        ),
+        return ACLNN_ERR_PARAM_INVALID);
 
     // 5. 检查输入aclTensor的shape是否符合约束
     CHECK_RET(CheckTbcShape(), ACLNN_ERR_PARAM_INVALID);
@@ -168,26 +174,26 @@ aclnnStatus ConvTbcBackwardChecker::CheckTbcParams() {
       // 检查输入输出是否类型一致
       OP_CHECK(
           outputTensor_.gradInput->GetDataType() == inputTensor_.input->GetDataType(),
-          OP_LOGE(
-              ACLNN_ERR_INNER_NULLPTR, "gradInput data type[%s] should be equal to input data type[%s]",
-              op::ToString(outputTensor_.gradInput->GetDataType()).GetString(),
-              op::ToString(inputTensor_.input->GetDataType()).GetString()),
+          OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(ACLNN_CONV_TBC_BACKWARD_NAME, "gradInput, input", 
+           FormatString("%s,%s",op::ToString(outputTensor_.gradInput->GetDataType()).GetString(),
+           op::ToString(inputTensor_.input->GetDataType()).GetString()),
+          "the dtypes of [gradInput, input] must be the same"),
           return ACLNN_ERR_PARAM_INVALID);
 
       OP_CHECK(
           outputTensor_.gradWeight->GetDataType() == inputTensor_.weight->GetDataType(),
-          OP_LOGE(
-              ACLNN_ERR_INNER_NULLPTR, "gradWeight data type[%s] should be equal to weight data type[%s]",
-              op::ToString(outputTensor_.gradWeight->GetDataType()).GetString(),
-              op::ToString(inputTensor_.weight->GetDataType()).GetString()),
+          OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(ACLNN_CONV_TBC_BACKWARD_NAME, "gradWeight, weight", 
+          FormatString("%s,%s",op::ToString(outputTensor_.gradWeight->GetDataType()).GetString(),	 
+          op::ToString(inputTensor_.weight->GetDataType()).GetString()),
+          "the dtypes of [gradWeight, weight] must be the same"),
           return ACLNN_ERR_PARAM_INVALID);
 
       OP_CHECK(
           outputTensor_.gradBias->GetDataType() == inputTensor_.bias->GetDataType(),
-          OP_LOGE(
-              ACLNN_ERR_INNER_NULLPTR, "gradBias data type[%s] should be equal to bias data type[%s]",
-              op::ToString(outputTensor_.gradBias->GetDataType()).GetString(),
-              op::ToString(inputTensor_.bias->GetDataType()).GetString()),
+          OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(ACLNN_CONV_TBC_BACKWARD_NAME, "gradBias, bias", 
+          FormatString("%s,%s", op::ToString(outputTensor_.gradBias->GetDataType()).GetString(),	 
+            op::ToString(inputTensor_.bias->GetDataType()).GetString()),
+            "the dtypes of [gradBias, bias] must be the same"),
           return ACLNN_ERR_PARAM_INVALID);
     }
     return ACLNN_SUCCESS;
