@@ -1273,7 +1273,7 @@ static aclnnStatus ConvTranspose3dWithFlag(const aclTensor *input, const aclTens
         IsConv3DTransposeV2WhiteListCase(caseInfo, CONV3D_TRANSPOSE_V2_WHITE_LIST) ||
         IsConv3DTransposeUseV2(params)) {
         OP_LOGD("conv3dtranspose: useHf32 is: %d, hf32 is %ld", useHf32, hf32);
-        if (IsConv3DTransposeUseV2(params)) {
+        if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
           ret = ADD_TO_LAUNCHER_LIST_AICORE(Conv3DTransposeV2, OP_INPUT(inputSize, input, weight, bias, nullptr),
                                           OP_OUTPUT(output), OP_ATTR(stride5, pad5, dilation5, groups,
                                           dataFormat, outputPad5, 0, useHf32, paddingP, hf32),
