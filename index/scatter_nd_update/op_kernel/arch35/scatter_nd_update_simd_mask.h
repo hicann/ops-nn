@@ -123,7 +123,7 @@ __aicore__ inline void ScatterNdUpdateSimdMask<T, U, OFFSET_T>::CopyOutOneLine(i
     SetFlag<HardEvent::V_S>(eventIdVToS);
     WaitFlag<HardEvent::V_S>(eventIdVToS);
     int64_t rowOfset = outOfstLocal(0);
-    int64_t outOfset = rowOfset + colIdx * tilingData_.afterAxisFactor;
+    int64_t outOfset = rowOfset * tilingData_.afterAxis + colIdx * tilingData_.afterAxisFactor;
     this->template CopyOut<T>(yGm_[outOfset], dataLocal[0], colLen);
     this->dataQueue_.FreeTensor(dataLocal);
 }
@@ -140,8 +140,7 @@ __aicore__ inline void ScatterNdUpdateSimdMask<T, U, OFFSET_T>::ProcessMaskOneLi
         SetFlag<HardEvent::V_S>(eventIdVToS);
         WaitFlag<HardEvent::V_S>(eventIdVToS);
         int64_t idx = outOfstLocal(0);
-        int64_t outOfstVal = idx * tilingData_.strideList[tilingData_.indexRankSize - 1];
- 	    if (outOfstVal < 0 || outOfstVal >= tilingData_.outputStorageShapeSize) {
+ 	    if (idx < 0 || idx >= tilingData_.varStorageInAxis) {
  	        continue;
  	    }
         if (maskLocal(idx) != 0) {
