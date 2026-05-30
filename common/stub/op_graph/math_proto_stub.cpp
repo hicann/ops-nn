@@ -93,4 +93,18 @@ REG_OP(Fill)
                               DT_QUINT8, DT_QINT32, DT_QINT16, DT_QUINT16, DT_UINT16,
                               DT_COMPLEX128, DT_FLOAT16, DT_BF16, DT_UINT32, DT_UINT64, DT_STRING}))
     .OP_END_FACTORY_REG(Fill)
+
+REG_OP(Sort)
+    .INPUT(x, TensorType({DT_FLOAT16, DT_FLOAT, DT_INT16, DT_INT8,
+                          DT_UINT8, DT_INT32, DT_INT64, DT_BF16, 
+                          DT_UINT32, DT_UINT16, DT_UINT64}))
+    .OUTPUT(y1, TensorType({DT_FLOAT16, DT_FLOAT, DT_INT16, DT_INT8,
+                            DT_UINT8, DT_INT32, DT_INT64, DT_BF16,
+                            DT_UINT32, DT_UINT16, DT_UINT64}))
+    .OUTPUT(y2, TensorType({DT_INT32, DT_INT64}))
+    .ATTR(axis, Int, -1)
+    .ATTR(descending, Bool, false)
+    .ATTR(stable, Bool, false)
+    .ATTR(y2_dtype, Type, DT_INT32)
+    .OP_END_FACTORY_REG(Sort)
 } // namespace ge
