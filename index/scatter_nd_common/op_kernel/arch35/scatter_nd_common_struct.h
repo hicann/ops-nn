@@ -38,6 +38,7 @@ struct ScatterNdCommonSimtTilingData{
 
 struct ScatterNdCommonSimtSortTilingData{
     uint64_t strideList[MAX_RANK_COUNT_NUM];
+    uint64_t outPutShape[MAX_SHAPE_RANK_NUM];
     int64_t indicesFactor;
     int64_t afterAxis;
     int64_t varInAxis;

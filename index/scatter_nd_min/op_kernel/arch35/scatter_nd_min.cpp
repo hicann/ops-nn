@@ -16,6 +16,7 @@
 
 #include "../scatter_nd_common/arch35/scatter_nd_common_simd_sort.h"
 #include "../scatter_nd_common/arch35/scatter_nd_common_simt.h"
+#include "../scatter_nd_common/arch35/scatter_nd_common_simt_sort.h"
 #include "../scatter_nd_common/arch35/scatter_nd_min_tiling_key.h"
 #include "../scatter_nd_common/arch35/scatter_nd_common_base.h"
 
@@ -123,6 +124,69 @@ __global__ __aicore__ void scatter_nd_min(
             GET_TILING_DATA_WITH_STRUCT(ScatterNdCommonSimtTilingData, tilingData, tiling);
             ScatterNdCommon::ScatterNdCommonSimt<DTYPE_VAR, DTYPE_INDICES, uint64_t, MODE_MIN> op(tilingData, pipe);
             op.Init(x, indices, updates, y);
+            op.Process();
+        }
+    } else if constexpr (TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMT_SORT && CAST_MODE == CAST_0 && ADDR_MODE == TPL_MODE_ADDR_INT32) {
+        if constexpr (std::is_same<int8_t, DTYPE_VAR>::value || std::is_same<int16_t, DTYPE_VAR>::value) {
+            return;
+        } else {
+            GET_TILING_DATA_WITH_STRUCT(ScatterNdCommonSimtSortTilingData, tilingData, tiling);
+            ScatterNdCommon::ScatterNdCommonSimtSort<DTYPE_VAR, DTYPE_INDICES, uint32_t, DTYPE_INDICES, CAST_0, MODE_MIN> op(tilingData, pipe);
+            op.Init(x, indices, updates, y, workspace);
+            op.Process();
+        }
+    } else if constexpr (TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMT_SORT && CAST_MODE == CAST_1 && ADDR_MODE == TPL_MODE_ADDR_INT32) {
+        if constexpr (std::is_same<int8_t, DTYPE_VAR>::value || std::is_same<int16_t, DTYPE_VAR>::value) {
+            return;
+        } else {
+            GET_TILING_DATA_WITH_STRUCT(ScatterNdCommonSimtSortTilingData, tilingData, tiling);
+            ScatterNdCommon::ScatterNdCommonSimtSort<DTYPE_VAR, DTYPE_INDICES, uint32_t, int16_t, CAST_1, MODE_MIN> op(tilingData, pipe);
+            op.Init(x, indices, updates, y, workspace);
+            op.Process();
+        }
+    } else if constexpr (TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMT_SORT && CAST_MODE == CAST_2 && ADDR_MODE == TPL_MODE_ADDR_INT32) {
+        if constexpr (std::is_same<int8_t, DTYPE_VAR>::value || std::is_same<int16_t, DTYPE_VAR>::value) {
+            return;
+        } else {
+            GET_TILING_DATA_WITH_STRUCT(ScatterNdCommonSimtSortTilingData, tilingData, tiling);
+            ScatterNdCommon::ScatterNdCommonSimtSort<DTYPE_VAR, DTYPE_INDICES, uint32_t, int32_t, CAST_2, MODE_MIN> op(tilingData, pipe);
+            op.Init(x, indices, updates, y, workspace);
+            op.Process();
+        }
+    } else if constexpr (TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMT_SORT && CAST_MODE == CAST_3 && ADDR_MODE == TPL_MODE_ADDR_INT32) {
+        if constexpr (std::is_same<int8_t, DTYPE_VAR>::value || std::is_same<int16_t, DTYPE_VAR>::value) {
+            return;
+        } else {
+            GET_TILING_DATA_WITH_STRUCT(ScatterNdCommonSimtSortTilingData, tilingData, tiling);
+            ScatterNdCommon::ScatterNdCommonSimtSort<DTYPE_VAR, DTYPE_INDICES, uint32_t, int16_t, CAST_3, MODE_MIN> op(tilingData, pipe);
+            op.Init(x, indices, updates, y, workspace);
+            op.Process();
+        }
+    } else if constexpr (TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMT_SORT && CAST_MODE == CAST_4 && ADDR_MODE == TPL_MODE_ADDR_INT32) {
+        if constexpr (std::is_same<int8_t, DTYPE_VAR>::value || std::is_same<int16_t, DTYPE_VAR>::value) {
+            return;
+        } else {
+            GET_TILING_DATA_WITH_STRUCT(ScatterNdCommonSimtSortTilingData, tilingData, tiling);
+            ScatterNdCommon::ScatterNdCommonSimtSort<DTYPE_VAR, DTYPE_INDICES, uint32_t, uint8_t, CAST_4, MODE_MIN> op(tilingData, pipe);
+            op.Init(x, indices, updates, y, workspace);
+            op.Process();
+        }
+    } else if constexpr (TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMT_SORT && CAST_MODE == CAST_5 && ADDR_MODE == TPL_MODE_ADDR_INT32) {
+        if constexpr (std::is_same<int8_t, DTYPE_VAR>::value || std::is_same<int16_t, DTYPE_VAR>::value) {
+            return;
+        } else {
+            GET_TILING_DATA_WITH_STRUCT(ScatterNdCommonSimtSortTilingData, tilingData, tiling);
+            ScatterNdCommon::ScatterNdCommonSimtSort<DTYPE_VAR, DTYPE_INDICES, uint32_t, uint8_t, CAST_5, MODE_MIN> op(tilingData, pipe);
+            op.Init(x, indices, updates, y, workspace);
+            op.Process();
+        }
+    } else if constexpr (TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMT_SORT && CAST_MODE == CAST_0 && ADDR_MODE == TPL_MODE_ADDR_INT64) {
+        if constexpr (std::is_same<int8_t, DTYPE_VAR>::value || std::is_same<int16_t, DTYPE_VAR>::value) {
+            return;
+        } else {
+            GET_TILING_DATA_WITH_STRUCT(ScatterNdCommonSimtSortTilingData, tilingData, tiling);
+            ScatterNdCommon::ScatterNdCommonSimtSort<DTYPE_VAR, DTYPE_INDICES, uint64_t, DTYPE_INDICES, CAST_0, MODE_MIN> op(tilingData, pipe);
+            op.Init(x, indices, updates, y, workspace);
             op.Process();
         }
     }

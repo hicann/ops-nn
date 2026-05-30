@@ -18,7 +18,7 @@
 
 #include "index/scatter_nd_common/op_host/arch35/scatter_nd_common_base_tiling.h"
 #include "index/scatter_nd_common/op_host/arch35/scatter_nd_common_simd_sort_tiling.h"
-
+#include "index/scatter_nd_common/op_host/arch35/scatter_nd_common_simt_sort_tiling.h"
 #include "index/scatter_nd_common/op_host/arch35/scatter_nd_common_simt_tiling.h"
 
 namespace optiling {
@@ -30,6 +30,16 @@ public:
     explicit ScatterNdMaxSimtTiling(gert::TilingContext* context) : ScatterNdCommonSimtTiling(context)
     {}
     ~ScatterNdMaxSimtTiling() override
+    {}
+};
+
+// ---------------------------ScatterNdMax Simt Sort Tiling---------------------------
+class ScatterNdMaxSimtSortTiling : public ScatterNdCommonSimtSortTiling
+{
+public:
+    explicit ScatterNdMaxSimtSortTiling(gert::TilingContext* context) : ScatterNdCommonSimtSortTiling(context)
+    {}
+    ~ScatterNdMaxSimtSortTiling() override
     {}
 };
 

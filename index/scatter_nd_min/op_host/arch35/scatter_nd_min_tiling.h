@@ -18,7 +18,7 @@
 
 #include "index/scatter_nd_common/op_host/arch35/scatter_nd_common_base_tiling.h"
 #include "index/scatter_nd_common/op_host/arch35/scatter_nd_common_simd_sort_tiling.h"
-
+#include "index/scatter_nd_common/op_host/arch35/scatter_nd_common_simt_sort_tiling.h"
 #include "index/scatter_nd_common/op_host/arch35/scatter_nd_common_simt_tiling.h"
 
 namespace optiling {
@@ -33,15 +33,15 @@ public:
     {}
 };
 
-// // ---------------------------ScatterNdMin Simt Sort Tiling---------------------------
-// class ScatterNdMinSimtSortTiling : public ScatterNdCommonSimtSortTiling
-// {
-// public:
-//     explicit ScatterNdMinSimtSortTiling(gert::TilingContext* context) : ScatterNdCommonSimtSortTiling(context)
-//     {}
-//     ~ScatterNdMinSimtSortTiling() override
-//     {}
-// };
+// ---------------------------ScatterNdMin Simt Sort Tiling---------------------------
+class ScatterNdMinSimtSortTiling : public ScatterNdCommonSimtSortTiling
+{
+public:
+    explicit ScatterNdMinSimtSortTiling(gert::TilingContext* context) : ScatterNdCommonSimtSortTiling(context)
+    {}
+    ~ScatterNdMinSimtSortTiling() override
+    {}
+};
 
 // ---------------------------ScatterNdMin Simd Sort Tiling---------------------------
 class ScatterNdMinSimdSortTiling : public ScatterNdCommonSimdSortTiling
