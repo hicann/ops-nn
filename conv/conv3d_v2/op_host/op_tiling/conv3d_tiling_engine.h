@@ -118,9 +118,6 @@ public:
     void SetHF32(bool enable);
 
     bool GetConv3DV2TilingData(Ops::NN::Conv3dV2::Conv3DV2TilingData &tilingData);
-    uint32_t GetNumBlocks() const;
-    void GetNumBlocksDetail(uint32_t &batchDim, uint32_t &mDim, uint32_t &nDim,
-                           uint32_t &doDim, uint32_t &groupDim) const;
 
     void PrintOpTilingData(const Ops::NN::Conv3dV2::Conv3DV2TilingData &tilingData) const;
     void PrintApiTilingDataShapeInfo(const Ops::NN::Conv3dV2::Conv3DV2TilingData &tilingData) const;
@@ -137,6 +134,9 @@ public:
                                    const std::vector<std::vector<uint32_t>> &inputRanges,
                                    uint32_t rangeIdx,
                                    std::vector<uint32_t> &record);
+    bool ValidateOptimizedTilingContract(const optiling::Conv3dOpsTiling::NumBlocksRes &numBlocksRes) const;
+    bool ValidateAxisContract(uint64_t wholeDim, uint64_t realWholeDim,
+                              uint32_t dim, const char *axisName) const;
     uint64_t CalcTotalCost(uint32_t batchDim, uint32_t mDim, uint32_t nDim,
                            uint32_t doDim, uint32_t groupDim);
     void NumBlocksFactorMix(uint32_t orgDim, std::vector<uint32_t> &inputRange,
@@ -150,8 +150,7 @@ public:
     bool ComputeNumBlocks();
     bool ComputeApiTiling(Ops::NN::Conv3dV2::Conv3DV2TilingData &tilingdata);
     bool GetConv3dApiTiling(Ops::NN::Conv3dV2::Conv3DV2TilingData &tilingdata);
-    void SetSingleOutputShapeByMode();
-    void SetSingleOutputShapeByModeOpt();
+    void SetSingleOutputShapeByMode(const optiling::Conv3dOpsTiling::NumBlocksRes &numBlocksRes);
     void GetConv3dApiTilingPartSetAttrAndShape();
     void GetConv3dApiTilingSetGroupsInfo();
     bool InitOutputOrder();

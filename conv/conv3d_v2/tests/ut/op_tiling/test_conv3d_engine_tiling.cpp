@@ -770,14 +770,13 @@ TEST(TestConv3dTilingEngine, PerformanceTest_NumBlocksDecisionComplexShape)
     EXPECT_TRUE(engine.ComputeNumBlocks());
 
     // Verify we get valid NumBlocks values
-    uint32_t batchDim, mDim, nDim, doDim, groupDim;
-    engine.GetNumBlocksDetail(batchDim, mDim, nDim, doDim, groupDim);
+    const auto &numBlocksRes = engine.numBlocksResOpt_;
 
-    EXPECT_GT(batchDim, 0);
-    EXPECT_GT(mDim, 0);
-    EXPECT_GT(nDim, 0);
-    EXPECT_GT(doDim, 0);
-    EXPECT_GT(groupDim, 0);
+    EXPECT_GT(numBlocksRes.batchDim, 0);
+    EXPECT_GT(numBlocksRes.mDim, 0);
+    EXPECT_GT(numBlocksRes.nDim, 0);
+    EXPECT_GT(numBlocksRes.doDim, 0);
+    EXPECT_GT(numBlocksRes.groupDim, 0);
 }
 
 TEST(TestConv3dTilingEngine, ComputeNumBlocks_TieBreakerPreference)
@@ -802,12 +801,11 @@ TEST(TestConv3dTilingEngine, ComputeNumBlocks_TieBreakerPreference)
     EXPECT_TRUE(engine.ComputeNumBlocks());
 
     // Verify NumBlocks values follow the documented preference
-    uint32_t batchDim, mDim, nDim, doDim, groupDim;
-    engine.GetNumBlocksDetail(batchDim, mDim, nDim, doDim, groupDim);
+    const auto &numBlocksRes = engine.numBlocksResOpt_;
 
-    EXPECT_GT(batchDim, 0);
-    EXPECT_GT(groupDim, 0);
-    EXPECT_GT(doDim, 0);
+    EXPECT_GT(numBlocksRes.batchDim, 0);
+    EXPECT_GT(numBlocksRes.groupDim, 0);
+    EXPECT_GT(numBlocksRes.doDim, 0);
 }
 
 // ---------------------------------------------------------------------------
@@ -1227,11 +1225,11 @@ TEST(TestConv3dTilingEngine, ComputeNumBlocks_MinMaxScenarios)
     // Test with single core - should use minimum distribution
     EXPECT_TRUE(engine.ComputeNumBlocks());
 
-    uint32_t batchDim, mDim, nDim, doDim, groupDim;
-    engine.GetNumBlocksDetail(batchDim, mDim, nDim, doDim, groupDim);
+    const auto &numBlocksRes = engine.numBlocksResOpt_;
 
     // With single core, total should be 1
-    EXPECT_EQ(batchDim * mDim * nDim * doDim * groupDim, 1);
+    EXPECT_EQ(numBlocksRes.batchDim * numBlocksRes.mDim * numBlocksRes.nDim *
+              numBlocksRes.doDim * numBlocksRes.groupDim, 1);
 }
 
 // ---------------------------------------------------------------------------

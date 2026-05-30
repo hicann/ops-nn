@@ -37,6 +37,7 @@ Conv3dTilingEngine::Conv3dTilingEngine(const std::string &logTag)
     numBlocksRes_.doDim = 1;
     numBlocksRes_.groupDim = 1;
     numBlocksRes_.minCost = MAX_64_BIT_NUM;
+    numBlocksResOpt_ = numBlocksRes_;
 
     isPointWise = false;
     kernelPointWise_ = false;
@@ -357,24 +358,8 @@ bool Conv3dTilingEngine::GetConv3DV2TilingData(Ops::NN::Conv3dV2::Conv3DV2Tiling
     return true;
 }
 
-uint32_t Conv3dTilingEngine::GetNumBlocks() const
-{
-    return numBlocksRes_.batchDim * numBlocksRes_.mDim * numBlocksRes_.nDim *
-           numBlocksRes_.doDim * numBlocksRes_.groupDim;
-}
-
-void Conv3dTilingEngine::GetNumBlocksDetail(uint32_t &batchDim, uint32_t &mDim, uint32_t &nDim,
-                                          uint32_t &doDim, uint32_t &groupDim) const
-{
-    batchDim = numBlocksRes_.batchDim;
-    mDim = numBlocksRes_.mDim;
-    nDim = numBlocksRes_.nDim;
-    doDim = numBlocksRes_.doDim;
-    groupDim = numBlocksRes_.groupDim;
-}
-
-// Map internal engine state (shapeInfo_/attrInfo_/numBlocksRes_/flagInfo_) into Conv3DV2TilingData::convRunInfo.
-// Precondition: CheckAllParams() has passed and numBlocksRes_ has been computed.
+// Map internal engine state into Conv3DV2TilingData::convRunInfo.
+// Precondition: CheckAllParams() has passed and numBlocksResOpt_ has been selected.
 void Conv3dTilingEngine::GetConv3DRunInfo(Ops::NN::Conv3dV2::Conv3DV2TilingData &tilingdata)
 {
     OP_LOGD(logTag_.c_str(), "Filling Conv3DRunInfo from engine state.");
@@ -394,7 +379,7 @@ void Conv3dTilingEngine::GetConv3DRunInfo(Ops::NN::Conv3dV2::Conv3DV2TilingData 
     runInfo.hout = shapeInfo_.ho;
     runInfo.wout = shapeInfo_.wo;
 
-    // 使用优化后的分核，更负载均衡
+    // Use the same selected block dimensions for convRunInfo and Conv3D API tiling.
     runInfo.batchDim = numBlocksResOpt_.batchDim;
     runInfo.mDim = numBlocksResOpt_.mDim;
     runInfo.nDim = numBlocksResOpt_.nDim;
@@ -1430,28 +1415,33 @@ void Conv3dTilingEngine::CoreNumBlocksDecision()
     std::vector<uint32_t> dimsRecord;
     NumBlocksDecisionBackTrack(numBlocksResTmp, allRanges, NUMBLOCKS_BATCH_IDX, dimsRecord);
     numBlocksRes_ = numBlocksResTmp;
+    numBlocksResOpt_ = numBlocksRes_;
 
     /**
-     * An optimized core partitioning logic is implemented here to ensure that the dout axis partitioning (doDim) is
-     * used as fully as possible on the kernel side.
-     * In order to ensure that part of the logic entering this optimized core partitioning does not degrade performance,
-     * the following two constraints are implemented:
-     * ** 1. This logic only updates the inter-core allocation for different axes (such as doDim) and the amount of
-     *       data that each core needs to process (such as singleCoreDo)
-     * ** 2. Optimized core partitioning is only performed for cases that meet DO_DIM_FILTER_THRESHOLD
+     * Re-run the search after filtering doRange, but accept the multi-axis result only if it is a valid selected
+     * tiling contract and does not regress the host cost model. The selected dims will be used by both convRunInfo and
+     * Conv3D API tiling, so baseline/optimized single-core shapes must not be mixed later.
     */
     InitNumBlocksRes(numBlocksResTmp);
     // filter the d-axis aicore partitioning range to avoid unused idle-core scenarios in its candidate values
     NumBlocksRangesFilter(shapeInfo_.dOut, numBlocksRanges_.doRange);
     allRanges[NUMBLOCKS_DO_IDX] = numBlocksRanges_.doRange;
+    dimsRecord.clear();
     NumBlocksDecisionBackTrack(numBlocksResTmp, allRanges, NUMBLOCKS_BATCH_IDX, dimsRecord);
     if (numBlocksRes_.doDim > DO_DIM_FILTER_THRESHOLD) {
         OP_LOGD(logTag_.c_str(), "Using original block dimensions: doDim (%u) > threshold (%u), keeping original block dimensions",
                 numBlocksRes_.doDim, DO_DIM_FILTER_THRESHOLD);
-        numBlocksResOpt_ = numBlocksRes_;
+    } else if (numBlocksResTmp.minCost > numBlocksRes_.minCost) {
+        OP_LOGD(logTag_.c_str(),
+                "Rejecting optimized block dimensions: optimized cost (%lu) is greater than baseline cost (%lu)",
+                numBlocksResTmp.minCost, numBlocksRes_.minCost);
+    } else if (!ValidateOptimizedTilingContract(numBlocksResTmp)) {
+        OP_LOGD(logTag_.c_str(), "Rejecting optimized block dimensions because selected tiling contract is invalid.");
     } else {
-        OP_LOGD(logTag_.c_str(), "Entering block dimension optimization logic: original doDim (%u) <= threshold (%u), using filtered optimized doDim (%u)",
-                numBlocksRes_.doDim, DO_DIM_FILTER_THRESHOLD, numBlocksResTmp.doDim);
+        OP_LOGD(logTag_.c_str(),
+                "Accepting optimized block dimensions: batch %u, m %u, n %u, do %u, group %u",
+                numBlocksResTmp.batchDim, numBlocksResTmp.mDim, numBlocksResTmp.nDim,
+                numBlocksResTmp.doDim, numBlocksResTmp.groupDim);
         numBlocksResOpt_ = numBlocksResTmp;
     }
 }
@@ -1464,6 +1454,61 @@ void Conv3dTilingEngine::InitNumBlocksRes(optiling::Conv3dOpsTiling::NumBlocksRe
     numBlocksRes.doDim = 1;
     numBlocksRes.groupDim = 1;
     numBlocksRes.minCost = MAX_64_BIT_NUM;
+}
+
+bool Conv3dTilingEngine::ValidateAxisContract(uint64_t wholeDim, uint64_t realWholeDim,
+                                              uint32_t dim, const char *axisName) const
+{
+    if (wholeDim == 0 || realWholeDim == 0) {
+        OP_LOGD(logTag_.c_str(), "Invalid selected dims: %s has zero shape.", axisName);
+        return false;
+    }
+    const uint64_t maxDimPerCore = CeilDiv(wholeDim, static_cast<uint64_t>(dim));
+    if (maxDimPerCore == 0) {
+        OP_LOGD(logTag_.c_str(), "Invalid selected dims: %s maxDimPerCore is zero.", axisName);
+        return false;
+    }
+    const uint64_t realDim = CeilDiv(wholeDim, maxDimPerCore);
+    const uint64_t tailStart = (realDim - 1) * maxDimPerCore;
+    if (tailStart >= realWholeDim) {
+        OP_LOGD(logTag_.c_str(), "Invalid selected dims: %s tailStart %lu exceeds realWholeDim %lu.",
+                axisName, tailStart, realWholeDim);
+        return false;
+    }
+    return true;
+}
+
+bool Conv3dTilingEngine::ValidateOptimizedTilingContract(const optiling::Conv3dOpsTiling::NumBlocksRes &numBlocksRes) const
+{
+    if (numBlocksRes.batchDim == 0 || numBlocksRes.mDim == 0 || numBlocksRes.nDim == 0 ||
+        numBlocksRes.doDim == 0 || numBlocksRes.groupDim == 0) {
+        OP_LOGD(logTag_.c_str(), "Invalid selected dims: zero dimension.");
+        return false;
+    }
+
+    uint64_t totalBlocks = 0;
+    if (Conv3dCommon::MulWithOverflowCheck(totalBlocks,
+            static_cast<uint64_t>(numBlocksRes.batchDim),
+            static_cast<uint64_t>(numBlocksRes.mDim),
+            static_cast<uint64_t>(numBlocksRes.nDim),
+            static_cast<uint64_t>(numBlocksRes.doDim),
+            static_cast<uint64_t>(numBlocksRes.groupDim)) ||
+        totalBlocks > static_cast<uint64_t>(platformInfo_.aicoreNum)) {
+        OP_LOGD(logTag_.c_str(), "Invalid selected dims: total blocks %lu overflow or exceed aicoreNum %u.",
+                totalBlocks, platformInfo_.aicoreNum);
+        return false;
+    }
+
+    const uint32_t n0 = g_cubeMknMap.GetMKN(descInfo_.fMapDtype, MKN_N_IDX);
+    const uint64_t alignedCout = AlignUp(shapeInfo_.coutOpt, n0);
+    const uint64_t totalM = outputOrder_ == Conv3dApiTiling::M_Mode ? shapeInfo_.ho * shapeInfo_.wo : shapeInfo_.ho;
+    return ValidateAxisContract(shapeInfo_.batch, shapeInfo_.batch, numBlocksRes.batchDim, "batch") &&
+           ValidateAxisContract(shapeInfo_.dOut, shapeInfo_.dOut, numBlocksRes.doDim, "dout") &&
+           ValidateAxisContract(alignedCout, shapeInfo_.coutOpt, numBlocksRes.nDim, "cout") &&
+           ValidateAxisContract(totalM, totalM, numBlocksRes.mDim, "m") &&
+           ValidateAxisContract(static_cast<uint64_t>(attrInfo_.groupOpt),
+                                static_cast<uint64_t>(attrInfo_.groupOpt),
+                                numBlocksRes.groupDim, "group");
 }
 
 void Conv3dTilingEngine::NumBlocksDecisionBackTrack(optiling::Conv3dOpsTiling::NumBlocksRes &numBlocksResTmp,
@@ -1618,38 +1663,20 @@ bool Conv3dTilingEngine::GetConv3dApiTiling(Ops::NN::Conv3dV2::Conv3DV2TilingDat
     return true;
 }
 
-void Conv3dTilingEngine::SetSingleOutputShapeByMode()
+void Conv3dTilingEngine::SetSingleOutputShapeByMode(const optiling::Conv3dOpsTiling::NumBlocksRes &numBlocksRes)
 {
-    OP_LOGD(logTag_.c_str(), "Setting single output shape by mode");
+    OP_LOGD(logTag_.c_str(), "Setting single output shape by selected block dims");
 
-    int32_t singleCoreCo = numBlocksRes_.nDim == 1 ? shapeInfo_.coutOpt :
-        AlignUp(shapeInfo_.coutOpt, g_cubeMknMap.GetMKN(descInfo_.fMapDtype, MKN_N_IDX)) / numBlocksRes_.nDim;
-    int32_t singleCoreDo = CeilDiv(static_cast<uint32_t>(shapeInfo_.dOut), numBlocksRes_.doDim);
+    int32_t singleCoreCo = numBlocksRes.nDim == 1 ? shapeInfo_.coutOpt :
+        AlignUp(shapeInfo_.coutOpt, g_cubeMknMap.GetMKN(descInfo_.fMapDtype, MKN_N_IDX)) / numBlocksRes.nDim;
+    int32_t singleCoreDo = CeilDiv(static_cast<uint32_t>(shapeInfo_.dOut), numBlocksRes.doDim);
 
     if (outputOrder_ == Conv3dApiTiling::M_Mode) {
-        int64_t singleCoreMo = CeilDiv(static_cast<uint64_t>(shapeInfo_.ho * shapeInfo_.wo), static_cast<uint64_t>(numBlocksRes_.mDim));
+        int64_t singleCoreMo = CeilDiv(static_cast<uint64_t>(shapeInfo_.ho * shapeInfo_.wo), static_cast<uint64_t>(numBlocksRes.mDim));
         conv3dApiTiling_.SetSingleOutputShape(singleCoreCo, singleCoreDo, singleCoreMo);
     } else {
-        int64_t singleCoreHo = CeilDiv(static_cast<uint64_t>(shapeInfo_.ho), static_cast<uint64_t>(numBlocksRes_.mDim));
+        int64_t singleCoreHo = CeilDiv(static_cast<uint64_t>(shapeInfo_.ho), static_cast<uint64_t>(numBlocksRes.mDim));
         conv3dApiTiling_.SetSingleOutputShape(singleCoreCo, singleCoreDo, singleCoreHo, shapeInfo_.wo);
-    }
-}
-
-void Conv3dTilingEngine::SetSingleOutputShapeByModeOpt()
-{
-    OP_LOGD(logTag_.c_str(), "Update single output shape by mode");
-    int64_t singleCoreGroupOpt = static_cast<int64_t>(CeilDiv(attrInfo_.groupOpt, numBlocksResOpt_.groupDim));
-
-    int32_t singleCoreCo = numBlocksResOpt_.nDim == 1 ? shapeInfo_.coutOpt :
-        AlignUp(shapeInfo_.coutOpt, g_cubeMknMap.GetMKN(descInfo_.fMapDtype, MKN_N_IDX)) / numBlocksResOpt_.nDim;
-    int32_t singleCoreDo = CeilDiv(static_cast<uint32_t>(shapeInfo_.dOut), numBlocksResOpt_.doDim);
-
-    if (outputOrder_ == Conv3dApiTiling::M_Mode) {
-        int64_t singleCoreMo = CeilDiv(static_cast<uint64_t>(shapeInfo_.ho * shapeInfo_.wo), static_cast<uint64_t>(numBlocksResOpt_.mDim));
-        conv3dApiTiling_.SetSingleOutputShapeOpt(singleCoreCo, singleCoreDo, singleCoreMo, singleCoreGroupOpt);
-    } else {
-        int64_t singleCoreHo = CeilDiv(static_cast<uint64_t>(shapeInfo_.ho), static_cast<uint64_t>(numBlocksResOpt_.mDim));
-        conv3dApiTiling_.SetSingleOutputShapeOpt(singleCoreCo, singleCoreDo, singleCoreHo, shapeInfo_.wo, singleCoreGroupOpt);
     }
 }
 
@@ -1680,12 +1707,10 @@ void Conv3dTilingEngine::GetConv3dApiTilingSetGroupsInfo()
 
     conv3dApiTiling_.SetGroups(static_cast<int64_t>(attrInfo_.groups));
 
-    int64_t singleCoreGroupOpt = static_cast<int64_t>(CeilDiv(attrInfo_.groupOpt, numBlocksRes_.groupDim));
+    int64_t singleCoreGroupOpt = static_cast<int64_t>(CeilDiv(attrInfo_.groupOpt, numBlocksResOpt_.groupDim));
     conv3dApiTiling_.SetOptGroupInfo(static_cast<int64_t>(attrInfo_.groupOpt), singleCoreGroupOpt,
                                      static_cast<int64_t>(shapeInfo_.cinOpt), static_cast<int64_t>(shapeInfo_.coutOpt));
-    SetSingleOutputShapeByMode();
-    // It updates the singleCoreXXX values in conv3dApiTiling_ with optimized values
-    SetSingleOutputShapeByModeOpt();
+    SetSingleOutputShapeByMode(numBlocksResOpt_);
     conv3dApiTiling_.SetOutputOrder(outputOrder_);
 
     conv3dApiTiling_.SetWeightType(Conv3dApiTiling::TPosition::GM, descInfo_.weightFormat,
