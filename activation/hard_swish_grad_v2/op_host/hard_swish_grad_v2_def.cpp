@@ -100,7 +100,7 @@ public:
         .NeedCheckSupportFlag(false)
         .PrecisionReduceFlag(true)
         .ExtendCfgInfo("opFile.value", "hard_swish_grad_v2_apt");
-    this->AICore().AddConfig("mc62cm12a", config950);    
+    this->AICore().AddConfig("mc62", config950);    
     this->AICore().AddConfig("ascend950", config950);
   }
 };

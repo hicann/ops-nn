@@ -95,8 +95,7 @@ int64_t BatchNormV3FullReduceTiling::DoUbTiling(const int64_t blockFactor, int64
 
 bool BatchNormV3FullReduceTiling::IsCapable()
 {
-    if (Ops::NN::OpTiling::IsRegbaseSocVersion(context_) ||
-        socVersion == platform_ascendc::SocVersion::MC62CM12A) {
+    if (Ops::NN::OpTiling::IsRegbaseSocVersion(context_)) {
         return false;
     }
     return true;

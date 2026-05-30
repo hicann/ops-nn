@@ -48,7 +48,7 @@ const AscendString RELU_WEIGHT_1 = "relu_weight1";
 
 const std::map<std::string, NpuArch> SUPPORT_SOC_LIST = {
     {"Ascend950", NpuArch::DAV_3510},
-    {"MC62CM12A", NpuArch::DAV_5102}
+    {"MC62", NpuArch::DAV_5102}
 };
 
 constexpr int32_t EXTENDCONV2D_QUANT_SCALE_0_INDEX = 4;

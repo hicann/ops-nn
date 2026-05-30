@@ -114,7 +114,7 @@
         {"ascend035", "Ascend035"},                                                                                     \
         {"kirinx90", "KrinX90"},                                                                                        \
         {"kirin9030", "Kirin9030"},                                                                                     \
-        {"mc62cm12a", "MC62CM12A"}                                                                                      \
+        {"mc62", "MC62"}                                                                                      \
     };                                                                                                                 \
     std::string buildSocVersion = STR(BUILD_SOC_VERSION);                                                              \
     if (!buildSocVersion.empty())                                                                                      \

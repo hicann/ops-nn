@@ -21,5 +21,5 @@ add_kernel_sources(
 
 add_kernel_sources(
     KERNEL_SRC arch35/quant_batch_matmul_v4.cpp
-    COMPUTE_UNITS mc62cm12a
+    COMPUTE_UNITS mc62
 )

@@ -83,7 +83,7 @@ set(ASCEND_COMPUTE_UNIT
     "ascend910b"
     CACHE STRING "soc that need to be compiled")
 set(ASCEND_ALL_COMPUTE_UNIT
-    "ascend310p;ascend910;ascend910b;ascend910_93;ascend950;ascend350;ascend031;ascend035;ascend310b;ascend910_55;mc62cm12a;kirinx90;kirin9030"
+    "ascend310p;ascend910;ascend910b;ascend910_93;ascend950;ascend350;ascend031;ascend035;ascend310b;ascend910_55;mc62;kirinx90;kirin9030"
     CACHE STRING "all soc list")
 set(VENDOR_NAME
     "custom"

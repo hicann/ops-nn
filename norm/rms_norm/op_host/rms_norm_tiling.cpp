@@ -357,7 +357,7 @@ static ge::graphStatus Tiling4RmsNorm(gert::TilingContext* context)
     }
 
     numColAlign = CeilDiv(numCol, static_cast<uint64_t>(dataPerBlock)) * dataPerBlock;
-    if (Ops::NN::OpTiling::IsRegbaseSocVersion(context) || curSocVersion == platform_ascendc::SocVersion::MC62CM12A) {
+    if (Ops::NN::OpTiling::IsRegbaseSocVersion(context)) {
         RMSNormArch35TilingData arch35TilingData;
         return TilingArch354RmsNorm(
             context, numRow, numCol, numCore, ubSize, xDataType, gammaDataType, *epsilon, tiling, arch35TilingData);
@@ -502,8 +502,7 @@ static ge::graphStatus Tiling4RmsNorm(gert::TilingContext* context)
     if ((curSocVersion == platform_ascendc::SocVersion::ASCEND910) && (modeKey == 0)) {
         tilingKey = tilingKey + xDtypeKey * DTYPE_WEIGHT;
     }
-    if (Ops::NN::OpTiling::IsRegbaseSocVersion(context) ||
-        curSocVersion == platform_ascendc::SocVersion::MC62CM12A) {
+    if (Ops::NN::OpTiling::IsRegbaseSocVersion(context)) {
         tilingKey = SocVersion * SOC_WEIGHT + modeKey;
     }
     context->SetTilingKey(tilingKey);

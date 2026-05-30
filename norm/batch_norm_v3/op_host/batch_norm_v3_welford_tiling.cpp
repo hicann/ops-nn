@@ -51,8 +51,7 @@ uint32_t BatchNormV3WelfordTiling::FindDichotomizeAddDiffSize(uint32_t parallelN
 
 bool BatchNormV3WelfordTiling::IsCapable()
 {
-    if (Ops::NN::OpTiling::IsRegbaseSocVersion(context_) ||
-        socVersion == platform_ascendc::SocVersion::MC62CM12A) {
+    if (Ops::NN::OpTiling::IsRegbaseSocVersion(context_)) {
         return false;
     }
     return true;

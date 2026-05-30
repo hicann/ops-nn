@@ -811,7 +811,7 @@ endfunction()
 # convert short socVersion to long socVersion
 ###################################################################################################
 function(map_compute_unit compute_unit compute_unit_long)
-    set(compute_unit_keys "ascend910b" "ascend310p" "ascend910_93" "ascend950" "ascend350" "mc62cm12a")
+    set(compute_unit_keys "ascend910b" "ascend310p" "ascend910_93" "ascend950" "ascend350" "mc62")
     set(compute_unit_values "ascend910b1" "ascend310p1" "ascend910_9391" "ascend950pr_9599" "ascend350_355e" "mc62cm12aa")
     list(FIND compute_unit_keys ${compute_unit} index)
     if(NOT index EQUAL -1)

@@ -16,7 +16,7 @@ add_kernel_sources(
 
 add_kernel_sources(
     KERNEL_SRC arch35/batch_mat_mul_v3.cpp
-    COMPUTE_UNITS mc62cm12a
+    COMPUTE_UNITS mc62
 )
 
 add_kernel_sources(

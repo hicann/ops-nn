@@ -69,7 +69,7 @@ struct SocConfig {
     SocConfig(const std::string& shortSoc, const std::string& soc) : shortSocVersion(shortSoc), socVersion(soc) {}
 
     static SocConfig Ascend950() { return SocConfig("Ascend950", "Ascend950PR_9589"); }
-    static SocConfig MC62CM12A() { return SocConfig("MC62CM12A", "Ascend950PR_9589"); }
+    static SocConfig MC62() { return SocConfig("MC62", "Ascend950PR_9589"); }
 
     void Apply() const {
         PlatformInfo platformInfo;
@@ -427,7 +427,7 @@ public:
     }
 
     TestGraph& SetSocMC62CM12A() {
-        SetSoc(SocConfig::MC62CM12A());
+        SetSoc(SocConfig::MC62());
         
         return *this;
     }
