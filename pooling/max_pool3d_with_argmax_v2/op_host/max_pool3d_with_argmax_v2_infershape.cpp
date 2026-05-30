@@ -20,7 +20,6 @@
 #include "graph/utils/type_utils.h"
 #include "exe_graph/runtime/infer_shape_context.h"
 #include <string>
-#include "common_dtype.h"
 
 using namespace ge;
 
@@ -103,28 +102,28 @@ ge::graphStatus InferShape4MaxPool3DWithArgmaxV2(gert::InferShapeContext* contex
 
     auto ksize = attrs->GetAttrPointer<gert::ContinuousVector>(INDEX_KSIZE);
     OPS_CHECK_NULL_WITH_CONTEXT(context, ksize);
-    std::string errMsg4Ksize = optiling::ConcatString("Length of ksize ", ksize->GetSize(), " must be 3!");
+    std::string errMsg4Ksize = std::string("Length of ksize ") + std::to_string(ksize->GetSize()) + " must be 3!";
     OP_CHECK_IF(ksize->GetSize() != ATTR_LIST_SHAPE_SIZE,
              OP_LOGE(context->GetNodeName(), "%s", errMsg4Ksize.c_str()), return GRAPH_FAILED);
     auto ksize_data = static_cast<const int64_t*>(ksize->GetData());
 
     auto strides = attrs->GetAttrPointer<gert::ContinuousVector>(INDEX_STRIDES);
     OPS_CHECK_NULL_WITH_CONTEXT(context, strides);
-    std::string errMsg4Strides = optiling::ConcatString("Length of strides ", strides->GetSize(), " must be 3!");
+    std::string errMsg4Strides = std::string("Length of strides ") + std::to_string(strides->GetSize()) + " must be 3!";
     OP_CHECK_IF(strides->GetSize() != ATTR_LIST_SHAPE_SIZE,
              OP_LOGE(context->GetNodeName(), "%s", errMsg4Strides.c_str()), return GRAPH_FAILED);
     auto strides_data = static_cast<const int64_t*>(strides->GetData());
 
     auto pads = attrs->GetAttrPointer<gert::ContinuousVector>(INDEX_PADS);
     OPS_CHECK_NULL_WITH_CONTEXT(context, pads);
-    std::string errMsg4Pads = optiling::ConcatString("Length of pads ", pads->GetSize(), " must be 3!");
+    std::string errMsg4Pads = std::string("Length of pads ") + std::to_string(pads->GetSize()) + " must be 3!";
     OP_CHECK_IF(pads->GetSize() != ATTR_LIST_SHAPE_SIZE,
              OP_LOGE(context->GetNodeName(), "%s", errMsg4Pads.c_str()), return GRAPH_FAILED);
     auto pads_data = static_cast<const int64_t*>(pads->GetData());
 
     auto dilation = attrs->GetAttrPointer<gert::ContinuousVector>(INDEX_DILATION);
     OPS_CHECK_NULL_WITH_CONTEXT(context, dilation);
-    std::string errMsg4Dilation = optiling::ConcatString("Length of dilation ", dilation->GetSize(), " must be 3!");
+    std::string errMsg4Dilation = std::string("Length of dilation ") + std::to_string(dilation->GetSize()) + " must be 3!";
     OP_CHECK_IF(dilation->GetSize() != ATTR_LIST_SHAPE_SIZE,
              OP_LOGE(context->GetNodeName(), "%s", errMsg4Dilation.c_str()), return GRAPH_FAILED);
     auto dilation_data = static_cast<const int64_t*>(dilation->GetData());
