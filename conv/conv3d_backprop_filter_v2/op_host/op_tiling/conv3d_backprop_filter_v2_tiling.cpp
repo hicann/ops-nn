@@ -34,9 +34,9 @@ static ge::graphStatus Conv3DBackpropFilterV2TilingFunc(gert::TilingContext *con
 static ge::graphStatus TilingParseForConv3DBackpropFilterV2(gert::TilingParseContext *context)
 {
     fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
-    OP_LOGE_IF(platformInfoPtr == nullptr, ge::GRAPH_FAILED, context->GetNodeName(), "platformInfoPtr is null");
+    OP_CHECK_IF(platformInfoPtr == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "platformInfoPtr is null"), return ge::GRAPH_FAILED);
     auto compileInfoPtr = context->GetCompiledInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>();
-    OP_LOGE_IF(compileInfoPtr == nullptr, ge::GRAPH_FAILED, context->GetNodeName(), "compileInfo is null");
+    OP_CHECK_IF(compileInfoPtr == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "compileInfo is null"), return ge::GRAPH_FAILED);
 
     // 此函数会将platformInfoPtr中的soc_version传递给compileInfoPtr，在tiling中尽量使用compileInfoPtr->soc_version来获取平台信息
     PlatformUtil::ParseRuntimePlatformInfo(*compileInfoPtr, context->GetNodeName(), *platformInfoPtr);

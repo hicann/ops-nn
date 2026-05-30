@@ -42,6 +42,7 @@ struct Conv3DTransposeV2TilingTestParam {
     string case_name;
     string soc_version;
     string short_soc_version;
+    string input_size_dtype;
 
     std::initializer_list<int64_t> input_size;
     std::initializer_list<int64_t> x_ori_shape;
@@ -215,6 +216,12 @@ static void TestOneParamCase(const Conv3DTransposeV2TilingTestParam& param)
         input_size.size() * sizeof(int64_t));
 
     auto tiling_data = gert::TilingData::CreateCap(2048);
+    ge::DataType input_size_dtype_val = ge::DT_INT64;
+    if (param.input_size_dtype == "int32") {
+        input_size_dtype_val = ge::DT_INT32;
+    } else if (param.input_size_dtype == "float16") {
+        input_size_dtype_val = ge::DT_FLOAT16;
+    }
     auto holder = gert::TilingContextFaker()
                       .SetOpType(op_type)
                       .NodeIoNum(3, 1)
@@ -232,14 +239,14 @@ static void TestOneParamCase(const Conv3DTransposeV2TilingTestParam& param)
                            {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(false)},
                            {"offset", Ops::NN::AnyValue::CreateFrom<int64_t>(param.offset)},
                            {"padding", Ops::NN::AnyValue::CreateFrom<std::string>(param.padding)}})
-                      .NodeInputTd(0, ge::DT_INT32, param.input_size_format, param.input_size_format)
-                      .NodeInputTd(1, ge::DT_BF16, param.x_ori_format, param.x_format)
-                      .NodeInputTd(2, ge::DT_BF16, param.filter_ori_format, param.filter_format)
-                      .NodeOutputTd(0, ge::DT_BF16, param.y_ori_format, param.y_format)
-                      .CompileInfo(&compile_info)
-                      .Workspace(workspace)
-                      .TilingData(tiling_data.get())
-                      .Build();
+                       .NodeInputTd(0, input_size_dtype_val, param.input_size_format, param.input_size_format)
+                       .NodeInputTd(1, ge::DT_BF16, param.x_ori_format, param.x_format)
+                       .NodeInputTd(2, ge::DT_BF16, param.filter_ori_format, param.filter_format)
+                       .NodeOutputTd(0, ge::DT_BF16, param.y_ori_format, param.y_format)
+                       .CompileInfo(&compile_info)
+                       .Workspace(workspace)
+                       .TilingData(tiling_data.get())
+                       .Build();
 
     auto tiling_context = holder.GetContext<gert::TilingContext>();
 
@@ -262,6 +269,7 @@ Conv3DTransposeV2TilingTestParam cases_params_950_case[] = {
     {"conv3d_transpose_1",
      "3510",
      "3510",
+     "int64",
      {1, 2, 1, 4, 4},
      {1, 2, 1, 4, 4},
      {1, 2, 1, 4, 4},
@@ -292,6 +300,7 @@ Conv3DTransposeV2TilingTestParam cases_params_950_case[] = {
     {"conv3d_transpose_2_group",
      "Ascend910_95",
      "3510",
+     "int64",
      {1, 16, 1, 4, 4},
      {1, 16, 1, 4, 4},
      {1, 16, 1, 4, 4},
@@ -322,6 +331,7 @@ Conv3DTransposeV2TilingTestParam cases_params_950_case[] = {
     {"conv3d_transpose_3_general_group",
      "Ascend910_95",
      "3510",
+     "int64",
      {1, 64, 1, 4, 4},
      {1, 64, 1, 4, 4},
      {1, 64, 1, 4, 4},
@@ -352,6 +362,7 @@ Conv3DTransposeV2TilingTestParam cases_params_950_case[] = {
     {"conv3d_transpose_4_general_group1_ncdhw_dhwcn",
      "3510",
      "3510",
+     "int64",
      {1, 2, 1, 4, 4},
      {1, 2, 1, 4, 4},
      {1, 2, 1, 4, 4},
@@ -382,6 +393,7 @@ Conv3DTransposeV2TilingTestParam cases_params_950_case[] = {
     {"conv3d_transpose_5_general_group1_ndhwc_dhwcn",
      "3510",
      "3510",
+     "int64",
      {1, 1, 4, 4, 2},
      {1, 1, 4, 4, 2},
      {1, 1, 4, 4, 2},
@@ -412,6 +424,7 @@ Conv3DTransposeV2TilingTestParam cases_params_950_case[] = {
     {"conv3d_transpose_split_k_case1",
      "3510",
      "3510",
+     "int64",
      {153, 553, 1, 6, 6},
      {153, 553, 1, 6, 6},
      {153, 553, 1, 6, 6},
@@ -442,6 +455,7 @@ Conv3DTransposeV2TilingTestParam cases_params_950_case[] = {
     {"conv3d_transpose_split_k_case2",
      "3510",
      "3510",
+     "int64",
      {1, 120, 1, 5, 123},
      {1, 120, 1, 5, 123},
      {1, 120, 1, 5, 123},
@@ -469,6 +483,99 @@ Conv3DTransposeV2TilingTestParam cases_params_950_case[] = {
      32,
      83886081,
      "1 1 1 1 1 1 32 0 2 2 1 2 2 1 16 4 4 1 0 1 1 1 35 120 35 120 8 3 8 3 1 5 123 1 71 1837 1 99 98 1 1 1 15 15 0 0 93 93 94 94 0 103 103 100 100 1 2 2 1 120 32 1 1024 16 32 98 98 1 0 1 0 1837 0 0 0 80 0 40 0 7840 0 257 0 0 0 "},
+    {"conv3d_transpose_input_size_dtype_unsupported_float16",
+     "3510",
+     "3510",
+     "float16",
+     {1, 2, 1, 4, 4},
+     {1, 2, 1, 4, 4},
+     {1, 2, 1, 4, 4},
+     {2, 2, 5, 2, 2},
+     {2, 2, 5, 2, 2},
+     {1, 2, 5, 5, 5},
+     {1, 2, 5, 5, 5},
+     ge::FORMAT_ND,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     {1, 1, 1, 1, 1},
+     {0, 0, 0, 0, 0, 0},
+     {1, 1, 1, 1, 1},
+     1,
+     "NCDHW",
+     {0, 0, 0, 0, 0},
+     0,
+     "VALID",
+     true,
+     false,
+     5,
+     0,
+     ""},
+    {"conv3d_transpose_output_padding_n_invalid",
+     "3510",
+     "3510",
+     "int64",
+     {1, 2, 5, 5, 5},
+     {1, 2, 5, 5, 5},
+     {1, 2, 5, 5, 5},
+     {2, 2, 5, 2, 2},
+     {2, 2, 5, 2, 2},
+     {1, 2, 9, 9, 9},
+     {1, 2, 9, 9, 9},
+     ge::FORMAT_ND,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     {1, 1, 2, 2, 2},
+     {0, 0, 0, 0, 0, 0},
+     {1, 1, 1, 1, 1},
+     1,
+     "NCDHW",
+     {1, 0, 0, 0, 0},
+     0,
+     "VALID",
+     true,
+     false,
+     5,
+     0,
+     ""},
+    {"conv3d_transpose_output_padding_size_invalid",
+     "3510",
+     "3510",
+     "int64",
+     {1, 2, 5, 5, 5},
+     {1, 2, 5, 5, 5},
+     {1, 2, 5, 5, 5},
+     {2, 2, 5, 2, 2},
+     {2, 2, 5, 2, 2},
+     {1, 2, 9, 9, 9},
+     {1, 2, 9, 9, 9},
+     ge::FORMAT_ND,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     ge::FORMAT_NCDHW,
+     {1, 1, 2, 2, 2},
+     {0, 0, 0, 0, 0, 0},
+     {1, 1, 1, 1, 1},
+     1,
+     "NCDHW",
+     {0, 0, 0, 0},
+     0,
+     "VALID",
+     true,
+     false,
+     5,
+     0,
+     ""},
 };
 
 static void ThreadFunc(

@@ -31,19 +31,19 @@ namespace Conv {
 
 static ge::graphStatus Conv3DBackpropInputV2TilingFunc(gert::TilingContext* context)
 {
-    OP_LOGE_IF(context == nullptr, ge::GRAPH_FAILED, "Conv3DBackpropInputV2", "context is null");
+    OP_CHECK_IF(context == nullptr, CUBE_INNER_ERR_REPORT("Conv3DBackpropInputV2", "context is null"), return ge::GRAPH_FAILED);
     auto compileInfoPtr = context->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>();
-    OP_LOGE_IF(compileInfoPtr == nullptr, ge::GRAPH_FAILED, context->GetNodeName(), "compileInfo is null");
+    OP_CHECK_IF(compileInfoPtr == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "compileInfo is null"), return ge::GRAPH_FAILED);
     return TilingRegistry::GetInstance().DoTilingImpl(context);
 }
 
 static ge::graphStatus TilingParseForConv3DBackpropInputV2(gert::TilingParseContext* context)
 {
     auto platformInfoPtr = context->GetPlatformInfo();
-    OP_LOGE_IF(platformInfoPtr == nullptr, ge::GRAPH_FAILED, context->GetNodeName(), "platformInfoPtr is null");
+    OP_CHECK_IF(platformInfoPtr == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "platformInfoPtr is null"), return ge::GRAPH_FAILED);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     auto compileInfoPtr = context->GetCompiledInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>();
-    OP_LOGE_IF(compileInfoPtr == nullptr, ge::GRAPH_FAILED, context->GetNodeName(), "compileInfo is null");
+    OP_CHECK_IF(compileInfoPtr == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "compileInfo is null"), return ge::GRAPH_FAILED);
     PlatformUtil::ParseRuntimePlatformInfo(*compileInfoPtr, context->GetNodeName(), *platformInfoPtr);
 
     compileInfoPtr->core_num = ascendcPlatform.GetCoreNumAic();

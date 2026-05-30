@@ -27,8 +27,10 @@
 #include "conv/conv3d_backprop_filter_v2/op_kernel/arch35/conv3d_backprop_filter_v2/conv3d_backprop_filter_v2_tiling_key.h"
 #include "conv/common/op_host/op_tiling/convbp_tiling_debug_util.h"
 #include "runtime_kb_api.h"
+#include "conv/common/op_host/op_tiling/arch35/conv_base_numblocks_decision.h"
 
 using Ops::NN::Optiling::RecursiveSum;
+using namespace optiling::conv_ops_tiling;
 
 namespace {
 constexpr size_t Y_INDEX = 2;
@@ -1067,14 +1069,23 @@ bool Conv3DDWV2BasicBlockTilingArch35::CheckAttrs()
     bool isBf16Flag = runInfo_.a_dtype == ge::DT_BF16 && runInfo_.b_dtype == ge::DT_BF16 &&
                       runInfo_.c_dtype == ge::DT_FLOAT;
     isDeterSupportDType_ = isFp16Flag || isBf16Flag;
-    OP_LOGE_IF(!(isHiF8Flag_ || isFp16Flag || isFp32Flag || isBf16Flag), false, opName_,
-        "x/output_backprop dtype only supports HiF8/Fp16/Fp32/Bf16, y dtype only supports fp32 now");
+    OP_CHECK_IF(!(isHiF8Flag_ || isFp16Flag || isFp32Flag || isBf16Flag), 
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(opName_, "x, out_backprop, and y", 
+            (ge::TypeUtils::DataTypeToSerialString(runInfo_.a_dtype) + ", " +
+             ge::TypeUtils::DataTypeToSerialString(runInfo_.b_dtype) + " and " +
+             ge::TypeUtils::DataTypeToSerialString(runInfo_.c_dtype)).c_str(),
+            "The dtypes of x and out_backprop must be within the range {DT_HIFLOAT8, DT_FLOAT16, DT_FLOAT, DT_BF16}, the dtype of y must be DT_FLOAT"),
+        return false);
 
-    OP_LOGE_IF(isHiF8Flag_ && runInfo_.groups != 1, false, opName_,
-        "hifloat8 dtype only supports groups = 1, currently is %d", runInfo_.groups);
+    OP_CHECK_IF(isHiF8Flag_ && runInfo_.groups != 1, 
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "group", std::to_string(runInfo_.groups).c_str(), 
+            "The value of group must be 1, when the dtype of x and out_backprop is DT_HIFLOAT8"),
+        return false);
 
-    OP_LOGE_IF(runInfo_.groups < 1 || runInfo_.groups > UINT16_MAX, false, opName_,
-        "Groups[%d] is invalid, it should be in range: [1, %d]", runInfo_.groups, UINT16_MAX);
+    OP_CHECK_IF(runInfo_.groups < 1 || runInfo_.groups > UINT16_MAX, 
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "group", std::to_string(runInfo_.groups).c_str(), 
+            FormatString("The value of group must be range [1, %d]", UINT16_MAX).c_str()),
+        return false);
     return true;
 }
 
@@ -1096,11 +1107,13 @@ bool Conv3DDWV2BasicBlockTilingArch35::CheckFormat()
 
     enableSplitW = (format_.fmapFormat == ge::FORMAT_NCDHW && format_.dedyFormat == ge::FORMAT_NCDHW) ||
                    (format_.fmapFormat == ge::FORMAT_NDHWC && format_.dedyFormat == ge::FORMAT_NDHWC);
-    OP_LOGE_IF(isHiF8Flag_ && deterNotSupportFormat_, false, opName_,
-        "When datatype is HiF8, fmapFormat[%s], dedyFormat[%s] and filter_format[%s] is only supports format NCDHW for now",
-        ge::TypeUtils::FormatToSerialString(format_.fmapFormat).c_str(),
-        ge::TypeUtils::FormatToSerialString(format_.dedyFormat).c_str(),
-        ge::TypeUtils::FormatToSerialString(format_.filterFormat).c_str());
+    OP_CHECK_IF(isHiF8Flag_ && deterNotSupportFormat_, 
+        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(opName_, "fmap, dedy and filter", 
+            (ge::TypeUtils::FormatToSerialString(format_.fmapFormat) + ", " + 
+             ge::TypeUtils::FormatToSerialString(format_.dedyFormat) + " and " +
+             ge::TypeUtils::FormatToSerialString(format_.filterFormat)).c_str(),
+            "The formats of fmap and dedy must be within the range {NCDHW, NDHWC}, the format of filter must be NCDHW, when datatype is HiF8"),
+        return false);
     return true;
 }
 
@@ -1115,15 +1128,18 @@ bool Conv3DDWV2BasicBlockTilingArch35::CheckKernelSize()
     int64_t kwMax = (runInfo_.wi + totalPadingW - 1) / runInfo_.dilation_w + 1;
 
     // kernel大小判断
-    OP_LOGE_IF(runInfo_.kd > kdMax, false, opName_,
-        "The D of filter need less than (Din + PaddingHead + PaddingTail -1) / DilationD + 1, so the D = %d of filter need to be less than %ld",
-        runInfo_.kd, kdMax);
-    OP_LOGE_IF(runInfo_.kh > khMax, false, opName_,
-        "The H of filter need less than (Hin + PaddingUp + PaddingDown -1) / DilationH + 1, so the H = %d of filter need to be less than %ld",
-        runInfo_.kh, khMax);
-    OP_LOGE_IF(runInfo_.kw > kwMax, false, opName_,
-        "The W of filter need less than (Win + PaddingLeft + PaddingRight -1) / DilationW + 1, so the W = %d of filter need to be less than %ld",
-        runInfo_.kw, kwMax);
+    OP_CHECK_IF(runInfo_.kd > kdMax, 
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "D of filter", std::to_string(runInfo_.kd).c_str(), 
+            FormatString("The value of D of filter must be less than (Din + PaddingHead + PaddingTail -1) / DilationD + 1 = %ld", kdMax).c_str()),
+        return false);
+    OP_CHECK_IF(runInfo_.kh > khMax, 
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "H of filter", std::to_string(runInfo_.kh).c_str(), 
+            FormatString("The value of H of filter must be less than (Hin + PaddingUp + PaddingDown -1) / DilationH + 1 = %ld", khMax).c_str()),
+        return false);
+    OP_CHECK_IF(runInfo_.kw > kwMax, 
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "W of filter", std::to_string(runInfo_.kw).c_str(), 
+            FormatString("The value of W of filter must be less than (Win + PaddingLeft + PaddingRight -1) / DilationW + 1 = %ld", kwMax).c_str()),
+        return false);
     return true;
 }
 

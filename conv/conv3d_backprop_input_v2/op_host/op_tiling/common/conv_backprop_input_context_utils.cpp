@@ -192,17 +192,17 @@ static bool IsSupportedDtypeForOutputPadding(const ge::DataType dtype) {
 bool ValidateConvBackpropContext(const gert::TilingContext *context) {
     // 校验输入张量描述是否获取成功
     auto input_size_desc = context->GetInputDesc(INPUT_SIZE_INDEX);
-    OP_CHECK_IF(input_size_desc == nullptr, OP_LOGE(context->GetNodeName(), "get input_size desc from context fail."), return false);
+    OP_CHECK_IF(input_size_desc == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "get input_size desc from context fail."), return false);
     auto filter_desc = context->GetInputDesc(FILTER_INDEX);
-    OP_CHECK_IF(filter_desc == nullptr, OP_LOGE(context->GetNodeName(), "get filter desc from context fail."), return false);
+    OP_CHECK_IF(filter_desc == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "get filter desc from context fail."), return false);
     auto out_backprop_desc = context->GetInputDesc(OUT_BACKPROP_INDEX);
-    OP_CHECK_IF(out_backprop_desc == nullptr, OP_LOGE(context->GetNodeName(), "get out_backprop desc from context fail."), return false);
+    OP_CHECK_IF(out_backprop_desc == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "get out_backprop desc from context fail."), return false);
     // 校验输出张量描述是否获取成功
     auto y_desc = context->GetOutputDesc(Y_INDEX);
-    OP_CHECK_IF(y_desc == nullptr, OP_LOGE(context->GetNodeName(), "get y desc from context fail."), return false);
+    OP_CHECK_IF(y_desc == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "get y desc from context fail."), return false);
     // 校验属性参数获取是否成功
     auto attrs = context->GetAttrs();
-    OP_CHECK_IF(attrs == nullptr, OP_LOGE(context->GetNodeName(), "failed to get runtime attrs."), return false);
+    OP_CHECK_IF(attrs == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "failed to get runtime attrs."), return false);
 
     return true;
 }
@@ -214,54 +214,54 @@ bool CheckAttrRangeDilations(const gert::TilingContext *context, const int64_t *
     if (y_ori_format == ge::FORMAT_NCDHW) {
       OP_CHECK_IF(
         !CheckRangeInt64(dilations[K_N_DIM_NCDHW], K_DEFAULT_DILATIONS, K_DEFAULT_DILATIONS),
-        OP_LOGE(op_name, "dilation_n value [%ld] is invalid, support range [%d, %d]",
-                dilations[K_N_DIM_NCDHW], K_DEFAULT_DILATIONS, K_DEFAULT_DILATIONS),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "dilation_n", std::to_string(dilations[K_N_DIM_NCDHW]).c_str(),
+          FormatString("The value of dilation_n must be range [%d, %d]", K_DEFAULT_DILATIONS, K_DEFAULT_DILATIONS).c_str()),
         return false);
       OP_CHECK_IF(
         !CheckRangeInt64(dilations[K_C_DIM_NCDHW], K_DEFAULT_DILATIONS, K_DEFAULT_DILATIONS),
-        OP_LOGE(op_name, "dilation_c value [%ld] is invalid, support range [%d, %d]",
-                dilations[K_C_DIM_NCDHW], K_DEFAULT_DILATIONS, K_DEFAULT_DILATIONS),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "dilation_c", std::to_string(dilations[K_C_DIM_NCDHW]).c_str(),
+          FormatString("The value of dilation_c must be range [%d, %d]", K_DEFAULT_DILATIONS, K_DEFAULT_DILATIONS).c_str()),
         return false);
       OP_CHECK_IF(
         !CheckRangeInt64(dilations[K_D_DIM_NCDHW], kDilationLow, kDilationUpTmp),
-        OP_LOGE(op_name, "dilation_d value [%ld] is invalid, support range [%d, %d]",
-                dilations[K_D_DIM_NCDHW], kDilationLow, kDilationUpTmp),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "dilation_d", std::to_string(dilations[K_D_DIM_NCDHW]).c_str(),
+          FormatString("The value of dilation_d must be range [%d, %d]", kDilationLow, kDilationUpTmp).c_str()),
         return false);
       OP_CHECK_IF(
         !CheckRangeInt64(dilations[K_H_DIM_NCDHW], kDilationLow, kDilationUpTmp),
-        OP_LOGE(op_name, "dilation_h value [%ld] is invalid, support range [%d, %d]",
-                dilations[K_H_DIM_NCDHW], kDilationLow, kDilationUpTmp),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "dilation_h", std::to_string(dilations[K_H_DIM_NCDHW]).c_str(),
+          FormatString("The value of dilation_h must be range [%d, %d]", kDilationLow, kDilationUpTmp).c_str()),
         return false);
       OP_CHECK_IF(
         !CheckRangeInt64(dilations[K_W_DIM_NCDHW], kDilationLow, kDilationUpTmp),
-        OP_LOGE(op_name, "dilation_w value [%ld] is invalid, support range [%d, %d]",
-                dilations[K_W_DIM_NCDHW], kDilationLow, kDilationUpTmp),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "dilation_w", std::to_string(dilations[K_W_DIM_NCDHW]).c_str(),
+          FormatString("The value of dilation_w must be range [%d, %d]", kDilationLow, kDilationUpTmp).c_str()),
         return false);
     } else {
       OP_CHECK_IF(
         !CheckRangeInt64(dilations[K_N_DIM_NDHWC], K_DEFAULT_DILATIONS, K_DEFAULT_DILATIONS),
-        OP_LOGE(op_name, "dilation_n value [%ld] is invalid, support range [%d, %d]",
-                dilations[K_N_DIM_NDHWC], K_DEFAULT_DILATIONS, K_DEFAULT_DILATIONS),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "dilation_n", std::to_string(dilations[K_N_DIM_NDHWC]).c_str(),
+          FormatString("The value of dilation_n must be range [%d, %d]", K_DEFAULT_DILATIONS, K_DEFAULT_DILATIONS).c_str()),
         return false);
       OP_CHECK_IF(
         !CheckRangeInt64(dilations[K_C_DIM_NDHWC], K_DEFAULT_DILATIONS, K_DEFAULT_DILATIONS),
-        OP_LOGE(op_name, "dilation_c value [%ld] is invalid, support range [%d, %d]",
-                dilations[K_C_DIM_NDHWC], K_DEFAULT_DILATIONS, K_DEFAULT_DILATIONS),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "dilation_c", std::to_string(dilations[K_C_DIM_NDHWC]).c_str(),
+          FormatString("The value of dilation_c must be range [%d, %d]", K_DEFAULT_DILATIONS, K_DEFAULT_DILATIONS).c_str()),
         return false);
       OP_CHECK_IF(
         !CheckRangeInt64(dilations[K_D_DIM_NDHWC], kDilationLow, kDilationUpTmp),
-        OP_LOGE(op_name, "dilation_d value [%ld] is invalid, support range [%d, %d]",
-                dilations[K_D_DIM_NDHWC], kDilationLow, kDilationUpTmp),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "dilation_d", std::to_string(dilations[K_D_DIM_NDHWC]).c_str(),
+          FormatString("The value of dilation_d must be range [%d, %d]", kDilationLow, kDilationUpTmp).c_str()),
         return false);
       OP_CHECK_IF(
         !CheckRangeInt64(dilations[K_H_DIM_NDHWC], kDilationLow, kDilationUpTmp),
-        OP_LOGE(op_name, "dilation_h value [%ld] is invalid, support range [%d, %d]",
-                dilations[K_H_DIM_NDHWC], kDilationLow, kDilationUpTmp),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "dilation_h", std::to_string(dilations[K_H_DIM_NDHWC]).c_str(),
+          FormatString("The value of dilation_h must be range [%d, %d]", kDilationLow, kDilationUpTmp).c_str()),
         return false);
       OP_CHECK_IF(
         !CheckRangeInt64(dilations[K_W_DIM_NDHWC], kDilationLow, kDilationUpTmp),
-        OP_LOGE(op_name, "dilation_w value [%ld] is invalid, support range [%d, %d]",
-                dilations[K_W_DIM_NDHWC], kDilationLow, kDilationUpTmp),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "dilation_w", std::to_string(dilations[K_W_DIM_NDHWC]).c_str(),
+          FormatString("The value of dilation_w must be range [%d, %d]", kDilationLow, kDilationUpTmp).c_str()),
         return false);
     }
 
@@ -274,54 +274,54 @@ bool CheckAttrRangeStrides(const gert::TilingContext *context, const int64_t *st
     if (y_ori_format == ge::FORMAT_NCDHW) {
       OP_CHECK_IF(
         !CheckRangeInt64(strides[K_N_DIM_NCDHW], K_DEFAULT_STRIDES, K_DEFAULT_STRIDES),
-        OP_LOGE(op_name, "stride_n value [%ld] is invalid, support range [%d, %d]",
-                strides[K_N_DIM_NCDHW], K_DEFAULT_STRIDES, K_DEFAULT_STRIDES),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "stride_n", std::to_string(strides[K_N_DIM_NCDHW]).c_str(),
+          FormatString("The value of stride_n must be range [%d, %d]", K_DEFAULT_STRIDES, K_DEFAULT_STRIDES).c_str()),
         return false);
       OP_CHECK_IF(
         !CheckRangeInt64(strides[K_C_DIM_NCDHW], K_DEFAULT_STRIDES, K_DEFAULT_STRIDES),
-        OP_LOGE(op_name, "stride_c value [%ld] is invalid, support range [%d, %d]",
-                strides[K_C_DIM_NCDHW], K_DEFAULT_STRIDES, K_DEFAULT_STRIDES),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "stride_c", std::to_string(strides[K_C_DIM_NCDHW]).c_str(),
+          FormatString("The value of stride_c must be range [%d, %d]", K_DEFAULT_STRIDES, K_DEFAULT_STRIDES).c_str()),
         return false);
       OP_CHECK_IF(
         !CheckRangeInt64(strides[K_D_DIM_NCDHW], kDimLow, kDimUp),
-        OP_LOGE(op_name, "stride_d value [%ld] is invalid, support range [%d, %d]",
-                strides[K_D_DIM_NCDHW], kDimLow, kDimUp),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "stride_d", std::to_string(strides[K_D_DIM_NCDHW]).c_str(),
+          FormatString("The value of stride_d must be range [%d, %d]", kDimLow, kDimUp).c_str()),
         return false);
       OP_CHECK_IF(
         !CheckRangeInt64(strides[K_H_DIM_NCDHW], kDimLow, kDimUp),
-        OP_LOGE(op_name, "stride_h value [%ld] is invalid, support range [%d, %d]",
-                strides[K_H_DIM_NCDHW], kDimLow, kDimUp),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "stride_h", std::to_string(strides[K_H_DIM_NCDHW]).c_str(),
+          FormatString("The value of stride_h must be range [%d, %d]", kDimLow, kDimUp).c_str()),
         return false);
       OP_CHECK_IF(
         !CheckRangeInt64(strides[K_W_DIM_NCDHW], kDimLow, kDimUp),
-        OP_LOGE(op_name, "stride_w value [%ld] is invalid, support range [%d, %d]",
-                strides[K_W_DIM_NCDHW], kDimLow, kDimUp),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "stride_w", std::to_string(strides[K_W_DIM_NCDHW]).c_str(),
+          FormatString("The value of stride_w must be range [%d, %d]", kDimLow, kDimUp).c_str()),
         return false);
     } else {
       OP_CHECK_IF(
         !CheckRangeInt64(strides[K_N_DIM_NDHWC], K_DEFAULT_STRIDES, K_DEFAULT_STRIDES),
-        OP_LOGE(op_name, "stride_n value [%ld] is invalid, support range [%d, %d]",
-                strides[K_N_DIM_NDHWC], K_DEFAULT_STRIDES, K_DEFAULT_STRIDES),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "stride_n", std::to_string(strides[K_N_DIM_NDHWC]).c_str(),
+          FormatString("The value of stride_n must be range [%d, %d]", K_DEFAULT_STRIDES, K_DEFAULT_STRIDES).c_str()),
         return false);
       OP_CHECK_IF(
         !CheckRangeInt64(strides[K_C_DIM_NDHWC], K_DEFAULT_STRIDES, K_DEFAULT_STRIDES),
-        OP_LOGE(op_name, "stride_c value [%ld] is invalid, support range [%d, %d]",
-                strides[K_C_DIM_NDHWC], K_DEFAULT_STRIDES, K_DEFAULT_STRIDES),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "stride_c", std::to_string(strides[K_C_DIM_NDHWC]).c_str(),
+          FormatString("The value of stride_c must be range [%d, %d]", K_DEFAULT_STRIDES, K_DEFAULT_STRIDES).c_str()),
         return false);
       OP_CHECK_IF(
         !CheckRangeInt64(strides[K_D_DIM_NDHWC], kDimLow, kDimUp),
-        OP_LOGE(op_name, "stride_d value [%ld] is invalid, support range [%d, %d]",
-                strides[K_D_DIM_NDHWC], kDimLow, kDimUp),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "stride_d", std::to_string(strides[K_D_DIM_NDHWC]).c_str(),
+          FormatString("The value of stride_d must be range [%d, %d]", kDimLow, kDimUp).c_str()),
         return false);
       OP_CHECK_IF(
         !CheckRangeInt64(strides[K_H_DIM_NDHWC], kDimLow, kDimUp),
-        OP_LOGE(op_name, "stride_h value [%ld] is invalid, support range [%d, %d]",
-                strides[K_H_DIM_NDHWC], kDimLow, kDimUp),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "stride_h", std::to_string(strides[K_H_DIM_NDHWC]).c_str(),
+          FormatString("The value of stride_h must be range [%d, %d]", kDimLow, kDimUp).c_str()),
         return false);
       OP_CHECK_IF(
         !CheckRangeInt64(strides[K_W_DIM_NDHWC], kDimLow, kDimUp),
-        OP_LOGE(op_name, "stride_w value [%ld] is invalid, support range [%d, %d]",
-                strides[K_W_DIM_NDHWC], kDimLow, kDimUp),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "stride_w", std::to_string(strides[K_W_DIM_NDHWC]).c_str(),
+          FormatString("The value of stride_w must be range [%d, %d]", kDimLow, kDimUp).c_str()),
         return false);
     }
 
@@ -343,33 +343,33 @@ bool CheckAttrRangePads(const gert::TilingContext *context, const int64_t *pads)
 
     OP_CHECK_IF(
       !CheckRangeInt64(pads[K_CONV3D_PAD_HEAD_IDX], 0, padDUp),
-      OP_LOGE(op_name, "pad_h value [%ld] is invalid, support range [%d, %d]",
-              pads[K_CONV3D_PAD_HEAD_IDX], 0, padDUp),
+      OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "pad_h", std::to_string(pads[K_CONV3D_PAD_HEAD_IDX]).c_str(),
+        FormatString("The value of pad_h must be range [%d, %d]", 0, padDUp).c_str()),
       return false);
     OP_CHECK_IF(
       !CheckRangeInt64(pads[K_CONV3D_PAD_TAIL_IDX], 0, padDUp),
-      OP_LOGE(op_name, "pad_t value [%ld] is invalid, support range [%d, %d]",
-              pads[K_CONV3D_PAD_TAIL_IDX], 0, padDUp),
+      OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "pad_t", std::to_string(pads[K_CONV3D_PAD_TAIL_IDX]).c_str(),
+        FormatString("The value of pad_t must be range [%d, %d]", 0, padDUp).c_str()),
       return false);
     OP_CHECK_IF(
       !CheckRangeInt64(pads[K_CONV3D_PAD_UP_IDX], 0, padHwUp),
-      OP_LOGE(op_name, "pad_u value [%ld] is invalid, support range [%d, %d]",
-              pads[K_CONV3D_PAD_UP_IDX], 0, padHwUp),
+      OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "pad_u", std::to_string(pads[K_CONV3D_PAD_UP_IDX]).c_str(),
+        FormatString("The value of pad_u must be range [%d, %d]", 0, padHwUp).c_str()),
       return false);
     OP_CHECK_IF(
       !CheckRangeInt64(pads[K_CONV3D_PAD_DOWN_IDX], 0, padHwUp),
-      OP_LOGE(op_name, "pad_d value [%ld] is invalid, support range [%d, %d]",
-              pads[K_CONV3D_PAD_DOWN_IDX], 0, padHwUp),
+      OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "pad_d", std::to_string(pads[K_CONV3D_PAD_DOWN_IDX]).c_str(),
+        FormatString("The value of pad_d must be range [%d, %d]", 0, padHwUp).c_str()),
       return false);
     OP_CHECK_IF(
       !CheckRangeInt64(pads[K_CONV3D_PAD_LEFT_IDX], 0, padHwUp),
-      OP_LOGE(op_name, "pad_l value [%ld] is invalid, support range [%d, %d]",
-              pads[K_CONV3D_PAD_LEFT_IDX], 0, padHwUp),
+      OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "pad_l", std::to_string(pads[K_CONV3D_PAD_LEFT_IDX]).c_str(),
+        FormatString("The value of pad_l must be range [%d, %d]", 0, padHwUp).c_str()),
       return false);
     OP_CHECK_IF(
       !CheckRangeInt64(pads[K_CONV3D_PAD_RIGHT_IDX], 0, padHwUp),
-      OP_LOGE(op_name, "pad_r value [%ld] is invalid, support range [%d, %d]",
-              pads[K_CONV3D_PAD_RIGHT_IDX], 0, padHwUp),
+      OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "pad_r", std::to_string(pads[K_CONV3D_PAD_RIGHT_IDX]).c_str(),
+        FormatString("The value of pad_r must be range [%d, %d]", 0, padHwUp).c_str()),
       return false);
 
     return true;
@@ -399,7 +399,8 @@ bool CheckAttrRange(gert::TilingContext *context,
     // groups: [1, 2G - 1 ]
     if (groups != nullptr) {
       OP_CHECK_IF(!CheckRangeInt64(*groups, kDimLow, kDimUp),
-        OP_LOGE(op_name, "group value [%ld] is invalid, support range [%d, %d]", *groups, kDimLow, kDimUp),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "group", std::to_string(*groups).c_str(),
+          FormatString("The value of group must be range [%d, %d]", kDimLow, kDimUp).c_str()),
         return false);
     }
 
@@ -410,40 +411,52 @@ bool CheckTransposeAttr(gert::TilingContext *context, OtherParams& otherParams) 
     auto yDesc = context->GetOutputDesc(Y_INDEX);
     auto attrs = context->GetAttrs();
     auto outputPadding = attrs->GetAttrPointer<gert::ContinuousVector>(K_OUTPUT_PADDING_CONV3D_TRANSPOSE_IDX);
-    OP_CHECK_IF(outputPadding == nullptr, OP_LOGE(context, "failed to get output_padding attrs"), return false);
-    OP_CHECK_IF(outputPadding->GetSize() != K_ORI_SHAPE_DIM_3D, 
-        OP_LOGE(context, "The output_padding should be 5d, actual dim num: %zu", outputPadding->GetSize()), return false);
+    OP_CHECK_IF(outputPadding == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "failed to get output_padding attrs."), return false);
+    OP_CHECK_IF(outputPadding->GetSize() != K_ORI_SHAPE_DIM_3D,
+      OP_LOGE_WITH_INVALID_ATTR_SIZE(context->GetNodeName(), "output_padding", 
+        std::to_string(outputPadding->GetSize()).c_str(), "5"), return false);
     const auto outputPaddingData = static_cast<const int64_t *>(outputPadding->GetData());
     if (yDesc->GetOriginFormat() == ge::FORMAT_NCDHW) {
       OP_CHECK_IF(outputPaddingData[K_N_DIM_NCDHW] != 0 || outputPaddingData[K_C_DIM_NCDHW] != 0,
-          OP_LOGE(context, "N/C output_padding should be zero.\n"), return false);
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context->GetNodeName(), "output_padding N and C",
+          (std::to_string(outputPaddingData[K_N_DIM_NCDHW]) + " and " + std::to_string(outputPaddingData[K_C_DIM_NCDHW])).c_str(), 
+          "The value of output_padding N and C must be 0"), 
+        return false);
       otherParams.output_padding.output_padding_d = outputPaddingData[K_D_DIM_NCDHW];
       otherParams.output_padding.output_padding_h = outputPaddingData[K_H_DIM_NCDHW];
       otherParams.output_padding.output_padding_w = outputPaddingData[K_W_DIM_NCDHW];
     } else {  // yDesc->GetOriginFormat() == ge::FORMAT_NDHWC
-    OP_CHECK_IF(outputPaddingData[K_N_DIM_NDHWC] != 0 || outputPaddingData[K_C_DIM_NDHWC] != 0,
-        OP_LOGE(context, "N/C output_padding should be zero.\n"), return false);
+      OP_CHECK_IF(outputPaddingData[K_N_DIM_NDHWC] != 0 || outputPaddingData[K_C_DIM_NDHWC] != 0,
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context->GetNodeName(), "output_padding N and C",
+          (std::to_string(outputPaddingData[K_N_DIM_NDHWC]) + " and " + std::to_string(outputPaddingData[K_C_DIM_NDHWC])).c_str(), 
+          "The value of output_padding N and C must be zero"), 
+        return false);
       otherParams.output_padding.output_padding_d = outputPaddingData[K_D_DIM_NDHWC];
       otherParams.output_padding.output_padding_h = outputPaddingData[K_H_DIM_NDHWC];
       otherParams.output_padding.output_padding_w = outputPaddingData[K_W_DIM_NDHWC];
     }
     if (attrs->GetAttrNum() > K_OFFSET_X_CONV3D_TRANSPOSE_IDX) {
       const auto offsetX = attrs->GetAttrPointer<int64_t>(K_OFFSET_X_CONV3D_TRANSPOSE_IDX);
-      OP_CHECK_IF(offsetX == nullptr, OP_LOGE(context, "failed to get offsetX attrs"), return false);
+      OP_CHECK_IF(offsetX == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "failed to get offsetX attrs"), return false);
       if (!IsArchAfter35(context) && !IsSocVersionFuse(context)) {
-        OP_CHECK_IF(*offsetX != 0, OP_LOGE(context, "offsetX:%ld is invalid, it should be 0", *offsetX), return false);
+        OP_CHECK_IF(*offsetX != 0, OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "offsetX", std::to_string(*offsetX).c_str(), "0"), return false);
       }
     }
     if (IsSocVersionFuse(context)) {
       if (attrs->GetAttrNum() > K_FUSION_MODE_CONV3D_TRANSPOSE_IDX) {
         const auto fusion_mode = attrs->GetAttrPointer<int32_t>(K_FUSION_MODE_CONV3D_TRANSPOSE_IDX);
-        OP_LOGE_IF(fusion_mode == nullptr, false, context, "failed to get fusion_mode attrs");
-        OP_LOGE_IF(*fusion_mode != 0 && *fusion_mode != 1, false, context, "fusion_mode:%d is invalid, it should be 0 or 1", *fusion_mode);
+        OP_CHECK_IF(fusion_mode == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "failed to get fusion_mode attrs"), return false);
+        OP_CHECK_IF(*fusion_mode != 0 && *fusion_mode != 1, 
+          OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "fusion_mode", std::to_string(*fusion_mode).c_str(), 
+            "The value of fusion_mode must be in {0, 1}"), 
+          return false);
       }
       if (attrs->GetAttrNum() > K_Y_QUANT_MODE_CONV3D_TRANSPOSE_IDX) {
         const auto y_quant_mode = attrs->GetAttrPointer<int32_t>(K_Y_QUANT_MODE_CONV3D_TRANSPOSE_IDX);
-        OP_LOGE_IF(y_quant_mode == nullptr, false, context, "failed to get quant_mode attrs");
-        OP_LOGE_IF(*y_quant_mode != 0, false, context, "quant_mode:%d is invalid, it should be 0", *y_quant_mode);
+        OP_CHECK_IF(y_quant_mode == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "failed to get quant_mode attrs"), return false);
+        OP_CHECK_IF(*y_quant_mode != 0, 
+          OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "y_quant_mode", std::to_string(*y_quant_mode).c_str(), "0"), 
+          return false);
       }
     }
     return true;
@@ -485,18 +498,21 @@ static bool CheckTransposeOutputdingRange(gert::TilingContext *context, Conv3dBp
   // outputPadding值需要小于同维度dilation或stride
   OP_CHECK_IF(
     (otherParams.output_padding.output_padding_d >= runInfoV2.stride_d && otherParams.output_padding.output_padding_d >= runInfoV2.dilation_d),
-    OP_LOGE(context, "output_padding_d value[%d] should smaller than dilation_d[%d] or stride_d[%d]",
-            otherParams.output_padding.output_padding_d, runInfoV2.dilation_d, runInfoV2.stride_d),
+    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "output_padding_d", 
+      std::to_string(otherParams.output_padding.output_padding_d).c_str(),
+      FormatString("The value of output_padding_d must be smaller than dilation_d[%d] or stride_d[%d]", runInfoV2.dilation_d, runInfoV2.stride_d).c_str()),
     return false);
   OP_CHECK_IF(
     (otherParams.output_padding.output_padding_h >= runInfoV2.stride_h && otherParams.output_padding.output_padding_h >= runInfoV2.dilation_h),
-    OP_LOGE(context, "output_padding_h value[%d] should smaller than dilation_h[%d] or stride_h[%d]",
-            otherParams.output_padding.output_padding_h, runInfoV2.dilation_h, runInfoV2.stride_h),
+    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "output_padding_h", 
+      std::to_string(otherParams.output_padding.output_padding_h).c_str(),
+      FormatString("The value of output_padding_h must be smaller than dilation_h[%d] or stride_h[%d]", runInfoV2.dilation_h, runInfoV2.stride_h).c_str()),
     return false);
   OP_CHECK_IF(
     (otherParams.output_padding.output_padding_w >= runInfoV2.stride_w && otherParams.output_padding.output_padding_w >= runInfoV2.dilation_w),
-    OP_LOGE(context, "output_padding_w value[%d] should smaller than dilation_w[%d] or stride_w[%d]",
-            otherParams.output_padding.output_padding_w, runInfoV2.dilation_w, runInfoV2.stride_w),
+    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "output_padding_w", 
+      std::to_string(otherParams.output_padding.output_padding_w).c_str(),
+      FormatString("The value of output_padding_w must be smaller than dilation_w[%d] or stride_w[%d]", runInfoV2.dilation_w, runInfoV2.stride_w).c_str()),
     return false);
   return true;
 }
@@ -551,22 +567,28 @@ static bool UpdateDtypeParams(const gert::TilingContext *context, Conv3dBpInputV
   }
   OP_CHECK_IF(
     !dtypeSupportFlag,
-    OP_LOGE(op_name, "out_backprop/filter/y dtype only supports %s now, get actual out_backprop dtype[%s] filter dtype[%s] y dtype[%s].",
-            dtypeCheckLog.c_str(),
-            ge::TypeUtils::DataTypeToSerialString(otherParams.a_dtype).c_str(),
-            ge::TypeUtils::DataTypeToSerialString(otherParams.b_dtype).c_str(),
-            ge::TypeUtils::DataTypeToSerialString(otherParams.c_dtype).c_str()),
+    OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(op_name, "out_backprop, filter and y",
+      (ge::TypeUtils::DataTypeToSerialString(otherParams.a_dtype) + ", " +
+       ge::TypeUtils::DataTypeToSerialString(otherParams.b_dtype) + " and " +
+       ge::TypeUtils::DataTypeToSerialString(otherParams.c_dtype)).c_str(),
+      ("The dtypes of out_backprop, filter and y must be within the range " + dtypeCheckLog).c_str()),
     return false);
 
   runInfoV2.a_dtype_bytes = ge::GetSizeByDataType(otherParams.a_dtype);
   OP_CHECK_IF(runInfoV2.a_dtype_bytes == -1,
-      OP_LOGE(op_name, "out_backprop dtype size is invalid"), return false);
+    OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(op_name, "out_backprop", ge::TypeUtils::DataTypeToSerialString(otherParams.a_dtype).c_str(),
+      "The dtype size of out_backprop must be not equal to -1"), 
+    return false);
   runInfoV2.b_dtype_bytes = ge::GetSizeByDataType(otherParams.b_dtype);
   OP_CHECK_IF(runInfoV2.b_dtype_bytes == -1,
-      OP_LOGE(op_name, "filter dtype size is invalid"), return false);
+    OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(op_name, "filter", ge::TypeUtils::DataTypeToSerialString(otherParams.b_dtype).c_str(),
+      "The dtype size of filter must be not equal to -1"), 
+    return false);
   runInfoV2.c_dtype_bytes = ge::GetSizeByDataType(otherParams.c_dtype);
   OP_CHECK_IF(runInfoV2.c_dtype_bytes == -1,
-      OP_LOGE(op_name, "y dtype size is invalid"), return false);
+    OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(op_name, "y", ge::TypeUtils::DataTypeToSerialString(otherParams.c_dtype).c_str(),
+      "The dtype size of y must be not equal to -1"), 
+    return false);
 
   return true;
 }
@@ -619,12 +641,12 @@ static bool CheckStorageFormat(const gert::TilingContext *context, size_t filter
   bool invalid_tag = valid_out_bp_format.count(out_backprop_format) == 0 || valid_filter_format.count(filter_format) == 0 ||
                      valid_y_format.count(y_format) == 0;
   if (invalid_tag) {
-      OP_LOGE(op_name, "out_backprop format[%s] and y format[%s] should be [%s], filter format[%s] should be [%s].",
-              ge::TypeUtils::FormatToSerialString(out_backprop_format).c_str(),
-              ge::TypeUtils::FormatToSerialString(y_format).c_str(),
-              FormatSetToString(valid_out_bp_format).c_str(),
-              ge::TypeUtils::FormatToSerialString(filter_format).c_str(),
-              FormatSetToString(valid_filter_format).c_str());
+    std::string formatsStr = ge::TypeUtils::FormatToSerialString(out_backprop_format) + ", " + 
+      ge::TypeUtils::FormatToSerialString(y_format) + " and " + 
+      ge::TypeUtils::FormatToSerialString(filter_format);
+    OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(op_name, "out_backprop, y and filter", formatsStr.c_str(), 
+      ("The formats of out_backprop and y must be within the range {" + FormatSetToString(valid_out_bp_format) + 
+      "}, the format of filter must be within the range {" + FormatSetToString(valid_filter_format) + "}").c_str());
     return false;
   }
 
@@ -638,7 +660,11 @@ static bool UpdateShapeParams(const gert::TilingContext *context, const Conv3dBp
   OP_CHECK_IF(kDtypeBlockReduceMap.find(otherParams.a_dtype) == kDtypeBlockReduceMap.end() ||
               kDtypeBlockReduceMap.find(otherParams.c_dtype) == kDtypeBlockReduceMap.end() ||
               kDtypeBlockReduceMap.find(otherParams.b_dtype) == kDtypeBlockReduceMap.end(),
-            OP_LOGE(op_name, "dtype is invalid!"),
+            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(op_name, "out_backprop, filter and y",
+              (ge::TypeUtils::DataTypeToSerialString(otherParams.a_dtype) + ", " +
+              ge::TypeUtils::DataTypeToSerialString(otherParams.b_dtype) + " and " +
+              ge::TypeUtils::DataTypeToSerialString(otherParams.c_dtype)).c_str(),
+              "The dtypes of out_backprop, filter and y must be within the range {DT_HIFLOAT8, DT_FLOAT8_E4M3FN, DT_FLOAT16, DT_FLOAT, DT_INT8}"),
             return false);                         
   // a_shape means out_backprop shape
   otherParams.a_shape.c = out_backprop_shape_ncdhw.c;
@@ -704,16 +730,24 @@ static bool ValidateOriginShapeDims(const gert::TilingContext *context,
                                     const gert::Shape &y_ori_shape) {
   const auto op_name = context->GetNodeName();
   OP_CHECK_IF(out_backprop_ori_shape.GetDimNum() != K_ORI_SHAPE_DIM_3D,
-              OP_LOGE(op_name, "out_backprop origin shape dim nums = %zu should be 5", out_backprop_ori_shape.GetDimNum()), return false);
+              OP_LOGE_FOR_INVALID_SHAPEDIM(op_name, "out_backprop", std::to_string(out_backprop_ori_shape.GetDimNum()).c_str(), 
+                std::to_string(K_ORI_SHAPE_DIM_3D).c_str()), 
+              return false);
   if (IsSocVersionFuse(context)) {
     OP_CHECK_IF(filter_ori_shape.GetDimNum() != K_ORI_SHAPE_DIM_3D && filter_ori_shape.GetDimNum() != K_ORI_SHAPE_DIM_2D,
-                OP_LOGE(op_name, "filter origin shape dim nums = %zu should be 5 or 4", filter_ori_shape.GetDimNum()), return false);
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(op_name, "filter", std::to_string(filter_ori_shape.GetDimNum()).c_str(), 
+                  "The shape dim of filter must be within the range {4, 5}"), 
+                return false);
   } else {
     OP_CHECK_IF(filter_ori_shape.GetDimNum() != K_ORI_SHAPE_DIM_3D,
-                OP_LOGE(op_name, "filter origin shape dim nums = %zu should be 5", filter_ori_shape.GetDimNum()), return false);
+                OP_LOGE_FOR_INVALID_SHAPEDIM(op_name, "filter", std::to_string(filter_ori_shape.GetDimNum()).c_str(), 
+                  std::to_string(K_ORI_SHAPE_DIM_3D).c_str()), 
+                return false);
   }
   OP_CHECK_IF(y_ori_shape.GetDimNum() != K_ORI_SHAPE_DIM_3D,
-              OP_LOGE(op_name, "y origin shape dim nums = %zu should be 5", y_ori_shape.GetDimNum()), return false);
+              OP_LOGE_FOR_INVALID_SHAPEDIM(op_name, "y", std::to_string(y_ori_shape.GetDimNum()).c_str(), 
+                std::to_string(K_ORI_SHAPE_DIM_3D).c_str()), 
+              return false);
   return true;
 }
 
@@ -737,7 +771,7 @@ static bool CalShapeInfoFromDesc(const gert::TilingContext *context, size_t filt
   const auto &filter_ori_shape = filter_shape->GetOriginShape();
   const auto &y_ori_shape = y_shape->GetOriginShape();
   const auto op_name = context->GetNodeName();
-  
+
   if (!ValidateOriginShapeDims(context, out_backprop_ori_shape, filter_ori_shape, y_ori_shape)) {
     return false;
   }
@@ -772,44 +806,45 @@ static bool GetShapeParams(gert::TilingContext *context, Conv3dBpInputV2RunInfo 
   const auto filter_shape = context->GetInputShape(filter_input_index);
   const auto y_shape = context->GetOutputShape(Y_INDEX);
   OP_CHECK_IF(out_backprop_desc == nullptr || filter_desc == nullptr || y_desc == nullptr,
-              OP_LOGE(op_name, "failed to get out_backprop/filter/y tensor desc from context."), return false);
+              CUBE_INNER_ERR_REPORT(op_name, "failed to get out_backprop/filter/y tensor desc from context."), return false);
   OP_CHECK_IF(out_backprop_shape == nullptr || filter_shape == nullptr || y_shape == nullptr,
-              OP_LOGE(op_name, "failed to get out_backprop/filter/y shape from context."), return false);
+              CUBE_INNER_ERR_REPORT(op_name, "failed to get out_backprop/filter/y shape from context."), return false);
 
   auto out_backprop_ori_format = out_backprop_desc->GetOriginFormat();
   auto filter_ori_format = filter_desc->GetOriginFormat();
   auto y_ori_format = y_desc->GetOriginFormat();
   OP_CHECK_IF(out_backprop_ori_format != y_ori_format,
-              OP_LOGE(op_name, "y origin format[%s] should be same with out_backprop origin format[%s].",
-                      ge::TypeUtils::FormatToSerialString(y_ori_format).c_str(),
-                      ge::TypeUtils::FormatToSerialString(out_backprop_ori_format).c_str()),
+              OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(op_name, "out_backprop and y",
+                (ge::TypeUtils::FormatToSerialString(out_backprop_ori_format) + " and " + ge::TypeUtils::FormatToSerialString(y_ori_format)).c_str(),
+                "The formats of out_backprop and y must be the same"), 
               return false);
   OP_CHECK_IF(out_backprop_ori_format != ge::FORMAT_NDHWC && out_backprop_ori_format != ge::FORMAT_NCDHW,
-              OP_LOGE(op_name, "out_backprop origin format[%s] should be NDHWC or NCDHW.",
-                      ge::TypeUtils::FormatToSerialString(out_backprop_ori_format).c_str()),
+              OP_LOGE_FOR_INVALID_FORMAT(op_name, "out_backprop", ge::TypeUtils::FormatToSerialString(out_backprop_ori_format).c_str(), "NDHWC or NCDHW"), 
               return false);
   if (IsArchAfter35(context) || IsSocVersionFuse(context)) {
     OP_CHECK_IF(filter_ori_format != ge::FORMAT_NDHWC && filter_ori_format != ge::FORMAT_NCDHW && filter_ori_format != ge::FORMAT_DHWCN && filter_ori_format != ge::FORMAT_NCHW,
-                OP_LOGE(op_name, "filter origin format[%s] should be NDHWC/NCDHW/DHWCN.",
-                        ge::TypeUtils::FormatToSerialString(filter_ori_format).c_str()),
+                OP_LOGE_FOR_INVALID_FORMAT(op_name, "filter", ge::TypeUtils::FormatToSerialString(filter_ori_format).c_str(), "NDHWC or NCDHW or DHWCN or NCHW"),
                 return false);
     OP_CHECK_IF(!CheckStorageFormat(context, filter_input_index, out_backprop_input_index, op_type),
                 OP_LOGE(op_name, "Check storage format From Desc fail."), return false);
   } else {
     OP_CHECK_IF(filter_ori_format != ge::FORMAT_NDHWC && filter_ori_format != ge::FORMAT_NCDHW && filter_ori_format != ge::FORMAT_DHWCN,
-                OP_LOGE(op_name, "filter origin format should be NDHWC or NCDHW or DHWCN."), return false);
+                OP_LOGE_FOR_INVALID_FORMAT(op_name, "filter", ge::TypeUtils::FormatToSerialString(filter_ori_format).c_str(), "NDHWC or NCDHW or DHWCN"), 
+                return false);
     auto out_backprop_format = static_cast<ge::Format>(ge::GetPrimaryFormat(out_backprop_desc->GetStorageFormat()));
     auto filter_format = static_cast<ge::Format>(ge::GetPrimaryFormat(filter_desc->GetStorageFormat()));
     auto y_format = static_cast<ge::Format>(ge::GetPrimaryFormat(y_desc->GetStorageFormat()));
     OP_CHECK_IF(out_backprop_format != ge::FORMAT_NDC1HWC0 || filter_format != ge::FORMAT_FRACTAL_Z_3D,
-                OP_LOGE(op_name, "out_backprop format should be NDC1HWC0, filter format should be FRACTAL_Z_3D."),
+                OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(op_name, "out_backprop and filter",
+                  (ge::TypeUtils::FormatToSerialString(out_backprop_format) + " and " + ge::TypeUtils::FormatToSerialString(filter_format)).c_str(),
+                  "The formats of out_backprop and filter must be NDC1HWC0 and FRACTAL_Z_3D"),
                 return false);
     if (!isV2Impl || op_type == optiling::OpTypeV2::kConv3DTransposeV2 || op_type == optiling::OpTypeV2::kExtendConvTranspose) {
       OP_CHECK_IF(y_format != ge::FORMAT_NDC1HWC0,
-                  OP_LOGE(op_name, "y format should be NDC1HWC0."), return false);
+                  OP_LOGE_FOR_INVALID_FORMAT(op_name, "y", ge::TypeUtils::FormatToSerialString(y_format).c_str(), "NDC1HWC0"), return false);
     } else {
       OP_CHECK_IF(y_format != ge::FORMAT_NDC1HWC0 && y_format != ge::FORMAT_NCDHW,
-                  OP_LOGE(op_name, "y format should be NDC1HWC0 or NCDHW."), return false);
+                  OP_LOGE_FOR_INVALID_FORMAT(op_name, "y", ge::TypeUtils::FormatToSerialString(y_format).c_str(), "NDC1HWC0 or NCDHW"), return false);
     }
   }
 
@@ -838,8 +873,8 @@ static void ReCalDilation(const gert::TilingContext *context, Conv3dBpInputV2Run
 
 static bool CalGroups(gert::TilingContext *context, OtherParams& otherParams, Conv3dBpInputV2RunInfo &runInfoV2) {
   if (otherParams.b_shape.c == 0 || otherParams.c_shape.c % otherParams.b_shape.c != 0) {
-    OP_LOGE(context, "fmap_channel(%ld) mod filter_channel(%ld) != 0", otherParams.c_shape.c,
-            otherParams.b_shape.c);
+    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "fmap_channel", std::to_string(otherParams.c_shape.c).c_str(), 
+      FormatString("The channel of fmap must be exactly divisible by filter_channel %ld", otherParams.b_shape.c).c_str());
     return false;
   }
 
@@ -847,13 +882,15 @@ static bool CalGroups(gert::TilingContext *context, OtherParams& otherParams, Co
   if (runInfoV2.groups == 1) {
     runInfoV2.groups = groups;
   } else if (groups != runInfoV2.groups) {
-    OP_LOGE(context, "fmap_channel(%ld) / filter_channel(%ld) != groups(%d)", otherParams.c_shape.c,
-            otherParams.b_shape.c, runInfoV2.groups);
+    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "fmap_channel and filter_channel", 
+      (std::to_string(otherParams.c_shape.c) + " and " + std::to_string(otherParams.b_shape.c)).c_str(),
+      FormatString("The channel of fmap must be equal to filter_channel multiplied by group %ld", runInfoV2.groups).c_str());
     return false;
   }
 
   OP_CHECK_IF(otherParams.a_shape.c % runInfoV2.groups != 0,
-              OP_LOGE(context, "out_backprop's C(%ld) %% groups(%d) != 0", otherParams.a_shape.c, runInfoV2.groups),
+              OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "out_backprop's C", std::to_string(otherParams.a_shape.c).c_str(), 
+                FormatString("The C of out_backprop must be exactly divisible by group %ld", runInfoV2.groups).c_str()),
               return false);
 
   if (IsArchAfter35(context) || IsSocVersionFuse(context)) {
@@ -894,11 +931,12 @@ static bool CheckAllZero(const T *tensor_data, size_t dim_size) {
 
 static bool CheckInputSizeAllZero(gert::TilingContext *context, bool &allzero) {
   auto input_size = context->GetInputTensor(INPUT_SIZE_INDEX);
-  OP_CHECK_IF(input_size == nullptr, OP_LOGE(context, "get input size fail"),
-      return false);
+  OP_CHECK_IF(input_size == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "get input size fail"), return false);
   size_t input_size_dim_num = static_cast<size_t>(input_size->GetOriginShape().GetShapeSize());
-  OP_CHECK_IF(input_size_dim_num != K_ORI_SHAPE_DIM_3D && input_size_dim_num != K_ORI_SHAPE_DIM_2D, OP_LOGE(context, "input_size_dim_num=[%zu], input_size must be 4d or 5d", input_size_dim_num),
-      return false);
+  OP_CHECK_IF(input_size_dim_num != K_ORI_SHAPE_DIM_3D && input_size_dim_num != K_ORI_SHAPE_DIM_2D, 
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "input_size", std::to_string(input_size_dim_num).c_str(), 
+              "The shape dim of input size must be within the range {4, 5}"), 
+            return false);
   auto dtype = context->GetInputDesc(INPUT_SIZE_INDEX)->GetDataType();
   if (dtype == ge::DT_INT32) {
     auto tensor_data = input_size->GetData<int32_t>();
@@ -907,7 +945,8 @@ static bool CheckInputSizeAllZero(gert::TilingContext *context, bool &allzero) {
     auto tensor_data = input_size->GetData<int64_t>();
     allzero = CheckAllZero(tensor_data, input_size_dim_num);
   } else {
-    OP_LOGE(context, "input_size dtype only supports int32 or int64");
+    OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context->GetNodeName(), "input_size", ge::TypeUtils::DataTypeToSerialString(dtype).c_str(), 
+      "The dtype of input_size must be within the range {DT_INT32, DT_INT64}");
     return false;
   }
   return true;
@@ -958,12 +997,18 @@ static bool CheckCalPads(const gert::TilingContext *context, const Conv3dBpInput
                       runInfoV2.pad_r - otherParams.filter_w_dilation) /
                       runInfoV2.stride_w + 1;
   std::string check_input_name = (op_type == optiling::OpTypeV2::kConv3DTransposeV2 || op_type == optiling::OpTypeV2::kExtendConvTranspose) ? "x" : "out_backprop";
-  OP_CHECK_IF(do_expect != otherParams.a_shape.d, OP_LOGE(context->GetNodeName(), "%s's D = %ld is not equal to inferred D = %ld",
-              check_input_name.c_str(), otherParams.a_shape.d, do_expect), return false);
-  OP_CHECK_IF(ho_expect != otherParams.a_shape.h, OP_LOGE(context->GetNodeName(), "%s's H = %ld is not equal to inferred H = %ld",
-              check_input_name.c_str(), otherParams.a_shape.h, ho_expect), return false);
-  OP_CHECK_IF(wo_expect != otherParams.a_shape.w, OP_LOGE(context->GetNodeName(), "%s's W = %ld is not equal to inferred W = %ld",
-              check_input_name.c_str(), otherParams.a_shape.w, wo_expect), return false);
+  OP_CHECK_IF(do_expect != otherParams.a_shape.d, 
+              OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), (check_input_name + "'s D").c_str(), std::to_string(otherParams.a_shape.d).c_str(),
+                FormatString("The value of %s's D must be equal to inferred D = %d", check_input_name.c_str(), do_expect).c_str()),
+              return false);
+  OP_CHECK_IF(ho_expect != otherParams.a_shape.h, 
+              OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), (check_input_name + "'s H").c_str(), std::to_string(otherParams.a_shape.h).c_str(),
+                FormatString("The value of %s's H must be equal to inferred H = %d", check_input_name.c_str(), ho_expect).c_str()),
+              return false);
+  OP_CHECK_IF(wo_expect != otherParams.a_shape.w, 
+              OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), (check_input_name + "'s W").c_str(), std::to_string(otherParams.a_shape.w).c_str(),
+                FormatString("The value of %s's W must be equal to inferred W = %d", check_input_name.c_str(), wo_expect).c_str()),
+              return false);
   return true;
 }
 
@@ -1026,7 +1071,9 @@ static int32_t CalFmapH(gert::TilingContext *context, const Conv3dBpInputV2RunIn
     int32_t minBaseM = 1024;
 
     int64_t dedx_w = otherParams.c_shape.w;
-    OP_CHECK_IF(dedx_w == 0, OP_LOGE(context, "dedx_w is 0"), return 0);
+    OP_CHECK_IF(dedx_w == 0, 
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "dedx_w", std::to_string(dedx_w).c_str(), "The value of dedx_w cannot be 0"),
+                return 0);
 
     constexpr int32_t FMAP_H_NUM = 2;
     int32_t hiCal;
@@ -1054,8 +1101,7 @@ static bool IsNeedTilingHkWk(gert::TilingContext *context, const Conv3dBpInputV2
     uint64_t l1_size  = 0;
 
     fe::PlatFormInfos* platformInfo = context->GetPlatformInfo();
-    OP_CHECK_IF(platformInfo == nullptr, OP_LOGE(context, "platformInfoPtr is null"),
-        return false);
+    OP_CHECK_IF(platformInfo == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "platformInfoPtr is null."), return false);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L1, l1_size);
 
@@ -1082,10 +1128,9 @@ static bool CalRealG(gert::TilingContext *context, Conv3dBpInputV2RunInfo &runIn
   // calc real g and check shape
   int32_t dy_c_ori = otherParams.a_shape.c / runInfoV2.groups;
   OP_CHECK_IF(dy_c_ori == 0,
-              OP_LOGE(context, "Given groups %d , expected out_backporp to be at least %d at dimension 1, but got out_backporp of size %ld  instead",
-                      runInfoV2.groups,
-                      runInfoV2.groups,
-                      otherParams.a_shape.c),
+              OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context->GetNodeName(), "out_backporp C and group",
+                (std::to_string(otherParams.a_shape.c) + " and " + std::to_string(runInfoV2.groups)).c_str(), 
+                FormatString("The value of out_backporp of C must be at least group(%d)", runInfoV2.groups).c_str()), 
               return false);
   int32_t dx_c_extend = MathUtil::Lcm(otherParams.b_shape.c, otherParams.c_shape.c0) / otherParams.b_shape.c;
   int32_t dy_c_extend = MathUtil::Lcm(dy_c_ori, kBlockSize) / dy_c_ori;
@@ -1133,12 +1178,12 @@ static bool CalRealG(gert::TilingContext *context, Conv3dBpInputV2RunInfo &runIn
                                otherParams.b_shape.h * otherParams.b_shape.w;
 
     OP_CHECK_IF(filterGDkCi1gHW != otherParams.filter_gdkci1ghw,
-                OP_LOGE(context, "the 1st dim of filter shape should be %ld, which is %ld",
-                        filterGDkCi1gHW, otherParams.filter_gdkci1ghw),
+                OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "the 1st dim of filter shape", 
+                  std::to_string(otherParams.filter_gdkci1ghw).c_str(), std::to_string(filterGDkCi1gHW).c_str()),
                 return false);
     OP_CHECK_IF(co1g != otherParams.co1g,
-                OP_LOGE(context, "the 2nd dim of filter shape should be %d, which is %d",
-                        co1g, otherParams.co1g),
+                OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "the 2nd dim of filter shape", 
+                  std::to_string(otherParams.co1g).c_str(), std::to_string(co1g).c_str()),
                 return false);
   }
   return true;
@@ -1175,8 +1220,9 @@ static bool CalModifyBackpropPadD(gert::TilingContext *context, Conv3dBpInputV2R
   otherParams.pad_head_before = CalBackpropPadBefore(filterShape.d, runInfoV2.dilation_d, runInfoV2.pad_h);
   int64_t pad_tail_after = CalBackpropPadAfter(dedxShape.d, dedyShape.d, runInfoV2.stride_d, runInfoV2.pad_h);
   OP_CHECK_IF(IsOverflowInt32(pad_tail_after) || !CheckRange(static_cast<int32_t>(pad_tail_after), -kDimUp, kDimUp),
-              OP_LOGE(context, "pad_tail_after = (inputD - outputD * strideD + padHead)=%ld is invalid, it should be in[%d, %d]",
-                      pad_tail_after, -kDimUp, kDimUp),
+              OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "pad_tail_after = (inputD - outputD * strideD + padHead)", 
+                std::to_string(pad_tail_after).c_str(), 
+                FormatString("The value of pad_tail_after must be range [%d, %d]", -kDimUp, kDimUp).c_str()), 
               return false);
   pad_tail_after = (pad_tail_after + abs(pad_tail_after)) / kNumTwo;
   otherParams.pad_tail_after = pad_tail_after;
@@ -1235,22 +1281,28 @@ bool CheckPadParamsWithLog(const Conv3dBpInputV2RunInfo &runInfoV2, const gert::
     kPadUpTmp = kPadUp;
   }
   OP_CHECK_IF(!CheckRange(runInfoV2.pad_h, 0, kPadUpTmp),
-              OP_LOGE(op_name, "pad_h value [%d] is invalid, support range [%d, %d]", runInfoV2.pad_h, 0, kPadUpTmp),
+              OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "pad_h", std::to_string(runInfoV2.pad_h).c_str(),
+                FormatString("The value of pad_h must be range [%d, %d]", 0, kPadUpTmp).c_str()),
               return false);
   OP_CHECK_IF(!CheckRange(runInfoV2.pad_t, 0, kPadUpTmp),
-              OP_LOGE(op_name, "pad_t value [%d] is invalid, support range [%d, %d]", runInfoV2.pad_t, 0, kPadUpTmp),
+              OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "pad_t", std::to_string(runInfoV2.pad_t).c_str(),
+                FormatString("The value of pad_t must be range [%d, %d]", 0, kPadUpTmp).c_str()),
               return false);
   OP_CHECK_IF(!CheckRange(runInfoV2.pad_u, 0, kPadUpTmp),
-              OP_LOGE(op_name, "pad_u value [%d] is invalid, support range [%d, %d]", runInfoV2.pad_u, 0, kPadUpTmp),
+              OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "pad_u", std::to_string(runInfoV2.pad_u).c_str(),
+                FormatString("The value of pad_u must be range [%d, %d]", 0, kPadUpTmp).c_str()),
               return false);
   OP_CHECK_IF(!CheckRange(runInfoV2.pad_d, 0, kPadUpTmp),
-              OP_LOGE(op_name, "pad_d value [%d] is invalid, support range [%d, %d]", runInfoV2.pad_d, 0, kPadUpTmp),
+              OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "pad_d", std::to_string(runInfoV2.pad_d).c_str(),
+                FormatString("The value of pad_d must be range [%d, %d]", 0, kPadUpTmp).c_str()),
               return false);
   OP_CHECK_IF(!CheckRange(runInfoV2.pad_l, 0, kPadUpTmp),
-              OP_LOGE(op_name, "pad_l value [%d] is invalid, support range [%d, %d]", runInfoV2.pad_l, 0, kPadUpTmp),
+              OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "pad_l", std::to_string(runInfoV2.pad_l).c_str(),
+                FormatString("The value of pad_l must be range [%d, %d]", 0, kPadUpTmp).c_str()),
               return false);
   OP_CHECK_IF(!CheckRange(runInfoV2.pad_r, 0, kPadUpTmp),
-              OP_LOGE(op_name, "pad_r value [%d] is invalid, support range [%d, %d]", runInfoV2.pad_r, 0, kPadUpTmp),
+              OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "pad_r", std::to_string(runInfoV2.pad_r).c_str(),
+                FormatString("The value of pad_r must be range [%d, %d]", 0, kPadUpTmp).c_str()),
               return false);
   return true;
 }
@@ -1268,45 +1320,56 @@ bool CheckParamsWithLog(Conv3dBpInputV2RunInfo &runInfoV2, gert::TilingContext *
     kStrideHWUpTmp = kStrideHWUp;
   }
   OP_CHECK_IF(!CheckRange(runInfoV2.dilation_h, kDilationLow, kDilationUpTmp),
-              OP_LOGE(op_name, "dilation_h value [%d] is invalid, support range [%d, %d]", runInfoV2.dilation_h, kDilationLow, kDilationUpTmp),
+              OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "dilation_h", std::to_string(runInfoV2.dilation_h).c_str(),
+                FormatString("The value of dilation_h must be range [%d, %d]", kDilationLow, kDilationUpTmp).c_str()),
               return false);
   OP_CHECK_IF(!CheckRange(runInfoV2.dilation_w, kDilationLow, kDilationUpTmp),
-              OP_LOGE(op_name, "dilation_w value [%d] is invalid, support range [%d, %d]", runInfoV2.dilation_w, kDilationLow, kDilationUpTmp),
+              OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "dilation_w", std::to_string(runInfoV2.dilation_w).c_str(),
+                FormatString("The value of dilation_w must be range [%d, %d]", kDilationLow, kDilationUpTmp).c_str()),
               return false);
   OP_CHECK_IF(!CheckRange(runInfoV2.dilation_d, kDilationLow, kDilationUpTmp),
-              OP_LOGE(op_name, "dilation_d value [%d] is invalid, support range [%d, %d]", runInfoV2.dilation_d, kDilationLow, kDilationUpTmp),
+              OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "dilation_d", std::to_string(runInfoV2.dilation_d).c_str(),
+                FormatString("The value of dilation_d must be range [%d, %d]", kDilationLow, kDilationUpTmp).c_str()),
               return false);
   OP_CHECK_IF(!CheckRange(runInfoV2.stride_h, kDimLow, kStrideHWUpTmp),
-              OP_LOGE(op_name, "stride_h value [%d] is invalid, support range [%d, %d]", runInfoV2.stride_h, kDimLow, kStrideHWUpTmp),
+              OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "stride_h", std::to_string(runInfoV2.stride_h).c_str(),
+                FormatString("The value of stride_h must be range [%d, %d]", kDimLow, kStrideHWUpTmp).c_str()),
               return false);
   OP_CHECK_IF(!CheckRange(runInfoV2.stride_w, kDimLow, kStrideHWUpTmp),
-              OP_LOGE(op_name, "stride_w value [%d] is invalid, support range [%d, %d]", runInfoV2.stride_w, kDimLow, kStrideHWUpTmp),
+              OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "stride_w", std::to_string(runInfoV2.stride_w).c_str(),
+                FormatString("The value of stride_w must be range [%d, %d]", kDimLow, kStrideHWUpTmp).c_str()),
               return false);
   OP_CHECK_IF(!CheckRange(runInfoV2.stride_d, kDimLow, kStrideDUpTmp),
-              OP_LOGE(op_name, "stride_d value [%d] is invalid, support range [%d, %d]", runInfoV2.stride_d, kDimLow, kStrideDUpTmp),
+              OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "stride_d", std::to_string(runInfoV2.stride_d).c_str(),
+                FormatString("The value of stride_d must be range [%d, %d]", kDimLow, kStrideDUpTmp).c_str()),
               return false);
   OP_CHECK_IF(!CheckPadParamsWithLog(runInfoV2, context),
               OP_LOGE(op_name, "check pad params failed"),
               return false);
   OP_CHECK_IF((otherParams.filter_d_dilation > otherParams.fmap_d_padding),
-              OP_LOGE(op_name, "((filter_d - 1) * dilation_d + 1)=[%ld] must less than or equal to (fmap_d + pad_h + pad_t)=[%ld]",
-                      otherParams.filter_d_dilation, otherParams.fmap_d_padding),
+              OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "filter_d_dilation = ((filter_d - 1) * dilation_d + 1)", 
+                std::to_string(otherParams.filter_d_dilation).c_str(),
+                FormatString("The value of filter_d_dilation must be less than or equal to (fmap_d + pad_h + pad_t)=[%ld]", otherParams.fmap_d_padding).c_str()),
               return false);
   OP_CHECK_IF((otherParams.filter_h_dilation > otherParams.fmap_h_padding),
-              OP_LOGE(op_name, "((filter_h - 1) * dilation_h + 1)=[%ld] must less than or equal to (fmap_h + pad_u + pad_d)=[%ld]",
-                      otherParams.filter_h_dilation, otherParams.fmap_h_padding),
+              OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "filter_h_dilation = ((filter_h - 1) * dilation_h + 1)", 
+                std::to_string(otherParams.filter_h_dilation).c_str(),
+                FormatString("The value of filter_h_dilation must be less than or equal to (fmap_h + pad_u + pad_d)=[%ld]", otherParams.fmap_h_padding).c_str()),
               return false);
   OP_CHECK_IF((otherParams.filter_w_dilation > otherParams.fmap_w_padding),
-              OP_LOGE(op_name, "((filter_w - 1) * dilation_w + 1)=[%ld] must less than or equal to (fmap_w + pad_l + pad_r)=[%ld]",
-                      otherParams.filter_w_dilation, otherParams.fmap_w_padding),
+              OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "filter_w_dilation = ((filter_w - 1) * dilation_w + 1)", 
+                std::to_string(otherParams.filter_w_dilation).c_str(),
+                FormatString("The value of filter_w_dilation must be less than or equal to (fmap_w + pad_l + pad_r)=[%ld]", otherParams.fmap_w_padding).c_str()),
               return false);
   OP_CHECK_IF(!CheckRange(otherParams.a_shape.w * runInfoV2.stride_w, kDimLow, kDimUp),
-              OP_LOGE(op_name, "out_backprop's W after expands [%ld] is invalid, support range [%d, %d]",
-                      otherParams.a_shape.w * runInfoV2.stride_w, kDimLow, kDimUp),
+              OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "out_backprop's W after expands", 
+                std::to_string(otherParams.a_shape.w * runInfoV2.stride_w).c_str(),
+                FormatString("The value of out_backprop's W after expands must be range [%d, %d]", kDimLow, kDimUp).c_str()),
               return false);
   OP_CHECK_IF(!CheckRange(otherParams.a_shape.h * runInfoV2.stride_h, kDimLow, kDimUp),
-              OP_LOGE(op_name, "out_backprop's H after expands [%ld] is invalid, support range [%d, %d]",
-                      otherParams.a_shape.h * runInfoV2.stride_h, kDimLow, kDimUp),
+              OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "out_backprop's H after expands", 
+                std::to_string(otherParams.a_shape.h * runInfoV2.stride_h).c_str(),
+                FormatString("The value of out_backprop's H after expands must be range [%d, %d]", kDimLow, kDimUp).c_str()),
               return false);
   return true;
 }
@@ -1389,7 +1452,7 @@ static bool CheckL1SizeLimit(Conv3dBpInputV2RunInfo &runInfoV2, gert::TilingCont
       << "B, fill_zero_size is " << fill_zero_size << "B, L1size is " << context->GetCompileInfo<Ops::NN::Conv::Conv3DBackpropV2CompileInfo>()->l1_size
       << "B, width may exceed limits, actual width: " << std::max(otherParams.c_shape.w, w_value)
       << ", width limit: " << kDimWNormalUp;
-    OP_LOGE(context->GetNodeName(), "Error msg: %s", ss.str().c_str());
+    CUBE_INNER_ERR_REPORT(context->GetNodeName(), "Error msg: %s", ss.str().c_str());
     return false;
   }
 

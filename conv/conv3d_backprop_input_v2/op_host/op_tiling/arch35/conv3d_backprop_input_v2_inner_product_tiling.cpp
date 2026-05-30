@@ -245,7 +245,7 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::GetShapeAttrsInfo()
 uint64_t Conv3DDXV2InnerProductTiling::GetCVRation()
 {
     auto platformInfoPtr = context_->GetPlatformInfo();
-    OP_LOGE_IF(platformInfoPtr == nullptr, ge::GRAPH_FAILED, context_->GetNodeName(), "platformInfoPtr is null");
+    OP_CHECK_IF(platformInfoPtr == nullptr, CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "platformInfoPtr is null"), return ge::GRAPH_FAILED);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
 
     uint64_t aivCoreCount = ascendcPlatform.GetCoreNumAiv();
@@ -761,7 +761,7 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::DoLibApiTiling()
         if (IsL1ParamsValid(l1Params, l0Params)) {
             SetSingleCoreInfo(coreParams, l0Params); // 重新设置核间切分数据
         } else {
-            OP_LOGE(context_, "params exceed max L1 limit size");
+            CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "params exceed max L1 limit size.");
             return ge::GRAPH_FAILED;
         }
     }

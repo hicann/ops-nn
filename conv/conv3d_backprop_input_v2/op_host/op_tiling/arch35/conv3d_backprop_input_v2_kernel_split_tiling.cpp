@@ -17,6 +17,7 @@
 #include <map>
 #include <numeric>
 #include <log/log.h>
+#include "error_util.h"
 #include <util/math_util.h>
 #include <register/op_impl_registry.h>
 #include <graph/utils/type_utils.h>
@@ -529,7 +530,7 @@ ge::graphStatus Conv3DDXV2KernelSplitTiling::DoLibApiTiling()
             // 重新设置核间切分数据，只允许调小baseMN
             SetSingleCoreInfo(coreParams, l0Params);
         } else {
-            OP_LOGE(context_, "params exceed max L1 limit size");
+            CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "params exceed max L1 limit size.");
             return ge::GRAPH_FAILED;
         }
     }

@@ -198,7 +198,7 @@ ge::graphStatus Conv3DBackpropInputV2TilingArch35::DoOpTiling()
     }
 
     if (!GetTbeTiling(context_, tbeTiling_, opType_)) {
-        OP_LOGE(context_->GetNodeName(), "GetTbeTiling failed");
+        CUBE_INNER_ERR_REPORT(context_->GetNodeName(), "GetTbeTiling failed.");
         return ge::GRAPH_FAILED;
     }
 
@@ -260,7 +260,7 @@ bool Conv3DBackpropInputV2TilingArch35::PrintInputsAttrs(conv_bp_v2_kernel::TCon
     const auto groups = attrs->GetAttrPointer<int64_t>(groupIndex);
     size_t enable_hf32_index = (opType_ == optiling::OpTypeV2::kConv3DTransposeV2 || opType_ == optiling::OpTypeV2::kExtendConvTranspose) ? TRANSPOSE_ENABLE_HF32_INDEX : ENABLE_HF32_INDEX; // dx hf32 idx 5 | transpose hf32 idx 7
     const auto enableHf32 = attrs->GetAttrPointer<bool>(enable_hf32_index);
-    OP_CHECK_IF(groups == nullptr, OP_LOGE(op_name, "get groups from context fail."), return false);
+    OP_CHECK_IF(groups == nullptr, CUBE_INNER_ERR_REPORT(op_name, "get groups from context fail."), return false);
     if (opType_ == optiling::OpTypeV2::kConv3DTransposeV2 || opType_ == optiling::OpTypeV2::kExtendConvTranspose){
         auto output_paddingShape = GetAttrVector(context_, OUTPUT_PADDING_INDEX, kConv3DbpDim, "output_padding");
         const auto offset = attrs->GetAttrPointer<bool>(OFFSET_X_INDEX);
@@ -337,17 +337,14 @@ bool Conv3DBackpropInputV2TilingArch35::CheckDtypeFormatAttrs(
 
     OP_TILING_CHECK(
         (hif8flag || fp8e4m3flag) && isFormatNotDn,
-        CUBE_INNER_ERR_REPORT(
-            opName_,
-            "the current output_backprop_dtype is [%s], filter_dtype is [%s], y_dtype is [%s], "
-            "and format only supports NCDHW, but actually get out_backprop_format is [%s], filter_format is [%s], "
-            "y_format is [%s]",
-            ge::TypeUtils::DataTypeToSerialString(out_backprop_desc->GetDataType()).c_str(),
-            ge::TypeUtils::DataTypeToSerialString(filter_desc->GetDataType()).c_str(),
-            ge::TypeUtils::DataTypeToSerialString(y_desc->GetDataType()).c_str(),
-            ge::TypeUtils::FormatToSerialString(runInfo_.outBackpropFormat).c_str(),
-            ge::TypeUtils::FormatToSerialString(runInfo_.filterFormat).c_str(),
-            ge::TypeUtils::FormatToSerialString(runInfo_.yFormat).c_str()),
+        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(opName_, "out_backprop, filter and y", 
+            (ge::TypeUtils::FormatToSerialString(runInfo_.outBackpropFormat) + ", " + 
+             ge::TypeUtils::FormatToSerialString(runInfo_.filterFormat) + " and " +
+             ge::TypeUtils::FormatToSerialString(runInfo_.yFormat)).c_str(),
+            ("The formats of out_backprop, filter and y must be NCDHW, when the current output_backprop_dtype is " + 
+             ge::TypeUtils::DataTypeToSerialString(out_backprop_desc->GetDataType()) + ", filter_dtype is " + 
+             ge::TypeUtils::DataTypeToSerialString(filter_desc->GetDataType()) + ", y_dtype is " + 
+             ge::TypeUtils::DataTypeToSerialString(y_desc->GetDataType())).c_str()),
         return false);
 
     return true;
@@ -366,13 +363,11 @@ bool Conv3DBackpropInputV2TilingArch35::AnalyzeFuseDtype(const bool f16flag, con
 
     OP_TILING_CHECK(
         !f16flag && !int8flag && !fp16int8flag,
-        CUBE_INNER_ERR_REPORT(
-            opName_,
-            "the fuse dtype of outputBackprop, filter, y only supports DT_FLOAT16/DT_INT8"
-            "but actually get outputBackpropDtype is [%s], filterDtype is [%s], yDtype is [%s]",
-            ge::TypeUtils::DataTypeToSerialString(outputBackpropDtype).c_str(),
-            ge::TypeUtils::DataTypeToSerialString(filterDtype).c_str(),
-            ge::TypeUtils::DataTypeToSerialString(yDtype).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(opName_, "out_backprop, filter and y",   
+            (ge::TypeUtils::DataTypeToSerialString(outputBackpropDtype) + ", " +
+            ge::TypeUtils::DataTypeToSerialString(filterDtype) + " and " +
+            ge::TypeUtils::DataTypeToSerialString(yDtype)).c_str(),
+            "The dtypes of out_backprop, filter and y must be within the range {DT_FLOAT16, DT_INT8}"),
         return false);
     return true;
 }
@@ -419,21 +414,18 @@ bool Conv3DBackpropInputV2TilingArch35::AnalyzeDtype() const
     } else {
         OP_TILING_CHECK(
         !flags.hif8flag && !flags.fp8e4m3flag && !flags.bf16flag && !flags.f16flag && !flags.f32flag && !flags.int8flag,
-        CUBE_INNER_ERR_REPORT(
-            opName_,
-            "the dtype of outputBackprop, filter, y only supports DT_HIFLOAT8/DT_FLOAT8_E4M3FN/DT_BF16/DT_FLOAT16/DT_FLOAT/DT_INT8,"
-            "but actually get outputBackpropDtype is [%s], filterDtype is [%s], yDtype is [%s]",
-            ge::TypeUtils::DataTypeToSerialString(outputBackpropDtype).c_str(),
-            ge::TypeUtils::DataTypeToSerialString(filterDtype).c_str(),
-            ge::TypeUtils::DataTypeToSerialString(yDtype).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(opName_, "out_backprop, filter and y",   
+            (ge::TypeUtils::DataTypeToSerialString(outputBackpropDtype) + ", " +
+            ge::TypeUtils::DataTypeToSerialString(filterDtype) + " and " +
+            ge::TypeUtils::DataTypeToSerialString(yDtype)).c_str(),
+            "The dtypes of out_backprop, filter and y must be within the range {DT_HIFLOAT8, DT_FLOAT8_E4M3FN, DT_BF16, DT_FLOAT16, DT_FLOAT, DT_INT8}"),
         return false);
     }
 
     OP_TILING_CHECK(
         (opType_ == optiling::OpTypeV2::kConv3DTransposeV2 || opType_ == optiling::OpTypeV2::kExtendConvTranspose) && inputSizeDtype != ge::DT_INT32 && inputSizeDtype != ge::DT_INT64,
-        CUBE_INNER_ERR_REPORT(
-            opName_, "input_size dtype should be int32 or int64, but actually get inputSizeDtype is [%s]",
-            ge::TypeUtils::DataTypeToSerialString(inputSizeDtype).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName_, "input_size", ge::TypeUtils::DataTypeToSerialString(inputSizeDtype).c_str(), 
+            "The dtype of input_size must be within the range {DT_INT32, DT_INT64}"),
         return false);
     if (!CheckDtypeFormatAttrs(outputBackpropIndex, filterIndex, flags.hif8flag, flags.fp8e4m3flag)) {
         return false;

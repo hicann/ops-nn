@@ -53,7 +53,8 @@ namespace Conv {
         size_t const_tensor_dim_num = static_cast<size_t>(const_tensor->GetOriginShape().GetShapeSize());
         OP_CHECK_IF(
             const_tensor_dim_num != dim_num,
-            CUBE_INNER_ERR_REPORT(op_name, "%s dim num %zu invalid", const_tensor_name, const_tensor_dim_num),
+            OP_LOGE_FOR_INVALID_SHAPEDIM(op_name, const_tensor_name, std::to_string(const_tensor_dim_num).c_str(), 
+                std::to_string(dim_num).c_str()), 
             return ge::GRAPH_FAILED);
         y_shape->SetDimNum(dim_num);
 
@@ -79,9 +80,8 @@ namespace Conv {
                 y_shape->SetDim(idx, tensor_data[idx]);
             }
         } else {
-            CUBE_INNER_ERR_REPORT(
-                op_name, "tensor %s not support dtype %s", const_tensor_name,
-                ge::TypeUtils::DataTypeToAscendString(dtype).GetString());
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(op_name, const_tensor_name, ge::TypeUtils::DataTypeToAscendString(dtype).GetString(), 
+                ("The dtype of " + std::string(const_tensor_name) +" must be within the range {DT_INT32, DT_INT64}").c_str());
             return ge::GRAPH_FAILED;
         }
 
@@ -98,7 +98,8 @@ namespace Conv {
         }
 
         const auto runtime_attrs = context->GetAttrs();
-        OP_LOGE_IF(runtime_attrs == nullptr, false, context->GetNodeName(), "failed to get runtime attrs");
+        OP_CHECK_IF(
+            runtime_attrs == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "failed to get runtime attrs"), return ge::GRAPH_FAILED);
         const auto from_depthwise = runtime_attrs->GetBool(6); // from_depthwise attr idx: 6
         if (from_depthwise == nullptr || !*from_depthwise) {
             return ge::GRAPH_SUCCESS;
@@ -163,8 +164,9 @@ namespace Conv {
     bool CheckOutputAllZeroFrom2D(const gert::InferShapeContext* context, const gert::Shape* shape, int32_t d_index)
     {
         size_t dim_num = shape->GetDimNum();
-        OP_CHECK_IF(
-            dim_num != kConv3dDimSizeLimit, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "shape dim is not 5"),
+        OP_CHECK_IF(dim_num != kConv3dDimSizeLimit, 
+            OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "tensor", std::to_string(dim_num).c_str(), 
+                std::to_string(kConv3dDimSizeLimit).c_str()),
             return false);
         if (shape->GetDim(d_index) != 1) {
             return false;
@@ -202,7 +204,9 @@ namespace Conv {
         OP_CHECK_IF(const_tensor == nullptr, CUBE_INNER_ERR_REPORT(op_name, "get null %s tensor", const_tensor_name), return ge::GRAPH_FAILED);
         size_t const_tensor_dim_num = static_cast<size_t>(const_tensor->GetOriginShape().GetShapeSize());
         OP_CHECK_IF(const_tensor_dim_num != kConv2dDimSizeLimit,
-            CUBE_INNER_ERR_REPORT(op_name, "%s dim num %zu invalid", const_tensor_name, const_tensor_dim_num), return ge::GRAPH_FAILED);
+            OP_LOGE_FOR_INVALID_SHAPEDIM(op_name, const_tensor_name, std::to_string(const_tensor_dim_num).c_str(), 
+                std::to_string(kConv2dDimSizeLimit).c_str()),
+            return ge::GRAPH_FAILED);
         y_shape->SetDimNum(extendDimSizeLimit);
         auto input_shape = context->GetInputShape(const_tensor_idx == IDX_0 ? IDX_1 : IDX_0);
         OP_CHECK_IF(input_shape == nullptr, CUBE_INNER_ERR_REPORT(op_name, "get null input tensor"), return ge::GRAPH_FAILED);
@@ -222,7 +226,9 @@ namespace Conv {
         OP_CHECK_IF(y_desc == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "y desc is null"), return ge::GRAPH_FAILED);
         const auto y_format = y_desc->GetOriginFormat();
         int32_t d_index = GetConvBackpropIndex(y_format);
-        OP_CHECK_IF(d_index == -1, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "y format does not support"), return ge::GRAPH_FAILED);
+        OP_CHECK_IF(d_index == -1, 
+            OP_LOGE_FOR_INVALID_FORMAT(context->GetNodeName(), "y", ge::TypeUtils::FormatToSerialString(y_format).c_str(), "NCDHW or NDHWC or DHWCN"), 
+            return ge::GRAPH_FAILED);
         auto dtype = const_tensor->GetDataType();
         if (dtype == ge::DT_INT32) {
             auto tensor_data = const_tensor->GetData<int32_t>();
@@ -247,7 +253,8 @@ namespace Conv {
                 }
             }
         } else {
-            CUBE_INNER_ERR_REPORT(context->GetNodeName(), "tensor not support dtype %s", ge::TypeUtils::DataTypeToAscendString(dtype).GetString());
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context->GetNodeName(), "tensor", ge::TypeUtils::DataTypeToAscendString(dtype).GetString(), 
+                "The dtype of tensor must be within the range {DT_INT32, DT_INT64}");
             return ge::GRAPH_FAILED;
         }
         return ge::GRAPH_SUCCESS;

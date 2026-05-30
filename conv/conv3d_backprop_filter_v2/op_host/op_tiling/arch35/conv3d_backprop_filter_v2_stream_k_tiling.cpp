@@ -21,6 +21,7 @@
 #include <log/log.h>
 #include <graph/utils/type_utils.h>
 #include "op_host/tiling_templates_registry.h"
+#include "error_util.h"
 
 namespace Ops {
 namespace NN {
@@ -93,7 +94,7 @@ ge::graphStatus Conv3DBackpropFilterV2StreamKTiling::DoOpTiling()
            << "filter shape is [" << runInfo_.co << ", "<< runInfo_.ci << ", " << runInfo_.kd << ", " << runInfo_.kh << ", " << runInfo_.kw << "]. "
            << "stride is [1, 1, " << runInfo_.stride_d << ", " << runInfo_.stride_h << ", " << runInfo_.stride_w << "]. "
            << "dilation is [1, 1, " << runInfo_.dilation_d << ", " << runInfo_.dilation_h << ", " << runInfo_.dilation_w << "]. ";
-        OP_LOGE(opName_, "StreamK tiling template do optiling failed. Exceed L1 buffer size, please check the shape and attribute. %s", ss.str().c_str());
+        CUBE_INNER_ERR_REPORT(opName_, "StreamK tiling template do optiling failed. Exceed L1 buffer size, please check the shape and attribute. %s", ss.str().c_str());
         return ge::GRAPH_FAILED;
     }
     if (blockTiling_.isSplitKernelHW) {

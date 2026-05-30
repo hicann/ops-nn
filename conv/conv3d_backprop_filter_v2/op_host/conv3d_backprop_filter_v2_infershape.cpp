@@ -38,13 +38,13 @@ static ge::graphStatus InferShapeForDepthwiseConv2DBackpropFilter(gert::InferSha
     OP_CHECK_IF(y_shape == nullptr, CUBE_INNER_ERR_REPORT("", "Get %s failed", "y shape"), return ge::GRAPH_FAILED);
     
     const auto runtime_attrs = context->GetAttrs();
-    OP_LOGE_IF(runtime_attrs == nullptr, ge::GRAPH_FAILED, context->GetNodeName(), "failed to get runtime attrs");
+    OP_CHECK_IF(runtime_attrs == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "failed to get runtime attrs"), return ge::GRAPH_FAILED);
     if (runtime_attrs->GetAttrNum() <= FROM_DEPTHWISE_INDEX) {
         return ret;
     }
 
     const bool* from_depthwise = runtime_attrs->GetAttrPointer<bool>(FROM_DEPTHWISE_INDEX);
-    OP_LOGE_IF(from_depthwise == nullptr, ge::GRAPH_FAILED, context->GetNodeName(), "failed to get runtime attrs from_depthwise");
+    OP_CHECK_IF(from_depthwise == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "failed to get runtime attrs from_depthwise"), return ge::GRAPH_FAILED);
 
     if (!*from_depthwise) {
         return ge::GRAPH_SUCCESS;
