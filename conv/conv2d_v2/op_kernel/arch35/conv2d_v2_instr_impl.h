@@ -94,6 +94,7 @@ public:
             this->allPadFlag = true;
             return;
         }
+        this->allPadFlag = false;
         // Calculate hiAL1, wiAL1
         this->hiLoadL1 = paddingHiAL1 - this->padTopL1 - padBottomL1;
         this->hiLoadL1 = this->hiLoadL1 > self_->ctx.convTilingData->convApiTiling.orgHi ?
@@ -464,7 +465,7 @@ private:
                 this->allPadFlag = true;
                 return;
             }
-
+            this->allPadFlag = false;
             this->padTopL1 = 0;
             padBottomL1 = 0;
             if (hiStartIdxWithPad < self_->ctx.convTilingData->convApiTiling.padTop) {

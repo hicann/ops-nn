@@ -100,6 +100,7 @@ constexpr uint32_t BASICBLOCK_INIT_VALUE_1024 = 1024;
 
 constexpr uint32_t COUT_LIMIT_128 = 128;
 constexpr uint32_t ENABLE_MMODE_CONV1D_WO_LIMIT_128 = 128;
+constexpr uint32_t ENABLE_MMODE_LOAD3D_W_SIZE_LIMIT = 32767;
 
 // idxList
 constexpr size_t DIS_CONTINUOUS_N_IDX = 2;

@@ -568,6 +568,13 @@ bool ConvTilingAlgorithmHWmode::CheckHoWoL1FullLoad() const
     if (!tilingIns_->isDmaFlag && hoAL1Full * woAL1Full > LOAD3D_M_START_POS_LIMIT) {
         return false;
     }
+    // load3d hiL1 & wiL1 <= 32767
+    uint64_t hiAL1Full = InferHiL1(hoAL1Full, tilingIns_->shapeInfo.orgHi);
+    uint64_t wiAL1Full = InferWiL1(woAL1Full, tilingIns_->shapeInfo.orgWi);
+    if (hiAL1Full > LOAD3D_HW_SIZE_LIMIT ||
+        wiAL1Full > LOAD3D_HW_SIZE_LIMIT) {
+        return false;
+    }
     return true;
 }
 

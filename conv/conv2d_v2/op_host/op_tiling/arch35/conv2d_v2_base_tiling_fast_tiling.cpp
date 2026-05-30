@@ -109,8 +109,10 @@ ge::graphStatus Conv2dBaseTiling::Conv2DInfoInitAndCheck()
 ge::graphStatus Conv2dBaseTiling::GetC04TilingSplitMode()
 {
     flagInfo_.mSplitModeFlag = false;
-    bool forceHWSplitModeFlag = featureFlagInfo_ == ConvAscendcFeatureFlag::IS_CONV1D_FLAG &&
-                                shapeInfo_.wo > ENABLE_MMODE_CONV1D_WO_LIMIT_128;
+    bool forceHWSplitModeFlag = (featureFlagInfo_ == ConvAscendcFeatureFlag::IS_CONV1D_FLAG &&
+                                 shapeInfo_.wo > ENABLE_MMODE_CONV1D_WO_LIMIT_128) ||
+                                (featureFlagInfo_ == ConvAscendcFeatureFlag::IS_LOAD3D_FLAG &&
+                                 oriShapeAttrInfo_.oriFmapW > ENABLE_MMODE_LOAD3D_W_SIZE_LIMIT);
     if (!forceHWSplitModeFlag && convBase_.CheckC04L1SizeLimitsInMsplitMode() == ge::GRAPH_SUCCESS) {
         flagInfo_.mSplitModeFlag = true;
         return ge::GRAPH_SUCCESS;
@@ -144,8 +146,11 @@ ge::graphStatus Conv2dBaseTiling::GetTilingSplitMode()
     }
 
     flagInfo_.mSplitModeFlag = false;
-    if (!flagHWCheckFirst && (featureFlagInfo_ == ConvAscendcFeatureFlag::IS_LOAD3D_FLAG || (featureFlagInfo_ ==
-        ConvAscendcFeatureFlag::IS_CONV1D_FLAG && orgWo <= ENABLE_MMODE_CONV1D_WO_LIMIT_128)) &&
+    bool tryMmodeCondition1 = featureFlagInfo_ == ConvAscendcFeatureFlag::IS_LOAD3D_FLAG &&
+        oriShapeAttrInfo_.oriFmapW <= ENABLE_MMODE_LOAD3D_W_SIZE_LIMIT;
+    bool tryMmodeCondition2 = featureFlagInfo_ == ConvAscendcFeatureFlag::IS_CONV1D_FLAG &&
+        orgWo <= ENABLE_MMODE_CONV1D_WO_LIMIT_128;
+    if (!flagHWCheckFirst && (tryMmodeCondition1 || tryMmodeCondition2) &&
         convBase_.CheckL1SizeLimitsInMSplitMode() == ge::GRAPH_SUCCESS) { // M split mode check, conv1d/dma skip M split
         flagInfo_.mSplitModeFlag = true;
         SelectMModeAlgorithm();

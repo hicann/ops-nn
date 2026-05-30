@@ -186,6 +186,7 @@ constexpr uint32_t LOAD3D_MAX_PAD = 255;
 constexpr uint32_t LOAD3D_MAX_FILTER_H_W = 511;
 constexpr uint32_t LOAD3D_MAX_DDR2L1_SIZE = 65535;
 constexpr uint32_t LOAD3D_M_START_POS_LIMIT = 32767;
+constexpr uint32_t LOAD3D_HW_SIZE_LIMIT = 32767;
 constexpr uint32_t DATACOPYPARAMS_BURSTLEN_MAX = 65535;
 
 constexpr uint32_t M0 = 16;

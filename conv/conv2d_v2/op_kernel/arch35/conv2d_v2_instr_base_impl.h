@@ -51,7 +51,6 @@ public:
                 1, static_cast<uint16_t>(self_->ctx.convTilingData->convApiTiling.aL1SpaceSize / C0_SIZE), 0, 0);
             InitConstValue<typename Intf::FmapT>(self_->ctx.al1, params);
         }
-        allPadFlag = false;
     }
 
     __aicore__ inline void SetLoad3dFMatrix(uint64_t padLeftL1, uint64_t padRightL1, uint64_t wiLoadL1)
