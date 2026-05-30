@@ -406,10 +406,12 @@ HPTG1@ops-nn:
                 - ops/ops-nn/norm/group_norm_v2/op_host/arch35/group_norm_v2_tiling_arch35.cpp
                 - ops/ops-nn/norm/layer_norm_v3/op_host/arch35/layer_norm_v3_tiling_arch35.cpp
                 - ops/ops-nn/norm/layer_norm_v3/op_host/arch35/layer_norm_v3_tiling_base.cpp
+                - ops/ops-nn/norm/layer_norm_v3/CMakeLists.txt
                 - ops/ops-nn/norm/lp_norm_v2/op_host/arch35/lp_norm_v2_tiling_arch35.cpp
                 - ops/ops-nn/norm/lp_norm_v2/op_host/arch35/lp_norm_v2_tiling_arch35.h
                 - ops/ops-nn/norm/lp_norm_v2/op_kernel/arch35/lp_norm_v2_dag.h
                 - ops/ops-nn/norm/lp_norm_v2/op_kernel/arch35/lp_norm_v2_tiling_struct.h
+                - ops/ops-nn/norm/lp_norm_v2/CMakeLists.txt
                 - ops/ops-nn/norm/layer_norm_v4/op_host/config/ascend950/
                 - ops/ops-nn/norm/layer_norm_v4/op_host/layer_norm_v4_regbase_two_pass_perf_tiling.cpp
                 - ops/ops-nn/norm/layer_norm_v4/op_host/layer_norm_v4_welford_tiling.cpp
@@ -424,6 +426,7 @@ HPTG1@ops-nn:
                 - ops/ops-nn/norm/layer_norm_grad_v3/op_host/layer_norm_grad_v3_grouped_reduce_big_n_tiling.cpp
                 - ops/ops-nn/norm/layer_norm_grad_v3/op_kernel/arch35/
                 - ops/ops-nn/norm/layer_norm_grad_v3/op_kernel/layer_norm_grad_v3_apt.cpp
+                - ops/ops-nn/norm/layer_norm/CMakeLists.txt
                 - ops/ops-nn/norm/add_layer_norm/op_host/add_layer_norm_tiling_arch35.cpp
                 - ops/ops-nn/norm/add_layer_norm/op_host/config/ascend950/
                 - ops/ops-nn/norm/add_layer_norm/op_kernel/arch35/
@@ -560,6 +563,7 @@ conv_backward-c@ops-nn:
         - ops/ops-nn/experimental/
         - ops/ops-nn/examples/
         - ops/ops-nn/build.sh
+        - ops/ops-nn/CMakeLists.txt
         - ops/ops-nn/cmake/
         - ops/ops-nn/tests/
         - ops/ops-nn/conv/conv3d_backprop_filter_v2/tests/
@@ -618,6 +622,7 @@ conv_forward_ascendc@ops-nn:
         - ops/ops-nn/conv/common/op_kernel/arch35
         - ops/ops-nn/conv/common/op_graph
         - ops/ops-nn/conv/common/op_graph/fusion_pass
+        - ops/ops-nn/conv/common/tests/ut/op_graph/test_conv_fusion_pass_framework.h
         - ops/ops-nn/conv/conv2d_v2/op_graph
         - ops/ops-nn/conv/conv2d_v2/op_host/config/ascend950
         - ops/ops-nn/conv/conv2d_v2/op_host/conv2d_v2_def.cpp
@@ -638,6 +643,7 @@ conv_forward_ascendc@ops-nn:
         - ops/ops-nn/conv/extend_conv2d/op_host/extend_conv2d_def.cpp
         - ops/ops-nn/conv/extend_conv2d/op_host/op_tiling/extend_conv2d_tiling.cpp
         - ops/ops-nn/conv/extend_conv2d/op_host/op_kernel
+        - ops/ops-nn/conv/extend_conv2d/op_graph/fusion_pass/conv2d_postcube_to_extendconv2d_fusion_pass.h
         - ops/ops-nn/conv/quant_conv3d/op_graph
         - ops/ops-nn/conv/quant_conv3d/op_graph/fusion_pass
         - ops/ops-nn/conv/quant_conv3d/op_host/quant_conv3d_def.cpp
@@ -1143,6 +1149,7 @@ norm-c@ops-nn:
         - ops/ops-nn/norm/batch_norm_v3/op_kernel/batch_norm_v3_base.h
         - ops/ops-nn/norm/batch_norm_v3/op_kernel/batch_norm_v3_full_reduce.h
         - ops/ops-nn/norm/batch_norm_v3/op_kernel/batch_norm_v3_welford.h
+        - ops/ops-nn/norm/batch_norm/CMakeLists.txt
         - ops/ops-nn/norm/bn_training_reduce/
         - ops/ops-nn/norm/deep_norm/
         - ops/ops-nn/norm/deep_norm_grad/
@@ -1904,6 +1911,7 @@ VC7@ops-nn:
         - ops/ops-nn/pooling/avg_pool3_d/op_kernel/avg_pool3_d_apt.cpp
         - ops/ops-nn/pooling/max_pool3_d/op_host/
         - ops/ops-nn/pooling/max_pool3_d/op_kernel/
+        - ops/ops-nn/pooling/max_pool3_d/CMakeLists.txt
         - ops/ops-nn/pooling/max_pool_v2/op_host/
         - ops/ops-nn/pooling/max_pool_v2/op_kernel/
         - ops/ops-nn/pooling/max_pool_v3/op_host/
