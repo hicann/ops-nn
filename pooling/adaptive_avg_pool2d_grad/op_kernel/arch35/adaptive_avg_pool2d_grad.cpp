@@ -15,11 +15,13 @@
 #include "adaptive_avg_pool2d_grad_simt.h"
 #include "adaptive_avg_pool2d_grad_struct.h"
 #include "adaptive_avg_pool2d_grad_big_kernel.h"
+#include "adaptive_avg_pool2d_grad_nchw_small_kernel.h"
 
 using namespace AdaptiveAvgPool2dGradOp;
 
 template <uint64_t TEMPLATE_MODE = TPL_SMALL_KERNEL, uint64_t INDEX_DTYPE = TPL_INT32, uint64_t IS_CHANNEL_LAST = 0>
-__global__ __aicore__ void adaptive_avg_pool2d_grad(GM_ADDR input_grad, GM_ADDR output_grad, GM_ADDR workspace, GM_ADDR tiling)
+__global__ __aicore__ void adaptive_avg_pool2d_grad(
+    GM_ADDR input_grad, GM_ADDR output_grad, GM_ADDR workspace, GM_ADDR tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     TPipe pipe;
@@ -44,6 +46,17 @@ __global__ __aicore__ void adaptive_avg_pool2d_grad(GM_ADDR input_grad, GM_ADDR 
         } else {
             AdaptiveAvgPool2dGradBigKernel<DTYPE_INPUT_GRAD, int64_t> op(pipe, tilingData);
             op.Init(input_grad, output_grad);
+            op.Process();
+        }
+    } else if constexpr (TEMPLATE_MODE == TPL_SMALL_KERNEL && IS_CHANNEL_LAST == 0) {
+        GET_TILING_DATA_WITH_STRUCT(AdaptiveAvgPool2dNCHWGradSmallKernelTilingDataV35, tilingData, tiling);
+        if constexpr (INDEX_DTYPE == TPL_INT32) {
+            AdaptiveAvgPool2dGradNCHWSmallKernel<DTYPE_INPUT_GRAD, int32_t> op;
+            op.Init(input_grad, output_grad, pipe, tilingData);
+            op.Process();
+        } else if constexpr (INDEX_DTYPE == TPL_INT64) {
+            AdaptiveAvgPool2dGradNCHWSmallKernel<DTYPE_INPUT_GRAD, int64_t> op;
+            op.Init(input_grad, output_grad, pipe, tilingData);
             op.Process();
         }
     }
