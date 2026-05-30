@@ -10,10 +10,11 @@
 
 /*!
  * \file inplace_index_fill_apt.cpp
- * \brief
+ * \brief Kernel entry point with template dispatch
  */
 
 #include "arch35/inplace_index_fill_simt.h"
+#include "arch35/inplace_index_fill_simt_dense_indices.h"
 #include "arch35/inplace_index_fill_simd.h"
 #include "arch35/inplace_index_fill_struct.h"
 #include "arch35/inplace_index_fill_tiling_key.h"
@@ -27,7 +28,37 @@ struct ComputeTypeGet {
     using type = typename std::conditional<sizeof(T) == B64, int64_t, T>::type;
 };
 
-template <uint64_t TEMPLATE_MODE, uint64_t ADDR_MODE>
+template <typename xType>
+__aicore__ inline void DispatchSimd(
+    InplaceIndexFillSimdTilingData& tilingData,
+    GM_ADDR x, GM_ADDR indices, GM_ADDR value, GM_ADDR workspace, AscendC::TPipe& pipe)
+{
+    InplaceIndexFillSimd<xType, DTYPE_INDICES> op(tilingData, pipe);
+    op.Init(x, indices, value, workspace);
+    op.Process();
+}
+
+template <typename xType, typename COM_T>
+__aicore__ inline void DispatchSimt(
+    InplaceIndexFillSimtTilingData& tilingData,
+    GM_ADDR x, GM_ADDR indices, GM_ADDR value, GM_ADDR workspace)
+{
+    InplaceIndexFillSimt::InplaceIndexFillSimtImpl<xType, DTYPE_INDICES, COM_T> op(&tilingData);
+    op.Init(indices, value, workspace);
+    op.Process((__gm__ xType*)(x), workspace);
+}
+
+template <typename xType, typename COM_T>
+__aicore__ inline void DispatchDenseIndices(
+    InplaceIndexFillSimtDenseIndicesTilingData& tilingData,
+    GM_ADDR x, GM_ADDR indices, GM_ADDR value, GM_ADDR workspace, AscendC::TPipe& pipe)
+{
+    InplaceIndexFillDenseIndices::InplaceIndexFillDenseIndicesImpl<xType, DTYPE_INDICES, COM_T> op(&tilingData, &pipe);
+    op.Init(indices, value, workspace);
+    op.Process((__gm__ xType*)(x));
+}
+
+template <uint64_t TEMPLATE_MODE, uint64_t DTYPE_MODE>
 __global__ __aicore__ void inplace_index_fill(
     GM_ADDR x, GM_ADDR indices, GM_ADDR value, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
@@ -36,29 +67,41 @@ __global__ __aicore__ void inplace_index_fill(
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     REGISTER_TILING_DEFAULT(InplaceIndexFillSimtTilingData);
 
-    if constexpr (TEMPLATE_MODE == TPL_MODE_SIMD && ADDR_MODE == TPL_MODE_ADDR_INT64) {
+    if constexpr (TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMD && DTYPE_MODE == TPL_MODE_DTYPE_B32) {
         REGISTER_TILING_FOR_TILINGKEY(
-            "TEMPLATE_MODE == TPL_MODE_SIMD && ADDR_MODE == TPL_MODE_ADDR_INT64",
+            "TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMD && DTYPE_MODE == TPL_MODE_DTYPE_B32",
             InplaceIndexFillSimdTilingData);
         GET_TILING_DATA_WITH_STRUCT(InplaceIndexFillSimdTilingData, tilingData, tiling);
-        InplaceIndexFillSimd<xType, DTYPE_INDICES> op(tilingData, pipe);
-        op.Init(x, indices, value, workspace);
-        op.Process();
-    } else if constexpr (TEMPLATE_MODE == TPL_MODE_SIMT && ADDR_MODE == TPL_MODE_ADDR_INT32) {
+        DispatchSimd<xType>(tilingData, x, indices, value, workspace, pipe);
+    } else if constexpr (TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMD && DTYPE_MODE == TPL_MODE_DTYPE_B64) {
         REGISTER_TILING_FOR_TILINGKEY(
-            "TEMPLATE_MODE == TPL_MODE_SIMT && ADDR_MODE == TPL_MODE_ADDR_INT32",
+            "TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMD && DTYPE_MODE == TPL_MODE_DTYPE_B64",
+            InplaceIndexFillSimdTilingData);
+        GET_TILING_DATA_WITH_STRUCT(InplaceIndexFillSimdTilingData, tilingData, tiling);
+        DispatchSimd<xType>(tilingData, x, indices, value, workspace, pipe);
+    } else if constexpr (TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMT && DTYPE_MODE == TPL_MODE_DTYPE_B32) {
+        REGISTER_TILING_FOR_TILINGKEY(
+            "TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMT && DTYPE_MODE == TPL_MODE_DTYPE_B32",
             InplaceIndexFillSimtTilingData);
         GET_TILING_DATA_WITH_STRUCT(InplaceIndexFillSimtTilingData, tilingData, tiling);
-        InplaceIndexFillSimt::InplaceIndexFillSimtImpl<xType, DTYPE_INDICES, uint32_t> op(&tilingData);
-        op.Init(value);
-        op.Process(x, indices);
-    } else if constexpr (TEMPLATE_MODE == TPL_MODE_SIMT && ADDR_MODE == TPL_MODE_ADDR_INT64) {
+        DispatchSimt<xType, uint32_t>(tilingData, x, indices, value, workspace);
+    } else if constexpr (TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMT && DTYPE_MODE == TPL_MODE_DTYPE_B64) {
         REGISTER_TILING_FOR_TILINGKEY(
-            "TEMPLATE_MODE == TPL_MODE_SIMT && ADDR_MODE == TPL_MODE_ADDR_INT64",
+            "TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMT && DTYPE_MODE == TPL_MODE_DTYPE_B64",
             InplaceIndexFillSimtTilingData);
         GET_TILING_DATA_WITH_STRUCT(InplaceIndexFillSimtTilingData, tilingData, tiling);
-        InplaceIndexFillSimt::InplaceIndexFillSimtImpl<xType, DTYPE_INDICES, uint64_t> op(&tilingData);
-        op.Init(value);
-        op.Process(x, indices);
+        DispatchSimt<xType, uint64_t>(tilingData, x, indices, value, workspace);
+    } else if constexpr (TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMT_DENSE_INDICES && DTYPE_MODE == TPL_MODE_DTYPE_B32) {
+        REGISTER_TILING_FOR_TILINGKEY(
+            "TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMT_DENSE_INDICES && DTYPE_MODE == TPL_MODE_DTYPE_B32",
+            InplaceIndexFillSimtDenseIndicesTilingData);
+        GET_TILING_DATA_WITH_STRUCT(InplaceIndexFillSimtDenseIndicesTilingData, tilingData, tiling);
+        DispatchDenseIndices<xType, uint32_t>(tilingData, x, indices, value, workspace, pipe);
+    } else if constexpr (TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMT_DENSE_INDICES && DTYPE_MODE == TPL_MODE_DTYPE_B64) {
+        REGISTER_TILING_FOR_TILINGKEY(
+            "TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMT_DENSE_INDICES && DTYPE_MODE == TPL_MODE_DTYPE_B64",
+            InplaceIndexFillSimtDenseIndicesTilingData);
+        GET_TILING_DATA_WITH_STRUCT(InplaceIndexFillSimtDenseIndicesTilingData, tilingData, tiling);
+        DispatchDenseIndices<xType, uint64_t>(tilingData, x, indices, value, workspace, pipe);
     }
 }

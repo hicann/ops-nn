@@ -165,7 +165,10 @@ void InplaceIndexFillTilingSimd::SetTilingData()  {
 }
 
 uint64_t InplaceIndexFillTilingSimd::GetTilingKey() const{
-    return GET_TPL_TILING_KEY(TPL_MODE_SIMD, TPL_MODE_ADDR_INT64);
+    uint64_t dtypeMode = (inputData.xDtypeSize <= 4)
+        ? static_cast<uint64_t>(TPL_MODE_DTYPE_B32)
+        : static_cast<uint64_t>(TPL_MODE_DTYPE_B64);
+    return GET_TPL_TILING_KEY(TPL_MODE_TEMPLATE_SIMD, dtypeMode);
 }
  
 REGISTER_OPS_TILING_TEMPLATE(InplaceIndexFill, InplaceIndexFillTilingSimd, 1);

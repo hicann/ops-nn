@@ -31,13 +31,18 @@ const uint32_t SYS_WORKSPACE_SIZE = 0;
 
 struct InplaceIndexFIllInputInfo {
     int64_t dim;        // 指定的维度，用于填充操作
-    int64_t preDimProduct = 1;      // x在dim轴前面的轴维度乘积
-    int64_t dimSize = 0;            // dim轴的维度
-    int64_t postDimProduct = 1;     // x在dim轴后面的轴维度乘积
-    int64_t indicesNum; // indices的长度
-    int64_t totalDataSize;   // 需处理的总数据量
+    int64_t preDimProduct = 1;      // x在dim轴前面的轴维度乘积（P）
+    int64_t dimSize = 0;            // dim轴的维度（N）
+    int64_t postDimProduct = 1;     // x在dim轴后面的轴维度乘积（Q）
+    int64_t indicesNum;             // indices的长度
+    int64_t totalDataSize;          // 需处理的总数据量（indicesNum * P * Q）
+    int64_t numel = 0;             // x 的总元素数（P * N * Q）
     int64_t xDtypeSize;
     int64_t indicesDtypeSize;
+    ge::DataType indicesDtype = ge::DT_INT32;  // indices 的数据类型
+
+    // DenseIndices 模板参数
+    int64_t indicesUbFactor = 0;    // UB 中每次加载的 indices 数量
 };
 
 struct InplaceIndexFillCompileInfo {

@@ -10,7 +10,9 @@
 
 /*!
  * \file inplace_index_fill_tiling_simt.cpp
- * \brief
+ * \brief SIMT tiling strategy with dual-path optimization:
+ *        - SIMD 搬运 x→y（UB 切分 + 双缓冲）
+ *        - SIMT 计算（路径A 稀疏 / 路径B 稠密 mask+顺序写）
  */
 
 #include "inplace_index_fill_tiling_simt.h"
@@ -21,101 +23,132 @@
 using namespace InplaceIndexFill;
 
 namespace optiling {
-constexpr uint64_t HALF_CORE_FACTOR = 2;       // 核心利用率阈值：至少使用一半核心
-constexpr uint64_t THREAD_HALVE_FACTOR = 2;    // 线程数减半因子
 
+// ============================================================================
+// IsCapable：SIMT 模板是兜底模板，无条件接受
+// ============================================================================
 bool InplaceIndexFillTilingSimt::IsCapable()
 {
     return true;
 }
 
-void InplaceIndexFillTilingSimt::BlockTiling(uint64_t dataSize, uint64_t numCores, uint64_t threadNum)
+// ============================================================================
+// CalcSimtUsedCoreNum：计算 SIMT 计算侧需要的核数
+// 策略：从 MAX_THREAD_NUM 开始，如果核利用率不足 50%，则减半线程数重新计算
+// 目的：确保至少使用一半的核，避免核闲置
+// ============================================================================
+int64_t InplaceIndexFillTilingSimt::CalcSimtUsedCoreNum()
 {
-    uint64_t perBlockData = (dataSize + numCores - 1) / numCores;
-    perBlockData = ((perBlockData + threadNum - 1) / threadNum) * threadNum;
-    uint64_t usedCoreNum = (dataSize + perBlockData - 1) / perBlockData;
-    uint64_t tailBlockData = dataSize - (usedCoreNum - 1) * perBlockData;
+    int64_t threadNum = MAX_THREAD_NUM;
+    // numel = P * N * Q（x 的总元素数），是路径B的遍历量上界
+    int64_t numel = inputData.numel;
+    // 每核至少需要 threadNum 个元素才能充分利用线程
+    int64_t simtUsedCoreNum = std::min(coreNum_, numel / threadNum);
 
-    tilingData_->usedCoreNum = usedCoreNum;
-    tilingData_->perBlockData = perBlockData;
-    tilingData_->tailBlockData = tailBlockData;
+    // 如果核利用率不足 50%，减半线程数重新计算
+    while ((simtUsedCoreNum < (coreNum_ / 2)) && (threadNum > static_cast<int64_t>(MIN_THREAD_NUM))) {
+        threadNum = threadNum / 2;
+        simtUsedCoreNum = std::min(coreNum_, numel / threadNum);
+    }
+
+    return simtUsedCoreNum;
 }
 
+// ============================================================================
+// DoOpTiling：主 tiling 入口
+// ============================================================================
 ge::graphStatus InplaceIndexFillTilingSimt::DoOpTiling()
 {
     coreNum_ = coreNum;
-    uint64_t dataSize = inputData.totalDataSize;
-    uint64_t threadNum = MAX_THREAD_NUM;
 
-    // 空tensor处理
+    // 空 tensor 处理
     if (inputData.preDimProduct == 0 || inputData.dimSize == 0 || inputData.postDimProduct == 0) {
-        // 出现空tensor直接传入pnq，在kernel侧先处理空tesnor情况，出现pnq==0，return
-        tilingData_->preDimProduct = inputData.preDimProduct;
-        tilingData_->dimSize = inputData.dimSize;
-        tilingData_->postDimProduct = inputData.postDimProduct;
-        tilingData_->usedCoreNum = 1;   // 空tensor场景核数1
+        usedCoreNum = 1;
+        simtUsedCoreNum_ = 1;
+        SetTilingData();
         return ge::GRAPH_SUCCESS;
     }
 
-    BlockTiling(dataSize, coreNum_, threadNum);
-    tilingData_->threadNum = threadNum; // 先赋值，防止后续循环不进入，线程为0
-
-    while (tilingData_->usedCoreNum <= coreNum_ / HALF_CORE_FACTOR && threadNum > MIN_THREAD_NUM) {
-        threadNum /= THREAD_HALVE_FACTOR;
-        tilingData_->threadNum = threadNum;
-
-        // 打印查看线程获取情况，后续删掉
-        std::ostringstream info;
-        info << "threadNum: " << threadNum << std::endl;
-        info << "tilingData_->threadNum: " << tilingData_->threadNum << std::endl;
-        OP_LOGI(context_->GetNodeName(), "%s", info.str().c_str());
-
-        BlockTiling(dataSize, coreNum_, threadNum);
-    }
-
+    simtUsedCoreNum_ = CalcSimtUsedCoreNum();
+    usedCoreNum = inputData.numel == 0 ? coreNum_ : simtUsedCoreNum_;
     SetTilingData();
 
     return ge::GRAPH_SUCCESS;
 }
 
+// ============================================================================
+// GetWorkspaceSize：申请 workspace 内存
+// 路径B 需要 N 字节的 mask 位图存放在 workspace 上
+// ============================================================================
+ge::graphStatus InplaceIndexFillTilingSimt::GetWorkspaceSize()
+{
+    size_t sysWorkspaceSize = SYS_WORKSPACE_SIZE;
+    auto platformPtr = context_->GetPlatformInfo();
+    if (platformPtr != nullptr) {
+        auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformPtr);
+        sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
+    }
+
+    size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
+    // workspace = N 字节（mask 位图）+ 系统 workspace
+    currentWorkspace[0] = (inputData.dimSize * sizeof(int8_t)) + sysWorkspaceSize;
+
+    // 设置核间同步模式（BuildIndicesMask 需要 SyncAll）
+    context_->SetScheduleMode(1);
+    return ge::GRAPH_SUCCESS;
+}
+
+// ============================================================================
+// GetTilingKey：生成 tiling key
+// ============================================================================
 uint64_t InplaceIndexFillTilingSimt::GetTilingKey() const
 {
-    uint64_t totalDataSize = tilingData_->totalDataSize;
-    uint64_t addrMode = (totalDataSize > INT32_MAX) ? TPL_MODE_ADDR_INT64 : TPL_MODE_ADDR_INT32;
-    return GET_TPL_TILING_KEY(TPL_MODE_SIMT, addrMode);
+    uint64_t templateMode = static_cast<uint64_t>(TPL_MODE_TEMPLATE_SIMT);
+    uint64_t dtypeMode = (inputData.xDtypeSize <= 4)
+        ? static_cast<uint64_t>(TPL_MODE_DTYPE_B32)
+        : static_cast<uint64_t>(TPL_MODE_DTYPE_B64);
+    return GET_TPL_TILING_KEY(templateMode, dtypeMode);
 }
 
+// ============================================================================
+// SetTilingData：将计算结果写入 tiling 数据结构
+// ============================================================================
 void InplaceIndexFillTilingSimt::SetTilingData()
 {
-    tilingData_->preDimProduct = inputData.preDimProduct;
-    tilingData_->dimSize = inputData.dimSize;
-    tilingData_->postDimProduct = inputData.postDimProduct;
-    tilingData_->indicesNum = inputData.indicesNum;
-    tilingData_->totalDataSize = inputData.totalDataSize;
-    tilingData_->tilingKeySimt = GetTilingKey();
-    usedCoreNum = tilingData_->usedCoreNum;
+    auto* tilingData = context_->GetTilingData<InplaceIndexFillSimtTilingData>();
+    tilingData->tilingKeySimt = GetTilingKey();
+    tilingData->p = inputData.preDimProduct;
+    tilingData->n = inputData.dimSize;
+    tilingData->q = inputData.postDimProduct;
+    tilingData->indicesNum = inputData.indicesNum;
+    tilingData->coreNum = coreNum_;
+    tilingData->usedCoreNum = usedCoreNum;
+    tilingData->simtUsedCoreNum = simtUsedCoreNum_;
 }
 
+// ============================================================================
+// DumpTilingInfo：打印 tiling 信息用于调试
+// ============================================================================
 void InplaceIndexFillTilingSimt::DumpTilingInfo()
 {
+    auto* tilingData = context_->GetTilingData<InplaceIndexFillSimtTilingData>();
     std::ostringstream info;
-    info << "tilingKeySimt: " << tilingData_->tilingKeySimt << std::endl;
-    info << "preDimProduct: " << tilingData_->preDimProduct << std::endl;
-    info << "dimSize: " << tilingData_->dimSize << std::endl;
-    info << "postDimProduct: " << tilingData_->postDimProduct << std::endl;
-    info << "indicesNum: " << tilingData_->indicesNum << std::endl;
-    info << "totalDataSize: " << tilingData_->totalDataSize << std::endl;
-    info << "usedCoreNum: " << tilingData_->usedCoreNum << std::endl;
-    info << "perBlockData: " << tilingData_->perBlockData << std::endl;
-    info << "tailBlockData: " << tilingData_->tailBlockData << std::endl;
-    info << "threadNum: " << tilingData_->threadNum << std::endl;
+    info << "tilingKeySimt: " << tilingData->tilingKeySimt
+         << ", p: " << tilingData->p
+         << ", n: " << tilingData->n
+         << ", q: " << tilingData->q
+         << ", indicesNum: " << tilingData->indicesNum
+         << ", usedCoreNum: " << tilingData->usedCoreNum
+         << ", simtUsedCoreNum: " << tilingData->simtUsedCoreNum;
     OP_LOGI(context_->GetNodeName(), "%s", info.str().c_str());
 }
 
+// ============================================================================
+// PostTiling：设置 blockDim
+// ============================================================================
 ge::graphStatus InplaceIndexFillTilingSimt::PostTiling()
 {
-    // 设置blockDim，即参与计算的Vector核数
-    int64_t usedCoreNum = tilingData_->usedCoreNum;
     context_->SetBlockDim(usedCoreNum);
     return ge::GRAPH_SUCCESS;
 }

@@ -78,6 +78,7 @@ ge::graphStatus InplaceIndexFillTilingBase::CheckDataType()
         OP_LOGE(context_->GetNodeName(), "indices should be of type int32 or int64."), return ge::GRAPH_FAILED);
     inputData.xDtypeSize = ge::GetSizeByDataType(xDType);
     inputData.indicesDtypeSize = ge::GetSizeByDataType(indicesDType);
+    inputData.indicesDtype = indicesDType;
 
     return ge::GRAPH_SUCCESS;
 }
@@ -132,6 +133,7 @@ ge::graphStatus InplaceIndexFillTilingBase::GetShapeAttrsInfo()
     auto indicesShape = indicesShapePtr->GetStorageShape();
     inputData.indicesNum = indicesShape.GetDim(0);
     inputData.totalDataSize = inputData.preDimProduct * inputData.indicesNum * inputData.postDimProduct;
+    inputData.numel = inputData.preDimProduct * inputData.dimSize * inputData.postDimProduct;
 
     return ge::GRAPH_SUCCESS;
 }
@@ -209,7 +211,10 @@ ge::graphStatus InplaceIndexFillTilingBase::PostTiling()
 
 uint64_t InplaceIndexFillTilingBase::GetTilingKey() const
 {
-    return GET_TPL_TILING_KEY(TPL_MODE_SIMT, TPL_MODE_ADDR_INT32);
+    uint64_t dtypeMode = (inputData.xDtypeSize <= 4)
+        ? static_cast<uint64_t>(TPL_MODE_DTYPE_B32)
+        : static_cast<uint64_t>(TPL_MODE_DTYPE_B64);
+    return GET_TPL_TILING_KEY(TPL_MODE_TEMPLATE_SIMT, dtypeMode);
 }
 
 static ge::graphStatus InplaceIndexFillTilingArch35(gert::TilingContext* context_)

@@ -10,7 +10,7 @@
 
 /*!
  * \file inplace_index_fill_tiling_simt.h
- * \brief
+ * \brief SIMT tiling strategy with dual-path optimization
  */
 #ifndef INPLACE_INDEX_FILL_TILING_SIMT_H_
 #define INPLACE_INDEX_FILL_TILING_SIMT_H_
@@ -21,8 +21,10 @@
 #include "../../op_kernel/arch35/inplace_index_fill_struct.h"
 
 namespace optiling {
-const uint64_t MAX_THREAD_NUM = 2048;         // 最大线程数
-const uint64_t MIN_THREAD_NUM = 128;          // 最小线程数
+
+// SIMT 线程数常量
+const uint64_t MAX_THREAD_NUM = 2048;   // 最大线程数（每核）
+const uint64_t MIN_THREAD_NUM = 128;    // 最小线程数（每核）
 
 class InplaceIndexFillTilingSimt : public InplaceIndexFillTilingBase {
 public:
@@ -32,18 +34,21 @@ public:
     {}
 
 protected:
-    InplaceIndexFill::InplaceIndexFillSimtTilingData* tilingData_ =
-        context_->GetTilingData<InplaceIndexFill::InplaceIndexFillSimtTilingData>();
-
-protected:
     bool IsCapable() override;
-    void BlockTiling(uint64_t dataSize, uint64_t numCores, uint64_t threadNum);
     ge::graphStatus DoOpTiling() override;
+    ge::graphStatus GetWorkspaceSize() override;
+    ge::graphStatus PostTiling() override;
     uint64_t GetTilingKey() const override;
     void SetTilingData();
     void DumpTilingInfo() override;
-    ge::graphStatus PostTiling() override;
+
+protected:
+    // 计算 SIMT 计算侧需要的核数
+    int64_t CalcSimtUsedCoreNum();
+
+protected:
     int64_t coreNum_ = 0;
+    int64_t simtUsedCoreNum_ = 0;   // SIMT 计算估算核数
 };
 
 } // namespace optiling

@@ -17,18 +17,28 @@
 #define INPLACE_INDEX_FILL_STRUCT_H_
 
 namespace InplaceIndexFill {
+
+// SIMT 模板常量定义
+constexpr uint32_t SIMT_THREAD_NUM = 2048;   // SIMT 每核线程数
+constexpr uint8_t SIMT_DB_BUFFER = 2;        // 双缓冲数量
+
 class InplaceIndexFillSimtTilingData {
 public:
-    int64_t tilingKeySimt = 0;
-    int64_t preDimProduct = 0;  // x在dim轴前面的轴维度乘积
-    int64_t dimSize = 0;        // dim轴的维度
-    int64_t postDimProduct = 0; // x在dim轴后面的轴维度乘积
-    int64_t indicesNum = 0; // indices的长度
-    int64_t totalDataSize = 0;  // 需处理的总数据量
-    int64_t usedCoreNum = 0;    // 使用核个数
-    int64_t perBlockData = 0;   // 核处理的数据量
-    int64_t tailBlockData = 0;  // 尾核处理的数据量
-    int64_t threadNum = 0;      // 核内处理线程数
+    int64_t tilingKeySimt = 0;       // tiling key，用于 kernel 侧模板选择
+    int64_t p = 0;                   // x 在 dim 轴前面所有维度的乘积（preDimProduct）
+    int64_t n = 0;                   // dim 轴的维度大小（dimSize），indices 值域 [0, n)
+    int64_t q = 0;                   // x 在 dim 轴后面所有维度的乘积（postDimProduct）
+    int64_t indicesNum = 0;          // indices 数组的长度
+    int64_t coreNum = 0;             // 平台总核数
+    int64_t usedCoreNum = 0;         // 实际使用的核数
+    int64_t simtUsedCoreNum = 0;     // SIMT 计算估算需要的核数
+};
+
+// DenseIndices 模板的 tiling 数据，继承自 SIMT tiling 数据
+// 适用于 indicesNum >= N*5 的极端稠密场景，使用 Sort+Unique 去重后构建 mask
+class InplaceIndexFillSimtDenseIndicesTilingData : public InplaceIndexFillSimtTilingData {
+public:
+    int64_t indicesUbFactor = 0;     // UB 中每次加载的 indices 数量
 };
 
 class InplaceIndexFillSimdTilingData {
@@ -55,5 +65,5 @@ public:
     int64_t qUbTailFactor = 0;
 };
 
-}   // namspace InplaceIndexFill
-#endif //INPLACE_INDEX_FILL_STRUCT_H_
+} // namespace InplaceIndexFill
+#endif // INPLACE_INDEX_FILL_STRUCT_H_
