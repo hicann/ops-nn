@@ -210,8 +210,8 @@ __aicore__ inline void AvgPool3dNormal<T>::AvgPoolW(
     LocalTensor<float> mulWUb = mulWBuffer.Get<float>();
 
     for (int kernelIdx = 0; kernelIdx < curWoFactor; kernelIdx++) {
-        int32_t kerWEndIdx = Min(poolVars.Wi, wEnd + kernelIdx * dW);
-        int32_t kerWStartIdx = Max(wStart + kernelIdx * dW, kerWEndIdx - kW);
+        int64_t kerWEndIdx = Min(poolVars.Wi, wEnd + kernelIdx * dW);
+        int64_t kerWStartIdx = Max(wStart + kernelIdx * dW, kerWEndIdx - kW);
         if (wStart == 0) {
             kerWStartIdx = Max(wStart, wEnd + kernelIdx * dW - kW);
         }
@@ -230,7 +230,7 @@ __aicore__ inline void AvgPool3dNormal<T>::AvgPoolW(
         auto inputOffset = poolVars.VL_NUM * (kerWStartIdx - wStart);
         Adds(mulWUb[mulWOffset], xLocalTransVL[inputOffset], (float)0.0, poolVars.VL_NUM, repeat, repeatCopyParams);
         AscendC::PipeBarrier<PIPE_V>();
-        for (int i = kerWStartIdx + 1; i < kerWEndIdx; i++) {
+        for (int64_t i = kerWStartIdx + 1; i < kerWEndIdx; i++) {
             auto nexAddOffset = poolVars.VL_NUM * (i - wStart);
             Add(mulWUb[mulWOffset], mulWUb[mulWOffset], xLocalTransVL[nexAddOffset], mask, repeat, repeatParams);
             AscendC::PipeBarrier<PIPE_V>();
@@ -251,8 +251,8 @@ __aicore__ inline void AvgPool3dNormal<T>::AvgPoolH(
     LocalTensor<float> mulHUb = inputTransBuffer.Get<float>();
 
     for (int kernelIdx = 0; kernelIdx < curHoFactor; kernelIdx++) {
-        int32_t kerHEndIdx = Min(poolVars.Hi, hEnd + kernelIdx * dH);
-        int32_t kerHStartIdx = Max(hStart + kernelIdx * dH, kerHEndIdx - kH);
+        int64_t kerHEndIdx = Min(poolVars.Hi, hEnd + kernelIdx * dH);
+        int64_t kerHStartIdx = Max(hStart + kernelIdx * dH, kerHEndIdx - kH);
         if (hStart == 0) {
             kerHStartIdx = Max(hStart, hEnd + kernelIdx * dH -kH);
         }
@@ -271,7 +271,7 @@ __aicore__ inline void AvgPool3dNormal<T>::AvgPoolH(
         auto mulWOffset = poolVars.VL_NUM * (kerHStartIdx - hStart);
         Adds(mulHUb[mulHOffset], mulWUb[mulWOffset], (float)0.0, poolVars.VL_NUM, repeat, repeatCopyParams);
         AscendC::PipeBarrier<PIPE_V>();
-        for (int i = kerHStartIdx + 1; i < kerHEndIdx; i++) {
+        for (int64_t i = kerHStartIdx + 1; i < kerHEndIdx; i++) {
             auto nexAddOffset = poolVars.VL_NUM * (i - hStart);
             Add(mulHUb[mulHOffset], mulHUb[mulHOffset], mulWUb[nexAddOffset], mask, repeat, repeatParams);
             AscendC::PipeBarrier<PIPE_V>();
@@ -290,8 +290,8 @@ __aicore__ inline void AvgPool3dNormal<T>::AvgPoolD(
     BinaryRepeatParams repeatParams{1, 1, 1, 8, 8, (uint8_t)(8 * diFactor)};
     LocalTensor<float> mulHUb = inputTransBuffer.Get<float>();
     LocalTensor<float> mulDUb = mulWBuffer.Get<float>();
-    int32_t kerDStartIdx = dStart;
-    int32_t kerDEndIdx = dEnd;
+    int64_t kerDStartIdx = dStart;
+    int64_t kerDEndIdx = dEnd;
     auto mulDOffset = 0;
     auto mulHOffset = 0;
     Adds(mulDUb[mulDOffset], mulHUb[mulHOffset], (float)0.0, poolVars.VL_NUM, repeat, repeatCopyParams);

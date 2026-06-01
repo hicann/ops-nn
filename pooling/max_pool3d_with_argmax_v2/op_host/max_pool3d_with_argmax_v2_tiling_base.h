@@ -699,10 +699,10 @@ private:
     ge::graphStatus PostTiling() override;
 
     MaxPool3DWithArgmaxV2BigKernelTilingData tiling;
-    uint32_t totalIdx;
-    uint32_t blockFactor;
-    uint32_t blockTail;
-    uint32_t coreNums;
+    uint64_t totalIdx;
+    uint64_t blockFactor;
+    uint64_t blockTail;
+    uint64_t coreNums;
 };
 
 class MaxPool3DWithArgmaxV2NoExpandIndicesTiling : public MaxPool3DWithArgmaxV2BaseTiling {
