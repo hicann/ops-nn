@@ -9,6 +9,23 @@
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
+"""
+Golden function for quant_conv3d kernel.
+
+Based on quant_conv3d_def.cpp:
+- Inputs: x (REQUIRED), filter (REQUIRED), scale (REQUIRED), bias (OPTIONAL), offset (OPTIONAL)
+- Output: y (REQUIRED)
+
+Format and DataType support:
+- x: Format=NCDHW, DataType=INT8
+- filter: Format=NCDHW, DataType=INT8
+- scale: Format=ND, DataType=INT32/INT64 (存储FLOAT32二进制)
+- bias: Format=ND, DataType=INT32
+- offset: Format=ND, DataType=INT32
+- y(output): Format=NCDHW, DataType=INT8/INT32/FLOAT16/BF16/FLOAT
+
+Supported dtypes: float16, float32, bfloat16, hifloat8, float8_e4m3fn, int8, int32
+"""
 
 import numpy as np
 
@@ -34,15 +51,20 @@ def due_fp16_overflow(data):
     return data
 
 
-def simulate_hf32_precision(data):
+def simulate_hf32_precision(data, short_soc_version=None):
     """
     Simulate HF32 (Half Float 32) precision.
-    HF32 truncates lower 12 bits of float32 mantissa (keeping 11 bits with rounding).
+    Ascend910B: truncates lower 12 bits of float32 mantissa, keeping 20 bits with rounding.
+    Default: truncates lower 13 bits of float32 mantissa, keeping 19 bits with rounding.
     """
     if data.dtype == np.float32:
         input_hf32 = data.view(np.int32)
-        input_hf32 = np.right_shift(np.right_shift(input_hf32, 11) + 1, 1)
-        input_hf32 = np.left_shift(input_hf32, 12)
+        if short_soc_version in ("Ascend910B",):
+            input_hf32 = np.right_shift(np.right_shift(input_hf32, 11) + 1, 1)
+            input_hf32 = np.left_shift(input_hf32, 12)
+        else:
+            input_hf32 = np.right_shift(np.right_shift(input_hf32, 12) + 1, 1)
+            input_hf32 = np.left_shift(input_hf32, 13)
         return input_hf32.view(np.float32)
     return data
 
@@ -90,7 +112,7 @@ def process_output_format(out, output_format, input_format):
     return out
 
 
-def convert_output_dtype(out, output_dtype, enable_hf32=False):
+def convert_output_dtype(out, output_dtype, enable_hf32=False, short_soc_version=None):
     dtype_map = {
         "float16": (np.float16, True),
         "float32": (np.float32, False),
@@ -121,7 +143,7 @@ def convert_output_dtype(out, output_dtype, enable_hf32=False):
         out = out.astype(dtype_ref)
 
     if output_dtype == FP32_STR and enable_hf32:
-        out = simulate_hf32_precision(out)
+        out = simulate_hf32_precision(out, short_soc_version)
 
     return out
 
@@ -298,7 +320,7 @@ def _process_conv3d_padding(x_np, pads, pad_mode, filter_shape, stride_d, stride
     return input_pad, torch_pad
 
 
-def quant_conv3d_golden(x, filter, scale, bias=None, offset_w=None,
+def quant_conv3d_golden(x, filter, scale, bias=None, offset=None,
                         *,
                         dtype: int,
                         strides: list,
@@ -390,7 +412,7 @@ def quant_conv3d_golden(x, filter, scale, bias=None, offset_w=None,
     out = torch.multiply(out, scale_tensor)
     out = out.numpy()
     
-    out = convert_output_dtype(out, output_dtype)
+    out = convert_output_dtype(out, output_dtype, short_soc_version=short_soc_version)
     
     out = process_output_format(out, output_format, input_format)
     

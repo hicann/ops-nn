@@ -7,7 +7,7 @@
 # Please refer to License for details. You may not use this file except in compliance with License.
 # THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
-# See LICENSE in免 root of the software repository for the full text of the License.
+# See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
 import numpy as np
@@ -18,8 +18,10 @@ __input__ = {
     }
 }
 
+NCDHW_FORMAT = "NCDHW"
 
-def quant_conv3d_input(x, filter, scale, bias=None, offset_w=None,
+
+def quant_conv3d_input(x, filter, scale, bias=None, offset=None,
                         *,
                         dtype: int,
                         strides: list,
@@ -40,8 +42,8 @@ def quant_conv3d_input(x, filter, scale, bias=None, offset_w=None,
         x: Input tensor
         filter: Filter tensor
         scale: Scale tensor
-        bias: Bias tensor
-        offset: Offset tensor
+        bias: Bias tensor (optional)
+        offset: Offset tensor (optional)
         **kwargs: Extended context including:
             - input_dtypes: List of input data types
             - full_soc_version: Full SoC version (e.g., 'Ascend910B2')

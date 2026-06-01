@@ -9,6 +9,22 @@
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
+"""
+Golden function for conv2d_v2 kernel.
+
+Based on conv2d_v2_def.cpp:
+- Inputs: x (REQUIRED), filter (REQUIRED), bias (OPTIONAL), offset_w (OPTIONAL)
+- Output: y (REQUIRED)
+
+Format and DataType support (Ascend950 only):
+- x: Format=NCHW/NHWC, DataType=BF16/FLOAT16/FLOAT/HIFLOAT8
+- filter: Format=NCHW/HWCN, DataType=BF16/FLOAT16/FLOAT/HIFLOAT8
+- bias: Format=ND, DataType=BF16/FLOAT16/FLOAT
+- offset_w: Format=ND, DataType=INT8
+- y(output): Format=NCHW/NHWC, DataType=BF16/FLOAT16/FLOAT/HIFLOAT8
+
+Supported dtypes: float16, float32, bfloat16, hifloat8, float8_e4m3fn, int8, int32
+"""
 
 import numpy as np
 
@@ -36,25 +52,20 @@ def due_fp16_overflow(data):
     return data
 
 
-def simulate_hf32_precision(data):
+def simulate_hf32_precision(data, short_soc_version=None):
     """
     Simulate HF32 (Half Float 32) precision.
-    HF32 truncates lower 12 bits of float32 mantissa (keeping 11 bits with rounding).
+    Ascend910B: truncates lower 12 bits of float32 mantissa, keeping 20 bits with rounding.
+    Default: truncates lower 13 bits of float32 mantissa, keeping 19 bits with rounding.
     """
     if data.dtype == np.float32:
-        # HF32 format details:
-        # - Sign bit: 1 bit
-        # - Exponent: 5 bits  
-        # - Mantissa: 11 bits (stored) + 1 implicit bit = 12 bits precision
-        # - Total: 1 + 5 + 12 = 18 bits used (but stored in 16 bits)
-        # When converting from FP32 to HF32:
-        # 1. Right shift by 11 to remove lower 11 bits of mantissa (keep sign + exp + upper mantissa)
-        # 2. Add 1 for rounding (to nearest even)
-        # 3. Right shift by 1 to complete the rounding operation
-        # 4. Left shift by 12 to restore the original bit alignment
         input_hf32 = data.view(np.int32)
-        input_hf32 = np.right_shift(np.right_shift(input_hf32, 11) + 1, 1)
-        input_hf32 = np.left_shift(input_hf32, 12)
+        if short_soc_version in ("Ascend910B",):
+            input_hf32 = np.right_shift(np.right_shift(input_hf32, 11) + 1, 1)
+            input_hf32 = np.left_shift(input_hf32, 12)
+        else:
+            input_hf32 = np.right_shift(np.right_shift(input_hf32, 12) + 1, 1)
+            input_hf32 = np.left_shift(input_hf32, 13)
         return input_hf32.view(np.float32)
     return data
 
@@ -88,9 +99,6 @@ def convert_output_dtype(out, output_dtype, enable_hf32=False):
         out = out.astype(dtype_cls)
     else:
         out = out.astype(dtype_ref)
-
-    if output_dtype == FP32_STR and enable_hf32:
-        out = simulate_hf32_precision(out)
 
     return out
 
@@ -210,6 +218,7 @@ def conv2d_v2_golden(x, filter, bias=None, offset_w=None,
     
     input_formats = kwargs.get("input_formats", [NCHW_FORMAT, NCHW_FORMAT])
     input_format = input_formats[0]
+    short_soc_version = kwargs.get("short_soc_version", None)
 
     x_dtype_str = x.dtype.name 
     filter_dtype_str = filter.dtype.name
@@ -218,8 +227,8 @@ def conv2d_v2_golden(x, filter, bias=None, offset_w=None,
     
     if enable_hf32 and x_dtype_str == FP32_STR:
         calc_dtype = np.float32
-        x_np = simulate_hf32_precision(x_np.astype(np.float32))
-        filter_np = simulate_hf32_precision(filter_np.astype(np.float32))
+        x_np = simulate_hf32_precision(x_np.astype(np.float32), short_soc_version)
+        filter_np = simulate_hf32_precision(filter_np.astype(np.float32), short_soc_version)
     else:
         calc_dtype = np.float64 if x_dtype_str == FP32_STR else np.float32
         x_np = x_np.astype(calc_dtype)

@@ -9,6 +9,26 @@
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
+"""
+Golden function for conv3d_v2 kernel.
+
+Based on conv3d_v2_def.cpp:
+- Inputs: x (REQUIRED), filter (REQUIRED), bias (OPTIONAL), scale (OPTIONAL), offset (OPTIONAL), offset_w (OPTIONAL)
+- Output: y (REQUIRED)
+
+Format and DataType support based on SoC version:
+- Ascend910B/Ascend910_93:
+    - x: Format=NDC1HWC0/NCDHW, DataType=BF16/FLOAT/FLOAT16/INT8
+    - filter: Format=FRACTAL_Z_3D/NCDHW, DataType=BF16/FLOAT/FLOAT16/INT8
+    - bias: Format=ND, DataType=FLOAT/FLOAT16/BF16
+    - y(output): Format=NDC1HWC0/NCDHW, DataType=BF16/FLOAT/FLOAT16
+- Ascend950:
+    - x: Format=NCDHW/NDHWC, DataType=BF16/FLOAT16/FLOAT/HIFLOAT8/INT8
+    - filter: Format=NCDHW/DHWCN, DataType=BF16/FLOAT16/FLOAT/HIFLOAT8/INT8
+    - y(output): Format=NCDHW/NDHWC, DataType=BF16/FLOAT16/FLOAT/HIFLOAT8
+
+Supported dtypes: float16, float32, bfloat16, hifloat8, float8_e4m3fn, int8, int32
+"""
 
 import numpy as np
 
@@ -36,20 +56,25 @@ def due_fp16_overflow(data):
     return data
 
 
-def simulate_hf32_precision(data):
+def simulate_hf32_precision(data, short_soc_version=None):
     """
     Simulate HF32 (Half Float 32) precision.
-    HF32 truncates lower 12 bits of float32 mantissa (keeping 11 bits with rounding).
+    Ascend910B: truncates lower 12 bits of float32 mantissa, keeping 20 bits with rounding.
+    Default: truncates lower 13 bits of float32 mantissa, keeping 19 bits with rounding.
     """
     if data.dtype == np.dtype(np.float32):
         input_hf32 = data.view(np.int32)
-        input_hf32 = np.right_shift(np.right_shift(input_hf32, 11) + 1, 1)
-        input_hf32 = np.left_shift(input_hf32, 12)
+        if short_soc_version in ("Ascend910B",):
+            input_hf32 = np.right_shift(np.right_shift(input_hf32, 11) + 1, 1)
+            input_hf32 = np.left_shift(input_hf32, 12)
+        else:
+            input_hf32 = np.right_shift(np.right_shift(input_hf32, 12) + 1, 1)
+            input_hf32 = np.left_shift(input_hf32, 13)
         return input_hf32.view(np.float32)
     return data
 
 
-def convert_output_dtype(out, output_dtype, enable_hf32=False):
+def convert_output_dtype(out, output_dtype, enable_hf32=False, short_soc_version=None):
     dtype_map = {
         "float16": (np.float16, True),
         "float32": (np.float32, False),
@@ -80,7 +105,7 @@ def convert_output_dtype(out, output_dtype, enable_hf32=False):
         out = out.astype(dtype_ref)
 
     if output_dtype == FP32_STR and enable_hf32:
-        out = simulate_hf32_precision(out)
+        out = simulate_hf32_precision(out, short_soc_version)
 
     return out
 
@@ -542,8 +567,8 @@ def conv3d_v2_golden(x, filter, bias=None, scale=None, offset=None, offset_w=Non
     
     if enable_hf32 and x_dtype_str == FP32_STR:
         calc_dtype = np.float32
-        x_np = simulate_hf32_precision(x_np.astype(np.float32))
-        filter_np = simulate_hf32_precision(filter_np.astype(np.float32))
+        x_np = simulate_hf32_precision(x_np.astype(np.float32), short_soc_version)
+        filter_np = simulate_hf32_precision(filter_np.astype(np.float32), short_soc_version)
     else:
         calc_dtype = np.float64 if x_dtype_str == FP32_STR else np.float32
         x_np = x_np.astype(calc_dtype)
@@ -620,7 +645,7 @@ def conv3d_v2_golden(x, filter, bias=None, scale=None, offset=None, offset_w=Non
     else:
         out = out.numpy()
     
-    out = convert_output_dtype(out, output_dtype, enable_hf32)
+    out = convert_output_dtype(out, output_dtype, enable_hf32, short_soc_version)
     
     output_ori_shapes = kwargs.get("output_ori_shapes", None)
     
