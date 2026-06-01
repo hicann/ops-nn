@@ -414,9 +414,9 @@ __aicore__ inline void BatchMatMulCommonBaseBlock::CalcBOffset(uint64_t batchBIn
     } else if constexpr (B_TYPE::format == CubeFormat::NZ) {
         uint64_t offsetBBatch = batchBIndex * params_.alignedOriN * params_.alignedKbSize;
         offset_.offsetB = B_TYPE::isTrans ?
-            offsetBBatch + (nCntIndex * batchMatmulTilingData_->matmulTiling.matmulTiling.baseN *
+            offsetBBatch + (nCntIndex * batchMatmulTilingData_->matmulTiling.matmulTiling.singleCoreN *
             params_.c0Size) + (params_.nTileAddrOffset * params_.c0Size) :
-            offsetBBatch + (nCntIndex * batchMatmulTilingData_->matmulTiling.matmulTiling.baseN *
+            offsetBBatch + (nCntIndex * batchMatmulTilingData_->matmulTiling.matmulTiling.singleCoreN *
             params_.alignedKbSize) + (params_.nTileAddrOffset * params_.alignedKbSize);
     }
 }
