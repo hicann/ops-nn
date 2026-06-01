@@ -30,6 +30,8 @@ const ge::AscendString ASCEND_QUANT = "AscendQuant";
 const ge::AscendString CONV2D = "Conv2D";
 const ge::AscendString CONV3D = "Conv3D";
 const ge::AscendString POST_CUBE_OP = "FixPipe";
+const ge::AscendString TRANS_DATA_OP = "TransData";
+const ge::AscendString IFMR_OP = "IFMR";
 const ge::AscendString STRIDES = "strides";
 const ge::AscendString PADS = "pads";
 const ge::AscendString DILATIONS = "dilations";
@@ -120,6 +122,7 @@ public:
     static bool GetMatchedNodes(const ge::GraphPtr &graph, std::vector<ge::GNode> &matchedNodes,
         const ge::AscendString &nodeType);
     static ge::GNodePtr GetNodePtr(const ge::GNode &node, const ConvDescInfo &convDescInfo);
+    static bool IsUnknownShape(const ge::TensorDesc &tensorDesc);
     static ge::AscendString ListToAscendString(const std::vector<ge::AscendString> &strList);
     static void PrintConvDescInfo(const ConvDescInfo &convDescInfo);
     static bool UpdateInputDesc(ge::GNode *convNode, const ConvDescInfo &convDescInfo);

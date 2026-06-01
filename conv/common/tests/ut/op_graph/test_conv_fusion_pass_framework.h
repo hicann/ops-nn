@@ -149,6 +149,11 @@ struct NodeConfig {
         return *this;
     }
 
+    NodeConfig& SetAttr(const std::string& attrKey, const std::vector<float>& attrValue) {
+        listFloatAttrs[attrKey] = attrValue;
+        return *this;
+    }
+
     std::string name;
     std::vector<TensorInfo> inputs;
     std::vector<TensorInfo> outputs;
@@ -158,6 +163,7 @@ struct NodeConfig {
     std::map<std::string, std::string> strAttrs;
     std::map<std::string, std::vector<int64_t>> listIntAttrs;
     std::map<std::string, std::vector<std::string>> listStrAttrs;
+    std::map<std::string, std::vector<float>> listFloatAttrs;
 };
 
 // ============================================================================
@@ -381,6 +387,86 @@ struct PostCubeConfig : public NodeConfig {
     TensorInfo reluWeight1Tensor;
 };
 
+inline TensorDesc BuildTensorDesc(DataType dtype, Format format, const std::vector<int64_t> &shape,
+    Format originFormat = FORMAT_RESERVED, const std::vector<int64_t> &originShape = {})
+{
+    TensorDesc desc;
+    desc.SetDataType(dtype);
+    desc.SetFormat(format);
+    desc.SetShape(Shape(shape));
+    if (!originShape.empty()) {
+        desc.SetOriginFormat(originFormat);
+        desc.SetOriginShape(Shape(originShape));
+    } else {
+        desc.SetOriginFormat(format);
+        desc.SetOriginShape(Shape(shape));
+    }
+    return desc;
+}
+
+struct TransDataConfig : public NodeConfig {
+    TransDataConfig() {
+        name = "TransData";
+        SetAttr("src_format", std::string("NDHWC"));
+        SetAttr("dst_format", std::string("NDC1HWC0"));
+        SetAttr("groups", int64_t(1));
+    }
+
+    // NDHWC -> NDC1HWC0; originShapeC is channel dim (index 4) for C%16 alignment tests.
+    static TransDataConfig NdhwcToNdc1hwc0(const std::string &nodeName, DataType dataType = DT_FLOAT16,
+        int64_t originShapeC = 16) {
+        TransDataConfig config;
+        config.SetName(nodeName);
+        config.srcDesc = BuildTensorDesc(dataType, FORMAT_NDHWC, {1, 32, 240, 352, originShapeC},
+            FORMAT_NDHWC, {1, 32, 240, 352, originShapeC});
+        config.dstDesc = BuildTensorDesc(dataType, FORMAT_NDC1HWC0, {1, 32, 1, 240, 352, 16},
+            FORMAT_NDHWC, {1, 32, 240, 352, originShapeC});
+        return config;
+    }
+
+    TensorDesc srcDesc;
+    TensorDesc dstDesc;
+};
+
+struct IFMRConfig : public NodeConfig {
+    IFMRConfig() {
+        name = "IFMR";
+        SetAttr("min_percentile", 0.01f);
+        SetAttr("max_percentile", 0.99f);
+        SetAttr("search_range", std::vector<float>{0.8f, 1.2f});
+        SetAttr("search_step", 0.01f);
+        SetAttr("with_offset", true);
+    }
+
+    static IFMRConfig Basic(const std::string &nodeName, DataType dataType = DT_FLOAT16) {
+        IFMRConfig config;
+        config.SetName(nodeName)
+            .AddInput(dataType, FORMAT_ND, {1}, nodeName + "_data")
+            .AddInput(dataType, FORMAT_ND, {1}, nodeName + "_data_min")
+            .AddInput(dataType, FORMAT_ND, {1}, nodeName + "_data_max")
+            .AddInput(DT_INT32, FORMAT_ND, {256}, nodeName + "_cumsum")
+            .AddOutput(DT_FLOAT, FORMAT_ND, {1}, nodeName + "_scale")
+            .AddOutput(DT_FLOAT, FORMAT_ND, {1}, nodeName + "_offset");
+        return config;
+    }
+};
+
+struct AddConfig : public NodeConfig {
+    AddConfig() {
+        name = "Add";
+    }
+
+    static AddConfig Basic(const std::string &nodeName, DataType dataType = DT_FLOAT16,
+        Format format = FORMAT_NCDHW, const std::vector<int64_t> &shape = {1, 16, 16, 244, 244}) {
+        AddConfig config;
+        config.SetName(nodeName)
+            .AddInput(dataType, format, shape, nodeName + "_x1")
+            .AddInput(dataType, format, shape, nodeName + "_x2")
+            .AddOutput(dataType, format, shape, nodeName + "_y");
+        return config;
+    }
+};
+
 // ============================================================================
 // 待处理节点信息
 // ============================================================================
@@ -398,6 +484,7 @@ struct PendingNodeInfo {
     std::map<std::string, std::string> strAttrs;
     std::map<std::string, std::vector<int64_t>> listIntAttrs;
     std::map<std::string, std::vector<std::string>> listStrAttrs;
+    std::map<std::string, std::vector<float>> listFloatAttrs;
 };
 
 struct PendingConnectionInfo {
@@ -761,6 +848,95 @@ public:
         it->second.UpdateOutputDesc(index, tensorDesc);
     }
 
+    void UpdateNodeInputDescEx(const std::string &nodeName, int32_t index, const TensorDesc &tensorDesc)
+    {
+        auto it = nodeMap.find(nodeName);
+        if (it != nodeMap.end()) {
+            it->second.UpdateInputDesc(index, tensorDesc);
+        }
+    }
+
+    void UpdateNodeOutputDescEx(const std::string &nodeName, int32_t index, const TensorDesc &tensorDesc)
+    {
+        auto it = nodeMap.find(nodeName);
+        if (it != nodeMap.end()) {
+            it->second.UpdateOutputDesc(index, tensorDesc);
+        }
+    }
+
+    TestGraph &AddTransData(const TransDataConfig &transDataConfig, bool autoSrc = true)
+    {
+        PendingNodeInfo nodeInfo;
+        if (autoSrc) {
+            TensorInfo srcInfo(transDataConfig.srcDesc.GetDataType(), transDataConfig.srcDesc.GetFormat(),
+                {}, transDataConfig.name + "_src");
+            auto src = CreateGraphInput(srcInfo);
+            pendingConnections.push_back({"", 0, transDataConfig.name, 0, src});
+        }
+        nodeInfo.inputDesc[0] = transDataConfig.srcDesc;
+        nodeInfo.outputDesc[0] = transDataConfig.dstDesc;
+        nodeInfo.nodeName = transDataConfig.name;
+        nodeInfo.opType = "TransData";
+        nodeInfo.inputDefs = {{"src", CompliantNodeBuilder::kEsIrInputRequired, ""}};
+        nodeInfo.outputDefs = {{"dst", CompliantNodeBuilder::kEsIrOutputRequired, ""}};
+        nodeInfo.strAttrs = transDataConfig.strAttrs;
+        nodeInfo.intAttrs = transDataConfig.intAttrs;
+        pendingNodes.push_back(nodeInfo);
+        return *this;
+    }
+
+    TestGraph &AddIFMR(const IFMRConfig &ifmrConfig, bool autoInputs = true)
+    {
+        PendingNodeInfo nodeInfo;
+        if (autoInputs) {
+            for (size_t i = 0; i < ifmrConfig.inputs.size(); ++i) {
+                auto input = CreateGraphInput(ifmrConfig.inputs[i]);
+                pendingConnections.push_back({"", 0, ifmrConfig.name, static_cast<int>(i), input});
+            }
+        }
+        for (size_t i = 0; i < ifmrConfig.inputs.size(); ++i) {
+            nodeInfo.inputDesc[static_cast<int32_t>(i)] = ifmrConfig.inputs[i].tensorDesc;
+        }
+        for (size_t i = 0; i < ifmrConfig.outputs.size(); ++i) {
+            nodeInfo.outputDesc[static_cast<int32_t>(i)] = ifmrConfig.outputs[i].tensorDesc;
+        }
+        nodeInfo.nodeName = ifmrConfig.name;
+        nodeInfo.opType = "IFMR";
+        nodeInfo.inputDefs = {{"data", CompliantNodeBuilder::kEsIrInputRequired, ""},
+                              {"data_min", CompliantNodeBuilder::kEsIrInputRequired, ""},
+                              {"data_max", CompliantNodeBuilder::kEsIrInputRequired, ""},
+                              {"cumsum", CompliantNodeBuilder::kEsIrInputRequired, ""}};
+        nodeInfo.outputDefs = {{"scale", CompliantNodeBuilder::kEsIrOutputRequired, ""},
+                               {"offset", CompliantNodeBuilder::kEsIrOutputRequired, ""}};
+        nodeInfo.floatAttrs = ifmrConfig.floatAttrs;
+        nodeInfo.boolAttrs = ifmrConfig.boolAttrs;
+        nodeInfo.listFloatAttrs = ifmrConfig.listFloatAttrs;
+        pendingNodes.push_back(nodeInfo);
+        return *this;
+    }
+
+    TestGraph &AddAdd(const AddConfig &addConfig, bool autoInputs = false)
+    {
+        PendingNodeInfo nodeInfo;
+        if (autoInputs) {
+            for (size_t i = 0; i < addConfig.inputs.size(); ++i) {
+                auto input = CreateGraphInput(addConfig.inputs[i]);
+                pendingConnections.push_back({"", 0, addConfig.name, static_cast<int>(i), input});
+            }
+        }
+        for (size_t i = 0; i < addConfig.inputs.size(); ++i) {
+            nodeInfo.inputDesc[static_cast<int32_t>(i)] = addConfig.inputs[i].tensorDesc;
+        }
+        nodeInfo.outputDesc[0] = addConfig.outputs[0].tensorDesc;
+        nodeInfo.nodeName = addConfig.name;
+        nodeInfo.opType = "Add";
+        nodeInfo.inputDefs = {{"x1", CompliantNodeBuilder::kEsIrInputRequired, ""},
+                              {"x2", CompliantNodeBuilder::kEsIrInputRequired, ""}};
+        nodeInfo.outputDefs = {{"y", CompliantNodeBuilder::kEsIrOutputRequired, ""}};
+        pendingNodes.push_back(nodeInfo);
+        return *this;
+    }
+
 private:
     void SetNodeAttr(GNode &node, PendingNodeInfo nodeInfo) {
         for (const auto& attr : nodeInfo.intAttrs) {
@@ -788,6 +964,10 @@ private:
             for (const auto& str : attr.second) {
                 attrValue.push_back(AscendString(str.c_str()));
             }
+            node.SetAttr(AscendString(attr.first.c_str()), attrValue);
+        }
+        for (const auto& attr : nodeInfo.listFloatAttrs) {
+            std::vector<float> attrValue = attr.second;
             node.SetAttr(AscendString(attr.first.c_str()), attrValue);
         }
     }
@@ -883,6 +1063,21 @@ public:
             }
         }
         return false;
+    }
+
+    static bool GetNodeBoolAttr(const GNode &node, const char *attrName, bool &value)
+    {
+        return node.GetAttr(AscendString(attrName), value) == GRAPH_SUCCESS;
+    }
+
+    static bool GetNodeStringAttr(const GNode &node, const char *attrName, std::string &value)
+    {
+        AscendString attr;
+        if (node.GetAttr(AscendString(attrName), attr) != GRAPH_SUCCESS) {
+            return false;
+        }
+        value = attr.GetString();
+        return true;
     }
 
     static void Print(std::shared_ptr<Graph>& graph) {

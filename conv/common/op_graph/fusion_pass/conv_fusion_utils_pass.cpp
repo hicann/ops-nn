@@ -196,6 +196,17 @@ GNodePtr ConvFusionUtilsPass::GetNodePtr(const GNode &node, const ConvDescInfo &
     return nodePtr;
 }
 
+bool ConvFusionUtilsPass::IsUnknownShape(const TensorDesc &tensorDesc)
+{
+    auto dims = tensorDesc.GetShape().GetDims();
+    for (auto dim : dims) {
+        if (dim < 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
 AscendString ConvFusionUtilsPass::ListToAscendString(const std::vector<AscendString> &strList)
 {
     std::string res = "";
