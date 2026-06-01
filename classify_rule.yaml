@@ -1927,8 +1927,8 @@ VC7@ops-nn:
         - ops/ops-nn/pooling/avg_pool3_d_grad/op_kernel/
         - ops/ops-nn/pooling/pool_3d_common/op_host/arch35/
         - ops/ops-nn/pooling/pool_3d_common/op_kernel/arch35/
-        - ops/ops-nn/pooling/adaptive_max_pool3d/op_host/
-        - ops/ops-nn/pooling/adaptive_max_pool3d/op_kernel/
+        - ops/ops-nn/pooling/adaptive_max_pool3d/op_host/adaptiva_max_pool3d_infershape.cpp
+        - ops/ops-nn/pooling/adaptive_max_pool3d/op_kernel/adaptive_max_pool3d_apt.cpp
         - ops/ops-nn/pooling/adaptive_max_pool3d_grad/op_host/
         - ops/ops-nn/pooling/adaptive_max_pool3d_grad/op_kernel/
         - ops/ops-nn/pooling/adaptive_avg_pool3d/op_host/
