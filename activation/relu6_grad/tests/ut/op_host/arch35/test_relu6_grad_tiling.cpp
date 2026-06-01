@@ -151,6 +151,75 @@ TEST_F(Relu6GradTilingTest, cross_rank_broadcast_fp16)
     EXPECT_EQ(RunTiling(ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, g, f, o), ge::GRAPH_SUCCESS);
 }
 
+// Per-axis (outer-product) broadcast [16,1] x [1,16] -> [16,16], fp16 / bf16.
+TEST_F(Relu6GradTilingTest, axis_broadcast_fp16)
+{
+    gert::StorageShape g = {{16, 1}, {16, 1}};
+    gert::StorageShape f = {{1, 16}, {1, 16}};
+    gert::StorageShape o = {{16, 16}, {16, 16}};
+    EXPECT_EQ(RunTiling(ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, g, f, o), ge::GRAPH_SUCCESS);
+}
+
+TEST_F(Relu6GradTilingTest, axis_broadcast_bf16)
+{
+    gert::StorageShape g = {{16, 1}, {16, 1}};
+    gert::StorageShape f = {{1, 16}, {1, 16}};
+    gert::StorageShape o = {{16, 16}, {16, 16}};
+    EXPECT_EQ(RunTiling(ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, g, f, o), ge::GRAPH_SUCCESS);
+}
+
+// Single-axis broadcast: gradients carries the size-1 dim (trailing / leading).
+TEST_F(Relu6GradTilingTest, trailing_dim_broadcast_fp32)
+{
+    gert::StorageShape g = {{3, 1}, {3, 1}};
+    gert::StorageShape f = {{3, 4}, {3, 4}};
+    gert::StorageShape o = {{3, 4}, {3, 4}};
+    EXPECT_EQ(RunTiling(ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, g, f, o), ge::GRAPH_SUCCESS);
+}
+
+TEST_F(Relu6GradTilingTest, leading_dim_broadcast_fp16)
+{
+    gert::StorageShape g = {{1, 4}, {1, 4}};
+    gert::StorageShape f = {{3, 4}, {3, 4}};
+    gert::StorageShape o = {{3, 4}, {3, 4}};
+    EXPECT_EQ(RunTiling(ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16, g, f, o), ge::GRAPH_SUCCESS);
+}
+
+// Scalar operand ([1]) broadcast against a full tensor, both directions.
+TEST_F(Relu6GradTilingTest, scalar_grad_broadcast_fp32)
+{
+    gert::StorageShape g = {{1}, {1}};
+    gert::StorageShape f = {{16, 16}, {16, 16}};
+    gert::StorageShape o = {{16, 16}, {16, 16}};
+    EXPECT_EQ(RunTiling(ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, g, f, o), ge::GRAPH_SUCCESS);
+}
+
+TEST_F(Relu6GradTilingTest, scalar_feat_broadcast_bf16)
+{
+    gert::StorageShape g = {{16, 16}, {16, 16}};
+    gert::StorageShape f = {{1}, {1}};
+    gert::StorageShape o = {{16, 16}, {16, 16}};
+    EXPECT_EQ(RunTiling(ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, g, f, o), ge::GRAPH_SUCCESS);
+}
+
+// 3D per-axis mutual broadcast [2,1,4] x [1,3,1] -> [2,3,4], fp32.
+TEST_F(Relu6GradTilingTest, mutual_broadcast_3d_fp32)
+{
+    gert::StorageShape g = {{2, 1, 4}, {2, 1, 4}};
+    gert::StorageShape f = {{1, 3, 1}, {1, 3, 1}};
+    gert::StorageShape o = {{2, 3, 4}, {2, 3, 4}};
+    EXPECT_EQ(RunTiling(ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, g, f, o), ge::GRAPH_SUCCESS);
+}
+
+// Cross-rank broadcast into 3D: gradients=[4], features=[2,3,4] -> [2,3,4], bf16.
+TEST_F(Relu6GradTilingTest, cross_rank_3d_broadcast_bf16)
+{
+    gert::StorageShape g = {{4}, {4}};
+    gert::StorageShape f = {{2, 3, 4}, {2, 3, 4}};
+    gert::StorageShape o = {{2, 3, 4}, {2, 3, 4}};
+    EXPECT_EQ(RunTiling(ge::DT_BF16, ge::DT_BF16, ge::DT_BF16, g, f, o), ge::GRAPH_SUCCESS);
+}
+
 // Reject case: gradients fp16 vs features fp32.
 TEST_F(Relu6GradTilingTest, mix_dtype_reject)
 {

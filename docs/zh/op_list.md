@@ -498,6 +498,16 @@
   </tr>
   <tr>
     <td>activation</td>
+    <td><a href="../../activation/relu6_grad/README.md">relu6_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对应 ReLU6 操作的反向传播梯度，对前向输入落在开区间 (0, 6) 的位置透传上游梯度，落在区间外（含端点 0 与 6）的位置输出 0。</td>
+  </tr>
+  <tr>
+    <td>activation</td>
     <td><a href="../../activation/selu/README.md">selu</a></td>
     <td>✓</td>
     <td>✓</td>

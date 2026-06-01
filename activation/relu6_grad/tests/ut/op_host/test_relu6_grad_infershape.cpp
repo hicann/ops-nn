@@ -165,6 +165,167 @@ TEST_F(relu6grad, relu6grad_infer_shape_cross_rank_broadcast_bf16)
     ASSERT_EQ(Ops::Base::ToString(*output_desc), Ops::Base::ToString(expected_output_shape));
 }
 
+// Per-axis broadcast gradients=[16,1], features=[1,16] -> [16,16], fp32.
+TEST_F(relu6grad, relu6grad_infer_shape_axis_broadcast_fp32)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Relu6Grad")->infer_shape;
+    gert::StorageShape gShape = {{16, 1}, {16, 1}};
+    gert::StorageShape xShape = {{1, 16}, {1, 16}};
+    gert::StorageShape yShape = {{}, {}};
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&gShape, &xShape})
+                      .OutputShapes({&yShape})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output_desc = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    gert::Shape expected_output_shape = {16, 16};
+    ASSERT_EQ(Ops::Base::ToString(*output_desc), Ops::Base::ToString(expected_output_shape));
+}
+
+// Single-axis (trailing dim) broadcast gradients=[3,1], features=[3,4] -> [3,4], fp32.
+TEST_F(relu6grad, relu6grad_infer_shape_trailing_dim_broadcast_fp32)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Relu6Grad")->infer_shape;
+    gert::StorageShape gShape = {{3, 1}, {3, 1}};
+    gert::StorageShape xShape = {{3, 4}, {3, 4}};
+    gert::StorageShape yShape = {{}, {}};
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&gShape, &xShape})
+                      .OutputShapes({&yShape})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output_desc = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    gert::Shape expected_output_shape = {3, 4};
+    ASSERT_EQ(Ops::Base::ToString(*output_desc), Ops::Base::ToString(expected_output_shape));
+}
+
+// Single-axis (leading dim) broadcast gradients=[1,4], features=[3,4] -> [3,4], bf16.
+TEST_F(relu6grad, relu6grad_infer_shape_leading_dim_broadcast_bf16)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Relu6Grad")->infer_shape;
+    gert::StorageShape gShape = {{1, 4}, {1, 4}};
+    gert::StorageShape xShape = {{3, 4}, {3, 4}};
+    gert::StorageShape yShape = {{}, {}};
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&gShape, &xShape})
+                      .OutputShapes({&yShape})
+                      .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output_desc = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    gert::Shape expected_output_shape = {3, 4};
+    ASSERT_EQ(Ops::Base::ToString(*output_desc), Ops::Base::ToString(expected_output_shape));
+}
+
+// Scalar features gradients=[16,16], features=[1] -> [16,16], fp16 (reverse of scalar gradients).
+TEST_F(relu6grad, relu6grad_infer_shape_scalar_features_broadcast_fp16)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Relu6Grad")->infer_shape;
+    gert::StorageShape gShape = {{16, 16}, {16, 16}};
+    gert::StorageShape xShape = {{1}, {1}};
+    gert::StorageShape yShape = {{}, {}};
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&gShape, &xShape})
+                      .OutputShapes({&yShape})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output_desc = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    gert::Shape expected_output_shape = {16, 16};
+    ASSERT_EQ(Ops::Base::ToString(*output_desc), Ops::Base::ToString(expected_output_shape));
+}
+
+// 3D per-axis mutual broadcast gradients=[2,1,4], features=[1,3,1] -> [2,3,4], fp32.
+TEST_F(relu6grad, relu6grad_infer_shape_mutual_broadcast_3d_fp32)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Relu6Grad")->infer_shape;
+    gert::StorageShape gShape = {{2, 1, 4}, {2, 1, 4}};
+    gert::StorageShape xShape = {{1, 3, 1}, {1, 3, 1}};
+    gert::StorageShape yShape = {{}, {}};
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&gShape, &xShape})
+                      .OutputShapes({&yShape})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output_desc = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    gert::Shape expected_output_shape = {2, 3, 4};
+    ASSERT_EQ(Ops::Base::ToString(*output_desc), Ops::Base::ToString(expected_output_shape));
+}
+
+// Cross-rank broadcast into 3D gradients=[4], features=[2,3,4] -> [2,3,4], fp16.
+TEST_F(relu6grad, relu6grad_infer_shape_cross_rank_3d_broadcast_fp16)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Relu6Grad")->infer_shape;
+    gert::StorageShape gShape = {{4}, {4}};
+    gert::StorageShape xShape = {{2, 3, 4}, {2, 3, 4}};
+    gert::StorageShape yShape = {{}, {}};
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&gShape, &xShape})
+                      .OutputShapes({&yShape})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output_desc = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    gert::Shape expected_output_shape = {2, 3, 4};
+    ASSERT_EQ(Ops::Base::ToString(*output_desc), Ops::Base::ToString(expected_output_shape));
+}
+
+// 4D per-axis mutual broadcast gradients=[2,1,4,1], features=[1,3,1,5] -> [2,3,4,5], fp32.
+TEST_F(relu6grad, relu6grad_infer_shape_mutual_broadcast_4d_fp32)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Relu6Grad")->infer_shape;
+    gert::StorageShape gShape = {{2, 1, 4, 1}, {2, 1, 4, 1}};
+    gert::StorageShape xShape = {{1, 3, 1, 5}, {1, 3, 1, 5}};
+    gert::StorageShape yShape = {{}, {}};
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&gShape, &xShape})
+                      .OutputShapes({&yShape})
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
+    auto output_desc = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
+    gert::Shape expected_output_shape = {2, 3, 4, 5};
+    ASSERT_EQ(Ops::Base::ToString(*output_desc), Ops::Base::ToString(expected_output_shape));
+}
+
 TEST_F(relu6grad, relu6grad_infer_shape_dynamic)
 {
     auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("Relu6Grad")->infer_shape;

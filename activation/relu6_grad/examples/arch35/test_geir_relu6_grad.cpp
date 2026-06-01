@@ -46,7 +46,7 @@
 #include "ge_ir_build.h"
 
 #include "nn_other.h"
-#include "../op_graph/relu6_grad_proto.h"
+#include "../../op_graph/relu6_grad_proto.h"
 
 #define FAILED -1
 #define SUCCESS 0
@@ -242,6 +242,9 @@ static bool MatchOne(double got, const ExpectPolicy& expect)
     if (expect.mode == ExpectPolicy::Mode::kIsNaN) {
         return std::isnan(got);
     }
+    if (std::isinf(expect.expected)) {
+        return std::isinf(got) && (std::signbit(got) == std::signbit(expect.expected));
+    }
     return std::abs(got - expect.expected) <= expect.absTol;
 }
 
@@ -370,10 +373,28 @@ int main(int argc, char* argv[])
         {"bf16_boundary_x_eq_0",      ge::DT_BF16,    1.0,   0.0,  {4},    {4},    {4},    exact(0.0,    2e-2)},
         {"bf16_boundary_x_eq_6",      ge::DT_BF16,    1.0,   6.0,  {4},    {4},    {4},    exact(0.0,    2e-2)},
         {"bf16_x_pos_inf",            ge::DT_BF16,    1.0,   kInf, {4},    {4},    {4},    exact(0.0,    2e-2)},
-        // --- broadcast ---
-        {"fp32_broadcast_inside",     ge::DT_FLOAT,   2.0,   3.0,  {4,1},  {1,4},  {4,4},  exact(2.0,    1e-5)},
-        {"fp32_broadcast_boundary",   ge::DT_FLOAT,   2.0,   6.0,  {4,1},  {1,4},  {4,4},  exact(0.0,    1e-5)},
-        {"fp32_broadcast_cross_rank", ge::DT_FLOAT,   2.0,   3.0,  {4},    {3,4},  {3,4},  exact(2.0,    1e-5)},
+        // --- broadcast: fp32 mutual / outer-product (each operand broadcasts on a different axis) ---
+        {"fp32_broadcast_inside",        ge::DT_FLOAT,   2.0,   3.0,  {4,1},    {1,4},    {4,4},    exact(2.0,    1e-5)},
+        {"fp32_broadcast_boundary",      ge::DT_FLOAT,   2.0,   6.0,  {4,1},    {1,4},    {4,4},    exact(0.0,    1e-5)},
+        {"fp32_broadcast_3d_mutual",     ge::DT_FLOAT,   2.5,   3.0,  {2,1,4},  {1,3,1},  {2,3,4},  exact(2.5,    1e-5)},
+        // --- broadcast: fp32 single-axis (one operand has a size-1 dim) ---
+        {"fp32_broadcast_trailing_dim",  ge::DT_FLOAT,   1.5,   2.0,  {3,1},    {3,4},    {3,4},    exact(1.5,    1e-5)},
+        {"fp32_broadcast_leading_dim",   ge::DT_FLOAT,   1.5,   2.0,  {1,4},    {3,4},    {3,4},    exact(1.5,    1e-5)},
+        // --- broadcast: fp32 scalar operand ({1}) against a full tensor, both directions ---
+        {"fp32_broadcast_scalar_grad",   ge::DT_FLOAT,   2.0,   3.0,  {1},      {16,16},  {16,16},  exact(2.0,    1e-5)},
+        {"fp32_broadcast_scalar_feat",   ge::DT_FLOAT,   2.0,   3.0,  {16,16},  {1},      {16,16},  exact(2.0,    1e-5)},
+        // --- broadcast: fp32 cross-rank (1D operand vs higher rank) ---
+        {"fp32_broadcast_cross_rank",    ge::DT_FLOAT,   2.0,   3.0,  {4},      {3,4},    {3,4},    exact(2.0,    1e-5)},
+        {"fp32_broadcast_cross_rank_3d", ge::DT_FLOAT,   2.0,   3.0,  {4},      {2,3,4},  {2,3,4},  exact(2.0,    1e-5)},
+        // --- broadcast: combined with mask off / dy special value ---
+        {"fp32_broadcast_x_out_of_band", ge::DT_FLOAT,   2.0,   6.5,  {4,1},    {1,4},    {4,4},    exact(0.0,    1e-5)},
+        {"fp32_broadcast_x_neg",         ge::DT_FLOAT,   2.0,  -1.0,  {4,1},    {1,4},    {4,4},    exact(0.0,    1e-5)},
+        {"fp32_broadcast_dy_inf_inband", ge::DT_FLOAT,   kInf,  3.0,  {4,1},    {1,4},    {4,4},    exact(kInf,   0.0 )},
+        // --- broadcast: fp16 / bf16 (exercises the FloatCast tiling path under broadcast) ---
+        {"fp16_broadcast_mutual",        ge::DT_FLOAT16, 1.5,   2.0,  {4,1},    {1,4},    {4,4},    exact(1.5,    5e-3)},
+        {"fp16_broadcast_scalar_grad",   ge::DT_FLOAT16, 1.5,   2.0,  {1},      {8,8},    {8,8},    exact(1.5,    5e-3)},
+        {"bf16_broadcast_mutual",        ge::DT_BF16,    1.0,   2.0,  {4,1},    {1,4},    {4,4},    exact(1.0,    2e-2)},
+        {"bf16_broadcast_cross_rank",    ge::DT_BF16,    1.0,   2.0,  {4},      {3,4},    {3,4},    exact(1.0,    2e-2)},
     };
 
     int allFail = 0;

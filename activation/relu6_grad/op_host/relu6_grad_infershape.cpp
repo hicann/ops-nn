@@ -14,10 +14,17 @@
  */
 #include "op_host/infershape_broadcast_util.h"
 #include "register/op_impl_registry.h"
+#include "log/log.h"
 
 using namespace ge;
 namespace ops {
 
-IMPL_OP_INFERSHAPE(Relu6Grad).InferShape(Ops::Base::InferShape4Broadcast);
+static ge::graphStatus InferShape4Relu6Grad(gert::InferShapeContext* context)
+{
+    OP_LOGD(context->GetNodeName(), "Begin to do InferShape4Relu6Grad in ops-nn");
+    return Ops::Base::InferShape4Broadcast(context);
+}
+
+IMPL_OP_INFERSHAPE(Relu6Grad).InferShape(InferShape4Relu6Grad);
 
 } // namespace ops
