@@ -20,6 +20,8 @@
 #ifdef __CCE_KT_TEST__
 #include "tikicpulib.h"
 #include "data_utils.h"
+#include "kernel_ut_data_helper.h"
+#include "kernel_ut_data_executor.h"
 #include "string.h"
 #include <iostream>
 #include <string>
@@ -29,21 +31,21 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void index_put_with_sort(GM_ADDR self, GM_ADDR linearIndex, 
-    GM_ADDR posIdx, GM_ADDR values, GM_ADDR self_ref, GM_ADDR workSpace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void index_put_with_sort(
+    GM_ADDR self, GM_ADDR linearIndex, GM_ADDR posIdx, GM_ADDR values, GM_ADDR self_ref, GM_ADDR workSpace,
+    GM_ADDR tiling);
 
 class index_put_with_sort_test : public testing::Test {
-    protected:
-
-    static void SetUpTestCase() {
-        cout << "index_put_with_sort_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase() {
+protected:
+    static void SetUpTestCase() { cout << "index_put_with_sort_test SetUp\n" << endl; }
+    static void TearDownTestCase()
+    {
         cout << "index_put_with_sort_test TearDown\n" << endl;
+        kernel_ut::CleanGeneratedBinFiles("./index_put_with_sort_data");
     }
 };
 
-TEST_F(index_put_with_sort_test, test_case_scatter_between_core_float_false) 
+TEST_F(index_put_with_sort_test, test_case_scatter_between_core_float_false)
 {
     size_t selfSize = 48 * 1536 * sizeof(float); // 1536 = 48 * 32
     size_t linearIndexSize = 48 * sizeof(int32_t);
@@ -55,21 +57,21 @@ TEST_F(index_put_with_sort_test, test_case_scatter_between_core_float_false)
 
     size_t tilingSize = sizeof(IndexPutWithSortTilingData);
 
-    uint8_t *self = (uint8_t *)AscendC::GmAlloc(selfSize);
-    uint8_t *linearIndex = (uint8_t *)AscendC::GmAlloc(linearIndexSize);
-    uint8_t *posIdx = (uint8_t *)AscendC::GmAlloc(posIdxSize);
-    uint8_t *values = (uint8_t *)AscendC::GmAlloc(valuesSize);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingSize);
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceSize);
+    uint8_t* self = (uint8_t*)AscendC::GmAlloc(selfSize);
+    uint8_t* linearIndex = (uint8_t*)AscendC::GmAlloc(linearIndexSize);
+    uint8_t* posIdx = (uint8_t*)AscendC::GmAlloc(posIdxSize);
+    uint8_t* values = (uint8_t*)AscendC::GmAlloc(valuesSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
 
     memset(workspace, 0, workspaceSize);
 
-    system("cp -r ../../../../index/index_put_with_sort/tests/ut/op_kernel/index_put_with_sort_data ./");
-    system("chmod -R 755 ./index_put_with_sort_data/");
-    system("cd ./index_put_with_sort_data/ && rm -rf ./*bin");
-    system("cd ./index_put_with_sort_data/ && python3 gen_data.py 48 48 1536");
-    
-    IndexPutWithSortTilingData *tilingData = reinterpret_cast<IndexPutWithSortTilingData*>(tiling);
+    kernel_ut::SetupTestEnvironment(
+        "index/index_put_with_sort/tests/ut/op_kernel/index_put_with_sort_data", "index_put_with_sort_data");
+    ;
+    kernel_ut::RunGenData("./index_put_with_sort_data", {"48", "48", "1536"});
+
+    IndexPutWithSortTilingData* tilingData = reinterpret_cast<IndexPutWithSortTilingData*>(tiling);
     tilingData->coreNums = 48;
     tilingData->indicesNums = 48;
     tilingData->sliceSize = 1536;
@@ -78,8 +80,7 @@ TEST_F(index_put_with_sort_test, test_case_scatter_between_core_float_false)
     tilingData->tailCoreDataLength = 0;
     tilingData->accumulate = 0;
 
-    char *path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/index_put_with_sort_data/self.bin", selfSize, self, selfSize);
     ReadFile(path + "/index_put_with_sort_data/linear_index.bin", linearIndexSize, linearIndex, linearIndexSize);
     ReadFile(path + "/index_put_with_sort_data/pos_idx.bin", posIdxSize, posIdx, posIdxSize);
@@ -94,10 +95,9 @@ TEST_F(index_put_with_sort_test, test_case_scatter_between_core_float_false)
     AscendC::GmFree(values);
     AscendC::GmFree(tiling);
     AscendC::GmFree(workspace);
-    free(path_);
 }
 
-TEST_F(index_put_with_sort_test, test_case_scatter_between_core_float_true) 
+TEST_F(index_put_with_sort_test, test_case_scatter_between_core_float_true)
 {
     size_t selfSize = 48 * 1536 * sizeof(float); // 1536 = 48 * 32
     size_t linearIndexSize = 48 * sizeof(int32_t);
@@ -109,21 +109,21 @@ TEST_F(index_put_with_sort_test, test_case_scatter_between_core_float_true)
 
     size_t tilingSize = sizeof(IndexPutWithSortTilingData);
 
-    uint8_t *self = (uint8_t *)AscendC::GmAlloc(selfSize);
-    uint8_t *linearIndex = (uint8_t *)AscendC::GmAlloc(linearIndexSize);
-    uint8_t *posIdx = (uint8_t *)AscendC::GmAlloc(posIdxSize);
-    uint8_t *values = (uint8_t *)AscendC::GmAlloc(valuesSize);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingSize);
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceSize);
+    uint8_t* self = (uint8_t*)AscendC::GmAlloc(selfSize);
+    uint8_t* linearIndex = (uint8_t*)AscendC::GmAlloc(linearIndexSize);
+    uint8_t* posIdx = (uint8_t*)AscendC::GmAlloc(posIdxSize);
+    uint8_t* values = (uint8_t*)AscendC::GmAlloc(valuesSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
 
     memset(workspace, 0, workspaceSize);
 
-    system("cp -r ../../../../index/index_put_with_sort/tests/ut/op_kernel/index_put_with_sort_data ./");
-    system("chmod -R 755 ./index_put_with_sort_data/");
-    system("cd ./index_put_with_sort_data/ && rm -rf ./*bin");
-    system("cd ./index_put_with_sort_data/ && python3 gen_data.py 48 48 1536");
-    
-    IndexPutWithSortTilingData *tilingData = reinterpret_cast<IndexPutWithSortTilingData*>(tiling);
+    kernel_ut::SetupTestEnvironment(
+        "index/index_put_with_sort/tests/ut/op_kernel/index_put_with_sort_data", "index_put_with_sort_data");
+    ;
+    kernel_ut::RunGenData("./index_put_with_sort_data", {"48", "48", "1536"});
+
+    IndexPutWithSortTilingData* tilingData = reinterpret_cast<IndexPutWithSortTilingData*>(tiling);
     tilingData->coreNums = 48;
     tilingData->indicesNums = 48;
     tilingData->sliceSize = 1536;
@@ -132,8 +132,7 @@ TEST_F(index_put_with_sort_test, test_case_scatter_between_core_float_true)
     tilingData->tailCoreDataLength = 0;
     tilingData->accumulate = 1;
 
-    char *path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/index_put_with_sort_data/self.bin", selfSize, self, selfSize);
     ReadFile(path + "/index_put_with_sort_data/linear_index.bin", linearIndexSize, linearIndex, linearIndexSize);
     ReadFile(path + "/index_put_with_sort_data/pos_idx.bin", posIdxSize, posIdx, posIdxSize);
@@ -148,10 +147,9 @@ TEST_F(index_put_with_sort_test, test_case_scatter_between_core_float_true)
     AscendC::GmFree(values);
     AscendC::GmFree(tiling);
     AscendC::GmFree(workspace);
-    free(path_);
 }
 
-TEST_F(index_put_with_sort_test, test_case_gather_float_false) 
+TEST_F(index_put_with_sort_test, test_case_gather_float_false)
 {
     size_t selfSize = 96 * 1536 * sizeof(float); // 1536 = 48 * 32
     size_t linearIndexSize = 96 * sizeof(int32_t);
@@ -163,21 +161,21 @@ TEST_F(index_put_with_sort_test, test_case_gather_float_false)
 
     size_t tilingSize = sizeof(IndexPutWithSortTilingData);
 
-    uint8_t *self = (uint8_t *)AscendC::GmAlloc(selfSize);
-    uint8_t *linearIndex = (uint8_t *)AscendC::GmAlloc(linearIndexSize);
-    uint8_t *posIdx = (uint8_t *)AscendC::GmAlloc(posIdxSize);
-    uint8_t *values = (uint8_t *)AscendC::GmAlloc(valuesSize);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingSize);
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceSize);
+    uint8_t* self = (uint8_t*)AscendC::GmAlloc(selfSize);
+    uint8_t* linearIndex = (uint8_t*)AscendC::GmAlloc(linearIndexSize);
+    uint8_t* posIdx = (uint8_t*)AscendC::GmAlloc(posIdxSize);
+    uint8_t* values = (uint8_t*)AscendC::GmAlloc(valuesSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
 
     memset(workspace, 0, workspaceSize);
 
-    system("cp -r ../../../../index/index_put_with_sort/tests/ut/op_kernel/index_put_with_sort_data ./");
-    system("chmod -R 755 ./index_put_with_sort_data/");
-    system("cd ./index_put_with_sort_data/ && rm -rf ./*bin");
-    system("cd ./index_put_with_sort_data/ && python3 gen_data.py 48 48 1536");
-    
-    IndexPutWithSortTilingData *tilingData = reinterpret_cast<IndexPutWithSortTilingData*>(tiling);
+    kernel_ut::SetupTestEnvironment(
+        "index/index_put_with_sort/tests/ut/op_kernel/index_put_with_sort_data", "index_put_with_sort_data");
+    ;
+    kernel_ut::RunGenData("./index_put_with_sort_data", {"48", "48", "1536"});
+
+    IndexPutWithSortTilingData* tilingData = reinterpret_cast<IndexPutWithSortTilingData*>(tiling);
     tilingData->coreNums = 48;
     tilingData->sliceSize = 1536;
     tilingData->sliceSizeAligned = 1536;
@@ -189,8 +187,7 @@ TEST_F(index_put_with_sort_test, test_case_gather_float_false)
     tilingData->lastBlockSize = 0;
     tilingData->accumulate = 0;
 
-    char *path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/index_put_with_sort_data/self.bin", selfSize, self, selfSize);
     ReadFile(path + "/index_put_with_sort_data/linear_index.bin", linearIndexSize, linearIndex, linearIndexSize);
     ReadFile(path + "/index_put_with_sort_data/pos_idx.bin", posIdxSize, posIdx, posIdxSize);
@@ -205,10 +202,9 @@ TEST_F(index_put_with_sort_test, test_case_gather_float_false)
     AscendC::GmFree(values);
     AscendC::GmFree(tiling);
     AscendC::GmFree(workspace);
-    free(path_);
 }
 
-TEST_F(index_put_with_sort_test, test_case_gather_float_true) 
+TEST_F(index_put_with_sort_test, test_case_gather_float_true)
 {
     size_t selfSize = 96 * 1536 * sizeof(float); // 1536 = 48 * 32
     size_t linearIndexSize = 96 * sizeof(int32_t);
@@ -220,21 +216,21 @@ TEST_F(index_put_with_sort_test, test_case_gather_float_true)
 
     size_t tilingSize = sizeof(IndexPutWithSortTilingData);
 
-    uint8_t *self = (uint8_t *)AscendC::GmAlloc(selfSize);
-    uint8_t *linearIndex = (uint8_t *)AscendC::GmAlloc(linearIndexSize);
-    uint8_t *posIdx = (uint8_t *)AscendC::GmAlloc(posIdxSize);
-    uint8_t *values = (uint8_t *)AscendC::GmAlloc(valuesSize);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingSize);
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceSize);
+    uint8_t* self = (uint8_t*)AscendC::GmAlloc(selfSize);
+    uint8_t* linearIndex = (uint8_t*)AscendC::GmAlloc(linearIndexSize);
+    uint8_t* posIdx = (uint8_t*)AscendC::GmAlloc(posIdxSize);
+    uint8_t* values = (uint8_t*)AscendC::GmAlloc(valuesSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
 
     memset(workspace, 0, workspaceSize);
 
-    system("cp -r ../../../../index/index_put_with_sort/tests/ut/op_kernel/index_put_with_sort_data ./");
-    system("chmod -R 755 ./index_put_with_sort_data/");
-    system("cd ./index_put_with_sort_data/ && rm -rf ./*bin");
-    system("cd ./index_put_with_sort_data/ && python3 gen_data.py 48 48 1536");
-    
-    IndexPutWithSortTilingData *tilingData = reinterpret_cast<IndexPutWithSortTilingData*>(tiling);
+    kernel_ut::SetupTestEnvironment(
+        "index/index_put_with_sort/tests/ut/op_kernel/index_put_with_sort_data", "index_put_with_sort_data");
+    ;
+    kernel_ut::RunGenData("./index_put_with_sort_data", {"48", "48", "1536"});
+
+    IndexPutWithSortTilingData* tilingData = reinterpret_cast<IndexPutWithSortTilingData*>(tiling);
     tilingData->coreNums = 48;
     tilingData->sliceSize = 1536;
     tilingData->sliceSizeAligned = 1536;
@@ -246,8 +242,7 @@ TEST_F(index_put_with_sort_test, test_case_gather_float_true)
     tilingData->lastBlockSize = 0;
     tilingData->accumulate = 1;
 
-    char *path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/index_put_with_sort_data/self.bin", selfSize, self, selfSize);
     ReadFile(path + "/index_put_with_sort_data/linear_index.bin", linearIndexSize, linearIndex, linearIndexSize);
     ReadFile(path + "/index_put_with_sort_data/pos_idx.bin", posIdxSize, posIdx, posIdxSize);
@@ -262,10 +257,9 @@ TEST_F(index_put_with_sort_test, test_case_gather_float_true)
     AscendC::GmFree(values);
     AscendC::GmFree(tiling);
     AscendC::GmFree(workspace);
-    free(path_);
 }
 
-TEST_F(index_put_with_sort_test, test_case_scatter_in_core_float_false) 
+TEST_F(index_put_with_sort_test, test_case_scatter_in_core_float_false)
 {
     size_t selfSize = 96 * 3072 * sizeof(float);
     size_t linearIndexSize = 96 * sizeof(int32_t);
@@ -277,21 +271,21 @@ TEST_F(index_put_with_sort_test, test_case_scatter_in_core_float_false)
 
     size_t tilingSize = sizeof(IndexPutWithSortTilingData);
 
-    uint8_t *self = (uint8_t *)AscendC::GmAlloc(selfSize);
-    uint8_t *linearIndex = (uint8_t *)AscendC::GmAlloc(linearIndexSize);
-    uint8_t *posIdx = (uint8_t *)AscendC::GmAlloc(posIdxSize);
-    uint8_t *values = (uint8_t *)AscendC::GmAlloc(valuesSize);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingSize);
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceSize);
+    uint8_t* self = (uint8_t*)AscendC::GmAlloc(selfSize);
+    uint8_t* linearIndex = (uint8_t*)AscendC::GmAlloc(linearIndexSize);
+    uint8_t* posIdx = (uint8_t*)AscendC::GmAlloc(posIdxSize);
+    uint8_t* values = (uint8_t*)AscendC::GmAlloc(valuesSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
 
     memset(workspace, 0, workspaceSize);
 
-    system("cp -r ../../../../index/index_put_with_sort/tests/ut/op_kernel/index_put_with_sort_data ./");
-    system("chmod -R 755 ./index_put_with_sort_data/");
-    system("cd ./index_put_with_sort_data/ && rm -rf ./*bin");
-    system("cd ./index_put_with_sort_data/ && python3 gen_data.py 48 48 1536");
-    
-    IndexPutWithSortTilingData *tilingData = reinterpret_cast<IndexPutWithSortTilingData*>(tiling);
+    kernel_ut::SetupTestEnvironment(
+        "index/index_put_with_sort/tests/ut/op_kernel/index_put_with_sort_data", "index_put_with_sort_data");
+    ;
+    kernel_ut::RunGenData("./index_put_with_sort_data", {"48", "48", "1536"});
+
+    IndexPutWithSortTilingData* tilingData = reinterpret_cast<IndexPutWithSortTilingData*>(tiling);
     tilingData->coreNums = 48;
     tilingData->sliceSize = 3072;
     tilingData->sliceSizeAligned = 3072;
@@ -303,8 +297,7 @@ TEST_F(index_put_with_sort_test, test_case_scatter_in_core_float_false)
     tilingData->lastBlockSize = 0;
     tilingData->accumulate = 0;
 
-    char *path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/index_put_with_sort_data/self.bin", selfSize, self, selfSize);
     ReadFile(path + "/index_put_with_sort_data/linear_index.bin", linearIndexSize, linearIndex, linearIndexSize);
     ReadFile(path + "/index_put_with_sort_data/pos_idx.bin", posIdxSize, posIdx, posIdxSize);
@@ -319,10 +312,9 @@ TEST_F(index_put_with_sort_test, test_case_scatter_in_core_float_false)
     AscendC::GmFree(values);
     AscendC::GmFree(tiling);
     AscendC::GmFree(workspace);
-    free(path_);
 }
 
-TEST_F(index_put_with_sort_test, test_case_scatter_in_core_float_true) 
+TEST_F(index_put_with_sort_test, test_case_scatter_in_core_float_true)
 {
     size_t selfSize = 96 * 3072 * sizeof(float);
     size_t linearIndexSize = 96 * sizeof(int32_t);
@@ -334,21 +326,21 @@ TEST_F(index_put_with_sort_test, test_case_scatter_in_core_float_true)
 
     size_t tilingSize = sizeof(IndexPutWithSortTilingData);
 
-    uint8_t *self = (uint8_t *)AscendC::GmAlloc(selfSize);
-    uint8_t *linearIndex = (uint8_t *)AscendC::GmAlloc(linearIndexSize);
-    uint8_t *posIdx = (uint8_t *)AscendC::GmAlloc(posIdxSize);
-    uint8_t *values = (uint8_t *)AscendC::GmAlloc(valuesSize);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingSize);
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceSize);
+    uint8_t* self = (uint8_t*)AscendC::GmAlloc(selfSize);
+    uint8_t* linearIndex = (uint8_t*)AscendC::GmAlloc(linearIndexSize);
+    uint8_t* posIdx = (uint8_t*)AscendC::GmAlloc(posIdxSize);
+    uint8_t* values = (uint8_t*)AscendC::GmAlloc(valuesSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
 
     memset(workspace, 0, workspaceSize);
 
-    system("cp -r ../../../../index/index_put_with_sort/tests/ut/op_kernel/index_put_with_sort_data ./");
-    system("chmod -R 755 ./index_put_with_sort_data/");
-    system("cd ./index_put_with_sort_data/ && rm -rf ./*bin");
-    system("cd ./index_put_with_sort_data/ && python3 gen_data.py 48 48 1536");
-    
-    IndexPutWithSortTilingData *tilingData = reinterpret_cast<IndexPutWithSortTilingData*>(tiling);
+    kernel_ut::SetupTestEnvironment(
+        "index/index_put_with_sort/tests/ut/op_kernel/index_put_with_sort_data", "index_put_with_sort_data");
+    ;
+    kernel_ut::RunGenData("./index_put_with_sort_data", {"48", "48", "1536"});
+
+    IndexPutWithSortTilingData* tilingData = reinterpret_cast<IndexPutWithSortTilingData*>(tiling);
     tilingData->coreNums = 48;
     tilingData->sliceSize = 3072;
     tilingData->sliceSizeAligned = 3072;
@@ -360,8 +352,7 @@ TEST_F(index_put_with_sort_test, test_case_scatter_in_core_float_true)
     tilingData->lastBlockSize = 0;
     tilingData->accumulate = 1;
 
-    char *path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/index_put_with_sort_data/self.bin", selfSize, self, selfSize);
     ReadFile(path + "/index_put_with_sort_data/linear_index.bin", linearIndexSize, linearIndex, linearIndexSize);
     ReadFile(path + "/index_put_with_sort_data/pos_idx.bin", posIdxSize, posIdx, posIdxSize);
@@ -376,5 +367,4 @@ TEST_F(index_put_with_sort_test, test_case_scatter_in_core_float_true)
     AscendC::GmFree(values);
     AscendC::GmFree(tiling);
     AscendC::GmFree(workspace);
-    free(path_);
 }

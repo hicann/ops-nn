@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  */
 
 /*!
@@ -20,6 +21,8 @@
 #ifdef __CCE_KT_TEST__
 #include "tikicpulib.h"
 #include "data_utils.h"
+#include "kernel_ut_data_helper.h"
+#include "kernel_ut_data_executor.h"
 #include "string.h"
 #include <iostream>
 #include <string>
@@ -31,16 +34,13 @@ using namespace std;
 
 extern "C" __global__ __aicore__ void scatter_elements_v2(
     GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling);
-class scatter_elements_v2_test : public testing::Test
-{
+class scatter_elements_v2_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "scatter_elements_v2_test SetUp\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "scatter_elements_v2_test SetUp\n" << endl; }
     static void TearDownTestCase()
     {
         cout << "scatter_elements_v2_test TearDown\n" << endl;
+        kernel_ut::CleanGeneratedBinFiles("./scatter_elements_v2_data");
     }
 };
 
@@ -62,16 +62,12 @@ TEST_F(scatter_elements_v2_test, test_case_fp32)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 32;
 
-    system(
-        "cp -r ../../../../index/scatter_elements_v2/tests/ut/op_kernel/scatter_elements_v2_data "
-        "./");
-    system("chmod -R 755 ./scatter_elements_v2_data/");
-    system("cd ./scatter_elements_v2_data/ && rm -rf ./*bin");
-    system("cd ./scatter_elements_v2_data/ && python3 gen_data.py float32");
-    system("cd ./scatter_elements_v2_data/ && python3 gen_tiling.py");
+    kernel_ut::SetupTestEnvironment(
+        "index/scatter_elements_v2/tests/ut/op_kernel/scatter_elements_v2_data", "scatter_elements_v2_data");
+    kernel_ut::RunGenData("./scatter_elements_v2_data", {"float32"});
+    kernel_ut::RunGenTiling("./scatter_elements_v2_data", {});
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/scatter_elements_v2_data/var.bin", var_size, var, var_size);
     ReadFile(path + "/scatter_elements_v2_data/indices.bin", indices_size, indices, indices_size);
     ReadFile(path + "/scatter_elements_v2_data/src.bin", src_size, src, src_size);
@@ -101,5 +97,4 @@ TEST_F(scatter_elements_v2_test, test_case_fp32)
     AscendC::GmFree(output);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }

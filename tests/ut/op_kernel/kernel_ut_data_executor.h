@@ -28,6 +28,8 @@ bool RunCompareData(const std::string& dataDir, const std::vector<std::string>& 
 
 bool RunGenTiling(const std::string& dataDir, const std::string& caseName);
 
+bool RunScript(const std::string& dataDir, const std::string& scriptName, const std::vector<std::string>& args);
+
 } // namespace kernel_ut
 
 #endif

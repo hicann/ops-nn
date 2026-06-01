@@ -27,7 +27,8 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void index_fill(GM_ADDR x, GM_ADDR indices, GM_ADDR value, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void index_fill(
+    GM_ADDR x, GM_ADDR indices, GM_ADDR value, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
 
 // 结构化测试参数，仅包含变化项
 struct IndexFillTestParams {
@@ -49,7 +50,8 @@ protected:
     static void TearDownTestCase() { cout << "index_fill_test TearDown\n" << endl; }
 
     // 通用测试执行函数（提取所有重复逻辑）
-    static void RunTest(const IndexFillTestParams& params, int tilingKey) {
+    static void RunTest(const IndexFillTestParams& params, int tilingKey)
+    {
         // 固定常量定义
         const size_t kSysWorkspaceSize = 16 * 1024 * 1024 + 4096;
         const size_t kUbSize = 196352;
@@ -105,52 +107,77 @@ protected:
 };
 
 // 测试用例简化为：仅配置参数+调用通用函数
-TEST_F(index_fill_test, index_fill_kernel_test_key_0) {
+TEST_F(index_fill_test, index_fill_kernel_test_key_0)
+{
     IndexFillTestParams params = {
-        .P = 100, .N = 7, .Q = 89567,
-        .indicesNum = 18, .indicesProcessMode = 0,
-        .frontCoreNumTaskIndices = 18, .tailCoreNumTaskIndices = 0,
-        .frontCoreDataTaskIndices = 1, .tailCoreDataTaskIndices = 0
-    };
+        .P = 100,
+        .N = 7,
+        .Q = 89567,
+        .indicesNum = 18,
+        .indicesProcessMode = 0,
+        .frontCoreNumTaskIndices = 18,
+        .tailCoreNumTaskIndices = 0,
+        .frontCoreDataTaskIndices = 1,
+        .tailCoreDataTaskIndices = 0};
     RunTest(params, 0);
 }
 
-TEST_F(index_fill_test, index_fill_kernel_test_key_1) {
+TEST_F(index_fill_test, index_fill_kernel_test_key_1)
+{
     IndexFillTestParams params = {
-        .P = 12, .N = 640, .Q = 128,
-        .indicesNum = 600, .indicesProcessMode = 0,
-        .frontCoreNumTaskIndices = 24, .tailCoreNumTaskIndices = 24,
-        .frontCoreDataTaskIndices = 13, .tailCoreDataTaskIndices = 12
-    };
+        .P = 12,
+        .N = 640,
+        .Q = 128,
+        .indicesNum = 600,
+        .indicesProcessMode = 0,
+        .frontCoreNumTaskIndices = 24,
+        .tailCoreNumTaskIndices = 24,
+        .frontCoreDataTaskIndices = 13,
+        .tailCoreDataTaskIndices = 12};
     RunTest(params, 1);
 }
 
-TEST_F(index_fill_test, index_fill_kernel_test_key_2) {
+TEST_F(index_fill_test, index_fill_kernel_test_key_2)
+{
     IndexFillTestParams params = {
-        .P = 1000, .N = 32, .Q = 32,
-        .indicesNum = 40, .indicesProcessMode = 0,
-        .frontCoreNumTaskIndices = 40, .tailCoreNumTaskIndices = 0,
-        .frontCoreDataTaskIndices = 1, .tailCoreDataTaskIndices = 0
-    };
+        .P = 1000,
+        .N = 32,
+        .Q = 32,
+        .indicesNum = 40,
+        .indicesProcessMode = 0,
+        .frontCoreNumTaskIndices = 40,
+        .tailCoreNumTaskIndices = 0,
+        .frontCoreDataTaskIndices = 1,
+        .tailCoreDataTaskIndices = 0};
     RunTest(params, 2);
 }
 
-TEST_F(index_fill_test, index_fill_kernel_test_key_3) {
+TEST_F(index_fill_test, index_fill_kernel_test_key_3)
+{
     IndexFillTestParams params = {
-        .P = 12, .N = 16880, .Q = 0,
-        .indicesNum = 1536, .indicesProcessMode = 1,
-        .frontCoreNumTaskIndices = 48, .tailCoreNumTaskIndices = 0,
-        .frontCoreDataTaskIndices = 32, .tailCoreDataTaskIndices = 0
-    };
+        .P = 12,
+        .N = 16880,
+        .Q = 0,
+        .indicesNum = 1536,
+        .indicesProcessMode = 1,
+        .frontCoreNumTaskIndices = 48,
+        .tailCoreNumTaskIndices = 0,
+        .frontCoreDataTaskIndices = 32,
+        .tailCoreDataTaskIndices = 0};
     RunTest(params, 3);
 }
 
-TEST_F(index_fill_test, index_fill_kernel_test_key_4) {
+TEST_F(index_fill_test, index_fill_kernel_test_key_4)
+{
     IndexFillTestParams params = {
-        .P = 1200, .N = 128, .Q = 0,
-        .indicesNum = 128, .indicesProcessMode = 0,
-        .frontCoreNumTaskIndices = 32, .tailCoreNumTaskIndices = 16,
-        .frontCoreDataTaskIndices = 3, .tailCoreDataTaskIndices = 2
-    };
+        .P = 1200,
+        .N = 128,
+        .Q = 0,
+        .indicesNum = 128,
+        .indicesProcessMode = 0,
+        .frontCoreNumTaskIndices = 32,
+        .tailCoreNumTaskIndices = 16,
+        .frontCoreDataTaskIndices = 3,
+        .tailCoreDataTaskIndices = 2};
     RunTest(params, 4);
 }

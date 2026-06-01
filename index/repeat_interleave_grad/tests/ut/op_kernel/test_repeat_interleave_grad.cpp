@@ -21,6 +21,8 @@
 #include "gtest/gtest.h"
 #include "tikicpulib.h"
 #include "data_utils.h"
+#include "kernel_ut_data_helper.h"
+#include "kernel_ut_data_executor.h"
 
 #include <cstdint>
 
@@ -29,28 +31,17 @@ using namespace std;
 extern "C" __global__ __aicore__ void repeat_interleave_grad(
     GM_ADDR input_grad, GM_ADDR repeats, GM_ADDR output_grad, GM_ADDR workspace, GM_ADDR tiling);
 
-class repeat_interleave_grad_test : public testing::Test
-{
+class repeat_interleave_grad_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "repeat_interleave_grad_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "repeat_interleave_grad_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "repeat_interleave_grad_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "repeat_interleave_grad_test TearDown\n" << endl; }
 };
 
 TEST_F(repeat_interleave_grad_test, test_case_0)
 {
-    system(
-        "cp -rf "
-        "../../../../index/repeat_interleave_grad/tests/ut/op_kernel/gen_data "
-        "./");
-    system("chmod -R 755 ./gen_data/");
+    kernel_ut::SetupTestEnvironment("index/repeat_interleave_grad/tests/ut/op_kernel/gen_data", "gen_data");
     // batch, repeat_dim, data_num, axis, data_type
-    system("cd ./gen_data/ && python3 gen_data.py 2 16 16 1 float16, int32");
+    kernel_ut::RunGenData("./gen_data", {"2 16 16 1 float16", "int32"});
 
     size_t inputByteSize = 2 * 16 * 2 * 16 * sizeof(half);
     size_t repeatsByteSize = 16 * sizeof(int32_t);
@@ -64,8 +55,7 @@ TEST_F(repeat_interleave_grad_test, test_case_0)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size + 32);
     uint32_t blockDim = 1;
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
     auto read_file_0 = ReadFile(path + "/gen_data/y_grad.bin", inputByteSize, x, inputByteSize);
     auto read_file_1 = ReadFile(path + "/gen_data/repeats.bin", repeatsByteSize, repeats, repeatsByteSize);
     cout << read_file_0 << " read_file_0 SetUp\n" << endl;
@@ -95,18 +85,13 @@ TEST_F(repeat_interleave_grad_test, test_case_0)
     AscendC::GmFree(y);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }
 
 TEST_F(repeat_interleave_grad_test, test_case_1)
 {
-    system(
-        "cp -rf "
-        "../../../../index/repeat_interleave_grad/tests/ut/op_kernel/gen_data "
-        "./");
-    system("chmod -R 755 ./gen_data/");
+    kernel_ut::SetupTestEnvironment("index/repeat_interleave_grad/tests/ut/op_kernel/gen_data", "gen_data");
     // batch, repeat_dim, data_num, axis, data_type
-    system("cd ./gen_data/ && python3 gen_data.py 2 16 16 1 float16, int32");
+    kernel_ut::RunGenData("./gen_data", {"2 16 16 1 float16", "int32"});
 
     size_t inputByteSize = 2 * 16 * 2 * 16 * sizeof(half);
     size_t repeatsByteSize = 16 * sizeof(int32_t);
@@ -120,8 +105,7 @@ TEST_F(repeat_interleave_grad_test, test_case_1)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size + 32);
     uint32_t blockDim = 1;
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
     auto read_file_0 = ReadFile(path + "/gen_data/y_grad.bin", inputByteSize, x, inputByteSize);
     auto read_file_1 = ReadFile(path + "/gen_data/repeats.bin", repeatsByteSize, repeats, repeatsByteSize);
     cout << read_file_0 << " read_file_0 SetUp\n" << endl;
@@ -151,18 +135,13 @@ TEST_F(repeat_interleave_grad_test, test_case_1)
     AscendC::GmFree(y);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }
 
 TEST_F(repeat_interleave_grad_test, test_case_2)
 {
-    system(
-        "cp -rf "
-        "../../../../index/repeat_interleave_grad/tests/ut/op_kernel/gen_data "
-        "./");
-    system("chmod -R 755 ./gen_data/");
+    kernel_ut::SetupTestEnvironment("index/repeat_interleave_grad/tests/ut/op_kernel/gen_data", "gen_data");
     // batch, repeat_dim, data_num, axis, data_type
-    system("cd ./gen_data/ && python3 gen_data.py 2 16 16 1 float32, int32");
+    kernel_ut::RunGenData("./gen_data", {"2 16 16 1 float32", "int32"});
 
     size_t inputByteSize = 2 * 16 * 2 * 16 * sizeof(float);
     size_t repeatsByteSize = 16 * sizeof(int32_t);
@@ -176,8 +155,7 @@ TEST_F(repeat_interleave_grad_test, test_case_2)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size + 32);
     uint32_t blockDim = 1;
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
     auto read_file_0 = ReadFile(path + "/gen_data/y_grad.bin", inputByteSize, x, inputByteSize);
     auto read_file_1 = ReadFile(path + "/gen_data/repeats.bin", repeatsByteSize, repeats, repeatsByteSize);
     cout << read_file_0 << " read_file_0 SetUp\n" << endl;
@@ -207,18 +185,13 @@ TEST_F(repeat_interleave_grad_test, test_case_2)
     AscendC::GmFree(y);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }
 
 TEST_F(repeat_interleave_grad_test, test_case_10)
 {
-    system(
-        "cp -rf "
-        "../../../../index/repeat_interleave_grad/tests/ut/op_kernel/gen_data "
-        "./");
-    system("chmod -R 755 ./gen_data/");
+    kernel_ut::SetupTestEnvironment("index/repeat_interleave_grad/tests/ut/op_kernel/gen_data", "gen_data");
     // batch, repeat_dim, data_num, axis, data_type
-    system("cd ./gen_data/ && python3 gen_data.py 2 16 16 1 float16, int64");
+    kernel_ut::RunGenData("./gen_data", {"2 16 16 1 float16", "int64"});
 
     size_t inputByteSize = 2 * 16 * 2 * 16 * sizeof(half);
     size_t repeatsByteSize = 16 * sizeof(int64_t);
@@ -232,8 +205,7 @@ TEST_F(repeat_interleave_grad_test, test_case_10)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size + 32);
     uint32_t blockDim = 1;
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
     auto read_file_0 = ReadFile(path + "/gen_data/y_grad.bin", inputByteSize, x, inputByteSize);
     auto read_file_1 = ReadFile(path + "/gen_data/repeats.bin", repeatsByteSize, repeats, repeatsByteSize);
     cout << read_file_0 << " read_file_0 SetUp\n" << endl;
@@ -263,18 +235,13 @@ TEST_F(repeat_interleave_grad_test, test_case_10)
     AscendC::GmFree(y);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }
 
 TEST_F(repeat_interleave_grad_test, test_case_11)
 {
-    system(
-        "cp -rf "
-        "../../../../index/repeat_interleave_grad/tests/ut/op_kernel/gen_data "
-        "./");
-    system("chmod -R 755 ./gen_data/");
+    kernel_ut::SetupTestEnvironment("index/repeat_interleave_grad/tests/ut/op_kernel/gen_data", "gen_data");
     // batch, repeat_dim, data_num, axis, data_type
-    system("cd ./gen_data/ && python3 gen_data.py 2 16 16 1 float16, int64");
+    kernel_ut::RunGenData("./gen_data", {"2 16 16 1 float16", "int64"});
 
     size_t inputByteSize = 2 * 16 * 2 * 16 * sizeof(half);
     size_t repeatsByteSize = 16 * sizeof(int64_t);
@@ -288,8 +255,7 @@ TEST_F(repeat_interleave_grad_test, test_case_11)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size + 32);
     uint32_t blockDim = 1;
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
     auto read_file_0 = ReadFile(path + "/gen_data/y_grad.bin", inputByteSize, x, inputByteSize);
     auto read_file_1 = ReadFile(path + "/gen_data/repeats.bin", repeatsByteSize, repeats, repeatsByteSize);
     cout << read_file_0 << " read_file_0 SetUp\n" << endl;
@@ -319,6 +285,4 @@ TEST_F(repeat_interleave_grad_test, test_case_11)
     AscendC::GmFree(y);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }
-

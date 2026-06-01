@@ -20,6 +20,8 @@
 #ifdef __CCE_KT_TEST__
 #include "tikicpulib.h"
 #include "data_utils.h"
+#include "kernel_ut_data_helper.h"
+#include "kernel_ut_data_executor.h"
 #include "string.h"
 #include <iostream>
 #include <string>
@@ -31,16 +33,13 @@ using namespace std;
 
 extern "C" __global__ __aicore__ void scatter_add_with_sorted(
     GM_ADDR var, GM_ADDR value, GM_ADDR sorted_index, GM_ADDR pos, GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling);
-class scatter_add_with_sorted_test : public testing::Test
-{
+class scatter_add_with_sorted_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "scatter_add_with_sorted_test SetUp\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "scatter_add_with_sorted_test SetUp\n" << endl; }
     static void TearDownTestCase()
     {
         cout << "scatter_add_with_sorted_test TearDown\n" << endl;
+        kernel_ut::CleanGeneratedBinFiles("./scatter_add_with_sorted_data");
     }
 };
 
@@ -63,17 +62,13 @@ TEST_F(scatter_add_with_sorted_test, test_case_fp32)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 32;
 
-    system(
-        "cp -r "
-        "../../../../index/scatter_add_with_sorted/tests/ut/op_kernel/scatter_add_with_sorted_data "
-        "./");
-    system("chmod -R 755 ./scatter_add_with_sorted_data/");
-    system("cd ./scatter_add_with_sorted_data/ && rm -rf ./*bin");
-    system("cd ./scatter_add_with_sorted_data/ && python3 gen_data.py float32");
-    system("cd ./scatter_add_with_sorted_data/ && python3 gen_tiling.py");
+    kernel_ut::SetupTestEnvironment(
+        "index/scatter_add_with_sorted/tests/ut/op_kernel/scatter_add_with_sorted_data",
+        "scatter_add_with_sorted_data");
+    kernel_ut::RunGenData("./scatter_add_with_sorted_data", {"float32"});
+    kernel_ut::RunGenTiling("./scatter_add_with_sorted_data", {});
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/scatter_add_with_sorted_data/var.bin", var_size, var, var_size);
     ReadFile(path + "/scatter_add_with_sorted_data/src.bin", src_size, src, src_size);
     ReadFile(path + "/scatter_add_with_sorted_data/ind.bin", ind_size, ind, ind_size);
@@ -94,6 +89,4 @@ TEST_F(scatter_add_with_sorted_test, test_case_fp32)
     AscendC::GmFree(output);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }
-

@@ -14,6 +14,8 @@
 #ifdef __CCE_KT_TEST__
 #include "tikicpulib.h"
 #include "data_utils.h"
+#include "kernel_ut_data_helper.h"
+#include "kernel_ut_data_executor.h"
 #include "string.h"
 #include <iostream>
 #include <string>
@@ -22,17 +24,16 @@
 #include <cstdint>
 
 using namespace std;
-extern "C" __global__ __aicore__ void embedding_dense_grad_v2(GM_ADDR grad, GM_ADDR sortIndices,
-    GM_ADDR posIdx, GM_ADDR backProps, GM_ADDR workSpace, GM_ADDR tiling);
+extern "C" __global__ __aicore__ void embedding_dense_grad_v2(
+    GM_ADDR grad, GM_ADDR sortIndices, GM_ADDR posIdx, GM_ADDR backProps, GM_ADDR workSpace, GM_ADDR tiling);
 
 class embedding_dense_grad_v2_test : public testing::Test {
-    protected:
-
-    static void SetUpTestCase() {
-        cout << "embedding_dense_grad_v2_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase() {
+protected:
+    static void SetUpTestCase() { cout << "embedding_dense_grad_v2_test SetUp\n" << endl; }
+    static void TearDownTestCase()
+    {
         cout << "embedding_dense_grad_v2_test TearDown\n" << endl;
+        kernel_ut::CleanGeneratedBinFiles("./data");
     }
 };
 
@@ -44,23 +45,21 @@ TEST_F(embedding_dense_grad_v2_test, test_case_1024_4096_100_false_false)
     size_t backPropsSize = 100 * 4096 * sizeof(float);
     size_t tilingSize = sizeof(EmbeddingDenseGradV2TilingData);
 
-    uint8_t *grad = (uint8_t *)AscendC::GmAlloc(gradSize);
-    uint8_t *sortIndice = (uint8_t *)AscendC::GmAlloc(sortIndiceSize);
-    uint8_t *posIdx = (uint8_t *)AscendC::GmAlloc(posIdxSize);
-    uint8_t *backProps = (uint8_t *)AscendC::GmAlloc(backPropsSize);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingSize);
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(16 * 1024 * 1024);
+    uint8_t* grad = (uint8_t*)AscendC::GmAlloc(gradSize);
+    uint8_t* sortIndice = (uint8_t*)AscendC::GmAlloc(sortIndiceSize);
+    uint8_t* posIdx = (uint8_t*)AscendC::GmAlloc(posIdxSize);
+    uint8_t* backProps = (uint8_t*)AscendC::GmAlloc(backPropsSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
 
     memset(workspace, 0, 16 * 1024 * 1024);
 
-    system("cp -r ../../../../index/embedding_dense_grad_v2/tests/ut/op_kernel/data ./");
-    system("chmod -R 755 ./data/");
-    system("cd ./data/ && rm -rf ./*bin");
-    system("cd ./data/ && python3 gen_data.py 1024 4096 100 False");
-    system("cd ./data/ && python3 gen_tiling.py test_case_1024_4096_100_false_false");
+    kernel_ut::SetupTestEnvironment("index/embedding_dense_grad_v2/tests/ut/op_kernel/data", "data");
+    ;
+    kernel_ut::RunGenData("./data", {"1024", "4096", "100", "False"});
+    kernel_ut::RunGenTiling("./data", {"test_case_1024_4096_100_false_false"});
 
-    char *path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/data/grad.bin", gradSize, grad, gradSize);
     ReadFile(path + "/data/sort_indices.bin", sortIndiceSize, sortIndice, sortIndiceSize);
     ReadFile(path + "/data/pos_idx.bin", posIdxSize, posIdx, posIdxSize);
@@ -75,7 +74,6 @@ TEST_F(embedding_dense_grad_v2_test, test_case_1024_4096_100_false_false)
     AscendC::GmFree(posIdx);
     AscendC::GmFree(backProps);
     AscendC::GmFree(tiling);
-    free(path_);
 }
 
 TEST_F(embedding_dense_grad_v2_test, test_case_1024_4096_100_false_true)
@@ -86,23 +84,21 @@ TEST_F(embedding_dense_grad_v2_test, test_case_1024_4096_100_false_true)
     size_t backPropsSize = 100 * 4096 * sizeof(float);
     size_t tilingSize = sizeof(EmbeddingDenseGradV2TilingData);
 
-    uint8_t *grad = (uint8_t *)AscendC::GmAlloc(gradSize);
-    uint8_t *sortIndice = (uint8_t *)AscendC::GmAlloc(sortIndiceSize);
-    uint8_t *posIdx = (uint8_t *)AscendC::GmAlloc(posIdxSize);
-    uint8_t *backProps = (uint8_t *)AscendC::GmAlloc(backPropsSize);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingSize);
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(16 * 1024 * 1024);
+    uint8_t* grad = (uint8_t*)AscendC::GmAlloc(gradSize);
+    uint8_t* sortIndice = (uint8_t*)AscendC::GmAlloc(sortIndiceSize);
+    uint8_t* posIdx = (uint8_t*)AscendC::GmAlloc(posIdxSize);
+    uint8_t* backProps = (uint8_t*)AscendC::GmAlloc(backPropsSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(16 * 1024 * 1024);
 
     memset(workspace, 0, 16 * 1024 * 1024);
 
-    system("cp -r ../../../../index/embedding_dense_grad_v2/tests/ut/op_kernel/data ./");
-    system("chmod -R 755 ./data/");
-    system("cd ./data/ && rm -rf ./*bin");
-    system("cd ./data/ && python3 gen_data.py 1024 4096 100 False");
-    system("cd ./data/ && python3 gen_tiling.py test_case_1024_4096_100_false_true");
+    kernel_ut::SetupTestEnvironment("index/embedding_dense_grad_v2/tests/ut/op_kernel/data", "data");
+    ;
+    kernel_ut::RunGenData("./data", {"1024", "4096", "100", "False"});
+    kernel_ut::RunGenTiling("./data", {"test_case_1024_4096_100_false_true"});
 
-    char *path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/data/grad.bin", gradSize, grad, gradSize);
     ReadFile(path + "/data/sort_indices.bin", sortIndiceSize, sortIndice, sortIndiceSize);
     ReadFile(path + "/data/pos_idx.bin", posIdxSize, posIdx, posIdxSize);
@@ -117,7 +113,6 @@ TEST_F(embedding_dense_grad_v2_test, test_case_1024_4096_100_false_true)
     AscendC::GmFree(posIdx);
     AscendC::GmFree(backProps);
     AscendC::GmFree(tiling);
-    free(path_);
 }
 
 TEST_F(embedding_dense_grad_v2_test, test_case_1024_4096_100_true_false)
@@ -129,23 +124,21 @@ TEST_F(embedding_dense_grad_v2_test, test_case_1024_4096_100_true_false)
     size_t tilingSize = sizeof(EmbeddingDenseGradV2TilingData);
     size_t workSpaceSize = 16 * 1024 * 1024 + 100 * sizeof(int32_t);
 
-    uint8_t *grad = (uint8_t *)AscendC::GmAlloc(gradSize);
-    uint8_t *sortIndice = (uint8_t *)AscendC::GmAlloc(sortIndiceSize);
-    uint8_t *posIdx = (uint8_t *)AscendC::GmAlloc(posIdxSize);
-    uint8_t *backProps = (uint8_t *)AscendC::GmAlloc(backPropsSize);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingSize);
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workSpaceSize);
+    uint8_t* grad = (uint8_t*)AscendC::GmAlloc(gradSize);
+    uint8_t* sortIndice = (uint8_t*)AscendC::GmAlloc(sortIndiceSize);
+    uint8_t* posIdx = (uint8_t*)AscendC::GmAlloc(posIdxSize);
+    uint8_t* backProps = (uint8_t*)AscendC::GmAlloc(backPropsSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workSpaceSize);
 
     memset(workspace, 0, workSpaceSize);
 
-    system("cp -r ../../../../index/embedding_dense_grad_v2/tests/ut/op_kernel/data ./");
-    system("chmod -R 755 ./data/");
-    system("cd ./data/ && rm -rf ./*bin");
-    system("cd ./data/ && python3 gen_data.py 1024 4096 100 False");
-    system("cd ./data/ && python3 gen_tiling.py test_case_1024_4096_100_true_false");
+    kernel_ut::SetupTestEnvironment("index/embedding_dense_grad_v2/tests/ut/op_kernel/data", "data");
+    ;
+    kernel_ut::RunGenData("./data", {"1024", "4096", "100", "False"});
+    kernel_ut::RunGenTiling("./data", {"test_case_1024_4096_100_true_false"});
 
-    char *path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/data/grad.bin", gradSize, grad, gradSize);
     ReadFile(path + "/data/sort_indices.bin", sortIndiceSize, sortIndice, sortIndiceSize);
     ReadFile(path + "/data/pos_idx.bin", posIdxSize, posIdx, posIdxSize);
@@ -160,7 +153,6 @@ TEST_F(embedding_dense_grad_v2_test, test_case_1024_4096_100_true_false)
     AscendC::GmFree(posIdx);
     AscendC::GmFree(backProps);
     AscendC::GmFree(tiling);
-    free(path_);
 }
 
 TEST_F(embedding_dense_grad_v2_test, test_case_1024_4096_100_true_true)
@@ -172,23 +164,21 @@ TEST_F(embedding_dense_grad_v2_test, test_case_1024_4096_100_true_true)
     size_t tilingSize = sizeof(EmbeddingDenseGradV2TilingData);
     size_t workSpaceSize = 16 * 1024 * 1024 + 100 * sizeof(int32_t);
 
-    uint8_t *grad = (uint8_t *)AscendC::GmAlloc(gradSize);
-    uint8_t *sortIndice = (uint8_t *)AscendC::GmAlloc(sortIndiceSize);
-    uint8_t *posIdx = (uint8_t *)AscendC::GmAlloc(posIdxSize);
-    uint8_t *backProps = (uint8_t *)AscendC::GmAlloc(backPropsSize);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingSize);
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workSpaceSize);
+    uint8_t* grad = (uint8_t*)AscendC::GmAlloc(gradSize);
+    uint8_t* sortIndice = (uint8_t*)AscendC::GmAlloc(sortIndiceSize);
+    uint8_t* posIdx = (uint8_t*)AscendC::GmAlloc(posIdxSize);
+    uint8_t* backProps = (uint8_t*)AscendC::GmAlloc(backPropsSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workSpaceSize);
 
     memset(workspace, 0, workSpaceSize);
 
-    system("cp -r ../../../../index/embedding_dense_grad_v2/tests/ut/op_kernel/data ./");
-    system("chmod -R 755 ./data/");
-    system("cd ./data/ && rm -rf ./*bin");
-    system("cd ./data/ && python3 gen_data.py 1024 4096 100 False");
-    system("cd ./data/ && python3 gen_tiling.py test_case_1024_4096_100_true_true");
+    kernel_ut::SetupTestEnvironment("index/embedding_dense_grad_v2/tests/ut/op_kernel/data", "data");
+    ;
+    kernel_ut::RunGenData("./data", {"1024", "4096", "100", "False"});
+    kernel_ut::RunGenTiling("./data", {"test_case_1024_4096_100_true_true"});
 
-    char *path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/data/grad.bin", gradSize, grad, gradSize);
     ReadFile(path + "/data/sort_indices.bin", sortIndiceSize, sortIndice, sortIndiceSize);
     ReadFile(path + "/data/pos_idx.bin", posIdxSize, posIdx, posIdxSize);
@@ -203,7 +193,6 @@ TEST_F(embedding_dense_grad_v2_test, test_case_1024_4096_100_true_true)
     AscendC::GmFree(posIdx);
     AscendC::GmFree(backProps);
     AscendC::GmFree(tiling);
-    free(path_);
 }
 
 TEST_F(embedding_dense_grad_v2_test, test_case_1024_256_100_false_false)
@@ -215,21 +204,20 @@ TEST_F(embedding_dense_grad_v2_test, test_case_1024_256_100_false_false)
     size_t tilingSize = sizeof(EmbeddingDenseGradV2TilingData);
     size_t workSpaceSize = 16 * 1024 * 1024 + 100 * sizeof(int32_t) + 100 * 256 * sizeof(float);
 
-    uint8_t *grad = (uint8_t *)AscendC::GmAlloc(gradSize);
-    uint8_t *sortIndice = (uint8_t *)AscendC::GmAlloc(sortIndiceSize);
-    uint8_t *posIdx = (uint8_t *)AscendC::GmAlloc(posIdxSize);
-    uint8_t *backProps = (uint8_t *)AscendC::GmAlloc(backPropsSize);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingSize);
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workSpaceSize);
+    uint8_t* grad = (uint8_t*)AscendC::GmAlloc(gradSize);
+    uint8_t* sortIndice = (uint8_t*)AscendC::GmAlloc(sortIndiceSize);
+    uint8_t* posIdx = (uint8_t*)AscendC::GmAlloc(posIdxSize);
+    uint8_t* backProps = (uint8_t*)AscendC::GmAlloc(backPropsSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workSpaceSize);
 
     memset(workspace, 0, workSpaceSize);
 
-    system("cp -r ../../../../index/embedding_dense_grad_v2/tests/ut/op_kernel/data ./");
-    system("chmod -R 755 ./data/");
-    system("cd ./data/ && rm -rf ./*bin");
-    system("cd ./data/ && python3 gen_data.py 48 256 100 False");
+    kernel_ut::SetupTestEnvironment("index/embedding_dense_grad_v2/tests/ut/op_kernel/data", "data");
+    ;
+    kernel_ut::RunGenData("./data", {"48", "256", "100", "False"});
 
-    EmbeddingDenseGradV2TilingData *tilingData = reinterpret_cast<EmbeddingDenseGradV2TilingData*>(tiling);
+    EmbeddingDenseGradV2TilingData* tilingData = reinterpret_cast<EmbeddingDenseGradV2TilingData*>(tiling);
     tilingData->params.coreNum = 48;
     tilingData->params.numWeights = 100;
     tilingData->params.embeddingDim = 256;
@@ -246,8 +234,7 @@ TEST_F(embedding_dense_grad_v2_test, test_case_1024_256_100_false_false)
     tilingData->smallDimTiling.tailCopyTime = 1;
     tilingData->smallDimTiling.tailLastRow = 1;
 
-    char *path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/data/grad.bin", gradSize, grad, gradSize);
     ReadFile(path + "/data/sort_indices.bin", sortIndiceSize, sortIndice, sortIndiceSize);
     ReadFile(path + "/data/pos_idx.bin", posIdxSize, posIdx, posIdxSize);
@@ -261,5 +248,4 @@ TEST_F(embedding_dense_grad_v2_test, test_case_1024_256_100_false_false)
     AscendC::GmFree(posIdx);
     AscendC::GmFree(backProps);
     AscendC::GmFree(tiling);
-    free(path_);
 }

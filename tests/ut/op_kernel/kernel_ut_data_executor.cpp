@@ -140,4 +140,32 @@ bool RunGenTiling(const std::string& dataDir, const std::string& caseName)
     return true;
 }
 
+bool RunScript(const std::string& dataDir, const std::string& scriptName, const std::vector<std::string>& args)
+{
+    KERNEL_UT_LOG_INFO("[KernelUTExecutor] Running %s in directory: %s", scriptName.c_str(), dataDir.c_str());
+
+    std::string scriptPath = dataDir + "/" + scriptName;
+    if (!CheckScriptExists(scriptPath)) {
+        KERNEL_UT_LOG_ERROR(
+            "[KernelUTExecutor] Cannot run %s: script not found at %s", scriptName.c_str(), scriptPath.c_str());
+        return false;
+    }
+
+    std::ostringstream cmdBuilder;
+    cmdBuilder << "python3 " << scriptName;
+    for (const auto& arg : args) {
+        cmdBuilder << " " << arg;
+    }
+
+    int result = ExecuteCommand(cmdBuilder.str(), dataDir);
+
+    if (result == -1) {
+        KERNEL_UT_LOG_ERROR("[KernelUTExecutor] %s execution failed", scriptName.c_str());
+        return false;
+    }
+
+    KERNEL_UT_LOG_INFO("[KernelUTExecutor] %s completed successfully", scriptName.c_str());
+    return true;
+}
+
 } // namespace kernel_ut

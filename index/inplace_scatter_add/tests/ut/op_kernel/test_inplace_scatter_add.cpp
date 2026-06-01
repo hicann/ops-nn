@@ -32,17 +32,17 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void inplace_scatter_add(GM_ADDR var, GM_ADDR indices, GM_ADDR updates,
-                                                          GM_ADDR var_ref, GM_ADDR workspace, GM_ADDR tiling);
-
+extern "C" __global__ __aicore__ void inplace_scatter_add(
+    GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR var_ref, GM_ADDR workspace, GM_ADDR tiling);
 
 class inplace_scatter_add_test : public testing::Test {
-   protected:
+protected:
     static void SetUpTestCase() { cout << "inplace_scatter_add_test SetUp\n" << endl; }
     static void TearDownTestCase() { cout << "inplace_scatter_add_test TearDown\n" << endl; }
 };
 
-TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_000) {
+TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_000)
+{
     AscendC::SetKernelMode(KernelMode::MIX_MODE);
     // M =2 N = 32 K = 2
     size_t shape_var = 2 * 32 * sizeof(float);
@@ -54,15 +54,15 @@ TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_000) {
     size_t tilingSize = sizeof(InplaceScatterAddTilingData);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
-    uint8_t *varGM = (uint8_t *)AscendC::GmAlloc(shape_var);
-    uint8_t *indicesGM = (uint8_t *)AscendC::GmAlloc(shape_indices);
-    uint8_t *updatesGM = (uint8_t *)AscendC::GmAlloc(shape_updates);
-    
+    uint8_t* varGM = (uint8_t*)AscendC::GmAlloc(shape_var);
+    uint8_t* indicesGM = (uint8_t*)AscendC::GmAlloc(shape_indices);
+    uint8_t* updatesGM = (uint8_t*)AscendC::GmAlloc(shape_updates);
+
     memset(varGM, 0, shape_var);
     memset(indicesGM, 0, shape_indices);
     memset(updatesGM, 0, shape_updates);
 
-    InplaceScatterAddTilingData *tilingData = reinterpret_cast<InplaceScatterAddTilingData*>(tiling);
+    InplaceScatterAddTilingData* tilingData = reinterpret_cast<InplaceScatterAddTilingData*>(tiling);
     tilingData->M = 2;
     tilingData->N = 32;
     tilingData->K = 2;
@@ -83,7 +83,8 @@ TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_000) {
     AscendC::GmFree((void*)updatesGM);
 }
 
-TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_100) {
+TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_100)
+{
     AscendC::SetKernelMode(KernelMode::MIX_MODE);
     // M =2 N = 32 K = 2
     size_t shape_var = 2 * 32 * sizeof(int32_t);
@@ -95,15 +96,15 @@ TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_100) {
     size_t tilingSize = sizeof(InplaceScatterAddTilingData);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
-    uint8_t *varGM = (uint8_t *)AscendC::GmAlloc(shape_var);
-    uint8_t *indicesGM = (uint8_t *)AscendC::GmAlloc(shape_indices);
-    uint8_t *updatesGM = (uint8_t *)AscendC::GmAlloc(shape_updates);
-    
+    uint8_t* varGM = (uint8_t*)AscendC::GmAlloc(shape_var);
+    uint8_t* indicesGM = (uint8_t*)AscendC::GmAlloc(shape_indices);
+    uint8_t* updatesGM = (uint8_t*)AscendC::GmAlloc(shape_updates);
+
     memset(varGM, 0, shape_var);
     memset(indicesGM, 0, shape_indices);
     memset(updatesGM, 0, shape_updates);
 
-    InplaceScatterAddTilingData *tilingData = reinterpret_cast<InplaceScatterAddTilingData*>(tiling);
+    InplaceScatterAddTilingData* tilingData = reinterpret_cast<InplaceScatterAddTilingData*>(tiling);
     tilingData->M = 2;
     tilingData->N = 32;
     tilingData->K = 2;
@@ -124,7 +125,8 @@ TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_100) {
     AscendC::GmFree((void*)updatesGM);
 }
 
-TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_010) {
+TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_010)
+{
     AscendC::SetKernelMode(KernelMode::MIX_MODE);
     // M =2 N = 32 K = 2
     size_t shape_var = 2 * 32 * sizeof(float);
@@ -136,15 +138,15 @@ TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_010) {
     size_t tilingSize = sizeof(InplaceScatterAddTilingData);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
-    uint8_t *varGM = (uint8_t *)AscendC::GmAlloc(shape_var);
-    uint8_t *indicesGM = (uint8_t *)AscendC::GmAlloc(shape_indices);
-    uint8_t *updatesGM = (uint8_t *)AscendC::GmAlloc(shape_updates);
-    
+    uint8_t* varGM = (uint8_t*)AscendC::GmAlloc(shape_var);
+    uint8_t* indicesGM = (uint8_t*)AscendC::GmAlloc(shape_indices);
+    uint8_t* updatesGM = (uint8_t*)AscendC::GmAlloc(shape_updates);
+
     memset(varGM, 0, shape_var);
     memset(indicesGM, 0, shape_indices);
     memset(updatesGM, 0, shape_updates);
 
-    InplaceScatterAddTilingData *tilingData = reinterpret_cast<InplaceScatterAddTilingData*>(tiling);
+    InplaceScatterAddTilingData* tilingData = reinterpret_cast<InplaceScatterAddTilingData*>(tiling);
     tilingData->M = 2;
     tilingData->N = 32;
     tilingData->K = 2;
@@ -165,7 +167,8 @@ TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_010) {
     AscendC::GmFree((void*)updatesGM);
 }
 
-TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_001) {
+TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_001)
+{
     AscendC::SetKernelMode(KernelMode::MIX_MODE);
     // M =2 N = 256 K = 2
     size_t shape_var = 2 * 256 * sizeof(float);
@@ -177,15 +180,15 @@ TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_001) {
     size_t tilingSize = sizeof(InplaceScatterAddTilingData);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
-    uint8_t *varGM = (uint8_t *)AscendC::GmAlloc(shape_var);
-    uint8_t *indicesGM = (uint8_t *)AscendC::GmAlloc(shape_indices);
-    uint8_t *updatesGM = (uint8_t *)AscendC::GmAlloc(shape_updates);
-    
+    uint8_t* varGM = (uint8_t*)AscendC::GmAlloc(shape_var);
+    uint8_t* indicesGM = (uint8_t*)AscendC::GmAlloc(shape_indices);
+    uint8_t* updatesGM = (uint8_t*)AscendC::GmAlloc(shape_updates);
+
     memset(varGM, 0, shape_var);
     memset(indicesGM, 0, shape_indices);
     memset(updatesGM, 0, shape_updates);
 
-    InplaceScatterAddTilingData *tilingData = reinterpret_cast<InplaceScatterAddTilingData*>(tiling);
+    InplaceScatterAddTilingData* tilingData = reinterpret_cast<InplaceScatterAddTilingData*>(tiling);
     tilingData->M = 2;
     tilingData->N = 256;
     tilingData->K = 2;
@@ -206,7 +209,8 @@ TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_001) {
     AscendC::GmFree((void*)updatesGM);
 }
 
-TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_110) {
+TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_110)
+{
     AscendC::SetKernelMode(KernelMode::MIX_MODE);
     // M =2 N = 32 K = 2
     size_t shape_var = 2 * 32 * sizeof(int32_t);
@@ -218,15 +222,15 @@ TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_110) {
     size_t tilingSize = sizeof(InplaceScatterAddTilingData);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
-    uint8_t *varGM = (uint8_t *)AscendC::GmAlloc(shape_var);
-    uint8_t *indicesGM = (uint8_t *)AscendC::GmAlloc(shape_indices);
-    uint8_t *updatesGM = (uint8_t *)AscendC::GmAlloc(shape_updates);
-    
+    uint8_t* varGM = (uint8_t*)AscendC::GmAlloc(shape_var);
+    uint8_t* indicesGM = (uint8_t*)AscendC::GmAlloc(shape_indices);
+    uint8_t* updatesGM = (uint8_t*)AscendC::GmAlloc(shape_updates);
+
     memset(varGM, 0, shape_var);
     memset(indicesGM, 0, shape_indices);
     memset(updatesGM, 0, shape_updates);
 
-    InplaceScatterAddTilingData *tilingData = reinterpret_cast<InplaceScatterAddTilingData*>(tiling);
+    InplaceScatterAddTilingData* tilingData = reinterpret_cast<InplaceScatterAddTilingData*>(tiling);
     tilingData->M = 2;
     tilingData->N = 32;
     tilingData->K = 2;
@@ -247,7 +251,8 @@ TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_110) {
     AscendC::GmFree((void*)updatesGM);
 }
 
-TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_101) {
+TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_101)
+{
     AscendC::SetKernelMode(KernelMode::MIX_MODE);
     // M =2 N = 256 K = 2
     size_t shape_var = 2 * 256 * sizeof(int32_t);
@@ -259,15 +264,15 @@ TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_101) {
     size_t tilingSize = sizeof(InplaceScatterAddTilingData);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
-    uint8_t *varGM = (uint8_t *)AscendC::GmAlloc(shape_var);
-    uint8_t *indicesGM = (uint8_t *)AscendC::GmAlloc(shape_indices);
-    uint8_t *updatesGM = (uint8_t *)AscendC::GmAlloc(shape_updates);
-    
+    uint8_t* varGM = (uint8_t*)AscendC::GmAlloc(shape_var);
+    uint8_t* indicesGM = (uint8_t*)AscendC::GmAlloc(shape_indices);
+    uint8_t* updatesGM = (uint8_t*)AscendC::GmAlloc(shape_updates);
+
     memset(varGM, 0, shape_var);
     memset(indicesGM, 0, shape_indices);
     memset(updatesGM, 0, shape_updates);
 
-    InplaceScatterAddTilingData *tilingData = reinterpret_cast<InplaceScatterAddTilingData*>(tiling);
+    InplaceScatterAddTilingData* tilingData = reinterpret_cast<InplaceScatterAddTilingData*>(tiling);
     tilingData->M = 2;
     tilingData->N = 256;
     tilingData->K = 2;
@@ -288,7 +293,8 @@ TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_101) {
     AscendC::GmFree((void*)updatesGM);
 }
 
-TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_011) {
+TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_011)
+{
     AscendC::SetKernelMode(KernelMode::MIX_MODE);
     // M =2 N = 256 K = 2
     size_t shape_var = 2 * 256 * sizeof(float);
@@ -300,15 +306,15 @@ TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_011) {
     size_t tilingSize = sizeof(InplaceScatterAddTilingData);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
-    uint8_t *varGM = (uint8_t *)AscendC::GmAlloc(shape_var);
-    uint8_t *indicesGM = (uint8_t *)AscendC::GmAlloc(shape_indices);
-    uint8_t *updatesGM = (uint8_t *)AscendC::GmAlloc(shape_updates);
-    
+    uint8_t* varGM = (uint8_t*)AscendC::GmAlloc(shape_var);
+    uint8_t* indicesGM = (uint8_t*)AscendC::GmAlloc(shape_indices);
+    uint8_t* updatesGM = (uint8_t*)AscendC::GmAlloc(shape_updates);
+
     memset(varGM, 0, shape_var);
     memset(indicesGM, 0, shape_indices);
     memset(updatesGM, 0, shape_updates);
 
-    InplaceScatterAddTilingData *tilingData = reinterpret_cast<InplaceScatterAddTilingData*>(tiling);
+    InplaceScatterAddTilingData* tilingData = reinterpret_cast<InplaceScatterAddTilingData*>(tiling);
     tilingData->M = 2;
     tilingData->N = 256;
     tilingData->K = 2;
@@ -329,7 +335,8 @@ TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_011) {
     AscendC::GmFree((void*)updatesGM);
 }
 
-TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_111) {
+TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_111)
+{
     AscendC::SetKernelMode(KernelMode::MIX_MODE);
     // M =2 N = 256 K = 2
     size_t shape_var = 2 * 256 * sizeof(int32_t);
@@ -341,15 +348,15 @@ TEST_F(inplace_scatter_add_test, inplace_scatter_add_kernel_test_111) {
     size_t tilingSize = sizeof(InplaceScatterAddTilingData);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
-    uint8_t *varGM = (uint8_t *)AscendC::GmAlloc(shape_var);
-    uint8_t *indicesGM = (uint8_t *)AscendC::GmAlloc(shape_indices);
-    uint8_t *updatesGM = (uint8_t *)AscendC::GmAlloc(shape_updates);
-    
+    uint8_t* varGM = (uint8_t*)AscendC::GmAlloc(shape_var);
+    uint8_t* indicesGM = (uint8_t*)AscendC::GmAlloc(shape_indices);
+    uint8_t* updatesGM = (uint8_t*)AscendC::GmAlloc(shape_updates);
+
     memset(varGM, 0, shape_var);
     memset(indicesGM, 0, shape_indices);
     memset(updatesGM, 0, shape_updates);
 
-    InplaceScatterAddTilingData *tilingData = reinterpret_cast<InplaceScatterAddTilingData*>(tiling);
+    InplaceScatterAddTilingData* tilingData = reinterpret_cast<InplaceScatterAddTilingData*>(tiling);
     tilingData->M = 2;
     tilingData->N = 256;
     tilingData->K = 2;

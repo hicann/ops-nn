@@ -20,6 +20,8 @@
 #ifdef __CCE_KT_TEST__
 #include "tikicpulib.h"
 #include "data_utils.h"
+#include "kernel_ut_data_helper.h"
+#include "kernel_ut_data_executor.h"
 #include "string.h"
 #include <iostream>
 #include <string>
@@ -31,16 +33,13 @@ using namespace std;
 
 extern "C" __global__ __aicore__ void linear_index(
     GM_ADDR indices, GM_ADDR var, GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling);
-class linear_index_test : public testing::Test
-{
+class linear_index_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "linear_index_test SetUp\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "linear_index_test SetUp\n" << endl; }
     static void TearDownTestCase()
     {
         cout << "linear_index_test TearDown\n" << endl;
+        kernel_ut::CleanGeneratedBinFiles("./linear_index_data");
     }
 };
 
@@ -59,14 +58,12 @@ TEST_F(linear_index_test, test_case_int32)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 48;
 
-    system("cp -r ../../../../index/linear_index/tests/ut/op_kernel/linear_index_data ./");
-    system("chmod -R 755 ./linear_index_data/");
-    system("cd ./linear_index_data/ && rm -rf ./*bin");
-    system("cd ./linear_index_data/ && python3 gen_data.py int32");
-    system("cd ./linear_index_data/ && python3 gen_tiling.py");
+    kernel_ut::SetupTestEnvironment("index/linear_index/tests/ut/op_kernel/linear_index_data", "linear_index_data");
+    ;
+    kernel_ut::RunGenData("./linear_index_data", {"int32"});
+    kernel_ut::RunGenTiling("./linear_index_data", {});
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/linear_index_data/indices.bin", ind_size, ind, ind_size);
     ReadFile(path + "/linear_index_data/var.bin", var_size, var, var_size);
     ReadFile(path + "/linear_index_data/tiling.bin", tiling_data_size, tiling, tiling_data_size);
@@ -88,7 +85,6 @@ TEST_F(linear_index_test, test_case_int32)
     AscendC::GmFree(output);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }
 
 TEST_F(linear_index_test, test_case_int64)
@@ -106,14 +102,12 @@ TEST_F(linear_index_test, test_case_int64)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 48;
 
-    system("cp -r ../../../../index/linear_index/tests/ut/op_kernel/linear_index_data ./");
-    system("chmod -R 755 ./linear_index_data/");
-    system("cd ./linear_index_data/ && rm -rf ./*bin");
-    system("cd ./linear_index_data/ && python3 gen_data.py int64");
-    system("cd ./linear_index_data/ && python3 gen_tiling.py");
+    kernel_ut::SetupTestEnvironment("index/linear_index/tests/ut/op_kernel/linear_index_data", "linear_index_data");
+    ;
+    kernel_ut::RunGenData("./linear_index_data", {"int64"});
+    kernel_ut::RunGenTiling("./linear_index_data", {});
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/linear_index_data/indices.bin", ind_size, ind, ind_size);
     ReadFile(path + "/linear_index_data/var.bin", var_size, var, var_size);
     ReadFile(path + "/linear_index_data/tiling.bin", tiling_data_size, tiling, tiling_data_size);
@@ -135,5 +129,4 @@ TEST_F(linear_index_test, test_case_int64)
     AscendC::GmFree(output);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }

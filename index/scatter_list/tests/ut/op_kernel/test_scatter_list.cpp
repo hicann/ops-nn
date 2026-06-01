@@ -21,33 +21,28 @@
 #include "tikicpulib.h"
 #include "scatter_list_tiling_def.h"
 #include "tensor_list_operate.h"
+#include "kernel_ut_data_helper.h"
+#include "kernel_ut_data_executor.h"
 
 using namespace std;
 
 extern "C" __global__ __aicore__ void scatter_list(
     GM_ADDR var, GM_ADDR indice, GM_ADDR updates, GM_ADDR mask, GM_ADDR varOut, GM_ADDR workspace, GM_ADDR tiling);
 
-class scatter_list_test : public testing::Test
-{
+class scatter_list_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "scatter_list_test SetUp\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "scatter_list_test SetUp\n" << endl; }
     static void TearDownTestCase()
     {
         cout << "scatter_list_test TearDown\n" << endl;
+        kernel_ut::CleanGeneratedBinFiles("./scatter_list_data");
     }
 };
 
 TEST_F(scatter_list_test, test_case_200)
 {
-    system(
-        "cp -rf "
-        "../../../../index/scatter_list/tests/ut/op_kernel/scatter_list_data "
-        "./");
-    system("chmod -R 755 ./scatter_list_data/");
-    system("cd ./scatter_list_data/ && python3 gen_data.py 8 4 4096 1 256");
+    kernel_ut::SetupTestEnvironment("index/scatter_list/tests/ut/op_kernel/scatter_list_data", "scatter_list_data");
+    kernel_ut::RunGenData("./scatter_list_data", {"8", "4", "4096", "1", "256"});
 
     std::vector<std::vector<uint64_t>> varShape = {{4, 4096, 256}, {4, 4096, 256}, {4, 4096, 256}, {4, 4096, 256},
                                                    {4, 4096, 256}, {4, 4096, 256}, {4, 4096, 256}, {4, 4096, 256}};
@@ -108,12 +103,8 @@ TEST_F(scatter_list_test, test_case_200)
 
 TEST_F(scatter_list_test, test_case_210)
 {
-    system(
-        "cp -rf "
-        "../../../../index/scatter_list/tests/ut/op_kernel/scatter_list_data "
-        "./");
-    system("chmod -R 755 ./scatter_list_data/");
-    system("cd ./scatter_list_data/ && python3 gen_data.py 8 16 4096 256 256");
+    kernel_ut::SetupTestEnvironment("index/scatter_list/tests/ut/op_kernel/scatter_list_data", "scatter_list_data");
+    kernel_ut::RunGenData("./scatter_list_data", {"8", "16", "4096", "256", "256"});
 
     std::vector<std::vector<uint64_t>> varShape = {{16, 4096, 256}, {16, 4096, 256}, {16, 4096, 256}, {16, 4096, 256},
                                                    {16, 4096, 256}, {16, 4096, 256}, {16, 4096, 256}, {16, 4096, 256}};
@@ -174,12 +165,8 @@ TEST_F(scatter_list_test, test_case_210)
 
 TEST_F(scatter_list_test, test_case_211)
 {
-    system(
-        "cp -rf "
-        "../../../../index/scatter_list/tests/ut/op_kernel/scatter_list_data "
-        "./");
-    system("chmod -R 755 ./scatter_list_data/");
-    system("cd ./scatter_list_data/ && python3 gen_data.py 8 16 4096 255 255");
+    kernel_ut::SetupTestEnvironment("index/scatter_list/tests/ut/op_kernel/scatter_list_data", "scatter_list_data");
+    kernel_ut::RunGenData("./scatter_list_data", {"8", "16", "4096", "255", "255"});
 
     std::vector<std::vector<uint64_t>> varShape = {{16, 4096, 255}, {16, 4096, 255}, {16, 4096, 255}, {16, 4096, 255},
                                                    {16, 4096, 255}, {16, 4096, 255}, {16, 4096, 255}, {16, 4096, 255}};
@@ -240,12 +227,8 @@ TEST_F(scatter_list_test, test_case_211)
 
 TEST_F(scatter_list_test, test_case_220)
 {
-    system(
-        "cp -rf "
-        "../../../../index/scatter_list/tests/ut/op_kernel/scatter_list_data "
-        "./");
-    system("chmod -R 755 ./scatter_list_data/");
-    system("cd ./scatter_list_data/ && python3 gen_data.py 8 1 4096 1024 256");
+    kernel_ut::SetupTestEnvironment("index/scatter_list/tests/ut/op_kernel/scatter_list_data", "scatter_list_data");
+    kernel_ut::RunGenData("./scatter_list_data", {"8", "1", "4096", "1024", "256"});
 
     std::vector<std::vector<uint64_t>> varShape = {{1, 4096, 256}, {1, 4096, 256}, {1, 4096, 256}, {1, 4096, 256},
                                                    {1, 4096, 256}, {1, 4096, 256}, {1, 4096, 256}, {1, 4096, 256}};
@@ -306,12 +289,8 @@ TEST_F(scatter_list_test, test_case_220)
 
 TEST_F(scatter_list_test, test_case_230)
 {
-    system(
-        "cp -rf "
-        "../../../../index/scatter_list/tests/ut/op_kernel/scatter_list_data "
-        "./");
-    system("chmod -R 755 ./scatter_list_data/");
-    system("cd ./scatter_list_data/ && python3 gen_data.py 8 4 4096 1024 256");
+    kernel_ut::SetupTestEnvironment("index/scatter_list/tests/ut/op_kernel/scatter_list_data", "scatter_list_data");
+    kernel_ut::RunGenData("./scatter_list_data", {"8", "4", "4096", "1024", "256"});
 
     std::vector<std::vector<uint64_t>> varShape = {{4, 4096, 256}, {4, 4096, 256}, {4, 4096, 256}, {4, 4096, 256},
                                                    {4, 4096, 256}, {4, 4096, 256}, {4, 4096, 256}, {4, 4096, 256}};
@@ -372,12 +351,8 @@ TEST_F(scatter_list_test, test_case_230)
 
 TEST_F(scatter_list_test, test_case_231)
 {
-    system(
-        "cp -rf "
-        "../../../../index/scatter_list/tests/ut/op_kernel/scatter_list_data "
-        "./");
-    system("chmod -R 755 ./scatter_list_data/");
-    system("cd ./scatter_list_data/ && python3 gen_data.py 8 4 4096 1024 255");
+    kernel_ut::SetupTestEnvironment("index/scatter_list/tests/ut/op_kernel/scatter_list_data", "scatter_list_data");
+    kernel_ut::RunGenData("./scatter_list_data", {"8", "4", "4096", "1024", "255"});
 
     std::vector<std::vector<uint64_t>> varShape = {{4, 4096, 255}, {4, 4096, 255}, {4, 4096, 255}, {4, 4096, 255},
                                                    {4, 4096, 255}, {4, 4096, 255}, {4, 4096, 255}, {4, 4096, 255}};
@@ -438,12 +413,8 @@ TEST_F(scatter_list_test, test_case_231)
 
 TEST_F(scatter_list_test, test_case_100)
 {
-    system(
-        "cp -rf "
-        "../../../../index/scatter_list/tests/ut/op_kernel/scatter_list_data "
-        "./");
-    system("chmod -R 755 ./scatter_list_data/");
-    system("cd ./scatter_list_data/ && python3 gen_data_neg.py [8,4,256,4096] [8,4,256,1]");
+    kernel_ut::SetupTestEnvironment("index/scatter_list/tests/ut/op_kernel/scatter_list_data", "scatter_list_data");
+    kernel_ut::RunScript("./scatter_list_data", "gen_data_neg.py", {"[8,4,256,4096]", "[8,4,256,1]"});
 
     std::vector<std::vector<uint64_t>> varShape = {{4, 256, 4096}, {4, 256, 4096}, {4, 256, 4096}, {4, 256, 4096},
                                                    {4, 256, 4096}, {4, 256, 4096}, {4, 256, 4096}, {4, 256, 4096}};
@@ -514,12 +485,8 @@ TEST_F(scatter_list_test, test_case_100)
 
 TEST_F(scatter_list_test, test_case_101)
 {
-    system(
-        "cp -rf "
-        "../../../../index/scatter_list/tests/ut/op_kernel/scatter_list_data "
-        "./");
-    system("chmod -R 755 ./scatter_list_data/");
-    system("cd ./scatter_list_data/ && python3 gen_data_neg.py [8,400,1024,32] [8,400,1024,1]");
+    kernel_ut::SetupTestEnvironment("index/scatter_list/tests/ut/op_kernel/scatter_list_data", "scatter_list_data");
+    kernel_ut::RunScript("./scatter_list_data", "gen_data_neg.py", {"[8,400,1024,32]", "[8,400,1024,1]"});
 
     std::vector<std::vector<uint64_t>> varShape = {{400, 1024, 32}, {400, 1024, 32}, {400, 1024, 32}, {400, 1024, 32},
                                                    {400, 1024, 32}, {400, 1024, 32}, {400, 1024, 32}, {400, 1024, 32}};
@@ -590,12 +557,8 @@ TEST_F(scatter_list_test, test_case_101)
 
 TEST_F(scatter_list_test, test_case_107)
 {
-    system(
-        "cp -rf "
-        "../../../../index/scatter_list/tests/ut/op_kernel/scatter_list_data "
-        "./");
-    system("chmod -R 755 ./scatter_list_data/");
-    system("cd ./scatter_list_data/ && python3 gen_data_neg.py [2,1,1,120016] [2,1,1,120000]");
+    kernel_ut::SetupTestEnvironment("index/scatter_list/tests/ut/op_kernel/scatter_list_data", "scatter_list_data");
+    kernel_ut::RunScript("./scatter_list_data", "gen_data_neg.py", {"[2,1,1,120016]", "[2,1,1,120000]"});
 
     std::vector<std::vector<uint64_t>> varShape = {{1, 1, 120016}, {1, 1, 120000}};
 

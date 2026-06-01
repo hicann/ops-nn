@@ -16,6 +16,8 @@
 #include "tikicpulib.h"
 #include "top_k_top_p_sample_tiling_def.h"
 #include "data_utils.h"
+#include "kernel_ut_data_helper.h"
+#include "kernel_ut_data_executor.h"
 
 #include <cstdint>
 using namespace std;
@@ -24,16 +26,13 @@ extern "C" __global__ __aicore__ void top_k_top_p_sample(
     GM_ADDR logits, GM_ADDR topKs, GM_ADDR topPs, GM_ADDR q, GM_ADDR logitsSelectIdx, GM_ADDR logitsTopKpSelect,
     GM_ADDR workspace, GM_ADDR tiling);
 
-class top_k_top_p_sample_test : public testing::Test
-{
+class top_k_top_p_sample_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "top_k_top_p_sample_test SetUp\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "top_k_top_p_sample_test SetUp\n" << endl; }
     static void TearDownTestCase()
     {
         cout << "top_k_top_p_sample_test TearDown\n" << endl;
+        kernel_ut::CleanGeneratedBinFiles("./top_k_top_p_sample_data");
     }
 };
 
@@ -59,57 +58,59 @@ TEST_F(top_k_top_p_sample_test, top_k_top_p_sample_test_half)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
-    system("cp -r ../../../../index/top_k_top_p_sample/tests/ut/op_kernel/top_k_top_p_sample_data ./");
-    system("chmod -R 755 ./top_k_top_p_sample_data/");
-    system("cd ./top_k_top_p_sample_data/ && rm -rf ./*bin");
-    system("cd ./top_k_top_p_sample_data/ && python3 gen_data.py 8 64 0 10000 1 1024 0 1 1");
+    kernel_ut::SetupTestEnvironment(
+        "index/top_k_top_p_sample/tests/ut/op_kernel/top_k_top_p_sample_data", "top_k_top_p_sample_data");
+    kernel_ut::RunGenData("./top_k_top_p_sample_data", {"8", "64", "0", "10000", "1", "1024", "0", "1", "1"});
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/top_k_top_p_sample_data/logits.bin", logitsSize, logits, logitsSize);
     ReadFile(path + "/top_k_top_p_sample_data/topKs.bin", topKsSize, topKs, topKsSize);
     ReadFile(path + "/top_k_top_p_sample_data/topPs.bin", topPsSize, topPs, topPsSize);
     TopKTopPSampleTilingData* topKTopPSampleTilingData = reinterpret_cast<TopKTopPSampleTilingData*>(tiling);
 
-
-
     topKTopPSampleTilingData->numCore = 40;
     topKTopPSampleTilingData->rowNum = 8;
     topKTopPSampleTilingData->rowLen = 64;
-    topKTopPSampleTilingData->headCoreNum = topKTopPSampleTilingData->rowNum % topKTopPSampleTilingData->numCore;//rowNum % numCore
-    topKTopPSampleTilingData->perHeadCoreRowNum = (topKTopPSampleTilingData->rowNum + topKTopPSampleTilingData->numCore - 1) / topKTopPSampleTilingData->numCore;//(rowNum + numCore -1) / numCore
-    topKTopPSampleTilingData->tailCoreRowNum =  topKTopPSampleTilingData->rowNum / topKTopPSampleTilingData->numCore;
+    topKTopPSampleTilingData->headCoreNum =
+        topKTopPSampleTilingData->rowNum % topKTopPSampleTilingData->numCore; // rowNum % numCore
+    topKTopPSampleTilingData->perHeadCoreRowNum =
+        (topKTopPSampleTilingData->rowNum + topKTopPSampleTilingData->numCore - 1) /
+        topKTopPSampleTilingData->numCore; //(rowNum + numCore -1) / numCore
+    topKTopPSampleTilingData->tailCoreRowNum = topKTopPSampleTilingData->rowNum / topKTopPSampleTilingData->numCore;
     topKTopPSampleTilingData->perHeadCorePartNum = 0;
     topKTopPSampleTilingData->tailCorePartNum = 0;
     topKTopPSampleTilingData->innerLoopEle = 4096 * 2;
-    topKTopPSampleTilingData->innerLoopTime = (topKTopPSampleTilingData->rowLen + topKTopPSampleTilingData->innerLoopEle -1) / topKTopPSampleTilingData->innerLoopEle;//(rowLen + innerLoopEle -1) / innerLoopEle
-    topKTopPSampleTilingData->innerLoopEleTail = topKTopPSampleTilingData->rowLen % topKTopPSampleTilingData->innerLoopEle;//rowLen % innerLoopEle
-    topKTopPSampleTilingData->innerLoopEleTailPad = (topKTopPSampleTilingData->innerLoopEleTail + 31) / 32 * 32;//safeCeli(innerLoopEleTail, BlockByte(32)) * BlockByte
-    topKTopPSampleTilingData->softmaxLoopTime = (topKTopPSampleTilingData->rowLen + (32768/4)-1) / (32768/4);
-    topKTopPSampleTilingData->softmaxLoopEleTail = topKTopPSampleTilingData->rowLen % (32768/4);
-    topKTopPSampleTilingData->softmaxLoopEleTailPad = (topKTopPSampleTilingData->softmaxLoopEleTail  + 31) / 32 * 32;
-    topKTopPSampleTilingData->eightKPartNum = (topKTopPSampleTilingData->rowLen + 1023)  / 1024;
+    topKTopPSampleTilingData->innerLoopTime =
+        (topKTopPSampleTilingData->rowLen + topKTopPSampleTilingData->innerLoopEle - 1) /
+        topKTopPSampleTilingData->innerLoopEle; //(rowLen + innerLoopEle -1) / innerLoopEle
+    topKTopPSampleTilingData->innerLoopEleTail =
+        topKTopPSampleTilingData->rowLen % topKTopPSampleTilingData->innerLoopEle; // rowLen % innerLoopEle
+    topKTopPSampleTilingData->innerLoopEleTailPad = (topKTopPSampleTilingData->innerLoopEleTail + 31) / 32 *
+                                                    32; // safeCeli(innerLoopEleTail, BlockByte(32)) * BlockByte
+    topKTopPSampleTilingData->softmaxLoopTime = (topKTopPSampleTilingData->rowLen + (32768 / 4) - 1) / (32768 / 4);
+    topKTopPSampleTilingData->softmaxLoopEleTail = topKTopPSampleTilingData->rowLen % (32768 / 4);
+    topKTopPSampleTilingData->softmaxLoopEleTailPad = (topKTopPSampleTilingData->softmaxLoopEleTail + 31) / 32 * 32;
+    topKTopPSampleTilingData->eightKPartNum = (topKTopPSampleTilingData->rowLen + 1023) / 1024;
     topKTopPSampleTilingData->eightKPartTail = topKTopPSampleTilingData->rowLen % 1024;
-    topKTopPSampleTilingData->eightKPartTailPad =  (topKTopPSampleTilingData->eightKPartTail + 31) / 32 * 32;
+    topKTopPSampleTilingData->eightKPartTailPad = (topKTopPSampleTilingData->eightKPartTail + 31) / 32 * 32;
     topKTopPSampleTilingData->mrgMode = 1;
     topKTopPSampleTilingData->isNeedLogits = 0;
     topKTopPSampleTilingData->eps = 1e-8;
     topKTopPSampleTilingData->topKGuess = 32;
-    
 
     uint64_t tillingKey = 1001;
     ICPU_SET_TILING_KEY(tillingKey);
-    ICPU_RUN_KF(top_k_top_p_sample, 40, logits, topKs, topPs, q, logitsSelectIdx, logitsTopKpSelect, workspace, (uint8_t*)(topKTopPSampleTilingData));
+    ICPU_RUN_KF(
+        top_k_top_p_sample, 40, logits, topKs, topPs, q, logitsSelectIdx, logitsTopKpSelect, workspace,
+        (uint8_t*)(topKTopPSampleTilingData));
 
-    AscendC::GmFree((void *)logits);
-    AscendC::GmFree((void *)topKs);
-    AscendC::GmFree((void *)topPs);
-    AscendC::GmFree((void *)q);
-    AscendC::GmFree((void *)logitsSelectIdx);
-    AscendC::GmFree((void *)logitsTopKpSelect);
-    AscendC::GmFree((void *)tiling);
-
-    free(path_);
+    AscendC::GmFree((void*)logits);
+    AscendC::GmFree((void*)topKs);
+    AscendC::GmFree((void*)topPs);
+    AscendC::GmFree((void*)q);
+    AscendC::GmFree((void*)logitsSelectIdx);
+    AscendC::GmFree((void*)logitsTopKpSelect);
+    AscendC::GmFree((void*)tiling);
 }
 
 TEST_F(top_k_top_p_sample_test, top_k_top_p_sample_test_bf16)
@@ -134,57 +135,59 @@ TEST_F(top_k_top_p_sample_test, top_k_top_p_sample_test_bf16)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
-    system("cp -r ../../../../index/top_k_top_p_sample/tests/ut/op_kernel/top_k_top_p_sample_data ./");
-    system("chmod -R 755 ./top_k_top_p_sample_data/");
-    system("cd ./top_k_top_p_sample_data/ && rm -rf ./*bin");
-    system("cd ./top_k_top_p_sample_data/ && python3 gen_data.py 8 64 0 10000 1 1024 0 1 0");
+    kernel_ut::SetupTestEnvironment(
+        "index/top_k_top_p_sample/tests/ut/op_kernel/top_k_top_p_sample_data", "top_k_top_p_sample_data");
+    kernel_ut::RunGenData("./top_k_top_p_sample_data", {"8", "64", "0", "10000", "1", "1024", "0", "1", "0"});
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/top_k_top_p_sample_data/logits.bin", logitsSize, logits, logitsSize);
     ReadFile(path + "/top_k_top_p_sample_data/topKs.bin", topKsSize, topKs, topKsSize);
     ReadFile(path + "/top_k_top_p_sample_data/topPs.bin", topPsSize, topPs, topPsSize);
     TopKTopPSampleTilingData* topKTopPSampleTilingData = reinterpret_cast<TopKTopPSampleTilingData*>(tiling);
 
-
-
     topKTopPSampleTilingData->numCore = 40;
     topKTopPSampleTilingData->rowNum = 8;
     topKTopPSampleTilingData->rowLen = 64;
-    topKTopPSampleTilingData->headCoreNum = topKTopPSampleTilingData->rowNum % topKTopPSampleTilingData->numCore;//rowNum % numCore
-    topKTopPSampleTilingData->perHeadCoreRowNum = (topKTopPSampleTilingData->rowNum + topKTopPSampleTilingData->numCore - 1) / topKTopPSampleTilingData->numCore;//(rowNum + numCore -1) / numCore
-    topKTopPSampleTilingData->tailCoreRowNum =  topKTopPSampleTilingData->rowNum / topKTopPSampleTilingData->numCore;
+    topKTopPSampleTilingData->headCoreNum =
+        topKTopPSampleTilingData->rowNum % topKTopPSampleTilingData->numCore; // rowNum % numCore
+    topKTopPSampleTilingData->perHeadCoreRowNum =
+        (topKTopPSampleTilingData->rowNum + topKTopPSampleTilingData->numCore - 1) /
+        topKTopPSampleTilingData->numCore; //(rowNum + numCore -1) / numCore
+    topKTopPSampleTilingData->tailCoreRowNum = topKTopPSampleTilingData->rowNum / topKTopPSampleTilingData->numCore;
     topKTopPSampleTilingData->perHeadCorePartNum = 0;
     topKTopPSampleTilingData->tailCorePartNum = 0;
     topKTopPSampleTilingData->innerLoopEle = 4096 * 2;
-    topKTopPSampleTilingData->innerLoopTime = (topKTopPSampleTilingData->rowLen + topKTopPSampleTilingData->innerLoopEle -1) / topKTopPSampleTilingData->innerLoopEle;//(rowLen + innerLoopEle -1) / innerLoopEle
-    topKTopPSampleTilingData->innerLoopEleTail = topKTopPSampleTilingData->rowLen % topKTopPSampleTilingData->innerLoopEle;//rowLen % innerLoopEle
-    topKTopPSampleTilingData->innerLoopEleTailPad = (topKTopPSampleTilingData->innerLoopEleTail + 31) / 32 * 32;//safeCeli(innerLoopEleTail, BlockByte(32)) * BlockByte
-    topKTopPSampleTilingData->softmaxLoopTime = (topKTopPSampleTilingData->rowLen + (32768/4)-1) / (32768/4);
-    topKTopPSampleTilingData->softmaxLoopEleTail = topKTopPSampleTilingData->rowLen % (32768/4);
-    topKTopPSampleTilingData->softmaxLoopEleTailPad = (topKTopPSampleTilingData->softmaxLoopEleTail  + 31) / 32 * 32;
-    topKTopPSampleTilingData->eightKPartNum = (topKTopPSampleTilingData->rowLen + 1023)  / 1024;
+    topKTopPSampleTilingData->innerLoopTime =
+        (topKTopPSampleTilingData->rowLen + topKTopPSampleTilingData->innerLoopEle - 1) /
+        topKTopPSampleTilingData->innerLoopEle; //(rowLen + innerLoopEle -1) / innerLoopEle
+    topKTopPSampleTilingData->innerLoopEleTail =
+        topKTopPSampleTilingData->rowLen % topKTopPSampleTilingData->innerLoopEle; // rowLen % innerLoopEle
+    topKTopPSampleTilingData->innerLoopEleTailPad = (topKTopPSampleTilingData->innerLoopEleTail + 31) / 32 *
+                                                    32; // safeCeli(innerLoopEleTail, BlockByte(32)) * BlockByte
+    topKTopPSampleTilingData->softmaxLoopTime = (topKTopPSampleTilingData->rowLen + (32768 / 4) - 1) / (32768 / 4);
+    topKTopPSampleTilingData->softmaxLoopEleTail = topKTopPSampleTilingData->rowLen % (32768 / 4);
+    topKTopPSampleTilingData->softmaxLoopEleTailPad = (topKTopPSampleTilingData->softmaxLoopEleTail + 31) / 32 * 32;
+    topKTopPSampleTilingData->eightKPartNum = (topKTopPSampleTilingData->rowLen + 1023) / 1024;
     topKTopPSampleTilingData->eightKPartTail = topKTopPSampleTilingData->rowLen % 1024;
-    topKTopPSampleTilingData->eightKPartTailPad =  (topKTopPSampleTilingData->eightKPartTail + 31) / 32 * 32;
+    topKTopPSampleTilingData->eightKPartTailPad = (topKTopPSampleTilingData->eightKPartTail + 31) / 32 * 32;
     topKTopPSampleTilingData->mrgMode = 1;
     topKTopPSampleTilingData->isNeedLogits = 0;
     topKTopPSampleTilingData->eps = 1e-8;
     topKTopPSampleTilingData->topKGuess = 32;
-    
 
     uint64_t tillingKey = 1027;
     ICPU_SET_TILING_KEY(tillingKey);
-    ICPU_RUN_KF(top_k_top_p_sample, 40, logits, topKs, topPs, q, logitsSelectIdx, logitsTopKpSelect, workspace, (uint8_t*)(topKTopPSampleTilingData));
+    ICPU_RUN_KF(
+        top_k_top_p_sample, 40, logits, topKs, topPs, q, logitsSelectIdx, logitsTopKpSelect, workspace,
+        (uint8_t*)(topKTopPSampleTilingData));
 
-    AscendC::GmFree((void *)logits);
-    AscendC::GmFree((void *)topKs);
-    AscendC::GmFree((void *)topPs);
-    AscendC::GmFree((void *)q);
-    AscendC::GmFree((void *)logitsSelectIdx);
-    AscendC::GmFree((void *)logitsTopKpSelect);
-    AscendC::GmFree((void *)tiling);
-
-    free(path_);
+    AscendC::GmFree((void*)logits);
+    AscendC::GmFree((void*)topKs);
+    AscendC::GmFree((void*)topPs);
+    AscendC::GmFree((void*)q);
+    AscendC::GmFree((void*)logitsSelectIdx);
+    AscendC::GmFree((void*)logitsTopKpSelect);
+    AscendC::GmFree((void*)tiling);
 }
 
 TEST_F(top_k_top_p_sample_test, top_k_top_p_sample_test_isNeedLogits)
@@ -209,55 +212,57 @@ TEST_F(top_k_top_p_sample_test, top_k_top_p_sample_test_isNeedLogits)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
 
-    system("cp -r ../../../../index/top_k_top_p_sample/tests/ut/op_kernel/top_k_top_p_sample_data ./");
-    system("chmod -R 755 ./top_k_top_p_sample_data/");
-    system("cd ./top_k_top_p_sample_data/ && rm -rf ./*bin");
-    system("cd ./top_k_top_p_sample_data/ && python3 gen_data.py 8 64 0 10000 1 1024 0 1 1");
+    kernel_ut::SetupTestEnvironment(
+        "index/top_k_top_p_sample/tests/ut/op_kernel/top_k_top_p_sample_data", "top_k_top_p_sample_data");
+    kernel_ut::RunGenData("./top_k_top_p_sample_data", {"8", "64", "0", "10000", "1", "1024", "0", "1", "1"});
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/top_k_top_p_sample_data/logits.bin", logitsSize, logits, logitsSize);
     ReadFile(path + "/top_k_top_p_sample_data/topKs.bin", topKsSize, topKs, topKsSize);
     ReadFile(path + "/top_k_top_p_sample_data/topPs.bin", topPsSize, topPs, topPsSize);
     TopKTopPSampleTilingData* topKTopPSampleTilingData = reinterpret_cast<TopKTopPSampleTilingData*>(tiling);
 
-
-
     topKTopPSampleTilingData->numCore = 40;
     topKTopPSampleTilingData->rowNum = 8;
     topKTopPSampleTilingData->rowLen = 64;
-    topKTopPSampleTilingData->headCoreNum = topKTopPSampleTilingData->rowNum % topKTopPSampleTilingData->numCore;//rowNum % numCore
-    topKTopPSampleTilingData->perHeadCoreRowNum = (topKTopPSampleTilingData->rowNum + topKTopPSampleTilingData->numCore - 1) / topKTopPSampleTilingData->numCore;//(rowNum + numCore -1) / numCore
-    topKTopPSampleTilingData->tailCoreRowNum =  topKTopPSampleTilingData->rowNum / topKTopPSampleTilingData->numCore;
+    topKTopPSampleTilingData->headCoreNum =
+        topKTopPSampleTilingData->rowNum % topKTopPSampleTilingData->numCore; // rowNum % numCore
+    topKTopPSampleTilingData->perHeadCoreRowNum =
+        (topKTopPSampleTilingData->rowNum + topKTopPSampleTilingData->numCore - 1) /
+        topKTopPSampleTilingData->numCore; //(rowNum + numCore -1) / numCore
+    topKTopPSampleTilingData->tailCoreRowNum = topKTopPSampleTilingData->rowNum / topKTopPSampleTilingData->numCore;
     topKTopPSampleTilingData->perHeadCorePartNum = 0;
     topKTopPSampleTilingData->tailCorePartNum = 0;
     topKTopPSampleTilingData->innerLoopEle = 4096 * 2;
-    topKTopPSampleTilingData->innerLoopTime = (topKTopPSampleTilingData->rowLen + topKTopPSampleTilingData->innerLoopEle -1) / topKTopPSampleTilingData->innerLoopEle;//(rowLen + innerLoopEle -1) / innerLoopEle
-    topKTopPSampleTilingData->innerLoopEleTail = topKTopPSampleTilingData->rowLen % topKTopPSampleTilingData->innerLoopEle;//rowLen % innerLoopEle
-    topKTopPSampleTilingData->innerLoopEleTailPad = (topKTopPSampleTilingData->innerLoopEleTail + 31) / 32 * 32;//safeCeli(innerLoopEleTail, BlockByte(32)) * BlockByte
-    topKTopPSampleTilingData->softmaxLoopTime = (topKTopPSampleTilingData->rowLen + (32768/4)-1) / (32768/4);
-    topKTopPSampleTilingData->softmaxLoopEleTail = topKTopPSampleTilingData->rowLen % (32768/4);
-    topKTopPSampleTilingData->softmaxLoopEleTailPad = (topKTopPSampleTilingData->softmaxLoopEleTail  + 31) / 32 * 32;
-    topKTopPSampleTilingData->eightKPartNum = (topKTopPSampleTilingData->rowLen + 1023)  / 1024;
+    topKTopPSampleTilingData->innerLoopTime =
+        (topKTopPSampleTilingData->rowLen + topKTopPSampleTilingData->innerLoopEle - 1) /
+        topKTopPSampleTilingData->innerLoopEle; //(rowLen + innerLoopEle -1) / innerLoopEle
+    topKTopPSampleTilingData->innerLoopEleTail =
+        topKTopPSampleTilingData->rowLen % topKTopPSampleTilingData->innerLoopEle; // rowLen % innerLoopEle
+    topKTopPSampleTilingData->innerLoopEleTailPad = (topKTopPSampleTilingData->innerLoopEleTail + 31) / 32 *
+                                                    32; // safeCeli(innerLoopEleTail, BlockByte(32)) * BlockByte
+    topKTopPSampleTilingData->softmaxLoopTime = (topKTopPSampleTilingData->rowLen + (32768 / 4) - 1) / (32768 / 4);
+    topKTopPSampleTilingData->softmaxLoopEleTail = topKTopPSampleTilingData->rowLen % (32768 / 4);
+    topKTopPSampleTilingData->softmaxLoopEleTailPad = (topKTopPSampleTilingData->softmaxLoopEleTail + 31) / 32 * 32;
+    topKTopPSampleTilingData->eightKPartNum = (topKTopPSampleTilingData->rowLen + 1023) / 1024;
     topKTopPSampleTilingData->eightKPartTail = topKTopPSampleTilingData->rowLen % 1024;
-    topKTopPSampleTilingData->eightKPartTailPad =  (topKTopPSampleTilingData->eightKPartTail + 31) / 32 * 32;
+    topKTopPSampleTilingData->eightKPartTailPad = (topKTopPSampleTilingData->eightKPartTail + 31) / 32 * 32;
     topKTopPSampleTilingData->mrgMode = 1;
     topKTopPSampleTilingData->isNeedLogits = 1;
     topKTopPSampleTilingData->eps = 1e-8;
     topKTopPSampleTilingData->topKGuess = 32;
-    
 
     uint64_t tillingKey = 1001;
     ICPU_SET_TILING_KEY(tillingKey);
-    ICPU_RUN_KF(top_k_top_p_sample, 40, logits, topKs, topPs, q, logitsSelectIdx, logitsTopKpSelect, workspace, (uint8_t*)(topKTopPSampleTilingData));
+    ICPU_RUN_KF(
+        top_k_top_p_sample, 40, logits, topKs, topPs, q, logitsSelectIdx, logitsTopKpSelect, workspace,
+        (uint8_t*)(topKTopPSampleTilingData));
 
-    AscendC::GmFree((void *)logits);
-    AscendC::GmFree((void *)topKs);
-    AscendC::GmFree((void *)topPs);
-    AscendC::GmFree((void *)q);
-    AscendC::GmFree((void *)logitsSelectIdx);
-    AscendC::GmFree((void *)logitsTopKpSelect);
-    AscendC::GmFree((void *)tiling);
-
-    free(path_);
+    AscendC::GmFree((void*)logits);
+    AscendC::GmFree((void*)topKs);
+    AscendC::GmFree((void*)topPs);
+    AscendC::GmFree((void*)q);
+    AscendC::GmFree((void*)logitsSelectIdx);
+    AscendC::GmFree((void*)logitsTopKpSelect);
+    AscendC::GmFree((void*)tiling);
 }

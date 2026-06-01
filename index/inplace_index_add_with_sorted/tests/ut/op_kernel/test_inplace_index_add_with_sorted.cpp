@@ -22,6 +22,8 @@
 #include "tikicpulib.h"
 #include "tiling_func_def.h"
 #include "data_utils.h"
+#include "kernel_ut_data_helper.h"
+#include "kernel_ut_data_executor.h"
 
 #define IS_CAST_FLOAT ((is_same<T, half>::value) || (is_same<T, bfloat16_t>::value))
 
@@ -32,11 +34,9 @@ struct integral_constant {
 using true_type = integral_constant<bool, true>;
 using false_type = integral_constant<bool, false>;
 template <typename, typename>
-struct is_same : public false_type {
-};
+struct is_same : public false_type {};
 template <typename Tp>
-struct is_same<Tp, Tp> : public true_type {
-};
+struct is_same<Tp, Tp> : public true_type {};
 
 struct InplaceIndexAddWithSortedCompileInfo {
     int32_t totalCoreNum = 40;
@@ -48,7 +48,7 @@ extern "C" __global__ __aicore__ void inplace_index_add_with_sorted(
     GM_ADDR var, GM_ADDR value, GM_ADDR sorted_indices, GM_ADDR pos, GM_ADDR alpha, GM_ADDR output, GM_ADDR workspace,
     GM_ADDR tiling);
 
-std::string GetShapesString(const std::vector<std::vector<int64_t>>& shapeInfo)
+static std::string GetShapesString(const std::vector<std::vector<int64_t>>& shapeInfo)
 {
     std::string ret = "{";
     for (auto shape : shapeInfo) {
@@ -61,7 +61,7 @@ std::string GetShapesString(const std::vector<std::vector<int64_t>>& shapeInfo)
     return ret + "}";
 }
 
-std::string GetShapesString(const std::vector<int64_t>& shape)
+static std::string GetShapesString(const std::vector<int64_t>& shape)
 {
     std::string ret = "{";
     for (auto dim : shape) {
@@ -70,7 +70,7 @@ std::string GetShapesString(const std::vector<int64_t>& shape)
     return ret + "}";
 }
 
-int64_t GetShapeSize(const std::vector<std::vector<int64_t>>& shapeInfo, const size_t& index)
+static int64_t GetShapeSize(const std::vector<std::vector<int64_t>>& shapeInfo, const size_t& index)
 {
     int64_t shapeSize = 1;
     for (auto shape : shapeInfo[index]) {
@@ -79,18 +79,11 @@ int64_t GetShapeSize(const std::vector<std::vector<int64_t>>& shapeInfo, const s
     return shapeSize;
 }
 
-class inplace_index_add_with_sorted_test : public testing::Test
-{
+class inplace_index_add_with_sorted_test : public testing::Test {
 protected:
-    static void SetUpTestSuite()
-    {
-        std::cout << "inplace_index_add_with_sorted_test SetUpTestSuite" << std::endl;
-    }
+    static void SetUpTestSuite() { std::cout << "inplace_index_add_with_sorted_test SetUpTestSuite" << std::endl; }
 
-    static void TearDownTestSuite()
-    {
-        std::cout << "inplace_index_add_with_sorted_test SetUpTestSuite" << std::endl;
-    }
+    static void TearDownTestSuite() { std::cout << "inplace_index_add_with_sorted_test SetUpTestSuite" << std::endl; }
 
     template <typename T>
     void SingleCallOperator(
@@ -102,16 +95,13 @@ protected:
         tilingObject.RunKernelTiling();
         int32_t tilingKey = tilingObject.GetTilingKey();
 
-        system(
-            "cp -r "
-            "../../../../index/inplace_index_add_with_sorted/tests/ut/op_kernel/"
-            "inplace_index_add_with_sorted_data ./");
-        system(
-            "chmod -R 755 ./inplace_index_add_with_sorted_data/ && rm -rf ./inplace_index_add_with_sorted_data/*bin");
-        std::string genCMD = "cd ./inplace_index_add_with_sorted_data/ && python3 gen_data.py '" +
-                             GetShapesString(shapeInfos) + "' '" + GetShapesString(attrInfos) + "' " +
-                             std::to_string(tilingKey);
-        system(genCMD.c_str());
+        kernel_ut::SetupTestEnvironment(
+            "index/inplace_index_add_with_sorted/tests/ut/op_kernel/inplace_index_add_with_sorted_data",
+            "inplace_index_add_with_sorted_data");
+        kernel_ut::RunGenData(
+            "./inplace_index_add_with_sorted_data",
+            {"'" + GetShapesString(shapeInfos) + "'", "'" + GetShapesString(attrInfos) + "'",
+             std::to_string(tilingKey)});
         size_t usrWorkspaceSize = 4096;
         uint8_t* usrWorkSpace = (uint8_t*)AscendC::GmAlloc(usrWorkspaceSize);
         size_t tilingSize = sizeof(InplaceIndexAddWithSortedTilingData);

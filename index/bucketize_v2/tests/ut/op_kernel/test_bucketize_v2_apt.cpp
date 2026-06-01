@@ -16,6 +16,8 @@
 #include "gtest/gtest.h"
 #include "tikicpulib.h"
 #include "data_utils.h"
+#include "kernel_ut_data_helper.h"
+#include "kernel_ut_data_executor.h"
 #include <cstdint>
 #include "../../../op_kernel/bucketize_v2_apt.cpp"
 #include "../../../op_kernel/arch35/bucketize_v2_struct.h"
@@ -23,13 +25,11 @@
 using namespace std;
 class bucketize_v2_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "bucketize_v2_test SetUp\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "bucketize_v2_test SetUp\n" << endl; }
     static void TearDownTestCase()
     {
         cout << "bucketize_v2_test TearDown\n" << endl;
+        kernel_ut::CleanGeneratedBinFiles("./bucketize_v2_data");
     }
 };
 
@@ -48,16 +48,13 @@ TEST_F(bucketize_v2_test, test_case_fp32_right_false)
     size_t workspaceFileSize = 16 * 1024 * 1024;
     size_t tilingDataSize = sizeof(BucketizeV2FullLoadTilingData);
 
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceFileSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
-    system("cp -r ../../../../index/bucketize_v2/tests/ut/op_kernel/bucketize_v2_data ./");
-    system("chmod -R 755 ./bucketize_v2_data/");
-    system("cd ./bucketize_v2_data/ && rm -rf ./*bin");
-    system("cd ./bucketize_v2_data/ && python3 gen_data.py case0");
+    kernel_ut::SetupTestEnvironment("index/bucketize_v2/tests/ut/op_kernel/bucketize_v2_data", "bucketize_v2_data");
+    kernel_ut::RunGenData("./bucketize_v2_data", {"case0"});
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
 
     ReadFile(path + "/bucketize_v2_data/input_x.bin", inputByteSize, x, inputByteSize);
     ReadFile(path + "/bucketize_v2_data/input_boundaries.bin", boundByteSize, boundaries, boundByteSize);
@@ -76,23 +73,21 @@ TEST_F(bucketize_v2_test, test_case_fp32_right_false)
     ICPU_SET_TILING_KEY(tilingKey);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     auto KernelBucketizeV2 = [](GM_ADDR x, GM_ADDR boundaries, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
-        ::bucketize_v2<1,false>(x, boundaries, y, workspace, tiling);
+        ::bucketize_v2<1, false>(x, boundaries, y, workspace, tiling);
     };
-    ICPU_RUN_KF(KernelBucketizeV2, blockDim,
-                x, boundaries, y, workspace, tiling);
+    ICPU_RUN_KF(KernelBucketizeV2, blockDim, x, boundaries, y, workspace, tiling);
 
     WriteFile(path + "/bucketize_v2_data/res_output.bin", y, outputByteSize);
 
-    AscendC::GmFree((void *)x);
-    AscendC::GmFree((void *)boundaries);
-    AscendC::GmFree((void *)y);
-    AscendC::GmFree((void *)workspace);
-    AscendC::GmFree((void *)tiling);
+    AscendC::GmFree((void*)x);
+    AscendC::GmFree((void*)boundaries);
+    AscendC::GmFree((void*)y);
+    AscendC::GmFree((void*)workspace);
+    AscendC::GmFree((void*)tiling);
 
-    int ret = system(("cd " + path + "/bucketize_v2_data && python3 compare_data.py int32").c_str());
+    bool ret = kernel_ut::RunCompareData("./bucketize_v2_data", {"int32"});
     std::cout << "compare exit = " << ret << std::endl;
-    ASSERT_EQ(ret, 0);
-    free(path_);
+    ASSERT_TRUE(ret);
 }
 
 TEST_F(bucketize_v2_test, test_case_fp32_right_true)
@@ -110,16 +105,13 @@ TEST_F(bucketize_v2_test, test_case_fp32_right_true)
     size_t workspaceFileSize = 16 * 1024 * 1024;
     size_t tilingDataSize = sizeof(BucketizeV2FullLoadTilingData);
 
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tilingDataSize);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceFileSize);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
 
-    system("cp -r ../../../../index/bucketize_v2/tests/ut/op_kernel/bucketize_v2_data ./");
-    system("chmod -R 755 ./bucketize_v2_data/");
-    system("cd ./bucketize_v2_data/ && rm -rf ./*bin");
-    system("cd ./bucketize_v2_data/ && python3 gen_data.py case1");
+    kernel_ut::SetupTestEnvironment("index/bucketize_v2/tests/ut/op_kernel/bucketize_v2_data", "bucketize_v2_data");
+    kernel_ut::RunGenData("./bucketize_v2_data", {"case1"});
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
 
     ReadFile(path + "/bucketize_v2_data/input_x.bin", inputByteSize, x, inputByteSize);
     ReadFile(path + "/bucketize_v2_data/input_boundaries.bin", boundByteSize, boundaries, boundByteSize);
@@ -138,21 +130,19 @@ TEST_F(bucketize_v2_test, test_case_fp32_right_true)
     ICPU_SET_TILING_KEY(tilingKey);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     auto KernelBucketizeV2 = [](GM_ADDR x, GM_ADDR boundaries, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
-        ::bucketize_v2<1,true>(x, boundaries, y, workspace, tiling);
+        ::bucketize_v2<1, true>(x, boundaries, y, workspace, tiling);
     };
-    ICPU_RUN_KF(KernelBucketizeV2, blockDim,
-                x, boundaries, y, workspace, tiling);
+    ICPU_RUN_KF(KernelBucketizeV2, blockDim, x, boundaries, y, workspace, tiling);
 
     WriteFile(path + "/bucketize_v2_data/res_output.bin", y, outputByteSize);
 
-    AscendC::GmFree((void *)x);
-    AscendC::GmFree((void *)boundaries);
-    AscendC::GmFree((void *)y);
-    AscendC::GmFree((void *)workspace);
-    AscendC::GmFree((void *)tiling);
+    AscendC::GmFree((void*)x);
+    AscendC::GmFree((void*)boundaries);
+    AscendC::GmFree((void*)y);
+    AscendC::GmFree((void*)workspace);
+    AscendC::GmFree((void*)tiling);
 
-    int ret = system(("cd " + path + "/bucketize_v2_data && python3 compare_data.py int32").c_str());
+    bool ret = kernel_ut::RunCompareData("./bucketize_v2_data", {"int32"});
     std::cout << "compare exit = " << ret << std::endl;
-    ASSERT_EQ(ret, 0);
-    free(path_);
+    ASSERT_TRUE(ret);
 }

@@ -21,6 +21,8 @@
 #ifdef __CCE_KT_TEST__
 #include "tikicpulib.h"
 #include "data_utils.h"
+#include "kernel_ut_data_helper.h"
+#include "kernel_ut_data_executor.h"
 #include "string.h"
 #include <iostream>
 #include <string>
@@ -36,14 +38,8 @@ extern "C" __global__ __aicore__ void expand_into_jagged_permute(
 
 class expand_into_jagged_permute_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "expand_into_jagged_permute_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "expand_into_jagged_permute_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "expand_into_jagged_permute_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "expand_into_jagged_permute_test TearDown\n" << endl; }
 };
 
 TEST_F(expand_into_jagged_permute_test, test_int32)
@@ -65,8 +61,7 @@ TEST_F(expand_into_jagged_permute_test, test_int32)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize + 32);
     uint32_t blockDim = 48;
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
 
     ExpandIntoJaggedPermuteTilingDataDef* tilingDatafromBin =
         reinterpret_cast<ExpandIntoJaggedPermuteTilingDataDef*>(tiling);
@@ -93,5 +88,4 @@ TEST_F(expand_into_jagged_permute_test, test_int32)
     AscendC::GmFree(outputPermute);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }

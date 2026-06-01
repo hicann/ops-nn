@@ -29,14 +29,8 @@ extern "C" __global__ __aicore__ void embedding_bag(
 
 class embedding_bag_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "embedding_bag_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "embedding_bag_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "embedding_bag_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "embedding_bag_test TearDown\n" << endl; }
 };
 
 TEST_F(embedding_bag_test, params_sum_false)
@@ -90,6 +84,4 @@ TEST_F(embedding_bag_test, params_sum_false)
     AscendC::GmFree(bag_size);
     AscendC::GmFree(max_indices);
     AscendC::GmFree(tiling);
-
 }
-

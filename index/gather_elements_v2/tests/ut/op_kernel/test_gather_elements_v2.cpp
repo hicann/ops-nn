@@ -20,6 +20,8 @@
 #ifdef __CCE_KT_TEST__
 #include "tikicpulib.h"
 #include "data_utils.h"
+#include "kernel_ut_data_helper.h"
+#include "kernel_ut_data_executor.h"
 #include "string.h"
 #include <iostream>
 #include <string>
@@ -32,16 +34,13 @@ using namespace std;
 extern "C" __global__ __aicore__ void gather_elements_v2(
     GM_ADDR x, GM_ADDR index, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling);
 
-class gather_elements_v2_test : public testing::Test
-{
+class gather_elements_v2_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "gather_elements_v2_test SetUp\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "gather_elements_v2_test SetUp\n" << endl; }
     static void TearDownTestCase()
     {
         cout << "gather_elements_v2_test TearDown\n" << endl;
+        kernel_ut::CleanGeneratedBinFiles("./data");
     }
 };
 
@@ -61,14 +60,12 @@ TEST_F(gather_elements_v2_test, test_case_8_4096_1248_fp32)
 
     memset(workspace, 0, workspaceSize);
 
-    system("cp -r ../../../../index/gather_elements_v2/tests/ut/op_kernel/data ./");
-    system("chmod -R 755 ./data/");
-    system("cd ./data/ && rm -rf ./*bin");
-    system("cd ./data/ && python3 gen_data.py 1 4096 1248 4096");
-    system("cd ./data/ && python3 gen_tiling.py test_case_8_4096_1248_fp16");
+    kernel_ut::SetupTestEnvironment("index/gather_elements_v2/tests/ut/op_kernel/data", "data");
+    ;
+    kernel_ut::RunGenData("./data", {"1", "4096", "1248", "4096"});
+    kernel_ut::RunGenTiling("./data", {"test_case_8_4096_1248_fp16"});
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/data/x.bin", xSize, x, xSize);
     ReadFile(path + "/data/index.bin", indexSize, index, indexSize);
     ReadFile(path + "/data/tiling.bin", tilingSize, tiling, tilingSize);
@@ -81,5 +78,4 @@ TEST_F(gather_elements_v2_test, test_case_8_4096_1248_fp32)
     AscendC::GmFree(index);
     AscendC::GmFree(y);
     AscendC::GmFree(tiling);
-    free(path_);
 }

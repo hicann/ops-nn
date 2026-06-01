@@ -15,6 +15,8 @@
 #ifdef __CCE_KT_TEST__
 #include "tikicpulib.h"
 #include "data_utils.h"
+#include "kernel_ut_data_helper.h"
+#include "kernel_ut_data_executor.h"
 #include "string.h"
 #include <iostream>
 #include <string>
@@ -27,17 +29,10 @@ using namespace std;
 
 extern "C" __global__ __aicore__ void masked_scatter(
     GM_ADDR x, GM_ADDR mask, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
-class masked_scatter_test : public testing::Test
-{
+class masked_scatter_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "masked_scatter_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "masked_scatter_test TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "masked_scatter_test SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "masked_scatter_test TearDown\n" << endl; }
 };
 
 TEST_F(masked_scatter_test, test_case_mask)
@@ -57,8 +52,7 @@ TEST_F(masked_scatter_test, test_case_mask)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 1024 * 16);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
-    char *path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
 
     MaskedScatterV1TilingData* tilingDatafrombin = reinterpret_cast<MaskedScatterV1TilingData*>(tiling);
 
@@ -68,27 +62,18 @@ TEST_F(masked_scatter_test, test_case_mask)
     tilingDatafrombin->totalUpdatesNum = 1824;
     tilingDatafrombin->maskTileLength = 64;
 
-    auto MaskedScatterKernel = [](GM_ADDR x, GM_ADDR mask, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
-        ::masked_scatter<0>(x, mask, updates, y, workspace, tiling);
-    };
+    auto MaskedScatterKernel = [](GM_ADDR x, GM_ADDR mask, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace,
+                                  GM_ADDR tiling) { ::masked_scatter<0>(x, mask, updates, y, workspace, tiling); };
 
     ICPU_SET_TILING_KEY(0);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(MaskedScatterKernel,
-        numBlocks,
-        x,
-        mask,
-        updates,
-        y,
-        workspace,
-        (uint8_t *)(tilingDatafrombin));
+    ICPU_RUN_KF(MaskedScatterKernel, numBlocks, x, mask, updates, y, workspace, (uint8_t*)(tilingDatafrombin));
     AscendC::GmFree(x);
     AscendC::GmFree(mask);
     AscendC::GmFree(updates);
     AscendC::GmFree(y);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }
 
 TEST_F(masked_scatter_test, test_case_updates_1)
@@ -108,8 +93,7 @@ TEST_F(masked_scatter_test, test_case_updates_1)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 1024 * 16);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
-    char *path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
 
     MaskedScatterV1TilingData* tilingDatafrombin = reinterpret_cast<MaskedScatterV1TilingData*>(tiling);
 
@@ -119,27 +103,18 @@ TEST_F(masked_scatter_test, test_case_updates_1)
     tilingDatafrombin->totalUpdatesNum = 32;
     tilingDatafrombin->maskTileLength = 64;
 
-    auto MaskedScatterKernel = [](GM_ADDR x, GM_ADDR mask, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
-        ::masked_scatter<1>(x, mask, updates, y, workspace, tiling);
-    };
+    auto MaskedScatterKernel = [](GM_ADDR x, GM_ADDR mask, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace,
+                                  GM_ADDR tiling) { ::masked_scatter<1>(x, mask, updates, y, workspace, tiling); };
 
     ICPU_SET_TILING_KEY(1);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(MaskedScatterKernel,
-        numBlocks,
-        x,
-        mask,
-        updates,
-        y,
-        workspace,
-        (uint8_t *)(tilingDatafrombin));
+    ICPU_RUN_KF(MaskedScatterKernel, numBlocks, x, mask, updates, y, workspace, (uint8_t*)(tilingDatafrombin));
     AscendC::GmFree(x);
     AscendC::GmFree(mask);
     AscendC::GmFree(updates);
     AscendC::GmFree(y);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }
 
 TEST_F(masked_scatter_test, test_case_updates_short)
@@ -159,8 +134,7 @@ TEST_F(masked_scatter_test, test_case_updates_short)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 1024 * 16);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
-    char *path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
 
     MaskedScatterV1TilingData* tilingDatafrombin = reinterpret_cast<MaskedScatterV1TilingData*>(tiling);
 
@@ -170,27 +144,18 @@ TEST_F(masked_scatter_test, test_case_updates_short)
     tilingDatafrombin->totalUpdatesNum = 8224;
     tilingDatafrombin->maskTileLength = 64;
 
-    auto MaskedScatterKernel = [](GM_ADDR x, GM_ADDR mask, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
-        ::masked_scatter<1>(x, mask, updates, y, workspace, tiling);
-    };
+    auto MaskedScatterKernel = [](GM_ADDR x, GM_ADDR mask, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace,
+                                  GM_ADDR tiling) { ::masked_scatter<1>(x, mask, updates, y, workspace, tiling); };
 
     ICPU_SET_TILING_KEY(1);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(MaskedScatterKernel,
-        numBlocks,
-        x,
-        mask,
-        updates,
-        y,
-        workspace,
-        (uint8_t *)(tilingDatafrombin));
+    ICPU_RUN_KF(MaskedScatterKernel, numBlocks, x, mask, updates, y, workspace, (uint8_t*)(tilingDatafrombin));
     AscendC::GmFree(x);
     AscendC::GmFree(mask);
     AscendC::GmFree(updates);
     AscendC::GmFree(y);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }
 
 TEST_F(masked_scatter_test, test_case_updates_exceed)
@@ -210,8 +175,7 @@ TEST_F(masked_scatter_test, test_case_updates_exceed)
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 1024 * 16);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
 
-    char *path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
 
     MaskedScatterV1TilingData* tilingDatafrombin = reinterpret_cast<MaskedScatterV1TilingData*>(tiling);
 
@@ -221,25 +185,16 @@ TEST_F(masked_scatter_test, test_case_updates_exceed)
     tilingDatafrombin->totalUpdatesNum = 640000;
     tilingDatafrombin->maskTileLength = 64;
 
-    auto MaskedScatterKernel = [](GM_ADDR x, GM_ADDR mask, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
-        ::masked_scatter<1>(x, mask, updates, y, workspace, tiling);
-    };
+    auto MaskedScatterKernel = [](GM_ADDR x, GM_ADDR mask, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace,
+                                  GM_ADDR tiling) { ::masked_scatter<1>(x, mask, updates, y, workspace, tiling); };
 
     ICPU_SET_TILING_KEY(1);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    ICPU_RUN_KF(MaskedScatterKernel,
-        numBlocks,
-        x,
-        mask,
-        updates,
-        y,
-        workspace,
-        (uint8_t *)(tilingDatafrombin));
+    ICPU_RUN_KF(MaskedScatterKernel, numBlocks, x, mask, updates, y, workspace, (uint8_t*)(tilingDatafrombin));
     AscendC::GmFree(x);
     AscendC::GmFree(mask);
     AscendC::GmFree(updates);
     AscendC::GmFree(y);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-    free(path_);
 }
