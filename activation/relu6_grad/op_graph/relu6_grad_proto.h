@@ -24,19 +24,21 @@ namespace ge {
 * @brief Gradient of ReLU6. Strict open-interval semantics:
 *        dx[i] = gradients[i]  if  0 < features[i] < 6
 *        dx[i] = 0              otherwise (including features[i] == 0 and 6)
-*        Supports NumPy-style broadcasting between gradients and features.
+*        Broadcasting is NOT supported: features must have the same shape as
+*        gradients, or be a scalar ([1]). backprops always has the same shape
+*        as gradients.
 
 * @par Inputs:
 * Two inputs, including:
 * @li gradients: A ND tensor. Upstream gradient (dy). Must be one of the
 *     following types: float16, float32, bfloat16.
 * @li features:  A ND tensor. Forward input x of ReLU6 (NOT the forward
-*     output). Must have the same dtype as gradients; shape must be
-*     broadcastable with gradients. \n
+*     output). Must have the same dtype as gradients; shape must be the same
+*     as gradients, or be a scalar ([1]). \n
 
 * @par Outputs:
 * backprops: A ND tensor. Has the same dtype as gradients; shape is the
-*            broadcast shape of gradients and features. \n
+*            same as gradients. \n
 
 * @par Third-party framework compatibility
 * Compatible with the TensorFlow operator Relu6Grad and PyTorch

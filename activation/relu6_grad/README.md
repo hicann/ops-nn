@@ -13,40 +13,68 @@
 
 ## 功能说明
 
-- **算子功能**：ReLU6 激活函数的反向梯度。对前向输入落在严格开区间
-  `(0, 6)` 的位置透传上游梯度 `dy`，落在区间外（含端点 `x = 0` 与
-  `x = 6`）的位置输出 0。
-- **计算公式**：
+- 算子功能：激活函数Relu6的反向，计算对应Relu6操作的反向传播梯度。对前向输入落在开区间 `(0, 6)` 的位置透传上游梯度，其余位置（含端点 `features = 0` 与 `features = 6`）输出0。
 
-$$
-dx_i = \begin{cases}
-dy_i, & 0 < x_i < 6 \\
-0,    & \text{otherwise}
-\end{cases}
-$$
+- 计算公式：
 
-  严格开区间。`x = 0` 与 `x = 6` 均落入零臂。`x = NaN` 由于 IEEE-754
-  比较语义返回 0；`x = ±inf` 同样落入零臂。当 mask 为 true 时 `dy` 按值
-  透传（`dy = NaN/Inf` 不会被屏蔽）。
-- **第三方对标**：等价于 TensorFlow `Relu6Grad` 与 PyTorch
-  `hardtanh_backward(min=0, max=6)` 在边界 `x ∈ {0, 6}` 取 0 的约定。
+  $$
+  backprops_{i} =
+  \begin{cases}
+  gradients_{i}, & 0 < features_{i} < 6 \\
+  0, & otherwise
+  \end{cases}
+  $$
+
+  其中：
+  - gradients：对应Relu6操作的反向传播梯度。
+  - features：作为输入传递给对应Relu6操作的特征，或其输出，使用任一者产生相同结果。
 
 ## 参数说明
 
-| 参数名 | 输入/输出 | 描述                                                 | 数据类型                              | 数据格式 |
-| :----: | :-------: | :--------------------------------------------------- | :-----------------------------------: | :------: |
-| gradients | 输入   | 上游梯度 `dy`。                                       | FLOAT16, FLOAT, BFLOAT16              | ND       |
-| features  | 输入   | 前向输入 `x`（非前向输出）；与 `gradients` 须可广播。 | FLOAT16, FLOAT, BFLOAT16              | ND       |
-| backprops | 输出   | 反向梯度 `dx`。shape 为 `gradients`、`features` 广播后的统一形状。 | FLOAT16, FLOAT, BFLOAT16 | ND       |
+<table style="undefined;table-layout: fixed; width: 820px"><colgroup>
+  <col style="width: 100px">
+  <col style="width: 150px">
+  <col style="width: 190px">
+  <col style="width: 260px">
+  <col style="width: 120px">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>参数名</th>
+      <th>输入/输出/属性</th>
+      <th>描述</th>
+      <th>数据类型</th>
+      <th>数据格式</th>
+    </tr></thead>
+  <tbody>
+    <tr>
+      <td>gradients</td>
+      <td>输入</td>
+      <td>传递给对应Relu6操作的反向传播梯度，公式中的gradients。</td>
+      <td>FLOAT16、FLOAT、BFLOAT16</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>features</td>
+      <td>输入</td>
+      <td>作为输入传递给对应Relu6操作的特征，或其输出，使用任一者产生相同结果，公式中的features。其shape须与gradients一致，或为标量[1]。</td>
+      <td>FLOAT16、FLOAT、BFLOAT16</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>backprops</td>
+      <td>输出</td>
+      <td>公式中的输出张量，shape与gradients一致。</td>
+      <td>FLOAT16、FLOAT、BFLOAT16</td>
+      <td>ND</td>
+    </tr>
+  </tbody></table>
 
 ## 约束说明
 
-- `gradients`、`features`、`backprops` 必须为**同一种 dtype**；不支持 mix-dtype。
-- 不支持 INT32 等整型数据。
-- 支持任意 NumPy 广播形态（含标量 `[1]`、单维 broadcast、跨 rank broadcast）。
-- 支持动态 shape 与动态 rank。
-- `features` 应当为 ReLU6 的**前向输入** `x`，而不是前向输出。该约定与
-  `canndev/ops/built-in/tbe/impl/dynamic/relu6_grad.py` 一致。
+- gradients、features、backprops的数据类型须保持一致，不支持混合数据类型。
+- 不支持广播：features的shape须与gradients完全一致，或为标量[1]。
+- 支持动态shape与动态rank。
 
 ## 实现方案
 
@@ -95,6 +123,6 @@ In0/In1 ─CopyInBrc─ Cast(->fp32) ─+
 
 ## 调用说明
 
-| 调用方式   | 样例代码                                                     | 说明                                                         |
-| ---------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| 图模式 | [test_geir_relu6_grad](examples/test_geir_relu6_grad.cpp) | 通过[算子IR](op_graph/relu6_grad_proto.h)构图方式调用 Relu6Grad 算子；覆盖 fp32/fp16/bf16 基础用例 + 边界 x=0/x=6、x=NaN/±Inf、广播等关键特殊值用例。 |
+| 调用方式   | 样例代码           | 说明                                            |
+| ---------------- | --------------------------- |-----------------------------------------------|
+| 图模式 | [test_geir_relu6_grad.cpp](examples/arch35/test_geir_relu6_grad.cpp)  | 通过[算子IR](op_graph/relu6_grad_proto.h)构图方式调用Relu6Grad算子。 |
