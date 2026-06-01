@@ -64,16 +64,20 @@ uint64_t DIM_3 = 3;
 uint64_t DIM_4 = 4;
 
 struct TilingParam {
-    // api tilingdata
     uint64_t orgHi;
     uint64_t orgWi;
     uint64_t orgHo;
     uint64_t orgWo;
-    uint64_t oriHinxWin;
+    uint64_t orgHixWi;
     uint64_t singleCoreBatch;
     uint64_t singleCoreHo;
     uint64_t singleCoreWo;
-    uint64_t UnionDataXt;
+    uint64_t unionDataXt;
+    uint64_t hin;
+    uint64_t win;
+    uint64_t hout;
+    uint64_t wout;
+
     uint32_t orgCi;
     uint32_t orgCo;
     uint32_t singleCoreCi;
@@ -90,8 +94,8 @@ struct TilingParam {
     uint32_t kL0;
     uint32_t nL0;
     uint32_t pBufferFlag;
-    uint32_t groups_api;
-    uint32_t enlarge_api;
+    uint32_t groups;
+    uint32_t enlarge;
     uint32_t singleCoreGroups;
     uint32_t singleCoreGroupOpt;
     uint32_t bUbNStep;
@@ -116,36 +120,15 @@ struct TilingParam {
     uint32_t nL1DivBlockSize;
     uint32_t kernelH;
     uint32_t kernelW;
-    uint32_t strideH_api;
-    uint32_t strideW_api;
-    uint32_t dilationH_api;
-    uint32_t dilationW_api;
-    uint32_t padTop_api;
+    uint32_t strideH;
+    uint32_t strideW;
+    uint32_t dilationH;
+    uint32_t dilationW;
+    uint32_t padTop;
     uint32_t padBottom;
-    uint32_t padLeft_api;
+    uint32_t padLeft;
     uint32_t padRight;
     uint32_t innerBatch;
-    uint8_t iterateMNOrder;
-    uint8_t biasFullLoadFlag;
-    uint8_t fixpParamsFullLoadFlag;
-    uint8_t hf32Enable;
-    uint8_t hf32TransMode;
-    uint8_t hasBias_api;
-    uint8_t hasScale;
-    uint8_t dualOutput;
-    uint8_t quantMode0;
-    uint8_t reluMode0;
-    uint8_t clipMode0;
-    uint8_t quantMode1;
-    uint8_t reluMode1;
-    uint8_t clipMode1;
-    int8_t offsetx;
-    int8_t roundMode;
-    // ops tilingdata
-    uint64_t hin;
-    uint64_t win;
-    uint64_t hout;
-    uint64_t wout;
     uint32_t batch;
     uint32_t cin;
     uint32_t cout;
@@ -156,18 +139,26 @@ struct TilingParam {
     uint32_t nDim;
     uint32_t hoDim;
     uint32_t woDim;
-    uint32_t strideH;
-    uint32_t strideW;
-    uint32_t dilationH;
-    uint32_t dilationW;
-    uint32_t padTop;
-    uint32_t padLeft;
-    uint32_t groups;
-    uint32_t enlarge;
     uint32_t cinOpt;
     uint32_t coutOpt;
     uint32_t groupOpt;
+
+    uint8_t iterateMNOrder;
+    uint8_t biasFullLoadFlag;
+    uint8_t fixpParamsFullLoadFlag;
+    uint8_t hf32Enable;
+    uint8_t hf32TransMode;
     uint8_t hasBias;
+    uint8_t hasScale;
+    uint8_t dualOutput;
+    uint8_t quantMode0;
+    uint8_t reluMode0;
+    uint8_t clipMode0;
+    uint8_t quantMode1;
+    uint8_t reluMode1;
+    uint8_t clipMode1;
+    int8_t offsetx;
+    int8_t roundMode;
 };
 
 struct KParmas {
@@ -300,11 +291,11 @@ bool isConv1dFlag(TilingParam &tilingData, bool isC04Mode)
 uint64_t CalcMinUsedL1SizeInMsplitMode(TilingParam &tilingData, uint32_t kAL1min, uint32_t kBL1min, DtypeSize dtypeSizes, bool hasScale)
 {
     uint64_t nBL1min = N0_SIZE;
-    uint64_t biasUsedL1Size = tilingData.hasBias_api ? ConvAlignB(nBL1min * dtypeSizes.biasDtypeSize, C0_SIZE) : 0;
+    uint64_t biasUsedL1Size = tilingData.hasBias ? ConvAlignB(nBL1min * dtypeSizes.biasDtypeSize, C0_SIZE) : 0;
     uint64_t scaleUsedL1Size = hasScale ? ConvAlignB(nBL1min * dtypeSizes.scaleDtypeSize, C0_SIZE) : 0;
     uint64_t weightUsedL1Size = ConvAlignB(kBL1min * nBL1min * dtypeSizes.weightDtypeSize, C0_SIZE);
     uint64_t hoAL1min = std::min(M0_SIZE / tilingData.orgWo + NUM_2, tilingData.orgHo);
-    uint64_t hiAL1min = InferHiL1(hoAL1min, tilingData.orgHi, tilingData.kernelH, tilingData.dilationH_api, tilingData.strideH_api);
+    uint64_t hiAL1min = InferHiL1(hoAL1min, tilingData.orgHi, tilingData.kernelH, tilingData.dilationH, tilingData.strideH);
     uint64_t fmapUsedL1Size = ConvAlignB(hiAL1min * tilingData.orgWi * kAL1min * dtypeSizes.fMapDtypeSize, C0_SIZE);
     uint64_t minL1LoadSize = biasUsedL1Size + fmapUsedL1Size + weightUsedL1Size + scaleUsedL1Size;
     return minL1LoadSize;
@@ -320,12 +311,12 @@ uint64_t CalcMinUsedL1SizeInHWsplitMode(TilingParam &tilingData, KParmas kParmas
     uint32_t weightDtypeSize = dtypeSizes.weightDtypeSize;
     uint32_t scaleDtypeSize = dtypeSizes.scaleDtypeSize;
     uint64_t nBL1min = N0_SIZE;
-    uint64_t biasUsedL1Size = tilingData.hasBias_api ? ConvAlignB(nBL1min * biasDtypeSize, C0_SIZE) : 0;
+    uint64_t biasUsedL1Size = tilingData.hasBias ? ConvAlignB(nBL1min * biasDtypeSize, C0_SIZE) : 0;
     uint64_t scaleUsedL1Size = hasScale ? ConvAlignB(nBL1min * scaleDtypeSize, C0_SIZE) : 0;
     uint64_t weightUsedL1Size = ConvAlignB(kBL1min * nBL1min * weightDtypeSize, C0_SIZE);
     uint64_t hoAL1min = tilingData.orgWo < M0_SIZE ? ConvCeilDiv(M0_SIZE, tilingData.orgWo) : 1;
     uint64_t hiAL1min = InferHiL1(hoAL1min, tilingData.orgHi, tilingData.kernelH,
-                                    tilingData.dilationH_api, tilingData.strideH_api);
+                                    tilingData.dilationH, tilingData.strideH);
     uint64_t fmapUsedL1Size = ConvAlignB(hiAL1min * wiAL1min * kAL1min * fMapDtypeSize, C0_SIZE);
 
     uint64_t minL1LoadSize = biasUsedL1Size + scaleUsedL1Size + fmapUsedL1Size + weightUsedL1Size;

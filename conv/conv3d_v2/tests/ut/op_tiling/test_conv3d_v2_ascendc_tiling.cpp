@@ -75,7 +75,6 @@ struct DtypeSize {
 };
 
 struct TilingParam {
-    // api tilingdata
     uint64_t orgDo;
     uint64_t orgHo;
     uint64_t orgWo;
@@ -91,10 +90,15 @@ struct TilingParam {
     uint64_t kernelHxkernelW;
     uint64_t cin1xOriHixOriWixk0;
     uint64_t oriHixOriWixk0;
+    uint64_t unionDataXt;
     uint64_t oriWixk0;
     uint64_t orgHixWi;
     uint64_t orgHoxWo;
-    uint64_t unionDataXt;
+    uint64_t hin;
+    uint64_t win;
+    uint64_t hout;
+    uint64_t wout;
+
     uint32_t orgCi;
     uint32_t kernelD;
     uint32_t kernelH;
@@ -104,20 +108,20 @@ struct TilingParam {
     uint32_t singleCoreCi;
     uint32_t singleCoreGroups;
     uint32_t singleCoreGroupOpt;
-    uint32_t groups_api;
-    uint32_t enlarge_api;
-    uint32_t strideH_api;
-    uint32_t strideW_api;
-    uint32_t strideD_api;
-    uint32_t dilationH_api;
-    uint32_t dilationW_api;
-    uint32_t dilationD_api;
-    uint32_t padHead_api;
-    uint32_t padTail_api;
-    uint32_t padTop_api;
-    uint32_t padBottom_api;
-    uint32_t padLeft_api;
-    uint32_t padRight_api;
+    uint32_t groups;
+    uint32_t enlarge;
+    uint32_t strideH;
+    uint32_t strideW;
+    uint32_t strideD;
+    uint32_t dilationH;
+    uint32_t dilationW;
+    uint32_t dilationD;
+    uint32_t padHead;
+    uint32_t padTail;
+    uint32_t padTop;
+    uint32_t padBottom;
+    uint32_t padLeft;
+    uint32_t padRight;
     uint32_t mL0;
     uint32_t woL0;
     uint32_t kL0;
@@ -153,17 +157,33 @@ struct TilingParam {
     uint32_t aL1SpaceSize;
     uint32_t multiNBL1;
     uint32_t pBufferFlag;
-    uint32_t groupOpt_api;
-    uint32_t cinOpt_api;
-    uint32_t coutOpt_api;
+    uint32_t groupOpt;
+    uint32_t cinOpt;
+    uint32_t coutOpt;
     uint32_t mUB;
     uint32_t nUB;
     uint32_t scaleAndBiasLoadType;
     uint32_t workspaceSize;
     uint32_t kernelHxkernelWxkernelD;
+    uint32_t batch;
+    uint32_t cin;
+    uint32_t din;
+    uint32_t cout;
+    uint32_t kd;
+    uint32_t kh;
+    uint32_t kw;
+    uint32_t dout;
+    uint32_t batchDim;
+    uint32_t doDim;
+    uint32_t mDim;
+    uint32_t wDim;
+    uint32_t nDim;
+    uint32_t groupDim;
+    uint32_t hoDim;
+
     int8_t offsetx;
     int8_t roundMode;
-    uint8_t hasBias_api;
+    uint8_t hasBias;
     uint8_t hasScale;
     uint8_t bl1FullLoad;
     uint8_t al1FullLoad;
@@ -174,47 +194,9 @@ struct TilingParam {
     uint8_t hf32Enable;
     uint8_t hf32TransMode;
     uint8_t quantType;
+    uint8_t outputOrder;
     uint8_t resvered1;
     uint8_t resvered2;
-    uint8_t resvered3;
-    // ops tilingdata
-    uint32_t batch;
-    uint32_t cin;
-    uint32_t din;
-    uint64_t hin;
-    uint64_t win;
-    uint32_t cout;
-    uint32_t kd;
-    uint32_t kh;
-    uint32_t kw;
-    uint32_t dout;
-    uint64_t hout;
-    uint64_t wout;
-    uint32_t batchDim;
-    uint32_t doDim;
-    uint32_t mDim;
-    uint32_t wDim;
-    uint32_t nDim;
-    uint32_t groupDim;
-    uint32_t hoDim;
-    uint32_t strideH;
-    uint32_t strideW;
-    uint32_t strideD;
-    uint32_t dilationH;
-    uint32_t dilationW;
-    uint32_t dilationD;
-    uint32_t padHead;
-    uint32_t padTail;
-    uint32_t padTop;
-    uint32_t padBottom;
-    uint32_t padLeft;
-    uint32_t padRight;
-    uint32_t groups;
-    uint32_t enlarge;
-    uint32_t cinOpt;
-    uint32_t coutOpt;
-    uint32_t groupOpt;
-    uint8_t hasBias;
 };
 
 struct PadModeParams {
@@ -349,7 +331,7 @@ uint64_t CalcConv3dHWmodeUsdL1Size(TilingParam &tilingData, DtypeSize dtypeSize,
     uint64_t pBuffer = tilingData.pBufferFlag;
     int8_t pbAL1 = (pBuffer & 0x08) >> NUM_3;
     uint64_t hiL1 = InferWiL1ForConv3dV2(tilingData.hoL1, tilingData.orgHi, tilingData.kernelH, tilingData.dilationH, tilingData.strideH);
-    uint64_t wiL1 = InferWiL1ForConv3dV2(tilingData.woL1, tilingData.orgWi, tilingData.kernelW, tilingData.dilationW_api, tilingData.strideW_api);
+    uint64_t wiL1 = InferWiL1ForConv3dV2(tilingData.woL1, tilingData.orgWi, tilingData.kernelW, tilingData.dilationW, tilingData.strideW);
     uint64_t al1Size = hiL1 * wiL1 * (tilingData.kAL1 / (tilingData.kernelH * tilingData.kernelW)) * (pbAL1 + 1) * dtypeSize.fMapDtypeSize;
     uint64_t bl1Size = tilingData.nBL1 * tilingData.kBL1 * dtypeSize.weightDtypeSize;
     if (hasBias) {
@@ -483,7 +465,7 @@ void CheckValidTilingData(TilingParam &tilingData,
                           uint64_t tilingKey,
                           bool isConv3dDequant)
 {
-    bool hasBias = tilingData.hasBias == 1 || tilingData.hasBias_api == 1;
+    bool hasBias = tilingData.hasBias == 1;
     int32_t outputOrder = tilingData.singleCoreWo == 0 && tilingData.woL1 == 0;
     if (isConv3dDequant) {
       ASSERT_GT(tilingData.mUB, 0);

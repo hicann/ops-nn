@@ -103,7 +103,7 @@ void CallSimpleKernel(
     size_t inputByteSize = VectorReduceMul(inputShapeNew) * BF16_SIZE;
     size_t weightByteSize = VectorReduceMul(weightShapeNew) * BF16_SIZE;
     size_t outputByteSize = VectorReduceMul(outputShapeNew) * BF16_SIZE;
-    size_t tilingDataSize = sizeof(Ops::NN::Conv3dV2::Conv3DRunInfo);
+    size_t tilingDataSize = sizeof(Ops::NN::Conv3dV2::Conv3DV2TilingData);
 
     uint8_t* input = (uint8_t*)AscendC::GmAlloc(inputByteSize);
     uint8_t* weight = (uint8_t*)AscendC::GmAlloc(weightByteSize);
@@ -133,11 +133,13 @@ void CallSimpleKernel(
     tilingDataFromBin->convRunInfo.doDim = doDim;
     tilingDataFromBin->convRunInfo.mDim = mDim;
     tilingDataFromBin->convRunInfo.nDim = nDim;
+    tilingDataFromBin->convRunInfo.hasBias = false;
+    tilingDataFromBin->convRunInfo.groups = 1;
     tilingDataFromBin->convRunInfo.strideH = stride[1];
-    tilingDataFromBin->convRunInfo.dilationH = dilation[1];
     tilingDataFromBin->convRunInfo.strideW = stride[2];
-    tilingDataFromBin->convRunInfo.dilationW = dilation[2];
     tilingDataFromBin->convRunInfo.strideD = stride[0];
+    tilingDataFromBin->convRunInfo.dilationH = dilation[1];
+    tilingDataFromBin->convRunInfo.dilationW = dilation[2];
     tilingDataFromBin->convRunInfo.dilationD = dilation[0];
     tilingDataFromBin->convRunInfo.padHead = pad[0];
     tilingDataFromBin->convRunInfo.padTail = pad[1];
@@ -145,7 +147,9 @@ void CallSimpleKernel(
     tilingDataFromBin->convRunInfo.padBottom = pad[3];
     tilingDataFromBin->convRunInfo.padLeft = pad[4];
     tilingDataFromBin->convRunInfo.padRight = pad[5];
-    tilingDataFromBin->convRunInfo.hasBias = false;
+    tilingDataFromBin->convRunInfo.cinOpt = inputShapeNew[1];
+    tilingDataFromBin->convRunInfo.coutOpt = outputShapeNew[1];
+    tilingDataFromBin->convRunInfo.groupOpt = 1;
 
     tilingDataFromBin->convApiTiling.groups = 1;
     tilingDataFromBin->convApiTiling.orgDo = outputShapeNew[2];

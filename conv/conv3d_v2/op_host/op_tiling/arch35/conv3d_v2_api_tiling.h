@@ -22,13 +22,14 @@
 #include "../../../../conv3d_v2/op_kernel/conv3d_v2_tiling_data.h"
 #include "conv/common/op_host/op_tiling/arch35/conv_template_utils.h"
 #include "conv/conv3d_v2/op_kernel/conv3d_v2_tiling_data.h"
+#include "conv3d_v2_tiling.h"
 namespace conv_tiling {
 class __attribute__((visibility("default"))) Conv3dTiling : public ConvTilingBase {
 public:
     Conv3dTiling() {};
     explicit Conv3dTiling(const PlatformInfo& platform) : ConvTilingBase(platform) {};
     ~Conv3dTiling() override {};
-    int64_t GetTiling(Ops::NN::Conv3dV2::TConv3DTiling &tiling);
+    int64_t GetTiling(Ops::NN::Conv3dV2::Conv3DV2TilingDataV2 &tiling);
     int64_t Compute() override;
     int64_t GetTilingData(optiling::conv_ops_tiling::ConvAscendcAttrInfo convAttrInfo,
                           optiling::conv_ops_tiling::ConvAscendcDescInfo convDescInfo,
@@ -36,7 +37,7 @@ public:
                           optiling::conv_ops_tiling::ConvAscendcShapesInfo convShapeInfo,
                           optiling::conv_ops_tiling::ConvOpsConstParams convOpsConstParams,
                           optiling::conv_ops_tiling::NumBlocksRes numBlocksRes,
-                          Ops::NN::Conv3dV2::Conv3DV2TilingData& tilingData);
+                          Ops::NN::Conv3dV2::Conv3DV2TilingDataV2& tilingData);
     void SetShape(optiling::conv_ops_tiling::ConvAscendcTilingFlag flagInfo,
                   optiling::conv_ops_tiling::ConvAscendcShapesInfo convShapeInfo,
                   optiling::conv_ops_tiling::ConvOpsConstParams convOpsConstParams,
@@ -60,7 +61,7 @@ public:
     void CalcOptGroupParams(const optiling::conv_ops_tiling::ConvOriGroupInfo& oriGroupInfo,
                             optiling::conv_ops_tiling::ConvOptGroupInfo& optGroupInfo) const;
     void SetOutputOrder(int8_t outOrder);
-    void SetScalarParams(Ops::NN::Conv3dV2::TConv3DTiling& tiling);
+    void SetScalarParams(Ops::NN::Conv3dV2::Conv3DV2TilingDataV2& tiling);
     void SetHF32(bool hf32EnableFlag, bool hf32TransModeFlag);
     void SetScaleType(TPosition pos, ConvFormat format, ConvDtype dtype);
     void SetQuantConvFlag(bool quantConvEnable);
@@ -70,10 +71,10 @@ public:
     void InitFlag();
 private:
     std::shared_ptr<ConvTilingAlgorithmBase> algoPtr;
-    void SetTilingData(Ops::NN::Conv3dV2::TConv3DTiling& tiling);
-    void SetAttrsTilingData(Ops::NN::Conv3dV2::TConv3DTiling& tiling);
-    void SetUnionDataXt(Ops::NN::Conv3dV2::TConv3DTiling& tiling);
-    uint32_t CalcAL1SpaceSize(Ops::NN::Conv3dV2::TConv3DTiling& tiling);
+    void SetTilingData(Ops::NN::Conv3dV2::Conv3DV2TilingDataV2& tiling);
+    void SetAttrsTilingData(Ops::NN::Conv3dV2::Conv3DV2TilingDataV2& tiling);
+    void SetUnionDataXt(Ops::NN::Conv3dV2::Conv3DV2TilingDataV2& tiling);
+    uint32_t CalcAL1SpaceSize(Ops::NN::Conv3dV2::Conv3DV2TilingDataV2& tiling);
     void Infer5hdShape();
     bool CheckInputParam();
     bool CheckAlgorithmLimit() const;

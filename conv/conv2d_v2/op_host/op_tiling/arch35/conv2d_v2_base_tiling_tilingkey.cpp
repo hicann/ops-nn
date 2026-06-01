@@ -27,7 +27,7 @@ uint64_t Conv2dBaseTiling::GetSmallWeightVal()
     }
 
     // Not useful to weight ub
-    if (tilingData_.convApiTiling.get_bUbNStep() > 0 && tilingData_.convApiTiling.get_bUbKStep() > 0) {
+    if (tilingData_.get_bUbNStep() > 0 && tilingData_.get_bUbKStep() > 0) {
         return CONV_NOT_SMALL_WEIGHT;
     }
 
@@ -37,9 +37,9 @@ uint64_t Conv2dBaseTiling::GetSmallWeightVal()
                            ci1 * shapeInfo_.kh * shapeInfo_.kw * convOpsConstParams_.k0;
     uint64_t singleCoreNSize = ConvAlignB(ConvCeilDiv(shapeInfo_.co, numBlocksRes.nDim), convOpsConstParams_.n0);
     int64_t weightDtypeSize = dtypeSizeTab.at(descInfo_.weightDtype);
-    if (weightKSize == tilingData_.convApiTiling.get_kBL1() &&
-        weightKSize == tilingData_.convApiTiling.get_kAL1() &&
-        tilingData_.convApiTiling.get_nL0() == singleCoreNSize) {
+    if (weightKSize == tilingData_.get_kBL1() &&
+        weightKSize == tilingData_.get_kAL1() &&
+        tilingData_.get_nL0() == singleCoreNSize) {
         if (weightKSize * singleCoreNSize * weightDtypeSize <= apiInputPlatformInfo.l0BSize) {
             return CONV_WEIGHT_SMALLER_THAN_BL0;
         }
@@ -58,7 +58,7 @@ uint64_t Conv2dBaseTiling::GetFmpTilingVal()
     uint64_t fmpKSize = flagInfo_.enableC04Flag ? ConvAlignB(C04_CIN_SIZE *
                         shapeInfo_.kh * shapeInfo_.kw, convOpsConstParams_.k0) :
                         ci1 * shapeInfo_.kh * shapeInfo_.kw * convOpsConstParams_.k0;
-    bool kAL1FullloadFlag = tilingData_.convApiTiling.get_kAL1() == fmpKSize;
+    bool kAL1FullloadFlag = tilingData_.get_kAL1() == fmpKSize;
     if (flagInfo_.mSplitModeFlag) {
         return GetFmpTilingValForMSplit(kAL1FullloadFlag);
     }
@@ -67,10 +67,10 @@ uint64_t Conv2dBaseTiling::GetFmpTilingVal()
  
 uint64_t Conv2dBaseTiling::GetFmpTilingValForMSplit(bool kAL1FullloadFlag)
 {
-    bool mL1FullloadFlag = tilingData_.convApiTiling.get_innerBatch() == 1 ?
-        tilingData_.convApiTiling.get_singleCoreHo() <= tilingData_.convApiTiling.get_hoL1() :
-        tilingData_.convApiTiling.get_innerBatch() == tilingData_.convApiTiling.get_singleCoreBatch();
-    bool mL0FullloadFlag = tilingData_.convApiTiling.get_hoL1() == tilingData_.convApiTiling.get_hoL0();
+    bool mL1FullloadFlag = tilingData_.get_innerBatch() == 1 ?
+        tilingData_.get_singleCoreHo() <= tilingData_.get_hoL1() :
+        tilingData_.get_innerBatch() == tilingData_.get_singleCoreBatch();
+    bool mL0FullloadFlag = tilingData_.get_hoL1() == tilingData_.get_hoL0();
     if (kAL1FullloadFlag && mL1FullloadFlag) {
         return FULLLOAD_AL1;
     } else if (!kAL1FullloadFlag && mL1FullloadFlag && mL0FullloadFlag) {
@@ -81,7 +81,7 @@ uint64_t Conv2dBaseTiling::GetFmpTilingValForMSplit(bool kAL1FullloadFlag)
 
 uint64_t Conv2dBaseTiling::GetL0PingPongVal()
 {
-    return static_cast<uint64_t>(tilingData_.convApiTiling.get_pBufferFlag() & L0A_L0B_PB_FLAG_MASK);
+    return static_cast<uint64_t>(tilingData_.get_pBufferFlag() & L0A_L0B_PB_FLAG_MASK);
 }
 
 uint64_t Conv2dBaseTiling::GetWeightTilingVal()
@@ -96,11 +96,11 @@ uint64_t Conv2dBaseTiling::GetWeightTilingVal()
                            shapeInfo_.kh * shapeInfo_.kw, convOpsConstParams_.k0) :
                            ci1 * shapeInfo_.kh * shapeInfo_.kw * convOpsConstParams_.k0;
     uint64_t singleCoreNSize = ConvAlignB(ConvCeilDiv(shapeInfo_.co, numBlocksRes.nDim), convOpsConstParams_.n0);
-    if (tilingData_.convApiTiling.get_kBL1() == weightKSize) {
+    if (tilingData_.get_kBL1() == weightKSize) {
         kBL1FullloadFlag = true;
     }
 
-    if (tilingData_.convApiTiling.get_nBL1() == singleCoreNSize) {
+    if (tilingData_.get_nBL1() == singleCoreNSize) {
         nBL1FullloadFlag = true;
     }
 
@@ -108,7 +108,7 @@ uint64_t Conv2dBaseTiling::GetWeightTilingVal()
         return FULLLOAD_BL1;
     }
 
-    if (!kBL1FullloadFlag && tilingData_.convApiTiling.get_nL0() == singleCoreNSize) {
+    if (!kBL1FullloadFlag && tilingData_.get_nL0() == singleCoreNSize) {
         return ONLY_N_FULLLOAD_BL1_BL0;
     }
     return WEIGHT_OTHER;
@@ -124,16 +124,16 @@ uint64_t Conv2dBaseTiling::GetOutputOrderVal()
  
 uint64_t Conv2dBaseTiling::GetFmpTilingValForHWSplit(bool kAL1FullloadFlag)
 {
-    bool hoL1FullloadFlag = tilingData_.convApiTiling.get_singleCoreHo() <= tilingData_.convApiTiling.get_hoL1();
+    bool hoL1FullloadFlag = tilingData_.get_singleCoreHo() <= tilingData_.get_hoL1();
     bool woL1FullloadFlag = false;
-    if (tilingData_.convApiTiling.get_singleCoreWo() <= tilingData_.convApiTiling.get_woL1() &&
-        !(ConvCeilDiv(tilingData_.convApiTiling.get_singleCoreWo(), tilingData_.convApiTiling.get_woL0()) > 1 &&
-        tilingData_.convApiTiling.get_singleCoreWo() % convOpsConstParams_.m0 > 0 &&
-        tilingData_.convApiTiling.get_hoL0() > 1)) {
+    if (tilingData_.get_singleCoreWo() <= tilingData_.get_woL1() &&
+        !(ConvCeilDiv(tilingData_.get_singleCoreWo(), tilingData_.get_woL0()) > 1 &&
+        tilingData_.get_singleCoreWo() % convOpsConstParams_.m0 > 0 &&
+        tilingData_.get_hoL0() > 1)) {
         woL1FullloadFlag = true;
     }
-    bool hoL0FullloadFlag = tilingData_.convApiTiling.get_hoL1() == tilingData_.convApiTiling.get_hoL0();
-    bool woL0FullloadFlag = tilingData_.convApiTiling.get_woL1() == tilingData_.convApiTiling.get_woL0();
+    bool hoL0FullloadFlag = tilingData_.get_hoL1() == tilingData_.get_hoL0();
+    bool woL0FullloadFlag = tilingData_.get_woL1() == tilingData_.get_woL0();
     if (kAL1FullloadFlag && hoL1FullloadFlag && woL1FullloadFlag) {
         return FULLLOAD_AL1;
     } else if (!kAL1FullloadFlag && hoL1FullloadFlag && hoL0FullloadFlag && woL1FullloadFlag && woL0FullloadFlag) {
@@ -144,7 +144,7 @@ uint64_t Conv2dBaseTiling::GetFmpTilingValForHWSplit(bool kAL1FullloadFlag)
 
 uint64_t Conv2dBaseTiling::GetL1PingPongVal()
 {
-    uint64_t l1PingPong = static_cast<uint64_t>(tilingData_.convApiTiling.get_pBufferFlag() &
+    uint64_t l1PingPong = static_cast<uint64_t>(tilingData_.get_pBufferFlag() &
         L1A_L1B_PB_FLAG_MASK) >> L1_PB_OFFSET;
     // in group conv: only care about bl1 pingpong
     if (flagInfo_.convGroupType != ConvGroupType::NORMAL_CONV) {
@@ -160,7 +160,7 @@ uint64_t Conv2dBaseTiling::GetL1PingPongVal()
 uint64_t Conv2dBaseTiling::GetWeightUbTrans()
 {
     // bUbKStep is always 0 except weight ub trans mode.
-    if (tilingData_.convApiTiling.get_bUbNStep() > 0 && tilingData_.convApiTiling.get_bUbKStep() > 0) {
+    if (tilingData_.get_bUbNStep() > 0 && tilingData_.get_bUbKStep() > 0) {
         return WEIGHT_UB_TRANS_OPEN;
     }
 
@@ -169,7 +169,7 @@ uint64_t Conv2dBaseTiling::GetWeightUbTrans()
 
 uint64_t Conv2dBaseTiling::GetEnableInnerBatch()
 {
-    if (tilingData_.convApiTiling.get_innerBatch() > 1) {
+    if (tilingData_.get_innerBatch() > 1) {
         return shapeInfo_.kh == 1 && shapeInfo_.kw == 1 && attrInfo_.padTop == 0 && attrInfo_.padBottom == 0 &&
             attrInfo_.padLeft == 0 && attrInfo_.padRight == 0 && attrInfo_.strideH == 1 && attrInfo_.strideW == 1 &&
             attrInfo_.dilationH == 1 && attrInfo_.dilationW == 1 ?
@@ -181,7 +181,7 @@ uint64_t Conv2dBaseTiling::GetEnableInnerBatch()
 uint64_t Conv2dBaseTiling::GetFmapCopyMode()
 {
     // bUbKStep is always 0 except weight ub trans mode.
-    if (tilingData_.convApiTiling.get_khUb() > 0 && tilingData_.convApiTiling.get_kwUb() > 0) {
+    if (tilingData_.get_khUb() > 0 && tilingData_.get_kwUb() > 0) {
         return FMAP_DMA_MODE;
     }
 
@@ -205,10 +205,10 @@ void Conv2dBaseTiling::ReSetTilingKeyPara()
         tilingKeyPara_.fmpTiling = FMP_OTHER;
     }
     bool sceneFlag = flagInfo_.convGroupType == ConvGroupType::OPT_GROUP_CONV &&
-        tilingKeyPara_.fmapCppyMode == FMAP_LOAD3D_MODE && tilingData_.convApiTiling.get_innerBatch() == 1 &&
-        tilingData_.convApiTiling.get_hoL1() == tilingData_.convApiTiling.get_hoL0();
+        tilingKeyPara_.fmapCppyMode == FMAP_LOAD3D_MODE && tilingData_.get_innerBatch() == 1 &&
+        tilingData_.get_hoL1() == tilingData_.get_hoL0();
     if (!flagInfo_.mSplitModeFlag) {
-        sceneFlag = sceneFlag && tilingData_.convApiTiling.get_woL1() == tilingData_.convApiTiling.get_woL0();
+        sceneFlag = sceneFlag && tilingData_.get_woL1() == tilingData_.get_woL0();
     }
     bool otherFlag = tilingKeyPara_.iterOrder == 0 && tilingKeyPara_.l1PingPong == L1_PB_ALL_OPEN;
     if (sceneFlag && otherFlag) {
@@ -238,7 +238,7 @@ ge::graphStatus Conv2dBaseTiling::SetTilingKey()
     tilingKeyPara_.l1PingPong = GetL1PingPongVal();
     tilingKeyPara_.l0PingPong = GetL0PingPongVal();
     tilingKeyPara_.outputOrder = GetOutputOrderVal();
-    tilingKeyPara_.iterOrder = static_cast<uint64_t>(tilingData_.convApiTiling.get_iterateMNOrder());
+    tilingKeyPara_.iterOrder = static_cast<uint64_t>(tilingData_.get_iterateMNOrder());
     tilingKeyPara_.groupType = static_cast<uint64_t>(flagInfo_.convGroupType);
     tilingKeyPara_.enableSmallChannel = static_cast<uint64_t>(flagInfo_.enableC04Flag);
     tilingKeyPara_.weightUbTrans = GetWeightUbTrans();
@@ -246,7 +246,7 @@ ge::graphStatus Conv2dBaseTiling::SetTilingKey()
     tilingKeyPara_.innerBatch =  GetEnableInnerBatch();
     tilingKeyPara_.disContinuous = static_cast<uint64_t>(flagInfo_.disContinuousFlag);
     if (IsWeightNZFormat(descInfo_.weightFormat)) {
-        tilingKeyPara_.batchOne = static_cast<uint64_t>(tilingData_.convApiTiling.get_singleCoreBatch() == 1);
+        tilingKeyPara_.batchOne = static_cast<uint64_t>(tilingData_.get_singleCoreBatch() == 1);
         tilingKeyPara_.noPad = GetNoPad();
         tilingKeyPara_.smallWeight = GetSmallWeightVal();
     }

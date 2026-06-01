@@ -25,7 +25,7 @@ namespace conv_ops_tiling {
  
 class __attribute__((visibility("default"))) Conv3dV2BaseTilingKey {
 public:
-    Conv3dV2BaseTilingKey(Ops::NN::Conv3dV2::Conv3DV2TilingData& tilingData,
+    Conv3dV2BaseTilingKey(Ops::NN::Conv3dV2::Conv3DV2TilingDataV2& tilingData,
         ConvAscendcTilingFlag& flagInfo, ConvAscendcDescInfo& descInfo, ConvAscendcShapesInfo& shapeInfo,
         NumBlocksRes& numBlocksRes, ConvOpsConstParams& convOpsConstParams) :
         tilingData_(tilingData), flagInfo_(flagInfo), descInfo_(descInfo), shapeInfo_(shapeInfo),
@@ -46,7 +46,7 @@ private:
     void ReSetTilingKeyPara(ConvTilingKeyPara& tilingKeyPara);
  
 private:
-    Ops::NN::Conv3dV2::Conv3DV2TilingData tilingData_;
+    Ops::NN::Conv3dV2::Conv3DV2TilingDataV2 tilingData_;
     ConvAscendcTilingFlag flagInfo_;
     ConvAscendcDescInfo descInfo_;
     ConvAscendcShapesInfo shapeInfo_;

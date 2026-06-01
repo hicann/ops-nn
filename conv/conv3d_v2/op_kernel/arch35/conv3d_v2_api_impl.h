@@ -63,7 +63,7 @@ public:
     struct ContextData : public Config::ContextData {
         __aicore__ inline ContextData(){};
 
-        const Ops::NN::Conv3dV2::Conv3DV2TilingData* convTilingData;
+        const Ops::NN::Conv3dV2::Conv3DV2TilingDataV2* convTilingData;
 
         // Using Conditional<flag, type1, type2>::type to select M or HW, if flag=true, type=type1, else type=type2
         using LoadAL1Tools = typename Conditional<

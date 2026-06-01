@@ -35,7 +35,7 @@ __global__ __aicore__ void quant_conv3d(GM_ADDR x, GM_ADDR filter, GM_ADDR scale
 
     SetSysWorkspace(workspace);
     __gm__ uint8_t *user = GetUserWorkspace(workspace);
-    REGISTER_TILING_DEFAULT(Ops::NN::Conv3dV2::Conv3DV2TilingData);
+    REGISTER_TILING_DEFAULT(Ops::NN::Conv3dV2::Conv3DV2TilingDataV2);
     GET_TILING_DATA(tilingData, tiling);
 
 #if defined(DTYPE_X) && defined(DTYPE_FILTER) && defined(DTYPE_Y)

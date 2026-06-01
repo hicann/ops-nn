@@ -251,12 +251,12 @@ ge::graphStatus Conv2dBaseTiling::GetConv2dApiTiling()
     Conv2dApiTilingSetShape();
 
     if (flagInfo_.mBasicBlockFlag) {
-        if (!conv2dApiTiling_.GetTiling(conv2dBasicBlockInfo_, tilingData_.convApiTiling)) {
+        if (!conv2dApiTiling_.GetTiling(conv2dBasicBlockInfo_, tilingData_)) {
             OP_LOGE(context_->GetNodeName(), "%s AscendC: get api tiling wrong", paramInfo_.nodeType.c_str());
             return ge::GRAPH_FAILED;
         }
     } else {
-        if (conv2dApiTiling_.GetTiling(tilingData_.convApiTiling) == -1) {
+        if (conv2dApiTiling_.GetTiling(tilingData_) == -1) {
             OP_LOGE(context_->GetNodeName(), "%s AscendC: get api tiling wrong", paramInfo_.nodeType.c_str());
             return ge::GRAPH_FAILED;
         }
@@ -334,39 +334,39 @@ void Conv2dBaseTiling::Conv2dOpTilingSetAttr()
 
 ge::graphStatus Conv2dBaseTiling::GetConv2dOpsTiling()
 {
-    tilingData_.convRunInfo.set_hin(static_cast<uint64_t>(shapeInfo_.hi));
-    tilingData_.convRunInfo.set_win(static_cast<uint64_t>(shapeInfo_.wi));
-    tilingData_.convRunInfo.set_hout(static_cast<uint64_t>(shapeInfo_.ho));
-    tilingData_.convRunInfo.set_wout(static_cast<uint64_t>(shapeInfo_.wo));
-    tilingData_.convRunInfo.set_batch(static_cast<uint32_t>(shapeInfo_.batch));
-    tilingData_.convRunInfo.set_cin(static_cast<uint32_t>(shapeInfo_.ci));
-    tilingData_.convRunInfo.set_cout(static_cast<uint32_t>(shapeInfo_.co));
-    tilingData_.convRunInfo.set_kh(static_cast<uint32_t>(shapeInfo_.kh));
-    tilingData_.convRunInfo.set_kw(static_cast<uint32_t>(shapeInfo_.kw));
-    tilingData_.convRunInfo.set_strideH(static_cast<uint32_t>(attrInfo_.strideH));
-    tilingData_.convRunInfo.set_strideW(static_cast<uint32_t>(attrInfo_.strideW));
-    tilingData_.convRunInfo.set_dilationH(static_cast<uint32_t>(attrInfo_.dilationH));
-    tilingData_.convRunInfo.set_dilationW(static_cast<uint32_t>(attrInfo_.dilationW));
-    tilingData_.convRunInfo.set_padTop(static_cast<uint32_t>(attrInfo_.padTop));
-    tilingData_.convRunInfo.set_padLeft(static_cast<uint32_t>(attrInfo_.padLeft));
-    tilingData_.convRunInfo.set_hasBias(static_cast<uint8_t>(flagInfo_.hasBias));
-    tilingData_.convRunInfo.set_batchDim(static_cast<uint32_t>(numBlocksRes.batchDim));
-    tilingData_.convRunInfo.set_nDim(static_cast<uint32_t>(numBlocksRes.nDim));
-    tilingData_.convRunInfo.set_groupDim(static_cast<uint32_t>(numBlocksRes.groupDim));
-    tilingData_.convRunInfo.set_groups(static_cast<uint32_t>(attrInfo_.groups));
+    tilingData_.set_hin(static_cast<uint64_t>(shapeInfo_.hi));
+    tilingData_.set_win(static_cast<uint64_t>(shapeInfo_.wi));
+    tilingData_.set_hout(static_cast<uint64_t>(shapeInfo_.ho));
+    tilingData_.set_wout(static_cast<uint64_t>(shapeInfo_.wo));
+    tilingData_.set_batch(static_cast<uint32_t>(shapeInfo_.batch));
+    tilingData_.set_cin(static_cast<uint32_t>(shapeInfo_.ci));
+    tilingData_.set_cout(static_cast<uint32_t>(shapeInfo_.co));
+    tilingData_.set_kh(static_cast<uint32_t>(shapeInfo_.kh));
+    tilingData_.set_kw(static_cast<uint32_t>(shapeInfo_.kw));
+    tilingData_.set_strideH(static_cast<uint32_t>(attrInfo_.strideH));
+    tilingData_.set_strideW(static_cast<uint32_t>(attrInfo_.strideW));
+    tilingData_.set_dilationH(static_cast<uint32_t>(attrInfo_.dilationH));
+    tilingData_.set_dilationW(static_cast<uint32_t>(attrInfo_.dilationW));
+    tilingData_.set_padTop(static_cast<uint32_t>(attrInfo_.padTop));
+    tilingData_.set_padLeft(static_cast<uint32_t>(attrInfo_.padLeft));
+    tilingData_.set_hasBias(static_cast<uint8_t>(flagInfo_.hasBias));
+    tilingData_.set_batchDim(static_cast<uint32_t>(numBlocksRes.batchDim));
+    tilingData_.set_nDim(static_cast<uint32_t>(numBlocksRes.nDim));
+    tilingData_.set_groupDim(static_cast<uint32_t>(numBlocksRes.groupDim));
+    tilingData_.set_groups(static_cast<uint32_t>(attrInfo_.groups));
     if (flagInfo_.convGroupType == ConvGroupType::OPT_GROUP_CONV) {
-        tilingData_.convRunInfo.set_cinOpt(static_cast<uint32_t>(optGroupInfo_.cinOpt));
-        tilingData_.convRunInfo.set_coutOpt(static_cast<uint32_t>(optGroupInfo_.coutOpt));
-        tilingData_.convRunInfo.set_groupOpt(static_cast<uint32_t>(optGroupInfo_.groupOpt));
-        tilingData_.convRunInfo.set_enlarge(static_cast<uint32_t>(optGroupInfo_.enlarge));
+        tilingData_.set_cinOpt(static_cast<uint32_t>(optGroupInfo_.cinOpt));
+        tilingData_.set_coutOpt(static_cast<uint32_t>(optGroupInfo_.coutOpt));
+        tilingData_.set_groupOpt(static_cast<uint32_t>(optGroupInfo_.groupOpt));
+        tilingData_.set_enlarge(static_cast<uint32_t>(optGroupInfo_.enlarge));
     }
 
     if (flagInfo_.mSplitModeFlag) {
-        tilingData_.convRunInfo.set_hoDim(static_cast<uint32_t>(numBlocksRes.mDim));
-        tilingData_.convRunInfo.set_woDim(static_cast<uint32_t>(1));
+        tilingData_.set_hoDim(static_cast<uint32_t>(numBlocksRes.mDim));
+        tilingData_.set_woDim(static_cast<uint32_t>(1));
     } else {
-        tilingData_.convRunInfo.set_hoDim(static_cast<uint32_t>(numBlocksRes.hoDim));
-        tilingData_.convRunInfo.set_woDim(static_cast<uint32_t>(numBlocksRes.woDim));
+        tilingData_.set_hoDim(static_cast<uint32_t>(numBlocksRes.hoDim));
+        tilingData_.set_woDim(static_cast<uint32_t>(numBlocksRes.woDim));
     }
     return ge::GRAPH_SUCCESS;
 }

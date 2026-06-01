@@ -246,7 +246,7 @@ TEST_F(TestConv2dTiling, test_group_conv2d_params_check)
     uint64_t orgKw = 1;
     uint64_t orgHo = orgHi;
     uint64_t orgWo = orgWi;
-    optiling::TConv2DTiling tilingData;
+    optiling::Conv2DTilingData tilingData;
 
     testTiling.SetOrgWeightShape(orgCo, orgKh, orgKw);
     testTiling.SetOrgFmapShape(orgCi, orgHi, orgWi);
@@ -301,7 +301,7 @@ TEST_F(TestConv2dTiling, test_group_conv2d_notsupport_c04)
     testTiling.SetBiasType(TPosition::GM, ConvFormat::ND, ConvDtype::FLOAT16);
     testTiling.SetGroups(2);
 
-    optiling::TConv2DTiling tilingData;
+    optiling::Conv2DTilingData tilingData;
     int64_t ret = testTiling.GetTiling(tilingData);
     EXPECT_EQ(ret, -1);
 }
@@ -330,7 +330,7 @@ TEST_F(TestConv2dTiling, test_group_conv2d_success)
     testTiling.SetGroups(2);
     testTiling.SetOptGroupParams(2, 2, 2);
 
-    optiling::TConv2DTiling tilingData;
+    optiling::Conv2DTilingData tilingData;
     int64_t ret = testTiling.GetTiling(tilingData);
     EXPECT_EQ(ret, 0);
 }
@@ -1971,7 +1971,7 @@ TEST_F(TestConv2dTiling, test_algo_BB_GetTiling)
     conv2DBasicBlockInfo.iterateMNOrder = conv_tiling::IterateMNOrder::ITER_M_FST;
 
     bool ret = false;
-    optiling::TConv2DTiling tilingData;
+    optiling::Conv2DTilingData tilingData;
     ret = testTiling.GetTiling(conv2DBasicBlockInfo, tilingData);
     EXPECT_EQ(ret, false);
 
@@ -2026,7 +2026,7 @@ TEST_F(TestConv2dTiling, test_algo_BB_GetTilingPartTwo)
     conv2DBasicBlockInfo.nCut = 1;
 
     bool ret = false;
-    optiling::TConv2DTiling tilingData;
+    optiling::Conv2DTilingData tilingData;
 
     conv2DBasicBlockInfo.nBl1FullLoad = true;
     testTiling.shapeInfo.singleM = 256;
@@ -2081,7 +2081,7 @@ TEST_F(TestConv2dTiling, test_algo_BB_GetTilingPartThree)
     conv2DBasicBlockInfo.mCut = 1;
 
     bool ret = false;
-    optiling::TConv2DTiling tilingData;
+    optiling::Conv2DTilingData tilingData;
     testTiling.shapeInfo.singleM = 256;
     testTiling.shapeInfo.singleCo = 64;
     conv2DBasicBlockInfo.iterateMNOrder = conv_tiling::IterateMNOrder::ITER_N_FST;
@@ -2146,7 +2146,7 @@ TEST_F(TestConv2dTiling, test_algo_BB_GetCoreBindingDecisionFactor)
     conv2DBasicBlockInfo.batch = 4;
     conv2DBasicBlockInfo.iterateMNOrder = conv_tiling::IterateMNOrder::ITER_M_FST;
 
-    optiling::TConv2DTiling tilingData;
+    optiling::Conv2DTilingData tilingData;
     bool ret = testTiling.GetCoreBindingDecisionFactor(conv2DBasicBlockInfo);
     EXPECT_EQ(ret, true);
     

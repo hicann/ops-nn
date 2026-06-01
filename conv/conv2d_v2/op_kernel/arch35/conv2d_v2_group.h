@@ -99,14 +99,14 @@ __aicore__ inline bool GroupConv2d<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYP
     hasScale = (extendParams != nullptr);
     convTilingData = &tilingData;
     if constexpr (CONV_CFG::isExtendConv2d) {
-        dualOutput = convTilingData->convApiTiling.dualOutput;
+        dualOutput = convTilingData->dualOutput;
     }
     convCommon.Init(this, convTilingData, hasScale);
 
     conv.Init(convTilingData);
 
-    ciPerGroup = convTilingData->convRunInfo.cin / convTilingData->convRunInfo.groups;
-    coPerGroup = convTilingData->convRunInfo.cout / convTilingData->convRunInfo.groups;
+    ciPerGroup = convTilingData->cin / convTilingData->groups;
+    coPerGroup = convTilingData->cout / convTilingData->groups;
 
     if (!InitSingleCoreData()) {
         return false;
@@ -124,30 +124,30 @@ __aicore__ inline bool GroupConv2d<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYP
     InitBlockNums();
 
     DimDataToFill batchToFill(this->singleCoreBatch, this->batchIdxStart, this->isBatchDimTail);
-    bool isRealDim = convCommon.CalcDimData(this->batchBlockNums, convTilingData->convRunInfo.batchDim, convTilingData->convRunInfo.batch,
-                                            convTilingData->convRunInfo.batch, batchToFill);
+    bool isRealDim = convCommon.CalcDimData(this->batchBlockNums, convTilingData->batchDim, convTilingData->batch,
+                                            convTilingData->batch, batchToFill);
     if (unlikely(!isRealDim)) {
         return false;
     }
 
     if constexpr (isMMode) {
         DimDataToFill mToFill(this->singleCoreM, this->mIdxStart, this->isMDimTail);
-        uint64_t totalM = convTilingData->convRunInfo.hout * convTilingData->convRunInfo.wout;
-        isRealDim = convCommon.CalcDimData(this->hoBlockNums, convTilingData->convRunInfo.hoDim, convCommon.AlignB(totalM, M0),
+        uint64_t totalM = convTilingData->hout * convTilingData->wout;
+        isRealDim = convCommon.CalcDimData(this->hoBlockNums, convTilingData->hoDim, convCommon.AlignB(totalM, M0),
                                            totalM, mToFill);
         if (unlikely(!isRealDim)) {
             return false;
         }
     } else {
         DimDataToFill hoToFill(this->singleCoreHo, this->hoIdxStart, this->isHoDimTail);
-        isRealDim = convCommon.CalcDimData(this->hoBlockNums, convTilingData->convRunInfo.hoDim, convTilingData->convRunInfo.hout,
-                                            convTilingData->convRunInfo.hout, hoToFill);
+        isRealDim = convCommon.CalcDimData(this->hoBlockNums, convTilingData->hoDim, convTilingData->hout,
+                                            convTilingData->hout, hoToFill);
         if (unlikely(!isRealDim)) {
             return false;
         }
         DimDataToFill woToFill(this->singleCoreWo, this->woIdxStart, this->isWoDimTail);
-        isRealDim = convCommon.CalcDimData(this->woBlockNums, convTilingData->convRunInfo.woDim, convTilingData->convRunInfo.wout,
-                                           convTilingData->convRunInfo.wout, woToFill);
+        isRealDim = convCommon.CalcDimData(this->woBlockNums, convTilingData->woDim, convTilingData->wout,
+                                           convTilingData->wout, woToFill);
         if (unlikely(!isRealDim)) {
             return false;
         }
@@ -170,28 +170,28 @@ __aicore__ inline void GroupConv2d<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYP
     // NCHW: batchDim -> 'groupDim -> nDim' -> hoDim -> woDim / batchDim -> 'groupDim -> nDim' -> mDim
     // NHWC: batchDim -> hoDim -> woDim -> 'groupDim -> nDim' / batchDim -> mDim -> 'groupDim -> nDim'
     if constexpr (isMMode) {
-        this->batchBlockNums = convTilingData->convRunInfo.groupDim * convTilingData->convRunInfo.nDim * convTilingData->convRunInfo.hoDim;
+        this->batchBlockNums = convTilingData->groupDim * convTilingData->nDim * convTilingData->hoDim;
         if constexpr (A_FORMAT == ConvFormat::NCHW) {
-            this->groupBlockNums = convTilingData->convRunInfo.nDim * convTilingData->convRunInfo.hoDim;
-            this->nBlockNums = convTilingData->convRunInfo.hoDim;
+            this->groupBlockNums = convTilingData->nDim * convTilingData->hoDim;
+            this->nBlockNums = convTilingData->hoDim;
             this->hoBlockNums = 1;
         } else {
-            this->hoBlockNums = convTilingData->convRunInfo.groupDim * convTilingData->convRunInfo.nDim;
-            this->groupBlockNums = convTilingData->convRunInfo.nDim;
+            this->hoBlockNums = convTilingData->groupDim * convTilingData->nDim;
+            this->groupBlockNums = convTilingData->nDim;
             this->nBlockNums = 1;
         }
     } else {
-        this->batchBlockNums = convTilingData->convRunInfo.groupDim * convTilingData->convRunInfo.nDim * convTilingData->convRunInfo.hoDim *
-                               convTilingData->convRunInfo.woDim;
+        this->batchBlockNums = convTilingData->groupDim * convTilingData->nDim * convTilingData->hoDim *
+                               convTilingData->woDim;
         if constexpr (A_FORMAT == ConvFormat::NCHW) {
-            this->groupBlockNums = convTilingData->convRunInfo.nDim * convTilingData->convRunInfo.hoDim * convTilingData->convRunInfo.woDim;
-            this->nBlockNums = convTilingData->convRunInfo.hoDim * convTilingData->convRunInfo.woDim;
-            this->hoBlockNums = convTilingData->convRunInfo.woDim;
+            this->groupBlockNums = convTilingData->nDim * convTilingData->hoDim * convTilingData->woDim;
+            this->nBlockNums = convTilingData->hoDim * convTilingData->woDim;
+            this->hoBlockNums = convTilingData->woDim;
             this->woBlockNums = 1;
         } else {
-            this->hoBlockNums = convTilingData->convRunInfo.woDim * convTilingData->convRunInfo.groupDim * convTilingData->convRunInfo.nDim;
-            this->woBlockNums = convTilingData->convRunInfo.groupDim * convTilingData->convRunInfo.nDim;
-            this->groupBlockNums = convTilingData->convRunInfo.nDim;
+            this->hoBlockNums = convTilingData->woDim * convTilingData->groupDim * convTilingData->nDim;
+            this->woBlockNums = convTilingData->groupDim * convTilingData->nDim;
+            this->groupBlockNums = convTilingData->nDim;
             this->nBlockNums = 1;
         }
     }
@@ -202,14 +202,14 @@ __aicore__ inline bool GroupConv2d<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYP
     InitSingleCoreDataOriGroup()
 {
     DimDataToFill groupToFill(singleGroups, groupIdxStart, isGroupDimTail);
-    bool isRealDim = convCommon.CalcDimData(this->groupBlockNums, convTilingData->convRunInfo.groupDim,
-                                            convTilingData->convRunInfo.groups, convTilingData->convRunInfo.groups, groupToFill);
+    bool isRealDim = convCommon.CalcDimData(this->groupBlockNums, convTilingData->groupDim,
+                                            convTilingData->groups, convTilingData->groups, groupToFill);
     if (unlikely(!isRealDim)) {
         return false;
     }
 
     DimDataToFill nToFill(this->singleCoreN, this->nIdxStart, this->isNDimTail);
-    isRealDim = convCommon.CalcNDimDataAlign(this->nBlockNums, convTilingData->convRunInfo.nDim, coPerGroup, nToFill);
+    isRealDim = convCommon.CalcNDimDataAlign(this->nBlockNums, convTilingData->nDim, coPerGroup, nToFill);
     if (unlikely(!isRealDim)) {
         return false;
     }
@@ -222,15 +222,15 @@ __aicore__ inline bool GroupConv2d<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYP
     InitSingleCoreDataOptGroup()
 {
     DimDataToFill groupToFill(singleGroupOpt, groupIdxStart, isGroupDimTail);
-    bool isRealDim = convCommon.CalcDimData(this->groupBlockNums, convTilingData->convRunInfo.groupDim,
-                                            convTilingData->convRunInfo.groupOpt, convTilingData->convRunInfo.groupOpt, groupToFill);
+    bool isRealDim = convCommon.CalcDimData(this->groupBlockNums, convTilingData->groupDim,
+                                            convTilingData->groupOpt, convTilingData->groupOpt, groupToFill);
     if (unlikely(!isRealDim)) {
         return false;
     }
 
     DimDataToFill nToFill(singleCoOpt, this->nIdxStart, this->isNDimTail);
-    isRealDim = convCommon.CalcNDimDataAlign(this->nBlockNums, convTilingData->convRunInfo.nDim,
-                                             convTilingData->convRunInfo.coutOpt, nToFill);
+    isRealDim = convCommon.CalcNDimDataAlign(this->nBlockNums, convTilingData->nDim,
+                                             convTilingData->coutOpt, nToFill);
     if (unlikely(!isRealDim)) {
         return false;
     }

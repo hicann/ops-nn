@@ -51,28 +51,28 @@ template <class Intf>
 __aicore__ inline void CalcGroupOptParamForMMode(Intf *self)
 {
     if (((self->ctx.groupOptIter + 1 == self->ctx.singleGroupOpt - 1 && self->ctx.groupOptIter != 0) ||
-        self->ctx.singleGroupOpt == 1) && self->ctx.updateEnlarge != self->ctx.convTilingData->convApiTiling.enlarge) {
+        self->ctx.singleGroupOpt == 1) && self->ctx.updateEnlarge != self->ctx.convTilingData->enlarge) {
         self->ctx.singleGroups = self->ctx.updateEnlarge;
-        self->ctx.singleGroups = self->ctx.singleGroups == 0 ? self->ctx.convTilingData->convApiTiling.enlarge : self->ctx.singleGroups;
+        self->ctx.singleGroups = self->ctx.singleGroups == 0 ? self->ctx.convTilingData->enlarge : self->ctx.singleGroups;
     }
 
-    uint64_t enlargeTail = self->ctx.singleGroups % self->ctx.convTilingData->convApiTiling.enlarge;
-    enlargeTail = enlargeTail == 0 ? self->ctx.convTilingData->convApiTiling.enlarge : enlargeTail;
-    if (enlargeTail != self->ctx.convTilingData->convApiTiling.enlarge) {
-        self->ctx.singleCoreCi = enlargeTail * (self->ctx.convTilingData->convApiTiling.orgCi / self->ctx.convTilingData->convApiTiling.groups);
+    uint64_t enlargeTail = self->ctx.singleGroups % self->ctx.convTilingData->enlarge;
+    enlargeTail = enlargeTail == 0 ? self->ctx.convTilingData->enlarge : enlargeTail;
+    if (enlargeTail != self->ctx.convTilingData->enlarge) {
+        self->ctx.singleCoreCi = enlargeTail * (self->ctx.convTilingData->orgCi / self->ctx.convTilingData->groups);
         if (self->ctx.groupOptIter == self->ctx.singleGroupOpt - 1) {
             self->ctx.singleCoreCo = self->ctx.updateSingleCoOpt;
 
-            uint64_t totalKAlignK0 = AlignB(self->ctx.singleCoreCi, Intf::k0) * self->ctx.convTilingData->convApiTiling.kernelHxkernelW;
-            self->ctx.ddr2l0LoopK = CeilDiv(totalKAlignK0, self->ctx.convTilingData->convApiTiling.kL0);
+            uint64_t totalKAlignK0 = AlignB(self->ctx.singleCoreCi, Intf::k0) * self->ctx.convTilingData->kernelHxkernelW;
+            self->ctx.ddr2l0LoopK = CeilDiv(totalKAlignK0, self->ctx.convTilingData->kL0);
             self->ctx.maxKL0Iter = self->ctx.ddr2l0LoopK - 1;
-            self->ctx.kL0Tail = totalKAlignK0 % self->ctx.convTilingData->convApiTiling.kL0;
+            self->ctx.kL0Tail = totalKAlignK0 % self->ctx.convTilingData->kL0;
             if constexpr (Intf::k0 != Intf::k0FmapTail) {
                 self->ctx.kAL0Tail = AlignB(self->ctx.singleCoreCi, Intf::k0FmapTail) *
-                    self->ctx.convTilingData->convApiTiling.kernelHxkernelW % self->ctx.convTilingData->convApiTiling.kL0;
-                self->ctx.kAL0Tail = self->ctx.kAL0Tail == 0 ? self->ctx.convTilingData->convApiTiling.kL0 : self->ctx.kAL0Tail;
+                    self->ctx.convTilingData->kernelHxkernelW % self->ctx.convTilingData->kL0;
+                self->ctx.kAL0Tail = self->ctx.kAL0Tail == 0 ? self->ctx.convTilingData->kL0 : self->ctx.kAL0Tail;
             }
-            self->ctx.kL0Tail = self->ctx.kL0Tail == 0 ? self->ctx.convTilingData->convApiTiling.kL0 : self->ctx.kL0Tail;
+            self->ctx.kL0Tail = self->ctx.kL0Tail == 0 ? self->ctx.convTilingData->kL0 : self->ctx.kL0Tail;
             
             InitCoDirectionValue<Intf>(self);
         }
@@ -114,18 +114,18 @@ __aicore__ inline void FirstIterateImplMMode(Intf *self)
     CalcCoDirectionVar<Intf>(self);
 
     if constexpr (Intf::groupOptPreloadFlag) {
-        if (self->ctx.singleGroupOpt == 1 && self->ctx.updateEnlarge != self->ctx.convTilingData->convApiTiling.enlarge) {
+        if (self->ctx.singleGroupOpt == 1 && self->ctx.updateEnlarge != self->ctx.convTilingData->enlarge) {
             self->ctx.singleGroups = self->ctx.updateEnlarge;
             self->ctx.singleGroups = self->ctx.singleGroups == 0 ?
-                self->ctx.convTilingData->convApiTiling.enlarge : self->ctx.singleGroups;
+                self->ctx.convTilingData->enlarge : self->ctx.singleGroups;
             CalcGroupOptParamForMMode<Intf>(self);
         }
         LoadAL1BaseModule<Intf>(self);
         self->ctx.loadAL1Flag = true;
-        if (self->ctx.singleGroupOpt == 2 && self->ctx.updateEnlarge != self->ctx.convTilingData->convApiTiling.enlarge) {
+        if (self->ctx.singleGroupOpt == 2 && self->ctx.updateEnlarge != self->ctx.convTilingData->enlarge) {
             self->ctx.singleGroups = self->ctx.updateEnlarge;
             self->ctx.singleGroups = self->ctx.singleGroups == 0 ?
-                self->ctx.convTilingData->convApiTiling.enlarge : self->ctx.singleGroups;
+                self->ctx.convTilingData->enlarge : self->ctx.singleGroups;
             CalcGroupOptParamForMMode<Intf>(self);
         }
     } else if constexpr (Intf::isMPreLoad) {
@@ -246,7 +246,7 @@ __aicore__ inline bool IterateMFirstMMode(Intf *self)
         if (self->ctx.groupOptIter < self->ctx.singleGroupOpt - 1) {
             return true;
         } else if (self->ctx.groupOptIter == self->ctx.singleGroupOpt - 1) {
-            if (self->ctx.updateSingleCoOpt == 0 && self->ctx.updateEnlarge != self->ctx.convTilingData->convApiTiling.enlarge) {
+            if (self->ctx.updateSingleCoOpt == 0 && self->ctx.updateEnlarge != self->ctx.convTilingData->enlarge) {
                 return false;
             }
             return true;

@@ -39,7 +39,7 @@ struct Conv2DCaseInputParam {
     uint32_t groups;
 };
 
-uint64_t CalcUsdL1Size(optiling::TConv2DTiling &tilingData,
+uint64_t CalcUsdL1Size(optiling::Conv2DTilingData &tilingData,
                        Conv2dTiling &tiling,
                        int8_t pbAL1,
                        int8_t pbBL1)
@@ -96,7 +96,7 @@ uint64_t CalcUsdL1Size(optiling::TConv2DTiling &tilingData,
     return curl1Size;
 }
 
-uint64_t CalcUsdL0ASize(optiling::TConv2DTiling &tilingData,
+uint64_t CalcUsdL0ASize(optiling::Conv2DTilingData &tilingData,
                         Conv2dTiling &tiling,
                         int8_t pbAL0)
 {
@@ -111,7 +111,7 @@ uint64_t CalcUsdL0ASize(optiling::TConv2DTiling &tilingData,
     return curl0aSize;
 }
 
-uint64_t CalcUsdL0BSize(optiling::TConv2DTiling &tilingData,
+uint64_t CalcUsdL0BSize(optiling::Conv2DTilingData &tilingData,
                         Conv2dTiling &tiling,
                         int8_t pbBL0)
 {
@@ -119,7 +119,7 @@ uint64_t CalcUsdL0BSize(optiling::TConv2DTiling &tilingData,
     return tilingData.get_nL0() * tilingData.get_kL0() * (pbBL0 + 1) * weightDtyeSize;
 }
 
-uint64_t CalcUsdL0CSize(optiling::TConv2DTiling &tilingData,
+uint64_t CalcUsdL0CSize(optiling::Conv2DTilingData &tilingData,
                         Conv2dTiling &tiling,
                         int8_t pbCL0)
 {
@@ -133,7 +133,7 @@ uint64_t CalcUsdL0CSize(optiling::TConv2DTiling &tilingData,
     return curl0cSize;
 }
 
-void CheckValidCommon(optiling::TConv2DTiling &tilingData,
+void CheckValidCommon(optiling::Conv2DTilingData &tilingData,
                       Conv2dTiling &tiling,
                       uint32_t k0)
 {
@@ -164,7 +164,7 @@ void CheckValidCommon(optiling::TConv2DTiling &tilingData,
     EXPECT_LE(CalcUsdL0CSize(tilingData, tiling, pbCL0), MEM_SIZE_256K);
 }
 
-void CheckValidMmode(optiling::TConv2DTiling &tilingData,
+void CheckValidMmode(optiling::Conv2DTilingData &tilingData,
                      Conv2dTiling &tiling,
                      uint32_t k0)
 {
@@ -204,7 +204,7 @@ void CheckValidMmode(optiling::TConv2DTiling &tilingData,
     }
 }
 
-void CheckValidC04(optiling::TConv2DTiling &tilingData,
+void CheckValidC04(optiling::Conv2DTilingData &tilingData,
                    uint32_t k0)
 {
     EXPECT_EQ(tilingData.get_kAL1(),
@@ -216,7 +216,7 @@ void CheckValidC04(optiling::TConv2DTiling &tilingData,
     }
 }
 
-void CheckValidHWmodePartOne(optiling::TConv2DTiling &tilingData, uint32_t k0)
+void CheckValidHWmodePartOne(optiling::Conv2DTilingData &tilingData, uint32_t k0)
 {
     // K direction check
     EXPECT_GE(tilingData.get_kL0(), k0);
@@ -264,7 +264,7 @@ void CheckValidHWmodePartOne(optiling::TConv2DTiling &tilingData, uint32_t k0)
     EXPECT_EQ(hoL1Check, 1);
 }
 
-void CheckValidHWmode(optiling::TConv2DTiling &tilingData,
+void CheckValidHWmode(optiling::Conv2DTilingData &tilingData,
                       Conv2dTiling &tiling,
                       uint32_t k0)
 {
@@ -296,7 +296,7 @@ void CheckValidHWmode(optiling::TConv2DTiling &tilingData,
     }
 }
 
-void CheckValidTilingData(optiling::TConv2DTiling &tilingData,
+void CheckValidTilingData(optiling::Conv2DTilingData &tilingData,
                           Conv2dTiling &tiling)
 {
     uint32_t weightDtyeSize = DTYPE_SIZE_TAB.at(tiling.descInfo.weightType.dtype);
@@ -432,7 +432,7 @@ void Conv2DCase(Conv2DCaseInputParam inputParams)
     testTiling.SetStride(strideH, strideW);
     testTiling.SetC04Flag(isC04Flag);
     testTiling.SetGroups(inputParams.groups);
-    optiling::TConv2DTiling tilingData;
+    optiling::Conv2DTilingData tilingData;
     int64_t ret = testTiling.GetTiling(tilingData);
     EXPECT_EQ(ret, 0);
 

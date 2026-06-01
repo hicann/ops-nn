@@ -33,14 +33,14 @@ public:
     {
         self_ = self;
         if constexpr (Intf::formatFmap == ConvFormat::NCHW) {
-            srcCiStride = self_->ctx.convTilingData->convApiTiling.orgHixWi * Intf::k0;
+            srcCiStride = self_->ctx.convTilingData->orgHixWi * Intf::k0;
         } else if constexpr (Intf::formatFmap == ConvFormat::NHWC) {
             srcCiStride = Intf::k0;
         }
         srcKhStride =
-            self_->ctx.convTilingData->convApiTiling.khUb * self_->ctx.convTilingData->convApiTiling.dilationH;
+            self_->ctx.convTilingData->khUb * self_->ctx.convTilingData->dilationH;
         srcKwStride =
-            self_->ctx.convTilingData->convApiTiling.kwUb * self_->ctx.convTilingData->convApiTiling.dilationW;
+            self_->ctx.convTilingData->kwUb * self_->ctx.convTilingData->dilationW;
     }
 
     __aicore__ inline void LoadGM2UB()
@@ -49,28 +49,28 @@ public:
         self_->ctx.khAL1Iter = self_->ctx.kAL1Iter / self_->ctx.ddr2L1LoopKw % self_->ctx.ddr2L1LoopKh;
         self_->ctx.cinAL1Iter = (self_->ctx.kAL1Iter / (self_->ctx.ddr2L1LoopKw * self_->ctx.ddr2L1LoopKh)) %
                                 self_->ctx.cinAL1LoopTimes;
-        srckhAL1IterOffset = self_->ctx.khAL1Iter * self_->ctx.convTilingData->convApiTiling.dilationH *
-            self_->ctx.convTilingData->convApiTiling.khL1 + self_->ctx.vecKhIter * srcKhStride;
-        srckwAL1IterOffset = self_->ctx.kwAL1Iter * self_->ctx.convTilingData->convApiTiling.dilationW *
-            self_->ctx.convTilingData->convApiTiling.kwL1 + self_->ctx.vecKwIter * srcKwStride;
+        srckhAL1IterOffset = self_->ctx.khAL1Iter * self_->ctx.convTilingData->dilationH *
+            self_->ctx.convTilingData->khL1 + self_->ctx.vecKhIter * srcKhStride;
+        srckwAL1IterOffset = self_->ctx.kwAL1Iter * self_->ctx.convTilingData->dilationW *
+            self_->ctx.convTilingData->kwL1 + self_->ctx.vecKwIter * srcKwStride;
         if (unlikely(self_->ctx.isFirstIterate)) {
             if constexpr (Intf::formatFmap == ConvFormat::NCHW) {
                 copyParams.loopInfo.loopSrcStride[NDDMA_LOOP0_INDEX] = 
-                    self_->ctx.convTilingData->convApiTiling.orgHixWi;
+                    self_->ctx.convTilingData->orgHixWi;
                 copyParams.loopInfo.loopSrcStride[NDDMA_LOOP1_INDEX] = 
-                    self_->ctx.convTilingData->convApiTiling.dilationW;
+                    self_->ctx.convTilingData->dilationW;
                 copyParams.loopInfo.loopSrcStride[NDDMA_LOOP2_INDEX] = 
-                    self_->ctx.convTilingData->convApiTiling.dilationH *
-                    self_->ctx.convTilingData->convApiTiling.orgWi;
+                    self_->ctx.convTilingData->dilationH *
+                    self_->ctx.convTilingData->orgWi;
             } else {
                 copyParams.loopInfo.loopSrcStride[NDDMA_LOOP0_INDEX] = 1;
                 copyParams.loopInfo.loopSrcStride[NDDMA_LOOP1_INDEX] =
-                    self_->ctx.convTilingData->convApiTiling.dilationW *
-                    self_->ctx.convTilingData->convApiTiling.orgCi;
+                    self_->ctx.convTilingData->dilationW *
+                    self_->ctx.convTilingData->orgCi;
                 copyParams.loopInfo.loopSrcStride[NDDMA_LOOP2_INDEX] =
-                    self_->ctx.convTilingData->convApiTiling.dilationH *
-                    self_->ctx.convTilingData->convApiTiling.orgWi *
-                    self_->ctx.convTilingData->convApiTiling.orgCi;
+                    self_->ctx.convTilingData->dilationH *
+                    self_->ctx.convTilingData->orgWi *
+                    self_->ctx.convTilingData->orgCi;
             }
             copyParams.loopInfo.loopDstStride[NDDMA_LOOP0_INDEX] = 1;
         }
@@ -90,9 +90,9 @@ public:
         uint32_t baseOffset = self_->ctx.batchIter * self_->ctx.fmapOneBatchSize +
                               self_->ctx.vecCi1Iter * srcCiStride;
         if constexpr (Intf::formatFmap == ConvFormat::NCHW) {
-            baseOffset += self_->ctx.cinAL1Iter * self_->ctx.convTilingData->convApiTiling.cinOffsetBlockInGM;
+            baseOffset += self_->ctx.cinAL1Iter * self_->ctx.convTilingData->cinOffsetBlockInGM;
             if (self_->ctx.vecId == 1) {
-                baseOffset += self_->ctx.currentVec0Ci * self_->ctx.convTilingData->convApiTiling.orgHixWi;
+                baseOffset += self_->ctx.currentVec0Ci * self_->ctx.convTilingData->orgHixWi;
             }
         } else {
             baseOffset += self_->ctx.cinAL1Iter * self_->ctx.cinAL1;
@@ -101,13 +101,13 @@ public:
             }
         }
  
-        hoL1Idx = self_->ctx.hoAL1Iter * self_->ctx.convTilingData->convApiTiling.hoL1 *
-            self_->ctx.convTilingData->convApiTiling.strideH;
-        woL1Idx = self_->ctx.woAL1Iter * self_->ctx.convTilingData->convApiTiling.woL1 *
-            self_->ctx.convTilingData->convApiTiling.strideW;
+        hoL1Idx = self_->ctx.hoAL1Iter * self_->ctx.convTilingData->hoL1 *
+            self_->ctx.convTilingData->strideH;
+        woL1Idx = self_->ctx.woAL1Iter * self_->ctx.convTilingData->woL1 *
+            self_->ctx.convTilingData->strideW;
         uint32_t dstHoStride = AlignB(self_->ctx.currentWoL1, BLOCK_L0_M) * Intf::k0;
         uint32_t dstKwStride = self_->ctx.currentHoL1xWoL1Align * Intf::k0;
-        uint32_t dstKhStride = dstKwStride * self_->ctx.convTilingData->convApiTiling.kwUb;
+        uint32_t dstKhStride = dstKwStride * self_->ctx.convTilingData->kwUb;
         copyParams.loopInfo.loopDstStride[NDDMA_LOOP1_INDEX] = dstKwStride;
         copyParams.loopInfo.loopDstStride[NDDMA_LOOP2_INDEX] = dstKhStride;
         uint32_t srcOffset = 0;
@@ -118,17 +118,17 @@ public:
                     continue;
                 }
                 copyParams.loopInfo.loopSize[NDDMA_LOOP1_INDEX] =
-                    self_->ctx.convTilingData->convApiTiling.kwUb - kwUbOnPadLeft - kwUbOnPadRight;
+                    self_->ctx.convTilingData->kwUb - kwUbOnPadLeft - kwUbOnPadRight;
                 copyParams.loopInfo.loopSize[NDDMA_LOOP2_INDEX] =
-                    self_->ctx.convTilingData->convApiTiling.khUb - khUbOnPadTop - khUbOnPadBottom;
+                    self_->ctx.convTilingData->khUb - khUbOnPadTop - khUbOnPadBottom;
                 if constexpr (Intf::formatFmap == ConvFormat::NCHW) {
                     srcOffset = baseOffset +
-                        hIdxWithPadStart * self_->ctx.convTilingData->convApiTiling.orgWi + wIdxWithPadStart;
+                        hIdxWithPadStart * self_->ctx.convTilingData->orgWi + wIdxWithPadStart;
                 } else {
                     srcOffset = baseOffset +
-                        hIdxWithPadStart * self_->ctx.convTilingData->convApiTiling.orgWi *
-                        self_->ctx.convTilingData->convApiTiling.orgCi +
-                        wIdxWithPadStart * self_->ctx.convTilingData->convApiTiling.orgCi;
+                        hIdxWithPadStart * self_->ctx.convTilingData->orgWi *
+                        self_->ctx.convTilingData->orgCi +
+                        wIdxWithPadStart * self_->ctx.convTilingData->orgCi;
                 }
                 uint32_t dstOffset = hoIdx * dstHoStride + woIdx * Intf::k0;
                 if (unlikely(khUbOnPadTop != 0)) {
@@ -151,32 +151,32 @@ private:
 
     __aicore__ inline bool IsOnPadAndUpdateKernelSize(uint16_t hoIdx, uint16_t woIdx)
     {
-        hIdxWithPadStart = hoL1Idx + hoIdx * self_->ctx.convTilingData->convApiTiling.strideH + srckhAL1IterOffset;
-        wIdxWithPadStart = woL1Idx + woIdx * self_->ctx.convTilingData->convApiTiling.strideW + srckwAL1IterOffset;
+        hIdxWithPadStart = hoL1Idx + hoIdx * self_->ctx.convTilingData->strideH + srckhAL1IterOffset;
+        wIdxWithPadStart = woL1Idx + woIdx * self_->ctx.convTilingData->strideW + srckwAL1IterOffset;
 
         hIdxWithPadStartOrg = hIdxWithPadStart + self_->ctx.hiStartPos;
         wIdxWithPadStartOrg = wIdxWithPadStart + self_->ctx.wiStartPos;
         hIdxWithPadStart = self_->ctx.hiStartPos < 0 ? hIdxWithPadStart + self_->ctx.hiStartPos : hIdxWithPadStart;
         wIdxWithPadStart = self_->ctx.wiStartPos < 0 ? wIdxWithPadStart + self_->ctx.wiStartPos : wIdxWithPadStart;
-        hIdxWithPadEndOrg = hIdxWithPadStartOrg + (self_->ctx.convTilingData->convApiTiling.khUb - 1) *
-            self_->ctx.convTilingData->convApiTiling.dilationH;
-        wIdxWithPadEndOrg = wIdxWithPadStartOrg + (self_->ctx.convTilingData->convApiTiling.kwUb - 1) *
-            self_->ctx.convTilingData->convApiTiling.dilationW;
+        hIdxWithPadEndOrg = hIdxWithPadStartOrg + (self_->ctx.convTilingData->khUb - 1) *
+            self_->ctx.convTilingData->dilationH;
+        wIdxWithPadEndOrg = wIdxWithPadStartOrg + (self_->ctx.convTilingData->kwUb - 1) *
+            self_->ctx.convTilingData->dilationW;
 
         kwUbOnPadLeft = 0;
         kwUbOnPadRight = 0;
         khUbOnPadTop = 0;
         khUbOnPadBottom = 0;
         if (unlikely(wIdxWithPadEndOrg < 0 ||
-                     wIdxWithPadStartOrg >= static_cast<int64_t>(self_->ctx.convTilingData->convApiTiling.orgWi) ||
+                     wIdxWithPadStartOrg >= static_cast<int64_t>(self_->ctx.convTilingData->orgWi) ||
                      hIdxWithPadEndOrg < 0 ||
-                     hIdxWithPadStartOrg >= static_cast<int64_t>(self_->ctx.convTilingData->convApiTiling.orgHi))) {
+                     hIdxWithPadStartOrg >= static_cast<int64_t>(self_->ctx.convTilingData->orgHi))) {
             return true;
         }
         if (likely(hIdxWithPadStartOrg >= 0 &&
-                   hIdxWithPadEndOrg < static_cast<int64_t>(self_->ctx.convTilingData->convApiTiling.orgHi) &&
+                   hIdxWithPadEndOrg < static_cast<int64_t>(self_->ctx.convTilingData->orgHi) &&
                    wIdxWithPadStartOrg >= 0 &&
-                   wIdxWithPadEndOrg < static_cast<int64_t>(self_->ctx.convTilingData->convApiTiling.orgWi))) {
+                   wIdxWithPadEndOrg < static_cast<int64_t>(self_->ctx.convTilingData->orgWi))) {
             return false;
         }
         UpdateRealKernelSize();
@@ -188,44 +188,44 @@ private:
     {
         // update real khUbSize in fmap.
         if (hIdxWithPadStartOrg < 0 &&
-            hIdxWithPadEndOrg < static_cast<int64_t>(self_->ctx.convTilingData->convApiTiling.orgHi)) {
-            khUbOnPadTop = (-hIdxWithPadStartOrg - 1) / self_->ctx.convTilingData->convApiTiling.dilationH + 1;
-            hIdxWithPadStart += khUbOnPadTop * self_->ctx.convTilingData->convApiTiling.dilationH;
+            hIdxWithPadEndOrg < static_cast<int64_t>(self_->ctx.convTilingData->orgHi)) {
+            khUbOnPadTop = (-hIdxWithPadStartOrg - 1) / self_->ctx.convTilingData->dilationH + 1;
+            hIdxWithPadStart += khUbOnPadTop * self_->ctx.convTilingData->dilationH;
         } else if (hIdxWithPadStartOrg >= 0 &&
-                   hIdxWithPadEndOrg >= static_cast<int64_t>(self_->ctx.convTilingData->convApiTiling.orgHi)) {
+                   hIdxWithPadEndOrg >= static_cast<int64_t>(self_->ctx.convTilingData->orgHi)) {
             uint32_t khUbOnFmapCountTemp = 
-                (static_cast<int64_t>(self_->ctx.convTilingData->convApiTiling.orgHi) - 1 - hIdxWithPadStartOrg) /
-                self_->ctx.convTilingData->convApiTiling.dilationH + 1;
-            khUbOnPadBottom = self_->ctx.convTilingData->convApiTiling.khUb - khUbOnFmapCountTemp;
+                (static_cast<int64_t>(self_->ctx.convTilingData->orgHi) - 1 - hIdxWithPadStartOrg) /
+                self_->ctx.convTilingData->dilationH + 1;
+            khUbOnPadBottom = self_->ctx.convTilingData->khUb - khUbOnFmapCountTemp;
         } else if (hIdxWithPadStartOrg < 0 &&
-                   hIdxWithPadEndOrg >= static_cast<int64_t>(self_->ctx.convTilingData->convApiTiling.orgHi)) {
-            khUbOnPadTop = (-hIdxWithPadStartOrg - 1) / self_->ctx.convTilingData->convApiTiling.dilationH + 1;
-            hIdxWithPadStart += khUbOnPadTop * self_->ctx.convTilingData->convApiTiling.dilationH;
+                   hIdxWithPadEndOrg >= static_cast<int64_t>(self_->ctx.convTilingData->orgHi)) {
+            khUbOnPadTop = (-hIdxWithPadStartOrg - 1) / self_->ctx.convTilingData->dilationH + 1;
+            hIdxWithPadStart += khUbOnPadTop * self_->ctx.convTilingData->dilationH;
             uint32_t khUbOnPadTopAndFmapCountTemp =
-                (static_cast<int64_t>(self_->ctx.convTilingData->convApiTiling.orgHi) - 1 - hIdxWithPadStartOrg) /
-                self_->ctx.convTilingData->convApiTiling.dilationH + 1;
-            khUbOnPadBottom = self_->ctx.convTilingData->convApiTiling.khUb - khUbOnPadTopAndFmapCountTemp;
+                (static_cast<int64_t>(self_->ctx.convTilingData->orgHi) - 1 - hIdxWithPadStartOrg) /
+                self_->ctx.convTilingData->dilationH + 1;
+            khUbOnPadBottom = self_->ctx.convTilingData->khUb - khUbOnPadTopAndFmapCountTemp;
         }
 
         // update real kwUbSize in fmap.
         if (wIdxWithPadStartOrg < 0 &&
-            wIdxWithPadEndOrg < static_cast<int64_t>(self_->ctx.convTilingData->convApiTiling.orgWi)) {
-            kwUbOnPadLeft = (-wIdxWithPadStartOrg - 1) / self_->ctx.convTilingData->convApiTiling.dilationW + 1;
-            wIdxWithPadStart += kwUbOnPadLeft * self_->ctx.convTilingData->convApiTiling.dilationW;
+            wIdxWithPadEndOrg < static_cast<int64_t>(self_->ctx.convTilingData->orgWi)) {
+            kwUbOnPadLeft = (-wIdxWithPadStartOrg - 1) / self_->ctx.convTilingData->dilationW + 1;
+            wIdxWithPadStart += kwUbOnPadLeft * self_->ctx.convTilingData->dilationW;
         } else if (wIdxWithPadStartOrg >= 0 &&
-                   wIdxWithPadEndOrg >= static_cast<int64_t>(self_->ctx.convTilingData->convApiTiling.orgWi)) {
+                   wIdxWithPadEndOrg >= static_cast<int64_t>(self_->ctx.convTilingData->orgWi)) {
             uint32_t kwUbOnFmapCountTemp =
-                (static_cast<int64_t>(self_->ctx.convTilingData->convApiTiling.orgWi) - 1 - wIdxWithPadStartOrg) /
-                self_->ctx.convTilingData->convApiTiling.dilationW + 1;
-            kwUbOnPadRight = self_->ctx.convTilingData->convApiTiling.kwUb - kwUbOnFmapCountTemp;
+                (static_cast<int64_t>(self_->ctx.convTilingData->orgWi) - 1 - wIdxWithPadStartOrg) /
+                self_->ctx.convTilingData->dilationW + 1;
+            kwUbOnPadRight = self_->ctx.convTilingData->kwUb - kwUbOnFmapCountTemp;
         } else if (wIdxWithPadStartOrg < 0 &&
-                   wIdxWithPadEndOrg >= static_cast<int64_t>(self_->ctx.convTilingData->convApiTiling.orgWi)) {
-            kwUbOnPadLeft = (-wIdxWithPadStartOrg - 1) / self_->ctx.convTilingData->convApiTiling.dilationW + 1;
-            wIdxWithPadStart += kwUbOnPadLeft * self_->ctx.convTilingData->convApiTiling.dilationW;
+                   wIdxWithPadEndOrg >= static_cast<int64_t>(self_->ctx.convTilingData->orgWi)) {
+            kwUbOnPadLeft = (-wIdxWithPadStartOrg - 1) / self_->ctx.convTilingData->dilationW + 1;
+            wIdxWithPadStart += kwUbOnPadLeft * self_->ctx.convTilingData->dilationW;
             uint32_t kwUbOnPadLeftAndFmapCountTemp =
-                (static_cast<int64_t>(self_->ctx.convTilingData->convApiTiling.orgWi) - 1 - wIdxWithPadStartOrg) /
-                self_->ctx.convTilingData->convApiTiling.dilationW + 1;
-            kwUbOnPadRight = self_->ctx.convTilingData->convApiTiling.kwUb - kwUbOnPadLeftAndFmapCountTemp;
+                (static_cast<int64_t>(self_->ctx.convTilingData->orgWi) - 1 - wIdxWithPadStartOrg) /
+                self_->ctx.convTilingData->dilationW + 1;
+            kwUbOnPadRight = self_->ctx.convTilingData->kwUb - kwUbOnPadLeftAndFmapCountTemp;
         }        
     }
 
@@ -269,21 +269,21 @@ public:
         self_ = self;
 
         dstStrideBase = 
-            (self_->ctx.convTilingData->convApiTiling.kwL1 - self_->ctx.convTilingData->convApiTiling.kwUb) * Intf::k0;
+            (self_->ctx.convTilingData->kwL1 - self_->ctx.convTilingData->kwUb) * Intf::k0;
         ci1StrideBase = 
-            self_->ctx.convTilingData->convApiTiling.khL1 * self_->ctx.convTilingData->convApiTiling.kwL1 * Intf::k0;
+            self_->ctx.convTilingData->khL1 * self_->ctx.convTilingData->kwL1 * Intf::k0;
         khStrideBase = 
-            self_->ctx.convTilingData->convApiTiling.khUb * self_->ctx.convTilingData->convApiTiling.kwL1 * Intf::k0;
-        kwStrideBase = self_->ctx.convTilingData->convApiTiling.kwUb * Intf::k0;
+            self_->ctx.convTilingData->khUb * self_->ctx.convTilingData->kwL1 * Intf::k0;
+        kwStrideBase = self_->ctx.convTilingData->kwUb * Intf::k0;
     }
 
     __aicore__ inline void LoadUB2L1()
     {
         if (unlikely(self_->ctx.isFirstIterate)) {
-            copyParams.blockCount = self_->ctx.convTilingData->convApiTiling.khUb;
+            copyParams.blockCount = self_->ctx.convTilingData->khUb;
             copyParams.srcStride = 0;
         }
-        copyParams.blockLen = self_->ctx.currentHoL1xWoL1Align * self_->ctx.convTilingData->convApiTiling.kwUb;
+        copyParams.blockLen = self_->ctx.currentHoL1xWoL1Align * self_->ctx.convTilingData->kwUb;
         copyParams.dstStride = self_->ctx.currentHoL1xWoL1Align * dstStrideBase;
 
         uint64_t dstOffset = self_->ctx.vecCi1Iter * self_->ctx.currentHoL1xWoL1Align * ci1StrideBase +

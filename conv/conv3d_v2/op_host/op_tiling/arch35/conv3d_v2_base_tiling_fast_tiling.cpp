@@ -76,41 +76,41 @@ ge::graphStatus Conv3dBaseTilingV2::CheckL1SizeLimits()
 
 ge::graphStatus Conv3dBaseTilingV2::GetConv3dOpsTiling()
 {
-    tilingData_.convRunInfo.din = static_cast<uint32_t>(shapeInfo_.di);
-    tilingData_.convRunInfo.hin = static_cast<uint64_t>(shapeInfo_.hi);
-    tilingData_.convRunInfo.win = static_cast<uint64_t>(shapeInfo_.wi);
-    tilingData_.convRunInfo.dout = static_cast<uint32_t>(shapeInfo_.dout);
-    tilingData_.convRunInfo.hout = static_cast<uint64_t>(shapeInfo_.ho);
-    tilingData_.convRunInfo.wout = static_cast<uint64_t>(shapeInfo_.wo);
-    tilingData_.convRunInfo.batch = static_cast<uint32_t>(shapeInfo_.batch);
-    tilingData_.convRunInfo.cin = static_cast<uint32_t>(shapeInfo_.ci);
-    tilingData_.convRunInfo.cout = static_cast<uint32_t>(shapeInfo_.co);
-    tilingData_.convRunInfo.kd = static_cast<uint32_t>(shapeInfo_.kd);
-    tilingData_.convRunInfo.kh = static_cast<uint32_t>(shapeInfo_.kh);
-    tilingData_.convRunInfo.kw = static_cast<uint32_t>(shapeInfo_.kw);
-    tilingData_.convRunInfo.batchDim = static_cast<uint32_t>(numBlocksRes.batchDim);
-    tilingData_.convRunInfo.nDim = static_cast<uint32_t>(numBlocksRes.nDim);
-    tilingData_.convRunInfo.doDim = static_cast<uint32_t>(numBlocksRes.doDim);
-    tilingData_.convRunInfo.groupDim = static_cast<uint32_t>(numBlocksRes.groupDim);
-    tilingData_.convRunInfo.strideH = static_cast<uint32_t>(attrInfo_.strideH);
-    tilingData_.convRunInfo.strideD = static_cast<uint32_t>(attrInfo_.strideD);
-    tilingData_.convRunInfo.dilationH = static_cast<uint32_t>(attrInfo_.dilationH);
-    tilingData_.convRunInfo.dilationD = static_cast<uint32_t>(attrInfo_.dilationD);
-    tilingData_.convRunInfo.padHead = static_cast<uint32_t>(attrInfo_.padHead);
-    tilingData_.convRunInfo.padTop = static_cast<uint32_t>(attrInfo_.padTop);
-    tilingData_.convRunInfo.hasBias = static_cast<uint8_t>(flagInfo_.hasBias);
-    tilingData_.convRunInfo.groups = static_cast<uint32_t>(attrInfo_.groups);
+    tilingData_.din = static_cast<uint32_t>(shapeInfo_.di);
+    tilingData_.hin = static_cast<uint64_t>(shapeInfo_.hi);
+    tilingData_.win = static_cast<uint64_t>(shapeInfo_.wi);
+    tilingData_.dout = static_cast<uint32_t>(shapeInfo_.dout);
+    tilingData_.hout = static_cast<uint64_t>(shapeInfo_.ho);
+    tilingData_.wout = static_cast<uint64_t>(shapeInfo_.wo);
+    tilingData_.batch = static_cast<uint32_t>(shapeInfo_.batch);
+    tilingData_.cin = static_cast<uint32_t>(shapeInfo_.ci);
+    tilingData_.cout = static_cast<uint32_t>(shapeInfo_.co);
+    tilingData_.kd = static_cast<uint32_t>(shapeInfo_.kd);
+    tilingData_.kh = static_cast<uint32_t>(shapeInfo_.kh);
+    tilingData_.kw = static_cast<uint32_t>(shapeInfo_.kw);
+    tilingData_.batchDim = static_cast<uint32_t>(numBlocksRes.batchDim);
+    tilingData_.nDim = static_cast<uint32_t>(numBlocksRes.nDim);
+    tilingData_.doDim = static_cast<uint32_t>(numBlocksRes.doDim);
+    tilingData_.groupDim = static_cast<uint32_t>(numBlocksRes.groupDim);
+    tilingData_.strideH = static_cast<uint32_t>(attrInfo_.strideH);
+    tilingData_.strideD = static_cast<uint32_t>(attrInfo_.strideD);
+    tilingData_.dilationH = static_cast<uint32_t>(attrInfo_.dilationH);
+    tilingData_.dilationD = static_cast<uint32_t>(attrInfo_.dilationD);
+    tilingData_.padHead = static_cast<uint32_t>(attrInfo_.padHead);
+    tilingData_.padTop = static_cast<uint32_t>(attrInfo_.padTop);
+    tilingData_.hasBias = static_cast<uint8_t>(flagInfo_.hasBias);
+    tilingData_.groups = static_cast<uint32_t>(attrInfo_.groups);
     if (flagInfo_.convGroupType == ConvGroupType::OPT_GROUP_CONV) {
-        tilingData_.convRunInfo.cinOpt = static_cast<uint32_t>(optGroupInfo_.cinOpt);
-        tilingData_.convRunInfo.coutOpt = static_cast<uint32_t>(optGroupInfo_.coutOpt);
-        tilingData_.convRunInfo.groupOpt = static_cast<uint32_t>(optGroupInfo_.groupOpt);
-        tilingData_.convRunInfo.enlarge = static_cast<uint32_t>(optGroupInfo_.enlarge);
+        tilingData_.cinOpt = static_cast<uint32_t>(optGroupInfo_.cinOpt);
+        tilingData_.coutOpt = static_cast<uint32_t>(optGroupInfo_.coutOpt);
+        tilingData_.groupOpt = static_cast<uint32_t>(optGroupInfo_.groupOpt);
+        tilingData_.enlarge = static_cast<uint32_t>(optGroupInfo_.enlarge);
     }
 
     if (flagInfo_.mSplitModeFlag) {
-        tilingData_.convRunInfo.hoDim = static_cast<uint32_t>(numBlocksRes.mDim);
+        tilingData_.hoDim = static_cast<uint32_t>(numBlocksRes.mDim);
     } else {
-        tilingData_.convRunInfo.hoDim = static_cast<uint32_t>(numBlocksRes.hoDim);
+        tilingData_.hoDim = static_cast<uint32_t>(numBlocksRes.hoDim);
     }
 
     return ge::GRAPH_SUCCESS;
@@ -183,7 +183,7 @@ ge::graphStatus Conv3dBaseTilingV2::GetConv3dApiTiling()
                                      dtypeMap[descInfo_.biasDtype]);
     }
 
-    if (conv3dApiTiling_.GetTiling(tilingData_.convApiTiling) == -1) {
+    if (conv3dApiTiling_.GetTiling(tilingData_) == -1) {
         OP_LOGE(context_->GetNodeName(), "%s AscendC: get api tiling wrong.", paramInfo_.nodeType.c_str());
         return ge::GRAPH_FAILED;
     }

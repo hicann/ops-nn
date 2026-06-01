@@ -114,7 +114,7 @@ struct PreFusionProcess {
         if constexpr (!Intf::preFusionFlag) {
             return;
         }
-        if ((self->ctx.convTilingData->convApiTiling.pBufferFlag & AL1_DB_IDX) >> AL1_DB_OFFSET) {
+        if ((self->ctx.convTilingData->pBufferFlag & AL1_DB_IDX) >> AL1_DB_OFFSET) {
             if (!self->ctx.al1PingPongFlag) {
                 eventIdMte3ToMte1 = self->ctx.eventIdMte3ToMte1Ping;
                 eventIdMte1ToMte3 = self->ctx.eventIdMte1ToMte3Ping;
@@ -122,7 +122,7 @@ struct PreFusionProcess {
                 eventIdMte3ToMte1 = self->ctx.eventIdMte3ToMte1Pong;
                 eventIdMte1ToMte3 = self->ctx.eventIdMte1ToMte3Pong;
             }
-            aL1Offset = self->ctx.al1PingPongFlag * self->ctx.convTilingData->convApiTiling.aL1SpaceSize;
+            aL1Offset = self->ctx.al1PingPongFlag * self->ctx.convTilingData->aL1SpaceSize;
         } else {
             eventIdMte3ToMte1 = self->ctx.eventIdMte3ToMte1Ping;
             eventIdMte1ToMte3 = self->ctx.eventIdMte1ToMte3Ping;
@@ -379,7 +379,7 @@ template <class Intf, uint32_t ImplType>
 __aicore__ void Iterate<Intf, ImplType>::ReduceKPreload(Intf *self, MmadParams &mmadParams)
 {
     // updateIterByFmapTag is true means fm update; false means weight update
-    bool updateIterByFmapTag = self->ctx.convTilingData->convApiTiling.kAL1 > self->ctx.convTilingData->convApiTiling.kBL1;
+    bool updateIterByFmapTag = self->ctx.convTilingData->kAL1 > self->ctx.convTilingData->kBL1;
     if (self->ctx.kAL1fullload && !self->ctx.kBL1fullload) {
         updateIterByFmapTag = false;
     } else if (!self->ctx.kAL1fullload && self->ctx.kBL1fullload) {
@@ -408,10 +408,10 @@ __aicore__ void Iterate<Intf, ImplType>::ReduceKPreload(Intf *self, MmadParams &
     // state
     TempIters tempIters;
 
-    uint64_t currentKL0 = self->ctx.convTilingData->convApiTiling.kL0;
+    uint64_t currentKL0 = self->ctx.convTilingData->kL0;
     uint64_t posK = 0;
     uint64_t KStartPosition = 0;
-    uint64_t kStep = self->ctx.convTilingData->convApiTiling.kStep;
+    uint64_t kStep = self->ctx.convTilingData->kStep;
     uint64_t multiKAL1 = self->ctx.multiKAL1;
     uint64_t multiKBL1 = self->ctx.multiKBL1;
 
@@ -470,7 +470,7 @@ template <class Intf, uint32_t ImplType>
 __aicore__ void Iterate<Intf, ImplType>::ReduceKFmapPreload(Intf *self, MmadParams &mmadParams)
 {
     // updateIterByFmapTag is true means fm update; false means weight update
-    bool updateIterByFmapTag = self->ctx.convTilingData->convApiTiling.kAL1 > self->ctx.convTilingData->convApiTiling.kBL1;
+    bool updateIterByFmapTag = self->ctx.convTilingData->kAL1 > self->ctx.convTilingData->kBL1;
     if (self->ctx.kAL1fullload && !self->ctx.kBL1fullload) {
         updateIterByFmapTag = false;
     } else if (!self->ctx.kAL1fullload && self->ctx.kBL1fullload) {
@@ -488,10 +488,10 @@ __aicore__ void Iterate<Intf, ImplType>::ReduceKFmapPreload(Intf *self, MmadPara
     // state
     TempIters tempIters;
 
-    uint64_t currentKL0 = self->ctx.convTilingData->convApiTiling.kL0;
+    uint64_t currentKL0 = self->ctx.convTilingData->kL0;
     uint64_t posK = 0;
     uint64_t KStartPosition = 0;
-    uint64_t kStep = self->ctx.convTilingData->convApiTiling.kStep;
+    uint64_t kStep = self->ctx.convTilingData->kStep;
     uint64_t multiKAL1 = self->ctx.multiKAL1;
     uint64_t multiKBL1 = self->ctx.multiKBL1;
 
@@ -559,11 +559,11 @@ __aicore__ void Iterate<Intf, ImplType>::ReduceKPreloadWithWeightFullloadL0(Intf
     if (self->ctx.loadAL1Flag) {
         if constexpr (Intf::outputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE)) {
             if constexpr (Intf::isNoPad) {
-                self->ctx.loadAl1Ins.SetLoad3dFMatrixNoPad(self->ctx.convTilingData->convApiTiling.orgWi);
+                self->ctx.loadAl1Ins.SetLoad3dFMatrixNoPad(self->ctx.convTilingData->orgWi);
             } else {
-                self->ctx.loadAl1Ins.SetLoad3dFMatrix(self->ctx.convTilingData->convApiTiling.padLeft,
-                                                    self->ctx.convTilingData->convApiTiling.padRight,
-                                                    self->ctx.convTilingData->convApiTiling.orgWi);
+                self->ctx.loadAl1Ins.SetLoad3dFMatrix(self->ctx.convTilingData->padLeft,
+                                                    self->ctx.convTilingData->padRight,
+                                                    self->ctx.convTilingData->orgWi);
             }
         }
         // If the current m direction iterator is not the last one, load the next fmap block to be processed.
@@ -585,10 +585,10 @@ __aicore__ void Iterate<Intf, ImplType>::ReduceKPreloadWithWeightFullloadL0(Intf
     }
     self->ctx.loadAL0Flag = true;
 
-    uint64_t currentKL0 = self->ctx.convTilingData->convApiTiling.kL0;
+    uint64_t currentKL0 = self->ctx.convTilingData->kL0;
     uint64_t posK = 0;
     uint64_t KStartPosition = 0;
-    uint64_t kStep = self->ctx.convTilingData->convApiTiling.kStep;
+    uint64_t kStep = self->ctx.convTilingData->kStep;
     uint64_t multiKAL1 = self->ctx.multiKAL1;
     uint64_t multiKBL1 = self->ctx.multiKBL1;
 
@@ -636,10 +636,10 @@ template <class Intf, uint32_t ImplType>
 __aicore__ void Iterate<Intf, ImplType>::ReduceK(Intf *self, MmadParams &mmadParams)
 {
     // state
-    uint64_t currentKL0 = self->ctx.convTilingData->convApiTiling.kL0;
+    uint64_t currentKL0 = self->ctx.convTilingData->kL0;
     uint64_t posK = 0;
     uint64_t KStartPosition = 0;
-    uint64_t kStep = self->ctx.convTilingData->convApiTiling.kStep;
+    uint64_t kStep = self->ctx.convTilingData->kStep;
     uint64_t multiKAL1 = self->ctx.multiKAL1;
     uint64_t multiKBL1 = self->ctx.multiKBL1;
 
@@ -832,10 +832,10 @@ __aicore__ void Iterate<Intf, ImplType>::ReduceGroupOptFmapPreload(Intf *self, M
     }
 
     // state
-    uint64_t currentKL0 = self->ctx.convTilingData->convApiTiling.kL0;
+    uint64_t currentKL0 = self->ctx.convTilingData->kL0;
     uint64_t posK = 0;
     uint64_t KStartPosition = 0;
-    uint64_t kStep = self->ctx.convTilingData->convApiTiling.kStep;
+    uint64_t kStep = self->ctx.convTilingData->kStep;
     uint64_t multiKAL1 = self->ctx.multiKAL1;
     uint64_t multiKBL1 = self->ctx.multiKBL1;
  
@@ -898,7 +898,7 @@ __aicore__ void Iterate<Intf, ImplType>::IterateK(Intf *self)
     if constexpr (Intf::isInnerBatchFlag || Intf::isDeQuantFlag) {
         self->ctx.cl0 = self->ctx.queueCL0.template AllocTensor<typename Intf::L0cT>();
     } else {
-        if ((self->ctx.convTilingData->convApiTiling.pBufferFlag & 0x04) >> 2) { // cl0 db
+        if ((self->ctx.convTilingData->pBufferFlag & 0x04) >> 2) { // cl0 db
             self->ctx.cl0 =
                 self->ctx.wholeCl0Tensor[(self->ctx.cl0PingPongFlag & 0x1) * L0C_HALF_SIZE / Intf::sizeOfL0c];
         } else {
@@ -937,7 +937,7 @@ template <class Intf, uint32_t ImplType>
 __aicore__ void Iterate<Intf, ImplType>::IterateBiasScale(Intf *self)
 {
     if (self->ctx.enableBias) {
-        if (!self->ctx.convTilingData->convApiTiling.biasFullLoadFlag) {
+        if (!self->ctx.convTilingData->biasFullLoadFlag) {
             self->ctx.biasL1 = self->ctx.queueBiasL1.template AllocTensor<typename Intf::BiasT>();
             self->ctx.loadBiasL1Ins.LoadChannelWiseL1(self->ctx.biasL1, self->ctx.biasgm);
             self->ctx.queueBiasL1.EnQue(self->ctx.biasL1);
@@ -949,7 +949,7 @@ __aicore__ void Iterate<Intf, ImplType>::IterateBiasScale(Intf *self)
         self->ctx.biasBT = self->ctx.queueBiasBT.template DeQue<typename Intf::L0cT>();
     }
 
-    if (!self->ctx.convTilingData->convApiTiling.fixpParamsFullLoadFlag) {
+    if (!self->ctx.convTilingData->fixpParamsFullLoadFlag) {
         if (self->ctx.enableVectorQuant || self->ctx.enableVectorRelu) {
             event_t eventId = static_cast<event_t>(self->ctx.pipe.FetchEventID(HardEvent::FIX_MTE2));
             SetFlag<HardEvent::FIX_MTE2>(eventId);
@@ -958,11 +958,11 @@ __aicore__ void Iterate<Intf, ImplType>::IterateBiasScale(Intf *self)
         if (self->ctx.enableVectorQuant) {
             self->ctx.scaleL1 = self->ctx.queueScaleL1.template AllocTensor<typename Intf::ScaleT>();
             if constexpr (Intf::isExtendConv2d) {
-                if (self->ctx.convTilingData->convApiTiling.quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
+                if (self->ctx.convTilingData->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
                     self->ctx.loadScaleL1Ins.LoadChannelWiseL1(self->ctx.scaleL1, self->ctx.scalegm);
                 }
-                if (self->ctx.convTilingData->convApiTiling.dualOutput &&
-                    self->ctx.convTilingData->convApiTiling.quantMode1 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
+                if (self->ctx.convTilingData->dualOutput &&
+                    self->ctx.convTilingData->quantMode1 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
                     self->ctx.loadScaleL1Ins.LoadChannelWiseL1(self->ctx.scaleL1[self->ctx.scale1L1offset],
                         self->ctx.scale1gm);
                 }
@@ -975,11 +975,11 @@ __aicore__ void Iterate<Intf, ImplType>::IterateBiasScale(Intf *self)
         if constexpr (Intf::isExtendConv2d) {
             if (self->ctx.enableVectorRelu) {
                 self->ctx.reluWeightL1 = self->ctx.queueReluWeightL1.template AllocTensor<typename Intf::ReluWeightT>();
-                if (self->ctx.convTilingData->convApiTiling.reluMode0 == static_cast<uint8_t>(ReluMode::VECTOR_RELU)) {
+                if (self->ctx.convTilingData->reluMode0 == static_cast<uint8_t>(ReluMode::VECTOR_RELU)) {
                     self->ctx.loadReluWeightL1Ins.LoadChannelWiseL1(self->ctx.reluWeightL1, self->ctx.reluWeightGM);
                 }
-                if (self->ctx.convTilingData->convApiTiling.dualOutput &&
-                    self->ctx.convTilingData->convApiTiling.reluMode1 == static_cast<uint8_t>(ReluMode::VECTOR_RELU)) {
+                if (self->ctx.convTilingData->dualOutput &&
+                    self->ctx.convTilingData->reluMode1 == static_cast<uint8_t>(ReluMode::VECTOR_RELU)) {
                     self->ctx.loadReluWeightL1Ins.LoadChannelWiseL1(self->ctx.reluWeightL1[self->ctx.reluWeight1L1offset],
                         self->ctx.reluWeight1GM);
                 }

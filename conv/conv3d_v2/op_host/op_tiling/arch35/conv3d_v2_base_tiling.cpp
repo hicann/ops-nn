@@ -297,12 +297,12 @@ ge::graphStatus Conv3dBaseTilingV2::DoOpTiling()
         }
     }
     if (flagInfo_.useTilingCache || flagInfo_.useTilingRepo) {
-        numBlocksRes.batchDim = tilingData_.convRunInfo.batchDim;
-        numBlocksRes.nDim = tilingData_.convRunInfo.nDim;
-        numBlocksRes.mDim = tilingData_.convRunInfo.hoDim;
-        numBlocksRes.hoDim = tilingData_.convRunInfo.hoDim;
-        numBlocksRes.doDim = tilingData_.convRunInfo.doDim;
-        numBlocksRes.groupDim = tilingData_.convRunInfo.groupDim;
+        numBlocksRes.batchDim = tilingData_.batchDim;
+        numBlocksRes.nDim = tilingData_.nDim;
+        numBlocksRes.mDim = tilingData_.hoDim;
+        numBlocksRes.hoDim = tilingData_.hoDim;
+        numBlocksRes.doDim = tilingData_.doDim;
+        numBlocksRes.groupDim = tilingData_.groupDim;
         if (SetTilingKey() != ge::GRAPH_SUCCESS) {
             return ge::GRAPH_FAILED;
         }

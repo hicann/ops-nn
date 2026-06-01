@@ -22,6 +22,10 @@
 #include "../../../../common/op_host/op_tiling/arch35/conv_api_tiling_base.h"
 #include "../../../../common/op_host/op_tiling/arch35/conv_api_tiling_algorithm_base.h"
 
+namespace optiling {
+    class Conv2DTilingData;
+}
+
 namespace conv_tiling {
 using optiling::conv_ops_tiling::FixpipeInfo;
 using optiling::conv_ops_tiling::ConvOriGroupInfo;
@@ -76,8 +80,8 @@ public:
     Conv2dTiling() {};
     explicit Conv2dTiling(const PlatformInfo& platform) : ConvTilingBase(platform) {};
     ~Conv2dTiling() override {};
-    int64_t GetTiling(optiling::TConv2DTiling &tiling);
-    bool GetTiling(Conv2DBasicBlockInfo& conv2DBasicBlockInfo, optiling::TConv2DTiling &tiling);
+    int64_t GetTiling(optiling::Conv2DTilingData &tiling);
+    bool GetTiling(Conv2DBasicBlockInfo& conv2DBasicBlockInfo, optiling::Conv2DTilingData &tiling);
     int64_t Compute() override;
 
     void SetOrgWeightShape(int64_t orgCo, int64_t orgkH, int64_t orgkW);
@@ -113,14 +117,14 @@ public:
     void GetDmaUbTiling(ConvDmaParams& params);
 private:
     std::shared_ptr<ConvTilingAlgorithmBase> algoPtr;
-    void SetTilingData(optiling::TConv2DTiling& tiling);
-    void SetAttrsTilingData(optiling::TConv2DTiling& tiling);
-    void SetScalarParams(optiling::TConv2DTiling& tiling);
-    void SetUbTiling(optiling::TConv2DTiling& tiling);
-    void SetExtendConv2DParams(optiling::TConv2DTiling& tiling);
+    void SetTilingData(optiling::Conv2DTilingData& tiling);
+    void SetAttrsTilingData(optiling::Conv2DTilingData& tiling);
+    void SetScalarParams(optiling::Conv2DTilingData& tiling);
+    void SetUbTiling(optiling::Conv2DTilingData& tiling);
+    void SetExtendConv2DParams(optiling::Conv2DTilingData& tiling);
     uint64_t CalcWeightUBSize(ConvWeightUbTransParams& params, uint64_t ci1Ub, uint64_t co1Ub) const;
     uint64_t CalcDmaUBSize(ConvDmaParams& params, uint64_t khUb, uint64_t kwUb) const;
-    uint32_t CalcAL1SpaceSize(optiling::TConv2DTiling& tiling);
+    uint32_t CalcAL1SpaceSize(optiling::Conv2DTilingData& tiling);
     void SetDefaultDdim();
     void Infer5hdShape();
     bool CheckParams();

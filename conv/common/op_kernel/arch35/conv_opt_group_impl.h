@@ -139,7 +139,7 @@ template <class Intf>
 __aicore__ inline void OptGroupUpdateLoopN(Intf *self) {
     if constexpr (Intf::hasNL0IterFlag) {
         self->ctx.l12l0LoopN = self->ctx.nBL1Iter == self->ctx.maxNBL1Iter ?
-            CeilDiv(self->ctx.nBL1Tail, self->ctx.convTilingData->convApiTiling.nL0) : self->ctx.convTilingData->convApiTiling.multiNBL1;
+            CeilDiv(self->ctx.nBL1Tail, self->ctx.convTilingData->nL0) : self->ctx.convTilingData->multiNBL1;
         self->ctx.ddr2l1LoopInner = self->ctx.ddr2l1LoopTmp * self->ctx.l12l0LoopN;
     }
 }
@@ -159,24 +159,24 @@ __aicore__ inline void OptGroupUpdateLoopInner(Intf *self) {
                     } else if (self->ctx.woAL1Iter == self->ctx.maxWoL1Iter) {
                         self->ctx.currentWoL1 = self->ctx.woL1SmallTail;
                     } else {
-                        self->ctx.currentWoL1 = self->ctx.convTilingData->convApiTiling.woL1;
+                        self->ctx.currentWoL1 = self->ctx.convTilingData->woL1;
                     }
                 } else {
                     self->ctx.currentWoL1 = self->ctx.woAL1Iter == self->ctx.maxWoL1Iter ?
-                        self->ctx.woAL1Tail : self->ctx.convTilingData->convApiTiling.woL1;
+                        self->ctx.woAL1Tail : self->ctx.convTilingData->woL1;
                 }
             }
             if constexpr (Intf::hasWL0IterFlag) {
-                self->ctx.l12l0LoopW = CeilDiv(self->ctx.currentWoL1, self->ctx.convTilingData->convApiTiling.woL0);
+                self->ctx.l12l0LoopW = CeilDiv(self->ctx.currentWoL1, self->ctx.convTilingData->woL0);
             }
 
             if constexpr (Intf::hasHL1IterFlag) {
                 self->ctx.hoAL1Iter = (self->ctx.outerIter / self->ctx.ddr2l1LoopW) % self->ctx.ddr2l1LoopH;
                 self->ctx.currentHoL1 = self->ctx.hoAL1Iter == self->ctx.maxHoL1Iter ?
-                    self->ctx.hoAL1Tail : self->ctx.convTilingData->convApiTiling.hoL1;
+                    self->ctx.hoAL1Tail : self->ctx.convTilingData->hoL1;
             }
             if constexpr (Intf::hasHL0IterFlag) {
-                self->ctx.l12l0LoopH = CeilDiv(self->ctx.currentHoL1, self->ctx.convTilingData->convApiTiling.hoL0);
+                self->ctx.l12l0LoopH = CeilDiv(self->ctx.currentHoL1, self->ctx.convTilingData->hoL0);
             }
 
             self->ctx.ddr2l1LoopTmp = self->ctx.l12l0LoopW * self->ctx.l12l0LoopH;

@@ -49,7 +49,7 @@ void Conv3dTiling::InitFlag()
     }
 }
 
-int64_t Conv3dTiling::GetTiling(Ops::NN::Conv3dV2::TConv3DTiling &tiling)
+int64_t Conv3dTiling::GetTiling(Ops::NN::Conv3dV2::Conv3DV2TilingDataV2 &tiling)
 {
     if (!CheckInputParam()) {
         OP_LOGE(nodeType, "conv3d api tiling check params failed.");
@@ -123,7 +123,7 @@ bool Conv3dTiling::CheckInputFormat()
     return true;
 }
 
-uint32_t Conv3dTiling::CalcAL1SpaceSize(Ops::NN::Conv3dV2::TConv3DTiling& tiling)
+uint32_t Conv3dTiling::CalcAL1SpaceSize(Ops::NN::Conv3dV2::Conv3DV2TilingDataV2& tiling)
 {
     uint64_t aL1SpaceSize = 0;
     uint64_t fmapSize = DTYPE_SIZE_TAB.at(descInfo.fMapType.dtype);
@@ -158,7 +158,7 @@ uint32_t Conv3dTiling::CalcAL1SpaceSize(Ops::NN::Conv3dV2::TConv3DTiling& tiling
     return static_cast<uint32_t>(aL1SpaceSize);
 }
 
-void Conv3dTiling::SetScalarParams(Ops::NN::Conv3dV2::TConv3DTiling& tiling)
+void Conv3dTiling::SetScalarParams(Ops::NN::Conv3dV2::Conv3DV2TilingDataV2& tiling)
 {
     // calculate the follow params in tiling process, for scalar optimization in kernel
     uint32_t kernelHxkernelW = tiling.kernelH * tiling.kernelW;
@@ -206,7 +206,7 @@ void Conv3dTiling::SetScalarParams(Ops::NN::Conv3dV2::TConv3DTiling& tiling)
     tiling.aL1SpaceSize = CalcAL1SpaceSize(tiling);
 }
 
-void Conv3dTiling::SetAttrsTilingData(Ops::NN::Conv3dV2::TConv3DTiling& tiling)
+void Conv3dTiling::SetAttrsTilingData(Ops::NN::Conv3dV2::Conv3DV2TilingDataV2& tiling)
 {
     tiling.strideH = static_cast<uint32_t>(this->attrInfo.strideH);
     tiling.strideW = static_cast<uint32_t>(this->attrInfo.strideW);
@@ -240,7 +240,7 @@ void Conv3dTiling::SetAttrsTilingData(Ops::NN::Conv3dV2::TConv3DTiling& tiling)
     }
 }
 
-void Conv3dTiling::SetUnionDataXt(Ops::NN::Conv3dV2::TConv3DTiling& tiling)
+void Conv3dTiling::SetUnionDataXt(Ops::NN::Conv3dV2::Conv3DV2TilingDataV2& tiling)
 {
     conv_tiling::UnionDataXt unionDataXt;
     unionDataXt.bf.kernelW = static_cast<uint64_t>(this->shapeInfo.orgkW);
@@ -254,7 +254,7 @@ void Conv3dTiling::SetUnionDataXt(Ops::NN::Conv3dV2::TConv3DTiling& tiling)
     tiling.unionDataXt = unionDataXt.n;
 }
 
-void Conv3dTiling::SetTilingData(Ops::NN::Conv3dV2::TConv3DTiling& tiling)
+void Conv3dTiling::SetTilingData(Ops::NN::Conv3dV2::Conv3DV2TilingDataV2& tiling)
 {
     if (outputOrder == static_cast<int8_t>(OutputOrder::M)) {
         tiling.singleCoreHo = static_cast<uint64_t>(shapeInfo.singleM);
@@ -803,7 +803,7 @@ int64_t Conv3dTiling::GetTilingData(optiling::conv_ops_tiling::ConvAscendcAttrIn
                                     optiling::conv_ops_tiling::ConvAscendcShapesInfo convShapeInfo,
                                     optiling::conv_ops_tiling::ConvOpsConstParams convOpsConstParams,
                                     optiling::conv_ops_tiling::NumBlocksRes numBlocksRes,
-                                    Ops::NN::Conv3dV2::Conv3DV2TilingData& tilingData)
+                                    Ops::NN::Conv3dV2::Conv3DV2TilingDataV2& tilingData)
 {
     SetShape(flagInfo, convShapeInfo, convOpsConstParams, numBlocksRes);
     bool hf32TransModeEnable = false;
@@ -838,7 +838,7 @@ int64_t Conv3dTiling::GetTilingData(optiling::conv_ops_tiling::ConvAscendcAttrIn
                     optiling::conv_ops_tiling::dtypeMap[convDescInfo.biasDtype]);
     }
 
-    if (GetTiling(tilingData.convApiTiling) == -1) {
+    if (GetTiling(tilingData) == -1) {
         return -1;
     }
 

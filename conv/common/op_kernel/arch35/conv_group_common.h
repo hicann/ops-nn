@@ -70,23 +70,23 @@ __aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
     CalcStartAddrFmapHW()
 {
     if constexpr (!CONV::isMMode) {
-        int64_t hiStartPosTmp = static_cast<int64_t>(convOps->hoIdxStart * convTilingData->convRunInfo.strideH) -
-                                static_cast<int64_t>(convTilingData->convRunInfo.padTop);
+        int64_t hiStartPosTmp = static_cast<int64_t>(convOps->hoIdxStart * convTilingData->strideH) -
+                                static_cast<int64_t>(convTilingData->padTop);
         convOps->singleCoreHiStartPos = hiStartPosTmp < 0 ? 0 : hiStartPosTmp;
         if constexpr (CONV::A_FORMAT == ConvFormat::NDHWC || CONV::A_FORMAT == ConvFormat::NHWC) {
-            fmStartAddr += convOps->singleCoreHiStartPos * convTilingData->convRunInfo.win * convTilingData->convRunInfo.cin;
+            fmStartAddr += convOps->singleCoreHiStartPos * convTilingData->win * convTilingData->cin;
         } else {
-            fmStartAddr += convOps->singleCoreHiStartPos * convTilingData->convRunInfo.win;
+            fmStartAddr += convOps->singleCoreHiStartPos * convTilingData->win;
         }
         
         // Conv2D Split W
         convOps->singleCoreHiStartPos = hiStartPosTmp;
         if constexpr (CONV::A_FORMAT == ConvFormat::NCHW || CONV::A_FORMAT == ConvFormat::NHWC) {
-            int64_t wiStartPosTmp = static_cast<int64_t>(convOps->woIdxStart * convTilingData->convRunInfo.strideW) -
-                                    static_cast<int64_t>(convTilingData->convRunInfo.padLeft);
+            int64_t wiStartPosTmp = static_cast<int64_t>(convOps->woIdxStart * convTilingData->strideW) -
+                                    static_cast<int64_t>(convTilingData->padLeft);
             convOps->singleCoreWiStartPos = wiStartPosTmp < 0 ? 0 : wiStartPosTmp;
             if constexpr (CONV::A_FORMAT == ConvFormat::NHWC) {
-                fmStartAddr += convOps->singleCoreWiStartPos * convTilingData->convRunInfo.cin;
+                fmStartAddr += convOps->singleCoreWiStartPos * convTilingData->cin;
             } else {
                 fmStartAddr += convOps->singleCoreWiStartPos;
             }
@@ -110,16 +110,16 @@ __aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
     outputStartAddr = convOps->batchIdxStart * convOps->outputOneBatchSize +
                       convOps->groupIdxStart * convOps->coPerGroup + convOps->nIdxStart;
     if constexpr (CONV::isMMode) {
-        outputStartAddr += convOps->mIdxStart * convTilingData->convRunInfo.cout;
+        outputStartAddr += convOps->mIdxStart * convTilingData->cout;
     } else {
-        outputStartAddr += convOps->hoIdxStart * convTilingData->convRunInfo.wout * convTilingData->convRunInfo.cout;
+        outputStartAddr += convOps->hoIdxStart * convTilingData->wout * convTilingData->cout;
         if constexpr (CONV::A_FORMAT == ConvFormat::NHWC) {
-            outputStartAddr += convOps->woIdxStart * convTilingData->convRunInfo.cout;
+            outputStartAddr += convOps->woIdxStart * convTilingData->cout;
         }
     }
     if constexpr (CONV::A_FORMAT == ConvFormat::NDHWC) {
-        fmStartAddr += diIdxStart * hwIn * convTilingData->convRunInfo.cin;
-        outputStartAddr += doIdxStart * hwOut * convTilingData->convRunInfo.cout;
+        fmStartAddr += diIdxStart * hwIn * convTilingData->cin;
+        outputStartAddr += doIdxStart * hwOut * convTilingData->cout;
     }
 }
 
@@ -141,7 +141,7 @@ __aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
     if constexpr (CONV::isMMode) {
         outputStartAddr += convOps->mIdxStart;
     } else {
-        outputStartAddr += convOps->hoIdxStart * convTilingData->convRunInfo.wout;
+        outputStartAddr += convOps->hoIdxStart * convTilingData->wout;
         if constexpr (CONV::A_FORMAT == ConvFormat::NCHW) {
             outputStartAddr += convOps->woIdxStart;
         }
@@ -158,12 +158,12 @@ __aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
     CalcStartAddrOriGroup(const uint64_t din, const uint64_t dout, const uint32_t kd, const uint64_t doIdxStart,
                           const int64_t diIdxStart)
 {
-    hwIn = convTilingData->convRunInfo.hin * convTilingData->convRunInfo.win;
-    hwOut = convTilingData->convRunInfo.hout * convTilingData->convRunInfo.wout;
+    hwIn = convTilingData->hin * convTilingData->win;
+    hwOut = convTilingData->hout * convTilingData->wout;
     dhwOut = dout * hwOut;
     dhwIn = din * hwIn;
-    convOps->fmapOneBatchSize = dhwIn * convTilingData->convRunInfo.cin;
-    convOps->outputOneBatchSize = dhwOut * convTilingData->convRunInfo.cout;
+    convOps->fmapOneBatchSize = dhwIn * convTilingData->cin;
+    convOps->outputOneBatchSize = dhwOut * convTilingData->cout;
 
     if constexpr (CONV::A_FORMAT == ConvFormat::NDHWC || CONV::A_FORMAT == ConvFormat::NHWC) {
         fmapOneGroupSize = convOps->ciPerGroup;
@@ -172,13 +172,13 @@ __aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
         CalcStartAddrOriGroupHWC(doIdxStart, diIdxStart);
     } else {
         fmapOneGroupSize = convOps->ciPerGroup * dhwIn;
-        weightOneCoSize = convOps->ciPerGroup * kd * convTilingData->convRunInfo.kh * convTilingData->convRunInfo.kw;
+        weightOneCoSize = convOps->ciPerGroup * kd * convTilingData->kh * convTilingData->kw;
         weightOneGroupSize = convOps->coPerGroup * weightOneCoSize;
         outputOneGroupSize = convOps->coPerGroup * dhwOut;
         CalcStartAddrOriGroupCHW(doIdxStart, diIdxStart);
     }
 
-    if (convTilingData->convRunInfo.hasBias) {
+    if (convTilingData->hasBias) {
         biasStartAddr = convOps->groupIdxStart * convOps->coPerGroup + convOps->nIdxStart;
     }
 
@@ -197,30 +197,30 @@ __aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
         if (hasScale) {
             if constexpr (CONV::A_FORMAT == ConvFormat::NCHW || CONV::A_FORMAT == ConvFormat::NHWC) {
                 Extendconv2dFixpipeParams fixpipeParamsCopy(convOps->fixpipeParams);
-                if (convOps->convTilingData->convApiTiling.quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
+                if (convOps->convTilingData->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
                     fixpipeParamsCopy.scale0 = convOps->fixpipeParams.scale0[groupIter * coPerGroup];
                 }
                 if constexpr (CONV::IS_EXTEND_CONV2D) {
-                    if (convTilingData->convApiTiling.reluMode0 == static_cast<uint8_t>(ReluMode::VECTOR_RELU)) {
+                    if (convTilingData->reluMode0 == static_cast<uint8_t>(ReluMode::VECTOR_RELU)) {
                         fixpipeParamsCopy.reluWeight0 = convOps->fixpipeParams.reluWeight0[groupIter * coPerGroup];
                     }
-                    if (convTilingData->convApiTiling.dualOutput) {
-                        if (convTilingData->convApiTiling.quantMode1 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
+                    if (convTilingData->dualOutput) {
+                        if (convTilingData->quantMode1 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
                             fixpipeParamsCopy.scale1 = convOps->fixpipeParams.scale1[groupIter * coPerGroup];
                         }
-                        if (convTilingData->convApiTiling.reluMode1 == static_cast<uint8_t>(ReluMode::VECTOR_RELU)) {
+                        if (convTilingData->reluMode1 == static_cast<uint8_t>(ReluMode::VECTOR_RELU)) {
                             fixpipeParamsCopy.reluWeight1 = convOps->fixpipeParams.reluWeight1[groupIter * coPerGroup];
                         }
-                        if (convTilingData->convApiTiling.quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT) ||
-                            convTilingData->convApiTiling.quantMode1 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT) ||
-                            convTilingData->convApiTiling.reluMode0 == static_cast<uint8_t>(ReluMode::VECTOR_RELU) ||
-                            convTilingData->convApiTiling.reluMode1 == static_cast<uint8_t>(ReluMode::VECTOR_RELU)) {
+                        if (convTilingData->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT) ||
+                            convTilingData->quantMode1 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT) ||
+                            convTilingData->reluMode0 == static_cast<uint8_t>(ReluMode::VECTOR_RELU) ||
+                            convTilingData->reluMode1 == static_cast<uint8_t>(ReluMode::VECTOR_RELU)) {
                             convOps->conv.SetFixpipeParams(fixpipeParamsCopy);
                         }
-                    } else if (convOps->convTilingData->convApiTiling.quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
+                    } else if (convOps->convTilingData->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
                         convOps->conv.SetFixpipeParams(fixpipeParamsCopy);
                     }
-                } else if (convOps->convTilingData->convApiTiling.quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
+                } else if (convOps->convTilingData->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
                     convOps->conv.SetFixpipeParams(fixpipeParamsCopy);
                 }
             } else {
@@ -237,14 +237,14 @@ __aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
     for (uint64_t groupIter = 0; groupIter < convOps->singleGroups; ++groupIter) {
         convOps->conv.SetWeight(convOps->filterGm[groupIter * weightOneGroupSize]);
         convOps->conv.SetFmap(convOps->fmapGm[groupIter * fmapOneGroupSize]);
-        if (convTilingData->convRunInfo.hasBias) {
+        if (convTilingData->hasBias) {
             convOps->conv.SetBias(convOps->biasGm[groupIter * convOps->coPerGroup]);
         }
 
         DealFixpiepParams(groupIter, convOps->coPerGroup);
 
         if constexpr (CONV::IS_EXTEND_CONV2D) {
-            if (this->convTilingData->convApiTiling.dualOutput) {
+            if (this->convTilingData->dualOutput) {
                 convOps->conv.IterateAll(convOps->outputGm[groupIter * outputOneGroupSize],
                                          convOps->output1Gm[groupIter * outputOneGroupSize]);
             } else {
@@ -264,7 +264,7 @@ __aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
     convOps->singleCoreN = convOps->singleCoOpt;
 
     // update singleGroups : real groups nums in singlecore
-    enlargeTail = convTilingData->convRunInfo.groups % convTilingData->convRunInfo.enlarge;
+    enlargeTail = convTilingData->groups % convTilingData->enlarge;
 
     if (unlikely(convOps->isGroupDimTail && enlargeTail != 0)) {
         uint64_t realCout = enlargeTail * convOps->coPerGroup;
@@ -278,7 +278,7 @@ __aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
     }
 
     if (unlikely(convOps->isGroupDimTail)) {
-        convOps->singleGroups = enlargeTail == 0 ? convTilingData->convRunInfo.enlarge : enlargeTail;
+        convOps->singleGroups = enlargeTail == 0 ? convTilingData->enlarge : enlargeTail;
     }
 }
 
@@ -287,25 +287,25 @@ __aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
     CalcOutputStartAddrOptGroup(const uint64_t doIdxStart)
 {
     if constexpr (CONV::C_FORMAT == ConvFormat::NDHWC || CONV::C_FORMAT == ConvFormat::NHWC) {
-        outputOneGroupSize = convTilingData->convRunInfo.coutOpt;
+        outputOneGroupSize = convTilingData->coutOpt;
         outputStartAddr = convOps->batchIdxStart * convOps->outputOneBatchSize +
-                          convOps->groupIdxStart * convTilingData->convRunInfo.coutOpt +
+                          convOps->groupIdxStart * convTilingData->coutOpt +
                           convOps->nIdxStart;
 
         if constexpr (CONV::C_FORMAT == ConvFormat::NDHWC) {
-            outputStartAddr += doIdxStart * hwOut * convTilingData->convRunInfo.cout;
+            outputStartAddr += doIdxStart * hwOut * convTilingData->cout;
         }
 
         if constexpr (CONV::isMMode) {
-            outputStartAddr += convOps->mIdxStart * convTilingData->convRunInfo.cout;
+            outputStartAddr += convOps->mIdxStart * convTilingData->cout;
         } else {
-            outputStartAddr += convOps->hoIdxStart * convTilingData->convRunInfo.wout * convTilingData->convRunInfo.cout;
+            outputStartAddr += convOps->hoIdxStart * convTilingData->wout * convTilingData->cout;
             if constexpr (CONV::C_FORMAT == ConvFormat::NHWC) {
-                outputStartAddr += convOps->woIdxStart * convTilingData->convRunInfo.cout;
+                outputStartAddr += convOps->woIdxStart * convTilingData->cout;
             }
         }
     } else if constexpr (CONV::C_FORMAT == ConvFormat::NCDHW || CONV::C_FORMAT == ConvFormat::NCHW) {
-        outputOneGroupSize = convTilingData->convRunInfo.coutOpt * dhwOut;
+        outputOneGroupSize = convTilingData->coutOpt * dhwOut;
         outputStartAddr = convOps->batchIdxStart * convOps->outputOneBatchSize +
                           convOps->groupIdxStart * outputOneGroupSize +
                           convOps->nIdxStart * dhwOut;
@@ -317,7 +317,7 @@ __aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
         if constexpr (CONV::isMMode) {
             outputStartAddr += convOps->mIdxStart;
         } else {
-            outputStartAddr += convOps->hoIdxStart * convTilingData->convRunInfo.wout;
+            outputStartAddr += convOps->hoIdxStart * convTilingData->wout;
             if constexpr (CONV::C_FORMAT == ConvFormat::NCHW) {
                 outputStartAddr += convOps->woIdxStart;
             }
@@ -336,10 +336,10 @@ __aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
                   convOps->groupIdxStart * fmapOneGroupSize;
     CalcStartAddrFmapHW();
     if constexpr (CONV::B_FORMAT == ConvFormat::FRACTAL_Z) {
-        weightOneGroupSize = convTilingData->convRunInfo.coutOpt * convTilingData->convRunInfo.cinOpt * kd * convTilingData->convRunInfo.kh * convTilingData->convRunInfo.kw;
+        weightOneGroupSize = convTilingData->coutOpt * convTilingData->cinOpt * kd * convTilingData->kh * convTilingData->kw;
         weightStartAddr = convOps->groupIdxStart * weightOneGroupSize + convOps->nIdxStart * convOps->k0;
     } else {
-        weightOneGroupSize = convTilingData->convRunInfo.coutOpt * convOps->ciPerGroup * kd * convTilingData->convRunInfo.kh * convTilingData->convRunInfo.kw;
+        weightOneGroupSize = convTilingData->coutOpt * convOps->ciPerGroup * kd * convTilingData->kh * convTilingData->kw;
         weightStartAddr = convOps->groupIdxStart * weightOneGroupSize;
     }
 
@@ -358,18 +358,18 @@ __aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
     // weight: Kd -> KhKw -> Ci_opt -> Group(enlarge) -> Co_opt
     // output: Batch -> Do -> HoWo -> Group(enlarge) -> Co_opt
     fmStartAddr = convOps->batchIdxStart * convOps->fmapOneBatchSize +
-                  convOps->groupIdxStart * convTilingData->convRunInfo.cinOpt;
+                  convOps->groupIdxStart * convTilingData->cinOpt;
     CalcStartAddrFmapHW();
     if constexpr (CONV::B_FORMAT == ConvFormat::FRACTAL_Z) {
-        weightOneGroupSize = convTilingData->convRunInfo.coutOpt * convTilingData->convRunInfo.cinOpt * kd * convTilingData->convRunInfo.kh * convTilingData->convRunInfo.kw;
+        weightOneGroupSize = convTilingData->coutOpt * convTilingData->cinOpt * kd * convTilingData->kh * convTilingData->kw;
         weightStartAddr = convOps->groupIdxStart * weightOneGroupSize + convOps->nIdxStart * convOps->k0;
     } else {
-        weightOneGroupSize = convTilingData->convRunInfo.coutOpt;
-        weightStartAddr = convOps->groupIdxStart * convTilingData->convRunInfo.coutOpt;
+        weightOneGroupSize = convTilingData->coutOpt;
+        weightStartAddr = convOps->groupIdxStart * convTilingData->coutOpt;
     }
 
     if constexpr (CONV::A_FORMAT == ConvFormat::NDHWC) {
-        fmStartAddr += diIdxStart * hwIn * convTilingData->convRunInfo.cin;
+        fmStartAddr += diIdxStart * hwIn * convTilingData->cin;
     }
 
     CalcOutputStartAddrOptGroup(doIdxStart);
@@ -380,38 +380,38 @@ __aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
     CalcStartAddrOptGroup(const uint64_t din, const uint64_t dout, const uint32_t kd, const uint64_t doIdxStart,
                           const int64_t diIdxStart)
 {
-    hwIn = convTilingData->convRunInfo.hin * convTilingData->convRunInfo.win;
-    hwOut = convTilingData->convRunInfo.hout * convTilingData->convRunInfo.wout;
+    hwIn = convTilingData->hin * convTilingData->win;
+    hwOut = convTilingData->hout * convTilingData->wout;
     dhwOut = dout * hwOut;
     dhwIn = din * hwIn;
-    convOps->fmapOneBatchSize = convTilingData->convRunInfo.cin * dhwIn;
-    convOps->outputOneBatchSize = convTilingData->convRunInfo.cout * dhwOut;
+    convOps->fmapOneBatchSize = convTilingData->cin * dhwIn;
+    convOps->outputOneBatchSize = convTilingData->cout * dhwOut;
     if constexpr (CONV::A_FORMAT == ConvFormat::NDHWC || CONV::A_FORMAT == ConvFormat::NHWC) {
-        fmapOneGroupSize = convTilingData->convRunInfo.cinOpt;
+        fmapOneGroupSize = convTilingData->cinOpt;
         CalcStartAddrOptGroupHWC(doIdxStart, diIdxStart, kd);
     } else {
-        fmapOneGroupSize = convTilingData->convRunInfo.cinOpt * dhwIn;
+        fmapOneGroupSize = convTilingData->cinOpt * dhwIn;
         CalcStartAddrOptGroupCHW(doIdxStart, diIdxStart, kd);
     }
 
-    if (convTilingData->convRunInfo.hasBias) {
-        biasStartAddr = convOps->groupIdxStart * convTilingData->convRunInfo.coutOpt + convOps->nIdxStart;
+    if (convTilingData->hasBias) {
+        biasStartAddr = convOps->groupIdxStart * convTilingData->coutOpt + convOps->nIdxStart;
     }
 
     if constexpr (CONV::isQuant) {
         if (hasScale) {
-            scaleStartAddr = convOps->groupIdxStart * convTilingData->convRunInfo.coutOpt + convOps->nIdxStart;
+            scaleStartAddr = convOps->groupIdxStart * convTilingData->coutOpt + convOps->nIdxStart;
         }
     }
 
     if constexpr (CONV::IS_EXTEND_CONV2D) {
-        if (convOps->convTilingData->convApiTiling.quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT) ||
-            convOps->convTilingData->convApiTiling.quantMode1 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
-            scaleStartAddr = convOps->groupIdxStart * convTilingData->convRunInfo.coutOpt + convOps->nIdxStart;
+        if (convOps->convTilingData->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT) ||
+            convOps->convTilingData->quantMode1 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
+            scaleStartAddr = convOps->groupIdxStart * convTilingData->coutOpt + convOps->nIdxStart;
         }
-        if (convTilingData->convApiTiling.reluMode0 == static_cast<uint8_t>(ReluMode::VECTOR_RELU) ||
-            convTilingData->convApiTiling.reluMode1 == static_cast<uint8_t>(ReluMode::VECTOR_RELU)) {
-            reluWeightStartAddr = convOps->groupIdxStart * convTilingData->convRunInfo.coutOpt + convOps->nIdxStart;
+        if (convTilingData->reluMode0 == static_cast<uint8_t>(ReluMode::VECTOR_RELU) ||
+            convTilingData->reluMode1 == static_cast<uint8_t>(ReluMode::VECTOR_RELU)) {
+            reluWeightStartAddr = convOps->groupIdxStart * convTilingData->coutOpt + convOps->nIdxStart;
         }
     }
 }
@@ -439,14 +439,14 @@ __aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
         convOps->conv.SetFmap(convOps->fmapGm[groupOptIter * fmapOneGroupSize]);
         convOps->conv.SetWeight(convOps->filterGm[groupOptIter * weightOneGroupSize]);
 
-        if (convTilingData->convRunInfo.hasBias) {
-            convOps->conv.SetBias(convOps->biasGm[groupOptIter * convTilingData->convRunInfo.coutOpt]);
+        if (convTilingData->hasBias) {
+            convOps->conv.SetBias(convOps->biasGm[groupOptIter * convTilingData->coutOpt]);
         }
 
-        DealFixpiepParams(groupOptIter, convTilingData->convRunInfo.coutOpt);
+        DealFixpiepParams(groupOptIter, convTilingData->coutOpt);
 
         if constexpr (CONV::IS_EXTEND_CONV2D) {
-            if (this->convTilingData->convApiTiling.dualOutput) {
+            if (this->convTilingData->dualOutput) {
                 convOps->conv.IterateAll(convOps->outputGm[groupOptIter * outputOneGroupSize],
                                          convOps->output1Gm[groupOptIter * outputOneGroupSize]);
             } else {
@@ -471,7 +471,7 @@ __aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
         }
         convOps->conv.SetOptGroupParams(enlargeTail, convOps->singleGroupOpt, convOps->singleCoOpt);
     } else {
-        convOps->conv.SetOptGroupParams(convTilingData->convRunInfo.enlarge, convOps->singleGroupOpt, convOps->singleCoOpt);
+        convOps->conv.SetOptGroupParams(convTilingData->enlarge, convOps->singleGroupOpt, convOps->singleCoOpt);
     }
 
     convOps->conv.SetIterIndex(groupOptIter);
@@ -479,12 +479,12 @@ __aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
     convOps->conv.SetFmap(convOps->fmapGm);
     convOps->conv.SetWeight(convOps->filterGm);
 
-    if (convTilingData->convRunInfo.hasBias) {
+    if (convTilingData->hasBias) {
         convOps->conv.SetBias(convOps->biasGm);
     }
     
     // quant need, current not care
-    DealFixpiepParams(groupOptIter, convTilingData->convRunInfo.coutOpt);
+    DealFixpiepParams(groupOptIter, convTilingData->coutOpt);
 
     if constexpr (CONV::IS_EXTEND_CONV2D) {
         if (convOps->dualOutput) {
@@ -509,7 +509,7 @@ __aicore__ __forceinline__ void ConvGroupCommon<CONV, CONV_TILING>::
                                                    convOps->singleCoreBatch);
             } else {
                 convOps->conv.SetSingleOutputShape(convOps->singleCoOpt, convOps->singleCoreDout, convOps->singleCoreHo,
-                                                   convTilingData->convRunInfo.wout, convOps->singleCoreBatch);
+                                                   convTilingData->wout, convOps->singleCoreBatch);
             }
         } else {
             if constexpr (CONV::isMMode) {

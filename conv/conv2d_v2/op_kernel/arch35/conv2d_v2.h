@@ -184,23 +184,23 @@ __aicore__ inline bool Conv2dBase<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE
 
     if constexpr (A_FORMAT == ConvFormat::NCHW) {
         if constexpr (isMMode) {
-            if (!InitSingleCoreData(convTilingData->convRunInfo.mDim, 1, 0, 0)) {
+            if (!InitSingleCoreData(convTilingData->mDim, 1, 0, 0)) {
                 return false;
             }
         } else {
-            if (!InitSingleCoreData(convTilingData->convRunInfo.hoDim * convTilingData->convRunInfo.woDim, 0,
-                convTilingData->convRunInfo.woDim, 1)) {
+            if (!InitSingleCoreData(convTilingData->hoDim * convTilingData->woDim, 0,
+                convTilingData->woDim, 1)) {
                 return false;
             }
         }
     } else {
         if constexpr (isMMode) {
-            if (!InitSingleCoreData(1, convTilingData->convRunInfo.nDim, 0, 0)) {
+            if (!InitSingleCoreData(1, convTilingData->nDim, 0, 0)) {
                 return false;
             }
         } else {
-            if (!InitSingleCoreData(1, 0, convTilingData->convRunInfo.woDim * convTilingData->convRunInfo.nDim,
-                convTilingData->convRunInfo.nDim)) {
+            if (!InitSingleCoreData(1, 0, convTilingData->woDim * convTilingData->nDim,
+                convTilingData->nDim)) {
                 return false;
             }
         }
@@ -217,38 +217,38 @@ __aicore__ inline bool Conv2dBase<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE
 {
     DimDataToFill batchToFill(singleCoreBatch, batchIdxStart, isBatchDimTail);
     bool isRealDim =
-        convCommon.CalcDimData(convTilingData->convRunInfo.hoDim * convTilingData->convRunInfo.nDim * convTilingData->convRunInfo.woDim,
-                               convTilingData->convRunInfo.batchDim, convTilingData->convRunInfo.batch, convTilingData->convRunInfo.batch, batchToFill);
+        convCommon.CalcDimData(convTilingData->hoDim * convTilingData->nDim * convTilingData->woDim,
+                               convTilingData->batchDim, convTilingData->batch, convTilingData->batch, batchToFill);
     if (unlikely(!isRealDim)) {
         return false;
     }
 
     DimDataToFill nToFill(singleCoreN, nIdxStart, isNDimTail);
-    isRealDim = convCommon.CalcNDimDataAlign(blockPerNDim, convTilingData->convRunInfo.nDim,
-                                             convTilingData->convRunInfo.cout, nToFill);
+    isRealDim = convCommon.CalcNDimDataAlign(blockPerNDim, convTilingData->nDim,
+                                             convTilingData->cout, nToFill);
     if (unlikely(!isRealDim)) {
         return false;
     }
 
     if constexpr (isMMode) {
         DimDataToFill mToFill(singleCoreM, mIdxStart, isMDimTail);
-        uint64_t totalM = convTilingData->convRunInfo.hout * convTilingData->convRunInfo.wout;
-        isRealDim = convCommon.CalcDimData(blockPerMDim, convTilingData->convRunInfo.mDim, convCommon.AlignB(totalM, M0),
+        uint64_t totalM = convTilingData->hout * convTilingData->wout;
+        isRealDim = convCommon.CalcDimData(blockPerMDim, convTilingData->mDim, convCommon.AlignB(totalM, M0),
                                            totalM, mToFill);
         if (unlikely(!isRealDim)) {
             return false;
         }
     } else {
         DimDataToFill hoToFill(singleCoreHo, hoIdxStart, isHoDimTail);
-        isRealDim = convCommon.CalcDimData(blockPerHoDim, convTilingData->convRunInfo.hoDim, convTilingData->convRunInfo.hout,
-                                           convTilingData->convRunInfo.hout, hoToFill);
+        isRealDim = convCommon.CalcDimData(blockPerHoDim, convTilingData->hoDim, convTilingData->hout,
+                                           convTilingData->hout, hoToFill);
         if (unlikely(!isRealDim)) {
             return false;
         }
 
         DimDataToFill woToFill(singleCoreWo, woIdxStart, isWoDimTail);
-        isRealDim = convCommon.CalcDimData(blockPerWoDim, convTilingData->convRunInfo.woDim, convTilingData->convRunInfo.wout,
-                                           convTilingData->convRunInfo.wout, woToFill);
+        isRealDim = convCommon.CalcDimData(blockPerWoDim, convTilingData->woDim, convTilingData->wout,
+                                           convTilingData->wout, woToFill);
         if (unlikely(!isRealDim)) {
             return false;
         }
@@ -297,7 +297,7 @@ __aicore__ inline void Conv2dBase<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE
     }
 
     conv.SetWeight(filterGm);
-    if (convTilingData->convRunInfo.hasBias) {
+    if (convTilingData->hasBias) {
         conv.SetBias(biasGm);
     }
 
@@ -309,10 +309,10 @@ __aicore__ inline void Conv2dBase<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE
 
     conv.SetFmap(fmapGm);
     if constexpr (CONV_CFG::disContinuous) {
-        conv.SetOrgBatch(convTilingData->convRunInfo.batch);
+        conv.SetOrgBatch(convTilingData->batch);
     }
     if constexpr (CONV_CFG::isExtendConv2d) {
-        if (convTilingData->convApiTiling.dualOutput) {
+        if (convTilingData->dualOutput) {
             conv.IterateAll(outputGm, output1Gm);
         } else {
             conv.IterateAll(outputGm);

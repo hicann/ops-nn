@@ -92,7 +92,7 @@ __global__ __aicore__ void conv3dv2(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_
 
     SetSysWorkspace(workspace);
     GM_ADDR user = GetUserWorkspace(workspace);
-    REGISTER_TILING_DEFAULT(Ops::NN::Conv3dV2::Conv3DV2TilingData);
+    REGISTER_TILING_DEFAULT(Ops::NN::Conv3dV2::Conv3DV2TilingDataV2);
     GET_TILING_DATA(tilingData, tiling);
 
 #if defined(DTYPE_X) && defined(DTYPE_FILTER) && defined(DTYPE_Y)

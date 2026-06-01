@@ -14,6 +14,7 @@
  */
 
 #include "conv2d_v2_api_tiling.h"
+#include "../conv2d_v2_tiling.h"
 #include <cstdint>
 #include <algorithm>
 #include <set>
@@ -31,7 +32,7 @@ using namespace std;
 #define UNUSED __attribute__((unused))
 
 namespace conv_tiling {
-int64_t Conv2dTiling::GetTiling(optiling::TConv2DTiling &tiling)
+int64_t Conv2dTiling::GetTiling(optiling::Conv2DTilingData &tiling)
 {
     if (!CheckParams()) {
         OP_LOGE(nodeType, "conv2d api tiling check params failed.");
@@ -57,7 +58,7 @@ int64_t Conv2dTiling::GetTiling(optiling::TConv2DTiling &tiling)
     return 0;
 }
 
-bool Conv2dTiling::GetTiling(Conv2DBasicBlockInfo& conv2DBasicBlockInfo, optiling::TConv2DTiling &tiling)
+bool Conv2dTiling::GetTiling(Conv2DBasicBlockInfo& conv2DBasicBlockInfo, optiling::Conv2DTilingData &tiling)
 {
     if (!CheckTilingAlgorithmType(conv2DBasicBlockInfo, BB_PHASE_2)) {
         return false;
@@ -260,7 +261,7 @@ void Conv2dTiling::GetDmaUbTiling(ConvDmaParams& params)
     params.khUb = static_cast<uint32_t>(khUbRange[khUbIdx]);
 }
 
-void Conv2dTiling::SetScalarParams(optiling::TConv2DTiling& tiling)
+void Conv2dTiling::SetScalarParams(optiling::Conv2DTilingData& tiling)
 {
     // calculate the follow params in tiling process, for scalar optimization in kernel
     uint32_t kernelHxkernelW = tiling.get_kernelH() * tiling.get_kernelW();
@@ -309,7 +310,7 @@ void Conv2dTiling::SetScalarParams(optiling::TConv2DTiling& tiling)
     tiling.set_aL1SpaceSize(CalcAL1SpaceSize(tiling));
 }
 
-void Conv2dTiling::SetUbTiling(optiling::TConv2DTiling& tiling)
+void Conv2dTiling::SetUbTiling(optiling::Conv2DTilingData& tiling)
 {
     if (isDmaFlag) {
         ConvDmaParams params = {l1TilingInfo.hoAL1, l1TilingInfo.woAL1, l1TilingInfo.khL1,
@@ -350,7 +351,7 @@ void Conv2dTiling::SetUbTiling(optiling::TConv2DTiling& tiling)
     tiling.set_bUbKStep(0);
 }
 
-void Conv2dTiling::SetExtendConv2DParams(optiling::TConv2DTiling& tiling)
+void Conv2dTiling::SetExtendConv2DParams(optiling::Conv2DTilingData& tiling)
 {
     // set extendConv2d fixpipe mode to tilingdata
     tiling.set_quantMode0(shapeInfo.quantMode0);
@@ -362,7 +363,7 @@ void Conv2dTiling::SetExtendConv2DParams(optiling::TConv2DTiling& tiling)
     tiling.set_dualOutput(shapeInfo.dualOutput);
 }
 
-void Conv2dTiling::SetTilingData(optiling::TConv2DTiling& tiling)
+void Conv2dTiling::SetTilingData(optiling::Conv2DTilingData& tiling)
 {
     if (outputOrder == static_cast<int8_t>(OutputOrder::M)) {
         tiling.set_singleCoreHo(static_cast<uint64_t>(shapeInfo.singleM));
@@ -417,7 +418,7 @@ void Conv2dTiling::SetTilingData(optiling::TConv2DTiling& tiling)
     SetExtendConv2DParams(tiling);
 }
 
-void Conv2dTiling::SetAttrsTilingData(optiling::TConv2DTiling& tiling)
+void Conv2dTiling::SetAttrsTilingData(optiling::Conv2DTilingData& tiling)
 {
     tiling.set_strideH(static_cast<uint32_t>(attrInfo.strideH));
     tiling.set_strideW(static_cast<uint32_t>(attrInfo.strideW));
@@ -440,7 +441,7 @@ void Conv2dTiling::SetAttrsTilingData(optiling::TConv2DTiling& tiling)
     tiling.set_roundMode(attrInfo.roundMode);
 }
 
-uint32_t Conv2dTiling::CalcAL1SpaceSize(optiling::TConv2DTiling& tiling)
+uint32_t Conv2dTiling::CalcAL1SpaceSize(optiling::Conv2DTilingData& tiling)
 {
     uint64_t aL1SpaceSize = 0;
     uint64_t fmapSize = DTYPE_SIZE_TAB.at(descInfo.fMapType.dtype);

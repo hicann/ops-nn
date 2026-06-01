@@ -58,8 +58,8 @@ public:
         if constexpr (Intf::isKL1NL0FullLoad) {
             LoadChannelWiseL1FullLoad(tensorL1, tensorGm, currentNL0_, 0);
         } else {
-            uint64_t tensorGmOffset = self_->ctx.nBL1Iter * self_->ctx.convTilingData->convApiTiling.nBL1 +
-                self_->ctx.nL0Iter * self_->ctx.convTilingData->convApiTiling.nL0;
+            uint64_t tensorGmOffset = self_->ctx.nBL1Iter * self_->ctx.convTilingData->nBL1 +
+                self_->ctx.nL0Iter * self_->ctx.convTilingData->nL0;
             LoadChannelWiseL1FullLoad(tensorL1, tensorGm, currentNL0_, tensorGmOffset);
         }
     }
@@ -93,15 +93,15 @@ public:
         }
         uint32_t offset = 0;
         
-        if (self_->ctx.convTilingData->convApiTiling.biasFullLoadFlag) {
+        if (self_->ctx.convTilingData->biasFullLoadFlag) {
             if constexpr (!Intf::isKL1NL0FullLoad) {
-                offset += self_->ctx.nBL1Iter * self_->ctx.convTilingData->convApiTiling.nBL1 +
-                          self_->ctx.nL0Iter * self_->ctx.convTilingData->convApiTiling.nL0;
+                offset += self_->ctx.nBL1Iter * self_->ctx.convTilingData->nBL1 +
+                          self_->ctx.nL0Iter * self_->ctx.convTilingData->nL0;
             }
             if constexpr (Intf::groupOptPreloadFlag) {
-                offset += self_->ctx.groupOptIter * self_->ctx.convTilingData->convApiTiling.orgCo /
-                          self_->ctx.convTilingData->convApiTiling.groups *
-                          self_->ctx.convTilingData->convApiTiling.enlarge;
+                offset += self_->ctx.groupOptIter * self_->ctx.convTilingData->orgCo /
+                          self_->ctx.convTilingData->groups *
+                          self_->ctx.convTilingData->enlarge;
             }
         }
 
@@ -124,7 +124,7 @@ public:
     __aicore__ inline void SetParams(Intf *self)
     {
         self_ = self;
-        nStep_ = self_->ctx.convTilingData->convApiTiling.nL0 / BLOCK_L0_N;
+        nStep_ = self_->ctx.convTilingData->nL0 / BLOCK_L0_N;
     }
 
     __aicore__ inline void SetN(uint64_t n)
@@ -133,7 +133,7 @@ public:
             ratioOfNToN0 = n / BLOCK_L0_N;
         } else {
             ratioOfNToN0 = (self_->ctx.nBL1Iter == self_->ctx.maxNBL1Iter && self_->ctx.nL0Iter == self_->ctx.maxNL0Iter) ?
-                n / BLOCK_L0_N : self_->ctx.convTilingData->convApiTiling.nStep;
+                n / BLOCK_L0_N : self_->ctx.convTilingData->nStep;
         }
     }
 
@@ -145,7 +145,7 @@ public:
             param_.SetMStartPosition(static_cast<uint32_t>(self_->ctx.nL0Iter * nStep_));
         }
         param_.SetMStep(static_cast<uint16_t>(ratioOfNToN0));
-        param_.SetSrcStride(static_cast<int32_t>(self_->ctx.convTilingData->convApiTiling.nL1DivBlockSize));
+        param_.SetSrcStride(static_cast<int32_t>(self_->ctx.convTilingData->nL1DivBlockSize));
         param_.SetDstStride(static_cast<uint16_t>(ratioOfNToN0));
         param_.SetIfTranspose(false);
     }
@@ -166,9 +166,9 @@ public:
         isLoaded = true;
         param_.SetMStartPosition(0);
         param_.SetKStartPosition(0);
-        param_.SetMStep(static_cast<uint16_t>(self_->ctx.convTilingData->convApiTiling.nL0 / BLOCK_L0_N)); 
-        param_.SetKStep(static_cast<uint16_t>(AlignB(self_->ctx.convTilingData->convApiTiling.kBL1, Intf::k0)/Intf::k0));
-        uint16_t stride = static_cast<uint16_t>(self_->ctx.convTilingData->convApiTiling.nBL1 / BLOCK_L0_N);
+        param_.SetMStep(static_cast<uint16_t>(self_->ctx.convTilingData->nL0 / BLOCK_L0_N)); 
+        param_.SetKStep(static_cast<uint16_t>(AlignB(self_->ctx.convTilingData->kBL1, Intf::k0)/Intf::k0));
+        uint16_t stride = static_cast<uint16_t>(self_->ctx.convTilingData->nBL1 / BLOCK_L0_N);
         param_.SetSrcStride(stride);
         param_.SetDstStride(stride);
         param_.SetIfTranspose(false);
@@ -197,7 +197,7 @@ public:
         if constexpr (Intf::ConvParam::innerBatch == static_cast<int8_t>(ConvInnerBatch::MULTI_BATCH)) {
             uint32_t srcOffset = 0;
             uint32_t dstOffset = 0;
-            uint32_t srcBatchStride = self_->ctx.currentML0Align * self_->ctx.convTilingData->convApiTiling.kL0;
+            uint32_t srcBatchStride = self_->ctx.currentML0Align * self_->ctx.convTilingData->kL0;
             uint32_t dstBatchStride = self_->ctx.currentML0Align * self_->ctx.currentNL0Align;
             for (uint32_t batchIdx = 0; batchIdx < self_->ctx.innerBatch; batchIdx++) {
                 Mmad<typename Intf::L0cT, typename Intf::FmapT, typename Intf::WeightT>(
@@ -228,7 +228,7 @@ __aicore__ inline QuantMode_t GetQuantPreHif8Fp8(Intf *self)
     // extend conv2d: may be scalar or vector quant
     if constexpr (AscendC::IsSameType<OutputT, float>::value) {
         if constexpr (Intf::isExtendConv2d) {
-            if (self->ctx.convTilingData->convApiTiling.quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
+            if (self->ctx.convTilingData->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
                 return QuantMode_t::VQF322F32_PRE;
             } else {
                 return QuantMode_t::QF322F32_PRE;
@@ -240,7 +240,7 @@ __aicore__ inline QuantMode_t GetQuantPreHif8Fp8(Intf *self)
 
     if constexpr (AscendC::IsSameType<OutputT, half>::value) {
         if constexpr (Intf::isExtendConv2d) {
-            if (self->ctx.convTilingData->convApiTiling.quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
+            if (self->ctx.convTilingData->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
                 return QuantMode_t::VQF322F16_PRE;
             } else {
                 return QuantMode_t::QF322F16_PRE;
@@ -252,7 +252,7 @@ __aicore__ inline QuantMode_t GetQuantPreHif8Fp8(Intf *self)
 
     if constexpr (AscendC::IsSameType<OutputT, bfloat16_t>::value) {
         if constexpr (Intf::isExtendConv2d) {
-            if (self->ctx.convTilingData->convApiTiling.quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
+            if (self->ctx.convTilingData->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
                 return QuantMode_t::VQF322BF16_PRE;
             } else {
                 return QuantMode_t::QF322BF16_PRE;
@@ -264,16 +264,16 @@ __aicore__ inline QuantMode_t GetQuantPreHif8Fp8(Intf *self)
 
     if constexpr (AscendC::IsSameType<OutputT, hifloat8_t>::value) {
         if constexpr (Intf::isExtendConv2d) {
-            if (self->ctx.convTilingData->convApiTiling.quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
+            if (self->ctx.convTilingData->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
                 return QuantMode_t::VQF322HIF8_PRE;
             } else {
                 return QuantMode_t::QF322HIF8_PRE;
             }
         } else {
-            if (self->ctx.convTilingData->convApiTiling.hasScale == 0) {
+            if (self->ctx.convTilingData->hasScale == 0) {
                 // conv2d support hif8 in hif8 out
                 return QuantMode_t::QF322HIF8_PRE;
-            } else if (self->ctx.convTilingData->convApiTiling.roundMode == ROUND_MODE_ROUND) {
+            } else if (self->ctx.convTilingData->roundMode == ROUND_MODE_ROUND) {
                 // quantconv2d/quantconv3d
                 return QuantMode_t::VQF322HIF8_PRE;
             }
@@ -282,7 +282,7 @@ __aicore__ inline QuantMode_t GetQuantPreHif8Fp8(Intf *self)
 
     if constexpr (AscendC::IsSameType<OutputT, fp8_e4m3fn_t>::value) {
         if constexpr (Intf::isExtendConv2d) {
-            if (self->ctx.convTilingData->convApiTiling.quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
+            if (self->ctx.convTilingData->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
                 return QuantMode_t::VQF322FP8_PRE;
             } else {
                 return QuantMode_t::QF322FP8_PRE;
@@ -302,13 +302,13 @@ __aicore__ inline QuantMode_t GetQuantPreInt32(Intf *self)
     if constexpr (AscendC::IsSameType<OutputT, half>::value) {
         if constexpr (Intf::isExtendConv2d) {
             if constexpr (FixpipeIdx == 0) {
-                if (self->ctx.convTilingData->convApiTiling.quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
+                if (self->ctx.convTilingData->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
                     return QuantMode_t::VDEQF16;
                 } else {
                     return QuantMode_t::DEQF16;
                 }
             } else {
-                if (self->ctx.convTilingData->convApiTiling.quantMode1 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
+                if (self->ctx.convTilingData->quantMode1 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
                     return QuantMode_t::VDEQF16;
                 } else {
                     return QuantMode_t::DEQF16;
@@ -323,13 +323,13 @@ __aicore__ inline QuantMode_t GetQuantPreInt32(Intf *self)
     } else if constexpr (AscendC::IsSameType<OutputT, int8_t>::value) {
         if constexpr (Intf::isExtendConv2d) {
             if constexpr (FixpipeIdx == 0) {
-                if (self->ctx.convTilingData->convApiTiling.quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
+                if (self->ctx.convTilingData->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
                     return QuantMode_t::VREQ8;
                 } else {
                     return QuantMode_t::REQ8;
                 }
             } else {
-                if (self->ctx.convTilingData->convApiTiling.quantMode1 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
+                if (self->ctx.convTilingData->quantMode1 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
                     return QuantMode_t::VREQ8;
                 } else {
                     return QuantMode_t::REQ8;
@@ -359,13 +359,13 @@ __aicore__ inline QuantMode_t GetQuantPreFp32(Intf *self)
     } else if constexpr (AscendC::IsSameType<OutputT, int8_t>::value) {
         if constexpr (Intf::isExtendConv2d) {
             if constexpr (FixpipeIdx == 0) {
-                if (self->ctx.convTilingData->convApiTiling.quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
+                if (self->ctx.convTilingData->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
                     return QuantMode_t::VQF322B8_PRE;
                 } else {
                     return QuantMode_t::QF322B8_PRE;
                 }
             } else {
-                if (self->ctx.convTilingData->convApiTiling.quantMode1 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
+                if (self->ctx.convTilingData->quantMode1 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
                     return QuantMode_t::VQF322B8_PRE;
                 } else {
                     return QuantMode_t::QF322B8_PRE;

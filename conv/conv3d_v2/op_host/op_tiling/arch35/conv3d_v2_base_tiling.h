@@ -32,7 +32,7 @@ namespace optiling {
 namespace conv_ops_tiling {
 using conv_tiling::IterateMNOrder;
 using conv_tiling::TPosition;
-class Conv3dTilingCache : public ConvTilingCache<Ops::NN::Conv3dV2::Conv3DV2TilingData> {
+class Conv3dTilingCache : public ConvTilingCache<Ops::NN::Conv3dV2::Conv3DV2TilingDataV2> {
 public:
     static Conv3dTilingCache& GetInstance()
     {
@@ -75,8 +75,8 @@ protected:
 
 private:
     conv_tiling::Conv3dTiling conv3dApiTiling_;
-    Ops::NN::Conv3dV2::Conv3DV2TilingData tilingData_;
-    Ops::NN::Conv3dV2::Conv3DV2TilingData cachedTilingData_;
+    Ops::NN::Conv3dV2::Conv3DV2TilingDataV2 tilingData_;
+    Ops::NN::Conv3dV2::Conv3DV2TilingDataV2 cachedTilingData_;
     optiling::conv_ops_tiling::ConvOriGroupInfo oriGroupInfo_;
     optiling::conv_ops_tiling::ConvOptGroupInfo optGroupInfo_;
     conv_tiling::PlatformInfo apiInputPlatformInfo_;
