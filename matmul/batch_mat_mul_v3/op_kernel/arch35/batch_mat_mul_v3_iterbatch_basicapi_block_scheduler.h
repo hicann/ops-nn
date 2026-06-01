@@ -69,7 +69,7 @@ public:
         isHf32_ = params.tilingData->isHf32;
         innerBatch_ = params.tilingData->innerBatch;
         l2CacheDisable_ = params.tilingData->l2CacheDisable;
-        needNdDma_ = params.tilingData->needNdDma;
+        needNdDma_ = static_cast<bool>(params.tilingData->needNdDma);
         batchX3_ = params.tilingData->batchX3;
     }
 

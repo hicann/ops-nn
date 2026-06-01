@@ -235,10 +235,8 @@ ge::graphStatus MatMulV3BasicStreamKTiling::GetTilingData(TilingResult& tiling) 
 {
     if (std::string_view(context_->GetNodeType()) == "FusedMatMul") {
         return GetTilingDataImpl<BatchMatMulV3BasicTilingData>(tiling);
-    } else {
-        return GetTilingDataImpl<MatMulV3BasicTilingData>(tiling);
     }
-    return ge::GRAPH_FAILED;
+    return GetTilingDataImpl<MatMulV3BasicTilingData>(tiling);
 }
 } // namespace matmul_v3_advanced
 } // namespace optiling

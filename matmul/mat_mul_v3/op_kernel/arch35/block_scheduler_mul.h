@@ -57,7 +57,7 @@ public:
         baseK_ = params.tilingData->baseK;
         tailK_ = params.tilingData->tailK;
         loopK_ = params.tilingData->loopK;
-        dataCopyMode_ = params.tilingData->dataCopyMode;
+        dataCopyMode_ = static_cast<bool>(params.tilingData->dataCopyMode);
         n_ = shape.n;
         k_ = shape.k;
     }

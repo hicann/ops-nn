@@ -138,7 +138,7 @@ struct BatchMatMulV3IterBatchBasicTilingData {
     uint32_t baseK = 16;
     uint32_t innerBatch = 0; // 非连续场景B2内轴
     uint32_t batchX3 = 1;
-    bool needNdDma = false; // x3是否需要broadCast
+    uint32_t needNdDma = 0; // x3是否需要broadCast
     L2CacheMode l2CacheDisable = L2CacheMode::L2_CACHE_DEFAULT;
 };
 #pragma pack(pop)
@@ -193,7 +193,7 @@ struct MatMulToMulBasicTilingData{
     uint32_t baseK = 0;
     uint32_t tailK = 0;
     uint32_t loopK = 1;
-    bool dataCopyMode = false;
+    uint32_t dataCopyMode = 0;
 };
 #pragma pack(pop)
 

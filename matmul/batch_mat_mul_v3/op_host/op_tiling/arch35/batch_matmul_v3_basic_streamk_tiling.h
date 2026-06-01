@@ -10,7 +10,7 @@
 
 
 /* !
- * \file batch_matmul_v3_stream_k_tiling.h
+ * \file batch_matmul_v3_basic_streamk_tiling.h
  * \brief
  */
 #ifndef __OP_HOST_BATCH_MATMUL_V3_STREAM_K_TILING_H__

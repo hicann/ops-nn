@@ -155,7 +155,6 @@ protected:
     template <typename TilingDataType>
     ge::graphStatus GetTilingDataImpl(TilingResult& tiling) const
     {
-        ge::graphStatus getTilingRet = ge::GRAPH_SUCCESS;
         std::shared_ptr<TilingDataType> tilingDataPtr;
         try {
             tilingDataPtr = std::make_shared<TilingDataType>();
@@ -163,7 +162,7 @@ protected:
             OP_LOGE(context_->GetNodeName(), "Failed to allocate memory for tilingData ");
             return ge::GRAPH_FAILED;
         }
-        getTilingRet = GetTilingDataProcess(*tilingDataPtr);
+        ge::graphStatus getTilingRet = GetTilingDataProcess(*tilingDataPtr);
         tiling.tilingData = tilingDataPtr;
         tiling.tilingDataSize = sizeof(TilingDataType);
         return getTilingRet;
