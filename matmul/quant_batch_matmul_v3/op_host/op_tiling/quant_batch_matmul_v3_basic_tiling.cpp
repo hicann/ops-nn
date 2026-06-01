@@ -316,6 +316,12 @@ bool QuantBatchMatmulV3BasicTiling::CheckUseBasicTiling()
         return true;
     }
 
+    // milan版本，如果有控核，则控制走入basic tiling
+    if (compileInfo_.supportL0c2Out && (aicoreParams_.aicNum != 24 && aicoreParams_.aicNum != 20)) {
+        OP_LOGD(inputParams_.opName, "Current aicNum is: %ld, entering basic tiling", aicoreParams_.aicNum);
+        return true;
+    }
+
     // 非milan版本或多batch暂不走基本块
     if (!compileInfo_.supportL0c2Out || inputParams_.batchC != 1) {
         return false;
