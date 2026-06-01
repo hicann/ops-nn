@@ -602,14 +602,17 @@ public:
     __aicore__ inline void CopyIn();
     __aicore__ inline void Compute();
     __aicore__ inline void singleLineProcessVF(
-        __local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr, __local_mem__ T2* argmaxAddr);
+        __local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr, __local_mem__ T2* argmaxAddr,
+        __local_mem__ uint32_t* helpAddr);
     __aicore__ inline void multipleLineProcessVF2(
         __local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr, __local_mem__ T2* argmaxAddr,
         __local_mem__ uint32_t* helpAddr);
     __aicore__ inline void multipleLineHwProcessVF(
-        __local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr, __local_mem__ T2* argmaxAddr);
+        __local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr, __local_mem__ T2* argmaxAddr,
+        __local_mem__ uint32_t* helpAddr);
     __aicore__ inline void multipleLineDhwProcessVF(
-        __local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr, __local_mem__ T2* argmaxAddr);
+        __local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr, __local_mem__ T2* argmaxAddr,
+        __local_mem__ uint32_t* helpAddr);
     __aicore__ inline void ProcessNoArgmaxBlock();
     __aicore__ inline void CopyOut();
 

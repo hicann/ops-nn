@@ -184,6 +184,7 @@ private:
     void SplitUnalignDHW();
     bool IsMeetTargetCoreNum() const;
     bool IsMeetUBSize();
+    bool IsMeetUBSizeNC();
     void SearchBestTiling();
     void DynamicAdjustmentDWH();
     void SetTilingData();
@@ -192,6 +193,7 @@ private:
     void PrintSplitData() const;
     void DoBlockTiling();
     void DoBufferCalculate();
+    void DoBufferCalculateNC();
     bool IsCapable() override;
     ge::graphStatus DoOpTiling() override;
     ge::graphStatus PostTiling() override;

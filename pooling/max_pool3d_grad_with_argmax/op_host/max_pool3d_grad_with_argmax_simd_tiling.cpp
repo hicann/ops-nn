@@ -51,18 +51,21 @@ void MaxPool3DGradWithArgmaxNCDHWTiling::InitializationVars()
         baseData.isPad = 1;
     }
     baseData.dProBatchSize = 1;
-    if (inputData.dKernel > inputData.dStride) {
-        baseData.dProBatchSize = Ops::Base::CeilDiv(inputData.dKernel, inputData.dStride);
+    int64_t effectiveDKernel = (inputData.dKernel - 1) * inputData.dDilation + 1;
+    if (effectiveDKernel > inputData.dStride) {
+        baseData.dProBatchSize = Ops::Base::CeilDiv(effectiveDKernel, inputData.dStride);
     }
 
     baseData.hProBatchSize = 1;
-    if (inputData.hKernel > inputData.hStride) {
-        baseData.hProBatchSize = Ops::Base::CeilDiv(inputData.hKernel, inputData.hStride);
+    int64_t effectiveHKernel = (inputData.hKernel - 1) * inputData.hDilation + 1;
+    if (effectiveHKernel > inputData.hStride) {
+        baseData.hProBatchSize = Ops::Base::CeilDiv(effectiveHKernel, inputData.hStride);
     }
 
     baseData.wProBatchSize = 1;
-    if (inputData.wKernel > inputData.wStride) {
-        baseData.wProBatchSize = Ops::Base::CeilDiv(inputData.wKernel, inputData.wStride);
+    int64_t effectiveWKernel = (inputData.wKernel - 1) * inputData.wDilation + 1;
+    if (effectiveWKernel > inputData.wStride) {
+        baseData.wProBatchSize = Ops::Base::CeilDiv(effectiveWKernel, inputData.wStride);
     }
 
     baseData.isOverlap = 0;
@@ -75,13 +78,6 @@ bool MaxPool3DGradWithArgmaxNCDHWTiling::IsCapable()
 {
     InitializationVars();
     if (inputData.inputFormat != ge::Format::FORMAT_NCDHW) {
-        return false;
-    }
-    if (baseData.hProBatchSize >= inputData.hGrad && baseData.wProBatchSize >= inputData.wGrad &&
-        baseData.dProBatchSize >= inputData.dGrad) {
-        return false;
-    }
-    if (inputData.dDilation != 1 || inputData.hDilation != 1 || inputData.wDilation != 1) {
         return false;
     }
 
@@ -101,7 +97,7 @@ bool MaxPool3DGradWithArgmaxNCDHWTiling::IsCapable()
 uint64_t MaxPool3DGradWithArgmaxNCDHWTiling::GetTilingKey() const
 {
     int64_t outDataCount = inputData.nX * inputData.cX * inputData.dX * inputData.hX * inputData.wX;
-    uint32_t idxDtype = outDataCount <= static_cast<int64_t>(MAX_INT32) ? TPL_INT32 : TPL_INT64;
+    uint32_t idxDtype = TPL_INT32;
     uint32_t isChannelLast = 0;
     uint32_t isSimt = 0;
     return GET_TPL_TILING_KEY(idxDtype, isSimt, isChannelLast, splitData.isCheckRange, splitData.isFull);
@@ -111,16 +107,46 @@ void MaxPool3DGradWithArgmaxNCDHWTiling::DoBufferCalculate()
 {
     // The calculation only involves inner.
     int64_t dInputInner = std::min(
-        Ops::Base::CeilDiv(splitData.dOutputInner + inputData.dKernel - 1, inputData.dStride), inputData.dGrad);
+        Ops::Base::CeilDiv(splitData.dOutputInner + (inputData.dKernel - 1) * inputData.dDilation, inputData.dStride),
+        inputData.dGrad);
     int64_t hInputInner = std::min(
-        Ops::Base::CeilDiv(splitData.hOutputInner + inputData.hKernel - 1, inputData.hStride), inputData.hGrad);
+        Ops::Base::CeilDiv(splitData.hOutputInner + (inputData.hKernel - 1) * inputData.hDilation, inputData.hStride),
+        inputData.hGrad);
     int64_t wInputInner = std::min(
-        Ops::Base::CeilDiv(splitData.wOutputInner + inputData.wKernel - 1, inputData.wStride), inputData.wGrad);
+        Ops::Base::CeilDiv(splitData.wOutputInner + (inputData.wKernel - 1) * inputData.wDilation, inputData.wStride),
+        inputData.wGrad);
     int64_t wInputInnerAligned = Ops::Base::CeilAlign(wInputInner, baseData.maxDataNumInOneBlock);
     int64_t wOutputInnerAligned = Ops::Base::CeilAlign(splitData.wOutputInner, baseData.maxDataNumInOneBlock);
 
     int64_t inputPlaneSizeDHW = dInputInner * hInputInner * wInputInnerAligned;
     int64_t outputPlaneSizeDHW = splitData.dOutputInner * splitData.hOutputInner * wOutputInnerAligned;
+
+    splitData.gradBufferSize = splitData.highAxisInner * inputPlaneSizeDHW * baseData.inputBytes;
+    splitData.argmaxBufferSize = splitData.highAxisInner * inputPlaneSizeDHW * baseData.indexBytes;
+    splitData.outputBufferSize = splitData.highAxisInner * outputPlaneSizeDHW * FLOAT32_SIZE;
+
+    int64_t tmpTotalBufferSize = splitData.outputBufferSize + splitData.gradBufferSize + splitData.argmaxBufferSize;
+    splitData.totalBufferSize = tmpTotalBufferSize * DOUBLE_BUFFER + HELP_BUFFER_SIZE;
+}
+
+void MaxPool3DGradWithArgmaxNCDHWTiling::DoBufferCalculateNC()
+{
+    // The calculation only involves inner.
+    int64_t wInputInner = std::min(
+        Ops::Base::CeilDiv(splitData.wOutputInner + (inputData.wKernel - 1) * inputData.wDilation, inputData.wStride),
+        inputData.wGrad);
+    int64_t hInputInner = std::min(
+        Ops::Base::CeilDiv(splitData.hOutputInner + (inputData.hKernel - 1) * inputData.hDilation, inputData.hStride),
+        inputData.hGrad);
+    int64_t dInputInner = std::min(
+        Ops::Base::CeilDiv(splitData.dOutputInner + (inputData.dKernel - 1) * inputData.dDilation, inputData.dStride),
+        inputData.dGrad);
+    
+    int64_t wInputInnerAligned = Ops::Base::CeilAlign(wInputInner, baseData.maxDataNumInOneBlock);
+
+    int64_t inputPlaneSizeDHW = dInputInner * hInputInner * wInputInnerAligned;
+    int64_t outputPlaneSizeDHW = splitData.dOutputInner * splitData.hOutputInner * splitData.wOutputInner;
+    outputPlaneSizeDHW = Ops::Base::CeilAlign(outputPlaneSizeDHW, baseData.maxDataNumInOneBlock);
 
     splitData.gradBufferSize = splitData.highAxisInner * inputPlaneSizeDHW * baseData.inputBytes;
     splitData.argmaxBufferSize = splitData.highAxisInner * inputPlaneSizeDHW * baseData.indexBytes;
@@ -141,6 +167,12 @@ bool MaxPool3DGradWithArgmaxNCDHWTiling::IsMeetTargetCoreNum() const
            baseData.coreUsedForBestPerformance;
 }
 
+bool MaxPool3DGradWithArgmaxNCDHWTiling::IsMeetUBSizeNC()
+{
+    DoBufferCalculateNC();
+    return splitData.totalBufferSize <= baseData.availableUb;
+}
+
 bool MaxPool3DGradWithArgmaxNCDHWTiling::IsMeetUBSize()
 {
     DoBufferCalculate();
@@ -152,21 +184,19 @@ bool MaxPool3DGradWithArgmaxNCDHWTiling::TrySplitNC()
     splitData.wOutputInner = inputData.wX;
     splitData.hOutputInner = inputData.hX;
     splitData.dOutputInner = inputData.dX;
-    splitData.highAxisInner = Ops::Base::CeilDiv(baseData.inputNCSize, baseData.coreUsedForBestPerformance);
-    if (IsMeetUBSize() && IsMeetTargetCoreNum()) {
-        return true;
-    }
 
     splitData.highAxisInner = 1;
-    if (IsMeetUBSize() && IsMeetTargetCoreNum()) {
+    if (IsMeetUBSizeNC()) {
+        splitData.highAxisInner = Ops::Base::CeilDiv(baseData.inputNCSize, baseData.coreUsedForBestPerformance);
+
         int64_t left = 1;
-        int64_t right = baseData.inputNCSize;
+        int64_t right = splitData.highAxisInner;
         int64_t bestSplit = 1;
         while (left <= right) {
             int64_t mid = left + (right - left) / 2;
             splitData.highAxisInner = mid;
 
-            if (IsMeetUBSize() && IsMeetTargetCoreNum()) {
+            if (IsMeetUBSizeNC()) {
                 bestSplit = mid;
                 left = mid + 1;
             } else {
@@ -328,6 +358,7 @@ void MaxPool3DGradWithArgmaxNCDHWTiling::SearchBestTiling()
         splitData.isFull = 1;
         return;
     }
+    splitData.isCheckRange = 1;
     if (baseData.isPad == 0 && baseData.isOverlap == 0) {
         if (TrySplitAlignD()) {
             return;
@@ -341,7 +372,6 @@ void MaxPool3DGradWithArgmaxNCDHWTiling::SearchBestTiling()
             return;
         }
     }
-    splitData.isCheckRange = 1;
     SplitUnalignDHW();
     return;
 }
@@ -349,7 +379,12 @@ void MaxPool3DGradWithArgmaxNCDHWTiling::SearchBestTiling()
 void MaxPool3DGradWithArgmaxNCDHWTiling::DoUBTiling()
 {
     SearchBestTiling();
-    DoBufferCalculate();
+    if (splitData.isFull == 1) {
+        DoBufferCalculateNC();
+    } else {
+        DoBufferCalculate();
+    }
+    
     splitData.wOutputOuter = Ops::Base::CeilDiv(inputData.wX, splitData.wOutputInner);
     int64_t tempWOutputTail = inputData.wX % splitData.wOutputInner;
     splitData.wOutputTail = tempWOutputTail == 0 ? splitData.wOutputInner : tempWOutputTail;
