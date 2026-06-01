@@ -412,7 +412,7 @@ __aicore__ inline void InplaceIndexAddDeterminstic<VAR_T, IDX_T>::CopySumAndRVal
 
     int32_t rowOfset = rowIdx * tilingData_.ubQuantaIndxFactor;
     CopyIn<IDX_T>(sumIdxLocal, updateSumIdxWsGm_[rowOfset], rowLen);
-    int32_t inOfset = rowOfset;
+    int32_t inOfset = rowOfset * tilingData_.afterAxis;
 
     DataCopyExtParams copyParams = {static_cast<uint16_t>(rowLen), static_cast<uint32_t>(colLen * sizeof(float)),
                                     static_cast<uint32_t>(0),
