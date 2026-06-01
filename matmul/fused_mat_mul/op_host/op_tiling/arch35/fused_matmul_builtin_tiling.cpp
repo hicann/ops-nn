@@ -258,14 +258,17 @@ ge::graphStatus FusedMatMulBuiltInTiling::GetBatchInfo(
 
 ge::graphStatus FusedMatMulBuiltInTiling::DoTiling()
 {
+    if (GetShapeAttrsInfo() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
     // 重写BMM校验Batch和bias
     MatMulV3BatchInfo tempBatchInfo;
     OP_TILING_CHECK(
         (GetBatchInfo(*context_, args_, tempBatchInfo) != ge::GRAPH_SUCCESS),
         CUBE_INNER_ERR_REPORT(args_.opName, "GetBatchInfo failed"), return ge::GRAPH_FAILED);
     args_.batchInfo = &tempBatchInfo;
-    // 需要先获取batchInfo再做shape校验
-    if (GetShapeAttrsInfo() != ge::GRAPH_SUCCESS) {
+    // 获取全部args信息(包括batchInfo)后进行算子特殊校验
+    if (OpSpecificCheck(*context_, args_, npuArch_) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
     FusedMatmulTilingKey fusedMatmulTilingKey;
@@ -287,7 +290,7 @@ ge::graphStatus FusedMatMulBuiltInTiling::GetArgs()
     if (GetShape() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
-    return OpSpecificCheck(*context_, args_, npuArch_);
+    return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus FusedMatMulBuiltInTiling::CheckArgs()
