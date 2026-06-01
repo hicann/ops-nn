@@ -79,11 +79,12 @@ private:
         LocalTensor<float> scaleLocal = scaleQue_.AllocTensor<float>();
         uint64_t gradAddrOffset = progress * embeddingDim_ + formerEmbeddingDim_ * dimJ;
         uint64_t scaleAddrOffset = progress;
-        DataCopyParams gradCopyParams{1, static_cast<uint16_t>(curEmbeddingDim_ * sizeof(T)), 0, 0};
-        DataCopyParams scaleCopyParams{1, static_cast<uint16_t>(sizeof(uint32_t)), 0, 0};
-        DataCopyPadParams padParams{true, 0, 0, 0};
-        DataCopyPad(gradLocal, backPropGm_[gradAddrOffset], gradCopyParams, padParams);
-        DataCopyPad(scaleLocal, indexCountGm_[scaleAddrOffset], scaleCopyParams, padParams);
+        DataCopyExtParams gradCopyParams{1, static_cast<uint32_t>(curEmbeddingDim_ * sizeof(T)), 0, 0, 0};
+        DataCopyExtParams scaleCopyParams{1, static_cast<uint32_t>(sizeof(uint32_t)), 0, 0, 0};
+        DataCopyPadExtParams<T> gradPadParams{true, 0, 0, 0};
+        DataCopyPadExtParams<float> scalePadParams{true, 0, 0, 0};
+        DataCopyPad(gradLocal, backPropGm_[gradAddrOffset], gradCopyParams, gradPadParams);
+        DataCopyPad(scaleLocal, indexCountGm_[scaleAddrOffset], scaleCopyParams, scalePadParams);
         gradInQue_.EnQue<T>(gradLocal);
         scaleQue_.EnQue<float>(scaleLocal);
     }
@@ -114,7 +115,7 @@ private:
     {
         LocalTensor<T> gradOutLocal = gradOutQue_.DeQue<T>();
         uint64_t gradAddrOffset = progress * embeddingDim_ + formerEmbeddingDim_ * dimJ;
-        DataCopyParams copyParams{1, static_cast<uint16_t>(curEmbeddingDim_ * sizeof(T)), 0, 0};
+        DataCopyExtParams copyParams{1, static_cast<uint32_t>(curEmbeddingDim_ * sizeof(T)), 0, 0, 0};
         DataCopyPad(backPropGm_[gradAddrOffset], gradOutLocal, copyParams);
         gradOutQue_.FreeTensor<T>(gradOutLocal);
     }

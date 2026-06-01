@@ -159,8 +159,8 @@ private:
     {
         LocalTensor<int> indiceLocal = indiceQue_.AllocTensor<int>();
         uint64_t idAddrOffset = indicesAddrOffset_ + offset;
-        DataCopyParams indiceCopyParams{1, static_cast<uint16_t>(sizeof(uint32_t)), 0, 0};
-        DataCopyPadParams padParams{true, 0, 0, 0};
+        DataCopyExtParams indiceCopyParams{1, static_cast<uint32_t>(sizeof(uint32_t)), 0, 0, 0};
+        DataCopyPadExtParams<int> padParams{true, 0, 0, 0};
         DataCopyPad(indiceLocal, indiceGlobalGm_[idAddrOffset - ADDR_BACK_STEP], indiceCopyParams, padParams);
         event_t eventMTE2S = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
         PIPE_MTE2_S();
@@ -173,9 +173,9 @@ private:
         // check is same indice with stand indice
         LocalTensor<int> indiceLocal = indiceQue_.AllocTensor<int>();
         uint64_t idAddrOffset = progress;
-        DataCopyParams indiceCopyParams{1, static_cast<uint16_t>(sizeof(uint32_t)), 0, 0};
-        DataCopyPadParams padParams{true, 0, 0, 0};
-        DataCopyPad(indiceLocal, indiceGm_[idAddrOffset], indiceCopyParams, padParams);
+        DataCopyExtParams indiceCopyParams{1, static_cast<uint32_t>(sizeof(uint32_t)), 0, 0, 0};
+        DataCopyPadExtParams<int> indicePadParams{true, 0, 0, 0};
+        DataCopyPad(indiceLocal, indiceGm_[idAddrOffset], indiceCopyParams, indicePadParams);
         event_t eventMTE2S = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
         PIPE_MTE2_S();
         if ((indiceLocal.GetValue(0) == standIdice_) == flag) {
@@ -186,11 +186,12 @@ private:
         // copy in
         LocalTensor<T> gradLocal = gradQue_.AllocTensor<T>();
         LocalTensor<int> posIdxLocal = posIdxQue_.AllocTensor<int>();
-        DataCopyParams gradCopyParams{1, static_cast<uint16_t>(nowEmbeddingDim_ * sizeof(T)), 0, 0};
-        DataCopyPad(posIdxLocal, posIdxGm_[idAddrOffset], indiceCopyParams, padParams);
+        DataCopyExtParams gradCopyParams{1, static_cast<uint32_t>(nowEmbeddingDim_ * sizeof(T)), 0, 0, 0};
+        DataCopyPadExtParams<T> gradPadParams{true, 0, 0, 0};
+        DataCopyPad(posIdxLocal, posIdxGm_[idAddrOffset], indiceCopyParams, indicePadParams);
         PIPE_MTE2_S();
         uint64_t gradAddrOffset = posIdxLocal.GetValue(0) * embeddingDim_ + formerEmbeddingDim_ * dimJ;
-        DataCopyPad(gradLocal, gradGm_[gradAddrOffset], gradCopyParams, padParams);
+        DataCopyPad(gradLocal, gradGm_[gradAddrOffset], gradCopyParams, gradPadParams);
         gradQue_.EnQue<T>(gradLocal);
         posIdxQue_.FreeTensor<int>(posIdxLocal);
         return true;

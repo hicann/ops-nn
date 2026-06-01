@@ -264,7 +264,7 @@ __aicore__ inline void CopyOut(int indice)
 {
     LocalTensor<CT> addLocal = addResQue_.DeQue<CT>();
     auto addLocalCasted = addLocal.template ReinterpretCast<MT>();
-    uint32_t gmAddrOffset = indice * embeddingDim_;
+    uint64_t gmAddrOffset = static_cast<uint64_t>(indice) * embeddingDim_;
     DataCopyExtParams copyParams{1, static_cast<uint32_t>(embeddingDim_ * sizeof(CT)), 0, 0, 0};
     SetAtomicAdd<CT>();
     if (isDifferentDtype_) {

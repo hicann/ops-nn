@@ -189,10 +189,10 @@ __aicore__ inline void ScatterListRLBLEPad<T1, T2>::CopyOutPad(
             alignCount = copyCountAlign - m_tilingData.updatesOneBlock;
             tailCount = copyCount - alignCount;
             DataCopy(varGm[dstGmOffset], updatesUb, alignCount);
-            DataCopyParams copyParams{1, static_cast<uint16_t>(tailCount * sizeof(T1)), 0, 0};
+            DataCopyExtParams copyParams{1, static_cast<uint32_t>(tailCount * sizeof(T1)), 0, 0, 0};
             DataCopyPad(varGm[dstGmOffset + alignCount], updatesUb[alignCount], copyParams);
         } else {
-            DataCopyParams copyParams{1, static_cast<uint16_t>(copyCount * sizeof(T1)), 0, 0};
+            DataCopyExtParams copyParams{1, static_cast<uint32_t>(copyCount * sizeof(T1)), 0, 0, 0};
             DataCopyPad(varGm[dstGmOffset], updatesUb, copyParams);
         }
     } else {

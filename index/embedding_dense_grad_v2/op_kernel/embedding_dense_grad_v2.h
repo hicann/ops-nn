@@ -495,8 +495,8 @@ private:
      __aicore__ inline void CopyStageIn(const uint64_t indexId)
      {
         LocalTensor<CT> gradLocal = gradQue_.AllocTensor<CT>();
-        DataCopyParams gradCopyParams{1, static_cast<uint16_t>(curEmbeddingDim_ * sizeof(CT)), 0, 0};
-        DataCopyPadParams padParams{true, 0, 0, 0};
+        DataCopyExtParams gradCopyParams{1, static_cast<uint32_t>(curEmbeddingDim_ * sizeof(CT)), 0, 0, 0};
+        DataCopyPadExtParams<CT> padParams{true, 0, 0, 0};
         DataCopyPad(gradLocal, outStageGm_[indexId * formerEmbeddingDim_], gradCopyParams, padParams);
         gradQue_.EnQue<CT>(gradLocal);
      }
