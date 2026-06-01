@@ -12,8 +12,8 @@
 #include <climits>
 #include <cmath>
 #include "level0/zero_op.h"
-#include "lp_norm_reduce_v2.h"
-#include "lp_norm_update_v2.h"
+#include "norm/common/op_api/lp_norm_reduce_v2.h"
+#include "norm/common/op_api/lp_norm_update_v2.h"
 #include "lp_norm_v2.h"
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"

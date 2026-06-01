@@ -11,8 +11,8 @@
 #include <climits>
 #include <cmath>
 #include <bitset>
-#include "lp_norm_reduce_v2.h"
-#include "lp_norm_update_v2.h"
+#include "norm/common/op_api/lp_norm_reduce_v2.h"
+#include "norm/common/op_api/lp_norm_update_v2.h"
 #include "lp_norm_v2.h"
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"

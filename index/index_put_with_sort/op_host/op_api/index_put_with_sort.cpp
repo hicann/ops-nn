@@ -13,7 +13,7 @@
  * \brief
  */
 
-#include "index_put_with_sort.h"
+#include "index/common/op_api/index_put_with_sort.h"
 #include "opdev/data_type_utils.h"
 #include "opdev/format_utils.h"
 #include "opdev/make_op_executor.h"

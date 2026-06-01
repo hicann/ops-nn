@@ -13,7 +13,7 @@
  * \brief
  */
 
-#include "index_put.h"
+#include "index/common/op_api/index_put.h"
 #include "opdev/aicpu/aicpu_task.h"
 #include "opdev/data_type_utils.h"
 #include "opdev/format_utils.h"

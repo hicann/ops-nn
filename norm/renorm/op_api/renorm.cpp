@@ -15,7 +15,7 @@
 #include "opdev/make_op_executor.h"
 #include "opdev/aicpu/aicpu_task.h"
 #include "opdev/op_dfx.h"
-#include "renorm.h"
+#include "norm/common/op_api/renorm.h"
 
 using namespace op;
 namespace l0op {

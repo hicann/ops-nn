@@ -23,10 +23,10 @@
 #include "aclnn_kernels/common/op_error_check.h"
 #include "op_api/aclnn_util.h"
 
-#include "pooling.h"
-#include "avgpool_update.h"
+#include "pooling/common/op_api/pooling.h"
+#include "pooling/common/op_api/avgpool_update.h"
 #include "level0/reduce_mean.h"
-#include "avgpool_v2.h"
+#include "pooling/common/op_api/avgpool_v2.h"
 #include "aclnn_kernels/transdata.h"
 #include "level0/muls.h"
 #include "aclnn_kernels/cast.h"

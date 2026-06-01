@@ -8,8 +8,8 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#include "gather_v3.h"
-#include "index/gather_v2/op_api/gather_v2.h"
+#include "index/common/op_api/gather_v3.h"
+#include "op_api/gather_v2.h"
 #include "opdev/make_op_executor.h"
 #include "opdev/aicpu/aicpu_task.h"
 #include "opdev/op_def.h"

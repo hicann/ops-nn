@@ -14,7 +14,7 @@
  * \brief
  */
 #include "aclnn_take.h"
-#include "gather_v2.h"
+#include "op_api/gather_v2.h"
 #include "aclnn_kernels/contiguous.h"
 #include "aclnn_kernels/reshape.h"
 #include "opdev/op_dfx.h"

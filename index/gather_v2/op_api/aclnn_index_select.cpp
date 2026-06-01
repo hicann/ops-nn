@@ -14,8 +14,8 @@
  * \brief
  */
 #include "aclnn_index_select.h"
-#include "gather_v2.h"
-#include "index/gather_v3/op_host/op_api/gather_v3.h"
+#include "op_api/gather_v2.h"
+#include "index/common/op_api/gather_v3.h"
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"
 #include "level0/unsqueeze.h"

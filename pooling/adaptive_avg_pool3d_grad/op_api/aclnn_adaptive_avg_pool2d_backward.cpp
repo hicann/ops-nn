@@ -14,7 +14,7 @@
 #include "aclnn_adaptive_avg_pool2d_backward.h"
 #include "adaptive_avg_pool3d_backward.h"
 #include "adaptive_avg_pool2d_backward.h"
-#include "level0/adaptive_avg_pool2d_assist_matrix.h"
+#include "pooling/common/op_api/adaptive_avg_pool2d_assist_matrix.h"
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"
 #include "aclnn_kernels/reshape.h"
@@ -34,7 +34,7 @@
 #include "opdev/tensor_view_utils.h"
 #include "opdev/fast_vector.h"
 #include "aclnn_kernels/common/op_error_check.h"
-#include "pooling/adaptive_avg_pool2d/op_api/shape_op.h"
+#include "pooling/common/op_api/shape_op.h"
 
 using namespace op;
 #ifdef __cplusplus

@@ -9,7 +9,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#include "scatter_nd_add.h"
+#include "index/common/op_api/scatter_nd_add.h"
 #include "opdev/make_op_executor.h"
 #include "opdev/op_dfx.h"
 #include "opdev/aicpu/aicpu_task.h"

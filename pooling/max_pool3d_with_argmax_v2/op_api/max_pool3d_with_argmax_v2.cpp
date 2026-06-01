@@ -18,7 +18,7 @@
 #include "opdev/shape_utils.h"
 #include "opdev/platform.h"
 #include "op_api/aclnn_util.h"
-#include "max_pool3d_with_argmax_v2.h"
+#include "pooling/common/op_api/max_pool3d_with_argmax_v2.h"
 
 using namespace op;
 

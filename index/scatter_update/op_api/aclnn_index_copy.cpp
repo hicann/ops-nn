@@ -15,7 +15,7 @@
 #include "aclnn_index_copy.h"
 #include "index/index_put_v2/op_api/index_put_v2.h"
 #include "aclnn_kernels/transpose.h"
-#include "scatter_update.h"
+#include "op_api/scatter_update.h"
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"
 #include "aclnn_kernels/reshape.h"

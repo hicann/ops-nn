@@ -33,7 +33,7 @@
 #include "opdev/op_log.h"
 #include "opdev/tensor_view_utils.h"
 #include "op_api/aclnn_util.h"
-#include "batch_norm_backward.h"
+#include "norm/common/op_api/batch_norm_backward.h"
 #include "aclnn_batch_norm_backward.h"
 
 using namespace op;

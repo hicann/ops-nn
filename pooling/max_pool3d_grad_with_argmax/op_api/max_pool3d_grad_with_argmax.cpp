@@ -8,7 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#include "max_pool3d_grad_with_argmax.h"
+#include "pooling/common/op_api/max_pool3d_grad_with_argmax.h"
 #include "opdev/data_type_utils.h"
 #include "opdev/aicpu/aicpu_task.h"
 #include "opdev/format_utils.h"

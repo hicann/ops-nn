@@ -14,7 +14,7 @@
 #include "level0/arange.h"
 #include "level0/concat.h"
 #include "level0/tensor_move.h"
-#include "gather_elements.h"
+#include "index/common/op_api/gather_elements.h"
 #include "level0/mod.h"
 #include "level0/split_v.h"
 #include "aclnn_kernels/contiguous.h"

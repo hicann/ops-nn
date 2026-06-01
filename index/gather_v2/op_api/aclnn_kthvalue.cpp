@@ -13,7 +13,7 @@
 #include "aclnn_kernels/transpose.h"
 #include "aclnn_kernels/reshape.h"
 #include "aclnn_kernels/contiguous.h"
-#include "gather_v2.h"
+#include "op_api/gather_v2.h"
 #include "level0/squeeze.h"
 #include "aclnn_kernels/cast.h"
 #include "aclnn/aclnn_base.h"

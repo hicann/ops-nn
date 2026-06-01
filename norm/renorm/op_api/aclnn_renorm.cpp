@@ -22,7 +22,7 @@
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"
 #include "level0/mul.h"
-#include "renorm.h"
+#include "norm/common/op_api/renorm.h"
 #include "aclnn_renorm.h"
 
 using namespace op;

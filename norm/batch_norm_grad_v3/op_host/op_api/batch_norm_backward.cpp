@@ -14,7 +14,7 @@
 #include "opdev/op_executor.h"
 #include "opdev/op_log.h"
 #include "opdev/shape_utils.h"
-#include "batch_norm_backward.h"
+#include "norm/common/op_api/batch_norm_backward.h"
 
 using namespace op;
 

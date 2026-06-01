@@ -18,7 +18,7 @@
 #include "opdev/op_dfx.h"
 #include "opdev/make_op_executor.h"
 #include "aclnn_kernels/common/op_error_check.h"
-#include "threshold.h"
+#include "activation/common/op_api/threshold.h"
 
 using namespace op;
 

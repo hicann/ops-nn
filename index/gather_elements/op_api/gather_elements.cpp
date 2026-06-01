@@ -13,7 +13,7 @@
  * \brief
  */
 
-#include "gather_elements.h"
+#include "index/common/op_api/gather_elements.h"
 #include "opdev/aicpu/aicpu_task.h"
 #include "opdev/make_op_executor.h"
 #include "opdev/op_def.h"

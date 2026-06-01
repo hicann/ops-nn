@@ -18,7 +18,7 @@
 #include "aclnn_kernels/transdata.h"
 #include "aclnn_kernels/transpose.h"
 #include "level0/unsqueeze.h"
-#include "../../../batch_norm_grad_v3/op_host/op_api/batch_norm_backward.h"
+#include "norm/common/op_api/batch_norm_backward.h"
 #include "group_norm_grad.h"
 #include "aclnn_kernels/cast.h"
 #include "level0/expand.h"

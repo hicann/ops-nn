@@ -12,7 +12,7 @@
  * \file lp_norm_reduce_v2.cpp
  * \brief
  */
-#include "lp_norm_reduce_v2.h"
+#include "norm/common/op_api/lp_norm_reduce_v2.h"
 #include "opdev/make_op_executor.h"
 #include "opdev/op_dfx.h"
 #include "opdev/op_executor.h"

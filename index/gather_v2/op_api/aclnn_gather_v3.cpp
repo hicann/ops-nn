@@ -9,7 +9,7 @@
  */
 
 #include "aclnn_gather_v3.h"
-#include "gather_v2.h"
+#include "op_api/gather_v2.h"
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"
 #include "level0/unsqueeze.h"

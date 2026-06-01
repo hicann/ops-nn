@@ -9,12 +9,12 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#include "adaptive_avg_pool2d_assist_matrix.h"
+#include "pooling/common/op_api/adaptive_avg_pool2d_assist_matrix.h"
 #include "../../adaptive_avg_pool3d/op_api/adaptive_avg_pool3d.h"
 #include "adaptive_avg_pool2d.h"
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"
-#include "shape_op.h"
+#include "pooling/common/op_api/shape_op.h"
 #include "level0/mul.h"
 #include "level0/reduce_mean.h"
 #include "level0/unsqueeze.h"

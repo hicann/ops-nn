@@ -12,7 +12,7 @@
  * \file inplace_index_add.cpp
  * \brief
  */
-#include "inplace_index_add.h"
+#include "index/common/op_api/inplace_index_add.h"
 #include "opdev/aicpu/aicpu_task.h"
 #include "opdev/make_op_executor.h"
 #include "opdev/op_def.h"

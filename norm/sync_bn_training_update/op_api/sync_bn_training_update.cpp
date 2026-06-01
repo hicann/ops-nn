@@ -12,7 +12,7 @@
  * \file sync_bn_training_update.cpp
  * \brief
  */
-#include "sync_bn_training_update.h"
+#include "norm/common/op_api/sync_bn_training_update.h"
 #include "opdev/data_type_utils.h"
 #include "opdev/format_utils.h"
 #include "opdev/make_op_executor.h"

@@ -8,7 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#include "unique_with_counts_and_sorting.h"
+#include "index/common/op_api/unique_with_counts_and_sorting.h"
 #include "opdev/platform.h"
 #include "opdev/aicpu/aicpu_task.h"
 #include "opdev/make_op_executor.h"

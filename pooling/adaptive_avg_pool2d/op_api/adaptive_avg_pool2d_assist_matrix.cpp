@@ -8,7 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#include "adaptive_avg_pool2d_assist_matrix.h"
+#include "pooling/common/op_api/adaptive_avg_pool2d_assist_matrix.h"
 #include "opdev/aicpu/aicpu_task.h"
 #include "opdev/common_types.h"
 #include "opdev/make_op_executor.h"

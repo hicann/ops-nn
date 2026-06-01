@@ -10,11 +10,11 @@
 
 
 #include "aclnn_median.h"
-#include "index/median_dim/op_host/op_api/median_dim.h"
+#include "index/common/op_api/median_dim.h"
 #include "level0/add.h"
 #include "level0/masked_fill.h"
 #include "level0/reduce_min.h"
-#include "index/gather_elements/op_api/gather_elements.h"
+#include "index/common/op_api/gather_elements.h"
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"
 #include "level0/select.h"
@@ -24,7 +24,7 @@
 #include "level0/equal.h"
 #include "level0/not_equal.h"
 #include "level0/fill.h"
-#include "gather_v2.h"
+#include "op_api/gather_v2.h"
 #include "level0/reduce_sum_op.h"
 #include "aclnn_kernels/reshape.h"
 #include "level0/sort.h"

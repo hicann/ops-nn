@@ -12,7 +12,7 @@
  * \brief
  */
 
-#include "scatter_update.h"
+#include "op_api/scatter_update.h"
 #include "opdev/make_op_executor.h"
 #include "opdev/op_dfx.h"
 #include "opdev/aicpu/aicpu_task.h"

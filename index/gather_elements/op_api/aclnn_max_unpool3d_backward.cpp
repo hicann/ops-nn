@@ -10,7 +10,7 @@
 
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"
-#include "gather_elements.h"
+#include "index/common/op_api/gather_elements.h"
 #include "aclnn_kernels/reshape.h"
 #include "aclnn_max_unpool3d_backward.h"
 #include "opdev/common_types.h"
