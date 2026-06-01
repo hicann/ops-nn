@@ -144,9 +144,10 @@ bool SetStridesAttr(const gert::TilingContext *context, Conv3dBpFilterV2RunInfo 
     return true;
 }
 
-static bool ValidateDilationsBasicInfo(const char* op_name, const gert::RuntimeAttrs* attrs,
+static bool ValidateDilationsBasicInfo(const char* op_name, const gert::TilingContext *context,
     const gert::ContinuousVector*& dilations)
 {
+    const auto attrs = context->GetAttrs();
     OP_CHECK_IF(attrs == nullptr, OP_LOGE_WITH_INVALID_ATTR(op_name, "attrs", "null", "non_empty_value"), return false);
     dilations = attrs->GetAttrPointer<gert::ContinuousVector>(DIALTIONS_INDEX);
     OP_CHECK_IF(dilations == nullptr, OP_LOGE_WITH_INVALID_ATTR(op_name, "dilations", "null", "non_empty_value"), return false);
@@ -201,9 +202,8 @@ static void AdjustDilationByKernel(Conv3dBpFilterV2RunInfo &runInfoV2)
 bool SetDilationsAttr(const gert::TilingContext *context, Conv3dBpFilterV2RunInfo &runInfoV2)
 {
     const auto op_name = (context->GetNodeName() == nullptr) ? "nil" : context->GetNodeName();
-    const auto attrs = context->GetAttrs();
     const gert::ContinuousVector* dilations = nullptr;
-    if (!ValidateDilationsBasicInfo(op_name, attrs, dilations)) {
+    if (!ValidateDilationsBasicInfo(op_name, context, dilations)) {
         return false;
     }
 
@@ -254,7 +254,7 @@ static bool ValidateGroupsAttr(const char* op_name, const gert::RuntimeAttrs* at
     return true;
 }
 
-static bool ValidateGroupsValue(const char* op_name, int32_t groups, int32_t actual_groups,
+static bool ValidateGroupsValue(const char* op_name, int32_t& groups, int32_t actual_groups,
     const Conv3dBpFilterV2RunInfo& runInfoV2, int32_t filter_shape_c)
 {
     if (groups == 1) {
