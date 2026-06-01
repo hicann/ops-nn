@@ -19,6 +19,7 @@
 #include "index/linear_index_v2/op_host/op_api/linear_index_v2.h"
 #include "index/index_put_with_sort_v2/op_api/index_put_with_sort_v2.h"
 #include "index/index_put_with_sort/op_host/op_api/index_put_with_sort.h"
+#include "index/index_check/op_api/index_check.h"
 #include "level0/sort.h"
 #include "aclnn_kernels/transpose.h"
 #include "aclnn_kernels/cast.h"
@@ -1252,6 +1253,28 @@ aclnnStatus aclnnIndexPutImplGetWorkspaceSize(aclTensor *selfRef,
     *workspaceSize = 0;
     uniqueExecutor.ReleaseTo(executor);
     return ACLNN_SUCCESS;
+  }
+
+  if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
+    GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) {
+    int64_t indicesSize = static_cast<int64_t>(indices->Size());
+    if (indicesSize <= MAX_SUPPORT_DIMS_NUMS) {
+        FVector<const aclTensor*, MAX_SUPPORT_DIMS_NUMS> indicesTensors;
+        for (int64_t i = 0; i < indicesSize; ++i) {
+            const aclTensor* curIndices = (*indices)[i];
+            const aclTensor* curIndicesTensor = l0op::Contiguous(curIndices, uniqueExecutor.get());
+            CHECK_RET(curIndicesTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            indicesTensors.emplace_back(curIndicesTensor);
+        }
+        aclTensorList *IndicesTensorList = uniqueExecutor.get()->AllocTensorList(indicesTensors.data(), indicesSize);
+        FVector<int64_t, MAX_SUPPORT_DIMS_NUMS> boundsVec;
+        for (size_t i = 0; i < selfRef->GetViewShape().GetDimNum(); i++) {
+            boundsVec.emplace_back(selfRef->GetViewShape().GetDim(i));
+        }
+        aclIntArray *boundsArray = uniqueExecutor.get()->AllocIntArray(boundsVec.data(), boundsVec.size());
+        const aclTensor *boundsTensor = uniqueExecutor.get()->ConvertToTensor(boundsArray, op::ToOpDataType(ACL_INT64));
+        l0op::IndexCheck(boundsTensor, IndicesTensorList, uniqueExecutor.get());
+    }
   }
 
   FVector<int64_t, DIMLIMIT> masks;
