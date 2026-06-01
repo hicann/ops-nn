@@ -64,7 +64,9 @@ static bool CheckDtypeValid(const aclTensor* self, const aclTensor* out)
     OP_CHECK_DTYPE_NOT_SUPPORT(self, supportList, return false);
 
     // 检查self的数据类型能否转换为输出的数据类型
-    OP_CHECK_RESULT_DTYPE_CAST_FAILED(self->GetDataType(), out->GetDataType(), return false);
+    if (GetCurrentPlatformInfo().GetCurNpuArch() < NpuArch::DAV_3510) {
+        OP_CHECK_RESULT_DTYPE_CAST_FAILED(self->GetDataType(), out->GetDataType(), return false);
+    }
 
     return true;
 }
