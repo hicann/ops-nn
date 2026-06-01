@@ -270,6 +270,38 @@ void MatMulV3BasicAswtTiling::DoBL1FullLoad(uint64_t aBatchDimAll, uint64_t bias
     return;
 }
 
+void MatMulV3BasicAswtTiling::CheckTensorApiSupport()
+{
+    auto selfShape = context_->GetInputShape(0)->GetOriginShape();
+    auto mat2Shape = context_->GetInputShape(1)->GetOriginShape();
+    auto selfStorageShape = context_->GetInputShape(0)->GetStorageShape();
+    size_t selfDimNum = selfShape.GetDimNum();
+    size_t mat2DimNum = mat2Shape.GetDimNum();
+    bool isMatmul = strcmp(context_->GetNodeType(), "MatMulV3") == 0;
+    // Slice非连续校验，根据storageshape 1d和左矩阵3d 右矩阵维度2d判断
+    bool isSlice =
+        context_->InputIsView(0) && (selfStorageShape.GetDimNum() == 1) && (selfDimNum == 3) && mat2DimNum == 2;
+
+    // FP32切K判断
+    bool isFp32 = (args_.aType == ge::DT_FLOAT && args_.bType == ge::DT_FLOAT);
+    bool isNdFormat = (args_.aFormat == ge::FORMAT_ND && args_.bFormat == ge::FORMAT_ND);
+    uint64_t fp32SplitKThreshold =
+        args_.kValue > FP32_K_SWITCH_THRESHOLD ? FP32_SPLIT_K_THRESHOLD2 : FP32_SPLIT_K_THRESHOLD1;
+    bool isSplitK = false;
+    // 连续且非全载场景才支持切K
+    if (!isSlice && isFp32 && !args_.isHf32 && isNdFormat && args_.kValue > fp32SplitKThreshold &&
+        fullLoad_ == MatMulV3FullLoad::NONE_FULL_LOAD) {
+        isSplitK = true;
+    }
+
+    // Matmul非切K且连续场景下才允许切换tensor api实现
+    apiLevel_ = (isMatmul && !isSlice && !isSplitK) ? MatMulV3ApiLevel::TENSOR_LEVEL : MatMulV3ApiLevel::BASIC_LEVEL;
+    // 1952当前只支持基础API
+    if (compileInfo_.npuArch == NpuArch::DAV_RESV) {
+        apiLevel_ = MatMulV3ApiLevel::BASIC_LEVEL;
+    }
+}
+
 ge::graphStatus MatMulV3BasicAswtTiling::DoOpTiling()
 {
     MatMulV3AswTiling::DoNormOpTiling();
@@ -289,6 +321,8 @@ ge::graphStatus MatMulV3BasicAswtTiling::DoOpTiling()
         runInfo_.stepKb = runInfo_.stepKa; // has bias, adjust stepK to suitable value
         runInfo_.depthA1 = runInfo_.stepKa * DB_SIZE;
         runInfo_.depthB1 = runInfo_.stepKb * DB_SIZE;
+        // 确认是否切换tensor api
+        CheckTensorApiSupport();
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -301,7 +335,7 @@ uint64_t MatMulV3BasicAswtTiling::GetTilingKey() const
         .SetFullLoad(fullLoad_)
         .SetModel(MatMulV3Model::BASIC)
         .SetL0C2Out(l0C2Out_)
-        .SetApiLevel(MatMulV3ApiLevel::BASIC_LEVEL)
+        .SetApiLevel(apiLevel_)
         .GetTilingKey();
 }
 

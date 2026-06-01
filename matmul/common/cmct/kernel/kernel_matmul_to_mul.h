@@ -77,8 +77,8 @@ public:
     using AType = typename BlockMmadBuilder::AType;
     using BType = typename BlockMmadBuilder::BType;
     using CType = typename BlockMmadBuilder::CType;
-    using TupleShape = Shape<int64_t, int64_t, int64_t, int64_t>;
-    using ParamsShape = Shape<uint64_t, uint64_t, uint64_t>;
+    using TupleShape = AscendC::Shape<int64_t, int64_t, int64_t, int64_t>;
+    using ParamsShape = AscendC::Shape<uint64_t, uint64_t, uint64_t>;
 
     // ND layout
     using NDLayout = AscendC::Layout<AscendC::Shape<int64_t, int64_t>, AscendC::Stride<int64_t, int64_t>>;

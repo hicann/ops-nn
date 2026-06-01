@@ -84,8 +84,8 @@ public:
     using NDLayout = AscendC::Layout<AscendC::Shape<int64_t, int64_t>, AscendC::Stride<int64_t, int64_t>>;
 
     static constexpr CubeFormat formatB = TagToFormat<LayoutB>::format;
-    static constexpr bool isNdFormat = formatB == CubeFormat::ND;
-    static constexpr bool isFp32 = std::is_same_v<CType, float>;
+    static constexpr bool isNdFormat = (formatB == CubeFormat::ND);
+    static constexpr bool isFp32 = (std::is_same_v<BType, float>);
 
     // no need to have tensortrait
     AscendC::GlobalTensor<AType> aGlobal_;

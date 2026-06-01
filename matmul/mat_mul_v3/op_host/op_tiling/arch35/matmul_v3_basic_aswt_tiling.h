@@ -29,6 +29,7 @@ public:
     bool CheckAL1FullLoadDav3510(const uint64_t kAlignedValue, const uint64_t mAlignedValue) const;
     void AdjustBL1Tiling3510Basic(uint64_t biasBatchDimAll);
     void AdjustAL1Tiling3510Basic(uint64_t biasBatchDimAll);
+    void CheckTensorApiSupport();
 
 protected:
     bool IsCapable() override;
@@ -39,6 +40,7 @@ protected:
     void DoAL1FullLoad(uint64_t bBatchDimAll = 1UL, uint64_t biasBatchDimAll = 1UL);
     MatMulV3FullLoad fullLoad_ {MatMulV3FullLoad::NONE_FULL_LOAD};
     MatMulV3L0C2Out l0C2Out_ {MatMulV3L0C2Out::ON_THE_FLY};
+    MatMulV3ApiLevel apiLevel_ {MatMulV3ApiLevel::BASIC_LEVEL};
 
 private:
     void FullLoadPre();

@@ -85,10 +85,10 @@ public:
     using BType = typename BlockMmadBuilder::BType;
     using CType = typename BlockMmadBuilder::CType;
     using BiasType = typename BlockMmadBuilder::BiasType;
-    using TupleShape = Shape<int64_t, int64_t, int64_t, int64_t>;
-    using TupleL1L0Shape = Shape<int64_t, int64_t, int64_t, int64_t, int64_t, int64_t>;
-    using BlockShape = Shape<int64_t, int64_t, int64_t, int64_t>;
-    using BlockCoord = Coord<int64_t, int64_t, int64_t, int64_t>;
+    using TupleShape = AscendC::Shape<int64_t, int64_t, int64_t, int64_t>;
+    using TupleL1L0Shape = AscendC::Shape<int64_t, int64_t, int64_t, int64_t, int64_t, int64_t>;
+    using BlockShape = AscendC::Shape<int64_t, int64_t, int64_t, int64_t>;
+    using BlockCoord = AscendC::Coord<int64_t, int64_t, int64_t, int64_t>;
 
     // ND layout
     using NDLayout = AscendC::Layout<AscendC::Shape<int64_t, int64_t>, AscendC::Stride<int64_t, int64_t>>;

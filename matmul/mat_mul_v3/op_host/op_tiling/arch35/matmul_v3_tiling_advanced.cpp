@@ -172,6 +172,7 @@ ge::graphStatus MatMulV3Tiling::DoTiling()
     OPS_CHECK_NULL_WITH_CONTEXT(context_, tilingCfg.compileInfo);
     NpuArch npuArch = reinterpret_cast<const MatmulV3CompileInfo *>(tilingCfg.compileInfo)->npuArch;
     MMRegisterCfg registerCfg{ "MatMulV3", npuArch, strategy::GetMatMulV3Priorities(npuArch) };
+    // 选择不同的tiling策略并执行其Optiling方法
     return MMTilingRegistry::GetInstance().DoTilingImpl(context_, tilingCfg, registerCfg);
 }
 

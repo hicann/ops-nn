@@ -148,10 +148,10 @@ protected:
         return cacheMode;
     }
 
-    //子类中指定模版
+    // 子类中指定模版
     virtual ge::graphStatus GetTilingData(TilingResult& tiling) const = 0;
 
-    //根据模版赋值TilingData
+    // 根据模版赋值TilingData
     template <typename TilingDataType>
     ge::graphStatus GetTilingDataImpl(TilingResult& tiling) const
     {
