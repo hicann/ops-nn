@@ -144,17 +144,20 @@ template <class A_TYPE, class B_TYPE, class L0C_TYPE, class OUTPUT_TYPE, class B
 __aicore__ inline void
 MatMulBaseKernelSingleCoreSplitK<A_TYPE, B_TYPE, L0C_TYPE, OUTPUT_TYPE, BIAS_TYPE, BLOCK_TYPE, MM_CFG, IS_NKM>::SetOrgShape()
 {
+    constexpr bool isFp32Output = sizeof(typename OUTPUT_TYPE::T) == sizeof(float);
+    const uint64_t orgShapeN = isFp32Output ? block_.matmulTilingData_->matmulTiling.N : block_.params_.outNAlign;
     if constexpr (A_TYPE::format == CubeFormat::NZ && B_TYPE::format == CubeFormat::NZ) {
         mm_.SetOrgShape(block_.params_.alignedOriM, block_.params_.alignedOriN, block_.params_.alignedKaSize,
-            block_.params_.alignedKbSize, block_.params_.outNAlign);
+            block_.params_.alignedKbSize, orgShapeN);
     } else if constexpr (A_TYPE::format == CubeFormat::NZ) {
         mm_.SetOrgShape(block_.params_.alignedOriM, block_.matmulTilingData_->matmulTiling.N,
-            block_.params_.alignedKaSize, block_.matmulTilingData_->matmulTiling.Kb, block_.params_.outNAlign);
+            block_.params_.alignedKaSize, block_.matmulTilingData_->matmulTiling.Kb, orgShapeN);
     } else if constexpr (B_TYPE::format == CubeFormat::NZ) {
         mm_.SetOrgShape(block_.matmulTilingData_->matmulTiling.M, block_.params_.alignedOriN,
-            block_.matmulTilingData_->matmulTiling.Ka, block_.params_.alignedKbSize, block_.params_.outNAlign);
+            block_.matmulTilingData_->matmulTiling.Ka, block_.params_.alignedKbSize, orgShapeN);
     } else {
-        if (n128AlignFlag_) {
+        // fp32输出时不需要对齐写回，dstStride与ND 128B对齐场景一致，统一使用realN
+        if (n128AlignFlag_ || isFp32Output) {
             mm_.SetOrgShape(block_.matmulTilingData_->matmulTiling.M, block_.matmulTilingData_->matmulTiling.N,
                 block_.matmulTilingData_->matmulTiling.Ka, block_.matmulTilingData_->matmulTiling.Kb, block_.matmulTilingData_->matmulTiling.N);
         } else {
@@ -358,7 +361,18 @@ MatMulBaseKernelSingleCoreSplitK<A_TYPE, B_TYPE, L0C_TYPE, OUTPUT_TYPE, BIAS_TYP
         } else {
             block_.params_.atomicAddFlag = true;
         }
-        mm_.IterateAll(cGlobal_[block_.offset_.offsetC], block_.params_.atomicAddFlag);
+        uint64_t actualOffsetC = block_.offset_.offsetC;
+        if constexpr (sizeof(typename OUTPUT_TYPE::T) == sizeof(float)) {
+            uint64_t alignedN = block_.params_.outNAlign;
+            uint64_t realN = block_.matmulTilingData_->matmulTiling.N;
+            // Tiling层保证 alignedN >= realN 且 offsetC 的列偏移不会落入对齐填充区
+            if (alignedN != realN && alignedN != 0) {
+                uint64_t nOff = actualOffsetC % alignedN;
+                uint64_t mRow = actualOffsetC / alignedN;
+                actualOffsetC = mRow * realN + nOff;
+            }
+        }
+        mm_.IterateAll(cGlobal_[actualOffsetC], block_.params_.atomicAddFlag);
         mm_.ClearBias();
 }
 
