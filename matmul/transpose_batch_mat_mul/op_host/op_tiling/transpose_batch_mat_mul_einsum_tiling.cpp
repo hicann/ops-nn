@@ -120,7 +120,7 @@ ge::graphStatus IsPpMatmulEinsumMode(gert::TilingContext* context)
 bool GetCloseKShiftFlag(gert::TilingContext* context)
 {
     if (context->GetDeterministicLevel() == INT32_MAX) {
-        OP_LOGE(context->GetNodeName(), "GetDeterministicLevel() failed.");
+        OP_LOGW(context->GetNodeName(), "GetDeterministicLevel() failed.");
         OP_LOGI(context->GetNodeName(), "GetCloseKShiftFlag: false");
         return false;
     }
