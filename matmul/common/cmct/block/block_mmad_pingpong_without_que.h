@@ -403,8 +403,11 @@ public:
     __aicore__ inline void CopyOut(
         const AscendC::GlobalTensor<C_T> &cGlobal, AscendC::LocalTensor<float> &c1Local, uint64_t baseM, uint64_t baseN)
     {
-        if (isSplitSingleK_ && !isFirstSplitK_) {
-            AscendC::SetAtomicAdd<float>();
+        if (isSplitSingleK_) {
+            PipeBarrier<PIPE_FIX>();
+            if (!isFirstSplitK_) {
+                AscendC::SetAtomicAdd<float>();
+            }
         }
         AscendC::DataCopyCO12DstParams intriParams;
         intriParams.nSize = baseN;

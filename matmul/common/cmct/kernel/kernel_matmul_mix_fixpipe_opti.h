@@ -239,7 +239,11 @@ public:
                     }
                     if ASCEND_IS_AIV {
                         // Synchronize with aic
-                        CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_MTE3>(AIC_SYNC_AIV_FLAG + (pingPongIdx));
+                        if constexpr (BlockMmadOp::DispatchPolicy::enableRelu) {
+                            CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_V>(AIC_SYNC_AIV_FLAG + (pingPongIdx));
+                        } else {
+                            CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_MTE3>(AIC_SYNC_AIV_FLAG + (pingPongIdx));
+                        }
                         // Calulate epilogue
                         epilogueOp(blockShape, offsetC, enable2UB);
                         // Notify aic

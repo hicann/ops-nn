@@ -376,7 +376,7 @@ aclnnStatus aclnnAddmvGetWorkspaceSize(
     } else {
         vecResultFinal = matMulRet;
     }
-
+    CHECK_RET(vecResultFinal != nullptr, ACLNN_ERR_INNER_NULLPTR);
     // 将计算结果转换成输出out的数据类型
     auto finalRet = l0op::Cast(vecResultFinal, out->GetDataType(), uniqueExecutor.get());
     CHECK_RET(finalRet != nullptr, ACLNN_ERR_INNER_NULLPTR);

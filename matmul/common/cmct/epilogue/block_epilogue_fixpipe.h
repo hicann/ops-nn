@@ -100,6 +100,8 @@ public:
             0};
         if constexpr (DispatchPolicy::enableRelu && !AscendC::IsSameType<DataTypeOut, bfloat16_t>::value) {
             AscendC::Relu(ubLocalTmp_, ubLocalTmp_, blockShapeM * blockShapeN);
+            AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(0x0);
+            AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(0x0);
         }
         DataCopyPad<DataTypeOut>(outputGlobal_[offset], ubLocalTmp_, copyParams);
     }
