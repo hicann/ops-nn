@@ -238,7 +238,7 @@ private:
             intriParams.nValue = self_->ctx.innerBatch * self_->ctx.convTilingData->convApiTiling.orgHixWi;
         } else {
             intriParams.ndNum = self_->ctx.innerBatch;
-            intriParams.nValue = self_->ctx.convTilingData->convApiTiling.orgHixWi;
+            intriParams.nValue = realHixWi;
             intriParams.srcNdMatrixStride = self_->ctx.convTilingData->convApiTiling.orgCi *
                 self_->ctx.convTilingData->convApiTiling.orgHixWi;
             intriParams.dstNzNStride = 1;
@@ -261,7 +261,7 @@ private:
         }
         intriParams.dValue = al1Ci;
         intriParams.ndNum = self_->ctx.innerBatch;
-        intriParams.nValue = self_->ctx.convTilingData->convApiTiling.orgHixWi;
+        intriParams.nValue = realHixWi;
         intriParams.srcDValue = self_->ctx.convTilingData->convApiTiling.orgCi;
         intriParams.srcNdMatrixStride = self_->ctx.convTilingData->convApiTiling.orgCi *
             self_->ctx.convTilingData->convApiTiling.orgHixWi;
@@ -282,7 +282,7 @@ private:
             self_->ctx.convTilingData->convApiTiling.cinATailInCore :
             self_->ctx.convTilingData->convApiTiling.cinAInCore;
         intriParams.ndNum = self_->ctx.innerBatch;
-        intriParams.nValue = self_->ctx.convTilingData->convApiTiling.orgHixWi;
+        intriParams.nValue = realHixWi;
         intriParams.dValue = al1Ci;
         intriParams.srcNdMatrixStride = self_->ctx.convTilingData->convApiTiling.orgCi;
         intriParams.srcDValue = self_->ctx.convTilingData->convApiTiling.orgCi *
