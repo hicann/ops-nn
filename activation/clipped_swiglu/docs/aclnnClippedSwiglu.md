@@ -6,7 +6,7 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |    ×    |
+|  <term>Ascend 950PR/Ascend 950DT</term>   |    √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 |  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
@@ -144,7 +144,7 @@ aclnnStatus aclnnClippedSwiglu(
       <td>groupIndexOptional（aclTensor*）</td>
       <td>输入</td>
       <td>公式中的输入group_index，表示分组的情况。</td>
-      <td>支持空指针。不为空指针时，维度要求为1维，且元素需大于等于0。第i个元素代表第i组需要处理x的batch数量。</td>
+      <td>支持空指针。不为空指针时，维度要求为1维，长度不超过1024，且元素需大于等于0。第i个元素代表第i组需要处理x的batch数量。</td>
       <td>INT64</td>
       <td>ND</td>
       <td>1</td>
@@ -174,7 +174,7 @@ aclnnStatus aclnnClippedSwiglu(
       <td>limit（double）</td>
       <td>输入</td>
       <td>公式中的输入limit，表示变体SwiGlu使用的门限值。</td>
-      <td>建议为7.0。</td>
+      <td>必须大于0，建议为7.0。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>

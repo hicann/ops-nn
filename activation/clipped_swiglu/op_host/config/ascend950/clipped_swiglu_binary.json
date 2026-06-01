@@ -1,0 +1,206 @@
+{
+    "op_type": "ClippedSwiglu",
+    "op_list": [
+      {
+        "bin_filename": "ClippedSwiglu_fp16",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "group_index",
+            "index": 1,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dim",
+            "dtype": "int64",
+            "value": null
+          },
+          {
+            "name": "alpha",
+            "dtype": "float32",
+            "value": null
+          },
+          {
+            "name": "limit",
+            "dtype": "float32",
+            "value": null
+          },
+          {
+            "name": "bias",
+            "dtype": "float32",
+            "value": null
+          },
+          {
+            "name": "interleaved",
+            "dtype": "bool",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "ClippedSwiglu_fp32",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "group_index",
+            "index": 1,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dim",
+            "dtype": "int64",
+            "value": null
+          },
+          {
+            "name": "alpha",
+            "dtype": "float32",
+            "value": null
+          },
+          {
+            "name": "limit",
+            "dtype": "float32",
+            "value": null
+          },
+          {
+            "name": "bias",
+            "dtype": "float32",
+            "value": null
+          },
+          {
+            "name": "interleaved",
+            "dtype": "bool",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "ClippedSwiglu_bf16",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "group_index",
+            "index": 1,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dim",
+            "dtype": "int64",
+            "value": null
+          },
+          {
+            "name": "alpha",
+            "dtype": "float32",
+            "value": null
+          },
+          {
+            "name": "limit",
+            "dtype": "float32",
+            "value": null
+          },
+          {
+            "name": "bias",
+            "dtype": "float32",
+            "value": null
+          },
+          {
+            "name": "interleaved",
+            "dtype": "bool",
+            "value": null
+          }
+        ]
+      }
+    ]
+}

@@ -16,7 +16,7 @@
 #include "log/log.h"
 #include "register/op_impl_registry.h"
 #include "error_util.h"
-
+#include "util/shape_util.h"
 using namespace ge;
 
 namespace {
@@ -29,37 +29,40 @@ const size_t SPLIT_NUM = 2;
 namespace ops {
 static ge::graphStatus InferShapeForClippedSwiglu(gert::InferShapeContext* context) {
     OP_LOGD(context->GetNodeName(), "Begin to do InferShapeForClippedSwiglu");
-    auto x_shape = context->GetInputShape(GLU_IN_X);
-    OPS_CHECK_NULL_WITH_CONTEXT(context, x_shape);
-    auto y_shape = context->GetOutputShape(GLU_OUT_Y);
-    OPS_CHECK_NULL_WITH_CONTEXT(context, y_shape);
+    auto xShape = context->GetInputShape(GLU_IN_X);
+    OPS_CHECK_NULL_WITH_CONTEXT(context, xShape);
+    auto yShape = context->GetOutputShape(GLU_OUT_Y);
+    OPS_CHECK_NULL_WITH_CONTEXT(context, yShape);
     auto attrs = context->GetAttrs();
     OPS_CHECK_NULL_WITH_CONTEXT(context, attrs);
 
-    auto split_dim_ptr = attrs->GetAttrPointer<int64_t>(GLU_ATTR_DIM);
-    OPS_CHECK_NULL_WITH_CONTEXT(context, split_dim_ptr);
-
-    auto split_dim = *split_dim_ptr;
-    if (split_dim < 0) {
-      split_dim += x_shape->GetDimNum();
-    }
-    if (split_dim < 0 || split_dim >= static_cast<int64_t>(x_shape->GetDimNum())) {
-      OP_LOGE("ClippedSwiglu", "The value of attr [dim] must be in the range [-%zu, %zu], but got [%ld].",
-                  x_shape->GetDimNum(), x_shape->GetDimNum() - 1, split_dim);
-      return GRAPH_FAILED;
-    }
-    OP_LOGD(context->GetNodeName(), "Begin to generate y_shape");
-    *y_shape = *x_shape;
-    // dynamic shape
-    if (x_shape->GetDim(split_dim) == -1) {
+    auto splitDimPtr = attrs->GetAttrPointer<int64_t>(GLU_ATTR_DIM);
+    OPS_CHECK_NULL_WITH_CONTEXT(context, splitDimPtr);
+    if (Ops::Base::IsUnknownRank(*xShape)) {
+        Ops::Base::SetUnknownRank(*yShape);
         return ge::GRAPH_SUCCESS;
     }
-    if (x_shape->GetDim(split_dim) < 0 || x_shape->GetDim(split_dim) % SPLIT_NUM != 0) {
-        OP_LOGE("ClippedSwiglu", "The shape [%s] is not divisible by 2.", Ops::Base::ToString(*x_shape).c_str());
+    auto splitDim = *splitDimPtr;
+    if (splitDim < 0) {
+      splitDim += xShape->GetDimNum();
+    }
+    if (splitDim < 0 || splitDim >= static_cast<int64_t>(xShape->GetDimNum())) {
+      OP_LOGE("ClippedSwiglu", "The value of attr [dim] must be in the range [-%zu, %zu], but got [%ld].",
+                  xShape->GetDimNum(), xShape->GetDimNum() - 1, splitDim);
+      return GRAPH_FAILED;
+    }
+    OP_LOGD(context->GetNodeName(), "Begin to generate yShape");
+    *yShape = *xShape;
+    // dynamic shape
+    if (xShape->GetDim(splitDim) == -1) {
+        return ge::GRAPH_SUCCESS;
+    }
+    if (xShape->GetDim(splitDim) < 0 || xShape->GetDim(splitDim) % SPLIT_NUM != 0) {
+        OP_LOGE("ClippedSwiglu", "The shape [%s] is not divisible by 2.", Ops::Base::ToString(*xShape).c_str());
         return ge::GRAPH_FAILED;
     }
 
-    y_shape->SetDim(split_dim, x_shape->GetDim(split_dim) / SPLIT_NUM);
+    yShape->SetDim(splitDim, xShape->GetDim(splitDim) / SPLIT_NUM);
     OP_LOGD(context->GetNodeName(), "End to do InferShapeForClippedSwiglu");
     return ge::GRAPH_SUCCESS;
 }

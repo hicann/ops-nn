@@ -298,6 +298,10 @@ REGISTER_TILING_TEMPLATE("ClippedSwiglu", ClippedSwigluTiling, 20000);
 
 ge::graphStatus TilingForClippedSwiglu(gert::TilingContext* context)
 {
+    bool regBase = Ops::NN::OpTiling::IsRegbaseSocVersion(context);
+    if (regBase) {
+        return Tiling4ClippedSwigluArch35(context);
+    }
     return TilingRegistry::GetInstance().DoTilingImpl(context);
 }
 

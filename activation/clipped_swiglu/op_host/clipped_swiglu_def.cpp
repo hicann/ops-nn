@@ -17,32 +17,62 @@
 namespace ops {
 constexpr float DEFAULT_ALPHA = 1.702;
 constexpr float DEFAULT_LIMIT = 7.0;
+
+static const std::vector<ge::DataType> xDtype = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16};
+static const std::vector<ge::DataType> groupIndexDtype = {ge::DT_INT64, ge::DT_INT64, ge::DT_INT64};
+static const std::vector<ge::Format> xFormat = {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
+
 class ClippedSwiglu : public OpDef {
 public:
     explicit ClippedSwiglu(const char* name) : OpDef(name)
     {
         this->Input("x")
             .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16})
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+            .DataType(xDtype)
+            .Format(xFormat)
+            .UnknownShapeFormat(xFormat);
         this->Input("group_index")
             .ParamType(OPTIONAL)
-            .DataType({ge::DT_INT64, ge::DT_INT64, ge::DT_INT64})
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+            .DataType(groupIndexDtype)
+            .Format(xFormat)
+            .UnknownShapeFormat(xFormat);
         this->Output("y")
             .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16})
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND})
-            .UnknownShapeFormat({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
+            .DataType(xDtype)
+            .Format(xFormat)
+            .UnknownShapeFormat(xFormat);
         this->Attr("dim").AttrType(OPTIONAL).Int(-1);
         this->Attr("alpha").AttrType(OPTIONAL).Float(DEFAULT_ALPHA);
         this->Attr("limit").AttrType(OPTIONAL).Float(DEFAULT_LIMIT);
         this->Attr("bias").AttrType(OPTIONAL).Float(1.0);
         this->Attr("interleaved").AttrType(OPTIONAL).Bool(true);
+
         this->AICore().AddConfig("ascend910b");
         this->AICore().AddConfig("ascend910_93");
+
+        OpAICoreConfig regbaseConfig;
+        regbaseConfig.Input("x")
+            .ParamType(REQUIRED)
+            .DataType(xDtype)
+            .Format(xFormat)
+            .UnknownShapeFormat(xFormat)
+            .AutoContiguous();
+        regbaseConfig.Input("group_index")
+            .ParamType(OPTIONAL)
+            .DataType(groupIndexDtype)
+            .Format(xFormat)
+            .UnknownShapeFormat(xFormat)
+            .AutoContiguous();
+        regbaseConfig.Output("y")
+            .ParamType(REQUIRED)
+            .DataType(xDtype)
+            .Format(xFormat)
+            .UnknownShapeFormat(xFormat);
+        regbaseConfig.DynamicCompileStaticFlag(true)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .ExtendCfgInfo("opFile.value", "clipped_swiglu_apt");
+        this->AICore().AddConfig("ascend950", regbaseConfig);
     }
 };
 OP_ADD(ClippedSwiglu);

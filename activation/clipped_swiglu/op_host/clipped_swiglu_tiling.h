@@ -25,6 +25,7 @@
 #include "../op_graph/clipped_swiglu_proto.h"
 #include "op_host/tiling_base.h"
 #include "op_host/tiling_templates_registry.h"
+#include "op_host/tiling_util.h"
 
 namespace optiling {
 using Ops::NN::Optiling::TilingBaseClass;
@@ -94,6 +95,8 @@ private:
     int64_t ubMaxPair_ = 0;// UB最多可以处理的元素pair数
     int64_t groupNum_ = 0;
 };
+
+ge::graphStatus Tiling4ClippedSwigluArch35(gert::TilingContext* context);
 
 } // namespace optiling
 #endif // AIR_CXX_RUNTIME_V2_OP_IMPL_CLIPPED_SWIGLU_H_

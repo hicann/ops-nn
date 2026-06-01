@@ -4,7 +4,7 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |    ×    |
+|  <term>Ascend 950PR/Ascend 950DT</term>   |    √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 |  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
@@ -105,7 +105,7 @@
     <tr>
       <td>group_index</td>
       <td>可选输入</td>
-      <td>公式中的输入group_index。维度必须是1维。</td>
+      <td>公式中的输入group_index。维度必须是1维，且元素个数必须小于等于1024。</td>
       <td>INT64</td>
       <td>-</td>
     </tr>
@@ -126,7 +126,7 @@
     <tr>
       <td>limit</td>
       <td>可选属性</td>
-      <td>公式中的输入limit，表示变体SwiGlu使用的门限值。默认为7.0。</td>
+      <td>公式中的输入limit，表示变体SwiGlu使用的门限值。必须大于0。默认为7.0。</td>
       <td>FLOAT</td>
       <td>-</td>
     </tr>
@@ -155,7 +155,8 @@
 
 ## 约束说明
 
-无
+- 可选输入 group_index 为1维，且元素个数必须小于等于1024。
+- 可选属性 limit 必须大于0。
 
 ## 调用说明
 

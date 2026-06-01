@@ -347,7 +347,7 @@
     {"name": "GroupNormV2", "compute_units": ["ascend950"], "auto_sync": false, "impl_mode": "", "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},
     {"name":"AddRmsNormDynamicMxQuant", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode": "", "compile_options": {"ascend950": ["--cce-no-dcache-flush", "--cce-simd-vf-fusion=false"]}},
     {"name":"SwiGlu", "compute_units": ["ascend910_93", "ascend910b", "ascend950", "kirinx90", "kirin9030", "ascend310p"], "auto_sync": true, "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},
-    {"name":"ClippedSwiglu", "compute_units": ["ascend910_93", "ascend910b"], "auto_sync": true},
+    {"name":"ClippedSwiglu", "compute_units": ["ascend910_93", "ascend910b", "ascend950"], "auto_sync": {"ascend910_93": true, "ascend910b": true, "ascend950": false}, "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},
     {"name":"Axpy", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : ""},
     {"name":"AxpyV2", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : ""},
     {"name":"SwiGluGrad", "compute_units": ["ascend910_93", "ascend910b", "ascend950", "ascend310p"], "auto_sync": true, "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},
