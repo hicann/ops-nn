@@ -687,8 +687,7 @@ bool QuantBatchMatmulV3Checker::CheckMXFP4Constraints(const std::vector<int64_t>
     return true;
 }
 
-bool QuantBatchMatmulV3Checker::CheckInputValidInMxPerGroupMode(const gert::Shape& weightShape,
-                                                                const gert::Shape& scaleShape,
+bool QuantBatchMatmulV3Checker::CheckInputValidInMxPerGroupMode(const gert::Shape& scaleShape,
                                                                 const gert::StorageShape *pertokenShape,
                                                                 const std::vector<int64_t> &dimValueOfMKN) const
 {
@@ -974,7 +973,7 @@ bool QuantBatchMatmulV3Checker::CheckShape(const std::vector<gert::Shape *> &man
         return false;
     }
     if ((!CheckInputValidInPerblockMode(scaleShape, pertokenShape, x1Shape, x2Shape) ||
-         !CheckInputValidInMxPerGroupMode(x2Shape, scaleShape, pertokenShape, dimValueOfMKN))) {
+         !CheckInputValidInMxPerGroupMode(scaleShape, pertokenShape, dimValueOfMKN))) {
         return false;
     }
     if (!ExtraInputCheck()) {

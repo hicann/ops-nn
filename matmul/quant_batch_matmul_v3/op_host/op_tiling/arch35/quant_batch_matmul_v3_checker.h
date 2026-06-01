@@ -26,7 +26,7 @@ public:
 
     ~QuantBatchMatmulV3Checker() override = default;
     bool CheckDtype() const override;
-    bool CheckShape(const std::vector<gert::Shape *> &mandtoryShape, const gert::StorageShape *biasShape,
+    bool CheckShape(const std::vector<gert::Shape *> &mandatoryShape, const gert::StorageShape *biasShape,
                     const gert::StorageShape *pertokenShape, const std::vector<int64_t> &dimValueOfMKN) const override;
 
 protected:
@@ -45,8 +45,7 @@ protected:
                                      size_t pertokenShapeLen, size_t scaleShapeLen) const;
     bool CheckBatchValidInPerblockMode(const gert::Shape& scaleShape, const gert::Shape& pertoken,
                                        const gert::Shape& x1Shape, const gert::Shape& x2Shape) const;
-    bool CheckInputValidInMxPerGroupMode(const gert::Shape& weightShape,
-                                         const gert::Shape& scaleShape, const gert::StorageShape *pertokenShape,
+    bool CheckInputValidInMxPerGroupMode(const gert::Shape& scaleShape, const gert::StorageShape *pertokenShape,
                                          const std::vector<int64_t> &dimValueOfMKN) const;
     bool CheckShapeValidInPerblockMode(const gert::Shape& scaleShape,
                                        const gert::Shape& pertoken, const gert::Shape& x1Shape,
