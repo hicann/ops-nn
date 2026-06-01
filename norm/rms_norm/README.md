@@ -57,7 +57,7 @@
     <tr>
       <td>epsilon</td>
       <td>可选属性</td>
-      <td><ul><li>添加到分母中的值，以确保数值稳定，对应公式中的eps。</li><li>默认值为1e-6f。</li></ul></td>
+      <td><ul><li>添加到分母中的值，以确保数值稳定，对应公式中的eps。</li><li>默认值为1e-6。</li></ul></td>
       <td>FLOAT32</td>
       <td>-</td>
     </tr>

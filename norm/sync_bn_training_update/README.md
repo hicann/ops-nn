@@ -18,20 +18,17 @@
 - 计算公式：
 
 $$
-runningMeanUpdate = (mean * momentum) + runningMean * (1 - momentum)
+running_mean_update = (mean * momentum) + running_mean * (1 - momentum)
 $$
 
 ## 参数说明
 
-  <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
+  <table style="undefined;table-layout: fixed; width: 1005px"><colgroup>
   <col style="width: 170px">
   <col style="width: 170px">
-  <col style="width: 271px">
-  <col style="width: 330px">
-  <col style="width: 223px">
-  <col style="width: 101px">
-  <col style="width: 190px">
-  <col style="width: 145px">
+  <col style="width: 352px">
+  <col style="width: 213px">
+  <col style="width: 100px">
   </colgroup>
   <thead>
     <tr>
@@ -52,7 +49,7 @@ $$
     <tr>
       <td>running_mean</td>
       <td>输入</td>
-      <td>表示计算过程中的均值，对应公式中的`runningMean`。</td>
+      <td>表示计算过程中的均值，对应公式中的`running_mean`。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
@@ -66,7 +63,7 @@ $$
     <tr>
       <td>running_mean_update</td>
       <td>输出</td>
-      <td>更新后的均值，对应公式中的`runningMeanUpdate`。</td>
+      <td>更新后的均值，对应公式中的`running_mean_update`。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
@@ -81,5 +78,5 @@ $$
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_BatchNormGatherStatsWithCounts](../sync_batch_norm_gather_stats_with_counts/examples/test_aclnn_BatchNormGatherStatsWithCounts.cpp) | 通过[aclnnBatchNormGatherStatsWithCounts](../sync_batch_norm_gather_stats_with_counts/docs/aclnnBatchNormGatherStatsWithCounts.md)接口方式调用SyncBNTrainingUpdate。 |
+| aclnn接口  | [test_aclnn_BatchNormGatherStatsWithCounts](../sync_batch_norm_gather_stats_with_counts/examples/test_aclnn_BatchNormGatherStatsWithCounts.cpp) | 通过[aclnnBatchNormGatherStatsWithCounts](../sync_batch_norm_gather_stats_with_counts/docs/aclnnBatchNormGatherStatsWithCounts.md)接口方式调用SyncBNTrainingUpdate算子。 |
 | 图模式 | [test_geir_sync_bn_training_update](../sync_bn_training_update/examples/test_geir_sync_bn_training_update.cpp) | 通过[算子IR](op_graph/sync_bn_training_update_proto.h)构图方式调用SyncBNTrainingUpdate算子。         |

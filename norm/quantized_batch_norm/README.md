@@ -100,7 +100,7 @@
       <td>output_zero_point</td>
       <td>输入</td>
       <td>输入标量，模型输出数据的偏置，对应公式中的`outputZeroPoint`。传入值不能超过input对应数据类型的上下边界，例如INT8上下边界为[-128,127]。</td>
-      <td>FLOAT32</td>
+      <td>INT32</td>
       <td>ND</td>
     </tr>
     <tr>

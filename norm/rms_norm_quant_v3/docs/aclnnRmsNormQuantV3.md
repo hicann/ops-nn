@@ -18,19 +18,21 @@
 - 接口功能：RmsNorm算子是大模型常用的标准化操作，相比LayerNorm算子，其去掉了减去均值的部分。RmsNormQuantV3算子将RmsNorm算子以及RmsNorm后的Quantize算子融合起来，减少搬入搬出操作。同时在RmsNormQuantV2算子的基础上新增了Rstd的输出。
 - 计算公式：
 
-$$
-quant\_in_i=\frac{x_i}{\operatorname{Rms}(\mathbf{x})} gamma_i + beta_i, \quad \text { where } \operatorname{Rms}(\mathbf{x})=\sqrt{\frac{1}{n} \sum_{i=1}^n x_i^2+epsilon}
-$$
+  $$
+  quant\_in_i=\frac{x_i}{\operatorname{Rms}(\mathbf{x})} gamma_i + beta_i, \quad \text { where } \operatorname{Rms}(\mathbf{x})=\sqrt{\frac{1}{n} \sum_{i=1}^n x_i^2+epsilon}
+  $$
 
-- divMode为True时：
-$$
-y=round((quant\_in/scale)+offset)
-$$
-
-- divMode为False时：
-$$
-y=round((quant\_in*scale)+offset)
-$$
+  - divMode为True时：
+  
+    $$
+    y=round((quant\_in/scale)+offset)
+    $$
+  
+  - divMode为False时：
+  
+    $$
+    y=round((quant\_in*scale)+offset)
+    $$
 
 ## 函数原型
 
@@ -207,7 +209,6 @@ aclnnStatus aclnnRmsNormQuantV3(
     </tr>
   </tbody>
   </table>
-  
 
 - **返回值**
 
@@ -244,8 +245,6 @@ aclnnStatus aclnnRmsNormQuantV3(
         <tr>
       <td>gamma不满足维度数为1-2维，scale不满足维度数为1维。</td>
     </tr>
-
-
     <tr>
       <td rowspan="7">ACLNN_ERR_INNER_TILING_ERROR</td>
       <td rowspan="7">561002</td>

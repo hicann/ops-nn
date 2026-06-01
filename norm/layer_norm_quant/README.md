@@ -112,7 +112,7 @@
     <tr>
       <td>epsilon</td>
       <td>可选属性</td>
-      <td><ul><li>表示对应LayerNorm中的epsilon，添加到分母中的值，以确保数值稳定。对应公式中的`epsilon`。</li><li>默认值为1e-5f。</li></ul></td>
+      <td><ul><li>表示对应LayerNorm中的epsilon，添加到分母中的值，以确保数值稳定。对应公式中的`epsilon`。</li><li>默认值为1e-5。</li></ul></td>
       <td>FLOAT</td>
       <td>-</td>
     </tr>
@@ -147,4 +147,4 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_layer_norm_quant](examples/arch35/test_aclnn_layer_norm_quant.cpp) | 通过[aclnnLayerNormQuant](docs/aclnnLayerNormQuant.md)接口方式调用LayerNormQuant算子。 |
+| aclnn接口  | [test_aclnn_layer_norm_quant](examples/test_aclnn_layer_norm_quant.cpp) | 通过[aclnnLayerNormQuant](docs/aclnnLayerNormQuant.md)接口方式调用LayerNormQuant算子。 |

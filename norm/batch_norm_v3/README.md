@@ -82,14 +82,14 @@
     <tr>
       <td>epsilon</td>
       <td>可选属性</td>
-      <td><ul><li>添加到方差中的小值以避免除以零，对应公式中的`ε`。</li><li>默认值为1e-5f。</li></ul></td>
+      <td><ul><li>添加到方差中的小值以避免除以零，对应公式中的`ε`。</li><li>默认值为1e-5。</li></ul></td>
       <td>FLOAT32</td>
       <td>-</td>
     </tr>
     <tr>
       <td>momentum</td>
       <td>可选属性</td>
-      <td><ul><li>动量参数，用于更新训练期间的均值和方差。</li><li>默认值为0.1f。</li></ul></td>
+      <td><ul><li>动量参数，用于更新训练期间的均值和方差。</li><li>默认值为0.1。</li></ul></td>
       <td>FLOAT32</td>
       <td>-</td>
     </tr>

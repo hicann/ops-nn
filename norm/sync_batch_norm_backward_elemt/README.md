@@ -17,9 +17,9 @@
 
 - 计算公式：
 
-$$
-gradInput = ({gradOut} - {meanDy}) - ((input - mean) * (invstd^{2} *   {meanDyXmu})) * invstd * weight
-$$
+  $$
+  gradInput = ({gradOut} - {meanDy}) - ((input - mean) * (invstd^{2} *   {meanDyXmu})) * invstd * weight
+  $$
 
 ## 参数说明
 

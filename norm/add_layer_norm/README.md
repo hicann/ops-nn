@@ -101,7 +101,7 @@
     <tr>
       <td>epsilon</td>
       <td>可选属性</td>
-      <td><ul><li>添加到分母中的值，以确保数值稳定，对应公式中的`epsilon`。</li><li>默认值为1e-5f。</li></ul></td>
+      <td><ul><li>添加到分母中的值，以确保数值稳定，对应公式中的`epsilon`。</li><li>默认值为1e-5。</li></ul></td>
       <td>FLOAT</td>
       <td>-</td>
     </tr>
@@ -122,7 +122,7 @@
     <tr>
       <td>mean</td>
       <td>输出</td>
-      <td>输出LayerNorm算过程中（x1 + x2 + bias）的结果的均值，对应公式中的`x`的平均值。shape需要与`x1`满足broadcast关系（前几维的维度和`x1`前几维的维度相同，后面的维度为1，总维度与`x1`维度相同，前几维指`x1`的维度减去`gamma`的维度，表示不需要norm的维度）。</td>
+      <td>输出LayerNorm计算过程中（x1 + x2 + bias）的结果的均值，对应公式中的`x`的平均值。shape需要与`x1`满足broadcast关系（前几维的维度和`x1`前几维的维度相同，后面的维度为1，总维度与`x1`维度相同，前几维指`x1`的维度减去`gamma`的维度，表示不需要norm的维度）。</td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>

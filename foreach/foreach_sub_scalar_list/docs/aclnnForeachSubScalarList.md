@@ -153,7 +153,7 @@ aclnnStatus aclnnForeachSubScalarList(
     <tr>
       <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="2">161002</td>
-      <td>x、scalar、out的数据类型不在支持的范围之内。</td>
+      <td>x、scalars、out的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>x和out的数据类型不一致。</td></tr>

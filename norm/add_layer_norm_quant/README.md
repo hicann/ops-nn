@@ -179,7 +179,7 @@
     <tr>
       <td>epsilon</td>
       <td>可选属性</td>
-      <td><ul><li>添加到分母中的值，以确保数值稳定，用于防止除0错误，对应公式中的`epsilon`。</li><li>默认值为1e-5f。</li></ul></td>
+      <td><ul><li>添加到分母中的值，以确保数值稳定，用于防止除0错误，对应公式中的`epsilon`。</li><li>默认值为1e-5。</li></ul></td>
       <td>FLOAT</td>
       <td>-</td>
     </tr>

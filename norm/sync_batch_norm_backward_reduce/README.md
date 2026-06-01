@@ -27,15 +27,12 @@ $$
 
 ## 参数说明
 
-  <table style="undefined;table-layout: fixed; width: 1550px"><colgroup>
+  <table style="undefined;table-layout: fixed; width: 1005px"><colgroup>
   <col style="width: 170px">
-  <col style="width: 120px">
-  <col style="width: 271px">
-  <col style="width: 330px">
-  <col style="width: 223px">
-  <col style="width: 101px">
-  <col style="width: 190px">
-  <col style="width: 145px">
+  <col style="width: 170px">
+  <col style="width: 352px">
+  <col style="width: 213px">
+  <col style="width: 100px">
   </colgroup>
   <thead>
     <tr>

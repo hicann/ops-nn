@@ -167,7 +167,7 @@ aclnnStatus aclnnForeachMaximumScalarV2(
     </tr>
   </tbody></table>
 
-## aclnnForeachDivScalarV2
+## aclnnForeachMaximumScalarV2
 
 - **参数说明**
 
