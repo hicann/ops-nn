@@ -40,17 +40,17 @@ private:
     FakeQuantAffineCachemaskTilingData tilingData;
     gert::TilingContext* tilingContext = nullptr;
     uint32_t coreNum = 0;
-    uint32_t loopNum = 0;
+    uint64_t loopNum = 0;
     uint32_t remainNum = 0;
     int64_t quantMin = 0;
     int64_t quantMax = 0;
     uint32_t dataPerRepeat = 0;
     uint32_t tileLength = 0;
-    uint32_t totalLength = 1;        // the length of input
-    uint32_t calcLength = 1;         // the length of input on axis != 0
-    uint32_t headNum = 1;            // the length of input on axis = 0
+    uint64_t totalLength = 1;        // the length of input
+    uint64_t calcLength = 1;         // the length of input on axis != 0
+    uint64_t headNum = 1;            // the length of input on axis = 0
     uint32_t alignNum = 0;           // data count per block
-    uint32_t totalLengthAligned = 0; // length to align 32B
+    uint64_t totalLengthAligned = 0; // length to align 32B
     uint64_t ubSizePlatForm = 0;
     uint32_t bytesPerData = 0;
     platform_ascendc::SocVersion socVersion = platform_ascendc::SocVersion::ASCEND910B;
@@ -114,7 +114,7 @@ ge::graphStatus FakeQuantAffineCachemaskTiling::Init()
     calcLength = totalLength / headNum;
 
     OP_LOGD(
-        tilingContext->GetNodeName(), "headNum %u, calcLength %u, totalLength %u.", headNum, calcLength, totalLength);
+        tilingContext->GetNodeName(), "headNum %lu, calcLength %lu, totalLength %lu.", headNum, calcLength, totalLength);
 
     auto compileInfo = tilingContext->GetCompileInfo<FakeQuantAffineCachemaskCompileInfo>();
     coreNum = static_cast<uint32_t>(compileInfo->totalCoreNum);
@@ -166,13 +166,13 @@ void FakeQuantAffineCachemaskTiling::TilingDataPrint() const
     OP_LOGD(tilingContext->GetNodeName(), "usedCoreNum: %u.", coreNum);
     OP_LOGD(tilingContext->GetNodeName(), "quantMin: %ld.", quantMin);
     OP_LOGD(tilingContext->GetNodeName(), "quantMax: %ld.", quantMax);
-    OP_LOGD(tilingContext->GetNodeName(), "loopNum: %u.", loopNum);
+    OP_LOGD(tilingContext->GetNodeName(), "loopNum: %lu.", loopNum);
     OP_LOGD(tilingContext->GetNodeName(), "remainNum: %u.", remainNum);
-    OP_LOGD(tilingContext->GetNodeName(), "totalLength: %u.", totalLength);
-    OP_LOGD(tilingContext->GetNodeName(), "calcLength: %u.", calcLength);
-    OP_LOGD(tilingContext->GetNodeName(), "headNum: %u.", headNum);
+    OP_LOGD(tilingContext->GetNodeName(), "totalLength: %lu.", totalLength);
+    OP_LOGD(tilingContext->GetNodeName(), "calcLength: %lu.", calcLength);
+    OP_LOGD(tilingContext->GetNodeName(), "headNum: %lu.", headNum);
     OP_LOGD(tilingContext->GetNodeName(), "alignNum: %u.", alignNum);
-    OP_LOGD(tilingContext->GetNodeName(), "totalLengthAligned: %u.", totalLengthAligned);
+    OP_LOGD(tilingContext->GetNodeName(), "totalLengthAligned: %lu.", totalLengthAligned);
     OP_LOGD(tilingContext->GetNodeName(), "tileLength: %u.", tileLength);
     OP_LOGD(tilingContext->GetNodeName(), "dataPerRepeat: %u.", dataPerRepeat);
 }

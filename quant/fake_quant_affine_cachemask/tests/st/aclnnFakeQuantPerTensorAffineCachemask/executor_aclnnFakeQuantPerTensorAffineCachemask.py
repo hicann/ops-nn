@@ -50,7 +50,7 @@ class MethodTorchNnFakeQuantAffineCachemaskApi(BaseApi):
         input_data.kwargs['self'] = input_data.kwargs['self'].to(device)
         input_data.kwargs['scale'] = input_data.kwargs['scale'].to(device)
         input_data.kwargs['zeroPoint'] = input_data.kwargs['zeroPoint'].to(device)
-        input_data.kwargs['fakeQuantEnbled'] = torch.tensor(input_data.kwargs['fakeQuantEnbled'],
+        input_data.kwargs['fakeQuantEnbled'] = torch.tensor(bool(input_data.kwargs['fakeQuantEnbled']),
                                                             dtype=torch.bool).to(device)
 
         output = mask = None

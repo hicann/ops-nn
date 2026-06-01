@@ -80,8 +80,8 @@ public:
         oneTensor = oneBuf.Get<T>();
         infTensor = infBuf.Get<T>();
 
-        Duplicate(quantMinTensor, static_cast<T>(quantMin), coreLength);
-        Duplicate(quantMaxTensor, static_cast<T>(quantMax), coreLength);
+        Duplicate(quantMinTensor, static_cast<T>(static_cast<float>(quantMin)), coreLength);
+        Duplicate(quantMaxTensor, static_cast<T>(static_cast<float>(quantMax)), coreLength);
         Duplicate(oneTensor, static_cast<T>(1.0f), coreLength);
         Duplicate(zeroTensor, static_cast<T>(0.0f), coreLength);
         Duplicate(infTensor, static_cast<T>(0x80000000), coreLength);
@@ -134,9 +134,9 @@ public:
     }
 
 protected:
-    uint32_t headNum, calcLength, loopNum, remainNum, circleNum, tileNum, totalLengthAligned, tileLength, blockLength,
-        offset, scaleOffset, lastTileLength, lastActulTileLength;
-    int32_t quantMin, quantMax;
+    uint64_t loopNum, headNum, calcLength, totalLengthAligned, circleNum, blockLength, offset, scaleOffset;
+    uint32_t remainNum, tileNum, tileLength, lastTileLength, lastActulTileLength;
+    int64_t quantMin, quantMax;
     uint64_t mask;
 };
 } // namespace FakeQuantAffineCachemaskN

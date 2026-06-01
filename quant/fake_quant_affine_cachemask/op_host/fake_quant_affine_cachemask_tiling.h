@@ -26,12 +26,12 @@ namespace optiling {
 BEGIN_TILING_DATA_DEF(FakeQuantAffineCachemaskTilingData)
 TILING_DATA_FIELD_DEF(int64_t, quantMin);
 TILING_DATA_FIELD_DEF(int64_t, quantMax);
-TILING_DATA_FIELD_DEF(uint32_t, loopNum);
+TILING_DATA_FIELD_DEF(uint64_t, loopNum);
 TILING_DATA_FIELD_DEF(uint32_t, remainNum);
-TILING_DATA_FIELD_DEF(uint32_t, calcLength);
-TILING_DATA_FIELD_DEF(uint32_t, headNum);
+TILING_DATA_FIELD_DEF(uint64_t, calcLength);
+TILING_DATA_FIELD_DEF(uint64_t, headNum);
 TILING_DATA_FIELD_DEF(uint32_t, dataPerRepeat);
-TILING_DATA_FIELD_DEF(uint32_t, totalLengthAligned);
+TILING_DATA_FIELD_DEF(uint64_t, totalLengthAligned);
 TILING_DATA_FIELD_DEF(uint32_t, tileLength);
 END_TILING_DATA_DEF;
 
