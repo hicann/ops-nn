@@ -22,8 +22,7 @@ namespace ScatterList {
 using namespace AscendC;
 
 template <typename T1, typename T2>
-class ScatterListTransposeLarge : public ScatterListBase<T1>
-{
+class ScatterListTransposeLarge : public ScatterListBase<T1> {
 public:
     __aicore__ inline ScatterListTransposeLarge(){};
     __aicore__ inline void Init(
@@ -88,7 +87,6 @@ __aicore__ inline void ScatterListTransposeLarge<T1, T2>::Init(
     varPtr = var;
     indiceGm.SetGlobalBuffer((__gm__ T2*)indice);
     updatesGm.SetGlobalBuffer((__gm__ T1*)updates);
-    ;
     if (mask == nullptr) {
         maskIsNull = true;
     } else {

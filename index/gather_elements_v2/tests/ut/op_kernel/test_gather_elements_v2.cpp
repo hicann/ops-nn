@@ -61,7 +61,6 @@ TEST_F(gather_elements_v2_test, test_case_8_4096_1248_fp32)
     memset(workspace, 0, workspaceSize);
 
     kernel_ut::SetupTestEnvironment("index/gather_elements_v2/tests/ut/op_kernel/data", "data");
-    ;
     kernel_ut::RunGenData("./data", {"1", "4096", "1248", "4096"});
     kernel_ut::RunGenTiling("./data", {"test_case_8_4096_1248_fp16"});
 

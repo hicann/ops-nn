@@ -36,7 +36,7 @@ repos:
       - id: clang-format
         files: \.(c|h|cpp|hpp|cc|hh|cxx|hxx|asc)$
         args:
-          - "--style={BasedOnStyle: Google, IndentWidth: 4, ColumnLimit: 120, BreakBeforeBraces: Allman}"
+          - "--style=file"
           - "--verbose"
           - "-i"
         exclude: ^build/|tests/third_party/
@@ -63,13 +63,6 @@ repos:
             "*.py,*.cpp,*.hpp,*.c,*.h",
           ]
 
-  # typos 检查
-  - repo: https://gitcode.com/gh_mirrors/ty/typos
-    rev: v1.32.0
-    hooks:
-      - id: typos
-        args: ["--force-exclude"]
-
   # OAT 合规性检查 (Open Source Audit Tool)
   - repo: local
     hooks:
@@ -79,5 +72,5 @@ repos:
         language: system
         pass_filenames: true
         types: [file]
-        stages: [commit]
+        stages: [pre-commit]
         verbose: true

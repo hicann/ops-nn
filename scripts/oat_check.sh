@@ -1,10 +1,10 @@
 #!/bin/sh
 # -----------------------------------------------------------------------------------------------------------
 # Copyright (c) 2026 Huawei Technologies Co., Ltd.
-# This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
 # CANN Open Software License Agreement Version 2.0 (the "License").
 # Please refer to the License for details. You may not use this file except in compliance with the License.
-# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # -----------------------------------------------------------------------------------------------------------
@@ -259,7 +259,7 @@ if [ "$TOTAL_ISSUES" -gt 0 ]; then
     echo "  - License Header Invalid:  $_LICENSE_INVALID"
     echo ""
     echo "[OAT] Details:"
-    echo "  cat $RESULT_FILE"
+    cat "$RESULT_FILE"
     echo ""
     echo "Fix the issues and recommit, or skip with:"
     echo "  git commit --no-verify"
@@ -269,6 +269,7 @@ fi
 
 echo ""
 echo "[OAT] [OK] All checks passed ($FILE_COUNT file(s) checked)."
-echo "[OAT] Summary: cat $RESULT_FILE"
+echo "[OAT] Summary: "
+cat "$RESULT_FILE"
 echo ""
 exit 0

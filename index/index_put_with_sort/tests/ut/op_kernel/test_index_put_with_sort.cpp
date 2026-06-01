@@ -68,7 +68,6 @@ TEST_F(index_put_with_sort_test, test_case_scatter_between_core_float_false)
 
     kernel_ut::SetupTestEnvironment(
         "index/index_put_with_sort/tests/ut/op_kernel/index_put_with_sort_data", "index_put_with_sort_data");
-    ;
     kernel_ut::RunGenData("./index_put_with_sort_data", {"48", "48", "1536"});
 
     IndexPutWithSortTilingData* tilingData = reinterpret_cast<IndexPutWithSortTilingData*>(tiling);
@@ -120,7 +119,6 @@ TEST_F(index_put_with_sort_test, test_case_scatter_between_core_float_true)
 
     kernel_ut::SetupTestEnvironment(
         "index/index_put_with_sort/tests/ut/op_kernel/index_put_with_sort_data", "index_put_with_sort_data");
-    ;
     kernel_ut::RunGenData("./index_put_with_sort_data", {"48", "48", "1536"});
 
     IndexPutWithSortTilingData* tilingData = reinterpret_cast<IndexPutWithSortTilingData*>(tiling);
@@ -172,7 +170,6 @@ TEST_F(index_put_with_sort_test, test_case_gather_float_false)
 
     kernel_ut::SetupTestEnvironment(
         "index/index_put_with_sort/tests/ut/op_kernel/index_put_with_sort_data", "index_put_with_sort_data");
-    ;
     kernel_ut::RunGenData("./index_put_with_sort_data", {"48", "48", "1536"});
 
     IndexPutWithSortTilingData* tilingData = reinterpret_cast<IndexPutWithSortTilingData*>(tiling);
@@ -227,7 +224,6 @@ TEST_F(index_put_with_sort_test, test_case_gather_float_true)
 
     kernel_ut::SetupTestEnvironment(
         "index/index_put_with_sort/tests/ut/op_kernel/index_put_with_sort_data", "index_put_with_sort_data");
-    ;
     kernel_ut::RunGenData("./index_put_with_sort_data", {"48", "48", "1536"});
 
     IndexPutWithSortTilingData* tilingData = reinterpret_cast<IndexPutWithSortTilingData*>(tiling);
@@ -282,7 +278,6 @@ TEST_F(index_put_with_sort_test, test_case_scatter_in_core_float_false)
 
     kernel_ut::SetupTestEnvironment(
         "index/index_put_with_sort/tests/ut/op_kernel/index_put_with_sort_data", "index_put_with_sort_data");
-    ;
     kernel_ut::RunGenData("./index_put_with_sort_data", {"48", "48", "1536"});
 
     IndexPutWithSortTilingData* tilingData = reinterpret_cast<IndexPutWithSortTilingData*>(tiling);
@@ -337,7 +332,6 @@ TEST_F(index_put_with_sort_test, test_case_scatter_in_core_float_true)
 
     kernel_ut::SetupTestEnvironment(
         "index/index_put_with_sort/tests/ut/op_kernel/index_put_with_sort_data", "index_put_with_sort_data");
-    ;
     kernel_ut::RunGenData("./index_put_with_sort_data", {"48", "48", "1536"});
 
     IndexPutWithSortTilingData* tilingData = reinterpret_cast<IndexPutWithSortTilingData*>(tiling);

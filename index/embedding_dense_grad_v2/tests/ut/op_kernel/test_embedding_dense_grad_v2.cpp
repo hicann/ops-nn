@@ -55,7 +55,6 @@ TEST_F(embedding_dense_grad_v2_test, test_case_1024_4096_100_false_false)
     memset(workspace, 0, 16 * 1024 * 1024);
 
     kernel_ut::SetupTestEnvironment("index/embedding_dense_grad_v2/tests/ut/op_kernel/data", "data");
-    ;
     kernel_ut::RunGenData("./data", {"1024", "4096", "100", "False"});
     kernel_ut::RunGenTiling("./data", {"test_case_1024_4096_100_false_false"});
 
@@ -94,7 +93,6 @@ TEST_F(embedding_dense_grad_v2_test, test_case_1024_4096_100_false_true)
     memset(workspace, 0, 16 * 1024 * 1024);
 
     kernel_ut::SetupTestEnvironment("index/embedding_dense_grad_v2/tests/ut/op_kernel/data", "data");
-    ;
     kernel_ut::RunGenData("./data", {"1024", "4096", "100", "False"});
     kernel_ut::RunGenTiling("./data", {"test_case_1024_4096_100_false_true"});
 
@@ -134,7 +132,6 @@ TEST_F(embedding_dense_grad_v2_test, test_case_1024_4096_100_true_false)
     memset(workspace, 0, workSpaceSize);
 
     kernel_ut::SetupTestEnvironment("index/embedding_dense_grad_v2/tests/ut/op_kernel/data", "data");
-    ;
     kernel_ut::RunGenData("./data", {"1024", "4096", "100", "False"});
     kernel_ut::RunGenTiling("./data", {"test_case_1024_4096_100_true_false"});
 
@@ -174,7 +171,6 @@ TEST_F(embedding_dense_grad_v2_test, test_case_1024_4096_100_true_true)
     memset(workspace, 0, workSpaceSize);
 
     kernel_ut::SetupTestEnvironment("index/embedding_dense_grad_v2/tests/ut/op_kernel/data", "data");
-    ;
     kernel_ut::RunGenData("./data", {"1024", "4096", "100", "False"});
     kernel_ut::RunGenTiling("./data", {"test_case_1024_4096_100_true_true"});
 
@@ -214,7 +210,6 @@ TEST_F(embedding_dense_grad_v2_test, test_case_1024_256_100_false_false)
     memset(workspace, 0, workSpaceSize);
 
     kernel_ut::SetupTestEnvironment("index/embedding_dense_grad_v2/tests/ut/op_kernel/data", "data");
-    ;
     kernel_ut::RunGenData("./data", {"48", "256", "100", "False"});
 
     EmbeddingDenseGradV2TilingData* tilingData = reinterpret_cast<EmbeddingDenseGradV2TilingData*>(tiling);

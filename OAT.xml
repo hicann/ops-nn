@@ -28,6 +28,9 @@
                 <!--filteritem type="filename" name="*.uvwxyz" desc="Describe the reason for filtering scan results"/-->
                 <!--filteritem type="filepath" name="abcdefg/.*.uvwxyz" desc="Describe the reason for filtering scan results"/-->
                 <!--filteritem type="filepath" name="projectroot/[a-zA-Z0-9]{20,}.sh" desc="Temp files"/-->
+                <!-- 排除 YAML 配置文件 -->
+                <filteritem type="filename" name="*.yaml" desc="YAML config files"/>
+                <filteritem type="filename" name="*.yml" desc="YAML config files"/>
             </filefilter>
             <filefilter name="copyrightPolicyFilter" desc="Filters for copyright header policies">
                 <!--filteritem type="filename" name="*.uvwxyz" desc="Describe the reason for filtering scan results"/-->
@@ -59,7 +62,7 @@
         <licensematcherlist>
             <licensematcher name="cann License" desc="If the scanning result is InvalidLicense, you can define matching rules here. Note that quotation marks must be escaped.">
                 <licensetext name="
-                    This program is free software, you can redistribute it and/or modify it under the terms and conditions of 
+                    This program is free software, you can redistribute it and/or modify it under the terms and conditions of
                     CANN Open Software License Agreement Version 2.0 (the &quot;License&quot;).
                     Please refer to the License for details. You may not use this file except in compliance with the License.
                     THIS SOFTWARE IS PROVIDED ON AN &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,

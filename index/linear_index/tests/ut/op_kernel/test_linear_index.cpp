@@ -59,7 +59,6 @@ TEST_F(linear_index_test, test_case_int32)
     uint32_t blockDim = 48;
 
     kernel_ut::SetupTestEnvironment("index/linear_index/tests/ut/op_kernel/linear_index_data", "linear_index_data");
-    ;
     kernel_ut::RunGenData("./linear_index_data", {"int32"});
     kernel_ut::RunGenTiling("./linear_index_data", {});
 
@@ -103,7 +102,6 @@ TEST_F(linear_index_test, test_case_int64)
     uint32_t blockDim = 48;
 
     kernel_ut::SetupTestEnvironment("index/linear_index/tests/ut/op_kernel/linear_index_data", "linear_index_data");
-    ;
     kernel_ut::RunGenData("./linear_index_data", {"int64"});
     kernel_ut::RunGenTiling("./linear_index_data", {});
 

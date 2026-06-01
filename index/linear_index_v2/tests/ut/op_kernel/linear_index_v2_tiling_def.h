@@ -16,7 +16,6 @@
 
 #include "kernel_tiling/kernel_tiling.h"
 
-
 struct LinearIndexV2TilingParam {
     uint64_t usedCoreNum = 0;
     uint64_t tensorId = 0;
@@ -26,7 +25,6 @@ struct LinearIndexV2TilingParam {
     uint64_t formerCoreTailDataNum = 0;
     uint64_t formerCoreFormerTime = 0;
     uint64_t formerCoreTailTime = 0;
-    ;
     uint64_t tailCoreNum = 0;
     uint64_t tailCoreDataNum = 0;
     uint64_t tailCoreFormerDataNum = 0;

@@ -53,8 +53,7 @@ const int INPUT_3 = 3;
 } // namespace
 
 namespace optiling {
-class ScatterAddWithSortedTiling
-{
+class ScatterAddWithSortedTiling {
 public:
     explicit ScatterAddWithSortedTiling(gert::TilingContext* context) : tilingContext(context) {};
     ge::graphStatus Init();
@@ -225,7 +224,6 @@ ge::graphStatus ScatterAddWithSortedTiling::Init()
         updatesLoop = (updatesOneTime - 1) / updatesEach + 1;
         updatesLast = updatesOneTime - updatesEach * (updatesLoop - 1);
         updatesAlign = (updatesEach + dataAlign - 1) / dataAlign * dataAlign;
-        ;
     } else {
         maxSize = (max_ub - updatesAlign * inputSize) / (SIZE_OF_INT32 + SIZE_OF_INT32);
         updatesEach = updatesLast = updatesOneTime;
@@ -329,10 +327,10 @@ ge::graphStatus ScatterAddWithSortedTilingForAscendC(gert::TilingContext* contex
 ge::graphStatus TilingScatterAddWithSorted(gert::TilingContext* context)
 {
     if (Ops::NN::OpTiling::IsRegbaseSocVersion(context)) {
-        OP_LOGD(context->GetNodeName(), "ScatterAddWithSorted is ascendc. runing ascendc tiling.");
+        OP_LOGD(context->GetNodeName(), "ScatterAddWithSorted is ascendc. running ascendc tiling.");
         return ScatterAddWithSortedTilingForAscendC(context);
     }
-        
+
     ScatterAddWithSortedTiling tilingObject(context);
     if (tilingObject.Init() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;

@@ -71,3 +71,6 @@ tbetoolkits-*.log
 single/
 scripts/ci/tmp/
 pr_filelist.txt
+oat_reports/
+
+log/
