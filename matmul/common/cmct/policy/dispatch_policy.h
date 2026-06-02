@@ -34,10 +34,14 @@ struct KernelBatchMatMulToMul {};  // BatchMatmul to mul
 struct KernelMixWithWeightPrologue {};
 struct KernelMatMulToMul {};
 struct KernelFlatQuant {};
-struct KernelRotateQuant {};
 struct KernelMatmulToVector {}; 
 
-enum class MatMulL0C2Out : std::uint8_t { ON_THE_FLY = 0, ND_FIXPIPE_1_1 = 1, ND_FIXPIPE_1_2 = 2 };
+enum class MatMulL0C2Out : std::uint8_t
+{
+    ON_THE_FLY = 0,
+    ND_FIXPIPE_1_1 = 1,
+    ND_FIXPIPE_1_2 = 2
+};
 
 /**
  * @struct MmadCAccOnUb
@@ -206,13 +210,6 @@ struct MatmulMergeBatch {
 template <class SingleCoreShape = AscendC::Shape<_0, _0, _0, _0>>
 struct MatmulFlatQuant {
     using ScheduleType = KernelFlatQuant;
-    using SingleShape = SingleCoreShape;
-    constexpr static bool enableInputDataLenCheck = false;
-};
-
-template <class SingleCoreShape = AscendC::Shape<_0, _0, _0, _0>>
-struct MatmulRotateQuant {
-    using ScheduleType = KernelRotateQuant;
     using SingleShape = SingleCoreShape;
     constexpr static bool enableInputDataLenCheck = false;
 };

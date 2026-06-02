@@ -96,7 +96,6 @@ class BlockMmadBuilder<
             BlockMatmulPolicy_> ||
         AscendC::Std::is_base_of_v<MatmulMultiBlock<>, BlockMatmulPolicy_> ||
         AscendC::Std::is_base_of_v<MatmulFlatQuant<>, BlockMatmulPolicy_> ||
-        AscendC::Std::is_base_of_v<MatmulRotateQuant<>, BlockMatmulPolicy_> ||
         AscendC::Std::is_base_of_v<MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY>, BlockMatmulPolicy_> ||
         AscendC::Std::is_base_of_v<MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2>, BlockMatmulPolicy_> ||
         AscendC::Std::is_base_of_v<
@@ -157,11 +156,16 @@ public:
     // params
     using Params = Arguments;
 
-    __aicore__ inline BlockMmadBuilder() {}
+    __aicore__ inline BlockMmadBuilder()
+    {}
 
-    __aicore__ inline ~BlockMmadBuilder() {}
+    __aicore__ inline ~BlockMmadBuilder()
+    {}
 
-    __host_aicore__ static size_t GetWorkspaceSize() { return 0; }
+    __host_aicore__ static size_t GetWorkspaceSize()
+    {
+        return 0;
+    }
 
     __host_aicore__ static Status CanImplement(Arguments const& args)
     {

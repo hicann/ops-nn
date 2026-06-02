@@ -1,6 +1,5 @@
 {
     "op_type": "RotateQuant",
-    "optional_input_mode": "gen_placeholder",
     "op_list": [
       {
         "bin_filename": "RotateQuant_bf16_int4",
@@ -20,14 +19,6 @@
             "format": "ND",
             "paramType": "required",
             "shape": [-2]
-          },
-          {
-            "name": "alpha",
-            "index": 2,
-            "dtype": "bfloat16",
-            "format": "ND",
-            "paramType": "optional",
-            "shape": [-2]
           }
         ],
         "outputs": [
@@ -55,31 +46,10 @@
             "value": null
           },
           {
-            "name": "axis",
-            "dtype": "int",
-            "value": null
-          },
-          {
-            "name": "round_mode",
-            "dtype": "string",
-            "value": null
-          },
-          {
-            "name": "scale_alg",
-            "dtype": "int",
-            "value": null
-          },
-          {
-            "name": "dst_type_max",
+            "name": "alpha",
             "dtype": "float",
             "value": null
-          },
-          {
-            "name": "trans",
-            "dtype": "bool",
-            "value": null
-          }
-        ]
+          }]
       },
       {
         "bin_filename": "RotateQuant_bf16_int8",
@@ -99,14 +69,6 @@
             "format": "ND",
             "paramType": "required",
             "shape": [-2]
-          },
-          {
-            "name": "alpha",
-            "index": 2,
-            "dtype": "bfloat16",
-            "format": "ND",
-            "paramType": "optional",
-            "shape": [-2]
           }
         ],
         "outputs": [
@@ -134,31 +96,10 @@
             "value": null
           },
           {
-            "name": "axis",
-            "dtype": "int",
-            "value": null
-          },
-          {
-            "name": "round_mode",
-            "dtype": "string",
-            "value": null
-          },
-          {
-            "name": "scale_alg",
-            "dtype": "int",
-            "value": null
-          },
-          {
-            "name": "dst_type_max",
+            "name": "alpha",
             "dtype": "float",
             "value": null
-          },
-          {
-            "name": "trans",
-            "dtype": "bool",
-            "value": null
-          }
-        ]
+          }]
       },
       {
         "bin_filename": "RotateQuant_fp16_int4",
@@ -177,14 +118,6 @@
             "dtype": "float16",
             "format": "ND",
             "paramType": "required",
-            "shape": [-2]
-          },
-          {
-            "name": "alpha",
-            "index": 2,
-            "dtype": "bfloat16",
-            "format": "ND",
-            "paramType": "optional",
             "shape": [-2]
           }
         ],
@@ -213,31 +146,10 @@
             "value": null
           },
           {
-            "name": "axis",
-            "dtype": "int",
-            "value": null
-          },
-          {
-            "name": "round_mode",
-            "dtype": "string",
-            "value": null
-          },
-          {
-            "name": "scale_alg",
-            "dtype": "int",
-            "value": null
-          },
-          {
-            "name": "dst_type_max",
+            "name": "alpha",
             "dtype": "float",
             "value": null
-          },
-          {
-            "name": "trans",
-            "dtype": "bool",
-            "value": null
-          }
-        ]
+          }]
       },
       {
         "bin_filename": "RotateQuant_fp16_int8",
@@ -256,14 +168,6 @@
             "dtype": "float16",
             "format": "ND",
             "paramType": "required",
-            "shape": [-2]
-          },
-          {
-            "name": "alpha",
-            "index": 2,
-            "dtype": "bfloat16",
-            "format": "ND",
-            "paramType": "optional",
             "shape": [-2]
           }
         ],
@@ -292,31 +196,10 @@
             "value": null
           },
           {
-            "name": "axis",
-            "dtype": "int",
-            "value": null
-          },
-          {
-            "name": "round_mode",
-            "dtype": "string",
-            "value": null
-          },
-          {
-            "name": "scale_alg",
-            "dtype": "int",
-            "value": null
-          },
-          {
-            "name": "dst_type_max",
+            "name": "alpha",
             "dtype": "float",
             "value": null
-          },
-          {
-            "name": "trans",
-            "dtype": "bool",
-            "value": null
-          }
-        ]
+          }]
       }
     ]
   }

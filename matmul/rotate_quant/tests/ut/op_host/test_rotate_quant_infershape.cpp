@@ -11,6 +11,7 @@
 #include <iostream>
 #include "infershape_test_util.h"
 #include "ut_op_common.h"
+#include "../../../op_host/op_tiling/rotate_quant_tiling.h"
 
 using namespace ge;
 using namespace std;

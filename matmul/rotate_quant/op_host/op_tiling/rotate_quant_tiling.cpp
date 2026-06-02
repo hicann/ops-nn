@@ -22,7 +22,7 @@
 #include "op_host/tiling_templates_registry.h"
 #include "matmul/common/op_host/math_util.h"
 
-
+using namespace optiling;
 
 namespace {
 constexpr uint32_t X_INDEX = 0;
@@ -56,9 +56,7 @@ constexpr uint32_t STEP_LOOP_MIN_ITERS_PER_CORE = 15;
 constexpr int64_t SYS_WORKSPACE_SIZE = 16777216;
 } // namespace
 
-namespace Ops {
-namespace NN {
-namespace RotateQuant {
+namespace optiling {
 ge::graphStatus RotateQuantTiling::GetPlatformInfo()
 {
     return ge::GRAPH_SUCCESS;
@@ -66,10 +64,6 @@ ge::graphStatus RotateQuantTiling::GetPlatformInfo()
 
 void RotateQuantTiling::InitCompileInfo()
 {
-    if (context_ == nullptr) {
-        OP_LOGE("RotateQuant", "context_ is null");
-        return;
-    }
     auto platformInfoPtr = context_->GetPlatformInfo();
     if (platformInfoPtr == nullptr) {
         OP_LOGE(context_->GetNodeName(), "platformInfoPtr is null");
@@ -95,7 +89,7 @@ void RotateQuantTiling::InitCompileInfo()
 
 ge::graphStatus RotateQuantTiling::GetShapeAttrsInfo()
 {
-    tilingDataSize_ = sizeof(RotateQuantOpt::RotateQuantTilingData);
+    tilingDataSize_ = sizeof(RotateQuantTilingData);
     if (inputParams_.initFlag) {
         OP_LOGD(inputParams_.opName, "No need to get shape and attrs from tiling context again");
         return ge::GRAPH_SUCCESS;
@@ -450,6 +444,4 @@ static ge::graphStatus TilingParseForRotateQuant(gert::TilingParseContext* conte
 IMPL_OP_OPTILING(RotateQuant)
     .Tiling(RotateQuantTilingFunc)
     .TilingParse<RotateQuantCompileInfo>(TilingParseForRotateQuant);
-} // namespace RotateQuant
-} // namespace NN
-} // namespace Ops
+} // namespace optiling

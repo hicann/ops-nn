@@ -34,7 +34,6 @@ struct QuantBatchMatmulV3Scheduler {
     static constexpr uint64_t FULL_LOAD_MODE = fullLoadMode;
 };
 struct BuiltInFlatQuantScheduler {};
-struct BuiltInRotateQuantScheduler {};
 struct BuiltInMulScheduler {};
 struct BuiltInVectorScheduler {};
 } // namespace Gemm
