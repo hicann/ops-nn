@@ -2889,6 +2889,16 @@
   </tr>
   <tr>
     <td>norm</td>
+    <td><a href="../../norm/euclidean_norm/README.md">euclidean_norm</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>EuclideanNorm算子是欧几里得范数的实现。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
     <td><a href="../../norm/gemma_rms_norm/README.md">gemma_rms_norm</a></td>
     <td>✓</td>
     <td>✓</td>
