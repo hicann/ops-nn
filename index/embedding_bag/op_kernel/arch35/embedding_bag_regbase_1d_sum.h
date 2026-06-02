@@ -60,16 +60,18 @@ public:
         this->embeddingDim_ = tiling_.embeddingDim;
         this->weightDimFactor_ = tiling_.weightDimFactor;
         if (tiling_.isNeedSampleWeight == 1) {
-            pipe_.InitBuffer(this->inQueueperSampleWeights_, 1, tiling_.indicesFactor * sizeof(T));
-            pipe_.InitBuffer(this->perSampleWeightsBuf_, (tiling_.weightRowFactor) * sizeof(float));
+            pipe_.InitBuffer(this->inQueueperSampleWeights_, 1, ops::CeilAlign(tiling_.indicesFactor * sizeof(T), UB_AGLIN_VALUE));
+            pipe_.InitBuffer(this->perSampleWeightsBuf_, ops::CeilAlign((tiling_.weightRowFactor) * sizeof(float), UB_AGLIN_VALUE));
         }
-        pipe_.InitBuffer(this->inQueueWeight_, 1, tiling_.weightRowFactor * tiling_.weightDimFactor * sizeof(T));
-        pipe_.InitBuffer(this->inQueueOffsets_, 1, (tiling_.offsetsFactor + 1) * sizeof(E));
-        pipe_.InitBuffer(this->inQueueIndices_, 1, tiling_.indicesFactor * sizeof(U));
-        pipe_.InitBuffer(this->outQueueY_, 1, tiling_.weightDimFactor * sizeof(T));
-        pipe_.InitBuffer(this->outQueueBagSize_, 1, (tiling_.offsetsFactor + 1) * sizeof(I));
-        pipe_.InitBuffer(this->outQueueOffset2bag_, tiling_.weightRowFactor * sizeof(I));
-        pipe_.InitBuffer(this->maxIndicesCalcBuf_, (tiling_.weightRowFactor) * sizeof(I));
+
+        pipe_.InitBuffer(this->inQueueWeight_, 1, 
+                ops::CeilAlign(tiling_.weightRowFactor * tiling_.weightDimFactor * sizeof(T), UB_AGLIN_VALUE));
+        pipe_.InitBuffer(this->inQueueOffsets_, 1, ops::CeilAlign((tiling_.offsetsFactor + 1) * sizeof(E), UB_AGLIN_VALUE));
+        pipe_.InitBuffer(this->inQueueIndices_, 1, ops::CeilAlign(tiling_.indicesFactor * sizeof(U), UB_AGLIN_VALUE));
+        pipe_.InitBuffer(this->outQueueY_, 1, ops::CeilAlign(tiling_.weightDimFactor * sizeof(float), UB_AGLIN_VALUE));
+        pipe_.InitBuffer(this->outQueueBagSize_, 1, ops::CeilAlign((tiling_.offsetsFactor + 1) * sizeof(I), UB_AGLIN_VALUE));
+        pipe_.InitBuffer(this->outQueueOffset2bag_, ops::CeilAlign(tiling_.weightRowFactor * sizeof(I), UB_AGLIN_VALUE));
+        pipe_.InitBuffer(this->maxIndicesCalcBuf_, ops::CeilAlign((tiling_.weightRowFactor) * sizeof(I), UB_AGLIN_VALUE));
         SyncAll();
     }
 
@@ -94,8 +96,8 @@ public:
             int64_t indiceStart = bagIndiceStart;
             int64_t curWeightNumber =
                 weightLoopIdx == this->weightLoop_ - 1 ? this->tailLoopWeightNmber_ : tiling_.weightDimFactor;
-            LocalTensor<T> outYLocal_ = this->outQueueY_.template AllocTensor<T>();
-            Duplicate(outYLocal_, static_cast<T>(0), static_cast<int32_t>(tiling_.weightDimFactor));
+            LocalTensor<float> outYLocal_ = this->outQueueY_.template AllocTensor<float>();
+            Duplicate(outYLocal_, static_cast<float>(0), static_cast<int32_t>(tiling_.weightDimFactor));
             for (uint64_t indicesCopyLoopIdx = 0; indicesCopyLoopIdx < indicesCopyLoop; ++indicesCopyLoopIdx) {
                 int64_t curIndicesCopyNumber =
                     indicesCopyLoopIdx == indicesCopyLoop - 1 ? tailLoopIndicesCopyNumber : tiling_.indicesFactor;
@@ -140,8 +142,16 @@ public:
             SetFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
             WaitFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
             int64_t outYOfset = curOffsetStart * tiling_.embeddingDim + weightOfset;
-            this->CopyYToGm(outYOfset, curWeightNumber, outYLocal_);
-            this->outQueueY_.template FreeTensor(outYLocal_);
+            if constexpr (!std::is_same<T, float>::value) {
+                Cast(outYLocal_.ReinterpretCast<T>(), outYLocal_, RoundMode::CAST_RINT, curWeightNumber);
+                this->outQueueY_.template EnQue(outYLocal_);
+                LocalTensor<T> yLocalOut = this->outQueueY_.template DeQue<T>();
+                this->CopyYToGm(outYOfset, curWeightNumber, yLocalOut);
+                this->outQueueY_.template FreeTensor(yLocalOut);
+            } else {
+                this->CopyYToGm(outYOfset, curWeightNumber, outYLocal_);
+                this->outQueueY_.template FreeTensor(outYLocal_);
+            }
             weightOfset = weightOfset + curWeightNumber;
         }
         bagSizeLocal(bagIdx) = bagSizeLocal(bagIdx) - paddingCount;
@@ -165,8 +175,8 @@ public:
             WaitFlag<HardEvent::MTE3_V>(eventIDMTE3ToV);
             int64_t curWeightNumber =
                 weightLoopIdx == this->weightLoop_ - 1 ? this->tailLoopWeightNmber_ : tiling_.weightDimFactor;
-            LocalTensor<T> outYLocal_ = this->outQueueY_.template AllocTensor<T>();
-            Duplicate(outYLocal_, static_cast<T>(0), static_cast<int32_t>(tiling_.weightDimFactor));
+            LocalTensor<float> outYLocal_ = this->outQueueY_.template AllocTensor<float>();
+            Duplicate(outYLocal_, static_cast<float>(0), static_cast<int32_t>(tiling_.weightDimFactor));
             int32_t eventIDMTE3ToS = static_cast<int32_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_S));
             SetFlag<HardEvent::MTE3_S>(eventIDMTE3ToS);
             WaitFlag<HardEvent::MTE3_S>(eventIDMTE3ToS);
@@ -201,8 +211,16 @@ public:
             SetFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
             WaitFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
             int64_t outYOfset = curOffsetStart * tiling_.embeddingDim + weightOfset;
-            this->CopyYToGm(outYOfset, curWeightNumber, outYLocal_);
-            this->outQueueY_.template FreeTensor(outYLocal_);
+            if constexpr (!std::is_same<T, float>::value) {
+                Cast(outYLocal_.ReinterpretCast<T>(), outYLocal_, RoundMode::CAST_RINT, curWeightNumber);
+                this->outQueueY_.template EnQue(outYLocal_);
+                LocalTensor<T> yLocalOut = this->outQueueY_.template DeQue<T>();
+                this->CopyYToGm(outYOfset, curWeightNumber, yLocalOut);
+                this->outQueueY_.template FreeTensor(yLocalOut);
+            } else {
+                this->CopyYToGm(outYOfset, curWeightNumber, outYLocal_);
+                this->outQueueY_.template FreeTensor(outYLocal_);
+            }
             weightOfset = weightOfset + curWeightNumber;
         }
         bagSizeLocal(bagIdx) = bagSizeLocal(bagIdx) - paddingCount;
@@ -289,8 +307,8 @@ public:
             WaitFlag<HardEvent::MTE3_V>(eventIDMTE3ToV);
             int64_t curWeightNumber =
                 weightLoopIdx == this->weightLoop_ - 1 ? this->tailLoopWeightNmber_ : tiling_.weightDimFactor;
-            LocalTensor<T> outYLocal_ = this->outQueueY_.template AllocTensor<T>();
-            Duplicate(outYLocal_, static_cast<T>(0), static_cast<int32_t>(tiling_.weightDimFactor));
+            LocalTensor<float> outYLocal_ = this->outQueueY_.template AllocTensor<float>();
+            Duplicate(outYLocal_, static_cast<float>(0), static_cast<int32_t>(tiling_.weightDimFactor));
             int64_t indiceStart = bagIndiceStart;
             int32_t eventIDMTE3ToS = static_cast<int32_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_S));
             SetFlag<HardEvent::MTE3_S>(eventIDMTE3ToS);
@@ -344,9 +362,17 @@ public:
             SetFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
             WaitFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
             int64_t outYOfset = curOffsetStart * tiling_.embeddingDim + weightOfset;
-            this->CopyYToGm(outYOfset, curWeightNumber, outYLocal_);
+            if constexpr (!std::is_same<T, float>::value) {
+                Cast(outYLocal_.ReinterpretCast<T>(), outYLocal_, RoundMode::CAST_RINT, curWeightNumber);
+                this->outQueueY_.template EnQue(outYLocal_);
+                LocalTensor<T> yLocalOut = this->outQueueY_.template DeQue<T>();
+                this->CopyYToGm(outYOfset, curWeightNumber, yLocalOut);
+                this->outQueueY_.template FreeTensor(yLocalOut);
+            } else {
+                this->CopyYToGm(outYOfset, curWeightNumber, outYLocal_);
+                this->outQueueY_.template FreeTensor(outYLocal_);
+            }
             weightOfset = weightOfset + curWeightNumber;
-            this->outQueueY_.template FreeTensor(outYLocal_);
         }
         bagSizeLocal(bagIdx) = bagSizeLocal(bagIdx) - paddingCount;
         this->inQueueIndices_.template EnQue(indicesLocal_);
@@ -371,8 +397,8 @@ public:
             int32_t eventIDMTE3ToV = static_cast<int32_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
             SetFlag<HardEvent::MTE3_V>(eventIDMTE3ToV);
             WaitFlag<HardEvent::MTE3_V>(eventIDMTE3ToV);
-            LocalTensor<T> outYLocal_ = this->outQueueY_.template AllocTensor<T>();
-            Duplicate(outYLocal_, static_cast<T>(0), static_cast<int32_t>(tiling_.weightDimFactor));
+            LocalTensor<float> outYLocal_ = this->outQueueY_.template AllocTensor<float>();
+            Duplicate(outYLocal_, static_cast<float>(0), static_cast<int32_t>(tiling_.weightDimFactor));
             int32_t eventIDMTE3ToS = static_cast<int32_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_S));
             SetFlag<HardEvent::MTE3_S>(eventIDMTE3ToS);
             WaitFlag<HardEvent::MTE3_S>(eventIDMTE3ToS);
@@ -445,8 +471,16 @@ public:
             int32_t eventIDVToMTE3 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
             SetFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
             WaitFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
-            this->CopyYToGm(outYOfset, curWeightNumber, outYLocal_);
-            this->outQueueY_.template FreeTensor(outYLocal_);
+            if constexpr (!std::is_same<T, float>::value) {
+                Cast(outYLocal_.ReinterpretCast<T>(), outYLocal_, RoundMode::CAST_RINT, curWeightNumber);
+                this->outQueueY_.template EnQue(outYLocal_);
+                LocalTensor<T> yLocalOut = this->outQueueY_.template DeQue<T>();
+                this->CopyYToGm(outYOfset, curWeightNumber, yLocalOut);
+                this->outQueueY_.template FreeTensor(yLocalOut);
+            } else {
+                this->CopyYToGm(outYOfset, curWeightNumber, outYLocal_);
+                this->outQueueY_.template FreeTensor(outYLocal_);
+            }
             weightOfset = weightOfset + curWeightNumber;
         }
         bagSizeLocal(bagIdx) = bagSizeLocal(bagIdx) - paddingCount;

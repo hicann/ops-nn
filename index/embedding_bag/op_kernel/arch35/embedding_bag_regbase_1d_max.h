@@ -65,14 +65,21 @@ public:
         this->tailLoopWeightNmber_ = this->curCoreEmbedDim_ - (this->weightLoop_ - 1) * tiling_.weightDimFactor;
         this->weightDimFactor_ = tiling_.weightDimFactor;
         this->embeddingDim_ = tiling_.embeddingDim;
-        pipe_.InitBuffer(this->inQueueWeight_, 1, tiling_.weightRowFactor * tiling_.weightDimFactor * sizeof(T));
-        pipe_.InitBuffer(this->inQueueIndices_, 1, tiling_.indicesFactor * sizeof(U));
-        pipe_.InitBuffer(this->inQueueOffsets_, 1, (tiling_.offsetsFactor + 1) * sizeof(E));
-        pipe_.InitBuffer(this->outQueueY_, 1, tiling_.weightDimFactor * sizeof(T));
-        pipe_.InitBuffer(this->outQueueOffset2bag_, tiling_.weightRowFactor * sizeof(I));
-        pipe_.InitBuffer(this->outQueueBagSize_, 1, (tiling_.offsetsFactor + 1) * sizeof(I));
-        pipe_.InitBuffer(this->outQueueMaxIndices_, (tiling_.weightDimFactor) * sizeof(I));
-        pipe_.InitBuffer(this->maxIndicesCalcBuf_, (tiling_.weightRowFactor) * sizeof(I));
+        pipe_.InitBuffer(
+            this->inQueueWeight_, 1,
+            ops::CeilAlign(tiling_.weightRowFactor * tiling_.weightDimFactor * sizeof(T), UB_AGLIN_VALUE));
+        pipe_.InitBuffer(this->inQueueIndices_, 1, ops::CeilAlign(tiling_.indicesFactor * sizeof(U), UB_AGLIN_VALUE));
+        pipe_.InitBuffer(
+            this->inQueueOffsets_, 1, ops::CeilAlign((tiling_.offsetsFactor + 1) * sizeof(E), UB_AGLIN_VALUE));
+        pipe_.InitBuffer(this->outQueueY_, 1, ops::CeilAlign(tiling_.weightDimFactor * sizeof(T), UB_AGLIN_VALUE));
+        pipe_.InitBuffer(
+            this->outQueueOffset2bag_, ops::CeilAlign(tiling_.weightRowFactor * sizeof(I), UB_AGLIN_VALUE));
+        pipe_.InitBuffer(
+            this->outQueueBagSize_, 1, ops::CeilAlign((tiling_.offsetsFactor + 1) * sizeof(I), UB_AGLIN_VALUE));
+        pipe_.InitBuffer(
+            this->outQueueMaxIndices_, ops::CeilAlign((tiling_.weightDimFactor) * sizeof(I), UB_AGLIN_VALUE));
+        pipe_.InitBuffer(
+            this->maxIndicesCalcBuf_, ops::CeilAlign((tiling_.weightRowFactor) * sizeof(I), UB_AGLIN_VALUE));
         SyncAll();
     }
 
@@ -138,7 +145,7 @@ public:
             }
             if (validIndicesFactorNumber == 0) {
                 Duplicate(outYLocal_, static_cast<T>(0), static_cast<int32_t>(curWeightNumber));
-                Duplicate(maxIndicesLocal_, static_cast<I>(0), static_cast<int32_t>(curWeightNumber));
+                Duplicate(maxIndicesLocal_, static_cast<I>(-1), static_cast<int32_t>(curWeightNumber));
             }
             int64_t outYOfset = curOffsetStart * tiling_.embeddingDim + weightOfset;
             int32_t eventIDVToMTE3 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
@@ -231,7 +238,7 @@ public:
             }
             if (validIndicesFactorNumber == 0) {
                 Duplicate(outYLocal_, static_cast<T>(0), static_cast<int32_t>(curWeightNumber));
-                Duplicate(maxIndicesLocal_, static_cast<I>(0), static_cast<int32_t>(curWeightNumber));
+                Duplicate(maxIndicesLocal_, static_cast<I>(-1), static_cast<int32_t>(curWeightNumber));
             }
             int32_t eventIDVToMTE3 = static_cast<int32_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
             SetFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
