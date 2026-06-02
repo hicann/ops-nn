@@ -2210,6 +2210,16 @@
   </tr>
   <tr>
     <td>loss</td>
+    <td><a href="../../loss/kl_div_target_loss_grad/README.md">kl_div_target_loss_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>进行KL散度的target反向计算。</td>
+  </tr>
+  <tr>
+    <td>loss</td>
     <td><a href="../../loss/l1_loss_grad/README.md">l1_loss_grad</a></td>
     <td>✓</td>
     <td>✓</td>

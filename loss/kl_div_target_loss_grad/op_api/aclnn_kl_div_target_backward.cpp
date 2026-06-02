@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -9,6 +9,7 @@
  */
 
 #include "aclnn_kl_div_target_backward.h"
+#include "kl_div_target_loss_grad.h"
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"
 #include "level0/reduce_sum_op.h"
@@ -37,6 +38,11 @@ using namespace op;
 extern "C" {
 #endif
 
+static const char* REDUCTION_NONE = "none";
+static const char* REDUCTION_MEAN = "mean";
+static const char* REDUCTION_SUM = "sum";
+static const char* REDUCTION_BATCHMEAN = "batchmean";
+
 int64_t GetElementNum(const op::Shape &shape)
 {
     int64_t ret = 1;
@@ -61,7 +67,8 @@ static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_SUPPORT_LIST =
 static const inline std::initializer_list<DataType>& GetSupportDtypeList(SocVersion socVersion)
 {
     static const std::initializer_list<DataType> emptyDtypes = {};
-    if (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93) {
+    if (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93 ||
+        Ops::NN::AclnnUtil::IsRegbase()) {
         return ASCEND910B_DTYPE_SUPPORT_LIST;
     }
     return emptyDtypes;
@@ -141,6 +148,21 @@ static aclnnStatus CheckParams(
     CHECK_RET(CheckFormat(gradOutput, self, target, gradTarget), ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;
+}
+
+static const char* GetReductionStr(int64_t reduction)
+{
+    if (reduction == None) {
+        return REDUCTION_NONE;
+    } else if (reduction == Mean) {
+        return REDUCTION_MEAN;
+    } else if (reduction == Sum) {
+        return REDUCTION_SUM;
+    } else if (reduction == Batchmean) {
+        return REDUCTION_BATCHMEAN;
+    } else {
+        return REDUCTION_NONE;
+    }
 }
 
 static aclIntArray* ComputeBroadcastShapeLossBackward(const op::Shape broadcastShape, aclOpExecutor* executor)
@@ -235,31 +257,37 @@ static aclnnStatus ExecuteKlDivTargetBackward(
     const aclTensor* gradOutput, const aclTensor* self, const aclTensor* target, int64_t reduction, bool logTarget,
     aclTensor* gradTarget, aclOpExecutor* executor)
 {
-    auto promoteType = op::DataType::DT_FLOAT; 
- 
     // 固定写法，将输入gradOutput转换成连续的tensor	 
     auto gradOutputContiguous = l0op::Contiguous(gradOutput, executor);	 
-    CHECK_RET(gradOutputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);	 
- 
-    // 将输入gradoutput的数据类型转换成隐式数据类型，根据具体算子语义按需调用 
-    auto gradOutputCasted = l0op::Cast(gradOutputContiguous, promoteType, executor); 
-    CHECK_RET(gradOutputCasted != nullptr, ACLNN_ERR_INNER_NULLPTR); 
+    CHECK_RET(gradOutputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 固定写法，将输入self转换成连续的tensor	 
     auto selfContiguous = l0op::Contiguous(self, executor);	 
     CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
- 
-    // 将输入self的数据类型转换成隐式数据类型，根据具体算子语义按需调用 
-    auto selfCasted = l0op::Cast(selfContiguous, promoteType, executor); 
-    CHECK_RET(selfCasted != nullptr, ACLNN_ERR_INNER_NULLPTR); 
- 
+
     // 固定写法，将输入target转换成连续的tensor	 
     auto targetContiguous = l0op::Contiguous(target, executor);	 
-    CHECK_RET(targetContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);	 
- 
-    // 将输入target的数据类型转换成隐式数据类型，根据具体算子语义按需调用	 
-    auto targetCasted = l0op::Cast(targetContiguous, promoteType, executor);	 
-    CHECK_RET(targetCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    CHECK_RET(targetContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    
+    auto gradOutputCasted = gradOutputContiguous;
+    auto selfCasted = selfContiguous;
+    auto targetCasted = targetContiguous;
+
+    if (!(Ops::NN::AclnnUtil::IsRegbase() && gradOutput->GetDataType() == self->GetDataType() && gradOutput->GetDataType() == target->GetDataType())) {
+        auto promoteType = op::DataType::DT_FLOAT;	 
+    
+        // 将输入gradoutput的数据类型转换成隐式数据类型，根据具体算子语义按需调用 
+        gradOutputCasted = l0op::Cast(gradOutputContiguous, promoteType, executor); 
+        CHECK_RET(gradOutputCasted != nullptr, ACLNN_ERR_INNER_NULLPTR); 
+    
+        // 将输入self的数据类型转换成隐式数据类型，根据具体算子语义按需调用 
+        selfCasted = l0op::Cast(selfContiguous, promoteType, executor); 
+        CHECK_RET(selfCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);  
+    
+        // 将输入target的数据类型转换成隐式数据类型，根据具体算子语义按需调用	 
+        targetCasted = l0op::Cast(targetContiguous, promoteType, executor);	 
+        CHECK_RET(targetCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
 
     op::Shape broadcastShape;
     BroadcastInferShape(target->GetViewShape(), self->GetViewShape(), broadcastShape);
@@ -269,7 +297,13 @@ static aclnnStatus ExecuteKlDivTargetBackward(
     CHECK_RET(targetBroadcast != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // 进行计算
-    auto grad = ComputeGradForKlDiv(targetBroadcast, selfCasted, gradOutputCasted, logTarget, reduction, executor);
+    const aclTensor* grad = nullptr;
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        grad = l0op::KlDivTargetLossGrad(
+            gradOutputCasted, selfCasted, targetBroadcast, GetReductionStr(reduction), logTarget, executor);
+    } else {
+        grad = ComputeGradForKlDiv(targetBroadcast, selfCasted, gradOutputCasted, logTarget, reduction, executor);
+    }
     CHECK_RET(grad != nullptr, ACLNN_ERR_INNER_NULLPTR);
     
     // 根据grad的shape是否与gradTarget的shape相同，判断是否需要reduce
