@@ -28,15 +28,15 @@ private:
     GlobalTensor<T> xyz1_gm, xyz2_gm, grad_dist1_gm, grad_dist2_gm;
     GlobalTensor<int32_t> idx1_gm, idx2_gm;
     GlobalTensor<T> grad_xyz1_gm, grad_xyz2_gm;
-    uint32_t num;
+    uint64_t num;
     uint32_t core_num;
     uint32_t cur_block_idx;
-    uint32_t cur_core_task_num;
-    uint32_t xyz_ele_num;
-    uint32_t half_xyz_ele_num;
+    uint64_t cur_core_task_num;
+    uint64_t xyz_ele_num;
+    uint64_t half_xyz_ele_num;
     uint32_t t_per_block;
-    uint32_t per_ub_size;
-    uint32_t start_task_id;
+    uint64_t per_ub_size;
+    uint64_t start_task_id;
 
 public:
     __aicore__ inline ChamferDistanceGrad(
@@ -47,7 +47,7 @@ public:
         this->core_num = GetBlockNum();
         this->cur_block_idx = GetBlockIdx();
         this->num = tiling_data->num;
-        auto batch_size = tiling_data->batch_size;
+        uint64_t batch_size = tiling_data->batch_size;
         this->half_xyz_ele_num = this->num * batch_size;
         uint32_t doub = 2;
         this->xyz_ele_num = this->num * batch_size * doub;
@@ -75,7 +75,7 @@ public:
         SyncAll();
 #endif
         uint32_t ub_num = 6;
-        uint32_t per_ub_size = tiling_data->ub_size / ub_num / sizeof(float) / block_bytes * block_bytes;
+        uint64_t per_ub_size = tiling_data->ub_size / ub_num / sizeof(float) / block_bytes * block_bytes;
         this->per_ub_size = per_ub_size;
         pipe.InitBuffer(in_queue_xyz, 1, doub * per_ub_size * sizeof(T));
         pipe.InitBuffer(in_queue_grad_dist, 1, per_ub_size * sizeof(T));
@@ -116,15 +116,15 @@ private:
     }
 
     __aicore__ inline void compute_mode_zero_with_d2(
-        int32_t task_idx, T db, float neg, T fill_value, const LocalTensor<T>& xyz_local,
+        uint64_t task_idx, T db, float neg, T fill_value, const LocalTensor<T>& xyz_local,
         const LocalTensor<T>& grad_dist_local, const LocalTensor<int32_t>& id_local, const LocalTensor<T>& d_local,
-        const LocalTensor<T>& xy_zero_block_local, const LocalTensor<T>& block_local, int32_t cur_task_idx,
-        int32_t cur_task_batch, int32_t cur_task_num)
+        const LocalTensor<T>& xy_zero_block_local, const LocalTensor<T>& block_local, uint64_t cur_task_idx,
+        uint64_t cur_task_batch, uint64_t cur_task_num)
     {
         uint32_t doub = 2;
         if (this->cur_core_task_num > this->per_ub_size) {
-            int32_t loop = this->cur_core_task_num / this->per_ub_size;
-            for (uint32_t loop_ind = 0; loop_ind < loop; loop_ind++) {
+            uint64_t loop = this->cur_core_task_num / this->per_ub_size;
+            for (uint64_t loop_ind = 0; loop_ind < loop; loop_ind++) {
                 cur_task_idx = task_idx + loop_ind * this->per_ub_size;
                 cur_task_batch = cur_task_idx / this->num;
                 cur_task_num = cur_task_idx % this->num;
@@ -142,8 +142,8 @@ private:
             }
         }
         if (this->cur_core_task_num % this->per_ub_size) {
-            int32_t num = this->cur_core_task_num % this->per_ub_size;
-            int32_t loop_num = this->cur_core_task_num / this->per_ub_size;
+            uint64_t num = this->cur_core_task_num % this->per_ub_size;
+            uint64_t loop_num = this->cur_core_task_num / this->per_ub_size;
             cur_task_idx = task_idx + loop_num * this->per_ub_size;
             cur_task_batch = cur_task_idx / this->num;
             cur_task_num = cur_task_idx % this->num;
@@ -171,9 +171,9 @@ private:
     }
 
     __aicore__ inline void main_cal_func_d2(
-        int32_t cur_task_batch, T db, float neg, const LocalTensor<T>& xyz_local, const LocalTensor<T>& grad_dist_local,
+        uint64_t cur_task_batch, T db, float neg, const LocalTensor<T>& xyz_local, const LocalTensor<T>& grad_dist_local,
         const LocalTensor<int32_t>& id_local, const LocalTensor<T>& d_local, const LocalTensor<T>& xy_zero_block_local,
-        const LocalTensor<T>& block_local, int32_t cur_task_num, int32_t num, int32_t cur_task_idx)
+        const LocalTensor<T>& block_local, uint64_t cur_task_num, uint64_t num, uint64_t cur_task_idx)
     {
         uint32_t doub = 2;
         size_t fp32_type = 4;
@@ -193,9 +193,9 @@ private:
         muls_template(grad_dist_local, grad_dist_local, db, ceil(num, this->t_per_block));
         PipeSync<AscendC::HardEvent::V_S>();
 
-        for (int32_t ind = 0; ind < num; ind++) {
-            auto cur_batch = (cur_task_idx + ind) / this->num;
-            auto cur_ind = id_local.GetValue(ind);
+        for (uint64_t ind = 0; ind < num; ind++) {
+            uint64_t cur_batch = (cur_task_idx + ind) / this->num;
+            int32_t cur_ind = id_local.GetValue(ind);
             PipeSync<AscendC::HardEvent::V_MTE2>();
             DataCopyPad(
                 block_local, xyz1_gm[cur_batch * this->num * doub + cur_ind * doub],
@@ -237,7 +237,7 @@ private:
         }
     }
 
-    __aicore__ inline void compute_mode_zero(int32_t task_idx)
+    __aicore__ inline void compute_mode_zero(uint64_t task_idx)
     {
         LocalTensor<T> xyz_local = in_queue_xyz.DeQue<T>();
         LocalTensor<T> grad_dist_local = in_queue_grad_dist.DeQue<T>();
@@ -253,12 +253,12 @@ private:
         PipeSync<AscendC::HardEvent::S_V>();
         Duplicate<T>(xy_zero_block_local, fill_value, this->t_per_block);
         PipeSync<AscendC::HardEvent::V_S>();
-        int32_t cur_task_idx = 0;
-        int32_t cur_task_batch = 0;
-        int32_t cur_task_num = 0;
+        uint64_t cur_task_idx = 0;
+        uint64_t cur_task_batch = 0;
+        uint64_t cur_task_num = 0;
         if (this->cur_core_task_num > this->per_ub_size) {
-            auto loop = this->cur_core_task_num / this->per_ub_size;
-            for (uint32_t loop_ind = 0; loop_ind < loop; loop_ind++) {
+            uint64_t loop = this->cur_core_task_num / this->per_ub_size;
+            for (uint64_t loop_ind = 0; loop_ind < loop; loop_ind++) {
                 cur_task_idx = task_idx + loop_ind * this->per_ub_size;
                 cur_task_batch = cur_task_idx / this->num;
                 cur_task_num = cur_task_idx % this->num;
@@ -277,8 +277,8 @@ private:
             }
         }
         if (this->cur_core_task_num % this->per_ub_size) {
-            auto num = this->cur_core_task_num % this->per_ub_size;
-            auto loop_num = this->cur_core_task_num / this->per_ub_size;
+            uint64_t num = this->cur_core_task_num % this->per_ub_size;
+            uint64_t loop_num = this->cur_core_task_num / this->per_ub_size;
             cur_task_idx = task_idx + loop_num * this->per_ub_size;
             cur_task_batch = cur_task_idx / this->num;
             cur_task_num = cur_task_idx % this->num;
@@ -318,9 +318,9 @@ private:
     }
 
     __aicore__ inline void main_cal_func_d1(
-        int32_t cur_task_batch, T db, float neg, const LocalTensor<T>& xyz_local, const LocalTensor<T>& grad_dist_local,
+        uint64_t cur_task_batch, T db, float neg, const LocalTensor<T>& xyz_local, const LocalTensor<T>& grad_dist_local,
         const LocalTensor<int32_t>& id_local, const LocalTensor<T>& d_local, const LocalTensor<T>& xy_zero_block_local,
-        const LocalTensor<T>& block_local, int32_t cur_task_num, int32_t num, int32_t cur_task_idx)
+        const LocalTensor<T>& block_local, uint64_t cur_task_num, uint64_t num, uint64_t cur_task_idx)
     {
         uint32_t doub = 2;
         size_t fp32_type = 4;
@@ -340,8 +340,8 @@ private:
         muls_template(grad_dist_local, grad_dist_local, db, ceil(num, this->t_per_block));
         PipeSync<AscendC::HardEvent::V_S>();
 
-        for (int32_t ind = 0; ind < num; ind++) {
-            int32_t cur_batch = (cur_task_idx + ind) / this->num;
+        for (uint64_t ind = 0; ind < num; ind++) {
+            uint64_t cur_batch = (cur_task_idx + ind) / this->num;
             int32_t cur_ind = id_local.GetValue(ind);
             PipeSync<AscendC::HardEvent::V_MTE2>();
             PipeSync<AscendC::HardEvent::MTE3_MTE2>();
@@ -426,7 +426,7 @@ private:
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void main_fuc_of_mode_zero(int32_t task_idx)
+    __aicore__ inline void main_fuc_of_mode_zero(uint64_t task_idx)
     {
         init_ub_mode_zero();
         compute_mode_zero(task_idx);

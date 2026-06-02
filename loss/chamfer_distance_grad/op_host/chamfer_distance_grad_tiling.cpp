@@ -44,12 +44,12 @@ private:
     void SetTilingKeyMode(ge::DataType dType_str);
     ChamferDistanceGradTilingData TilingData;
     gert::TilingContext* TilingContext = nullptr;
-    uint32_t batch_size = 1;
-    uint32_t num = 100;
+    uint64_t batch_size = 1;
+    uint64_t num = 100;
     uint64_t ub_size = 192 * 1024;
-    uint32_t task_per_core = 1;
-    uint32_t core_used = 1;
-    uint32_t task_tail_core = 1;
+    uint64_t task_per_core = 1;
+    uint64_t core_used = 1;
+    uint64_t task_tail_core = 1;
 };
 
 void ChamferDistanceGradTiling::SetTilingKeyMode(ge::DataType dType_str)
@@ -74,8 +74,8 @@ ge::graphStatus ChamferDistanceGradTiling::Init()
     auto compileInfo = reinterpret_cast<const ChamferDistanceGradCompileInfo*>(TilingContext->GetCompileInfo());
     uint64_t total_ub_size = compileInfo->ubSizePlatForm;
     ub_size = total_ub_size - RESERVE_SAPCE;
-    uint32_t core_num = compileInfo->totalCoreNum;
-    OP_LOGD(TilingContext, "core_num is %u.", core_num);
+    uint64_t core_num = static_cast<uint64_t>(compileInfo->totalCoreNum);
+    OP_LOGD(TilingContext, "core_num is %lu.", core_num);
     batch_size = xyz_shape.GetDim(0);
     num = xyz_shape.GetDim(1);
     auto dtype_str = TilingContext->GetInputDesc(0)->GetDataType();
@@ -111,12 +111,12 @@ ge::graphStatus ChamferDistanceGradTiling::RunKernelTiling()
 
 void ChamferDistanceGradTiling::TilingDataPrint()
 {
-    OP_LOGD(TilingContext, "batch_size:       %d.", batch_size);
-    OP_LOGD(TilingContext, "num:  %d.", num);
+    OP_LOGD(TilingContext, "batch_size:       %lu.", batch_size);
+    OP_LOGD(TilingContext, "num:  %lu.", num);
     OP_LOGD(TilingContext, "ub_size:               %lu.", ub_size);
-    OP_LOGD(TilingContext, "task_per_core:      %d.", task_per_core);
-    OP_LOGD(TilingContext, "core_used:     %d.", core_used);
-    OP_LOGD(TilingContext, "task_tail_core:     %d.", task_tail_core);
+    OP_LOGD(TilingContext, "task_per_core:      %lu.", task_per_core);
+    OP_LOGD(TilingContext, "core_used:     %lu.", core_used);
+    OP_LOGD(TilingContext, "task_tail_core:     %lu.", task_tail_core);
 }
 
 static ge::graphStatus TilingChamferDistanceGrad(gert::TilingContext* context)

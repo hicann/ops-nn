@@ -14,12 +14,12 @@
 #include "kernel_tiling/kernel_tiling.h"
 
 struct ChamferDistanceGradTilingDataTest {
-    uint32_t batch_size = 0;     // 1
-    uint32_t num = 0;            // 2
+    uint64_t batch_size = 0;     // 1
+    uint64_t num = 0;            // 2
     uint64_t ub_size = 0;        // 3
-    uint32_t task_per_core = 0;  // 4
-    uint32_t core_used = 0;      // 5
-    uint32_t task_tail_core = 0; // 6
+    uint64_t task_per_core = 0;  // 4
+    uint64_t core_used = 0;      // 5
+    uint64_t task_tail_core = 0; // 6
 };
 
 #define DTYPE_X int64_t
