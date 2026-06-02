@@ -2043,3 +2043,17 @@ VC8@ops-nn:
         - ops/ops-nn/index/sorted_sparse_segment_mean_grad/tests/
       non_delivery: null
       open_source: null
+sort@ops-nn:
+  src:
+    release:
+      style:
+        - ops/ops-nn/index/scatter_elements/op_api/aclnn_unique.cpp
+        - ops/ops-nn/index/scatter_elements/op_api/aclnn_unique.h
+        - ops/ops-nn/index/scatter_elements/op_api/aclnn_unique2.cpp
+        - ops/ops-nn/index/scatter_elements/op_api/aclnn_unique2.h
+      opensource_style: null
+      kernel_style: null
+    unrelease:
+      test_code: null
+      non_delivery: null
+      open_source: null
