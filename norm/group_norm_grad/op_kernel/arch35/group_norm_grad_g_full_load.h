@@ -42,9 +42,6 @@ private:
     __aicore__ inline void VFMode0DbetaDs(
         const LocalTensor<T>& x, const LocalTensor<T>& dy, const LocalTensor<float>& dbeta,
         const LocalTensor<float>& dgamma);
-    __aicore__ inline void VFMode0DbetaDsBinaryFold(
-        const LocalTensor<T>& x, const LocalTensor<T>& dy, const LocalTensor<float>& dbeta,
-        const LocalTensor<float>& dgamma);
     __aicore__ inline void ComputeMode0Dx(
         int32_t taskIdx, const LocalTensor<T>& xTensor, const LocalTensor<T>& dyTensor, const LocalTensor<T>& dxTensor,
         LocalTensor<float>& dbetaTensor, LocalTensor<float>& dsTensor, const float mean, const float rstd);
@@ -172,7 +169,7 @@ __aicore__ inline void GroupNormGradGFullLoad<T, U>::Compute(
     } else if (this->eleNumPerC_ <= this->VecLen_) {
         VFMode0DbetaDs(xTensor, dyTensor, dbetaTensor, dsTensor);
     } else {
-        VFMode0DbetaDsBinaryFold(xTensor, dyTensor, dbetaTensor, dsTensor);
+        this->VFDbetaDgammaBinaryFoldCommon(xTensor, dyTensor, dbetaTensor, dsTensor, 0, this->C_G_);
     }
     this->outQueDbeta_.EnQue(dbetaTensor);
     this->outQueDs_.EnQue(dsTensor);
@@ -304,161 +301,6 @@ __aicore__ inline void GroupNormGradGFullLoad<T, U>::VFMode0DbetaDs(
   dbeta = reducesum(dy)
   dgamma = reduceSum(x * dy)
 */
-template <typename T, typename U>
-__aicore__ inline void GroupNormGradGFullLoad<T, U>::VFMode0DbetaDsBinaryFold(
-    const LocalTensor<T>& x, const LocalTensor<T>& dy, const LocalTensor<float>& dbeta,
-    const LocalTensor<float>& dgamma)
-{
-    __ubuf__ T* ubX = (__ubuf__ T*)x.GetPhyAddr();
-    __ubuf__ T* ubDy = (__ubuf__ T*)dy.GetPhyAddr();
-    __ubuf__ float* ubDbeta = (__ubuf__ float*)dbeta.GetPhyAddr();
-    __ubuf__ float* ubDgamma = (__ubuf__ float*)dgamma.GetPhyAddr();
-    uint32_t binaryQuotientOffset = this->binaryAddQuotient_;
-    uint32_t binaryAddRemainder = this->eleNumPerC_ - this->binaryAddQuotient_;
-    uint16_t remainderLoop = CeilDiv(binaryAddRemainder, this->VecLen_);
-    uint16_t remainderGeneral = remainderLoop == 0 ? 0 : remainderLoop - 1;
-    // the binary fold, the head half o the 64-aligned
-    uint16_t quotientLoop = CeilDiv(this->binaryAddQuotient_, this->VecLen_);
-    uint16_t binaryAddKLoop = this->binaryAddK_;
-    uint16_t binaryAddLoop = ((this->binaryAddQuotient_ / this->VecLen_) / this->VecLen_);
-    uint32_t binaryAddLastNum = this->binaryAddLastNum_;
-    LocalTensor<float> binaryDbetaTensor = this->outQueDx_.template AllocTensor<float>();
-    // 复用 outQueDx_ 切分为前后2半用，float16时，大小是float32的一半，折半2次
-    uint32_t HxWSpaceOffset = this->eleNumPerC_ / DOUBLE_BUFFER / DOUBLE_BUFFER;
-    HxWSpaceOffset = CeilAlign(HxWSpaceOffset, this->PF32_PER_BLOCK);
-    LocalTensor<float> binarydsTensor = binaryDbetaTensor[HxWSpaceOffset];
-    __ubuf__ T* ubXR = (__ubuf__ T*)ubX + binaryQuotientOffset;
-    __ubuf__ T* ubDyR = (__ubuf__ T*)ubDy + binaryQuotientOffset;
-    __ubuf__ float* ubBinaryDbeta = (__ubuf__ float*)binaryDbetaTensor.GetPhyAddr();
-    __ubuf__ float* ubBinaryDgamma = (__ubuf__ float*)binarydsTensor.GetPhyAddr();
-    uint16_t outerLoopTimes = static_cast<uint16_t>(this->C_G_);
-    uint32_t eleNumPerC = this->eleNumPerC_;
-    uint32_t sregvl = this->VecLen_;
-    __ubuf__ T* curUbX;
-    __ubuf__ T* curUbXR;
-    __ubuf__ T* curUbDy;
-    __ubuf__ T* curUbDyR;
-
-    __VEC_SCOPE__
-    {
-        UnalignReg uSrcX;
-        UnalignReg uSrcXR;
-        UnalignReg uSrcDy;
-        UnalignReg uSrcDyR;
-        RegTensor<float> vregDbeta;
-        RegTensor<float> vregDgamma;
-        RegTensor<float> vregX;
-        RegTensor<float> vregXQ;
-        RegTensor<float> vregXR;
-        RegTensor<float> vregDy;
-        RegTensor<float> vregDyQ;
-        RegTensor<float> vregDyR;
-        RegTensor<float> tempX;
-        RegTensor<float> tempDy;
-        for (uint16_t cgIdx = 0; cgIdx < outerLoopTimes; cgIdx++) {
-            uint32_t sreg0 = binaryAddRemainder;
-            uint32_t ubOffSet = cgIdx * eleNumPerC;
-            MaskReg pregMain = CreateMask<float, MaskPattern::ALL>();
-            MaskReg pregMerge = CreateMask<float, MaskPattern::VL1>();
-            curUbX = ubX + ubOffSet;
-            curUbXR = ubXR + ubOffSet;
-            curUbDy = ubDy + ubOffSet;
-            curUbDyR = ubDyR + ubOffSet;
-            Duplicate(vregDbeta, 0, pregMain);
-            Duplicate(vregDgamma, 0, pregMain);
-            DataCopyUnAlignPre(uSrcX, curUbX);
-            DataCopyUnAlignPre(uSrcXR, curUbXR);
-            DataCopyUnAlignPre(uSrcDy, curUbDy);
-            DataCopyUnAlignPre(uSrcDyR, curUbDyR);
-            for (uint16_t i = 0; i < remainderGeneral; i++) {
-                MaskReg pregLoop = UpdateMask<float>(sreg0);
-                LoadUnAlignOneTensor<T>(curUbX, vregXQ, uSrcX, pregMain, sregvl);
-                LoadUnAlignOneTensor<T>(curUbXR, vregXR, uSrcXR, pregLoop, sregvl);
-                LoadUnAlignOneTensor<T>(curUbDy, vregDyQ, uSrcDy, pregMain, sregvl);
-                LoadUnAlignOneTensor<T>(curUbDyR, vregDyR, uSrcDyR, pregLoop, sregvl);
-                Mul(vregXQ, vregXQ, vregDyQ, pregMain);
-                Mul(vregXR, vregXR, vregDyR, pregLoop);
-                // add Quotient add remainder
-                Add(vregXQ, vregXQ, vregXR, pregLoop);
-                Add(vregDyQ, vregDyQ, vregDyR, pregLoop);
-                ReduceSum(vregDgamma, vregXQ, pregLoop);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDgamma + i, vregDgamma, pregMerge);
-                ReduceSum(vregDbeta, vregDyQ, pregLoop);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDbeta + i, vregDbeta, pregMerge);
-            }
-            // step2: the tail (last 64 or less than 64) blocks reduce to 1.
-            {
-                MaskReg pregLoop = UpdateMask<float>(sreg0);
-                DataCopyUnAlignPre(uSrcX, curUbX);
-                DataCopyUnAlignPre(uSrcXR, curUbXR);
-                DataCopyUnAlignPre(uSrcDy, curUbDy);
-                DataCopyUnAlignPre(uSrcDyR, curUbDyR);
-                LoadUnAlignOneTensor<T>(curUbX, vregXQ, uSrcX, pregMain, sregvl);
-                LoadUnAlignOneTensor<T>(curUbXR, vregXR, uSrcXR, pregLoop, sregvl);
-                LoadUnAlignOneTensor<T>(curUbDy, vregDyQ, uSrcDy, pregMain, sregvl);
-                LoadUnAlignOneTensor<T>(curUbDyR, vregDyR, uSrcDyR, pregLoop, sregvl);
-                Mul(vregXQ, vregXQ, vregDyQ, pregMain);
-                Mul(vregXR, vregXR, vregDyR, pregLoop);
-                // add Quotient add remainder
-                Add(tempX, vregXQ, vregXR, pregLoop);
-                Add(tempDy, vregDyQ, vregDyR, pregLoop);
-                Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregXQ, tempX, pregLoop);
-                Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDyQ, tempDy, pregLoop);
-                ReduceSum(vregDgamma, vregXQ, pregMain);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
-                    ubBinaryDgamma + remainderGeneral, vregDgamma, pregMerge);
-                ReduceSum(vregDbeta, vregDyQ, pregMain);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
-                    ubBinaryDbeta + remainderGeneral, vregDbeta, pregMerge);
-            }
-            // step3: non-overlapping portions of the first half reduce by 64, this part always 64 align
-            DataCopyUnAlignPre(uSrcX, curUbX);
-            DataCopyUnAlignPre(uSrcDy, curUbDy);
-            for (uint16_t i = 0; i < static_cast<uint16_t>(quotientLoop - remainderLoop); i++) {
-                LoadUnAlignOneTensor<T>(curUbX, vregX, uSrcX, pregMain, sregvl);
-                LoadUnAlignOneTensor<T>(curUbDy, vregDy, uSrcDy, pregMain, sregvl);
-                Mul(vregX, vregX, vregDy, pregMain);
-                ReduceSum(vregDgamma, vregX, pregMain);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
-                    ubBinaryDgamma + remainderLoop + i, vregDgamma, pregMerge);
-                ReduceSum(vregDbeta, vregDy, pregMain);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
-                    ubBinaryDbeta + remainderLoop + i, vregDbeta, pregMerge);
-            }
-            LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
-            // step4: binary folding reduce calculation
-            pregMain = CreateMask<float, MaskPattern::ALL>();
-            uint16_t curBinaryAddLoop = binaryAddLoop;
-            for (uint16_t i = 0; i < binaryAddKLoop; i++) {
-                curBinaryAddLoop = curBinaryAddLoop / 2;
-                for (uint16_t j = 0; j < curBinaryAddLoop; j++) {
-                    DataCopy(vregXQ, ((__ubuf__ float*)ubBinaryDgamma + j * sregvl));
-                    DataCopy(vregXR, ((__ubuf__ float*)ubBinaryDgamma + (j + curBinaryAddLoop) * sregvl));
-                    Add(vregXQ, vregXQ, vregXR, pregMain);
-                    DataCopy(ubBinaryDgamma + j * sregvl, vregXQ, pregMain);
-                    DataCopy(vregDyQ, ((__ubuf__ float*)ubBinaryDbeta + j * sregvl));
-                    DataCopy(vregDyR, ((__ubuf__ float*)ubBinaryDbeta + (j + curBinaryAddLoop) * sregvl));
-                    Add(vregDyQ, vregDyQ, vregDyR, pregMain);
-                    DataCopy(ubBinaryDbeta + j * sregvl, vregDyQ, pregMain);
-                }
-                LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
-            }
-            // step5: vcadd reduce to 1
-            {
-                uint32_t sreg2 = binaryAddLastNum;
-                MaskReg pregLoop = UpdateMask<float>(sreg2);
-                DataCopy(vregDgamma, ((__ubuf__ float*)ubBinaryDgamma));
-                ReduceSum(vregDgamma, vregDgamma, pregLoop);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubDgamma + cgIdx, vregDgamma, pregMerge);
-                DataCopy(vregDbeta, ((__ubuf__ float*)ubBinaryDbeta));
-                ReduceSum(vregDbeta, vregDbeta, pregLoop);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubDbeta + cgIdx, vregDbeta, pregMerge);
-            }
-        }
-    } // end VF
-    this->outQueDx_.FreeTensor(binaryDbetaTensor);
-}
-
 template <typename T, typename U>
 __aicore__ inline void GroupNormGradGFullLoad<T, U>::ComputeMode0Dx(
     int32_t taskIdx, const LocalTensor<T>& xTensor, const LocalTensor<T>& dyTensor, const LocalTensor<T>& dxTensor,

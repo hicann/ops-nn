@@ -38,14 +38,6 @@ class BatchNormV3Infer {
     static constexpr uint32_t VL_FP32 = VECTOR_LENGTH / sizeof(float);
     static constexpr int64_t BLOCK_SIZE = GetUbBlockSize();
 
-    constexpr static AscendC::MicroAPI::CastTrait castTraitB162B32 = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN, MaskMergeMode::ZEROING,
-        AscendC::RoundMode::UNKNOWN};
-
-    constexpr static AscendC::MicroAPI::CastTrait castTraitB322B16 = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT, MaskMergeMode::ZEROING,
-        AscendC::RoundMode::CAST_RINT};
-
 public:
     __aicore__ inline BatchNormV3Infer(){};
 
@@ -165,10 +157,10 @@ private:
 
         if (needCopy) {
             DataCopyExtParams extParam;
-            extParam.blockCount = 1;
 
             // beta、gamma
             extParam.blockLen = curTileALen * sizeof(T_GAMMA);
+            extParam.blockCount = 1;
 
             DataCopyPadExtParams<T_GAMMA> padExtParam;
             padExtParam.isPad = false;
@@ -177,9 +169,8 @@ private:
             DataCopyPad(gammaLocal, gammaGm_[offset], extParam, padExtParam);
 
             // mean、var
-            extParam.blockLen = curTileALen * sizeof(T_RUNNING_MEAN);
-
             DataCopyPadExtParams<T_RUNNING_MEAN> padExtParams1;
+            extParam.blockLen = curTileALen * sizeof(T_RUNNING_MEAN);
             padExtParams1.isPad = false;
 
             DataCopyPad(meanLocal, meanGm_[offset], extParam, padExtParams1);
@@ -246,7 +237,7 @@ private:
                     AscendC::MicroAPI::RegTensor<T_RUNNING_MEAN> runningVarTmp;
                     AscendC::MicroAPI::DataCopy<T_RUNNING_MEAN, AscendC::MicroAPI::LoadDist::DIST_BRC_B16>(
                         runningVarTmp, ((__local_mem__ T_RUNNING_MEAN*)(varLocal) + i));
-                    AscendC::MicroAPI::Cast<float, T_RUNNING_MEAN, castTraitB162B32>(var, runningVarTmp, pregMask);
+                    AscendC::MicroAPI::Cast<float, T_RUNNING_MEAN, NormCommon::castTraitB162B32>(var, runningVarTmp, pregMask);
                 } else {
                     AscendC::MicroAPI::DataCopy<float, LoadDist::DIST_BRC_B32>(
                         var, ((__local_mem__ float*)(varLocal) + i));
@@ -261,7 +252,7 @@ private:
                     AscendC::MicroAPI::RegTensor<T_RUNNING_MEAN> runningMeanTmp;
                     AscendC::MicroAPI::DataCopy<T_RUNNING_MEAN, AscendC::MicroAPI::LoadDist::DIST_BRC_B16>(
                         runningMeanTmp, ((__local_mem__ T_RUNNING_MEAN*)(meanLocal) + i));
-                    AscendC::MicroAPI::Cast<float, T_RUNNING_MEAN, castTraitB162B32>(mean, runningMeanTmp, pregMask);
+                    AscendC::MicroAPI::Cast<float, T_RUNNING_MEAN, NormCommon::castTraitB162B32>(mean, runningMeanTmp, pregMask);
                 } else {
                     AscendC::MicroAPI::DataCopy<float, LoadDist::DIST_BRC_B32>(
                         mean, ((__local_mem__ float*)(meanLocal) + i));
@@ -290,7 +281,7 @@ private:
                             DataCopy(((__local_mem__ float*)yLocal) + xOffset, y, pregMask);
                         } else { // fp16、bf16
                             RegTensor<T> xFp16;
-                            Cast<T, float, castTraitB322B16>(xFp16, y, pregMask);
+                            Cast<T, float, NormCommon::castTraitB322B16>(xFp16, y, pregMask);
                             DataCopy<T, StoreDist::DIST_PACK_B32>(
                                 ((__local_mem__ T*)yLocal) + xOffset, xFp16, pregMask);
                         }
@@ -309,7 +300,7 @@ private:
         } else { // fp16、bf16
             RegTensor<T> xFp16;
             DataCopy<T, LoadDist::DIST_BRC_B16>(xFp16, ((__local_mem__ T*)src + offset));
-            Cast<float, T, castTraitB162B32>(dst, xFp16, preg);
+            Cast<float, T, NormCommon::castTraitB162B32>(dst, xFp16, preg);
         }
     }
 
@@ -321,7 +312,7 @@ private:
         } else { // fp16、bf16
             RegTensor<T> xFp16;
             DataCopy<T, LoadDist::DIST_UNPACK_B16>(xFp16, ((__local_mem__ T*)src + offset));
-            Cast<float, T, castTraitB162B32>(dst, xFp16, preg);
+            Cast<float, T, NormCommon::castTraitB162B32>(dst, xFp16, preg);
         }
     }
 

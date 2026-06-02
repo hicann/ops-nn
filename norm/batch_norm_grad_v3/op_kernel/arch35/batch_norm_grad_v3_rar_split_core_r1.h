@@ -759,6 +759,8 @@ public:
 
     __aicore__ inline void CopyInSmallShapes(int64_t offset, uint32_t dataLen)
     {
+        CopyInMeanAndRstd(offset, dataLen);
+
         DataCopyPadExtParams<float> dataCopyPadExtParams;
         dataCopyPadExtParams.isPad = false;
         dataCopyPadExtParams.leftPadding = 0;
@@ -770,14 +772,6 @@ public:
         copyInParams.blockLen = dataLen * sizeof(float);
         copyInParams.srcStride = 0;
         copyInParams.dstStride = 0;
-
-        LocalTensor<float> mean = meanInQue_.template AllocTensor<float>();
-        DataCopyPad(mean, meanGm_[offset], copyInParams, dataCopyPadExtParams);
-        meanInQue_.EnQue(mean);
-
-        LocalTensor<float> rstd = rstdInQue_.template AllocTensor<float>();
-        DataCopyPad(rstd, rstdGm_[offset], copyInParams, dataCopyPadExtParams);
-        rstdInQue_.EnQue(rstd);
 
         LocalTensor<float> dbetaTmp = dbetaTmpInQue_.template AllocTensor<float>();
         DataCopyPad(dbetaTmp, dbetaTmpGm_[offset], copyInParams, dataCopyPadExtParams);

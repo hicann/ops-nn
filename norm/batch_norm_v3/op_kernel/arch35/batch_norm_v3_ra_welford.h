@@ -15,20 +15,21 @@
 #ifndef BATCH_NORM_V3_RA_WELFORD_REGBASE_H
 #define BATCH_NORM_V3_RA_WELFORD_REGBASE_H
 
-#include "kernel_tiling/kernel_tiling.h"
+#include "batch_norm_v3_regbase_common.h"
 #include "kernel_operator.h"
+#include "kernel_tiling/kernel_tiling.h"
 
 namespace BatchNormV3Ops {
 using namespace AscendC;
-using AscendC::MicroAPI::CreateMask;
-using AscendC::MicroAPI::LoadDist;
-using AscendC::MicroAPI::LocalMemBar;
-using AscendC::MicroAPI::MaskPattern;
-using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::MemType;
-using AscendC::MicroAPI::RegTensor;
-using AscendC::MicroAPI::StoreDist;
 using AscendC::MicroAPI::UpdateMask;
+using AscendC::MicroAPI::StoreDist;
+using AscendC::MicroAPI::RegTensor;
+using AscendC::MicroAPI::MemType;
+using AscendC::MicroAPI::MaskReg;
+using AscendC::MicroAPI::MaskPattern;
+using AscendC::MicroAPI::LocalMemBar;
+using AscendC::MicroAPI::LoadDist;
+using AscendC::MicroAPI::CreateMask;
 
 template <typename T, typename T_BETA, typename T_RUNNING_MEAN>
 class BatchNormV3RAWelford {
@@ -60,7 +61,9 @@ public:
 
         float one = 1.0;
         this->oneSubMomentum = one - this->momentum;
-        this->besselCorrectionFactor = (static_cast<float>(this->r) / static_cast<float>(this->r - 1));
+        this->besselCorrectionFactor = this->r == 1 ?
+                                           AscendC::NumericLimits<float>::QuietNaN() :
+                                           (static_cast<float>(this->r) / static_cast<float>(this->r - 1));
 
         int64_t powerOfTwoForR = tilingData->powerOfTwoForR;
         this->nFactor = static_cast<float>(1) / static_cast<float>(powerOfTwoForR);
@@ -169,7 +172,7 @@ private:
         __local_mem__ float* tmpVarLocal = (__local_mem__ float*)tVarTensor.GetPhyAddr();
         __local_mem__ float* tmpCountLocal = (__local_mem__ float*)tCountTensor.GetPhyAddr();
 
-        ProcessWelfordUpdate(aOffset, currentANum, tmpMeanLocal, tmpVarLocal, tmpCountLocal);
+        ProcessWelfordUpdate(aOffset, currentANum, tmpMeanLocal, tmpVarLocal);
         CopyInRunningMeanVar(aOffset, currentANum);
 
         LocalTensor<float> batchMeanOutUb = batchMeanQueue.AllocTensor<float>();
@@ -187,8 +190,7 @@ private:
     }
 
     __aicore__ inline void ProcessWelfordUpdate(
-        int64_t aOffset, int64_t currentANum, __local_mem__ float* tmpMeanLocal, __local_mem__ float* tmpVarLocal,
-        __local_mem__ float* tmpCountLocal)
+        int64_t aOffset, int64_t currentANum, __local_mem__ float* tmpMeanLocal, __local_mem__ float* tmpVarLocal)
     {
         int64_t quotient = (this->r + this->rFactor - 1) / this->rFactor;
         for (int64_t rLoopIdx = 0; rLoopIdx < quotient; rLoopIdx++) {
@@ -206,11 +208,11 @@ private:
             uint16_t updateLoopCount = CEIL_DIV(processNum, VL_F32);
             if (rLoopIdx == 0) {
                 // 第一次更新时，需要将tmp mean和tmp var清0
-                WelfordParallelUpdateWithInitVF(
-                    xLocal, tmpMeanLocal, tmpVarLocal, tmpCountLocal, processNum, updateLoopCount, scale);
+                BatchNormV3Ops::WelfordParallelUpdateVF<true>(
+                    xLocal, tmpMeanLocal, tmpVarLocal, processNum, updateLoopCount, scale, VL_F32);
             } else {
-                WelfordParallelUpdateVF(
-                    xLocal, tmpMeanLocal, tmpVarLocal, tmpCountLocal, processNum, updateLoopCount, scale);
+                BatchNormV3Ops::WelfordParallelUpdateVF<false>(
+                    xLocal, tmpMeanLocal, tmpVarLocal, processNum, updateLoopCount, scale, VL_F32);
             }
             xQueue.FreeTensor(xInUb);
         }
@@ -254,115 +256,18 @@ private:
         xQueue.EnQue(xInUb);
     }
 
-    template <typename T_SRC>
-    __aicore__ inline void LoadOneTensorForDtypeT(
-        __local_mem__ T_SRC* input, RegTensor<float>& dst, MaskReg& preg, uint32_t offset)
-    {
-        if constexpr (IsSameType<T_SRC, half>::value) {
-            RegTensor<half> xFp16;
-            DataCopy<half, LoadDist::DIST_UNPACK_B16>(xFp16, ((__local_mem__ half*)(input) + (offset)));
-            Cast<float, half, castTraitB162B32>(dst, xFp16, preg);
-        } else if constexpr (IsSameType<T_SRC, bfloat16_t>::value) {
-            RegTensor<bfloat16_t> xBf16;
-            DataCopy<bfloat16_t, LoadDist::DIST_UNPACK_B16>(xBf16, ((__local_mem__ bfloat16_t*)(input) + (offset)));
-            Cast<float, bfloat16_t, castTraitB162B32>(dst, xBf16, preg);
-        } else {
-            DataCopy(dst, ((__local_mem__ float*)(input) + (offset)));
-        }
-    }
-
-    __aicore__ inline void WelfordParallelUpdateWithInitVF(
-        __local_mem__ T* x1Local, __local_mem__ float* tmpMeanLocal, __local_mem__ float* tmpVarLocal,
-        __local_mem__ float* tmpCountLocal, uint64_t calLen, uint16_t loopCount, float scale)
-    {
-        __VEC_SCOPE__
-        {
-            RegTensor<float> x1;
-            RegTensor<float> tmpMean;
-            RegTensor<float> tmpVar;
-            RegTensor<float> delta1;
-            RegTensor<float> delta2;
-            RegTensor<float> delta3;
-            RegTensor<float> delat4;
-            vector_bool pregMain = pset_b8(PAT_ALL);
-            vector_bool pregLoop;
-            uint32_t sreg0 = calLen;
-            for (uint16_t i = 0; i < loopCount; i++) {
-                pregLoop = plt_b32(sreg0, POST_UPDATE);
-                LoadOneTensorForDtypeT(x1Local, x1, pregLoop, i * VL_F32);
-                Duplicate(tmpMean, 0.0, pregLoop);
-                // delata1 = x1 - mean
-                Sub(delta1, x1, tmpMean, pregLoop);
-                // delta2 = delta1 * scale
-                Muls(delta2, delta1, scale, pregLoop);
-                // mean = mean + delta2
-                Add(tmpMean, tmpMean, delta2, pregLoop);
-                DataCopy(tmpMeanLocal + i * VL_F32, tmpMean, pregLoop);
-
-                Duplicate(tmpVar, 0.0, pregLoop);
-                // delta3 = x1 - mean
-                Sub(delta3, x1, tmpMean, pregLoop);
-                // delta4 = delta1 * delta3
-                Mul(delat4, delta1, delta3, pregLoop);
-                // var = var + delta4
-                Add(tmpVar, tmpVar, delat4, pregLoop);
-                DataCopy(tmpVarLocal + i * VL_F32, tmpVar, pregLoop);
-            }
-        }
-    }
-
-    __aicore__ inline void WelfordParallelUpdateVF(
-        __local_mem__ T* x1Local, __local_mem__ float* tmpMeanLocal, __local_mem__ float* tmpVarLocal,
-        __local_mem__ float* tmpCountLocal, uint64_t calLen, uint16_t loopCount, float scale)
-    {
-        __VEC_SCOPE__
-        {
-            RegTensor<float> x1;
-            RegTensor<float> tmpMean;
-            RegTensor<float> tmpVar;
-            RegTensor<float> delta1;
-            RegTensor<float> delta2;
-            RegTensor<float> delta3;
-            RegTensor<float> delat4;
-            MaskReg pregLoop;
-            uint32_t sreg0 = calLen;
-            for (uint16_t i = 0; i < loopCount; i++) {
-                pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg0);
-                LoadOneTensorForDtypeT(x1Local, x1, pregLoop, i * VL_F32);
-
-                DataCopy(tmpMean, tmpMeanLocal + i * VL_F32);
-                // delata1 = x1 - mean
-                Sub(delta1, x1, tmpMean, pregLoop);
-                // delta2 = delta1 * scale
-                Muls(delta2, delta1, scale, pregLoop);
-                // mean = mean + delta2
-                Add(tmpMean, tmpMean, delta2, pregLoop);
-                DataCopy(tmpMeanLocal + i * VL_F32, tmpMean, pregLoop);
-
-                DataCopy(tmpVar, tmpVarLocal + i * VL_F32);
-                // delta3 = x1 - mean
-                Sub(delta3, x1, tmpMean, pregLoop);
-                // delta4 = delta1 * delta3
-                Mul(delat4, delta1, delta3, pregLoop);
-                // var = var + delta4
-                Add(tmpVar, tmpVar, delat4, pregLoop);
-                DataCopy(tmpVarLocal + i * VL_F32, tmpVar, pregLoop);
-            }
-        }
-    }
-
     __aicore__ inline void CopyInRunningMeanVar(int64_t aOffset, int64_t currentANum)
     {
         LocalTensor<T_BETA> betaInUb = betaQueue.AllocTensor<T_BETA>();
         LocalTensor<T_BETA> gammaInUb = gammaQueue.AllocTensor<T_BETA>();
         DataCopyPadExtParams<T_BETA> dataCopyPadExtParamsT;
-        dataCopyPadExtParamsT.isPad = false;
         dataCopyPadExtParamsT.leftPadding = 0;
+        dataCopyPadExtParamsT.isPad = false;
         dataCopyPadExtParamsT.rightPadding = 0;
         dataCopyPadExtParamsT.paddingValue = 0;
         DataCopyExtParams copyInParamsT;
-        copyInParamsT.blockCount = 1;
         copyInParamsT.blockLen = currentANum * sizeof(T_BETA);
+        copyInParamsT.blockCount = 1;
         copyInParamsT.srcStride = 0;
         copyInParamsT.dstStride = 0;
         DataCopyPad(betaInUb, betaGm[aOffset], copyInParamsT, dataCopyPadExtParamsT);
@@ -373,13 +278,13 @@ private:
         LocalTensor<T_RUNNING_MEAN> runningMeanInUb = runningMeanInQueue.AllocTensor<T_RUNNING_MEAN>();
         LocalTensor<T_RUNNING_MEAN> runningVarInUb = runningVarInQueue.AllocTensor<T_RUNNING_MEAN>();
         DataCopyPadExtParams<T_RUNNING_MEAN> dataCopyPadExtParams;
-        dataCopyPadExtParams.isPad = false;
         dataCopyPadExtParams.leftPadding = 0;
+        dataCopyPadExtParams.isPad = false;
         dataCopyPadExtParams.rightPadding = 0;
         dataCopyPadExtParams.paddingValue = 0;
         DataCopyExtParams copyInParams;
-        copyInParams.blockCount = 1;
         copyInParams.blockLen = currentANum * sizeof(T_RUNNING_MEAN);
+        copyInParams.blockCount = 1;
         copyInParams.srcStride = 0;
         copyInParams.dstStride = 0;
         DataCopyPad(runningMeanInUb, runningMeanGm[aOffset], copyInParams, dataCopyPadExtParams);
@@ -413,17 +318,17 @@ private:
         uint16_t aLoopCount = this->currentALoopCount;
         uint32_t rLoopStride = currentANumAlign;
 
-        uint16_t remainderLoopCount = (this->rFactor - this->binaryAddQuotient) / SCALE_COEF_EIGHT;
-        uint16_t quotientLoopCount = (this->binaryAddQuotient / SCALE_COEF_EIGHT) - remainderLoopCount;
-        uint32_t baseLineOffset = SCALE_COEF_EIGHT * rLoopStride;
+        uint16_t remainderLoopCount = (this->rFactor - this->binaryAddQuotient) / SCALE_COEF_FOUR;
+        uint16_t quotientLoopCount = (this->binaryAddQuotient / SCALE_COEF_FOUR) - remainderLoopCount;
+        uint32_t baseLineOffset = SCALE_COEF_FOUR * rLoopStride;
         uint32_t remainderOffset = this->binaryAddQuotient * currentANumAlign;
         uint32_t remainderCountOffset = this->binaryAddQuotient;
 
         uint16_t binaryAddKLoop = this->binaryAddK;
-        uint16_t binaryAddInnerLoop = this->binaryAddQuotient / SCALE_COEF_EIGHT;
+        uint16_t binaryAddInnerLoop = this->binaryAddQuotient / SCALE_COEF_FOUR;
         uint16_t binaryAddLastLoop = this->binaryAddLast;
 
-        uint16_t finalLoopCount = this->binaryAddQuotient / SCALE_COEF_EIGHT;
+        uint16_t finalLoopCount = this->binaryAddQuotient / SCALE_COEF_FOUR;
         float numScale = this->nFactor;
         float scaleCorrection = this->nCorrectionFactor;
 
@@ -436,19 +341,19 @@ private:
         __VEC_SCOPE__
         {
 
-            RegTensor<float> x1;
-            RegTensor<float> x2;
-            RegTensor<float> x3;
-            RegTensor<float> x4;
+            RegTensor<float> raMeanAcc0;
+            RegTensor<float> raMeanAcc1;
+            RegTensor<float> raBinaryTmp0;
+            RegTensor<float> raBinaryTmp1;
 
-            RegTensor<float> nextRow;
-            RegTensor<float> rem;
-            RegTensor<float> remNextRow;
+            RegTensor<float> raNextRow;
+            RegTensor<float> raRem;
+            RegTensor<float> raRemNextRow;
 
-            RegTensor<float> rowCount;
-            RegTensor<float> nextRowCount;
-            RegTensor<float> remCount;
-            RegTensor<float> nextRemCount;
+            RegTensor<float> raRowCount;
+            RegTensor<float> raNextRowCount;
+            RegTensor<float> raRemCount;
+            RegTensor<float> raNextRemCount;
 
 
             MaskReg pregLoop;
@@ -459,45 +364,47 @@ private:
                 for (uint16_t i = 0; i < remainderLoopCount; i++) {
                     uint32_t quotOffset = i * baseLineOffset + aLoopOffset;
                     uint32_t remOffset = i * baseLineOffset + remainderOffset + aLoopOffset;
-                    uint32_t quotCountOffset = i * SCALE_COEF_EIGHT;
-                    uint32_t remCountOffset = i * SCALE_COEF_EIGHT + remainderCountOffset;
-                    TwoRowAddForMeanWithTail(
-                        x1, tmpMeanLocal, tmpCountLocal, pregLoop, quotOffset, remOffset, quotOffset + rLoopStride,
+                    uint32_t quotCountOffset = i * SCALE_COEF_FOUR;
+                    uint32_t remCountOffset = i * SCALE_COEF_FOUR + remainderCountOffset;
+                    TwoRowAddPartialMeanWithTail(
+                        raMeanAcc0, tmpMeanLocal, tmpCountLocal, pregLoop, quotOffset, remOffset, quotOffset + rLoopStride,
                         remOffset + rLoopStride, quotCountOffset, remCountOffset, quotCountOffset + 1,
-                        remCountOffset + 1, rem, nextRow, remNextRow, rowCount, nextRowCount, remCount, nextRemCount,
-                        numScale);
-                    TwoRowAddForMeanWithTail(
-                        x2, tmpMeanLocal, tmpCountLocal, pregLoop, quotOffset + twoRLoopSize, remOffset + twoRLoopSize,
+                        remCountOffset + 1, raRem, raNextRow, raRemNextRow, raRowCount, raNextRowCount, raRemCount,
+                        raNextRemCount, numScale);
+                    TwoRowAddPartialMeanWithTail(
+                        raMeanAcc1, tmpMeanLocal, tmpCountLocal, pregLoop, quotOffset + twoRLoopSize,
+                        remOffset + twoRLoopSize,
                         quotOffset + threeRLoopSize, remOffset + threeRLoopSize, quotCountOffset + ROW_TWO_OFFSET,
                         remCountOffset + ROW_TWO_OFFSET, quotCountOffset + ROW_THREE_OFFSET,
-                        remCountOffset + ROW_THREE_OFFSET, rem, nextRow, remNextRow, rowCount, nextRowCount, remCount,
-                        nextRemCount, numScale);
-                    Add(x1, x1, x2, pregLoop);
-                    DataCopy(((__local_mem__ float*)binaryAddTmpAddr + i * rLoopStride + aLoopOffset), x1, pregLoop);
+                        remCountOffset + ROW_THREE_OFFSET, raRem, raNextRow, raRemNextRow, raRowCount, raNextRowCount,
+                        raRemCount, raNextRemCount, numScale);
+                    Add(raMeanAcc0, raMeanAcc0, raMeanAcc1, pregLoop);
+                    DataCopy(
+                        ((__local_mem__ float*)binaryAddTmpAddr + i * rLoopStride + aLoopOffset), raMeanAcc0, pregLoop);
                 }
                 // 剩余的前半部分，一次for循环，处理8行
                 for (uint16_t i = 0; i < quotientLoopCount; i++) {
                     uint32_t baseOffset = (remainderLoopCount + i) * baseLineOffset + aLoopOffset;
-                    uint32_t baseCountOffset = (remainderLoopCount + i) * SCALE_COEF_EIGHT;
-                    TwoRowAddForMean(
-                        x1, tmpMeanLocal, tmpCountLocal, pregLoop, baseOffset, baseOffset + rLoopStride,
-                        baseCountOffset, baseCountOffset + 1, rem, rowCount, nextRowCount, numScale);
-                    TwoRowAddForMean(
-                        x2, tmpMeanLocal, tmpCountLocal, pregLoop, baseOffset + twoRLoopSize,
+                    uint32_t baseCountOffset = (remainderLoopCount + i) * SCALE_COEF_FOUR;
+                    TwoRowAddPartialMean(
+                        raMeanAcc0, tmpMeanLocal, tmpCountLocal, pregLoop, baseOffset, baseOffset + rLoopStride,
+                        baseCountOffset, baseCountOffset + 1, raRem, raRowCount, raNextRowCount, numScale);
+                    TwoRowAddPartialMean(
+                        raMeanAcc1, tmpMeanLocal, tmpCountLocal, pregLoop, baseOffset + twoRLoopSize,
                         baseOffset + threeRLoopSize, baseCountOffset + ROW_TWO_OFFSET,
-                        baseCountOffset + ROW_THREE_OFFSET, rem, rowCount, nextRowCount, numScale);
-                    Add(x1, x1, x2, pregLoop);
+                        baseCountOffset + ROW_THREE_OFFSET, raRem, raRowCount, raNextRowCount, numScale);
+                    Add(raMeanAcc0, raMeanAcc0, raMeanAcc1, pregLoop);
                     DataCopy(
                         ((__local_mem__ float*)binaryAddTmpAddr + (remainderLoopCount + i) * rLoopStride + aLoopOffset),
-                        x1, pregLoop);
+                        raMeanAcc0, pregLoop);
                 }
                 LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
                 BinaryAddVF(
                     binaryAddTmpAddr, rLoopStride, binaryAddKLoop, binaryAddInnerLoop, binaryAddLastLoop, pregLoop,
-                    aLoopOffset, x1, x2, x3, x4);
-                DataCopy(x1, ((__local_mem__ float*)binaryAddTmpAddr + aLoopOffset));
-                Muls(x1, x1, scaleCorrection, pregLoop);
-                DataCopy(((__local_mem__ float*)batchMeanInUbAddr + aLoopOffset), x1, pregLoop);
+                    aLoopOffset, raMeanAcc0, raMeanAcc1, raBinaryTmp0, raBinaryTmp1);
+                DataCopy(raMeanAcc0, ((__local_mem__ float*)binaryAddTmpAddr + aLoopOffset));
+                Muls(raMeanAcc0, raMeanAcc0, scaleCorrection, pregLoop);
+                DataCopy(((__local_mem__ float*)batchMeanInUbAddr + aLoopOffset), raMeanAcc0, pregLoop);
             }
         }
     }
@@ -511,17 +418,17 @@ private:
         uint16_t aLoopCount = this->currentALoopCount;
         uint32_t rLoopStride = currentANumAlign;
 
-        uint16_t remainderLoopCount = (this->rFactor - this->binaryAddQuotient) / SCALE_COEF_EIGHT;
-        uint16_t quotientLoopCount = (this->binaryAddQuotient / SCALE_COEF_EIGHT) - remainderLoopCount;
-        uint32_t baseLineOffset = SCALE_COEF_EIGHT * rLoopStride;
+        uint16_t remainderLoopCount = (this->rFactor - this->binaryAddQuotient) / SCALE_COEF_FOUR;
+        uint16_t quotientLoopCount = (this->binaryAddQuotient / SCALE_COEF_FOUR) - remainderLoopCount;
+        uint32_t baseLineOffset = SCALE_COEF_FOUR * rLoopStride;
         uint32_t remainderOffset = this->binaryAddQuotient * currentANumAlign;
         uint32_t remainderCountOffset = this->binaryAddQuotient;
 
         uint16_t binaryAddKLoop = this->binaryAddK;
-        uint16_t binaryAddInnerLoop = this->binaryAddQuotient / SCALE_COEF_EIGHT;
+        uint16_t binaryAddInnerLoop = this->binaryAddQuotient / SCALE_COEF_FOUR;
         uint16_t binaryAddLastLoop = this->binaryAddLast;
 
-        uint16_t finalLoopCount = this->binaryAddQuotient / SCALE_COEF_EIGHT;
+        uint16_t finalLoopCount = this->binaryAddQuotient / SCALE_COEF_FOUR;
         float numScale = (float)1.0 / static_cast<float>(this->r);
 
         uint32_t twoRLoopSize = ROW_TWO_OFFSET * rLoopStride;
@@ -534,19 +441,19 @@ private:
         {
             RegTensor<float> saveMean;
 
-            RegTensor<float> x1;
-            RegTensor<float> x2;
-            RegTensor<float> x3;
-            RegTensor<float> x4;
+            RegTensor<float> raVarAcc0;
+            RegTensor<float> raVarAcc1;
+            RegTensor<float> raVarBinaryTmp0;
+            RegTensor<float> raVarBinaryTmp1;
 
-            RegTensor<float> nextRow;
-            RegTensor<float> rem;
-            RegTensor<float> remNextRow;
+            RegTensor<float> raVarNextRow;
+            RegTensor<float> raVarRem;
+            RegTensor<float> raVarRemNextRow;
 
-            RegTensor<float> rowCount;
-            RegTensor<float> nextRowCount;
-            RegTensor<float> remCount;
-            RegTensor<float> nextRemCount;
+            RegTensor<float> raVarRowCount;
+            RegTensor<float> raVarNextRowCount;
+            RegTensor<float> raVarRemCount;
+            RegTensor<float> raVarNextRemCount;
 
             RegTensor<float> rowM2;
             RegTensor<float> nextRowM2;
@@ -562,199 +469,51 @@ private:
                 for (uint16_t i = 0; i < remainderLoopCount; i++) {
                     uint32_t quotOffset = i * baseLineOffset + aLoopOffset;
                     uint32_t remOffset = i * baseLineOffset + remainderOffset + aLoopOffset;
-                    uint32_t quotCountOffset = i * SCALE_COEF_EIGHT;
-                    uint32_t remCountOffset = i * SCALE_COEF_EIGHT + remainderCountOffset;
-                    TwoRowAddForVarWithTail(
-                        x1, tmpMeanLocal, tmpVarLocal, tmpCountLocal, pregLoop, quotOffset, remOffset,
+                    uint32_t quotCountOffset = i * SCALE_COEF_FOUR;
+                    uint32_t remCountOffset = i * SCALE_COEF_FOUR + remainderCountOffset;
+                    TwoRowAddPartialVarWithTail(
+                        raVarAcc0, tmpMeanLocal, tmpVarLocal, tmpCountLocal, pregLoop, quotOffset, remOffset,
                         quotOffset + rLoopStride, remOffset + rLoopStride, quotCountOffset, remCountOffset,
-                        quotCountOffset + 1, remCountOffset + 1, saveMean, rem, nextRow, remNextRow, rowCount,
-                        nextRowCount, remCount, nextRemCount, rowM2, nextRowM2, remM2, nextRemM2, numScale);
-                    TwoRowAddForVarWithTail(
-                        x2, tmpMeanLocal, tmpVarLocal, tmpCountLocal, pregLoop, quotOffset + twoRLoopSize,
+                        quotCountOffset + 1, remCountOffset + 1, saveMean, raVarRem, raVarNextRow, raVarRemNextRow,
+                        raVarRowCount, raVarNextRowCount, raVarRemCount, raVarNextRemCount, rowM2, nextRowM2, remM2,
+                        nextRemM2, numScale);
+                    TwoRowAddPartialVarWithTail(
+                        raVarAcc1, tmpMeanLocal, tmpVarLocal, tmpCountLocal, pregLoop, quotOffset + twoRLoopSize,
                         remOffset + twoRLoopSize, quotOffset + threeRLoopSize, remOffset + threeRLoopSize,
                         quotCountOffset + ROW_TWO_OFFSET, remCountOffset + ROW_TWO_OFFSET,
-                        quotCountOffset + ROW_THREE_OFFSET, remCountOffset + ROW_THREE_OFFSET, saveMean, rem, nextRow,
-                        remNextRow, rowCount, nextRowCount, remCount, nextRemCount, rowM2, nextRowM2, remM2, nextRemM2,
-                        numScale);
-                    Add(x1, x1, x2, pregLoop);
-                    DataCopy(((__local_mem__ float*)binaryAddTmpAddr + i * rLoopStride + aLoopOffset), x1, pregLoop);
+                        quotCountOffset + ROW_THREE_OFFSET, remCountOffset + ROW_THREE_OFFSET, saveMean, raVarRem,
+                        raVarNextRow, raVarRemNextRow, raVarRowCount, raVarNextRowCount, raVarRemCount,
+                        raVarNextRemCount, rowM2, nextRowM2, remM2, nextRemM2, numScale);
+                    Add(raVarAcc0, raVarAcc0, raVarAcc1, pregLoop);
+                    DataCopy(
+                        ((__local_mem__ float*)binaryAddTmpAddr + i * rLoopStride + aLoopOffset), raVarAcc0, pregLoop);
                 }
                 // 剩余的前半部分，一次for循环，处理8行
                 for (uint16_t i = 0; i < quotientLoopCount; i++) {
                     uint32_t baseOffset = (remainderLoopCount + i) * baseLineOffset + aLoopOffset;
-                    uint32_t baseCountOffset = (remainderLoopCount + i) * SCALE_COEF_EIGHT;
-                    TwoRowAddForVar(
-                        x1, tmpMeanLocal, tmpVarLocal, tmpCountLocal, pregLoop, baseOffset, baseOffset + rLoopStride,
-                        baseCountOffset, baseCountOffset + 1, saveMean, rem, rowCount, nextRowCount, rowM2, remM2,
-                        numScale);
-                    TwoRowAddForVar(
-                        x2, tmpMeanLocal, tmpVarLocal, tmpCountLocal, pregLoop, baseOffset + twoRLoopSize,
+                    uint32_t baseCountOffset = (remainderLoopCount + i) * SCALE_COEF_FOUR;
+                    TwoRowAddPartialVar(
+                        raVarAcc0, tmpMeanLocal, tmpVarLocal, tmpCountLocal, pregLoop, baseOffset,
+                        baseOffset + rLoopStride, baseCountOffset, baseCountOffset + 1, saveMean, raVarRem,
+                        raVarRowCount, raVarNextRowCount, rowM2, remM2, numScale);
+                    TwoRowAddPartialVar(
+                        raVarAcc1, tmpMeanLocal, tmpVarLocal, tmpCountLocal, pregLoop, baseOffset + twoRLoopSize,
                         baseOffset + threeRLoopSize, baseCountOffset + ROW_TWO_OFFSET,
-                        baseCountOffset + ROW_THREE_OFFSET, saveMean, rem, rowCount, nextRowCount, rowM2, remM2,
-                        numScale);
-                    Add(x1, x1, x2, pregLoop);
+                        baseCountOffset + ROW_THREE_OFFSET, saveMean, raVarRem, raVarRowCount, raVarNextRowCount, rowM2,
+                        remM2, numScale);
+                    Add(raVarAcc0, raVarAcc0, raVarAcc1, pregLoop);
                     DataCopy(
                         ((__local_mem__ float*)binaryAddTmpAddr + (remainderLoopCount + i) * rLoopStride + aLoopOffset),
-                        x1, pregLoop);
+                        raVarAcc0, pregLoop);
                 }
                 LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
                 BinaryAddVF(
                     binaryAddTmpAddr, rLoopStride, binaryAddKLoop, binaryAddInnerLoop, binaryAddLastLoop, pregLoop,
-                    aLoopOffset, x1, x2, x3, x4);
-                DataCopy(x1, ((__local_mem__ float*)binaryAddTmpAddr + aLoopOffset));
-                DataCopy(((__local_mem__ float*)batchRstdInUbAddr + aLoopOffset), x1, pregLoop);
+                    aLoopOffset, raVarAcc0, raVarAcc1, raVarBinaryTmp0, raVarBinaryTmp1);
+                DataCopy(raVarAcc0, ((__local_mem__ float*)binaryAddTmpAddr + aLoopOffset));
+                DataCopy(((__local_mem__ float*)batchRstdInUbAddr + aLoopOffset), raVarAcc0, pregLoop);
             }
         }
-    }
-
-    __aicore__ inline void BinaryAddVF(
-        __local_mem__ float* binaryAddTmpAddr, uint32_t rLoopStride, uint16_t binaryAddKLoop,
-        uint16_t binaryAddInnerLoop, uint16_t binaryAddLastLoop, MaskReg& pregLoop, uint32_t offset,
-        RegTensor<float>& x1, RegTensor<float>& x2, RegTensor<float>& x3, RegTensor<float>& x4)
-    {
-        uint16_t curBinaryAddInnerLoop = binaryAddInnerLoop;
-        for (uint16_t i = 0; i < binaryAddKLoop; i++) {
-            curBinaryAddInnerLoop = curBinaryAddInnerLoop / ROW_FOUR_OFFSET;
-            for (uint16_t j = 0; j < curBinaryAddInnerLoop; j++) {
-                DataCopy(x1, ((__local_mem__ float*)binaryAddTmpAddr + (j * ROW_FOUR_OFFSET) * rLoopStride + offset));
-                DataCopy(
-                    x2, ((__local_mem__ float*)binaryAddTmpAddr + (j * ROW_FOUR_OFFSET + 1) * rLoopStride + offset));
-                Add(x1, x1, x2, pregLoop);
-                DataCopy(
-                    x3, ((__local_mem__ float*)binaryAddTmpAddr + (j * ROW_FOUR_OFFSET + ROW_TWO_OFFSET) * rLoopStride +
-                         offset));
-                DataCopy(
-                    x4, ((__local_mem__ float*)binaryAddTmpAddr +
-                         (j * ROW_FOUR_OFFSET + ROW_THREE_OFFSET) * rLoopStride + offset));
-                Add(x3, x3, x4, pregLoop);
-                Add(x1, x1, x3, pregLoop);
-                DataCopy(((__local_mem__ float*)binaryAddTmpAddr + j * rLoopStride + offset), x1, pregLoop);
-            }
-            LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
-        }
-        for (uint16_t i = 0; i < binaryAddLastLoop; i++) {
-            DataCopy(x1, ((__local_mem__ float*)binaryAddTmpAddr + offset));
-            DataCopy(x2, ((__local_mem__ float*)binaryAddTmpAddr + rLoopStride + offset));
-            Add(x1, x1, x2, pregLoop);
-            DataCopy(((__local_mem__ float*)binaryAddTmpAddr + offset), x1, pregLoop);
-            LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
-        }
-    }
-
-    __aicore__ inline void TwoRowAddForMeanWithTail(
-        RegTensor<float>& dst, __local_mem__ float* input, __local_mem__ float* tCount, MaskReg& preg, uint32_t offset1,
-        uint32_t offset2, uint32_t offset3, uint32_t offset4, uint32_t offset5, uint32_t offset6, uint32_t offset7,
-        uint32_t offset8, RegTensor<float>& rem, RegTensor<float>& nextRow, RegTensor<float>& remNextRow,
-        RegTensor<float>& dstCount, RegTensor<float>& remCount, RegTensor<float>& nextRowCount,
-        RegTensor<float>& remNextRowCount, float n)
-    {
-        DataCopy(dst, ((__local_mem__ float*)(input) + (offset1)));
-        DataCopy(rem, ((__local_mem__ float*)(input) + (offset2)));
-        DataCopy<float, LoadDist::DIST_BRC_B32>(dstCount, ((__local_mem__ float*)(tCount) + (offset5)));
-        DataCopy<float, LoadDist::DIST_BRC_B32>(remCount, ((__local_mem__ float*)(tCount) + (offset6)));
-        Mul(dst, dst, dstCount, preg);
-        Mul(rem, rem, remCount, preg);
-        Muls(dst, dst, n, preg);
-        Muls(rem, rem, n, preg);
-        Add(dst, dst, rem, preg);
-        DataCopy(nextRow, ((__local_mem__ float*)(input) + (offset3)));
-        DataCopy(remNextRow, ((__local_mem__ float*)(input) + (offset4)));
-        DataCopy<float, LoadDist::DIST_BRC_B32>(nextRowCount, ((__local_mem__ float*)(tCount) + (offset7)));
-        DataCopy<float, LoadDist::DIST_BRC_B32>(remNextRowCount, ((__local_mem__ float*)(tCount) + (offset8)));
-        Mul(nextRow, nextRow, nextRowCount, preg);
-        Mul(remNextRow, remNextRow, remNextRowCount, preg);
-        Muls(nextRow, nextRow, n, preg);
-        Muls(remNextRow, remNextRow, n, preg);
-        Add(nextRow, nextRow, remNextRow, preg);
-        Add(dst, dst, nextRow, preg);
-    }
-
-    __aicore__ inline void TwoRowAddForMean(
-        RegTensor<float>& dst, __local_mem__ float* input, __local_mem__ float* tCount, MaskReg& preg, uint32_t offset1,
-        uint32_t offset2, uint32_t offset5, uint32_t offset6, RegTensor<float>& rem, RegTensor<float>& dstCount,
-        RegTensor<float>& remCount, float n)
-    {
-        DataCopy(dst, ((__local_mem__ float*)(input) + (offset1)));
-        DataCopy(rem, ((__local_mem__ float*)(input) + (offset2)));
-        DataCopy<float, LoadDist::DIST_BRC_B32>(dstCount, ((__local_mem__ float*)(tCount) + (offset5)));
-        DataCopy<float, LoadDist::DIST_BRC_B32>(remCount, ((__local_mem__ float*)(tCount) + (offset6)));
-        Mul(dst, dst, dstCount, preg);
-        Mul(rem, rem, remCount, preg);
-        Muls(dst, dst, n, preg);
-        Muls(rem, rem, n, preg);
-        Add(dst, dst, rem, preg);
-    }
-
-    __aicore__ inline void TwoRowAddForVarWithTail(
-        RegTensor<float>& dst, __local_mem__ float* tmpMean, __local_mem__ float* tmpM2, __local_mem__ float* tCount,
-        MaskReg& preg, uint32_t offset1, uint32_t offset2, uint32_t offset3, uint32_t offset4, uint32_t offset5,
-        uint32_t offset6, uint32_t offset7, uint32_t offset8, RegTensor<float>& mean, RegTensor<float>& rem,
-        RegTensor<float>& nextRow, RegTensor<float>& remNextRow, RegTensor<float>& dstCount, RegTensor<float>& remCount,
-        RegTensor<float>& nextRowCount, RegTensor<float>& remNextRowCount, RegTensor<float>& dstM2,
-        RegTensor<float>& remM2, RegTensor<float>& nextRowM2, RegTensor<float>& remNextRowM2, float n)
-    {
-        DataCopy(dst, ((__local_mem__ float*)(tmpMean) + (offset1)));
-        DataCopy(rem, ((__local_mem__ float*)(tmpMean) + (offset2)));
-        DataCopy<float, LoadDist::DIST_BRC_B32>(dstCount, ((__local_mem__ float*)(tCount) + (offset5)));
-        DataCopy<float, LoadDist::DIST_BRC_B32>(remCount, ((__local_mem__ float*)(tCount) + (offset6)));
-        Sub(dst, dst, mean, preg);
-        Mul(dst, dst, dst, preg);
-        Sub(rem, rem, mean, preg);
-        Mul(rem, rem, rem, preg);
-        Mul(dst, dst, dstCount, preg);
-        Mul(rem, rem, remCount, preg);
-        DataCopy(dstM2, ((__local_mem__ float*)(tmpM2) + (offset1)));
-        DataCopy(remM2, ((__local_mem__ float*)(tmpM2) + (offset2)));
-        Add(dst, dstM2, dst, preg);
-        Muls(dst, dst, n, preg);
-        Add(rem, remM2, rem, preg);
-        Muls(rem, rem, n, preg);
-        Add(dst, dst, rem, preg);
-
-        DataCopy(nextRow, ((__local_mem__ float*)(tmpMean) + (offset3)));
-        DataCopy(remNextRow, ((__local_mem__ float*)(tmpMean) + (offset4)));
-        DataCopy<float, LoadDist::DIST_BRC_B32>(nextRowCount, ((__local_mem__ float*)(tCount) + (offset7)));
-        DataCopy<float, LoadDist::DIST_BRC_B32>(remNextRowCount, ((__local_mem__ float*)(tCount) + (offset8)));
-        Sub(nextRow, nextRow, mean, preg);
-        Mul(nextRow, nextRow, nextRow, preg);
-        Sub(remNextRow, remNextRow, mean, preg);
-        Mul(remNextRow, remNextRow, remNextRow, preg);
-        Mul(nextRow, nextRow, nextRowCount, preg);
-        Mul(remNextRow, remNextRow, remNextRowCount, preg);
-        DataCopy(nextRowM2, ((__local_mem__ float*)(tmpM2) + (offset3)));
-        DataCopy(remNextRowM2, ((__local_mem__ float*)(tmpM2) + (offset4)));
-        Add(nextRow, nextRowM2, nextRow, preg);
-        Muls(nextRow, nextRow, n, preg);
-        Add(remNextRow, remNextRowM2, remNextRow, preg);
-        Muls(remNextRow, remNextRow, n, preg);
-        Add(nextRow, nextRow, remNextRow, preg);
-
-        Add(dst, dst, nextRow, preg);
-    }
-
-    __aicore__ inline void TwoRowAddForVar(
-        RegTensor<float>& dst, __local_mem__ float* tmpMean, __local_mem__ float* tmpM2, __local_mem__ float* tCount,
-        MaskReg& preg, uint32_t offset1, uint32_t offset2, uint32_t offset5, uint32_t offset6, RegTensor<float>& mean,
-        RegTensor<float>& rem, RegTensor<float>& dstCount, RegTensor<float>& remCount, RegTensor<float>& dstM2,
-        RegTensor<float>& remM2, float n)
-    {
-        DataCopy(dst, ((__local_mem__ float*)(tmpMean) + (offset1)));
-        DataCopy(rem, ((__local_mem__ float*)(tmpMean) + (offset2)));
-        DataCopy<float, LoadDist::DIST_BRC_B32>(dstCount, ((__local_mem__ float*)(tCount) + (offset5)));
-        DataCopy<float, LoadDist::DIST_BRC_B32>(remCount, ((__local_mem__ float*)(tCount) + (offset6)));
-        Sub(dst, dst, mean, preg);
-        Mul(dst, dst, dst, preg);
-        Sub(rem, rem, mean, preg);
-        Mul(rem, rem, rem, preg);
-        Mul(dst, dst, dstCount, preg);
-        Mul(rem, rem, remCount, preg);
-        DataCopy(dstM2, ((__local_mem__ float*)(tmpM2) + (offset1)));
-        DataCopy(remM2, ((__local_mem__ float*)(tmpM2) + (offset2)));
-        Add(dst, dstM2, dst, preg);
-        Muls(dst, dst, n, preg);
-        Add(rem, remM2, rem, preg);
-        Muls(rem, rem, n, preg);
-        Add(dst, dst, rem, preg);
     }
 
     __aicore__ inline void CalculateRunningMeanVar(
@@ -764,7 +523,6 @@ private:
         uint16_t aLoop = currentALoopCount;
         LocalTensor<T_RUNNING_MEAN> runningMeanInUb = runningMeanInQueue.template DeQue<T_RUNNING_MEAN>();
         LocalTensor<T_RUNNING_MEAN> runningVarInUb = runningVarInQueue.template DeQue<T_RUNNING_MEAN>();
-
         LocalTensor<T_RUNNING_MEAN> runningMeanOutUb = runningMeanOutQueue.AllocTensor<T_RUNNING_MEAN>();
         LocalTensor<T_RUNNING_MEAN> runningVarOutUb = runningVarOutQueue.AllocTensor<T_RUNNING_MEAN>();
 
@@ -774,123 +532,10 @@ private:
             (__local_mem__ T_RUNNING_MEAN*)runningMeanOutUb.GetPhyAddr();
         __local_mem__ T_RUNNING_MEAN* runningVarOutUbAddr = (__local_mem__ T_RUNNING_MEAN*)runningVarOutUb.GetPhyAddr();
 
-        float besselCorrectionFactorVf = this->besselCorrectionFactor;
-        float momentumVf = this->momentum;
-        float oneSubMomentumVf = this->oneSubMomentum;
-        __VEC_SCOPE__
-        {
-            RegTensor<float> mean;
-            RegTensor<float> var;
+        CalculateRunningMeanVarWithRstdVF<T_RUNNING_MEAN>(batchMeanInUbAddr, batchRstdInUbAddr, runningMeanInUbAddr,
+            runningVarInUbAddr, runningMeanOutUbAddr, runningVarOutUbAddr, static_cast<uint16_t>(currentANum), aLoop, VL_F32,
+            this->besselCorrectionFactor, this->momentum, this->oneSubMomentum, this->epsilon);
 
-            RegTensor<float> one;
-
-            RegTensor<float> runningMean;
-            RegTensor<float> saveMean;
-            RegTensor<float> runningVar;
-            RegTensor<float> saveVar;
-
-            MaskReg pregMain = CreateMask<float, MaskPattern::ALL>();
-
-            RegTensor<float> r;
-            RegTensor<float> y;
-            RegTensor<float> s;
-            RegTensor<float> t;
-            RegTensor<float> scalar1;
-            RegTensor<float> scalarInf;
-            RegTensor<float> scalarZero;
-            RegTensor<float> t1;
-            RegTensor<float> t3;
-            RegTensor<float> t4;
-            RegTensor<float> rstd;
-
-            MaskReg cmpRegZero;
-            MaskReg cmpRegInf;
-            MaskReg pregLoop;
-
-            Duplicate(one, 1.0, pregMain);
-            uint32_t sreg2 = currentANum;
-            for (uint16_t k = 0; k < aLoop; k++) {
-                pregLoop = UpdateMask<float>(sreg2);
-                Duplicate(scalar1, float(0.5), pregLoop);
-                Duplicate(scalarInf, POS_INF, pregLoop);
-                Duplicate(scalarZero, float(0.0), pregLoop);
-                Duplicate(t1, float(1.5), pregLoop);
-                Duplicate(s, float(1.0), pregLoop);
-                // running var
-                if constexpr (!IsSameType<T_RUNNING_MEAN, float>::value) {
-                    // 需要把T_RUNNING_MEAN的输入cast到float
-                    AscendC::MicroAPI::RegTensor<T_RUNNING_MEAN> runningVarTmp;
-                    AscendC::MicroAPI::DataCopy<T_RUNNING_MEAN, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
-                        runningVarTmp, ((__local_mem__ T_RUNNING_MEAN*)runningVarInUbAddr + k * VL_F32));
-                    AscendC::MicroAPI::Cast<float, T_RUNNING_MEAN, castTraitB162B32>(
-                        runningVar, runningVarTmp, pregLoop);
-                } else {
-                    AscendC::MicroAPI::DataCopy(runningVar, ((__local_mem__ float*)runningVarInUbAddr + k * VL_F32));
-                }
-                DataCopy(var, ((__local_mem__ float*)batchRstdInUbAddr + k * VL_F32));
-                Muls(saveVar, var, besselCorrectionFactorVf, pregLoop);
-                Muls(saveVar, saveVar, momentumVf, pregLoop);
-                Muls(runningVar, runningVar, oneSubMomentumVf, pregLoop);
-                Add(saveVar, saveVar, runningVar, pregLoop);
-                if constexpr (!IsSameType<T_RUNNING_MEAN, float>::value) {
-                    // 需要把float的结果cast回T_RUNNING_MEAN
-                    AscendC::MicroAPI::RegTensor<T_RUNNING_MEAN> saveVarTmp;
-                    AscendC::MicroAPI::Cast<T_RUNNING_MEAN, float, castTraitB322B16>(saveVarTmp, saveVar, pregLoop);
-                    AscendC::MicroAPI::DataCopy<T_RUNNING_MEAN, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(
-                        ((__local_mem__ T_RUNNING_MEAN*)runningVarOutUbAddr + k * VL_F32), saveVarTmp, pregLoop);
-                } else {
-                    AscendC::MicroAPI::DataCopy(
-                        ((__local_mem__ float*)runningVarOutUbAddr + k * VL_F32), saveVar, pregLoop);
-                }
-
-                // rstd
-                Adds(var, var, epsilon, pregLoop);
-                Div(r, one, var, pregLoop);
-                Sqrt(y, r, pregLoop);
-                Muls(t, var, float(-0.5), pregLoop);
-                Mul(t, t, y, pregLoop);                // -0.5 * x * y
-                Mula(t1, t, y, pregLoop);              // 1.5 + (-0.5 * x * y) * y
-                Mul(rstd, y, t1, pregLoop);            // y = y * (1.5 - 0.5 * x * y)
-                Muls(t3, var, float(-1.0), pregLoop);  // -1 * x
-                Mula(s, t3, r, pregLoop);              // 1 + (-1) * x * r
-                Muls(t4, rstd, float(-1.0), pregLoop); // (-1) * y
-                Mula(r, t4, rstd, pregLoop);           // r + (-1) * y * y
-                Mula(s, var, r, pregLoop);             // s + x * t
-                Mul(s, s, rstd, pregLoop);             // e * y
-                Mula(rstd, s, scalar1, pregLoop);      // y + y * e * 0.5
-                CompareScalar(cmpRegZero, var, POS_INF, pregLoop);
-                Select(rstd, scalarZero, rstd, cmpRegZero);
-                CompareScalar(cmpRegInf, var, float(0.0), pregLoop);
-                Select(rstd, scalarInf, rstd, cmpRegInf);
-                DataCopy(((__local_mem__ float*)batchRstdInUbAddr + k * VL_F32), rstd, pregLoop);
-
-                // running mean
-                DataCopy(mean, ((__local_mem__ float*)batchMeanInUbAddr + k * VL_F32));
-                if constexpr (!IsSameType<T_RUNNING_MEAN, float>::value) {
-                    // 需要把T_RUNNING_MEAN的输入cast到float
-                    AscendC::MicroAPI::RegTensor<T_RUNNING_MEAN> runningMeanTmp;
-                    AscendC::MicroAPI::DataCopy<T_RUNNING_MEAN, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
-                        runningMeanTmp, ((__local_mem__ T_RUNNING_MEAN*)runningMeanInUbAddr + k * VL_F32));
-                    AscendC::MicroAPI::Cast<float, T_RUNNING_MEAN, castTraitB162B32>(
-                        runningMean, runningMeanTmp, pregLoop);
-                } else {
-                    AscendC::MicroAPI::DataCopy(runningMean, ((__local_mem__ float*)runningMeanInUbAddr + k * VL_F32));
-                }
-                Muls(saveMean, mean, momentumVf, pregLoop);
-                Muls(runningMean, runningMean, oneSubMomentumVf, pregLoop);
-                Add(saveMean, saveMean, runningMean, pregLoop);
-                if constexpr (!IsSameType<T_RUNNING_MEAN, float>::value) {
-                    // 需要把float的结果cast回T_RUNNING_MEAN
-                    AscendC::MicroAPI::RegTensor<T_RUNNING_MEAN> saveMeanTmp;
-                    AscendC::MicroAPI::Cast<T_RUNNING_MEAN, float, castTraitB322B16>(saveMeanTmp, saveMean, pregLoop);
-                    AscendC::MicroAPI::DataCopy<T_RUNNING_MEAN, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(
-                        ((__local_mem__ T_RUNNING_MEAN*)runningMeanOutUbAddr + k * VL_F32), saveMeanTmp, pregLoop);
-                } else {
-                    AscendC::MicroAPI::DataCopy(
-                        ((__local_mem__ float*)runningMeanOutUbAddr + k * VL_F32), saveMean, pregLoop);
-                }
-            }
-        }
         runningMeanInQueue.FreeTensor(runningMeanInUb);
         runningVarInQueue.FreeTensor(runningVarInUb);
         runningMeanOutQueue.EnQue(runningMeanOutUb);
@@ -960,12 +605,12 @@ private:
                     Add(y2, y2, gamma, pregLoop);
                     if constexpr (IsSameType<T, half>::value) {
                         RegTensor<half> yFp16;
-                        Cast<half, float, castTraitB322B16>(yFp16, y2, pregLoop);
+                        Cast<half, float, NormCommon::castTraitB322B16>(yFp16, y2, pregLoop);
                         DataCopy<half, StoreDist::DIST_PACK_B32>(
                             ((__local_mem__ half*)yInUbAddr + rIndex * rLoopStride + aLoopOffset), yFp16, pregLoop);
                     } else if constexpr (IsSameType<T, bfloat16_t>::value) {
                         RegTensor<bfloat16_t> xBf16;
-                        Cast<bfloat16_t, float, castTraitB322B16>(xBf16, y2, pregLoop);
+                        Cast<bfloat16_t, float, NormCommon::castTraitB322B16>(xBf16, y2, pregLoop);
                         DataCopy<bfloat16_t, StoreDist::DIST_PACK_B32>(
                             ((__local_mem__ bfloat16_t*)yInUbAddr + rIndex * rLoopStride + aLoopOffset), xBf16,
                             pregLoop);
@@ -1055,7 +700,7 @@ private:
     static constexpr int64_t NDDMA_THRESHOLD = 32;
     static constexpr int64_t BLOCK_SIZE = 32;
     static constexpr int64_t DOUBLE_BUFFER = 2;
-    static constexpr int64_t SCALE_COEF_EIGHT = 4;
+    static constexpr int64_t SCALE_COEF_FOUR = 4;
     constexpr static int64_t NDDMA_DIM_NUM = 2;
 
     static constexpr uint32_t ROW_TWO_OFFSET = 2;
@@ -1066,21 +711,6 @@ private:
     static constexpr uint32_t ROW_SEVEN_OFFSET = 7;
 
     static constexpr float POS_INF = 3.40282366920938E+38;
-
-    constexpr static AscendC::MicroAPI::CastTrait castTraitB162B32 = {
-        AscendC::MicroAPI::RegLayout::ZERO,
-        AscendC::MicroAPI::SatMode::UNKNOWN,
-        AscendC::MicroAPI::MaskMergeMode::ZEROING,
-        AscendC::RoundMode::UNKNOWN,
-    };
-
-    constexpr static AscendC::MicroAPI::CastTrait castTraitB322B16 = {
-        AscendC::MicroAPI::RegLayout::ZERO,
-        AscendC::MicroAPI::SatMode::NO_SAT,
-        AscendC::MicroAPI::MaskMergeMode::ZEROING,
-        AscendC::RoundMode::CAST_RINT,
-    };
-
     float epsilon = 1e-5;
     float momentum = 0.1;
     float besselCorrectionFactor;

@@ -48,7 +48,7 @@ public:
 
         powerOfTwo_ = 1;
         while (powerOfTwo_ < colsPerLoop_) {
-            powerOfTwo_ *= AddLayerNorm::TWO;
+            powerOfTwo_ *= AddLayerNorm::NUM_TWO;
         }
 
         uint64_t gmOffset = (tilingData->rowsPerCore * cols_) * coreIdx;
@@ -118,16 +118,8 @@ public:
         LocalTensor<X1_TYPE> x1Local, LocalTensor<X1_TYPE> x2Local, LocalTensor<X1_TYPE> biasLocal, int64_t inputOffset,
         int64_t biasOffset, int32_t copyLen)
     {
-        int32_t copyLenAlign = BLOCK_ALIGN(copyLen * sizeof(X1_TYPE), blockSize_) / sizeof(X1_TYPE);
-        DataCopyPadExtParams<X1_TYPE> padParams;
-        padParams.isPad = true;
-        padParams.paddingValue = static_cast<X1_TYPE>(0.0);
-        padParams.rightPadding = copyLenAlign - copyLen;
-        DataCopyExtParams dataCopyParams;
-        dataCopyParams.blockCount = 1;
-        dataCopyParams.blockLen = copyLen * sizeof(X1_TYPE);
-        dataCopyParams.srcStride = 0;
-        dataCopyParams.dstStride = 0;
+        DataCopyPadExtParams<X1_TYPE> padParams = MakeZeroPadParams<X1_TYPE>(copyLen, blockSize_);
+        DataCopyExtParams dataCopyParams = MakeDataCopyParams<X1_TYPE>(copyLen);
         DataCopyPad(x1Local, x1Gm_[inputOffset], dataCopyParams, padParams);
         x1Queue_.EnQue(x1Local);
         DataCopyPad(x2Local, x2Gm_[inputOffset], dataCopyParams, padParams);
@@ -160,25 +152,6 @@ public:
 
         DataCopyPad(y1Gm_[yOffset], y1Local, dataCopyParams);
         CONST_CONDITIONAL_EXPR(IS_SCALE2_EXIST, DataCopyPad(y2Gm_[yOffset], y2Local, dataCopyParams));
-    }
-
-    __aicore__ inline void CopyGammaAndBetaToUB(
-        LocalTensor<X1_TYPE> gammaLocal, LocalTensor<X1_TYPE> betaLocal, int64_t offset, int32_t copyLen)
-    {
-        int32_t copyLenAlign = BLOCK_ALIGN(copyLen * sizeof(X1_TYPE), blockSize_) / sizeof(X1_TYPE);
-        DataCopyPadExtParams<X1_TYPE> padParams;
-        padParams.isPad = true;
-        padParams.paddingValue = static_cast<X1_TYPE>(0.0);
-        padParams.rightPadding = copyLenAlign - copyLen;
-        DataCopyExtParams dataCopyParams;
-        dataCopyParams.blockCount = 1;
-        dataCopyParams.blockLen = copyLen * sizeof(X1_TYPE);
-        dataCopyParams.srcStride = 0;
-        dataCopyParams.dstStride = 0;
-        DataCopyPad(betaLocal, betaGm_[offset], dataCopyParams, padParams);
-        betaQueue_.EnQue(betaLocal);
-        DataCopyPad(gammaLocal, gammaGm_[offset], dataCopyParams, padParams);
-        gammaQueue_.EnQue(gammaLocal);
     }
 
     __aicore__ inline void CopyQuantParams2UB(
@@ -337,15 +310,15 @@ public:
 
                 LocalTensor<X1_TYPE> xLocal = xQueue_.template AllocTensor<X1_TYPE>();
 
-                uint16_t loopCount = CEIL_DIV(copyLen, vlFp32_);
                 count += 1;
+                uint16_t loopCount = CEIL_DIV(copyLen, vlFp32_);
                 float scale = static_cast<float>(1.0) / static_cast<float>(count);
 
                 if (j == 0) {
-                    VFWelfordParallelUpdateWithInit<X1_TYPE, TILING_KEY>(
+                    VFWelfordParallelUpdateCommon<true, X1_TYPE, TILING_KEY>(
                         x1Local, x2Local, biasLocal, xLocal, tmpMeanLocal, tmpVarLocal, copyLen, loopCount, scale);
                 } else {
-                    VFWelfordParallelUpdate<X1_TYPE, TILING_KEY>(
+                    VFWelfordParallelUpdateCommon<false, X1_TYPE, TILING_KEY>(
                         x1Local, x2Local, biasLocal, xLocal, tmpMeanLocal, tmpVarLocal, copyLen, loopCount, scale);
                 }
 
@@ -418,7 +391,8 @@ public:
                 // copy in x1, x2, bias
                 CopyInputsToUB(x1Local, x2Local, biasLocal, inputOffsetTemp, biasOffset, copyLen);
                 // copy in gamma, beta
-                CopyGammaAndBetaToUB(gammaLocal, betaLocal, inputOffsetGamma, copyLen);
+                CopyGammaAndBetaToUBCommon(gammaLocal, betaLocal, gammaGm_, betaGm_, gammaQueue_, betaQueue_,
+                    inputOffsetGamma, copyLen, blockSize_);
                 // copy in scale/offset
                 CopyQuantParams2UB(scale1Local, scale2Local, offset1Local, offset2Local, inputOffsetGamma, copyLen);
 

@@ -77,7 +77,7 @@ public:
 
     __aicore__ inline void SubProcess(int64_t rowIdx)
     {
-        CopyInRstd(rowIdx, 1);
+        CopyInRstdCommon(inQueueRstd_, rstdGm_, rowIdx, 1);
         LocalTensor<float> rstdLocal = inQueueRstd_.DeQue<float>();
         FormerProcess(rstdLocal, rowIdx);
         LocalTensor<float> tmpSumLocal = tmpSumBuf_.Get<float>();
@@ -142,20 +142,6 @@ public:
         LocalTensor<float> level2Local = level2Buf_.Get<float>();
         LocalTensor<float> tmpSumLocal = tmpSumBuf_.Get<float>();
         ComputeMultiLevelMean(tmpSumLocal, 0, level0Local, level1Local, level2Local, level0Offset, level1Offset);
-    }
-
-    __aicore__ inline void CopyInRstd(int64_t rowIdx, int64_t count)
-    {
-        LocalTensor<float> rstdLocal = inQueueRstd_.AllocTensor<float>();
-        DataCopyExtParams copyParams{
-            1,                                            // blockCount
-            static_cast<uint32_t>(count * sizeof(float)), // blockLen
-            0,                                            // srcStride
-            0,                                            // dstStride
-            0                                             // rsv
-        };
-        DataCopyPad(rstdLocal, rstdGm_[rowIdx], copyParams, {true, 0, 0, 0});
-        inQueueRstd_.EnQue(rstdLocal);
     }
 
     __aicore__ inline void CopyInGamma(int64_t colIdx, int64_t count)

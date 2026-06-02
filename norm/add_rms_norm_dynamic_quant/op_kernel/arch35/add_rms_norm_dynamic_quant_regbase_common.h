@@ -34,8 +34,8 @@ using RmsNorm::GetOverflowMode;
 using RmsNorm::SetOverflowMode;
 using RmsNorm::castTraitFp322Fp8;
 using RmsNorm::castTraitFp322Hifp8;
-using RmsNorm::CopyInX;
 using RmsNorm::CopyOutX;
+using RmsNorm::CopyInX;
 using RmsNorm::CopyOutY;
 using RmsNorm::YCopyOutImpl;
 
@@ -96,6 +96,69 @@ __aicore__ inline void CopyOutScale(
     LocalTensor<float> scaleLocal = outQueueScale.DeQue<float>();
     RmsNorm::DataCopyImpl<float>(scaleGm[gmOffset], scaleLocal, 1, blockLen);
     outQueueScale.FreeTensor(scaleLocal);
+}
+
+template <typename T, typename Queue>
+__aicore__ inline void CopyInParamToQueue(Queue& inQueue, GlobalTensor<T>& srcGm, uint64_t numN)
+{
+    LocalTensor<T> local = inQueue.template AllocTensor<T>();
+    RmsNorm::DataCopyImpl<T>(local, srcGm, 1, numN);
+    inQueue.EnQue(local);
+}
+
+template <typename T_SMOOTH_SCALE, typename SmoothScale1Queue, typename SmoothScale2Queue>
+__aicore__ inline void CopyInDynamicQuantCommon(SmoothScale1Queue& inQueueSmoothScale1,
+    SmoothScale2Queue& inQueueSmoothScale2, GlobalTensor<T_SMOOTH_SCALE>& smoothScale1Gm,
+    GlobalTensor<T_SMOOTH_SCALE>& smoothScale2Gm, uint64_t numN, bool hasSmoothScale1, bool hasSmoothScale2)
+{
+    if (hasSmoothScale1) {
+        CopyInParamToQueue(inQueueSmoothScale1, smoothScale1Gm, numN);
+    }
+    if (hasSmoothScale2) {
+        CopyInParamToQueue(inQueueSmoothScale2, smoothScale2Gm, numN);
+    }
+}
+
+template <typename T_X, typename T_SMOOTH_SCALE, typename SmoothScale1Queue, typename SmoothScale2Queue,
+    typename BetaQueue>
+__aicore__ inline void PrepareOptionalParamLocals(SmoothScale1Queue& inQueueSmoothScale1,
+    SmoothScale2Queue& inQueueSmoothScale2, BetaQueue& inQueueBeta, GlobalTensor<T_X>& betaGm,
+    LocalTensor<T_SMOOTH_SCALE>& smoothScale1Local, LocalTensor<T_SMOOTH_SCALE>& smoothScale2Local,
+    LocalTensor<T_X>& betaLocal, uint64_t numN, bool hasSmoothScale1, bool hasSmoothScale2, bool hasBeta)
+{
+    if (hasSmoothScale1) {
+        smoothScale1Local = inQueueSmoothScale1.template DeQue<T_SMOOTH_SCALE>();
+    }
+    if (hasSmoothScale2) {
+        smoothScale2Local = inQueueSmoothScale2.template DeQue<T_SMOOTH_SCALE>();
+    }
+    if (hasBeta) {
+        CopyInParamToQueue(inQueueBeta, betaGm, numN);
+        betaLocal = inQueueBeta.template DeQue<T_X>();
+    }
+}
+
+template <typename T_X, typename T_Y, typename T_SMOOTH_SCALE>
+__aicore__ inline void InitOptionalGmBuffers(
+    GlobalTensor<T_SMOOTH_SCALE>& smoothScale1Gm, GlobalTensor<T_SMOOTH_SCALE>& smoothScale2Gm,
+    GlobalTensor<T_Y>& y2Gm, GlobalTensor<float>& scale2Gm, GlobalTensor<T_X>& betaGm,
+    GM_ADDR smoothScale1, GM_ADDR smoothScale2, GM_ADDR y2, GM_ADDR scale2, GM_ADDR beta,
+    uint64_t gmOffset, uint64_t gmLen, uint64_t scalesGmOffset, uint64_t mCore, uint64_t numN,
+    bool hasSmoothScale1, bool hasSmoothScale2, bool hasY2Scale2, bool hasBeta)
+{
+    if (hasSmoothScale1) {
+        smoothScale1Gm.SetGlobalBuffer((__gm__ T_SMOOTH_SCALE*)smoothScale1, numN);
+    }
+    if (hasSmoothScale2) {
+        smoothScale2Gm.SetGlobalBuffer((__gm__ T_SMOOTH_SCALE*)smoothScale2, numN);
+    }
+    if (hasY2Scale2) {
+        y2Gm.SetGlobalBuffer((__gm__ T_Y*)y2 + gmOffset, gmLen);
+        scale2Gm.SetGlobalBuffer((__gm__ float*)scale2 + scalesGmOffset, mCore);
+    }
+    if (hasBeta) {
+        betaGm.SetGlobalBuffer((__gm__ T_X*)beta, numN);
+    }
 }
 
 template <

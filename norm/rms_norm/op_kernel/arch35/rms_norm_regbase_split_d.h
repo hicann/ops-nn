@@ -27,8 +27,8 @@ public:
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, const RMSNormTilingData* tiling)
     {
         ASSERT(GetBlockNum() != 0 && "block dim can not be zero!");
-        numRow = tiling->num_row;
         numCol = tiling->num_col;
+        numRow = tiling->num_row;
         blockFactor = tiling->block_factor;
         ubFactor = tiling->ub_factor;
         ubLoop = tiling->ub_loop;

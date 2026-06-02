@@ -16,8 +16,8 @@
 #define OPS_BUILT_IN_OP_TILING_RUNTIME_ADD_RMS_NORM_QUANT_H_
 
 #include "register/tilingdata_base.h"
-#include "log/log.h"
 #include "register/op_impl_registry.h"
+#include "log/log.h"
 #include "util/math_util.h"
 #include "tiling/platform/platform_ascendc.h"
 #include "platform/platform_infos_def.h"

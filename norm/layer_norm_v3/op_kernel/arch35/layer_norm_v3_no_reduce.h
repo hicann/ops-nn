@@ -30,6 +30,8 @@ using AscendC::MicroAPI::MemType;
 using AscendC::MicroAPI::RegTensor;
 using AscendC::MicroAPI::StoreDist;
 using AscendC::MicroAPI::UpdateMask;
+using NormCommon::NormCommonRegbase::LoadRegForDtype;
+using NormCommon::NormCommonRegbase::StoreRegForDtype;
 
 template <typename T, typename U, typename M, bool IsOutRstd>
 class LayerNormV3RegbaseNoReduce {
@@ -163,11 +165,11 @@ private:
             RegTensor<float> varReg;
             for (uint16_t a = 0; a < aLoop; a++) {
                 MaskReg pregLoop = UpdateMask<float>(sreg);
-                LoadTensorForDtypeTIn(xInUb, xReg, pregLoop, (a * VL_B32));
-                StoreTensorForDtypeTOut(meanInUb, xReg, pregLoop, (a * VL_B32));
+                LoadRegForDtype(xInUb, xReg, pregLoop, (a * VL_B32));
+                StoreRegForDtype(meanInUb, xReg, pregLoop, (a * VL_B32));
                 Sub(subReg, xReg, xReg, pregLoop);
                 Mul(varReg, subReg, subReg, pregLoop);
-                StoreTensorForDtypeTOut(tmpUb, varReg, pregLoop, (a * VL_B32));
+                StoreRegForDtype(tmpUb, varReg, pregLoop, (a * VL_B32));
             }
         }
     }
@@ -199,17 +201,17 @@ private:
             RegTensor<float> rstdReg;
             MaskReg pregLoop = UpdateMask<float>(sreg);
             for (uint16_t a = 0; a < aLoop; a++) {
-                LoadTensorForDtypeTIn(tmpUb, varReg, pregLoop, (a * VL_B32));
+                LoadRegForDtype(tmpUb, varReg, pregLoop, (a * VL_B32));
                 if constexpr (!IsOutRstd) {
-                    StoreTensorForDtypeTOut(rstdOutUb, varReg, pregLoop, (a * VL_B32));
+                    StoreRegForDtype(rstdOutUb, varReg, pregLoop, (a * VL_B32));
                 }
                 AscendC::MicroAPI::MaskReg pregRstdAll1 =
                     AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
                 NormCommon::ComputeRstdNewtonRaphsonReg(varReg, rstdReg, pregRstdAll1, epsilon);
                 if constexpr (IsOutRstd) {
-                    StoreTensorForDtypeTOut(rstdOutUb, rstdReg, pregLoop, (a * VL_B32));
+                    StoreRegForDtype(rstdOutUb, rstdReg, pregLoop, (a * VL_B32));
                 }
-                StoreTensorForDtypeTOut(tmpUb, rstdReg, pregLoop, (a * VL_B32));
+                StoreRegForDtype(tmpUb, rstdReg, pregLoop, (a * VL_B32));
             }
         }
     }
@@ -237,9 +239,9 @@ private:
             }
             MaskReg pregLoop = UpdateMask<float>(sreg);
             for (uint16_t a = 0; a < aLoop; a++) {
-                LoadTensorForDtypeTIn(xInUb, xReg, pregLoop, (a * VL_B32));
+                LoadRegForDtype(xInUb, xReg, pregLoop, (a * VL_B32));
                 Sub(subReg, xReg, xReg, pregLoop);
-                LoadTensorForDtypeTIn(tmpUb, rstdReg, pregLoop, (a * VL_B32));
+                LoadRegForDtype(tmpUb, rstdReg, pregLoop, (a * VL_B32));
                 Mul(yReg, subReg, rstdReg, pregLoop);
                 if constexpr (hasGammaFlag && hasBetaFlag) {
                     FusedMulDstAdd(yReg, gammaReg, betaReg, pregLoop);
@@ -251,7 +253,7 @@ private:
                         Add(yReg, yReg, betaReg, pregLoop);
                     }
                 }
-                StoreTensorForDtypeTOut(yOutUb, yReg, pregLoop, (a * VL_B32));
+                StoreRegForDtype(yOutUb, yReg, pregLoop, (a * VL_B32));
             }
         }
     }
@@ -265,32 +267,6 @@ private:
         copyInParams.dstStride = 0;
         DataCopyPad(yGm_[offset], yOutUb, copyInParams);
         yQueue_.FreeTensor(yOutUb);
-    }
-
-    template <typename T_IN>
-    __aicore__ inline void LoadTensorForDtypeTIn(
-        __local_mem__ T_IN* src, RegTensor<float>& dst, MaskReg& preg, uint32_t offset)
-    {
-        if constexpr (IsSameType<T_IN, float>::value) {
-            DataCopy<float, LoadDist::DIST_NORM>(dst, src + offset);
-        } else {
-            RegTensor<T_IN> xIn;
-            DataCopy<T_IN, LoadDist::DIST_UNPACK_B16>(xIn, src + offset);
-            Cast<float, T_IN, castTraitB162B32>(dst, xIn, preg);
-        }
-    }
-
-    template <typename T_OUT>
-    __aicore__ inline void StoreTensorForDtypeTOut(
-        __local_mem__ T_OUT* dst, RegTensor<float>& src, MaskReg& preg, uint32_t offset)
-    {
-        if constexpr (IsSameType<T_OUT, float>::value) {
-            DataCopy<T_OUT, StoreDist::DIST_NORM>(dst + offset, src, preg);
-        } else {
-            RegTensor<T_OUT> xOut;
-            Cast<T_OUT, float, castTraitB322B16>(xOut, src, preg);
-            DataCopy<T_OUT, StoreDist::DIST_PACK_B32>(dst + offset, xOut, preg);
-        }
     }
 
     template <typename H>

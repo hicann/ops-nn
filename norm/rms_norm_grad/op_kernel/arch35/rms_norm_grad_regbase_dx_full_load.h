@@ -33,13 +33,13 @@ public:
         __gm__ uint8_t* dy, __gm__ uint8_t* x, __gm__ uint8_t* rstd, __gm__ uint8_t* gamma, __gm__ uint8_t* dx,
         __gm__ uint8_t* dgamma)
     {
-        usedCoreNum_ = tiling_->usedCoreNumDx;
         uint32_t coreIdx = GetBlockIdx();
+        usedCoreNum_ = tiling_->usedCoreNumDx;
         if (coreIdx >= usedCoreNum_) {
             return;
         }
-        rows_ = tiling_->rows;
         cols_ = tiling_->cols;
+        rows_ = tiling_->rows;
         blockFactor_ = tiling_->blockFactorDx;
 
         colsAlignBlock_ =
@@ -90,7 +90,7 @@ public:
         LocalTensor<float> dyLocal = inQueueDy_.DeQue<float>();
         CopyInX(rowIdx, calcRowNumSub);
         LocalTensor<float> xLocal = inQueueX_.DeQue<float>();
-        CopyInRstd(rowIdx, calcRowNumSub);
+        CopyInRstdCommon(inQueueRstd_, rstdGm_, rowIdx, calcRowNumSub);
         LocalTensor<float> rstdLocal = inQueueRstd_.DeQue<float>();
         LocalTensor<T_GAMMA> gammaLocal = gammaBuf_.Get<T_GAMMA>();
         LocalTensor<float> tmpSumLocal = tmpSumBuf_.Get<float>();
@@ -166,20 +166,6 @@ public:
         inQueueRstd_.FreeTensor(rstdLocal);
         outQueueDx_.EnQue(dxLocal);
         CopyOutDx(rowIdx, calcRowNumSub);
-    }
-
-    __aicore__ inline void CopyInRstd(int64_t rowIdx, int64_t count)
-    {
-        LocalTensor<float> rstdLocal = inQueueRstd_.AllocTensor<float>();
-        DataCopyExtParams copyParams{
-            1,                                            // blockCount
-            static_cast<uint32_t>(count * sizeof(float)), // blockLen
-            0,                                            // srcStride
-            0,                                            // dstStride
-            0                                             // rsv
-        };
-        DataCopyPad(rstdLocal, rstdGm_[rowIdx], copyParams, {true, 0, 0, 0}); // dummy值为0，待确认
-        inQueueRstd_.EnQue(rstdLocal);
     }
 
     __aicore__ inline void CopyInGamma()

@@ -16,16 +16,16 @@
 #ifndef BATCH_NORM_V3_INFER_LAST_CHANNEL_H
 #define BATCH_NORM_V3_INFER_LAST_CHANNEL_H
 
-#include "kernel_tiling/kernel_tiling.h"
-#include "kernel_operator.h"
 #include "batch_norm_v3.h"
+#include "kernel_operator.h"
+#include "kernel_tiling/kernel_tiling.h"
 namespace BatchNormV3Ops {
 using namespace AscendC;
 
-using AscendC::MicroAPI::LoadDist;
-using AscendC::MicroAPI::MaskMergeMode;
-using AscendC::MicroAPI::MaskReg;
 using AscendC::MicroAPI::RegTensor;
+using AscendC::MicroAPI::MaskReg;
+using AscendC::MicroAPI::MaskMergeMode;
+using AscendC::MicroAPI::LoadDist;
 using AscendC::MicroAPI::StoreDist;
 
 template <typename T, typename T_GAMMA, typename T_RUNNING_MEAN>
@@ -37,34 +37,27 @@ class BatchNormV3InferLastChannel {
     static constexpr uint16_t VL_FP32 = VECTOR_LENGTH / sizeof(float);
     static constexpr int64_t BLOCK_SIZE = GetUbBlockSize();
 
-    constexpr static AscendC::MicroAPI::CastTrait castTraitB162B32 = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN, MaskMergeMode::ZEROING,
-        AscendC::RoundMode::UNKNOWN};
-
-    constexpr static AscendC::MicroAPI::CastTrait castTraitB322B16 = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT, MaskMergeMode::ZEROING,
-        AscendC::RoundMode::CAST_RINT};
-
 public:
     __aicore__ inline BatchNormV3InferLastChannel(){};
 
-    __aicore__ inline BatchNormV3InferLastChannel(const BatchNormV3InferLastChannelTilingData* tilingDataIn)
+    __aicore__ inline BatchNormV3InferLastChannel(const BatchNormV3InferLastChannelTilingData* tilingDataInput)
     {
-        tilingData_ = tilingDataIn;
+        tilingData_ = tilingDataInput;
     }
 
     __aicore__ inline void Init(
-        GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR mean, GM_ADDR var, GM_ADDR y, TPipe* pipeIn)
+        GM_ADDR xInput, GM_ADDR gammaInput, GM_ADDR betaInput, GM_ADDR meanInput, GM_ADDR varInput, GM_ADDR yOutput,
+        TPipe* pipeInput)
     {
-        pipe_ = pipeIn;
+        pipe_ = pipeInput;
 
-        xGm_.SetGlobalBuffer((__gm__ T*)x);
-        betaGm_.SetGlobalBuffer((__gm__ T_GAMMA*)beta);
-        gammaGm_.SetGlobalBuffer((__gm__ T_GAMMA*)gamma);
-        meanGm_.SetGlobalBuffer((__gm__ T_RUNNING_MEAN*)mean);
-        varGm_.SetGlobalBuffer((__gm__ T_RUNNING_MEAN*)var);
+        xGm_.SetGlobalBuffer((__gm__ T*)xInput);
+        betaGm_.SetGlobalBuffer((__gm__ T_GAMMA*)betaInput);
+        gammaGm_.SetGlobalBuffer((__gm__ T_GAMMA*)gammaInput);
+        meanGm_.SetGlobalBuffer((__gm__ T_RUNNING_MEAN*)meanInput);
+        varGm_.SetGlobalBuffer((__gm__ T_RUNNING_MEAN*)varInput);
 
-        yGm_.SetGlobalBuffer((__gm__ T*)y);
+        yGm_.SetGlobalBuffer((__gm__ T*)yOutput);
 
         pipe_->InitBuffer(betaQueue_, BUFFER_NUM, tilingData_->tileBlockALen * sizeof(T_GAMMA));
         pipe_->InitBuffer(gammaQueue_, BUFFER_NUM, tilingData_->tileBlockALen * sizeof(T_GAMMA));
@@ -224,7 +217,7 @@ private:
                     AscendC::MicroAPI::RegTensor<T_RUNNING_MEAN> runningVarTmp;
                     AscendC::MicroAPI::DataCopy<T_RUNNING_MEAN, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
                         runningVarTmp, ((__local_mem__ T_RUNNING_MEAN*)varLocal + offset));
-                    AscendC::MicroAPI::Cast<float, T_RUNNING_MEAN, castTraitB162B32>(var, runningVarTmp, pregMaskFp32);
+                    AscendC::MicroAPI::Cast<float, T_RUNNING_MEAN, NormCommon::castTraitB162B32>(var, runningVarTmp, pregMaskFp32);
                 } else {
                     AscendC::MicroAPI::DataCopy<float, LoadDist::DIST_NORM>(var, varLocal + offset);
                 }
@@ -239,7 +232,7 @@ private:
                     AscendC::MicroAPI::RegTensor<T_RUNNING_MEAN> runningMeanTmp;
                     AscendC::MicroAPI::DataCopy<T_RUNNING_MEAN, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
                         runningMeanTmp, ((__local_mem__ T_RUNNING_MEAN*)meanLocal + offset));
-                    AscendC::MicroAPI::Cast<float, T_RUNNING_MEAN, castTraitB162B32>(
+                    AscendC::MicroAPI::Cast<float, T_RUNNING_MEAN, NormCommon::castTraitB162B32>(
                         mean, runningMeanTmp, pregMaskFp32);
                 } else {
                     AscendC::MicroAPI::DataCopy<float, LoadDist::DIST_NORM>(mean, meanLocal + offset);
@@ -265,7 +258,7 @@ private:
                         DataCopy(((__local_mem__ float*)yLocal) + xOffset, y, pregMaskFp32);
                     } else { // fp16、bf16
                         RegTensor<T> xFp16;
-                        Cast<T, float, castTraitB322B16>(xFp16, y, pregMaskFp32);
+                        Cast<T, float, NormCommon::castTraitB322B16>(xFp16, y, pregMaskFp32);
                         DataCopy<T, StoreDist::DIST_PACK_B32>(
                             ((__local_mem__ T*)yLocal) + xOffset, xFp16, pregMaskFp32);
                     }
@@ -283,7 +276,7 @@ private:
         } else { // fp16、bf16
             RegTensor<T> xFp16;
             DataCopy<T, LoadDist::DIST_UNPACK_B16>(xFp16, ((__local_mem__ T*)src + offset));
-            Cast<float, T, castTraitB162B32>(dst, xFp16, preg);
+            Cast<float, T, NormCommon::castTraitB162B32>(dst, xFp16, preg);
         }
     }
 

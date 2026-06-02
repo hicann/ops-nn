@@ -33,19 +33,19 @@ bool LayerNormV3WelfordTiling::IsCapable()
 
 ge::graphStatus LayerNormV3WelfordTiling::DoOpTiling()
 {
-    td_.set_M(commonParams.colSize);
     td_.set_N(commonParams.rowSize);
+    td_.set_M(commonParams.colSize);
     td_.set_rAlign(commonParams.rowAlign);
-    td_.set_nullptrGamma(commonParams.gammaNullPtr);
     td_.set_nullptrBeta(commonParams.betaNullPtr);
+    td_.set_nullptrGamma(commonParams.gammaNullPtr);
     td_.set_epsilon(commonParams.eps);
 
     int64_t blockFactor = (td_.get_M() + commonParams.coreNum - 1) / commonParams.coreNum;
-    int64_t numBlocks = (td_.get_M() + blockFactor - 1) / blockFactor;
     int64_t mainBlockCount = td_.get_M() / blockFactor;
+    int64_t numBlocks = (td_.get_M() + blockFactor - 1) / blockFactor;
     td_.set_mainBlockCount(mainBlockCount);
-    td_.set_numBlocks(numBlocks);
     td_.set_mainBlockFactor(blockFactor);
+    td_.set_numBlocks(numBlocks);
     td_.set_tailBlockFactor(td_.get_M() - mainBlockCount * blockFactor);
 
     return ge::GRAPH_SUCCESS;
@@ -55,11 +55,11 @@ bool LayerNormV3WelfordTiling::IsValidTileLength(int64_t tileLength)
 {
     int64_t xSize = 0;
     int64_t ySize = 0;
-    int64_t meanSize = 0;
     int64_t rstdSize = 0;
+    int64_t meanSize = 0;
     int64_t welfordTempSize = 0;
-    int64_t gammaSize = 0;
     int64_t betaSize = 0;
+    int64_t gammaSize = 0;
     int64_t apiTempSize = 0;
 
     // tensor size
@@ -97,9 +97,9 @@ bool LayerNormV3WelfordTiling::IsValidTileLength(int64_t tileLength)
 
     // apiTemp size
     int64_t normalizeApiTempSize = 0;
-    int64_t welfordUpdateApiTempSize = 0;
     int64_t welfordFinalizeApiTempSize = 0;
-    uint32_t minValue{0}, maxValue{0};
+    int64_t welfordUpdateApiTempSize = 0;
+    uint32_t maxValue{0}, minValue{0};
     ge::Shape tensorShape({1, tileLength});
     AscendC::GetWelfordUpdateMaxMinTmpSize(
         tensorShape, WELFORD_B32_SIZE, GammaBetaTypeSize, false, true, maxValue, minValue);
@@ -127,8 +127,8 @@ ge::graphStatus LayerNormV3WelfordTiling::DoLibApiTiling()
     int64_t welfordUpdateTimes = td_.get_N() / tileLength;
     int64_t welfordUpdateTail = td_.get_N() - welfordUpdateTimes * tileLength;
     td_.set_tileLength(tileLength);
-    td_.set_welfordUpdateTimes(welfordUpdateTimes);
     td_.set_welfordUpdateTail(welfordUpdateTail);
+    td_.set_welfordUpdateTimes(welfordUpdateTimes);
     return ge::GRAPH_SUCCESS;
 }
 

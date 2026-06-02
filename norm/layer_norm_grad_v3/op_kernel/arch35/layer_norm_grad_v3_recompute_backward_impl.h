@@ -152,11 +152,11 @@ __aicore__ inline void LayerNormGradV3RecomputeBackward<T, U>::ProcessMainBlock(
         inQueueGamma.EnQue(gammaMain_);
         gammaMain_ = inQueueGamma.template DeQue<float>();
     } else if constexpr (IsSameType<U, bfloat16_t>::value || IsSameType<U, half>::value) {
-        LocalTensor<U> castTempTensor = gammaMain_.ReinterpretCast<U>()[td_->backwardNfactorBlockAligned];
-        CopyIn(castTempTensor, gammaInTensorGM[offset], nfactor);
+        LocalTensor<U> gammaMainCastTensor = gammaMain_.ReinterpretCast<U>()[td_->backwardNfactorBlockAligned];
+        CopyIn(gammaMainCastTensor, gammaInTensorGM[offset], nfactor);
         inQueueGamma.EnQue(gammaMain_);
         gammaMain_ = inQueueGamma.template DeQue<float>();
-        CastToFp32From<U>(gammaMain_, castTempTensor, nfactor);
+        CastToFp32From<U>(gammaMain_, gammaMainCastTensor, nfactor);
     }
     // 计算
     NlastBroadcastMul(sum1Main_, sum1Main_, gammaMain_, mfactor, td_->backwardNfactorBlockAligned);
@@ -169,11 +169,11 @@ __aicore__ inline void LayerNormGradV3RecomputeBackward<T, U>::ProcessMainBlock(
         inQueueX.EnQue(sum2Main_);
         sum2Main_ = inQueueX.template DeQue<float>();
     } else if constexpr (IsSameType<T, bfloat16_t>::value || IsSameType<T, half>::value) {
-        LocalTensor<T> castTempTensor = sum2Main_.ReinterpretCast<T>()[td_->backwardNfactorBlockAligned];
-        CopyIn(castTempTensor, xInTensorGM[offset], mfactor, nfactor, 2 * td_->backwardNfactorBlockAligned, td_->col);
+        LocalTensor<T> sum2CastTensor = sum2Main_.ReinterpretCast<T>()[td_->backwardNfactorBlockAligned];
+        CopyIn(sum2CastTensor, xInTensorGM[offset], mfactor, nfactor, 2 * td_->backwardNfactorBlockAligned, td_->col);
         inQueueX.EnQue(sum2Main_);
         sum2Main_ = inQueueX.template DeQue<float>();
-        CastToFp32From<T>(sum2Main_, castTempTensor, mfactor, nfactor, td_->backwardNfactorBlockAligned);
+        CastToFp32From<T>(sum2Main_, sum2CastTensor, mfactor, nfactor, td_->backwardNfactorBlockAligned);
     }
     // 计算
     Normalize(sum2Main_, sum2Main_, mean_, rstd_, mfactor, td_->backwardNfactorBlockAligned);
@@ -207,11 +207,11 @@ __aicore__ inline void LayerNormGradV3RecomputeBackward<T, U>::ProcessFoldBlock(
         inQueueGamma.EnQue(gammaFold_);
         gammaFold_ = inQueueGamma.template DeQue<float>();
     } else if constexpr (IsSameType<U, bfloat16_t>::value || IsSameType<U, half>::value) {
-        LocalTensor<U> castTempTensor = gammaFold_.ReinterpretCast<U>()[td_->backwardNfactorBlockAligned];
-        CopyIn(castTempTensor, gammaInTensorGM[offset], nfactor);
+        LocalTensor<U> gammaFoldCastTensor = gammaFold_.ReinterpretCast<U>()[td_->backwardNfactorBlockAligned];
+        CopyIn(gammaFoldCastTensor, gammaInTensorGM[offset], nfactor);
         inQueueGamma.EnQue(gammaFold_);
         gammaFold_ = inQueueGamma.template DeQue<float>();
-        CastToFp32From<U>(gammaFold_, castTempTensor, nfactor);
+        CastToFp32From<U>(gammaFold_, gammaFoldCastTensor, nfactor);
     }
     // 进行计算
     PRELOAD(2);
@@ -225,11 +225,11 @@ __aicore__ inline void LayerNormGradV3RecomputeBackward<T, U>::ProcessFoldBlock(
         inQueueX.EnQue(xFold_);
         xFold_ = inQueueX.template DeQue<float>();
     } else if constexpr (IsSameType<T, bfloat16_t>::value || IsSameType<T, half>::value) {
-        LocalTensor<T> castTempTensor = xFold_.ReinterpretCast<T>()[td_->backwardNfactorBlockAligned];
-        CopyIn(castTempTensor, xInTensorGM[offset], mfactor, nfactor, 2 * td_->backwardNfactorBlockAligned, td_->col);
+        LocalTensor<T> xFoldCastTensor = xFold_.ReinterpretCast<T>()[td_->backwardNfactorBlockAligned];
+        CopyIn(xFoldCastTensor, xInTensorGM[offset], mfactor, nfactor, 2 * td_->backwardNfactorBlockAligned, td_->col);
         inQueueX.EnQue(xFold_);
         xFold_ = inQueueX.template DeQue<float>();
-        CastToFp32From<T>(xFold_, castTempTensor, mfactor, nfactor, td_->backwardNfactorBlockAligned);
+        CastToFp32From<T>(xFold_, xFoldCastTensor, mfactor, nfactor, td_->backwardNfactorBlockAligned);
     }
     Normalize(xFold_, xFold_, mean_, rstd_, mfactor, td_->backwardNfactorBlockAligned);
     VectorMul(xFold_, xFold_, dyFold_, mfactor * td_->backwardNfactorBlockAligned);
@@ -266,11 +266,11 @@ __aicore__ inline void LayerNormGradV3RecomputeBackward<T, U>::ProcessX(
         inQueueX.EnQue(x_);
         x_ = inQueueX.template DeQue<float>();
     } else if constexpr (IsSameType<T, bfloat16_t>::value || IsSameType<T, half>::value) {
-        LocalTensor<T> castTempTensor = x_.ReinterpretCast<T>()[td_->backwardNfactorBlockAligned];
-        CopyIn(castTempTensor, xInTensorGM[offset], mfactor, nfactor, 2 * td_->backwardNfactorBlockAligned, td_->col);
+        LocalTensor<T> xCastTensor = x_.ReinterpretCast<T>()[td_->backwardNfactorBlockAligned];
+        CopyIn(xCastTensor, xInTensorGM[offset], mfactor, nfactor, 2 * td_->backwardNfactorBlockAligned, td_->col);
         inQueueX.EnQue(x_);
         x_ = inQueueX.template DeQue<float>();
-        CastToFp32From<T>(x_, castTempTensor, mfactor, nfactor, td_->backwardNfactorBlockAligned);
+        CastToFp32From<T>(x_, xCastTensor, mfactor, nfactor, td_->backwardNfactorBlockAligned);
     }
     Normalize(x_, x_, mean_, rstd_, mfactor, td_->backwardNfactorBlockAligned);
 
@@ -280,11 +280,11 @@ __aicore__ inline void LayerNormGradV3RecomputeBackward<T, U>::ProcessX(
         inQueueDy.EnQue(dy_);
         dy_ = inQueueDy.template DeQue<float>();
     } else if constexpr (IsSameType<T, bfloat16_t>::value || IsSameType<T, half>::value) {
-        LocalTensor<T> castTempTensor = dy_.ReinterpretCast<T>()[td_->backwardNfactorBlockAligned];
-        CopyIn(castTempTensor, dyInTensorGM[offset], mfactor, nfactor, 2 * td_->backwardNfactorBlockAligned, td_->col);
+        LocalTensor<T> dyCastTensor = dy_.ReinterpretCast<T>()[td_->backwardNfactorBlockAligned];
+        CopyIn(dyCastTensor, dyInTensorGM[offset], mfactor, nfactor, 2 * td_->backwardNfactorBlockAligned, td_->col);
         inQueueDy.EnQue(dy_);
         dy_ = inQueueDy.template DeQue<float>();
-        CastToFp32From<T>(dy_, castTempTensor, mfactor, nfactor, td_->backwardNfactorBlockAligned);
+        CastToFp32From<T>(dy_, dyCastTensor, mfactor, nfactor, td_->backwardNfactorBlockAligned);
     }
 
     LocalTensor<float> gamma_ = inQueueGamma.template AllocTensor<float>();
@@ -293,15 +293,16 @@ __aicore__ inline void LayerNormGradV3RecomputeBackward<T, U>::ProcessX(
         inQueueGamma.EnQue(gamma_);
         gamma_ = inQueueGamma.template DeQue<float>();
     } else if constexpr (IsSameType<U, bfloat16_t>::value || IsSameType<U, half>::value) {
-        LocalTensor<U> castTempTensor = gamma_.ReinterpretCast<U>()[td_->backwardNfactorBlockAligned];
-        CopyIn(castTempTensor, gammaInTensorGM[ni * td_->backwardNfactor], nfactor);
+        LocalTensor<U> gammaCastTensor = gamma_.ReinterpretCast<U>()[td_->backwardNfactorBlockAligned];
+        CopyIn(gammaCastTensor, gammaInTensorGM[ni * td_->backwardNfactor], nfactor);
         inQueueGamma.EnQue(gamma_);
         gamma_ = inQueueGamma.template DeQue<float>();
-        CastToFp32From<U>(gamma_, castTempTensor, nfactor);
+        CastToFp32From<U>(gamma_, gammaCastTensor, nfactor);
     }
 
     LocalTensor<T> dx_ = outQueueDx.template AllocTensor<T>();
-    ComputeDx(dx_, dy_, x_, gamma_, sum1Tensor, sum2Tensor, rstd_, mfactor, nfactor, td_->backwardNfactorBlockAligned);
+    ComputeDxCommon<T>(dx_, dy_, x_, gamma_, sum1Tensor, sum2Tensor, rstd_, mfactor, nfactor,
+                       td_->backwardNfactorBlockAligned, td_->col);
     inQueueDy.FreeTensor(dy_);
     inQueueX.FreeTensor(x_);
     inQueueGamma.FreeTensor(gamma_);
@@ -313,98 +314,6 @@ __aicore__ inline void LayerNormGradV3RecomputeBackward<T, U>::ProcessX(
 }
 
 // 二分累加
-template <typename T, typename U>
-__aicore__ inline void LayerNormGradV3RecomputeBackward<T, U>::ComputeDx(
-    const LocalTensor<T>& dstTensor, const LocalTensor<float>& dyTensor, const LocalTensor<float>& xTensor,
-    const LocalTensor<float>& gammaTensor, const LocalTensor<float>& sum1Tensor, const LocalTensor<float>& sum2Tensor,
-    const LocalTensor<float>& rstdTensor, const int64_t rowSize, const int64_t colSize, const int64_t stride)
-{
-    // Compute Dx
-    constexpr static uint32_t VL = GetVRegSize() / sizeof(float);
-    uint16_t outerLoopTimes = rowSize;
-    uint16_t innerLoopTimes =
-        CeilDiv(static_cast<int64_t>(colSize * sizeof(float)), static_cast<int64_t>(GetVRegSize()));
-    uint32_t outerLoopStride = stride;
-    uint32_t innerLoopStride = VL;
-    float floatN = static_cast<float>(td_->col);
-    float reciprocalN = static_cast<float>(1) / floatN;
-
-    if (innerLoopTimes == 1) {
-        __VEC_SCOPE__
-        {
-            __local_mem__ T* dst = (__local_mem__ T*)dstTensor.GetPhyAddr();
-            __local_mem__ float* dy = (__local_mem__ float*)dyTensor.GetPhyAddr();
-            __local_mem__ float* x = (__local_mem__ float*)xTensor.GetPhyAddr();
-            __local_mem__ float* gamma = (__local_mem__ float*)gammaTensor.GetPhyAddr();
-            __local_mem__ float* sum1 = (__local_mem__ float*)sum1Tensor.GetPhyAddr();
-            __local_mem__ float* sum2 = (__local_mem__ float*)sum2Tensor.GetPhyAddr();
-            __local_mem__ float* rstd = (__local_mem__ float*)rstdTensor.GetPhyAddr();
-            uint32_t count;
-
-            AscendC::MicroAPI::RegTensor<float> xReg, dyReg, dxReg;
-            AscendC::MicroAPI::RegTensor<float> sum1Reg, sum2Reg, rstdReg;
-            AscendC::MicroAPI::RegTensor<float> gammaReg;
-            AscendC::MicroAPI::RegTensor<float> Reg0, Reg1, Reg2, Reg3, Reg4, Reg5;
-            AscendC::MicroAPI::MaskReg pMask;
-            count = static_cast<uint32_t>(colSize);
-            pMask = AscendC::MicroAPI::UpdateMask<float>(count);
-            for (uint16_t i = 0; i < outerLoopTimes; ++i) {
-                DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(sum1Reg, (__local_mem__ float*)sum1 + i);
-                DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(sum2Reg, (__local_mem__ float*)sum2 + i);
-                DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(rstdReg, (__local_mem__ float*)rstd + i);
-                DataCopy(dyReg, (__local_mem__ float*)dy + i * outerLoopStride + 0 * innerLoopStride);
-                DataCopy(xReg, (__local_mem__ float*)x + i * outerLoopStride + 0 * innerLoopStride);
-                DataCopy(gammaReg, (__local_mem__ float*)gamma + 0 * innerLoopStride);
-                Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg0, dyReg, gammaReg, pMask);
-                Muls<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg1, Reg0, floatN, pMask);
-                Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg2, Reg1, sum1Reg, pMask);
-                Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg3, xReg, sum2Reg, pMask);
-                Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg4, Reg2, Reg3, pMask);
-                Muls<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg5, Reg4, reciprocalN, pMask);
-                Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(dxReg, Reg5, rstdReg, pMask);
-                StoreTensorForDtypeT<T>(dst, dxReg, pMask, i * outerLoopStride);
-            }
-        }
-    } else {
-        __VEC_SCOPE__
-        {
-            __local_mem__ T* dst = (__local_mem__ T*)dstTensor.GetPhyAddr();
-            __local_mem__ float* dy = (__local_mem__ float*)dyTensor.GetPhyAddr();
-            __local_mem__ float* x = (__local_mem__ float*)xTensor.GetPhyAddr();
-            __local_mem__ float* gamma = (__local_mem__ float*)gammaTensor.GetPhyAddr();
-            __local_mem__ float* sum1 = (__local_mem__ float*)sum1Tensor.GetPhyAddr();
-            __local_mem__ float* sum2 = (__local_mem__ float*)sum2Tensor.GetPhyAddr();
-            __local_mem__ float* rstd = (__local_mem__ float*)rstdTensor.GetPhyAddr();
-            uint32_t count;
-
-            AscendC::MicroAPI::RegTensor<float> xReg, dyReg, dxReg;
-            AscendC::MicroAPI::RegTensor<float> sum1Reg, sum2Reg, rstdReg;
-            AscendC::MicroAPI::RegTensor<float> gammaReg;
-            AscendC::MicroAPI::RegTensor<float> Reg0, Reg1, Reg2, Reg3, Reg4, Reg5;
-            AscendC::MicroAPI::MaskReg pMask;
-            for (uint16_t i = 0; i < outerLoopTimes; ++i) {
-                count = static_cast<uint32_t>(colSize);
-                DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(sum1Reg, (__local_mem__ float*)sum1 + i);
-                DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(sum2Reg, (__local_mem__ float*)sum2 + i);
-                DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(rstdReg, (__local_mem__ float*)rstd + i);
-                for (uint16_t j = 0; j < innerLoopTimes; ++j) {
-                    pMask = AscendC::MicroAPI::UpdateMask<float>(count);
-                    DataCopy(dyReg, (__local_mem__ float*)dy + i * outerLoopStride + j * innerLoopStride);
-                    DataCopy(xReg, (__local_mem__ float*)x + i * outerLoopStride + j * innerLoopStride);
-                    DataCopy(gammaReg, (__local_mem__ float*)gamma + j * innerLoopStride);
-                    Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg0, dyReg, gammaReg, pMask);
-                    Muls<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg1, Reg0, floatN, pMask);
-                    Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg2, Reg1, sum1Reg, pMask);
-                    Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg3, xReg, sum2Reg, pMask);
-                    Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg4, Reg2, Reg3, pMask);
-                    Muls<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg5, Reg4, reciprocalN, pMask);
-                    Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(dxReg, Reg5, rstdReg, pMask);
-                    StoreTensorForDtypeT<T>(dst, dxReg, pMask, i * outerLoopStride + j * innerLoopStride);
-                }
-            }
-        }
-    }
-}
 
 template <typename T, typename U>
 __aicore__ inline void LayerNormGradV3RecomputeBackward<T, U>::Epilogue()

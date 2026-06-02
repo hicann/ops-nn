@@ -39,10 +39,10 @@ public:
     {
         numM_ = tilingData->numM;
         numN_ = tilingData->numN;
-        baseM_ = tilingData->baseM;
         baseN_ = tilingData->baseN;
-        baseNDtypeAlign_ = tilingData->baseNDtypeAlign;
+        baseM_ = tilingData->baseM;
         baseNReduceAlign_ = tilingData->baseNReduceAlign;
+        baseNDtypeAlign_ = tilingData->baseNDtypeAlign;
         powerSplit_ = tilingData->powerSplit;
         powerLoop_ = tilingData->powerLoop;
         mPerCore_ = tilingData->mPerCore;

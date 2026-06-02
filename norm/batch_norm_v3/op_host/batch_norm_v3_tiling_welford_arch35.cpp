@@ -76,10 +76,10 @@ protected:
     ge::graphStatus GetPlatformInfo() override;
     // 2、获取INPUT/OUTPUT/ATTR信息
     ge::graphStatus GetShapeAttrsInfo() override;
-    // 3、计算数据切分TilingData
-    ge::graphStatus DoOpTiling() override;
-    // 4、计算高阶API的TilingData
+    // 3、计算高阶API的TilingData
     ge::graphStatus DoLibApiTiling() override;
+    // 4、计算数据切分TilingData
+    ge::graphStatus DoOpTiling() override;
     // 5、计算TilingKey
     uint64_t GetTilingKey() const override;
     // 6、计算Workspace 大小
@@ -336,9 +336,9 @@ ge::graphStatus BatchNormV3WelfordReduceTilingBase::GetWorkspaceSize()
 ge::graphStatus BatchNormV3WelfordReduceTilingBase::PostTiling()
 {
     context_->SetBlockDim(blockNum);
+    auto rawTilingData = context_->GetRawTilingData();
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
     currentWorkspace[0] = workspaceSize_;
-    auto rawTilingData = context_->GetRawTilingData();
     OP_CHECK_IF(
         tilingData.GetDataSize() > rawTilingData->GetCapacity(),
         OP_LOGE(

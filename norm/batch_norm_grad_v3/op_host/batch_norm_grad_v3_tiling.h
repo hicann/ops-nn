@@ -417,6 +417,7 @@ protected:
 private:
     void DoRecomputeTilingSplitR1();
     void DoRecomputeTilingSplitR0();
+    void SetUbRDimTilingData();
 
     uint64_t binaryAddBufSize{0};
     uint64_t subTilingKey{0};
@@ -454,7 +455,6 @@ protected:
     ge::graphStatus PostTiling() override;
 
 private:
-    void SetBlockFactors(int64_t aDim_, int64_t dtypeSize);
     void CalculateLoopFactors(int64_t dtypeSize, int64_t weightDtypeSize, int64_t rDim_, int64_t power2k);
     void SetReduceLoopTimes(int64_t power2k, int64_t rDim_);
 
@@ -481,9 +481,6 @@ protected:
     ge::graphStatus GetWorkspaceSize() override;
     // 保存Tiling数据
     ge::graphStatus PostTiling() override;
-
-private:
-    void SetBlockFactors(int64_t aDim_, int64_t dtypeSize);
 
 private:
     // member variables for RA recompute tiling

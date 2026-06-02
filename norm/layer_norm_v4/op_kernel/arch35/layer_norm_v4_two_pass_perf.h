@@ -30,6 +30,8 @@ using AscendC::MicroAPI::MemType;
 using AscendC::MicroAPI::RegTensor;
 using AscendC::MicroAPI::StoreDist;
 using AscendC::MicroAPI::UpdateMask;
+using NormCommon::NormCommonRegbase::LoadRegForDtype;
+using NormCommon::NormCommonRegbase::StoreRegForDtype;
 
 template <typename T, typename U, typename M> class LayerNormV4RegbaseTwoPassPerf {
 public:
@@ -204,7 +206,7 @@ private:
             uint32_t sreg0 = reduceNum;
             MaskReg pregLoop = UpdateMask<float>(sreg0);
             for (uint16_t a = 0; a < currentANum; a++) {
-                LoadTensorForDtypeTIn(xInUb, x, pregLoop, (a * aStride));
+                LoadRegForDtype(xInUb, x, pregLoop, (a * aStride));
                 Muls(meanSum, x, n, pregLoop);
                 ReduceSum(mean, meanSum, pregLoop);
                 Muls(mean, mean, nCorrectionFactor, pregOne);
@@ -212,7 +214,7 @@ private:
 
                 Duplicate(meanDup, mean, pregFull);
                 Sub(xMeanSub, x, meanDup, pregLoop);
-                StoreTensorForDtypeTOut(xSubMeanUb, xMeanSub, pregLoop, (a * aStride));
+                StoreRegForDtype(xSubMeanUb, xMeanSub, pregLoop, (a * aStride));
                 Mul(square, xMeanSub, xMeanSub, pregLoop);
                 Muls(varSum, square, n, pregLoop);
                 ReduceSum(var, varSum, pregLoop);
@@ -256,8 +258,8 @@ private:
             MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
 
             for (uint16_t a = 0; a < currentANum; a++) {
-                LoadTensorForDtypeTIn(xInUb, x1, pregFull, (a * aStride));
-                LoadTensorForDtypeTIn(xInUb + VL_B32, x2, pregTail, (a * aStride));
+                LoadRegForDtype(xInUb, x1, pregFull, (a * aStride));
+                LoadRegForDtype(xInUb + VL_B32, x2, pregTail, (a * aStride));
                 Muls(meanSum1, x1, n, pregFull);
                 Muls(meanSum2, x2, n, pregTail);
                 Add(meanSum, meanSum1, meanSum2, pregFull);
@@ -268,8 +270,8 @@ private:
                 Duplicate(meanDup, mean, pregFull);
                 Sub(xMeanSub1, x1, meanDup, pregFull);
                 Sub(xMeanSub2, x2, meanDup, pregTail);
-                StoreTensorForDtypeTOut(xSubMeanUb, xMeanSub1, pregFull, (a * aStride));
-                StoreTensorForDtypeTOut(xSubMeanUb, xMeanSub2, pregTail, (a * aStride + VL_B32));
+                StoreRegForDtype(xSubMeanUb, xMeanSub1, pregFull, (a * aStride));
+                StoreRegForDtype(xSubMeanUb, xMeanSub2, pregTail, (a * aStride + VL_B32));
                 Mul(square1, xMeanSub1, xMeanSub1, pregFull);
                 Mul(square2, xMeanSub2, xMeanSub2, pregTail);
                 Muls(varSum1, square1, n, pregFull);
@@ -320,8 +322,8 @@ private:
                 uint32_t sregRemainder = binaryAddRemainder;
                 for (uint16_t r = 0; r < binaryAddRemainderFloorLoop; r++) {
                     pregLoop = UpdateMask<float>(sregRemainder);
-                    LoadTensorForDtypeTIn(xInUb, x1, pregFull, (r * VL_B32 + a * aStride));
-                    LoadTensorForDtypeTIn(xInUb + binaryAddQuotient, x2, pregFull, (r * VL_B32 + a * aStride));
+                    LoadRegForDtype(xInUb, x1, pregFull, (r * VL_B32 + a * aStride));
+                    LoadRegForDtype(xInUb + binaryAddQuotient, x2, pregFull, (r * VL_B32 + a * aStride));
                     Muls(x1, x1, n, pregFull);
                     Muls(x2, x2, n, pregFull);
                     Add(meanSum, x1, x2, pregFull);
@@ -332,9 +334,9 @@ private:
                 for (uint16_t r = 0; r < static_cast<uint16_t>(binaryAddRemainderCeilLoop -
                                                                binaryAddRemainderFloorLoop); r++) {
                     pregLoop = UpdateMask<float>(sregRemainder);
-                    LoadTensorForDtypeTIn(xInUb + binaryAddRemainderFloorLoop * VL_B32,
+                    LoadRegForDtype(xInUb + binaryAddRemainderFloorLoop * VL_B32,
                                           x1, pregFull, (r * VL_B32 + a * aStride));
-                    LoadTensorForDtypeTIn(xInUb + binaryAddRemainderFloorLoop * VL_B32 + binaryAddQuotient,
+                    LoadRegForDtype(xInUb + binaryAddRemainderFloorLoop * VL_B32 + binaryAddQuotient,
                                           x2, pregLoop, (r * VL_B32 + a * aStride));
                     Muls(x1, x1, n, pregFull);
                     Muls(x2, x2, n, pregLoop);
@@ -346,7 +348,7 @@ private:
                 }
                 for (uint16_t r = 0; r < static_cast<uint16_t>(binaryAddQuotientLoop -
                                                                binaryAddRemainderCeilLoop); r++) {
-                    LoadTensorForDtypeTIn(xInUb + binaryAddRemainderCeilLoop * VL_B32,
+                    LoadRegForDtype(xInUb + binaryAddRemainderCeilLoop * VL_B32,
                                           x1, pregFull, (r * VL_B32 + a * aStride));
                     Muls(x1, x1, n, pregFull);
                     ReduceSum(mean, x1, pregFull);
@@ -400,13 +402,13 @@ private:
                 uint32_t sregRemainder = binaryAddRemainder;
                 for (uint16_t r = 0; r < binaryAddRemainderFloorLoop; r++) {
                     pregLoop = UpdateMask<float>(sregRemainder);
-                    LoadTensorForDtypeTIn(xInUb, x1, pregFull, (r * VL_B32 + a * aStride));
-                    LoadTensorForDtypeTIn(xInUb + binaryAddQuotient, x2, pregFull, (r * VL_B32 + a * aStride));
+                    LoadRegForDtype(xInUb, x1, pregFull, (r * VL_B32 + a * aStride));
+                    LoadRegForDtype(xInUb + binaryAddQuotient, x2, pregFull, (r * VL_B32 + a * aStride));
                     Sub(xMeanSub1, x1, mean, pregFull);
                     Sub(xMeanSub2, x2, mean, pregFull);
-                    StoreTensorForDtypeTOut(
+                    StoreRegForDtype(
                         xSubMeanUb, xMeanSub1, pregFull, (r * VL_B32 + a * aStride));
-                    StoreTensorForDtypeTOut(
+                    StoreRegForDtype(
                         xSubMeanUb + binaryAddQuotient, xMeanSub2, pregFull, (r * VL_B32 + a * aStride));
                     Mul(square1, xMeanSub1, xMeanSub1, pregFull);
                     Mul(square2, xMeanSub2, xMeanSub2, pregFull);
@@ -420,17 +422,17 @@ private:
                 for (uint16_t r = 0; r < static_cast<uint16_t>(binaryAddRemainderCeilLoop -
                                                                binaryAddRemainderFloorLoop); r++) {
                     pregLoop = UpdateMask<float>(sregRemainder);
-                    LoadTensorForDtypeTIn(xInUb + binaryAddRemainderFloorLoop * VL_B32,
+                    LoadRegForDtype(xInUb + binaryAddRemainderFloorLoop * VL_B32,
                                           x1, pregFull, (r * VL_B32 + a * aStride));
-                    LoadTensorForDtypeTIn(xInUb + binaryAddRemainderFloorLoop * VL_B32 + binaryAddQuotient,
+                    LoadRegForDtype(xInUb + binaryAddRemainderFloorLoop * VL_B32 + binaryAddQuotient,
                                           x2, pregLoop, (r * VL_B32 + a * aStride));
                     Sub(xMeanSub1, x1, mean, pregFull);
                     Sub(xMeanSub2, x2, mean, pregLoop);
-                    StoreTensorForDtypeTOut(
+                    StoreRegForDtype(
                         xSubMeanUb + binaryAddRemainderFloorLoop * VL_B32,
                         xMeanSub1, pregFull, (r * VL_B32 + a * aStride));
-                    StoreTensorForDtypeTOut(
-                        xSubMeanUb + + binaryAddRemainderFloorLoop * VL_B32 + binaryAddQuotient,
+                    StoreRegForDtype(
+                        xSubMeanUb + binaryAddRemainderFloorLoop * VL_B32 + binaryAddQuotient,
                         xMeanSub2, pregLoop, (r * VL_B32 + a * aStride));
                     Mul(square1, xMeanSub1, xMeanSub1, pregFull);
                     Mul(square2, xMeanSub2, xMeanSub2, pregLoop);
@@ -444,10 +446,10 @@ private:
                 }
                 for (uint16_t r = 0; r < static_cast<uint16_t>(binaryAddQuotientLoop -
                                                                binaryAddRemainderCeilLoop); r++) {
-                    LoadTensorForDtypeTIn(xInUb + binaryAddRemainderCeilLoop * VL_B32,
+                    LoadRegForDtype(xInUb + binaryAddRemainderCeilLoop * VL_B32,
                                           x1, pregFull, (r * VL_B32 + a * aStride));
                     Sub(xMeanSub1, x1, mean, pregFull);
-                    StoreTensorForDtypeTOut(
+                    StoreRegForDtype(
                         xSubMeanUb + binaryAddRemainderCeilLoop * VL_B32,
                         xMeanSub1, pregFull, (r * VL_B32 + a * aStride));
                     Mul(square1, xMeanSub1, xMeanSub1, pregFull);
@@ -521,15 +523,15 @@ private:
                 uint32_t sreg0 = reduceNum;
                 for (uint16_t r = 0; r < loopCount; r++) {
                     pregLoop = UpdateMask<float>(sreg0);
-                    LoadTensorForDtypeTIn(xSubMeanUb, x1, pregLoop, (r * VL_B32 + a * NUM_TWO * aStride));
-                    LoadTensorForDtypeTIn(xSubMeanUb + aStride, x2, pregLoop, (r * VL_B32 + a * NUM_TWO * aStride));
+                    LoadRegForDtype(xSubMeanUb, x1, pregLoop, (r * VL_B32 + a * NUM_TWO * aStride));
+                    LoadRegForDtype(xSubMeanUb + aStride, x2, pregLoop, (r * VL_B32 + a * NUM_TWO * aStride));
                     Mul(y1, x1, rsqrt1, pregLoop);
                     Mul(y2, x2, rsqrt2, pregLoop);
                     if constexpr (hasGammaFlag) {
-                        LoadTensorForDtypeTIn(gammaInUb, gamma, pregLoop, (r * VL_B32));
+                        LoadRegForDtype(gammaInUb, gamma, pregLoop, (r * VL_B32));
                     }
                     if constexpr (hasBetaFlag) {
-                        LoadTensorForDtypeTIn(betaInUb, beta, pregLoop, (r * VL_B32));
+                        LoadRegForDtype(betaInUb, beta, pregLoop, (r * VL_B32));
                     }
                     if constexpr(hasGammaFlag && hasBetaFlag) {
                         FusedMulDstAdd(y1, gamma, beta, pregLoop);
@@ -544,8 +546,8 @@ private:
                             Add(y2, y2, beta, pregLoop);
                         }
                     }
-                    StoreTensorForDtypeTOut(yOutUb, y1, pregLoop, (r * VL_B32 + a * NUM_TWO * aStride));
-                    StoreTensorForDtypeTOut(yOutUb + aStride, y2, pregLoop, (r * VL_B32 + a * NUM_TWO * aStride));
+                    StoreRegForDtype(yOutUb, y1, pregLoop, (r * VL_B32 + a * NUM_TWO * aStride));
+                    StoreRegForDtype(yOutUb + aStride, y2, pregLoop, (r * VL_B32 + a * NUM_TWO * aStride));
                 }
             }
             for (uint16_t a = 0; a < remainderLoop; a++) {
@@ -553,13 +555,13 @@ private:
                 uint32_t sreg1 = reduceNum;
                 for (uint16_t r = 0; r < loopCount; r++) {
                     pregLoop = UpdateMask<float>(sreg1);
-                    LoadTensorForDtypeTIn(xSubMeanUb + aStride * remainderA, xRemainder, pregLoop, (r * VL_B32));
+                    LoadRegForDtype(xSubMeanUb + aStride * remainderA, xRemainder, pregLoop, (r * VL_B32));
                     Mul(yRemainder, xRemainder, rsqrtRemainder, pregLoop);
                     if constexpr (hasGammaFlag) {
-                        LoadTensorForDtypeTIn(gammaInUb, gamma, pregLoop, (r * VL_B32));
+                        LoadRegForDtype(gammaInUb, gamma, pregLoop, (r * VL_B32));
                     }
                     if constexpr (hasBetaFlag) {
-                        LoadTensorForDtypeTIn(betaInUb, beta, pregLoop, (r * VL_B32));
+                        LoadRegForDtype(betaInUb, beta, pregLoop, (r * VL_B32));
                     }
                     if constexpr(hasGammaFlag && hasBetaFlag) {
                         FusedMulDstAdd(yRemainder, gamma, beta, pregLoop);
@@ -571,7 +573,7 @@ private:
                             Add(yRemainder, yRemainder, beta, pregLoop);
                         }
                     }
-                    StoreTensorForDtypeTOut(yOutUb + aStride * remainderA, yRemainder, pregLoop, (r * VL_B32));
+                    StoreRegForDtype(yOutUb + aStride * remainderA, yRemainder, pregLoop, (r * VL_B32));
                 }
             }
         }
@@ -609,32 +611,6 @@ private:
         copyInParams.dstStride = 0;
         DataCopyPad(yGm_[offset], yOutUb, copyInParams);
         yQueue_.FreeTensor(yOutUb);
-    }
-
-    template <typename T_IN>
-    __aicore__ inline void LoadTensorForDtypeTIn(__local_mem__ T_IN* src, RegTensor<float>& dst,
-                                                 MaskReg& preg, uint32_t offset)
-    {
-        if constexpr (IsSameType<T_IN, float>::value) {
-            DataCopy<float, LoadDist::DIST_NORM>(dst, src + offset);
-        } else {
-            RegTensor<T_IN> xIn;
-            DataCopy<T_IN, LoadDist::DIST_UNPACK_B16>(xIn, src + offset);
-            Cast<float, T_IN, castTraitB162B32>(dst, xIn, preg);
-        }
-    }
-
-    template <typename T_OUT>
-    __aicore__ inline void StoreTensorForDtypeTOut(__local_mem__ T_OUT* dst, RegTensor<float>& src,
-                                                   MaskReg& preg, uint32_t offset)
-    {
-        if constexpr (IsSameType<T_OUT, float>::value) {
-            DataCopy<T_OUT, StoreDist::DIST_NORM>(dst + offset, src, preg);
-        } else {
-            RegTensor<T_OUT> xOut;
-            Cast<T_OUT, float, castTraitB322B16>(xOut, src, preg);
-            DataCopy<T_OUT, StoreDist::DIST_PACK_B32>(dst + offset, xOut, preg);
-        }
     }
 
     /* global memory address */

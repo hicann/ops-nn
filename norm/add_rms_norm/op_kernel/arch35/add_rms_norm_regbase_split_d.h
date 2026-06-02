@@ -87,19 +87,18 @@ public:
 
     __aicore__ inline void SubProcess(uint32_t rowRepeat, uint32_t calRowNum)
     {
-        uint32_t colRepeats = CeilDiv(numCol, ubFactor);
-
         LocalTensor<float> rstdLocal = outQueueRstd.AllocTensor<float>();
         Duplicate(rstdLocal, (float)0.0, rowFactor);
+        uint32_t colRepeats = CeilDiv(numCol, ubFactor);
 
         for (uint32_t row = 0; row < calRowNum; row++) {
             uint32_t split = ubLoop * ubFactor;
             uint32_t colTail = numCol - split;
+            uint64_t offsets = (rowRepeat * rowFactor + row) * numCol;
             uint32_t tail = colTail % ubFactor;
             uint32_t tailLoop = colTail / ubFactor;
             uint32_t masterLoop = tail != 0 ? 1 : 0;
             masterLoop = ubLoop - tailLoop - masterLoop;
-            uint64_t offsets = (rowRepeat * rowFactor + row) * numCol;
             ComputeFormer(offsets, rstdLocal, row, masterLoop, tailLoop, tail);
         }
 

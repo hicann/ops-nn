@@ -49,22 +49,16 @@ public:
 
         powerOfTwo_ = 1;
         while (powerOfTwo_ < COLS_PER_LOOP_) {
-            powerOfTwo_ *= AddLayerNorm::TWO;
+            powerOfTwo_ *= AddLayerNorm::NUM_TWO;
         }
 
-        outNums_ = (IS_SCALE2_EXIST) ? AddLayerNorm::TWO : 1;
+        outNums_ = (IS_SCALE2_EXIST) ? AddLayerNorm::NUM_TWO : 1;
         uint64_t gmOffset = (tilingData->rowsPerCore * COLS_) * coreIdx;
         uint64_t outScaleOffset = tilingData->rowsPerCore * coreIdx;
         // each core need 2 row * buffnum ws
         uint64_t wsOffset = coreIdx * BUFFER_NUM * outNums_ * COLS_;
 
-        if (coreIdx < GetBlockNum() - 1) {
-            // non-tail cores
-            rowsPerCore_ = tilingData->rowsPerCore;
-        } else {
-            // tail cores
-            rowsPerCore_ = tilingData->rowsPerTailCore;
-        }
+        rowsPerCore_ = (coreIdx < GetBlockNum() - 1) ? tilingData->rowsPerCore : tilingData->rowsPerTailCore;
 
         x1Gm_.SetGlobalBuffer((__gm__ X1_TYPE*)(x1) + gmOffset);
         x2Gm_.SetGlobalBuffer((__gm__ X1_TYPE*)(x2) + gmOffset);
@@ -126,48 +120,40 @@ public:
         LocalTensor<X1_TYPE> x1Local, LocalTensor<X1_TYPE> x2Local, LocalTensor<X1_TYPE> biasLocal, int64_t inputOffset,
         int64_t biasOffset, int32_t copyLen)
     {
-        int32_t copyLenAlign = BLOCK_ALIGN(copyLen * sizeof(X1_TYPE), blockSize_) / sizeof(X1_TYPE);
-        DataCopyPadExtParams<X1_TYPE> padParams;
-        padParams.isPad = true;
-        padParams.paddingValue = static_cast<X1_TYPE>(0.0);
-        padParams.rightPadding = copyLenAlign - copyLen;
-        DataCopyExtParams dataCopyParams;
-        dataCopyParams.blockCount = 1;
-        dataCopyParams.blockLen = copyLen * sizeof(X1_TYPE);
-        dataCopyParams.srcStride = 0;
-        dataCopyParams.dstStride = 0;
-        DataCopyPad(x1Local, x1Gm_[inputOffset], dataCopyParams, padParams);
+        DataCopyPadExtParams<X1_TYPE> inputPadParams = MakeZeroPadParams<X1_TYPE>(copyLen, blockSize_);
+        DataCopyExtParams inputCopyParams = MakeDataCopyParams<X1_TYPE>(copyLen);
+        DataCopyPad(x1Local, x1Gm_[inputOffset], inputCopyParams, inputPadParams);
         x1Queue_.EnQue(x1Local);
-        DataCopyPad(x2Local, x2Gm_[inputOffset], dataCopyParams, padParams);
+        DataCopyPad(x2Local, x2Gm_[inputOffset], inputCopyParams, inputPadParams);
         x2Queue_.EnQue(x2Local);
         if constexpr (IS_BIAS_ELEWISE || IS_BIAS_BROADCAST) {
-            DataCopyPad(biasLocal, biasGm_[biasOffset], dataCopyParams, padParams);
+            DataCopyPad(biasLocal, biasGm_[biasOffset], inputCopyParams, inputPadParams);
             biasQueue_.EnQue(biasLocal);
         }
     }
 
     __aicore__ inline void CopyXToGm(LocalTensor<X1_TYPE> xLocal, int64_t xOffset, int32_t copyLen)
     {
-        DataCopyExtParams dataCopyParams;
-        dataCopyParams.blockCount = 1;
-        dataCopyParams.blockLen = copyLen * sizeof(X1_TYPE);
-        dataCopyParams.srcStride = 0;
-        dataCopyParams.dstStride = 0;
+        DataCopyExtParams xCopyParams;
+        xCopyParams.blockCount = 1;
+        xCopyParams.blockLen = copyLen * sizeof(X1_TYPE);
+        xCopyParams.srcStride = 0;
+        xCopyParams.dstStride = 0;
 
-        DataCopyPad(xGm_[xOffset], xLocal, dataCopyParams);
+        DataCopyPad(xGm_[xOffset], xLocal, xCopyParams);
     }
 
     __aicore__ inline void CopyYToGm(
         LocalTensor<int8_t> y1Local, LocalTensor<int8_t> y2Local, int64_t yOffset, int32_t copyLen)
     {
-        DataCopyExtParams dataCopyParams;
-        dataCopyParams.blockCount = 1;
-        dataCopyParams.blockLen = copyLen * sizeof(int8_t);
-        dataCopyParams.srcStride = 0;
-        dataCopyParams.dstStride = 0;
+        DataCopyExtParams yCopyParams;
+        yCopyParams.blockCount = 1;
+        yCopyParams.blockLen = copyLen * sizeof(int8_t);
+        yCopyParams.srcStride = 0;
+        yCopyParams.dstStride = 0;
 
-        DataCopyPad(y1Gm_[yOffset], y1Local, dataCopyParams);
-        CONST_CONDITIONAL_EXPR(IS_SCALE2_EXIST, DataCopyPad(y2Gm_[yOffset], y2Local, dataCopyParams));
+        DataCopyPad(y1Gm_[yOffset], y1Local, yCopyParams);
+        CONST_CONDITIONAL_EXPR(IS_SCALE2_EXIST, DataCopyPad(y2Gm_[yOffset], y2Local, yCopyParams));
     }
 
     __aicore__ inline void CopyNormToWorkspace(
@@ -217,25 +203,6 @@ public:
             DataCopyPad(outScale2Gm_[outScaleOffset], outScale2Local, dataCopyParams);
             outScale2Queue_.FreeTensor(outScale2Local);
         }
-    }
-
-    __aicore__ inline void CopyGammaAndBetaToUB(
-        LocalTensor<X1_TYPE> gammaLocal, LocalTensor<X1_TYPE> betaLocal, int64_t offset, int32_t copyLen)
-    {
-        int32_t copyLenAlign = BLOCK_ALIGN(copyLen * sizeof(X1_TYPE), blockSize_) / sizeof(X1_TYPE);
-        DataCopyPadExtParams<X1_TYPE> padParams;
-        padParams.isPad = true;
-        padParams.paddingValue = static_cast<X1_TYPE>(0.0);
-        padParams.rightPadding = copyLenAlign - copyLen;
-        DataCopyExtParams dataCopyParams;
-        dataCopyParams.blockCount = 1;
-        dataCopyParams.blockLen = copyLen * sizeof(X1_TYPE);
-        dataCopyParams.srcStride = 0;
-        dataCopyParams.dstStride = 0;
-        DataCopyPad(betaLocal, betaGm_[offset], dataCopyParams, padParams);
-        betaQueue_.EnQue(betaLocal);
-        DataCopyPad(gammaLocal, gammaGm_[offset], dataCopyParams, padParams);
-        gammaQueue_.EnQue(gammaLocal);
     }
 
     __aicore__ inline void CopyQuantParams2UB(
@@ -549,10 +516,10 @@ public:
                 float scale = static_cast<float>(1.0) / static_cast<float>(count);
 
                 if (j == 0) {
-                    VFWelfordParallelUpdateWithInit<X1_TYPE, TILING_KEY>(
+                    VFWelfordParallelUpdateCommon<true, X1_TYPE, TILING_KEY>(
                         x1Local, x2Local, biasLocal, xLocal, tmpMeanLocal, tmpVarLocal, copyLen, loopCount, scale);
                 } else {
-                    VFWelfordParallelUpdate<X1_TYPE, TILING_KEY>(
+                    VFWelfordParallelUpdateCommon<false, X1_TYPE, TILING_KEY>(
                         x1Local, x2Local, biasLocal, xLocal, tmpMeanLocal, tmpVarLocal, copyLen, loopCount, scale);
                 }
 
@@ -628,7 +595,8 @@ public:
                 // copy in x1, x2, bias
                 CopyInputsToUB(x1Local, x2Local, biasLocal, inputOffsetTemp, biasOffset, copyLen);
                 // copy in gamma, beta
-                CopyGammaAndBetaToUB(gammaLocal, betaLocal, inputOffsetGamma, copyLen);
+                CopyGammaAndBetaToUBCommon(gammaLocal, betaLocal, gammaGm_, betaGm_, gammaQueue_, betaQueue_,
+                    inputOffsetGamma, copyLen, blockSize_);
                 // copy in scale/offset
                 CopyQuantParams2UB(smooth1Local, smooth2Local, inputOffsetGamma, copyLen);
 

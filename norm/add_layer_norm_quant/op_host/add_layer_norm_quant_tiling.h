@@ -237,6 +237,7 @@ private:
     bool GetShapeInfoDynamicQuant();
 
     void ComputeBinaryAddVars();
+    void ApplyFullLoadTilingResult(int64_t rowStep, int64_t binaryAddNum);
 
 private:
     gert::TilingContext* context_{nullptr};

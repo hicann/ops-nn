@@ -103,7 +103,8 @@ public:
                 curB1Idx * tilingData_->tileBlockB1Len;
 
             CopyInDy(dyOffset, curTileB0Len, curTileALen, curTileB1Len, ubStrideT1);
-            CopyInGammaVar(needCopy, weightOffset, curTileALen);
+            CopyInGammaVarCommon(gammaQueue_, runningVarQueue_, gammaGm_, runningVarGm_, needCopy, weightOffset,
+                curTileALen);
             Compute(curTileB0Len, curTileALen, curTileB1Len);
             CopyOutDx(dyOffset, curTileB0Len, curTileALen, curTileB1Len, ubStrideT1);
         }
@@ -132,32 +133,6 @@ private:
         DataCopyPad<T1, PaddingMode::Normal>(dyLocal, dyGm_[dyGmOffset], copyInParams, dataCopyPadExtParams);
         ResetLoopModePara(DataCopyMVType::OUT_TO_UB);
         dyQueue_.EnQue(dyLocal);
-    }
-
-    __aicore__ inline void CopyInGammaVar(bool needCopy, int64_t offset, int64_t curTileALen)
-    {
-        LocalTensor<T2> gammaLocal = gammaQueue_.AllocTensor<T2>();
-        LocalTensor<T3> varLocal = runningVarQueue_.AllocTensor<T3>();
-
-        if (needCopy) {
-            DataCopyExtParams extParam;
-            extParam.blockCount = 1;
-
-            // gamma
-            extParam.blockLen = curTileALen * sizeof(T2);
-            DataCopyPadExtParams<T2> padExtParam;
-            padExtParam.isPad = false;
-            DataCopyPad(gammaLocal, gammaGm_[offset], extParam, padExtParam);
-
-            // runningVar
-            extParam.blockLen = curTileALen * sizeof(T3);
-            DataCopyPadExtParams<T3> padExtParams1;
-            padExtParams1.isPad = false;
-            DataCopyPad(varLocal, runningVarGm_[offset], extParam, padExtParams1);
-        }
-
-        gammaQueue_.EnQue(gammaLocal);
-        runningVarQueue_.EnQue(varLocal);
     }
 
     __aicore__ inline void Compute(int64_t curTileB0Len, int64_t curTileALen, int64_t curTileB1Len)

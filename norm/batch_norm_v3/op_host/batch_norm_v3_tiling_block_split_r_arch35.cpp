@@ -113,18 +113,7 @@ void BatchNormV3BlockSplitRTiling::SetInputInfo()
 bool BatchNormV3BlockSplitRTiling::BinaryAddTiling(
     const int64_t binaryAddNum, int64_t& binaryAddK, int64_t& binaryAddLast)
 {
-    binaryAddK = 0;
-    int64_t curBinaryAddNum = 1;
-    while (curBinaryAddNum < binaryAddNum) {
-        binaryAddK++;
-        curBinaryAddNum *= BINARY_ADD_COEF_FOUR;
-    }
-    if (curBinaryAddNum == binaryAddNum) {
-        binaryAddLast = 0;
-    } else if (curBinaryAddNum == binaryAddNum * BINARY_ADD_COEF) {
-        binaryAddK = binaryAddK - 1;
-        binaryAddLast = 1;
-    } else {
+    if (!GetBatchNormV3BinaryAddParam(binaryAddNum, binaryAddK, binaryAddLast)) {
         OP_LOGI(context_->GetNodeName(), "BinaryAddTiling binaryAddNum %ld case not supported", binaryAddNum);
         return false;
     }
@@ -236,20 +225,20 @@ uint64_t BatchNormV3BlockSplitRTiling::GetTilingKey() const
 ge::graphStatus BatchNormV3BlockSplitRTiling::PostTiling()
 {
     context_->SetBlockDim(usedCoreNum);
+    auto rawTilingData = context_->GetRawTilingData();
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
     currentWorkspace[0] =
         WSP_RESERVED_SIZE + usedCoreNum * MEAN_AND_VAR_NODE_NUM * batchNormV3TilingData.get_patternAAlign() * FP32_BYTE;
-    auto rawTilingData = context_->GetRawTilingData();
     OP_CHECK_IF(
         batchNormV3TilingData.GetDataSize() > rawTilingData->GetCapacity(),
         OP_LOGE(
             context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu",
             batchNormV3TilingData.GetDataSize(), rawTilingData->GetCapacity()),
         return ge::GRAPH_FAILED);
+    uint32_t batch_mode = 1U;
     batchNormV3TilingData.SaveToBuffer(rawTilingData->GetData(), rawTilingData->GetCapacity());
     rawTilingData->SetDataSize(batchNormV3TilingData.GetDataSize());
-    uint32_t batch_mode = 1U;
     auto ret = context_->SetScheduleMode(batch_mode);
 
     return ret;

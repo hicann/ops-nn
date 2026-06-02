@@ -36,8 +36,6 @@ class BatchNormWelford
     static constexpr int32_t INDEX_2 = 2;
     static constexpr int32_t INDEX_3 = 3;
 
-    static constexpr int32_t DICHOTOMY_ADD_COEFF = 2;
-
 public:
     __aicore__ inline BatchNormWelford(){};
     __aicore__ inline uint32_t RoundUp32(uint32_t x, int32_t size)
@@ -332,31 +330,6 @@ public:
     }
 
 private:
-    __aicore__ inline void DichotomyAdd(RegTensor<float>& dstReg, __local_mem__ float* src, uint16_t outerLoop,
-                                        uint16_t innerLoop, uint32_t lastNum)
-    {
-        RegTensor<float> tmpReg1;
-        RegTensor<float> tmpReg2;
-        RegTensor<float> tmpReg3;
-        AscendC::MicroAPI::LocalMemBar<AscendC::MicroAPI::MemType::VEC_STORE, AscendC::MicroAPI::MemType::VEC_LOAD>();
-        MaskReg pregMain = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
-        for (uint16_t k = 0; k < outerLoop; k++) {
-            innerLoop = innerLoop / DICHOTOMY_ADD_COEFF;
-            for (uint16_t i = 0; i < innerLoop; i++) {
-                DataCopy(tmpReg1, src + i * VL_FP32);
-                DataCopy(tmpReg2, src + (i + innerLoop) * VL_FP32);
-                Add(tmpReg3, tmpReg1, tmpReg2, pregMain);
-                DataCopy(src + i * VL_FP32, tmpReg3, pregMain);
-            }
-            AscendC::MicroAPI::LocalMemBar<AscendC::MicroAPI::MemType::VEC_STORE,
-                                           AscendC::MicroAPI::MemType::VEC_LOAD>();
-        }
-        uint32_t sreg0 = lastNum;
-        MaskReg pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg0);
-        DataCopy(tmpReg3, src);
-        ReduceSum(dstReg, tmpReg3, pregLoop);
-    }
-
     __aicore__ inline void ProcessSplitWelfordUpdate(__local_mem__ float* tmpMeanLocal,
                                                      __local_mem__ float* tmpVarLocal, int64_t index, int64_t nBurst,
                                                      int64_t burstLen, int64_t count, bool isFirstStep)
@@ -664,7 +637,7 @@ private:
                     dichotomyAddLocal + dichotomyAddReminderLoopCount + i, mean, pregMerge);
             }
 
-            DichotomyAdd(mean, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
+            NormCommon::DichotomyAdd(mean, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
             Muls(mean, mean, scale1, pregMerge);
             DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(meanLocal + offset, mean, pregMerge);
 
@@ -710,7 +683,7 @@ private:
                     dichotomyAddLocal + dichotomyAddReminderLoopCount + i, var, pregMerge);
             }
 
-            DichotomyAdd(var, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
+            NormCommon::DichotomyAdd(var, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
             Muls(var, var, reduceScale1, pregMerge);
             DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(varLocal + offset, var, pregMerge);
             NormCommon::ComputeRstdNewtonRaphsonReg<false>(var, rstd, pregMerge, eps);
@@ -841,7 +814,7 @@ private:
                 DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                     dichotomyAddLocal + dichotomyAddReminderRealLoopCount + i, mean, pregMerge);
             }
-            DichotomyAdd(mean, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
+            NormCommon::DichotomyAdd(mean, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
             Muls(mean, mean, reduceScale1, pregMerge);
             DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(meanLocal + offset, mean, pregMerge);
 
@@ -937,7 +910,7 @@ private:
                 DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                     dichotomyAddLocal + dichotomyAddReminderRealLoopCount + i, var, pregMerge);
             }
-            DichotomyAdd(var, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
+            NormCommon::DichotomyAdd(var, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
             Muls(var, var, reduceScale1, pregMerge);
             DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(varLocal + offset, var, pregMerge);
             NormCommon::ComputeRstdNewtonRaphsonReg<false>(var, rstd, pregMerge, eps);
@@ -1046,7 +1019,7 @@ private:
                 DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                     dichotomyAddLocal + dichotomyAddReminderRealLoopCount + i, mean, pregMerge);
             }
-            DichotomyAdd(mean, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
+            NormCommon::DichotomyAdd(mean, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
             Muls(mean, mean, reduceScale1, pregMerge);
             DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(meanLocal + offset, mean, pregMerge);
 
@@ -1143,7 +1116,7 @@ private:
                 DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                     dichotomyAddLocal + dichotomyAddReminderRealLoopCount + i, var, pregMerge);
             }
-            DichotomyAdd(var, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
+            NormCommon::DichotomyAdd(var, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
             Muls(var, var, reduceScale1, pregMerge);
             DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(varLocal + offset, var, pregMerge);
             NormCommon::ComputeRstdNewtonRaphsonReg<false>(var, rstd, pregMerge, eps);
@@ -1245,7 +1218,7 @@ private:
                                                                    mean, pregMerge);
             }
 
-            DichotomyAdd(mean, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
+            NormCommon::DichotomyAdd(mean, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
             Muls(mean, mean, reduceScale1, pregMerge);
             DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(meanLocal + offset, mean, pregMerge);
 
@@ -1325,7 +1298,7 @@ private:
                                                                    var, pregMerge);
             }
 
-            DichotomyAdd(var, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
+            NormCommon::DichotomyAdd(var, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
             Muls(var, var, reduceScale1, pregMerge);
             DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(varLocal + offset, var, pregMerge);
             NormCommon::ComputeRstdNewtonRaphsonReg<false>(var, rstd, pregMerge, eps);

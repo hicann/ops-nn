@@ -28,12 +28,14 @@ using AscendC::MicroAPI::LoadDist;
 using AscendC::MicroAPI::LocalMemBar;
 using AscendC::MicroAPI::MaskPattern;
 using AscendC::MicroAPI::MaskReg;
-using AscendC::MicroAPI::MemType;
 using AscendC::MicroAPI::RegTensor;
+using AscendC::MicroAPI::MemType;
 using AscendC::MicroAPI::StoreDist;
 using AscendC::MicroAPI::UpdateMask;
 using namespace NormCommon;
 using namespace NormCommon::NormCommonRegbase;
+using NormCommon::NormCommonRegbase::LoadRegForDtype;
+using NormCommon::NormCommonRegbase::StoreRegForDtype;
 
 constexpr uint64_t BLOCK_SIZE = 32;
 constexpr uint64_t B32_BLOCK_NUM = 8;
@@ -157,25 +159,25 @@ __aicore__ inline void ComputeYMulti(
             RegTensor<float> rstdReg;
             RegTensor<float> xReg1, dst1Reg, gammaFp32Reg1, yReg1;
             RegTensor<float> xReg2, dst2Reg, gammaFp32Reg2, yReg2;
-            MaskReg maskReg;
+            MaskReg pregMask;
             DataCopy<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + rstdOffset);
             for (uint16_t i = 0; i < (uint16_t)repeatTimes; i++) {
                 uint16_t offset = i * V_LENGTH;
-                maskReg = UpdateMask<float>(sreg);
+                pregMask = UpdateMask<float>(sreg);
                 DataCopy(xReg1, xAddr1 + offset);
                 DataCopy(xReg2, xAddr2 + offset);
-                NormCommon::LoadCastRegVF(gammaFp32Reg1, gammaAddr1, i, maskReg);
-                NormCommon::LoadCastRegVF(gammaFp32Reg2, gammaAddr2, i, maskReg);
-                Mul(dst1Reg, xReg1, rstdReg, maskReg);
-                Mul(dst2Reg, xReg2, rstdReg, maskReg);
-                Mul(yReg1, dst1Reg, gammaFp32Reg1, maskReg);
-                Mul(yReg2, dst2Reg, gammaFp32Reg2, maskReg);
-                DataCopy(y1Addr1 + offset, yReg1, maskReg);
-                DataCopy(y1Addr2 + offset, yReg2, maskReg);
-                Cast<U_X, float, castTraitB322B16>(yB16Reg1, yReg1, maskReg);
-                Cast<U_X, float, castTraitB322B16>(yB16Reg2, yReg2, maskReg);
-                DataCopy<U_X, StoreDist::DIST_PACK_B32>(y2Addr1 + offset, yB16Reg1, maskReg);
-                DataCopy<U_X, StoreDist::DIST_PACK_B32>(y2Addr2 + offset, yB16Reg2, maskReg);
+                NormCommon::LoadCastRegVF(gammaFp32Reg1, gammaAddr1, i, pregMask);
+                NormCommon::LoadCastRegVF(gammaFp32Reg2, gammaAddr2, i, pregMask);
+                Mul(dst1Reg, xReg1, rstdReg, pregMask);
+                Mul(dst2Reg, xReg2, rstdReg, pregMask);
+                Mul(yReg1, dst1Reg, gammaFp32Reg1, pregMask);
+                Mul(yReg2, dst2Reg, gammaFp32Reg2, pregMask);
+                DataCopy(y1Addr1 + offset, yReg1, pregMask);
+                DataCopy(y1Addr2 + offset, yReg2, pregMask);
+                Cast<U_X, float, castTraitB322B16>(yB16Reg1, yReg1, pregMask);
+                Cast<U_X, float, castTraitB322B16>(yB16Reg2, yReg2, pregMask);
+                DataCopy<U_X, StoreDist::DIST_PACK_B32>(y2Addr1 + offset, yB16Reg1, pregMask);
+                DataCopy<U_X, StoreDist::DIST_PACK_B32>(y2Addr2 + offset, yB16Reg2, pregMask);
             }
             rstdOffset++;
             xAddr1 += count;
@@ -185,32 +187,6 @@ __aicore__ inline void ComputeYMulti(
             y2Addr1 += count;
             y2Addr2 += count;
         }
-    }
-}
-
-template <typename T_IN>
-__aicore__ inline void LoadTensorForDtypeTIn(
-    __local_mem__ T_IN* src, RegTensor<float>& dst, MaskReg& preg, uint32_t offset)
-{
-    if constexpr (IsSameType<T_IN, float>::value) {
-        DataCopy<float, LoadDist::DIST_NORM>(dst, src + offset);
-    } else {
-        RegTensor<T_IN> xIn;
-        DataCopy<T_IN, LoadDist::DIST_UNPACK_B16>(xIn, src + offset);
-        Cast<float, T_IN, castTraitB162B32>(dst, xIn, preg);
-    }
-}
-
-template <typename T_OUT>
-__aicore__ inline void StoreTensorForDtypeTOut(
-    __local_mem__ T_OUT* dst, RegTensor<float>& src, MaskReg& preg, uint32_t offset)
-{
-    if constexpr (IsSameType<T_OUT, float>::value) {
-        DataCopy<T_OUT, StoreDist::DIST_NORM>(dst + offset, src, preg);
-    } else {
-        RegTensor<T_OUT> xOut;
-        Cast<T_OUT, float, castTraitB322B16>(xOut, src, preg);
-        DataCopy<T_OUT, StoreDist::DIST_PACK_B32>(dst + offset, xOut, preg);
     }
 }
 

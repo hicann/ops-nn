@@ -167,17 +167,17 @@ ge::graphStatus BatchNormGradV3InferBase::GetDyInfo()
             OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "dy",
                 std::to_string(dyDimNum_).c_str(), "dy should be 4D with NCHW format"),
             return ge::GRAPH_FAILED);
-        fusedB0Len_ = dyStorageShape.GetDim(DIM_0);
-        fusedALen_ = dyStorageShape.GetDim(DIM_1);
         fusedB1Len_ = dyStorageShape.GetDim(DIM_2) * dyStorageShape.GetDim(DIM_3);
+        fusedALen_ = dyStorageShape.GetDim(DIM_1);
+        fusedB0Len_ = dyStorageShape.GetDim(DIM_0);
     } else if (dyFormat_ == FORMAT_NCDHW) {
         OP_CHECK_IF(dyDimNum_ != DIM_NUM_5,
             OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "dy",
                 std::to_string(dyDimNum_).c_str(), "dy should be 5D with NCDHW format"),
             return ge::GRAPH_FAILED);
-        fusedB0Len_ = dyStorageShape.GetDim(DIM_0);
-        fusedALen_ = dyStorageShape.GetDim(DIM_1);
         fusedB1Len_ = dyStorageShape.GetDim(DIM_2) * dyStorageShape.GetDim(DIM_3) * dyStorageShape.GetDim(DIM_4);
+        fusedALen_ = dyStorageShape.GetDim(DIM_1);
+        fusedB0Len_ = dyStorageShape.GetDim(DIM_0);
     } else {
         OP_LOGI(context_->GetNodeName(), "batch norm grad infer only support format NCHW/NCDHW/NHWC/HCDHW.");
         return ge::GRAPH_PARAM_INVALID;

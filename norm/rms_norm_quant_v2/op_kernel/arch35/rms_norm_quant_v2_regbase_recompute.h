@@ -374,7 +374,8 @@ public:
                     Mul<float>(xFp32Tmp, xFp32Tmp, xFp32Tmp, baseN_);
                 }
             }
-            CalculateSquareReduceSum(xFp32Tmp, xFp32Tmp, baseN_); // 整块 ub 二分累加
+            NormCommon::NormCommonRegbase::CalculateReduceSum(
+                xFp32Tmp, xFp32Tmp, binaryAddBuf_, baseN_, static_cast<uint32_t>(binAddQuotient_)); // 整块 ub 二分累加
             int64_t cacheId = GetCacheId(r);
             UpdateCache(cacheLocal, xFp32Tmp, cacheId, AR_RECOMPUTE_SUM_LEN);
             inQueueX_.FreeTensor(xLocal);
@@ -695,142 +696,6 @@ private:
                 LoadTensorForDtypeTIn<T_X>(xInUb, xReg, pregFull, offset);
                 Mul(xReg, xReg, xReg, pregFull);
                 DataCopy<float, StoreDist::DIST_NORM_B32>(xFp32TmpBuf + offset, xReg, pregFull);
-            }
-        }
-    }
-
-    __aicore__ inline void CalculateSquareReduceSum(
-        LocalTensor<float>& xFp32Local, LocalTensor<float>& xReduceLocal, uint32_t reduceNum)
-    {
-        LocalTensor<float> binaryAddBuffTmp = binaryAddBuf_.Get<float>();
-        __local_mem__ float* xReduceUb = (__local_mem__ float*)xReduceLocal.GetPhyAddr();
-        __local_mem__ float* tmpUb = (__local_mem__ float*)binaryAddBuffTmp.GetPhyAddr();
-        __local_mem__ float* xFp32Tmp = (__local_mem__ float*)xFp32Local.GetPhyAddr();
-
-        if (reduceNum <= VL_FP32) {
-            CalculateSquareReduceSumLessThanVL(xFp32Tmp, xReduceUb, reduceNum);
-        } else if (reduceNum <= VL_FP32 + VL_FP32) {
-            CalculateSquareReduceSumLessThanTwoVL(xFp32Tmp, xReduceUb, reduceNum);
-        } else if (reduceNum <= VL_FP32 * VL_FP32 * NUM_TWO) {
-            CalculateSquareReduceSumCommon<NUM_ONE>(xFp32Tmp, xReduceUb, tmpUb, reduceNum);
-        } else {
-            CalculateSquareReduceSumCommon<NUM_TWO>(xFp32Tmp, xReduceUb, tmpUb, reduceNum);
-        }
-    }
-
-    __aicore__ inline void CalculateSquareReduceSumLessThanVL(
-        __local_mem__ float* xFp32Tmp, __local_mem__ float* xReduceUb, uint32_t reduceNum)
-    {
-        __VEC_SCOPE__
-        {
-            RegTensor<float> x;
-            RegTensor<float> onesReg;
-            RegTensor<float> vMean;
-
-            MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
-            uint32_t sreg0 = reduceNum;
-            MaskReg pregLoop = UpdateMask<float>(sreg0);
-            Duplicate(onesReg, float(1.0), pregOne);
-
-            LoadTensorForDtypeTIn<float>(xFp32Tmp, x, pregLoop, 0);
-            ReduceSum(vMean, x, pregLoop);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(xReduceUb, vMean, pregOne);
-        }
-    }
-
-    __aicore__ inline void CalculateSquareReduceSumLessThanTwoVL(
-        __local_mem__ float* xFp32Tmp, __local_mem__ float* xReduceUb, uint32_t reduceNum)
-    {
-        uint32_t tailLen = reduceNum - VL_FP32;
-        __VEC_SCOPE__
-        {
-            RegTensor<float> xFold;
-            RegTensor<float> x;
-            RegTensor<float> onesReg;
-            RegTensor<float> vMean;
-            RegTensor<float> sumReg;
-
-            MaskReg pregTail = UpdateMask<float>(tailLen);
-            MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
-            MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
-            Duplicate(onesReg, float(1.0), pregOne);
-
-            LoadTensorForDtypeTIn<float>(xFp32Tmp, x, pregFull, 0);
-            LoadTensorForDtypeTIn<float>(xFp32Tmp + VL_FP32, xFold, pregTail, 0);
-            ShiftLefts((RegTensor<uint32_t>&)xFold, (RegTensor<uint32_t>&)xFold, static_cast<int16_t>(0), pregTail);
-            Add(sumReg, x, xFold, pregFull);
-            ReduceSum(vMean, sumReg, pregFull);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(xReduceUb, vMean, pregOne);
-        }
-    }
-
-    template <int32_t LAST_LOOP_NUMS>
-    __aicore__ inline void CalculateSquareReduceSumCommon(
-        __local_mem__ float* xFp32Tmp, __local_mem__ float* xReduceUb, __local_mem__ float* tmpUb, uint32_t reduceNum)
-    {
-        uint32_t binaryAddQuotient = binAddQuotient_;
-        uint16_t binaryAddQuotientLoop = (binaryAddQuotient + VL_FP32 - 1) / VL_FP32;
-        uint32_t lastBinaryAddNum = binaryAddQuotient / VL_FP32;
-
-        uint32_t binaryAddRemainder = reduceNum - binaryAddQuotient;
-        uint16_t binaryAddRemainderCeilLoop = (binaryAddRemainder + VL_FP32 - 1) / VL_FP32;
-        uint16_t binaryAddRemainderFloorLoop = binaryAddRemainder / VL_FP32;
-        __VEC_SCOPE__
-        {
-            RegTensor<float> x;
-            RegTensor<float> xFold;
-            RegTensor<float> sumReg;
-            RegTensor<float> vMean;
-            RegTensor<float> onesReg;
-
-            MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
-            MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
-            MaskReg pregLoop;
-            Duplicate(onesReg, float(1.0), pregOne);
-
-            for (uint16_t r = 0; r < binaryAddRemainderFloorLoop; ++r) {
-                uint32_t offset = r * VL_FP32;
-                LoadTensorForDtypeTIn<float>(xFp32Tmp, x, pregFull, offset);
-                LoadTensorForDtypeTIn<float>(xFp32Tmp + binaryAddQuotient, xFold, pregFull, offset);
-                Add(sumReg, x, xFold, pregFull);
-                ReduceSum(vMean, sumReg, pregFull);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(tmpUb + static_cast<uint32_t>(r), vMean, pregOne);
-            }
-            uint32_t sregRemainder = binaryAddRemainder - binaryAddRemainderFloorLoop * VL_FP32;
-            for (uint16_t r = 0; r < static_cast<uint16_t>(binaryAddRemainderCeilLoop - binaryAddRemainderFloorLoop);
-                 r++) {
-                uint16_t offset = 0;
-                pregLoop = UpdateMask<float>(sregRemainder);
-                LoadTensorForDtypeTIn<float>(xFp32Tmp + binaryAddRemainderFloorLoop * VL_FP32, x, pregFull, 0);
-                LoadTensorForDtypeTIn<float>(
-                    xFp32Tmp + binaryAddRemainderFloorLoop * VL_FP32 + binaryAddQuotient, xFold, pregLoop, 0);
-                ShiftLefts((RegTensor<uint32_t>&)xFold, (RegTensor<uint32_t>&)xFold, static_cast<int16_t>(0), pregLoop);
-                Add(sumReg, x, xFold, pregFull);
-                ReduceSum(vMean, sumReg, pregFull);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
-                    tmpUb + static_cast<uint32_t>(binaryAddRemainderFloorLoop), vMean, pregOne);
-            }
-            for (uint16_t r = 0; r < static_cast<uint16_t>(binaryAddQuotientLoop - binaryAddRemainderCeilLoop); r++) {
-                LoadTensorForDtypeTIn<float>(xFp32Tmp + binaryAddRemainderCeilLoop * VL_FP32, x, pregFull, 0);
-                ReduceSum(vMean, x, pregFull);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
-                    tmpUb + static_cast<uint32_t>(binaryAddRemainderCeilLoop + r), vMean, pregOne);
-            }
-            LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
-            if constexpr (LAST_LOOP_NUMS == 1) {
-                MaskReg pregLast = UpdateMask<float>(lastBinaryAddNum);
-                DataCopy(x, tmpUb);
-                ReduceSum(vMean, x, pregLast);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(xReduceUb, vMean, pregOne);
-            } else if constexpr (LAST_LOOP_NUMS == 2) {
-                lastBinaryAddNum -= VL_FP32;
-                MaskReg pregLast = UpdateMask<float>(lastBinaryAddNum);
-                DataCopy(x, tmpUb);
-                DataCopy(xFold, tmpUb + VL_FP32);
-                ShiftLefts((RegTensor<uint32_t>&)xFold, (RegTensor<uint32_t>&)xFold, static_cast<int16_t>(0), pregLast);
-                Add(sumReg, x, xFold, pregFull);
-                ReduceSum(vMean, sumReg, pregFull);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(xReduceUb, vMean, pregOne);
             }
         }
     }

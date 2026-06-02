@@ -36,7 +36,6 @@ constexpr int64_t NHWC_DIM_NUM = 4;
 constexpr int64_t NDHWC_DIM_NUM = 5;
 constexpr int64_t MIN_ND_DIM_NUM = 2;
 constexpr int64_t BINARY_ADD_COEF = 2;
-constexpr int64_t BINARY_ADD_COEF_FOUR = 4;
 constexpr int64_t RA_BINARY_ADD_THRESHOLD = 8;
 constexpr int64_t CHANGE_TO_WELFORD_THRESHOLD = 64;
 constexpr float DEFAULT_EPSILON = 1e-5;
@@ -630,29 +629,17 @@ bool BatchNormV3RAFullReduceTilingBase::IsNeedChangeToWelford(int64_t elemSize)
 
 ge::graphStatus BatchNormV3RAFullReduceTilingBase::BinaryAddTiling()
 {
-    int64_t binaryQuotient = RA_BINARY_ADD_THRESHOLD;
-    while (binaryQuotient < r1) {
-        binaryQuotient *= BINARY_ADD_COEF;
-    }
-    binaryQuotient /= BINARY_ADD_COEF;
+    int64_t binaryQuotient = GetBatchNormV3BinaryQuotient(r1, RA_BINARY_ADD_THRESHOLD);
     batchNormV3TilingData.set_binaryAddQuotient(binaryQuotient);
     int64_t binaryAddNum = binaryQuotient / RA_BINARY_ADD_THRESHOLD;
+    int64_t binaryAddLast = 0;
     int64_t binaryAddK = 0;
-    int64_t curBinaryAddNum = 1;
-    while (curBinaryAddNum < binaryAddNum) {
-        binaryAddK++;
-        curBinaryAddNum *= BINARY_ADD_COEF_FOUR;
-    }
-    if (curBinaryAddNum == binaryAddNum) {
-        batchNormV3TilingData.set_binaryAddK(binaryAddK);
-        batchNormV3TilingData.set_binaryAddLast(0);
-    } else if (curBinaryAddNum == binaryAddNum * BINARY_ADD_COEF) {
-        batchNormV3TilingData.set_binaryAddK(binaryAddK - 1);
-        batchNormV3TilingData.set_binaryAddLast(1);
-    } else {
+    if (!GetBatchNormV3BinaryAddParam(binaryAddNum, binaryAddK, binaryAddLast)) {
         OP_LOGE(context_->GetNodeName(), "Binary add calculate error.");
         return ge::GRAPH_FAILED;
     }
+    batchNormV3TilingData.set_binaryAddK(binaryAddK);
+    batchNormV3TilingData.set_binaryAddLast(binaryAddLast);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -705,9 +692,9 @@ uint64_t BatchNormV3RAFullReduceTilingBase::GetTilingKey() const
 ge::graphStatus BatchNormV3RAFullReduceTilingBase::PostTiling()
 {
     context_->SetBlockDim(blockNum);
+    auto rawTilingData = context_->GetRawTilingData();
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
     currentWorkspace[0] = workspaceSize_;
-    auto rawTilingData = context_->GetRawTilingData();
     OP_CHECK_IF(
         batchNormV3TilingData.GetDataSize() > rawTilingData->GetCapacity(),
         OP_LOGE(

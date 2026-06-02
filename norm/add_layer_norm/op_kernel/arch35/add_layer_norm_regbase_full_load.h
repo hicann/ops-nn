@@ -54,7 +54,7 @@ public:
 
         powerOfTwo_ = 1;
         while (powerOfTwo_ < colsPerLoop_) {
-            powerOfTwo_ *= TWO;
+            powerOfTwo_ *= NUM_TWO;
         }
 
         uint64_t gmOffset;
@@ -255,28 +255,6 @@ public:
         DataCopyPad(xGm_[xOffset], xLocal, dataCopyParams);
     }
 
-    __aicore__ inline void CopyMeanToGm(LocalTensor<float> meanLocal, int64_t meanOffset, int32_t rowsCount)
-    {
-        DataCopyExtParams dataCopyParams;
-        dataCopyParams.blockCount = 1;
-        dataCopyParams.blockLen = rowsCount * sizeof(float);
-        dataCopyParams.srcStride = 0;
-        dataCopyParams.dstStride = 0;
-
-        DataCopyPad(meanGm_[meanOffset], meanLocal, dataCopyParams);
-    }
-
-    __aicore__ inline void CopyRstdToGm(LocalTensor<float> rstdLocal, int64_t rstdOffset, int32_t rowsCount)
-    {
-        DataCopyExtParams dataCopyParams;
-        dataCopyParams.blockCount = 1;
-        dataCopyParams.blockLen = rowsCount * sizeof(float);
-        dataCopyParams.srcStride = 0;
-        dataCopyParams.dstStride = 0;
-
-        DataCopyPad(rstdGm_[rstdOffset], rstdLocal, dataCopyParams);
-    }
-
     __aicore__ inline void CopyYToGm(LocalTensor<BIAS_TYPE> yLocal, int64_t yOffset, int32_t copyLen, int32_t rowsCount)
     {
         DataCopyExtParams dataCopyParams;
@@ -286,42 +264,6 @@ public:
         dataCopyParams.dstStride = 0;
 
         DataCopyPad(yGm_[yOffset], yLocal, dataCopyParams);
-    }
-
-    __aicore__ inline void CopyGammaAndBetaToUB(
-        LocalTensor<GAMMA_TYPE> gammaLocal, LocalTensor<BETA_TYPE> betaLocal, int64_t offset, int32_t copyLen)
-    {
-        if constexpr (isMix) {
-            int32_t copyLenAlign = BLOCK_ALIGN(copyLen * sizeof(float), blockSize_) / sizeof(float);
-            DataCopyPadExtParams<float> padParams;
-            padParams.isPad = true;
-            padParams.paddingValue = static_cast<float>(0.0);
-            padParams.rightPadding = copyLenAlign - copyLen;
-            DataCopyExtParams dataCopyParams;
-            dataCopyParams.blockCount = 1;
-            dataCopyParams.blockLen = copyLen * sizeof(float);
-            dataCopyParams.srcStride = 0;
-            dataCopyParams.dstStride = 0;
-            DataCopyPad(betaLocal, betaGm_[offset], dataCopyParams, padParams);
-            betaQueue_.EnQue(betaLocal);
-            DataCopyPad(gammaLocal, gammaGm_[offset], dataCopyParams, padParams);
-            gammaQueue_.EnQue(gammaLocal);
-        } else {
-            int32_t copyLenAlign = BLOCK_ALIGN(copyLen * sizeof(GAMMA_TYPE), blockSize_) / sizeof(GAMMA_TYPE);
-            DataCopyPadExtParams<GAMMA_TYPE> padParams;
-            padParams.isPad = true;
-            padParams.paddingValue = static_cast<GAMMA_TYPE>(0.0);
-            padParams.rightPadding = copyLenAlign - copyLen;
-            DataCopyExtParams dataCopyParams;
-            dataCopyParams.blockCount = 1;
-            dataCopyParams.blockLen = copyLen * sizeof(GAMMA_TYPE);
-            dataCopyParams.srcStride = 0;
-            dataCopyParams.dstStride = 0;
-            DataCopyPad(betaLocal, betaGm_[offset], dataCopyParams, padParams);
-            betaQueue_.EnQue(betaLocal);
-            DataCopyPad(gammaLocal, gammaGm_[offset], dataCopyParams, padParams);
-            gammaQueue_.EnQue(gammaLocal);
-        }
     }
 
     __aicore__ inline void VFCalcMeanVarFast(
@@ -659,7 +601,7 @@ public:
                 LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
                 uint16_t curBinaryAddLoopMean = binaryAddLoopMean;
                 for (uint16_t i = 0; i < binaryAddKLoop; i++) {
-                    curBinaryAddLoopMean = curBinaryAddLoopMean / 2;
+                    curBinaryAddLoopMean = curBinaryAddLoopMean / NUM_TWO;
                     for (uint16_t j = 0; j < curBinaryAddLoopMean; j++) {
                         DataCopy(binaryAddQ, ((__local_mem__ float*)binaryAddAddr + j * vlFp32));
                         DataCopy(
@@ -756,7 +698,7 @@ public:
                 LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
                 uint16_t curBinaryAddLoopVar = binaryAddLoopVar;
                 for (uint16_t i = 0; i < binaryAddKLoop; i++) {
-                    curBinaryAddLoopVar = curBinaryAddLoopVar / 2;
+                    curBinaryAddLoopVar = curBinaryAddLoopVar / NUM_TWO;
                     for (uint16_t j = 0; j < curBinaryAddLoopVar; j++) {
                         DataCopy(binaryAddQ, ((__local_mem__ float*)binaryAddAddr + j * vlFp32));
                         DataCopy(
@@ -904,16 +846,17 @@ public:
             // copy out mean
             meanQueue_.EnQue(meanLocal);
             meanLocal = meanQueue_.template DeQue<float>();
-            CopyMeanToGm(meanLocal, meanOffset, rowsCount);
+            CopyLocalToGm(meanGm_, meanLocal, meanOffset, rowsCount);
 
             // copy out rstd
             rstdQueue_.EnQue(rstdLocal);
             rstdLocal = rstdQueue_.template DeQue<float>();
-            CopyRstdToGm(rstdLocal, meanOffset, rowsCount);
+            CopyLocalToGm(rstdGm_, rstdLocal, meanOffset, rowsCount);
 
             // copy in gamma, beta
             if (i == 0) {
-                CopyGammaAndBetaToUB(gammaLocal, betaLocal, 0, colsPerLoop_);
+                CopyGammaAndBetaToUBCommon<isMix>(
+                    gammaLocal, betaLocal, gammaGm_, betaGm_, gammaQueue_, betaQueue_, 0, colsPerLoop_, blockSize_);
                 gammaLocal = gammaQueue_.template DeQue<GAMMA_TYPE>();
                 betaLocal = betaQueue_.template DeQue<BETA_TYPE>();
             }
@@ -984,11 +927,11 @@ private:
     int64_t rowsPerLoop_;
     int64_t rowsTail_;
     int64_t rowsLoopCount_;
+    float eps_;
     int64_t binaryAddNum_;
     int64_t binaryAddK_;
     int64_t binaryAddLastNum_;
     int64_t powerOfTwo_;
-    float eps_;
 
     TPipe pipe_;
     const AddLayerNormRegbaseTilingData* tiling_;

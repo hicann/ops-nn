@@ -148,6 +148,35 @@ int main()
     aclTensor* mxscale = nullptr;
     aclTensor* rstd = nullptr;
 
+    auto destroyTensor = [](aclTensor*& tensor) {
+        if (tensor != nullptr) {
+            aclDestroyTensor(tensor);
+            tensor = nullptr;
+        }
+    };
+    auto freeDeviceAddr = [](void*& deviceAddr) {
+        if (deviceAddr != nullptr) {
+            aclrtFree(deviceAddr);
+            deviceAddr = nullptr;
+        }
+    };
+    auto releaseResources = [&]() {
+        freeDeviceAddr(workspaceAddr);
+        destroyTensor(x);
+        destroyTensor(gamma);
+        destroyTensor(y);
+        destroyTensor(mxscale);
+        destroyTensor(rstd);
+        freeDeviceAddr(xDeviceAddr);
+        freeDeviceAddr(gammaDeviceAddr);
+        freeDeviceAddr(yDeviceAddr);
+        freeDeviceAddr(mxscaleDeviceAddr);
+        freeDeviceAddr(rstdDeviceAddr);
+        aclrtDestroyStream(stream);
+        aclrtResetDevice(deviceId);
+        aclFinalize();
+    };
+
     // Initialize host data
     // Use FP16 values (1.0 in FP16 = 0x3C00)
     std::vector<uint16_t> xHostData(batchSize * hiddenSize, 0x3C00);
@@ -171,9 +200,7 @@ int main()
     ret = CreateAclTensor(xHostData, xShape, &xDeviceAddr, aclDataType::ACL_FLOAT16, &x);
     if (ret != ACL_SUCCESS) {
         LOG_PRINT("CreateAclTensor x failed. ERROR: %d\n", ret);
-        aclrtDestroyStream(stream);
-        aclrtResetDevice(deviceId);
-        aclFinalize();
+        releaseResources();
         return ret;
     }
 
@@ -181,11 +208,7 @@ int main()
     ret = CreateAclTensor(gammaHostData, gammaShape, &gammaDeviceAddr, aclDataType::ACL_FLOAT16, &gamma);
     if (ret != ACL_SUCCESS) {
         LOG_PRINT("CreateAclTensor gamma failed. ERROR: %d\n", ret);
-        aclDestroyTensor(x);
-        aclrtFree(xDeviceAddr);
-        aclrtDestroyStream(stream);
-        aclrtResetDevice(deviceId);
-        aclFinalize();
+        releaseResources();
         return ret;
     }
 
@@ -193,13 +216,7 @@ int main()
     ret = CreateAclTensor(yHostData, yShape, &yDeviceAddr, aclDataType::ACL_FLOAT8_E4M3FN, &y);
     if (ret != ACL_SUCCESS) {
         LOG_PRINT("CreateAclTensor y failed. ERROR: %d\n", ret);
-        aclDestroyTensor(x);
-        aclDestroyTensor(gamma);
-        aclrtFree(xDeviceAddr);
-        aclrtFree(gammaDeviceAddr);
-        aclrtDestroyStream(stream);
-        aclrtResetDevice(deviceId);
-        aclFinalize();
+        releaseResources();
         return ret;
     }
 
@@ -207,15 +224,7 @@ int main()
     ret = CreateAclTensor(mxscaleHostData, mxscaleShape, &mxscaleDeviceAddr, aclDataType::ACL_FLOAT8_E8M0, &mxscale);
     if (ret != ACL_SUCCESS) {
         LOG_PRINT("CreateAclTensor mxscale failed. ERROR: %d\n", ret);
-        aclDestroyTensor(x);
-        aclDestroyTensor(gamma);
-        aclDestroyTensor(y);
-        aclrtFree(xDeviceAddr);
-        aclrtFree(gammaDeviceAddr);
-        aclrtFree(yDeviceAddr);
-        aclrtDestroyStream(stream);
-        aclrtResetDevice(deviceId);
-        aclFinalize();
+        releaseResources();
         return ret;
     }
 
@@ -223,17 +232,7 @@ int main()
     ret = CreateAclTensor(rstdHostData, rstdShape, &rstdDeviceAddr, aclDataType::ACL_FLOAT, &rstd);
     if (ret != ACL_SUCCESS) {
         LOG_PRINT("CreateAclTensor rstd failed. ERROR: %d\n", ret);
-        aclDestroyTensor(x);
-        aclDestroyTensor(gamma);
-        aclDestroyTensor(y);
-        aclDestroyTensor(mxscale);
-        aclrtFree(xDeviceAddr);
-        aclrtFree(gammaDeviceAddr);
-        aclrtFree(yDeviceAddr);
-        aclrtFree(mxscaleDeviceAddr);
-        aclrtDestroyStream(stream);
-        aclrtResetDevice(deviceId);
-        aclFinalize();
+        releaseResources();
         return ret;
     }
 
@@ -248,19 +247,7 @@ int main()
 
     if (ret != ACL_SUCCESS) {
         LOG_PRINT("aclnnRmsNormDynamicMxQuantGetWorkspaceSize failed. ERROR: %d\n", ret);
-        aclDestroyTensor(x);
-        aclDestroyTensor(gamma);
-        aclDestroyTensor(y);
-        aclDestroyTensor(mxscale);
-        aclDestroyTensor(rstd);
-        aclrtFree(xDeviceAddr);
-        aclrtFree(gammaDeviceAddr);
-        aclrtFree(yDeviceAddr);
-        aclrtFree(mxscaleDeviceAddr);
-        aclrtFree(rstdDeviceAddr);
-        aclrtDestroyStream(stream);
-        aclrtResetDevice(deviceId);
-        aclFinalize();
+        releaseResources();
         return ret;
     }
 
@@ -271,19 +258,7 @@ int main()
         ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
         if (ret != ACL_SUCCESS) {
             LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret);
-            aclDestroyTensor(x);
-            aclDestroyTensor(gamma);
-            aclDestroyTensor(y);
-            aclDestroyTensor(mxscale);
-            aclDestroyTensor(rstd);
-            aclrtFree(xDeviceAddr);
-            aclrtFree(gammaDeviceAddr);
-            aclrtFree(yDeviceAddr);
-            aclrtFree(mxscaleDeviceAddr);
-            aclrtFree(rstdDeviceAddr);
-            aclrtDestroyStream(stream);
-            aclrtResetDevice(deviceId);
-            aclFinalize();
+            releaseResources();
             return ret;
         }
     }
@@ -292,21 +267,7 @@ int main()
     ret = aclnnRmsNormDynamicMxQuant(workspaceAddr, workspaceSize, executor, stream);
     if (ret != ACL_SUCCESS) {
         LOG_PRINT("aclnnRmsNormDynamicMxQuant failed. ERROR: %d\n", ret);
-        if (workspaceAddr)
-            aclrtFree(workspaceAddr);
-        aclDestroyTensor(x);
-        aclDestroyTensor(gamma);
-        aclDestroyTensor(y);
-        aclDestroyTensor(mxscale);
-        aclDestroyTensor(rstd);
-        aclrtFree(xDeviceAddr);
-        aclrtFree(gammaDeviceAddr);
-        aclrtFree(yDeviceAddr);
-        aclrtFree(mxscaleDeviceAddr);
-        aclrtFree(rstdDeviceAddr);
-        aclrtDestroyStream(stream);
-        aclrtResetDevice(deviceId);
-        aclFinalize();
+        releaseResources();
         return ret;
     }
 
@@ -314,21 +275,7 @@ int main()
     ret = aclrtSynchronizeStream(stream);
     if (ret != ACL_SUCCESS) {
         LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret);
-        if (workspaceAddr)
-            aclrtFree(workspaceAddr);
-        aclDestroyTensor(x);
-        aclDestroyTensor(gamma);
-        aclDestroyTensor(y);
-        aclDestroyTensor(mxscale);
-        aclDestroyTensor(rstd);
-        aclrtFree(xDeviceAddr);
-        aclrtFree(gammaDeviceAddr);
-        aclrtFree(yDeviceAddr);
-        aclrtFree(mxscaleDeviceAddr);
-        aclrtFree(rstdDeviceAddr);
-        aclrtDestroyStream(stream);
-        aclrtResetDevice(deviceId);
-        aclFinalize();
+        releaseResources();
         return ret;
     }
 
@@ -341,21 +288,7 @@ int main()
             ACL_MEMCPY_DEVICE_TO_HOST);
         if (ret != ACL_SUCCESS) {
             LOG_PRINT("copy y from device to host failed. ERROR: %d\n", ret);
-            if (workspaceAddr)
-                aclrtFree(workspaceAddr);
-            aclDestroyTensor(x);
-            aclDestroyTensor(gamma);
-            aclDestroyTensor(y);
-            aclDestroyTensor(mxscale);
-            aclDestroyTensor(rstd);
-            aclrtFree(xDeviceAddr);
-            aclrtFree(gammaDeviceAddr);
-            aclrtFree(yDeviceAddr);
-            aclrtFree(mxscaleDeviceAddr);
-            aclrtFree(rstdDeviceAddr);
-            aclrtDestroyStream(stream);
-            aclrtResetDevice(deviceId);
-            aclFinalize();
+            releaseResources();
             return ret;
         }
 
@@ -371,21 +304,7 @@ int main()
             ACL_MEMCPY_DEVICE_TO_HOST);
         if (ret != ACL_SUCCESS) {
             LOG_PRINT("copy mxscale from device to host failed. ERROR: %d\n", ret);
-            if (workspaceAddr)
-                aclrtFree(workspaceAddr);
-            aclDestroyTensor(x);
-            aclDestroyTensor(gamma);
-            aclDestroyTensor(y);
-            aclDestroyTensor(mxscale);
-            aclDestroyTensor(rstd);
-            aclrtFree(xDeviceAddr);
-            aclrtFree(gammaDeviceAddr);
-            aclrtFree(yDeviceAddr);
-            aclrtFree(mxscaleDeviceAddr);
-            aclrtFree(rstdDeviceAddr);
-            aclrtDestroyStream(stream);
-            aclrtResetDevice(deviceId);
-            aclFinalize();
+            releaseResources();
             return ret;
         }
 
@@ -401,21 +320,7 @@ int main()
             ACL_MEMCPY_DEVICE_TO_HOST);
         if (ret != ACL_SUCCESS) {
             LOG_PRINT("copy rstd from device to host failed. ERROR: %d\n", ret);
-            if (workspaceAddr)
-                aclrtFree(workspaceAddr);
-            aclDestroyTensor(x);
-            aclDestroyTensor(gamma);
-            aclDestroyTensor(y);
-            aclDestroyTensor(mxscale);
-            aclDestroyTensor(rstd);
-            aclrtFree(xDeviceAddr);
-            aclrtFree(gammaDeviceAddr);
-            aclrtFree(yDeviceAddr);
-            aclrtFree(mxscaleDeviceAddr);
-            aclrtFree(rstdDeviceAddr);
-            aclrtDestroyStream(stream);
-            aclrtResetDevice(deviceId);
-            aclFinalize();
+            releaseResources();
             return ret;
         }
 
@@ -427,27 +332,7 @@ int main()
 
     LOG_PRINT("\n=== RmsNormDynamicMxQuant Test PASSED ===\n");
 
-    if (workspaceAddr) {
-        aclrtFree(workspaceAddr);
-    }
-
-    // 6. 释放aclTensor，需要根据具体API的接口定义修改
-    aclDestroyTensor(x);
-    aclDestroyTensor(gamma);
-    aclDestroyTensor(y);
-    aclDestroyTensor(mxscale);
-    aclDestroyTensor(rstd);
-
-    // 7. 释放device资源，需要根据具体API的接口定义修改
-    aclrtFree(xDeviceAddr);
-    aclrtFree(gammaDeviceAddr);
-    aclrtFree(yDeviceAddr);
-    aclrtFree(mxscaleDeviceAddr);
-    aclrtFree(rstdDeviceAddr);
-
-    aclrtDestroyStream(stream);
-    aclrtResetDevice(deviceId);
-    aclFinalize();
+    releaseResources();
 
     return 0;
 }

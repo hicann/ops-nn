@@ -16,6 +16,7 @@
 #ifndef LAYER_NORM_V4_WELFORD_H
 #define LAYER_NORM_V4_WELFORD_H
 
+#include "layer_norm_v4_common.h"
 #include "kernel_tiling/kernel_tiling.h"
 #include "kernel_operator.h"
 #include "../../inc/platform.h"
@@ -181,41 +182,13 @@ private:
         rstdTensor = outQueueRstd.template AllocTensor<float>();
     }
 
-    __aicore__ inline void CastBatchMeanRstd(uint64_t currentANum)
-    {
-        __local_mem__ float* batchMeanInAddr = (__local_mem__ float*)meanTensor.GetPhyAddr();
-        __local_mem__ float* batchRstdInAddr = (__local_mem__ float*)rstdTensor.GetPhyAddr();
-        __local_mem__ M* batchMeanOutAddr = (__local_mem__ M*)meanTensor.GetPhyAddr();
-        __local_mem__ M* batchRstdOutAddr = (__local_mem__ M*)rstdTensor.GetPhyAddr();
-
-        uint32_t castCount = static_cast<uint32_t>(currentANum);
-        uint16_t castLoops = static_cast<uint32_t>((castCount + VL_F32 - 1) / VL_F32);
-        __VEC_SCOPE__
-        {
-            RegTensor<float> input_mean;
-            RegTensor<float> input_rstd;
-            RegTensor<M> output_mean;
-            RegTensor<M> output_rstd;
-            MicroAPI::MaskReg pregLoop;
-            for (uint16_t i = 0; i < castLoops; i++) {
-                pregLoop = MicroAPI::UpdateMask<float>(castCount);
-                MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_NORM>(input_mean, batchMeanInAddr + VL_F32 * i);
-                MicroAPI::DataCopy<float, MicroAPI::LoadDist::DIST_NORM>(input_rstd, batchRstdInAddr + VL_F32 * i);
-                Cast<M, float, castTraitB322B16>(output_mean, input_mean, pregLoop);
-                Cast<M, float, castTraitB322B16>(output_rstd, input_rstd, pregLoop);
-                DataCopy<M, StoreDist::DIST_PACK_B32>(
-                    ((__local_mem__ M*)batchMeanOutAddr + i * VL_MEAN), output_mean, pregLoop);
-                DataCopy<M, StoreDist::DIST_PACK_B32>(
-                    ((__local_mem__ M*)batchRstdOutAddr + i * VL_MEAN), output_rstd, pregLoop);
-            }
-        }
-    }
-
     __aicore__ inline void RefreshCache()
     {
         if constexpr (!IsSameType<M, float>::value) {
             // float to bfloat16 or float16, input continue and output each repeat have only half value
-            CastBatchMeanRstd(cacheCount);
+            CastBatchMeanRstdToDtype<M>(
+                (__local_mem__ float*)meanTensor.GetPhyAddr(), (__local_mem__ float*)rstdTensor.GetPhyAddr(),
+                (__local_mem__ M*)meanTensor.GetPhyAddr(), (__local_mem__ M*)rstdTensor.GetPhyAddr(), cacheCount);
             outQueueMean.EnQue(meanTensor);
             outQueueRstd.EnQue(rstdTensor);
             meanTensor = outQueueMean.template DeQue<float>();

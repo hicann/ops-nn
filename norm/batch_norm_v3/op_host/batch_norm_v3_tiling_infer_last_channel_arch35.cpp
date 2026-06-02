@@ -24,11 +24,11 @@ constexpr int64_t TILINGKEY_INFER_LAST_CHANNEL = 900000;
 constexpr int64_t NHWC_DIM_NUM = 4;
 constexpr int64_t NDHWC_DIM_NUM = 5;
 constexpr int64_t WEIGHT_BIAS_NUM = 2;
-constexpr int64_t MEAN_VAR_NUM = 2;
 constexpr int64_t INPUT_OUTPUT_NUM = 2;
+constexpr int64_t MEAN_VAR_NUM = 2;
 
-constexpr int64_t FLOAT32_BYTES = 4;
 constexpr int64_t FLOAT16_BYTES = 2;
+constexpr int64_t FLOAT32_BYTES = 4;
 constexpr int64_t DOUBLE_BUFFER = 2;
 
 constexpr int64_t DIM_0 = 0;
@@ -37,9 +37,9 @@ constexpr int64_t DIM_2 = 2;
 constexpr int64_t DIM_3 = 3;
 constexpr int64_t DIM_4 = 4;
 
+constexpr float DEFAULT_EPSILON = 1e-5;
 static const int32_t INDEX_EPSILON = 0;
 static const int32_t INDEX_IS_TRAINING = 2;
-constexpr float DEFAULT_EPSILON = 1e-5;
 
 // 框架侧占位可以只预留32B（ttk正常），debugTool执行时需要预留16M
 constexpr uint32_t MINIMAL_WORKSPACE = 16 * 1024 * 1024;
@@ -80,10 +80,10 @@ protected:
     ge::graphStatus GetShapeAttrsInfo() override;
     // 3、计算数据切分TilingData
     ge::graphStatus DoOpTiling() override;
-    // 4、计算高阶API的TilingData
-    ge::graphStatus DoLibApiTiling() override;
-    // 5、计算TilingKey
+    // 4、计算TilingKey
     uint64_t GetTilingKey() const override;
+    // 5、计算高阶API的TilingData
+    ge::graphStatus DoLibApiTiling() override;
     // 6、计算Workspace 大小
     ge::graphStatus GetWorkspaceSize() override;
     // 7、保存Tiling数据
@@ -131,21 +131,21 @@ ge::graphStatus BatchNormV3InferLastChannelTiling::GetPlatformInfo()
 {
     auto compileInfo = reinterpret_cast<const BatchNormV3CompileInfo*>(context_->GetCompileInfo());
     OP_CHECK_NULL_WITH_CONTEXT(context_, compileInfo);
+    opName = context_->GetNodeName();
     blockSize = static_cast<uint64_t>(compileInfo->blockSize);
     vlFp32 = static_cast<uint64_t>(compileInfo->vectorLength) / FLOAT32_BYTES;
     vlFp16 = static_cast<uint64_t>(compileInfo->vectorLength) / FLOAT16_BYTES;
 
-    opName = context_->GetNodeName();
     auto platformInfo = context_->GetPlatformInfo();
     if (platformInfo != nullptr) {
         auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-        aicoreParams_.numBlocks = ascendcPlatform.GetCoreNumAiv();
         uint64_t ubSizePlatForm;
         ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
         aicoreParams_.ubSize = ubSizePlatForm;
+        aicoreParams_.numBlocks = ascendcPlatform.GetCoreNumAiv();
     } else {
-        aicoreParams_.numBlocks = compileInfo->coreNum;
         aicoreParams_.ubSize = compileInfo->ubSize;
+        aicoreParams_.numBlocks = compileInfo->coreNum;
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -300,14 +300,13 @@ ge::graphStatus BatchNormV3InferLastChannelTiling::PostTiling()
     context_->SetBlockDim(usedCoreNums);
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
-    currentWorkspace[0] = workspaceSize_;
     auto rawTilingData = context_->GetRawTilingData();
+    currentWorkspace[0] = workspaceSize_;
     OP_CHECK_IF(
         tilingData.GetDataSize() > rawTilingData->GetCapacity(),
         OP_LOGE(
             context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu",
-            tilingData.GetDataSize(), rawTilingData->GetCapacity()),
-        return ge::GRAPH_FAILED);
+            tilingData.GetDataSize(), rawTilingData->GetCapacity()), return ge::GRAPH_FAILED);
     tilingData.SaveToBuffer(rawTilingData->GetData(), rawTilingData->GetCapacity());
     rawTilingData->SetDataSize(tilingData.GetDataSize());
 

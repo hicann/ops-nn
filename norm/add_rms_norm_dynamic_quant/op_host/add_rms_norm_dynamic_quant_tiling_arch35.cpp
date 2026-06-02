@@ -515,11 +515,11 @@ bool AddRmsNormDynamicQuantRegbaseTiling::TrySplitTiling()
             tmpPowerCutN *= MULTI_FACTOR_2;
         }
         tilingParams.powerSplit = tmpPowerCutN;
-        uint64_t tmpLoop = 1;
-        while (tmpLoop * MULTI_FACTOR_2 * tilingParams.powerSplit <= tilingParams.numN) {
-            tmpLoop *= MULTI_FACTOR_2;
+        uint64_t curLoop = 1;
+        while (curLoop * MULTI_FACTOR_2 * tilingParams.powerSplit <= tilingParams.numN) {
+            curLoop *= MULTI_FACTOR_2;
         }
-        tilingParams.powerLoop = tmpLoop;
+        tilingParams.powerLoop = curLoop;
         tilingParams.baseM = 1;
         tilingParams.baseN = tilingParams.powerSplit;
         tilingParams.tilingType = TILING_TYPE_SPILT;
@@ -573,8 +573,8 @@ void AddRmsNormDynamicQuantRegbaseTiling::SetTilingData()
     tilingData.set_powerLoop(tilingParams.powerLoop);
     tilingData.set_mPerCore(tilingParams.mPerCore);
     tilingData.set_mLastCore(tilingParams.mLastCore);
-    tilingData.set_epsilon(tilingParams.epsilon);
     tilingData.set_avgFactor(tilingParams.avgFactor);
+    tilingData.set_epsilon(tilingParams.epsilon);
     tilingData.set_hasSmoothScale1(static_cast<uint32_t>(tilingParams.hasSmoothScale1));
     tilingData.set_hasSmoothScale2(static_cast<uint32_t>(tilingParams.hasSmoothScale2));
     tilingData.set_hasBeta(static_cast<uint32_t>(tilingParams.hasBeta));

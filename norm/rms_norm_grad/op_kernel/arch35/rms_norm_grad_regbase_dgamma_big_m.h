@@ -246,8 +246,8 @@ private:
         const LocalTensor<float>& dstTensor, const LocalTensor<T>& dyTensor, const LocalTensor<T>& xTensor,
         const LocalTensor<float>& rstdTensor, const int64_t rowSize, const int64_t colSize)
     {
-        uint16_t outerLoopTimes = static_cast<uint16_t>(rowSize);
         uint16_t innerLoopTimes = ops::CeilDiv(colSize, static_cast<int64_t>(VL_FP32));
+        uint16_t outerLoopTimes = static_cast<uint16_t>(rowSize);
         uint32_t outerStride = td_->dgammaNfactorBlockAligned;
         uint32_t innerStride = VL_FP32;
 
@@ -259,8 +259,8 @@ private:
         __VEC_SCOPE__
         {
             for (uint16_t i = 0; i < outerLoopTimes; ++i) {
-                uint32_t count = static_cast<uint32_t>(colSize);
                 AscendC::MicroAPI::RegTensor<float> rstdReg;
+                uint32_t count = static_cast<uint32_t>(colSize);
                 DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(
                     rstdReg, (__local_mem__ float*)rstd + static_cast<uint32_t>(i));
 

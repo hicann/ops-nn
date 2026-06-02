@@ -108,15 +108,15 @@ public:
             dbetaOutQue_.EnQue(dbeta);
 
             LocalTensor<float> mean = meanInQue_.template AllocTensor<float>();
-            PrepareMean(mean, meanOffset, a);
+            CopyInNormParam(mean, meanGm_, meanOffset, a);
             meanInQue_.EnQue(mean);
 
             LocalTensor<float> rstd = rstdInQue_.template AllocTensor<float>();
-            PrepareRstd(rstd, meanOffset, a);
+            CopyInNormParam(rstd, rstdGm_, meanOffset, a);
             rstdInQue_.EnQue(rstd);
 
             LocalTensor<WEIGHT_TYPE> gamma = gammaInQue_.template AllocTensor<WEIGHT_TYPE>();
-            PrepareInGamma(gamma, meanOffset, a);
+            CopyInNormParam(gamma, gammaGm_, meanOffset, a);
             gammaInQue_.EnQue(gamma);
 
             if (i >= BUFFER_NUM) {
@@ -147,11 +147,11 @@ public:
             gammaInQue_.FreeTensor(gamma);
 
             LocalTensor<WEIGHT_TYPE> dbetaOut = dbetaOutQue_.template DeQue<WEIGHT_TYPE>();
-            CopyOutDbeta(dbetaOut, meanOffset, a);
+            CopyOutNormParam(dbetaOut, dbetaGm_, meanOffset, a);
             dbetaOutQue_.FreeTensor(dbetaOut);
 
             LocalTensor<WEIGHT_TYPE> dgammaOut = dgammaOutQue_.template DeQue<WEIGHT_TYPE>();
-            CopyOutDgamma(dgammaOut, meanOffset, a);
+            CopyOutNormParam(dgammaOut, dgammaGm_, meanOffset, a);
             dgammaOutQue_.FreeTensor(dgammaOut);
 
             CopyOutDx(x, offset, a);
@@ -171,21 +171,6 @@ public:
         } else {
             CopyInRAR(x, xGm_, xBufElemNum_ / TWO, offset, a);
         }
-    }
-
-    __aicore__ inline void PrepareMean(LocalTensor<float>& mean, uint64_t offset, uint64_t a)
-    {
-        CopyInA(mean, meanGm_, offset, a);
-    }
-
-    __aicore__ inline void PrepareRstd(LocalTensor<float>& rstd, uint64_t offset, uint64_t a)
-    {
-        CopyInA(rstd, rstdGm_, offset, a);
-    }
-
-    __aicore__ inline void PrepareInGamma(LocalTensor<WEIGHT_TYPE>& gamma, uint64_t offset, uint64_t a)
-    {
-        CopyInA(gamma, gammaGm_, offset, a);
     }
 
     __aicore__ inline void CalcDbetaVF(
@@ -540,16 +525,6 @@ public:
         CopyOutRAR(dx, dxGm_, offset, a);
     }
 
-    __aicore__ inline void CopyOutDgamma(LocalTensor<WEIGHT_TYPE>& dgamma, uint64_t meanOffset, uint32_t a)
-    {
-        CopyOutA(dgamma, dgammaGm_, meanOffset, a);
-    }
-
-    __aicore__ inline void CopyOutDbeta(LocalTensor<WEIGHT_TYPE>& dbeta, uint64_t meanOffset, uint32_t a)
-    {
-        CopyOutA(dbeta, dbetaGm_, meanOffset, a);
-    }
-
     __aicore__ inline void CopyInRAR(
         LocalTensor<DY_TYPE>& localTensor, GlobalTensor<DY_TYPE>& globalTensor, uint64_t localOffset,
         uint64_t globalOffset, uint64_t a)
@@ -579,23 +554,6 @@ public:
         ResetLoopModePara(DataCopyMVType::OUT_TO_UB);
     }
 
-    template <typename U>
-    __aicore__ inline void CopyInA(
-        LocalTensor<U>& localTensor, GlobalTensor<U>& globalTensor, uint64_t offset, uint64_t a)
-    {
-        DataCopyPadExtParams<U> dataCopyPadExtParams;
-        dataCopyPadExtParams.isPad = false;
-        dataCopyPadExtParams.leftPadding = 0;
-        dataCopyPadExtParams.rightPadding = 0;
-        dataCopyPadExtParams.paddingValue = 0;
-        DataCopyExtParams copyInParams;
-        copyInParams.blockCount = 1;
-        copyInParams.blockLen = a * sizeof(U);
-        copyInParams.srcStride = 0;
-        copyInParams.dstStride = 0;
-        DataCopyPad<U, PaddingMode::Compact>(localTensor, globalTensor[offset], copyInParams, dataCopyPadExtParams);
-    }
-
     __aicore__ inline void CopyOutRAR(
         LocalTensor<DY_TYPE>& localTensor, GlobalTensor<DY_TYPE>& globalTensor, uint64_t offset, uint64_t a)
     {
@@ -616,17 +574,6 @@ public:
         copyOutParams.dstStride = (aDim_ - 1) * r0Dim_ * sizeof(DY_TYPE);
         DataCopyPad<DY_TYPE, PaddingMode::Compact>(globalTensor[offset], localTensor, copyOutParams);
         ResetLoopModePara(DataCopyMVType::UB_TO_OUT);
-    }
-
-    __aicore__ inline void CopyOutA(
-        LocalTensor<WEIGHT_TYPE>& localTensor, GlobalTensor<WEIGHT_TYPE>& globalTensor, uint64_t offset, uint64_t a)
-    {
-        DataCopyExtParams copyOutParams;
-        copyOutParams.blockCount = 1;
-        copyOutParams.blockLen = a * sizeof(WEIGHT_TYPE);
-        copyOutParams.srcStride = 0;
-        copyOutParams.dstStride = 0;
-        DataCopyPad<WEIGHT_TYPE, PaddingMode::Compact>(globalTensor[offset], localTensor, copyOutParams);
     }
 
 private:

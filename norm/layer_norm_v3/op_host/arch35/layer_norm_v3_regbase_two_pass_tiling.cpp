@@ -53,17 +53,17 @@ bool LayerNormV3RegBaseTwoPassTiling::IsCapable()
         return false;
     }
 
+    int64_t betaElemSize = FP32_BYTE;
     int64_t xElemSize = FP32_BYTE;
     if (commonParams.tensorDtype == ge::DT_FLOAT16 || commonParams.tensorDtype == ge::DT_BF16) {
         xElemSize = FP16_BYTE;
     }
-    int64_t betaElemSize = FP32_BYTE;
     if (commonParams.paramDtype == ge::DT_FLOAT16 || commonParams.paramDtype == ge::DT_BF16) {
         betaElemSize = FP16_BYTE;
     }
 
-    int64_t a = commonParams.colSize;
     int64_t r = commonParams.rowSize;
+    int64_t a = commonParams.colSize;
     int64_t rAlign = commonParams.rowAlign;
     binaryAddQuotient = commonParams.vlFp32;
     while (binaryAddQuotient < r) {
@@ -75,8 +75,8 @@ bool LayerNormV3RegBaseTwoPassTiling::IsCapable()
                           (commonParams.betaNullPtr == 1 ? 0 : rAlign) * betaElemSize;
     int64_t largeBufferMemPerA = rAlign * xElemSize * LARGE_BUFFER_NUM * DOUBLE_BUFFER;
     int64_t lastACanUse = -1;
-    int64_t lastTmpBufferUse = 0;
     int64_t tmpBufferUse = 0;
+    int64_t lastTmpBufferUse = 0;
     int64_t begin = 1;
     int64_t end = a;
     while (begin <= end) {
@@ -95,8 +95,8 @@ bool LayerNormV3RegBaseTwoPassTiling::IsCapable()
 
     td_.set_aFactor(lastACanUse);
     td_.set_tmpBufferSize(lastTmpBufferUse);
-    td_.set_a(a);
     td_.set_r(r);
+    td_.set_a(a);
     td_.set_rAlign(rAlign);
     td_.set_binaryAddQuotient(binaryAddQuotient);
     return true;
@@ -126,10 +126,10 @@ uint64_t LayerNormV3RegBaseTwoPassTiling::GetTilingKey() const
 ge::graphStatus LayerNormV3RegBaseTwoPassTiling::DoOpTiling()
 {
     // optional input
-    int64_t isGammaNullptr = commonParams.gammaNullPtr;
     int64_t isBetaNullptr = commonParams.betaNullPtr;
-    td_.set_nullptrGamma(isGammaNullptr);
+    int64_t isGammaNullptr = commonParams.gammaNullPtr;
     td_.set_nullptrBeta(isBetaNullptr);
+    td_.set_nullptrGamma(isGammaNullptr);
 
     // dim
     int64_t r = commonParams.rowSize;
@@ -175,10 +175,10 @@ ge::graphStatus LayerNormV3RegBaseTwoPassTiling::DoLibApiTiling()
     if (commonParams.tensorDtype == ge::DT_FLOAT16 || commonParams.tensorDtype == ge::DT_BF16) {
         xElemSize = FP16_BYTE;
     }
-    int64_t aFactor = td_.get_aFactor();
     int64_t r = commonParams.rowSize;
-    uint32_t maxValue;
+    int64_t aFactor = td_.get_aFactor();
     uint32_t minValue;
+    uint32_t maxValue;
 
     ge::Shape inputShape({aFactor, r});
     AscendC::GetLayerNormMaxMinTmpSize(inputShape, xElemSize, true, true, false, maxValue, minValue);

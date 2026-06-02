@@ -125,10 +125,10 @@ uint64_t RmsNormDynamicMxQuantFullLoadTiling::GetTilingKey() const
 
 ge::graphStatus RmsNormDynamicMxQuantFullLoadTiling::PostTiling()
 {
-    context_->SetBlockDim(usedCoreNum_);
     size_t* workspaces = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
     workspaces[0] = workspaceSize_;
+    context_->SetBlockDim(usedCoreNum_);
 
     size_t tilingDataSize = sizeof(tilingData_);
     errno_t ret = memcpy_s(

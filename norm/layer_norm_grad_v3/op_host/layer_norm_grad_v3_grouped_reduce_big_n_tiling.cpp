@@ -53,8 +53,8 @@ ge::graphStatus LayerNormGradV3GroupedReduceBigNTiling::GammaBetaKernelTiling()
     // M方向分块参数计算（二分累加）
     int64_t mLoop = ops::FloorDiv(rowSize, mFactor);
     int64_t mTotalLoop = ops::CeilDiv(rowSize, mFactor);
-    int64_t mTail = rowSize - mLoop * mFactor;
     int64_t basicBlockLoop = FindNearestPower2(mTotalLoop);
+    int64_t mTail = rowSize - mLoop * mFactor;
     int64_t mainFoldCount = mLoop - basicBlockLoop;
     int64_t cacheBufferCount = CONST_ONE;
     int64_t resultCacheID = 0;

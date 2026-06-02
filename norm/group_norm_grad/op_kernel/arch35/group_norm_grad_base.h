@@ -80,6 +80,13 @@ protected:
     __aicore__ inline void VFComputeBinaryFoldSum1Sum2(
         const LocalTensor<float>& dbetaTensor, const LocalTensor<float>& dsTensor,
         const LocalTensor<float>& gammaTensor, float& sum1, float& sum2);
+    __aicore__ inline void VFDbetaDgammaBinaryFoldCommon(
+        const LocalTensor<T>& x, const LocalTensor<T>& dy, const LocalTensor<float>& dbeta,
+        const LocalTensor<float>& dgamma, const uint32_t outputOffset, const uint32_t curCNum);
+    __aicore__ inline void VFComputeMode1DxCommon(
+        const LocalTensor<T>& dstTensor, const LocalTensor<T>& xTensor, const LocalTensor<T>& dyTensor,
+        const LocalTensor<float>& gammaTensor, const float C2, const float C3, const uint32_t gammaOffset,
+        const uint32_t curCNum);
     __aicore__ inline void InitStage2Mode2Buffer();
     __aicore__ inline void InitStage2Mode1Buffer();
     __aicore__ inline void stage2Mode1Process(int64_t cOffset, uint32_t currentCNum);
@@ -704,8 +711,8 @@ __aicore__ inline void GroupNormGradBase<T, U>::StoreDgammaDbeta(
 }
 
 /*
-  sum1 = reduceSum(dbeta * gamma)
-  sum2 = reduceSum(dgamma * gamma)
+  sum1 = reduceSum(dgamma * gamma)
+  sum2 = reduceSum(dbeta * gamma)
 */
 template <typename T, typename U>
 __aicore__ inline void GroupNormGradBase<T, U>::VFComputeBinaryFoldSum1Sum2(
@@ -858,8 +865,8 @@ __aicore__ inline void GroupNormGradBase<T, U>::VFComputeBinaryFoldSum1Sum2(
 }
 
 /*
-    sum1 = ReduceSum(dbeta * gamma) / D * HxW
-    sum2 = ReduceSum(dgamma * gamma) / D * HxW
+    sum1 = ReduceSum(dgamma * gamma) / D * HxW
+    sum2 = ReduceSum(dbeta * gamma) / D * HxW
 */
 template <typename T, typename U>
 __aicore__ inline void GroupNormGradBase<T, U>::VFComputeSum1Sum2(
@@ -1475,6 +1482,221 @@ __aicore__ inline void GroupNormGradBase<T, U>::FlodSumDgammaVF(__local_mem__ fl
             DataCopy<float, LoadDist::DIST_NORM>(src2Reg, src2Addr);
             Add(src1Reg, src1Reg, src2Reg, mask);
             DataCopy<float, StoreDist::DIST_NORM>(src1Addr, src1Reg, mask);
+        }
+    }
+}
+
+template <typename T, typename U>
+__aicore__ inline void GroupNormGradBase<T, U>::VFDbetaDgammaBinaryFoldCommon(
+    const LocalTensor<T>& x, const LocalTensor<T>& dy, const LocalTensor<float>& dbeta,
+    const LocalTensor<float>& dgamma, const uint32_t outputOffset, const uint32_t curCNum)
+{
+    __ubuf__ T* ubX = (__ubuf__ T*)x.GetPhyAddr();
+    __ubuf__ T* ubDy = (__ubuf__ T*)dy.GetPhyAddr();
+    __ubuf__ float* ubDbeta = (__ubuf__ float*)dbeta.GetPhyAddr();
+    __ubuf__ float* ubDgamma = (__ubuf__ float*)dgamma.GetPhyAddr();
+    uint32_t binaryQuotientOffset = this->binaryAddQuotient_;
+    uint32_t binaryAddRemainder = this->eleNumPerC_ - this->binaryAddQuotient_;
+    uint16_t remainderLoop = CeilDiv(binaryAddRemainder, this->VecLen_);
+    uint16_t remainderGeneral = remainderLoop == 0 ? 0 : remainderLoop - 1;
+    uint16_t quotientLoop = CeilDiv(this->binaryAddQuotient_, this->VecLen_);
+    uint16_t binaryAddKLoop = this->binaryAddK_;
+    uint16_t binaryAddLoop = ((this->binaryAddQuotient_ / this->VecLen_) / this->VecLen_);
+    uint32_t binaryAddLastNum = this->binaryAddLastNum_;
+    LocalTensor<float> binaryDbetaTensor = this->outQueDx_.template AllocTensor<float>();
+    uint32_t HxWSpaceOffset = this->eleNumPerC_ / DOUBLE_BUFFER / DOUBLE_BUFFER;
+    HxWSpaceOffset = CeilAlign(HxWSpaceOffset, this->PF32_PER_BLOCK);
+    LocalTensor<float> binaryDgammaTensor = binaryDbetaTensor[HxWSpaceOffset];
+    __ubuf__ T* ubXR = (__ubuf__ T*)ubX + binaryQuotientOffset;
+    __ubuf__ T* ubDyR = (__ubuf__ T*)ubDy + binaryQuotientOffset;
+    __ubuf__ float* ubBinaryDbeta = (__ubuf__ float*)binaryDbetaTensor.GetPhyAddr();
+    __ubuf__ float* ubBinaryDgamma = (__ubuf__ float*)binaryDgammaTensor.GetPhyAddr();
+    uint32_t eleNumPerC = this->eleNumPerC_;
+    uint32_t sregvl = this->VecLen_;
+    __ubuf__ T* curUbX;
+    __ubuf__ T* curUbXR;
+    __ubuf__ T* curUbDy;
+    __ubuf__ T* curUbDyR;
+
+    __VEC_SCOPE__
+    {
+        UnalignReg uSrcX;
+        UnalignReg uSrcXR;
+        UnalignReg uSrcDy;
+        UnalignReg uSrcDyR;
+        RegTensor<float> vregDbeta;
+        RegTensor<float> vregDgamma;
+        RegTensor<float> vregX;
+        RegTensor<float> vregXQ;
+        RegTensor<float> vregXR;
+        RegTensor<float> vregDy;
+        RegTensor<float> vregDyQ;
+        RegTensor<float> vregDyR;
+        RegTensor<float> tempX;
+        RegTensor<float> tempDy;
+        for (uint16_t cgIdx = 0; cgIdx < static_cast<uint16_t>(curCNum); cgIdx++) {
+            uint32_t sreg0 = binaryAddRemainder;
+            uint32_t ubOffSet = cgIdx * eleNumPerC;
+            MaskReg pregMain = CreateMask<float, MaskPattern::ALL>();
+            MaskReg pregMerge = CreateMask<float, MaskPattern::VL1>();
+            curUbX = ubX + ubOffSet;
+            curUbXR = ubXR + ubOffSet;
+            curUbDy = ubDy + ubOffSet;
+            curUbDyR = ubDyR + ubOffSet;
+            Duplicate(vregDbeta, 0, pregMain);
+            Duplicate(vregDgamma, 0, pregMain);
+            DataCopyUnAlignPre(uSrcX, curUbX);
+            DataCopyUnAlignPre(uSrcXR, curUbXR);
+            DataCopyUnAlignPre(uSrcDy, curUbDy);
+            DataCopyUnAlignPre(uSrcDyR, curUbDyR);
+            for (uint16_t i = 0; i < remainderGeneral; i++) {
+                MaskReg pregLoop = UpdateMask<float>(sreg0);
+                LoadUnAlignOneTensor<T>(curUbX, vregXQ, uSrcX, pregMain, sregvl);
+                LoadUnAlignOneTensor<T>(curUbXR, vregXR, uSrcXR, pregLoop, sregvl);
+                LoadUnAlignOneTensor<T>(curUbDy, vregDyQ, uSrcDy, pregMain, sregvl);
+                LoadUnAlignOneTensor<T>(curUbDyR, vregDyR, uSrcDyR, pregLoop, sregvl);
+                Mul(vregXQ, vregXQ, vregDyQ, pregMain);
+                Mul(vregXR, vregXR, vregDyR, pregLoop);
+                Add(vregXQ, vregXQ, vregXR, pregLoop);
+                Add(vregDyQ, vregDyQ, vregDyR, pregLoop);
+                ReduceSum(vregDgamma, vregXQ, pregLoop);
+                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDgamma + i, vregDgamma, pregMerge);
+                ReduceSum(vregDbeta, vregDyQ, pregLoop);
+                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDbeta + i, vregDbeta, pregMerge);
+            }
+            {
+                MaskReg pregLoop = UpdateMask<float>(sreg0);
+                DataCopyUnAlignPre(uSrcX, curUbX);
+                DataCopyUnAlignPre(uSrcXR, curUbXR);
+                DataCopyUnAlignPre(uSrcDy, curUbDy);
+                DataCopyUnAlignPre(uSrcDyR, curUbDyR);
+                LoadUnAlignOneTensor<T>(curUbX, vregXQ, uSrcX, pregMain, sregvl);
+                LoadUnAlignOneTensor<T>(curUbXR, vregXR, uSrcXR, pregLoop, sregvl);
+                LoadUnAlignOneTensor<T>(curUbDy, vregDyQ, uSrcDy, pregMain, sregvl);
+                LoadUnAlignOneTensor<T>(curUbDyR, vregDyR, uSrcDyR, pregLoop, sregvl);
+                Mul(vregXQ, vregXQ, vregDyQ, pregMain);
+                Mul(vregXR, vregXR, vregDyR, pregLoop);
+                Add(tempX, vregXQ, vregXR, pregLoop);
+                Add(tempDy, vregDyQ, vregDyR, pregLoop);
+                Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregXQ, tempX, pregLoop);
+                Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDyQ, tempDy, pregLoop);
+                ReduceSum(vregDgamma, vregXQ, pregMain);
+                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
+                    ubBinaryDgamma + remainderGeneral, vregDgamma, pregMerge);
+                ReduceSum(vregDbeta, vregDyQ, pregMain);
+                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
+                    ubBinaryDbeta + remainderGeneral, vregDbeta, pregMerge);
+            }
+            DataCopyUnAlignPre(uSrcX, curUbX);
+            DataCopyUnAlignPre(uSrcDy, curUbDy);
+            for (uint16_t i = 0; i < static_cast<uint16_t>(quotientLoop - remainderLoop); i++) {
+                LoadUnAlignOneTensor<T>(curUbX, vregX, uSrcX, pregMain, sregvl);
+                LoadUnAlignOneTensor<T>(curUbDy, vregDy, uSrcDy, pregMain, sregvl);
+                Mul(vregX, vregX, vregDy, pregMain);
+                ReduceSum(vregDgamma, vregX, pregMain);
+                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
+                    ubBinaryDgamma + remainderLoop + i, vregDgamma, pregMerge);
+                ReduceSum(vregDbeta, vregDy, pregMain);
+                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
+                    ubBinaryDbeta + remainderLoop + i, vregDbeta, pregMerge);
+            }
+            LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
+            pregMain = CreateMask<float, MaskPattern::ALL>();
+            uint16_t curBinaryAddLoop = binaryAddLoop;
+            for (uint16_t i = 0; i < binaryAddKLoop; i++) {
+                curBinaryAddLoop = curBinaryAddLoop / 2;
+                for (uint16_t j = 0; j < curBinaryAddLoop; j++) {
+                    DataCopy(vregXQ, ((__ubuf__ float*)ubBinaryDgamma + j * sregvl));
+                    DataCopy(vregXR, ((__ubuf__ float*)ubBinaryDgamma + (j + curBinaryAddLoop) * sregvl));
+                    Add(vregXQ, vregXQ, vregXR, pregMain);
+                    DataCopy(ubBinaryDgamma + j * sregvl, vregXQ, pregMain);
+                    DataCopy(vregDyQ, ((__ubuf__ float*)ubBinaryDbeta + j * sregvl));
+                    DataCopy(vregDyR, ((__ubuf__ float*)ubBinaryDbeta + (j + curBinaryAddLoop) * sregvl));
+                    Add(vregDyQ, vregDyQ, vregDyR, pregMain);
+                    DataCopy(ubBinaryDbeta + j * sregvl, vregDyQ, pregMain);
+                }
+                LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
+            }
+            {
+                uint32_t sreg2 = binaryAddLastNum;
+                MaskReg pregLoop = UpdateMask<float>(sreg2);
+                DataCopy(vregDgamma, ((__ubuf__ float*)ubBinaryDgamma));
+                ReduceSum(vregDgamma, vregDgamma, pregLoop);
+                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
+                    ubDgamma + outputOffset + cgIdx, vregDgamma, pregMerge);
+                DataCopy(vregDbeta, ((__ubuf__ float*)ubBinaryDbeta));
+                ReduceSum(vregDbeta, vregDbeta, pregLoop);
+                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
+                    ubDbeta + outputOffset + cgIdx, vregDbeta, pregMerge);
+            }
+        }
+    }
+    this->outQueDx_.FreeTensor(binaryDbetaTensor);
+}
+
+template <typename T, typename U>
+__aicore__ inline void GroupNormGradBase<T, U>::VFComputeMode1DxCommon(
+    const LocalTensor<T>& dstTensor, const LocalTensor<T>& xTensor, const LocalTensor<T>& dyTensor,
+    const LocalTensor<float>& gammaTensor, const float C2, const float C3, const uint32_t gammaOffset,
+    const uint32_t curCNum)
+{
+    __ubuf__ T* ubX = (__ubuf__ T*)xTensor.GetPhyAddr();
+    __ubuf__ T* ubDy = (__ubuf__ T*)dyTensor.GetPhyAddr();
+    __ubuf__ T* ubDst = (__ubuf__ T*)dstTensor.GetPhyAddr();
+    __ubuf__ float* ubGamma = (__ubuf__ float*)gammaTensor.GetPhyAddr();
+    uint32_t eleNumPerC = this->eleNumPerC_;
+    float rstdScalar = this->rstdScalar_;
+    uint32_t sregvl = (uint32_t)this->VecLen_;
+    uint16_t loopCnt = eleNumPerC / sregvl;
+    uint32_t tailNum = eleNumPerC - (uint32_t)loopCnt * sregvl;
+    __ubuf__ T* curUbDst;
+    __ubuf__ T* curUbX;
+    __ubuf__ T* curUbDy;
+
+    __VEC_SCOPE__
+    {
+        UnalignReg uSrcX;
+        UnalignReg uSrcDy;
+        UnalignReg uValue;
+        RegTensor<float> vregX;
+        RegTensor<float> vregDy;
+        RegTensor<float> vregGamma;
+        for (uint16_t idx = 0; idx < static_cast<uint16_t>(curCNum); idx++) {
+            MaskReg preg;
+            uint32_t ubOffSet = idx * eleNumPerC;
+            curUbX = ubX + ubOffSet;
+            curUbDy = ubDy + ubOffSet;
+            curUbDst = ubDst + ubOffSet;
+            uint32_t dataLen = loopCnt * sregvl;
+            DataCopy<float, LoadDist::DIST_BRC_B32>(vregGamma, ubGamma + gammaOffset + idx);
+            DataCopyUnAlignPre(uSrcX, curUbX);
+            DataCopyUnAlignPre(uSrcDy, curUbDy);
+            for (uint16_t i = 0; i < loopCnt; ++i) {
+                preg = UpdateMask<float>(dataLen);
+                LoadUnAlignOneTensor<T>(curUbX, vregX, uSrcX, preg, sregvl);
+                LoadUnAlignOneTensor<T>(curUbDy, vregDy, uSrcDy, preg, sregvl);
+                Muls(vregX, vregX, C2, preg);
+                Mul(vregDy, vregDy, vregGamma, preg);
+                Muls(vregDy, vregDy, rstdScalar, preg);
+                Add(vregX, vregX, vregDy, preg);
+                Adds(vregX, vregX, C3, preg);
+                StoreUnAlignOneTensor<T>(curUbDst, vregX, uValue, preg, sregvl);
+            }
+            {
+                uint32_t tail = tailNum;
+                preg = UpdateMask<float>(tail);
+                DataCopyUnAlignPre(uSrcX, curUbX);
+                DataCopyUnAlignPre(uSrcDy, curUbDy);
+                LoadUnAlignOneTensor<T>(curUbX, vregX, uSrcX, preg, tailNum);
+                LoadUnAlignOneTensor<T>(curUbDy, vregDy, uSrcDy, preg, tailNum);
+                Muls(vregX, vregX, C2, preg);
+                Mul(vregDy, vregDy, vregGamma, preg);
+                Muls(vregDy, vregDy, rstdScalar, preg);
+                Add(vregX, vregX, vregDy, preg);
+                Adds(vregX, vregX, C3, preg);
+                StoreUnAlignOneTensor<T>(curUbDst, vregX, uValue, preg, tailNum);
+            }
+            DataCopyUnAlignPost(curUbDst, uValue, 0);
         }
     }
 }

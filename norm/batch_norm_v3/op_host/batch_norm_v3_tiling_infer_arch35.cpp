@@ -83,10 +83,10 @@ protected:
     ge::graphStatus DoLibApiTiling() override;
     // 5、计算TilingKey
     uint64_t GetTilingKey() const override;
-    // 6、计算Workspace 大小
-    ge::graphStatus GetWorkspaceSize() override;
-    // 7、保存Tiling数据
+    // 6、保存Tiling数据
     ge::graphStatus PostTiling() override;
+    // 7、计算Workspace 大小
+    ge::graphStatus GetWorkspaceSize() override;
 
     void Reset();
 
@@ -138,18 +138,18 @@ ge::graphStatus BatchNormV3InferTiling::GetPlatformInfo()
 {
     auto compileInfo = reinterpret_cast<const BatchNormV3CompileInfo*>(context_->GetCompileInfo());
     OP_CHECK_NULL_WITH_CONTEXT(context_, compileInfo);
+    opName = context_->GetNodeName();
     blockSize_ = static_cast<uint64_t>(compileInfo->blockSize);
     vlFp32_ = static_cast<uint64_t>(compileInfo->vectorLength) / FLOAT32_BYTES;
     vlFp16_ = static_cast<uint64_t>(compileInfo->vectorLength) / FLOAT16_BYTES;
 
-    opName = context_->GetNodeName();
     auto platformInfo = context_->GetPlatformInfo();
     if (platformInfo != nullptr) {
         auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-        aicoreParams_.numBlocks = ascendcPlatform.GetCoreNumAiv();
         uint64_t ubSizePlatForm;
         ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
         aicoreParams_.ubSize = ubSizePlatForm;
+        aicoreParams_.numBlocks = ascendcPlatform.GetCoreNumAiv();
     } else {
         aicoreParams_.numBlocks = compileInfo->coreNum;
         aicoreParams_.ubSize = compileInfo->ubSize;

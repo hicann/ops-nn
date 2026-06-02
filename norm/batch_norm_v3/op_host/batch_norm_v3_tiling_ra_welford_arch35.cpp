@@ -112,29 +112,17 @@ ge::graphStatus BatchNormV3RAWelfordTilingBase::BinaryAddTiling(int64_t elemSize
     }
     batchNormV3TilingData.set_rFactor(rFactor);
 
-    int64_t binaryQuotient = RA_BINARY_ADD_THRESHOLD;
-    while (binaryQuotient < rFactor) {
-        binaryQuotient *= BINARY_ADD_COEF;
-    }
-    binaryQuotient /= BINARY_ADD_COEF;
+    int64_t binaryQuotient = GetBatchNormV3BinaryQuotient(rFactor, RA_BINARY_ADD_THRESHOLD);
     batchNormV3TilingData.set_binaryAddQuotient(binaryQuotient);
     int64_t binaryAddNum = binaryQuotient / RA_BINARY_ADD_THRESHOLD;
     int64_t binaryAddK = 0;
-    int64_t curBinaryAddNum = 1;
-    while (curBinaryAddNum < binaryAddNum) {
-        binaryAddK++;
-        curBinaryAddNum *= BINARY_ADD_COEF_FOUR;
-    }
-    if (curBinaryAddNum == binaryAddNum) {
-        batchNormV3TilingData.set_binaryAddK(binaryAddK);
-        batchNormV3TilingData.set_binaryAddLast(0);
-    } else if (curBinaryAddNum == binaryAddNum * BINARY_ADD_COEF) {
-        batchNormV3TilingData.set_binaryAddK(binaryAddK - 1);
-        batchNormV3TilingData.set_binaryAddLast(1);
-    } else {
+    int64_t binaryAddLast = 0;
+    if (!GetBatchNormV3BinaryAddParam(binaryAddNum, binaryAddK, binaryAddLast)) {
         OP_LOGE(context_->GetNodeName(), "Binary add calculate error.");
         return ge::GRAPH_FAILED;
     }
+    batchNormV3TilingData.set_binaryAddK(binaryAddK);
+    batchNormV3TilingData.set_binaryAddLast(binaryAddLast);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -190,8 +178,7 @@ ge::graphStatus BatchNormV3RAWelfordTilingBase::PostTiling()
         batchNormV3TilingData.GetDataSize() > rawTilingData->GetCapacity(),
         OP_LOGE(
             context_->GetNodeName(), "actual tiling data size %zu > context tiling data size %zu",
-            batchNormV3TilingData.GetDataSize(), rawTilingData->GetCapacity()),
-        return ge::GRAPH_FAILED);
+            batchNormV3TilingData.GetDataSize(), rawTilingData->GetCapacity()), return ge::GRAPH_FAILED);
     batchNormV3TilingData.SaveToBuffer(rawTilingData->GetData(), rawTilingData->GetCapacity());
     rawTilingData->SetDataSize(batchNormV3TilingData.GetDataSize());
 

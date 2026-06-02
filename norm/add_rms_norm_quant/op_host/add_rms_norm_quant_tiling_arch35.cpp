@@ -36,6 +36,7 @@ constexpr uint32_t DOUBLE_BUFFER = 2;
 constexpr uint32_t CONST_ZERO = 0;
 constexpr uint32_t CONST_ONE = 1;
 constexpr uint32_t CONST_TWO = 2;
+constexpr float DEFAULT_EPSILON = 1e-5;
 const gert::Shape g_vec_1_shape = {1};
 /**
  * Ensure that the returned shape is non-scalar.
@@ -55,8 +56,8 @@ inline const gert::Shape &EnsureNotScalar(const gert::Shape &in_shape) {
 ge::graphStatus AddRmsNormQuantRegbaseTiling::CheckDtypeVaild(
     ge::DataType& srcDtype, std::vector<ge::DataType>& supportDtypeList, string srcName)
 {
-    for (const auto& supportedDtype : supportDtypeList) {
-        if (supportedDtype == srcDtype) {
+    for (const auto& quantSupportedDtype : supportDtypeList) {
+        if (quantSupportedDtype == srcDtype) {
             return ge::GRAPH_SUCCESS;
         }
     }
@@ -434,10 +435,10 @@ ge::graphStatus AddRmsNormQuantRegbaseTiling::SetInputParams()
     size_t x1DimNum = x1Shape.GetDimNum();
     size_t gammaDimNum = gammaShape.GetDimNum();
     uint64_t numM = 1;
-    uint64_t numN = 1;
     for (size_t i = 0; i < x1DimNum - gammaDimNum; i++) {
         numM *= x1Shape.GetDim(i);
     }
+    uint64_t numN = 1;
     for (size_t i = 0; i < gammaDimNum; i++) {
         numN *= gammaShape.GetDim(i);
     }
@@ -468,7 +469,7 @@ ge::graphStatus AddRmsNormQuantRegbaseTiling::SetInputParams()
     auto attrs = context_->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context_, attrs);
     const float* epsilon = attrs->GetFloat(EPS_ATTR_INDEX);
-    tilingParams.epsilon = *epsilon;
+    tilingParams.epsilon = (epsilon == nullptr) ? DEFAULT_EPSILON : *epsilon;
     if (0 == numN) {
         OP_LOGE(nodeName.c_str(), "Can not div zero.");
         return ge::GRAPH_FAILED;
@@ -647,13 +648,13 @@ ge::graphStatus AddRmsNormQuantRegbaseTiling::SetTilingParams()
             tmpPowerSize *= MULTI_FACTOR_2;
         }
         tilingParams.powerSplit = tmpPowerSize;
+        tilingParams.baseM = 1;
+        tilingParams.baseN = tilingParams.powerSplit;
         uint64_t tmpLoop = 1;
         while (tmpLoop * MULTI_FACTOR_2 * tilingParams.powerSplit <= tilingParams.numN) {
             tmpLoop *= MULTI_FACTOR_2;
         }
         tilingParams.powerLoop = tmpLoop;
-        tilingParams.baseM = 1;
-        tilingParams.baseN = tilingParams.powerSplit;
         tilingParams.tilingType = TILING_TYPE_SPILT;
         return ge::GRAPH_SUCCESS;
     }
@@ -667,8 +668,8 @@ ge::graphStatus AddRmsNormQuantRegbaseTiling::DoOpTiling()
     OP_LOGD(nodeName.c_str(), "Enter AddRmsNormQuantRegbaseTiling DoOpTiling.");
     if (tilingParams.needGetCompileInfo) {
         auto ascendcPlatform = platform_ascendc::PlatformAscendC(context_->GetPlatformInfo());
-        ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, tilingParams.maxUbSize);
         tilingParams.totalCoreNum = ascendcPlatform.GetCoreNumAiv();
+        ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, tilingParams.maxUbSize);
     }
 
     tilingParams.mPerCore = Ops::Base::CeilDiv(tilingParams.numM, tilingParams.totalCoreNum);
@@ -706,10 +707,10 @@ void AddRmsNormQuantRegbaseTiling::SetTilingData()
     tilingData.set_baseNReduceAlign(tilingParams.baseNReduceAlign);
     tilingData.set_powerSplit(tilingParams.powerSplit);
     tilingData.set_powerLoop(tilingParams.powerLoop);
-    tilingData.set_mPerCore(tilingParams.mPerCore);
-    tilingData.set_mLastCore(tilingParams.mLastCore);
     tilingData.set_epsilon(tilingParams.epsilon);
     tilingData.set_avgFactor(tilingParams.avgFactor);
+    tilingData.set_mPerCore(tilingParams.mPerCore);
+    tilingData.set_mLastCore(tilingParams.mLastCore);
     tilingData.set_divMode(tilingParams.divMode ? 1 : 0);
 }
 

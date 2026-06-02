@@ -690,13 +690,13 @@ public:
         }
         int64_t processR = ubRDimFactor_;
         uint32_t binaryAddQuotient = binaryAddQuotient_;
-        uint32_t binaryAddK = binaryAddK_;
         uint32_t binaryAddLastNum = binaryAddLastNum_;
+        uint32_t binaryAddK = binaryAddK_;
         if (isHalf) {
             processR = ubRDimTailFactor_;
             binaryAddQuotient = halfBinaryAddQuotient_;
-            binaryAddK = halfBinaryAddK_;
             binaryAddLastNum = halfBinaryAddLastNum_;
+            binaryAddK = halfBinaryAddK_;
         }
         int64_t binaryAddRemainder = processR - binaryAddQuotient;
         uint16_t binaryAddRemainderLoop = CeilDiv(binaryAddRemainder, VL_FP32);

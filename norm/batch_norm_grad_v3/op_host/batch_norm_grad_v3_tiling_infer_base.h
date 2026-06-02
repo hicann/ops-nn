@@ -46,17 +46,17 @@ static std::vector<std::array<ge::DataType, DTYPE_CHECK_NUM>> validInputDtypes =
 constexpr int64_t DIM_NUM_4 = 4;
 constexpr int64_t DIM_NUM_5 = 5;
 
-constexpr int64_t INPUT_OUTPUT_NUM = 2;
 constexpr int64_t DOUBLE_BUFFER = 2;
+constexpr int64_t INPUT_OUTPUT_NUM = 2;
 
-constexpr int64_t FLOAT32_BYTES = 4;
 constexpr int64_t FLOAT16_BYTES = 2;
+constexpr int64_t FLOAT32_BYTES = 4;
 
 constexpr int64_t DIM_0 = 0;
 constexpr int64_t DIM_1 = 1;
 constexpr int64_t DIM_2 = 2;
-constexpr int64_t DIM_3 = 3;
 constexpr int64_t DIM_4 = 4;
+constexpr int64_t DIM_3 = 3;
 
 constexpr int64_t PARAM_INPUT_WEIGHT_INDEX = 2;
 constexpr int64_t PARAM_INPUT_RUNNINGVAR_INDEX = 4;
@@ -88,24 +88,24 @@ protected:
         return true;
     }
 
-    // 1、获取平台信息比如CoreNum、UB/L1/L0C资源大小
-    ge::graphStatus GetPlatformInfo() override;
-    // 2、获取INPUT/OUTPUT/ATTR信息
+    // 1、获取INPUT/OUTPUT/ATTR信息
     ge::graphStatus GetShapeAttrsInfo() override;
+    // 2、获取平台信息比如CoreNum、UB/L1/L0C资源大小
+    ge::graphStatus GetPlatformInfo() override;
     // 3、计算数据切分TilingData
     ge::graphStatus DoOpTiling() override
     {
         return ge::GRAPH_SUCCESS;
     }
-    // 4、计算高阶API的TilingData
+    // 4、计算Workspace 大小
+    ge::graphStatus GetWorkspaceSize() override;
+    // 5、计算高阶API的TilingData
     ge::graphStatus DoLibApiTiling() override;
-    // 5、计算TilingKey
+    // 6、计算TilingKey
     uint64_t GetTilingKey() const override
     {
         return 0;
     }
-    // 6、计算Workspace 大小
-    ge::graphStatus GetWorkspaceSize() override;
     // 7、保存Tiling数据
     ge::graphStatus PostTiling() override
     {

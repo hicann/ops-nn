@@ -18,6 +18,7 @@
 #include "kernel_tiling/kernel_tiling.h"
 #include "kernel_operator.h"
 #include "../../norm_common/reduce_common_regbase.h"
+#include "batch_norm_v3_regbase_common.h"
 namespace BatchNormV3Ops {
 using namespace AscendC;
 
@@ -42,16 +43,6 @@ class BatchNormV3Welford {
     static constexpr int32_t INDEX_4 = 4;
     static constexpr int32_t INDEX_8 = 8;
     static constexpr int32_t INDEX_16 = 16;
-
-    static constexpr int32_t DICHOTOMY_ADD_COEFF = 2;
-
-    constexpr static AscendC::MicroAPI::CastTrait castTraitB162B32 = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN, MaskMergeMode::ZEROING,
-        AscendC::RoundMode::UNKNOWN};
-
-    constexpr static AscendC::MicroAPI::CastTrait castTraitB322B16 = {
-        AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::NO_SAT, MaskMergeMode::ZEROING,
-        AscendC::RoundMode::CAST_RINT};
 
 public:
     __aicore__ inline BatchNormV3Welford(){};
@@ -97,7 +88,9 @@ public:
         auto blockIdx = GetBlockIdx();
 
         oneSubMomentum = (float)1.0 - momentum;
-        momentumForVar = momentum * elemNum / (elemNum - 1);
+        momentumForVar = elemNum == 1 ?
+            AscendC::NumericLimits<float>::QuietNaN() :
+            momentum * elemNum / (elemNum - 1);
         isLastCore = (blockIdx == realCoreNum - 1) && (numLastCore != 0);
         processNumPerCore = isLastCore ? numLastCore : aBlockFactor;
 
@@ -331,72 +324,6 @@ public:
     }
 
 private:
-    template <typename T_SRC>
-    __aicore__ inline void LoadTwoTensorForDtypeTBrc(
-        __local_mem__ T_SRC* src1, __local_mem__ T_SRC* src2, RegTensor<float>& dst1, RegTensor<float>& dst2, MaskReg& dst1Preg,
-        MaskReg& dst2Preg, uint32_t src1Offset, uint32_t src2Offset)
-    {
-        if constexpr (IsSameType<T_SRC, half>::value) {
-            RegTensor<half> xFp16Q;
-            RegTensor<half> xFp16R;
-            DataCopy<half, LoadDist::DIST_BRC_B16>(xFp16Q, ((__local_mem__ half*)(src1) + (src1Offset)));
-            DataCopy<half, LoadDist::DIST_BRC_B16>(xFp16R, ((__local_mem__ half*)(src2) + (src2Offset)));
-            Cast<float, half, castTraitB162B32>(dst1, xFp16Q, dst1Preg);
-            Cast<float, half, castTraitB162B32>(dst2, xFp16R, dst2Preg);
-        } else if constexpr (IsSameType<T_SRC, bfloat16_t>::value) {
-            RegTensor<bfloat16_t> xFp16Q;
-            RegTensor<bfloat16_t> xFp16R;
-            DataCopy<bfloat16_t, LoadDist::DIST_BRC_B16>(xFp16Q, ((__local_mem__ bfloat16_t*)(src1) + (src1Offset)));
-            DataCopy<bfloat16_t, LoadDist::DIST_BRC_B16>(xFp16R, ((__local_mem__ bfloat16_t*)(src2) + (src2Offset)));
-            Cast<float, bfloat16_t, castTraitB162B32>(dst1, xFp16Q, dst1Preg);
-            Cast<float, bfloat16_t, castTraitB162B32>(dst2, xFp16R, dst2Preg);
-        } else {
-            DataCopy<float, LoadDist::DIST_BRC_B32>(dst1, ((__local_mem__ float*)(src1) + (src1Offset)));
-            DataCopy<float, LoadDist::DIST_BRC_B32>(dst2, ((__local_mem__ float*)(src2) + (src2Offset)));
-        }
-    }
-
-    __aicore__ inline void LoadOneTensorForDtypeT(
-        __local_mem__ T* input, RegTensor<float>& dst, MaskReg& preg, uint32_t offset)
-    {
-        if constexpr (IsSameType<T, half>::value) {
-            RegTensor<half> xFp16;
-            DataCopy<half, LoadDist::DIST_UNPACK_B16>(xFp16, ((__local_mem__ half*)(input) + (offset)));
-            Cast<float, half, castTraitB162B32>(dst, xFp16, preg);
-        } else if constexpr (IsSameType<T, bfloat16_t>::value) {
-            RegTensor<bfloat16_t> xBf16;
-            DataCopy<bfloat16_t, LoadDist::DIST_UNPACK_B16>(xBf16, ((__local_mem__ bfloat16_t*)(input) + (offset)));
-            Cast<float, bfloat16_t, castTraitB162B32>(dst, xBf16, preg);
-        } else {
-            DataCopy(dst, ((__local_mem__ float*)(input) + (offset)));
-        }
-    }
-
-    __aicore__ inline void DichotomyAdd(
-        RegTensor<float>& dstReg, __local_mem__ float* src, uint16_t outerLoop, uint16_t innerLoop, uint32_t lastNum)
-    {
-        RegTensor<float> tmpReg1;
-        RegTensor<float> tmpReg2;
-        RegTensor<float> tmpReg3;
-        AscendC::MicroAPI::LocalMemBar<AscendC::MicroAPI::MemType::VEC_STORE, AscendC::MicroAPI::MemType::VEC_LOAD>();
-        MaskReg pregMain = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
-        for (uint16_t k = 0; k < outerLoop; k++) {
-            innerLoop = innerLoop / DICHOTOMY_ADD_COEFF;
-            for (uint16_t i = 0; i < innerLoop; i++) {
-                DataCopy(tmpReg1, src + i * VL_FP32);
-                DataCopy(tmpReg2, src + (i + innerLoop) * VL_FP32);
-                Add(tmpReg3, tmpReg1, tmpReg2, pregMain);
-                DataCopy(src + i * VL_FP32, tmpReg3, pregMain);
-            }
-            AscendC::MicroAPI::LocalMemBar<
-                AscendC::MicroAPI::MemType::VEC_STORE, AscendC::MicroAPI::MemType::VEC_LOAD>();
-        }
-        uint32_t sreg0 = lastNum;
-        MaskReg pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg0);
-        DataCopy(tmpReg3, src);
-        ReduceSum(dstReg, tmpReg3, pregLoop);
-    }
-
     __aicore__ inline void ProcessSplitWelfordUpdate(
         __local_mem__ float* tmpMeanLocal, __local_mem__ float* tmpVarLocal, int64_t index, int64_t nBurst,
         int64_t burstLen, int64_t count, bool isFirstStep)
@@ -412,9 +339,11 @@ private:
         uint16_t updateLoopCount = CeilDiv(processNum, VL_FP32);
         if (isFirstStep) {
             // 第一次更新时，需要将tmp mean和tmp var清0
-            VFWelfordParallelUpdateWithInit(xLocal, tmpMeanLocal, tmpVarLocal, processNum, updateLoopCount, scale);
+            BatchNormV3Ops::WelfordParallelUpdateVF<true>(
+                xLocal, tmpMeanLocal, tmpVarLocal, processNum, updateLoopCount, scale, VL_FP32);
         } else {
-            VFWelfordParallelUpdate(xLocal, tmpMeanLocal, tmpVarLocal, processNum, updateLoopCount, scale);
+            BatchNormV3Ops::WelfordParallelUpdateVF<false>(
+                xLocal, tmpMeanLocal, tmpVarLocal, processNum, updateLoopCount, scale, VL_FP32);
         }
         xQueue.FreeTensor(xInUb);
     }
@@ -552,7 +481,7 @@ private:
                     AscendC::MicroAPI::RegTensor<T_RUNNING_MEAN> meanTmp;
                     AscendC::MicroAPI::DataCopy<T_RUNNING_MEAN, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
                         meanTmp, ((__local_mem__ T_RUNNING_MEAN*)meanLocal + i * VL_FP32));
-                    AscendC::MicroAPI::Cast<float, T_RUNNING_MEAN, castTraitB162B32>(mean, meanTmp, pregLoop);
+                    AscendC::MicroAPI::Cast<float, T_RUNNING_MEAN, NormCommon::castTraitB162B32>(mean, meanTmp, pregLoop);
                 } else {
                     AscendC::MicroAPI::DataCopy(mean, ((__local_mem__ float*)meanLocal + i * VL_FP32));
                 }
@@ -563,7 +492,7 @@ private:
                 if constexpr (!IsSameType<T_RUNNING_MEAN, float>::value) {
                     // 需要把float的结果cast回T_RUNNING_MEAN
                     AscendC::MicroAPI::RegTensor<T_RUNNING_MEAN> outMeanTmp;
-                    AscendC::MicroAPI::Cast<T_RUNNING_MEAN, float, castTraitB322B16>(outMeanTmp, mean, pregLoop);
+                    AscendC::MicroAPI::Cast<T_RUNNING_MEAN, float, NormCommon::castTraitB322B16>(outMeanTmp, mean, pregLoop);
                     AscendC::MicroAPI::DataCopy<T_RUNNING_MEAN, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(
                         ((__local_mem__ T_RUNNING_MEAN*)outMeanLocal + i * VL_FP32), outMeanTmp, pregLoop);
                 } else {
@@ -575,7 +504,7 @@ private:
                     AscendC::MicroAPI::RegTensor<T_RUNNING_MEAN> varTmp;
                     AscendC::MicroAPI::DataCopy<T_RUNNING_MEAN, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B16>(
                         varTmp, ((__local_mem__ T_RUNNING_MEAN*)varLocal + i * VL_FP32));
-                    AscendC::MicroAPI::Cast<float, T_RUNNING_MEAN, castTraitB162B32>(var, varTmp, pregLoop);
+                    AscendC::MicroAPI::Cast<float, T_RUNNING_MEAN, NormCommon::castTraitB162B32>(var, varTmp, pregLoop);
                 } else {
                     AscendC::MicroAPI::DataCopy(var, ((__local_mem__ float*)varLocal + i * VL_FP32));
                 }
@@ -586,92 +515,12 @@ private:
                 if constexpr (!IsSameType<T_RUNNING_MEAN, float>::value) {
                     // 需要把float的结果cast回T_RUNNING_MEAN
                     AscendC::MicroAPI::RegTensor<T_RUNNING_MEAN> outVarTmp;
-                    AscendC::MicroAPI::Cast<T_RUNNING_MEAN, float, castTraitB322B16>(outVarTmp, var, pregLoop);
+                    AscendC::MicroAPI::Cast<T_RUNNING_MEAN, float, NormCommon::castTraitB322B16>(outVarTmp, var, pregLoop);
                     AscendC::MicroAPI::DataCopy<T_RUNNING_MEAN, AscendC::MicroAPI::StoreDist::DIST_PACK_B32>(
                         ((__local_mem__ T_RUNNING_MEAN*)outVarLocal + i * VL_FP32), outVarTmp, pregLoop);
                 } else {
                     AscendC::MicroAPI::DataCopy(((__local_mem__ float*)outVarLocal + i * VL_FP32), var, pregLoop);
                 }
-            }
-        }
-    }
-
-    __aicore__ inline void VFWelfordParallelUpdateWithInit(
-        __local_mem__ T* x1Local, __local_mem__ float* tmpMeanLocal, __local_mem__ float* tmpVarLocal, uint64_t calLen,
-        uint16_t loopCount, float scale)
-    {
-        __VEC_SCOPE__
-        {
-            RegTensor<float> x1;
-            RegTensor<float> tmpMean;
-            RegTensor<float> tmpVar;
-            RegTensor<float> delta1;
-            RegTensor<float> delta2;
-            RegTensor<float> delta3;
-            RegTensor<float> delat4;
-            vector_bool pregMain = pset_b8(PAT_ALL);
-            vector_bool pregLoop;
-            uint32_t sreg0 = calLen;
-            for (uint16_t i = 0; i < loopCount; i++) {
-                pregLoop = plt_b32(sreg0, POST_UPDATE);
-                LoadOneTensorForDtypeT(x1Local, x1, pregLoop, i * VL_FP32);
-                Duplicate(tmpMean, 0.0, pregLoop);
-                // delata1 = x1 - mean
-                Sub(delta1, x1, tmpMean, pregLoop);
-                // delta2 = delta1 * scale
-                Muls(delta2, delta1, scale, pregLoop);
-                // mean = mean + delta2
-                Add(tmpMean, tmpMean, delta2, pregLoop);
-                DataCopy(tmpMeanLocal + i * VL_FP32, tmpMean, pregLoop);
-
-                Duplicate(tmpVar, 0.0, pregLoop);
-                // delta3 = x1 - mean
-                Sub(delta3, x1, tmpMean, pregLoop);
-                // delta4 = delta1 * delta3
-                Mul(delat4, delta1, delta3, pregLoop);
-                // var = var + delta4
-                Add(tmpVar, tmpVar, delat4, pregLoop);
-                DataCopy(tmpVarLocal + i * VL_FP32, tmpVar, pregLoop);
-            }
-        }
-    }
-
-    __aicore__ inline void VFWelfordParallelUpdate(
-        __local_mem__ T* x1Local, __local_mem__ float* tmpMeanLocal, __local_mem__ float* tmpVarLocal, uint64_t calLen,
-        uint16_t loopCount, float scale)
-    {
-        __VEC_SCOPE__
-        {
-            RegTensor<float> x1;
-            RegTensor<float> tmpMean;
-            RegTensor<float> tmpVar;
-            RegTensor<float> delta1;
-            RegTensor<float> delta2;
-            RegTensor<float> delta3;
-            RegTensor<float> delat4;
-            MaskReg pregLoop;
-            uint32_t sreg0 = calLen;
-            for (uint16_t i = 0; i < loopCount; i++) {
-                pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg0);
-                LoadOneTensorForDtypeT(x1Local, x1, pregLoop, i * VL_FP32);
-
-                DataCopy(tmpMean, tmpMeanLocal + i * VL_FP32);
-                // delata1 = x1 - mean
-                Sub(delta1, x1, tmpMean, pregLoop);
-                // delta2 = delta1 * scale
-                Muls(delta2, delta1, scale, pregLoop);
-                // mean = mean + delta2
-                Add(tmpMean, tmpMean, delta2, pregLoop);
-                DataCopy(tmpMeanLocal + i * VL_FP32, tmpMean, pregLoop);
-
-                DataCopy(tmpVar, tmpVarLocal + i * VL_FP32);
-                // delta3 = x1 - mean
-                Sub(delta3, x1, tmpMean, pregLoop);
-                // delta4 = delta1 * delta3
-                Mul(delat4, delta1, delta3, pregLoop);
-                // var = var + delta4
-                Add(tmpVar, tmpVar, delat4, pregLoop);
-                DataCopy(tmpVarLocal + i * VL_FP32, tmpVar, pregLoop);
             }
         }
     }
@@ -735,7 +584,7 @@ private:
                     dichotomyAddLocal + dichotomyAddReminderLoopCount + i, mean, pregMerge);
             }
 
-            DichotomyAdd(mean, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
+            NormCommon::DichotomyAdd(mean, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
             Muls(mean, mean, scale1, pregMerge);
             DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(meanLocal + offset, mean, pregMerge);
 
@@ -781,7 +630,7 @@ private:
                     dichotomyAddLocal + dichotomyAddReminderLoopCount + i, var, pregMerge);
             }
 
-            DichotomyAdd(var, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
+            NormCommon::DichotomyAdd(var, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
             Muls(var, var, reduceScale1, pregMerge);
             DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(varLocal + offset, var, pregMerge);
             NormCommon::ComputeRstdNewtonRaphsonReg<false>(var, rstd, pregMerge, eps);
@@ -912,7 +761,7 @@ private:
                 DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                     dichotomyAddLocal + dichotomyAddReminderRealLoopCount + i, mean, pregMerge);
             }
-            DichotomyAdd(mean, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
+            NormCommon::DichotomyAdd(mean, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
             Muls(mean, mean, reduceScale1, pregMerge);
             DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(meanLocal + offset, mean, pregMerge);
 
@@ -998,7 +847,7 @@ private:
                     dichotomyAddLocal + i + welfordDiffLoopCount + welfordReminderLoopCount, var, pregMerge);
             }
             for (uint16_t i = 0;
-                 i < static_cast<uint16_t>(dichotomyAddPowerLoopCount - dichotomyAddReminderRealLoopCount); i++) {
+                 i < static_cast<uint16_t>(dichotomyAddPowerLoopCount - dichotomyAddReminderRealLoopCount); ++i) {
                 DataCopy(dichotomyAddMeanL, tmpMeanLocal + (i + dichotomyAddReminderRealLoopCount) * VL_FP32);
                 Sub(deltaL, dichotomyAddMeanL, mean, pregMain);
                 Mul(deltaL, deltaL, deltaL, pregMain);
@@ -1010,7 +859,7 @@ private:
                 DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                     dichotomyAddLocal + dichotomyAddReminderRealLoopCount + i, var, pregMerge);
             }
-            DichotomyAdd(var, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
+            NormCommon::DichotomyAdd(var, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
             Muls(var, var, reduceScale1, pregMerge);
             DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(varLocal + offset, var, pregMerge);
             NormCommon::ComputeRstdNewtonRaphsonReg<false>(var, rstd, pregMerge, eps);
@@ -1119,7 +968,7 @@ private:
                 DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                     dichotomyAddLocal + dichotomyAddReminderRealLoopCount + i, mean, pregMerge);
             }
-            DichotomyAdd(mean, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
+            NormCommon::DichotomyAdd(mean, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
             Muls(mean, mean, reduceScale1, pregMerge);
             DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(meanLocal + offset, mean, pregMerge);
 
@@ -1177,7 +1026,7 @@ private:
             }
 
             for (uint16_t i = 0; i < dichotomyAddReminderLoopCount; i++) {
-                pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg0);
+                MaskReg pregMask = AscendC::MicroAPI::UpdateMask<float>(sreg0);
                 DataCopy(
                     dichotomyAddMeanL, tmpMeanLocal + (i + welfordDiffLoopCount) * VL_FP32 + welfordDiffReminderAlign);
                 Sub(deltaL, dichotomyAddMeanL, mean, pregMain);
@@ -1186,9 +1035,9 @@ private:
                 DataCopy(
                     dichotomyAddMeanR,
                     tmpMeanLocal + (i + welfordDiffLoopCount) * VL_FP32 + welfordDiffReminderAlign + dichotomyAddPower);
-                Sub(deltaR, dichotomyAddMeanR, mean, pregLoop);
-                Mul(deltaR, deltaR, deltaR, pregLoop);
-                Muls(deltaR, deltaR, cnt, pregLoop);
+                Sub(deltaR, dichotomyAddMeanR, mean, pregMask);
+                Mul(deltaR, deltaR, deltaR, pregMask);
+                Muls(deltaR, deltaR, cnt, pregMask);
 
                 DataCopy(
                     dichotomyAddVarL, tmpVarLocal + (i + welfordDiffLoopCount) * VL_FP32 + welfordDiffReminderAlign);
@@ -1197,8 +1046,8 @@ private:
                 DataCopy(
                     dichotomyAddVarR,
                     tmpVarLocal + (i + welfordDiffLoopCount) * VL_FP32 + welfordDiffReminderAlign + dichotomyAddPower);
-                Add(dichotomyAddVarR, dichotomyAddVarR, deltaR, pregLoop);
-                Muls(dichotomyAddVarR, dichotomyAddVarR, reduceScale0, pregLoop);
+                Add(dichotomyAddVarR, dichotomyAddVarR, deltaR, pregMask);
+                Muls(dichotomyAddVarR, dichotomyAddVarR, reduceScale0, pregMask);
                 Add(sumVar, dichotomyAddVarL, dichotomyAddVarR, pregMain);
                 ReduceSum(var, sumVar, pregMain);
                 DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
@@ -1218,7 +1067,7 @@ private:
                 DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                     dichotomyAddLocal + dichotomyAddReminderRealLoopCount + i, var, pregMerge);
             }
-            DichotomyAdd(var, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
+            NormCommon::DichotomyAdd(var, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
             Muls(var, var, reduceScale1, pregMerge);
             DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(varLocal + offset, var, pregMerge);
             NormCommon::ComputeRstdNewtonRaphsonReg<false>(var, rstd, pregMerge, eps);
@@ -1259,16 +1108,16 @@ private:
         {
             RegTensor<float> dichotomyAddMeanL;
             RegTensor<float> dichotomyAddMeanR;
-            RegTensor<float> dichotomyAddVarL;
-            RegTensor<float> dichotomyAddVarR;
+            RegTensor<float> dichotomyAddVarLReg;
+            RegTensor<float> dichotomyAddVarRReg;
             RegTensor<float> sumMean;
             RegTensor<float> mean;
-            RegTensor<float> sumVar;
-            RegTensor<float> var;
-            RegTensor<float> deltaL;
-            RegTensor<float> deltaR;
+            RegTensor<float> sumVarReg;
+            RegTensor<float> varReg;
+            RegTensor<float> deltaLReg;
+            RegTensor<float> deltaRReg;
             RegTensor<float> one;
-            RegTensor<float> rstd;
+            RegTensor<float> rstdReg;
             RegTensor<float> tmp;
 
             MaskReg pregLoop;
@@ -1321,7 +1170,7 @@ private:
                     mean, pregMerge);
             }
 
-            DichotomyAdd(mean, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
+            NormCommon::DichotomyAdd(mean, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
             Muls(mean, mean, reduceScale1, pregMerge);
             DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(meanLocal + offset, mean, pregMerge);
 
@@ -1333,38 +1182,38 @@ private:
             for (uint16_t i = 0; i < dichotomyAddReminderLoopCount; i++) {
                 pregLoop = AscendC::MicroAPI::UpdateMask<float>(sreg0);
                 DataCopy(dichotomyAddMeanL, tmpMeanLocal + i * VL_FP32);
-                Sub(deltaL, dichotomyAddMeanL, mean, pregMain);
-                Mul(deltaL, deltaL, deltaL, pregMain);
-                Muls(deltaL, deltaL, tailCnt, pregMain);
-                DataCopy(dichotomyAddVarL, tmpVarLocal + i * VL_FP32);
-                Add(dichotomyAddVarL, dichotomyAddVarL, deltaL, pregMain);
-                Muls(dichotomyAddVarL, dichotomyAddVarL, reduceScale0, pregMain);
+                Sub(deltaLReg, dichotomyAddMeanL, mean, pregMain);
+                Mul(deltaLReg, deltaLReg, deltaLReg, pregMain);
+                Muls(deltaLReg, deltaLReg, tailCnt, pregMain);
+                DataCopy(dichotomyAddVarLReg, tmpVarLocal + i * VL_FP32);
+                Add(dichotomyAddVarLReg, dichotomyAddVarLReg, deltaLReg, pregMain);
+                Muls(dichotomyAddVarLReg, dichotomyAddVarLReg, reduceScale0, pregMain);
 
                 DataCopy(dichotomyAddMeanR, tmpMeanLocal + i * VL_FP32 + dichotomyAddPower);
-                Sub(deltaR, dichotomyAddMeanR, mean, pregLoop);
-                Mul(deltaR, deltaR, deltaR, pregLoop);
-                Muls(deltaR, deltaR, cnt, pregLoop);
-                DataCopy(dichotomyAddVarR, tmpVarLocal + i * VL_FP32 + dichotomyAddPower);
-                Add(dichotomyAddVarR, dichotomyAddVarR, deltaR, pregLoop);
-                Muls(dichotomyAddVarR, dichotomyAddVarR, reduceScale0, pregLoop);
+                Sub(deltaRReg, dichotomyAddMeanR, mean, pregLoop);
+                Mul(deltaRReg, deltaRReg, deltaRReg, pregLoop);
+                Muls(deltaRReg, deltaRReg, cnt, pregLoop);
+                DataCopy(dichotomyAddVarRReg, tmpVarLocal + i * VL_FP32 + dichotomyAddPower);
+                Add(dichotomyAddVarRReg, dichotomyAddVarRReg, deltaRReg, pregLoop);
+                Muls(dichotomyAddVarRReg, dichotomyAddVarRReg, reduceScale0, pregLoop);
 
-                Add(sumVar, dichotomyAddVarL, dichotomyAddVarR, pregMain);
-                ReduceSum(var, sumVar, pregMain);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, var, pregMerge);
+                Add(sumVarReg, dichotomyAddVarLReg, dichotomyAddVarRReg, pregMain);
+                ReduceSum(varReg, sumVarReg, pregMain);
+                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(dichotomyAddLocal + i, varReg, pregMerge);
             }
 
             // 整块剩余部分回刷UB，整块使用tailCountScale
             for (uint16_t i = 0; i < welfordDiffLoopCount; i++) {
                 DataCopy(dichotomyAddMeanL, tmpMeanLocal + i * VL_FP32 + dichotomyAddReminderRoundUp);
-                Sub(deltaL, dichotomyAddMeanL, mean, pregMain);
-                Mul(deltaL, deltaL, deltaL, pregMain);
-                Muls(deltaL, deltaL, tailCnt, pregMain);
-                DataCopy(dichotomyAddVarL, tmpVarLocal + i * VL_FP32 + dichotomyAddReminderRoundUp);
-                Add(dichotomyAddVarL, dichotomyAddVarL, deltaL, pregMain);
-                Muls(dichotomyAddVarL, dichotomyAddVarL, reduceScale0, pregMain);
-                ReduceSum(var, dichotomyAddVarL, pregMain);
+                Sub(deltaLReg, dichotomyAddMeanL, mean, pregMain);
+                Mul(deltaLReg, deltaLReg, deltaLReg, pregMain);
+                Muls(deltaLReg, deltaLReg, tailCnt, pregMain);
+                DataCopy(dichotomyAddVarLReg, tmpVarLocal + i * VL_FP32 + dichotomyAddReminderRoundUp);
+                Add(dichotomyAddVarLReg, dichotomyAddVarLReg, deltaLReg, pregMain);
+                Muls(dichotomyAddVarLReg, dichotomyAddVarLReg, reduceScale0, pregMain);
+                ReduceSum(varReg, dichotomyAddVarLReg, pregMain);
                 DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
-                    dichotomyAddLocal + dichotomyAddReminderLoopCount + i, var, pregMerge);
+                    dichotomyAddLocal + dichotomyAddReminderLoopCount + i, varReg, pregMerge);
             }
 
             sreg0 = welfordDiffReminder;
@@ -1373,40 +1222,41 @@ private:
                 DataCopy(
                     dichotomyAddMeanL,
                     tmpMeanLocal + (i + welfordDiffLoopCount) * VL_FP32 + dichotomyAddReminderRoundUp);
-                Sub(deltaL, dichotomyAddMeanL, mean, pregMain);
-                Mul(deltaL, deltaL, deltaL, pregMain);
-                Muls(deltaL, deltaL, cnt, pregMain);
-                Muls(tmp, deltaL, coeff, pregLoop);
-                Copy<float, MaskMergeMode::MERGING>(deltaL, tmp, pregLoop);
+                Sub(deltaLReg, dichotomyAddMeanL, mean, pregMain);
+                Mul(deltaLReg, deltaLReg, deltaLReg, pregMain);
+                Muls(deltaLReg, deltaLReg, cnt, pregMain);
+                Muls(tmp, deltaLReg, coeff, pregLoop);
+                Copy<float, MaskMergeMode::MERGING>(deltaLReg, tmp, pregLoop);
                 DataCopy(
-                    dichotomyAddVarL, tmpVarLocal + (i + welfordDiffLoopCount) * VL_FP32 + dichotomyAddReminderRoundUp);
-                Add(dichotomyAddVarL, dichotomyAddVarL, deltaL, pregMain);
-                Muls(dichotomyAddVarL, dichotomyAddVarL, reduceScale0, pregMain);
-                ReduceSum(var, dichotomyAddVarL, pregMain);
+                    dichotomyAddVarLReg,
+                    tmpVarLocal + (i + welfordDiffLoopCount) * VL_FP32 + dichotomyAddReminderRoundUp);
+                Add(dichotomyAddVarLReg, dichotomyAddVarLReg, deltaLReg, pregMain);
+                Muls(dichotomyAddVarLReg, dichotomyAddVarLReg, reduceScale0, pregMain);
+                ReduceSum(varReg, dichotomyAddVarLReg, pregMain);
                 DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
-                    dichotomyAddLocal + dichotomyAddReminderLoopCount + welfordDiffLoopCount + i, var, pregMerge);
+                    dichotomyAddLocal + dichotomyAddReminderLoopCount + welfordDiffLoopCount + i, varReg, pregMerge);
             }
 
             for (uint16_t i = 0; i < dichotomyAddPowerRemainLoopCount; i++) {
                 DataCopy(dichotomyAddMeanL, tmpMeanLocal + i * VL_FP32 + dichotomyAddPowerOffset);
-                Sub(deltaL, dichotomyAddMeanL, mean, pregMain);
-                Mul(deltaL, deltaL, deltaL, pregMain);
-                Muls(deltaL, deltaL, cnt, pregMain);
-                DataCopy(dichotomyAddVarL, tmpVarLocal + i * VL_FP32 + dichotomyAddPowerOffset);
-                Add(dichotomyAddVarL, dichotomyAddVarL, deltaL, pregMain);
-                Muls(dichotomyAddVarL, dichotomyAddVarL, reduceScale0, pregMain);
-                ReduceSum(var, dichotomyAddVarL, pregMain);
+                Sub(deltaLReg, dichotomyAddMeanL, mean, pregMain);
+                Mul(deltaLReg, deltaLReg, deltaLReg, pregMain);
+                Muls(deltaLReg, deltaLReg, cnt, pregMain);
+                DataCopy(dichotomyAddVarLReg, tmpVarLocal + i * VL_FP32 + dichotomyAddPowerOffset);
+                Add(dichotomyAddVarLReg, dichotomyAddVarLReg, deltaLReg, pregMain);
+                Muls(dichotomyAddVarLReg, dichotomyAddVarLReg, reduceScale0, pregMain);
+                ReduceSum(varReg, dichotomyAddVarLReg, pregMain);
                 DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
                     dichotomyAddLocal + dichotomyAddReminderLoopCount + welfordDiffLoopCount +
                         welfordReminderLoopCount + i,
-                    var, pregMerge);
+                    varReg, pregMerge);
             }
 
-            DichotomyAdd(var, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
-            Muls(var, var, reduceScale1, pregMerge);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(varLocal + offset, var, pregMerge);
-            NormCommon::ComputeRstdNewtonRaphsonReg<false>(var, rstd, pregMerge, eps);
-            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(rstdLocal + offset, rstd, pregMerge);
+            NormCommon::DichotomyAdd(varReg, dichotomyAddLocal, dichotomyAddK, innerLoopCountOrigin, dichotomyAddLastNum);
+            Muls(varReg, varReg, reduceScale1, pregMerge);
+            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(varLocal + offset, varReg, pregMerge);
+            NormCommon::ComputeRstdNewtonRaphsonReg<false>(varReg, rstdReg, pregMerge, eps);
+            DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(rstdLocal + offset, rstdReg, pregMerge);
         }
     }
 
@@ -1524,12 +1374,12 @@ private:
 
                 if constexpr (IsSameType<T, half>::value) {
                     RegTensor<half> yFp16;
-                    Cast<half, float, castTraitB322B16>(yFp16, y, pregLoop);
+                    Cast<half, float, NormCommon::castTraitB322B16>(yFp16, y, pregLoop);
                     DataCopy<half, StoreDist::DIST_PACK_B32>(
                         ((__local_mem__ half*)yLocal) + j * VL_FP32, yFp16, pregLoop);
                 } else if constexpr (IsSameType<T, bfloat16_t>::value) {
                     RegTensor<bfloat16_t> xBf16;
-                    Cast<bfloat16_t, float, castTraitB322B16>(xBf16, y, pregLoop);
+                    Cast<bfloat16_t, float, NormCommon::castTraitB322B16>(xBf16, y, pregLoop);
                     DataCopy<bfloat16_t, StoreDist::DIST_PACK_B32>(
                         ((__local_mem__ bfloat16_t*)yLocal) + j * VL_FP32, xBf16, pregLoop);
                 } else {

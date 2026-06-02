@@ -52,6 +52,38 @@ static constexpr int64_t TWO = 2;
 static constexpr int64_t THREE = 3;
 static constexpr int64_t BASIC_FACTOR = 64;
 
+template <typename TilingData>
+bool SetRABlockFactorsCommon(
+    TilingData& tilingData, int64_t aDim, int64_t dtypeSize, uint32_t coreNum, uint64_t blockSize)
+{
+    if (aDim <= 0 || dtypeSize <= 0 || coreNum == 0 || blockSize == 0) {
+        return false;
+    }
+    int64_t aFactor = std::max((aDim + coreNum - 1) / coreNum, static_cast<int64_t>(blockSize / dtypeSize));
+    if (aFactor <= 0) {
+        return false;
+    }
+    int64_t numBlocks = (aDim + aFactor - 1) / aFactor;
+    if (numBlocks <= 0) {
+        return false;
+    }
+    aFactor = (aDim + numBlocks - 1) / numBlocks;
+    if (aFactor <= 0) {
+        return false;
+    }
+    int64_t mainBlockFactor = aFactor;
+    int64_t mainBlockCount = aDim / aFactor;
+    int64_t tailBlockFactor = aDim - mainBlockCount * mainBlockFactor;
+    int64_t tailBlockCount = tailBlockFactor > 0 ? 1 : 0;
+
+    tilingData.set_numBlocks(numBlocks);
+    tilingData.set_mainBlockFactor(mainBlockFactor);
+    tilingData.set_tailBlockFactor(tailBlockFactor);
+    tilingData.set_mainBlockCount(mainBlockCount);
+    tilingData.set_tailBlockCount(tailBlockCount);
+    return true;
+}
+
 static std::vector<std::array<ge::DataType, INPUT_NUM>> validInputDtype = {
     {ge::DataType::DT_FLOAT, ge::DataType::DT_FLOAT, ge::DataType::DT_FLOAT, ge::DataType::DT_FLOAT,
      ge::DataType::DT_FLOAT, ge::DataType::DT_FLOAT, ge::DataType::DT_FLOAT},
@@ -618,17 +650,7 @@ void BatchNormGradV3RARRecomputeTilingBase::DoRecomputeTilingSplitR1()
     ubRDimTailTailFactorAlign = ubRDimTailFactorAlign;
     ubRDimTailTailLoopNum = ubRDimFactorAlign * sizeof(float) > (binaryAddBufSize / TWO) ? TWO : 1;
 
-    tilingData.set_ubRDimFactor(ubRDimFactor);
-    tilingData.set_ubRDimFactorAlign(ubRDimFactorAlign);
-    tilingData.set_ubRDimLoopNum(ubRDimLoopNum);
-    tilingData.set_ubRDimTail(ubRDimTail);
-    tilingData.set_ubRDimTailFactor(ubRDimTailFactor);
-    tilingData.set_ubRDimTailFactorAlign(ubRDimTailFactorAlign);
-    tilingData.set_ubRDimTailLoopNum(ubRDimTailLoopNum);
-    tilingData.set_ubRDimTailTail(ubRDimTailTail);
-    tilingData.set_ubRDimTailTailFactor(ubRDimTailTailFactor);
-    tilingData.set_ubRDimTailTailFactorAlign(ubRDimTailTailFactorAlign);
-    tilingData.set_ubRDimTailTailLoopNum(ubRDimTailTailLoopNum);
+    SetUbRDimTilingData();
 }
 
 void BatchNormGradV3RARRecomputeTilingBase::DoRecomputeTilingSplitR0()
@@ -649,6 +671,11 @@ void BatchNormGradV3RARRecomputeTilingBase::DoRecomputeTilingSplitR0()
     ubRDimTailTailFactorAlign = ubRDimTailFactorAlign;
     ubRDimTailTailLoopNum = ubRDimFactorAlign * sizeof(float) > (binaryAddBufSize / TWO) ? TWO : 1;
 
+    SetUbRDimTilingData();
+}
+
+void BatchNormGradV3RARRecomputeTilingBase::SetUbRDimTilingData()
+{
     tilingData.set_ubRDimFactor(ubRDimFactor);
     tilingData.set_ubRDimFactorAlign(ubRDimFactorAlign);
     tilingData.set_ubRDimLoopNum(ubRDimLoopNum);
@@ -766,28 +793,14 @@ ge::graphStatus BatchNormGradV3RAFullLoadTilingBase::DoOpTiling()
     int64_t aDim_ = tilingData.baseTilingData.get_aDim();
     int64_t power2k = 1L << (63 - __builtin_clzl(rDim_ - 1));
 
-    SetBlockFactors(aDim_, dtypeSize);
+    OP_TILING_CHECK(
+        !SetRABlockFactorsCommon(tilingData, aDim_, dtypeSize, coreNum, blockSize),
+        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "failed to set RA block factors."),
+        return ge::GRAPH_FAILED);
     CalculateLoopFactors(dtypeSize, weightDtypeSize, rDim_, power2k);
     SetReduceLoopTimes(power2k, rDim_);
 
     return ge::GRAPH_SUCCESS;
-}
-
-void BatchNormGradV3RAFullLoadTilingBase::SetBlockFactors(int64_t aDim_, int64_t dtypeSize)
-{
-    int64_t aFactor = std::max((aDim_ + coreNum - 1) / coreNum, static_cast<int64_t>(blockSize / dtypeSize));
-    int64_t numBlocks = (aDim_ + aFactor - 1) / aFactor;
-    aFactor = (aDim_ + numBlocks - 1) / numBlocks;
-    int64_t mainBlockFactor = aFactor;
-    int64_t mainBlockCount = aDim_ / aFactor;
-    int64_t tailBlockFactor = aDim_ - mainBlockCount * mainBlockFactor;
-    int64_t tailBlockCount = tailBlockFactor > 0 ? 1 : 0;
-
-    tilingData.set_numBlocks(numBlocks);
-    tilingData.set_mainBlockFactor(mainBlockFactor);
-    tilingData.set_tailBlockFactor(tailBlockFactor);
-    tilingData.set_mainBlockCount(mainBlockCount);
-    tilingData.set_tailBlockCount(tailBlockCount);
 }
 
 void BatchNormGradV3RAFullLoadTilingBase::CalculateLoopFactors(
@@ -895,7 +908,10 @@ ge::graphStatus BatchNormGradV3RARecomputeTilingBase::DoOpTiling()
     int64_t dtypeSize = dyDtype == ge::DataType::DT_FLOAT ? FLOAT_BYTE_NUMBER : FLOAT16_BYTE_NUMBER;
     int64_t rDim_ = tilingData.baseTilingData.get_r1Dim();
     int64_t aDim_ = tilingData.baseTilingData.get_aDim();
-    SetBlockFactors(aDim_, dtypeSize);
+    OP_TILING_CHECK(
+        !SetRABlockFactorsCommon(tilingData, aDim_, dtypeSize, coreNum, blockSize),
+        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "failed to set RA block factors."),
+        return ge::GRAPH_FAILED);
 
     // ub tiling
     int64_t rLoopTimes = rDim_ / rLoopFactor;
@@ -921,23 +937,6 @@ ge::graphStatus BatchNormGradV3RARecomputeTilingBase::DoOpTiling()
     tilingData.set_reciprocal(reciprocal);
 
     return ge::GRAPH_SUCCESS;
-}
-
-void BatchNormGradV3RARecomputeTilingBase::SetBlockFactors(int64_t aDim_, int64_t dtypeSize)
-{
-    int64_t aFactor = std::max((aDim_ + coreNum - 1) / coreNum, static_cast<int64_t>(blockSize / dtypeSize));
-    int64_t numBlocks = (aDim_ + aFactor - 1) / aFactor;
-    aFactor = (aDim_ + numBlocks - 1) / numBlocks;
-    int64_t mainBlockFactor = aFactor;
-    int64_t mainBlockCount = aDim_ / aFactor;
-    int64_t tailBlockFactor = aDim_ - mainBlockCount * mainBlockFactor;
-    int64_t tailBlockCount = tailBlockFactor > 0 ? 1 : 0;
-
-    tilingData.set_numBlocks(numBlocks);
-    tilingData.set_mainBlockFactor(mainBlockFactor);
-    tilingData.set_tailBlockFactor(tailBlockFactor);
-    tilingData.set_mainBlockCount(mainBlockCount);
-    tilingData.set_tailBlockCount(tailBlockCount);
 }
 
 uint64_t BatchNormGradV3RARecomputeTilingBase::GetTilingKey() const

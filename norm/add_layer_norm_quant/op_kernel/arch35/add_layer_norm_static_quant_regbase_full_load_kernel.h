@@ -45,7 +45,7 @@ public:
 
         powerOfTwo_ = 1;
         while (powerOfTwo_ < colsPerLoop_) {
-            powerOfTwo_ *= AddLayerNorm::TWO;
+            powerOfTwo_ *= AddLayerNorm::NUM_TWO;
         }
 
         int32_t rem = colsPerLoop_ % blockSize_;
@@ -124,19 +124,8 @@ public:
 
     __aicore__ inline void CopyBiasToUB(LocalTensor<X1_TYPE> biasLocal, int32_t copyLen)
     {
-        int32_t copyLenAlign = BLOCK_ALIGN(copyLen * sizeof(X1_TYPE), blockSize_) / sizeof(X1_TYPE);
-
-        DataCopyPadExtParams<X1_TYPE> padParams;
-        padParams.isPad = true;
-        padParams.paddingValue = static_cast<X1_TYPE>(0.0);
-        padParams.rightPadding = copyLenAlign - copyLen;
-
-        DataCopyExtParams dataCopyParams;
-        dataCopyParams.blockCount = 1;
-        dataCopyParams.blockLen = copyLen * sizeof(X1_TYPE);
-        dataCopyParams.srcStride = 0;
-        dataCopyParams.dstStride = 0;
-
+        DataCopyPadExtParams<X1_TYPE> padParams = MakeZeroPadParams<X1_TYPE>(copyLen, blockSize_);
+        DataCopyExtParams dataCopyParams = MakeDataCopyParams<X1_TYPE>(copyLen);
         DataCopyPad(biasLocal, biasGm_[0], dataCopyParams, padParams);
         biasQueue_.EnQue(biasLocal);
     }
@@ -145,16 +134,8 @@ public:
         LocalTensor<X1_TYPE> x1Local, LocalTensor<X1_TYPE> x2Local, LocalTensor<X1_TYPE> biasLocal, int64_t inputOffset,
         int32_t copyLen, int32_t rowsCount)
     {
-        int32_t copyLenAlign = BLOCK_ALIGN(copyLen * sizeof(X1_TYPE), blockSize_) / sizeof(X1_TYPE);
-        DataCopyPadExtParams<X1_TYPE> padParams;
-        padParams.isPad = true;
-        padParams.paddingValue = static_cast<X1_TYPE>(0.0);
-        padParams.rightPadding = copyLenAlign - copyLen;
-        DataCopyExtParams dataCopyParams;
-        dataCopyParams.blockCount = rowsCount;
-        dataCopyParams.blockLen = copyLen * sizeof(X1_TYPE);
-        dataCopyParams.srcStride = 0;
-        dataCopyParams.dstStride = dmaStride_;
+        DataCopyPadExtParams<X1_TYPE> padParams = MakeZeroPadParams<X1_TYPE>(copyLen, blockSize_);
+        DataCopyExtParams dataCopyParams = MakeDataCopyParams<X1_TYPE>(copyLen, rowsCount, dmaStride_);
         DataCopyPad(x1Local, x1Gm_[inputOffset], dataCopyParams, padParams);
         x1Queue_.EnQue(x1Local);
         DataCopyPad(x2Local, x2Gm_[inputOffset], dataCopyParams, padParams);
@@ -167,69 +148,50 @@ public:
 
     __aicore__ inline void CopyXToGm(LocalTensor<X1_TYPE> xLocal, int64_t xOffset, int32_t copyLen, int32_t rowsCount)
     {
-        DataCopyExtParams dataCopyParams;
-        dataCopyParams.blockCount = rowsCount;
-        dataCopyParams.blockLen = copyLen * sizeof(X1_TYPE);
-        dataCopyParams.srcStride = dmaStride_;
-        dataCopyParams.dstStride = 0;
+        DataCopyExtParams xCopyParams;
+        xCopyParams.blockCount = rowsCount;
+        xCopyParams.blockLen = copyLen * sizeof(X1_TYPE);
+        xCopyParams.srcStride = dmaStride_;
+        xCopyParams.dstStride = 0;
 
-        DataCopyPad(xGm_[xOffset], xLocal, dataCopyParams);
+        DataCopyPad(xGm_[xOffset], xLocal, xCopyParams);
     }
 
     __aicore__ inline void CopyYToGm(
         LocalTensor<int8_t> y1Local, LocalTensor<int8_t> y2Local, int64_t yOffset, int32_t copyLen, int32_t rowsCount)
     {
-        DataCopyExtParams dataCopyParams;
-        dataCopyParams.blockCount = rowsCount;
-        dataCopyParams.blockLen = copyLen * sizeof(int8_t);
-        dataCopyParams.srcStride = 0;
-        dataCopyParams.dstStride = 0;
+        DataCopyExtParams yCopyParams;
+        yCopyParams.blockCount = rowsCount;
+        yCopyParams.blockLen = copyLen * sizeof(int8_t);
+        yCopyParams.srcStride = 0;
+        yCopyParams.dstStride = 0;
 
-        DataCopyPad(y1Gm_[yOffset], y1Local, dataCopyParams);
-        CONST_CONDITIONAL_EXPR(IS_SCALE2_EXIST, DataCopyPad(y2Gm_[yOffset], y2Local, dataCopyParams));
-    }
-
-    __aicore__ inline void CopyGammaAndBetaToUB(
-        LocalTensor<X1_TYPE> gammaLocal, LocalTensor<X1_TYPE> betaLocal, int64_t offset, int32_t copyLen)
-    {
-        int32_t copyLenAlign = BLOCK_ALIGN(copyLen * sizeof(X1_TYPE), blockSize_) / sizeof(X1_TYPE);
-        DataCopyPadExtParams<X1_TYPE> padParams;
-        padParams.isPad = true;
-        padParams.paddingValue = static_cast<X1_TYPE>(0.0);
-        padParams.rightPadding = copyLenAlign - copyLen;
-        DataCopyExtParams dataCopyParams;
-        dataCopyParams.blockCount = 1;
-        dataCopyParams.blockLen = copyLen * sizeof(X1_TYPE);
-        dataCopyParams.srcStride = 0;
-        dataCopyParams.dstStride = 0;
-        DataCopyPad(betaLocal, betaGm_[offset], dataCopyParams, padParams);
-        betaQueue_.EnQue(betaLocal);
-        DataCopyPad(gammaLocal, gammaGm_[offset], dataCopyParams, padParams);
-        gammaQueue_.EnQue(gammaLocal);
+        DataCopyPad(y1Gm_[yOffset], y1Local, yCopyParams);
+        CONST_CONDITIONAL_EXPR(IS_SCALE2_EXIST, DataCopyPad(y2Gm_[yOffset], y2Local, yCopyParams));
     }
 
     __aicore__ inline void CopyQuantParams2UB(
         LocalTensor<SCALE_TYPE> scale1Local, LocalTensor<SCALE_TYPE> scale2Local, LocalTensor<SCALE_TYPE> offset1Local,
         LocalTensor<SCALE_TYPE> offset2Local, int64_t offset, int32_t copyLen)
     {
-        DataCopyExtParams dataCopyParams;
-        dataCopyParams.blockCount = 1;
-        dataCopyParams.blockLen = copyLen * sizeof(SCALE_TYPE);
-        dataCopyParams.srcStride = 0;
-        dataCopyParams.dstStride = 0;
-        DataCopyPad(scale1Local, scale1Gm_[offset], dataCopyParams, {});
+        DataCopyExtParams quantCopyParams;
+        quantCopyParams.blockCount = 1;
+        quantCopyParams.blockLen = copyLen * sizeof(SCALE_TYPE);
+        quantCopyParams.srcStride = 0;
+        quantCopyParams.dstStride = 0;
+        DataCopyPad(scale1Local, scale1Gm_[offset], quantCopyParams, {});
         scale1Queue_.EnQue(scale1Local);
 
         if constexpr (IS_SCALE2_EXIST) {
-            DataCopyPad(scale2Local, scale2Gm_[offset], dataCopyParams, {});
+            DataCopyPad(scale2Local, scale2Gm_[offset], quantCopyParams, {});
             scale2Queue_.EnQue(scale2Local);
         }
         if constexpr (IS_OFFSET1_EXIST) {
-            DataCopyPad(offset1Local, zeroOffset1Gm_[offset], dataCopyParams, {});
+            DataCopyPad(offset1Local, zeroOffset1Gm_[offset], quantCopyParams, {});
             zeroOffset1Queue_.EnQue(offset1Local);
         }
         if constexpr (IS_OFFSET2_EXIST) {
-            DataCopyPad(offset2Local, zeroOffset2Gm_[offset], dataCopyParams, {});
+            DataCopyPad(offset2Local, zeroOffset2Gm_[offset], quantCopyParams, {});
             zeroOffset2Queue_.EnQue(offset2Local);
         }
     }
@@ -408,7 +370,8 @@ public:
 
             // copy in gamma, beta
             if (i == 0) {
-                CopyGammaAndBetaToUB(gammaLocal, betaLocal, 0, colsPerLoop_);
+                CopyGammaAndBetaToUBCommon(
+                    gammaLocal, betaLocal, gammaGm_, betaGm_, gammaQueue_, betaQueue_, 0, colsPerLoop_, blockSize_);
                 CopyQuantParams2UB(scale1Local, scale2Local, offset1Local, offset2Local, 0, colsPerLoop_);
                 gammaLocal = gammaQueue_.template DeQue<X1_TYPE>();
                 betaLocal = betaQueue_.template DeQue<X1_TYPE>();

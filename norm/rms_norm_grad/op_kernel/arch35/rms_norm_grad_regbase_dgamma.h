@@ -312,8 +312,8 @@ public:
         LocalTensor<DY_TYPE> dyLocal = dyQueue_.template AllocTensor<DY_TYPE>();
         LocalTensor<X_TYPE> xLocal = xQueue_.template AllocTensor<X_TYPE>();
         LocalTensor<float> dgammaOutLocal = dgammaQueue_.template AllocTensor<float>();
-        int64_t cacheID = GetCacheID(i);
         uint32_t rstdOffset = i * rowsPerUB_;
+        int64_t cacheID = GetCacheID(i);
 
         CopyInputsToUB(dyLocal, xLocal, rstdLocal, inputOffset, currentCols, rowsPerUB_, rstdOffset);
         xQueue_.EnQue(xLocal);

@@ -26,12 +26,12 @@ constexpr static int64_t BLOCK_SIZE = 32;
 constexpr static uint32_t FLOAT_BYTES = 4;
 constexpr static int64_t MAX_STRIDE = 65535;
 constexpr static int64_t DOUBLE_BUFFER = 2;
-constexpr static int64_t LOOP_HIGH_SHIFT = 21;
 constexpr static int64_t LOOP_STRIDE_HIGH_SHIFT = 40;
+constexpr static int64_t LOOP_HIGH_SHIFT = 21;
 constexpr static uint32_t NUM_TWO = 2;
 constexpr static float POS_INF = 3.40282366920938E+38;
-constexpr static float zero = 0.0f;
 constexpr static uint32_t VL_B32 = GetVecLen() / sizeof(float);
+constexpr static float zero = 0.0f;
 constexpr static uint32_t VL_B16 = GetVecLen() / sizeof(int16_t);
 constexpr static uint32_t BLK_B32 = BLOCK_SIZE / sizeof(float);
 

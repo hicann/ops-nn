@@ -113,18 +113,7 @@ void BatchNormV3RARBlockSplitRTiling::SetInputInfo()
 bool BatchNormV3RARBlockSplitRTiling::BinaryAddTiling(
     const int64_t binaryAddNum, int64_t& binaryAddK, int64_t& binaryAddLast)
 {
-    binaryAddK = 0;
-    int64_t curBinaryAddNum = 1;
-    while (curBinaryAddNum < binaryAddNum) {
-        binaryAddK++;
-        curBinaryAddNum *= BINARY_ADD_COEF_FOUR;
-    }
-    if (curBinaryAddNum == binaryAddNum) {
-        binaryAddLast = 0;
-    } else if (curBinaryAddNum == binaryAddNum * BINARY_ADD_COEF) {
-        binaryAddK = binaryAddK - 1;
-        binaryAddLast = 1;
-    } else {
+    if (!GetBatchNormV3BinaryAddParam(binaryAddNum, binaryAddK, binaryAddLast)) {
         OP_LOGD(context_->GetNodeName(), "BinaryAddTiling binaryAddNum %ld case not supported", binaryAddNum);
         return false;
     }

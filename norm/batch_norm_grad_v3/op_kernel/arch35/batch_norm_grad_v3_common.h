@@ -179,6 +179,62 @@ __aicore__ inline void CopyIn(const LocalTensor<T>& dstTensor, const GlobalTenso
 }
 
 template <typename T>
+__aicore__ inline void CopyInNormParam(LocalTensor<T>& localTensor, GlobalTensor<T>& globalTensor, uint64_t offset, uint64_t a)
+{
+    DataCopyPadExtParams<T> padParams;
+    padParams.isPad = false;
+    padParams.leftPadding = 0;
+    padParams.rightPadding = 0;
+    padParams.paddingValue = 0;
+
+    DataCopyExtParams copyParams;
+    copyParams.blockCount = 1;
+    copyParams.blockLen = a * sizeof(T);
+    copyParams.srcStride = 0;
+    copyParams.dstStride = 0;
+    DataCopyPad<T, PaddingMode::Compact>(localTensor, globalTensor[offset], copyParams, padParams);
+}
+
+template <typename T>
+__aicore__ inline void CopyOutNormParam(
+    LocalTensor<T>& localTensor, GlobalTensor<T>& globalTensor, uint64_t offset, uint64_t a)
+{
+    DataCopyExtParams copyParams;
+    copyParams.blockCount = 1;
+    copyParams.blockLen = a * sizeof(T);
+    copyParams.srcStride = 0;
+    copyParams.dstStride = 0;
+    DataCopyPad<T, PaddingMode::Compact>(globalTensor[offset], localTensor, copyParams);
+}
+
+template <typename T2, typename T3, int32_t bufferDepth>
+__aicore__ inline void CopyInGammaVarCommon(
+    TQue<QuePosition::VECIN, bufferDepth>& gammaQueue, TQue<QuePosition::VECIN, bufferDepth>& runningVarQueue,
+    GlobalTensor<T2>& gammaGm, GlobalTensor<T3>& runningVarGm, bool needCopy, int64_t offset, int64_t curTileALen)
+{
+    LocalTensor<T2> gammaLocal = gammaQueue.template AllocTensor<T2>();
+    LocalTensor<T3> varLocal = runningVarQueue.template AllocTensor<T3>();
+
+    if (needCopy) {
+        DataCopyExtParams extParam;
+        extParam.blockCount = 1;
+
+        extParam.blockLen = curTileALen * sizeof(T2);
+        DataCopyPadExtParams<T2> gammaPadParam;
+        gammaPadParam.isPad = false;
+        DataCopyPad(gammaLocal, gammaGm[offset], extParam, gammaPadParam);
+
+        extParam.blockLen = curTileALen * sizeof(T3);
+        DataCopyPadExtParams<T3> varPadParam;
+        varPadParam.isPad = false;
+        DataCopyPad(varLocal, runningVarGm[offset], extParam, varPadParam);
+    }
+
+    gammaQueue.EnQue(gammaLocal);
+    runningVarQueue.EnQue(varLocal);
+}
+
+template <typename T>
 __aicore__ inline void CopyOut(
     const GlobalTensor<T>& dstTensor, const LocalTensor<T>& srcTensor, int64_t rowSize, int64_t colSize,
     int64_t dstStride, int64_t srcStride)

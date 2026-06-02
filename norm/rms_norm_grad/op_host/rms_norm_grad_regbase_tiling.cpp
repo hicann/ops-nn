@@ -70,21 +70,21 @@ ge::graphStatus RmsNormGradRegbaseTiling::CheckShapeAllPositive(gert::Shape& sha
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus RmsNormGradRegbaseTiling::CheckShapesEqual(gert::Shape& shape0, gert::Shape& shape1)
+ge::graphStatus RmsNormGradRegbaseTiling::CheckShapesEqual(gert::Shape& lhsShape, gert::Shape& rhsShape)
 {
     OP_CHECK_IF(
-        shape0.GetDimNum() != shape1.GetDimNum(),
+        lhsShape.GetDimNum() != rhsShape.GetDimNum(),
         OP_LOGE(
-            context_->GetNodeName(), "DimNum of shapes are not equal: %zu vs %zu", shape0.GetDimNum(),
-            shape1.GetDimNum()),
+            context_->GetNodeName(), "DimNum of shapes are not equal: %zu vs %zu", lhsShape.GetDimNum(),
+            rhsShape.GetDimNum()),
         return ge::GRAPH_FAILED);
 
-    for (size_t i = 0; i < shape0.GetDimNum(); i++) {
+    for (size_t i = 0; i < lhsShape.GetDimNum(); i++) {
         OP_CHECK_IF(
-            shape0.GetDim(i) != shape1.GetDim(i),
+            lhsShape.GetDim(i) != rhsShape.GetDim(i),
             OP_LOGE(
-                context_->GetNodeName(), "Dim %lu of shapes are not equal: %ld vs %ld", i, shape0.GetDim(i),
-                shape1.GetDim(i)),
+                context_->GetNodeName(), "Dim %lu of shapes are not equal: %ld vs %ld", i, lhsShape.GetDim(i),
+                rhsShape.GetDim(i)),
             return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;

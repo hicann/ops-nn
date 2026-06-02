@@ -71,7 +71,7 @@ static inline bool HasZeroDim(const gert::StorageShape* s)
     }
     gert::Shape shape = s->GetStorageShape();
     for (size_t i = 0; i < shape.GetDimNum(); i++) {
-        OP_CHECK_IF((shape.GetDim(i) == 0), OP_LOGW("HasZeroDim", "Got 0 dim in shape."), return false);
+        OP_CHECK_IF((shape.GetDim(i) == 0), OP_LOGW("HasZeroDim", "Got 0 dim in shape."), return true);
     }
     return (shape.GetShapeSize() <= 0);
 }
@@ -94,6 +94,19 @@ void AddLayerNormQuantRegbaseTiling::ComputeBinaryAddVars()
     OP_LOGW(
         "ComputeBinaryAddVars", "binaryAddNum:%ld, binaryAddK:%ld, binaryAddLastNum:%ld", this->binaryAddNum_,
         this->binaryAddK_, this->binaryAddLastNum_);
+}
+
+void AddLayerNormQuantRegbaseTiling::ApplyFullLoadTilingResult(int64_t rowStep, int64_t binaryAddNum)
+{
+    this->rowsPerLoop_ = (rowStep <= this->rowsPerCore_) ? rowStep : this->rowsPerCore_;
+    this->rowsPerLoop_ = (this->rowsPerLoop_ <= MAX_ROW_STEP) ? this->rowsPerLoop_ : MAX_ROW_STEP;
+    this->colsPerLoop_ = this->cols_;
+    this->colsLoopCount_ = 1;
+    this->colsTail_ = this->colsPerLoop_;
+
+    this->binaryAddNum_ = binaryAddNum;
+    ComputeBinaryAddVars();
+    this->ubTilingPolicy_ = UB_TILING_POLICY::FULL_LOAD;
 }
 
 void AddLayerNormQuantRegbaseTiling::SetTilingDataAndTilingKeyAndWorkSpace(AddLayerNormQuantRegbaseTilingData* tiling)
@@ -460,15 +473,7 @@ bool AddLayerNormQuantRegbaseTiling::CheckDynQuantFullLoadTiling()
         "CheckDynQuantFullLoadTiling", "inOutCols=%ld, rowFactor=%ld, rowStep: %ld, ret: %d", inOutCols, rowFactor,
         rowStep, ret);
     if (ret) {
-        this->rowsPerLoop_ = (rowStep <= this->rowsPerCore_) ? rowStep : this->rowsPerCore_;
-        this->rowsPerLoop_ = (this->rowsPerLoop_ <= MAX_ROW_STEP) ? this->rowsPerLoop_ : MAX_ROW_STEP;
-        this->colsPerLoop_ = this->cols_;
-        this->colsLoopCount_ = 1;
-        this->colsTail_ = this->colsPerLoop_;
-
-        this->binaryAddNum_ = tmpBinaryAddNum;
-        ComputeBinaryAddVars();
-        this->ubTilingPolicy_ = UB_TILING_POLICY::FULL_LOAD;
+        ApplyFullLoadTilingResult(rowStep, tmpBinaryAddNum);
     }
     return ret;
 }
@@ -541,15 +546,7 @@ bool AddLayerNormQuantRegbaseTiling::CheckStcQuantFullLoadTiling()
         "CheckStcQuantFullLoadTiling", "inOutCols=%ld, tmpBufsCols=%ld, rowFactor=%ld, rowStep: %ld, ret: %d",
         inOutCols, tmpBufsCols, rowFactor, rowStep, ret);
     if (ret) {
-        this->rowsPerLoop_ = (rowStep <= this->rowsPerCore_) ? rowStep : this->rowsPerCore_;
-        this->rowsPerLoop_ = (this->rowsPerLoop_ <= MAX_ROW_STEP) ? this->rowsPerLoop_ : MAX_ROW_STEP;
-        this->colsPerLoop_ = this->cols_;
-        this->colsLoopCount_ = 1;
-        this->colsTail_ = this->colsPerLoop_;
-
-        this->binaryAddNum_ = tmpBinaryAddNum;
-        ComputeBinaryAddVars();
-        this->ubTilingPolicy_ = UB_TILING_POLICY::FULL_LOAD;
+        ApplyFullLoadTilingResult(rowStep, tmpBinaryAddNum);
     }
     return ret;
 }

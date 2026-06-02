@@ -19,6 +19,8 @@
 #include "../../norm_common/reduce_common_regbase.h"
 
 namespace AddRmsNormDynamicQuant {
+using NormCommon::NormCommonRegbase::LoadRegForDtype;
+using NormCommon::NormCommonRegbase::StoreRegForDtype;
 
 template <typename T_X, typename T_Y>
 class KernelAddRmsNormDynamicQuantRegbasePerf {
@@ -30,8 +32,9 @@ public:
     }
 
     __aicore__ inline void Init(
-        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR smooathScale1, GM_ADDR smooathScale2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2,
-        GM_ADDR x, GM_ADDR scale1, GM_ADDR scale2, const AddRmsNormDynamicQuantRegbaseTilingData* tilingData)
+        GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR smooathScale1, GM_ADDR smooathScale2,
+        GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR x, GM_ADDR scale1, GM_ADDR scale2,
+        const AddRmsNormDynamicQuantRegbaseTilingData* tilingData)
     {
         InitTiling(numM_, numN_, baseM_, baseN_, baseNDtypeAlign_, baseNReduceAlign_, powerSplit_,
                    mPerCore_, mLastCore_, epsilon_, avgFactor_, tilingData);
@@ -39,9 +42,10 @@ public:
         hasSmoothScale2_ = tilingData->hasSmoothScale2;
         hasBeta_ = tilingData->hasBeta;
         hasY2Scale2_ = hasSmoothScale2_;
+
+        oriOverflowMode_ = GetOverflowMode<T_Y>();
         blockNum_ = GetBlockNum();
         blockIdx_ = GetBlockIdx();
-        oriOverflowMode_ = GetOverflowMode<T_Y>();
 
         CalBlockTail();
         InitBuffer(x1, x2, gamma, smooathScale1, smooathScale2, beta, y1, y2, x, scale1, scale2);
@@ -69,19 +73,10 @@ public:
         y1Gm_.SetGlobalBuffer((__gm__ T_Y*)y1 + gmOffset, gmLen);
         xGm_.SetGlobalBuffer((__gm__ T_X*)x + gmOffset, gmLen);
         scale1Gm_.SetGlobalBuffer((__gm__ float*)scale1 + scalesGmOffset, mCore_);
-        if (hasSmoothScale1_) {
-            smoothScale1Gm_.SetGlobalBuffer((__gm__ T_SMOOTH_SCALE*)smooathScale1, numN_);
-        }
-        if (hasSmoothScale2_) {
-            smoothScale2Gm_.SetGlobalBuffer((__gm__ T_SMOOTH_SCALE*)smooathScale2, numN_);
-        }
-        if (hasY2Scale2_) {
-            y2Gm_.SetGlobalBuffer((__gm__ T_Y*)y2 + gmOffset, gmLen);
-            scale2Gm_.SetGlobalBuffer((__gm__ float*)scale2 + scalesGmOffset, mCore_);
-        }
-        if (hasBeta_) {
-            betaGm_.SetGlobalBuffer((__gm__ T_X*)beta, numN_);
-        }
+        InitOptionalGmBuffers<T_X, T_Y, T_SMOOTH_SCALE>(
+            smoothScale1Gm_, smoothScale2Gm_, y2Gm_, scale2Gm_, betaGm_, smooathScale1, smooathScale2,
+            y2, scale2, beta, gmOffset, gmLen, scalesGmOffset, mCore_, numN_, hasSmoothScale1_,
+            hasSmoothScale2_, hasY2Scale2_, hasBeta_);
 
         InitUBBuffer();
     }
@@ -121,22 +116,16 @@ public:
     }
     __aicore__ inline void Process()
     {
-        CopyInGamma();
-        CopyInDynamicQuant();
+        CopyInParamToQueue(inQueueGamma_, gammaGm_, numN_);
+        CopyInDynamicQuantCommon(
+            inQueueSmoothScale1_, inQueueSmoothScale2_, smoothScale1Gm_, smoothScale2Gm_, numN_, hasSmoothScale1_,
+            hasSmoothScale2_);
         LocalTensor<T_X> gammaLocal = inQueueGamma_.DeQue<T_X>();
         LocalTensor<T_SMOOTH_SCALE> smoothScale1Local;
         LocalTensor<T_SMOOTH_SCALE> smoothScale2Local;
         LocalTensor<T_X> betaLocal;
-        if (hasSmoothScale1_) {
-            smoothScale1Local = inQueueSmoothScale1_.DeQue<T_SMOOTH_SCALE>();
-        }
-        if (hasSmoothScale2_) {
-            smoothScale2Local = inQueueSmoothScale2_.DeQue<T_SMOOTH_SCALE>();
-        }
-        if (hasBeta_) {
-            CopyInBeta();
-            betaLocal = inQueueBeta_.DeQue<T_X>();
-        }
+        PrepareOptionalParamLocals(inQueueSmoothScale1_, inQueueSmoothScale2_, inQueueBeta_, betaGm_,
+            smoothScale1Local, smoothScale2Local, betaLocal, numN_, hasSmoothScale1_, hasSmoothScale2_, hasBeta_);
 
         for (uint64_t mOuterIdx = 0; mOuterIdx < mOuterCnt_; mOuterIdx++) {
             uint64_t realM = mOuterIdx == (mOuterCnt_ - 1) ? tailMOuter_ : baseM_;
@@ -162,7 +151,10 @@ public:
             // 2.二分累加计算SquareReduceSum、Rstd
             LocalTensor<float> rstdLocal = rstdBuf_.Get<float>();
             LocalTensor<float> xReduceLocal = xReduceTmpBuf_.Get<float>();
-            CalculateSquareReduceSum(xOutTmpLocal, xReduceLocal, realM);
+            NormCommon::NormCommonRegbase::CalculateSquareReduceSum<float>(
+                xOutTmpLocal, xReduceLocal, xReduceTmpBuf_, static_cast<uint16_t>(realM),
+                static_cast<uint32_t>(baseNDtypeAlign_), static_cast<uint32_t>(baseN_),
+                static_cast<uint32_t>(powerSplit_), static_cast<uint32_t>(B32_BLOCK_NUM));
             NormCommon::ComputeRstdNewtonRaphson<true, true>(
                 xReduceLocal, rstdLocal, realM, epsilon_, avgFactor_, V_LENGTH);
 
@@ -236,32 +228,6 @@ private:
         inQueueX2_.EnQue(xLocal2);
     }
 
-    template <typename T_IN>
-    __aicore__ inline void LoadTensorForDtypeTIn(
-        __local_mem__ T_IN* src, RegTensor<float>& dst, MaskReg& preg, uint32_t offset)
-    {
-        if constexpr (IsSameType<T_IN, float>::value) {
-            DataCopy<float, LoadDist::DIST_NORM>(dst, src + offset);
-        } else {
-            RegTensor<T_IN> xIn;
-            DataCopy<T_IN, LoadDist::DIST_UNPACK_B16>(xIn, src + offset);
-            Cast<float, T_IN, castTraitB162B32>(dst, xIn, preg);
-        }
-    }
-
-    template <typename T_OUT>
-    __aicore__ inline void StoreTensorForDtypeTOut(
-        __local_mem__ T_OUT* dst, RegTensor<float>& src, MaskReg& preg, uint32_t offset)
-    {
-        if constexpr (IsSameType<T_OUT, float>::value) {
-            DataCopy<T_OUT, StoreDist::DIST_NORM>(dst + offset, src, preg);
-        } else {
-            RegTensor<T_OUT> xOut;
-            Cast<T_OUT, float, castTraitB322B16>(xOut, src, preg);
-            DataCopy<T_OUT, StoreDist::DIST_PACK_B32>(dst + offset, xOut, preg);
-        }
-    }
-
     __aicore__ inline void CopyOutX(uint64_t offset, uint32_t realM)
     {
         LocalTensor<T_X> xLocal = outQueueX_.DeQue<T_X>();
@@ -295,106 +261,6 @@ private:
         }
     }
 
-    __aicore__ inline void CopyInGamma()
-    {
-        LocalTensor<T_X> gammaLocal = inQueueGamma_.AllocTensor<T_X>();
-        RmsNorm::DataCopyImpl<T_X>(gammaLocal, gammaGm_, 1, numN_);
-        inQueueGamma_.EnQue(gammaLocal);
-    }
-
-    __aicore__ inline void CopyInBeta()
-    {
-        LocalTensor<T_X> betaLocal = inQueueBeta_.AllocTensor<T_X>();
-        RmsNorm::DataCopyImpl<T_X>(betaLocal, betaGm_, 1, numN_);
-        inQueueBeta_.EnQue(betaLocal);
-    }
-
-    __aicore__ inline void CopyInDynamicQuant()
-    {
-        if (hasSmoothScale1_) {
-            LocalTensor<T_SMOOTH_SCALE> smoothScale1Local = inQueueSmoothScale1_.AllocTensor<T_SMOOTH_SCALE>();
-            RmsNorm::DataCopyImpl<T_SMOOTH_SCALE>(smoothScale1Local, smoothScale1Gm_, 1, numN_);
-            inQueueSmoothScale1_.EnQue(smoothScale1Local);
-        }
-        if (hasSmoothScale2_) {
-            LocalTensor<T_SMOOTH_SCALE> smoothScale2Local = inQueueSmoothScale2_.AllocTensor<T_SMOOTH_SCALE>();
-            RmsNorm::DataCopyImpl<T_SMOOTH_SCALE>(smoothScale2Local, smoothScale2Gm_, 1, numN_);
-            inQueueSmoothScale2_.EnQue(smoothScale2Local);
-        }
-    }
-
-    __aicore__ inline void CalculateSquareReduceSum(
-        LocalTensor<float>& xOutTmpLocal, LocalTensor<float>& xReduceLocal, uint32_t realM)
-    {
-        LocalTensor<float> binaryAddBuffTmp = xTmpBuf_.Get<float>();
-        __local_mem__ float* xOutTmp = (__local_mem__ float*)xOutTmpLocal.GetPhyAddr();
-        __local_mem__ float* xReduceUb = (__local_mem__ float*)xReduceLocal.GetPhyAddr();
-        __local_mem__ float* tmpUb = (__local_mem__ float*)binaryAddBuffTmp.GetPhyAddr();
-
-        if (baseN_ <= V_LENGTH) {
-            CalculateSquareReduceSumLessThanVL(xOutTmp, xReduceUb, realM, baseN_, baseNDtypeAlign_);
-        } else if (baseN_ <= V_LENGTH + V_LENGTH) {
-            CalculateSquareReduceSumLessThanTwoVL(xOutTmp, xReduceUb, realM, baseN_, baseNDtypeAlign_);
-        } else if (baseN_ <= V_LENGTH * V_LENGTH * NUM_TWO) {
-            CalculateSquareReduceSumCommon<NUM_ONE>(xOutTmp, xReduceUb, tmpUb, realM, baseN_, baseNDtypeAlign_);
-        } else {
-            CalculateSquareReduceSumCommon<NUM_TWO>(xOutTmp, xReduceUb, tmpUb, realM, baseN_, baseNDtypeAlign_);
-        }
-    }
-
-    __aicore__ inline void CalculateSquareReduceSumLessThanVL(
-        __local_mem__ float* xOutTmp, __local_mem__ float* xReduceUb, uint16_t realM, uint64_t baseN, uint64_t baseNDtypeAlign)
-    {
-        __VEC_SCOPE__
-        {
-            RegTensor<float> x;
-            RegTensor<float> vMean;
-            RegTensor<float> onesReg;
-
-            uint32_t sreg0 = baseN;
-            MaskReg pregLoop = UpdateMask<float>(sreg0);
-            MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
-            Duplicate(onesReg, float(1.0), pregOne);
-
-            for (uint16_t i = 0; i < realM; i++) {
-                LoadTensorForDtypeTIn<float>(xOutTmp, x, pregLoop, i * baseNDtypeAlign);
-                Mul(x, x, x, pregLoop);
-                ReduceSum(vMean, x, pregLoop);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(xReduceUb + i, vMean, pregOne);
-            }
-        }
-    }
-
-    __aicore__ inline void CalculateSquareReduceSumLessThanTwoVL(
-        __local_mem__ float* xOutTmp, __local_mem__ float* xReduceUb, uint16_t realM, uint64_t baseN, uint64_t baseNDtypeAlign)
-    {
-        uint32_t tailLen = baseN - V_LENGTH;
-        __VEC_SCOPE__
-        {
-            RegTensor<float> x;
-            RegTensor<float> xFold;
-            RegTensor<float> onesReg;
-            RegTensor<float> sumReg;
-            RegTensor<float> vMean;
-
-            MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
-            MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
-            MaskReg pregTail = UpdateMask<float>(tailLen);
-            Duplicate(onesReg, float(1.0), pregOne);
-
-            for (uint16_t i = 0; i < realM; ++i) {
-                LoadTensorForDtypeTIn<float>(xOutTmp, x, pregFull, i * baseNDtypeAlign);
-                LoadTensorForDtypeTIn<float>(xOutTmp + V_LENGTH, xFold, pregTail, i * baseNDtypeAlign);
-                Mul(x, x, x, pregFull);
-                Mul(xFold, xFold, xFold, pregTail);
-                ShiftLefts((RegTensor<uint32_t>&)xFold, (RegTensor<uint32_t>&)xFold, static_cast<int16_t>(0), pregTail);
-                Add(sumReg, x, xFold, pregFull);
-                ReduceSum(vMean, sumReg, pregFull);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(xReduceUb + i, vMean, pregOne);
-            }
-        }
-    }
-
     __aicore__ inline void CalculateXAdd(
         LocalTensor<T_X>& xLocal1, LocalTensor<T_X>& xLocal2, LocalTensor<T_X>& xOutLocal,
         LocalTensor<float>& xOutTmpLocal, uint32_t realM)
@@ -416,106 +282,15 @@ private:
             for (uint16_t i = 0; i < loopCount; ++i) {
                 uint32_t offset = i * V_LENGTH;
                 pregLoop = UpdateMask<float>(sreg);
-                LoadTensorForDtypeTIn<T_X>(x1InUb, x1, pregLoop, offset);
-                LoadTensorForDtypeTIn<T_X>(x2InUb, x2, pregLoop, offset);
+                LoadRegForDtype<T_X>(x1InUb, x1, pregLoop, offset);
+                LoadRegForDtype<T_X>(x2InUb, x2, pregLoop, offset);
                 Add(xSum, x1, x2, pregLoop);
-                StoreTensorForDtypeTOut<T_X>(xOutInUb, xSum, pregLoop, offset);
+                StoreRegForDtype<T_X>(xOutInUb, xSum, pregLoop, offset);
                 DataCopy<float, StoreDist::DIST_NORM_B32>(xOutTmp + offset, xSum, pregLoop);
             }
         }
     }
 
-    template <int32_t LAST_LOOP_NUMS>
-    __aicore__ inline void CalculateSquareReduceSumCommon(
-        __local_mem__ float* xOutTmp, __local_mem__ float* xReduceUb, __local_mem__ float* tmpUb, uint16_t realM, uint64_t baseN, uint64_t baseNDtypeAlign)
-    {
-        uint32_t binaryAddQuotient = powerSplit_;
-        uint16_t binaryAddQuotientLoop = (binaryAddQuotient + V_LENGTH - 1) / V_LENGTH;
-
-        uint32_t lastBinaryAddNum = binaryAddQuotient / V_LENGTH;
-        uint32_t lastBinaryAddNumAlign = (binaryAddQuotientLoop + B32_BLOCK_NUM - 1) / B32_BLOCK_NUM * B32_BLOCK_NUM;
-
-        uint32_t binaryAddRemainder = baseN - binaryAddQuotient;
-        uint16_t binaryAddRemainderCeilLoop = (binaryAddRemainder + V_LENGTH - 1) / V_LENGTH;
-        uint16_t binaryAddRemainderFloorLoop = binaryAddRemainder / V_LENGTH;
-        __VEC_SCOPE__
-        {
-            RegTensor<float> x;
-            RegTensor<float> xFold;
-            RegTensor<float> sumReg;
-            RegTensor<float> vMean;
-            RegTensor<float> onesReg;
-
-            MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
-            MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
-            MaskReg pregLoop;
-            Duplicate(onesReg, float(1.0), pregOne);
-
-            for (uint16_t i = 0; i < realM; ++i) {
-                uint32_t baseOffset = i * baseNDtypeAlign;
-                for (uint16_t r = 0; r < binaryAddRemainderFloorLoop; ++r) {
-                    uint32_t offset = r * V_LENGTH + baseOffset;
-                    LoadTensorForDtypeTIn<float>(xOutTmp, x, pregFull, offset);
-                    LoadTensorForDtypeTIn<float>(xOutTmp + binaryAddQuotient, xFold, pregFull, offset);
-                    Mul(x, x, x, pregFull);
-                    Mul(xFold, xFold, xFold, pregFull);
-                    Add(sumReg, x, xFold, pregFull);
-                    ReduceSum(vMean, sumReg, pregFull);
-                    DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
-                        tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign + r), vMean, pregOne);
-                }
-                uint32_t sregRemainder = binaryAddRemainder - binaryAddRemainderFloorLoop * V_LENGTH;
-                for (uint16_t r = 0;
-                     r < static_cast<uint16_t>(binaryAddRemainderCeilLoop - binaryAddRemainderFloorLoop); r++) {
-                    uint16_t offset = baseOffset;
-                    pregLoop = UpdateMask<float>(sregRemainder);
-                    LoadTensorForDtypeTIn<float>(xOutTmp + binaryAddRemainderFloorLoop * V_LENGTH, x, pregFull, offset);
-                    LoadTensorForDtypeTIn<float>(
-                        xOutTmp + binaryAddRemainderFloorLoop * V_LENGTH + binaryAddQuotient, xFold, pregLoop, offset);
-                    Mul(x, x, x, pregFull);
-                    Mul(xFold, xFold, xFold, pregLoop);
-                    ShiftLefts(
-                        (RegTensor<uint32_t>&)xFold, (RegTensor<uint32_t>&)xFold, static_cast<int16_t>(0), pregLoop);
-                    Add(sumReg, x, xFold, pregFull);
-                    ReduceSum(vMean, sumReg, pregFull);
-                    DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
-                        tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign + binaryAddRemainderFloorLoop), vMean,
-                        pregOne);
-                }
-                for (uint16_t r = 0; r < static_cast<uint16_t>(binaryAddQuotientLoop - binaryAddRemainderCeilLoop);
-                     r++) {
-                    uint32_t offset = r * V_LENGTH + baseOffset;
-                    LoadTensorForDtypeTIn<float>(xOutTmp + binaryAddRemainderCeilLoop * V_LENGTH, x, pregFull, offset);
-                    Mul(x, x, x, pregFull);
-                    ReduceSum(vMean, x, pregFull);
-                    DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
-                        tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign + binaryAddRemainderCeilLoop + r),
-                        vMean, pregOne);
-                }
-            }
-            LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
-            if constexpr (LAST_LOOP_NUMS == 1) {
-                MaskReg pregLast = UpdateMask<float>(lastBinaryAddNum);
-                for (uint16_t i = 0; i < realM; ++i) {
-                    DataCopy(x, tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign));
-                    ReduceSum(vMean, x, pregLast);
-                    DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(xReduceUb + i, vMean, pregOne);
-                }
-            } else if constexpr (LAST_LOOP_NUMS == 2) {
-                lastBinaryAddNum -= V_LENGTH;
-                MaskReg pregLast = UpdateMask<float>(lastBinaryAddNum);
-                for (uint16_t i = 0; i < realM; ++i) {
-                    DataCopy(x, tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign));
-                    DataCopy(xFold, tmpUb + static_cast<uint32_t>(i * lastBinaryAddNumAlign + V_LENGTH));
-                    ShiftLefts(
-                        (RegTensor<uint32_t>&)xFold, (RegTensor<uint32_t>&)xFold, static_cast<int16_t>(0), pregLast);
-                    Add(sumReg, x, xFold, pregFull);
-                    ReduceSum(vMean, sumReg, pregFull);
-                    DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(xReduceUb + i, vMean, pregOne);
-                }
-            }
-        }
-    }
 
     template <
         typename T_XPF32, typename T_GAMMA, typename T_SMOOTHSCALE = float, bool HAS_SMOOTH_SCALE = true,

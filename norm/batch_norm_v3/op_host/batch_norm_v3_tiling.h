@@ -30,6 +30,38 @@
 using namespace Ops::NN::Optiling;
 
 namespace optiling {
+constexpr int64_t BATCH_NORM_V3_BINARY_ADD_COEF = 2;
+constexpr int64_t BATCH_NORM_V3_BINARY_ADD_COEF_FOUR = 4;
+
+inline int64_t GetBatchNormV3BinaryQuotient(int64_t factor, int64_t threshold)
+{
+    int64_t binaryQuotient = threshold;
+    while (binaryQuotient < factor) {
+        binaryQuotient *= BATCH_NORM_V3_BINARY_ADD_COEF;
+    }
+    return binaryQuotient / BATCH_NORM_V3_BINARY_ADD_COEF;
+}
+
+inline bool GetBatchNormV3BinaryAddParam(const int64_t binaryAddNum, int64_t& binaryAddK, int64_t& binaryAddLast)
+{
+    binaryAddK = 0;
+    int64_t curBinaryAddNum = 1;
+    while (curBinaryAddNum < binaryAddNum) {
+        binaryAddK++;
+        curBinaryAddNum *= BATCH_NORM_V3_BINARY_ADD_COEF_FOUR;
+    }
+    if (curBinaryAddNum == binaryAddNum) {
+        binaryAddLast = 0;
+        return true;
+    }
+    if (curBinaryAddNum == binaryAddNum * BATCH_NORM_V3_BINARY_ADD_COEF) {
+        binaryAddK--;
+        binaryAddLast = 1;
+        return true;
+    }
+    return false;
+}
+
 BEGIN_TILING_DATA_DEF(BatchNormV3BaseTilingData)
 TILING_DATA_FIELD_DEF(int64_t, patternR1);
 TILING_DATA_FIELD_DEF(int64_t, patternR0);

@@ -33,8 +33,8 @@ struct alignas(8) RmsNormDynamicMxQuantFullLoadTilingData {
     int64_t mUbFactor = 0;
     int64_t mxBlockSize = 0;
     int64_t nMxblockAligned = 0;
-    int64_t nMxblockNumAlignedTwo = 0;
     int64_t needPadN = 0;
+    int64_t nMxblockNumAlignedTwo = 0;
     int64_t scaleAlg = 0;
     int64_t roundMode = 0;
     int64_t hasInputBeta = 0;

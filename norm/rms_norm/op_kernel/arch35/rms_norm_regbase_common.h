@@ -520,24 +520,24 @@ __aicore__ inline void ComputeYMultiN(
                 RegTensor<float> rstdReg;
                 RegTensor<float> xReg1, dst1Reg, gammaFp32Reg1, yReg1;
                 RegTensor<float> xReg2, dst2Reg, gammaFp32Reg2, yReg2;
-                MaskReg maskReg;
+                MaskReg pregMask;
                 DataCopy<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + offset);
                 for (uint16_t i = 0; i < (uint16_t)repeatTimes; i++) {
-                    maskReg = UpdateMask<float>(sreg);
+                    pregMask = UpdateMask<float>(sreg);
                     DataCopy(xReg1, xAddr1 + i * V_LENGTH);
                     DataCopy(xReg2, xAddr2 + i * V_LENGTH);
                     DataCopy<DG, LoadDist::DIST_UNPACK_B16>(gammaReg1, gammaAddr1 + i * V_LENGTH);
                     DataCopy<DG, LoadDist::DIST_UNPACK_B16>(gammaReg2, gammaAddr2 + i * V_LENGTH);
-                    Cast<float, DG, castTraitB162B32>(gammaFp32Reg1, gammaReg1, maskReg);
-                    Cast<float, DG, castTraitB162B32>(gammaFp32Reg2, gammaReg2, maskReg);
-                    Mul(dst1Reg, xReg1, rstdReg, maskReg);
-                    Mul(dst2Reg, xReg2, rstdReg, maskReg);
-                    Mul(yReg1, dst1Reg, gammaFp32Reg1, maskReg);
-                    Mul(yReg2, dst2Reg, gammaFp32Reg2, maskReg);
-                    Cast<DX, float, castTraitB322B16>(yB16Reg1, yReg1, maskReg);
-                    Cast<DX, float, castTraitB322B16>(yB16Reg2, yReg2, maskReg);
-                    DataCopy<DX, StoreDist::DIST_PACK_B32>(yAddr1 + i * V_LENGTH, yB16Reg1, maskReg);
-                    DataCopy<DX, StoreDist::DIST_PACK_B32>(yAddr2 + i * V_LENGTH, yB16Reg2, maskReg);
+                    Cast<float, DG, castTraitB162B32>(gammaFp32Reg1, gammaReg1, pregMask);
+                    Cast<float, DG, castTraitB162B32>(gammaFp32Reg2, gammaReg2, pregMask);
+                    Mul(dst1Reg, xReg1, rstdReg, pregMask);
+                    Mul(dst2Reg, xReg2, rstdReg, pregMask);
+                    Mul(yReg1, dst1Reg, gammaFp32Reg1, pregMask);
+                    Mul(yReg2, dst2Reg, gammaFp32Reg2, pregMask);
+                    Cast<DX, float, castTraitB322B16>(yB16Reg1, yReg1, pregMask);
+                    Cast<DX, float, castTraitB322B16>(yB16Reg2, yReg2, pregMask);
+                    DataCopy<DX, StoreDist::DIST_PACK_B32>(yAddr1 + i * V_LENGTH, yB16Reg1, pregMask);
+                    DataCopy<DX, StoreDist::DIST_PACK_B32>(yAddr2 + i * V_LENGTH, yB16Reg2, pregMask);
                 }
                 offset++;
                 xAddr1 += count;
@@ -1064,7 +1064,7 @@ __aicore__ inline void ComputeFormerImplV1MultiN(
     __local_mem__ float* rstdAddr = (__ubuf__ float*)rstdLocal.GetPhyAddr();
 
     __local_mem__ float* workAddr1 =
-        (__ubuf__ float*)workLocal.GetPhyAddr() + NormCommon::ONCE_VECTOR_SIZE * sizeof(float);
+        (__ubuf__ float*)workLocal.GetPhyAddr() + NormCommon::ONCE_VECTOR_SIZE;
     __local_mem__ float* rstdAddr1 = (__ubuf__ float*)rstdLocal.GetPhyAddr() + curRows / 2;
 
     __VEC_SCOPE__

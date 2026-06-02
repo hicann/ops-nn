@@ -31,8 +31,8 @@ public:
     {
         numM_ = tilingData->numM;
         numN_ = tilingData->numN;
-        baseM_ = tilingData->baseM;
         baseN_ = tilingData->baseN;
+        baseM_ = tilingData->baseM;
         baseNDtypeAlign_ = tilingData->baseNDtypeAlign;
         baseNReduceAlign_ = tilingData->baseNReduceAlign;
         powerSplit_ = tilingData->powerSplit;
@@ -206,11 +206,11 @@ private:
         LocalTensor<float>& dstLocal, uint64_t position, uint64_t curRow, uint64_t masterLoop, uint64_t tailLoop,
         uint64_t tail, float avgFactor = 1.0f, float epsilon = 0.0f)
     {
-        uint64_t workSpaceOffset{0};
+        uint64_t workspaceOffset{0};
         uint64_t offset{curRow};
-        uint32_t level1{0};
-        uint32_t level2{0};
-        uint32_t level3{0};
+        uint32_t level1Idx{0};
+        uint32_t level2Idx{0};
+        uint32_t level3Idx{0};
         LocalTensor<float> level1Local = level1Buf_.Get<float>();
         LocalTensor<float> level2Local = level2Buf_.Get<float>();
         LocalTensor<float> level3Local = level3Buf_.Get<float>();
@@ -222,53 +222,53 @@ private:
         // Use TailBlock as MainBlock and reduce 2 nearby Mainblock twice.
         for (uint32_t repeat = 0; repeat < tailLoop; repeat++) {
             // Tail
-            ComputeFormerHandle(tempLocal, offset, 0, workSpaceOffset, powerSplit_, powerSplit_);
+            ComputeFormerHandle(tempLocal, offset, 0, workspaceOffset, powerSplit_, powerSplit_);
             offset += powerSplit_;
-            workSpaceOffset += powerSplit_;
+            workspaceOffset += powerSplit_;
             // Main
-            ComputeFormerHandle(tempLocal, offset, 1, workSpaceOffset, powerSplit_, powerSplit_);
+            ComputeFormerHandle(tempLocal, offset, 1, workspaceOffset, powerSplit_, powerSplit_);
             offset += powerSplit_;
-            workSpaceOffset += powerSplit_;
+            workspaceOffset += powerSplit_;
 
-            RmsNorm::ComputeSum(level1Local, tempLocal, level1, SUM_COUNT);
-            level1 += 1;
-            RmsNorm::ComputeMultiLevelReduce(level1Local, level2Local, level3Local, level1, level2, level3);
+            RmsNorm::ComputeSum(level1Local, tempLocal, level1Idx, SUM_COUNT);
+            level1Idx += 1;
+            RmsNorm::ComputeMultiLevelReduce(level1Local, level2Local, level3Local, level1Idx, level2Idx, level3Idx);
         }
         // Stage2: Cal TailTail
         // Use TailBlock as MainBlock and reduce 2 nearby Mainblock twice.
         uint64_t powerSplitHalf = powerSplit_ / CONST_FACTOR_2;
         if (tail > 0 && tail <= powerSplitHalf) {
             // Tail
-            ComputeFormerHandle(tempLocal, offset, 0, workSpaceOffset, powerSplitHalf + tail, powerSplitHalf);
+            ComputeFormerHandle(tempLocal, offset, 0, workspaceOffset, powerSplitHalf + tail, powerSplitHalf);
             offset += powerSplitHalf + tail;
-            workSpaceOffset += powerSplitHalf + tail;
+            workspaceOffset += powerSplitHalf + tail;
             // Main
-            ComputeFormerHandle(tempLocal, offset, 1, workSpaceOffset, powerSplitHalf, powerSplitHalf);
+            ComputeFormerHandle(tempLocal, offset, 1, workspaceOffset, powerSplitHalf, powerSplitHalf);
             offset += powerSplitHalf;
-            workSpaceOffset += powerSplitHalf;
+            workspaceOffset += powerSplitHalf;
         } else if (tail > powerSplitHalf) {
             // Half Main & Half Tail
-            ComputeFormerHandle(tempLocal, offset, 0, workSpaceOffset, powerSplit_, powerSplit_);
+            ComputeFormerHandle(tempLocal, offset, 0, workspaceOffset, powerSplit_, powerSplit_);
             offset += powerSplit_;
-            workSpaceOffset += powerSplit_;
+            workspaceOffset += powerSplit_;
             // Other Tail
-            ComputeFormerHandle(tempLocal, offset, 1, workSpaceOffset, tail, powerSplitHalf);
+            ComputeFormerHandle(tempLocal, offset, 1, workspaceOffset, tail, powerSplitHalf);
             offset += tail;
-            workSpaceOffset += tail;
+            workspaceOffset += tail;
         }
-        RmsNorm::ComputeSum(level1Local, tempLocal, level1, SUM_COUNT);
-        level1 += 1;
-        RmsNorm::ComputeMultiLevelReduce(level1Local, level2Local, level3Local, level1, level2, level3);
+        RmsNorm::ComputeSum(level1Local, tempLocal, level1Idx, SUM_COUNT);
+        level1Idx += 1;
+        RmsNorm::ComputeMultiLevelReduce(level1Local, level2Local, level3Local, level1Idx, level2Idx, level3Idx);
         // Stage3: Cal MasterLoop
         for (uint32_t repeat = 0; repeat < masterLoop; repeat++) {
-            ComputeFormerHandle(level1Local, offset, level1, workSpaceOffset, powerSplit_, powerSplit_);
+            ComputeFormerHandle(level1Local, offset, level1Idx, workspaceOffset, powerSplit_, powerSplit_);
             offset += powerSplit_;
-            workSpaceOffset += powerSplit_;
-            level1 += 1;
-            RmsNorm::ComputeMultiLevelReduce(level1Local, level2Local, level3Local, level1, level2, level3);
+            workspaceOffset += powerSplit_;
+            level1Idx += 1;
+            RmsNorm::ComputeMultiLevelReduce(level1Local, level2Local, level3Local, level1Idx, level2Idx, level3Idx);
         }
         ComputeMultiLevelRstd<IS_RSTD>(
-            dstLocal, position, level1Local, level2Local, level3Local, level1, level2, avgFactor, epsilon);
+            dstLocal, position, level1Local, level2Local, level3Local, level1Idx, level2Idx, avgFactor, epsilon);
     }
 
     __aicore__ inline void SubProcessY(LocalTensor<float>& rstdLocal, uint64_t mIdx)
@@ -334,8 +334,8 @@ private:
     TBuf<TPosition::VECCALC> tempBuf_;
     TBuf<TPosition::VECCALC> xOutTmpBuf_;
     // Tiling data
-    uint64_t numN_{0};
     uint64_t numM_{0};
+    uint64_t numN_{0};
     uint64_t baseM_{0};
     uint64_t baseN_{0};
     uint64_t baseNDtypeAlign_{0};

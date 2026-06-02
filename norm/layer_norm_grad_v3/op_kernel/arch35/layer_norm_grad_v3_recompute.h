@@ -28,23 +28,6 @@ public:
     __aicore__ inline void Process();
 
 private:
-    __aicore__ inline void DoTiling();
-    __aicore__ inline void Prologue();
-    __aicore__ inline void Epilogue(const int64_t offset, const int64_t extent);
-    __aicore__ inline void ProcessMainBlock(
-        const int64_t ni, const int64_t basicBlockIdx, const int64_t mfactor, const int64_t nfactor);
-    __aicore__ inline void ProcessFoldBlock(
-        const int64_t ni, const int64_t basicBlockIdx, const int64_t mfactor, const int64_t nfactor);
-    __aicore__ inline void ProcessSummation(
-        const int64_t ni, const int64_t basicBlockIdx, const int64_t mfactor, const int64_t nfactor);
-
-private:
-    __aicore__ inline void ComputeGamma(
-        const LocalTensor<float>& dstTensor, const LocalTensor<float>& dyTensor, const LocalTensor<float>& xTensor,
-        const LocalTensor<float>& rstdTensor, const LocalTensor<float>& meanTensor, const int64_t rowSize,
-        const int64_t colSize);
-
-private:
     const LayerNormGradV3TilingDataRecompute* __restrict td_;
     int64_t Ntail = 0;
     int64_t NTotalloop = 0;
@@ -97,11 +80,6 @@ private:
     __aicore__ inline void ProcessSummation(
         const int64_t mi, const int64_t basicBlockIdx, const int64_t mfactor, const int64_t nfactor);
     __aicore__ inline void ProcessX(const int64_t mi, const int64_t ni, const int64_t mfactor, const int64_t nfactor);
-    __aicore__ inline void ComputeDx(
-        const LocalTensor<T>& dstTensor, const LocalTensor<float>& dyTensor, const LocalTensor<float>& xTensor,
-        const LocalTensor<float>& gammaTensor, const LocalTensor<float>& sum1Tensor,
-        const LocalTensor<float>& sum2Tensor, const LocalTensor<float>& rstdTensor, const int64_t rowSize,
-        const int64_t colSize, const int64_t stride);
     __aicore__ inline void Epilogue();
 
 private:

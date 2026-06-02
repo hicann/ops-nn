@@ -25,9 +25,9 @@
 namespace BatchNormGradV3 {
 using namespace AscendC;
 
-using AscendC::MicroAPI::LoadDist;
 using AscendC::MicroAPI::MaskReg;
 using AscendC::MicroAPI::RegTensor;
+using AscendC::MicroAPI::LoadDist;
 
 template <typename T1, typename T2, typename T3>
 class BatchNormGradV3InferChannelLast {
@@ -96,7 +96,8 @@ public:
             int64_t dyOffset = curRowIdx * tilingData_->totalALen * tilingData_->tileBlockBLen + weightOffset;
 
             CopyInDy(dyOffset, curTileBLen, curTileALen, ubStrideT1);
-            CopyInGammaVar(needCopy, weightOffset, curTileALen);
+            CopyInGammaVarCommon(gammaQueue_, runningVarQueue_, gammaGm_, runningVarGm_, needCopy, weightOffset,
+                curTileALen);
             Compute(curTileBLen, curTileALen);
             CopyOutDx(dyOffset, curTileBLen, curTileALen, ubStrideT1);
         }
@@ -118,36 +119,6 @@ private:
 
         DataCopyPad(dyLocal, dyGm_[dyGmOffset], extParam, padExtParam);
         dyQueue_.EnQue(dyLocal);
-    }
-
-    __aicore__ inline void CopyInGammaVar(bool needCopy, int64_t offset, int64_t curTileALen)
-    {
-        LocalTensor<T2> gammaLocal = gammaQueue_.AllocTensor<T2>();
-        LocalTensor<T3> varLocal = runningVarQueue_.AllocTensor<T3>();
-
-        if (needCopy) {
-            DataCopyExtParams extParam;
-            extParam.blockCount = 1;
-
-            // gamma
-            extParam.blockLen = curTileALen * sizeof(T2);
-
-            DataCopyPadExtParams<T2> padExtParam;
-            padExtParam.isPad = false;
-
-            DataCopyPad(gammaLocal, gammaGm_[offset], extParam, padExtParam);
-
-            // runningVar
-            extParam.blockLen = curTileALen * sizeof(T3);
-
-            DataCopyPadExtParams<T3> padExtParams1;
-            padExtParams1.isPad = false;
-
-            DataCopyPad(varLocal, runningVarGm_[offset], extParam, padExtParams1);
-        }
-
-        gammaQueue_.EnQue(gammaLocal);
-        runningVarQueue_.EnQue(varLocal);
     }
 
     __aicore__ inline void Compute(int64_t curTileBLen, int64_t curTileALen)

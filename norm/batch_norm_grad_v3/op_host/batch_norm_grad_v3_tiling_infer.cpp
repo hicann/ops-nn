@@ -92,11 +92,11 @@ ge::graphStatus BatchNormGradV3InferTiling::DoOpTiling()
     int64_t tileBlockB1Tail = fusedB1Len_ - b1Inner * aTileBase_ * (b1Outer - 1);
 
     tilingData_.set_totalTiles(totalTiles);
-    tilingData_.set_tilesPerCore(tilesPerCore);
-    tilingData_.set_usedCoreNums(usedCoreNums_);
     tilingData_.set_totalB0Len(fusedB0Len_);
     tilingData_.set_totalALen(fusedALen_);
     tilingData_.set_totalB1Len(fusedB1Len_);
+    tilingData_.set_tilesPerCore(tilesPerCore);
+    tilingData_.set_usedCoreNums(usedCoreNums_);
     tilingData_.set_b0Outer(b0Outer);
     tilingData_.set_aOuter(aOuter);
     tilingData_.set_b1Outer(b1Outer);

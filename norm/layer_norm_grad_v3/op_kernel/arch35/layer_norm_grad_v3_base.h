@@ -122,6 +122,47 @@ public:
     __aicore__ inline static void Normalize(
         const LocalTensor<float>& dstTensor, const LocalTensor<float>& srcTensor, const LocalTensor<float>& meanTensor,
         const LocalTensor<float>& rstdTensor, const int64_t rowSize, const int64_t colSize);
+    __aicore__ inline static void ComputeGammaCommon(
+        const LocalTensor<float>& dstTensor, const LocalTensor<float>& dyTensor, const LocalTensor<float>& xTensor,
+        const LocalTensor<float>& rstdTensor, const LocalTensor<float>& meanTensor, const int64_t rowSize,
+        const int64_t colSize, const int64_t outerStride);
+    template <typename T, typename TilingData>
+    __aicore__ inline static void ProcessGammaBetaMainBlockCommon(
+        const TilingData* td, const int64_t ni, const int64_t basicBlockIdx, const int64_t mfactor,
+        const int64_t nfactor, LocalTensor<float>& dyMain, LocalTensor<float>& xMain, LocalTensor<float>& rstd,
+        LocalTensor<float>& mean, TQue<QuePosition::VECIN, 1>& inQueueDy,
+        TQue<QuePosition::VECIN, 1>& inQueueX, TQue<QuePosition::VECIN, 1>& inQueueParam,
+        GlobalTensor<T>& dyInTensorGM, GlobalTensor<T>& xInTensorGM, GlobalTensor<float>& rstdInTensorGM,
+        GlobalTensor<float>& meanInTensorGM);
+    template <typename T, typename TilingData>
+    __aicore__ inline static void ProcessGammaBetaFoldBlockCommon(
+        const TilingData* td, const int64_t ni, const int64_t basicBlockIdx, const int64_t mfactor,
+        const int64_t nfactor, LocalTensor<float>& dyMain, LocalTensor<float>& xMain,
+        TQue<QuePosition::VECIN, 1>& inQueueDy, TQue<QuePosition::VECIN, 1>& inQueueX,
+        TQue<QuePosition::VECIN, 1>& inQueueParam, GlobalTensor<T>& dyInTensorGM, GlobalTensor<T>& xInTensorGM,
+        GlobalTensor<float>& rstdInTensorGM, GlobalTensor<float>& meanInTensorGM);
+    template <typename PD_GAMMA_TYPE, typename TilingData>
+    __aicore__ inline static void GammaBetaPrologueCommon(
+        const TilingData* td, TQue<QuePosition::VECOUT, 1>& outQueueSum, LocalTensor<PD_GAMMA_TYPE>& beta,
+        LocalTensor<PD_GAMMA_TYPE>& gamma);
+    template <typename PD_GAMMA_TYPE, typename TilingData>
+    __aicore__ inline static void GammaBetaEpilogueCommon(
+        const TilingData* td, const int64_t offset, const int64_t extent,
+        TQue<QuePosition::VECOUT, 1>& outQueueSum, LocalTensor<float>& cacheTensor0,
+        LocalTensor<float>& cacheTensor1, LocalTensor<PD_GAMMA_TYPE>& beta, LocalTensor<PD_GAMMA_TYPE>& gamma,
+        GlobalTensor<PD_GAMMA_TYPE>& pdBetaOutTensorGM, GlobalTensor<PD_GAMMA_TYPE>& pdGammaOutTensorGM);
+    template <typename TilingData>
+    __aicore__ inline static void GammaBetaProcessSummationCommon(
+        const TilingData* td, const int64_t basicBlockIdx, const int64_t mfactor, const int64_t nfactor,
+        LocalTensor<float>& tempTensor, LocalTensor<float>& dyMain, LocalTensor<float>& xMain,
+        LocalTensor<float>& cacheTensor0, LocalTensor<float>& cacheTensor1, TQue<QuePosition::VECIN, 1>& inQueueDy,
+        TQue<QuePosition::VECIN, 1>& inQueueX);
+    template <typename T>
+    __aicore__ inline static void ComputeDxCommon(
+        const LocalTensor<T>& dstTensor, const LocalTensor<float>& dyTensor, const LocalTensor<float>& xTensor,
+        const LocalTensor<float>& gammaTensor, const LocalTensor<float>& sum1Tensor,
+        const LocalTensor<float>& sum2Tensor, const LocalTensor<float>& rstdTensor, const int64_t rowSize,
+        const int64_t colSize, const int64_t stride, const int64_t fullColSize);
     template <typename T>
     __aicore__ inline static void StoreTensorForDtypeT(
         __local_mem__ T* dst, AscendC::MicroAPI::RegTensor<float>& src, AscendC::MicroAPI::MaskReg& preg, uint32_t offset);
@@ -405,15 +446,15 @@ __aicore__ inline void LayerNormGradV3Base::VectorMul(
         __local_mem__ float* src0 = (__local_mem__ float*)src0Tensor.GetPhyAddr();
         __local_mem__ float* src1 = (__local_mem__ float*)src1Tensor.GetPhyAddr();
         uint32_t sreg = static_cast<uint32_t>(count);
-        AscendC::MicroAPI::RegTensor<float> aReg, bReg, cReg;
+        AscendC::MicroAPI::RegTensor<float> aReg, bReg, mulReg;
         AscendC::MicroAPI::MaskReg pMask;
 
         for (uint16_t i = 0; i < loopTimes; ++i) {
             pMask = AscendC::MicroAPI::UpdateMask<float>(sreg);
             DataCopy(aReg, (__local_mem__ float*)src0 + i * VL_FP32);
             DataCopy(bReg, (__local_mem__ float*)src1 + i * VL_FP32);
-            Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(cReg, aReg, bReg, pMask);
-            DataCopy((__local_mem__ float*)dst + i * VL_FP32, cReg, pMask);
+            Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(mulReg, aReg, bReg, pMask);
+            DataCopy((__local_mem__ float*)dst + i * VL_FP32, mulReg, pMask);
         }
     }
 }
@@ -863,6 +904,349 @@ __aicore__ inline void LayerNormGradV3Base::Normalize(
                     Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(bReg, aReg, meanReg, pMask);
                     Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(cReg, bReg, rstdReg, pMask);
                     DataCopy((__local_mem__ float*)dst + i * outerLoopStride + j * innerLoopStride, cReg, pMask);
+                }
+            }
+        }
+    }
+}
+
+__aicore__ inline void LayerNormGradV3Base::ComputeGammaCommon(
+    const LocalTensor<float>& dstTensor, const LocalTensor<float>& dyTensor, const LocalTensor<float>& xTensor,
+    const LocalTensor<float>& rstdTensor, const LocalTensor<float>& meanTensor, const int64_t rowSize,
+    const int64_t colSize, const int64_t outerStride)
+{
+    int64_t colLength = colSize * sizeof(float);
+    uint16_t outerLoopTimes = static_cast<uint16_t>(rowSize);
+    uint16_t innerLoopTimes = CeilDiv(static_cast<int64_t>(colLength), static_cast<int64_t>(GetVRegSize()));
+    uint32_t innerStride = static_cast<uint32_t>(GetVRegSize() / sizeof(float));
+    if (innerLoopTimes == 1) {
+        __VEC_SCOPE__
+        {
+            __local_mem__ float* dst = (__local_mem__ float*)dstTensor.GetPhyAddr();
+            __local_mem__ float* x = (__local_mem__ float*)xTensor.GetPhyAddr();
+            __local_mem__ float* dy = (__local_mem__ float*)dyTensor.GetPhyAddr();
+            __local_mem__ float* mean = (__local_mem__ float*)meanTensor.GetPhyAddr();
+            __local_mem__ float* rstd = (__local_mem__ float*)rstdTensor.GetPhyAddr();
+            uint32_t count = static_cast<uint32_t>(colSize);
+            AscendC::MicroAPI::MaskReg pMask;
+            pMask = AscendC::MicroAPI::UpdateMask<float>(count);
+            for (uint16_t i = 0; i < outerLoopTimes; ++i) {
+                AscendC::MicroAPI::RegTensor<float> meanReg;
+                AscendC::MicroAPI::RegTensor<float> rstdReg;
+                DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(meanReg, (__local_mem__ float*)mean + i);
+                DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(rstdReg, (__local_mem__ float*)rstd + i);
+
+                AscendC::MicroAPI::RegTensor<float> xReg;
+                AscendC::MicroAPI::RegTensor<float> dyReg;
+                DataCopy(xReg, (__local_mem__ float*)x + i * outerStride + 0 * innerStride);
+                Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, meanReg, pMask);
+                Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, rstdReg, pMask);
+                DataCopy(dyReg, (__local_mem__ float*)dy + i * outerStride + 0 * innerStride);
+                Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, dyReg, pMask);
+                DataCopy((__local_mem__ float*)dst + i * outerStride + 0 * innerStride, xReg, pMask);
+            }
+        }
+    } else {
+        __VEC_SCOPE__
+        {
+            __local_mem__ float* dst = (__local_mem__ float*)dstTensor.GetPhyAddr();
+            __local_mem__ float* x = (__local_mem__ float*)xTensor.GetPhyAddr();
+            __local_mem__ float* dy = (__local_mem__ float*)dyTensor.GetPhyAddr();
+            __local_mem__ float* mean = (__local_mem__ float*)meanTensor.GetPhyAddr();
+            __local_mem__ float* rstd = (__local_mem__ float*)rstdTensor.GetPhyAddr();
+            for (uint16_t i = 0; i < outerLoopTimes; ++i) {
+                uint32_t count = static_cast<uint32_t>(colSize);
+                AscendC::MicroAPI::RegTensor<float> meanReg;
+                AscendC::MicroAPI::RegTensor<float> rstdReg;
+                DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(meanReg, (__local_mem__ float*)mean + i);
+                DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(rstdReg, (__local_mem__ float*)rstd + i);
+
+                AscendC::MicroAPI::RegTensor<float> xReg;
+                AscendC::MicroAPI::RegTensor<float> dyReg;
+                AscendC::MicroAPI::MaskReg pMask;
+                for (uint16_t j = 0; j < innerLoopTimes; ++j) {
+                    pMask = AscendC::MicroAPI::UpdateMask<float>(count);
+                    DataCopy(xReg, (__local_mem__ float*)x + i * outerStride + j * innerStride);
+                    Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, meanReg, pMask);
+                    Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, rstdReg, pMask);
+                    DataCopy(dyReg, (__local_mem__ float*)dy + i * outerStride + j * innerStride);
+                    Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, dyReg, pMask);
+                    DataCopy((__local_mem__ float*)dst + i * outerStride + j * innerStride, xReg, pMask);
+                }
+            }
+        }
+    }
+}
+
+template <typename T, typename TilingData>
+__aicore__ inline void LayerNormGradV3Base::ProcessGammaBetaMainBlockCommon(
+    const TilingData* td, const int64_t ni, const int64_t basicBlockIdx, const int64_t mfactor,
+    const int64_t nfactor, LocalTensor<float>& dyMain, LocalTensor<float>& xMain, LocalTensor<float>& rstd,
+    LocalTensor<float>& mean, TQue<QuePosition::VECIN, 1>& inQueueDy, TQue<QuePosition::VECIN, 1>& inQueueX,
+    TQue<QuePosition::VECIN, 1>& inQueueParam, GlobalTensor<T>& dyInTensorGM, GlobalTensor<T>& xInTensorGM,
+    GlobalTensor<float>& rstdInTensorGM, GlobalTensor<float>& meanInTensorGM)
+{
+    int64_t offset = ni * td->gammaBetaNfactor + basicBlockIdx * td->gammaBetaMfactor * td->col;
+    dyMain = inQueueDy.template AllocTensor<float>();
+    if constexpr (IsSameType<T, float>::value) {
+        CopyIn(dyMain, dyInTensorGM[offset], mfactor, nfactor, td->gammaBetaNfactor, td->col);
+        inQueueDy.EnQue(dyMain);
+        dyMain = inQueueDy.template DeQue<float>();
+    } else if constexpr (IsSameType<T, bfloat16_t>::value || IsSameType<T, half>::value) {
+        LocalTensor<T> castTempTensor = dyMain.ReinterpretCast<T>()[td->gammaBetaNfactor];
+        CopyIn(castTempTensor, dyInTensorGM[offset], mfactor, nfactor, 2 * td->gammaBetaNfactor, td->col);
+        inQueueDy.EnQue(dyMain);
+        dyMain = inQueueDy.template DeQue<float>();
+        CastToFp32From<T>(dyMain, castTempTensor, mfactor, nfactor, td->gammaBetaNfactor);
+    }
+
+    if (td->pdgammaIsRequire) {
+        xMain = inQueueX.template AllocTensor<float>();
+        if constexpr (IsSameType<T, float>::value) {
+            CopyIn(xMain.ReinterpretCast<T>(), xInTensorGM[offset], mfactor, nfactor, td->gammaBetaNfactor, td->col);
+            inQueueX.EnQue(xMain);
+            xMain = inQueueX.template DeQue<float>();
+        } else if constexpr (IsSameType<T, bfloat16_t>::value || IsSameType<T, half>::value) {
+            LocalTensor<T> castTempTensor = xMain.ReinterpretCast<T>()[td->gammaBetaNfactor];
+            CopyIn(castTempTensor, xInTensorGM[offset], mfactor, nfactor, 2 * td->gammaBetaNfactor, td->col);
+            inQueueX.EnQue(xMain);
+            xMain = inQueueX.template DeQue<float>();
+            CastToFp32From<T>(xMain, castTempTensor, mfactor, nfactor, td->gammaBetaNfactor);
+        }
+
+        offset = basicBlockIdx * td->gammaBetaMfactor;
+        rstd = inQueueParam.template AllocTensor<float>();
+        CopyIn(rstd, rstdInTensorGM[offset], mfactor);
+        inQueueParam.EnQue(rstd);
+        rstd = inQueueParam.template DeQue<float>();
+
+        mean = inQueueParam.template AllocTensor<float>();
+        CopyIn(mean, meanInTensorGM[offset], mfactor);
+        inQueueParam.EnQue(mean);
+        mean = inQueueParam.template DeQue<float>();
+
+        ComputeGammaCommon(xMain, dyMain, xMain, rstd, mean, mfactor, td->gammaBetaNfactor, td->gammaBetaNfactor);
+        inQueueParam.FreeTensor(rstd);
+        inQueueParam.FreeTensor(mean);
+        if (!td->pdbetaIsRequire) {
+            inQueueDy.FreeTensor(dyMain);
+        }
+    }
+}
+
+template <typename T, typename TilingData>
+__aicore__ inline void LayerNormGradV3Base::ProcessGammaBetaFoldBlockCommon(
+    const TilingData* td, const int64_t ni, const int64_t basicBlockIdx, const int64_t mfactor,
+    const int64_t nfactor, LocalTensor<float>& dyMain, LocalTensor<float>& xMain,
+    TQue<QuePosition::VECIN, 1>& inQueueDy, TQue<QuePosition::VECIN, 1>& inQueueX,
+    TQue<QuePosition::VECIN, 1>& inQueueParam, GlobalTensor<T>& dyInTensorGM, GlobalTensor<T>& xInTensorGM,
+    GlobalTensor<float>& rstdInTensorGM, GlobalTensor<float>& meanInTensorGM)
+{
+    int64_t offset =
+        ni * td->gammaBetaNfactor + (basicBlockIdx + td->gammaBetaBasicBlockLoop) * td->gammaBetaMfactor * td->col;
+    LocalTensor<float> dyFold = inQueueDy.template AllocTensor<float>();
+    if constexpr (IsSameType<T, float>::value) {
+        CopyIn(dyFold, dyInTensorGM[offset], mfactor, nfactor, td->gammaBetaNfactor, td->col);
+        inQueueDy.EnQue(dyFold);
+        dyFold = inQueueDy.template DeQue<float>();
+    } else if constexpr (IsSameType<T, bfloat16_t>::value || IsSameType<T, half>::value) {
+        LocalTensor<T> castTempTensor = dyFold.ReinterpretCast<T>()[td->gammaBetaNfactor];
+        CopyIn(castTempTensor, dyInTensorGM[offset], mfactor, nfactor, 2 * td->gammaBetaNfactor, td->col);
+        inQueueDy.EnQue(dyFold);
+        dyFold = inQueueDy.template DeQue<float>();
+        CastToFp32From<T>(dyFold, castTempTensor, mfactor, nfactor, td->gammaBetaNfactor);
+    }
+    if (td->pdbetaIsRequire) {
+        VectorAdd(dyMain, dyMain, dyFold, mfactor, nfactor, td->gammaBetaNfactor);
+    }
+
+    if (td->pdgammaIsRequire) {
+        LocalTensor<float> xFold = inQueueX.template AllocTensor<float>();
+        if constexpr (IsSameType<T, float>::value) {
+            CopyIn(xFold.ReinterpretCast<T>(), xInTensorGM[offset], mfactor, nfactor, td->gammaBetaNfactor, td->col);
+            inQueueX.EnQue(xFold);
+            xFold = inQueueX.template DeQue<float>();
+        } else if constexpr (IsSameType<T, bfloat16_t>::value || IsSameType<T, half>::value) {
+            LocalTensor<T> castTempTensor = xFold.ReinterpretCast<T>()[td->gammaBetaNfactor];
+            CopyIn(castTempTensor, xInTensorGM[offset], mfactor, nfactor, 2 * td->gammaBetaNfactor, td->col);
+            inQueueX.EnQue(xFold);
+            xFold = inQueueX.template DeQue<float>();
+            CastToFp32From<T>(xFold, castTempTensor, mfactor, nfactor, td->gammaBetaNfactor);
+        }
+
+        offset = (basicBlockIdx + td->gammaBetaBasicBlockLoop) * td->gammaBetaMfactor;
+        LocalTensor<float> rstdFold = inQueueParam.template AllocTensor<float>();
+        CopyIn(rstdFold, rstdInTensorGM[offset], mfactor);
+        inQueueParam.EnQue(rstdFold);
+        rstdFold = inQueueParam.template DeQue<float>();
+
+        LocalTensor<float> meanFold = inQueueParam.template AllocTensor<float>();
+        CopyIn(meanFold, meanInTensorGM[offset], mfactor);
+        inQueueParam.EnQue(meanFold);
+        meanFold = inQueueParam.template DeQue<float>();
+
+        ComputeGammaCommon(xFold, dyFold, xFold, rstdFold, meanFold, mfactor, td->gammaBetaNfactor,
+                           td->gammaBetaNfactor);
+        inQueueParam.FreeTensor(rstdFold);
+        inQueueParam.FreeTensor(meanFold);
+        inQueueDy.FreeTensor(dyFold);
+        VectorAdd(xMain, xMain, xFold, mfactor, nfactor, td->gammaBetaNfactor);
+        inQueueX.FreeTensor(xFold);
+    } else {
+        inQueueDy.FreeTensor(dyFold);
+    }
+}
+
+template <typename PD_GAMMA_TYPE, typename TilingData>
+__aicore__ inline void LayerNormGradV3Base::GammaBetaPrologueCommon(
+    const TilingData* td, TQue<QuePosition::VECOUT, 1>& outQueueSum, LocalTensor<PD_GAMMA_TYPE>& beta,
+    LocalTensor<PD_GAMMA_TYPE>& gamma)
+{
+    if (td->pdbetaIsRequire) {
+        beta = outQueueSum.template AllocTensor<PD_GAMMA_TYPE>();
+    }
+
+    if (td->pdgammaIsRequire) {
+        gamma = outQueueSum.template AllocTensor<PD_GAMMA_TYPE>();
+    }
+}
+
+template <typename PD_GAMMA_TYPE, typename TilingData>
+__aicore__ inline void LayerNormGradV3Base::GammaBetaEpilogueCommon(
+    const TilingData* td, const int64_t offset, const int64_t extent, TQue<QuePosition::VECOUT, 1>& outQueueSum,
+    LocalTensor<float>& cacheTensor0, LocalTensor<float>& cacheTensor1, LocalTensor<PD_GAMMA_TYPE>& beta,
+    LocalTensor<PD_GAMMA_TYPE>& gamma, GlobalTensor<PD_GAMMA_TYPE>& pdBetaOutTensorGM,
+    GlobalTensor<PD_GAMMA_TYPE>& pdGammaOutTensorGM)
+{
+    if (td->pdbetaIsRequire) {
+        CopyUB2UBWithCast<PD_GAMMA_TYPE>(beta, cacheTensor0[td->gammaBetaResultCacheID * td->gammaBetaNfactor],
+                                         extent);
+        outQueueSum.EnQue(beta);
+        beta = outQueueSum.template DeQue<PD_GAMMA_TYPE>();
+        CopyOut<PD_GAMMA_TYPE>(pdBetaOutTensorGM[offset], beta, extent);
+        outQueueSum.FreeTensor(beta);
+    }
+
+    if (td->pdgammaIsRequire) {
+        CopyUB2UBWithCast<PD_GAMMA_TYPE>(gamma, cacheTensor1[td->gammaBetaResultCacheID * td->gammaBetaNfactor],
+                                         extent);
+        outQueueSum.EnQue(gamma);
+        gamma = outQueueSum.template DeQue<PD_GAMMA_TYPE>();
+        CopyOut<PD_GAMMA_TYPE>(pdGammaOutTensorGM[offset], gamma, extent);
+        outQueueSum.FreeTensor(gamma);
+    }
+}
+
+template <typename TilingData>
+__aicore__ inline void LayerNormGradV3Base::GammaBetaProcessSummationCommon(
+    const TilingData* td, const int64_t basicBlockIdx, const int64_t mfactor, const int64_t nfactor,
+    LocalTensor<float>& tempTensor, LocalTensor<float>& dyMain, LocalTensor<float>& xMain,
+    LocalTensor<float>& cacheTensor0, LocalTensor<float>& cacheTensor1, TQue<QuePosition::VECIN, 1>& inQueueDy,
+    TQue<QuePosition::VECIN, 1>& inQueueX)
+{
+    int64_t cacheID = GetCacheID(basicBlockIdx);
+    uint32_t srcShape[2] = {static_cast<uint32_t>(mfactor), static_cast<uint32_t>(td->gammaBetaNfactor)};
+
+    if (td->pdbetaIsRequire) {
+        AscendC::ReduceSum<float, AscendC::Pattern::Reduce::RA, true>(tempTensor, dyMain, srcShape, false);
+        inQueueDy.FreeTensor(dyMain);
+        UpdateCache(cacheTensor0, tempTensor, cacheID, td->gammaBetaNfactor, nfactor);
+    }
+
+    if (td->pdgammaIsRequire) {
+        AscendC::ReduceSum<float, AscendC::Pattern::Reduce::RA, true>(tempTensor, xMain, srcShape, false);
+        inQueueX.FreeTensor(xMain);
+        UpdateCache(cacheTensor1, tempTensor, cacheID, td->gammaBetaNfactor, nfactor);
+    }
+}
+
+template <typename T>
+__aicore__ inline void LayerNormGradV3Base::ComputeDxCommon(
+    const LocalTensor<T>& dstTensor, const LocalTensor<float>& dyTensor, const LocalTensor<float>& xTensor,
+    const LocalTensor<float>& gammaTensor, const LocalTensor<float>& sum1Tensor,
+    const LocalTensor<float>& sum2Tensor, const LocalTensor<float>& rstdTensor, const int64_t rowSize,
+    const int64_t colSize, const int64_t stride, const int64_t fullColSize)
+{
+    constexpr static uint32_t VL = GetVRegSize() / sizeof(float);
+    uint16_t outerLoopTimes = rowSize;
+    uint16_t innerLoopTimes =
+        CeilDiv(static_cast<int64_t>(colSize * sizeof(float)), static_cast<int64_t>(GetVRegSize()));
+    uint32_t outerLoopStride = stride;
+    uint32_t innerLoopStride = VL;
+    float floatN = static_cast<float>(fullColSize);
+    float reciprocalN = (floatN != 0.0f) ? static_cast<float>(1) / floatN : 0.0f;
+
+    if (innerLoopTimes == 1) {
+        __VEC_SCOPE__
+        {
+            __local_mem__ T* dst = (__local_mem__ T*)dstTensor.GetPhyAddr();
+            __local_mem__ float* dy = (__local_mem__ float*)dyTensor.GetPhyAddr();
+            __local_mem__ float* x = (__local_mem__ float*)xTensor.GetPhyAddr();
+            __local_mem__ float* gamma = (__local_mem__ float*)gammaTensor.GetPhyAddr();
+            __local_mem__ float* sum1 = (__local_mem__ float*)sum1Tensor.GetPhyAddr();
+            __local_mem__ float* sum2 = (__local_mem__ float*)sum2Tensor.GetPhyAddr();
+            __local_mem__ float* rstd = (__local_mem__ float*)rstdTensor.GetPhyAddr();
+            uint32_t count;
+
+            AscendC::MicroAPI::RegTensor<float> xReg, dyReg, dxReg;
+            AscendC::MicroAPI::RegTensor<float> sum1Reg, sum2Reg, rstdReg;
+            AscendC::MicroAPI::RegTensor<float> gammaReg;
+            AscendC::MicroAPI::RegTensor<float> Reg0, Reg1, Reg2, Reg3, Reg4, Reg5;
+            AscendC::MicroAPI::MaskReg pMask;
+            count = static_cast<uint32_t>(colSize);
+            pMask = AscendC::MicroAPI::UpdateMask<float>(count);
+            for (uint16_t i = 0; i < outerLoopTimes; ++i) {
+                DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(sum1Reg, (__local_mem__ float*)sum1 + i);
+                DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(sum2Reg, (__local_mem__ float*)sum2 + i);
+                DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(rstdReg, (__local_mem__ float*)rstd + i);
+                DataCopy(dyReg, (__local_mem__ float*)dy + i * outerLoopStride + 0 * innerLoopStride);
+                DataCopy(xReg, (__local_mem__ float*)x + i * outerLoopStride + 0 * innerLoopStride);
+                DataCopy(gammaReg, (__local_mem__ float*)gamma + 0 * innerLoopStride);
+                Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg0, dyReg, gammaReg, pMask);
+                Muls<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg1, Reg0, floatN, pMask);
+                Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg2, Reg1, sum1Reg, pMask);
+                Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg3, xReg, sum2Reg, pMask);
+                Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg4, Reg2, Reg3, pMask);
+                Muls<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg5, Reg4, reciprocalN, pMask);
+                Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(dxReg, Reg5, rstdReg, pMask);
+                StoreTensorForDtypeT<T>(dst, dxReg, pMask, i * outerLoopStride);
+            }
+        }
+    } else {
+        __VEC_SCOPE__
+        {
+            __local_mem__ T* dst = (__local_mem__ T*)dstTensor.GetPhyAddr();
+            __local_mem__ float* dy = (__local_mem__ float*)dyTensor.GetPhyAddr();
+            __local_mem__ float* x = (__local_mem__ float*)xTensor.GetPhyAddr();
+            __local_mem__ float* gamma = (__local_mem__ float*)gammaTensor.GetPhyAddr();
+            __local_mem__ float* sum1 = (__local_mem__ float*)sum1Tensor.GetPhyAddr();
+            __local_mem__ float* sum2 = (__local_mem__ float*)sum2Tensor.GetPhyAddr();
+            __local_mem__ float* rstd = (__local_mem__ float*)rstdTensor.GetPhyAddr();
+            uint32_t count;
+
+            AscendC::MicroAPI::RegTensor<float> xReg, dyReg, dxReg;
+            AscendC::MicroAPI::RegTensor<float> sum1Reg, sum2Reg, rstdReg;
+            AscendC::MicroAPI::RegTensor<float> gammaReg;
+            AscendC::MicroAPI::RegTensor<float> Reg0, Reg1, Reg2, Reg3, Reg4, Reg5;
+            AscendC::MicroAPI::MaskReg pMask;
+            for (uint16_t i = 0; i < outerLoopTimes; ++i) {
+                count = static_cast<uint32_t>(colSize);
+                DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(sum1Reg, (__local_mem__ float*)sum1 + i);
+                DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(sum2Reg, (__local_mem__ float*)sum2 + i);
+                DataCopy<float, AscendC::MicroAPI::LoadDist::DIST_BRC_B32>(rstdReg, (__local_mem__ float*)rstd + i);
+                for (uint16_t j = 0; j < innerLoopTimes; ++j) {
+                    pMask = AscendC::MicroAPI::UpdateMask<float>(count);
+                    DataCopy(dyReg, (__local_mem__ float*)dy + i * outerLoopStride + j * innerLoopStride);
+                    DataCopy(xReg, (__local_mem__ float*)x + i * outerLoopStride + j * innerLoopStride);
+                    DataCopy(gammaReg, (__local_mem__ float*)gamma + j * innerLoopStride);
+                    Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg0, dyReg, gammaReg, pMask);
+                    Muls<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg1, Reg0, floatN, pMask);
+                    Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg2, Reg1, sum1Reg, pMask);
+                    Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg3, xReg, sum2Reg, pMask);
+                    Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg4, Reg2, Reg3, pMask);
+                    Muls<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(Reg5, Reg4, reciprocalN, pMask);
+                    Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(dxReg, Reg5, rstdReg, pMask);
+                    StoreTensorForDtypeT<T>(dst, dxReg, pMask, i * outerLoopStride + j * innerLoopStride);
                 }
             }
         }

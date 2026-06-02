@@ -23,6 +23,7 @@
 namespace BatchNormGradV3 {
 using namespace AscendC;
 using AscendC::MicroAPI::LocalMemBar;
+using AscendC::MicroAPI::MaskMergeMode;
 using AscendC::MicroAPI::MemType;
 
 template <typename DY_TYPE, typename WEIGHT_TYPE, int BUFFER_NUM = 1>
@@ -326,26 +327,26 @@ public:
                     // dx = rstd * gamma * (dy - reciprocal * (dbeta + (x - mean) * rstd * dgamma))
                     LoadOneTensor<DY_TYPE>(xAddr, xReg, pMask, i * outerStride);
                     LoadOneTensor<DY_TYPE>(dyAddr, dyReg, pMask, i * outerStride);
-                    Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, meanReg, pMask);
-                    Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, rstdReg, pMask);
-                    Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, dgammaReg, pMask);
-                    Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, dbetaReg, pMask);
-                    Muls<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, reciprocal, pMask);
-                    Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(dyReg, dyReg, xReg, pMask);
-                    Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(dyReg, dyReg, gammaReg, pMask);
-                    Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(dyReg, dyReg, rstdReg, pMask);
+                    Sub<float, MaskMergeMode::ZEROING>(xReg, xReg, meanReg, pMask);
+                    Mul<float, MaskMergeMode::ZEROING>(xReg, xReg, rstdReg, pMask);
+                    Mul<float, MaskMergeMode::ZEROING>(xReg, xReg, dgammaReg, pMask);
+                    Add<float, MaskMergeMode::ZEROING>(xReg, xReg, dbetaReg, pMask);
+                    Muls<float, float, MaskMergeMode::ZEROING>(xReg, xReg, reciprocal, pMask);
+                    Sub<float, MaskMergeMode::ZEROING>(dyReg, dyReg, xReg, pMask);
+                    Mul<float, MaskMergeMode::ZEROING>(dyReg, dyReg, gammaReg, pMask);
+                    Mul<float, MaskMergeMode::ZEROING>(dyReg, dyReg, rstdReg, pMask);
                     StoreOneTensor<DY_TYPE>(dxAddr, dyReg, pMask, i * outerStride);
 
                     LoadOneTensor<DY_TYPE>(xAddr, xReg, pMask, i * outerStride + innerStride);
                     LoadOneTensor<DY_TYPE>(dyAddr, dyReg, pMask, i * outerStride + innerStride);
-                    Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, meanReg, pMask);
-                    Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, rstdReg, pMask);
-                    Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, dgammaReg, pMask);
-                    Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, dbetaReg, pMask);
-                    Muls<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, reciprocal, pMask);
-                    Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(dyReg, dyReg, xReg, pMask);
-                    Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(dyReg, dyReg, gammaReg, pMask);
-                    Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(dyReg, dyReg, rstdReg, pMask);
+                    Sub<float, MaskMergeMode::ZEROING>(xReg, xReg, meanReg, pMask);
+                    Mul<float, MaskMergeMode::ZEROING>(xReg, xReg, rstdReg, pMask);
+                    Mul<float, MaskMergeMode::ZEROING>(xReg, xReg, dgammaReg, pMask);
+                    Add<float, MaskMergeMode::ZEROING>(xReg, xReg, dbetaReg, pMask);
+                    Muls<float, float, MaskMergeMode::ZEROING>(xReg, xReg, reciprocal, pMask);
+                    Sub<float, MaskMergeMode::ZEROING>(dyReg, dyReg, xReg, pMask);
+                    Mul<float, MaskMergeMode::ZEROING>(dyReg, dyReg, gammaReg, pMask);
+                    Mul<float, MaskMergeMode::ZEROING>(dyReg, dyReg, rstdReg, pMask);
                     StoreOneTensor<DY_TYPE>(dxAddr, dyReg, pMask, i * outerStride + innerStride);
 
                     LoadOneTensor<DY_TYPE>(xAddr, xReg, pMask, i * outerStride + innerStride * 2);
@@ -426,38 +427,38 @@ public:
                     // dx = rstd * gamma * (dy - reciprocal * (dbeta + (x - mean) * rstd * dgamma))
                     LoadOneTensor<DY_TYPE>(xAddr, xReg, pMask, i * outerStride);
                     LoadOneTensor<DY_TYPE>(dyAddr, dyReg, pMask, i * outerStride);
-                    Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, meanReg, pMask);
-                    Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, rstdReg, pMask);
-                    Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, dgammaReg, pMask);
-                    Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, dbetaReg, pMask);
-                    Muls<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, reciprocal, pMask);
-                    Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(dyReg, dyReg, xReg, pMask);
-                    Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(dyReg, dyReg, gammaReg, pMask);
-                    Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(dyReg, dyReg, rstdReg, pMask);
+                    Sub<float, MaskMergeMode::ZEROING>(xReg, xReg, meanReg, pMask);
+                    Mul<float, MaskMergeMode::ZEROING>(xReg, xReg, rstdReg, pMask);
+                    Mul<float, MaskMergeMode::ZEROING>(xReg, xReg, dgammaReg, pMask);
+                    Add<float, MaskMergeMode::ZEROING>(xReg, xReg, dbetaReg, pMask);
+                    Muls<float, float, MaskMergeMode::ZEROING>(xReg, xReg, reciprocal, pMask);
+                    Sub<float, MaskMergeMode::ZEROING>(dyReg, dyReg, xReg, pMask);
+                    Mul<float, MaskMergeMode::ZEROING>(dyReg, dyReg, gammaReg, pMask);
+                    Mul<float, MaskMergeMode::ZEROING>(dyReg, dyReg, rstdReg, pMask);
                     StoreOneTensor<DY_TYPE>(dxAddr, dyReg, pMask, i * outerStride);
 
                     LoadOneTensor<DY_TYPE>(xAddr, xReg, pMask, i * outerStride + innerStride);
                     LoadOneTensor<DY_TYPE>(dyAddr, dyReg, pMask, i * outerStride + innerStride);
-                    Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, meanReg, pMask);
-                    Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, rstdReg, pMask);
-                    Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, dgammaReg, pMask);
-                    Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, dbetaReg, pMask);
-                    Muls<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, reciprocal, pMask);
-                    Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(dyReg, dyReg, xReg, pMask);
-                    Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(dyReg, dyReg, gammaReg, pMask);
-                    Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(dyReg, dyReg, rstdReg, pMask);
+                    Sub<float, MaskMergeMode::ZEROING>(xReg, xReg, meanReg, pMask);
+                    Mul<float, MaskMergeMode::ZEROING>(xReg, xReg, rstdReg, pMask);
+                    Mul<float, MaskMergeMode::ZEROING>(xReg, xReg, dgammaReg, pMask);
+                    Add<float, MaskMergeMode::ZEROING>(xReg, xReg, dbetaReg, pMask);
+                    Muls<float, float, MaskMergeMode::ZEROING>(xReg, xReg, reciprocal, pMask);
+                    Sub<float, MaskMergeMode::ZEROING>(dyReg, dyReg, xReg, pMask);
+                    Mul<float, MaskMergeMode::ZEROING>(dyReg, dyReg, gammaReg, pMask);
+                    Mul<float, MaskMergeMode::ZEROING>(dyReg, dyReg, rstdReg, pMask);
                     StoreOneTensor<DY_TYPE>(dxAddr, dyReg, pMask, i * outerStride + innerStride);
 
                     LoadOneTensor<DY_TYPE>(xAddr, xReg, pMask, i * outerStride + innerStride * 2);
                     LoadOneTensor<DY_TYPE>(dyAddr, dyReg, pMask, i * outerStride + innerStride * 2);
-                    Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, meanReg, pMask);
-                    Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, rstdReg, pMask);
-                    Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, dgammaReg, pMask);
-                    Add<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, dbetaReg, pMask);
-                    Muls<float, float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(xReg, xReg, reciprocal, pMask);
-                    Sub<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(dyReg, dyReg, xReg, pMask);
-                    Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(dyReg, dyReg, gammaReg, pMask);
-                    Mul<float, AscendC::MicroAPI::MaskMergeMode::ZEROING>(dyReg, dyReg, rstdReg, pMask);
+                    Sub<float, MaskMergeMode::ZEROING>(xReg, xReg, meanReg, pMask);
+                    Mul<float, MaskMergeMode::ZEROING>(xReg, xReg, rstdReg, pMask);
+                    Mul<float, MaskMergeMode::ZEROING>(xReg, xReg, dgammaReg, pMask);
+                    Add<float, MaskMergeMode::ZEROING>(xReg, xReg, dbetaReg, pMask);
+                    Muls<float, float, MaskMergeMode::ZEROING>(xReg, xReg, reciprocal, pMask);
+                    Sub<float, MaskMergeMode::ZEROING>(dyReg, dyReg, xReg, pMask);
+                    Mul<float, MaskMergeMode::ZEROING>(dyReg, dyReg, gammaReg, pMask);
+                    Mul<float, MaskMergeMode::ZEROING>(dyReg, dyReg, rstdReg, pMask);
                     StoreOneTensor<DY_TYPE>(dxAddr, dyReg, pMask, i * outerStride + innerStride * 2);
 
                     LoadOneTensor<DY_TYPE>(xAddr, xReg, pMask, i * outerStride + innerStride * 3);
