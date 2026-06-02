@@ -23,27 +23,24 @@ namespace ge {
 
 * @par Inputs:
 * @li x1: A matrix Tensor. The shape supports (m, k), and the format supports ND.
-* The data type supports float8_e5m2, float8_e4m3fn, int8. The m and k value must be at least 1. The k value
-* must be at least 1 and must be a multiple of 64.
-* - In A4W4 pergroup scenario: The data type supports int4.
+* The data type supports float8_e5m2, float8_e4m3fn, int8.\n
+* In A4W4 pergroup scenario: The data type supports int4.
 * @li x2: A matrix Tensor of quantized weight. The shape supports (n, k), and the format supports ND/FRACTAL_NZ.\n
-* - In MxA8W4 scenario:
-* For ND format, the data type supports float4_e2m1. For FRACTAL_NZ format, the data type supports float4_e2m1.\n
-* - In A8W4 scenario:
-* The data type supports float4_e2m1.
-* The k, n value must be at least 1 and k, n value must be a multiple of 64.
-* The shape must be (k1, n1, n0, k0) (n0 = 16, k0 = 32) when the format is FRACTAL_NZ.
-* - In A8W8 scenario: The data type supports int8.
-* - In A4W4 pergroup scenario: The data type supports int4.
+* In MxA8W4 and A8W4 scenario: the data type supports float4_e2m1.
+* The shape must be (k1, n1, n0, k0) (n0 = 16, k0 = 32) when the format is FRACTAL_NZ.\n
+* In A8W8 scenario: The data type supports int8.\n
+* In A4W4 pergroup scenario: The data type supports int4.
 * @li bias: An Optional Tensor.
 * The shape supprts(1, n), format supports ND, the type supports bfloat16, float16, float32.
 * @li x1_scale: An Optional Tensor for quantization parameters.
 * The type supports float8_e8m0, float16, bfloat16, format supports ND.
-* The shape supprts(m, k/group_size) when type is float8_e8m0, float32.
+* The shape supprts(m, k/group_size) when type is float8_e8m0, float32.\n
+* In MxA8W4 scenario: The shape supports (m, ceildiv(k, group_size * 2), 2). The type supports float8_e8m0.
 * The type bfloat16, bfloat16 is not supported yet.
 * @li x2_scale: An Optional Tensor for quantization parameters.
 * The type supports float8_e8m0, bfloat16, float16, uint64, format supports ND, The shape supports (n, ceildiv(k, group_size)).
 * - In A8W8 scenario: The shape supports (ceildiv(k, group_size_k), ceildiv(n, group_size_n)). The type supports float32.
+* - In MxA8W4 scenario: The shape supports (n, ceildiv(k, group_size * 2), 2). The type supports float8_e8m0.
 * @li y_scale: An Optional Tensor for quantization parameters.
 * The type support uint64, format supports ND, The shape supprts(1, n).
 * @li x1_offset: An Optional Tensor for quantization parameters. It's not supported yet.
@@ -58,9 +55,10 @@ namespace ge {
 * When transpose_x1 is true, x1's shape is (k, m). Currently, it should always be false.
 * @li transpose_x2: A bool. x2 is transposed if true. Default: false.
 * When transpose_x2 is true, x2's shape is (n, k), x2_scale's shape should be (n, k / group_size).
-* Currently, it should always be true.
+* Currently, it should always be true.\n
 * In A8W8 scenario, when transpose_x2 is true, x2_scale's shape should be
-* (ceildiv(n, group_size_n), ceildiv(k, group_size_k)).
+* (ceildiv(n, group_size_n), ceildiv(k, group_size_k)).\n
+* In MxA8W4 scenario, when transpose_x2 is true, x2_scale's shape should be (n, ceildiv(k, group_size * 2), 2).
 * @li group_size: An int32. Default: -1.
 
 * @par Outputs:

@@ -2,7 +2,7 @@
     "op_type": "QuantBatchMatmulV4",
     "op_list": [
         {
-            "bin_filename": "QuantBatchMatmulV4_ND_ND_float8_e4m3fn_float4_e2m1_fp16",
+            "bin_filename": "QuantBatchMatmulV4_ND_ND_float8_e4m3fn_float4_e2m1_out_bf16",
             "inputs": [
                 {
                     "name": "x1",
@@ -157,7 +157,7 @@
             ]
         },
         {
-            "bin_filename": "QuantBatchMatmulV4_ND_NZ_float8_e4m3fn_float4_e2m1_fp16",
+            "bin_filename": "QuantBatchMatmulV4_ND_NZ_float8_e4m3fn_float4_e2m1_out_bf16",
             "inputs": [
                 {
                     "name": "x1",
@@ -777,7 +777,7 @@
             ]
         },
         {
-            "bin_filename": "QuantBatchMatmulV4_ND_ND_float8_e4m3fn_float4_e2m1_fp16_out_fp16",
+            "bin_filename": "QuantBatchMatmulV4_ND_ND_float8_e4m3fn_float4_e2m1_out_fp16",
             "inputs": [
                 {
                     "name": "x1",
@@ -932,7 +932,7 @@
             ]
         },
         {
-            "bin_filename": "QuantBatchMatmulV4_ND_NZ_float8_e4m3fn_float4_e2m1_fp16_out_fp16",
+            "bin_filename": "QuantBatchMatmulV4_ND_NZ_float8_e4m3fn_float4_e2m1_out_fp16",
             "inputs": [
                 {
                     "name": "x1",
@@ -1087,7 +1087,7 @@
             ]
         },
         {
-            "bin_filename": "QuantBatchMatmulV4_ND_NZ_MX_float8_e4m3fn_float4_e2m1_fp16_out_fp16",
+            "bin_filename": "QuantBatchMatmulV4_ND_NZ_MX_float8_e4m3fn_float4_e2m1_out_fp16",
             "inputs": [
                 {
                     "name": "x1",
@@ -1242,7 +1242,7 @@
             ]
         },
         {
-            "bin_filename": "QuantBatchMatmulV4_ND_ND_MX_float8_e4m3fn_float4_e2m1_fp16_out_fp16",
+            "bin_filename": "QuantBatchMatmulV4_ND_ND_MX_float8_e4m3fn_float4_e2m1_out_fp16",
             "inputs": [
                 {
                     "name": "x1",
