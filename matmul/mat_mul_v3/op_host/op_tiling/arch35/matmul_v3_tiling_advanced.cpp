@@ -22,6 +22,7 @@
 #include "./matmul_tiling_cfg.h"
 #include "matmul_v3_compile_info_advanced.h"
 #include "matmul_v3_tiling_strategy.h"
+#include "matmul/common/op_host/log_format_util.h"
 
 namespace {
 using namespace optiling;
@@ -87,27 +88,38 @@ ge::graphStatus IsValidDtype(const MatMulV3Args &args)
     }
 
     if (args.hasBias) {
-        OP_LOGE(args.opName,
-            "Unsupported data type: x1[%s], x2[%s], y[%s], bias[%s], input dtype of x1 and x2 and output dtype "
-            "must be same, only support[DT_FLOAT16, DT_FLOAT, DT_BF16], or input dtype of x1 and x2 is "
-            "DT_FLOAT16 | DT_BF16 and output dtype is DT_FLOAT, and bias dtype must be same to input type "
-            "or equals DT_FLOAT when input dtype is DT_FLOAT16 | DT_BF16",
-            Ops::Base::ToString(args.aType).c_str(), Ops::Base::ToString(args.bType).c_str(),
-            Ops::Base::ToString(args.cType).c_str(), Ops::Base::ToString(args.biasType).c_str());
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            args.opName, "mat1, mat2, out, self",
+            Ops::NN::FormatString(
+                "%s, %s, %s, %s", Ops::Base::ToString(args.aType).c_str(), Ops::Base::ToString(args.bType).c_str(),
+                Ops::Base::ToString(args.cType).c_str(), Ops::Base::ToString(args.biasType).c_str())
+                .c_str(),
+            Ops::NN::FormatString(
+                "The dtypes of %s must be the same and within the range %s or when the dtype of %s is %s, the dtypes "
+                "of "
+                "%s must be %s",
+                "mat1, mat2, out, self", "{FLOAT16, FLOAT, BF16}", "mat1/mat2", "FLOAT16 or BF16", "out, self", "FLOAT")
+                .c_str());
         return ge::GRAPH_FAILED;
     } else {
-        OP_LOGE(args.opName,
-            "Unsupported data type: x1[%s], x2[%s], y[%s], input dtype of x1 and x2 and output dtype must be same, "
-            "only support[DT_FLOAT16, DT_FLOAT, DT_BF16], or input dtype of x1 and x2 is DT_FLOAT16 | DT_BF16 "
-            "and output dtype is DT_FLOAT",
-            Ops::Base::ToString(args.aType).c_str(), Ops::Base::ToString(args.bType).c_str(),
-            Ops::Base::ToString(args.cType).c_str());
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            args.opName, "self, mat2, out",
+            Ops::NN::FormatString(
+                "%s, %s, %s", Ops::Base::ToString(args.aType).c_str(), Ops::Base::ToString(args.bType).c_str(),
+                Ops::Base::ToString(args.cType).c_str())
+                .c_str(),
+            Ops::NN::FormatString(
+                "The dtypes of %s must be the same and within the range %s or when the dtype of %s is %s, the dtypes "
+                "of "
+                "%s must be %s",
+                "self, mat2, out", "{FLOAT16, FLOAT, BF16}", "self/mat2", "FLOAT16 or BF16", "out", "FLOAT")
+                .c_str());
         return ge::GRAPH_FAILED;
     }
 }
 
 ge::graphStatus GetInputDims(const gert::Shape& storageShape, const gert::Shape& oriShape, uint64_t dtypeSize,
-                             ge::Format format, int64_t (&dims)[TWO_BATCH_DIM])
+                             ge::Format format, int64_t (&dims)[TWO_BATCH_DIM], const char* paramName)
 {
     const size_t dimNum = storageShape.GetDimNum();
     const size_t oriDimNum = oriShape.GetDimNum();
@@ -115,18 +127,37 @@ ge::graphStatus GetInputDims(const gert::Shape& storageShape, const gert::Shape&
     dims[1] = oriShape[oriDimNum - ONE_BATCH_DIM];
     if (format == ge::FORMAT_ND) {
         if (dimNum < TWO_BATCH_DIM) {
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                "MatMulV3", paramName, Ops::NN::FormatString("%zu", dimNum).c_str(),
+                Ops::NN::FormatString(
+                    "When the format of %s is %s, the shape dim of %s must be at least %d", paramName, "ND", paramName,
+                    2)
+                    .c_str());
             return ge::GRAPH_FAILED;
         }
     } else {
         if (dimNum < FOUR_BATCH_DIM) {
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                "MatMulV3", paramName, Ops::NN::FormatString("%zu", dimNum).c_str(),
+                Ops::NN::FormatString(
+                    "When the format of %s is %s, the shape dim of %s must be at least %d", paramName, "FRACTAL_NZ",
+                    paramName, 4)
+                    .c_str());
             return ge::GRAPH_FAILED;
         }
         int64_t storageShape0 = storageShape[dimNum - THREE_BATCH_DIM] * storageShape[dimNum - TWO_BATCH_DIM];
         int64_t storageShape1 = storageShape[dimNum - FOUR_BATCH_DIM] * storageShape[dimNum - ONE_BATCH_DIM];
         if (ops::CeilAlign(dims[0], static_cast<int64_t>(BASIC_BLOCK_SIZE_16)) != storageShape0 ||
             ops::CeilAlign(dims[1], static_cast<int64_t>(BLOCK_BYTE_SIZE / dtypeSize)) != storageShape1) {
-            OP_LOGE("MatMulV3", "NZ aligned oriShape (%ld, %ld) is not equal to storageShape (%ld, %ld)", dims[0],
-                    dims[1], storageShape0, storageShape1);
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                "MatMulV3", paramName,
+                Ops::NN::FormatString(
+                    "%s, %s", Ops::Base::ToString(oriShape).c_str(), Ops::Base::ToString(storageShape).c_str())
+                    .c_str(),
+                Ops::NN::FormatString(
+                    "The NZ aligned %s of %s must be equal to %s of %s", "oriShape", paramName, "storageShape",
+                    paramName)
+                    .c_str());
             return ge::GRAPH_FAILED;
         }
     }
@@ -141,7 +172,11 @@ ge::graphStatus MatMulV3Tiling::CheckSelfSlice(int64_t (&dims)[TWO_BATCH_DIM])
 {
     auto selfShape = context_->GetInputShape(0)->GetOriginShape();
     if (args_.isATrans) {
-        OP_LOGE(args_.opName, "non-contiguous slice does not support transA");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            args_.opName, "transposeA", Ops::NN::FormatString("%s", args_.isATrans ? "true" : "false").c_str(),
+            Ops::NN::FormatString(
+                "In %s case, the value of %s cannot be %s", "non-contiguous self-slice", "transposeA", "true")
+                .c_str());
         return ge::GRAPH_FAILED;
     }
     dims[0] = selfShape[0] * selfShape[1]; // m = batch * sliceM
@@ -154,8 +189,13 @@ ge::graphStatus MatMulV3Tiling::CheckInputTranspose(int64_t (&dims)[TWO_BATCH_DI
 {
     auto inputViewShape = context_->GetInputShape(idx)->GetOriginShape();
     const size_t oriDimNum = inputViewShape.GetDimNum();
+    const char* paramName = (idx == 0) ? "self" : "mat2";
     if (oriDimNum != THREE_BATCH_DIM) {
-        OP_LOGE(args_.opName, "non-contiguous transpose viewShape dim is not 3");
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            args_.opName, paramName, Ops::NN::FormatString("%zu", oriDimNum).c_str(),
+            Ops::NN::FormatString(
+                "In %s scene, the shape dim of %s must be %d", "non-contiguous transpose", paramName, 3)
+                .c_str());
         return ge::GRAPH_FAILED;
     }
     dims[0] = inputViewShape[oriDimNum - TWO_BATCH_DIM];
@@ -202,7 +242,8 @@ bool MatMulV3Tiling::CheckIsNonContiguous(int64_t (&mkDims)[TWO_BATCH_DIM], int6
             return false;
         }
     } else {
-        if ((GetInputDims(selfStorageShape, selfShape, args_.aDtypeSize, args_.aFormat, mkDims) != ge::GRAPH_SUCCESS)) {
+        if (GetInputDims(selfStorageShape, selfShape, args_.aDtypeSize, args_.aFormat, mkDims, "self") !=
+            ge::GRAPH_SUCCESS) {
             OP_LOGE(args_.opName, "invalid input dim num for self");
             return false;
         }
@@ -213,7 +254,8 @@ bool MatMulV3Tiling::CheckIsNonContiguous(int64_t (&mkDims)[TWO_BATCH_DIM], int6
             return false;
         }
     } else {
-        if ((GetInputDims(mat2StorageShape, mat2Shape, args_.bDtypeSize, args_.bFormat, knDims) != ge::GRAPH_SUCCESS)) {
+        if (GetInputDims(mat2StorageShape, mat2Shape, args_.bDtypeSize, args_.bFormat, knDims, "mat2") !=
+            ge::GRAPH_SUCCESS) {
             OP_LOGE(args_.opName, "invalid input dim num for mat2");
             return false;
         }
@@ -233,7 +275,13 @@ ge::graphStatus MatMulV3Tiling::GetShape()
 
     // NZ异常校验
     if (args_.aFormat == ge::FORMAT_FRACTAL_NZ || args_.outFormat == ge::FORMAT_FRACTAL_NZ) {
-        OP_LOGE(args_.opName, "Parameter format error: The 'self', and 'out' tensors not support NZ formats.");
+        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
+            args_.opName, "self, out",
+            Ops::NN::FormatString(
+                "%s, %s", (args_.aFormat == ge::FORMAT_FRACTAL_NZ) ? "FRACTAL_NZ" : "ND",
+                (args_.outFormat == ge::FORMAT_FRACTAL_NZ) ? "FRACTAL_NZ" : "ND")
+                .c_str(),
+            Ops::NN::FormatString("The formats of %s must be %s", "self, out", "ND").c_str());
         return ge::GRAPH_FAILED;
     }
 
@@ -246,8 +294,14 @@ ge::graphStatus MatMulV3Tiling::GetShape()
     uint64_t kIdxB = args_.isBTrans ? 1ULL : 0ULL;
     int64_t k = mkDims[kIdxA];
     if (k != knDims[kIdxB]) {
-      OP_LOGE(args_.opName, "unequal input kDim values: k_left[%ld], k_right[%ld]", k, knDims[kIdxB]);
-      return ge::GRAPH_FAILED;
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            args_.opName, "self, mat2",
+            Ops::NN::FormatString(
+                "%s, %s", Ops::Base::ToString(context_->GetInputShape(0)->GetOriginShape()).c_str(),
+                Ops::Base::ToString(context_->GetInputShape(1)->GetOriginShape()).c_str())
+                .c_str(),
+            Ops::NN::FormatString("%s of %s must be equal", "K-axis", "self, mat2").c_str());
+        return ge::GRAPH_FAILED;
     }
     uint64_t mIdx = args_.isATrans ? 1ULL : 0ULL;
     uint64_t nIdx = args_.isBTrans ? 0ULL : 1ULL;
@@ -257,7 +311,11 @@ ge::graphStatus MatMulV3Tiling::GetShape()
     args_.kValue = static_cast<uint64_t>(k);
     args_.nValue = static_cast<uint64_t>(n);
     if (args_.kValue == 0UL && args_.hasBias) {
-        OP_LOGE(args_.opName, "Can not support inputShape has bias when kValue equals zero.");
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            args_.opName, "mat1", Ops::Base::ToString(context_->GetInputShape(0)->GetOriginShape()).c_str(),
+            Ops::NN::FormatString(
+                "When optional parameter %s exists, %s of %s must be a positive number", "self", "k-axis", "mat1")
+                .c_str());
         return ge::GRAPH_FAILED;
     }
     auto isValidDimValue = [](int64_t dim) -> bool {
@@ -267,14 +325,23 @@ ge::graphStatus MatMulV3Tiling::GetShape()
         return (dim >= 0) && (dim <= INT32_MAX);
     };
     if (!isValidDimValue(args_.mValue) || !isValidDimValueK(args_.kValue) || !isValidDimValue(args_.nValue)) {
-        OP_LOGE(args_.opName, "illegal value: m[%lu], k[%lu], n[%lu]", args_.mValue, args_.kValue, args_.nValue);
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            args_.opName, "self, mat2",
+            Ops::NN::FormatString(
+                "%s, %s", Ops::Base::ToString(context_->GetInputShape(0)->GetOriginShape()).c_str(),
+                Ops::Base::ToString(context_->GetInputShape(1)->GetOriginShape()).c_str())
+                .c_str(),
+            Ops::NN::FormatString("%s of %s must be within the range %s", "m, k, n", "self, mat2", "[0, INT32_MAX]")
+                .c_str());
         return ge::GRAPH_FAILED;
     }
     // check output dim num
     const gert::Shape &cShape = context_->GetOutputShape(0)->GetOriginShape();
     const size_t cDimNum = cShape.GetDimNum();
     if (cDimNum < TWO_BATCH_DIM) {
-        OP_LOGE(args_.opName, "illegal value: output dim num (%zu)", cDimNum);
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            args_.opName, "out", Ops::NN::FormatString("%zu", cDimNum).c_str(),
+            Ops::NN::FormatString("The shape dim of %s must be at least %d", "out", 2).c_str());
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -300,7 +367,13 @@ ge::graphStatus MatMulV3Tiling::BaseOpSpecificCheck()
         };
         if (!isMatrix(context_->GetInputShape(0)->GetOriginShape()) ||
             !isMatrix(context_->GetInputShape(1)->GetOriginShape())) {
-            OP_LOGE(args_.opName, "invalid input dim num");
+            OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+                args_.opName, "self, mat2",
+                Ops::NN::FormatString(
+                    "%zu, %zu", context_->GetInputShape(0)->GetOriginShape().GetDimNum(),
+                    context_->GetInputShape(1)->GetOriginShape().GetDimNum())
+                    .c_str(),
+                Ops::NN::FormatString("The shape dims of %s must be %s", "self, mat2", "2 or 3").c_str());
             return ge::GRAPH_FAILED;
         }
     }
@@ -312,7 +385,11 @@ ge::graphStatus MatMulV3Tiling::BaseOpSpecificCheck()
         const int64_t biasValue = biasShape[biasShape.GetDimNum() - 1];
         const int64_t nOriValue = cShape[cShape.GetDimNum() - 1];
         if (biasValue != nOriValue) {
-            OP_LOGE(args_.opName, "illegal value: bias[%ld], n[%ld]", biasValue, nOriValue);
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                args_.opName, "self", Ops::Base::ToString(biasShape).c_str(),
+                Ops::NN::FormatString(
+                    "%s of %s must be equal to %s of %s (%ld)", "Shape[-1]", "self", "Shape[-1]", "out", nOriValue)
+                    .c_str());
             return ge::GRAPH_FAILED;
         }
     }

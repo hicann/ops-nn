@@ -16,6 +16,8 @@
 #include "opdev/op_executor.h"
 #include "opdev/op_log.h"
 #include "opdev/platform.h"
+#include "log/log.h"
+#include "matmul/common/op_host/log_format_util.h"
 
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"
@@ -57,19 +59,44 @@ static constexpr uint64_t K_ALIGNMENT64 = 64UL;
 static const int64_t SUPPORTED_GROUP_SIZE = 32;
 static const int64_t NUM_TWO = 2;
 static const int64_t NUM_THREE = 3;
+static const char* const OP_NAME = "aclnnTransposeQuantBatchMatMulGetWorkspaceSize";
 
 inline static bool CheckNotNull(
     const aclTensor* x1, const aclTensor* x2, const aclTensor* out, const aclTensor* x1Scale, const aclTensor* x2Scale,
     const aclIntArray* permX1, const aclIntArray* permX2, const aclIntArray* permY)
 {
-    OP_CHECK_NULL(x1, return false);
-    OP_CHECK_NULL(x2, return false);
-    OP_CHECK_NULL(x1Scale, return false);
-    OP_CHECK_NULL(x2Scale, return false);
-    OP_CHECK_NULL(permX1, return false);
-    OP_CHECK_NULL(permX2, return false);
-    OP_CHECK_NULL(permY, return false);
-    OP_CHECK_NULL(out, return false);
+    OP_CHECK(x1 != nullptr,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(OP_NAME, "x1", "nullptr",
+            Ops::NN::FormatString("The value of %s cannot be %s", "x1", "null").c_str()),
+        return false);
+    OP_CHECK(x2 != nullptr,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(OP_NAME, "x2", "nullptr",
+            Ops::NN::FormatString("The value of %s cannot be %s", "x2", "null").c_str()),
+        return false);
+    OP_CHECK(x1Scale != nullptr,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(OP_NAME, "x1Scale", "nullptr",
+            Ops::NN::FormatString("The value of %s cannot be %s", "x1Scale", "null").c_str()),
+        return false);
+    OP_CHECK(x2Scale != nullptr,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(OP_NAME, "x2Scale", "nullptr",
+            Ops::NN::FormatString("The value of %s cannot be %s", "x2Scale", "null").c_str()),
+        return false);
+    OP_CHECK(permX1 != nullptr,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(OP_NAME, "permX1", "nullptr",
+            Ops::NN::FormatString("The value of %s cannot be %s", "permX1", "null").c_str()),
+        return false);
+    OP_CHECK(permX2 != nullptr,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(OP_NAME, "permX2", "nullptr",
+            Ops::NN::FormatString("The value of %s cannot be %s", "permX2", "null").c_str()),
+        return false);
+    OP_CHECK(permY != nullptr,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(OP_NAME, "permY", "nullptr",
+            Ops::NN::FormatString("The value of %s cannot be %s", "permY", "null").c_str()),
+        return false);
+    OP_CHECK(out != nullptr,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(OP_NAME, "out", "nullptr",
+            Ops::NN::FormatString("The value of %s cannot be %s", "out", "null").c_str()),
+        return false);
     return true;
 }
 
@@ -87,19 +114,70 @@ inline static bool CheckDtypeValid(
     int32_t dtype)
 {
     if (!IsMicroScaling(x1Scale, x2Scale)) {
-        OP_CHECK_DTYPE_NOT_SUPPORT(x1, x1_SUPPORT_LIST_FP8, return false);
-        OP_CHECK_DTYPE_NOT_SUPPORT(x2, x2_SUPPORT_LIST_FP8, return false);
+        if (!CheckType(x1->GetDataType(), x1_SUPPORT_LIST_FP8)) {
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                OP_NAME, "x1", op::ToString(x1->GetDataType()).GetString(),
+                Ops::NN::FormatString(
+                    "The dtype of %s must be in %s", "x1", op::ToString(x1_SUPPORT_LIST_FP8).GetString())
+                    .c_str());
+            return false;
+        }
+        if (!CheckType(x2->GetDataType(), x2_SUPPORT_LIST_FP8)) {
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                OP_NAME, "x2", op::ToString(x2->GetDataType()).GetString(),
+                Ops::NN::FormatString(
+                    "The dtype of %s must be in %s", "x2", op::ToString(x2_SUPPORT_LIST_FP8).GetString())
+                    .c_str());
+            return false;
+        }
     } else {
-        OP_CHECK_DTYPE_NOT_SUPPORT(x1, x1_SUPPORT_LIST_MXFP8, return false);
-        OP_CHECK_DTYPE_NOT_SUPPORT(x2, x2_SUPPORT_LIST_MXFP8, return false);
+        if (!CheckType(x1->GetDataType(), x1_SUPPORT_LIST_MXFP8)) {
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                OP_NAME, "x1", op::ToString(x1->GetDataType()).GetString(),
+                Ops::NN::FormatString(
+                    "The dtype of %s must be in %s", "x1", op::ToString(x1_SUPPORT_LIST_MXFP8).GetString())
+                    .c_str());
+            return false;
+        }
+        if (!CheckType(x2->GetDataType(), x2_SUPPORT_LIST_MXFP8)) {
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                OP_NAME, "x2", op::ToString(x2->GetDataType()).GetString(),
+                Ops::NN::FormatString(
+                    "The dtype of %s must be in %s", "x2", op::ToString(x2_SUPPORT_LIST_MXFP8).GetString())
+                    .c_str());
+            return false;
+        }
     }
-    OP_CHECK_DTYPE_NOT_SUPPORT(x1Scale, x1_SCALE_SUPPORT_LIST, return false);
-    OP_CHECK_DTYPE_NOT_SUPPORT(x2Scale, x2_SCALE_SUPPORT_LIST, return false);
+    if (!CheckType(x1Scale->GetDataType(), x1_SCALE_SUPPORT_LIST)) {
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            OP_NAME, "x1Scale", op::ToString(x1Scale->GetDataType()).GetString(),
+            Ops::NN::FormatString(
+                "The dtype of %s must be in %s", "x1Scale", op::ToString(x1_SCALE_SUPPORT_LIST).GetString())
+                .c_str());
+        return false;
+    }
+    if (!CheckType(x2Scale->GetDataType(), x2_SCALE_SUPPORT_LIST)) {
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            OP_NAME, "x2Scale", op::ToString(x2Scale->GetDataType()).GetString(),
+            Ops::NN::FormatString(
+                "The dtype of %s must be in %s", "x2Scale", op::ToString(x2_SCALE_SUPPORT_LIST).GetString())
+                .c_str());
+        return false;
+    }
     // Only support FP16 and BF16
-    OP_CHECK_DTYPE_NOT_SUPPORT(out, OUT_DTYPE_SUPPORT_LIST, return false);
+    if (!CheckType(out->GetDataType(), OUT_DTYPE_SUPPORT_LIST)) {
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            OP_NAME, "out", op::ToString(out->GetDataType()).GetString(),
+            Ops::NN::FormatString(
+                "The dtype of %s must be in %s", "out", op::ToString(OUT_DTYPE_SUPPORT_LIST).GetString())
+                .c_str());
+        return false;
+    }
     // Dtype shoulde be same with out tensor data type
     if (static_cast<int32_t>(out->GetDataType()) != dtype) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Dtype should be same with out dtype");
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            OP_NAME, "out", op::ToString(out->GetDataType()).GetString(),
+            Ops::NN::FormatString("The dtype of %s must be out dtype(%d)", "out", dtype).c_str());
         return false;
     }
     return true;
@@ -111,21 +189,38 @@ inline static bool CheckScalex1Valid(const aclTensor* x1Scale, int64_t batch, in
     auto dimTensorScale = x1Scale->GetViewShape().GetDimNum();
     if (isMxFp) {
         if (dimTensorScale != EXPECTED_MX_SCALE_DIM) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "MXFp8 Dim of x1Scale must be 4, which is %d", dimTensorScale);
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                OP_NAME, "x1Scale", Ops::NN::FormatString("%zu", dimTensorScale).c_str(),
+                Ops::NN::FormatString(
+                    "In %s scene, the shape dim of %s must be %d", "MXFp8", "x1Scale",
+                    static_cast<int>(EXPECTED_MX_SCALE_DIM))
+                    .c_str());
             return false;
         }
         if (x1Scale->GetViewShape().GetDim(0) != m || x1Scale->GetViewShape().GetDim(1) != batch ||
             x1Scale->GetViewShape().GetDim(NUM_TWO) != numGroup ||
             x1Scale->GetViewShape().GetDim(NUM_THREE) != NUM_TWO) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "The x1scale shape must be [%ld, %d, %ld, 2], which are [%ld, %ld, %d ,%d]", m,
-                batch, numGroup, x1Scale->GetViewShape().GetDim(0), x1Scale->GetViewShape().GetDim(1),
-                x1Scale->GetViewShape().GetDim(NUM_TWO), x1Scale->GetViewShape().GetDim(NUM_THREE));
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                OP_NAME, "x1Scale", op::ToString(x1Scale->GetViewShape()).GetString(),
+                Ops::NN::FormatString(
+                    "In %s scene, the shape of %s must be %s", "MXFp8", "x1Scale",
+                    Ops::NN::FormatString("[%ld, %ld, %ld, 2]", m, batch, numGroup).c_str())
+                    .c_str());
             return false;
         }
     } else {
-        if (dimTensorScale != EXPECTED_SCALE_DIM || x1Scale->GetViewShape().GetDim(0) != m) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Dim of x1Scale != 1 or x1Scale dim 0 != M");
+        if (dimTensorScale != EXPECTED_SCALE_DIM) {
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                OP_NAME, "x1Scale", Ops::NN::FormatString("%zu", dimTensorScale).c_str(),
+                Ops::NN::FormatString("The shape dim of %s must be %zu", "x1Scale", EXPECTED_SCALE_DIM).c_str());
+            return false;
+        }
+        if (x1Scale->GetViewShape().GetDim(0) != m) {
+            OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+                OP_NAME, "x1Scale", Ops::NN::FormatString("%ld", x1Scale->GetViewShape().GetDim(0)).c_str(),
+                Ops::NN::FormatString(
+                    "%s of %s must be equal to %s of %s (%ld)", "Shape[0]", "x1Scale", "m-axis", "x1", m)
+                    .c_str());
             return false;
         }
     }
@@ -141,23 +236,40 @@ inline static bool CheckScalex2Valid(
         int64_t scaleN = x2Scale->GetViewShape().GetDim((*permX2)[NUM_TWO]);
         int64_t scaleGroupNum = x2Scale->GetViewShape().GetDim((*permX2)[1]);
         if (dimTensorScale != EXPECTED_MX_SCALE_DIM) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "MXFp8 Dim of x2Scale must be 4, which is %d", dimTensorScale);
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                OP_NAME, "x2Scale", Ops::NN::FormatString("%zu", dimTensorScale).c_str(),
+                Ops::NN::FormatString(
+                    "In %s scene, the shape dim of %s must be %d", "MXFp8", "x2Scale",
+                    static_cast<int>(EXPECTED_MX_SCALE_DIM))
+                    .c_str());
             return false;
         }
         std::vector<int64_t> dims = {batch, numGroup, n, NUM_TWO};
         if (x2Scale->GetViewShape().GetDim(0) != batch || scaleN != n || scaleGroupNum != numGroup ||
             x2Scale->GetViewShape().GetDim(NUM_THREE) != NUM_TWO) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "The x2scale shape must be [%ld, %d, %ld, 2], which are [%ld, %ld, %d ,%d]",
-                batch, dims[(*permX2)[1]], dims[(*permX2)[NUM_TWO]], x2Scale->GetViewShape().GetDim(0),
-                x2Scale->GetViewShape().GetDim(1), x2Scale->GetViewShape().GetDim(NUM_TWO),
-                x2Scale->GetViewShape().GetDim(NUM_THREE));
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                OP_NAME, "x2Scale", op::ToString(x2Scale->GetViewShape()).GetString(),
+                Ops::NN::FormatString(
+                    "In %s scene, the shape of %s must be %s", "MXFp8", "x2Scale",
+                    Ops::NN::FormatString("[%ld, %ld, %ld, 2]", batch, dims[(*permX2)[1]], dims[(*permX2)[NUM_TWO]])
+                        .c_str())
+                    .c_str());
             return false;
         }
     } else {
         int64_t scaleDim0 = x2Scale->GetViewShape().GetDim(0);
-        if (dimTensorScale != EXPECTED_SCALE_DIM || scaleDim0 != n) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Dim of x2Scale != 1 or x2Scale dim 0 != N");
+        if (dimTensorScale != EXPECTED_SCALE_DIM) {
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                OP_NAME, "x2Scale", Ops::NN::FormatString("%zu", dimTensorScale).c_str(),
+                Ops::NN::FormatString("The shape dim of %s must be %zu", "x2Scale", EXPECTED_SCALE_DIM).c_str());
+            return false;
+        }
+        if (scaleDim0 != n) {
+            OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+                OP_NAME, "x2Scale", Ops::NN::FormatString("%ld", scaleDim0).c_str(),
+                Ops::NN::FormatString(
+                    "%s of %s must be equal to %s of %s (%ld)", "Shape[0]", "x2Scale", "n-axis", "x2", n)
+                    .c_str());
             return false;
         }
     }
@@ -184,11 +296,22 @@ inline static bool CheckScaleValid(
 
 static bool CheckPermValid(const aclIntArray* permX1, const aclIntArray* permX2, const aclIntArray* permY, bool isMxFp)
 {
-    if (permX1->Size() != EXPECTED_DIM || permX2->Size() != EXPECTED_DIM || permY->Size() != EXPECTED_DIM) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "The dims of the perm intArray should be 3, now permX1 dim: %ld , permX2 dim: %ld,  permY dim: %ld",
-            permX1->Size(), permX2->Size(), permY->Size());
+    if (permX1->Size() != EXPECTED_DIM) {
+        OP_LOGE_FOR_INVALID_LISTSIZE(
+            OP_NAME, "permX1",
+            std::to_string(permX1->Size()).c_str(), std::to_string(EXPECTED_DIM).c_str());
+        return false;
+    }
+    if (permX2->Size() != EXPECTED_DIM) {
+        OP_LOGE_FOR_INVALID_LISTSIZE(
+            OP_NAME, "permX2",
+            std::to_string(permX2->Size()).c_str(), std::to_string(EXPECTED_DIM).c_str());
+        return false;
+    }
+    if (permY->Size() != EXPECTED_DIM) {
+        OP_LOGE_FOR_INVALID_LISTSIZE(
+            OP_NAME, "permY",
+            std::to_string(permY->Size()).c_str(), std::to_string(EXPECTED_DIM).c_str());
         return false;
     }
     // 当前支持转置场景
@@ -202,15 +325,23 @@ static bool CheckPermValid(const aclIntArray* permX1, const aclIntArray* permX2,
     }
 
     if (!allowedPermX1) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm of x1 should be [1, 0, 2].");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            OP_NAME, "permX1",
+            Ops::NN::FormatString("[%ld, %ld, %ld]", (*permX1)[0], (*permX1)[1], (*permX1)[2]).c_str(),
+            Ops::NN::FormatString("The value of %s must be %s", "permX1", "[1, 0, 2]").c_str());
         return false;
     }
     if (!allowedPermX2) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm of x2 should be %s", permX2ErrorInfo.c_str());
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            OP_NAME, "permX2",
+            Ops::NN::FormatString("[%ld, %ld, %ld]", (*permX2)[0], (*permX2)[1], (*permX2)[2]).c_str(),
+            Ops::NN::FormatString("The value of %s must be %s", "permX2", permX2ErrorInfo.c_str()).c_str());
         return false;
     }
     if (!allowedPermY) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the perm of y should be [1, 0, 2].");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            OP_NAME, "permY", Ops::NN::FormatString("[%ld, %ld, %ld]", (*permY)[0], (*permY)[1], (*permY)[2]).c_str(),
+            Ops::NN::FormatString("The value of %s must be %s", "permY", "[1, 0, 2]").c_str());
         return false;
     }
     return true;
@@ -223,9 +354,10 @@ static bool CheckShapeValid(
     op::Shape x1Shape = x1->GetViewShape();
     op::Shape x2Shape = x2->GetViewShape();
     if ((x1Shape.GetDimNum() != EXPECTED_DIM) || (x2Shape.GetDimNum() != EXPECTED_DIM)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "The dims of the two inputs should be 3, now they are %s and %s",
-            op::ToString(x1Shape).GetString(), op::ToString(x2Shape).GetString());
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            OP_NAME, "x1, x2",
+            Ops::NN::FormatString("%zu, %zu", x1Shape.GetDimNum(), x2Shape.GetDimNum()).c_str(),
+            Ops::NN::FormatString("The shape dims of %s must be %zu", "x1, x2", EXPECTED_DIM).c_str());
         return false;
     }
     int64_t x1KDim = x1->GetViewShape().GetDim((*permX1)[2]);
@@ -235,22 +367,29 @@ static bool CheckShapeValid(
     int64_t n = x2->GetViewShape().GetDim((*permX2)[2]);
 
     if (x1KDim != x2KDim) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "The k-axis of the two inputs are different, now x1KDim are %ld, and x2KDim are %ld", x1KDim, x2KDim);
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            OP_NAME, "x1, x2",
+            Ops::NN::FormatString("%s, %s", op::ToString(x1Shape).GetString(), op::ToString(x2Shape).GetString())
+                .c_str(),
+            Ops::NN::FormatString("%s of %s must be equal", "K-axis", "x1, x2").c_str());
         return false;
     }
     if (!isMxFp) {
         // Check shape k n
         if (x1KDim != TQBMM_VALID_K || n != TQBMM_VALID_N) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "The shape of the x2 is not supported, now K are %ld, and N are %ld", x1KDim,
-                n);
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                OP_NAME, "x2", op::ToString(x2Shape).GetString(),
+                Ops::NN::FormatString(
+                    "The k-axis and n-axis of %s must be %d and %d", "x2", TQBMM_VALID_K, TQBMM_VALID_N)
+                    .c_str());
             return false;
         }
     } else {
         if (x1KDim % K_ALIGNMENT64 != 0) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "K must be a multiple of 64, now K are %ld", x1KDim);
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                OP_NAME, "x1", op::ToString(x1Shape).GetString(),
+                Ops::NN::FormatString("%s of %s must be exactly divisible by %lu", "K-axis", "x1", K_ALIGNMENT64)
+                    .c_str());
             return false;
         }
     }
@@ -261,13 +400,19 @@ static bool CheckShapeValid(
 static inline bool CheckWeightNz(const aclTensor* x2, bool isMxFp)
 {
     if (!isMxFp) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "NZ format of x2 only supports mxfp8 mode (x1_scale/x2_scale is e8m0).");
+        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
+            OP_NAME, "x2", "FRACTAL_NZ",
+            Ops::NN::FormatString("In %s case, the format of %s cannot be %s",
+                                  "non-mxfp8 mode", "x2", "FRACTAL_NZ").c_str());
         return false;
     }
     auto storageShapeDim = x2->GetStorageShape().GetDimNum();
     OP_CHECK(
         storageShapeDim == EXPECTED_NZ_DIM,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Only support x2 storageShapeDim is 5, which are [%zu].", storageShapeDim),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            OP_NAME, "x2", Ops::NN::FormatString("%zu", storageShapeDim).c_str(),
+            Ops::NN::FormatString("The storage shape dim of %s must be %d", "x2",
+                                  static_cast<int>(EXPECTED_NZ_DIM)).c_str()),
         return false);
     return true;
 }
@@ -284,9 +429,13 @@ static inline bool InferGroupSize(int64_t& groupSize, bool isMxFp)
     uint64_t groupSizeN = (static_cast<uint64_t>(groupSize) >> GROUP_N_OFFSET) & GROUP_MNK_BIT_SIZE;
     uint64_t groupSizeM = (static_cast<uint64_t>(groupSize) >> GROUP_M_OFFSET) & GROUP_MNK_BIT_SIZE;
     if (isMxFp && !validGroupSize(groupSizeM, groupSizeN, groupSizeK)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "The valid groupSizeM and groupSizeN must be 0 or 1,the valid groupSizeK must be 32.");
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            OP_NAME, "groupSizeM, groupSizeN, groupSizeK",
+            Ops::NN::FormatString("%lu, %lu, %lu", groupSizeM, groupSizeN, groupSizeK).c_str(),
+            Ops::NN::FormatString(
+                "The values of %s must be %s, and the value of %s must be %d", "groupSizeM and groupSizeN", "0 or 1",
+                "groupSizeK", static_cast<int>(SUPPORTED_GROUP_SIZE))
+                .c_str());
         return false;
     }
     OP_LOGD(
@@ -302,7 +451,10 @@ inline static aclnnStatus CheckParams(
 {
     // Only support DAV_3510
     if (GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Only support DAV_3510");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            OP_NAME, "platform",
+            Ops::NN::FormatString("%d", static_cast<int>(GetCurrentPlatformInfo().GetCurNpuArch())).c_str(),
+            Ops::NN::FormatString("The value of %s can only be %s", "platform", "DAV_3510").c_str());
         return ACLNN_ERR_PARAM_INVALID;
     }
     // Check null
@@ -321,13 +473,23 @@ inline static aclnnStatus CheckParams(
     // 不支持x1Format、 outFormat为NZ
     if (ge::GetPrimaryFormat(x1->GetStorageFormat()) == Format::FORMAT_FRACTAL_NZ ||
         ge::GetPrimaryFormat(out->GetStorageFormat()) == Format::FORMAT_FRACTAL_NZ) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of x1 or out can not be FORMAT_FRACTAL_NZ.");
+        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
+            OP_NAME, "x1, out",
+            Ops::NN::FormatString(
+                "%s, %s",
+                op::ToString(x1->GetStorageFormat()).GetString(),
+                op::ToString(out->GetStorageFormat()).GetString())
+                .c_str(),
+            Ops::NN::FormatString("The formats of %s cannot be %s", "x1, out", "FRACTAL_NZ").c_str());
         return ACLNN_ERR_PARAM_INVALID;
     }
     // MxFp8场景groupSize判断
     CHECK_RET(InferGroupSize(groupSize, isMxFp), ACLNN_ERR_PARAM_INVALID);
     if (batch_split_factor != 1) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Batch_split_factor should be 1 currently: [%d].", batch_split_factor);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            OP_NAME, "batchSplitFactor",
+            Ops::NN::FormatString("%d", batch_split_factor).c_str(),
+            Ops::NN::FormatString("The value of %s must be %d", "batchSplitFactor", 1).c_str());
         return ACLNN_ERR_PARAM_INVALID;
     }
     return ACLNN_SUCCESS;
@@ -405,12 +567,18 @@ aclnnStatus aclnnTransposeQuantBatchMatMulGetWorkspaceSize(
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
     // 空tensor 处理
     if (x1->IsEmpty() || x2->IsEmpty()) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Not support empty tensor!");
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            OP_NAME, "x1, x2",
+            Ops::NN::FormatString(
+                "%s, %s", op::ToString(x1->GetViewShape()).GetString(), op::ToString(x2->GetViewShape()).GetString())
+                .c_str(),
+            Ops::NN::FormatString("%s cannot be empty tensors", "x1, x2").c_str());
         return ACLNN_ERR_PARAM_INVALID;
     }
     // 当前暂不支持bias
     if (bias != nullptr) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Not support bias!");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            OP_NAME, "bias", "", Ops::NN::FormatString("The value of %s must be %s", "bias", "null").c_str());
         return ACLNN_ERR_PARAM_INVALID;
     }
     // 构建matmul计算图
@@ -456,19 +624,26 @@ aclnnStatus aclnnTransposeQuantBatchMatMulWeightNzGetWorkspaceSize(
 
     // x2 format must be NZ
     if (ge::GetPrimaryFormat(x2->GetStorageFormat()) != Format::FORMAT_FRACTAL_NZ) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Format of x2 must be FRACTAL_NZ, actual is %s.",
-            op::ToString(x2->GetStorageFormat()).GetString());
+        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
+            OP_NAME, "x2",
+            op::ToString(x2->GetStorageFormat()).GetString(),
+            Ops::NN::FormatString("The format of %s must be %s", "x2", "FRACTAL_NZ").c_str());
         return ACLNN_ERR_PARAM_INVALID;
     }
     // 空tensor 处理
     if (x1->IsEmpty() || x2->IsEmpty()) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Not support empty tensor!");
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            OP_NAME, "x1, x2",
+            Ops::NN::FormatString("%s, %s", op::ToString(x1->GetViewShape()).GetString(),
+                                  op::ToString(x2->GetViewShape()).GetString()).c_str(),
+            Ops::NN::FormatString("The shapes of %s cannot be %s", "x1, x2", "empty").c_str());
         return ACLNN_ERR_PARAM_INVALID;
     }
     // 当前暂不支持bias
     if (bias != nullptr) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Not support bias!");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            OP_NAME, "bias", "not nullptr",
+            Ops::NN::FormatString("The value of %s must be %s", "bias", "null").c_str());
         return ACLNN_ERR_PARAM_INVALID;
     }
     // 构建matmul计算图

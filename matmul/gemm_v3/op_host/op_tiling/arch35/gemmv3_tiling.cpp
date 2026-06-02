@@ -23,7 +23,7 @@
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_v3_compile_info_advanced.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/matmul_v3_simplifiedkey.h"
 #include "matmul/common/op_host/op_tiling/debug_tiling.h"
-#include "log/log.h"
+#include "matmul/common/op_host/log_format_util.h"
 
 namespace {
 using namespace optiling;
@@ -78,12 +78,14 @@ ge::graphStatus IsValidDtype(const MatMulV3Args& args)
             return ge::GRAPH_SUCCESS;
         }
     }
-    OP_LOGE(
-        args.opName,
-        "Unsupported data type: a[%s], b[%s], y[%s], input dtype of a and b must be same and only support "
-        "[DT_FLOAT16, DT_FLOAT, DT_BF16] and output dtype must be DT_FLOAT ",
-        Ops::Base::ToString(args.aType).c_str(), Ops::Base::ToString(args.bType).c_str(),
-        Ops::Base::ToString(args.cType).c_str());
+    std::string incorrectDtypes = Ops::Base::ToString(args.aType) + ", " +
+        Ops::Base::ToString(args.bType) + ", " + Ops::Base::ToString(args.cType);
+    OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+        args.opName, "A, B, out", incorrectDtypes.c_str(),
+        Ops::NN::FormatString(
+            "The dtypes of %s must be within the range %s", "A, B, out",
+            "(FLOAT16,FLOAT16,FLOAT), (BF16,BF16,FLOAT), (FLOAT,FLOAT,FLOAT)")
+            .c_str());
     return ge::GRAPH_FAILED;
 }
 
@@ -98,7 +100,11 @@ ge::graphStatus GetGemmV3ShapeMKN(const gert::Shape& aShape, const gert::Shape& 
     int64_t ka = aShape[args.isATrans ? 0 : 1];
     int64_t kb = bShape[args.isBTrans ? 1 : 0];
     if (ka != kb) {
-        OP_LOGE(args.opName, "unequal input kDim values: k_left[%ld], k_right[%ld]", ka, kb);
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            args.opName, "A, B",
+            Ops::NN::FormatString("%s, %s", Ops::Base::ToString(aShape).c_str(), Ops::Base::ToString(bShape).c_str())
+                .c_str(),
+            Ops::NN::FormatString("%s of %s must be equal", "K-axis", "A, B").c_str());
         return ge::GRAPH_FAILED;
     }
     int64_t m = aShape[args.isATrans ? 1 : 0];
@@ -111,7 +117,11 @@ ge::graphStatus GetGemmV3ShapeMKN(const gert::Shape& aShape, const gert::Shape& 
         return (dim > 0) && (dim <= INT32_MAX);
     };
     if (!isValidDimValue(args.mValue) || !isValidDimValue(args.kValue) || !isValidDimValue(args.nValue)) {
-        OP_LOGE(args.opName, "illegal dim value: m[%lu], k[%lu], n[%lu]", args.mValue, args.kValue, args.nValue);
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            args.opName, "A, B",
+            Ops::NN::FormatString("%s, %s", Ops::Base::ToString(aShape).c_str(), Ops::Base::ToString(bShape).c_str())
+                .c_str(),
+            Ops::NN::FormatString("%s of %s must be within the range %s", "m, k, n", "A, B", "(0, INT32_MAX]").c_str());
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -154,11 +164,19 @@ ge::graphStatus GemmV3Tiling::GetShape()
     const size_t bDimNum = bShape.GetDimNum();
     const size_t yDimNum = yShape.GetDimNum();
     // 输入a&b维度校验
-    OP_TILING_CHECK((aDimNum != ALLOW_DIM) || (bDimNum != ALLOW_DIM),
-                    CUBE_INNER_ERR_REPORT(args_.opName, "invalid dim num for input a or b"), return ge::GRAPH_FAILED);
+    if ((aDimNum != ALLOW_DIM) || (bDimNum != ALLOW_DIM)) {
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            args_.opName, "A, B", Ops::NN::FormatString("[%zu, %zu]", aDimNum, bDimNum).c_str(),
+            Ops::NN::FormatString("The shape dims of %s must be %zu", "A, B", ALLOW_DIM).c_str());
+        return ge::GRAPH_FAILED;
+    }
     // 输出y维度校验
-    OP_TILING_CHECK(yDimNum != ALLOW_DIM, CUBE_INNER_ERR_REPORT(args_.opName, "invalid dim num for output y"),
-                    return ge::GRAPH_FAILED);
+    if (yDimNum != ALLOW_DIM) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            args_.opName, "out", std::to_string(yDimNum).c_str(),
+            Ops::NN::FormatString("The shape dim of %s must be %zu", "out", ALLOW_DIM).c_str());
+        return ge::GRAPH_FAILED;
+    }
     // get transpose
     args_.isATrans = *context_->GetAttrs()->GetAttrPointer<bool>(TRANSA_ATTR_INDEX);
     args_.isBTrans = *context_->GetAttrs()->GetAttrPointer<bool>(TRANSB_ATTR_INDEX);
@@ -169,12 +187,20 @@ ge::graphStatus GemmV3Tiling::GetShape()
     if (context_->GetInputDesc(C_IDX) != nullptr) {
         const gert::Shape& cShape = context_->GetInputShape(C_IDX)->GetOriginShape();
         const size_t cDimNum = cShape.GetDimNum();
-        OP_TILING_CHECK(cDimNum != ALLOW_DIM, CUBE_INNER_ERR_REPORT(args_.opName, "invalid dim num for input c"),
-                        return ge::GRAPH_FAILED);
+        if (cDimNum != ALLOW_DIM) {
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                args_.opName, "C", std::to_string(cDimNum).c_str(),
+                Ops::NN::FormatString("The shape dim of %s must be %zu", "C", ALLOW_DIM).c_str());
+            return ge::GRAPH_FAILED;
+        }
         // c和y相同shape
         if (cShape[0] != yShape[0] || cShape[1] != yShape[1]) {
-            OP_LOGE(args_.opName, "unequal shape for input c and output y: m_c[%ld], n_c[%ld], m_y[%ld], n_y[%ld]",
-                    cShape[0], cShape[1], yShape[0], yShape[1]);
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                args_.opName, "C, out",
+                Ops::NN::FormatString(
+                    "%s, %s", Ops::Base::ToString(cShape).c_str(), Ops::Base::ToString(yShape).c_str())
+                    .c_str(),
+                Ops::NN::FormatString("The shapes of %s must be the same", "C, out").c_str());
             return ge::GRAPH_FAILED;
         }
     }
@@ -207,9 +233,12 @@ ge::graphStatus GemmV3Tiling::CheckArgs()
     OPS_CHECK_NULL_WITH_CONTEXT(context_, alphaValue);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, betaValue);
     // alpha和beta必须为1，默认1.0
-    OP_TILING_CHECK(
-        std::abs(*alphaValue - 1.0f) > epsilon || std::abs(*betaValue - 1.0f) > epsilon,
-        CUBE_INNER_ERR_REPORT(args_.opName, "alpha and beta must be 1.0"), return ge::GRAPH_FAILED);
+    if (std::abs(*alphaValue - 1.0f) > epsilon || std::abs(*betaValue - 1.0f) > epsilon) {
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            args_.opName, "alpha, beta", Ops::NN::FormatString("%f, %f", *alphaValue, *betaValue).c_str(),
+            Ops::NN::FormatString("The values of %s must be %s", "alpha, beta", "1.0").c_str());
+        return ge::GRAPH_FAILED;
+    }
     // transA和transB必须有bool值，默认false
     OPS_CHECK_NULL_WITH_CONTEXT(context_, transAValue);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, transBValue);

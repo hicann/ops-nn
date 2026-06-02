@@ -16,6 +16,8 @@
 #include "opdev/op_executor.h"
 #include "opdev/op_log.h"
 #include "opdev/platform.h"
+#include "log/log.h"
+#include "matmul/common/op_host/log_format_util.h"
 
 #include "aclnn_kernels/cast.h"
 #include "aclnn_kernels/contiguous.h"
@@ -246,8 +248,12 @@ inline static aclnnStatus CheckParams(const aclTensor* x1, const aclTensor* x2, 
         return ACLNN_ERR_PARAM_INVALID;
     }
     if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510 && cubeMathType == -1) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "cubeMathType[%d] can not be -1 for npu arch 3510",
-            cubeMathType);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            "aclnnTransposeBatchMatMulGetWorkspaceSize", "cubeMathType",
+            Ops::NN::FormatString("%d", cubeMathType).c_str(),
+            Ops::NN::FormatString(
+                "In %s case, the value of %s cannot be %s", "DAV_3510 architecture", "cubeMathType", "-1")
+                .c_str());
         return ACLNN_ERR_PARAM_INVALID;
     }
     CHECK_RET(CheckMathType(x1, x2, cubeMathType), ACLNN_ERR_PARAM_INVALID);

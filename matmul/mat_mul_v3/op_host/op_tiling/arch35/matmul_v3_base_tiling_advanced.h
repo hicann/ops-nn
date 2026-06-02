@@ -23,6 +23,7 @@
 #include "matmul_v3_tiling_key.h"
 #include "matmul_v3_tiling_data.h"
 #include "error_util.h"
+#include "matmul/common/op_host/log_format_util.h"
 
 namespace optiling {
 namespace matmul_v3_advanced {
@@ -45,8 +46,14 @@ protected:
             OP_LOGE("MatMulV3", "context_ is nullptr");
             return ge::GRAPH_FAILED;
         }
+        const gert::Shape& selfShape = context_->GetInputShape(0)->GetOriginShape();
+        const gert::Shape& mat2Shape = context_->GetInputShape(1)->GetOriginShape();
         if (args_.kValue == 0UL && args_.hasBias) {
-            OP_LOGE(args_.opName, "Can not support inputShape hasBias when kValue equals zero.");
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                args_.opName, "mat1", Ops::Base::ToString(selfShape).c_str(),
+                Ops::NN::FormatString(
+                    "When optional parameter %s exists, %s of %s must be a positive number", "self", "k-axis", "mat1")
+                    .c_str());
             return ge::GRAPH_FAILED;
         }
         auto isValidDimValue = [](int64_t dim) -> bool {
@@ -56,7 +63,13 @@ protected:
             return (dim >= 0) && (dim <= INT32_MAX);
         };
         if (!isValidDimValue(args_.mValue) || !isValidDimValueK(args_.kValue) || !isValidDimValue(args_.nValue)) {
-            OP_LOGE(args_.opName, "illegal value: m[%lu], k[%lu], n[%lu]", args_.mValue, args_.kValue, args_.nValue);
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                args_.opName, "self, mat2",
+                Ops::NN::FormatString(
+                    "%s, %s", Ops::Base::ToString(selfShape).c_str(), Ops::Base::ToString(mat2Shape).c_str())
+                    .c_str(),
+                Ops::NN::FormatString("%s of %s must be within the range %s", "m, k, n", "self, mat2", "[0, INT32_MAX]")
+                    .c_str());
             return ge::GRAPH_FAILED;
         }
         if (compileInfo_.aicNum == 0UL) {
@@ -222,11 +235,16 @@ protected:
                                dtypeMap_.at(args_.biasType));
             }
         } catch (const std::out_of_range &e) {
-            OP_LOGE(args_.opName, "MatMulV3 Set Type Failed! %d, %d, %d, %d",
-                    static_cast<int32_t>(args_.aType),
-                    static_cast<int32_t>(args_.bType),
-                    static_cast<int32_t>(args_.cType),
-                    static_cast<int32_t>(args_.biasType));
+            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                args_.opName, "mat1, mat2, out, self",
+                Ops::NN::FormatString(
+                    "%s, %s, %s, %s", Ops::Base::ToString(args_.aType).c_str(),
+                    Ops::Base::ToString(args_.bType).c_str(), Ops::Base::ToString(args_.cType).c_str(),
+                    Ops::Base::ToString(args_.biasType).c_str())
+                    .c_str(),
+                Ops::NN::FormatString(
+                    "The dtypes of %s must be within the range %s", "mat1, mat2, out, self", "matmul_tiling dtypeMap")
+                    .c_str());
             return ge::GRAPH_FAILED;
         }
 

@@ -26,6 +26,7 @@
 #include "matmul/mat_mul_v3/op_host/op_tiling/matmul_v3_platform_common.h"
 #include "register/op_def_registry.h"
 #include "op_host/tiling_templates_registry.h"
+#include "matmul/common/op_host/log_format_util.h"
 
 namespace {
 using namespace optiling;
@@ -97,21 +98,36 @@ ge::graphStatus IsValidDtype(const gert::TilingContext& context, const MatMulV3A
     }
 
     if (args.hasBias && args.hasX3Input) {
-        OP_LOGE(
-            args.opName, "Unsupported data type: x1[%s], x2[%s], y[%s], bias[%s], x3[%s]",
-            std::to_string(args.aType).c_str(), std::to_string(args.bType).c_str(), std::to_string(args.cType).c_str(),
-            std::to_string(args.biasType).c_str(), std::to_string(args.x3Type).c_str());
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            args.opName, "x1, x2, y, bias, x3",
+            Ops::NN::FormatString(
+                "%s, %s, %s, %s, %s", std::to_string(args.aType).c_str(), std::to_string(args.bType).c_str(),
+                std::to_string(args.cType).c_str(), std::to_string(args.biasType).c_str(),
+                std::to_string(args.x3Type).c_str())
+                .c_str(),
+            Ops::NN::FormatString(
+                "The dtypes of %s must be within the range %s", "x1/x2/y/bias/x3", "dtype support list")
+                .c_str());
         return ge::GRAPH_FAILED;
     } else if (args.hasBias) {
-        OP_LOGE(
-            args.opName, "Unsupported data type: x1[%s], x2[%s], y[%s], bias[%s]", std::to_string(args.aType).c_str(),
-            std::to_string(args.bType).c_str(), std::to_string(args.cType).c_str(), std::to_string(args.biasType).c_str());
-
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            args.opName, "x1, x2, y, bias",
+            Ops::NN::FormatString(
+                "%s, %s, %s, %s", std::to_string(args.aType).c_str(), std::to_string(args.bType).c_str(),
+                std::to_string(args.cType).c_str(), std::to_string(args.biasType).c_str())
+                .c_str(),
+            Ops::NN::FormatString("The dtypes of %s must be within the range %s", "x1/x2/y/bias", "dtype support list")
+                .c_str());
         return ge::GRAPH_FAILED;
     } else {
-        OP_LOGE(
-            args.opName, "Unsupported data type: x1[%s], x2[%s], y[%s]", std::to_string(args.aType).c_str(),
-            std::to_string(args.bType).c_str(), std::to_string(args.cType).c_str());
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            args.opName, "x1, x2, y",
+            Ops::NN::FormatString(
+                "%s, %s, %s", std::to_string(args.aType).c_str(), std::to_string(args.bType).c_str(),
+                std::to_string(args.cType).c_str())
+                .c_str(),
+            Ops::NN::FormatString("The dtypes of %s must be within the range %s", "x1/x2/y", "dtype support list")
+                .c_str());
         return ge::GRAPH_FAILED;
     }
 }
@@ -124,24 +140,31 @@ ge::graphStatus OpSpecificCheck(
         const gert::Shape& x3Shape = context.GetOptionalInputShape(INPUT_X3_IDX)->GetOriginShape();
         const size_t x3DimNum = x3Shape.GetDimNum();
         if (x3DimNum < NUM_TWO || x3DimNum > NUM_THREE) {
-            OP_LOGE(args.opName, "illegal value: output dim num (%zu)", x3DimNum);
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                args.opName, "x3", Ops::NN::FormatString("%zu", x3DimNum).c_str(),
+                Ops::NN::FormatString("The shape dim of %s must be within the range %s", "x3", "{2, 3}").c_str());
             return ge::GRAPH_FAILED;
         }
         if (x3Shape[x3DimNum - NUM_TWO] != static_cast<int64_t>(args.mValue) ||
             x3Shape[x3DimNum - 1] != static_cast<int64_t>(args.nValue)) {
-            OP_LOGE(
-                args.opName, "illegal value: shape x3Shape[-2]:%ld, x3Shape[-1]:%ld, m:%lu, n%lu",
-                x3Shape[x3DimNum - NUM_TWO], x3Shape[x3DimNum - 1], args.mValue, args.nValue);
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                args.opName, "x3", Ops::Base::ToString(x3Shape).c_str(),
+                Ops::NN::FormatString(
+                    "%s of %s must be equal to %s of %s (%lu), %s of %s must be equal to %s of %s (%lu)", "Shape[-2]",
+                    "x3", "Shape[-2]", "y", args.mValue, "Shape[-1]", "x3", "Shape[-1]", "y", args.nValue)
+                    .c_str());
             return ge::GRAPH_FAILED;
         }
         // 仅支持x3的batch 1D
         if (x3DimNum == NUM_THREE) {
-            OP_TILING_CHECK(
-                x3Shape[0] != 1 && x3Shape[0] != static_cast<int>(args.batchInfo->batchC),
-                CUBE_INNER_ERR_REPORT(
-                    args.opName, "illegal value: batchX3 %ld cannot broadcast to batchC %lu", x3Shape[0],
-                    args.batchInfo->batchC),
-                return ge::GRAPH_FAILED);
+            if (x3Shape[0] != 1 && x3Shape[0] != static_cast<int>(args.batchInfo->batchC)) {
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                    args.opName, "x3", Ops::Base::ToString(x3Shape).c_str(),
+                    Ops::NN::FormatString(
+                        "%s of %s must satisfy broadcast rule (equal or one is 1)", "Batch-axis", "x3, y")
+                        .c_str());
+                return ge::GRAPH_FAILED;
+            }
             args.batchX3 = x3Shape[0];
         }
     }
@@ -153,7 +176,11 @@ ge::graphStatus OpSpecificCheck(
         const int64_t biasValue = biasShape[biasShape.GetDimNum() - 1];
         const int64_t nOriValue = cShape[cShape.GetDimNum() - 1];
         if (biasValue != nOriValue) {
-            OP_LOGE(args.opName, "illegal value: bias[%ld], n[%ld]", biasValue, nOriValue);
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                args.opName, "bias", Ops::Base::ToString(biasShape).c_str(),
+                Ops::NN::FormatString(
+                    "%s of %s must be equal to %s of %s (%ld)", "Shape[-1]", "bias", "Shape[-1]", "y", nOriValue)
+                    .c_str());
             return ge::GRAPH_FAILED;
         }
     }
@@ -182,16 +209,25 @@ ge::graphStatus FusedMatMulBuiltInTiling::GetBmmBiasInfo(const gert::TilingConte
     size_t cDims = outputShape.GetDimNum();
     // 不支持batchbias
     if (biasDims > NUM_TWO) {
-        OP_LOGE(args.opName, "Bias dim of fusedMatmul must be lower than 3.");
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            args.opName, "bias", Ops::NN::FormatString("%zu", biasDims).c_str(),
+            Ops::NN::FormatString("The shape dim of %s must be less than %d", "bias", 3).c_str());
         return ge::GRAPH_FAILED;
     }
     // 先校验bias的尾值是否与output尾值相等
     if (biasShape[biasDims - FINAL_SHAPE_DIM] != outputShape[cDims - FINAL_SHAPE_DIM]) {
-        OP_LOGE(args.opName, "Last dim of bias is not equal to last dim of output.");
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            args.opName, "bias", Ops::Base::ToString(biasShape).c_str(),
+            Ops::NN::FormatString(
+                "%s of %s must be equal to %s of %s (%ld)", "Shape[-1]", "bias", "Shape[-1]", "y",
+                outputShape[cDims - FINAL_SHAPE_DIM])
+                .c_str());
         return ge::GRAPH_FAILED;
     }
     if (biasDims == NUM_TWO && biasShape[0] != 1) { // BIAS[0]必须为1
-        OP_LOGE(args.opName, "M of bias must be 1.");
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            args.opName, "bias", Ops::Base::ToString(biasShape).c_str(),
+            Ops::NN::FormatString("%s of %s must be equal to %d", "M-axis", "bias", 1).c_str());
         return ge::GRAPH_FAILED;
     }
     batchInfo.batchBias = 1;
@@ -210,9 +246,9 @@ ge::graphStatus FusedMatMulBuiltInTiling::GetBatchInfo(
     size_t bDims = bShape.GetDimNum();
     size_t cDims = cShape.GetDimNum();
     if (aDims > BATCH_DIM_MAX || bDims > BATCH_DIM_MAX) {
-        OP_LOGE(
-            args.opName, "The current input dimensions is greater than 6 where x1_dims is (%zu) and x2_dims is (%zu)",
-            aDims, bDims);
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            args.opName, "x1, x2", Ops::NN::FormatString("%zu, %zu", aDims, bDims).c_str(),
+            Ops::NN::FormatString("The shape dims of %s must be %s %d", "x1, x2", "less than or equal to", 6).c_str());
         return ge::GRAPH_FAILED;
     }
     batchInfo.batchA3 = aDims > NO_BATCH_SHAPE_DIM ? aShape.GetDim(aDims - ONE_BATCH_SHAPE_DIM) : 1UL;
@@ -234,7 +270,11 @@ ge::graphStatus FusedMatMulBuiltInTiling::GetBatchInfo(
     // Check if one of the batch size is zero
     bool isBatchZero = (batchInfo.batchA == 0UL || batchInfo.batchB == 0UL);
     if (isBatchZero) {
-        OP_LOGE(args.opName, "One of the batch size is zero");
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            args.opName, "x1, x2",
+            Ops::NN::FormatString("%s, %s", Ops::Base::ToString(aShape).c_str(), Ops::Base::ToString(bShape).c_str())
+                .c_str(),
+            Ops::NN::FormatString("Batch axes of %s must be positive numbers", "x1, x2").c_str());
         return ge::GRAPH_FAILED;
     }
 
@@ -247,7 +287,15 @@ ge::graphStatus FusedMatMulBuiltInTiling::GetBatchInfo(
     bool batch1Invalid = batchInfo.batchA1 != batchInfo.batchB1 && batchInfo.batchA1 != 1UL && batchInfo.batchB1 != 1UL;
     bool batch0Invalid = batchInfo.batchA0 != batchInfo.batchB0 && batchInfo.batchA0 != 1UL && batchInfo.batchB0 != 1UL;
     if (batch3Invalid || batch2Invalid || batch1Invalid || batch0Invalid) {
-        OP_LOGE(args.opName, "Is M broadcast to N situation, do not support!");
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            args.opName, "x1, x2",
+            Ops::NN::FormatString("%s, %s", Ops::Base::ToString(aShape).c_str(), Ops::Base::ToString(bShape).c_str())
+                .c_str(),
+            Ops::NN::FormatString(
+                "The batch_axis of %s must satisfy the broadcast rule: the batch_axis at corresponding "
+                "positions must be equal or one of them must be 1",
+                "x1, x2")
+                .c_str());
         return ge::GRAPH_FAILED;
     }
     OP_TILING_CHECK(

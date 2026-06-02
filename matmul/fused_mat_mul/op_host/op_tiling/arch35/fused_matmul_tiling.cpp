@@ -24,6 +24,7 @@
 #include "matmul/common/op_host/op_tiling/debug_tiling.h"
 #include "op_host/tiling_key.h"
 #include "register/op_impl_registry.h"
+#include "matmul/common/op_host/log_format_util.h"
 
 namespace {
 using namespace optiling;
@@ -120,11 +121,15 @@ bool CheckDtype(const gert::TilingContext& context, bool hasX3Input, bool hasBia
         return true;
     }
 
-    OP_LOGE(
-        "FusedMatMul", "Unsupported data type: x1[%s], x2[%s], bias[%s], x3[%s], y[%s]",
-        Ops::Base::ToString(dtype[INPUT_X1_IDX]).c_str(), Ops::Base::ToString(dtype[INPUT_X2_IDX]).c_str(),
-        Ops::Base::ToString(dtype[INPUT_BIAS_IDX]).c_str(), Ops::Base::ToString(dtype[INPUT_X3_IDX]).c_str(),
-        Ops::Base::ToString(dtype[OUTPUT_Y_IDX]).c_str());
+    OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+        context.GetNodeName(), "x1, x2, bias, x3, y",
+        Ops::NN::FormatString(
+            "%s, %s, %s, %s, %s", Ops::Base::ToString(dtype[INPUT_X1_IDX]).c_str(),
+            Ops::Base::ToString(dtype[INPUT_X2_IDX]).c_str(), Ops::Base::ToString(dtype[INPUT_BIAS_IDX]).c_str(),
+            Ops::Base::ToString(dtype[INPUT_X3_IDX]).c_str(), Ops::Base::ToString(dtype[OUTPUT_Y_IDX]).c_str())
+            .c_str(),
+        Ops::NN::FormatString("The dtypes of %s must be within the range %s", "x1/x2/bias/x3/y", "dtype support list")
+            .c_str());
     return false;
 }
 
@@ -152,7 +157,13 @@ bool OpSpecificCheck(const gert::TilingContext& context, int64_t m, int64_t n, b
     auto isMatrix = [](const gert::Shape& oriShape) { return oriShape.GetDimNum() == TWO_BATCH_DIM; };
     if (!isMatrix(context.GetInputShape(0)->GetOriginShape()) ||
         !isMatrix(context.GetInputShape(1)->GetOriginShape())) {
-        OP_LOGE("FusedMatMul", "invalid input dim num");
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            context.GetNodeName(), "x1, x2",
+            Ops::NN::FormatString(
+                "%zu, %zu", context.GetInputShape(0)->GetOriginShape().GetDimNum(),
+                context.GetInputShape(1)->GetOriginShape().GetDimNum())
+                .c_str(),
+            Ops::NN::FormatString("The shape dims of %s must be %d", "x1, x2", 2).c_str());
         return false;
     }
 
@@ -160,13 +171,18 @@ bool OpSpecificCheck(const gert::TilingContext& context, int64_t m, int64_t n, b
         const gert::Shape& x3Shape = context.GetOptionalInputShape(INPUT_X3_IDX)->GetOriginShape();
         const size_t x3DimNum = x3Shape.GetDimNum();
         if (x3DimNum < TWO_BATCH_DIM) {
-            OP_LOGE("FusedMatMul", "illegal value: output dim num (%zu)", x3DimNum);
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                context.GetNodeName(), "x3", Ops::NN::FormatString("%zu", x3DimNum).c_str(),
+                Ops::NN::FormatString("The shape dim of %s must be at least %d", "x3", 2).c_str());
             return false;
         }
         if (x3Shape[0] != m || x3Shape[1] != n) {
-            OP_LOGE(
-                "FusedMatMul", "illegal value: shape x3Shape[0]:%ld, x3Shape[1]:%ld, m:%ld, n:%ld", x3Shape[0],
-                x3Shape[1], m, n);
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                context.GetNodeName(), "x3", Ops::Base::ToString(x3Shape).c_str(),
+                Ops::NN::FormatString(
+                    "%s of %s must be equal to %s of %s (%ld), %s of %s must be equal to %s of %s (%ld)", "Shape[0]",
+                    "x3", "Shape[0]", "y", m, "Shape[1]", "x3", "Shape[1]", "y", n)
+                    .c_str());
             return false;
         }
     }
@@ -175,7 +191,11 @@ bool OpSpecificCheck(const gert::TilingContext& context, int64_t m, int64_t n, b
         const gert::Shape& biasShape = context.GetOptionalInputShape(INPUT_BIAS_IDX)->GetOriginShape();
         const int64_t biasValue = biasShape[biasShape.GetDimNum() - 1];
         if (biasValue != n) {
-            OP_LOGE("FusedMatMul", "illegal value: bias[%ld], n[%ld]", biasValue, n);
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                context.GetNodeName(), "bias", Ops::Base::ToString(biasShape).c_str(),
+                Ops::NN::FormatString(
+                    "%s of %s must be equal to %s of %s (%ld)", "Shape[-1]", "bias", "Shape[-1]", "y", n)
+                    .c_str());
             return false;
         }
     }
@@ -193,14 +213,26 @@ bool GetShape(const gert::TilingContext& context, int64_t& m, int64_t& n, int64_
     int64_t knDims[TWO_BATCH_DIM];
     if ((GetInputDims(context.GetInputShape(0)->GetStorageShape(), ge::FORMAT_ND, mkDims) != ge::GRAPH_SUCCESS) ||
         (GetInputDims(context.GetInputShape(1)->GetStorageShape(), ge::FORMAT_ND, knDims) != ge::GRAPH_SUCCESS)) {
-        OP_LOGE("FusedMatMul", "invalid input dim num");
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            context.GetNodeName(), "x1, x2",
+            Ops::NN::FormatString(
+                "%zu, %zu", context.GetInputShape(0)->GetStorageShape().GetDimNum(),
+                context.GetInputShape(1)->GetStorageShape().GetDimNum())
+                .c_str(),
+            Ops::NN::FormatString("The shape dims of %s must be %d", "x1, x2", 2).c_str());
         return false;
     }
     uint64_t kIdxA = isATrans ? 0ULL : 1ULL;
     uint64_t kIdxB = isBTrans ? 1ULL : 0ULL;
     k = mkDims[kIdxA];
     if (k != knDims[kIdxB]) {
-        OP_LOGE("FusedMatMul", "unequal input kDim values: k_left[%ld], k_right[%ld]", k, knDims[kIdxB]);
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context.GetNodeName(), "x1, x2",
+            Ops::NN::FormatString(
+                "%s, %s", Ops::Base::ToString(context.GetInputShape(0)->GetStorageShape()).c_str(),
+                Ops::Base::ToString(context.GetInputShape(1)->GetStorageShape()).c_str())
+                .c_str(),
+            Ops::NN::FormatString("%s of %s must be equal", "K-axis", "x1, x2").c_str());
         return false;
     }
     uint64_t mIdx = isATrans ? 1ULL : 0ULL;
@@ -221,14 +253,23 @@ bool CheckShape(const gert::TilingContext& context, bool hasX3Input, bool hasBia
 
     auto isValidDimValue = [](int64_t dim) -> bool { return (dim > 0) && (dim <= INT32_MAX); };
     if (!isValidDimValue(m) || !isValidDimValue(k) || !isValidDimValue(n)) {
-        OP_LOGE("FusedMatMul", "illegal value: m[%ld], k[%ld], n[%ld]", m, k, n);
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context.GetNodeName(), "x1, x2",
+            Ops::NN::FormatString(
+                "%s, %s", Ops::Base::ToString(context.GetInputShape(0)->GetStorageShape()).c_str(),
+                Ops::Base::ToString(context.GetInputShape(1)->GetStorageShape()).c_str())
+                .c_str(),
+            Ops::NN::FormatString("%s of %s must be within the range %s", "m, k, n", "x1, x2", "(0, INT32_MAX]")
+                .c_str());
         return false;
     }
     // check output dim num
     const gert::Shape& cShape = context.GetOutputShape(0)->GetOriginShape();
     const size_t cDimNum = cShape.GetDimNum();
     if (cDimNum < TWO_BATCH_DIM) {
-        OP_LOGE("FusedMatMul", "illegal value: output dim num (%zu)", cDimNum);
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            context.GetNodeName(), "y", Ops::NN::FormatString("%zu", cDimNum).c_str(),
+            Ops::NN::FormatString("The shape dim of %s must be at least %d", "y", 2).c_str());
         return false;
     }
     return OpSpecificCheck(context, m, n, hasX3Input, hasBias);

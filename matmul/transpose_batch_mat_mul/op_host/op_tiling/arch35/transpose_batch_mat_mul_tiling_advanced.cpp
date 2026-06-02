@@ -23,6 +23,7 @@
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_tiling_cfg.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_tiling_registry.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_v3_compile_info_advanced.h"
+#include "matmul/common/op_host/log_format_util.h"
 
 namespace {
 using namespace optiling;
@@ -73,21 +74,38 @@ ge::graphStatus IsValidDtype(const MatMulV3Args &args)
             return ge::GRAPH_SUCCESS;
         }
     }
-    OP_LOGE(args.opName,
-        "Unsupported data type: x1[%s], x2[%s], y[%s], input dtype of x1 and x2 and output dtype must be same, "
-        "only support[DT_FLOAT16, DT_FLOAT, DT_BF16]",
-        Ops::Base::ToString(args.aType).c_str(), Ops::Base::ToString(args.bType).c_str(), Ops::Base::ToString(args.cType).c_str());
+    OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+        args.opName, "x1, x2, out",
+        Ops::NN::FormatString(
+            "%s, %s, %s", Ops::Base::ToString(args.aType).c_str(), Ops::Base::ToString(args.bType).c_str(),
+            Ops::Base::ToString(args.cType).c_str())
+            .c_str(),
+        Ops::NN::FormatString(
+            "The dtypes of %s must be within the range %s", "x1, x2, out",
+            "(FLOAT16,FLOAT16,FLOAT16), (FLOAT16,FLOAT16,INT8), (FLOAT,FLOAT,FLOAT), (BF16,BF16,BF16)")
+            .c_str());
     return ge::GRAPH_FAILED;
 }
 
 ge::graphStatus TBMMOpSpecificCheck(MatMulV3Args &args)
 {
     // format check
-    OP_TILING_CHECK(
-        (args.aFormat == ge::FORMAT_FRACTAL_NZ) || (args.outFormat == ge::FORMAT_FRACTAL_NZ),
-        CUBE_INNER_ERR_REPORT(args.opName, "invalid input/output format"), return ge::GRAPH_FAILED);
+    if ((args.aFormat == ge::FORMAT_FRACTAL_NZ) || (args.outFormat == ge::FORMAT_FRACTAL_NZ)) {
+        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
+            args.opName, "x1, out",
+            Ops::NN::FormatString(
+                "%s, %s", (args.aFormat == ge::FORMAT_FRACTAL_NZ) ? "FRACTAL_NZ" : "ND",
+                (args.outFormat == ge::FORMAT_FRACTAL_NZ) ? "FRACTAL_NZ" : "ND")
+                .c_str(),
+            Ops::NN::FormatString("The formats of %s must be %s", "x1, out", "ND").c_str());
+        return ge::GRAPH_FAILED;
+    }
 
-    OP_TILING_CHECK(args.hasBias, CUBE_INNER_ERR_REPORT(args.opName, "Not support bias."), return ge::GRAPH_FAILED);
+    if (args.hasBias) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            args.opName, "bias", "", Ops::NN::FormatString("The value of %s must be %s", "bias", "null").c_str());
+        return ge::GRAPH_FAILED;
+    }
 
     // dtype check
     return IsValidDtype(args);
@@ -114,10 +132,21 @@ ge::graphStatus TBMMGetShapeMKN(const gert::Shape &aShape, const gert::Shape &bS
         n = bShape[bPerm[N_IDX]];
         args.isBTrans = bPerm[KB_IDX] > bPerm[N_IDX];
     }
-    OP_TILING_CHECK(kA != kB, CUBE_INNER_ERR_REPORT(args.opName, "unequal input kDim values"), return ge::GRAPH_FAILED);
+    if (kA != kB) {
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            args.opName, "x1, x2",
+            Ops::NN::FormatString("%s, %s", Ops::Base::ToString(aShape).c_str(), Ops::Base::ToString(bShape).c_str())
+                .c_str(),
+            Ops::NN::FormatString("%s of %s must be equal", "K-axis", "x1, x2").c_str());
+        return ge::GRAPH_FAILED;
+    }
 
     if ((m <= 0) || (kA <= 0) || (n <= 0)) {
-        OP_LOGE(args.opName, "illegal value: m[%ld], k[%ld], n[%ld]", m, kA, n);
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            args.opName, "x1, x2",
+            Ops::NN::FormatString("%s, %s", Ops::Base::ToString(aShape).c_str(), Ops::Base::ToString(bShape).c_str())
+                .c_str(),
+            Ops::NN::FormatString("%s of %s must be positive numbers", "m, k, n", "x1, x2").c_str());
         return ge::GRAPH_FAILED;
     }
     args.mValue = static_cast<uint64_t>(m);
@@ -136,8 +165,12 @@ ge::graphStatus TBMMGetShape(const gert::TilingContext &context, MatMulV3Args &a
     const size_t aDimNum = aShape.GetDimNum();
     const size_t bDimNum = bShape.GetDimNum();
     const size_t cDimNum = cShape.GetDimNum();
-    OP_TILING_CHECK((aDimNum != ALLOW_DIM) || (bDimNum != ALLOW_DIM) || (cDimNum != ALLOW_DIM),
-                    CUBE_INNER_ERR_REPORT(args.opName, "invalid input/output dim num"), return ge::GRAPH_FAILED);
+    if ((aDimNum != ALLOW_DIM) || (bDimNum != ALLOW_DIM) || (cDimNum != ALLOW_DIM)) {
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            args.opName, "x1, x2, out", Ops::NN::FormatString("%zu, %zu, %zu", aDimNum, bDimNum, cDimNum).c_str(),
+            Ops::NN::FormatString("The shape dims of %s must be %d", "x1, x2, out", 3).c_str());
+        return ge::GRAPH_FAILED;
+    }
 
     auto attrs = context.GetAttrs();
     size_t idx = 0;
@@ -149,21 +182,36 @@ ge::graphStatus TBMMGetShape(const gert::TilingContext &context, MatMulV3Args &a
         bool aPermCheck =
             ((aPerm[BATCH_IDX] == 1L) && (aPerm[M_IDX] == 0L) && (aPerm[KA_IDX] == 2L)) ||
             ((aPerm[BATCH_IDX] == 0L) && (aPerm[M_IDX] == 1L) && (aPerm[KA_IDX] == 2L)); // aPerm is [1,0,2] or [0,1,2]
-        OP_TILING_CHECK(!aPermCheck,
-            CUBE_INNER_ERR_REPORT(args.opName, "unsupport aPerm value"), return ge::GRAPH_FAILED);
+        if (!aPermCheck) {
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                args.opName, "permX1",
+                Ops::NN::FormatString("[%ld, %ld, %ld]", aPerm[BATCH_IDX], aPerm[M_IDX], aPerm[KA_IDX]).c_str(),
+                Ops::NN::FormatString("The value of %s must be in %s", "permX1", "{[1,0,2], [0,1,2]}").c_str());
+            return ge::GRAPH_FAILED;
+        }
     }
     if(bPermList != nullptr && bPermList->GetSize() == ALLOW_DIM) {
         const int64_t *bPerm = static_cast<const int64_t *>(bPermList->GetData());
         bool bPermCheck = ((bPerm[BATCH_IDX] == 0L) && (bPerm[KB_IDX] == 1L) && (bPerm[N_IDX] == 2L)) || // bPerm 012 or
                           ((bPerm[BATCH_IDX] == 0L) && (bPerm[KB_IDX] == 2L) && (bPerm[N_IDX] == 1L)); // bPerm 021
-        OP_TILING_CHECK(!bPermCheck,
-            CUBE_INNER_ERR_REPORT(args.opName, "unsupport bPerm value"), return ge::GRAPH_FAILED);
+        if (!bPermCheck) {
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                args.opName, "permX2",
+                Ops::NN::FormatString("[%ld, %ld, %ld]", bPerm[BATCH_IDX], bPerm[KB_IDX], bPerm[N_IDX]).c_str(),
+                Ops::NN::FormatString("The value of %s must be in %s", "permX2", "{[0,1,2], [0,2,1]}").c_str());
+            return ge::GRAPH_FAILED;
+        }
     }
     if(yPermList != nullptr && yPermList->GetSize() == ALLOW_DIM) {
         const int64_t *yPerm = static_cast<const int64_t *>(yPermList->GetData());
         bool yPermCheck = (yPerm[BATCH_IDX] == 1L) && (yPerm[M_IDX] == 0L) && (yPerm[N_IDX] == 2L); // yPerm is [1,0,2]
-        OP_TILING_CHECK(!yPermCheck,
-            CUBE_INNER_ERR_REPORT(args.opName, "unsupport yPerm value"), return ge::GRAPH_FAILED);
+        if (!yPermCheck) {
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                args.opName, "permY",
+                Ops::NN::FormatString("[%ld, %ld, %ld]", yPerm[BATCH_IDX], yPerm[M_IDX], yPerm[N_IDX]).c_str(),
+                Ops::NN::FormatString("The value of %s must be %s", "permY", "[1,0,2]").c_str());
+            return ge::GRAPH_FAILED;
+        }
     }
 
     OP_TILING_CHECK((TBMMGetShapeMKN(aShape, bShape, aPermList, bPermList, args) != ge::GRAPH_SUCCESS),
@@ -173,9 +221,15 @@ ge::graphStatus TBMMGetShape(const gert::TilingContext &context, MatMulV3Args &a
         uint32_t batchSplitFactor = std::max(*(attrs->GetAttrPointer<int32_t>(ATTR_NUM - 1)), 1);
         bool batchSplitFactorPermCheck =
             aShape[static_cast<const int64_t*>(aPermList->GetData())[0]] % batchSplitFactor == 0;
-        OP_TILING_CHECK(!batchSplitFactorPermCheck,
-                        CUBE_INNER_ERR_REPORT(args.opName, "batch_split_factor is not supported."),
-                        return ge::GRAPH_FAILED);
+        if (!batchSplitFactorPermCheck) {
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                args.opName, "x1", Ops::Base::ToString(aShape).c_str(),
+                Ops::NN::FormatString(
+                    "%s of %s must be exactly divisible by attribute %s (%u)", "Batch-axis", "x1", "batch_split_factor",
+                    batchSplitFactor)
+                    .c_str());
+            return ge::GRAPH_FAILED;
+        }
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -201,28 +255,44 @@ ge::graphStatus TransposeBatchMatMulTiling::CheckScale(const gert::Shape& shape_
     const gert::ContinuousVector* bPermList = attrs->GetAttrPointer<gert::ContinuousVector>(1);
     if (attrs->GetAttrNum() >= ATTR_NUM) {
         uint32_t batchSplitFactor = std::max(*(attrs->GetAttrPointer<int32_t>(ATTR_NUM - 1)), 1);
-        OP_TILING_CHECK(batchSplitFactor != 1,
-                        CUBE_INNER_ERR_REPORT(args_.opName, "batchSplitFactor should be 1 when the scale is not null."),
-                        return ge::GRAPH_FAILED);
+        if (batchSplitFactor != 1) {
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                args_.opName, "batchSplitFactor", Ops::NN::FormatString("%u", batchSplitFactor).c_str(),
+                Ops::NN::FormatString(
+                    "When optional parameter %s exists, the value of %s must be %d", "scale", "batchSplitFactor", 1)
+                    .c_str());
+            return ge::GRAPH_FAILED;
+        }
     }
     if (bPermList != nullptr && bPermList->GetSize() == ALLOW_DIM) {
         const int64_t* bPerm = static_cast<const int64_t*>(bPermList->GetData());
         int64_t n = bShape[bPerm[N_IDX]];
         int64_t b = bShape[bPerm[BATCH_IDX]];
-        OP_TILING_CHECK(shape_scale.GetDim(0) != b * n,
-                        CUBE_INNER_ERR_REPORT(args_.opName,
-                                              "The dimension of n mul b [%ld] and scale [%ld] tensors must be the same",
-                                              b * n, shape_scale.GetDim(0)),
-                        return ge::GRAPH_FAILED);
+        if (shape_scale.GetDim(0) != b * n) {
+            OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+                args_.opName, "scale", Ops::NN::FormatString("%ld", shape_scale.GetDim(0)).c_str(),
+                Ops::NN::FormatString(
+                    "%s of %s must be equal to %s of %s multiplied by %s of %s (%ld)", "Shape[0]", "scale",
+                    "batch-axis", "x2", "n-axis", "x2", b * n)
+                    .c_str());
+            return ge::GRAPH_FAILED;
+        }
     }
     auto tensor_x1 = context_->GetInputDesc(0);
     auto tensor_x2 = context_->GetInputDesc(1);
     ge::DataType dtype_x1 = tensor_x1->GetDataType();
     ge::DataType dtype_x2 = tensor_x2->GetDataType();
-    OP_TILING_CHECK(dtype_x2 != ge::DT_FLOAT16 || dtype_x1 != ge::DT_FLOAT16,
-                    CUBE_INNER_ERR_REPORT(args_.opName,
-                                          "the dtype of input is only supported FLOAT16 when the scale takes effect."),
-                    return ge::GRAPH_FAILED);
+    if (dtype_x2 != ge::DT_FLOAT16 || dtype_x1 != ge::DT_FLOAT16) {
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            args_.opName, "x1, x2",
+            Ops::NN::FormatString(
+                "%s, %s", Ops::Base::ToString(dtype_x1).c_str(), Ops::Base::ToString(dtype_x2).c_str())
+                .c_str(),
+            Ops::NN::FormatString(
+                "When optional parameter %s exists, the dtypes of %s must be %s", "scale", "x1, x2", "FLOAT16")
+                .c_str());
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -238,7 +308,8 @@ ge::graphStatus TransposeBatchMatMulTiling::CheckArgs()
     OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetInputShape(idx));
     idx++;
     if (context_->GetOptionalInputShape(BIAS_IDX) != nullptr) {
-        OP_LOGE(args_.opName, "bias is not supported now");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            args_.opName, "bias", "", Ops::NN::FormatString("The value of %s must be %s", "bias", "null").c_str());
         return ge::GRAPH_FAILED;
     }
     const gert::StorageShape* storageShape_scale = context_->GetOptionalInputShape(SCALE_IDX);
@@ -311,8 +382,14 @@ ge::graphStatus TransposeBatchMatMulTiling::GetBatchInfo(const gert::TilingConte
         const int64_t *bPerm = static_cast<const int64_t *>(bPermList->GetData());
         batchB = bShape[bPerm[BATCH_IDX]];
     }
-    OP_TILING_CHECK(batchA != batchB, CUBE_INNER_ERR_REPORT(args.opName, "unequal input batch values"),
-                    return ge::GRAPH_FAILED);
+    if (batchA != batchB) {
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            args.opName, "x1, x2",
+            Ops::NN::FormatString("%s, %s", Ops::Base::ToString(aShape).c_str(), Ops::Base::ToString(bShape).c_str())
+                .c_str(),
+            Ops::NN::FormatString("%s of %s must be equal", "Batch-axis", "x1, x2").c_str());
+        return ge::GRAPH_FAILED;
+    }
     batchInfo.batchA3 = batchA;
     batchInfo.batchB3 = batchA;
     batchInfo.batchC3 = batchA;

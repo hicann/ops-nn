@@ -17,6 +17,7 @@
 #include "fused_matmul_common.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_tiling_registry.h"
 #include "matmul/common/op_host/math_util.h"
+#include "matmul/common/op_host/log_format_util.h"
 
 namespace {
 using namespace optiling;
@@ -34,7 +35,9 @@ bool CheckBatchDefault(const MatMulV3Args& args)
 bool CheckBatchDav3510(const MatMulV3Args& args)
 {
     if (args.batchInfo->batchC > 1) {
-        OP_LOGE(args.opName, "bmm only support IterBatch shape");
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            args.opName, "y", "",
+            Ops::NN::FormatString("Batch-axis of y cannot be greater than 1").c_str());
         return false;
     }
     return true;

@@ -19,6 +19,7 @@
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_tiling_registry.h"
 #include "batch_matmul_v3_tiling_key.h"
 #include "matmul/common/op_host/math_util.h"
+#include "matmul/common/op_host/log_format_util.h"
 
 namespace optiling {
 namespace batch_matmul_v3_advanced {
@@ -53,7 +54,9 @@ bool BatchMatMulV3AswBasicTiling::IsCapable()
                          (args_.bType == ge::DT_FLOAT16 || args_.bType == ge::DT_BF16) &&
                          (args_.cType == ge::DT_FLOAT16 || args_.cType == ge::DT_BF16 || args_.cType == ge::DT_FLOAT);
     if ((!isSupportType) && args_.bFormat == ge::FORMAT_FRACTAL_NZ) {
-        OP_LOGE(args_.opName, "NZ format is not supported when the input data type is FP32");
+        OP_LOGE_FOR_INVALID_FORMAT(
+            args_.opName, "mat2", Ops::Base::ToString(args_.bFormat).c_str(),
+            Ops::NN::FormatString("%s when the dtype of %s is %s", "ND", "input", "FP32").c_str());
         return false;
     }
     return true;
