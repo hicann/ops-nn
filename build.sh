@@ -27,7 +27,7 @@ SUPPORTED_LONG_OPTS=(
   "help" "ops=" "soc=" "vendor_name=" "build-type=" "cov" "noexec" "noaicpu" "opkernel" "opkernel_aicpu" "opkernel_aicpu_test" "static"
    "jit" "pkg" "asan" "make_clean_all" "make_clean" "no_force"
   "ophost" "opgraph" "opapi" "run_example" "example_name=" "genop=" "genop_aicpu=" "experimental" "cann_3rd_lib_path=" "oom" "onnxplugin" "tfplugin" "dump_cce"
-  "simulator" "bisheng_flags=" "kernel_template_input=" "module_extension=" "noaclnn" "mssanitizer" "rule_launch"
+  "simulator" "bisheng_flags=" "kernel_template_input=" "module_extension=" "noaclnn" "mssanitizer" "rule_launch="
 )
 
 source "./install_deps.sh"
@@ -681,7 +681,7 @@ checkopts() {
   ENABLE_CREATE_LIB=FALSE
   ENABLE_RUN_EXAMPLE=FALSE
   ENABLE_SIMULATOR=FALSE
-  ENABLE_RULE_LAUNCH=FALSE
+  ENABLE_RULE_LAUNCH=""
   BISHENG_FLAGS=""
   BUILD_LIBS=()
   UT_TARGES=()
@@ -864,7 +864,9 @@ checkopts() {
                     exit 0 ;;
         no_force) NO_FORCE=TRUE ;;
         simulator) ENABLE_SIMULATOR=TRUE ;;
-        rule_launch) ENABLE_RULE_LAUNCH=TRUE ;;
+        rule_launch=*)
+          ENABLE_RULE_LAUNCH=${OPTARG#*=}
+          ;;
         bisheng_flags=*)
           BISHENG_FLAGS=${OPTARG#*=}
           ;;
@@ -987,8 +989,8 @@ assemble_cmake_args() {
   if [[ "$NO_AICPU" == "TRUE" ]]; then
     CMAKE_ARGS="$CMAKE_ARGS -DNO_AICPU=TRUE"
   fi
-  if [[ "$ENABLE_RULE_LAUNCH" == "TRUE" ]]; then
-    CMAKE_ARGS="$CMAKE_ARGS -DRULE_LAUNCH=hitestwrapper"
+  if [[ "x$ENABLE_RULE_LAUNCH" != "x" ]]; then
+    CMAKE_ARGS="$CMAKE_ARGS -DRULE_LAUNCH=${ENABLE_RULE_LAUNCH}"
   fi
   CMAKE_ARGS="$CMAKE_ARGS -DENABLE_BINARY=${ENABLE_BINARY}"
   CMAKE_ARGS="$CMAKE_ARGS -DENABLE_PACKAGE=${ENABLE_PACKAGE}"
