@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -9,19 +9,16 @@
  */
 
 /*!
- * \file fake_quant_affine_cachemask.h
- * \brief
+ * \file fake_quant_affine_cachemask_tiling_arch35.h
+ * \brief arch35 tiling function declaration for FakeQuantAffineCachemask
  */
+#ifndef FAKE_QUANT_AFFINE_CACHEMASK_TILING_ARCH35_H
+#define FAKE_QUANT_AFFINE_CACHEMASK_TILING_ARCH35_H
 
-#ifndef OP_API_INC_LEVEL0_FAKE_QUANT_AFFINE_CACHEMASK_H_
-#define OP_API_INC_LEVEL0_FAKE_QUANT_AFFINE_CACHEMASK_H_
+#include "register/op_impl_registry.h"
 
-#include "opdev/op_executor.h"
+namespace optiling {
+ge::graphStatus Tiling4FakeQuantAffineCachemaskArch35(gert::TilingContext* context);
+} // namespace optiling
 
-namespace l0op {
-std::tuple<aclTensor*, aclTensor*> FakeQuantAffineCachemask(
-    const aclTensor* self, const aclTensor* scale, const aclTensor* zeroPoint, int64_t axis, int64_t quantMin,
-    int64_t quantMax, aclOpExecutor* executor);
-}
-
-#endif // OP_API_INC_LEVEL0_FAKE_QUANT_AFFINE_CACHEMASK_H_
+#endif // FAKE_QUANT_AFFINE_CACHEMASK_TILING_ARCH35_H

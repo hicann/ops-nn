@@ -14,8 +14,12 @@
  */
 
 #include "fake_quant_affine_cachemask_tiling.h"
+#include "tiling_util.h"
+#include "fake_quant_affine_cachemask_tiling_arch35.h"
 
 namespace optiling {
+using namespace Ops::NN::OpTiling;
+
 constexpr uint64_t FP32_MODE = 1;
 constexpr uint64_t FP16_MODE = 2;
 constexpr uint32_t BYTES_PER_DATA_FP32 = 68;
@@ -179,6 +183,9 @@ void FakeQuantAffineCachemaskTiling::TilingDataPrint() const
 
 static ge::graphStatus TilingFakeQuantAffineCachemask(gert::TilingContext* context)
 {
+    if (IsRegbaseSocVersion(context)) {
+        return Tiling4FakeQuantAffineCachemaskArch35(context);
+    }
     FakeQuantAffineCachemaskTiling tilingObject(context);
     tilingObject.Init();
     return tilingObject.RunKernelTiling();

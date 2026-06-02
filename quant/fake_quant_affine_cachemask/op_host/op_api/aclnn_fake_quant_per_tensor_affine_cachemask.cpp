@@ -182,26 +182,12 @@ aclnnStatus aclnnFakeQuantPerTensorAffineCachemaskGetWorkspaceSize(
         CHECK_RET(zeroPointBroadcast != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
         auto result = l0op::FakeQuantAffineCachemask(
-            selfContiguous, scaleBroadcast, zeroPointBroadcast, quantMin, quantMax, uniqueExecutor.get());
+            selfContiguous, scaleBroadcast, zeroPointBroadcast, 0, quantMin, quantMax, uniqueExecutor.get());
         fakeQuantOut = std::get<0>(result);
         fakeQuantMask = std::get<1>(result);
     }
-    CHECK_RET(fakeQuantOut != nullptr && fakeQuantMask != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    // 固定写法，将计算结果转换成输出out的数据类型
-    auto fakeCastOut = l0op::Cast(fakeQuantOut, out->GetDataType(), uniqueExecutor.get());
-    CHECK_RET(fakeCastOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto fakeViewCopyResult = l0op::ViewCopy(fakeCastOut, out, uniqueExecutor.get());
-    CHECK_RET(fakeViewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    auto maskViewCopyResult = l0op::ViewCopy(fakeQuantMask, mask, uniqueExecutor.get());
-    CHECK_RET(maskViewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    // 固定写法，获取计算过程中需要使用的workspace大小
-    *workspaceSize = uniqueExecutor->GetWorkspaceSize();
-    uniqueExecutor.ReleaseTo(executor);
-    return ACLNN_SUCCESS;
+    return FinalizeOutput(fakeQuantOut, fakeQuantMask, out, mask,
+                          workspaceSize, executor, uniqueExecutor);
 }
 
 aclnnStatus aclnnFakeQuantPerTensorAffineCachemask(

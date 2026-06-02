@@ -40,5 +40,6 @@ struct FakeQuantAffineCachemaskCompileInfo {
     int32_t totalCoreNum = 30;
     uint64_t ubSizePlatForm = 0;
 };
+
 } // namespace optiling
 #endif // OPS_BUILD_IN_OP_TILING_RUNTIME_FAKE_QUANT_AFFINE_CACHEMASK_H

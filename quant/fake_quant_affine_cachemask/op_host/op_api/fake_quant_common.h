@@ -26,11 +26,35 @@
 #include "opdev/op_dfx.h"
 #include "opdev/op_executor.h"
 #include "opdev/op_log.h"
+#include "opdev/tensor_view_utils.h"
 
 namespace FakeQuantCommon {
 
 std::tuple<const aclTensor*, const aclTensor*, const aclTensor*> GetContiguousInput(const aclTensor* self, const aclTensor* scale,
     const aclTensor* zeroPoint, aclOpExecutor* executor);
+
+inline aclnnStatus FinalizeOutput(
+    aclTensor* fakeQuantOut, aclTensor* fakeQuantMask,
+    const aclTensor* out, const aclTensor* mask,
+    uint64_t* workspaceSize, aclOpExecutor** executor,
+    UniqueExecutor& uniqueExecutor)
+{
+    CHECK_RET(fakeQuantOut != nullptr && fakeQuantMask != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto fakeCastOut = l0op::Cast(fakeQuantOut, out->GetDataType(), uniqueExecutor.get());
+    CHECK_RET(fakeCastOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto fakeViewCopyResult = l0op::ViewCopy(fakeCastOut, out, uniqueExecutor.get());
+    CHECK_RET(fakeViewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto maskViewCopyResult = l0op::ViewCopy(fakeQuantMask, mask, uniqueExecutor.get());
+    CHECK_RET(maskViewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    *workspaceSize = uniqueExecutor->GetWorkspaceSize();
+    uniqueExecutor.ReleaseTo(executor);
+    return ACLNN_SUCCESS;
+}
+
 }
 
 #endif
