@@ -18,7 +18,7 @@
 - 矩阵乘计算公式：
 
   1.输入x右乘kroneckerP2：
-  
+
     $$
     x' = x @ kroneckerP2
     $$
@@ -38,9 +38,9 @@
     $$
     quantScale = [max(abs(x''[0,:,:])),max(abs(x''[1,:,:])),...,max(abs(x''[K,:,:]))]/(7 / clipRatio)
     $$
-  
+
   2.计算输出的out：
-  
+
     $$
     out = x'' / quantScale
     $$
@@ -76,7 +76,7 @@
   $$
   out = x2 / quantScale
   $$
-  
+
 ## 参数说明
 
 <table style="undefined;table-layout: fixed; width: 1005px"><colgroup>
@@ -128,6 +128,13 @@
       <td>可选属性</td>
       <td><ul><li>用于控制量化方式，当值为DT_FLOAT4_E2M1时表示为pergroup量化方式，当值为DT_INT32时表示pertoken量化方式。</li><li>默认值为DT_INT32。</li></ul></td>
       <td>INT</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>dst_type_max</td>
+      <td>可选属性</td>
+      <td><ul><li>表示maxType的取值，对应公式中的Amax。支持取值0.0和6.0-12.0。</li><li>取值0.0代码Amax(DType)为量化结果数据类型的最大值。</li><li>取值为6.0-12.0代表Amax(DType)为传入值。</li><li>默认值为0.0。</li></ul></td>
+      <td>FLOAT32</td>
       <td>-</td>
     </tr>
     <tr>
