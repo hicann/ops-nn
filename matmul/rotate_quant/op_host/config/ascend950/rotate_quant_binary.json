@@ -3,7 +3,7 @@
     "optional_input_mode": "gen_placeholder",
     "op_list": [
       {
-        "bin_filename": "RotateQuant_bf16_int4",
+        "bin_filename": "RotateQuant_bf16_mxfp4",
         "inputs": [
           {
             "name": "x",
@@ -34,7 +34,7 @@
           {
             "name": "y",
             "index": 0,
-            "dtype": "int4",
+            "dtype": "float4_e2m1",
             "format": "ND",
             "paramType": "required",
             "shape": [-2]
@@ -42,7 +42,7 @@
           {
             "name": "scale",
             "index": 1,
-            "dtype": "float32",
+            "dtype": "float8_e8m0",
             "format": "ND",
             "paramType": "required",
             "shape": [-2]
@@ -82,12 +82,12 @@
         ]
       },
       {
-        "bin_filename": "RotateQuant_bf16_int8",
+        "bin_filename": "RotateQuant_fp16_mxfp4",
         "inputs": [
           {
             "name": "x",
             "index": 0,
-            "dtype": "bfloat16",
+            "dtype": "float16",
             "format": "ND",
             "paramType": "required",
             "shape": [-2]
@@ -95,7 +95,7 @@
           {
             "name": "rot",
             "index": 1,
-            "dtype": "bfloat16",
+            "dtype": "float16",
             "format": "ND",
             "paramType": "required",
             "shape": [-2]
@@ -113,7 +113,7 @@
           {
             "name": "y",
             "index": 0,
-            "dtype": "int8",
+            "dtype": "float4_e2m1",
             "format": "ND",
             "paramType": "required",
             "shape": [-2]
@@ -121,7 +121,7 @@
           {
             "name": "scale",
             "index": 1,
-            "dtype": "float32",
+            "dtype": "float8_e8m0",
             "format": "ND",
             "paramType": "required",
             "shape": [-2]
@@ -161,12 +161,12 @@
         ]
       },
       {
-        "bin_filename": "RotateQuant_fp16_int4",
+        "bin_filename": "RotateQuant_bf16_mxfp8e4m3",
         "inputs": [
           {
             "name": "x",
             "index": 0,
-            "dtype": "float16",
+            "dtype": "bfloat16",
             "format": "ND",
             "paramType": "required",
             "shape": [-2]
@@ -174,7 +174,7 @@
           {
             "name": "rot",
             "index": 1,
-            "dtype": "float16",
+            "dtype": "bfloat16",
             "format": "ND",
             "paramType": "required",
             "shape": [-2]
@@ -192,7 +192,7 @@
           {
             "name": "y",
             "index": 0,
-            "dtype": "int4",
+            "dtype": "float8_e4m3fn",
             "format": "ND",
             "paramType": "required",
             "shape": [-2]
@@ -200,7 +200,7 @@
           {
             "name": "scale",
             "index": 1,
-            "dtype": "float32",
+            "dtype": "float8_e8m0",
             "format": "ND",
             "paramType": "required",
             "shape": [-2]
@@ -240,7 +240,7 @@
         ]
       },
       {
-        "bin_filename": "RotateQuant_fp16_int8",
+        "bin_filename": "RotateQuant_fp16_mxfp8e4m3",
         "inputs": [
           {
             "name": "x",
@@ -271,7 +271,7 @@
           {
             "name": "y",
             "index": 0,
-            "dtype": "int8",
+            "dtype": "float8_e4m3fn",
             "format": "ND",
             "paramType": "required",
             "shape": [-2]
@@ -279,7 +279,165 @@
           {
             "name": "scale",
             "index": 1,
-            "dtype": "float32",
+            "dtype": "float8_e8m0",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [-2]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "y_dtype",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "round_mode",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "scale_alg",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "dst_type_max",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "trans",
+            "dtype": "bool",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "RotateQuant_bf16_mxfp8e5m2",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [-2]
+          },
+          {
+            "name": "rot",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [-2]
+          },
+          {
+            "name": "alpha",
+            "index": 2,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [-2]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float8_e5m2",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [-2]
+          },
+          {
+            "name": "scale",
+            "index": 1,
+            "dtype": "float8_e8m0",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [-2]
+          }
+        ],
+        "attrs": [
+          {
+            "name": "y_dtype",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "axis",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "round_mode",
+            "dtype": "string",
+            "value": null
+          },
+          {
+            "name": "scale_alg",
+            "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "dst_type_max",
+            "dtype": "float",
+            "value": null
+          },
+          {
+            "name": "trans",
+            "dtype": "bool",
+            "value": null
+          }
+        ]
+      },
+      {
+        "bin_filename": "RotateQuant_fp16_mxfp8e5m2",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [-2]
+          },
+          {
+            "name": "rot",
+            "index": 1,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [-2]
+          },
+          {
+            "name": "alpha",
+            "index": 2,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [-2]
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "float8_e5m2",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [-2]
+          },
+          {
+            "name": "scale",
+            "index": 1,
+            "dtype": "float8_e8m0",
             "format": "ND",
             "paramType": "required",
             "shape": [-2]

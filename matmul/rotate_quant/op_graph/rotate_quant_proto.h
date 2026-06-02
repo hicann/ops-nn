@@ -20,44 +20,65 @@
 namespace ge {
 /**
 * @brief Performs rotation transformation on the input tensor x using a rotation matrix,
-* followed by per-token symmetric dynamic quantization.
+* followed by per-token symmetric dynamic quantization. \n
 *
 * @par Inputs:
-* @li x: Input tensor for rotation and quantization. Data type supports FLOAT16 and BFLOAT16.
-* Format ND, 2D shape (M, N). Supports non-contiguous tensors.
-* @li rotation: Rotation matrix. Data type must be the same as x. Format ND, 2D shape (K, K).
-* Must be a square matrix. Supports non-contiguous tensors. \n
-
-* @par Attributes:
-* @li y_dtype: An Int. Specifies the output data type of y. Default is 0.
-* @li alpha: A Float. Scaling coefficient for clamp range limitation. Default is 0.0 (no clamp). \n
-
+* @li x: A tensor. Input data for rotation and quantization. 2-D with shape [M, N].
+* Must be one of the following types: float16, bfloat16. The format supports ND.
+* @li rot: A tensor. Rotation matrix. 2-D with shape [K, K]. Must be a square matrix.
+* Must be one of the following types: float16, bfloat16. Has the same type as input "x".
+* The format supports ND.
+* @li alpha: A tensor. Optional scaling coefficient for clamp range limitation.
+* Only supported when y_dtype is float4_e2m1, float8_e4m3fn, or float8_e5m2. Not supported when y_dtype is int4 or int8.
+* Must be bfloat16. The format supports ND. \n
+*
 * @par Outputs:
-* @li y: Quantized output tensor. Data type supports INT8 and INT4. Format ND, 2D shape (M, N).
-* @li scale: Per-token dynamic quantization scaling factors. Data type is FLOAT32. Format ND, 1D shape (M). \n
+* @li y: When the output data type is int4 or int8, the shape is [M, N].
+* When the output data type is float4_e2m1, float8_e4m3fn, or float8_e5m2, the shape is [M, N]. \n
+* @li scale: When the output data type is float32, the shape is [M].
+* When the output data type is float8_e8m0, the shape is [M]. \n
+*
+* @par Attributes:
+* @li y_dtype: An optional int. Specifies the output data type of y. Defaults to DT_INT8. \n
+* @li axis: An optional int. Specifies the axis for quantization. Defaults to -1. \n
+* @li round_mode: An optional string. Specifies the rounding mode. Defaults to "rint". \n
+* @li scale_alg: An optional int. Specifies the scale algorithm. Defaults to 0. \n
+* @li dst_type_max: An optional float. Specifies the max value of destination type. Defaults to 0.0. \n
+* @li trans: An optional bool. Specifies whether to transpose. Defaults to false. \n
 
 * @par Constraints:
-* Atlas A3 Training Series Products/Atlas A3 Inference Series Products, Atlas A2 Training Series Products/Atlas A2 Inference Series Products: \n
-* - x shape is (M, N), rotation shape is (K, K). rotation must be a square matrix.
+* Atlas A3 Training Series Products/Atlas A3 Inference Series Products, Atlas A2 Training Series Products/Atlas A2 Inference Series Products, Atlas 950 Series Products: \n
+* - x shape is [M, N], rot shape is [K, K]. rot must be a square matrix.
 * - N must be a multiple of K, and N must be divisible by 8.
-* - x and rotation must have the same data type.
-* - scale output shape must be (M).
+* - x and rot must have the same data type.
+* - scale output shape must be [M].
 * - N range: [128, 16000], K range: [16, 1024]. \n
 
-* | x        | rotation | y    | scale   |
-* |----------|----------|------|---------|
-* | FLOAT16  | FLOAT16  | INT8 | FLOAT32 |
-* | BF16     | BF16     | INT8 | FLOAT32 |
-* | FLOAT16  | FLOAT16  | INT4 | FLOAT32 |
-* | BF16     | BF16     | INT4 | FLOAT32 |
+* | x        | rot      | alpha | y              | scale       |
+* |----------|----------|-------|----------------|-------------|
+* | BF16     | BF16     | N/A   | INT4           | FLOAT32     |
+* | BF16     | BF16     | N/A   | INT8           | FLOAT32     |
+* | FLOAT16  | FLOAT16  | N/A   | INT4           | FLOAT32     |
+* | FLOAT16  | FLOAT16  | N/A   | INT8           | FLOAT32     |
+* | FLOAT16  | FLOAT16  | BF16  | FLOAT4_E2M1    | FLOAT8_E8M0 |
+* | BF16     | BF16     | BF16  | FLOAT4_E2M1    | FLOAT8_E8M0 |
+* | FLOAT16  | FLOAT16  | BF16  | FLOAT8_E4M3FN  | FLOAT8_E8M0 |
+* | BF16     | BF16     | BF16  | FLOAT8_E4M3FN  | FLOAT8_E8M0 |
+* | FLOAT16  | FLOAT16  | BF16  | FLOAT8_E5M2    | FLOAT8_E8M0 |
+* | BF16     | BF16     | BF16  | FLOAT8_E5M2    | FLOAT8_E8M0 |
 */
 REG_OP(RotateQuant)
     .INPUT(x, TensorType({DT_FLOAT16, DT_BF16}))
- 	.INPUT(rotation, TensorType({DT_FLOAT16, DT_BF16}))
- 	.OUTPUT(y, TensorType({DT_INT8, DT_INT4}))
- 	.OUTPUT(scale, TensorType({DT_FLOAT32}))
- 	.ATTR(y_dtype, Int, 0)
- 	.ATTR(alpha, Float, 0.0)
+ 	.INPUT(rot, TensorType({DT_FLOAT16, DT_BF16}))
+ 	.OPTIONAL_INPUT(alpha, TensorType({DT_BF16}))
+ 	.OUTPUT(y, TensorType({DT_INT8, DT_INT4, DT_FLOAT4_E2M1, DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2}))
+ 	.OUTPUT(scale, TensorType({DT_FLOAT32, DT_FLOAT8_E8M0}))
+ 	.ATTR(y_dtype, Int, DT_INT8)
+ 	.ATTR(axis, Int, -1)
+ 	.ATTR(round_mode, String, "rint")
+ 	.ATTR(scale_alg, Int, 0)
+ 	.ATTR(dst_type_max, Float, 0.0)
+ 	.ATTR(trans, Bool, false)
  	.OP_END_FACTORY_REG(RotateQuant)
 } // namespace ge
 

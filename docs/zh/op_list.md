@@ -2595,7 +2595,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>对张量x进行旋转变换，再执行对称动态量化。</td>
+    <td>对张量x进行旋转变换，然后执行可选的clamp操作，最后执行对称动态量化（目的数据类型为int8或者quint4x2）或者MX量化（目的数据类型为FLOAT4类、FLOAT8类）。</td>
   </tr>
   <tr>
     <td>matmul</td>

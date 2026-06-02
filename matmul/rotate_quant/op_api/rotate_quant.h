@@ -13,8 +13,10 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-std::tuple<aclTensor*, aclTensor*> RotateQuant(
-    const aclTensor* x, const aclTensor* rot, int32_t dst_dtype, aclOpExecutor* executor);
+const std::tuple<aclTensor*, aclTensor*> RotateQuant(
+    const aclTensor* x, const aclTensor* rotation, const aclTensor* alpha, int64_t axis, const char* roundMode,
+    int64_t scaleAlg, float dstTypeMax, bool trans, int64_t dstType, aclTensor* yOut, aclTensor* scaleOut,
+    aclOpExecutor* executor);
 }
 
 #endif
