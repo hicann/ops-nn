@@ -49,7 +49,7 @@ public:
         pPipe->InitBuffer(outQueue_, 1, outQueLen);
         pPipe->InitBuffer(tmpBufNew_, tmpBufLens);
 
-        blkRowOffset_ = blockIdx_ * tilingD_->rowPerHeadCore;
+        blkRowOffset_ = static_cast<int64_t>(blockIdx_) * tilingD_->rowPerHeadCore;
 
         inGm.SetGlobalBuffer((__gm__ xDtype*)x + blkRowOffset_ * tilingD_->rowLen);
         outGm.SetGlobalBuffer((__gm__ yDtype*)y + blkRowOffset_ * tilingD_->rowLen);
@@ -325,8 +325,8 @@ private:
     constexpr static int32_t BLOCK_SIZE = 32;
 
     uint32_t blockIdx_ = 0;
-    uint32_t blkRowOffset_ = 0;
-    uint32_t maxHandleNum_ = 0;
+    uint64_t blkRowOffset_ = 0;
+    uint64_t maxHandleNum_ = 0;
     uint32_t smoothF32Offset_ = 0;
     uint32_t rowsAlignBlock_ = 0;
 
