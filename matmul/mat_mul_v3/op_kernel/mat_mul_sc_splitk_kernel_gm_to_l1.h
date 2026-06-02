@@ -302,7 +302,7 @@ MatMulBaseKernelSingleCoreSplitKGmToL1<A_TYPE, B_TYPE, L0C_TYPE, OUTPUT_TYPE, BI
                     CopyInAl1ND(M_1, k0, K_INDEX_0, k0);
                 }
                 int32_t nPingReal = N_INDEX_0 == nnloop_ - 1 ? block_.params_.innerSingleCoreN : N0;
-                CopyInBl1ND(bpingflag, k0, K_INDEX_0, nPingReal, N_INDEX_0);
+                CopyInBl1(bpingflag, k0, K_INDEX_0, nPingReal, N_INDEX_0);
                 for (uint64_t kIndex = 0; kIndex < block_.params_.loopK; ++kIndex) {
                     bool lastK = kIndex == block_.params_.loopK - 1;
                     int32_t realK = lastK ? block_.matmulTilingData_->matmulTiling.Ka - kIndex * k0 : k0;
@@ -323,7 +323,7 @@ MatMulBaseKernelSingleCoreSplitKGmToL1<A_TYPE, B_TYPE, L0C_TYPE, OUTPUT_TYPE, BI
                         }
                         if (nnloop_ > 1) {
                             int32_t nPongReal = N_INDEX_0 + 1 == nnloop_ - 1 ? block_.params_.innerSingleCoreN - (N_INDEX_0 + 1) * N0: N0;
-                            CopyInBl1ND(!bpingflag, realK, K_INDEX_0, nPongReal, N_INDEX_0 + 1);
+                            CopyInBl1(!bpingflag, realK, K_INDEX_0, nPongReal, N_INDEX_0 + 1);
                         }
                         ProcessBaseMNK(lastK, realK, nextRealK, kIndex);
                     }
@@ -649,10 +649,10 @@ MatMulBaseKernelSingleCoreSplitKGmToL1<A_TYPE, B_TYPE, L0C_TYPE, OUTPUT_TYPE, BI
         int32_t realN = lastN ? block_.params_.innerSingleCoreN - nloop * N0 : N0;
         if (!lastN && !firstN) {
             int32_t nextRealN = nloop ==  nnloop_ - 2  ? block_.params_.innerSingleCoreN - (nloop + 1) * N0 : N0;
-            CopyInBl1ND(!bpingflag, realK, K_INDEX_0, nextRealN, nloop + 1);
+            CopyInBl1(!bpingflag, realK, K_INDEX_0, nextRealN, nloop + 1);
         }
         if (lastN && !lastK) {
-            CopyInBl1ND(!bpingflag, nextRealK, K_INDEX_0 + 1, N0, N_INDEX_0); // B nextk
+            CopyInBl1(!bpingflag, nextRealK, K_INDEX_0 + 1, N0, N_INDEX_0); // B nextk
         }
         if (nmloop_ - 1 >= M_0) {
             AMatMulB(bpingflag, nloop, realK, realN, kIndex, aL1Ping, eventIdAPingMte2Mte1, M_0);

@@ -581,18 +581,18 @@ bool MatmulV3BaseTiling::NeedNd2NzVnchw(uint64_t outerSize, uint64_t innerSize, 
 }
 
 ge::graphStatus MatmulV3BaseTiling::SelectNZTiling() 
-{ 
-    if (args_.bFormat == ge::FORMAT_FRACTAL_NZ && args_.bType != ge::DT_FLOAT && (compileInfo_.supportL12BtBf16 || compileInfo_.supportL0c2out)) { 
-        if (tilingSelect_ == TilingCalcSelect::ALL) { 
-            tilingSelect_ = TilingCalcSelect::BASE; 
-        } else if (tilingSelect_ != TilingCalcSelect::BASE) { 
-            OP_LOGE(args_.opName, "weightNz doesn't support this tiling select yet."); 
-            return ge::GRAPH_FAILED; 
-        } 
-    } 
-
-    return ge::GRAPH_SUCCESS; 
-} 
+{
+    bool isNZNZ = args_.aFormat == ge::FORMAT_FRACTAL_NZ && args_.bFormat == ge::FORMAT_FRACTAL_NZ;
+    if (isNZNZ && (compileInfo_.supportL12BtBf16 || compileInfo_.supportL0c2out)) {
+        if (tilingSelect_ == TilingCalcSelect::ALL) {
+            tilingSelect_ = TilingCalcSelect::BASE;
+        } else if (tilingSelect_ != TilingCalcSelect::BASE) {
+            OP_LOGE(args_.opName, "weightNz doesn't support this tiling select yet.");
+            return ge::GRAPH_FAILED;
+        }
+    }
+    return ge::GRAPH_SUCCESS;
+}
 
 void MatmulV3BaseTiling::CalL1Tiling()
 {

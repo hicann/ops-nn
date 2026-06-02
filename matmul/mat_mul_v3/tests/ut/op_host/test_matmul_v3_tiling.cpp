@@ -737,8 +737,8 @@ static TilingTestParam ascend910B_cases_params[] = {
       "block_dim":{"CORE_NUM":24, "vector_core_cnt": 48},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
       "hardware_info": {"BT_SIZE": 1024, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 196608, "L2_SIZE": 201326592, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072, "CORE_NUM":24, "vector_core_cnt": 48, "socVersion": "Ascend910B" },
       "format_a":"ND","format_b":"FRACTAL_NZ","repo_range":{},"repo_seeds":{}})",
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_FRACTAL_NZ, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, true, false, 0, 0, {24576, 16}, {1, 1536, 16, 16}, {16, 16}, {24576, 16}, {24576, 16}, {16, 16}, false, 0, 0, 24, 65536,
-    "24 16 16 24576 24576 16 1024 24576 16 1024 16 512 8 1 1 0 0 0 0 393216 1024 0 1 1 1 1 256 4 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 "
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_FRACTAL_NZ, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, true, false, 0, 0, {24576, 16}, {1, 1536, 16, 16}, {16, 16}, {24576, 16}, {24576, 16}, {16, 16}, false, 0, 0, 24, 65584,
+    "24 16 16 24576 24576 384 16 384 128 128 128 9 6 3 1 0 0 1 0 393216 1024 0 1 1 1 1 3 3 0 0 2 2 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 0 0 1 0 0 0 1 1 0 0 0 0 0 0 0 0 "
   },
   {
     "MatMulV3_basic_test_weightNz_tiling_k_shift", "MatMulV3", R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false,"offset_x":0,"opImplMode":0},
@@ -747,7 +747,7 @@ static TilingTestParam ascend910B_cases_params[] = {
       "hardware_info": {"BT_SIZE": 1024, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 196608, "L2_SIZE": 201326592, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072, "CORE_NUM":24, "vector_core_cnt": 48, "socVersion": "Ascend910B" },
       "format_a":"ND","format_b":"FRACTAL_NZ","repo_range":{},"repo_seeds":{}})",
     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_FRACTAL_NZ, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, false, false, 0, 0, {192, 6144}, {512, 384, 16, 16}, {192, 8192}, {192, 6144}, {6144, 8192}, {192, 8192}, false, 0, 0, 24, 65536,
-    "24 192 8192 6144 6144 128 128 6144 128 128 64 16 16 1 1 0 0 0 0 458752 98304 0 1 1 1 1 8 8 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 2 64 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ", DT_BF16, DT_BF16
+    "24 192 8192 6144 6144 128 128 6144 128 128 64 16 16 1 1 0 0 0 0 458752 98304 0 1 1 1 1 8 8 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 11 2 6 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ", DT_BF16, DT_BF16
   },
   {
     "MatMulV3_basic_force_grp_acc_for_fp32", "MatMulV3", R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":false,"offset_x":0,"opImplMode":4},

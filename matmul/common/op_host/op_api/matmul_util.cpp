@@ -461,6 +461,13 @@ static bool CheckSupportInfoFormatNzNzNd(const MmOpInfo& mmOpInfo)
            mmOpInfo.support_info.output_format == ge::FORMAT_ND;
 }
 
+static bool CheckSupportInfoFormatNdNzNd(const MmOpInfo& mmOpInfo)
+{
+    return mmOpInfo.support_info.self_format == ge::FORMAT_ND &&
+           mmOpInfo.support_info.mat2_format == ge::FORMAT_FRACTAL_NZ &&
+           mmOpInfo.support_info.output_format == ge::FORMAT_ND;
+}
+
 static const aclTensor* GetMatMulOp(
     const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, MmOpInfo& mmOpInfo, const bool transposeX1,
     const bool transposeX2, const bool offsetX, const int64_t opImplModeEnum, aclOpExecutor* executor)
@@ -507,7 +514,10 @@ static const aclTensor* GetMatMulOp(
                 l0op::MatMulV3NzNzNd(x1, x2, bias, transposeX1, transposeX2, offsetX, opImplModeEnum, executor);
             return mmOut;
         }
-
+        if (CheckSupportInfoFormatNdNzNd(mmOpInfo)) {
+            x1 = l0op::ReFormat(x1, op::Format::FORMAT_ND);
+            x2 = l0op::ReFormat(x2, op::Format::FORMAT_FRACTAL_NZ);
+        }
         const aclTensor* mmOut =
             l0op::MatMulV3Nd(x1, x2, bias, transposeX1, transposeX2, offsetX, opImplModeEnum, executor);
         return mmOut;
@@ -1888,6 +1898,16 @@ bool IsFormatSupportNd(const aclTensor* self, const aclTensor* mat2)
     return true;
 }
 
+bool CheckMMV3NdNzNdSupport(const aclTensor* self, const aclTensor* mat2, MmOpInfo& mmOpInfo) {
+    // 当前切换场景不支持输入self/mat2混精度场景，不支持self/out升精度输出场景，且输入类型只支持fp16/bf16/fp32
+    bool isDtypeSupport = mmOpInfo.support_info.self_dtype == mmOpInfo.support_info.mat2_dtype &&
+                          mmOpInfo.support_info.self_dtype == mmOpInfo.support_info.output_dtype &&
+                          ALIGN_UNIT_MAP.find(mmOpInfo.support_info.self_dtype) != ALIGN_UNIT_MAP.end();
+    auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
+    return isDtypeSupport && npuArch == NpuArch::DAV_2201 &&
+           self->GetStorageFormat() == Format::FORMAT_ND && mat2->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ;
+}
+
 bool IsSupportNzNzNd(const aclTensor* self, const aclTensor* mat2)
 {
     op::Shape selfShape = self->GetViewShape();
@@ -2034,7 +2054,12 @@ aclnnStatus SetMmSupportFormat(const aclTensor* self, const aclTensor* mat2, MmO
             mmOpInfo.support_info.mat2_format = Format::FORMAT_FRACTAL_NZ;
             return ACLNN_SUCCESS;
         }
-
+        if (CheckMMV3NdNzNdSupport(self, mat2, mmOpInfo)) {
+            mmOpInfo.support_info.output_format = Format::FORMAT_ND;
+            mmOpInfo.support_info.self_format = Format::FORMAT_ND;
+            mmOpInfo.support_info.mat2_format = Format::FORMAT_FRACTAL_NZ;
+            return ACLNN_SUCCESS;
+        }
         mmOpInfo.support_info.output_format = Format::FORMAT_FRACTAL_NZ;
         mmOpInfo.support_info.self_format = Format::FORMAT_FRACTAL_NZ;
         mmOpInfo.support_info.mat2_format = Format::FORMAT_FRACTAL_NZ;
