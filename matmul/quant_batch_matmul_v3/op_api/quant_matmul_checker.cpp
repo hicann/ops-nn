@@ -677,7 +677,7 @@ bool QuantMatmulChecker::InferGroupSize(int64_t& groupSize)
     CHECK_RET(InferGroupSizeN(x2, x1Scale, x2Scale, transX2, groupSizeMnk.k, groupSizeMnk.n), false);
 
     OP_LOGD(
-        "Infered groupSize: groupSizeM: %lu, groupSizeN: %lu, groupSizeK: %lu.", groupSizeMnk.m, groupSizeMnk.n,
+        "Inferred groupSize: groupSizeM: %lu, groupSizeN: %lu, groupSizeK: %lu.", groupSizeMnk.m, groupSizeMnk.n,
         groupSizeMnk.k);
     groupSize = EncodeGroupSizeMnk(groupSizeMnk);
     return true;
@@ -806,16 +806,16 @@ bool QuantMatmulChecker::CheckDimValue() const
 
 int64_t QuantMatmulChecker::InferOutputShape(std::vector<int64_t> &batchRecord) const
 {
-    int64_t inferedOutbatchValue = 1;
+    int64_t inferredOutbatchValue = 1;
     auto x1DimNum = x1_->GetViewShape().GetDimNum();
     auto x2DimNum = x2_->GetViewShape().GetDimNum();
     auto outDimNum = std::max(x1DimNum, x2DimNum);
-    size_t vaildOffset = outDimNum - std::min(x1DimNum, x2DimNum);
+    size_t validOffset = outDimNum - std::min(x1DimNum, x2DimNum);
     auto &longShapeTensor = x1DimNum > x2DimNum ? x1_ : x2_;
     auto &shortShapeTensor = x1DimNum > x2DimNum ? x2_ : x1_;
     for (size_t i = 0; i < outDimNum - PENULTIMATE_DIM; i++) {
         auto longDimVal = longShapeTensor->GetViewShape().GetDim(i);
-        auto shortDimVal = i < vaildOffset ? 1 : shortShapeTensor->GetViewShape().GetDim(i - vaildOffset);
+        auto shortDimVal = i < validOffset ? 1 : shortShapeTensor->GetViewShape().GetDim(i - validOffset);
         if (shortDimVal > 1 && longDimVal > 1 && shortDimVal != longDimVal) {
             OP_LOGE_FOR_INVALID_VALUES_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize",
                 "short batch dimension, long batch dimension", FormatString("%ld, %ld", shortDimVal, longDimVal).c_str(),
@@ -823,13 +823,13 @@ int64_t QuantMatmulChecker::InferOutputShape(std::vector<int64_t> &batchRecord) 
             return OUTPUT_INFER_FAIL;
         }
         int64_t curBatchValue = static_cast<int64_t>(std::max(shortDimVal, longDimVal));
-        inferedOutbatchValue = inferedOutbatchValue * curBatchValue;
+        inferredOutbatchValue = inferredOutbatchValue * curBatchValue;
         batchRecord.push_back(curBatchValue);
     }
-    return inferedOutbatchValue;
+    return inferredOutbatchValue;
 }
 
-bool QuantMatmulChecker::CheckBiasShape(const std::vector<int64_t> &batchRecord, int64_t inferedOutbatchValue) const
+bool QuantMatmulChecker::CheckBiasShape(const std::vector<int64_t> &batchRecord, int64_t inferredOutbatchValue) const
 {
     auto biasDimNum = bias_->GetViewShape().GetDimNum();
     // 3 is bias with batch dim-num
@@ -870,10 +870,10 @@ bool QuantMatmulChecker::CheckBiasShape(const std::vector<int64_t> &batchRecord,
             FormatString("when the shape dim of bias is 3D, the last dimension of bias must be %ld", x2NDim_).c_str()),
         return false);
     OP_CHECK(
-        biasFirstDim == inferedOutbatchValue,
+        biasFirstDim == inferredOutbatchValue,
         OP_LOGE_FOR_INVALID_VALUES_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize",
             "bias first dimension, inferred out batch dimension",
-            FormatString("%ld, %ld", biasFirstDim, inferedOutbatchValue).c_str(),
+            FormatString("%ld, %ld", biasFirstDim, inferredOutbatchValue).c_str(),
             "when the shape dim of bias is 3D, the first dimension of bias must be equal to the inferred out batch "
             "dimension"),
         return false);
@@ -885,16 +885,16 @@ bool QuantMatmulChecker::CheckOutShape(bool twoDimMatmulCaseFlag, const std::vec
     auto outDimNum = out_->GetViewShape().GetDimNum();
     int64_t outMDim = out_->GetViewShape().GetDim(outDimNum - PENULTIMATE_DIM);
     int64_t outNDim = out_->GetViewShape().GetDim(outDimNum - 1);
-    size_t inferedOutDimNum = batchRecord.size() + 2;
+    size_t inferredOutDimNum = batchRecord.size() + 2;
     // x1 and x2 are 2 dim and out is 3 dim speical case
-    if (outMDim == 1 && inferedOutDimNum == 2 && outDimNum == 3 && twoDimMatmulCaseFlag) {
+    if (outMDim == 1 && inferredOutDimNum == 2 && outDimNum == 3 && twoDimMatmulCaseFlag) {
         outDimNum -= 1;
         outMDim = out_->GetViewShape().GetDim(0);
     }
-    if (inferedOutDimNum != outDimNum) {
+    if (inferredOutDimNum != outDimNum) {
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize",
             GetInputName(OUT_NAME, interfaceType_).c_str(), FormatString("%zuD", outDimNum).c_str(),
-            FormatString("the shape dim of out must be %zuD", inferedOutDimNum).c_str());
+            FormatString("the shape dim of out must be %zuD", inferredOutDimNum).c_str());
         return false;
     }
     OP_CHECK(outMDim == x1MDim_,
@@ -1076,12 +1076,12 @@ bool QuantMatmulChecker::CheckShape() const
     CHECK_RET(CheckDimValue(), false);
 
     std::vector<int64_t> batchRecord;
-    int64_t inferedOutbatchValue = InferOutputShape(batchRecord);
-    if (inferedOutbatchValue == OUTPUT_INFER_FAIL) {
+    int64_t inferredOutbatchValue = InferOutputShape(batchRecord);
+    if (inferredOutbatchValue == OUTPUT_INFER_FAIL) {
         return false;
     }
     if (bias_ != nullptr) {
-        if (!CheckBiasShape(batchRecord, inferedOutbatchValue)) {
+        if (!CheckBiasShape(batchRecord, inferredOutbatchValue)) {
             return false;
         }
     }

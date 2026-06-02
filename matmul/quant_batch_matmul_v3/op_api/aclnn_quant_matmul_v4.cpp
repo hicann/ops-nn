@@ -525,9 +525,9 @@ static int64_t InferOutputShape(const aclTensor *x1, const aclTensor *x2, std::v
     auto outDimNum = std::max(x1DimNum, x2DimNum);
     auto &longShapeTensor = x1DimNum > x2DimNum ? x1 : x2;
     auto &shortShapeTensor = x1DimNum > x2DimNum ? x2 : x1;
-    size_t vaildOffset = outDimNum - std::min(x1DimNum, x2DimNum);
+    size_t validOffset = outDimNum - std::min(x1DimNum, x2DimNum);
     for (size_t i = 0; i < outDimNum - PENULTIMATE_DIM; i++) {
-        auto shortDimValue = i < vaildOffset ? 1 : shortShapeTensor->GetViewShape().GetDim(i - vaildOffset);
+        auto shortDimValue = i < validOffset ? 1 : shortShapeTensor->GetViewShape().GetDim(i - validOffset);
         auto longDimValue = longShapeTensor->GetViewShape().GetDim(i);
         if (shortDimValue > 1 && longDimValue > 1 && shortDimValue != longDimValue) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID,

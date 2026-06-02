@@ -62,7 +62,7 @@ private:
     bool CheckNormalScaleDimRange(size_t x1ScaleDim, size_t x2ScaleDim) const;
     bool CheckGroupSize() const;
     bool CheckOutShape(bool twoDimMatmulCaseFlag, const std::vector<int64_t> &batchRecord) const;
-    bool CheckBiasShape(const std::vector<int64_t> &batchRecord, int64_t inferedOutbatchValue) const;
+    bool CheckBiasShape(const std::vector<int64_t> &batchRecord, int64_t inferredOutbatchValue) const;
     int64_t InferOutputShape(std::vector<int64_t> &batchRecord) const;
     bool CheckDimValue() const;
     bool CheckDimValuePertokenDoubleScale() const;
