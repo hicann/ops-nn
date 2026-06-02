@@ -22,6 +22,7 @@
 #include "opdev/op_dfx.h"
 #include "opdev/platform.h"
 #include "op_api/aclnn_util.h"
+#include "aclnn_kernels/common/op_error_check.h"
 
 using namespace op;
 
@@ -29,12 +30,28 @@ namespace l0op {
 
 OP_TYPE_REGISTER(IndexCheck);
 
+static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
+    op::DataType::DT_INT64, op::DataType::DT_INT32};
+
+static bool IsAiCoreSupport(const aclTensorList* indices)
+{
+    for (size_t i = 0; i < indices->Size(); i++) {
+        OP_CHECK_DTYPE_NOT_SUPPORT((*indices)[i], AICORE_DTYPE_SUPPORT_LIST, return false);
+    }
+    return true;
+}
+
 void IndexCheck(
     const aclTensor* bounds, const aclTensorList* indices, aclOpExecutor* executor)
 {
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
     if (socVersion != SocVersion::ASCEND910B && socVersion != SocVersion::ASCEND910_93) {
         OP_LOGD("IndexCheck only support ASCEND910B and ASCEND910_93, skip.");
+        return;
+    }
+
+    if (!IsAiCoreSupport(indices)) {
+        OP_LOGD("Unsupported dtype of indices in IndexCheck.");
         return;
     }
 
