@@ -76,7 +76,7 @@ static ge::graphStatus InferShape4QuantBatchMatmulInplaceAdd(gert::InferShapeCon
         return ge::GRAPH_FAILED;
     }
     OP_LOGD(
-        opName, "x1_shape: %s", "x2_shape: %s",
+        opName, "x1_shape: %s, x2_shape: %s",
         Ops::Base::ToString(*shape_x1).c_str(), Ops::Base::ToString(*shape_x2).c_str());
 
     auto yShape = context->GetInputShape(YREF_INDEX);

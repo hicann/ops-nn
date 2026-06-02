@@ -19,7 +19,7 @@
 #include "../utils/quant_batch_matmul_constant.h"
 #include "../utils/tuple_utils.h"
 #include "../policy/dispatch_policy.h"
-#include "..//tile/tile_copy.h"
+#include "../tile/tile_copy.h"
 
 namespace Cmct {
 namespace Gemm {

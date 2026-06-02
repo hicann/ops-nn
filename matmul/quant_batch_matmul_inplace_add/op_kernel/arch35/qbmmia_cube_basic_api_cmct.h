@@ -13,8 +13,7 @@
  * \brief HiFloat8 T-T kernel for QuantBatchMatmulInplaceAdd.
  *        Uses BlockMmadA8W8FixpipeQuant for cube-based MMAD with FixPipe dequant.
  */
-#ifndef QBMMIA_CUBE_BASIC_API_CMCT_H
-#define QBMMIA_CUBE_BASIC_API_CMCT_H
+#pragma once
 #include "cmct/block/block_mmad_a8w8_fixpipe_quant.h"
 #include "cmct/block/block_scheduler_policy.h"
 #include "cmct/block/block_scheduler_utils.h"
@@ -88,4 +87,3 @@ __aicore__ inline void QbmmiaCubeBasicApiKernel(
     MatmulKernel qbmm;
     qbmm(params);
 }
-#endif

@@ -18,7 +18,7 @@
 #include "../quant_batch_matmul_v3_base.h"
 
 namespace QuantBatchMatmulV3 {
-constexpr uint64_t PER_BLOCK_SIZE= 128;
+constexpr uint64_t PER_BLOCK_SIZE = 128;
 struct ASWTilingParam {
     uint64_t singleCoreM;
     uint64_t singleCoreN;

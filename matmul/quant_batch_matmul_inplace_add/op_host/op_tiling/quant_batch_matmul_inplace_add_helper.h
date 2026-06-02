@@ -409,9 +409,9 @@ bool QuantBatchMatmulInplaceAddHelper<BaseT>::AnalyzeInputs()
         return false;
     }
     OP_LOGD(
-        this->inputParams_.opName, "batchA: %lu, batchB: %lu, batchC: %lu, isPerTensor: %s, isPertoken: %s",
+        this->inputParams_.opName, "batchA: %lu, batchB: %lu, batchC: %lu, isPerTensor: %d, isPertoken: %d",
         this->inputParams_.batchA, this->inputParams_.batchB, this->inputParams_.batchC,
-        this->inputParams_.isPerTensor ? "true" : "false", this->inputParams_.isPertoken ? "true" : "false");
+        static_cast<int>(this->inputParams_.isPerTensor), static_cast<int>(this->inputParams_.isPertoken));
     return true;
 }
 

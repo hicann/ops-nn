@@ -26,9 +26,9 @@ struct QuantBatchMatmulInplaceAddParams {
     int64_t groupSize = 0L;
 };
 
-static const std::initializer_list<op::DataType> x1_DTYPE_SUPPORT_LIST = {
+static const std::initializer_list<op::DataType> X1_DTYPE_SUPPORT_LIST = {
     DataType::DT_FLOAT8_E4M3FN, DataType::DT_FLOAT8_E5M2, DataType::DT_HIFLOAT8};
-static const std::initializer_list<op::DataType> x2_DTYPE_SUPPORT_LIST = {
+static const std::initializer_list<op::DataType> X2_DTYPE_SUPPORT_LIST = {
     DataType::DT_FLOAT8_E4M3FN, DataType::DT_FLOAT8_E5M2, DataType::DT_HIFLOAT8};
 static const std::initializer_list<op::DataType> X1_SCALE_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT8_E8M0, DataType::DT_FLOAT};
 static const std::initializer_list<op::DataType> X2_SCALE_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT8_E8M0, DataType::DT_FLOAT};

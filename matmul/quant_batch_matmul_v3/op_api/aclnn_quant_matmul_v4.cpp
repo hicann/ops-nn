@@ -59,44 +59,44 @@ static constexpr int INDEX_OUT_IN_TUPLE = 2;
 static constexpr int INDEX_ISA4W4_IN_BOOL_TUPLE = 2;
 static constexpr size_t LAST_SECOND_DIM_INDEX = 2;
 
-static const int MIN_DIM_NUM_ND = 2;
-static const int MAX_DIM_NUM_ND = 6;
-static const int MIN_DIM_NUM_NZ = 4;
-static const int MAX_DIM_NUM_NZ = 8;
-static const int PENULTIMATE_DIM = 2;
-static const int NZ_K1_INDEX = 3;
-static const int NZ_K1_INDEX_TRANS = 4;
-static const int NZ_STORAGE_PENULTIMATE_DIM = 16;
-static const int NZ_STORAGE_LAST_DIM = 32;
-static const int64_t NZ_K0_VALUE_BMM_BLOCK_NUM = 16;
-static const int64_t NZ_K0_VALUE_INT32_TRANS = 8;
-static const int64_t NZ_K0_VALUE_INT8_TRANS = 32;
-static const int64_t NZ_K0_VALUE_INT4_TRANS = 64;
+static constexpr int MIN_DIM_NUM_ND = 2;
+static constexpr int MAX_DIM_NUM_ND = 6;
+static constexpr int MIN_DIM_NUM_NZ = 4;
+static constexpr int MAX_DIM_NUM_NZ = 8;
+static constexpr int PENULTIMATE_DIM = 2;
+static constexpr int NZ_K1_INDEX = 3;
+static constexpr int NZ_K1_INDEX_TRANS = 4;
+static constexpr int NZ_STORAGE_PENULTIMATE_DIM = 16;
+static constexpr int NZ_STORAGE_LAST_DIM = 32;
+static constexpr int64_t NZ_K0_VALUE_BMM_BLOCK_NUM = 16;
+static constexpr int64_t NZ_K0_VALUE_INT32_TRANS = 8;
+static constexpr int64_t NZ_K0_VALUE_INT8_TRANS = 32;
+static constexpr int64_t NZ_K0_VALUE_INT4_TRANS = 64;
 static constexpr int64_t OUTPUT_INFER_FAIL = -1L;
-static const int64_t LAST_AXIS_LIMIT = 65535;
-static const int X2_FIXED_DIM_NUM_A4W4 = 2;
-static const int64_t INT4_NUMS_IN_INT8 = 2;
-static const int64_t INT4_NUMS_IN_INT32 = 8;
-static const int64_t INNER_SIZE_MULTIPLE = 64;
-static const int64_t K_VALUE = 3696;
-static const int64_t N_VALUE = 8192;
-static const int64_t M_RANGE1_LEFT = 128;
-static const int64_t M_RANGE1_RIGHT = 512;
-static const int32_t CORE_NUM_20 = 20;
-static const int64_t SUPPORTED_GROUP_SIZE = 32;
+static constexpr int64_t LAST_AXIS_LIMIT = 65535;
+static constexpr int X2_FIXED_DIM_NUM_A4W4 = 2;
+static constexpr int64_t INT4_NUMS_IN_INT8 = 2;
+static constexpr int64_t INT4_NUMS_IN_INT32 = 8;
+static constexpr int64_t INNER_SIZE_MULTIPLE = 64;
+static constexpr int64_t K_VALUE = 3696;
+static constexpr int64_t N_VALUE = 8192;
+static constexpr int64_t M_RANGE1_LEFT = 128;
+static constexpr int64_t M_RANGE1_RIGHT = 512;
+static constexpr int32_t CORE_NUM_20 = 20;
+static constexpr int64_t SUPPORTED_GROUP_SIZE = 32;
 static constexpr uint64_t B4_PER_B32 = 8UL;
-static const int64_t SUPPORTED_K_ALIGN_NUM = 32;
-static const int64_t SUPPORTED_N_ALIGN_NUM = 8;
-static const size_t MAX_DIM_VALUE = 2;
-static const size_t MX_SCALE_DIM_VALUE = 3;
-static const uint64_t GROUP_M_OFFSET = 32;
-static const uint64_t GROUP_N_OFFSET = 16;
-static const uint64_t GROUP_MNK_BIT_SIZE = 0xFFFF;
-static const size_t MX_SCALE_MAX_DIM = 3;
-static const size_t MX_SCALE_DIM_NUM = 3;
-static const int64_t MAX_SHAPE_SIZE_A8W4_INT = 29576;
-static const int64_t PPMATMUL_PRIORITY_M = 1024;
-static const int64_t NO_BATCH_DIM_SUM = 2;
+static constexpr int64_t SUPPORTED_K_ALIGN_NUM = 32;
+static constexpr int64_t SUPPORTED_N_ALIGN_NUM = 8;
+static constexpr size_t MAX_DIM_VALUE = 2;
+static constexpr size_t MX_SCALE_DIM_VALUE = 3;
+static constexpr uint64_t GROUP_M_OFFSET = 32;
+static constexpr uint64_t GROUP_N_OFFSET = 16;
+static constexpr uint64_t GROUP_MNK_BIT_SIZE = 0xFFFF;
+static constexpr size_t MX_SCALE_MAX_DIM = 3;
+static constexpr size_t MX_SCALE_DIM_NUM = 3;
+static constexpr int64_t MAX_SHAPE_SIZE_A8W4_INT = 29576;
+static constexpr int64_t PPMATMUL_PRIORITY_M = 1024;
+static constexpr int64_t NO_BATCH_DIM_SUM = 2;
 
 static const std::initializer_list<op::DataType> IN_TYPE_SUPPORT_LIST = {op::DataType::DT_INT4,
                                                                          op::DataType::DT_INT8};
@@ -228,7 +228,7 @@ static inline bool CheckDtypeValidOnOnlyL0c2ubPertoken(TupleTensor mandatoryTens
     auto pertokenScaleOptional = std::get<INDEX_PERTOKEN_IN_OPTIONAL_TUPLE>(optionalTensors);
     if (pertokenScaleOptional->GetDataType() != op::DataType::DT_FLOAT) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "PertokenScaleOptional should be FLOAT, actual dtype is %s",
-                op::ToString(scale->GetDataType()).GetString());
+                op::ToString(pertokenScaleOptional->GetDataType()).GetString());
         return false;
     }
     if (out->GetDataType() != op::DataType::DT_FLOAT16) {
@@ -307,7 +307,7 @@ or UINT64, actual dtype is %s.", op::ToString(scale->GetDataType()).GetString())
     } else {
         if (bias != nullptr && bias->GetDataType() == op::DataType::DT_FLOAT16) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                    "When pertokenScaleOptional is not nullptr, bias dtype should not be FLOAT16.");
+                    "When pertokenScaleOptional is nullptr, bias dtype should not be FLOAT16.");
             return false;
         }
         if (bias != nullptr && bias->GetDataType() == op::DataType::DT_FLOAT &&

@@ -9,7 +9,7 @@
  */
 
  /*!
- * \file qbmm_block_scheduler.h
+ * \file block_scheduler_qbmm.h
  * \brief
  */
 

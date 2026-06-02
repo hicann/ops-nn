@@ -194,8 +194,8 @@ __aicore__ inline void QuantMmBatchPertile<QBMM_PERTILE_KERNEL_FUN_TEM_PARAMS>::
     yTensorPtr_ = params.mmadParams.cGmAddr;
 
     isPertile_ = params.epilogueParams.groupSizeM == 1;
-    auto mmResPing_ = epilogueOp_.GetL0c2UbPingTensor();
-    auto mmResPong_ = epilogueOp_.GetL0c2UbPongTensor();
+    mmResPing_ = epilogueOp_.GetL0c2UbPingTensor();
+    mmResPong_ = epilogueOp_.GetL0c2UbPongTensor();
     mmadOp_.Init(
         TupleShape{
             static_cast<int64_t>(params.epilogueParams.baseM), static_cast<int64_t>(params.epilogueParams.baseN),
