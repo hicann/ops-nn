@@ -14,6 +14,7 @@
 
 #include "../../../op_host/op_api/aclnn_batch_matmul.h"
 #include "opdev/platform.h"
+#include "op_api/op_api_def.h"
 #include "op_api_ut_common/op_api_ut.h"
 #include "op_api_ut_common/scalar_desc.h"
 #include "op_api_ut_common/tensor_desc.h"
@@ -1391,4 +1392,276 @@ TEST_F(l2_batch_matmul_test, batch_matmul_310_FP32_FP16_FP16FP32_KEEP_DTYPE)
         OP_API_UT(aclnnBatchMatMul, INPUT(tensor_1_desc, tensor_2_desc), OUTPUT(out_tensor_desc), cube_math_type);
     aclRet = ut_false_false.TestGetWorkspaceSize(&workspace_size);
     EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_batch_matmul_test, batch_matmul_16in32out_fp16_fp16_fp32_keep_dtype_aligned)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910B);
+    auto tensor_1_desc = TensorDesc({8, 16, 32}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto tensor_2_desc = TensorDesc({8, 32, 64}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto out_tensor_desc = TensorDesc({8, 16, 64}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.005, 0.005);
+    int8_t cube_math_type = KEEP_DTYPE;
+    auto ut = OP_API_UT(aclnnBatchMatMul, INPUT(tensor_1_desc, tensor_2_desc), OUTPUT(out_tensor_desc), cube_math_type);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+TEST_F(l2_batch_matmul_test, batch_matmul_16in32out_bf16_bf16_fp32_keep_dtype_aligned)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910B);
+    auto tensor_1_desc = TensorDesc({8, 16, 32}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto tensor_2_desc = TensorDesc({8, 32, 64}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto out_tensor_desc = TensorDesc({8, 16, 64}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.005, 0.005);
+    int8_t cube_math_type = KEEP_DTYPE;
+    auto ut = OP_API_UT(aclnnBatchMatMul, INPUT(tensor_1_desc, tensor_2_desc), OUTPUT(out_tensor_desc), cube_math_type);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+TEST_F(l2_batch_matmul_test, batch_matmul_16in32out_fp16_fp16_fp32_keep_dtype_not_aligned)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910B);
+    auto tensor_1_desc = TensorDesc({3, 5, 7}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto tensor_2_desc = TensorDesc({3, 7, 9}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto out_tensor_desc = TensorDesc({3, 5, 9}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    int8_t cube_math_type = KEEP_DTYPE;
+    auto ut = OP_API_UT(aclnnBatchMatMul, INPUT(tensor_1_desc, tensor_2_desc), OUTPUT(out_tensor_desc), cube_math_type);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+TEST_F(l2_batch_matmul_test, batch_matmul_16in32out_bf16_bf16_fp32_keep_dtype_not_aligned)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910B);
+    auto tensor_1_desc = TensorDesc({3, 5, 7}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto tensor_2_desc = TensorDesc({3, 7, 9}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto out_tensor_desc = TensorDesc({3, 5, 9}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    int8_t cube_math_type = KEEP_DTYPE;
+    auto ut = OP_API_UT(aclnnBatchMatMul, INPUT(tensor_1_desc, tensor_2_desc), OUTPUT(out_tensor_desc), cube_math_type);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+TEST_F(l2_batch_matmul_test, batch_matmul_16in32out_fp16_fp16_fp32_use_hf32)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910B);
+    auto tensor_1_desc = TensorDesc({4, 16, 32}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto tensor_2_desc = TensorDesc({4, 32, 16}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto out_tensor_desc = TensorDesc({4, 16, 16}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    int8_t cube_math_type = USE_HF32;
+    auto ut = OP_API_UT(aclnnBatchMatMul, INPUT(tensor_1_desc, tensor_2_desc), OUTPUT(out_tensor_desc), cube_math_type);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+TEST_F(l2_batch_matmul_test, batch_matmul_16in32out_bf16_bf16_fp32_use_hf32)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910B);
+    auto tensor_1_desc = TensorDesc({4, 16, 32}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto tensor_2_desc = TensorDesc({4, 32, 16}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto out_tensor_desc = TensorDesc({4, 16, 16}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    int8_t cube_math_type = USE_HF32;
+    auto ut = OP_API_UT(aclnnBatchMatMul, INPUT(tensor_1_desc, tensor_2_desc), OUTPUT(out_tensor_desc), cube_math_type);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+TEST_F(l2_batch_matmul_test, batch_matmul_16in32out_fp16_fp16_fp32_allow_fp32_down_precision)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910B);
+    auto tensor_1_desc = TensorDesc({4, 16, 32}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto tensor_2_desc = TensorDesc({4, 32, 16}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto out_tensor_desc = TensorDesc({4, 16, 16}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    int8_t cube_math_type = ALLOW_FP32_DOWN_PRECISION;
+    auto ut = OP_API_UT(aclnnBatchMatMul, INPUT(tensor_1_desc, tensor_2_desc), OUTPUT(out_tensor_desc), cube_math_type);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+TEST_F(l2_batch_matmul_test, batch_matmul_16in32out_bf16_bf16_fp32_allow_fp32_down_precision)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910B);
+    auto tensor_1_desc = TensorDesc({4, 16, 32}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto tensor_2_desc = TensorDesc({4, 32, 16}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto out_tensor_desc = TensorDesc({4, 16, 16}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    int8_t cube_math_type = ALLOW_FP32_DOWN_PRECISION;
+    auto ut = OP_API_UT(aclnnBatchMatMul, INPUT(tensor_1_desc, tensor_2_desc), OUTPUT(out_tensor_desc), cube_math_type);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+TEST_F(l2_batch_matmul_test, batch_matmul_16in32out_fp16_fp16_fp32_large_batch)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910B);
+    auto tensor_1_desc = TensorDesc({128, 16, 32}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto tensor_2_desc = TensorDesc({128, 32, 64}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto out_tensor_desc = TensorDesc({128, 16, 64}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.005, 0.005);
+    int8_t cube_math_type = KEEP_DTYPE;
+    auto ut = OP_API_UT(aclnnBatchMatMul, INPUT(tensor_1_desc, tensor_2_desc), OUTPUT(out_tensor_desc), cube_math_type);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+TEST_F(l2_batch_matmul_test, batch_matmul_16in32out_bf16_bf16_fp32_large_batch)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910B);
+    auto tensor_1_desc = TensorDesc({128, 16, 32}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto tensor_2_desc = TensorDesc({128, 32, 64}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto out_tensor_desc = TensorDesc({128, 16, 64}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.005, 0.005);
+    int8_t cube_math_type = KEEP_DTYPE;
+    auto ut = OP_API_UT(aclnnBatchMatMul, INPUT(tensor_1_desc, tensor_2_desc), OUTPUT(out_tensor_desc), cube_math_type);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+TEST_F(l2_batch_matmul_test, batch_matmul_16in32out_fp16_fp16_fp32_batch_broadcast)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910B);
+    auto tensor_1_desc = TensorDesc({4, 16, 32}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto tensor_2_desc = TensorDesc({1, 32, 16}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto out_tensor_desc = TensorDesc({4, 16, 16}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    int8_t cube_math_type = KEEP_DTYPE;
+    auto ut = OP_API_UT(aclnnBatchMatMul, INPUT(tensor_1_desc, tensor_2_desc), OUTPUT(out_tensor_desc), cube_math_type);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+TEST_F(l2_batch_matmul_test, batch_matmul_16in32out_bf16_bf16_fp32_batch_broadcast)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910B);
+    auto tensor_1_desc = TensorDesc({4, 16, 32}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto tensor_2_desc = TensorDesc({1, 32, 16}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto out_tensor_desc = TensorDesc({4, 16, 16}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    int8_t cube_math_type = KEEP_DTYPE;
+    auto ut = OP_API_UT(aclnnBatchMatMul, INPUT(tensor_1_desc, tensor_2_desc), OUTPUT(out_tensor_desc), cube_math_type);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+TEST_F(l2_batch_matmul_test, batch_matmul_16in32out_fp16_fp16_fp32_k1_special)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910B);
+    auto tensor_1_desc = TensorDesc({4, 16, 1}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto tensor_2_desc = TensorDesc({4, 1, 16}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto out_tensor_desc = TensorDesc({4, 16, 16}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    int8_t cube_math_type = KEEP_DTYPE;
+    auto ut = OP_API_UT(aclnnBatchMatMul, INPUT(tensor_1_desc, tensor_2_desc), OUTPUT(out_tensor_desc), cube_math_type);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+TEST_F(l2_batch_matmul_test, batch_matmul_16in32out_bf16_bf16_fp32_k1_special)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910B);
+    auto tensor_1_desc = TensorDesc({4, 16, 1}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto tensor_2_desc = TensorDesc({4, 1, 16}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto out_tensor_desc = TensorDesc({4, 16, 16}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    int8_t cube_math_type = KEEP_DTYPE;
+    auto ut = OP_API_UT(aclnnBatchMatMul, INPUT(tensor_1_desc, tensor_2_desc), OUTPUT(out_tensor_desc), cube_math_type);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+TEST_F(l2_batch_matmul_test, batch_matmul_16in32out_fp16_fp16_fp32_empty_tensor)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910B);
+    auto tensor_1_desc = TensorDesc({2, 0, 4}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto tensor_2_desc = TensorDesc({2, 4, 5}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto out_tensor_desc = TensorDesc({2, 0, 5}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    int8_t cube_math_type = KEEP_DTYPE;
+    auto ut = OP_API_UT(aclnnBatchMatMul, INPUT(tensor_1_desc, tensor_2_desc), OUTPUT(out_tensor_desc), cube_math_type);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+TEST_F(l2_batch_matmul_test, batch_matmul_16in32out_fp16_fp16_fp32_transpose)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910B);
+    auto tensor_1_desc = TensorDesc({4, 16, 32}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto tensor_1_desc_t = TensorDesc({4, 16, 32}, ACL_FLOAT16, ACL_FORMAT_ND,
+            {512, 1, 16}, 0, {4, 32, 16}).ValueRange(-2, 2);
+    auto tensor_2_desc = TensorDesc({4, 32, 16}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto tensor_2_desc_t = TensorDesc({4, 32, 16}, ACL_FLOAT16, ACL_FORMAT_ND,
+            {64, 1, 32}, 0, {4, 16, 32}).ValueRange(-2, 2);
+    auto out_tensor_desc = TensorDesc({4, 16, 16}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.005, 0.005);
+
+    int8_t math_type = KEEP_DTYPE;
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = 0;
+    auto ut_false_false = OP_API_UT(aclnnBatchMatMul, INPUT(tensor_1_desc, tensor_2_desc),
+        OUTPUT(out_tensor_desc), math_type);
+    aclRet = ut_false_false.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+    auto ut_true_false = OP_API_UT(aclnnBatchMatMul, INPUT(tensor_1_desc_t, tensor_2_desc),
+        OUTPUT(out_tensor_desc), math_type);
+    aclRet = ut_true_false.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+    auto ut_false_true = OP_API_UT(aclnnBatchMatMul, INPUT(tensor_1_desc, tensor_2_desc_t),
+        OUTPUT(out_tensor_desc), math_type);
+    aclRet = ut_false_true.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+    auto ut_true_true = OP_API_UT(aclnnBatchMatMul, INPUT(tensor_1_desc_t, tensor_2_desc_t),
+        OUTPUT(out_tensor_desc), math_type);
+    aclRet = ut_true_true.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+TEST_F(l2_batch_matmul_test, batch_matmul_16in32out_bf16_bf16_fp32_transpose)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910B);
+    auto tensor_1_desc = TensorDesc({4, 16, 32}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto tensor_1_desc_t = TensorDesc({4, 16, 32}, ACL_BF16, ACL_FORMAT_ND, {512, 1, 16}, 0, {4, 32, 16}).ValueRange(-2, 2);
+    auto tensor_2_desc = TensorDesc({4, 32, 16}, ACL_BF16, ACL_FORMAT_ND).ValueRange(-2, 2);
+    auto tensor_2_desc_t = TensorDesc({4, 32, 16}, ACL_BF16, ACL_FORMAT_ND, {64, 1, 32}, 0, {4, 16, 32}).ValueRange(-2, 2);
+    auto out_tensor_desc = TensorDesc({4, 16, 16}, ACL_FLOAT, ACL_FORMAT_ND).Precision(0.005, 0.005);
+
+    int8_t math_type = KEEP_DTYPE;
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = 0;
+    auto ut_false_false = OP_API_UT(aclnnBatchMatMul, INPUT(tensor_1_desc, tensor_2_desc),
+        OUTPUT(out_tensor_desc), math_type);
+    aclRet = ut_false_false.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+    auto ut_true_false = OP_API_UT(aclnnBatchMatMul, INPUT(tensor_1_desc_t, tensor_2_desc),
+        OUTPUT(out_tensor_desc), math_type);
+    aclRet = ut_true_false.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+    auto ut_false_true = OP_API_UT(aclnnBatchMatMul, INPUT(tensor_1_desc, tensor_2_desc_t),
+        OUTPUT(out_tensor_desc), math_type);
+    aclRet = ut_false_true.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+    auto ut_true_true = OP_API_UT(aclnnBatchMatMul, INPUT(tensor_1_desc_t, tensor_2_desc_t),
+        OUTPUT(out_tensor_desc), math_type);
+    aclRet = ut_true_true.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
 }

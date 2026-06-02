@@ -43,6 +43,34 @@
 #define FP32_ADDMM_DISABLE 0
 #define FP32_ADDMM_ENABLE 1
 
+#define FRACTAL_NZ 29
+
+#if defined(FORMAT_X1) && FORMAT_X1 == FORMAT_ND && defined(ORIG_DTYPE_X2) && ORIG_DTYPE_X2 == DT_FLOAT
+    #define IS_ND_NZ_FP32 1
+#else
+    #define IS_ND_NZ_FP32 0
+#endif
+
+#if defined(ORIG_DTYPE_Y) && (ORIG_DTYPE_Y == DT_FLOAT)
+    #define IS_FP32_OUT 1
+#else
+    #define IS_FP32_OUT 0
+#endif
+
+#if defined(ORIG_DTYPE_C) && (ORIG_DTYPE_C == DT_FLOAT)
+    #define IS_FP32_BIAS 1
+#else
+    #define IS_FP32_BIAS 0
+#endif
+
+#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220
+    #define IS_A2_A3 1
+#else
+    #define IS_A2_A3 0
+#endif
+
+// ND_NZ_FP32场景支持走入多个模板
+
 ASCENDC_TPL_ARGS_DECL(
     MatMulV3,
     ASCENDC_TPL_UINT_DECL(
@@ -101,7 +129,7 @@ ASCENDC_TPL_SEL(
 );
 #else
 ASCENDC_TPL_SEL(
-#if (!defined(ORIG_DTYPE_C) || (defined(ORIG_DTYPE_C) && ORIG_DTYPE_C == DT_FLOAT))
+#if (!defined(ORIG_DTYPE_C) || (IS_FP32_BIAS && !IS_A2_A3) || (IS_A2_A3 && IS_FP32_BIAS && !IS_FP32_OUT))
     /* Base */
     ASCENDC_TPL_ARGS_SEL(
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),

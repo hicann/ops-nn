@@ -190,7 +190,7 @@ const aclTensor* GemmV3Nd(
     return gemmOut;
 };
 
-const aclTensor* GemmV3NdWithAlphaBeta(const aclTensor* x1,
+const aclTensor* GemmV3NdNzWithAlphaBeta(const aclTensor* x1,
                                        const aclTensor* x2,
                                        const aclTensor* self,
                                        float alpha,
@@ -198,10 +198,12 @@ const aclTensor* GemmV3NdWithAlphaBeta(const aclTensor* x1,
                                        bool transposeX1,
                                        bool transposeX2,
                                        bool enableHf32,
-                                       aclOpExecutor* executor)
+                                       aclOpExecutor* executor,
+                                       bool enable16In32Out)
 {
-    L0_DFX(GemmV3NdWithAlphaBeta, x1, x2, self, alpha, beta, transposeX1, transposeX2, enableHf32);
-    aclTensor* out = executor->AllocTensor(self->GetDataType(), Format::FORMAT_ND, Format::FORMAT_ND);
+    L0_DFX(GemmV3NdNzWithAlphaBeta, x1, x2, self, alpha, beta, transposeX1, transposeX2, enableHf32);
+    op::DataType outDtype = enable16In32Out ? DataType::DT_FLOAT : self->GetDataType();
+    aclTensor* out = executor->AllocTensor(outDtype, Format::FORMAT_ND, Format::FORMAT_ND);
     auto ret = INFER_SHAPE(
         GemmV3, OP_INPUT(x1, x2, self), OP_OUTPUT(out), OP_ATTR(alpha, beta, transposeX1, transposeX2, enableHf32));
     if (ret != ACLNN_SUCCESS) {

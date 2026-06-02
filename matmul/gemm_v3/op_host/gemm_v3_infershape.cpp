@@ -38,6 +38,7 @@ ge::graphStatus InferShapeForGemmV3(InferShapeContext* context)
     auto shape_out = context->GetOutputShape(kOutputIdx);
     auto attrs = context->GetAttrs();
     auto dtype_c = context->GetInputDesc(kMatmulV2MinShapeSize)->GetDataType();
+    auto dtype_out = context->GetOutputDesc(kOutputIdx)->GetDataType();
     // 当前仅支持累加场景，shape_c不支持为空
     OP_CHECK_IF(
         shape_a == nullptr || shape_b == nullptr || shape_c == nullptr || shape_out == nullptr || attrs == nullptr,
@@ -48,12 +49,6 @@ ge::graphStatus InferShapeForGemmV3(InferShapeContext* context)
     OP_CHECK_IF(
         alpha == nullptr || beta == nullptr, CUBE_INNER_ERR_REPORT(op_name, "gemmv3 attribute is null"),
         return ge::GRAPH_FAILED);
-    if (dtype_c == ge::DT_FLOAT) {
-        // 校验alpha和beta是否等于1.0f
-        OP_CHECK_IF(std::abs(*alpha - 1.0f) > epsilon || std::abs(*beta - 1.0f) > epsilon,
-                    CUBE_INNER_ERR_REPORT(op_name, "alpha and beta must be 1.0"),
-                    return ge::GRAPH_FAILED);
-    }
     const bool* trans_a = attrs->GetAttrPointer<bool>(2);
     const bool* trans_b = attrs->GetAttrPointer<bool>(3);
     const bool* enable_hf32 = attrs->GetAttrPointer<bool>(4);
@@ -65,38 +60,28 @@ ge::graphStatus InferShapeForGemmV3(InferShapeContext* context)
         "gemmv3 a_shape: %s, b_shape: %s, c_shape:%s, transpose_a: %d, transpose_b: %d, enable_hf32: %d",
         Shape2String(*shape_a).c_str(), Shape2String(*shape_b).c_str(), Shape2String(*shape_c).c_str(), *trans_a,
         *trans_b, *enable_hf32);
-    if (dtype_c == ge::DT_FLOAT) {
+    if (shape_a->GetDimNum() == kMatmulV2MinShapeSize) { // addmm校验
         OP_CHECK_IF(
             (shape_a->GetDimNum() != kMatmulV2MinShapeSize || shape_b->GetDimNum() != kMatmulV2MinShapeSize ||
             shape_c->GetDimNum() != kMatmulV2MinShapeSize),
             CUBE_INNER_ERR_REPORT(
-                op_name, "gemmv3 input dim num[%zu] [%zu] [%zu]is not 2!", shape_a->GetDimNum(), shape_b->GetDimNum(),
+                op_name, "addmm input dim num[%zu] [%zu] [%zu]is not 2!", shape_a->GetDimNum(), shape_b->GetDimNum(),
+                shape_c->GetDimNum()),
+            return ge::GRAPH_FAILED);
+    } else if (shape_a->GetDimNum() == kAddmmMaxShapeSize) { // baddbmm校验
+        OP_CHECK_IF(
+            (shape_a->GetDimNum() != kAddmmMaxShapeSize || shape_b->GetDimNum() != kAddmmMaxShapeSize ||
+            shape_c->GetDimNum() != kAddmmMaxShapeSize),
+            CUBE_INNER_ERR_REPORT(
+                op_name, "baddbmm input x1、x2、self dim num[%zu] [%zu] [%zu]is not 3!", shape_a->GetDimNum(), shape_b->GetDimNum(),
                 shape_c->GetDimNum()),
             return ge::GRAPH_FAILED);
     } else {
-        if (shape_a->GetDimNum() == kMatmulV2MinShapeSize) { // addmm校验
-            OP_CHECK_IF(
-                (shape_a->GetDimNum() != kMatmulV2MinShapeSize || shape_b->GetDimNum() != kMatmulV2MinShapeSize ||
-                shape_c->GetDimNum() != kMatmulV2MinShapeSize),
-                CUBE_INNER_ERR_REPORT(
-                    op_name, "addmm input dim num[%zu] [%zu] [%zu]is not 2!", shape_a->GetDimNum(), shape_b->GetDimNum(),
-                    shape_c->GetDimNum()),
-                return ge::GRAPH_FAILED);
-        } else if (shape_a->GetDimNum() == kAddmmMaxShapeSize) { // baddbmm校验
-            OP_CHECK_IF(
-                (shape_a->GetDimNum() != kAddmmMaxShapeSize || shape_b->GetDimNum() != kAddmmMaxShapeSize ||
-                shape_c->GetDimNum() != kAddmmMaxShapeSize),
-                CUBE_INNER_ERR_REPORT(
-                    op_name, "baddbmm input x1、x2、self dim num[%zu] [%zu] [%zu]is not 3!", shape_a->GetDimNum(), shape_b->GetDimNum(),
-                    shape_c->GetDimNum()),
-                return ge::GRAPH_FAILED);
-        } else {
-            OP_CHECK_IF(
-                shape_a->GetDimNum() != kAddmmMaxShapeSize && shape_a->GetDimNum() != kMatmulV2MinShapeSize,
-                CUBE_INNER_ERR_REPORT(
-                    op_name, "unsupport addmm/baddbmm input x1 dim num[%zu], it should be 2 or 3!", shape_a->GetDimNum()),
-                return ge::GRAPH_FAILED);
-        }
+        OP_CHECK_IF(
+            shape_a->GetDimNum() != kAddmmMaxShapeSize && shape_a->GetDimNum() != kMatmulV2MinShapeSize,
+            CUBE_INNER_ERR_REPORT(
+                op_name, "unsupport addmm/baddbmm input x1 dim num[%zu], it should be 2 or 3!", shape_a->GetDimNum()),
+            return ge::GRAPH_FAILED);
     }
     
     size_t idx_m = static_cast<size_t>(*trans_a);

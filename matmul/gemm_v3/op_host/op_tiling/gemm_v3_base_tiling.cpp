@@ -81,18 +81,24 @@ bool GemmV3BaseTiling::IsCapable()
         hwInfo_.socVersion != platform_ascendc::SocVersion::ASCEND910_93) {
         return false;
     }
+    ge::DataType dtypeA = context_->GetInputDesc(INDEX_A)->GetDataType();
     ge::DataType dtypeC = context_->GetInputDesc(INDEX_C)->GetDataType();
     ge::DataType dtypeY = context_->GetOutputDesc(INDEX_Y)->GetDataType();
-    if (dtypeC != dtypeY) {
+    bool isLowPrecInput = (dtypeA == ge::DT_FLOAT16 || dtypeA == ge::DT_BF16);
+    bool is16In32Out = dtypeY == ge::DT_FLOAT && isLowPrecInput;
+    if ((!is16In32Out && dtypeC != dtypeY) || (is16In32Out && dtypeC != dtypeA && dtypeC != dtypeY)) {
         OP_LOGW(params_.opName,
-                "self dtype (%s) and out dtype (%s) are not the same.",
+                "Expected self dtype(%s) to be equal to mat dtype or out dtype(%s) in 16in32out scenario. or"
+                "Expected self dtype(%s) to be equal to out dtype(%s).",
                 Ops::Base::ToString(dtypeC).c_str(),
                 Ops::Base::ToString(dtypeY).c_str());
         return false;
     }
-    if (dtypeY != ge::DT_FLOAT16 && dtypeY != ge::DT_BF16) {
+    bool isValidOutput = (dtypeY == ge::DT_FLOAT16 || dtypeY == ge::DT_BF16 ||
+                          (dtypeY == ge::DT_FLOAT && isLowPrecInput));
+    if (!isValidOutput) {
         OP_LOGW(params_.opName,
-                "invalid out dtype (%s), only support half or bfloat16 output.",
+                "invalid out dtype (%s), only support half, bfloat16 or float(with low-precision input) output.",
                 Ops::Base::ToString(dtypeY).c_str());
         return false;
     }

@@ -30,6 +30,7 @@
 #include "../transpose_batch_mat_mul/pp_matmul_common.h"
 #include "gemm_v3_tiling_data.h"
 #include "kernel_tensor.h"
+#include <type_traits>
 
 namespace PpMatMulNS {
 
@@ -42,6 +43,7 @@ template <uint32_t swizzleDirect,
           bool transA,
           bool transB,
           typename InDtype,
+          typename BiasDtype,
           typename OutDtype,
           typename AccumDtype,
           DataFormat formatA = DataFormat::ND,
@@ -186,7 +188,7 @@ private:
 private:
     AscendC::GlobalTensor<InDtype> gmA_;
     AscendC::GlobalTensor<InDtype> gmB_;
-    AscendC::GlobalTensor<OutDtype> gmC_;
+    AscendC::GlobalTensor<BiasDtype> gmC_;
     AscendC::GlobalTensor<OutDtype> gmY_;
     AscendC::GlobalTensor<AccumDtype> gmWorkspace_;
     AscendC::LocalTensor<InDtype> l1BaseA_;
@@ -195,7 +197,7 @@ private:
     AscendC::LocalTensor<InDtype> l0BaseB_;
     AscendC::LocalTensor<AccumDtype> l0BaseC_;
     AscendC::LocalTensor<AccumDtype> ubSum_;
-    AscendC::LocalTensor<OutDtype> ubC_;
+    AscendC::LocalTensor<BiasDtype> ubC_;
     AscendC::LocalTensor<OutDtype> ubY_;
     AscendC::LocalTensor<AccumDtype> ubProd_;
 
@@ -226,12 +228,13 @@ template <uint32_t swizzleDirect,
           bool transA,
           bool transB,
           typename InDtype,
+          typename BiasDtype,
           typename OutDtype,
           typename AccumDtype,
           DataFormat formatA,
           DataFormat formatB>
 __aicore__ FORCE_INLINE void
-GemmV3BaseKernel<swizzleDirect, transA, transB, InDtype, OutDtype, AccumDtype, formatA, formatB>::Init(
+GemmV3BaseKernel<swizzleDirect, transA, transB, InDtype, BiasDtype, OutDtype, AccumDtype, formatA, formatB>::Init(
     __gm__ uint8_t* __restrict__ a,
     __gm__ uint8_t* __restrict__ b,
     __gm__ uint8_t* __restrict__ c,
@@ -269,7 +272,7 @@ GemmV3BaseKernel<swizzleDirect, transA, transB, InDtype, OutDtype, AccumDtype, f
 
     gmA_.SetGlobalBuffer(reinterpret_cast<__gm__ InDtype*>(a));
     gmB_.SetGlobalBuffer(reinterpret_cast<__gm__ InDtype*>(b));
-    gmC_.SetGlobalBuffer(reinterpret_cast<__gm__ OutDtype*>(c));
+    gmC_.SetGlobalBuffer(reinterpret_cast<__gm__ BiasDtype*>(c));
     gmY_.SetGlobalBuffer(reinterpret_cast<__gm__ OutDtype*>(y));
     gmWorkspace_.SetGlobalBuffer(reinterpret_cast<__gm__ AccumDtype*>(workspace) +
                                  coreIdx_ * mTile_ * nTile_ * NUM_BUFFER);
@@ -283,12 +286,21 @@ template <uint32_t swizzleDirect,
           bool transA,
           bool transB,
           typename InDtype,
+          typename BiasDtype,
           typename OutDtype,
           typename AccumDtype,
           DataFormat formatA,
           DataFormat formatB>
 __aicore__ FORCE_INLINE void
-GemmV3BaseKernel<swizzleDirect, transA, transB, InDtype, OutDtype, AccumDtype, formatA, formatB>::GetBlockIdx(
+GemmV3BaseKernel<swizzleDirect,
+                 transA,
+                 transB,
+                 InDtype,
+                 BiasDtype,
+                 OutDtype,
+                 AccumDtype,
+                 formatA,
+                 formatB>::GetBlockIdx(
     const uint64_t index, MatCoord& tidx)
 {
     uint64_t in_batch_idx = index % (tileDim_.m * tileDim_.n);
@@ -327,12 +339,13 @@ template <uint32_t swizzleDirect,
           bool transA,
           bool transB,
           typename InDtype,
+          typename BiasDtype,
           typename OutDtype,
           typename AccumDtype,
           DataFormat formatA,
           DataFormat formatB>
 __aicore__ FORCE_INLINE void
-GemmV3BaseKernel<swizzleDirect, transA, transB, InDtype, OutDtype, AccumDtype, formatA, formatB>::RunCube()
+GemmV3BaseKernel<swizzleDirect, transA, transB, InDtype, BiasDtype, OutDtype, AccumDtype, formatA, formatB>::RunCube()
 {
 #ifdef __DAV_C220_CUBE__
     using LocalTensor = AscendC::LocalTensor<InDtype>;
@@ -571,16 +584,18 @@ GemmV3BaseKernel<swizzleDirect, transA, transB, InDtype, OutDtype, AccumDtype, f
 #endif
 }
 
+// vector 数据搬运
 template <uint32_t swizzleDirect,
           bool transA,
           bool transB,
           typename InDtype,
+          typename BiasDtype,
           typename OutDtype,
           typename AccumDtype,
           DataFormat formatA,
           DataFormat formatB>
 __aicore__ FORCE_INLINE void
-GemmV3BaseKernel<swizzleDirect, transA, transB, InDtype, OutDtype, AccumDtype, formatA, formatB>::RunVector()
+GemmV3BaseKernel<swizzleDirect, transA, transB, InDtype, BiasDtype, OutDtype, AccumDtype, formatA, formatB>::RunVector()
 {
 #ifdef __DAV_C220_VEC__
     using namespace AscendC;
@@ -592,8 +607,10 @@ GemmV3BaseKernel<swizzleDirect, transA, transB, InDtype, OutDtype, AccumDtype, f
         GetBlockIdx(loopIdx, tileIdx);
         uint64_t mTileActual = (tileIdx.m == (tileDim_.m - 1)) ? (m_ - tileIdx.m * mTile_) : mTile_;
         uint64_t nTileActual = (tileIdx.n == (tileDim_.n - 1)) ? (n_ - tileIdx.n * nTile_) : nTile_;
-        uint64_t nRound = RoundUp<CONST_16>(nTileActual);
+        constexpr uint32_t roundNum = CONST_32 / sizeof(BiasDtype);
+        uint64_t nRound = RoundUp<roundNum>(nTileActual);
         uint32_t prodDstGap = (nRound - nTileActual) * sizeof(AccumDtype) >= CONST_32 ? 1 : 0;
+        uint32_t sumSrcGap = std::is_same_v<OutDtype, BiasDtype> ? 0 : prodDstGap;
         uint64_t mTileHalf = (mTileActual + 1) / 2;
         uint64_t mTileHalfActual = (AscendC::GetSubBlockIdx() == 0) ? mTileHalf : (mTileActual - mTileHalf);
         uint64_t offsetCy = batchIdx * m_ * n_ + tileIdx.m * mTile_ * n_ + tileIdx.n * nTile_ +
@@ -602,25 +619,32 @@ GemmV3BaseKernel<swizzleDirect, transA, transB, InDtype, OutDtype, AccumDtype, f
         uint64_t count = CeilDiv<VEC_ITER_NUMEL>(numel);
         if (mTileHalfActual != 0) {
             WaitFlag<HardEvent::MTE3_MTE2>(EVENT_ID0);
-            CopyGmToUbufAlign<OutDtype>(ubC_,                                  // dst
-                                        gmC_[offsetCy],                        // src
-                                        0,                                     // sid
-                                        mTileHalfActual,                       // nBurst
-                                        nTileActual * sizeof(OutDtype),        // lenBurst
-                                        0,                                     // leftPaddingNum
-                                        0,                                     // rightPaddingNum
-                                        (n_ - nTileActual) * sizeof(OutDtype), // srcGap
-                                        0);                                    // dstGap
+            AscendC::LocalTensor<BiasDtype> dstUbC = ubC_;
+            if constexpr (std::is_same_v<BiasDtype, AccumDtype>) {
+                dstUbC = ubSum_;
+            }
+            CopyGmToUbufAlign<BiasDtype>(dstUbC,                                 // dst
+                                         gmC_[offsetCy],                         // src
+                                         0,                                      // sid
+                                         mTileHalfActual,                        // nBurst
+                                         nTileActual * sizeof(BiasDtype),        // lenBurst
+                                         0,                                      // leftPaddingNum
+                                         0,                                      // rightPaddingNum
+                                         (n_ - nTileActual) * sizeof(BiasDtype), // srcGap
+                                         0);                                     // dstGap
             SetFlag<HardEvent::MTE2_V>(EVENT_ID0);
             WaitFlag<HardEvent::MTE2_V>(EVENT_ID0);
             for (uint32_t i = 0; i < count; ++i) {
-                AscendC::Cast<AccumDtype, OutDtype, false>(ubSum_[i * VEC_ITER_NUMEL],
-                                                           ubC_[i * VEC_ITER_NUMEL],
-                                                           AscendC::RoundMode::CAST_NONE,
-                                                           (uint64_t)0,
-                                                           VEC_ITER_REPEAT,
-                                                           AscendC::UnaryRepeatParams(1, 1, 8, 4));
-                AscendC::PipeBarrier<PIPE_V>();
+                if constexpr (!std::is_same_v<BiasDtype, AccumDtype>) {
+                    AscendC::printf("need cast ubc dtype.\n");
+                    AscendC::Cast<AccumDtype, BiasDtype, false>(ubSum_[i * VEC_ITER_NUMEL],     // dst
+                                                                ubC_[i * VEC_ITER_NUMEL],       // src
+                                                                AscendC::RoundMode::CAST_NONE,  // mode
+                                                                (uint64_t)0,                    // mask
+                                                                VEC_ITER_REPEAT,                // repeat
+                                                                AscendC::UnaryRepeatParams(1, 1, 8, 4));
+                    AscendC::PipeBarrier<PIPE_V>();
+                }
                 AscendC::Muls<AccumDtype, false>(ubSum_[i * VEC_ITER_NUMEL], // dst
                                                  ubSum_[i * VEC_ITER_NUMEL], // src
                                                  beta_,                      // scalar
@@ -654,24 +678,31 @@ GemmV3BaseKernel<swizzleDirect, transA, transB, InDtype, OutDtype, AccumDtype, f
                                                              VEC_ITER_REPEAT,             // repeat
                                                              AscendC::UnaryRepeatParams(1, 1, 8, 8));
                 AscendC::PipeBarrier<PIPE_V>();
-                AscendC::Cast<OutDtype, AccumDtype, false>(ubY_[i * VEC_ITER_NUMEL],      // dst
-                                                           ubSum_[i * VEC_ITER_NUMEL],    // src
-                                                           AscendC::RoundMode::CAST_RINT, // mode
-                                                           (uint64_t)0,                   // mask (disabled)
-                                                           VEC_ITER_REPEAT,               // repeat
-                                                           AscendC::UnaryRepeatParams(1, 1, 4, 8));
-                AscendC::PipeBarrier<PIPE_V>();
+                if constexpr (!std::is_same_v<OutDtype, AccumDtype>) {
+                    AscendC::printf("need cast uby dtype.\n");
+                    AscendC::Cast<OutDtype, AccumDtype, false>(ubY_[i * VEC_ITER_NUMEL],      // dst
+                                                               ubSum_[i * VEC_ITER_NUMEL],    // src
+                                                               AscendC::RoundMode::CAST_RINT, // mode
+                                                               (uint64_t)0,                   // mask (disabled)
+                                                               VEC_ITER_REPEAT,               // repeat
+                                                               AscendC::UnaryRepeatParams(1, 1, 4, 8));
+                    AscendC::PipeBarrier<PIPE_V>();
+                }
             }
             SetFlag<HardEvent::V_MTE3>(EVENT_ID0);
             WaitFlag<HardEvent::V_MTE3>(EVENT_ID0);
+            AscendC::LocalTensor<OutDtype> SrcUbY = ubY_;
+            if constexpr (std::is_same_v<OutDtype, AccumDtype>) {
+                SrcUbY = ubSum_;
+            }
             CopyUbufToGmAlign(gmY_[offsetCy],                         // dst
-                              ubY_,                                   // src
+                              SrcUbY,                                 // src
                               0,                                      // sid
                               mTileHalfActual,                        // nBurst
                               nTileActual * sizeof(OutDtype),         // lenBurst
                               0,                                      // leftPaddingNum
                               0,                                      // rightPaddingNum
-                              0,                                      // srcGap
+                              sumSrcGap,                                      // srcGap
                               (n_ - nTileActual) * sizeof(OutDtype)); // dstGap
             SetFlag<HardEvent::MTE3_MTE2>(EVENT_ID0);
         } else {
@@ -687,13 +718,21 @@ template <uint32_t swizzleDirect,
           bool transA,
           bool transB,
           typename InDtype,
+          typename BiasDtype,
           typename OutDtype,
           typename AccumDtype,
           DataFormat formatA,
           DataFormat formatB>
 __aicore__ FORCE_INLINE void
-GemmV3BaseKernel<swizzleDirect, transA, transB, InDtype, OutDtype, AccumDtype, formatA, formatB>::InitBufferCube(
-    const OcBuffer& buf)
+GemmV3BaseKernel<swizzleDirect,
+                 transA,
+                 transB,
+                 InDtype,
+                 BiasDtype,
+                 OutDtype,
+                 AccumDtype,
+                 formatA,
+                 formatB>::InitBufferCube(const OcBuffer& buf)
 {
 #ifdef __DAV_C220_CUBE__
     l1BaseA_ = buf.template GetBuffer<BufferType::ASCEND_CB, InDtype>(0);
@@ -707,13 +746,21 @@ template <uint32_t swizzleDirect,
           bool transA,
           bool transB,
           typename InDtype,
+          typename BiasDtype,
           typename OutDtype,
           typename AccumDtype,
           DataFormat formatA,
           DataFormat formatB>
 __aicore__ FORCE_INLINE void
-GemmV3BaseKernel<swizzleDirect, transA, transB, InDtype, OutDtype, AccumDtype, formatA, formatB>::InitBufferVector(
-    const OcBuffer& buf)
+GemmV3BaseKernel<swizzleDirect,
+                 transA,
+                 transB,
+                 InDtype,
+                 BiasDtype,
+                 OutDtype,
+                 AccumDtype,
+                 formatA,
+                 formatB>::InitBufferVector(const OcBuffer& buf)
 {
 #ifdef __DAV_C220_VEC__
     uint64_t sizeUbProd = 65536;
@@ -721,7 +768,7 @@ GemmV3BaseKernel<swizzleDirect, transA, transB, InDtype, OutDtype, AccumDtype, f
     uint64_t sizeUbC = 32768;
     ubProd_ = buf.template GetBuffer<BufferType::ASCEND_UB, AccumDtype>(0);
     ubSum_ = buf.template GetBuffer<BufferType::ASCEND_UB, AccumDtype>(sizeUbProd);
-    ubC_ = buf.template GetBuffer<BufferType::ASCEND_UB, OutDtype>(sizeUbProd + sizeUbSum);
+    ubC_ = buf.template GetBuffer<BufferType::ASCEND_UB, BiasDtype>(sizeUbProd + sizeUbSum);
     ubY_ = buf.template GetBuffer<BufferType::ASCEND_UB, OutDtype>(sizeUbProd + sizeUbSum + sizeUbC);
 #endif
 }

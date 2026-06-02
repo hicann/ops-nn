@@ -63,16 +63,16 @@ const aclTensor* GemmV3Nd(
     const aclTensor* x1, const aclTensor* x2, const aclTensor* c, bool transposeX1, bool transposeX2, bool enableHf32,
     aclOpExecutor* executor);
 
-// 输入ND
-const aclTensor* GemmV3NdWithAlphaBeta(const aclTensor* x1,
-                                       const aclTensor* x2,
-                                       const aclTensor* self,
-                                       float alpha,
-                                       float beta,
-                                       bool transposeX1,
-                                       bool transposeX2,
-                                       bool enableHf32,
-                                       aclOpExecutor* executor);
-
+// 输入ND/ NDNZ
+const aclTensor* GemmV3NdNzWithAlphaBeta(const aclTensor* x1,
+                                         const aclTensor* x2,
+                                         const aclTensor* self,
+                                         float alpha,
+                                         float beta,
+                                         bool transposeX1,
+                                         bool transposeX2,
+                                         bool enableHf32,
+                                         aclOpExecutor* executor,
+                                         bool enable16In32Out = false);
 } // namespace l0op
 

@@ -270,7 +270,11 @@ public:
             convOut = bmmOut;
             return ACLNN_SUCCESS;
         }
-        if (CheckGemmV3WithAlphaBeta(bias, matA, matB, cubeMathType)) {
+        bool enable16In32Out = NeedEnableFp32Output(
+            matA->GetDataType(), matB->GetDataType(), output->GetDataType(), cubeMathType);
+        bool needBroadcast = CheckAddmmTensorShapeNeedBroadcast(matA, matB, bias);
+        // A2/A3上对于 16in32out,且不需要broadcast场景 直接走gemmV3
+        if (CheckGemmV3WithAlphaBeta(bias, matA, matB, cubeMathType) || (enable16In32Out && !needBroadcast)) {
             const aclTensor* bmmOut = ExecGemmV3WithAlphaBetaOp(bias, matA, matB, alpha, beta, executor);
             CHECK_RET(bmmOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
             convOut = bmmOut;
@@ -279,7 +283,12 @@ public:
         // self(bias) * beta
         const aclTensor* selfContiguous = l0op::Contiguous(bias, executor);
         CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        const aclTensor* mulOut = l0op::Muls(selfContiguous, beta->ToFloat(), executor);
+        const aclTensor* selfContiguousCast = selfContiguous;
+        if (enable16In32Out) {
+            selfContiguousCast = l0op::Cast(selfContiguous, output->GetDataType(), executor);
+            CHECK_RET(selfContiguousCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        }
+        const aclTensor* mulOut = l0op::Muls(selfContiguousCast, beta->ToFloat(), executor);
         CHECK_RET(mulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
         // bmmOut = batch1(matA) @ batch2(matB)
@@ -357,17 +366,20 @@ aclnnStatus aclnnBaddbmmGetWorkspaceSize(
     // 参数检查
     auto ret = CheckInputParams(self, batch1, batch2, beta, alpha, out, cubeMathType);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    CHECK_RET(Check16In32OutWithBiasValid(batch1->GetDataType(), batch2->GetDataType(), out->GetDataType(), self), ACLNN_ERR_PARAM_INVALID);
 
     // 创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
+    const aclTensor* castOut = nullptr;
     // 输入空Tensor处理方法，直接返回了一个空 Tensor，未做计算
     if (isProcessEmptyTensor(batch1, batch2)) {
         auto emptyOut = bmmProcessEmptyTensor(batch1, batch2, uniqueExecutor.get());
         CHECK_RET(emptyOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-        auto viewCopyResult = l0op::ViewCopy(emptyOut, out, uniqueExecutor.get());
+        castOut = l0op::Cast(emptyOut, out->GetDataType(), uniqueExecutor.get());
+        auto viewCopyResult = l0op::ViewCopy(castOut, out, uniqueExecutor.get());
         CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
         // 固定写法，获取计算过程中需要使用的workspace大小

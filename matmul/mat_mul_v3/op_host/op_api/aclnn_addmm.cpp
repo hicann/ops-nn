@@ -502,7 +502,12 @@ public:
     aclnnStatus Impl() override{
         auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
         bool isSupportNpuArch = (npuArch == NpuArch::DAV_2201);
-        if (CheckGemmV3WithAlphaBeta(bias, matA, matB, cubeMathType) && isSupportNpuArch) {
+        bool enable16In32Out = NeedEnableFp32Output(
+            matA->GetDataType(), matB->GetDataType(), output->GetDataType(), cubeMathType);
+        bool needBroadcast = CheckAddmmTensorShapeNeedBroadcast(matA, matB, bias);
+        // A2/A3上对于 16in32out,且不需要broadcast场景 直接走gemmV3
+        if ((CheckGemmV3WithAlphaBeta(bias, matA, matB, cubeMathType) ||
+            (enable16In32Out && !needBroadcast)) && isSupportNpuArch) {
             auto outGemmV3 = ExecGemmV3WithAlphaBetaOp(bias, matA, matB, alpha, beta, executor);
             CHECK_RET(outGemmV3 != nullptr, ACLNN_ERR_INNER_NULLPTR);
             convOut = outGemmV3;
@@ -669,7 +674,9 @@ std::shared_ptr<MatmulGraphImpl> CreateAddmmGraphImpl(
     }
     // 以下全部是 alpha != 0 && beta != 0
 
-    if (NeedToConvertBias(self, mat1, mat2, beta, alpha)) {
+    if (NeedToConvertBias(self, mat1, mat2, beta, alpha) &&
+        !(self->GetDataType() == op::DataType::DT_BF16 && mat1->GetDataType() == op::DataType::DT_BF16 &&
+          mat2->GetDataType() == op::DataType::DT_BF16 && out->GetDataType() == op::DataType::DT_FLOAT)) {
         OP_LOGI("run in NeedToConvertBias branch");
         matmulGraph = std::make_shared<AddmmMmOpWithBiasGraph>(mat1, mat2, self, out, alpha, beta, cubeMathType, executor);
         return matmulGraph;
@@ -704,6 +711,7 @@ aclnnStatus aclnnAddmmGetWorkspaceSize(
     AclnnAddmmTensor addmmTensor = {self, mat1, mat2, beta, alpha, out};
     auto ret = CheckInputParams(addmmTensor, cubeMathType);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    CHECK_RET(Check16In32OutWithBiasValid(mat1->GetDataType(), mat2->GetDataType(), out->GetDataType(), self), ACLNN_ERR_PARAM_INVALID);
 
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
@@ -775,9 +783,17 @@ ACLNN_API aclnnStatus aclnnAddmmWeightNzGetWorkspaceSize(
         return ACLNN_SUCCESS;
     }
 
+    bool enable16In32Out = NeedEnableFp32Output(
+        mat1->GetDataType(), mat2->GetDataType(), out->GetDataType(), cubeMathType);
+    bool addmmNeedBroadcast = CheckAddmmTensorShapeNeedBroadcast(mat1, mat2, self);
+
     const aclTensor* castOut = nullptr;
     if (fabs(beta->ToFloat() - 0.0f) <= numeric_limits<float>::epsilon()) {
         castOut = MatmulMulProcess(addmmTensor, cubeMathType, uniqueExecutor.get());
+    } else if (enable16In32Out && !addmmNeedBroadcast) {
+        OP_LOGD("aclnnAddmmWeightNz run in ExecGemmV3WithAlphaBetaOp branch");
+        // 16in32out场景优先走gemmV3通路
+        castOut = ExecGemmV3WithAlphaBetaOp(self, mat1, mat2, alpha, beta, uniqueExecutor.get(), enable16In32Out);
     } else if (NeedToConvertBias(self, mat1, mat2, beta, alpha)) {
         OP_LOGD("aclnnAddmmWeightNz run in NeedToConvertBias branch");
         auto biasMmOut = ExecMmOpWithBias(
