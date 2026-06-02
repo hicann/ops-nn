@@ -348,10 +348,12 @@ __aicore__ inline void WeightQuantBatchMatmulV2Common<
         GM_ADDR x, GM_ADDR weight, GM_ADDR antiquantScale, GM_ADDR antiquantOffset, GM_ADDR quantScale,
         GM_ADDR quantOffset, GM_ADDR bias, GM_ADDR y)
 {
-    xGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ xType*>(x), tiling_->matmulTiling.M * tiling_->matmulTiling.Ka);
-    wGlobal_.SetGlobalBuffer(
-        reinterpret_cast<__gm__ wType*>(weight), tiling_->matmulTiling.Kb * tiling_->matmulTiling.N);
-    yGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ yType*>(y), tiling_->matmulTiling.M * tiling_->matmulTiling.N);
+    xGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ xType*>(x),
+        static_cast<uint64_t>(tiling_->matmulTiling.M) * tiling_->matmulTiling.Ka);
+    wGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ wType*>(weight),
+        static_cast<uint64_t>(tiling_->matmulTiling.Kb) * tiling_->matmulTiling.N);
+    yGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ yType*>(y),
+        static_cast<uint64_t>(tiling_->matmulTiling.M) * tiling_->matmulTiling.N);
     biasGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ biasType*>(bias), tiling_->matmulTiling.N);
     biasFlag_ = static_cast<bool>(tiling_->matmulTiling.isBias);
     offsetGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ xType*>(antiquantOffset), tiling_->matmulTiling.N);

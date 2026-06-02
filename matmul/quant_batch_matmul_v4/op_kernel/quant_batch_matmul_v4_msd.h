@@ -354,19 +354,19 @@ template <typename xType, typename wType, typename scaleType, typename yType, Qu
 __aicore__ inline void QuantBatchMatmulV4Msd<xType, wType, scaleType, yType, quantType, bTrans, weightNz >::MMCompute(uint32_t mIdx, uint32_t nIdx, uint64_t workSpaceOffset)
 {
     if ASCEND_IS_AIC {
-        uint64_t x1Offset = mIdx * baseM_ * kSize_;
+        uint64_t x1Offset = static_cast<uint64_t>(mIdx) * baseM_ * kSize_;
         uint64_t x2Offset = 0;
         if constexpr (bTrans == true) {
             if constexpr (weightNz == true) {
-                x2Offset = nIdx * baseN_ * 64;
+                x2Offset = static_cast<uint64_t>(nIdx) * baseN_ * 64;
             } else if constexpr (weightNz == false) {
-                x2Offset = nIdx * kSize_ * baseN_;
+                x2Offset = static_cast<uint64_t>(nIdx) * kSize_ * baseN_;
             }
         } else if constexpr (bTrans == false) {
             if constexpr (weightNz == true) {
-                x2Offset = nIdx * baseN_ * ops::Aligned(kSize_, uint32_t(16));
+                x2Offset = static_cast<uint64_t>(nIdx) * baseN_ * ops::Aligned(kSize_, uint32_t(16));
             } else if constexpr (weightNz == false) {
-                x2Offset = nIdx * baseN_;
+                x2Offset = static_cast<uint64_t>(nIdx) * baseN_;
             }
         }
         uint32_t curSingleN = baseN_;
@@ -397,13 +397,13 @@ __aicore__ inline void QuantBatchMatmulV4Msd<xType, wType, scaleType, yType, qua
             mmObj_.SetSingleShape(curSingleM, curSingleN, groupSize_);
             GlobalTensor<wType> weightSlice;
             for (uint32_t loopK = 0; loopK < groupNum_; loopK++) {
-                mmObj_.SetTensorA(x1Global_[x1Offset + loopK * groupSize_]);
-                auto weightSlice = x2Global_[x2Offset + loopK * groupSize_ * nSize_];
+                mmObj_.SetTensorA(x1Global_[x1Offset + static_cast<uint64_t>(loopK) * groupSize_]);
+                auto weightSlice = x2Global_[x2Offset + static_cast<uint64_t>(loopK) * groupSize_ * nSize_];
                 if (blockDimM_ == 1) {
                     weightSlice.SetL2CacheHint(CacheMode::CACHE_MODE_DISABLE);
                 }
                 mmObj_.SetTensorB(weightSlice);
-                mmObj_.SetQuantVector(x2ScaleGlobal_[loopK * nSize_ + x2Offset]);
+                mmObj_.SetQuantVector(x2ScaleGlobal_[static_cast<uint64_t>(loopK) * nSize_ + x2Offset]);
                 mmObj_.Iterate();
                 mmObj_.GetTensorC(mmOutGlobal_[workSpaceOffset], loopK == 0 ? 0 : 1, true);
             }
@@ -421,7 +421,7 @@ __aicore__ inline void QuantBatchMatmulV4Msd<xType, wType, scaleType, yType, qua
         curCubeSingleN = nSize_ - nIdx * baseN_;
     }
     uint32_t curCubeSingleM = baseM_ / 2; // 2: 2 lines int4 to 1 line int8
-    uint64_t outOffset = mIdx * curCubeSingleM * tilingData_->nSize + nIdx * baseN_;
+    uint64_t outOffset = static_cast<uint64_t>(mIdx) * curCubeSingleM * tilingData_->nSize + static_cast<uint64_t>(nIdx) * baseN_;
     if (mIdx == blockDimM_ - 1) {
         curCubeSingleM =  mSize_ - mIdx * curCubeSingleM;
     }
