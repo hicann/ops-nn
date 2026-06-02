@@ -48,7 +48,7 @@
     <file_info value="ophost_const_folding_lib" copy_type="delivery"
         src_path="" dst_path="opp/built-in/op_impl/host_cpu/"
         install_path="opp/built-in/op_impl/host_cpu/" optional="true">
-        <file value="libnn_constant_folding_ops.so" install_mod="555"/>
+        <file value="libopconstant_folding_nn.so" install_mod="555"/>
     </file_info>
 
     <file_info value="op_nn_onnx_plugin_lib" src_path="" dst_path="opp/built-in/framework/onnx" install_path="opp/built-in/framework/onnx">

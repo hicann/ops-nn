@@ -497,7 +497,7 @@ function(gen_tf_plugin_symbol)
 endfunction()
 
 # Collects AICPU_HOST_OBJ_TARGETS (registered by add_aicpu_host_kernel_modules in func.cmake)
-# and links all host OBJECT files into one SHARED library libnn_constant_folding_ops.so.
+# and links all host OBJECT files into one SHARED library libopconstant_folding_nn.so.
 function(gen_aicpu_const_symbol)
   get_property(AICPU_HOST_OBJ_TARGETS GLOBAL PROPERTY AICPU_HOST_OBJ_TARGETS)
   message(STATUS "All host targets: ${AICPU_HOST_OBJ_TARGETS}")
@@ -508,14 +508,14 @@ function(gen_aicpu_const_symbol)
     return()
   endif()
 
-  set(CONST_SO_OUTPUT ${CMAKE_BINARY_DIR}/libnn_constant_folding_ops.so)
+  set(CONST_SO_OUTPUT ${CMAKE_BINARY_DIR}/libopconstant_folding_nn.so)
 
   set(ALL_OBJECTS "")
   foreach(tgt IN LISTS AICPU_HOST_OBJ_TARGETS)
     list(APPEND ALL_OBJECTS $<TARGET_OBJECTS:${tgt}>)
   endforeach()
 
-  message(STATUS "Linking libnn_constant_folding_ops.so with host compiler")
+  message(STATUS "Linking libopconstant_folding_nn.so with host compiler")
   message(STATUS "Objects: ${ALL_OBJECTS}")
   message(STATUS "Output: ${CONST_SO_OUTPUT}")
 
@@ -544,11 +544,11 @@ function(gen_aicpu_const_symbol)
       ${AICPU_HOST_CONST_LIBS}
       -o ${CONST_SO_OUTPUT}
     DEPENDS ${AICPU_HOST_OBJ_TARGETS}
-    COMMENT "Linking libnn_constant_folding_ops.so using host compiler"
+    COMMENT "Linking libopconstant_folding_nn.so using host compiler"
     COMMAND_EXPAND_LISTS
   )
 
-  add_custom_target(nn_constant_folding_ops_builtin ALL DEPENDS ${CONST_SO_OUTPUT})
+  add_custom_target(opconstant_folding_nn_builtin ALL DEPENDS ${CONST_SO_OUTPUT})
   install(
     FILES ${CONST_SO_OUTPUT}
     DESTINATION ${AICPU_HOST_KERNEL_IMPL}
