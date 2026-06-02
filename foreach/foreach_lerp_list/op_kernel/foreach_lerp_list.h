@@ -42,6 +42,28 @@ constexpr float FLOAT_NUM_NEG = -0.5f;
 constexpr float FLOAT_NUM_POS = 0.5;
 constexpr float FLOAT_NUM_ONE = 1.0;
 
+__aicore__ inline void GenerateMask(
+    LocalTensor<float>& lerpLocal1, LocalTensor<float>& lerpLocal2,
+    LocalTensor<uint8_t>& maskLocal, LocalTensor<float> absSrc, uint32_t elementCount)
+{
+    uint32_t alignedCount = (elementCount + ELEMENT_PER_REPEAT - 1) / ELEMENT_PER_REPEAT * ELEMENT_PER_REPEAT;
+    PipeBarrier<PIPE_V>();
+    Duplicate<float>(lerpLocal1, FLOAT_NUM_POS, elementCount);
+    PipeBarrier<PIPE_V>();
+    Abs(lerpLocal2, absSrc, elementCount);
+    PipeBarrier<PIPE_V>();
+    Compare(maskLocal, lerpLocal2, lerpLocal1, CMPMODE::GE, alignedCount);
+    PipeBarrier<PIPE_V>();
+}
+
+__aicore__ inline void SyncVToS()
+{
+    event_t eventIDVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
+    SetFlag<HardEvent::V_S>(eventIDVToS);
+    WaitFlag<HardEvent::V_S>(eventIDVToS);
+    PipeBarrier<PIPE_V>();
+}
+
 template <typename T>
 class InnerComputer
 {
@@ -89,43 +111,21 @@ private:
         uint32_t repeatBatchCnt = totalRepeatCnt / MAX_REPEATS;            // limit by L0 API, should calc
         uint32_t repeatBatchCntRemainder = totalRepeatCnt % MAX_REPEATS;   // should calc
         uint32_t offset = 0;
+        uint32_t batchElementCount = MAX_REPEATS * ELEMENT_PER_REPEAT;
         for (uint32_t i = 0; i < repeatBatchCnt; i++) {
-            event_t eventIDVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
-            SetFlag<HardEvent::V_S>(eventIDVToS);
-            WaitFlag<HardEvent::V_S>(eventIDVToS);
-            PipeBarrier<PIPE_V>();
-            Select(
-                float32Tensor[maxCastDataCount * FACTOR_NUMBER_THREE + offset], maskLocal[offset],
-                float32Tensor[maxCastDataCount + offset],
-                float32Tensor[maxCastDataCount * FACTOR_NUMBER_THREE + offset], SELMODE::VSEL_TENSOR_TENSOR_MODE,
-                ELEMENT_PER_REPEAT, MAX_REPEATS, {1, 1, 1, 8, 8, 8});
-            PipeBarrier<PIPE_V>();
-            offset += MAX_REPEATS * ELEMENT_PER_REPEAT;
+            SelectBatch(float32Tensor, lerpLocal1, lerpLocal2, maskLocal, maxCastDataCount, offset,
+                batchElementCount, MAX_REPEATS);
+            offset += batchElementCount;
         }
         if (repeatBatchCntRemainder > 0) {
-            event_t eventIDVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
-            SetFlag<HardEvent::V_S>(eventIDVToS);
-            WaitFlag<HardEvent::V_S>(eventIDVToS);
-            PipeBarrier<PIPE_V>();
-            Select(
-                float32Tensor[maxCastDataCount * FACTOR_NUMBER_THREE + offset], maskLocal[offset],
-                float32Tensor[maxCastDataCount + offset],
-                float32Tensor[maxCastDataCount * FACTOR_NUMBER_THREE + offset], SELMODE::VSEL_TENSOR_TENSOR_MODE,
-                ELEMENT_PER_REPEAT, repeatBatchCntRemainder, {1, 1, 1, 8, 8, 8});
-            PipeBarrier<PIPE_V>();
-            offset += repeatBatchCntRemainder * ELEMENT_PER_REPEAT;
+            uint32_t remElementCount = repeatBatchCntRemainder * ELEMENT_PER_REPEAT;
+            SelectBatch(float32Tensor, lerpLocal1, lerpLocal2, maskLocal, maxCastDataCount, offset,
+                remElementCount, repeatBatchCntRemainder);
+            offset += remElementCount;
         }
         if (totalRepeatCntRemainder > 0) {
-            event_t eventIDVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
-            SetFlag<HardEvent::V_S>(eventIDVToS);
-            WaitFlag<HardEvent::V_S>(eventIDVToS);
-            PipeBarrier<PIPE_V>();
-            Select(
-                float32Tensor[maxCastDataCount * FACTOR_NUMBER_THREE + offset], maskLocal[offset],
-                float32Tensor[maxCastDataCount + offset],
-                float32Tensor[maxCastDataCount * FACTOR_NUMBER_THREE + offset], SELMODE::VSEL_TENSOR_TENSOR_MODE,
-                totalRepeatCntRemainder, 1, {1, 1, 1, 8, 8, 8});
-            PipeBarrier<PIPE_V>();
+            SelectBatch(float32Tensor, lerpLocal1, lerpLocal2, maskLocal, maxCastDataCount, offset,
+                totalRepeatCntRemainder, 1);
         }
 
         PipeBarrier<PIPE_V>();
@@ -168,14 +168,6 @@ private:
             float32Tensor[maxCastDataCount * FACTOR_NUMBER_TWO], weightLocal[index * maxCastDataCount],
             RoundMode::CAST_NONE, dataCount);
         PipeBarrier<PIPE_V>();
-        Duplicate<float>(lerpLocal1, FLOAT_NUM_POS, dataCount);
-        PipeBarrier<PIPE_V>();
-        Abs(lerpLocal2, float32Tensor[maxCastDataCount * FACTOR_NUMBER_TWO], dataCount);
-        PipeBarrier<PIPE_V>();
-        Compare(
-            maskLocal, lerpLocal2, lerpLocal1, CMPMODE::GE,
-            (dataCount + ELEMENT_PER_REPEAT - 1) / ELEMENT_PER_REPEAT * ELEMENT_PER_REPEAT);
-        PipeBarrier<PIPE_V>();
         Duplicate<float>(lerpLocal1, FLOAT_NUM_ONE, dataCount);
         PipeBarrier<PIPE_V>();
         Sub(lerpLocal1, lerpLocal1, float32Tensor[maxCastDataCount * FACTOR_NUMBER_TWO], dataCount);
@@ -185,6 +177,22 @@ private:
         Mul(float32Tensor, float32Tensor, lerpLocal1, dataCount);
         PipeBarrier<PIPE_V>();
         Sub(float32Tensor[maxCastDataCount], float32Tensor[maxCastDataCount], float32Tensor, dataCount);
+    }
+
+    __aicore__ inline void SelectBatch(
+        LocalTensor<float>& float32Tensor, LocalTensor<float>& lerpLocal1, LocalTensor<float>& lerpLocal2,
+        LocalTensor<uint8_t>& maskLocal, uint32_t maxCastDataCount, uint32_t offset,
+        uint32_t elementCount, uint32_t repeatCount)
+    {
+        GenerateMask(lerpLocal1, lerpLocal2, maskLocal,
+            float32Tensor[maxCastDataCount * FACTOR_NUMBER_TWO + offset], elementCount);
+        SyncVToS();
+        Select(
+            float32Tensor[maxCastDataCount * FACTOR_NUMBER_THREE + offset], maskLocal[0],
+            float32Tensor[maxCastDataCount + offset],
+            float32Tensor[maxCastDataCount * FACTOR_NUMBER_THREE + offset], SELMODE::VSEL_TENSOR_TENSOR_MODE,
+            ELEMENT_PER_REPEAT, repeatCount, {1, 1, 1, 8, 8, 8});
+        PipeBarrier<PIPE_V>();
     }
 };
 
@@ -214,41 +222,21 @@ public:
         uint32_t repeatBatchCnt = totalRepeatCnt / MAX_REPEATS;
         uint32_t repeatBatchCntRemainder = totalRepeatCnt % MAX_REPEATS;
         uint32_t offset = 0;
+        uint32_t batchElementCount = MAX_REPEATS * ELEMENT_PER_REPEAT;
         for (uint32_t i = 0; i < repeatBatchCnt; i++) {
-            // todo
-            // 已提issue。select接口里面有s操作的，循环操作的时候，需要插入一个s等v的同步，否则可能会出现一些同步依赖的问题
-            event_t eventIDVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
-            SetFlag<HardEvent::V_S>(eventIDVToS);
-            WaitFlag<HardEvent::V_S>(eventIDVToS);
-            PipeBarrier<PIPE_V>();
-            Select(
-                yLocal[offset], maskLocal[offset], x2Local[offset], yLocal[offset], SELMODE::VSEL_TENSOR_TENSOR_MODE,
-                ELEMENT_PER_REPEAT, MAX_REPEATS, {1, 1, 1, 8, 8, 8});
-            PipeBarrier<PIPE_V>();
-            offset += MAX_REPEATS * ELEMENT_PER_REPEAT;
+            SelectBatch(yLocal, x2Local, weightLocal, lerpLocal1, lerpLocal2, maskLocal, offset,
+                batchElementCount, MAX_REPEATS);
+            offset += batchElementCount;
         }
-
         if (repeatBatchCntRemainder > 0) {
-            event_t eventIDVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
-            SetFlag<HardEvent::V_S>(eventIDVToS);
-            WaitFlag<HardEvent::V_S>(eventIDVToS);
-            PipeBarrier<PIPE_V>();
-            Select(
-                yLocal[offset], maskLocal[offset], x2Local[offset], yLocal[offset], SELMODE::VSEL_TENSOR_TENSOR_MODE,
-                ELEMENT_PER_REPEAT, repeatBatchCntRemainder, {1, 1, 1, 8, 8, 8});
-            PipeBarrier<PIPE_V>();
-            offset += repeatBatchCntRemainder * ELEMENT_PER_REPEAT;
+            uint32_t remElementCount = repeatBatchCntRemainder * ELEMENT_PER_REPEAT;
+            SelectBatch(yLocal, x2Local, weightLocal, lerpLocal1, lerpLocal2, maskLocal, offset,
+                remElementCount, repeatBatchCntRemainder);
+            offset += remElementCount;
         }
-
         if (totalRepeatCntRemainder > 0) {
-            event_t eventIDVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
-            SetFlag<HardEvent::V_S>(eventIDVToS);
-            WaitFlag<HardEvent::V_S>(eventIDVToS);
-            PipeBarrier<PIPE_V>();
-            Select(
-                yLocal[offset], maskLocal[offset], x2Local[offset], yLocal[offset], SELMODE::VSEL_TENSOR_TENSOR_MODE,
-                totalRepeatCntRemainder, 1, {1, 1, 1, 8, 8, 8});
-            PipeBarrier<PIPE_V>();
+            SelectBatch(yLocal, x2Local, weightLocal, lerpLocal1, lerpLocal2, maskLocal, offset,
+                totalRepeatCntRemainder, 1);
         }
         PipeBarrier<PIPE_V>();
     }
@@ -260,14 +248,6 @@ public:
     {
         // y = x2 - (x2 - x1) * (1 - weight)
         PipeBarrier<PIPE_V>();
-        Duplicate<float>(lerpLocal1, FLOAT_NUM_POS, dataCount);
-        PipeBarrier<PIPE_V>();
-        Abs(lerpLocal2, weightLocal, dataCount);
-        PipeBarrier<PIPE_V>();
-        Compare(
-            maskLocal, lerpLocal2, lerpLocal1, CMPMODE::GE,
-            (dataCount + ELEMENT_PER_REPEAT - 1) / ELEMENT_PER_REPEAT * ELEMENT_PER_REPEAT);
-        PipeBarrier<PIPE_V>();
         Duplicate<float>(lerpLocal1, FLOAT_NUM_ONE, dataCount);
         PipeBarrier<PIPE_V>();
         Sub(lerpLocal1, lerpLocal1, weightLocal, dataCount);
@@ -277,6 +257,20 @@ public:
         Mul(x1Local, x1Local, lerpLocal1, dataCount);
         PipeBarrier<PIPE_V>();
         Sub(x2Local, x2Local, x1Local, dataCount);
+        PipeBarrier<PIPE_V>();
+    }
+
+    __aicore__ inline void SelectBatch(
+        LocalTensor<float>& yLocal, LocalTensor<float>& x2Local, LocalTensor<float>& weightLocal,
+        LocalTensor<float>& lerpLocal1, LocalTensor<float>& lerpLocal2,
+        LocalTensor<uint8_t>& maskLocal, uint32_t offset,
+        uint32_t elementCount, uint32_t repeatCount)
+    {
+        GenerateMask(lerpLocal1, lerpLocal2, maskLocal, weightLocal[offset], elementCount);
+        SyncVToS();
+        Select(
+            yLocal[offset], maskLocal[0], x2Local[offset], yLocal[offset], SELMODE::VSEL_TENSOR_TENSOR_MODE,
+            ELEMENT_PER_REPEAT, repeatCount, {1, 1, 1, 8, 8, 8});
         PipeBarrier<PIPE_V>();
     }
 };
