@@ -17,7 +17,9 @@
 #define DTYPE_X half
 #define DTYPE_GAMMA float
 #define __CCE_UT_TEST__
+#ifndef __CCE_AICORE__
 #define __CCE_AICORE__ 220
+#endif
 
 #pragma pack(1)
 

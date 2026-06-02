@@ -47,7 +47,8 @@ __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::InitOutputGm()
 }
 
 template <typename T, bool isDeterministic>
-__aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::InitUnifiedBuffer(GroupNormSwishGradTilingData* tilingData)
+__aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::InitUnifiedBuffer(
+    GroupNormSwishGradTilingData* tilingData)
 {
     if (tilingKey == groupFitUbTilingKey) {
         InitGroupFitUbBuffer();
@@ -113,8 +114,7 @@ __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::CustomDataCopyIn(
 
 template <typename T, bool isDeterministic>
 __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::CustomDataCopyOut(
-    LocalTensor<float>& outLocal, const uint64_t gmOffset, TQue<QuePosition::VECOUT, 1>& outQue,
-    const uint32_t count)
+    LocalTensor<float>& outLocal, const uint64_t gmOffset, TQue<QuePosition::VECOUT, 1>& outQue, const uint32_t count)
 {
     DataCopyExtParams copyParams{1, static_cast<uint32_t>(count * sizeof(T)), 0, 0, 0};
     if constexpr (IsSameType<T, float>::value) {
@@ -153,8 +153,7 @@ __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::CustomDataCopyOut
 
 template <typename T, bool isDeterministic>
 __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::CustomDataCopyOut(
-    LocalTensor<float>& outLocal, GlobalTensor<T>& gmOut, const uint64_t gmOffset,
-    TQue<QuePosition::VECOUT, 1>& outQue,
+    LocalTensor<float>& outLocal, GlobalTensor<T>& gmOut, const uint64_t gmOffset, TQue<QuePosition::VECOUT, 1>& outQue,
     const uint32_t count)
 {
     DataCopyExtParams copyParams{1, static_cast<uint32_t>(count * sizeof(T)), 0, 0, 0};
@@ -204,9 +203,9 @@ __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::Fp32DgammaDbeta2G
 
 template <typename T, bool isDeterministic>
 __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::NonFp32DgammaDbeta2Gm(
-    uint32_t channelIdx, GlobalTensor<T>& dgammaOut, const LocalTensor<float>& dgammaUb,
-    GlobalTensor<T>& dbetaOut, const LocalTensor<float>& dbetaUb,
-    TQue<QuePosition::VECOUT, 1>& dgammaOutQue, TQue<QuePosition::VECOUT, 1>& dbetaOutQue)
+    uint32_t channelIdx, GlobalTensor<T>& dgammaOut, const LocalTensor<float>& dgammaUb, GlobalTensor<T>& dbetaOut,
+    const LocalTensor<float>& dbetaUb, TQue<QuePosition::VECOUT, 1>& dgammaOutQue,
+    TQue<QuePosition::VECOUT, 1>& dbetaOutQue)
 {
     DataCopyParams copyParams{1, (uint16_t)(this->cG * sizeof(T)), 0, 0};
     if (dbetaIsRequire) {
@@ -243,8 +242,7 @@ __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::ModeSelection(
     } else if constexpr (!isDeterministic && !IsSameType<T, float>::value) {
         outChannelIdx = (taskIdx % this->g) * this->cG;
         if (n == 1) {
-            NonFp32DgammaDbeta2Gm(
-                outChannelIdx, dgammaGm, dgammaUb, dbetaGm, dbetaUb, outQueueDgammaT, outQueueDbetaT);
+            NonFp32DgammaDbeta2Gm(outChannelIdx, dgammaGm, dgammaUb, dbetaGm, dbetaUb, outQueueDgammaT, outQueueDbetaT);
         } else {
             Fp32DgammaDbeta2Gm(outChannelIdx, dgammaWorkspace, dgammaUb, dbetaWorkspace, dbetaUb);
         }
@@ -299,10 +297,10 @@ __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::MulsAddsTemplate(
 
 template <typename T, bool isDeterministic>
 __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::SwishGradMulXReduceTemplate(
-    const LocalTensor<float>& temp1Local, const LocalTensor<float>& temp2Local,
-    const LocalTensor<float>& dyNewSumLocal, const LocalTensor<float>& xMulDySumLocal,
-    const LocalTensor<float>& xLocal, const LocalTensor<float>& dyLocal, const LocalTensor<float>& gammaLocal,
-    const LocalTensor<float>& betaLocal, uint32_t cGIdx, float swishScaleValue, uint32_t calCount)
+    const LocalTensor<float>& temp1Local, const LocalTensor<float>& temp2Local, const LocalTensor<float>& dyNewSumLocal,
+    const LocalTensor<float>& xMulDySumLocal, const LocalTensor<float>& xLocal, const LocalTensor<float>& dyLocal,
+    const LocalTensor<float>& gammaLocal, const LocalTensor<float>& betaLocal, uint32_t cGIdx, float swishScaleValue,
+    uint32_t calCount)
 {
     __ubuf__ float* temp1Ptr = (__ubuf__ float*)temp1Local.GetPhyAddr();
     __ubuf__ float* temp2Ptr = (__ubuf__ float*)temp2Local.GetPhyAddr();
@@ -313,8 +311,9 @@ __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::SwishGradMulXRedu
     __ubuf__ float* gammaPtr = (__ubuf__ float*)gammaLocal.GetPhyAddr();
     __ubuf__ float* betaPtr = (__ubuf__ float*)betaLocal.GetPhyAddr();
     PipeBarrier<PIPE_V>();
-    SwishGradMulXReduceVf(temp1Ptr, temp2Ptr, dyNewSumPtr, xMulDySumPtr, xPtr, dyPtr, gammaPtr, betaPtr, cGIdx,
-        swishScaleValue, calCount);
+    SwishGradMulXReduceVf(
+        temp1Ptr, temp2Ptr, dyNewSumPtr, xMulDySumPtr, xPtr, dyPtr, gammaPtr, betaPtr, cGIdx, swishScaleValue,
+        calCount);
     PipeBarrier<PIPE_V>();
 }
 
@@ -322,8 +321,7 @@ template <typename T, bool isDeterministic>
 __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::SwishDxTemplate(
     const LocalTensor<float>& dxLocal, const LocalTensor<float>& xLocal, const LocalTensor<float>& dyLocal,
     const LocalTensor<float>& gammaLocal, const LocalTensor<float>& betaLocal, const LocalTensor<float>& c1Local,
-    const LocalTensor<float>& c2Local, const LocalTensor<float>& meanRstdLocal, uint32_t cGIdx,
-    float swishScaleValue,
+    const LocalTensor<float>& c2Local, const LocalTensor<float>& meanRstdLocal, uint32_t cGIdx, float swishScaleValue,
     uint32_t calCount)
 {
     __ubuf__ float* dxPtr = (__ubuf__ float*)dxLocal.GetPhyAddr();
@@ -340,8 +338,9 @@ __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::SwishDxTemplate(
 }
 
 template <typename T, bool isDeterministic>
-__aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::MulReduceSumTemplate(const LocalTensor<float>& dstLocal1,
-    const LocalTensor<float>& dstLocal2, const LocalTensor<float>& srcLocal, uint32_t calCount)
+__aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::MulReduceSumTemplate(
+    const LocalTensor<float>& dstLocal1, const LocalTensor<float>& dstLocal2, const LocalTensor<float>& srcLocal,
+    uint32_t calCount)
 {
     __ubuf__ float* src0Ptr = (__ubuf__ float*)dstLocal1.GetPhyAddr();
     __ubuf__ float* src1Ptr = (__ubuf__ float*)dstLocal2.GetPhyAddr();
@@ -386,7 +385,8 @@ __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::InitBufferForStag
 }
 
 template <typename T, bool isDeterministic>
-__aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::CastDgammaDbetaWsp2Gm(uint64_t channelIdx, uint32_t count)
+__aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::CastDgammaDbetaWsp2Gm(
+    uint64_t channelIdx, uint32_t count)
 {
     DataCopyExtParams copyParamsFp16{1, static_cast<uint32_t>(count * sizeof(half)), 0, 0, 0};
     DataCopyExtParams copyParamsFp32{1, static_cast<uint32_t>(count * sizeof(float)), 0, 0, 0};
@@ -432,8 +432,8 @@ __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::ReduceAxisNWsp2Ub
     LocalTensor<float> vecInLocal = vecInQue.AllocTensor<float>();
     DataCopyExtParams copyParamsIn{
         static_cast<uint16_t>(repeatTime), static_cast<uint32_t>(count * sizeof(float)),
-        static_cast<uint32_t>((c - count) * sizeof(float)),
-        static_cast<uint32_t>((castEleNum - count) / floatPerBlock), 0};
+        static_cast<uint32_t>((c - count) * sizeof(float)), static_cast<uint32_t>((castEleNum - count) / floatPerBlock),
+        0};
     DataCopyPadExtParams<float> padParams{false, 0, 0, 0};
     DataCopyPad(vecInLocal, workspace[workspaceOffset], copyParamsIn, padParams);
     event_t eventIdMte2ToV = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
@@ -450,7 +450,8 @@ __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::ReduceAxisNWsp2Ub
         PipeBarrier<PIPE_V>();
         activeRowCount = leftRowCount;
     }
-    KahanAccumulateVf((__ubuf__ float*)sumLocal.GetPhyAddr(), (__ubuf__ float*)compensationLocal.GetPhyAddr(),
+    KahanAccumulateVf(
+        (__ubuf__ float*)sumLocal.GetPhyAddr(), (__ubuf__ float*)compensationLocal.GetPhyAddr(),
         (__ubuf__ float*)vecInLocal.GetPhyAddr(), count);
     vecInQue.FreeTensor(vecInLocal);
 }
@@ -480,13 +481,13 @@ __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::ReduceDgammaDbeta
         }
         if (dgammaIsRequire) {
             ReduceAxisNWsp2Ub(
-                inQueueDgammaChannel, dgammaWorkspace, startOffset + loopOffset + channelIdx, repeatTime,
-                count, dgammaSumLocal, dgammaCompLocal);
+                inQueueDgammaChannel, dgammaWorkspace, startOffset + loopOffset + channelIdx, repeatTime, count,
+                dgammaSumLocal, dgammaCompLocal);
         }
         if (dbetaIsRequire) {
             ReduceAxisNWsp2Ub(
-                inQueueDbetaChannel, dbetaWorkspace, startOffset + loopOffset + channelIdx, repeatTime,
-                count, dbetaSumLocal, dbetaCompLocal);
+                inQueueDbetaChannel, dbetaWorkspace, startOffset + loopOffset + channelIdx, repeatTime, count,
+                dbetaSumLocal, dbetaCompLocal);
         }
     }
     event_t eventIdVToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
@@ -562,9 +563,8 @@ __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::ReduceCastDgammaD
 // Basic VF kernels shared by the stage-1 paths.
 
 template <typename T, bool isDeterministic>
-__simd_vf__ inline void GroupNormSwishGrad<T, isDeterministic>::MulsAddsVf(__ubuf__ float* src0Ptr,
-                                                                           __ubuf__ float* meanRstdPtr,
-                                                                           uint32_t calCount)
+__simd_vf__ inline void GroupNormSwishGrad<T, isDeterministic>::MulsAddsVf(
+    __ubuf__ float* src0Ptr, __ubuf__ float* meanRstdPtr, uint32_t calCount)
 {
     AscendC::MicroAPI::MaskReg maskFull0;
     AscendC::MicroAPI::MaskReg maskFull1;
@@ -596,17 +596,10 @@ __simd_vf__ inline void GroupNormSwishGrad<T, isDeterministic>::MulsAddsVf(__ubu
 }
 
 template <typename T, bool isDeterministic>
-__simd_vf__ inline void GroupNormSwishGrad<T, isDeterministic>::SwishDxVf(__ubuf__ float* dxPtr,
-                                                                          __ubuf__ float* xPtr,
-                                                                          __ubuf__ float* dyPtr,
-                                                                          __ubuf__ float* gammaPtr,
-                                                                          __ubuf__ float* betaPtr,
-                                                                          __ubuf__ float* c1Ptr,
-                                                                          __ubuf__ float* c2Ptr,
-                                                                          __ubuf__ float* meanRstdPtr,
-                                                                          uint32_t cGIdx,
-                                                                          float swishScaleValue,
-                                                                          uint32_t calCount)
+__simd_vf__ inline void GroupNormSwishGrad<T, isDeterministic>::SwishDxVf(
+    __ubuf__ float* dxPtr, __ubuf__ float* xPtr, __ubuf__ float* dyPtr, __ubuf__ float* gammaPtr,
+    __ubuf__ float* betaPtr, __ubuf__ float* c1Ptr, __ubuf__ float* c2Ptr, __ubuf__ float* meanRstdPtr, uint32_t cGIdx,
+    float swishScaleValue, uint32_t calCount)
 {
     AscendC::MicroAPI::MaskReg maskFull0;
     AscendC::MicroAPI::MaskReg maskFull1;
@@ -674,17 +667,10 @@ __simd_vf__ inline void GroupNormSwishGrad<T, isDeterministic>::SwishDxVf(__ubuf
 // Fused VF reduction kernels shared by the stage-1 paths.
 
 template <typename T, bool isDeterministic>
-__simd_vf__ inline void GroupNormSwishGrad<T, isDeterministic>::SwishGradMulXReduceVf(__ubuf__ float* temp1Ptr,
-                                                                                      __ubuf__ float* temp2Ptr,
-                                                                                      __ubuf__ float* dyNewSumPtr,
-                                                                                      __ubuf__ float* xMulDySumPtr,
-                                                                                      __ubuf__ float* xPtr,
-                                                                                      __ubuf__ float* dyPtr,
-                                                                                      __ubuf__ float* gammaPtr,
-                                                                                      __ubuf__ float* betaPtr,
-                                                                                      uint32_t cGIdx,
-                                                                                      float swishScaleValue,
-                                                                                      uint32_t calCount)
+__simd_vf__ inline void GroupNormSwishGrad<T, isDeterministic>::SwishGradMulXReduceVf(
+    __ubuf__ float* temp1Ptr, __ubuf__ float* temp2Ptr, __ubuf__ float* dyNewSumPtr, __ubuf__ float* xMulDySumPtr,
+    __ubuf__ float* xPtr, __ubuf__ float* dyPtr, __ubuf__ float* gammaPtr, __ubuf__ float* betaPtr, uint32_t cGIdx,
+    float swishScaleValue, uint32_t calCount)
 {
     AscendC::MicroAPI::MaskReg maskFull0;
     AscendC::MicroAPI::MaskReg maskFull1;
@@ -817,11 +803,9 @@ __simd_vf__ inline void GroupNormSwishGrad<T, isDeterministic>::SwishGradMulXRed
 }
 
 template <typename T, bool isDeterministic>
-__simd_vf__ inline void GroupNormSwishGrad<T, isDeterministic>::DualMulReduceSumVf(__ubuf__ float* dstLocal0,
-                                                                                   __ubuf__ float* dstLocal1,
-                                                                                   __ubuf__ float* dstLocal2,
-                                                                                   float normFactor,
-                                                                                   uint32_t calCount)
+__simd_vf__ inline void GroupNormSwishGrad<T, isDeterministic>::DualMulReduceSumVf(
+    __ubuf__ float* dstLocal0, __ubuf__ float* dstLocal1, __ubuf__ float* dstLocal2, float normFactor,
+    uint32_t calCount)
 {
     AscendC::MicroAPI::MaskReg maskTail;
     AscendC::MicroAPI::MaskReg maskScalar;

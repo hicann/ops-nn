@@ -20,8 +20,7 @@
 using namespace AscendC;
 
 template <typename T, bool isDeterministic>
-class GroupNormSwishGrad
-{
+class GroupNormSwishGrad {
 public:
     __aicore__ inline GroupNormSwishGrad(
         GM_ADDR dy, GM_ADDR mean, GM_ADDR rstd, GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR dx, GM_ADDR dgamma,
@@ -37,41 +36,27 @@ private:
 
     __aicore__ inline void InitGroupFitUbBuffer();
 
-    static __simd_vf__ inline void SwishGradMulXReduceUnAlignVf(__ubuf__ float* temp1Ptr,
-                                                                 __ubuf__ float* temp2Ptr,
-                                                                 __ubuf__ float* dyNewSumPtr,
-                                                                 __ubuf__ float* xMulDySumPtr,
-                                                                 __ubuf__ float* xPtr,
-                                                                 __ubuf__ float* dyPtr,
-                                                                 __ubuf__ float* gammaPtr,
-                                                                 __ubuf__ float* betaPtr,
-                                                                 uint32_t cGIdx,
-                                                                 float swishScaleValue,
-                                                                 uint32_t calCount);
+    static __simd_vf__ inline void SwishGradMulXReduceUnAlignVf(
+        __ubuf__ float* temp1Ptr, __ubuf__ float* temp2Ptr, __ubuf__ float* dyNewSumPtr, __ubuf__ float* xMulDySumPtr,
+        __ubuf__ float* xPtr, __ubuf__ float* dyPtr, __ubuf__ float* gammaPtr, __ubuf__ float* betaPtr, uint32_t cGIdx,
+        float swishScaleValue, uint32_t calCount);
 
-    __aicore__ inline void SwishGradMulXReduceUnAlignTemplate(const LocalTensor<float>& temp1Local,
-        const LocalTensor<float>& temp2Local, const LocalTensor<float>& dyNewSumLocal,
-        const LocalTensor<float>& xMulDySumLocal, const LocalTensor<float>& xLocal, const LocalTensor<float>& dyLocal,
-        const LocalTensor<float>& gammaLocal, const LocalTensor<float>& betaLocal, uint32_t cGIdx,
-        float swishScaleValue,
-        uint32_t calCount);
+    __aicore__ inline void SwishGradMulXReduceUnAlignTemplate(
+        const LocalTensor<float>& temp1Local, const LocalTensor<float>& temp2Local,
+        const LocalTensor<float>& dyNewSumLocal, const LocalTensor<float>& xMulDySumLocal,
+        const LocalTensor<float>& xLocal, const LocalTensor<float>& dyLocal, const LocalTensor<float>& gammaLocal,
+        const LocalTensor<float>& betaLocal, uint32_t cGIdx, float swishScaleValue, uint32_t calCount);
 
-    static __simd_vf__ inline void SwishDxUnAlignVf(__ubuf__ float* dxPtr,
-                                                    __ubuf__ float* xPtr,
-                                                    __ubuf__ float* dyPtr,
-                                                    __ubuf__ float* gammaPtr,
-                                                    __ubuf__ float* betaPtr,
-                                                    __ubuf__ float* c1Ptr,
-                                                    __ubuf__ float* c2Ptr,
-                                                    __ubuf__ float* meanRstdPtr,
-                                                    uint32_t cGIdx,
-                                                    float swishScaleValue,
-                                                    uint32_t calCount);
+    static __simd_vf__ inline void SwishDxUnAlignVf(
+        __ubuf__ float* dxPtr, __ubuf__ float* xPtr, __ubuf__ float* dyPtr, __ubuf__ float* gammaPtr,
+        __ubuf__ float* betaPtr, __ubuf__ float* c1Ptr, __ubuf__ float* c2Ptr, __ubuf__ float* meanRstdPtr,
+        uint32_t cGIdx, float swishScaleValue, uint32_t calCount);
 
-    __aicore__ inline void SwishDxUnAlignTemplate(const LocalTensor<float>& dxLocal, const LocalTensor<float>& xLocal,
-        const LocalTensor<float>& dyLocal, const LocalTensor<float>& gammaLocal, const LocalTensor<float>& betaLocal,
-        const LocalTensor<float>& c1Local, const LocalTensor<float>& c2Local,
-        const LocalTensor<float>& meanRstdLocal, uint32_t cGIdx, float swishScaleValue, uint32_t calCount);
+    __aicore__ inline void SwishDxUnAlignTemplate(
+        const LocalTensor<float>& dxLocal, const LocalTensor<float>& xLocal, const LocalTensor<float>& dyLocal,
+        const LocalTensor<float>& gammaLocal, const LocalTensor<float>& betaLocal, const LocalTensor<float>& c1Local,
+        const LocalTensor<float>& c2Local, const LocalTensor<float>& meanRstdLocal, uint32_t cGIdx,
+        float swishScaleValue, uint32_t calCount);
 
     // UB can hold one complete channel HxW, but not the whole group.
     __aicore__ inline void ComputeChannelFitUb(int32_t taskIdx);
@@ -82,8 +67,8 @@ private:
     __aicore__ inline void CopyInChannelSplitUb(
         uint64_t offset, uint32_t processNum, const LocalTensor<float>& meanRstdLocal);
 
-    __aicore__ inline void ComputeDgammaDbetaChannelSplitUb(int32_t iterCGIdx,
-        const LocalTensor<float>& temp1Local, const LocalTensor<float>& temp2Local,
+    __aicore__ inline void ComputeDgammaDbetaChannelSplitUb(
+        int32_t iterCGIdx, const LocalTensor<float>& temp1Local, const LocalTensor<float>& temp2Local,
         const LocalTensor<float>& gammaLocal, const LocalTensor<float>& betaLocal, uint64_t offset,
         uint32_t processNum);
 
@@ -112,17 +97,16 @@ private:
 
     __aicore__ inline void CustomDataCopyOut(
         LocalTensor<float>& outLocal, GlobalTensor<T>& gmOut, const uint64_t gmOffset,
-        TQue<QuePosition::VECOUT, 1>& outQue,
-        const uint32_t count);
+        TQue<QuePosition::VECOUT, 1>& outQue, const uint32_t count);
 
     __aicore__ inline void Fp32DgammaDbeta2Gm(
         uint32_t channelIdx, GlobalTensor<float>& dgammaOut, const LocalTensor<float>& dgammaUb,
         GlobalTensor<float>& dbetaOut, const LocalTensor<float>& dbetaUb);
 
     __aicore__ inline void NonFp32DgammaDbeta2Gm(
-        uint32_t channelIdx, GlobalTensor<T>& dgammaOut, const LocalTensor<float>& dgammaUb,
-        GlobalTensor<T>& dbetaOut, const LocalTensor<float>& dbetaUb,
-        TQue<QuePosition::VECOUT, 1>& dgammaOutQue, TQue<QuePosition::VECOUT, 1>& dbetaOutQue);
+        uint32_t channelIdx, GlobalTensor<T>& dgammaOut, const LocalTensor<float>& dgammaUb, GlobalTensor<T>& dbetaOut,
+        const LocalTensor<float>& dbetaUb, TQue<QuePosition::VECOUT, 1>& dgammaOutQue,
+        TQue<QuePosition::VECOUT, 1>& dbetaOutQue);
 
     __aicore__ inline void ModeSelection(
         int32_t taskIdx, const LocalTensor<float>& dgammaUb, const LocalTensor<float>& dbetaUb);
@@ -134,62 +118,42 @@ private:
     __aicore__ inline uint32_t Floor(uint32_t a, uint32_t b);
 
     // AICORE wrappers around VF kernels.
-    static __simd_vf__ inline void MulsAddsVf(__ubuf__ float* src0Ptr,
-                                              __ubuf__ float* meanRstdPtr,
-                                              uint32_t calCount);
+    static __simd_vf__ inline void MulsAddsVf(__ubuf__ float* src0Ptr, __ubuf__ float* meanRstdPtr, uint32_t calCount);
 
     __aicore__ inline void MulsAddsTemplate(
         const LocalTensor<float>& srcLocal, const LocalTensor<float>& meanRstdLocal, int32_t calCount);
 
-    static __simd_vf__ inline void SwishGradMulXReduceVf(__ubuf__ float* temp1Ptr,
-                                                          __ubuf__ float* temp2Ptr,
-                                                          __ubuf__ float* dyNewSumPtr,
-                                                          __ubuf__ float* xMulDySumPtr,
-                                                          __ubuf__ float* xPtr,
-                                                          __ubuf__ float* dyPtr,
-                                                          __ubuf__ float* gammaPtr,
-                                                          __ubuf__ float* betaPtr,
-                                                          uint32_t cGIdx,
-                                                          float swishScaleValue,
-                                                          uint32_t calCount);
+    static __simd_vf__ inline void SwishGradMulXReduceVf(
+        __ubuf__ float* temp1Ptr, __ubuf__ float* temp2Ptr, __ubuf__ float* dyNewSumPtr, __ubuf__ float* xMulDySumPtr,
+        __ubuf__ float* xPtr, __ubuf__ float* dyPtr, __ubuf__ float* gammaPtr, __ubuf__ float* betaPtr, uint32_t cGIdx,
+        float swishScaleValue, uint32_t calCount);
 
-    __aicore__ inline void SwishGradMulXReduceTemplate(const LocalTensor<float>& temp1Local,
-        const LocalTensor<float>& temp2Local, const LocalTensor<float>& dyNewSumLocal,
-        const LocalTensor<float>& xMulDySumLocal, const LocalTensor<float>& xLocal, const LocalTensor<float>& dyLocal,
-        const LocalTensor<float>& gammaLocal, const LocalTensor<float>& betaLocal, uint32_t cGIdx,
-        float swishScaleValue,
+    __aicore__ inline void SwishGradMulXReduceTemplate(
+        const LocalTensor<float>& temp1Local, const LocalTensor<float>& temp2Local,
+        const LocalTensor<float>& dyNewSumLocal, const LocalTensor<float>& xMulDySumLocal,
+        const LocalTensor<float>& xLocal, const LocalTensor<float>& dyLocal, const LocalTensor<float>& gammaLocal,
+        const LocalTensor<float>& betaLocal, uint32_t cGIdx, float swishScaleValue, uint32_t calCount);
+
+    static __simd_vf__ inline void SwishDxVf(
+        __ubuf__ float* dxPtr, __ubuf__ float* xPtr, __ubuf__ float* dyPtr, __ubuf__ float* gammaPtr,
+        __ubuf__ float* betaPtr, __ubuf__ float* c1Ptr, __ubuf__ float* c2Ptr, __ubuf__ float* meanRstdPtr,
+        uint32_t cGIdx, float swishScaleValue, uint32_t calCount);
+
+    __aicore__ inline void SwishDxTemplate(
+        const LocalTensor<float>& dxLocal, const LocalTensor<float>& xLocal, const LocalTensor<float>& dyLocal,
+        const LocalTensor<float>& gammaLocal, const LocalTensor<float>& betaLocal, const LocalTensor<float>& c1Local,
+        const LocalTensor<float>& c2Local, const LocalTensor<float>& meanRstdLocal, uint32_t cGIdx,
+        float swishScaleValue, uint32_t calCount);
+
+    static __simd_vf__ inline void DualMulReduceSumVf(
+        __ubuf__ float* src0Ptr, __ubuf__ float* src1Ptr, __ubuf__ float* src2Ptr, float normFactor, uint32_t calCount);
+
+    static __simd_vf__ inline void KahanAccumulateVf(
+        __ubuf__ float* sumPtr, __ubuf__ float* compensationPtr, __ubuf__ float* chunkPtr, uint32_t calCount);
+
+    __aicore__ inline void MulReduceSumTemplate(
+        const LocalTensor<float>& dstLocal1, const LocalTensor<float>& dstLocal2, const LocalTensor<float>& srcLocal,
         uint32_t calCount);
-
-    static __simd_vf__ inline void SwishDxVf(__ubuf__ float* dxPtr,
-                                             __ubuf__ float* xPtr,
-                                             __ubuf__ float* dyPtr,
-                                             __ubuf__ float* gammaPtr,
-                                             __ubuf__ float* betaPtr,
-                                             __ubuf__ float* c1Ptr,
-                                             __ubuf__ float* c2Ptr,
-                                             __ubuf__ float* meanRstdPtr,
-                                             uint32_t cGIdx,
-                                             float swishScaleValue,
-                                             uint32_t calCount);
-
-    __aicore__ inline void SwishDxTemplate(const LocalTensor<float>& dxLocal, const LocalTensor<float>& xLocal,
-        const LocalTensor<float>& dyLocal, const LocalTensor<float>& gammaLocal, const LocalTensor<float>& betaLocal,
-        const LocalTensor<float>& c1Local, const LocalTensor<float>& c2Local,
-        const LocalTensor<float>& meanRstdLocal, uint32_t cGIdx, float swishScaleValue, uint32_t calCount);
-
-    static __simd_vf__ inline void DualMulReduceSumVf(__ubuf__ float* src0Ptr,
-                                             __ubuf__ float* src1Ptr,
-                                             __ubuf__ float* src2Ptr,
-                                             float normFactor,
-                                             uint32_t calCount);
-
-    static __simd_vf__ inline void KahanAccumulateVf(__ubuf__ float* sumPtr,
-                                                     __ubuf__ float* compensationPtr,
-                                                     __ubuf__ float* chunkPtr,
-                                                     uint32_t calCount);
-
-    __aicore__ inline void MulReduceSumTemplate(const LocalTensor<float>& dstLocal1,
-        const LocalTensor<float>& dstLocal2, const LocalTensor<float>& srcLocal, uint32_t calCount);
 
     __aicore__ inline void InitBufferForStage2Cast();
 
@@ -208,8 +172,7 @@ private:
     __aicore__ inline void ReduceDgammaDbetaWsp2Gm(
         uint64_t startOffset, uint64_t channelIdx, uint32_t count, uint32_t reduceAxisNum);
 
-    __aicore__ inline void ReduceCastDgammaDbetaWsp2Gm(
-        uint64_t channelIdx, uint32_t count, uint32_t reduceAxisNum);
+    __aicore__ inline void ReduceCastDgammaDbetaWsp2Gm(uint64_t channelIdx, uint32_t count, uint32_t reduceAxisNum);
 
 private:
     // Pipe object
@@ -286,10 +249,10 @@ private:
     const uint32_t maxRepeatTimes = 255;
     const uint32_t comRepeatTimes = 64;
     // Stage-1 UB tiling keys. workspaceStage2TilingKey is reserved for stage-2 buffer selection.
-    const int32_t groupFitUbTilingKey = 0; // Whole group fits in UB.
-    const int32_t channelFitUbTilingKey = 1; // One channel fits in UB.
+    const int32_t groupFitUbTilingKey = 0;      // Whole group fits in UB.
+    const int32_t channelFitUbTilingKey = 1;    // One channel fits in UB.
     const int32_t workspaceStage2TilingKey = 2; // Stage-2 reduction/cast buffer variant.
-    const int32_t channelSplitUbTilingKey = 3; // One channel is split by HxW segments.
+    const int32_t channelSplitUbTilingKey = 3;  // One channel is split by HxW segments.
     const int doubleBuffer = 2;
     const int32_t vectorOnceBytes = 256;
     // sum + compensation + guard. The guard keeps the second issue lane in-bounds when its mask is empty.
@@ -396,18 +359,22 @@ __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::Process()
         InitBufferForStage2Reduce();
         if (curBlockIdx < stage2CoreUsed - 1) {
             ReduceDgammaDbetaWsp2Gm(
-                0, static_cast<uint64_t>(curBlockIdx) * castEleNum, castEleNum, DivCeil(DivCeil(n, splitCount), splitCount));
+                0, static_cast<uint64_t>(curBlockIdx) * castEleNum, castEleNum,
+                DivCeil(DivCeil(n, splitCount), splitCount));
         } else if (stage2CoreUsed <= curBlockIdx && curBlockIdx < splitCount * stage2CoreUsed - 1) {
             ReduceDgammaDbetaWsp2Gm(
-                static_cast<uint64_t>(DivCeil(DivCeil(n, splitCount), splitCount)) * c, static_cast<uint64_t>(curBlockIdx % stage2CoreUsed) * castEleNum,
-                castEleNum, (DivCeil(n, splitCount) - DivCeil(DivCeil(n, splitCount), splitCount)));
+                static_cast<uint64_t>(DivCeil(DivCeil(n, splitCount), splitCount)) * c,
+                static_cast<uint64_t>(curBlockIdx % stage2CoreUsed) * castEleNum, castEleNum,
+                (DivCeil(n, splitCount) - DivCeil(DivCeil(n, splitCount), splitCount)));
         } else if (curBlockIdx == stage2CoreUsed - 1) {
             ReduceDgammaDbetaWsp2Gm(
-                0, static_cast<uint64_t>(curBlockIdx) * castEleNum, tailCastNum, DivCeil(DivCeil(n, splitCount), splitCount));
+                0, static_cast<uint64_t>(curBlockIdx) * castEleNum, tailCastNum,
+                DivCeil(DivCeil(n, splitCount), splitCount));
         } else if (curBlockIdx == splitCount * stage2CoreUsed - 1) {
             ReduceDgammaDbetaWsp2Gm(
-                static_cast<uint64_t>(DivCeil(DivCeil(n, splitCount), splitCount)) * c, static_cast<uint64_t>(curBlockIdx % stage2CoreUsed) * castEleNum,
-                tailCastNum, (DivCeil(n, splitCount) - DivCeil(DivCeil(n, splitCount), splitCount)));
+                static_cast<uint64_t>(DivCeil(DivCeil(n, splitCount), splitCount)) * c,
+                static_cast<uint64_t>(curBlockIdx % stage2CoreUsed) * castEleNum, tailCastNum,
+                (DivCeil(n, splitCount) - DivCeil(DivCeil(n, splitCount), splitCount)));
         }
     } else if constexpr (isDeterministic && !IsSameType<T, float>::value) {
 #ifndef __CCE_KT_TEST__
@@ -416,9 +383,11 @@ __aicore__ inline void GroupNormSwishGrad<T, isDeterministic>::Process()
 #endif
         InitBufferForStage2ReduceCast();
         if (curBlockIdx < stage2CoreUsed - 1) {
-            ReduceCastDgammaDbetaWsp2Gm(static_cast<uint64_t>(curBlockIdx) * castEleNum, castEleNum, DivCeil(n, splitCount));
+            ReduceCastDgammaDbetaWsp2Gm(
+                static_cast<uint64_t>(curBlockIdx) * castEleNum, castEleNum, DivCeil(n, splitCount));
         } else if (curBlockIdx == stage2CoreUsed - 1) {
-            ReduceCastDgammaDbetaWsp2Gm(static_cast<uint64_t>(curBlockIdx) * castEleNum, tailCastNum, DivCeil(n, splitCount));
+            ReduceCastDgammaDbetaWsp2Gm(
+                static_cast<uint64_t>(curBlockIdx) * castEleNum, tailCastNum, DivCeil(n, splitCount));
         }
     }
 }

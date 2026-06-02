@@ -48,29 +48,29 @@ $$
 
 ```c++
 aclnnStatus aclnnGroupNormSwishGradGetWorkspaceSize(
-    const aclTensor *dy, 
-    const aclTensor *mean, 
-    const aclTensor *rstd, 
-    const aclTensor *x, 
-    const aclTensor *gamma, 
-    const aclTensor *beta, 
-    int64_t          numGroups, 
-    char            *dataFormatOptional, 
-    double           swishScale, 
-    bool             dgammaIsRequire, 
-    bool             dbetaIsRequire, 
-    const aclTensor *dxOut, 
-    const aclTensor *dgammaOut, 
-    const aclTensor *dbetaOut, 
-    uint64_t        *workspaceSize, 
+    const aclTensor *dy,
+    const aclTensor *mean,
+    const aclTensor *rstd,
+    const aclTensor *x,
+    const aclTensor *gamma,
+    const aclTensor *beta,
+    int64_t          numGroups,
+    char            *dataFormatOptional,
+    double           swishScale,
+    bool             dgammaIsRequire,
+    bool             dbetaIsRequire,
+    const aclTensor *dxOut,
+    const aclTensor *dgammaOut,
+    const aclTensor *dbetaOut,
+    uint64_t        *workspaceSize,
     aclOpExecutor  **executor)
 ```
 
 ```c++
 aclnnStatus aclnnGroupNormSwishGrad(
-    void *         workspace, 
-    uint64_t       workspaceSize, 
-    aclOpExecutor *executor, 
+    void *         workspace,
+    uint64_t       workspaceSize,
+    aclOpExecutor *executor,
     aclrtStream    stream)
 ```
 
@@ -340,7 +340,8 @@ aclnnStatus aclnnGroupNormSwishGrad(
 ## 约束说明
 
 - 确定性计算
-  - aclnnGroupNormSwishGrad默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
+  - A2/A3平台：aclnnGroupNormSwishGrad默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
+  - Ascend 950平台：aclnnGroupNormSwishGrad默认确定性实现。
 
 - 输入shape限制：
     1. numGroups大于0。
