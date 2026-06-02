@@ -692,7 +692,111 @@ activation-c@ops-nn:
   src:
     release:
       style:
-        - ops/ops-nn/activation/
+        - ops/ops-nn/activation/celu_v2/op_api/
+        - ops/ops-nn/activation/common/op_api/threshold.h
+        - ops/ops-nn/activation/elu/op_api/
+        - ops/ops-nn/activation/elu_grad_v2/op_api/
+        - ops/ops-nn/activation/erfinv/op_api/
+        - ops/ops-nn/activation/fast_gelu/op_api/
+        - ops/ops-nn/activation/fast_gelu_grad/op_api/
+        - ops/ops-nn/activation/fatrelu_mul/
+        - ops/ops-nn/activation/ge_glu_grad_v2/op_graph/
+        - ops/ops-nn/activation/ge_glu_grad_v2/op_host/
+        - ops/ops-nn/activation/ge_glu_grad_v2/op_kernel/ge_glu_grad_v2.cpp
+        - ops/ops-nn/activation/ge_glu_grad_v2/op_kernel/ge_glu_grad_v2_base_310p.h
+        - ops/ops-nn/activation/ge_glu_grad_v2/op_kernel/ge_glu_grad_v2_erf_base.h
+        - ops/ops-nn/activation/ge_glu_grad_v2/op_kernel/ge_glu_grad_v2_erf_bfp16.h
+        - ops/ops-nn/activation/ge_glu_grad_v2/op_kernel/ge_glu_grad_v2_erf_fp16.h
+        - ops/ops-nn/activation/ge_glu_grad_v2/op_kernel/ge_glu_grad_v2_erf_fp32.h
+        - ops/ops-nn/activation/ge_glu_grad_v2/op_kernel/ge_glu_grad_v2_fp16_310p.h
+        - ops/ops-nn/activation/ge_glu_grad_v2/op_kernel/ge_glu_grad_v2_fp32_310p.h
+        - ops/ops-nn/activation/ge_glu_grad_v2/op_kernel/ge_glu_grad_v2_tanh_base.h
+        - ops/ops-nn/activation/ge_glu_grad_v2/op_kernel/ge_glu_grad_v2_tanh_bfp16.h
+        - ops/ops-nn/activation/ge_glu_grad_v2/op_kernel/ge_glu_grad_v2_tanh_fp16.h
+        - ops/ops-nn/activation/ge_glu_grad_v2/op_kernel/ge_glu_grad_v2_tanh_fp32.h
+        - ops/ops-nn/activation/ge_glu_v2/op_graph/
+        - ops/ops-nn/activation/ge_glu_v2/op_host/
+        - ops/ops-nn/activation/ge_glu_v2/op_kernel/erf/
+        - ops/ops-nn/activation/ge_glu_v2/op_kernel/tanh/
+        - ops/ops-nn/activation/ge_glu_v2/op_kernel/ge_glu_v2.cpp
+        - ops/ops-nn/activation/ge_glu_v2/op_kernel/ge_glu_v2_base.h
+        - ops/ops-nn/activation/ge_glu_v2/op_kernel/ge_glu_v2_base_310p.h
+        - ops/ops-nn/activation/ge_glu_v2/op_kernel/ge_glu_v2_fp16_align_last_axis_big_without_pad.h
+        - ops/ops-nn/activation/ge_glu_v2/op_kernel/ge_glu_v2_fp16_stride_310p.h
+        - ops/ops-nn/activation/ge_glu_v2/op_kernel/ge_glu_v2_fp32_align_last_axis_big_without_pad.h
+        - ops/ops-nn/activation/ge_glu_v2/op_kernel/ge_glu_v2_fp32_stride_310p.h
+        - ops/ops-nn/activation/gelu/op_api/
+        - ops/ops-nn/activation/gelu_grad/op_api/
+        - ops/ops-nn/activation/gelu_grad_v2/op_api/
+        - ops/ops-nn/activation/gelu_mul/
+        - ops/ops-nn/activation/gelu_quant/op_graph/
+        - ops/ops-nn/activation/gelu_quant/op_host/gelu_quant_def.cpp
+        - ops/ops-nn/activation/gelu_quant/op_host/gelu_quant_infershape.cpp
+        - ops/ops-nn/activation/gelu_quant/op_host/gelu_quant_tiling.cpp
+        - ops/ops-nn/activation/gelu_quant/op_host/gelu_quant_tiling.h
+        - ops/ops-nn/activation/activation/gelu_quant/op_host/gelu_quant_tiling_base.h
+        - ops/ops-nn/activation/gelu_quant/op_host/gelu_quant_tiling_def.h
+        - ops/ops-nn/activation/gelu_quant/op_kernel/gelu_dynamic_quant.h
+        - ops/ops-nn/activation/gelu_quant/op_kernel/gelu_dynamic_quant_workspace.h
+        - ops/ops-nn/activation/gelu_quant/op_kernel/gelu_quant.cpp
+        - ops/ops-nn/activation/gelu_quant/op_kernel/gelu_quant_base.h
+        - ops/ops-nn/activation/gelu_quant/op_kernel/gelu_static_quant.h
+        - ops/ops-nn/activation/gelu_quant/op_kernel/gelu_static_quant_block.h
+        - ops/ops-nn/activation/gelu_quant/op_kernel/gelu_static_quant_per_tensor.h
+        - ops/ops-nn/activation/gelu_v2/op_api/
+        - ops/ops-nn/activation/glu/op_graph/
+        - ops/ops-nn/activation/glu/op_host/op_api/
+        - ops/ops-nn/activation/glu/op_host/CMakeLists.txt
+        - ops/ops-nn/activation/glu/op_host/glu_def.cpp
+        - ops/ops-nn/activation/glu/op_host/glu_infershape.cpp
+        - ops/ops-nn/activation/glu/op_host/glu_tiling.cpp
+        - ops/ops-nn/activation/glu/op_host/glu_tiling.h
+        - ops/ops-nn/activation/glu/op_kernel/glu.cpp
+        - ops/ops-nn/activation/glu/op_kernel/glu_big_shape.h
+        - ops/ops-nn/activation/glu/op_kernel/glu_single_shape.h
+        - ops/ops-nn/activation/glu/op_kernel/glu_small_shape.h
+        - ops/ops-nn/activation/hard_shrink/op_api/
+        - ops/ops-nn/activation/hard_shrink_grad/op_api/
+        - ops/ops-nn/activation/hard_sigmoid/
+        - ops/ops-nn/activation/hard_sigmoid_grad/op_api/
+        - ops/ops-nn/activation/hard_swish/op_host/op_api/
+        - ops/ops-nn/activation/hard_swish_grad_v2
+        - ops/ops-nn/activation/hardtanh_grad/op_api/
+        - ops/ops-nn/activation/heaviside/
+        - ops/ops-nn/activation/leaky_relu/op_api/
+        - ops/ops-nn/activation/leaky_relu_grad/op_api/
+        - ops/ops-nn/activation/log_sigmoid/op_api/
+        - ops/ops-nn/activation/log_softmax_grad/op_api/
+        - ops/ops-nn/activation/log_softmax_v2/op_api/
+        - ops/ops-nn/activation/mish/op_api/
+        - ops/ops-nn/activation/mish_grad/op_api/
+        - ops/ops-nn/activation/mish_grad/op_api/
+        - ops/ops-nn/activation/p_relu/op_api/
+        - ops/ops-nn/activation/p_relu_grad_reduce/op_api/
+        - ops/ops-nn/activation/p_relu_grad_update/op_api/
+        - ops/ops-nn/activation/relu/op_api/
+        - ops/ops-nn/activation/relu_grad/op_api/
+        - ops/ops-nn/activation/selu/op_api/
+        - ops/ops-nn/activation/selu_grad/
+        - ops/ops-nn/activation/shrink/op_api/
+        - ops/ops-nn/activation/sigmoid/op_api/
+        - ops/ops-nn/activation/sigmoid_grad/op_api/
+        - ops/ops-nn/activation/silu_grad/op_api/
+        - ops/ops-nn/activation/softmax_cross_entropy_with_logits/op_api/
+        - ops/ops-nn/activation/softmax_grad/op_api/
+        - ops/ops-nn/activation/softmax_v2/op_api/
+        - ops/ops-nn/activation/softplus_v2/op_api/
+        - ops/ops-nn/activation/softplus_v2_grad/
+        - ops/ops-nn/activation/softshrink/op_api/
+        - ops/ops-nn/activation/softshrink_grad/
+        - ops/ops-nn/activation/squared_relu/
+        - ops/ops-nn/activation/swi_glu/
+        - ops/ops-nn/activation/swi_glu_grad/
+        - ops/ops-nn/activation/swish/op_api/
+        - ops/ops-nn/activation/swish_grad/op_api/
+        - ops/ops-nn/activation/threshold/
+        - ops/ops-nn/activation/threshold_grad_v2_d/
+        
         - ops/ops-nn/rnn/bidirection_lstm/op_host/bidirection_lstm_tiling.cpp
       opensource_style: null
       kernel_style: null
@@ -726,6 +830,8 @@ activation-c@ops-nn:
         - ops/ops-nn/activation/gelu_quant/examples/
         - ops/ops-nn/activation/gelu_v2/tests/
         - ops/ops-nn/activation/gelu_v2/examples/
+        - ops/ops-nn/activation/glu/examples/
+        - ops/ops-nn/activation/glu/tests/
         - ops/ops-nn/activation/hard_shrink/tests/
         - ops/ops-nn/activation/hard_shrink/examples/
         - ops/ops-nn/activation/hard_shrink_grad/tests/
@@ -752,8 +858,8 @@ activation-c@ops-nn:
         - ops/ops-nn/activation/log_sigmoid/examples/
         - ops/ops-nn/activation/logsigmoid_grad/tests/
         - ops/ops-nn/activation/logsigmoid_grad/examples/
-        - ops/ops-nn/activation/logsoftmax_grad/tests/
-        - ops/ops-nn/activation/logsoftmax_grad/examples/
+        - ops/ops-nn/activation/log_softmax_grad/tests/
+        - ops/ops-nn/activation/log_softmax_grad/examples/
         - ops/ops-nn/activation/log_softmax_v2/tests/
         - ops/ops-nn/activation/log_softmax_v2/examples/
         - ops/ops-nn/activation/mish/tests/
@@ -766,6 +872,10 @@ activation-c@ops-nn:
         - ops/ops-nn/activation/prelu_grad_update/examples/
         - ops/ops-nn/activation/relu/tests/
         - ops/ops-nn/activation/relu/examples/
+        - ops/ops-nn/activation/relu_grad/tests/
+        - ops/ops-nn/activation/relu_grad/examples/
+        - ops/ops-nn/activation/relu_grad_v2/tests/
+        - ops/ops-nn/activation/relu_grad_v2/examples/
         - ops/ops-nn/activation/selu/tests/
         - ops/ops-nn/activation/selu/examples/
         - ops/ops-nn/activation/selu_grad/tests/
