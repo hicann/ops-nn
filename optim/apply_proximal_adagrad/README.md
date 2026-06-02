@@ -109,7 +109,6 @@
 
 ## 约束说明
 
-- 仅支持 <term>Ascend 950PR/Ascend 950DT</term>（arch35 / DAV_3510），不适配其他芯片代际。
 - 支持 `float32` / `float16` / `bfloat16` 三种数据类型；所有 tensor（var / accum / lr / l1 / l2 / grad）数据类型必须严格一致。
 - `var`、`accum`、`grad` 三者 shape 必须完全一致，且均为连续排布的 ND Tensor。
 - `lr`、`l1`、`l2` 必须为 0-D 或 1 元素 1-D 的标量 Tensor。
