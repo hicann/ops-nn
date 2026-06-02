@@ -1468,6 +1468,16 @@
   </tr>
   <tr>
     <td>index</td>
+    <td><a href="../../index/data_format_dim_map/README.md">data_format_dim_map</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>根据源数据格式和目标数据格式的维度映射关系，将输入的维度索引转换为目标格式下的对应维度索引。</td>
+  </tr>
+  <tr>
+    <td>index</td>
     <td><a href="../../index/embedding/README.md">embedding</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -2829,6 +2839,16 @@
   </tr>
   <tr>
     <td>norm</td>
+    <td><a href="../../norm/bn_infer_grad/README.md">bn_infer_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>计算BatchNorm在推理模式（training=False）下输入数据关于损失函数的梯度，等价于PyTorch batch_norm_backward(..., training=false, ...) 中 grad_input 的子计算。</td>
+  </tr>
+  <tr>
+    <td>norm</td>
     <td><a href="../../norm/bn_training_reduce/README.md">bn_training_reduce</a></td>
     <td>✗</td>
     <td>✗</td>
@@ -3337,6 +3357,16 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>实现FusedEmaAdam融合优化器功能，结合了Adam优化器和指数移动平均（EMA）技术。</td>
+  </tr>
+  <tr>
+    <td>optim</td>
+    <td><a href="../../optim/apply_proximal_adagrad/README.md">apply_proximal_adagrad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>结合Adagrad自适应学习率与FOBOS（Forward-Backward Splitting）Proximal近端算法的优化器，基于梯度平方累加器自适应调整学习率，并通过软阈值（L1正则化）与缩放（L2正则化）对模型参数进行原地更新。</td>
   </tr>
   <tr>
     <td>pooling</td>
