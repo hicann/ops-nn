@@ -281,6 +281,7 @@ inline static ge::graphStatus SetTilingData(gert::TilingContext *context,
     tilingData.preAxisSize = tilingParam.preAxisSize;
     tilingData.postAxisSize = tilingParam.postAxisSize;
     tilingData.dstTypeMax = tilingParam.dstTypeMax;
+    tilingData.groupSize = tilingParam.groupSize;
 
     return ge::GRAPH_SUCCESS;
 }

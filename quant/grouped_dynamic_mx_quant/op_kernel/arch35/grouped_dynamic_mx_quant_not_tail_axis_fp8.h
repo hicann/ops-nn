@@ -67,6 +67,7 @@ private:
     int64_t postAxisSize_ = 0; // n轴大小
     int64_t blockSize_ = 0;     // 量化数据块大小，仅支持32
     int64_t scaleAlg_ = 0;
+    int64_t groupSize_ = 0;
 };
 
 template <typename T, typename U>
@@ -83,6 +84,7 @@ __aicore__ inline void GroupedDynamicMxQuantBaseFP8<T, U>::ParseTilingData(const
     scaleAlg_ = tilingData.scaleAlg;
     preAxisSize_ = tilingData.preAxisSize;
     postAxisSize_ = tilingData.postAxisSize;
+    groupSize_ = tilingData.groupSize;
 }
 
 template <typename T, typename U>
@@ -170,8 +172,8 @@ __aicore__ inline void GroupedDynamicMxQuantBaseFP8<T, U>::Process()
 
     for (int64_t loopIdx = 0; loopIdx < loopNum; loopIdx++) {
         int64_t curLoopIdxInAllCore = loopIdx + blockLoopOffset_;
-        int64_t gIdx = curLoopIdxInAllCore / uo_;
-        int64_t nIdx = curLoopIdxInAllCore % uo_;
+        int64_t gIdx = curLoopIdxInAllCore % groupSize_;
+        int64_t nIdx = curLoopIdxInAllCore / groupSize_;
         int64_t gIdxValueStart = 0;
         if (gIdx > 0) {
             gIdxValueStart = groupIndexGm_.GetValue(gIdx -1);
