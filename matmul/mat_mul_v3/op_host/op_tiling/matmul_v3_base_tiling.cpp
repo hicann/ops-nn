@@ -2336,6 +2336,10 @@ void MatmulV3BaseTiling::IsGmToL1ByShape()
         bMatrix = args_.isBTrans ? args_.nValue : args_.kValue;
     }
     if (!args_.hasBias && aMatrix <= SHAPE_LIMIT && bMatrix <= SHAPE_LIMIT) {
+        if (disableMixNd2nz && args_.bFormat == ge::FORMAT_FRACTAL_NZ) {
+            OP_LOGD(args_.opName, "The shape is not capable for SINGLE_CORE_SPLIT_K_GM_TO_L1");
+            return;
+        }
         tilingData_.matmulTiling.shareL1Size = static_cast<uint32_t>(0);
         if (runInfo_.stepM == STEP_NUM_3 && args_.hasBias){
             tilingData_.matmulTiling.shareL1Size = static_cast<uint32_t>(L1_BIAS_SIZE);
