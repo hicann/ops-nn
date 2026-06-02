@@ -147,6 +147,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_NUM) inline void SimtComputeMax1
     COMP_T numBags, COMP_T numIndices,  COMP_T chunkPerBag, COMP_T magic, COMP_T shift,
     COMP_T embeddingDimSize, COMP_T paddingIdx)
 {
+    W negInf = GetNegInf<W>();
     COMP_T numChunks = chunkPerBag * numBags;
     COMP_T chunkOffset = blockIdx.x * blockDim.y + threadIdx.y;
     COMP_T chunkStride = gridDim.x * blockDim.y;
@@ -161,7 +162,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_NUM) inline void SimtComputeMax1
             COMP_T end = (bag < numBags - 1 ? offsets[bag + 1] : numIndices);
             COMP_T eachBagSize = 0;
             P maxIdx = static_cast<P>(-1);
-            W maxVal = 0;
+            W maxVal = begin == end ? 0: negInf;
             for (COMP_T embedIdx = begin; embedIdx < end; embedIdx++) {
                 bool pad = (indices[embedIdx] == paddingIdx);
                 COMP_T weightOffset = embeddingDimSize * indices[embedIdx];

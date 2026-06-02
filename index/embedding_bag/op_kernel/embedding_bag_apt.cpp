@@ -77,20 +77,38 @@ extern "C" __global__ __aicore__ void embedding_bag(
             return;
         }
     } else if (TILING_KEY_IS(TILING_KEY_INDICES_1D_PROMOTE)) {
-        if (tilingData.mode == MODE_SUM) {
-            EmbeddingBag::EmbeddingBagRegBaseIndx1dSum<DTYPE_WEIGHT, DTYPE_INDICES, DTYPE_OFFSETS, int64_t> op(tilingData, pipe);
-            op.Init(gmParam);
-            op.Process();
-        } else if (tilingData.mode == MODE_MEAN) {
-            EmbeddingBag::EmbeddingBagRegBaseIndx1dMean<DTYPE_WEIGHT, DTYPE_INDICES, DTYPE_OFFSETS, int64_t> op(tilingData, pipe);
-            op.Init(gmParam);
-            op.Process();
-        } else if (tilingData.mode == MODE_MAX) {
-            EmbeddingBag::EmbeddingBagRegBaseIndx1dMax<DTYPE_WEIGHT, DTYPE_INDICES, DTYPE_OFFSETS, int64_t> op(tilingData, pipe);
-            op.Init(gmParam);
-            op.Process();
+        if constexpr (std::is_same<DTYPE_INDICES, int64_t>::value) {
+            if (tilingData.mode == MODE_SUM) {
+                EmbeddingBag::EmbeddingBagRegBaseIndx1dSum<DTYPE_WEIGHT, DTYPE_INDICES, int32_t, int64_t> op(tilingData, pipe);
+                op.Init(gmParam);
+                op.Process();
+            } else if (tilingData.mode == MODE_MEAN) {
+                EmbeddingBag::EmbeddingBagRegBaseIndx1dMean<DTYPE_WEIGHT, DTYPE_INDICES, int32_t, int64_t> op(tilingData, pipe);
+                op.Init(gmParam);
+                op.Process();
+            } else if (tilingData.mode == MODE_MAX) {
+                EmbeddingBag::EmbeddingBagRegBaseIndx1dMax<DTYPE_WEIGHT, DTYPE_INDICES, int32_t, int64_t> op(tilingData, pipe);
+                op.Init(gmParam);
+                op.Process();
+            } else {
+                return;
+            }
         } else {
-            return;
+            if (tilingData.mode == MODE_SUM) {
+                EmbeddingBag::EmbeddingBagRegBaseIndx1dSum<DTYPE_WEIGHT, DTYPE_INDICES, int64_t, int64_t> op(tilingData, pipe);
+                op.Init(gmParam);
+                op.Process();
+            } else if (tilingData.mode == MODE_MEAN) {
+                EmbeddingBag::EmbeddingBagRegBaseIndx1dMean<DTYPE_WEIGHT, DTYPE_INDICES, int64_t, int64_t> op(tilingData, pipe);
+                op.Init(gmParam);
+                op.Process();
+            } else if (tilingData.mode == MODE_MAX) {
+                EmbeddingBag::EmbeddingBagRegBaseIndx1dMax<DTYPE_WEIGHT, DTYPE_INDICES, int64_t, int64_t> op(tilingData, pipe);
+                op.Init(gmParam);
+                op.Process();
+            } else {
+                return;
+            }
         }
     } else if (TILING_KEY_IS(TILING_KEY_INDICES_2D_SAME)) {
         EmbeddingBag::EmbeddingBagRegBaseIndx2d<DTYPE_WEIGHT, DTYPE_INDICES, DTYPE_INDICES> op(tilingData, pipe);

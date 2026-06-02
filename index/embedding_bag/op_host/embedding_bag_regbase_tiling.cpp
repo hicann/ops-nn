@@ -263,7 +263,7 @@ int64_t EmbeddingBagRegBaseTiling::GetWeightAlignSize1D(int64_t weightRowFactor,
 {
     /**
     * inQueueWeight_ -> weightRowFactor * weightDimFactor * weightTypeSize_
-    * outQueueY_ -> weightDimFactor * weightTypeSize_
+    * outQueueY_ -> weightDimFactor * ge::GetSizeByDataType(ge::DT_FLOAT)
     * maxIndicesOutBuf -> weightDimFactor * promoteTypeSize_
     * maxIndicesCalcBuf_ -> weightRowFactor * promoteTypeSize_
     * offset2BagBuf_ -> weightRowFactor * promoteTypeSize_
@@ -271,7 +271,7 @@ int64_t EmbeddingBagRegBaseTiling::GetWeightAlignSize1D(int64_t weightRowFactor,
     */
     int64_t ubBlock = static_cast<int64_t>(Ops::Base::GetUbBlockSize(context_));
     int64_t occupy = weightRowFactor * Ops::Base::CeilAlign(weightDimFactor * weightTypeSize_, ubBlock) +
-                     Ops::Base::CeilAlign(weightDimFactor * weightTypeSize_, ubBlock) +
+                     Ops::Base::CeilAlign(weightDimFactor * ge::GetSizeByDataType(ge::DT_FLOAT), ubBlock) +
                      Ops::Base::CeilAlign(weightDimFactor * promoteTypeSize_, ubBlock) +
                      Ops::Base::CeilAlign(weightRowFactor * promoteTypeSize_, ubBlock) +
                      Ops::Base::CeilAlign(weightRowFactor * promoteTypeSize_, ubBlock);
@@ -341,17 +341,17 @@ int64_t EmbeddingBagRegBaseTiling::GetWeightAlignSize2D(int64_t weightRowFactor,
     /**
     * sum/mean:
     * weightInQue -> weightRowFactor * weightDimFactor * weightTypeSize_
-    * weightOutQue -> weightDimFactor * weightTypeSize_
+    * weightOutQue -> weightDimFactor * ge::GetSizeByDataType(ge::DT_FLOAT)
     */
     if (mode_ == MDOE_SUM && isNeedSampleWeight_ == 1) {
         /* persampleWeight时weightRowFactor为1 */
         int64_t occupy = Ops::Base::CeilAlign(weightDimFactor * weightTypeSize_, ubBlock) +
-                         Ops::Base::CeilAlign(weightDimFactor * weightTypeSize_, ubBlock);
+                         Ops::Base::CeilAlign(weightDimFactor * ge::GetSizeByDataType(ge::DT_FLOAT), ubBlock);
         return occupy;
     }
     if (mode_ == MDOE_SUM || mode_ == MDOE_MEAN) {
         int64_t occupy = weightRowFactor * Ops::Base::CeilAlign(weightDimFactor * weightTypeSize_, ubBlock) +
-                        Ops::Base::CeilAlign(weightDimFactor * weightTypeSize_, ubBlock);
+                        Ops::Base::CeilAlign(weightDimFactor * ge::GetSizeByDataType(ge::DT_FLOAT), ubBlock);
         return occupy;
     }
 
