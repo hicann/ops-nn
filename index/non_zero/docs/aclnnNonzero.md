@@ -81,7 +81,7 @@ aclnnStatus aclnnNonzero(
       <td>INT64</td>
       <td>ND</td>
       <td>2</td>
-      <td>√</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>workspaceSize</td>
