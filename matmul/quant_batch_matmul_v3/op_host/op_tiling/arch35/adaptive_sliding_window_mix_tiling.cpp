@@ -68,7 +68,9 @@ bool AdaptiveSlidingWindowMixTiling::IsCapable()
     SetBf16Compat();
     bool isScaleVecPostProcess = inputParams_.isPerChannel &&
                                  !(inputParams_.scaleDtype == ge::DT_UINT64 || inputParams_.scaleDtype == ge::DT_INT64);
-    bool capable = (isScaleVecPostProcess || inputParams_.isPertoken || isBf16Mix_ || isSupportS4S4_) &&
+    bool isFp8OrHif8TTBiasMix = IsFp8OrHif8TTFloatBiasMix();
+    bool capable = (isScaleVecPostProcess || inputParams_.isPertoken || isBf16Mix_ ||
+                    isFp8OrHif8TTBiasMix || isSupportS4S4_) &&
                    inputParams_.cDtype != ge::DT_INT32;
     if (!capable && isSupportS4S4_) {
         inputParams_.aDtype = originADtype;

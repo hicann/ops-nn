@@ -64,9 +64,7 @@ __aicore__ inline void QuantBmmPertokenAL1FullLoad<LOCAL_TEMPLATE_FUNC_MIX_PARAM
     this->tilingData_ = static_cast<const DequantBmm::QuantBatchMatmulV3TilingDataParams *>(tilingData);
 
     this->biasDtype_ = this->tilingData_->params.biasDtype;
-    this->isBiasEpilogue_ =
-        IsSameType<aType, int8_t>::value &&
-        (this->biasDtype_ == DT_BF16 || this->biasDtype_ == DT_FLOAT16 || this->biasDtype_ == DT_FLOAT);
+    this->InitBiasEpilogueMode();
     this->UpdateGlobalAddr(aGM, bGM, scale, bias, ptScale, cGM, workSpace);
 }
 
@@ -209,4 +207,3 @@ __aicore__ inline void QuantBmmPertokenAL1FullLoad<LOCAL_TEMPLATE_FUNC_MIX_PARAM
 }
 
 }  // namespace QuantBatchMatmulV3
-

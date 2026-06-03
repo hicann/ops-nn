@@ -82,6 +82,7 @@ public:
 protected:
     __aicore__ inline void ProcessWithoutBatch();
     __aicore__ inline void ProcessWithBatch();
+    __aicore__ inline void InitBiasEpilogueMode();
     __aicore__ inline void MMCompute();
     __aicore__ inline void DequantCompute();
     __aicore__ inline void VFDoDequantWithX1Pertoken(__ubuf__ cType *dequantOutInUbAddr,
@@ -174,6 +175,25 @@ __aicore__ inline QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PARAMS>:
 }
 
 LOCAL_TEMPLATE_CLASS_MIX_PARAMS
+__aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PARAMS>::InitBiasEpilogueMode()
+{
+    constexpr bool isFp8OrHif8Input = IsSameType<aType, hifloat8_t>::value ||
+                                      IsSameType<aType, fp8_e4m3fn_t>::value ||
+                                      IsSameType<aType, fp8_e5m2_t>::value;
+    constexpr bool isFloatScale = IsSameType<scaleType, float>::value && IsSameType<ptScaleType, float>::value;
+    bool hasBias = static_cast<bool>(tilingData_->matmulTiling.isBias);
+    // FP8/HIF8 float-bias epilogue keeps dequant in UB for TT/KC(m=1) and per-token modes.
+    bool isFp8OrHif8FloatBiasEpilogue =
+        hasBias && isFp8OrHif8Input && isFloatScale && biasDtype_ == DT_FLOAT &&
+        (static_cast<bool>(tilingData_->params.isPertoken) ||
+         static_cast<bool>(tilingData_->params.isDoubleScale));
+    isBiasEpilogue_ = hasBias &&
+                      (isFp8OrHif8FloatBiasEpilogue ||
+                       (IsSameType<aType, int8_t>::value &&
+                        (biasDtype_ == DT_BF16 || biasDtype_ == DT_FLOAT16 || biasDtype_ == DT_FLOAT)));
+}
+
+LOCAL_TEMPLATE_CLASS_MIX_PARAMS
 __aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PARAMS>::Init(
     GM_ADDR aGM, GM_ADDR bGM, GM_ADDR scale, GM_ADDR offset, GM_ADDR bias, GM_ADDR ptScale, GM_ADDR cGM,
     GM_ADDR workSpace, const void *tilingData, TPipe *pipe)
@@ -187,8 +207,7 @@ __aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PAR
     tilingData_ = static_cast<const DequantBmm::QuantBatchMatmulV3TilingDataParams *>(tilingData);
 
     biasDtype_ = tilingData_->params.biasDtype;
-    isBiasEpilogue_ = IsSameType<aType, int8_t>::value &&
-                      (biasDtype_ == DT_BF16 || biasDtype_ == DT_FLOAT16 || biasDtype_ == DT_FLOAT);
+    InitBiasEpilogueMode();
     UpdateGlobalAddr(aGM, bGM, scale, bias, ptScale, cGM, workSpace);
     if ASCEND_IS_AIC{
         mm.Init(&tilingData_->matmulTiling, pipe);
@@ -573,9 +592,21 @@ LOCAL_TEMPLATE_CLASS_MIX_PARAMS
 __aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PARAMS>::VFDoDequantWithX1Pertensor(
     __ubuf__ cType *dequantOutInUbAddr, __ubuf__ l0cDtype *l0cOutUbAddr, uint16_t mSize)
 {
-    VFDoDequant<false, BasicQuantMode::PERTENSOR_MODE, false, float>(
-        dequantOutInUbAddr, l0cOutUbAddr, (__ubuf__ scaleType *)scaleUb_.GetPhyAddr(), nullptr, nullptr, mSize,
-        block_.params_.singleCoreN);
+    if (!isBiasEpilogue_) {
+        VFDoDequant<false, BasicQuantMode::PERTENSOR_MODE, false, float>(
+            dequantOutInUbAddr, l0cOutUbAddr, (__ubuf__ scaleType *)scaleUb_.GetPhyAddr(), nullptr, nullptr, mSize,
+            block_.params_.singleCoreN);
+    } else if (biasDtype_ == DT_FLOAT) {
+        if (static_cast<bool>(tilingData_->params.isPerTensor)) {
+            VFDoDequant<true, BasicQuantMode::PERTENSOR_MODE, true, float>(
+                dequantOutInUbAddr, l0cOutUbAddr, nullptr, nullptr, (__ubuf__ float *)biasUbFloat_.GetPhyAddr(),
+                mSize, block_.params_.singleCoreN);
+        } else {
+            VFDoDequant<false, BasicQuantMode::PERTENSOR_MODE, true, float>(
+                dequantOutInUbAddr, l0cOutUbAddr, (__ubuf__ scaleType *)scaleUb_.GetPhyAddr(), nullptr,
+                (__ubuf__ float *)biasUbFloat_.GetPhyAddr(), mSize, block_.params_.singleCoreN);
+        }
+    }
 }
 
 LOCAL_TEMPLATE_CLASS_MIX_PARAMS
@@ -705,4 +736,3 @@ __aicore__ inline void QuantBmmPertokenRegbaseKernel<LOCAL_TEMPLATE_FUNC_MIX_PAR
 }
 
 }  // namespace QuantBatchMatmulV3
-

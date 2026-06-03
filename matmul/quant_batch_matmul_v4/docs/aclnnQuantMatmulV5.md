@@ -171,7 +171,7 @@
       - x1，x2为FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8，x1Scale为FLOAT32，x2Scale为FLOAT32，可选参数bias为FLOAT32：
 
         $$
-        out = (x1@x2 + bias) * x2Scale * x1Scale
+        out = x1@x2 * x2Scale * x1Scale + bias
         $$
 
     </details>
@@ -181,7 +181,6 @@
     <summary><strong>K-C && K-T量化模式</strong></summary>
 
       - x1，x2为INT8，x1Scale为FLOAT32，x2Scale为BFLOAT16/FLOAT32，可选参数bias为INT32；
-      或x1，x2为FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8，x1Scale为FLOAT32，x2Scale为FLOAT32，可选参数bias为FLOAT32；
       或x1，x2为INT4，x1Scale为FLOAT32，x2Scale为BFLOAT16/FLOAT32，可选参数bias为INT32：
 
         $$
@@ -191,7 +190,8 @@
       - x1，x2为INT8，x1Scale为FLOAT32，x2Scale为BFLOAT16/FLOAT32，可选参数bias为BFLOAT16/FLOAT32；
       或x1，x2为INT8，x1Scale为FLOAT32，x2Scale为FLOAT32，可选参数bias为FLOAT16/FLOAT32；
       或x1，x2为INT4，x1Scale为FLOAT32，x2Scale为BFLOAT16/FLOAT32，可选参数bias为BFLOAT16/FLOAT32；
-      或x1，x2为INT4，x1Scale为FLOAT32，x2Scale为FLOAT32，可选参数bias为FLOAT16/FLOAT32：
+      或x1，x2为INT4，x1Scale为FLOAT32，x2Scale为FLOAT32，可选参数bias为FLOAT16/FLOAT32；
+      或x1，x2为FLOAT8_E4M3FN/FLOAT8_E5M2/HIFLOAT8，x1Scale为FLOAT32，x2Scale为FLOAT32，可选参数bias为FLOAT32：
 
         $$
         out = x1@x2 * x2Scale * x1Scale + bias
