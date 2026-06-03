@@ -133,7 +133,7 @@ TEST_F(RmsNormQuantV2Tiling, rms_norm_quant_v2_tiling_001)
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 5000);
+    ASSERT_EQ(tiling_key, 0);
     // dlog_setlevel(0, 3, 0);
 }
 
@@ -233,7 +233,7 @@ TEST_F(RmsNormQuantV2Tiling, rms_norm_quant_v2_tiling_002)
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 5000);
+    ASSERT_EQ(tiling_key, 0);
     // dlog_setlevel(0, 3, 0);
 }
 
@@ -334,7 +334,7 @@ TEST_F(RmsNormQuantV2Tiling, rms_norm_quant_v2_tiling_003)
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 6000);
+    ASSERT_EQ(tiling_key, 1);
     // dlog_setlevel(0, 3, 0);
 }
 
@@ -434,7 +434,7 @@ TEST_F(RmsNormQuantV2Tiling, rms_norm_quant_v2_tiling_004)
     // workspaces nullptr return failed
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 6000);
+    ASSERT_EQ(tiling_key, 1);
     // dlog_setlevel(0, 3, 0);
 }
 

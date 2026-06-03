@@ -36,4 +36,7 @@ inline void InitTilingData(uint8_t* tiling, T* const_data)
 #define DTYPE_ZERO_POINTS2 float
 #define DTYPE_Y1 int8_t
 
+#define COMPUTE_MODE_FULL_LOAD 0
+#define COMPUTE_MODE_RECOMPUTE 1
+
 #endif

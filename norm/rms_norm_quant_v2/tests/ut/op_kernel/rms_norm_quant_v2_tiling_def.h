@@ -12,6 +12,7 @@
 #define RMS_NORM_QUANT_V2_TILING_H_
 
 #include "kernel_tiling/kernel_tiling.h"
+#include "../../../op_kernel/arch35/rms_norm_quant_v2_tiling_data.h"
 #include <climits>
 
 // #define DT_BF16 bfloat16_t
@@ -53,5 +54,8 @@ inline void InitTilingData(uint8_t* tiling, T* const_data)
 #define DTYPE_ZERO_POINTS1 float
 #define DTYPE_ZERO_POINTS2 float
 #define DTYPE_Y1 int8_t
+
+#define COMPUTE_MODE_FULL_LOAD 0
+#define COMPUTE_MODE_RECOMPUTE 1
 
 #endif

@@ -41,13 +41,13 @@ namespace ge {
 * @li scales1: A tensor. Describing the weight of the first quant operation.
 *              Support dtype: float32/float16/bfloat16, support format: ND.
 *              The shape supports at least 1 dimension, and at most 8 dimensions.
-* @li scales2: An optional input tensor. Describing the weight of the secend quant operation.
+* @li scales2: An optional input tensor. Describing the weight of the second quant operation.
 *              Support dtype: float32/float16/bfloat16, support format: ND.
 *              The shape supports at least 1 dimension, and at most 8 dimensions.
 * @li zero_points1: An optional input tensor. Describing the bias of the first quant operation.
 *                   Support dtype: int32/int8/float32/float16/bfloat16, support format: ND.
 *                   The shape supports at least 1 dimension, and at most 8 dimensions.
-* @li zero_points2: An optional input tensor. Describing the bias of the secend quant operation.
+* @li zero_points2: An optional input tensor. Describing the bias of the second quant operation.
 *                   Support dtype: int32/int8/float32/float16/bfloat16, support format: ND.
 *                   The shape supports at least 1 dimension, and at most 8 dimensions.
 * @li beta: An optional input tensor. Describing the bias of the rmsnorm operation.
@@ -57,19 +57,18 @@ namespace ge {
 * @par Attributes
 * @li epsilon: An optional attribute. Describing the epsilon of the rmsnorm operation.
 *              The type is float. Defaults to 1e-6.
-* @li div_mode: An optional attribute. When div_mode is true, the quant opertaion uses division, otherwise, uses
-multiplication.
+* @li div_mode: An optional attribute. When div_mode is true, the quant opertaion uses division, otherwise, uses multiplication.
 *               The type is bool. Defaults to true.
-* @li dst_type: An optional int32. Output y data type enum value. Support DT_INT8, DT_INT4, DT_HIFLOAT8, DT_FP8_E5M2,
+* @li dst_type: An optional attribute. Output y data type enum value. Support DT_INT8, DT_INT4, DT_HIFLOAT8, DT_FP8_E5M2,
 *               DT_FP8_E4M3FN. Defaults to DT_INT8.
 * @li output_rstd: An optional attribute. Whether to output rstd. The type is bool. Defaults to false.
 
 * @par Outputs
 * @li y1: A tensor. Describing the output of the first quant operation.
-*                   Support dtype: int8/hifloat8/float8e5m2/float8e4m3fn, support format: ND.
+*                   Support dtype: int8/int4/hifloat8/float8e5m2/float8e4m3fn, support format: ND.
 *                   The shape supports at least 1 dimension, and at most 8 dimensions.
 * @li y2: A tensor. Describing the output of the second quant operation.
-*                   Support dtype: int8/hifloat8/float8e5m2/float8e4m3fn, support format: ND.
+*                   Support dtype: int8/int4/hifloat8/float8e5m2/float8e4m3fn, support format: ND.
 *                   The shape supports at least 1 dimension, and at most 8 dimensions.
 * @li rstd: A tensor. Describing the output of the reciprocal of standard deviation from RMS normalization.
 *                     Support dtype: float32, support format: ND.

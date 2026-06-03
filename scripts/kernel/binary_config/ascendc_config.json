@@ -614,7 +614,6 @@
     {"name":"PreRmsNorm", "compute_units": ["ascend910b", "ascend910_93", "ascend310p"], "auto_sync": true},
     {"name":"RmsNormQuant", "compute_units": ["ascend910b", "ascend910_93", "ascend310p", "kirinx90", "kirin9030", "ascend310b"], "auto_sync": true},
     {"name":"RmsNormQuantV2", "compute_units": ["ascend950"], "auto_sync": true, "impl_mode" : ""},
-    {"name":"RmsNormQuantV3", "compute_units": ["ascend950"], "auto_sync": true, "impl_mode" : ""},
     {"name":"PreRmsNormQuant", "compute_units": ["ascend910b", "ascend910_93", "ascend310p"], "auto_sync": true},
     {"name":"PostLayerNorm", "compute_units": ["ascend910_93", "ascend910b"], "auto_sync": true},
     {"name":"ReshapeAndCache", "compute_units": ["ascend910_93", "ascend910b"], "auto_sync": true},

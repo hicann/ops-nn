@@ -149,9 +149,11 @@ ge::graphStatus RmsNormQuantV2RegbaseTilingFullLoad::PostTiling()
 }
 uint64_t RmsNormQuantV2RegbaseTilingFullLoad::GetTilingKey() const
 {
-    uint64_t tilingKey = RMSNORMQUANTV2_REGBASE_NORMAL;
-    OP_LOGI(nodeName.c_str(), "TilingKey is %lu.", tilingKey);
-    return tilingKey;
+    rms_norm_quant_v2::RmsNormQuantV2TilingKey tilingKey;
+    tilingKey.SetComputeMode(rms_norm_quant_v2::ComputeMode::FULL_LOAD);
+    uint64_t key = tilingKey.GetTilingKey();
+    OP_LOGI(nodeName.c_str(), "TilingKey is %lu.", key);
+    return key;
 }
 
 REGISTER_OPS_TILING_TEMPLATE(RmsNormQuantV2, RmsNormQuantV2RegbaseTilingFullLoad, 100);

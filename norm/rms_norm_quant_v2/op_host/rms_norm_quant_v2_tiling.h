@@ -25,12 +25,37 @@
 #include "op_common/op_host/util/platform_util.h"
 #include "op_host/tiling_templates_registry.h"
 #include "../op_kernel/arch35/rms_norm_quant_v2_tiling_data.h"
+#include "../op_kernel/arch35/rms_norm_quant_v2_tiling_key.h"
 
 using namespace Ops::NN::Optiling;
 namespace optiling {
 
-constexpr uint32_t RMSNORMQUANTV2_REGBASE_NORMAL = 5000;
-constexpr uint32_t RMSNORMQUANTV2_REGBASE_RECOMPUTE = 6000;
+namespace rms_norm_quant_v2 {
+
+enum class ComputeMode : uint64_t
+{
+    FULL_LOAD = 0,
+    RECOMPUTE = 1,
+};
+
+class RmsNormQuantV2TilingKey {
+public:
+    RmsNormQuantV2TilingKey& SetComputeMode(ComputeMode mode)
+    {
+        computeMode_ = mode;
+        return *this;
+    }
+
+    uint64_t GetTilingKey() const
+    {
+        return GET_TPL_TILING_KEY(static_cast<uint64_t>(computeMode_));
+    }
+
+private:
+    ComputeMode computeMode_ = ComputeMode::FULL_LOAD;
+};
+
+} // namespace rms_norm_quant_v2
 
 constexpr int64_t X_INDEX = 0;
 constexpr int64_t GAMMA_INDEX = 1;

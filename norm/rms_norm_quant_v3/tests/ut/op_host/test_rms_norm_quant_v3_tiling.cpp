@@ -131,7 +131,7 @@ TEST_F(RmsNormQuantV3TilingTest, rms_norm_quant_v3_tiling_001)
 
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 5000);
+    ASSERT_EQ(tiling_key, 0);
 }
 
 TEST_F(RmsNormQuantV3TilingTest, rms_norm_quant_v3_tiling_002)
@@ -228,7 +228,7 @@ TEST_F(RmsNormQuantV3TilingTest, rms_norm_quant_v3_tiling_002)
 
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 5000);
+    ASSERT_EQ(tiling_key, 0);
 }
 
 TEST_F(RmsNormQuantV3TilingTest, rms_norm_quant_v3_tiling_003)
@@ -325,7 +325,7 @@ TEST_F(RmsNormQuantV3TilingTest, rms_norm_quant_v3_tiling_003)
 
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 5000);
+    ASSERT_EQ(tiling_key, 0);
 }
 
 TEST_F(RmsNormQuantV3TilingTest, rms_norm_quant_v3_tiling_004)
@@ -422,7 +422,7 @@ TEST_F(RmsNormQuantV3TilingTest, rms_norm_quant_v3_tiling_004)
 
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 6000);
+    ASSERT_EQ(tiling_key, 1);
 }
 
 TEST_F(RmsNormQuantV3TilingTest, rms_norm_quant_v3_tiling_005)
@@ -520,7 +520,7 @@ TEST_F(RmsNormQuantV3TilingTest, rms_norm_quant_v3_tiling_005)
 
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 5000);
+    ASSERT_EQ(tiling_key, 0);
 }
 
 TEST_F(RmsNormQuantV3TilingTest, rms_norm_quant_v3_tiling_006)
@@ -618,7 +618,7 @@ TEST_F(RmsNormQuantV3TilingTest, rms_norm_quant_v3_tiling_006)
 
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 5000);
+    ASSERT_EQ(tiling_key, 0);
 }
 
 TEST_F(RmsNormQuantV3TilingTest, rms_norm_quant_v3_tiling_007)
@@ -716,7 +716,7 @@ TEST_F(RmsNormQuantV3TilingTest, rms_norm_quant_v3_tiling_007)
 
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 5000);
+    ASSERT_EQ(tiling_key, 0);
 }
 
 TEST_F(RmsNormQuantV3TilingTest, rms_norm_quant_v3_tiling_008)
@@ -814,7 +814,7 @@ TEST_F(RmsNormQuantV3TilingTest, rms_norm_quant_v3_tiling_008)
 
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 6000);
+    ASSERT_EQ(tiling_key, 1);
 }
 
 TEST_F(RmsNormQuantV3TilingTest, rms_norm_quant_v3_tiling_009)
@@ -912,7 +912,7 @@ TEST_F(RmsNormQuantV3TilingTest, rms_norm_quant_v3_tiling_009)
 
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 5000);
+    ASSERT_EQ(tiling_key, 0);
 }
 
 TEST_F(RmsNormQuantV3TilingTest, rms_norm_quant_v3_tiling_010)
@@ -1010,7 +1010,7 @@ TEST_F(RmsNormQuantV3TilingTest, rms_norm_quant_v3_tiling_010)
 
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 5000);
+    ASSERT_EQ(tiling_key, 0);
 }
 
 TEST_F(RmsNormQuantV3TilingTest, rms_norm_quant_v3_tiling_011)
@@ -1108,7 +1108,7 @@ TEST_F(RmsNormQuantV3TilingTest, rms_norm_quant_v3_tiling_011)
 
     EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
     auto tiling_key = tiling_context->GetTilingKey();
-    ASSERT_EQ(tiling_key, 5000);
+    ASSERT_EQ(tiling_key, 0);
 }
 
 TEST_F(RmsNormQuantV3TilingTest, rms_norm_quant_v3_tiling_012)

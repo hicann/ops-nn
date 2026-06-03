@@ -9,14 +9,15 @@
  */
 
 /*!
- * \file rms_norm_quant_v3_apt.cpp
+ * \file rms_norm_quant_v3.cpp
  * \brief
  */
-#include "../rms_norm_quant_v2/rms_norm_quant_v2_apt.h"
+#include "../../rms_norm_quant_v2/rms_norm_quant_v2_apt.h"
 
-extern "C" __global__ __aicore__ void rms_norm_quant_v3(
+template <int8_t COMPUTE_MODE>
+__global__ __aicore__ void rms_norm_quant_v3(
     GM_ADDR x, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2, GM_ADDR zero_points1, GM_ADDR zero_points2,
     GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR rstd, GM_ADDR workspace, GM_ADDR tiling)
 {
-    rms_norm_quant_v2_impl(x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1, y2, rstd, workspace, tiling);
+    rms_norm_quant_v2_impl<COMPUTE_MODE>(x, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1, y2, rstd, workspace, tiling);
 }

@@ -132,8 +132,7 @@ public:
         OpAICoreConfig configRegbase;
         configRegbase.DynamicCompileStaticFlag(true)
             .DynamicRankSupportFlag(true)
-            .DynamicShapeSupportFlag(true)
-            .ExtendCfgInfo("opFile.value", "rms_norm_quant_v3_apt");
+            .DynamicShapeSupportFlag(true);
         this->AICore().AddConfig("ascend950", configRegbase);
     }
 };
