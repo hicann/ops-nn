@@ -194,7 +194,7 @@ private:
     __aicore__ inline void SetDn2NzIntriParamsC04(Dn2NzParams &intriParams)
     {
         intriParams.dnNum = self_->ctx.innerBatch;
-        intriParams.nValue = self_->ctx.convTilingData->orgHixWi;
+        intriParams.nValue = realHixWi;
         intriParams.dValue = self_->ctx.convTilingData->orgCi;
         intriParams.srcDValue = self_->ctx.convTilingData->orgHixWi;
         intriParams.srcDnMatrixStride = self_->ctx.convTilingData->orgCi *
