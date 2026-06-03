@@ -1239,15 +1239,18 @@ static bool CalModifyBackpropPadHW(gert::TilingContext *context, Conv3dBpInputV2
   otherParams.pad_left_before = CalBackpropPadBefore(filterShape.w, runInfoV2.dilation_w, runInfoV2.pad_l);
   otherParams.pad_up_before = CalBackpropPadBefore(filterShape.h, runInfoV2.dilation_h, runInfoV2.pad_u);
 
-  if (IsArchAfter35(context) || IsSocVersionFuse(context)) {
-    otherParams.pad_head_before = CalBackpropPadBefore(filterShape.d, runInfoV2.dilation_d, runInfoV2.pad_h);
-  }
-
   otherParams.shape_left_modify = (otherParams.pad_left_before - abs(otherParams.pad_left_before)) / kNumTwo;
   otherParams.shape_up_modify = (otherParams.pad_up_before - abs(otherParams.pad_up_before)) / kNumTwo;
 
   int64_t pad_right_after = CalBackpropPadAfter(dedxShape.w, dedyShape.w, runInfoV2.stride_w, runInfoV2.pad_l);
-  int64_t pad_down_after = CalBackpropPadAfter(dedxShape.h, dedyShape.h, runInfoV2.stride_h, runInfoV2.pad_u);
+  int64_t pad_down_after;
+  if (IsArchAfter35(context) || IsSocVersionFuse(context)) {
+    otherParams.pad_head_before = CalBackpropPadBefore(filterShape.d, runInfoV2.dilation_d, runInfoV2.pad_h);
+    pad_down_after = dedxShape.h - (static_cast<int64_t>(dedyShape.h - 1) * runInfoV2.stride_h + 1) +
+                     (filterShape.h - 1) * runInfoV2.dilation_h - otherParams.pad_up_before;
+  } else {
+    pad_down_after = CalBackpropPadAfter(dedxShape.h, dedyShape.h, runInfoV2.stride_h, runInfoV2.pad_u);
+  }
 
   int64_t shape_down_modify = (pad_down_after - abs(pad_down_after)) / kNumTwo;
   int64_t shape_right_modify = (pad_right_after - abs(pad_right_after)) / kNumTwo;
