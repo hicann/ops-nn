@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -121,7 +121,7 @@ void QuantBatchMatmulV4BasicBlockTiling::SetShape(int64_t mSize, int64_t nSize, 
     basicBlockParam_.mSize = mSize;
     basicBlockParam_.nSize = nSize;
     basicBlockParam_.kSize = kSize;
-    basicBlockParam_.singleK = kSize;
+    basicBlockParam_.singleK = ops::CeilAlign(kSize, ONE_BLOCK_SIZE); // k方向单核处理粒度需32对齐
     basicBlockParam_.groupSize = groupSize;
     OP_LOGI(opName_, "Init shape param, mSize: %ld, nSize: %ld, kSize: %ld, groupSize: %ld", basicBlockParam_.mSize,
             basicBlockParam_.nSize, basicBlockParam_.kSize, basicBlockParam_.groupSize);
@@ -183,7 +183,7 @@ bool QuantBatchMatmulV4BasicBlockTiling::ValidateInputParam() const
 
     OP_TILING_CHECK(basicBlockParam_.groupSize < 0,
                     VECTOR_INNER_ERR_REPORT_TILIING(
-                        opName_, "Invalid param, groupSize must be greater than or equalt to 0, groupSize: %ld",
+                        opName_, "Invalid param, groupSize must be greater than or equal to 0, groupSize: %ld",
                         basicBlockParam_.groupSize),
                     return false);
 
@@ -313,7 +313,7 @@ void QuantBatchMatmulV4BasicBlockTiling::GetMte2DataSizeMx(BasicBlockParam& basi
         CeilDiv(basicBlockParam.singleK, basicBlockParam.basicBlock.baseK * basicBlockParam.l1Param.stepKa *
                                              basicBlockParam.l1Param.scaleFactor);
     // 每行搬运量都小于cacheline, 按照cacheline大小计算
-    int64_t scaleSingleK = basicBlockParam.singleK / basicBlockParam.groupSize;
+    int64_t scaleSingleK = CeilDiv(basicBlockParam.singleK, basicBlockParam.groupSize);
     int64_t scaleKLoopNumHbm = min(CeilDiv(scaleSingleK, platformParam_.cacheLine), scaleKloopNumTotal);
     int64_t scaleKLoopNumL2 = scaleKloopNumTotal - scaleKLoopNumHbm;
     int64_t scaleASizeHbm = basicBlockParam.singleM * platformParam_.cacheLine * scaleKLoopNumHbm;

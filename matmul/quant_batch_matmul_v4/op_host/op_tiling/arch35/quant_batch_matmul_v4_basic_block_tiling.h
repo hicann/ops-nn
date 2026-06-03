@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -42,6 +42,7 @@ constexpr double BYTE_BITS = 8;
 constexpr int64_t BITS_16 = 16;
 constexpr int64_t BITS_4 = 4;
 constexpr int64_t BLOCK_CUBE = 16;
+constexpr int64_t ONE_BLOCK_SIZE = 32;
 constexpr int64_t BUFF_NUM_1 = 1;
 constexpr int64_t BUFF_NUM_2 = 2;
 constexpr int64_t BUFF_NUM_3 = 3;

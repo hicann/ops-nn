@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -628,8 +628,11 @@ QuantBatchMatmulV4RegBaseCommonKernel<xType, wType, biasType, yType, aTrans, bTr
             ubOffset = ubBufIdx_ * (vecScaleOffsetLen_ / sizeof(scaleType) / tiling_->BL1Pingpong);
         }
     } else {  // B 矩阵非转置
-        intriParams.blockLen = bubNLen * sizeof(scaleType);
-        intriParams.srcStride = (tiling_->nSize - bubNLen) * sizeof(scaleType);
+        int32_t bubNLenReal = (bubNOffset + bubNLen) > tiling_->nSize ? tiling_->nSize - bubNOffset : bubNLen;
+        intriParams.blockLen = bubNLenReal * sizeof(scaleType);
+        intriParams.srcStride = (tiling_->nSize - bubNLenReal) * sizeof(scaleType);
+        intriParams.dstStride = (bubNLen * sizeof(scaleType) - CeilAlign(intriParams.blockLen, ALIGNED_32_SIZE))
+                                 / ALIGNED_32_SIZE;
         if constexpr (antiQuantType == QuantType::PER_GROUP) {
             // k_offset + n_offset
             gmOffset = bubKOffset / tiling_->groupSize * tiling_->nSize + bubNOffset;

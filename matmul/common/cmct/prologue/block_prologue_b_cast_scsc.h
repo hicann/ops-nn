@@ -376,7 +376,7 @@ private:
         if constexpr (weightNz) {
             int64_t nAlignSize = CeilAlign(nSize_, static_cast<uint64_t>(BLOCK_CUBE));
             int64_t nUbAlignSize = CeilAlign(nUbLen_, BLOCK_CUBE);
-            intriParams.blockCount = kUbLen_ / C0_SIZE_B8;
+            intriParams.blockCount = CeilDiv(kUbLen_, C0_SIZE_B8);
             intriParams.blockLen = nUbAlignSize * C0_SIZE_B8;
             intriParams.srcStride = (nAlignSize - nUbAlignSize) * C0_SIZE_B8;
         } else {
@@ -422,7 +422,9 @@ private:
         AscendC::DataCopyParams params;
         if constexpr (weightNz) {
             params.blockLen = BLOCK_NUM_REG;
-            params.blockCount = CeilAlign(nUbLen_, BLOCK_CUBE) * kUbLen_ * sizeof(ElementOut) / VECTOR_REG_WIDTH;
+            params.blockCount = CeilAlign(nUbLen_, BLOCK_CUBE) * 
+                                CeilAlign(kUbLen_, static_cast<int32_t>(ONE_BLK_SIZE)) *  
+                                sizeof(ElementOut) / VECTOR_REG_WIDTH;
             params.srcStride = (l1BufNum_ - 1) * BLOCK_NUM_REG;
             params.dstStride = 0;
             DataCopy(l1Local_[l1Offset], ubLocal, params);
@@ -466,11 +468,12 @@ private:
         wParams.dataBlockStride = CeilAlign(nUbLen_, BLOCK_CUBE) + 1;
         wParams.repeatStride = wParams.dataBlockStride * BLOCK_CUBE;
         wParams.outDimOffset = ONE_BLOCK_SIZE - wParams.innerExtend * wParams.repeatStride * ONE_BLOCK_SIZE;
-        wParams.maskB8Tail0 = Min(kUbLen_ % VECTOR_REG_WIDTH_FOR_4BITS, static_cast<int32_t>(VECTOR_REG_WIDTH)) +
-                              kUbLen_ / VECTOR_REG_WIDTH_FOR_4BITS * VECTOR_REG_WIDTH;
+        int32_t kUbLenAlign = CeilAlign(kUbLen_, static_cast<int32_t>(ONE_BLOCK_SIZE));
+        wParams.maskB8Tail0 = Min(kUbLenAlign % VECTOR_REG_WIDTH_FOR_4BITS, static_cast<int32_t>(VECTOR_REG_WIDTH)) +
+                              kUbLenAlign / VECTOR_REG_WIDTH_FOR_4BITS * VECTOR_REG_WIDTH;
         wParams.maskB8Tail1 =
-            Cmct::Gemm::Max(kUbLen_ % VECTOR_REG_WIDTH_FOR_4BITS - static_cast<int32_t>(VECTOR_REG_WIDTH), 0) +
-            kUbLen_ / VECTOR_REG_WIDTH_FOR_4BITS * VECTOR_REG_WIDTH;
+            Cmct::Gemm::Max(kUbLenAlign % VECTOR_REG_WIDTH_FOR_4BITS - static_cast<int32_t>(VECTOR_REG_WIDTH), 0) +
+            kUbLenAlign / VECTOR_REG_WIDTH_FOR_4BITS * VECTOR_REG_WIDTH;
         wParams.weightInUbBaseAddr = weightInUbBaseAddr_;
         wParams.weightOutUbAddr = weightOutUbAddr_;
         wParams.weightOutUbAddr1 = weightOutUbAddr1_;

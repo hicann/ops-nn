@@ -71,6 +71,11 @@ ge::graphStatus QuantBatchMatmulV4PergroupArch35Tiling::CalcDequantTiling(
 
 ge::graphStatus QuantBatchMatmulV4PergroupArch35Tiling::DoOpTiling()
 {
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetRawTilingData());
+    OP_TILING_CHECK(context_->GetRawTilingData()->GetCapacity() < tilingDataSize_,
+        CUBE_INNER_ERR_REPORT(inputParams_.opName, "context tiling data capacity %zu < actual tiling data size %zu.",
+            context_->GetRawTilingData()->GetCapacity(), tilingDataSize_),
+        return ge::GRAPH_FAILED);
     isUbQuant_ = true;
     InitCompileInfo();
     SetTransAttr(trans_);
@@ -108,9 +113,8 @@ ge::graphStatus QuantBatchMatmulV4PergroupArch35Tiling::DoOpTiling()
     stepK = std::max(1U, stepK);
     basicTiling_.stepKa = stepK;
     basicTiling_.stepKb = stepK;
-    OP_LOGD(
-        inputParams_.opName, "arch35 int8 tiling: groupSizeK=%u, stepK=%u, l1Size=%u", inputParams_.groupSizeK, stepK,
-        l1Size);
+    OP_LOGD(inputParams_.opName, "arch35 int8 tiling: groupSizeK=%u, stepK=%u, l1Size=%u", 
+        inputParams_.groupSizeK, stepK, l1Size);
 
     basicTiling_.baseK = inputParams_.groupSizeK;
     QuantBatchMatmulV3BasicTiling::DoL2CacheTiling();
@@ -158,12 +162,6 @@ ge::graphStatus QuantBatchMatmulV4PergroupArch35Tiling::CheckContext()
     OPS_CHECK_NULL_WITH_CONTEXT(context_, outputDesc);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetRawTilingData());
     OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetRawTilingData()->GetData());
-    OP_TILING_CHECK(
-        context_->GetRawTilingData()->GetCapacity() < tilingDataSize_,
-        CUBE_INNER_ERR_REPORT(
-            inputParams_.opName, "context tiling data capacity %zu < actual tiling data size %zu.",
-            context_->GetRawTilingData()->GetCapacity(), tilingDataSize_),
-        return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 

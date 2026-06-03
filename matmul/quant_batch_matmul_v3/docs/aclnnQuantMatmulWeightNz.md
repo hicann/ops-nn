@@ -579,13 +579,14 @@ aclnnStatus aclnnQuantMatmulWeightNz(
   
     |量化类型|x1 dtype       |x2 dtype     | x1Scale dtype  |x2Scale dtype |bias dtype| yScale dtype  | out dtype | x1 shape  | x2 shape| x1Scale shape | x2Scale shape     |bias shape | yScale shape| [groupSizeM, groupSizeN, groupSizeK]|
     |---------------| ------------| -------------- |--------------|-------------|--------- | -------- |--------| ---------- | --------------| ------------      |---------- | ------------| ---------------------------------------|-------|
-    | mx量化 |FLOAT8_E4M3FN  |FLOAT4_E2M1  |FLOAT8_E8M0     |FLOAT8_E8M0   |null/BFLOAT16/FLOAT16| null |BFLOAT16/FLOAT16|(m, k)  |(n, k)  |(m, k/64, 2)    |(n, k/64, 2)        |(1, n)    | null        | [0, 0, 32] / [1, 1, 32]                |
-    | mx量化 |FLOAT8_E4M3FN  |FLOAT32      |FLOAT8_E8M0     |FLOAT8_E8M0   |null/BFLOAT16/FLOAT16| null |BFLOAT16/FLOAT16|(m, k)  |(n, k/8)|(m, k/64, 2)    |(n, k/64, 2)        |(1, n)    | null        | [0, 0, 32] / [1, 1, 32]                |
+    | mx量化 |FLOAT8_E4M3FN  |FLOAT4_E2M1  |FLOAT8_E8M0     |FLOAT8_E8M0   |null/BFLOAT16/FLOAT16| null |BFLOAT16/FLOAT16|(m, k)  |(n, k)  |(m, ceil(k/64), 2)    |(n, ceil(k/64), 2)        |(1, n)    | null        | [0, 0, 32] / [1, 1, 32]                |
+    | mx量化 |FLOAT8_E4M3FN  |FLOAT32      |FLOAT8_E8M0     |FLOAT8_E8M0   |null/BFLOAT16/FLOAT16| null |BFLOAT16/FLOAT16|(m, k)  |(n, k/8)|(m, ceil(k/64), 2)    |(n, ceil(k/64), 2)        |(1, n)    | null        | [0, 0, 32] / [1, 1, 32]                |
     | T-CG量化 |FLOAT8_E4M3FN  |FLOAT4_E2M1  |null            |BFLOAT16/FLOAT16      |null| uint64/int64 |BFLOAT16/FLOAT16|(m, k)  |(k, n)  |null           |(k/32, n)        |null       |(1, n)      | [0, 0, 32] / [1, 1, 32]                |
     | T-CG量化 |FLOAT8_E4M3FN  |FLOAT32      |null            |BFLOAT16/FLOAT16      |null| uint64/int64 |BFLOAT16/FLOAT16|(m, k)  |(k, n/8)|null           |(k/32, n)        |null       |(1, n)      | [0, 0, 32] / [1, 1, 32]                |
 
     - 约束说明：
-      - k要求32对齐, n要求8对齐。MX量化模式下k要求大于32，n大于等于8；T-CG量化模式下k要求大于等于64，n的要求大于等于8。
+      - MX量化模式下, k要求8对齐, n要求8对齐。
+      - T-CG量化模式下，k要求32对齐且大于等于64，n要求8对齐。
       - x1是FLOAT8_E4M3FN，x2是FLOAT32时, x2表示一个FLOAT32存储8个FLOAT4_E2M1的紧密排布的数据格式。
       - MX量化模式下，bias数据类型与out数据类型需要一致；T-CG量化模式下，x2Scale的数据类型和out的数据类型需要一致。
 

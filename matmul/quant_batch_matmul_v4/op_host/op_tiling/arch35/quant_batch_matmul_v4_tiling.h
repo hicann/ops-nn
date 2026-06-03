@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -64,12 +64,14 @@ constexpr size_t VALID_BIAS_MAX_DIM = 2;
 constexpr uint64_t VEC_INNER_AXIS_ALIGN_UINT = 128UL;
 constexpr uint64_t MAX_SHAPE_DIM = 0x7fffffffUL;
 constexpr uint64_t MIN_GROUP_SIZE = 32UL;
+constexpr uint64_t MX_GROUP_SIZE = 32UL;
 constexpr int32_t BASIC_PRIORITY = 1;
 constexpr uint64_t INT4_DTYPE_PARAM = 2;
 constexpr uint32_t WORKSPACE_SIZE = 16777216; // 16 * 1024 * 1024
 constexpr int32_t DB_BUFFER = 2;
 constexpr int32_t EXTRA_GROUP_NUM = 2;
 constexpr uint64_t K_ALIGN_SIZE = 32;
+constexpr uint64_t K_ALIGN_SIZE_MX = 8;
 constexpr uint64_t N_ALIGN_SIZE = 8;
 
 constexpr int64_t B64_BITS = 64;
@@ -185,6 +187,7 @@ protected:
     void Reset();
     void InitCompileInfo();
     ge::graphStatus CheckContext() const;
+    ge::graphStatus CheckInputParams() const;
     bool AnalyzeDtype();
     bool AnalyzeBiasDtype(const gert::CompileTimeTensorDesc *biasDesc);
     bool AnalyzeX1scaleDtype(const gert::CompileTimeTensorDesc *x1ScaleDesc);

@@ -175,7 +175,7 @@ __global__ __aicore__ void quant_batch_matmul_v4(
         tPipe.Destroy();
     }
 #else
-    REGISTER_TILING_DEFAULT(DequantBmm::QuantBatchMatmulV3TilingDataParams);
+    REGISTER_TILING_DEFAULT(qbmmv4_tiling::QuantBatchMatmulV4TilingDataParams);
     if (QUANT_TYPE == QBMMV4_PER_GROUP) {
         constexpr bool isTransA = TRANS == QBMMV4_A_TRANS || TRANS == QBMMV4_ALL_TRANS;
         constexpr bool isTransB = TRANS == QBMMV4_B_TRANS || TRANS == QBMMV4_ALL_TRANS;

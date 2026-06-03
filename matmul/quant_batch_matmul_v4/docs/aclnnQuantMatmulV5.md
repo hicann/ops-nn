@@ -902,7 +902,7 @@ aclnnStatus aclnnQuantMatmulV5(
   - 注：上表中gsM、gsK和gsN分别表示groupSizeM、groupSizeK和groupSizeN。gsM、gsK和gsN为0的维度会自动推导，上表中是不用自动推导的情况。
   - mx全量化场景下，当x2数据类型为FLOAT8_E4M3FN/FLOAT8_E5M2时，x1和x1Scale的转置属性需要保持一致，x2和x2Scale的转置属性需要保持一致。
   - mx全量化场景下，当x2数据类型为FLOAT4_E2M1时，x1和x2的内轴必须为偶数，且k必须大于2。
-  - mx伪量化场景下，当x2数据类型为FLOAT4_E2M1时，transposeX1为false且transposeX2为true，不支持batch轴。数据格式支持ND格式。要求支持k是32的倍数。
+  - mx伪量化场景下，当x2数据类型为FLOAT4_E2M1时，transposeX1为false且transposeX2为true，不支持batch轴。数据格式支持ND格式。要求支持k是8的倍数。
   - mx伪量化场景下，bias为可选参数。数据类型支持BFLOAT16或FLOAT16，数据类型要求与输出类型保持一致。数据格式支持ND，shape支持2维，shape表示(1，n)。如不需要使用该参数，传入nullptr。
 
   </details>

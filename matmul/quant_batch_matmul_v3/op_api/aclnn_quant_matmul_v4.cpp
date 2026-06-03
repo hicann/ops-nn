@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -85,7 +85,8 @@ static constexpr int64_t M_RANGE1_RIGHT = 512;
 static constexpr int32_t CORE_NUM_20 = 20;
 static constexpr int64_t SUPPORTED_GROUP_SIZE = 32;
 static constexpr uint64_t B4_PER_B32 = 8UL;
-static constexpr int64_t SUPPORTED_K_ALIGN_NUM = 32;
+static constexpr int64_t SUPPORTED_TCG_A8W4_K_ALIGN_NUM = 32;
+static constexpr int64_t SUPPORTED_MX_A8W4_K_ALIGN_NUM = 8;
 static constexpr int64_t SUPPORTED_N_ALIGN_NUM = 8;
 static constexpr size_t MAX_DIM_VALUE = 2;
 static constexpr size_t MX_SCALE_DIM_VALUE = 3;
@@ -640,8 +641,7 @@ static inline bool CheckDimValue(const aclTensor *scale, const aclTensor *offset
     if (offset != nullptr) {
         OP_CHECK_WRONG_DIMENSION(offset, 1, return false);
         if (offset->GetViewShape().GetDim(0) != x2NDim && offset->GetViewShape().GetDim(0) != 1) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                    "Offset 1st dim should equal to x2 n dim %ld or 1, but actual is %ld.",
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Offset 1st dim should equal to x2 n dim %ld or 1, but actual is %ld.",
                     x2NDim, offset->GetViewShape().GetDim(0));
             return false;
         }
@@ -948,8 +948,7 @@ static inline bool CheckA8W4ScaleX1Shape(
                 "aclnnQuantMatmulWeightNzGetWorkspaceSize", "x1Scale",
                 FormatString("%ld, %ld, %ld", x1Scale->GetViewShape().GetDim(0),
                     x1Scale->GetViewShape().GetDim(1), x1Scale->GetViewShape().GetDim(2)).c_str(),
-                FormatString("the shape of x1Scale must be [%ld, %ld, 2]", groupDimM,
-                    CeilDiv(groupDimK, 2L)).c_str());
+                FormatString("the shape of x1Scale must be [%ld, %ld, 2]", groupDimM, CeilDiv(groupDimK, 2L)).c_str());
             return false;
         }
     }
@@ -971,8 +970,7 @@ static inline bool CheckA8W4ScaleX2Shape(
             x2Scale->GetViewShape().GetDim(2) != 2) {
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
                 "aclnnQuantMatmulWeightNzGetWorkspaceSize", "x2Scale",
-                FormatString("%ld, %ld, %ld", x2ScaleNDim, x2ScaleGroupDim,
-                    x2Scale->GetViewShape().GetDim(2)).c_str(),
+                FormatString("%ld, %ld, %ld", x2ScaleNDim, x2ScaleGroupDim, x2Scale->GetViewShape().GetDim(2)).c_str(),
                 FormatString("the shape of x2Scale must be [%ld, %ld, 2]", groupDimN,
                     CeilDiv(groupDimK, x2ScaleReshapeFactor)).c_str());
             return false;
@@ -1014,8 +1012,7 @@ static inline bool CheckA8W4OutAndBiasShape(const TupleOptional& optionalTensors
         if (yScale->GetViewShape().GetDim(1) != x2NDim || yScale->GetViewShape().GetDim(0) != 1) {
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
                 "aclnnQuantMatmulWeightNzGetWorkspaceSize", "yScale",
-                FormatString("%ld, %ld", yScale->GetViewShape().GetDim(0), yScale->GetViewShape().GetDim(1))
-                    .c_str(),
+                FormatString("%ld, %ld", yScale->GetViewShape().GetDim(0), yScale->GetViewShape().GetDim(1)).c_str(),
                 FormatString("the shape of yScale must be [1, %ld]", x2NDim).c_str());
             return false;
         }
@@ -1023,7 +1020,7 @@ static inline bool CheckA8W4OutAndBiasShape(const TupleOptional& optionalTensors
     return true;
 }
 
-static inline bool CheckA8W4X1X2Shape(int64_t x1KDim, int64_t x2KDim, int64_t x2NDim) {
+static inline bool CheckA8W4X1X2Shape(int64_t x1KDim, int64_t x2KDim, int64_t x2NDim, bool isMx) {
     // CHECK x1KDim
     if (x1KDim <= 0) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
@@ -1037,19 +1034,24 @@ static inline bool CheckA8W4X1X2Shape(int64_t x1KDim, int64_t x2KDim, int64_t x2
             "the n dimension of x2 must be greater than 0");
         return false;
     }
-
     if (x1KDim != x2KDim) {
         OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", "x1 K, x2 K",
-            FormatString("%ld, %ld", x1KDim, x2KDim).c_str(),
+            "aclnnQuantMatmulWeightNzGetWorkspaceSize", "x1 K, x2 K", FormatString("%ld, %ld", x1KDim, x2KDim).c_str(),
             "the k dimension of x1 and x2 must be equal");
         return false;
     }
-    if (x1KDim % SUPPORTED_K_ALIGN_NUM != 0 || x1KDim <= SUPPORTED_K_ALIGN_NUM) {
+    if (isMx && (x1KDim % SUPPORTED_MX_A8W4_K_ALIGN_NUM != 0)) { // Mx量化k方向8对齐
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            "aclnnQuantMatmulWeightNzGetWorkspaceSize", "x1", std::to_string(x1KDim).c_str(),
+            FormatString("the k dimension of x1 must be aligned to %ld for MX quantization", 
+                SUPPORTED_MX_A8W4_K_ALIGN_NUM).c_str());
+        return false;
+    }
+    if (!isMx && (x1KDim % SUPPORTED_TCG_A8W4_K_ALIGN_NUM != 0 || x1KDim <= SUPPORTED_TCG_A8W4_K_ALIGN_NUM)) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
             "aclnnQuantMatmulWeightNzGetWorkspaceSize", "x1", std::to_string(x1KDim).c_str(),
             FormatString("the k dimension of x1 must be aligned to %ld and greater than %ld",
-                SUPPORTED_K_ALIGN_NUM, SUPPORTED_K_ALIGN_NUM).c_str());
+                SUPPORTED_TCG_A8W4_K_ALIGN_NUM, SUPPORTED_TCG_A8W4_K_ALIGN_NUM).c_str());
         return false;
     }
     if (x2NDim % SUPPORTED_N_ALIGN_NUM != 0) {
@@ -1084,7 +1086,9 @@ static inline bool CheckA8W4Shape(const TupleTensor &mandatoryTensors, const Tup
             "the m dimension of x1 must be greater than 0");
         return false;
     }
-    CHECK_RET(CheckA8W4X1X2Shape(x1KDim, x2KDim, x2NDim), false);
+    auto x1Scale = std::get<INDEX_PERTOKEN_IN_OPTIONAL_TUPLE>(optionalTensors);
+    auto x2Scale = std::get<INDEX_SCALE_IN_MANDTORY_TUPLE>(mandatoryTensors);
+    CHECK_RET(CheckA8W4X1X2Shape(x1KDim, x2KDim, x2NDim, IsMicroScaling(x1Scale, x2Scale)), false);
     int64_t groupDimK = (x2KDim + SUPPORTED_GROUP_SIZE - 1) / SUPPORTED_GROUP_SIZE;
     int64_t groupDimM = x1MDim;
     int64_t groupDimN = x2NDim;
@@ -1497,8 +1501,8 @@ static inline bool CheckInputAttrExistence(const TupleAttr &boolsTrans, const Tu
             "aclnnQuantMatmulWeightNzGetWorkspaceSize", "transposeX2", transposeX2 ? "true" : "false",
             "in A8W4 scenario with NZ format, when the quant mode is t-cg, transposeX2 must be false");
         return false;
-    } else if (IsMicroScaling(x1Scale, x2Scale)  && !transposeX2) {
-            // A8W4 scenario with mx quant mode
+    } else if (IsMicroScaling(x1Scale, x2Scale)  && !transposeX2) { 
+        // A8W4 scenario with mx quant mode
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
             "aclnnQuantMatmulWeightNzGetWorkspaceSize", "transposeX2", transposeX2 ? "true" : "false",
             "in A8W4 scenario with NZ format, when the quant mode is mx, transposeX2 must be true");
@@ -1521,31 +1525,23 @@ static inline bool CheckDimRangeA8W4(const TupleTensor& mandatoryTensors, const 
     auto bias = std::get<INDEX_BIAS_IN_OPTIONAL_TUPLE>(optionalTensors);
 
     if (x1->GetViewShape().GetDimNum() != MAX_DIM_VALUE) {
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", "x1",
-            FormatString("%zuD", x1->GetViewShape().GetDimNum()).c_str(),
-            "the shape dim of x1 must be 2");
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize", "x1", 
+            FormatString("%zuD", x1->GetViewShape().GetDimNum()).c_str(), "the shape dim of x1 must be 2");
         return false;
     }
     if (x2->GetViewShape().GetDimNum() != MAX_DIM_VALUE) {
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", "x2",
-            FormatString("%zuD", x2->GetViewShape().GetDimNum()).c_str(),
-            "the shape dim of x2 must be 2");
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize", "x2",
+            FormatString("%zuD", x2->GetViewShape().GetDimNum()).c_str(), "the shape dim of x2 must be 2");
         return false;
     }
     if (bias != nullptr && bias->GetViewShape().GetDimNum() != MAX_DIM_VALUE) {
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", "bias",
-            FormatString("%zuD", bias->GetViewShape().GetDimNum()).c_str(),
-            "the shape dim of bias must be 2");
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize", "bias",
+            FormatString("%zuD", bias->GetViewShape().GetDimNum()).c_str(), "the shape dim of bias must be 2");
         return false;
     }
     if (out->GetViewShape().GetDimNum() != MAX_DIM_VALUE) {
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", "out",
-            FormatString("%zuD", out->GetViewShape().GetDimNum()).c_str(),
-            "the shape dim of out must be 2");
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize", "out",
+            FormatString("%zuD", out->GetViewShape().GetDimNum()).c_str(), "the shape dim of out must be 2");
         return false;
     }
     OP_LOGD("QuantMatmul check dimension range success.");

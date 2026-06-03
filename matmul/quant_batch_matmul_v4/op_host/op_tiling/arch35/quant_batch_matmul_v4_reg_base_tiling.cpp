@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -54,12 +54,23 @@ bool QuantBatchMatmulV4RegBase::CheckA8W4Params() const
             VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
                                             "Invalid params, only support x2 not transpose FORMAT_FRACTAL_NZ."),
             return false);
-    OP_CHECK_IF(
-        inputParams_.groupSize <= 0 || inputParams_.kSize < inputParams_.groupSize,
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            inputParams_.opName,
-            "Invalid params, groupSize must be greater than 0 and less than kSize, kSize: %lu, groupSize: %lu.",
-            inputParams_.kSize, inputParams_.groupSize), return false);
+
+    if (inputParams_.antiQuantType == QuantType::MX) {
+        OP_CHECK_IF(
+            inputParams_.groupSize != MX_GROUP_SIZE,
+            VECTOR_INNER_ERR_REPORT_TILIING(
+                inputParams_.opName,
+                "Invalid params, groupSize must be 32 for MX quantization, but got %lu.",
+                inputParams_.groupSize), return false);
+    } else {
+        OP_CHECK_IF(
+            inputParams_.groupSize <= 0 || inputParams_.kSize < inputParams_.groupSize,
+            VECTOR_INNER_ERR_REPORT_TILIING(
+                inputParams_.opName,
+                "Invalid params, groupSize must be greater than 0 and less than kSize, kSize: %lu, groupSize: %lu.",
+                inputParams_.kSize, inputParams_.groupSize), return false);
+    }
+
     OP_CHECK_IF(inputParams_.groupSize % GROUP_ALIGN_SIZE > 0,
              VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
                                              "Invalid params, groupSize must be 32 aligned, groupSize: %lu.",
@@ -67,19 +78,28 @@ bool QuantBatchMatmulV4RegBase::CheckA8W4Params() const
     // A8W4 Nz场景要求n为32B对齐
     OP_CHECK_IF(inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ && inputParams_.nSize % N_ALIGN_SIZE > 0,
             VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
-                                            "Invalid params, nSize only support aligned to 64 when weight format is NZ, but nSize is %lu.",
+                                            "Invalid params, nSize only support aligned to 8 when weight format is NZ, but nSize is %lu.",
                                             inputParams_.nSize), return false);
     return true;
 }
 
 bool QuantBatchMatmulV4RegBase::CustomCheck() const
 {
-    OP_CHECK_IF(
-        inputParams_.kSize % K_ALIGN_SIZE > 0 || inputParams_.kSize <= K_ALIGN_SIZE,
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            inputParams_.opName, "Invalid params, kSize must be aligned to 32 and greater than 32, but got %lu.",
-            inputParams_.kSize),
-        return false);
+    if (inputParams_.antiQuantType == QuantType::MX) {
+        OP_CHECK_IF(
+            inputParams_.kSize % K_ALIGN_SIZE_MX > 0,
+            VECTOR_INNER_ERR_REPORT_TILIING(
+                inputParams_.opName, "Invalid params, kSize must be aligned to 8 for MX quantization, but got %lu.",
+                inputParams_.kSize),
+            return false);
+    } else {
+        OP_CHECK_IF(
+            inputParams_.kSize % K_ALIGN_SIZE > 0 || inputParams_.kSize <= K_ALIGN_SIZE,
+            VECTOR_INNER_ERR_REPORT_TILIING(
+                inputParams_.opName, "Invalid params, kSize must be aligned to 32 and greater than 32, but got %lu.",
+                inputParams_.kSize),
+            return false);
+    }
 
     OP_CHECK_IF((inputParams_.cDtype != ge::DT_BF16) && (inputParams_.cDtype != ge::DT_FLOAT16),
              VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Invalid params, output only support DT_BF16 or DT_FLOAT16."),
@@ -399,7 +419,7 @@ void QuantBatchMatmulV4RegBase::PrintCVTilingData(const bool debugLevel) const
        << " AL1Pingpong: " << tilingData_->AL1Pingpong << " BL1Pingpong: " << tilingData_->BL1Pingpong;
     if (debugLevel) {
         OPS_LOG_D(inputParams_.opName, "tiling data: %s", ss.str().c_str());
-    }else {
+    } else {
         OPS_LOG_E(inputParams_.opName, "tiling data: %s", ss.str().c_str());
     }
     PrintMatMulTiling();

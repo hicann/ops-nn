@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -46,7 +46,8 @@ static const int64_t SUPPORTED_GROUP_SIZE = 32;
 static const int64_t MAX_SHAPE_SIZE_A8W4_INT = 29576;
 static const int64_t SUPPORTED_GROUP_SIZE_A8W4_INT = 256;
 static const int64_t SUPPORTED_K_ALIGN_NUM = 64;
-static const int64_t SUPPORTED_A8W4_K_ALIGN_NUM = 32;
+static const int64_t SUPPORTED_TCG_A8W4_K_ALIGN_NUM = 32;
+static const int64_t SUPPORTED_MX_A8W4_K_ALIGN_NUM = 8;
 static const int64_t SUPPORTED_N_ALIGN_NUM = 8;
 static const uint64_t GROUP_M_OFFSET = 32;
 static const uint64_t GROUP_N_OFFSET = 16;
@@ -591,18 +592,44 @@ static inline bool CheckOutAndOffsetShape(const TupleQuant& quantTensors, int64_
     return true;
 }
 
-static inline bool CheckKDimAndBasicShape(
-    const TupleInput& inputTensors, const TupleQuant& quantTensors, int64_t x1KDim, int64_t x2KDim, int64_t x2NDim)
+static inline bool CheckA8W4KDim(const TupleInput& inputTensors, const TupleQuant& quantTensors, int64_t kDim)
 {
     auto x1 = std::get<INDEX_X1_IN_INPUT_TUPLE>(inputTensors);
     auto x2 = std::get<INDEX_X2_IN_INPUT_TUPLE>(inputTensors);
     auto x1Scale = std::get<INDEX_X1_SCALE_IN_QUANT_TUPLE>(quantTensors);
     auto x2Scale = std::get<INDEX_X2_SCALE_IN_QUANT_TUPLE>(quantTensors);
-    bool isPerChannel = x2Scale->GetViewShape().GetDimNum() == 1;
-    bool isA8W4INT = isA8W4IntAfterPre(x1, x2);
-    bool isA8W4TCG = isA8W4FloatTCG(x1, x2, x1Scale);
-    bool isA8W4Mx = isA8W4FloatMx(x1, x2, x1Scale, x2Scale);
-    // CHECK x1KDim
+    if (isA8W4IntAfterPre(x1, x2)) {
+        bool isPerChannel = x2Scale->GetViewShape().GetDimNum() == 1;
+        size_t kAlign = isPerChannel ? SUPPORTED_K_ALIGN_NUM_INT4 : SUPPORTED_GROUP_SIZE_A8W4_INT;
+        if (kDim % kAlign != 0) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the k dim must be align to %ld, which is %ld", kAlign, kDim);
+            return false;
+        }
+    } else if (isA8W4FloatTCG(x1, x2, x1Scale)) {
+        if (kDim % SUPPORTED_TCG_A8W4_K_ALIGN_NUM != 0 || kDim <= SUPPORTED_TCG_A8W4_K_ALIGN_NUM) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the k dim must to be aligned to %ld and more than %ld, which is %ld",
+                    SUPPORTED_TCG_A8W4_K_ALIGN_NUM, SUPPORTED_TCG_A8W4_K_ALIGN_NUM, kDim);
+            return false;
+        }
+    } else if (isA8W4FloatMx(x1, x2, x1Scale, x2Scale)) {
+        if (kDim % SUPPORTED_MX_A8W4_K_ALIGN_NUM != 0) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The k dim must be aligned to %ld for MX quantization, which is %ld",
+                    SUPPORTED_MX_A8W4_K_ALIGN_NUM, kDim);
+            return false;
+        }    
+    } else {
+        if (kDim % SUPPORTED_K_ALIGN_NUM != 0) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the k dim must be align to %ld, which is %ld", SUPPORTED_K_ALIGN_NUM, kDim);
+            return false;
+        }
+    }
+    return true;
+}
+
+static inline bool CheckKDimAndBasicShape(
+    const TupleInput& inputTensors, const TupleQuant& quantTensors, int64_t x1KDim, int64_t x2KDim, int64_t x2NDim)
+{
+    // CHECK basic shape
     auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
     if (npuArch == NpuArch::DAV_2201) {   // A8W4INT A2 A3
         if (x1KDim <= 0 || x1KDim > MAX_SHAPE_SIZE_A8W4_INT) {
@@ -624,23 +651,9 @@ static inline bool CheckKDimAndBasicShape(
                 x1KDim, x2KDim);
         return false;
     }
-    if (isA8W4INT) {
-        size_t kAlign = isPerChannel ? SUPPORTED_K_ALIGN_NUM_INT4 : SUPPORTED_GROUP_SIZE_A8W4_INT;
-        if (x1KDim % kAlign != 0) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the k dim must be align to %ld, which is %ld", kAlign, x1KDim);
-            return false;
-        }
-    } else if (isA8W4TCG || isA8W4Mx) {
-        if (x1KDim % SUPPORTED_A8W4_K_ALIGN_NUM != 0 || x1KDim <= SUPPORTED_A8W4_K_ALIGN_NUM) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID,"the k dim must to be aligned to %ld and more than %ld, which is %ld",
-                    SUPPORTED_A8W4_K_ALIGN_NUM, SUPPORTED_A8W4_K_ALIGN_NUM, x1KDim);
-            return false;
-        }
-    } else {
-        if (x1KDim % SUPPORTED_K_ALIGN_NUM != 0) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the k dim must be align to %ld, which is %ld", SUPPORTED_K_ALIGN_NUM, x1KDim);
-            return false;
-        }
+    // CHECK kDim
+    if (!CheckA8W4KDim(inputTensors, quantTensors, x1KDim)) {
+        return false;
     }
     return true;
 }

@@ -30,6 +30,7 @@
 
 namespace Cmct::Gemm::Block {
 using AscendC::BLOCK_CUBE;
+using AscendC::ONE_BLK_SIZE;
 using AscendC::CrossCoreSetFlag;
 using AscendC::CrossCoreWaitFlag;
 using AscendC::GlobalTensor;
@@ -317,7 +318,7 @@ private:
             WaitFlag<HardEvent::MTE1_MTE2>(eventIdsScaleBMte1ToMte2_[scaleBBufIdx_]);
             CopyScaleB2L1(tensorBlockScaleB);
         }
-        if (kL1Len_ % K_ALIGN_SIZE != 0) {
+        if (CeilAlign(kL1Len_, ONE_BLK_SIZE) % K_ALIGN_SIZE != 0) {
             LocalTensor<ElementA> bL1Tensor;
             if (l1BufIdx_ == IDX_0) {
                 bL1Tensor = bL1LocalBuf0_;
@@ -328,7 +329,8 @@ private:
             } else {
                 bL1Tensor = bL1LocalBuf3_;
             }
-            FillL1WithZero(bL1Tensor[CeilAlign(nL1Len_, BLOCK_CUBE) * kL1Len_].template ReinterpretCast<uint32_t>(), nL1Len_);
+            uint64_t offset = CeilAlign(nL1Len_, BLOCK_CUBE) * CeilAlign(kL1Len_, ONE_BLK_SIZE);
+            FillL1WithZero(bL1Tensor[offset].template ReinterpretCast<uint32_t>(), nL1Len_);
         }
         WaitForVector(l1BufIdx_);
     }
@@ -590,8 +592,9 @@ private:
         }
         DataCopy(aL1LocalBuf, srcTensor, nd2nzParams);
 
-        if (kL1Len_ % K_ALIGN_SIZE != 0) {
-            FillL1WithZero(aL1LocalBuf[CeilAlign(mL1Len_, BLOCK_CUBE) * kL1Len_].template ReinterpretCast<uint32_t>(), mL1Len_);
+        if (CeilAlign(kL1Len_, ONE_BLK_SIZE) % K_ALIGN_SIZE != 0) {
+            uint64_t offset = CeilAlign(mL1Len_, BLOCK_CUBE) * CeilAlign(kL1Len_, ONE_BLK_SIZE);
+            FillL1WithZero(aL1LocalBuf[offset].template ReinterpretCast<uint32_t>(), mL1Len_);
         }
     }
 

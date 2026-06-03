@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -149,30 +149,8 @@ ge::graphStatus QuantBatchMatmulV4TilingBase::GetShapeAttrsInfo()
     inputParams_.weightNz = inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ;
     OP_TILING_CHECK(!AnalyzeQuantType() || !AnalyzeAttrs() || !AnalyzeInputs() || !AnalyzeDtype(),
         VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Fail to analyze context info"), return ge::GRAPH_FAILED);
-    bool maxDimCheck = inputParams_.kSize > MAX_SHAPE_DIM || inputParams_.nSize > MAX_SHAPE_DIM;
-    if (inputParams_.transA) {
-        maxDimCheck |= inputParams_.mSize > MAX_SHAPE_DIM;
-    }
-    OP_TILING_CHECK(inputParams_.supportL0c2Out && maxDimCheck,
-        VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
-            "only support MKN in range [1, %lu], get actual value[%lu, %lu, %lu]",
-            MAX_SHAPE_DIM, inputParams_.mSize, inputParams_.kSize, inputParams_.nSize),
-        return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(inputParams_.groupSize > inputParams_.kSize || inputParams_.groupSize % MIN_GROUP_SIZE != 0,
-        VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
-            "Only support group size greater than %lu, less than K and align to %lu, get K[%lu] and group size[%lu]",
-            MIN_GROUP_SIZE, MIN_GROUP_SIZE, inputParams_.kSize, inputParams_.groupSize),
-        return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(inputParams_.supportL0c2Out && !inputParams_.supportL12BtBf16 &&
-                        inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ &&
-                        (inputParams_.bDtype != ge::DT_INT8 || inputParams_.antiQuantType != QuantType::PER_CHANNEL ||
-                            inputParams_.cDtype == ge::DT_INT8),
-                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
-                        "weight Nz only support weight dtype INT8 per-channel scene, and not support quant scale, "
-                        "current input bDtype[%s], antiquantType[%d], cDtype[%s]",
-                        ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str(),
-                        static_cast<int>(inputParams_.antiQuantType),
-                        ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str()),
+    OP_TILING_CHECK(CheckInputParams() != ge::GRAPH_SUCCESS, 
+                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "invalid input parameters"),
                     return ge::GRAPH_FAILED);
     auto transA_str = inputParams_.transA ? "true" : "false";
     auto transB_str = inputParams_.transB ? "true" : "false";
@@ -223,6 +201,43 @@ ge::graphStatus QuantBatchMatmulV4TilingBase::CheckContext() const
             weigthDimNum,
             ge::TypeUtils::FormatToSerialString(weightFormat).c_str()),
         return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus QuantBatchMatmulV4TilingBase::CheckInputParams() const
+{
+    bool maxDimCheck = inputParams_.kSize > MAX_SHAPE_DIM || inputParams_.nSize > MAX_SHAPE_DIM;
+    if (inputParams_.transA) {
+        maxDimCheck |= inputParams_.mSize > MAX_SHAPE_DIM;
+    }
+    OP_TILING_CHECK(inputParams_.supportL0c2Out && maxDimCheck,
+        VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
+            "only support MKN in range [1, %lu], get actual value[%lu, %lu, %lu]",
+            MAX_SHAPE_DIM, inputParams_.mSize, inputParams_.kSize, inputParams_.nSize),
+        return ge::GRAPH_FAILED);
+    if (inputParams_.antiQuantType == QuantType::MX) {
+        OP_TILING_CHECK(inputParams_.groupSize != MX_GROUP_SIZE,
+            VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
+                "Group size must be 32 for MX quantization, get group size[%lu]", inputParams_.groupSize),
+            return ge::GRAPH_FAILED);
+    } else {
+        OP_TILING_CHECK(inputParams_.groupSize > inputParams_.kSize || inputParams_.groupSize % MIN_GROUP_SIZE != 0,
+            VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
+                "Only support group size greater than %lu, less than K and align to %lu, get K[%lu] and group size[%lu]",
+                MIN_GROUP_SIZE, MIN_GROUP_SIZE, inputParams_.kSize, inputParams_.groupSize),
+            return ge::GRAPH_FAILED);
+    }
+    OP_TILING_CHECK(inputParams_.supportL0c2Out && !inputParams_.supportL12BtBf16 &&
+                        inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ &&
+                        (inputParams_.bDtype != ge::DT_INT8 || inputParams_.antiQuantType != QuantType::PER_CHANNEL ||
+                            inputParams_.cDtype == ge::DT_INT8),
+                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
+                        "weight Nz only support weight dtype INT8 per-channel scene, and not support quant scale, "
+                        "current input bDtype[%s], antiquantType[%d], cDtype[%s]",
+                        ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str(),
+                        static_cast<int>(inputParams_.antiQuantType),
+                        ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str()),
+                    return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
