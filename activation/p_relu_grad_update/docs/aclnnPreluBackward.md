@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-接口功能：完成[aclnnPreluBackward](../../p_relu_grad_update/docs/aclnnPreluBackward.md)的反向计算。
+接口功能：完成[aclnnPrelu](../../p_relu/docs/aclnnPrelu.md)的反向计算。
 
 gradInput的计算公式如下：
 
