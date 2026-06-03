@@ -323,9 +323,6 @@ main() {
         else
           cmd="asc_opc ${op_python_path} --main_func=${op_func} --input_param=${new_file} --soc_version=${opc_soc_version} --output=${binary_bin_path} --impl_mode=${impl_mode} ${simplified_key_param} --op_mode=dynamic"
         fi
-        if [ "${cmake_build_type}" = "Debug" ]; then
-          cmd="${cmd} -g"
-        fi
         if [[ -n "$bisheng_flags" ]]; then
           echo "bisheng_flags is: ${bisheng_flags}"
           cmd="${cmd} --op_debug_config=${bisheng_flags}"
@@ -339,6 +336,9 @@ main() {
           fi
           if [ "${enable_dump_cce}" = "TRUE" ]; then
             op_debug_configs+=("dump_cce")
+          fi
+          if [ "${cmake_build_type}" = "Debug" ]; then
+            op_debug_configs+=("ccec_g" "ccec_O0")
           fi
           if [ ${#op_debug_configs[@]} -gt 0 ]; then
               OLD_IFS="${IFS}"
