@@ -1267,12 +1267,14 @@ aclnnStatus aclnnIndexPutImplGetWorkspaceSize(aclTensor *selfRef,
             indicesTensors.emplace_back(curIndicesTensor);
         }
         aclTensorList *IndicesTensorList = uniqueExecutor.get()->AllocTensorList(indicesTensors.data(), indicesSize);
+        CHECK_RET(IndicesTensorList != nullptr, ACLNN_ERR_INNER_NULLPTR);
         FVector<int64_t, MAX_SUPPORT_DIMS_NUMS> boundsVec;
         for (size_t i = 0; i < selfRef->GetViewShape().GetDimNum(); i++) {
             boundsVec.emplace_back(selfRef->GetViewShape().GetDim(i));
         }
         aclIntArray *boundsArray = uniqueExecutor.get()->AllocIntArray(boundsVec.data(), boundsVec.size());
         const aclTensor *boundsTensor = uniqueExecutor.get()->ConvertToTensor(boundsArray, op::ToOpDataType(ACL_INT64));
+        CHECK_RET(boundsTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
         l0op::IndexCheck(boundsTensor, IndicesTensorList, uniqueExecutor.get());
     }
   }

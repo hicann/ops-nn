@@ -22,7 +22,6 @@
 #include "opdev/op_dfx.h"
 #include "opdev/platform.h"
 #include "op_api/aclnn_util.h"
-#include "aclnn_kernels/common/op_error_check.h"
 
 using namespace op;
 
@@ -36,7 +35,12 @@ static const std::initializer_list<op::DataType> AICORE_DTYPE_SUPPORT_LIST = {
 static bool IsAiCoreSupport(const aclTensorList* indices)
 {
     for (size_t i = 0; i < indices->Size(); i++) {
-        OP_CHECK_DTYPE_NOT_SUPPORT((*indices)[i], AICORE_DTYPE_SUPPORT_LIST, return false);
+        if (!CheckType((*indices)[i]->GetDataType(), AICORE_DTYPE_SUPPORT_LIST)) {
+            OP_LOGW("Tensor indices not implemented for %s, should be in dtype support list %s.",
+                    op::ToString((*indices)[i]->GetDataType()).GetString(), 
+                    op::ToString(AICORE_DTYPE_SUPPORT_LIST).GetString());
+            return false;
+        }
     }
     return true;
 }
@@ -51,7 +55,7 @@ void IndexCheck(
     }
 
     if (!IsAiCoreSupport(indices)) {
-        OP_LOGD("Unsupported dtype of indices in IndexCheck.");
+        OP_LOGD("Unsupported dtype of indices in IndexCheck, skip.");
         return;
     }
 
