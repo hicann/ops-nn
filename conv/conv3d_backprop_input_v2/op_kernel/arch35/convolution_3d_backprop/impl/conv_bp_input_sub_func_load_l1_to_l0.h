@@ -239,13 +239,13 @@ static __aicore__ inline void LoadToB2ForKernelSplitB1FullLoad(
     }
 }
 
-template <class Intf>
+template <class Intf, bool ksCoutFullLoad>
 static __aicore__ inline void LoadToB2ReverseOnly(
     Intf* self, const LocalTensor<typename Intf::SrcBT>& l1B1Matrix, uint32_t blockSize, uint32_t srcB1Offset,
     uint32_t dstB2Offset, const uint32_t kPos, LocalTensor<typename Intf::SrcBT>& l0b)
 {
     if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
-        if (self->ctx.kSCoutFullLoad_) { // B1全载时，在load2b2阶段完成子kernel重排
+        if (ksCoutFullLoad) { // B1全载时，在load2b2阶段完成子kernel重排
             LoadToB2ForKernelSplitB1FullLoad(self, l1B1Matrix, blockSize, srcB1Offset, dstB2Offset, l0b);
         } else {
             LoadToB2ReverseOnlyCommon(self, l1B1Matrix, blockSize, srcB1Offset, dstB2Offset, kPos, l0b);
@@ -260,7 +260,7 @@ static __aicore__ inline void LoadToB2ReverseOnly(
     }
 }
 
-template <class Intf>
+template <class Intf, bool ksCoutFullLoad>
 static __aicore__ inline void LoadToB2(
     Intf* self, const LocalTensor<typename Intf::SrcBT>& l1B1Matrix, uint32_t kPos,
     LocalTensor<typename Intf::SrcBT>& l0b)
@@ -278,7 +278,7 @@ static __aicore__ inline void LoadToB2(
             LoadData(l0b[dstB2Offset], l1B1Matrix[srcB1Offset], self->ctx.load2dv2_);
         }
     } else if constexpr (Intf::conv3dConfig.loadB2Condition == TPL_REVERSE_ONLY) {
-        LoadToB2ReverseOnly(self, l1B1Matrix, blockSize, srcB1Offset, dstB2Offset, kPos, l0b);
+        LoadToB2ReverseOnly<Intf, ksCoutFullLoad>(self, l1B1Matrix, blockSize, srcB1Offset, dstB2Offset, kPos, l0b);
     } else if constexpr (Intf::conv3dConfig.loadB2Condition == TPL_NO_TRANSPOSE_NO_REVERSE) {
         LoadToB2NoTransposeNoReverse(self, l1B1Matrix, srcB1Offset, kPos, l0b);
     } else {

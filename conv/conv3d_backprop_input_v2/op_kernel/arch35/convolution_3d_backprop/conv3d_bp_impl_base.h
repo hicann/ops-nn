@@ -121,7 +121,6 @@ public:
 
         DEFINE_STUCT_FIELD(uint32_t, kSegment_);
         DEFINE_STUCT_FIELD(uint32_t, kSegmentTail_);
-        DEFINE_STUCT_FIELD(uint64_t, kValueSegment_);
         DEFINE_STUCT_FIELD(bool, enableSplitK_);
         DEFINE_STUCT_FIELD(bool, useUbAccumForSplitK_);
         DEFINE_STUCT_FIELD(bool, isLastKSegment_);
@@ -142,7 +141,6 @@ public:
         DEFINE_STUCT_ARRAY_FIELD(int32_t, subPadLeftList_, SUB_KERNEL_NUM);
         DEFINE_STUCT_ARRAY_FIELD(int32_t, subPadRightList_, SUB_KERNEL_NUM);
         DEFINE_STUCT_ARRAY_FIELD(int32_t, subPadUpList_, SUB_KERNEL_NUM);
-        DEFINE_STUCT_ARRAY_FIELD(int32_t, subPadDownList_, SUB_KERNEL_NUM);
         DEFINE_STUCT_FIELD(uint64_t, curMStartIdx_);
         DEFINE_STUCT_FIELD(uint32_t, curBatchCoreIdx_);
         DEFINE_STUCT_FIELD(uint32_t, groupIterIdx_);

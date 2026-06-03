@@ -207,12 +207,12 @@ __aicore__ inline uint32_t CalcCurCinSizeB1(Intf *self, uint32_t curCinIdx)
     return curCinSize;
 }
 
-template <class Intf>
+template <class Intf, bool ksCoutFullLoad>
 __aicore__ inline void CalcCoutIndexAndSizeB1(Intf *self, uint64_t kIdx,
     uint32_t &curCoutIdx, uint32_t &curCoutSize)
 {
    if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
-        if (self->ctx.kSCoutFullLoad_) {    // cout全载场景
+        if (ksCoutFullLoad) {    // cout全载场景
             curCoutSize = self->ctx.tiling_->singleCoreCout;
             return;
         }
@@ -254,12 +254,9 @@ static __aicore__ inline void CalcCutInWIndex(Intf *self, const uint32_t crossBl
     } else {
         self->ctx.headWi_ = curWiPos;
     }
-    int32_t leftBaseUseM = doubleBaseUseM - self->ctx.headWi_;
-    if (leftBaseUseM < 0) {
-        leftBaseUseM = 0;
-    }
-    self->ctx.midHi_ = static_cast<uint32_t>(leftBaseUseM) / wiUsed;
-    self->ctx.tailWi_ = static_cast<uint32_t>(leftBaseUseM) - self->ctx.midHi_ * wiUsed;
+    uint32_t leftBaseUseM = doubleBaseUseM - self->ctx.headWi_;
+    self->ctx.midHi_ = leftBaseUseM / wiUsed;
+    self->ctx.tailWi_ = leftBaseUseM - self->ctx.midHi_ * wiUsed;
 }
 
 template <class Intf>
@@ -1220,7 +1217,7 @@ __aicore__ inline void GroupTransdataWeight(Intf *self, uint32_t kIdx, uint32_t 
     uint32_t curCinSize = CalcCurCinSizeB1(self, curCinIdx);
     uint32_t curCoutIdx = 0;
     uint32_t curCoutSize = 0;
-    CalcCoutIndexAndSizeB1(self, kIdx, curCoutIdx, curCoutSize);
+    CalcCoutIndexAndSizeB1<Intf, false>(self, kIdx, curCoutIdx, curCoutSize);
 
     uint32_t curCin1Idx = (self->ctx.curCinStartIdx_ + curCinIdx) >> SHIFT_BIT_4;
     uint32_t curCout1Idx = (self->ctx.curCoutStartIdx_ + curCoutIdx) >> self->ctx.tiling_->c0BitsB;

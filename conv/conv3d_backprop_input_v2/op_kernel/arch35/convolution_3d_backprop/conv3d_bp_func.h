@@ -319,7 +319,6 @@ __aicore__ inline void InitParams(Intf *self)
     InitParamsForSplitDkSplit<Intf>(self);
     self->ctx.kSegment_ = self->ctx.tiling_->kSegment;
     self->ctx.kSegmentTail_ = self->ctx.tiling_->kSegmentTail;
-    self->ctx.kValueSegment_ = self->ctx.tiling_->kValueSegment;
     self->ctx.enableSplitK_ = self->ctx.tiling_->enableSplitK;
     self->ctx.useUbAccumForSplitK_ = self->ctx.tiling_->useUbAccumForSplitK;
     if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
@@ -491,7 +490,11 @@ static __aicore__ inline void ComputeForNoTilingHWk(Intf *self, LocalTensor<type
             continue;
         }
         int64_t curDoutIdx = strideDgtOne ? (dTmp / strideD) : dTmp;
-        ComputeForKIter<Intf, hasBias>(self,l0a, l0b, l0c, curInnerKdIdx, curDoutIdx, isFirstDk, l0PingPongFlag);
+        if (self->ctx.kSCoutFullLoad_) {
+            ComputeForKIter<Intf, hasBias, true>(self,l0a, l0b, l0c, curInnerKdIdx, curDoutIdx, isFirstDk, l0PingPongFlag);
+        } else {
+            ComputeForKIter<Intf, hasBias, false>(self,l0a, l0b, l0c, curInnerKdIdx, curDoutIdx, isFirstDk, l0PingPongFlag);
+        }
         isFirstDk = false;
     }
     if (hasBias) {

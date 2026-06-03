@@ -316,7 +316,7 @@ __aicore__ inline void LoadGmDataToB1ForDn2Nz(Intf *self, uint32_t curCinSize, u
     }
 }
 
-template <class Intf>
+template <class Intf, bool ksCoutFullLoad>
 __aicore__ inline void LoadGmDataToB1ForNd2Nz(Intf *self, uint32_t curCinSize, uint32_t curCoutSize,
     uint64_t out2B1SrcAddrOffset, const LocalTensor<typename Intf::SrcBT> &useB1Buf)
 {
@@ -329,7 +329,7 @@ __aicore__ inline void LoadGmDataToB1ForNd2Nz(Intf *self, uint32_t curCinSize, u
             LoadToB1TransposeForDkHkWkIsOne(self, curCinSize, curCoutSize, out2B1SrcAddrOffset, useB1Buf);
         } else {
             if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
-                if (!self->ctx.kSCoutFullLoad_) { // B1若未全载，则在loadB1时完成子kernel重排
+                if (!ksCoutFullLoad) { // B1若未全载，则在loadB1时完成子kernel重排
                     LoadToB1Nd2NzForKernelSplit(self, curCinSize, curCoutSize, out2B1SrcAddrOffset, useB1Buf);
                 } else {
                     LoadToB1Nd2NzTranspose(self, curCinSize, curCoutSize, out2B1SrcAddrOffset, useB1Buf);
@@ -388,7 +388,7 @@ __aicore__ inline void LoadGmDataToB1DHWCN2NzTranspose(Intf *self, uint32_t curC
     DataCopy(useB1Buf, self->ctx.weightGlobal_[out2B1SrcAddrOffset], nd2NzParams);
 }
 
-template <class Intf, class src1_T>
+template <class Intf, class src1_T, bool ksCoutFullLoad>
 __aicore__ inline void LoadGmDataToB1(Intf *self, uint32_t kIdx, uint32_t curDkIdx)
 {
     LocalTensor<typename Intf::SrcBT> useB1Buf = self->ctx.inQueL1B_.template AllocTensor<typename Intf::SrcBT>();
@@ -397,7 +397,7 @@ __aicore__ inline void LoadGmDataToB1(Intf *self, uint32_t kIdx, uint32_t curDkI
     uint32_t curCinSize = CalcCurCinSizeB1(self, curCinIdx);
     uint32_t curCoutIdx = 0;
     uint32_t curCoutSize = 0;
-    CalcCoutIndexAndSizeB1(self, kIdx, curCoutIdx, curCoutSize);
+    CalcCoutIndexAndSizeB1<Intf, ksCoutFullLoad>(self, kIdx, curCoutIdx, curCoutSize);
 
     // 1982 kernel gm shape: (cout, cin, dk, hk, wk)
     // because l1 not cut hk and wk, so,
@@ -429,14 +429,14 @@ __aicore__ inline void LoadGmDataToB1(Intf *self, uint32_t kIdx, uint32_t curDkI
             uint64_t out2B1SrcAddrOffset = static_cast<uint64_t>(curCoutIdx) * self->ctx.tiling_->cinG * self->ctx.dkHkWk_ +
                 curCinIdx + (curDkIdx * self->ctx.hkWk_ + self->ctx.curHkIdx_ * self->ctx.tiling_->wk + self->ctx.curWkIdx_) *
                 self->ctx.tiling_->cinG;
-            LoadGmDataToB1ForNd2Nz(self, curCinSize, curCoutSize, out2B1SrcAddrOffset, useB1Buf);
+            LoadGmDataToB1ForNd2Nz<Intf, ksCoutFullLoad>(self, curCinSize, curCoutSize, out2B1SrcAddrOffset, useB1Buf);
         }
     }
 
     self->ctx.inQueL1B_.EnQue(useB1Buf);
 }
 
-template <class Intf, class src1_T>
+template <class Intf, class src1_T, bool ksCoutFullLoad>
 __aicore__ inline void LoadToB1(Intf *self, uint64_t kIdx, uint32_t curDkIdx, bool loadFlag)
 {
     if (!loadFlag || unlikely(kIdx >= self->ctx.kIter_ || (self->ctx.isB1FullLoadFlag_ && !self->ctx.isLoadB1_))) {
@@ -455,7 +455,7 @@ __aicore__ inline void LoadToB1(Intf *self, uint64_t kIdx, uint32_t curDkIdx, bo
         self->ctx.c04LoadToB1IterIdx_ += 1;
     } else {
         if ASCEND_IS_AIC_SCALAR {
-            LoadGmDataToB1<Intf, typename Intf::SrcBT>(self, kIdx, curDkIdx);
+            LoadGmDataToB1<Intf, typename Intf::SrcBT, ksCoutFullLoad>(self, kIdx, curDkIdx);
         }
     }
 }

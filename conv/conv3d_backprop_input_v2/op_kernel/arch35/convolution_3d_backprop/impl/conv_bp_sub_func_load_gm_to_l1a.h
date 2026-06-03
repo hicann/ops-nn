@@ -77,11 +77,11 @@ static __aicore__ inline void CalcSetFmatrixParams(Intf *self, uint32_t fmapH, u
     self->ctx.load3d_.padList[3] = 255;
 }
 
-template <class Intf>
+template <class Intf, bool ksCoutFullLoad>
 static __aicore__ inline void CalcCurCoutSizeA1(Intf *self, const uint64_t kIdx, const uint32_t curCoutIdx, uint32_t &curCoutSize)
 {
     if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
-        if (self->ctx.kSCoutFullLoad_) {    // cout全载场景
+        if (ksCoutFullLoad) {    // cout全载场景
             curCoutSize = self->ctx.tiling_->singleCoreCout;
             return;
         }
@@ -148,7 +148,7 @@ static __aicore__ inline void CalcCurHoSize4KernelSplit(Intf *self, uint32_t cur
     }
 }
 
-template <class Intf>
+template <class Intf, bool ksCoutFullLoad>
 static __aicore__ inline void CalcLoadToA1Dn2NzParams4KernelSplit(Intf *self, uint32_t kIdx, Dn2NzParams &dn2NzParams,
     uint32_t curDoutIdx, int64_t &curOriHoIdx, uint64_t &woOffset)
 {
@@ -170,7 +170,7 @@ static __aicore__ inline void CalcLoadToA1Dn2NzParams4KernelSplit(Intf *self, ui
 
     uint32_t curCoutIdx = DivHkWk<Intf>(self, kIdx * self->ctx.tiling_->baseK);
     uint32_t curCoutSize = 0;
-    CalcCurCoutSizeA1(self, kIdx, curCoutIdx, curCoutSize);
+    CalcCurCoutSizeA1<Intf, ksCoutFullLoad>(self, kIdx, curCoutIdx, curCoutSize);
     CalcCurHoSize4KernelSplit(self, curDoutIdx, curOriHoIdx, woOffset, realWo, curHoSize);
     // 目前只支持各方向pad相等，只判断左pad，简化计算，kernel=1*1 只需要搬第一块子dedy，不用分开搬运
     if (self->ctx.tiling_->backpropPadLeft == 0 && (self->ctx.tiling_->wk != 1 || self->ctx.tiling_->hk != 1)) {
@@ -268,7 +268,7 @@ static __aicore__ inline void CalcLoadToA1Dn2NzParams(Intf *self, Dn2NzParams &d
 
     uint32_t curHoSize = self->ctx.curHoSize_;
     uint32_t curCoutSize = 0;
-    CalcCurCoutSizeA1(self, kIdx, curCoutIdx, curCoutSize);
+    CalcCurCoutSizeA1<Intf, false>(self, kIdx, curCoutIdx, curCoutSize);
     uint32_t loadToA1HLoop = 0;
     uint32_t woExpand = ((self->ctx.tiling_->wo - 1) * self->ctx.tiling_->strideW) + 1;
     bool resetWoExpand = self->ctx.tiling_->backpropPadLeft < 0 || self->ctx.tiling_->backpropPadRight < 0;
@@ -320,7 +320,7 @@ static __aicore__ inline void CalcLoadToA1Nd2NzParams(Intf *self, Nd2NzParams &n
     if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_H) {
         strideH = 1;
     }
-    CalcCurCoutSizeA1(self, kIdx, curCoutIdx, curCoutSize);
+    CalcCurCoutSizeA1<Intf, false>(self, kIdx, curCoutIdx, curCoutSize);
     uint32_t loadToA1HLoop = 0;
     uint32_t woExpand = ((self->ctx.tiling_->wo - 1) * self->ctx.tiling_->strideW) + 1;
     uint32_t woStart = 0;
@@ -367,7 +367,7 @@ static __aicore__ inline void CalcLoadToA1Nd2NzParams(Intf *self, Nd2NzParams &n
     CalcSetFmatrixParams(self, curHoSize, woExpand);
 }
 
-template <class Intf, class src0_T>
+template <class Intf, class src0_T, bool ksCoutFullLoad>
 __aicore__ inline void LoadToA1ForDn2Nz(Intf *self, LocalTensor<typename Intf::SrcAT> &useA1Buf,
     uint32_t kIdx, uint32_t curDoutIdx)
 {
@@ -388,7 +388,7 @@ __aicore__ inline void LoadToA1ForDn2Nz(Intf *self, LocalTensor<typename Intf::S
     }
     coOffset = curCoutIdx * self->ctx.doHoWo_;
     if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
-        CalcLoadToA1Dn2NzParams4KernelSplit(self, kIdx, dn2NzParams, curDoutIdx, curOriHoIdx, woOffset);
+        CalcLoadToA1Dn2NzParams4KernelSplit<Intf, ksCoutFullLoad>(self, kIdx, dn2NzParams, curDoutIdx, curOriHoIdx, woOffset);
     } else {
         uint32_t strideH = self->ctx.tiling_->strideH;
         if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_H) {
@@ -476,7 +476,7 @@ __aicore__ inline void LoadToA1ForNd2Nz(Intf *self, LocalTensor<typename Intf::S
     }
 }
 
-template <class Intf, class src0_T>
+template <class Intf, class src0_T, bool ksCoutFullLoad>
 __aicore__ inline void LoadToA1(Intf *self, uint32_t kIdx, uint32_t curDoutIdx, bool loadFlag)
 {
     if (!loadFlag || unlikely(kIdx >= self->ctx.kIter_ || (self->ctx.isA1FullLoadFlag_ && !self->ctx.isLoadA1_))) {
@@ -485,7 +485,7 @@ __aicore__ inline void LoadToA1(Intf *self, uint32_t kIdx, uint32_t curDoutIdx, 
     LocalTensor<typename Intf::SrcAT> useA1Buf = self->ctx.inQueL1A_.template AllocTensor<typename Intf::SrcAT>();
 
     if constexpr (Intf::Config::cType::format == Convolution3DBackprop::CubeFormat::NCDHW) {
-        LoadToA1ForDn2Nz<Intf, typename Intf::SrcAT>(self, useA1Buf, kIdx, curDoutIdx);
+        LoadToA1ForDn2Nz<Intf, typename Intf::SrcAT, ksCoutFullLoad>(self, useA1Buf, kIdx, curDoutIdx);
     } else {
         LoadToA1ForNd2Nz<Intf, typename Intf::SrcAT>(self, useA1Buf, kIdx, curDoutIdx);
     }

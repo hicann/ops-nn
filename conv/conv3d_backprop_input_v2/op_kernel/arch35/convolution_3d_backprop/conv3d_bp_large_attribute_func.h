@@ -92,7 +92,7 @@ static __aicore__ inline void ComputeForTilingHkWk(Intf *self, LocalTensor<typen
                 if (!ComputeForWkLoop<Intf>(self, kwDilation, woExpand, woStartIdx, curWkIdx)) {
                     continue;
                 }
-                ComputeForKIter<Intf, hasBias>(self, l0a, l0b, l0c, curInnerKdIdx, curDoutIdx, isFirstDHWk, l0PingPongFlag);
+                ComputeForKIter<Intf, hasBias, false>(self, l0a, l0b, l0c, curInnerKdIdx, curDoutIdx, isFirstDHWk, l0PingPongFlag);
                 isFirstDHWk = false;
             }
             self->ctx.curHoIdx_ -= self->ctx.tiling_->dilationH; //计算一行Hk后需更新curHoIdx，且需要跳过空洞部分

@@ -125,12 +125,7 @@ static __aicore__ inline void CalcSubKernelPadListForKernelSplit(Intf *self)
     self->ctx.subPadUpList_[2] = CalcSubKernelBackpadBegin(self->ctx.tiling_->hk,
         self->ctx.tiling_->strideH, self->ctx.tiling_->backpropPadUp, 1);
     self->ctx.subPadUpList_[3] = self->ctx.subPadUpList_[2];
-    self->ctx.subPadDownList_[0] = CalcSubKernelBackpadEnd(self->ctx.tiling_->hk,
-        self->ctx.tiling_->strideH, self->ctx.tiling_->backpropPadDown, 0);
-    self->ctx.subPadDownList_[1] = self->ctx.subPadDownList_[0];
-    self->ctx.subPadDownList_[2] = CalcSubKernelBackpadEnd(self->ctx.tiling_->hk,
-        self->ctx.tiling_->strideH, self->ctx.tiling_->backpropPadDown, 1);
-    self->ctx.subPadDownList_[3] = self->ctx.subPadDownList_[2];
+    // load3d下pad值固定为255，这里不需要再计算下pad信息
 }
 
 template <class Intf>
