@@ -159,7 +159,7 @@ TEST_F(rotate_quant_test, test_case_bf16_int8)
 
     ICPU_SET_TILING_KEY(TILING_KEY_BF16);
     AscendC::SetKernelMode(KernelMode::MIX_MODE);
-    ICPU_RUN_KF(rotate_quant, KERNEL_RUN_CORE_NUM, x, rot, y, scale, workSpace, tiling);
+    ICPU_RUN_KF(rotate_quant, KERNEL_RUN_CORE_NUM, x, rot, nullptr, y, scale, workSpace, tiling);
 
     AscendC::GmFree(x);
     AscendC::GmFree(rot);
@@ -202,7 +202,7 @@ TEST_F(rotate_quant_test, test_case_fp16_int8)
 
     ICPU_SET_TILING_KEY(TILING_KEY_FP16);
     AscendC::SetKernelMode(KernelMode::MIX_MODE);
-    ICPU_RUN_KF(rotate_quant, KERNEL_RUN_CORE_NUM, x, rot, y, scale, workSpace, tiling);
+    ICPU_RUN_KF(rotate_quant, KERNEL_RUN_CORE_NUM, x, rot, nullptr, y, scale, workSpace, tiling);
 
     AscendC::GmFree(x);
     AscendC::GmFree(rot);

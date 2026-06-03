@@ -26,12 +26,8 @@ using namespace RotateQuantOpt;
 #endif
 
 KERNEL_LINKAGE __global__
-    __aicore__ void rotate_quant(GM_ADDR x, GM_ADDR rot, GM_ADDR y, GM_ADDR scale, GM_ADDR workSpace, GM_ADDR tiling)
+    __aicore__ void rotate_quant(GM_ADDR x, GM_ADDR rot, GM_ADDR alpha, GM_ADDR y, GM_ADDR scale, GM_ADDR workSpace, GM_ADDR tiling)
 {
-    if (x == nullptr || rot == nullptr || y == nullptr || scale == nullptr) {
-        return;
-    }
-
     REGISTER_TILING_DEFAULT(RotateQuantTilingData);
     GET_TILING_DATA(tilingData, tiling);
     __gm__ uint8_t* userWorkspace = GetUserWorkspace(workSpace);

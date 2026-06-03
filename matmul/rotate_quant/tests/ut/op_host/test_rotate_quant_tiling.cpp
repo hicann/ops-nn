@@ -13,7 +13,7 @@
 #include <gtest/gtest.h>
 #include "log/log.h"
 #include "ut_op_common.h"
-#include "../../../op_host/op_tiling/rotate_quant_tiling.h"
+#include "../../../op_host/arch22/rotate_quant_tiling.h"
 #include "platform/platform_infos_def.h"
 #include "ut_op_util.h"
 #include "kernel_run_context_facker.h"
@@ -81,7 +81,7 @@ TEST_P(TilingRotateQuant, rotate_quant_tiling)
     platform_info.Init();
 
     // compile info
-    optiling::RotateQuantCompileInfo compile_info;
+    Ops::NN::RotateQuant::RotateQuantCompileInfo compile_info;
 
     string op_type("RotateQuant");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
