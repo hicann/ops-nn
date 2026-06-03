@@ -175,7 +175,7 @@ __aicore__ inline void ScatterNdCommonSimt<PARAMS_T, INDICES_T, TYPE_T, Mode>::I
 
     pipe_.InitBuffer(inQueX, DOUBLE_BUFFER, ROUND_UP32(this->ubTilingSize_ * sizeof(PARAMS_T)));
     if (tiling_.rankSize >= INDICE_RANK_TWO) {
-        pipe_.InitBuffer(inQueIdx, DOUBLE_BUFFER, ROUND_UP32(indiceUbTilingSize * sizeof(INDICES_T)));
+        pipe_.InitBuffer(inQueIdx, DOUBLE_BUFFER, ROUND_UP32((indiceUbTilingSize + tiling_.rankSize) * sizeof(INDICES_T)));
         pipe_.InitBuffer(strideListBuf, MAX_RANK_COUNT * sizeof(TYPE_T));
         pipe_.InitBuffer(outputShapeBuf, MAX_SHAPE_RANK * sizeof(TYPE_T));
     }

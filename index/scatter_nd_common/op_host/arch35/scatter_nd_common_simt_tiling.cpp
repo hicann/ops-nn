@@ -23,7 +23,7 @@ namespace optiling {
 using namespace ScatterNdCommon;
 
 static constexpr uint64_t RESERVE_SIZE = 256;
-static constexpr int64_t DCACHE_SIZE = 32768;  // 32k
+static constexpr int64_t DCACHE_SIZE = 131072;  // 128k
 static constexpr int64_t TEMPLATE_MODE_SIMT = 8;
 static constexpr uint64_t DB_BUFFER = 2;
 static constexpr uint64_t MIN_TILING_SIZE = 128;
