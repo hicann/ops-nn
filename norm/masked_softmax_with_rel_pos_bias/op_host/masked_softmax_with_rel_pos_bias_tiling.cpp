@@ -570,7 +570,13 @@ ge::graphStatus MaskedSoftmaxWithRelPosBiasBTiling::DoOpTiling() {
   tilingData.set_singleCoreSize(singleCoreSize);
 
   auto xYUbSize = BUFF_NUM * xSize;  // 包括x和y
-  uint32_t stackNum = (aicoreParams_.ubSize - static_cast<uint32_t>(attenBiasAndTempSize - bf16AttenAndBiasCastTempSize)) /
+  uint64_t attenBiasNetSize;
+  if (attenBiasAndTempSize >= bf16AttenAndBiasCastTempSize) {
+    attenBiasNetSize = attenBiasAndTempSize - bf16AttenAndBiasCastTempSize;
+  } else {
+    attenBiasNetSize = 0;
+  }
+  uint32_t stackNum = (aicoreParams_.ubSize - static_cast<uint32_t>(attenBiasNetSize)) /
                       (xYUbSize * 2 + static_cast<uint32_t>(bf16XCastTempSize) + softMaskMinTmpSize); // 2 is for double buffer
   stackNum = std::min(stackNum, singleCoreSize / BUFF_NUM);
   // 这个loopNum并没有在device侧使用
@@ -744,7 +750,7 @@ class MaskedSoftmaxWithRelPosBiasBWTiling : public MaskedSoftmaxWithRelPosBiasBa
 
 // 需要根据切分规则判断Ub能否用满
 bool MaskedSoftmaxWithRelPosBiasBWTiling::IsCapable() {
-  if (b_ * w_ < aivNum) {
+  if (static_cast<uint64_t>(b_) * w_ < aivNum) {
     OP_LOGD(context_, "Do BW tiling failed, b * w should greater than aivNum, "
                 "but b * w is %u, aivNum is %u.", b_ * w_, aivNum);
     return false;
@@ -966,9 +972,9 @@ ge::graphStatus MaskedSoftmaxWithRelPosBiasS1BiasTiling::DoSoftMaxFlashV2Tiling(
 }
 
 ge::graphStatus MaskedSoftmaxWithRelPosBiasS1BiasTiling::DoOpTiling() {
-  uint32_t totalSize = b_ * w_ * n_ * s1_;
-  uint32_t singleCoreSize = totalSize / aivNum;
-  int64_t tailSize = b_ * w_ * n_ * s1_ - singleCoreSize * aivNum;
+  int64_t totalSize = static_cast<int64_t>(b_) * w_ * n_ * s1_;
+  int64_t singleCoreSize = totalSize / aivNum;
+  int64_t tailSize = totalSize - singleCoreSize * aivNum;
   int64_t tailStartCoreIdx = aivNum;
   if (tailSize != 0) {
     tailStartCoreIdx = tailSize;
@@ -982,14 +988,14 @@ ge::graphStatus MaskedSoftmaxWithRelPosBiasS1BiasTiling::DoOpTiling() {
                                               bf16ABiasCastTempSize + bf16YCastTempSize));
   uint32_t loopNum = 0;
   if (tailSize != 0) {
-    stackNum = std::min(stackNum, (singleCoreSize - 1) / BUFF_NUM);
+    stackNum = std::min(stackNum, static_cast<uint32_t>((singleCoreSize - 1) / BUFF_NUM));
     if (stackNum != 0) {
-      loopNum = (singleCoreSize - 1) / stackNum;
+      loopNum = static_cast<uint32_t>((singleCoreSize - 1) / stackNum);
     }
   } else {
-    stackNum = std::min(stackNum, singleCoreSize / BUFF_NUM);
+    stackNum = std::min(stackNum, static_cast<uint32_t>(singleCoreSize / BUFF_NUM));
     if (stackNum != 0) {
-      loopNum = singleCoreSize / stackNum;
+      loopNum = static_cast<uint32_t>(singleCoreSize / stackNum);
     }
   }
   auto loopTailNum = singleCoreSize - stackNum * loopNum;
@@ -1074,7 +1080,7 @@ uint64_t MaskedSoftmaxWithRelPosBiasS1BiasTiling::GetTilingKey() const {
 ge::graphStatus MaskedSoftmaxWithRelPosBiasS1BiasTiling::PostTiling() {
   tilingData.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
   context_->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());  // already check capcity in CheckContext
-  context_->SetBlockDim(std::min(aivNum, b_ * w_ * n_ * s1_));
+  context_->SetBlockDim(std::min(aivNum, static_cast<uint32_t>(static_cast<uint64_t>(b_) * w_ * n_ * s1_)));
   return ge::GRAPH_SUCCESS;
 }
 class MaskedSoftmaxWithRelPosBiasBWNTiling : public MaskedSoftmaxWithRelPosBiasBaseTiling {
@@ -1108,7 +1114,7 @@ class MaskedSoftmaxWithRelPosBiasBWNTiling : public MaskedSoftmaxWithRelPosBiasB
 
 // 需要根据切分规则判断Ub能否用满
 bool MaskedSoftmaxWithRelPosBiasBWNTiling::IsCapable() {
-  if (b_ * w_ * n_ < aivNum) {
+  if (static_cast<uint64_t>(b_) * w_ * n_ < aivNum) {
     OP_LOGD(context_, "Do BWN tiling failed, b * w * n should greater than aivNum, "
                 "but b * w * n is %u, aivNum is %u.", b_, aivNum);
     return false;
@@ -1146,8 +1152,8 @@ bool MaskedSoftmaxWithRelPosBiasBWNTiling::IsCapable() {
 
 ge::graphStatus MaskedSoftmaxWithRelPosBiasBWNTiling::DoOpTiling() {
   // 这里一定是batchSize >= aivNum
-  int64_t singleCoreSize = b_ * w_ * n_ / aivNum;
-  int64_t tailSize = b_ * w_ * n_ - singleCoreSize * aivNum;
+  int64_t singleCoreSize = static_cast<int64_t>(b_) * w_ * n_ / aivNum;
+  int64_t tailSize = static_cast<int64_t>(b_) * w_ * n_ - singleCoreSize * aivNum;
   int64_t tailStartCoreIdx = aivNum;
   if (tailSize != 0) {
     tailStartCoreIdx = tailSize;
@@ -1301,7 +1307,7 @@ bool MaskedSoftmaxWithRelPosBiasBWNS1Tiling::IsCapable() {
 }
 
 ge::graphStatus MaskedSoftmaxWithRelPosBiasBWNS1Tiling::DoOpTiling() {
-  int64_t totalSize = b_ * w_ * n_ * s1_;
+  int64_t totalSize = static_cast<int64_t>(b_) * w_ * n_ * s1_;
   int64_t singleCoreSize = totalSize / aivNum;
   int64_t tailSize = totalSize - singleCoreSize * aivNum;
   int64_t tailStartCoreIdx = aivNum;
@@ -1398,7 +1404,7 @@ uint64_t MaskedSoftmaxWithRelPosBiasBWNS1Tiling::GetTilingKey() const {
 ge::graphStatus MaskedSoftmaxWithRelPosBiasBWNS1Tiling::PostTiling() {
   tilingData.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
   context_->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());  // already check capcity in CheckContext
-  context_->SetBlockDim(std::min(aivNum, b_ * w_ * n_ * s1_));
+  context_->SetBlockDim(std::min(aivNum, static_cast<uint32_t>(static_cast<uint64_t>(b_) * w_ * n_ * s1_)));
   return ge::GRAPH_SUCCESS;
 }
 
@@ -1433,7 +1439,7 @@ bool MaskedSoftmaxWithRelPosBiasONES2Tiling::IsCapable() {
 }
 
 ge::graphStatus MaskedSoftmaxWithRelPosBiasONES2Tiling::DoOpTiling() {
-  int64_t totalSize = b_ * w_ * n_ * s1_;
+  int64_t totalSize = static_cast<int64_t>(b_) * w_ * n_ * s1_;
   int64_t singleCoreSize = totalSize / aivNum;
   int64_t tailSize = totalSize - singleCoreSize * aivNum;
   int64_t tailStartCoreIdx = aivNum;
@@ -1470,7 +1476,7 @@ uint64_t MaskedSoftmaxWithRelPosBiasONES2Tiling::GetTilingKey() const {
 ge::graphStatus MaskedSoftmaxWithRelPosBiasONES2Tiling::PostTiling() {
   tilingData.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
   context_->GetRawTilingData()->SetDataSize(tilingData.GetDataSize());  // already check capcity in CheckContext
-  context_->SetBlockDim(std::min(aivNum, b_ * w_ * n_ * s1_));
+  context_->SetBlockDim(std::min(aivNum, static_cast<uint32_t>(static_cast<uint64_t>(b_) * w_ * n_ * s1_)));
   return ge::GRAPH_SUCCESS;
 }
 

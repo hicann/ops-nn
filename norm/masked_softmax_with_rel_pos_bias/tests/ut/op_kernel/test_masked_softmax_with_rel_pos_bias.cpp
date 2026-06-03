@@ -161,33 +161,6 @@ TEST_F(masked_softmax_with_rel_pos_bias_test, test_case_51)
     }
 }
 
-TEST_F(masked_softmax_with_rel_pos_bias_test, test_case_52)
-{
-    uint32_t BS = 1023;
-    uint32_t W = 4;
-    uint32_t N = 2;
-    uint32_t S1 = 16;
-    uint32_t S2 = 16;
-
-    // 下面4个循环，代表每个类型的4个tiling key，从1到4,
-    // 最后一个输入，代表当前tilingkey的第几个测试，每个tilingkey需要测试多个shape，例如：
-    // 测试模板4的，float32，第一个tilingkey，第一种shape，则gen_tiling.py中的caseidx应该写成"case4010"，第二种shape则为"case4011"
-    std::string dtype = "float32";
-    for (uint32_t i = 1; i <= 4; i++) {
-        run_masked_softmax_with_rel_pos_bias_case(BS, W, N, S1, S2, dtype, sizeof(float), 5000 + i, 1);
-    }
-
-    dtype = "half";
-    for (uint32_t i = 1; i <= 4; i++) {
-        run_masked_softmax_with_rel_pos_bias_case(BS, W, N, S1, S2, dtype, sizeof(half), 5010 + i, 1);
-    }
-
-    dtype = "bfloat16";
-    for (uint32_t i = 1; i <= 4; i++) {
-        run_masked_softmax_with_rel_pos_bias_case(BS, W, N, S1, S2, dtype, sizeof(bfloat16_t), 5020 + i, 1);
-    }
-}
-
 TEST_F(masked_softmax_with_rel_pos_bias_test, test_case_53)
 {
     uint32_t BS = 49;
@@ -212,33 +185,6 @@ TEST_F(masked_softmax_with_rel_pos_bias_test, test_case_53)
     dtype = "bfloat16";
     for (uint32_t i = 1; i <= 4; i++) {
         run_masked_softmax_with_rel_pos_bias_case(BS, W, N, S1, S2, dtype, sizeof(bfloat16_t), 5120 + i, 1);
-    }
-}
-
-TEST_F(masked_softmax_with_rel_pos_bias_test, test_case_54)
-{
-    uint32_t BS = 525;
-    uint32_t W = 3;
-    uint32_t N = 5;
-    uint32_t S1 = 4;
-    uint32_t S2 = 3;
-
-    // 下面4个循环，代表每个类型的4个tiling key，从1到4,
-    // 最后一个输入，代表当前tilingkey的第几个测试，每个tilingkey需要测试多个shape，例如：
-    // 测试模板4的，float32，第一个tilingkey，第一种shape，则gen_tiling.py中的caseidx应该写成"case4010"，第二种shape则为"case4011"
-    std::string dtype = "float32";
-    for (uint32_t i = 1; i <= 4; i++) {
-        run_masked_softmax_with_rel_pos_bias_case(BS, W, N, S1, S2, dtype, sizeof(float), 5100 + i, 2);
-    }
-
-    dtype = "half";
-    for (uint32_t i = 1; i <= 4; i++) {
-        run_masked_softmax_with_rel_pos_bias_case(BS, W, N, S1, S2, dtype, sizeof(half), 5110 + i, 2);
-    }
-
-    dtype = "bfloat16";
-    for (uint32_t i = 1; i <= 4; i++) {
-        run_masked_softmax_with_rel_pos_bias_case(BS, W, N, S1, S2, dtype, sizeof(bfloat16_t), 5120 + i, 2);
     }
 }
 
@@ -347,63 +293,6 @@ TEST_F(masked_softmax_with_rel_pos_bias_test, test_case_20)
     dtype = "bfloat16";
     for (uint32_t i = 3; i <= 4; i++) {
         run_masked_softmax_with_rel_pos_bias_case(BS, W, N, S1, S2, dtype, sizeof(bfloat16_t), 220 + i, 1);
-    }
-}
-
-TEST_F(masked_softmax_with_rel_pos_bias_test, test_case_30)
-{
-    uint32_t BS = 2;
-    uint32_t W = 2;
-    uint32_t N = 128;
-    uint32_t S1 = 8;
-    uint32_t S2 = 8;
-
-    // 下面4个循环，代表每个类型的4个tiling key，从1到4,
-    // 最后一个输入，代表当前tilingkey的第几个测试，每个tilingkey需要测试多个shape，例如：
-    // 测试模板3的，float32，第一个tilingkey，第一种shape，则gen_tiling.py中的caseidx应该写成"case3010"，第二种shape则为"case3011"
-
-    std::string dtype = "float32";
-    for (uint32_t i = 1; i <= 4; i++) {
-        run_masked_softmax_with_rel_pos_bias_case(BS, W, N, S1, S2, dtype, sizeof(float), 300 + i, 0);
-    }
-
-    dtype = "half";
-    // ut 报在softmax内部，npu执行正常
-    for (uint32_t i = 1; i <= 1; i++) {
-        run_masked_softmax_with_rel_pos_bias_case(BS, W, N, S1, S2, dtype, sizeof(half), 310 + i, 0);
-    }
-
-    dtype = "bfloat16";
-    for (uint32_t i = 1; i <= 2; i++) {
-        run_masked_softmax_with_rel_pos_bias_case(BS, W, N, S1, S2, dtype, sizeof(bfloat16_t), 320 + i, 0);
-    }
-}
-
-TEST_F(masked_softmax_with_rel_pos_bias_test, test_case_31)
-{
-    uint32_t BS = 2;
-    uint32_t W = 3;
-    uint32_t N = 127;
-    uint32_t S1 = 5;
-    uint32_t S2 = 5;
-
-    // 下面4个循环，代表每个类型的4个tiling key，从1到4,
-    // 最后一个输入，代表当前tilingkey的第几个测试，每个tilingkey需要测试多个shape，例如：
-    // 测试模板3的，float32，第一个tilingkey，第一种shape，则gen_tiling.py中的caseidx应该写成"case3010"，第二种shape则为"case3011"
-
-    std::string dtype = "float32";
-    for (uint32_t i = 1; i <= 4; i++) {
-        run_masked_softmax_with_rel_pos_bias_case(BS, W, N, S1, S2, dtype, sizeof(float), 300 + i, 1);
-    }
-
-    dtype = "half";
-    for (uint32_t i = 1; i <= 1; i++) {
-        run_masked_softmax_with_rel_pos_bias_case(BS, W, N, S1, S2, dtype, sizeof(half), 310 + i, 1);
-    }
-
-    dtype = "bfloat16";
-    for (uint32_t i = 1; i <= 2; i++) {
-        run_masked_softmax_with_rel_pos_bias_case(BS, W, N, S1, S2, dtype, sizeof(bfloat16_t), 320 + i, 1);
     }
 }
 

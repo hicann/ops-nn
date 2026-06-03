@@ -49,7 +49,7 @@ class MaskedSoftmaxWithRelPosBiasBWN {
     softMaxTiling = tilingData->softmaxTilingData;
     atten_mask_offset = offset;
     relative_pos_bias_offset = offset % n_;
-    uint32_t offsets1s2_ = offset * s1s2_;
+    uint64_t offsets1s2_ = offset * s1s2_;
     xGm.SetGlobalBuffer((__gm__ T*)x + offsets1s2_, batchSize * s1s2_);
     yGm.SetGlobalBuffer((__gm__ T*)y + offsets1s2_, batchSize * s1s2_);
     if constexpr (existAtten) {
