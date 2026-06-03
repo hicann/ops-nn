@@ -179,7 +179,7 @@ aclnnStatus ExecIndexFillGetWorkspaceSize(
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
-    if(self->IsEmpty() || index->IsEmpty()){
+    if(self->IsEmpty()){
         *workspaceSize = 0;
         uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
@@ -192,13 +192,6 @@ aclnnStatus ExecIndexFillGetWorkspaceSize(
         return ACLNN_SUCCESS;
     }
 
-    // 算子的空tensor在kernel中支持，对标竞品根据算子实际情况补充
-    if (self->IsEmpty()) {
-        // 根据实际支持情况补充
-        *workspaceSize = 0;
-        uniqueExecutor.ReleaseTo(executor);
-        return ACLNN_SUCCESS;
-    }
     // 固定写法，将输入转换成连续的tensor
     auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
     CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
