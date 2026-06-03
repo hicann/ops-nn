@@ -1,6 +1,7 @@
 # ops-nn
 
 ## 🔥Latest News
+
 - [2026/03] 开源算子支持下一代芯片：Ascend950PR（[!450](https://gitcode.com/cann/ops-nn/pull/450)）。
 - [2026/03] 新增<<<>>>的算子开发样例（[!620](https://gitcode.com/cann/ops-nn/pull/620)）。
 - [2026/03] 低bit类算子和融合算子支持更多数据类型：fp8/mxfp8/hifp8/mxfp4等，并支持pertensor/perchannel/pertoken/pergroup/perblock等不同量化和组合方式：[全量化融合算子:quant_batch_matmul_v4](https://gitcode.com/cann/ops-nn/blob/9.0.0-beta.1/matmul/quant_batch_matmul_v4/README.md)，[伪量化融合算子:weight_quant_batch_matmul_v2](https://gitcode.com/cann/ops-nn/blob/9.0.0-beta.1/matmul/weight_quant_batch_matmul_v2/README.md)。
@@ -28,15 +29,14 @@ ops-nn是[CANN](https://hiascend.com/software/cann)（Compute Architecture for N
 
 ## ⬇️源码下载
 
-环境准备好后，下载与CANN版本配套的分支源码，命令如下，\$\{tag\_version\}替换为分支标签名。
- 	 
-> 说明：若环境中已存在配套分支源码，**可跳过本步骤**，例如CANNLab默认已提供最新商发版CANN对应的源码。
+环境准备好后，下载与CANN版本配套的分支源码，通用命令如下，\$\{tag\_version\}替换为分支标签名。以9.0.0分支源码下载为例：
 
 ```bash
-git clone -b ${tag_version} https://gitcode.com/cann/ops-nn.git
+# 通用命令：git clone -b ${tag_version} https://gitcode.com/cann/ops-nn.git
+git clone -b 9.0.0 https://gitcode.com/cann/ops-nn.git
 ```
 
-说明：对于CANNLab云开发环境，已默认提供最新商发CANN版本配套的源码，如需获取其他版本源码，参考上述命令获取。
+> 说明：若环境中已存在配套分支源码，**可跳过本步骤**，例如CANNLab默认已提供最新商发版CANN对应的源码。
 
 ## 📖学习教程
 

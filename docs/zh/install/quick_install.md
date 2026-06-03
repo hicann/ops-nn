@@ -44,18 +44,18 @@
 
 1.**安装驱动与固件（运行态依赖）**
 
-宿主机上昇腾驱动与固件的下载和安装操作请参考《[CANN软件安装指南](https://www.hiascend.com/document/redirect/CannCommunityInstWizard)》中“准备软件包”和“安装NPU驱动和固件”章节。驱动与固件是运行态依赖，若仅编译算子，可以不安装。
+驱动与固件是运行态依赖，若仅编译算子，可以不安装。使用`npu-sim info`检查是否有NPU相关信息，若没有，请参考《[CANN快速安装](https://www.hiascend.com/cann/download)》完成驱动与固件安装。
 
 2.**下载镜像**
 
-- 步骤1：以root用户登录宿主机。确保宿主机已安装Docker引擎（版本1.11.2及以上）。
-- 步骤2：从[昇腾镜像仓库](https://www.hiascend.com/developer/ascendhub/detail/17da20d1c2b6493cb38765adeba85884)拉取已预集成CANN软件包及`ops-nn`所需依赖的镜像。命令如下，根据实际架构选择：
+- 步骤1：以root用户登录宿主机。确保宿主机已安装Docker引擎（版本1.11.2及以上），使用`docker --version`检查Docker版本，若没有，请参考[Docker官方安装指南](https://docs.docker.com/engine/install/)。
+- 步骤2：从[昇腾镜像仓库](https://www.hiascend.com/developer/ascendhub/detail/17da20d1c2b6493cb38765adeba85884)拉取已预集成CANN软件包及`ops-nn`所需依赖的镜像。
+
+  示例如下，请自行替换CANN版本号、芯片系列、操作系统、python版本信息。
 
     ```bash
-    # 示例：拉取ARM架构的CANN开发镜像
-    docker pull --platform=arm64 swr.cn-south-1.myhuaweicloud.com/ascendhub/cann:8.5.0-910b-ubuntu22.04-py3.10-ops
-    # 示例：拉取X86架构的CANN开发镜像
-    docker pull --platform=amd64 swr.cn-south-1.myhuaweicloud.com/ascendhub/cann:8.5.0-910b-ubuntu22.04-py3.10-ops
+    # 以cann:9.1.0-beta.1版本为例
+    docker pull swr.cn-south-1.myhuaweicloud.com/ascendhub/cann:9.1.0-beta.1-910b-openeuler24.03-py3.12-devel
     ```
 
 3.**运行Docker**
@@ -63,7 +63,7 @@
 拉取镜像后，需要以特定参数启动容器，以便容器内能访问宿主的昇腾设备。
 
 ```bash
-docker run --name cann_container --device /dev/davinci0 --device /dev/davinci_manager --device /dev/devmm_svm --device /dev/hisi_hdc -v /usr/local/dcmi:/usr/local/dcmi -v /usr/local/bin/npu-smi:/usr/local/bin/npu-smi -v /usr/local/Ascend/driver/lib64/:/usr/local/Ascend/driver/lib64/ -v /usr/local/Ascend/driver/version.info:/usr/local/Ascend/driver/version.info -v /etc/ascend_install.info:/etc/ascend_install.info -it swr.cn-south-1.myhuaweicloud.com/ascendhub/cann:8.5.0-910b-ubuntu22.04-py3.10-ops bash
+docker run --name cann_container --device /dev/davinci0 --device /dev/davinci_manager --device /dev/devmm_svm --device /dev/hisi_hdc -v /usr/local/dcmi:/usr/local/dcmi -v /usr/local/bin/npu-smi:/usr/local/bin/npu-smi -v /usr/local/Ascend/driver/lib64/:/usr/local/Ascend/driver/lib64/ -v /usr/local/Ascend/driver/version.info:/usr/local/Ascend/driver/version.info -v /etc/ascend_install.info:/etc/ascend_install.info -it swr.cn-south-1.myhuaweicloud.com/ascendhub/cann:9.1.0-beta.1-910b-openeuler24.03-py3.12-devel bash
 ```
 
 | 参数 | 说明 | 注意事项 |
@@ -79,7 +79,7 @@ docker run --name cann_container --device /dev/davinci0 --device /dev/davinci_ma
 | `-v /usr/local/Ascend/driver/version.info:/usr/local/Ascend/driver/version.info` | 挂载驱动版本信息文件。 | - |
 | `-v /etc/ascend_install.info:/etc/ascend_install.info` | 挂载CANN软件安装信息文件。 | - |
 | `-it` | `-i`（交互式）和 `-t`（分配伪终端）的组合参数。 | - |
-| `swr.cn-south-1.myhuaweicloud.com/ascendhub/cann:8.5.0-910b-ubuntu22.04-py3.10-ops` | 指定要运行的Docker镜像。 |请确保此镜像名和标签（tag）与你通过`docker pull`拉取的镜像完全一致。 |
+| `swr.cn-south-1.myhuaweicloud.com/ascendhub/cann:9.1.0-beta.1-910b-openeuler24.03-py3.12-devel` | 指定要运行的Docker镜像。 |请确保此镜像名和标签（tag）与你通过`docker pull`拉取的镜像完全一致。 |
 | `bash` | 容器启动后立即执行的命令。 | - |
 
 ### 方式3：手动安装
@@ -92,43 +92,39 @@ docker run --name cann_container --device /dev/davinci0 --device /dev/davinci_ma
 
     1. **安装驱动与固件（运行态依赖）**
 
-        下载和安装操作请参考《[CANN软件安装指南](https://www.hiascend.com/document/redirect/CannCommunityInstWizard)》中“准备软件包”和“安装NPU驱动和固件”章节。驱动与固件是运行态依赖，若仅编译算子，可以不安装。
+        驱动与固件是运行态依赖，若仅编译算子，可以不安装。使用`npu-sim info`检查是否有NPU相关信息，若没有，请参考《[CANN快速安装](https://www.hiascend.com/cann/download)》完成驱动与固件安装。
 
     2. **安装CANN包**
 
-        请单击[下载链接](https://ascend.devcloud.huaweicloud.com/artifactory/cann-run-mirror/software/master/)，选择最新时间版本，并根据产品型号和环境架构下载对应包。安装命令如下，更多指导参考《[CANN软件安装指南](https://www.hiascend.com/document/redirect/CannCommunityInstWizard)》。
+        请单击[下载链接](https://ascend.devcloud.huaweicloud.com/artifactory/cann-run-mirror/software/master/)，选择最新时间版本，并根据产品型号和环境架构下载对应包。安装命令如下，更多指导参考《[CANN快速安装](https://www.hiascend.com/cann/download)》。
 
         - 安装CANN toolkit包
 
-            ```bash
-            # 确保安装包具有可执行权限
-            chmod +x Ascend-cann-toolkit_${cann_version}_linux-${arch}.run
-            # 安装命令
-           ./Ascend-cann-toolkit_${cann_version}_linux-${arch}.run --install --install-path=${install_path}
+           ```bash
+           bash ./Ascend-cann-toolkit_${cann_version}_linux-${arch}.run --install --install-path=${install_path}
            ```
 
         - 安装CANN ops包（运行态依赖）
 
             ops包是运行态依赖，若仅编译算子，可不安装此包。
 
-            ```bash
-            # 确保安装包具有可执行权限
-            chmod +x Ascend-cann-${soc_name}-ops_${cann_version}_linux-${arch}.run
-            # 安装命令
-            ./Ascend-cann-${soc_name}-ops_${cann_version}_linux-${arch}.run --install --install-path=${install_path}
+           ```bash
+           bash ./Ascend-cann-${soc_name}-ops_${cann_version}_linux-${arch}.run --install --install-path=${install_path}
            ```
 
-            - \$\{cann\_version\}：表示CANN包版本号。
-            - \$\{arch\}：表示CPU架构，如aarch64、x86_64。
-            - \$\{soc\_name\}：表示NPU型号名称。
-            - \$\{install\_path\}：表示指定安装路径，ops包需与toolkit包安装在相同路径，root用户默认安装在`/usr/local/Ascend`目录。
+        变量含义说明：
+
+        - \$\{cann\_version\}：表示CANN包版本号。
+        - \$\{arch\}：表示CPU架构，可通过`uname -m`查询，例如aarch64、x86_64。
+        - \$\{soc\_name\}：表示NPU型号名称。
+        - \$\{install\_path\}：表示指定安装路径，ops包需与toolkit包安装在相同路径，root用户默认安装在`/usr/local/Ascend`目录。
 
 - **场景2：体验已发布版本能力或基于已发布版本进行开发**
 
     请访问[CANN官网下载中心](https://www.hiascend.com/cann/download)，选择发布版本（仅支持CANN 8.5.0及后续版本），并根据产品型号和环境架构下载对应包，最后参考网页提供的命令完成安装。
 
 #### 安装基础依赖
- 	 
+
 本项目基础依赖如下，注意满足版本号要求。
 
 - python >= 3.7.0（建议版本 <= 3.10）
@@ -149,7 +145,7 @@ docker run --name cann_container --device /dev/davinci0 --device /dev/davinci_ma
     ```bash
     git clone -b ${tag_version} https://gitcode.com/cann/ops-nn.git
     ```
-    
+
 2. 安装依赖。
 
     先通过项目根目录install\_deps.sh一键安装上述依赖，命令如下，若遇到不支持系统，请参考该文件自行适配。
@@ -157,7 +153,7 @@ docker run --name cann_container --device /dev/davinci0 --device /dev/davinci_ma
     ```bash
     bash install_deps.sh
     ```
-    
+
     安装完后，再通过项目根目录requirements.txt继续安装python三方库依赖，命令如下。
 
     ```bash
@@ -178,11 +174,15 @@ docker run --name cann_container --device /dev/davinci0 --device /dev/davinci_ma
 - **检查CANN版本**
 
     ```bash
-    # 查看CANN toolkit包版本信息（默认路径安装），WebIDE场景下将/usr/local替换为/home/developer
-    cat /usr/local/Ascend/cann/${arch}-linux/ascend_toolkit_install.info
-    # 查看CANN ops包版本信息（默认路径安装），WebIDE场景下将/usr/local替换为/home/developer
-    cat /usr/local/Ascend/cann/${arch}-linux/ascend_ops_install.info
+    # 查看CANN toolkit包版本信息（默认路径安装）
+    cat /usr/local/Ascend/cann/${arch}-linux/ascend_toolkit_install.info # docker和手动安装场景
+    cat /home/developer/Ascend/cann/${arch}-linux/ascend_toolkit_install.info # CANNLab场景
+    # 查看CANN ops包版本信息（默认路径安装）
+    cat /usr/local/Ascend/cann/${arch}-linux/ascend_ops_install.info # docker和手动安装场景
+    cat /home/developer/Ascend/cann/${arch}-linux/ascend_ops_install.info # CANNLab场景
     ```
+
+    其中\$\{arch\}可通过`uname -m`查询当前架构，如aarch64、x86_64。
 
 ## 环境变量配置
 
