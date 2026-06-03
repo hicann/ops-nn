@@ -22,7 +22,7 @@ class ForeachExpm1: public OpDef {
 public:
     explicit ForeachExpm1(const char* name) : OpDef(name)
     {
-        std::vector<ge::DataType> tensor_dtype_list = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16};
+        std::vector<ge::DataType> tensor_dtype_list = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16};
         std::vector<ge::Format> format_list(tensor_dtype_list.size(), ge::FORMAT_ND);
         this->Input("x")
             .ParamType(DYNAMIC)

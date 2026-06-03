@@ -47,7 +47,15 @@ public:
             .AutoContiguous();
         this->AICore().AddConfig("ascend910b");
         this->AICore().AddConfig("ascend910_93");
-        this->AICore().AddConfig("ascend950");
+        OpAICoreConfig aicoreConfig950;
+        aicoreConfig950.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(false)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .PrecisionReduceFlag(true)
+            .ExtendCfgInfo("opFile.value", "foreach_copy");
+        this->AICore().AddConfig("ascend950", aicoreConfig950);
 
         OpAICoreConfig config_kirin = GetKirinCoreConfig();
         this->AICore().AddConfig("kirinx90", config_kirin);

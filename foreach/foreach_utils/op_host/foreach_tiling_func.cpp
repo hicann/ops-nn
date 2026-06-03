@@ -22,43 +22,6 @@
 
 namespace optiling {
 
-static ge::graphStatus Tiling4ForeachAbsTiling(gert::TilingContext* context)
-{
-    ForeachCommonTiling tilingObject(context);
-    if (tilingObject.Init(FOREACH_ABS_OP_CODE) != ge::GRAPH_SUCCESS) {
-        return ge::GRAPH_FAILED;
-    }
-    return tilingObject.RunBigKernelTiling();
-}
-
-static ge::graphStatus Tiling4ForeachCopyTiling(gert::TilingContext* context)
-{
-    ForeachCommonTiling tilingObject(context);
-    if (tilingObject.Init(FOREACH_COPY_OP_CODE) != ge::GRAPH_SUCCESS) {
-        return ge::GRAPH_FAILED;
-    }
-    return tilingObject.RunBigKernelTiling();
-}
-
-static ge::graphStatus Tiling4ForeachAcosTiling(gert::TilingContext* context)
-{
-    ForeachCommonTiling tilingObject(context);
-    if (tilingObject.Init(FOREACH_ACOS_OP_CODE) != ge::GRAPH_SUCCESS) {
-        return ge::GRAPH_FAILED;
-    }
-
-    return tilingObject.RunBigKernelTiling();
-}
-
-static ge::graphStatus Tiling4ForeachAddListTiling(gert::TilingContext* context)
-{
-    ForeachCommonTiling tilingObject(context);
-    if (tilingObject.Init(FOREACH_ADD_LIST_OP_CODE, ForeachInputType::TYPE_SCALAR) != ge::GRAPH_SUCCESS) {
-        return ge::GRAPH_FAILED;
-    }
-    return tilingObject.RunBigScalarKernelTiling();
-}
-
 static ge::graphStatus Tiling4ForeachAddScalarTiling(gert::TilingContext* context)
 {
     return Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(context);
@@ -78,24 +41,6 @@ static ge::graphStatus Tiling4ForeachAddcdivListTiling(gert::TilingContext* cont
     return tilingObject.RunBigKernelTiling();
 }
 
-static ge::graphStatus Tiling4ForeachAddcdivScalarTiling(gert::TilingContext* context)
-{
-    ForeachCommonTiling tilingObject(context);
-    if (tilingObject.Init(FOREACH_POINTWISE_OP_CODE, ForeachInputType::TYPE_SCALAR) != ge::GRAPH_SUCCESS) {
-        return ge::GRAPH_FAILED;
-    }
-    return tilingObject.RunBigScalarKernelTiling();
-}
-
-static ge::graphStatus Tiling4ForeachAddcdivScalarListTiling(gert::TilingContext* context)
-{
-    ForeachCommonTiling tilingObject(context);
-    if (tilingObject.Init(FOREACH_POINTWISE_OP_CODE, ForeachInputType::TYPE_SCALARS_TENSOR) != ge::GRAPH_SUCCESS) {
-        return ge::GRAPH_FAILED;
-    }
-    return tilingObject.RunBigKernelTiling();
-}
-
 static ge::graphStatus Tiling4ForeachAddcmulListTiling(gert::TilingContext* context)
 {
     ForeachCommonTiling tilingObject(context);
@@ -110,60 +55,6 @@ static ge::graphStatus Tiling4ForeachAddcmulScalarTiling(gert::TilingContext* co
     return Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(context);
 }
 
-/* migrated to arch22/foreach_addcmul_scalar_list_tiling_arch22.cpp
-static ge::graphStatus Tiling4ForeachAddcmulScalarListTiling(gert::TilingContext* context)
-{
-    ForeachCommonTiling tilingObject(context);
-    if (tilingObject.Init(FOREACH_POINTWISE_OP_CODE, ForeachInputType::TYPE_SCALARS_TENSOR) != ge::GRAPH_SUCCESS) {
-        return ge::GRAPH_FAILED;
-    }
-    return tilingObject.RunBigKernelTiling();
-}
-
-IMPL_OP_OPTILING(ForeachAddcmulScalarList)
-    .Tiling(Tiling4ForeachAddcmulScalarListTiling)
-    .TilingParse<ForeachCompileInfo>(TilingPrepare4ForeachTiling);
-*/
-
-static ge::graphStatus Tiling4ForeachAsinTiling(gert::TilingContext* context)
-{
-    ForeachCommonTiling tilingObject(context);
-    if (tilingObject.Init(FOREACH_ASIN_OP_CODE) != ge::GRAPH_SUCCESS) {
-        return ge::GRAPH_FAILED;
-    }
-    return tilingObject.RunBigKernelTiling();
-}
-
-/* migrated to arch22/foreach_cos_tiling_arch22.cpp
-static ge::graphStatus Tiling4ForeachCosTiling(gert::TilingContext* context)
-{
-    ForeachCommonTiling tilingObject(context);
-    if (tilingObject.Init(FOREACH_COS_OP_CODE) != ge::GRAPH_SUCCESS) {
-        return ge::GRAPH_FAILED;
-    }
-    return tilingObject.RunBigKernelTiling();
-}
-*/
-/* migrated to arch22/foreach_cosh_tiling_arch22.cpp
-static ge::graphStatus Tiling4ForeachCoshTiling(gert::TilingContext* context)
-{
-    ForeachCommonTiling tilingObject(context);
-    if (tilingObject.Init(FOREACH_COSH_OP_CODE) != ge::GRAPH_SUCCESS) {
-        return ge::GRAPH_FAILED;
-    }
-    return tilingObject.RunBigKernelTiling();
-}
-*/
-
-static ge::graphStatus Tiling4ForeachDivListTiling(gert::TilingContext* context)
-{
-    ForeachCommonTiling tilingObject(context);
-    if (tilingObject.Init(BINARY_LIST_OP_CODE) != ge::GRAPH_SUCCESS) {
-        return ge::GRAPH_FAILED;
-    }
-    return tilingObject.RunBigKernelTiling();
-}
-
 static ge::graphStatus Tiling4ForeachDivScalarTiling(gert::TilingContext* context)
 {
     return Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(context);
@@ -174,30 +65,10 @@ static ge::graphStatus Tiling4ForeachDivScalarListTiling(gert::TilingContext* co
     return Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(context);
 }
 
-static ge::graphStatus Tiling4ForeachErfcTiling(gert::TilingContext* context)
-{
-    ForeachCommonTiling tilingObject(context);
-    if (tilingObject.Init(FOREACH_ERFC_OP_CODE) != ge::GRAPH_SUCCESS) {
-        return ge::GRAPH_FAILED;
-    }
-    return tilingObject.RunBigKernelTiling();
-}
-
-static ge::graphStatus Tiling4ForeachLerpListTiling(gert::TilingContext* context)
-{
-    ForeachCommonTiling tilingObject(context);
-    if (tilingObject.Init(FOREACH_LERP_LIST_OP_CODE) != ge::GRAPH_SUCCESS) {
-        return ge::GRAPH_FAILED;
-    }
-    return tilingObject.RunBigKernelTiling();
-}
-
 static ge::graphStatus Tiling4ForeachLerpScalarTiling(gert::TilingContext* context)
 {
     return Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(context);
 }
-
-
 
 static ge::graphStatus Tiling4ForeachMulScalarTiling(gert::TilingContext* context)
 {
@@ -236,31 +107,10 @@ static ge::graphStatus Tiling4ForeachPowScalarListTiling(gert::TilingContext* co
     return tilingObject.RunBigKernelTiling();
 }
 
-static ge::graphStatus Tiling4ForeachRoundOffNumberTiling(gert::TilingContext* context)
-{
-    ForeachCommonTiling tilingObject(context);
-    if (tilingObject.Init(FOREACH_ROUND_OFF_NUM_OP_CODE, ForeachInputType::TYPE_SCALAR) != ge::GRAPH_SUCCESS) {
-        return ge::GRAPH_FAILED;
-    }
-    return tilingObject.RunBigScalarKernelTiling();
-}
-
-
-
 static ge::graphStatus Tiling4ForeachSqrtTiling(gert::TilingContext* context)
 {
     return Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(context);
 }
-
-static ge::graphStatus Tiling4ForeachSubScalarListTiling(gert::TilingContext* context)
-{
-    ForeachCommonTiling tilingObject(context);
-    if (tilingObject.Init(FOREACH_SUB_SCALAR_OP_CODE, ForeachInputType::TYPE_SCALARS_TENSOR) != ge::GRAPH_SUCCESS) {
-        return ge::GRAPH_FAILED;
-    }
-    return tilingObject.RunBigKernelTiling();
-}
-
 
 static ge::graphStatus Tiling4ForeachZeroInplaceTiling(gert::TilingContext* context)
 {
@@ -350,22 +200,6 @@ static ge::graphStatus TilingPrepare4ForeachScalarTiling(gert::TilingParseContex
     return ge::GRAPH_SUCCESS;
 }
 
-IMPL_OP_OPTILING(ForeachAbs)
-    .Tiling(Tiling4ForeachAbsTiling)
-    .TilingParse<ForeachCompileInfo>(TilingPrepare4ForeachTiling);
-
-IMPL_OP_OPTILING(ForeachCopy)
-    .Tiling(Tiling4ForeachCopyTiling)
-    .TilingParse<ForeachCompileInfo>(TilingPrepare4ForeachTiling);
-
-IMPL_OP_OPTILING(ForeachAcos)
-    .Tiling(Tiling4ForeachAcosTiling)
-    .TilingParse<ForeachCompileInfo>(TilingPrepare4ForeachTiling);
-
-IMPL_OP_OPTILING(ForeachAddList)
-    .Tiling(Tiling4ForeachAddListTiling)
-    .TilingParse<ForeachCompileInfo>(TilingPrepare4ForeachScalarTiling);
-
 IMPL_OP_OPTILING(ForeachAddScalar)
     .Tiling(Tiling4ForeachAddScalarTiling)
     .TilingParse<ForeachCompileInfo>(TilingPrepare4ForeachScalarTiling);
@@ -378,14 +212,6 @@ IMPL_OP_OPTILING(ForeachAddcdivList)
     .Tiling(Tiling4ForeachAddcdivListTiling)
     .TilingParse<ForeachCompileInfo>(TilingPrepare4ForeachTiling);
 
-IMPL_OP_OPTILING(ForeachAddcdivScalar)
-    .Tiling(Tiling4ForeachAddcdivScalarTiling)
-    .TilingParse<ForeachCompileInfo>(TilingPrepare4ForeachScalarTiling);
-
-IMPL_OP_OPTILING(ForeachAddcdivScalarList)
-    .Tiling(Tiling4ForeachAddcdivScalarListTiling)
-    .TilingParse<ForeachCompileInfo>(TilingPrepare4ForeachTiling);
-
 IMPL_OP_OPTILING(ForeachAddcmulList)
     .Tiling(Tiling4ForeachAddcmulListTiling)
     .TilingParse<ForeachCompileInfo>(TilingPrepare4ForeachTiling);
@@ -393,32 +219,6 @@ IMPL_OP_OPTILING(ForeachAddcmulList)
 IMPL_OP_OPTILING(ForeachAddcmulScalar)
     .Tiling(Tiling4ForeachAddcmulScalarTiling)
     .TilingParse<ForeachCompileInfo>(TilingPrepare4ForeachScalarTiling);
-
-IMPL_OP_OPTILING(ForeachAsin)
-    .Tiling(Tiling4ForeachAsinTiling)
-    .TilingParse<ForeachCompileInfo>(TilingPrepare4ForeachTiling);
-
-/* migrated to arch22/foreach_addcmul_scalar_list_tiling_arch22.cpp
-IMPL_OP_OPTILING(ForeachAddcmulScalarList)
-    .Tiling(Tiling4ForeachAddcmulScalarListTiling)
-    .TilingParse<ForeachCompileInfo>(TilingPrepare4ForeachTiling);
-*/
-
-/* migrated to arch22/foreach_cos_tiling_arch22.cpp
-IMPL_OP_OPTILING(ForeachCos)
-    .Tiling(Tiling4ForeachCosTiling)
-    .TilingParse<ForeachCompileInfo>(TilingPrepare4ForeachTiling);
-*/
-
-/* migrated to arch22/foreach_cosh_tiling_arch22.cpp
-IMPL_OP_OPTILING(ForeachCosh)
-    .Tiling(Tiling4ForeachCoshTiling)
-    .TilingParse<ForeachCompileInfo>(TilingPrepare4ForeachTiling);
-*/
-
-IMPL_OP_OPTILING(ForeachDivList)
-    .Tiling(Tiling4ForeachDivListTiling)
-    .TilingParse<ForeachCompileInfo>(TilingPrepare4ForeachTiling);
 
 IMPL_OP_OPTILING(ForeachDivScalar)
     .Tiling(Tiling4ForeachDivScalarTiling)
@@ -428,19 +228,9 @@ IMPL_OP_OPTILING(ForeachDivScalarList)
     .Tiling(Tiling4ForeachDivScalarListTiling)
     .TilingParse<ForeachCompileInfo>(TilingPrepare4ForeachTiling);
 
-IMPL_OP_OPTILING(ForeachErfc)
-    .Tiling(Tiling4ForeachErfcTiling)
-    .TilingParse<ForeachCompileInfo>(TilingPrepare4ForeachTiling);
-
-IMPL_OP_OPTILING(ForeachLerpList)
-    .Tiling(Tiling4ForeachLerpListTiling)
-    .TilingParse<ForeachCompileInfo>(TilingPrepare4ForeachTiling);
-
 IMPL_OP_OPTILING(ForeachLerpScalar)
     .Tiling(Tiling4ForeachLerpScalarTiling)
     .TilingParse<ForeachCompileInfo>(TilingPrepare4ForeachTiling);
-
-
 
 IMPL_OP_OPTILING(ForeachMulScalar)
     .Tiling(Tiling4ForeachMulScalarTiling)
@@ -462,21 +252,9 @@ IMPL_OP_OPTILING(ForeachPowScalarList)
     .Tiling(Tiling4ForeachPowScalarListTiling)
     .TilingParse<ForeachCompileInfo>(TilingPrepare4ForeachTiling);
 
-IMPL_OP_OPTILING(ForeachRoundOffNumber)
-    .Tiling(Tiling4ForeachRoundOffNumberTiling)
-    .TilingParse<ForeachCompileInfo>(TilingPrepare4ForeachScalarTiling);
-
-
-
 IMPL_OP_OPTILING(ForeachSqrt)
     .Tiling(Tiling4ForeachSqrtTiling)
     .TilingParse<ForeachCompileInfo>(TilingPrepare4ForeachTiling);
-
-IMPL_OP_OPTILING(ForeachSubScalarList)
-    .Tiling(Tiling4ForeachSubScalarListTiling)
-    .TilingParse<ForeachCompileInfo>(TilingPrepare4ForeachTiling);
-
-
 
 IMPL_OP_OPTILING(ForeachZeroInplace)
     .Tiling(Tiling4ForeachZeroInplaceTiling)
