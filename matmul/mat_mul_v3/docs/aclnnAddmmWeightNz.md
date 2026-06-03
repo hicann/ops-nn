@@ -275,7 +275,7 @@ aclnnStatus aclnnAddmmWeightNz(
 
 - 确定性说明：aclnnAddmmWeightNz默认确定性实现。
 
-- 当输入mat1、mat2的数据类型都为FLOAT16或BFLOAT16，并且指定out数据类型为FLOAT32时，输出y的数据类型为FLOAT32。
+- 当输入mat1、mat2的数据类型都为FLOAT16或BFLOAT16，并且指定out数据类型为FLOAT32时，输出out的数据类型为FLOAT32。
 
 - 计算一致性说明
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：

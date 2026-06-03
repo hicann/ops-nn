@@ -515,7 +515,7 @@ aclnnStatus aclnnInplaceAddmm(
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：aclnnAddmm&aclnnInplaceAddmm默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
   - <term>Ascend 950PR/Ascend 950DT</term>：aclnnAddmm&aclnnInplaceAddmm默认确定性实现。
 
-- 当输入mat1、mat2的数据类型都为FLOAT16或BFLOAT16，并且指定out数据类型为FLOAT32时，输出y的数据类型为FLOAT32。
+- 当输入mat1、mat2的数据类型都为FLOAT16或BFLOAT16，并且指定out数据类型为FLOAT32时，输出out的数据类型为FLOAT32。
 
 - 计算一致性说明
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：
