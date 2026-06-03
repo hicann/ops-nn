@@ -322,6 +322,6 @@ TEST_F(ConfusionSoftmaxGradTiling, confusion_softmax_grad_ar_recompute)
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
     EXPECT_EQ(to_string<int32_t>(tilingData->GetData(), tilingData->GetDataSize()),
-              "1396 0 20000 0 15168 0 4832 0 22 0 2 0 1 0 0 0 ");
+              "1396 0 20000 0 15200 0 4800 0 22 0 2 0 1 0 0 0 ");
     dlog_setlevel(0, 3, 0);
 }
