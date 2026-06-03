@@ -153,7 +153,7 @@ aclnnStatus aclnnAvgPool2d(
       <td>divisorOverride</td>
       <td>输入</td>
       <td>取平均的除数。</td>
-      <td>配置为0时表示功能不使能。</td>
+      <td>配置为0时表示功能不开启。</td>
       <td>INT64</td>
       <td>-</td>
       <td>-</td>

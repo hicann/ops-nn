@@ -127,7 +127,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
       <tr>
       <td>scale</td>
         <td>输入（可选）</td>
-        <td>表示输出矩阵的量化系数，可在输入为FLOAT16且输出为INT8时使能。</td>
+        <td>表示输出矩阵的量化系数，可在输入为FLOAT16且输出为INT8时开启。</td>
         <td>
         <ul>
             <li>shape仅支持一维且需要满足且等于[b*n]。</li>

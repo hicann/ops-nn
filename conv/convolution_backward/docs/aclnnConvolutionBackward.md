@@ -215,7 +215,7 @@ aclnnStatus aclnnConvolutionBackward(
     <tr>
       <td>transposed</td>
       <td>输入</td>
-      <td>转置卷积使能标志位, 当其值为True时使能转置卷积。</td>
+      <td>转置卷积开启标志位, 当其值为True时开启转置卷积。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>

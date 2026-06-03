@@ -125,7 +125,7 @@ ops-nn 算子首个 Beta 版本 v8.5.0-beta.1 现已发布。
 - 【工程能力】nn类onnx算子插件支持。([#452](https://gitcode.com/cann/ops-nn/pull/452))
 - 【工程能力】增加编译选项oom、asan、mssanitizer、build-type等工程级稳定性与可调试性能力。([#391](https://gitcode.com/cann/ops-nn/pull/391))
 - 【算子实现】部分算子新增对KirinX90支持。([#609](https://gitcode.com/cann/ops-nn/pull/609)、[#610](https://gitcode.com/cann/ops-nn/pull/610)、[#612](https://gitcode.com/cann/ops-nn/pull/612))
-- 【算子实现】新支持[稀疏4:2量化matmul算子](matmul/sparse4to2quant_matmul)，针对稀疏矩阵使能硬件加速能力。([#429](https://gitcode.com/cann/ops-nn/pull/429))
+- 【算子实现】新支持[稀疏4:2量化matmul算子](matmul/sparse4to2quant_matmul)，针对稀疏矩阵开启硬件加速能力。([#429](https://gitcode.com/cann/ops-nn/pull/429))
 - 【资料优化】增加QUICK_START，离线编译模式，aicore/aicpu/graph模式下开发指南完善。([#702](https://gitcode.com/cann/ops-nn/pull/702)、[#562](https://gitcode.com/cann/ops-nn/pull/562))
 - 【资料优化】优化贡献指南中新算子贡献流程。([#294](https://gitcode.com/cann/ops-nn/pull/294))
 - 【性能优化】增加asc_opc算子并行编译能力，优化编译效率；增加ccache，优化编译时长。([#692](https://gitcode.com/cann/ops-nn/pull/692))
@@ -133,5 +133,5 @@ ops-nn 算子首个 Beta 版本 v8.5.0-beta.1 现已发布。
 ### 🐛 问题修复
 
 - 修复conv类算子编译告警问题。([Issue33](https://gitcode.com/cann/ops-nn/issues/33))
-- 使用constexpr修饰if使能编译优化。([Issue98](https://gitcode.com/cann/ops-nn/issues/98))
+- 使用constexpr修饰if开启编译优化。([Issue98](https://gitcode.com/cann/ops-nn/issues/98))
 - add_example样例算子执行调用问题修复。([Issue245](https://gitcode.com/cann/ops-nn/issues/245))

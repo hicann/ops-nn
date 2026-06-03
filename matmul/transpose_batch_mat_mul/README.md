@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-- 算子功能：完成张量x1与张量x2的矩阵乘计算。仅支持三维的Tensor传入。Tensor支持转置，转置序列根据传入的序列进行变更。permX1代表张量x1的转置序列，支持[0,1,2]、[1,0,2]，permX2代表张量x2的转置序列[0,1,2]，permY表示矩阵乘输出矩阵的转置序列，当前仅支持[1,0,2]，序列值为0的是batch维度，其余两个维度做矩阵乘法。scale表示输出矩阵的量化系数，可在输入为FLOAT16且输出为INT8时使能，详细约束条件可见约束说明或者[aclnnTransposeBatchMatMul](docs/aclnnTransposeBatchMatMul.md)调用说明文档。
+- 算子功能：完成张量x1与张量x2的矩阵乘计算。仅支持三维的Tensor传入。Tensor支持转置，转置序列根据传入的序列进行变更。permX1代表张量x1的转置序列，支持[0,1,2]、[1,0,2]，permX2代表张量x2的转置序列[0,1,2]，permY表示矩阵乘输出矩阵的转置序列，当前仅支持[1,0,2]，序列值为0的是batch维度，其余两个维度做矩阵乘法。scale表示输出矩阵的量化系数，可在输入为FLOAT16且输出为INT8时开启，详细约束条件可见约束说明或者[aclnnTransposeBatchMatMul](docs/aclnnTransposeBatchMatMul.md)调用说明文档。
 
 - 示例：
   - x1的shape是(B, M, K)，x2的shape是(B, K, N)，scale为None，batchSplitFactor等于1时，计算输出out的shape是(M, B, N)。

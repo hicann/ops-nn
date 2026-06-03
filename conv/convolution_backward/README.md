@@ -64,7 +64,7 @@
 | stride | 输入 | <ul><li>反向传播过程中卷积核在输入上移动的步长，相当于公式中的stride[0]、stride[1]、stride[2]。</li><li>数组长度为weight维度减2，数值必须大于0。</li></ul> | INT64 | - |
 | padding | 输入 | <ul><li>反向传播过程中对于输入填充，相当于公式中的padding[0]、padding[1]、padding[2]。</li><li>数组长度可以为weight维度减2，在2d场景下数组长度可以为4。数值必须大于等于0。</li></ul> | INT64 | - |
 | dilation | 输入 | <ul><li>反向传播过程中的膨胀参数，相当于公式中的dilation[0]、dilation[1]、dilation[2]。</li><li>数组长度可以为weight维度减2。数值必须大于0。</li></ul> | INT64 | - |
-| transposed | 输入 | <ul><li>转置卷积使能标志位, 当其值为True时使能转置卷积。</li></ul> | - | - |
+| transposed | 输入 | <ul><li>转置卷积开启标志位, 当其值为True时开启转置卷积。</li></ul> | - | - |
 | outputPadding | 输入 | <ul><li>反向传播过程中对于输出填充，数组长度可以为weight维度减2，各维度的数值范围满足[0, stride对应维度数值)。transposed为False场景下，要求每个元素值为0。</li></ul> | INT64 | - |
 | groups | 输入 | <ul><li>反向传播过程中输入通道的分组数。</li><li>需满足groups*weight的C维度=input的C维度，groups取值范围为[1,65535]。</li></ul> | INT32 | - |
 | gradInput | 输出 | <ul><li>输入张量$x$对$L$的梯度，相当于公式中的$\frac{\partial L}{\partial x}$。</li><li>数据类型与'input'保持一致。</li><li>数据格式需要与'input'、'gradOutput'一致。</li></ul> | FLOAT、FLOAT16、BFLOAT16 | NCL、NCHW、NCDHW |
