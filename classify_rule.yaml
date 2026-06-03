@@ -2097,10 +2097,13 @@ VC8@ops-nn:
         - ops/ops-nn/index/bucketize_v2/op_kernel/arch35/
         - ops/ops-nn/index/scatter_nd_add/op_host/arch35/
         - ops/ops-nn/index/scatter_nd_add/op_kernel/arch35/
-        - ops/ops-nn/index/reverse_v2/op_host/
+        - ops/ops-nn/index/reverse_v2/op_host/arch35/reverse_v2_tiling_arch35.cpp
+        - ops/ops-nn/index/reverse_v2/op_host/arch35/reverse_v2_tiling_arch35.h
+        - ops/ops-nn/index/reverse_v2/op_kernel/arch35/
         - ops/ops-nn/index/index_fill_d/op_host/arch35/
         - ops/ops-nn/index/index_fill_d/op_kernel/arch35/
-        - ops/ops-nn/index/gather_nd/op_host/
+        - ops/ops-nn/index/gather_nd/op_host/arch35/
+        - ops/ops-nn/index/gather_nd/op_kernel/arch35/
         - ops/ops-nn/index/gather_v2/op_host/arch35/gather_v2_tiling.cpp
         - ops/ops-nn/index/gather_v2/op_host/arch35/gather_v2_tiling.h
         - ops/ops-nn/index/gather_v2/op_kernel/arch35/
@@ -2110,20 +2113,24 @@ VC8@ops-nn:
         - ops/ops-nn/index/concat_offset/op_kernel/arch35/
         - ops/ops-nn/index/sparse_segment_mean/op_host/arch35/
         - ops/ops-nn/index/sparse_segment_mean/op_kernel/arch35/
-        - ops/ops-nn/index/scatter/op_host/
+        - ops/ops-nn/index/scatter/op_host/arch35/
+        - ops/ops-nn/index/scatter/op_kernel/arch35/
         - ops/ops-nn/index/scatter_nd/op_host/arch35/
         - ops/ops-nn/index/scatter_nd/op_kernel/arch35/
         - ops/ops-nn/index/scatter_add/op_host/arch35/scatter_add_tiling_base.cpp
         - ops/ops-nn/index/scatter_add/op_host/arch35/scatter_add_tiling_base.h
         - ops/ops-nn/index/scatter_add/op_kernel/arch35/
-        - ops/ops-nn/index/inplace_index_add/op_host/
-        - ops/ops-nn/index/scatter_nd_update/op_host/
-        - ops/ops-nn/index/scatter_update/op_host/
+        - ops/ops-nn/index/inplace_index_add/op_host/arch35/
+        - ops/ops-nn/index/inplace_index_add/op_kernel/arch35/
+        - ops/ops-nn/index/scatter_nd_update/op_host/arch35/
+        - ops/ops-nn/index/scatter_nd_update/op_kernel/arch35/
+        - ops/ops-nn/index/scatter_update/op_host/arch35/
+        - ops/ops-nn/index/scatter_update/op_kernel/arch35/
         - ops/ops-nn/index/linear_index_v2/op_host/
         - ops/ops-nn/index/linear_index_v2/op_kernel/arch35/
         - ops/ops-nn/index/sparse_to_dense/op_host/
         - ops/ops-nn/index/sparse_to_dense/op_kernel/arch35/
-        - ops/ops-nn/index/sorted_sparse_segment_mean_grad/op_host/
+        - ops/ops-nn/index/sorted_sparse_segment_mean_grad/op_host/arch35/
         - ops/ops-nn/index/sorted_sparse_segment_mean_grad/op_kernel/arch35/
       opensource_style: null
       kernel_style: null
@@ -2152,6 +2159,17 @@ VC8@ops-nn:
         - ops/ops-nn/index/linear_index_v2/tests/
         - ops/ops-nn/index/sparse_to_dense/tests/
         - ops/ops-nn/index/sorted_sparse_segment_mean_grad/tests/
+        - ops/ops-nn/index/reverse_v2/examples/
+        - ops/ops-nn/index/reverse_v2/tests/
+        - ops/ops-nn/index/gather_nd/examples/
+        - ops/ops-nn/index/gather_nd/tests/
+        - ops/ops-nn/index/scatter/example/
+        - ops/ops-nn/index/scatter/tests/
+        - ops/ops-nn/index/inplace_index_add/tests/
+        - ops/ops-nn/index/scatter_nd_update/examples/
+        - ops/ops-nn/index/scatter_nd_update/tests/
+        - ops/ops-nn/index/scatter_update/examples/
+        - ops/ops-nn/index/scatter_update/tests/
       non_delivery: null
       open_source: null
 sort@ops-nn:
