@@ -546,8 +546,9 @@ aclnnStatus aclnnInplaceBaddbmm(
 aclnnBaddbmm&aclnnInplaceBaddbmm默认确定性实现。
 
 - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：Cube单元不支持FLOAT32计算。当输入为FLOAT32，可通过设置cubeMathType=1（ALLOW_FP32_DOWN_PRECISION）来允许接口内部cast到FLOAT16进行计算。
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：不支持batch1和batch2两输入其中一个输入为BFLOAT16, 另一个输入为FLOAT或FLOAT16的数据类型推导。
-- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当输入self、mat2的数据类型都为FLOAT16或BFLOAT16，并且指定out数据类型为FLOAT32时，输出y的数据类型为FLOAT32。
+- <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+  - 不支持batch1和batch2两输入其中一个输入为BFLOAT16，另一个输入为FLOAT或FLOAT16的数据类型推导。
+  - 升精度计算场景下，目前仅支持输入batch1、batch2的数据类型都为FLOAT16或BFLOAT16，且out数据类型为FLOAT32。
 
 ## 调用示例
 
