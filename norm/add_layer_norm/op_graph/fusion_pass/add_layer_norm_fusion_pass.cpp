@@ -13,6 +13,8 @@
 #include "es_math_ops.h"
 #include "platform/platform_info.h"
 #include "add_layer_norm_utils.h"
+#include "ge_api_types.h"
+#include "ge_api.h"
 
 using namespace ge;
 using namespace fe;
@@ -42,6 +44,15 @@ const int64_t kLayerNormCaptureIdx = 0l;
 const int64_t kAdd1CaptureIdx = 1l;
 const int64_t kAdd2CaptureIdx = 2l;
 const int64_t kCast1CaptureIdx = 3l;
+
+bool CheckIsLayerNormV3(const AscendString& pattern_graph_name) {
+    std::string pattern_name_str = pattern_graph_name.GetString();
+    if (pattern_name_str.find("V3") != std::string::npos) {
+        OPS_LOG_D(kPassName.c_str(), "pattern is layer norm v3");
+        return true;
+        }
+    return false;
+}
 
 PatternUniqPtr MakePatternForLayernorm(bool make_cast1_as_output, bool make_add2_as_output, bool add_first)
 {
@@ -279,7 +290,11 @@ std::vector<PatternUniqPtr> AddLayerNormFusionPass::Patterns()
     return pattern_graphs;
 }
 
+#if GE_COMPILER_VERSION_NUM > 90000000
+bool AddLayerNormFusionPass::MeetRequirements(const std::unique_ptr<MatchResult>& match_result, CustomPassContext &pass_context)
+#else
 bool AddLayerNormFusionPass::MeetRequirements(const std::unique_ptr<MatchResult>& match_result)
+#endif
 {
     OPS_LOG_D(kPassName.c_str(), "Enter MeetRequirements for AddLayerNormFusionPass");
 
@@ -288,7 +303,7 @@ bool AddLayerNormFusionPass::MeetRequirements(const std::unique_ptr<MatchResult>
         return false;
     }
     if (!IsBeginNormAxisRight(match_result)) {
-        OPS_LOG_D(kPassName.c_str(), "Chaeck all attr fail");
+        OPS_LOG_D(kPassName.c_str(), "Check all attr fail");
         return false;
     }
     if (!IsAllInputShapeAndDtypeValid(match_result)) {
@@ -306,11 +321,36 @@ bool AddLayerNormFusionPass::MeetRequirements(const std::unique_ptr<MatchResult>
     if (y_output_nodes.size() != 1) {
         return false;
     }
+    #if GE_COMPILER_VERSION_NUM > 90000000
+    AscendString graphRunMode;
+    pass_context.GetOptionValue("ge.graphRunMode", graphRunMode);
+    OPS_LOG_D(kPassName.c_str(), "graphRunMode: %s", graphRunMode.GetString());
+    const int32_t base = 10;
+    bool isTrainMode = static_cast<ge::GraphRunMode>(std::strtol(graphRunMode.GetString(), nullptr, base));
+    #else
+    // 如果获取不到trainmode，不拦截
+    OPS_LOG_D(kPassName.c_str(), "Can not get train mode, default open");
+    bool isTrainMode = true;
+    #endif
+    AscendString match_pattern_name;
+    auto pattern_graph = match_result->GetPatternGraph();
+    OP_LOGE_IF(
+        pattern_graph.GetName(match_pattern_name) != GRAPH_SUCCESS, false, kPassName,
+        "Failed to get name of pattern");
+    if (isTrainMode && !CheckIsLayerNormV3(match_pattern_name)) {
+        OPS_LOG_D(kPassName.c_str(), "Only Fusion AddLayerNorm when graphRunMode is true");
+        return false;
+    }
     return true;
 }
-
+#if GE_COMPILER_VERSION_NUM > 90000000
+GraphUniqPtr AddLayerNormFusionPass::Replacement(const std::unique_ptr<MatchResult>& match_result, CustomPassContext &pass_context)
+{
+    (void)pass_context;
+#else
 GraphUniqPtr AddLayerNormFusionPass::Replacement(const std::unique_ptr<MatchResult>& match_result)
 {
+#endif
     OPS_LOG_D(kPassName.c_str(), "Enter Replacement for AddLayerNormFusionPass");
     std::vector<SubgraphInput> subgraph_inputs;
     match_result->ToSubgraphBoundary()->GetAllInputs(subgraph_inputs);
@@ -326,16 +366,11 @@ GraphUniqPtr AddLayerNormFusionPass::Replacement(const std::unique_ptr<MatchResu
     bool x2first = input_shapes[1].GetDims().size() > input_shapes[4].GetDims().size();
 
     auto replace_graph_builder = es::EsGraphBuilder("replacement");
-    auto r_x1 = replace_graph_builder.CreateInput(
-        0, "x1", input_dtypes[0], input_formats[0], input_shapes[0].GetDims());
-    auto r_x2_or_bias = replace_graph_builder.CreateInput(
-        1, x2first ? kAddInputsName[0].c_str():kAddInputsName[1].c_str(), input_dtypes[1], input_formats[1], input_shapes[1].GetDims());
-    auto r_gamma = replace_graph_builder.CreateInput(
-        2, "gamma", input_dtypes[2], input_formats[2], input_shapes[2].GetDims());
-    auto r_beta = replace_graph_builder.CreateInput(
-        3, "beta", input_dtypes[3], input_formats[3], input_shapes[3].GetDims());
-    auto r_bias_or_x2 = replace_graph_builder.CreateInput(
-        4, x2first ? kAddInputsName[1].c_str():kAddInputsName[0].c_str(), input_dtypes[4], input_formats[4], input_shapes[4].GetDims());
+    auto r_x1 = replace_graph_builder.CreateInput(0, "x1", input_dtypes[0], input_formats[0], input_shapes[0].GetDims());
+    auto r_x2_or_bias = replace_graph_builder.CreateInput(1, x2first ? kAddInputsName[0].c_str():kAddInputsName[1].c_str(), input_dtypes[1], input_formats[1], input_shapes[1].GetDims());
+    auto r_gamma = replace_graph_builder.CreateInput(2, "gamma", input_dtypes[2], input_formats[2], input_shapes[2].GetDims());
+    auto r_beta = replace_graph_builder.CreateInput(3, "beta", input_dtypes[3], input_formats[3], input_shapes[3].GetDims());
+    auto r_bias_or_x2 = replace_graph_builder.CreateInput(4, x2first ? kAddInputsName[1].c_str():kAddInputsName[0].c_str(), input_dtypes[4], input_formats[4], input_shapes[4].GetDims());
 
     NodeIo layer_norm_node;
     if (match_result->GetCapturedTensor(kLayerNormCaptureIdx, layer_norm_node) != SUCCESS) {
@@ -344,8 +379,7 @@ GraphUniqPtr AddLayerNormFusionPass::Replacement(const std::unique_ptr<MatchResu
     }
     float32_t attr_epsilion;
     layer_norm_node.node.GetAttr("epsilon", attr_epsilion);
-    auto addlayernorm = es::AddLayerNorm(r_x1, x2first ? r_x2_or_bias:r_bias_or_x2, r_gamma,
-        r_beta, x2first ? r_bias_or_x2:r_x2_or_bias, attr_epsilion, true);
+    auto addlayernorm = es::AddLayerNorm(r_x1, x2first ? r_x2_or_bias:r_bias_or_x2, r_gamma,r_beta, x2first ? r_bias_or_x2:r_x2_or_bias, attr_epsilion, true);
 
     GNode addlayernorm_node = *addlayernorm.y.GetProducer();
     auto layernorm_node_format = input_formats[2];
