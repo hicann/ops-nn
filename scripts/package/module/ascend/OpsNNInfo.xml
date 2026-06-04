@@ -51,8 +51,8 @@
         <file value="libopconstant_folding_nn.so" install_mod="555"/>
     </file_info>
 
-    <file_info value="op_nn_onnx_plugin_lib" src_path="" dst_path="opp/built-in/framework/onnx" install_path="opp/built-in/framework/onnx">
-        <file value="libop_nn_onnx_plugin.so" entity="true" optional="true" install_mod="555"/>
+    <file_info value="oponnx_plugin_nn_lib" src_path="" dst_path="opp/built-in/framework/onnx" install_path="opp/built-in/framework/onnx">
+        <file value="liboponnx_plugin_nn.so" entity="true" optional="true" install_mod="555"/>
     </file_info>
 
     <file_info value="tfplugin_nn_lib" src_path="" dst_path="opp/built-in/framework/tensorflow" install_path="opp/built-in/framework/tensorflow">

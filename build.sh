@@ -371,7 +371,7 @@ usage() {
  	echo "    --soc supported parameters must only in [ascend910b ascend910_93 ascend950 ascend310p kirinx90 kirin9030 mc62], A3(--soc=ascedn910_93)"
   echo "    --vendor_name Specify the custom operator pkg vendor name, like: --vendor_name=customize, default to customize-nn"
   echo "    --tfplugin build optf_plugin_nn.so"
-  echo "    --onnxplugin build op_nn_onnx_plugin.so"
+  echo "    --onnxplugin build oponnx_plugin_nn.so"
   echo "    --opapi build opapi_nn.so"
   echo "    --opgraph build opgraph_nn.so"
   echo "    --ophost build ophost_nn.so"
@@ -526,7 +526,7 @@ set_create_libs() {
     return
   fi
   if [[ "$ENABLE_PACKAGE" == "TRUE" && "$ENABLE_CUSTOM" != "TRUE" ]]; then
-    BUILD_LIBS=("ophost_${REPOSITORY_NAME}" "opapi_${REPOSITORY_NAME}" "op_${REPOSITORY_NAME}_onnx_plugin" "optf_plugin_${REPOSITORY_NAME}" "opgraph_${REPOSITORY_NAME}")
+    BUILD_LIBS=("ophost_${REPOSITORY_NAME}" "opapi_${REPOSITORY_NAME}" "oponnx_plugin_${REPOSITORY_NAME}" "optf_plugin_${REPOSITORY_NAME}" "opgraph_${REPOSITORY_NAME}")
     ENABLE_CREATE_LIB=TRUE
   else
     if [[ "$OP_HOST" == "TRUE" ]]; then
@@ -538,7 +538,7 @@ set_create_libs() {
       ENABLE_CREATE_LIB=TRUE
     fi
     if [[ "$ONNX_PLUGIN" == "TRUE" ]]; then
-      BUILD_LIBS+=("op_${REPOSITORY_NAME}_onnx_plugin")
+      BUILD_LIBS+=("oponnx_plugin_${REPOSITORY_NAME}")
       ENABLE_CREATE_LIB=TRUE
     fi
     if [[ "$TF_PLUGIN" == "TRUE" ]]; then
