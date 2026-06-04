@@ -25,7 +25,7 @@
   $$
 
   $$
-  {\rm y}_i = x1_{i} + {\rm scalar} × x2_{i} × x3_{i} (i=0,1,...n-1)
+  {\rm y}_i = x1_{i} + {\rm scalar} \times x2_{i} \times x3_{i} (i=0,1,...n-1)
   $$
 
 ## 函数原型

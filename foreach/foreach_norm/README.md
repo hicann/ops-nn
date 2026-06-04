@@ -18,6 +18,7 @@
 - 算子功能：对输入张量列表的每个张量进行范数运算。
 - 计算公式：
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+
     $$
     x = [{x_0}, {x_1}, ... {x_{n-1}}]\\
     $$
@@ -27,18 +28,25 @@
     $$
 
   - <term>Ascend 950PR/Ascend 950DT</term>：
+
     $$
     x = [{x_0}, {x_1}, ... {x_{n-1}}]\\
     $$
+
     - scalar = +Inf:
+
       $$
       y = \max|x_i|
       $$
+
     - int(scalar) = 1:
+
       $$
       y = \sum_{i=0}^{n-1}|x_i|
       $$
+
     - other:
+
       $$
       y = \left(\sum_{i=0}^{n-1}|x_i|^{2}\right)^{\frac{1}{{2}}}
       $$
@@ -78,7 +86,7 @@
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>表示进行范数运算的输出张量列表，对应公式中的`y`。数据类型、数据格式与入参`x`的数据类型、数据格式一致。shape size为1。</td>
+      <td>表示进行范数运算的输出张量列表，对应公式中的`y`。数据类型、数据格式与入参`x`的数据类型、数据格式一致，shape size为1。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>

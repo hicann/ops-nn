@@ -226,7 +226,7 @@ aclnnStatus aclnnAdaLayerNormBackward(
     <tr>
       <td>gradScaleOut（aclTensor*）</td>
       <td>输出</td>
-      <td>可选输出，表示反向传播自适应缩放系数的梯度，对应计算公式中的`gradWeightOut`。</td>
+      <td>可选输出，表示反向传播自适应缩放系数的梯度，对应计算公式中的`gradScaleOut`。</td>
       <td><ul><li>不支持空Tensor。</li><li>当指针`gradScaleOut`不为空时，输出`scale`梯度计算结果，且其与输入`input`的数据类型相同。</li><li>shape与`scale`的shape相等，为[B, H]或[B, 1, H]。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
@@ -236,7 +236,7 @@ aclnnStatus aclnnAdaLayerNormBackward(
     <tr>
       <td>gradShiftOut（aclTensor*）</td>
       <td>输出</td>
-      <td>可选输出，表示反向传播自适应偏移系数的梯度，对应计算公式中的`gradBiasOut`。</td>
+      <td>可选输出，表示反向传播自适应偏移系数的梯度，对应计算公式中的`gradShiftOut`。</td>
       <td><ul><li>不支持空Tensor。</li><li>当指针`gradShiftOut`不为空时，输出`shift`梯度计算结果，且其与输入`input`的数据类型相同。</li><li>shape与`shift`的shape相等，为[B, H]或[B, 1, H]。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>

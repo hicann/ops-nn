@@ -22,13 +22,13 @@
   $$
   \left\{
   \begin{array} {rcl}
-  out& &= \frac{x - E[x]}{\sqrt{Var[x] + eps}} * \gamma + \beta \\
-  meanOut& &= E[x]\\
-  rstdOut& &= \frac{1}{\sqrt{Var[x] + eps}}\\
+  y& &= \frac{x - E[x]}{\sqrt{Var[x] + eps}} * \gamma + \beta \\
+  mean& &= E[x]\\
+  rstd& &= \frac{1}{\sqrt{Var[x] + eps}}\\
   \end{array}
   \right.
   $$
-      
+
 ## 参数说明
 
 <table style="undefined;table-layout: fixed; width: 1005px"><colgroup>
@@ -69,7 +69,7 @@
       <td>ND</td>
     </tr>
     <tr>
-      <td>group</td>
+      <td>num_groups</td>
       <td>属性</td>
       <td>x的第1维度分为group组。</td>
       <td>INT32、INT64</td>
@@ -97,21 +97,21 @@
       <td>-</td>
     </tr>
     <tr>
-      <td>out</td>
+      <td>y</td>
       <td>输出</td>
-      <td>out输出张量。</td>
+      <td>输出张量。</td>
       <td>FLOAT16、FLOAT、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
-      <td>meanOut</td>
+      <td>mean</td>
       <td>输出</td>
       <td>mean输出张量。</td>
       <td>FLOAT16、FLOAT、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
-      <td>rstdOut</td>
+      <td>rstd</td>
       <td>输出</td>
       <td>rstd输出张量。</td>
       <td>FLOAT16、FLOAT、BFLOAT16</td>
