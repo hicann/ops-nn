@@ -102,6 +102,9 @@ protected:
 private:
     bool CheckC04Enable();
     bool CheckBasicSplitKCondition();
+
+    void SetSplitKRunInfo(uint32_t hkWk, uint32_t coutThreshold, uint32_t coutSegmentCount);
+
     bool CheckVecTrans16bitPlus(const CoreTilingParams& coreParams, const L0TilingParams& l0Params);
     bool CheckVecTransEnable(
         const CoreTilingParams& coreParams, const L1TilingParams& l1Params, const L0TilingParams& l0Params);

@@ -140,6 +140,34 @@ bool Conv3DDXV2InnerProductTiling::CheckBasicSplitKCondition()
     return true;
 }
 
+void Conv3DDXV2InnerProductTiling::SetSplitKRunInfo(uint32_t hkWk, uint32_t coutThreshold, uint32_t coutSegmentCount) {
+    tilingRunInfo_.kSegment = static_cast<uint64_t>(coutThreshold);
+    tilingRunInfo_.kSegmentTail = runInfo_.dedy_cout_g - (coutSegmentCount - 1) * tilingRunInfo_.kSegment;
+    // kValueSegment: 每次循环计算的 K 大小 = kSegment * HkWk，对齐到k0
+    tilingRunInfo_.kValueSegment = Ops::Base::CeilAlign(tilingRunInfo_.kSegment * hkWk, static_cast<uint64_t>(tilingRunInfo_.k0));
+
+    splitKMode_ = (coutSegmentCount > 1) ? 1 : 0;
+    tilingRunInfo_.enableSplitK = splitKMode_;
+
+    if (tilingRunInfo_.enableSplitK) {
+        // workspace累加支持fp16、bf16
+        if (static_cast<int32_t>(runInfo_.c_dtype_bytes) == ge::GetSizeByDataType(ge::DT_FLOAT16) || static_cast<int32_t>(runInfo_.c_dtype_bytes) == ge::GetSizeByDataType(ge::DT_BF16) ||
+            static_cast<int32_t>(runInfo_.c_dtype_bytes) == ge::GetSizeByDataType(ge::DT_HIFLOAT8) || static_cast<int32_t>(runInfo_.c_dtype_bytes) == ge::GetSizeByDataType(ge::DT_FLOAT8_E4M3FN)) {
+            tilingRunInfo_.useUbAccumForSplitK = true;
+        }
+    } else {
+        // 未开启切K且Dtype为fp32
+        tilingRunInfo_.useUbAccumForSplitK = false;
+    }
+
+    OP_LOGD(
+        opName_,
+        "Split K status: kValue=%lu, kSegment=%lu, kValueSegment=%lu, kSegmentTail=%lu,"
+        "enableSplitK=%d, useUbAccumForSplitK=%d, coutThreshold=%u, coutSegmentCount=%u",
+        tilingRunInfo_.kValue, tilingRunInfo_.kSegment, tilingRunInfo_.kValueSegment, tilingRunInfo_.kSegmentTail,
+        tilingRunInfo_.enableSplitK, tilingRunInfo_.useUbAccumForSplitK, coutThreshold, coutSegmentCount);
+}
+
 ge::graphStatus Conv3DDXV2InnerProductTiling::CalcKSegment()
 {
     if (!CheckBasicSplitKCondition()) {
@@ -176,31 +204,7 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::CalcKSegment()
     uint32_t coutSegmentCount =
         std::max(Ops::Base::CeilDiv(static_cast<uint32_t>(runInfo_.dedy_cout_g), coutThreshold), ONE_U32);
 
-    tilingRunInfo_.kSegment = static_cast<uint64_t>(coutThreshold);
-    tilingRunInfo_.kSegmentTail = runInfo_.dedy_cout_g - (coutSegmentCount - 1) * tilingRunInfo_.kSegment;
-    // kValueSegment: 每次循环计算的 K 大小 = kSegment * HkWk，对齐到k0
-    tilingRunInfo_.kValueSegment = Ops::Base::CeilAlign(tilingRunInfo_.kSegment * hkWk, static_cast<uint64_t>(tilingRunInfo_.k0));
-
-    splitKMode_ = (coutSegmentCount > 1) ? 1 : 0;
-    tilingRunInfo_.enableSplitK = splitKMode_;
-
-    if (tilingRunInfo_.enableSplitK) {
-        // workspace累加支持fp16、bf16
-        if (static_cast<int32_t>(runInfo_.c_dtype_bytes) == ge::GetSizeByDataType(ge::DT_FLOAT16) || static_cast<int32_t>(runInfo_.c_dtype_bytes) == ge::GetSizeByDataType(ge::DT_BF16) ||
-            static_cast<int32_t>(runInfo_.c_dtype_bytes) == ge::GetSizeByDataType(ge::DT_HIFLOAT8) || static_cast<int32_t>(runInfo_.c_dtype_bytes) == ge::GetSizeByDataType(ge::DT_FLOAT8_E4M3FN)) {
-            tilingRunInfo_.useUbAccumForSplitK = true;
-        }
-    } else {
-        // 未开启切K且Dtype为fp32
-        tilingRunInfo_.useUbAccumForSplitK = false;
-    }
-
-    OP_LOGD(
-        opName_,
-        "Split K status: kValue=%lu, kSegment=%lu, kValueSegment=%lu, kSegmentTail=%lu,"
-        "enableSplitK=%d, useUbAccumForSplitK=%d, coutThreshold=%u, coutSegmentCount=%u",
-        tilingRunInfo_.kValue, tilingRunInfo_.kSegment, tilingRunInfo_.kValueSegment, tilingRunInfo_.kSegmentTail,
-        tilingRunInfo_.enableSplitK, tilingRunInfo_.useUbAccumForSplitK, coutThreshold, coutSegmentCount);
+    SetSplitKRunInfo(hkWk, coutThreshold, coutSegmentCount);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -418,7 +422,7 @@ uint32_t Conv3DDXV2InnerProductTiling::GetLoadB2Condition(
     const L1TilingParams& l1Params, const L0TilingParams& l0Params)
 {
     if (IsSocVersionFuse(context_) && runInfo_.filterFormat == ge::FORMAT_FRACTAL_Z && runInfo_.groups == 1) {
-        return B2_NO_TRANSPOSE_NO_REVERSE; // fractal_z格式不转置不逆序，通过fusspass做
+        return B2_NO_TRANSPOSE_NO_REVERSE; // fractal_z格式不转置不逆序，通过fussion pass做
     }
 
     a1DbFlag_ = l1Params.al1Pbuffer == DB_ON;
@@ -668,7 +672,7 @@ void Conv3DDXV2InnerProductTiling::TranslateRunInfoData() {
     tilingData_.conv3DDxTiling.dilationH = runInfo_.dilation_h;
     tilingData_.conv3DDxTiling.dilationW = runInfo_.dilation_w;
 }
-    
+
 void Conv3DDXV2InnerProductTiling::TranslateTilingData(std::shared_ptr<tuningtiling::Conv3DBackpropInputTunerTiling> tunerTiling) {
     tilingData_.conv3DDxTiling.al0Pbuffer = tunerTiling->al0Pbuffer;
     tilingData_.conv3DDxTiling.bl0Pbuffer = tunerTiling->bl0Pbuffer;
@@ -904,7 +908,10 @@ void Conv3DDXV2InnerProductTiling::InitBaseMNK(L0TilingParams& l0Params)
     uint32_t bestBaseM = BASIC_BLOCK_SIZE_256;
     uint32_t bestBaseN = BASIC_BLOCK_SIZE_256;
     uint32_t bestBaseK = BASIC_BLOCK_SIZE_128 / dtypeByteL0b_;
-    if (runInfo_.kernel_d * runInfo_.kernel_h * runInfo_.kernel_w > 1 && (tilingRunInfo_.tilingHkWkMode == NO_TILING_HWK || (tilingRunInfo_.tilingHkWkMode == TILING_HK && runInfo_.dedx_w > 1))) {//切hk时，wi=1特殊场景
+    if (runInfo_.kernel_d * runInfo_.kernel_h * runInfo_.kernel_w > 1 && (
+            tilingRunInfo_.tilingHkWkMode == NO_TILING_HWK || (
+                tilingRunInfo_.tilingHkWkMode == TILING_HK && runInfo_.dedx_w > 1))) {
+        // 切hk时，wi=1特殊场景
         bestBaseM = BASIC_BLOCK_SIZE_512;
         bestBaseN = BASIC_BLOCK_SIZE_128;
         bestBaseK = BASIC_BLOCK_SIZE_64 / dtypeByteL0b_;
@@ -945,8 +952,7 @@ uint32_t Conv3DDXV2InnerProductTiling::CalculateMaxBaseM(uint32_t baseN)
 void Conv3DDXV2InnerProductTiling::AdjustBaseMWhenSmallN(uint32_t& baseM, uint32_t baseN, const L0TilingParams& l0Params, const TilingRunInfo& tilingRunInfo)
 {
     uint32_t l0cMaxNum = platformInfo_.l0_c_size / l0Params.cl0Pbuffer / ge::GetSizeByDataType(ge::DT_FLOAT);
-    uint64_t alingedMValue = Ops::Base::CeilAlign(tilingRunInfo.mValue, static_cast<uint64_t>(tilingRunInfo_.m0));
-    
+    uint64_t alignedMValue = Ops::Base::CeilAlign(tilingRunInfo.mValue, static_cast<uint64_t>(tilingRunInfo_.m0));
     uint32_t maxBaseM = CalculateMaxBaseM(baseN);
     int64_t bpPadRight = runInfo_.dedx_w - (static_cast<int64_t>(runInfo_.dedy_w - 1) * runInfo_.stride_w + 1) +
         (runInfo_.kernel_w - 1) * runInfo_.dilation_w - runInfo_.backprop_pad_l;
@@ -961,7 +967,7 @@ void Conv3DDXV2InnerProductTiling::AdjustBaseMWhenSmallN(uint32_t& baseM, uint32
         mL0cMax = std::max(l0cMaxNum / baseN / tilingRunInfo_.n0, ONE_U32) * tilingRunInfo_.n0;
     }
     baseM = std::min(maxBaseM, mL0cMax);
-    baseM = std::min(static_cast<uint64_t>(baseM), alingedMValue);
+    baseM = std::min(static_cast<uint64_t>(baseM), alignedMValue);
 }
 
 void Conv3DDXV2InnerProductTiling::AdjustBaseNWhenSmallM(uint32_t& baseN, uint32_t baseM, const L0TilingParams& l0Params, const TilingRunInfo& tilingRunInfo)
