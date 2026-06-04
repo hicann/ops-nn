@@ -24,6 +24,7 @@
 #include "opdev/op_executor.h"
 #include "opdev/tensor_view_utils.h"
 #include "aclnn_kernels/common/op_error_check.h"
+#include "log/log.h"
 
 using namespace op;
 using Ops::NN::IsTransposeLastTwoDims;
@@ -65,6 +66,8 @@ const int64_t ANTIQUANT_GRP_SIZE64 = 64;
 const int64_t ANTIQUANT_GRP_SIZE128 = 128;
 const int64_t N_ALIGN_VALUE = 64;
 const uint64_t INPUT_DIM_WITHOUT_BATCH = 2;
+
+static constexpr const char* kOpName = "aclnnWeightQuantBatchMatmulV2";
 
 static const std::initializer_list<DataType> ASCEND910B_AQSCALE_DTYPE_SUPPORT_LIST = {
     DataType::DT_FLOAT16, DataType::DT_BF16, DataType::DT_UINT64, DataType::DT_INT64};
@@ -341,14 +344,15 @@ static bool CheckMicroScalingCondition(
     if (microScalingFlag) {
         OP_CHECK(
             antiquantGroupSize == ANTIQUANT_GROUP_SIZE_MIN_VALUE,
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "Invalid groupSize [%d], only support groupSize 32 on fp4 micro-scaling condition.",
-                antiquantGroupSize),
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                kOpName, "antiquantGroupSize", std::to_string(antiquantGroupSize).c_str(),
+                "When the quant mode is fp4 micro-scaling, the value of antiquantGroupSize must be 32"),
             return false);
         OP_CHECK(
             antiquantOffsetOptional == nullptr,
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "antiquantOffset is not supported on fp4 micro-scaling condition."),
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                kOpName, "antiquantOffsetOptional", "not null",
+                "When the quant mode is fp4 micro-scaling, the value of antiquantOffsetOptional must be null"),
             return false);
     }
 
@@ -499,10 +503,10 @@ static bool CheckXWeightDimValue(const aclTensor* weight, int64_t kX, int64_t mX
         if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510 &&
             weight->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ &&
             (kX > M_K_N_MAX_VALUE || nWeight > M_K_N_MAX_VALUE)) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "k,n shouldn't be larger than %ld, actual k is %ld, n is %ld. ",
-                M_K_N_MAX_VALUE, kX, nWeight);
+            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                kOpName, "k, n",
+                (std::to_string(kX) + ", " + std::to_string(nWeight)).c_str(),
+                "The values of k and n can not be larger than the max value");
             return false;
         }
     }
@@ -523,9 +527,9 @@ static bool CheckXWeightDimValue(const aclTensor* weight, int64_t kX, int64_t mX
 
         if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510 &&
             weight->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ && transposeWeight) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "DAV3510 does not support w4 tranB when weight's dtype is FORMAT_FRACTAL_NZ!");
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                kOpName, "weight", "FORMAT_FRACTAL_NZ with transposeWeight",
+                "When the format of weight is FRACTAL_NZ, the value of transposeWeight can not be true on DAV3510");
             return false;
         }
     }
@@ -696,29 +700,26 @@ static bool CheckValForWeightInt8Nz(
 
     // per-group场景
     if (antiquantGroupSize > 0) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "when weight's dtype is [int8], weight's format is [FRACTAL_NZ], only support per-channel antiquant mode, "
-            "antiquantGroupSize should be 0, but actual antiquantGroupSize is [%d].",
-            antiquantGroupSize);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(kOpName, "antiquantGroupSize", std::to_string(antiquantGroupSize).c_str(),
+                                              "When the dtype of weight is INT8 and the format of weight is "
+                                              "FRACTAL_NZ, the value of antiquantGroupSize must be 0");
         return false;
     }
 
     // per-tensor场景
     if (antiquantScale->GetViewShape().GetShapeSize() == 1) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "when weight's dtype is [int8], weight's format is [FRACTAL_NZ], "
-            "antiquant mode should not be per-tensor.");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(kOpName, "antiquantScale", "per-tensor",
+                                              "When the dtype of weight is INT8 and the format of weight is "
+                                              "FRACTAL_NZ, the value of antiquantScale can not be per-tensor");
         return false;
-    } 
-    
+    }
+
     // per-channel场景
     if (IsTransposeLastTwoDims(x)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "when weight's dtype is [int8], weight's format is [FRACTAL_NZ], and antiquantGroupSize is 0, "
-            "x should not be transposed.");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            kOpName, "x", "transposed",
+            "When the dtype of weight is INT8, the format of weight is FRACTAL_NZ, and the quant mode is per-channel, "
+            "the value of x can not be transposed");
         return false;
     }
 
@@ -760,9 +761,9 @@ static bool AdvancedQuantParamsNullCheckForWeightInt4Nz(
     }
 
     if ((quantScaleOptional != nullptr) || (quantOffsetOptional != nullptr)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "when weight's dtype is [int4], weight's format is [FRACTAL_NZ], y's dtype should not be [int8].");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            kOpName, "weight, y", "int4 FRACTAL_NZ, int8",
+            "When the dtype of weight is INT4 and the format of weight is FRACTAL_NZ, the dtype of y can not be INT8");
         return false;
     }
 
@@ -770,7 +771,9 @@ static bool AdvancedQuantParamsNullCheckForWeightInt4Nz(
         !(weight->GetDataType() == DataType::DT_FLOAT4_E2M1 &&
           antiquantScale->GetDataType() == DataType::DT_FLOAT8_E8M0 &&
           weight->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ && transposeWeight),
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Only supported transposeWeight false on fp4 micro-scaling condition."),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            kOpName, "transposeWeight", "true",
+            "When the quant mode is fp4 micro-scaling, the value of transposeWeight must be false"),
         return false);
 
     return true;
@@ -836,9 +839,8 @@ static bool CheckWeightFormat(const aclTensor* weight)
 {
     if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
         if (weight->GetStorageFormat() != op::Format::FORMAT_ND) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                    "In DAV_3510, aclnnWeightQuantBatchMatmulV2 and aclnnWeightQuantBatchMatmulV3 weight format only "
-                    "support FORMAT_ND.");
+            OP_LOGE_FOR_INVALID_FORMAT(
+                    kOpName, "weight", op::ToString(weight->GetStorageFormat()).GetString(), "FORMAT_ND");
             return false;
         }
     }
@@ -860,10 +862,9 @@ static bool CheckAntiquantForFixpipe(const aclTensor* antiquantScale, const aclT
 {
     if (antiquantOffsetOptional->GetDataType() == DataType::DT_INT32) {
         if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "antiquantOffset's dtype only support DT_FLOAT16 and DT_BF16, "
-                "actual antiquantOffset's dtype is DT_INT32.");
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                kOpName, "antiquantOffsetOptional", "DT_INT32",
+                "The dtype of antiquantOffsetOptional must be FLOAT16 or BF16");
             return false;
         }
 
@@ -949,24 +950,24 @@ static bool CheckBiasWithXBf16(const aclTensor* weight, const aclTensor* biasOpt
         if (weight->GetDataType() == DataType::DT_FLOAT4_E2M1 || weight->GetDataType() == DataType::DT_FLOAT8_E4M3FN ||
             weight->GetDataType() == DataType::DT_HIFLOAT8) {
             if (biasOptional->GetDataType() != DataType::DT_BF16) {
-                OP_LOGE(
-                    ACLNN_ERR_PARAM_INVALID, "biasOptional's dtype should be [DT_BF16], actual is [%s].",
-                    op::ToString(biasOptional->GetDataType()).GetString());
+                OP_LOGE_FOR_INVALID_DTYPE(
+                    kOpName, "biasOptional", op::ToString(biasOptional->GetDataType()).GetString(),
+                    "BF16");
                 return false;
             }
         } else if (
             weight->GetDataType() == DataType::DT_INT8 && weight->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
             if (biasOptional->GetDataType() != DataType::DT_FLOAT) {
-                OP_LOGE(
-                    ACLNN_ERR_PARAM_INVALID, "biasOptional's dtype should be [DT_FLOAT], actual is [%s].",
-                    op::ToString(biasOptional->GetDataType()).GetString());
+                OP_LOGE_FOR_INVALID_DTYPE(
+                    kOpName, "biasOptional", op::ToString(biasOptional->GetDataType()).GetString(),
+                    "FLOAT");
                 return false;
             }
         } else {
             if (biasOptional->GetDataType() != DataType::DT_BF16 && biasOptional->GetDataType() != DataType::DT_FLOAT) {
-                OP_LOGE(
-                    ACLNN_ERR_PARAM_INVALID, "biasOptional's dtype should be [DT_FLOAT]/[DT_BF16], actual is [%s].",
-                    op::ToString(biasOptional->GetDataType()).GetString());
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                    kOpName, "biasOptional", op::ToString(biasOptional->GetDataType()).GetString(),
+                    "The dtype of biasOptional must be FLOAT or BF16");
                 return false;
             }
         }
@@ -1047,11 +1048,9 @@ static bool CheckDtypeValid(
         op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
         if (weight->GetDataType() != DataType::DT_INT4 && weight->GetDataType() != DataType::DT_FLOAT4_E2M1 &&
             weight->GetDataType() != DataType::DT_INT8) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "when weight's format is FRACTAL_NZ, weight's dtype only support DT_INT4、DT_FLOAT4_E2M1 and DT_INT8, "
-                "actual is [%s].",
-                op::ToString(weight->GetDataType()).GetString());
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                kOpName, "weight", op::ToString(weight->GetDataType()).GetString(),
+                "When the format of weight is FRACTAL_NZ, the dtype of weight must be INT4, FLOAT4_E2M1, or INT8");
             return false;
         }
     }
@@ -1169,10 +1168,9 @@ static aclnnStatus AntiQuantScaleAndOffsetContiguousCheck(const aclTensor* antiq
             OP_CHECK(
                 (transposeWeight && IsTransLastTwoDims(antiquantScale)) ||
                     (!transposeWeight && IsContiguous(antiquantScale)),
-                OP_LOGE(
-                    ACLNN_ERR_PARAM_INVALID,
-                    "when weight is contiguous or transpose last two dims, antiquantScale tensor should be "
-                    "consistent with it."),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                    kOpName, "antiquantScale", "not consistent with weight",
+                    "The value of antiquantScale must be consistent with weight (contiguous or transposed)"),
                 return ACLNN_ERR_PARAM_INVALID);
         }
 
@@ -1183,10 +1181,9 @@ static aclnnStatus AntiQuantScaleAndOffsetContiguousCheck(const aclTensor* antiq
             OP_CHECK(
                 (transposeWeight && IsTransLastTwoDims(antiquantOffsetOptional)) ||
                     (!transposeWeight && IsContiguous(antiquantOffsetOptional)),
-                OP_LOGE(
-                    ACLNN_ERR_PARAM_INVALID,
-                    "when weight is contiguous or transpose last two dims, antiquantOffsetOptional tensor should "
-                    "be consistent with it."),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                    kOpName, "antiquantOffsetOptional", "not consistent with weight",
+                    "The value of antiquantOffsetOptional must be consistent with weight (contiguous or transposed)"),
                 return ACLNN_ERR_PARAM_INVALID);
         }
     } else {
@@ -1240,9 +1237,9 @@ static aclnnStatus ContiguousCheck(
         CHECK_RET(antiQuantRes == ACLNN_SUCCESS, antiQuantRes);
     }
 
-    OP_CHECK(
-        IsContiguous(y), OP_LOGE(ACLNN_ERR_PARAM_INVALID, "only support y tensor is contiguous."),
-        return ACLNN_ERR_PARAM_INVALID);
+    OP_CHECK(IsContiguous(y),
+             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(kOpName, "y", "not contiguous", "The value of y must be contiguous"),
+             return ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;
 }
@@ -1439,9 +1436,8 @@ static bool SetShapeStrideForNZ(const aclTensor* weight, aclTensor* weightTemp, 
         auto strideSize = newStrides.size();
         OP_CHECK(
             strideSize >= DIM_RANGE_WITHOUT_BATCH.front() && strideSize <= DIM_RANGE_WITHOUT_BATCH.back(),
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "The dim of weight's strides should be in range [%lu, %lu]. actual is [%lu].",
-                DIM_RANGE_WITHOUT_BATCH.front(), DIM_RANGE_WITHOUT_BATCH.back(), strideSize),
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                kOpName, "weight", std::to_string(strideSize).c_str(), "The shape dim of weight must be 2D"),
             return false);
         // 当transposeWeight=false时，viewStride的倒数第二维要放大8倍， 即(n/8，1) -> (n, 1)
         newStrides[strideSize - SECOND_LAST_DIM] *= INT4_NUMS_IN_INT32;
@@ -1512,9 +1508,8 @@ static aclnnStatus PackedWeightPreProcess(
         auto strideSize = newStrides.size();
         OP_CHECK(
             strideSize >= DIM_RANGE_WITHOUT_BATCH.front() && strideSize <= DIM_RANGE_WITHOUT_BATCH.back(),
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "The dim of weight's strides should be in range [%lu, %lu]. actual is [%lu].",
-                DIM_RANGE_WITHOUT_BATCH.front(), DIM_RANGE_WITHOUT_BATCH.back(), strideSize),
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                kOpName, "weight", std::to_string(strideSize).c_str(), "The shape dim of weight must be 2D"),
             return ACLNN_ERR_PARAM_INVALID);
         // 当transposeWeight=true时，strides的最后一维要放大8倍， 即(1, k/8) -> (1, k)
         newStrides[strideSize - 1] *= INT4_NUMS_IN_INT32;
@@ -1600,11 +1595,11 @@ aclnnStatus CheckContiguous(
     bool& transposeX, bool& transposeWeight, aclOpExecutor* executor)
 {
     if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
-        OP_CHECK(
-            !transposeX && IsContiguous(x),
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "DAV_3510 not support x transpose and only support x tensor is contiguous."),
-            return ACLNN_ERR_PARAM_INVALID);
+        OP_CHECK(!transposeX && IsContiguous(x),
+                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                     kOpName, "x", "transposed or not contiguous",
+                     "On DAV3510, the value of x can not be transposed and the value of x must be contiguous"),
+                 return ACLNN_ERR_PARAM_INVALID);
     }
     CHECK_RET(TensorContiguousProcess(x, transposeX, executor), ACLNN_ERR_INNER_NULLPTR);
 
@@ -1856,7 +1851,9 @@ aclnnStatus aclnnWeightQuantBatchMatmulNzGetWorkspaceSize(
     CHECK_RET(socRes == ACLNN_SUCCESS, socRes);
     CHECK_RET(CheckNotNull(x, weight, antiquantScale, y), ACLNN_ERR_PARAM_NULLPTR);
     OP_CHECK(
-        IsNzFormat(weight), OP_LOGE(ACLNN_ERR_PARAM_INVALID, "only support weight tensor is FRACTAL_NZ."),
+        IsNzFormat(weight),
+        OP_LOGE_FOR_INVALID_FORMAT(
+            kOpName, "weight", op::ToString(weight->GetStorageFormat()).GetString(), "FORMAT_FRACTAL_NZ"),
         return ACLNN_ERR_PARAM_INVALID);
     const aclTensor* tensorWeight = weight;
     const aclTensor* antiquantScaleRef = antiquantScale;

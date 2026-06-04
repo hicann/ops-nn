@@ -27,6 +27,7 @@
 #include "opdev/platform.h"
 #include "aclnn_quant_matmul_v5.h"
 #include "quant_matmul_common_check.h"
+#include "log/log.h"
 
 using namespace op;
 using Ops::NN::SwapLastTwoDimValue;
@@ -63,6 +64,8 @@ static const std::initializer_list<op::DataType> X1_SCALE_SUPPORT_LIST = {op::Da
 static const std::initializer_list<op::DataType> X2_SCALE_SUPPORT_LIST = {op::DataType::DT_UINT64};
 static const std::initializer_list<op::DataType> Y_OFFSET_SUPPORT_LIST = {op::DataType::DT_FLOAT};
 
+static constexpr const char* kOpName = "aclnnQuantMatmulV5";
+
 static inline bool isA8W4Float(const aclTensor *x1, const aclTensor *x2) {
     return (std::find(EIGHT_BIT_FLOAT_INPUT_LIST.begin(), EIGHT_BIT_FLOAT_INPUT_LIST.end(), x1->GetDataType()) !=
             EIGHT_BIT_FLOAT_INPUT_LIST.end()) &&
@@ -78,7 +81,7 @@ static inline bool isA8W4FloatTCG(const aclTensor* x1, const aclTensor* x2, cons
 
 static inline bool isA8W4FloatMx(const aclTensor* x1, const aclTensor* x2, const aclTensor* x1Scale, const aclTensor* x2Scale)
 {
-    return x1->GetDataType() == op::DataType::DT_FLOAT8_E4M3FN && x2->GetDataType() == op::DataType::DT_FLOAT4_E2M1 && 
+    return x1->GetDataType() == op::DataType::DT_FLOAT8_E4M3FN && x2->GetDataType() == op::DataType::DT_FLOAT4_E2M1 &&
         x1Scale != nullptr && x1Scale->GetDataType() == op::DataType::DT_FLOAT8_E8M0 && x2Scale->GetDataType() == op::DataType::DT_FLOAT8_E8M0;
 }
 
@@ -180,19 +183,25 @@ static inline bool CheckInputAttrExistence(const TupleAttr &boolsTrans, int64_t 
 
     bool isX2Nz = ge::GetPrimaryFormat(x2->GetStorageFormat()) == op::Format::FORMAT_FRACTAL_NZ;
     if (!transposeX2 && !isA8W4INT && !isX2Nz) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "A8W4 [fp8/4] ND only support transposeX2 is true.");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            kOpName, "transposeX2", "false",
+            "When the quant mode is A8W4 fp8/4 ND, the value of transposeX2 must be true");
         return false;
     }
     auto &x1Scale = std::get<INDEX_X1_SCALE_IN_QUANT_TUPLE>(quantTensors);
     auto &x2Scale = std::get<INDEX_X2_SCALE_IN_QUANT_TUPLE>(quantTensors);
-    if (isX2Nz){
+    if (isX2Nz) {
         if (x1Scale == nullptr && transposeX2) {
             // A8W4 mode
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "A8W4 NZ T-CG quantization mode only support transposeX2 is false.");
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                kOpName, "transposeX2", "true",
+                "When the quant mode is A8W4 NZ T-CG, the value of transposeX2 can not be true");
             return false;
-        } else if (IsMicroScaling(x1Scale, x2Scale)  && !transposeX2) {
-             // MxA8W4 mode
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "A8W4 NZ mx quantization mode only support transposeX2 is true.");
+        } else if (IsMicroScaling(x1Scale, x2Scale) && !transposeX2) {
+            // MxA8W4 mode
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                kOpName, "transposeX2", "false",
+                "When the quant mode is A8W4 NZ mx, the value of transposeX2 must be true");
             return false;
         }
     }
@@ -205,7 +214,9 @@ static inline bool CheckInputAttrExistence(const TupleAttr &boolsTrans, int64_t 
     } else {            // A8W4 FLOAT
         uint64_t groupSizeK = static_cast<uint64_t>(groupSize) & GROUP_MNK_BIT_SIZE;
         if (groupSizeK != SUPPORTED_GROUP_SIZE) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "A8W4 [fp8/4] only support groupSizeK equal to 32.");
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                kOpName, "groupSizeK", std::to_string(groupSizeK).c_str(),
+                "When the quant mode is A8W4 fp8/4, the value of groupSizeK must be 32");
             return false;
         }
     }
@@ -229,19 +240,23 @@ static inline bool CheckInputExistence(TupleInput &inputTensors, TupleQuant &qua
     isA8W4 = isA8W4Float(x1, x2) || isA8W4Int(x1, x2);
     // 不支持参数
     if (!isA8W4 && yScale != nullptr && !yScale->IsEmpty()) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Do not support yScale now, yScale should be empty tensor or nullptr.");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            kOpName, "yScale", "not empty/null", "The value of yScale must be empty tensor or nullptr");
         return false;
     }
     if (x1Offset != nullptr && !x1Offset->IsEmpty()) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Do not support x1Offset now, x1Offset should be empty tensor or nullptr.");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            kOpName, "x1Offset", "not empty/null", "The value of x1Offset must be empty tensor or nullptr");
         return false;
     }
     if (isA8W4 && x2Offset != nullptr) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Do not support x2Offset now, x2Offset should be empty tensor or nullptr.");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            kOpName, "x2Offset", "not empty/null", "The value of x2Offset must be empty tensor or nullptr");
         return false;
     }
     if (yOffset != nullptr && !yOffset->IsEmpty() && !isA8W4Int(x1, x2)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Do not support yOffset now, yOffset should be empty tensor or nullptr.");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            kOpName, "yOffset", "not empty/null", "The value of yOffset must be empty tensor or nullptr");
         return false;
     }
     return true;
@@ -257,14 +272,34 @@ static inline bool CheckDimRange(TupleInput &inputTensors, TupleQuant &quantTens
     size_t x2MinDimNum = x2StorageFormat == op::Format::FORMAT_FRACTAL_NZ ? MIN_DIM_NUM_NZ : MIN_DIM_NUM_ND;
     size_t x2DimNum = x2->GetStorageShape().GetDimNum();
     if (x2DimNum < x2MinDimNum || x2DimNum > x2MaxDimNum) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "Input x2's dimension should be in range[%zu, %zu], but actual is %zu.", x2MinDimNum, x2MaxDimNum, x2DimNum);
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                kOpName, "x2", std::to_string(x2DimNum).c_str(), "The shape dim of x2 must be in the valid range");
         return false;
     }
-    OP_CHECK_MIN_DIM(x1, MIN_DIM_NUM_ND, return false);
-    OP_CHECK_MIN_DIM(out, MIN_DIM_NUM_ND, return false);
-    OP_CHECK_MAX_DIM(x1, MAX_DIM_NUM_ND, return false);
-    OP_CHECK_MAX_DIM(out, MAX_DIM_NUM_ND, return false);
+    if (x1->GetViewShape().GetDimNum() < static_cast<size_t>(MIN_DIM_NUM_ND)) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM(
+            kOpName, "x1", std::to_string(x1->GetViewShape().GetDimNum()).c_str(),
+            "2D");
+        return false;
+    }
+    if (out->GetViewShape().GetDimNum() < static_cast<size_t>(MIN_DIM_NUM_ND)) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM(
+            kOpName, "out", std::to_string(out->GetViewShape().GetDimNum()).c_str(),
+            "2D");
+        return false;
+    }
+    if (x1->GetViewShape().GetDimNum() > static_cast<size_t>(MAX_DIM_NUM_ND)) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            kOpName, "x1", std::to_string(x1->GetViewShape().GetDimNum()).c_str(),
+            "The shape dim of x1 can not be larger than 6D");
+        return false;
+    }
+    if (out->GetViewShape().GetDimNum() > static_cast<size_t>(MAX_DIM_NUM_ND)) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            kOpName, "out", std::to_string(out->GetViewShape().GetDimNum()).c_str(),
+            "The shape dim of out can not be larger than 6D");
+        return false;
+    }
     if (x1Scale != nullptr && op::GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510 &&
          op::GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_2201) {
         OP_CHECK_WRONG_DIMENSION(x2Scale, 1, return false);
@@ -296,17 +331,17 @@ static inline bool CheckScaleDimRangeA8W4(TupleQuant& quantTensors, bool isA8W4I
     } else {
         size_t expectDimNum = IsMicroScaling(x1Scale, x2Scale) ? MAX_MX_SCALE_DIM : MAX_SCALE_DIM;
         if (x1Scale != nullptr && x1Scale->GetViewShape().GetDimNum() != expectDimNum) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "In A8W4 [fp8/4] mode, the dimension of x1Scale should be %zu. Actual x1Scale dimension: %zu.",
-                expectDimNum, x1Scale->GetViewShape().GetDimNum());
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                kOpName, "x1Scale", std::to_string(x1Scale->GetViewShape().GetDimNum()).c_str(),
+                ("When the quant mode is A8W4, the shape dim of x1Scale must be " + std::to_string(expectDimNum) + "D")
+                    .c_str());
             return false;
         }
         if (x2Scale->GetViewShape().GetDimNum() != expectDimNum) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "In A8W4 [fp8/4] mode, the dimension of x2Scale should be %zu. Actual x2Scale dimension: %zu.",
-                expectDimNum, x2Scale->GetViewShape().GetDimNum());
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                kOpName, "x2Scale", std::to_string(x2Scale->GetViewShape().GetDimNum()).c_str(),
+                ("When the quant mode is A8W4, the shape dim of x2Scale must be " + std::to_string(expectDimNum) + "D")
+                    .c_str());
             return false;
         }
     }
@@ -361,6 +396,76 @@ static inline bool CheckDimRangeA8W4(TupleInput& inputTensors, TupleQuant& quant
     return true;
 }
 
+static bool CheckBasicInputDtypes(const aclTensor* x1, const aclTensor* x2, const aclTensor* out)
+{
+    if (!CheckType(x1->GetDataType(), EIGHT_BIT_FLOAT_INPUT_LIST)) {
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(kOpName, "x1", op::ToString(x1->GetDataType()).GetString(),
+                                              std::string("The dtype of x1 must be within the range ") +
+                                                  op::ToString(EIGHT_BIT_FLOAT_INPUT_LIST).GetString());
+        return false;
+    }
+    if (!CheckType(x2->GetDataType(), FOUR_BIT_FLOAT_INPUT_LIST)) {
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(kOpName, "x2", op::ToString(x2->GetDataType()).GetString(),
+                                              std::string("The dtype of x2 must be within the range ") +
+                                                  op::ToString(FOUR_BIT_FLOAT_INPUT_LIST).GetString());
+        return false;
+    }
+    if (!CheckType(out->GetDataType(), Y_SUPPORT_LIST)) {
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            kOpName, "out", op::ToString(out->GetDataType()).GetString(),
+            std::string("The dtype of out must be within the range ") + op::ToString(Y_SUPPORT_LIST).GetString());
+        return false;
+    }
+    return true;
+}
+
+static bool CheckA8W4FloatDtype(const aclTensor* x2Scale, const aclTensor* bias, const aclTensor* yScale)
+{
+    if (bias != nullptr || yScale == nullptr) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            kOpName, "bias, yScale", "non-null bias or null yScale",
+            "When the quant mode is A8W4, the value of bias must be null and the value of yScale can not be null");
+        return false;
+    }
+    if (!CheckType(x2Scale->GetDataType(), Y_SUPPORT_LIST)) {
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(kOpName, "x2Scale", op::ToString(x2Scale->GetDataType()).GetString(),
+                                              std::string("The dtype of x2Scale must be within the range ") +
+                                                  op::ToString(Y_SUPPORT_LIST).GetString());
+        return false;
+    }
+    if (!CheckType(yScale->GetDataType(), Y_SCALE_SUPPORT_LIST)) {
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(kOpName, "yScale", op::ToString(yScale->GetDataType()).GetString(),
+                                              std::string("The dtype of yScale must be within the range ") +
+                                                  op::ToString(Y_SCALE_SUPPORT_LIST).GetString());
+        return false;
+    }
+    return true;
+}
+
+static bool CheckMxA8W4Dtype(const aclTensor* bias, const aclTensor* yScale, const aclTensor* out)
+{
+    if (bias != nullptr) {
+        if (!CheckType(bias->GetDataType(), Y_SUPPORT_LIST)) {
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(kOpName, "bias", op::ToString(bias->GetDataType()).GetString(),
+                                                  std::string("The dtype of bias must be within the range ") +
+                                                      op::ToString(Y_SUPPORT_LIST).GetString());
+            return false;
+        }
+        if (bias->GetDataType() != out->GetDataType()) {
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                kOpName, "bias", op::ToString(bias->GetDataType()).GetString(),
+                "When the quant mode is MxA8W4, the dtype of bias must be consistent with the dtype of out");
+            return false;
+        }
+    }
+    if (yScale != nullptr) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(kOpName, "yScale", "not null",
+                                              "When the quant mode is MxA8W4, the value of yScale must be null");
+        return false;
+    }
+    return true;
+}
+
 static bool CheckDtype(const TupleInput &inputTensors, const TupleQuant &quantTensors,
                        const aclTensor *out) {
     auto x1 = std::get<INDEX_X1_IN_INPUT_TUPLE>(inputTensors);
@@ -370,39 +475,18 @@ static bool CheckDtype(const TupleInput &inputTensors, const TupleQuant &quantTe
     auto bias = std::get<INDEX_BIAS_IN_QUANT_TUPLE>(quantTensors);
     auto yScale = std::get<INDEX_Y_SCALE_IN_QUANT_TUPLE>(quantTensors);
 
-    OP_CHECK_DTYPE_NOT_SUPPORT(x1, EIGHT_BIT_FLOAT_INPUT_LIST, return false);
-    OP_CHECK_DTYPE_NOT_SUPPORT(x2, FOUR_BIT_FLOAT_INPUT_LIST, return false);
-    OP_CHECK_DTYPE_NOT_SUPPORT(out, Y_SUPPORT_LIST, return false);
-
-    if (x1Scale == nullptr) {
-        // A8W4 mode
-        if (bias != nullptr || yScale == nullptr) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "In A8W4 mode, bias must be null and yScale can not be null.");
-            return false;
-        }
-        OP_CHECK_DTYPE_NOT_SUPPORT(x2Scale, Y_SUPPORT_LIST, return false);
-        OP_CHECK_DTYPE_NOT_SUPPORT(yScale, Y_SCALE_SUPPORT_LIST, return false);
-    } else if (IsMicroScaling(x1Scale, x2Scale)) {
-        // MxA8W4 mode
-        if (bias != nullptr) {
-            // 检查1：bias 类型必须在 Y_SUPPORT_LIST 中
-            OP_CHECK_DTYPE_NOT_SUPPORT(bias, Y_SUPPORT_LIST, return false);
-            // 检查2：bias dtype 必须与 out dtype 一致
-            if (bias->GetDataType() != out->GetDataType()) {
-                OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                         "In MxA8W4 mode, bias dtype must be consistent with output dtype. ");
-                return false;
-            }
-        }
-        if (yScale != nullptr) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "In MxA8W4 mode, yScale must be null.");
-            return false;
-        }
-    } else {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Unexpected quant mode!");
+    if (!CheckBasicInputDtypes(x1, x2, out)) {
         return false;
     }
-    return true;
+
+    if (x1Scale == nullptr) {
+        return CheckA8W4FloatDtype(x2Scale, bias, yScale);
+    } else if (IsMicroScaling(x1Scale, x2Scale)) {
+        return CheckMxA8W4Dtype(bias, yScale, out);
+    } else {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(kOpName, "quantMode", "unexpected", "unexpected quant mode");
+        return false;
+    }
 }
 
 static bool CheckDtypeA8W4Int(const TupleInput &inputTensors, const TupleQuant &quantTensors,
@@ -505,11 +589,11 @@ static inline bool CheckScaleX1Shape(const TupleQuant& quantTensors, int64_t x1M
         if (x1Scale->GetViewShape().GetDim(0) != x1MDim ||
             x1Scale->GetViewShape().GetDim(1) != CeilDiv(groupDim, static_cast<int64_t>(MX_SCALE_LAST_DIM_SIZE)) ||
             x1Scale->GetViewShape().GetDim(2) != MX_SCALE_LAST_DIM_SIZE) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "The x1Scale shape must be [%ld, %ld, %zu] for MxA8W4, which are [%ld, %ld, %ld]", x1MDim,
-                CeilDiv(groupDim, static_cast<int64_t>(MX_SCALE_LAST_DIM_SIZE)), MX_SCALE_LAST_DIM_SIZE, x1Scale->GetViewShape().GetDim(0),
-                x1Scale->GetViewShape().GetDim(1), x1Scale->GetViewShape().GetDim(2));
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                kOpName, "x1Scale", op::ToString(x1Scale->GetViewShape()).GetString(),
+                ("When the quant mode is MxA8W4, the shape of x1Scale must be [" + std::to_string(x1MDim) + ", " +
+                 std::to_string(CeilDiv(groupDim, static_cast<int64_t>(MX_SCALE_LAST_DIM_SIZE))) + ", " +
+                 std::to_string(MX_SCALE_LAST_DIM_SIZE) + "]").c_str());
             return false;
         }
     }
@@ -540,18 +624,20 @@ static inline bool CheckScaleX2Shape(const TupleQuant& quantTensors, int64_t x2N
         }
     } else if (IsMicroScaling(x1Scale, x2Scale)) {
         // MX_SCALE_LAST_DIM_SIZE:x2Scale Shape: (n, groupDim / MX_SCALE_LAST_DIM_SIZE, MX_SCALE_LAST_DIM_SIZE)
-        if (x2ScaleNDim != x2NDim || x2ScaleGroupDim != CeilDiv(groupDim, static_cast<int64_t>(MX_SCALE_LAST_DIM_SIZE)) ||
+        if (x2ScaleNDim != x2NDim ||
+            x2ScaleGroupDim != CeilDiv(groupDim, static_cast<int64_t>(MX_SCALE_LAST_DIM_SIZE)) ||
             x2Scale->GetViewShape().GetDim(2) != MX_SCALE_LAST_DIM_SIZE) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                    "The x2scale shape must be [%ld, %ld, %zu], which are [%ld, %ld, %ld]", x2NDim,
-                    CeilDiv(groupDim, static_cast<int64_t>(MX_SCALE_LAST_DIM_SIZE)), MX_SCALE_LAST_DIM_SIZE, x2ScaleNDim, x2ScaleGroupDim,
-                    x2Scale->GetViewShape().GetDim(2));
+            OP_LOGE_FOR_INVALID_SHAPE(
+                kOpName, "x2Scale", op::ToString(x2Scale->GetViewShape()).GetString(),
+                "[" + std::to_string(x2NDim) + ", " +
+                    std::to_string(CeilDiv(groupDim, static_cast<int64_t>(MX_SCALE_LAST_DIM_SIZE))) + ", " +
+                    std::to_string(MX_SCALE_LAST_DIM_SIZE) + "]");
             return false;
         }
     } else {
         if (x2ScaleNDim != x2NDim || x2ScaleGroupDim != groupDim) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The x2scale shape must be [%ld, %ld], which are [%ld, %ld]",
-                    x2NDim, groupDim, x2ScaleNDim, x2ScaleGroupDim);
+            OP_LOGE_FOR_INVALID_SHAPE(kOpName, "x2Scale", op::ToString(x2Scale->GetViewShape()).GetString(),
+                                      "[" + std::to_string(x2NDim) + ", " + std::to_string(groupDim) + "]");
             return false;
         }
     }
@@ -607,14 +693,15 @@ static inline bool CheckA8W4KDim(const TupleInput& inputTensors, const TupleQuan
         }
     } else if (isA8W4FloatTCG(x1, x2, x1Scale)) {
         if (kDim % SUPPORTED_TCG_A8W4_K_ALIGN_NUM != 0 || kDim <= SUPPORTED_TCG_A8W4_K_ALIGN_NUM) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the k dim must to be aligned to %ld and more than %ld, which is %ld",
-                    SUPPORTED_TCG_A8W4_K_ALIGN_NUM, SUPPORTED_TCG_A8W4_K_ALIGN_NUM, kDim);
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                kOpName, "k", std::to_string(kDim).c_str(),
+                "The value of k must be aligned to 32 and greater than 32 for T-CG quantization");
             return false;
         }
     } else if (isA8W4FloatMx(x1, x2, x1Scale, x2Scale)) {
         if (kDim % SUPPORTED_MX_A8W4_K_ALIGN_NUM != 0) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The k dim must be aligned to %ld for MX quantization, which is %ld",
-                    SUPPORTED_MX_A8W4_K_ALIGN_NUM, kDim);
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(kOpName, "k", std::to_string(kDim).c_str(),
+                                                  "The value of k must be aligned to 8 for MX quantization");
             return false;
         }    
     } else {
@@ -638,7 +725,8 @@ static inline bool CheckKDimAndBasicShape(
         }
     } else {    // A8W4FLOAT DAV3510
         if (x1KDim <= 0) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the k-dim must be at least 1, which is %ld", x1KDim);
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(kOpName, "k", std::to_string(x1KDim).c_str(),
+                                                  "The value of k must be >= 1");
             return false;
         }
     }
@@ -669,8 +757,9 @@ static inline bool CheckX1X2Shape(
     auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
     if (npuArch == NpuArch::DAV_3510 && isX2Nz) {
         if (x2NDim % SUPPORTED_N_ALIGN_NUM != 0) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "A8W4 NZ the n dim must be align to %ld, which is %ld",
-                    SUPPORTED_N_ALIGN_NUM, x2NDim);
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                kOpName, "n", std::to_string(x2NDim).c_str(),
+                "When the quant mode is A8W4 NZ, the value of n must be aligned to 8");
             return false;
         }
     }
@@ -907,10 +996,10 @@ static inline bool A8W4InferGroupSize(int64_t& groupSize) {
     uint64_t groupSizeN = (static_cast<uint64_t>(groupSize) >> GROUP_N_OFFSET) & GROUP_MNK_BIT_SIZE;
     uint64_t groupSizeM = (static_cast<uint64_t>(groupSize) >> GROUP_M_OFFSET) & GROUP_MNK_BIT_SIZE;
     if (!validGroupSize(groupSizeM, groupSizeN)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "The valid groupSizeM and groupSizeN must be 0 or 1, actual groupSizeM [%lu], groupSizeN [%lu]!",
-            groupSizeM, groupSizeN);
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            kOpName, "groupSizeM, groupSizeN",
+            (std::to_string(groupSizeM) + ", " + std::to_string(groupSizeN)).c_str(),
+            "The values of groupSizeM and groupSizeN must be 0 or 1");
         return false;
     }
 
@@ -1050,9 +1139,7 @@ aclnnStatus aclnnQuantMatmulV5GetWorkspaceSize(const aclTensor *x1, const aclTen
     if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
         OP_CHECK(
             x2 != nullptr && !IsFormatNZ(x2),
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "In DAV_3510, aclnnQuantMatmulV5 not support FORMAT_FRACTAL_NZ and only support FORMAT_ND."),
+            OP_LOGE_FOR_INVALID_FORMAT(kOpName, "x2", "FORMAT_FRACTAL_NZ", "FORMAT_ND"),
             return ACLNN_ERR_PARAM_INVALID);
     }
     auto uniqueExecutor = CREATE_EXECUTOR();
