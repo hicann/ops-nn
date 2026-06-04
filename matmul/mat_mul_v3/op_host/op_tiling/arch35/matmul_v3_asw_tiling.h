@@ -32,38 +32,11 @@ protected:
 
     ge::graphStatus DoOpTiling() override;
 
-    ge::graphStatus DoNormOpTiling();
-
     uint64_t GetTilingKey() const override;
 
     ge::graphStatus GetTilingData(TilingResult &tiling) const override;
-private:
-    struct CalcParams {
-        uint64_t baseStart;
-        uint64_t baseEnd;
-        bool isNegativeSign;
-        double bestBalance;
-        uint64_t baseM;
-        uint64_t baseN;
-        uint64_t baseK;
-    };
 
-    void CalcBasicBlock();
-    void FormulateBasicBlock();
-    void FormulateLoadBalanceBlock();
     void CalcTailBasicBlock();
-    void OptimizeEdgeBasicBlock();
-    void GetOuterAxisTailCnt(bool nLoadBalance, uint64_t& baseTailSplitCnt, uint64_t& tailMain);
-    void CalcSingleX(uint64_t& higherSingleX, uint64_t& lowerSingleX);
-    // 单边大场景处理
-    uint64_t UpdateBaseBlock(uint64_t baseBlock, bool isMLarger);
-    void CalcLargeSingleSide(uint64_t minMN, uint64_t maxMN, uint64_t& targetBase, bool isMLarger);
-    void HandleLargeSingleSide(uint64_t minMN, uint64_t maxMN, bool isMLarger);
-    // 两边都比较大场景处理
-    bool UpdateBothBaseBlock(
-        double balance, CalcParams& params, uint64_t currentBaseM, uint64_t currentBaseN, uint64_t baseK);
-    bool CalcBestBalance(CalcParams& params, bool isMLarger);
-    void HandleLargeBothSides(uint64_t higherSingleX, uint64_t lowerSingleX, uint64_t minMN, bool isMLarger);
 };
 } // namespace matmul_v3_advanced
 } // namespace optiling

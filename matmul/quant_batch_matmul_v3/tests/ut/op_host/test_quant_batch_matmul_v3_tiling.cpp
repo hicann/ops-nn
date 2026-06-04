@@ -761,6 +761,7 @@ static void ThreadFunc(const QuantBatchMatmulV3TilingTestParam *params, size_t t
             lock_guard<mutex> lock(tilingTestMutex);
             params[idx].Test();
         } else {
+            lock_guard<mutex> lock(tilingTestMutex);
             params[idx].Test();
         }
     }

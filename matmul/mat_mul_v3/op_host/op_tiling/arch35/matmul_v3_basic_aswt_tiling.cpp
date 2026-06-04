@@ -33,66 +33,90 @@ bool MatMulV3BasicAswtTiling::IsCapable()
     return true;
 }
 
-void MatMulV3BasicAswtTiling::FullLoadPre()
+void MatMulV3BasicAswtTiling::ResetFullLoadLoadBalance()
 {
-    uint64_t mCnt = MathUtil::CeilDivision(args_.mValue, runInfo_.singleCoreM);
-    uint64_t nCnt = MathUtil::CeilDivision(args_.nValue, runInfo_.singleCoreN);
-    isSingleRound_ = mCnt * nCnt <= compileInfo_.aicNum;
-    biasSize_ = args_.hasBias ? runInfo_.baseN * runInfo_.stepN * GetSizeByDataType(args_.biasType) : 0;
-    return;
-}
-
-uint64_t MatMulV3BasicAswtTiling::GetAFullLoadBasicNL1() const
-{
-    return std::min(ops::CeilAlign(args_.nValue, BASIC_BLOCK_SIZE_16), runInfo_.baseN * DB_SIZE);
-}
-
-// A全载切换基础API的条件
-bool MatMulV3BasicAswtTiling::CheckAL1FullLoadDav3510(const uint64_t kAlignedValue, const uint64_t mAlignedValue) const
-{
-    uint64_t al1Size = kAlignedValue * mAlignedValue * args_.aDtypeSize;
-    // 单核上只有一轮，走basic api模板， 头开销较小，无需走全载模板
-    if (isSingleRound_) {
-        return false;
-    }
-    // L2命中率高则不走全载模板
-    uint64_t maxStepM = MatMulV3BaseTiling::GetAswWindowLen() > 1UL ? MatMulV3BaseTiling::GetAswWindowLen() - 1UL : 1;
-    if (args_.mValue >= maxStepM * runInfo_.baseM) {
-        return false;
-    }
-    uint64_t biasSize = args_.hasBias ? GetAFullLoadBasicNL1() * GetSizeByDataType(args_.biasType) : 0;
-    // 3/4L1 = 384M
-    if (al1Size + biasSize > compileInfo_.l1Size * 3UL / 4UL) {
-        return false;
-    }
-    uint64_t mCnt = MathUtil::CeilDivision(args_.mValue, runInfo_.singleCoreM);
-    uint64_t nCnt = MathUtil::CeilDivision(args_.nValue, runInfo_.singleCoreN);
-    uint64_t aL1FullMTE2Size = args_.mValue * compileInfo_.aicNum + args_.nValue * mCnt;
-    uint64_t baseMTE2Size = args_.mValue * nCnt + args_.nValue * mCnt;
-    // 1.2f 表示切基础API全载后至少减少20%的总数据搬运量
-    if (args_.mValue > BASIC_BLOCK_SIZE_256 && static_cast<float>(baseMTE2Size) < 1.2f * aL1FullMTE2Size) {
-        return false;
-    }
-    return true;
+    // 全载模板需重置负载均衡计算
+    runInfo_.mBaseTailSplitCnt = 1UL;
+    runInfo_.nBaseTailSplitCnt = 1UL;
+    runInfo_.tailInfo.mTailMain = 0UL;
+    runInfo_.tailInfo.nTailMain = 0UL;
 }
 
 bool MatMulV3BasicAswtTiling::CheckAL1FullLoad() const
 {
+    // 不支持Fixpipe优化
     if (l0C2Out_ != MatMulV3L0C2Out::ON_THE_FLY) {
         return false;
     }
-    if (args_.nValue < CACHELINE) {
+    // 不支持CubeBound
+    if (runInfo_.cubeBoundParam <= runInfo_.cubeBoundEdge) {
+        OP_LOGD(args_.opName, "The shape already cubebound, no need do al1 full load.");
         return false;
     }
-    uint64_t mAlignedValue = ops::CeilAlign(args_.mValue, BASIC_BLOCK_SIZE_16);
-    uint64_t kAlignedValue = ops::CeilAlign(args_.kValue, BLOCK_BYTE_SIZE / args_.aDtypeSize);
-    if (args_.isATrans) {
-        // m为内轴时强制16对齐
-        mAlignedValue = ops::CeilAlign(args_.mValue, BASIC_BLOCK_SIZE_16);
-        kAlignedValue = ops::CeilAlign(args_.kValue, BASIC_BLOCK_SIZE_16);
+    // 不支持搬运量无减少
+    uint64_t mCnt = MathUtil::CeilDivision(args_.mValue, runInfo_.singleCoreM);
+    uint64_t nCnt = MathUtil::CeilDivision(args_.nValue, runInfo_.singleCoreN);
+    if (nCnt <= compileInfo_.aicNum) {
+        return false;
     }
-    // check AL1FullLoad
-    return CheckAL1FullLoadDav3510(kAlignedValue, mAlignedValue);
+    // 不支持Fixp Bound多轮场景
+    if (args_.kValue <= BASIC_BLOCK_SIZE_128 && mCnt != 1) {
+        return false;
+    }
+    // 不超L1 Buffer
+    uint64_t mAlignedValue = ops::CeilAlign(args_.mValue, BASIC_BLOCK_SIZE_16);
+    uint64_t kAlignedValue = ops::CeilAlign(args_.kValue, BASIC_BLOCK_SIZE_16);
+    uint64_t aL1Size = mAlignedValue * kAlignedValue * args_.aDtypeSize;
+    uint64_t biasSize = args_.hasBias ? runInfo_.baseN * DB_SIZE * GetSizeByDataType(args_.biasType) : 0;
+    // 全载数据不超过3/4 L1 Buffer
+    if ((aL1Size + biasSize) > compileInfo_.l1Size * 3UL / 4UL) {
+        return false;
+    }
+    OP_LOGI(args_.opName, "MatMulV3 tiling enable state is DoAL1FullLoad.");
+    return true;
+}
+
+bool MatMulV3BasicAswtTiling::CheckBL1FullLoad() const
+{
+    // 不支持CubeBound
+    if (runInfo_.cubeBoundParam <= runInfo_.cubeBoundEdge) {
+        OP_LOGD(args_.opName, "The shape already cubebound, no need do al1 full load.");
+        return false;
+    }
+    // 不支持搬运量无减少
+    uint64_t mCnt = MathUtil::CeilDivision(args_.mValue, runInfo_.singleCoreM);
+    uint64_t nCnt = MathUtil::CeilDivision(args_.nValue, runInfo_.singleCoreN);
+    if (mCnt <= compileInfo_.aicNum) {
+        return false;
+    }
+    // 不超L1 Buffer
+    uint64_t nAlignedValue = ops::CeilAlign(args_.nValue, BASIC_BLOCK_SIZE_16);
+    uint64_t kAlignedValue = ops::CeilAlign(args_.kValue, BASIC_BLOCK_SIZE_16);
+    uint64_t bL1Size = nAlignedValue * kAlignedValue * args_.bDtypeSize;
+    uint64_t biasSize = args_.hasBias ? nAlignedValue * GetSizeByDataType(args_.biasType) : 0;
+    // 全载数据不超过3/4 L1 Buffer
+    if ((bL1Size + biasSize) > compileInfo_.l1Size * 3UL / 4UL) {
+        return false;
+    }
+    OP_LOGI(args_.opName, "MatMulV3 tiling enable state is DoBL1FullLoad.");
+    return true;
+}
+
+void MatMulV3BasicAswtTiling::CalcTailBasicBlockAL1Full()
+{
+    uint64_t nCnt = MathUtil::CeilDivision(args_.nValue, runInfo_.baseN);
+    uint64_t tailCnt = nCnt <= compileInfo_.aicNum ? 0UL : nCnt % compileInfo_.aicNum;
+    runInfo_.tailInfo.mCnt = 1UL;
+    runInfo_.tailInfo.nCnt = 1UL;
+
+    if (tailCnt == 0UL) {
+        return;
+    }
+    while ((runInfo_.tailInfo.nCnt + 1UL) * tailCnt <= compileInfo_.aicNum &&
+        (args_.isBTrans || MathUtil::CeilDivision(runInfo_.baseN, runInfo_.tailInfo.nCnt) *
+        args_.bDtypeSize > BASIC_BLOCK_K_128_BYTE)) {
+        runInfo_.tailInfo.nCnt += 1UL;
+    }
 }
 
 void MatMulV3BasicAswtTiling::CalcTailBasicBlockBL1Full()
@@ -104,167 +128,148 @@ void MatMulV3BasicAswtTiling::CalcTailBasicBlockBL1Full()
     if (tailCnt == 0UL) {
         return;
     }
-    while ((runInfo_.tailInfo.mCnt + 1UL) * tailCnt <= compileInfo_.aicNum) {
+    while ((runInfo_.tailInfo.mCnt + 1UL) * tailCnt <= compileInfo_.aicNum &&
+        (!args_.isATrans || MathUtil::CeilDivision(runInfo_.baseM, runInfo_.tailInfo.mCnt) *
+        args_.aDtypeSize > BASIC_BLOCK_K_128_BYTE)) {
         runInfo_.tailInfo.mCnt += 1UL;
     }
 }
 
-// overide CalcTailBasicBlock
-void MatMulV3BasicAswtTiling::CalcTailBasicBlockAL1Full()
+void MatMulV3BasicAswtTiling::DoAL1FullLoad()
 {
-    uint64_t nCnt = MathUtil::CeilDivision(args_.nValue, runInfo_.baseN);
-    uint64_t tailCnt = nCnt <= compileInfo_.aicNum ? 0UL : nCnt % compileInfo_.aicNum;
-    runInfo_.tailInfo.mCnt = 1UL;
-    runInfo_.tailInfo.nCnt = 1UL;
+    ResetFullLoadLoadBalance();
+    OP_LOGI(args_.opName, "MatMulV3 tiling enable state is DoAL1FullLoad.");
 
-    if (tailCnt == 0UL) {
-        return;
-    }
-    while ((runInfo_.tailInfo.nCnt + 1UL) * tailCnt <= compileInfo_.aicNum) {
-        runInfo_.tailInfo.nCnt += 1UL;
-    }
-}
-
-void MatMulV3BasicAswtTiling::AdjustAL1Tiling3510Basic([[maybe_unused]] uint64_t biasBatchDimAll /* args */) {
-    // biasBatchDimAll没有被使用，但编译器不会发出警告
-    uint64_t kAlignedValue = ops::CeilAlign(args_.kValue, BASIC_BLOCK_SIZE_16);
     uint64_t mAlignedValue = ops::CeilAlign(args_.mValue, BASIC_BLOCK_SIZE_16);
-    // aL1 LoadSize
-    uint64_t aL1Size = kAlignedValue * mAlignedValue * args_.aDtypeSize;
-    // bl1 LoadSize
-    uint64_t bL1loadSize = runInfo_.baseK * runInfo_.depthB1 * runInfo_.baseN * args_.bDtypeSize;
-    uint64_t baseBiasSize = args_.hasBias ? GetAFullLoadBasicNL1() * GetSizeByDataType(args_.biasType) : 0;
-    // Check L1 load size
-    while (bL1loadSize > compileInfo_.l1Size - baseBiasSize - aL1Size) {
-        // 第一轮优先调整stepK为2， 进一步的调整baseN
-        // 如果stepKa = 1 && stepKb = 1, 则调整baseN减半， stepKa=stepKb=1
-        // 如果stepKa > 1 && stepKb = 1, 则baseN不变， stepKb -> 2  stepKa = 1
-        // 如果stepKa = 2 && stepKb = 2, 则baseN减半, stepKa=stepkb=2
-        // 如果stepKa > 2 && stepKb = 2, 则baseN不变， stepKb -> 2 stepKa > 2
-        runInfo_.baseN = (runInfo_.stepKb == std::min(runInfo_.stepKa, 2UL)) ? runInfo_.baseN >> 1 : runInfo_.baseN;
-        runInfo_.stepKb = std::min(runInfo_.stepKa, 2UL); // 最小为2保证baseK * 2 * adtype = 256B
-        runInfo_.depthB1 = DB_SIZE * runInfo_.stepKb;     // stepN = DB_SIZE
-        runInfo_.baseN = ops::CeilAlign(runInfo_.baseN, BASIC_BLOCK_SIZE_16);
-        bL1loadSize = runInfo_.depthB1 * runInfo_.baseN * runInfo_.baseK * args_.aDtypeSize;
+    uint64_t kAlignedValue = ops::CeilAlign(args_.kValue, BASIC_BLOCK_SIZE_16);
+    runInfo_.stepM = MathUtil::CeilDivision(mAlignedValue, runInfo_.baseM);
+    runInfo_.stepKa = MathUtil::CeilDivision(kAlignedValue, runInfo_.baseK);
+    uint64_t aL1Size = mAlignedValue * kAlignedValue * args_.aDtypeSize;
+    uint64_t biasSize = args_.hasBias ? runInfo_.baseN * DB_SIZE * GetSizeByDataType(args_.biasType) : 0;
+    uint64_t remainL1Size = compileInfo_.l1Size - (aL1Size + biasSize);
+    uint64_t maxBaseNWithL1 = remainL1Size / (runInfo_.baseK * args_.bDtypeSize * DB_SIZE);
+    uint64_t maxBaseNWithL0cDb = compileInfo_.l0CSize / (runInfo_.baseM * DATA_SIZE_FP32 * DB_SIZE);
+    uint64_t maxBaseN = ops::FloorAlign(std::min(maxBaseNWithL1, maxBaseNWithL0cDb), BASIC_BLOCK_SIZE_16);
+    uint64_t balanceBaseN =
+        args_.batchInfo != nullptr ? maxBaseN :
+        ops::CeilAlign(MathUtil::CeilDivision(args_.nValue, compileInfo_.aicNum), BASIC_BLOCK_SIZE_16);
+    // 在已有baseN，最大baseN，负载均衡baseN中选择最小值
+    runInfo_.baseN = std::min(runInfo_.baseN, std::min(maxBaseN, balanceBaseN));
+    // N内轴时满足128B对齐
+    uint64_t baseAlignUnit = BASIC_BLOCK_K_128_BYTE / args_.bDtypeSize;
+    if (!args_.isBTrans && runInfo_.baseN > baseAlignUnit) {
+        runInfo_.baseN = ops::FloorAlign(runInfo_.baseN, baseAlignUnit);
     }
-    uint64_t dtypeSize = GetSizeByDataType(ge::DT_FLOAT);
+
+    uint64_t maxStepKWithBufferLimit = remainL1Size / (runInfo_.baseK * runInfo_.baseN * DB_SIZE * args_.bDtypeSize);
+    // stepK最大不超过4
+    uint64_t maxStepK =
+        std::min(std::min(MathUtil::CeilDivision(args_.kValue, runInfo_.baseK), maxStepKWithBufferLimit), 4UL);
+    // B矩阵K为内轴，k_bl1不满足256B对齐，尝试baseK放大一倍， 提升B矩阵搬运效率
+    if (args_.isBTrans && maxStepK == maxStepKWithBufferLimit &&
+        maxStepK * runInfo_.baseK % BASIC_BLOCK_K_256_BYTE &&
+        (runInfo_.baseK << 1) * runInfo_.baseM * args_.aDtypeSize * DB_SIZE <= compileInfo_.l0ASize) {
+        runInfo_.baseK <<= 1;
+        maxBaseNWithL1 = remainL1Size / (runInfo_.baseK * args_.bDtypeSize * DB_SIZE);
+        uint64_t maxBaseNWithL0B = compileInfo_.l0BSize / (runInfo_.baseK * args_.bDtypeSize * DB_SIZE);
+        runInfo_.baseN = std::min(runInfo_.baseN, maxBaseNWithL0B);
+        runInfo_.stepKa = MathUtil::CeilDivision(kAlignedValue, runInfo_.baseK);
+    }
+    uint64_t stepK = 1;
+    for (; stepK < maxStepK; stepK++) {
+        uint64_t curKL1 = runInfo_.baseK * stepK;
+        uint64_t usedL1Size = runInfo_.baseN * curKL1 * args_.bDtypeSize;
+        // L1搬运量约束
+        if (usedL1Size < L1_SINGLE_SIZE_LIMIT) {
+            continue;
+        }
+        // K内轴时约束kL1 256B对齐，发挥带宽能力
+        if (args_.isBTrans && curKL1 % (BASIC_BLOCK_K_256_BYTE / args_.bDtypeSize) != 0) {
+            continue;
+        }
+        break;
+    }
+    runInfo_.stepKb = stepK;
+    runInfo_.depthA1 = runInfo_.stepM * runInfo_.stepKa;
+    runInfo_.depthB1 = runInfo_.stepKb * DB_SIZE;
     runInfo_.singleCoreM = args_.mValue;
     runInfo_.singleCoreN = runInfo_.baseN;
-    runInfo_.dbL0C = runInfo_.baseM * runInfo_.baseN * dtypeSize * DB_SIZE <= compileInfo_.l0CSize ? DB_SIZE : 1UL;
-    // 1.n为外轴且是256倍数
-    // 2.n为内轴且是256*2的倍数
-    // 则baseN减半不影响MTE2搬运效率
-    if ((args_.isBTrans && (runInfo_.baseN * args_.bDtypeSize) % BASIC_BLOCK_SIZE_256 == 0) ||
-        (runInfo_.baseN * args_.bDtypeSize) % (BASIC_BLOCK_SIZE_256 * NUM_TWO) == 0) {
-        runInfo_.baseN =
-            (runInfo_.dbL0C > 1UL) ? runInfo_.baseN : ops::CeilAlign(runInfo_.baseN >> 1, BASIC_BLOCK_SIZE_16);
-    }
-    // b矩阵开启4buffer
-    uint64_t bL14Buffer = runInfo_.baseK * runInfo_.stepKb * runInfo_.baseN * args_.aDtypeSize * BASIC_L1_BUFFER_NUM;
-    runInfo_.l1BufferNum =
-        bL14Buffer + aL1Size + baseBiasSize * BASIC_L1_BUFFER_NUM > compileInfo_.l1Size ? DB_SIZE : BASIC_L1_BUFFER_NUM;
-    runInfo_.singleCoreN = runInfo_.baseN;
-    runInfo_.dbL0C = runInfo_.baseM * runInfo_.baseN * dtypeSize * DB_SIZE <= compileInfo_.l0CSize ? DB_SIZE : 1UL;
-}
-
-void MatMulV3BasicAswtTiling::DoAL1FullLoad(uint64_t bBatchDimAll, uint64_t biasBatchDimAll)
-{
-    MatMulV3TilingHelper::ResetFullLoadLoadBalance(runInfo_);
-    OP_LOGI(args_.opName, "MatMulV3 tiling enable state is DoAL1FullLoad.");
-    // adjust tiling common
-    MatMulV3TilingHelper::AdjustAL1TilingCommon(bBatchDimAll, compileInfo_, args_, runInfo_);
-    // 复用A全载的标记位, 无需再使用函数指针隔离, 不支持的平台无需设置走基础API的标记
-    AdjustAL1Tiling3510Basic(biasBatchDimAll);
+    uint64_t bL14BufferSize =
+        runInfo_.baseK * runInfo_.stepKb * runInfo_.baseN * args_.bDtypeSize * BASIC_L1_BUFFER_NUM;
+    runInfo_.l1BufferNum = bL14BufferSize + aL1Size + biasSize > compileInfo_.l1Size ? DB_SIZE : BASIC_L1_BUFFER_NUM;
+    runInfo_.dbL0C = runInfo_.baseM * runInfo_.baseN * DATA_SIZE_FP32 * DB_SIZE <= compileInfo_.l0CSize ? DB_SIZE : 1UL;
+    uint64_t nCore = MathUtil::CeilDivision(args_.nValue, runInfo_.baseN);
+    uint64_t batchNum = args_.batchInfo == nullptr ? 1 : args_.batchInfo->batchC;
+    runInfo_.usedCoreNum = std::min(nCore * batchNum, compileInfo_.aicNum);
     CalcTailBasicBlockAL1Full();
     fullLoad_ = MatMulV3FullLoad::A_FULL_LOAD;
     return;
 }
 
-bool MatMulV3BasicAswtTiling::CheckBL1FullLoadDav3510(const uint64_t kAlignedValue, const uint64_t nAlignedValue) const
-{
-    uint64_t bl1Size = kAlignedValue * nAlignedValue * args_.bDtypeSize;
-    // 单核上只有一轮，走basic api模板， 头开销较小，无需走全载模板
-    if (isSingleRound_) {
-        return false;
-    }
-    // L2命中率高， 不走全载模板
-    uint64_t maxStepN = MatMulV3BaseTiling::GetAswWindowLen() > 1UL ? MatMulV3BaseTiling::GetAswWindowLen() - 1UL : 1;
-    if (args_.nValue >= maxStepN * runInfo_.baseN) {
-        return false;
-    }
-    uint64_t biasSize = args_.hasBias ? nAlignedValue * GetSizeByDataType(args_.biasType) : 0;
-    // 3/4L1 = 384M
-    if (bl1Size + biasSize > compileInfo_.l1Size * 3UL / 4UL) {
-        return false;
-    }
-    uint64_t mCnt = MathUtil::CeilDivision(args_.mValue, runInfo_.singleCoreM);
-    uint64_t nCnt = MathUtil::CeilDivision(args_.nValue, runInfo_.singleCoreN);
-    uint64_t bL1FullMTE2Size = args_.nValue * compileInfo_.aicNum + args_.mValue * nCnt;
-    uint64_t baseMTE2Size = args_.mValue * nCnt + args_.nValue * mCnt;
-    // 1.2表示全载后至少减少了20%的总数据搬运量
-    if (args_.nValue > BASIC_BLOCK_SIZE_256 && static_cast<float>(baseMTE2Size) < 1.2f * bL1FullMTE2Size) {
-        return false;
-    }
-    return true;
-}
-
-bool MatMulV3BasicAswtTiling::CheckBL1FullLoad() const
-{
-    if (args_.mValue < CACHELINE) {
-        return false;
-    }
-    uint64_t kAlignedValue = ops::CeilAlign(args_.kValue, BASIC_BLOCK_SIZE_16);
-    uint64_t nAlignedValue = ops::CeilAlign(args_.nValue, BASIC_BLOCK_SIZE_16);
-    if (args_.isBTrans) {
-        kAlignedValue = ops::CeilAlign(args_.kValue, BLOCK_BYTE_SIZE / args_.bDtypeSize);
-        nAlignedValue = ops::CeilAlign(args_.nValue, BASIC_BLOCK_SIZE_16);
-    }
-    return CheckBL1FullLoadDav3510(kAlignedValue, nAlignedValue);
-}
-
-void MatMulV3BasicAswtTiling::AdjustBL1Tiling3510Basic([[maybe_unused]] uint64_t biasBatchDimAll /* args */)
-{
-    // biasBatchDimAll 没有被使用，但是编译器不发出警告
-    uint64_t kAlignedValue = ops::CeilAlign(args_.kValue, BASIC_BLOCK_SIZE_16);
-    uint64_t nAlignedValue = ops::CeilAlign(args_.nValue, BASIC_BLOCK_SIZE_16);
-    uint64_t bL1Size = kAlignedValue * nAlignedValue * args_.bDtypeSize;
-    uint64_t aL1LoadSize = runInfo_.baseK * runInfo_.depthA1 * runInfo_.baseM * args_.aDtypeSize;
-    uint64_t baseBiasSize = args_.hasBias ? nAlignedValue * GetSizeByDataType(args_.biasType) : 0;
-    // Check L1 load size
-    while (aL1LoadSize > compileInfo_.l1Size - baseBiasSize - bL1Size) {
-        // 第一轮有限调整stepK为2， 进一步的调整baseM
-        runInfo_.baseM = (runInfo_.stepKa == std::min(runInfo_.stepKb, 2UL)) ? runInfo_.baseM >> 1 : runInfo_.baseM;
-        runInfo_.stepKa = std::min(runInfo_.stepKb, 2UL); // 最小为2保证baseK * 2 * adtype = 256B
-        runInfo_.depthA1 = DB_SIZE * runInfo_.stepKa;
-        runInfo_.baseM = ops::CeilAlign(runInfo_.baseM, BASIC_BLOCK_SIZE_16);
-        aL1LoadSize = runInfo_.depthA1 * runInfo_.baseM * runInfo_.baseK * args_.aDtypeSize;
-    }
-    uint64_t dtypeSize = GetSizeByDataType(ge::DT_FLOAT);
-    runInfo_.singleCoreN = args_.nValue;
-    runInfo_.singleCoreM = runInfo_.baseM;
-    // 内轴*dtype是256 * 2的整数倍表明tiling减半不影响MTE2搬运效率
-    if (!args_.isATrans || (runInfo_.baseM * args_.aDtypeSize) % (BASIC_BLOCK_SIZE_256 * NUM_TWO) == 0) {
-        runInfo_.baseM = runInfo_.baseM * runInfo_.baseN * dtypeSize * DB_SIZE <= compileInfo_.l0CSize ?
-                             runInfo_.baseM :
-                             ops::CeilAlign(runInfo_.baseM >> 1, BASIC_BLOCK_SIZE_16);
-    }
-    // 重新计算是否满足aL1开启4buffer loc开启db
-    uint64_t aL14Buffer = static_cast<uint64_t>(runInfo_.baseK) * runInfo_.stepKa * runInfo_.baseM * args_.aDtypeSize *
-                          BASIC_L1_BUFFER_NUM;
-    runInfo_.l1BufferNum =
-        aL14Buffer + bL1Size + baseBiasSize * BASIC_L1_BUFFER_NUM > compileInfo_.l1Size ? DB_SIZE : BASIC_L1_BUFFER_NUM;
-    runInfo_.singleCoreM = runInfo_.baseM;
-    runInfo_.dbL0C = runInfo_.baseM * runInfo_.baseN * dtypeSize * DB_SIZE <= compileInfo_.l0CSize ? DB_SIZE : 1UL;
-    runInfo_.mixInfo.ubDB = runInfo_.baseM * runInfo_.baseN * dtypeSize <= compileInfo_.ubSize ? DB_SIZE : 1UL;
-}
-
-void MatMulV3BasicAswtTiling::DoBL1FullLoad(uint64_t aBatchDimAll, uint64_t biasBatchDimAll)
+void MatMulV3BasicAswtTiling::DoBL1FullLoad()
 {
     // 负载均衡屏蔽全载模板
-    MatMulV3TilingHelper::ResetFullLoadLoadBalance(runInfo_);
+    ResetFullLoadLoadBalance();
     OP_LOGI(args_.opName, "MatMulV3 tiling enable state is DoBL1FullLoad.");
-    MatMulV3TilingHelper::AdjustBL1TilingCommon(aBatchDimAll, compileInfo_, args_, runInfo_);
-    AdjustBL1Tiling3510Basic(biasBatchDimAll);
+
+    uint64_t nAlignedValue = ops::CeilAlign(args_.nValue, BASIC_BLOCK_SIZE_16);
+    uint64_t kAlignedValue = ops::CeilAlign(args_.kValue, BASIC_BLOCK_SIZE_16);
+    runInfo_.stepN = MathUtil::CeilDivision(nAlignedValue, runInfo_.baseN);
+    runInfo_.stepKb = MathUtil::CeilDivision(kAlignedValue, runInfo_.baseK);
+    uint64_t bL1Size = nAlignedValue * kAlignedValue * args_.bDtypeSize;
+    uint64_t biasSize = args_.hasBias ? nAlignedValue * GetSizeByDataType(args_.biasType) : 0;
+    uint64_t remainL1Size = compileInfo_.l1Size - (bL1Size + biasSize);
+    uint64_t maxBaseMWithL1 = remainL1Size / (runInfo_.baseK * args_.aDtypeSize * DB_SIZE);
+    uint64_t maxBaseMWithL0cDb = compileInfo_.l0CSize / (runInfo_.baseN * DATA_SIZE_FP32 * DB_SIZE);
+    uint64_t maxBaseM = ops::FloorAlign(std::min(maxBaseMWithL1, maxBaseMWithL0cDb), BASIC_BLOCK_SIZE_16);
+    uint64_t balanceBaseM =
+        args_.batchInfo != nullptr ? maxBaseM :
+        ops::CeilAlign(MathUtil::CeilDivision(args_.mValue, compileInfo_.aicNum), BASIC_BLOCK_SIZE_16);
+    runInfo_.baseM = std::min(runInfo_.baseM, std::min(maxBaseM, balanceBaseM));
+    uint64_t baseAlignUnit = BASIC_BLOCK_K_128_BYTE / args_.bDtypeSize;
+    if (args_.isATrans && runInfo_.baseM > baseAlignUnit) {
+        runInfo_.baseM = ops::FloorAlign(runInfo_.baseM, baseAlignUnit);
+    }
+
+    uint64_t maxStepKWithBufferLimit = remainL1Size / (runInfo_.baseK * runInfo_.baseM * DB_SIZE * args_.aDtypeSize);
+    // stepK最大不超过4
+    uint64_t maxStepK =
+        std::min(std::min(MathUtil::CeilDivision(args_.kValue, runInfo_.baseK), maxStepKWithBufferLimit), 4UL);
+    // A矩阵K为内轴，k_al1不满足256B对齐，尝试baseK放大一倍
+    if (!args_.isATrans && maxStepK == maxStepKWithBufferLimit &&
+        maxStepK * runInfo_.baseK % BASIC_BLOCK_K_256_BYTE &&
+        (runInfo_.baseK << 1) * runInfo_.baseN * args_.bDtypeSize * DB_SIZE <= compileInfo_.l0BSize) {
+        runInfo_.baseK <<= 1;
+        maxBaseMWithL1 = remainL1Size / (runInfo_.baseK * args_.aDtypeSize * DB_SIZE);
+        uint64_t maxBaseMWithL0A = compileInfo_.l0ASize / (runInfo_.baseK * args_.aDtypeSize * DB_SIZE);
+        runInfo_.baseM = std::min(runInfo_.baseM, maxBaseMWithL0A);
+        runInfo_.stepKb = MathUtil::CeilDivision(kAlignedValue, runInfo_.baseK);
+    }
+    uint64_t stepK = 1;
+    for (; stepK < maxStepK; stepK++) {
+        uint64_t curKL1 = runInfo_.baseK * stepK;
+        uint64_t usedL1Size = runInfo_.baseM * curKL1 * args_.aDtypeSize;
+        if (usedL1Size < L1_SINGLE_SIZE_LIMIT) {
+            continue;
+        }
+        if (!args_.isATrans && curKL1 % (BASIC_BLOCK_K_256_BYTE / args_.aDtypeSize) != 0) {
+            continue;
+        }
+        break;
+    }
+    runInfo_.stepKa = stepK;
+    runInfo_.depthA1 = runInfo_.stepKa * DB_SIZE;
+    runInfo_.depthB1 = runInfo_.stepN * runInfo_.stepKb;
+    runInfo_.singleCoreM = runInfo_.baseM;
+    runInfo_.singleCoreN = args_.nValue;
+    uint64_t aL14BufferSize =
+        runInfo_.baseK * runInfo_.stepKa * runInfo_.baseM * args_.aDtypeSize * BASIC_L1_BUFFER_NUM;
+    runInfo_.l1BufferNum = aL14BufferSize + bL1Size + biasSize > compileInfo_.l1Size ? DB_SIZE : BASIC_L1_BUFFER_NUM;
+    runInfo_.dbL0C = runInfo_.baseM * runInfo_.baseN * DATA_SIZE_FP32 * DB_SIZE <= compileInfo_.l0CSize ? DB_SIZE : 1UL;
+    runInfo_.mixInfo.ubDB = runInfo_.baseM * runInfo_.baseN * DATA_SIZE_FP32 <= compileInfo_.ubSize ? DB_SIZE : 1UL;
+    uint64_t mCore = MathUtil::CeilDivision(args_.mValue, runInfo_.baseM);
+    uint64_t batchNum = args_.batchInfo == nullptr ? 1 : args_.batchInfo->batchC;
+    runInfo_.usedCoreNum = std::min(mCore * batchNum, compileInfo_.aicNum);
     CalcTailBasicBlockBL1Full();
     fullLoad_ = MatMulV3FullLoad::B_FULL_LOAD;
     return;
@@ -304,24 +309,14 @@ void MatMulV3BasicAswtTiling::CheckTensorApiSupport()
 
 ge::graphStatus MatMulV3BasicAswtTiling::DoOpTiling()
 {
-    MatMulV3AswTiling::DoNormOpTiling();
+    MatMulV3AswTiling::DoOpTiling();
     l0C2Out_ = MatMulV3TilingHelper::GetL0C2Out(compileInfo_, args_, runInfo_);
-    FullLoadPre();
     if (CheckAL1FullLoad()) {
         DoAL1FullLoad();
     } else if (CheckBL1FullLoad()) {
         DoBL1FullLoad();
     } else if (l0C2Out_ == MatMulV3L0C2Out::ON_THE_FLY) {
-        // 非全载 非fixpipe 负载均衡实现
-        MatMulV3AswTiling::DoOpTiling();
-        uint64_t remainSizeForAL1BL1 =
-            args_.hasBias ? (compileInfo_.l1Size - BIAS_TABLE_NUM * DATA_SIZE_FP32) : compileInfo_.l1Size;
-        runInfo_.stepKa =
-            remainSizeForAL1BL1 / NUM_TWO / ((runInfo_.baseM + runInfo_.baseN) * runInfo_.baseK) / args_.aDtypeSize;
-        runInfo_.stepKb = runInfo_.stepKa; // has bias, adjust stepK to suitable value
-        runInfo_.depthA1 = runInfo_.stepKa * DB_SIZE;
-        runInfo_.depthB1 = runInfo_.stepKb * DB_SIZE;
-        // 确认是否切换tensor api
+        // 非全载 非fixpipe 负载均衡实现, 确认是否切换tensor api
         CheckTensorApiSupport();
     }
     return ge::GRAPH_SUCCESS;

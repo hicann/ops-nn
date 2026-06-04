@@ -25,10 +25,6 @@ public:
     MatMulV3BasicAswtTiling(gert::TilingContext *context, MatMulTilingCfg &cfg)
         : MatMulV3AswTiling(context, cfg) {};
     ~MatMulV3BasicAswtTiling() override = default;
-    bool CheckBL1FullLoadDav3510(const uint64_t kAlignedValue, const uint64_t nAlignedValue) const;
-    bool CheckAL1FullLoadDav3510(const uint64_t kAlignedValue, const uint64_t mAlignedValue) const;
-    void AdjustBL1Tiling3510Basic(uint64_t biasBatchDimAll);
-    void AdjustAL1Tiling3510Basic(uint64_t biasBatchDimAll);
     void CheckTensorApiSupport();
 
 protected:
@@ -36,24 +32,19 @@ protected:
     ge::graphStatus DoOpTiling() override;
     uint64_t GetTilingKey() const override;
     ge::graphStatus GetTilingData(TilingResult& tiling) const override;
-    void DoBL1FullLoad(uint64_t aBatchDimAll = 1UL, uint64_t biasBatchDimAll = 1UL);
-    void DoAL1FullLoad(uint64_t bBatchDimAll = 1UL, uint64_t biasBatchDimAll = 1UL);
+    void DoBL1FullLoad();
+    void DoAL1FullLoad();
     MatMulV3FullLoad fullLoad_ {MatMulV3FullLoad::NONE_FULL_LOAD};
     MatMulV3L0C2Out l0C2Out_ {MatMulV3L0C2Out::ON_THE_FLY};
     MatMulV3ApiLevel apiLevel_ {MatMulV3ApiLevel::BASIC_LEVEL};
 
 private:
-    void FullLoadPre();
-    uint64_t GetAFullLoadBasicNL1() const;
+    void ResetFullLoadLoadBalance();
+
     void CalcTailBasicBlockBL1Full();
     void CalcTailBasicBlockAL1Full();
     bool CheckBL1FullLoad() const;
     bool CheckAL1FullLoad() const;
-
-    uint64_t biasSize_ {0};
-    bool isSingleRound_ {false};
-    bool isAFullLoad_ {false};
-    bool isBFullLoad_ {false};
 };
 } // namespace matmul_v3
 } // namespace optiling

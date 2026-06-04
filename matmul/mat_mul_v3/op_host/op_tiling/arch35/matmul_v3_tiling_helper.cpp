@@ -25,43 +25,38 @@ using namespace optiling::matmul_v3_advanced;
 using StrideIndexPairs = std::vector<std::pair<int64_t, std::pair<int64_t, int64_t>>>;
 
 // ------------------------------ CalL1Tiling -------------------------------------------//
-void CalL1TilingDefault(const MatmulV3CompileInfo &compileInfo, const MatMulV3Args &args, MatMulV3RunInfo &runInfo)
+void CalL1TilingDefault(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args, MatMulV3RunInfo& runInfo)
 {
-    uint64_t totalL1Size = compileInfo.l1Size;
-    if (args.hasScale) {
-        totalL1Size -= runInfo.baseN * sizeof(uint64_t);
-    }
-    uint64_t reserveBTSize = args.hasBias ? BIAS_TABLE_NUM * DATA_SIZE_FP32 : 0UL;
-    runInfo.depthA1 = totalL1Size / NUM_TWO / runInfo.baseM / runInfo.baseK / args.aDtypeSize;  // 2: half of l1
-    runInfo.depthB1 = totalL1Size / NUM_TWO / runInfo.baseN / runInfo.baseK / args.bDtypeSize;  // 2: half of l1
-
-    uint64_t depthASize = runInfo.depthA1 * runInfo.baseM * runInfo.baseK * args.aDtypeSize;
-    uint64_t depthBSize = runInfo.depthB1 * runInfo.baseN * runInfo.baseK * args.bDtypeSize;
-    if (depthASize + depthBSize > totalL1Size - reserveBTSize) {
-        if (runInfo.baseM <= runInfo.baseN) {
-            runInfo.depthA1 = std::max(runInfo.depthA1 / NUM_TWO, 1UL);  // 2: adjust deptch for l1 buffer
-        } else {
-            runInfo.depthB1 = std::max(runInfo.depthB1 / NUM_TWO, 1UL);  // 2: adjust deptch for l1 buffer
+    bool isKInner = !args.isATrans || args.isBTrans;
+    uint64_t totalL1Size = compileInfo.l1Size - (args.hasBias ? runInfo.baseN * DB_SIZE * DATA_SIZE_FP32 : 0UL);
+    totalL1Size -= args.hasScale ? runInfo.baseN * sizeof(uint64_t) : 0UL;
+    // Shape约束 && issue queue约束
+    uint64_t maxStepK = std::min(MathUtil::CeilDivision(args.kValue, runInfo.baseK), 8UL);
+    uint64_t kAlignUnit = isKInner ? BASIC_BLOCK_K_512_BYTE / args.aDtypeSize : BASIC_BLOCK_SIZE_16;
+    uint64_t resKL1 = 0;
+    uint64_t singleMteSize = 0;
+    for (uint64_t stepK = 1; stepK <= maxStepK; stepK++) {
+        uint64_t curKL1 = runInfo.baseK * stepK;
+        uint64_t aL1Size = runInfo.baseM * curKL1 * args.aDtypeSize;
+        uint64_t bL1Size = runInfo.baseN * curKL1 * args.bDtypeSize;
+        if ((aL1Size + bL1Size) * DB_SIZE > totalL1Size ||
+            std::max(aL1Size, bL1Size) * DB_SIZE * 2 > compileInfo.l1Size) {
+            break;
+        }
+        bool condNoRes = resKL1 == 0;
+        bool condKAlign256B = curKL1 % (BASIC_BLOCK_K_256_BYTE / args.aDtypeSize) == 0;
+        bool condKAlign =
+            resKL1 % kAlignUnit != 0 && (condKAlign256B || (!condKAlign256B && singleMteSize < L1_SINGLE_SIZE_LIMIT));
+        bool condMteSize = resKL1 % kAlignUnit == 0 && curKL1 % kAlignUnit == 0 && singleMteSize < L1_SINGLE_SIZE_LIMIT;
+        if (condNoRes || condKAlign || condMteSize) {
+            resKL1 = curKL1;
+            singleMteSize = std::max(aL1Size, bL1Size);
         }
     }
-    runInfo.stepKa = std::max(runInfo.depthA1 / DB_SIZE, 1UL);
-    runInfo.stepKb = std::max(runInfo.depthB1 / DB_SIZE, 1UL);
-    // 对齐且基本块为[256, 256]则stepK改为2
-    if (runInfo.baseM == BASIC_BLOCK_SIZE_256 && runInfo.baseN == BASIC_BLOCK_SIZE_256 &&
-        args.mValue % BASIC_BLOCK_SIZE_16 == 0 && args.nValue % BASIC_BLOCK_SIZE_16 == 0 &&
-        args.kValue % BASIC_BLOCK_SIZE_16 == 0 && runInfo.singleCoreK <= BASIC_BLOCK_SIZE_256) {
-        runInfo.stepKa = std::min(runInfo.stepKa, 2UL);
-        runInfo.stepKb = std::min(runInfo.stepKb, 2UL);
-    }
-    // 调整stepKa和stepKb为整数倍关系
-    if (runInfo.stepKa >= runInfo.stepKb) {
-        runInfo.stepKa = runInfo.stepKa / runInfo.stepKb * runInfo.stepKb;
-    } else {
-        runInfo.stepKb = runInfo.stepKb / runInfo.stepKa * runInfo.stepKa;
-    }
-    // 默认开启double buffer
-    runInfo.depthA1 = runInfo.stepKa * DB_SIZE;  // depth % (stepKa * stepM) == 0
-    runInfo.depthB1 = runInfo.stepKb * DB_SIZE;  // depth % (stepKb * stepN) == 0
+    runInfo.stepKa = resKL1 / runInfo.baseK;
+    runInfo.stepKb = resKL1 / runInfo.baseK;
+    runInfo.depthA1 = runInfo.stepKa * DB_SIZE;
+    runInfo.depthB1 = runInfo.stepKb * DB_SIZE;
     runInfo.singleCoreM = runInfo.baseM;
     runInfo.singleCoreN = runInfo.baseN;
     return;
@@ -156,7 +151,7 @@ MatMulV3L0C2Out GetL0C2OutDav3510(const MatmulV3CompileInfo &compileInfo, const 
     uint64_t mCnt = MathUtil::CeilDivision(args.mValue, runInfo.singleCoreM);
     uint64_t nCnt = MathUtil::CeilDivision(args.nValue, runInfo.singleCoreN);
     // make sure the fixpipe stream is large enough to be bound
-    bool isMultiRound = mCnt * nCnt >= NUM_TWO * compileInfo.aicNum;
+    bool isMultiRound = mCnt * nCnt > compileInfo.aicNum;
     uint64_t cDtypeSize = ge::GetSizeByDataType(args.cType);
     // 128: SMALL_SHAPE_LOWER_THRES
     bool isUnalignedN = args.nValue * cDtypeSize % 128UL != 0 && args.nValue * cDtypeSize > BASIC_BLOCK_SIZE_256;
@@ -176,48 +171,7 @@ const static std::map<NpuArch, GetL0C2OutFunc> GetL0C2OutFuncMap = {
     {NpuArch::DAV_3510, GetL0C2OutDav3510},
 };
 
-
-// ------------------------------ GetStepSmallK -------------------------------------------//
-uint64_t GetStepSmallKDefault(const MatMulV3Args& /* args */, const MatMulV3RunInfo& runInfo, bool isBL1FullLoad)
-{
-    return isBL1FullLoad ? runInfo.stepKa : runInfo.stepKb;
-}
-
-uint64_t GetStepSmallKDav3510(const MatMulV3Args& args, const MatMulV3RunInfo& runInfo, bool isBL1FullLoad)
-{
-    uint64_t stepBigK = runInfo.stepKa;
-    uint64_t stepSmallK = runInfo.stepKb;
-    uint64_t dtypeSize = args.aDtypeSize;
-    ge::DataType inputType = args.aType;
-    bool isTrans = args.isBTrans;
-    if (isBL1FullLoad) {
-        stepBigK = runInfo.stepKb;
-        stepSmallK = runInfo.stepKa;
-        dtypeSize = args.bDtypeSize;
-        inputType = args.bType;
-        isTrans = args.isATrans;
-    }
-
-    static const double SMALL_TAIL = 0.25;
-    bool isSmallTail = static_cast<double>(stepBigK % stepSmallK) / stepSmallK <= SMALL_TAIL;
-    isSmallTail = (isSmallTail && !isTrans) || runInfo.baseK * dtypeSize >= BASIC_BLOCK_SIZE_256;
-    // A/B全载场景，stepK big为全载矩阵的stepK, 调整stepK small为2, 减少mte2耗时, 提高搬运带宽
-    if ((inputType == ge::DT_FLOAT && !args.isHf32)) {
-        stepSmallK = 1UL;
-    } else if (isSmallTail) {
-        stepSmallK = 2UL;
-    }
-    return stepSmallK;
-}
-
-using GetStepSmallKFunc = uint64_t (*)(const MatMulV3Args&, const MatMulV3RunInfo&, bool);
-
-// 全载模板修改stepK
-const static std::map<NpuArch, GetStepSmallKFunc> GetStepSmallKFuncMap = {
-    {NpuArch::DAV_3510, GetStepSmallKDav3510},
-};
-
-static uint64_t GetMaxBaseWithLimit(
+uint64_t GetMaxBaseWithLimit(
     const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
     uint64_t baseMNBufferLimit, uint64_t baseAlignUnit, bool isRightMatrix, bool isMemoryBound)
 {
@@ -245,6 +199,9 @@ static uint64_t GetMaxBaseWithLimit(
     // 输入shape约束
     maxBaseBlock =
         std::min(ops::CeilAlign(shapeValue, baseAlignUnit), ops::FloorAlign(maxBaseBlock, baseAlignUnit));
+    if (shapeValue < baseAlignUnit) {
+        maxBaseBlock = std::min(maxBaseBlock, ops::CeilAlign(shapeValue, BASIC_BLOCK_SIZE_16));
+    }
     return maxBaseBlock;
 }
 
@@ -291,6 +248,20 @@ static void GetBaseK(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args&
         }
     }
 }
+
+bool PreCheckFullLoad(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,
+                      const MatMulV3RunInfo& runInfo)
+{
+    uint64_t mAlignedValue = ops::CeilAlign(args.mValue, BASIC_BLOCK_SIZE_16);
+    uint64_t nAlignedValue = ops::CeilAlign(args.nValue, BASIC_BLOCK_SIZE_16);
+    uint64_t kAlignedValue = ops::CeilAlign(args.kValue, BASIC_BLOCK_SIZE_16);
+    uint64_t al1Size = mAlignedValue * kAlignedValue * args.aDtypeSize;
+    uint64_t bl1Size = nAlignedValue * kAlignedValue * args.bDtypeSize;
+    uint64_t biasSize = args.hasBias ? runInfo.baseN * DB_SIZE * GetSizeByDataType(args.biasType) : 0;
+    // 全载数据不超过3/4 L1 Buffer
+    return al1Size + biasSize <= compileInfo.l1Size * 3UL / 4UL ||
+        bl1Size + biasSize <= compileInfo.l1Size * 3UL / 4UL;
+}
 }  // namespace
 
 namespace optiling {
@@ -320,62 +291,6 @@ MatMulV3L0C2Out MatMulV3TilingHelper::GetL0C2Out(const MatmulV3CompileInfo &comp
                     ? GetL0C2OutDefault
                     : GetL0C2OutFuncMap.at(compileInfo.npuArch);
     return iter(compileInfo, args, runInfo);
-}
-
-uint64_t MatMulV3TilingHelper::GetStepSmallK(
-    bool isBL1FullLoad, const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args, MatMulV3RunInfo& runInfo)
-{
-    auto iter = (GetStepSmallKFuncMap.find(compileInfo.npuArch) == GetStepSmallKFuncMap.end()) ?
-                    GetStepSmallKDefault :
-                    GetStepSmallKFuncMap.at(compileInfo.npuArch);
-    return iter(args, runInfo, isBL1FullLoad);
-}
-
-void MatMulV3TilingHelper::AdjustBL1TilingCommon(
-    uint64_t aBatchDimAll, const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args, MatMulV3RunInfo& runInfo)
-{
-    // fine tune tiling basen
-    uint64_t nAlignedValue = ops::CeilAlign(args.nValue, BASIC_BLOCK_SIZE_16);
-    uint64_t bl0Size = nAlignedValue * runInfo.baseK * args.bDtypeSize * DB_SIZE;
-    runInfo.baseN = bl0Size <= compileInfo.l0BSize ? nAlignedValue : std::min(nAlignedValue, runInfo.baseN);
-    runInfo.stepN = MathUtil::CeilDivision(args.nValue, runInfo.baseN);
-    runInfo.stepKb = MathUtil::CeilDivision(args.kValue, runInfo.baseK);
-    // fine tune stepK for fullload
-    runInfo.stepKa = GetStepSmallK(true, compileInfo, args, runInfo);
-    // take full use of cores
-    if (aBatchDimAll * MathUtil::CeilDivision(args.mValue, runInfo.baseM) < compileInfo.aicNum) {
-        runInfo.baseM =
-            ops::CeilAlign(MathUtil::CeilDivision(aBatchDimAll * args.mValue, compileInfo.aicNum), BASIC_BLOCK_SIZE_16);
-    }
-    runInfo.depthA1 = DB_SIZE * runInfo.stepKa;
-    runInfo.depthB1 = runInfo.stepN * runInfo.stepKb;
-}
-
-void MatMulV3TilingHelper::AdjustAL1TilingCommon(
-    uint64_t bBatchDimAll, const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args, MatMulV3RunInfo& runInfo)
-{
-    uint64_t mAlignedValue = ops::CeilAlign(args.mValue, BASIC_BLOCK_SIZE_16);
-    uint64_t al0Size = mAlignedValue * runInfo.baseK * args.aDtypeSize * DB_SIZE;
-    runInfo.baseM = al0Size <= compileInfo.l0ASize ? mAlignedValue : std::min(mAlignedValue, runInfo.baseM);
-    runInfo.stepM = MathUtil::CeilDivision(args.mValue, runInfo.baseM);
-    runInfo.stepKa = MathUtil::CeilDivision(args.kValue, runInfo.baseK);
-    runInfo.stepKb = GetStepSmallK(false, compileInfo, args, runInfo);
-    // take full use of cores
-    if (bBatchDimAll * MathUtil::CeilDivision(args.nValue, runInfo.baseN) < compileInfo.aicNum) {
-        runInfo.baseN =
-            ops::CeilAlign(MathUtil::CeilDivision(bBatchDimAll * args.nValue, compileInfo.aicNum), BASIC_BLOCK_SIZE_16);
-    }
-    runInfo.depthB1 = DB_SIZE * runInfo.stepKb;
-    runInfo.depthA1 = runInfo.stepM * runInfo.stepKa;
-}
-
-void MatMulV3TilingHelper::ResetFullLoadLoadBalance(MatMulV3RunInfo& runInfo)
-{
-    // 全载模板需重置负载均衡计算
-    runInfo.mBaseTailSplitCnt = 1UL;
-    runInfo.nBaseTailSplitCnt = 1UL;
-    runInfo.tailInfo.mTailMain = 0UL;
-    runInfo.tailInfo.nTailMain = 0UL;
 }
 
 bool MatMulV3TilingHelper::IsSelfNonContiguous(const gert::TilingContext* context)
@@ -454,28 +369,24 @@ void MatMulV3TilingHelper::GetRebalanceBlock(const MatmulV3CompileInfo& compileI
     double hbmBW = GetHbmBW(platformInfo);
     double l2BW = GetL2BW(platformInfo);
     double singleCoreComputePower = GetCoreFreq(platformInfo) * NUM_EIGHT;
-    // balanceRateEdge用于判断是否取得最优解，进行减枝
+    // balanceRateEdge用于判断是否取得最优解，进行减枝, 默认0.9
     double balanceRateEdge = 0.9;
     double cmr = (static_cast<double>(args.mValue) + args.nValue) / (static_cast<double>(args.mValue) * args.nValue);
     double computePower = singleCoreComputePower * compileInfo.aicNum;
 
     // 切K场景，要求输出size同时小于L0C和UB
-    uint64_t baseMNBufferLimit = runInfo.usedCoreNum == compileInfo.aicNum ?
-                                     compileInfo.l0CSize :
-                                     std::min(compileInfo.l0CSize, compileInfo.ubSize);
+    uint64_t baseMNBufferLimit = runInfo.usedCoreNum == compileInfo.aicNum ? compileInfo.l0CSize :
+                                 std::min(compileInfo.l0CSize, compileInfo.ubSize);
 
     uint64_t batchNum = args.batchInfo == nullptr ? 1 : args.batchInfo->batchA;
     double l2CacheUsage =
         std::max(static_cast<double>(batchNum * (args.mValue + args.nValue) * args.kValue * args.aDtypeSize) /
-                     compileInfo.l2Size,
-                 1.0);
+                compileInfo.l2Size, 1.0);
     runInfo.cubeBoundEdge =
         (l2BW / computePower) + l2CacheUsage * (1 - l2BW / hbmBW) * cmr - (1 + l2BW / hbmBW) / args.kValue;
     uint64_t baseMBest = std::min(ops::CeilAlign(args.mValue, BASIC_BLOCK_SIZE_16), BASIC_BLOCK_SIZE_256);
-    uint64_t baseNBest =
-        std::max(BASIC_BLOCK_SIZE_16,
-                 std::min(ops::CeilAlign(args.nValue, BASIC_BLOCK_SIZE_16),
-                          ops::FloorAlign(baseMNBufferLimit / DATA_SIZE_FP32 / baseMBest, BASIC_BLOCK_SIZE_16)));
+    uint64_t baseNBest = std::max(BASIC_BLOCK_SIZE_16, std::min(ops::CeilAlign(args.nValue, BASIC_BLOCK_SIZE_16),
+                         ops::FloorAlign(baseMNBufferLimit / DATA_SIZE_FP32 / baseMBest, BASIC_BLOCK_SIZE_16)));
     double cubeBoundParamBest = (1.0 / baseMBest) + (1.0 / baseNBest);
     bool isMemoryBound = cubeBoundParamBest > runInfo.cubeBoundEdge;
     uint64_t innerAlignUnit = isMemoryBound ? BASIC_BLOCK_SIZE_128 : BASIC_BLOCK_SIZE_64;
@@ -484,8 +395,8 @@ void MatMulV3TilingHelper::GetRebalanceBlock(const MatmulV3CompileInfo& compileI
     double fixpBoundEdge = (args.mValue * args.nValue * hbmBW) / ((args.mValue + args.nValue) * l2BW);
     uint64_t baseMAlignUnit = args.isATrans ? innerAlignUnit / args.aDtypeSize : BASIC_BLOCK_SIZE_16;
     uint64_t baseNAlignUnit = (static_cast<double>(args.kValue) < fixpBoundEdge) ?
-                                  (BASIC_BLOCK_K_256_BYTE / args.bDtypeSize) :
-                                  (args.isBTrans ? BASIC_BLOCK_SIZE_16 : innerAlignUnit / args.bDtypeSize);
+        (BASIC_BLOCK_K_256_BYTE / args.bDtypeSize) :
+        (args.isBTrans ? BASIC_BLOCK_SIZE_16 : innerAlignUnit / args.bDtypeSize);
 
     // 计算候选解集的上界
     uint64_t maxBaseM =
@@ -494,31 +405,35 @@ void MatMulV3TilingHelper::GetRebalanceBlock(const MatmulV3CompileInfo& compileI
         GetMaxBaseWithLimit(compileInfo, args, baseMNBufferLimit, baseNAlignUnit, true, isMemoryBound);
 
     runInfo.baseM = std::max(BASIC_BLOCK_SIZE_16, std::min(maxBaseM, BASIC_BLOCK_SIZE_256));
-    runInfo.baseN = std::max(
-        BASIC_BLOCK_SIZE_16,
+    runInfo.baseN = std::max(BASIC_BLOCK_SIZE_16,
         std::min(maxBaseN, ops::FloorAlign(baseMNBufferLimit / DATA_SIZE_FP32 / runInfo.baseM, baseNAlignUnit)));
     runInfo.cubeBoundParam = (1.0 / runInfo.baseM) + (1.0 / runInfo.baseN);
     runInfo.cubeBoundEdge = runInfo.cubeBoundEdge * CUBE_BOUND_RATIO;
     double balanceRate = GetBalanceRateWithTail(args, runInfo.usedCoreNum, runInfo.baseM, runInfo.baseN);
 
     for (uint64_t curBaseM = maxBaseM; curBaseM >= 1 && curBaseM <= maxBaseM; curBaseM -= baseMAlignUnit) {
-        uint64_t curMaxBaseN =
-            std::min(maxBaseN, ops::FloorAlign(baseMNBufferLimit / DATA_SIZE_FP32 / curBaseM, baseNAlignUnit));
+        uint64_t curMaxBaseN = std::min(maxBaseN, ops::FloorAlign(baseMNBufferLimit / DATA_SIZE_FP32 / curBaseM /
+                (PreCheckFullLoad(compileInfo, args, runInfo) ? DB_OFF_SIZE : 1), baseNAlignUnit));
         for (uint64_t curBaseN = curMaxBaseN; curBaseN >= 1 && curBaseN <= curMaxBaseN; curBaseN -= baseNAlignUnit) {
             double curCubeBoundParam = (1.0 / curBaseM) + (1.0 / curBaseN);
             double curBalanceRate = GetBalanceRateWithTail(args, runInfo.usedCoreNum, curBaseM, curBaseN);
             // 当前最优解满足负载均衡阈值时，本轮解集无法在计算访存拿到收益时过滤本轮解集
-            if (balanceRate >= balanceRateEdge && curCubeBoundParam > runInfo.cubeBoundParam &&
-                curCubeBoundParam > runInfo.cubeBoundEdge) {
+            bool skipCond = balanceRate >= balanceRateEdge && curCubeBoundParam > runInfo.cubeBoundParam &&
+                curCubeBoundParam > runInfo.cubeBoundEdge && runInfo.cubeBoundEdge > 0;
+            if (skipCond) {
                 continue;
             }
             // 当前解满足cubebound并且负载均衡率更高
             bool cubeBoundCond = curCubeBoundParam <= runInfo.cubeBoundEdge && curBalanceRate > balanceRate;
             // 综合评选负载均衡和计算访存能力
             bool balanceCond = ((curCubeBoundParam / curBalanceRate) < (runInfo.cubeBoundParam / balanceRate)) ||
-                               ((std::abs(curCubeBoundParam / curBalanceRate - runInfo.cubeBoundParam / balanceRate) < EPSILON) &&
-                                curBalanceRate > balanceRate);
-            if (cubeBoundCond || balanceCond) {
+                               ((std::abs(curCubeBoundParam / curBalanceRate - runInfo.cubeBoundParam / balanceRate) <
+                                 EPSILON) && curBalanceRate > balanceRate);
+            bool updateCond = cubeBoundCond || balanceCond;
+            if (updateCond) {
+                if (cubeBoundCond) {
+                    runInfo.cubeBoundEdge = curCubeBoundParam;
+                }
                 runInfo.baseM = curBaseM;
                 runInfo.baseN = curBaseN;
                 runInfo.cubeBoundParam = curCubeBoundParam;

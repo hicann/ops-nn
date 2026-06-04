@@ -71,7 +71,7 @@ ge::graphStatus BatchMatMulV3AswBL1FullLoadBasicTiling::DoOpTiling()
     MatMulV3TilingHelper::ResetBase(compileInfo_, args_, runInfo_);
     MatMulV3TilingHelper::CalL1Tiling(compileInfo_, args_, runInfo_);
     // 复用基础API B全载
-    MatMulV3BasicAswtTiling::DoBL1FullLoad(args_.batchInfo->batchA, args_.batchInfo->batchBias);
+    MatMulV3BasicAswtTiling::DoBL1FullLoad();
 
     // l1开2db后依然只使用了一半的空间，则开启4 db。该字段仅在基础api场景生效
     uint64_t alignKbValue = ops::CeilAlign(args_.kValue, BASIC_BLOCK_SIZE_16);
