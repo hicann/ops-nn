@@ -475,25 +475,33 @@ bool QuantMatmulChecker::CheckMXFP4FP8ParamsNDOrNZ() const
 bool QuantMatmulChecker::CheckDimValueMicroScaling() const
 {
     auto x1ScaleMDimIndex = transposeX1_ ? 1 : 0;
-    auto x2ScaleNDimIndex = transposeX2_ ? 0 : 1;
-    if (x1Scale_->GetViewShape().GetDim(x1ScaleMDimIndex) != x1MDim_ ||
-        x2Scale_->GetViewShape().GetDim(x2ScaleNDimIndex) != x2NDim_) {
+ 	auto x1ScaleKDimIndex = transposeX1_ ? 0 : 1;
+ 	auto x2ScaleNDimIndex = transposeX2_ ? 0 : 1;
+ 	auto x2ScaleKDimIndex = transposeX2_ ? 1 : 0;
+ 	auto x1ScaleMDim = x1Scale_->GetViewShape().GetDim(x1ScaleMDimIndex);
+ 	auto x1ScaleKDim = x1Scale_->GetViewShape().GetDim(x1ScaleKDimIndex);
+ 	auto x2ScaleNDim = x2Scale_->GetViewShape().GetDim(x2ScaleNDimIndex);
+ 	auto x2ScaleKDim = x2Scale_->GetViewShape().GetDim(x2ScaleKDimIndex);
+ 	// shape里有1时,x和scale的转置可以不一致,放开转置一致性校验
+    bool x1ScaleHasOne = (x1ScaleMDim == 1 && x1ScaleKDim == x1MDim_) || (x1ScaleMDim == x1MDim_ && x1ScaleKDim == 1) ||
+                         (x1ScaleMDim == 1 && x1ScaleKDim == CeilDiv(x1KDim_, MXFP_DIVISOR_SIZE)) ||
+                         (x1ScaleMDim == CeilDiv(x1KDim_, MXFP_DIVISOR_SIZE) && x1ScaleKDim == 1);
+    bool x2ScaleHasOne = (x2ScaleNDim == 1 && x2ScaleKDim == x2NDim_) || (x2ScaleNDim == x2NDim_ && x2ScaleKDim == 1) ||
+                         (x2ScaleNDim == 1 && x2ScaleKDim == CeilDiv(x2KDim_, MXFP_DIVISOR_SIZE)) ||
+                         (x2ScaleNDim == CeilDiv(x2KDim_, MXFP_DIVISOR_SIZE) && x2ScaleKDim == 1);
+ 	if ((!x1ScaleHasOne && x1ScaleMDim != x1MDim_) || (!x2ScaleHasOne && x2ScaleNDim != x2NDim_)) {
         OP_LOGE_FOR_INVALID_VALUES_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize",
             FormatString("x1 M, %s M, x2 N, %s N", GetX1ScaleName().c_str(), GetX2ScaleName().c_str()).c_str(),
-            FormatString("%ld, %ld, %ld, %ld", x1MDim_, x1Scale_->GetViewShape().GetDim(x1ScaleMDimIndex), x2NDim_,
-                x2Scale_->GetViewShape().GetDim(x2ScaleNDimIndex)).c_str(),
+            FormatString("%ld, %ld, %ld, %ld", x1MDim_, x1ScaleMDim, x2NDim_, x2ScaleNDim).c_str(),
             FormatString("when the quant mode is mx, the M dimension of x1 and %s must be equal, and the N dimension "
                 "of x2 and %s must be equal", GetX1ScaleName().c_str(), GetX2ScaleName().c_str()).c_str());
         return false;
     }
-    auto x1ScaleKDimIndex = transposeX1_ ? 0 : 1;
-    auto x2ScaleKDimIndex = transposeX2_ ? 1 : 0;
-    if (CeilDiv(x1KDim_, MXFP_DIVISOR_SIZE) != x1Scale_->GetViewShape().GetDim(x1ScaleKDimIndex) ||
-        CeilDiv(x2KDim_, MXFP_DIVISOR_SIZE) != x2Scale_->GetViewShape().GetDim(x2ScaleKDimIndex)) {
+ 	if ((!x1ScaleHasOne && (CeilDiv(x1KDim_, MXFP_DIVISOR_SIZE) != x1ScaleKDim)) ||
+ 	    (!x2ScaleHasOne && (CeilDiv(x2KDim_, MXFP_DIVISOR_SIZE) != x2ScaleKDim))) {
         OP_LOGE_FOR_INVALID_VALUES_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize",
             FormatString("x1 K, %s K, x2 K, %s K", GetX1ScaleName().c_str(), GetX2ScaleName().c_str()).c_str(),
-            FormatString("%ld, %ld, %ld, %ld", x1KDim_, x1Scale_->GetViewShape().GetDim(x1ScaleKDimIndex), x2KDim_,
-                x2Scale_->GetViewShape().GetDim(x2ScaleKDimIndex)).c_str(),
+            FormatString("%ld, %ld, %ld, %ld", x1KDim_, x1ScaleKDim, x2KDim_, x2ScaleKDim).c_str(),
             FormatString("when the quant mode is mx, the K dimension of %s must be equal to the K dimension of x1 "
                 "ceildivided by 64, and the K dimension of %s must be equal to the K dimension of x2 ceildivided by 64",
                 GetX1ScaleName().c_str(), GetX2ScaleName().c_str()).c_str());
@@ -646,6 +654,12 @@ bool QuantMatmulChecker::InferGroupSizeN(
     auto scaleSizeN = 0L;
     if (IsMicroScaling(x1Scale, x2Scale)) {
         scaleSizeN = x2Scale->GetViewShape().GetDim(transX2 ? 0 : 1);
+        auto scaleSizeDim0 = x2Scale->GetViewShape().GetDim(0);
+        auto scaleSizeDim1 = x2Scale->GetViewShape().GetDim(1);
+        if((scaleSizeDim0 == 1 && scaleSizeDim1 == inputSizeN) || (scaleSizeDim0 == inputSizeN && scaleSizeDim1 == 1) ||
+            (inputSizeN == 1 && (scaleSizeDim0 == 1 || scaleSizeDim1 == 1))){
+            scaleSizeN = inputSizeN;
+        }
     } else {
         if (IsA4W4PergroupNonSymmetric(groupSizeK)) {
             scaleSizeN = transX2 ? x2Scale->GetViewShape().GetDim(x2ScaleDimNum - 1) :

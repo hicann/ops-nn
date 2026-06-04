@@ -630,19 +630,26 @@ bool QuantBatchMatmulV3Checker::MxScaleShapeCheck(const gert::Shape &scaleShape)
         return false);
     auto kDimIdx = inputParams_.transB ? 1 : 0;
     auto nDimIdx = inputParams_.transB ? 0 : 1;
-    OP_TILING_CHECK(
-        static_cast<uint64_t>(scaleShape.GetDim(kDimIdx)) != ops::CeilDiv(inputParams_.kSize, MXFP_DIVISOR_SIZE),
-        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
-            inputParams_.opName, "x2K, scaleK",
-            FormatString("%lu, %ld", inputParams_.kSize, scaleShape.GetDim(kDimIdx)).c_str(),
-            "when the quant mode is mx, the k dimension of scale must be equal to the k dimension size of x2 ceildivided by 64"),
-        return false);
-    OP_TILING_CHECK(static_cast<uint64_t>(scaleShape.GetDim(nDimIdx)) != inputParams_.nSize,
-                    OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
-                        inputParams_.opName, "x2N, scaleN",
-                        FormatString("%lu, %ld", inputParams_.nSize, scaleShape.GetDim(nDimIdx)).c_str(),
-                        "when the quant mode is mx, the n dimension of scale must be equal to the n dimension size of x2"),
-                    return false);
+    bool nDimHasOne = (scaleShape.GetDim(kDimIdx) == 1 && static_cast<uint64_t>(scaleShape.GetDim(nDimIdx)) == ops::CeilDiv(inputParams_.kSize, MXFP_DIVISOR_SIZE)) || 
+                    (scaleShape.GetDim(nDimIdx) == 1 && static_cast<uint64_t>(scaleShape.GetDim(kDimIdx)) == ops::CeilDiv(inputParams_.kSize, MXFP_DIVISOR_SIZE));
+    bool kDimHasOne = (scaleShape.GetDim(kDimIdx) == 1 && static_cast<uint64_t>(scaleShape.GetDim(nDimIdx)) == inputParams_.nSize) || 
+                    (scaleShape.GetDim(nDimIdx) == 1 && static_cast<uint64_t>(scaleShape.GetDim(kDimIdx)) == inputParams_.nSize);
+    //轴里有1时不进行转置一致性校验。
+    if(!nDimHasOne && !kDimHasOne){
+        OP_TILING_CHECK(
+            static_cast<uint64_t>(scaleShape.GetDim(kDimIdx)) != ops::CeilDiv(inputParams_.kSize, MXFP_DIVISOR_SIZE),
+            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                inputParams_.opName, "x2K, scaleK",
+                FormatString("%lu, %ld", inputParams_.kSize, scaleShape.GetDim(kDimIdx)).c_str(),
+                "when the quant mode is mx, the k dimension of scale must be equal to the k dimension size of x2 ceildivided by 64"),
+            return false);
+        OP_TILING_CHECK(static_cast<uint64_t>(scaleShape.GetDim(nDimIdx)) != inputParams_.nSize,
+                        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                            inputParams_.opName, "x2N, scaleN",
+                            FormatString("%lu, %ld", inputParams_.nSize, scaleShape.GetDim(nDimIdx)).c_str(),
+                            "when the quant mode is mx, the n dimension of scale must be equal to the n dimension size of x2"),
+                        return false);
+    }
     OP_TILING_CHECK(static_cast<uint64_t>(scaleShape.GetDim(scaleShapeLen - 1)) != MXFP_MULTI_BASE_SIZE,
                     OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
                         inputParams_.opName, "scale dimension 2",

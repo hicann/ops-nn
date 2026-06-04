@@ -732,6 +732,10 @@ bool QuantBatchMatmulV3TilingBase::AnalyzeGroupInfo(const gert::Shape& scaleShap
     auto scaleInner = scaleShape.GetDim(1);
     auto scaleOuter = scaleShape.GetDim(0);
     uint64_t scaleNSize = static_cast<uint64_t>(inputParams_.transB ? scaleOuter : scaleInner);
+    if((scaleInner == 1 && scaleOuter == inputParams_.nSize)||(scaleInner == inputParams_.nSize && scaleOuter == 1) ||
+        (inputParams_.nSize == 1 && (scaleInner == 1 || scaleOuter == 1))){
+        scaleNSize = inputParams_.nSize;
+    }
     if (!ReCalcGroupSize(inputParams_.groupSizeN, inputParams_.nSize, scaleNSize, "n")) {
         return false;
     }
