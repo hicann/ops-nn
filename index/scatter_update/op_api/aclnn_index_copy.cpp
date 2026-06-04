@@ -331,16 +331,22 @@ static aclnnStatus ScatterToIndexPutV2(
     return ACLNN_SUCCESS;
 }
 
-static bool IsUseIndexPutV2(const aclTensor* selfRefReShape)
+static int64_t GetDeterministicValue()
 {
     int64_t deterministicValue = 0;
-    rtError_t retRts = aclrtGetSysParamOpt(ACL_OPT_DETERMINISTIC, &deterministicValue);
-    if (retRts != RT_ERROR_NONE) {
-        deterministicValue = 0;
+    aclError aclRet = aclrtGetSysParamOpt(ACL_OPT_DETERMINISTIC, &deterministicValue);
+    if (aclRet != ACL_SUCCESS) {
+        OP_LOGW("Failed to obtain the deterministicValue.");
+        return 0;
     }
+    return deterministicValue;
+}
+
+static bool IsUseIndexPutV2(const aclTensor* selfRefReShape)
+{
     bool isAscend950 = Ops::NN::AclnnUtil::IsRegbase();
 
-    if (!isAscend950 || deterministicValue != 0 || selfRefReShape->GetDataType() == DataType::DT_COMPLEX128) {
+    if (!isAscend950 || GetDeterministicValue() != 0 || selfRefReShape->GetDataType() == DataType::DT_COMPLEX128) {
         return false;
     }
     return true;
