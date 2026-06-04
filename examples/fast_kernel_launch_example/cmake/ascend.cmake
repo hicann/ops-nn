@@ -51,6 +51,7 @@ set(CMAKE_LINKER ${BISHENG})
 # set ASCEND_INCLUDE_DIRS
 set(ASCEND_INCLUDE_DIRS
     ${ASCEND_DIR}/include
+    ${ASCEND_DIR}/include/op_common
     ${ASCEND_DIR}/compiler/tikcpp/include
     ${ASCEND_DIR}/compiler/ascendc/include/basic_api/impl
     ${ASCEND_DIR}/compiler/ascendc/include/basic_api/interface
@@ -62,6 +63,7 @@ set(ASCEND_INCLUDE_DIRS
     ${ASCEND_DIR}/pkg_inc
     ${ASCEND_DIR}/opp/built-in/op_impl/ai_core/tbe/impl/ops_nn/ascendc/conv3d_v2
     ${ASCEND_DIR}/opp/built-in/op_impl/ai_core/tbe/impl/ops_nn/ascendc/conv3d_v2/arch35
+    ${ASCEND_DIR}/x86_64-linux/include/version
     ${CMAKE_CURRENT_SOURCE_DIR}/../../conv/common/op_host/op_tiling/arch35
     ${CMAKE_CURRENT_SOURCE_DIR}/../../conv/conv3d_v2/op_host/op_tiling/arch35
     ${CMAKE_CURRENT_SOURCE_DIR}/../../conv

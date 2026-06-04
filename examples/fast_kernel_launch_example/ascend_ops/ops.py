@@ -48,7 +48,7 @@ __all__ = ["conv3d_custom",]
 def conv3d_custom(input: Tensor, weight: Tensor, strides: list, pads: list, dilations: list,
                   bias: Tensor = None, enable_hf32: bool = False) -> Tensor:
     # 判断当前NPU设备类型
-    if torch_npu.npu.get_device_name() == "Ascend950PR_9589":
+    if torch_npu.npu.get_device_name().startswith("Ascend950"):
         # Ascend950设备路径：使用conv3d_v2_custom算子
         
         # 检查算子是否已注册

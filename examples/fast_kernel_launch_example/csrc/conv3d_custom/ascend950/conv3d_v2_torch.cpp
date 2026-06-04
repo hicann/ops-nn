@@ -82,69 +82,69 @@ namespace Conv3dCustom {
  * @param conv3dRunInfo 输出参数，3D卷积运行信息结构体
  * @param tilingInfo 输入参数，tiling信息，包含形状、属性、块维度等信息
  */
-static void InitConv3dRunInfo(Ops::NN::Conv3dV2::Conv3DRunInfo& conv3dRunInfo,
+static void InitConv3dRunInfo(Ops::NN::Conv3dV2::Conv3DV2TilingDataV2& tilingData,
                                optiling::conv_ops_tiling::ConvAscendcTilingInfo& tilingInfo)
 {
     // 输入输出形状信息
-    conv3dRunInfo.batch     = static_cast<uint32_t>(tilingInfo.shapeInfo.batch);  // 批次大小
-    conv3dRunInfo.cin       = static_cast<uint32_t>(tilingInfo.shapeInfo.ci);      // 输入通道数
-    conv3dRunInfo.din       = static_cast<uint32_t>(tilingInfo.shapeInfo.di);      // 输入深度
-    conv3dRunInfo.hin       = static_cast<uint32_t>(tilingInfo.shapeInfo.hi);      // 输入高度
-    conv3dRunInfo.win       = static_cast<uint32_t>(tilingInfo.shapeInfo.wi);      // 输入宽度
-    conv3dRunInfo.cout      = static_cast<uint32_t>(tilingInfo.shapeInfo.co);      // 输出通道数
+    tilingData.batch     = static_cast<uint32_t>(tilingInfo.shapeInfo.batch);  // 批次大小
+    tilingData.cin       = static_cast<uint32_t>(tilingInfo.shapeInfo.ci);      // 输入通道数
+    tilingData.din       = static_cast<uint32_t>(tilingInfo.shapeInfo.di);      // 输入深度
+    tilingData.hin       = static_cast<uint32_t>(tilingInfo.shapeInfo.hi);      // 输入高度
+    tilingData.win       = static_cast<uint32_t>(tilingInfo.shapeInfo.wi);      // 输入宽度
+    tilingData.cout      = static_cast<uint32_t>(tilingInfo.shapeInfo.co);      // 输出通道数
     
     // 卷积核大小
-    conv3dRunInfo.kd        = static_cast<uint32_t>(tilingInfo.shapeInfo.kd);      // 卷积核深度
-    conv3dRunInfo.kh        = static_cast<uint32_t>(tilingInfo.shapeInfo.kh);      // 卷积核高度
-    conv3dRunInfo.kw        = static_cast<uint32_t>(tilingInfo.shapeInfo.kw);      // 卷积核宽度
+    tilingData.kd        = static_cast<uint32_t>(tilingInfo.shapeInfo.kd);      // 卷积核深度
+    tilingData.kh        = static_cast<uint32_t>(tilingInfo.shapeInfo.kh);      // 卷积核高度
+    tilingData.kw        = static_cast<uint32_t>(tilingInfo.shapeInfo.kw);      // 卷积核宽度
     
     // 输出形状信息
-    conv3dRunInfo.dout      = static_cast<uint32_t>(tilingInfo.shapeInfo.dout);    // 输出深度
-    conv3dRunInfo.hout      = static_cast<uint32_t>(tilingInfo.shapeInfo.ho);      // 输出高度
-    conv3dRunInfo.wout      = static_cast<uint32_t>(tilingInfo.shapeInfo.wo);      // 输出宽度
+    tilingData.dout      = static_cast<uint32_t>(tilingInfo.shapeInfo.dout);    // 输出深度
+    tilingData.hout      = static_cast<uint32_t>(tilingInfo.shapeInfo.ho);      // 输出高度
+    tilingData.wout      = static_cast<uint32_t>(tilingInfo.shapeInfo.wo);      // 输出宽度
     
     // 块维度信息（用于并行计算）
-    conv3dRunInfo.batchDim  = tilingInfo.numBlocksRes.batchDim;  // 批次维度分块数
-    conv3dRunInfo.doDim     = tilingInfo.numBlocksRes.doDim;     // 输出深度维度分块数
-    conv3dRunInfo.mDim      = tilingInfo.numBlocksRes.mDim;      // M维度（输出通道）分块数
-    conv3dRunInfo.wDim      = tilingInfo.numBlocksRes.woDim;     // 输出宽度维度分块数
-    conv3dRunInfo.nDim      = tilingInfo.numBlocksRes.nDim;      // N维度（批次）分块数
-    conv3dRunInfo.groupDim  = tilingInfo.numBlocksRes.groupDim;  // 组维度分块数
-    conv3dRunInfo.hoDim     = tilingInfo.numBlocksRes.hoDim;     // 输出高度维度分块数
+    tilingData.batchDim  = tilingInfo.numBlocksRes.batchDim;  // 批次维度分块数
+    tilingData.doDim     = tilingInfo.numBlocksRes.doDim;     // 输出深度维度分块数
+    tilingData.mDim      = tilingInfo.numBlocksRes.mDim;      // M维度（输出通道）分块数
+    tilingData.wDim      = tilingInfo.numBlocksRes.woDim;     // 输出宽度维度分块数
+    tilingData.nDim      = tilingInfo.numBlocksRes.nDim;      // N维度（批次）分块数
+    tilingData.groupDim  = tilingInfo.numBlocksRes.groupDim;  // 组维度分块数
+    tilingData.hoDim     = tilingInfo.numBlocksRes.hoDim;     // 输出高度维度分块数
     
     // 卷积参数：步长
-    conv3dRunInfo.strideD   = static_cast<uint32_t>(tilingInfo.attrInfo.strideD);  // 深度方向步长
-    conv3dRunInfo.strideH   = static_cast<uint32_t>(tilingInfo.attrInfo.strideH);  // 高度方向步长
-    conv3dRunInfo.strideW   = static_cast<uint32_t>(tilingInfo.attrInfo.strideW);  // 宽度方向步长
+    tilingData.strideD   = static_cast<uint32_t>(tilingInfo.attrInfo.strideD);  // 深度方向步长
+    tilingData.strideH   = static_cast<uint32_t>(tilingInfo.attrInfo.strideH);  // 高度方向步长
+    tilingData.strideW   = static_cast<uint32_t>(tilingInfo.attrInfo.strideW);  // 宽度方向步长
     
     // 卷积参数：膨胀（dilation）
-    conv3dRunInfo.dilationD = static_cast<uint32_t>(tilingInfo.attrInfo.dilationD);  // 深度方向膨胀
-    conv3dRunInfo.dilationH = static_cast<uint32_t>(tilingInfo.attrInfo.dilationH);  // 高度方向膨胀
-    conv3dRunInfo.dilationW = static_cast<uint32_t>(tilingInfo.attrInfo.dilationW);  // 宽度方向膨胀
+    tilingData.dilationD = static_cast<uint32_t>(tilingInfo.attrInfo.dilationD);  // 深度方向膨胀
+    tilingData.dilationH = static_cast<uint32_t>(tilingInfo.attrInfo.dilationH);  // 高度方向膨胀
+    tilingData.dilationW = static_cast<uint32_t>(tilingInfo.attrInfo.dilationW);  // 宽度方向膨胀
     
     // 卷积参数：padding
-    conv3dRunInfo.padHead   = static_cast<uint32_t>(tilingInfo.attrInfo.padHead);    // 头部padding
-    conv3dRunInfo.padTail   = static_cast<uint32_t>(tilingInfo.attrInfo.padTail);    // 尾部padding
-    conv3dRunInfo.padTop    = static_cast<uint32_t>(tilingInfo.attrInfo.padTop);     // 顶部padding
-    conv3dRunInfo.padBottom = static_cast<uint32_t>(tilingInfo.attrInfo.padBottom);  // 底部padding
-    conv3dRunInfo.padLeft   = static_cast<uint32_t>(tilingInfo.attrInfo.padLeft);    // 左侧padding
-    conv3dRunInfo.padRight  = static_cast<uint32_t>(tilingInfo.attrInfo.padRight);  // 右侧padding
+    tilingData.padHead   = static_cast<uint32_t>(tilingInfo.attrInfo.padHead);    // 头部padding
+    tilingData.padTail   = static_cast<uint32_t>(tilingInfo.attrInfo.padTail);    // 尾部padding
+    tilingData.padTop    = static_cast<uint32_t>(tilingInfo.attrInfo.padTop);     // 顶部padding
+    tilingData.padBottom = static_cast<uint32_t>(tilingInfo.attrInfo.padBottom);  // 底部padding
+    tilingData.padLeft   = static_cast<uint32_t>(tilingInfo.attrInfo.padLeft);    // 左侧padding
+    tilingData.padRight  = static_cast<uint32_t>(tilingInfo.attrInfo.padRight);  // 右侧padding
     
     // 其他参数
-    conv3dRunInfo.groups    = 1;                                                    // 分组数（当前为1，表示标准卷积）
-    conv3dRunInfo.enlarge   = 1;                                                    // 扩展标志
-    conv3dRunInfo.cinOpt    = static_cast<uint32_t>(tilingInfo.shapeInfo.ci);      // 优化后的输入通道数
-    conv3dRunInfo.coutOpt   = static_cast<uint32_t>(tilingInfo.shapeInfo.co);      // 优化后的输出通道数
-    conv3dRunInfo.groupOpt  = 1;                                                    // 优化后的分组数
-    conv3dRunInfo.hasBias   = static_cast<uint8_t>(tilingInfo.flagInfo.hasBias);   // 是否有偏置项
+    tilingData.groups    = 1;                                                    // 分组数（当前为1，表示标准卷积）
+    tilingData.enlarge   = 1;                                                    // 扩展标志
+    tilingData.cinOpt    = static_cast<uint32_t>(tilingInfo.shapeInfo.ci);      // 优化后的输入通道数
+    tilingData.coutOpt   = static_cast<uint32_t>(tilingInfo.shapeInfo.co);      // 优化后的输出通道数
+    tilingData.groupOpt  = 1;                                                    // 优化后的分组数
+    tilingData.hasBias   = static_cast<uint8_t>(tilingInfo.flagInfo.hasBias);   // 是否有偏置项
     
     // 根据分割模式确定hoDim
     if (tilingInfo.flagInfo.mSplitModeFlag) {
         // M分割模式：使用mDim作为hoDim
-        conv3dRunInfo.hoDim = static_cast<uint32_t>(tilingInfo.numBlocksRes.mDim);
+        tilingData.hoDim = static_cast<uint32_t>(tilingInfo.numBlocksRes.mDim);
     } else {
         // 标准模式：使用hoDim作为hoDim
-        conv3dRunInfo.hoDim = static_cast<uint32_t>(tilingInfo.numBlocksRes.hoDim);
+        tilingData.hoDim = static_cast<uint32_t>(tilingInfo.numBlocksRes.hoDim);
     }
 }
 
@@ -157,11 +157,11 @@ static void InitConv3dRunInfo(Ops::NN::Conv3dV2::Conv3DRunInfo& conv3dRunInfo,
  * @param tilingData 输出参数，tiling数据结构体
  * @param tilingInfo 输入参数，tiling信息
  */
-static void InitTilingData(Ops::NN::Conv3dV2::Conv3DV2TilingData& tilingData,
+static void InitTilingData(Ops::NN::Conv3dV2::Conv3DV2TilingDataV2& tilingData,
     optiling::conv_ops_tiling::ConvAscendcTilingInfo& tilingInfo)
 {
     // 将tiling信息转换为Conv3DRunInfo结构体
-    InitConv3dRunInfo(tilingData.conv3dRunInfo, tilingInfo);
+    InitConv3dRunInfo(tilingData, tilingInfo);
 }
 
 
@@ -295,7 +295,7 @@ static int32_t InitPlatformInfo(optiling::conv_ops_tiling::ConvAscendcPlatformIn
     }
 
     // 获取AI Core数量
-    platformInfo.aicariNum = ascendcPlatform->GetCoreNumAic();
+    platformInfo.aicoreNum = ascendcPlatform->GetCoreNumAic();
     
     // 获取各级缓存的内存大小
     uint64_t size {};
@@ -439,7 +439,7 @@ void Conv3dV2CustomApi(
         "Failed to get block dimension information from convolution base decision");
 
     // 初始化tiling数据结构
-    Ops::NN::Conv3dV2::Conv3DV2TilingData tilingData;
+    Ops::NN::Conv3dV2::Conv3DV2TilingDataV2 tilingData;
     InitTilingData(tilingData, tilingInfo);
 
     // 设置平台信息并获取tiling数据
@@ -456,8 +456,8 @@ void Conv3dV2CustomApi(
         tilingInfo.convOpsConstParams, tilingInfo.numBlocksRes, tilingData);
 
     // 计算需要的AI Core数量
-    uint32_t g_numBlocks = tilingData.conv3dRunInfo.batchDim * tilingData.conv3dRunInfo.doDim *
-                        tilingData.conv3dRunInfo.hoDim * tilingData.conv3dRunInfo.nDim;
+    uint32_t g_numBlocks = tilingData.batchDim * tilingData.doDim *
+                        tilingData.hoDim * tilingData.nDim;
     
     // 获取tiling键（用于选择最优的kernel实现）
     optiling::conv_ops_tiling::ConvTilingKeyPara tilingKeyPara {};

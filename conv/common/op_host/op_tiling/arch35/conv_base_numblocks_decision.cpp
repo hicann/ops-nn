@@ -212,8 +212,9 @@ bool ConvBaseDeci::CheckInstrLimitsHWmode()
             ss << "If the format of input x is NDHWC, ";
             ss << "the constraint of instruction %s must be met: ";
             ss << "shape[%zu] * shape [%zu] ≤ %ld";
-            vector<int64_t> outputShape = {shapeInfo_.batch,
-                shapeInfo_.dout, shapeInfo_.ho, shapeInfo_.wo, shapeInfo_.co};
+            vector<int64_t> outputShape = {static_cast<int64_t>(shapeInfo_.batch),
+                static_cast<int64_t>(shapeInfo_.dout), static_cast<int64_t>(shapeInfo_.ho),
+                static_cast<int64_t>(shapeInfo_.wo), static_cast<int64_t>(shapeInfo_.co)};
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(nodeInfo_.nodeType.c_str(), "y",
                 VectorToString(outputShape, IntToString<int64_t>).c_str(),
                 FormatString(ss.str().c_str(), "Fixpipe", NDHWC_W_IDX, NDHWC_C_IDX).c_str());
