@@ -161,9 +161,7 @@ ge::graphStatus AdaptiveSlidingWindowBasicTilingV4::CheckContext()
     auto outputShape = context_->GetOutputShape(0);
     auto outputDesc = context_->GetOutputDesc(0);
     auto attrs = context_->GetAttrs();
-    OP_TILING_CHECK(
-        attrs == nullptr, CUBE_INNER_ERR_REPORT(inputParams_.opName, "Function context_->GetAttrs() failed!"),
-        return ge::GRAPH_FAILED);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs);
     auto dtypeAttr = attrs->GetAttrPointer<int64_t>(0);
 
     OPS_CHECK_NULL_WITH_CONTEXT(context_, x1Shape);
@@ -177,7 +175,7 @@ ge::graphStatus AdaptiveSlidingWindowBasicTilingV4::CheckContext()
     OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetRawTilingData()->GetData());
     OP_TILING_CHECK(
         context_->GetRawTilingData()->GetCapacity() < tilingDataSize_,
-        CUBE_INNER_ERR_REPORT(
+        OP_LOGE(
             inputParams_.opName, "context tiling data capacity %zu < actual tiling data size %zu.",
             context_->GetRawTilingData()->GetCapacity(), tilingDataSize_),
         return ge::GRAPH_FAILED);
@@ -223,24 +221,21 @@ bool AdaptiveSlidingWindowBasicTilingV4::CheckInputValidInPertileMode(
 bool AdaptiveSlidingWindowBasicTilingV4::CheckGroupValidInPertileMode() const
 {
     OP_TILING_CHECK(inputParams_.groupSizeM != 1,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                          "In G-B quantification, input or infered groupSizeM should be 1, but now is %lu, \
-groupSizeM = (groupSize >> 32) & 0xFFFF.",
-                                          inputParams_.groupSizeM),
+                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                        inputParams_.opName, "groupSizeM", std::to_string(inputParams_.groupSizeM).c_str(),
+                        "When the quant mode is G-B, the value of groupSizeM must be 1"),
                     return false);
     OP_TILING_CHECK(inputParams_.groupSizeK != PER_BLOCK_SIZE,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                          "In G-B quantification, input or infered groupSizeK should be 128, but now is %lu, \
-groupSizeK = groupSize & 0xFFFF.",
-                                          inputParams_.groupSizeK),
+                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                        inputParams_.opName, "groupSizeK", std::to_string(inputParams_.groupSizeK).c_str(),
+                        "When the quant mode is G-B, the value of groupSizeK must be 128"),
                     return false);
     OP_TILING_CHECK(inputParams_.groupSizeN != PER_BLOCK_SIZE,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                          "In G-B quantification, input or infered groupSizeN should be 128, but now is %lu, \
-groupSizeN = (groupSize >> 16) & 0xFFFF.",
-                                          inputParams_.groupSizeN),
+                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                        inputParams_.opName, "groupSizeN", std::to_string(inputParams_.groupSizeN).c_str(),
+                        "When the quant mode is G-B, the value of groupSizeN must be 128"),
                     return false);
-  return true;
+    return true;
 }
 
 bool AdaptiveSlidingWindowBasicTilingV4::CheckShapeValidInPertileMode(const gert::Shape& scaleShape,
@@ -254,13 +249,9 @@ bool AdaptiveSlidingWindowBasicTilingV4::CheckShapeValidInPertileMode(const gert
              static_cast<uint64_t>(scaleShape.GetDim(x2ShapeLen - 2)) ||
          ops::CeilDiv(static_cast<uint64_t>(x2Shape.GetDim(x2ShapeLen - 1)), PER_BLOCK_SIZE) !=
              static_cast<uint64_t>(scaleShape.GetDim(x2ShapeLen - 1))),
-        CUBE_INNER_ERR_REPORT(
-            inputParams_.opName,
-            "In G-B quantification, the size of last two dimensions of scale should be both equal to \
-the size of last two dimensions of x2 ceildivided by groupSize 128, but now, \
-scaleShape[-1] is %ld, x2Shape[-1] is %ld, scaleShape[-2] is %ld, x2Shape[-2] is %ld.",
-            scaleShape.GetDim(x2ShapeLen - 1), x2Shape.GetDim(x2ShapeLen - 1),
-            scaleShape.GetDim(x2ShapeLen - 2), x2Shape.GetDim(x2ShapeLen - 2)),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            inputParams_.opName, "scale, x2", "scaleShape[-1], scaleShape[-2]",
+            "When the quant mode is G-B, the shape of scale must be equal to ceilDiv(x2Shape, 128)"),
         return false);
     int64_t x1MIndex = inputParams_.transA ? (x1ShapeLen - 1) : (x1ShapeLen - 2);
     int64_t x1KIndex = inputParams_.transA ? (x1ShapeLen - 2) : (x1ShapeLen - 1);
@@ -270,21 +261,15 @@ scaleShape[-1] is %ld, x2Shape[-1] is %ld, scaleShape[-2] is %ld, x2Shape[-2] is
     uint64_t scaleX1K = pertoken.GetDim(x1KIndex);
     OP_TILING_CHECK(
         (ops::CeilDiv(x1M, inputParams_.groupSizeM) != scaleX1M),
-        CUBE_INNER_ERR_REPORT(
-            inputParams_.opName,
-            "In G-B quantification, the m dimension size of x1 ceildivided by groupSizeM should be equal to \
-the m dimension size of pertokenScale, but now, groupSizeM is %lu, \
-m dimension size of pertokenScale is %lu, m dimension size of x1Shape is %lu.",
-            inputParams_.groupSizeM, scaleX1M, x1M),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            inputParams_.opName, "x1, pertokenScale", "m dim mismatch",
+            "When the quant mode is G-B, the m dim of pertokenScale must be equal to CeilDiv(x1M, groupSizeM)"),
         return false);
     OP_TILING_CHECK(
         (ops::CeilDiv(x1K, inputParams_.groupSizeK) != scaleX1K),
-        CUBE_INNER_ERR_REPORT(
-            inputParams_.opName,
-            "In G-B quantification, the k dimension size of x1 ceildivided by groupSizeK should be equal to \
-the k dimension size of pertokenScale, but now, groupSizeK is %lu, \
-k dimension size of pertokenScale is %lu, k dimension size of x1Shape is %lu.",
-            inputParams_.groupSizeK, scaleX1K, x1K),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            inputParams_.opName, "x1, pertokenScale", "k dim mismatch",
+            "When the quant mode is G-B, the k dim of pertokenScale must be equal to CeilDiv(x1K, groupSizeK)"),
         return false);
     return true;
 }
@@ -292,20 +277,16 @@ k dimension size of pertokenScale is %lu, k dimension size of x1Shape is %lu.",
 bool AdaptiveSlidingWindowBasicTilingV4::CheckDimValidInPertileMode(size_t x1ShapeLen, size_t x2ShapeLen,
                                                             size_t pertokenShapeLen, size_t scaleShapeLen) const
 {
-    OP_TILING_CHECK(scaleShapeLen != x2ShapeLen,
-                    CUBE_INNER_ERR_REPORT(
-                        inputParams_.opName,
-                        "In G-B quantification, x2 dimension and scale dimension should be equal, \
-but x2 dimension is: %zu, scale dimension is: %zu.",
-                        x2ShapeLen, scaleShapeLen),
-                    return false);
+    OP_TILING_CHECK(
+        scaleShapeLen != x2ShapeLen,
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(inputParams_.opName, "x2, scale", "dimension count mismatch",
+                                                 "The shape dims of x2 and scale must be equal"),
+        return false);
     OP_TILING_CHECK(
         pertokenShapeLen != x1ShapeLen,
-        CUBE_INNER_ERR_REPORT(
-            inputParams_.opName,
-            "In G-B quantification, x1 dimension and pertoken dimension should be equal, \
-but x1 dimension is: %zu, pertoken dimension is: %zu.",
-            x1ShapeLen, pertokenShapeLen),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            inputParams_.opName, "x1, pertokenScale", "dimension count mismatch",
+            "The shape dims of x1 and pertokenScale must be equal"),
         return false);
     return true;
 }
@@ -318,20 +299,22 @@ bool AdaptiveSlidingWindowBasicTilingV4::CheckBatchValidInPertileMode(const gert
     auto x1ShapeLen = x1Shape.GetDimNum();
     if (x2ShapeLen > DIM_NUM_TWO) {
         for (size_t i = 0; i < x2ShapeLen - DIM_NUM_TWO; ++i) {
-            OP_TILING_CHECK(scaleShape.GetDim(i) != x2Shape.GetDim(i),
-                            CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                                  "In G-B quantification, x2 batch and scale batch should be equal,"
-                                                  "but at dimension %zu, x2 batch: %ld, scale batch: %ld.",
-                                                  i, x2Shape.GetDim(i), scaleShape.GetDim(i)), return false);
+            OP_TILING_CHECK(
+                scaleShape.GetDim(i) != x2Shape.GetDim(i),
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    inputParams_.opName, "x2, scale", "batch dim mismatch",
+                    "When the quant mode is G-B, the batch dims of x2 and scale must be equal"),
+                return false);
         }
     }
     if (x1ShapeLen > DIM_NUM_TWO) {
         for (size_t i = 0; i < x1ShapeLen - DIM_NUM_TWO; ++i) {
-            OP_TILING_CHECK(pertoken.GetDim(i) != x1Shape.GetDim(i),
-                            CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                                  "In G-B quantification, x1 batch and pertoken batch should be equal,"
-                                                  "but at dimension %zu, x1 batch: %ld, pertoken batch: %ld.",
-                                                  i, x1Shape.GetDim(i), pertoken.GetDim(i)), return false);
+            OP_TILING_CHECK(
+                pertoken.GetDim(i) != x1Shape.GetDim(i),
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    inputParams_.opName, "x1, pertokenScale", "batch dim mismatch",
+                    "When the quant mode is G-B, the batch dims of x1 and pertokenScale must be equal"),
+                return false);
         }
     }
     return true;
@@ -343,7 +326,7 @@ bool AdaptiveSlidingWindowBasicTilingV4::CheckBatchValidInPertileMode(const gert
          InitCompileInfo();
          auto mmCompileInfo = reinterpret_cast<const QuantBatchMatmulV4CompileInfo *>(context_->GetCompileInfo());
          OP_TILING_CHECK(mmCompileInfo == nullptr,
-                         CUBE_INNER_ERR_REPORT(inputParams_.opName, "get compile info is null"), return false);
+                         OP_LOGE(inputParams_.opName, "get compile info is null"), return false);
          try {
              compileInfoPtr_ = std::make_unique<QuantBatchMatmulV4CompileInfo>(*mmCompileInfo);
          } catch (const std::bad_alloc &e) {
@@ -361,6 +344,7 @@ bool AdaptiveSlidingWindowBasicTilingV4::CheckBatchValidInPertileMode(const gert
      aicoreParams_.blockDim = 0;
      return true;
 }
+
 bool AdaptiveSlidingWindowBasicTilingV4::CheckCoreNum() const
 {
     auto aicNum = compileInfoPtr_->aicNum;

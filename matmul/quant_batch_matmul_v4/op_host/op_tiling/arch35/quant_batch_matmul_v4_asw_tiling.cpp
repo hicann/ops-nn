@@ -45,7 +45,7 @@ bool AdaptiveSlidingWindowTilingV4::CheckDtype() const
     auto checker = std::unique_ptr<QuantBatchMatmulV4Checker4MmadS8S4>(
         new (std::nothrow) QuantBatchMatmulV4Checker4MmadS8S4(context_, inputParams_));
     OP_TILING_CHECK(checker == nullptr,
-        CUBE_INNER_ERR_REPORT(inputParams_.opName, "failed to instantiate checker"),
+        OP_LOGE(inputParams_.opName, "failed to instantiate checker"),
         return false);
 
     OP_TILING_CHECK(!checker->CheckDtype(),
@@ -64,7 +64,10 @@ bool AdaptiveSlidingWindowTilingV4::CheckShape(const std::vector<gert::Shape *> 
     if (x2TableShape != nullptr) {
         auto x2TableShapeLen = x2TableShape->GetStorageShape().GetDimNum();
         OP_TILING_CHECK(x2TableShapeLen != 2,
-                        CUBE_INNER_ERR_REPORT(inputParams_.opName, "x2 table shape should be 2 dim"), return false);
+                        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(inputParams_.opName, "x2Table",
+                                                                 std::to_string(x2TableShapeLen).c_str(),
+                                                                 "The shape dim of x2Table must be 2D"),
+                        return false);
         // the x2Table is transposed
         inputParams_.x2TableNSize =
             static_cast<uint64_t>(x2TableShape->GetStorageShape().GetDim(x2TableShapeLen - LAST_SECOND_DIM_INDEX));
@@ -74,10 +77,10 @@ bool AdaptiveSlidingWindowTilingV4::CheckShape(const std::vector<gert::Shape *> 
     auto checker = std::unique_ptr<QuantBatchMatmulV4Checker4MmadS8S4>(
         new (std::nothrow) QuantBatchMatmulV4Checker4MmadS8S4(context_, inputParams_));
     OP_TILING_CHECK(checker == nullptr,
-        CUBE_INNER_ERR_REPORT(inputParams_.opName, "failed to instantiate checker"),
+        OP_LOGE(inputParams_.opName, "failed to instantiate checker"),
         return false);
     OP_TILING_CHECK(!checker->CheckShape(mandtoryShape, biasShape, pertokenShape, dimValueOfMKN),
-        CUBE_INNER_ERR_REPORT(inputParams_.opName, "CheckShape fail"),
+        OP_LOGE(inputParams_.opName, "CheckShape fail"),
         return false);
 
     return true;
@@ -92,9 +95,7 @@ ge::graphStatus AdaptiveSlidingWindowTilingV4::CheckContext()
     auto outputShape = context_->GetOutputShape(0);
     auto outputDesc = context_->GetOutputDesc(0);
     auto attrs = context_->GetAttrs();
-    OP_TILING_CHECK(attrs == nullptr,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName, "Function context_->GetAttrs() failed!"),
-                    return ge::GRAPH_FAILED);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs);
     auto dtypeAttr = attrs->GetAttrPointer<int64_t>(0);
 
     OPS_CHECK_NULL_WITH_CONTEXT(context_, x1Shape);
@@ -108,7 +109,7 @@ ge::graphStatus AdaptiveSlidingWindowTilingV4::CheckContext()
     OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetRawTilingData()->GetData());
     OP_TILING_CHECK(
         context_->GetRawTilingData()->GetCapacity() < tilingDataSize_,
-        CUBE_INNER_ERR_REPORT(inputParams_.opName, "context tiling data capacity %zu < actual tiling data size %zu.",
+        OP_LOGE(inputParams_.opName, "context tiling data capacity %zu < actual tiling data size %zu.",
                               context_->GetRawTilingData()->GetCapacity(), tilingDataSize_),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
@@ -131,14 +132,14 @@ bool AdaptiveSlidingWindowTilingV4::AnalyzeDtype()
 
     // 当前AdaptiveSlidingWindowTilingV4仅支持LUT场景，x2Table必须存在
     OP_TILING_CHECK(
-        x2TableDesc == nullptr, CUBE_INNER_ERR_REPORT(inputParams_.opName, "X2Table does not exist."), return false);
+        x2TableDesc == nullptr, OP_LOGE(inputParams_.opName, "X2Table does not exist."), return false);
     inputParams_.isLut = true;
 
     inputParams_.cDtype = context_->GetOutputDesc(0)->GetDataType();
     isUbQuant_ = inputParams_.cDtype == ge::DT_BF16 || pertokenScaleDesc != nullptr;
     SetFormat();
 
-    OP_TILING_CHECK(!CheckDtype(), CUBE_INNER_ERR_REPORT(inputParams_.opName, "CheckDtype failed!"), return false);
+    OP_TILING_CHECK(!CheckDtype(), OP_LOGE(inputParams_.opName, "CheckDtype failed!"), return false);
     return true;
 }
 
@@ -156,13 +157,13 @@ bool AdaptiveSlidingWindowTilingV4::AnalyzeInputs()
     auto x1ShapeLen = x1Shape.GetDimNum();
     auto x2ShapeLen = x2Shape.GetDimNum();
     OP_TILING_CHECK(x1ShapeLen != 2,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                          "Input x1 dimension should equal to 2, but x1 dimension: %zu.", x1ShapeLen),
-                    return false);
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(inputParams_.opName, "x1", std::to_string(x1ShapeLen).c_str(),
+                                                 "The shape dim of x1 must be 2D"),
+        return false);
     OP_TILING_CHECK(x2ShapeLen != 2,
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                          "Input x2 dimension should equal to 2, but x2 dimension: %zu.", x2ShapeLen),
-                    return false);
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(inputParams_.opName, "x2", std::to_string(x2ShapeLen).c_str(),
+                                                 "The shape dim of x2 must be 2D"),
+        return false);
 
     auto x1Inner = x1Shape.GetDim(x1ShapeLen - LAST_FIRST_DIM_INDEX);
     auto x1Outer = x1Shape.GetDim(x1ShapeLen - LAST_SECOND_DIM_INDEX);
@@ -180,8 +181,8 @@ bool AdaptiveSlidingWindowTilingV4::AnalyzeInputs()
     AnalyzeBatchInfo(x1Shape, x2Shape);
     OP_TILING_CHECK(
         !InferOutBatchDim(x1Shape, x2Shape),
-        CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                              "batch dim can not be broadcasted or the batch dims of output do not match with input."),
+        OP_LOGE(inputParams_.opName,
+            "batch dim can not be broadcasted or the batch dims of output do not match with input."),
         return false);
     if (scaleShape != nullptr && !SetQuantMode(scaleShape->GetStorageShape(), pertokenShape)) {
         return false;
@@ -189,10 +190,11 @@ bool AdaptiveSlidingWindowTilingV4::AnalyzeInputs()
     if (!CheckShape(mandtoryShape, biasShape, pertokenShape, x2TableShape, dimValueOfMKN)) {
         return false;
     }
-    OP_TILING_CHECK(!CheckOutputShapeAvailable(),
-                    CUBE_INNER_ERR_REPORT(inputParams_.opName,
-                                          "Multiple of output shape dims should be in boundary of INT64_MAX"),
-                                          return false);
+    OP_TILING_CHECK(
+        !CheckOutputShapeAvailable(),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            inputParams_.opName, "y", "output shape product", "The shape size of y must be <= INT64_MAX"),
+        return false);
 
     auto isPerTensorStr = inputParams_.isPerTensor ? "true" : "false";
     auto isPertokenStr = inputParams_.isPertoken ? "true" : "false";
@@ -231,7 +233,7 @@ bool AdaptiveSlidingWindowTilingV4::SetPlatformInfoForTiling()
         InitCompileInfo();
         auto mmCompileInfo = reinterpret_cast<const QuantBatchMatmulV4CompileInfo *>(context_->GetCompileInfo());
         OP_TILING_CHECK(mmCompileInfo == nullptr,
-                        CUBE_INNER_ERR_REPORT(inputParams_.opName, "get compile info is null"), return false);
+                        OP_LOGE(inputParams_.opName, "compile info is null"), return false);
         try {
             compileInfoPtr_ = std::make_unique<QuantBatchMatmulV4CompileInfo>(*mmCompileInfo);
         } catch (const std::bad_alloc &e) {

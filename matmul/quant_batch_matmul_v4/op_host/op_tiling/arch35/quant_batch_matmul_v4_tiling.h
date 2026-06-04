@@ -203,6 +203,7 @@ protected:
     bool AnalyzeInputs();
     bool AnalyzeX2ScalePerGroupShape(const gert::StorageShape *x2ScaleShape);
     bool AnalyzeShapeSize(const gert::StorageShape *x1Shape, const gert::StorageShape *x2Shape);
+    bool ValidateShapeDimensions();
     bool AnalyzeBiasShape(const gert::StorageShape *biasShape);
     bool AnalyzeX1ScaleShape(const gert::StorageShape *x1ScaleShape);
     bool AnalyzeX2ScaleShape(const gert::StorageShape *x2ScaleShape);

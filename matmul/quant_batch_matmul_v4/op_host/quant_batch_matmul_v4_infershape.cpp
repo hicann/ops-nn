@@ -28,7 +28,9 @@ static ge::graphStatus InferShapeForQuantBatchMatmulV4(gert::InferShapeContext* 
     if (!any_unknow_rank &&
         (dim_a < QUANT_BATCH_MATMUL_V4_MIN_SHAPE_SIZE || dim_a > QUANT_BATCH_MATMUL_V4_MAX_SHAPE_SIZE ||
          dim_b < QUANT_BATCH_MATMUL_V4_MIN_SHAPE_SIZE || dim_b > QUANT_BATCH_MATMUL_V4_MAX_SHAPE_SIZE)) {
-        OP_LOGE(context->GetNodeName(), "[InferShape] The shape can only be in the range of 2 to 6.");
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            context->GetNodeName(), "x1, x2", (std::to_string(dim_a) + ", " + std::to_string(dim_b)).c_str(),
+            "The shape dims of x1, x2 must be in [2D, 6D]");
         return ge::GRAPH_FAILED;
     }
     // first transpose attr is transpose_x1, its index is 2 and bias input tensor index is 2, is_x2_packed is true

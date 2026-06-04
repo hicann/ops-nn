@@ -42,17 +42,13 @@ bool QuantBatchMatmulV4RegBase::IsCapable()
 bool QuantBatchMatmulV4RegBase::CheckA8W4Params() const
 {
     OP_CHECK_IF(inputParams_.transA,
-             VECTOR_INNER_ERR_REPORT_TILIING(
-                 inputParams_.opName, "Invalid params, only support transpose_x1 false. Actual transpose_x: %s.",
-                 inputParams_.transA ? "true" : "false"),
+             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(inputParams_.opName, "transposeX1", (inputParams_.transA ? "true" : "false"), "The value of transposeX1 must be false"),
              return false);
     OP_CHECK_IF(inputParams_.bFormat == ge::FORMAT_ND && !inputParams_.transB,
-             VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
-                                             "Invalid params, only support x2 transpose FORMAT_ND."),
+             OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(inputParams_.opName, "x2", "x2Format", "When transposeX2 is true, the format of x2 must be ND"),
              return false);
     OP_CHECK_IF(inputParams_.antiQuantType == QuantType::PER_GROUP && inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ && inputParams_.transB,
-            VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
-                                            "Invalid params, only support x2 not transpose FORMAT_FRACTAL_NZ."),
+            OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(inputParams_.opName, "x2", "x2Format", "When the quant mode is per_group and transposeX2 is false, the format of x2 must be FRACTAL_NZ"),
             return false);
 
     if (inputParams_.antiQuantType == QuantType::MX) {
@@ -72,9 +68,8 @@ bool QuantBatchMatmulV4RegBase::CheckA8W4Params() const
     }
 
     OP_CHECK_IF(inputParams_.groupSize % GROUP_ALIGN_SIZE > 0,
-             VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
-                                             "Invalid params, groupSize must be 32 aligned, groupSize: %lu.",
-                                             inputParams_.groupSize), return false);
+             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(inputParams_.opName, "groupSize", std::to_string(inputParams_.groupSize).c_str(), "The value of groupSize must be aligned to 32"),
+             return false);
     // A8W4 Nz场景要求n为32B对齐
     OP_CHECK_IF(inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ && inputParams_.nSize % N_ALIGN_SIZE > 0,
             VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
@@ -102,7 +97,7 @@ bool QuantBatchMatmulV4RegBase::CustomCheck() const
     }
 
     OP_CHECK_IF((inputParams_.cDtype != ge::DT_BF16) && (inputParams_.cDtype != ge::DT_FLOAT16),
-             VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Invalid params, output only support DT_BF16 or DT_FLOAT16."),
+             OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(inputParams_.opName, "y", ge::TypeUtils::DataTypeToSerialString(inputParams_.cDtype).c_str(), "The dtype of y must be BF16 or FLOAT16"),
              return false);
 
     bool a8w4Flag = (inputParams_.aDtype == ge::DT_HIFLOAT8 || inputParams_.aDtype == ge::DT_FLOAT8_E5M2 ||
@@ -111,13 +106,18 @@ bool QuantBatchMatmulV4RegBase::CustomCheck() const
     if (a8w4Flag) {
         return CheckA8W4Params();
     } else {
-        OP_LOGE(inputParams_.opName,
-                "Only support x1 Dtype: %s, x2 Dtype: %s, y Dtype: %s, groupSize: "
-                "%lu, transposeX1: %s, transposeX2: %s",
-                ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype).c_str(),
-                ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str(),
-                ge::TypeUtils::DataTypeToSerialString(inputParams_.cDtype).c_str(), inputParams_.groupSize,
-                inputParams_.transA ? "true" : "false", inputParams_.transB ? "true" : "false"); return false;
+        std::string incorrectVals = std::string("x1:") +
+            ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype) + ", x2:" +
+            ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype) + ", y:" +
+            ge::TypeUtils::DataTypeToSerialString(inputParams_.cDtype) + ", groupSize:" +
+            std::to_string(inputParams_.groupSize) + ", transA:" +
+            (inputParams_.transA ? "true" : "false") + ", transB:" +
+            (inputParams_.transB ? "true" : "false");
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            inputParams_.opName, "x1, x2, y, groupSize, transposeX1, transposeX2",
+            incorrectVals.c_str(),
+            "The dtype of x1 must be HIFLOAT8, FLOAT8_E5M2, or FLOAT8_E4M3FN, the dtype of x2 must be FLOAT4_E2M1 or FLOAT, and the dtype of y must be BF16 or FLOAT16");
+        return false;
     }
     return true;
 }
@@ -140,10 +140,9 @@ bool QuantBatchMatmulV4RegBase::CheckCoreNum() const
 ge::graphStatus QuantBatchMatmulV4RegBase::DoOpTiling()
 {
     OP_TILING_CHECK(InstantiateTilingData() == ge::GRAPH_FAILED,
-                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "unable to get pointer of tiling data"),
+                    OP_LOGE(inputParams_.opName, "unable to get pointer of tiling data"),
                     return ge::GRAPH_FAILED);
-    OP_CHECK_IF(!CustomCheck(), VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Custom check failed."),
-             return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!CustomCheck(), OP_LOGE(inputParams_.opName, "Custom check failed."), return ge::GRAPH_FAILED);
 
     if (!CheckCoreNum()) {
         OP_LOGE(inputParams_.opName, "Check CoreNum fail.");
@@ -178,7 +177,7 @@ ge::graphStatus QuantBatchMatmulV4RegBase::DoOpTiling()
     tilingSolver_.SetDtypeBits(GetDtypeBits(inputParams_.aDtype), GetDtypeBits(inputParams_.bDtype),
                                GetDtypeBits(inputParams_.biasDtype), B64_BITS);
     OP_CHECK_IF(!tilingSolver_.GetBasicBlockTiling(),
-             VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Unable to get matmul tiling for mnk[%lu, %lu, %lu]",
+             OP_LOGE(inputParams_.opName, "Unable to get matmul tiling for mnk[%lu, %lu, %lu]",
                                              inputParams_.mSize, inputParams_.nSize, inputParams_.kSize),
              return ge::GRAPH_FAILED);
     SetMatmulTiling();
@@ -207,10 +206,10 @@ ge::graphStatus QuantBatchMatmulV4RegBase::PostTiling()
 {
     OP_LOGD(inputParams_.opName, "final tiling data size: %zu", tilingDataSize_);
 
-    OP_TILING_CHECK(tilingDataSize_ % sizeof(uint64_t) != 0,
-                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "tiling data size[%zu] not aligned to 8",
-                                                    tilingDataSize_),
-                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        tilingDataSize_ % sizeof(uint64_t) != 0,
+        OP_LOGE(inputParams_.opName, "tiling data size[%zu] not aligned to 8", tilingDataSize_),
+        return ge::GRAPH_FAILED);
     context_->GetRawTilingData()->SetDataSize(tilingDataSize_);
     context_->SetBlockDim(tilingData_->cubeNumBlocksM * tilingData_->cubeNumBlocksN);
 

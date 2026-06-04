@@ -149,11 +149,7 @@ ge::graphStatus QuantBatchMatmulV4PergroupArch35Tiling::CheckContext()
     auto outputShape = context_->GetOutputShape(Y_OUTPUT_IDX);
     auto outputDesc = context_->GetOutputDesc(Y_OUTPUT_IDX);
     auto attrs = context_->GetAttrs();
-
-    OP_TILING_CHECK(
-        attrs == nullptr, VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Function context_.GetAttrs() failed!"),
-        return ge::GRAPH_FAILED);
-
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, x1Shape);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, x1Desc);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, x2Shape);
@@ -176,7 +172,7 @@ ge::graphStatus QuantBatchMatmulV4PergroupArch35Tiling::GetShapeAttrsInfo()
     OPS_LOG_D(inputParams_.opName, "TilingContext: %s", Ops::NN::DebugTilingContext(context_).c_str());
 
     if (CheckContext() != ge::GRAPH_SUCCESS) {
-        CUBE_INNER_ERR_REPORT(inputParams_.opName, "Invalid context.");
+        OP_LOGE(inputParams_.opName, "Invalid context.");
         return ge::GRAPH_FAILED;
     }
 

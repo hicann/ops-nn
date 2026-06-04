@@ -168,24 +168,21 @@ void QuantBatchMatmulV4BasicBlockTiling::SetDtypeBits(const int64_t aDtypeBits, 
 bool QuantBatchMatmulV4BasicBlockTiling::ValidateInputParam() const
 {
     OP_TILING_CHECK(basicBlockParam_.mSize <= 0 || basicBlockParam_.nSize <= 0 || basicBlockParam_.kSize <= 0,
-                    VECTOR_INNER_ERR_REPORT_TILIING(
-                        opName_, "Invalid param, shape size must gt 0, mSize: %ld, nSize: %ld, kSize: %ld",
-                        basicBlockParam_.mSize, basicBlockParam_.nSize, basicBlockParam_.kSize),
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(opName_, "mSize, nSize, kSize", "shape values",
+                                                           "The values of mSize, nSize, kSize must be > 0"),
                     return false);
 
     OP_TILING_CHECK(
         aDtypeBits_ <= 0 || bDtypeBits_ <= 0 || (hasBias_ && biasDtypeBits_ <= 0),
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            opName_,
-            "Invalid param, dtypeBits must be greater than 0, aDtypeBits_: %ld, bDtypeBits_: %ld, biasDtypeBits_: %ld",
-            aDtypeBits_, bDtypeBits_, biasDtypeBits_),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            opName_, "aDtype/bDtype/biasDtype", "dtypeBits", "The dtype bits of aDtype, bDtype, biasDtype must be > 0"),
         return false);
 
-    OP_TILING_CHECK(basicBlockParam_.groupSize < 0,
-                    VECTOR_INNER_ERR_REPORT_TILIING(
-                        opName_, "Invalid param, groupSize must be greater than or equal to 0, groupSize: %ld",
-                        basicBlockParam_.groupSize),
-                    return false);
+    OP_TILING_CHECK(
+        basicBlockParam_.groupSize < 0,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "groupSize", std::to_string(basicBlockParam_.groupSize).c_str(),
+                                              "The value of groupSize must be >= 0"),
+        return false);
 
     return true;
 }
@@ -563,13 +560,13 @@ void QuantBatchMatmulV4BasicBlockTiling::PrintFinalResult(const BasicBlockParam 
 bool QuantBatchMatmulV4BasicBlockTiling::ValidateTilingResult() const
 {
     OP_TILING_CHECK(basicBlockParam_.mDim * basicBlockParam_.nDim * basicBlockParam_.kDim > platformParam_.blockNum,
-                    VECTOR_INNER_ERR_REPORT_TILIING(
+                    OP_LOGE(
                         opName_, "Invalid block dim, mDim: %ld, nDim: %ld, kDim: %ld, maxDimNum: %ld",
                         basicBlockParam_.mDim, basicBlockParam_.nDim, basicBlockParam_.kDim, platformParam_.blockNum),
                     return false);
 
     OP_TILING_CHECK(GetL1LoadSize(basicBlockParam_.basicBlock, basicBlockParam_.l1Param) > platformParam_.l1Size,
-                    VECTOR_INNER_ERR_REPORT_TILIING(
+                    OP_LOGE(
                         opName_, "The load size exceeds L1 buffer limit, load size: %ld, L1 buffer size: %ld",
                         GetL1LoadSize(basicBlockParam_.basicBlock, basicBlockParam_.l1Param), platformParam_.l1Size),
                     return false);
@@ -581,7 +578,7 @@ bool QuantBatchMatmulV4BasicBlockTiling::ValidateTilingResult() const
 
     OP_TILING_CHECK(
         a2Size > platformParam_.l0aSize || b2Size > platformParam_.l0bSize || a2Size == 0 || b2Size == 0,
-        VECTOR_INNER_ERR_REPORT_TILIING(
+        OP_LOGE(
             opName_,
             "The load size may exceed L0 buffer limit, L0A load size: %ld, L0B load size: %ld, L0 buffer size: %ld",
             a2Size, b2Size, platformParam_.l0aSize),
@@ -592,7 +589,7 @@ bool QuantBatchMatmulV4BasicBlockTiling::ValidateTilingResult() const
     OP_TILING_CHECK((basicBlockParam_.l1Param.stepKa < stepKMax && basicBlockParam_.l1Param.stepKb < stepKMax) &&
                         (basicBlockParam_.l1Param.stepKa % basicBlockParam_.l1Param.stepKb > 0 &&
                          basicBlockParam_.l1Param.stepKb % basicBlockParam_.l1Param.stepKa > 0),
-                    VECTOR_INNER_ERR_REPORT_TILIING(
+                    OP_LOGE(
                         opName_, "Invalid stepK, stepKa (%ld) should be divisible by stepKb (%ld) or otherwise",
                         basicBlockParam_.l1Param.stepKa, basicBlockParam_.l1Param.stepKb),
                     return false);
@@ -649,20 +646,20 @@ bool QuantBatchMatmulV4BasicBlockTiling::GetFallbackTiling()
     const int64_t alignSize =
         isMxType_ ? (weightNzFlag_ ? BLOCK_CUBE : NZ_BASIC_BLOCK_ALIGN_SIZE) : NZ_BASIC_BLOCK_ALIGN_SIZE;
     const int64_t maxMNSize = isMxType_ ? BASE_MN_LIMIT_BUFF_2 : BASE_MN_LIMIT_BUFF_1;
-    
+
     // M轴切分
     basicBlockParam_.basicBlock.baseM = ops::CeilAlign(min(basicBlockParam_.mSize, DEFAULT_FALLBACK_BASEM), BLOCK_CUBE);
-    basicBlockParam_.mDim = min(CeilDiv(basicBlockParam_.mSize, basicBlockParam_.basicBlock.baseM), 
+    basicBlockParam_.mDim = min(CeilDiv(basicBlockParam_.mSize, basicBlockParam_.basicBlock.baseM),
                                 platformParam_.blockNum);
     basicBlockParam_.singleM = ops::CeilAlign(CeilDiv(basicBlockParam_.mSize, basicBlockParam_.mDim), BLOCK_CUBE);
-    
+
     // N轴切分
-    basicBlockParam_.basicBlock.baseN = min(BASE_BLOCK_MAX, 
+    basicBlockParam_.basicBlock.baseN = min(BASE_BLOCK_MAX,
                                             (maxMNSize / basicBlockParam_.basicBlock.baseM) / BLOCK_CUBE * BLOCK_CUBE);
     basicBlockParam_.nDim = min(CeilDiv(basicBlockParam_.nSize, basicBlockParam_.basicBlock.baseN),
                                 platformParam_.blockNum / basicBlockParam_.mDim);
     basicBlockParam_.singleN = ops::CeilAlign(CeilDiv(basicBlockParam_.nSize, basicBlockParam_.nDim), alignSize);
-    
+
     // 修正分核和baseN大小
     basicBlockParam_.mDim = CeilDiv(basicBlockParam_.mSize, basicBlockParam_.singleM);
     basicBlockParam_.nDim = CeilDiv(basicBlockParam_.nSize, basicBlockParam_.singleN);
@@ -692,8 +689,8 @@ bool QuantBatchMatmulV4BasicBlockTiling::GetFinalResult()
 */
 bool QuantBatchMatmulV4BasicBlockTiling::GetBasicBlockTiling()
 {
-    OP_TILING_CHECK(!ValidateInputParam(), VECTOR_INNER_ERR_REPORT_TILIING(opName_, "Invalid input param"),
-                    return false);
+    OP_TILING_CHECK(
+        !ValidateInputParam(), OP_LOGE(opName_, "Invalid input param"), return false);
 
     Reset();
     int64_t mDimMax = min(CeilDiv(basicBlockParam_.mSize, BLOCK_CUBE), platformParam_.blockNum);
