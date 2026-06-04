@@ -109,14 +109,14 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
     </tr>
     <tr>
       <td>x1Scale（aclTensor*）</td>
-      <td>可选输入</td>
+      <td>输入</td>
       <td>表示量化参数中的由x1量化引入的缩放因子。</td>
       <td>
-        综合约束请参见<a href="#约束说明" target="_blank">约束说明。
+        综合约束请参见<a href="#约束说明" target="_blank">约束说明</a>。
       </td>
-      <td>FLOAT8_E8M0 、FLOAT32</td>
+      <td>FLOAT8_E8M0、FLOAT32</td>
       <td>ND</td>
-      <td>3</td>
+      <td>3、1</td>
       <td>√</td>
     </tr>
     <tr>
@@ -124,11 +124,11 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
       <td>输入</td>
       <td>表示量化参数中的由x2量化引入的缩放因子。</td>
       <td>
-        综合约束请参见<a href="#约束说明" target="_blank">约束说明。
+        综合约束请参见<a href="#约束说明" target="_blank">约束说明</a>。
       </td>
-      <td>FLOAT8_E8M0 、FLOAT32 </td>
+      <td>FLOAT8_E8M0、FLOAT32</td>
       <td>ND</td>
-      <td>3</td>
+      <td>3、1</td>
       <td>√</td>
     </tr>
     <tr>
@@ -229,7 +229,7 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
     <tr>
       <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="4">161002</td>
-      <td>x1、x2、x1Scale、x2Scale、yRef、groupSize的数据类型和数据格式不在支持的范围内。</td>
+      <td>x1、x2、x1Scale、x2Scale、yRef的数据类型和数据格式不在支持的范围内，或groupSize的取值不在支持的范围内。</td>
     </tr>
     <tr>
       <td>x1、x2、x1Scale、x2Scale、yRef的shape不满足校验条件。</td>
@@ -273,7 +273,7 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
 - 动态量化（mx 量化）场景约束：
   - 输入和输出支持以下数据类型组合：
 
-    | x1 | x2 | x1Scale | x2Scale | outRef |
+    | x1 | x2 | x1Scale | x2Scale | yRef |
     |:-------:|:-------:| :------- | :------ | :------ |
     |FLOAT8_E5M2/FLOAT8_E4M3FN |FLOAT8_E5M2/FLOAT8_E4M3FN| FLOAT8_E8M0 | FLOAT8_E8M0 | FLOAT32 |
 
@@ -286,7 +286,7 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
 - HIFLOAT8 T-T 场景约束：
   - 输入和输出支持以下数据类型组合：
 
-    | x1 | x2 | x1Scale | x2Scale | outRef |
+    | x1 | x2 | x1Scale | x2Scale | yRef |
     |:-------:|:-------:| :------- | :------ | :------ |
     |HIFLOAT8 |HIFLOAT8| FLOAT32 | FLOAT32 | FLOAT32 |
 
@@ -421,8 +421,8 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
       aclTensor* x1Scale = nullptr;
       aclTensor* yOutput = nullptr;
 
-      std::vector<uint8_t> x1HostData(M * K, 1);                 // 0b00111000 为 fp8_e4m3fn的1.0
-      std::vector<uint8_t> x2HostData(N * K, 1); // 0b0010为fp4_e2m1的1.0，这里用uint8代表2个fp4
+      std::vector<uint8_t> x1HostData(M * K, 1); // 示例填充值
+      std::vector<uint8_t> x2HostData(N * K, 1); // 示例填充值
       std::vector<uint8_t> x2ScaleHostData(CeilDiv(K, 64) * N * 2, 1);
       std::vector<float> yInputHostData(M * N, 1);                        // fp32的1.0
       std::vector<uint8_t> x1ScaleHostData(M * CeilDiv(K, 64) * 2, 1);
@@ -462,7 +462,7 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
       bool transposeX2 = false;
       int64_t groupSize = 32;
 
-      // 3. 调用CANN算子库API，需要修改为具体的Api名称
+      // 3. 调用CANN算子库API
       uint64_t workspaceSize = 0;
       aclOpExecutor* executor = nullptr;
       void* workspaceAddr = nullptr;
@@ -476,7 +476,7 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
           ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
           CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
       }
-      // 调用aclnnTransQuantParamV2第二段接口
+      // 调用aclnnQuantBatchMatmulInplaceAdd第二段接口
       ret = aclnnQuantBatchMatmulInplaceAdd(workspaceAddr, workspaceSize, executor, stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantBatchMatmulInplaceAdd failed. ERROR: %d\n", ret); return ret);
 
@@ -484,11 +484,11 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
       ret = aclrtSynchronizeStream(stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
-      // 5. 获取输出的值，将Device侧内存上的结果拷贝至Host侧，需要根据具体API的接口定义修改
+      // 5. 获取输出的值，将Device侧内存上的结果拷贝至Host侧
       auto size = GetShapeSize(yInputShape);
       std::vector<float> resultData(size, 0);
       ret = aclrtMemcpy(resultData.data(), size * sizeof(uint32_t), yInputDeviceAddr,
-                      size * sizeof(uint32_t), ACL_MEMCPY_DEVICE_TO_HOST);
+                       size * sizeof(uint32_t), ACL_MEMCPY_DEVICE_TO_HOST);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
       for (int64_t j = 0; j < size; j++) {
           LOG_PRINT("result[%ld] is: %f\n", j, resultData[j]);
