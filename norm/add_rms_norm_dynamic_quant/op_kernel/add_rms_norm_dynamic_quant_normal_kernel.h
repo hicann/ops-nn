@@ -63,7 +63,7 @@ public:
 
         LocalTensor<T> gammaLocal = weightBuf01.template Get<T>();
 
-        int32_t gmOffset = 0;
+        uint64_t gmOffset = 0;
         int32_t gmOffsetScale = 0;
         int32_t elementCount = this->numLastDimAligned * this->rowStep;
 

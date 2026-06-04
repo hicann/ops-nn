@@ -90,7 +90,7 @@ public:
     {
         LocalTensor<float> rstdLocal = outQueueRstd.AllocTensor<float>();
         for (uint32_t i_i = 0; i_i < calc_row_num; i_i++) {
-            uint32_t gm_bias = (i_o * this->rowFactor + i_i) * this->numCol;
+            uint64_t gm_bias = (static_cast<uint64_t>(i_o) * static_cast<uint64_t>(this->rowFactor) + static_cast<uint64_t>(i_i)) * static_cast<uint64_t>(this->numCol);
             CopyIn(gm_bias);
             Compute(i_i, gammaLocal, rstdLocal);
             CopyOutY(gm_bias);

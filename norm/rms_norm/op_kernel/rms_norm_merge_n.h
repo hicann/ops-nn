@@ -97,8 +97,8 @@ public:
 
     __aicore__ inline void DoMainCompute(uint32_t i_o, uint32_t calcRowNum, LocalTensor<float>& gammaLocal)
     {
-        uint32_t gmBias = i_o * rowFactor * numCol;
-        uint32_t elementNum = calcRowNum * numColAlign;
+        uint64_t gmBias = static_cast<uint64_t>(i_o) * static_cast<uint64_t>(rowFactor) * static_cast<uint64_t>(numCol);
+        uint64_t elementNum = static_cast<uint64_t>(calcRowNum) * static_cast<uint64_t>(numColAlign);
         CopyIn(gmBias, calcRowNum);
         if (isNorm == 1) {
           ComputeSingleRow(i_o, calcRowNum, gammaLocal, gmBias);

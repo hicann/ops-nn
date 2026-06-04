@@ -94,7 +94,7 @@ public:
 
     __aicore__ inline void SubProcess(uint32_t i_o, uint32_t calc_row_num, LocalTensor<T>& gammaLocal)
     {
-        uint32_t gm_bias = i_o * rowFactor * numCol;
+        uint64_t gm_bias = static_cast<uint64_t>(i_o) * static_cast<uint64_t>(rowFactor) * static_cast<uint64_t>(numCol);
         CopyInX(gm_bias, calc_row_num);
         LocalTensor<T> xLocal = ComputeX(calc_row_num);
         CopyOutX(gm_bias, calc_row_num);
