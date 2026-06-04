@@ -75,7 +75,7 @@ ge::graphStatus DualLevelQuantBatchMatmulTilingASW::DoOpTiling()
     OP_LOGD(matmulInfo_.opName, "DoOpTiling of adaptive sliding window tiling strategy.");
     OP_TILING_CHECK(
         InstantiateTilingData() == ge::GRAPH_FAILED,
-        CUBE_INNER_ERR_REPORT(matmulInfo_.opName, "unable to get pointer of tiling data"), return ge::GRAPH_FAILED);
+        OP_LOGE(matmulInfo_.opName, "unable to get pointer of tiling data"), return ge::GRAPH_FAILED);
 
     if (!AnalyseSlidingWinInfo()) {
         OP_LOGE(matmulInfo_.opName, "DoOpTiling fail");
@@ -122,7 +122,7 @@ ge::graphStatus DualLevelQuantBatchMatmulTilingASW::PostTiling()
     OP_LOGD(context_, "final tiling data size: %zu", tilingDataSize_);
     OP_TILING_CHECK(
         tilingDataSize_ % sizeof(uint64_t) != 0,
-        CUBE_INNER_ERR_REPORT(context_, "tiling data size[%zu] is not aligned to 8", tilingDataSize_),
+        OP_LOGE(context_, "tiling data size[%zu] is not aligned to 8", tilingDataSize_),
         return ge::GRAPH_FAILED);
     errno_t ret = memcpy_s(
         context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
@@ -160,7 +160,7 @@ ge::graphStatus DualLevelQuantBatchMatmulTilingASW::InstantiateTilingData()
     }
     OP_TILING_CHECK(
         context_->GetRawTilingData()->GetCapacity() < tilingDataSize_,
-        CUBE_INNER_ERR_REPORT(
+        OP_LOGE(
             matmulInfo_.opName, "tiling data capacity %zu < actual tiling data size %zu",
             context_->GetRawTilingData()->GetCapacity(), tilingDataSize_),
         return ge::GRAPH_FAILED);
@@ -371,7 +371,9 @@ bool DualLevelQuantBatchMatmulTilingASW::OptimizeEdgeBasicBlock()
 bool DualLevelQuantBatchMatmulTilingASW::GetOuterMAxisTailCnt(uint64_t& baseTailSplitCnt, uint64_t& tailMain)
 {
     OP_TILING_CHECK(
-        matmulInfo_.mSize == 0UL, CUBE_INNER_ERR_REPORT(matmulInfo_.opName, "Input size of the M-axis is zero."),
+        matmulInfo_.mSize == 0UL,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            matmulInfo_.opName, "mSize", "0", "The M-axis size can not be 0"),
         return false);
     uint64_t mCnt = ops::CeilDiv(matmulInfo_.mSize, adaptiveWin_.baseM);
     uint64_t mTailSize = matmulInfo_.mSize % adaptiveWin_.baseM;
@@ -389,9 +391,9 @@ bool DualLevelQuantBatchMatmulTilingASW::GetOuterMAxisTailCnt(uint64_t& baseTail
             static_cast<uint64_t>(BASIC_BLOCK_SIZE_16));
         OP_TILING_CHECK(
             mainWindowNum + 1UL < mergeWindowNum,
-            CUBE_INNER_ERR_REPORT(
-                matmulInfo_.opName, "Subtraction underflow: mainWindowNum(%lu) + 1UL - mergeWindowNum(%lu).", mainWindowNum,
-                mergeWindowNum),
+            OP_LOGE(
+                matmulInfo_.opName, "Subtraction underflow: mainWindowNum(%lu) + 1UL - mergeWindowNum(%lu).",
+                mainWindowNum, mergeWindowNum),
             return false);
         uint64_t curPerf = (mainWindowNum + 1UL - mergeWindowNum) * adaptiveWin_.baseM + mergeWindowNum * newTailMain;
         if (curPerf <= perfRes) {
@@ -413,7 +415,7 @@ bool DualLevelQuantBatchMatmulTilingASW::GetOuterNAxisTailCnt(uint64_t& baseTail
 
     OP_TILING_CHECK(
         nCnt == 0UL,
-        CUBE_INNER_ERR_REPORT(
+        OP_LOGE(
             matmulInfo_.opName,
             "Subtraction underflow: nCnt(%lu) - 1UL and \
 the divisor is zero: WINDOW_LEN %% nCnt.",
@@ -423,7 +425,7 @@ the divisor is zero: WINDOW_LEN %% nCnt.",
         ops::CeilDiv<uint64_t>((nCnt - 1UL) * mCnt + mCnt % compileInfo_.aicNum, compileInfo_.aicNum);
 
     OP_TILING_CHECK(
-        compileInfo_.aicNum == 0UL, CUBE_INNER_ERR_REPORT(matmulInfo_.opName, "The number of enabled Cube cores is 0."),
+        compileInfo_.aicNum == 0UL, OP_LOGE(matmulInfo_.opName, "The number of enabled Cube cores is 0."),
         return false);
     if (nCnt * mCnt <= compileInfo_.aicNum ||
         (mCnt % compileInfo_.aicNum == 0UL && (nCnt % WINDOW_LEN == 0UL || WINDOW_LEN % nCnt == 0UL))) {
@@ -431,8 +433,9 @@ the divisor is zero: WINDOW_LEN %% nCnt.",
     }
     OP_TILING_CHECK(
         totalWindows < mainWindows,
-        CUBE_INNER_ERR_REPORT(
-            matmulInfo_.opName, "Subtraction underflow: totalWindows(%lu) - mainWindows(%lu).", totalWindows, mainWindows),
+        OP_LOGE(
+            matmulInfo_.opName, "Subtraction underflow: totalWindows(%lu) - mainWindows(%lu).", totalWindows,
+            mainWindows),
         return false);
     uint64_t tailWindows = totalWindows - mainWindows;
     uint64_t perfRes = mainWindows * baseN + tailWindows * nTail;
@@ -459,9 +462,9 @@ uint64_t DualLevelQuantBatchMatmulTilingASW::CalculateCurrentPerf(
         static_cast<uint64_t>(BASIC_BLOCK_SIZE_16));
     OP_TILING_CHECK(
         adaptiveWin_.baseN < newTailMain,
-        CUBE_INNER_ERR_REPORT(
-            matmulInfo_.opName, "Subtraction underflow: adaptiveWin_.baseN(%lu) - newTailMain(%lu).", adaptiveWin_.baseN,
-            newTailMain),
+        OP_LOGE(
+            matmulInfo_.opName, "Subtraction underflow: adaptiveWin_.baseN(%lu) - newTailMain(%lu).",
+            adaptiveWin_.baseN, newTailMain),
         return static_cast<uint64_t>(-1));
     uint64_t newTailLast = mergeLen * (adaptiveWin_.baseN - newTailMain) + nTail;
     uint64_t newMainRound = 0UL;
@@ -474,8 +477,8 @@ uint64_t DualLevelQuantBatchMatmulTilingASW::CalculateCurrentPerf(
     if (mergeLen > 0UL) {
         OP_TILING_CHECK(
             totalWindows < newMainRound,
-            CUBE_INNER_ERR_REPORT(
-                matmulInfo_.opName, "Subtraction underflow: totalWindows(%lu) - newMainRound(%lu).", totalWindows, newMainRound),
+            OP_LOGE(matmulInfo_.opName,
+                "Subtraction underflow: totalWindows(%lu) - newMainRound(%lu).", totalWindows, newMainRound),
             return static_cast<uint64_t>(-1));
         newTailRound = std::min(
             ops::CeilDiv<uint64_t>(mergeLen * mCnt + mCnt % compileInfo_.aicNum, compileInfo_.aicNum),
@@ -484,8 +487,8 @@ uint64_t DualLevelQuantBatchMatmulTilingASW::CalculateCurrentPerf(
 
     OP_TILING_CHECK(
         totalWindows < newMainRound + newTailRound,
-        CUBE_INNER_ERR_REPORT(
-            matmulInfo_.opName, "Subtraction underflow: totalWindows(%lu) - newMainRound(%lu) - newTailRound(%lu).", totalWindows,
+        OP_LOGE(matmulInfo_.opName,
+            "Subtraction underflow: totalWindows(%lu) - newMainRound(%lu) - newTailRound(%lu).", totalWindows,
             newMainRound, newTailRound),
         return static_cast<uint64_t>(-1));
     return newMainRound * adaptiveWin_.baseN + newTailRound * newTailMain +

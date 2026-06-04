@@ -104,18 +104,27 @@ bool GetInputs(DualLevelQuantBatchMatmulInfo& matmulInfo, const gert::TilingCont
     auto x1ShapeLen = x1Shape.GetDimNum();
     auto x2ShapeLen = x2Shape.GetDimNum();
     OP_TILING_CHECK(
-        x1ShapeLen != DIM_NUM || x2ShapeLen != DIM_NUM,
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context,
-            "input x1 dimension and x2 dimension should be 2, "
-            "but x1 dimension: %zu, x2 dimension: %zu",
-            x1ShapeLen, x2ShapeLen),
+        x1ShapeLen != DIM_NUM,
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            context->GetNodeName(), "x1", (std::to_string(x1ShapeLen) + "D").c_str(), "The shape dim of x1 must be 2D"),
+        return false);
+    OP_TILING_CHECK(
+        x2ShapeLen != DIM_NUM,
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            context->GetNodeName(), "x2", (std::to_string(x2ShapeLen) + "D").c_str(), "The shape dim of x2 must be 2D"),
         return false);
 
     // not yet support empty tensor for input
     OP_TILING_CHECK(
-        x1Shape.GetShapeSize() == 0 || x2Shape.GetShapeSize() == 0,
-        VECTOR_INNER_ERR_REPORT_TILIING(context, "Not yet support empty tensor"), return false);
+        x1Shape.GetShapeSize() == 0,
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+            context->GetNodeName(), "x1", "0", "The shape size of x1 can not be 0"),
+        return false);
+    OP_TILING_CHECK(
+        x2Shape.GetShapeSize() == 0,
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+            context->GetNodeName(), "x2", "0", "The shape size of x2 can not be 0"),
+        return false);
 
     auto x1Outer = x1Shape.GetDim(0);
     auto x1Inner = x1Shape.GetDim(1);
@@ -127,11 +136,10 @@ bool GetInputs(DualLevelQuantBatchMatmulInfo& matmulInfo, const gert::TilingCont
     auto kX2 = matmulInfo.transB ? x2Inner : x2Outer;
     OP_TILING_CHECK(
         kX1 != kX2,
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context,
-            "Inputs dimension is not match, "
-            "x1 kSize: %ld, x2 kSize: %ld",
-            kX1, kX2),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context->GetNodeName(), "x1, x2",
+            (std::to_string(kX1) + ", " + std::to_string(kX2)).c_str(),
+            "The K dimension of x1 must equal the K dimension of x2"),
         return false);
     matmulInfo.kSize = kX1;
     return true;
@@ -158,31 +166,31 @@ ge::graphStatus DualLevelQuantBatchMatmulBaseTiling::GetShapeAttrsInfo()
     // 检查context必要参数是否存在，避免重复判断
     OP_TILING_CHECK(
         Ops::NN::DLQBMMChecker::CheckContext(context_, tilingDataSize_) != ge::GRAPH_SUCCESS,
-        VECTOR_INNER_ERR_REPORT_TILIING(context_, "Invalid context."), return ge::GRAPH_FAILED);
+        OP_LOGE(context_, "Invalid context."), return ge::GRAPH_FAILED);
 
     // 获取并检查参数信息
     OPS_LOG_I(context_, "TilingContext: %s", Ops::NN::DebugTilingContext(context_).c_str());
 
     OP_TILING_CHECK(
-        !GetAttrs(matmulInfo_, context_), VECTOR_INNER_ERR_REPORT_TILIING(context_, "Failed to GetAttrs"),
+        !GetAttrs(matmulInfo_, context_), OP_LOGE(context_, "Failed to GetAttrs"),
         return ge::GRAPH_FAILED);
     OP_TILING_CHECK(
         !Ops::NN::DLQBMMChecker::CheckAttrs(context_, compileInfo_.npuArch, matmulInfo_),
-        VECTOR_INNER_ERR_REPORT_TILIING(context_, "Failed to check attrs."), return ge::GRAPH_FAILED);
+        OP_LOGE(context_, "Failed to check attrs."), return ge::GRAPH_FAILED);
 
     OP_TILING_CHECK(
-        !GetDtype(matmulInfo_, context_), VECTOR_INNER_ERR_REPORT_TILIING(context_, "Failed to GetDtype"),
+        !GetDtype(matmulInfo_, context_), OP_LOGE(context_, "Failed to GetDtype"),
         return ge::GRAPH_FAILED);
     OP_TILING_CHECK(
         !Ops::NN::DLQBMMChecker::CheckDtypes(context_, compileInfo_.npuArch, matmulInfo_),
-        VECTOR_INNER_ERR_REPORT_TILIING(context_, "Failed to check dtypes."), return ge::GRAPH_FAILED);
+        OP_LOGE(context_, "Failed to check dtypes."), return ge::GRAPH_FAILED);
 
     OP_TILING_CHECK(
-        !GetInputs(matmulInfo_, context_), VECTOR_INNER_ERR_REPORT_TILIING(context_, "Failed to GetInputs"),
+        !GetInputs(matmulInfo_, context_), OP_LOGE(context_, "Failed to GetInputs"),
         return ge::GRAPH_FAILED);
     OP_TILING_CHECK(
         !Ops::NN::DLQBMMChecker::CheckInputs(context_, compileInfo_.npuArch, matmulInfo_),
-        VECTOR_INNER_ERR_REPORT_TILIING(context_, "Failed to check inputs."), return ge::GRAPH_FAILED);
+        OP_LOGE(context_, "Failed to check inputs."), return ge::GRAPH_FAILED);
     LogDebugMatmulInfo(context_, matmulInfo_);
     return ge::GRAPH_SUCCESS;
 }
@@ -222,7 +230,7 @@ bool DualLevelQuantBatchMatmulBaseTiling::SetPlatformInfoForTiling()
         const auto* mmCompileInfo =
             reinterpret_cast<const DualLevelQuantBatchMatmulCompileInfo*>(context_->GetCompileInfo());
         OP_TILING_CHECK(
-            mmCompileInfo == nullptr, CUBE_INNER_ERR_REPORT(context_, "GetCompileInfo is null"), return false);
+            mmCompileInfo == nullptr, OP_LOGE(context_, "GetCompileInfo is null"), return false);
         compileInfo_ = *mmCompileInfo;
     }
 

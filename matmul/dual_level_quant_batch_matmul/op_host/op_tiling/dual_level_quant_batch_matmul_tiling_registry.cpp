@@ -41,9 +41,12 @@ static ge::graphStatus DualLevelQuantBatchMatmulTilingFunc(gert::TilingContext* 
     OP_LOGE_IF(context == nullptr, ge::GRAPH_FAILED, "DualLevelQuantBatchMatmul", "tilingContext is null");
 
     auto* compileInfoPtr = reinterpret_cast<const DualLevelQuantBatchMatmulCompileInfo*>(context->GetCompileInfo());
-    OP_LOGE_IF(compileInfoPtr == nullptr, ge::GRAPH_FAILED, context->GetNodeName(), "compileInfoPtr is null");
+    OPS_CHECK_NULL_WITH_CONTEXT(context, compileInfoPtr);
     NpuArch npuArch = compileInfoPtr->npuArch;
-    OP_LOGE_IF(npuArch != NpuArch::DAV_3510, ge::GRAPH_FAILED, context->GetNodeName(), "Platform not supported");
+    if (npuArch != NpuArch::DAV_3510) {
+        OP_LOGE(context->GetNodeName(), "Platform not supported, only support dav3510 platform");
+        return ge::GRAPH_FAILED;
+    }
     return TilingRegistry::GetInstance().DoTilingImpl(context);
 }
 
@@ -55,15 +58,15 @@ static ge::graphStatus TilingParseForDualLevelQuantBatchMatmul(gert::TilingParse
     OP_LOGE_IF(platformInfoPtr == nullptr, ge::GRAPH_SUCCESS, context->GetNodeName(), "platformInfoPtr is null");
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfoPtr);
     auto compileInfoPtr = context->GetCompiledInfo<DualLevelQuantBatchMatmulCompileInfo>();
-    OP_LOGE_IF(compileInfoPtr == nullptr, ge::GRAPH_FAILED, context->GetNodeName(), "compileInfoPtr is null");
+    OPS_CHECK_NULL_WITH_CONTEXT(context, compileInfoPtr);
 
     compileInfoPtr->aivNum = ascendcPlatform.GetCoreNumAiv();
     compileInfoPtr->aicNum = ascendcPlatform.GetCoreNumAic();
     OP_LOGE_IF(compileInfoPtr->aicNum == 0, ge::GRAPH_FAILED, context->GetNodeName(), "aicNum is 0");
     OP_LOGE_IF(compileInfoPtr->aivNum == 0, ge::GRAPH_FAILED, context->GetNodeName(), "aivNum is 0");
-    OP_LOGE_IF(compileInfoPtr->aivNum != CORE_RATIO * compileInfoPtr->aicNum, ge::GRAPH_FAILED, context->GetNodeName(),
-               "aicNum:aivNum should be 1:2, actual aicNum: %u, aivNum: %u.", compileInfoPtr->aicNum,
-               compileInfoPtr->aivNum);
+    OP_LOGE_IF(
+        compileInfoPtr->aivNum != CORE_RATIO * compileInfoPtr->aicNum, ge::GRAPH_FAILED, context->GetNodeName(),
+        "aicNum:aivNum should be 1:2, actual aicNum: %u, aivNum: %u.", compileInfoPtr->aicNum, compileInfoPtr->aivNum);
 
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, compileInfoPtr->ubSize);
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L1, compileInfoPtr->l1Size);
