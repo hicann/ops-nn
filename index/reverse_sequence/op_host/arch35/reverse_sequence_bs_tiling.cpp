@@ -129,7 +129,7 @@ void ReverseSequenceBSTiling::CalcSplitDimB()
     ubFactorB_ = inDimBLower;
     ubFactorS_ = inputData_.inputDim[dimS_];
     if (ubFactorB_ <= 0) {
-        OP_LOGE(context_, "ReverseSequence ubFactorB_ is %ld.", ubFactorB_);
+        OP_LOGE(context_->GetNodeName(), "ReverseSequence ubFactorB_ is %ld.", ubFactorB_);
         return;
     }
     
@@ -143,7 +143,7 @@ void ReverseSequenceBSTiling::CalcSplitDimS()
 {
     ubFactorS_ = std::min(inputData_.inputDim[dimS_], (availableUb_ / DIGIT_FOUR));
     if (ubFactorS_ <= 0) {
-        OP_LOGE(context_, "ReverseSequence ubFactorS_ is %ld.", ubFactorS_);
+        OP_LOGE(context_->GetNodeName(), "ReverseSequence ubFactorS_ is %ld.", ubFactorS_);
         return;
     }
 

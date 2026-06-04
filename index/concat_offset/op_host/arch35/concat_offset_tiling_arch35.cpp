@@ -41,12 +41,14 @@ static ge::graphStatus TilingPrepare4ConcatOffset(gert::TilingParseContext* cont
   auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
   compile_info->core_num = ascendcPlatform.GetCoreNumAiv();
   OP_TILING_CHECK((compile_info->core_num <= 0),
-      OP_LOGE(context->GetNodeName(), "Failed to get core num."), return ge::GRAPH_FAILED);
+      OP_LOGE(context->GetNodeName(), "core_num must be greater than 0"), 
+      return ge::GRAPH_FAILED);
   uint64_t ubSize;
   ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
   compile_info->ubSize = static_cast<int64_t>(ubSize);
   OP_TILING_CHECK((compile_info->ubSize <= 0),
-      OP_LOGE(context->GetNodeName(), "Failed to get ub size."), return ge::GRAPH_FAILED);
+      OP_LOGE(context->GetNodeName(), "ubSize must be greater than 0"), 
+      return ge::GRAPH_FAILED);
   return ge::GRAPH_SUCCESS;
 }
 

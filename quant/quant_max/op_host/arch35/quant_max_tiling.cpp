@@ -89,9 +89,10 @@ ge::graphStatus QuantMaxRegbase::CheckDtype()
     xDtype_ = xInputDesc->GetDataType();
     OP_CHECK_IF(
         xDtype_ != ge::DT_FLOAT16 && xDtype_ != ge::DT_FLOAT && xDtype_ != ge::DT_BF16,
-        OP_LOGE(
-            context_->GetNodeName(), "input x dtype [%s] not supported, only support [DT_FLOAT16, DT_FLOAT, DT_BF16]",
-            ge::TypeUtils::DataTypeToSerialString(xDtype_).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            context_->GetNodeName(), "x",
+            ge::TypeUtils::DataTypeToSerialString(xDtype_).c_str(),
+            "The dtype of x must be within the range [DT_FLOAT16, DT_FLOAT, DT_BF16]."),
         return ge::GRAPH_FAILED);
 
     auto scaleInputDesc = context_->GetInputDesc(INPUT_SCALE_INDEX);
@@ -99,9 +100,10 @@ ge::graphStatus QuantMaxRegbase::CheckDtype()
     scaleDtype_ = scaleInputDesc->GetDataType();
     OP_CHECK_IF(
         scaleDtype_ != ge::DT_FLOAT,
-        OP_LOGE(
-            context_->GetNodeName(), "input scale dtype [%s] not supported, only support [DT_FLOAT]",
-            ge::TypeUtils::DataTypeToSerialString(scaleDtype_).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            context_->GetNodeName(), "scale",
+            ge::TypeUtils::DataTypeToSerialString(scaleDtype_).c_str(),
+            "The dtype of scale must be DT_FLOAT."),
         return ge::GRAPH_FAILED);
 
     auto yOutputDesc = context_->GetOutputDesc(OUTPUT_Y_INDEX);
@@ -109,11 +111,10 @@ ge::graphStatus QuantMaxRegbase::CheckDtype()
     yDtype_ = yOutputDesc->GetDataType();
     OP_CHECK_IF(
         yDtype_ != ge::DT_HIFLOAT8 && yDtype_ != ge::DT_FLOAT8_E5M2 && yDtype_ != ge::DT_FLOAT8_E4M3FN,
-        OP_LOGE(
-            context_->GetNodeName(),
-            "output y dtype [%s] not supported, only support [DT_HIFLOAT8, DT_FLOAT8_E5M2, "
-            "DT_FLOAT8_E4M3FN]",
-            ge::TypeUtils::DataTypeToSerialString(yDtype_).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            context_->GetNodeName(), "y",
+            ge::TypeUtils::DataTypeToSerialString(yDtype_).c_str(),
+            "The dtype of y must be within the range [DT_HIFLOAT8, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN]."),
         return ge::GRAPH_FAILED);
 
     auto amaxOutputDesc = context_->GetOutputDesc(OUTPUT_AMAX_INDEX);
@@ -121,9 +122,10 @@ ge::graphStatus QuantMaxRegbase::CheckDtype()
     amaxDtype_ = amaxOutputDesc->GetDataType();
     OP_CHECK_IF(
         amaxDtype_ != xDtype_,
-        OP_LOGE(
-            context_->GetNodeName(), "output amax dtype %s is not same as input x dtype %s",
-            Ops::Base::ToString(amaxDtype_).c_str(), Ops::Base::ToString(xDtype_).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            context_->GetNodeName(), "x, amax",
+            (Ops::Base::ToString(xDtype_) + ", " + Ops::Base::ToString(amaxDtype_)).c_str(),
+            "The dtypes of x and amax must be the same."),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -165,14 +167,17 @@ ge::graphStatus QuantMaxRegbase::CheckAttrs()
 
     // check dstType and output dtype, must be same
     if (dstType_ != ge::DT_HIFLOAT8 && dstType_ != ge::DT_FLOAT8_E5M2 && dstType_ != ge::DT_FLOAT8_E4M3FN) {
-        OP_LOGE(
-            context_->GetNodeName(), "dst type:%s is invalid", ToString(static_cast<ge::DataType>(dstType_)).c_str());
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context_->GetNodeName(), "dst_type",
+            ToString(static_cast<ge::DataType>(dstType_)).c_str(),
+            "The value of dst_type must be within the range [DT_HIFLOAT8, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN].");
         return ge::GRAPH_FAILED;
     }
     if (dstType_ != yDtype_) {
-        OP_LOGE(
-            context_->GetNodeName(), "dst type:%s not equal output y dtype:%s",
-            ToString(static_cast<ge::DataType>(dstType_)).c_str(), ToString(yDtype_).c_str());
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            context_->GetNodeName(), "dst_type, y",
+            (ToString(static_cast<ge::DataType>(dstType_)) + ", " + ToString(yDtype_)).c_str(),
+            "The dtypes of dst_type and y must be the same.");
         return ge::GRAPH_FAILED;
     }
 
@@ -196,22 +201,35 @@ ge::graphStatus QuantMaxRegbase::CheckShape(
     size_t amaxDimNum = amaxShape.GetDimNum();
 
     OP_CHECK_IF(
-        xDimNum > 8 || xDimNum < 1, OP_LOGE(context_->GetNodeName(), "input x dim num should be in range [1, 8]"),
+        xDimNum > 8 || xDimNum < 1,
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            context_->GetNodeName(), "x",
+            std::to_string(xDimNum).c_str(),
+            "The shape dim of x must be within the range [1, 8]."),
         return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(
-        scaleDimNum != 1, OP_LOGE(context_->GetNodeName(), "input scale dim num should be equal 1"),
+        scaleDimNum != 1,
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            context_->GetNodeName(), "scale",
+            std::to_string(scaleDimNum).c_str(),
+            "The shape dim of scale must be equal to 1."),
         return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(
-        amaxDimNum != 1, OP_LOGE(context_->GetNodeName(), "input amax dim num should be equal 1"),
+        amaxDimNum != 1,
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            context_->GetNodeName(), "amax",
+            std::to_string(amaxDimNum).c_str(),
+            "The shape dim of amax must be equal to 1."),
         return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(
         xShape != yShape,
-        OP_LOGE(
-            context_->GetNodeName(), "input x %ld and output y %ld shape not same", xShape.GetShapeSize(),
-            yShape.GetShapeSize()),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context_->GetNodeName(), "x, y",
+            (std::to_string(xShape.GetShapeSize()) + ", " + std::to_string(yShape.GetShapeSize())).c_str(),
+            "The shapes of x and y must be the same."),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -251,7 +269,10 @@ ge::graphStatus QuantMaxRegbase::GetOpParam()
 
     int64_t xSizeNum = xInputShape.GetShapeSize();
     if (xSizeNum == 0ULL) {
-        OP_LOGE(context_->GetNodeName(), "ascend_quant does not support empty tensor.");
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+            context_->GetNodeName(), "x",
+            std::to_string(xSizeNum).c_str(),
+            "The shape size of x must be greater than 0.");
         return ge::GRAPH_FAILED;
     }
 
@@ -296,7 +317,11 @@ ge::graphStatus QuantMaxRegbase::CalcPerTensorBlockFactor(int64_t size)
     int64_t shape = xInputShape_.GetDim(FIRST_DIM);
     int64_t dtypeSize = ge::GetSizeByDataType(xDtype_);
     OP_CHECK_IF(
-        (dtypeSize <= 0), OP_LOGE(context_->GetNodeName(), "dtypeSize is invalid: %ld", dtypeSize),
+        (dtypeSize <= 0),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            context_->GetNodeName(), "x",
+            ge::TypeUtils::DataTypeToSerialString(xDtype_).c_str(),
+            "The dtype size of x must be greater than 0."),
         return ge::GRAPH_FAILED);
     blockFactor_ = blockFactor_ * cacheLine_ / dtypeSize;
     blockTailFactor_ = shape - blockFactor_ * (actCoreNum_ - 1);
@@ -323,7 +348,11 @@ ge::graphStatus QuantMaxRegbase::CalcTiling()
     int64_t shape = xInputShape_.GetDim(FIRST_DIM);
     int64_t dtypeSize = ge::GetSizeByDataType(xDtype_);
     OP_CHECK_IF(
-        (dtypeSize <= 0), OP_LOGE(context_->GetNodeName(), "dtypeSize is invalid: %ld", dtypeSize),
+        (dtypeSize <= 0),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            context_->GetNodeName(), "x",
+            ge::TypeUtils::DataTypeToSerialString(xDtype_).c_str(),
+            "The dtype size of x must be greater than 0."),
         return ge::GRAPH_FAILED);
     int64_t cacheLineNum = CeilDiv(shape, cacheLine_ / dtypeSize);
     int64_t actCoreNum = GetCoreNum(cacheLineNum, coreNum_);

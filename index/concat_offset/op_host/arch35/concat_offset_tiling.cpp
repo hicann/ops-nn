@@ -48,8 +48,7 @@ ge::graphStatus ConcatOffsetTiling::GetPlatformInfo()
     ubSize_ = compileInfo->ubSize;
     OP_TILING_CHECK(
         (totalCoreNum_ <= 0 || ubSize_ <= 0),
-        OP_LOGE(
-            context_->GetNodeName(), "ConcatOffset GetCompileInfo Failed, core_num:%ld, ubSize:%ld.", totalCoreNum_, ubSize_),
+        OP_LOGE(context_->GetNodeName(), "core_num and ubSize must be greater than 0"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -63,21 +62,23 @@ ge::graphStatus ConcatOffsetTiling::GetXInfoAndCheck() {
     // xi must be 1D
     size_t x0DimNum = x0TensorShape.GetDimNum();
     if (x0DimNum != 1U) {
-        OP_LOGE(context_->GetNodeName(), "The first tensor in input x must be 1D");
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x[0]", std::to_string(x0DimNum), "1");
         return ge::GRAPH_FAILED;
     }
     // xi shape size must be 1~8
     perTensorShapeSize_ = x0TensorShape.GetDim(0);
     if (perTensorShapeSize_ < DIM1 || perTensorShapeSize_ > DIM8) {
-        OP_LOGE(context_->GetNodeName(), "The shape size of the first tensor in input x must be 1~8");
+        OP_LOGE_FOR_INVALID_SHAPESIZE(context_->GetNodeName(), "x[0]", std::to_string(perTensorShapeSize_), "[1, 8]");
         return ge::GRAPH_FAILED;
     }
     // check dtype
     auto x0Desc = context_->GetDynamicInputDesc(INPUT_X_INDEX, 0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, x0Desc);
     auto x0Dtype = x0Desc->GetDataType();
-    OP_TILING_CHECK(!IsSupportDtype(TENSOR_SUPPORTED_DTYPE, x0Dtype), OP_LOGE(context_->GetNodeName(),
-    "The tensor dtype only support int32 currently, please check."), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(!IsSupportDtype(TENSOR_SUPPORTED_DTYPE, x0Dtype), 
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x", 
+            Ops::Base::ToString(x0Dtype).c_str(), "DT_INT32"), 
+        return ge::GRAPH_FAILED);
     
     // all input tensors dtype and dtype should be equal
     for (int64_t i = 1; i < sizeN_; i++) {
@@ -86,14 +87,21 @@ ge::graphStatus ConcatOffsetTiling::GetXInfoAndCheck() {
         auto xiTensorShape = xiTensorShapePtr->GetStorageShape();
         OP_TILING_CHECK(
             xiTensorShape != x0TensorShape,
-            OP_LOGE(context_->GetNodeName(), "all input x tensor shapes should be equal"),
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), 
+                "x[" + std::to_string(i) + "], x[0]", 
+                (Ops::Base::ToString(xiTensorShape) + ", " + Ops::Base::ToString(x0TensorShape)).c_str(),
+                "The shapes of all input tensors must be the same."),
             return ge::GRAPH_FAILED);
         
         auto xiDesc = context_->GetDynamicInputDesc(INPUT_X_INDEX, i);
         OP_CHECK_NULL_WITH_CONTEXT(context_, xiDesc);
         auto xiDtype = xiDesc->GetDataType();
         OP_TILING_CHECK(
-            x0Dtype != xiDtype, OP_LOGE(context_->GetNodeName(), "all input tensors dtype should be equal"),
+            x0Dtype != xiDtype, 
+            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), 
+                "x[" + std::to_string(i) + "], x[0]", 
+                (Ops::Base::ToString(xiDtype) + ", " + Ops::Base::ToString(x0Dtype)).c_str(),
+                "The dtypes of all input tensors must be the same."),
             return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
@@ -114,7 +122,9 @@ inline ge::graphStatus ConcatOffsetTiling::GetConcatDimInfoAndCheck()
     }
     // concat_dim out of bound
     if (concatDim_ < 0 || concatDim_ >= perTensorShapeSize_) {
-        OP_LOGE(context_->GetNodeName(), "concat_dim (%ld) must be in range rank(xi) (%ld).", concatDim_, perTensorShapeSize_);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "concat_dim", 
+            std::to_string(concatDim_), 
+            "must be in range [0, " + std::to_string(perTensorShapeSize_) + ")");
         return ge::GRAPH_FAILED;
     }
 
@@ -129,7 +139,10 @@ inline ge::graphStatus ConcatOffsetTiling::GetAttrInfoAndCheck() {
     OP_CHECK_NULL_WITH_CONTEXT(context_, anchorInstanceInfo);
     uint32_t inputNum = anchorInstanceInfo->GetInstanceNum();
     OP_TILING_CHECK(
-        inputNum < LEAST_INPUT_NUM, OP_LOGE(context_->GetNodeName(), "The number of input tensors must be greater than or equal to 2."),
+        inputNum < LEAST_INPUT_NUM, 
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "x", 
+            std::to_string(inputNum).c_str(),
+            "The value of x must be greater than or equal to 2."),
         return ge::GRAPH_FAILED);
 
     // get attr N
@@ -139,9 +152,10 @@ inline ge::graphStatus ConcatOffsetTiling::GetAttrInfoAndCheck() {
     sizeN_ = *NPtr;
     OP_TILING_CHECK(
         sizeN_ != static_cast<int64_t>(inputNum),
-        OP_LOGE(
-            context_->GetNodeName(), "attr N:%ld should be same as input x tensor num:%ld", 
-            sizeN_, static_cast<int64_t>(inputNum)),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context_->GetNodeName(), "N", 
+            std::to_string(sizeN_).c_str(),
+            "The value of N must be equal to the input tensor number."),
         return ge::GRAPH_FAILED);
     
     return ge::GRAPH_SUCCESS;

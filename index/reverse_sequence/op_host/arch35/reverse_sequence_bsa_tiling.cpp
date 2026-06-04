@@ -144,7 +144,7 @@ void ReverseSequenceBSATiling::CalcSplitDimS()
         ubFactorS_ = MAX_INPUT_ELEMENTS / inputData_.inputDim[DIM_A];
     }
     if (ubFactorS_ <= 0) {
-        OP_LOGE(context_, "ReverseSequence ubFactorS_ is %ld.", ubFactorS_);
+        OP_LOGE(context_->GetNodeName(), "ReverseSequence ubFactorS_ is %ld.", ubFactorS_);
         return;
     }
     ubFactorB_ = 1;
@@ -163,7 +163,7 @@ void ReverseSequenceBSATiling::CalcSplitDimA()
         ubFactorA_ = MAX_INPUT_ELEMENTS;
     }
     if (ubFactorA_ <= 0) {
-        OP_LOGE(context_, "ReverseSequence ubFactorA_ is %ld.", ubFactorA_);
+        OP_LOGE(context_->GetNodeName(), "ReverseSequence ubFactorA_ is %ld.", ubFactorA_);
         return;
     }
     ubFactorB_ = 1;
