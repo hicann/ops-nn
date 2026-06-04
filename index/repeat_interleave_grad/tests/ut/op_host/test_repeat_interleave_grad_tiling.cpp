@@ -14,7 +14,6 @@
  */
 
 #include <iostream>
-#include <fstream>
 #include <vector>
 #include <gtest/gtest.h>
 #include "log/log.h"
@@ -57,19 +56,14 @@ struct RepeatInterleaveGradCompileInfo {
 static void RunTilingTestInternal(gert::StorageShape input_shape, gert::StorageShape repeats_shape,
                                   gert::StorageShape out_shape, ge::DataType grad_dtype, ge::DataType index_dtype,
                                   int64_t axis, bool is_ascend_c,
-                                  map<string, string> soc_version_infos)
+                                  map<string, string> soc_version_infos,
+                                  ge::graphStatus expect_result = ge::GRAPH_SUCCESS)
 {
-    std::string compile_info_string = R"({
-        "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
-                          "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
-                          "UB_SIZE": 196608, "L2_SIZE": 33554432, "L1_SIZE": 524288,
-                          "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
-                          "CORE_NUM": 40}
-                          })";
-    map<string, string> soc_infos;
-    map<string, string> aicore_spec;
-    map<string, string> intrinsics;
-    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
+    std::string hw_json = R"({"hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
+        "UB_SIZE": 196608, "L2_SIZE": 33554432, "L1_SIZE": 524288, "L0A_SIZE": 65536,
+        "L0B_SIZE": 65536, "L0C_SIZE": 131072, "CORE_NUM": 40}} )";
+    map<string, string> soc_infos, aicore_spec, intrinsics;
+    GetPlatFormInfos(hw_json.c_str(), soc_infos, aicore_spec, intrinsics);
 
     fe::PlatFormInfos platform_info;
     platform_info.Init();
@@ -80,30 +74,31 @@ static void RunTilingTestInternal(gert::StorageShape input_shape, gert::StorageS
     compile_info.vRegSize = 256;
     compile_info.blockSize = 32;
 
-    std::string op_type("RepeatInterleaveGrad");
-    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
-    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
-    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
+    auto op_impl = gert::OpImplRegistry::GetInstance().GetOpImpl("RepeatInterleaveGrad");
+    ASSERT_NE(op_impl, nullptr);
+    auto tiling_func = op_impl->tiling;
+    auto tiling_parse_func = op_impl->tiling_parse;
 
     auto kernel_holder =
         gert::KernelRunContextFaker()
             .KernelIONum(2, 1)
-            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
+            .Inputs({const_cast<char*>(hw_json.c_str()), reinterpret_cast<void*>(&platform_info)})
             .Outputs({&compile_info})
             .Build();
 
-    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
+    auto* parse_ctxt = kernel_holder.GetContext<gert::TilingParseContext>();
+    auto* ppi = parse_ctxt->GetPlatformInfo();
+    ASSERT_TRUE(ppi->Init());
+    ppi->SetPlatformRes("SoCInfo", soc_infos);
+    ppi->SetPlatformRes("AICoreSpec", aicore_spec);
+    ppi->SetCoreNumByCoreType("AICore");
+    ppi->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    ppi->SetPlatformRes("version", soc_version_infos);
 
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
     auto param = gert::TilingData::CreateCap(4096);
-    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
-    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    auto ws_holder = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(ws_holder.get());
     ASSERT_NE(param, nullptr);
     auto holder = gert::TilingContextFaker()
                       .NodeIoNum(2, 1)
@@ -120,30 +115,28 @@ static void RunTilingTestInternal(gert::StorageShape input_shape, gert::StorageS
                       .Workspace(ws_size)
                       .Build();
 
-    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
-    ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
-    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
-    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
-    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    auto* tiling_context = holder.GetContext<gert::TilingContext>();
+    auto* platform = tiling_context->GetPlatformInfo();
+    ASSERT_NE(platform, nullptr);
+    platform->SetPlatformRes("SoCInfo", soc_infos);
+    platform->SetPlatformRes("AICoreSpec", aicore_spec);
+    platform->SetCoreNumByCoreType("AICore");
+    platform->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 
-    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tiling_func(tiling_context), expect_result);
 }
+static const map<string, string> kSoc950 = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
 
-static void RunTilingTest(gert::StorageShape input_shape, gert::StorageShape repeats_shape,
-                          gert::StorageShape out_shape, ge::DataType grad_dtype, ge::DataType index_dtype,
-                          int64_t axis, bool is_ascend_c)
+static void RunTilingTest(gert::StorageShape in, gert::StorageShape rpt, gert::StorageShape out,
+                          ge::DataType gdt, ge::DataType idt, int64_t axis, bool is_ascend_c)
 {
-    RunTilingTestInternal(input_shape, repeats_shape, out_shape, grad_dtype, index_dtype, axis, false, {});
+    RunTilingTestInternal(in, rpt, out, gdt, idt, axis, is_ascend_c, {});
 }
-
-static void RunTilingTest(gert::StorageShape input_shape, gert::StorageShape repeats_shape,
-                          gert::StorageShape out_shape, ge::DataType grad_dtype, ge::DataType index_dtype, int64_t axis)
+static void RunTilingTest(gert::StorageShape in, gert::StorageShape rpt, gert::StorageShape out,
+                          ge::DataType gdt, ge::DataType idt, int64_t axis)
 {
-    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
-    RunTilingTestInternal(input_shape, repeats_shape, out_shape, grad_dtype, index_dtype, axis, true, soc_version_infos);
+    RunTilingTestInternal(in, rpt, out, gdt, idt, axis, true, kSoc950);
 }
-
 
 TEST_F(RepeatInterleaveGradTiling, repeat_interleave_grad_tiling_fp16_int32_axis1)
 {
@@ -216,7 +209,6 @@ TEST_F(RepeatInterleaveGradTiling, repeat_interleave_grad_tiling_fp32_1d_input)
     gert::StorageShape out_shape = {{32}, {32}};
     RunTilingTest(input_shape, repeats_shape, out_shape, ge::DT_FLOAT, ge::DT_FLOAT, 0);
 }
-
 TEST_F(RepeatInterleaveGradTiling, repeat_interleave_grad_tiling_large_shape)
 {
     gert::StorageShape input_shape = {{8, 128, 256}, {8, 128, 256}};
@@ -224,7 +216,6 @@ TEST_F(RepeatInterleaveGradTiling, repeat_interleave_grad_tiling_large_shape)
     gert::StorageShape out_shape = {{8, 64, 256}, {8, 64, 256}};
     RunTilingTest(input_shape, repeats_shape, out_shape, ge::DT_FLOAT, ge::DT_FLOAT, 1);
 }
-
 TEST_F(RepeatInterleaveGradTiling, repeat_interleave_grad_tiling_small_batch)
 {
     gert::StorageShape input_shape = {{1, 16, 8}, {1, 16, 8}};
@@ -263,4 +254,48 @@ TEST_F(RepeatInterleaveGradTiling, repeat_interleave_grad_tiling_low_core_num)
     gert::StorageShape repeats_shape = {{16}, {16}};
     gert::StorageShape out_shape = {{2, 8, 8}, {2, 8, 8}};
     RunTilingTest(input_shape, repeats_shape, out_shape, ge::DT_FLOAT, ge::DT_FLOAT, 1, 4);
+}
+
+// IntRepeat negative tests: validates Tiling4RIGIntRepeat error paths (Ascend950 regbase)
+TEST_F(RepeatInterleaveGradTiling, int_repeat_basic)
+{
+    gert::StorageShape in = {{2, 32, 16}, {2, 32, 16}};
+    gert::StorageShape rpt = {{1}, {1}};
+    gert::StorageShape out = {{2, 16, 16}, {2, 16, 16}};
+    RunTilingTestInternal(in, rpt, out, ge::DT_FLOAT16, ge::DT_INT32, 1, true, kSoc950);
+}
+TEST_F(RepeatInterleaveGradTiling, int_repeat_axis_out_of_range)  // OP_LOGE_FOR_INVALID_VALUE_WITH_REASON("axis")
+{
+    gert::StorageShape in = {{2, 32, 16}, {2, 32, 16}};
+    gert::StorageShape rpt = {{1}, {1}};
+    gert::StorageShape out = {{2, 16, 16}, {2, 16, 16}};
+    RunTilingTestInternal(in, rpt, out, ge::DT_FLOAT16, ge::DT_INT32, 10, true, kSoc950, ge::GRAPH_FAILED);
+}
+TEST_F(RepeatInterleaveGradTiling, int_repeat_ygrad_dim_exceeds_max)  // OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON("y_grad")
+{
+    gert::StorageShape in = {{2, 2, 2, 2, 2, 2, 2, 2, 2, 4}, {2, 2, 2, 2, 2, 2, 2, 2, 2, 4}};
+    gert::StorageShape rpt = {{1}, {1}};
+    gert::StorageShape out = {{2, 2, 2, 2, 2, 2, 2, 2, 2, 2}, {2, 2, 2, 2, 2, 2, 2, 2, 2, 2}};
+    RunTilingTestInternal(in, rpt, out, ge::DT_FLOAT16, ge::DT_INT32, 0, true, kSoc950, ge::GRAPH_FAILED);
+}
+TEST_F(RepeatInterleaveGradTiling, int_repeat_output_shape_zero)  // OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON
+{
+    gert::StorageShape in = {{2, 32, 16}, {2, 32, 16}};
+    gert::StorageShape rpt = {{1}, {1}};
+    gert::StorageShape out = {{0, 16, 16}, {0, 16, 16}};
+    RunTilingTestInternal(in, rpt, out, ge::DT_FLOAT16, ge::DT_INT32, 1, true, kSoc950, ge::GRAPH_FAILED);
+}
+TEST_F(RepeatInterleaveGradTiling, int_repeat_ygrad_not_multiple)  // OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON("y_grad")
+{
+    gert::StorageShape in = {{2, 33, 16}, {2, 33, 16}};
+    gert::StorageShape rpt = {{1}, {1}};
+    gert::StorageShape out = {{2, 16, 16}, {2, 16, 16}};
+    RunTilingTestInternal(in, rpt, out, ge::DT_FLOAT16, ge::DT_INT32, 1, true, kSoc950, ge::GRAPH_FAILED);
+}
+TEST_F(RepeatInterleaveGradTiling, int_repeat_invalid_axis_chained)  // OP_LOGE("GetRIGDim failed")
+{
+    gert::StorageShape in = {{2, 32, 16}, {2, 32, 16}};
+    gert::StorageShape rpt = {{1}, {1}};
+    gert::StorageShape out = {{2, 16, 16}, {2, 16, 16}};
+    RunTilingTestInternal(in, rpt, out, ge::DT_FLOAT16, ge::DT_INT32, 100, true, kSoc950, ge::GRAPH_FAILED);
 }

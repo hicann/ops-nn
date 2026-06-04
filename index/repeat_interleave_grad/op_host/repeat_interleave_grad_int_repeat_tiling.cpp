@@ -57,9 +57,10 @@ static ge::graphStatus convertCompileInfo(
     uint64_t ubSize = static_cast<uint64_t>(compileInfo->ubSize);
     OP_CHECK_IF(
         ubSize <= static_cast<uint64_t>(CACHE_BUF_SIZE),
-        OP_LOGE(
-            context, "ReduceOp GetHardwareInfo Failed, ubSize:%lu, at least:%lu.", ubSize,
-            CACHE_BUF_SIZE),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "ub_size",
+            std::to_string(ubSize).c_str(),
+            ("ubSize is " + std::to_string(ubSize) + " but at least " +
+             std::to_string(CACHE_BUF_SIZE) + " is required").c_str()),
         return ge::GRAPH_FAILED);
     reduceCompileInfo->ubSize = ubSize;
 
@@ -80,9 +81,9 @@ static ge::graphStatus DoTiling(
     }
     OP_CHECK_IF(
         (status == ge::GRAPH_FAILED),
-        OP_LOGE(
-            context,
-            "ReduceOp Tiling failed, dtype shoude be in (int8/uint8/bfloat16/float16/float/int32/int64)"),
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "y_grad",
+            Ops::Base::ToString(opInput.inputDtype).c_str(),
+            "int8, uint8, bfloat16, float16, float, int32 or int64"),
         return ge::GRAPH_FAILED);
 
     // set Tiling data
@@ -107,8 +108,12 @@ static ge::graphStatus GetRIGDim(gert::TilingContext* context, int64_t& axis_, i
         }
         // check dim range
         OP_CHECK_IF(
-            (axis_ < 0 && axis_ >= yDimNum),
-            OP_LOGE(context, "RIG dim out of range"), return ge::GRAPH_FAILED);
+            (axis_ < 0 || axis_ >= yDimNum),
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "axis",
+                std::to_string(axis_).c_str(),
+                ("axis must be in [" + std::to_string(-yDimNum) + ", " +
+                 std::to_string(yDimNum - 1) + "]").c_str()),
+            return ge::GRAPH_FAILED);
     }
 
     return ge::GRAPH_SUCCESS;
@@ -123,13 +128,19 @@ static ge::graphStatus GetRIGRepeat(gert::TilingContext* context, int64_t& repea
     int64_t repeatDimNum = repeatShape.GetDimNum();
 
     OP_CHECK_IF(
-        (repeatDimNum != 1), OP_LOGE(context, "RIG repeat dim num is not 1"),
+        (repeatDimNum != 1),
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context->GetNodeName(), "repeats",
+            std::to_string(repeatDimNum).c_str(),
+            "repeat must be a 1D tensor"),
         return ge::GRAPH_FAILED);
 
     int64_t lenRepeat = repeatShape.GetDim(0);
 
     OP_CHECK_IF(
-        (lenRepeat != 1), OP_LOGE(context, "RIG repeat has more than 1 number"),
+        (lenRepeat != 1),
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "repeats",
+            Ops::Base::ToString(repeatShape).c_str(),
+            "repeats must be a scalar tensor with length 1"),
         return ge::GRAPH_FAILED);
 
     // use input and output shape to get repeat
@@ -140,7 +151,9 @@ static ge::graphStatus GetRIGRepeat(gert::TilingContext* context, int64_t& repea
     int64_t xDimNum = xShape.GetDimNum();
     OP_CHECK_IF(
         xDimNum > MAX_YGRAD_DIM,
-        OP_LOGE(context, "The yGrad Dim should not be greater than 8!"),
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context->GetNodeName(), "y_grad",
+            std::to_string(xDimNum).c_str(),
+            "y_grad dim should not be greater than 8"),
         return ge::GRAPH_FAILED);
 
     auto xShapeSize = xShape.GetShapeSize();
@@ -148,14 +161,20 @@ static ge::graphStatus GetRIGRepeat(gert::TilingContext* context, int64_t& repea
 
     OP_CHECK_IF(
         xShapeSize == 0 || yShapeSize == 0,
-        OP_LOGE(context, "The input or output shape is empty!"),
+        OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(context->GetNodeName(), "y_grad and x_grad",
+            (std::to_string(xShapeSize) + " and " + std::to_string(yShapeSize)).c_str(),
+            "y_grad and x_grad shape must not be empty"),
         return ge::GRAPH_FAILED);
 
     auto remain = xShapeSize % yShapeSize;
     OP_LOGI(context, "xShapeSize:%lu, yShapeSize:%lu", xShapeSize, yShapeSize);
 
     OP_CHECK_IF(
-        (remain > 0), OP_LOGE(context, "y_grad is not multiple of x_grad"),
+        (remain > 0),
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "y_grad",
+            Ops::Base::ToString(xShape).c_str(),
+            ("y_grad shape size " + std::to_string(xShapeSize) +
+             " is not a multiple of x_grad shape size " + std::to_string(yShapeSize)).c_str()),
         return ge::GRAPH_FAILED);
 
     repeat = xShapeSize / yShapeSize;
@@ -201,18 +220,18 @@ static ge::graphStatus GetRIGinputParam(gert::TilingContext* context, ReduceOpIn
     int64_t repeatDim = 0;
     OP_CHECK_IF(
         (GetRIGDim(context, repeatDim, yDimNum) == ge::GRAPH_FAILED),
-        OP_LOGE(context, "RIG get dim failed"), return ge::GRAPH_FAILED);
+        OP_LOGE(context, "GetRIGDim failed for axis"), return ge::GRAPH_FAILED);
 
     int64_t repeat = 0;
     OP_CHECK_IF(
         (GetRIGRepeat(context, repeat, yShape) == ge::GRAPH_FAILED),
-        OP_LOGE(context, "RIG get repeat failed"), return ge::GRAPH_FAILED);
+        OP_LOGE(context, "GetRIGRepeat failed for repeats"), return ge::GRAPH_FAILED);
 
     OP_LOGI(context, "dim:%lu, repeat:%lu", repeatDim, repeat);
 
     OP_CHECK_IF(
         (ReduceOpTmpl::GetInputDtype(context, 0, opInput.inputDtype) == ge::GRAPH_FAILED),
-        OP_LOGE(context, "ReduceOp get x input dtype failed"),
+        OP_LOGE(context, "GetInputDtype failed for y_grad"),
         return ge::GRAPH_FAILED);
 
     MergeAxis(opInput, yShape, repeat, repeatDim);
@@ -227,19 +246,19 @@ ge::graphStatus Tiling4RIGIntRepeat(gert::TilingContext* context, const RepeatIn
     ReduceOpCompileInfo reduceCompileInfo;
     OP_CHECK_IF(
         (convertCompileInfo(compileInfo, &reduceCompileInfo, context) == ge::GRAPH_FAILED),
-        OP_LOGE(context, "convert compile info Failed for Reduce template"),
+        OP_LOGE(context, "convertCompileInfo failed for RepeatInterleaveGrad"),
         return ge::GRAPH_FAILED);
 
     ReduceOpInputParam opInput;
     OP_CHECK_IF(
         (GetRIGinputParam(context, opInput) == ge::GRAPH_FAILED),
-        OP_LOGE(context, "ReduceOp get x input param failed"),
+        OP_LOGE(context, "GetRIGinputParam failed for y_grad"),
         return ge::GRAPH_FAILED);
 
     repeatInterleaveGradTilingKey key;
     OP_CHECK_IF(
         (DoTiling(context, &reduceCompileInfo, opInput, key.ReduceTiling) == ge::GRAPH_FAILED),
-        OP_LOGE(context, "DoTiling Failed for RepeatInterleaveGrad"),
+        OP_LOGE(context, "DoTiling failed for RepeatInterleaveGrad"),
         return ge::GRAPH_FAILED);
 
     key.templateNum = RIG::IS_REDUCE_T;
