@@ -46,8 +46,7 @@ public:
         OpAICoreConfig aicoreConfig;
         aicoreConfig.DynamicCompileStaticFlag(true)
             .DynamicRankSupportFlag(true)
-            .DynamicShapeSupportFlag(true)
-            .ExtendCfgInfo("opFile.value", "nll_loss_apt");
+            .DynamicShapeSupportFlag(true);
         this->AICore().AddConfig("ascend950", aicoreConfig);
     }
 };

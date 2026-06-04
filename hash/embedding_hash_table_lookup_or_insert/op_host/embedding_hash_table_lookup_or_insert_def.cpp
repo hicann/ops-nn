@@ -47,8 +47,7 @@ class EmbeddingHashTableLookupOrInsert : public OpDef {
     aicore_config.DynamicCompileStaticFlag(true)
         .DynamicRankSupportFlag(true)
         .DynamicShapeSupportFlag(true)
-        .NeedCheckSupportFlag(false)
-        .ExtendCfgInfo("opFile.value", "embedding_hash_table_lookup_or_insert");
+        .NeedCheckSupportFlag(false);
     this->AICore().AddConfig("ascend950", aicore_config);
   }
 };

@@ -53,8 +53,7 @@ public:
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
-            .PrecisionReduceFlag(true)
-            .ExtendCfgInfo("opFile.value", "foreach_pow_scalar_apt");
+            .PrecisionReduceFlag(true);
         this->AICore().AddConfig("ascend950", aicoreConfig);
 
         this->AICore().AddConfig("ascend910_93");

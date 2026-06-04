@@ -70,8 +70,7 @@ public:
         config_910d.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(true)
             .DynamicRankSupportFlag(true)
-            .DynamicShapeSupportFlag(true)
-            .ExtendCfgInfo("opFile.value", "foreach_non_finite_check_and_unscale_apt");
+            .DynamicShapeSupportFlag(true);
         this->AICore().AddConfig("ascend950", config_910d);
     }
 

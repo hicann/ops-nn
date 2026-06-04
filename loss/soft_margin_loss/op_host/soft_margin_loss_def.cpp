@@ -38,8 +38,7 @@ public:
         aicoreConfig.DynamicCompileStaticFlag(true)
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
-            .PrecisionReduceFlag(false)
-            .ExtendCfgInfo("opFile.value", "soft_margin_loss_apt");
+            .PrecisionReduceFlag(false);
         this->AICore().AddConfig("ascend950", aicoreConfig);
     }
 };

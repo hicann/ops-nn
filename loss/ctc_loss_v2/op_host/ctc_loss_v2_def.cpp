@@ -71,8 +71,7 @@ class CTCLossV2 : public OpDef {
             OpAICoreConfig aicoreConfig;
             aicoreConfig.DynamicCompileStaticFlag(true)
             .DynamicRankSupportFlag(true)
-            .DynamicShapeSupportFlag(true)
-            .ExtendCfgInfo("opFile.value", "ctc_loss_v2_apt");
+            .DynamicShapeSupportFlag(true);
             this->AICore().AddConfig("ascend950", aicoreConfig);
         }
     };

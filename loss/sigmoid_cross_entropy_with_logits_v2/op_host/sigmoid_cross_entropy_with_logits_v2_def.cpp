@@ -45,8 +45,7 @@ namespace ops {
             aicoreConfig.DynamicCompileStaticFlag(true)
                 .DynamicRankSupportFlag(true)
                 .DynamicShapeSupportFlag(true)
-                .PrecisionReduceFlag(false)
-                .ExtendCfgInfo("opFile.value", "sigmoid_cross_entropy_with_logits_v2_apt");
+                .PrecisionReduceFlag(false);
             this->AICore().AddConfig("ascend950", aicoreConfig);
         }
     };

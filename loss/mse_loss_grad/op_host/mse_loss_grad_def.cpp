@@ -50,8 +50,7 @@ public:
         aicoreConfig.DynamicCompileStaticFlag(true)
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
-            .PrecisionReduceFlag(false)
-            .ExtendCfgInfo("opFile.value", "mse_loss_grad_apt");
+            .PrecisionReduceFlag(false);
         this->AICore().AddConfig("ascend950", aicoreConfig);
     }
 };

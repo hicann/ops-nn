@@ -119,8 +119,7 @@ class EmbeddingHashTableApplyAdamW : public OpDef {
         .DynamicRankSupportFlag(true)
         .DynamicShapeSupportFlag(true)
         .NeedCheckSupportFlag(false)
-        .PrecisionReduceFlag(true)
-        .ExtendCfgInfo("opFile.value", "embedding_hash_table_apply_adam_w");
+        .PrecisionReduceFlag(true);
     this->AICore().AddConfig("ascend950", aicore_config);
   }
 };

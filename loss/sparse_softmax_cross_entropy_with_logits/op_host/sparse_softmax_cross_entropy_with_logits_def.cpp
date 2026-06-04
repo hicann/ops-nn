@@ -39,8 +39,7 @@ namespace ops {
             aicoreConfig.DynamicCompileStaticFlag(true)
                 .DynamicRankSupportFlag(true)
                 .DynamicShapeSupportFlag(true)
-                .PrecisionReduceFlag(false)
-                .ExtendCfgInfo("opFile.value", "sparse_softmax_cross_entropy_with_logits_apt");
+                .PrecisionReduceFlag(false);
             this->AICore().AddConfig("ascend950", aicoreConfig);
         }
     };

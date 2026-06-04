@@ -42,8 +42,7 @@ public:
         aicoreConfig.DynamicCompileStaticFlag(true)
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
-            .PrecisionReduceFlag(false)
-            .ExtendCfgInfo("opFile.value", "lp_loss_apt");
+            .PrecisionReduceFlag(false);
         this->AICore().AddConfig("ascend950", aicoreConfig);
     }
 };

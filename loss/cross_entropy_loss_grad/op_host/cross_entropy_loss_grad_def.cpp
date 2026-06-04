@@ -128,8 +128,7 @@ public:
         .Format(dataFormat);
     aicoreRegbaseConfig.DynamicCompileStaticFlag(true)
         .DynamicRankSupportFlag(true)
-        .DynamicShapeSupportFlag(true)
-        .ExtendCfgInfo("opFile.value", "cross_entropy_loss_grad_apt");
+        .DynamicShapeSupportFlag(true);
     this->AICore().AddConfig("ascend950", aicoreRegbaseConfig);
   }
 };

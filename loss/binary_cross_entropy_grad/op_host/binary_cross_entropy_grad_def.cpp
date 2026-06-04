@@ -58,8 +58,7 @@ class BinaryCrossEntropyGrad : public OpDef {
             aicoreConfig.DynamicCompileStaticFlag(true)
                 .DynamicRankSupportFlag(true)
                 .DynamicShapeSupportFlag(true)
-                .PrecisionReduceFlag(false)
-                .ExtendCfgInfo("opFile.value", "binary_cross_entropy_grad_apt");
+                .PrecisionReduceFlag(false);
             this->AICore().AddConfig("ascend950", aicoreConfig);
         }
 };

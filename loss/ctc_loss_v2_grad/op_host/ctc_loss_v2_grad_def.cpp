@@ -60,8 +60,7 @@ public:
         OpAICoreConfig aicoreConfig;
         aicoreConfig.DynamicCompileStaticFlag(true)
             .DynamicRankSupportFlag(true)
-            .DynamicShapeSupportFlag(true)
-            .ExtendCfgInfo("opFile.value", "ctc_loss_v2_grad_apt");
+            .DynamicShapeSupportFlag(true);
         this->AICore().AddConfig("ascend950", aicoreConfig);
     }
 };
