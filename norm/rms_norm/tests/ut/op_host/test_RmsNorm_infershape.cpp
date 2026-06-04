@@ -91,3 +91,144 @@ TEST_F(RmsNorm, RmsNorm_InferDtype_case_0)
         EXPECT_EQ(context->GetOutputDataType(1), rstd_ref);
     }
 }
+
+TEST_F(RmsNorm, RmsNorm_InferDtype_case_bf16)
+{
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("RmsNorm"), nullptr);
+    auto data_type_func = gert::OpImplRegistry::GetInstance().GetOpImpl("RmsNorm")->infer_datatype;
+
+    if (data_type_func != nullptr) {
+        ge::DataType input_ref = ge::DT_BF16;
+        ge::DataType output_ref = ge::DT_BF16;
+        ge::DataType rstd_ref = ge::DT_FLOAT;
+        auto context_holder = gert::InferDataTypeContextFaker()
+                                  .IrInputNum(2)
+                                  .NodeIoNum(2, 2)
+                                  .NodeInputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(1, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(0, ge::DT_BF16, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .InputDataTypes({&input_ref, &input_ref})
+                                  .OutputDataTypes({&output_ref, &rstd_ref})
+                                  .Build();
+        auto context = context_holder.GetContext<gert::InferDataTypeContext>();
+        EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);
+        ASSERT_NE(context, nullptr);
+
+        EXPECT_EQ(context->GetInputDataType(0), input_ref);
+        EXPECT_EQ(context->GetOutputDataType(0), output_ref);
+        EXPECT_EQ(context->GetOutputDataType(1), rstd_ref);
+    }
+}
+
+TEST_F(RmsNorm, RmsNorm_InferDtype_case_fp32)
+{
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("RmsNorm"), nullptr);
+    auto data_type_func = gert::OpImplRegistry::GetInstance().GetOpImpl("RmsNorm")->infer_datatype;
+
+    if (data_type_func != nullptr) {
+        ge::DataType input_ref = ge::DT_FLOAT;
+        ge::DataType output_ref = ge::DT_FLOAT;
+        ge::DataType rstd_ref = ge::DT_FLOAT;
+        auto context_holder = gert::InferDataTypeContextFaker()
+                                  .IrInputNum(2)
+                                  .NodeIoNum(2, 2)
+                                  .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeInputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                                  .InputDataTypes({&input_ref, &input_ref})
+                                  .OutputDataTypes({&output_ref, &rstd_ref})
+                                  .Build();
+        auto context = context_holder.GetContext<gert::InferDataTypeContext>();
+        EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);
+        ASSERT_NE(context, nullptr);
+
+        EXPECT_EQ(context->GetInputDataType(0), input_ref);
+        EXPECT_EQ(context->GetOutputDataType(0), output_ref);
+        EXPECT_EQ(context->GetOutputDataType(1), rstd_ref);
+    }
+}
+
+TEST_F(RmsNorm, RmsNorm_infershape_case_2d)
+{
+    ge::op::RmsNorm op;
+    op.UpdateInputDesc("x", create_desc({48, 256}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("gamma", create_desc({256}, ge::DT_FLOAT16));
+    EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
+
+    auto output_y_desc = op.GetOutputDesc(0);
+    auto output_rstd_desc = op.GetOutputDesc(1);
+    std::vector<int64_t> expected_y_shape = {48, 256};
+    std::vector<int64_t> expected_rstd_shape = {48, 1};
+    EXPECT_EQ(output_y_desc.GetShape().GetDims(), expected_y_shape);
+    EXPECT_EQ(output_rstd_desc.GetShape().GetDims(), expected_rstd_shape);
+}
+
+TEST_F(RmsNorm, RmsNorm_infershape_case_1d)
+{
+    ge::op::RmsNorm op;
+    op.UpdateInputDesc("x", create_desc({256}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("gamma", create_desc({256}, ge::DT_FLOAT16));
+    EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
+
+    auto output_y_desc = op.GetOutputDesc(0);
+    auto output_rstd_desc = op.GetOutputDesc(1);
+    std::vector<int64_t> expected_y_shape = {256};
+    std::vector<int64_t> expected_rstd_shape = {1};
+    EXPECT_EQ(output_y_desc.GetShape().GetDims(), expected_y_shape);
+    EXPECT_EQ(output_rstd_desc.GetShape().GetDims(), expected_rstd_shape);
+}
+
+TEST_F(RmsNorm, RmsNorm_infershape_case_gamma_dim_gt_x)
+{
+    ge::op::RmsNorm op;
+    op.UpdateInputDesc("x", create_desc({256}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("gamma", create_desc({24, 256}, ge::DT_FLOAT16));
+    EXPECT_EQ(InferShapeTest(op), ge::GRAPH_FAILED);
+}
+
+TEST_F(RmsNorm, RmsNorm_infershape_case_4d)
+{
+    ge::op::RmsNorm op;
+    op.UpdateInputDesc("x", create_desc({2, 3, 4, 8}, ge::DT_FLOAT16));
+    op.UpdateInputDesc("gamma", create_desc({8}, ge::DT_FLOAT16));
+    EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
+
+    auto output_y_desc = op.GetOutputDesc(0);
+    auto output_rstd_desc = op.GetOutputDesc(1);
+    std::vector<int64_t> expected_y_shape = {2, 3, 4, 8};
+    std::vector<int64_t> expected_rstd_shape = {2, 3, 4, 1};
+    EXPECT_EQ(output_y_desc.GetShape().GetDims(), expected_y_shape);
+    EXPECT_EQ(output_rstd_desc.GetShape().GetDims(), expected_rstd_shape);
+}
+
+TEST_F(RmsNorm, RmsNorm_infershape_case_bf16)
+{
+    ge::op::RmsNorm op;
+    op.UpdateInputDesc("x", create_desc({4, 1, 8}, ge::DT_BF16));
+    op.UpdateInputDesc("gamma", create_desc({8}, ge::DT_BF16));
+    EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
+
+    auto output_y_desc = op.GetOutputDesc(0);
+    auto output_rstd_desc = op.GetOutputDesc(1);
+    std::vector<int64_t> expected_y_shape = {4, 1, 8};
+    std::vector<int64_t> expected_rstd_shape = {4, 1, 1};
+    EXPECT_EQ(output_y_desc.GetShape().GetDims(), expected_y_shape);
+    EXPECT_EQ(output_rstd_desc.GetShape().GetDims(), expected_rstd_shape);
+}
+
+TEST_F(RmsNorm, RmsNorm_infershape_case_fp32)
+{
+    ge::op::RmsNorm op;
+    op.UpdateInputDesc("x", create_desc({4, 1, 8}, ge::DT_FLOAT));
+    op.UpdateInputDesc("gamma", create_desc({8}, ge::DT_FLOAT));
+    EXPECT_EQ(InferShapeTest(op), ge::GRAPH_SUCCESS);
+
+    auto output_y_desc = op.GetOutputDesc(0);
+    auto output_rstd_desc = op.GetOutputDesc(1);
+    std::vector<int64_t> expected_y_shape = {4, 1, 8};
+    std::vector<int64_t> expected_rstd_shape = {4, 1, 1};
+    EXPECT_EQ(output_y_desc.GetShape().GetDims(), expected_y_shape);
+    EXPECT_EQ(output_rstd_desc.GetShape().GetDims(), expected_rstd_shape);
+}
