@@ -333,42 +333,42 @@
         # 设置C++编译标准
         add_compile_options(-std=c++11)
         
-		# 设置编译输出目录为当前目录下的bin文件夹
+        # 设置编译输出目录为当前目录下的bin文件夹
         set(CMAKE_RUNTIME_OUTPUT_DIRECTORY  "./bin")
         
-		# 设置调试和发布模式的编译选项
+        # 设置调试和发布模式的编译选项
         set(CMAKE_CXX_FLAGS_DEBUG "-fPIC -O0 -g -Wall")
         set(CMAKE_CXX_FLAGS_RELEASE "-fPIC -O2 -Wall")
         
-		# 添加可执行文件（自定义：替换为实际调用算子的*.cpp文件）
+        # 添加可执行文件（自定义：替换为实际调用算子的*.cpp文件）
         add_executable(${test_aclnn_op_name}
         ${test_aclnn_op_name}.cpp)
         
-		# ASCEND_PATH（如遇CANN包路径有误，请根据实际路径修改）
+        # ASCEND_PATH（如遇CANN包路径有误，请根据实际路径修改）
         if(NOT "$ENV{ASCEND_HOME_PATH}" STREQUAL "")
             set(ASCEND_PATH $ENV{ASCEND_HOME_PATH})
         else()
             set(ASCEND_PATH "/usr/local/Ascend/cann")
         endif()
         
-		# 设置头文件路径
+        # 设置头文件路径
         set(INCLUDE_BASE_DIR "${ASCEND_PATH}/include")
         include_directories(
             ${INCLUDE_BASE_DIR}
             ${ASCEND_PATH}/include/aclnnop
         )
         
-		# 链接所需的动态库（自定义：替换为实际算子可执行文件）
-        target_link_libraries(${op_name}_invocation PRIVATE
+        # 链接所需的动态库（自定义：替换为实际算子可执行文件）
+        target_link_libraries(${test_aclnn_op_name} PRIVATE
             ${ASCEND_PATH}/lib64/libascendcl.so
             ${ASCEND_PATH}/lib64/libnnopbase.so
             ${ASCEND_PATH}/lib64/libopapi_nn.so            # 链接内置算子库文件
         )
         
-		# 安装目标文件到bin目录（自定义：替换为实际算子可执行文件）  
-        install(TARGETS ${op_name}_invocation DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+        # 安装目标文件到bin目录（自定义：替换为实际算子可执行文件）  
+        install(TARGETS ${test_aclnn_op_name} DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
         ```
-    
+
 4. 创建run.sh文件。
 
     在`${test_aclnn_op_name}.cpp`同级目录下创建run.sh文件，以`AddExample`算子为例，示例如下，请根据实际情况自行修改。
@@ -402,7 +402,7 @@
 
     默认在当前执行路径 `/build/bin`下生成可执行文件${test_aclnn_op_name}。运行结果以test_aclnn_add_example为例：
 
-   ```
+   ```text
    mean result[2046] is 2.000000
    mean result[2047] is 2.000000
    ```
@@ -552,6 +552,6 @@
 
     默认在当前执行路径 `/build/bin`下生成可执行文件${test_geir_op_name}，运行结果如下：
 
-    ```
+    ```text
     INFO - [XIR]: Finalize ir graph session success
     ```
