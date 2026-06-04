@@ -59,7 +59,7 @@ ge::graphStatus WeightQuantBatchMatmulV2TilingAS::PostTiling()
 
     OP_TILING_CHECK(
         tilingDataSize_ % sizeof(uint64_t) != 0,
-        VECTOR_INNER_ERR_REPORT_TILIING(opName_, "tiling data size[%zu] not aligned to 8", tilingDataSize_),
+        OP_LOGE(opName_, "tiling data size[%zu] not aligned to 8", tilingDataSize_),
         return ge::GRAPH_FAILED);
 
     context_->GetRawTilingData()->SetDataSize(tilingDataSize_);
@@ -78,13 +78,20 @@ bool WeightQuantBatchMatmulV2TilingAS::IsCapable()
 {
     OP_TILING_CHECK(
         matmulInfoPtr_->antiQuantScaleDtype == ge::DT_UINT64,
-        VECTOR_INNER_ERR_REPORT_TILIING(opName_, "DAV3510 does not support antiQuantScaleDtype is uint64."),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            opName_, "antiQuantScaleDtype",
+            ge::TypeUtils::DataTypeToAscendString(matmulInfoPtr_->antiQuantScaleDtype).GetString(),
+            "The dtype of antiQuantScaleDtype can not be UINT64 on DAV3510"),
         return false);
     OP_TILING_CHECK(
         (matmulInfoPtr_->bDtype == ge::DT_INT4 && matmulInfoPtr_->bFormat == ge::FORMAT_FRACTAL_NZ) &&
             (matmulInfoPtr_->transA || matmulInfoPtr_->transB),
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            opName_, "DAV3510 does not support A16W4 transA or transB when weight's layout is FRACTAL_NZ."),
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(opName_, "transA, transB",
+                                               (std::string(matmulInfoPtr_->transA ? "true" : "false") + ", " +
+                                                std::string(matmulInfoPtr_->transB ? "true" : "false"))
+                                                   .c_str(),
+                                               "When the format of x2 is FRACTAL_NZ and the dtype of x2 is INT4, the "
+                                               "values of transA and transB both must be false on DAV3510"),
         return false);
 
     OP_TILING_CHECK(
@@ -119,12 +126,10 @@ ge::graphStatus WeightQuantBatchMatmulV2TilingAS::InstantiateTilingData()
             return ge::GRAPH_FAILED;
         }
     }
-    OP_TILING_CHECK(
-        tilingData_ == nullptr, VECTOR_INNER_ERR_REPORT_TILIING(opName_, "failed to instantiate tilingData"),
-        return ge::GRAPH_FAILED);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, tilingData_);
     OP_TILING_CHECK(
         context_->GetRawTilingData()->GetCapacity() < tilingDataSize_,
-        VECTOR_INNER_ERR_REPORT_TILIING(
+        OP_LOGE(
             opName_, "tiling data capacity %zu < actual tiling data size %zu",
             context_->GetRawTilingData()->GetCapacity(), tilingDataSize_),
         return ge::GRAPH_FAILED);
@@ -136,7 +141,7 @@ ge::graphStatus WeightQuantBatchMatmulV2TilingAS::DoOpTiling()
 {
     OP_TILING_CHECK(
         InstantiateTilingData() == ge::GRAPH_FAILED,
-        VECTOR_INNER_ERR_REPORT_TILIING(opName_, "unable to get pointer of tiling data"), return ge::GRAPH_FAILED);
+        OP_LOGE(opName_, "unable to get pointer of tiling data"), return ge::GRAPH_FAILED);
     if (compileInfoPtr_->socVersion != SocVersion::ASCEND910_55) {
         // 950上默认给L1的n轴大小为256
         l1NMaxSize_ = 256UL;
@@ -891,9 +896,7 @@ uint64_t WeightQuantBatchMatmulV2TilingAS::GetTilingKey() const
 ge::graphStatus WeightQuantBatchMatmulV2TilingAS::GetWorkspaceSize()
 {
     size_t* workspaces = context_->GetWorkspaceSizes(1);
-    OP_TILING_CHECK(
-        workspaces == nullptr, VECTOR_INNER_ERR_REPORT_TILIING(opName_, "failed to get workspace size"),
-        return ge::GRAPH_FAILED);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
     workspaces[0] = static_cast<size_t>(16 * 1024 * 1024); // asc要求workspace最低需要16 * 1024 * 1024 Byte
     return ge::GRAPH_SUCCESS;
 }

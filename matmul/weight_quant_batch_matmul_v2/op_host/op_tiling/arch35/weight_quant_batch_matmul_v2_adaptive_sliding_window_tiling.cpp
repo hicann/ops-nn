@@ -40,7 +40,7 @@ ge::graphStatus WeightQuantBatchMatmulV2TilingASW::DoOpTiling()
 {
     OP_LOGD(opName_, "DoOpTiling of adaptive sliding window tiling strategy.");
     OP_TILING_CHECK(InstantiateTilingData() == ge::GRAPH_FAILED,
-                    VECTOR_INNER_ERR_REPORT_TILIING(opName_, "unable to get pointer of tiling data"),
+                    OP_LOGE(opName_, "unable to get pointer of tiling data"),
                     return ge::GRAPH_FAILED);
 
     AnalyseSlidingWinInfo();
@@ -63,7 +63,7 @@ ge::graphStatus WeightQuantBatchMatmulV2TilingASW::InstantiateTilingData()
     }
     OP_TILING_CHECK(
         context_->GetRawTilingData()->GetCapacity() < tilingDataSize_,
-        VECTOR_INNER_ERR_REPORT_TILIING(opName_, "tiling data capacity %zu < actual tiling data size %zu",
+        OP_LOGE(opName_, "tiling data capacity %zu < actual tiling data size %zu",
                                         context_->GetRawTilingData()->GetCapacity(), tilingDataSize_),
         return ge::GRAPH_FAILED);
 
@@ -136,8 +136,9 @@ uint64_t WeightQuantBatchMatmulV2TilingASW::GetSizeWithDataType(uint64_t shapeSi
         // 2: 判断是否是偶数
         OP_TILING_CHECK(
             shapeSize % 2 != 0,
-            CUBE_INNER_ERR_REPORT(
-                opName_, "To get size of matrix/array, the number of elements must be even when dtype is FLOAT4/INT4"),
+            OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(opName_, "elements", std::to_string(shapeSize).c_str(),
+                                                      "When the dtype of the input is FLOAT4 or INT4, the shape size "
+                                                      "of the input must be a positive even number"),
             return 0);
         // 1/2: 这几种数据类型的dsize=1/2
         return shapeSize / 2;
@@ -355,7 +356,7 @@ ge::graphStatus WeightQuantBatchMatmulV2TilingASW::DoLibApiTiling()
 ge::graphStatus WeightQuantBatchMatmulV2TilingASW::GetWorkspaceSize()
 {
     size_t *workspaces = context_->GetWorkspaceSizes(1);
-    OP_TILING_CHECK(workspaces == nullptr, VECTOR_INNER_ERR_REPORT_TILIING(opName_, "failed to get workspace size"),
+    OP_TILING_CHECK(workspaces == nullptr, OP_LOGE(opName_, "failed to get workspace size"),
                     return ge::GRAPH_FAILED);
     workspaces[0] = WORKSPACE_SIZE;  // asc要求workspace最低需要16 * 1024 * 1024 Byte
     return ge::GRAPH_SUCCESS;
@@ -366,7 +367,7 @@ ge::graphStatus WeightQuantBatchMatmulV2TilingASW::PostTiling()
     OP_LOGD(opName_, "final tiling data size: %zu", tilingDataSize_);
     OP_TILING_CHECK(
         tilingDataSize_ % sizeof(uint64_t) != 0,
-        CUBE_INNER_ERR_REPORT(opName_, "tiling data size[%zu] is not aligned to 8", tilingDataSize_),
+        OP_LOGE(opName_, "tiling data size[%zu] is not aligned to 8", tilingDataSize_),
         return ge::GRAPH_FAILED);
     errno_t ret = memcpy_s(
         context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),

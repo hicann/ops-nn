@@ -80,7 +80,11 @@ bool WeightQuantBatchMatmulV2RegBase::IsCapable()
 
     OP_TILING_CHECK(
         matmulInfoPtr_->antiQuantScaleDtype == ge::DT_UINT64,
-        VECTOR_INNER_ERR_REPORT_TILIING(opName_, "david do not support antiQuantScaleDtype is uint64."), return false);
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            opName_, "antiQuantScaleDtype",
+            ge::TypeUtils::DataTypeToAscendString(matmulInfoPtr_->antiQuantScaleDtype).GetString(),
+            "The dtype of antiQuantScaleDtype can not be UINT64 in reg_base template"),
+        return false);
     return true;
 }
 
@@ -88,7 +92,7 @@ ge::graphStatus WeightQuantBatchMatmulV2RegBase::DoOpTiling()
 {
     OP_TILING_CHECK(
         InstantiateTilingData() == ge::GRAPH_FAILED,
-        VECTOR_INNER_ERR_REPORT_TILIING(opName_, "unable to get pointer of tiling data"), return ge::GRAPH_FAILED);
+        OP_LOGE(opName_, "unable to get pointer of tiling data"), return ge::GRAPH_FAILED);
 
     tilingData_->kSize = matmulInfoPtr_->kSize;
     tilingData_->nSize = matmulInfoPtr_->nSize;
@@ -114,7 +118,7 @@ ge::graphStatus WeightQuantBatchMatmulV2RegBase::DoOpTiling()
     }
     OP_CHECK_IF(
         !tilingSolver_.GetBasicBlockTiling(),
-        VECTOR_INNER_ERR_REPORT_TILIING(
+        OP_LOGE(
             opName_, "Unable to get matmul tiling for mnk[%lu, %lu, %lu]", matmulInfoPtr_->mSize, matmulInfoPtr_->nSize,
             matmulInfoPtr_->kSize),
         return ge::GRAPH_FAILED);
@@ -166,7 +170,7 @@ ge::graphStatus WeightQuantBatchMatmulV2RegBase::PostTiling()
 
     OP_TILING_CHECK(
         tilingDataSize_ % sizeof(uint64_t) != 0,
-        VECTOR_INNER_ERR_REPORT_TILIING(opName_, "tiling data size[%zu] not aligned to 8", tilingDataSize_),
+        OP_LOGE(opName_, "tiling data size[%zu] not aligned to 8", tilingDataSize_),
         return ge::GRAPH_FAILED);
     context_->GetRawTilingData()->SetDataSize(tilingDataSize_);
     context_->SetBlockDim(tilingData_->cubeNumBlocksM * tilingData_->cubeNumBlocksN);
@@ -254,12 +258,10 @@ ge::graphStatus WeightQuantBatchMatmulV2RegBase::InstantiateTilingData()
         tilingData_ = std::unique_ptr<wqbmmv2_tiling::WeightQuantBatchMatmulV2RegBaseTilingDataParams>(
             new (std::nothrow) wqbmmv2_tiling::WeightQuantBatchMatmulV2RegBaseTilingDataParams());
     }
-    OP_TILING_CHECK(
-        tilingData_ == nullptr, VECTOR_INNER_ERR_REPORT_TILIING(opName_, "failed to instantiate tilingData"),
-        return ge::GRAPH_FAILED);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, tilingData_);
     OP_TILING_CHECK(
         context_->GetRawTilingData()->GetCapacity() < tilingDataSize_,
-        VECTOR_INNER_ERR_REPORT_TILIING(
+        OP_LOGE(
             opName_, "tiling data capacity %zu < actual tiling data size %zu",
             context_->GetRawTilingData()->GetCapacity(), tilingDataSize_),
         return ge::GRAPH_FAILED);

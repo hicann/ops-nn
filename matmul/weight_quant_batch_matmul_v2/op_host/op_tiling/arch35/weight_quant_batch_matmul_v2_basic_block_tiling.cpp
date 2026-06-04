@@ -182,28 +182,30 @@ bool WeightQuantBatchMatmulV2BasicBlockTiling::ValidateInputParam() const
 {
     OP_TILING_CHECK(
         basicBlockParam_.mSize <= 0 || basicBlockParam_.nSize <= 0 || basicBlockParam_.kSize <= 0,
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            opName_, "Invalid param, shape size must greater than 0, mSize: %ld, nSize: %ld, kSize: %ld",
-            basicBlockParam_.mSize, basicBlockParam_.nSize, basicBlockParam_.kSize),
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            opName_, "mSize, nSize, kSize",
+            (std::to_string(basicBlockParam_.mSize) + ", " + std::to_string(basicBlockParam_.nSize) + ", " +
+             std::to_string(basicBlockParam_.kSize)).c_str(),
+            "The values of mSize, nSize, kSize must be greater than 0"),
         return false);
 
     OP_TILING_CHECK(
         basicBlockParam_.aDtypeBits <= 0 || basicBlockParam_.bDtypeBits <= 0 ||
             (basicBlockParam_.hasBias && basicBlockParam_.biasDtypeBits <= 0) ||
             (!basicBlockParam_.hasBias && basicBlockParam_.biasDtypeBits > 0),
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            opName_,
-            "Invalid param, dtypeBits must be greater than 0, aDtypeBits: %ld, bDtypeBits: %ld, biasDtypeBits: %ld",
-            basicBlockParam_.aDtypeBits, basicBlockParam_.bDtypeBits, basicBlockParam_.biasDtypeBits),
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            opName_, "aDtypeBits, bDtypeBits, biasDtypeBits",
+            (std::to_string(basicBlockParam_.aDtypeBits) + ", " + std::to_string(basicBlockParam_.bDtypeBits) + ", " +
+             std::to_string(basicBlockParam_.biasDtypeBits)).c_str(),
+            std::string("The dtype bits of aDtypeBits, bDtypeBits, biasDtypeBits must be greater than 0, and biasDtypeBits must ") +
+            "match the hasBias flag"),
         return false);
 
     OP_TILING_CHECK(
         basicBlockParam_.groupSize < 0 || basicBlockParam_.groupSize >= basicBlockParam_.kSize,
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            opName_,
-            "Invalid param, groupSize must be greater than or equalt to 0, and "
-            "groupSize must be less than K. Actual groupSize: %ld, K: %ld",
-            basicBlockParam_.groupSize, basicBlockParam_.kSize),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            opName_, "groupSize", std::to_string(basicBlockParam_.groupSize).c_str(),
+            "The value of groupSize must be >= 0 and < kSize"),
         return false);
 
     return true;
@@ -821,14 +823,14 @@ bool WeightQuantBatchMatmulV2BasicBlockTiling::ValidateTilingResult() const
 {
     OP_TILING_CHECK(
         basicBlockParam_.mDim * basicBlockParam_.nDim * basicBlockParam_.kDim > platformParam_.blockNum,
-        VECTOR_INNER_ERR_REPORT_TILIING(
+        OP_LOGE(
             opName_, "Invalid block dim, mDim: %ld, nDim: %ld, kDim: %ld, maxDimNum: %ld", basicBlockParam_.mDim,
             basicBlockParam_.nDim, basicBlockParam_.kDim, platformParam_.blockNum),
         return false);
 
     OP_TILING_CHECK(
         GetL1LoadSize(basicBlockParam_.basicBlock, basicBlockParam_.l1Param) > platformParam_.l1Size,
-        VECTOR_INNER_ERR_REPORT_TILIING(
+        OP_LOGE(
             opName_, "The load size exceeds L1 buffer limit, load size: %ld, L1 buffer size: %ld",
             GetL1LoadSize(basicBlockParam_.basicBlock, basicBlockParam_.l1Param), platformParam_.l1Size),
         return false);
@@ -840,7 +842,7 @@ bool WeightQuantBatchMatmulV2BasicBlockTiling::ValidateTilingResult() const
 
     OP_TILING_CHECK(
         a2Size > platformParam_.l0aSize || b2Size > platformParam_.l0bSize || a2Size == 0 || b2Size == 0,
-        VECTOR_INNER_ERR_REPORT_TILIING(
+        OP_LOGE(
             opName_,
             "The load size may exceed L0 buffer limit, L0A load size: %ld, L0B load size: %ld, L0 buffer size: %ld",
             a2Size, b2Size, platformParam_.l0aSize),
@@ -852,7 +854,7 @@ bool WeightQuantBatchMatmulV2BasicBlockTiling::ValidateTilingResult() const
         (basicBlockParam_.l1Param.stepKa < stepKMax && basicBlockParam_.l1Param.stepKb < stepKMax) &&
             (basicBlockParam_.l1Param.stepKa % basicBlockParam_.l1Param.stepKb > 0 &&
              basicBlockParam_.l1Param.stepKb % basicBlockParam_.l1Param.stepKa > 0),
-        VECTOR_INNER_ERR_REPORT_TILIING(
+        OP_LOGE(
             opName_, "Invalid stepK, stepKa (%ld) should be divisible by stepKb (%ld) or otherwise",
             basicBlockParam_.l1Param.stepKa, basicBlockParam_.l1Param.stepKb),
         return false);
@@ -937,8 +939,7 @@ bool WeightQuantBatchMatmulV2BasicBlockTiling::GetDefaultBasicBlockTiling()
  */
 bool WeightQuantBatchMatmulV2BasicBlockTiling::GetBasicBlockTiling()
 {
-    OP_TILING_CHECK(
-        !ValidateInputParam(), VECTOR_INNER_ERR_REPORT_TILIING(opName_, "Invalid input param"), return false);
+    OP_TILING_CHECK(!ValidateInputParam(), OP_LOGE(opName_, "Invalid input param"), return false);
 
     Reset();
     std::unique_ptr<WeightQuantBatchMatmulV2BasicBlockTable> basicBlockTablePtr =

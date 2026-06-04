@@ -37,7 +37,7 @@ ge::graphStatus WeightQuantBatchMatmulV2IterbatchTiling::DoOpTiling()
 {
     OP_LOGD(opName_, "DoOpTiling of iterate batch tiling strategy.");
     OP_TILING_CHECK(InstantiateTilingData() == ge::GRAPH_FAILED,
-                    VECTOR_INNER_ERR_REPORT_TILIING(opName_, "unable to get pointer of tiling data"),
+                    OP_LOGE(opName_, "unable to get pointer of tiling data"),
                     return ge::GRAPH_FAILED);
 
     CalL1Tiling();
