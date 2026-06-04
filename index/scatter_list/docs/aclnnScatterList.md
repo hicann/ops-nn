@@ -29,11 +29,11 @@
 
 ```Cpp
 aclnnStatus aclnnScatterListGetWorkspaceSize(
-  aclTensorList*       var,
-  const aclTensor*     indices,
+  aclTensorList*       varRef,
+  const aclTensor*     indice,
   const aclTensor*     updates,
-  const aclTensor*     mask,
-  char*                reduce,
+  const aclTensor*     maskOptional,
+  char*                reduceOptional,
   int64_t              axis,
   uint64_t*            workspaceSize,
   aclOpExecutor**      executor)
@@ -74,7 +74,7 @@ aclnnStatus aclnnScatterList(
     </tr></thead>
   <tbody>
     <tr>
-      <td>var（aclTensorList*）</td>
+      <td>varRef（aclTensorList*）</td>
       <td>输入/输出</td>
       <td>待被更新的张量列表。</td>
       <td>张量列表中的各tensor的shape与updates满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。<br>各tensor的数据类型需与updates数据类型相同。</td>
@@ -84,7 +84,7 @@ aclnnStatus aclnnScatterList(
       <td>√</td>
     </tr>
     <tr>
-      <td>indices（aclTensor*）</td>
+      <td>indice（aclTensor*）</td>
       <td>输入</td>
       <td>索引张量。</td>
       <td>-</td>
@@ -104,7 +104,7 @@ aclnnStatus aclnnScatterList(
       <td>√</td>
     </tr>
     <tr>
-      <td>mask（aclTensor*）</td>
+      <td>maskOptional（aclTensor*）</td>
       <td>可选参数</td>
       <td>掩码张量。</td>
       <td>-</td>
@@ -114,7 +114,7 @@ aclnnStatus aclnnScatterList(
       <td>√</td>
     </tr>
     <tr>
-      <td>reduce（const char*）</td>
+      <td>reduceOptional（char*）</td>
       <td>属性</td>
       <td>应用的reduction操作类型。</td>
       <td>当前仅支持"update"。</td>
@@ -183,16 +183,16 @@ aclnnStatus aclnnScatterList(
     <tr>
       <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="4">161002</td>
-      <td>var中tensor的数据类型不在支持的范围之内。</td>
+      <td>varRef中tensor的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td>indices的数据类型不在支持的范围之内。</td>
+      <td>indice的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td>reduce参数不在支持的范围之内。</td>
+      <td>reduceOptional参数不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td>var中tensor与updates的数据类型不一致。</td>
+      <td>varRef中tensor与updates的数据类型不一致。</td>
     </tr>
   </tbody></table>
 
