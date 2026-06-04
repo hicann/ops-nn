@@ -24,10 +24,13 @@
 #include "mat_mul_unaligned_deterministic_splitk_kernel.h"
 #include "mat_mul_unaligned_sc_splitk_kernel.h"
 #include "mat_mul_unaligned_sc_splitk_kernel_gm_to_l1.h"
-#include "mat_mul_optimized_fixpipe_algorithm.h"
 #include "mat_mul_l1_full_load.h"
 #include "mat_mul_v3_tiling_key.h"
 
+#if defined(__CCE_AICORE__) && __CCE_AICORE__ >= 220
+#include "mat_mul_base_kernel_vec_nz2nd.h"
+#include "mat_mul_optimized_fixpipe_algorithm.h"
+#endif
 
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
 #include "mat_mul_multi_core_splitk_kernel.h"
@@ -205,6 +208,12 @@ __global__ __aicore__ void mat_mul_v3(
         FIXOPTI == MAT_MUL_V3_BASE_FIXOPTI && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_FALSE) { 
         MMV3_IMPL_CLASS( 
             MatmulBaseKernel, format_x1, MatmulBaseBlock, MM_CFG_NO_PRELOAD 
+        );
+    } else if constexpr (
+        LOADMODE == MAT_MUL_V3_BASE_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_BASE_SPLIT_K &&
+        FIXOPTI == MAT_MUL_V3_VEC_NZ2ND_UNALIGNOUT && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_FALSE) {
+        MMV3_IMPL_C_CLASS( 
+            MatmulBaseVectorNz2NdKernel, format_x1, CubeFormat::NZ, MatmulBaseBlock, MM_CFG_NO_PRELOAD
         );
     }
 #else

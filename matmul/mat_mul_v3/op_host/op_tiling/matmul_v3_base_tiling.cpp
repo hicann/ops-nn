@@ -631,6 +631,22 @@ void MatmulV3BaseTiling::CalL1Tiling()
     runInfo_.singleCoreN = runInfo_.baseN;
     return;
 }
+bool MatmulV3BaseTiling::CheckNzNzNdSupport() {
+    bool isDAV2201 = (compileInfo_.npuArch == NpuArch::DAV_2201);
+    if (isDAV2201 &&
+        (args_.aFormat == ge::FORMAT_FRACTAL_NZ) &&
+        (args_.bFormat == ge::FORMAT_FRACTAL_NZ) &&
+        (args_.outFormat == ge::FORMAT_ND) &&
+        (args_.nValue % BASIC_ALIGN_256 != 0)) {
+        return true;
+    }
+    return false;
+}
+void MatmulV3BaseTiling::DoNzNzNdVectorTiling() {
+    if (CheckNzNzNdSupport()) {
+        tilingEnable_.tilingEnableFixOpti = TilingEnableFixOpti::VEC_NZ2ND_UNALIGNOUT;
+    }
+}
 
 void MatmulV3BaseTiling::DoBasicTiling()
 {
@@ -673,6 +689,7 @@ void MatmulV3BaseTiling::DoBasicTiling()
     DoSelectTiling();
     // add nd2nz tiling here
     DoNd2NzVectorTiling();
+    DoNzNzNdVectorTiling();
     if (args_.hasBias) {
       runInfo_.baseN = std::min(256UL, runInfo_.baseN);  // 有bias时 baseN 小于256
       if (tilingEnable_.tilingEnableSplitCore == TilingEnableSplitCore::BASE &&
@@ -2765,6 +2782,18 @@ uint64_t MatmulV3BaseTiling::GetDeterministicSplitKWorkspaceSize(uint64_t aligne
            RPC_WORKSIZE * MB_SIZE;
 }
 
+void MatmulV3BaseTiling::GetVecNz2ndUnAlignedOutWorkspaceSize()
+{
+    if(CheckNzNzNdSupport())
+    {
+        workspaceSize_ += tilingData_.matmulTiling.baseN * tilingData_.matmulTiling.baseM *
+            tilingData_.matmulTiling.usedCoreNum * NUMBER_TWO * cDtypeSize_;
+    }else{
+        workspaceSize_ += ops::CeilAlign(args_.nValue, N_ALIGNED) * tilingData_.matmulTiling.baseM *
+            tilingData_.matmulTiling.usedCoreNum * NUMBER_TWO * cDtypeSize_;
+    }
+}
+
 ge::graphStatus MatmulV3BaseTiling::GetWorkspaceSize()
 {
     uint64_t align256Byte = 256 / aDtypeSize_;  // 256B 对齐shape
@@ -2789,9 +2818,9 @@ ge::graphStatus MatmulV3BaseTiling::GetWorkspaceSize()
            tilingData_.matmulTiling.usedCoreNum * NUMBER_TWO * cDtypeSize_;
     }
     if (tilingEnable_.tilingEnableFixOpti == TilingEnableFixOpti::VEC_NZ2ND_UNALIGNOUT) {
-        workspaceSize_ += ops::CeilAlign(args_.nValue, N_ALIGNED) * tilingData_.matmulTiling.baseM *
-           tilingData_.matmulTiling.usedCoreNum * NUMBER_TWO * cDtypeSize_;
+        GetVecNz2ndUnAlignedOutWorkspaceSize();
     }
+        
     if (!compileInfo_.supportL0c2out) {
         return ge::GRAPH_SUCCESS;
     }
