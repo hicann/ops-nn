@@ -43,7 +43,7 @@ ge::graphStatus Conv3dBaseTilingV2::ParseFmapShape()
 ge::graphStatus Conv3dBaseTilingV2::ParseWeightShape()
 {
     auto weightShapePtr = context_->GetInputShape(INPUT_WEIGHT_INDEX);
-    auto weightShape = weightShapePtr->GetStorageShape();
+    auto weightShape = GetWeightShape(weightShapePtr);
     if (weightShape.GetDimNum() != CONV3D_DIM_SIZE_LIMIT) {
         OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeType(), "filter",
             std::to_string(weightShape.GetDimNum()).c_str(),
@@ -143,6 +143,46 @@ ge::graphStatus Conv3dBaseTilingV2::CheckWeightShape()
                 paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_N_IDX], 1, MAX_COUT_BF16_SHAPE).c_str());
         return ge::GRAPH_FAILED;
     }
+    if (IsWeightNZFormat(descInfo_.weightFormat)) {
+        auto ret = CheckWeightNZFormatShape();
+        if (ret != ge::GRAPH_SUCCESS) {
+            return ret;
+        }
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus Conv3dBaseTilingV2::CheckWeightNZFormatShape()
+{
+    auto weightStorageShape = context_->GetInputShape(INPUT_WEIGHT_INDEX)->GetStorageShape();
+    auto storageDimNum = weightStorageShape.GetDimNum();
+    if (storageDimNum != FORMAT_FRACTAL_3D_DIM) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeType(), "filter",
+            std::to_string(storageDimNum).c_str(),
+            std::to_string(FORMAT_FRACTAL_3D_DIM).c_str());
+        return ge::GRAPH_FAILED;
+    }
+    auto c0 = static_cast<int64_t>(CUBE_MKN_MAP.GetMKN(dtypeMap.at(descInfo_.weightDtype), MKN_K_IDX));
+    auto n0 = static_cast<int64_t>(CUBE_MKN_MAP.GetMKN(dtypeMap.at(descInfo_.weightDtype), MKN_N_IDX));
+    if (c0 == 0 || n0 == 0) {
+        OP_LOGE(context_->GetNodeName(), "%s AscendC: Get c0 or n0 = 0.", paramInfo_.nodeType.c_str());
+        return ge::GRAPH_FAILED;
+    }
+    int64_t n1 = (oriShapeAttrInfo_.oriWeightN + n0 - 1) / n0;
+    int64_t dc1hw = oriShapeAttrInfo_.oriWeightD *
+                    ((oriShapeAttrInfo_.oriWeightC + c0 - 1) / c0) *
+                    oriShapeAttrInfo_.oriWeightH *
+                    oriShapeAttrInfo_.oriWeightW;
+    if (weightStorageShape.GetDim(FORMAT_FRACTAL_3D_DKCIN1KHKW_INDEX) != dc1hw ||
+        weightStorageShape.GetDim(FORMAT_FRACTAL_3D_N1_INDEX) != n1 ||
+        weightStorageShape.GetDim(FORMAT_FRACTAL_3D_N0_INDEX) != n0 ||
+        weightStorageShape.GetDim(FORMAT_FRACTAL_3D_C0_INDEX) != c0) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeType(), "filter",
+            VectorToString(GetInputShapeVec(context_, INPUT_WEIGHT_INDEX), IntToString<int64_t>).c_str(),
+            FormatString("FRACTAL_Z_3D storage shape must correspond with origin shape, "
+                "expected [%ld, %ld, %ld, %ld]", dc1hw, n1, n0, c0).c_str());
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -188,7 +228,8 @@ ge::graphStatus Conv3dBaseTilingV2::ParseBiasShape()
     if (biasDimNum == CONV3D_DIM_SIZE_LIMIT && !GetPosByFormat(biasFormat, "C", "Bias", idxC)) {
         return ge::GRAPH_FAILED;
     }
-    auto weightShape = context_->GetInputShape(INPUT_WEIGHT_INDEX)->GetStorageShape();
+    auto weightShapePtr = context_->GetInputShape(INPUT_WEIGHT_INDEX);
+    auto weightShape = GetWeightShape(weightShapePtr);
     size_t weightIdx = paramInfo_.paramsIdxVec[paramInfo_.WEIGHT_PARAM_IDX][IDX_LIST_N_IDX];
     for (size_t i = 0; i < biasDimNum; i++) {
         if (i == idxC) {
@@ -239,10 +280,11 @@ ge::graphStatus Conv3dBaseTilingV2::CheckOutputShape()
 ge::graphStatus Conv3dBaseTilingV2::CheckInputDesc()
 {
     bool isConv3dDequantFormatLegal = descInfo_.fMapFormat == ge::FORMAT_NCDHW &&
-                                        descInfo_.weightFormat == ge::FORMAT_NCDHW &&
-                                        descInfo_.outFormat == ge::FORMAT_NDHWC;
+                                     (descInfo_.weightFormat == ge::FORMAT_NCDHW ||
+                                      descInfo_.weightFormat == ge::FORMAT_FRACTAL_Z_3D) &&
+                                      descInfo_.outFormat == ge::FORMAT_NDHWC;
     std::stringstream ss;
-    ss << "[NCDHW, NCDHW, NDHWC]";
+    ss << "[[NCDHW, NCDHW, NDHWC], [NCDHW, FRACTAL_Z_3D, NDHWC]]";
     if (flagInfo_.isConv3dDequant && !isConv3dDequantFormatLegal) {
         string incorrectFormats = formatToStrTab.at(descInfo_.fMapFormat) + ", " +
                                   formatToStrTab.at(descInfo_.weightFormat) + ", " +

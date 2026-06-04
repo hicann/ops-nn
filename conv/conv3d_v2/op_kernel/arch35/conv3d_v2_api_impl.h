@@ -76,9 +76,11 @@ public:
             ConvParam::outputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE),
             ConvFunc::CopyOutToolsMMode<Intf, typename Intf::OutputT>,
             ConvFunc::CopyOutToolsHWMode<Intf, typename Intf::OutputT>>::type;
+        using LoadBL1Tools = typename Conditional<
+            Config::WEIGHT_NZ_FLAG, ConvFunc::LoadBL1FZTools<Intf>, Conv3dFunc::LoadBL1Tools<Intf>>::type;
 
         LoadAL1Tools loadAl1Ins;
-        Conv3dFunc::LoadBL1Tools<Intf> loadBL1Ins;
+        LoadBL1Tools loadBL1Ins;
         ConvFunc::LoadChannelWiseL1Tools<Intf, typename Config::BiasT> loadBiasL1Ins;
         ConvFunc::LoadChannelWiseL1Tools<Intf, typename Config::ScaleT> loadScaleL1Ins;
         LoadAL0Tools loadAL0Ins;

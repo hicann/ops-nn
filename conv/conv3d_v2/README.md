@@ -292,7 +292,7 @@
   <td style="text-align:center">BFLOAT16</td>
   </tr>
   <tr>
-  <td rowspan="3" style="text-align:center">数据格式</td>
+  <td rowspan="4" style="text-align:center">数据格式</td>
   <td style="text-align:center">NCDHW</td>
   <td style="text-align:center">NCDHW</td>
   <td style="text-align:center">ND</td>
@@ -309,6 +309,13 @@
   <tr>
   <td style="text-align:center">NCDHW</td>
   <td style="text-align:center">NCDHW</td>
+  <td style="text-align:center">ND</td>
+  <td style="text-align:center">ND</td>
+  <td style="text-align:center">NDHWC</td>
+  </tr>
+  <tr>
+  <td style="text-align:center">NCDHW</td>
+  <td style="text-align:center">FRACTAL_Z_3D</td>
   <td style="text-align:center">ND</td>
   <td style="text-align:center">ND</td>
   <td style="text-align:center">NDHWC</td>

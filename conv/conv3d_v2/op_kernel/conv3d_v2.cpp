@@ -50,6 +50,14 @@ constexpr ConvFormat filterFormat = ConvFormat::DHWCN;
 constexpr ConvFormat outputFormat = ConvFormat::NDHWC;
 #endif
 
+#if defined(FORMAT_X) && FORMAT_X == FORMAT_NCDHW && \
+    defined(FORMAT_FILTER) && FORMAT_FILTER == FORMAT_FRACTAL_Z_3D && \
+    defined(FORMAT_Y) && FORMAT_Y == FORMAT_NDHWC
+constexpr ConvFormat fmapFormat   = ConvFormat::NCDHW;
+constexpr ConvFormat filterFormat = ConvFormat::FRACTAL_Z_3D;
+constexpr ConvFormat outputFormat = ConvFormat::NDHWC;
+#endif
+
 #else
 
 #if defined(FORMAT_X) && FORMAT_X == FORMAT_NCDHW && defined(FORMAT_FILTER) && FORMAT_FILTER == FORMAT_NCDHW && \

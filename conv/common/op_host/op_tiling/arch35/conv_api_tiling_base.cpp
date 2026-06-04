@@ -79,7 +79,8 @@ int64_t ConvTilingBase::CheckTilingRes()
 uint32_t ConvTilingBase::GetBandWidthCof() const
 {
     if (descInfo.weightType.format == ConvFormat::FRACTAL_Z ||
-        descInfo.weightType.format == ConvFormat::FRACTAL_Z_C04) {
+        descInfo.weightType.format == ConvFormat::FRACTAL_Z_C04 ||
+        descInfo.weightType.format == ConvFormat::FRACTAL_Z_3D) {
         return 1;
     }
 

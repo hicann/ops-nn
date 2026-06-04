@@ -21,7 +21,7 @@
     #include "conv2d_v2_instr_c04_impl.h"
     #include "conv2d_v2_instr_dma_impl.h"
     #include "conv2d_v2_instr_weight_ub_trans_impl.h"
-    #include "conv2d_v2_instr_fz_impl.h"
+    #include "../../common/arch35/conv_instr_fz_impl.h"
 #endif
 
 #endif // CONV2D_V2_INSTR_H

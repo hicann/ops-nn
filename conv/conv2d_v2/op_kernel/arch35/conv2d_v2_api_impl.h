@@ -81,7 +81,7 @@ public:
             ConvFunc::CopyOutToolsMMode<Intf, typename Intf::Output1T, 1>,
             ConvFunc::CopyOutToolsHWMode<Intf, typename Intf::Output1T, 1>>::type;
         using LoadBL1Tools = typename Conditional<
-            Config::WEIGHT_NZ_FLAG, Conv2dFunc::LoadBL1FZTools<Intf>, Conv2dFunc::LoadBL1Tools<Intf>>::type;
+            Config::WEIGHT_NZ_FLAG, ConvFunc::LoadBL1FZTools<Intf>, Conv2dFunc::LoadBL1Tools<Intf>>::type;
 
         LoadAL1Tools loadAl1Ins;
         LoadBL1Tools loadBL1Ins;

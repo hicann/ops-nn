@@ -93,7 +93,8 @@ int64_t ConvComputeDo(int64_t di, int64_t dk, int64_t padHead, int64_t padTail, 
 
 bool IsWeightNZFormat(ge::Format weightFormat)
 {
-    return weightFormat == ge::Format::FORMAT_FRACTAL_Z || weightFormat == ge::Format::FORMAT_FRACTAL_Z_C04;
+    return weightFormat == ge::Format::FORMAT_FRACTAL_Z || weightFormat == ge::Format::FORMAT_FRACTAL_Z_C04 ||
+           weightFormat == ge::Format::FORMAT_FRACTAL_Z_3D;
 }
 
 ge::graphStatus ConvBaseDeci::GetNumBlocksInfo(ConvAscendcTilingInfo& tilingInfo)

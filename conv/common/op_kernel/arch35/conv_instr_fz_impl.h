@@ -9,17 +9,17 @@
  */
 
 /*!
- * \file conv2d_v2_instr_fz_impl.h
- * \brief
+ * \file conv_instr_fz_impl.h
+ * \brief LoadBL1FZTools for FRACTAL_Z / FRACTAL_Z_C04 / FRACTAL_Z_3D weight formats
  */
 
-#ifndef CONV2D_V2_INSTR_FZ_IMPL_H
-#define CONV2D_V2_INSTR_FZ_IMPL_H
+#ifndef CONV_INSTR_FZ_IMPL_H
+#define CONV_INSTR_FZ_IMPL_H
 
-#include "conv2d_v2_config.h"
-#include "conv2d_v2_util.h"
+#include "conv_config.h"
+#include "conv_util.h"
 
-namespace Conv2dFunc {
+namespace ConvFunc {
 using namespace AscendC;
 using namespace conv;
 
@@ -88,6 +88,6 @@ private:
     uint32_t orgCoAlignN0 = 0;
 };
 
-};
+} // namespace ConvFunc
 
-#endif // CONV2D_V2_INSTR_IMPL_H
+#endif // CONV_INSTR_FZ_IMPL_H

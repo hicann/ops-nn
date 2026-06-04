@@ -247,7 +247,8 @@ __aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::
     if constexpr (CONV::A_FORMAT == ConvFormat::NCDHW) {
         fmStartAddr += diIdxStart * hwIn;
     }
-    if constexpr (CONV::B_FORMAT == ConvFormat::FRACTAL_Z || CONV::B_FORMAT == ConvFormat::FRACTAL_Z_C04) {
+    if constexpr (CONV::B_FORMAT == ConvFormat::FRACTAL_Z || CONV::B_FORMAT == ConvFormat::FRACTAL_Z_C04 ||
+                  CONV::B_FORMAT == ConvFormat::FRACTAL_Z_3D) {
         weightStartAddr = convOps->nIdxStart * convOps->k0;
     } else {
         weightStartAddr = convOps->nIdxStart * convTilingData->cin * kd * convTilingData->kh * convTilingData->kw;
@@ -297,7 +298,8 @@ __aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::
         convOps->singleCoreWiStartPos = wiStartPosTmp;
     }
 
-    if constexpr (CONV::B_FORMAT == ConvFormat::FRACTAL_Z || CONV::B_FORMAT == ConvFormat::FRACTAL_Z_C04) {
+    if constexpr (CONV::B_FORMAT == ConvFormat::FRACTAL_Z || CONV::B_FORMAT == ConvFormat::FRACTAL_Z_C04 ||
+                  CONV::B_FORMAT == ConvFormat::FRACTAL_Z_3D) {
         weightStartAddr = convOps->nIdxStart * convOps->k0;
     } else {
         weightStartAddr = convOps->nIdxStart * convTilingData->cin * kd * convTilingData->kh * convTilingData->kw;
@@ -383,7 +385,11 @@ __aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::
                           convTilingData->wout * convTilingData->cout + convOps->nIdxStart +
                           doIdxStart * hwOut * convTilingData->cout;
     }
-    weightStartAddr = convOps->nIdxStart * convTilingData->cin * kd * convTilingData->kh * convTilingData->kw;
+    if constexpr (CONV::B_FORMAT == ConvFormat::FRACTAL_Z_3D) {
+        weightStartAddr = convOps->nIdxStart * (C0_SIZE / sizeof(typename CONV::WEIGHT_T));
+    } else {
+        weightStartAddr = convOps->nIdxStart * convTilingData->cin * kd * convTilingData->kh * convTilingData->kw;
+    }
 }
 
 template <class CONV, class CONV_TILING>

@@ -56,6 +56,12 @@ __aicore__ inline void InitKDirectionValue(Intf *self)
     self->ctx.maxKBL1Iter = CeilDiv(alignCinKhKwKd, self->ctx.convTilingData->kBL1) - 1;
     self->ctx.multiKBL1 = self->ctx.convTilingData->kBL1 / self->ctx.convTilingData->kL0;
 
+    if constexpr (Intf::WEIGHT_NZ_FLAG) {
+        self->ctx.kBL1AlignK0Tail = alignCinKhKwKd % self->ctx.convTilingData->kBL1;
+        self->ctx.kBL1AlignK0Tail = self->ctx.kBL1AlignK0Tail == 0 ?
+            self->ctx.convTilingData->kBL1 : self->ctx.kBL1AlignK0Tail;
+    }
+
     self->ctx.kL0Tail = alignCinKhKwKd % self->ctx.convTilingData->kL0;
     self->ctx.kL0Tail = self->ctx.kL0Tail == 0 ? self->ctx.convTilingData->kL0 : self->ctx.kL0Tail;
     self->ctx.multiKAL1 = self->ctx.convTilingData->kAL1 / self->ctx.convTilingData->kL0;

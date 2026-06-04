@@ -114,6 +114,7 @@ private:
     ge::graphStatus CheckFmapShape();
     ge::graphStatus ParseWeightShape();
     ge::graphStatus CheckWeightShape();
+    ge::graphStatus CheckWeightNZFormatShape();
     ge::graphStatus ParseBiasShape();
     ge::graphStatus ParseOutputShape();
     ge::graphStatus CheckOutputShape();
@@ -160,6 +161,8 @@ private:
     void SetQuantFlag();
     void SetScaleBiasFlag();
     ge::graphStatus GetConv3DAxisPosInfo();
+    ge::Format GetWeightFormat() const;
+    gert::Shape GetWeightShape(const gert::StorageShape* weightShapePtr) const;
     ge::graphStatus ApplySamesPad(const string& padMode);
     ge::graphStatus PrepareTiling();
     void SetApiInputPlatformInfo();

@@ -18,6 +18,7 @@
 
 #include "conv3d_v2_config.h"
 #include "conv3d_v2_util.h"
+#include "../../common/arch35/conv_instr_fz_impl.h"
 
 namespace Conv3dFunc {
 using namespace AscendC;

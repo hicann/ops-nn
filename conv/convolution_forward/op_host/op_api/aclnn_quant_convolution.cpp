@@ -951,7 +951,7 @@ public:
     aclnnStatus Check(QuantConvEngine &engine) override
     {
         SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
-        if (!engine.params.isWeightNz && GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
+        if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
             OP_LOGD("Get Current NpuArch: DAV_3510.");
             return ACLNN_SUCCESS;
         }

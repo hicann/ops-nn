@@ -109,7 +109,8 @@ void Conv3dTiling::Infer5hdShape()
 bool Conv3dTiling::CheckInputFormat()
 {
     std::set<std::pair<ConvFormat, ConvFormat>> conv3dSupportFormatSet = {
-        {ConvFormat::NCDHW, ConvFormat::NCDHW}, {ConvFormat::NDHWC, ConvFormat::DHWCN}
+        {ConvFormat::NCDHW, ConvFormat::NCDHW}, {ConvFormat::NDHWC, ConvFormat::DHWCN}, 
+        {ConvFormat::NCDHW, ConvFormat::FRACTAL_Z_3D}
     };
 
     if (conv3dSupportFormatSet.find({descInfo.fMapType.format, descInfo.weightType.format}) ==

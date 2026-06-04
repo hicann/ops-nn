@@ -13,11 +13,11 @@
 </tr>
 <tr>
 <td><term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term></td>
-<td style="text-align:center">x</td>
+<td style="text-align:center">×</td>
 </tr>
 <tr>
 <td><term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term></td>
-<td style="text-align:center">x</td>
+<td style="text-align:center">×</td>
 </tr>
 <tr>
 <td><term>Atlas 200I/500 A2 推理产品</term></td>
@@ -111,7 +111,7 @@
 <td>dtype</td>
 <td>属性</td>
 <td>表示输出 y 的数据类型。支持的列表包括 [-1(默认)，0(FLOAT)，1(FLOAT16)，27(BFLOAT16)，34(HIFLOAT8)，36(FLOAT8_E4M3FN)]。</td>
-<td>BOOL</td>
+<td>INT8</td>
 <td>-</td>
 </tr>
 <tr>
@@ -145,7 +145,7 @@
 <tr>
 <td>data_format</td>
 <td>可选属性</td>
-<td>输入数据格式，支持 "NCDHW"。</td>
+<td>输入数据格式，支持 "NCDHW" 与 "NDHWC"。</td>
 <td>STRING</td>
 <td>-</td>
 </tr>
@@ -166,7 +166,7 @@
 <tr>
 <td>pad_mode</td>
 <td>可选属性</td>
-<td>填充模式，支持 "SPECIFIC"、"SAME"、"VALID"、"SAME_UPPER", "SAME_LOWER"。</td>
+<td>填充模式，支持 "SPECIFIC"、"SAME"、"VALID"、"SAME_UPPER"、"SAME_LOWER"。</td>
 <td>STRING</td>
 <td>-</td>
 </tr>

@@ -101,7 +101,7 @@ void Conv3dBaseTilingV2::GetDescInfo()
         descInfo_.scaleFormat = context_->GetOptionalInputDesc(tmpScaleIdx)->GetStorageFormat();
     }
     flagInfo_.isConv3dDequant = !flagInfo_.quantFlag && descInfo_.fMapDtype == ge::DataType::DT_INT8;
-    paramInfo_.paramsFormat = {descInfo_.fMapFormat, descInfo_.weightFormat, descInfo_.outFormat};
+    paramInfo_.paramsFormat = {descInfo_.fMapFormat, GetWeightFormat(), descInfo_.outFormat};
 }
  
 ge::graphStatus Conv3dBaseTilingV2::CheckNullPtr()
@@ -208,6 +208,26 @@ void Conv3dBaseTilingV2::SetScaleBiasFlag()
 void Conv3dBaseTilingV2::SetQuantFlag()
 {
     flagInfo_.quantFlag = isQuantConv3D(context_->GetNodeType());
+}
+
+ge::Format Conv3dBaseTilingV2::GetWeightFormat() const
+{
+    auto weightDesc = context_->GetInputDesc(INPUT_WEIGHT_INDEX);
+    auto weightStorageFormat = static_cast<ge::Format>(GetPrimaryFormat(weightDesc->GetStorageFormat()));
+    if (IsWeightNZFormat(weightStorageFormat)) {
+        return static_cast<ge::Format>(GetPrimaryFormat(weightDesc->GetOriginFormat()));
+    }
+    return weightStorageFormat;
+}
+
+gert::Shape Conv3dBaseTilingV2::GetWeightShape(const gert::StorageShape* weightShapePtr) const
+{
+    auto weightDesc = context_->GetInputDesc(INPUT_WEIGHT_INDEX);
+    auto weightStorageFormat = static_cast<ge::Format>(GetPrimaryFormat(weightDesc->GetStorageFormat()));
+    if (IsWeightNZFormat(weightStorageFormat)) {
+        return weightShapePtr->GetOriginShape();
+    }
+    return weightShapePtr->GetStorageShape();
 }
 
 ge::graphStatus Conv3dBaseTilingV2::GetConv3DAxisPosInfo()

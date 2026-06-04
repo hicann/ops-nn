@@ -238,7 +238,8 @@ struct ConvDataType {
     constexpr static auto formatOutput = OUTPUT_TYPE::format;
     constexpr static auto formatBias = BIAS_TYPE::format;
     constexpr static bool WEIGHT_NZ_FLAG = WEIGHT_TYPE::format == ConvFormat::FRACTAL_Z ||
-        WEIGHT_TYPE::format == ConvFormat::FRACTAL_Z_C04;
+        WEIGHT_TYPE::format == ConvFormat::FRACTAL_Z_C04 ||
+        WEIGHT_TYPE::format == ConvFormat::FRACTAL_Z_3D;
 
     constexpr static auto posFmap = FMAP_TYPE::pos;
     constexpr static auto posWeight = WEIGHT_TYPE::pos;

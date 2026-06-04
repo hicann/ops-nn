@@ -71,7 +71,7 @@ struct Conv3dIntf {
     constexpr static auto formatWeight = Config::formatWeight;
     constexpr static auto formatOutput = Config::formatOutput;
     constexpr static auto posOutput = Config::posOutput;
-    constexpr static bool WEIGHT_NZ_FLAG = false;
+    constexpr static bool WEIGHT_NZ_FLAG = Config::WEIGHT_NZ_FLAG;
     constexpr static bool isFixedPoint = false;
     constexpr static uint64_t k0 = C0_SIZE / sizeof(WeightT);
     constexpr static uint64_t k0FmapTail = C0_SIZE / sizeof(FmapT);

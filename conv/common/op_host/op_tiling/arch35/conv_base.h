@@ -47,7 +47,8 @@ static std::map<ge::Format, std::string> formatToStrTab = {
     {ge::FORMAT_DHWCN, "DHWCN"}, {ge::FORMAT_NDHWC, "NDHWC"},
     {ge::FORMAT_NCDHW, "NCDHW"}, {ge::FORMAT_NC1HWC0, "NC1HWC0"},
     {ge::FORMAT_ND, "ND"}, {ge::FORMAT_FRACTAL_Z_C04, "FRACTAL_Z_C04"},
-    {ge::FORMAT_FRACTAL_Z, "FRACTAL_Z"}
+    {ge::FORMAT_FRACTAL_Z, "FRACTAL_Z"},
+    {ge::FORMAT_FRACTAL_Z_3D, "FRACTAL_Z_3D"}
 };
 
 static std::map<ge::Format, ConvFormat> formatMap = {
@@ -56,7 +57,8 @@ static std::map<ge::Format, ConvFormat> formatMap = {
     {ge::FORMAT_DHWNC, ConvFormat::DHWNC}, {ge::FORMAT_DHWCN, ConvFormat::DHWCN},
     {ge::FORMAT_NDHWC, ConvFormat::NDHWC}, {ge::FORMAT_NCDHW, ConvFormat::NCDHW},
     {ge::FORMAT_NC1HWC0, ConvFormat::NC1HWC0}, {ge::FORMAT_FRACTAL_Z_C04, ConvFormat::FRACTAL_Z_C04},
-    {ge::FORMAT_FRACTAL_Z, ConvFormat::FRACTAL_Z}
+    {ge::FORMAT_FRACTAL_Z, ConvFormat::FRACTAL_Z},
+    {ge::FORMAT_FRACTAL_Z_3D, ConvFormat::FRACTAL_Z_3D}
 };
 
 // [fmap, weight, output, bias]
