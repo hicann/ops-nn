@@ -771,7 +771,6 @@ activation-c@ops-nn:
         - ops/ops-nn/activation/log_softmax_v2/op_api/
         - ops/ops-nn/activation/mish/op_api/
         - ops/ops-nn/activation/mish_grad/op_api/
-        - ops/ops-nn/activation/mish_grad/op_api/
         - ops/ops-nn/activation/p_relu/op_api/
         - ops/ops-nn/activation/p_relu_grad_reduce/op_api/
         - ops/ops-nn/activation/p_relu_grad_update/op_api/
@@ -1767,7 +1766,6 @@ VC1@ops-nn:
         - ops/ops-nn/activation/elu_grad_v2/
         - ops/ops-nn/activation/fast_gelu/
         - ops/ops-nn/activation/fast_gelu_grad/
-        - ops/ops-nn/activation/ge_glu_grad_v2/op_graph/
         - ops/ops-nn/activation/ge_glu_grad_v2/op_host/config/ascend950/
         - ops/ops-nn/activation/ge_glu_grad_v2/op_host/op_api/
         - ops/ops-nn/activation/ge_glu_grad_v2/op_host/ge_glu_grad_v2_def.cpp
@@ -1777,7 +1775,6 @@ VC1@ops-nn:
         - ops/ops-nn/activation/ge_glu_grad_v2/op_kernel/arch35/
         - ops/ops-nn/activation/ge_glu_grad_v2/op_kernel/ge_glu_grad_v2_apt.cpp
         - ops/ops-nn/activation/ge_glu_v2/framework/
-        - ops/ops-nn/activation/ge_glu_v2/op_graph/
         - ops/ops-nn/activation/ge_glu_v2/op_host/config/ascend950/
         - ops/ops-nn/activation/ge_glu_v2/op_host/op_api/
         - ops/ops-nn/activation/ge_glu_v2/op_host/ge_glu_v2_def.cpp
@@ -1789,16 +1786,11 @@ VC1@ops-nn:
         - ops/ops-nn/activation/gelu/
         - ops/ops-nn/activation/gelu_grad/
         - ops/ops-nn/activation/gelu_grad_v2/
-        - ops/ops-nn/activation/gelu_quant/op_graph/
         - ops/ops-nn/activation/gelu_quant/op_host/config/ascend950/
         - ops/ops-nn/activation/gelu_quant/op_host/op_api/
-        - ops/ops-nn/activation/gelu_quant/op_host/gelu_quant_def.cpp
-        - ops/ops-nn/activation/gelu_quant/op_host/gelu_quant_infershape.cpp
-        - ops/ops-nn/activation/gelu_quant/op_host/gelu_quant_tiling.h
         - ops/ops-nn/activation/gelu_quant/op_host/gelu_quant_tiling_arch35.cpp
         - ops/ops-nn/activation/gelu_quant/op_host/gelu_quant_tiling_arch35.h
         - ops/ops-nn/activation/gelu_quant/op_host/gelu_quant_tiling_base.h
-        - ops/ops-nn/activation/gelu_quant/op_host/gelu_quant_tiling_def.h
         - ops/ops-nn/activation/gelu_quant/op_kernel/arch35/
         - ops/ops-nn/activation/gelu_quant/op_kernel/gelu_quant_apt.cpp
         - ops/ops-nn/activation/gelu_v2/
@@ -1919,8 +1911,6 @@ VC1@ops-nn:
         #- ops/ops-nn/activation/prelu/tests/
         #- ops/ops-nn/activation/relu/examples/
         #- ops/ops-nn/activation/relu/tests/
-        - ops/ops-nn/activation/relu_grad/examples/
-        - ops/ops-nn/activation/relu_grad/tests/
         - ops/ops-nn/activation/relu_v2/examples/
         - ops/ops-nn/activation/relu_v2/tests/
         #- ops/ops-nn/activation/sigmoid/examples/
