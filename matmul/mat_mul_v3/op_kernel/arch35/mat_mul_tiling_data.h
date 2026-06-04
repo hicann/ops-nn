@@ -83,6 +83,15 @@ struct BatchMatMulV3TilingData {
     uint32_t iterBatch = 1;
     uint32_t batchOutNum = 1;
     uint32_t batchSplitFactor = 1;
+    // 以下为tensorApi实现batchMatmul广播模板的新增变量
+    uint32_t mL1 = 0;
+    uint32_t nL1 = 0;
+    uint32_t kL1 = 0;
+    uint8_t l1BufferNum = 0;
+    uint8_t ubDB = 1;         // ub默认不开db为1
+    uint32_t sliceM = 1;      // 非连续场景m轴
+    uint32_t srcNdStride = 1; // 非连续场景m轴stride
+    uint32_t innerBatch = 1;  // 非连续transpose场景内轴batch值
 };
 #pragma pack(pop)
 

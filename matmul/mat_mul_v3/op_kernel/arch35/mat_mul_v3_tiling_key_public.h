@@ -15,6 +15,8 @@
 
 #pragma once
 
+#define MAT_MUL_TENSOR_LEVEL_BASIC 3
+#define MAT_MUL_TENSOR_LEVEL 2
 #define MAT_MUL_BASIC_LEVEL 1 // 数据类型定义
 #define MAT_MUL_HIGH_LEVEL 0
 #define MAT_MUL_TENSOR_LEVEL 2
@@ -59,7 +61,8 @@ enum class MatMulV3ApiLevel : std::uint8_t
 {
     HIGH_LEVEL = MAT_MUL_HIGH_LEVEL,
     BASIC_LEVEL = MAT_MUL_BASIC_LEVEL,
-    TENSOR_LEVEL = MAT_MUL_TENSOR_LEVEL
+    TENSOR_LEVEL = MAT_MUL_TENSOR_LEVEL,
+    TENSOR_LEVEL_BASIC = MAT_MUL_TENSOR_LEVEL_BASIC
 };
 
 enum class MatMulV3BatchModel : std::uint8_t

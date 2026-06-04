@@ -22,6 +22,7 @@ using Ops::NN::MathUtil;
 namespace {
 using namespace optiling;
 using namespace optiling::matmul_v3_advanced;
+using StrideIndexPairs = std::vector<std::pair<int64_t, std::pair<int64_t, int64_t>>>;
 
 // ------------------------------ CalL1Tiling -------------------------------------------//
 void CalL1TilingDefault(const MatmulV3CompileInfo &compileInfo, const MatMulV3Args &args, MatMulV3RunInfo &runInfo)
@@ -388,6 +389,57 @@ bool MatMulV3TilingHelper::IsSelfNonContiguous(const gert::TilingContext* contex
     return (
         context->InputIsView(0) && selfStorageShape.GetDimNum() == NUM_ONE && selfDimNum == NUM_THREE &&
         mat2DimNum == NUM_TWO);
+}
+
+bool MatMulV3TilingHelper::IsTransposeNonContiguous(const gert::TilingContext* context, uint64_t idx)
+{
+    // 获得stride 然后根据stride判断
+    auto viewShape = context->GetInputShape(idx)->GetOriginShape();
+    auto viewStride = context->GetInputStride(idx);
+    int64_t dimNum = viewStride->GetDimNum();
+    StrideIndexPairs strideIndexPairs;
+    strideIndexPairs.reserve(dimNum);
+    auto lastStride = INT64_MAX;
+    bool isTranspose = false;
+    for (int64_t i = 0; i < dimNum; i++) {
+        int64_t curStride = viewStride->GetStride(i);
+        if (curStride == 0 || viewShape[i] == 1) {
+            return false;
+        }
+        if (lastStride < curStride) {
+            isTranspose = true;
+        }
+        lastStride = curStride;
+        strideIndexPairs.emplace_back(std::make_pair(curStride, std::make_pair(i, viewShape[i])));
+    }
+    if (!isTranspose) {
+        return false;
+    }
+    // strides顺序排序
+    std::sort(strideIndexPairs.rbegin(), strideIndexPairs.rend());
+    if (!IsContiguousStride(strideIndexPairs)) {
+        return false;
+    }
+    std::vector<int> indexs;
+    for (auto it = strideIndexPairs.begin(); it != strideIndexPairs.end(); it++) {
+        indexs.push_back(it->second.first);
+    }
+    // 3D场景只有下标符合{1 0 2} * {2 0 1}才是满足支持transpose场景，右矩阵转置为{1 0 2}
+    std::set<std::vector<int>> transposeIndexs = {{1, 0, 2}};
+    auto isNoNeedSwap = find(transposeIndexs.begin(), transposeIndexs.end(), indexs);
+    return isNoNeedSwap != transposeIndexs.end();
+}
+
+bool MatMulV3TilingHelper::IsContiguousStride(StrideIndexPairs& strideIndexPairs)
+{
+    int64_t expectStride = 1;
+    for (auto it = strideIndexPairs.rbegin(); it != strideIndexPairs.rend(); it++) {
+        if (it->first != expectStride) {
+            return false;
+        }
+        expectStride *= it->second.second;
+    }
+    return true;
 }
 
 void MatMulV3TilingHelper::GetRebalanceBlock(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args,

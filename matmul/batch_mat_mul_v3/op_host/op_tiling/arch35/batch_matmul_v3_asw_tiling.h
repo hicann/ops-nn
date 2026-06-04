@@ -16,22 +16,20 @@
 #pragma once
 
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_v3_base_tiling_advanced.h"
+#include "matmul/mat_mul_v3/op_kernel/arch35/mat_mul_v3_tiling_key_public.h"
 
 namespace optiling {
 namespace batch_matmul_v3_advanced {
 using namespace matmul_v3_advanced;
 class BatchMatMulV3AswTiling : public MatMulV3BaseTiling {
 public:
-    BatchMatMulV3AswTiling(gert::TilingContext *context, MatMulTilingCfg &cfg)
-        : MatMulV3BaseTiling(context, cfg) {};
+    BatchMatMulV3AswTiling(gert::TilingContext* context, MatMulTilingCfg& cfg) : MatMulV3BaseTiling(context, cfg) {};
 
     ~BatchMatMulV3AswTiling() override {};
+    void CheckTensorApiSupport();
 
 protected:
-    bool IsCapable() override
-    {
-        return true;
-    };
+    bool IsCapable() override { return true; };
 
     ge::graphStatus DoOpTiling() override;
 
@@ -39,8 +37,10 @@ protected:
 
     uint64_t GetNumBlocks() const override;
 
-    ge::graphStatus GetTilingData(TilingResult &tiling) const override;
-};
-}
-}
+    ge::graphStatus GetTilingData(TilingResult& tiling) const override;
 
+    MatMulV3ApiLevel apiLevel_{MatMulV3ApiLevel::HIGH_LEVEL};
+    MatMulV3FullLoad fullLoad_{MatMulV3FullLoad::NONE_FULL_LOAD};
+};
+} // namespace batch_matmul_v3_advanced
+} // namespace optiling

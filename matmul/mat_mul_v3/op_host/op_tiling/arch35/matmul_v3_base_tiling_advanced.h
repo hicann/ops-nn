@@ -351,6 +351,30 @@ protected:
         tilingData.cBatchDim3 = batchInfo_->batchC3;
         tilingData.iterBatch = runInfo_.bmmRunInfo.iterBatch;
         tilingData.batchOutNum = runInfo_.bmmRunInfo.batchOutNum;
+        tilingData.mL1 = std::min(ops::CeilAlign(args_.mValue, BASIC_BLOCK_SIZE_16), runInfo_.baseM * runInfo_.stepM);
+        tilingData.nL1 = std::min(ops::CeilAlign(args_.nValue, BASIC_BLOCK_SIZE_16), runInfo_.baseN * runInfo_.stepN);
+        int32_t stepKa = std::min(runInfo_.stepKb, runInfo_.stepKa);
+        int32_t STEPKA_THERSHOLD = 4;
+        stepKa = std::min(STEPKA_THERSHOLD, stepKa);
+        tilingData.kL1 = runInfo_.baseK * static_cast<uint32_t>(stepKa);
+        tilingData.l1BufferNum = static_cast<uint8_t>(runInfo_.l1BufferNum);
+        tilingData.ubDB = static_cast<uint8_t>(runInfo_.mixInfo.ubDB);
+
+        auto selfViewShape = context_->GetInputShape(0)->GetOriginShape();
+        auto mat2Shape = context_->GetInputShape(1)->GetOriginShape();
+        auto selfStorageShape = context_->GetInputShape(0)->GetStorageShape();
+        // 非连续Slice校验
+        // TensorV2 & 3d && storageShape 1d
+        if (context_->InputIsView(0) && selfViewShape.GetDimNum() == 3 && mat2Shape.GetDimNum() == 2 &&
+            selfStorageShape.GetDimNum() == 1) {
+            auto selfViewStride = context_->GetInputStride(0);
+            tilingData.sliceM = selfViewShape[1];                  // sliceM=self[1], ndNum = baseM/sliceM
+            tilingData.srcNdStride = selfViewStride->GetStride(0); // oriM * srcK
+        } else {
+            tilingData.sliceM = runInfo_.baseM;
+            tilingData.srcNdStride = 1;
+        }
+        tilingData.innerBatch = runInfo_.innerBatch;
         return GetTilingDataProcess(tilingData.matMulTilingData);
     };
 
