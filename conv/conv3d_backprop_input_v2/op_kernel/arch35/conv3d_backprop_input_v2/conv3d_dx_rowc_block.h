@@ -66,7 +66,7 @@ public:
         }
         this->dedyGm_.SetGlobalBuffer((__gm__ dedyType *)dedy);
         this->yGm_.SetGlobalBuffer((__gm__ yType *)y);
-        if constexpr (GetScaleFormat<filterType>(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
+        if constexpr (GetScaleFormat(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
             this->scaleGm_.SetGlobalBuffer((__gm__ scaleType *)scale);
         }
 
@@ -336,7 +336,7 @@ protected:
             this->CheckFullLoadEnable();
             this->dedx_.SetFullLoadFlag(this->tiling_->enableFullLoad);
 
-            if constexpr (GetScaleFormat<filterType>(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
+            if constexpr (GetScaleFormat(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
                 this->dedx_.SetScale(this->scaleGm_[this->offsetScale_]);
             }
 

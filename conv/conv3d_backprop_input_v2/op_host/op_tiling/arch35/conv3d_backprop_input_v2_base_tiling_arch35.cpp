@@ -350,19 +350,14 @@ bool Conv3DBackpropInputV2TilingArch35::CheckDtypeFormatAttrs(
     return true;
 }
 
-bool Conv3DBackpropInputV2TilingArch35::AnalyzeFuseDtype(const bool f16flag, const ge::DataType outputBackpropDtype,
+bool Conv3DBackpropInputV2TilingArch35::AnalyzeFuseDtype(const DtypeFlags flags, const ge::DataType outputBackpropDtype,
     const ge::DataType filterDtype, const ge::DataType yDtype) const
 {
     if (!IsSocVersionFuse(context_)) {
         return true;
     }
-    bool int8flag = outputBackpropDtype == ge::DT_INT8 && filterDtype == ge::DT_INT8 &&
-        (yDtype == ge::DT_INT8 || yDtype == ge::DT_FLOAT16);
-    bool fp16int8flag = outputBackpropDtype == ge::DT_FLOAT16 && filterDtype == ge::DT_INT8 &&
-        (yDtype == ge::DT_INT8 || yDtype == ge::DT_FLOAT16);
-
     OP_TILING_CHECK(
-        !f16flag && !int8flag && !fp16int8flag,
+        !flags.f16flag && !flags.int8flag && !flags.f16int8flag && !flags.a16w8flag,
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(opName_, "out_backprop, filter and y",   
             (ge::TypeUtils::DataTypeToSerialString(outputBackpropDtype) + ", " +
             ge::TypeUtils::DataTypeToSerialString(filterDtype) + " and " +
@@ -383,6 +378,8 @@ DtypeFlags Conv3DBackpropInputV2TilingArch35::ComputeDtypeFlags(const ge::DataTy
     flags.f16flag = outputBackpropDtype == ge::DT_FLOAT16 && filterDtype == ge::DT_FLOAT16 && yDtype == ge::DT_FLOAT16;
     flags.f32flag = outputBackpropDtype == ge::DT_FLOAT && filterDtype == ge::DT_FLOAT && yDtype == ge::DT_FLOAT;
     flags.int8flag = outputBackpropDtype == ge::DT_INT8 && filterDtype == ge::DT_INT8 && (yDtype == ge::DT_FLOAT16 || yDtype == ge::DT_INT8);
+    flags.a16w8flag = outputBackpropDtype == ge::DT_FLOAT16 && filterDtype == ge::DT_INT8 && (yDtype == ge::DT_INT8 || yDtype == ge::DT_FLOAT16);
+    flags.f16int8flag = outputBackpropDtype == ge::DT_FLOAT16 && filterDtype == ge::DT_FLOAT16 && yDtype == ge::DT_INT8;
     return flags;
 }
 
@@ -409,7 +406,7 @@ bool Conv3DBackpropInputV2TilingArch35::AnalyzeDtype() const
 
     DtypeFlags flags = ComputeDtypeFlags(outputBackpropDtype, filterDtype, yDtype);
     if (IsSocVersionFuse(context_)) {
-        OP_TILING_CHECK(!AnalyzeFuseDtype(flags.f16flag, outputBackpropDtype, filterDtype, yDtype),
+        OP_TILING_CHECK(!AnalyzeFuseDtype(flags, outputBackpropDtype, filterDtype, yDtype),
             CUBE_INNER_ERR_REPORT(opName_, "check dtype failed!"), return false);
     } else {
         OP_TILING_CHECK(

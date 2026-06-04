@@ -45,7 +45,13 @@ constexpr uint8_t C04_COUT_SIZE = 4;
 constexpr uint8_t C04_SHIFT_SIZE = 2;
 constexpr uint8_t MASK_REG_WIDTH = AscendC::VECTOR_REG_WIDTH >> 3; // 右移3bit: MaskReg的宽度是RegTensor的1/8
 constexpr MultiCopyConfig nddmaConfig = {false};
+#if (__NPU_ARCH__ == 5102) // mdc场景使用定点化计算，enableFixVal = true
+constexpr FixpipeConfig CFG_COLUMN_MAJOR_UB = {CO2Layout::COLUMN_MAJOR, true, true};
+constexpr FixpipeConfig CFG_COLUMN_MAJOR_GM = {CO2Layout::COLUMN_MAJOR, false, true};
+#else
 constexpr FixpipeConfig CFG_COLUMN_MAJOR_UB = {CO2Layout::COLUMN_MAJOR, true};
+constexpr FixpipeConfig CFG_COLUMN_MAJOR_GM = CFG_COLUMN_MAJOR;
+#endif
 constexpr uint32_t UB_SIZE = AscendC::TOTAL_UB_SIZE;
 constexpr uint32_t SHIFT_BIT_4 = 4;
 
@@ -266,10 +272,10 @@ static __aicore__ inline void LoadL0c2GMForKernelSplitFixPipe(Intf *self, const 
     if (Intf::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT &&
         self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
         uint64_t scaleAddr = self->ctx.curNIdx_ * self->ctx.tiling_->baseN;
-        Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR>(self->ctx.l0cOutWorkspace_[wsDstOffset],
+        Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR_GM>(self->ctx.l0cOutWorkspace_[wsDstOffset],
             useC1Buf[srcOffset], self->ctx.scaleL1Buf_[scaleAddr], fixPipeParams);
     } else {
-        Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR>(self->ctx.l0cOutWorkspace_[wsDstOffset],
+        Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR_GM>(self->ctx.l0cOutWorkspace_[wsDstOffset],
             useC1Buf[srcOffset], fixPipeParams);
     }
 }
@@ -428,11 +434,16 @@ static __aicore__ inline void SetQuantInt32ToHalf(Intf *self, FixpipeParamsC310<
 
 template <class Intf, CO2Layout layout = CO2Layout::COLUMN_MAJOR>
 static __aicore__ inline void SetQuantInt8(Intf *self, FixpipeParamsC310<layout> &fixPipeParams) {
-    if (self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
-        fixPipeParams.quantPre = QuantMode_t::VREQ8;
+    if constexpr (Intf::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
+        if (self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
+            fixPipeParams.quantPre = QuantMode_t::VREQ8;
+        } else {
+            fixPipeParams.quantPre = QuantMode_t::REQ8;
+            fixPipeParams.deqScalar = self->ctx.deqScalar_;
+        }
     } else {
         fixPipeParams.quantPre = QuantMode_t::REQ8;
-        fixPipeParams.deqScalar = self->ctx.deqScalar_;
+        fixPipeParams.deqScalar = DQ_SCALAR_QF_ONE; 
     }
 }
 

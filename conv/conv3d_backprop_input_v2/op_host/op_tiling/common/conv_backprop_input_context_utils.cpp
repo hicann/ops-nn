@@ -560,9 +560,11 @@ static bool UpdateDtypeParams(const gert::TilingContext *context, Conv3dBpInputV
   if (IsSocVersionFuse(context)) {
     bool isInt8Flag = otherParams.a_dtype == ge::DT_INT8 && otherParams.b_dtype == ge::DT_INT8 &&
       (otherParams.c_dtype == ge::DT_INT8 || otherParams.c_dtype == ge::DT_FLOAT16);
-    bool isFp16Int8Flag = otherParams.a_dtype == ge::DT_FLOAT16 && otherParams.b_dtype == ge::DT_INT8 &&
+    bool isA16W8Flag = otherParams.a_dtype == ge::DT_FLOAT16 && otherParams.b_dtype == ge::DT_INT8 &&
       (otherParams.c_dtype == ge::DT_INT8 || otherParams.c_dtype == ge::DT_FLOAT16);
-    dtypeSupportFlag = isFp16Flag || isInt8Flag || isFp16Int8Flag;
+    bool isFp16Int8Flag = otherParams.a_dtype == ge::DT_FLOAT16 && otherParams.b_dtype == ge::DT_FLOAT16 &&
+      otherParams.c_dtype == ge::DT_INT8;
+    dtypeSupportFlag = isFp16Flag || isInt8Flag || isA16W8Flag || isFp16Int8Flag;
     dtypeCheckLog = "fp16 and int8";
   }
   OP_CHECK_IF(

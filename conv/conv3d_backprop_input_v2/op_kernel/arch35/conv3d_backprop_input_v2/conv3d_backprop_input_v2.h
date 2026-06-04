@@ -53,10 +53,9 @@ __aicore__ inline constexpr Convolution3DBackprop::CubeFormat GetFormat(int form
     }
 }
 
-template <typename filterType>
 __aicore__ inline constexpr Convolution3DBackprop::CubeFormat GetScaleFormat(int format)
 {
-    if (std::is_same_v<filterType, int8_t> && ((format == FORMAT_ND) || (format == FORMAT_NCHW))) {
+    if (format == FORMAT_ND || format == FORMAT_NCHW) {
         return Convolution3DBackprop::CubeFormat::ND;
     } else {
         return Convolution3DBackprop::CubeFormat::UNSUPPORT;
@@ -102,7 +101,7 @@ public:
         }
         dedx_.Init(&(tilingData->conv3DDxTiling), hasBias_);
 
-        if constexpr (GetScaleFormat<filterType>(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
+        if constexpr (GetScaleFormat(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
             scaleGm_.SetGlobalBuffer((__gm__ scaleType *)scale);
         }
 
@@ -147,7 +146,7 @@ public:
                     dedx_.SetBias(biasGm_[offsetBias_]);
                 }
 
-                if constexpr (GetScaleFormat<filterType>(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
+                if constexpr (GetScaleFormat(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
                     dedx_.SetScale(scaleGm_[offsetScale_]);
                 }
                 dedx_.IterateAll(yGm_[offsetC_], 0, fullLoadBiasFlag_, freeBiasFlag_);  // 1 means atomic add
@@ -180,7 +179,7 @@ public:
                     dedx_.SetBias(biasGm_[offsetBias_]);
                 }
 
-                if constexpr (GetScaleFormat<filterType>(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
+                if constexpr (GetScaleFormat(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
                     dedx_.SetScale(scaleGm_[offsetScale_]);
                 }
                 dedx_.IterateAll(yGm_[offsetC_], 0, fullLoadBiasFlag_, freeBiasFlag_);  // 1 means atomic add
@@ -195,7 +194,7 @@ protected:
     static constexpr Convolution3DBackprop::CubeFormat dedyCubeFormat = GetFormat(dedyFormat);
     static constexpr Convolution3DBackprop::CubeFormat yCubeFormat = GetFormat(yFormat);
     static constexpr Convolution3DBackprop::CubeFormat biasCubeFormat = GetFormat(biasFormat);
-    static constexpr Convolution3DBackprop::CubeFormat scaleCubeFormat = GetScaleFormat<filterType>(scaleFormat);
+    static constexpr Convolution3DBackprop::CubeFormat scaleCubeFormat = GetScaleFormat(scaleFormat);
     using filterDxType = Convolution3DBackprop::ConvType<TPosition::GM, filterCubeFormat, filterType>;
     using inputSizeDxType =
         Convolution3DBackprop::ConvType<TPosition::GM, Convolution3DBackprop::CubeFormat::ND, int32_t>;
@@ -397,7 +396,7 @@ protected:
 
     __aicore__ inline void CalcScaleOffset(uint32_t groupIdx)
     {
-        if constexpr (GetScaleFormat<filterType>(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
+        if constexpr (GetScaleFormat(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
             if (tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
                 offsetScale_ = static_cast<uint64_t>(nCoreIdx_) * tiling_->singleCoreCin + groupIdx * tiling_->cinG;
             } else if (tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::SCALAR_QUANT)) {

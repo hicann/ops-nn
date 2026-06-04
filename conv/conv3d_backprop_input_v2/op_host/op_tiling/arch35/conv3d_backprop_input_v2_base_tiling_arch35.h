@@ -63,6 +63,8 @@ struct DtypeFlags {
     bool f16flag = false;
     bool f32flag = false;
     bool int8flag = false;
+    bool a16w8flag = false;
+    bool f16int8flag = false;
 };
 
 struct TilingValueDavid {
@@ -301,7 +303,7 @@ protected:
 private:
     Conv3dBackpropV2TBETilingData tbeTiling_ = {};
     TilingBestBaseBlock GetBestBaseBlock(uint32_t baseBlockId);
-    bool AnalyzeFuseDtype(const bool f16flag, const ge::DataType outputBackpropDtype,
+    bool AnalyzeFuseDtype(const DtypeFlags flags, const ge::DataType outputBackpropDtype,
         const ge::DataType filterDtype, const ge::DataType yDtype) const;
     DtypeFlags ComputeDtypeFlags(const ge::DataType outputBackpropDtype, const ge::DataType filterDtype,
         const ge::DataType yDtype) const;

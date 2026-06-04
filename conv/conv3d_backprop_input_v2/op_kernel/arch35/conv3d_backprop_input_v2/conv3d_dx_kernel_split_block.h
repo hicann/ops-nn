@@ -58,7 +58,7 @@ public:
             this->biasGm_.SetGlobalBuffer((__gm__ biasType *)bias);
         }
 
-        if constexpr (GetScaleFormat<filterType>(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
+        if constexpr (GetScaleFormat(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
             this->scaleGm_.SetGlobalBuffer((__gm__ scaleType *)scale);
         }
         this->dedx_.Init(&(tilingData->conv3DDxTiling), this->hasBias_);
@@ -275,7 +275,7 @@ protected:
             this->dedx_.SetBias(this->biasGm_[this->offsetBias_]);
         }
 
-        if constexpr (GetScaleFormat<filterType>(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
+        if constexpr (GetScaleFormat(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
             this->dedx_.SetScale(this->scaleGm_[this->offsetScale_]);
         }
     }

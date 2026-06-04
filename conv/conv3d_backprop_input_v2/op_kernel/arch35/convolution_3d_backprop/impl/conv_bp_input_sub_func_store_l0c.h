@@ -104,18 +104,18 @@ static __aicore__ inline void LoadL0c2GmForNz2Dn(
     if (self->ctx.enableSplitDk_ || self->ctx.useUbAccumForSplitK_) {
 #if (__NPU_ARCH__ != 5102)
         if constexpr (std::is_same<typename Intf::L0cT, int32_t>::value) {
-            Fixpipe<float, float, CFG_COLUMN_MAJOR>(self->ctx.l0cOutGm_[dstOffset], useC1Buf.template ReinterpretCast<float>(), fixPipeParams);
+            Fixpipe<float, float, CFG_COLUMN_MAJOR_GM>(self->ctx.l0cOutGm_[dstOffset], useC1Buf.template ReinterpretCast<float>(), fixPipeParams);
         } else {
-            Fixpipe<float, float, CFG_COLUMN_MAJOR>(self->ctx.l0cOutGm_[dstOffset], useC1Buf, fixPipeParams);
+            Fixpipe<float, float, CFG_COLUMN_MAJOR_GM>(self->ctx.l0cOutGm_[dstOffset], useC1Buf, fixPipeParams);
         }
 #endif
     } else if (
         Intf::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT &&
         self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
         uint64_t scaleAddr = self->ctx.curNIdx_ * self->ctx.tiling_->baseN;
-        Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR>(output[dstOffset], useC1Buf, self->ctx.scaleL1Buf_[scaleAddr], fixPipeParams);
+        Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR_GM>(output[dstOffset], useC1Buf, self->ctx.scaleL1Buf_[scaleAddr], fixPipeParams);
     } else {
-        Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR>(output[dstOffset], useC1Buf, fixPipeParams);
+        Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR_GM>(output[dstOffset], useC1Buf, fixPipeParams);
     }
 }
 
@@ -196,10 +196,10 @@ static __aicore__ inline void LoadL0c2GmForKernelSplitHFixPipe(
     if (Intf::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT &&
         self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
         uint64_t scaleAddr = self->ctx.curNIdx_ * self->ctx.tiling_->baseN;
-        Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR>(
+        Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR_GM>(
             output[dstOffset], useC1Buf[srcOffset], self->ctx.scaleL1Buf_[scaleAddr], fixPipeParams);
     } else {
-        Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR>(
+        Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR_GM>(
             output[dstOffset], useC1Buf[srcOffset], fixPipeParams);
     }
 }
