@@ -106,11 +106,12 @@ public:
     __aicore__ inline void InitInputGMBuffer(
         __gm__ uint8_t* x1, __gm__ uint8_t* x2, __gm__ uint8_t* gamma, __gm__ uint8_t* beta, __gm__ uint8_t* bias)
     {
-        uint32_t gmOffset_ = nlFirstDimPerCore * numLastDim;
-        x1Gm.SetGlobalBuffer((__gm__ T_X1*)(x1) + block_idx * gmOffset_);
-        x2Gm.SetGlobalBuffer((__gm__ T_X2*)(x2) + block_idx * gmOffset_);
+        uint64_t gmOffset_ = static_cast<uint64_t>(nlFirstDimPerCore) * numLastDim;
+        uint64_t coreOffset = static_cast<uint64_t>(block_idx) * gmOffset_;
+        x1Gm.SetGlobalBuffer((__gm__ T_X1*)(x1) + coreOffset);
+        x2Gm.SetGlobalBuffer((__gm__ T_X2*)(x2) + coreOffset);
         if constexpr (IS_BIAS_PRESENT) {
-            biasGm.SetGlobalBuffer((__gm__ T*)(bias) + block_idx * gmOffset_);
+            biasGm.SetGlobalBuffer((__gm__ T*)(bias) + coreOffset);
         } else if constexpr (IS_BIAS_BROADCAST) {
             biasGm.SetGlobalBuffer((__gm__ T*)bias);
         }
@@ -121,12 +122,14 @@ public:
     __aicore__ inline void InitOutputGMBuffer(
         __gm__ uint8_t* y, __gm__ uint8_t* mean, __gm__ uint8_t* rstd, __gm__ uint8_t* x)
     {
-        uint32_t gmOffset_ = nlFirstDimPerCore * numLastDim;
-        yGm.SetGlobalBuffer((__gm__ T*)(y) + block_idx * gmOffset_);
+        uint64_t gmOffset_ = static_cast<uint64_t>(nlFirstDimPerCore) * numLastDim;
+        uint64_t coreOffset = static_cast<uint64_t>(block_idx) * gmOffset_;
+        yGm.SetGlobalBuffer((__gm__ T*)(y) + coreOffset);
         // mean/rstd always output fp32
-        meanGm.SetGlobalBuffer((__gm__ float*)mean + block_idx * nlFirstDimPerCore);
-        rstdGm.SetGlobalBuffer((__gm__ float*)rstd + block_idx * nlFirstDimPerCore);
-        xGm.SetGlobalBuffer((__gm__ T*)(x) + block_idx * gmOffset_);
+        uint64_t meanOffset = static_cast<uint64_t>(block_idx) * nlFirstDimPerCore;
+        meanGm.SetGlobalBuffer((__gm__ float*)mean + meanOffset);
+        rstdGm.SetGlobalBuffer((__gm__ float*)rstd + meanOffset);
+        xGm.SetGlobalBuffer((__gm__ T*)(x) + coreOffset);
     }
 
     __aicore__ inline void InitUBBuffer()
@@ -148,7 +151,7 @@ public:
         int32_t rowMoveCnt = CEIL_DIV(rowWork, rowStep);
 
         for (int32_t rowIdx = 0; rowIdx < rowMoveCnt; ++rowIdx) {
-            uint32_t gmOffset = rowIdx * rowStep * numLastDim;
+            uint64_t gmOffset = static_cast<uint64_t>(rowIdx) * rowStep * numLastDim;
             CopyInAdd(gmOffset, numLastDim);
             if constexpr (IS_ADDITIONAL_OUTPUT_ENABLE) {
                 CopyOutX(gmOffset, numLastDim);
@@ -164,7 +167,7 @@ public:
 private:
     template <typename T_NOCAST, typename T_NEEDCAST>
     __aicore__ inline void CopyInAddWithCast(
-        GlobalTensor<T_NOCAST>& xNoCastGm, GlobalTensor<T_NEEDCAST>& xNeedCastGm, uint32_t gmOffset, uint32_t size)
+        GlobalTensor<T_NOCAST>& xNoCastGm, GlobalTensor<T_NEEDCAST>& xNeedCastGm, uint64_t gmOffset, uint32_t size)
     {
         event_t eventMTE2V = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
         auto xBufLocal = xBufFp32.Get<float>();
@@ -188,7 +191,7 @@ private:
         inputOutputQue.FreeTensor(xNoCastLocal);
     }
 
-    __aicore__ inline void CopyInAddWithoutCast(uint32_t gmOffset, uint32_t size)
+    __aicore__ inline void CopyInAddWithoutCast(uint64_t gmOffset, uint32_t size)
     {
         auto xBufLocal = xBufFp32.Get<float>();
 
@@ -204,7 +207,7 @@ private:
         inputOutputQue.FreeTensor(xLocal);
     }
 
-    __aicore__ inline void CopyInAddAllCast(uint32_t gmOffset, uint32_t size)
+    __aicore__ inline void CopyInAddAllCast(uint64_t gmOffset, uint32_t size)
     {
         event_t eventMTE3MTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
         event_t eventMTE2V = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
@@ -242,7 +245,7 @@ private:
         tmpQueFp32.FreeTensor(tmpLocal);
     }
 
-    __aicore__ inline void CopyInAddBiasAllCast(uint32_t gmOffset, uint32_t size)
+    __aicore__ inline void CopyInAddBiasAllCast(uint64_t gmOffset, uint32_t size)
     {
         event_t eventMTE3MTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
         event_t eventMTE2V = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
@@ -299,7 +302,7 @@ private:
         inputOutputQue.EnQue(xOutLocal);
     }
 
-    __aicore__ inline void CopyInAdd(uint32_t gmOffset, uint32_t size)
+    __aicore__ inline void CopyInAdd(uint64_t gmOffset, uint32_t size)
     {
         if constexpr (IS_X1_NEEDCAST) {
             CopyInAddWithCast<T_X2, T_X1>(x2Gm, x1Gm, gmOffset, size);
@@ -314,7 +317,7 @@ private:
         }
     }
 
-    __aicore__ inline void CopyOutX(uint32_t gmOffset, uint32_t size)
+    __aicore__ inline void CopyOutX(uint64_t gmOffset, uint32_t size)
     {
         event_t eventVMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
 
@@ -365,7 +368,7 @@ private:
         event_t eventMTE3V = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
 
         auto yLocalFp32 = yBufFp32.Get<float>();
-        uint32_t gmOffset = rowIdx * rowStep * numLastDim;
+        uint64_t gmOffset = static_cast<uint64_t>(rowIdx) * rowStep * numLastDim;
 
         SetFlag<HardEvent::V_MTE3>(eventVMTE3);
         WaitFlag<HardEvent::V_MTE3>(eventVMTE3);
@@ -379,7 +382,7 @@ private:
         WaitFlag<HardEvent::MTE3_V>(eventMTE3V);
 
 #if OUTPUT_MEAN_RSTD == 1
-        uint32_t gm_offset_mean = rowIdx * rowStep;
+        uint64_t gm_offset_mean = static_cast<uint64_t>(rowIdx) * rowStep;
         LocalTensor<float> mean = meanQue.template DeQue<float>();
         LocalTensor<float> rstd = rstdQue.template DeQue<float>();
         DataCopyEx(meanGm[gm_offset_mean], mean, row_count);

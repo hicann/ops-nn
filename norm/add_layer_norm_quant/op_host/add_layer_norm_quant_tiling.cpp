@@ -333,7 +333,7 @@ static inline void DoBlockTiling(
     context->SetBlockDim(numCore);
     firstdimPerCore = CEIL_DIV(numRow, numCore);
     uint32_t firstDimPerCoreTail = numRow - firstdimPerCore * (numCore - 1);
-    uint32_t gmOffset = firstdimPerCore * tiling->get_numLastDim();
+    uint64_t gmOffset = static_cast<uint64_t>(firstdimPerCore) * tiling->get_numLastDim();
     
     tiling->set_firstDimPerCore(firstdimPerCore);
     tiling->set_firstDimPerCoreTail(firstDimPerCoreTail);

@@ -58,7 +58,7 @@ public:
         pipe_->InitBuffer(outScaleQueue_, BUFFER_NUM, (blockSize_ * sizeof(float)));
     }
 
-    __aicore__ inline void CopyOutScaleToGm(LocalTensor<float> outLocal, uint32_t outScaleGmOffset, uint32_t curRows)
+    __aicore__ inline void CopyOutScaleToGm(LocalTensor<float> outLocal, uint64_t outScaleGmOffset, uint32_t curRows)
     {
         DataCopyExtParams dataCopyParams;
         dataCopyParams.blockCount = 1;
@@ -77,7 +77,7 @@ public:
         AscendC::NumericLimits<float>::NegativeInfinity(dstAddr, curRows);
     }
 
-    __aicore__ inline void CalOutScale(uint32_t gmOffset_, uint32_t curRows){
+    __aicore__ inline void CalOutScale(uint64_t gmOffset_, uint32_t curRows){
         LocalTensor<float> ScaleOutLocal = outScaleQueue_.AllocTensor<float>();
         VFDuplicateRows(ScaleOutLocal, curRows);
         outScaleQueue_.EnQue(ScaleOutLocal);
@@ -92,7 +92,7 @@ public:
             return;
         }
 
-        int64_t outputOffset = 0;
+        uint64_t outputOffset = 0;
         if (coreIdx_ < usedCoreNum_ - 1) {
             for (uint32_t curLoop = 0; curLoop < numBlocks_; curLoop++){
                 outputOffset = curLoop * blockSize_ + gmOffset_;

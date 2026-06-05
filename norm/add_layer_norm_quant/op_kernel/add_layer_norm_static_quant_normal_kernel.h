@@ -83,8 +83,8 @@ public:
             padParams.rightPadding = this->numLastDimAligned - this->numLastDim;
         }
 
-        int32_t gmOffset = 0;
-        int32_t gmOffsetScale = 0;
+        uint64_t gmOffset = 0;
+        uint64_t gmOffsetScale = 0;
         int32_t elementCount = this->numLastDimAligned * this->rowStep;
 
         for (int32_t rowIdx = 0; rowIdx < rowMoveCnt - 1; ++rowIdx) {
@@ -95,7 +95,7 @@ public:
             ComputeLayerNorm(this->rowStep, elementCount, gammaLocal, betaLocal);
             ComputeStaticQuant(this->rowStep, elementCount);
             CopyOut(gmOffset, gmOffsetScale, this->rowStep);
-            gmOffset += this->rowStep * this->numLastDim;
+            gmOffset += static_cast<uint64_t>(this->rowStep) * this->numLastDim;
             gmOffsetScale += this->rowStep;
         }
         {
@@ -113,7 +113,7 @@ public:
 
 private:
     __aicore__ inline void CopyInX1X2(
-        int32_t gmOffset, int32_t rowCount, int32_t elementCount, DataCopyPadParams& padParams)
+        uint64_t gmOffset, int32_t rowCount, int32_t elementCount, DataCopyPadParams& padParams)
     {
         LocalTensor<T> x1x2LocalIn = inRowsQue.template AllocTensor<T>();
         DataCopyEx(x1x2LocalIn[0], this->x1Gm[gmOffset], this->numLastDim, rowCount, padParams);
@@ -181,7 +181,7 @@ private:
         inRowsQue.FreeTensor(x1x2Local);
     }
 
-    __aicore__ inline void CopyOutAdditionalOutput(int32_t gmOffset, int32_t rowCount, int32_t elementCount)
+    __aicore__ inline void CopyOutAdditionalOutput(uint64_t gmOffset, int32_t rowCount, int32_t elementCount)
     {
         if (this->isXOut) {
             LocalTensor<float> addBufLocal = xBufFp32.Get<float>();
@@ -382,7 +382,7 @@ private:
         outRowQue.EnQue(y12Local);
     }
 
-    __aicore__ inline void CopyOut(int32_t gmOffset, int32_t gmOffsetScale, int32_t rowCount)
+    __aicore__ inline void CopyOut(uint64_t gmOffset, uint64_t gmOffsetScale, int32_t rowCount)
     {
         LocalTensor<int8_t> outY12 = outRowQue.template DeQue<int8_t>();
         auto outY1 = outY12[0];

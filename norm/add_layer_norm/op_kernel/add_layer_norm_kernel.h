@@ -89,21 +89,23 @@ public:
             row_step = MIN_KERNEL(first_dim_per_time, row_work);
         }
         row_tail_ = (row_work % row_step == 0) ? row_step : (row_work % row_step);
-        gm_offset_ = nl_first_dim_per_core * num_last_dim;
-        x1_gm.SetGlobalBuffer((__gm__ T_X1*)(x1) + block_idx * gm_offset_);
-        x2_gm.SetGlobalBuffer((__gm__ T_X2*)(x2) + block_idx * gm_offset_);
+        gm_offset_ = static_cast<uint64_t>(nl_first_dim_per_core) * num_last_dim;
+        uint64_t core_offset = static_cast<uint64_t>(block_idx) * gm_offset_;
+        x1_gm.SetGlobalBuffer((__gm__ T_X1*)(x1) + core_offset);
+        x2_gm.SetGlobalBuffer((__gm__ T_X2*)(x2) + core_offset);
         if constexpr (IS_BIAS_PRESENT) {
-            bias_gm.SetGlobalBuffer((__gm__ T*)(bias) + block_idx * gm_offset_);
+            bias_gm.SetGlobalBuffer((__gm__ T*)(bias) + core_offset);
         } else if constexpr (IS_BIAS_BROADCAST) {
             bias_gm.SetGlobalBuffer((__gm__ T*)bias);
         }
         gamma_gm.SetGlobalBuffer((__gm__ T_GAMMA*)gamma);
         beta_gm.SetGlobalBuffer((__gm__ T_GAMMA*)beta);
-        y_gm.SetGlobalBuffer((__gm__ T*)(y) + block_idx * gm_offset_);
+        y_gm.SetGlobalBuffer((__gm__ T*)(y) + core_offset);
         // mean/rstd always output fp32
-        mean_gm.SetGlobalBuffer((__gm__ float*)mean + block_idx * nl_first_dim_per_core);
-        rstd_gm.SetGlobalBuffer((__gm__ float*)rstd + block_idx * nl_first_dim_per_core);
-        x_gm.SetGlobalBuffer((__gm__ T*)(x) + block_idx * gm_offset_);
+        uint64_t mean_offset = static_cast<uint64_t>(block_idx) * nl_first_dim_per_core;
+        mean_gm.SetGlobalBuffer((__gm__ float*)mean + mean_offset);
+        rstd_gm.SetGlobalBuffer((__gm__ float*)rstd + mean_offset);
+        x_gm.SetGlobalBuffer((__gm__ T*)(x) + core_offset);
         workspace_gm.SetGlobalBuffer((__gm__ float*)workspace + workspace_size);
         num_last_dim_aligned = num_last_dim;
         if (ROUND_UP32(num_last_dim * sizeof(T)) != num_last_dim * sizeof(T)) {
@@ -316,7 +318,7 @@ public:
 
                 if constexpr (IS_BIAS_PRESENT) {
                     LocalTensor<T> x3_in = x1_que.template AllocTensor<T>();
-                    uint32_t gm_offset = row_idx * row_step * num_last_dim + col_offset;
+                    uint64_t gm_offset = static_cast<uint64_t>(row_idx) * row_step * num_last_dim + col_offset;
                     DataCopyEx(x3_in, bias_gm[gm_offset], process_count);
                     x1_que.EnQue(x3_in);
                     auto x3_local = x1_que.template DeQue<T>();
@@ -476,7 +478,7 @@ public:
         x2_que.FreeTensor(x2_local_2);
         if constexpr (IS_BIAS_PRESENT) {
             LocalTensor<T> x3_in_2 = x1_que.template AllocTensor<T>();
-            uint32_t gm_offset_2 = row_idx * row_step * num_last_dim + col_offset;
+            uint64_t gm_offset_2 = static_cast<uint64_t>(row_idx) * row_step * num_last_dim + col_offset;
             DataCopyEx(x3_in_2, bias_gm[gm_offset_2], process_count);
             x1_que.EnQue(x3_in_2);
             auto x3_local_2 = x1_que.template DeQue<T>();
@@ -644,7 +646,7 @@ private:
 
         LocalTensor<T> x1_local = x1_que.template AllocTensor<T>();
         LocalTensor<T> x2_local = x2_que.template AllocTensor<T>();
-        uint32_t gm_offset = row_idx * row_step * num_last_dim + offset;
+        uint64_t gm_offset = static_cast<uint64_t>(row_idx) * row_step * num_last_dim + offset;
         if constexpr (IS_X1_NEEDCAST) {
             SetFlag<HardEvent::MTE3_S>(event_mte3_s);
             WaitFlag<HardEvent::MTE3_S>(event_mte3_s);
@@ -713,7 +715,7 @@ private:
         LocalTensor<float> x_local_fp32 = x_buf_fp32.Get<float>();
         LocalTensor<float> y_buf_local = y_buf_fp32.Get<float>();
         LocalTensor<float> add_buf_local = z_buf_fp32.Get<float>();
-        uint32_t gm_offset = proc_id * row_step * num_last_dim;
+        uint64_t gm_offset = static_cast<uint64_t>(proc_id) * row_step * num_last_dim;
         auto elementCount = num_last_dim_aligned * row_count;
         DataCopyPadParams padParams;
         if (last_dim_pad) {
@@ -800,7 +802,7 @@ private:
     {
         if constexpr (IS_ADDITIONAL_OUTPUT_ENABLE) {
             LocalTensor<float> add_buf_local = z_buf_fp32.Get<float>();
-            uint32_t gm_offset = proc_id * row_step * num_last_dim;
+            uint64_t gm_offset = static_cast<uint64_t>(proc_id) * row_step * num_last_dim;
             auto elementCount = num_last_dim_aligned * row_count;
             auto x_local = x_que.template AllocTensor<T>();
             if constexpr (is_same<T, float>::value) {
@@ -844,7 +846,7 @@ private:
     {
         auto y_buf_local = y_buf_fp32.Get<float>();
         auto add_buf_local = z_buf_fp32.Get<float>();
-        uint32_t gm_offset = proc_id * row_step * num_last_dim;
+        uint64_t gm_offset = static_cast<uint64_t>(proc_id) * row_step * num_last_dim;
         auto elementCount = num_last_dim_aligned * row_count;
         DataCopyPadParams padParams;
         if (last_dim_pad) {
@@ -873,7 +875,7 @@ private:
         event_t event_mte3_s = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_S));
         auto add_buf_local = x_buf_fp32.Get<float>();
         auto y_buf_local = y_buf_fp32.Get<float>();
-        uint32_t gm_offset = row_idx * row_step * num_last_dim;
+        uint64_t gm_offset = static_cast<uint64_t>(row_idx) * row_step * num_last_dim;
         LocalTensor<T> x1_local_in = x1_que.template AllocTensor<T>();
         if constexpr (IS_X1_NEEDCAST) {
             SetFlag<HardEvent::MTE3_S>(event_mte3_s);
@@ -1297,12 +1299,12 @@ private:
     __aicore__ inline void CopyOut(int32_t row_idx, int32_t row_count)
     {
         LocalTensor<T> res = y_que.template DeQue<T>();
-        uint32_t gm_offset = row_idx * row_step * num_last_dim;
+        uint64_t gm_offset = static_cast<uint64_t>(row_idx) * row_step * num_last_dim;
         DataCopyEx(y_gm[gm_offset], res, num_last_dim, row_count);
         y_que.FreeTensor(res);
 
 #if OUTPUT_MEAN_RSTD == 1
-        uint32_t gm_offset_mean = row_idx * row_step;
+        uint64_t gm_offset_mean = static_cast<uint64_t>(row_idx) * row_step;
         LocalTensor<float> mean = mean_que.template DeQue<float>();
         LocalTensor<float> rstd = rstd_que.template DeQue<float>();
         DataCopyEx(mean_gm[gm_offset_mean], mean, row_count);
@@ -1315,7 +1317,7 @@ private:
     __aicore__ inline void CopyOutSlicePhase0(int32_t row_idx, int32_t size, int32_t offset = 0)
     {
         LocalTensor<T> x = x_que.template DeQue<T>();
-        uint32_t gm_offset = row_idx * row_step * num_last_dim + offset;
+        uint64_t gm_offset = static_cast<uint64_t>(row_idx) * row_step * num_last_dim + offset;
         DataCopyEx(x_gm[gm_offset], x, size);
         x_que.FreeTensor(x);
     }
@@ -1323,7 +1325,7 @@ private:
     __aicore__ inline void CopyOutSlicePhase1(int32_t row_idx, int32_t size, int32_t offset = 0)
     {
         LocalTensor<T> res = y_que.template DeQue<T>();
-        uint32_t gm_offset = row_idx * row_step * num_last_dim + offset;
+        uint64_t gm_offset = static_cast<uint64_t>(row_idx) * row_step * num_last_dim + offset;
         DataCopyEx(y_gm[gm_offset], res, size);
         y_que.FreeTensor(res);
     }
@@ -1371,7 +1373,7 @@ private:
     uint32_t num_last_dim;
     uint32_t row_step;
     uint32_t row_work;
-    uint32_t gm_offset_;
+    uint64_t gm_offset_;
     uint32_t row_tail_;
     uint32_t col_tail;
     uint32_t col_move_cnt;

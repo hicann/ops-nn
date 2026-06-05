@@ -61,10 +61,11 @@ public:
 
     __aicore__ inline void InitInGlobalTensors(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR beta, GM_ADDR bias)
     {
-        x1Gm.SetGlobalBuffer((__gm__ T*)(x1) + block_idx * this->gmOffset_);
-        x2Gm.SetGlobalBuffer((__gm__ T*)(x2) + block_idx * this->gmOffset_);
+        uint64_t coreOffset = static_cast<uint64_t>(block_idx) * this->gmOffset_;
+        x1Gm.SetGlobalBuffer((__gm__ T*)(x1) + coreOffset);
+        x2Gm.SetGlobalBuffer((__gm__ T*)(x2) + coreOffset);
         if constexpr (IS_BIAS_ELEWISE) {
-            biasGm.SetGlobalBuffer((__gm__ T*)(bias) + block_idx * this->gmOffset_);
+            biasGm.SetGlobalBuffer((__gm__ T*)(bias) + coreOffset);
         } else if constexpr (IS_BIAS_BROADCAST) {
             biasGm.SetGlobalBuffer((__gm__ T*)bias);
         }
@@ -74,9 +75,10 @@ public:
 
     __aicore__ inline void InitOutGlobalTensors(GM_ADDR y1, GM_ADDR y2, GM_ADDR x)
     {
-        y1Gm.SetGlobalBuffer((__gm__ int8_t*)(y1) + block_idx * this->gmOffset_);
-        y2Gm.SetGlobalBuffer((__gm__ int8_t*)(y2) + block_idx * this->gmOffset_);
-        xGm.SetGlobalBuffer((__gm__ T*)(x) + block_idx * this->gmOffset_);
+        uint64_t coreOffset = static_cast<uint64_t>(block_idx) * this->gmOffset_;
+        y1Gm.SetGlobalBuffer((__gm__ int8_t*)(y1) + coreOffset);
+        y2Gm.SetGlobalBuffer((__gm__ int8_t*)(y2) + coreOffset);
+        xGm.SetGlobalBuffer((__gm__ T*)(x) + coreOffset);
     }
 
     __aicore__ inline void InitWorkSpaceGlobalTensors(GM_ADDR workspace)
@@ -97,7 +99,7 @@ protected:
     float aveNum;
     bool isXOut;
 
-    uint32_t gmOffset_;
+    uint64_t gmOffset_;
     uint32_t rowTail_;
     uint32_t rowStep;
     uint32_t rowWork;

@@ -87,16 +87,18 @@ public:
             rowStep = MIN(firstDimPerTime, rowWork);
         }
         rowTail_ = (rowWork % rowStep == 0) ? rowStep : (rowWork % rowStep);
-        gmOffset_ = notLastFirstDimPerCore * numLastDim;
-        x1Gm.SetGlobalBuffer((__gm__ T*)(x1) + block_idx * gmOffset_);
-        x2Gm.SetGlobalBuffer((__gm__ T*)(x2) + block_idx * gmOffset_);
+        gmOffset_ = static_cast<uint64_t>(notLastFirstDimPerCore) * numLastDim;
+        uint64_t coreOffset = static_cast<uint64_t>(block_idx) * gmOffset_;
+        x1Gm.SetGlobalBuffer((__gm__ T*)(x1) + coreOffset);
+        x2Gm.SetGlobalBuffer((__gm__ T*)(x2) + coreOffset);
         gammaGm.SetGlobalBuffer((__gm__ T*)gamma);
         betaGm.SetGlobalBuffer((__gm__ T*)beta);
-        yGm.SetGlobalBuffer((__gm__ T*)(y) + block_idx * gmOffset_);
+        yGm.SetGlobalBuffer((__gm__ T*)(y) + coreOffset);
         // mean/rstd always output fp32
-        meanGm.SetGlobalBuffer((__gm__ float*)mean + block_idx * notLastFirstDimPerCore);
-        rstdGm.SetGlobalBuffer((__gm__ float*)rstd + block_idx * notLastFirstDimPerCore);
-        xGm.SetGlobalBuffer((__gm__ T*)(x) + block_idx * gmOffset_);
+        uint64_t meanOffset = static_cast<uint64_t>(block_idx) * notLastFirstDimPerCore;
+        meanGm.SetGlobalBuffer((__gm__ float*)mean + meanOffset);
+        rstdGm.SetGlobalBuffer((__gm__ float*)rstd + meanOffset);
+        xGm.SetGlobalBuffer((__gm__ T*)(x) + coreOffset);
         if constexpr (IS_BIAS_BROADCAST) {
             biasGm.SetGlobalBuffer((__gm__ T*)bias);
         }
@@ -169,7 +171,7 @@ public:
             DataCopyEx(biasLocal, biasGm, numLastDim);
         }
 
-        uint32_t gmOffset = 0;
+        uint64_t gmOffset = 0;
         uint32_t elementCount = numLastDimAligned * rowStep;
 
         {
@@ -196,7 +198,7 @@ public:
                 PrecisionCompute(rowStep, gammaLocalReduce, betaLocalReduce, elementCount);
             }
             CopyOut(0, rowStep);
-            gmOffset += rowStep * numLastDim;
+            gmOffset += static_cast<uint64_t>(rowStep) * numLastDim;
         }
         for (int32_t rowIdx = 1; rowIdx < rowMoveCnt - 1; ++rowIdx) {
             LocalTensor<T> x1x2LocalIn = x1x2Que.template AllocTensor<T>();
@@ -217,7 +219,7 @@ public:
                 PrecisionCompute(rowStep, gammaLocalReduce, betaLocalReduce, elementCount);
             }
             CopyOut(rowIdx, rowStep);
-            gmOffset += rowStep * numLastDim;
+            gmOffset += static_cast<uint64_t>(rowStep) * numLastDim;
         }
         {
             auto rowIdx = rowMoveCnt - 1;
@@ -307,7 +309,7 @@ private:
     {
         if constexpr (IS_ADDITIONAL_OUTPUT_ENABLE) {
             LocalTensor<float> addBufLocal = zBufFp32.Get<float>();
-            uint32_t gmOffset = procId * rowStep * numLastDim;
+            uint64_t gmOffset = static_cast<uint64_t>(procId) * rowStep * numLastDim;
             auto elementCount = numLastDimAligned * rowCount;
             auto xLocal = yQue.template AllocTensor<T>();
             if constexpr (is_same<T, float>::value) {
@@ -651,12 +653,12 @@ private:
     __aicore__ inline void CopyOut(int32_t rowIdx, int32_t rowCount)
     {
         LocalTensor<T> resReduce = yQue.template DeQue<T>();
-        uint32_t gmOffsetReduce = rowIdx * rowStep * numLastDim;
+        uint64_t gmOffsetReduce = static_cast<uint64_t>(rowIdx) * rowStep * numLastDim;
         DataCopyEx(yGm[gmOffsetReduce], resReduce, numLastDim, rowCount);
         yQue.FreeTensor(resReduce);
 
 #if OUTPUT_MEAN_RSTD == 1
-        uint32_t gmOffsetMeanReduce = rowIdx * rowStep;
+        uint64_t gmOffsetMeanReduce = static_cast<uint64_t>(rowIdx) * rowStep;
         LocalTensor<float> meanReduce = meanQue.template DeQue<float>();
         LocalTensor<float> rstdReduce = rstdQue.template DeQue<float>();
         DataCopyEx(meanGm[gmOffsetMeanReduce], meanReduce, rowCount);
@@ -701,7 +703,7 @@ private:
     uint32_t numFirstDim;
     uint32_t rowStep;
     uint32_t rowWork;
-    uint32_t gmOffset_;
+    uint64_t gmOffset_;
     uint32_t rowTail_;
     uint32_t colTail;
     uint32_t colMoveCnt;

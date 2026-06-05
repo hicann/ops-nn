@@ -43,7 +43,7 @@ struct AddLayerNormQuantTilingData {
     uint32_t firstDimPerTimeTail = 0;
     uint32_t rowTailPerBlock = 0;
     uint32_t rowTailLastBlock = 0;
-    uint32_t gmOffset = 0;
+    uint64_t gmOffset = 0;
 };
 
 #pragma pack()

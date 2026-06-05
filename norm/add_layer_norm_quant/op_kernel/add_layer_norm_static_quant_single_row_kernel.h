@@ -55,16 +55,16 @@ public:
 
     __aicore__ inline void Process()
     {
-        uint32_t gm_offset = 0;
+        uint64_t gm_offset = 0;
         for (uint32_t row_idx = 0; row_idx < this->rowWork; ++row_idx) {
             CopyInAddSingleRow(gm_offset);
             precision_compute_single_row(gm_offset);
-            gm_offset += this->numLastDim;
+            gm_offset += static_cast<uint64_t>(this->numLastDim);
         }
     }
 
 private:
-    __aicore__ inline void CopyInAddSingleRow(uint32_t gm_offset)
+    __aicore__ inline void CopyInAddSingleRow(uint64_t gm_offset)
     {
         LocalTensor<float> tmpTensors = tmpBuf.Get<float>();
 
@@ -117,7 +117,7 @@ private:
         rowInQue.FreeTensor(biasTensor);
     }
 
-    __aicore__ inline void precision_compute_single_row(uint32_t gm_offset)
+    __aicore__ inline void precision_compute_single_row(uint64_t gm_offset)
     {
         LocalTensor<float> tmpTensors = tmpBuf.Get<float>();
 
@@ -295,7 +295,8 @@ public:
 
         scalesGm.SetGlobalBuffer((__gm__ T*)scales);
         offsetsGm.SetGlobalBuffer((__gm__ T*)offsets);
-        workspaceGm.SetGlobalBuffer((__gm__ float*)workspace + block_idx * 2 * this->numLastDim);
+        uint64_t workspaceOffset = static_cast<uint64_t>(block_idx) * 2 * this->numLastDim;
+        workspaceGm.SetGlobalBuffer((__gm__ float*)workspace + workspaceOffset);
 
         // single row
         Ppipe->InitBuffer(rowInQue, BUFFER_NUM, this->numLastDimAligned * sizeof(T));
@@ -308,14 +309,16 @@ public:
     __aicore__ inline void Process()
     {
         CopyInBetaGammaBias();
+        uint64_t gmOffset = 0;
         for (int32_t row_idx = 0; row_idx < this->rowWork; ++row_idx) {
-            CopyInAddSingleRow(row_idx);
-            precision_compute_single_row(row_idx);
+            CopyInAddSingleRow(gmOffset);
+            precision_compute_single_row(gmOffset);
+            gmOffset += static_cast<uint64_t>(this->numLastDim);
         }
     }
 
 private:
-    __aicore__ inline void CopyInAddSingleRow(int32_t row_idx)
+    __aicore__ inline void CopyInAddSingleRow(uint64_t gmOffset)
     {
         LocalTensor<float> tmpTensors = tmpBuf.Get<float>();
 
@@ -334,9 +337,8 @@ private:
         }
 
         LocalTensor<T> biasIn = rowInQue.template AllocTensor<T>();
-        uint32_t gm_offset = row_idx * this->numLastDim;
-        DataCopyEx(x1In, this->x1Gm[gm_offset], this->numLastDim);
-        DataCopyEx(x2In, this->x2Gm[gm_offset], this->numLastDim);
+        DataCopyEx(x1In, this->x1Gm[gmOffset], this->numLastDim);
+        DataCopyEx(x2In, this->x2Gm[gmOffset], this->numLastDim);
 
         rowInQue.EnQue(biasIn);
         auto biasTensor = rowInQue.template DeQue<T>();
@@ -350,7 +352,7 @@ private:
             Adds(xOutTensor, x1In, ZERO, this->numLastDim);
             rowOutQue.template EnQue<T>(xOutTensor);
             auto xOut = rowOutQue.template DeQue<T>();
-            DataCopyEx(this->xGm[gm_offset], xOut, this->numLastDim);
+            DataCopyEx(this->xGm[gmOffset], xOut, this->numLastDim);
             rowOutQue.FreeTensor(xOut);
         } else {
             Cast(x1Fp32, x1In, RoundMode::CAST_NONE, this->numLastDim);
@@ -367,14 +369,14 @@ private:
             Cast(xOutTensor, x1Fp32, RoundMode::CAST_RINT, this->numLastDim);
             rowOutQue.template EnQue<T>(xOutTensor);
             auto xOut = rowOutQue.template DeQue<T>();
-            DataCopyEx(this->xGm[gm_offset], xOut, this->numLastDim);
+            DataCopyEx(this->xGm[gmOffset], xOut, this->numLastDim);
             rowOutQue.FreeTensor(xOut);
         }
         PipeBarrier<PIPE_V>();
         rowInQue.FreeTensor(biasTensor);
     }
 
-    __aicore__ inline void precision_compute_single_row(int32_t row_idx)
+    __aicore__ inline void precision_compute_single_row(uint64_t gmOffset)
     {
         LocalTensor<float> tmpTensors = tmpBuf.Get<float>();
         LocalTensor<T> gammaBetaTensor = gammaBetaBuf.Get<T>();
@@ -464,7 +466,7 @@ private:
         Cast(yLocal, xTensor.ReinterpretCast<half>(), RoundMode::CAST_TRUNC, this->numLastDim);
         quantizeOutQue.EnQue(yLocal);
         auto yOut = quantizeOutQue.template DeQue<int8_t>();
-        DataCopyEx(this->y1Gm[row_idx * this->numLastDim], yOut, this->numLastDim);
+        DataCopyEx(this->y1Gm[gmOffset], yOut, this->numLastDim);
         quantizeOutQue.FreeTensor(yOut);
     }
 

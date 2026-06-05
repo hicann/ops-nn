@@ -51,9 +51,10 @@ public:
             numLastDimAligned = ROUND_UP32(numLastDim * sizeof(T)) / sizeof(T);
         }
 
-        gmOffset_ = nlFirstDimPerCore * numLastDim;
-        x1Gm.SetGlobalBuffer((__gm__ T*)(x1) + block_idx * gmOffset_);
-        x2Gm.SetGlobalBuffer((__gm__ T*)(x2) + block_idx * gmOffset_);
+        gmOffset_ = static_cast<uint64_t>(nlFirstDimPerCore) * numLastDim;
+        uint64_t coreOffset = static_cast<uint64_t>(block_idx) * gmOffset_;
+        x1Gm.SetGlobalBuffer((__gm__ T*)(x1) + coreOffset);
+        x2Gm.SetGlobalBuffer((__gm__ T*)(x2) + coreOffset);
         gammaGm.SetGlobalBuffer((__gm__ T*)gamma);
         betaGm.SetGlobalBuffer((__gm__ T*)beta);
         biasGm.SetGlobalBuffer((__gm__ T*)bias);
@@ -62,10 +63,11 @@ public:
             offsetsGm.SetGlobalBuffer((__gm__ T*)offsets);
             hasOffset = true;
         }
-        workspaceGm.SetGlobalBuffer((__gm__ float*)workspace + block_idx * 2 * numLastDim);
+        uint64_t workspaceOffset = static_cast<uint64_t>(block_idx) * 2 * numLastDim;
+        workspaceGm.SetGlobalBuffer((__gm__ float*)workspace + workspaceOffset);
 
-        yGm.SetGlobalBuffer((__gm__ int8_t*)(y) + block_idx * gmOffset_);
-        xGm.SetGlobalBuffer((__gm__ T*)(x) + block_idx * gmOffset_);
+        yGm.SetGlobalBuffer((__gm__ int8_t*)(y) + coreOffset);
+        xGm.SetGlobalBuffer((__gm__ T*)(x) + coreOffset);
 
         // single row
         Ppipe->InitBuffer(rowInQue, BUFFER_NUM, numLastDimAligned * sizeof(T));
@@ -104,7 +106,7 @@ private:
         }
 
         LocalTensor<T> biasIn = rowInQue.template AllocTensor<T>();
-        uint32_t gm_offset = row_idx * numLastDim;
+        uint64_t gm_offset = static_cast<uint64_t>(row_idx) * numLastDim;
         DataCopyEx(x1In, x1Gm[gm_offset], numLastDim);
         DataCopyEx(x2In, x2Gm[gm_offset], numLastDim);
 
@@ -243,7 +245,7 @@ private:
         Cast(yLocal, xTensor.ReinterpretCast<half>(), RoundMode::CAST_TRUNC, numLastDim);
         quantizeOutQue.EnQue(yLocal);
         auto yOut = quantizeOutQue.template DeQue<int8_t>();
-        DataCopyEx(yGm[row_idx * numLastDim], yOut, numLastDim);
+        DataCopyEx(yGm[static_cast<uint64_t>(row_idx) * numLastDim], yOut, numLastDim);
         quantizeOutQue.FreeTensor(yOut);
     }
 
@@ -289,7 +291,7 @@ private:
     uint32_t numLastDim;
     uint32_t rowStep;
     uint32_t rowWork;
-    uint32_t gmOffset_;
+    uint64_t gmOffset_;
     uint32_t rowTail_;
     uint32_t nlFirstDimPerCore;
     uint32_t lFirstDimPerCore;

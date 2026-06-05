@@ -89,21 +89,23 @@ public:
             rowStep = MIN(firstDimPerTime, rowWork);
         }
         rowTail_ = (rowWork % rowStep == 0) ? rowStep : (rowWork % rowStep);
-        gmOffset_ = nlFirstDimPerCore * numLastDim;
-        x1Gm.SetGlobalBuffer((__gm__ T*)(x1) + block_idx * gmOffset_);
-        x2Gm.SetGlobalBuffer((__gm__ T*)(x2) + block_idx * gmOffset_);
+        gmOffset_ = static_cast<uint64_t>(nlFirstDimPerCore) * numLastDim;
+        uint64_t coreOffset = static_cast<uint64_t>(block_idx) * gmOffset_;
+        x1Gm.SetGlobalBuffer((__gm__ T*)(x1) + coreOffset);
+        x2Gm.SetGlobalBuffer((__gm__ T*)(x2) + coreOffset);
         if constexpr (IS_BIAS_PRESENT) {
-            biasGm.SetGlobalBuffer((__gm__ T*)(bias) + block_idx * gmOffset_);
+            biasGm.SetGlobalBuffer((__gm__ T*)(bias) + coreOffset);
         } else if constexpr (IS_BIAS_BROADCAST) {
             biasGm.SetGlobalBuffer((__gm__ T*)bias);
         }
         gammaGm.SetGlobalBuffer((__gm__ T*)gamma);
         betaGm.SetGlobalBuffer((__gm__ T*)beta);
-        yGm.SetGlobalBuffer((__gm__ T*)(y) + block_idx * gmOffset_);
+        yGm.SetGlobalBuffer((__gm__ T*)(y) + coreOffset);
         // mean/rstd always output fp32
-        meanGm.SetGlobalBuffer((__gm__ float*)mean + block_idx * nlFirstDimPerCore);
-        rstdGm.SetGlobalBuffer((__gm__ float*)rstd + block_idx * nlFirstDimPerCore);
-        xGm.SetGlobalBuffer((__gm__ T*)(x) + block_idx * gmOffset_);
+        uint64_t meanOffset = static_cast<uint64_t>(block_idx) * nlFirstDimPerCore;
+        meanGm.SetGlobalBuffer((__gm__ float*)mean + meanOffset);
+        rstdGm.SetGlobalBuffer((__gm__ float*)rstd + meanOffset);
+        xGm.SetGlobalBuffer((__gm__ T*)(x) + coreOffset);
 
         numLastDimAligned = numLastDim;
         if (ROUND_UP32(numLastDim * sizeof(T)) != numLastDim * sizeof(T)) {
@@ -160,7 +162,7 @@ public:
             DataCopyEx(biasLocal, biasGm, numLastDim);
         }
 
-        uint32_t gmOffset = 0;
+        uint64_t gmOffset = 0;
         auto elementCount = numLastDimAligned * rowStep;
 
         {
@@ -181,7 +183,7 @@ public:
             CopyOutAdditionalOutput(0, rowStep);
             precisionCompute(rowStep, gammaLocal, betaLocal, x1x2Local, elementCount);
             CopyOut(0, rowStep);
-            gmOffset += rowStep * numLastDim;
+            gmOffset += static_cast<uint64_t>(rowStep) * numLastDim;
         }
         for (int32_t rowIdx = 1; rowIdx < rowMoveCnt - 1; ++rowIdx) {
             LocalTensor<T> x1x2LocalIn = x1x2Que.template AllocTensor<T>();
@@ -196,7 +198,7 @@ public:
             CopyOutAdditionalOutput(rowIdx, rowStep);
             precisionCompute(rowStep, gammaLocal, betaLocal, x1x2Local, elementCount);
             CopyOut(rowIdx, rowStep);
-            gmOffset += rowStep * numLastDim;
+            gmOffset += static_cast<uint64_t>(rowStep) * numLastDim;
         }
         {
             auto rowIdx = rowMoveCnt - 1;
@@ -328,12 +330,12 @@ private:
     __aicore__ inline void CopyOut(int32_t rowIdx, int32_t rowCount)
     {
         LocalTensor<T> res = yQue.template DeQue<T>();
-        uint32_t gmOffset = rowIdx * rowStep * numLastDim;
+        uint64_t gmOffset = static_cast<uint64_t>(rowIdx) * rowStep * numLastDim;
         DataCopyEx(yGm[gmOffset], res, numLastDim, rowCount);
         yQue.FreeTensor(res);
 
 #if OUTPUT_MEAN_RSTD == 1
-        uint32_t gmOffsetMean = rowIdx * rowStep;
+        uint64_t gmOffsetMean = static_cast<uint64_t>(rowIdx) * rowStep;
         LocalTensor<float> mean = meanQue.template DeQue<float>();
         LocalTensor<float> rstd = rstdQue.template DeQue<float>();
         DataCopyEx(meanGm[gmOffsetMean], mean, rowCount);
@@ -347,7 +349,7 @@ private:
     {
         if constexpr (IS_ADDITIONAL_OUTPUT_ENABLE) {
             LocalTensor<float> addBufLocalSpecial = xBufFp32.Get<float>();
-            uint32_t gmOffsetSpecial = procId * rowStep * numLastDim;
+            uint64_t gmOffsetSpecial = static_cast<uint64_t>(procId) * rowStep * numLastDim;
             auto elementCountSpecial = numLastDimAligned * rowCount;
             auto xLocalSpecial = yQue.template AllocTensor<T>();
             if constexpr (is_same<T, float>::value) {
@@ -395,7 +397,7 @@ private:
     uint32_t numLastDim;
     uint32_t rowStep;
     uint32_t rowWork;
-    uint32_t gmOffset_;
+    uint64_t gmOffset_;
     uint32_t rowTail_;
     uint32_t colTail;
     uint32_t colMoveCnt;
