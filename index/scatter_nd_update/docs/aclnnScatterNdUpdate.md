@@ -201,6 +201,9 @@ aclnnStatus aclnnScatterNdUpdate(
   - indices至少是2维，indices最后1维rank表示索引的维度数，rank取值范围为[1, 7], 且必须满足rank <= varRef.rank, 即索引维度数不能超过varRef的维度数。
   - 假设indices最后1维的大小是a，则updates的shape等于indices除最后1维外的shape加上varRef除前a维外的shape。举例：varRef的shape是(4, 5, 6)，indices的shape是(3, 2)，则updates的shape必须是(3, 6)。
 
+- 非连续Tensor支持：
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：varRef支持首轴非连续（即第0维的stride大于其按连续布局计算的期望值，其余各维均连续）的场景，算子可直接基于该非连续视图完成更新，无需先将varRef转换为连续Tensor。
+
 ## 调用示例
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
