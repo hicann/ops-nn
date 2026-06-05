@@ -334,7 +334,6 @@ protected:
             this->dedx_.SetWeight(this->filterGm_[this->offsetB_]);
 
             this->CheckFullLoadEnable();
-            this->dedx_.SetFullLoadFlag(this->tiling_->enableFullLoad);
 
             if constexpr (GetScaleFormat(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
                 this->dedx_.SetScale(this->scaleGm_[this->offsetScale_]);

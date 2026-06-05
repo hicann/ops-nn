@@ -27,7 +27,6 @@ DECLARE_CHECK_IMPL(SetBias);
 DECLARE_CHECK_IMPL(SetScale);
 DECLARE_CHECK_IMPL(SetSingleShape);
 DECLARE_CHECK_IMPL(SetStartIdx);
-DECLARE_CHECK_IMPL(SetFullLoadFlag);
 DECLARE_CHECK_IMPL(SetBatchCoreIdx);
 DECLARE_CHECK_IMPL(FreeBiasTensor);
 DECLARE_CHECK_SYNC_IMPL(Iterate);
@@ -160,36 +159,29 @@ __aicore__ inline void InitFullLoadFlag(Intf *self)
         self->ctx.isA1FullLoadFlag_ = false;
         return;
     }
-
-    self->ctx.isB1FullLoadFlag_ = (self->ctx.tiling_->baseN >= self->ctx.tiling_->singleCoreCin) &&
-        (self->ctx.tiling_->enlarge == 1);
+    bool isDoutDkFullLoad = self->ctx.tiling_->dk == 1 || self->ctx.tiling_->dout == 1;
+    bool baseB1Cond = self->ctx.tiling_->baseN >= self->ctx.tiling_->singleCoreCin &&
+        self->ctx.tiling_->enlarge == 1;
     if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
-        if (!self->ctx.kSCoutFullLoad_) {
-            self->ctx.isA1FullLoadFlag_ = false;
-            self->ctx.isB1FullLoadFlag_ = false;
-        } else {
-            bool isDoutDkFullLoad = (self->ctx.tiling_->dk == 1 || self->ctx.tiling_->dout == 1);
-            self->ctx.isA1FullLoadFlag_ = self->ctx.tiling_->al1Pbuffer == 1 && isDoutDkFullLoad;
-            // pad为奇数(反向pad为偶数)的场景，每个sub kernel需要重载L1A
-            // 当前仅支持各方向pad一致且kernel为4或2，简化条件
-            if (self->ctx.tiling_->wk == 3 || ((self->ctx.tiling_->backpropPadLeft == 0 ||
-                self->ctx.tiling_->backpropPadLeft == 2) && (self->ctx.tiling_->wk == 4 || self->ctx.tiling_->wk == 2))) {
-                self->ctx.isA1FullLoadFlag_ = false;
-            }
-            self->ctx.isB1FullLoadFlag_ = self->ctx.isB1FullLoadFlag_ &&
-                self->ctx.tiling_->bl1Pbuffer == 1 && isDoutDkFullLoad;
-        }
+        bool needReloadA1 = self->ctx.tiling_->wk == 3 ||
+            ((self->ctx.tiling_->backpropPadLeft == 0 || self->ctx.tiling_->backpropPadLeft == 2) &&
+             (self->ctx.tiling_->wk == 4 || self->ctx.tiling_->wk == 2));
+        self->ctx.isA1FullLoadFlag_ = self->ctx.kSCoutFullLoad_ &&
+            self->ctx.tiling_->al1Pbuffer == 1 && isDoutDkFullLoad && !needReloadA1;
+        self->ctx.isB1FullLoadFlag_ = self->ctx.kSCoutFullLoad_ && baseB1Cond &&
+            self->ctx.tiling_->bl1Pbuffer == 1 && isDoutDkFullLoad;
+    } else if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_H) {
+        self->ctx.isA1FullLoadFlag_ = false;
+        self->ctx.isB1FullLoadFlag_ = baseB1Cond && isDoutDkFullLoad &&
+            self->ctx.tiling_->baseK * self->ctx.curStepKb_ >=
+            self->ctx.tiling_->singleCoreCout * self->ctx.splitHkWkList_[0];
     } else {
         self->ctx.isA1FullLoadFlag_ = false;
-        if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_H) {
-            self->ctx.isB1FullLoadFlag_ = (self->ctx.tiling_->baseK * self->ctx.curStepKb_ >=
-                self->ctx.tiling_->singleCoreCout * self->ctx.splitHkWkList_[0]) && self->ctx.isB1FullLoadFlag_ &&
-                (self->ctx.tiling_->dk == 1 || self->ctx.tiling_->dout == 1);
-        } else {
-            self->ctx.isB1FullLoadFlag_ = (self->ctx.tiling_->baseK * self->ctx.curStepKb_ >=
-                self->ctx.tiling_->singleCoreCout * self->ctx.singleShapeHWk_) && self->ctx.isB1FullLoadFlag_ &&
-                self->ctx.tiling_->bl1Pbuffer == 1 && self->ctx.tiling_->singleIterateDk == 1;
-        }
+        self->ctx.isB1FullLoadFlag_ = baseB1Cond &&
+            self->ctx.tiling_->baseK * self->ctx.curStepKb_ >=
+            self->ctx.tiling_->singleCoreCout * self->ctx.singleShapeHWk_ &&
+            self->ctx.tiling_->bl1Pbuffer == 1 &&
+            self->ctx.tiling_->singleIterateDk == 1;
     }
 }
 
@@ -251,7 +243,6 @@ __aicore__ inline void InitParamsPart2(Intf *self)
     self->ctx.baseUseN_ = 0;
     self->ctx.baseUseK_ = 0;
     self->ctx.curEnlargeCin1_ = 0;
-    self->ctx.curEnlargeCout1_ = 0;
     self->ctx.curDinStartIdx_ = 0;
     self->ctx.curHoStartIdx_ = 0;
     self->ctx.curCinStartIdx_ = 0;
@@ -269,7 +260,6 @@ __aicore__ inline void InitParamsPart2(Intf *self)
     self->ctx.isLoadB1_ = true;
     self->ctx.isFreeA1_ = false;
     self->ctx.isFreeB1_ = false;
-    self->ctx.isLastDk_ = true;
     self->ctx.isLastKSegment_ = false;
     self->ctx.needComputeFlag_ = true;
     self->ctx.realMSize_ = 0;
@@ -317,8 +307,6 @@ __aicore__ inline void InitParams(Intf *self)
     self->ctx.curStepKa_ = self->ctx.tiling_->stepKa;
     self->ctx.curStepKb_ = self->ctx.tiling_->stepKb;
     InitParamsForSplitDkSplit<Intf>(self);
-    self->ctx.kSegment_ = self->ctx.tiling_->kSegment;
-    self->ctx.kSegmentTail_ = self->ctx.tiling_->kSegmentTail;
     self->ctx.enableSplitK_ = self->ctx.tiling_->enableSplitK;
     self->ctx.useUbAccumForSplitK_ = self->ctx.tiling_->useUbAccumForSplitK;
     if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
@@ -659,31 +647,24 @@ static __aicore__ inline void UpdateFullLoadL1Status(Intf *self)
     if (!self->ctx.isB1FullLoadFlag_ && !self->ctx.isA1FullLoadFlag_) {
         return;
     }
-    bool isLastMNIter = (self->ctx.curMIdx_ == self->ctx.mIter_ - 1) &&
+    bool isLastMNIter = self->ctx.curMIdx_ == self->ctx.mIter_ - 1 &&
         self->ctx.curNIdx_ == self->ctx.nIter_ - 1;
-    bool isLastDIter = (self->ctx.tiling_->dk == 1 && self->ctx.curDinIdx_ ==
-        self->ctx.curDinStartIdx_ + self->ctx.singleShapeDin_ - 1) ||
-        self->ctx.tiling_->dk > 1;
-
     if constexpr (Intf::conv3dConfig.kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
-        self->ctx.isFreeB1_ = isLastMNIter && self->ctx.tiling_->dk > 1;
-        bool isLastRearrangeHWIter = (self->ctx.rearrangeWIndex_ == self->ctx.tiling_->strideW - 1) &&
-            (self->ctx.rearrangeHIndex_ == self->ctx.tiling_->strideH - 1);
-        self->ctx.isFreeA1_ = isLastRearrangeHWIter;
-        if (!isLastRearrangeHWIter && CheckFreeA1ForKernelSplit(self)) {
-            self->ctx.isFreeA1_ = true;
-        }
-        self->ctx.isFreeB1_ = self->ctx.isFreeB1_ && isLastRearrangeHWIter;
+        bool isLastRearrangeHWIter = self->ctx.rearrangeWIndex_ == self->ctx.tiling_->strideW - 1 &&
+            self->ctx.rearrangeHIndex_ == self->ctx.tiling_->strideH - 1;
+        self->ctx.isFreeA1_ = isLastRearrangeHWIter || CheckFreeA1ForKernelSplit(self);
+        self->ctx.isFreeB1_ = isLastMNIter && self->ctx.tiling_->dk > 1 && isLastRearrangeHWIter;
     } else {
-        if (self->ctx.isB1FullLoadFlag_ && self->ctx.tiling_->dk == 1) {
-            // c04场景和group>1（包括enlarge>1）场景不支持calRound间不释放B矩阵
-            if (self->ctx.enableFullLoad_ && !Intf::conv3dConfig.enableC04Flag && self->ctx.tiling_->group == 1) {
-                isLastDIter = false;
-            }
-        }
-        self->ctx.isFreeB1_ = isLastMNIter && isLastDIter;
+        bool isLastDIter = (self->ctx.tiling_->dk == 1 && self->ctx.curDinIdx_ ==
+            self->ctx.curDinStartIdx_ + self->ctx.singleShapeDin_ - 1) ||
+            self->ctx.tiling_->dk > 1;
+        bool suppressB1Free = self->ctx.isB1FullLoadFlag_ && self->ctx.tiling_->dk == 1 &&
+            self->ctx.tiling_->enableFullLoad && !Intf::conv3dConfig.enableC04Flag &&
+            self->ctx.tiling_->group == 1;
+        self->ctx.isFreeB1_ = isLastMNIter && isLastDIter && !suppressB1Free;
     }
 }
+
 
 template <class Intf>
 static __aicore__ inline void UpdateL1ComputeInfo(Intf *self)
@@ -715,11 +696,11 @@ static __aicore__ inline void UpdateL1ComputeInfo(Intf *self)
 template <class Intf>
 static __aicore__ inline void UpdateSplitKTail(Intf *self, uint32_t kIdx)
 {
-    if (kIdx + self->ctx.kSegment_ < self->ctx.tiling_->coutG) {
+    if (kIdx + self->ctx.tiling_->kSegment < self->ctx.tiling_->coutG) {
         return;
     }
     self->ctx.isLastKSegment_ = true;
-    self->ctx.singleShapeCout_ = self->ctx.kSegmentTail_;
+    self->ctx.singleShapeCout_ = self->ctx.tiling_->kSegmentTail;
     uint64_t tmpSingleCoreK = 0;
     uint32_t singleShapeCout1 = DivCeilC0<Intf>(self, self->ctx.singleShapeCout_);
     tmpSingleCoreK = singleShapeCout1 * self->ctx.singleShapeHWk_ * self->ctx.tiling_->c0;
@@ -762,8 +743,6 @@ static __aicore__ inline void SetDequantScale(Intf *self)
  	        SetFlag<HardEvent::FIX_MTE2>(eventId);
  	        WaitFlag<HardEvent::FIX_MTE2>(eventId);
             Convolution3DBackpropFunc::FullLoadToScaleL1<Intf>(self);
-        } else if (self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::SCALAR_QUANT)) {
-            self->ctx.deqScalar_ = self->ctx.scaleGlobal_.GetValue(0);
         }
     }
 }
@@ -779,7 +758,7 @@ static __aicore__ inline void CalcSplitK_(Intf *self, uint8_t &enAtomic, const G
     if (unlikely(hasBias)) {
         self->ctx.computeBiasOnce_ = false;
     }    
-    for (uint32_t kIdx = self->ctx.curCoutStartIdx_; kIdx < self->ctx.tiling_->coutG; kIdx += self->ctx.kSegment_) {
+    for (uint32_t kIdx = self->ctx.curCoutStartIdx_; kIdx < self->ctx.tiling_->coutG; kIdx += self->ctx.tiling_->kSegment) {
         self->ctx.curCoutStartIdx_ = kIdx;
         UpdateSplitKTail<Intf>(self, kIdx);
         // fp32: 使用atomic累加到GM; 非fp32: 使用atomic累加到workspace
@@ -899,7 +878,6 @@ struct SetSingleShape {
         if constexpr (Intf::conv3dConfig.groupMode == TPL_GROUP_MODE_ENLARGE) {
             self->ctx.curEnlarge = self->ctx.singleShapeCout_ / (self->ctx.tiling_->cout / self->ctx.tiling_->oriGroup);
             self->ctx.curEnlargeCin1_ = DivCeil16(self->ctx.curEnlarge * (self->ctx.tiling_->cin / self->ctx.tiling_->oriGroup));
-            self->ctx.curEnlargeCout1_ = DivCeilC0<Intf>(self, self->ctx.singleShapeCout_);
         }
     }
 };
@@ -924,16 +902,6 @@ struct SetStartIdx {
         }
         self->ctx.curCinStartIdx_ = curCinStartIdx;
         self->ctx.curCoutStartIdx_ = curCoutStartIdx;
-    }
-};
-
-template <class Intf>
-struct SetFullLoadFlag {
-    DECLARE_DEFAULT_OVERLOADING_FUN(Intf, Convolution3DBackpropFunc);
-    static __aicore__ inline void call(Intf *self, bool enableFullLoad)
-    {
-        // 设置全载模板标志位
-        self->ctx.enableFullLoad_ = enableFullLoad;
     }
 };
 
@@ -972,7 +940,7 @@ static __aicore__ inline void InitFirstIterState(Intf *self)
         }
     } else {
         if (!self->ctx.isB1FullLoadFlag_ || self->ctx.tiling_->dk > 1 ||
-            Intf::conv3dConfig.enableC04Flag || !self->ctx.enableFullLoad_ || self->ctx.tiling_->group != 1) {
+            Intf::conv3dConfig.enableC04Flag || !self->ctx.tiling_->enableFullLoad || self->ctx.tiling_->group != 1) {
             self->ctx.isLoadB1_ = true;
             self->ctx.isFreeB1_ = false;
         }
@@ -1126,9 +1094,7 @@ struct VecPreProcess {
         if (unlikely(self->ctx.enableSplitDk_)) {
             if ASCEND_IS_AIC_SCALAR {
                 // 反向event(实际只需要保证vector核内的时序,不加反向event时cube到vector之间的event有可能会下超过16次,导致报错)
-                if (self->ctx.isLastDk_) {
-                    CvCrossCoreWait<Intf, PIPE_MTE3, PIPE_FIX>(self, FLAG_FIXP_ID);
-                }
+                CvCrossCoreWait<Intf, PIPE_MTE3, PIPE_FIX>(self, FLAG_FIXP_ID);
             }
         }
     }
@@ -1145,19 +1111,15 @@ struct VecPostProcess {
         }
         if (unlikely(self->ctx.enableSplitDk_)) {
             if ASCEND_IS_AIC_SCALAR {
-                if (self->ctx.isLastDk_) {
-                    CvCrossCoreSet<Intf, PIPE_FIX, PIPE_MTE2>(self, FLAG_MTE2_VEC_ID);
-                }
+                CvCrossCoreSet<Intf, PIPE_FIX, PIPE_MTE2>(self, FLAG_MTE2_VEC_ID);
             }
             if ASCEND_IS_AIV_SCALAR {
                 if (GetSubBlockIdx() != 0) {
                     return;
                 }
-                if (self->ctx.isLastDk_) {
-                    CvCrossCoreWait<Intf, PIPE_FIX, PIPE_MTE2>(self, FLAG_MTE2_VEC_ID);
-                    CastToDstType<Intf>(self, output, enAtomic, enSequentialWrite);
-                    CvCrossCoreSet<Intf, PIPE_MTE3, PIPE_FIX>(self, FLAG_FIXP_ID);
-                }
+                CvCrossCoreWait<Intf, PIPE_FIX, PIPE_MTE2>(self, FLAG_MTE2_VEC_ID);
+                CastToDstType<Intf>(self, output, enAtomic, enSequentialWrite);
+                CvCrossCoreSet<Intf, PIPE_MTE3, PIPE_FIX>(self, FLAG_FIXP_ID);
             }
         }
         // workSpace累加UB cast搬出

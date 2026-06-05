@@ -140,7 +140,6 @@ public:
             for (uint32_t batchIdx = 0; batchIdx < singleShapeBatch_; ++batchIdx) {
                 dedx_.SetOutBackprop(dedyGm_[offsetA_]);
                 dedx_.SetWeight(filterGm_[offsetB_]);
-                dedx_.SetFullLoadFlag(this->tiling_->enableFullLoad);
 
                 if (unlikely(hasBias_)) {
                     dedx_.SetBias(biasGm_[offsetBias_]);
@@ -172,7 +171,6 @@ public:
                 }
                 dedx_.SetOutBackprop(dedyGm_[offsetA_]);
                 dedx_.SetWeight(filterGm_[offsetB_]);
-                dedx_.SetFullLoadFlag(this->tiling_->enableFullLoad);
 
                 if (unlikely(hasBias_)) {
                     offsetBias_ = nCoreIdx_ * tiling_->singleCoreCin + groupIdx * tiling_->cinG;

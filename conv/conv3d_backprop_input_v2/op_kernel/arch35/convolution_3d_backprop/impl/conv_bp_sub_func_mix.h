@@ -424,7 +424,7 @@ static __aicore__ inline void SetQuantInt32ToHalf(Intf *self, FixpipeParamsC310<
             fixPipeParams.quantPre = QuantMode_t::VDEQF16;  // int32 -> fp16 tensor quant
         } else {
             fixPipeParams.quantPre = QuantMode_t::DEQF16;   // int32 -> fp16 scalar quant
-            fixPipeParams.deqScalar = self->ctx.deqScalar_;
+            fixPipeParams.deqScalar = self->ctx.scaleGlobal_.GetValue(0);
         }
     } else {
         fixPipeParams.quantPre = QuantMode_t::DEQF16;   // int32 -> fp16 scalar quant
@@ -439,11 +439,11 @@ static __aicore__ inline void SetQuantInt8(Intf *self, FixpipeParamsC310<layout>
             fixPipeParams.quantPre = QuantMode_t::VREQ8;
         } else {
             fixPipeParams.quantPre = QuantMode_t::REQ8;
-            fixPipeParams.deqScalar = self->ctx.deqScalar_;
+            fixPipeParams.deqScalar = self->ctx.scaleGlobal_.GetValue(0);
         }
     } else {
         fixPipeParams.quantPre = QuantMode_t::REQ8;
-        fixPipeParams.deqScalar = DQ_SCALAR_QF_ONE; 
+        fixPipeParams.deqScalar = DQ_SCALAR_QF_ONE;
     }
 }
 
@@ -1122,7 +1122,7 @@ static __aicore__ inline void Dn2Nz4Group(Intf *self)
 
     // ub size is 253952, half is 126976, bfloat16 data num max is 63488, which is smaller than uint16_max.
     // that is cout1G * hk * wk * cinG * BLOCK_CUBE * c0 < 63488
-    uint16_t cout1G = static_cast<uint16_t>(self->ctx.curEnlargeCout1_);
+    uint16_t cout1G = static_cast<uint16_t>(DivCeilC0<Intf>(self, self->ctx.singleShapeCout_));
     uint16_t hkWk = static_cast<uint16_t>(self->ctx.hkWk_);
     uint16_t cin1G = static_cast<uint16_t>(self->ctx.curEnlargeCin1_);
     uint16_t cin1GIterMax = cin1G * C0LoopTimes;

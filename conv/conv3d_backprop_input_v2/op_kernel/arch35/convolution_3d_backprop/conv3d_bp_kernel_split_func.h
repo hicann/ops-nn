@@ -157,9 +157,6 @@ static __aicore__ inline void InitParamsForKernelSplitHW(Intf *self)
     }
 
     self->ctx.splitWi_ = DivCeil(self->ctx.tiling_->wi, self->ctx.tiling_->strideW);
-    // hi不对齐strideh时，subkernel Msize 比 first msize hi少1
-    self->ctx.subKernelM_ = static_cast<uint64_t>(self->ctx.tiling_->hi) / self->ctx.tiling_->strideH *
-        self->ctx.splitWi_;
 
     uint32_t alignedCout = AlignUpC0<Intf>(self, self->ctx.tiling_->singleCoreCout);
     if (self->ctx.kSCoutFullLoad_) {
@@ -224,13 +221,15 @@ static __aicore__ inline void RecalcBaseUseMForKernelSplit(Intf *self)
         return; // 仅需在rearrangeHIndex_=1, rearrangeWIndex_=0时进入
     }
 
+    uint64_t subKernelM = static_cast<uint64_t>(self->ctx.tiling_->hi) / self->ctx.tiling_->strideH *
+    self->ctx.splitWi_;
     // hi不对齐strideH时，会出现两个子kenrel计算得Msize不一样大得场景，需要重新计算baseUseN, 避免多搬
     uint64_t curMIdx = self->ctx.curMStartIdx_ + self->ctx.curMIdx_ * self->ctx.tiling_->baseM;
-    if (curMIdx > self->ctx.subKernelM_) {
+    if (curMIdx > subKernelM) {
         self->ctx.needComputeFlag_ = false;
         self->ctx.curHoSize_ = 0;
-    } else if (curMIdx + self->ctx.baseUseM_ > self->ctx.subKernelM_) {
-        self->ctx.baseUseM_ = self->ctx.subKernelM_ - curMIdx;
+    } else if (curMIdx + self->ctx.baseUseM_ > subKernelM) {
+        self->ctx.baseUseM_ = subKernelM - curMIdx;
         self->ctx.mmad_.m = ((self->ctx.baseUseM_ + BLOCK_CUBE - 1) >> 4) << 4;
     }
 }
@@ -238,20 +237,17 @@ static __aicore__ inline void RecalcBaseUseMForKernelSplit(Intf *self)
 template <class Intf>
 static __aicore__ inline bool IterateForKernelSplit(Intf *self)
 {
-    bool res = true;
-    if (++self->ctx.splitWIndex_ >= self->ctx.tiling_->strideW) {
-        self->ctx.splitWIndex_ = 0;
-    }
-    if (++self->ctx.rearrangeWIndex_ >= self->ctx.tiling_->strideW) {
-        self->ctx.rearrangeWIndex_ = 0;
-        if (++self->ctx.splitHIndex_ >= self->ctx.tiling_->strideH) {
-            self->ctx.splitHIndex_ = 0;
-        }
-        if (++self->ctx.rearrangeHIndex_ >= self->ctx.tiling_->strideH) {
-            self->ctx.rearrangeHIndex_ = 0;
-            res = false;
-        }
-    }
+    uint32_t splitWNext = self->ctx.splitWIndex_ + 1;
+    self->ctx.splitWIndex_ = splitWNext >= self->ctx.tiling_->strideW ? 0 : splitWNext;
+    uint32_t rearrangeWNext = self->ctx.rearrangeWIndex_ + 1;
+    bool wWrapped = rearrangeWNext >= self->ctx.tiling_->strideW;
+    self->ctx.rearrangeWIndex_ = wWrapped ? 0 : rearrangeWNext;
+    uint32_t hIncr = wWrapped ? 1u : 0u;
+    uint32_t splitHNext = self->ctx.splitHIndex_ + hIncr;
+    self->ctx.splitHIndex_ = splitHNext >= self->ctx.tiling_->strideH ? 0 : splitHNext;
+    uint32_t rearrangeHNext = self->ctx.rearrangeHIndex_ + hIncr;
+    self->ctx.rearrangeHIndex_ = rearrangeHNext >= self->ctx.tiling_->strideH ? 0 : rearrangeHNext;
+    bool res = !wWrapped || rearrangeHNext < self->ctx.tiling_->strideH;
 
     // 切换子kernel的时候刷新不同子kernel的参数
     self->ctx.splitIndex_ = self->ctx.splitHIndex_ * self->ctx.tiling_->strideW + self->ctx.splitWIndex_;
@@ -325,7 +321,7 @@ struct FreeB1Tensor {
         } else if (Intf::conv3dConfig.kernelSplitMode == TPL_NO_SPLIT_KERNEL) {
             // c04场景和group>1（包括enlarge>1）场景不支持calRound间不释放B矩阵
             if (self->ctx.isB1FullLoadFlag_ && self->ctx.tiling_->dk == 1 &&
-            !Intf::conv3dConfig.enableC04Flag && self->ctx.enableFullLoad_ && self->ctx.tiling_->group == 1) {
+            !Intf::conv3dConfig.enableC04Flag && self->ctx.tiling_->enableFullLoad && self->ctx.tiling_->group == 1) {
                 self->ctx.isLoadB1_ = true;
                 self->ctx.isFreeB1_ = false;
                 self->ctx.inQueL1B_.FreeTensor(self->ctx.cacheB1Buf_);

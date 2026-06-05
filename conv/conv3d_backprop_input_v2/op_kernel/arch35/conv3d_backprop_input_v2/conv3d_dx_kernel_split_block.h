@@ -311,7 +311,6 @@ protected:
                 mCoreUse = (this->mCoreIdx_ == (this->mCnt_ - 1)) ? this->mCoreTail_ : this->singleShapeM_;
             }
             this->SetIterateParams(mCoreUse, splitBaseHk, baseHkIter, splitTailHk, kernelIdx);
-            this->dedx_.SetFullLoadFlag(this->tiling_->enableFullLoad);
 
             if (unlikely(this->hasBias_)) {
                 this->IterateAllForBias(firstloadbias);

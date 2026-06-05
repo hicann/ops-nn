@@ -53,7 +53,6 @@ public:
     DECLARE_IMPL(Config_, Convolution3DBackpropFunc, SetSingleShapeParams, Intf);
     DECLARE_IMPL(Config_, Convolution3DBackpropFunc, SetSingleShape, Intf);
     DECLARE_IMPL(Config_, Convolution3DBackpropFunc, SetStartIdx, Intf);
-    DECLARE_IMPL(Config_, Convolution3DBackpropFunc, SetFullLoadFlag, Intf);
     DECLARE_IMPL(Config_, Convolution3DBackpropFunc, SetBatchCoreIdx, Intf);
     DECLARE_IMPL(Config_, Convolution3DBackpropFunc, FreeB1Tensor, Intf);
     DECLARE_IMPL(Config_, Convolution3DBackpropFunc, FreeBiasTensor, Intf);
@@ -111,7 +110,6 @@ public:
         DEFINE_STUCT_FIELD(uint32_t, singleShapeCin_);
         DEFINE_STUCT_FIELD(uint32_t, singleShapeCout_);
         DEFINE_STUCT_FIELD(uint32_t, curEnlargeCin1_);
-        DEFINE_STUCT_FIELD(uint32_t, curEnlargeCout1_);
         DEFINE_STUCT_FIELD(uint32_t, singleShapeDin_);
         DEFINE_STUCT_FIELD(uint32_t, curDinStartIdx_);
         DEFINE_STUCT_FIELD(int32_t, curHoStartIdx_);
@@ -119,8 +117,6 @@ public:
         DEFINE_STUCT_FIELD(int32_t, curCoutStartIdx_);
         DEFINE_STUCT_FIELD(int32_t, hoExpand_);
 
-        DEFINE_STUCT_FIELD(uint32_t, kSegment_);
-        DEFINE_STUCT_FIELD(uint32_t, kSegmentTail_);
         DEFINE_STUCT_FIELD(bool, enableSplitK_);
         DEFINE_STUCT_FIELD(bool, useUbAccumForSplitK_);
         DEFINE_STUCT_FIELD(bool, isLastKSegment_);
@@ -152,11 +148,9 @@ public:
         DEFINE_STUCT_FIELD(bool, isFreeA1_);
         DEFINE_STUCT_FIELD(bool, isFreeB1_);
         DEFINE_STUCT_FIELD(bool, enableSplitDk_);
-        DEFINE_STUCT_FIELD(bool, isLastDk_);
         DEFINE_STUCT_FIELD(bool, needComputeFlag_);
         DEFINE_STUCT_FIELD(bool, hasBias_);
         DEFINE_STUCT_FIELD(bool, computeBiasOnce_);
-        DEFINE_STUCT_FIELD(bool, enableFullLoad_);
         DEFINE_STUCT_FIELD(uint8_t, isFirstIter_);
         DEFINE_STUCT_FIELD(uint8_t, l0PingPongFlag_);
         DEFINE_STUCT_FIELD(uint8_t, enableL0PingPong_);
@@ -219,11 +213,9 @@ public:
         DEFINE_STUCT_FIELD(uint64_t, curStepKb_);
         DEFINE_STUCT_FIELD(uint32_t, kSCoutFullLoad_);
         DEFINE_STUCT_FIELD(uint32_t, kSUseWorkSpace_);
-        DEFINE_STUCT_FIELD(uint64_t, subKernelM_);
         DEFINE_STUCT_FIELD(uint32_t, l0aPingPongAddr_);
         DEFINE_STUCT_FIELD(uint32_t, l0bPingPongAddr_);
         DEFINE_STUCT_FIELD(uint32_t, realWoSize_);
-        DEFINE_STUCT_FIELD(uint64_t, deqScalar_);
 #endif
     };
 };

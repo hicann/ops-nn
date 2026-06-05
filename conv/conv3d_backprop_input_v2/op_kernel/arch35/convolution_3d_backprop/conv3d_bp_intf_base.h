@@ -131,14 +131,6 @@ public:
         }
     }
 
-    __aicore__ inline void SetFullLoadFlag(bool enableFullLoad)
-    {
-        using Local = typename Ext::SetFullLoadFlag;
-        if constexpr (CHECK_FUN(Local, Convolution3DBackpropFunc, this, enableFullLoad)) {
-            Local::call(this, enableFullLoad);
-        }
-    }
-
     __aicore__ inline void SetBatchCoreIdx(uint32_t batchCoreIdx)
     {
         using Local = typename Ext::SetBatchCoreIdx;

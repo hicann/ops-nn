@@ -124,18 +124,10 @@ static __aicore__ inline void LoadL0c2Gm(
         WaitFlag<HardEvent::MTE2_FIX>(eventId);
     }
     if constexpr (Intf::Config::dType::format == Convolution3DBackprop::CubeFormat::NCDHW) {
-        if (!enSequentialWrite) {
-            LoadL0c2OutForNz2Dn<Intf>(self, output, useC1Buf);
-        } else {
-            return;
-        }
+        LoadL0c2OutForNz2Dn<Intf>(self, output, useC1Buf);
     } else {
 #if (__NPU_ARCH__ != 5102)
-        if (!enSequentialWrite) {
-            LoadL0c2OutForNz2Nd<Intf>(self, output, useC1Buf);
-        } else {
-            return;
-        }
+        LoadL0c2OutForNz2Nd<Intf>(self, output, useC1Buf);
 #endif
     }
     if constexpr (
