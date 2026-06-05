@@ -156,8 +156,8 @@ void TransposeQuantBatchMatMulAswTiling::CalScaleFactors(uint64_t baseASize, uin
 
 void TransposeQuantBatchMatMulAswTiling::CalStepKs()
 {
-    runInfo_.stepKa = runInfo_.depthA1 / DB_SIZE;
-    runInfo_.stepKb = runInfo_.depthB1 / DB_SIZE;
+    runInfo_.stepKa = std::max(runInfo_.depthA1 / DB_SIZE , 1UL);
+    runInfo_.stepKb = std::max(runInfo_.depthB1 / DB_SIZE , 1UL);
 
     if (static_cast<uint64_t>(runInfo_.stepKa * runInfo_.baseK) > args_.kValue) {
         runInfo_.stepKa = ops::CeilDiv(args_.kValue, static_cast<uint64_t>(runInfo_.baseK));

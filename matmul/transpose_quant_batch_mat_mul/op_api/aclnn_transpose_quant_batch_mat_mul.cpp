@@ -385,7 +385,7 @@ static bool CheckShapeValid(
             return false;
         }
     } else {
-        if (x1KDim % K_ALIGNMENT64 != 0) {
+        if (x1KDim <= 0 || static_cast<uint64_t>(x1KDim) % K_ALIGNMENT64 != 0) {
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
                 OP_NAME, "x1", op::ToString(x1Shape).GetString(),
                 Ops::NN::FormatString("%s of %s must be exactly divisible by %lu", "K-axis", "x1", K_ALIGNMENT64)
