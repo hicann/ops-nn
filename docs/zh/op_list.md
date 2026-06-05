@@ -3169,6 +3169,16 @@
     <td>AI Core</td>
     <td>RmsNorm的反向计算。用于计算RmsNorm的梯度，即在反向传播过程中计算输入张量的梯度。</td>
   </tr>
+    <tr>
+    <td>norm</td>
+    <td><a href="../../norm/rms_norm_grad_quant/README.md">rms_norm_grad_quant</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>RmsNormGrad是用于计算RmsNorm的梯度，即在反向传播过程中计算输入张量的梯度的算子。RmsNormGradQuant算子将RmsNormGrad和Quantize两个算子融合，RmsNormGrad计算完dx后进行quant计算，减少搬入搬出操作。</td>
+  </tr>
   <tr>
     <td>norm</td>
     <td><a href="../../norm/rms_norm_quant/README.md">rms_norm_quant</a></td>

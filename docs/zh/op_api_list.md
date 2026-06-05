@@ -358,6 +358,7 @@
 | [aclnnRepeatInterleaveWithDim](../../index/repeat_interleave/docs/aclnnRepeatInterleaveWithDim.md) | 将tensor中的每个元素根据dim维度，重复Tensor repeats中对应位置的相应次数。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnRmsNorm](../../norm/rms_norm/docs/aclnnRmsNorm.md) | RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnRmsNormGrad](../../norm/rms_norm_grad/docs/aclnnRmsNormGrad.md) | [aclnnRmsNorm](../../norm/rms_norm/docs/aclnnRmsNorm.md)的反向计算。用于计算RMSNorm的梯度，即在反向传播过程中计算输入张量的梯度。 | 默认非确定性实现，支持配置开启 | 默认非确定性实现，支持配置开启 |
+| [aclnnRmsNormGradQuant](../../norm/rms_norm_grad_quant/docs/aclnnRmsNormGradQuant.md) | RmsNormGrad是用于计算RmsNorm的梯度，即在反向传播过程中计算输入张量的梯度的算子。RmsNormGradQuant算子将RmsNormGrad和Quantize两个算子融合，RmsNormGrad计算完dx后进行quant计算，减少搬入搬出操作。| - | 默认非确定性实现，支持配置开启 |
 | [aclnnRmsNormQuant](../../norm/rms_norm_quant/docs/aclnnRmsNormQuant.md) | aclnnRmsNormQuant算子将aclnnRmsNorm前的Add算子以及aclnnRmsNorm后的Quantize算子融合起来，减少搬入搬出操作。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnRmsNormQuantV3](../../norm/rms_norm_quant_v3/docs/aclnnRmsNormQuantV3.md) | aclnnRmsNormQuantV3将aclnnRmsNorm以及aclnnRmsNorm后的Quantize算子融合起来，减少搬入搬出操作。同时在aclnnRmsNormQuant的基础上支持Rstd的可选输出。| - | 默认确定性实现 |
 | [aclnnRotateQuant](../../matmul/rotate_quant/docs/aclnnRotateQuant.md) | 对张量x进行旋转变换，然后执行可选的clamp操作，最后执行对称动态量化（目的数据类型为int8或者quint4x2）或者MX量化（目的数据类型为FLOAT4类、FLOAT8类）。 | 默认确定性实现 | 默认确定性实现 |
