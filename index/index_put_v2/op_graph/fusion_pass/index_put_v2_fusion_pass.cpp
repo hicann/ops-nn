@@ -151,8 +151,8 @@ bool IndexPutV2FusionPass::CheckPlatform()
         return false;
     }
     const std::string soc = platformInfo.str_info.short_soc_version;
-    if (soc != "Ascend950" && soc != "MC62CM12A") {
-        OP_LOGI(kPassName.c_str(), "Platform %s is not supported, only Ascend950, MC62CM12A", soc.c_str());
+    if (soc != "Ascend950" && soc != "MC62") {
+        OP_LOGI(kPassName.c_str(), "Platform %s is not supported, only Ascend950, MC62", soc.c_str());
         return false;
     }
     return true;

@@ -8,8 +8,8 @@
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
 
-set(SUPPORT_COMPUTE_UNIT "ascend950" "mc62cm12a")
-set(SUPPORT_TILING_DIR "arch35" "arch35")
+set(SUPPORT_COMPUTE_UNIT "ascend950")
+set(SUPPORT_TILING_DIR "arch35")
 
 add_modules_sources(
     HOSTNAME ${OPHOST_NAME}

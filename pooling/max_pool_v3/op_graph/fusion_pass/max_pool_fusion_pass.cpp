@@ -54,7 +54,7 @@ inline static bool IsRegbasePlatform()
         PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(info, optInfo) != SUCCESS,
         false, kPassName.c_str(), "Get platform_info failed.");
     const std::string socVersion = info.str_info.short_soc_version;
-    bool isRegbasePlatform = (socVersion == "Ascend950" || socVersion == "MC62CM12A");
+    bool isRegbasePlatform = (socVersion == "Ascend950" || socVersion == "MC62");
     OPS_LOG_D(kPassName.c_str(), "Platform short soc: %s, is_regbase: %d", socVersion.c_str(), isRegbasePlatform);
     return isRegbasePlatform;
 }
