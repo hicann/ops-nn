@@ -186,9 +186,9 @@ static ge::graphStatus CheckShape(const gert::TilingContext* context, const Anti
     // Check FP4 constraint: last dimension must be even (each byte holds 2 FP4 values)
     auto inputXPtr = context->GetInputDesc(0);
     auto xDtype = inputXPtr->GetDataType();
-    if ((xDtype == ge::DT_FLOAT4_E2M1 || xDtype == ge::DT_FLOAT4_E1M2) && (xShape.GetDim(-1) % DIGIT_TWO != 0)) {
+    if ((xDtype == ge::DT_FLOAT4_E2M1 || xDtype == ge::DT_FLOAT4_E1M2) && (xShape.GetDim(xShape.GetDimNum() - 1) % DIGIT_TWO != 0)) {
         OP_LOGE(context->GetNodeName(), "For FP4 input, the last dimension (colNum=%ld) must be even.",
-                xShape.GetDim(-1));
+                xShape.GetDim(xShape.GetDimNum() - 1));
         return ge::GRAPH_FAILED;
     }
 

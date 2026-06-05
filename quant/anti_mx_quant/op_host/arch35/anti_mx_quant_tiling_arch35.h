@@ -17,7 +17,6 @@
 #define AIR_CXX_RUNTIME_V2_OP_IMPL_ANTI_MX_QUANT_H
 
 #include <cstdint>
-#include <vector>
 #include <string>
 #include <set>
 #include "register/op_def_registry.h"
@@ -73,10 +72,10 @@ public:
 
 private:
     ge::graphStatus SetTilingParams();
-    void CalcTilingKey();
+    void CalcTilingKey() const;
     void CalcAxisSize(const gert::Shape& xShape);
     ge::graphStatus AutoTiling();
-    std::set<int64_t> FindSplitCombo(int64_t usedCoreNum);
+    std::set<int64_t> FindSplitCombo(int64_t usedCoreNum) const;
     ge::graphStatus SetTilingDataForTailAxis();
     void PrintTilingDataForTailAxis();
     int64_t CalcBytesPerBlock() const;

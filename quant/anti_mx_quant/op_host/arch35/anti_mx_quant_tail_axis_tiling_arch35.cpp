@@ -84,7 +84,7 @@ void AntiMxQuantTailAxisTiling::PrintTilingDataForTailAxis()
         tilingData_.rowNormalBlockNum, tilingData_.rowTailLen, tilingData_.maxUbBlockNum);
 }
 
-std::set<int64_t> AntiMxQuantTailAxisTiling::FindSplitCombo(int64_t usedCoreNum)
+std::set<int64_t> AntiMxQuantTailAxisTiling::FindSplitCombo(int64_t usedCoreNum) const
 {
     std::set<int64_t> result;
     int64_t upbound = std::ceil(std::sqrt(usedCoreNum) + 1);
@@ -190,7 +190,7 @@ int64_t AntiMxQuantTailAxisTiling::CalcBytesPerBlock() const
     return DB_BUFFER * (inputBytes + outputBytes + BYTES_OF_SCALE_PER_BLOCK) + extraBufBytes;
 }
 
-void AntiMxQuantTailAxisTiling::CalcTilingKey()
+void AntiMxQuantTailAxisTiling::CalcTilingKey() const
 {
     // Only one template param: axis mode (0=tail axis, 1=non-tail axis)
     uint64_t axisMode = TPL_AXIS_TAIL;

@@ -106,7 +106,7 @@ static bool CheckShape(const aclTensor* x, const aclTensor* y, const aclTensor* 
     return true;
 }
 
-static bool CheckAttrValid(int64_t axis, int64_t dstType)
+static bool CheckAttrValid(int64_t dstType)
 {
     if (dstType != NUM_FLOAT32 && dstType != NUM_FLOAT16 && dstType != NUM_BFLOAT16) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dstType must be 0(FLOAT32), 1(FLOAT16) or 27(BF16), but got %ld.", dstType);
@@ -125,7 +125,7 @@ static aclnnStatus CheckParams(const aclTensor* x, const aclTensor* mxscale, int
     CHECK_RET(CheckDtypeValid(x, mxscale, y, dstType), ACLNN_ERR_PARAM_INVALID);
 
     // 3. Check attr
-    CHECK_RET(CheckAttrValid(axis, dstType), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckAttrValid(dstType), ACLNN_ERR_PARAM_INVALID);
 
     // 4. Check shape
     CHECK_RET(CheckShape(x, y, mxscale, axis), ACLNN_ERR_PARAM_INVALID);
