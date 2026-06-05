@@ -41,8 +41,8 @@ bool FusedMatMulStreamKTiling::IsCapable()
 }
 
 bool FusedMatMulBatchStreamKTiling::IsCapable()
-{
-    if (args_.batchInfo->batchC <= 1) {
+{   
+    if (!IsFusedMatMulBmmShape(context_)) {
         return false;
     }
     auto attrs = context_->GetAttrs();
