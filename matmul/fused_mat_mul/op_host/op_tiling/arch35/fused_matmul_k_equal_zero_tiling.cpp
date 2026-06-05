@@ -28,7 +28,12 @@ bool FusedMatMulKEqZeroTiling::IsCapable()
     auto attrs = context_->GetAttrs();
     OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs);
     std::string opType = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
-    if (opType != "relu" && !opType.empty()) {
+    if (opType != "relu" && opType != "gelu_erf" && opType != "gelu_tanh" &&
+        opType != "add" && opType != "mul" && !opType.empty()) {
+        return false;
+    }
+    if ((opType == "add" || opType == "mul" || opType == "gelu_erf" || opType == "gelu_tanh") &&
+        batchInfo_ != nullptr && batchInfo_->batchC > 1UL) {
         return false;
     }
     return BatchMatMulV3KEqZeroTiling::IsCapable();
@@ -36,6 +41,23 @@ bool FusedMatMulKEqZeroTiling::IsCapable()
 
 uint64_t FusedMatMulKEqZeroTiling::GetTilingKey() const
 {
+    auto attrs = context_->GetAttrs();
+    if (attrs != nullptr) {
+        std::string opType = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
+        if (opType == "add" || opType == "mul") {
+            auto it = FUSED_OP_TYPE_MAP.find(opType);
+            if (it != FUSED_OP_TYPE_MAP.end()) {
+                return GET_TPL_TILING_KEY(
+                    static_cast<uint64_t>(MAT_MUL_BASIC_LEVEL),
+                    static_cast<uint64_t>(F_NO_TRANS),
+                    static_cast<uint64_t>(MAT_MUL_FOR_BATCH),
+                    static_cast<uint64_t>(MAT_MUL_K_EQUAL_ZERO),
+                    static_cast<uint64_t>(MAT_MUL_NO_FULL_LOAD),
+                    static_cast<uint64_t>(MAT_MUL_ON_THE_FLY),
+                    static_cast<uint64_t>(it->second));
+            }
+        }
+    }
     MatMulV3TilingKey tmp = MatMulV3TilingKey();
     MatMulV3TilingKey& tilingKey = tilingKeyObj == nullptr ? tmp : *tilingKeyObj;
     return tilingKey.SetTrans(false, false)

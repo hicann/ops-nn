@@ -3,7 +3,7 @@
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
@@ -74,7 +74,7 @@ __aicore__ inline void MatMulMixWithoutQueActKernel(GM_ADDR aGM, GM_ADDR bGM, GM
 
     // 定义BlockEpilogue类型
     using BlockEpilogue = Block::BlockEpilogueElementwise<L0TileShape, OutType, OutType, FusionOp>;
-    
+
     // 定义shape的形状，tuple保存 m n k batch
     using ProblemShape = MatmulShape;
 
@@ -86,9 +86,8 @@ __aicore__ inline void MatMulMixWithoutQueActKernel(GM_ADDR aGM, GM_ADDR bGM, GM
         {aGM, bGM, yGM, biasGM},                           // gm addr
         {yGM, {x3GM}},                                     // epilogue and fusion args
         {&tilingData}};
-   
+
     MatmulKernel mm;
     mm(params);
 }
 }
-

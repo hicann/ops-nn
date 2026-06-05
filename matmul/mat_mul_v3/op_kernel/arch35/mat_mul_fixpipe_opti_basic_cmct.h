@@ -18,16 +18,55 @@
 #include "cmct/block/block_scheduler_utils.h"
 #include "cmct/kernel/kernel_matmul_mix_fixpipe_opti.h"
 #include "cmct/epilogue/block_epilogue_fixpipe.h"
+#include "cmct/epilogue/block_epilogue_fixpipe_fusion.h"
+#include "cmct/epilogue/fusion/fusion_add.h"
+#include "cmct/epilogue/fusion/fusion_mul.h"
+#include "cmct/epilogue/fusion/default_fusion_op.h"
 #include "block_scheduler_aswt.h"
 namespace MatmulV3Advanced {
 using namespace Cmct;
 using namespace Cmct::Gemm;
+
+// FusionOpSelector for FixpipeOpti — primary template defaults to DefaultFusion
+namespace FixpipeInternal {
+template<uint64_t OpType, class OutType>
+struct FusionOpSelector {
+    using type = Block::DefaultFusion<OutType, OutType>;
+};
+
+template<class OutType>
+struct FusionOpSelector<OP_TYPE_ADD, OutType> {
+    using type = Block::FusionAdd<OutType, OutType>;
+};
+
+template<class OutType>
+struct FusionOpSelector<OP_TYPE_MUL, OutType> {
+    using type = Block::FusionMul<OutType, OutType>;
+};
+
+// BlockEpilogueSelector: ADD/MUL use BlockEpilogueFixpipeFusion, others use BlockEpilogueFixpipe
+template<uint64_t OpType, class L0TileShape, class OutType, class DispatchPolicy, class FusionOp>
+struct BlockEpilogueSelector {
+    using type = Block::BlockEpilogueFixpipe<L0TileShape, OutType, OutType, DispatchPolicy>;
+};
+
+template<class L0TileShape, class OutType, class DispatchPolicy, class FusionOp>
+struct BlockEpilogueSelector<OP_TYPE_ADD, L0TileShape, OutType, DispatchPolicy, FusionOp> {
+    using type = Block::BlockEpilogueFixpipeFusion<L0TileShape, OutType, OutType, DispatchPolicy, FusionOp>;
+};
+
+template<class L0TileShape, class OutType, class DispatchPolicy, class FusionOp>
+struct BlockEpilogueSelector<OP_TYPE_MUL, L0TileShape, OutType, DispatchPolicy, FusionOp> {
+    using type = Block::BlockEpilogueFixpipeFusion<L0TileShape, OutType, OutType, DispatchPolicy, FusionOp>;
+};
+} // namespace FixpipeInternal
+
 template <
     class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class A_LAYOUT, class B_LAYOUT, class C_LAYOUT,
     uint64_t FULL_LOAD_MODE = 0, uint64_t FUSED_OP_TYPE = 0>
 __aicore__ inline void MatMulFixpipeOptiActKernel(
     GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR cGM, GM_ADDR workspaceGM,
-    const MatMulV3BasicTilingData& tilingData, int64_t batch = 0)
+    const MatMulV3BasicTilingData& tilingData, int64_t batch = 0, GM_ADDR x3GM = nullptr)
 {
     // 定义L1和L0的TileShape
     using L1TileShape = AscendC::Shape<_128, _256, _256>;
@@ -56,25 +95,33 @@ __aicore__ inline void MatMulFixpipeOptiActKernel(
         AType, LayoutA, BType, LayoutB, OutType, LayoutC, BiasType, LayoutC, L1TileShape, L0TileShape, BlockScheduler,
         DispatchPolicy>;
 
-    // 定义Fusion类型
-    using FusionOp = Block::DefaultFusion<OutType, OutType>;
-
-    // 定义BlockEpilogue类型
-    using BlockEpilogue = Block::BlockEpilogueFixpipe<L0TileShape, OutType, OutType, DispatchPolicy>;
+    // 定义BlockEpilogue类型: ADD/MUL用BlockEpilogueFixpipeFusion, 其他用BlockEpilogueFixpipe
+    using FusionOp = typename FixpipeInternal::FusionOpSelector<FUSED_OP_TYPE, OutType>::type;
+    using BlockEpilogue = typename FixpipeInternal::BlockEpilogueSelector<
+        FUSED_OP_TYPE, L0TileShape, OutType, DispatchPolicy, FusionOp>::type;
 
     // 定义shape的形状，tuple保存 m n k batch
     using ProblemShape = MatmulShape;
 
     // 定义Kernel类型
-    using MatmulKernel = Kernel::KernelMatmulMixFixpipeOpti<ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler>;
+    using MatmulKernel = Kernel::KernelMatmulMixFixpipeOpti<ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler,
+                                                            FUSED_OP_TYPE, OutType, FusionOp>;
     using Params = typename MatmulKernel::Params;
+    using EpilogueParams = typename BlockEpilogue::Params;
+
+    EpilogueParams epilogueParams;
+    epilogueParams.outGmAddr = cGM;
+    if constexpr (FUSED_OP_TYPE == OP_TYPE_ADD || FUSED_OP_TYPE == OP_TYPE_MUL) {
+        epilogueParams.fusionParams.inputGmAddr = x3GM;
+    }
+
     Params params = {
         {tilingData.m, tilingData.n, tilingData.k, batch}, // shape
         {aGM, bGM, cGM, biasGM},                           // gm addr
-        {cGM},                                             // epilogue args
-        {&tilingData}};
+        epilogueParams,                                    // epilogue params
+        {&tilingData},
+        x3GM};                                             // x3GM for fusion
     MatmulKernel mm;
     mm(params);
 }
 }
-

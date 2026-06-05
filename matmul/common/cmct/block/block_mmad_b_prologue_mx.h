@@ -582,13 +582,13 @@ private:
         srcTensor.SetGlobalBuffer(tensorA.address_);
         LocalTensor<ElementA> aL1LocalBuf;
         if (aL1Idx == IDX_0) {
-            aL1LocalBuf = aL1LocalBuf0_; 
+            aL1LocalBuf = aL1LocalBuf0_;
         } else if (aL1Idx == IDX_1) {
-            aL1LocalBuf = aL1LocalBuf1_; 
+            aL1LocalBuf = aL1LocalBuf1_;
         } else if (aL1Idx == IDX_2) {
-            aL1LocalBuf = aL1LocalBuf2_; 
+            aL1LocalBuf = aL1LocalBuf2_;
         } else if (aL1Idx == IDX_3) {
-            aL1LocalBuf = aL1LocalBuf3_; 
+            aL1LocalBuf = aL1LocalBuf3_;
         }
         DataCopy(aL1LocalBuf, srcTensor, nd2nzParams);
 
@@ -701,4 +701,3 @@ private:
     static constexpr TEventID eventIdsFixToM_[2] = {0, 1};
 };
 } // namespace Cmct::Gemm::Block
-

@@ -149,6 +149,7 @@ struct MatmulMultiBlockWithOutQue {
     constexpr static bool enableRelu = (FUSED_OP_TYPE_ == OP_TYPE_RELU);
     constexpr static bool enableAdd = (FUSED_OP_TYPE_ == OP_TYPE_ADD);
     constexpr static bool enableMul = (FUSED_OP_TYPE_ == OP_TYPE_MUL);
+    constexpr static bool enableGelu = (FUSED_OP_TYPE_ == OP_TYPE_GELU_ERF || FUSED_OP_TYPE_ == OP_TYPE_GELU_TANH);
 };
 
 /**

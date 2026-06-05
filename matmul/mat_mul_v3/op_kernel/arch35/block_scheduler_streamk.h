@@ -240,4 +240,3 @@ using SchedulerOp = BlockSchedulerStreamKBuiltIn<ProblemShape_, L1TileShape_, L0
 } // namespace Block
 } // namespace Gemm
 } // namespace Cmct
-

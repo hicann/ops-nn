@@ -60,6 +60,8 @@ constexpr uint64_t ONLY_VECTOR_IN = 2;
 constexpr static uint64_t OP_TYPE_EMPTY = 0UL;
 constexpr static uint64_t OP_TYPE_ADD = 1UL;
 constexpr static uint64_t OP_TYPE_MUL = 2UL;
+constexpr static uint64_t OP_TYPE_GELU_ERF = 3UL;
+constexpr static uint64_t OP_TYPE_GELU_TANH = 4UL;
 constexpr static uint64_t OP_TYPE_RELU = 5UL;
 constexpr uint64_t BLOCK_BYTE_SIZE = 32;
 struct MatmulShape {
@@ -181,4 +183,3 @@ template <class Stride>
 struct is_2d_nz_c0_32 : is_2d_nz_c0_32_impl<typename AscendC::Std::remove_cvref_t<Stride>> {};
 } // namespace Gemm
 } // namespace Cmct
-

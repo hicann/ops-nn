@@ -33,6 +33,7 @@ constexpr float BETA = 0.044715;
 constexpr float ALPHA = -1.5957691;
 constexpr float REQ_SQRT2 = 0.70710678;
 constexpr float SCALAR_HALF = 0.5;
+constexpr uint16_t ZERO_FLAG = 0;
 
 template <typename DataTypeOut_, typename DataTypeIn_, GeluApproxiMate approxiMate>
 class FusionGelu {
@@ -75,7 +76,8 @@ public:
                                       AscendC::LocalTensor<DataTypeIn>& outputLocal, int64_t offset, int64_t curAivM,
                                       int64_t curAivN, int64_t strideN, int64_t stageSize)
     {
-        TPipeSetWaitFlag<AscendC::HardEvent::MTE3_V>();
+        AscendC::SetFlag<AscendC::HardEvent::MTE3_V>(ZERO_FLAG);
+        AscendC::WaitFlag<AscendC::HardEvent::MTE3_V>(ZERO_FLAG);
         if constexpr (approxiMate == GeluApproxiMate::ERF) {
             AscendC::Muls(inputLocal_, srcLocal, REQ_SQRT2, stageSize);
             AscendC::PipeBarrier<PIPE_V>();
@@ -115,4 +117,3 @@ public:
 } // namespace Block
 } // namespace Gemm
 } // namespace Cmct
-

@@ -131,4 +131,3 @@ public:
 } // namespace Gemm
 }  // namespace Cmct
 #endif  // CMCT_INCLUDE_EPILOGUE_BLOCK_EPILOGUE_FIXPIPE_H
-

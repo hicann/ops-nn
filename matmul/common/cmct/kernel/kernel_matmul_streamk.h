@@ -32,21 +32,28 @@
 #include "../block/block_mmad_streamk.h"
 #include "../block/block_mmad_builder.h"
 #include "../epilogue/block_epilogue_streamk.h"
+#include "../epilogue/block_epilogue_streamk_fusion.h"
+#include "../epilogue/block_epilogue_elementwise.h"
+#include "../epilogue/block_epilogue_empty.h"
 #include "../block/block_scheduler_utils.h"
 #include "../block/block_scheduler_policy.h"
+
 namespace Cmct {
 namespace Gemm {
 namespace Kernel {
 // specialization of streamk basicapi kernel
 template <class ProblemShape_, class BlockMmadBuilder_, class BlockEpilogue_, class BlockScheduler_,
+          uint64_t FUSED_OP_TYPE_ = 0, class OutType_ = void, class FusedEpilogue_ = Block::BlockEpilogueEmpty,
           typename Enable_ = void>
 class KernelMatmulStreamK {
     static_assert(AscendC::Std::always_false_v<BlockEpilogue_>,
                   "KernelStreamk is not implemented for this BlockEpilogue");
 };
 
-template <class ProblemShape_, class BlockMmadBuilder_, class BlockEpilogue_, class BlockScheduler_>
-class KernelMatmulStreamK<ProblemShape_, BlockMmadBuilder_, BlockEpilogue_, BlockScheduler_, AscendC::Std::enable_if_t<
+template <class ProblemShape_, class BlockMmadBuilder_, class BlockEpilogue_, class BlockScheduler_,
+          uint64_t FUSED_OP_TYPE_, class OutType_, class FusedEpilogue_>
+class KernelMatmulStreamK<ProblemShape_, BlockMmadBuilder_, BlockEpilogue_, BlockScheduler_,
+                          FUSED_OP_TYPE_, OutType_, FusedEpilogue_, AscendC::Std::enable_if_t<
                           AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamK<float, float,
                           MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY>>> ||
                           AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamK<float, float,
@@ -70,7 +77,31 @@ class KernelMatmulStreamK<ProblemShape_, BlockMmadBuilder_, BlockEpilogue_, Bloc
                           AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamK<float, half,
                           MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_RELU>>> ||
                           AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamK<float, half,
-                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_RELU>>>>>{
+                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_RELU>>> ||
+                          AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamKFusion<float, float,
+                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_ADD>>> ||
+                          AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamKFusion<float, float,
+                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_ADD>>> ||
+                          AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamKFusion<float, bfloat16_t,
+                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_ADD>>> ||
+                          AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamKFusion<float, bfloat16_t,
+                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_ADD>>> ||
+                          AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamKFusion<float, half,
+                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_ADD>>> ||
+                          AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamKFusion<float, half,
+                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_ADD>>> ||
+                          AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamKFusion<float, float,
+                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_MUL>>> ||
+                          AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamKFusion<float, float,
+                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_MUL>>> ||
+                          AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamKFusion<float, bfloat16_t,
+                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_MUL>>> ||
+                          AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamKFusion<float, bfloat16_t,
+                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_MUL>>> ||
+                          AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamKFusion<float, half,
+                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ON_THE_FLY, OP_TYPE_MUL>>> ||
+                          AscendC::Std::is_base_of_v<BlockEpilogue_, Block::BlockEpilogueStreamKFusion<float, half,
+                          MatmulMultiBlockWithStreamK<MatMulL0C2Out::ND_FIXPIPE_1_2, OP_TYPE_MUL>>>>>{
 public:
     __aicore__ inline KernelMatmulStreamK() {}
     __aicore__ inline ~KernelMatmulStreamK() {}
@@ -79,6 +110,9 @@ public:
     using ProblemShape = ProblemShape_;
     using BlockScheduler = BlockScheduler_;
     using BlockEpilogue = BlockEpilogue_;
+    using FusedEpilogue = FusedEpilogue_;
+    using OutType = OutType_;
+    static constexpr uint64_t FUSED_OP_TYPE = FUSED_OP_TYPE_;
 
     static constexpr bool transA = BlockMmadBuilder::transA;
     static constexpr bool transB = BlockMmadBuilder::transB;
@@ -89,10 +123,7 @@ public:
     // mmadOp
     using BlockMmadOp = typename BlockMmadBuilder::BlockMmadOp;
     using BlockMmadArguments = typename BlockMmadBuilder::Arguments;
-    using BlockEpilogueArguments = typename BlockEpilogue::Arguments;
     using BlockMmadParams = typename BlockMmadBuilder::Params;
-    using BlockEpilogueParams = typename BlockEpilogue::Params;
-    // come from cann
     using BlockSchedulerParams = typename BlockSchedulerOp::Params;
     using AType = typename BlockMmadBuilder::AType;
     using BType = typename BlockMmadBuilder::BType;
@@ -133,17 +164,25 @@ public:
     constexpr static uint16_t BLOCK_BASE_M = 256;
     constexpr static uint16_t BLOCK_BASE_N = 256;
 
+    struct EpilogueArgs {
+        GM_ADDR cGmAddr{nullptr};
+        GM_ADDR workspaceGmAddr{nullptr};
+        GM_ADDR x3GmAddr{nullptr};
+    };
+
     struct Arguments {
         ProblemShape problemShape;
         BlockMmadArguments mmadArgs;
-        BlockEpilogueArguments epilogueArgs;
+        EpilogueArgs epilogueArgs;
         Arguments() = default;
     };
+
+    using BlockEpilogueParams = typename BlockEpilogue::Params;
 
     struct Params {
         ProblemShape problemShape;
         BlockMmadParams mmadParams;
-        BlockEpilogueParams epilogueParams;
+        EpilogueArgs epilogueArgs;
         BlockSchedulerParams schParams;
         Params() = default;
     };
@@ -157,7 +196,6 @@ public:
     {
         problemShape_ = ToShapeTuple(params.problemShape);
         BlockMmadParams blockMmadParams_ = params.mmadParams;
-        BlockEpilogueParams blockEpilogueParams_ = params.epilogueParams;
         m_ = Get<MNK_M>(problemShape_);
         n_ = Get<MNK_N>(problemShape_);
         k_ = Get<MNK_K>(problemShape_);
@@ -263,7 +301,10 @@ public:
             CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_MTE3>(AIC_SYNC_AIV_FLAG);
             SyncAll();
             BlockEpilogue epilogueOp;
-            epilogueOp.Init(params.epilogueParams, problemShape_, tileL1, bs.GetMNKTileNum(), usedCoreNum_,
+            BlockEpilogueParams skEpilogueParams{params.epilogueArgs.cGmAddr,
+                                                  params.epilogueArgs.workspaceGmAddr,
+                                                  params.epilogueArgs.x3GmAddr};
+            epilogueOp.Init(skEpilogueParams, problemShape_, tileL1, bs.GetMNKTileNum(), usedCoreNum_,
                             bs.CheckIsSkScene(0));
             epilogueOp();
         }
@@ -336,4 +377,3 @@ public:
 } // namespace Kernel
 } // namespace Gemm
 } // namespace Cmct
-

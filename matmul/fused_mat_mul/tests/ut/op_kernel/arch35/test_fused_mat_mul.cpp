@@ -26,6 +26,7 @@
 #endif
 
 #include <cstdint>
+#include <cstring>
 
 #include "kernel_tiling/kernel_tiling.h"
 using namespace std;
@@ -46,6 +47,43 @@ struct HcclCombinOpParam {
     uint32_t rankId;
     uint32_t rankDim;
 };
+
+#ifdef __CCE_KT_TEST__
+static void InitBasicTiling(MatMulV3BasicTilingData *tilingData, uint32_t m, uint32_t n, uint32_t k, uint32_t coreNum)
+{
+    tilingData->usedCoreNum = coreNum;
+    tilingData->m = m;
+    tilingData->n = n;
+    tilingData->k = k;
+    tilingData->mL1 = m;
+    tilingData->nL1 = n;
+    tilingData->kL1 = k;
+    tilingData->baseM = m;
+    tilingData->baseN = n;
+    tilingData->baseK = k;
+    tilingData->skSingleCoreK = 0;
+    tilingData->mTailCnt = 1;
+    tilingData->nTailCnt = 1;
+    tilingData->mBaseTailSplitCnt = 1;
+    tilingData->nBaseTailSplitCnt = 1;
+    tilingData->mTailMain = 1;
+    tilingData->nTailMain = 1;
+    tilingData->isHf32 = 0;
+    tilingData->l1BufferNum = 2;
+    tilingData->l0cDB = 2;
+    tilingData->ubDB = 1;
+    tilingData->sliceM = 1;
+    tilingData->srcNdStride = 1;
+    tilingData->innerBatch = 1;
+}
+
+static void ExpectAllZero(const uint8_t *data, size_t size)
+{
+    for (size_t i = 0; i < size; ++i) {
+        EXPECT_EQ(data[i], 0);
+    }
+}
+#endif
 
 TEST_F(fused_mat_mul_test, fused_mat_mul_test_1) {
     // {{16, 16}, {16, 16}}
@@ -107,7 +145,8 @@ TEST_F(fused_mat_mul_test, fused_mat_mul_test_1) {
 
     auto fused_mat_mul_wrapper = [](GM_ADDR x1, GM_ADDR x2, GM_ADDR bias, GM_ADDR x3, GM_ADDR y, GM_ADDR workspace,
                                   GM_ADDR tiling) {
-        ::fused_mat_mul<0, 0, 0, 0, 0, 0, 0>(x1, x2, bias, x3, y, workspace, tiling);
+        ::fused_mat_mul<MAT_MUL_BASIC_LEVEL, F_NO_TRANS, MAT_MUL_FOR_BATCH, MAT_MUL_BASIC, MAT_MUL_NO_FULL_LOAD,
+            MAT_MUL_ON_THE_FLY, F_OPTYPE_NONE>(x1, x2, bias, x3, y, workspace, tiling);
     };
 
     ICPU_RUN_KF(fused_mat_mul_wrapper, 20, aGM, bGM, nullptr, x3GM, output, workspace, tiling);
@@ -118,4 +157,84 @@ TEST_F(fused_mat_mul_test, fused_mat_mul_test_1) {
     AscendC::GmFree((void*)bGM);
     AscendC::GmFree((void*)output);
     free(path_);
+}
+
+TEST_F(fused_mat_mul_test, fused_mat_mul_gelu_erf_basic_test) {
+#ifdef __CCE_KT_TEST__
+    AscendC::SetKernelMode(KernelMode::MIX_MODE);
+
+    constexpr uint32_t m = 16;
+    constexpr uint32_t n = 16;
+    constexpr uint32_t k = 16;
+    size_t shapeA = m * k * sizeof(DTYPE_X1);
+    size_t shapeB = k * n * sizeof(DTYPE_X2);
+    size_t shapeOutput = m * n * sizeof(DTYPE_Y);
+    size_t workspaceSize = 20 * 1024 * 1024;
+
+    uint8_t *workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
+    uint8_t *tiling = (uint8_t*)AscendC::GmAlloc(sizeof(MatMulV3BasicTilingData));
+    uint8_t *aGM = (uint8_t*)AscendC::GmAlloc(shapeA);
+    uint8_t *bGM = (uint8_t*)AscendC::GmAlloc(shapeB);
+    uint8_t *output = (uint8_t*)AscendC::GmAlloc(shapeOutput);
+
+    memset(workspace, 0, workspaceSize);
+    memset(aGM, 0, shapeA);
+    memset(bGM, 0, shapeB);
+    memset(output, 0xff, shapeOutput);
+
+    auto *tilingData = reinterpret_cast<MatMulV3BasicTilingData*>(tiling);
+    memset(tilingData, 0, sizeof(MatMulV3BasicTilingData));
+    InitBasicTiling(tilingData, m, n, k, 1);
+
+    auto fusedMatMulWrapper = [](GM_ADDR x1, GM_ADDR x2, GM_ADDR bias, GM_ADDR x3, GM_ADDR y, GM_ADDR workspace,
+                                  GM_ADDR tiling) {
+        AscendC::TPipe pipe;
+        ::fused_mat_mul<MAT_MUL_BASIC_LEVEL, F_NO_TRANS, MAT_MUL_FOR_BATCH, MAT_MUL_BASIC, MAT_MUL_NO_FULL_LOAD,
+            MAT_MUL_ON_THE_FLY, F_OPTYPE_GELU_ERF>(x1, x2, bias, x3, y, workspace, tiling);
+    };
+
+    ICPU_RUN_KF(fusedMatMulWrapper, 1, aGM, bGM, nullptr, nullptr, output, workspace, tiling);
+    ExpectAllZero(output, shapeOutput);
+
+    AscendC::GmFree((void*)workspace);
+    AscendC::GmFree((void*)tiling);
+    AscendC::GmFree((void*)aGM);
+    AscendC::GmFree((void*)bGM);
+    AscendC::GmFree((void*)output);
+#endif
+}
+
+TEST_F(fused_mat_mul_test, fused_mat_mul_gelu_k_equal_zero_test) {
+#ifdef __CCE_KT_TEST__
+    AscendC::SetKernelMode(KernelMode::MIX_MODE);
+
+    constexpr uint64_t totalDataAmount = 256;
+    size_t shapeOutput = totalDataAmount * sizeof(DTYPE_Y);
+    size_t workspaceSize = 20 * 1024 * 1024;
+
+    uint8_t *workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
+    uint8_t *tiling = (uint8_t*)AscendC::GmAlloc(sizeof(MatMulV3KEqZeroBasicTilingData));
+    uint8_t *output = (uint8_t*)AscendC::GmAlloc(shapeOutput);
+
+    memset(workspace, 0, workspaceSize);
+    memset(output, 0xff, shapeOutput);
+
+    auto *tilingData = reinterpret_cast<MatMulV3KEqZeroBasicTilingData*>(tiling);
+    memset(tilingData, 0, sizeof(MatMulV3KEqZeroBasicTilingData));
+    tilingData->totalDataAmount = totalDataAmount;
+    tilingData->aivNum = 2;
+
+    auto fusedMatMulWrapper = [](GM_ADDR x1, GM_ADDR x2, GM_ADDR bias, GM_ADDR x3, GM_ADDR y, GM_ADDR workspace,
+                                  GM_ADDR tiling) {
+        ::fused_mat_mul<MAT_MUL_HIGH_LEVEL, F_NO_TRANS, MAT_MUL_FOR_BATCH, MAT_MUL_K_EQUAL_ZERO, MAT_MUL_NO_FULL_LOAD,
+            MAT_MUL_ON_THE_FLY, F_OPTYPE_GELU_ERF>(x1, x2, bias, x3, y, workspace, tiling);
+    };
+
+    ICPU_RUN_KF(fusedMatMulWrapper, 1, nullptr, nullptr, nullptr, nullptr, output, workspace, tiling);
+    ExpectAllZero(output, shapeOutput);
+
+    AscendC::GmFree((void*)workspace);
+    AscendC::GmFree((void*)tiling);
+    AscendC::GmFree((void*)output);
+#endif
 }

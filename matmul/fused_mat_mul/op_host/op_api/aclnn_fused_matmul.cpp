@@ -22,8 +22,10 @@
 #include "opdev/op_executor.h"
 #include "opdev/op_log.h"
 #include "opdev/shape_utils.h"
+#include "log/log.h"
 
 #include "aclnn_kernels/reshape.h"
+#include "matmul/common/op_host/log_format_util.h"
 #include "matmul/common/op_host/op_api/matmul_util.h"
 #include "matmul/common/op_host/op_api/cube_util.h"
 
@@ -38,12 +40,13 @@ static constexpr size_t DIM_LEN_MIN = 2;
 static constexpr size_t DIM_LEN_MAX = 3;
 static constexpr size_t DIM_LEN_MAX_RELU = 6;
 
-static const std::vector<const char*> kAllSupportedOpTypes = {"", "16cast32", "add", "mul", "gelu_erf", 
+static const std::vector<const char*> kAllSupportedOpTypes = {"", "16cast32", "add", "mul", "gelu_erf",
     "gelu_tanh", "relu"};
 static const std::vector<const char*> kSupportedBiasOpTypes = {"", "16cast32", "relu", "add", "mul"};
 static const std::vector<const char*> kSupportedFp32OpTypes = {"", "relu", "add", "mul"};
 static const std::vector<const char*> kSupportedX3OpTypes = {"add", "mul"};
 static const std::vector<const char*> kSupportedIn16CastOut32OpTypes = {"16cast32"};
+static const std::vector<const char*> kSupportedEmptyTensorOpTypes = {"", "relu", "gelu_erf", "gelu_tanh", "add", "mul"};
 
 bool IsInSupportedOpTypes(const char* fusedOpType, const std::vector<const char*>& types) {
     if (fusedOpType == nullptr) {
@@ -88,7 +91,7 @@ bool CheckNotNull(
 }
 
 static inline bool CheckMathType(const aclTensor* self, const aclTensor* mat2, int8_t cubeMathType)
-{   
+{
     bool selfFloat = self->GetDataType() == DataType::DT_FLOAT;
     bool mat2Float = mat2->GetDataType() == DataType::DT_FLOAT;
     auto promoteType = selfFloat || mat2Float ? DataType::DT_FLOAT : self->GetDataType();
@@ -178,10 +181,23 @@ static bool CheckNoBroadcastBatchShape(const aclTensor* x, const aclTensor* x2, 
     return true;
 }
 
+static bool CheckGeluBatchShape(const aclTensor* x)
+{
+    const auto& xShape = x->GetViewShape();
+    if (xShape.GetDimNum() == DIM_LEN_MIN) {
+        return true;
+    }
+    OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+        "aclnnFusedMatmul", "x1", FormatString("%zuD", xShape.GetDimNum()).c_str(),
+        FormatString("The shape dim of %s must be %zuD for gelu op type", "x1", DIM_LEN_MIN).c_str());
+    return false;
+}
+
 static inline bool CheckShape(
     const aclTensor* x, const aclTensor* x2, const aclTensor* x3, const char* fusedOpType, const aclTensor* y)
 {
     bool isReluOrEmpty = (strcmp(fusedOpType, "relu") == 0 || strcmp(fusedOpType, "") == 0);
+    bool isGelu = (strcmp(fusedOpType, "gelu_erf") == 0 || strcmp(fusedOpType, "gelu_tanh") == 0);
     size_t dimLenMax = isReluOrEmpty ? DIM_LEN_MAX_RELU : DIM_LEN_MAX;
     // check x dims number
     OP_CHECK_MAX_DIM(x, dimLenMax, return false);
@@ -211,6 +227,9 @@ static inline bool CheckShape(
 
     if (isReluOrEmpty) {
         CHECK_RET(CheckNoBroadcastBatchShape(x, x2, y), false);
+    }
+    if (isGelu) {
+        CHECK_RET(CheckGeluBatchShape(x), false);
     }
 
     if (x3 != nullptr) {
@@ -246,7 +265,7 @@ static aclnnStatus CheckParams(
     CHECK_RET(CheckFusedOpType(fusedOpType), ACLNN_ERR_PARAM_INVALID);
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(x, x2, bias, x3, fusedOpType, y), ACLNN_ERR_PARAM_NULLPTR);
-    
+
     // 2. 检查A和B是否为2维，且是否满足matmul shape MN 与传入的x3 shape Mn相同
     CHECK_RET(CheckShape(x, x2, x3, fusedOpType, y), ACLNN_ERR_PARAM_INVALID);
 
@@ -280,8 +299,8 @@ static const aclTensor* BuildFusedMatMulGraph(
     const aclTensor* x, const aclTensor* x2, const aclTensor* bias, const aclTensor* x3, const aclTensor* y,
     const char* fusedOpType, int8_t cubeMathType, aclOpExecutor* executor)
 {
-    // 空tensor 处理，对于relu或者空的场景放开空tensor，其余不支持
-    bool allowEmptyTensor = (strcmp(fusedOpType, "relu") == 0 || strcmp(fusedOpType, "") == 0);
+    // 空tensor 处理，对于非16Cast32放开空tensor
+    bool allowEmptyTensor = IsInSupportedOpTypes(fusedOpType, kSupportedEmptyTensorOpTypes);
     if (!allowEmptyTensor && (x->IsEmpty() || x2->IsEmpty())) {
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "fused matmul is not supported empty tensor handle");
         return nullptr;

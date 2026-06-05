@@ -40,8 +40,8 @@ constexpr uint64_t WORKSPACE_SIZE = 1024;
 const std::unordered_map<NpuArch, std::array<std::vector<std::string>, 2>> NpuArchFusedOpSupport = {
     {NpuArch::DAV_3510,
      std::array<std::vector<std::string>, 2>{
-         std::vector<std::string>{"", "relu", "add", "mul", "16cast32"},
-         std::vector<std::string>{"gelu_erf", "gelu_tanh"}}},
+         std::vector<std::string>{"", "relu", "add", "mul", "16cast32", "gelu_erf", "gelu_tanh"},
+         std::vector<std::string>{}}},
     {NpuArch::DAV_RESV,
      std::array<std::vector<std::string>, 2>{std::vector<std::string>{"relu"}, std::vector<std::string>{}}}};
 

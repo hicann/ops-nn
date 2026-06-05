@@ -32,17 +32,24 @@
 #include "../block/block_mmad_pingpong_without_que.h"
 #include "../block/block_mmad_builder.h"
 #include "../epilogue/block_epilogue_empty.h"
+#include "../epilogue/fusion/fusion_add.h"
+#include "../epilogue/fusion/fusion_mul.h"
+#include "../epilogue/fusion/default_fusion_op.h"
 #include "../block/block_scheduler_utils.h"
 #include "../block/block_scheduler_policy.h"
 namespace Cmct {
 namespace Gemm {
 namespace Kernel {
 
-template <class ProblemShape, class BlockMmadBuilder, class BlockEpilogue, class BlockScheduler, typename Enable = void>
+template <class ProblemShape, class BlockMmadBuilder, class BlockEpilogue, class BlockScheduler,
+          uint64_t FUSED_OP_TYPE_ = 0, class OutType_ = void, class FusionOp_ = Block::DefaultFusion<void, void>,
+          typename Enable = void>
 class KernelMatmulMixFixpipeOpti;
 
-template <class ProblemShape_, class BlockMmadBuilder_, class BlockEpilogue_, class BlockScheduler_>
+template <class ProblemShape_, class BlockMmadBuilder_, class BlockEpilogue_, class BlockScheduler_,
+          uint64_t FUSED_OP_TYPE_, class OutType_, class FusionOp_>
 class KernelMatmulMixFixpipeOpti<ProblemShape_, BlockMmadBuilder_, BlockEpilogue_, BlockScheduler_,
+    FUSED_OP_TYPE_, OutType_, FusionOp_,
     AscendC::Std::enable_if_t<!AscendC::Std::is_same_v<BlockEpilogue_, Block::BlockEpilogueEmpty>>> {
 public:
     __aicore__ inline KernelMatmulMixFixpipeOpti()
@@ -66,6 +73,9 @@ public:
     using ProblemShape = ProblemShape_;
     using BlockScheduler = BlockScheduler_;
     using BlockEpilogue = BlockEpilogue_;
+    using OutType = OutType_;
+    using FusionOp = FusionOp_;
+    static constexpr uint64_t FUSED_OP_TYPE = FUSED_OP_TYPE_;
 
     static constexpr bool transA = BlockMmadBuilder::transA;
     static constexpr bool transB = BlockMmadBuilder::transB;
@@ -114,6 +124,7 @@ public:
         BlockMmadParams mmadParams;
         BlockEpilogueParams epilogueParams;
         BlockSchedulerParams schParams;
+        GM_ADDR x3GmAddr{nullptr};
         Params() = default;
     };
 
@@ -163,6 +174,9 @@ public:
         int64_t realBlockNum = bs.GetBlockNum(params.problemShape, blockNum);
         bool isHf32 = bs.Gethf32Flag();
         bool enableUbDB = bs.GetUbDB();
+        if constexpr (FUSED_OP_TYPE == OP_TYPE_ADD || FUSED_OP_TYPE == OP_TYPE_MUL) {
+            enableUbDB = false;
+        }
         if (curBlockIdx >= realBlockNum) {
             return;
         }
@@ -324,4 +338,3 @@ public:
 }  // namespace Kernel
 }  // namespace Gemm
 }  // namespace Cmct
-

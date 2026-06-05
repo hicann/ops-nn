@@ -3,7 +3,7 @@
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
@@ -62,8 +62,8 @@ public:
     using ProblemShape = AscendC::Shape<int64_t, int64_t, int64_t, int64_t>;
 
     // GM ADDR
-    AscendC::LocalTensor<DataTypeIn> cLocal_{AscendC::TPosition::VECIN, 0, AscendC::TOTAL_UB_SIZE};
-    AscendC::LocalTensor<DataTypeIn> cLocalTmp_{AscendC::TPosition::VECIN, 0, AscendC::TOTAL_UB_SIZE};
+    AscendC::LocalTensor<DataTypeIn> cLocal_{AscendC::TPosition::VECIN, 0, AscendC::TOTAL_UB_SIZE / sizeof(DataTypeIn)};
+    AscendC::LocalTensor<DataTypeIn> cLocalTmp_{AscendC::TPosition::VECIN, 0, AscendC::TOTAL_UB_SIZE / sizeof(DataTypeIn)};
     AscendC::GlobalTensor<DataTypeOut> outputGlobal_;
     // vector核一次最多计算多少个元素
     int64_t stageSize_ = 0;
@@ -82,8 +82,24 @@ public:
         outputGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ DataTypeOut*>(params.outGmAddr));
     }
 
+    __aicore__ inline AscendC::LocalTensor<DataTypeOut> DoFusionAndCast(
+        int64_t stageOffset, int64_t offset, int64_t blockShapeM, int64_t blockShapeN, int64_t N, int64_t stageSize)
+    {
+        // Do fusionOp{add, mul, gelu} in ub:  (cLocal_[stageOffset], x3 or None) -> cLocal_
+        fusionOp_(cLocal_[stageOffset], cLocalTmp_, offset, blockShapeM, blockShapeN, N, stageSize);
+        AscendC::LocalTensor<DataTypeOut> outputLocal =
+            cLocal_[stageOffset].template ReinterpretCast<DataTypeOut>();
+        if constexpr (AscendC::IsSameType<DataTypeOut, DataTypeIn>::value) {
+            outputLocal = cLocalTmp_;
+        } else {
+            Cast(outputLocal, cLocalTmp_, AscendC::RoundMode::CAST_RINT, stageSize);
+            AscendC::PipeBarrier<PIPE_V>();
+        }
+        return outputLocal;
+    }
+
     __aicore__ inline void Run(BlockShape const& blockShape, int64_t dstOffset, int64_t flagId = 5)
-    {   
+    {
         // 默认1-2不再基于splitM区分, aiv 0~1分别搬运blockShapeM/2
         int64_t blockShapeM = Get<0>(blockShape);
         int64_t halfBlockShapeM = Cmct::Gemm::CeilDiv(blockShapeM, AscendC::GetTaskRation());
@@ -107,8 +123,8 @@ public:
             // Aiv1需要多偏移aiv0所处理的数据
             offset += AscendC::GetSubBlockIdx() * halfBlockShapeM * N;
             stageSize = AscendC::Std::min(stageSize, inputSize - stageOffset);
-            // Do add or mul in ub: x3 + cLocal_[stageOffset] -> cLocal_
-            fusionOp_(cLocal_[stageOffset], cLocalTmp_, offset, blockShapeM, blockShapeN, N, stageSize);
+            AscendC::LocalTensor<DataTypeOut> outputLocal =
+                DoFusionAndCast(stageOffset, offset, blockShapeM, blockShapeN, N, stageSize);
 
             AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(ZERO_FLAG);
             AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(ZERO_FLAG);
@@ -117,11 +133,64 @@ public:
                 static_cast<uint16_t>(stageSize / blockShapeNAlign),
                 static_cast<uint32_t>(blockShapeN * sizeof(DataTypeOut)), 0,
                 static_cast<uint32_t>((N - blockShapeN) * sizeof(DataTypeOut)), 0};
-            AscendC::DataCopyPad<DataTypeOut>(outputGlobal_[offset], cLocalTmp_, copyParams);
+            AscendC::DataCopyPad<DataTypeOut>(outputGlobal_[offset], outputLocal, copyParams);
             stageOffset += stageSize;
             loop++;
         }
         // Notify aic
+        AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_MTE3>(flagId);
+    }
+
+    __aicore__ inline void RunFromWorkspace(
+        BlockShape const& blockShape, int64_t dstOffset, AscendC::GlobalTensor<DataTypeIn>& workspaceGlobal,
+        int64_t workspaceOffset, int64_t flagId = 5)
+    {
+        int64_t blockShapeM = Get<0>(blockShape);
+        int64_t halfBlockShapeM = Cmct::Gemm::CeilDiv(blockShapeM, AscendC::GetTaskRation());
+        blockShapeM = ((static_cast<uint64_t>(blockShapeM) & 1UL) > 0UL) ?
+                          (halfBlockShapeM - AscendC::GetSubBlockIdx()) :
+                          halfBlockShapeM;
+        int64_t blockShapeN = Get<1>(blockShape);
+        int64_t inputSize = blockShapeM * blockShapeN;
+        int64_t stageSize = AscendC::Std::min(stageSize_, inputSize) / blockShapeN * blockShapeN;
+        ASCENDC_ASSERT(stageSize > 0, {
+            KERNEL_LOG(KERNEL_EORROR, "stageSize size limit %ld, %ld, %ld!", stageSize_, blockShapeM, blockShapeN);
+        });
+        int64_t loop = 0;
+        int64_t stageOffset = 0;
+        int64_t N = Get<MNK_N>(problemShape_);
+        while (stageOffset < inputSize) {
+            int64_t offset = dstOffset + loop * stageSize / blockShapeN * N;
+            offset += AscendC::GetSubBlockIdx() * halfBlockShapeM * N;
+            int64_t workspaceGmOffset = workspaceOffset + loop * stageSize / blockShapeN * N;
+            workspaceGmOffset += AscendC::GetSubBlockIdx() * halfBlockShapeM * N;
+            stageSize = AscendC::Std::min(stageSize, inputSize - stageOffset);
+            int64_t stageRows = stageSize / blockShapeN;
+
+            AscendC::SetFlag<AscendC::HardEvent::V_MTE2>(ZERO_FLAG);
+            AscendC::WaitFlag<AscendC::HardEvent::V_MTE2>(ZERO_FLAG);
+            AscendC::DataCopyExtParams gm2UbParams{
+                static_cast<uint16_t>(1), static_cast<uint32_t>(stageRows * blockShapeN * sizeof(DataTypeIn)),
+                0, 0, 0};
+            AscendC::DataCopyPadExtParams<DataTypeIn> padParams{false, 0, 0, 0};
+            AscendC::DataCopyPad<DataTypeIn>(
+                cLocal_[stageOffset], workspaceGlobal[workspaceGmOffset], gm2UbParams, padParams);
+            AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(ZERO_FLAG);
+            AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(ZERO_FLAG);
+
+            AscendC::LocalTensor<DataTypeOut> outputLocal =
+                DoFusionAndCast(stageOffset, offset, blockShapeM, blockShapeN, N, stageSize);
+
+            AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(ZERO_FLAG);
+            AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(ZERO_FLAG);
+            AscendC::DataCopyExtParams ub2GmParams{
+                static_cast<uint16_t>(1), static_cast<uint32_t>(stageRows * blockShapeN * sizeof(DataTypeOut)), 0,
+                0, 0};
+            AscendC::DataCopyPad<DataTypeOut>(
+                outputGlobal_[offset], outputLocal, ub2GmParams);
+            stageOffset += stageSize;
+            loop++;
+        }
         AscendC::CrossCoreSetFlag<AIC_SYNC_AIV_MODE_4, PIPE_MTE3>(flagId);
     }
 
@@ -135,6 +204,17 @@ public:
     {
         Run(blockShape, dstOffset, flagId);
         return;
+    }
+
+    __aicore__ inline void operator()(
+        BlockShape const& blockShape, int64_t dstOffset, AscendC::GlobalTensor<DataTypeIn>& workspaceGlobal,
+        int64_t workspaceOffset, bool useWorkspace, int64_t flagId = 5)
+    {
+        if (useWorkspace) {
+            RunFromWorkspace(blockShape, dstOffset, workspaceGlobal, workspaceOffset, flagId);
+            return;
+        }
+        Run(blockShape, dstOffset, flagId);
     }
 
     // static init
@@ -163,4 +243,3 @@ public:
 } // namespace Gemm
 } // namespace Cmct
 #endif // EPILOGUE_BLOCK_EPILOGUE_H
-

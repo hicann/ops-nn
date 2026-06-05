@@ -17,14 +17,55 @@
 #include "cmct/block/block_scheduler_policy.h"
 #include "cmct/block/block_scheduler_utils.h"
 #include "cmct/kernel/kernel_matmul_streamk.h"
+#include "cmct/epilogue/block_epilogue_streamk.h"
+#include "cmct/epilogue/block_epilogue_streamk_fusion.h"
+#include "cmct/epilogue/block_epilogue_elementwise.h"
+#include "cmct/epilogue/fusion/fusion_add.h"
+#include "cmct/epilogue/fusion/fusion_mul.h"
+#include "cmct/epilogue/fusion/default_fusion_op.h"
 #include "block_scheduler_streamk.h"
 
 using namespace Cmct;
 using namespace Cmct::Gemm;
+
+// FusionOpSelector for StreamK — primary template defaults to DefaultFusion
+namespace StreamKInternal {
+template<uint64_t OpType, class OutType>
+struct FusionOpSelector {
+    using type = Block::DefaultFusion<OutType, OutType>;
+};
+
+template<class OutType>
+struct FusionOpSelector<OP_TYPE_MUL, OutType> {
+    using type = Block::FusionMul<OutType, OutType>;
+};
+
+template<class OutType>
+struct FusionOpSelector<OP_TYPE_ADD, OutType> {
+    using type = Block::FusionAdd<OutType, OutType>;
+};
+
+// BlockEpilogueSelector: ADD/MUL use BlockEpilogueStreamKFusion, others use BlockEpilogueStreamK
+template<uint64_t OpType, class OutType, class DispatchPolicy>
+struct BlockEpilogueSelector {
+    using type = Block::BlockEpilogueStreamK<float, OutType, DispatchPolicy>;
+};
+
+template<class OutType, class DispatchPolicy>
+struct BlockEpilogueSelector<OP_TYPE_ADD, OutType, DispatchPolicy> {
+    using type = Block::BlockEpilogueStreamKFusion<float, OutType, DispatchPolicy>;
+};
+
+template<class OutType, class DispatchPolicy>
+struct BlockEpilogueSelector<OP_TYPE_MUL, OutType, DispatchPolicy> {
+    using type = Block::BlockEpilogueStreamKFusion<float, OutType, DispatchPolicy>;
+};
+} // namespace StreamKInternal
 template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class A_LAYOUT, class B_LAYOUT, class C_LAYOUT,
           MatMulL0C2Out MATMUL_L0C2OUT, uint64_t FUSED_OP_TYPE = 0>
 __aicore__ inline void MatMulStreamKActKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM,
-    GM_ADDR cGM, GM_ADDR workspaceGM, const MatMulV3BasicTilingData& tilingData, int64_t batch = 1)
+    GM_ADDR cGM, GM_ADDR workspaceGM, const MatMulV3BasicTilingData& tilingData,
+    int64_t batch = 1, GM_ADDR x3GM = nullptr)
 {
     // 定义L1和L0的TileShape
     using L1TileShape = AscendC::Shape<_0, _0, _0>;
@@ -49,25 +90,29 @@ __aicore__ inline void MatMulStreamKActKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR 
             L1TileShape, L0TileShape, BlockScheduler, MatmulMultiBlockWithStreamK<MATMUL_L0C2OUT, FUSED_OP_TYPE>>;
 
     // 定义Fusion类型
-    using FusionOp = Block::DefaultFusion<OutType, OutType>;
+    using FusionOp = typename StreamKInternal::FusionOpSelector<FUSED_OP_TYPE, OutType>::type;
 
-    // 定义BlockEpilogue类型
-    using BlockEpilogue =
-        Block::BlockEpilogueStreamK<float, OutType, MatmulMultiBlockWithStreamK<MATMUL_L0C2OUT, FUSED_OP_TYPE>>;
+    // 定义BlockEpilogue类型: ADD/MUL用BlockEpilogueStreamKFusion, 其他用BlockEpilogueStreamK
+    using DispatchPolicy = MatmulMultiBlockWithStreamK<MATMUL_L0C2OUT, FUSED_OP_TYPE>;
+    using BlockEpilogue = typename StreamKInternal::BlockEpilogueSelector<
+        FUSED_OP_TYPE, OutType, DispatchPolicy>::type;
+
+    // FusedEpilogue不再使用(融合已在BlockEpilogueStreamKFusion中完成)，保持Empty以兼容模板
+    using FusedEpilogue = Block::BlockEpilogueEmpty;
 
     // 定义shape的形状，tuple保存 m n k batch
     using ProblemShape = MatmulShape;
 
     // 定义Kernel类型
-    using MatmulKernel = Kernel::KernelMatmulStreamK<ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler>;
+    using MatmulKernel = Kernel::KernelMatmulStreamK<ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler,
+                                                     FUSED_OP_TYPE, OutType, FusedEpilogue>;
     using Params = typename MatmulKernel::Params;
     Params params = {
         {tilingData.m, tilingData.n, tilingData.k, batch}, // shape
         {aGM, bGM, cGM, biasGM, nullptr, workspaceGM}, // gm addr
-        {cGM, workspaceGM}, // epilogue args
+        {cGM, workspaceGM, x3GM}, // epilogue args
         {&tilingData}
     };
     MatmulKernel mm;
     mm(params);
 }
-

@@ -71,4 +71,3 @@ __aicore__ inline void MatMulActKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM,
     mm(params);
 }
 }
-

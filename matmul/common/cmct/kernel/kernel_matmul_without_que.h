@@ -225,7 +225,7 @@ public:
         if (curBlockIdx >= realBlockNum) {
             return;
         }
-        
+
         // come from the block_mmad_pingpong_without_que.h
         if (isHf32) {
             AscendC::SetHF32Mode(1);
@@ -283,7 +283,7 @@ public:
                 }
             }
         }
-        
+
         SetMMLayoutTransform(false);
         UnsetHf32(isHf32);
     }
@@ -292,4 +292,3 @@ public:
 }  // namespace Kernel
 }  // namespace Gemm
 }  // namespace Cmct
-

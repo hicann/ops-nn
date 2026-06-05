@@ -3,7 +3,7 @@
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
@@ -91,6 +91,7 @@ public:
     AscendC::GlobalTensor<AType> aGlobal_;
     AscendC::GlobalTensor<BType> bGlobal_;
     AscendC::GlobalTensor<CType> cGlobal_;
+    AscendC::GlobalTensor<CType> workspaceGlobal_;
     AscendC::GlobalTensor<BiasType> biasGlobal_;
     // shape
     TupleShape problemShape_{};
@@ -108,6 +109,8 @@ public:
         BlockMmadParams mmadParams;
         BlockEpilogueParams epilogueParams;
         BlockSchedulerParams schParams;
+        GM_ADDR workspaceGmAddr{nullptr};
+        bool useGmWorkspace = false;
         Params() = default;
     };
 
@@ -116,17 +119,43 @@ public:
         return {shape.m, shape.n, shape.k, shape.b};
     }
 
+    __aicore__ inline void RunEpilogue(
+        BlockEpilogue& epilogueOp, const TupleL1L0Shape& blockShape, int64_t offsetC, int64_t flagId,
+        bool useWorkspace)
+    {
+        BlockShape epilogueShape = {Get<MNK_M0>(blockShape), Get<MNK_N0>(blockShape), 1, 1};
+        // With GM workspace, epilogue reloads the MMAD result from the same C offset.
+        epilogueOp(epilogueShape, offsetC, workspaceGlobal_, offsetC, useWorkspace, flagId);
+    }
+
+    __aicore__ inline void RunMmad(
+        BlockMmadOp& blockMmadOp, BlockEpilogue& epilogueOp, const TupleL1L0Shape& blockShape, int64_t offsetA,
+        int64_t offsetB, int64_t offsetC, int64_t offsetBias, uint64_t mOffset, uint64_t nOffset, bool useWorkspace)
+    {
+        if (useWorkspace) {
+            // Store MMAD output in GM when the paired AIV epilogue cannot hold the aligned tile in UB.
+            blockMmadOp.template operator()<AscendC::GlobalTensor<CType>, BlockMmadBuilder::formatB>(
+                workspaceGlobal_[offsetC], aGlobal_[offsetA], bGlobal_[offsetB], biasGlobal_[offsetBias],
+                blockShape, mOffset, nOffset, false, true);
+            return;
+        }
+        auto cLocal = epilogueOp.GetTensor();
+        blockMmadOp.template operator()<AscendC::LocalTensor<CType>, BlockMmadBuilder::formatB>(
+            cLocal, aGlobal_[offsetA], bGlobal_[offsetB], biasGlobal_[offsetBias], blockShape, mOffset, nOffset, false,
+            true);
+    }
+
     __aicore__ inline void Init(Params const &params)
     {
         problemShape_ = ToShapeTuple(params.problemShape);
         BlockMmadParams blockMmadParams_ = params.mmadParams;
-        int64_t m = Get<MNK_M>(problemShape_);
-        int64_t n = Get<MNK_N>(problemShape_);
-        int64_t k = Get<MNK_K>(problemShape_);
         // Init GlobalTensor
         aGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ AType *>(blockMmadParams_.aGmAddr));
         bGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ BType *>(blockMmadParams_.bGmAddr));
         cGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ CType *>(blockMmadParams_.cGmAddr));
+        if (params.workspaceGmAddr != nullptr) {
+            workspaceGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ CType *>(params.workspaceGmAddr));
+        }
         // Support bias
         if (blockMmadParams_.biasGmAddr != nullptr) {
             isBias_ = true;
@@ -185,9 +214,9 @@ public:
             }
         }
 
-        uint64_t cvIndex = 0;
         bool enableCVSync = false;
         int64_t n = Get<MNK_N>(problemShape_);
+        bool useWorkspace = params.useGmWorkspace;
         int64_t count = 0;
         int64_t countId = 0;
         // Process tiles in ping-pong mode
@@ -226,11 +255,8 @@ public:
                             AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_FIX>(
                                 AIV_SYNC_AIC_FLAG + countId + FLAG_ID_MAX);
                         }
-                        // get ub tensor
-                        auto cLocal = epilogueOp.GetTensor();
-                        blockMmadOp.template operator()<AscendC::LocalTensor<CType>, BlockMmadBuilder::formatB>(
-                            cLocal, aGlobal_[offsetA], bGlobal_[offsetB], biasGlobal_[offsetBias], blockShape, mOffset,
-                            nOffset, false, true);
+                        RunMmad(blockMmadOp, epilogueOp, blockShape, offsetA, offsetB, offsetC, offsetBias, mOffset,
+                            nOffset, useWorkspace);
 
                         enableCVSync = true;
                         count++;
@@ -248,8 +274,7 @@ public:
                         // Synchronize with aic
                         AscendC::CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_V>(AIC_SYNC_AIV_FLAG + countId);
                         // Calulate epilogue
-                        epilogueOp(
-                            {Get<0>(blockShape), Get<1>(blockShape), 1, 1}, offsetC, (AIV_SYNC_AIC_FLAG + countId));
+                        RunEpilogue(epilogueOp, blockShape, offsetC, AIV_SYNC_AIC_FLAG + countId, useWorkspace);
                     }
                 }
             }
@@ -270,4 +295,3 @@ public:
 }  // namespace Kernel
 }  // namespace Gemm
 }  // namespace Cmct
-

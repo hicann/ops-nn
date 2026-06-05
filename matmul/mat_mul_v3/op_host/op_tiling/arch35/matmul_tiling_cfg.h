@@ -49,4 +49,3 @@ public:
     MatMulV3TilingKey *tilingKeyObj = nullptr; // tilingkey函数指针， 用于:生成TilingKey
 };
 } // namespace optiling
-

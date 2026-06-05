@@ -51,7 +51,7 @@ const static std::map<NpuArch, std::vector<int32_t>> FusedMatMulPrioritiesMap = 
 };
 
 inline std::vector<int32_t> GetFusedMatMulPriorities(NpuArch npuArch)
-{   
+{
     std::vector<int32_t> priorities = {};
     if (FusedMatMulPrioritiesMap.find(npuArch) != FusedMatMulPrioritiesMap.end()) {
         priorities = FusedMatMulPrioritiesMap.at(npuArch);
@@ -62,4 +62,3 @@ inline std::vector<int32_t> GetFusedMatMulPriorities(NpuArch npuArch)
 } // namespace strategy
 } // namespace fused_matmul
 } // namespace optiling
-

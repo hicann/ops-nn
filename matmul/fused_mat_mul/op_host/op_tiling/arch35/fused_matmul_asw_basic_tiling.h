@@ -31,8 +31,14 @@ protected:
     bool IsCapable() override;
     ge::graphStatus DoOpTiling() override;
     uint64_t GetTilingKey() const override;
+    ge::graphStatus PostTiling() override;
     bool CheckBatch() const;
+
+private:
+    void AdjustSmallNTiling(std::string opType);
+    void UpdateSmallNTailInfo(uint64_t tailCnt);
+    void UpdateAswDepth();
+    void UpdateBFullLoadDepth();
 };
 } // namespace fused_matmul
 } // namespace optiling
-

@@ -14,6 +14,12 @@
  */
 #pragma once
 
+#if defined(__CCE_AICORE__)
+#include "../../mat_mul_v3/arch35/mat_mul_tiling_data.h"
+#else
+#include "matmul/mat_mul_v3/op_kernel/arch35/mat_mul_tiling_data.h"
+#endif
+
 #ifndef __CCE_AICORE__
 #include <cstdint>
 #endif
@@ -26,4 +32,3 @@ struct FusedMatMulTilingData {
     uint32_t hasBias = 0;
 };
 #pragma pack(pop)
-

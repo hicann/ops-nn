@@ -39,7 +39,19 @@ class BlockMmad<
             MatmulMultiBlockWithOutQue<AscendC::Shape<_0, _0, _0, _0>, NONE_FULL_LOAD_MODE, OP_TYPE_ADD>,
             DispatchPolicy_> ||
         AscendC::Std::is_base_of_v<
+            MatmulMultiBlockWithOutQue<AscendC::Shape<_0, _0, _0, _0>, A_FULL_LOAD_MODE, OP_TYPE_ADD>,
+            DispatchPolicy_> ||
+        AscendC::Std::is_base_of_v<
+            MatmulMultiBlockWithOutQue<AscendC::Shape<_0, _0, _0, _0>, B_FULL_LOAD_MODE, OP_TYPE_ADD>,
+            DispatchPolicy_> ||
+        AscendC::Std::is_base_of_v<
             MatmulMultiBlockWithOutQue<AscendC::Shape<_0, _0, _0, _0>, NONE_FULL_LOAD_MODE, OP_TYPE_MUL>,
+            DispatchPolicy_> ||
+        AscendC::Std::is_base_of_v<
+            MatmulMultiBlockWithOutQue<AscendC::Shape<_0, _0, _0, _0>, A_FULL_LOAD_MODE, OP_TYPE_MUL>,
+            DispatchPolicy_> ||
+        AscendC::Std::is_base_of_v<
+            MatmulMultiBlockWithOutQue<AscendC::Shape<_0, _0, _0, _0>, B_FULL_LOAD_MODE, OP_TYPE_MUL>,
             DispatchPolicy_> ||
         AscendC::Std::is_base_of_v<
             MatmulMultiBlockWithOutQue<AscendC::Shape<_0, _0, _0, _0>, NONE_FULL_LOAD_MODE, OP_TYPE_RELU>,
@@ -49,6 +61,12 @@ class BlockMmad<
             DispatchPolicy_> ||
         AscendC::Std::is_base_of_v<
             MatmulMultiBlockWithOutQue<AscendC::Shape<_0, _0, _0, _0>, A_FULL_LOAD_MODE, OP_TYPE_RELU>,
+            DispatchPolicy_> ||
+        AscendC::Std::is_base_of_v<
+            MatmulMultiBlockWithOutQue<AscendC::Shape<_0, _0, _0, _0>, NONE_FULL_LOAD_MODE, OP_TYPE_GELU_ERF>,
+            DispatchPolicy_> ||
+        AscendC::Std::is_base_of_v<
+            MatmulMultiBlockWithOutQue<AscendC::Shape<_0, _0, _0, _0>, NONE_FULL_LOAD_MODE, OP_TYPE_GELU_TANH>,
             DispatchPolicy_>>> {
 public:
     using L0cType = typename GetL0CAndBtType::Type;
@@ -512,8 +530,7 @@ public:
         return CopyOut(cGlobal, c1Local, baseM, baseN);
     }
 
-    // Fixpipe: copy Loc to UB of two aiv
-    __aicore__ inline void DoubleCopyOut(
+    __aicore__ inline void DoubleCopyOutTwoFixpipe(
         const AscendC::LocalTensor<C_T> &dstLocal, uint64_t l0cOffset, uint64_t baseM, uint64_t baseN)
     {
         AscendC::LocalTensor<L0cType> c1Local = c1Local_[l0cOffset];
@@ -549,6 +566,42 @@ public:
         fixpipeParams.mSize = baseM - halfBaseM;    // baseM - baseM/2
         fixpipeParams.subBlockId = 1;               // aiv1
         AscendC::Fixpipe<C_T, L0cType, AscendC::Impl::CFG_ROW_MAJOR_UB>(dstLocal, c1LocalNext, fixpipeParams);
+    }
+
+    __aicore__ inline void DoubleCopyOutDualSplitM(
+        const AscendC::LocalTensor<C_T> &dstLocal, uint64_t l0cOffset, uint64_t baseM, uint64_t baseN)
+    {
+        AscendC::LocalTensor<L0cType> c1Local = c1Local_[l0cOffset];
+        AscendC::FixpipeParamsC310<AscendC::CO2Layout::ROW_MAJOR> fixpipeParams;
+        uint64_t c0 = AscendC::AuxGetC0Size<C_T>();
+        fixpipeParams.nSize = Cmct::Gemm::Align(baseN, c0);
+        fixpipeParams.mSize = Cmct::Gemm::Align(baseM, SPLIT_M_ALIGN);
+        if constexpr (DispatchPolicy::enableGelu) {
+            // GELU consumes float workspace through vector copy, whose row stride follows fp16 C0 alignment.
+            fixpipeParams.dstStride = Cmct::Gemm::Align(fixpipeParams.nSize, AscendC::AuxGetC0Size<half>());
+        } else {
+            fixpipeParams.dstStride = fixpipeParams.nSize;
+        }
+        fixpipeParams.srcStride = Cmct::Gemm::Align(baseM, AscendC::BLOCK_CUBE);
+        fixpipeParams.dualDstCtl = static_cast<uint8_t>(AscendC::McgShfMode::DUAL_DST_SPLIT_M);
+        fixpipeParams.unitFlag = 0;
+        fixpipeParams.params.ndNum = 1;
+        fixpipeParams.params.srcNdStride = 1;
+        fixpipeParams.params.dstNdStride = 1;
+        AscendC::Fixpipe<C_T, L0cType, AscendC::Impl::CFG_ROW_MAJOR_UB>(dstLocal, c1Local, fixpipeParams);
+    }
+
+    // Fixpipe: copy L0C to UB of two aiv
+    // 非随路quantPre走DUAL_DST_SPLIT_M单指令(性能优), 需要Quant走两条Fixpipe兼容
+    __aicore__ inline void DoubleCopyOut(
+        const AscendC::LocalTensor<C_T>& dstLocal, uint64_t l0cOffset, uint64_t baseM, uint64_t baseN)
+    {
+        if constexpr (AscendC::IsSameType<C_T, float>::value) {
+            // splitM不支持quantPre
+            DoubleCopyOutDualSplitM(dstLocal, l0cOffset, baseM, baseN);
+        } else {
+            DoubleCopyOutTwoFixpipe(dstLocal, l0cOffset, baseM, baseN);
+        }
     }
 
     template <typename T, CubeFormat LayoutB = CubeFormat::ND>
@@ -958,14 +1011,13 @@ public:
             abL1LoopCnt_++;
         }
 
-        AscendC::LocalTensor<L0cType> c1Local = c1Local_[l0cOffset];
         if (enableL0cPingPong_) {
             AscendC::SetFlag<AscendC::HardEvent::M_FIX>(l0cPingPong_ & 0x1);
             AscendC::WaitFlag<AscendC::HardEvent::M_FIX>(l0cPingPong_ & 0x1);
         }
 
         // 数据搬出到GM或者ub
-        CopyOut(cTensor, c1Local, mmadParams.m, mmadParams.n);
+        DoubleCopyOut(cTensor, l0cOffset, mmadParams.m, mmadParams.n);
         if (enableL0cPingPong_) {
             AscendC::SetFlag<AscendC::HardEvent::FIX_M>(l0cPingPong_ & 0x1);
             l0cPingPong_++;
@@ -1013,13 +1065,12 @@ private:
     constexpr static int32_t BT_SIZE = 4096;
     uint64_t aL1OneBuffer_ = 0;
     uint64_t bL1OneBuffer_ = 0;
-    AscendC::LocalTensor<A_T> l0aLocal_{AscendC::TPosition::A2, 0, L0A_SIZE};
-    AscendC::LocalTensor<B_T> l0bLocal_{AscendC::TPosition::B2, 0, L0B_SIZE};
-    AscendC::LocalTensor<L0cType> c1Local_{AscendC::TPosition::CO1, 0, AscendC::TOTAL_L0C_SIZE};
-    AscendC::LocalTensor<L0cType> biasBt_{AscendC::TPosition::C2, 0, BT_SIZE};
-    AscendC::LocalTensor<A_T> l1Local_{AscendC::TPosition::A1, 0, AscendC::TOTAL_L1_SIZE};
+    AscendC::LocalTensor<A_T> l0aLocal_{AscendC::TPosition::A2, 0, L0A_SIZE / sizeof(A_T)};
+    AscendC::LocalTensor<B_T> l0bLocal_{AscendC::TPosition::B2, 0, L0B_SIZE / sizeof(B_T)};
+    AscendC::LocalTensor<L0cType> c1Local_{AscendC::TPosition::CO1, 0, AscendC::TOTAL_L0C_SIZE / sizeof(L0cType)};
+    AscendC::LocalTensor<L0cType> biasBt_{AscendC::TPosition::C2, 0, BT_SIZE / sizeof(L0cType)};
+    AscendC::LocalTensor<A_T> l1Local_{AscendC::TPosition::A1, 0, AscendC::TOTAL_L1_SIZE / sizeof(A_T)};
 };
 }  // namespace Block
 }  // namespace Gemm
 }  // namespace Cmct
-

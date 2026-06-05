@@ -62,7 +62,7 @@ const std::map<std::string, FusedOpType> FUSED_OP_TYPE_MAP = {
     {"relu", FusedOpType::RELU},
     {"16cast32", FusedOpType::CAST32}};
 
-const std::set<std::string> FusedOpTypeSupportStreamK = {"", "relu", "16cast32"};
+const std::set<std::string> FusedOpTypeSupportStreamK = {"", "relu", "16cast32", "add", "mul"};
 
 inline bool IsFusedMatMulBmmShape(const gert::TilingContext* context)
 {
@@ -76,4 +76,3 @@ inline bool IsFusedMatMulBmmShape(const gert::TilingContext* context)
 }
 
 } // namespace optiling
-

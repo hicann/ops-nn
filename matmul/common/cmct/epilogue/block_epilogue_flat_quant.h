@@ -226,18 +226,18 @@ public:
         AscendC::MicroAPI::RegTensor<bfloat16_t> vSrcReg0;
         AscendC::MicroAPI::RegTensor<bfloat16_t> vSrcReg1;
         AscendC::MicroAPI::RegTensor<uint16_t> vdMaxExp;
-        
+
         AscendC::MicroAPI::RegTensor<uint16_t> absMask16Bit;
         AscendC::MicroAPI::Duplicate(absMask16Bit, ABS_MASK_FOR_16BIT);
-        
+
         AscendC::MicroAPI::MaskReg maskReg;
         AscendC::MicroAPI::UnalignReg u1;
         AscendC::MicroAPI::AddrReg aReg;
-        
+
         for (uint16_t i = 0; i < repeatTimes; i++) {
             aReg = AscendC::MicroAPI::CreateAddrReg<uint32_t>(i, oneRepeatSize);
             maskReg = AscendC::MicroAPI::UpdateMask<bfloat16_t>(count);
-            
+
             AscendC::MicroAPI::LoadAlign<bfloat16_t, AscendC::MicroAPI::LoadDist::DIST_DINTLV_B16>(
                 vSrcReg0, vSrcReg1, srcPtr, aReg);
             AscendC::MicroAPI::And(

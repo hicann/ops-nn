@@ -52,6 +52,11 @@ static const std::vector<std::vector<ge::DataType>> CAST32_DTYPE_SUPPORT_LIST = 
     {ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_BF16, ge::DT_BF16},
     {ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_BF16}};
 
+static const std::vector<std::vector<ge::DataType>> GELU_DTYPE_SUPPORT_LIST = {
+    // x1,              x2,             y. GELU has no x3 input and rejects bias before dtype matching.
+    {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16},
+    {ge::DT_BF16, ge::DT_BF16, ge::DT_BF16}};
+
 inline void GetDtype(const gert::TilingContext& context, MatMulV3Args& args, NpuArch npuArch)
 {
     args.aType = context.GetInputDesc(0)->GetDataType();
@@ -86,13 +91,23 @@ ge::graphStatus IsValidDtype(const gert::TilingContext& context, const MatMulV3A
 
     auto attrs = context.GetAttrs();
     std::string opType = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
+    const bool isGeluOp = (opType == "gelu_erf" || opType == "gelu_tanh");
+    if (isGeluOp && args.hasBias) {
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            args.opName, "fusedOpType, bias", Ops::NN::FormatString("%s, not null", opType.c_str()).c_str(),
+            Ops::NN::FormatString("The input %s is not supported for gelu op type", "bias").c_str());
+        return ge::GRAPH_FAILED;
+    }
+
     // check dtype
     auto supportList = (npuArch == NpuArch::DAV_3510) ? DTYPE_SUPPORT_LIST_DAV_3510 : DTYPE_SUPPORT_LIST_RESERVED;
     if (opType == "16cast32") {
         supportList = CAST32_DTYPE_SUPPORT_LIST;
+    } else if (isGeluOp) {
+        supportList = GELU_DTYPE_SUPPORT_LIST;
     }
     for (auto& supported : supportList) {
-        if (std::equal(dtype.begin(), dtype.end(), supported.begin())) {
+        if (supported.size() >= dtype.size() && std::equal(dtype.begin(), dtype.end(), supported.begin())) {
             return ge::GRAPH_SUCCESS;
         }
     }
@@ -132,60 +147,99 @@ ge::graphStatus IsValidDtype(const gert::TilingContext& context, const MatMulV3A
     }
 }
 
-ge::graphStatus OpSpecificCheck(
-    const gert::TilingContext& context, MatMulV3Args& args, NpuArch npuArch)
+ge::graphStatus CheckGeluShapeDim(const gert::TilingContext& context, const MatMulV3Args& args)
 {
-    // check x3 shape
-    if (args.hasX3Input) {
-        const gert::Shape& x3Shape = context.GetOptionalInputShape(INPUT_X3_IDX)->GetOriginShape();
-        const size_t x3DimNum = x3Shape.GetDimNum();
-        if (x3DimNum < NUM_TWO || x3DimNum > NUM_THREE) {
-            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
-                args.opName, "x3", Ops::NN::FormatString("%zu", x3DimNum).c_str(),
-                Ops::NN::FormatString("The shape dim of %s must be within the range %s", "x3", "{2, 3}").c_str());
-            return ge::GRAPH_FAILED;
-        }
-        if (x3Shape[x3DimNum - NUM_TWO] != static_cast<int64_t>(args.mValue) ||
-            x3Shape[x3DimNum - 1] != static_cast<int64_t>(args.nValue)) {
+    auto attrs = context.GetAttrs();
+    OPS_CHECK_NULL_WITH_CONTEXT(&context, attrs);
+    std::string opType = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
+    if (opType != "gelu_erf" && opType != "gelu_tanh") {
+        return ge::GRAPH_SUCCESS;
+    }
+
+    const size_t aDimNum = context.GetInputShape(0)->GetOriginShape().GetDimNum();
+    const size_t bDimNum = context.GetInputShape(1)->GetOriginShape().GetDimNum();
+    const size_t cDimNum = context.GetOutputShape(0)->GetOriginShape().GetDimNum();
+    if (aDimNum == NUM_TWO && bDimNum == NUM_TWO && cDimNum == NUM_TWO) {
+        return ge::GRAPH_SUCCESS;
+    }
+
+    OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+        args.opName, "x1, x2, y", Ops::NN::FormatString("%zuD, %zuD, %zuD", aDimNum, bDimNum, cDimNum).c_str(),
+        Ops::NN::FormatString("The shape dims of %s must be %zu for gelu op type", "x1, x2, y", NUM_TWO).c_str());
+    return ge::GRAPH_FAILED;
+}
+
+ge::graphStatus CheckX3Shape(const gert::TilingContext& context, MatMulV3Args& args)
+{
+    if (!args.hasX3Input) {
+        return ge::GRAPH_SUCCESS;
+    }
+    const gert::Shape& x3Shape = context.GetOptionalInputShape(INPUT_X3_IDX)->GetOriginShape();
+    const size_t x3DimNum = x3Shape.GetDimNum();
+    if (x3DimNum < NUM_TWO || x3DimNum > NUM_THREE) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            args.opName, "x3", Ops::NN::FormatString("%zu", x3DimNum).c_str(),
+            Ops::NN::FormatString("The shape dim of %s must be within the range %s", "x3", "{2, 3}").c_str());
+        return ge::GRAPH_FAILED;
+    }
+    if (x3Shape[x3DimNum - NUM_TWO] != static_cast<int64_t>(args.mValue) ||
+        x3Shape[x3DimNum - 1] != static_cast<int64_t>(args.nValue)) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            args.opName, "x3", Ops::Base::ToString(x3Shape).c_str(),
+            Ops::NN::FormatString(
+                "%s of %s must be equal to %s of %s (%lu), %s of %s must be equal to %s of %s (%lu)", "Shape[-2]",
+                 "x3", "Shape[-2]", "y", args.mValue, "Shape[-1]", "x3", "Shape[-1]", "y", args.nValue)
+                .c_str());
+        return ge::GRAPH_FAILED;
+    }
+    // 仅支持x3的batch 1D
+    if (x3DimNum == NUM_THREE) {
+        if (x3Shape[0] != 1 && x3Shape[0] != static_cast<int>(args.batchInfo->batchC)) {
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
                 args.opName, "x3", Ops::Base::ToString(x3Shape).c_str(),
                 Ops::NN::FormatString(
-                    "%s of %s must be equal to %s of %s (%lu), %s of %s must be equal to %s of %s (%lu)", "Shape[-2]",
-                    "x3", "Shape[-2]", "y", args.mValue, "Shape[-1]", "x3", "Shape[-1]", "y", args.nValue)
+                    "%s of %s must satisfy broadcast rule (equal or one is 1)", "Batch-axis", "x3, y")
                     .c_str());
             return ge::GRAPH_FAILED;
         }
-        // 仅支持x3的batch 1D
-        if (x3DimNum == NUM_THREE) {
-            if (x3Shape[0] != 1 && x3Shape[0] != static_cast<int>(args.batchInfo->batchC)) {
-                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-                    args.opName, "x3", Ops::Base::ToString(x3Shape).c_str(),
-                    Ops::NN::FormatString(
-                        "%s of %s must satisfy broadcast rule (equal or one is 1)", "Batch-axis", "x3, y")
-                        .c_str());
-                return ge::GRAPH_FAILED;
-            }
-            args.batchX3 = x3Shape[0];
-        }
+        args.batchX3 = x3Shape[0];
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus CheckBiasShape(const gert::TilingContext& context, const MatMulV3Args& args)
+{
+    if (!args.hasBias) {
+        return ge::GRAPH_SUCCESS;
+    }
+    const gert::Shape& biasShape = context.GetInputShape(INPUT_BIAS_IDX)->GetOriginShape();
+    const gert::Shape& cShape = context.GetOutputShape(0)->GetOriginShape();
+    const int64_t biasValue = biasShape[biasShape.GetDimNum() - 1];
+    const int64_t nOriValue = cShape[cShape.GetDimNum() - 1];
+    if (biasValue != nOriValue) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            args.opName, "bias", Ops::Base::ToString(biasShape).c_str(),
+            Ops::NN::FormatString(
+                "%s of %s must be equal to %s of %s (%ld)", "Shape[-1]", "bias", "Shape[-1]", "y", nOriValue)
+                .c_str());
+        return ge::GRAPH_FAILED;
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus OpSpecificCheck(
+    const gert::TilingContext& context, MatMulV3Args& args, NpuArch npuArch)
+{
+    if (CheckGeluShapeDim(context, args) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    if (CheckX3Shape(context, args) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    if (CheckBiasShape(context, args) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
     }
 
-    // check bias
-    if (args.hasBias) {
-        const gert::Shape& biasShape = context.GetInputShape(INPUT_BIAS_IDX)->GetOriginShape();
-        const gert::Shape& cShape = context.GetOutputShape(0)->GetOriginShape();
-        const int64_t biasValue = biasShape[biasShape.GetDimNum() - 1];
-        const int64_t nOriValue = cShape[cShape.GetDimNum() - 1];
-        if (biasValue != nOriValue) {
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-                args.opName, "bias", Ops::Base::ToString(biasShape).c_str(),
-                Ops::NN::FormatString(
-                    "%s of %s must be equal to %s of %s (%ld)", "Shape[-1]", "bias", "Shape[-1]", "y", nOriValue)
-                    .c_str());
-            return ge::GRAPH_FAILED;
-        }
-    }
-
-    // dtype check
     return IsValidDtype(context, args, npuArch);
 }
 } // namespace
@@ -195,7 +249,7 @@ namespace fused_matmul {
 
 ge::graphStatus FusedMatMulBuiltInTiling::GetBmmBiasInfo(const gert::TilingContext &context, MatMulV3Args& args,
                                                     MatMulV3BatchInfo& batchInfo)
-{   
+{
     // 本质上是由于matmul判断hasBias有OptionalInput无法占位问题
     bool hasBias =
         (context.GetOptionalInputDesc(INPUT_BIAS_IDX) != nullptr &&
