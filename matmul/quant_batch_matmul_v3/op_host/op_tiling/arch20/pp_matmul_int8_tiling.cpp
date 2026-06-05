@@ -68,7 +68,7 @@ bool PpMatmulInt8Tiling::IsCapable()
     auto inputBShape = context_->GetInputShape(1)->GetOriginShape();
     uint32_t N = inputBShape.GetDimNum() == NO_BATCH_DIM_SUM ? inputAShape[0] : inputAShape[1];
     OP_TILING_CHECK((K == 1 || N == 1),
-        CUBE_INNER_ERR_REPORT(inputParams_.opName, "When format of x2 is FRACTAL_NZ, n or k cannot be 1."),
+        OP_LOGI(inputParams_.opName, "When format of x2 is FRACTAL_NZ, n or k cannot be 1."),
         return false);
     auto biasShape = GetBiasShape(GetBiasIdx());
     auto attrs = context_->GetAttrs();
