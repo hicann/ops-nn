@@ -230,3 +230,356 @@ TEST_F(RmsNormDynamicMxQuantInfershape, RmsNormDynamicMxQuant_infershape_m_0_n_0
 {
     CheckInferShapeWithRstd({0, 0}, {0}, {0, 0}, {0, 0, 2}, {0, 1});
 }
+
+TEST_F(RmsNormDynamicMxQuantInfershape, RmsNormDynamicMxQuant_infershape_unknown_rank)
+{
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("RmsNormDynamicMxQuant"), nullptr);
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("RmsNormDynamicMxQuant")->infer_shape;
+
+    if (infer_shape_func != nullptr) {
+        gert::StorageShape x_shape = {{-2}, {-2}};
+        gert::StorageShape y_shape = {{-2}, {-2}};
+        gert::StorageShape mxscale_shape = {{-2}, {-2}};
+        gert::StorageShape rstd_shape = {{-2}, {-2}};
+
+        auto holder = gert::InferShapeContextFaker()
+                          .NodeIoNum(3, 3)
+                          .IrInstanceNum({1, 1, 1})
+                          .InputShapes({&x_shape, &x_shape, &x_shape})
+                          .OutputShapes({&y_shape, &mxscale_shape, &rstd_shape})
+                          .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-6)},
+                                      {"scale_alg", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                      {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                                      {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(40)},
+                                      {"output_rstd", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                          .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeOutputTd(0, ge::DT_FLOAT4_E2M1, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeOutputTd(1, ge::DT_FLOAT8_E8M0, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .Build();
+
+        auto context = holder.GetContext<gert::InferShapeContext>();
+        EXPECT_EQ(infer_shape_func(context), ge::GRAPH_SUCCESS);
+
+        EXPECT_EQ(context->GetOutputShape(0)->GetDim(0), -2);
+        EXPECT_EQ(context->GetOutputShape(1)->GetDim(0), -2);
+    }
+}
+
+TEST_F(RmsNormDynamicMxQuantInfershape, RmsNormDynamicMxQuant_infershape_unknown_rank_with_rstd)
+{
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("RmsNormDynamicMxQuant"), nullptr);
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("RmsNormDynamicMxQuant")->infer_shape;
+
+    if (infer_shape_func != nullptr) {
+        gert::StorageShape x_shape = {{-2}, {-2}};
+        gert::StorageShape y_shape = {{-2}, {-2}};
+        gert::StorageShape mxscale_shape = {{-2}, {-2}};
+        gert::StorageShape rstd_shape = {{-2}, {-2}};
+
+        auto holder = gert::InferShapeContextFaker()
+                          .NodeIoNum(3, 3)
+                          .IrInstanceNum({1, 1, 1})
+                          .InputShapes({&x_shape, &x_shape, &x_shape})
+                          .OutputShapes({&y_shape, &mxscale_shape, &rstd_shape})
+                          .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-6)},
+                                      {"scale_alg", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                      {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                                      {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(40)},
+                                      {"output_rstd", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                          .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeOutputTd(0, ge::DT_FLOAT4_E2M1, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeOutputTd(1, ge::DT_FLOAT8_E8M0, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .Build();
+
+        auto context = holder.GetContext<gert::InferShapeContext>();
+        EXPECT_EQ(infer_shape_func(context), ge::GRAPH_SUCCESS);
+
+        EXPECT_EQ(context->GetOutputShape(0)->GetDim(0), -2);
+        EXPECT_EQ(context->GetOutputShape(1)->GetDim(0), -2);
+        EXPECT_EQ(context->GetOutputShape(2)->GetDim(0), -2);
+    }
+}
+
+TEST_F(RmsNormDynamicMxQuantInfershape, RmsNormDynamicMxQuant_infershape_unknown_dim)
+{
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("RmsNormDynamicMxQuant"), nullptr);
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("RmsNormDynamicMxQuant")->infer_shape;
+
+    if (infer_shape_func != nullptr) {
+        gert::StorageShape x_shape = {{8, -1}, {8, -1}};
+        gert::StorageShape gamma_shape = {{-1}, {-1}};
+        gert::StorageShape y_shape = {{8, -1}, {8, -1}};
+        gert::StorageShape mxscale_shape = {{8, -1, 2}, {8, -1, 2}};
+        gert::StorageShape rstd_shape = {{8, 1}, {8, 1}};
+
+        auto holder = gert::InferShapeContextFaker()
+                          .NodeIoNum(3, 3)
+                          .IrInstanceNum({1, 1, 1})
+                          .InputShapes({&x_shape, &gamma_shape, &gamma_shape})
+                          .OutputShapes({&y_shape, &mxscale_shape, &rstd_shape})
+                          .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-6)},
+                                      {"scale_alg", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                      {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                                      {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(40)},
+                                      {"output_rstd", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                          .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeOutputTd(0, ge::DT_FLOAT4_E2M1, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeOutputTd(1, ge::DT_FLOAT8_E8M0, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .Build();
+
+        auto context = holder.GetContext<gert::InferShapeContext>();
+        EXPECT_EQ(infer_shape_func(context), ge::GRAPH_SUCCESS);
+
+        EXPECT_EQ(context->GetOutputShape(0)->GetDim(0), 8);
+        EXPECT_EQ(context->GetOutputShape(0)->GetDim(1), -1);
+        EXPECT_EQ(context->GetOutputShape(1)->GetDim(0), 8);
+        EXPECT_EQ(context->GetOutputShape(1)->GetDim(1), -1);
+        EXPECT_EQ(context->GetOutputShape(1)->GetDim(2), 2);
+    }
+}
+
+TEST_F(RmsNormDynamicMxQuantInfershape, RmsNormDynamicMxQuant_infershape_unknown_dim_with_rstd)
+{
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("RmsNormDynamicMxQuant"), nullptr);
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("RmsNormDynamicMxQuant")->infer_shape;
+
+    if (infer_shape_func != nullptr) {
+        gert::StorageShape x_shape = {{8, -1}, {8, -1}};
+        gert::StorageShape gamma_shape = {{-1}, {-1}};
+        gert::StorageShape y_shape = {{8, -1}, {8, -1}};
+        gert::StorageShape mxscale_shape = {{8, -1, 2}, {8, -1, 2}};
+        gert::StorageShape rstd_shape = {{8, 1}, {8, 1}};
+
+        auto holder = gert::InferShapeContextFaker()
+                          .NodeIoNum(3, 3)
+                          .IrInstanceNum({1, 1, 1})
+                          .InputShapes({&x_shape, &gamma_shape, &gamma_shape})
+                          .OutputShapes({&y_shape, &mxscale_shape, &rstd_shape})
+                          .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-6)},
+                                      {"scale_alg", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                      {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                                      {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(40)},
+                                      {"output_rstd", Ops::NN::AnyValue::CreateFrom<bool>(true)}})
+                          .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeOutputTd(0, ge::DT_FLOAT4_E2M1, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeOutputTd(1, ge::DT_FLOAT8_E8M0, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                          .Build();
+
+        auto context = holder.GetContext<gert::InferShapeContext>();
+        EXPECT_EQ(infer_shape_func(context), ge::GRAPH_SUCCESS);
+
+        EXPECT_EQ(context->GetOutputShape(0)->GetDim(0), 8);
+        EXPECT_EQ(context->GetOutputShape(0)->GetDim(1), -1);
+        EXPECT_EQ(context->GetOutputShape(1)->GetDim(0), 8);
+        EXPECT_EQ(context->GetOutputShape(1)->GetDim(1), -1);
+        EXPECT_EQ(context->GetOutputShape(1)->GetDim(2), 2);
+        EXPECT_EQ(context->GetOutputShape(2)->GetDim(0), 8);
+        EXPECT_EQ(context->GetOutputShape(2)->GetDim(1), 1);
+    }
+}
+
+TEST_F(RmsNormDynamicMxQuantInfershape, RmsNormDynamicMxQuant_infer_dtype_float4_e2m1)
+{
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("RmsNormDynamicMxQuant"), nullptr);
+    auto data_type_func = gert::OpImplRegistry::GetInstance().GetOpImpl("RmsNormDynamicMxQuant")->infer_datatype;
+
+    if (data_type_func != nullptr) {
+        ge::DataType input_ref = ge::DT_FLOAT16;
+        ge::DataType y_ref = ge::DT_FLOAT4_E2M1;
+        ge::DataType mx_scale_ref = ge::DT_FLOAT8_E8M0;
+        ge::DataType rstd_ref = ge::DT_FLOAT;
+        auto context_holder =
+            gert::InferDataTypeContextFaker()
+                .IrInputNum(3)
+                .NodeIoNum(3, 3)
+                .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                .NodeOutputTd(0, ge::DT_FLOAT4_E2M1, ge::FORMAT_ND, ge::FORMAT_ND)
+                .NodeOutputTd(1, ge::DT_FLOAT8_E8M0, ge::FORMAT_ND, ge::FORMAT_ND)
+                .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-6)}})
+                .NodeAttrs({{"scale_alg", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
+                .NodeAttrs({{"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")}})
+                .NodeAttrs({{"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(40)}})
+                .NodeAttrs({{"output_rstd", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                .InputDataTypes({&input_ref, &input_ref, &input_ref})
+                .OutputDataTypes({&y_ref, &mx_scale_ref, &rstd_ref})
+                .Build();
+        auto context = context_holder.GetContext<gert::InferDataTypeContext>();
+        EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);
+        ASSERT_NE(context, nullptr);
+
+        EXPECT_EQ(context->GetOutputDataType(0), y_ref);
+        EXPECT_EQ(context->GetOutputDataType(1), mx_scale_ref);
+        EXPECT_EQ(context->GetOutputDataType(2), rstd_ref);
+    }
+}
+
+TEST_F(RmsNormDynamicMxQuantInfershape, RmsNormDynamicMxQuant_infer_dtype_float4_e1m2)
+{
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("RmsNormDynamicMxQuant"), nullptr);
+    auto data_type_func = gert::OpImplRegistry::GetInstance().GetOpImpl("RmsNormDynamicMxQuant")->infer_datatype;
+
+    if (data_type_func != nullptr) {
+        ge::DataType input_ref = ge::DT_FLOAT16;
+        ge::DataType y_ref = ge::DT_FLOAT4_E1M2;
+        ge::DataType mx_scale_ref = ge::DT_FLOAT8_E8M0;
+        ge::DataType rstd_ref = ge::DT_FLOAT;
+        auto context_holder =
+            gert::InferDataTypeContextFaker()
+                .IrInputNum(3)
+                .NodeIoNum(3, 3)
+                .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                .NodeOutputTd(0, ge::DT_FLOAT4_E1M2, ge::FORMAT_ND, ge::FORMAT_ND)
+                .NodeOutputTd(1, ge::DT_FLOAT8_E8M0, ge::FORMAT_ND, ge::FORMAT_ND)
+                .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-6)}})
+                .NodeAttrs({{"scale_alg", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
+                .NodeAttrs({{"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")}})
+                .NodeAttrs({{"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(41)}})
+                .NodeAttrs({{"output_rstd", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                .InputDataTypes({&input_ref, &input_ref, &input_ref})
+                .OutputDataTypes({&y_ref, &mx_scale_ref, &rstd_ref})
+                .Build();
+        auto context = context_holder.GetContext<gert::InferDataTypeContext>();
+        EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);
+        ASSERT_NE(context, nullptr);
+
+        EXPECT_EQ(context->GetOutputDataType(0), y_ref);
+        EXPECT_EQ(context->GetOutputDataType(1), mx_scale_ref);
+        EXPECT_EQ(context->GetOutputDataType(2), rstd_ref);
+    }
+}
+
+TEST_F(RmsNormDynamicMxQuantInfershape, RmsNormDynamicMxQuant_infer_dtype_float8_e4m3fn)
+{
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("RmsNormDynamicMxQuant"), nullptr);
+    auto data_type_func = gert::OpImplRegistry::GetInstance().GetOpImpl("RmsNormDynamicMxQuant")->infer_datatype;
+
+    if (data_type_func != nullptr) {
+        ge::DataType input_ref = ge::DT_FLOAT16;
+        ge::DataType y_ref = ge::DT_FLOAT8_E4M3FN;
+        ge::DataType mx_scale_ref = ge::DT_FLOAT8_E8M0;
+        ge::DataType rstd_ref = ge::DT_FLOAT;
+        auto context_holder =
+            gert::InferDataTypeContextFaker()
+                .IrInputNum(3)
+                .NodeIoNum(3, 3)
+                .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                .NodeOutputTd(0, ge::DT_FLOAT8_E4M3FN, ge::FORMAT_ND, ge::FORMAT_ND)
+                .NodeOutputTd(1, ge::DT_FLOAT8_E8M0, ge::FORMAT_ND, ge::FORMAT_ND)
+                .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-6)}})
+                .NodeAttrs({{"scale_alg", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
+                .NodeAttrs({{"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")}})
+                .NodeAttrs({{"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(36)}})
+                .NodeAttrs({{"output_rstd", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                .InputDataTypes({&input_ref, &input_ref, &input_ref})
+                .OutputDataTypes({&y_ref, &mx_scale_ref, &rstd_ref})
+                .Build();
+        auto context = context_holder.GetContext<gert::InferDataTypeContext>();
+        EXPECT_EQ(data_type_func(context), ge::GRAPH_SUCCESS);
+        ASSERT_NE(context, nullptr);
+
+        EXPECT_EQ(context->GetOutputDataType(0), y_ref);
+        EXPECT_EQ(context->GetOutputDataType(1), mx_scale_ref);
+        EXPECT_EQ(context->GetOutputDataType(2), rstd_ref);
+    }
+}
+
+TEST_F(RmsNormDynamicMxQuantInfershape, RmsNormDynamicMxQuant_infer_dtype_invalid)
+{
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("RmsNormDynamicMxQuant"), nullptr);
+    auto data_type_func = gert::OpImplRegistry::GetInstance().GetOpImpl("RmsNormDynamicMxQuant")->infer_datatype;
+
+    if (data_type_func != nullptr) {
+        ge::DataType input_ref = ge::DT_FLOAT16;
+        ge::DataType y_ref = ge::DT_FLOAT16;
+        ge::DataType mx_scale_ref = ge::DT_FLOAT8_E8M0;
+        ge::DataType rstd_ref = ge::DT_FLOAT;
+        auto context_holder =
+            gert::InferDataTypeContextFaker()
+                .IrInputNum(3)
+                .NodeIoNum(3, 3)
+                .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                .NodeOutputTd(1, ge::DT_FLOAT8_E8M0, ge::FORMAT_ND, ge::FORMAT_ND)
+                .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-6)}})
+                .NodeAttrs({{"scale_alg", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
+                .NodeAttrs({{"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")}})
+                .NodeAttrs({{"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(999)}})
+                .NodeAttrs({{"output_rstd", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                .InputDataTypes({&input_ref, &input_ref, &input_ref})
+                .OutputDataTypes({&y_ref, &mx_scale_ref, &rstd_ref})
+                .Build();
+        auto context = context_holder.GetContext<gert::InferDataTypeContext>();
+        EXPECT_EQ(data_type_func(context), ge::GRAPH_FAILED);
+    }
+}
+
+TEST_F(RmsNormDynamicMxQuantInfershape, RmsNormDynamicMxQuant_infershape_debug_log)
+{
+    setenv("ASCEND_GLOBAL_LOG_LEVEL", "0", true);
+    dlog_setlevel(-1, 0, 1);
+
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("RmsNormDynamicMxQuant"), nullptr);
+    auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("RmsNormDynamicMxQuant")->infer_shape;
+
+    ASSERT_NE(infer_shape_func, nullptr);
+
+    gert::StorageShape x_shape = {{8, 64}, {8, 64}};
+    gert::StorageShape gamma_shape = {{64}, {64}};
+    gert::StorageShape y_shape = {{8, 64}, {8, 64}};
+    gert::StorageShape mxscale_shape = {{8, 1, 2}, {8, 1, 2}};
+    gert::StorageShape rstd_shape = {{8, 1}, {8, 1}};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 3)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&x_shape, &gamma_shape, &gamma_shape})
+                      .OutputShapes({&y_shape, &mxscale_shape, &rstd_shape})
+                      .NodeAttrs({{"epsilon", Ops::NN::AnyValue::CreateFrom<float>(1e-6)},
+                                  {"scale_alg", Ops::NN::AnyValue::CreateFrom<int64_t>(0)},
+                                  {"round_mode", Ops::NN::AnyValue::CreateFrom<string>("rint")},
+                                  {"dst_type", Ops::NN::AnyValue::CreateFrom<int64_t>(40)},
+                                  {"output_rstd", Ops::NN::AnyValue::CreateFrom<bool>(false)}})
+                      .NodeInputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT4_E2M1, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(1, ge::DT_FLOAT8_E8M0, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .Build();
+
+    auto context = holder.GetContext<gert::InferShapeContext>();
+    EXPECT_EQ(infer_shape_func(context), ge::GRAPH_SUCCESS);
+
+    EXPECT_EQ(context->GetOutputShape(0)->GetDim(0), 8);
+    EXPECT_EQ(context->GetOutputShape(0)->GetDim(1), 64);
+    EXPECT_EQ(context->GetOutputShape(1)->GetDim(0), 8);
+    EXPECT_EQ(context->GetOutputShape(1)->GetDim(1), 1);
+    EXPECT_EQ(context->GetOutputShape(1)->GetDim(2), 2);
+
+    dlog_setlevel(-1, 2, 1);
+    setenv("ASCEND_GLOBAL_LOG_LEVEL", "3", true);
+}
