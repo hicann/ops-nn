@@ -459,13 +459,13 @@ inline static aclnnStatus CheckParams(
     }
     // Check null
     CHECK_RET(CheckNotNull(x1, x2, out, x1Scale, x2Scale, permX1, permX2, permY), ACLNN_ERR_PARAM_NULLPTR);
+    // check dtype
+    CHECK_RET(CheckDtypeValid(x1, x2, x1Scale, x2Scale, out, dtype), ACLNN_ERR_PARAM_INVALID);
     bool isMxFp = IsMicroScaling(x1Scale, x2Scale);
     // check perm
     CHECK_RET(CheckPermValid(permX1, permX2, permY, isMxFp), ACLNN_ERR_PARAM_INVALID);
     // check shape
     CHECK_RET(CheckShapeValid(x1, x2, x1Scale, x2Scale, permX1, permX2, isMxFp), ACLNN_ERR_PARAM_INVALID);
-    // check dtype
-    CHECK_RET(CheckDtypeValid(x1, x2, x1Scale, x2Scale, out, dtype), ACLNN_ERR_PARAM_INVALID);
     // check nz
     if (ge::GetPrimaryFormat(x2->GetStorageFormat()) == Format::FORMAT_FRACTAL_NZ) {
         CHECK_RET(CheckWeightNz(x2, isMxFp), ACLNN_ERR_PARAM_INVALID);
