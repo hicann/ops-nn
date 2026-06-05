@@ -8,7 +8,6 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 #include "ge/fusion/pass/pattern_fusion_pass.h"
-#include "version/ge-compiler_version.h"
 
 #ifndef NN_ADD_LAYER_NORM_FUSION_PASS_H
 #define NN_ADD_LAYER_NORM_FUSION_PASS_H
@@ -17,25 +16,13 @@ namespace ops {
 using namespace ge;
 using namespace fusion;
 
-#if GE_COMPILER_VERSION_NUM > 90000000
-class __attribute__((visibility("default"))) AddLayerNormFusionPass : public PatternFusionPassV2 {
-protected:
-    std::vector<PatternUniqPtr> Patterns() override;
-
-    bool MeetRequirements(const std::unique_ptr<MatchResult>& match_result,
-                                           CustomPassContext &pass_context) override;
-
-    std::unique_ptr<Graph> Replacement(const std::unique_ptr<MatchResult>& match_result, CustomPassContext &pass_context) override;
-};
-#else
 class __attribute__((visibility("default"))) AddLayerNormFusionPass : public PatternFusionPass {
-    protected:
+protected:
     std::vector<PatternUniqPtr> Patterns() override;
 
     bool MeetRequirements(const std::unique_ptr<MatchResult>& match_result) override;
 
     std::unique_ptr<Graph> Replacement(const std::unique_ptr<MatchResult>& match_result) override;
 };
-#endif
 } //namespace ops
 #endif // NN_ADD_LAYER_NORM_FUSION_PASS_H
