@@ -93,21 +93,21 @@ aclnnStatus aclnnIndexPutImpl(
         <td>indices</td>
         <td>输入</td>
         <td>公式中的 indices。</td>
-        <td>-</td>
+        <td>indices中Tensor个数不能超过selfRef的维度数（最大8维）</td>
         <td>INT32、INT64、BOOL</td>
         <td>ND</td>
-        <td>-</td>
-        <td>-</td>
+        <td>1-8</td>
+        <td>√</td>
       </tr>
       <tr>
         <td>values</td>
         <td>输入</td>
         <td>公式中的 values。</td>
-        <td>-</td>
+        <td></td>
         <td>和selfRef一致</td>
         <td>ND</td>
-        <td>-</td>
-        <td>-</td>
+        <td>维度数 = indices广播后维度数 + (selfRef维度数 - indices个数)</td>
+        <td>√</td>
       </tr>
       <tr>
         <td>accumulate</td>
@@ -177,15 +177,21 @@ aclnnStatus aclnnIndexPutImpl(
       <td>传入的selfRef、indices、values是空指针时。</td>
       </tr>
       <tr>
-      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="3">161002</td>
+      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="5">161002</td>
       <td>selfRef、values、indices的数据类型不在支持的范围之内。</td>
       </tr>
       <tr>
       <td>selfRef和values数据类型不同。</td>
       </tr>
       <tr>
-      <td>selfRef和values数据格式不同。</td>
+      <td>selfRef维度数超过8维。</td>
+      </tr>
+      <tr>
+      <td>indices中Tensor个数超过selfRef维度数。</td>
+      </tr>
+      <tr>
+      <td>Atlas 训练系列产品使用BFLOAT16数据类型时。</td>
       </tr>
     </tbody>
     </table>
@@ -238,10 +244,21 @@ aclnnStatus aclnnIndexPutImpl(
   - aclnnIndexPutImpl默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性。
 
 - 输入参数selfRef, indices, values一般有以下约束：
-  - indices中的Tensor个数不能超过selfRef的维度。
+  - indices中的Tensor个数不能超过selfRef的维度（最大8维）。
   - values的维度需满足以下公式或广播后满足以下公式：
       - values.Dims() = indices[i].Dims() + (selfRef.Dims() - indices.size())
       - 其意义是values前一半维度需要与indices中的Tensor维度相同（indices中的Tensor会广播成相同shape），后一半维度需要与selfRef维度扣除indices中Tensor个数后相同。
+
+- 非连续Tensor支持：
+  - selfRef、indices、values均支持非连续Tensor（即strides不满足连续存储条件的Tensor）。
+  - 非连续场景有以下限制条件：
+      - selfRef、indices、values的维度数均不超过4维。
+      - 当accumulate为True且数据类型为FLOAT16/BFLOAT16/INT8/UINT8时，非连续优化不生效（走高精度路径）。
+
+- 索引元素数量限制：
+  - 一般情况下，单个index Tensor的元素数量不超过60,000,000。
+  - 高维场景有更严格的限制：5维不超过54,247,424；6维不超过48,611,328；7维不超过44,384,256；8维不超过40,861,696。
+  - 使用IndexPutWithSortV2优化路径时，索引取值范围不超过16,777,216，self尾轴元素数不超过2,147,483,647。
 
 ## 调用示例
 
