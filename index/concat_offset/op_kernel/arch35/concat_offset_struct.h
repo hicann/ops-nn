@@ -16,6 +16,8 @@
 #ifndef CONCAT_OFFSET_STRUCT_H
 #define CONCAT_OFFSET_STRUCT_H
 
+#include <cstdint>
+
 class ConcatOffsetTilingData {
 public:
     int64_t threadNum;
