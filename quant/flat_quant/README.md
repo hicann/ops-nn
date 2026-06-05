@@ -133,7 +133,7 @@
     <tr>
       <td>dst_type_max</td>
       <td>可选属性</td>
-      <td><ul><li>表示maxType的取值，对应公式中的Amax。支持取值0.0和6.0-12.0。</li><li>取值0.0代码Amax(DType)为量化结果数据类型的最大值。</li><li>取值为6.0-12.0代表Amax(DType)为传入值。</li><li>默认值为0.0。</li></ul></td>
+      <td><ul><li>表示maxType的取值，对应公式中的Amax。支持取值0.0和6.0-12.0。</li><li>取值为0.0代表不使用该参数。</li><li>取值为6.0-12.0代表目标数据类型的最大值。</li><li>仅支持在FP4E2M1数据类型时设置该值。</li><li>默认值为0.0。</li></ul></td>
       <td>FLOAT32</td>
       <td>-</td>
     </tr>
