@@ -118,7 +118,7 @@
       <td>batch_mean</td>
       <td>输出</td>
       <td><ul><li>训练模式：当前批次的均值，推理模式：等于输入mean。</li><li>一个1D张量，shape与入参scale保持一致。</li></ul></td>
-      <td>FLOAT32、FLOAT16、BFLOAT16</td>
+      <td>FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>

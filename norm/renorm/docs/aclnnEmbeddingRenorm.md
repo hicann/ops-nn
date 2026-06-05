@@ -26,9 +26,9 @@
   $$
   其中X=(x_{1}, x_{2}, ... , x_{n})
   $$
-    
+
   针对计算出的范数大于maxNorm的场景，需要做归一化处理，对indices指定的0维元素乘以系数：
-    
+
   $$
   scalar = \frac{maxNorm}{currentNorm+1e^{-7}}
   $$

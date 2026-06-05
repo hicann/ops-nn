@@ -22,7 +22,7 @@
   $$
   output_i=\left\{
   \begin{aligned}
-  input_i,\quad ||input_i||_p <= maxNorm \\
+  input_i,\quad ||input_i||_p ≤ maxNorm \\
   \frac {input_i} {max(||input_i||_p, eps)} \cdot maxNorm,\quad ||input_i||_p>maxNorm
   \end{aligned}
   \right.
@@ -34,8 +34,8 @@
   $$
   ||input_i||_p =\left\{
   \begin{aligned}
-  \sqrt[p]{reduce\_sum(|input_i|^p, dim)},\quad (p > 0) \& (p \ != inf) \\
-  max(|input_i|),\quad p==inf
+  \sqrt[p]{reduce\_sum(|input_i|^p, dim)},\quad (p > 0) \& (p ≠ inf) \\
+  max(|input_i|),\quad p = inf
   \end{aligned}
   \right.
   $$
@@ -479,6 +479,7 @@
 - 确定性计算：
   - aclnnRenorm默认确定性实现。
   - aclnnInplaceRenorm默认确定性实现。
+- 入参`p`的取值为0时，计算公式请参见[aclnnEmbeddingRenorm](aclnnEmbeddingRenorm.md#功能说明)中的“计算公式”。
 
 ## 调用示例
 

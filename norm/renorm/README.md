@@ -20,8 +20,8 @@
   $$
   output_i=\left\{
   \begin{aligned}
-  input_i,\quad ||input_i||_p <= maxNorm \\
-  \frac {input_i} {max(||input_i||_p, eps)} \cdot maxNorm,\quad ||input_i||_p>maxNorm
+  input_i,\quad ||input_i||_p ≤ maxNorm \\
+  \frac {input_i} {max(||input_i||_p, eps)} \cdot maxNorm,\quad ||input_i||_p > maxNorm
   \end{aligned}
   \right.
   $$
@@ -29,15 +29,25 @@
   其中：
   $i$为dim确定的某维度张量切片：
 
-  $$
-  ||input_i||_p =\left\{
-  \begin{aligned}
-  \sqrt[p]{reduce\_sum(|input_i|^p, dim)},\quad (p > 0) \& (p \ != inf) \\
-  max(|input_i|),\quad p==inf
-  \end{aligned}
-  \right.
-  $$
+  - 当p > 0时：
 
+    $$
+    ||input_i||_p =\left\{
+    \begin{aligned}
+    \sqrt[p]{reduce\_sum(|input_i|^p, dim)},\quad (p > 0) \& (p \ ≠ inf) \\
+    max(|input_i|),\quad p = inf
+    \end{aligned}
+    \right.
+    $$
+
+  - 当p == 0时，$||input_i||$为统计input中非0值：
+
+    $$
+    ||input_i||={\sum_{i=1}^n {\mathbb{I}}}(input_i ≠ 0)
+    $$
+
+    其中，当$input_i ≠ 0$时，${\mathbb{I}} = 1$；当$input_i = 0$时，${\mathbb{I}} = 0$。
+  
 ## 参数说明
 
 <table style="undefined;table-layout: fixed; width: 1005px"><colgroup>
