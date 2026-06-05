@@ -326,7 +326,7 @@ private:
         GM_ADDR logitsIdx, GM_ADDR logitsSortMasked, GM_ADDR workspace, TPipe* tPipe)
     {
         // InitGlobalBuffer as '(type *)<ADDR_OFFSET>' where <ELEMENT AMOUNT> is not recommended.
-        uint32_t gmOffset = this->startTaskId * this->rowLen;   // element offset by row-offset * col_size (B_offset * S)
+        uint64_t gmOffset = static_cast<uint64_t>(this->startTaskId) * this->rowLen;   // element offset by row-offset * col_size (B_offset * S)
 
         // Read-only tensors
         logitsGlobal.SetGlobalBuffer((__gm__ T*)logits + gmOffset);                 // logits in [B, S]
@@ -355,9 +355,9 @@ private:
         }
 
         // the workspace seems to be a shared cache for intermediate results from the GM data
-        uint32_t count = this->rowNum * this->rowLen;
-        uint32_t offset = 0;    // offsets for different cache blocks shared by ALL kernels
-        uint32_t wsKernelOfs = gmOffset;   // Kernel addr offset in current workspace block
+        uint64_t count = static_cast<uint64_t>(this->rowNum) * this->rowLen;
+        uint64_t offset = 0;    // offsets for different cache blocks shared by ALL kernels
+        uint64_t wsKernelOfs = gmOffset;   // Kernel addr offset in current workspace block
 
         // If there is NO inter-kernel communications, local workspace shall start from the GM offset of current core.
         logitsGlobalUser.SetGlobalBuffer((__gm__ float*)workspace + wsKernelOfs);  // global Logits workspace in [B, S]
@@ -407,10 +407,10 @@ private:
         LocalTensor<T> localValue = buf0.Get<T>();
         LocalTensor<float> localValueCast = buf3.Get<float>();
 
-        uint32_t startIndex = rowId * this->rowLen;
+        uint64_t startIndex = static_cast<uint64_t>(rowId) * this->rowLen;
         uint32_t innerCopyLen = INNER_LOOP_ELE; // 8 * 1024
         uint32_t countLen = INNER_LOOP_ELE;
-        uint32_t gmOffset = startIndex;
+        uint64_t gmOffset = startIndex;
 
         for (uint32_t innerLoopCount = 0; innerLoopCount < this->innerLoopTime; ++innerLoopCount) {
 
@@ -461,13 +461,13 @@ private:
     {
         uint32_t innerCopyLen = SOFTMAX_PER_LEN;
         uint32_t countLen = SOFTMAX_PER_LEN;
-        uint32_t startIndex = rowId * this->rowLen;
+        uint64_t startIndex = static_cast<uint64_t>(rowId) * this->rowLen;
         uint32_t indexOffset = 0;
         LocalTensor<uint32_t> localIndex = buf1.Get<uint32_t>();
         LocalTensor<float> valueLocalCast = buf2.Get<float>();
         LocalTensor<float> reduceMaxMiddle = buf4.Get<float>();
         for (int32_t innerLoopCount = 0; innerLoopCount < params.softmaxLoopTime; innerLoopCount++) {
-            uint32_t gmOffset = startIndex + innerLoopCount * innerCopyLen;
+            uint64_t gmOffset = startIndex + innerLoopCount * innerCopyLen;
             if (params.softmaxLoopEleTail > 0 && innerLoopCount == params.softmaxLoopTime - 1) {
                 countLen = params.softmaxLoopEleTail;
                 innerCopyLen = params.softmaxLoopEleTailPad;
@@ -501,8 +501,8 @@ private:
     {
         uint32_t countLen = INNER_LOOP_ELE;
         uint32_t countLenPad = INNER_LOOP_ELE;
-        uint32_t startIndex = rowId * this->rowLen;
-        uint32_t gmOffset = 0;
+        uint64_t startIndex = static_cast<uint64_t>(rowId) * this->rowLen;
+        uint64_t gmOffset = 0;
         uint32_t indexOffset = 0;
         uint32_t copyOutOffset = 0;
         uint64_t rsvdCnt = 0;
@@ -579,12 +579,12 @@ private:
     {
         uint32_t innerCopyLen = SOFTMAX_PER_LEN;
         uint32_t countLen = SOFTMAX_PER_LEN;
-        uint32_t startIndex = rowId * this->rowLen;
+        uint64_t startIndex = static_cast<uint64_t>(rowId) * this->rowLen;
         LocalTensor<T> valueLocal = buf0.Get<T>();
         LocalTensor<float> valueLocalCast = buf2.Get<float>();
         LocalTensor<float> reduceMaxMiddle = buf4.Get<float>();
         for (int32_t innerLoopCount = 0; innerLoopCount < params.softmaxLoopTime; innerLoopCount++) {
-            uint32_t gmOffset = startIndex + innerLoopCount * innerCopyLen;
+            uint64_t gmOffset = startIndex + innerLoopCount * innerCopyLen;
             if (params.softmaxLoopEleTail > 0 && innerLoopCount == params.softmaxLoopTime - 1) {
                 countLen = params.softmaxLoopEleTail;
                 innerCopyLen = params.softmaxLoopEleTailPad;
@@ -616,13 +616,13 @@ private:
     {
         uint32_t innerCopyLen = SOFTMAX_PER_LEN; // 8 * 1024 * 2 个元素，每个元素2字节，满足32k
         uint32_t countLen = SOFTMAX_PER_LEN;
-        uint32_t startIndex = rowId * this->rowLen;
+        uint64_t startIndex = static_cast<uint64_t>(rowId) * this->rowLen;
         LocalTensor<float> valueLocalCast = buf3.Get<float>();
         LocalTensor<float> valueLocalMiddle = buf2.Get<float>();
         LocalTensor<float> reduceSumVal = buf4.Get<float>();
 
         for (int32_t innerLoopCount = 0; innerLoopCount < params.softmaxLoopTime; innerLoopCount++) {
-            uint32_t gmOffset = startIndex + innerLoopCount * innerCopyLen;
+            uint64_t gmOffset = startIndex + innerLoopCount * innerCopyLen;
             if (params.softmaxLoopEleTail > 0 && innerLoopCount == params.softmaxLoopTime - 1) {
                 countLen = params.softmaxLoopEleTail;
                 innerCopyLen = params.softmaxLoopEleTailPad;
@@ -660,7 +660,7 @@ private:
     }
 
     __aicore__ inline void SoftMaxSecCompute( // 做softmax中的exp/S的步骤
-        LocalTensor<float>& valueLocalCast, float reduceSumMax, uint32_t gmOffset, uint32_t innerCopyLen,
+        LocalTensor<float>& valueLocalCast, float reduceSumMax, uint64_t gmOffset, uint32_t innerCopyLen,
         uint32_t countLen)
     {
         LocalTensor<float> valueRs = buf0.Get<float>();
@@ -679,13 +679,13 @@ private:
     {
         uint32_t innerCopyLen = INNER_LOOP_ELE;
         uint32_t countLen = INNER_LOOP_ELE;
-        uint32_t startIndex = rowId * this->rowLen;
+        uint64_t startIndex = static_cast<uint64_t>(rowId) * this->rowLen;
         uint32_t indexOffset = 0;
         float maxValueTemp{FLOAT_MIN};
 
         LocalTensor<float> localValueCast = buf3.Get<float>();
         LocalTensor<float> sampleDistTemp = buf4.Get<float>();
-        uint32_t gmOffset = startIndex;
+        uint64_t gmOffset = startIndex;
         for (int32_t innerLoopCount = 0; innerLoopCount < this->innerLoopTime; ++innerLoopCount) {
             if (this->innerLoopEleTail > 0 && innerLoopCount == this->innerLoopTime - 1) {
                 // tail block
@@ -848,11 +848,11 @@ private:
         LocalTensor<float> localSortResult = buf2.Get<float>();
         LocalTensor<float> localValueCast = buf3.Get<float>();
 
-        uint32_t startIndex = rowId * this->rowLen;
+        uint64_t startIndex = static_cast<uint64_t>(rowId) * this->rowLen;
         uint32_t indexOffset = 0;
         uint32_t innerCopyLen = INNER_LOOP_ELE; // 8 * 1024
         uint32_t countLen = INNER_LOOP_ELE;
-        uint32_t gmOffset = startIndex;
+        uint64_t gmOffset = startIndex;
 
         for (uint32_t innerLoopCount = 0; innerLoopCount < this->innerLoopTime; ++innerLoopCount) {
             if (this->innerLoopEleTail > 0 && innerLoopCount == this->innerLoopTime - 1) {
@@ -951,8 +951,8 @@ private:
         uint32_t innerCopyLen = SOFTMAX_PER_LEN;
         uint32_t countLen = SOFTMAX_PER_LEN;
         uint32_t indexOffset = 0;
-        uint32_t startIndex = rowId * this->rowLen;
-        uint32_t gmOffset = startIndex;
+        uint64_t startIndex = static_cast<uint64_t>(rowId) * this->rowLen;
+        uint64_t gmOffset = startIndex;
         LocalTensor<float> localValueCast = buf2.Get<float>();
         LocalTensor<float> sampleDist = buf4.Get<float>();
         float maxValue{FLOAT_MIN};
@@ -1005,7 +1005,7 @@ private:
 
     __aicore__ inline void CopyOutLogits(int32_t rowId, uint32_t copyCnt)
     {
-        uint32_t startIndex = rowId * this->rowLen;
+        uint64_t startIndex = static_cast<uint64_t>(rowId) * this->rowLen;
         LocalTensor<float> topKPLogitsLocal = buf5.Get<float>();
         DataCopy(topKPLogitsLocal, localValueRs, Align(copyCnt, EIGHT));
         SetWaitFlag<HardEvent::V_S>(HardEvent::V_S);
@@ -1026,7 +1026,7 @@ private:
     {
         // gather the scatter result of selected logits
         SetWaitFlag<HardEvent::MTE3_MTE2>(HardEvent::MTE3_MTE2);
-        uint32_t startIndex = rowId * this->rowLen;
+        uint64_t startIndex = static_cast<uint64_t>(rowId) * this->rowLen;
         uint32_t maxNum = GM_COPY_PER_FLOAT_MAX;
         uint32_t rowLenOri = this->rowLen;
         LocalTensor<T> localValue = buf0.Get<T>();
@@ -1080,7 +1080,7 @@ private:
     {
         // gather the scatter result of selected logits
         SetWaitFlag<HardEvent::MTE3_MTE2>(HardEvent::MTE3_MTE2);
-        uint32_t startIndex = rowId * this->rowLen;
+        uint64_t startIndex = static_cast<uint64_t>(rowId) * this->rowLen;
         uint32_t countLen = SOFTMAX_PER_LEN / 2;
         uint32_t loopTime = SafeCeil(calCnt, SOFTMAX_PER_LEN / 2);
         uint32_t lastLoopLen = calCnt - (loopTime - 1) * (SOFTMAX_PER_LEN / 2);

@@ -413,7 +413,7 @@ void TopKTopPSampleV2Tiling::SetOpTilingData()
     headCoreNum = rowNum % numCore;
     perHeadCoreRowNum = (rowNum + numCore - 1) / numCore;
     tailCoreRowNum = rowNum / numCore;
-    headOffset = headCoreNum * perHeadCoreRowNum * rowLen;
+    headOffset = static_cast<uint64_t>(headCoreNum) * perHeadCoreRowNum * rowLen;
 
     tiling.set_headCoreNum(headCoreNum);
     tiling.set_perHeadCorePartNum(perHeadCorePartNum);
@@ -445,7 +445,7 @@ void TopKTopPSampleV2Tiling::SetOpTilingData()
     tiling.set_eightKPartTailPad(SafeCeil(loopTail, BLOCK_BYTES) * BLOCK_BYTES);
 
     tiling.set_mrgMode(1);
-    usrSize = rowNum * rowLen * sizeof(float) * MRG_QUE_SORT_1_NUM;
+    usrSize = static_cast<uint64_t>(rowNum) * rowLen * sizeof(float) * MRG_QUE_SORT_1_NUM;
 
     tiling.set_eps(eps_);
     tiling.set_isNeedLogits(isNeedLogits_); 
