@@ -103,13 +103,14 @@ static bool CheckDtypeValid(
             "indices or offsets must has one dtype in [int32, int64], "
             "but get indices dtype %s, offsets dtype %s.",
             op::ToString(indices->GetDataType()).GetString(), op::ToString(offsets->GetDataType()).GetString());
+        return false;
     }
 
     // 检查perSampleWeights的数据类型是否与weight相同
     if (perSampleWeights != nullptr && weight->GetDataType() != perSampleWeights->GetDataType()) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID, "perSampleWeights dtype %s should be in same with weight dtype %s.",
-            op::ToString(perSampleWeights->GetDataType()).GetString(), op::ToString(output->GetDataType()).GetString());
+            op::ToString(perSampleWeights->GetDataType()).GetString(), op::ToString(weight->GetDataType()).GetString());
         return false;
     }
 
@@ -394,14 +395,14 @@ aclnnStatus aclnnEmbeddingBagGetWorkspaceSize(
     CHECK_RET(bagSizeL0Cast != nullptr, ACLNN_ERR_INNER_NULLPTR);
     auto viewCopyBagSizeL0CastResult = l0op::ViewCopy(bagSizeL0Cast, bagSize, uniqueExecutor.get());
     auto maxIndicesShapeSize = std::get<3>(result)->GetViewShape().GetShapeSize();
+    CHECK_RET(
+        viewCopyOutputResult != nullptr && viewCopyBagSizeL0CastResult != nullptr,
+        ACLNN_ERR_INNER_NULLPTR);
     if (maxIndicesShapeSize != 0){
         auto maxIndicesL0Cast = l0op::Cast(std::get<3>(result), maxIndices->GetDataType(), uniqueExecutor.get());
         CHECK_RET(maxIndicesL0Cast != nullptr, ACLNN_ERR_INNER_NULLPTR);
         auto viewCopyMaxIndicesL0CastResult = l0op::ViewCopy(maxIndicesL0Cast, maxIndices, uniqueExecutor.get());
-        CHECK_RET(
-            viewCopyOutputResult != nullptr && viewCopyMaxIndicesL0CastResult != nullptr &&
-                viewCopyBagSizeL0CastResult != nullptr,
-            ACLNN_ERR_INNER_NULLPTR);
+        CHECK_RET(viewCopyMaxIndicesL0CastResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
     
     // 固定写法，获取计算过程中需要使用的workspace大小
