@@ -156,7 +156,9 @@ ge::graphStatus RIGDavidTilingImpl::Init(const RepeatInterleaveGradCompileInfo* 
     auto repeatShapeSize = repeatShape.GetShapeSize();
 
     OP_CHECK_IF(
-        repeatShapeSize == 0L, OP_LOGE(context_->GetNodeName(), "The repeat shape is empty!"),
+        repeatShapeSize == 0L,
+        OP_LOGE_FOR_INVALID_SHAPESIZE(context_->GetNodeName(), "repeats",
+            std::to_string(repeatShapeSize).c_str(), "> 0"),
         return ge::GRAPH_FAILED);
 
     // 获取axis 如果axis为null，处理逻辑不同
@@ -172,7 +174,8 @@ ge::graphStatus RIGDavidTilingImpl::Init(const RepeatInterleaveGradCompileInfo* 
     int64_t xDimNum = xShape.GetDimNum();
     OP_CHECK_IF(
         xDimNum > MAX_YGRAD_DIM,
-        OP_LOGE(context_->GetNodeName(), "The yGrad Dim should not be greater than 8!"),
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "y_grad",
+            (std::to_string(xDimNum) + "D, max 8D").c_str(), "the RIG reduce template only supports up to 8 dims"),
         return ge::GRAPH_FAILED);
     if (!isAxisNone_ && axis_ < 0) {
         axis_ = axis_ + xDimNum;
@@ -181,7 +184,9 @@ ge::graphStatus RIGDavidTilingImpl::Init(const RepeatInterleaveGradCompileInfo* 
     // 校验axis是none时，输入的长度是否为1
     OP_CHECK_IF(
         (isAxisNone_ && xDimNum != 1),
-        OP_LOGE(context_->GetNodeName(), "Axis is none, yGrad shape length should be 1"),
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "y_grad",
+            (std::to_string(xDimNum) + "D, expected 1D").c_str(),
+            "when axis is not set, y_grad must be 1-dimensional"),
         return ge::GRAPH_FAILED);
     // 合轴
     MergeAxis(xShape, yShape, repeatShape, xDimNum);
@@ -248,7 +253,7 @@ ge::graphStatus RIGDavidTilingImpl::DoTiling(gert::TilingContext* context)
     workspaces[0] = templateNum_ == RIG::BLOCK_SPLIT_R ? RIG_WORKSPACE_SIZE + workspaceSizeExt_ : RIG_WORKSPACE_SIZE;
     if (templateNum_ == RIG::BLOCK_SPLIT_R) {
         OP_CHECK_IF(context_->SetScheduleMode(1) != ge::GRAPH_SUCCESS,
-                    OP_LOGE(context_->GetNodeName(), "Fail to set schedulemode."),
+                    OP_LOGE(context_->GetNodeName(), "SetScheduleMode failed for RepeatInterleaveGrad block_split_r"),
                     return ge::GRAPH_FAILED);
     }
 
@@ -296,7 +301,8 @@ void RIGDavidTilingImpl::TilingStrategy()
             DoUbSplit(mBlockPara_.blockTailFactor, BASE_SPLIT_LENGTH, mUbPara_.tailCoreUbPara); // M.i.o  M.i.i
             rFactor_ = basicBlockSize_ / mUbPara_.mainCoreUbPara.ubFactor / dtSize_; // 使用主核主块计算rfactor
             if (rFactor_ <= 1) {
-                OP_LOGE(context_->GetNodeName(), "RAxis in ub is too small, cannot calculate");
+                OP_LOGE(context_->GetNodeName(), "RAxis in ub is too small (rFactor=%d), cannot calculate",
+                        rFactor_);
                 return;
             }
             templateNum_ = RIG::BLOCK_SPLIT_M_N_1;
@@ -475,31 +481,35 @@ static ge::graphStatus TilingGetCompileInfo(gert::TilingContext* context, Repeat
 
     compileInfo->coreNum = ascendcPlatform.GetCoreNumAiv();
     OP_CHECK_IF(
-        (compileInfo->coreNum <= 0), OP_LOGE(context, "core num is negative."),
+        (compileInfo->coreNum <= 0),
+        OP_LOGE(context, "GetHardwareInfo failed: coreNum is %ld.", compileInfo->coreNum),
         return ge::GRAPH_FAILED);
 
     uint64_t ubSize = 0;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     compileInfo->ubSize = static_cast<int64_t>(ubSize);
     OP_CHECK_IF(
-        (compileInfo->ubSize <= 0L), OP_LOGE(context, "fail to get ub size."),
+        (compileInfo->ubSize <= 0L),
+        OP_LOGE(context, "GetHardwareInfo failed: ubSize is %ld.", compileInfo->ubSize),
         return ge::GRAPH_FAILED);
 
     compileInfo->clSize = GetCacheLineSize(context);
     OP_CHECK_IF(
         (compileInfo->clSize <= 0U),
-        OP_LOGE(context, "fail to get cache line size."),
+        OP_LOGE(context, "GetHardwareInfo failed: clSize is %u.", compileInfo->clSize),
         return ge::GRAPH_FAILED);
 
     compileInfo->blockSize = GetUbBlockSize(context);
     OP_CHECK_IF(
         (compileInfo->blockSize <= 0),
-        OP_LOGE(context, "fail to get block size."), return ge::GRAPH_FAILED);
+        OP_LOGE(context, "GetHardwareInfo failed: blockSize is %ld.", compileInfo->blockSize),
+        return ge::GRAPH_FAILED);
 
     compileInfo->vRegSize = GetVRegSize(context);
     OP_CHECK_IF(
         (compileInfo->vRegSize <= 0U),
-        OP_LOGE(context, "fail to get vReg size."), return ge::GRAPH_FAILED);
+        OP_LOGE(context, "GetHardwareInfo failed: vRegSize is %u.", compileInfo->vRegSize),
+        return ge::GRAPH_FAILED);
 
     OP_LOGD(context, "Exit TilingPrepare4CumsumAscendc.");
     return ge::GRAPH_SUCCESS;
@@ -517,12 +527,12 @@ ge::graphStatus Tiling4RepeatInterleaveGradDavid(gert::TilingContext* context)
 
     RIGDavidTilingImpl tilingImpl = RIGDavidTilingImpl(context);
     if (tilingImpl.Init(&compileInfo) != ge::GRAPH_SUCCESS) {
-        OP_LOGE(context, "Tiling4RepeatInterleaveGradDavid init failed.");
+        OP_LOGE(context, "RIGDavidTilingImpl Init failed for y_grad and repeats");
         return ge::GRAPH_FAILED;
     }
 
     if (tilingImpl.DoTiling(context) != ge::GRAPH_SUCCESS) {
-        OP_LOGE(context, "Tiling4RepeatInterleaveGradDavid DoTiling failed.");
+        OP_LOGE(context, "RIGDavidTilingImpl DoTiling failed for RepeatInterleaveGrad");
         return ge::GRAPH_FAILED;
     }
 
