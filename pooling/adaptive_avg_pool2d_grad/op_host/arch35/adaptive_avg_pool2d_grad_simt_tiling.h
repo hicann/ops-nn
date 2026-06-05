@@ -16,7 +16,7 @@
 #define OPS_BUILD_IN_OP_TILING_RUNTIME_ADAPTIVE_AVG_POOL2D_GRAD_SIMT_H_
 
 #include "adaptive_avg_pool2d_grad_base_tiling.h"
-#include "../op_kernel/arch35/adaptive_avg_pool2d_grad_struct.h"
+#include "../../op_kernel/arch35/adaptive_avg_pool2d_grad_struct.h"
 
 using namespace AdaptiveAvgPool2dGradOp;
 namespace optiling {

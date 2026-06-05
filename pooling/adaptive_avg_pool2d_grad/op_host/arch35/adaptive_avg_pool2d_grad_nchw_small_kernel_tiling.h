@@ -9,18 +9,19 @@
  */
 
 /*!
- * \file adaptive_avg_pool2d_grad_tiling.h
+ * \file adaptive_avg_pool2d_grad_nchw_small_kernel_tiling.h
  * \brief
  * ATTENTION: MAKE SURE 'BEGIN_TILING_DATA_DEF' STAY IN THE SAME LINE (27) USING BLANK LINES.
  */
 
-#ifndef ADAPTIVE_AVG_POOL2D_GRAD_BIG_KERNEL_TILING_H_
-#define ADAPTIVE_AVG_POOL2D_GRAD_BIG_KERNEL_TILING_H_
+#ifndef ADAPTIVE_AVG_POOL2D_GRAD_SMALL_KERNEL_TILING_H_
+#define ADAPTIVE_AVG_POOL2D_GRAD_SMALL_KERNEL_TILING_H_
+
 #include "register/op_def_registry.h"
 #include "tiling/tiling_api.h"
 #include "op_common/op_host/util/platform_util.h"
 #include "adaptive_avg_pool2d_grad_base_tiling.h"
-#include "../op_kernel/arch35/adaptive_avg_pool2d_grad_struct.h"
+#include "../../op_kernel/arch35/adaptive_avg_pool2d_grad_struct.h"
 
 namespace optiling {
 
@@ -29,14 +30,14 @@ constexpr int64_t FLOAT32_SIZE = 4;
 constexpr int64_t INT32_SIZE = 4;
 constexpr int64_t INT64_SIZE = 8;
 constexpr int64_t UB_RESVERVED_SIZE = 2048;
-constexpr int64_t UB_TEMP_BUFF_SIZE = 256 * 8;
-constexpr int64_t T3_INT64 = 10;
+constexpr int64_t UB_TEMP_BUFF_SIZE = 256 * 10;
 constexpr int64_t DOUBLE_BUFFER = 2;
 constexpr int64_t THRESHOLD = 2;
+constexpr int64_t WORKSPACE_SIZE = 16 * 1024 * 1024;
 constexpr int64_t ALIGN_NUM = 32;
-constexpr int64_t ADAPTIVE_BIG_KERNEL_SIZE = 256;
+constexpr int64_t MAX_INT32 = 2147483647;
 
-struct AdaptiveAvgPool2dGradBaseInfo {
+struct AdaptiveAvgPool2dGradNCHWBaseInfo {
     int64_t vRegSize{0};
     int64_t ubBlockSize{0};
     int64_t inputBytes{0};
@@ -53,8 +54,7 @@ struct AdaptiveAvgPool2dGradBaseInfo {
     int64_t isOverlap{0};
 };
 
-struct AdaptiveAvgPool2dGradSplitInfo {
-    // DoUBTiling
+struct AdaptiveAvgPool2dGradNCHWSplitInfo {
     int64_t isCheckRange{0};
 
     int64_t highAxisInner{0};
@@ -69,26 +69,27 @@ struct AdaptiveAvgPool2dGradSplitInfo {
     int64_t wOutputTail{0};
     int64_t wOutputOuter{0};
 
-    // DoBlockTiling
     int64_t normalCoreProcessNum{0};
     int64_t tailCoreProcessNum{0};
     int64_t usedCoreNum{0};
     int64_t totalBaseBlockNum{0};
 
-    // DoBufferCalculate
-    int64_t gradInputBufferSize{0};
-    int64_t outputBufferSize{0};
+    int64_t inputQueBufferSize{0};
+    int64_t transQueBufferSize{0};
+    int64_t transOutQueBufferSize{0};
     int64_t totalBufferSize{0};
 };
 
-class AdaptiveAvgPool2dGradTilingBigKernel : public AdaptiveAvgPool2dGradTilingBase {
+class AdaptiveAvgPool2dGradTilingSmallKernel : public AdaptiveAvgPool2dGradTilingBase {
 public:
-    explicit AdaptiveAvgPool2dGradTilingBigKernel(gert::TilingContext* context)
+    explicit AdaptiveAvgPool2dGradTilingSmallKernel(gert::TilingContext* context)
         : AdaptiveAvgPool2dGradTilingBase(context)
     {}
 
-    ~AdaptiveAvgPool2dGradTilingBigKernel() override
-    {}
+    ~AdaptiveAvgPool2dGradTilingSmallKernel() override {}
+
+    AdaptiveAvgPool2dGradOp::AdaptiveAvgPool2dNCHWGradSmallKernelTilingDataV35* tilingData =
+        context_->GetTilingData<AdaptiveAvgPool2dGradOp::AdaptiveAvgPool2dNCHWGradSmallKernelTilingDataV35>();
 
 protected:
     ge::graphStatus DoOpTiling() override;
@@ -101,37 +102,42 @@ protected:
 
     void InitializationVars();
     void DoBufferCalculate();
+
     bool IsMeetTargetCoreNum();
     bool IsMeetUBSize();
+
     bool TrySplitNC();
-    void SplitUnalignDHW();
+
+    void SplitAlignHW();
+    void DynamicAdjustmentAlignHW();
+
+    void SplitUnalignHW();
+    void DynamicAdjustmentHW();
+
     void SearchBestTiling();
     void DoUBTiling();
-    void DynamicAdjustmentDWH();
-    void SplitAlignDHW();
-    void DynamicAdjustmentAlignDWH();
     void DoBlockTiling();
-    ge::graphStatus SetTilingData();
+    void SetTilingData();
+    void PrintSplitData() const;
 
 public:
+    int64_t gradInputN{0};
+    int64_t gradInputC{0};
+    int64_t gradInputH{0};
+    int64_t gradInputW{0};
 
-    int64_t gradInputN_;
-    int64_t gradInputC_;
-    int64_t gradInputH_;
-    int64_t gradInputW_;
+    int64_t gradOutputN{0};
+    int64_t gradOutputC{0};
+    int64_t gradOutputH{0};
+    int64_t gradOutputW{0};
 
-    int64_t gradOutputN_;
-    int64_t gradOutputC_;
-    int64_t gradOutputH_;
-    int64_t gradOutputW_;
+    int64_t kernelH{0};
+    int64_t kernelW{0};
 
-    int64_t kernelH_;
-    int64_t kernelW_;
-
-    AdaptiveAvgPool2dGradBaseInfo baseData_;
-    AdaptiveAvgPool2dGradSplitInfo splitData_;
+    AdaptiveAvgPool2dGradNCHWBaseInfo baseData;
+    AdaptiveAvgPool2dGradNCHWSplitInfo splitData;
 };
 
 } // namespace optiling
 
-#endif // OPS_BUILD_IN_OP_TILING_RUNTIME_ADAPTIVE_AVG_POOL2D_GRAD_H_
+#endif // ADAPTIVE_AVG_POOL2D_GRAD_SMALL_KERNEL_TILING_H_

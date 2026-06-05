@@ -64,4 +64,4 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_adaptive_avg_pool2d_backward.cpp](../adaptive_avg_pool3d_grad/examples/test_aclnn_adaptive_avg_pool2d_backward.cpp) | 通过[aclnnAdaptiveAvgPool2dBackward](../adaptive_avg_pool3d_grad/docs/aclnnAdaptiveAvgPool2dBackward.md)接口方式调用AdaptiveAvgPool2d算子。 |
+| aclnn接口  | [test_aclnn_adaptive_avg_pool2d_backward.cpp](../adaptive_avg_pool2d_grad/examples/test_aclnn_adaptive_avg_pool2d_backward.cpp) | 通过[aclnnAdaptiveAvgPool2dBackward](../adaptive_avg_pool2d_grad/docs/aclnnAdaptiveAvgPool2dBackward.md)接口方式调用AdaptiveAvgPool2dGrad算子。 |

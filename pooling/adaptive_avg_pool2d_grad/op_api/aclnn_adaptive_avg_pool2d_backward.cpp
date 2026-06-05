@@ -10,9 +10,8 @@
 #include <numeric>
 #include <vector>
 #include "aclnn/aclnn_base.h"
-#include "aclnn_adaptive_avg_pool3d_backward.h"
 #include "aclnn_adaptive_avg_pool2d_backward.h"
-#include "adaptive_avg_pool3d_backward.h"
+#include "pooling/common/op_api/adaptive_avg_pool3d_backward.h"
 #include "adaptive_avg_pool2d_backward.h"
 #include "pooling/common/op_api/adaptive_avg_pool2d_assist_matrix.h"
 #include "aclnn_kernels/cast.h"
