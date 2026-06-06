@@ -233,9 +233,6 @@ uint64_t MatMulV3BasicStreamKTiling::GetTilingKey() const
 
 ge::graphStatus MatMulV3BasicStreamKTiling::GetTilingData(TilingResult& tiling) const
 {
-    if (std::string_view(context_->GetNodeType()) == "FusedMatMul") {
-        return GetTilingDataImpl<BatchMatMulV3BasicTilingData>(tiling);
-    }
     return GetTilingDataImpl<MatMulV3BasicTilingData>(tiling);
 }
 } // namespace matmul_v3_advanced
