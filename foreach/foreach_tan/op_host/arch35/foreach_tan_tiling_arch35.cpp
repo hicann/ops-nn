@@ -45,8 +45,6 @@ static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& u
     return ge::GRAPH_SUCCESS;
 }
 
-
-
 static ge::graphStatus ForeachTanTilingFunc(gert::TilingContext* context)
 {
     OP_LOGD(context->GetNodeName(), "ForeachTanTilingFunc begin.");

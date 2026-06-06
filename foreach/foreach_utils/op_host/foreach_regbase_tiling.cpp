@@ -21,6 +21,7 @@
 
 namespace optiling {
 static constexpr uint64_t WORK_SPACE_SIZE = 32;
+static constexpr uint64_t TPL_REGISTER_PRIORITY = 30000;
 
 const char* ForeachRegbaseTiling::GetFirstTensorName() const
 {
@@ -827,13 +828,13 @@ ge::graphStatus ForeachRegbaseTilingUnaryScalarList2::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-REGISTER_OPS_TILING_TEMPLATE(ForeachAddScalar, ForeachRegbaseTilingUnaryScalar, 30000);
-REGISTER_OPS_TILING_TEMPLATE(ForeachMulScalar, ForeachRegbaseTilingUnaryScalar, 30000);
-REGISTER_OPS_TILING_TEMPLATE(ForeachDivScalar, ForeachRegbaseTilingUnaryScalar, 30000);
-REGISTER_OPS_TILING_TEMPLATE(ForeachAddcmulScalar, ForeachRegbaseTilingTernaryScalar, 30000);
-REGISTER_OPS_TILING_TEMPLATE(ForeachLerpScalar, ForeachRegbaseTilingBinaryScalar, 30000);
-REGISTER_OPS_TILING_TEMPLATE(ForeachDivScalarList, ForeachRegbaseTilingUnaryScalarList, 30000);
-REGISTER_OPS_TILING_TEMPLATE(ForeachAddScalarList, ForeachRegbaseTilingUnaryScalarList2, 30000);
-REGISTER_OPS_TILING_TEMPLATE(ForeachMulScalarList, ForeachRegbaseTilingUnaryScalarList2, 30000);
-REGISTER_OPS_TILING_TEMPLATE(ForeachSqrt, ForeachRegbaseTilingUnary, 30000);
+REGISTER_OPS_TILING_TEMPLATE(ForeachAddScalar, ForeachRegbaseTilingUnaryScalar, TPL_REGISTER_PRIORITY);
+REGISTER_OPS_TILING_TEMPLATE(ForeachMulScalar, ForeachRegbaseTilingUnaryScalar, TPL_REGISTER_PRIORITY);
+REGISTER_OPS_TILING_TEMPLATE(ForeachDivScalar, ForeachRegbaseTilingUnaryScalar, TPL_REGISTER_PRIORITY);
+REGISTER_OPS_TILING_TEMPLATE(ForeachAddcmulScalar, ForeachRegbaseTilingTernaryScalar, TPL_REGISTER_PRIORITY);
+REGISTER_OPS_TILING_TEMPLATE(ForeachLerpScalar, ForeachRegbaseTilingBinaryScalar, TPL_REGISTER_PRIORITY);
+REGISTER_OPS_TILING_TEMPLATE(ForeachDivScalarList, ForeachRegbaseTilingUnaryScalarList, TPL_REGISTER_PRIORITY);
+REGISTER_OPS_TILING_TEMPLATE(ForeachAddScalarList, ForeachRegbaseTilingUnaryScalarList2, TPL_REGISTER_PRIORITY);
+REGISTER_OPS_TILING_TEMPLATE(ForeachMulScalarList, ForeachRegbaseTilingUnaryScalarList2, TPL_REGISTER_PRIORITY);
+REGISTER_OPS_TILING_TEMPLATE(ForeachSqrt, ForeachRegbaseTilingUnary, TPL_REGISTER_PRIORITY);
 } // namespace optiling

@@ -27,6 +27,8 @@
 
 namespace NsForeachAddcmulScalarList {
 
+constexpr int TENSOR_PTR_SHIFT = 3;
+
 using namespace AscendC;
 
 // Compile-time thread count constant (must not come from tiling)
@@ -39,7 +41,7 @@ __aicore__ inline __gm__ T* SimtGetTensorAddr(GM_ADDR tensorListPtr, int32_t idx
 {
     __gm__ uint64_t* dataAddr = reinterpret_cast<__gm__ uint64_t*>(tensorListPtr);
     uint64_t tensorPtrOffset = *dataAddr;
-    __gm__ uint64_t* tensorPtr = dataAddr + (tensorPtrOffset >> 3);
+    __gm__ uint64_t* tensorPtr = dataAddr + (tensorPtrOffset >> TENSOR_PTR_SHIFT);
     return reinterpret_cast<__gm__ T*>(*(tensorPtr + idx));
 }
 

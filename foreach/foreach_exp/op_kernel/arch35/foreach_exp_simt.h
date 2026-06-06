@@ -28,6 +28,8 @@
 
 namespace NsForeachExp {
 
+constexpr int TENSOR_PTR_SHIFT = 3;
+
 using namespace AscendC;
 
 constexpr uint32_t THREAD_NUM = 1024;
@@ -40,7 +42,7 @@ __simt_callee__ inline __gm__ T* SimtGetTensorAddr(GM_ADDR tensorListPtr, int64_
 {
     __gm__ uint64_t* dataAddr = reinterpret_cast<__gm__ uint64_t*>(tensorListPtr);
     uint64_t tensorPtrOffset = *dataAddr;
-    __gm__ uint64_t* tensorPtr = dataAddr + (tensorPtrOffset >> 3);
+    __gm__ uint64_t* tensorPtr = dataAddr + (tensorPtrOffset >> TENSOR_PTR_SHIFT);
     return reinterpret_cast<__gm__ T*>(*(tensorPtr + idx));
 }
 

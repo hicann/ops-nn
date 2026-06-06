@@ -18,6 +18,8 @@
 #ifndef FOREACH_LOG1P_TILING_DATA_H
 #define FOREACH_LOG1P_TILING_DATA_H
 
+#include <cstdint>
+
 constexpr int32_t MAX_TENSOR_NUM = 128;
 
 struct ForeachLog1pTilingData {

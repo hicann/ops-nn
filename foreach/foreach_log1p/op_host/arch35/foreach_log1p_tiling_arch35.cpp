@@ -37,21 +37,28 @@ struct ForeachLog1pCompileInfo {
     int64_t ubSize;
 };
 
+constexpr uint64_t TILING_KEY_FP16 = 0;
+constexpr uint64_t TILING_KEY_FP32 = 1;
+constexpr uint64_t TILING_KEY_BF16 = 2;
+
+constexpr int64_t FALLBACK_CORE_NUM = 24;
+constexpr int64_t FALLBACK_UB_SIZE = 1024 * 1024;
+
 static uint64_t GetTilingKeyByDtype(ge::DataType dtype)
 {
     switch (dtype) {
         case ge::DT_FLOAT16:
-            return 0;
+            return TILING_KEY_FP16;
         case ge::DT_FLOAT:
-            return 1;
+            return TILING_KEY_FP32;
         case ge::DT_BF16:
-            return 2;
+            return TILING_KEY_BF16;
         default:
-            return 0;
+            return TILING_KEY_FP16;
     }
 }
 
-static ge::graphStatus GetPlatformInfoFallback(gert::TilingContext* context, int64_t& coreNum, int64_t& ubSize)
+static ge::graphStatus GetPlatformInfoFallback(const gert::TilingContext* context, int64_t& coreNum, int64_t& ubSize)
 {
     auto compileInfo = reinterpret_cast<const ForeachLog1pCompileInfo*>(context->GetCompileInfo());
     if (compileInfo != nullptr && compileInfo->coreNum > 0 && compileInfo->ubSize > 0) {
@@ -70,8 +77,8 @@ static ge::graphStatus GetPlatformInfoFallback(gert::TilingContext* context, int
             return ge::GRAPH_SUCCESS;
         }
     }
-    coreNum = 24;
-    ubSize = 1024 * 1024;
+    coreNum = FALLBACK_CORE_NUM;
+    ubSize = FALLBACK_UB_SIZE;
     return ge::GRAPH_SUCCESS;
 }
 

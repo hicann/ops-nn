@@ -241,7 +241,7 @@ public:
     ge::graphStatus RunBigScalarKernelTiling()
     {
         auto platformInfo = tilingContext->GetPlatformInfo();
-        auto compileInfoPtr = (const ForeachCompileInfo*)(tilingContext->GetCompileInfo());
+        auto compileInfoPtr = reinterpret_cast<const ForeachCompileInfo*>(tilingContext->GetCompileInfo());
 
         uint64_t ubSizePlatForm = 0;
         uint32_t needCoreNum = 0;
