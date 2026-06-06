@@ -707,6 +707,90 @@ TEST_F(l2_masked_scatter_test, ascend910B2_aclnnInplaceMaskedScatter_bf16_case) 
   EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
+TEST_F(l2_masked_scatter_test, aclnnInplaceMaskedScatter_mask_dtype_invalid) {
+  const vector<int64_t>& selfShape = {2, 4};
+  aclDataType selfDtype = ACL_FLOAT;
+  aclFormat selfFormat = ACL_FORMAT_ND;
+  const vector<int64_t>& maskShape = {2, 4};
+  aclDataType maskDtype = ACL_FLOAT;
+  aclFormat maskFormat = ACL_FORMAT_ND;
+  const vector<int64_t>& sourceShape = {2, 4};
+  aclDataType sourceDtype = ACL_FLOAT;
+  aclFormat sourceFormat = ACL_FORMAT_ND;
+
+  auto selfTensorDesc = TensorDesc(selfShape, selfDtype, selfFormat);
+  auto maskTensorDesc = TensorDesc(maskShape, maskDtype, maskFormat);
+  auto sourceTensorDesc = TensorDesc(sourceShape, sourceDtype, sourceFormat);
+
+  auto ut = OP_API_UT(aclnnInplaceMaskedScatter, INPUT(selfTensorDesc, maskTensorDesc, sourceTensorDesc), OUTPUT());
+  uint64_t workspaceSize = 0;
+  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_masked_scatter_test, aclnnInplaceMaskedScatter_self_shape_dim_exceed_8) {
+  const vector<int64_t>& selfShape = {2, 2, 2, 2, 2, 2, 2, 2, 2};
+  aclDataType selfDtype = ACL_FLOAT;
+  aclFormat selfFormat = ACL_FORMAT_ND;
+  const vector<int64_t>& maskShape = {2, 2, 2, 2, 2, 2, 2, 2};
+  aclDataType maskDtype = ACL_BOOL;
+  aclFormat maskFormat = ACL_FORMAT_ND;
+  const vector<int64_t>& sourceShape = {2, 2, 2, 2, 2, 2, 2, 2};
+  aclDataType sourceDtype = ACL_FLOAT;
+  aclFormat sourceFormat = ACL_FORMAT_ND;
+
+  auto selfTensorDesc = TensorDesc(selfShape, selfDtype, selfFormat);
+  auto maskTensorDesc = TensorDesc(maskShape, maskDtype, maskFormat);
+  auto sourceTensorDesc = TensorDesc(sourceShape, sourceDtype, sourceFormat);
+
+  auto ut = OP_API_UT(aclnnInplaceMaskedScatter, INPUT(selfTensorDesc, maskTensorDesc, sourceTensorDesc), OUTPUT());
+  uint64_t workspaceSize = 0;
+  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_masked_scatter_test, aclnnInplaceMaskedScatter_mask_shape_dim_exceed_8) {
+  const vector<int64_t>& selfShape = {2, 2, 2, 2, 2, 2, 2, 2};
+  aclDataType selfDtype = ACL_FLOAT;
+  aclFormat selfFormat = ACL_FORMAT_ND;
+  const vector<int64_t>& maskShape = {2, 2, 2, 2, 2, 2, 2, 2, 2};
+  aclDataType maskDtype = ACL_BOOL;
+  aclFormat maskFormat = ACL_FORMAT_ND;
+  const vector<int64_t>& sourceShape = {2, 2, 2, 2, 2, 2, 2, 2};
+  aclDataType sourceDtype = ACL_FLOAT;
+  aclFormat sourceFormat = ACL_FORMAT_ND;
+
+  auto selfTensorDesc = TensorDesc(selfShape, selfDtype, selfFormat);
+  auto maskTensorDesc = TensorDesc(maskShape, maskDtype, maskFormat);
+  auto sourceTensorDesc = TensorDesc(sourceShape, sourceDtype, sourceFormat);
+
+  auto ut = OP_API_UT(aclnnInplaceMaskedScatter, INPUT(selfTensorDesc, maskTensorDesc, sourceTensorDesc), OUTPUT());
+  uint64_t workspaceSize = 0;
+  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_masked_scatter_test, aclnnInplaceMaskedScatter_source_shape_dim_exceed_8) {
+  const vector<int64_t>& selfShape = {2, 2, 2, 2, 2, 2, 2, 2};
+  aclDataType selfDtype = ACL_FLOAT;
+  aclFormat selfFormat = ACL_FORMAT_ND;
+  const vector<int64_t>& maskShape = {2, 2, 2, 2, 2, 2, 2, 2};
+  aclDataType maskDtype = ACL_BOOL;
+  aclFormat maskFormat = ACL_FORMAT_ND;
+  const vector<int64_t>& sourceShape = {2, 2, 2, 2, 2, 2, 2, 2, 2};
+  aclDataType sourceDtype = ACL_FLOAT;
+  aclFormat sourceFormat = ACL_FORMAT_ND;
+
+  auto selfTensorDesc = TensorDesc(selfShape, selfDtype, selfFormat);
+  auto maskTensorDesc = TensorDesc(maskShape, maskDtype, maskFormat);
+  auto sourceTensorDesc = TensorDesc(sourceShape, sourceDtype, sourceFormat);
+
+  auto ut = OP_API_UT(aclnnInplaceMaskedScatter, INPUT(selfTensorDesc, maskTensorDesc, sourceTensorDesc), OUTPUT());
+  uint64_t workspaceSize = 0;
+  aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspaceSize);
+  EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+}
+
 TEST_F(l2_masked_scatter_test, aclnnInplaceMaskedScatter_large_shape_case) {
   // self input
   const vector<int64_t>& selfShape = {64, 179, 32, 32};

@@ -56,6 +56,125 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_NUMS) void MaskedScatterToUBSimt
     }
 }
 
+__simd_callee__ inline void CopyMaskToPrefixSumVf(__ubuf__ uint8_t* maskAddr, __ubuf__ int32_t* prefixSumAddr,
+    uint32_t vfLen, uint32_t rows, uint16_t size0)
+{
+    uint32_t main = rows;
+    AscendC::MicroAPI::MaskReg p0 = AscendC::MicroAPI::UpdateMask<int32_t>(main);
+    AscendC::MicroAPI::RegTensor<uint8_t> mask;
+    auto prefixSumTmpAddr = prefixSumAddr;
+    for (uint16_t i = 0; i < size0; ++i) {
+        AscendC::MicroAPI::DataCopy<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE,
+            MicroAPI::LoadDist::DIST_UNPACK4_B8>(mask, maskAddr, vfLen);
+        AscendC::MicroAPI::DataCopy<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(prefixSumTmpAddr,
+            (AscendC::MicroAPI::RegTensor<int32_t>&)mask, vfLen, p0);
+    }
+    AscendC::MicroAPI::LocalMemBar<AscendC::MicroAPI::MemType::VEC_STORE, AscendC::MicroAPI::MemType::VEC_LOAD>();
+}
+
+__simd_callee__ inline void ComputeColPrefixSumVf(__ubuf__ int32_t* prefixSumAddr, __ubuf__ int32_t* tmpAddr,
+    uint32_t rows, uint32_t cols, uint16_t size0)
+{
+    uint32_t stride = rows;
+    AscendC::MicroAPI::RegTensor<int32_t> tmp;
+    AscendC::MicroAPI::RegTensor<uint32_t> sequence;
+    AscendC::MicroAPI::RegTensor<uint32_t> index;
+    AscendC::MicroAPI::Arange(tmp, 0);
+    sequence = (AscendC::MicroAPI::RegTensor<uint32_t>&)tmp;
+    AscendC::MicroAPI::RegTensor<int32_t> v0;
+    AscendC::MicroAPI::RegTensor<int32_t> v1;
+    AscendC::MicroAPI::RegTensor<int32_t> v2;
+    uint32_t main = rows;
+    AscendC::MicroAPI::MaskReg p0 = AscendC::MicroAPI::UpdateMask<int32_t>(main);
+    AscendC::MicroAPI::Duplicate(v1, 0, p0);
+    AscendC::MicroAPI::Muls(sequence, sequence, cols, p0);
+    auto prefixSumTmpAddr = prefixSumAddr;
+    auto tempAddr = tmpAddr;
+    for (uint16_t i = 0; i < size0; ++i) {
+        AscendC::MicroAPI::Adds(index, sequence, (uint32_t)i, p0);
+        AscendC::MicroAPI::DataCopyGather(v0, prefixSumTmpAddr, index, p0);
+        AscendC::MicroAPI::Add(v2, v0, v1, p0);
+        AscendC::MicroAPI::Copy(v1, v2, p0);
+        AscendC::MicroAPI::AddrReg offset = AscendC::MicroAPI::CreateAddrReg<int32_t>(i, stride);
+        AscendC::MicroAPI::DataCopy(tempAddr, v2, offset, p0);
+    }
+    AscendC::MicroAPI::LocalMemBar<AscendC::MicroAPI::MemType::VEC_STORE, AscendC::MicroAPI::MemType::VEC_LOAD>();
+}
+
+__simd_callee__ inline void ComputeRowPrefixSumVf(__ubuf__ int32_t* prefixSumAddr, __ubuf__ int32_t* tmpAddr,
+    uint32_t rows, uint32_t cols, uint16_t size1, uint16_t tailSize1, uint32_t vfLen)
+{
+    AscendC::MicroAPI::RegTensor<int32_t> tmp;
+    AscendC::MicroAPI::RegTensor<uint32_t> sequence;
+    AscendC::MicroAPI::RegTensor<uint32_t> index;
+    AscendC::MicroAPI::Arange(tmp, 0);
+    sequence = (AscendC::MicroAPI::RegTensor<uint32_t>&)tmp;
+    AscendC::MicroAPI::MaskReg pregFull = AscendC::MicroAPI::CreateMask<int32_t,
+        AscendC::MicroAPI::MaskPattern::ALL>();
+    AscendC::MicroAPI::Muls(sequence, sequence, rows, pregFull);
+    uint32_t spReg1 = tailSize1 - 1;
+    AscendC::MicroAPI::MaskReg sp1 = AscendC::MicroAPI::UpdateMask<int32_t>(spReg1);
+    AscendC::MicroAPI::RegTensor<int32_t> v0;
+    AscendC::MicroAPI::RegTensor<int32_t> v1;
+    AscendC::MicroAPI::RegTensor<int32_t> v2;
+    AscendC::MicroAPI::RegTensor<int32_t> v3;
+    AscendC::MicroAPI::RegTensor<int32_t> v4;
+    AscendC::MicroAPI::RegTensor<uint32_t> vdSque;
+    AscendC::MicroAPI::UnalignReg u1;
+    AscendC::MicroAPI::Duplicate(v1, 0, pregFull);
+    for (uint16_t i = 0; i < static_cast<uint16_t>(rows); i++) {
+        uint32_t mainCols = cols;
+        AscendC::MicroAPI::Adds(vdSque, sequence, (uint32_t)i, pregFull);
+        for (uint16_t j = 0; j < size1; j++) {
+            AscendC::MicroAPI::MaskReg p1 = AscendC::MicroAPI::UpdateMask<int32_t>(mainCols);
+            AscendC::MicroAPI::Adds(index, vdSque, (uint32_t)(j * vfLen * vfLen), p1);
+            AscendC::MicroAPI::DataCopyGather(v0, tmpAddr, index, p1);
+            AscendC::MicroAPI::Add(v2, v0, v1, p1);
+            AscendC::MicroAPI::DataCopyUnAlign(prefixSumAddr, v2, u1, rows);
+        }
+        AscendC::MicroAPI::DataCopyUnAlignPost(prefixSumAddr, u1, 0);
+        AscendC::MicroAPI::MaskReg p1 = AscendC::MicroAPI::UpdateMask<int32_t>(mainCols);
+        AscendC::MicroAPI::Adds(index, vdSque, (uint32_t)(size1 * vfLen * vfLen), p1);
+        AscendC::MicroAPI::DataCopyGather(v0, tmpAddr, index, p1);
+        AscendC::MicroAPI::Add(v2, v0, v1, p1);
+        AscendC::MicroAPI::DataCopyUnAlign(prefixSumAddr, v2, u1, tailSize1);
+        AscendC::MicroAPI::Duplicate(v4, 0, sp1);
+        AscendC::MicroAPI::Copy<int32_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(v2, v4, sp1);
+        AscendC::MicroAPI::ReduceSum(v3, v2, p1);
+        AscendC::MicroAPI::Duplicate(v1, v3, pregFull);
+        AscendC::MicroAPI::DataCopyUnAlignPost(prefixSumAddr, u1, 0);
+    }
+}
+
+__simd_vf__ inline void ComputeSingleLoopPrefixSumVf(__ubuf__ uint8_t* maskAddr, __ubuf__ int32_t* prefixSumAddr,
+    __ubuf__ int32_t* tmpAddr, uint32_t vfLen, uint32_t rows, uint32_t cols, uint16_t size0, uint16_t size1,
+    uint16_t tailSize1)
+{
+    CopyMaskToPrefixSumVf(maskAddr, prefixSumAddr, vfLen, rows, size0);
+    ComputeColPrefixSumVf(prefixSumAddr, tmpAddr, rows, cols, size0);
+    ComputeRowPrefixSumVf(prefixSumAddr, tmpAddr, rows, cols, size1, tailSize1, vfLen);
+}
+
+template <typename U>
+__simd_vf__ inline void CustomReduceSumVf(__ubuf__ U* srcAddr, __ubuf__ U* dstAddr, uint16_t dataLen,
+    uint16_t vfLen, uint16_t loopSize)
+{
+    AscendC::MicroAPI::RegTensor<U> src;
+    AscendC::MicroAPI::RegTensor<U> dst;
+    AscendC::MicroAPI::RegTensor<U> tmpSum;
+    uint32_t pnum = static_cast<uint32_t>(dataLen);
+    uint32_t sumMask = 1;
+    AscendC::MicroAPI::MaskReg oneMask = AscendC::MicroAPI::UpdateMask<U>(sumMask);
+    AscendC::MicroAPI::Duplicate(dst, 0, oneMask);
+    for (uint16_t i = 0; i < loopSize; i++) {
+        AscendC::MicroAPI::MaskReg pMask = AscendC::MicroAPI::UpdateMask<U>(pnum);
+        AscendC::MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(src, srcAddr, vfLen);
+        AscendC::MicroAPI::ReduceSum(tmpSum, src, pMask);
+        AscendC::MicroAPI::Add(dst, dst, tmpSum, oneMask);
+    }
+    AscendC::MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(dstAddr, dst, 0, oneMask);
+}
+
 template<typename T, typename U>
 class MaskedScatterImpl {
 public:
@@ -182,78 +301,7 @@ __aicore__ inline void MaskedScatterImpl<T, U>::ComputeSingleLoopPrefixSum(uint3
         size1--;
         tailSize1 = vfLen;
     }
-    __VEC_SCOPE__
-    {
-        uint32_t main = rows;
-        AscendC::MicroAPI::MaskReg p0 = AscendC::MicroAPI::UpdateMask<int32_t>(main); // vfLen的mask
-        AscendC::MicroAPI::RegTensor<uint8_t> mask;
-        auto prefixSumTmpAddr = prefixSumAddr;
-        for (uint16_t i = 0; i < size0; ++i) {
-            AscendC::MicroAPI::DataCopy<uint8_t, MicroAPI::PostLiteral::POST_MODE_UPDATE,
-                MicroAPI::LoadDist::DIST_UNPACK4_B8>(mask, maskAddr, vfLen);
-            AscendC::MicroAPI::DataCopy<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(prefixSumTmpAddr,
-                (AscendC::MicroAPI::RegTensor<int32_t>&)mask, vfLen, p0);
-        }
-        AscendC::MicroAPI::LocalMemBar<AscendC::MicroAPI::MemType::VEC_STORE, AscendC::MicroAPI::MemType::VEC_LOAD>();
-        uint32_t stride = rows;
-        AscendC::MicroAPI::RegTensor<int32_t> tmp;
-        AscendC::MicroAPI::RegTensor<uint32_t> sequence;
-        AscendC::MicroAPI::RegTensor<uint32_t> index;
-        AscendC::MicroAPI::Arange(tmp, 0);
-        sequence = (AscendC::MicroAPI::RegTensor<uint32_t>&)tmp; // 以0开始的序列
-        AscendC::MicroAPI::RegTensor<int32_t> v0;
-        AscendC::MicroAPI::RegTensor<int32_t> v1;
-        AscendC::MicroAPI::RegTensor<int32_t> v2;
-        AscendC::MicroAPI::UnalignReg u1;
-
-        AscendC::MicroAPI::Duplicate(v1, 0, p0); // 构造全为0的寄存器v1
-        AscendC::MicroAPI::Muls(sequence, sequence, cols, p0); // 构造以0开始，以cols为步长的序列
-        prefixSumTmpAddr = prefixSumAddr;
-        auto tempAddr = tmpAddr;
-        for (uint16_t i = 0; i < size0; ++i) {
-            AscendC::MicroAPI::Adds(index, sequence, (uint32_t)i, p0); // 构造以i开始，以cols为步长的序列
-            AscendC::MicroAPI::DataCopyGather(v0, prefixSumTmpAddr, index, p0);
-            AscendC::MicroAPI::Add(v2, v0, v1, p0);
-            AscendC::MicroAPI::Copy(v1, v2, p0);
-            AscendC::MicroAPI::AddrReg offset = AscendC::MicroAPI::CreateAddrReg<int32_t>(i, stride);
-            AscendC::MicroAPI::DataCopy(tempAddr, v2, offset, p0);
-        }
-        AscendC::MicroAPI::LocalMemBar<AscendC::MicroAPI::MemType::VEC_STORE, AscendC::MicroAPI::MemType::VEC_LOAD>();
-
-        AscendC::MicroAPI::Arange(tmp, 0);
-        sequence = (AscendC::MicroAPI::RegTensor<uint32_t>&)tmp;
-        AscendC::MicroAPI::MaskReg pregFull = AscendC::MicroAPI::CreateMask<int32_t,
-            AscendC::MicroAPI::MaskPattern::ALL>();
-        AscendC::MicroAPI::Muls(sequence, sequence, rows, pregFull);
-        uint32_t spReg1 = tailSize1 - 1;
-        AscendC::MicroAPI::MaskReg sp1 = AscendC::MicroAPI::UpdateMask<int32_t>(spReg1);
-        AscendC::MicroAPI::RegTensor<int32_t> v3;
-        AscendC::MicroAPI::RegTensor<int32_t> v4;
-        AscendC::MicroAPI::RegTensor<uint32_t> vdSque;
-        AscendC::MicroAPI::Duplicate(v1, 0, pregFull);
-        for (uint16_t i = 0; i < static_cast<uint16_t>(rows); i++) {
-            uint32_t mainCols = cols;
-            AscendC::MicroAPI::Adds(vdSque, sequence, (uint32_t)i, pregFull);
-            for (uint16_t j = 0; j < size1; j++) {
-                AscendC::MicroAPI::MaskReg p1 = AscendC::MicroAPI::UpdateMask<int32_t>(mainCols);
-                AscendC::MicroAPI::Adds(index, vdSque, (uint32_t)(j * vfLen * vfLen), p1);
-                AscendC::MicroAPI::DataCopyGather(v0, tmpAddr, index, p1);
-                AscendC::MicroAPI::Add(v2, v0, v1, p1);
-                AscendC::MicroAPI::DataCopyUnAlign(prefixSumAddr, v2, u1, rows);
-            }
-            AscendC::MicroAPI::DataCopyUnAlignPost(prefixSumAddr, u1, 0);
-            AscendC::MicroAPI::MaskReg p1 = AscendC::MicroAPI::UpdateMask<int32_t>(mainCols);
-            AscendC::MicroAPI::Adds(index, vdSque, (uint32_t)(size1 * vfLen * vfLen), p1);
-            AscendC::MicroAPI::DataCopyGather(v0, tmpAddr, index, p1);
-            AscendC::MicroAPI::Add(v2, v0, v1, p1);
-            AscendC::MicroAPI::DataCopyUnAlign(prefixSumAddr, v2, u1, tailSize1);
-            AscendC::MicroAPI::Duplicate(v4, 0, sp1);
-            AscendC::MicroAPI::Copy<int32_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(v2, v4, sp1);
-            AscendC::MicroAPI::ReduceSum(v3, v2, p1);
-            AscendC::MicroAPI::Duplicate(v1, v3, pregFull);
-            AscendC::MicroAPI::DataCopyUnAlignPost(prefixSumAddr, u1, 0);
-        }
-    }
+    ComputeSingleLoopPrefixSumVf(maskAddr, prefixSumAddr, tmpAddr, vfLen, rows, cols, size0, size1, tailSize1);
     maskQueue_.FreeTensor(maskLocal);
 }
 
@@ -291,23 +339,7 @@ __aicore__ inline void MaskedScatterImpl<T, U>::CustomReduceSum(const LocalTenso
     uint16_t loopSize = (dataLen + vfLen - 1) / vfLen;
     auto srcAddr = (__ubuf__ U *)src.GetPhyAddr();
     auto dstAddr = (__ubuf__ U *)dst.GetPhyAddr();
-    __VEC_SCOPE__
-    {
-        AscendC::MicroAPI::RegTensor<U> src;
-        AscendC::MicroAPI::RegTensor<U> dst;
-        AscendC::MicroAPI::RegTensor<U> tmpSum;
-        uint32_t pnum = static_cast<uint32_t>(dataLen);
-        uint32_t sumMask = 1;
-        AscendC::MicroAPI::MaskReg oneMask = AscendC::MicroAPI::UpdateMask<U>(sumMask);
-        AscendC::MicroAPI::Duplicate(dst, 0, oneMask);
-        for (uint16_t i = 0; i< loopSize; i++) {
-            AscendC::MicroAPI::MaskReg pMask = AscendC::MicroAPI::UpdateMask<U>(pnum);
-            AscendC::MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(src, srcAddr, vfLen);
-            AscendC::MicroAPI::ReduceSum(tmpSum, src, pMask);
-            AscendC::MicroAPI::Add(dst, dst, tmpSum, oneMask);
-        }
-        AscendC::MicroAPI::DataCopy<U, MicroAPI::PostLiteral::POST_MODE_UPDATE>(dstAddr, dst, 0, oneMask);
-    }
+    CustomReduceSumVf<U>(srcAddr, dstAddr, dataLen, vfLen, loopSize);
 }
 
 template <typename T, typename U>

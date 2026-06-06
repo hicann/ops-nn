@@ -18,6 +18,7 @@
 #include "platform/platform_info.h"
 #include "util/math_util.h"
 #include "util/platform_util.h"
+#include "matmul/common/op_host/log_format_util.h"
 
 namespace optiling {
 constexpr int64_t OUTPUT_Y_IDX = 0;
@@ -66,23 +67,38 @@ ge::graphStatus MaskedScatterTiling::CheckDataType()
     auto inputMaskPtr = context_->GetRequiredInputDesc(INPUT_MASK_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputMaskPtr);
     auto maskDtype = inputMaskPtr->GetDataType();
-    OP_CHECK_IF(maskDtype != ge::DT_BOOL, OP_LOGE(context_->GetNodeName(),
-        "The dtype of mask only support bool currently, please check."), return ge::GRAPH_FAILED);
+    if (maskDtype != ge::DT_BOOL) {
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "mask",
+            ge::TypeUtils::DataTypeToSerialString(maskDtype).c_str(),
+            "The dtype of mask must be BOOL");
+        return ge::GRAPH_FAILED;
+    }
     auto inputUpdatesPtr = context_->GetRequiredInputDesc(INPUT_UPDATES_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputUpdatesPtr);
     auto updatesDtype = inputUpdatesPtr->GetDataType();
     auto outputYPtr = context_->GetOutputDesc(OUTPUT_Y_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputYPtr);
     auto yDtype = outputYPtr->GetDataType();
-    OP_CHECK_IF(dType_ != updatesDtype || dType_ != yDtype,
-        OP_LOGE(context_->GetNodeName(),
-        "The x, updates and y must have the same dtype, please check."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(!IsSupportDtype(SUPPORT_DTYPE, dType_), OP_LOGE(context_->GetNodeName(),
-        "The dtype only support float32, float16, double, uint8, int8, int16, int32, int64, bool, bfloat16 \
-currently, please check."), return ge::GRAPH_FAILED);
+    if (dType_ != updatesDtype || dType_ != yDtype) {
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "x, updates, y",
+            Ops::NN::FormatString("%s, %s, %s", ge::TypeUtils::DataTypeToSerialString(dType_).c_str(),
+                ge::TypeUtils::DataTypeToSerialString(updatesDtype).c_str(),
+                ge::TypeUtils::DataTypeToSerialString(yDtype).c_str()).c_str(),
+            "The dtype of x, updates and y must be the same");
+        return ge::GRAPH_FAILED;
+    }
+    if (!IsSupportDtype(SUPPORT_DTYPE, dType_)) {
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "x",
+            ge::TypeUtils::DataTypeToSerialString(dType_).c_str(),
+            "The dtype of x must be in [FLOAT32, FLOAT16, DOUBLE, UINT8, INT8, INT16, INT32, INT64, BOOL, BFLOAT16]");
+        return ge::GRAPH_FAILED;
+    }
     dataTypeSize_ = ge::GetSizeByDataType(dType_);
-    OP_CHECK_IF(dataTypeSize_ == -1, OP_LOGE(context_->GetNodeName(),
-        "Get the size of dtype failed, please check."), return ge::GRAPH_FAILED);
+    if (dataTypeSize_ == -1) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "dataTypeSize",
+            "-1", "Get the size of dtype failed");
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -101,8 +117,13 @@ ge::graphStatus MaskedScatterTiling::CheckOutputShape()
     auto yShapePtr = context_->GetOutputShape(OUTPUT_Y_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, yShapePtr);
     auto yShape = yShapePtr->GetStorageShape();
-    OP_CHECK_IF(xShape != maskShape || xShape != yShape, OP_LOGE(context_->GetNodeName(),
-        "The x, mask and y must have the same shape, please check."), return ge::GRAPH_FAILED);
+    if (xShape != maskShape || xShape != yShape) {
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "x, mask, y",
+            Ops::NN::FormatString("%s, %s, %s", Ops::Base::ToString(xShape).c_str(),
+                Ops::Base::ToString(maskShape).c_str(), Ops::Base::ToString(yShape).c_str()).c_str(),
+            "The shape of x, mask and y must be the same");
+        return ge::GRAPH_FAILED;
+    }
     inputShape_ = xShape;
     return ge::GRAPH_SUCCESS;
 }

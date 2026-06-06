@@ -266,3 +266,17 @@ TEST_F(MaskedScatterTiling, MaskedScatter_tiling_ascendc_error_shape) {
     string expectTilingData = "";
     ExecuteTestCase(opsParamInfos, expectTilingData, ge::GRAPH_FAILED);
 }
+
+TEST_F(MaskedScatterTiling, MaskedScatter_tiling_ascendc_error_y_shape) {
+    MaskedScatterOpsParamInfos opsParamInfos;
+    opsParamInfos.xDtype = ge::DT_FLOAT;
+    opsParamInfos.maskDtype = ge::DT_BOOL;
+    opsParamInfos.updateDtype = ge::DT_FLOAT;
+    opsParamInfos.yDtype = ge::DT_FLOAT;
+    opsParamInfos.xShape = {{60, 14, 16, 128}, {60, 14, 16, 128}};
+    opsParamInfos.maskShape = {{60, 14, 16, 128}, {60, 14, 16, 128}};
+    opsParamInfos.updateShape = {{60, 14, 16, 128}, {60, 14, 16, 128}};
+    opsParamInfos.yShape = {{60, 14, 16, 1}, {60, 14, 16, 1}};
+    string expectTilingData = "";
+    ExecuteTestCase(opsParamInfos, expectTilingData, ge::GRAPH_FAILED);
+}

@@ -32,6 +32,7 @@
 #include "opdev/tensor_view_utils.h"
 #include "opdev/platform.h"
 #include "op_api/aclnn_util.h"
+#include "log/log.h"
 
 using namespace op;
 #ifdef __cplusplus
@@ -56,6 +57,8 @@ extern "C" {
 constexpr size_t MAX_DIM_LEN = 8;
 const int32_t INT32_MAX_VAL = 2147483647;
 const int32_t Threshold = 128;
+
+static constexpr const char* kOpName = "aclnnInplaceMaskedScatter";
 
 // 根据API定义，需要列出所能支持的所有dtype
 static const std::initializer_list<op::DataType> ASCEND910_SELFREF_DTYPE_SUPPORT_LIST = {
@@ -93,15 +96,24 @@ static inline const std::initializer_list<op::DataType>& GetDtypeSupportList()
 static bool CheckDtypeValid(const aclTensor* selfRef, const aclTensor* mask, const aclTensor* source)
 {
     auto supportList = GetDtypeSupportList();
-    // 检查selfRef的数据类型是否在masked_scatter算子的支持列表内
-    OP_CHECK_DTYPE_NOT_SUPPORT(selfRef, supportList, return false);
-    // 检查mask的数据类型是否在maskedScatter算子的支持列表内
-    OP_CHECK_DTYPE_NOT_SUPPORT(mask, MASK_DTYPE_SUPPORT_LIST, return false);
-    // 检查selfRef和source的数据类型是否相同
+    if (!CheckType(selfRef->GetDataType(), supportList)) {
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(kOpName, "self",
+            op::ToString(selfRef->GetDataType()).GetString(),
+            std::string("The dtype of self must be within the range ") +
+                op::ToString(supportList).GetString());
+        return false;
+    }
+    if (!CheckType(mask->GetDataType(), MASK_DTYPE_SUPPORT_LIST)) {
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(kOpName, "mask",
+            op::ToString(mask->GetDataType()).GetString(),
+            std::string("The dtype of mask must be within the range ") +
+                op::ToString(MASK_DTYPE_SUPPORT_LIST).GetString());
+        return false;
+    }
     if (selfRef->GetDataType() != source->GetDataType()) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "source dtype %s should be same with selfRef [%s].",
-            op::ToString(source->GetDataType()).GetString(), op::ToString(selfRef->GetDataType()).GetString());
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(kOpName, "source",
+            op::ToString(source->GetDataType()).GetString(),
+            "The dtype of source must be the same as self");
         return false;
     }
 
@@ -114,9 +126,10 @@ static bool isMaskCanExpandToSelfRef(const aclTensor* selfRef, const aclTensor* 
     size_t selfRefShapeLen = selfRefShape.GetDimNum();
     for (size_t i = 0; i < selfRefShapeLen; i++) {
         if (broadcastShape->GetDim(i) != selfRefShape.GetDim(i)) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "target selfRef sizes %s ,source mask sizes %s",
-                op::ToString(selfRef->GetViewShape()).GetString(), op::ToString(mask->GetViewShape()).GetString());
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(kOpName, "self, mask",
+                (op::ToString(selfRef->GetViewShape()).GetString() + std::string(", ") +
+                 op::ToString(mask->GetViewShape()).GetString()).c_str(),
+                "The shape of mask must be broadcastable to the shape of self");
             return false;
         }
     }
@@ -125,17 +138,32 @@ static bool isMaskCanExpandToSelfRef(const aclTensor* selfRef, const aclTensor* 
 
 static bool CheckShape(const aclTensor* selfRef, const aclTensor* mask, const aclTensor* source)
 {
-    OP_CHECK_MAX_DIM(selfRef, MAX_DIM_LEN, return false);
-    OP_CHECK_MAX_DIM(mask, MAX_DIM_LEN, return false);
-    OP_CHECK_MAX_DIM(source, MAX_DIM_LEN, return false);
+    if (selfRef->GetViewShape().GetDimNum() > MAX_DIM_LEN) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(kOpName, "self",
+            std::to_string(selfRef->GetViewShape().GetDimNum()).c_str(),
+            "The shape dim of self must be <= 8D");
+        return false;
+    }
+    if (mask->GetViewShape().GetDimNum() > MAX_DIM_LEN) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(kOpName, "mask",
+            std::to_string(mask->GetViewShape().GetDimNum()).c_str(),
+            "The shape dim of mask must be <= 8D");
+        return false;
+    }
+    if (source->GetViewShape().GetDimNum() > MAX_DIM_LEN) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(kOpName, "source",
+            std::to_string(source->GetViewShape().GetDimNum()).c_str(),
+            "The shape dim of source must be <= 8D");
+        return false;
+    }
 
     Shape broadcastShape;
     OP_CHECK_BROADCAST_AND_INFER_SHAPE(selfRef, mask, broadcastShape, return false);
 
     if (!isMaskCanExpandToSelfRef(selfRef, mask, &broadcastShape)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID,
-            "the number of dimensions in selfRef tensor must be greater or equal to the mask tensor");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(kOpName, "self, mask",
+            "shape mismatch",
+            "The number of dimensions in self tensor must be >= the mask tensor");
         return false;
     }
 
