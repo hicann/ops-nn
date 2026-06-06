@@ -240,7 +240,7 @@ static TilingTestParam ascend950_cases_params[] = {
       "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "socVersion": "Ascend950" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, false, true, 0, false, true,{4096, 8192}, {1280, 8192}, {4096, 1280}, {4096, 8192}, {1280, 8192}, {4096, 1280}, false, 0, 0, 32, 4129UL,
-    "32 4096 1280 8192 256 256 192 256 256 64 4096 1 1 1 1 0 0 16843264 0 256 1 0 1 0 "
+    "32 4096 1280 8192 256 256 192 256 256 64 4096 1 1 1 1 0 0 16843264 0 256 1 0 "
   },
   {
     "FusedMatMul_950_basic_05", "FusedMatMul", "", R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":true, "offset_x":0, "enable_hf32":0},
@@ -249,7 +249,7 @@ static TilingTestParam ascend950_cases_params[] = {
       "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "socVersion": "Ascend950" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, false, true, 0, false, true,{4096, 8192}, {128, 8192}, {4096, 128}, {4096, 8192}, {128, 8192}, {4096, 128}, false, 0, 0, 32, 4129UL,
-    "32 4096 128 8192 256 128 256 256 128 64 4096 1 1 1 1 0 0 16843264 0 256 1 0 1 0 "
+    "32 4096 128 8192 256 128 256 256 128 64 4096 1 1 1 1 0 0 16843264 0 256 1 0 "
   },
   {
     "FusedMatMul_950_basic_06", "FusedMatMul", "gelu_erf", R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":true, "offset_x":0, "enable_hf32":0},
@@ -295,7 +295,7 @@ static TilingTestParam ascend950_cases_params[] = {
       "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 28, "vector_core_cnt": 56, "socVersion": "Ascend950" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, false, true, 0, false, true,{128, 4096}, {2048, 4096}, {128, 2048}, {128, 4096}, {2048, 4096}, {128, 2048}, false, 0, 0, 28, 4129UL,
-    "28 128 2048 4096 128 256 256 128 256 64 1366 1 1 1 1 0 0 16843264 0 128 1 0 1 0 ", ge::DT_BF16, ge::DT_BF16, ge::DT_BF16
+    "28 128 2048 4096 128 256 256 128 256 64 1366 1 1 1 1 0 0 16843264 0 128 1 0 ", ge::DT_BF16, ge::DT_BF16, ge::DT_BF16
   },
   {
     "FusedMatMul_950_mmoe_fused_op_type_none_streamk2aswt", "FusedMatMul", "", R"({"_pattern": "MatMul", "attrs":{"transpose_a":false,"transpose_b":true, "offset_x":0, "enable_hf32":0},
@@ -314,7 +314,7 @@ static TilingTestParam ascend950_cases_params[] = {
       "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 28, "vector_core_cnt": 56, "socVersion": "Ascend950" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, false, true, 0, false, true,{128, 18856}, {64, 18856}, {128, 64}, {128, 18856}, {64, 18856}, {128, 64}, false, 0, 0, 28, 83890209UL,
-    "28 128 64 18856 128 64 512 128 64 128 674 1 1 1 1 0 0 16843264 0 128 1 0 1 0 ", ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT
+    "28 128 64 18856 128 64 512 128 64 128 674 1 1 1 1 0 0 16843264 0 128 1 0 ", ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT
   },
   {
     "FusedMatMul_950_bmm_empty_onthefly", "FusedMatMul", "", R"({"_pattern": "BatchMatMul", "attrs":{"transpose_a":false,"transpose_b":false, "offset_x":0, "enable_hf32": 1},
