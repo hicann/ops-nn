@@ -178,7 +178,7 @@ static aclnnStatus CheckParams(const aclTensor* self, const aclTensor* target, i
 
 static aclnnStatus L1LossEmptyTensorCompute(int64_t reduction, aclTensor* out, aclOpExecutor* executor)
 {
-    aclnnStatus ret;
+    aclnnStatus ret = ACLNN_SUCCESS;
     // 1. reduction='none'，返回空tensor
     // 2. reduction='mean'，返回NAN
     // 3. reduction='sum'，返回0
