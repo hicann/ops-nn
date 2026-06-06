@@ -121,6 +121,31 @@ uint64_t Conv2dBaseTiling::GetOutputOrderVal()
     }
     return 0;
 }
+
+uint64_t Conv2dBaseTiling::GetSmallKernelVal()
+{
+    // Not support group conv, c04, weight ub, multi-bath.
+    if (((tilingData_.get_bUbNStep() > 0 && tilingData_.get_bUbKStep() > 0)) ||
+        static_cast<uint64_t>(tilingData_.get_singleCoreBatch() != 1) ||
+        tilingData_.get_nL0() != tilingData_.get_nBL1() ||
+        flagInfo_.enableC04Flag) {
+        return CONV_NOT_SMALL_KERNEL;
+    }
+
+    if (tilingData_.get_padLeft() < tilingData_.get_kernelW() &&
+        tilingData_.get_padRight() < tilingData_.get_kernelW() &&
+        tilingData_.get_padTop() < tilingData_.get_kernelH() &&
+        tilingData_.get_padBottom() < tilingData_.get_kernelH()) {
+        return CONV_NOT_SMALL_KERNEL;
+    }
+
+    if ((flagInfo_.convGroupType == ConvGroupType::NORMAL_CONV || tilingData_.get_groupOpt() == 1) &&
+        tilingKeyPara_.fmpTiling == FULLLOAD_AL1 && tilingKeyPara_.weightTiling == FULLLOAD_BL1) {
+        return CONV_SMALL_KERNEL;
+    }
+
+    return CONV_NOT_SMALL_KERNEL;
+}
  
 uint64_t Conv2dBaseTiling::GetFmpTilingValForHWSplit(bool kAL1FullloadFlag)
 {
@@ -249,6 +274,7 @@ ge::graphStatus Conv2dBaseTiling::SetTilingKey()
         tilingKeyPara_.batchOne = static_cast<uint64_t>(tilingData_.get_singleCoreBatch() == 1);
         tilingKeyPara_.noPad = GetNoPad();
         tilingKeyPara_.smallWeight = GetSmallWeightVal();
+        tilingKeyPara_.smallKernel = GetSmallKernelVal();
     }
     ReSetTilingKeyPara();
     if (IsWeightNZFormat(descInfo_.weightFormat)) {
@@ -266,7 +292,8 @@ ge::graphStatus Conv2dBaseTiling::SetTilingKey()
                                         tilingKeyPara_.disContinuous,
                                         tilingKeyPara_.batchOne,
                                         tilingKeyPara_.noPad,
-                                        tilingKeyPara_.smallWeight);
+                                        tilingKeyPara_.smallWeight,
+                                        tilingKeyPara_.smallKernel);
     } else {
         tilingKey_ = GET_TPL_TILING_KEY(tilingKeyPara_.fmpTiling,
                                         tilingKeyPara_.weightTiling,
@@ -279,7 +306,11 @@ ge::graphStatus Conv2dBaseTiling::SetTilingKey()
                                         tilingKeyPara_.weightUbTrans,
                                         tilingKeyPara_.fmapCppyMode,
                                         tilingKeyPara_.innerBatch,
-                                        tilingKeyPara_.disContinuous);
+                                        tilingKeyPara_.disContinuous,
+                                        0,
+                                        0,
+                                        0,
+                                        0);
     }
 
     OP_LOGD(context_->GetNodeName(), "%s AscendC: c04 mode status is: %d",

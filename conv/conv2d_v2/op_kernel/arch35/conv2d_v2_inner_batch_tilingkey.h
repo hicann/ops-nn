@@ -30,9 +30,15 @@ ASCENDC_TPL_UINT_SEL(BatchOne, ASCENDC_TPL_UI_LIST,                             
     CONV_MULTI_BATCH, CONV_ONE_BATCH),                                                                               \
 ASCENDC_TPL_UINT_SEL(NoPad, ASCENDC_TPL_UI_LIST,                                                                     \
     CONV_HAS_PAD, CONV_NO_PAD),                                                                                      \
-ASCENDC_TPL_UINT_SEL(SmallWeight, ASCENDC_TPL_UI_LIST, __VA_ARGS__)
+ASCENDC_TPL_UINT_SEL(SmallWeight, ASCENDC_TPL_UI_LIST, __VA_ARGS__)                                                  \
+ASCENDC_TPL_UINT_SEL(SmallKernel, ASCENDC_TPL_UI_LIST, CONV_NOT_SMALL_KERNEL, CONV_SMALL_KERNEL)
 #else
-#define CONV2D_SCALAR_OPT_SEL(...)
+#define CONV2D_SCALAR_OPT_SEL(...)                                                                                   \
+,                                                                                                                    \
+ASCENDC_TPL_UINT_SEL(BatchOne, ASCENDC_TPL_UI_LIST, 0),                                                              \
+ASCENDC_TPL_UINT_SEL(NoPad, ASCENDC_TPL_UI_LIST, 0),                                                                 \
+ASCENDC_TPL_UINT_SEL(SmallWeight, ASCENDC_TPL_UI_LIST, 0)                                                            \
+ASCENDC_TPL_UINT_SEL(SmallKernel, ASCENDC_TPL_UI_LIST, 0)
 #endif
 
 // Weight Ub Trans Mode TilingKey SEL

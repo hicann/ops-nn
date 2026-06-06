@@ -18,6 +18,7 @@
 #include "arch35/conv2d_v2.h"
 #include "arch35/conv2d_v2_group.h"
 #include "arch35/conv2d_v2_tilingkey.h"
+#include "arch35/conv2d_small_kernel.h"
 
 using namespace AscendC;
 using namespace Conv2DV2Key;
@@ -86,15 +87,9 @@ constexpr ConvFormat scaleFormat = ConvFormat::ND;
 #define SET_KERNEL_TASK_TYPE(key) KERNEL_TASK_TYPE(key, KERNEL_TYPE_MIX_AIC_1_2)
 #endif
 
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
 template<int8_t FmapTiling, int8_t WeightTiling, int8_t L1PingPong, int8_t L0PingPong, int8_t OutputOrder,
          int8_t IterOrder, int8_t GroupType, int8_t EnableSmallChannel, int8_t WeightUbTrans, int8_t FmapCopyMode,
-         int8_t InnerBatch, int8_t DisContinuous, int8_t BatchOne, int8_t NoPad, int8_t SmallWeight>
-#else
-template<int8_t FmapTiling, int8_t WeightTiling, int8_t L1PingPong, int8_t L0PingPong, int8_t OutputOrder,
-         int8_t IterOrder, int8_t GroupType, int8_t EnableSmallChannel, int8_t WeightUbTrans, int8_t FmapCopyMode,
-         int8_t InnerBatch, int8_t DisContinuous>
-#endif
+         int8_t InnerBatch, int8_t DisContinuous, int8_t BatchOne, int8_t NoPad, int8_t SmallWeight, int8_t SmallKernel>
 __global__ __aicore__ void conv2dv2(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR offset_w, GM_ADDR y,
     GM_ADDR workspace, GM_ADDR tiling)
 {
@@ -118,33 +113,27 @@ __global__ __aicore__ void conv2dv2(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_
 #endif
     using scaleType = ConvType<TPosition::GM, scaleFormat, uint64_t>;
 
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
-    if constexpr (GroupType == CONV_GROUP_TYPE_NORMAL_CONV) {
-        Conv2dBase<fmapType, weightType, outputType, biasType, scaleType,
-            Conv2DV1Param<FmapTiling, WeightTiling, L1PingPong, L0PingPong, OutputOrder, IterOrder, GroupType,
-                          EnableSmallChannel, WeightUbTrans, FmapCopyMode, InnerBatch, DisContinuous, BatchOne, NoPad,
-                          SmallWeight>> baseConv2d;
-        baseConv2d.RunConv2dKernel(x, filter, bias, y, tilingData);
+    if (SmallKernel == 1 && OutputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE) &&
+        fmapFormat == ConvFormat::NCHW && outputFormat == ConvFormat::NCHW &&
+        AscendC::IsSameType<DTYPE_X, half>::value) {
+        Conv2dSmallKernel<DTYPE_X, DTYPE_FILTER, biasType::T, DTYPE_Y> op;
+        op.Init(tilingData);
+        op.Process(x, filter, bias, y, nullptr);
     } else {
-        GroupConv2d<fmapType, weightType, outputType, biasType, scaleType,
-            Conv2DV1Param<FmapTiling, WeightTiling, L1PingPong, L0PingPong, OutputOrder, IterOrder, GroupType,
-                          EnableSmallChannel, WeightUbTrans, FmapCopyMode, InnerBatch, DisContinuous, BatchOne, NoPad,
-                          SmallWeight>> groupConv2d;
-        groupConv2d.RunConv2dKernel(x, filter, bias, y, tilingData);
+        if constexpr (GroupType == CONV_GROUP_TYPE_NORMAL_CONV) {
+            Conv2dBase<fmapType, weightType, outputType, biasType, scaleType,
+                Conv2DV1Param<FmapTiling, WeightTiling, L1PingPong, L0PingPong, OutputOrder, IterOrder, GroupType,
+                            EnableSmallChannel, WeightUbTrans, FmapCopyMode, InnerBatch, DisContinuous, BatchOne, NoPad,
+                            SmallWeight>> baseConv2d;
+            baseConv2d.RunConv2dKernel(x, filter, bias, y, tilingData);
+        } else {
+            GroupConv2d<fmapType, weightType, outputType, biasType, scaleType,
+                Conv2DV1Param<FmapTiling, WeightTiling, L1PingPong, L0PingPong, OutputOrder, IterOrder, GroupType,
+                            EnableSmallChannel, WeightUbTrans, FmapCopyMode, InnerBatch, DisContinuous, BatchOne, NoPad,
+                            SmallWeight>> groupConv2d;
+            groupConv2d.RunConv2dKernel(x, filter, bias, y, tilingData);
+        }
     }
-#else
-    if constexpr (GroupType == CONV_GROUP_TYPE_NORMAL_CONV) {
-        Conv2dBase<fmapType, weightType, outputType, biasType, scaleType,
-            Conv2DV1Param<FmapTiling, WeightTiling, L1PingPong, L0PingPong, OutputOrder, IterOrder, GroupType,
-                          EnableSmallChannel, WeightUbTrans, FmapCopyMode, InnerBatch, DisContinuous>> baseConv2d;
-        baseConv2d.RunConv2dKernel(x, filter, bias, y, tilingData);
-    } else {
-        GroupConv2d<fmapType, weightType, outputType, biasType, scaleType,
-            Conv2DV1Param<FmapTiling, WeightTiling, L1PingPong, L0PingPong, OutputOrder, IterOrder, GroupType,
-                          EnableSmallChannel, WeightUbTrans, FmapCopyMode, InnerBatch, DisContinuous>> groupConv2d;
-        groupConv2d.RunConv2dKernel(x, filter, bias, y, tilingData);
-    }
-#endif
 
 #endif
 }

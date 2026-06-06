@@ -167,6 +167,7 @@ struct ConvParam {
     constexpr static int8_t batchOne = 0;
     constexpr static int8_t noPad = 0;
     constexpr static int8_t smallWeight = 0;
+    constexpr static int8_t smallKernel = 0;
 };
 
 template <typename T>

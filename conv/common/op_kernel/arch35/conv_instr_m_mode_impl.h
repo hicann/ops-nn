@@ -288,8 +288,8 @@ private:
         intriParams.srcStride = AlignB(currentML0_, BLOCK_L0_M);
         intriParams.dstStride = self_->ctx.convTilingData->orgCo;
         intriParams.params.ndNum = 1;
-        intriParams.params.dstNdStride = 0;
-        intriParams.params.srcNdStride = 0;
+        intriParams.params.dstNdStride = currentML0_ * self_->ctx.convTilingData->orgCo;
+        intriParams.params.srcNdStride = currentML0_ * currentNL0_ / BLOCK_L0_N;
         SetBaseParams<CO2Layout::ROW_MAJOR>(intriParams);
     }
 

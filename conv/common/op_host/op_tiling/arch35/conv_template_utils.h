@@ -438,6 +438,7 @@ struct ConvTilingKeyPara {
     uint64_t batchOne = 0;
     uint64_t noPad = 0;
     uint64_t smallWeight = 0;
+    uint64_t smallKernel = 0;
 };
 
 static std::map<ge::DataType, uint32_t> dtypeSizeTab = {

@@ -135,6 +135,7 @@ const std::vector<std::vector<ge::Format>> SUPPORT_CONV2D_FORMAT_LIST_MDC = {
     {ge::Format::FORMAT_NHWC, ge::Format::FORMAT_HWCN, ge::Format::FORMAT_NHWC},
     {ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NHWC},
     {ge::Format::FORMAT_NCHW, ge::Format::FORMAT_HWCN, ge::Format::FORMAT_NHWC},
+    {ge::Format::FORMAT_NHWC, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NHWC},
     {ge::Format::FORMAT_NHWC, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW},
     {ge::Format::FORMAT_NHWC, ge::Format::FORMAT_HWCN, ge::Format::FORMAT_NCHW}
 };
@@ -174,6 +175,7 @@ const std::vector<std::vector<ge::Format>> EXTENDCONV2D_SUPPORT_FORMAT_LIST_MDC 
     {ge::Format::FORMAT_NHWC, ge::Format::FORMAT_HWCN, ge::Format::FORMAT_NHWC},
     {ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NHWC},
     {ge::Format::FORMAT_NCHW, ge::Format::FORMAT_HWCN, ge::Format::FORMAT_NHWC},
+    {ge::Format::FORMAT_NHWC, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NHWC},
     {ge::Format::FORMAT_NHWC, ge::Format::FORMAT_NCHW, ge::Format::FORMAT_NCHW},
     {ge::Format::FORMAT_NHWC, ge::Format::FORMAT_HWCN, ge::Format::FORMAT_NCHW}
 };

@@ -69,6 +69,10 @@ namespace ConvKey {
 #define CONV_ONE_BATCH 1
 
 #define CONV_NOT_SMALL_WEIGHT 0
+
+#define CONV_NOT_SMALL_KERNEL 0
+#define CONV_SMALL_KERNEL 1
+
 #define CONV_FULLLOAD_KL1_NL0 1
 #define CONV_WEIGHT_SMALLER_THAN_BL0 2
 
