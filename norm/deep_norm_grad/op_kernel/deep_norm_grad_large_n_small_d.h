@@ -27,27 +27,27 @@ public:
         GM_ADDR dataDy, GM_ADDR dataX, GM_ADDR dataGx, GM_ADDR dataRstd, GM_ADDR dataMean, GM_ADDR dataGamma,
         GM_ADDR outputDx, GM_ADDR outputDgx, GM_ADDR outputDgamma, GM_ADDR outputDbeta)
     {
-        dyGm.SetGlobalBuffer((__gm__ T*)dataDy + GetBlockIdx() * nDealPerCore * dDimNum, nDeal * dDimNum);
-        xGm.SetGlobalBuffer((__gm__ T*)dataX + GetBlockIdx() * nDealPerCore * dDimNum, nDeal * dDimNum);
-        gxGm.SetGlobalBuffer((__gm__ T*)dataGx + GetBlockIdx() * nDealPerCore * dDimNum, nDeal * dDimNum);
-        meanGm.SetGlobalBuffer((__gm__ float*)dataMean + GetBlockIdx() * nDealPerCore, nDeal);
-        rstdGm.SetGlobalBuffer((__gm__ float*)dataRstd + GetBlockIdx() * nDealPerCore, nDeal);
+        dyGm.SetGlobalBuffer((__gm__ T*)dataDy + static_cast<uint64_t>(GetBlockIdx()) * nDealPerCore * dDimNum, static_cast<uint64_t>(nDeal) * dDimNum);
+        xGm.SetGlobalBuffer((__gm__ T*)dataX + static_cast<uint64_t>(GetBlockIdx()) * nDealPerCore * dDimNum, static_cast<uint64_t>(nDeal) * dDimNum);
+        gxGm.SetGlobalBuffer((__gm__ T*)dataGx + static_cast<uint64_t>(GetBlockIdx()) * nDealPerCore * dDimNum, static_cast<uint64_t>(nDeal) * dDimNum);
+        meanGm.SetGlobalBuffer((__gm__ float*)dataMean + static_cast<uint64_t>(GetBlockIdx()) * nDealPerCore, nDeal);
+        rstdGm.SetGlobalBuffer((__gm__ float*)dataRstd + static_cast<uint64_t>(GetBlockIdx()) * nDealPerCore, nDeal);
         gammaGm.SetGlobalBuffer((__gm__ T*)dataGamma, dDimNum);
 
-        outputDxGm.SetGlobalBuffer((__gm__ T*)outputDx + GetBlockIdx() * nDealPerCore * dDimNum, nDeal * dDimNum);
-        outputDgxGm.SetGlobalBuffer((__gm__ T*)outputDgx + GetBlockIdx() * nDealPerCore * dDimNum, nDeal * dDimNum);
+        outputDxGm.SetGlobalBuffer((__gm__ T*)outputDx + static_cast<uint64_t>(GetBlockIdx()) * nDealPerCore * dDimNum, static_cast<uint64_t>(nDeal) * dDimNum);
+        outputDgxGm.SetGlobalBuffer((__gm__ T*)outputDgx + static_cast<uint64_t>(GetBlockIdx()) * nDealPerCore * dDimNum, static_cast<uint64_t>(nDeal) * dDimNum);
         outputDbetaGm.SetGlobalBuffer((__gm__ float*)outputDbeta, dDimNum);
         outputDgammaGm.SetGlobalBuffer((__gm__ float*)outputDgamma, dDimNum);
     }
 
     __aicore__ inline void InitQueue()
     {
-        uint32_t sizeND = mergeNCountUpdatePer * elemWithDInUB * sizeof(T);
-        uint32_t sizeNDFp32 = mergeNCountUpdatePer * elemWithDInUB * sizeof(float);
-        uint32_t sizeD = elemWithDInUB * sizeof(T);
-        uint32_t sizeDFp32 = elemWithDInUBFp32 * sizeof(float);
-        uint32_t brcbNFp32 = brcbLineAlignedPer * elemWithoutDInUBFp32 * sizeof(float);
-        uint32_t brcbNDFp32 = brcbLineAlignedPer * elemWithDInUB * sizeof(float);
+        uint64_t sizeND = static_cast<uint64_t>(mergeNCountUpdatePer) * elemWithDInUB * sizeof(T);
+        uint64_t sizeNDFp32 = static_cast<uint64_t>(mergeNCountUpdatePer) * elemWithDInUB * sizeof(float);
+        uint64_t sizeD = static_cast<uint64_t>(elemWithDInUB) * sizeof(T);
+        uint64_t sizeDFp32 = static_cast<uint64_t>(elemWithDInUBFp32) * sizeof(float);
+        uint64_t brcbNFp32 = static_cast<uint64_t>(brcbLineAlignedPer) * elemWithoutDInUBFp32 * sizeof(float);
+        uint64_t brcbNDFp32 = static_cast<uint64_t>(brcbLineAlignedPer) * elemWithDInUB * sizeof(float);
 
         pipe.InitBuffer(dyQue, BUFFER_NUM, sizeND); 
         pipe.InitBuffer(xQue, BUFFER_NUM, sizeND);
@@ -266,8 +266,8 @@ private:
         LocalTensor<float> meanLocal = meanQue.AllocTensor<float>();
         LocalTensor<float> rstdLocal = rstdQue.AllocTensor<float>();
 
-        uint32_t offsetND = processID * mergeNCountUpdatePer * dDimNum;
-        uint32_t offsetN = processID * mergeNCountUpdatePer;
+        uint64_t offsetND = static_cast<uint64_t>(processID) * mergeNCountUpdatePer * dDimNum;
+        uint64_t offsetN = static_cast<uint64_t>(processID) * mergeNCountUpdatePer;
 #if __CCE_AICORE__ == 220
         // dy&x&gx
         DataCopyParams dataCopyParamsND{(uint16_t)processNCount, (uint16_t)(processElem * sizeof(T)), 0, 0};
@@ -314,7 +314,7 @@ private:
         LocalTensor<T> outputPdXLocal = outputPdXQue.DeQue<T>();
         LocalTensor<T> outputPdGxLocal = outputPdGxQue.DeQue<T>();
 
-        uint32_t offsetND = processID * mergeNCountUpdatePer * dDimNum;
+        uint64_t offsetND = static_cast<uint64_t>(processID) * mergeNCountUpdatePer * dDimNum;
 
         DataCopyCustom<T>(outputDxGm, outputPdXLocal, processElem, offsetND, false, (uint16_t)processNCount);
         DataCopyCustom<T>(outputDgxGm, outputPdGxLocal, processElem, offsetND, false, (uint16_t)processNCount);
@@ -368,7 +368,7 @@ private:
         LocalTensor<float> outputPdXFp32Local = outputPdXFp32Buf.Get<float>();
         LocalTensor<float> outputPdGxFp32Local = outputPdGxFp32Buf.Get<float>();
 
-        uint32_t processElemND = processNCount * elemWithDInUB;
+        uint64_t processElemND = static_cast<uint64_t>(processNCount) * elemWithDInUB;
 
         Cast(dyFp32Local, inputDy, RoundMode::CAST_NONE, processElemND);
         Cast(xFp32Local, inputX, RoundMode::CAST_NONE, processElemND);
@@ -406,7 +406,7 @@ private:
         LocalTensor<float> brcbNDBufLocal1 = brcbNDBuf1.Get<float>();
         LocalTensor<float> brcbNDBufLocal2 = brcbNDBuf2.Get<float>();
 
-        uint32_t processElemND = processNCount * elemWithDInUB;
+        uint64_t processElemND = static_cast<uint64_t>(processNCount) * elemWithDInUB;
         uint32_t brcbRepTimes = brcbLineAligned / BRCB_ONCE_ELEM;
         uint8_t brcbBlockStride = elemWithDInUB / FLOAT_BLOCK_ELEM;
         uint16_t brcbRepStride = brcbBlockStride * BRCB_ONCE_ELEM; 

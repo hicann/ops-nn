@@ -25,44 +25,44 @@ public:
         GM_ADDR data_dy, GM_ADDR data_x, GM_ADDR data_gx, GM_ADDR data_rstd, GM_ADDR data_mean, GM_ADDR data_gamma,
         GM_ADDR output_pd_x, GM_ADDR output_pd_gx, GM_ADDR output_pd_gamma, GM_ADDR output_pd_beta)
     {
-        dy_gm.SetGlobalBuffer((__gm__ T*)data_dy + GetBlockIdx() * N_deal_per_core * D_dim_num, N_deal * D_dim_num);
-        x_gm.SetGlobalBuffer((__gm__ T*)data_x + GetBlockIdx() * N_deal_per_core * D_dim_num, N_deal * D_dim_num);
-        gx_gm.SetGlobalBuffer((__gm__ T*)data_gx + GetBlockIdx() * N_deal_per_core * D_dim_num, N_deal * D_dim_num);
-        mean_gm.SetGlobalBuffer((__gm__ float*)data_mean + GetBlockIdx() * N_deal_per_core, N_deal);
-        rstd_gm.SetGlobalBuffer((__gm__ float*)data_rstd + GetBlockIdx() * N_deal_per_core, N_deal);
+        dy_gm.SetGlobalBuffer((__gm__ T*)data_dy + static_cast<uint64_t>(GetBlockIdx()) * N_deal_per_core * D_dim_num, static_cast<uint64_t>(N_deal) * D_dim_num);
+        x_gm.SetGlobalBuffer((__gm__ T*)data_x + static_cast<uint64_t>(GetBlockIdx()) * N_deal_per_core * D_dim_num, static_cast<uint64_t>(N_deal) * D_dim_num);
+        gx_gm.SetGlobalBuffer((__gm__ T*)data_gx + static_cast<uint64_t>(GetBlockIdx()) * N_deal_per_core * D_dim_num, static_cast<uint64_t>(N_deal) * D_dim_num);
+        mean_gm.SetGlobalBuffer((__gm__ float*)data_mean + static_cast<uint64_t>(GetBlockIdx()) * N_deal_per_core, N_deal);
+        rstd_gm.SetGlobalBuffer((__gm__ float*)data_rstd + static_cast<uint64_t>(GetBlockIdx()) * N_deal_per_core, N_deal);
         gamma_gm.SetGlobalBuffer((__gm__ T*)data_gamma, D_dim_num);
 
         output_pd_x_gm.SetGlobalBuffer(
-            (__gm__ T*)output_pd_x + GetBlockIdx() * N_deal_per_core * D_dim_num, N_deal * D_dim_num);
+            (__gm__ T*)output_pd_x + static_cast<uint64_t>(GetBlockIdx()) * N_deal_per_core * D_dim_num, static_cast<uint64_t>(N_deal) * D_dim_num);
         output_pd_gx_gm.SetGlobalBuffer(
-            (__gm__ T*)output_pd_gx + GetBlockIdx() * N_deal_per_core * D_dim_num, N_deal * D_dim_num);
+            (__gm__ T*)output_pd_gx + static_cast<uint64_t>(GetBlockIdx()) * N_deal_per_core * D_dim_num, static_cast<uint64_t>(N_deal) * D_dim_num);
         output_pd_beta_gm.SetGlobalBuffer((__gm__ float*)output_pd_beta, D_dim_num);
         output_pd_gamma_gm.SetGlobalBuffer((__gm__ float*)output_pd_gamma, D_dim_num);
     }
 
     __aicore__ inline void InitQueue()
     {
-        pipe.InitBuffer(dy_que, BUFFER_NUM, merge_N_count_update_per * elem_with_D_in_ub * sizeof(T));
-        pipe.InitBuffer(x_que, BUFFER_NUM, merge_N_count_update_per * elem_with_D_in_ub * sizeof(T));
-        pipe.InitBuffer(gx_que, BUFFER_NUM, merge_N_count_update_per * elem_with_D_in_ub * sizeof(T));
-        pipe.InitBuffer(mean_que, BUFFER_NUM, merge_N_count_update_per * elem_without_D_in_ub_fp32 * sizeof(float));
-        pipe.InitBuffer(rstd_que, BUFFER_NUM, merge_N_count_update_per * elem_without_D_in_ub_fp32 * sizeof(float));
-        pipe.InitBuffer(gamma_que, BUFFER_NUM, elem_with_D_in_ub * sizeof(T));
-        pipe.InitBuffer(output_pd_x_que, BUFFER_NUM, merge_N_count_update_per * elem_with_D_in_ub * sizeof(T));
-        pipe.InitBuffer(output_pd_gx_que, BUFFER_NUM, merge_N_count_update_per * elem_with_D_in_ub * sizeof(T));
-        pipe.InitBuffer(output_pd_beta_que, BUFFER_NUM, elem_with_D_in_ub_fp32 * sizeof(float));
-        pipe.InitBuffer(output_pd_gamma_que, BUFFER_NUM, elem_with_D_in_ub_fp32 * sizeof(float));
+        pipe.InitBuffer(dy_que, BUFFER_NUM, static_cast<uint64_t>(merge_N_count_update_per) * elem_with_D_in_ub * sizeof(T));
+        pipe.InitBuffer(x_que, BUFFER_NUM, static_cast<uint64_t>(merge_N_count_update_per) * elem_with_D_in_ub * sizeof(T));
+        pipe.InitBuffer(gx_que, BUFFER_NUM, static_cast<uint64_t>(merge_N_count_update_per) * elem_with_D_in_ub * sizeof(T));
+        pipe.InitBuffer(mean_que, BUFFER_NUM, static_cast<uint64_t>(merge_N_count_update_per) * elem_without_D_in_ub_fp32 * sizeof(float));
+        pipe.InitBuffer(rstd_que, BUFFER_NUM, static_cast<uint64_t>(merge_N_count_update_per) * elem_without_D_in_ub_fp32 * sizeof(float));
+        pipe.InitBuffer(gamma_que, BUFFER_NUM, static_cast<uint64_t>(elem_with_D_in_ub) * sizeof(T));
+        pipe.InitBuffer(output_pd_x_que, BUFFER_NUM, static_cast<uint64_t>(merge_N_count_update_per) * elem_with_D_in_ub * sizeof(T));
+        pipe.InitBuffer(output_pd_gx_que, BUFFER_NUM, static_cast<uint64_t>(merge_N_count_update_per) * elem_with_D_in_ub * sizeof(T));
+        pipe.InitBuffer(output_pd_beta_que, BUFFER_NUM, static_cast<uint64_t>(elem_with_D_in_ub_fp32) * sizeof(float));
+        pipe.InitBuffer(output_pd_gamma_que, BUFFER_NUM, static_cast<uint64_t>(elem_with_D_in_ub_fp32) * sizeof(float));
 #if __CCE_AICORE__ == 220
         if constexpr (is_same<T, half>::value || is_same<T, bfloat16_t>::value) {
 #else
         if constexpr (is_same<T, half>::value) {
 #endif
-            pipe.InitBuffer(dy_fp32_buf, elem_with_D_in_ub_fp32 * sizeof(float));
-            pipe.InitBuffer(x_fp32_buf, elem_with_D_in_ub_fp32 * sizeof(float));
-            pipe.InitBuffer(gx_fp32_buf, elem_with_D_in_ub_fp32 * sizeof(float));
-            pipe.InitBuffer(gamma_fp32_buf, elem_with_D_in_ub_fp32 * sizeof(float));
-            pipe.InitBuffer(output_pd_x_fp32_buf, elem_with_D_in_ub_fp32 * sizeof(float));
-            pipe.InitBuffer(output_pd_gx_fp32_buf, elem_with_D_in_ub_fp32 * sizeof(float));
+            pipe.InitBuffer(dy_fp32_buf, static_cast<uint64_t>(elem_with_D_in_ub_fp32) * sizeof(float));
+            pipe.InitBuffer(x_fp32_buf, static_cast<uint64_t>(elem_with_D_in_ub_fp32) * sizeof(float));
+            pipe.InitBuffer(gx_fp32_buf, static_cast<uint64_t>(elem_with_D_in_ub_fp32) * sizeof(float));
+            pipe.InitBuffer(gamma_fp32_buf, static_cast<uint64_t>(elem_with_D_in_ub_fp32) * sizeof(float));
+            pipe.InitBuffer(output_pd_x_fp32_buf, static_cast<uint64_t>(elem_with_D_in_ub_fp32) * sizeof(float));
+            pipe.InitBuffer(output_pd_gx_fp32_buf, static_cast<uint64_t>(elem_with_D_in_ub_fp32) * sizeof(float));
         }
     }
 
@@ -246,8 +246,8 @@ private:
         LocalTensor<float> mean_local = mean_que.AllocTensor<float>();
         LocalTensor<float> rstd_local = rstd_que.AllocTensor<float>();
 
-        uint32_t offset_ND = process_id * merge_N_count_update_per * D_dim_num;
-        uint32_t offset_N = process_id * merge_N_count_update_per;
+        uint64_t offset_ND = static_cast<uint64_t>(process_id) * merge_N_count_update_per * D_dim_num;
+        uint64_t offset_N = static_cast<uint64_t>(process_id) * merge_N_count_update_per;
 
 #if __CCE_AICORE__ == 220
         // dy&x&gx
@@ -298,7 +298,7 @@ private:
         LocalTensor<T> output_pd_x_local = output_pd_x_que.DeQue<T>();
         LocalTensor<T> output_pd_gx_local = output_pd_gx_que.DeQue<T>();
 
-        uint32_t offset_ND = process_id * merge_N_count_update_per * D_dim_num;
+        uint64_t offset_ND = static_cast<uint64_t>(process_id) * merge_N_count_update_per * D_dim_num;
 
         DataCopyCustom<T>(output_pd_x_gm, output_pd_x_local, process_elem, offset_ND, false, (uint16_t)process_N_count);
         DataCopyCustom<T>(

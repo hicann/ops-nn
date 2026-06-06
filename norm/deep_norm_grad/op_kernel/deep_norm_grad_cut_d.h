@@ -25,15 +25,15 @@ public:
         GM_ADDR dataDy, GM_ADDR dataX, GM_ADDR dataGx, GM_ADDR dataRstd, GM_ADDR dataMean, GM_ADDR dataGamma,
         GM_ADDR outputPdX, GM_ADDR outputPdGx, GM_ADDR outputPdGamma, GM_ADDR outputPdBeta)
     {
-        dyGm.SetGlobalBuffer((__gm__ T*)dataDy + GetBlockIdx() * nDealPerCore * dDimNum, nDeal * dDimNum);
-        xGm.SetGlobalBuffer((__gm__ T*)dataX + GetBlockIdx() * nDealPerCore * dDimNum, nDeal * dDimNum);
-        gxGm.SetGlobalBuffer((__gm__ T*)dataGx + GetBlockIdx() * nDealPerCore * dDimNum, nDeal * dDimNum);
-        meanGm.SetGlobalBuffer((__gm__ float*)dataMean + GetBlockIdx() * nDealPerCore, nDeal);
-        rstdGm.SetGlobalBuffer((__gm__ float*)dataRstd + GetBlockIdx() * nDealPerCore, nDeal);
+        dyGm.SetGlobalBuffer((__gm__ T*)dataDy + static_cast<uint64_t>(GetBlockIdx()) * nDealPerCore * dDimNum, static_cast<uint64_t>(nDeal) * dDimNum);
+        xGm.SetGlobalBuffer((__gm__ T*)dataX + static_cast<uint64_t>(GetBlockIdx()) * nDealPerCore * dDimNum, static_cast<uint64_t>(nDeal) * dDimNum);
+        gxGm.SetGlobalBuffer((__gm__ T*)dataGx + static_cast<uint64_t>(GetBlockIdx()) * nDealPerCore * dDimNum, static_cast<uint64_t>(nDeal) * dDimNum);
+        meanGm.SetGlobalBuffer((__gm__ float*)dataMean + static_cast<uint64_t>(GetBlockIdx()) * nDealPerCore, nDeal);
+        rstdGm.SetGlobalBuffer((__gm__ float*)dataRstd + static_cast<uint64_t>(GetBlockIdx()) * nDealPerCore, nDeal);
         gammaGm.SetGlobalBuffer((__gm__ T*)dataGamma, dDimNum);
 
-        outputPdXGm.SetGlobalBuffer((__gm__ T*)outputPdX + GetBlockIdx() * nDealPerCore * dDimNum, nDeal * dDimNum);
-        outputPdGxGm.SetGlobalBuffer((__gm__ T*)outputPdGx + GetBlockIdx() * nDealPerCore * dDimNum, nDeal * dDimNum);
+        outputPdXGm.SetGlobalBuffer((__gm__ T*)outputPdX + static_cast<uint64_t>(GetBlockIdx()) * nDealPerCore * dDimNum, static_cast<uint64_t>(nDeal) * dDimNum);
+        outputPdGxGm.SetGlobalBuffer((__gm__ T*)outputPdGx + static_cast<uint64_t>(GetBlockIdx()) * nDealPerCore * dDimNum, static_cast<uint64_t>(nDeal) * dDimNum);
         outputPdBetaGm.SetGlobalBuffer((__gm__ float*)outputPdBeta, dDimNum);
         outputPdGammaGm.SetGlobalBuffer((__gm__ float*)outputPdGamma, dDimNum);
         // use atomicadd, need init beta&gamma

@@ -59,52 +59,52 @@ __aicore__ inline void SafeDataCopy(
     const AscendC::GlobalTensor<T>& dstGlobal, const AscendC::LocalTensor<T>& srcLocal, const int64_t& calCount,
     bool recoverUbTailFormat = false)
 {
-    constexpr int typeSize = sizeof(T);                                // Ԫ���ֽ���
-    constexpr int numElemsPerBlock = AscendC::ONE_BLK_SIZE / typeSize; // 32byteԪ����
-    if constexpr (IsDataCopyPadSupport() && sizeof(T) < 8) { // ���֧��DataCopyPad��ֱ��DataCopyPad����
+    constexpr int typeSize = sizeof(T);                                
+    constexpr int numElemsPerBlock = AscendC::ONE_BLK_SIZE / typeSize;
+    if constexpr (IsDataCopyPadSupport() && sizeof(T) < 8) {
         AscendC::DataCopyParams copyParams{1, static_cast<uint16_t>(calCount * typeSize), 0, 0};
         DataCopyPad(dstGlobal, srcLocal, copyParams);
     } else {
-        if (likely(!(calCount % numElemsPerBlock))) { // ������ֱ��DataCopy����
+        if (likely(!(calCount % numElemsPerBlock))) {
             struct AscendC::DataCopyParams copyParams;
             copyParams.blockLen = calCount / AscendC::AscendCUtils::GetC0Count(typeSize);
             DataCopy(dstGlobal, srcLocal, copyParams);
-        } else { // ����Ȳ�֧��DataCopyPadҲ���������ַ���˿���
-            const int numAlignedBlocks = calCount / numElemsPerBlock * numElemsPerBlock; // ���벿��
+        } else {
+            const int numAlignedBlocks = calCount / numElemsPerBlock * numElemsPerBlock;
             if (calCount * typeSize < AscendC::ONE_BLK_SIZE) {
                 DataCopy(dstGlobal, srcLocal, numElemsPerBlock);
-                return; // �˴���Ȼ���ڴ��̤
+                return;
             }
             DataCopy(dstGlobal, srcLocal, numAlignedBlocks);
             event_t eventId = static_cast<event_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE3_S));
             AscendC::SetFlag<AscendC::HardEvent::MTE3_S>(eventId);
             AscendC::WaitFlag<AscendC::HardEvent::MTE3_S>(eventId);
-            const int rollbackEleCount = calCount - numAlignedBlocks;          // ������Ҫ���˴���byte��
-            const size_t rollbackDstIdx = numAlignedBlocks - numElemsPerBlock; // �������˵�blockԪ������
-            const size_t rollbackSrcIdx = rollbackDstIdx + rollbackEleCount;   // ������ԴԪ������
+            const int rollbackEleCount = calCount - numAlignedBlocks;   
+            const size_t rollbackDstIdx = numAlignedBlocks - numElemsPerBlock;
+            const size_t rollbackSrcIdx = rollbackDstIdx + rollbackEleCount;
             if constexpr (!forAtomicAdd) {
-                for (int i = numElemsPerBlock - 1; i >= 0; --i) { // �������Ƕ����β����һ��block��size������䵽ǰһ��block��
-                    srcLocal.SetValue((rollbackDstIdx + i), srcLocal.GetValue(rollbackSrcIdx + i)); // ����local buf
+                for (int i = numElemsPerBlock - 1; i >= 0; --i) {
+                    srcLocal.SetValue((rollbackDstIdx + i), srcLocal.GetValue(rollbackSrcIdx + i));
                 }
             } else {
-                const size_t setZeroEleCount = numElemsPerBlock - rollbackEleCount; // ��Ҫ��0��Ԫ����
+                const size_t setZeroEleCount = numElemsPerBlock - rollbackEleCount;
                 for (int i = 0; i < setZeroEleCount; ++i) {
-                    srcLocal.SetValue((rollbackDstIdx + i), 0); // Atomicģʽ�£����˲�����0��ʹ�û��˲��ֲ����ظ���
+                    srcLocal.SetValue((rollbackDstIdx + i), 0);
                 }
-                for (int i = setZeroEleCount; i < numElemsPerBlock; ++i) { // �������Ƕ����β�鸴����䵽ǰһ��block��
-                    srcLocal.SetValue((rollbackDstIdx + i), srcLocal.GetValue(rollbackSrcIdx + i)); // ����local buf
+                for (int i = setZeroEleCount; i < numElemsPerBlock; ++i) {
+                    srcLocal.SetValue((rollbackDstIdx + i), srcLocal.GetValue(rollbackSrcIdx + i));
                 }
                 DataCopy(dstGlobal[calCount - numElemsPerBlock], srcLocal[rollbackDstIdx], numElemsPerBlock);
-                return; // AtomicAddģʽ�� �ݲ�֧��recoverUbTailFormat����������չ֧��
+                return;
             }
             DataCopy(dstGlobal[calCount - numElemsPerBlock], srcLocal[rollbackDstIdx], numElemsPerBlock);
-            if (recoverUbTailFormat) { // ��ԭ�ع��ֳ�
+            if (recoverUbTailFormat) {
                 event_t eventId = static_cast<event_t>(GetTPipePtr()->FetchEventID(AscendC::HardEvent::MTE3_MTE2));
                 AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(eventId);
                 AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(eventId);
                 DataCopy(
                     srcLocal[rollbackDstIdx], dstGlobal[rollbackDstIdx],
-                    numElemsPerBlock); // ��ԭ���ڻ��˵�block����
+                    numElemsPerBlock);
             }
         }
     }
@@ -396,7 +396,7 @@ __aicore__ inline uint32_t RoundUp(uint32_t x, uint32_t blockElem)
 
 template <typename T, typename U, typename R>
 __aicore__ inline void DataCopyCustom(
-    const U& dstTensor, const R& srcTensor, const uint32_t processElem, const uint32_t offset, bool is_float,
+    const U& dstTensor, const R& srcTensor, const uint32_t processElem, const uint64_t offset, bool is_float,
     const uint16_t blockCount)
 {
 #if __CCE_AICORE__ == 220
@@ -404,11 +404,11 @@ __aicore__ inline void DataCopyCustom(
     DataCopyPad(dstTensor[offset], srcTensor, dataCopyParamsND);
 #else
     int32_t blockNumel = is_float ? BLOCK_ALIGN_SIZE / sizeof(float) : BLOCK_ALIGN_SIZE / sizeof(T);
-    int32_t blockNum = processElem / blockNumel; // 32/byte
+    int32_t blockNum = processElem / blockNumel;
     int32_t tail = processElem % blockNumel;
     int32_t blkLength = blockNum * blockNumel;
     for (uint32_t idx = 0; idx < blockCount; idx++) {
-        uint32_t curOffset = offset + idx * processElem;
+        uint64_t curOffset = offset + static_cast<uint64_t>(idx) * processElem;
         if (blockNum == 0) {
             break;
         }
@@ -433,13 +433,13 @@ __aicore__ inline void DataCopyCustom(
 
 __aicore__ inline void DataCopyAutomicAdd(
     GlobalTensor<float> dstTensor, const LocalTensor<float> srcTensor, const uint32_t processElem,
-    const uint32_t offset, const uint16_t blockCount)
+    const uint64_t offset, const uint16_t blockCount)
 {
 #if __CCE_AICORE__ == 220
     DataCopyParams dataCopyParamsND{blockCount, (uint16_t)(processElem * sizeof(float)), 0, 0};
     DataCopyPad(dstTensor[offset], srcTensor, dataCopyParamsND);
 #else
-    SafeDataCopy<true>(dstTensor[offset], srcTensor, blockCount * processElem);
+    SafeDataCopy<true>(dstTensor[offset], srcTensor, static_cast<uint64_t>(blockCount) * processElem);
 #endif
 }
 
