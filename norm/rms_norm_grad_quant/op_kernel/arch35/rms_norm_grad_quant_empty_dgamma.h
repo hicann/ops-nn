@@ -105,22 +105,22 @@ __aicore__ inline void Process()
 
 private:
 
-TQue<QuePosition::VECOUT, 1> dgammaQueue_;
+    TQue<QuePosition::VECOUT, 1> dgammaQueue_;
 
-GlobalTensor<float> dgammaGm_;
-uint64_t colsLastCoreDG_;
-uint32_t coreIdx_;
-uint64_t colsPerCore_;
-uint64_t gmOffset_;
-uint64_t usedCoreNumDG_;
-uint64_t colsPerUB_;
-uint64_t tailUbCols_;
-uint64_t ubLoopCount_;
-uint64_t lastUbLoopCount_;
-uint64_t lastCoreTailUbCols_;
-TPipe *Ppipe_ = nullptr;
+    GlobalTensor<float> dgammaGm_;
+    uint64_t colsLastCoreDG_;
+    uint32_t coreIdx_;
+    uint64_t colsPerCore_;
+    uint64_t gmOffset_;
+    uint64_t usedCoreNumDG_;
+    uint64_t colsPerUB_;
+    uint64_t tailUbCols_;
+    uint64_t ubLoopCount_;
+    uint64_t lastUbLoopCount_;
+    uint64_t lastCoreTailUbCols_;
+    TPipe *Ppipe_ = nullptr;
 
-const RmsNormGradQuantRegbaseEmptyTilingData *tiling_;
+    const RmsNormGradQuantRegbaseEmptyTilingData *tiling_;
 };
 } // namespace RmsNormGradQuant
 #endif //RMS_NORM_GRAD_EMPTY_DGAMMA_H

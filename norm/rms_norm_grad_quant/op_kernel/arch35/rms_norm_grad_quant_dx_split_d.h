@@ -379,16 +379,16 @@ public:
                 Sub(subReg, mulReg2, mulReg4, maskReg);
                 Mul(dxReg, subReg, rstdReg, maskReg);
                 // cal quant
-                    LoadTensorForDtypeTIn(scalesXAddr, scalesXReg, maskReg);
-                    if constexpr (DIV_MODE) {
-                        Div(scalesXResultReg, dxReg, scalesXReg, maskReg);
-                    } else {
-                        Mul(scalesXResultReg, dxReg, scalesXReg, maskReg);
-                    }
-                    if constexpr (HAS_OFFSET_X) {
-                        LoadTensorForDtypeTIn(offsetXAddr, offsetXReg, maskReg);
-                        Add(scalesXResultReg, scalesXResultReg, offsetXReg, maskReg);
-                    }
+                LoadTensorForDtypeTIn(scalesXAddr, scalesXReg, maskReg);
+                if constexpr (DIV_MODE) {
+                    Div(scalesXResultReg, dxReg, scalesXReg, maskReg);
+                } else {
+                    Mul(scalesXResultReg, dxReg, scalesXReg, maskReg);
+                }
+                if constexpr (HAS_OFFSET_X) {
+                    LoadTensorForDtypeTIn(offsetXAddr, offsetXReg, maskReg);
+                    Add(scalesXResultReg, scalesXResultReg, offsetXReg, maskReg);
+                }
                 if constexpr (IsSameType<T_DX, hifloat8_t>::value) {
                     RegTensor<T_DX> dxRegHif8;
                     Cast<T_DX, float, castTraitFp322Hifp8>(dxRegHif8, scalesXResultReg, maskReg);
