@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -30,7 +30,8 @@ __global__ __aicore__ void ascend_quant(GM_ADDR x, GM_ADDR y, GM_ADDR workspace,
     GET_TILING_DATA(tilingData, tiling);
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
     AscendQuantPerTensorRegbase<DTYPE_X, DTYPE_Y, RoundMode> op;
-    op.Init(x, y, &tilingData);
+    TPipe pipe;
+    op.Init(x, y, &tilingData, &pipe);
     op.Process();
     #if (__NPU_ARCH__ == 3510)
         AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(oriOverflowMode);

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ template <typename T, typename U, uint64_t RoundMode>
 class AscendQuantPerTensorRegbase : public AscendQuantBase<T, U, RoundMode> {
 public:
     __aicore__ inline AscendQuantPerTensorRegbase(){};
-    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, const AscendQuantTilingData* tilingData);
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, const AscendQuantTilingData* tilingData, TPipe* pipe);
     __aicore__ inline void Process();
 
 private:
@@ -38,13 +38,13 @@ private:
 private:
     using yCopyDtype = std::conditional_t<IsSameType<U, int4b_t>::value, uint8_t, U>;
     constexpr static int32_t bufferNum_ = 2;
-    TPipe pipe_;
+    TPipe* pipe_;
     TQue<QuePosition::VECIN, bufferNum_> inQueueX_;
     TQue<QuePosition::VECOUT, bufferNum_> outQueueY_;
     GlobalTensor<T> xGm_;
     GlobalTensor<yCopyDtype> yGm_;
 
-    AscendQuantTilingData tilingData_;
+    const AscendQuantTilingData* tilingData_;
     int32_t blockIdx_ = 0;
     int64_t gmXOffset_ = 0;
     int64_t blockLen_ = 1;
@@ -64,38 +64,39 @@ __aicore__ inline void SetFloatOverflowModeForRegbase()
 
 template <typename T, typename U, uint64_t RoundMode>
 __aicore__ inline void AscendQuantPerTensorRegbase<T, U, RoundMode>::Init(
-    GM_ADDR x, GM_ADDR y, const AscendQuantTilingData* tilingData)
+    GM_ADDR x, GM_ADDR y, const AscendQuantTilingData* tilingData, TPipe* pipe)
 {
-    SetFloatOverflowModeForRegbase<U>();  
+    SetFloatOverflowModeForRegbase<U>();
+    pipe_ = pipe;
     blockIdx_ = GetBlockIdx();
     xGm_.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(x));
     yGm_.SetGlobalBuffer(reinterpret_cast<__gm__ yCopyDtype*>(y));
 
-    this->ParseTilingData(tilingData, tilingData_);
+    tilingData_ = tilingData;
     this->ParseCoreBlocks(tilingData_, blockIdx_, blockLen_);
 
     // calc n size to alloc queue
-    pipe_.InitBuffer(inQueueX_, bufferNum_, tilingData_.baseLen * sizeof(T));
-    pipe_.InitBuffer(outQueueY_, bufferNum_, tilingData_.baseLen * sizeof(U));
+    pipe_->InitBuffer(inQueueX_, bufferNum_, tilingData_->baseLen * sizeof(T));
+    pipe_->InitBuffer(outQueueY_, bufferNum_, tilingData_->baseLen * sizeof(U));
 }
 
 template <typename T, typename U, uint64_t RoundMode>
 __aicore__ inline void AscendQuantPerTensorRegbase<T, U, RoundMode>::Process()
 {
-    if (blockIdx_ >= tilingData_.numCore) {
+    if (blockIdx_ >= tilingData_->numCore) {
         return;
     }
-    gmXOffset_ = blockIdx_ * tilingData_.blockFactor;
+    gmXOffset_ = blockIdx_ * tilingData_->blockFactor;
 
     // main loop with column, for scale and offset only need copy once
-    int64_t lenLoopNum = blockLen_ / tilingData_.baseLen;
-    int64_t lenLoopTail = blockLen_ % tilingData_.baseLen;
+    int64_t lenLoopNum = blockLen_ / tilingData_->baseLen;
+    int64_t lenLoopTail = blockLen_ % tilingData_->baseLen;
 
     for (int64_t i = 0; i < lenLoopNum; ++i) {
-        CopyXAndCompute(tilingData_.baseLen, gmXOffset_ + i * tilingData_.baseLen);
+        CopyXAndCompute(tilingData_->baseLen, gmXOffset_ + i * tilingData_->baseLen);
     }
     if (lenLoopTail != 0) {
-        CopyXAndCompute(lenLoopTail, gmXOffset_ + lenLoopNum * tilingData_.baseLen);
+        CopyXAndCompute(lenLoopTail, gmXOffset_ + lenLoopNum * tilingData_->baseLen);
     }
 }
 
@@ -129,8 +130,8 @@ __aicore__ inline void AscendQuantPerTensorRegbase<T, U, RoundMode>::Compute(int
 
     uint16_t VL = AscendC::VECTOR_REG_WIDTH / sizeof(float);
 
-    float ATTR_SCALE = tilingData_.scale;
-    float ATTR_OFFSET = tilingData_.offset;
+    float ATTR_SCALE = tilingData_->scale;
+    float ATTR_OFFSET = tilingData_->offset;
 
     __VEC_SCOPE__
     {

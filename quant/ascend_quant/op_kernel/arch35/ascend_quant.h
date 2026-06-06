@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -33,14 +33,12 @@ public:
     __aicore__ inline AscendQuantBase(){};
 
 protected:
-    __aicore__ inline void ParseTilingData(
-        const AscendQuantTilingData* tilingData, AscendQuantTilingData& runTilingData);
     __aicore__ inline void ParseCoreBlocks(
-        const AscendQuantTilingData& runTilingData, int32_t blockIdx, int64_t& blockLen);
+        const AscendQuantTilingData* runTilingData, int32_t blockIdx, int64_t& blockLen);
     __aicore__ inline void GetXInCopyParams(
-        const AscendQuantTilingData& runTilingData, int64_t xLen, AscendC::DataCopyExtParams& copyParams);
+        const AscendQuantTilingData* runTilingData, int64_t xLen, AscendC::DataCopyExtParams& copyParams);
     __aicore__ inline void GetOutCopyParams(
-        const AscendQuantTilingData& runTilingData, int64_t yLen, AscendC::DataCopyExtParams& copyParams);
+        const AscendQuantTilingData* runTilingData, int64_t yLen, AscendC::DataCopyExtParams& copyParams);
 
 protected:
     constexpr static int32_t BLOCK_SIZE = GetUbBlockSize();
@@ -156,43 +154,29 @@ protected:
 };
 
 template <typename T, typename U, uint64_t RoundMode>
-__aicore__ inline void AscendQuantBase<T, U, RoundMode>::ParseTilingData(
-    const AscendQuantTilingData* tilingData, AscendQuantTilingData& runTilingData)
-{
-    runTilingData.numCore = tilingData->numCore;
-    runTilingData.dim0 = tilingData->dim0;
-    runTilingData.blockFactor = tilingData->blockFactor;
-    runTilingData.blockTailFactor = tilingData->blockTailFactor;
-    runTilingData.baseLen = tilingData->baseLen;
-    runTilingData.roundMode = tilingData->roundMode;
-    runTilingData.scale = tilingData->scale;
-    runTilingData.offset = tilingData->offset;
-}
-
-template <typename T, typename U, uint64_t RoundMode>
 __aicore__ inline void AscendQuantBase<T, U, RoundMode>::ParseCoreBlocks(
-    const AscendQuantTilingData& runTilingData, int32_t blockIdx, int64_t& blockLen)
+    const AscendQuantTilingData* runTilingData, int32_t blockIdx, int64_t& blockLen)
 {
-    if (blockIdx == runTilingData.numCore - 1) {
-        blockLen = runTilingData.blockTailFactor;
+    if (blockIdx == runTilingData->numCore - 1) {
+        blockLen = runTilingData->blockTailFactor;
     } else {
-        blockLen = runTilingData.blockFactor;
+        blockLen = runTilingData->blockFactor;
     }
 }
 
 template <typename T, typename U, uint64_t RoundMode>
 __aicore__ inline void AscendQuantBase<T, U, RoundMode>::GetXInCopyParams(
-    const AscendQuantTilingData& runTilingData, int64_t xLen, DataCopyExtParams& copyParams)
+    const AscendQuantTilingData* runTilingData, int64_t xLen, DataCopyExtParams& copyParams)
 {
     copyParams.blockCount = 1;
     copyParams.blockLen = xLen * sizeof(T);
-    if (runTilingData.baseLen > xLen) {
-        copyParams.dstStride = (runTilingData.baseLen - xLen) * sizeof(T) / BLOCK_SIZE;
+    if (runTilingData->baseLen > xLen) {
+        copyParams.dstStride = (runTilingData->baseLen - xLen) * sizeof(T) / BLOCK_SIZE;
     } else {
         copyParams.dstStride = 0;
     }
-    if (runTilingData.dim0 > xLen) {
-        copyParams.srcStride = (runTilingData.dim0 - xLen) * sizeof(T);
+    if (runTilingData->dim0 > xLen) {
+        copyParams.srcStride = (runTilingData->dim0 - xLen) * sizeof(T);
     } else {
         copyParams.srcStride = 0;
     }
@@ -201,7 +185,7 @@ __aicore__ inline void AscendQuantBase<T, U, RoundMode>::GetXInCopyParams(
 
 template <typename T, typename U, uint64_t RoundMode>
 __aicore__ inline void AscendQuantBase<T, U, RoundMode>::GetOutCopyParams(
-    const AscendQuantTilingData& runTilingData, int64_t yLen, DataCopyExtParams& copyParams)
+    const AscendQuantTilingData* runTilingData, int64_t yLen, DataCopyExtParams& copyParams)
 {
     int64_t yLenReal = yLen;
     if constexpr (IsSameType<U, int4b_t>::value) {
@@ -211,17 +195,17 @@ __aicore__ inline void AscendQuantBase<T, U, RoundMode>::GetOutCopyParams(
         copyParams.blockLen = yLenReal * sizeof(yCopyDtype);
     }
     copyParams.blockCount = 1;
-    if (runTilingData.dim0 > yLen) {
+    if (runTilingData->dim0 > yLen) {
         if constexpr (IsSameType<U, int4b_t>::value) {
-            copyParams.dstStride = (runTilingData.dim0 - yLen) * sizeof(yCopyDtype) / INT4_NUMS_IN_INT8_SPACE;
+            copyParams.dstStride = (runTilingData->dim0 - yLen) * sizeof(yCopyDtype) / INT4_NUMS_IN_INT8_SPACE;
         } else {
-            copyParams.dstStride = (runTilingData.dim0 - yLen) * sizeof(yCopyDtype);
+            copyParams.dstStride = (runTilingData->dim0 - yLen) * sizeof(yCopyDtype);
         }
     } else {
         copyParams.dstStride = 0;
     }
-    if (runTilingData.baseLen > yLenReal) {
-        copyParams.srcStride = (runTilingData.baseLen - yLenReal) * sizeof(yCopyDtype) / BLOCK_SIZE;
+    if (runTilingData->baseLen > yLenReal) {
+        copyParams.srcStride = (runTilingData->baseLen - yLenReal) * sizeof(yCopyDtype) / BLOCK_SIZE;
     } else {
         copyParams.srcStride = 0;
     }
