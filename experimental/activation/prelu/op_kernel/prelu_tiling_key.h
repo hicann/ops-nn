@@ -1,0 +1,42 @@
+/**
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+
+/*!
+ * \file prelu_tiling_key.h
+ * \brief Tiling 模板参数定义
+ */
+
+#ifndef __PRELU_TILING_KEY_H__
+#define __PRELU_TILING_KEY_H__
+
+#include "ascendc/host_api/tiling/template_argument.h"
+
+#define PRELU_TPL_SCALAR_MODE 0
+#define PRELU_TPL_CHANNEL_FULL_L_MODE 1
+#define PRELU_TPL_CHANNEL_SPLIT_L_MODE 2
+#define PRELU_TPL_CHANNEL_SPLIT_L_PARALLEL_MODE 3
+#define PRELU_TPL_CHANNEL_NC_WEIGHT_REUSE_MODE 4
+#define PRELU_TPL_CHANNEL_NC_SPLIT_C_WEIGHT_REUSE_MODE 5
+#define PRELU_TPL_CHANNEL_NC_RESIDENT_WEIGHT_MODE 6
+
+ASCENDC_TPL_ARGS_DECL(
+    Prelu,
+    ASCENDC_TPL_UINT_DECL(schMode, 3, ASCENDC_TPL_UI_LIST,
+        PRELU_TPL_SCALAR_MODE, PRELU_TPL_CHANNEL_FULL_L_MODE, PRELU_TPL_CHANNEL_SPLIT_L_MODE,
+        PRELU_TPL_CHANNEL_SPLIT_L_PARALLEL_MODE, PRELU_TPL_CHANNEL_NC_WEIGHT_REUSE_MODE,
+        PRELU_TPL_CHANNEL_NC_SPLIT_C_WEIGHT_REUSE_MODE, PRELU_TPL_CHANNEL_NC_RESIDENT_WEIGHT_MODE));
+
+ASCENDC_TPL_SEL(ASCENDC_TPL_ARGS_SEL(
+    ASCENDC_TPL_UINT_SEL(schMode, ASCENDC_TPL_UI_LIST,
+        PRELU_TPL_SCALAR_MODE, PRELU_TPL_CHANNEL_FULL_L_MODE, PRELU_TPL_CHANNEL_SPLIT_L_MODE,
+        PRELU_TPL_CHANNEL_SPLIT_L_PARALLEL_MODE, PRELU_TPL_CHANNEL_NC_WEIGHT_REUSE_MODE,
+        PRELU_TPL_CHANNEL_NC_SPLIT_C_WEIGHT_REUSE_MODE, PRELU_TPL_CHANNEL_NC_RESIDENT_WEIGHT_MODE)));
+
+#endif
