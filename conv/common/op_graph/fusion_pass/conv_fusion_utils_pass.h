@@ -73,6 +73,35 @@ const std::vector<int64_t> HF32_PRECISION_MODES_INT = {0x1, 0x2, 0x40};
         }                                                                                                        \
     } while (0)
 
+std::string GeFormatToString(const ge::Format& geFormat);
+std::string GeDtypeToString(const ge::DataType& geDtype);
+
+inline std::string VectorToString(const std::vector<ge::DataType>& dtypeVec)
+{
+    std::string result = "[";
+    for (size_t i = 0; i < dtypeVec.size(); ++i) {
+        result += GeDtypeToString(dtypeVec[i]);
+        if (i < dtypeVec.size() - 1) {
+            result += ",";
+        }
+    }
+    result += "]";
+    return result;
+}
+
+inline std::string VectorsToString(const std::vector<std::vector<ge::DataType>>& dtypeVecs)
+{
+    std::string result = "[";
+    for (size_t j = 0; j < dtypeVecs.size(); ++j) {
+        result += VectorToString(dtypeVecs[j]);
+        if (j < dtypeVecs.size() - 1) {
+            result += ",";
+        }
+    }
+    result += "]";
+    return result;
+}
+
 struct ConvBaseAttrs {
     std::vector<int64_t> strides = {};
     std::vector<int64_t> pads = {};

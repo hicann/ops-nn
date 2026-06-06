@@ -257,8 +257,14 @@ bool Conv2DPostCubeToExtendConv2DFusionPass::CheckConvPostCubeDtype(const GNodeP
 
     auto supportedDtypes = npuArch == NpuArch::DAV_5102 ?
         SUPPORTED_DTYPES_WITH_POST_CUBE_DAV_5102 : SUPPORTED_DTYPES_WITH_POST_CUBE_DAV_3510;
-    FUSION_PASS_CHECK(!ConvFusionUtilsPass::CheckSupportList<DataType>(supportedDtypes, checkDtypes),
-        OP_LOGE(convDescInfo.nodeNameStr, "Current dtype not supported."), return false);
+    if (!ConvFusionUtilsPass::CheckSupportList<DataType>(supportedDtypes, checkDtypes)) {
+        std::string incorrectDtypes = VectorToString(checkDtypes);
+        std::string reason = "The dtypes of these parameters support only the following combinations: " +
+            VectorsToString(supportedDtypes);
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(convDescInfo.nodeNameStr.c_str(), "x, filter, postCubeIn, postCubeOut",
+            incorrectDtypes.c_str(), reason.c_str());
+        return false;
+    }
 
     return true;
 }
@@ -285,8 +291,11 @@ bool Conv2DPostCubeToExtendConv2DFusionPass::CheckSupportPostCubeCase(const GNod
     AscendString supportedListStr = ConvFusionUtilsPass::ListToAscendString(SUPPORTED_NODE_TYPES);
     for (auto &node : postCubeFusionOp) {
         if (std::find(SUPPORTED_NODE_TYPES.begin(), SUPPORTED_NODE_TYPES.end(), node) == SUPPORTED_NODE_TYPES.end()) {
-            OP_LOGE(convDescInfo.nodeNameStr, "PostCube unit not supported: %s, only support [%s].",
-                node.GetString(), supportedListStr.GetString());
+            std::stringstream reason;
+            reason << "In the fusion pass Conv2DPostCubeToExtendConv2DFusionPass, "
+                   << "the output node connected to this node can only be of the following types: "
+                   << std::string(supportedListStr.GetString());
+            OP_LOGE_FOR_INVALID_GRAPH_NODE(convDescInfo.nodeNameStr.c_str(), reason.str());
             return false;
         }
     }
@@ -302,18 +311,18 @@ bool Conv2DPostCubeToExtendConv2DFusionPass::CheckSupportPostCubeCase(const GNod
         // check PostCube unit input format: quant_scale_0
         Format quantScale0Format = quantScale0Desc.GetFormat();
         if (quantScale0Format != FORMAT_ND && quantScale0Format != FORMAT_NCHW) {
-            OP_LOGE(convDescInfo.nodeNameStr,
-                "PostCube node quant_scale_0 format %s not supported, should be in [ND, NCHW].",
-                TypeUtils::FormatToSerialString(quantScale0Format).c_str());
+            std::string correctFormat = GeFormatToString(FORMAT_ND) + ", " + GeFormatToString(FORMAT_NCHW);
+            OP_LOGE_FOR_INVALID_FORMAT(convDescInfo.nodeNameStr.c_str(), "scale0",
+                GeFormatToString(quantScale0Format).c_str(), correctFormat.c_str());
             return false;
         }
 
         // check PostCube unit input dtype: quant_scale_0
         DataType quantScale0dtype = quantScale0Desc.GetDataType();
         if (quantScale0dtype != ge::DT_UINT64 && quantScale0dtype != ge::DT_INT64) {
-            OP_LOGE(convDescInfo.nodeNameStr,
-                "PostCube node quant_scale_0 dtype %s not supported, should be in [uint64, int64].",
-                TypeUtils::DataTypeToSerialString(quantScale0dtype).c_str());
+            std::string correctDtype = GeDtypeToString(ge::DT_UINT64) + ", " + GeDtypeToString(ge::DT_INT64);
+            OP_LOGE_FOR_INVALID_DTYPE(convDescInfo.nodeNameStr.c_str(), "scale0",
+                GeDtypeToString(quantScale0dtype).c_str(), correctDtype.c_str());
             return false;
         }
     }
@@ -350,8 +359,15 @@ bool Conv2DPostCubeToExtendConv2DFusionPass::GetPostCubeNodes(const GNode &convN
     bool isPostCubeFirst = firstNodeType == POST_CUBE_OP;
 
     if ((postCubeNodes.size() > DUAL_OUTPUTNUM) || (!otherNodes.empty() && postCubeNodes.size() == DUAL_OUTPUTNUM)) {
-        OP_LOGE(convDescInfo.nodeNameStr, "Unsupported multiple outputs with %zu PostCube and %zu other nodes.",
-            postCubeNodes.size(), otherNodes.size());
+        AscendString tmpPostCube = ConvFusionUtilsPass::ListToAscendString(POST_CUBE_NODE_TYPES);
+        std::string supportedPostCubeString(tmpPostCube.GetString());
+        std::stringstream reason;
+        reason << "In the fusion pass Conv2DPostCubeToExtendConv2DFusionPass, "
+               << "the output node combination connected to this node can only be: "
+               << "1. One postCube node and N non-postCube nodes; "
+               << "2. Two postCube nodes. "
+               << "The postCube node types include: " << supportedPostCubeString; 
+        OP_LOGE_FOR_INVALID_GRAPH_NODE(convDescInfo.nodeNameStr.c_str(), reason.str());
         return false;
     }
 

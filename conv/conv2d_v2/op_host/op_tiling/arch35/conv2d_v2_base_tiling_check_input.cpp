@@ -78,8 +78,9 @@ ge::graphStatus Conv2dBaseTiling::GetDisContinuousFlag()
         }
     }
     if (!legalStride) {
-        OP_LOGE_FOR_INVALID_STRIDE(context_->GetNodeType(), "x", VectorToString(realStride, IntToString<int64_t>, "[",
-            "]").c_str(), VectorToString(expectStride, IntToString<int64_t>, "[", "]").c_str());
+        OP_LOGE_FOR_INVALID_STRIDE(context_->GetNodeType(), "x",
+            VectorToString(realStride, IntToString<int64_t>).c_str(),
+            VectorToString(expectStride, IntToString<int64_t>).c_str());
         return ge::GRAPH_FAILED;
     }
     flagInfo_.disContinuousFlag = true;

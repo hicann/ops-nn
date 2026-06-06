@@ -143,7 +143,7 @@ ge::graphStatus ShapeAttrSynthesisCheckAux(const ConvAscendcOriginShapeAttrInfo&
     if (oriShapeAttrInfo.oriFmapC != oriShapeAttrInfo.oriWeightC * oriShapeAttrInfo.oriGroups) {
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeType(), "x, filter",
             VectorsToString(std::vector<std::vector<int64_t>>{
-                GetInputShapeVec(context, INPUT_FMAP_INDEX), GetOutputShapeVec(context, OUTPUT_INDEX)},
+                GetInputShapeVec(context, INPUT_FMAP_INDEX), GetInputShapeVec(context, INPUT_WEIGHT_INDEX)},
                 IntToString<int64_t>).c_str(),
             FormatString("Shape[%zu] of %s must be equal to shape[%zu] of %s multiplied by %s %ld",
                 paramInfo.paramsIdxVec[paramInfo.FMAP_PARAM_IDX][IDX_LIST_C_IDX], "x",
@@ -380,19 +380,20 @@ bool ConvBase::CheckValidString(const string &inputStr, const gert::TilingContex
     }
 
     if (inputStr.size() > MAX_STR_LEN) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeType(), "round_mode",
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeType(), "round_mode",
             inputStr.c_str(),
             FormatString("The string length %zu of this parameter exceeds the maximum value %zu",
                 inputStr.size(), MAX_STR_LEN).c_str()
         );
         return false;
     }
-    if (!std::all_of(inputStr.begin(), inputStr.end(),
-                     [](char c) { return std::isalnum(c) || c == '_'; })) {
-        OP_LOGE(context->GetNodeName(),
-            "%s AscendC: check input string: %s failed, only support 0-9, a-z, A-Z and '_'.",
-            context->GetNodeType(), inputStr.c_str());
-        return false;
+    for (char c : inputStr) {
+        if (!std::isalnum(c) && c != '_') {
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeType(), "round_mode", inputStr.c_str(), FormatString(
+                "The parameter value contains invalid character '%c'. Only '0-9', 'a-z', 'A-Z' and '_' is supported",
+                c).c_str());
+            return false;
+        }
     }
 
     return true;

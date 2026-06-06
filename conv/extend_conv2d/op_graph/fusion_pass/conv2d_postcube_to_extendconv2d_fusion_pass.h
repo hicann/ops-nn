@@ -104,7 +104,9 @@ const std::vector<std::vector<DataType>> SUPPORTED_DTYPES_WITH_POST_CUBE_DAV_510
 const std::vector<AscendString> SUPPORTED_NODE_TYPES = {
     "Conv2D", "AscendDequant", "AscendRequant", "AscendQuant", "Relu", "LeakyRelu"
 };
-
+const std::vector<AscendString> POST_CUBE_NODE_TYPES = {
+    "AscendDequant", "AscendRequant", "AscendQuant", "Relu", "LeakyRelu"
+};
 enum class OutputCase : std::uint8_t {
     SINGLE,
     DUAL_POST_CUBE,

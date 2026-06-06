@@ -24,6 +24,7 @@
 #include "opdev/op_executor.h"
 #include "opdev/op_log.h"
 #include "opdev/platform.h"
+#include "op_common/log/log.h"
 #include "opdev/tensor_view_utils.h"
 
 #include "aclnn/aclnn_base.h"
@@ -38,11 +39,13 @@
 #include "aclnn_kernels/transpose.h"
 #include "matmul/common/op_host/op_api/cube_util.h"
 #include "aclnn_quant_convolution.h"
+#include "convolution_util.h"
 
 
 using namespace op;
 using namespace ge;
 using namespace l0op;
+using namespace ConvolutionUtil;
 
 using L0FUNCTION = void (*) ();
 using QUANT_CONV_FUNCTION = const aclTensor* (*) (const aclTensor* input, const aclTensor* weight,
@@ -55,24 +58,6 @@ using QUANT_CONV_V2_FUNCTION = const aclTensor* (*) (const aclTensor* input, con
 using CONV3D_V2_FUNCTION = const aclTensor* (*) (const aclTensor* input, const aclTensor* weight,
     const aclTensor* bias, const aclTensor* scale, DataType outputDtype, Format outputFormat, const aclIntArray* stride,
     const aclIntArray* padding, const aclIntArray* dilation, int groups, bool useHf32, aclOpExecutor* executor);
-
-#define CHECK_PARAMS_EQ(param, value)                                                                             \
-    do {                                                                                                          \
-        if ((param) != (value)) {                                                                                 \
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "expected %s = %s, get %s", #param, op::ToString(value).GetString(), \
-                    op::ToString(param).GetString());                                                             \
-            return ACLNN_ERR_PARAM_INVALID;                                                                       \
-        }                                                                                                         \
-    } while (0)
-
-#define CHECK_PARAMS_GT(param, boundary)                                                                             \
-    do {                                                                                                             \
-        if ((param) <= (boundary)) {                                                                                 \
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "expected %s larger than %s, but get %s", #param,                       \
-                    op::ToString(boundary).GetString(), op::ToString(param).GetString());                            \
-            return ACLNN_ERR_PARAM_INVALID;                                                                          \
-        }                                                                                                            \
-    } while (0)
 
 #define CHECK_NULLPTR(param, ret_value)                                                                              \
     do {                                                                                                             \
@@ -207,19 +192,6 @@ public:
     TensorMeta() = default;
     explicit TensorMeta(const aclTensor* tensor) { this->SetFromTensor(tensor); }
 
-    FVector<int64_t> ToFVector(const op::Shape &shapeT) const
-    {
-        FVector<int64_t> vShape;
-        if (shapeT.GetDimNum() != 0) {
-            size_t dimNum = shapeT.GetDimNum();
-            for (size_t idx = 0; idx < dimNum; idx++) {
-                int64_t tmpVal = shapeT.GetDim(idx);
-                vShape.push_back(tmpVal);
-            }
-        }
-        return vShape;
-    }
-
     void SetFromTensor(const aclTensor* tensor)
     {
         if (tensor == nullptr) {
@@ -229,27 +201,32 @@ public:
         dataType = tensor->GetDataType();
         string formatStr = op::ToString(format).GetString();
         tensorShape = tensor->GetViewShape();
-        shape = ToFVector(tensorShape);
+        shape = op::ToFVector(tensorShape);
         storageFormat = tensor->GetStorageFormat();
         storageTensorShape = tensor->GetStorageShape();
-        storageShape = ToFVector(storageTensorShape);
+        storageShape = op::ToFVector(storageTensorShape);
 
         auto len = shape.size();
         auto npos = formatStr.npos;
         auto index = formatStr.find('N');
+        nIdx = index;
         n = (index == npos || index >= len) ? 1 : shape[index];
 
         index = formatStr.find('C');
+        cIdx = index;
         c = (index == npos || index >= len) ? 1 : shape[index];
 
         // 不含D轴时默认为1
         index = formatStr.find('D');
+        dIdx = index;
         d = (index == npos || index >= len) ? 1 : shape[index];
 
         index = formatStr.find('H');
+        hIdx = index;
         h = (index == npos || index >= len) ? 1 : shape[index];
 
         index = formatStr.find('W');
+        wIdx = index;
         w = (index == npos || index >= len) ? 1 : shape[index];
     }
 
@@ -258,6 +235,11 @@ public:
     int64_t D() const { return d; }
     int64_t H() const { return h; }
     int64_t W() const { return w; }
+    size_t NIdx() const { return nIdx; }
+    size_t CIdx() const { return cIdx; }
+    size_t DIdx() const { return dIdx; }
+    size_t HIdx() const { return hIdx; }
+    size_t WIdx() const { return wIdx; }
 
 public:
     op::Format format = Format::FORMAT_ND;
@@ -274,6 +256,11 @@ private:
     int64_t d = 0;
     int64_t h = 0;
     int64_t w = 0;
+    size_t nIdx = 0;
+    size_t cIdx = 0;
+    size_t dIdx = 0;
+    size_t hIdx = 0;
+    size_t wIdx = 0;
 };
 
 struct QuantConvParams {
@@ -318,13 +305,13 @@ public:
             scale.format = params.scale->GetViewFormat();
             scale.dataType = params.scale->GetDataType();
             scale.tensorShape = params.scale->GetViewShape();
-            scale.shape = scale.ToFVector(scale.tensorShape);
+            scale.shape = op::ToFVector(scale.tensorShape);
         }
         if (params.bias) {
             bias.format = params.bias->GetViewFormat();
             bias.dataType = params.bias->GetDataType();
             bias.tensorShape = params.bias->GetViewShape();
-            bias.shape = bias.ToFVector(bias.tensorShape);
+            bias.shape = op::ToFVector(bias.tensorShape);
         }
     }
 
@@ -343,9 +330,9 @@ private:
 
 struct QuantConvEngine {
 public:
-    // 存储输入输出的元数据，可被直接访问，避免多次调用Get函数带来性能损失
     QuantConvParams params;
     QuantConvMeta meta;
+    std::string entityName;
     explicit QuantConvEngine(QuantConvParams &quantConvParams) : params(quantConvParams) { meta.FromParams(params); }
     FVector<int64_t> CalcOutputShape() { return InferOutShape(); }
 
@@ -367,7 +354,7 @@ private:
     }
 };
 
-static const aclTensor* L0FuncWarper(std::map<std::string, L0FUNCTION> l0Functions, std::string functionType,
+static const aclTensor* L0FuncWarper(const std::map<std::string, L0FUNCTION>& l0Functions, std::string functionType,
                                      const aclTensor* input, const aclTensor* weight, const aclTensor* bias,
                                      const aclTensor* scale, const aclTensor *offset,
                                      const aclIntArray* stride, const aclIntArray* padding,
@@ -391,8 +378,8 @@ static const aclTensor* L0FuncWarper(std::map<std::string, L0FUNCTION> l0Functio
                 padding, dilation, groups, offsetx, roundMode, executor);
         }
     } else {
-        result = (reinterpret_cast<QUANT_CONV_FUNCTION>(fn))(input, weight, bias, scale, offset, stride, padding, dilation,
-                                           groups, executor);
+        result = (reinterpret_cast<QUANT_CONV_FUNCTION>(fn))(input, weight, bias, scale, offset, stride, padding,
+            dilation, groups, executor);
     }
 
     return result;
@@ -418,63 +405,80 @@ public:
     aclnnStatus Check(QuantConvEngine &engine) override
     {
         if (CheckInOutDim(engine) != ACLNN_SUCCESS) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "check inputs and output dim failed");
             return ACLNN_ERR_PARAM_INVALID;
         }
         if (CheckAttrDim(engine) != ACLNN_SUCCESS) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "check attrs dim failed");
             return ACLNN_ERR_PARAM_INVALID;
         }
 
         return ACLNN_SUCCESS;
     }
 private:
-    aclnnStatus CheckInOutDim(QuantConvEngine &engine) const
+    aclnnStatus CheckInOutDimND(QuantConvEngine &engine) const
     {
         size_t inputDim = engine.meta.input.shape.size();
         size_t weightDim = engine.meta.weight.shape.size();
         size_t outputDim = engine.meta.output.shape.size();
+        if (inputDim != QUANT_CONV_2D_DIM_SIZE && inputDim != QUANT_CONV_3D_DIM_SIZE) {
+            OP_LOGE_FOR_INVALID_SHAPEDIM(engine.entityName, "x", std::to_string(inputDim),
+                std::to_string(QUANT_CONV_2D_DIM_SIZE) + " or " + std::to_string(QUANT_CONV_3D_DIM_SIZE));
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+        if (weightDim != QUANT_CONV_2D_DIM_SIZE && weightDim != QUANT_CONV_3D_DIM_SIZE) {
+            OP_LOGE_FOR_INVALID_SHAPEDIM(engine.entityName, "filter", std::to_string(weightDim),
+                std::to_string(QUANT_CONV_2D_DIM_SIZE) + " or " + std::to_string(QUANT_CONV_3D_DIM_SIZE));
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+        if (outputDim != QUANT_CONV_2D_DIM_SIZE && outputDim != QUANT_CONV_3D_DIM_SIZE) {
+            OP_LOGE_FOR_INVALID_SHAPEDIM(engine.entityName, "y", std::to_string(outputDim),
+                std::to_string(QUANT_CONV_2D_DIM_SIZE) + " or " + std::to_string(QUANT_CONV_3D_DIM_SIZE));
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+        if (inputDim != weightDim || inputDim != outputDim || weightDim != outputDim) {
+            OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(engine.entityName, "x, filter, y", std::to_string(inputDim) +
+                ", " + std::to_string(weightDim) + ", " + std::to_string(outputDim),
+                "the dims of these parameters must be the same");
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+        return ACLNN_SUCCESS;
+    }
+
+    aclnnStatus CheckInOutDim(QuantConvEngine &engine) const
+    {
         size_t scaleDim = engine.meta.scale.shape.size();
-        CHECK_PARAMS_EQ(scaleDim, static_cast<size_t>(1));
+        if (scaleDim != static_cast<size_t>(1)) {
+            OP_LOGE_FOR_INVALID_SHAPEDIM(engine.entityName, "scale", std::to_string(scaleDim),
+                std::to_string(static_cast<size_t>(1)));
+            return ACLNN_ERR_PARAM_INVALID;
+        }
         if (engine.params.bias) {
             size_t biasDim = engine.meta.bias.shape.size();
-            CHECK_PARAMS_EQ(biasDim, static_cast<size_t>(1));
+            if (biasDim != static_cast<size_t>(1)) {
+                OP_LOGE_FOR_INVALID_SHAPEDIM(engine.entityName, "bias", std::to_string(biasDim),
+                std::to_string(static_cast<size_t>(1)));
+                return ACLNN_ERR_PARAM_INVALID;
+            }
         }
+
         if (IsSocSupportND()) {
-            if (inputDim != QUANT_CONV_2D_DIM_SIZE && inputDim != QUANT_CONV_3D_DIM_SIZE) {
-                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "expected inputDim equals one of [%zu, %zu], get %zu",
-                    QUANT_CONV_2D_DIM_SIZE, QUANT_CONV_3D_DIM_SIZE, inputDim);
-                return ACLNN_ERR_PARAM_INVALID;
-            }
-            if (weightDim != QUANT_CONV_2D_DIM_SIZE && weightDim != QUANT_CONV_3D_DIM_SIZE) {
-                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "expected weightDim equals one of [%zu, %zu], get %zu",
-                    QUANT_CONV_2D_DIM_SIZE, QUANT_CONV_3D_DIM_SIZE, weightDim);
-                return ACLNN_ERR_PARAM_INVALID;
-            }
-            if (outputDim != QUANT_CONV_2D_DIM_SIZE && outputDim != QUANT_CONV_3D_DIM_SIZE) {
-                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "expected outputDim equals one of [%zu, %zu], get %zu",
-                    QUANT_CONV_2D_DIM_SIZE, QUANT_CONV_3D_DIM_SIZE, outputDim);
-                return ACLNN_ERR_PARAM_INVALID;
-            }
-            if (inputDim != weightDim || inputDim != outputDim || weightDim != outputDim) {
-                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "expected inputDim = weightDim = outputDim, get %zu, %zu, %zu",
-                    inputDim, weightDim, outputDim);
-                return ACLNN_ERR_PARAM_INVALID;
-            }
+            return CheckInOutDimND(engine);
         } else {
+            size_t inputDim = engine.meta.input.shape.size();
+            size_t weightDim = engine.meta.weight.shape.size();
+            size_t outputDim = engine.meta.output.shape.size();
             if (inputDim != QUANT_CONV_3D_DIM_SIZE) {
-                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "expected inputDim equals %zu, get %zu",
-                        QUANT_CONV_3D_DIM_SIZE, inputDim);
+                OP_LOGE_FOR_INVALID_SHAPEDIM(engine.entityName, "x", std::to_string(inputDim),
+                    std::to_string(QUANT_CONV_3D_DIM_SIZE));
                 return ACLNN_ERR_PARAM_INVALID;
             }
             if (weightDim != QUANT_CONV_3D_DIM_SIZE) {
-                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "expected weightDim equals %zu, get %zu",
-                        QUANT_CONV_3D_DIM_SIZE, weightDim);
+                OP_LOGE_FOR_INVALID_SHAPEDIM(engine.entityName, "filter", std::to_string(weightDim),
+                    std::to_string(QUANT_CONV_3D_DIM_SIZE));
                 return ACLNN_ERR_PARAM_INVALID;
             }
             if (outputDim != QUANT_CONV_3D_DIM_SIZE) {
-                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "expected outputDim equals one of %zu, get %zu",
-                        QUANT_CONV_3D_DIM_SIZE, outputDim);
+                OP_LOGE_FOR_INVALID_SHAPEDIM(engine.entityName, "y", std::to_string(outputDim),
+                    std::to_string(QUANT_CONV_3D_DIM_SIZE));
                 return ACLNN_ERR_PARAM_INVALID;
             }
         }
@@ -487,18 +491,27 @@ private:
         size_t strideDim = engine.meta.stride.size();
         size_t dilationDim = engine.meta.dilation.size();
         size_t padDim = engine.meta.padding.size();
-        CHECK_PARAMS_EQ(strideDim, QUANT_CONV_3D_STRIDE_DIM);
-        CHECK_PARAMS_EQ(dilationDim, QUANT_CONV_3D_DILATION_DIM);
+        if (strideDim != QUANT_CONV_3D_STRIDE_DIM) {
+            OP_LOGE_FOR_INVALID_LISTSIZE(engine.entityName, "strides", std::to_string(strideDim),
+                std::to_string(QUANT_CONV_3D_STRIDE_DIM));
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+        if (dilationDim != QUANT_CONV_3D_DILATION_DIM) {
+            OP_LOGE_FOR_INVALID_LISTSIZE(engine.entityName, "dilations", std::to_string(dilationDim),
+                std::to_string(QUANT_CONV_3D_DILATION_DIM));
+            return ACLNN_ERR_PARAM_INVALID;
+        }
         if (IsSocSupportND()) {
             if (padDim != QUANT_CONV_3D_PAD_DIM && padDim != QUANT_CONV_3D_PAD_DIM * CONST_VALUE_2) {
-                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "expected padDim equals one of [%zu, %zu], get %zu",
-                    QUANT_CONV_3D_PAD_DIM, QUANT_CONV_3D_PAD_DIM * CONST_VALUE_2, padDim);
+                OP_LOGE_FOR_INVALID_LISTSIZE(engine.entityName, "pads", std::to_string(padDim),
+                    std::to_string(QUANT_CONV_3D_PAD_DIM) + " or " +
+                    std::to_string(QUANT_CONV_3D_PAD_DIM * CONST_VALUE_2));
                 return ACLNN_ERR_PARAM_INVALID;
             }
         } else {
             if (padDim != QUANT_CONV_3D_PAD_DIM) {
-                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "expected padDim equals %zu, get %zu",
-                    QUANT_CONV_3D_PAD_DIM, padDim);
+                OP_LOGE_FOR_INVALID_LISTSIZE(engine.entityName, "pads", std::to_string(padDim),
+                    std::to_string(QUANT_CONV_3D_PAD_DIM));
                 return ACLNN_ERR_PARAM_INVALID;
             }
         }
@@ -511,11 +524,20 @@ private:
         size_t strideDim = engine.meta.stride.size();
         size_t dilationDim = engine.meta.dilation.size();
         size_t padDim = engine.meta.padding.size();
-        CHECK_PARAMS_EQ(strideDim, QUANT_CONV_2D_STRIDE_DIM);
-        CHECK_PARAMS_EQ(dilationDim, QUANT_CONV_2D_DILATION_DIM);
+        if (strideDim != QUANT_CONV_2D_STRIDE_DIM) {
+            OP_LOGE_FOR_INVALID_LISTSIZE(engine.entityName, "strides", std::to_string(strideDim),
+                std::to_string(QUANT_CONV_2D_STRIDE_DIM));
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+        if (dilationDim != QUANT_CONV_2D_DILATION_DIM) {
+            OP_LOGE_FOR_INVALID_LISTSIZE(engine.entityName, "dilations", std::to_string(dilationDim),
+                std::to_string(QUANT_CONV_2D_DILATION_DIM));
+            return ACLNN_ERR_PARAM_INVALID;
+        }
         if (padDim != QUANT_CONV_2D_PAD_DIM && padDim != QUANT_CONV_2D_PAD_DIM * CONST_VALUE_2) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "expected padDim equals one of [%zu, %zu], get %zu",
-                QUANT_CONV_2D_PAD_DIM, QUANT_CONV_2D_PAD_DIM * CONST_VALUE_2, padDim);
+            OP_LOGE_FOR_INVALID_LISTSIZE(engine.entityName, "pads", std::to_string(padDim),
+                std::to_string(QUANT_CONV_2D_PAD_DIM) + " or " +
+                std::to_string(QUANT_CONV_2D_PAD_DIM * CONST_VALUE_2));
             return ACLNN_ERR_PARAM_INVALID;
         }
         return ACLNN_SUCCESS;
@@ -546,15 +568,14 @@ public:
     aclnnStatus Check(QuantConvEngine &engine) override
     {
         if (!IsSocSupportND()) {
-            CHECK_NULLPTR(engine.params.bias, ACLNN_ERR_PARAM_NULLPTR);
+            CHECK_PARAM_NULLPTR(engine.entityName, engine.params.bias, "bias");
         }
-        CHECK_NULLPTR(engine.params.input, ACLNN_ERR_PARAM_NULLPTR);
-        CHECK_NULLPTR(engine.params.weight, ACLNN_ERR_PARAM_NULLPTR);
-        CHECK_NULLPTR(engine.params.scale, ACLNN_ERR_PARAM_NULLPTR);
-        CHECK_NULLPTR(engine.params.stride, ACLNN_ERR_PARAM_NULLPTR);
-        CHECK_NULLPTR(engine.params.padding, ACLNN_ERR_PARAM_NULLPTR);
-        CHECK_NULLPTR(engine.params.dilation, ACLNN_ERR_PARAM_NULLPTR);
-        CHECK_NULLPTR(engine.params.output, ACLNN_ERR_PARAM_NULLPTR);
+        CHECK_PARAM_NULLPTR(engine.entityName, engine.params.input, "x");
+        CHECK_PARAM_NULLPTR(engine.entityName, engine.params.weight, "filter");
+        CHECK_PARAM_NULLPTR(engine.entityName, engine.params.scale, "scale");
+        CHECK_PARAM_NULLPTR(engine.entityName, engine.params.stride, "strides");
+        CHECK_PARAM_NULLPTR(engine.entityName, engine.params.padding, "pads");
+        CHECK_PARAM_NULLPTR(engine.entityName, engine.params.output, "y");
         return ACLNN_SUCCESS;
     }
 };
@@ -563,34 +584,104 @@ class FormatsChecker : public QuantConvolutionChecker {
 public:
     FormatsChecker() = default;
     ~FormatsChecker() override = default;
-    aclnnStatus Check(QuantConvEngine &engine) override
+    aclnnStatus CheckBias(QuantConvEngine &engine)
     {
-        auto biasFormat = engine.meta.bias.format;
-        auto scaleFormat = engine.meta.scale.format;
         if (engine.params.bias) {
-            CHECK_PARAMS_EQ(biasFormat, Format::FORMAT_ND);
+            auto biasFormat = engine.meta.bias.format;
+            if (biasFormat != Format::FORMAT_ND) {
+                OP_LOGE_FOR_INVALID_FORMAT(engine.entityName, "bias", GeFormatToString(biasFormat),
+                    GeFormatToString(Format::FORMAT_ND));
+                return ACLNN_ERR_PARAM_INVALID;
+            }
         }
-        CHECK_PARAMS_EQ(scaleFormat, Format::FORMAT_ND);
+        return ACLNN_SUCCESS;
+    }
+
+    aclnnStatus CheckScale(QuantConvEngine &engine)
+    {
+        auto scaleFormat = engine.meta.scale.format;
+        if (scaleFormat != Format::FORMAT_ND) {
+            OP_LOGE_FOR_INVALID_FORMAT(engine.entityName, "scale", GeFormatToString(scaleFormat),
+                GeFormatToString(Format::FORMAT_ND));
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+        return ACLNN_SUCCESS;
+    }
+
+    aclnnStatus CheckFormat2D(QuantConvEngine &engine)
+    {
+        if (!IsSocSupportND()) {
+            return ACLNN_SUCCESS;
+        }
 
         auto inputFormat = engine.meta.input.format;
         auto weightFormat = engine.meta.weight.format;
         auto outputFormat = engine.meta.output.format;
+        if (inputFormat != Format::FORMAT_NCHW) {
+            OP_LOGE_FOR_INVALID_FORMAT(engine.entityName, "x", GeFormatToString(inputFormat),
+                GeFormatToString(Format::FORMAT_NCHW));
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+        if (weightFormat != Format::FORMAT_NCHW) {
+            OP_LOGE_FOR_INVALID_FORMAT(engine.entityName, "filter", GeFormatToString(weightFormat),
+                GeFormatToString(Format::FORMAT_NCHW));
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+        if (outputFormat != Format::FORMAT_NCHW) {
+            OP_LOGE_FOR_INVALID_FORMAT(engine.entityName, "y", GeFormatToString(outputFormat),
+                GeFormatToString(Format::FORMAT_NCHW));
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+        return ACLNN_SUCCESS;
+    }
 
-        size_t inputDimNum = engine.meta.input.shape.size();
-        if (inputDimNum == QUANT_CONV_2D_DIM_SIZE && IsSocSupportND()) {
-            CHECK_PARAMS_EQ(inputFormat, Format::FORMAT_NCHW);
-            CHECK_PARAMS_EQ(weightFormat, Format::FORMAT_NCHW);
-            CHECK_PARAMS_EQ(outputFormat, Format::FORMAT_NCHW);
-        } else if (inputDimNum == QUANT_CONV_3D_DIM_SIZE) {
-            CHECK_PARAMS_EQ(inputFormat, Format::FORMAT_NCDHW);
-            if (engine.params.isWeightNz) {
-                CHECK_PARAMS_EQ(engine.meta.weight.storageFormat, Format::FORMAT_FRACTAL_Z_3D);
-            } else {
-                CHECK_PARAMS_EQ(weightFormat, Format::FORMAT_NCDHW);
+    aclnnStatus CheckFormat3D(QuantConvEngine &engine)
+    {
+        auto inputFormat = engine.meta.input.format;
+        auto weightFormat = engine.meta.weight.format;
+        auto outputFormat = engine.meta.output.format;
+        if (inputFormat != Format::FORMAT_NCDHW) {
+            OP_LOGE_FOR_INVALID_FORMAT(engine.entityName, "x", GeFormatToString(inputFormat),
+                GeFormatToString(Format::FORMAT_NCDHW));
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+        if (engine.params.isWeightNz) {
+            if (engine.meta.weight.storageFormat != Format::FORMAT_FRACTAL_Z_3D) {
+                OP_LOGE_FOR_INVALID_FORMAT(engine.entityName, "filter",
+                    GeFormatToString(engine.meta.weight.storageFormat),
+                    GeFormatToString(Format::FORMAT_FRACTAL_Z_3D));
+                return ACLNN_ERR_PARAM_INVALID;
             }
-            CHECK_PARAMS_EQ(outputFormat, Format::FORMAT_NCDHW);
+        } else {
+            if (weightFormat != Format::FORMAT_NCDHW) {
+                OP_LOGE_FOR_INVALID_FORMAT(engine.entityName, "filter",
+                    GeFormatToString(weightFormat), GeFormatToString(Format::FORMAT_NCDHW));
+                return ACLNN_ERR_PARAM_INVALID;
+            }
+        }
+        if (outputFormat != Format::FORMAT_NCDHW) {
+            OP_LOGE_FOR_INVALID_FORMAT(engine.entityName, "y", GeFormatToString(outputFormat),
+                GeFormatToString(Format::FORMAT_NCDHW));
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+        return ACLNN_SUCCESS;
+    }
+
+    aclnnStatus Check(QuantConvEngine &engine) override
+    {
+        if (CheckBias(engine) != ACLNN_SUCCESS) {
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+        if (CheckScale(engine) != ACLNN_SUCCESS) {
+            return ACLNN_ERR_PARAM_INVALID;
         }
 
+        size_t inputDimNum = engine.meta.input.shape.size();
+        if (inputDimNum == QUANT_CONV_2D_DIM_SIZE) {
+            return CheckFormat2D(engine);
+        } else if (inputDimNum == QUANT_CONV_3D_DIM_SIZE) {
+            return CheckFormat3D(engine);
+        }
         return ACLNN_SUCCESS;
     }
 };
@@ -605,15 +696,15 @@ public:
         if (IsSocSupportND()) {
             if (scaleDtype != DataType::DT_INT64 && scaleDtype != DataType::DT_UINT64 &&
                 scaleDtype != DataType::DT_FLOAT) {
-                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "expected scaleDtype equals one of [%s, %s, %s], get %s",
-                    op::ToString(DataType::DT_INT64).GetString(), op::ToString(DataType::DT_UINT64).GetString(),
-                    op::ToString(DataType::DT_FLOAT).GetString(), op::ToString(scaleDtype).GetString());
+                OP_LOGE_FOR_INVALID_DTYPE(engine.entityName, "scale", GeDtypeToString(scaleDtype),
+                    "one of {" + GeDtypeToString(DataType::DT_INT64) + ", " +
+                    GeDtypeToString(DataType::DT_UINT64) + ", " + GeDtypeToString(DataType::DT_FLOAT) + "}");
                 return ACLNN_ERR_PARAM_INVALID;
             }
         } else {
             if (scaleDtype != DataType::DT_FLOAT) {
-                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "expected scaleDtype equals %s, get %s",
-                    op::ToString(DataType::DT_FLOAT).GetString(), op::ToString(scaleDtype).GetString());
+                OP_LOGE_FOR_INVALID_DTYPE(engine.entityName, "scale", GeDtypeToString(scaleDtype),
+                    GeDtypeToString(DataType::DT_FLOAT));
                 return ACLNN_ERR_PARAM_INVALID;
             }
         }
@@ -643,16 +734,19 @@ public:
                 return ACLNN_SUCCESS;
             }
         }
+        std::stringstream reason;
+        reason << "The dtypes of these parameters support only the following combinations: ";
         if (engine.params.bias) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "quant Conv Dtypes Match failed, get [fmap, weight, bias, output]: [%s, %s, %s, %s]",
-                op::ToString(inputDtype).GetString(), op::ToString(weightDtype).GetString(),
-                op::ToString(biasDtype).GetString(), op::ToString(outputDtype).GetString());
+            reason << VectorsToString(supportedDtypesGroups, GeDtypeToString);
+            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(engine.entityName, "x, filter, bias, y",
+                GeDtypeToString(inputDtype) + ", " + GeDtypeToString(weightDtype) + ", " +
+                GeDtypeToString(biasDtype) + ", " + GeDtypeToString(outputDtype), reason.str());
         } else {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "quant Conv Dtypes Match failed, get [fmap, weight, output]: [%s, %s, %s]",
-                op::ToString(inputDtype).GetString(), op::ToString(weightDtype).GetString(),
-                op::ToString(outputDtype).GetString());
+            size_t skippedBiasIdx = checkedLength;
+            reason << VectorsToString(supportedDtypesGroups, GeDtypeToString, skippedBiasIdx);
+            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(engine.entityName, "x, filter, y",
+                GeDtypeToString(inputDtype) + ", " + GeDtypeToString(weightDtype) + ", " +
+                GeDtypeToString(outputDtype), reason.str());
         }
         return ACLNN_ERR_PARAM_INVALID;
     }
@@ -682,60 +776,66 @@ public:
     aclnnStatus Check(QuantConvEngine &engine) override
     {
         if (CheckShapeValue(engine) != ACLNN_SUCCESS) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "input shape check failed");
             return ACLNN_ERR_PARAM_INVALID;
         }
 
         if (CheckAttrValue(engine) != ACLNN_SUCCESS) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "attr check failed");
             return ACLNN_ERR_PARAM_INVALID;
         }
 
         if (CheckOutputValue(engine) != ACLNN_SUCCESS) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "output shape check failed");
             return ACLNN_ERR_PARAM_INVALID;
         }
         return ACLNN_SUCCESS;
     }
 
 private:
-    static inline aclnnStatus CheckVectorValueGt0(const FVector<int64_t> &param)
+    static inline aclnnStatus CheckVectorValueGt0(const std::string &entityName, const std::string &paramName,
+        const FVector<int64_t> &param)
     {
         for (size_t i = 0; i < param.size(); ++i) {
             if (param[i] <= 0) {
-                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "expected %zuth value > 0, but get %ld", i + 1, param[i]);
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(entityName, paramName, op::FVectorToString(param),
+                    "shape[" + std::to_string(i) + "] of this parameter should be greater than 0");
                 return ACLNN_ERR_PARAM_INVALID;
             }
         }
         return ACLNN_SUCCESS;
     }
 
-    static inline aclnnStatus CheckVectorValueGte0(const FVector<int64_t> &param)
+    static inline aclnnStatus CheckVectorValueGte0(const std::string &entityName, const std::string &paramName,
+        const FVector<int64_t> &param)
     {
         for (size_t i = 0; i < param.size(); ++i) {
             if (param[i] < 0) {
-                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "expected %luth value >= 0, but get %ld", i + 1, param[i]);
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(entityName, paramName, op::FVectorToString(param),
+                    "shape[" + std::to_string(i) + "] of this parameter should be greater than or equal to 0");
                 return ACLNN_ERR_PARAM_INVALID;
             }
         }
         return ACLNN_SUCCESS;
     }
 
-    static aclnnStatus CheckValidString(const string &inputStr)
+    static aclnnStatus CheckValidString(const std::string &entityName, const std::string &paramName,
+        const string &inputStr)
     {
         if (inputStr.empty()) {
             return ACLNN_SUCCESS;
         }
 
         if (inputStr.size() > MAX_STR_LEN) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "check input string length: %zu failed, string length exceed %zu.",
-                inputStr.size(), MAX_STR_LEN);
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(entityName, paramName, inputStr, "The string length " +
+                std::to_string(inputStr.size()) + " of this parameter exceeds the maximum value " +
+                std::to_string(MAX_STR_LEN));
             return ACLNN_ERR_PARAM_INVALID;
         }
-        if (!std::all_of(inputStr.begin(), inputStr.end(), [](char c) { return std::isalnum(c) || c == '_'; })) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "check input string: %s failed, only support 0-9, a-z, A-Z and '_'.",
-                inputStr.c_str());
-            return ACLNN_ERR_PARAM_INVALID;
+        for (char c : inputStr) {
+            if (!std::isalnum(c) && c != '_') {
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(entityName, paramName, inputStr,
+                    "The parameter value contains invalid character '" + std::string(1, c) +
+                    "'. Only '0-9', 'a-z', 'A-Z' and '_' is supported");
+                return ACLNN_ERR_PARAM_INVALID;
+            }
         }
 
         return ACLNN_SUCCESS;
@@ -751,8 +851,7 @@ private:
                 CHECK_NULLPTR(engine.params.roundMode, ACLNN_ERR_PARAM_NULLPTR);
                 roundModeStr = std::string(engine.params.roundMode);
                 if (roundModeStr != "rint") {
-                    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "expected roundMode equals 'rint', get: %s",
-                        roundModeStr.c_str());
+                    OP_LOGE_FOR_INVALID_VALUE(engine.entityName, "round_mode", roundModeStr, "'rint'");
                     return ACLNN_ERR_PARAM_INVALID;
                 }
                 break;
@@ -760,8 +859,7 @@ private:
                 CHECK_NULLPTR(engine.params.roundMode, ACLNN_ERR_PARAM_NULLPTR);
                 roundModeStr = std::string(engine.params.roundMode);
                 if (roundModeStr != "round") {
-                    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "expected roundMode equals 'round', get: %s",
-                        roundModeStr.c_str());
+                    OP_LOGE_FOR_INVALID_VALUE(engine.entityName, "round_mode", roundModeStr, "'round'");
                     return ACLNN_ERR_PARAM_INVALID;
                 }
                 break;
@@ -771,8 +869,7 @@ private:
                 }
                 OP_LOGW("the input roundMode is suggested to be set as a nullptr");
                 roundModeStr = std::string(engine.params.roundMode);
-                if (CheckValidString(roundModeStr) != ACLNN_SUCCESS) {
-                    OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the input roundMode has invalid str");
+                if (CheckValidString(engine.entityName, "round_mode", roundModeStr) != ACLNN_SUCCESS) {
                     return ACLNN_ERR_PARAM_INVALID;
                 }
                 break;
@@ -785,14 +882,18 @@ private:
         auto inputDtype = engine.meta.input.dataType;
         if (inputDtype == DataType::DT_HIFLOAT8 || inputDtype == DataType::DT_FLOAT8_E4M3FN) {
             if (engine.params.offsetx != 0) {
-                OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                    "expected offsetx = 0 when input dtype is hifloat8 or float8_e4m3, get offsetx: %d",
-                    engine.params.offsetx);
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(engine.entityName, "offset_x",
+                    std::to_string(engine.params.offsetx),
+                    "If the dtype of x is " + GeDtypeToString(DataType::DT_HIFLOAT8) + " or " +
+                    GeDtypeToString(DataType::DT_FLOAT8_E4M3FN) + ", attribute offset_x should be 0");
                 return ACLNN_ERR_PARAM_INVALID;
             }
         }
         if (engine.params.offsetx > OFFSET_X_MAX_VALUE || engine.params.offsetx < OFFSET_X_MIN_VALUE) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "expected offsetx belong to [-128, 127], get: %d", engine.params.offsetx);
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(engine.entityName, "offset_x",
+                std::to_string(engine.params.offsetx),
+                "The current value is not within the valid range. The valid range is [" +
+                std::to_string(OFFSET_X_MIN_VALUE) + ", " + std::to_string(OFFSET_X_MAX_VALUE) + "]");
             return ACLNN_ERR_PARAM_INVALID;
         }
         return ACLNN_SUCCESS;
@@ -805,23 +906,113 @@ private:
         int64_t weightCin = engine.meta.weight.C();
         int64_t cOut = engine.meta.weight.N();
         if (IsSocSupportND()) {
-            CHECK_PARAMS_GT(groups, 0L);
+            if (groups <= 0L) {
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(engine.entityName, "groups", std::to_string(groups),
+                    "the value of this parameter must be greater than 0");
+                return ACLNN_ERR_PARAM_INVALID;
+            }
             if (cOut % groups != 0) {
-                OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                    "expected weight_cout mod groups equals 0, get weight_cout %ld, groups %ld", cOut, groups);
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(engine.entityName, "filter",
+                    op::FVectorToString(engine.meta.weight.shape),
+                    "shape[" + std::to_string(engine.meta.weight.NIdx()) +
+                    "] of this parameter should be exactly divided by attribute groups(" +
+                    std::to_string(groups) + ")");
                 return ACLNN_ERR_PARAM_INVALID;
             }
         } else {
             if (engine.params.groups != 1) {
-                OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                    "expected groups in quantConv must be 1, but get value is: %ld.", engine.params.groups);
+                OP_LOGE_FOR_INVALID_VALUE(engine.entityName, "groups", std::to_string(engine.params.groups), "1");
                 return ACLNN_ERR_PARAM_INVALID;
             }
         }
         if (weightCin * groups != fMapCin) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                "expected weight_cin * groups = fMap_cin, get weight_cin %ld, groups %ld, fMap_cin %ld",
-                weightCin, groups, fMapCin);
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(engine.entityName, "x, filter",
+                op::FVectorToString(engine.meta.input.shape) + ", " +
+                op::FVectorToString(engine.meta.weight.shape),
+                "shape[" + std::to_string(engine.meta.input.CIdx()) + "] of x must be equal to shape[" +
+                std::to_string(engine.meta.weight.CIdx()) + "] of filter multiplied by attribute groups(" +
+                    std::to_string(groups) + ")");
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+        return ACLNN_SUCCESS;
+    }
+
+    static aclnnStatus CheckXShape(QuantConvEngine &engine)
+    {
+        int64_t inputDimN = engine.meta.input.N();
+        int64_t inputDimC = engine.meta.input.C();
+        int64_t inputDimD = engine.meta.input.D();
+        int64_t inputDimH = engine.meta.input.H();
+        int64_t inputDimW = engine.meta.input.W();
+
+        if (inputDimN <= 0L) {
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(engine.entityName, "x",
+                op::FVectorToString(engine.meta.input.shape),
+                "Shape[" + std::to_string(engine.meta.input.NIdx()) + "] of x must be greater than 0");
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+        if (inputDimC <= 0L) {
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(engine.entityName, "x",
+                op::FVectorToString(engine.meta.input.shape),
+                "Shape[" + std::to_string(engine.meta.input.CIdx()) + "] of x must be greater than 0");
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+        if (inputDimD <= 0L) {
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(engine.entityName, "x",
+                op::FVectorToString(engine.meta.input.shape),
+                "Shape[" + std::to_string(engine.meta.input.DIdx()) + "] of x must be greater than 0");
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+        if (inputDimH <= 0L) {
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(engine.entityName, "x",
+                op::FVectorToString(engine.meta.input.shape),
+                "Shape[" + std::to_string(engine.meta.input.HIdx()) + "] of x must be greater than 0");
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+        if (inputDimW <= 0L) {
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(engine.entityName, "x",
+                op::FVectorToString(engine.meta.input.shape),
+                "Shape[" + std::to_string(engine.meta.input.WIdx()) + "] of x must be greater than 0");
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+        return ACLNN_SUCCESS;
+    }
+
+    static aclnnStatus CheckFilterShape(QuantConvEngine &engine)
+    {
+        int64_t weightDimN = engine.meta.weight.N();
+        int64_t weightDimC = engine.meta.weight.C();
+        int64_t weightDimD = engine.meta.weight.D();
+        int64_t weightDimH = engine.meta.weight.H();
+        int64_t weightDimW = engine.meta.weight.W();
+        if (weightDimN <= 0L) {
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(engine.entityName, "filter",
+                op::FVectorToString(engine.meta.weight.shape),
+                "Shape[" + std::to_string(engine.meta.weight.NIdx()) + "] of filter must be greater than 0");
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+        if (weightDimC <= 0L) {
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(engine.entityName, "filter",
+                op::FVectorToString(engine.meta.weight.shape),
+                "Shape[" + std::to_string(engine.meta.weight.CIdx()) + "] of filter must be greater than 0");
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+        if (weightDimD <= 0L) {
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(engine.entityName, "filter",
+                op::FVectorToString(engine.meta.weight.shape),
+                "Shape[" + std::to_string(engine.meta.weight.DIdx()) + "] of filter must be greater than 0");
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+        if (weightDimH <= 0L) {
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(engine.entityName, "filter",
+                op::FVectorToString(engine.meta.weight.shape),
+                "Shape[" + std::to_string(engine.meta.weight.HIdx()) + "] of filter must be greater than 0");
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+        if (weightDimW <= 0L) {
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(engine.entityName, "filter",
+                op::FVectorToString(engine.meta.weight.shape),
+                "Shape[" + std::to_string(engine.meta.weight.WIdx()) + "] of filter must be greater than 0");
             return ACLNN_ERR_PARAM_INVALID;
         }
         return ACLNN_SUCCESS;
@@ -829,46 +1020,35 @@ private:
 
     static aclnnStatus CheckShapeValue(QuantConvEngine &engine)
     {
-        int64_t inputDimN = engine.meta.input.N();
-        int64_t inputDimC = engine.meta.input.C();
-        int64_t inputDimD = engine.meta.input.D();
-        int64_t inputDimH = engine.meta.input.H();
-        int64_t inputDimW = engine.meta.input.W();
-        int64_t weightDimN = engine.meta.weight.N();
-        int64_t weightDimC = engine.meta.weight.C();
-        int64_t weightDimD = engine.meta.weight.D();
-        int64_t weightDimH = engine.meta.weight.H();
-        int64_t weightDimW = engine.meta.weight.W();
-
-        // enable empty tensor
-        CHECK_PARAMS_GT(inputDimN, 0L);
-        CHECK_PARAMS_GT(inputDimD, 0L);
-        CHECK_PARAMS_GT(inputDimH, 0L);
-        CHECK_PARAMS_GT(inputDimW, 0L);
-        CHECK_PARAMS_GT(weightDimN, 0L);
-
-        CHECK_PARAMS_GT(inputDimC, 0L);
-        CHECK_PARAMS_GT(weightDimC, 0L);
-        CHECK_PARAMS_GT(weightDimD, 0L);
-        CHECK_PARAMS_GT(weightDimH, 0L);
-        CHECK_PARAMS_GT(weightDimW, 0L);
+        if (CheckXShape(engine) != ACLNN_SUCCESS) {
+            return ACLNN_ERR_PARAM_INVALID;
+        }
+        if (CheckFilterShape(engine) != ACLNN_SUCCESS) {
+            return ACLNN_ERR_PARAM_INVALID;
+        }
         if (engine.params.isWeightNz) {
             if (CheckWeightTransValue(engine) != ACLNN_SUCCESS) {
                 return ACLNN_ERR_PARAM_INVALID;
             }
         }
-
+        int64_t weightDimN = engine.meta.weight.N();
         if (engine.params.bias) {
             if (engine.meta.bias.shape[0] != weightDimN) {
-                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "expected bias shape equal cout %ld, get %ld",
-                    weightDimN, engine.meta.bias.shape[0]);
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(engine.entityName, "bias, filter",
+                    op::FVectorToString(engine.meta.bias.shape) + ", " +
+                    op::FVectorToString(engine.meta.weight.shape),
+                    "shape[" + std::to_string(engine.meta.weight.NIdx()) + "] of bias must be equal to shape[" +
+                    std::to_string(engine.meta.weight.NIdx()) + "] of filter");
                 return ACLNN_ERR_PARAM_INVALID;
             }
         }
 
         if (engine.meta.scale.shape[0] != weightDimN) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "expected scale shape equal cout %ld, get %ld",
-                weightDimN, engine.meta.scale.shape[0]);
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(engine.entityName, "scale, filter",
+                op::FVectorToString(engine.meta.scale.shape) + ", " +
+                op::FVectorToString(engine.meta.weight.shape),
+                "shape[" + std::to_string(engine.meta.weight.NIdx()) + "] of scale must be equal to shape[" +
+                std::to_string(engine.meta.weight.NIdx()) + "] of filter");
             return ACLNN_ERR_PARAM_INVALID;
         }
         return ACLNN_SUCCESS;
@@ -879,16 +1059,24 @@ private:
         FVector<int64_t> storageshape = engine.meta.weight.storageShape;
         auto len = storageshape.size();
         for (size_t i = 0; i < len; ++i) {
-            CHECK_PARAMS_GT(storageshape[i], 0L);
+            if (storageshape[i] <= 0L) {
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(engine.entityName, "filter",
+                    op::FVectorToString(engine.meta.weight.storageShape),
+                    "Storage shape[" + std::to_string(i) + "] of filter must be greater than 0");
+                return ACLNN_ERR_PARAM_INVALID;
+            }
         }
         int64_t c0 = 32;
         int64_t n0 = 16;
         int64_t n1 = (engine.meta.weight.N() + n0 - 1) / n0;
         int64_t dc1hw = engine.meta.weight.D() * ((engine.meta.weight.C() + c0 - 1) / c0) * engine.meta.weight.H() *
                         engine.meta.weight.W();
-        if (len !=  FRACTAL_Z_3D_DIM || storageshape[0] != dc1hw || storageshape[1] != n1 || storageshape[2] != n0
+        if (len != FRACTAL_Z_3D_DIM || storageshape[0] != dc1hw || storageshape[1] != n1 || storageshape[2] != n0
            || storageshape[3] != c0) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "expected weight FRACTAL_Z_3D shape correspond with out NCDHW shape");
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(engine.entityName, "filter",
+                op::FVectorToString(engine.meta.weight.storageShape),
+                "The storage shape of filter should be [" + std::to_string(dc1hw) + ", " + std::to_string(n1) + ", " +
+                std::to_string(n0) + ", " + std::to_string(c0) + "]");
             return ACLNN_ERR_PARAM_INVALID;
         }
         return ACLNN_SUCCESS;
@@ -896,29 +1084,23 @@ private:
 
     static aclnnStatus CheckAttrValue(QuantConvEngine &engine)
     {
-        if (CheckVectorValueGt0(engine.meta.stride) != ACLNN_SUCCESS) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "check stride value greater than 0 failed");
+        if (CheckVectorValueGt0(engine.entityName, "strides", engine.meta.stride) != ACLNN_SUCCESS) {
             return ACLNN_ERR_PARAM_INVALID;
         }
-        if (CheckVectorValueGt0(engine.meta.dilation) != ACLNN_SUCCESS) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "check dilation value greater than 0 failed");
+        if (CheckVectorValueGt0(engine.entityName, "dilations", engine.meta.dilation) != ACLNN_SUCCESS) {
             return ACLNN_ERR_PARAM_INVALID;
         }
-        if (CheckVectorValueGte0(engine.meta.padding) != ACLNN_SUCCESS) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "check pad value greater than or equal to 0 failed");
+        if (CheckVectorValueGte0(engine.entityName, "pads", engine.meta.padding) != ACLNN_SUCCESS) {
             return ACLNN_ERR_PARAM_INVALID;
         }
         if (CheckAttrGroups(engine) != ACLNN_SUCCESS) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "groups check failed");
             return ACLNN_ERR_PARAM_INVALID;
         }
         if (IsSocSupportND()) {
             if (CheckAttrRoundMode(engine) != ACLNN_SUCCESS) {
-                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "roundMode check failed");
                 return ACLNN_ERR_PARAM_INVALID;
             }
             if (CheckAttrOffsetX(engine) != ACLNN_SUCCESS) {
-                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "offsetx check failed");
                 return ACLNN_ERR_PARAM_INVALID;
             }
         }
@@ -928,16 +1110,17 @@ private:
     static aclnnStatus CheckOutputValue(QuantConvEngine &engine)
     {
         FVector<int64_t> outputShape = engine.meta.output.shape;
-        if (CheckVectorValueGt0(outputShape) != ACLNN_SUCCESS) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "check output value greater than 0 failed");
+        if (CheckVectorValueGt0(engine.entityName, "y", outputShape) != ACLNN_SUCCESS) {
             return ACLNN_ERR_PARAM_INVALID;
         }
         auto inferredOutputShape = engine.CalcOutputShape();
         for (size_t i = 0; i < inferredOutputShape.size(); i++) {
             if (inferredOutputShape[i] != outputShape[i]) {
-                OP_LOGE(ACLNN_ERR_PARAM_INVALID, "expected output %zuth dim equal %ld, get %ld", i + 1,
-                    inferredOutputShape[i], outputShape[i]);
-                return ACLNN_ERR_PARAM_INVALID;
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(engine.entityName, "y",
+                    op::FVectorToString(engine.meta.output.shape),
+                    "shape[" + std::to_string(i) + "] of y must be equal to its inferred value(" +
+                    std::to_string(inferredOutputShape[i]) + ")");
+                    return ACLNN_ERR_PARAM_INVALID;
             }
         }
         return ACLNN_SUCCESS;
@@ -961,8 +1144,12 @@ public:
             case SocVersion::ASCEND910_93:
                 break;
             default:
-                OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                    "support for %s is not implemented", op::ToString(socVersion).GetString());
+                OP_LOGE_FOR_INVALID_VALUE(engine.entityName, "SoC version",
+                    std::string(op::ToString(socVersion).GetString()), "one of {" +
+                    std::string(op::ToString(SocVersion::ASCEND910B).GetString()) + ", " +
+                    std::string(op::ToString(SocVersion::ASCEND910_93).GetString()) + ", " +
+                    std::string(op::ToString(SocVersion::ASCEND950).GetString()) +
+                    "}");
                 return ACLNN_ERR_PARAM_INVALID;
         }
         return ACLNN_SUCCESS;
@@ -1146,7 +1333,6 @@ public:
         }
         auto ret = ContiguousPreProcess(input, weight, scale, bias, executor, is_weight_nz);
         if (ret != ACLNN_SUCCESS) {
-            OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "quant conv3d contiguous preprocess failed");
             return ret;
         }
         return ACLNN_SUCCESS;
@@ -1283,8 +1469,8 @@ public:
     }
 };
 
-std::shared_ptr<QuantConvolutionImpl> CreateQuantConvolutionImpl(const aclTensor* input, const aclTensor* weight,
-    const aclTensor* bias, const aclTensor* scale, const aclTensor *offset,
+std::shared_ptr<QuantConvolutionImpl> CreateQuantConvolutionImpl(const std::string& entityName, const aclTensor* input,
+    const aclTensor* weight, const aclTensor* bias, const aclTensor* scale, const aclTensor *offset,
     const aclIntArray* stride, const aclIntArray* padding, const aclIntArray* dilation, const bool transposed,
     const aclIntArray *outputPadding, const int64_t groups, int32_t offsetx, const char* roundMode,
     aclTensor* output, bool isWeightNz, aclOpExecutor* executor)
@@ -1297,7 +1483,9 @@ std::shared_ptr<QuantConvolutionImpl> CreateQuantConvolutionImpl(const aclTensor
                 return std::make_shared<ExtendConv2dImpl>(input, weight, bias, scale, offset, stride, padding, dilation,
                     transposed, outputPadding, groups, offsetx, roundMode, output, executor);
             } else {
-                OP_LOGE(ACLNN_ERR_INNER, "cur soc not support quant conv2d");
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(entityName, "x", std::to_string(inputDim),
+                    "The shape dim of this parameter can be " + std::to_string(QUANT_CONV_2D_DIM_SIZE) +
+                    " only when the SoC version is " + std::string(op::ToString(SocVersion::ASCEND950).GetString()));
                 return nullptr;
             }
 
@@ -1330,9 +1518,9 @@ aclnnStatus aclnnQuantConvolutionGetWorkspaceSize(const aclTensor *input, const 
     QuantConvParams params = {input, weight, bias, scale, offset, stride, padding, dilation,
                               transposed, outputPadding, groups, offsetx, roundMode, output, false};
     QuantConvEngine quantConvEngine(params);
+    quantConvEngine.entityName = "aclnnQuantConvolutionGetWorkspaceSize";
     aclnnStatus ret = CheckQuantConvParams(quantConvEngine);
     if (ret != ACLNN_SUCCESS) {
-        OP_LOGE(ret, "check quant params failed");
         return ret;
     }
 
@@ -1341,8 +1529,8 @@ aclnnStatus aclnnQuantConvolutionGetWorkspaceSize(const aclTensor *input, const 
 
     std::shared_ptr<AclnnQuantConvolution::QuantConvolutionImpl> quantConvImpl =
         AclnnQuantConvolution::CreateQuantConvolutionImpl(
-            input, weight, bias, scale, offset, stride, padding, dilation, transposed, outputPadding, groups, offsetx,
-            roundMode, output, false, uniqueExecutor.get());
+            quantConvEngine.entityName, input, weight, bias, scale, offset, stride, padding, dilation, transposed,
+            outputPadding, groups, offsetx, roundMode, output, false, uniqueExecutor.get());
     if (quantConvImpl == nullptr) {
         OP_LOGE(ACLNN_ERR_INNER, "create quant convolution failed, convolution = nullptr");
         return ACLNN_ERR_INNER;
@@ -1394,9 +1582,9 @@ aclnnStatus aclnnQuantConvolutionWeightNzGetWorkspaceSize(const aclTensor *input
     QuantConvParams params = {input, weight, bias, scale, offset, stride, padding, dilation,
                               transposed, outputPadding, groups, offsetx, roundMode, output, true};
     QuantConvEngine quantConvEngine(params);
+    quantConvEngine.entityName = "aclnnQuantConvolutionWeightNzGetWorkspaceSize";
     aclnnStatus ret = CheckQuantConvParams(quantConvEngine);
     if (ret != ACLNN_SUCCESS) {
-        OP_LOGE(ret, "check quant conv weight nz params failed");
         return ret;
     }
 
@@ -1405,8 +1593,8 @@ aclnnStatus aclnnQuantConvolutionWeightNzGetWorkspaceSize(const aclTensor *input
 
     std::shared_ptr<AclnnQuantConvolution::QuantConvolutionImpl> quantConvImpl =
         AclnnQuantConvolution::CreateQuantConvolutionImpl(
-            input, weight, bias, scale, offset, stride, padding, dilation, transposed, outputPadding, groups, offsetx,
-            roundMode, output, true, uniqueExecutor.get());
+            quantConvEngine.entityName, input, weight, bias, scale, offset, stride, padding, dilation, transposed,
+            outputPadding, groups, offsetx, roundMode, output, true, uniqueExecutor.get());
     if (quantConvImpl == nullptr) {
         OP_LOGE(ACLNN_ERR_INNER, "create quant convolution weight nz failed, convolution = nullptr");
         return ACLNN_ERR_INNER;

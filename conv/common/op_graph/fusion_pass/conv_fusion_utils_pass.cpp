@@ -14,6 +14,7 @@
 #include "log/log.h"
 #include "platform/platform_info.h"
 #include "runtime/runtime/base.h"
+#include <graph/utils/type_utils.h>
 
 namespace Ops {
 namespace NN {
@@ -260,6 +261,16 @@ bool ConvFusionUtilsPass::UpdateInputDesc(GNode *convNode, const ConvDescInfo &c
     }
 
     return true;
+}
+
+std::string GeFormatToString(const ge::Format& geFormat)
+{
+    return std::string(ge::TypeUtils::FormatToAscendString(geFormat).GetString());
+}
+
+std::string GeDtypeToString(const ge::DataType& geDtype)
+{
+    return std::string(ge::TypeUtils::DataTypeToAscendString(geDtype).GetString());
 }
 
 } // namespace ConvFusionUtilsPass

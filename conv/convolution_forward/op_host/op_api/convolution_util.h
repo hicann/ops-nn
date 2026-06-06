@@ -20,6 +20,8 @@
 #include "aclnn/aclnn_base.h"
 #include "opdev/common_types.h"
 #include "opdev/platform.h"
+#include "opdev/format_utils.h"
+#include "opdev/fast_vector.h"
 
 namespace Ops {
 namespace NN {
@@ -27,7 +29,56 @@ namespace NN {
 }
 }
 
+namespace op {
+op::FVector<int64_t> ToFVector(const op::Shape& shapeT);
+std::string FVectorToString(const op::FVector<int64_t>& vec);
+}
+
 namespace ConvolutionUtil {
+#define CHECK_PARAM_NULLPTR(entityName, param, paramName)                                                       \
+    do {                                                                                                        \
+        if ((param) == nullptr) {                                                                               \
+            OP_LOGE_FOR_INVALID_VALUE(entityName, paramName, "nullptr", "not nullptr");                         \
+            return ACLNN_ERR_PARAM_NULLPTR;                                                                     \
+        }                                                                                                       \
+    } while (0)
+
+template<typename T, typename Converter>
+std::string VectorsToString(const std::vector<std::vector<T>>& vecs, Converter converter, size_t skipIdx = -1)
+{
+    std::string result = "[";
+ 
+    for (size_t j = 0; j < vecs.size(); ++j) {
+        result += "[";
+        bool needComma = false;
+        for (size_t i = 0; i < vecs[j].size(); ++i) {
+            if (i == skipIdx) {
+                continue;
+            }
+            if (needComma) {
+                result += ",";
+            }
+            result += converter(vecs[j][i]);
+            needComma = true;
+        }
+        result += "]";
+        if (j < vecs.size() - 1) {
+            result += ",";
+        }
+    }
+    result += "]";
+    return result;
+}
+
+std::string GeFormatToString(const ge::Format& geFormat);
+
+std::string GeDtypeToString(const ge::DataType& geDtype);
+
+template<typename T>
+std::string IntToString(const T& intValue)
+{
+    return std::to_string(intValue);
+}
 
 constexpr int64_t RESERVED_SIZE_8K = 8 * 1024;
 

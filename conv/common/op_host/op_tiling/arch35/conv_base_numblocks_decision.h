@@ -38,17 +38,16 @@ void InitNumBlocksConstParas(ConvOpsConstParams& convOpsConstParams,
                             const ConvAscendcDescInfo& descInfo, const ConvAscendcShapesInfo& shapeInfo);
 
 template<typename T, typename Converter>
-std::string VectorToString(const std::vector<T>& vec, Converter converter,
-                           const string& bracketLeft = "", const string& bracketRight = "")
+std::string VectorToString(const std::vector<T>& vec, Converter converter)
 {
-    std::string result = bracketLeft;
+    std::string result = "[";
     for (size_t i = 0; i < vec.size(); ++i) {
         result += converter(vec[i]);
         if (i < vec.size() - 1) {
             result += ",";
         }
     }
-    result += bracketRight;
+    result += "]";
     return result;
 }
 
@@ -56,16 +55,8 @@ template<typename T, typename Converter>
 std::string VectorsToString(const std::vector<std::vector<T>>& vecs, Converter converter)
 {
     std::string result = "[";
-
     for (size_t j = 0; j < vecs.size(); ++j) {
-        result += "[";
-        for (size_t i = 0; i < vecs[j].size(); ++i) {
-            result += converter(vecs[j][i]);
-            if (i < vecs[j].size() - 1) {
-                result += ",";
-            }
-        }
-        result += "]";
+        result += VectorToString(vecs[j], converter);
         if (j < vecs.size() - 1) {
             result += ",";
         }

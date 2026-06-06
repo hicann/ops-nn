@@ -181,7 +181,7 @@ ge::graphStatus Conv2dBaseTiling::CheckDisContinuousInstrLimits()
         ss << "the constraint of instruction %s must be met: ";
         ss << "shape[%zu] * shape [%zu] ≤ %ld";
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeType(), "x",
-            VectorToString(GetOutputShapeVec(context_, INPUT_FMAP_INDEX), IntToString<int64_t>).c_str(),
+            VectorToString(GetInputShapeVec(context_, INPUT_FMAP_INDEX), IntToString<int64_t>).c_str(),
             FormatString(ss.str().c_str(), "ND2NZ",
                 paramInfo_.paramsIdxVec[paramInfo_.FMAP_PARAM_IDX][IDX_LIST_C_IDX],
                 paramInfo_.paramsIdxVec[paramInfo_.FMAP_PARAM_IDX][IDX_LIST_N_IDX]).c_str());

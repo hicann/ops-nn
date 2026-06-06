@@ -61,6 +61,35 @@ std::map<op::DataType, uint32_t> gDataTypeSizeTab = {{op::DataType::DT_FLOAT16, 
                                                         {op::DataType::DT_UINT64, 8}, {op::DataType::DT_INT32, 4}};
 }  // namespace SplitWInfo
 
+namespace op {
+op::FVector<int64_t> ToFVector(const op::Shape& shapeT)
+{
+    op::FVector<int64_t> vShape;
+    if (shapeT.GetDimNum() != 0) {
+        size_t dimNum = shapeT.GetDimNum();
+        for (size_t idx = 0; idx < dimNum; idx++) {
+            int64_t tmpVal = shapeT.GetDim(idx);
+            vShape.push_back(tmpVal);
+        }
+    }
+    return vShape;
+}
+
+std::string FVectorToString(const op::FVector<int64_t>& vec)
+{
+    std::string result = "[";
+    for (size_t i = 0; i < vec.size(); ++i) {
+        result += std::to_string(vec[i]);
+        if (i < vec.size() - 1) {
+            result += ", ";
+        }
+    }
+    result += "]";
+    return result;
+}
+}
+
+
 namespace ConvolutionUtil {
 
 void Conv2DSplitWInfo::InitConv2DSplitWInfo(const aclTensor* input, const aclTensor* weight, const aclIntArray* stride,
@@ -411,7 +440,7 @@ bool CheckDmaLimits(const struct ConvolutionOpInfo* opInfo, const aclTensor* inp
     uint64_t weightL1Size = ConvAlignB(kBL1min * nBL1min * weightDtypeSize, SplitWInfo::BLK_LEN);
     uint64_t inputL1Size = 0;
     uint64_t orgWo = (win + padLeft + padRight - (dilationW * (orgKw - 1) + 1)) / strideW + 1;
-    uint64_t hoAL1min = orgWo < m0 ? (m0 + orgWo - 1) / orgWo : 1;
+    uint64_t hoAL1min = orgWo < static_cast<uint64_t>(m0) ? (m0 + orgWo - 1) / orgWo : 1;
     uint64_t khDilated = (orgKh - 1) * dilationH + 1; 
     uint64_t hiAL1min = Conv2DInferHiL1(hoAL1min, khDilated, hin, strideH);
     uint64_t kAL1min = k0;
@@ -468,6 +497,16 @@ uint64_t ConvAlignB(uint64_t a, uint64_t b)
         return 0;
     }
     return ((a + b - 1) / b) * b;
+}
+
+std::string GeFormatToString(const ge::Format& geFormat)
+{
+    return op::ToString(geFormat).GetString();
+}
+
+std::string GeDtypeToString(const ge::DataType& geDtype)
+{
+    return op::ToString(geDtype).GetString();
 }
 
 } // namespace ConvolutionUtil

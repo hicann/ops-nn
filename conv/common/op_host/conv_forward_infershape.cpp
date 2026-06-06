@@ -28,6 +28,32 @@
         return false;                                                                                \
     }
 
+inline std::string VectorToString(const std::vector<int64_t>& vec)
+{
+    std::string result = "[";
+    for (size_t i = 0; i < vec.size(); ++i) {
+        result += std::to_string(vec[i]);
+        if (i < vec.size() - 1) {
+            result += ",";
+        }
+    }
+    result += "]";
+    return result;
+}
+
+inline std::string VectorsToString(const std::vector<std::vector<int64_t>>& inVecs)
+{
+    std::string result = "[";
+    for (size_t j = 0; j < inVecs.size(); ++j) {
+        result += VectorToString(inVecs[j]);
+        if (j < inVecs.size() - 1) {
+            result += ",";
+        }
+    }
+    result += "]";
+    return result;
+}
+
 namespace ConvForward {
 // Conv common proto index
 constexpr size_t X_IDX_CONV = 0;
@@ -100,6 +126,13 @@ constexpr size_t IDX_LIST_C_IDX = 1;
 constexpr size_t IDX_LIST_D_IDX = 2;
 constexpr size_t IDX_LIST_H_IDX = 3;
 constexpr size_t IDX_LIST_W_IDX = 4;
+
+constexpr size_t IDX_PAD_H_IDX = 0;
+constexpr size_t IDX_PAD_T_IDX = 1;
+constexpr size_t IDX_PAD_U_IDX = 2;
+constexpr size_t IDX_PAD_D_IDX = 3;
+constexpr size_t IDX_PAD_L_IDX = 4;
+constexpr size_t IDX_PAD_R_IDX = 5;
 
 using gert::InferShapeContext;
 
@@ -324,8 +357,11 @@ static bool GetConvFilterShape(const InferShapeContext* context, ConvOpInfo& opI
     }
 
     if (opInfo.kh == 0 || opInfo.kw == 0) {
-        OP_LOGE(context->GetNodeName(),
-                "Input kh [%ld] or kw [%ld] can't be equal to 0.", opInfo.kh, opInfo.kw);
+        std::string reason = "Shape[" + std::to_string(opInfo.wFormatIdx[IDX_LIST_H_IDX]) +
+            "] and shape[" + std::to_string(opInfo.wFormatIdx[IDX_LIST_W_IDX]) +
+            "] of this parameter must be greater than or equal to 1";
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "filter",
+            Ops::Base::ToString(*filterShape), reason.c_str());
         return false;
     }
 
@@ -349,7 +385,9 @@ static bool CheckConvBiasDimLegal(const InferShapeContext* context, const gert::
     size_t biasDimNum = biasShape->GetDimNum();
     size_t biasDimNumExpect = opInfo.isConv3DLike ? CONV3DV2_SUPPORTED_DIM_NUM : CONV2DV2_SUPPORTED_DIM_NUM;
     if (biasDimNum != static_cast<size_t>(1) && biasDimNum != biasDimNumExpect) {
-        OP_LOGE(context->GetNodeName(), "Input bias shape should be 1 D or %zu D.", biasDimNumExpect);
+        std::string correctDim = "1 or " + std::to_string(biasDimNumExpect);
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "bias",
+            std::to_string(biasDimNum).c_str(), correctDim.c_str());
         return false;
     }
     if (opInfo.kn == UNKNOWN_DIM_VALUE_) { // cout dynamic scene quit after dim check
@@ -361,19 +399,24 @@ static bool CheckConvBiasDimLegal(const InferShapeContext* context, const gert::
     OPS_CHECK_NULL_WITH_CONTEXT(context, biasDesc);
     ge::Format biasFormat = biasDesc->GetOriginFormat();
     GetConvShapeIdx(biasFormat, opInfo.biasFormatIdx);
+    auto filterShape = context->GetInputShape(opInfo.paramIdx.weightIdx);
+    OPS_CHECK_NULL_WITH_CONTEXT_BOOL(context, filterShape);
+    std::vector<const gert::Shape*> biasFilterShape = {biasShape, filterShape};
+    std::string reason = "Shape[" + std::to_string(opInfo.biasFormatIdx[IDX_LIST_C_IDX]) +
+        "] of bias must be equal to shape[" + std::to_string(opInfo.wFormatIdx[IDX_LIST_N_IDX]) + "] of filter";
     // Check bias other dim
     if (biasDimNum != biasDimNumExpect) {
         if (biasShape->GetDim(0) != opInfo.kn) {
-            OP_LOGE(context->GetNodeName(), "Input bias size of dim_c: %ld should be equal to out_channels: %ld.",
-                    biasShape->GetDim(opInfo.biasFormatIdx[IDX_LIST_C_IDX]), opInfo.kn);
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "bias, filter",
+                Ops::Base::ToString(biasFilterShape).c_str(), reason.c_str());
             return false;
         }
         return true;
     }
     // Check bias channel
     if (biasShape->GetDim(opInfo.biasFormatIdx[IDX_LIST_C_IDX]) != opInfo.kn) {
-        OP_LOGE(context->GetNodeName(), "Input bias size of dim_c: %ld should be equal to out_channels: %ld.",
-                biasShape->GetDim(opInfo.biasFormatIdx[IDX_LIST_C_IDX]), opInfo.kn);
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "bias, filter",
+            Ops::Base::ToString(biasFilterShape).c_str(), reason.c_str());
         return false;
     }
     for (size_t i = 0; i < biasDimNum; i++) {
@@ -382,7 +425,9 @@ static bool CheckConvBiasDimLegal(const InferShapeContext* context, const gert::
             continue;
         }
         if (biasShape->GetDim(i) != 1) {
-            OP_LOGE(context->GetNodeName(), "Input bias size of other dim except dim_c should be equal to 1.");
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "bias",
+                Ops::Base::ToString(*biasShape).c_str(),
+                "Shape[" + std::to_string(i) + "] of this parameter must be equal to 1");
             return false;
         }
     }
@@ -430,14 +475,17 @@ static bool GetConvStrides(const T* context, ConvOpInfo& opInfo)
     if (opInfo.isConv3DLike) {
         opInfo.strd = strides[opInfo.xFormatIdx[IDX_LIST_D_IDX]];
     }
-
+    std::string reason = "All dimensions of this parameter must be greater than or equal to 1";
+    std::vector<int64_t> stridesVec;
     if (opInfo.isConv3DLike && (opInfo.strd <= 0 || opInfo.strh <= 0 || opInfo.strw <= 0)) {
-        OP_LOGE(context->GetNodeName(),
-            "strides should be positive, actual is [%ld,%ld,%ld].", opInfo.strd, opInfo.strh, opInfo.strw);
+        stridesVec.assign(strides, strides + CONV3DV2_SUPPORTED_DIM_NUM);
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "strides",
+            VectorToString(stridesVec).c_str(), reason.c_str());
         return false;
     } else if (opInfo.isConv2DLike && (opInfo.strh <= 0 || opInfo.strw <= 0)) {
-        OP_LOGE(context->GetNodeName(),
-            "strides should be positive, actual is [%ld,%ld].", opInfo.strh, opInfo.strw);
+        stridesVec.assign(strides, strides + CONV2DV2_SUPPORTED_DIM_NUM);
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "strides",
+            VectorToString(stridesVec).c_str(), reason.c_str());
         return false;
     }
 
@@ -468,13 +516,17 @@ static bool GetConvDilations(const T* context, ConvOpInfo& opInfo)
         opInfo.dild = dilations[opInfo.xFormatIdx[IDX_LIST_D_IDX]];
     }
 
+    std::string reason = "All dimensions of this parameter must be greater than or equal to 1";
+    std::vector<int64_t> dilationsVec;
     if (opInfo.isConv3DLike && (opInfo.dild <= 0 || opInfo.dilh <= 0 || opInfo.dilw <= 0)) {
-        OP_LOGE(context->GetNodeName(),
-            "dilations should be positive, actual is [%ld,%ld,%ld].", opInfo.dild, opInfo.dilh, opInfo.dilw);
+        dilationsVec.assign(dilations, dilations + CONV3DV2_SUPPORTED_DIM_NUM);
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "dilations",
+            VectorToString(dilationsVec).c_str(), reason.c_str());
         return false;
     } else if (opInfo.isConv2DLike && (opInfo.dilh <= 0 || opInfo.dilw <= 0)) {
-        OP_LOGE(context->GetNodeName(),
-            "dilations should be positive, actual is [%ld,%ld].", opInfo.dilh, opInfo.dilw);
+        dilationsVec.assign(dilations, dilations + CONV2DV2_SUPPORTED_DIM_NUM);
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "dilations",
+            VectorToString(dilationsVec).c_str(), reason.c_str());
         return false;
     }
 
@@ -490,13 +542,17 @@ static bool CheckPositivePads(const char* nodeName, const ConvOpInfo& opInfo)
         (opInfo.padu < 0 || opInfo.padd < 0 || opInfo.padl < 0 || opInfo.padr < 0);
     bool staticRankAndShape = !opInfo.unknownShapeX && !opInfo.unknownRankX &&
                               !opInfo.unknownShapeW && !opInfo.unknownRankW;
+    std::string reason = "All dimensions of this parameter must be greater than or equal to 0";
+    std::vector<int64_t> incorrectShape;
     if (staticRankAndShape && negConv3DPadFlag) {
-        OP_LOGE(nodeName, "pads should be positive, but the actual is [%ld,%ld,%ld,%ld,%ld,%ld].",
-            opInfo.padh, opInfo.padt, opInfo.padu, opInfo.padd, opInfo.padl, opInfo.padr);
+        incorrectShape = {opInfo.padh, opInfo.padt, opInfo.padu, opInfo.padd, opInfo.padl, opInfo.padr};
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(nodeName, "pads",
+            VectorToString(incorrectShape).c_str(), reason.c_str());
         return false;
     } else if (staticRankAndShape && negConv2DPadFlag) {
-        OP_LOGE(nodeName, "pads should be positive, but the actual is [%ld,%ld,%ld,%ld].",
-            opInfo.padu, opInfo.padd, opInfo.padl, opInfo.padr);
+        incorrectShape = {opInfo.padu, opInfo.padd, opInfo.padl, opInfo.padr};
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(nodeName, "pads",
+            VectorToString(incorrectShape).c_str(), reason.c_str());
         return false;
     }
     return true;
@@ -595,7 +651,8 @@ static bool GetPadModeAndUpdatePad(const T* context, ConvOpInfo& opInfo)
         opInfo.padl = 0;
         opInfo.padr = 0;
     } else {
-        OP_LOGE(context->GetNodeName(), "pad mode is invalid which is %s.", opInfo.padMode);
+        std::string correctValue = "SAME, SAME_UPPER, SAME_LOWER, VALID, SPECIFIC";
+        OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "pad_mode", opInfo.padMode, correctValue.c_str());
         return false;
     }
     return true;
@@ -647,6 +704,45 @@ static bool GetConvPads(const T* context, ConvOpInfo& opInfo)
     return CheckPositivePads(context->GetNodeName(), opInfo);
 }
 
+static bool CheckConvGroupValue(const InferShapeContext* context, ConvOpInfo& opInfo, int64_t groups)
+{
+    const gert::Shape* xShape = context->GetInputShape(opInfo.paramIdx.fMapIdx);
+    OPS_CHECK_NULL_WITH_CONTEXT_BOOL(context, xShape);
+    const gert::Shape* filterShape = context->GetInputShape(opInfo.paramIdx.weightIdx);
+    OPS_CHECK_NULL_WITH_CONTEXT_BOOL(context, filterShape);
+    std::vector<const gert::Shape*> xFilterShape = {xShape, filterShape};
+    if (opInfo.opType == ConvOptype::CONV2DV2 && groups == 1 && opInfo.ic != 0 && opInfo.kc != 0) {
+        if (opInfo.ic % opInfo.kc == 0) {
+            groups = opInfo.ic / opInfo.kc;
+            OP_LOGD(context->GetNodeName(), "Attr groups is implicitly changed.");
+        } else {
+            std::string reason = "Shape[" + std::to_string(opInfo.xFormatIdx[IDX_LIST_C_IDX]) +
+                "] of x must be exactly divisible by Shape[" +
+                std::to_string(opInfo.wFormatIdx[IDX_LIST_C_IDX]) + "] of filter";
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "x, filter",
+                Ops::Base::ToString(xFilterShape).c_str(), reason.c_str());
+            return false;
+        }
+    }
+
+    if (opInfo.ic != opInfo.kc * groups) {
+        std::string reason = "Shape[" + std::to_string(opInfo.xFormatIdx[IDX_LIST_C_IDX]) +
+            "] of x must be equal to shape[" + std::to_string(opInfo.wFormatIdx[IDX_LIST_C_IDX]) +
+            "] of filter multiplied by groups " + std::to_string(groups);
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "x, filter",
+                Ops::Base::ToString(xFilterShape).c_str(), reason.c_str());
+        return false;
+    }
+    if (opInfo.kn % groups != 0) {
+        std::string reason = "Shape[" + std::to_string(opInfo.wFormatIdx[IDX_LIST_N_IDX]) +
+            "] of this parameter must be exactly divisible by attribute groups " + std::to_string(groups);
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "filter",
+            Ops::Base::ToString(*filterShape).c_str(), reason.c_str());
+        return false;
+    }
+    return true;
+}
+
 static bool CheckConvGroups(const InferShapeContext* context, ConvOpInfo& opInfo)
 {
     bool unknownRank = opInfo.unknownRankX || opInfo.unknownRankW;
@@ -674,30 +770,34 @@ static bool CheckConvGroups(const InferShapeContext* context, ConvOpInfo& opInfo
             opInfo.ic, opInfo.kc, groups);
         return true;
     }
+    return CheckConvGroupValue(context, opInfo, groups);
+}
 
-    if (opInfo.opType == ConvOptype::CONV2DV2 && groups == 1 && opInfo.ic != 0 && opInfo.kc != 0) {
-        if (opInfo.ic % opInfo.kc == 0) {
-            groups = opInfo.ic / opInfo.kc;
-            OP_LOGD(context->GetNodeName(), "Attr groups is implicitly changed.");
-        } else {
-            OP_LOGE(context->GetNodeName(), "In_channels(>0) should be divisible by kernel_channels when groups = 1.");
-            return false;
-        }
+static bool ReportInputWithPadError(const InferShapeContext* context, const ConvOpInfo& opInfo, std::string reason) {
+    const gert::RuntimeAttrs* attrs = context->GetAttrs();
+    OPS_CHECK_NULL_WITH_CONTEXT_BOOL(context, attrs);
+    const gert::ContinuousVector* dilationsList =
+        attrs->GetAttrPointer<gert::ContinuousVector>(opInfo.paramIdx.dilationIdx);
+    const int64_t* dilationsPtr = static_cast<const int64_t *>(dilationsList->GetData());
+    OPS_CHECK_NULL_WITH_CONTEXT_BOOL(context, dilationsPtr);
+    const gert::Shape* xShapePtr = context->GetInputShape(opInfo.paramIdx.fMapIdx);
+    OPS_CHECK_NULL_WITH_CONTEXT_BOOL(context, xShapePtr);
+    const gert::Shape* filterShapePtr = context->GetInputShape(opInfo.paramIdx.weightIdx);
+    OPS_CHECK_NULL_WITH_CONTEXT_BOOL(context, filterShapePtr);
+    std::vector<int64_t> dilations;
+    std::vector<int64_t> pads;
+    if (opInfo.isConv3DLike) {
+        dilations.assign(dilationsPtr, dilationsPtr + CONV3DV2_SUPPORTED_DIM_NUM);
+        pads = {opInfo.padh, opInfo.padt, opInfo.padu, opInfo.padd, opInfo.padl, opInfo.padr};
+    } else if (opInfo.isConv2DLike) {
+        dilations.assign(dilationsPtr, dilationsPtr + CONV2DV2_SUPPORTED_DIM_NUM);
+        pads = {opInfo.padu, opInfo.padd, opInfo.padl, opInfo.padr};
     }
-
-    if (opInfo.ic != opInfo.kc * groups) {
-        OP_LOGE(context->GetNodeName(),
-                "The input channel should be equal to filter_channel*groups. input channel is %ld, "
-                "filter channel is %ld, groups is: %ld.",
-                opInfo.ic, opInfo.kc, groups);
-        return false;
-    }
-    if (opInfo.kn % groups != 0) {
-        OP_LOGE(context->GetNodeName(), "The output channels %ld should be divisible by groups %ld.",
-                opInfo.kn, groups);
-        return false;
-    }
-    return true;
+    std::string incorrectShapes = Ops::Base::ToString(*xShapePtr) + Ops::Base::ToString(*filterShapePtr) +
+        VectorToString(pads) + VectorToString(dilations);
+    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "x, filter, pads, dilations",
+        incorrectShapes.c_str(), reason.c_str());
+    return false;
 }
 
 static bool CheckConvInputWithPad(const InferShapeContext* context, const ConvOpInfo& opInfo)
@@ -710,19 +810,67 @@ static bool CheckConvInputWithPad(const InferShapeContext* context, const ConvOp
     int64_t idPad = opInfo.id + opInfo.padh + opInfo.padt - opInfo.dild * (opInfo.kd - 1) - 1;
     int64_t ihPad = opInfo.ih + opInfo.padu + opInfo.padd - opInfo.dilh * (opInfo.kh - 1) - 1;
     int64_t iwPad = opInfo.iw + opInfo.padl + opInfo.padr - opInfo.dilw * (opInfo.kw - 1) - 1;
-    if (opInfo.isConv3DLike && (idPad < 0 || ihPad < 0 || iwPad < 0)) {
-        std::stringstream convLogStr;
-        convLogStr << "Fmap size(DHW) after padding should be greater than or equal to filtersize(DHW)."
-                << "idPad " << idPad << ", ihPad " << ihPad << ", iwPad " << iwPad;
-        OP_LOGE(context->GetNodeName(), "%s", convLogStr.str().c_str());
-        return false;
-    } else if (opInfo.isConv2DLike && (ihPad < 0 || iwPad < 0)) {
-        OP_LOGE(context->GetNodeName(),
-            "Fmap size(HW) after padding should be greater than or equal to filtersize(HW). ihPad %ld, iwPad %ld",
-            ihPad, iwPad);
-        return false;
+
+    bool checkFlag = true;
+    size_t xIdx = 0;
+    size_t filterIdx = 0;
+    size_t pad1Idx = 0;
+    size_t pad2Idx = 0;
+    size_t dilationIdx = 0;
+    if (opInfo.isConv3DLike && idPad < 0) {
+        xIdx = opInfo.xFormatIdx[IDX_LIST_D_IDX];
+        filterIdx = opInfo.wFormatIdx[IDX_LIST_D_IDX];
+        pad1Idx = IDX_PAD_H_IDX;
+        pad2Idx = IDX_PAD_T_IDX;
+        dilationIdx = opInfo.xFormatIdx[IDX_LIST_D_IDX];
+        checkFlag = false;
+    } else if ((opInfo.isConv2DLike || opInfo.isConv3DLike) && ihPad < 0) {
+        xIdx = opInfo.xFormatIdx[IDX_LIST_H_IDX];
+        filterIdx = opInfo.wFormatIdx[IDX_LIST_H_IDX];
+        pad1Idx = IDX_PAD_U_IDX;
+        pad2Idx = IDX_PAD_D_IDX;
+        dilationIdx = opInfo.xFormatIdx[IDX_LIST_H_IDX];
+        checkFlag = false;
+    } else if ((opInfo.isConv2DLike || opInfo.isConv3DLike) && iwPad < 0) {
+        xIdx = opInfo.xFormatIdx[IDX_LIST_W_IDX];
+        filterIdx = opInfo.wFormatIdx[IDX_LIST_W_IDX];
+        pad1Idx = IDX_PAD_L_IDX;
+        pad2Idx = IDX_PAD_R_IDX;
+        dilationIdx = opInfo.xFormatIdx[IDX_LIST_W_IDX];
+        checkFlag = false;
     }
 
+    if (!checkFlag) {
+        std::stringstream ss;
+        ss << "x[" + std::to_string(xIdx) +"] + pads[" + std::to_string(pad1Idx) + "] + pads[" +
+        std::to_string(pad2Idx) + "] < dilations[" + std::to_string(dilationIdx) + "] * (filter[" +
+        std::to_string(filterIdx) + "] - 1) + 1, ";
+        ss << "indicating that the filter is greater than the feature map and convolution compute cannot be performed";
+        return ReportInputWithPadError(context, opInfo, ss.str());
+    }
+    return true;
+}
+
+static bool CheckOutputNegative(const InferShapeContext* context, ConvOpInfo& opInfo)
+{
+    bool conv2dNegFlag = opInfo.on < 0 || opInfo.oc < 0 || opInfo.oh < 0 || opInfo.ow < 0;
+    std::string reason = "All dimensions of this shape cannot be a negative value";
+    std::vector<int64_t> yInferredShape;
+    if (opInfo.isConv2DLike) {
+        yInferredShape = {opInfo.on, opInfo.oc, opInfo.oh, opInfo.ow};
+        if (conv2dNegFlag) {
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "y(infered)",
+                VectorToString(yInferredShape).c_str(), reason.c_str());
+            return false;
+        }
+    } else if (opInfo.isConv3DLike) {
+        yInferredShape = {opInfo.on, opInfo.oc, opInfo.od, opInfo.oh, opInfo.ow};
+        if (conv2dNegFlag || opInfo.od < 0) {
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "y(infered)",
+                VectorToString(yInferredShape).c_str(), reason.c_str());
+            return false;
+        }
+    }
     return true;
 }
 
@@ -731,46 +879,39 @@ static bool CheckOutputZeroTensor(const InferShapeContext* context, ConvOpInfo& 
     if (!opInfo.isInputZeroTensor) {
         return true;
     }
-    bool conv2dNegFlag = opInfo.on < 0 || opInfo.oc < 0 || opInfo.oh < 0 || opInfo.ow < 0;
+    if (!CheckOutputNegative(context, opInfo)) {
+        return false;
+    }
     bool conv2dNoneZeroFlag = opInfo.on != 0 && opInfo.oc != 0 && opInfo.oh != 0 && opInfo.ow != 0;
-    std::stringstream convLogStr;
+    std::stringstream reason2;
+    reason2 << "If any dimension of the shape of x or shape[" + std::to_string(opInfo.wFormatIdx[IDX_LIST_N_IDX])
+            << "] of filter is 0, any dimension of the shape of y must be equal to 0";
+    std::vector<std::vector<int64_t>> xyInferredShapes;
     if (opInfo.isConv2DLike) {
-        if (conv2dNegFlag) {
-            convLogStr << "Invalid input [in: "<< opInfo.in << ", ic: " << opInfo.ic << ", ih: "
-                    << opInfo.ih << ", iw: " << opInfo.iw << "], output [on: " << opInfo.on << ", oc: "
-                    << opInfo.oc << ", oh: " << opInfo.oh << ", ow: " << opInfo.ow << "] infers negative value!";
-            OP_LOGE(context->GetNodeName(), "%s", convLogStr.str().c_str());
-            return false;
-        }
+        xyInferredShapes = {{opInfo.in, opInfo.ic, opInfo.ih, opInfo.iw},
+                            {opInfo.on, opInfo.oc, opInfo.oh, opInfo.ow}};
         if (conv2dNoneZeroFlag) {
-            convLogStr << "zero tensor input [in: "<< opInfo.in << ", ic: " << opInfo.ic << ", ih: "
-                    << opInfo.ih << ", iw: " << opInfo.iw << "] and non-zero tensor output [on: " << opInfo.on
-                    << ", oc: " << opInfo.oc << ", oh: " << opInfo.oh << ", ow: " << opInfo.ow << "] are not supported!";
-            OP_LOGE(context->GetNodeName(), "%s", convLogStr.str().c_str());
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "x, y(infered)",
+                VectorsToString(xyInferredShapes).c_str(), reason2.str().c_str());
             return false;
         }
     } else if (opInfo.isConv3DLike) {
-        if (conv2dNegFlag || opInfo.od < 0) {
-            convLogStr << "Invalid input [in: "<< opInfo.in << ", ic: " << opInfo.ic << ", id: " << opInfo.id
-                    << ", ih: " << opInfo.ih << ", iw: " << opInfo.iw << "], output [on: " << opInfo.on << ", oc: "
-                    << opInfo.oc << ", od: " << opInfo.od << ", oh: " << opInfo.oh << ", ow: " << opInfo.ow
-                    << "] infers negative value!";
-            OP_LOGE(context->GetNodeName(), "%s", convLogStr.str().c_str());
-            return false;
-        }
+        xyInferredShapes = {{opInfo.in, opInfo.ic, opInfo.id, opInfo.ih, opInfo.iw},
+                            {opInfo.on, opInfo.oc, opInfo.od, opInfo.oh, opInfo.ow}};
         if (conv2dNoneZeroFlag && opInfo.od != 0) {
-            convLogStr << "Zero tensor input [in: "<< opInfo.in << ", ic: " << opInfo.ic << ", id: " << opInfo.id
-                    << ", ih: " << opInfo.ih << ", iw: " << opInfo.iw << "] and non-zero tensor output [on: "
-                    << opInfo.on << ", oc: " << opInfo.oc << ", od: " << opInfo.od << ", oh: " << opInfo.oh
-                    << ", ow: " << opInfo.ow << "] are not supported!";
-            OP_LOGE(context->GetNodeName(), "%s", convLogStr.str().c_str());
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "x, y(infered)",
+                VectorsToString(xyInferredShapes).c_str(), reason2.str().c_str());
             return false;
         }
     }
     opInfo.isOutputZeroTensor = true;
+    std::string reason3 = "All dimensions of the shapes of x and y and shape[" +
+        std::to_string(opInfo.wFormatIdx[IDX_LIST_N_IDX]) + "] of filter cannot be 0";
     if (opInfo.opType == ConvOptype::QUANT_CONV3D || opInfo.opType == ConvOptype::QUANT_CONV2D) {
         if (opInfo.isInputZeroTensor || opInfo.isOutputZeroTensor) {
-            OP_LOGE(context->GetNodeName(), "zero tensor is not supported in quant scenario.");
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "x, y(infered)",
+                VectorsToString(xyInferredShapes).c_str(), reason3.c_str());
+            return false;
         }
     }
     OP_LOGD(context->GetNodeName(), "Output is zero tensor.");
@@ -806,8 +947,12 @@ static bool SetConvYDim(InferShapeContext* context, ConvOpInfo& opInfo, const ge
         yShape->AppendDim(opInfo.oh);
         yShape->AppendDim(opInfo.ow);
     } else {
-        OP_LOGE(context->GetNodeName(), "The format of output y not support format %s.",
-                ge::TypeUtils::FormatToSerialString(yFormat).c_str());
+        std::string correctFormat = Ops::Base::ToString(ge::Format::FORMAT_NCDHW) + ", " +
+            Ops::Base::ToString(ge::Format::FORMAT_NDHWC) + ", " +
+            Ops::Base::ToString(ge::Format::FORMAT_NHWC) + ", " +
+            Ops::Base::ToString(ge::Format::FORMAT_NCHW);
+        OP_LOGE_FOR_INVALID_FORMAT(context->GetNodeName(), "y", Ops::Base::ToString(yFormat).c_str(),
+            correctFormat.c_str());
         return false;
     }
 
@@ -864,14 +1009,15 @@ static bool CheckQuantRoundMode(const InferShapeContext* context, ConvOpInfo& op
     const ge::DataType yDtype = yDesc->GetDataType();
     if (yDtype == ge::DT_HIFLOAT8) {
         if (strcmp(roundMode, "round") != 0) {
-            OP_LOGE(context->GetNodeName(),
-                    "round_mode only support round in hif8 dtype, now round_mode is %s.", roundMode);
+            std::string reason = "If the dtype of output y is hifloat8, parameter round_mode must be 'round'";
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "round_mode", roundMode, reason.c_str());
             return false;
         }
     } else if (yDtype == ge::DT_FLOAT8_E4M3FN || yDtype == ge::DT_INT8) {
         if (strcmp(roundMode, "rint") != 0) {
-            OP_LOGE(context->GetNodeName(),
-                    "round_mode only support rint in not_hif8 dtype, now round_mode is %s.", roundMode);
+            std::string reason =
+                "If the dtype of output y is int8 or float8_e4m3fn, parameter round_mode must be 'rint'";
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "round_mode", roundMode, reason.c_str());
             return false;
       }
     }
@@ -890,13 +1036,14 @@ static bool CheckDualOutputCase(const InferShapeContext* context, ConvOpInfo& op
     const auto reluWeight1Desc = context->GetOptionalInputDesc(opInfo.paramIdx.reluWeight1Idx);
     const auto clipValue1Desc = context->GetOptionalInputDesc(opInfo.paramIdx.clipValue1Idx);
     if (*dualOut) {
-        OP_LOGE(context->GetNodeName(),
-                "ExtendConv2D only support one output now, dualOut attr is %d.", *dualOut);
+        OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "dual_output", "true", "false");
         return false;
     } else {
         if (scale1Desc != nullptr || reluWeight1Desc != nullptr || clipValue1Desc != nullptr || *enableRelu1) {
-            OP_LOGE(context->GetNodeName(),
-                    "when dualoutput is false, the second related input and attr is not allowed.");
+            std::stringstream ss;
+            ss << "When this parameter is false, parameters scale1, relu_weight1, clip_value1 ";
+            ss << "and attribute enable_relu1 cannot be passed";
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "dual_output", "false", ss.str().c_str());
             return false;
         }
     }
@@ -909,10 +1056,12 @@ static bool CheckSupportReluCase(const InferShapeContext* context, ConvOpInfo& o
     const auto clipValue0Desc = context->GetOptionalInputDesc(opInfo.paramIdx.clipValue0Idx);
     const auto reluWeight1Desc = context->GetOptionalInputDesc(opInfo.paramIdx.reluWeight1Idx);
     const auto clipValue1Desc = context->GetOptionalInputDesc(opInfo.paramIdx.clipValue1Idx);
-    if (reluWeight0Desc != nullptr || clipValue0Desc != nullptr ||
-        reluWeight1Desc != nullptr || clipValue1Desc != nullptr) {
-        OP_LOGE(context->GetNodeName(),
-                "ExtendConv2D only support normal relu now, reluweight/clipvalue should be null.");
+    if (reluWeight0Desc != nullptr || reluWeight1Desc != nullptr) {
+        OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "relu_weight(0/1)", "not nullptr", "nullptr");
+        return false;
+    }
+    if (clipValue0Desc != nullptr || clipValue1Desc != nullptr) {
+        OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "clip_value(0/1)", "not nullptr", "nullptr");
         return false;
     }
     return true;
@@ -925,8 +1074,9 @@ static bool CheckExtendConvScaleDtype(const InferShapeContext* context, const Co
     if (scale0Tensor != nullptr) {
         const ge::DataType scale0Dtype = scale0Tensor->GetDataType();
         if (scale0Dtype != ge::DT_UINT64 && scale0Dtype != ge::DT_INT64) {
-            OP_LOGE(context->GetNodeName(),
-                    "unSupported params data type [scale0]: [%s]", DTypeToStr(scale0Dtype).c_str());
+            std::string correctDtype = Ops::Base::ToString(ge::DT_UINT64) + ", " + Ops::Base::ToString(ge::DT_INT64);
+            OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "scale0", Ops::Base::ToString(scale0Dtype).c_str(),
+                correctDtype.c_str());
             return false;
         }
     }
@@ -934,8 +1084,9 @@ static bool CheckExtendConvScaleDtype(const InferShapeContext* context, const Co
     if (scale1Tensor != nullptr) {
         const ge::DataType scale1Dtype = scale1Tensor->GetDataType();
         if (scale1Dtype != ge::DT_UINT64 && scale1Dtype != ge::DT_INT64) {
-            OP_LOGE(context->GetNodeName(),
-                    "unSupported params data type [scale1]: [%s]", DTypeToStr(scale1Dtype).c_str());
+            std::string correctDtype = Ops::Base::ToString(ge::DT_UINT64) + ", " + Ops::Base::ToString(ge::DT_INT64);
+            OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "scale1", Ops::Base::ToString(scale1Dtype).c_str(),
+                correctDtype.c_str());
             return false;
         }
     }
@@ -958,11 +1109,15 @@ static ge::graphStatus CheckInputZeroTensor(const InferShapeContext* context, Co
 
     bool conv2dInputZeroFlag = opInfo.ic == 0 || opInfo.in == 0 || opInfo.ih == 0 || opInfo.iw == 0 || opInfo.kn == 0;
     bool conv2dUnsupportZeroFlag = opInfo.kh == 0 || opInfo.kw == 0;
+    const auto filterShape = context->GetInputShape(opInfo.paramIdx.weightIdx);
+    OPS_CHECK_NULL_WITH_CONTEXT_BOOL(context, filterShape);
     if (opInfo.isConv2DLike) {
         if (conv2dUnsupportZeroFlag) {
-            OP_LOGE(context->GetNodeName(),
-                    "Input kh or kw can't be 0, [kn: %ld, kc: %ld, kh: %ld, kw: %ld] is not supported!",
-                    opInfo.kn, opInfo.kc, opInfo.kh, opInfo.kw);
+            std::string reason = "Shape[" + std::to_string(opInfo.wFormatIdx[IDX_LIST_H_IDX]) +
+                "] and shape[" + std::to_string(opInfo.wFormatIdx[IDX_LIST_W_IDX]) +
+                "] of this parameter must be greater than or equal to 1";
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "filter",
+                Ops::Base::ToString(*filterShape), reason.c_str());
             return ge::GRAPH_FAILED;
         }
         if (conv2dInputZeroFlag) {
@@ -973,9 +1128,12 @@ static ge::graphStatus CheckInputZeroTensor(const InferShapeContext* context, Co
     }
     // Conv3DV2 and QuantConv3D
     if (conv2dUnsupportZeroFlag || opInfo.kd == 0) {
-        OP_LOGE(context->GetNodeName(),
-                "Input kd or kh or kw can't be 0, [kn: %ld, kc: %ld, kd: %ld, kh: %ld, kw: %ld] is not supported!",
-                opInfo.kn, opInfo.kc, opInfo.kd, opInfo.kh, opInfo.kw);
+        std::string reason = "Shape[" + std::to_string(opInfo.wFormatIdx[IDX_LIST_D_IDX]) +
+            "], shape[" + std::to_string(opInfo.wFormatIdx[IDX_LIST_H_IDX]) +
+            "], and shape[" + std::to_string(opInfo.wFormatIdx[IDX_LIST_W_IDX]) +
+            "] of this parameter must be greater than or equal to 1";
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "filter",
+            Ops::Base::ToString(*filterShape), reason.c_str());
         return ge::GRAPH_FAILED;
     }
     if (conv2dInputZeroFlag || opInfo.id == 0) {
@@ -1004,13 +1162,26 @@ static bool CheckConvInputRangeDim(const gert::InferShapeRangeContext* context, 
     const gert::Range<gert::Shape>* wShapeRange)
 {
     if (fmShapeRangeDimNum != wShapeRangeDimNum) {
-        OP_LOGE(context->GetNodeName(), "fmap/weight ShapeRange Dims Num should be same.");
+        std::string incorrectDims = std::to_string(fmShapeRangeDimNum) + ", " + std::to_string(wShapeRangeDimNum);
+        std::string reason = "The dims of shape_range_max of x and filter must be the same";
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context->GetNodeName(), "x_range_max, filter_range_max",
+            incorrectDims.c_str(), reason.c_str());
         return false;
     }
     size_t fmShapeRangeDimNumMin = fmShapeRange->GetMin()->GetDimNum();
     size_t wShapeRangeDimNumMin = wShapeRange->GetMin()->GetDimNum();
-    if (fmShapeRangeDimNumMin != fmShapeRangeDimNum || wShapeRangeDimNum != wShapeRangeDimNumMin) {
-        OP_LOGE(context->GetNodeName(), "fmap/weight Max ShapeRange Dims not equal to Min.");
+    if (fmShapeRangeDimNumMin != fmShapeRangeDimNum ) {
+        std::string incorrectDims = std::to_string(fmShapeRangeDimNumMin) + ", " + std::to_string(fmShapeRangeDimNum);
+        std::string reason = "The dims of shape_range_min and shape_range_max must be the same";
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context->GetNodeName(), "x_range_min, x_range_max",
+            incorrectDims.c_str(), reason.c_str());
+        return false;
+    }
+    if (wShapeRangeDimNum != wShapeRangeDimNumMin) {
+        std::string incorrectDims = std::to_string(wShapeRangeDimNumMin) + ", " + std::to_string(wShapeRangeDimNum);
+        std::string reason = "The dims of shape_range_min and shape_range_max must be the same";
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context->GetNodeName(), "filter_range_min, filter_range_max",
+            incorrectDims.c_str(), reason.c_str());
         return false;
     }
     return true;
@@ -1185,24 +1356,33 @@ static bool InferConvOutShapeRange(gert::InferShapeRangeContext* context, ConvOp
     return true;
 }
 
-static ge::graphStatus InferShapeForConvInner(InferShapeContext* context, OpParamIdx& opParamIdx, ConvOptype opType)
+static ge::graphStatus SetOpInfo(ConvOpInfo &opInfo, const gert::CompileTimeTensorDesc* offsetDesc,
+    const OpParamIdx& opParamIdx, const ConvOptype& opType, const char* nodeName)
 {
-    OP_CHECK(context == nullptr, CUBE_INNER_ERR_REPORT("ConvolutionV2", "context is null"), return ge::GRAPH_FAILED);
-    const auto opName = context->GetNodeName();
-    OP_LOGD(context->GetNodeName(), "Enter shape infer. ");
-
-    ConvOpInfo opInfo;
     opInfo.paramIdx = opParamIdx;
     opInfo.opType = opType;
     opInfo.isConv2DLike = (opType == ConvOptype::CONV2DV2 || opType == ConvOptype::QUANT_CONV2D ||
                            opType == ConvOptype::EXTEND_CONV2D);
     opInfo.isConv3DLike = (opType == ConvOptype::CONV3DV2 || opType == ConvOptype::QUANT_CONV3D);
 
-    if (opInfo.opType == ConvOptype::QUANT_CONV2D &&
-        context->GetInputDesc(OFFSET_IDX_QUANT_CONV) != nullptr) {
-        OP_LOGE(context->GetNodeName(), "QuantConv2d don't support to set offset parameter.");
+    if (opInfo.opType == ConvOptype::QUANT_CONV2D && offsetDesc != nullptr) {
+        OP_LOGE_FOR_INVALID_VALUE(nodeName, "offset", "not nullptr", "nullptr");
         return ge::GRAPH_FAILED;
     }
+    return ge::GRAPH_SUCCESS;
+}
+
+static ge::graphStatus InferShapeForConvInner(InferShapeContext* context, OpParamIdx& opParamIdx, ConvOptype opType)
+{
+    OP_CHECK(context == nullptr, CUBE_INNER_ERR_REPORT("ConvolutionV2", "context is null"), return ge::GRAPH_FAILED);
+    const auto opName = context->GetNodeName();
+    OP_LOGD(context->GetNodeName(), "Enter shape infer. ");
+    ConvOpInfo opInfo;
+    if (SetOpInfo(opInfo, context->GetInputDesc(OFFSET_IDX_QUANT_CONV), opParamIdx,
+                  opType, context->GetNodeName()) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+
     const gert::CompileTimeTensorDesc* xDesc = context->GetInputDesc(opInfo.paramIdx.fMapIdx);
     OPS_CHECK_NULL_WITH_CONTEXT(context, xDesc);
     const ge::Format xFormat = xDesc->GetOriginFormat();
@@ -1299,15 +1479,8 @@ ge::graphStatus InferShapeRangeForConvInner(gert::InferShapeRangeContext* contex
     OP_LOGI(context->GetNodeName(), "InferShapeRangeForConvInner running begin. ");
 
     ConvOpInfo opInfo;
-    opInfo.paramIdx = opParamIdx;
-    opInfo.opType = opType;
-    opInfo.isConv2DLike = (opType == ConvOptype::CONV2DV2 || opType == ConvOptype::QUANT_CONV2D ||
-                           opType == ConvOptype::EXTEND_CONV2D);
-    opInfo.isConv3DLike = (opType == ConvOptype::CONV3DV2 || opType == ConvOptype::QUANT_CONV3D);
-
-    if (opInfo.opType == ConvOptype::QUANT_CONV2D &&
-        context->GetInputDesc(OFFSET_IDX_QUANT_CONV) != nullptr) {
-        OP_LOGE(context->GetNodeName(), "QuantConv2d don't support to set offset parameter.");
+    if (SetOpInfo(opInfo, context->GetInputDesc(OFFSET_IDX_QUANT_CONV), opParamIdx,
+                  opType, context->GetNodeName()) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
 
@@ -1394,8 +1567,10 @@ static ge::graphStatus InferDataTypeExtendConv2D(gert::InferDataTypeContext* con
         context->SetOutputDataType(Y0_IDX_EXTEND_CONV, out0Dtype);
     } else {
         if (xDtype == ge::DT_UNDEFINED) {
-            OP_LOGE(context->GetNodeName(), "get x dtype: %s which is invalid when dtype0 is default value: -1.",
-                DTypeToStr(xDtype).c_str());
+            std::string reason = "when the dtype0 attribute is -1, the dtype of x cannot be " +
+                Ops::Base::ToString(ge::DT_UNDEFINED);
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context->GetNodeName(), "x",
+                Ops::Base::ToString(xDtype).c_str(), reason.c_str());
             return ge::GRAPH_FAILED;
         }
         context->SetOutputDataType(Y0_IDX_EXTEND_CONV, xDtype);
@@ -1408,8 +1583,10 @@ static ge::graphStatus InferDataTypeExtendConv2D(gert::InferDataTypeContext* con
         context->SetOutputDataType(Y1_IDX_EXTEND_CONV, out1Dtype);
     } else {
         if (xDtype == ge::DT_UNDEFINED) {
-            OP_LOGE(context->GetNodeName(), "get x dtype: %s which is invalid when dtype1 is default value: -1.",
-                    DTypeToStr(xDtype).c_str());
+            std::string reason = "when the dtype1 attribute is -1, the dtype of x cannot be " +
+                Ops::Base::ToString(ge::DT_UNDEFINED);
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context->GetNodeName(), "x",
+                Ops::Base::ToString(xDtype).c_str(), reason.c_str());
             return ge::GRAPH_FAILED;
         }
         context->SetOutputDataType(Y1_IDX_EXTEND_CONV, xDtype);
