@@ -39,6 +39,7 @@ static int64_t SameUpdateDim(const int64_t ksize, const int64_t strides, int64_t
 static ge::graphStatus InferShapePaddingValid(
     gert::InferShapeContext* context, size_t hDim, size_t wDim)
 {
+    const char* opName_ = "MaxPoolV2";
     auto inShape = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inShape);
     auto outShape = context->GetOutputShape(0);
@@ -46,23 +47,26 @@ static ge::graphStatus InferShapePaddingValid(
     *outShape = *inShape;
     auto ksize = context->GetInputTensor(INPUT_KSIZE_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, ksize);
-    OP_CHECK_IF(
-        ksize->GetShapeSize() != SHAPE_NHWC_SIZE,
-        OP_LOGE(context->GetNodeName(), "Length of ksize %ld must be 4!", ksize->GetShapeSize()), return GRAPH_FAILED);
+    if (ksize->GetShapeSize() != SHAPE_NHWC_SIZE) {
+        OP_LOGE_FOR_INVALID_LISTSIZE(opName_, "Length of ksize", std::to_string(ksize->GetShapeSize()).c_str(), "4");
+        return GRAPH_FAILED;
+    }
     int64_t hksizeData = static_cast<int64_t>(ksize->GetData<int32_t>()[hDim]);
     int64_t wksizeData = static_cast<int64_t>(ksize->GetData<int32_t>()[wDim]);
     auto strides = context->GetInputTensor(INPUT_STRIDES_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, strides);
-    OP_CHECK_IF(
-        strides->GetShapeSize() != SHAPE_NHWC_SIZE,
-        OP_LOGE(context->GetNodeName(), "Length of strides %ld must be 4!", strides->GetShapeSize()), return GRAPH_FAILED);
+    if (strides->GetShapeSize() != SHAPE_NHWC_SIZE) {
+        OP_LOGE_FOR_INVALID_LISTSIZE(opName_, "Length of strides", std::to_string(strides->GetShapeSize()).c_str(), "4");
+        return GRAPH_FAILED;
+    }
     int64_t hstridesData = static_cast<int64_t>(strides->GetData<int32_t>()[hDim]);
     int64_t wstridesData = static_cast<int64_t>(strides->GetData<int32_t>()[wDim]);
-    OP_CHECK_IF(
-        hstridesData <= 0 || wstridesData <= 0,
-        OP_LOGE(context->GetNodeName(), "MaxPoolV2: not support stride shape [%ld, %ld]", hstridesData, wstridesData),
-        return GRAPH_FAILED);
-
+    if (hstridesData <= 0 || wstridesData <= 0) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "strides[h,w]",
+            (std::to_string(hstridesData) + ", " + std::to_string(wstridesData)).c_str(),
+            "strides must be greater than 0");
+        return GRAPH_FAILED;
+    }
     int64_t dimSize = inShape->GetDim(hDim);
     outShape->SetDim(hDim, SameUpdateDim(hksizeData, hstridesData, dimSize));
     dimSize = inShape->GetDim(wDim);
@@ -73,6 +77,7 @@ static ge::graphStatus InferShapePaddingValid(
 static ge::graphStatus InferShapePaddingSame(
     gert::InferShapeContext* context, size_t hDim, size_t wDim)
 {
+    const char* opName_ = "MaxPoolV2";
     auto inShape = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inShape);
     auto outShape = context->GetOutputShape(0);
@@ -80,15 +85,19 @@ static ge::graphStatus InferShapePaddingSame(
     *outShape = *inShape;
     auto strides = context->GetInputTensor(INPUT_STRIDES_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, strides);
-    OP_CHECK_IF(
-        static_cast<uint64_t>(strides->GetShapeSize()) != SHAPE_NHWC_SIZE,
-        OP_LOGE(context->GetNodeName(), "Length of strides %lu must be 4!", static_cast<uint64_t>(strides->GetShapeSize())), return GRAPH_FAILED);
-    int64_t hstridesData = static_cast<int64_t>(strides->GetData<int32_t>()[hDim]);
+    if (static_cast<uint64_t>(strides->GetShapeSize()) != SHAPE_NHWC_SIZE) {
+        OP_LOGE_FOR_INVALID_LISTSIZE(opName_, "Length of strides",
+            std::to_string(static_cast<uint64_t>(strides->GetShapeSize())).c_str(), "4");
+        return GRAPH_FAILED;
+    }
+int64_t hstridesData = static_cast<int64_t>(strides->GetData<int32_t>()[hDim]);
     int64_t wstridesData = static_cast<int64_t>(strides->GetData<int32_t>()[wDim]);
-    OP_CHECK_IF(
-        hstridesData <= 0 || wstridesData <= 0,
-        OP_LOGE(context->GetNodeName(), "MaxPoolV2: not support stride shape [%ld, %ld]", hstridesData, wstridesData),
-        return GRAPH_FAILED);
+    if (hstridesData <= 0 || wstridesData <= 0) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "strides[h,w]",
+            (std::to_string(hstridesData) + ", " + std::to_string(wstridesData)).c_str(),
+            "strides must be greater than 0");
+        return GRAPH_FAILED;
+    }
     int64_t dimSize = inShape->GetDim(hDim);
     outShape->SetDim(hDim, SameUpdateDim(1, hstridesData, dimSize));
     dimSize = inShape->GetDim(wDim);
@@ -103,6 +112,7 @@ static const std::vector<std::pair<std::string, InferShapePaddingFunc>> kFuncMap
 
 static ge::graphStatus InferShape4MaxPoolV2(gert::InferShapeContext* context)
 {
+    const char* opName_ = "MaxPoolV2";
     auto inShape = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inShape);
     auto outShape = context->GetOutputShape(0);
@@ -128,10 +138,11 @@ static ge::graphStatus InferShape4MaxPoolV2(gert::InferShapeContext* context)
         [&paddingMode](const std::pair<std::string, InferShapePaddingFunc>& item)->bool{
           return item.first == paddingMode;
         });
-    OP_CHECK_IF(
-        it == kFuncMap.end(),
-        OP_LOGE(context->GetNodeName(), "paddingMode %s must in (VALID, SAME).", paddingMode),
-        return GRAPH_FAILED);
+    if (it == kFuncMap.end()) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "paddingMode", paddingMode,
+            "must in (VALID, SAME)");
+        return GRAPH_FAILED;
+    }
 
     // when paddingMode in (VALID, SAME)
     return it->second(context, hDim, wDim);

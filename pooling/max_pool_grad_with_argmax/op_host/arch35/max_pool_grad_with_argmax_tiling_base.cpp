@@ -17,7 +17,6 @@
 #include "graph/utils/type_utils.h"
 #include "exe_graph/runtime/infer_shape_context.h"
 
-
 #include "platform/platform_info.h"
 #include "atvoss/broadcast/broadcast_tiling.h"
 #include "op_common/op_host/util/platform_util.h"
@@ -43,29 +42,31 @@ static constexpr int64_t INPUT_GRAD = 1;
 static constexpr int64_t INPUT_ARGMAX = 2;
 
  ge::graphStatus MaxPoolGradWithArgmaxBaseTiling::GetShapeAttrsInfo() {
-    OP_LOGD("MaxPoolGradWithArgmax", "MaxPoolGradWithArgmaxBaseTiling::GetShapeAttrsInfo()");
+    const char* opName_ = "MaxPoolGradWithArgmax";
+    OP_LOGD(opName_, "MaxPoolGradWithArgmaxBaseTiling::GetShapeAttrsInfo()");
      auto inputX = context_->GetInputShape(INPUT_X);
      OPS_CHECK_NULL_WITH_CONTEXT(context_, inputX);
      auto xShape = Ops::Base::EnsureNotScalar(inputX->GetStorageShape());
  
-     OP_TILING_CHECK(xShape.GetDimNum() != DIMS_FOUR,
-                     VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
-                                                     "MaxPoolGradWithArgmax: input shape dim = %zu, should be equal 4",
-                                                     xShape.GetDimNum()),
-                     return ge::GRAPH_FAILED);
+     if (xShape.GetDimNum() != DIMS_FOUR) {
+         OP_LOGE_FOR_INVALID_SHAPEDIM(opName_, "x",
+             std::to_string(xShape.GetDimNum()).c_str(), "4");
+         return ge::GRAPH_FAILED;
+     }
  
-     OP_TILING_CHECK(xShape.GetShapeSize() <= 0,
-                     VECTOR_INNER_ERR_REPORT_TILIING(
-                         context_->GetNodeName(), "MaxPoolGradWithArgmax: input shape size %ld less than zero failed",
-                         xShape.GetShapeSize()),
-                     return ge::GRAPH_FAILED);
+     if (xShape.GetShapeSize() <= 0) {
+         OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(opName_, "x",
+             std::to_string(xShape.GetShapeSize()).c_str(),
+             "input shape size must be greater than 0");
+         return ge::GRAPH_FAILED;
+     }
     
      auto inputDesc = context_->GetInputDesc(INPUT_X);
      OPS_CHECK_NULL_WITH_CONTEXT(context_, inputDesc);
      inputData.inputDtype = inputDesc->GetDataType();
      if (inputData.inputDtype != ge::DataType::DT_BF16 && inputData.inputDtype != ge::DataType::DT_FLOAT16 &&
          inputData.inputDtype != ge::DataType::DT_FLOAT) {
-         VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "MaxPoolGradWithArgmax: invalid dtype");
+         OP_LOGE_FOR_INVALID_DTYPE(opName_, "x", std::to_string(static_cast<int32_t>(inputData.inputDtype)), "[DT_FLOAT16, DT_FLOAT, DT_BF16]");
          return ge::GRAPH_FAILED;
      }
 
@@ -73,44 +74,47 @@ static constexpr int64_t INPUT_ARGMAX = 2;
    OPS_CHECK_NULL_WITH_CONTEXT(context_, inputGrad);
    auto gradShape = Ops::Base::EnsureNotScalar(inputGrad->GetStorageShape());
 
-   OP_TILING_CHECK(gradShape.GetShapeSize() <= 0,
-                     VECTOR_INNER_ERR_REPORT_TILIING(
-                         context_->GetNodeName(), "MaxPoolGradWithArgmax: grad shape size %ld less than zero failed",
-                         gradShape.GetShapeSize()),
-                     return ge::GRAPH_FAILED);
+   if (gradShape.GetShapeSize() <= 0) {
+         OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(opName_, "grad",
+             std::to_string(gradShape.GetShapeSize()).c_str(),
+             "grad shape size must be greater than 0");
+         return ge::GRAPH_FAILED;
+     }
  
    auto inputArgmax = context_->GetInputShape(INPUT_ARGMAX);
    OPS_CHECK_NULL_WITH_CONTEXT(context_, inputArgmax);
    auto argmaxShape = Ops::Base::EnsureNotScalar(inputArgmax->GetStorageShape());
-   OP_TILING_CHECK(argmaxShape.GetShapeSize() <= 0,
-                     VECTOR_INNER_ERR_REPORT_TILIING(
-                         context_->GetNodeName(), "MaxPoolGradWithArgmax: argmax shape size %ld less than zero failed",
-                         argmaxShape.GetShapeSize()),
-                     return ge::GRAPH_FAILED);
+   if (argmaxShape.GetShapeSize() <= 0) {
+         OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(opName_, "argmax",
+             std::to_string(argmaxShape.GetShapeSize()).c_str(), "argmax shape size must be greater than 0");
+         return ge::GRAPH_FAILED;
+     }
 
     auto inputArgmaxDesc = context_->GetInputDesc(INPUT_ARGMAX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputArgmaxDesc);
     auto argmaxDtype = inputArgmaxDesc->GetDataType();
     if (argmaxDtype != ge::DataType::DT_INT32 && argmaxDtype != ge::DataType::DT_INT64) {
-        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
-                                        "MaxPoolGradWithArgmax: argmax dtype only support int32, int64, but got [%s].",
-                                        ge::TypeUtils::DataTypeToSerialString(argmaxDtype).c_str());
+        OP_LOGE_FOR_INVALID_DTYPE(opName_, "argmax", std::to_string(static_cast<int32_t>(argmaxDtype)), "[DT_INT32, DT_INT64]");
         return ge::GRAPH_FAILED;
     }
     inputData.indexDtype = argmaxDtype;
 
-   OP_TILING_CHECK(gradShape != argmaxShape,
-                   VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
-                                                   "MaxPoolGradWithArgmax: argmax shape is not same as grad shape"),
-                   return ge::GRAPH_FAILED);
+   if (gradShape != argmaxShape) {
+       OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(opName_, "argmax, grad",
+           "argmax_shape, grad_shape",
+           "argmax shape must equal grad shape");
+       return ge::GRAPH_FAILED;
+   }
  
     auto outY = context_->GetOutputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, outY);
     auto yShape = Ops::Base::EnsureNotScalar(outY->GetStorageShape());
-    OP_TILING_CHECK(yShape != xShape,
-                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
-                                                    "MaxPoolGradWithArgmax: output shape is not same as input shape"),
-                    return ge::GRAPH_FAILED);
+    if (yShape != xShape) {
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(opName_, "y, x",
+            "y_shape, x_shape",
+            "output shape must equal input shape");
+        return ge::GRAPH_FAILED;
+    }
     
     auto runtimeAttrs = context_->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context_, runtimeAttrs);
@@ -137,8 +141,8 @@ static constexpr int64_t INPUT_ARGMAX = 2;
             inputData.wGrad = gradShape.GetDim(DIM_TWO);
             inputData.cGrad = gradShape.GetDim(DIM_THREE);
         } else {
-            VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "MaxPoolGradWithArgmax: input format [%s] is invalid",
-                                            inputFormatPtr);
+            OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(opName_, "x",
+                inputFormatPtr, "dataFormat must be NCHW or NHWC");
             return ge::GRAPH_FAILED;
         } 
         if (inputData.inputFormat == ge::Format::FORMAT_NHWC) {
@@ -146,62 +150,76 @@ static constexpr int64_t INPUT_ARGMAX = 2;
             OPS_CHECK_NULL_WITH_CONTEXT(context_, kernelSizePtr);
         inputData.hKernel = kernelSizePtr->GetData()[DIM_ONE];
         inputData.wKernel = kernelSizePtr->GetData()[DIM_TWO];
-        OP_TILING_CHECK(kernelSizePtr->GetData()[DIM_ZERO] != 1 || kernelSizePtr->GetData()[DIM_THREE] != 1 ||
-                        inputData.hKernel <= 0 || inputData.wKernel <= 0,
-                        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
-                                                        "MaxPoolGradWithArgmax: kernel shape [%ld, %ld, %ld, %ld] is invalid",
-                                                        kernelSizePtr->GetData()[DIM_ZERO], kernelSizePtr->GetData()[DIM_ONE], kernelSizePtr->GetData()[DIM_TWO], kernelSizePtr->GetData()[DIM_THREE]),
-                        return ge::GRAPH_FAILED);
+        if (kernelSizePtr->GetData()[DIM_ZERO] != 1 || kernelSizePtr->GetData()[DIM_THREE] != 1 ||
+                        inputData.hKernel <= 0 || inputData.wKernel <= 0) {
+            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(opName_, "ksize[NHWC]",
+                (std::string("[") + std::to_string(kernelSizePtr->GetData()[DIM_ZERO]) + "," +
+                 std::to_string(kernelSizePtr->GetData()[DIM_ONE]) + "," +
+                 std::to_string(kernelSizePtr->GetData()[DIM_TWO]) + "," +
+                 std::to_string(kernelSizePtr->GetData()[DIM_THREE]) + "]").c_str(),
+                "NHWC ksize[0] and ksize[3] must be 1, ksize[H] and ksize[W] must be > 0");
+            return ge::GRAPH_FAILED;
+        }
         
         const gert::TypedContinuousVector<int64_t>* stridePtr = runtimeAttrs->GetListInt(ATTR_INDEX_STRIDES);
         OPS_CHECK_NULL_WITH_CONTEXT(context_, stridePtr);
         inputData.hStride = stridePtr->GetData()[DIM_ONE];
         inputData.wStride = stridePtr->GetData()[DIM_TWO];
-        OP_TILING_CHECK(stridePtr->GetData()[DIM_ZERO] != 1 || stridePtr->GetData()[DIM_THREE] != 1 || 
-                        inputData.hStride <= 0 || inputData.wStride <= 0,
-                        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
-                                                        "MaxPoolGradWithArgmax: stride shape [%ld, %ld, %ld, %ld] is invalid",
-                                                        stridePtr->GetData()[DIM_ZERO], stridePtr->GetData()[DIM_ONE], stridePtr->GetData()[DIM_TWO], stridePtr->GetData()[DIM_THREE]),
-                        return ge::GRAPH_FAILED);
+        if (stridePtr->GetData()[DIM_ZERO] != 1 || stridePtr->GetData()[DIM_THREE] != 1 || 
+                        inputData.hStride <= 0 || inputData.wStride <= 0) {
+            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(opName_, "strides[NHWC]",
+                (std::string("[") + std::to_string(stridePtr->GetData()[DIM_ZERO]) + "," +
+                 std::to_string(stridePtr->GetData()[DIM_ONE]) + "," +
+                 std::to_string(stridePtr->GetData()[DIM_TWO]) + "," +
+                 std::to_string(stridePtr->GetData()[DIM_THREE]) + "]").c_str(),
+                "NHWC strides[0] and strides[3] must be 1, strides[H] and strides[W] must be > 0");
+            return ge::GRAPH_FAILED;
+        }
     } else if (inputData.inputFormat == ge::Format::FORMAT_NCHW) {
-        // ===== NCHW 分支：ksize = [1, 1, kH, kW], stride = [1, 1, sH, sW] =====
         const gert::TypedContinuousVector<int64_t>* kernelSizePtr = runtimeAttrs->GetListInt(ATTR_INDEX_KSIZE);
         OPS_CHECK_NULL_WITH_CONTEXT(context_, kernelSizePtr);
-        inputData.hKernel = kernelSizePtr->GetData()[DIM_TWO];   // index 2
-        inputData.wKernel = kernelSizePtr->GetData()[DIM_THREE]; // index 3
-        OP_TILING_CHECK(kernelSizePtr->GetData()[DIM_ZERO] != 1 || kernelSizePtr->GetData()[DIM_ONE] != 1 ||
-                        inputData.hKernel <= 0 || inputData.wKernel <= 0,
-                        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
-                                                        "MaxPoolGradWithArgmax: kernel shape [%ld, %ld, %ld, %ld] is invalid for NCHW",
-                                                        kernelSizePtr->GetData()[DIM_ZERO], kernelSizePtr->GetData()[DIM_ONE],
-                                                        kernelSizePtr->GetData()[DIM_TWO], kernelSizePtr->GetData()[DIM_THREE]),
-                        return ge::GRAPH_FAILED);
+        inputData.hKernel = kernelSizePtr->GetData()[DIM_TWO];
+        inputData.wKernel = kernelSizePtr->GetData()[DIM_THREE];
+        if (kernelSizePtr->GetData()[DIM_ZERO] != 1 || kernelSizePtr->GetData()[DIM_ONE] != 1 ||
+                        inputData.hKernel <= 0 || inputData.wKernel <= 0) {
+            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(opName_, "ksize[NCHW]",
+                (std::string("[") + std::to_string(kernelSizePtr->GetData()[DIM_ZERO]) + "," +
+                 std::to_string(kernelSizePtr->GetData()[DIM_ONE]) + "," +
+                 std::to_string(kernelSizePtr->GetData()[DIM_TWO]) + "," +
+                 std::to_string(kernelSizePtr->GetData()[DIM_THREE]) + "]").c_str(),
+                "NCHW ksize[0] and ksize[1] must be 1, ksize[H] and ksize[W] must be > 0");
+            return ge::GRAPH_FAILED;
+        }
         const gert::TypedContinuousVector<int64_t>* stridePtr = runtimeAttrs->GetListInt(ATTR_INDEX_STRIDES);
         OPS_CHECK_NULL_WITH_CONTEXT(context_, stridePtr);
-        inputData.hStride = stridePtr->GetData()[DIM_TWO];   // index 2
-        inputData.wStride = stridePtr->GetData()[DIM_THREE]; // index 3
-        OP_TILING_CHECK(stridePtr->GetData()[DIM_ZERO] != 1 || stridePtr->GetData()[DIM_ONE] != 1 ||
-                        inputData.hStride <= 0 || inputData.wStride <= 0,
-                        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
-                                                        "MaxPoolGradWithArgmax: stride shape [%ld, %ld, %ld, %ld] is invalid for NCHW",
-                                                        stridePtr->GetData()[DIM_ZERO], stridePtr->GetData()[DIM_ONE],
-                                                        stridePtr->GetData()[DIM_TWO], stridePtr->GetData()[DIM_THREE]),
-                        return ge::GRAPH_FAILED);
+        inputData.hStride = stridePtr->GetData()[DIM_TWO];
+        inputData.wStride = stridePtr->GetData()[DIM_THREE];
+        if (stridePtr->GetData()[DIM_ZERO] != 1 || stridePtr->GetData()[DIM_ONE] != 1 ||
+                        inputData.hStride <= 0 || inputData.wStride <= 0) {
+            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(opName_, "strides[NCHW]",
+                (std::string("[") + std::to_string(stridePtr->GetData()[DIM_ZERO]) + "," +
+                 std::to_string(stridePtr->GetData()[DIM_ONE]) + "," +
+                 std::to_string(stridePtr->GetData()[DIM_TWO]) + "," +
+                 std::to_string(stridePtr->GetData()[DIM_THREE]) + "]").c_str(),
+                "NCHW strides[0] and strides[1] must be 1, strides[H] and strides[W] must be > 0");
+            return ge::GRAPH_FAILED;
+        }
     } else {
-        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
-                                        "MaxPoolGradWithArgmax: unsupported input format");
+        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(opName_, "x",
+            "unknown", "dataFormat must be NCHW or NHWC");
         return ge::GRAPH_FAILED;
     }
    
     const char* padMode = runtimeAttrs->GetAttrPointer<char>(ATTR_INDEX_PADDING);
         OPS_CHECK_NULL_WITH_CONTEXT(context_, padMode);
         std::string padModeStr = padMode;
-        OP_TILING_CHECK(
-            IsInvalidPaddingMode(padModeStr),
-            VECTOR_INNER_ERR_REPORT_TILIING(context_, "MaxPoolGradWithArgmax: not support padmode %s", padModeStr.c_str()),
-            return ge::GRAPH_FAILED);
+        if (IsInvalidPaddingMode(padModeStr)) {
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "padding",
+                padModeStr.c_str(), "padding must be VALID or SAME");
+            return ge::GRAPH_FAILED;
+        }
     if (padModeStr == "VALID") {
-        inputData.hPad = inputData.wPad = 0;  // top, bottom, left, right
+        inputData.hPad = inputData.wPad = 0;
     } else if (padModeStr == "SAME") {
         int64_t hPadNeed = std::max(int64_t{0}, (inputData.hGrad - 1) * inputData.hStride +
                                                 inputData.hKernel - inputData.hX);
@@ -212,16 +230,19 @@ static constexpr int64_t INPUT_ARGMAX = 2;
         inputData.wPad = wPadNeed / DIGIT_TWO;
     }
 
-   OP_TILING_CHECK(inputData.hPad > inputData.hKernel / 2 || inputData.wPad > inputData.wKernel / 2,
-                   VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
-                                                   "MaxPoolGradWithArgmax: pad shape [%ld, %ld] is invalid",
-                                                   inputData.hPad, inputData.wPad),
-                   return ge::GRAPH_FAILED);
+   if (inputData.hPad > inputData.hKernel / 2 || inputData.wPad > inputData.wKernel / 2) {
+       OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(opName_, "hPad, wPad",
+           (std::string("hPad=") + std::to_string(inputData.hPad) + ", wPad=" + std::to_string(inputData.wPad)).c_str(),
+           "hPad must <= hKernel/2, wPad must <= wKernel/2");
+       return ge::GRAPH_FAILED;
+   }
  
-   OP_TILING_CHECK(
-       !CheckGradShape(inputData, padModeStr),
-       VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "MaxPoolGradWithArgmax: grad shape is invalid"),
-       return ge::GRAPH_FAILED);
+   if (!CheckGradShape(inputData, padModeStr)) {
+       OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(opName_, "grad",
+           "grad_shape",
+           "grad shape is invalid for the given padMode and kernel/stride config");
+       return ge::GRAPH_FAILED;
+   }
 
    if (IsGreaterThanInt32MaxNHWC(inputData)) {
        inputData.isInt32Meet = 0;

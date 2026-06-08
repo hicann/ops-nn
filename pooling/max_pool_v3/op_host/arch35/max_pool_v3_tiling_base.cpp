@@ -55,7 +55,10 @@ ge::graphStatus MaxPoolV3BaseTiling::GetPlatformInfo()
     auto platformPtr = context_->GetPlatformInfo();
     if (platformPtr == nullptr) {
         auto compileInfoPtr = reinterpret_cast<const MaxPoolV3CompileInfo*>(context_->GetCompileInfo());
-        OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE(context_, "compile info is null"), return ge::GRAPH_FAILED);
+        if (compileInfoPtr == nullptr) {
+            OP_LOGE(context_, "compile info is null");
+            return ge::GRAPH_FAILED;
+        }
         coreNum = compileInfoPtr->coreNum;
         ubSize = compileInfoPtr->ubSize;
     } else {
@@ -66,7 +69,10 @@ ge::graphStatus MaxPoolV3BaseTiling::GetPlatformInfo()
         ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatform);
         ubSize = static_cast<uint64_t>(ubSizePlatform);
     }
-    OP_CHECK_IF(coreNum == 0, OP_LOGE(context_, "coreNum is 0"), return ge::GRAPH_FAILED);
+    if (coreNum == 0) {
+        OP_LOGE(context_, "coreNum is 0");
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -89,32 +95,30 @@ bool MaxPoolV3BaseTiling::IsInvalidPaddingMode(std::string padMode)
 ge::graphStatus MaxPoolV3BaseTiling::CheckShape(
     gert::Shape& inputShape, gert::Shape& outputShape, const ge::Format& inputFormat)
 {
-    OP_CHECK_IF(
-        inputShape.GetDimNum() != NCHW_DIMS,
-        OP_LOGE(context_->GetNodeName(), "MaxPoolV3: input shape dim = %zu, should be equal 4", inputShape.GetDimNum()),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        outputShape.GetDimNum() != NCHW_DIMS,
-        OP_LOGE(
-            context_->GetNodeName(), "MaxPoolV3: output shape dim = %zu, should be equal 4", outputShape.GetDimNum()),
-        return ge::GRAPH_FAILED);
+    const char* opName_ = "MaxPoolV3";
+    if (inputShape.GetDimNum() != NCHW_DIMS) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM(opName_, "x", std::to_string(inputShape.GetDimNum()).c_str(), "4");
+        return ge::GRAPH_FAILED;
+    }
+    if (outputShape.GetDimNum() != NCHW_DIMS) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM(opName_, "y", std::to_string(outputShape.GetDimNum()).c_str(), "4");
+        return ge::GRAPH_FAILED;
+    }
     if (inputShape.GetShapeSize() == 0 && outputShape.GetShapeSize() == 0) {
         return ge::GRAPH_SUCCESS;
     }
 
-    OP_CHECK_IF(
-        inputShape.GetShapeSize() <= 0,
-        OP_LOGE(
-            context_->GetNodeName(), "MaxPoolV3: input shape size %ld less than zero failed",
-            inputShape.GetShapeSize()),
-        return ge::GRAPH_FAILED);
+    if (inputShape.GetShapeSize() <= 0) {
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(opName_, "x",
+            std::to_string(inputShape.GetShapeSize()).c_str(), "shape size must be greater than 0");
+        return ge::GRAPH_FAILED;
+    }
 
-    OP_CHECK_IF(
-        outputShape.GetShapeSize() <= 0,
-        OP_LOGE(
-            context_->GetNodeName(), "MaxPoolV3: output shape size %ld less than zero failed",
-            outputShape.GetShapeSize()),
-        return ge::GRAPH_FAILED);
+    if (outputShape.GetShapeSize() <= 0) {
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(opName_, "y",
+            std::to_string(outputShape.GetShapeSize()).c_str(), "shape size must be greater than 0");
+        return ge::GRAPH_FAILED;
+    }
 
     int32_t nDim = MP_MAX_2D_DIM_ZERO;
     int32_t cDim = MP_MAX_2D_DIM_ONE;
@@ -122,27 +126,24 @@ ge::graphStatus MaxPoolV3BaseTiling::CheckShape(
         nDim = MP_MAX_2D_DIM_ZERO;
         cDim = MP_MAX_2D_DIM_THREE;
     }
-    OP_CHECK_IF(
-        inputShape.GetDim(nDim) != outputShape.GetDim(nDim),
-        OP_LOGE(
-            context_->GetNodeName(),
-            "MaxPoolV3: the size of dim-n should be equal in inputShape and outShape, but get input [%ld], output "
-            "[%ld]",
-            inputShape.GetDim(nDim), outputShape.GetDim(nDim)),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        inputShape.GetDim(cDim) != outputShape.GetDim(cDim),
-        OP_LOGE(
-            context_->GetNodeName(),
-            "MaxPoolV3: the size of dim-c should be equal in inputShape and outShape, but get input [%ld], output "
-            "[%ld]",
-            inputShape.GetDim(cDim), outputShape.GetDim(cDim)),
-        return ge::GRAPH_FAILED);
+    if (inputShape.GetDim(nDim) != outputShape.GetDim(nDim)) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(opName_, "x",
+            std::to_string(inputShape.GetDim(nDim)).c_str(),
+            ("dim-n must be equal between x and y, expected " + std::to_string(outputShape.GetDim(nDim))).c_str());
+        return ge::GRAPH_FAILED;
+    }
+    if (inputShape.GetDim(cDim) != outputShape.GetDim(cDim)) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(opName_, "x",
+            std::to_string(inputShape.GetDim(cDim)).c_str(),
+            ("dim-c must be equal between x and y, expected " + std::to_string(outputShape.GetDim(cDim))).c_str());
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus MaxPoolV3BaseTiling::GetShapeAndDtype()
 {
+    const char* opName_ = "MaxPoolV3";
     auto inputX = context_->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputX);
     auto inputShape = Ops::NN::OpTiling::EnsureNotScalar(inputX->GetStorageShape());
@@ -153,20 +154,25 @@ ge::graphStatus MaxPoolV3BaseTiling::GetShapeAndDtype()
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputDesc);
     dtype = inputDesc->GetDataType();
     if (IsInvalidType(dtype)) {
-        OP_LOGE(context_->GetNodeName(), "MaxPoolV3: invalid dtype");
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName_, "x",
+            std::to_string(static_cast<int32_t>(dtype)).c_str(),
+            "dtype not in supported list [0(DT_FLOAT), 1(DT_FLOAT16), 27(DT_BF16), 9(DT_INT64), 3(DT_INT32), 19(DT_UINT32), 5(DT_INT16), 18(DT_UINT16), 2(DT_INT8), 17(DT_UINT8)]");
         return ge::GRAPH_FAILED;
     }
     dtypeSize = ge::GetSizeByDataType(dtype);
-    OP_CHECK_IF(
-        dtypeSize <= 0, OP_LOGE(context_, "dtypeSize must be greater than 0, dtypeSize: %ld", dtypeSize),
-        return ge::GRAPH_FAILED);
+    if (dtypeSize <= 0) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "x dtype size",
+            std::to_string(dtypeSize).c_str(), "dtypeSize must be greater than 0");
+        return ge::GRAPH_FAILED;
+    }
 
     auto runtimeAttrs = context_->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context_, runtimeAttrs);
 
-    OP_CHECK_IF(
-        CheckShape(inputShape, outShape, inputData.inputFormat) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context_->GetNodeName(), "MaxPoolV3: check shape failed"), return ge::GRAPH_FAILED);
+    if (CheckShape(inputShape, outShape, inputData.inputFormat) != ge::GRAPH_SUCCESS) {
+        OP_LOGE(opName_, "MaxPoolV3: check shape failed");
+        return ge::GRAPH_FAILED;
+    }
     nDim_ = MP_MAX_2D_DIM_ZERO;
     cDim_ = MP_MAX_2D_DIM_ONE;
     hDim_ = MP_MAX_2D_DIM_TWO;
@@ -182,7 +188,9 @@ ge::graphStatus MaxPoolV3BaseTiling::GetShapeAndDtype()
         inputData.batches = inputShape.GetDim(MP_MAX_2D_DIM_ZERO);
         inputData.channels = inputShape.GetDim(MP_MAX_2D_DIM_THREE);
     } else {
-        OP_LOGE(context_->GetNodeName(), "MaxPoolV3: only support NCHW and NHWC, not support format.");
+        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(opName_, "x",
+            std::to_string(static_cast<int32_t>(inputData.inputFormat)).c_str(),
+            "only support NCHW and NHWC");
         return ge::GRAPH_FAILED;
     }
     inputData.inputShape = {inputShape.GetDim(hDim_), inputShape.GetDim(wDim_)};
@@ -192,100 +200,115 @@ ge::graphStatus MaxPoolV3BaseTiling::GetShapeAndDtype()
 
 ge::graphStatus MaxPoolV3BaseTiling::GetKernelInfo()
 {
+    const char* opName_ = (std::string(context_->GetNodeType()) == "MaxPoolV2") ? "MaxPoolV2" : "MaxPoolV3";
     if (std::string(context_->GetNodeType()) == "MaxPoolV2") {
         auto kernelSize = context_->GetInputTensor(INPUT_KSIZE_IDX);
         OP_CHECK_NULL_WITH_CONTEXT(context_, kernelSize);
-        OP_CHECK_IF(
-            kernelSize->GetShapeSize() != NCHW_DIMS,
-            OP_LOGE(context_, "MaxPoolV2: kernel_size must have %d elements ", NCHW_DIMS), return ge::GRAPH_FAILED);
+        if (kernelSize->GetShapeSize() != NCHW_DIMS) {
+            OP_LOGE_FOR_INVALID_LISTSIZE(opName_, "Length of kernel_size",
+                std::to_string(kernelSize->GetShapeSize()).c_str(), "4");
+            return ge::GRAPH_FAILED;
+        }
         int32_t hKernelSize = kernelSize->GetData<int32_t>()[hDim_];
         int32_t wKernelSize = kernelSize->GetData<int32_t>()[wDim_];
         inputData.kernelSize = {hKernelSize, wKernelSize};
-        OP_CHECK_IF(
-            hKernelSize <= 0 || wKernelSize <= 0,
-            OP_LOGE(context_->GetNodeName(),
-                "MaxPoolV2: The ksize of the H and W dimensions should be greater than 0, not support [%d, %d]",
-                hKernelSize, wKernelSize),
-            return ge::GRAPH_FAILED);
+        if (hKernelSize <= 0 || wKernelSize <= 0) {
+            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(opName_, "ksize[H], ksize[W]",
+                (std::to_string(hKernelSize) + ", " + std::to_string(wKernelSize)).c_str(),
+                "ksize of H and W dimensions must be greater than 0");
+            return ge::GRAPH_FAILED;
+        }
         auto stride = context_->GetInputTensor(INPUT_STRIDES_IDX);
         OP_CHECK_NULL_WITH_CONTEXT(context_, stride);
-        OP_CHECK_IF(stride->GetShapeSize() != NCHW_DIMS,
-            OP_LOGE(context_, "MaxPoolV2: stride must have %d elements ", NCHW_DIMS),
-            return ge::GRAPH_FAILED);
+        if (stride->GetShapeSize() != NCHW_DIMS) {
+            OP_LOGE_FOR_INVALID_LISTSIZE(opName_, "Length of strides",
+                std::to_string(stride->GetShapeSize()).c_str(), "4");
+            return ge::GRAPH_FAILED;
+        }
 
         int32_t hStride = stride->GetData<int32_t>()[hDim_];
         int32_t wStride = stride->GetData<int32_t>()[wDim_];
 
         inputData.stride = {hStride, wStride};
-        OP_CHECK_IF(hStride <= 0 || wStride <= 0,
-            OP_LOGE(context_->GetNodeName(), "MaxPoolV2: not support stride shape [%d, %d]", hStride, wStride),
-            return ge::GRAPH_FAILED);
+        if (hStride <= 0 || wStride <= 0) {
+            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(opName_, "strides[H], strides[W]",
+                (std::to_string(hStride) + ", " + std::to_string(wStride)).c_str(),
+                "strides of H and W dimensions must be greater than 0");
+            return ge::GRAPH_FAILED;
+        }
     } else {
         auto runtimeAttrs = context_->GetAttrs();
         OP_CHECK_NULL_WITH_CONTEXT(context_, runtimeAttrs);
         auto kernelSize = runtimeAttrs->GetListInt(KERNEL_POS);
         OP_CHECK_NULL_WITH_CONTEXT(context_, kernelSize);
-        OP_CHECK_IF(
-            kernelSize->GetSize() != NCHW_DIMS,
-            OP_LOGE(context_, "MaxPoolV3: kernel_size must have %d elements ", NCHW_DIMS), return ge::GRAPH_FAILED);
+        if (kernelSize->GetSize() != NCHW_DIMS) {
+            OP_LOGE_FOR_INVALID_LISTSIZE(opName_, "Length of kernel_size",
+                std::to_string(kernelSize->GetSize()).c_str(), "4");
+            return ge::GRAPH_FAILED;
+        }
 
         int64_t hKernelSize = kernelSize->GetData()[hDim_];
         int64_t wKernelSize = kernelSize->GetData()[wDim_];
         inputData.kernelSize = {hKernelSize, wKernelSize};
-        OP_CHECK_IF(
-            hKernelSize <= 0 || wKernelSize <= 0,
-            OP_LOGE(
-                context_->GetNodeName(),
-                "MaxPoolV3: The ksize of the H and W dimensions should be greater than 0, not support [%ld, %ld]",
-                hKernelSize, wKernelSize),
-            return ge::GRAPH_FAILED);
+        if (hKernelSize <= 0 || wKernelSize <= 0) {
+            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(opName_, "ksize[H], ksize[W]",
+                (std::to_string(hKernelSize) + ", " + std::to_string(wKernelSize)).c_str(),
+                "ksize of H and W dimensions must be greater than 0");
+            return ge::GRAPH_FAILED;
+        }
         auto stride = runtimeAttrs->GetListInt(STRIDE_POS);
         OP_CHECK_NULL_WITH_CONTEXT(context_, stride);
-        OP_CHECK_IF(
-            stride->GetSize() != NCHW_DIMS, OP_LOGE(context_, "MaxPoolV3: stride must have %d elements ", NCHW_DIMS),
-            return ge::GRAPH_FAILED);
+        if (stride->GetSize() != NCHW_DIMS) {
+            OP_LOGE_FOR_INVALID_LISTSIZE(opName_, "Length of strides",
+                std::to_string(stride->GetSize()).c_str(), "4");
+            return ge::GRAPH_FAILED;
+        }
 
         int64_t hStride = stride->GetData()[hDim_];
         int64_t wStride = stride->GetData()[wDim_];
 
         inputData.stride = {hStride, wStride};
-        OP_CHECK_IF(
-            hStride <= 0 || wStride <= 0,
-            OP_LOGE(context_->GetNodeName(), "MaxPoolV3: not support stride shape [%ld, %ld]", hStride, wStride),
-            return ge::GRAPH_FAILED);
+        if (hStride <= 0 || wStride <= 0) {
+            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(opName_, "strides[H], strides[W]",
+                (std::to_string(hStride) + ", " + std::to_string(wStride)).c_str(),
+                "strides of H and W dimensions must be greater than 0");
+            return ge::GRAPH_FAILED;
+        }
     }
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus MaxPoolV3BaseTiling::GetPadInfo()
 {
+    const char* opName_ = "MaxPoolV3";
     auto runtimeAttrs = context_->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context_, runtimeAttrs);
 
     if (padModeStr_ == "CALCULATED") {
         auto padding = runtimeAttrs->GetListInt(PADDING_POS);
         OP_CHECK_NULL_WITH_CONTEXT(context_, padding);
-        OP_CHECK_IF(
-            padding->GetSize() != NCHW_DIMS,
-            OP_LOGE(context_, "MaxPoolV3: pad list must have %d elements ", NCHW_DIMS),
-            return ge::GRAPH_FAILED);
+        if (padding->GetSize() != NCHW_DIMS) {
+            OP_LOGE_FOR_INVALID_LISTSIZE(opName_, "Length of padding",
+                std::to_string(padding->GetSize()).c_str(), "4");
+            return ge::GRAPH_FAILED;
+        }
         int64_t topPad = padding->GetData()[TOP_PAD_INDEX];
         int64_t bottomPad = padding->GetData()[BOTTOM_PAD_INDEX];
         int64_t leftPad = padding->GetData()[LEFT_PAD_INDEX];
         int64_t rightPad = padding->GetData()[RIGHT_PAD_INDEX];
 
         inputData.pad = {topPad, bottomPad, leftPad, rightPad};
-        OP_CHECK_IF(
-            topPad >= inputData.kernelSize[H_DIM] || topPad < 0 || bottomPad >= inputData.kernelSize[H_DIM] || bottomPad < 0 ||
-                leftPad >= inputData.kernelSize[W_DIM] || leftPad < 0 || rightPad >= inputData.kernelSize[W_DIM] || rightPad < 0,
-            OP_LOGE(
-                context_->GetNodeName(),
-                "MaxPoolV3: not support pad shape [%ld, %ld, %ld, %ld] kernel shape [%ld, %ld], pad should \
-be greater than or equal to 0 and smaller than the corresponding kernel size",
-                topPad, bottomPad, leftPad, rightPad, inputData.kernelSize[H_DIM], inputData.kernelSize[W_DIM]),
-            return ge::GRAPH_FAILED);
+        if (topPad >= inputData.kernelSize[H_DIM] || topPad < 0 || bottomPad >= inputData.kernelSize[H_DIM] || bottomPad < 0 ||
+            leftPad >= inputData.kernelSize[W_DIM] || leftPad < 0 || rightPad >= inputData.kernelSize[W_DIM] || rightPad < 0) {
+            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(opName_, "top_pad, bottom_pad, left_pad, right_pad",
+                (std::to_string(topPad) + ", " + std::to_string(bottomPad) + ", " +
+                 std::to_string(leftPad) + ", " + std::to_string(rightPad)).c_str(),
+                ("padding must be >= 0 and < corresponding kernel size, kernel H=" +
+                 std::to_string(inputData.kernelSize[H_DIM]) + ", W=" +
+                 std::to_string(inputData.kernelSize[W_DIM])).c_str());
+            return ge::GRAPH_FAILED;
+        }
     } else if (padModeStr_ == "VALID") {
-        // top bottom left right
         inputData.pad = {0, 0, 0, 0};
     } else if (padModeStr_ == "SAME") {
         int64_t hPadNeed = std::max(
@@ -300,7 +323,8 @@ be greater than or equal to 0 and smaller than the corresponding kernel size",
         int64_t rightPad = wPadNeed - leftPad;
         inputData.pad = {topPad, bottomPad, leftPad, rightPad};
     } else {
-        OP_LOGE(context_, "MaxPoolV3: not support padmode %s", padModeStr_.c_str());
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "padding_mode",
+            padModeStr_.c_str(), "only support CALCULATED, SAME, VALID");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -308,6 +332,7 @@ be greater than or equal to 0 and smaller than the corresponding kernel size",
 
 ge::graphStatus MaxPoolV3BaseTiling::GetAttrsInfo()
 {
+    const char* opName_ = (std::string(context_->GetNodeType()) == "MaxPoolV2") ? "MaxPoolV2" : "MaxPoolV3";
     auto runtimeAttrs = context_->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context_, runtimeAttrs);
     const char* padMode = nullptr;
@@ -321,9 +346,11 @@ ge::graphStatus MaxPoolV3BaseTiling::GetAttrsInfo()
     } else {
         padModeStr_ = "CALCULATED";
     }
-    OP_CHECK_IF(
-        IsInvalidPaddingMode(padModeStr_), OP_LOGE(context_, "MaxPoolV3: not support padmode %s", padModeStr_.c_str()),
-        return ge::GRAPH_FAILED);
+    if (IsInvalidPaddingMode(padModeStr_)) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "padding_mode",
+            padModeStr_.c_str(), "only support CALCULATED, SAME, VALID");
+        return ge::GRAPH_FAILED;
+    }
     inputData.ceilMode = false;
     inputData.globalPooling = false;
     if (std::string(context_->GetNodeType()) == "MaxPoolV3") {
@@ -351,7 +378,8 @@ ge::graphStatus MaxPoolV3BaseTiling::GetAttrsInfo()
     } else if (inputFormatStr == "NHWC") {
         inputData.inputFormat = ge::Format::FORMAT_NHWC;
     } else {
-        OP_LOGE(context_, "MaxPoolV3: only support NCHW and NHWC, not support format %s", inputFormatStr.c_str());
+        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(opName_, "x",
+            inputFormatStr.c_str(), "only support NCHW and NHWC");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -359,14 +387,13 @@ ge::graphStatus MaxPoolV3BaseTiling::GetAttrsInfo()
 
 ge::graphStatus MaxPoolV3BaseTiling::CheckOutPutShapeForValid()
 {
+    const char* opName_ = "MaxPoolV3";
     int64_t expectedH = (inputData.inputShape[0] - inputData.kernelSize[0] + inputData.stride[0]) / inputData.stride[0];
     int64_t expectedW = (inputData.inputShape[1] - inputData.kernelSize[1] + inputData.stride[1]) / inputData.stride[1];
     if (inputData.outShape[0] != expectedH || inputData.outShape[1] != expectedW) {
-        OP_LOGE(
-            context_,
-            "MaxPoolV3: when padmode is VALID, the outputshape in h-dim and w-dim should be [%ld] [%ld], but got [%ld] "
-            "[%ld]",
-            expectedH, expectedW, inputData.outShape[0], inputData.inputShape[1]);
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName_, "y",
+            (std::to_string(inputData.outShape[0]) + ", " + std::to_string(inputData.outShape[1])).c_str(),
+            ("when padmode is VALID, output shape must be (" + std::to_string(expectedH) + ", " + std::to_string(expectedW) + ")").c_str());
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -397,6 +424,7 @@ int64_t MaxPoolV3BaseTiling::InferCalculateOutShape(
 
 ge::graphStatus MaxPoolV3BaseTiling::CheckOutPutShapeForCalculated()
 {
+    const char* opName_ = "MaxPoolV3";
     int64_t expectedH = InferCalculateOutShape(
         inputData.kernelSize[0], inputData.pad[TOP_PAD_INDEX], inputData.pad[BOTTOM_PAD_INDEX], inputData.stride[0],
         inputData.ceilMode, inputData.inputShape[H_DIM]);
@@ -404,11 +432,9 @@ ge::graphStatus MaxPoolV3BaseTiling::CheckOutPutShapeForCalculated()
         inputData.kernelSize[1], inputData.pad[LEFT_PAD_INDEX], inputData.pad[RIGHT_PAD_INDEX], inputData.stride[1],
         inputData.ceilMode, inputData.inputShape[W_DIM]);
     if (inputData.outShape[0] > expectedH || inputData.outShape[1] > expectedW) {
-        OP_LOGE(
-            context_,
-            "MaxPoolV3: when padmode is CALCULATED, the outputshape in \
-h-dim and w-dim should be [%ld] [%ld], but got [%ld] [%ld]",
-            expectedH, expectedW, inputData.outShape[0], inputData.inputShape[1]);
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName_, "y",
+            (std::to_string(inputData.outShape[0]) + ", " + std::to_string(inputData.outShape[1])).c_str(),
+            ("when padmode is CALCULATED, output shape must not exceed (" + std::to_string(expectedH) + ", " + std::to_string(expectedW) + ")").c_str());
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -428,29 +454,41 @@ ge::graphStatus MaxPoolV3BaseTiling::CheckOutPutShape()
 
 ge::graphStatus MaxPoolV3BaseTiling::GetShapeAttrsInfo()
 {
-    OP_CHECK_IF(GetAttrsInfo() != ge::GRAPH_SUCCESS, OP_LOGE(context_, "GetAttrsInfo fail."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        GetShapeAndDtype() != ge::GRAPH_SUCCESS, OP_LOGE(context_, "GetShapeAndDtype fail."), return ge::GRAPH_FAILED);
+    const char* opName_ = "MaxPoolV3";
+    if (GetAttrsInfo() != ge::GRAPH_SUCCESS) {
+        OP_LOGE(context_, "GetAttrsInfo fail.");
+        return ge::GRAPH_FAILED;
+    }
+    if (GetShapeAndDtype() != ge::GRAPH_SUCCESS) {
+        OP_LOGE(context_, "GetShapeAndDtype fail.");
+        return ge::GRAPH_FAILED;
+    }
 
     if (inputData.globalPooling) {
-        OP_CHECK_IF(
-            (inputData.inputShape[0] != 0 && inputData.outShape[0] != 1) ||
-                (inputData.inputShape[1] != 0 && inputData.outShape[1] != 1),
-            OP_LOGE(
-                context_,
-                "MaxPoolV3: when global_pooling is true, the outputshape in h-dim and w-dim must be 1 if the size \
-of corresponding inputshape is not zero"),
-            return ge::GRAPH_FAILED);
+        if ((inputData.inputShape[0] != 0 && inputData.outShape[0] != 1) ||
+            (inputData.inputShape[1] != 0 && inputData.outShape[1] != 1)) {
+            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(opName_, "y[h-dim], y[w-dim]",
+                (std::to_string(inputData.outShape[0]) + ", " + std::to_string(inputData.outShape[1])).c_str(),
+                "when global_pooling is true, output shape in h-dim and w-dim must be 1 if the corresponding input shape is not zero");
+            return ge::GRAPH_FAILED;
+        }
         inputData.pad = {0, 0, 0, 0};
         inputData.stride = inputData.inputShape;
         inputData.kernelSize = inputData.inputShape;
         return ge::GRAPH_SUCCESS;
     }
-    OP_CHECK_IF(
-        GetKernelInfo() != ge::GRAPH_SUCCESS, OP_LOGE(context_, "GetKernelInfo fail."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(GetPadInfo() != ge::GRAPH_SUCCESS, OP_LOGE(context_, "GetPadInfo fail."), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        CheckOutPutShape() != ge::GRAPH_SUCCESS, OP_LOGE(context_, "CheckOutPutShape fail."), return ge::GRAPH_FAILED);
+    if (GetKernelInfo() != ge::GRAPH_SUCCESS) {
+        OP_LOGE(context_, "GetKernelInfo fail.");
+        return ge::GRAPH_FAILED;
+    }
+    if (GetPadInfo() != ge::GRAPH_SUCCESS) {
+        OP_LOGE(context_, "GetPadInfo fail.");
+        return ge::GRAPH_FAILED;
+    }
+    if (CheckOutPutShape() != ge::GRAPH_SUCCESS) {
+        OP_LOGE(context_, "CheckOutPutShape fail.");
+        return ge::GRAPH_FAILED;
+    }
     RefineShape();
     return ge::GRAPH_SUCCESS;
 }

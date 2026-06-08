@@ -52,42 +52,48 @@ ge::graphStatus InferShapeForMaxPoolGradWithArgmax(gert::InferShapeContext* cont
     if (context == nullptr) {
         return GRAPH_FAILED;
     }
+    const char* opName_ = "MaxPoolGradWithArgmax";
 
     OP_LOGD(context->GetNodeName(), "runtime2.0 MaxPoolGradWithArgmax infershape running");
     auto xDesc = context->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, xDesc);
     auto xOriFormat = xDesc->GetOriginFormat();
-    OP_CHECK_IF(
-        xOriFormat != FORMAT_ND && xOriFormat != FORMAT_NCHW && xOriFormat != FORMAT_NHWC,
-        OP_LOGE(context->GetNodeName(), "format only supports ND, NCHW, NHWC"), return GRAPH_FAILED);
-
+    if (xOriFormat != FORMAT_ND && xOriFormat != FORMAT_NCHW && xOriFormat != FORMAT_NHWC) {
+        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(opName_, "x", ge::TypeUtils::FormatToSerialString(xOriFormat).c_str(), "format only supports ND, NCHW, NHWC");
+        return GRAPH_FAILED;
+    }
     auto attrs = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
 
     auto ksize = attrs->GetAttrPointer<gert::ContinuousVector>(ATTR_INDEX_KSIZE);
     OP_CHECK_NULL_WITH_CONTEXT(context, ksize);
-    OP_CHECK_IF(
-        ksize->GetSize() != ATTR_LIST_SHAPE_SIZE,
-        OP_LOGE(context->GetNodeName(), "Length of ksize %lu must be 4!", ksize->GetSize()), return GRAPH_FAILED);
-    auto ksize_data = static_cast<const int64_t*>(ksize->GetData());
+    if (ksize->GetSize() != ATTR_LIST_SHAPE_SIZE) {
+        OP_LOGE_FOR_INVALID_LISTSIZE(opName_, "ksize", std::to_string(ksize->GetSize()).c_str(), "4");
+        return GRAPH_FAILED;
+    }
 
     auto strides = attrs->GetAttrPointer<gert::ContinuousVector>(ATTR_INDEX_STRIDES);
     OP_CHECK_NULL_WITH_CONTEXT(context, strides);
-    OP_CHECK_IF(
-        strides->GetSize() != ATTR_LIST_SHAPE_SIZE,
-        OP_LOGE(context->GetNodeName(), "Length of strides %lu must be 4!", strides->GetSize()), return GRAPH_FAILED);
+    if (strides->GetSize() != ATTR_LIST_SHAPE_SIZE) {
+        OP_LOGE_FOR_INVALID_LISTSIZE(opName_, "strides", std::to_string(strides->GetSize()).c_str(), "4");
+        return GRAPH_FAILED;
+    }
+    auto ksize_data = static_cast<const int64_t*>(ksize->GetData());
     auto strides_data = static_cast<const int64_t*>(strides->GetData());
-    
-    OP_CHECK_IF(
-        ksize_data[INDEX_ZERO] != KSIZE_STRIDES_VALUE || strides_data[INDEX_ZERO] != KSIZE_STRIDES_VALUE,
-        OP_LOGE(context->GetNodeName(), "Pooling ksize[0] / strides[0] must be 1."), return GRAPH_FAILED);
-
+    if (ksize_data[INDEX_ZERO] != KSIZE_STRIDES_VALUE || strides_data[INDEX_ZERO] != KSIZE_STRIDES_VALUE) {
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(opName_, "ksize[0], strides[0]", 
+                                                (std::to_string(ksize_data[INDEX_ZERO]) + ", " + std::to_string(strides_data[INDEX_ZERO])).c_str(), 
+                                                "Pooling ksize[0] and strides[0] must be 1");
+        return GRAPH_FAILED;
+    }
     auto padsPtr = attrs->GetAttrPointer<char>(ATTR_INDEX_PADS);
     OP_CHECK_NULL_WITH_CONTEXT(context, padsPtr);
     std::string padding(padsPtr);
-    OP_CHECK_IF(padding != "SAME" && padding != "VALID",
-             OP_LOGE(context->GetNodeName(), "Pads attritube must be 'SAME' or 'VALID'!"),
-             return GRAPH_FAILED);
+    if (padding != "SAME" && padding != "VALID") {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "pads", padding.c_str(), "Pads attritube must be SAME or VALID");
+        return GRAPH_FAILED;
+    }
+
     auto include_batch_in_index = attrs->GetAttrPointer<bool>(ATTR_INDEX_INCLUDE_BATCH_IN_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, include_batch_in_index);
 
@@ -95,19 +101,23 @@ ge::graphStatus InferShapeForMaxPoolGradWithArgmax(gert::InferShapeContext* cont
     OP_LOGE_IF(dataFormatPtr == nullptr, GRAPH_FAILED, context->GetNodeName(), "Get dataFormat failed.");
     std::string dataFormatStr = dataFormatPtr == nullptr ? "NULL" : dataFormatPtr;
     if (dataFormatStr == "NHWC") {
-        OP_CHECK_IF(
-            ksize_data[INDEX_THREE] != KSIZE_STRIDES_VALUE,
-            OP_LOGE(context->GetNodeName(), "Pooling ksize[3] must be 1."), return GRAPH_FAILED);
-        OP_CHECK_IF(
-            strides_data[INDEX_THREE] != KSIZE_STRIDES_VALUE,
-            OP_LOGE(context->GetNodeName(), "Pooling strides[3] must be 1."), return GRAPH_FAILED);
+        if (ksize_data[INDEX_THREE] != KSIZE_STRIDES_VALUE) {
+            OP_LOGE_FOR_INVALID_VALUE(opName_, "ksize[3]", std::to_string(ksize_data[INDEX_THREE]).c_str(), "1");
+            return GRAPH_FAILED;
+        }
+        if (strides_data[INDEX_THREE] != KSIZE_STRIDES_VALUE) {
+            OP_LOGE_FOR_INVALID_VALUE(opName_, "strides[3]", std::to_string(strides_data[INDEX_THREE]).c_str(), "1");
+            return GRAPH_FAILED;
+        }
     } else {
-        OP_CHECK_IF(
-            ksize_data[INDEX_ONE] != KSIZE_STRIDES_VALUE,
-            OP_LOGE(context->GetNodeName(), "Pooling ksize[1] must be 1."), return GRAPH_FAILED);
-        OP_CHECK_IF(
-            strides_data[INDEX_ONE] != KSIZE_STRIDES_VALUE,
-            OP_LOGE(context->GetNodeName(), "Pooling strides[1] must be 1."), return GRAPH_FAILED);
+        if (ksize_data[INDEX_ONE] != KSIZE_STRIDES_VALUE) {
+            OP_LOGE_FOR_INVALID_VALUE(opName_, "ksize[1]", std::to_string(ksize_data[INDEX_ONE]).c_str(), "1");
+            return GRAPH_FAILED;
+        }
+        if (strides_data[INDEX_ONE] != KSIZE_STRIDES_VALUE) {
+            OP_LOGE_FOR_INVALID_VALUE(opName_, "strides[3]", std::to_string(strides_data[INDEX_ONE]).c_str(), "1");
+            return GRAPH_FAILED;
+        }
     }
     const gert::Shape* xShape = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
