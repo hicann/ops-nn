@@ -337,9 +337,6 @@ main() {
           if [ "${enable_dump_cce}" = "TRUE" ]; then
             op_debug_configs+=("dump_cce")
           fi
-          if [ "${cmake_build_type}" = "Debug" ]; then
-            op_debug_configs+=("ccec_g" "ccec_O0")
-          fi
           if [ ${#op_debug_configs[@]} -gt 0 ]; then
               OLD_IFS="${IFS}"
               IFS=','
