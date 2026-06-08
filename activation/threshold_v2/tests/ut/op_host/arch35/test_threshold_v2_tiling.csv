@@ -21,3 +21,5 @@ Ascend950,ThresholdV2Arch35/TestThresholdV2Tiling.generalTest/18,,shape_diff_val
 Ascend950,ThresholdV2Arch35/TestThresholdV2Tiling.generalTest/19,,fp16_1d,64,1,8192,,,,FLOAT16,FLOAT16,FLOAT16,FLOAT16,8192,8192,8192,8192,TRUE,8,7,fp16 1d case
 Ascend950,ThresholdV2Arch35/TestThresholdV2Tiling.generalTest/20,,fp32_1d,64,1,8192,,,,FLOAT,FLOAT,FLOAT,FLOAT,8192,8192,8192,8192,TRUE,16,15,fp32 1d case
 Ascend950,ThresholdV2Arch35/TestThresholdV2Tiling.generalTest/21,,int8_1d,64,1,8192,,,,INT8,INT8,INT8,INT8,8192,8192,8192,8192,TRUE,2,19,int8 1d case
+Ascend950,ThresholdV2Arch35/TestThresholdV2Tiling.generalTest/22,,invalid_threshold_dtype,64,4,1,64,2,64,FLOAT16,DOUBLE,FLOAT16,FLOAT16,1_64_2_64,1_64_2_64,1_64_2_64,1_64_2_64,FALSE,0,0,invalid dtype for threshold parameter
+Ascend950,ThresholdV2Arch35/TestThresholdV2Tiling.generalTest/23,,invalid_value_dtype,64,4,1,64,2,64,FLOAT16,FLOAT16,DOUBLE,FLOAT16,1_64_2_64,1_64_2_64,1_64_2_64,1_64_2_64,FALSE,0,0,invalid dtype for value parameter

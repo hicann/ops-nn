@@ -126,12 +126,44 @@ TEST_F(l2_foreach_div_scalar_v2_test, ascend910B2_foreach_div_scalar_v2_test_sha
     EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
 }*/
 
-// private format
+// private format - both self and out
 TEST_F(l2_foreach_div_scalar_v2_test, ascend910B2_foreach_div_scalar_v2_test_format) {
     vector<vector<int64_t>> selfDims = {{2, 2}};
     auto scalar_desc = ScalarDesc(1.0);
     vector<vector<int64_t>> outDims = {{2, 2}};
     auto x = TensorDesc(selfDims[0], ACL_BF16, ACL_FORMAT_NC1HWC0).ValueRange(-1, 1);
+    auto out = TensorDesc(outDims[0], ACL_BF16, ACL_FORMAT_NC1HWC0).Precision(0.001, 0.001);
+    auto xList = TensorListDesc({x});
+    auto outList = TensorListDesc({out});
+
+    auto ut = OP_API_UT(aclnnForeachDivScalarV2, INPUT(xList, scalar_desc), OUTPUT(outList));
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
+}
+
+// private format - only self is private format
+TEST_F(l2_foreach_div_scalar_v2_test, ascend910B2_foreach_div_scalar_v2_test_format_invalid_self) {
+    vector<vector<int64_t>> selfDims = {{2, 2}};
+    auto scalar_desc = ScalarDesc(1.0);
+    vector<vector<int64_t>> outDims = {{2, 2}};
+    auto x = TensorDesc(selfDims[0], ACL_BF16, ACL_FORMAT_NC1HWC0).ValueRange(-1, 1);
+    auto out = TensorDesc(outDims[0], ACL_BF16, ACL_FORMAT_ND).Precision(0.001, 0.001);
+    auto xList = TensorListDesc({x});
+    auto outList = TensorListDesc({out});
+
+    auto ut = OP_API_UT(aclnnForeachDivScalarV2, INPUT(xList, scalar_desc), OUTPUT(outList));
+    uint64_t workspaceSize = 0;
+    aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+    EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
+}
+
+// private format - only out is private format
+TEST_F(l2_foreach_div_scalar_v2_test, ascend910B2_foreach_div_scalar_v2_test_format_invalid_out) {
+    vector<vector<int64_t>> selfDims = {{2, 2}};
+    auto scalar_desc = ScalarDesc(1.0);
+    vector<vector<int64_t>> outDims = {{2, 2}};
+    auto x = TensorDesc(selfDims[0], ACL_BF16, ACL_FORMAT_ND).ValueRange(-1, 1);
     auto out = TensorDesc(outDims[0], ACL_BF16, ACL_FORMAT_NC1HWC0).Precision(0.001, 0.001);
     auto xList = TensorListDesc({x});
     auto outList = TensorListDesc({out});

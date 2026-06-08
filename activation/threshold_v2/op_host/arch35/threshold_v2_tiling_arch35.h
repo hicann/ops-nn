@@ -37,6 +37,12 @@ protected:
     ge::graphStatus CheckShape();
 
 private:
+    template <typename K, typename V>
+    V GetOrDefault(const std::unordered_map<K, V>& map, const K& key, const V& def) {
+        auto it = map.find(key);
+        return it != map.end() ? it->second : def;
+    }
+    
     uint64_t dType = 0;
     bool hasValue = true;
     gert::TilingContext *tilingContext;

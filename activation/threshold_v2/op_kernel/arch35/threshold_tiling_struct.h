@@ -28,6 +28,7 @@ using namespace Ops::Base;
 #define TPL_UINT8 5
 #define TPL_INT32 6
 #define TPL_INT64 7
+#define TPL_DEFAULT 8
 
 #define TPL_SCH_MODE_0 0
 #define TPL_SCH_MODE_1 1

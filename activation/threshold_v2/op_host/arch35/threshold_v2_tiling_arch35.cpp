@@ -33,7 +33,6 @@ using namespace platform_ascendc;
 using namespace Ops::Base;
 
 namespace optiling {
-const int64_t ASCEND_WORKSPACE = 16777216; // 16 * 1024 * 1024
 
 ge::graphStatus ThresholdTiling::CalcInputDtype()
 {
@@ -48,21 +47,30 @@ ge::graphStatus ThresholdTiling::CalcInputDtype()
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, inputDesc);
     this->inputDtype = inputDesc->GetDataType();
     OP_CHECK_IF(
-        !IsSupportedDtype(this->inputDtype), OP_LOGE(tilingContext->GetNodeName(), "input x dtype not support"),
+        !IsSupportedDtype(this->inputDtype),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(tilingContext->GetNodeName(), "x",
+            ge::TypeUtils::DataTypeToSerialString(this->inputDtype).c_str(),
+            "The dtype of x must be within the range DT_FLOAT16, DT_BF16, DT_INT8, DT_UINT8, DT_INT32, DT_FLOAT and DT_INT64"),
         return ge::GRAPH_FAILED);
 
     auto thresholdDesc = tilingContext->GetInputDesc(1);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, thresholdDesc);
     auto thresholdDtype = thresholdDesc->GetDataType();
     OP_CHECK_IF(
-        !IsSupportedDtype(thresholdDtype), OP_LOGE(tilingContext->GetNodeName(), "input threshold dtype not support"),
+        !IsSupportedDtype(thresholdDtype),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(tilingContext->GetNodeName(), "threshold",
+            ge::TypeUtils::DataTypeToSerialString(thresholdDtype).c_str(),
+            "The dtype of threshold must be within the range DT_FLOAT16, DT_BF16, DT_INT8, DT_UINT8, DT_INT32, DT_FLOAT and DT_INT64"),
         return ge::GRAPH_FAILED);
 
     auto valueDesc = tilingContext->GetOptionalInputDesc(2);
     if (valueDesc != nullptr) {
         auto valueDtype = valueDesc->GetDataType();
         OP_CHECK_IF(
-            !IsSupportedDtype(valueDtype), OP_LOGE(tilingContext->GetNodeName(), "input value dtype not support"),
+            !IsSupportedDtype(valueDtype),
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(tilingContext->GetNodeName(), "value",
+                ge::TypeUtils::DataTypeToSerialString(valueDtype).c_str(),
+                "The dtype of value must be within the range DT_FLOAT16, DT_BF16, DT_INT8, DT_UINT8, DT_INT32, DT_FLOAT and DT_INT64"),
             return ge::GRAPH_FAILED);
     }
 
@@ -75,9 +83,14 @@ ge::graphStatus ThresholdTiling::CalcOutputDtype()
     auto outputDesc = tilingContext->GetOutputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, outputDesc);
     this->outputDtype = outputDesc->GetDataType();
-    OP_CHECK_IF(
-        this->outputDtype != this->inputDtype, OP_LOGE(tilingContext->GetNodeName(), "Output dtype not same as input"),
-        return ge::GRAPH_FAILED);
+
+    if (this->outputDtype != this->inputDtype) {
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(tilingContext->GetNodeName(), "y",
+            ge::TypeUtils::DataTypeToSerialString(this->outputDtype).c_str(),
+            std::string("The dtype of y must be the same as " +
+                ge::TypeUtils::DataTypeToSerialString(this->inputDtype) + " of x").c_str());
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -88,14 +101,8 @@ ge::graphStatus ThresholdTiling::CheckShape()
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, xStorageShape);
     const gert::Shape& inputXShape = EnsureNotScalar(xStorageShape->GetStorageShape());
 
-    auto thresholdStorageShape = tilingContext->GetInputShape(1);
-    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, thresholdStorageShape);
-    const gert::Shape& inputThresholdShape = EnsureNotScalar(thresholdStorageShape->GetStorageShape());
-
     auto valueStorageShape = tilingContext->GetOptionalInputShape(2);
-    if (valueStorageShape != nullptr) {
-        const gert::Shape& inputValueShape = EnsureNotScalar(valueStorageShape->GetStorageShape());
-    } else {
+    if (valueStorageShape == nullptr) {
         hasValue = false;
     }
 
@@ -105,7 +112,8 @@ ge::graphStatus ThresholdTiling::CheckShape()
 
     OP_CHECK_IF(
         inputXShape != outputYShape,
-        OP_LOGE(tilingContext->GetNodeName(), "input x and output y shape not same"),
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(tilingContext->GetNodeName(), "y", ToString(outputYShape).c_str(),
+            "The shape of y must be equal to the shape of x"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -114,26 +122,17 @@ ge::graphStatus ThresholdTiling::RunTiling()
 {
     ElewiseBaseTiling elewiseBaseTiling(tilingContext);
 
-    OP_CHECK_IF(
-        CalcInputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "invalid in dtype"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        CalcOutputDtype() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "invalid out dtype"), return ge::GRAPH_FAILED);
-    OP_CHECK_IF(CheckShape() == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "invalid shape"), return ge::GRAPH_FAILED);
-
+    if (CalcInputDtype() == ge::GRAPH_FAILED || CalcOutputDtype() == ge::GRAPH_FAILED || CheckShape() == ge::GRAPH_FAILED) {
+        return ge::GRAPH_FAILED;
+    }
     auto tiling = tilingContext->GetTilingData<EleBaseTilingDataV2>();
-    OP_CHECK_IF(
-        (tiling == nullptr), OP_LOGE(tilingContext->GetNodeName(), "Get ThresholdV2Tiling from GE context failed"),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext, tiling);
 
-    static const std::unordered_map<ge::DataType, uint64_t> dtypeToTplMap = {
+    static const std::unordered_map<ge::DataType, int> dtypeToTplMap = {
         {ge::DT_FLOAT16, TPL_FP16}, {ge::DT_BF16, TPL_BF16}, {ge::DT_FLOAT, TPL_FP32},
         {ge::DT_INT8, TPL_INT8}, {ge::DT_UINT8, TPL_UINT8}, {ge::DT_INT32, TPL_INT32}, {ge::DT_INT64, TPL_INT64}
     };
-    auto it = dtypeToTplMap.find(this->inputDtype);
-    OP_CHECK_IF(it == dtypeToTplMap.end(), OP_LOGE(tilingContext->GetNodeName(), "Input dtype not support."),
-        return ge::GRAPH_FAILED);
-    dType = it->second;
-
+    dType = GetOrDefault(dtypeToTplMap, this->inputDtype, TPL_DEFAULT);
     ge::graphStatus res = ge::GRAPH_FAILED;
     if (dType == TPL_BF16) {
         res = hasValue ? elewiseBaseTiling.DoTiling<ThresholdCastDag<bfloat16_t, float>::OpDag>(*tiling)
@@ -156,17 +155,18 @@ ge::graphStatus ThresholdTiling::RunTiling()
     } else if (dType == TPL_INT64) {
         res = hasValue ? elewiseBaseTiling.DoTiling<ThresholdDag<int64_t>::OpDag>(*tiling)
             : elewiseBaseTiling.DoTiling<ThresholdDagNoValue<int64_t>::OpDag>(*tiling);
+    } else {
+        OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "x",
+            ge::TypeUtils::DataTypeToSerialString(this->inputDtype).c_str(),
+            "The dtype of x must be within the range fp16, bf16, fp32, int64, int32, uint8 and int8");
+        return ge::GRAPH_FAILED;
     }
 
-    OP_CHECK_IF(res == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "elewiseBaseTiling failed"), return ge::GRAPH_FAILED);
-    tilingContext->GetWorkspaceSizes(1)[0] = ASCEND_WORKSPACE;
-
-    uint8_t valueMode = hasValue ? TPL_HAS_VALUE : TPL_NO_VALUE;
-    const uint64_t tilingKey = GET_TPL_TILING_KEY(tiling->scheMode, valueMode, dType);
-    tilingContext->SetTilingKey(tilingKey);
+    tilingContext->GetWorkspaceSizes(1)[0] = 0;
+    tilingContext->SetTilingKey(GET_TPL_TILING_KEY(tiling->scheMode, 
+        hasValue ? TPL_HAS_VALUE : TPL_NO_VALUE, dType));
     tilingContext->SetBlockDim(tiling->blockNum);
-
-    return ge::GRAPH_SUCCESS;
+    return res;
 }
 
 ge::graphStatus TilingForThreshold(gert::TilingContext* tilingContext)

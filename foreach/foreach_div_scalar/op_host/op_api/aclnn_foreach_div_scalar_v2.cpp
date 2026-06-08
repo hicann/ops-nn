@@ -59,8 +59,6 @@ static const std::initializer_list<DataType>& GetDtypeSupportList() {
   if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
     return ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPPORT_LIST;
   } else {
-    OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for %s is not implemented",
-            op::ToString(GetCurrentPlatformInfo().GetSocVersion()).GetString());
     return EMPTY_LIST;
   }
 }
