@@ -27,6 +27,35 @@ constexpr int32_t OUT_BUFFER_LEN = 1024;
 constexpr int32_t NUM128 = 128;
 
 template <typename T>
+__simd_vf__ inline void CopyResultToUbVf(__ubuf__ T* dstAddr, __ubuf__ T* srcAddr)
+{
+    MicroAPI::RegTensor<T> res;
+    MicroAPI::UnalignReg u0;
+    MicroAPI::DataCopyUnAlignPre(u0, srcAddr);
+    MicroAPI::DataCopyUnAlign(res, u0, srcAddr, ONE);
+
+    MicroAPI::UnalignReg u1;
+    MicroAPI::DataCopyUnAlign(dstAddr, res, u1, ONE);
+    MicroAPI::DataCopyUnAlignPost(dstAddr, u1, 0);
+}
+
+template <typename T>
+__simd_vf__ inline void InitOutLocalClearVf(__ubuf__ T* addr, T zero, uint16_t repeatTimes, uint32_t num, uint32_t repeatElm)
+{
+    MicroAPI::RegTensor<T> v0;
+    MicroAPI::Duplicate(v0, zero);
+    for (uint16_t i = 0; i < repeatTimes; i++) {
+        MicroAPI::MaskReg p0 = MicroAPI::UpdateMask<T>(num);
+        if constexpr (sizeof(T) == B64) {
+            MicroAPI::DataCopy(addr + i * repeatElm, v0, p0);
+        } else {
+            MicroAPI::AddrReg offsetReg = MicroAPI::CreateAddrReg<T>(i, repeatElm);
+            MicroAPI::DataCopy(addr, v0, offsetReg, p0);
+        }
+    }
+}
+
+template <typename T>
 class AvgPoolBigKernel
 {
 public:
@@ -220,17 +249,7 @@ __aicore__ inline void AvgPoolBigKernel<T>::CopyResultToUb(int64_t curIdx)
     LocalTensor<T> ubResult = ubLoopResult_.Get<T>();
     __local_mem__ T* srcAddr = (__local_mem__ T*)ubResult.GetPhyAddr();
 
-    __VEC_SCOPE__
-    {
-        MicroAPI::RegTensor<T> res;
-        MicroAPI::UnalignReg u0;
-        MicroAPI::DataCopyUnAlignPre(u0, srcAddr);
-        MicroAPI::DataCopyUnAlign(res, u0, srcAddr, ONE);
-
-        MicroAPI::UnalignReg u1;
-        MicroAPI::DataCopyUnAlign(dstAddr, res, u1, ONE);
-        MicroAPI::DataCopyUnAlignPost(dstAddr, u1, 0);
-    }
+    CopyResultToUbVf<T>((__ubuf__ T*)dstAddr, (__ubuf__ T*)srcAddr);
 }
 
 template <typename T>
@@ -332,20 +351,7 @@ __aicore__ inline void AvgPoolBigKernel<T>::InitOutLocal(int32_t localCurIdx)
 
     T zero = T(0);
     __local_mem__ T* addr = (__local_mem__ T*)dstAddr;
-    __VEC_SCOPE__
-    {
-        MicroAPI::RegTensor<T> v0;
-        MicroAPI::Duplicate(v0, zero);
-        for (uint16_t i = 0; i < repeatTimes; i++) {
-            MicroAPI::MaskReg p0 = MicroAPI::UpdateMask<T>(num);
-            if constexpr (sizeof(T) == B64) {
-                MicroAPI::DataCopy(addr + i * repeatElm, v0, p0);
-            } else {
-                MicroAPI::AddrReg offsetReg = MicroAPI::CreateAddrReg<T>(i, repeatElm);
-                MicroAPI::DataCopy(addr, v0, offsetReg, p0);
-            }
-        }
-    }
+    InitOutLocalClearVf<T>((__ubuf__ T*)addr, zero, repeatTimes, num, repeatElm);
 }
 
 template <typename T>

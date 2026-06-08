@@ -24,6 +24,137 @@ namespace AvgPool
 {
 using namespace AscendC;
 
+template <typename M, typename U>
+__simd_vf__ inline void NhwcSmallPadCopyAndPadSingleRowVf(
+    __ubuf__ M* xLocalAddr, __ubuf__ M* inLocalAddr,
+    uint32_t totalDupNum, uint16_t dupLoop,
+    uint32_t srcBatchStride, uint32_t colStride, U oneBatchElements,
+    uint32_t rowOffsetInUb, uint32_t colOffsetInUb, uint32_t ubFactorN, uint32_t hInUb,
+    uint16_t preColsLoop, uint32_t tailPreCols, uint32_t repeatElm)
+{
+    CustomDuplicate<M>(xLocalAddr, totalDupNum, dupLoop);
+    MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_STORE>();
+    CustomCopy(xLocalAddr, inLocalAddr, srcBatchStride, colStride, oneBatchElements, colStride, rowOffsetInUb,
+               colOffsetInUb, ubFactorN, hInUb, preColsLoop, tailPreCols, repeatElm);
+}
+
+template <typename M, typename U>
+__simd_vf__ inline void NhwcSmallPadCopyAndPadScatterMultiRowVf(
+    __ubuf__ M* xLocalAddr, __ubuf__ M* inLocalAddr, __ubuf__ U* indexAddr,
+    uint32_t totalDupNum, uint16_t dupLoop,
+    uint32_t srcBatchStride, uint32_t srcRowStride, uint32_t dstBatchStride, uint32_t dstRowStride,
+    uint32_t dstOffset, uint16_t loopN, uint16_t loopRows, uint32_t repeatElm, uint32_t tailRepeatElm)
+{
+    MicroAPI::RegTensor<U> v0;
+    MicroAPI::DataCopy(v0, indexAddr);
+    CustomDuplicate<M>(xLocalAddr, totalDupNum, dupLoop);
+    MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_STORE>();
+    CustomCopyByScatterMultiRows<M, U>(xLocalAddr, inLocalAddr, v0, srcBatchStride, srcRowStride,
+                                       dstBatchStride, dstRowStride, dstOffset, loopN, loopRows, repeatElm,
+                                       tailRepeatElm);
+}
+
+template <typename M, typename U>
+__simd_vf__ inline void NhwcSmallPadCopyAndPadScatterSingleRowVf(
+    __ubuf__ M* xLocalAddr, __ubuf__ M* inLocalAddr,
+    uint32_t totalDupNum, uint16_t dupLoop,
+    uint32_t srcBatchStride, uint32_t colStride, U oneBatchElements,
+    uint32_t rowOffsetInUb, uint32_t colOffsetInUb, uint32_t ubFactorN, uint32_t hInUb,
+    uint16_t preColsLoop, uint32_t realColsElm, uint32_t repeatElm)
+{
+    CustomDuplicate<M>(xLocalAddr, totalDupNum, dupLoop);
+    MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_STORE>();
+    CustomCopyByScatterSingleRow<M, U>(xLocalAddr, inLocalAddr, srcBatchStride, colStride, oneBatchElements,
+                                       colStride, rowOffsetInUb, colOffsetInUb, ubFactorN, hInUb, preColsLoop,
+                                       realColsElm, repeatElm);
+}
+
+template <typename T, typename U, typename Z, bool OUT_DIV>
+__simd_vf__ inline void NhwcSmallPadComputeMultiBatchVf(
+    __ubuf__ Z* dstLocalAddr, __ubuf__ T* xLocalAddr, __ubuf__ U* indexAddr,
+    uint16_t kH, uint16_t kW, uint16_t loopN, U rowStrideInub, U oneLoopStride,
+    uint16_t oneLoopElements, uint16_t tailLoopElements,
+    U halfLoopOut0, U halfLoopOut1, U tailHalfLoopOut0, U tailHalfLoopOut1,
+    float32_t divisor, uint16_t channels)
+{
+    MicroAPI::RegTensor<U> v0;
+    MicroAPI::DataCopy(v0, indexAddr);
+    AvgPoolSplitBatch<T, U, Z, OUT_DIV>(
+        dstLocalAddr, xLocalAddr, v0, kH, kW, loopN, rowStrideInub, oneLoopStride, oneLoopElements, tailLoopElements,
+        halfLoopOut0, halfLoopOut1, tailHalfLoopOut0, tailHalfLoopOut1, divisor, channels);
+}
+
+template <typename T, typename U, typename Z, bool OUT_DIV>
+__simd_vf__ inline void NhwcSmallPadComputeMultiRowVf(
+    __ubuf__ Z* dstLocalAddr, __ubuf__ T* xLocalAddr, __ubuf__ U* indexAddr,
+    uint16_t kH, uint16_t kW, uint16_t loopN, uint16_t loopH, U oneChannelElements, U rowStrideInub,
+    U oneLoopStride, uint16_t oneLoopElements, uint16_t tailLoopElements,
+    U halfLoopOut0, U halfLoopOut1, U tailHalfLoopOut0, U tailHalfLoopOut1,
+    float32_t divisor, uint16_t channels)
+{
+    MicroAPI::RegTensor<U> v0;
+    MicroAPI::DataCopy(v0, indexAddr);
+    AvgPoolSplitH<T, U, Z, OUT_DIV>(
+        dstLocalAddr, xLocalAddr, v0, kH, kW, loopN, loopH, oneChannelElements, rowStrideInub, oneLoopStride,
+        oneLoopElements, tailLoopElements, halfLoopOut0, halfLoopOut1, tailHalfLoopOut0, tailHalfLoopOut1, divisor,
+        channels);
+}
+
+template <typename T, typename U, typename Z, bool OUT_DIV>
+__simd_vf__ inline void NhwcSmallPadComputeSingleRowVf(
+    __ubuf__ Z* dstLocalAddr, __ubuf__ T* xLocalAddr, __ubuf__ U* indexAddr,
+    uint16_t kH, uint16_t kW, uint16_t loopH, uint16_t loopW,
+    U oneLoopStrideH, U oneLoopStrideW, U inColsElms,
+    uint16_t oneLoopElements, uint16_t tailLoopElements,
+    U halfLoopOut0, U halfLoopOut1, U tailHalfLoopOut0, U tailHalfLoopOut1,
+    float32_t divisor, uint16_t channels)
+{
+    MicroAPI::RegTensor<U> v0;
+    MicroAPI::DataCopy(v0, indexAddr);
+    AvgPoolSplitW<T, U, Z, OUT_DIV>(
+        dstLocalAddr, xLocalAddr, v0, kH, kW, loopH, loopW, oneLoopStrideH, oneLoopStrideW, inColsElms,
+        oneLoopElements, tailLoopElements, halfLoopOut0, halfLoopOut1, tailHalfLoopOut0, tailHalfLoopOut1,
+        divisor, channels);
+}
+
+template <typename M, typename U>
+__simd_vf__ inline void NhwcSmallPadComputeSingleChannelsVf(
+    __ubuf__ M* xLocalAddr, __ubuf__ M* dstLocalAddr,
+    uint16_t i, uint16_t j, uint16_t k,
+    U batchStride, U oneLoopStrideH, U oneLoopStrideW,
+    U oneChannelOutElements, U outLoopStrideH,
+    U colStride, U alignChannels,
+    uint16_t kH, uint16_t kW,
+    uint16_t cLoop, uint16_t tailNum, uint16_t repeatElm,
+    float32_t divisor)
+{
+    for (uint16_t m = 0; m < cLoop; m++) {
+        auto curSrcAddr = xLocalAddr + i * batchStride + j * oneLoopStrideH + k * oneLoopStrideW + m * repeatElm;
+        auto curDstAddr =
+            dstLocalAddr + i * oneChannelOutElements + j * outLoopStrideH + k * alignChannels + m * repeatElm;
+        AvgPoolSingleChannel(curDstAddr, curSrcAddr, kH, kW, colStride, alignChannels, repeatElm, divisor);
+    }
+    auto curSrcAddr =
+        xLocalAddr + i * batchStride + j * oneLoopStrideH + k * oneLoopStrideW + cLoop * repeatElm;
+    auto curDstAddr =
+        dstLocalAddr + i * oneChannelOutElements + j * outLoopStrideH + k * alignChannels + cLoop * repeatElm;
+    AvgPoolSingleChannel(curDstAddr, curSrcAddr, kH, kW, colStride, alignChannels, tailNum, divisor);
+}
+
+template <typename M, typename U>
+__simd_vf__ inline void NhwcSmallPadMultiChannelCopyAndPadVf(
+    __ubuf__ M* xLocalAddr, __ubuf__ M* inLocalAddr,
+    uint32_t totalDupNum, uint16_t dupLoop,
+    uint32_t srcBatchStride, uint32_t colStride, U oneBatchElements, uint32_t dstColStride,
+    uint32_t rowOffsetInUb, uint32_t colOffsetInUb, uint32_t ubFactorN, uint32_t hInUb,
+    uint16_t preColsLoop, uint32_t tailPreCols, uint32_t repeatElm)
+{
+    CustomDuplicate<M>(xLocalAddr, totalDupNum, dupLoop);
+    MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_STORE>();
+    CustomCopy(xLocalAddr, inLocalAddr, srcBatchStride, colStride, oneBatchElements, dstColStride, rowOffsetInUb,
+               colOffsetInUb, ubFactorN, hInUb, preColsLoop, tailPreCols, repeatElm);
+}
+
 template <typename T, bool OUT_DIV=false>
 class AvgPoolNHWCSmallKernelPad
 {
@@ -405,13 +536,9 @@ __aicore__ inline void AvgPoolNHWCSmallKernelPad<T, OUT_DIV>::CopyAndPad(LocalTe
         uint32_t rowOffsetInUb = expectRowStart;
         uint32_t colOffsetInUb = expectColStart * channels;
         uint32_t hInUb = realRows;
-        __VEC_SCOPE__
-        {
-            CustomDuplicate<M>(xLocalAddr, totalDupNum, dupLoop);
-            MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_STORE>();
-            CustomCopy(xLocalAddr, inLocalAddr, srcBatchStride, colStride, oneBatchElements, colStride, rowOffsetInUb,
-                       colOffsetInUb, ubFactorN, hInUb, preColsLoop, tailPreCols, repeatElm);
-        }
+        NhwcSmallPadCopyAndPadSingleRowVf<M, U>((__ubuf__ M*)xLocalAddr, (__ubuf__ M*)inLocalAddr, totalDupNum,
+            dupLoop, srcBatchStride, colStride, oneBatchElements, rowOffsetInUb, colOffsetInUb, ubFactorN, hInUb,
+            preColsLoop, tailPreCols, repeatElm);
     } else if (tilingData_->copyMode == SCATTER_MULTI_ROW) {
         uint32_t srcBatchStride = realRows * realCols * channels;
         uint32_t srcRowStride = tilingData_->onceCopyRow * realCols * channels;
@@ -422,16 +549,9 @@ __aicore__ inline void AvgPoolNHWCSmallKernelPad<T, OUT_DIV>::CopyAndPad(LocalTe
         uint32_t loopRows = realRows / tilingData_->onceCopyRow;
         uint32_t repeatElm = tilingData_->onceCopyRow * realCols * channels;
         uint32_t tailRepeatElm = (realRows - loopRows * tilingData_->onceCopyRow) * realCols * channels;
-        __VEC_SCOPE__
-        {
-            MicroAPI::RegTensor<U> v0;
-            MicroAPI::DataCopy(v0, indexAddr);
-            CustomDuplicate<M>(xLocalAddr, totalDupNum, dupLoop);
-            MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_STORE>();
-            CustomCopyByScatterMultiRows<M, U>(xLocalAddr, inLocalAddr, v0, srcBatchStride, srcRowStride,
-                                               dstBatchStride, dstRowStride, dstOffset, loopN, loopRows, repeatElm,
-                                               tailRepeatElm);
-        }
+        NhwcSmallPadCopyAndPadScatterMultiRowVf<M, U>((__ubuf__ M*)xLocalAddr, (__ubuf__ M*)inLocalAddr,
+            indexAddr, totalDupNum, dupLoop, srcBatchStride, srcRowStride, dstBatchStride, dstRowStride,
+            dstOffset, loopN, loopRows, repeatElm, tailRepeatElm);
     } else {
         constexpr uint32_t repeatElm = Ops::Base::GetVRegSize() / sizeof(U);
         uint16_t realColsElm = realCols * channels;
@@ -442,14 +562,9 @@ __aicore__ inline void AvgPoolNHWCSmallKernelPad<T, OUT_DIV>::CopyAndPad(LocalTe
         uint32_t rowOffsetInUb = expectRowStart;
         uint32_t colOffsetInUb = expectColStart * channels;
         uint32_t hInUb = realRows;
-        __VEC_SCOPE__
-        {
-            CustomDuplicate<M>(xLocalAddr, totalDupNum, dupLoop);
-            MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_STORE>();
-            CustomCopyByScatterSingleRow<M, U>(xLocalAddr, inLocalAddr, srcBatchStride, colStride, oneBatchElements,
-                                               colStride, rowOffsetInUb, colOffsetInUb, ubFactorN, hInUb, preColsLoop,
-                                               realColsElm, repeatElm);
-        }
+        NhwcSmallPadCopyAndPadScatterSingleRowVf<M, U>((__ubuf__ M*)xLocalAddr, (__ubuf__ M*)inLocalAddr,
+            totalDupNum, dupLoop, srcBatchStride, colStride, oneBatchElements, rowOffsetInUb, colOffsetInUb,
+            ubFactorN, hInUb, preColsLoop, realColsElm, repeatElm);
     }
 }
 
@@ -495,14 +610,9 @@ __aicore__ inline void AvgPoolNHWCSmallKernelPad<T, OUT_DIV>::ComputeMultiBatch(
     U tailHalfLoopOut1 = tailLoopElements > oneRegNumFp32 ? tailLoopElements - oneRegNumFp32 : 0;
 
     CopyAndPad<M, U>(inLocal, n, inRows, inColsElms, expectRowStart, expectColStart, realRows, realCols, channels);
-    __VEC_SCOPE__
-    {
-        MicroAPI::RegTensor<U> v0;
-        MicroAPI::DataCopy(v0, indexAddr);
-        AvgPoolSplitBatch<T, U, Z, OUT_DIV>(
-            dstLocalAddr, xLocalAddr, v0, kH, kW, loopN, inColsElms, oneLoopStride, oneLoopElements, tailLoopElements,
-            halfLoopOut0, halfLoopOut1, tailHalfLoopOut0, tailHalfLoopOut1, divisor, channels);
-    }
+    NhwcSmallPadComputeMultiBatchVf<T, U, Z, OUT_DIV>((__ubuf__ Z*)dstLocalAddr, (__ubuf__ T*)xLocalAddr, indexAddr,
+        kH, kW, loopN, inColsElms, oneLoopStride, oneLoopElements, tailLoopElements,
+        halfLoopOut0, halfLoopOut1, tailHalfLoopOut0, tailHalfLoopOut1, divisor, channels);
     if constexpr (OUT_DIV) {
         __local_mem__ T* newDstAddr = (__local_mem__ T*)maxOutLocal.GetPhyAddr();
         uint32_t totalOut = n * outUbFactorH * outUbFactorW;
@@ -555,15 +665,9 @@ __aicore__ inline void AvgPoolNHWCSmallKernelPad<T, OUT_DIV>::ComputeMultiRow(in
     U tailHalfLoopOut1 = tailLoopElements > oneRegNumFp32 ? tailLoopElements - oneRegNumFp32 : 0;
 
     CopyAndPad<M, U>(inLocal, n, inRows, inColsElms, expectRowStart, expectColStart, realRows, realCols, channels);
-    __VEC_SCOPE__
-    {
-        MicroAPI::RegTensor<U> v0;
-        MicroAPI::DataCopy(v0, indexAddr);
-        AvgPoolSplitH<T, U, Z, OUT_DIV>(
-            dstLocalAddr, xLocalAddr, v0, kH, kW, loopN, loopH, oneBatchElements, inColsElms, oneLoopStrideH,
-            oneLoopElements, tailLoopElements, halfLoopOut0, halfLoopOut1, tailHalfLoopOut0, tailHalfLoopOut1, divisor,
-            channels);
-    }
+    NhwcSmallPadComputeMultiRowVf<T, U, Z, OUT_DIV>((__ubuf__ Z*)dstLocalAddr, (__ubuf__ T*)xLocalAddr, indexAddr, kH,
+        kW, loopN, loopH, oneBatchElements, inColsElms, oneLoopStrideH, oneLoopElements, tailLoopElements,
+        halfLoopOut0, halfLoopOut1, tailHalfLoopOut0, tailHalfLoopOut1, divisor, channels);
     if constexpr (OUT_DIV) {
         __local_mem__ T* newDstAddr = (__local_mem__ T*)maxOutLocal.GetPhyAddr();
         uint32_t totalOut = n * outUbFactorH * outUbFactorW;
@@ -621,28 +725,18 @@ __aicore__ inline void AvgPoolNHWCSmallKernelPad<T, OUT_DIV>::ComputeSingleRow(i
     
     CopyAndPad<M, U>(inLocal, n, inRows, inColsElms, expectRowStart, expectColStart, realRows, realCols, channels);
     if (ubFactorN == 1U) {
-        __VEC_SCOPE__
-        {
-            MicroAPI::RegTensor<U> v0;
-            MicroAPI::DataCopy(v0, indexAddr);
-            AvgPoolSplitW<T, U, Z, OUT_DIV>(
-                dstLocalAddr, xLocalAddr, v0, kH, kW, loopH, loopW, oneLoopStrideH, oneLoopStrideW, inColsElms,
-                oneLoopElements, tailLoopElements, halfLoopOut0, halfLoopOut1, tailHalfLoopOut0, tailHalfLoopOut1,
-                divisor, channels);
-        }
+        NhwcSmallPadComputeSingleRowVf<T, U, Z, OUT_DIV>((__ubuf__ Z*)dstLocalAddr, (__ubuf__ T*)xLocalAddr, indexAddr,
+            kH, kW, loopH, loopW, oneLoopStrideH, oneLoopStrideW, inColsElms,
+            oneLoopElements, tailLoopElements, halfLoopOut0, halfLoopOut1, tailHalfLoopOut0, tailHalfLoopOut1,
+            divisor, channels);
     } else {
         for (uint16_t i = 0; i < loopN; i++) {
             __local_mem__ T* srcAddr = xLocalAddr + i * oneBatchElements;
             __local_mem__ Z* dstAddr = dstLocalAddr + i * oneChannelOutElements;
-            __VEC_SCOPE__
-            {
-                MicroAPI::RegTensor<U> v0;
-                MicroAPI::DataCopy(v0, indexAddr);
-                AvgPoolSplitW<T, U, Z, OUT_DIV>(
-                    dstAddr, srcAddr, v0, kH, kW, loopH, loopW, oneLoopStrideH, oneLoopStrideW, inColsElms,
-                    oneLoopElements, tailLoopElements, halfLoopOut0, halfLoopOut1, tailHalfLoopOut0, tailHalfLoopOut1,
-                    divisor, channels);
-            }
+            NhwcSmallPadComputeSingleRowVf<T, U, Z, OUT_DIV>((__ubuf__ Z*)dstAddr, (__ubuf__ T*)srcAddr, indexAddr,
+                kH, kW, loopH, loopW, oneLoopStrideH, oneLoopStrideW, inColsElms,
+                oneLoopElements, tailLoopElements, halfLoopOut0, halfLoopOut1, tailHalfLoopOut0, tailHalfLoopOut1,
+                divisor, channels);
         }
     }
     if constexpr (OUT_DIV) {
@@ -706,25 +800,14 @@ __aicore__ inline void AvgPoolNHWCSmallKernelPad<T, OUT_DIV>::ComputeSingleChann
                 if constexpr (OUT_DIV) {
                     curIndex = GetCurrentDivisorIndex(index++);
                 }
-                __VEC_SCOPE__
-                {
-                    if constexpr (OUT_DIV) {
-                        divisor = divisorLocal(curIndex);
-                    }
-                    for (uint16_t m = 0; m < cLoop; m++) {
-                        auto curSrcAddr =
-                            xLocalAddr + i * batchStride + j * oneLoopStrideH + k * oneLoopStrideW + m * repeatElm;
-                        auto curDstAddr = dstLocalAddr + i * oneChannelOutElements + j * outLoopStrideH +
-                                          k * alignChannels + m * repeatElm;
-                        AvgPoolSingleChannel(
-                            curDstAddr, curSrcAddr, kH, kW, colStride, alignChannels, repeatElm, divisor);
-                    }
-                    auto curSrcAddr =
-                        xLocalAddr + i * batchStride + j * oneLoopStrideH + k * oneLoopStrideW + cLoop * repeatElm;
-                    auto curDstAddr = dstLocalAddr + i * oneChannelOutElements + j * outLoopStrideH +
-                                      k * alignChannels + cLoop * repeatElm;
-                    AvgPoolSingleChannel(curDstAddr, curSrcAddr, kH, kW, colStride, alignChannels, tailNum, divisor);
+                float32_t curDivisor = divisor;
+                if constexpr (OUT_DIV) {
+                    curDivisor = divisorLocal(curIndex);
                 }
+                NhwcSmallPadComputeSingleChannelsVf<M, U>((__ubuf__ M*)xLocalAddr, (__ubuf__ M*)dstLocalAddr,
+                    i, j, k, batchStride, oneLoopStrideH, oneLoopStrideW,
+                    oneChannelOutElements, outLoopStrideH, colStride, alignChannels,
+                    kH, kW, cLoop, tailNum, repeatElm, curDivisor);
             }
         }
     }
@@ -762,13 +845,9 @@ __aicore__ inline void AvgPoolNHWCSmallKernelPad<T, OUT_DIV>::MultiChannelCopyAn
     uint32_t rowOffsetInUb = expectRowStart;
     uint32_t colOffsetInUb = expectColStart * alignChannels;
     uint32_t hInUb = realRows;
-    __VEC_SCOPE__
-    {
-        CustomDuplicate<M>(xLocalAddr, totalDupNum, dupLoop);
-        MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_STORE>();
-        CustomCopy(xLocalAddr, inLocalAddr, srcBatchStride, colStride, oneBatchElements, dstColStride, rowOffsetInUb,
-                   colOffsetInUb, ubFactorN, hInUb, preColsLoop, tailPreCols, repeatElm);
-    }
+    NhwcSmallPadMultiChannelCopyAndPadVf<M, U>((__ubuf__ M*)xLocalAddr, (__ubuf__ M*)inLocalAddr, totalDupNum,
+        dupLoop, srcBatchStride, colStride, oneBatchElements, dstColStride, rowOffsetInUb, colOffsetInUb, ubFactorN,
+        hInUb, preColsLoop, tailPreCols, repeatElm);
 }
 
 

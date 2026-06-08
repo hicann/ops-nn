@@ -83,33 +83,39 @@ __aicore__ inline void IndexFillD<T>::CopyOut(int64_t offset, int64_t dataLen)
     yQueue_.FreeTensor(yLocal);
 }
 
+template<typename DTYPE>
+__simd_vf__ inline void CompareVfKernel(__ubuf__ DTYPE* xPtr, __ubuf__ DTYPE* assist1Ptr,
+                                __ubuf__ DTYPE* assist2Ptr, __ubuf__ DTYPE* yPtr,
+                                uint32_t count, uint16_t onRepeatSize, uint16_t repeatTimes)
+{
+    MicroAPI::RegTensor<DTYPE> vSrcRegX;
+    MicroAPI::RegTensor<DTYPE> vSrcRegAssist1;
+    MicroAPI::RegTensor<DTYPE> vSrcRegAssist2;
+    MicroAPI::RegTensor<DTYPE> vDstRegY;
+    MicroAPI::MaskReg cmpMaskReg;
+    for (uint16_t i = 0; i < repeatTimes; i++) {
+        MicroAPI::MaskReg maskReg = MicroAPI::UpdateMask<DTYPE>(count);
+        MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<DTYPE, MicroAPI::MaskPattern::ALL>();
+        MicroAPI::DataCopy(vSrcRegX, xPtr + i * onRepeatSize);
+        MicroAPI::DataCopy(vSrcRegAssist1, assist1Ptr + i * onRepeatSize);
+        MicroAPI::DataCopy(vSrcRegAssist2, assist2Ptr + i * onRepeatSize);
+        MicroAPI::CompareScalar<DTYPE, CMPMODE::GT>(cmpMaskReg, vSrcRegAssist1, (DTYPE)0, maskAll);
+        MicroAPI::Select(vDstRegY, vSrcRegX, vSrcRegAssist2, cmpMaskReg);
+        MicroAPI::DataCopy(yPtr + i * onRepeatSize, vDstRegY, maskReg);
+    }
+}
+
 template<typename T, typename DTYPE>
 static __aicore__ inline void CompareVf(LocalTensor<T> &xLocal, LocalTensor<T> &assist1Local,
                                 LocalTensor<T> &assist2Local, LocalTensor<T> &yLocal,
                                 uint32_t count, uint16_t onRepeatSize, uint16_t repeatTimes)
 {
-    __local_mem__ DTYPE* xPtr = (__local_mem__ DTYPE*)xLocal.GetPhyAddr();
-    __local_mem__ DTYPE* assist1Ptr = (__local_mem__ DTYPE*)assist1Local.GetPhyAddr();
-    __local_mem__ DTYPE* assist2Ptr = (__local_mem__ DTYPE*)assist2Local.GetPhyAddr();
-    __local_mem__ DTYPE* yPtr = (__local_mem__ DTYPE*)yLocal.GetPhyAddr();
-    __VEC_SCOPE__
-    {
-        MicroAPI::RegTensor<DTYPE> vSrcRegX;
-        MicroAPI::RegTensor<DTYPE> vSrcRegAssist1;
-        MicroAPI::RegTensor<DTYPE> vSrcRegAssist2;
-        MicroAPI::RegTensor<DTYPE> vDstRegY;
-        MicroAPI::MaskReg cmpMaskReg;
-        for(uint16_t i = 0; i < repeatTimes; i++) {
-            MicroAPI::MaskReg maskReg = MicroAPI::UpdateMask<DTYPE>(count);
-            MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<DTYPE, MicroAPI::MaskPattern::ALL>();
-            MicroAPI::DataCopy(vSrcRegX, xPtr + i * onRepeatSize);
-            MicroAPI::DataCopy(vSrcRegAssist1, assist1Ptr + i * onRepeatSize);
-            MicroAPI::DataCopy(vSrcRegAssist2, assist2Ptr + i * onRepeatSize);
-            MicroAPI::CompareScalar<DTYPE, CMPMODE::GT>(cmpMaskReg, vSrcRegAssist1, (DTYPE)0, maskAll);
-            MicroAPI::Select(vDstRegY, vSrcRegX, vSrcRegAssist2, cmpMaskReg);
-            MicroAPI::DataCopy(yPtr + i * onRepeatSize, vDstRegY, maskReg);
-        }
-    }
+    CompareVfKernel<DTYPE>(
+        (__ubuf__ DTYPE*)xLocal.GetPhyAddr(),
+        (__ubuf__ DTYPE*)assist1Local.GetPhyAddr(),
+        (__ubuf__ DTYPE*)assist2Local.GetPhyAddr(),
+        (__ubuf__ DTYPE*)yLocal.GetPhyAddr(),
+        count, onRepeatSize, repeatTimes);
 }
 
 template<typename T>

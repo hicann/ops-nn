@@ -17,6 +17,8 @@
 #include "op_host/util/math_util.h"
 #include "atvoss/elewise/elewise_tiling.h"
 #include "tiling/platform/platform_ascendc.h"
+#include <sstream>
+#include <string>
 
 namespace optiling
 {
@@ -55,8 +57,11 @@ ge::graphStatus IndexFillDTiling::CheckShape()
     auto yShape = yShapePtr->GetStorageShape();
 
     OP_CHECK_IF(xShape != assist1Shape || xShape != assist2Shape || xShape != yShape,
-               OP_LOGE(context_->GetNodeName(),
-               "input x, assist1, assist2 and y shape must be same, please check"),
+               OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(),
+               "x, assist1, assist2, y",
+               (Ops::Base::ToString(xShape) + ", " + Ops::Base::ToString(assist1Shape) + ", " +
+                Ops::Base::ToString(assist2Shape) + ", " + Ops::Base::ToString(yShape)).c_str(),
+               "x, assist1, assist2 and y shapes must be the same"),
                return ge::GRAPH_FAILED);
     inputXShape_ = xShape;
     return ge::GRAPH_SUCCESS;
@@ -81,16 +86,21 @@ ge::graphStatus IndexFillDTiling::CheckDataType()
     auto outputPtr = context_->GetOutputDesc(OUTPUT_Y_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputPtr);
     auto outputDtype = outputPtr->GetDataType();
-    OP_CHECK_IF(!IsSupportDtype(SUPPORT_DTYPE, dType_), OP_LOGE(context_->GetNodeName(),
-        "The dtype only support float32, float16, int32, int64, bool, bfloat16 \
-        currently, please check."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!IsSupportDtype(SUPPORT_DTYPE, dType_), OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+        context_->GetNodeName(), "x", Ops::Base::ToString(dType_).c_str(),
+        "dtype must be in [DT_FLOAT, DT_FLOAT16, DT_INT32, DT_INT64, DT_BOOL, DT_BF16]"),
+        return ge::GRAPH_FAILED);
     OP_CHECK_IF(dType_ != assist1DType || dType_ != assist2DType || dType_ != outputDtype,
-               OP_LOGE(context_->GetNodeName(),
-               "input x, assist1, assist2 and y dtype must be same, please check"),
+               OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(),
+               "x, assist1, assist2, y",
+               (Ops::Base::ToString(dType_) + ", " + Ops::Base::ToString(assist1DType) + ", " +
+                Ops::Base::ToString(assist2DType) + ", " + Ops::Base::ToString(outputDtype)).c_str(),
+               "x, assist1, assist2 and y dtypes must be the same"),
                return ge::GRAPH_FAILED);
     dataTypeSize_ = ge::GetSizeByDataType(dType_);
-    OP_CHECK_IF(dataTypeSize_ == -1, OP_LOGE(context_->GetNodeName(),
-        "Get the size of dtype failed, please check."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(dataTypeSize_ == -1, OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(),
+        "x", Ops::Base::ToString(dType_).c_str(), "failed to get dtype size, dtype may be unsupported"),
+        return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
