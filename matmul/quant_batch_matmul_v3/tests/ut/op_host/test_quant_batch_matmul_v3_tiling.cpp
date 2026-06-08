@@ -34,12 +34,20 @@
 #include "../../../op_kernel/arch35/quant_batch_matmul_v3_tiling_data.h"
 #include "platform/platform_infos_def.h"
 #include "ut_string_utils.h"
+#include "version/asc_devkit_version.h"
 
 using namespace ut_str;
 using namespace std;
 using namespace ge;
 using namespace ut_util;
 using namespace optiling;
+
+// Blaze Tensor API kernel gate; must stay aligned with IS_BLAZE in quant_batch_matmul_v3.cpp.
+#if defined(ASC_DEVKIT_MAJOR) && defined(ASC_DEVKIT_MINOR)
+inline constexpr bool IsTensorapiCapable = (ASC_DEVKIT_MAJOR >= 9) && (ASC_DEVKIT_MINOR > 0);
+#else
+inline constexpr bool IsTensorapiCapable = false;
+#endif
 
 class QuantBatchMatmulV3TilingTestParam {
 public:
@@ -673,7 +681,8 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
     if (result) {
         ASSERT_EQ(tilingFunc(tilingContext), ge::GRAPH_SUCCESS)
             << "socVersion is: " << socVersion << ", caseName is: " << caseName << ", prefix is: " << prefix;
-        if (tilingStub) {
+        //  非 Blaze 不支持 weightNz BasicAPI 路径，跳过出参校验
+        if (tilingStub || (weightNz && !IsTensorapiCapable)) {
             return;
         }
         ASSERT_EQ(tilingContext->GetTilingKey(), tilingKey)
@@ -691,7 +700,11 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
 
         bool isMxfp8 = quantMode == 2 && (x1Dtype == ge::DT_FLOAT8_E4M3FN || x1Dtype == ge::DT_FLOAT8_E5M2) && (x2Dtype == ge::DT_FLOAT8_E4M3FN || x2Dtype == ge::DT_FLOAT8_E5M2);
         bool isMxfp4 = quantMode == 2 && x1Dtype == ge::DT_FLOAT4_E2M1 && x2Dtype == ge::DT_FLOAT4_E2M1;
-        if ((quantMode == 3 || quantMode == 4 || isMxfp8 || isMxfp4 || (quantMode == 0 && !pertokenFlag) || (quantMode == 1 && (scaleDtype == ge::DT_UINT64 || yDtype == ge::DT_INT32))) && !weightNz) {
+        // weightNz + Blaze 走 BasicAPITilingData；非 weightNz 时仍按 quantMode 等条件判断
+        bool isUseBasicApiTilingData = (quantMode == 3 || quantMode == 4 || isMxfp8 || isMxfp4 ||
+            (quantMode == 0 && !pertokenFlag) || (quantMode == 1 && (scaleDtype == ge::DT_UINT64 || yDtype == ge::DT_INT32))) &&
+            (!weightNz || IsTensorapiCapable);
+        if (isUseBasicApiTilingData) {
             DequantBmm::QuantBatchMatmulV3BasicAPITilingData& actualTilingData = *reinterpret_cast<DequantBmm::QuantBatchMatmulV3BasicAPITilingData*>(tilingContext->GetRawTilingData()->GetData());
             DequantBmm::QuantBatchMatmulV3BasicAPITilingData& expectTilingData = *reinterpret_cast<DequantBmm::QuantBatchMatmulV3BasicAPITilingData*>(tilingDataInt.data());
             // biasFlag 为0时，biasDtype在kernel侧不使用，忽略校验

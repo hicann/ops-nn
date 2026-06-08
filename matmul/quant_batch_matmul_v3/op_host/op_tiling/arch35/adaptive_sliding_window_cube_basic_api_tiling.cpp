@@ -86,8 +86,8 @@ bool AdaptiveSlidingWindowCubeBasicAPITiling::IsCapable()
     bool isFp8OrHif8TTBiasMix = IsFp8OrHif8TTFloatBiasMix();
     bool capable =
         !isFp8OrHif8TTBiasMix &&
-        ((inputParams_.isDoubleScale && !inputParams_.isPerChannel) || isCubePerTensor || isCubePerChannel) &&
-        inputParams_.bFormat == ge::FORMAT_ND;
+        (((inputParams_.isDoubleScale && !inputParams_.isPerChannel) || isCubePerTensor || isCubePerChannel) &&
+         (inputParams_.bFormat == ge::FORMAT_ND || IsWeightNzCubeBasicApiCapable(inputParams_)));
     if (!capable && isSupportS4S4_) {
         inputParams_.aDtype = originADtype;
         inputParams_.bDtype = originBDtype;
@@ -247,7 +247,16 @@ void AdaptiveSlidingWindowCubeBasicAPITiling::CalcTailRoundBasicBlockSplit()
 void AdaptiveSlidingWindowCubeBasicAPITiling::SetTilingData()
 {
     QuantBatchMatMulV3TilingUtil::SetCommonTilingData(inputParams_, tilingData_);
-    if (inputParams_.isDoubleScale) {
+    if (inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ) {
+        tilingData_.params.x1QuantMode = static_cast<uint32_t>(optiling::BasicQuantMode::DEFAULT);
+        tilingData_.params.x2QuantMode = static_cast<uint32_t>(optiling::BasicQuantMode::PERCHANNEL_MODE);
+        if (inputParams_.isDoubleScale) {
+            tilingData_.params.x1QuantMode = static_cast<uint32_t>(optiling::BasicQuantMode::PERTENSOR_MODE);
+            tilingData_.params.x2QuantMode = static_cast<uint32_t>(optiling::BasicQuantMode::PERTENSOR_MODE);
+        } else if (inputParams_.isPerTensor) {
+            tilingData_.params.x2QuantMode = static_cast<uint32_t>(optiling::BasicQuantMode::PERTENSOR_MODE);
+        }
+    } else if (inputParams_.isDoubleScale) {
         tilingData_.params.x1QuantMode = static_cast<uint32_t>(optiling::BasicQuantMode::PERTENSOR_MODE);
         tilingData_.params.x2QuantMode = static_cast<uint32_t>(optiling::BasicQuantMode::PERTENSOR_MODE);
     } else if (inputParams_.isPerTensor) {
