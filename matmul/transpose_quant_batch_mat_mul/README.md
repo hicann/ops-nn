@@ -122,6 +122,7 @@
   </tr>
 </tbody></table>
 
+- Ascend 950PR/Ascend 950DT：只有输入x2支持FRACTAL_NZ格式。
 ## 约束说明
 
 - <term>Ascend 950PR/Ascend 950DT</term>：
