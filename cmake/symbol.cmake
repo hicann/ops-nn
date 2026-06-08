@@ -160,10 +160,13 @@ function(gen_cust_proto_symbol)
     return()
   endif()
   npu_op_library(cust_proto GRAPH)
+  merge_graph_headers(TARGET cust_merge_ops_proto OUT_DIR ${ASCEND_GRAPH_CONF_DST})
+  add_dependencies(cust_proto cust_merge_ops_proto)
   target_sources(
     cust_proto
     PUBLIC $<$<TARGET_EXISTS:${OPHOST_NAME}_infer_obj>:$<TARGET_OBJECTS:${OPHOST_NAME}_infer_obj>>
            $<$<TARGET_EXISTS:${GRAPH_PLUGIN_NAME}_obj>:$<TARGET_OBJECTS:${GRAPH_PLUGIN_NAME}_obj>>
+    PRIVATE ${ASCEND_GRAPH_CONF_DST}/ops_proto_nn.cpp
     )
   target_link_libraries(
     cust_proto
