@@ -381,115 +381,41 @@ bool QuantBatchMatmulV3Checker::CheckDtypesInRange() const
     return true;
 }
 
-bool QuantBatchMatmulV3Checker::CheckWeightNzAbDtypes() const
+bool QuantBatchMatmulV3Checker::CheckDtype4WeightNz() const
 {
     bool isInt8Pair = inputParams_.aDtype == ge::DT_INT8 && inputParams_.bDtype == ge::DT_INT8;
     bool isHifloat8Pair = IsHifloat8Pair(inputParams_.aDtype, inputParams_.bDtype);
+    bool isHifloat8Scale = inputParams_.scaleDtype == ge::DT_UINT64 || inputParams_.scaleDtype == ge::DT_INT64;
     bool isFp8E4M3Pair = IsFp8E4M3Pair(inputParams_.aDtype, inputParams_.bDtype);
     bool isFp4Pair = IsFp4Pair(inputParams_.aDtype, inputParams_.bDtype);
-
     OP_TILING_CHECK(
-        !(isInt8Pair || isHifloat8Pair || isFp8E4M3Pair || isFp4Pair),
+        !(isInt8Pair || isHifloat8Pair || isFp4Pair || isFp8E4M3Pair),
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
             inputParams_.opName, "x1, x2",
             FormatString(
                 "%s, %s",
                 ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype).c_str(),
                 ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str()).c_str(),
-            "when the format of x2 is FRACTAL_NZ, the dtypes of x1 and x2 must be "
-            "INT8/HIFLOAT8/FLOAT8_E4M3FN/FLOAT4_E2M1"),
-        return false);
-    return true;
-}
-
-bool QuantBatchMatmulV3Checker::CheckWeightNzDtype4Hifloat8() const
-{
-    bool hasPerTokenScale = context_->GetOptionalInputDesc(GetPertokenIdx()) != nullptr &&
-                            context_->GetOptionalInputShape(GetPertokenIdx()) != nullptr;
-    bool is64BitScale = inputParams_.scaleDtype == ge::DT_UINT64 || inputParams_.scaleDtype == ge::DT_INT64;
-
-    OP_TILING_CHECK(
-        hasPerTokenScale,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            inputParams_.opName, "pertokenScale", "not null",
-            "when the format of x2 is FRACTAL_NZ and input dtype is HIFLOAT8, pertokenScale must be null"),
+            "when the format of x2 is FRACTAL_NZ, the dtype of input must be INT8/HIFLOAT8/FLOAT8_E4M3FN/FLOAT4_E2M1"),
         return false);
     OP_TILING_CHECK(
-        !is64BitScale,
+        (isFp8E4M3Pair || isFp4Pair) &&
+            !(inputParams_.scaleDtype == ge::DT_FLOAT8_E8M0 && inputParams_.perTokenScaleDtype == ge::DT_FLOAT8_E8M0),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            inputParams_.opName, "scale, pertokenScale",
+            FormatString(
+                "%s, %s",
+                ge::TypeUtils::DataTypeToSerialString(inputParams_.scaleDtype).c_str(),
+                ge::TypeUtils::DataTypeToSerialString(inputParams_.perTokenScaleDtype).c_str()).c_str(),
+            "when the format of x2 is FRACTAL_NZ and the dtype of input is FLOAT8_E4M3FN/FLOAT4_E2M1, the dtypes of scale and pertokenScale must be FLOAT8_E8M0"),
+        return false);
+    OP_TILING_CHECK(
+        isHifloat8Pair && !isHifloat8Scale,
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
             inputParams_.opName, "scale", ge::TypeUtils::DataTypeToSerialString(inputParams_.scaleDtype).c_str(),
-            "when the format of x2 is FRACTAL_NZ and input dtype is HIFLOAT8, the dtype of scale must be "
-            "UINT64/INT64"),
+            "when the format of x2 is FRACTAL_NZ and the dtype of input is HIFLOAT8, the dtype of scale must be UINT64/INT64"),
         return false);
     return true;
-}
-
-bool QuantBatchMatmulV3Checker::CheckWeightNzDtype4Fp4() const
-{
-    bool hasPerTokenScale = context_->GetOptionalInputDesc(GetPertokenIdx()) != nullptr &&
-                            context_->GetOptionalInputShape(GetPertokenIdx()) != nullptr;
-    bool isE8M0ScalePair =
-        inputParams_.scaleDtype == ge::DT_FLOAT8_E8M0 && inputParams_.perTokenScaleDtype == ge::DT_FLOAT8_E8M0;
-
-    OP_TILING_CHECK(
-        !(hasPerTokenScale && isE8M0ScalePair),
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-            inputParams_.opName, "pertokenScale, scale",
-            FormatString(
-                "%s, %s",
-                hasPerTokenScale ?
-                    ge::TypeUtils::DataTypeToSerialString(inputParams_.perTokenScaleDtype).c_str() : "null",
-                ge::TypeUtils::DataTypeToSerialString(inputParams_.scaleDtype).c_str()).c_str(),
-            "when the format of x2 is FRACTAL_NZ and input dtype is FLOAT4_E2M1, pertokenScale and scale must both "
-            "be provided and be FLOAT8_E8M0"),
-        return false);
-    return true;
-}
-
-bool QuantBatchMatmulV3Checker::CheckWeightNzDtype4Fp8E4M3() const
-{
-    bool hasPerTokenScale = context_->GetOptionalInputDesc(GetPertokenIdx()) != nullptr &&
-                            context_->GetOptionalInputShape(GetPertokenIdx()) != nullptr;
-    bool isE8M0ScalePair =
-        inputParams_.scaleDtype == ge::DT_FLOAT8_E8M0 && inputParams_.perTokenScaleDtype == ge::DT_FLOAT8_E8M0;
-    bool is64BitScale = inputParams_.scaleDtype == ge::DT_UINT64 || inputParams_.scaleDtype == ge::DT_INT64;
-    bool isStaticX2Scale = !hasPerTokenScale && is64BitScale;
-    bool isMxScale = hasPerTokenScale && isE8M0ScalePair;
-
-    OP_TILING_CHECK(
-        !(isMxScale || isStaticX2Scale),
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-            inputParams_.opName, "pertokenScale, scale",
-            FormatString(
-                "%s, %s",
-                hasPerTokenScale ?
-                    ge::TypeUtils::DataTypeToSerialString(inputParams_.perTokenScaleDtype).c_str() : "null",
-                ge::TypeUtils::DataTypeToSerialString(inputParams_.scaleDtype).c_str()).c_str(),
-            "when the format of x2 is FRACTAL_NZ and input dtype is FLOAT8_E4M3FN, pertokenScale and scale must both "
-            "be FLOAT8_E8M0, or pertokenScale must be null and scale must be UINT64/INT64"),
-        return false);
-    return true;
-}
-
-bool QuantBatchMatmulV3Checker::CheckDtype4WeightNz() const
-{
-    if (!CheckWeightNzAbDtypes()) {
-        return false;
-    }
-    
-    if (inputParams_.aDtype == ge::DT_INT8 && inputParams_.bDtype == ge::DT_INT8) {
-        return true;
-    }
-
-    if (IsHifloat8Pair(inputParams_.aDtype, inputParams_.bDtype)) {
-        return CheckWeightNzDtype4Hifloat8();
-    }
-
-    if (IsFp4Pair(inputParams_.aDtype, inputParams_.bDtype)) {
-        return CheckWeightNzDtype4Fp4();
-    }
-
-    return CheckWeightNzDtype4Fp8E4M3();
 }
 
 bool QuantBatchMatmulV3Checker::CheckDtype() const

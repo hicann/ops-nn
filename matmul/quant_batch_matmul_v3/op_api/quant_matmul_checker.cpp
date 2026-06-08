@@ -1126,7 +1126,7 @@ bool QuantMatmulChecker::CheckFormatInt4() const
     return true;
 }
 
-bool QuantMatmulChecker::CheckWeightNzAbDtypes() const
+bool QuantMatmulChecker::CheckDtype4WeightNz() const
 {
     if (!(x1_->GetDataType() == op::DataType::DT_INT8 ||
           IsHif8Input(x1_, x2_) ||
@@ -1141,33 +1141,22 @@ bool QuantMatmulChecker::CheckWeightNzAbDtypes() const
             "INT8/HIFLOAT8/FLOAT8_E4M3FN/FLOAT4_E2M1");
         return false;
     }
-    return true;
-}
 
-bool QuantMatmulChecker::CheckWeightNzDtype4Fp8E4M3() const
-{
-    bool isStaticX2Scale = x1Scale_ == nullptr && x2Scale_ != nullptr &&
-                           (x2Scale_->GetDataType() == op::DataType::DT_UINT64 ||
-                            x2Scale_->GetDataType() == op::DataType::DT_INT64);
-    if (!IsMicroScaling(x1Scale_, x2Scale_) && !isStaticX2Scale) {
+    if ((x1_->GetDataType() == op::DataType::DT_FLOAT8_E4M3FN &&
+         x2_->GetDataType() == op::DataType::DT_FLOAT8_E4M3FN) &&
+        !(x1Scale_->GetDataType() == op::DataType::DT_FLOAT8_E8M0 &&
+          x2Scale_->GetDataType() == op::DataType::DT_FLOAT8_E8M0)) {
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize",
-            FormatString("%s, %s", GetX1ScaleName().c_str(), GetX2ScaleName().c_str()).c_str(),
-            FormatString(
-                "%s, %s",
-                x1Scale_ == nullptr ? "null" : op::ToString(x1Scale_->GetDataType()).GetString(),
-                op::ToString(x2Scale_->GetDataType()).GetString())
-                .c_str(),
-            "when the format of x2 is FRACTAL_NZ and input dtype is FLOAT8_E4M3FN, x1Scale and x2Scale must be "
-            "FLOAT8_E8M0 for mx quantization, or x1Scale must be null and x2Scale must exist and its dtype must be UINT64/INT64");
+            "aclnnQuantMatmulWeightNzGetWorkspaceSize", FormatString("%s, %s", GetX1ScaleName().c_str(), GetX2ScaleName().c_str()).c_str(),
+            FormatString("%s, %s", op::ToString(x1Scale_->GetDataType()).GetString(),
+                op::ToString(x2Scale_->GetDataType()).GetString()).c_str(),
+            "when the format of x2 is FRACTAL_NZ and input dtype is FLOAT8_E4M3FN, the dtypes of x1Scale and x2Scale "
+            "must be FLOAT8_E8M0");
         return false;
     }
-    return true;
-}
 
-bool QuantMatmulChecker::CheckWeightNzDtype4Fp4() const
-{
-    if (!(x1Scale_->GetDataType() == op::DataType::DT_FLOAT8_E8M0 &&
+    if ((x1_->GetDataType() == op::DataType::DT_FLOAT4_E2M1 && x2_->GetDataType() == op::DataType::DT_FLOAT4_E2M1) &&
+        !(x1Scale_->GetDataType() == op::DataType::DT_FLOAT8_E8M0 &&
           x2Scale_->GetDataType() == op::DataType::DT_FLOAT8_E8M0)) {
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
             "aclnnQuantMatmulWeightNzGetWorkspaceSize", FormatString("%s, %s", GetX1ScaleName().c_str(), GetX2ScaleName().c_str()).c_str(),
@@ -1177,48 +1166,16 @@ bool QuantMatmulChecker::CheckWeightNzDtype4Fp4() const
             "must be FLOAT8_E8M0");
         return false;
     }
-    return true;
-}
 
-bool QuantMatmulChecker::CheckWeightNzDtype4Hifloat8() const
-{
-    if (x1Scale_ != nullptr) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", GetX1ScaleName().c_str(), "not null",
-            "when the format of x2 is FRACTAL_NZ and input dtype is HIFLOAT8, x1Scale must be null");
-        return false;
-    }
-    if (!(x2Scale_->GetDataType() == op::DataType::DT_UINT64 ||
+    if (IsHif8Input(x1_, x2_) &&
+        !(x2Scale_->GetDataType() == op::DataType::DT_UINT64 ||
           x2Scale_->GetDataType() == op::DataType::DT_INT64)) {
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", GetX2ScaleName().c_str(),
-            op::ToString(x2Scale_->GetDataType()).GetString(),
-            "when the format of x2 is FRACTAL_NZ and input dtype is HIFLOAT8, the dtype of x2Scale must be "
-            "UINT64 or INT64");
+            "aclnnQuantMatmulWeightNzGetWorkspaceSize", GetX2ScaleName().c_str(), op::ToString(x2Scale_->GetDataType()).GetString(),
+            "when the format of x2 is FRACTAL_NZ and input dtype is HIFLOAT8, the dtype of x2Scale must be UINT64 or "
+            "INT64");
         return false;
     }
-    return true;
-}
-
-bool QuantMatmulChecker::CheckDtype4WeightNz() const
-{
-    if (!CheckWeightNzAbDtypes()) {
-        return false;
-    }
-
-    if (IsHif8Input(x1_, x2_)) {
-        return CheckWeightNzDtype4Hifloat8();
-    }
-
-    if (x1_->GetDataType() == op::DataType::DT_FLOAT4_E2M1 && x2_->GetDataType() == op::DataType::DT_FLOAT4_E2M1) {
-        return CheckWeightNzDtype4Fp4();
-    }
-
-    if (x1_->GetDataType() == op::DataType::DT_FLOAT8_E4M3FN &&
-        x2_->GetDataType() == op::DataType::DT_FLOAT8_E4M3FN) {
-        return CheckWeightNzDtype4Fp8E4M3();
-    }
-
     return true;
 }
 
