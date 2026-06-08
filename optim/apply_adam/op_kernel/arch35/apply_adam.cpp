@@ -9,15 +9,15 @@
  */
 
 /* !
- * \file apply_adam_apt.cpp
+ * \file apply_adam.cpp
  * \brief Apply Adam optimization algorithm to update variables
  */
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
-#include "arch35/apply_adam_dag.h"
+#include "apply_adam_dag.h"
 #include "atvoss/elewise/elewise_sch.h"
 #include "atvoss/util/dfx.h"
-#include "arch35/apply_adam_tiling_struct.h"
+#include "apply_adam_tiling_struct.h"
 
 using namespace AscendC;
 

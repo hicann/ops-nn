@@ -106,8 +106,7 @@ public:
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
-            .PrecisionReduceFlag(false)
-            .ExtendCfgInfo("opFile.value", "apply_proximal_adagrad");
+            .PrecisionReduceFlag(false);
         this->AICore().AddConfig("ascend950", aiCoreConfig);
     }
 };

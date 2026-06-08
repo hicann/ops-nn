@@ -9,13 +9,13 @@
  */
 
 /*!
- * \file apply_adam_w_v2_apt.cpp
+ * \file apply_adam_w_v2.cpp
  * \brief apply_adam_w_v2_apt
  */
 
-#include "./arch35/apply_adam_w_v2_dag.h"
-#include "./arch35/apply_adam_w_v2_tiling_key.h"
-#include "./arch35/apply_adam_w_v2_tiling_data.h"
+#include "apply_adam_w_v2_dag.h"
+#include "apply_adam_w_v2_tiling_key.h"
+#include "apply_adam_w_v2_tiling_data.h"
 #include "kernel_operator.h"
 #include "atvoss/elewise/elewise_sch.h"
 

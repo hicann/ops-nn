@@ -14,8 +14,8 @@
  */
 
 #include "kernel_operator.h"
-#include "./arch35/adam_apply_one_with_decay_assign_dag.h"
-#include "./arch35/adam_apply_one_with_decay_assign_tiling_key.h"
+#include "adam_apply_one_with_decay_assign_dag.h"
+#include "adam_apply_one_with_decay_assign_tiling_key.h"
 #include "atvoss/broadcast/broadcast_sch.h"
 
 using namespace AscendC;

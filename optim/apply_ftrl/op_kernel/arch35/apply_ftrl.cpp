@@ -12,9 +12,9 @@
  * \file apply_ftrl.cpp
  * \brief apply_ftrl
  */
-#include "./arch35/apply_ftrl_dag.h"
-#include "./arch35/apply_ftrl_tiling_key.h"
-#include "./arch35/apply_ftrl_tiling_data.h"
+#include "apply_ftrl_dag.h"
+#include "apply_ftrl_tiling_key.h"
+#include "apply_ftrl_tiling_data.h"
 #include "kernel_operator.h"
 #include "atvoss/elewise/elewise_sch.h"
 

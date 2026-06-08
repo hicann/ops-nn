@@ -15,12 +15,12 @@
 
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
-#include "arch35/apply_gradient_descent_dag.h"
+#include "apply_gradient_descent_dag.h"
 #include "atvoss/elewise/elewise_sch.h"
 #include "atvoss/util/dfx.h"
 #include "../inc/platform.h"
-#include "arch35/apply_gradient_descent_tiling_key.h"
-#include "arch35/apply_gradient_descent_tiling_struct.h"
+#include "apply_gradient_descent_tiling_key.h"
+#include "apply_gradient_descent_tiling_struct.h"
 
 using namespace AscendC;
 using namespace ApplyGradientDescentNs;

@@ -63,7 +63,6 @@ public:
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .PrecisionReduceFlag(false)
-            .ExtendCfgInfo("opFile.value", "apply_ftrl_apt")
             .ExtendCfgInfo("opInterface.value", "apply_ftrl");
         this->AICore().AddConfig("ascend950", aicoreConfig);
     }

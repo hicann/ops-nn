@@ -13,9 +13,9 @@
  * \brief apply_adagrad_d
  */
 #include "kernel_operator.h"
-#include "./arch35/apply_adagrad_d_tiling_key.h"
-#include "./arch35/apply_adagrad_d_dag.h"
-#include "apply_adagrad_d_struct.h"
+#include "apply_adagrad_d_tiling_key.h"
+#include "apply_adagrad_d_dag.h"
+#include "../apply_adagrad_d_struct.h"
 #include "atvoss/elewise/elewise_sch.h"
 #include "atvoss/util/dfx.h"
 

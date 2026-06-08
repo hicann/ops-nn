@@ -9,15 +9,15 @@
  */
 
 /* !
- * \file apply_adam_d_apt.cpp
+ * \file apply_adam_d.cpp
  * \brief y =|x|
  */
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
-#include "arch35/apply_adam_d_dag.h"
+#include "apply_adam_d_dag.h"
 #include "atvoss/elewise/elewise_sch.h"
 #include "atvoss/util/dfx.h"
-#include "arch35/apply_adam_d_tiling_struct.h"
+#include "apply_adam_d_tiling_struct.h"
 
 using namespace AscendC;
 

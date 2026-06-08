@@ -81,8 +81,7 @@ public:
         aicoreConfig.DynamicCompileStaticFlag(true)
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
-            .PrecisionReduceFlag(false)
-            .ExtendCfgInfo("opFile.value", "adam_apply_one_with_decay_apt");
+            .PrecisionReduceFlag(false);
         this->AICore().AddConfig("ascend950", aicoreConfig);
     }
 };

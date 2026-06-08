@@ -14,9 +14,9 @@
  */
 
 #include "kernel_operator.h"
-#include "./arch35/apply_adam_w_dag.h"
-#include "./arch35/apply_adam_w_tiling_key.h"
-#include "./arch35/apply_adam_w_tiling_struct.h"
+#include "apply_adam_w_dag.h"
+#include "apply_adam_w_tiling_key.h"
+#include "apply_adam_w_tiling_struct.h"
 #include "atvoss/elewise/elewise_sch.h"
 
 using namespace AscendC;

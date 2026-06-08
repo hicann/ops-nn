@@ -96,12 +96,7 @@ public:
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
-            .PrecisionReduceFlag(true)
-            // opFile.value 用于 CANN 构建期定位 cpp 文件（apply_adadelta.cpp），
-            // kernel 函数符号则按 OpType 'ApplyAdadelta' 的 snake_case 'apply_adadelta' 绑定，两条链路独立。
-            // GE IR 端到端验证已确认 CANN runtime 正确绑定。
-            // 目录/文件名 'apply_adadelta' 与 ops-nn 仓 optim/ 现有命名约定一致。
-            .ExtendCfgInfo("opFile.value", "apply_adadelta");
+            .PrecisionReduceFlag(true);
         this->AICore().AddConfig("ascend950", aicoreConfig);
     }
 };

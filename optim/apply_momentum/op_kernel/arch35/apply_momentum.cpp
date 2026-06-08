@@ -14,9 +14,9 @@
  */
 
 #include "kernel_operator.h"
-#include "./arch35/apply_momentum_dag.h"
-#include "./arch35/apply_momentum_tiling_key.h"
-#include "./arch35/apply_momentum_tiling_data.h"
+#include "apply_momentum_dag.h"
+#include "apply_momentum_tiling_key.h"
+#include "apply_momentum_tiling_data.h"
 #include "atvoss/elewise/elewise_sch.h"
 
 using namespace AscendC;

@@ -117,7 +117,7 @@ public:
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
             .PrecisionReduceFlag(true)
-            .ExtendCfgInfo("opFile.value", "apply_adam_w_v2_apt")
+            .ExtendCfgInfo("opFile.value", "apply_adam_w_v2")
             .ExtendCfgInfo("opInterface.value", "apply_adam_w_v2");
         this->AICore().AddConfig("ascend950", aicoreRegbaseConfig);
     }

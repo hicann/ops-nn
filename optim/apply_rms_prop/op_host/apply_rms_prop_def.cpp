@@ -102,13 +102,7 @@ public:
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
-            .PrecisionReduceFlag(true)
-            // opFile.value 用于 CANN 构建期定位 cpp 文件（apply_rms_prop.cpp），
-            // kernel 函数符号则按 OpType 'ApplyRMSProp' 的 snake_case 'apply_rms_prop' 绑定
-            //（CANN 对 acronym 'RMS' 按整段处理，不拆为 r_m_s），两条链路独立。
-            // GE IR 端到端验证（Precision is ok / Enter ApplyRMSPropTilingFunc）已确认绑定正确。
-            // 目录/文件名 'apply_rms_prop' 与 ops-nn 仓 optim/ 现有命名约定一致。
-            .ExtendCfgInfo("opFile.value", "apply_rms_prop");
+            .PrecisionReduceFlag(true);
         this->AICore().AddConfig("ascend950", aicoreConfig);
     }
 };

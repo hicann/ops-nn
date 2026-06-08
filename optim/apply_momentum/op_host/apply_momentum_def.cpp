@@ -52,7 +52,6 @@ public:
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .PrecisionReduceFlag(false)
-            .ExtendCfgInfo("opFile.value", "apply_momentum_apt")
             .ExtendCfgInfo("opInterface.value", "apply_momentum");
         this->AICore().AddConfig("ascend950", aicoreConfig);
     }

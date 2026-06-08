@@ -101,8 +101,7 @@ public:
         aicore_config.DynamicCompileStaticFlag(true)
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
-            .PrecisionReduceFlag(false)
-            .ExtendCfgInfo("opFile.value", "apply_adam_apt");
+            .PrecisionReduceFlag(false);
         this->AICore().AddConfig("ascend950", aicore_config);
     }
 };
