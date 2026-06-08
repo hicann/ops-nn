@@ -149,7 +149,6 @@ private:
     ge::graphStatus CheckOffsetXLegal();
     ge::graphStatus CheckFmapShape();
     ge::graphStatus CheckWeightShape();
-    ge::graphStatus CheckBiasShape() const;
     ge::graphStatus CheckOutputShape();
     ge::graphStatus CheckInputDesc();
     ge::graphStatus CheckParamsDtype();
@@ -231,8 +230,6 @@ private:
     ge::graphStatus CheckNullPtr();
     ge::graphStatus CheckOptionalInputLeagal();
     ge::graphStatus CheckExtendScaleLegal();
-    ge::graphStatus CheckExtendReluWeightLegal();
-    ge::graphStatus CheckExtendClipValueLegal();
     ge::graphStatus CheckExtendConv2dReluWeightAndClipValue(const uint32_t outputIdx, uint8_t& reluMode);
     ge::graphStatus CheckAttrsLeagal();
     ge::graphStatus CheckEnableHf32Legal();

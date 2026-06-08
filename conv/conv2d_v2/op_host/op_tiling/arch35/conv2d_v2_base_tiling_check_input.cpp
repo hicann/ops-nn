@@ -27,12 +27,7 @@ ge::graphStatus Conv2dBaseTiling::CheckOptionalInputLeagal()
     if (CheckExtendScaleLegal() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
-    if (CheckExtendReluWeightLegal() != ge::GRAPH_SUCCESS) {
-        return ge::GRAPH_FAILED;
-    }
-    if (CheckExtendClipValueLegal() != ge::GRAPH_SUCCESS) {
-        return ge::GRAPH_FAILED;
-    }
+
     return ge::GRAPH_SUCCESS;
 }
 
@@ -293,11 +288,6 @@ ge::graphStatus Conv2dBaseTiling::ParseBiasShape()
     if (CheckBiasShapeLegal(idxC, biasDimNum) == ge::GRAPH_FAILED) {
         return ge::GRAPH_FAILED;
     }
-    return ge::GRAPH_SUCCESS;
-}
-
-ge::graphStatus Conv2dBaseTiling::CheckBiasShape() const
-{
     return ge::GRAPH_SUCCESS;
 }
 
@@ -597,22 +587,6 @@ bool Conv2dBaseTiling::CheckScaleLegal(uint32_t scaleIndex, uint8_t& quantMode, 
     }
 
     return true;
-}
-
-ge::graphStatus Conv2dBaseTiling::CheckExtendReluWeightLegal()
-{
-    if (!flagInfo_.extendConvFlag) {
-        return ge::GRAPH_SUCCESS;
-    }
-    return ge::GRAPH_SUCCESS;
-}
-
-ge::graphStatus Conv2dBaseTiling::CheckExtendClipValueLegal()
-{
-    if (!flagInfo_.extendConvFlag) {
-        return ge::GRAPH_SUCCESS;
-    }
-    return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus Conv2dBaseTiling::CheckExtendDualOutputSpecial()

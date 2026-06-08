@@ -318,7 +318,8 @@ private:
         ubInfo->realHUb = 0;
         ubInfo->realWUb = unUsedML0 < ubInfo->mUb ? unUsedML0 : ubInfo->mUb;
         if constexpr (Intf::isInnerBatchFlag) {
-            uint64_t unUsedInnerbatch = self_->innerBatch >= ubInfo->batchLoopIdx * ubInfo->batchUb ? self_->innerBatch - ubInfo->batchLoopIdx * ubInfo->batchUb : 0;
+            uint64_t unUsedInnerbatch = self_->ctx.innerBatch >= ubInfo->batchLoopIdx * ubInfo->batchUb ?
+                self_->ctx.innerBatch - ubInfo->batchLoopIdx * ubInfo->batchUb : 0;
             ubInfo->realBatchUb = unUsedInnerbatch < ubInfo->batchUb ? unUsedInnerbatch : ubInfo->batchUb;
         } else {
             ubInfo->realBatchUb = 1;

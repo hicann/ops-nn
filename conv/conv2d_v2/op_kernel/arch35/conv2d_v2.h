@@ -71,7 +71,7 @@ protected:
     __aicore__ inline void InitBuffer(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y,
                                       const ExtendParams* extendParams);
 
-    // Conv2d op kerenle impl intf
+    // Conv2d op kernel impl intf
     __aicore__ inline void Conv2dKernelImpl();
 
 public:
@@ -96,7 +96,7 @@ public:
     GlobalTensor<FMAP_T> fmapGm;
     GlobalTensor<WEIGHT_T> filterGm;
     GlobalTensor<OUTPUT_T> outputGm;
-    GlobalTensor<OUTPUT1_T> output1Gm; // extend conv2d dural ouput
+    GlobalTensor<OUTPUT1_T> output1Gm; // extend conv2d dual output
     GlobalTensor<BIAS_T> biasGm;
     GlobalTensor<SCALE_T> scaleGm;
     Extendconv2dFixpipeParams<SCALE_T, RELU_WEIGHT_T, CLIP_VALUE_0_T, CLIP_VALUE_1_T> fixpipeParams;
@@ -308,9 +308,6 @@ __aicore__ inline void Conv2dBase<FMAP_TYPE, WEIGHT_TYPE, OUTPUT_TYPE, BIAS_TYPE
     }
 
     conv.SetFmap(fmapGm);
-    if constexpr (CONV_CFG::disContinuous) {
-        conv.SetOrgBatch(convTilingData->batch);
-    }
     if constexpr (CONV_CFG::isExtendConv2d) {
         if (convTilingData->dualOutput) {
             conv.IterateAll(outputGm, output1Gm);

@@ -191,7 +191,7 @@ bool Conv2dBaseTiling::UpdateOriPadFromPadMode()
     padModeIndex = flagInfo_.extendConvFlag ? EXTENDCONV_ATTR_PAD_MODE_INDEX : padModeIndex;
     auto padModePtr = context_->GetAttrs()->GetStr(padModeIndex);
     if (padModePtr == nullptr) {
-        return true; // skip udpate
+        return true; // skip update
     }
     string padMode(padModePtr);
     auto iter = find(PADMODE_WHITELIST.begin(), PADMODE_WHITELIST.end(), padMode);

@@ -52,10 +52,6 @@ public:
     CONV_REG_IMPL(Config, ConvFunc, SetFmap);
     CONV_REG_IMPL(Config, ConvFunc, SetWeight);
     CONV_REG_IMPL(Config, ConvFunc, SetBias);
-    CONV_REG_IMPL(Config, Conv3dFunc, SetOrgFmapShape);
-    CONV_REG_IMPL(Config, Conv3dFunc, SetOrgWeightShape);
-    CONV_REG_IMPL(Config, Conv3dFunc, SetOrgOutputShape);
-    CONV_REG_IMPL(Config, Conv3dFunc, SetSingleFmapShape);
     CONV_REG_IMPL(Config, Conv3dFunc, SetSingleOutputShape);
     CONV_REG_IMPL(Config, Conv3dFunc, SetFmapStartPosition);
     CONV_REG_IMPL(Config, Conv3dFunc, BeginSetCrossFlag);

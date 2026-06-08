@@ -1021,7 +1021,7 @@ bool ConvTilingAlgorithmBBmode::L1LoadStrategyBase::MultiLoadKL1(ConvTilingAlgor
             bbPtr->dbValue.pbAL1 = SINGLE_BUFFER_NUM;
 
             if (bbPtr->l1TilingParams.kAL1 * bbPtr->tilingIns_->shapeInfo.singlekH *
-                bbPtr->tilingIns_->shapeInfo.singlekW >= MAX_16_BIT_NUM) {
+                bbPtr->tilingIns_->shapeInfo.singlekW > MAX_16_BIT_NUM) {
                 OP_LOGD(bbPtr->tilingIns_->nodeType, "Exceeded kStartPos limit");
                 return false;
             }

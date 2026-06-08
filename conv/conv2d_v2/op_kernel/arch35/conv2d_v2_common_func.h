@@ -31,11 +31,6 @@ using namespace ConvFunc;
 using namespace conv;
 
 CONV_DECLARE_REG_IMPL(Init);
-CONV_DECLARE_REG_IMPL(SetOrgBatch);
-CONV_DECLARE_REG_IMPL(SetOrgFmapShape);
-CONV_DECLARE_REG_IMPL(SetOrgWeightShape);
-CONV_DECLARE_REG_IMPL(SetOrgOutputShape);
-CONV_DECLARE_REG_IMPL(SetSingleFmapShape);
 CONV_DECLARE_REG_IMPL(SetSingleOutputShape);
 CONV_DECLARE_REG_IMPL(SetFmapStartPosition);
 CONV_DECLARE_REG_IMPL(SetOptGroupParams);
@@ -206,42 +201,6 @@ struct Init {
 };
 
 template <class Intf, uint32_t ImplType>
-struct SetOrgBatch {
-    static __aicore__ inline void call(Intf *self, uint64_t orgBatch)
-    {
-    }
-};
-
-template <class Intf, uint32_t ImplType>
-struct SetOrgFmapShape {
-    static __aicore__ inline void call(Intf *self, uint64_t orgCi, uint64_t orgHi, uint64_t orgWi)
-    {
-    }
-};
-
-template <class Intf, uint32_t ImplType>
-struct SetOrgWeightShape {
-    static __aicore__ inline void call(Intf *self, uint64_t orgCo, uint64_t orgCi, uint64_t orgKh, uint64_t orgKw)
-    {
-    }
-};
-
-template <class Intf, uint32_t ImplType>
-struct SetOrgOutputShape {
-    static __aicore__ inline void call(Intf *self, uint64_t orgCo, uint64_t orgHo, uint64_t orgWo)
-    {
-    }
-};
-
-template <class Intf, uint32_t ImplType>
-struct SetSingleFmapShape {
-    static __aicore__ inline void call(Intf *self, uint64_t singleCi, uint64_t singleHi, uint64_t singleWi)
-    {
-        self->ctx.singleCoreCi = singleCi;
-    }
-};
-
-template <class Intf, uint32_t ImplType>
 struct SetSingleOutputShape {
     static __aicore__ inline void call(Intf *self, uint64_t singleCo, uint64_t singleHo, uint64_t singleWo,
         uint64_t singleCoreBatch)
@@ -287,7 +246,7 @@ struct SetSingleOutputShape {
             }
         }
     }
- 
+
     static __aicore__ inline void call(Intf *self, uint64_t singleCo, uint64_t singleM, uint64_t singleCoreBatch)
     {
         if constexpr (Intf::outputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE)) {

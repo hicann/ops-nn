@@ -30,10 +30,6 @@ using namespace ConvFunc;
 using namespace conv;
 
 CONV_DECLARE_REG_IMPL(Init);
-CONV_DECLARE_REG_IMPL(SetOrgFmapShape);
-CONV_DECLARE_REG_IMPL(SetOrgWeightShape);
-CONV_DECLARE_REG_IMPL(SetOrgOutputShape);
-CONV_DECLARE_REG_IMPL(SetSingleFmapShape);
 CONV_DECLARE_REG_IMPL(SetSingleOutputShape);
 CONV_DECLARE_REG_IMPL(SetFmapStartPosition);
 CONV_DECLARE_REG_IMPL(SetOptGroupParams);
@@ -168,37 +164,6 @@ struct Init {
         self->ctx.bL1CinTail = self->ctx.bL1Dk > 1 ? self->ctx.bL1Cin : self->ctx.singleCoreCi % self->ctx.bL1Cin;
         self->ctx.bL1CinTail = self->ctx.bL1CinTail == 0 ? self->ctx.bL1Cin : self->ctx.bL1CinTail;
         self->ctx.bL1CinLoadNum = CeilDiv(self->ctx.singleCoreCi, self->ctx.bL1Cin);
-    }
-};
-
-template <class Intf, uint32_t ImplType>
-struct SetOrgFmapShape {
-    static __aicore__ inline void call(Intf *self, uint64_t orgCi, uint64_t orgDi, uint64_t orgHi, uint64_t orgWi)
-    {
-    }
-};
-
-template <class Intf, uint32_t ImplType>
-struct SetOrgWeightShape {
-    static __aicore__ inline void call(
-        Intf *self, uint64_t orgCo, uint64_t orgCi, uint64_t orgKd, uint64_t orgKh, uint64_t orgKw)
-    {
-    }
-};
-
-template <class Intf, uint32_t ImplType>
-struct SetOrgOutputShape {
-    static __aicore__ inline void call(Intf *self, uint64_t orgCo, uint64_t orgDo, uint64_t orgHo, uint64_t orgWo)
-    {
-    }
-};
-
-template <class Intf, uint32_t ImplType>
-struct SetSingleFmapShape {
-    static __aicore__ inline void call(
-        Intf *self, uint64_t singleCi, uint64_t singleDi, uint64_t singleHi, uint64_t singleWi)
-    {
-        self->ctx.singleCoreCi = singleCi;
     }
 };
 

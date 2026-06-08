@@ -208,46 +208,6 @@ public:
         }
     }
 
-    __aicore__ inline void SetOrgBatch(uint64_t orgBatch)
-    {
-        using local = typename Ext::SetOrgBatch;
-        if constexpr (CONV_CHECK_FUN(local, Conv2dFunc, this, orgBatch)) {
-            local::call(this, orgBatch);
-        }
-    }
-
-    __aicore__ inline void SetOrgFmapShape(uint64_t orgCi, uint64_t orgHi, uint64_t orgWi)
-    {
-        using local = typename Ext::SetOrgFmapShape;
-        if constexpr (CONV_CHECK_FUN(local, Conv2dFunc, this, orgCi, orgHi, orgWi)) {
-            local::call(this, orgCi, orgHi, orgWi);
-        }
-    }
-
-    __aicore__ inline void SetOrgWeightShape(uint64_t orgCo, uint64_t orgCi, uint64_t orgKh, uint64_t orgKw)
-    {
-        using local = typename Ext::SetOrgWeightShape;
-        if constexpr (CONV_CHECK_FUN(local, Conv2dFunc, this, orgCo, orgCi, orgKh, orgKw)) {
-            local::call(this, orgCo, orgCi, orgKh, orgKw);
-        }
-    }
-
-    __aicore__ inline void SetOrgOutputShape(uint64_t orgCo, uint64_t orgHo, uint64_t orgWo)
-    {
-        using local = typename Ext::SetOrgOutputShape;
-        if constexpr (CONV_CHECK_FUN(local, Conv2dFunc, this, orgCo, orgHo, orgWo)) {
-            local::call(this, orgCo, orgHo, orgWo);
-        }
-    }
-
-    __aicore__ inline void SetSingleFmapShape(uint64_t singleCi, uint64_t singleHi, uint64_t singleWi)
-    {
-        using local = typename Ext::SetSingleFmapShape;
-        if constexpr (CONV_CHECK_FUN(local, Conv2dFunc, this, singleCi, singleHi, singleWi)) {
-            local::call(this, singleCi, singleHi, singleWi);
-        }
-    }
-
     __aicore__ inline void SetSingleOutputShape(uint64_t singleCo, uint64_t singleHo, uint64_t singleWo,
                                                 uint64_t singleCoreBatch)
     {

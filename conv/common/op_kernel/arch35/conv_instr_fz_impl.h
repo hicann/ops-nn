@@ -33,7 +33,6 @@ public:
         self_ = self;
         maxNBL1Iter_ = self->ctx.maxNBL1Iter;
         maxKBL1Iter_ = self->ctx.maxKBL1Iter;
-        orgCoAlignN0 = AlignB(self_->ctx.convTilingData->orgCo, BLOCK_L0_N);
         if constexpr (Intf::groupOptNZFlag) {
             self->ctx.coPerGroup =
                 self->ctx.convTilingData->orgCo / self->ctx.convTilingData->groups;

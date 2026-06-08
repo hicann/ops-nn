@@ -40,11 +40,6 @@ public:
     CONV_REG_IMPL(Config, ConvFunc, SetBias);
     CONV_REG_IMPL(Config, ConvFunc, SetScale);
     CONV_REG_IMPL(Config, ConvFunc, SetFixpipeParams);
-    CONV_REG_IMPL(Config, Conv2dFunc, SetOrgBatch);
-    CONV_REG_IMPL(Config, Conv2dFunc, SetOrgFmapShape);
-    CONV_REG_IMPL(Config, Conv2dFunc, SetOrgWeightShape);
-    CONV_REG_IMPL(Config, Conv2dFunc, SetOrgOutputShape);
-    CONV_REG_IMPL(Config, Conv2dFunc, SetSingleFmapShape);
     CONV_REG_IMPL(Config, Conv2dFunc, SetSingleOutputShape);
     CONV_REG_IMPL(Config, Conv2dFunc, SetOptGroupParams);
     CONV_REG_IMPL(Config, Conv2dFunc, SetFmapStartPosition);
@@ -75,7 +70,7 @@ public:
             ConvParam::outputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE),
             ConvFunc::CopyOutToolsMMode<Intf, typename Intf::OutputT>,
             ConvFunc::CopyOutToolsHWMode<Intf, typename Intf::OutputT>>::type;
-        // extend conv2d exist dual ouputs
+        // extend conv2d exist dual outputs
         using CopyOutTools1 = typename Conditional<
             ConvParam::outputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE),
             ConvFunc::CopyOutToolsMMode<Intf, typename Intf::Output1T, 1>,

@@ -25,7 +25,7 @@ ge::graphStatus Conv2dBaseTiling::PrepareTiling()
         return ge::GRAPH_FAILED;
     }
     if (CheckFmapShape() != ge::GRAPH_SUCCESS || CheckWeightShape() != ge::GRAPH_SUCCESS ||
-        CheckBiasShape() != ge::GRAPH_SUCCESS || CheckOutputShape() != ge::GRAPH_SUCCESS) {
+        CheckOutputShape() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
     if (CheckExtendDualOutputSpecial() != ge::GRAPH_SUCCESS) {

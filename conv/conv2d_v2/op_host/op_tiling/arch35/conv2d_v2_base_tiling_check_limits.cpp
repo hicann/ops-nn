@@ -92,7 +92,7 @@ ge::graphStatus Conv2dBaseTiling::CheckLoad3DLimits()
     auto k0 = CUBE_MKN_MAP.GetMKN(dtypeMap.at(descInfo_.weightDtype), MKN_K_IDX);
     uint64_t load3dPoskLimit = MAX_16_BIT_NUM;
     uint64_t load3dPosk = shapeInfo_.kh * shapeInfo_.kw * k0;
-    if (load3dPosk >= load3dPoskLimit) {
+    if (load3dPosk > load3dPoskLimit) {
         OP_LOGD(context_->GetNodeName(),
             "%s AscendC: Weight shape does not satisfy Load3D's limits: kH(%lu)*kW(%lu)*k0(%u)=%lu, which must <= %lu.",
             paramInfo_.nodeType.c_str(), shapeInfo_.kh, shapeInfo_.kw, k0, load3dPosk, load3dPoskLimit);
