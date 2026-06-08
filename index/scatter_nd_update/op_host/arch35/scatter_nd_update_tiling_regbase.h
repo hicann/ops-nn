@@ -35,14 +35,14 @@ public:
     explicit ScatterNdUpdateTiling(gert::TilingContext* context) : TilingBaseClass(context) {
     }
     uint32_t maxThread_{1024};
-    uint64_t coreNum_;
-    uint64_t ubSize_;
+    uint64_t coreNum_{0};
+    uint64_t ubSize_{0};
 protected:
     bool IsCapable() override
     {
         return true;
     }
-    ge::graphStatus GetPlatformInfo();
+    ge::graphStatus GetPlatformInfo() override;
     ge::graphStatus GetShapeAttrsInfo() override;
     uint32_t GetSortTmpSize(ge::DataType dataType, uint32_t lastAxisNum, bool isDescend);
     int64_t GetRestAvailableSize(int64_t sampleNum, int64_t valueTypeBytes,
@@ -90,10 +90,10 @@ private:
 private:
     int64_t shapeRank_ = 0;
     int64_t totalCoreNum_ {0};
-    ge::DataType varDtype_;
-    ge::DataType updateDtype_;
-    ge::DataType indiceDtype_;
-    ge::DataType outOfSetDtype_;
+    ge::DataType varDtype_ = ge::DT_UNDEFINED;
+    ge::DataType updateDtype_ = ge::DT_UNDEFINED;
+    ge::DataType indiceDtype_ = ge::DT_UNDEFINED;
+    ge::DataType outOfSetDtype_ = ge::DT_UNDEFINED;
 
     uint64_t updateShapeSize {0};
     uint64_t indiceShapeSize {0};
