@@ -14,6 +14,7 @@
  */
 
 #include "register/op_impl_registry.h"
+#include <string>
 #include "util/math_util.h"
 #include "log/log.h"
 #include "platform/platform_info.h"
@@ -158,7 +159,10 @@ ge::graphStatus EmbeddingBagTiling::Init()
         numOffset_ -= 1;
     }
     OP_CHECK_IF(
-        (numOffset_ == 0), OP_LOGE(tilingContext_, "If include_last_offset is true, offset size should greater than 1"),
+        (numOffset_ == 0),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            tilingContext_->GetNodeName(), "numOffset_", std::to_string(numOffset_).c_str(),
+            "offset size must be >=2 when include_last_offset is true"),
         return ge::GRAPH_FAILED);
     paddingIdx_ = *attrs->GetAttrPointer<int64_t>(PADDING_IDX_INDEX);
     GetUsedCore();

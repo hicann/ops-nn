@@ -13,6 +13,7 @@
  */
 
 #include "register/op_impl_registry.h"
+#include <string>
 #include "util/math_util.h"
 #include "platform/platform_infos_def.h"
 #include "log/log.h"
@@ -94,7 +95,10 @@ ge::graphStatus EmbeddingBagRegBaseTiling::GetShapeAttrsInfo()
     auto weightShape = weight->GetStorageShape();
 
     OP_CHECK_IF(weightShape.GetDimNum() != DIM_TWO,
-        OP_LOGE(opName, "weight shape check failed."), return ge::GRAPH_FAILED);
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            opName, "weight", std::to_string(weightShape.GetDimNum()).c_str(),
+            "weight shape dim must be 2"),
+        return ge::GRAPH_FAILED);
     auto numEmbeddings_ = weightShape.GetDim(0);
     embeddingDim_ = weightShape.GetDim(1);
     weightShapeSize_ = static_cast<uint64_t>(embeddingDim_ * numEmbeddings_);

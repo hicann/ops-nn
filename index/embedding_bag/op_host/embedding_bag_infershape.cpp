@@ -324,19 +324,31 @@ static bool InferShapeForEmbeddingBagSupport(gert::InferShapeContext* context)
     bool is_unknown_indices = CheckIsUnknown(indices_shape);
     bool is_unknown_offsets = CheckIsUnknown(offsets_shape);
 
-    OP_CHECK_IF(
-        InferShape4OutputSupport(context, batch, embedding_dim, dimension, is_unknown_weight, is_unknown_indices, is_unknown_offsets) !=
-            ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "EmbeddingBagSupport failed to infer shape for output."), return GRAPH_FAILED);
-    OP_CHECK_IF(
-        InferShape4Offset2BagSupport(context, indices_num, is_unknown_indices) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "EmbeddingBagSupport failed to infer shape for offset2bag."), return GRAPH_FAILED);
-    OP_CHECK_IF(
-        InferShape4BagSizeSupport(context, bag_size, dimension, is_unknown_indices, is_unknown_offsets) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "EmbeddingBagSupport failed to infer shape for bag_size."), return GRAPH_FAILED);
-    OP_CHECK_IF(
-        InferShape4MaxIndicesSupport(context, batch, embedding_dim, dimension, is_unknown_weight, is_unknown_indices, is_unknown_offsets) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "EmbeddingBagSupport failed to infer shape for max_indices."), return GRAPH_FAILED);
+    if (InferShape4OutputSupport(context, batch, embedding_dim, dimension, is_unknown_weight, is_unknown_indices, is_unknown_offsets) !=
+        ge::GRAPH_SUCCESS) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context->GetNodeName(), "output", "unknown",
+            "EmbeddingBagSupport failed to infer shape for output");
+        return GRAPH_FAILED;
+    }
+    if (InferShape4Offset2BagSupport(context, indices_num, is_unknown_indices) != ge::GRAPH_SUCCESS) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context->GetNodeName(), "offset2bag", "unknown",
+            "EmbeddingBagSupport failed to infer shape for offset2bag");
+        return GRAPH_FAILED;
+    }
+    if (InferShape4BagSizeSupport(context, bag_size, dimension, is_unknown_indices, is_unknown_offsets) != ge::GRAPH_SUCCESS) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context->GetNodeName(), "bag_size", "unknown",
+            "EmbeddingBagSupport failed to infer shape for bag_size");
+        return GRAPH_FAILED;
+    }
+    if (InferShape4MaxIndicesSupport(context, batch, embedding_dim, dimension, is_unknown_weight, is_unknown_indices, is_unknown_offsets) != ge::GRAPH_SUCCESS) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context->GetNodeName(), "max_indices", "unknown",
+            "EmbeddingBagSupport failed to infer shape for max_indices");
+        return GRAPH_FAILED;
+    }
     OP_LOGD(context->GetNodeName(), "runtime2.0 EmbeddingBagSupport infershape running success.");
     
     return ge::GRAPH_SUCCESS;
@@ -378,19 +390,31 @@ static ge::graphStatus InferShapeForEmbeddingBag(gert::InferShapeContext* contex
     bool is_unknown_rank = Ops::Base::IsUnknownRank(*weight_shape);
     bool is_unknown_shape = Ops::Base::IsUnknownShape(*weight_shape);
 
-    OP_CHECK_IF(
-        InferShape4Output(context, batch, embedding_dim, weight_dim_num, is_unknown_rank, is_unknown_shape) !=
-            ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "failed to infer shape for output."), return GRAPH_FAILED);
-    OP_CHECK_IF(
-        InferShape4Offset2Bag(context, indices_num, is_unknown_rank, is_unknown_shape) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "failed to infer shape for offset2bag."), return GRAPH_FAILED);
-    OP_CHECK_IF(
-        InferShape4BagSize(context, batch, is_unknown_rank, is_unknown_shape) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "failed to infer shape for bag_size."), return GRAPH_FAILED);
-    OP_CHECK_IF(
-        InferShape4MaxIndices(context, batch, embedding_dim, is_unknown_rank, is_unknown_shape, false) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "failed to infer shape for max_indices."), return GRAPH_FAILED);
+    if (InferShape4Output(context, batch, embedding_dim, weight_dim_num, is_unknown_rank, is_unknown_shape) !=
+        ge::GRAPH_SUCCESS) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context->GetNodeName(), "output", "unknown",
+            "failed to infer shape for output");
+        return GRAPH_FAILED;
+    }
+    if (InferShape4Offset2Bag(context, indices_num, is_unknown_rank, is_unknown_shape) != ge::GRAPH_SUCCESS) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context->GetNodeName(), "offset2bag", "unknown",
+            "failed to infer shape for offset2bag");
+        return GRAPH_FAILED;
+    }
+    if (InferShape4BagSize(context, batch, is_unknown_rank, is_unknown_shape) != ge::GRAPH_SUCCESS) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context->GetNodeName(), "bag_size", "unknown",
+            "failed to infer shape for bag_size");
+        return GRAPH_FAILED;
+    }
+    if (InferShape4MaxIndices(context, batch, embedding_dim, is_unknown_rank, is_unknown_shape, false) != ge::GRAPH_SUCCESS) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context->GetNodeName(), "max_indices", "unknown",
+            "failed to infer shape for max_indices");
+        return GRAPH_FAILED;
+    }
     OP_LOGD(context->GetNodeName(), "runtime2.0 EmbeddingBag infershape running success.");
     
     return ge::GRAPH_SUCCESS;
