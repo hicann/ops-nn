@@ -477,7 +477,7 @@ private:
                 And((RegTensor<uint16_t>&)vSrcReg1, (RegTensor<uint16_t>&)vSrcReg1, absMask16Bit, maskReg);
             }
             Max(vdMaxExp, (RegTensor<uint16_t>&)vSrcReg0, (RegTensor<uint16_t>&)vSrcReg1, maskReg);
-            ReduceDataBlock<ReduceType::MAX>(vdMaxExp, vdMaxExp, maskReg);
+            ReduceMaxWithDataBlock(vdMaxExp, vdMaxExp, maskReg);
             StoreUnAlign<uint16_t, PostLiteral::POST_MODE_UPDATE>(dstPtr, vdMaxExp, u1, STORE_UNALIGN_STRIDE_BYTES);
         }
         StoreUnAlignPost(dstPtr, u1, 0);
@@ -515,7 +515,7 @@ private:
             And((RegTensor<uint16_t>&)vSrcReg0, (RegTensor<uint16_t>&)vSrcReg0, absMask16Bit, maskReg);
             And((RegTensor<uint16_t>&)vSrcReg1, (RegTensor<uint16_t>&)vSrcReg1, absMask16Bit, maskReg);
             Max(vdMaxExp, (RegTensor<uint16_t>&)vSrcReg0, (RegTensor<uint16_t>&)vSrcReg1, maskReg);
-            ReduceDataBlock<ReduceType::MAX>(vdMaxExp, vdMaxExp, maskReg);
+            ReduceMaxWithDataBlock(vdMaxExp, vdMaxExp, maskReg);
             Mul(vLimitReg, (RegTensor<bfloat16_t>&)vdMaxExp, alphaReg, maskReg);
             if constexpr (needExp) {
                 And(vExpExtract, (RegTensor<uint16_t>&)vLimitReg, expMaskBF16, maskReg);
