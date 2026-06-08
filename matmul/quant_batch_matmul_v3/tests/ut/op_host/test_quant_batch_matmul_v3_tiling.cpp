@@ -757,13 +757,12 @@ static void ThreadFunc(const QuantBatchMatmulV3TilingTestParam *params, size_t t
     int32_t logLevel = 0;
     int32_t enableEvent = 0;
     for (size_t idx = threadIdx; idx < testcaseNum; idx += threadNum) {
-        if (params[idx].socVersion == "Ascend950") {
-            lock_guard<mutex> lock(tilingTestMutex);
-            params[idx].Test();
-        } else {
-            lock_guard<mutex> lock(tilingTestMutex);
-            params[idx].Test();
+        // Failure cases are covered by generalTest and may report ErrorManager messages.
+        if (!params[idx].result) {
+            continue;
         }
+        lock_guard<mutex> lock(tilingTestMutex);
+        params[idx].Test();
     }
 }
 
