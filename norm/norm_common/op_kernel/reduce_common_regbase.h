@@ -519,6 +519,71 @@ __aicore__ inline void ComputeRstdNewtonRaphsonReg(
     Select(rstd, scalarInf, rstd, cmpRegInf);
 }
 
+template <typename T>
+__aicore__ inline void LoadTensorUnAlignForDtypeT(__local_mem__ T*& src, RegTensor<float>& dst,
+    AscendC::MicroAPI::UnalignReg& uSrc, MaskReg& preg, uint32_t postUpdateStride)
+{
+    if constexpr (IsSameType<T, float>::value) {
+        AscendC::MicroAPI::DataCopyUnAlign<float, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+            dst, uSrc, src, postUpdateStride);
+    } else {
+        RegTensor<T> xB16;
+        RegTensor<T> xB16Unpack;
+        AscendC::MicroAPI::DataCopyUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+            xB16, uSrc, src, postUpdateStride);
+        UnPack((RegTensor<uint32_t>&)xB16Unpack, (RegTensor<uint16_t>&)xB16);
+        Cast<float, T, castTraitB162B32>(dst, xB16Unpack, preg);
+    }
+}
+
+template <typename T>
+__aicore__ inline void StoreTensorUnAlignForDtypeT(__local_mem__ T*& dst, RegTensor<float>& src,
+    AscendC::MicroAPI::UnalignReg& uDst, MaskReg& preg, uint32_t postUpdateStride)
+{
+    if constexpr (IsSameType<T, float>::value) {
+        AscendC::MicroAPI::DataCopyUnAlign<float, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+            dst, src, uDst, postUpdateStride);
+    } else {
+        RegTensor<T> xB16;
+        RegTensor<T> xB16Pack;
+        Cast<T, float, castTraitB322B16>(xB16, src, preg);
+        Pack((RegTensor<uint16_t>&)xB16Pack, (RegTensor<uint32_t>&)xB16);
+        AscendC::MicroAPI::DataCopyUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+            dst, xB16Pack, uDst, postUpdateStride);
+    }
+}
+
+template <typename T>
+__aicore__ inline void LoadTensorUnAlignForDtypeT(
+    __local_mem__ T* src, RegTensor<float>& dst, MaskReg& preg, uint32_t postUpdateStride)
+{
+    AscendC::MicroAPI::UnalignReg uSrc;
+    __local_mem__ T* srcTmp = src;
+    AscendC::MicroAPI::DataCopyUnAlignPre(uSrc, srcTmp);
+    LoadTensorUnAlignForDtypeT(srcTmp, dst, uSrc, preg, postUpdateStride);
+}
+
+template <typename T>
+__aicore__ inline void StoreTensorUnAlignForDtypeT(
+    __local_mem__ T* dst, RegTensor<float>& src, MaskReg& preg, uint32_t postUpdateStride)
+{
+    AscendC::MicroAPI::UnalignReg uDst;
+    __local_mem__ T* dstTmp = dst;
+    StoreTensorUnAlignForDtypeT(dstTmp, src, uDst, preg, postUpdateStride);
+    AscendC::MicroAPI::DataCopyUnAlignPost(dstTmp, uDst, 0);
+}
+
+// NOTE: x is overwritten in place (x = (x - mean) * scale * rstd); only y is the
+// downstream-usable result. Callers must not rely on the original x after this call.
+__aicore__ inline void NormalizeWithScaleBiasReg(RegTensor<float>& x, RegTensor<float>& scale,
+    RegTensor<float>& bias, RegTensor<float>& mean, RegTensor<float>& rstd, RegTensor<float>& y, MaskReg& preg)
+{
+    Sub(x, x, mean, preg);
+    Mul(x, x, scale, preg);
+    Mul(x, x, rstd, preg);
+    Add(y, x, bias, preg);
+}
+
 template <bool NEED_MAX = true, bool NEED_AVG_FACTOR = false>
 __aicore__ inline void ComputeRstdNewtonRaphson(
     __local_mem__ float* src, __local_mem__ float* dst, uint32_t rowCount, float epsilon,

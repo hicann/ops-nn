@@ -22,6 +22,9 @@
 #include "arch35/batch_norm_welford.h"
 #include "arch35/batch_norm_infer.h"
 #include "arch35/batch_norm_infer_last_channel.h"
+#include "arch35/batch_norm_infer_last_channel_continuous_a.h"
+#include "arch35/batch_norm_infer_last_channel_small_a.h"
+#include "arch35/batch_norm_infer_small_ab1.h"
 
 using namespace AscendC;
 using namespace BatchNormOps;
@@ -35,7 +38,10 @@ namespace
 #define TILINGKEY_RA_WELFORD 500000
 #define TILINGKEY_RA_BLOCK_SPLIT_R 600000
 #define TILINGKEY_INFER_LAST_CHANNEL 900000
+#define TILINGKEY_INFER_LAST_CHANNEL_SMALL_A 902000
+#define TILINGKEY_INFER_LAST_CHANNEL_CONTINUOUS_A 901000
 #define TILINGKEY_INFER 910000
+#define TILINGKEY_INFER_SMALL_AB1 911000
 }  // namespace
 
 extern "C" __global__ __aicore__ void batch_norm(GM_ADDR x, GM_ADDR scale, GM_ADDR offset, GM_ADDR mean,
@@ -93,6 +99,27 @@ extern "C" __global__ __aicore__ void batch_norm(GM_ADDR x, GM_ADDR scale, GM_AD
         GET_TILING_DATA_WITH_STRUCT(BatchNormInferTilingData, tiling_data_in, tiling);
         const BatchNormInferTilingData* __restrict tilingData = &tiling_data_in;
         BatchNormInfer<DTYPE_X, DTYPE_SCALE> op(tilingData);
+        op.Init(x, scale, offset, mean, variance, y, batch_mean, batch_variance, reserve_space_1, reserve_space_2,
+                &pipe);
+        op.Process();
+    } else if (TILING_KEY_IS(TILINGKEY_INFER_LAST_CHANNEL_SMALL_A)) {
+        GET_TILING_DATA_WITH_STRUCT(BatchNormInferLastChannelTilingData, tiling_data_in, tiling);
+        const BatchNormInferLastChannelTilingData* __restrict tilingData = &tiling_data_in;
+        BatchNormInferLastChannelSmallA<DTYPE_X, DTYPE_SCALE, DTYPE_SCALE> op(tilingData);
+        op.Init(x, scale, offset, mean, variance, y, batch_mean, batch_variance, reserve_space_1, reserve_space_2,
+                &pipe);
+        op.Process();
+    } else if (TILING_KEY_IS(TILINGKEY_INFER_LAST_CHANNEL_CONTINUOUS_A)) {
+        GET_TILING_DATA_WITH_STRUCT(BatchNormInferLastChannelTilingData, tiling_data_in, tiling);
+        const BatchNormInferLastChannelTilingData* __restrict tilingData = &tiling_data_in;
+        BatchNormInferLastChannelContinuousA<DTYPE_X, DTYPE_SCALE, DTYPE_SCALE> op(tilingData);
+        op.Init(x, scale, offset, mean, variance, y, batch_mean, batch_variance, reserve_space_1, reserve_space_2,
+                &pipe);
+        op.Process();
+    } else if (TILING_KEY_IS(TILINGKEY_INFER_SMALL_AB1)) {
+        GET_TILING_DATA_WITH_STRUCT(BatchNormInferTilingData, tiling_data_in, tiling);
+        const BatchNormInferTilingData* __restrict tilingData = &tiling_data_in;
+        BatchNormInferSmallAB1<DTYPE_X, DTYPE_SCALE, DTYPE_SCALE> op(tilingData);
         op.Init(x, scale, offset, mean, variance, y, batch_mean, batch_variance, reserve_space_1, reserve_space_2,
                 &pipe);
         op.Process();

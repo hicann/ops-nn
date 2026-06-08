@@ -22,6 +22,9 @@
 #include "arch35/batch_norm_v3_welford.h"
 #include "arch35/batch_norm_v3_infer.h"
 #include "arch35/batch_norm_v3_infer_last_channel.h"
+#include "arch35/batch_norm_v3_infer_last_channel_continuous_a.h"
+#include "arch35/batch_norm_v3_infer_last_channel_small_a.h"
+#include "arch35/batch_norm_v3_infer_small_ab1.h"
 
 using namespace AscendC;
 using namespace BatchNormV3Ops;
@@ -34,7 +37,10 @@ namespace {
 #define TILINGKEY_RA_WELFORD 500000
 #define TILINGKEY_RA_BLOCK_SPLIT_R 600000
 #define TILINGKEY_INFER_LAST_CHANNEL 900000
+#define TILINGKEY_INFER_LAST_CHANNEL_SMALL_A 902000
+#define TILINGKEY_INFER_LAST_CHANNEL_CONTINUOUS_A 901000
 #define TILINGKEY_INFER 910000
+#define TILINGKEY_INFER_SMALL_AB1 911000
 } // namespace
 
 extern "C" __global__ __aicore__ void batch_norm_v3(
@@ -82,6 +88,27 @@ extern "C" __global__ __aicore__ void batch_norm_v3(
         const BatchNormV3InferTilingData* __restrict tilingData = &tiling_data_in;
         TPipe pipe;
         BatchNormV3Infer<DTYPE_X, DTYPE_WEIGHT, DTYPE_RUNNING_MEAN> op(tilingData);
+        op.Init(x, weight, bias, mean, variance, y, &pipe);
+        op.Process();
+    } else if (TILING_KEY_IS(TILINGKEY_INFER_LAST_CHANNEL_SMALL_A)) {
+        GET_TILING_DATA_WITH_STRUCT(BatchNormV3InferLastChannelTilingData, tiling_data_in, tiling);
+        const BatchNormV3InferLastChannelTilingData* __restrict tilingData = &tiling_data_in;
+        TPipe pipe;
+        BatchNormV3InferLastChannelSmallA<DTYPE_X, DTYPE_WEIGHT, DTYPE_RUNNING_MEAN> op(tilingData);
+        op.Init(x, weight, bias, mean, variance, y, &pipe);
+        op.Process();
+    } else if (TILING_KEY_IS(TILINGKEY_INFER_LAST_CHANNEL_CONTINUOUS_A)) {
+        GET_TILING_DATA_WITH_STRUCT(BatchNormV3InferLastChannelTilingData, tiling_data_in, tiling);
+        const BatchNormV3InferLastChannelTilingData* __restrict tilingData = &tiling_data_in;
+        TPipe pipe;
+        BatchNormV3InferLastChannelContinuousA<DTYPE_X, DTYPE_WEIGHT, DTYPE_RUNNING_MEAN> op(tilingData);
+        op.Init(x, weight, bias, mean, variance, y, &pipe);
+        op.Process();
+    } else if (TILING_KEY_IS(TILINGKEY_INFER_SMALL_AB1)) {
+        GET_TILING_DATA_WITH_STRUCT(BatchNormV3InferTilingData, tiling_data_in, tiling);
+        const BatchNormV3InferTilingData* __restrict tilingData = &tiling_data_in;
+        TPipe pipe;
+        BatchNormV3InferSmallAB1<DTYPE_X, DTYPE_WEIGHT, DTYPE_RUNNING_MEAN> op(tilingData);
         op.Init(x, weight, bias, mean, variance, y, &pipe);
         op.Process();
     } else if (TILING_KEY_IS(TILINGKEY_RA_BLOCK_SPLIT_R)) {

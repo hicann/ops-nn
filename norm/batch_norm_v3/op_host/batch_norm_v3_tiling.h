@@ -301,6 +301,7 @@ TILING_DATA_FIELD_DEF(float, epsilon);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(BatchNormV3_910000, BatchNormV3InferTilingData);
+REGISTER_TILING_DATA_CLASS(BatchNormV3_911000, BatchNormV3InferTilingData);
 
 BEGIN_TILING_DATA_DEF(BatchNormV3InferLastChannelTilingData)
 TILING_DATA_FIELD_DEF(int64_t, totalTiles);
@@ -318,6 +319,8 @@ TILING_DATA_FIELD_DEF(float, epsilon);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(BatchNormV3_900000, BatchNormV3InferLastChannelTilingData);
+REGISTER_TILING_DATA_CLASS(BatchNormV3_902000, BatchNormV3InferLastChannelTilingData);
+REGISTER_TILING_DATA_CLASS(BatchNormV3_901000, BatchNormV3InferLastChannelTilingData);
 
 struct ParamsBatchNormV3 {
     uint64_t coreNum = 0;
