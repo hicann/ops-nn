@@ -526,7 +526,7 @@ bool QuantBatchMatmulV3Checker::CheckInputValidInPerblockMode(const gert::Shape&
     OP_TILING_CHECK(inputParams_.hasBias,
                     OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
                         inputParams_.opName, "bias", "not null",
-                        "when the quant mode is G-B or B-B, bias must be null"),
+                        "when the quantization mode is G-B or B-B, bias must be null"),
                     return false);
     auto scaleShapeLen = scaleShape.GetDimNum();
     auto x2ShapeLen = x2Shape.GetDimNum();
@@ -556,17 +556,17 @@ bool QuantBatchMatmulV3Checker::CheckGroupValidInPerblockMode() const
     OP_TILING_CHECK(inputParams_.groupSizeM != PER_BLOCK_SIZE && inputParams_.groupSizeM != 1UL,
                     OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
                         inputParams_.opName, "groupSizeM", std::to_string(inputParams_.groupSizeM).c_str(),
-                        "when the quant mode is G-B or B-B, input or inferred groupSizeM must be 128 or 1, groupSizeM = (groupSize >> 32) & 0xFFFF"),
+                        "when the quantization mode is G-B or B-B, input or inferred groupSizeM must be 128 or 1, groupSizeM = (groupSize >> 32) & 0xFFFF"),
                     return false);
     OP_TILING_CHECK(inputParams_.groupSizeK != PER_BLOCK_SIZE,
                     OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
                         inputParams_.opName, "groupSizeK", std::to_string(inputParams_.groupSizeK).c_str(),
-                        "when the quant mode is G-B or B-B, input or inferred groupSizeK must be 128, groupSizeK = groupSize & 0xFFFF"),
+                        "when the quantization mode is G-B or B-B, input or inferred groupSizeK must be 128, groupSizeK = groupSize & 0xFFFF"),
                     return false);
     OP_TILING_CHECK(inputParams_.groupSizeN != PER_BLOCK_SIZE,
                     OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
                         inputParams_.opName, "groupSizeN", std::to_string(inputParams_.groupSizeN).c_str(),
-                        "when the quant mode is G-B or B-B, input or inferred groupSizeN must be 128, groupSizeN = (groupSize >> 16) & 0xFFFF"),
+                        "when the quantization mode is G-B or B-B, input or inferred groupSizeN must be 128, groupSizeN = (groupSize >> 16) & 0xFFFF"),
                     return false);
   return true;
 }
@@ -587,7 +587,7 @@ bool QuantBatchMatmulV3Checker::CheckShapeValidInPerblockMode(const gert::Shape&
             FormatString("[%ld, %ld], [%ld, %ld]",
                          scaleShape.GetDim(x2ShapeLen - 2), scaleShape.GetDim(x2ShapeLen - 1),
                          x2Shape.GetDim(x2ShapeLen - 2), x2Shape.GetDim(x2ShapeLen - 1)).c_str(),
-            "when the quant mode is G-B or B-B, the last two dimensions of scale must be equal to the last two dimensions of x2 ceildivided by groupSize 128"),
+            "when the quantization mode is G-B or B-B, the last two dimensions of scale must be equal to the last two dimensions of x2 ceildivided by groupSize 128"),
         return false);
     int64_t x1MIndex = inputParams_.transA ? (x1ShapeLen - 1) : (x1ShapeLen - 2);
     int64_t x1KIndex = inputParams_.transA ? (x1ShapeLen - 2) : (x1ShapeLen - 1);
@@ -600,14 +600,14 @@ bool QuantBatchMatmulV3Checker::CheckShapeValidInPerblockMode(const gert::Shape&
         OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
             inputParams_.opName, "groupSizeM, pertokenScaleM, x1M",
             FormatString("%lu, %lu, %lu", inputParams_.groupSizeM, scaleX1M, x1M).c_str(),
-            "when the quant mode is G-B or B-B, the m dimension size of pertokenScale must be equal to the m dimension size of x1 ceildivided by groupSizeM"),
+            "when the quantization mode is G-B or B-B, the m dimension size of pertokenScale must be equal to the m dimension size of x1 ceildivided by groupSizeM"),
         return false);
     OP_TILING_CHECK(
         (ops::CeilDiv(x1K, inputParams_.groupSizeK) != scaleX1K),
         OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
             inputParams_.opName, "groupSizeK, pertokenScaleK, x1K",
             FormatString("%lu, %lu, %lu", inputParams_.groupSizeK, scaleX1K, x1K).c_str(),
-            "when the quant mode is G-B or B-B, the k dimension size of pertokenScale must be equal to the k dimension size of x1 ceildivided by groupSizeK"),
+            "when the quantization mode is G-B or B-B, the k dimension size of pertokenScale must be equal to the k dimension size of x1 ceildivided by groupSizeK"),
         return false);
     return true;
 }
@@ -619,14 +619,14 @@ bool QuantBatchMatmulV3Checker::CheckDimValidInPerblockMode(size_t x1ShapeLen, s
                     OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
                         inputParams_.opName, "x2, scale",
                         FormatString("%zuD, %zuD", x2ShapeLen, scaleShapeLen).c_str(),
-                        "when the quant mode is G-B or B-B, the dimension of scale must be equal to the dimension of x2"),
+                        "when the quantization mode is G-B or B-B, the dimension of scale must be equal to the dimension of x2"),
                     return false);
     OP_TILING_CHECK(
         pertokenShapeLen != x1ShapeLen,
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
             inputParams_.opName, "x1, pertokenScale",
             FormatString("%zuD, %zuD", x1ShapeLen, pertokenShapeLen).c_str(),
-            "when the quant mode is G-B or B-B, the dimension of pertokenScale must be equal to the dimension of x1"),
+            "when the quantization mode is G-B or B-B, the dimension of pertokenScale must be equal to the dimension of x1"),
         return false);
     return true;
 }
@@ -643,7 +643,7 @@ bool QuantBatchMatmulV3Checker::CheckBatchValidInPerblockMode(const gert::Shape&
                             OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
                                 inputParams_.opName, "dimIndex, x2Batch, scaleBatch",
                                 FormatString("%zu, %ld, %ld", i, x2Shape.GetDim(i), scaleShape.GetDim(i)).c_str(),
-                                "when the quant mode is G-B or B-B, the batch dimension of scale must be equal to the batch dimension of x2"),
+                                "when the quantization mode is G-B or B-B, the batch dimension of scale must be equal to the batch dimension of x2"),
                             return false);
         }
     }
@@ -653,7 +653,7 @@ bool QuantBatchMatmulV3Checker::CheckBatchValidInPerblockMode(const gert::Shape&
                             OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
                                 inputParams_.opName, "dimIndex, x1Batch, pertokenBatch",
                                 FormatString("%zu, %ld, %ld", i, x1Shape.GetDim(i), pertoken.GetDim(i)).c_str(),
-                                "when the quant mode is G-B or B-B, the batch dimension of pertokenScale must be equal to the batch dimension of x1"),
+                                "when the quantization mode is G-B or B-B, the batch dimension of pertokenScale must be equal to the batch dimension of x1"),
                             return false);
         }
     }
@@ -667,7 +667,7 @@ bool QuantBatchMatmulV3Checker::MxPertokenScaleShapeCheck(const gert::StorageSha
     OP_TILING_CHECK(pertokenShapeLen != SCALE_THREE_DIM,
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
                         inputParams_.opName, "pertokenScale", FormatString("%zuD", pertokenShapeLen).c_str(),
-                        "when the quant mode is mx, the shape dim of pertokenScale must be 3"),
+                        "when the quantization mode is mx, the shape dim of pertokenScale must be 3"),
                     return false);
     auto mDimIdx = inputParams_.transA ? 1 : 0;
     auto kDimIdx = inputParams_.transA ? 0 : 1;
@@ -676,19 +676,19 @@ bool QuantBatchMatmulV3Checker::MxPertokenScaleShapeCheck(const gert::StorageSha
         OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
             inputParams_.opName, "x1K, pertokenScaleK",
             FormatString("%lu, %ld", inputParams_.kSize, pertoken.GetDim(kDimIdx)).c_str(),
-            "when the quant mode is mx, the k dimension of pertokenScale must be equal to the k dimension size of x1 ceildivided by 64"),
+            "when the quantization mode is mx, the k dimension of pertokenScale must be equal to the k dimension size of x1 ceildivided by 64"),
         return false);
     OP_TILING_CHECK(static_cast<uint64_t>(pertoken.GetDim(mDimIdx)) != inputParams_.mSize,
                     OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
                         inputParams_.opName, "x1M, pertokenScaleM",
                         FormatString("%lu, %ld", inputParams_.mSize, pertoken.GetDim(mDimIdx)).c_str(),
-                        "when the quant mode is mx, the m dimension of pertokenScale must be equal to the m dimension size of x1"),
+                        "when the quantization mode is mx, the m dimension of pertokenScale must be equal to the m dimension size of x1"),
                     return false);
     OP_TILING_CHECK(static_cast<uint64_t>(pertoken.GetDim(pertokenShapeLen - 1)) != MXFP_MULTI_BASE_SIZE,
                     OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
                         inputParams_.opName, "pertokenScale last dimension",
                         std::to_string(pertoken.GetDim(pertokenShapeLen - 1)).c_str(),
-                        "when the quant mode is mx, the last dimension of pertokenScale must be equal to 2"),
+                        "when the quantization mode is mx, the last dimension of pertokenScale must be equal to 2"),
                     return false);
     return true;
 }
@@ -700,35 +700,34 @@ bool QuantBatchMatmulV3Checker::MxScaleShapeCheck(const gert::Shape &scaleShape)
         scaleShapeLen != SCALE_THREE_DIM,
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
             inputParams_.opName, "scale", FormatString("%zuD", scaleShapeLen).c_str(),
-            "when the quant mode is mx, the shape dim of scale must be 3"),
+            "when the quantization mode is mx, the shape dim of scale must be 3"),
         return false);
     auto kDimIdx = inputParams_.transB ? 1 : 0;
     auto nDimIdx = inputParams_.transB ? 0 : 1;
-    bool nDimHasOne = (scaleShape.GetDim(kDimIdx) == 1 && static_cast<uint64_t>(scaleShape.GetDim(nDimIdx)) == ops::CeilDiv(inputParams_.kSize, MXFP_DIVISOR_SIZE)) || 
+bool nDimHasOne = (scaleShape.GetDim(kDimIdx) == 1 && static_cast<uint64_t>(scaleShape.GetDim(nDimIdx)) == ops::CeilDiv(inputParams_.kSize, MXFP_DIVISOR_SIZE)) || 
                     (scaleShape.GetDim(nDimIdx) == 1 && static_cast<uint64_t>(scaleShape.GetDim(kDimIdx)) == ops::CeilDiv(inputParams_.kSize, MXFP_DIVISOR_SIZE));
     bool kDimHasOne = (scaleShape.GetDim(kDimIdx) == 1 && static_cast<uint64_t>(scaleShape.GetDim(nDimIdx)) == inputParams_.nSize) || 
                     (scaleShape.GetDim(nDimIdx) == 1 && static_cast<uint64_t>(scaleShape.GetDim(kDimIdx)) == inputParams_.nSize);
-    //轴里有1时不进行转置一致性校验。
     if(!nDimHasOne && !kDimHasOne){
         OP_TILING_CHECK(
             static_cast<uint64_t>(scaleShape.GetDim(kDimIdx)) != ops::CeilDiv(inputParams_.kSize, MXFP_DIVISOR_SIZE),
             OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
                 inputParams_.opName, "x2K, scaleK",
                 FormatString("%lu, %ld", inputParams_.kSize, scaleShape.GetDim(kDimIdx)).c_str(),
-                "when the quant mode is mx, the k dimension of scale must be equal to the k dimension size of x2 ceildivided by 64"),
+                "when the quantization mode is mx, the k dimension of scale must be equal to the k dimension size of x2 ceildivided by 64"),
             return false);
         OP_TILING_CHECK(static_cast<uint64_t>(scaleShape.GetDim(nDimIdx)) != inputParams_.nSize,
                         OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
                             inputParams_.opName, "x2N, scaleN",
                             FormatString("%lu, %ld", inputParams_.nSize, scaleShape.GetDim(nDimIdx)).c_str(),
-                            "when the quant mode is mx, the n dimension of scale must be equal to the n dimension size of x2"),
+                            "when the quantization mode is mx, the n dimension of scale must be equal to the n dimension size of x2"),
                         return false);
     }
     OP_TILING_CHECK(static_cast<uint64_t>(scaleShape.GetDim(scaleShapeLen - 1)) != MXFP_MULTI_BASE_SIZE,
                     OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
                         inputParams_.opName, "scale dimension 2",
                         std::to_string(scaleShape.GetDim(scaleShapeLen - 1)).c_str(),
-                        "when the quant mode is mx, dimension 2 of scale must be equal to 2"),
+                        "when the quantization mode is mx, dimension 2 of scale must be equal to 2"),
                     return false);
     return true;
 }
@@ -780,12 +779,12 @@ bool QuantBatchMatmulV3Checker::CheckInputValidInMxPerGroupMode(const gert::Shap
                         inputParams_.opName, "groupSizeM, groupSizeN, groupSizeK",
                         FormatString("%lu, %lu, %lu", inputParams_.groupSizeM, inputParams_.groupSizeN,
                                      inputParams_.groupSizeK).c_str(),
-                        "when the quant mode is mx, input or inferred [groupSizeM, groupSizeN, groupSizeK] must be [1, 1, 32], groupSize = groupSizeK | groupSizeN << 16 | groupSizeM << 32"),
+                        "when the quantization mode is mx, input or inferred [groupSizeM, groupSizeN, groupSizeK] must be [1, 1, 32], groupSize = groupSizeK | groupSizeN << 16 | groupSizeM << 32"),
                     return false);
     if (pertokenShape == nullptr) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
             inputParams_.opName, "pertokenScale", "null",
-            "when the quant mode is mx, pertokenScale can not be null");
+            "when the quantization mode is mx, pertokenScale can not be null");
         return false;
     }
     OP_TILING_CHECK(!MxPertokenScaleShapeCheck(pertokenShape),
@@ -846,7 +845,7 @@ bool QuantBatchMatmulV3Checker::CheckShapeInRangeForOptionalInputs(const gert::S
             OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
                 inputParams_.opName, "pertokenScale, scale",
                 FormatString("%zuD, %zuD", pertokenDimNum, scaleShape.GetDimNum()).c_str(),
-                "when the quant mode is not G-B, B-B or mx, the shape dim of pertokenScale and scale must be 1"),
+                "when the quantization mode is not G-B, B-B or mx, the shape dim of pertokenScale and scale must be 1"),
             return false);
     }
     return true;
@@ -952,7 +951,7 @@ bool QuantBatchMatmulV3Checker::PerTokenDimValueCheck(const gert::Shape &scaleSh
         OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
             inputParams_.opName, "m, pertokenScaleDim0",
             FormatString("%lu, %ld", inputParams_.mSize, pertoken.GetDim(0)).c_str(),
-            "when the quant mode is not mx and dimension 0 of scale is 1, dimension 0 of pertokenScale must be equal to m or 1"),
+            "when the quantization mode is not mx and dimension 0 of scale is 1, dimension 0 of pertokenScale must be equal to m or 1"),
         return false);
     OP_TILING_CHECK(
         isFp8HiF8 && !inputParams_.isMxPerGroup && inputParams_.mSize != 1UL && perTokenDim0 == 1UL &&
@@ -961,7 +960,7 @@ bool QuantBatchMatmulV3Checker::PerTokenDimValueCheck(const gert::Shape &scaleSh
         OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
             inputParams_.opName, "n, scaleDim0",
             FormatString("%lu, %ld", inputParams_.nSize, scaleShape.GetDim(0)).c_str(),
-            "when the quant mode is not mx, dimension 0 of pertokenScale is 1, and m is not 1, dimension 0 of scale must be equal to 1 or n"),
+            "when the quantization mode is not mx, dimension 0 of pertokenScale is 1, and m is not 1, dimension 0 of scale must be equal to 1 or n"),
         return false);
     OP_TILING_CHECK(
         pertoken.GetDimNum() == 1 && static_cast<uint64_t>(perTokenDim0) == inputParams_.mSize &&

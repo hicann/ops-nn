@@ -830,19 +830,19 @@ static bool CheckA8W4TcGDtype(const aclTensor *x2Scale, const aclTensor *bias, c
     if (bias != nullptr) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
             "aclnnQuantMatmulWeightNzGetWorkspaceSize", "bias", "not null",
-            "in A8W4 scenario, when the quant mode is t-cg, bias must be null");
+            "in A8W4 scenario, when the quantization mode is t-cg, bias must be null");
         return false;
     }
     if (yScale == nullptr) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
             "aclnnQuantMatmulWeightNzGetWorkspaceSize", "yScale", "null",
-            "in A8W4 scenario, when the quant mode is t-cg, yScale can not be null");
+            "in A8W4 scenario, when the quantization mode is t-cg, yScale can not be null");
         return false;
     }
     if (x2Scale == nullptr) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
             "aclnnQuantMatmulWeightNzGetWorkspaceSize", "x2Scale", "null",
-            "in A8W4 scenario, when the quant mode is t-cg, x2Scale can not be null");
+            "in A8W4 scenario, when the quantization mode is t-cg, x2Scale can not be null");
         return false;
     }
     if (x2Scale->GetDataType() != DataType::DT_BF16 && x2Scale->GetDataType() != DataType::DT_FLOAT16) {
@@ -868,7 +868,7 @@ static bool CheckA8W4MxDtype(const aclTensor *bias, const aclTensor *yScale, con
         if (bias->GetDataType() != DataType::DT_BF16 && bias->GetDataType() != DataType::DT_FLOAT16) {
             OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
                 "aclnnQuantMatmulWeightNzGetWorkspaceSize", "bias", op::ToString(bias->GetDataType()).GetString(),
-                "in A8W4 scenario, when the quant mode is mx, the dtype of bias must be BFLOAT16 or FLOAT16");
+                "in A8W4 scenario, when the quantization mode is mx, the dtype of bias must be BFLOAT16 or FLOAT16");
             return false;
         }
         // Check that bias dtype is the same as out dtype.
@@ -877,14 +877,14 @@ static bool CheckA8W4MxDtype(const aclTensor *bias, const aclTensor *yScale, con
                 "aclnnQuantMatmulWeightNzGetWorkspaceSize", "bias, out",
                 FormatString("%s, %s", op::ToString(bias->GetDataType()).GetString(),
                     op::ToString(out->GetDataType()).GetString()).c_str(),
-                "in A8W4 scenario, when the quant mode is mx, the dtype of bias must be the same as the dtype of out");
+                "in A8W4 scenario, when the quantization mode is mx, the dtype of bias must be the same as the dtype of out");
             return false;
         }
     }
     if (yScale != nullptr) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
             "aclnnQuantMatmulWeightNzGetWorkspaceSize", "yScale", "not null",
-            "in A8W4 scenario, when the quant mode is mx, yScale must be null");
+            "in A8W4 scenario, when the quantization mode is mx, yScale must be null");
         return false;
     }
     return true;
@@ -906,7 +906,7 @@ static bool CheckA8W4Dtype(const TupleTensor &mandatoryTensors, const TupleOptio
         FormatString("%s, %s",
             x1Scale == nullptr ? "null" : op::ToString(x1Scale->GetDataType()).GetString(),
             x2Scale == nullptr ? "null" : op::ToString(x2Scale->GetDataType()).GetString()).c_str(),
-        "in A8W4 scenario, the quant mode must be mx or t-cg");
+        "in A8W4 scenario, the quantization mode must be mx or t-cg");
     return false;
 }
 
@@ -1499,13 +1499,13 @@ static inline bool CheckInputAttrExistence(const TupleAttr &boolsTrans, const Tu
         // A8W4 scenario with t-cg quant mode
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
             "aclnnQuantMatmulWeightNzGetWorkspaceSize", "transposeX2", transposeX2 ? "true" : "false",
-            "in A8W4 scenario with NZ format, when the quant mode is t-cg, transposeX2 must be false");
+            "in A8W4 scenario with NZ format, when the quantization mode is t-cg, transposeX2 must be false");
         return false;
     } else if (IsMicroScaling(x1Scale, x2Scale)  && !transposeX2) { 
         // A8W4 scenario with mx quant mode
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
             "aclnnQuantMatmulWeightNzGetWorkspaceSize", "transposeX2", transposeX2 ? "true" : "false",
-            "in A8W4 scenario with NZ format, when the quant mode is mx, transposeX2 must be true");
+            "in A8W4 scenario with NZ format, when the quantization mode is mx, transposeX2 must be true");
         return false;
     }
     uint64_t groupSizeK = static_cast<uint64_t>(groupSize) & GROUP_MNK_BIT_SIZE;

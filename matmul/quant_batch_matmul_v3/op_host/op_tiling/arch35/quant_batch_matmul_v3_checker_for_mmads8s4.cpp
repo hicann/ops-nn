@@ -259,13 +259,13 @@ bool QuantBatchMatmulV3Checker4MmadS8S4::CheckDimValue(const gert::Shape &scaleS
         inputParams_.aDtype == ge::DT_INT8 && !(inputParams_.isPerTensor || inputParams_.isPerChannel),
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
             inputParams_.opName, "x1", ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype).c_str(),
-            "when the dtype of x1 is INT8, the quant mode must be PerTensor/PerChannel"),
+            "when the dtype of x1 is INT8, the quantization mode must be PerTensor/PerChannel"),
         return false);
     // INT4 x1 supports PerChannel only.
     OP_TILING_CHECK(inputParams_.aDtype == ge::DT_INT4 && !inputParams_.isPerChannel,
                     OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
                         inputParams_.opName, "x1", ge::TypeUtils::DataTypeToSerialString(inputParams_.aDtype).c_str(),
-                    "when the dtype of x1 is INT4, the quant mode must be PerChannel"),
+                    "when the dtype of x1 is INT4, the quantization mode must be PerChannel"),
                     return false);
     // INT4 x1 requires an even inner axis.
     OP_TILING_CHECK(

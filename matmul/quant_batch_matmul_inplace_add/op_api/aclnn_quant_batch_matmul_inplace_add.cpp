@@ -91,14 +91,14 @@ static aclnnStatus IsMxQuantDim(const QBMMInplaceAdd::QuantBatchMatmulInplaceAdd
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
             "aclnnQuantBatchMatmulInplaceAddGetWorkspaceSize", "x2Scale",
             FormatString("%zuD", x2ScaleDimNum).c_str(),
-            FormatString("when the quant mode is mx, the shape dim of x2Scale must be %zu", MX_X2_SCALE_DIM).c_str());
+            FormatString("when the quantization mode is mx, the shape dim of x2Scale must be %zu", MX_X2_SCALE_DIM).c_str());
         return ACLNN_ERR_PARAM_INVALID;
     }
     if (x1ScaleDimNum != MX_X1_SCALE_DIM) {
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
             "aclnnQuantBatchMatmulInplaceAddGetWorkspaceSize", "x1Scale",
             FormatString("%zuD", x1ScaleDimNum).c_str(),
-            FormatString("when the quant mode is mx, the shape dim of x1Scale must be %zu", MX_X1_SCALE_DIM).c_str());
+            FormatString("when the quantization mode is mx, the shape dim of x1Scale must be %zu", MX_X1_SCALE_DIM).c_str());
         return ACLNN_ERR_PARAM_INVALID;
     }
     
@@ -113,7 +113,7 @@ static aclnnStatus IsPerTensorDim(const QBMMInplaceAdd::QuantBatchMatmulInplaceA
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
             "aclnnQuantBatchMatmulInplaceAddGetWorkspaceSize", "x1Scale",
             FormatString("%zuD", x1ScaleDimNum).c_str(),
-            FormatString("when the quant mode is HiFloat8 per-tensor, the shape dim of x1Scale must be %zu",
+            FormatString("when the quantization mode is HiFloat8 per-tensor, the shape dim of x1Scale must be %zu",
                 PERTENSOR_SCALE_DIM).c_str());
         return ACLNN_ERR_PARAM_INVALID;
     }
@@ -121,7 +121,7 @@ static aclnnStatus IsPerTensorDim(const QBMMInplaceAdd::QuantBatchMatmulInplaceA
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
             "aclnnQuantBatchMatmulInplaceAddGetWorkspaceSize", "x2Scale",
             FormatString("%zuD", x2ScaleDimNum).c_str(),
-            FormatString("when the quant mode is HiFloat8 per-tensor, the shape dim of x2Scale must be %zu",
+            FormatString("when the quantization mode is HiFloat8 per-tensor, the shape dim of x2Scale must be %zu",
                 PERTENSOR_SCALE_DIM).c_str());
         return ACLNN_ERR_PARAM_INVALID;
     }
@@ -129,14 +129,14 @@ static aclnnStatus IsPerTensorDim(const QBMMInplaceAdd::QuantBatchMatmulInplaceA
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
             "aclnnQuantBatchMatmulInplaceAddGetWorkspaceSize", "x1Scale",
             StripEnclosingSquareBrackets(op::ToString(params.x1ScaleOptional->GetViewShape()).GetString()).c_str(),
-            "when the quant mode is HiFloat8 per-tensor, the shape of x1Scale must be [1]");
+            "when the quantization mode is HiFloat8 per-tensor, the shape of x1Scale must be [1]");
         return ACLNN_ERR_PARAM_INVALID;
     }
     if (params.x2Scale->GetViewShape().GetDim(0) != 1) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
             "aclnnQuantBatchMatmulInplaceAddGetWorkspaceSize", "x2Scale",
             StripEnclosingSquareBrackets(op::ToString(params.x2Scale->GetViewShape()).GetString()).c_str(),
-            "when the quant mode is HiFloat8 per-tensor, the shape of x2Scale must be [1]");
+            "when the quantization mode is HiFloat8 per-tensor, the shape of x2Scale must be [1]");
         return ACLNN_ERR_PARAM_INVALID;
     }
     return ACLNN_SUCCESS;
@@ -218,14 +218,14 @@ static bool CheckGroupSize(const QBMMInplaceAdd::QuantBatchMatmulInplaceAddParam
             OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
                 "aclnnQuantBatchMatmulInplaceAddGetWorkspaceSize", "groupSize, groupSizeM, groupSizeN, groupSizeK",
                 FormatString("%ld, %lu, %lu, %lu", groupSize, groupSizeM, groupSizeN, groupSizeK).c_str(),
-                "when the quant mode is mx, groupSize must be 4295032864 and Torch API group_sizes must be [1, 1, 32]");
+                "when the quantization mode is mx, groupSize must be 4295032864 and Torch API group_sizes must be [1, 1, 32]");
             return false;
         }
     } else if (groupSize != 0L) {
         OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
             "aclnnQuantBatchMatmulInplaceAddGetWorkspaceSize", "groupSize, groupSizeM, groupSizeN, groupSizeK",
             FormatString("%ld, %lu, %lu, %lu", groupSize, groupSizeM, groupSizeN, groupSizeK).c_str(),
-            "when the quant mode is not mx, groupSize must be 0 and Torch API group_sizes must be [0, 0, 0] or None");
+            "when the quantization mode is not mx, groupSize must be 0 and Torch API group_sizes must be [0, 0, 0] or None");
         return false;
     }
     OP_LOGD("QuantBatchMatmulInplaceAdd check group_size success.");
@@ -297,7 +297,7 @@ static aclnnStatus CheckMxScaleLastDim(const QBMMInplaceAdd::QuantBatchMatmulInp
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
             "aclnnQuantBatchMatmulInplaceAddGetWorkspaceSize", "x1Scale",
             StripEnclosingSquareBrackets(op::ToString(params.x1ScaleOptional->GetViewShape()).GetString()).c_str(),
-            FormatString("when the quant mode is mx, the last dimension of x1Scale must be %d",
+            FormatString("when the quantization mode is mx, the last dimension of x1Scale must be %d",
                 MXFP_MULTI_BASE_SIZE).c_str());
         return ACLNN_ERR_PARAM_INVALID;
     }
@@ -305,7 +305,7 @@ static aclnnStatus CheckMxScaleLastDim(const QBMMInplaceAdd::QuantBatchMatmulInp
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
             "aclnnQuantBatchMatmulInplaceAddGetWorkspaceSize", "x2Scale",
             StripEnclosingSquareBrackets(op::ToString(params.x2Scale->GetViewShape()).GetString()).c_str(),
-            FormatString("when the quant mode is mx, the last dimension of x2Scale must be %d",
+            FormatString("when the quantization mode is mx, the last dimension of x2Scale must be %d",
                 MXFP_MULTI_BASE_SIZE).c_str());
         return ACLNN_ERR_PARAM_INVALID;
     }
@@ -469,14 +469,14 @@ static aclnnStatus CheckMxfp8DtypeValid(const QBMMInplaceAdd::QuantBatchMatmulIn
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
             "aclnnQuantBatchMatmulInplaceAddGetWorkspaceSize", "x1Scale",
             op::ToString(params.x1ScaleOptional->GetDataType()).GetString(),
-            "when the quant mode is mx, the dtype of x1Scale must be FLOAT8_E8M0");
+            "when the quantization mode is mx, the dtype of x1Scale must be FLOAT8_E8M0");
         return ACLNN_ERR_PARAM_INVALID;
     }
     if (params.x2Scale->GetDataType() != op::DataType::DT_FLOAT8_E8M0) {
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
             "aclnnQuantBatchMatmulInplaceAddGetWorkspaceSize", "x2Scale",
             op::ToString(params.x2Scale->GetDataType()).GetString(),
-            "when the quant mode is mx, the dtype of x2Scale must be FLOAT8_E8M0");
+            "when the quantization mode is mx, the dtype of x2Scale must be FLOAT8_E8M0");
         return ACLNN_ERR_PARAM_INVALID;
     }
     if (!CheckType(params.yRef->GetDataType(), YREF_DTYPE_SUPPORT_LIST)) {
@@ -499,14 +499,14 @@ static aclnnStatus CheckHif8DtypeValid(const QBMMInplaceAdd::QuantBatchMatmulInp
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
             "aclnnQuantBatchMatmulInplaceAddGetWorkspaceSize", "x1Scale",
             op::ToString(params.x1ScaleOptional->GetDataType()).GetString(),
-            "when the quant mode is HiFloat8 per-tensor, the dtype of x1Scale must be FLOAT32");
+            "when the quantization mode is HiFloat8 per-tensor, the dtype of x1Scale must be FLOAT32");
         return ACLNN_ERR_PARAM_INVALID;
     }
     if (params.x2Scale->GetDataType() != op::DataType::DT_FLOAT) {
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
             "aclnnQuantBatchMatmulInplaceAddGetWorkspaceSize", "x2Scale",
             op::ToString(params.x2Scale->GetDataType()).GetString(),
-            "when the quant mode is HiFloat8 per-tensor, the dtype of x2Scale must be FLOAT32");
+            "when the quantization mode is HiFloat8 per-tensor, the dtype of x2Scale must be FLOAT32");
         return ACLNN_ERR_PARAM_INVALID;
     }
     if (!CheckType(params.yRef->GetDataType(), YREF_DTYPE_SUPPORT_LIST)) {
@@ -521,7 +521,7 @@ static aclnnStatus CheckHif8DtypeValid(const QBMMInplaceAdd::QuantBatchMatmulInp
             "aclnnQuantBatchMatmulInplaceAddGetWorkspaceSize", "x1Scale, x2Scale",
             FormatString("%s, %s", op::ToString(params.x1ScaleOptional->GetViewShape()).GetString(),
                 op::ToString(params.x2Scale->GetViewShape()).GetString()).c_str(),
-            "when the quant mode is HiFloat8 per-tensor, the shapes of x1Scale and x2Scale must be [1]");
+            "when the quantization mode is HiFloat8 per-tensor, the shapes of x1Scale and x2Scale must be [1]");
         return ACLNN_ERR_PARAM_INVALID;
     }
     return ACLNN_SUCCESS;

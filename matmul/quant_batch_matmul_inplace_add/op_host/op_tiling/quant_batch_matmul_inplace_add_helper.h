@@ -301,13 +301,13 @@ bool QuantBatchMatmulInplaceAddHelper<BaseT>::CheckParamsForMxQuant(
         x1ScaleDimNum != MX_X1_SCALE_DIM,
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
             this->inputParams_.opName, "x1Scale", FormatString("%zuD", x1ScaleDimNum).c_str(),
-            "when the quant mode is mx, the shape dim of x1Scale must be 3"),
+            "when the quantization mode is mx, the shape dim of x1Scale must be 3"),
         return false);
     OP_CHECK_IF(
         x2ScaleDimNum != MX_X2_SCALE_DIM,
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
             this->inputParams_.opName, "x2Scale", FormatString("%zuD", x2ScaleDimNum).c_str(),
-            "when the quant mode is mx, the shape dim of x2Scale must be 3"),
+            "when the quantization mode is mx, the shape dim of x2Scale must be 3"),
         return false);
     auto x2ScaleNDim =
         static_cast<uint64_t>(this->inputParams_.transB ? x2ScaleShape.GetDim(0) : x2ScaleShape.GetDim(1));
@@ -326,7 +326,7 @@ bool QuantBatchMatmulInplaceAddHelper<BaseT>::CheckParamsForMxQuant(
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
             this->inputParams_.opName, "x2Scale",
             FormatString("[%lu, %lu, %lu]", x2ScaleKDim, x2ScaleNDim, x2ScaleLastDim).c_str(),
-            FormatString("when the quant mode is mx, the shape of x2Scale must be [%lu, %lu, 2]",
+            FormatString("when the quantization mode is mx, the shape of x2Scale must be [%lu, %lu, 2]",
                 expectedKDimValue, this->inputParams_.nSize).c_str()),
         return false);
     OP_CHECK_IF(
@@ -335,7 +335,7 @@ bool QuantBatchMatmulInplaceAddHelper<BaseT>::CheckParamsForMxQuant(
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
             this->inputParams_.opName, "x1Scale",
             FormatString("[%lu, %lu, %lu]", x1ScaleKDim, x1ScaleMDim, x1ScaleLastDim).c_str(),
-            FormatString("when the quant mode is mx, the shape of x1Scale must be [%lu, %lu, 2]",
+            FormatString("when the quantization mode is mx, the shape of x1Scale must be [%lu, %lu, 2]",
                 expectedKDimValue, this->inputParams_.mSize).c_str()),
         return false);
     return true;
@@ -350,14 +350,14 @@ bool QuantBatchMatmulInplaceAddHelper<BaseT>::CheckParamsForPerTensorQuant(
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
             this->inputParams_.opName, "x1Scale, x2Scale",
             FormatString("%zuD, %zuD", x1ScaleShape.GetDimNum(), x2ScaleShape.GetDimNum()).c_str(),
-            "when the quant mode is per-tensor, the shape dims of x1Scale and x2Scale must be 1"),
+            "when the quantization mode is per-tensor, the shape dims of x1Scale and x2Scale must be 1"),
         return false);
     OP_CHECK_IF(
         x1ScaleShape.GetDim(0) != 1 || x2ScaleShape.GetDim(0) != 1,
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
             this->inputParams_.opName, "x1Scale, x2Scale",
             FormatString("[%ld], [%ld]", x1ScaleShape.GetDim(0), x2ScaleShape.GetDim(0)).c_str(),
-            "when the quant mode is per-tensor, the shape of x1Scale and x2Scale must be [1]"),
+            "when the quantization mode is per-tensor, the shape of x1Scale and x2Scale must be [1]"),
         return false);
     return true;
 }
