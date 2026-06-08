@@ -55,7 +55,8 @@ protected:
 static void ExecuteTestCase(
     gert::StorageShape& xStorageShape, gert::StorageShape& yStorageShape, gert::StorageShape& argmaxStorageShape,
     std::vector<int64_t> ksize, std::vector<int64_t> strides, std::string pads, ge::DataType dtype, int64_t index_dtype,
-    bool includeBatchInIndex, std::string data_format, bool nan_prop, uint64_t except_tilingkey, std::string expect)
+    bool includeBatchInIndex, std::string data_format, bool nan_prop, uint64_t except_tilingkey, std::string expect,
+    ge::graphStatus expect_status = ge::GRAPH_SUCCESS)
 {
     dlog_setlevel(0, 0, 0);
 
@@ -149,7 +150,10 @@ static void ExecuteTestCase(
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
 
     // workspaces nullptr return failed
-    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_SUCCESS);
+    EXPECT_EQ(tiling_func(tiling_context), expect_status);
+    if (expect_status != ge::GRAPH_SUCCESS) {
+        return;
+    }
     auto tiling_key = tiling_context->GetTilingKey();
     ASSERT_EQ(tiling_key, except_tilingkey);
     auto tilingData = tiling_context->GetRawTilingData();
@@ -358,4 +362,222 @@ TEST_F(MaxPoolWithArgmaxTiling, MaxPoolWithArgmaxTiling_Small_C_700011)
     ExecuteTestCase(
         xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype, includeBatchInIndex, data_format,
         nan_prop, except_tilingkey, expect);
+}
+
+// ======================== Failure Cases ========================
+
+TEST_F(MaxPoolWithArgmaxTiling, fail_invalid_input_dim)
+{
+    gert::StorageShape xStorageShape = {{1, 3, 3}, {1, 3, 3}};
+    gert::StorageShape yStorageShape = {{1, 1, 1}, {1, 1, 1}};
+    gert::StorageShape argmaxStorageShape = {{1, 1, 1}, {1, 1, 1}};
+    std::vector<int64_t> ksize = {1, 2, 2, 1};
+    std::vector<int64_t> strides = {1, 2, 2, 1};
+    std::string pads = "VALID";
+    ge::DataType dtype = ge::DT_FLOAT;
+    int64_t index_dtype = 3;
+    bool includeBatchInIndex = false;
+    std::string data_format = "NHWC";
+    bool nan_prop = false;
+    ExecuteTestCase(
+        xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype, includeBatchInIndex, data_format,
+        nan_prop, 0, "", ge::GRAPH_FAILED);
+}
+
+TEST_F(MaxPoolWithArgmaxTiling, fail_invalid_dtype)
+{
+    gert::StorageShape xStorageShape = {{1, 3, 3, 2}, {1, 3, 3, 2}};
+    gert::StorageShape yStorageShape = {{1, 1, 1, 2}, {1, 1, 1, 2}};
+    gert::StorageShape argmaxStorageShape = {{1, 1, 1, 2}, {1, 1, 1, 2}};
+    std::vector<int64_t> ksize = {1, 2, 2, 1};
+    std::vector<int64_t> strides = {1, 2, 2, 1};
+    std::string pads = "VALID";
+    ge::DataType dtype = ge::DT_INT32;
+    int64_t index_dtype = 3;
+    bool includeBatchInIndex = false;
+    std::string data_format = "NHWC";
+    bool nan_prop = false;
+    ExecuteTestCase(
+        xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype, includeBatchInIndex, data_format,
+        nan_prop, 0, "", ge::GRAPH_FAILED);
+}
+
+TEST_F(MaxPoolWithArgmaxTiling, fail_y_argmax_shape_mismatch)
+{
+    gert::StorageShape xStorageShape = {{1, 3, 3, 2}, {1, 3, 3, 2}};
+    gert::StorageShape yStorageShape = {{1, 1, 1, 2}, {1, 1, 1, 2}};
+    gert::StorageShape argmaxStorageShape = {{1, 2, 2, 2}, {1, 2, 2, 2}};
+    std::vector<int64_t> ksize = {1, 2, 2, 1};
+    std::vector<int64_t> strides = {1, 2, 2, 1};
+    std::string pads = "VALID";
+    ge::DataType dtype = ge::DT_FLOAT;
+    int64_t index_dtype = 3;
+    bool includeBatchInIndex = false;
+    std::string data_format = "NHWC";
+    bool nan_prop = false;
+    ExecuteTestCase(
+        xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype, includeBatchInIndex, data_format,
+        nan_prop, 0, "", ge::GRAPH_FAILED);
+}
+
+TEST_F(MaxPoolWithArgmaxTiling, fail_invalid_data_format)
+{
+    gert::StorageShape xStorageShape = {{1, 3, 3, 2}, {1, 3, 3, 2}};
+    gert::StorageShape yStorageShape = {{1, 1, 1, 2}, {1, 1, 1, 2}};
+    gert::StorageShape argmaxStorageShape = {{1, 1, 1, 2}, {1, 1, 1, 2}};
+    std::vector<int64_t> ksize = {1, 2, 2, 1};
+    std::vector<int64_t> strides = {1, 2, 2, 1};
+    std::string pads = "VALID";
+    ge::DataType dtype = ge::DT_FLOAT;
+    int64_t index_dtype = 3;
+    bool includeBatchInIndex = false;
+    std::string data_format = "INVALID";
+    bool nan_prop = false;
+    ExecuteTestCase(
+        xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype, includeBatchInIndex, data_format,
+        nan_prop, 0, "", ge::GRAPH_FAILED);
+}
+
+TEST_F(MaxPoolWithArgmaxTiling, fail_ksize_n_not_one)
+{
+    gert::StorageShape xStorageShape = {{1, 3, 3, 2}, {1, 3, 3, 2}};
+    gert::StorageShape yStorageShape = {{1, 1, 1, 2}, {1, 1, 1, 2}};
+    gert::StorageShape argmaxStorageShape = {{1, 1, 1, 2}, {1, 1, 1, 2}};
+    std::vector<int64_t> ksize = {2, 2, 2, 1};
+    std::vector<int64_t> strides = {1, 2, 2, 1};
+    std::string pads = "VALID";
+    ge::DataType dtype = ge::DT_FLOAT;
+    int64_t index_dtype = 3;
+    bool includeBatchInIndex = false;
+    std::string data_format = "NHWC";
+    bool nan_prop = false;
+    ExecuteTestCase(
+        xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype, includeBatchInIndex, data_format,
+        nan_prop, 0, "", ge::GRAPH_FAILED);
+}
+
+TEST_F(MaxPoolWithArgmaxTiling, fail_ksize_hw_zero)
+{
+    gert::StorageShape xStorageShape = {{1, 3, 3, 2}, {1, 3, 3, 2}};
+    gert::StorageShape yStorageShape = {{1, 1, 1, 2}, {1, 1, 1, 2}};
+    gert::StorageShape argmaxStorageShape = {{1, 1, 1, 2}, {1, 1, 1, 2}};
+    std::vector<int64_t> ksize = {1, 0, 0, 1};
+    std::vector<int64_t> strides = {1, 2, 2, 1};
+    std::string pads = "VALID";
+    ge::DataType dtype = ge::DT_FLOAT;
+    int64_t index_dtype = 3;
+    bool includeBatchInIndex = false;
+    std::string data_format = "NHWC";
+    bool nan_prop = false;
+    ExecuteTestCase(
+        xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype, includeBatchInIndex, data_format,
+        nan_prop, 0, "", ge::GRAPH_FAILED);
+}
+
+TEST_F(MaxPoolWithArgmaxTiling, fail_strides_n_not_one)
+{
+    gert::StorageShape xStorageShape = {{1, 3, 3, 2}, {1, 3, 3, 2}};
+    gert::StorageShape yStorageShape = {{1, 1, 1, 2}, {1, 1, 1, 2}};
+    gert::StorageShape argmaxStorageShape = {{1, 1, 1, 2}, {1, 1, 1, 2}};
+    std::vector<int64_t> ksize = {1, 2, 2, 1};
+    std::vector<int64_t> strides = {2, 2, 2, 1};
+    std::string pads = "VALID";
+    ge::DataType dtype = ge::DT_FLOAT;
+    int64_t index_dtype = 3;
+    bool includeBatchInIndex = false;
+    std::string data_format = "NHWC";
+    bool nan_prop = false;
+    ExecuteTestCase(
+        xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype, includeBatchInIndex, data_format,
+        nan_prop, 0, "", ge::GRAPH_FAILED);
+}
+
+TEST_F(MaxPoolWithArgmaxTiling, fail_strides_hw_zero)
+{
+    gert::StorageShape xStorageShape = {{1, 3, 3, 2}, {1, 3, 3, 2}};
+    gert::StorageShape yStorageShape = {{1, 1, 1, 2}, {1, 1, 1, 2}};
+    gert::StorageShape argmaxStorageShape = {{1, 1, 1, 2}, {1, 1, 1, 2}};
+    std::vector<int64_t> ksize = {1, 2, 2, 1};
+    std::vector<int64_t> strides = {1, 0, 0, 1};
+    std::string pads = "VALID";
+    ge::DataType dtype = ge::DT_FLOAT;
+    int64_t index_dtype = 3;
+    bool includeBatchInIndex = false;
+    std::string data_format = "NHWC";
+    bool nan_prop = false;
+    ExecuteTestCase(
+        xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype, includeBatchInIndex, data_format,
+        nan_prop, 0, "", ge::GRAPH_FAILED);
+}
+
+TEST_F(MaxPoolWithArgmaxTiling, fail_invalid_padding)
+{
+    gert::StorageShape xStorageShape = {{1, 3, 3, 2}, {1, 3, 3, 2}};
+    gert::StorageShape yStorageShape = {{1, 1, 1, 2}, {1, 1, 1, 2}};
+    gert::StorageShape argmaxStorageShape = {{1, 1, 1, 2}, {1, 1, 1, 2}};
+    std::vector<int64_t> ksize = {1, 2, 2, 1};
+    std::vector<int64_t> strides = {1, 2, 2, 1};
+    std::string pads = "INVALID";
+    ge::DataType dtype = ge::DT_FLOAT;
+    int64_t index_dtype = 3;
+    bool includeBatchInIndex = false;
+    std::string data_format = "NHWC";
+    bool nan_prop = false;
+    ExecuteTestCase(
+        xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype, includeBatchInIndex, data_format,
+        nan_prop, 0, "", ge::GRAPH_FAILED);
+}
+
+TEST_F(MaxPoolWithArgmaxTiling, fail_include_batch_in_index_true)
+{
+    gert::StorageShape xStorageShape = {{1, 3, 3, 2}, {1, 3, 3, 2}};
+    gert::StorageShape yStorageShape = {{1, 1, 1, 2}, {1, 1, 1, 2}};
+    gert::StorageShape argmaxStorageShape = {{1, 1, 1, 2}, {1, 1, 1, 2}};
+    std::vector<int64_t> ksize = {1, 2, 2, 1};
+    std::vector<int64_t> strides = {1, 2, 2, 1};
+    std::string pads = "VALID";
+    ge::DataType dtype = ge::DT_FLOAT;
+    int64_t index_dtype = 3;
+    bool includeBatchInIndex = true;
+    std::string data_format = "NHWC";
+    bool nan_prop = false;
+    ExecuteTestCase(
+        xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype, includeBatchInIndex, data_format,
+        nan_prop, 0, "", ge::GRAPH_FAILED);
+}
+
+TEST_F(MaxPoolWithArgmaxTiling, fail_y_shape_mismatch_valid)
+{
+    gert::StorageShape xStorageShape = {{1, 3, 3, 2}, {1, 3, 3, 2}};
+    gert::StorageShape yStorageShape = {{1, 2, 2, 2}, {1, 2, 2, 2}};
+    gert::StorageShape argmaxStorageShape = {{1, 2, 2, 2}, {1, 2, 2, 2}};
+    std::vector<int64_t> ksize = {1, 2, 2, 1};
+    std::vector<int64_t> strides = {1, 2, 2, 1};
+    std::string pads = "VALID";
+    ge::DataType dtype = ge::DT_FLOAT;
+    int64_t index_dtype = 3;
+    bool includeBatchInIndex = false;
+    std::string data_format = "NHWC";
+    bool nan_prop = false;
+    ExecuteTestCase(
+        xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype, includeBatchInIndex, data_format,
+        nan_prop, 0, "", ge::GRAPH_FAILED);
+}
+
+TEST_F(MaxPoolWithArgmaxTiling, fail_y_shape_mismatch_same)
+{
+    gert::StorageShape xStorageShape = {{1, 3, 3, 2}, {1, 3, 3, 2}};
+    gert::StorageShape yStorageShape = {{1, 1, 1, 2}, {1, 1, 1, 2}};
+    gert::StorageShape argmaxStorageShape = {{1, 1, 1, 2}, {1, 1, 1, 2}};
+    std::vector<int64_t> ksize = {1, 2, 2, 1};
+    std::vector<int64_t> strides = {1, 2, 2, 1};
+    std::string pads = "SAME";
+    ge::DataType dtype = ge::DT_FLOAT;
+    int64_t index_dtype = 3;
+    bool includeBatchInIndex = false;
+    std::string data_format = "NHWC";
+    bool nan_prop = false;
+    ExecuteTestCase(
+        xStorageShape, yStorageShape, argmaxStorageShape, ksize, strides, pads, dtype, index_dtype, includeBatchInIndex, data_format,
+        nan_prop, 0, "", ge::GRAPH_FAILED);
 }

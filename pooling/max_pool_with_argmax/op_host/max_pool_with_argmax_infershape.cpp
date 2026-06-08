@@ -60,6 +60,9 @@ inline ge::graphStatus SetAllUnknownDim(const int64_t rank, gert::Shape* output_
 
 ge::graphStatus InferShapeForMaxPoolWithArgmax(gert::InferShapeContext* context)
 {
+    if (context == nullptr) {
+        return GRAPH_FAILED;
+    }
     OP_LOGD(context->GetNodeName(), "runtime2.0 MaxPoolWithArgmax infershape running");
     auto src_td = context->GetInputDesc(0);
     OPS_CHECK_NULL_WITH_CONTEXT(context, src_td);
@@ -69,56 +72,74 @@ ge::graphStatus InferShapeForMaxPoolWithArgmax(gert::InferShapeContext* context)
     auto indices_dtype = indices_td->GetDataType();
     OP_LOGD(context->GetNodeName(), "indices_dtype = %d", indices_dtype);
 
-    OP_CHECK_IF(input_format != FORMAT_ND && input_format != FORMAT_NCHW && input_format != FORMAT_NHWC,
-                OP_LOGE(context->GetNodeName(), "format only supports ND, NCHW, NHWC"),
-                return GRAPH_FAILED);
+    if (input_format != FORMAT_ND && input_format != FORMAT_NCHW && input_format != FORMAT_NHWC) {
+        OP_LOGE_FOR_INVALID_FORMAT(context->GetNodeName(), "x",
+            Ops::Base::ToString(input_format).c_str(), "ND, NCHW or NHWC");
+        return GRAPH_FAILED;
+    }
 
     auto attrs = context->GetAttrs();
     OPS_CHECK_NULL_WITH_CONTEXT(context, attrs);
 
     auto ksize = attrs->GetAttrPointer<gert::ContinuousVector>(INDEX_KSIZE);
     OPS_CHECK_NULL_WITH_CONTEXT(context, ksize);
-    OP_CHECK_IF(ksize->GetSize() != ATTR_LIST_SHAPE_SIZE,
-                OP_LOGE(context->GetNodeName(), "Length of ksize %lu must be 4!", ksize->GetSize()),
-                return GRAPH_FAILED);
+    if (ksize->GetSize() != ATTR_LIST_SHAPE_SIZE) {
+        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "ksize",
+            std::to_string(ksize->GetSize()).c_str(), std::to_string(ATTR_LIST_SHAPE_SIZE).c_str());
+        return GRAPH_FAILED;
+    }
     auto ksize_data = static_cast<const int64_t*>(ksize->GetData());
 
     auto strides = attrs->GetAttrPointer<gert::ContinuousVector>(INDEX_STRIDES);
     OPS_CHECK_NULL_WITH_CONTEXT(context, strides);
-    OP_CHECK_IF(strides->GetSize() != ATTR_LIST_SHAPE_SIZE,
-                OP_LOGE(context->GetNodeName(), "Length of strides %lu must be 4!", strides->GetSize()),
-                return GRAPH_FAILED);
+    if (strides->GetSize() != ATTR_LIST_SHAPE_SIZE) {
+        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "strides",
+            std::to_string(strides->GetSize()).c_str(), std::to_string(ATTR_LIST_SHAPE_SIZE).c_str());
+        return GRAPH_FAILED;
+    }
     auto strides_data = static_cast<const int64_t*>(strides->GetData());
 
     const char* dataFormatPtr = attrs->GetAttrPointer<char>(INDEX_DATA_FORMAT);
     OP_LOGE_IF(dataFormatPtr == nullptr, GRAPH_FAILED, context->GetNodeName(), "Get dataFormat failed.");
     std::string dataFormatStr(dataFormatPtr);
-    OP_CHECK_IF(ksize_data[INDEX_ZERO] != KSIZE_STRIDES_FIXED_DIM_VALUE &&
-                strides_data[INDEX_ZERO] != KSIZE_STRIDES_FIXED_DIM_VALUE,
-                OP_LOGE(context->GetNodeName(), "Pooling ksize[0] / strides[0] must be 1."),
-                return GRAPH_FAILED);
+    if (ksize_data[INDEX_ZERO] != KSIZE_STRIDES_FIXED_DIM_VALUE &&
+        strides_data[INDEX_ZERO] != KSIZE_STRIDES_FIXED_DIM_VALUE) {
+        std::string attrMsg = std::to_string(ksize_data[INDEX_ZERO]) + " and " +
+                              std::to_string(strides_data[INDEX_ZERO]);
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context->GetNodeName(), "ksize[0] and strides[0]", attrMsg.c_str(),
+            "ksize[0] and strides[0] should be 1");
+        return GRAPH_FAILED;
+    }
     if (dataFormatStr == "NHWC") {
-        OP_CHECK_IF(
-            ksize_data[INDEX_THREE] != KSIZE_STRIDES_FIXED_DIM_VALUE,
-            OP_LOGE(context->GetNodeName(), "Pooling ksize[3] must be 1."), return GRAPH_FAILED);
-        OP_CHECK_IF(
-            strides_data[INDEX_THREE] != KSIZE_STRIDES_FIXED_DIM_VALUE,
-            OP_LOGE(context->GetNodeName(), "Pooling strides[3] must be 1."), return GRAPH_FAILED);
+        if (ksize_data[INDEX_THREE] != KSIZE_STRIDES_FIXED_DIM_VALUE) {
+            OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "ksize[3]",
+                std::to_string(ksize_data[INDEX_THREE]).c_str(), "1");
+            return GRAPH_FAILED;
+        }
+        if (strides_data[INDEX_THREE] != KSIZE_STRIDES_FIXED_DIM_VALUE) {
+            OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "strides[3]",
+                std::to_string(strides_data[INDEX_THREE]).c_str(), "1");
+            return GRAPH_FAILED;
+        }
     } else {
         // NCHW
-        OP_CHECK_IF(
-            ksize_data[INDEX_ONE] != KSIZE_STRIDES_FIXED_DIM_VALUE,
-            OP_LOGE(context->GetNodeName(), "Pooling ksize[1] must be 1."), return GRAPH_FAILED);
-        OP_CHECK_IF(
-            strides_data[INDEX_ONE] != KSIZE_STRIDES_FIXED_DIM_VALUE,
-            OP_LOGE(context->GetNodeName(), "Pooling strides[1] must be 1."), return GRAPH_FAILED);
+        if (ksize_data[INDEX_ONE] != KSIZE_STRIDES_FIXED_DIM_VALUE) {
+            OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "ksize[1]",
+                std::to_string(ksize_data[INDEX_ONE]).c_str(), "1");
+            return GRAPH_FAILED;
+        }
+        if (strides_data[INDEX_ONE] != KSIZE_STRIDES_FIXED_DIM_VALUE) {
+            OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "strides[1]",
+                std::to_string(strides_data[INDEX_ONE]).c_str(), "1");
+            return GRAPH_FAILED;
+        }
     }
 
     const char* paddingPtr = attrs->GetAttrPointer<char>(INDEX_PADS);
     OP_LOGE_IF(paddingPtr == nullptr, GRAPH_FAILED, context->GetNodeName(), "Get pads failed.");
     std::string padStr(paddingPtr);
     if (padStr != "SAME" && padStr != "VALID") {
-        OP_LOGE(context->GetNodeName(), "Attr padding(%s) must in SAME and VALID", padStr.c_str());
+        OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "padding", padStr.c_str(), "SAME or VALID");
         return GRAPH_FAILED;
     }
 
@@ -154,9 +175,15 @@ ge::graphStatus InferShapeForMaxPoolWithArgmax(gert::InferShapeContext* context)
     if (padStr == "SAME") {
         int64_t outH = (in_shape->GetDim(h_dim) + strides_data[h_dim] - 1) / strides_data[h_dim];
         int64_t outW = (in_shape->GetDim(w_dim) + strides_data[w_dim] - 1) / strides_data[w_dim];
-        OP_CHECK_IF(outH < 0 || outW < 0,
-                    OP_LOGE(context->GetNodeName(), "Pooling outShape H and W must > 0."),
-                    return GRAPH_FAILED);
+        if (outH < 0 || outW < 0) {
+            std::string valMsg = "[" + std::to_string(in_shape->GetDim(h_dim)) + ", " +
+                                 std::to_string(in_shape->GetDim(w_dim)) + "], [" +
+                                 std::to_string(strides_data[h_dim]) + ", " +
+                                 std::to_string(strides_data[w_dim]) + "]";
+            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context->GetNodeName(), "x[h_dim, w_dim], strides[h_dim, w_dim]", valMsg.c_str(),
+                "these input values lead to inferred output H and W dimensions less than 0");
+            return GRAPH_FAILED;
+        }
         out_shape->SetDim(h_dim, outH);
         out_shape->SetDim(w_dim, outW);
         out_indices_shape->SetDim(h_dim, outH);
@@ -164,9 +191,17 @@ ge::graphStatus InferShapeForMaxPoolWithArgmax(gert::InferShapeContext* context)
     } else {
         int64_t outH = (in_shape->GetDim(h_dim) - ksize_data[h_dim] + strides_data[h_dim]) / strides_data[h_dim];
         int64_t outW = (in_shape->GetDim(w_dim) - ksize_data[w_dim] + strides_data[w_dim]) / strides_data[w_dim];
-        OP_CHECK_IF(outH < 0 || outW < 0,
-                    OP_LOGE(context->GetNodeName(), "Pooling outShape H and W must > 0."),
-                    return GRAPH_FAILED);
+        if (outH < 0 || outW < 0) {
+            std::string valMsg = "[" + std::to_string(in_shape->GetDim(h_dim)) + ", " +
+                                 std::to_string(in_shape->GetDim(w_dim)) + "], [" +
+                                 std::to_string(ksize_data[h_dim]) + ", " +
+                                 std::to_string(ksize_data[w_dim]) + "], [" +
+                                 std::to_string(strides_data[h_dim]) + ", " +
+                                 std::to_string(strides_data[w_dim]) + "]";
+            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context->GetNodeName(), "x[h_dim, w_dim], kernel_size[h_dim, w_dim], strides[h_dim, w_dim]", valMsg.c_str(),
+                "these input values lead to inferred output H and W dimensions less than 0");
+            return GRAPH_FAILED;
+        }
         out_shape->SetDim(h_dim, outH);
         out_shape->SetDim(w_dim, outW);
         out_indices_shape->SetDim(h_dim, outH);

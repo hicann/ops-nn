@@ -56,12 +56,14 @@ static ge::graphStatus CheckOutPutShapeForValid(gert::TilingContext* context, co
                         inputData.stride[W_DIM];
     if (static_cast<int64_t>(inputData.outShape[H_DIM]) != expectedH ||
         static_cast<int64_t>(inputData.outShape[W_DIM]) != expectedW) {
-        VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(),
-                                        "MaxPoolWithArgmax: when padding is VALID, the outputshape in \
-h-dim and w-dim should be [%ld] [%ld], but got [%ld] [%ld]",
-                                        expectedH, expectedW,
-                                        static_cast<int64_t>(inputData.outShape[H_DIM]),
-                                        static_cast<int64_t>(inputData.outShape[W_DIM]));
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context->GetNodeName(), "y[h_dim, w_dim]",
+            ("[" + std::to_string(static_cast<int64_t>(inputData.outShape[H_DIM])) + ", " +
+             std::to_string(static_cast<int64_t>(inputData.outShape[W_DIM])) + "]")
+                .c_str(),
+            ("y[h_dim, w_dim] must be equal to the theoretical value [" + std::to_string(expectedH) + ", " +
+             std::to_string(expectedW) + "]")
+                .c_str());
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -73,12 +75,14 @@ static ge::graphStatus CheckOutPutShapeForSame(gert::TilingContext* context, con
     int64_t expectedW = (inputData.inputShape[W_DIM] + inputData.stride[W_DIM] - 1) / inputData.stride[W_DIM];
     if (static_cast<int64_t>(inputData.outShape[H_DIM]) != expectedH ||
         static_cast<int64_t>(inputData.outShape[W_DIM]) != expectedW) {
-        VECTOR_INNER_ERR_REPORT_TILIING(context->GetNodeName(),
-                                        "MaxPoolWithArgmax: when padding is SAME, the outputshape in \
-h-dim and w-dim should be [%ld] [%ld], but got [%ld] [%ld]",
-                                        expectedH, expectedW,
-                                        static_cast<int64_t>(inputData.outShape[H_DIM]),
-                                        static_cast<int64_t>(inputData.outShape[W_DIM]));
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context->GetNodeName(), "y[h_dim, w_dim]",
+            ("[" + std::to_string(static_cast<int64_t>(inputData.outShape[H_DIM])) + ", " +
+             std::to_string(static_cast<int64_t>(inputData.outShape[W_DIM])) + "]")
+                .c_str(),
+            ("y[h_dim, w_dim] must be equal to the theoretical value [" + std::to_string(expectedH) + ", " +
+             std::to_string(expectedW) + "]")
+                .c_str());
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -123,20 +127,19 @@ ge::graphStatus MaxPoolWithArgmaxBaseTiling::GetShapeAttrsInfo()
     auto inputShape = EnsureNotScalar(inputX->GetStorageShape());
 
     OP_TILING_CHECK(inputShape.GetDimNum() != NCHW_DIMS,
-                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
-                                                    "MaxPoolWithArgmax: input shape dim = %zu, should be equal 4",
-                                                    inputShape.GetDimNum()),
+                    OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x",
+                        std::to_string(inputShape.GetDimNum()).c_str(), "4"),
                     return ge::GRAPH_FAILED);
     OP_TILING_CHECK(inputShape.GetShapeSize() <= 0,
-                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
-                                                    "MaxPoolWithArgmax: input shape size %ld less than zero failed",
-                                                    inputShape.GetShapeSize()),
+                    OP_LOGE_FOR_INVALID_SHAPESIZE(context_->GetNodeName(), "x",
+                        std::to_string(inputShape.GetShapeSize()).c_str(), "greater than 0"),
                     return ge::GRAPH_FAILED);
     auto inputDesc = context_->GetInputDesc(0);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, inputDesc);
     dtype = inputDesc->GetDataType();
     if (dtype != ge::DataType::DT_BF16 && dtype != ge::DataType::DT_FLOAT16 && dtype != ge::DataType::DT_FLOAT) {
-        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "MaxPoolWithArgmax: invalid dtype");
+        OP_LOGE_FOR_INVALID_DTYPE(
+            context_->GetNodeName(), "x", Ops::Base::ToString(dtype).c_str(), "DT_FLOAT, DT_FLOAT16, or DT_BF16");
         return ge::GRAPH_FAILED;
     }
 
@@ -147,8 +150,10 @@ ge::graphStatus MaxPoolWithArgmaxBaseTiling::GetShapeAttrsInfo()
     OPS_CHECK_NULL_WITH_CONTEXT(context_, indicesX);
     auto indicesShape = EnsureNotScalar(indicesX->GetStorageShape());
     if (indicesShape != outShape) {
-        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
-                                        "MaxPoolWithArgmax: indices shape and values shape is different");
+        std::string errorMsg = Ops::Base::ToString(outShape) + " and " +
+                              Ops::Base::ToString(indicesShape);
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "y and argmax",
+            errorMsg.c_str(), "the shapes of y and argmax must be the same");
         return ge::GRAPH_FAILED;
     }
     auto runtimeAttrs = context_->GetAttrs();
@@ -174,16 +179,19 @@ ge::graphStatus MaxPoolWithArgmaxBaseTiling::GetShapeAttrsInfo()
         inputData.nInput = inputShape.GetDim(MP_MAX_2D_DIM_ZERO);
         inputData.cInput = inputShape.GetDim(MP_MAX_2D_DIM_THREE);
     } else {
-        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "MaxPoolWithArgmax: not support format %s",
-                                        inputFormatStr.c_str());
+        OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "data_format",
+            inputFormatStr.c_str(), "NCHW or NHWC");
         return ge::GRAPH_FAILED;
     }
 
-    OP_TILING_CHECK(outShape.GetDim(h_dim) < 1 || outShape.GetDim(w_dim) < 1,
-                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
-                                                    "MaxPoolWithArgmax: output shape [%ld, %ld] not support",
-                                                    outShape.GetDim(h_dim), outShape.GetDim(w_dim)),
-                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        outShape.GetDim(h_dim) < 1 || outShape.GetDim(w_dim) < 1,
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context_->GetNodeName(), "y[h_dim, w_dim]",
+            ("[" + std::to_string(outShape.GetDim(h_dim)) + ", " + std::to_string(outShape.GetDim(w_dim)) + "]")
+                .c_str(),
+            "h_dim and w_dim shape of y should be greater than 0"),
+        return ge::GRAPH_FAILED);
 
     inputData.inputShape =
         array<uint64_t, HW_DIMS>{uint64_t(inputShape.GetDim(h_dim)), uint64_t(inputShape.GetDim(w_dim))};
@@ -199,18 +207,18 @@ ge::graphStatus MaxPoolWithArgmaxBaseTiling::GetShapeAttrsInfo()
     cValue = *(kernelSize->GetData() + c_dim);
     OP_TILING_CHECK(
         (nValue != DIGIT_ONE) || (cValue != DIGIT_ONE),
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context_->GetNodeName(),
-            "MaxPoolWithArgmax: ksize[n] and ksize[c] must be 1, but got ksize[n]: %d and ksize[c]: %d.", nValue,
-            cValue),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "ksize[n_dim, c_dim]",
+            ("[" + std::to_string(nValue) + ", " + std::to_string(cValue) + "]").c_str(),
+            "n_dim and c_dim of ksize must be 1"),
         return ge::GRAPH_FAILED);
     hValue = *(kernelSize->GetData() + h_dim);
     wValue = *(kernelSize->GetData() + w_dim);
     inputData.kernelSize = array<uint64_t, HW_DIMS>{uint64_t(hValue), uint64_t(wValue)};
     OP_TILING_CHECK(
         hValue <= 0 || wValue <= 0,
-        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
-                                        "MaxPoolWithArgmax: not support kernel shape [%d, %d]", hValue, wValue),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "ksize[h_dim, w_dim]",
+            ("[" + std::to_string(hValue) + ", " + std::to_string(wValue) + "]").c_str(),
+            "h_dim and w_dim of ksize should be greater than 0"),
         return ge::GRAPH_FAILED);
 
     const gert::TypedContinuousVector<int64_t>* stride = runtimeAttrs->GetListInt(STRIDE_POS);
@@ -219,27 +227,25 @@ ge::graphStatus MaxPoolWithArgmaxBaseTiling::GetShapeAttrsInfo()
     cValue = *(stride->GetData() + c_dim);
     OP_TILING_CHECK(
         (nValue != DIGIT_ONE) || (cValue != DIGIT_ONE),
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context_->GetNodeName(),
-            "MaxPoolWithArgmax: stride[0] and stride[1] must be 1, but got stride[n]: %d and stride[c]: %d.", nValue,
-            cValue),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "strides[n_dim, c_dim]",
+            ("[" + std::to_string(nValue) + ", " + std::to_string(cValue) + "]").c_str(),
+            "n_dim and c_dim of strides must be 1"),
         return ge::GRAPH_FAILED);
     hValue = *(stride->GetData() + h_dim);
     wValue = *(stride->GetData() + w_dim);
     inputData.stride = array<uint64_t, HW_DIMS>{uint64_t(hValue), uint64_t(wValue)};
     OP_TILING_CHECK(
         hValue <= 0 || wValue <= 0,
-        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
-                                        "MaxPoolWithArgmax: not support stride shape [%d, %d]", hValue, wValue),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "strides[h_dim, w_dim]",
+            ("[" + std::to_string(hValue) + ", " + std::to_string(wValue) + "]").c_str(),
+            "h_dim and w_dim of strides should be greater than 0"),
         return ge::GRAPH_FAILED);
 
     auto padModePtr = runtimeAttrs->GetStr(PADDING_POS);
     string padMode(padModePtr);
     OP_TILING_CHECK(
         padMode != "VALID" && padMode != "SAME",
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context_->GetNodeName(), "MaxPoolWithArgmax: unsupported pad mode [%s], only VALID and SAME are supported",
-            padMode.c_str()),
+        OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "padding", padMode.c_str(), "VALID or SAME"),
         return ge::GRAPH_FAILED);
     inputData.isPad = 0;
     if (padMode == "VALID") {
@@ -261,9 +267,10 @@ ge::graphStatus MaxPoolWithArgmaxBaseTiling::GetShapeAttrsInfo()
         inputData.pad = {hPadNeed / DIGIT_TWO, wPadNeed / DIGIT_TWO}; // top, left
     }
 
-    OP_TILING_CHECK(CheckOutPutShape(context_, inputData, padMode) != ge::GRAPH_SUCCESS,
-                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "MaxPoolWithArgmax: CheckOutPutShape fail."),
-                    return ge::GRAPH_FAILED);
+    ge::graphStatus res = CheckOutPutShape(context_, inputData, padMode);
+    if (res != ge::GRAPH_SUCCESS) {
+        return res;
+    }
 
     int indexDtype = MP_MAX_2D_TYPE_INT64;
     const int* indexDtypePtr = runtimeAttrs->GetAttrPointer<int>(DTYPE_POS);
@@ -286,9 +293,12 @@ ge::graphStatus MaxPoolWithArgmaxBaseTiling::GetShapeAttrsInfo()
     OPS_CHECK_NULL_WITH_CONTEXT(context_, includeBatchInIndex);
     inputData.includeBatchInIndex = static_cast<int64_t>(*includeBatchInIndex);
     // only support false now
-    OP_TILING_CHECK(inputData.includeBatchInIndex != 0,
-                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "MaxPoolWithArgmax: includeBatchInIndex attr only support false now."),
-                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        inputData.includeBatchInIndex != 0,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context_->GetNodeName(), "include_batch_in_index", std::to_string(inputData.includeBatchInIndex).c_str(),
+            "include_batch_in_index only support 0(false) now"),
+        return ge::GRAPH_FAILED);
 
     const bool* nanProp  = runtimeAttrs->GetAttrPointer<bool>(NAN_PROP_POS);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, nanProp);
