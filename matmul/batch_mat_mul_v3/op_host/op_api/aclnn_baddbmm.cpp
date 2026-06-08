@@ -275,7 +275,8 @@ public:
         bool needBroadcast = CheckAddmmTensorShapeNeedBroadcast(matA, matB, bias);
         // A2/A3上对于 16in32out,且不需要broadcast场景 直接走gemmV3
         if (CheckGemmV3WithAlphaBeta(bias, matA, matB, cubeMathType) || (enable16In32Out && !needBroadcast)) {
-            const aclTensor* bmmOut = ExecGemmV3WithAlphaBetaOp(bias, matA, matB, alpha, beta, executor);
+            const aclTensor* bmmOut = ExecGemmV3WithAlphaBetaOp(bias, matA, matB,
+                                                                alpha, beta, executor, enable16In32Out);
             CHECK_RET(bmmOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
             convOut = bmmOut;
             return ACLNN_SUCCESS;

@@ -405,7 +405,7 @@ const aclTensor* GetBatchMatmulOp(
                 enable16In32Out, executor);
         }
         OP_LOGI("Hit batch_mat_mul_v3 scenario.");
-        if (enable16In32Out) {
+        if (enable16In32Out || enable2201Baddbmm16In32Out) {
             OP_LOGI("Hit batch_mat_mul_v3 fp16/bf16 in - fp32 out scenario.");
             bmmOpOut = l0op::BatchMatMulV3NdFp16Bf162Fp32(
                 selfTransdata, mat2Transdata, bias, nullptr, adjX1, adjX2, offsetX, matmulOpInfo.enableHf32, executor);

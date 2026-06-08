@@ -508,7 +508,7 @@ public:
         // A2/A3上对于 16in32out,且不需要broadcast场景 直接走gemmV3
         if ((CheckGemmV3WithAlphaBeta(bias, matA, matB, cubeMathType) ||
             (enable16In32Out && !needBroadcast)) && isSupportNpuArch) {
-            auto outGemmV3 = ExecGemmV3WithAlphaBetaOp(bias, matA, matB, alpha, beta, executor);
+            auto outGemmV3 = ExecGemmV3WithAlphaBetaOp(bias, matA, matB, alpha, beta, executor, enable16In32Out);
             CHECK_RET(outGemmV3 != nullptr, ACLNN_ERR_INNER_NULLPTR);
             convOut = outGemmV3;
             return ACLNN_SUCCESS;

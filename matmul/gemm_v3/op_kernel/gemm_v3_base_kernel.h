@@ -636,7 +636,6 @@ GemmV3BaseKernel<swizzleDirect, transA, transB, InDtype, BiasDtype, OutDtype, Ac
             WaitFlag<HardEvent::MTE2_V>(EVENT_ID0);
             for (uint32_t i = 0; i < count; ++i) {
                 if constexpr (!std::is_same_v<BiasDtype, AccumDtype>) {
-                    AscendC::printf("need cast ubc dtype.\n");
                     AscendC::Cast<AccumDtype, BiasDtype, false>(ubSum_[i * VEC_ITER_NUMEL],     // dst
                                                                 ubC_[i * VEC_ITER_NUMEL],       // src
                                                                 AscendC::RoundMode::CAST_NONE,  // mode
@@ -679,7 +678,6 @@ GemmV3BaseKernel<swizzleDirect, transA, transB, InDtype, BiasDtype, OutDtype, Ac
                                                              AscendC::UnaryRepeatParams(1, 1, 8, 8));
                 AscendC::PipeBarrier<PIPE_V>();
                 if constexpr (!std::is_same_v<OutDtype, AccumDtype>) {
-                    AscendC::printf("need cast uby dtype.\n");
                     AscendC::Cast<OutDtype, AccumDtype, false>(ubY_[i * VEC_ITER_NUMEL],      // dst
                                                                ubSum_[i * VEC_ITER_NUMEL],    // src
                                                                AscendC::RoundMode::CAST_RINT, // mode

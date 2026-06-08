@@ -476,6 +476,11 @@ static const aclTensor* GetMatMulOp(
     bool supportNdNz = mmOpInfo.support_info.self_format == ge::FORMAT_ND &&
                        mmOpInfo.support_info.mat2_format == ge::FORMAT_FRACTAL_NZ;
     bool addmm16In32Out = enable16In32Out && (bias != nullptr || supportNdNz);
+    bool isFp32Out = mmOpInfo.support_info.output_dtype == DataType::DT_FLOAT;
+    bool bothMatFp16Bf16 = (mmOpInfo.support_info.self_dtype == DataType::DT_FLOAT16 &&
+                            mmOpInfo.support_info.mat2_dtype == DataType::DT_FLOAT16) ||
+                           (mmOpInfo.support_info.self_dtype == DataType::DT_BF16 &&
+                            mmOpInfo.support_info.mat2_dtype == DataType::DT_BF16);
     if (CheckMatmulV3Support(x1, x2, bias, mmOpInfo, transposeX1, transposeX2, opImplModeEnum) ||
         (CheckMMV3NzNzNdSupport(mmOpInfo) && CheckSupportInfoFormatNzNzNd(mmOpInfo)) || addmm16In32Out) {
         OP_LOGI("Hit matmul_v3 scenario.");
@@ -517,7 +522,7 @@ static const aclTensor* GetMatMulOp(
         const aclTensor* mmOut =
             l0op::MatMulV3Nd(x1, x2, bias, transposeX1, transposeX2, offsetX, opImplModeEnum, executor);
         return mmOut;
-    } else if (enable16In32Out && bias == nullptr) {
+    } else if ((enable16In32Out || (isFp32Out && bothMatFp16Bf16)) && bias == nullptr) {
         // This is Split K Mode; Check if MatMul using Nd in Nd Out
         OP_LOGI("hit matmulv2 fp16/bp16 in fp32 out case.");
         const aclTensor* mmOut =
