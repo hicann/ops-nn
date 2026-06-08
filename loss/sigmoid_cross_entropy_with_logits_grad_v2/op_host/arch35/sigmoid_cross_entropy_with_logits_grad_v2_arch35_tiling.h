@@ -32,6 +32,12 @@
 namespace optiling {
 using Ops::NN::Optiling::TilingBaseClass;
 using namespace Ops::Base;
+
+struct SigmoidCrossEntropyWithLogitsGradV2CompileInfo {
+    uint64_t coreNum = 0;
+    uint64_t ubSize = 0;
+};
+
 class SigmoidCrossEntropyWithLogitsGradV2Tiling : public TilingBaseClass {
 public:
     explicit SigmoidCrossEntropyWithLogitsGradV2Tiling(gert::TilingContext* context) : TilingBaseClass(context)

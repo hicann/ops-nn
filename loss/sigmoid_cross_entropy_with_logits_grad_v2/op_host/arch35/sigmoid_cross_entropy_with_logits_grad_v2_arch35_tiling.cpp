@@ -222,5 +222,27 @@ uint64_t SigmoidCrossEntropyWithLogitsGradV2Tiling::GetTilingKey() const
     return tilingKey_;
 }
 
+static ge::graphStatus ParseForSigmoidCrossEntropyWithLogitsGradV2(gert::TilingParseContext* context) {
+    OP_LOGD(context->GetNodeName(), "begin to get compile info for SigmoidCrossEntropyWithLogitsGradV2.");
+
+    auto compile_info = GetCompileInfoPtr<SigmoidCrossEntropyWithLogitsGradV2CompileInfo>(context);
+    OP_CHECK_NULL_WITH_CONTEXT(context, compile_info);
+
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus TilingSwitchForSigmoidCrossEntropyWithLogitsGradV2(gert::TilingContext* context)
+{
+    auto compile_info = static_cast<const SigmoidCrossEntropyWithLogitsGradV2CompileInfo*>(context->GetCompileInfo());
+    OP_CHECK_NULL_WITH_CONTEXT(context, compile_info);
+    OP_LOGD(context->GetNodeName(), "SigmoidCrossEntropyWithLogitsGradV2 enter AscendC");
+    return Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(context);
+}
+
+// register tiling interface of the SigmoidCrossEntropyWithLogitsGradV2 op.
+IMPL_OP_OPTILING(SigmoidCrossEntropyWithLogitsGradV2)
+    .Tiling(TilingSwitchForSigmoidCrossEntropyWithLogitsGradV2)
+    .TilingParse<SigmoidCrossEntropyWithLogitsGradV2CompileInfo>(ParseForSigmoidCrossEntropyWithLogitsGradV2);
+
 REGISTER_OPS_TILING_TEMPLATE(SigmoidCrossEntropyWithLogitsGradV2, SigmoidCrossEntropyWithLogitsGradV2Tiling, 0);
 } // namespace optiling
