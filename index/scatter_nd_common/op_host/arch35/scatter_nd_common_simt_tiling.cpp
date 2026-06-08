@@ -72,7 +72,7 @@ ge::graphStatus ScatterNdCommonSimtTiling::BlockTiling()
     auto typeSize = ge::GetSizeByDataType(updateDtype_);
     OP_CHECK_IF(
         typeSize <= 0,
-        OP_LOGE(context_, "update dtypeSize must be greater than 0, dtypeSize: %ld", typeSize),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "updates", std::to_string(updateDtype_).c_str(), "The dtype size of updates must be greater than 0."),
         return ge::GRAPH_FAILED);
     alignFactor_ = Ops::Base::GetUbBlockSize(context_) / typeSize;
     auto blockFactor = Ops::Base::CeilDiv(updateShapeSize_, totalCoreNum_);
@@ -98,12 +98,12 @@ ge::graphStatus ScatterNdCommonSimtTiling::UbTiling()
     auto indiceNum = indiceShapeSize_ / rankSize_;
     sliceSize_ = updateShapeSize_ / indiceNum;
     OP_CHECK_IF(sliceSize_ == static_cast<uint64_t>(0),
-                    OP_LOGE(context_->GetNodeName(), "sliceSize %lu is zero. please check.", sliceSize_),
+                    OP_LOGD(context_->GetNodeName(), "sliceSize %lu is zero. please check.", sliceSize_),
                     return ge::GRAPH_FAILED);
     auto updateTypeSize = ge::GetSizeByDataType(updateDtype_);
     OP_CHECK_IF(
         updateTypeSize <= 0,
-        OP_LOGE(context_, "updateTypeSize must be greater than 0, updateTypeSize: %ld", updateTypeSize),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "updates", std::to_string(updateDtype_).c_str(), "The dtype size of updates must be greater than 0."),
         return ge::GRAPH_FAILED);
     indiceDtype_ = context_->GetInputDesc(INPUT_IDX_INDICES)->GetDataType();
     auto indiceTypeSize = ge::GetSizeByDataType(indiceDtype_);
@@ -151,7 +151,7 @@ ge::graphStatus ScatterNdCommonSimtTiling::PostTiling()
 
     auto res = context_->SetLocalMemorySize(ubSize_ - DCACHE_SIZE);
     OP_CHECK_IF((res != ge::GRAPH_SUCCESS),
-        OP_LOGE(context_->GetNodeName(), "SetLocalMemorySize ubSize = %lu failed.", ubSize_), return ge::GRAPH_FAILED);
+        OP_LOGD(context_->GetNodeName(), "SetLocalMemorySize ubSize = %lu failed.", ubSize_), return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }

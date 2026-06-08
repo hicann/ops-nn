@@ -46,10 +46,6 @@ static std::string ConcatString(const T& arg, const Ts& ... arg_left) {
   return oss.str();
 }
 
-static std::string OtherErrMsg(const std::string& error_detail) {
-  std::string msg = error_detail;
-  return msg;
-}
 
 static bool CheckAndUpdateAxis(const gert::InferShapeContext* context, int64_t& batch_dims, int64_t& axes_data,
                                const GatherInfo& gather_info) {
@@ -57,22 +53,23 @@ static bool CheckAndUpdateAxis(const gert::InferShapeContext* context, int64_t& 
   int64_t index_batch_dims = gather_info.index_batch_dims;
   int64_t rank_indices = gather_info.rank_indices;
   if (batch_dims < -rank_indices || (batch_dims > rank_indices && rank_indices != 0)) {
-      std::string err_msg = OtherErrMsg(ConcatString("Expected batch_dims in the range [", std::to_string(-rank_indices), ",",
-                                                     std::to_string(rank_indices), "), but got", std::to_string(batch_dims)));
-      OP_LOGE(context->GetNodeName(), "%s", err_msg.c_str());
+      OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "batch_dims", std::to_string(batch_dims).c_str(),
+                                ("The value of batch_dims must be in the range [" + std::to_string(-rank_indices) + ", " + std::to_string(rank_indices - 1) + "]").c_str());
       return false;
     }
   if (batch_dims < 0) {
     batch_dims = batch_dims + rank_indices;
   }
   OP_CHECK_IF(batch_dims >= x_real_dim_cnt,
-           OP_LOGE(context->GetNodeName(), "batch_dims must be less than rank x)"),
+           OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "batch_dims", std::to_string(batch_dims).c_str(),
+                                ("The value of batch_dims must be less than " + std::to_string(x_real_dim_cnt)).c_str()),
            return false);
   auto x_shape = context->GetInputShape(0);
   auto indies_shape = context->GetInputShape(1);
   for (int i = 0; i < batch_dims; i++) {
     if (x_shape->GetDim(i) != indies_shape->GetDim(i) && x_shape->GetDim(i) > 0 && indies_shape->GetDim(i) > 0) {
-      OP_LOGE(context->GetNodeName(), "x_shape not equal indies_shape");
+      OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x", std::to_string(x_shape->GetDim(i)).c_str(),
+                                                 ("The " + std::to_string(i) + " axis of x must be == the " + std::to_string(i) + " axis " + std::to_string(indies_shape->GetDim(i)) + " of indices").c_str());
       return false;
     }
   }
@@ -80,15 +77,17 @@ static bool CheckAndUpdateAxis(const gert::InferShapeContext* context, int64_t& 
     axes_data = batch_dims;
   }
   OP_CHECK_IF(axes_data > 0 && (x_real_dim_cnt < axes_data + 1),
-           OP_LOGE(context->GetNodeName(), "axis is invalid"), return false);
+           OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "axis", std::to_string(axes_data).c_str(), ("The value of axis must be less than " + std::to_string(x_real_dim_cnt)).c_str()),
+           return false);
   if (axes_data < 0) {
     OP_CHECK_IF(x_real_dim_cnt < -axes_data,
-             OP_LOGE(context->GetNodeName(), "axis is invalid"), return false);
+             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "axis", std::to_string(axes_data).c_str(), ("The value of axis must be greater than or equal to " + std::to_string(-x_real_dim_cnt)).c_str()),
+             return false);
 
     axes_data = x_real_dim_cnt + axes_data;
     OP_CHECK_IF(
         batch_dims > axes_data,
-        OP_LOGE(context->GetNodeName(), "batch_dims must be less than or equal to axis"),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "batch_dims", std::to_string(batch_dims).c_str(), "The value of batch_dims must be less than or equal to axis"),
         return false);
   }
   return true;
@@ -127,11 +126,11 @@ static ge::graphStatus GatherCommonInfer(gert::InferShapeContext* context, const
   }
 
   OP_CHECK_IF(x_real_dim_cnt < 1,
-           OP_LOGE("x_real_dim_cnt", "x_real_dim_cnt must be more than 1"),
+           OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "x dim num", std::to_string(x_real_dim_cnt).c_str(), "The value of x dim num must be greater than 1"),
            return ge::GRAPH_FAILED);
 
   OP_CHECK_IF(!CheckAndUpdateAxis(context, batch_dims, axis, gather_info),
-           OP_LOGE(context->GetNodeName(), "check axis and batchdim failed"),
+           OP_LOGD(context->GetNodeName(), "check axis and batchdim failed"),
            return ge::GRAPH_FAILED);
 
   for (int64_t i = 0; i < axis; i++) {
@@ -165,11 +164,13 @@ static ge::graphStatus InferShapeForGatherV2(gert::InferShapeContext* context) {
   out_shape->SetDimNum(0);
   auto axes_size = static_cast<int32_t>(axes_tensor->GetShapeSize());
   OP_LOGD(context->GetNodeName(), "axes_size is %d", axes_size);
-  OP_CHECK_IF(axes_size < 1, OP_LOGE(context->GetNodeName(), "axes size must big than 0!"),
+  OP_CHECK_IF(axes_size < 1, OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context->GetNodeName(), "axis", std::to_string(axes_size).c_str(),
+                                                                       "The shape size of axis must be greater than 0."),
            return ge::GRAPH_FAILED);
   int64_t axis = 0;
   OP_CHECK_IF(!Ops::Base::GetConstInt(context, INPUT_IDX_AXIS, axis),
-           OP_LOGE(context->GetNodeName(), "get axis failed"), return ge::GRAPH_FAILED);
+           OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "axis", "null", "const int"),
+           return ge::GRAPH_FAILED);
 
   GatherInfo gatherinfo = {axis, 0, x_real_dim_cnt, rank_indices};
   return GatherCommonInfer(context, x_shape, indies_shape, out_shape, gatherinfo);

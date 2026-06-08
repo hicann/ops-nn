@@ -156,9 +156,12 @@ ge::graphStatus Gatherv2TilingBase::GetPlatformInfo() {
 inline ge::graphStatus Gatherv2TilingBase::GetXInfoAndCheck() {
   // x
   xDtype_ = context_->GetInputDesc(INPUT_X_INDEX)->GetDataType();
-  OP_CHECK_IF(!IsSupportDtype(X_SUPPORT_DTYPE, xDtype_), OP_LOGE(context_->GetNodeName(),
-    "The dtype only support float32, float16, bfloat16, fp8, int64, uint64, int32, uint32, int16, uint16, int8, uint8, \
-bool currently, please check."), return ge::GRAPH_FAILED);
+
+  if (!IsSupportDtype(X_SUPPORT_DTYPE, xDtype_)) {
+    OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x", std::to_string(xDtype_).c_str(),
+      "float32, float16, bfloat16, fp8, int64, uint64, int32, uint32, int16, uint16, int8, uint8, bool");
+    return ge::GRAPH_FAILED;
+  }
 
   xShape_ = context_->GetInputShape(INPUT_X_INDEX)->GetStorageShape();
 
@@ -169,8 +172,11 @@ inline ge::graphStatus Gatherv2TilingBase::GetIndicesInfoAndCheck() {
   // check dtype
   indicesDtype_ = context_->GetInputDesc(INPUT_INDICES_INDEX)->GetDataType();
   indicesDtypeSize_ = ge::GetSizeByDataType(indicesDtype_);
-  OP_CHECK_IF(!IsSupportDtype(INDICES_SUPPORT_DTYPE, indicesDtype_), OP_LOGE(context_->GetNodeName(),
-    "The dtype only support int32, int64 currently, please check."), return ge::GRAPH_FAILED);
+  if (!IsSupportDtype(INDICES_SUPPORT_DTYPE, indicesDtype_)) {
+    OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "indices", std::to_string(indicesDtype_).c_str(),
+      "int32, int64");
+    return ge::GRAPH_FAILED;
+  }
 
   indicesShape_ = context_->GetInputShape(INPUT_INDICES_INDEX)->GetStorageShape();
 
@@ -179,20 +185,19 @@ inline ge::graphStatus Gatherv2TilingBase::GetIndicesInfoAndCheck() {
 
 inline ge::graphStatus Gatherv2TilingBase::GetAxisInfoAndCheck() {
   OP_CHECK_IF(!(Ops::Base::GetConstInt(context_, INPUT_AXIS_INDEX, axis_)),
-                  OP_LOGE(context_->GetNodeName(),
-                                                  "get const data axis failed"), return false);
+                  OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "axis", "null", "const int"), return false);
 
   size_t min_x_dim = static_cast<size_t>(axis_ < 0 ? -axis_ : axis_ + 1);
   auto xAxisNum = xShape_.GetDimNum();
   if (xAxisNum == 0 && xShape_.GetShapeSize() != 0) {
     if (indicesShape_.GetShapeSize() != 1) {
-      OP_LOGE(context_->GetNodeName(), "When x is scalar, index can have only 1 value, but got %ld value",
-        indicesShape_.GetShapeSize());
+      OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "index", std::to_string(indicesShape_.GetShapeSize()).c_str(),
+                                                "The shape size of indices should be equal to 1 when x is scalar.");
     }
     xAxisNum = 1;
   }
   if (xAxisNum < min_x_dim) {
-    OP_LOGE(context_->GetNodeName(), "Shape must be at least rank %lu, but is rank %lu", min_x_dim, xAxisNum);
+    OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "x", std::to_string(xAxisNum).c_str(), ("The shape of x must be >= " + std::to_string(min_x_dim)).c_str());
     return ge::GRAPH_FAILED;
   }
   if (axis_ < 0) {
@@ -210,8 +215,8 @@ inline ge::graphStatus Gatherv2TilingBase::GetAttrsInfoAndCheck() {
   if (batchDims_ != 0) {
     if (batchDims_ < static_cast<int64_t>(-indicesShape_.GetDimNum()) ||
         batchDims_ > static_cast<int64_t>(indicesShape_.GetDimNum())) {
-      OP_LOGE(context_->GetNodeName(), "Expected batch_dims in the range [%lu, %lu], but got %ld",
-              -indicesShape_.GetDimNum(), indicesShape_.GetDimNum() - 1, batchDims_);
+      OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "batch_dims", std::to_string(batchDims_).c_str(),
+                                ("The value of batch_dims must be in the range [" + std::to_string(-indicesShape_.GetDimNum()) + ", " + std::to_string(indicesShape_.GetDimNum() - 1) + "]").c_str());
       return ge::GRAPH_FAILED;
     }
     if (batchDims_ < 0) {
@@ -219,18 +224,19 @@ inline ge::graphStatus Gatherv2TilingBase::GetAttrsInfoAndCheck() {
     }
 
     if (batchDims_ >= static_cast<int64_t>(xShape_.GetDimNum())) {
-      OP_LOGE(context_->GetNodeName(), "batch_dims (%ld) must be less than rank(x) (%lu).", batchDims_,
-              xShape_.GetDimNum());
+      OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "batch_dims", std::to_string(batchDims_).c_str(),
+                                ("The value of batch_dims must be less than " + std::to_string(xShape_.GetDimNum())).c_str());
       return ge::GRAPH_FAILED;
     }
     if (axis_ < batchDims_) {
-      OP_LOGE(context_->GetNodeName(), "batch_dims (%ld) must be less than or equal to axis (%ld).", batchDims_, axis_);
+      OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "batch_dims", std::to_string(batchDims_).c_str(),
+                                ("The value of batch_dims must be less than " + std::to_string(axis_)).c_str());
       return ge::GRAPH_FAILED;
     }
     for (int32_t i = 0; i < batchDims_; i++) {
       if (xShape_.GetDim(i) != indicesShape_.GetDim(i)) {
-        OP_LOGE(context_->GetNodeName(), "x.shape[%d]: %ld, should be equal to indices.shape[%d]: %ld", i,
-                xShape_.GetDim(i), i, indicesShape_.GetDim(i));
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "x", std::to_string(xShape_.GetDim(i)).c_str(),
+                                                 ("The " + std::to_string(i) + " axis of x must be == the " + std::to_string(i) + " axis " + std::to_string(indicesShape_.GetDim(i)) + " of indices").c_str());
         return ge::GRAPH_FAILED;
       }
     }
@@ -249,16 +255,16 @@ inline ge::graphStatus Gatherv2TilingBase::GetAttrsInfoAndCheck() {
 ge::graphStatus Gatherv2TilingBase::GetShapeAttrsInfo() {
   opName_ = context_->GetNodeName();
   OP_CHECK_IF(GetXInfoAndCheck() != ge::GRAPH_SUCCESS,
-                  OP_LOGE(opName_, "input x check failed."),
+                  OP_LOGD(opName_, "input x check failed."),
                   return ge::GRAPH_FAILED);
   OP_CHECK_IF(GetIndicesInfoAndCheck() != ge::GRAPH_SUCCESS,
-                  OP_LOGE(opName_, "input indices check failed."),
+                  OP_LOGD(opName_, "input indices check failed."),
                   return ge::GRAPH_FAILED);
   OP_CHECK_IF(GetAxisInfoAndCheck() != ge::GRAPH_SUCCESS,
-                  OP_LOGE(opName_, "input axis check failed."),
+                  OP_LOGD(opName_, "input axis check failed."),
                   return ge::GRAPH_FAILED);
   OP_CHECK_IF(GetAttrsInfoAndCheck() != ge::GRAPH_SUCCESS,
-                 OP_LOGE(opName_, "input attrs check failed."),
+                 OP_LOGD(opName_, "input attrs check failed."),
                   return ge::GRAPH_FAILED);
   return ge::GRAPH_SUCCESS;
 }

@@ -110,7 +110,8 @@ ge::graphStatus ScatterNdCommonBaseTiling::GetShapeAttrsInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, var);
     auto varShapeSize = var->GetShapeSize();
     OP_CHECK_IF((varShapeSize <= 0),
-            OP_LOGE(opName, "var shape size is invalid(%ld)", varShapeSize),
+            OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(opName, "var", std::to_string(varShapeSize).c_str(),
+                                                                       "The shape size of var must be greater than 0."),
             return ge::GRAPH_FAILED);
     auto varDesc = context_->GetInputDesc(INPUT_IDX_UPDATES);
     OP_CHECK_NULL_WITH_CONTEXT(context_, varDesc);
@@ -118,15 +119,16 @@ ge::graphStatus ScatterNdCommonBaseTiling::GetShapeAttrsInfo()
     varTypeSize_ = ge::GetSizeByDataType(varDtype);
     OP_CHECK_IF(
         varTypeSize_ <= 0,
-        OP_LOGE(context_, "varTypeSize must be greater than 0, varTypeSize: %ld", varTypeSize_),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName, "var", std::to_string(varDtype).c_str(), "The dtype size of var must be greater than 0."),
         return ge::GRAPH_FAILED);
 
     auto indices = context_->GetInputTensor(INPUT_IDX_INDICES);
     OP_CHECK_NULL_WITH_CONTEXT(context_, indices);
     indiceShapeSize_ = indices->GetShapeSize();
     OP_CHECK_IF((indiceShapeSize_ < 0),
-            OP_LOGE(opName,
-            "update shape size is invalid(%ld)", indiceShapeSize_), return ge::GRAPH_FAILED);
+            OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(opName, "indice", std::to_string(indiceShapeSize_).c_str(),
+                                                      "The shape size of indice must be greater than or equal to 0."),
+            return ge::GRAPH_FAILED);
     auto indicesDesc = context_->GetInputDesc(INPUT_IDX_INDICES);
     OP_CHECK_NULL_WITH_CONTEXT(context_, indicesDesc);
     indiceDtype_ = indicesDesc->GetDataType();
@@ -137,24 +139,23 @@ ge::graphStatus ScatterNdCommonBaseTiling::GetShapeAttrsInfo()
     rankSize_ = indiceShape.GetDim(indiceDims - 1);
     OP_CHECK_IF(
         (RANK_MIN_VALUE > static_cast<uint16_t>(rankSize_) || static_cast<uint16_t>(rankSize_) > RANK_MAX_VALUE),
-        OP_LOGE(opName,
-        "rankSize_ %u out of range[1, 7], please check.", rankSize_),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName, "rankSize", std::to_string(rankSize_).c_str(), "The value of rankSize must be greater than or equal to 1 and less than or equal to 7."),
         return ge::GRAPH_FAILED);
     
     auto updates = context_->GetInputTensor(INPUT_IDX_UPDATES);
     OP_CHECK_NULL_WITH_CONTEXT(context_, updates);
     updateShapeSize_ = updates->GetShapeSize();
     OP_CHECK_IF((updateShapeSize_ < 0),
-                    OP_LOGE(opName,
-                    "update shape size is invalid(%ld)", updateShapeSize_), return ge::GRAPH_FAILED);
+                    OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(opName, "updates", std::to_string(updateShapeSize_).c_str(),
+                                                      "The shape size of updates must be greater than or equal to 0."),
+                    return ge::GRAPH_FAILED);
 
     auto updateDesc = context_->GetInputDesc(INPUT_IDX_UPDATES);
     OP_CHECK_NULL_WITH_CONTEXT(context_, updateDesc);
     updateDtype_ = updateDesc->GetDataType();
     OP_CHECK_IF(
             (updateDtype_ != varDtype),
-            OP_LOGE(opName, "updates [%s] and var [%s] must have the same dtype.",
-                                          Ops::Base::ToString(updateDtype_).c_str(), Ops::Base::ToString(varDtype).c_str()),
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName, "updates", std::to_string(updateDtype_).c_str(), "The dtype of updates must be the same as dtype of var."),
           return ge::GRAPH_FAILED);
 
     auto outputShape = context_->GetOutputShape(OUTPUT_IDX_SHAPE);
@@ -162,8 +163,7 @@ ge::graphStatus ScatterNdCommonBaseTiling::GetShapeAttrsInfo()
     auto shapeValue = outputShape->GetStorageShape();
     uint64_t shapeRank = shapeValue.GetDimNum();
     OP_CHECK_IF((shapeRank < rankSize_),
-            OP_LOGE(opName,
-            "shapeRank %lu less than rank %u, please check.", shapeRank, rankSize_), 
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(opName, "var", std::to_string(shapeRank).c_str(), ("The shape dim of var must be greater than or equal to" + std::to_string(rankSize_)).c_str()),
             return ge::GRAPH_FAILED);
 
     for (uint64_t idx = 0; idx < shapeRank; idx++) {

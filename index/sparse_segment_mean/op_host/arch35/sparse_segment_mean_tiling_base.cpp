@@ -76,23 +76,19 @@ ge::graphStatus SparseSegmentMeanBaseTiling::GetXAndYInfoAndCheck() {
     auto xShapeDimNum = xShape.GetDimNum();
     OP_TILING_CHECK(
         xShapeDimNum < 1,
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context_->GetNodeName(), "SparseSegmentMean: input shape dim = %zu, should be greater than or equal to 1",
-            xShapeDimNum),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "x", std::to_string(xShapeDimNum).c_str(), "The shape of x must be greater than or equal to 1."),
         return ge::GRAPH_FAILED);
 
     OP_TILING_CHECK(
         xShape.GetDim(0) <= 0,
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context_->GetNodeName(), "SparseSegmentMean: dim0 of input x is %ld, cannot less than or equal to zero",
-            xShape.GetDim(0)),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "x", std::to_string(xShape.GetDim(0)).c_str(),
+                                                 "The 0 axis of x must be greater than 0."),
         return ge::GRAPH_FAILED);
         
     OP_TILING_CHECK(
         xShape.GetShapeSize() <= 0,
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context_->GetNodeName(), "SparseSegmentMean: input shape size %ld less than or equal to zero failed",
-            xShape.GetShapeSize()),
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "x", std::to_string(xShape.GetShapeSize()).c_str(),
+                                                                       "The shape size of x must be greater than 0."),
         return ge::GRAPH_FAILED);
     inputData.gatherSize = xShape.GetDim(0);
     inputData.innerSize = 1;
@@ -105,9 +101,7 @@ ge::graphStatus SparseSegmentMeanBaseTiling::GetXAndYInfoAndCheck() {
     inputData.inputDtype = inputDesc->GetDataType();
     if (inputData.inputDtype != ge::DataType::DT_FLOAT16 && inputData.inputDtype != ge::DataType::DT_FLOAT &&
         inputData.inputDtype != ge::DataType::DT_BF16) {
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context_->GetNodeName(),
-            "SparseSegmentMean: invalid dtype! The input x dtype only support float16, float32 and bfloat16");
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x", std::to_string(inputData.inputDtype).c_str(), "float16, float32 and bfloat16");
         return ge::GRAPH_FAILED;
     }
 
@@ -115,7 +109,7 @@ ge::graphStatus SparseSegmentMeanBaseTiling::GetXAndYInfoAndCheck() {
     auto outputDesc = context_->GetOutputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputDesc);
     if (outputDesc->GetDataType() != inputData.inputDtype) {
-        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "SparseSegmentMean: input dtype should be same as output");
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "y", std::to_string(outputDesc->GetDataType()).c_str(), "The dtype of y must be the same as dtype of x.");
         return ge::GRAPH_FAILED;
     }
 
@@ -135,16 +129,13 @@ ge::graphStatus SparseSegmentMeanBaseTiling::GetIndicesAndSegmentIdsInfoAndCheck
 
     OP_TILING_CHECK(
         indicesShape.GetDimNum() != 1,
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context_->GetNodeName(), "SparseSegmentMean: indices shape dim = %zu, should be equal to 1",
-            indicesShape.GetDimNum()),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "indices", std::to_string(indicesShape.GetDimNum()).c_str(), "The shape dim of indices must be 1."),
         return ge::GRAPH_FAILED);
 
     OP_TILING_CHECK(
         indicesShape.GetShapeSize() <= 0,
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context_->GetNodeName(), "SparseSegmentMean: indices shape size %ld less than or equal to zero failed",
-            indicesShape.GetShapeSize()),
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "indices", std::to_string(indicesShape.GetShapeSize()).c_str(),
+                                                                       "The shape size of indices must be greater than 0."),
         return ge::GRAPH_FAILED);
     inputData.outterSize = indicesShape.GetShapeSize();
 
@@ -153,9 +144,7 @@ ge::graphStatus SparseSegmentMeanBaseTiling::GetIndicesAndSegmentIdsInfoAndCheck
     inputData.indicesDtype = inputIndicesDesc->GetDataType();
     inputData.indicesBytes = inputData.indicesDtype == ge::DataType::DT_INT32 ? INT32_SIZE : INT64_SIZE;
     if (inputData.indicesDtype != ge::DataType::DT_INT32 && inputData.indicesDtype != ge::DataType::DT_INT64) {
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context_->GetNodeName(), "SparseSegmentMean: indices dtype only support int32, int64, but got [%s].",
-            Ops::Base::ToString(inputData.indicesDtype).c_str());
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "indices", std::to_string(inputData.indicesDtype).c_str(), "int32, int64");
         return ge::GRAPH_FAILED;
     }
 
@@ -164,14 +153,12 @@ ge::graphStatus SparseSegmentMeanBaseTiling::GetIndicesAndSegmentIdsInfoAndCheck
     auto segmentIdsShape = Ops::Base::EnsureNotScalar(inputSegmentIds->GetStorageShape());
     OP_TILING_CHECK(
         indicesShape.GetShapeSize() != segmentIdsShape.GetShapeSize(),
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context_->GetNodeName(), "SparseSegmentMean: indices shape size is not same as segment_ids shape size"),
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "indices", std::to_string(indicesShape.GetShapeSize()).c_str(),
+                                                                       "The shape size of indices must be equal to the shape size of segment_ids."),
         return ge::GRAPH_FAILED);
     OP_TILING_CHECK(
         segmentIdsShape.GetDimNum() != 1,
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context_->GetNodeName(), "SparseSegmentMean: segment_ids shape dim = %zu, should be equal to 1",
-            segmentIdsShape.GetDimNum()),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "segment_ids", std::to_string(segmentIdsShape.GetDimNum()).c_str(), "The shape dim of segment_ids must be 1."),
         return ge::GRAPH_FAILED);
 
     auto inputSegmentIdsDesc = context_->GetInputDesc(INPUT_SEGMENT_IDS);
@@ -179,9 +166,7 @@ ge::graphStatus SparseSegmentMeanBaseTiling::GetIndicesAndSegmentIdsInfoAndCheck
     inputData.segmentIdsDtype = inputSegmentIdsDesc->GetDataType();
     inputData.segmentIdsBytes = inputData.segmentIdsDtype == ge::DataType::DT_INT32 ? INT32_SIZE : INT64_SIZE;
     if (inputData.segmentIdsDtype != ge::DataType::DT_INT32 && inputData.segmentIdsDtype != ge::DataType::DT_INT64) {
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context_->GetNodeName(), "SparseSegmentMean: segment_ids dtype only support int32, int64, but got [%s].",
-            Ops::Base::ToString(inputData.segmentIdsDtype).c_str());
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "segment_ids", std::to_string(inputData.segmentIdsDtype).c_str(), "int32, int64");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -193,11 +178,11 @@ ge::graphStatus SparseSegmentMeanBaseTiling::GetShapeAttrsInfo()
 
     OP_TILING_CHECK(
         GetXAndYInfoAndCheck() != ge::GRAPH_SUCCESS,
-        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "input x and output y check failed."),
+        OP_LOGD(context_->GetNodeName(), "input x and output y check failed."),
         return ge::GRAPH_FAILED);
     OP_TILING_CHECK(
         GetIndicesAndSegmentIdsInfoAndCheck() != ge::GRAPH_SUCCESS,
-        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "input indices and segment_ids check failed."),
+        OP_LOGD(context_->GetNodeName(), "input indices and segment_ids check failed."),
         return ge::GRAPH_FAILED);
 
     PrintInputData();

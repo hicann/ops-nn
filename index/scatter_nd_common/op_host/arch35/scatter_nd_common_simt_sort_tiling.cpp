@@ -179,7 +179,7 @@ ge::graphStatus ScatterNdCommonSimtSortTiling::PostTiling()
     uint32_t usedLocalMemorySize = static_cast<uint32_t>(ubSize_ - DCACHE_SIZE);
     auto res = context_->SetLocalMemorySize(usedLocalMemorySize);
     OP_CHECK_IF((res != ge::GRAPH_SUCCESS),
-        OP_LOGE(context_->GetNodeName(), "SetLocalMemorySize ubSize = %lu failed.", usedLocalMemorySize), return ge::GRAPH_FAILED);
+        OP_LOGD(context_->GetNodeName(), "SetLocalMemorySize ubSize = %lu failed.", usedLocalMemorySize), return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
