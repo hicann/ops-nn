@@ -530,10 +530,11 @@ ge::graphStatus Tiling4EmbeddingDenseGradSimd(gert::TilingContext *context, uint
     OP_CHECK_NULL_WITH_CONTEXT(context, gradTensor);
     const gert::Shape gradShape = gradTensor->GetStorageShape();
     int64_t gradDims = gradShape.GetDimNum();
-    OP_CHECK_IF(gradDims <= 0,
-                    OP_LOGE(context->GetNodeName(),
-                        "GradDim should bigger than 0."),
-                    return ge::GRAPH_FAILED);
+    if (gradDims <= 0) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "grad",
+            (std::to_string(gradDims) + "D").c_str(), "greater than 0");
+        return ge::GRAPH_FAILED;
+    }
 
     auto indicesTensor = context->GetInputShape(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, indicesTensor);
@@ -551,10 +552,12 @@ ge::graphStatus Tiling4EmbeddingDenseGradSimd(gert::TilingContext *context, uint
     for (uint32_t i = 0; i < indicesDims; i++) {
         indicesShapeMuls *= indicesShape.GetDim(i);
     }
-    OP_CHECK_IF(gradShapeMuls != indicesShapeMuls,
-                    OP_LOGE(context->GetNodeName(),
-                        "The dim product of indices shape is not equal to first several dim of grad."),
-                    return ge::GRAPH_FAILED);
+    if (gradShapeMuls != indicesShapeMuls) {
+        std::string sizeMsg = std::to_string(gradShapeMuls) + " and " + std::to_string(indicesShapeMuls);
+        OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(context->GetNodeName(), "grad and indices", sizeMsg.c_str(),
+            "The product of the first (dim-1) axes of grad must equal the total shape size of indices.");
+        return ge::GRAPH_FAILED;
+    }
 
     uint64_t embeddingDim = gradShape.GetDim(gradDims - 1);
     tilingParams.embeddingDim = embeddingDim;
@@ -562,18 +565,23 @@ ge::graphStatus Tiling4EmbeddingDenseGradSimd(gert::TilingContext *context, uint
     auto indicesTensorDesc = context->GetInputDesc(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, indicesTensorDesc);
     auto indicesDataType = indicesTensorDesc->GetDataType();
-    OP_CHECK_IF(indicesTypeMap.count(indicesDataType) == 0,
-                    OP_LOGE(context->GetNodeName(), "Check DataType failed"),
-                    return ge::GRAPH_FAILED);
+    if (indicesTypeMap.count(indicesDataType) == 0) {
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "indices",
+            Ops::Base::ToString(indicesDataType).c_str(), "INT32 or INT64");
+        return ge::GRAPH_FAILED;
+    }
     tilingParams.tilingKey += indicesTypeMap.find(indicesDataType)->second;
     tilingParams.indicesDtypeSize = indicesTypeMap.find(indicesDataType)->second / COMPUTE_INDICE;
 
     auto gradTensorDesc = context->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, gradTensorDesc);
     tilingParams.gradDataType = gradTensorDesc->GetDataType();
-    OP_CHECK_IF(gradTypeMap.count(tilingParams.gradDataType) == 0,
-                    OP_LOGE(context->GetNodeName(), "Check DataType failed"),
-                    return ge::GRAPH_FAILED);
+    if (gradTypeMap.count(tilingParams.gradDataType) == 0) {
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "grad",
+            Ops::Base::ToString(tilingParams.gradDataType).c_str(),
+            "FLOAT, FLOAT16 or BF16");
+        return ge::GRAPH_FAILED;
+    }
     tilingParams.tilingKey += gradTypeMap.find(tilingParams.gradDataType)->second;
     tilingParams.gradDtypeSize = gradTypeByte.find(tilingParams.gradDataType)->second;
 

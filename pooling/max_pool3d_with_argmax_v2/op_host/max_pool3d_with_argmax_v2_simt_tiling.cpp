@@ -93,9 +93,11 @@ ge::graphStatus MaxPool3DWithArgmaxV2TilingSIMT::GetShapeAttrsInfo()
     inputData.data_format = data_format;
     std::transform(inputData.data_format.begin(), inputData.data_format.end(), inputData.data_format.begin(),
                    [](unsigned char c) { return std::tolower(c); });
-    OP_CHECK_IF(!(inputData.data_format == "ndhwc" || inputData.data_format == "ncdhw"),
-             OP_LOGE(context_, "ATTR data_format is %s ,expect [NDHWC] or [NCDHW].", data_format),
-             return ge::GRAPH_FAILED);
+    if (!(inputData.data_format == "ndhwc" || inputData.data_format == "ncdhw")) {
+        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(context_->GetNodeName(), "data_format", data_format,
+            "the value of data_format must be NDHWC or NCDHW");
+        return ge::GRAPH_FAILED;
+    }
     auto inputX = context_->GetInputShape(FIRPOS);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, inputX);
     auto inputShape = EnsureNotScalar(inputX->GetStorageShape());
@@ -109,9 +111,8 @@ ge::graphStatus MaxPool3DWithArgmaxV2TilingSIMT::GetShapeAttrsInfo()
     auto indicesShape = EnsureNotScalar(indicesX->GetStorageShape());
 
     if (inputShape.GetDimNum() != NCDHW_DIMS) {
-        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
-                                        "MaxPool3DWithArgmaxV2: input shape dim = %zu, should be equal 5",
-                                        inputShape.GetDimNum());
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x",
+            (std::to_string(inputShape.GetDimNum()) + "D").c_str(), std::to_string(NCDHW_DIMS).c_str());
         return ge::GRAPH_FAILED;
     }
 
@@ -132,12 +133,15 @@ ge::graphStatus MaxPool3DWithArgmaxV2TilingSIMT::GetShapeAttrsInfo()
     OPS_CHECK_NULL_WITH_CONTEXT(context_, inputDesc);
     dtype = inputDesc->GetDataType();
     if (dtype != ge::DataType::DT_BF16 && dtype != ge::DataType::DT_FLOAT16 && dtype != ge::DataType::DT_FLOAT) {
-        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "MaxPool3DWithArgmaxV2: invalid dtype %s, should be BFloat16、Float16 or Float32", Ops::Base::ToString(dtype).c_str());
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x",
+            ge::TypeUtils::DataTypeToSerialString(dtype).c_str(),
+            "BF16, FLOAT16 or FLOAT");
         return ge::GRAPH_FAILED;
     }
     if (indicesShape != outShape) {
-        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
-                                        "MaxPool3DWithArgmaxV2: indices shape and values shape is different");
+        std::string shapeMsg = Ops::Base::ToString(indicesShape) + " and " + Ops::Base::ToString(outShape);
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "indicesShape and outShape", shapeMsg.c_str(),
+            "The shape of indices must be the same as the shape of out.");
         return ge::GRAPH_FAILED;
     }
     OPS_CHECK_NULL_WITH_CONTEXT(context_, runtimeAttrs);
@@ -158,10 +162,14 @@ ge::graphStatus MaxPool3DWithArgmaxV2TilingSIMT::GetShapeAttrsInfo()
     int32_t padsD = *(padding->GetData());
     int32_t padsH = *(padding->GetData() + H_LOCATION);
     int32_t padsW = *(padding->GetData() + W_LOCATION);
-    OP_CHECK_IF((padsD * DOUB > kSizeD || padsH * DOUB > kSizeH || padsW * DOUB > kSizeW),
-             OP_LOGE(context_, "pad should be smaller than or equal to half of kernel size, pad shape is [%d, %d, %d], kernel shape [%d, %d, %d]",
-             padsD, padsH, padsW, kSizeD, kSizeH, kSizeW),
-             return ge::GRAPH_FAILED);
+    if ((padsD * DOUB > kSizeD || padsH * DOUB > kSizeH || padsW * DOUB > kSizeW)) {
+        std::string attrMsg = "pad {" + std::to_string(padsD) + ", " + std::to_string(padsH) + ", " +
+                              std::to_string(padsW) + "}, ksize {" + std::to_string(kSizeD) + ", " +
+                              std::to_string(kSizeH) + ", " + std::to_string(kSizeW) + "}";
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context_->GetNodeName(), "pads", attrMsg.c_str(),
+            "each value of pads must be less than or equal to half of the corresponding ksize value");
+        return ge::GRAPH_FAILED;
+    }
     inputData.pad = array<uint64_t, DHW_DIMS>{uint64_t(padsD), uint64_t(padsH), uint64_t(padsW)};
     const gert::TypedContinuousVector<int64_t>* dilation = runtimeAttrs->GetListInt(DILATION_POS);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, dilation);

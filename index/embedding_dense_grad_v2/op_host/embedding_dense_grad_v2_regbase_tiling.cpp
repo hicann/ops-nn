@@ -78,16 +78,18 @@ ge::graphStatus EmbeddingDenseGradV2ForRegBase::VerifyIndicesAndPosIdx()
     auto posIdxDtype = posIdxDesc->GetDataType();
 
     indicesDtype_ = indicesDesc->GetDataType();
-    OP_CHECK_IF(
-        (indicesDtype_ != ge::DT_INT32 && indicesDtype_ != ge::DT_INT64) || posIdxDtype != ge::DT_INT32,
-        OP_LOGE(opName_, "Indices dtype only support int32 or int64, and pos idx dtype only support int32."),
-        return ge::GRAPH_FAILED);
+    if ((indicesDtype_ != ge::DT_INT32 && indicesDtype_ != ge::DT_INT64) || posIdxDtype != ge::DT_INT32) {
+        std::string dtypeMsg = ge::TypeUtils::DataTypeToSerialString(indicesDtype_) + " and " +
+                               ge::TypeUtils::DataTypeToSerialString(posIdxDtype);
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(opName_, "indices and pos_idx", dtypeMsg.c_str(),
+            "The dtype of indices must be INT32 or INT64, and the dtype of pos_idx must be INT32");
+        return ge::GRAPH_FAILED;
+    }
     indicesDtypeSize_ = ge::GetSizeByDataType(indicesDtype_);
     OP_CHECK_IF(
         indicesDtypeSize_ <= 0,
-        OP_LOGE(
-            opName_, "Get invalid dtype size. indices dtype [%s], size: %u.",
-            Ops::Base::ToString(indicesDtype_).c_str(), indicesDtypeSize_),
+        OP_LOGE_FOR_INVALID_DTYPE(opName_, "indices",
+            ge::TypeUtils::DataTypeToSerialString(indicesDtype_).c_str(), "non zero"),
         return ge::GRAPH_FAILED);
 
     auto indicesTensor = context_->GetInputShape(EMBEDDING_DENSE_GRAD_IN_INDICES);
@@ -97,12 +99,13 @@ ge::graphStatus EmbeddingDenseGradV2ForRegBase::VerifyIndicesAndPosIdx()
     auto posIdxTensor = context_->GetInputShape(EMBEDDING_DENSE_GRAD_IN_POSIDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, posIdxTensor);
     const gert::Shape& posIdxShape = posIdxTensor->GetStorageShape();
-    OP_CHECK_IF(
-        indicesShape.GetShapeSize() != posIdxShape.GetShapeSize(),
-        OP_LOGE(
-            opName_, "sort indices shape (%s) size is no equal to pos idx shape (%s) size.",
-            Ops::Base::ToString(indicesShape).c_str(), Ops::Base::ToString(posIdxShape).c_str()),
-        return ge::GRAPH_FAILED);
+    if (indicesShape.GetShapeSize() != posIdxShape.GetShapeSize()) {
+        std::string sizeMsg = std::to_string(indicesShape.GetShapeSize()) + " and " +
+                              std::to_string(posIdxShape.GetShapeSize());
+        OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(opName_, "sort indices and pos_idx", sizeMsg.c_str(),
+            "The shape size of sort indices must be equal to the shape size of pos_idx");
+        return ge::GRAPH_FAILED;
+    }
 
     scatterAxis_ = indicesShape.GetShapeSize();
     return ge::GRAPH_SUCCESS;
@@ -119,7 +122,9 @@ ge::graphStatus EmbeddingDenseGradV2ForRegBase::GetShapeAttrsInfo()
     const gert::Shape& gradOutShape = gradOutTensor->GetStorageShape();
     int64_t gradOutDimNum = gradOutShape.GetDimNum();
     OP_CHECK_IF(
-        (gradOutDimNum < DOUBLE), OP_LOGE(opName_, "grad_out dim num (%ld) is invalid.", gradOutDimNum),
+        (gradOutDimNum < DOUBLE),
+        OP_LOGE_FOR_INVALID_SHAPEDIM(opName_, "grad", std::to_string(gradOutDimNum).c_str(),
+            "greater than or equal to 2"),
         return ge::GRAPH_FAILED);
 
     elewiseAxis_ = gradOutShape.GetDim(gradOutDimNum - 1);
@@ -130,9 +135,8 @@ ge::graphStatus EmbeddingDenseGradV2ForRegBase::GetShapeAttrsInfo()
     gradDtypeSize_ = ge::GetSizeByDataType(gradDType_);
     OP_CHECK_IF(
         gradDtypeSize_ <= 0,
-        OP_LOGE(
-            opName_, "Get invalid dtype size. grad dtype [%s], size: %u.", Ops::Base::ToString(gradDType_).c_str(),
-            gradDtypeSize_),
+        OP_LOGE_FOR_INVALID_DTYPE(opName_, "grad",
+            ge::TypeUtils::DataTypeToSerialString(gradDType_).c_str(), "non zero"),
         return ge::GRAPH_FAILED);
 
     if (VerifyIndicesAndPosIdx() != ge::GRAPH_SUCCESS) {
@@ -143,9 +147,12 @@ ge::graphStatus EmbeddingDenseGradV2ForRegBase::GetShapeAttrsInfo()
     for (int64_t i = 0; i < gradOutDimNum - 1; i++) {
         gradScatterShapeSize *= gradOutShape.GetDim(i);
     }
-    OP_CHECK_IF(
-        gradScatterShapeSize != scatterAxis_, OP_LOGE(opName_, "indices shape is not equal to grad scatter dims."),
-        return ge::GRAPH_FAILED);
+    if (gradScatterShapeSize != scatterAxis_) {
+        std::string sizeMsg = std::to_string(scatterAxis_) + " and " + std::to_string(gradScatterShapeSize);
+        OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(opName_, "indices and grad", sizeMsg.c_str(),
+            "The shape size of indices must be equal to the product of the first (dim-1) axes of grad");
+        return ge::GRAPH_FAILED;
+    }
 
     auto attrs = context_->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context_, attrs);
@@ -157,9 +164,13 @@ ge::graphStatus EmbeddingDenseGradV2ForRegBase::GetShapeAttrsInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, gradWeightTensor);
     const gert::Shape& gradWeightShape = gradWeightTensor->GetStorageShape();
     int64_t gradWeightDimNum = gradWeightShape.GetDimNum();
-    OP_CHECK_IF(
-        (gradWeightDimNum != DOUBLE || static_cast<int64_t>(gradWeightShape.GetDim(0)) != numWeights_),
-        OP_LOGE(opName_, "grad_weight shape is invalid."), return ge::GRAPH_FAILED);
+    if (gradWeightDimNum != DOUBLE || static_cast<int64_t>(gradWeightShape.GetDim(0)) != numWeights_) {
+        std::string reasonMsg = "The shape of grad_weight must be {" + std::to_string(numWeights_) +
+                                ", " + std::to_string(elewiseAxis_) + "} with 2 dimensions";
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName_, "grad_weight",
+            Ops::Base::ToString(gradWeightShape).c_str(), reasonMsg.c_str());
+        return ge::GRAPH_FAILED;
+    }
 
     return ge::GRAPH_SUCCESS;
 }

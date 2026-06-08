@@ -68,9 +68,8 @@ ge::graphStatus MaxPool3DWithArgmaxV2BaseTiling::GetShapeAttrsInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputX);
     auto inputShape = EnsureNotScalar(inputX->GetStorageShape());
     if (inputShape.GetDimNum() != NCDHW_DIMS) {
-        OP_LOGE(
-            context_->GetNodeName(), "MaxPool3DWithArgmaxV2: input shape dim = %zu, should be equal 5",
-            inputShape.GetDimNum());
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x", std::to_string(inputShape.GetDimNum()).c_str(),
+            std::to_string(NCDHW_DIMS).c_str());
         return ge::GRAPH_FAILED;
     }
 
@@ -78,7 +77,9 @@ ge::graphStatus MaxPool3DWithArgmaxV2BaseTiling::GetShapeAttrsInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputDesc);
     dtype = inputDesc->GetDataType();
     if (dtype != ge::DataType::DT_BF16 && dtype != ge::DataType::DT_FLOAT16 && dtype != ge::DataType::DT_FLOAT) {
-        OP_LOGE(context_->GetNodeName(), "MaxPool3DWithArgmaxV2: invalid dtype");
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x",
+            ge::TypeUtils::DataTypeToSerialString(dtype).c_str(),
+            "BFLOAT16, FLOAT16 or FLOAT32");
         return ge::GRAPH_FAILED;
     }
 
@@ -90,8 +91,9 @@ ge::graphStatus MaxPool3DWithArgmaxV2BaseTiling::GetShapeAttrsInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, indicesX);
     auto indicesShape = EnsureNotScalar(indicesX->GetStorageShape());
     if (indicesShape != outShape) {
-        OP_LOGE(
-            context_->GetNodeName(), "MaxPool3DWithArgmaxV2: indices shape and values shape are different");
+        std::string shapeMsg = Ops::Base::ToString(indicesShape) + " and " + Ops::Base::ToString(outShape);
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "indicesShape and outShape", shapeMsg.c_str(),
+            "The shape of indices must be the same as the shape of out");
         return ge::GRAPH_FAILED;
     }
 
