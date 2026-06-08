@@ -281,7 +281,8 @@ bool CheckWeightNzShapeValid(const aclTensor* self, const aclTensor* mat2)
 {
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
     auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
-    bool isSupportNpuArch = ((npuArch == NpuArch::DAV_2201) || (npuArch == NpuArch::DAV_3510));
+    bool isSupportNpuArch = ((npuArch == NpuArch::DAV_2201) || (npuArch == NpuArch::DAV_3510) || 
+                             (npuArch == NpuArch::DAV_2002));
     if (!isSupportNpuArch) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID, "Weight NZ is unsupported by the current SOC version [%s].",
