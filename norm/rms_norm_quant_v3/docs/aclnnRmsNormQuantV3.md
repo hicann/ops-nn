@@ -181,7 +181,7 @@ aclnnStatus aclnnRmsNormQuantV3(
       <td>rstd（aclTensor*）</td>
       <td>输出</td>
       <td>表示归一化后的标准差的倒数。对应公式中Rms(x)的倒数。</td>
-      <td><ul><li>不支持空Tensor。</li><li>当outputRstd为True时，shape与入参x的shape前几维保持一致，前几维指x的维度减去gamma的维度，表示不需要norm的维度，rstdOut的-1轴是1。</li><li>当outputRstd为False时，该参数的最终输出无效。</li></ul></td>
+      <td><ul><li>不支持空Tensor。</li><li>当outputRstd为True时，shape与入参x的shape前几维保持一致，前几维指x的维度减去1，表示不需要norm的维度，rstdOut的-1轴是1。</li><li>当outputRstd为False时，该参数的最终输出无效。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>1-8</td>
@@ -243,7 +243,7 @@ aclnnStatus aclnnRmsNormQuantV3(
       <td>当输出yDtype为int32时，y的尾轴大小不等于x的尾轴大小的1/8，并且x的尾轴不能被8整除。</td>
     </tr>  
         <tr>
-      <td>gamma不满足维度数为1-2维，scale不满足维度数为1维。</td>
+      <td>gamma不满足维度数为1-2维，beta(若存在)不满足维度数为1-2维，scale不满足维度数为1维。</td>
     </tr>
     <tr>
       <td rowspan="7">ACLNN_ERR_INNER_TILING_ERROR</td>
@@ -260,13 +260,13 @@ aclnnStatus aclnnRmsNormQuantV3(
       <td>当输出yDtype为int4时，x的尾轴大小不是偶数。</td>
     </tr>
     <tr>
-      <td>gamma、beta(若存在)的shape不是完全相同的shape，或轴长不等于x的尾轴大小，或者类型不相同。</td>
+      <td>gamma、beta(若存在)的尾轴不相同的，或尾轴长不等于x的尾轴大小，或者类型不相同。</td>
     </tr>
     <tr>
-      <td>gamma的维度和x的需要做norm的维度不相同，或rstdOut的维度和x的不需要norm的维度不相同，或rstdOut对应x归一化维度的轴长不为1。</td>
+      <td>rstdOut的维度和x的维度不相同，或rstdOut对应shape与入参x的shape前几维不一致，前几维指x的维度减去1，或rstdOut的尾轴不为1。</td>
     </tr>
     <tr>
-      <td>scale、offsetOptional(若存在)的shape不是完全相同的shape，或轴长不等于1或x的尾轴大小，或者类型不相同。</td>
+      <td>scale、offsetOptional(若存在)的shape不是完全相同的shape，或轴长不等于1或x的尾轴大小，或者类型不满足下列约束说明。</td>
     </tr>
 
   </tbody></table>
