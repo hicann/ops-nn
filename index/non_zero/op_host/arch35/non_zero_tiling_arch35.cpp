@@ -182,7 +182,9 @@ ge::graphStatus NonZeroAscendCTilingImpl::Init(const NonZeroCompileInfo* compile
     vRegSize_ = compileInfo->vRegSize;
     OP_CHECK_IF(
         coreNum_ <= 0 || ubSize_ <= 0 || vRegSize_ <= 0,
-        OP_LOGE(context_->GetNodeName(), "coreNum or ubSize or vRegSize is small than zero"), return ge::GRAPH_FAILED);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "coreNum, ubSize, vRegSize", 
+            (std::to_string(coreNum_) + ", " + std::to_string(ubSize_) + ", " + std::to_string(vRegSize_)).c_str(), 
+            "value must be greater than 0"), return ge::GRAPH_FAILED);
 
     // get attrs: transpose
     auto attrs = context_->GetAttrs();
@@ -201,7 +203,7 @@ ge::graphStatus NonZeroAscendCTilingImpl::Init(const NonZeroCompileInfo* compile
 
     intputDtypeSize_ = GetSizeByDataType(inputDtype_);
     outputDtypeSize_ = GetSizeByDataType(outputDtype_);
-    OP_CHECK_IF(intputDtypeSize_ <= 0, OP_LOGE(context_->GetNodeName(), "dtype size is 0"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(intputDtypeSize_ <= 0, OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "intputDtypeSize", std::to_string(intputDtypeSize_).c_str(), "dtype size must be greater than 0"), return ge::GRAPH_FAILED);
 
     OP_LOGD(context_->GetNodeName(), "Exit NonZeroAscendCTilingImpl init.");
     return ge::GRAPH_SUCCESS;
@@ -350,7 +352,7 @@ ge::graphStatus NonZeroAscendCTilingImpl::CalcQuickDivParams()
     // calc quick div params rk and rm
     for (int64_t i = 0; i < SHAPE_DIM_MAX; i++) {
         uint64_t c = mulInDimRList_[i];
-        OP_CHECK_IF(c <= 0, OP_LOGE(context_->GetNodeName(), "divisor c is small than zero"), return ge::GRAPH_FAILED);
+        OP_CHECK_IF(c <= 0, OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "c", std::to_string(c).c_str(), "divisor c must be greater than 0"), return ge::GRAPH_FAILED);
         quickDivRKList_[i] = std::ceil(std::log2(c));
         quickDivRMList_[i] =
             std::ceil(std::exp2(quickDivRKList_[i] + QUICK_DIV_NUM_32) / c) - std::exp2(QUICK_DIV_NUM_32);
@@ -574,15 +576,15 @@ static ge::graphStatus TilingPrepare4NonZero(gert::TilingParseContext* context)
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->coreNum = ascendcPlatform.GetCoreNumAiv();
     OP_CHECK_IF(
-        (compileInfo->coreNum <= 0), OP_LOGE(context->GetNodeName(), "core num invalid."), return ge::GRAPH_FAILED);
+        (compileInfo->coreNum <= 0), OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "coreNum", std::to_string(compileInfo->coreNum).c_str(), "> 0"), return ge::GRAPH_FAILED);
     uint64_t ubSize = 0;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     compileInfo->ubSize = static_cast<int64_t>(ubSize);
     OP_CHECK_IF(
-        (compileInfo->ubSize <= 0), OP_LOGE(context->GetNodeName(), "ub size invalid."), return ge::GRAPH_FAILED);
+        (compileInfo->ubSize <= 0), OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "ubSize", std::to_string(compileInfo->ubSize).c_str(), "> 0"), return ge::GRAPH_FAILED);
     compileInfo->vRegSize = static_cast<int64_t>(GetVRegSize(context));
     OP_CHECK_IF(
-        (compileInfo->vRegSize <= 0), OP_LOGE(context->GetNodeName(), "vRegSize size invalid."),
+        (compileInfo->vRegSize <= 0), OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "vRegSize", std::to_string(compileInfo->vRegSize).c_str(), "> 0"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }

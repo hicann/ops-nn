@@ -14,6 +14,7 @@
  */
 
 #include "gather_elements_no_contiguous_tiling.h"
+#include "log/log.h"
 #include "platform/platform_info.h"
 #include "gather_elements_tiling.h"
 #include "util/math_util.h"
@@ -48,7 +49,7 @@ ge::graphStatus GatherElementsNoContiguousTiling::GetPlatformInfo()
     auto platformInfo = context_->GetPlatformInfo();
     if (platformInfo == nullptr) {
         auto compileInfoPtr = reinterpret_cast<const GatherElementsCompileInfo *>(context_->GetCompileInfo());
-        OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE(context_, "compile info is null"),
+        OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE_FOR_INVALID_CONFIG_WITH_REASON(opName_, "tiling", "compile_info", "null", "compile info cannot be null"),
             return ge::GRAPH_FAILED);
         coreNum_ = static_cast<int64_t>(compileInfoPtr->core_num);
         ubSize_ = static_cast<int64_t>(compileInfoPtr->ub_size);
@@ -62,9 +63,9 @@ ge::graphStatus GatherElementsNoContiguousTiling::GetPlatformInfo()
         OP_LOGD(opName_, "Get aivNum form ascendcPlatform is: %ld", coreNum_);
     }
     OP_CHECK_IF((coreNum_ <= 0 || ubSize_ <= 0),
-        OP_LOGE(opName_,
-        "coreNum and ubSize should not be samller than 0, but got coreNum [%ld] and ubSize [%ld], please check.",
-        coreNum_, ubSize_), return ge::GRAPH_FAILED);
+        OP_LOGE_FOR_INVALID_VALUE(opName_, "coreNum, ubSize",
+        (std::to_string(coreNum_) + ", " + std::to_string(ubSize_)).c_str(), "> 0"),
+        return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -113,8 +114,9 @@ ge::graphStatus GatherElementsNoContiguousTiling::GetTensorInfo(gert::Shape &sha
     }
     std::string info = isOut ? "output" : "input";
     OP_CHECK_IF(shape.GetDimNum() != stride.GetDimNum(),
-        OP_LOGE(opName_, "shape's dimNum [%lu] should be equal to strid's dimNum [%lu] for [%s] [%lu]", 
-            shape.GetDimNum(), stride.GetDimNum(), info.c_str(), idx),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(opName_, info.c_str(),
+        (std::to_string(shape.GetDimNum()) + ", " + std::to_string(stride.GetDimNum())).c_str(),
+        "shape's dimNum should be equal to stride's dimNum"),
         return ge::GRAPH_FAILED); 
     return ge::GRAPH_SUCCESS;
 }
@@ -134,20 +136,24 @@ ge::graphStatus GatherElementsNoContiguousTiling::GetInAndOutInfo()
     auto xDesc = context_->GetRequiredInputDesc(IN_X_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, xDesc);
     xDtype_ = xDesc->GetDataType();
-    OP_CHECK_IF(ParamTypeIsInvalid(xDtype_), OP_LOGE(opName_,
-        "x dtype should be float,float16,bfloat16,fp8,bool,int8,uint8,int16,uint16,int32,uint32,int64,uint64, but got [%s], please check.",
-        Ops::Base::ToString(xDtype_).c_str()), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ParamTypeIsInvalid(xDtype_), OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName_, "x",
+        Ops::Base::ToString(xDtype_).c_str(),
+        "dtype should be in [DT_FLOAT, DT_FLOAT16, DT_BF16, DT_BOOL, DT_INT8, DT_UINT8, DT_INT16, DT_UINT16, DT_INT32, DT_UINT32, DT_INT64, DT_UINT64, DT_FLOAT8_E5M2, DT_FLOAT8_E8M0, DT_FLOAT8_E4M3FN]"),
+        return ge::GRAPH_FAILED);
     auto indexDesc = context_->GetRequiredInputDesc(IN_INDEX_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, indexDesc);
     indexDtype_ = indexDesc->GetDataType();
     OP_CHECK_IF((indexDtype_ != ge::DataType::DT_INT32) && (indexDtype_ != ge::DataType::DT_INT64),
-        OP_LOGE(opName_, "index dtype should be int32,int64, please check."),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName_, "index",
+        Ops::Base::ToString(indexDtype_).c_str(),
+        "dtype should be in [DT_INT32, DT_INT64]"),
         return ge::GRAPH_FAILED);
     auto yDesc = context_->GetOutputDesc(OUT_Y_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, yDesc);
     auto yDtype = yDesc->GetDataType();
-    OP_CHECK_IF(yDtype != xDtype_, OP_LOGE(opName_,
-        "The input x and output y should have same dtype, please check."),
+    OP_CHECK_IF(yDtype != xDtype_, OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(opName_, "x, y",
+        (Ops::Base::ToString(xDtype_) + ", " + Ops::Base::ToString(yDtype)).c_str(),
+        "x and y should have same dtype"),
         return ge::GRAPH_FAILED);
     GetTensorInfo(xShape_, xStride_, IN_X_IDX, false);
     GetTensorInfo(indexShape_, indexStride_, IN_INDEX_IDX, false);
@@ -155,11 +161,14 @@ ge::graphStatus GatherElementsNoContiguousTiling::GetInAndOutInfo()
     dimSize_ = static_cast<int64_t>(indexShape_.GetDimNum());
 
     OP_CHECK_IF(dimSize_ > MAX_DIM_LEN_EIGHT,
-        OP_LOGE(opName_, "dimSize should not larger than 8, got %ld.", dimSize_),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(opName_, "index",
+        std::to_string(dimSize_).c_str(), "dimSize should not larger than 8"),
         return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(yShape_ != indexShape_,
-        OP_LOGE(opName_, "The input index and output y should have same shape."),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(opName_, "index, y",
+        (Ops::Base::ToString(indexShape_) + ", " + Ops::Base::ToString(yShape_)).c_str(),
+        "index and y should have same shape"),
         return ge::GRAPH_FAILED);
 
     // 非连续场景要用size*stride去判断
@@ -170,11 +179,11 @@ ge::graphStatus GatherElementsNoContiguousTiling::GetInAndOutInfo()
     ySize_ = indexShape_.GetShapeSize();
     xDtypeSize_ = ge::GetSizeByDataType(xDtype_);
     OP_CHECK_IF((xDtypeSize_ == -1),
-        OP_LOGE(opName_, "get xDtypeSize fail"),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName_, "x", Ops::Base::ToString(xDtype_).c_str(), "failed to get dtype size, dtype may be unsupported"),
         return ge::GRAPH_FAILED);
         indexDtypeSize_ = ge::GetSizeByDataType(indexDtype_);
     OP_CHECK_IF((indexDtypeSize_ == -1),
-        OP_LOGE(opName_, "get indexDtypeSize fail"),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName_, "index", Ops::Base::ToString(indexDtype_).c_str(), "failed to get dtype size, dtype may be unsupported"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -213,8 +222,9 @@ inline ge::graphStatus GatherElementsNoContiguousTiling::GetAttrInfo()
 
     auto axisVal = static_cast<int64_t>(*axis);
     OP_CHECK_IF(axisVal < -dimSize_ || axisVal >= dimSize_,
-        OP_LOGE(opName_, "axis value should between with [%ld, %ld], but got %ld.", -dimSize_,
-        dimSize_ - 1, axisVal),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "axis",
+        std::to_string(axisVal).c_str(),
+        "axis value should be in range [-dimSize, dimSize-1]"),
         return ge::GRAPH_FAILED);
 
     axis_ = axisVal < 0 ? axisVal + dimSize_ : axisVal;
@@ -223,8 +233,9 @@ inline ge::graphStatus GatherElementsNoContiguousTiling::GetAttrInfo()
             continue;
         }
         OP_CHECK_IF(xShape_.GetDim(i) < indexShape_.GetDim(i),
-            OP_LOGE(opName_,
-            "x should larger than or equal to index of each dim value, except axis."),
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(opName_, "x, index",
+            (std::to_string(xShape_.GetDim(i)) + ", " + std::to_string(indexShape_.GetDim(i))).c_str(),
+            "x should larger than or equal to index of each dim value, except axis"),
             return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;

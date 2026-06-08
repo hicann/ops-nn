@@ -15,6 +15,7 @@
  #include "unsorted_segment_sum_tiling_arch35.h"
  #include "unsorted_segment_sum_tiling.h"
  #include "util/platform_util.h"
+ #include "log/log.h"
 
 
  namespace optiling {
@@ -353,10 +354,10 @@
 
  static ge::graphStatus CalcNeededCoreNum(const gert::TilingContext* context, const CommParas& commParas,
                                           const int32_t& ids_size, const int32_t& core_num, int32_t& need_core_num) {
-   OP_CHECK_IF(
-       core_num == 0,
-       OP_LOGE(context->GetNodeName(), "CalcNeededCoreNum check param failed, core_num is 0"),
-       return ge::GRAPH_FAILED);
+OP_CHECK_IF(
+        core_num == 0,
+        OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "core_num", "0", "> 0"),
+        return ge::GRAPH_FAILED);
    int32_t ele_num = ids_size / core_num;
 
    if (commParas.num_segments > 1) {
@@ -385,21 +386,20 @@
  static ge::graphStatus CalcNeededCoreByNumSegments(const gert::TilingContext* context,
                                                     const CommParas4UbSizeNoAtomic comm_ub_size_params,
                                                     const int32_t& core_num, int32_t& need_core_num) {
-   OP_CHECK_IF(core_num == 0,
-                   OP_LOGE(context->GetNodeName(),
-                                                   "CalcNeededCoreByNumSegments check param failed, core_num is 0"),
-                   return ge::GRAPH_FAILED);
+OP_CHECK_IF(core_num == 0,
+                    OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "core_num", "0", "> 0"),
+                    return ge::GRAPH_FAILED);
    int32_t ele_num = comm_ub_size_params.num_segments / core_num;
 
    if (comm_ub_size_params.num_segments == 1) {
      if (comm_ub_size_params.e_size <= comm_ub_size_params.output_ub_ele_num_one_row) {
        need_core_num = 1;
      } else {
-       OP_CHECK_IF(
-           comm_ub_size_params.output_ub_ele_num_one_row == 0,
-           OP_LOGE(
-               context->GetNodeName(), "CalcNeededCoreByNumSegments check param failed, output_ub_ele_num_one_row is 0"),
-           return ge::GRAPH_FAILED);
+OP_CHECK_IF(
+             comm_ub_size_params.output_ub_ele_num_one_row == 0,
+             OP_LOGE_FOR_INVALID_VALUE(
+                 context->GetNodeName(), "output_ub_ele_num_one_row", "0", ">0"),
+             return ge::GRAPH_FAILED);
        int32_t core_one = comm_ub_size_params.e_size / comm_ub_size_params.output_ub_ele_num_one_row;
        if (core_one >= core_num) {
          need_core_num = core_num;
@@ -2225,34 +2225,36 @@
    OP_LOGI(context->GetNodeName(), "Tiling4SegmentSumComm running.");
 
    auto input_data_shape = context->GetInputShape(INPUT_DATA_IDX);
-   OP_CHECK_IF(input_data_shape == nullptr,
-                   OP_LOGE(context->GetNodeName(), "get input_data_shape failed."),
-                   return ge::GRAPH_FAILED);
+OP_CHECK_IF(input_data_shape == nullptr,
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "data", "null", "input shape cannot be null"),
+                    return ge::GRAPH_FAILED);
    const gert::Shape& input_data_shape_sizes = Ops::Base::EnsureNotScalar(input_data_shape->GetStorageShape());
 
    auto input_segment_ids_shape = context->GetInputShape(INPUT_SEGMENT_IDS_IDX);
-   OP_CHECK_IF(input_segment_ids_shape == nullptr,
-                   OP_LOGE(context->GetNodeName(), "get input_segment_ids_shape failed."),
-                   return ge::GRAPH_FAILED);
+OP_CHECK_IF(input_segment_ids_shape == nullptr,
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "segment_ids", "null", "input shape cannot be null"),
+                    return ge::GRAPH_FAILED);
    const gert::Shape& input_segment_ids_shape_sizes = Ops::Base::EnsureNotScalar(input_segment_ids_shape->GetStorageShape());
 
    const int32_t input_size = input_data_shape_sizes.GetShapeSize();
    const int32_t ids_size = input_segment_ids_shape_sizes.GetShapeSize();
    OP_LOGI(context->GetNodeName(), "input_size=%d, ids_size=%d", input_size, ids_size);
-   OP_CHECK_IF(input_size < ids_size,
-                   OP_LOGE(context->GetNodeName(),
-                                                   "dim of input must be greater than or equal with dim of ids"),
-                   return ge::GRAPH_FAILED);
+OP_CHECK_IF(input_size < ids_size,
+                    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                        context->GetNodeName(), "input, segment_ids",
+                        "input_size, ids_size",
+                        "input shape size must be >= segment_ids shape size"),
+                    return ge::GRAPH_FAILED);
 
    for (size_t i = 0; i < input_segment_ids_shape_sizes.GetDimNum(); i++) {
      OP_LOGD(context->GetNodeName(), "input_segment_ids_shape_sizes[%zu] is %ld", i,
              input_segment_ids_shape_sizes.GetDim(i));
-     OP_CHECK_IF(input_data_shape_sizes.GetDim(i) != input_segment_ids_shape_sizes.GetDim(i),
-                     OP_LOGE(
-                         context->GetNodeName(),
-                         "front shape of input must be equal with ids shape, but input_data_shape_sizes[%ld] is %ld.", i,
-                         input_data_shape_sizes.GetDim(i)),
-                     return ge::GRAPH_FAILED);
+OP_CHECK_IF(input_data_shape_sizes.GetDim(i) != input_segment_ids_shape_sizes.GetDim(i),
+                      OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                          context->GetNodeName(), "input, segment_ids",
+                          "input_shape[i], ids_shape[i]",
+                          "front shape of input must match segment_ids shape"),
+                      return ge::GRAPH_FAILED);
    }
 
    if (input_size == 0 || ids_size == 0) {
@@ -2263,22 +2265,23 @@
    OP_LOGD(context->GetNodeName(), " e_size is %d", e_size);
 
    auto input_data_dec_ptr = context->GetInputDesc(INPUT_DATA_IDX);
-   OP_CHECK_IF(input_data_dec_ptr == nullptr,
-                   OP_LOGE(context->GetNodeName(), "get input_data_dec_ptr failed."),
-                   return ge::GRAPH_FAILED);
+OP_CHECK_IF(input_data_dec_ptr == nullptr,
+                    OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context->GetNodeName(), "data", "null", "input desc cannot be null"),
+                    return ge::GRAPH_FAILED);
    const ge::DataType input_dtype = input_data_dec_ptr->GetDataType();
 
    auto segment_ids_dec_ptr = context->GetInputDesc(INPUT_SEGMENT_IDS_IDX);
-   OP_CHECK_IF(segment_ids_dec_ptr == nullptr,
-                   OP_LOGE(context->GetNodeName(), "get segment_ids_dec_ptr failed."),
-                   return ge::GRAPH_FAILED);
+OP_CHECK_IF(segment_ids_dec_ptr == nullptr,
+                    OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context->GetNodeName(), "segment_ids", "null", "input desc cannot be null"),
+                    return ge::GRAPH_FAILED);
    const ge::DataType ids_dtype = segment_ids_dec_ptr->GetDataType();
 
    // get input dtype
    EleByte input_ele_byte = FP32_BYTE;
-   OP_CHECK_IF(!GetEleDtype(input_dtype, input_ele_byte),
-                   OP_LOGE(context->GetNodeName(), "get input_ele_byte failed."),
-                   return ge::GRAPH_FAILED);
+OP_CHECK_IF(!GetEleDtype(input_dtype, input_ele_byte),
+                    OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context->GetNodeName(), "input",
+                        Ops::Base::ToString(input_dtype).c_str(), "failed to get dtype size, dtype may be unsupported"),
+                    return ge::GRAPH_FAILED);
 
    EleByte output_ele_byte = input_ele_byte;
    int32_t output_ub_ele_num_one_row = BYTE_BLOCK / output_ele_byte;
@@ -2286,9 +2289,10 @@
 
    // get ids dtype
    EleByte ids_ele_byte = FP32_BYTE;
-   OP_CHECK_IF(!GetEleDtype(ids_dtype, ids_ele_byte),
-                   OP_LOGE(context->GetNodeName(), "get ids_ele_byte failed."),
-                   return ge::GRAPH_FAILED);
+OP_CHECK_IF(!GetEleDtype(ids_dtype, ids_ele_byte),
+                    OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context->GetNodeName(), "segment_ids",
+                        Ops::Base::ToString(ids_dtype).c_str(), "failed to get dtype size, dtype may be unsupported"),
+                    return ge::GRAPH_FAILED);
 
    if (input_dtype == ge::DT_FLOAT) {
      if (CalcTiling4Float(context, e_size, num_segments, input_size, ids_size, output_ub_ele_num_one_row, input_ele_byte,
@@ -2317,9 +2321,9 @@
    OP_CHECK_IF(!Ops::Base::GetConstInt(context, INPUT_NUM_SEGMENTS_IDX, num_segments),
                    OP_LOGE(context->GetNodeName(), "num_segments not exists."),
                    return ge::GRAPH_FAILED);
-   OP_CHECK_IF(num_segments <= 0,
-                   OP_LOGE(context->GetNodeName(), "num_segments is small than 0."),
-                   return ge::GRAPH_FAILED);
+OP_CHECK_IF(num_segments <= 0,
+                    OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "num_segments", std::to_string(num_segments).c_str(), "> 0"),
+                    return ge::GRAPH_FAILED);
    OP_LOGD(context->GetNodeName(), "num_segments=%d", num_segments);
 
    return Tiling4SegmentSumComm(context, num_segments);
@@ -2352,14 +2356,14 @@
    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
    compile_info->core_num = ascendcPlatform.GetCoreNumAiv();
    compile_info->max_thread = Ops::Base::GetSimtMaxThreadNum<gert::TilingParseContext>(context);
-   OP_CHECK_IF((compile_info->core_num <= 0),
-                    OP_LOGE(context->GetNodeName(),
-                    "The core num is invaild."),
-                    return ge::GRAPH_FAILED);
-   OP_CHECK_IF((compile_info->max_thread <= 0),
-                    OP_LOGE(context->GetNodeName(),
-                    "The max thread from platform is invaild."),
-                    return ge::GRAPH_FAILED);
+OP_CHECK_IF((compile_info->core_num <= 0),
+                      OP_LOGE_FOR_INVALID_VALUE(
+                          context->GetNodeName(), "core_num", std::to_string(compile_info->core_num).c_str(), ">0"),
+                      return ge::GRAPH_FAILED);
+OP_CHECK_IF((compile_info->max_thread <= 0),
+                      OP_LOGE_FOR_INVALID_VALUE(
+                          context->GetNodeName(), "max_thread", std::to_string(compile_info->max_thread).c_str(), ">0"),
+                      return ge::GRAPH_FAILED);
    return ge::GRAPH_SUCCESS;
  }
 

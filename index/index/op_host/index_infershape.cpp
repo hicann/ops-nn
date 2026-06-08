@@ -14,6 +14,7 @@
  */
 #include <vector>
 #include <algorithm>
+#include <string>
 #include "log/log.h"
 #include "graph/utils/type_utils.h"
 #include "runtime/infer_shape_context.h"
@@ -48,12 +49,13 @@ static graphStatus CanBroadcast(const string& name, const vector<vector<int64_t>
             if (dim_index >= 0) {
                 int64_t dim = shape[dim_index];
                 if (dim <= 0) {
-                    OP_LOGE(name, "Shape dimensions must be positive integers.");
+                    OP_LOGE_FOR_INVALID_VALUE(name, "dim", std::to_string(dim).c_str(), "> 0");
                     return GRAPH_FAILED;
                 }
                 // 检查维度兼容性：要么相等，要么其中一个为1
                 if (current_dim != 1 && dim != 1 && current_dim != dim) {
-                    OP_LOGE(name, "Shapes cannot be broadcast, incompatible dimensions.");
+                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(name, "dim", std::to_string(dim).c_str(), 
+                        ("cannot broadcast with current_dim " + std::to_string(current_dim) + ", incompatible dimensions").c_str());
                     return GRAPH_FAILED;
                 }
                 current_dim = max(current_dim, dim);

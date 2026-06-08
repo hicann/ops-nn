@@ -21,6 +21,7 @@
 #include "util/math_util.h"
 #include "unsorted_segment_sum_tiling_arch35.h"
 #include "unsorted_segment_sum_tiling.h"
+#include "log/log.h"
 
 using namespace AscendC;
 using namespace ge;
@@ -143,11 +144,17 @@ ge::graphStatus UnsortedSegmentSumBaseTiling::CheckInputDtype()
     auto indexTypeIter = indexTypeMap.find(segmentIdsDtypePtr->GetDataType());
     OP_CHECK_IF(
         dataTypeIter == dataTypeMap.end(),
-        OP_LOGE(context_->GetNodeName(), "Not support data's type!"),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            context_->GetNodeName(), "data", 
+            Ops::Base::ToString(dataDtypePtr->GetDataType()).c_str(),
+            "supported dtype list is [DT_FLOAT, DT_FLOAT16, DT_BF16, DT_INT32, DT_INT64, DT_UINT32, DT_UINT64]"),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         indexTypeIter == indexTypeMap.end(),
-        OP_LOGE(context_->GetNodeName(), "Not support segment_ids's type"),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            context_->GetNodeName(), "segment_ids",
+            Ops::Base::ToString(segmentIdsDtypePtr->GetDataType()).c_str(),
+            "supported dtype list is [DT_INT32, DT_INT64]"),
         return ge::GRAPH_FAILED);
 
     dataType_ = dataDtypePtr->GetDataType();
@@ -156,10 +163,10 @@ ge::graphStatus UnsortedSegmentSumBaseTiling::CheckInputDtype()
     valueTypeBytes_ = ge::GetSizeByDataType(dataType_);
     idTypeBytes_ = ge::GetSizeByDataType(idType_);
     OP_CHECK_IF(
-        valueTypeBytes_ <= 0UL, OP_LOGE(context_->GetNodeName(), "get dataType size fail."),
+        valueTypeBytes_ <= 0UL, OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "data", Ops::Base::ToString(dataType_).c_str(), "failed to get dtype size, dtype may be unsupported"),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(
-        idTypeBytes_ <= 0UL, OP_LOGE(context_->GetNodeName(), "get idType size fail."),
+        idTypeBytes_ <= 0UL, OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "segment_ids", Ops::Base::ToString(idType_).c_str(), "failed to get dtype size, dtype may be unsupported"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -168,7 +175,11 @@ ge::graphStatus UnsortedSegmentSumBaseTiling::GetShapeAttrsInfo()
 {
     OP_CHECK_IF(
         CheckInputDtype() != ge::GRAPH_SUCCESS,
-        OP_LOGE(context_->GetNodeName(), "input dtype check failed."), return ge::GRAPH_FAILED);
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            context_->GetNodeName(), "data, segment_ids",
+            "data_dtype, segment_ids_dtype",
+            "dtype combination not supported"),
+        return ge::GRAPH_FAILED);
 
     auto dataShapePtr = context_->GetInputShape(INPUT_DATA_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, dataShapePtr);
@@ -188,13 +199,17 @@ ge::graphStatus UnsortedSegmentSumBaseTiling::GetShapeAttrsInfo()
 
     OP_CHECK_IF(
         numSegmentsShape.GetDimNum() != 1,
-        OP_LOGE(context_->GetNodeName(), "Num_segments should be one dim shape!"),
+        OP_LOGE_FOR_INVALID_SHAPEDIM(
+            context_->GetNodeName(), "num_segments",
+            std::to_string(numSegmentsShape.GetDimNum()).c_str(), "1"),
         return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(
         !ShapeStartsWith(dataShape, segmentIdsShape),
-        OP_LOGE(
-            context_->GetNodeName(), "Data.shape does not start with segment_ids.shape"),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context_->GetNodeName(), "data, segment_ids",
+            "data_shape, segment_ids_shape",
+            "data.shape must start with segment_ids.shape"),
         return ge::GRAPH_FAILED);
 
     std::tie(inputOuterDim_, innerDim_) = FlatInput(dataShape, segmentIdsShape);
@@ -202,7 +217,10 @@ ge::graphStatus UnsortedSegmentSumBaseTiling::GetShapeAttrsInfo()
     uint64_t bound = static_cast<int64_t>(1ULL << 48);
     OP_CHECK_IF(
         inputOuterDim_ > bound,
-        OP_LOGE(context_->GetNodeName(), "InputOuterDim out of 2^48!"),
+        OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(
+            context_->GetNodeName(), "inputOuterDim",
+            std::to_string(inputOuterDim_).c_str(),
+            "value must be in range (0, 2^48)"),
         return ge::GRAPH_FAILED);
 
     dataShapeSize_ = dataShape.GetShapeSize();

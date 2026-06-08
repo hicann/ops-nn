@@ -14,6 +14,7 @@
  * \brief Non-continuous tiling implementation for Index/IndexPutV2 operators
  */
 
+#include <string>
 #include <string_view>
 #include "log/log.h"
 #include "op_common/op_host/util/const_util.h"
@@ -143,8 +144,8 @@ ge::graphStatus IndexNonContinuousTiling::GetTensorInfo(gert::Shape &shape, gert
     }
     std::string info = isOut ? "output" : "input";
     OP_CHECK_IF(shape.GetDimNum() != stride.GetDimNum(),
-        OP_LOGE(context_->GetNodeName(), "shape's dimNum [%lu] should be equal to strid's dimNum [%lu] for [%s] [%lu]", 
-        shape.GetDimNum(), stride.GetDimNum(), info.c_str(), idx),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), info.c_str(), std::to_string(shape.GetDimNum()).c_str(), 
+            ("should be equal to stride's dimNum " + std::to_string(stride.GetDimNum())).c_str()),
         return ge::GRAPH_FAILED); 
     return ge::GRAPH_SUCCESS;
 }
@@ -386,9 +387,10 @@ ge::graphStatus IndexNonContinuousTiling::GetShapeAttrsInfo() {
     auto xDesc = context_->GetRequiredInputDesc(IN_X_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, xDesc);
     xDtype_ = xDesc->GetDataType();
-    OP_CHECK_IF(ParamTypeIsInvalid(xDtype_), OP_LOGE(context_->GetNodeName(),
-        "x dtype should be float,float16,bfloat16,bool,int8,uint8,int32,int64, but got [%s], please check.",
-        Ops::Base::ToString(xDtype_).c_str()), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(ParamTypeIsInvalid(xDtype_), OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(),
+        "x", Ops::Base::ToString(xDtype_).c_str(), 
+        "should be in [DT_FLOAT, DT_FLOAT16, DT_BF16, DT_BOOL, DT_INT8, DT_UINT8, DT_INT32, DT_INT64]"),
+        return ge::GRAPH_FAILED);
     const std::set<ge::DataType> supportedIndexDtypes = {ge::DT_INT32, ge::DT_INT64};
     auto computeNodeInfo = context_->GetComputeNodeInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context_, computeNodeInfo);
@@ -401,16 +403,17 @@ ge::graphStatus IndexNonContinuousTiling::GetShapeAttrsInfo() {
         OP_CHECK_NULL_WITH_CONTEXT(context_, indexDesc);
         ge::DataType curIndexDtype = indexDesc->GetDataType();
         OP_CHECK_IF(
-            supportedIndexDtypes.count(curIndexDtype) == 0, OP_LOGE(context_->GetNodeName(),
-            "index dtype should be int32/int64."),
+            supportedIndexDtypes.count(curIndexDtype) == 0, OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(),
+            "index", Ops::Base::ToString(curIndexDtype).c_str(), "should be in [DT_INT32, DT_INT64]"),
             return ge::GRAPH_FAILED;
         );
     }
     auto yDesc = context_->GetOutputDesc(OUT_Y_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, yDesc);
     auto yDtype = yDesc->GetDataType();
-    OP_CHECK_IF(yDtype != xDtype_, OP_LOGE(context_->GetNodeName(),
-        "The input x and output y should have same dtype, please check."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(yDtype != xDtype_, OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(),
+        "x, y", (Ops::Base::ToString(xDtype_) + ", " + Ops::Base::ToString(yDtype)).c_str(),
+        "should have same dtype"), return ge::GRAPH_FAILED);
 
     GetTensorInfo(xShape_, xStride_, IN_X_IDX, false);
     inputDimNum_ = xShape_.GetDimNum();

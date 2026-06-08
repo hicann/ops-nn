@@ -52,9 +52,11 @@ static graphStatus InferShape4UnsortedSegment(gert::InferShapeContext* context) 
   gert::Shape *output_shape = context->GetOutputShape(0);
   OP_CHECK_NULL_WITH_CONTEXT(context, output_shape);
 
-  OP_CHECK_IF(num_segments_tensor->GetShapeSize() > 1,
-           OP_LOGE(context->GetNodeName(), "The size of num_segments must be 1!"),
-           return ge::GRAPH_FAILED);
+OP_CHECK_IF(num_segments_tensor->GetShapeSize() > 1,
+            OP_LOGE_FOR_INVALID_LISTSIZE(
+                context->GetNodeName(), "num_segments",
+                std::to_string(num_segments_tensor->GetShapeSize()).c_str(), "1"),
+            return ge::GRAPH_FAILED);
 
   // dynamic shape is -2
   if (IsUnknownRank(*x_shape)) {

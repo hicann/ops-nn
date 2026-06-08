@@ -13,6 +13,7 @@
  */
 
 #include "util/platform_util.h"
+#include "log/log.h"
 #include "op_host/tiling_util.h"
 #include "index_put_with_sort_v2_tiling_arch35.h"
 #include "index/index_put_with_sort_v2/op_kernel/arch35/index_put_with_sort_v2_struct.h"
@@ -50,8 +51,8 @@ ge::graphStatus IndexPutWithSortV2Tiling::CheckShapeAllPositive(gert::Shape& sha
     for (size_t i = 0; i < shape.GetDimNum(); i++) {
         OP_CHECK_IF(
             shape.GetDim(i) <= 0,
-            OP_LOGE(context_->GetNodeName(),
-                                            "Dim %lu of input should be positive, but actual %ld.", i, shape.GetDim(i)),
+            OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "input",
+                                            std::to_string(shape.GetDim(i)).c_str(), "dimension value must be greater than 0"),
             return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
@@ -61,15 +62,15 @@ ge::graphStatus IndexPutWithSortV2Tiling::CheckShapesEqual(gert::Shape& shape0, 
 {
     OP_CHECK_IF(
         shape0.GetDimNum() != shape1.GetDimNum(),
-        OP_LOGE(context_->GetNodeName(), "DimNum of shapes are not equal: %lu vs %lu",
-                                        shape0.GetDimNum(), shape1.GetDimNum()),
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "shape0, shape1",
+                                        std::to_string(shape0.GetDimNum()).c_str(), "dimNum of both parameters must be equal"),
         return ge::GRAPH_FAILED);
 
     for (size_t i = 0; i < shape0.GetDimNum(); i++) {
         OP_CHECK_IF(
             shape0.GetDim(i) != shape1.GetDim(i),
-            OP_LOGE(context_->GetNodeName(), "Dim %lu of shapes are not equal: %ld vs %ld", i,
-                                            shape0.GetDim(i), shape1.GetDim(i)),
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "shape0, shape1",
+                                            std::to_string(shape0.GetDim(i)).c_str(), "dimension values must be equal"),
             return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
@@ -82,7 +83,8 @@ ge::graphStatus IndexPutWithSortV2Tiling::CheckInputsShape()
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputShape);
     auto storageShape0 = inputShape->GetStorageShape();
     if (CheckShapeAllPositive(storageShape0) != ge::GRAPH_SUCCESS) {
-       OP_LOGE(context_->GetNodeName(), "self shape contains zero.");
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "self", "0",
+                                                   "all dimension values of shape must be greater than 0");
         return ge::GRAPH_FAILED;
     }
     auto inputXDesc = context_->GetInputDesc(INPUT_INDEX_0);
@@ -95,7 +97,8 @@ ge::graphStatus IndexPutWithSortV2Tiling::CheckInputsShape()
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputShape);
     auto storageShape1 = inputShape->GetStorageShape();
     if (CheckShapeAllPositive(storageShape1) != ge::GRAPH_SUCCESS) {
-        OP_LOGE(context_->GetNodeName(), "linear_index shape contains zero.");
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "linear_index", "0",
+                                                   "all dimension values of shape must be greater than 0");
         return ge::GRAPH_FAILED;
     }
     indexedDimSize_ = storageShape1.GetShapeSize();
@@ -109,13 +112,16 @@ ge::graphStatus IndexPutWithSortV2Tiling::CheckInputsShape()
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputShape);
     auto storageShape2 = inputShape->GetStorageShape();
     if (CheckShapeAllPositive(storageShape2) != ge::GRAPH_SUCCESS) {
-        OP_LOGE(context_->GetNodeName(), "pos_idx shape contains zero.");
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "pos_idx", "0",
+                                                   "all dimension values of shape must be greater than 0");
         return ge::GRAPH_FAILED;
     }
 
     // check shapes of input1 and input2 are equal
     if (CheckShapesEqual(storageShape1, storageShape2) != ge::GRAPH_SUCCESS) {
-        OP_LOGE(context_->GetNodeName(), "Shapes of linear_index and pos_idx are not equal.");
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "linear_index, pos_idx",
+                                               "linear_index_shape, pos_idx_shape",
+                                               "shapes of both parameters must be equal");
         return ge::GRAPH_FAILED;
     }
 
@@ -124,7 +130,8 @@ ge::graphStatus IndexPutWithSortV2Tiling::CheckInputsShape()
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputShape);
     auto storageShape3 = inputShape->GetStorageShape();
     if (CheckShapeAllPositive(storageShape3) != ge::GRAPH_SUCCESS) {
-        OP_LOGE(context_->GetNodeName(), "values shape contains zero.");
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "values", "0",
+                                                   "all dimension values of shape must be greater than 0");
         return ge::GRAPH_FAILED;
     }
 
@@ -162,7 +169,8 @@ ge::graphStatus IndexPutWithSortV2Tiling::GetShapeAttrsInfo()
 
     // check inputs shape
     if (CheckInputsShape() != ge::GRAPH_SUCCESS) {
-        OP_LOGE(context_->GetNodeName(), "Inputs shape invalid.");
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "inputs", "inputs_shape",
+                                               "input shape is invalid");
         return ge::GRAPH_FAILED;
     }
     auto attrs = context_->GetAttrs();
@@ -398,7 +406,9 @@ ge::graphStatus IndexPutWithSortV2Tiling::DoOpTiling()
     CalcNonIndexedStride(selfStride, valueStride);
     CalcThreadNum();
     if (indexedThreadNum_ <= 0 || nonIndexedThreadNum_ <= 0) {
-        OP_LOGE(context_->GetNodeName(), "ThreadNum result less than zero.");
+        OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "ThreadNum",
+                                  (std::to_string(indexedThreadNum_) + ", " + std::to_string(nonIndexedThreadNum_)).c_str(),
+                                  "> 0");
         return ge::GRAPH_FAILED;
     }
     SetTilingData();

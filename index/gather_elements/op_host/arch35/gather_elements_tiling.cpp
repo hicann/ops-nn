@@ -13,6 +13,7 @@
  * \brief
  */
 #include "gather_elements_tiling.h"
+#include "log/log.h"
 #include "gather_elements_tiling_arch35.h"
 #include "register/op_def_registry.h"
 #include "tiling/tiling_api.h"
@@ -87,13 +88,15 @@ ge::graphStatus TilingPrepareGatherElementsForAscendC(gert::TilingParseContext *
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->core_num = ascendcPlatform.GetCoreNumAiv();
     OP_CHECK_IF((compileInfo->core_num <= 0),
-                    OP_LOGE(context->GetNodeName(), "Failed to core num."),
+                    OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "core_num",
+                    std::to_string(compileInfo->core_num).c_str(), "> 0"),
                     return ge::GRAPH_FAILED);
     uint64_t ubSize;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     compileInfo->ub_size = static_cast<int64_t>(ubSize);
     OP_CHECK_IF((compileInfo->ub_size <= 0),
-                    OP_LOGE(context->GetNodeName(), "Failed to get ub size."),
+                    OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "ub_size",
+                    std::to_string(compileInfo->ub_size).c_str(), "> 0"),
                     return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
