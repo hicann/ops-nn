@@ -31,32 +31,32 @@
 
 namespace optiling {
 BEGIN_TILING_DATA_DEF(GroupNormGradTilingData)
-TILING_DATA_FIELD_DEF(uint32_t, Tiling_key);               // 0
-TILING_DATA_FIELD_DEF(uint32_t, N);                        // 1
-TILING_DATA_FIELD_DEF(uint32_t, C);                        // 2
-TILING_DATA_FIELD_DEF(uint32_t, HXW);                      // 3
-TILING_DATA_FIELD_DEF(uint32_t, G);                        // 4
-TILING_DATA_FIELD_DEF(uint32_t, NXG);                      // 5
-TILING_DATA_FIELD_DEF(uint32_t, C_G);                      // 6
-TILING_DATA_FIELD_DEF(uint32_t, task_num_per_core);        // 7
-TILING_DATA_FIELD_DEF(uint32_t, task_num_per_tail_core);   // 8
-TILING_DATA_FIELD_DEF(uint32_t, tail_core);                // 9
-TILING_DATA_FIELD_DEF(uint32_t, mode1_ub_cap_C_num);       // 10
-TILING_DATA_FIELD_DEF(uint32_t, mode1_ub_iter_C_num);      // 11
-TILING_DATA_FIELD_DEF(uint32_t, mode1_ub_tail_C_num);      // 12
-TILING_DATA_FIELD_DEF(uint32_t, mode2_ub_capacity_ele);    // 13
-TILING_DATA_FIELD_DEF(uint32_t, mode2_ub_iteration_num);   // 14
-TILING_DATA_FIELD_DEF(uint32_t, mode2_ub_tail_num);        // 15
-TILING_DATA_FIELD_DEF(uint32_t, workSpaceSize);            // 16
-TILING_DATA_FIELD_DEF(uint32_t, stage2CoreUsed);           // 17
-TILING_DATA_FIELD_DEF(uint32_t, castEleNum);               // 18
-TILING_DATA_FIELD_DEF(uint32_t, tailCastNum);              // 19
-TILING_DATA_FIELD_DEF(uint32_t, coreBatchParts);           // 20
-TILING_DATA_FIELD_DEF(uint32_t, coreBatchPartsTailRepeat); // 21
-TILING_DATA_FIELD_DEF(uint32_t, repeatTime4Stage2);        // 22
-TILING_DATA_FIELD_DEF(int32_t, dx_is_require);             // 23
-TILING_DATA_FIELD_DEF(int32_t, dgamma_is_require);         // 24
-TILING_DATA_FIELD_DEF(int32_t, dbeta_is_require);          // 25
+TILING_DATA_FIELD_DEF(uint64_t, Tiling_key);               // 0
+TILING_DATA_FIELD_DEF(uint64_t, N);                        // 1
+TILING_DATA_FIELD_DEF(uint64_t, C);                        // 2
+TILING_DATA_FIELD_DEF(uint64_t, HXW);                      // 3
+TILING_DATA_FIELD_DEF(uint64_t, G);                        // 4
+TILING_DATA_FIELD_DEF(uint64_t, NXG);                      // 5
+TILING_DATA_FIELD_DEF(uint64_t, C_G);                      // 6
+TILING_DATA_FIELD_DEF(uint64_t, task_num_per_core);        // 7
+TILING_DATA_FIELD_DEF(uint64_t, task_num_per_tail_core);   // 8
+TILING_DATA_FIELD_DEF(uint64_t, tail_core);                // 9
+TILING_DATA_FIELD_DEF(uint64_t, mode1_ub_cap_C_num);       // 10
+TILING_DATA_FIELD_DEF(uint64_t, mode1_ub_iter_C_num);      // 11
+TILING_DATA_FIELD_DEF(uint64_t, mode1_ub_tail_C_num);      // 12
+TILING_DATA_FIELD_DEF(uint64_t, mode2_ub_capacity_ele);    // 13
+TILING_DATA_FIELD_DEF(uint64_t, mode2_ub_iteration_num);   // 14
+TILING_DATA_FIELD_DEF(uint64_t, mode2_ub_tail_num);        // 15
+TILING_DATA_FIELD_DEF(uint64_t, workSpaceSize);            // 16
+TILING_DATA_FIELD_DEF(uint64_t, stage2CoreUsed);           // 17
+TILING_DATA_FIELD_DEF(uint64_t, castEleNum);               // 18
+TILING_DATA_FIELD_DEF(uint64_t, tailCastNum);              // 19
+TILING_DATA_FIELD_DEF(uint64_t, coreBatchParts);           // 20
+TILING_DATA_FIELD_DEF(uint64_t, coreBatchPartsTailRepeat); // 21
+TILING_DATA_FIELD_DEF(uint64_t, repeatTime4Stage2);        // 22
+TILING_DATA_FIELD_DEF(uint64_t, dx_is_require);             // 23
+TILING_DATA_FIELD_DEF(uint64_t, dgamma_is_require);         // 24
+TILING_DATA_FIELD_DEF(uint64_t, dbeta_is_require);          // 25
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(GroupNormGrad, GroupNormGradTilingData)
