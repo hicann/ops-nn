@@ -185,17 +185,59 @@ inline static bool isAddMixDtypeSupport(const aclTensor *self, const aclTensor *
          (self->GetDataType() == DataType::DT_FLOAT && other->GetDataType() == DataType::DT_BF16);
 }
 
+static const aclTensor* DoAdd(const aclTensor* self, const aclTensor* other, aclScalar* alpha,
+                              const aclTensor* selfContiguous, const aclTensor* otherContiguous,
+                              aclOpExecutor* exec) {
+  // 判断输入是否符合kernel支持的混合输入类型
+  bool isMixDataType = isAddMixDtypeSupport(self, other);
+  if (isMixDataType && !(alpha->ToFloat() > 1 || alpha->ToFloat() < 1)) {
+    // 无需调用Cast，直接调用L0带混合数据类型的kernel
+    return l0op::Add(selfContiguous, otherContiguous, exec);
+  }
+  // 对self和other两个输入做隐式数据类型转换，根据具体算子语义按需调用
+  auto promoteType = op::PromoteType(self->GetDataType(), other->GetDataType());
+  promoteType = IsFpDtype(promoteType) ? DataType::DT_FLOAT : promoteType;
+  // 将输入self的数据类型转换成隐式数据类型，根据具体算子语义按需调用
+  auto selfCasted = l0op::Cast(selfContiguous, promoteType, exec);
+  CHECK_RET(selfCasted != nullptr, nullptr);
+  // 将输入other的数据类型转换成隐式数据类型，根据具体算子语义按需调用
+  auto otherCasted = l0op::Cast(otherContiguous, promoteType, exec);
+  CHECK_RET(otherCasted != nullptr, nullptr);
+  // 进行非混合输入类型的Add计算分支判断
+  if (!(alpha->ToFloat() > 1 || alpha->ToFloat() < 1)) {
+    return l0op::Add(selfCasted, otherCasted, exec);
+  } else if (IsSupportAxpy(promoteType)) {
+    return l0op::Axpy(selfCasted, otherCasted, alpha->ToFloat(), exec);
+  }
+  const auto alphaTensor = exec->ConvertToTensor(alpha, promoteType);
+  const auto otherRes = l0op::Mul(otherCasted, alphaTensor, exec);
+  return l0op::Add(selfCasted, otherRes, exec);
+}
+
+static const aclTensor* DoReluAndCopy(const aclTensor* addOpOut, const aclTensor* out, aclOpExecutor* exec) {
+  // 如果out的数据类型是int16，则转成int32进行relu计算
+  const aclTensor* addOutCasted = (addOpOut->GetDataType() == DataType::DT_INT16)
+      ? l0op::Cast(addOpOut, DataType::DT_INT32, exec) : addOpOut;
+  CHECK_RET(addOutCasted != nullptr, nullptr);
+  // 如果addOutCasted不是UINT8类型，需要调用relu计算
+  const aclTensor* reluRes = (addOutCasted->GetDataType() != op::DataType::DT_UINT8)
+      ? l0op::Relu(addOutCasted, exec) : addOutCasted;
+  CHECK_RET(reluRes != nullptr, nullptr);
+  // reluRes数据类型cast回out
+  auto outCasted = l0op::Cast(reluRes, out->GetDataType(), exec);
+  // 将计算结果outCasted拷贝到输出out上，out可能是非连续的tensor
+  return l0op::ViewCopy(outCasted, out, exec);
+}
+
 aclnnStatus aclnnAddReluGetWorkspaceSize(const aclTensor* self, const aclTensor* other, aclScalar* alpha,
-                                     aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor) {
+                                         aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor) {
   L2_DFX_PHASE_1(aclnnAddRelu, DFX_IN(self, other, alpha), DFX_OUT(out));
   // 固定写法，创建OpExecutor
   auto uniqueExecutor = CREATE_EXECUTOR();
   CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
-
   // 固定写法，参数检查
   auto ret = CheckParams(self, other, alpha, out);
   CHECK_RET(ret == ACLNN_SUCCESS, ret);
-
   // add算子的空tensor在kernel中支持，对标竞品根据算子实际情况补充
   if (self->IsEmpty() || other->IsEmpty()) {
     // 根据实际支持情况补充
@@ -203,74 +245,17 @@ aclnnStatus aclnnAddReluGetWorkspaceSize(const aclTensor* self, const aclTensor*
     uniqueExecutor.ReleaseTo(executor);
     return ACLNN_SUCCESS;
   }
-
   // 固定写法，将输入self转换成连续的tensor
   auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
   CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
   // 固定写法，将输入other转换成连续的tensor
   auto otherContiguous = l0op::Contiguous(other, uniqueExecutor.get());
   CHECK_RET(otherContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
   // 申请add的输出tensor
-  const aclTensor* addOpOut = nullptr;
-  // 判断输入是否符合kernel支持的混合输入类型
-  bool isMixDataType = isAddMixDtypeSupport(self, other);
-  if (isMixDataType && !(alpha->ToFloat() > 1 || alpha->ToFloat() < 1)) {
-    // 无需调用Cast，直接调用L0带混合数据类型的kernel
-    addOpOut = l0op::Add(selfContiguous, otherContiguous, uniqueExecutor.get());
-  } else {
-    // 对self和other两个输入做隐式数据类型转换，根据具体算子语义按需调用
-    auto promoteType = op::PromoteType(self->GetDataType(), other->GetDataType());
-    promoteType = IsFpDtype(promoteType) ? DataType::DT_FLOAT : promoteType;
-
-    // 将输入self的数据类型转换成隐式数据类型，根据具体算子语义按需调用
-    auto selfCasted = l0op::Cast(selfContiguous, promoteType, uniqueExecutor.get());
-    CHECK_RET(selfCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    // 将输入other的数据类型转换成隐式数据类型，根据具体算子语义按需调用
-    auto otherCasted = l0op::Cast(otherContiguous, promoteType, uniqueExecutor.get());
-    CHECK_RET(otherCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    // 进行非混合输入类型的Add计算分支判断
-    if (!(alpha->ToFloat() > 1 || alpha->ToFloat() < 1)) {
-      addOpOut = l0op::Add(selfCasted, otherCasted, uniqueExecutor.get());
-    } else if (IsSupportAxpy(promoteType)) {
-      addOpOut = l0op::Axpy(selfCasted, otherCasted, alpha->ToFloat(), uniqueExecutor.get());
-    } else {
-      const auto alphaTensor = uniqueExecutor.get()->ConvertToTensor(alpha, promoteType);
-      const auto otherRes = l0op::Mul(otherCasted, alphaTensor, uniqueExecutor.get());
-      addOpOut = l0op::Add(selfCasted, otherRes, uniqueExecutor.get());
-    }
-  }
+  const aclTensor* addOpOut = DoAdd(self, other, alpha, selfContiguous, otherContiguous, uniqueExecutor.get());
   CHECK_RET(addOpOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  // 如果out的数据类型是int16，则转成int32进行relu计算
-  const aclTensor* addOutCasted = nullptr;
-  if (addOpOut->GetDataType() == DataType::DT_INT16) {
-    addOutCasted = l0op::Cast(addOpOut, DataType::DT_INT32, uniqueExecutor.get());
-  } else {
-    addOutCasted = addOpOut;
-  }
-  CHECK_RET(addOutCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
-  
-  // 如果addOutCasted不是UINT8类型，需要调用relu计算
-  const aclTensor* reluRes = nullptr;
-  if (addOutCasted->GetDataType() != op::DataType::DT_UINT8) {
-    // 调用relu进行计算
-    reluRes = l0op::Relu(addOutCasted, uniqueExecutor.get());
-  } else {
-    reluRes = addOutCasted;
-  }
-  CHECK_RET(reluRes != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  // reluRes数据类型cast回out
-  auto outCasted = l0op::Cast(reluRes, out->GetDataType(), uniqueExecutor.get());
-
-  // 固定写法，将计算结果outCasted拷贝到输出out上，out可能是非连续的tensor
-  auto viewCopyResult = l0op::ViewCopy(outCasted, out, uniqueExecutor.get());
+  auto viewCopyResult = DoReluAndCopy(addOpOut, out, uniqueExecutor.get());
   CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
   // 固定写法，获取计算过程中需要使用的workspace大小
   *workspaceSize = uniqueExecutor->GetWorkspaceSize();
   uniqueExecutor.ReleaseTo(executor);  // 需要把 uniqueExecutor持有executor转移给executor

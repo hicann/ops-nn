@@ -169,48 +169,30 @@ static inline aclIntArray *getDimAndSplitSize(const aclTensor *self, int64_t &po
   return executor->AllocIntArray(splitSizeValue, SPLIT_NUM);
 }
 
-aclnnStatus aclnnGluBackwardGetWorkspaceSize(const aclTensor *gradOut, const aclTensor *self, int64_t dim,
-                                             const aclTensor *out, uint64_t *workspaceSize, aclOpExecutor **executor) {
-  L2_DFX_PHASE_1(aclnnGluBackward, DFX_IN(gradOut, self, dim), DFX_OUT(out));
-  // 固定写法，创建OpExecutor
-  auto uniqueExecutor = CREATE_EXECUTOR();
-  CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
+static aclnnStatus PrepareInputs(const aclTensor *self, const aclTensor *gradOut, bool needCast,
+                                 const aclTensor **selfContiguous, const aclTensor **gradOutContiguous,
+                                 aclOpExecutor *executor) {
+  *selfContiguous = l0op::Contiguous(self, executor);
+  CHECK_RET(*selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-  // 入参参数检查
-  auto ret = CheckParams(gradOut, self, dim, out);
-  CHECK_RET(ret == ACLNN_SUCCESS, ret);
+  *gradOutContiguous = l0op::Contiguous(gradOut, executor);
+  CHECK_RET(*gradOutContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-  // 如果为空tensor，则直接返回空
-  if (self->IsEmpty()) {
-    *workspaceSize = 0;
-    uniqueExecutor.ReleaseTo(executor);
-    return ACLNN_SUCCESS;
+  if (needCast) {
+    *selfContiguous = l0op::Cast(*selfContiguous, op::DataType::DT_FLOAT, executor);
+    CHECK_RET(*selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    *gradOutContiguous = l0op::Cast(*gradOutContiguous, op::DataType::DT_FLOAT, executor);
+    CHECK_RET(*gradOutContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
   }
+  return ACLNN_SUCCESS;
+}
 
-  // 入参self根据指定的dim所对应的维度除2,获取SplitV需要的splitSize
-  int64_t positiveDim = dim;
-  auto splitSize = getDimAndSplitSize(self, positiveDim, dim, uniqueExecutor.get());
-
-  // 将输入self转换成连续的tensor
-  auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
-  CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  // 将输入gradOut转换成连续的tensor
-  auto gradOutContiguous = l0op::Contiguous(gradOut, uniqueExecutor.get());
-  CHECK_RET(gradOutContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  // 将fp16转为fp32计算
-  bool bf16Type = (self->GetDataType() == op::DataType::DT_FLOAT16) ? true : false;
-  if (bf16Type) {
-    selfContiguous = l0op::Cast(selfContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
-    CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-    gradOutContiguous = l0op::Cast(gradOutContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
-    CHECK_RET(gradOutContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-  }
-
-  // 调用SplitV算子
-  auto splitResult = l0op::SplitV(selfContiguous, splitSize, positiveDim, uniqueExecutor.get());
+static aclnnStatus ComputeGluBackward(const aclTensor *selfContiguous, const aclTensor *gradOutContiguous,
+                                      aclIntArray *splitSize, int64_t positiveDim,
+                                      const aclTensor **gradA, const aclTensor **gradB,
+                                      aclOpExecutor *executor) {
+  auto splitResult = l0op::SplitV(selfContiguous, splitSize, positiveDim, executor);
   CHECK_RET(splitResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
   if (splitResult->Size() != static_cast<size_t>(SPLIT_NUM)) {
@@ -220,45 +202,78 @@ aclnnStatus aclnnGluBackwardGetWorkspaceSize(const aclTensor *gradOut, const acl
 
   auto splitFirst = (*splitResult)[0];
   auto splitSecond = (*splitResult)[1];
-  // 调用Sigmoid算子Kernel,Inplace方式减少空间占用
-  splitSecond = l0op::Sigmoid(splitSecond, uniqueExecutor.get());
+  splitSecond = l0op::Sigmoid(splitSecond, executor);
   CHECK_RET(splitSecond != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-  // 调用Mul算子Kernel，获取a_grad ,Inplace方式减少空间占用
-  gradOutContiguous = l0op::Mul(gradOutContiguous, splitSecond, uniqueExecutor.get());
-  CHECK_RET(gradOutContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
+  auto aGrad = l0op::Mul(gradOutContiguous, splitSecond, executor);
+  CHECK_RET(aGrad != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-  // 调用Mul算子Kernel，获取sigmoid(b) * a ,Inplace方式减少空间占用
-  splitSecond = l0op::Mul(splitFirst, splitSecond, uniqueExecutor.get());
-  CHECK_RET(splitSecond != nullptr, ACLNN_ERR_INNER_NULLPTR);
+  auto sigmoidBA = l0op::Mul(splitFirst, splitSecond, executor);
+  CHECK_RET(sigmoidBA != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-  // 调用Sub算子Kernel，获取 a - (sigmoid(b) * a) ,Inplace方式减少空间占用
-  splitFirst = l0op::Sub(splitFirst, splitSecond, uniqueExecutor.get());
-  CHECK_RET(splitFirst != nullptr, ACLNN_ERR_INNER_NULLPTR);
+  auto subResult = l0op::Sub(splitFirst, sigmoidBA, executor);
+  CHECK_RET(subResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-  // 调用Mul算子Kernel，获取b_grad   ,Inplace方式减少空间占用
-  splitFirst = l0op::Mul(splitFirst, gradOutContiguous, uniqueExecutor.get());
-  CHECK_RET(splitFirst != nullptr, ACLNN_ERR_INNER_NULLPTR);
+  *gradB = l0op::Mul(subResult, aGrad, executor);
+  CHECK_RET(*gradB != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-  // 调用ConcatD算子Kernel，获取out
+  *gradA = aGrad;
+  return ACLNN_SUCCESS;
+}
+
+static aclnnStatus AssembleOutput(const aclTensor *gradA, const aclTensor *gradB, int64_t positiveDim,
+                                  bool needCast, const aclTensor *out, aclOpExecutor *executor) {
   op::FVector<const aclTensor*> tensorListVector;
-  tensorListVector.emplace_back(gradOutContiguous);
-  tensorListVector.emplace_back(splitFirst);
-  auto tensorList = uniqueExecutor.get()->AllocTensorList(tensorListVector.data(), tensorListVector.size());
-  auto concatTensor = l0op::ConcatD(tensorList, positiveDim, uniqueExecutor.get());
+  tensorListVector.emplace_back(gradA);
+  tensorListVector.emplace_back(gradB);
+  auto tensorList = executor->AllocTensorList(tensorListVector.data(), tensorListVector.size());
+  auto concatTensor = l0op::ConcatD(tensorList, positiveDim, executor);
   CHECK_RET(concatTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
   const aclTensor* gluBackwardOut = concatTensor;
-  if (bf16Type) {
-    gluBackwardOut = l0op::Cast(concatTensor, op::DataType::DT_FLOAT16, uniqueExecutor.get());
+  if (needCast) {
+    gluBackwardOut = l0op::Cast(concatTensor, op::DataType::DT_FLOAT16, executor);
     CHECK_RET(gluBackwardOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
   }
 
-  // 将计算结果拷贝到输出out上，out可能是非连续的tensor
-  auto viewCopyResult = l0op::ViewCopy(gluBackwardOut, out, uniqueExecutor.get());
+  auto viewCopyResult = l0op::ViewCopy(gluBackwardOut, out, executor);
   CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+  return ACLNN_SUCCESS;
+}
 
-  // 获取计算过程中需要使用的workspace大小
+aclnnStatus aclnnGluBackwardGetWorkspaceSize(const aclTensor *gradOut, const aclTensor *self, int64_t dim,
+                                             const aclTensor *out, uint64_t *workspaceSize, aclOpExecutor **executor) {
+  L2_DFX_PHASE_1(aclnnGluBackward, DFX_IN(gradOut, self, dim), DFX_OUT(out));
+  auto uniqueExecutor = CREATE_EXECUTOR();
+  CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
+
+  auto ret = CheckParams(gradOut, self, dim, out);
+  CHECK_RET(ret == ACLNN_SUCCESS, ret);
+
+  if (self->IsEmpty()) {
+    *workspaceSize = 0;
+    uniqueExecutor.ReleaseTo(executor);
+    return ACLNN_SUCCESS;
+  }
+
+  int64_t positiveDim = dim;
+  auto splitSize = getDimAndSplitSize(self, positiveDim, dim, uniqueExecutor.get());
+  bool needCast = (self->GetDataType() == op::DataType::DT_FLOAT16);
+
+  const aclTensor *selfContiguous = nullptr;
+  const aclTensor *gradOutContiguous = nullptr;
+  auto status = PrepareInputs(self, gradOut, needCast, &selfContiguous, &gradOutContiguous, uniqueExecutor.get());
+  CHECK_RET(status == ACLNN_SUCCESS, status);
+
+  const aclTensor *gradA = nullptr;
+  const aclTensor *gradB = nullptr;
+  status = ComputeGluBackward(selfContiguous, gradOutContiguous, splitSize, positiveDim,
+                              &gradA, &gradB, uniqueExecutor.get());
+  CHECK_RET(status == ACLNN_SUCCESS, status);
+
+  status = AssembleOutput(gradA, gradB, positiveDim, needCast, out, uniqueExecutor.get());
+  CHECK_RET(status == ACLNN_SUCCESS, status);
+
   *workspaceSize = uniqueExecutor->GetWorkspaceSize();
   uniqueExecutor.ReleaseTo(executor);
   return ACLNN_SUCCESS;

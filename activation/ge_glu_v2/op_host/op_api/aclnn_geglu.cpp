@@ -74,25 +74,9 @@ static bool CheckDtypeValid(const aclTensor* self, const aclTensor* out, const a
     return true;
 }
 
-static bool CheckShape(const aclTensor* self, int64_t dim, const aclTensor* out, const aclTensor* outGelu)
+static bool CheckSliceDimSizes(
+    const aclTensor* self, const aclTensor* out, const aclTensor* outGelu, int64_t sliceDim)
 {
-    OP_CHECK_MAX_DIM(self, MAX_SUPPORT_DIMS_NUMS, return false);
-    OP_CHECK_MAX_DIM(out, MAX_SUPPORT_DIMS_NUMS, return false);
-    OP_CHECK_MAX_DIM(outGelu, MAX_SUPPORT_DIMS_NUMS, return false);
-
-    int64_t dimNum = self->GetViewShape().GetDimNum();
-    if (dimNum == 0) {
-        dimNum = 1;
-    }
-
-    if ((-dimNum > dim) || ((dimNum - 1) < dim)) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_NULLPTR, "Expected aclnnGeGlu dim value %ld to be in range [%ld, %ld] but check failed.",
-            dim, -dimNum, dimNum - 1);
-        return false;
-    }
-
-    auto sliceDim = dim < 0 ? dimNum + dim : dim;
     auto selfSliceDimSize = self->GetViewShape().GetDim(sliceDim);
     auto outSliceDimSize = out->GetViewShape().GetDim(sliceDim);
     auto outGeluSliceDimSize = outGelu->GetViewShape().GetDim(sliceDim);
@@ -115,17 +99,13 @@ static bool CheckShape(const aclTensor* self, int64_t dim, const aclTensor* out,
             selfSliceDimSize / SLICE_NUM);
         return false;
     }
+    return true;
+}
 
-    int64_t outDimNum = out->GetViewShape().GetDimNum();
-    int64_t outGeluDimNum = outGelu->GetViewShape().GetDimNum();
-
-    OP_CHECK(
-        outDimNum == outGeluDimNum && outDimNum == dimNum,
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "outDimNum[%ld] and outGeluDimNum[%ld] must be the same with inputDimNum[%ld].",
-            outDimNum, outGeluDimNum, dimNum),
-        return false);
-
+static bool CheckOtherDimsMatch(
+    const aclTensor* self, const aclTensor* out, const aclTensor* outGelu, int64_t dimNum, int64_t sliceDim,
+    int64_t dim)
+{
     for (int64_t idx = 0; idx < dimNum; idx++) {
         if (idx == sliceDim) {
             continue;
@@ -142,6 +122,43 @@ static bool CheckShape(const aclTensor* self, int64_t dim, const aclTensor* out,
             return false);
     }
     return true;
+}
+
+static bool CheckShape(const aclTensor* self, int64_t dim, const aclTensor* out, const aclTensor* outGelu)
+{
+    OP_CHECK_MAX_DIM(self, MAX_SUPPORT_DIMS_NUMS, return false);
+    OP_CHECK_MAX_DIM(out, MAX_SUPPORT_DIMS_NUMS, return false);
+    OP_CHECK_MAX_DIM(outGelu, MAX_SUPPORT_DIMS_NUMS, return false);
+
+    int64_t dimNum = self->GetViewShape().GetDimNum();
+    if (dimNum == 0) {
+        dimNum = 1;
+    }
+
+    if ((-dimNum > dim) || ((dimNum - 1) < dim)) {
+        OP_LOGE(
+            ACLNN_ERR_PARAM_NULLPTR, "Expected aclnnGeGlu dim value %ld to be in range [%ld, %ld] but check failed.",
+            dim, -dimNum, dimNum - 1);
+        return false;
+    }
+
+    auto sliceDim = dim < 0 ? dimNum + dim : dim;
+
+    if (!CheckSliceDimSizes(self, out, outGelu, sliceDim)) {
+        return false;
+    }
+
+    int64_t outDimNum = out->GetViewShape().GetDimNum();
+    int64_t outGeluDimNum = outGelu->GetViewShape().GetDimNum();
+
+    OP_CHECK(
+        outDimNum == outGeluDimNum && outDimNum == dimNum,
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID, "outDimNum[%ld] and outGeluDimNum[%ld] must be the same with inputDimNum[%ld].",
+            outDimNum, outGeluDimNum, dimNum),
+        return false);
+
+    return CheckOtherDimsMatch(self, out, outGelu, dimNum, sliceDim, dim);
 }
 
 static bool checkApproximate(int64_t approximate)

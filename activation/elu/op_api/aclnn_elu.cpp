@@ -112,78 +112,85 @@ static aclnnStatus CheckParams(
     return ACLNN_SUCCESS;
 }
 
+static inline bool NeedInfNanHandling(const aclScalar* alpha, const aclScalar* inputScale)
+{
+    return std::isinf(alpha->ToFloat()) || std::isnan(alpha->ToFloat()) ||
+           std::isinf(inputScale->ToFloat()) || std::isnan(inputScale->ToFloat());
+}
+
+static inline bool NeedCastToFloat(aclDataType dataType)
+{
+    return dataType == aclDataType::ACL_DOUBLE || dataType == aclDataType::ACL_FLOAT16 ||
+           dataType == aclDataType::ACL_BF16;
+}
+
+static aclnnStatus ComputeEluWithInfNan(
+    const aclTensor* contiguousSelf, const aclScalar* alpha, const aclScalar* scale, aclOpExecutor* executor,
+    const aclTensor** eluOut)
+{
+    aclDataType dataType = aclDataType::ACL_DT_UNDEFINED;
+    aclGetDataType(contiguousSelf, &dataType);
+    auto oriDataType = dataType;
+    if (NeedCastToFloat(oriDataType)) {
+        dataType = aclDataType::ACL_FLOAT;
+    }
+    float zeroValue = 0.0f;
+    const aclScalar* zeroScalar = aclCreateScalar(&zeroValue, dataType);
+
+    float negAlpha = (alpha->ToFloat()) * float(-1.0);
+    const aclScalar* negAlphaScalar = aclCreateScalar(&negAlpha, dataType);
+    const aclTensor* thresholdOut;
+    if (NeedCastToFloat(oriDataType)) {
+        auto castSelf = l0op::Cast(contiguousSelf, op::DataType::DT_FLOAT, executor);
+        CHECK_RET(castSelf != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        thresholdOut = l0op::Threshold(castSelf, zeroScalar, negAlphaScalar, executor);
+    } else {
+        thresholdOut = l0op::Threshold(contiguousSelf, zeroScalar, negAlphaScalar, executor);
+    }
+    CHECK_RET(thresholdOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    *eluOut = l0op::Muls(thresholdOut, scale->ToFloat(), executor);
+
+    aclDestroyScalar(zeroScalar);
+    aclDestroyScalar(negAlphaScalar);
+    return ACLNN_SUCCESS;
+}
+
 static aclnnStatus GetWorkspaceSizeCommon(
     const aclTensor* self, const aclScalar* alpha, const aclScalar* scale, const aclScalar* inputScale, aclTensor* out,
     uint64_t* workspaceSize, aclOpExecutor** executor)
 {
-    // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
-    // 固定写法，参数检查
     auto ret = CheckParams(self, alpha, scale, inputScale, out);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
-    // 如果self是空tensor，则out也是空tensor，直接返回
     if (self->IsEmpty()) {
         *workspaceSize = 0;
         uniqueExecutor.ReleaseTo(executor);
         return ACLNN_SUCCESS;
     }
 
-    // 固定写法，将输入self转换成连续的Tensor
     auto contiguousSelf = l0op::Contiguous(self, uniqueExecutor.get());
     CHECK_RET(contiguousSelf != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    // 调用Elu算子kernel
-    const aclTensor* eluOut;
-    if (std::isinf(alpha->ToFloat()) || std::isnan(alpha->ToFloat()) || std::isinf(inputScale->ToFloat()) ||
-        std::isnan(inputScale->ToFloat())) {
-        aclDataType dataType = aclDataType::ACL_DT_UNDEFINED;
-        aclGetDataType(contiguousSelf, &dataType);
-        auto oriDataType = dataType;
-        if (oriDataType == aclDataType::ACL_DOUBLE || oriDataType == aclDataType::ACL_FLOAT16 ||
-            oriDataType == aclDataType::ACL_BF16) {
-            dataType = aclDataType::ACL_FLOAT;
-        }
-        float zeroValue = 0.0f;
-        const aclScalar* zeroScalar = aclCreateScalar(&zeroValue, dataType);
-
-        float negAlpha = (alpha->ToFloat()) * float(-1.0);
-        const aclScalar* negAlphaScalar = aclCreateScalar(&negAlpha, dataType);
-        const aclTensor* thresholdOut;
-        if (oriDataType == aclDataType::ACL_DOUBLE || oriDataType == aclDataType::ACL_FLOAT16 ||
-            oriDataType == aclDataType::ACL_BF16) {
-            auto castSelf = l0op::Cast(contiguousSelf, op::DataType::DT_FLOAT, uniqueExecutor.get());
-            CHECK_RET(castSelf != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-            thresholdOut = l0op::Threshold(castSelf, zeroScalar, negAlphaScalar, uniqueExecutor.get());
-        } else {
-            thresholdOut = l0op::Threshold(contiguousSelf, zeroScalar, negAlphaScalar, uniqueExecutor.get());
-        }
-        CHECK_RET(thresholdOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        eluOut = l0op::Muls(thresholdOut, scale->ToFloat(), uniqueExecutor.get());
-
-        // 释放资源
-        aclDestroyScalar(zeroScalar);
-        aclDestroyScalar(negAlphaScalar);
+    const aclTensor* eluOut = nullptr;
+    if (NeedInfNanHandling(alpha, inputScale)) {
+        auto status = ComputeEluWithInfNan(contiguousSelf, alpha, scale, uniqueExecutor.get(), &eluOut);
+        CHECK_RET(status == ACLNN_SUCCESS, status);
     } else {
-        eluOut =
-            l0op::Elu(contiguousSelf, alpha->ToFloat(), scale->ToFloat(), inputScale->ToFloat(), uniqueExecutor.get());
+        eluOut = l0op::Elu(contiguousSelf, alpha->ToFloat(), scale->ToFloat(), inputScale->ToFloat(),
+                           uniqueExecutor.get());
     }
-
     CHECK_RET(eluOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    // 固定写法，将计算结果转换成输出out的数据类型
     auto castOut = l0op::Cast(eluOut, out->GetDataType(), uniqueExecutor.get());
     CHECK_RET(castOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    // 固定写法，将计算结果拷贝到输出out上，out可能是非连续的tensor
     auto viewCopyResult = l0op::ViewCopy(castOut, out, uniqueExecutor.get());
     CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    // 固定写法，获取计算过程中需要使用的workspace大小
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();
     uniqueExecutor.ReleaseTo(executor);
     return ACLNN_SUCCESS;

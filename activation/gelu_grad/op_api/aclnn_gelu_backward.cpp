@@ -106,20 +106,65 @@ static const aclTensor* BroadcastTensor(const aclTensor* self, const op::Shape b
     return self;
 }
 
+static aclnnStatus RunGeluGradAndCopy(
+    const aclTensor* gradOutputCasted, const aclTensor* selfCasted, const aclTensor* gradInputCasted,
+    const aclTensor* gradInput, aclOpExecutor* executor)
+{
+    auto GeluBackwardResult =
+        l0op::GeluGrad(gradOutputCasted, selfCasted, gradOutputCasted, gradInputCasted, executor);
+    CHECK_RET(GeluBackwardResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto castOut = l0op::Cast(GeluBackwardResult, gradInput->GetDataType(), executor);
+    CHECK_RET(castOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto viewCopyResult = l0op::ViewCopy(castOut, gradInput, executor);
+    CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    return ACLNN_SUCCESS;
+}
+
+static aclnnStatus ComputeGeluGradRegbase(
+    const aclTensor* gradOutputContiguous, const aclTensor* selfContiguous, const aclTensor* gradInputCasted,
+    const aclTensor* gradInput, op::DataType promoteType, aclOpExecutor* executor)
+{
+    auto selfCasted = l0op::Cast(selfContiguous, promoteType, executor);
+    CHECK_RET(selfCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto gradOutputCasted = l0op::Cast(gradOutputContiguous, promoteType, executor);
+    CHECK_RET(gradOutputCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    return RunGeluGradAndCopy(gradOutputCasted, selfCasted, gradInputCasted, gradInput, executor);
+}
+
+static aclnnStatus ComputeGeluGradBroadcast(
+    const aclTensor* gradOutputContiguous, const aclTensor* selfContiguous, const aclTensor* gradInputCasted,
+    const aclTensor* gradInput, op::DataType promoteType, const op::Shape& broadcastShape, aclOpExecutor* executor)
+{
+    auto gradOutputBroadcast = BroadcastTensor(gradOutputContiguous, broadcastShape, executor);
+    CHECK_RET(gradOutputBroadcast != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto selfBroadcast = BroadcastTensor(selfContiguous, broadcastShape, executor);
+    CHECK_RET(selfBroadcast != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto selfCasted = l0op::Cast(selfBroadcast, promoteType, executor);
+    CHECK_RET(selfCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    auto gradOutputCasted = l0op::Cast(gradOutputBroadcast, promoteType, executor);
+    CHECK_RET(gradOutputCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    return RunGeluGradAndCopy(gradOutputCasted, selfCasted, gradInputCasted, gradInput, executor);
+}
+
 aclnnStatus aclnnGeluBackwardGetWorkspaceSize(
     const aclTensor* gradOutput, const aclTensor* self, const aclTensor* gradInput, uint64_t* workspaceSize,
     aclOpExecutor** executor)
 {
     L2_DFX_PHASE_1(aclnnGeluBackward, DFX_IN(gradOutput, self), DFX_OUT(gradInput));
-    // 固定写法，创建OpExecutor
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
-    // 固定写法，参数检查
     auto ret = CheckParams(gradOutput, self, gradInput);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
-    // 空Tensor处理
     if (self->IsEmpty() || gradOutput->IsEmpty()) {
         *workspaceSize = 0;
         uniqueExecutor.ReleaseTo(executor);
@@ -128,76 +173,30 @@ aclnnStatus aclnnGeluBackwardGetWorkspaceSize(
 
     op::Shape broadcastShape;
     BroadcastInferShape(gradOutput->GetViewShape(), self->GetViewShape(), broadcastShape);
-
-    // 对gradOutput和self两个输入做隐式数据类型转换，根据具体算子语义按需调用
     auto promoteType = op::PromoteType(gradOutput->GetDataType(), self->GetDataType());
 
-    // gradOutput如果非连续，需要转连续
     auto gradOutputContiguous = l0op::Contiguous(gradOutput, uniqueExecutor.get());
     CHECK_RET(gradOutputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    // self如果非连续，需要转连续
     auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
     CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    // gradInput如果非连续，需要转连续
     auto gradInputContiguous = l0op::Contiguous(gradInput, uniqueExecutor.get());
     CHECK_RET(gradInputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     auto gradInputCasted = l0op::Cast(gradInputContiguous, promoteType, uniqueExecutor.get());
     CHECK_RET(gradInputCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
+    aclnnStatus status;
     if (Ops::NN::AclnnUtil::IsRegbase()) {
-        // 将输入self的数据类型转换成隐式数据类型，根据具体算子语义按需调用
-        auto selfCasted = l0op::Cast(selfContiguous, promoteType, uniqueExecutor.get());
-        CHECK_RET(selfCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        // 将输入gradOutput的数据类型转换成隐式数据类型，根据具体算子语义按需调用
-        auto gradOutputCasted = l0op::Cast(gradOutputContiguous, promoteType, uniqueExecutor.get());
-        CHECK_RET(gradOutputCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        // 调用l0算子GeluGrad进行计算,输出dtype与gradInput一致
-        auto GeluBackwardResult =
-            l0op::GeluGrad(gradOutputCasted, selfCasted, gradOutputCasted, gradInputCasted, uniqueExecutor.get());
-        CHECK_RET(GeluBackwardResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        auto castOut = l0op::Cast(GeluBackwardResult, gradInput->GetDataType(), uniqueExecutor.get());
-        CHECK_RET(castOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        // 如果出参out是非连续Tensor，需要把计算完的连续Tensor转非连续
-        auto viewCopyResult = l0op::ViewCopy(castOut, gradInput, uniqueExecutor.get());
-        CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        status = ComputeGeluGradRegbase(gradOutputContiguous, selfContiguous, gradInputCasted,
+                                        gradInput, promoteType, uniqueExecutor.get());
     } else {
-        // 判断gradOutput是否需要进行broadcast
-        auto gradOutputBroadcast = BroadcastTensor(gradOutputContiguous, broadcastShape, uniqueExecutor.get());
-        CHECK_RET(gradOutputBroadcast != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        // 判断self是否需要进行broadcast
-        auto selfBroadcast = BroadcastTensor(selfContiguous, broadcastShape, uniqueExecutor.get());
-        CHECK_RET(selfBroadcast != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        // 将输入self的数据类型转换成隐式数据类型，根据具体算子语义按需调用
-        auto selfCasted = l0op::Cast(selfBroadcast, promoteType, uniqueExecutor.get());
-        CHECK_RET(selfCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        // 将输入gradOutput的数据类型转换成隐式数据类型，根据具体算子语义按需调用
-        auto gradOutputCasted = l0op::Cast(gradOutputBroadcast, promoteType, uniqueExecutor.get());
-        CHECK_RET(gradOutputCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        // 调用l0算子GeluGrad进行计算,输出dtype与gradInput一致
-        auto GeluBackwardResult =
-            l0op::GeluGrad(gradOutputCasted, selfCasted, gradOutputCasted, gradInputCasted, uniqueExecutor.get());
-        CHECK_RET(GeluBackwardResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        auto castOut = l0op::Cast(GeluBackwardResult, gradInput->GetDataType(), uniqueExecutor.get());
-        CHECK_RET(castOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-        // 如果出参out是非连续Tensor，需要把计算完的连续Tensor转非连续
-        auto viewCopyResult = l0op::ViewCopy(castOut, gradInput, uniqueExecutor.get());
-        CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        status = ComputeGeluGradBroadcast(gradOutputContiguous, selfContiguous, gradInputCasted,
+                                          gradInput, promoteType, broadcastShape, uniqueExecutor.get());
     }
+    CHECK_RET(status == ACLNN_SUCCESS, status);
 
-    // 固定写法，获取计算过程中需要使用的workspace大小
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();
     uniqueExecutor.ReleaseTo(executor);
     return ACLNN_SUCCESS;

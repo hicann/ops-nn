@@ -77,74 +77,80 @@ static inline bool CheckDtypeValid(
     return true;
 }
 
+static inline bool CheckDimInRange(int64_t dim, int64_t selfDimNum)
+{
+    if (dim >= selfDimNum || dim < -selfDimNum) {
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID, "expected dim to be in range of [%ld, %ld], but got %ld.", -selfDimNum,
+            selfDimNum - 1, dim);
+        return false;
+    }
+    return true;
+}
+
+static inline bool CheckGradOutputDims(
+    const aclTensor* gradOutput, const aclTensor* self, size_t splitDim, size_t selfDimNum)
+{
+    for (size_t i = 0; i < splitDim; ++i) {
+        if (gradOutput->GetViewShape().GetDim(i) != self->GetViewShape().GetDim(i)) {
+            OP_LOGE(
+                ACLNN_ERR_PARAM_INVALID,
+                "except for the last dimension, all other dimensions of gradOutput: %s and self: %s must equal",
+                op::ToString(gradOutput->GetViewShape()).GetString(),
+                op::ToString(self->GetViewShape()).GetString());
+            return false;
+        }
+    }
+
+    if (gradOutput->GetViewShape().GetDim(splitDim) * 2 != self->GetViewShape().GetDim(splitDim)) {
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID,
+            "the last dimension of gradOutput: %s must be the half of the last dimension of self: %s",
+            op::ToString(gradOutput->GetViewShape()).GetString(), op::ToString(self->GetViewShape()).GetString());
+        return false;
+    }
+
+    for (size_t i = splitDim + 1; i < selfDimNum; ++i) {
+        if (gradOutput->GetViewShape().GetDim(i) != self->GetViewShape().GetDim(i)) {
+            OP_LOGE(
+                ACLNN_ERR_PARAM_INVALID,
+                "except for the last dimension, all other dimensions of gradOutput: %s and self: %s must equal",
+                op::ToString(gradOutput->GetViewShape()).GetString(),
+                op::ToString(self->GetViewShape()).GetString());
+            return false;
+        }
+    }
+    return true;
+}
+
 static inline bool CheckShape(
     const aclTensor* gradOutput, const aclTensor* self, const aclTensor* gelu, const aclTensor* gradInput, int64_t dim)
 {
-    // gelu和gradOutput的shape必须一致
     OP_CHECK_SHAPE_NOT_EQUAL(gelu, gradOutput, return false);
-
-    // gradInput和self的shape必须一致
     OP_CHECK_SHAPE_NOT_EQUAL(gradInput, self, return false);
 
-    // check dim value
     auto selfDimNum = self->GetViewShape().GetDimNum();
-    // 当输入张量是0维时，当作1维处理
     if (selfDimNum == 0) {
         selfDimNum = 1;
     }
     int64_t selfDimNum2 = static_cast<int64_t>(selfDimNum);
 
-    // 检查指定dim是否在self的维度范围内
-    if (dim >= selfDimNum2 || dim < -selfDimNum2) {
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "expected dim to be in range of [%ld, %ld], but got %ld.", -selfDimNum2,
-            selfDimNum2 - 1, dim);
+    if (!CheckDimInRange(dim, selfDimNum2)) {
         return false;
     }
 
     auto newDim = dim < 0 ? selfDimNum2 + dim : dim;
     size_t newDim2 = static_cast<size_t>(newDim);
 
-    // gradOutput的shape中除dim维外，其它维的大小跟self一样，dim维的大小是self的一半
     auto gradOutputDimNum = gradOutput->GetViewShape().GetDimNum();
-    if (gradOutputDimNum == selfDimNum) {
-        for (size_t i = 0; i < newDim2; ++i) {
-            if (gradOutput->GetViewShape().GetDim(i) != self->GetViewShape().GetDim(i)) {
-                OP_LOGE(
-                    ACLNN_ERR_PARAM_INVALID,
-                    "except for the last dimension, all other dimensions of gradOutput: %s and self: %s must equal",
-                    op::ToString(gradOutput->GetViewShape()).GetString(),
-                    op::ToString(self->GetViewShape()).GetString());
-                return false;
-            }
-        }
-
-        if (gradOutput->GetViewShape().GetDim(newDim2) * 2 != self->GetViewShape().GetDim(newDim2)) {
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "the last dimension of gradOutput: %s must be the half of the last dimension of self: %s",
-                op::ToString(gradOutput->GetViewShape()).GetString(), op::ToString(self->GetViewShape()).GetString());
-            return false;
-        }
-
-        for (size_t i = newDim2 + 1; i < selfDimNum; ++i) {
-            if (gradOutput->GetViewShape().GetDim(i) != self->GetViewShape().GetDim(i)) {
-                OP_LOGE(
-                    ACLNN_ERR_PARAM_INVALID,
-                    "except for the last dimension, all other dimensions of gradOutput: %s and self: %s must equal",
-                    op::ToString(gradOutput->GetViewShape()).GetString(),
-                    op::ToString(self->GetViewShape()).GetString());
-                return false;
-            }
-        }
-    } else {
+    if (gradOutputDimNum != selfDimNum) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID, "gradOutput: %s and self: %s must have same dimensions",
             op::ToString(gradOutput->GetViewShape()).GetString(), op::ToString(self->GetViewShape()).GetString());
         return false;
     }
 
-    return true;
+    return CheckGradOutputDims(gradOutput, self, newDim2, selfDimNum);
 }
 
 static inline bool CheckAttributeValue(int64_t approximate)

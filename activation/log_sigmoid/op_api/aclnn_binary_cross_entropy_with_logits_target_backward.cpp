@@ -245,6 +245,63 @@ static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* sel
   return ACLNN_SUCCESS;
 }
 
+static const aclTensor* PrepareInput(const aclTensor* input, const aclTensor* ref,
+                                     op::DataType promoteType, aclOpExecutor* exec) {
+  // 如果非连续，需要转连续
+  auto contiguous = l0op::Contiguous(input, exec);
+  CHECK_RET(contiguous != nullptr, nullptr);
+  auto casted = l0op::Cast(contiguous, promoteType, exec);
+  CHECK_RET(casted != nullptr, nullptr);
+  return casted;
+}
+
+static const aclTensor* PrepareOptional(const aclTensor* optional, const aclTensor* ref,
+                                        op::DataType promoteType, aclOpExecutor* exec) {
+  // 如果为空，按ref的shape创建全1的tensor
+  auto tensor = (optional == nullptr) ? l0op::OnesLike(ref, exec)
+                                      : l0op::Contiguous(optional, exec);
+  CHECK_RET(tensor != nullptr, nullptr);
+  auto casted = l0op::Cast(tensor, promoteType, exec);
+  CHECK_RET(casted != nullptr, nullptr);
+  return casted;
+}
+
+static aclnnStatus ComputeGradTarget(const aclTensor* selfCasted, const aclTensor* targetCasted,
+                                     const aclTensor* gradOutputCasted, const aclTensor* weightCasted,
+                                     const aclTensor* posWeightCasted, int64_t reduction,
+                                     aclTensor* gradTarget, aclOpExecutor* exec) {
+  // 调用l0算子进行计算
+  auto zerosTensor = l0op::ZerosLike(selfCasted, exec);
+  CHECK_RET(zerosTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
+  auto negativeSelf = l0op::Sub(zerosTensor, selfCasted, exec);
+  CHECK_RET(negativeSelf != nullptr, ACLNN_ERR_INNER_NULLPTR);
+  auto logSigmoidNegativeSelf = l0op::LogSigmoid(negativeSelf, exec);
+  CHECK_RET(logSigmoidNegativeSelf != nullptr, ACLNN_ERR_INNER_NULLPTR);
+  auto logSigmoidSelf = l0op::LogSigmoid(selfCasted, exec);
+  CHECK_RET(logSigmoidSelf != nullptr, ACLNN_ERR_INNER_NULLPTR);
+  auto intermediateResult1 = l0op::Mul(logSigmoidSelf, posWeightCasted, exec);
+  CHECK_RET(intermediateResult1 != nullptr, ACLNN_ERR_INNER_NULLPTR);
+  auto intermediateResult2 = l0op::Sub(logSigmoidNegativeSelf, intermediateResult1, exec);
+  CHECK_RET(intermediateResult2 != nullptr, ACLNN_ERR_INNER_NULLPTR);
+  auto intermediateResult3 = l0op::Mul(gradOutputCasted, intermediateResult2, exec);
+  CHECK_RET(intermediateResult3 != nullptr, ACLNN_ERR_INNER_NULLPTR);
+  auto tempGradTarget = l0op::Mul(intermediateResult3, weightCasted, exec);
+  CHECK_RET(tempGradTarget != nullptr, ACLNN_ERR_INNER_NULLPTR);
+  // 根据reduction是否为Mean进一步处理
+  if (reduction == 1) {
+    int64_t size = targetCasted->GetViewShape().GetShapeSize();
+    CHECK_RET(size != 0, ACLNN_ERR_PARAM_INVALID);
+    tempGradTarget = l0op::Muls(tempGradTarget, 1.0 / size, exec);
+    CHECK_RET(tempGradTarget != nullptr, ACLNN_ERR_INNER_NULLPTR);
+  }
+  auto gradTargetCasted = l0op::Cast(tempGradTarget, gradTarget->GetDataType(), exec);
+  CHECK_RET(gradTargetCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
+  // 如果出参是非连续Tensor，需要把计算完的连续Tensor转非连续
+  auto viewCopyResult = l0op::ViewCopy(gradTargetCasted, gradTarget, exec);
+  CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+  return ACLNN_SUCCESS;
+}
+
 static aclnnStatus BinaryCrossEntropyWithLogitsTargetBackwardStub(
     const aclTensor *gradOutput,
     const aclTensor *self,
@@ -260,83 +317,29 @@ static aclnnStatus BinaryCrossEntropyWithLogitsTargetBackwardStub(
   CHECK_RET(CheckPromoteType(gradOutput, self, target, weightOptional, posWeightOptional, gradTarget, promoteType),
             ACLNN_ERR_PARAM_INVALID);
 
-  // gradOutput如果非连续，需要转连续
-  auto gradOutputContiguous = l0op::Contiguous(gradOutput, executor);
-  CHECK_RET(gradOutputContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  // self如果非连续，需要转连续
-  auto selfContiguous = l0op::Contiguous(self, executor);
-  CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  // target如果非连续，需要转连续
-  auto targetContiguous = l0op::Contiguous(target, executor);
-  CHECK_RET(targetContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  // weightOptional如果为空，按self的shape创建全1的tensor
-  auto weightTensor = (weightOptional == nullptr) ? l0op::OnesLike(selfContiguous, executor)
-                                                  : l0op::Contiguous(weightOptional, executor);
-  CHECK_RET(weightTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  // weightOptional如果为空，按self的shape创建全1的tensor
-  auto posWeightTensor = (posWeightOptional == nullptr) ? l0op::OnesLike(selfContiguous, executor)
-                                                        : l0op::Contiguous(posWeightOptional, executor);
-  CHECK_RET(posWeightTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  auto gradOutputCasted = l0op::Cast(gradOutputContiguous, promoteType, executor);
+  // gradOutput如果非连续，需要转连续并cast
+  auto gradOutputCasted = PrepareInput(gradOutput, self, promoteType, executor);
   CHECK_RET(gradOutputCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-  auto selfCasted = l0op::Cast(selfContiguous, promoteType, executor);
+  // self如果非连续，需要转连续并cast
+  auto selfCasted = PrepareInput(self, self, promoteType, executor);
   CHECK_RET(selfCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-  auto targetCasted = l0op::Cast(targetContiguous, promoteType, executor);
+  // target如果非连续，需要转连续并cast
+  auto targetCasted = PrepareInput(target, self, promoteType, executor);
   CHECK_RET(targetCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-  auto weightCasted = l0op::Cast(weightTensor, promoteType, executor);
+  // weightOptional如果为空，按self的shape创建全1的tensor并cast
+  auto weightCasted = PrepareOptional(weightOptional, selfCasted, promoteType, executor);
   CHECK_RET(weightCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-  auto posWeightCasted = l0op::Cast(posWeightTensor, promoteType, executor);
+  // posWeightOptional如果为空，按self的shape创建全1的tensor并cast
+  auto posWeightCasted = PrepareOptional(posWeightOptional, selfCasted, promoteType, executor);
   CHECK_RET(posWeightCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-  // 调用l0算子进行计算
-  auto zerosTensor = l0op::ZerosLike(selfCasted, executor);
-  CHECK_RET(zerosTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  auto negativeSelf = l0op::Sub(zerosTensor, selfCasted, executor);
-  CHECK_RET(negativeSelf != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  auto logSigmoidNegativeSelf = l0op::LogSigmoid(negativeSelf, executor);
-  CHECK_RET(logSigmoidNegativeSelf != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  auto logSigmoidSelf = l0op::LogSigmoid(selfCasted, executor);
-  CHECK_RET(logSigmoidSelf != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  auto intermediateResult1 = l0op::Mul(logSigmoidSelf, posWeightCasted, executor);
-  CHECK_RET(intermediateResult1 != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  auto intermediateResult2 = l0op::Sub(logSigmoidNegativeSelf, intermediateResult1, executor);
-  CHECK_RET(intermediateResult2 != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  auto intermediateResult3 = l0op::Mul(gradOutputCasted, intermediateResult2, executor);
-  CHECK_RET(intermediateResult3 != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  auto tempGradTarget = l0op::Mul(intermediateResult3, weightCasted, executor);
-  CHECK_RET(tempGradTarget != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  // 根据reduction是否为Mean进一步处理
-  if (reduction == 1)
-  {
-    int64_t size = targetCasted->GetViewShape().GetShapeSize();
-    CHECK_RET(size != 0, ACLNN_ERR_PARAM_INVALID);
-    tempGradTarget = l0op::Muls(tempGradTarget, 1.0 / size, executor);
-    CHECK_RET(tempGradTarget != nullptr, ACLNN_ERR_INNER_NULLPTR);
-  }
-
-  auto gradTargetCasted = l0op::Cast(tempGradTarget, gradTarget->GetDataType(), executor);
-  CHECK_RET(gradTargetCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
-
-  // 如果出参是非连续Tensor，需要把计算完的连续Tensor转非连续
-  auto viewCopyResult = l0op::ViewCopy(gradTargetCasted, gradTarget, executor);
-  CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
+  auto ret = ComputeGradTarget(selfCasted, targetCasted, gradOutputCasted, weightCasted,
+                               posWeightCasted, reduction, gradTarget, executor);
+  CHECK_RET(ret == ACLNN_SUCCESS, ret);
   return ACLNN_SUCCESS;
 }
 

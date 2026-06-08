@@ -298,6 +298,12 @@ protected:
 
   bool CheckInOutShapes(gert::TilingContext* context);
 
+  bool CheckBatchSizeShape(gert::TilingContext* context);
+
+  bool CheckXInputShape(gert::TilingContext* context);
+
+  bool CheckInitHInputShape(gert::TilingContext* context);
+
   bool GetCheckAttr(gert::TilingContext* context);
 
   void GetIntraCoreMMTilingData(uint32_t BaseMNFractalN, uint32_t &BaseMNum, uint32_t &BaseNNum);

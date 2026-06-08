@@ -38,6 +38,65 @@ ge::graphStatus CopyShapeInput2OutputWithIdx(gert::InferShapeContext* context, i
     return ge::GRAPH_SUCCESS;
 }
 
+static ge::graphStatus CheckSplitDimValues(int64_t dim_value_x, int64_t dim_value_dy, int64_t dim_value_gelu)
+{
+    OP_CHECK_IF(
+        (dim_value_x % GE_GLU_NUM_TWO != 0),
+        OP_LOGE("GEGLUGRADV2", "The input x shape can not split by the attr dim, check failed."),
+        return GRAPH_FAILED);
+    OP_CHECK_IF(
+        (dim_value_dy != UNKNOWN_DIM_VALUE_ && dim_value_x != GE_GLU_NUM_TWO * dim_value_dy),
+        OP_LOGE("GEGLUGRADV2", "The input dy and x shape does not satisfy the operator constraint."),
+        return GRAPH_FAILED);
+    OP_CHECK_IF(
+        (dim_value_gelu != UNKNOWN_DIM_VALUE_ && dim_value_x != GE_GLU_NUM_TWO * dim_value_gelu),
+        OP_LOGE("GEGLUGRADV2", "The input gelu and x shape does not satisfy the operator constraint."),
+        return GRAPH_FAILED);
+    return GRAPH_SUCCESS;
+}
+
+static ge::graphStatus CheckNonSplitDimValues(int64_t dim_value_x, int64_t dim_value_dy, int64_t dim_value_gelu)
+{
+    OP_CHECK_IF(
+        (dim_value_dy != UNKNOWN_DIM_VALUE_ && dim_value_x != dim_value_dy),
+        OP_LOGE("GEGLUGRADV2", "The input dy and x shape does not satisfy the operator constraint."),
+        return GRAPH_FAILED);
+    OP_CHECK_IF(
+        (dim_value_gelu != UNKNOWN_DIM_VALUE_ && dim_value_x != dim_value_gelu),
+        OP_LOGE("GEGLUGRADV2", "The input gelu and x shape does not satisfy the operator constraint."),
+        return GRAPH_FAILED);
+    return GRAPH_SUCCESS;
+}
+
+static ge::graphStatus CheckDimValuesConsistency(const gert::Shape* x_shape, const gert::Shape* dy_shape,
+                                                  const gert::Shape* gelu_shape, int64_t split_dim)
+{
+    size_t x_dim_num = x_shape->GetDimNum();
+    for (size_t i = 0; i < x_dim_num; i++) {
+        int64_t dim_value_x = x_shape->GetDim(i);
+        int64_t dim_value_dy = dy_shape->GetDim(i);
+        int64_t dim_value_gelu = gelu_shape->GetDim(i);
+        if (dim_value_x == UNKNOWN_DIM_VALUE_) {
+            OP_CHECK_IF(
+                (dim_value_dy != UNKNOWN_DIM_VALUE_ && dim_value_gelu != UNKNOWN_DIM_VALUE_ &&
+                 dim_value_dy != dim_value_gelu),
+                OP_LOGE("GEGLUGRADV2", "The input shape dy and gelu is different, check failed."),
+                return GRAPH_FAILED);
+            continue;
+        }
+        if (split_dim == static_cast<int64_t>(i)) {
+            auto status = CheckSplitDimValues(dim_value_x, dim_value_dy, dim_value_gelu);
+            OP_CHECK_IF(status != GRAPH_SUCCESS,
+                OP_LOGE("GEGLUGRADV2", "CheckSplitDimValues failed at dim %zu.", i), return GRAPH_FAILED);
+        } else {
+            auto status = CheckNonSplitDimValues(dim_value_x, dim_value_dy, dim_value_gelu);
+            OP_CHECK_IF(status != GRAPH_SUCCESS,
+                OP_LOGE("GEGLUGRADV2", "CheckNonSplitDimValues failed at dim %zu.", i), return GRAPH_FAILED);
+        }
+    }
+    return GRAPH_SUCCESS;
+}
+
 static ge::graphStatus InferShapeForGeGluGradV2(gert::InferShapeContext* context)
 {
     auto dy_shape = context->GetInputShape(GE_GLU_GRAD_IN_DY);
@@ -80,41 +139,9 @@ static ge::graphStatus InferShapeForGeGluGradV2(gert::InferShapeContext* context
             x_dim_num - 1, split_dim),
         return GRAPH_FAILED);
 
-    for (size_t i = 0; i < x_dim_num; i++) {
-        int64_t dim_value_x = x_shape->GetDim(i);
-        int64_t dim_value_dy = dy_shape->GetDim(i);
-        int64_t dim_value_gelu = gelu_shape->GetDim(i);
-        if (dim_value_x == UNKNOWN_DIM_VALUE_) {
-            OP_CHECK_IF(
-                (dim_value_dy != UNKNOWN_DIM_VALUE_ && dim_value_gelu != UNKNOWN_DIM_VALUE_ &&
-                 dim_value_dy != dim_value_gelu),
-                OP_LOGE("GEGLUGRADV2", "The input shape dy and gelu is different, check failed."), return GRAPH_FAILED);
-        } else {
-            if (split_dim == static_cast<int64_t>(i)) {
-                OP_CHECK_IF(
-                    (dim_value_x % GE_GLU_NUM_TWO != 0),
-                    OP_LOGE("GEGLUGRADV2", "The input x shape can not split by the attr dim, check failed."),
-                    return GRAPH_FAILED);
-                OP_CHECK_IF(
-                    (dim_value_dy != UNKNOWN_DIM_VALUE_ && dim_value_x != GE_GLU_NUM_TWO * dim_value_dy),
-                    OP_LOGE("GEGLUGRADV2", "The input dy and x shape does not satisfy the operator constraint."),
-                    return GRAPH_FAILED);
-                OP_CHECK_IF(
-                    (dim_value_gelu != UNKNOWN_DIM_VALUE_ && dim_value_x != GE_GLU_NUM_TWO * dim_value_gelu),
-                    OP_LOGE("GEGLUGRADV2", "The input gelu and x shape does not satisfy the operator constraint."),
-                    return GRAPH_FAILED);
-            } else {
-                OP_CHECK_IF(
-                    (dim_value_dy != UNKNOWN_DIM_VALUE_ && dim_value_x != dim_value_dy),
-                    OP_LOGE("GEGLUGRADV2", "The input dy and x shape does not satisfy the operator constraint."),
-                    return GRAPH_FAILED);
-                OP_CHECK_IF(
-                    (dim_value_gelu != UNKNOWN_DIM_VALUE_ && dim_value_x != dim_value_gelu),
-                    OP_LOGE("GEGLUGRADV2", "The input gelu and x shape does not satisfy the operator constraint."),
-                    return GRAPH_FAILED);
-            }
-        }
-    }
+    auto status = CheckDimValuesConsistency(x_shape, dy_shape, gelu_shape, split_dim);
+    OP_CHECK_IF(status != GRAPH_SUCCESS,
+        OP_LOGE("GEGLUGRADV2", "CheckDimValuesConsistency failed."), return GRAPH_FAILED);
 
     return CopyShapeInput2OutputWithIdx(context, 1, 0);
 }

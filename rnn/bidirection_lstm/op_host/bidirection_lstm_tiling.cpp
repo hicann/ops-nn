@@ -163,23 +163,26 @@ bool BidirectionLSTMTiling::CheckOutputShapes(gert::TilingContext* context) {
   return true;
 }
 
-bool BidirectionLSTMTiling::CheckInOutShapes(gert::TilingContext* context) {
+bool BidirectionLSTMTiling::CheckBatchSizeShape(gert::TilingContext* context) {
   auto batch_size = context->GetOptionalInputShape(11);
   if(batch_size == nullptr) {
     _Params.isSeq = false;
     _Params.packed = false;
-  } else {
-    auto shape = batch_size->GetStorageShape();
-    OP_CHECK_IF(shape.GetDimNum() != 1,
-                    OP_LOGE(context->GetNodeName(),
-                    "BidirectionLSTM get batch_size shape ndim is not 1, please check."), return false);
-    OP_CHECK_IF(shape.GetDim(0) > MAX_SEQ,
-                    OP_LOGE(context->GetNodeName(),
-                    "BidirectionLSTM get batch_size length %lu exceed limit %u, please check.", static_cast<uint64_t>(shape.GetDim(0)), MAX_SEQ), return false);
-    _Params.isSeq = true;
-    _Params.sequenceLength = shape.GetDim(0);
+    return true;
   }
+  auto shape = batch_size->GetStorageShape();
+  OP_CHECK_IF(shape.GetDimNum() != 1,
+                  OP_LOGE(context->GetNodeName(),
+                  "BidirectionLSTM get batch_size shape ndim is not 1, please check."), return false);
+  OP_CHECK_IF(shape.GetDim(0) > MAX_SEQ,
+                  OP_LOGE(context->GetNodeName(),
+                  "BidirectionLSTM get batch_size length %lu exceed limit %u, please check.", static_cast<uint64_t>(shape.GetDim(0)), MAX_SEQ), return false);
+  _Params.isSeq = true;
+  _Params.sequenceLength = shape.GetDim(0);
+  return true;
+}
 
+bool BidirectionLSTMTiling::CheckXInputShape(gert::TilingContext* context) {
   auto x = context->GetInputShape(0);
   OPS_CHECK_NULL_WITH_CONTEXT_RET(context, x, false);
   auto shape = x->GetStorageShape();
@@ -198,15 +201,33 @@ bool BidirectionLSTMTiling::CheckInOutShapes(gert::TilingContext* context) {
   if(!_Params.isSeq){
     _Params.sequenceLength = shape.GetDim(0);
   }
+  return true;
+}
 
+bool BidirectionLSTMTiling::CheckInitHInputShape(gert::TilingContext* context) {
   auto init_h = context->GetInputShape(1);
   OPS_CHECK_NULL_WITH_CONTEXT_RET(context, init_h, false);
-  shape = init_h->GetStorageShape();
+  auto shape = init_h->GetStorageShape();
   OP_CHECK_IF(shape.GetDimNum() != NUMBER_THREE,
                   OP_LOGE(context->GetNodeName(),
                   "BidirectionLSTM get init_h shape ndim is not 3, please check."), return false);
   _Params.batchSize = shape.GetDim(1);
   _Params.hiddenSize = shape.GetDim(NUMBER_TWO);
+  return true;
+}
+
+bool BidirectionLSTMTiling::CheckInOutShapes(gert::TilingContext* context) {
+  OP_CHECK_IF(!CheckBatchSizeShape(context),
+                OP_LOGE(context->GetNodeName(),
+                "BidirectionLSTM CheckBatchSizeShape failed, please check."), return false);
+
+  OP_CHECK_IF(!CheckXInputShape(context),
+                OP_LOGE(context->GetNodeName(),
+                "BidirectionLSTM CheckXInputShape failed, please check."), return false);
+
+  OP_CHECK_IF(!CheckInitHInputShape(context),
+                OP_LOGE(context->GetNodeName(),
+                "BidirectionLSTM CheckInitHInputShape failed, please check."), return false);
 
   OP_CHECK_IF(!CheckInputShapes(context),
                 OP_LOGE(context->GetNodeName(),
