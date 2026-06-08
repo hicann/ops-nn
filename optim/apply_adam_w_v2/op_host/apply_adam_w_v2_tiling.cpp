@@ -222,11 +222,17 @@ static ge::graphStatus CheckInputShape(const gert::TilingContext* context)
             "The shapes of {var, m, v, grad and max_grad_norm(if provided)} must be the same"),
         return ge::GRAPH_FAILED);
 
+    size_t stepSize = 1;
+    for (size_t i = 0; i < stepShape.GetDimNum(); ++i) {
+        stepSize *= stepShape.GetDim(i);
+    }
+
     OP_CHECK_IF(
-        stepShape.GetDimNum() != 1 || stepShape.GetDim(0) != 1,
-        OP_LOGE_FOR_INVALID_SHAPE(context->GetNodeName(), "step",
-            Ops::Base::ToString(stepShape).c_str(), "[1]"),
+        stepSize != 1,
+        OP_LOGE_FOR_INVALID_SHAPE(context->GetNodeName(),
+        "step", Ops::Base::ToString(stepShape).c_str(), "only one element is allowed."),
         return ge::GRAPH_FAILED);
+
     return ge::GRAPH_SUCCESS;
 }
 
