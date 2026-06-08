@@ -29,7 +29,8 @@ namespace optiling {
 bool AdaptiveMaxPool3dParaPoolTiling::IsCapable()
 {
     if (ge::GetSizeByDataType(input_.xDtype) == 0) {
-        OP_LOGE(context_->GetNodeName(), "Get xDtype size is 0, not support");
+        OP_LOGE_FOR_INVALID_DTYPE(
+            "AdaptiveMaxPool3d", "x", "unknown/unsupported", "[DT_FLOAT, DT_FLOAT16, DT_BF16]");
         return false;
     }
     computeInfo_.vfLen = Ops::Base::GetVRegSize(context_) / ge::GetSizeByDataType(input_.xDtype);
@@ -203,9 +204,13 @@ ge::graphStatus AdaptiveMaxPool3dParaPoolTiling::InitUbFactor()
     auto kernelD = computeInfo_.kernelDMax;
     auto kernelH = computeInfo_.kernelHMax;
     auto kernelW = computeInfo_.kernelWMax;
-    OP_CHECK_IF(
-        (kernelW <= 0 || kernelH <= 0 || kernelD <= 0),
-        OP_LOGE(context_->GetNodeName(), "Kernel size <= 0, not support"), return ge::GRAPH_FAILED);
+    if (kernelW <= 0 || kernelH <= 0 || kernelD <= 0) {
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            "AdaptiveMaxPool3d", "kernelD, kernelH, kernelW",
+            (std::to_string(kernelD) + ", " + std::to_string(kernelH) + ", " + std::to_string(kernelW)).c_str(),
+            "kernel size must be > 0");
+        return ge::GRAPH_FAILED;
+    }
 
     computeInfo_.ncFactor = computeInfo_.vfLen;
     computeInfo_.woFactor = input_.wOut;
@@ -217,10 +222,11 @@ ge::graphStatus AdaptiveMaxPool3dParaPoolTiling::InitUbFactor()
 ge::graphStatus AdaptiveMaxPool3dParaPoolTiling::DoOpTiling()
 {
     OP_LOGD(context_->GetNodeName(), "AdaptiveMaxPool3dParaPoolTiling DoOpTiling start.");
-    OP_CHECK_IF(
-        GetAndCheckIndicesDtype() != ge::GRAPH_SUCCESS,
-        OP_LOGE(context_->GetNodeName(), "AdaptiveMaxPool3dParaPoolTiling get indices type failed"),
-        return ge::GRAPH_FAILED);
+    if (GetAndCheckIndicesDtype() != ge::GRAPH_SUCCESS) {
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            "AdaptiveMaxPool3d", "indices", "unexpected", "dtype must be DT_INT32 or DT_INT64");
+        return ge::GRAPH_FAILED;
+    }
     OP_CHECK_IF(
         InitUbFactor() != ge::GRAPH_SUCCESS,
         OP_LOGE(context_->GetNodeName(), "AdaptiveMaxPool3dParaPoolTiling init ubfactor failed"),

@@ -4,8 +4,9 @@
  * This file is a part of the CANN Open Software.
  * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
- * See LICENSE in the root of the software repository for the full text of the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE. See LICENSE in the root of
+ * the software repository for the full text of the License.
  */
 
 /*!
@@ -28,7 +29,6 @@ constexpr size_t INDEX_OUT_MAX = 0;
 constexpr size_t INDEX_OUT_INDICES = 1;
 constexpr size_t INDEX_DTYPE = 1;
 constexpr size_t INT32_DTYPE = 3;
-
 
 constexpr size_t NCDHW_DIMS = 5;
 constexpr size_t CDHW_DIMS = 4;
@@ -67,30 +67,32 @@ static ge::graphStatus InferShape4AdaptiveMaxPool3d(gert::InferShapeContext* con
         OP_LOGD(context->GetNodeName(), "AdaptiveMaxPool3d infershape handle unknown shape.");
         return ge::GRAPH_SUCCESS;
     }
-    
-    OP_CHECK_IF(
-        input_dim_num != NCDHW_DIMS && input_dim_num != CDHW_DIMS,
-        OP_LOGE(context, "The dims of x not equal 5 or 4."), return GRAPH_FAILED);
+
+    if (input_dim_num != NCDHW_DIMS && input_dim_num != CDHW_DIMS) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            "AdaptiveMaxPool3d", "X", std::to_string(input_dim_num).c_str(), "X shape dim must be 4 or 5");
+        return GRAPH_FAILED;
+    }
     y_shape->SetDimNum(input_dim_num);
     indices_shape->SetDimNum(input_dim_num);
 
     size_t output_size_len = output_size_ptr->GetSize();
-    OP_CHECK_IF(
-        output_size_len != OUTPUT_SIZE_DIMS && output_size_len != ONE_DIMS && output_size_len != NONE_DIMS,
-        OP_LOGE(context, "The size of output_size is not equals to 0, 1 or 3."),
-        return GRAPH_FAILED);
-    
-    for(size_t j = 0; j < input_dim_num - OUTPUT_SIZE_DIMS; j++) {
+    if (output_size_len != OUTPUT_SIZE_DIMS && output_size_len != ONE_DIMS && output_size_len != NONE_DIMS) {
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+            "AdaptiveMaxPool3d", "output_size", std::to_string(output_size_len).c_str(), "Out Size must be in [0, 1, 3]");
+        return GRAPH_FAILED;
+    }
+    for (size_t j = 0; j < input_dim_num - OUTPUT_SIZE_DIMS; j++) {
         y_shape->SetDim(j, x_shape->GetDim(j));
         indices_shape->SetDim(j, x_shape->GetDim(j));
     }
 
     std::vector<int> realOutDims = {};
-    if (output_size_len  == OUTPUT_SIZE_DIMS) {
+    if (output_size_len == OUTPUT_SIZE_DIMS) {
         for (size_t i = 0; i < OUTPUT_SIZE_DIMS; i++) {
             realOutDims.push_back(output_size[i]);
         }
-    } else if (output_size_len  == ONE_DIMS) {
+    } else if (output_size_len == ONE_DIMS) {
         for (size_t i = 0; i < OUTPUT_SIZE_DIMS; i++) {
             realOutDims.push_back(output_size[0]);
         }

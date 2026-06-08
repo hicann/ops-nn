@@ -36,7 +36,8 @@ bool AdaptiveAvgPool3dParaPoolTiling::IsCapable()
         return false;
     }
     if (ge::GetSizeByDataType(input_.xDtype) == 0) {
-        OP_LOGE(context_->GetNodeName(), "Get xDtype size is 0, not support");
+        OP_LOGE_FOR_INVALID_DTYPE(
+            "AdaptiveAvgPool3d", "x", "unknown/unsupported", "[DT_FLOAT, DT_FLOAT16, DT_BF16]");
         return false;
     }
     avgComptuteInfo_.vfLen = Ops::Base::GetVRegSize(context_) / ge::GetSizeByDataType(input_.xDtype);
@@ -110,10 +111,12 @@ void AdaptiveAvgPool3dParaPoolTiling::CalUbBlockFactor()
     avgComptuteInfo_.ncTail = input_.nIn * input_.cIn - (avgComptuteInfo_.ncOuter - 1) * avgComptuteInfo_.ncFactor;
 
     /* 总共的UB块 */
-    avgComptuteInfo_.totalOuter = avgComptuteInfo_.ncOuter * avgComptuteInfo_.woOuter * avgComptuteInfo_.hoOuter * avgComptuteInfo_.doOuter;
+    avgComptuteInfo_.totalOuter =
+        avgComptuteInfo_.ncOuter * avgComptuteInfo_.woOuter * avgComptuteInfo_.hoOuter * avgComptuteInfo_.doOuter;
     avgComptuteInfo_.blockFactor = Ops::Base::CeilDiv(avgComptuteInfo_.totalOuter, input_.coreNum);
     avgComptuteInfo_.useCoreNum = Ops::Base::CeilDiv(avgComptuteInfo_.totalOuter, avgComptuteInfo_.blockFactor);
-    avgComptuteInfo_.blockTail = avgComptuteInfo_.totalOuter - (avgComptuteInfo_.useCoreNum - 1) * avgComptuteInfo_.blockFactor;
+    avgComptuteInfo_.blockTail =
+        avgComptuteInfo_.totalOuter - (avgComptuteInfo_.useCoreNum - 1) * avgComptuteInfo_.blockFactor;
 }
 
 /*
@@ -130,12 +133,13 @@ uint64_t AdaptiveAvgPool3dParaPoolTiling::CalOccupySize()
 {
     CalMaxUbSplitSize();
     uint64_t dataBlock = Ops::Base::GetUbBlockSize(context_);
-    auto occupySize = avgComptuteInfo_.maxInputSize * ge::GetSizeByDataType(input_.xDtype) +
-                      avgComptuteInfo_.maxInputSize * ge::GetSizeByDataType(ge::DT_FLOAT) * MAX_UB_BUFFER_NUM +
-                      Ops::Base::CeilAlign(avgComptuteInfo_.maxDimOut * ge::GetSizeByDataType(ge::DT_INT32), dataBlock) +
-                      Ops::Base::CeilAlign(avgComptuteInfo_.doFactor * ge::GetSizeByDataType(ge::DT_INT32), dataBlock) +
-                      Ops::Base::CeilAlign(avgComptuteInfo_.hoFactor * ge::GetSizeByDataType(ge::DT_INT32), dataBlock) +
-                      Ops::Base::CeilAlign(avgComptuteInfo_.woFactor * ge::GetSizeByDataType(ge::DT_INT32), dataBlock);
+    auto occupySize =
+        avgComptuteInfo_.maxInputSize * ge::GetSizeByDataType(input_.xDtype) +
+        avgComptuteInfo_.maxInputSize * ge::GetSizeByDataType(ge::DT_FLOAT) * MAX_UB_BUFFER_NUM +
+        Ops::Base::CeilAlign(avgComptuteInfo_.maxDimOut * ge::GetSizeByDataType(ge::DT_INT32), dataBlock) +
+        Ops::Base::CeilAlign(avgComptuteInfo_.doFactor * ge::GetSizeByDataType(ge::DT_INT32), dataBlock) +
+        Ops::Base::CeilAlign(avgComptuteInfo_.hoFactor * ge::GetSizeByDataType(ge::DT_INT32), dataBlock) +
+        Ops::Base::CeilAlign(avgComptuteInfo_.woFactor * ge::GetSizeByDataType(ge::DT_INT32), dataBlock);
     return occupySize;
 }
 
@@ -227,9 +231,13 @@ ge::graphStatus AdaptiveAvgPool3dParaPoolTiling::InitUbFactor()
     auto kernelD = avgComptuteInfo_.kernelDMax;
     auto kernelH = avgComptuteInfo_.kernelHMax;
     auto kernelW = avgComptuteInfo_.kernelWMax;
-    OP_CHECK_IF(
-        (kernelW <= 0 || kernelH <= 0 || kernelD <= 0),
-        OP_LOGE(context_->GetNodeName(), "Kernel size <= 0, not support"), return ge::GRAPH_FAILED);
+    if (kernelW <= 0 || kernelH <= 0 || kernelD <= 0) {
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            "AdaptiveAvgPool3d", "kernelD, kernelH, kernelW",
+            (std::to_string(kernelD) + ", " + std::to_string(kernelH) + ", " + std::to_string(kernelW)).c_str(),
+            "kernel size must be > 0");
+        return ge::GRAPH_FAILED;
+    }
 
     avgComptuteInfo_.ncFactor = avgComptuteInfo_.vfLen;
     avgComptuteInfo_.woFactor = input_.wOut;

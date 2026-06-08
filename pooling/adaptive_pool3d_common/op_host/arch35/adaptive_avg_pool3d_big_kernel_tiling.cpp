@@ -37,7 +37,7 @@ static constexpr int64_t STORE_ADD_SIZE = 1024;
 
 ge::graphStatus AdaptiveAvgPool3dBigKernelTiling::CheckOutputDtypeInfo()
 {
-    auto opNodeName = context_->GetNodeName();
+    auto opNodeName = "AdaptiveAvgPool3d";
     OP_LOGD(opNodeName, "CheckOutputDtypeInfo begin.");
 
     auto outputShape = context_->GetOutputShape(0);
@@ -45,8 +45,12 @@ ge::graphStatus AdaptiveAvgPool3dBigKernelTiling::CheckOutputDtypeInfo()
     auto outputDesc = context_->GetOutputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputDesc);
     auto outputDtype = outputDesc->GetDataType();
-    OP_CHECK_IF((outputDtype != ge::DT_FLOAT && outputDtype != ge::DT_FLOAT16 && outputDtype != ge::DT_BF16),
-        OP_LOGE(opNodeName, "output datatype only support only supports float, float16, bfloat16"), return ge::GRAPH_FAILED);
+    if (outputDtype != ge::DT_FLOAT && outputDtype != ge::DT_FLOAT16 && outputDtype != ge::DT_BF16) {
+        OP_LOGE_FOR_INVALID_DTYPE(
+            opNodeName, "output", ge::TypeUtils::DataTypeToSerialString(outputDtype).c_str(),
+            "[DT_FLOAT, DT_FLOAT16, DT_BF16]");
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -54,16 +58,17 @@ bool AdaptiveAvgPool3dBigKernelTiling::IsCapable()
 {
     OP_TILING_CHECK(
         GetAndCheckDataFormat() != ge::GRAPH_SUCCESS,
-        VECTOR_INNER_ERR_REPORT_TILIING(context_, "GetDataFormatAttrInfo fail."),
-        return ge::GRAPH_FAILED);
+        VECTOR_INNER_ERR_REPORT_TILIING(context_, "GetDataFormatAttrInfo fail."), return ge::GRAPH_FAILED);
     // 按照搬运对齐的大小全载UB, 判断是否走当前模板
     OP_LOGD(context_->GetNodeName(), "AdaptiveAvgPool3dBigKernelTiling IsCapable check.");
     uint64_t kernelDMax = CalKernelSizeOneDimMax(input_.dIn, input_.dOut);
     uint64_t kernelHMax = CalKernelSizeOneDimMax(input_.hIn, input_.hOut);
     uint64_t kernelWMax = CalKernelSizeOneDimMax(input_.wIn, input_.wOut);
     avgBigKernelInfo.kernelMaxDHW = kernelDMax * kernelHMax * kernelWMax;
-    bool isCapable = (avgBigKernelInfo.kernelMaxDHW >= ADAPTIVE_AVG_POOL3D_BIG_KERNEL_THERSHOLD) && (input_.dataFormat == ge::Format::FORMAT_NCDHW);
-    OP_LOGD(context_->GetNodeName(), "AdaptiveAvgPool3dBigKernelTiling IsCapable check: %s", isCapable ? "true" : "false");
+    bool isCapable = (avgBigKernelInfo.kernelMaxDHW >= ADAPTIVE_AVG_POOL3D_BIG_KERNEL_THERSHOLD) &&
+                     (input_.dataFormat == ge::Format::FORMAT_NCDHW);
+    OP_LOGD(
+        context_->GetNodeName(), "AdaptiveAvgPool3dBigKernelTiling IsCapable check: %s", isCapable ? "true" : "false");
     return isCapable;
 }
 
@@ -86,7 +91,7 @@ void AdaptiveAvgPool3dBigKernelTiling::DoBlockTiling()
 
     int64_t vRegSize = Ops::Base::GetVRegSize(context_);
     auto xDtypeSize = input_.xDtype == ge::DT_FLOAT ? FLOAT32_BYTPES : FLOAT16_BYTPES;
-    int64_t ubAvailable = input_.ubSize - xDtypeSize * UB_MAX_INDICES_USE_COUNT - FLOAT32_BYTPES * STORE_ADD_SIZE; 
+    int64_t ubAvailable = input_.ubSize - xDtypeSize * UB_MAX_INDICES_USE_COUNT - FLOAT32_BYTPES * STORE_ADD_SIZE;
     int64_t defaultMaxSize = Ops::Base::FloorAlign(ubAvailable / BUFFER_NUM, vRegSize);
     avgBigKernelInfo.maxCount = defaultMaxSize / FLOAT32_BYTPES;
     avgBigKernelInfo.batchCount = avgBigKernelInfo.maxCount / avgBigKernelInfo.kernelMaxDHW;
@@ -114,14 +119,15 @@ void AdaptiveAvgPool3dBigKernelTiling::PrintTilingData() const
 }
 void AdaptiveAvgPool3dBigKernelTiling::SetTilingData()
 {
-    AdaptivePool3DTiling::AdaptivePool3dBigKernelTilingData* tilingData = context_->GetTilingData<AdaptivePool3dBigKernelTilingData>();
-    tilingData->nc = input_.nIn * input_.cIn;
-    tilingData->dInDim = input_.dIn;
-    tilingData->hInDim = input_.hIn;
-    tilingData->wInDim = input_.wIn;
+    AdaptivePool3DTiling::AdaptivePool3dBigKernelTilingData* tilingData =
+        context_->GetTilingData<AdaptivePool3dBigKernelTilingData>();
     tilingData->dOutDim = input_.dOut;
     tilingData->hOutDim = input_.hOut;
     tilingData->wOutDim = input_.wOut;
+    tilingData->dInDim = input_.dIn;
+    tilingData->hInDim = input_.hIn;
+    tilingData->wInDim = input_.wIn;
+    tilingData->nc = input_.nIn * input_.cIn;
     tilingData->blockFactor = avgBigKernelInfo.blockFactor;
     tilingData->blockTail = avgBigKernelInfo.blockTail;
     tilingData->totalIdx = avgBigKernelInfo.totalIdx;
@@ -133,8 +139,11 @@ void AdaptiveAvgPool3dBigKernelTiling::SetTilingData()
 ge::graphStatus AdaptiveAvgPool3dBigKernelTiling::DoOpTiling()
 {
     OP_LOGD(context_->GetNodeName(), "AdaptiveAvgPool3dBigKernelTiling DoOpTiling start.");
-    OP_CHECK_IF(CheckOutputDtypeInfo() != ge::GRAPH_SUCCESS,
-        OP_LOGE(context_->GetNodeName(), "AdaptiveAvgPool3d indices dtype unexpected"), return ge::GRAPH_FAILED);
+    if (CheckOutputDtypeInfo() != ge::GRAPH_SUCCESS) {
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            "AdaptiveAvgPool3d", "output", "unexpected", "dtype must be DT_FLOAT, DT_FLOAT16, or DT_BF16");
+        return ge::GRAPH_FAILED;
+    }
     DoBlockTiling();
     SetTilingData();
     PrintTilingData();
@@ -149,4 +158,4 @@ ge::graphStatus AdaptiveAvgPool3dBigKernelTiling::PostTiling()
 
 REGISTER_OPS_TILING_TEMPLATE(AdaptiveAvgPool3d, AdaptiveAvgPool3dBigKernelTiling, 1);
 
-}
+} // namespace optiling

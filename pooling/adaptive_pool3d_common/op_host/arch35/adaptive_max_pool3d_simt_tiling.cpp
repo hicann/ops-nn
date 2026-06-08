@@ -29,17 +29,17 @@
 
 using namespace ge;
 using namespace AdaptivePool3DTiling;
-namespace optiling{
-    
-bool AdaptiveMaxPool3DTilingSimt::IsCapable()
-{
-    return true;
-}
+namespace optiling {
+
+bool AdaptiveMaxPool3DTilingSimt::IsCapable() { return true; }
 
 ge::graphStatus AdaptiveMaxPool3DTilingSimt::DoOpTiling()
 {
-    OP_CHECK_IF(GetAndCheckIndicesDtype() != ge::GRAPH_SUCCESS,
-        OP_LOGE(context_->GetNodeName(), "AdaptiveMaxPool3d get indices dtype failed."), return ge::GRAPH_FAILED);
+    if (GetAndCheckIndicesDtype() != ge::GRAPH_SUCCESS) {
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            "AdaptiveMaxPool3d", "indices", "unexpected", "dtype must be DT_INT32 or DT_INT64");
+        return ge::GRAPH_FAILED;
+    }
     tilingData_->nDim = input_.nIn;
     tilingData_->cDim = input_.cIn;
     tilingData_->dInDim = input_.dIn;
@@ -51,7 +51,9 @@ ge::graphStatus AdaptiveMaxPool3DTilingSimt::DoOpTiling()
     int64_t ncSize = tilingData_->nDim * tilingData_->cDim;
     outputDataCount = ncSize * tilingData_->dOutDim * tilingData_->hOutDim * tilingData_->wOutDim;
     indexNeedNum = ncSize * tilingData_->dInDim * tilingData_->hInDim * tilingData_->wInDim;
-    divNeedNum = std::max({tilingData_->dInDim * tilingData_->dOutDim, tilingData_->hInDim * tilingData_->hOutDim, tilingData_->wInDim * tilingData_->wOutDim, outputDataCount});
+    divNeedNum = std::max(
+        {tilingData_->dInDim * tilingData_->dOutDim, tilingData_->hInDim * tilingData_->hOutDim,
+         tilingData_->wInDim * tilingData_->wOutDim, outputDataCount});
     int64_t threads = std::min(outputDataCount, MAX_THREAD_NUM);
     int64_t blockNum = Ops::Base::CeilDiv(outputDataCount, threads);
     blockNum = std::min(blockNum, static_cast<int64_t>(input_.coreNum));
@@ -63,11 +65,11 @@ uint64_t AdaptiveMaxPool3DTilingSimt::GetTilingKey() const
 {
     if (indexNeedNum <= MAX_INT32 && divNeedNum < MAX_INT32) {
         return GET_TPL_TILING_KEY(TPL_MODE_2, TPL_INT32_UINT32, TPL_MULTI_MODE_0, TPL_DATA_FORMAT_MODE_0);
-    }else if (indexNeedNum > MAX_INT32 && divNeedNum < MAX_INT32) {
+    } else if (indexNeedNum > MAX_INT32 && divNeedNum < MAX_INT32) {
         return GET_TPL_TILING_KEY(TPL_MODE_2, TPL_INT64_UINT32, TPL_MULTI_MODE_0, TPL_DATA_FORMAT_MODE_0);
-    }else if (indexNeedNum <= MAX_INT32 && divNeedNum > MAX_INT32){
+    } else if (indexNeedNum <= MAX_INT32 && divNeedNum > MAX_INT32) {
         return GET_TPL_TILING_KEY(TPL_MODE_2, TPL_INT32_UINT64, TPL_MULTI_MODE_0, TPL_DATA_FORMAT_MODE_0);
-    }else {
+    } else {
         return GET_TPL_TILING_KEY(TPL_MODE_2, TPL_INT64_UINT64, TPL_MULTI_MODE_0, TPL_DATA_FORMAT_MODE_0);
     }
 }
@@ -76,16 +78,14 @@ ge::graphStatus AdaptiveMaxPool3DTilingSimt::PostTiling()
 {
     ubSize = input_.ubSize - DCACHE_SIZE;
     auto res = context_->SetLocalMemorySize(ubSize);
-    OP_TILING_CHECK((res != ge::GRAPH_SUCCESS),
-                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "SetLocalMemorySize ubSize = %lu failed.", ubSize),
-                    return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        (res != ge::GRAPH_SUCCESS),
+        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "SetLocalMemorySize ubSize = %lu failed.", ubSize),
+        return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus AdaptiveMaxPool3DTilingSimt::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus AdaptiveMaxPool3DTilingSimt::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 void AdaptiveMaxPool3DTilingSimt::DumpTilingInfo()
 {
@@ -101,4 +101,4 @@ void AdaptiveMaxPool3DTilingSimt::DumpTilingInfo()
     OP_LOGI(context_, "%s", str.c_str());
 }
 REGISTER_OPS_TILING_TEMPLATE(AdaptiveMaxPool3d, AdaptiveMaxPool3DTilingSimt, 2);
-}  // namespace optiling
+} // namespace optiling

@@ -55,22 +55,23 @@ static ge::graphStatus InferShape4AdaptiveAvgPool3d(gert::InferShapeContext* con
     size_t input_dim_num = x_shape->GetDimNum();
     size_t output_size_len = output_size_ptr->GetSize();
     OP_CHECK_IF(input_dim_num != X_DIMS_4 && input_dim_num != X_DIMS_5,
-            OP_LOGE(context, "The dims of x must be 4 or 5, but got %zu.", input_dim_num),
-                return GRAPH_FAILED);
-    OP_CHECK_IF(
-        output_size_len != OUTPUT_SIZE_DIMS,
-        OP_LOGE(context, "The size of output_size not equal 3."),
-        return GRAPH_FAILED);
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                    "AdaptiveAvgPool3d", "X", std::to_string(input_dim_num).c_str(), "must be 4 or 5"),
+                GRAPH_FAILED);
+    OP_CHECK_IF(output_size_len != OUTPUT_SIZE_DIMS, 
+                OP_LOGE_FOR_INVALID_LISTSIZE(
+                    "AdaptiveAvgPool3d", "output_size", std::to_string(output_size_len).c_str(), "3"),
+                GRAPH_FAILED);
     y_shape->SetDimNum(input_dim_num);
 
     const char* data_format = attr_ptr->GetAttrPointer<char>(DATA_FORTMAT_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, data_format);
     std::string data_format_str = data_format;
-    size_t s_idx = 0; 
+    size_t s_idx = 0;
     if (data_format_str == "NCDHW") {
         // NCDHW --> 2,CDHW-->1
         s_idx = (input_dim_num == X_DIMS_5) ? NUM_TWO : NUM_ONE;
-    } else { 
+    } else {
         // NDHWC -> 1, DHWC-->0
         s_idx = (input_dim_num == X_DIMS_5) ? NUM_ONE : 0;
     }
@@ -88,7 +89,7 @@ static ge::graphStatus InferShape4AdaptiveAvgPool3d(gert::InferShapeContext* con
             y_shape->SetDim(i, x_shape->GetDim(i));
         }
     }
-    
+
     return GRAPH_SUCCESS;
 }
 

@@ -56,15 +56,15 @@ constexpr size_t kHDimNCDHWIdx = 3;
 constexpr size_t kWDimNCDHWIdx = 4;
 
 using gert::InferShapeContext;
-}  // namespace
+} // namespace
 
 using namespace ge;
 
 namespace ops {
 using ge::Format;
+using ge::FORMAT_DHWCN;
 using ge::FORMAT_NCDHW;
 using ge::FORMAT_NDHWC;
-using ge::FORMAT_DHWCN;
 struct Conv3DInputShapesForAvgPool3d {
     int64_t in = 0;
     int64_t id = 0;
@@ -101,11 +101,15 @@ struct Conv3DAttrsForAvgPool3d {
 };
 
 static bool GetConv3DXShape(
-    const InferShapeContext *context, size_t x_idx, Format x_format, bool avg_pool3d, Conv3DInputShapesForAvgPool3d &shapes) {
+    const InferShapeContext* context, size_t x_idx, Format x_format, bool avg_pool3d,
+    Conv3DInputShapesForAvgPool3d& shapes)
+{
     const auto x_shape = context->GetInputShape(x_idx);
     OP_LOGE_IF(x_shape == nullptr, false, context->GetNodeName(), "failed to get x shape.");
-    OP_LOGE_IF(x_shape->GetDimNum() != kConv3dInputSizeLimit, false, context->GetNodeName(),
-               "The shape of x_tensor should be 5d, actual dim num: %zu", x_shape->GetDimNum());
+    if (x_shape->GetDimNum() != kConv3dInputSizeLimit) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM("AvgPool3D", "X", std::to_string(x_shape->GetDimNum()).c_str(), "5");
+        return false;
+    }
 
     size_t idx = 0;
     if (x_format == FORMAT_NCDHW) {
@@ -127,79 +131,91 @@ static bool GetConv3DXShape(
         shapes.ic = x_shape->GetDim(idx++);
         shapes.in = x_shape->GetDim(idx++);
     } else {
-        OP_LOGE(context->GetNodeName(), "The format of input x not support format %s.",
-                ge::TypeUtils::FormatToAscendString(x_format).GetString());
+        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
+            context->GetNodeName(), "X", ge::TypeUtils::FormatToAscendString(x_format).GetString(),
+            "format only supports NCDHW, NDHWC, DHWCN");
         return false;
     }
 
     return true;
 }
 
+static void SetPads(Conv3DAttrsForAvgPool3d& attrs, int64_t padf, int64_t padb, int64_t padu, int64_t padd, 
+                    int64_t padl, int64_t padr)
+{
+    attrs.padf = padf;
+    attrs.padb = padb;
+    attrs.padu = padu;
+    attrs.padd = padd;
+    attrs.padl = padl;
+    attrs.padr = padr;
+}
+
 static bool GetConv3DPads(
-    const InferShapeContext *context, const Conv3DInputShapesForAvgPool3d &shapes, size_t pads_idx, size_t padding_idx,
-    Conv3DAttrsForAvgPool3d &attrs) {
+    const InferShapeContext* context, const Conv3DInputShapesForAvgPool3d& shapes, size_t pads_idx, size_t padding_idx,
+    Conv3DAttrsForAvgPool3d& attrs)
+{
     const auto runtime_attrs = context->GetAttrs();
     OP_LOGE_IF(runtime_attrs == nullptr, false, context->GetNodeName(), "failed to get runtime attrs");
     const auto pads_list = runtime_attrs->GetAttrPointer<gert::ContinuousVector>(pads_idx);
     OP_LOGE_IF(pads_list == nullptr, false, context->GetNodeName(), "failed to get pads attrs");
-    OP_LOGE_IF(pads_list->GetSize() != LEN_6 and pads_list->GetSize() != LEN_3 and pads_list->GetSize() != LEN_1,
-               false, context->GetNodeName(), "invalid pads");
-    const auto pads_list_data = static_cast<const int64_t *>(pads_list->GetData());
+    if (pads_list->GetSize() != LEN_6 and pads_list->GetSize() != LEN_3 and pads_list->GetSize() != LEN_1) {
+        OP_LOGE_FOR_INVALID_LISTSIZE(
+            "AvgPool3D", "Size of pads", std::to_string(pads_list->GetSize()).c_str(), "[6, 3, 1]");
+        return false;
+    }
+    const auto pads_list_data = static_cast<const int64_t*>(pads_list->GetData());
 
-    if (pads_list->GetSize() == LEN_1 || pads_list->GetSize() == LEN_3){
+    if (pads_list->GetSize() == LEN_1 || pads_list->GetSize() == LEN_3) {
         attrs.padf = pads_list_data[DIM_0];
         attrs.padb = pads_list_data[DIM_0];
         attrs.padu = pads_list->GetSize() == LEN_1 ? pads_list_data[DIM_0] : pads_list_data[DIM_1];
         attrs.padd = pads_list->GetSize() == LEN_1 ? pads_list_data[DIM_0] : pads_list_data[DIM_1];
         attrs.padl = pads_list->GetSize() == LEN_1 ? pads_list_data[DIM_0] : pads_list_data[DIM_2];
         attrs.padr = pads_list->GetSize() == LEN_1 ? pads_list_data[DIM_0] : pads_list_data[DIM_2];
-    }else{
-        attrs.padf = pads_list_data[DIM_0];
-        attrs.padb = pads_list_data[DIM_1];
-        attrs.padu = pads_list_data[DIM_2];
-        attrs.padd = pads_list_data[DIM_3];
-        attrs.padl = pads_list_data[DIM_4];
-        attrs.padr = pads_list_data[DIM_5];
+    } else {
+        SetPads(attrs, pads_list_data[DIM_0], pads_list_data[DIM_1], pads_list_data[DIM_2],
+                pads_list_data[DIM_3], pads_list_data[DIM_4], pads_list_data[DIM_5]);
     }
 
     if (runtime_attrs->GetAttrNum() > padding_idx) {
         const auto padding = runtime_attrs->GetAttrPointer<char>(padding_idx);
         if (padding != nullptr && (strcmp(padding, "SAME") == 0)) {
             OP_LOGD(context->GetNodeName(), "get padding SAME");
-            int64_t tails_d = shapes.id % attrs.strd;  // non zero, checked in shape range infer logic
-            int64_t tails_h = shapes.ih % attrs.strh;  // non zero, checked in shape range infer logic
-            int64_t tails_w = shapes.iw % attrs.strw;  // non zero, checked in shape range infer logic
+            int64_t tails_d = shapes.id % attrs.strd; // non zero, checked in shape range infer logic
+            int64_t tails_h = shapes.ih % attrs.strh; // non zero, checked in shape range infer logic
+            int64_t tails_w = shapes.iw % attrs.strw; // non zero, checked in shape range infer logic
             int64_t dilate_kernel_d = attrs.dild * (shapes.kd - 1) + 1;
             int64_t dilate_kernel_h = attrs.dilh * (shapes.kh - 1) + 1;
             int64_t dilate_kernel_w = attrs.dilw * (shapes.kw - 1) + 1;
             int64_t pad_d = std::max((tails_d > 0 ? dilate_kernel_d - tails_d : dilate_kernel_d - attrs.strd), 0L);
             int64_t pad_h = std::max((tails_h > 0 ? dilate_kernel_h - tails_h : dilate_kernel_h - attrs.strh), 0L);
             int64_t pad_w = std::max((tails_w > 0 ? dilate_kernel_w - tails_w : dilate_kernel_w - attrs.strw), 0L);
-            attrs.padf = pad_d / 2;  // 2 means pad_up is half size of pad_d
-            attrs.padb = pad_d - attrs.padf;
-            attrs.padu = pad_h / 2;  // 2 means pad_up is half size of pad_h
-            attrs.padd = pad_h - attrs.padu;
-            attrs.padl = pad_w / 2;  // 2 means pad_up is half size of pad_w
-            attrs.padr = pad_w - attrs.padl;
+            SetPads(attrs, pad_d / 2, pad_d - pad_d / 2, pad_h / 2, pad_h - pad_h / 2, pad_w / 2, pad_w - pad_w / 2);
             return true;
         }
     }
 
     bool negative_pad =
         std::any_of(pads_list_data, pads_list_data + pads_list->GetSize(), [](int64_t val) -> bool { return val < 0; });
-    OP_LOGE_IF(negative_pad, false, context->GetNodeName(), "The value of the pads attribute should >= 0");
+    if (negative_pad) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            "AvgPool3D", "Value of pads", "negative value found", "each element of pads must be >= 0");
+        return false;
+    }
 
     return true;
 }
 
 static bool GetStridesForAvgPool3D(
-    const InferShapeContext *context, ge::Format x_format, Conv3DAttrsForAvgPool3d &attrs) {
+    const InferShapeContext* context, ge::Format x_format, Conv3DAttrsForAvgPool3d& attrs)
+{
     const auto runtime_attrs = context->GetAttrs();
     OP_LOGE_IF(runtime_attrs == nullptr, false, context->GetNodeName(), "failed to get runtime attrs");
 
     const auto strides_list = runtime_attrs->GetAttrPointer<gert::ContinuousVector>(kAvgPool3DStridesIdx);
     OP_LOGE_IF(strides_list == nullptr, false, context->GetNodeName(), "failed to get strides attrs");
-    const auto strides_list_data = static_cast<const int64_t *>(strides_list->GetData());
+    const auto strides_list_data = static_cast<const int64_t*>(strides_list->GetData());
 
     if (strides_list->GetSize() == 1) {
         attrs.strd = strides_list_data[0];
@@ -227,18 +243,25 @@ static bool GetStridesForAvgPool3D(
         }
     }
 
-    OP_LOGE_IF(attrs.strd == 0 || attrs.strh == 0 || attrs.strw == 0, false,
-               context->GetNodeName(), "get zero strides");
+    if (attrs.strd == 0 || attrs.strh == 0 || attrs.strw == 0) {
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            "AvgPool3D", "strd, strh, strw",
+            (std::to_string(attrs.strd) + ", " + std::to_string(attrs.strh) + ", " + std::to_string(attrs.strw))
+                .c_str(),
+            "strd, strh, strw must be > 0, cannot be 0");
+        return false;
+    }
     return true;
 }
 
-static bool GetKSize(const InferShapeContext *context, ge::Format x_format, Conv3DInputShapesForAvgPool3d &shapes) {
+static bool GetKSize(const InferShapeContext* context, ge::Format x_format, Conv3DInputShapesForAvgPool3d& shapes)
+{
     const auto runtime_attrs = context->GetAttrs();
     OP_LOGE_IF(runtime_attrs == nullptr, false, context->GetNodeName(), "failed to get runtime attrs");
 
     const auto ksize_list = runtime_attrs->GetAttrPointer<gert::ContinuousVector>(kAvgPool3DKSizeIdx);
     OP_LOGE_IF(ksize_list == nullptr, false, context->GetNodeName(), "failed to get ksize attrs");
-    const auto ksize_list_data = static_cast<const int64_t *>(ksize_list->GetData());
+    const auto ksize_list_data = static_cast<const int64_t*>(ksize_list->GetData());
 
     if (ksize_list->GetSize() == 1) {
         shapes.kd = ksize_list_data[0];
@@ -269,10 +292,10 @@ static bool GetKSize(const InferShapeContext *context, ge::Format x_format, Conv
     return true;
 }
 
-
 static bool CalcAvgPool3DOutputShape(
-    const char *op_name, const Conv3DInputShapesForAvgPool3d &shapes, const Conv3DAttrsForAvgPool3d &attrs,
-    ge::Format y_format, gert::Shape *y_shape) {
+    const char* op_name, const Conv3DInputShapesForAvgPool3d& shapes, const Conv3DAttrsForAvgPool3d& attrs,
+    ge::Format y_format, gert::Shape* y_shape)
+{
     int64_t outd = 0;
     int64_t outh = 0;
     int64_t outw = 0;
@@ -315,15 +338,17 @@ static bool CalcAvgPool3DOutputShape(
         y_shape->AppendDim(shapes.ic);
         y_shape->AppendDim(shapes.in);
     } else {
-        OP_LOGE(op_name, "The format of output y not support format %s.",
-                ge::TypeUtils::FormatToAscendString(y_format).GetString());
+        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
+            op_name, "Format of output y", ge::TypeUtils::FormatToAscendString(y_format).GetString(),
+            "format only supports NCDHW, NDHWC, DHWCN");
         return false;
     }
 
     return true;
 }
 
-static ge::graphStatus InferShapeForAvgPool3D(InferShapeContext *context) {
+static ge::graphStatus InferShapeForAvgPool3D(InferShapeContext* context)
+{
     if (context == nullptr) {
         OP_LOGE("AvgPool3D", "context is null");
         return ge::GRAPH_FAILED;
@@ -361,7 +386,5 @@ static ge::graphStatus InferShapeForAvgPool3D(InferShapeContext *context) {
     return ge::GRAPH_FAILED;
 }
 
-IMPL_OP_INFERSHAPE(AvgPool3D)
-    .InferShape(InferShapeForAvgPool3D)
-    .PrivateAttr("padding", "");
-}  // namespace ops
+IMPL_OP_INFERSHAPE(AvgPool3D).InferShape(InferShapeForAvgPool3D).PrivateAttr("padding", "");
+} // namespace ops
