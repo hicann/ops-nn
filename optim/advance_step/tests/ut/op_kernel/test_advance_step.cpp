@@ -120,10 +120,10 @@ TEST_F(advance_step_test, test_advance_step_int_2)
     size_t spec_num = 2;
     size_t block_size = 8;
 
-    size_t inputTokenSize = num_seqs * (spec_num + 1) * sizeof(int64_t);
-    size_t sampledTokenSize = num_seqs * spec_num * sizeof(int64_t);
-    size_t blockTableSize = num_seqs * 10000 * sizeof(int64_t);
-    size_t acceptedNumSize = num_seqs * sizeof(int64_t);
+    size_t inputTokenSize = num_seqs * (spec_num + 1) * sizeof(int64_t) + 1024;
+    size_t sampledTokenSize = num_seqs * (spec_num + 1) * sizeof(int64_t) + 1024;
+    size_t blockTableSize = num_seqs * 1000 * sizeof(int64_t) * 2;
+    size_t acceptedNumSize = num_seqs * sizeof(int64_t) + 1024;
 
     uint8_t* input_tokens = (uint8_t*)AscendC::GmAlloc(inputTokenSize);
     uint8_t* sampled_token_ids = (uint8_t*)AscendC::GmAlloc(sampledTokenSize);

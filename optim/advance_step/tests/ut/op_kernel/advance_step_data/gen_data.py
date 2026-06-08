@@ -12,7 +12,6 @@ import os
 import numpy as np
 import re
 import torch
-import tensorflow as tf
 
 def Advance_step(num_seqs, num_queries, block_size, input_tokens, sampled_token_ids, input_positions,
                 seq_lens, slot_mapping, block_tables):
@@ -83,11 +82,6 @@ def gen_data_and_golden(input_shape_str, output_size_str, d_type="int64"):
     seq_lens_out = np.random.randint(1, size=size).astype(np_type).flatten()
     slot_mapping_out = np.random.randint(1, size=size).astype(np_type).flatten()
 
-    input_tokens_out_tensor = torch.tensor(input_tokens_out.astype(np.int64), dtype=torch.int64)
-    input_positions_out_tensor = torch.tensor(input_positions_out.astype(np.int64), dtype=torch.int64)
-    seq_lens_out_tensor = torch.tensor(seq_lens_out.astype(np.int64), dtype=torch.int64)
-    slot_mapping_out_tensor = torch.tensor(slot_mapping_out.astype(np.int64), dtype=torch.int64)
-
     Advance_step(16, 8, 8, input_tokens_tensor, sampled_token_ids_tensor, input_positions_tensor, seq_lens_tensor,
                 slot_mapping_tensor, block_tables_tensor)
 
@@ -97,10 +91,10 @@ def gen_data_and_golden(input_shape_str, output_size_str, d_type="int64"):
     seq_lens.astype(np_type).tofile(f"seq_lens_input_advance_step.bin")
     slot_mapping.astype(np_type).tofile(f"slot_mapping_input_advance_step.bin")
     block_tables.astype(np_type).tofile(f"block_tables_input_advance_step.bin")
-    input_tokens_out_tensor.numpy().astype(np_type).tofile(f"1_golden_advance_step.bin")
-    input_positions_out_tensor.numpy().astype(np_type).tofile(f"2_golden_advance_step.bin")
-    seq_lens_out_tensor.numpy().astype(np_type).tofile(f"3_golden_advance_step.bin")
-    slot_mapping_out_tensor.numpy().astype(np_type).tofile(f"4_golden_advance_step.bin")
+    input_tokens_tensor.numpy().astype(np_type).tofile(f"1_golden_advance_step.bin")
+    input_positions_tensor.numpy().astype(np_type).tofile(f"2_golden_advance_step.bin")
+    seq_lens_tensor.numpy().astype(np_type).tofile(f"3_golden_advance_step.bin")
+    slot_mapping_tensor.numpy().astype(np_type).tofile(f"4_golden_advance_step.bin")
 
 if __name__ == "__main__":
     if len(sys.argv) != 4:

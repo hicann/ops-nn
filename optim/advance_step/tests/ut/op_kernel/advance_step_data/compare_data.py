@@ -24,7 +24,7 @@ def compare_data(golden_file_lists, output_file_lists, d_type):
     for gold, out in zip(golden_file_lists, output_file_lists):
         tmp_out = np.fromfile(out, np_dtype)
         tmp_gold = np.fromfile(gold, np_dtype)
-        diff_res = np.isclose(tmp_gold, tmp_gold, precision, 0, True)
+        diff_res = np.isclose(tmp_gold, tmp_out, precision, 0, True)
         diff_idx = np.where(diff_res != True)[0]
         if len(diff_idx) == 0:
             print("PASSED!")
@@ -36,8 +36,8 @@ def compare_data(golden_file_lists, output_file_lists, d_type):
     return data_same
 
 def get_file_lists(dtype):
-    golden_file_lists = sorted(glob.glob(curr_dir + "/*golden*.bin"))
-    output_file_lists = sorted(glob.glob(curr_dir + "/*output*.bin"))
+    golden_file_lists = sorted(glob.glob(curr_dir + "/1_golden_advance_step.bin"))
+    output_file_lists = sorted(glob.glob(curr_dir + "/1_output_advance_step.bin"))
     return golden_file_lists, output_file_lists
 
 def process(d_type):

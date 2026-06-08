@@ -84,6 +84,8 @@ static aclnnStatus CheckParams(const aclTensor *self, const aclTensor *out) {
 
 aclnnStatus aclnnGeluGetWorkspaceSize(const aclTensor *self, aclTensor *out,
                                       uint64_t *workspaceSize, aclOpExecutor **executor) {
+  OP_CHECK_COMM_INPUT(workspaceSize, executor);
+  
   L2_DFX_PHASE_1(aclnnGelu, DFX_IN(self), DFX_OUT(out));
 
   // 固定写法，创建OpExecutor
