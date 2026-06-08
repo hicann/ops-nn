@@ -72,23 +72,24 @@ ge::graphStatus MaxPoolWithArgmaxV3BaseTiling::GetShapeAttrsInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputX);
     auto inputShape = Ops::Base::EnsureNotScalar(inputX->GetStorageShape());
 
-    OP_CHECK_IF(
-        !(inputShape.GetDimNum() == NCHW_DIMS || inputShape.GetDimNum() == CHW_DIMS),
-        OP_LOGE(
-            context_->GetNodeName(), "MaxPoolWithArgmaxV3: input shape dim = %zu, should be equal 3 or 4",
-            inputShape.GetDimNum()),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        inputShape.GetShapeSize() <= 0,
-        OP_LOGE(
-            context_->GetNodeName(), "MaxPoolWithArgmaxV3: input shape size %ld less than zero failed",
-            inputShape.GetShapeSize()),
-        return ge::GRAPH_FAILED);
+    if (!(inputShape.GetDimNum() == NCHW_DIMS || inputShape.GetDimNum() == CHW_DIMS)) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM(
+            context_->GetNodeName(), "x", std::to_string(inputShape.GetDimNum()).c_str(), "3 or 4");
+        return ge::GRAPH_FAILED;
+    }
+    if (inputShape.GetShapeSize() <= 0) {
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+            context_->GetNodeName(), "x", std::to_string(inputShape.GetShapeSize()).c_str(),
+            "Shape size of x must be greater than 0");
+        return ge::GRAPH_FAILED;
+    }
     auto inputDesc = context_->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputDesc);
     dtype = inputDesc->GetDataType();
     if (dtype != ge::DataType::DT_BF16 && dtype != ge::DataType::DT_FLOAT16 && dtype != ge::DataType::DT_FLOAT) {
-        OP_LOGE(context_->GetNodeName(), "MaxPoolWithArgmaxV3: invalid dtype");
+        OP_LOGE_FOR_INVALID_DTYPE(
+            context_->GetNodeName(), "x", Ops::Base::ToString(dtype).c_str(),
+            "float, float16 and bfloat16");
         return ge::GRAPH_FAILED;
     }
 
@@ -99,7 +100,10 @@ ge::graphStatus MaxPoolWithArgmaxV3BaseTiling::GetShapeAttrsInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, indicesX);
     auto indicesShape = Ops::Base::EnsureNotScalar(indicesX->GetStorageShape());
     if (indicesShape != outShape) {
-        OP_LOGE(context_->GetNodeName(), "MaxPoolWithArgmaxV3: indices shape and values shape is different");
+        std::string shapeMsg = Ops::Base::ToString(indicesShape) + " and " + Ops::Base::ToString(outShape);
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context_->GetNodeName(), "indices and y", shapeMsg.c_str(),
+            "The Shapes of indices and y must be the same");
         return ge::GRAPH_FAILED;
     }
     auto runtimeAttrs = context_->GetAttrs();
@@ -145,16 +149,19 @@ ge::graphStatus MaxPoolWithArgmaxV3BaseTiling::GetShapeAttrsInfo()
         inputData.nInput = 1;
         inputData.cInput = inputShape.GetDim(MP_MAX_2D_DIM_TWO);
     } else {
-        OP_LOGE(context_->GetNodeName(), "MaxPoolWithArgmaxV3: not support format %s", inputFormatStr.c_str());
+        OP_LOGE_FOR_INVALID_FORMAT(
+            context_->GetNodeName(), "x", inputFormatStr.c_str(), "NCHW, NHWC, CHW or HWC");
         return ge::GRAPH_FAILED;
     }
 
-    OP_CHECK_IF(
-        outShape.GetDim(h_dim) < 1 || outShape.GetDim(w_dim) < 1,
-        OP_LOGE(
-            context_->GetNodeName(), "MaxPoolWithArgmaxV3: output shape [%ld, %ld] not support", outShape.GetDim(h_dim),
-            outShape.GetDim(w_dim)),
-        return ge::GRAPH_FAILED);
+    if (outShape.GetDim(h_dim) < 1 || outShape.GetDim(w_dim) < 1) {
+        std::string shapeMsg = "[" + std::to_string(outShape.GetDim(h_dim)) + ", " +
+                               std::to_string(outShape.GetDim(w_dim)) + "]";
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context_->GetNodeName(), "y", shapeMsg.c_str(),
+            "H and W dims of output shape must be greater than 0");
+        return ge::GRAPH_FAILED;
+    }
 
     inputData.inputShape =
         array<uint64_t, HW_DIMS>{uint64_t(inputShape.GetDim(h_dim)), uint64_t(inputShape.GetDim(w_dim))};
@@ -167,10 +174,13 @@ ge::graphStatus MaxPoolWithArgmaxV3BaseTiling::GetShapeAttrsInfo()
     hValue = *(kernelSize->GetData());
     wValue = *(kernelSize->GetData() + 1);
     inputData.kernelSize = array<uint64_t, HW_DIMS>{uint64_t(hValue), uint64_t(wValue)};
-    OP_CHECK_IF(
-        hValue <= 0 || wValue <= 0,
-        OP_LOGE(context_->GetNodeName(), "MaxPoolWithArgmaxV3: not support kernel shape [%d, %d]", hValue, wValue),
-        return ge::GRAPH_FAILED);
+    if (hValue <= 0 || wValue <= 0) {
+        std::string shapeMsg = "[" + std::to_string(hValue) + ", " + std::to_string(wValue) + "]";
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context_->GetNodeName(), "ksize", shapeMsg.c_str(),
+            "Each element of ksize must be greater than 0");
+        return ge::GRAPH_FAILED;
+    }
 
     int32_t khValue = hValue;
     int32_t kwValue = wValue;
@@ -179,22 +189,26 @@ ge::graphStatus MaxPoolWithArgmaxV3BaseTiling::GetShapeAttrsInfo()
     hValue = *(stride->GetData());
     wValue = *(stride->GetData() + 1);
     inputData.stride = array<uint64_t, HW_DIMS>{uint64_t(hValue), uint64_t(wValue)};
-    OP_CHECK_IF(
-        hValue <= 0 || wValue <= 0,
-        OP_LOGE(context_->GetNodeName(), "MaxPoolWithArgmaxV3: not support stride shape [%d, %d]", hValue, wValue),
-        return ge::GRAPH_FAILED);
+    if (hValue <= 0 || wValue <= 0) {
+        std::string strideMsg = "[" + std::to_string(hValue) + ", " + std::to_string(wValue) + "]";
+        OP_LOGE_FOR_INVALID_STRIDE(
+            context_->GetNodeName(), "strides", strideMsg.c_str(), "Each element must be greater than 0");
+        return ge::GRAPH_FAILED;
+    }
 
     const gert::TypedContinuousVector<int64_t>* padding = runtimeAttrs->GetListInt(PADDING_POS);
     OP_CHECK_NULL_WITH_CONTEXT(context_, padding);
     hValue = *(padding->GetData());
     wValue = *(padding->GetData() + 1);
     inputData.pad = array<uint64_t, HW_DIMS>{uint64_t(hValue), uint64_t(wValue)};
-    OP_CHECK_IF(
-        hValue > khValue / 2 || wValue > kwValue / 2,
-        OP_LOGE(
-            context_->GetNodeName(), "MaxPoolWithArgmaxV3: not support pad shape [%d, %d] kernel shape [%d, %d]",
-            hValue, wValue, khValue, kwValue),
-        return ge::GRAPH_FAILED);
+    if (hValue > khValue / 2 || wValue > kwValue / 2) {
+        std::string padMsg = "pad [" + std::to_string(hValue) + ", " + std::to_string(wValue) +
+                             "], kernel [" + std::to_string(khValue) + ", " + std::to_string(kwValue) + "]";
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context_->GetNodeName(), "pads", padMsg.c_str(),
+            "Each element of pads must not exceed half of the corresponding ksize element");
+        return ge::GRAPH_FAILED;
+    }
 
     inputData.dilation = array<uint64_t, HW_DIMS>{1, 1};
     hValue = 1;
@@ -204,11 +218,13 @@ ge::graphStatus MaxPoolWithArgmaxV3BaseTiling::GetShapeAttrsInfo()
         hValue = *(dilation->GetData());
         wValue = *(dilation->GetData() + 1);
         inputData.dilation = array<uint64_t, HW_DIMS>{uint64_t(hValue), uint64_t(wValue)};
-        OP_CHECK_IF(
-            hValue <= 0 || wValue <= 0,
-            OP_LOGE(
-                context_->GetNodeName(), "MaxPoolWithArgmaxV3: not support dilation shape [%d, %d]", hValue, wValue),
-            return ge::GRAPH_FAILED);
+        if (hValue <= 0 || wValue <= 0) {
+            std::string dilationMsg = "[" + std::to_string(hValue) + ", " + std::to_string(wValue) + "]";
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                context_->GetNodeName(), "dilation", dilationMsg.c_str(),
+                "Each element of dilation must be greater than 0");
+            return ge::GRAPH_FAILED;
+        }
     }
 
     inputData.ceilMode = false;

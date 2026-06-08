@@ -31,9 +31,11 @@ ge::graphStatus MaxPoolWithArgmaxV3TilingSIMT::GetShapeAttrsInfo()
     std::transform(
         inputData.data_format.begin(), inputData.data_format.end(), inputData.data_format.begin(),
         [](unsigned char c) { return std::tolower(c); });
-    OP_CHECK_IF(
-        !(inputData.data_format == "nchw" || inputData.data_format == "nhwc"),
-        OP_LOGE(context_, "ATTR data_format is %s ,expect [NCHW] or [NHWC].", data_format), return ge::GRAPH_FAILED);
+    if (!(inputData.data_format == "nchw" || inputData.data_format == "nhwc")) {
+        OP_LOGE_FOR_INVALID_FORMAT(
+            context_->GetNodeName(), "data_format", data_format, "NCHW or NHWC");
+        return ge::GRAPH_FAILED;
+    }
     auto inputX = context_->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputX);
     auto inputShape = Ops::Base::EnsureNotScalar(inputX->GetStorageShape());
@@ -47,9 +49,8 @@ ge::graphStatus MaxPoolWithArgmaxV3TilingSIMT::GetShapeAttrsInfo()
     auto indicesShape = Ops::Base::EnsureNotScalar(indicesX->GetStorageShape());
 
     if (inputShape.GetDimNum() != NCHW_DIMS) {
-        OP_LOGE(
-            context_->GetNodeName(), "MaxPoolWithArgmaxV3: input shape dim = %zu, should be equal 4",
-            inputShape.GetDimNum());
+        OP_LOGE_FOR_INVALID_SHAPEDIM(
+            context_->GetNodeName(), "x", std::to_string(inputShape.GetDimNum()).c_str(), "4");
         return ge::GRAPH_FAILED;
     }
     if (inputData.data_format == "nhwc") {
@@ -68,11 +69,16 @@ ge::graphStatus MaxPoolWithArgmaxV3TilingSIMT::GetShapeAttrsInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputDesc);
     dtype = inputDesc->GetDataType();
     if (dtype != ge::DataType::DT_BF16 && dtype != ge::DataType::DT_FLOAT16 && dtype != ge::DataType::DT_FLOAT) {
-        OP_LOGE(context_->GetNodeName(), "MaxPoolWithArgmaxV3: invalid dtype");
+        OP_LOGE_FOR_INVALID_DTYPE(
+            context_->GetNodeName(), "x", Ops::Base::ToString(dtype).c_str(),
+            "float, float16 and bfloat16");
         return ge::GRAPH_FAILED;
     }
     if (indicesShape != outShape) {
-        OP_LOGE(context_->GetNodeName(), "MaxPoolWithArgmaxV3: indices shape and values shape is different");
+        std::string shapeMsg = Ops::Base::ToString(indicesShape) + " and " + Ops::Base::ToString(outShape);
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context_->GetNodeName(), "indices and y", shapeMsg.c_str(),
+            "The Shapes of indices and y must be the same");
         return ge::GRAPH_FAILED;
     }
     OP_CHECK_NULL_WITH_CONTEXT(context_, runtimeAttrs);

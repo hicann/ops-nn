@@ -37,8 +37,11 @@ bool MaxPoolWithArgmaxV3BigKernelTiling::IsCapable()
     int64_t vRegSize = Ops::Base::GetVRegSize(context_);
     maxCount_ = Ops::Base::FloorAlign(maxCount_, vRegSize);
     int64_t dtypeSize = ge::GetSizeByDataType(dtype);
-    OP_CHECK_IF(
-        dtypeSize <= 0, OP_LOGE(context_, "dtypeSize must be greater than 0, dtypeSize: %ld", dtypeSize), return false);
+    if (dtypeSize <= 0) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "dtypeSize", std::to_string(dtypeSize).c_str(),
+            "dtypeSize derived from the dtype of x must be greater than 0");
+        return false;
+    }
     maxCount_ = maxCount_ / dtypeSize;
     if (inputData.dilation[H_DIM] == 1 && inputData.dilation[W_DIM] == 1 && maxCount_ > MIN_COUNT &&
         inputData.inputFormat == ge::Format::FORMAT_NCHW && inputData.kernelSize[W_DIM] * dtypeSize > KW_THRESHOLD) {

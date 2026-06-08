@@ -45,7 +45,8 @@ static constexpr size_t INT64_DTYPE = 9;
 static int64_t DivRtn(int64_t x, int64_t y)
 {
     if (y == 0) {
-        OP_LOGE("MaxPoolWithArgmaxV3", "y value cannot be zero.");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON("MaxPoolWithArgmaxV3", "y", std::to_string(y).c_str(),
+            "Divisor y must not be zero");
         return GRAPH_FAILED;
     }
     int64_t q = x / y;
@@ -83,9 +84,11 @@ ge::graphStatus InferShapeForMaxPoolWithArgmaxV3(gert::InferShapeContext* contex
     auto indices_dtype = indices_td->GetDataType();
     OP_LOGD(context->GetNodeName(), "indices_dtype = %d", indices_dtype);
 
-    OP_CHECK_IF(
-        input_format != FORMAT_ND && input_format != FORMAT_NCHW && input_format != FORMAT_NHWC,
-        OP_LOGE(context->GetNodeName(), "format only supports ND, NCHW, NHWC"), return GRAPH_FAILED);
+    if (input_format != FORMAT_ND && input_format != FORMAT_NCHW && input_format != FORMAT_NHWC) {
+        OP_LOGE_FOR_INVALID_FORMAT(context->GetNodeName(), "x",
+            Ops::Base::ToString(input_format).c_str(), "ND, NCHW or NHWC");
+        return GRAPH_FAILED;
+    }
 
     size_t param_h_dim = PARAM_H_DIM;
     size_t param_w_dim = PARAM_W_DIM;
@@ -97,30 +100,38 @@ ge::graphStatus InferShapeForMaxPoolWithArgmaxV3(gert::InferShapeContext* contex
 
     auto ksize = attrs->GetAttrPointer<gert::ContinuousVector>(INDEX_KSIZE);
     OP_CHECK_NULL_WITH_CONTEXT(context, ksize);
-    OP_CHECK_IF(
-        ksize->GetSize() != ATTR_LIST_SHAPE_SIZE,
-        OP_LOGE(context->GetNodeName(), "Length of ksize %lu must be 2!", ksize->GetSize()), return GRAPH_FAILED);
+    if (ksize->GetSize() != ATTR_LIST_SHAPE_SIZE) {
+        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "ksize",
+            std::to_string(ksize->GetSize()).c_str(), "2");
+        return GRAPH_FAILED;
+    }
     auto ksize_data = static_cast<const int64_t*>(ksize->GetData());
 
     auto strides = attrs->GetAttrPointer<gert::ContinuousVector>(INDEX_STRIDES);
     OP_CHECK_NULL_WITH_CONTEXT(context, strides);
-    OP_CHECK_IF(
-        strides->GetSize() != ATTR_LIST_SHAPE_SIZE,
-        OP_LOGE(context->GetNodeName(), "Length of strides %lu must be 2!", strides->GetSize()), return GRAPH_FAILED);
+    if (strides->GetSize() != ATTR_LIST_SHAPE_SIZE) {
+        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "strides",
+            std::to_string(strides->GetSize()).c_str(), "2");
+        return GRAPH_FAILED;
+    }
     auto strides_data = static_cast<const int64_t*>(strides->GetData());
 
     auto pads = attrs->GetAttrPointer<gert::ContinuousVector>(INDEX_PADS);
     OP_CHECK_NULL_WITH_CONTEXT(context, pads);
-    OP_CHECK_IF(
-        pads->GetSize() != ATTR_LIST_SHAPE_SIZE,
-        OP_LOGE(context->GetNodeName(), "Length of pads %lu must be 2!", pads->GetSize()), return GRAPH_FAILED);
+    if (pads->GetSize() != ATTR_LIST_SHAPE_SIZE) {
+        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "pads",
+            std::to_string(pads->GetSize()).c_str(), "2");
+        return GRAPH_FAILED;
+    }
     auto pads_data = static_cast<const int64_t*>(pads->GetData());
 
     auto dilation = attrs->GetAttrPointer<gert::ContinuousVector>(INDEX_DILATION);
     OP_CHECK_NULL_WITH_CONTEXT(context, dilation);
-    OP_CHECK_IF(
-        dilation->GetSize() != ATTR_LIST_SHAPE_SIZE,
-        OP_LOGE(context->GetNodeName(), "Length of dilation %lu must be 2!", dilation->GetSize()), return GRAPH_FAILED);
+    if (dilation->GetSize() != ATTR_LIST_SHAPE_SIZE) {
+        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "dilation",
+            std::to_string(dilation->GetSize()).c_str(), "2");
+        return GRAPH_FAILED;
+    }
     auto dilation_data = static_cast<const int64_t*>(dilation->GetData());
 
     auto ceil_mode = attrs->GetAttrPointer<bool>(INDEX_CEIL_MODE);

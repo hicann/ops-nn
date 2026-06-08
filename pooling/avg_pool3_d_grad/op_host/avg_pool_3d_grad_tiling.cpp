@@ -227,11 +227,12 @@ ge::graphStatus AvgPool3dGradTiling::InitDHW()
     auto pads = attrs->GetAttrPointer<gert::ContinuousVector>(2);
     if (kSize->GetSize() != ATTR_SIZE || strides->GetSize() != ATTR_SIZE ||
         (pads->GetSize() != ATTR_SIZE && pads->GetSize() != COMPATIABLE_PAD_DIM)) {
-        OP_LOGE(
-            tilingContext_->GetNodeName(),
-            "kSize shape %lu"
-            "strides shape %lu, pads shape %lu is not same with 3, or pads shape is not same with 6",
-            kSize->GetSize(), strides->GetSize(), pads->GetSize());
+        std::string sizeMsg = "kSize=" + std::to_string(kSize->GetSize()) +
+                              ", strides=" + std::to_string(strides->GetSize()) +
+                              ", pads=" + std::to_string(pads->GetSize());
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            tilingContext_->GetNodeName(), "ksize, strides, pads", sizeMsg.c_str(),
+            "The total number of elements of ksize and strides must be equal to 3, and pads must be equal to 3 or 6");
         return ge::GRAPH_FAILED;
     }
     auto kSizeData = static_cast<const int64_t*>(kSize->GetData());
@@ -596,12 +597,14 @@ ge::graphStatus AvgPool3dGradTiling::InitBaseParams(gert::Shape& gradShape, ge::
     divisorOverride_ = static_cast<int64_t>(*attrs->GetAttrPointer<int>(DIVISOR_IDX));
     dataFormat_ = attrs->GetStr(FORMAT_IDX);
     if (dataFormat_ != "NDHWC" && dataFormat_ != "NCDHW") {
-        OP_LOGE(tilingContext_->GetNodeName(), "invalid data_format, should be NCDHW or NDHWC");
+        OP_LOGE_FOR_INVALID_FORMAT(
+            tilingContext_->GetNodeName(), "data_format", dataFormat_.c_str(), "NCDHW or NDHWC");
         return ge::GRAPH_FAILED;
     }
 
     if (gradShape.GetDimNum() != GRAD_SHAPE) {
-        OP_LOGE(tilingContext_->GetNodeName(), "gradShape dim num is not 5");
+        OP_LOGE_FOR_INVALID_SHAPEDIM(
+            tilingContext_->GetNodeName(), "grad", std::to_string(gradShape.GetDimNum()).c_str(), "5");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
