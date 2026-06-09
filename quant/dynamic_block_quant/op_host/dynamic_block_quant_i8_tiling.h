@@ -40,9 +40,9 @@ private:
 private:
     gert::TilingContext* context = nullptr;
     int64_t perCoreRowNum = 0;
-    uint32_t tailRowList[MAX_CORE_COUNT] = {0};
-    uint32_t tailColBlockStartList[MAX_CORE_COUNT] = {0};
-    uint32_t tailColBlockEndList[MAX_CORE_COUNT] = {0};
+    int64_t tailRowList[MAX_CORE_COUNT] = {0};
+    int64_t tailColBlockStartList[MAX_CORE_COUNT] = {0};
+    int64_t tailColBlockEndList[MAX_CORE_COUNT] = {0};
 };
 } // namespace dynamic_block_quant_i8
 } // namespace optiling
