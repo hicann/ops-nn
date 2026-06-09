@@ -130,6 +130,7 @@ private:
     uint64_t indiceCastMode_ = 0;  // 0: 不Cast；1：int32 Cast int16；2：int64 Cast int32；3：int64 Cast int16
     uint64_t updateShapeSize {0};
     uint64_t indiceShapeSize {0};
+    uint64_t varDimNum_ {0};
     uint64_t outputShapeSize = 1;
     uint64_t alignFactor {0};
     uint64_t blockNum {0};

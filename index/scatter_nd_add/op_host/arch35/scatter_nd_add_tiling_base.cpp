@@ -150,6 +150,7 @@ ge::graphStatus ScatterNdAddSimtTiling::GetShapeAttrsInfo()
       outPutShape[idx] = shapeValue.GetDim(idx);
       outputShapeSize *= outPutShape[idx];
     }
+    varDimNum_ = shapeRank;
 
     if (indiceShapeSize == 0 || updateShapeSize == 0) {
         return ge::GRAPH_SUCCESS;
@@ -645,6 +646,11 @@ void ScatterNdAddSimtTiling::DoOpTilingForDeterminstic()
     /* 优先分after */
     int64_t splitThresh = totalCoreNum_ * MIN_HANDLE_SIZE / varTypeSize_;
     if ((afterAxis_ > splitThresh) || (indicesAxis_ < (totalCoreNum_ / TWO)) || (varInAxis_ / indicesAxis_) > SPLIT_THRESHOLD) {
+        DoOpTilingSplitAfter();
+        return;
+    }
+    if (varDimNum_ == 1 && outputShapeSize <= SPLIT_THRESHOLD && updateShapeSize <= SPLIT_THRESHOLD &&
+        indiceShapeSize <= SPLIT_THRESHOLD) {
         DoOpTilingSplitAfter();
         return;
     }
