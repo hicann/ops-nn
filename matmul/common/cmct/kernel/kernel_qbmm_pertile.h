@@ -133,7 +133,8 @@ public:
     };
 
 public:
-    __aicore__ inline void Init(const Params& params);
+    __aicore__ inline void Init(
+        const Params& params, AscendC::LocalTensor<CType>& mmResPing, AscendC::LocalTensor<CType>& mmResPong);
     __aicore__ inline void Run(const Params& params);
     __aicore__ inline void operator()(const Params& params)
     {
@@ -158,8 +159,6 @@ private:
 
     AscendC::GlobalTensor<AType> aGlobal_;
     AscendC::GlobalTensor<BType> bGlobal_;
-    AscendC::LocalTensor<CType> mmResPing_;
-    AscendC::LocalTensor<CType> mmResPong_;
 
     GM_ADDR xTensorPtr_;
     GM_ADDR wTensorPtr_;
@@ -173,7 +172,9 @@ private:
 QBMM_PERTILE_KERNEL_CLASS_TEM_PARAMS
 __aicore__ inline void QuantMmBatchPertile<QBMM_PERTILE_KERNEL_FUN_TEM_PARAMS>::Run(const Params& params)
 {
-    Init(params);
+    AscendC::LocalTensor<CType> mmResPing = epilogueOp_.GetL0c2UbPingTensor();
+    AscendC::LocalTensor<CType> mmResPong = epilogueOp_.GetL0c2UbPongTensor();
+    Init(params, mmResPing, mmResPong);
     BlockSchedulerOp bs(params.problemShape, params.schParams);
 
     if (params.problemShape.b == 1UL) {
@@ -187,22 +188,21 @@ __aicore__ inline void QuantMmBatchPertile<QBMM_PERTILE_KERNEL_FUN_TEM_PARAMS>::
 }
 
 QBMM_PERTILE_KERNEL_CLASS_TEM_PARAMS
-__aicore__ inline void QuantMmBatchPertile<QBMM_PERTILE_KERNEL_FUN_TEM_PARAMS>::Init(const Params& params)
+__aicore__ inline void QuantMmBatchPertile<QBMM_PERTILE_KERNEL_FUN_TEM_PARAMS>::Init(
+    const Params& params, AscendC::LocalTensor<CType>& mmResPing, AscendC::LocalTensor<CType>& mmResPong)
 {
     xTensorPtr_ = params.mmadParams.aGmAddr;
     wTensorPtr_ = params.mmadParams.bGmAddr;
     yTensorPtr_ = params.mmadParams.cGmAddr;
 
     isPertile_ = params.epilogueParams.groupSizeM == 1;
-    mmResPing_ = epilogueOp_.GetL0c2UbPingTensor();
-    mmResPong_ = epilogueOp_.GetL0c2UbPongTensor();
     mmadOp_.Init(
         TupleShape{
             static_cast<int64_t>(params.epilogueParams.baseM), static_cast<int64_t>(params.epilogueParams.baseN),
             static_cast<int64_t>(params.epilogueParams.baseK)},
         BlockShape{
             1UL, 1UL, static_cast<int64_t>(params.qbmmParams.kaL1), static_cast<int64_t>(params.qbmmParams.kbL1)},
-        &mmResPing_, &mmResPong_, params.qbmmParams.nBufferNum);
+        &mmResPing, &mmResPong, params.qbmmParams.nBufferNum);
     epilogueOp_.Init(&params.epilogueParams);
 
     Get<MNK_M>(problemShape_) = params.problemShape.m;
