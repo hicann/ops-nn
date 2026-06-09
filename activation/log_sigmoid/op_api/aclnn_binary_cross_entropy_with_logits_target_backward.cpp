@@ -245,7 +245,7 @@ static aclnnStatus CheckParams(const aclTensor* gradOutput, const aclTensor* sel
   return ACLNN_SUCCESS;
 }
 
-static const aclTensor* PrepareInput(const aclTensor* input, const aclTensor* ref,
+static const aclTensor* PrepareInput(const aclTensor* input,
                                      op::DataType promoteType, aclOpExecutor* exec) {
   // 如果非连续，需要转连续
   auto contiguous = l0op::Contiguous(input, exec);
@@ -318,15 +318,15 @@ static aclnnStatus BinaryCrossEntropyWithLogitsTargetBackwardStub(
             ACLNN_ERR_PARAM_INVALID);
 
   // gradOutput如果非连续，需要转连续并cast
-  auto gradOutputCasted = PrepareInput(gradOutput, self, promoteType, executor);
+  auto gradOutputCasted = PrepareInput(gradOutput, promoteType, executor);
   CHECK_RET(gradOutputCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
   // self如果非连续，需要转连续并cast
-  auto selfCasted = PrepareInput(self, self, promoteType, executor);
+  auto selfCasted = PrepareInput(self, promoteType, executor);
   CHECK_RET(selfCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
   // target如果非连续，需要转连续并cast
-  auto targetCasted = PrepareInput(target, self, promoteType, executor);
+  auto targetCasted = PrepareInput(target, promoteType, executor);
   CHECK_RET(targetCasted != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
   // weightOptional如果为空，按self的shape创建全1的tensor并cast
