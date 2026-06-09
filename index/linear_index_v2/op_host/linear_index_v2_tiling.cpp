@@ -19,6 +19,7 @@
 #include "platform/platform_info.h"
 #include "linear_index_v2_tiling.h"
 #include "op_host/tiling_util.h"
+#include "graph/utils/type_utils.h"
 
 constexpr int64_t SCALE_SPACE = 20480;
 constexpr int64_t UB_PART = 4;
@@ -68,6 +69,7 @@ private:
 
     computeParam formerCoreParam_;
     computeParam tailCoreParam_;
+    const char* opName_ = "LinearIndexV2";
 };
 
 void LinearIndexV2Tiling::ComputeParam(computeParam& param, uint64_t dataNum) const
@@ -112,8 +114,10 @@ ge::graphStatus LinearIndexV2Tiling::Init()
     auto idxInstanceInfoPtr = computeNodeInfoPtr->GetInputInstanceInfo(0);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, idxInstanceInfoPtr);
     tensorId_ = idxInstanceInfoPtr->GetInstanceNum();
-    OP_CHECK_IF(
-        tensorId_ == 0, OP_LOGE(tilingContext_, "indices can not be a empty tensor list"), return ge::GRAPH_FAILED);
+    if (tensorId_ == 0) {
+        OP_LOGE_FOR_INVALID_TENSORNUM(opName_, "Number of indices tensors in indices_list", 0, ">=1");
+        return ge::GRAPH_FAILED;
+    }
     // for ascend950, indices can be [0], which means support non-continuous indices
     uint64_t validIdx = 0;
     if (compileInfo->isAscend950) {
@@ -138,7 +142,9 @@ ge::graphStatus LinearIndexV2Tiling::Init()
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, idxTensorDtypePtr);
     auto idxDtype = idxTensorDtypePtr->GetDataType();
     if (idxDtype != ge::DT_INT32 && idxDtype != ge::DT_INT64) {
-        OP_LOGE(tilingContext_, "indice only support in32 or int64");
+        OP_LOGE_FOR_INVALID_DTYPE(opName_, "indices",
+            (ge::TypeUtils::DataTypeToSerialString(idxDtype) + "(" + std::to_string(static_cast<int32_t>(idxDtype)) + ")").c_str(),
+            "[DT_INT32(3), DT_INT64(9)]");
         return ge::GRAPH_FAILED;
     }
     SetTilingKeyMode(idxDtype == ge::DT_INT32);

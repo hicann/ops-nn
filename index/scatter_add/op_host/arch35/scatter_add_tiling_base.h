@@ -205,7 +205,7 @@ private:
     ge::DataType varDtype_ = ge::DT_UNDEFINED;
     ge::DataType indicesDtype_ = ge::DT_UNDEFINED;
     ge::DataType indicesCastDtype_ = ge::DT_UNDEFINED;
-    const char* opName = "ScatterAdd";
+    const char* opName_ = "ScatterAdd";
     ScatterAddTilingData tilingData_;
 };
 }  // namespace optiling

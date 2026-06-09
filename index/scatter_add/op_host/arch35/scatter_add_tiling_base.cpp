@@ -129,7 +129,7 @@ ge::graphStatus ScatterAddTiling::getRestAvailableSize(uint64_t sampleNum, uint6
     ge::DataType idType) const
 {
     uint64_t indicesDtypeSize = ge::GetSizeByDataType(idType);
-    OP_CHECK_IF(indicesDtypeSize <= 0, OP_LOGE(opName, "get indicesType size fail."),
+    OP_CHECK_IF(indicesDtypeSize <= 0, OP_LOGE(opName_, "get indicesType size fail."),
                     return ge::GRAPH_FAILED);
     auto ubBlock = Ops::Base::GetUbBlockSize(context_);
     uint64_t occupy = sampleNum * Ops::Base::CeilAlign(valueTypeBytes * postAxisSize, static_cast<uint64_t>(ubBlock)) + sampleNum * Ops::Base::CeilAlign(FLOAT_BYTES * postAxisSize, static_cast<uint64_t>(ubBlock)) + 
@@ -141,11 +141,11 @@ ge::graphStatus ScatterAddTiling::getRestAvailableSize(uint64_t sampleNum, uint6
 ge::graphStatus ScatterAddTiling::GetPlatformInfo()
 {
     auto platformInfo = context_->GetPlatformInfo();
-    OP_CHECK_IF(platformInfo == nullptr, OP_LOGE(opName, "fail to get platform info"),
+    OP_CHECK_IF(platformInfo == nullptr, OP_LOGE(opName_, "fail to get platform info"),
                     return ge::GRAPH_FAILED);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     auto aivNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF((aivNum <= 0), OP_LOGE(opName, "fail to get coreNum."),
+    OP_CHECK_IF((aivNum <= 0), OP_LOGE(opName_, "fail to get coreNum."),
                     return ge::GRAPH_FAILED);
     totalCoreNum_ = aivNum;
     uint64_t ubSizePlatForm = 0;
@@ -157,7 +157,7 @@ ge::graphStatus ScatterAddTiling::GetPlatformInfo()
             ubSize_ = ubSizePlatForm - DCACHE_SIZE1;
         } else {
             OP_CHECK_IF((ubSizePlatForm <= DCACHE_SIZE),
-                            OP_LOGE(opName, "ub size less than Dcache Size. please check"),
+                            OP_LOGE(opName_, "ub size less than Dcache Size. please check"),
                             return ge::GRAPH_FAILED);
             ubSize_ = ubSizePlatForm - DCACHE_SIZE;
         }
@@ -191,10 +191,10 @@ ge::graphStatus ScatterAddTiling::GetShapeAttrsInfo()
         isUpdateScalar_ = 1;
     } else {
         OP_CHECK_IF(CheckUpdatesShape(varShape, indiceShape, updateShape) != ge::GRAPH_SUCCESS,
-                        OP_LOGE(opName, "update shape check failed."), return ge::GRAPH_FAILED);
+                        OP_LOGE(opName_, "update shape check failed."), return ge::GRAPH_FAILED);
     }
     OP_CHECK_IF(CheckInputDtype() != ge::GRAPH_SUCCESS,
-                    OP_LOGE(opName, "input dtype check failed."), return ge::GRAPH_FAILED);
+                    OP_LOGE(opName_, "input dtype check failed."), return ge::GRAPH_FAILED);
 
     isSimt_ = varShape_[1] * varTypeSize_ < VAR_TAIL_DIM_SIZE;
     bool supportAtomicAdd =
@@ -224,37 +224,43 @@ ge::graphStatus ScatterAddTiling::CheckInputDtype()
     auto indicesPtr = context_->GetInputDesc(INDICES_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, indicesPtr);
     indicesDtype_ = indicesPtr->GetDataType();
-    OP_CHECK_IF(
-        (INDICES_DTYPE_SET.find(indicesDtype_) == INDICES_DTYPE_SET.end()),
-        OP_LOGE(opName, "indices data dtype only support %s, currently, please check.",
-                                        ToString(INDICES_DTYPE_SET).c_str()),
-        return ge::GRAPH_FAILED);
+    if (INDICES_DTYPE_SET.find(indicesDtype_) == INDICES_DTYPE_SET.end()) {
+        OP_LOGE_FOR_INVALID_DTYPE(opName_, "indices",
+            (ge::TypeUtils::DataTypeToSerialString(indicesDtype_) + "(" + std::to_string(static_cast<int32_t>(indicesDtype_)) + ")").c_str(),
+            "[DT_INT32(3), DT_INT64(9)]");
+        return ge::GRAPH_FAILED;
+    }
     indicesDtypeSize_ = ge::GetSizeByDataType(indicesDtype_);
-    OP_CHECK_IF(indicesDtypeSize_ <= 0, OP_LOGE(opName, "get indicesDtype size fail."),
+    OP_CHECK_IF(indicesDtypeSize_ <= 0, OP_LOGE(opName_, "get indicesDtype size fail."),
                     return ge::GRAPH_FAILED);
     auto dataPtr = context_->GetInputDesc(VAR_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, dataPtr);
     varDtype_ = dataPtr->GetDataType();
-    OP_CHECK_IF((VAR_DTYPE_SET.find(varDtype_) == VAR_DTYPE_SET.end()),
-                    OP_LOGE(opName, "var data dtype only support %s, please check.",
-                                                    ToString(VAR_DTYPE_SET).c_str()),
-                    return ge::GRAPH_FAILED);
+    if (VAR_DTYPE_SET.find(varDtype_) == VAR_DTYPE_SET.end()) {
+        OP_LOGE_FOR_INVALID_DTYPE(opName_, "var",
+            (ge::TypeUtils::DataTypeToSerialString(varDtype_) + "(" + std::to_string(static_cast<int32_t>(varDtype_)) + ")").c_str(),
+            "[DT_FLOAT(5), DT_FLOAT16(4), DT_INT32(1), DT_INT8(2), DT_UINT8(3), DT_BF16(6)]");
+        return ge::GRAPH_FAILED;
+    }
     varTypeSize_ = ge::GetSizeByDataType(varDtype_);
-    OP_CHECK_IF(varTypeSize_ <= 0, OP_LOGE(opName, "get dataType size fail."),
+    OP_CHECK_IF(varTypeSize_ <= 0, OP_LOGE(opName_, "get dataType size fail."),
                     return ge::GRAPH_FAILED);
     auto updatePtr = context_->GetInputDesc(UPDATES_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, updatePtr);
     auto updatesType = updatePtr->GetDataType();
-    OP_CHECK_IF(
-        (VAR_DTYPE_SET.find(updatesType) == VAR_DTYPE_SET.end()),
-        OP_LOGE(opName, "updates data dtype only support %s currently, please check.",
-                                        ToString(VAR_DTYPE_SET).c_str()),
-        return ge::GRAPH_FAILED);
+    if (VAR_DTYPE_SET.find(updatesType) == VAR_DTYPE_SET.end()) {
+        OP_LOGE_FOR_INVALID_DTYPE(opName_, "updates",
+            (ge::TypeUtils::DataTypeToSerialString(updatesType) + "(" + std::to_string(static_cast<int32_t>(updatesType)) + ")").c_str(),
+            "[DT_FLOAT(5), DT_FLOAT16(4), DT_INT32(1), DT_INT8(2), DT_UINT8(3), DT_BF16(6)]");
+        return ge::GRAPH_FAILED;
+    }
     updatesDtypeSize_ = ge::GetSizeByDataType(updatesType);
-    OP_CHECK_IF(
-        (updatesType != varDtype_),
-        OP_LOGE(opName, "expected updates dtype to be equal to var dtype, please check."),
-        return ge::GRAPH_FAILED);
+    if (updatesType != varDtype_) {
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(opName_, "updates, var",
+            (ge::TypeUtils::DataTypeToSerialString(updatesType) + ", " + ge::TypeUtils::DataTypeToSerialString(varDtype_)).c_str(),
+            "expected updates dtype to be equal to var dtype");
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -264,25 +270,29 @@ ge::graphStatus ScatterAddTiling::CheckUpdatesShape(const gert::Shape& varShape,
     uint64_t varDimNum = static_cast<uint64_t>(varShape.GetDimNum());
     uint64_t indicesDimNum = static_cast<uint64_t>(indicesShape.GetDimNum());
     uint64_t updatesDimNum = static_cast<uint64_t>(updatesShape.GetDimNum());
-    OP_CHECK_IF(
-        (updatesDimNum != indicesDimNum + varDimNum - 1),
-        OP_LOGE(
-            opName, "updatesDimNum must have the same number of indicesDimNum add varDimNum - 1, please check."),
-        return ge::GRAPH_FAILED);
+    if (updatesDimNum != indicesDimNum + varDimNum - 1) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(opName_, "updates",
+            std::to_string(updatesDimNum).c_str(),
+            "updatesDimNum must equal indicesDimNum + varDimNum - 1");
+        return ge::GRAPH_FAILED;
+    }
     for (uint64_t i = 0; i < indicesDimNum; i++) {
-        OP_CHECK_IF(
-            (static_cast<uint32_t>(updatesShape.GetDim(i)) != static_cast<uint32_t>(indicesShape.GetDim(i))),
-            OP_LOGE(
-                opName, "updatesShape should be equal to the shape of 'indices' concats the shape of 'var' except for the first dimension."),
-            return ge::GRAPH_FAILED);
+        if (static_cast<uint32_t>(updatesShape.GetDim(i)) != static_cast<uint32_t>(indicesShape.GetDim(i))) {
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(opName_, "updates, indices",
+                (std::to_string(updatesShape.GetDim(i)) + ", " + std::to_string(indicesShape.GetDim(i))).c_str(),
+                "updatesShape should equal indicesShape in first indicesDimNum dimensions");
+            return ge::GRAPH_FAILED;
+        }
     }
 
     for (uint64_t i = 1; i < varDimNum; i++) {
-        OP_CHECK_IF((static_cast<uint32_t>(updatesShape.GetDim(i + indicesDimNum - 1)) !=
-                        static_cast<uint32_t>(varShape.GetDim(i))),
-                        OP_LOGE(
-                            opName, "updatesShape should be equal to the shape of 'indices' concats the shape of 'var' except for the first dimension."),
-                        return ge::GRAPH_FAILED);
+        if (static_cast<uint32_t>(updatesShape.GetDim(i + indicesDimNum - 1)) !=
+                        static_cast<uint32_t>(varShape.GetDim(i))) {
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(opName_, "updates, var",
+                (std::to_string(updatesShape.GetDim(i + indicesDimNum - 1)) + ", " + std::to_string(varShape.GetDim(i))).c_str(),
+                "updatesShape should equal varShape except for first dimension");
+            return ge::GRAPH_FAILED;
+        }
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -567,7 +577,7 @@ ge::graphStatus ScatterAddTiling::TilingSimdNotSupportAtomicAddCompute(bool supp
 ge::graphStatus ScatterAddTiling::TilingCopyCompute()
 {
     castTypeSize_ = ge::GetSizeByDataType(ge::DT_INT32);
-    OP_CHECK_IF(castTypeSize_ <= 0, OP_LOGE(opName, "get dataType size fail."),
+    OP_CHECK_IF(castTypeSize_ <= 0, OP_LOGE(opName_, "get dataType size fail."),
                     return ge::GRAPH_FAILED);
     ubFactor_ = Ops::Base::FloorAlign(ubSize_ / BUFFER_NUM / (castTypeSize_ + varTypeSize_),
                                 static_cast<uint64_t>(Ops::Base::GetUbBlockSize(context_)));
@@ -831,7 +841,7 @@ ge::graphStatus ScatterAddTiling::DoOpTiling()
 
     if (isDeterminTemplate_ == 1) {
         OP_CHECK_IF(ScatterAddDeterministicTiling() != ge::GRAPH_SUCCESS,
-                    OP_LOGE(opName, "ScatterAddDeterministicTiling fail."), return ge::GRAPH_FAILED);
+                    OP_LOGE(opName_, "ScatterAddDeterministicTiling fail."), return ge::GRAPH_FAILED);
         SetTilingData();
         return ge::GRAPH_SUCCESS;
     }
@@ -841,7 +851,7 @@ ge::graphStatus ScatterAddTiling::DoOpTiling()
                 : SIMD_ATOMIC_ADD_NOT_SUPPORT_DTYPE.find(varDtype_) == SIMD_ATOMIC_ADD_NOT_SUPPORT_DTYPE.end();
     if (!supportAtomicAdd) {      // 不支持AtomicAdd的数据类型，先走 Tiling CopyCompute计算类型转换的tiling数据，需要分配Cast的空间
         OP_CHECK_IF(TilingCopyCompute() != ge::GRAPH_SUCCESS,
-                        OP_LOGE(opName, "TilingCopyCompute fail."), return ge::GRAPH_FAILED);
+                        OP_LOGE(opName_, "TilingCopyCompute fail."), return ge::GRAPH_FAILED);
     }
 
     if (!isSimt_) {
@@ -849,23 +859,23 @@ ge::graphStatus ScatterAddTiling::DoOpTiling()
         if (!supportAtomicAdd) {
             isSort_ = 0;
             OP_CHECK_IF(TilingSimdNotSupportAtomicAddCompute(supportAtomicAdd) != ge::GRAPH_SUCCESS,
-                            OP_LOGE(opName, "TilingSimdNotSupportAtomicAddCompute fail."),
+                            OP_LOGE(opName_, "TilingSimdNotSupportAtomicAddCompute fail."),
                             return ge::GRAPH_FAILED);
         } else {
             if (isSort_ == 1) {
                 OP_CHECK_IF(TilingSimdSupportAtomicAddSortCompute() != ge::GRAPH_SUCCESS,
-                                OP_LOGE(opName, "TilingSimdSupportAtomicAddSortCompute fail."),
+                                OP_LOGE(opName_, "TilingSimdSupportAtomicAddSortCompute fail."),
                                 return ge::GRAPH_FAILED);
             } else {
                 OP_CHECK_IF(TilingSimdSupportAtomicAddCompute() != ge::GRAPH_SUCCESS,
-                                OP_LOGE(opName, "TilingSimdSupportAtomicAddCompute fail."),
+                                OP_LOGE(opName_, "TilingSimdSupportAtomicAddCompute fail."),
                                 return ge::GRAPH_FAILED);
             }
         }
     } else {
         if (isSort_ == 1) {
             OP_CHECK_IF(TilingSimtSort() != ge::GRAPH_SUCCESS,
-                            OP_LOGE(opName, "TilingSimtSort fail."),
+                            OP_LOGE(opName_, "TilingSimtSort fail."),
                             return ge::GRAPH_FAILED);
         }
     }
@@ -936,7 +946,7 @@ ge::graphStatus ScatterAddTiling::PostTiling()
     context_->SetScheduleMode(1);
     auto res = context_->SetLocalMemorySize(ubSize_);
     OP_CHECK_IF((res != ge::GRAPH_SUCCESS),
-                    OP_LOGE(opName, "SetLocalMemorySize ubSize = %lu failed.", ubSize_),
+                    OP_LOGE(opName_, "SetLocalMemorySize ubSize = %lu failed.", ubSize_),
                     return ge::GRAPH_FAILED);
     tilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());
     context_->GetRawTilingData()->SetDataSize(tilingData_.GetDataSize());
@@ -994,7 +1004,7 @@ void ScatterAddTiling::DumpTilingInfo()
     info << "ubFactorRow:" << tilingData_.get_ubFactorRow() << std::endl;
     info << "ubFactorCol:" << tilingData_.get_ubFactorCol() << std::endl;
     info << "indicesCastMode: " << tilingData_.get_indicesCastMode() << std::endl;
-    OP_LOGI(opName, "Tiling inf is: %s", info.str().c_str());
+    OP_LOGI(opName_, "Tiling inf is: %s", info.str().c_str());
 }
 
 ge::graphStatus ScatterAddTilingForAscendC(gert::TilingContext* context)
