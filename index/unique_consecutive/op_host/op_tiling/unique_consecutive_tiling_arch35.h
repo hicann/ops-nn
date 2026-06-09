@@ -28,7 +28,7 @@ TILING_DATA_FIELD_DEF(int64_t, tileLengthTailCore);
 TILING_DATA_FIELD_DEF(int64_t, adjUbTileLength);
 TILING_DATA_FIELD_DEF(int64_t, valueQueueSize);
 TILING_DATA_FIELD_DEF(int64_t, countQueueSize);
-TILING_DATA_FIELD_DEF(int64_t, idxCopyInQueueSize);
+TILING_DATA_FIELD_DEF(int64_t, idxQueueSize);
 TILING_DATA_FIELD_DEF(int64_t, collectingCntBufSize);
 TILING_DATA_FIELD_DEF(int64_t, offsetCntBufSize);
 TILING_DATA_FIELD_DEF(int64_t, prevIdxBufSize);
@@ -91,7 +91,7 @@ private:
     int64_t tileLength_{1};
     int64_t valueQueueSize_{1};
     int64_t countQueueSize_{1};
-    int64_t idxCopyInQueueSize_{1};
+    int64_t idxQueueSize_{1};
     int64_t collectingCntBufSize_{1};
     int64_t offsetCntBufSize_{1};
     int64_t prevIdxBufSize_{1};
@@ -105,8 +105,6 @@ private:
     int64_t tileLengthTailCore_{1};
 
     // worksapce vars
-    int64_t idxWorkSpace_{1};
-    int64_t valueWorkSpace_{1};
     int64_t coreWorkSpace_{1};
 
     // debug vars

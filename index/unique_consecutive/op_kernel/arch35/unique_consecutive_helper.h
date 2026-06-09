@@ -392,4 +392,137 @@ __aicore__ inline void CastAndAddsOffsets(LocalTensor<int64_t>& dstIdx, LocalTen
 
     AscendC::VF_CALL<VFCastAndAddsOffsets<repNums>>(dstIdxAddr, srcIdxAddr, repTimes, nums, offset);
 }
+
+template <typename T, typename T1, int REP_LENGTH>
+static __aicore__ inline void VFCountAdjacentNe(__ubuf__ int32_t* dstCountAddr, __ubuf__ T* srcValueAddr,
+                                                uint32_t repeatTimes, uint32_t totalNums)
+{
+    MicroAPI::RegTensor<T> xPrev;
+    MicroAPI::RegTensor<T> xNext;
+    MicroAPI::UnalignReg uregIn;
+    MicroAPI::UnalignReg uregOut;
+    MicroAPI::MaskReg cmpRet;
+    MicroAPI::MaskReg pregLoop;
+
+    MicroAPI::RegTensor<int32_t> addReg, dstReg, oneReg, zeroReg, selectReg;
+    MicroAPI::MaskReg addComReg;
+
+    uint32_t sreg0 = totalNums;
+    uint32_t addSreg = GetVLEleNums<int32_t>();
+
+    MicroAPI::Duplicate(addReg, (int32_t)0);
+    MicroAPI::Duplicate(oneReg, (int32_t)1);
+    MicroAPI::Duplicate(zeroReg, (int32_t)0);
+    addComReg = MicroAPI::UpdateMask<int32_t>(addSreg);
+
+    for (uint16_t i = 0; i < (uint16_t)repeatTimes; ++i) {
+        pregLoop = MicroAPI::UpdateMask<T>(sreg0);
+        auto curtSrcAddr = srcValueAddr + REP_LENGTH * i + 1;
+
+        DataCopy(xPrev, srcValueAddr + REP_LENGTH * i);
+        MicroAPI::DataCopyUnAlignPre(uregIn, curtSrcAddr);
+        MicroAPI::DataCopyUnAlign(xNext, uregIn, curtSrcAddr);
+
+        MicroAPI::Compare<T1, CMPMODE::NE>(cmpRet, (MicroAPI::RegTensor<T1>&)xPrev, (MicroAPI::RegTensor<T1>&)xNext, pregLoop);
+
+        if constexpr (sizeof(T) == 1) {
+            MicroAPI::MaskReg maskQ1, maskQ2, maskQ3, maskQ4, maskTmp;
+            MicroAPI::MaskUnPack<MicroAPI::HighLowPart::LOWEST>(maskTmp, cmpRet);
+            MicroAPI::MaskUnPack<MicroAPI::HighLowPart::LOWEST>(maskQ1, maskTmp);
+            MicroAPI::MaskUnPack<MicroAPI::HighLowPart::HIGHEST>(maskQ2, maskTmp);
+            MicroAPI::MaskUnPack<MicroAPI::HighLowPart::HIGHEST>(maskTmp, cmpRet);
+            MicroAPI::MaskUnPack<MicroAPI::HighLowPart::LOWEST>(maskQ3, maskTmp);
+            MicroAPI::MaskUnPack<MicroAPI::HighLowPart::HIGHEST>(maskQ4, maskTmp);
+
+            MicroAPI::Select<int32_t>(selectReg, oneReg, zeroReg, maskQ1);
+            MicroAPI::Add(addReg, addReg, selectReg, addComReg);
+            MicroAPI::Select<int32_t>(selectReg, oneReg, zeroReg, maskQ2);
+            MicroAPI::Add(addReg, addReg, selectReg, addComReg);
+            MicroAPI::Select<int32_t>(selectReg, oneReg, zeroReg, maskQ3);
+            MicroAPI::Add(addReg, addReg, selectReg, addComReg);
+            MicroAPI::Select<int32_t>(selectReg, oneReg, zeroReg, maskQ4);
+            MicroAPI::Add(addReg, addReg, selectReg, addComReg);
+        } else if constexpr (sizeof(T) == 2) {
+            MicroAPI::MaskReg maskLow, maskHigh;
+            MicroAPI::MaskUnPack<MicroAPI::HighLowPart::LOWEST>(maskLow, cmpRet);
+            MicroAPI::MaskUnPack<MicroAPI::HighLowPart::HIGHEST>(maskHigh, cmpRet);
+
+            MicroAPI::Select<int32_t>(selectReg, oneReg, zeroReg, maskLow);
+            MicroAPI::Add(addReg, addReg, selectReg, addComReg);
+            MicroAPI::Select<int32_t>(selectReg, oneReg, zeroReg, maskHigh);
+            MicroAPI::Add(addReg, addReg, selectReg, addComReg);
+        } else {
+            MicroAPI::Select<int32_t>(selectReg, oneReg, zeroReg, cmpRet);
+            MicroAPI::Add(addReg, addReg, selectReg, addComReg);
+        }
+    }
+
+    MicroAPI::ReduceSum(dstReg, addReg, addComReg);
+    MicroAPI::DataCopyUnAlign<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(dstCountAddr, dstReg, uregOut, 1);
+    MicroAPI::DataCopyUnAlignPost(dstCountAddr, uregOut, 0);
+}
+
+template <int REP_LENGTH>
+static __aicore__ inline void VFCountAdjacentNeB64(__ubuf__ int32_t* dstCountAddr, __ubuf__ int64_t* srcValueAddr, 
+                                                    uint32_t repeatTimes, uint32_t totalNums)
+{
+    MicroAPI::RegTensor<int64_t> xPrev;
+    MicroAPI::RegTensor<int64_t> xNext;
+    MicroAPI::UnalignReg uregIn;
+    MicroAPI::UnalignReg uregOut;
+    MicroAPI::MaskReg cmpRet;
+    MicroAPI::MaskReg pregLoop;
+
+    MicroAPI::RegTensor<int64_t> addReg, dstReg, oneReg, zeroReg, selectReg;
+    MicroAPI::MaskReg addComReg;
+
+    uint32_t sreg0 = totalNums;
+    uint32_t addSreg = GetVLEleNums<int64_t>();
+
+    MicroAPI::Duplicate(addReg, (int64_t)0);
+    MicroAPI::Duplicate(oneReg, (int64_t)1);
+    MicroAPI::Duplicate(zeroReg, (int64_t)0);
+    addComReg = MicroAPI::UpdateMask<int64_t>(addSreg);
+
+    for (uint16_t i = 0; i < (uint16_t)repeatTimes; ++i) {
+        pregLoop = MicroAPI::UpdateMask<int64_t>(sreg0);
+        auto curtSrcAddr = srcValueAddr + REP_LENGTH * i + 1;
+
+        DataCopy(xPrev, srcValueAddr + REP_LENGTH * i);
+        MicroAPI::DataCopyUnAlignPre(uregIn, curtSrcAddr);
+        MicroAPI::DataCopyUnAlign(xNext, uregIn, curtSrcAddr);
+
+        MicroAPI::Compare<int64_t, CMPMODE::NE>(cmpRet, xPrev, xNext, pregLoop);
+        MicroAPI::Select<int64_t>(selectReg, oneReg, zeroReg, cmpRet);
+        MicroAPI::Add(addReg, addReg, selectReg, addComReg);
+    }
+
+    MicroAPI::ReduceSum(dstReg, addReg, addComReg);
+    MicroAPI::DataCopyUnAlign<int32_t, MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+        dstCountAddr, (MicroAPI::RegTensor<int32_t>&)dstReg, uregOut, 1);
+    MicroAPI::DataCopyUnAlignPost(dstCountAddr, uregOut, 0);
+}
+
+template <typename VALUE_TYPE, typename INPUT_TYPE, bool IS_TAIL>
+__aicore__ inline void CountAdjacentNe(LocalTensor<int32_t>& dstNums, LocalTensor<VALUE_TYPE>& srcValue, uint32_t nums, uint64_t& rsvdCnt)
+{
+    __local_mem__ int32_t* dstCountAddr = (__local_mem__ int32_t*)dstNums[0].GetPhyAddr();
+    __local_mem__ VALUE_TYPE* srcValueAddr = (__local_mem__ VALUE_TYPE*)srcValue[0].GetPhyAddr();
+
+    constexpr uint32_t repNums = GetVLEleNums<VALUE_TYPE>();
+    uint32_t totalNums = nums - 1;
+    uint32_t repTimes = CEIL_DIV(totalNums, repNums);
+
+    if constexpr (is_same<VALUE_TYPE, int64_t>::value) {
+        AscendC::VF_CALL<VFCountAdjacentNeB64<repNums>>(dstCountAddr, srcValueAddr, repTimes, totalNums);
+    } else {
+        AscendC::VF_CALL<VFCountAdjacentNe<VALUE_TYPE, INPUT_TYPE, repNums>>(dstCountAddr, srcValueAddr, repTimes, totalNums);
+    }
+
+    SimpleNativePipeSync<HardEvent::V_S>();
+    rsvdCnt = static_cast<uint64_t>(dstNums.GetValue(0));
+    if constexpr (IS_TAIL) {
+        rsvdCnt += 1;
+    }
+}
 #endif  // UNIQUE_CONSECUTIVE_HELPER_H

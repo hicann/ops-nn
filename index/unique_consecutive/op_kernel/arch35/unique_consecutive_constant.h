@@ -29,4 +29,7 @@ constexpr int32_t SHAPE1_DIM0_IDX = 10;
 constexpr int32_t SHAPE2_SIZE_IDX = 18;
 constexpr int32_t SHAPE2_DIM0_IDX = 19;
 
+constexpr int32_t CORE_COLLECT_NUM_OFFSET = 16;
+constexpr int32_t CORE_LAST_UNIQUE_IDX_OFFSET = 1;
+
 #endif  // UNIQUE_CONSECUTIVE_CONSTANT_H

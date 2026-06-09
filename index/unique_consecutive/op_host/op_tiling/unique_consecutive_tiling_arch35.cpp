@@ -150,8 +150,10 @@ bool UniqueConsecutiveTilingHelper::DoBlockTiling()
 {
     int64_t maxSingleCoreElements = MAX_BYTES_SINGLE_CORE / this->dtSizeX_;
     this->useCoreNums_ = CeilDiv(this->totalSize_, maxSingleCoreElements);
-    if (this->useCoreNums_ <= 0) {
+    if (this->useCoreNums_ < 0) {
         return false;
+    } else if (this->useCoreNums_ == 0) {
+        return true;
     }
     if (this->useCoreNums_ > this->aivCoreNum_) {
         this->useCoreNums_ = this->aivCoreNum_;
@@ -189,19 +191,19 @@ bool UniqueConsecutiveTilingHelper::DoUbTiling()
     int64_t alignCountLength = 0;
     if (outIdxDtype_ == ge::DataType::DT_INT64) {
         this->countQueueSize_ = (this->tileLength_ * static_cast<int64_t>(sizeof(int64_t))) 
+                                / static_cast<int64_t>(this->blockSize_) 
+                                * static_cast<int64_t>(this->blockSize_);
+        this->idxQueueSize_ = (this->tileLength_ * static_cast<int64_t>(sizeof(int64_t))) 
                                 / (static_cast<int64_t>(this->blockSize_) * ALIGNMENT_SCALE_FACTOR) 
                                 * (static_cast<int64_t>(this->blockSize_) * ALIGNMENT_SCALE_FACTOR);
-        this->idxCopyInQueueSize_ = (this->tileLength_ * static_cast<int64_t>(sizeof(int64_t))) 
-                                    / static_cast<int64_t>(this->blockSize_) 
-                                    * static_cast<int64_t>(this->blockSize_);
         alignCountLength = this->countQueueSize_ / static_cast<int64_t>(sizeof(int64_t));
     } else {
         this->countQueueSize_ = (this->tileLength_ * static_cast<int64_t>(sizeof(int32_t))) 
                                 / static_cast<int64_t>(this->blockSize_) 
                                 * static_cast<int64_t>(this->blockSize_);
-        this->idxCopyInQueueSize_ = (this->tileLength_ * static_cast<int64_t>(sizeof(int32_t))) 
+        this->idxQueueSize_ = (this->tileLength_ * static_cast<int64_t>(sizeof(int32_t))) 
                                     / static_cast<int64_t>(this->blockSize_) 
-                                    * static_cast<int64_t>(this->blockSize_);
+                                    * static_cast<int64_t>(this->blockSize_);                        
         alignCountLength = this->countQueueSize_ / static_cast<int64_t>(sizeof(int32_t));
     }
     this->adjUbTileLength_ = alignValueLength < alignCountLength ? alignValueLength : alignCountLength;
@@ -210,16 +212,9 @@ bool UniqueConsecutiveTilingHelper::DoUbTiling()
 
 bool UniqueConsecutiveTilingHelper::ComputeWorkspaces()
 {
-    if (isInt64_) {
-        this->idxWorkSpace_ = static_cast<int64_t>(sizeof(int64_t)) * this->totalSize_;
-    } else {
-        this->idxWorkSpace_ = static_cast<int64_t>(sizeof(int32_t)) * this->totalSize_;
-    }
-    this->valueWorkSpace_ = this->dtSizeX_ * this->totalSize_;
     this->coreWorkSpace_ = this->useCoreNums_ * MAGIC_GM_PAGE_SIZE;
 
-    OP_LOGI("ComputeWorkspaces", "idxWorkSpace=%ld, valueWorkSpace=%ld, coreWorkSpace=%ld", this->idxWorkSpace_,
-            this->valueWorkSpace_, this->coreWorkSpace_);
+    OP_LOGI("ComputeWorkspaces", "coreWorkSpace=%ld", this->coreWorkSpace_);
 
     return true;
 }
@@ -233,7 +228,7 @@ void UniqueConsecutiveTilingHelper::SetTilingDataAndTilingKeyAndWorkSpace(Unique
     tiling->set_adjUbTileLength(this->adjUbTileLength_);
     tiling->set_valueQueueSize(this->valueQueueSize_);
     tiling->set_countQueueSize(this->countQueueSize_);
-    tiling->set_idxCopyInQueueSize(this->idxCopyInQueueSize_);
+    tiling->set_idxQueueSize(this->idxQueueSize_);
     tiling->set_collectingCntBufSize(this->collectingCntBufSize_);
     tiling->set_offsetCntBufSize(this->offsetCntBufSize_);
     tiling->set_prevIdxBufSize(this->prevIdxBufSize_);
@@ -242,9 +237,7 @@ void UniqueConsecutiveTilingHelper::SetTilingDataAndTilingKeyAndWorkSpace(Unique
     size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
     this->useCoreNums_ = (this->useCoreNums_ > 0) ? this->useCoreNums_ : 1;
 
-    currentWorkspace[0] = (this->useCoreNums_ == 1) ? 1
-                                                    : this->sysWorkspaceSize_ + this->idxWorkSpace_ +
-                                                          this->valueWorkSpace_ + this->coreWorkSpace_;
+    currentWorkspace[0] = (this->useCoreNums_ == 1) ? this->sysWorkspaceSize_ + 0 : this->sysWorkspaceSize_ + this->coreWorkSpace_;
 
     uint64_t tilingKey = (this->useCoreNums_ == 1) ? TILING_KEY_SINGLE_CORE : TILING_KEY_MULTI_CORE;
     if (this->retCounts_) {
