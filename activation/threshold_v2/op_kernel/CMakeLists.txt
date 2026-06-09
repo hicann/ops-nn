@@ -12,4 +12,5 @@ add_kernel_sources(
     KERNEL_SRC arch35/threshold_v2.cpp
     COMPUTE_UNITS ascend950
     IMPL_MODE high_performance,high_precision
+    AUTO_SYNC false
 )
