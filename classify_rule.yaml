@@ -2300,6 +2300,23 @@ VC2@ops-nn:
       non_delivery: null
       open_source: null
 
+VC5@ops-nn:
+  src:
+    release:
+      style:
+        # threshold_v2
+        - ops/ops-nn/activation/threshold_v2/op_host/
+        - ops/ops-nn/activation/threshold_v2/op_kernel/
+      opensource_style: null
+      kernel_style: null
+    unrelease:
+      test_code:
+        # threshold_v2
+        - ops/ops-nn/activation/threshold_v2/examples/
+        - ops/ops-nn/activation/threshold_v2/tests/
+      non_delivery: null
+      open_source: null
+
 VC6@ops-nn:
   src:
     release:
