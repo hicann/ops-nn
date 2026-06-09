@@ -426,7 +426,9 @@ ge::graphStatus FusedMatMulTiling::DoTiling()
     int64_t m = 0L;
     int64_t n = 0L;
     int64_t k = 0L;
-    GetShape(*context_, m, n, k);
+    if (!GetShape(*context_, m, n, k)) {
+        return false;
+    }
 
     FusedMatMulTilingData tilingData{
         static_cast<uint32_t>(m), static_cast<uint32_t>(n), static_cast<uint32_t>(k), static_cast<uint32_t>(hasBias_)};

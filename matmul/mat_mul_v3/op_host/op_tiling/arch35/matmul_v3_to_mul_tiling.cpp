@@ -67,6 +67,7 @@ ge::graphStatus MatMulV3ToMulTiling::DoOpTiling()
         baseK = (ubCount - baseMN - biasCount) / NUM_FIVE / baseMN;
     } else { // (m, k) || (n, k)
         biasCount = args_.hasBias ? tmpMN : 0;
+        OP_CHECK_IF(tmpMN == 0, OP_LOGE(args_.opName, "tmpMN is 0"), return ge::GRAPH_FAILED);
         uint64_t tmpK = ubCount <= (tmpMN + biasCount) ? 0 : (ubCount - tmpMN - biasCount) / NUM_FIVE / tmpMN;
         baseK = std::max(ops::FloorAlign(tmpK, ALIGN_NUM), BASE_K);
         biasCount = args_.hasBias ? 1 : 0;

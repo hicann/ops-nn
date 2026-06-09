@@ -260,7 +260,7 @@ const aclTensor* GetMatMulResult(
     aclIntArray* vecToMatShape = executor->AllocIntArray(appendDim, 1);
     OP_CHECK_NULL(vecToMatShape, return nullptr);
     auto mat2 = l0op::UnsqueezeNd(vecContiguous, vecToMatShape, executor);
-
+    OP_CHECK_NULL(mat2, return nullptr);
     // 调用matmul之前需要对mat和vec做数据类型转换，以满足运算条件
     auto promoteType = PromoteType(matContiguous->GetDataType(), mat2->GetDataType());
 
@@ -326,6 +326,7 @@ const aclTensor* GetMulResult(
     if (std::abs(alpha->ToFloat() - 1.0f) > std::numeric_limits<float>::epsilon()) {
         vecResult = MulScalar(alpha, vecResult, executor);
     }
+    OP_CHECK_NULL(vecResult, return nullptr);
     return vecResult;
 }
 static inline bool IsMatMulSupportDtype(const aclTensor* mat, const aclTensor* vec)
