@@ -74,24 +74,59 @@ typedef struct {
 } updateAddParams;
 
 template <typename T>
+__simd_vf__ inline void CastToInt32Vf(__local_mem__ T* srcAddr, __local_mem__ int32_t* dstAddr, uint16_t loopTimes, uint32_t dataLen)
+{
+    MicroAPI::RegTensor<T> srcValue;
+    MicroAPI::MaskReg preg;
+    uint32_t sregMask = dataLen;
+    for (uint16_t i = 0; i < loopTimes; i++) {
+        auto dstReg = MicroAPI::CreateAddrReg<int32_t>(i, static_cast<uint16_t>(VL_B32));
+        auto srcReg = MicroAPI::CreateAddrReg<T>(i, static_cast<uint16_t>(VL_B32));
+        preg = MicroAPI::UpdateMask<int32_t>(sregMask);
+        MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_UNPACK4_B8>(srcValue, srcAddr, srcReg);
+        MicroAPI::DataCopy<int32_t, MicroAPI::StoreDist::DIST_NORM>(
+            dstAddr, (MicroAPI::RegTensor<int32_t>&)srcValue, dstReg, preg);
+    }
+}
+
+template <typename T>
 __aicore__ inline void CastToInt32(LocalTensor<int32_t>& dstLocal, LocalTensor<T>& srcLocal, uint32_t dataLen)
 {
     __local_mem__ T* srcAddr = (__local_mem__ T*)srcLocal.GetPhyAddr();
     __local_mem__ int32_t* dstAddr = (__local_mem__ int32_t*)dstLocal.GetPhyAddr();
 
     uint16_t loopTimes = ops::CeilDiv(dataLen, VL_B32);
-    __VEC_SCOPE__
-    {
-        MicroAPI::RegTensor<T> srcValue;
-        MicroAPI::MaskReg preg;
-        uint32_t sregMask = dataLen;
-        for (uint16_t i = 0; i < loopTimes; i++) {
-            auto dstReg = MicroAPI::CreateAddrReg<int32_t>(i, static_cast<uint16_t>(VL_B32));
-            auto srcReg = MicroAPI::CreateAddrReg<T>(i, static_cast<uint16_t>(VL_B32));
-            preg = MicroAPI::UpdateMask<int32_t>(sregMask);
-            MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_UNPACK4_B8>(srcValue, srcAddr, srcReg);
-            MicroAPI::DataCopy<int32_t, MicroAPI::StoreDist::DIST_NORM>(
-                dstAddr, (MicroAPI::RegTensor<int32_t>&)srcValue, dstReg, preg);
+
+    CastToInt32Vf(srcAddr, dstAddr, loopTimes, dataLen);
+}
+
+template<typename T>
+__simd_vf__ inline void NegateUpdateVf(__local_mem__ T* updatesAddr, uint32_t loopSize, uint16_t loopTimes, uint32_t dataLen)
+{
+    if constexpr (IsSameType<T, bfloat16_t>::value) { 
+        MicroAPI::RegTensor<bfloat16_t> updatesValue;
+        MicroAPI::RegTensor<bfloat16_t> scalarReg;
+        MicroAPI::RegTensor<bfloat16_t> dstReg;
+        MicroAPI::MaskReg maskReg;
+        uint32_t count = dataLen;
+        bfloat16_t scalarValue = -1;
+        MicroAPI::Duplicate(scalarReg, scalarValue);
+        for (uint16_t j = 0; j < loopTimes; j++) {
+            maskReg = MicroAPI::UpdateMask<T>(count);
+            MicroAPI::DataCopy(updatesValue, updatesAddr + loopSize * j);
+            MicroAPI::Mul(dstReg, updatesValue, scalarReg, maskReg);
+            MicroAPI::DataCopy(updatesAddr + loopSize * j, dstReg, maskReg);
+        }
+    } else {  
+        MicroAPI::RegTensor<T> updatesValue;
+        MicroAPI::RegTensor<T> negValue;
+        MicroAPI::MaskReg maskReg;
+        uint32_t count = dataLen;
+        for (uint16_t j = 0; j < loopTimes; j++) {
+            maskReg = MicroAPI::UpdateMask<T>(count);
+            MicroAPI::DataCopy(updatesValue, updatesAddr + loopSize * j);
+            MicroAPI::Neg(negValue, updatesValue, maskReg);
+            MicroAPI::DataCopy(updatesAddr + loopSize * j, negValue, maskReg);
         }
     }
 }
@@ -107,37 +142,23 @@ __aicore__ inline void NegateUpdate(LocalTensor<T>& updatesLocal, uint32_t dataL
     uint32_t loopSize = platform::GetVRegSize() / sizeof(T);
     uint16_t loopTimes = ops::CeilDiv(dataLen, loopSize);  
              
-    if constexpr (IsSameType<T, bfloat16_t>::value) { 
-        __VEC_SCOPE__
-        {
-            MicroAPI::RegTensor<bfloat16_t> updatesValue;
-            MicroAPI::RegTensor<bfloat16_t> scalarReg;
-            MicroAPI::RegTensor<bfloat16_t> dstReg;
-            MicroAPI::MaskReg maskReg;
-            uint32_t count = dataLen;
-            bfloat16_t scalarValue = -1;
-            MicroAPI::Duplicate(scalarReg, scalarValue);
-            for (uint16_t j = 0; j < loopTimes; j++) {
-                maskReg = MicroAPI::UpdateMask<T>(count);
-                MicroAPI::DataCopy(updatesValue, updatesAddr + loopSize * j);
-                MicroAPI::Mul(dstReg, updatesValue, scalarReg, maskReg);
-                MicroAPI::DataCopy(updatesAddr + loopSize * j, dstReg, maskReg);
-            }
-        }
-    } else {  
-        __VEC_SCOPE__
-        {
-            MicroAPI::RegTensor<T> updatesValue;
-            MicroAPI::RegTensor<T> negValue;
-            MicroAPI::MaskReg maskReg;
-            uint32_t count = dataLen;
-            for (uint16_t j = 0; j < loopTimes; j++) {
-                maskReg = MicroAPI::UpdateMask<T>(count);
-                MicroAPI::DataCopy(updatesValue, updatesAddr + loopSize * j);
-                MicroAPI::Neg(negValue, updatesValue, maskReg);
-                MicroAPI::DataCopy(updatesAddr + loopSize * j, negValue, maskReg);
-            }
-        }
+    NegateUpdateVf(updatesAddr, loopSize, loopTimes, dataLen);
+}
+
+template <typename T>
+__simd_vf__ inline void CastToOriginVf(__local_mem__ int32_t* srcAddr, __local_mem__ T* dstAddr, uint32_t dataLen,
+                                       uint16_t loopTimes, uint16_t stride)
+{
+    MicroAPI::RegTensor<int32_t> srcValue;
+    MicroAPI::MaskReg preg;
+    uint32_t sregMask = dataLen;
+    for (uint16_t i = 0; i < loopTimes; i++) {
+        auto dstReg = MicroAPI::CreateAddrReg<T>(i, static_cast<uint16_t>(VL_B32));
+        auto srcReg = MicroAPI::CreateAddrReg<int32_t>(i, static_cast<uint16_t>(VL_B32));
+        preg = MicroAPI::UpdateMask<int32_t>(sregMask);
+        MicroAPI::DataCopy<int32_t, MicroAPI::LoadDist::DIST_NORM>(srcValue, srcAddr, srcReg);
+        MicroAPI::DataCopy<T, MicroAPI::StoreDist::DIST_PACK4_B32>(
+            dstAddr, (MicroAPI::RegTensor<T>&)srcValue, dstReg, preg);
     }
 }
 
@@ -149,20 +170,8 @@ __aicore__ inline void CastToOrigin(LocalTensor<T>& dstLocal, LocalTensor<int32_
 
     uint16_t loopTimes = ops::CeilDiv(dataLen, VL_B32);
     uint16_t stride = static_cast<uint16_t>(VL_B32);
-    __VEC_SCOPE__
-    {
-        MicroAPI::RegTensor<int32_t> srcValue;
-        MicroAPI::MaskReg preg;
-        uint32_t sregMask = dataLen;
-        for (uint16_t i = 0; i < loopTimes; i++) {
-            auto dstReg = MicroAPI::CreateAddrReg<T>(i, static_cast<uint16_t>(VL_B32));
-            auto srcReg = MicroAPI::CreateAddrReg<int32_t>(i, static_cast<uint16_t>(VL_B32));
-            preg = MicroAPI::UpdateMask<int32_t>(sregMask);
-            MicroAPI::DataCopy<int32_t, MicroAPI::LoadDist::DIST_NORM>(srcValue, srcAddr, srcReg);
-            MicroAPI::DataCopy<T, MicroAPI::StoreDist::DIST_PACK4_B32>(
-                dstAddr, (MicroAPI::RegTensor<T>&)srcValue, dstReg, preg);
-        }
-    }
+    
+    CastToOriginVf(srcAddr, dstAddr, dataLen, loopTimes, stride);
 }
 
 template <typename IDX_T, typename CAST_T, uint32_t castType>
@@ -200,7 +209,7 @@ __aicore__ inline void BroadcastUpdatesScalar(LocalTensor<T> updatesLocal, Globa
 }
 
 template<typename IDX_T>
-__aicore__ inline void ComputeUniqueIdNumInt64(__local_mem__ IDX_T* indicesAddr, __local_mem__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt, int64_t dataLen)
+__simd_callee__ inline void ComputeUniqueIdNumInt64(__local_mem__ IDX_T* indicesAddr, __local_mem__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt, int64_t dataLen)
 {
     uint32_t counter = dataLen + 1;
     AscendC::MicroAPI::RegTensor<int32_t> orderReg, selReg;
@@ -224,7 +233,7 @@ __aicore__ inline void ComputeUniqueIdNumInt64(__local_mem__ IDX_T* indicesAddr,
 }
 
 template<typename IDX_T>
-__aicore__ inline void ComputeUniqueIdNumInt32(__local_mem__ IDX_T* indicesAddr, __local_mem__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt, int64_t dataLen)
+__simd_callee__ inline void ComputeUniqueIdNumInt32(__local_mem__ IDX_T* indicesAddr, __local_mem__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt, int64_t dataLen)
 {
     uint32_t counter = dataLen + 1;
     AscendC::MicroAPI::RegTensor<int32_t> orderReg, selReg;
@@ -247,7 +256,7 @@ __aicore__ inline void ComputeUniqueIdNumInt32(__local_mem__ IDX_T* indicesAddr,
 }
 
 template<typename IDX_T>
-__aicore__ inline void ComputeUniqueIdNumInt16(__local_mem__ IDX_T* indicesAddr, __local_mem__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt, int64_t dataLen)
+__simd_callee__ inline void ComputeUniqueIdNumInt16(__local_mem__ IDX_T* indicesAddr, __local_mem__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt, int64_t dataLen)
 {
     uint32_t counter = dataLen + 1;
     AscendC::MicroAPI::RegTensor<int32_t> orderReg, orderReg2, selReg, selReg2;
@@ -274,7 +283,7 @@ __aicore__ inline void ComputeUniqueIdNumInt16(__local_mem__ IDX_T* indicesAddr,
 }
 
 template<typename IDX_T>
-__aicore__ inline void ComputeUniqueIdNumUint8(__local_mem__ IDX_T* indicesAddr, __local_mem__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt, int64_t dataLen)
+__simd_callee__ inline void ComputeUniqueIdNumUint8(__local_mem__ IDX_T* indicesAddr, __local_mem__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt, int64_t dataLen)
 {
     uint32_t counter = dataLen + 1;
     AscendC::MicroAPI::RegTensor<int32_t> orderReg, orderReg2, orderReg3, orderReg4;
@@ -312,6 +321,23 @@ __aicore__ inline void ComputeUniqueIdNumUint8(__local_mem__ IDX_T* indicesAddr,
 }
 
 template<typename IDX_T>
+__simd_vf__ inline void ComputeUniqueIdNumVf(__local_mem__ IDX_T* indicesAddr, __local_mem__ int32_t* uniqueIdCountsAddr,
+                                                int64_t dataLen, uint16_t loopCnt)
+{
+    AscendC::MicroAPI::ClearSpr<AscendC::SpecialPurposeReg::AR>();
+
+    if constexpr (std::is_same<int64_t, IDX_T>::value) {
+        ComputeUniqueIdNumInt64<IDX_T>(indicesAddr, uniqueIdCountsAddr, loopCnt, dataLen);
+    } else if constexpr (std::is_same<int32_t, IDX_T>::value) {
+        ComputeUniqueIdNumInt32<IDX_T>(indicesAddr, uniqueIdCountsAddr, loopCnt, dataLen);
+    } else if constexpr (std::is_same<int16_t, IDX_T>::value) {
+        ComputeUniqueIdNumInt16<IDX_T>(indicesAddr, uniqueIdCountsAddr, loopCnt, dataLen);
+    } else {  // uint8
+        ComputeUniqueIdNumUint8<IDX_T>(indicesAddr, uniqueIdCountsAddr, loopCnt, dataLen);
+    }
+}
+
+template<typename IDX_T>
 __aicore__ inline uint32_t ComputeUniqueIdNum(LocalTensor<IDX_T> indicesLocal, LocalTensor<int32_t> uniqueIdCountLocal, int64_t dataLen)
 {
     __local_mem__ IDX_T* indicesAddr = (__local_mem__ IDX_T*)indicesLocal[(UB_AGLIN_VALUE / sizeof(IDX_T))].GetPhyAddr();
@@ -319,20 +345,8 @@ __aicore__ inline uint32_t ComputeUniqueIdNum(LocalTensor<IDX_T> indicesLocal, L
 
     constexpr int64_t vfLen = platform::GetVRegSize() / sizeof(IDX_T);
     uint16_t loopCnt = ops::CeilDiv(dataLen + 1, vfLen);
-    __VEC_SCOPE__
-    {
-        AscendC::MicroAPI::ClearSpr<AscendC::SpecialPurposeReg::AR>();
 
-        if constexpr (std::is_same<int64_t, IDX_T>::value) {
-            ComputeUniqueIdNumInt64<IDX_T>(indicesAddr, uniqueIdCountsAddr, loopCnt, dataLen);
-        } else if constexpr (std::is_same<int32_t, IDX_T>::value) {
-            ComputeUniqueIdNumInt32<IDX_T>(indicesAddr, uniqueIdCountsAddr, loopCnt, dataLen);
-        } else if constexpr (std::is_same<int16_t, IDX_T>::value) {
-            ComputeUniqueIdNumInt16<IDX_T>(indicesAddr, uniqueIdCountsAddr, loopCnt, dataLen);
-        } else {  // uint8
-            ComputeUniqueIdNumUint8<IDX_T>(indicesAddr, uniqueIdCountsAddr, loopCnt, dataLen);
-        }
-    }
+    ComputeUniqueIdNumVf(indicesAddr, uniqueIdCountsAddr, dataLen, loopCnt);
     uint32_t uniqueIdNum = ((AscendC::MicroAPI::GetSpr<AscendC::SpecialPurposeReg::AR>()) / sizeof(int32_t)) - 1;
     return uniqueIdNum;
 }
@@ -359,29 +373,31 @@ __aicore__ inline uint32_t SortAndComputeUniqueIdx(int64_t rowLen, LocalTensor<I
     return ComputeUniqueIdNum(sortIndicesLocal, uniqueIdxLocal, rowLen);
 }
 
+__simd_vf__ inline void ComputeUniqueIdTimesVf(__local_mem__ int32_t* noDupResAddr, uint32_t counterStatFre, uint16_t loopCntStatFre)
+{
+    AscendC::MicroAPI::RegTensor<int32_t> beginReg;
+    AscendC::MicroAPI::RegTensor<int32_t> endReg;
+    AscendC::MicroAPI::RegTensor<int32_t> subReg;
+    AscendC::MicroAPI::MaskReg maskRegUpdate;
+    AscendC::MicroAPI::UnalignReg u0;
+    for (uint16_t i = 0; i < loopCntStatFre; i++) {
+        auto noDupResAddrUpdate = noDupResAddr + i * VF_B32 + 1;
+        maskRegUpdate = AscendC::MicroAPI::UpdateMask<int32_t>(counterStatFre);
+        AscendC::MicroAPI::DataCopy(beginReg, noDupResAddr + i * VF_B32);
+        AscendC::MicroAPI::DataCopyUnAlignPre(u0, noDupResAddrUpdate);
+        AscendC::MicroAPI::DataCopyUnAlign<int32_t>(endReg, u0, noDupResAddrUpdate);
+        AscendC::MicroAPI::Sub(subReg, endReg, beginReg, maskRegUpdate);
+        AscendC::MicroAPI::DataCopy(noDupResAddr + i * VF_B32, subReg, maskRegUpdate);
+    }
+}
+
 __aicore__ inline void ComputeUniqueIdTimes(LocalTensor<int32_t>& noDupRes, uint32_t& arNum)
 {
     __local_mem__ int32_t* noDupResAddr = (__ubuf__ int32_t*)noDupRes.GetPhyAddr();
     uint16_t loopCntStatFre = (arNum + VF_B32 - 1) / VF_B32;
     uint32_t counterStatFre = arNum;
-    __VEC_SCOPE__
-    {
-        AscendC::MicroAPI::RegTensor<int32_t> beginReg;
-        AscendC::MicroAPI::RegTensor<int32_t> endReg;
-        AscendC::MicroAPI::RegTensor<int32_t> subReg;
-        AscendC::MicroAPI::MaskReg maskRegUpdate;
-        AscendC::MicroAPI::UnalignReg u0;
 
-        for (uint16_t i = 0; i < loopCntStatFre; i++) {
-            auto noDupResAddrUpdate = noDupResAddr + i * VF_B32 + 1;
-            maskRegUpdate = AscendC::MicroAPI::UpdateMask<int32_t>(counterStatFre);
-            AscendC::MicroAPI::DataCopy(beginReg, noDupResAddr + i * VF_B32);
-            AscendC::MicroAPI::DataCopyUnAlignPre(u0, noDupResAddrUpdate);
-            AscendC::MicroAPI::DataCopyUnAlign<int32_t>(endReg, u0, noDupResAddrUpdate);
-            AscendC::MicroAPI::Sub(subReg, endReg, beginReg, maskRegUpdate);
-            AscendC::MicroAPI::DataCopy(noDupResAddr + i * VF_B32, subReg, maskRegUpdate);
-        }
-    }
+    ComputeUniqueIdTimesVf(noDupResAddr, counterStatFre, loopCntStatFre);
 
     event_t eventIDVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
     SetFlag<HardEvent::V_S>(eventIDVToS);

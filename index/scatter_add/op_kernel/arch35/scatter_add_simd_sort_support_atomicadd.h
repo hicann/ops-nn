@@ -40,16 +40,9 @@ public:
     __aicore__ inline uint32_t ProcessIndices(uint64_t blockOffsetindices, uint64_t rowLoop, uint32_t rows);
     __aicore__ inline void ComputeUpdatesSum(uint64_t cols, uint64_t colsAlign, uint32_t uniqueIdNum);
     __aicore__ inline void CopyResToGm(uint32_t cols, uint32_t colsAlign, uint64_t ubOffset, uint32_t& uniqueIdNum);
-    __aicore__ inline void ProcessPerUpdateScalar(
-        __local_mem__ T* resLocalAddr, MicroAPI::MaskReg& maskRegUpdate, MicroAPI::AddrReg& addrReg,
-        updateAddParams& params, T updateScalarValue);
-
+    
     template <typename VGatherIndexDType>
     __aicore__ inline void ComputeUpdatesSumRegbase(uint64_t cols, uint64_t colsAlign, uint32_t uniqueIdNum);
-    template <typename VGatherIndexDType, typename VGatherIndexDTypeInt>
-    __aicore__ inline void ProcessPerUpdateGroup(
-        __local_mem__ T* updatesLocalAddr, __local_mem__ T* resLocalAddr, MicroAPI::MaskReg& maskRegUpdate,
-        MicroAPI::RegTensor<VGatherIndexDTypeInt>& serReg, MicroAPI::AddrReg& addrReg, updateAddParams& params);
 
 private:
     AscendC::GlobalTensor<T> varGm_;
@@ -122,9 +115,9 @@ __aicore__ inline uint32_t ScatterAddSIMDSortSupportAtomicAdd<T, U, CAST_T, upda
     return uniqueIdNum;
 }
 
-template<typename T, typename U, typename CAST_T, bool updatesIsScalar, uint32_t castType, uint32_t scatterOp>
-template <typename VGatherIndexDType, typename VGatherIndexDTypeInt>
-__aicore__ inline void ScatterAddSIMDSortSupportAtomicAdd<T, U, CAST_T, updatesIsScalar, castType, scatterOp>::ProcessPerUpdateGroup(
+
+template <typename T, typename VGatherIndexDType, typename VGatherIndexDTypeInt>
+__simd_callee__ inline void ProcessPerUpdateGroup(
     __local_mem__ T* updatesLocalAddr, __local_mem__ T* resLocalAddr, MicroAPI::MaskReg& maskRegUpdate,
     MicroAPI::RegTensor<VGatherIndexDTypeInt>& serReg, MicroAPI::AddrReg& addrReg, updateAddParams& params)
 {
@@ -174,10 +167,9 @@ __aicore__ inline void ScatterAddSIMDSortSupportAtomicAdd<T, U, CAST_T, updatesI
     }
 }
 
-template<typename T, typename U, typename CAST_T, bool updatesIsScalar, uint32_t castType, uint32_t scatterOp>
-__aicore__ inline void ScatterAddSIMDSortSupportAtomicAdd<T, U, CAST_T, updatesIsScalar, castType, scatterOp>::ProcessPerUpdateScalar(
-    __local_mem__ T* resLocalAddr, MicroAPI::MaskReg& maskRegUpdate, MicroAPI::AddrReg& addrReg,
-    updateAddParams& params, T updateScalarValue)
+template<typename T>
+__simd_callee__ inline void ProcessPerUpdateScalar(__local_mem__ T* resLocalAddr, MicroAPI::MaskReg& maskRegUpdate,
+                                              MicroAPI::AddrReg& addrReg, updateAddParams& params, T updateScalarValue)
 {
     MicroAPI::RegTensor<T> addOut;
     MicroAPI::RegTensor<T> outReg;
@@ -190,6 +182,35 @@ __aicore__ inline void ScatterAddSIMDSortSupportAtomicAdd<T, U, CAST_T, updatesI
     MicroAPI::DataCopy(resLocalAddr, outReg, addrReg, maskRegUpdate);
 }
 
+template<typename T, typename VGatherIndexDType, typename VGatherIndexDTypeInt, bool updatesIsScalar>
+__simd_vf__ inline void ComputeUpdatesSumRegbaseVf(
+        __local_mem__ T* updatesLocalAddr, __local_mem__ int32_t* uniqueIdCountLocalAddr, __local_mem__ T* resLocalAddr,
+        __local_mem__ T* resLocalBaseAddr, updateAddParams params, 
+        uint64_t cols, uint64_t colsAlign, uint32_t loopPerRow, uint32_t vfLenUpdate,T updateScalarValue, uint32_t uniqueIdNum)
+{
+    int32_t sclar0 = 0;
+    for (uint16_t i = 0; i < (uint16_t)uniqueIdNum; ++i) {
+        MicroAPI::RegTensor<VGatherIndexDTypeInt> serReg;
+        MicroAPI::RegTensor<VGatherIndexDTypeInt> serRegBase;
+        MicroAPI::Arange(serRegBase, (VGatherIndexDTypeInt)sclar0);
+        params.segCount = static_cast<uint16_t>(uniqueIdCountLocalAddr[i]);
+        uint32_t colCount = cols;
+        resLocalAddr = resLocalBaseAddr + i * colsAlign;
+        for (uint16_t j = 0; j < (uint16_t)loopPerRow; ++j) {
+            MicroAPI::MaskReg maskRegUpdate = MicroAPI::UpdateMask<VGatherIndexDType>(colCount);
+            auto addrReg = MicroAPI::CreateAddrReg<T>(j, static_cast<uint16_t>(vfLenUpdate));
+            if constexpr (updatesIsScalar) {
+                ProcessPerUpdateScalar(resLocalAddr, maskRegUpdate, addrReg, params, updateScalarValue);
+            } else {
+                MicroAPI::Adds(serReg, serRegBase, (VGatherIndexDTypeInt)(vfLenUpdate * j), maskRegUpdate);
+                ProcessPerUpdateGroup<T, VGatherIndexDType, VGatherIndexDTypeInt>(
+                    updatesLocalAddr, resLocalAddr, maskRegUpdate, serReg, addrReg, params);
+            }
+        }
+        params.outGmIndex = params.outGmIndex + params.segCount;
+    }
+}
+
 template<typename T, typename U, typename CAST_T, bool updatesIsScalar, uint32_t castType, uint32_t scatterOp>
 template <typename VGatherIndexDType>
 __aicore__ inline void ScatterAddSIMDSortSupportAtomicAdd<T, U, CAST_T, updatesIsScalar, castType, scatterOp>::ComputeUpdatesSumRegbase(
@@ -200,11 +221,6 @@ __aicore__ inline void ScatterAddSIMDSortSupportAtomicAdd<T, U, CAST_T, updatesI
     LocalTensor<T> updatesLocal = updatesQueue_.DeQue<T>();
     LocalTensor<T> resLocal = outQueueRes_.AllocTensor<T>();
 
-    __local_mem__ T* updatesLocalAddr = (__local_mem__ T*)updatesLocal.GetPhyAddr();
-    __local_mem__ T* resLocalAddr = (__local_mem__ T*)resLocal.GetPhyAddr();
-    __local_mem__ T* resLocalBaseAddr = resLocalAddr;
-
-    int32_t sclar0 = 0;
     T updateScalarValue = updatesLocal(0);
     uint32_t loopPerRow = (cols + vfLenUpdate_ - 1) / vfLenUpdate_;
     updateAddParams params;
@@ -213,31 +229,9 @@ __aicore__ inline void ScatterAddSIMDSortSupportAtomicAdd<T, U, CAST_T, updatesI
     params.sortedIdxAddr = (__local_mem__ uint32_t*)updatesOriginIdxLocal.GetPhyAddr();
     using VGatherIndexDTypeInt = std::conditional_t<std::is_same_v<VGatherIndexDType, uint16_t>, int16_t, int32_t>;
 
-    __VEC_SCOPE__
-    {
-        for (uint16_t i = 0; i < (uint16_t)uniqueIdNum; ++i) {
-            MicroAPI::RegTensor<VGatherIndexDTypeInt> serReg;
-            MicroAPI::RegTensor<VGatherIndexDTypeInt> serRegBase;
-
-            MicroAPI::Arange(serRegBase, (VGatherIndexDTypeInt)sclar0);
-
-            params.segCount = static_cast<uint16_t>(uniqueIdCountLocal(i));
-            uint32_t colCount = cols;
-            resLocalAddr = resLocalBaseAddr + i * colsAlign;
-            for (uint16_t j = 0; j < (uint16_t)loopPerRow; ++j) {
-                MicroAPI::MaskReg maskRegUpdate = MicroAPI::UpdateMask<VGatherIndexDType>(colCount);
-                auto addrReg = MicroAPI::CreateAddrReg<T>(j, static_cast<uint16_t>(vfLenUpdate_));
-                if constexpr (updatesIsScalar) {
-                    ProcessPerUpdateScalar(resLocalAddr, maskRegUpdate, addrReg, params, updateScalarValue);
-                } else {
-                    MicroAPI::Adds(serReg, serRegBase, (VGatherIndexDTypeInt)(vfLenUpdate_ * j), maskRegUpdate);
-                    ProcessPerUpdateGroup<VGatherIndexDType, VGatherIndexDTypeInt>(
-                        updatesLocalAddr, resLocalAddr, maskRegUpdate, serReg, addrReg, params);
-                }
-            }
-            params.outGmIndex = params.outGmIndex + params.segCount;
-        }
-    }
+    ComputeUpdatesSumRegbaseVf<T, VGatherIndexDType, VGatherIndexDTypeInt, updatesIsScalar>(
+            (__local_mem__ T*)updatesLocal.GetPhyAddr(), (__local_mem__ int32_t*)uniqueIdCountLocal.GetPhyAddr(), (__local_mem__ T*)resLocal.GetPhyAddr(),
+            (__local_mem__ T*)resLocal.GetPhyAddr(), params, cols, colsAlign, loopPerRow, vfLenUpdate_, updateScalarValue, uniqueIdNum);
 
     outQueueRes_.EnQue<T>(resLocal);
     if constexpr (updatesIsScalar) {

@@ -270,13 +270,51 @@ __aicore__ inline void ScatterAddDeterministicImpl<T, U, scatterOp>:: CopyInIndi
     indicesQue_.EnQue(indicesLocal);
 }
 
+template<typename U>
+__simd_vf__ inline void ComputeUniqueIdNumVf(__local_mem__ U* sortedIndicesAddr, __local_mem__ int32_t* uniqueIdCountsAddr, 
+                                             uint32_t vfLen, uint16_t loopCnt, uint32_t counter)
+{
+    AscendC::MicroAPI::RegTensor<int32_t> orderReg;
+    AscendC::MicroAPI::RegTensor<U> sortedIdxReg;
+    AscendC::MicroAPI::RegTensor<U> sortedIdxShiftOneReg;
+    AscendC::MicroAPI::RegTensor<int32_t> selReg0;
+    AscendC::MicroAPI::MaskReg cmpMask;
+    AscendC::MicroAPI::MaskReg maskRegUpdate;
+    AscendC::MicroAPI::UnalignReg u0;
+    AscendC::MicroAPI::UnalignReg u1;
+    AscendC::MicroAPI::UnalignReg ureg0;
+    AscendC::MicroAPI::ClearSpr<AscendC::SpecialPurposeReg::AR>();
+    for (uint16_t i = 0; i < loopCnt; ++i) {
+        AscendC::MicroAPI::Arange(orderReg, i * vfLen);
+        maskRegUpdate = AscendC::MicroAPI::UpdateMask<U>(counter);
+        auto startAddr = sortedIndicesAddr + i * vfLen;
+        DataCopy(sortedIdxReg, startAddr);
+        AscendC::MicroAPI::DataCopyUnAlignPre(u1, startAddr - 1);
+        AscendC::MicroAPI::DataCopyUnAlign<U>(sortedIdxShiftOneReg, u1, startAddr - 1);
+    
+        AscendC::MicroAPI::Compare<U, CMPMODE::NE>(cmpMask, sortedIdxReg, sortedIdxShiftOneReg, maskRegUpdate);
+        if constexpr (std::is_same<int64_t, U>::value) {
+            AscendC::MicroAPI::MaskReg maskHalf;
+            AscendC::MicroAPI::MaskPack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskHalf, cmpMask);
+            AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg0, orderReg,
+                maskHalf);
+        } else {
+            AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg0, orderReg,
+                cmpMask);
+        }
+                                                                                        
+        AscendC::MicroAPI::DataCopyUnAlign<int32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+                                            uniqueIdCountsAddr, selReg0, ureg0);
+    }
+    AscendC::MicroAPI::DataCopyUnAlignPost(uniqueIdCountsAddr, ureg0);
+}
+
 template<typename T, typename U, uint32_t scatterOp>
 __aicore__ inline void ScatterAddDeterministicImpl<T, U, scatterOp>::ComputeUniqueIdNum(LocalTensor<U>& sortedIndicesLocal, 
     LocalTensor<U>& uniqueIdCountLocalU, uint32_t dataLen)
 {
     LocalTensor<U> updateSumIdxLocal =  updateSumIdxQueue_.AllocTensor<U>();
     LocalTensor<int32_t> uniqueIdCountLocal = uniqueIdCountLocalU.template ReinterpretCast<int32_t>();
-
 
     __local_mem__ U* sortedIndicesAddr = (__local_mem__ U*)sortedIndicesLocal[shiftOffset_].GetPhyAddr();
     __local_mem__ int32_t* uniqueIdCountsAddr = (__local_mem__ int32_t*)uniqueIdCountLocal.GetPhyAddr();
@@ -285,43 +323,9 @@ __aicore__ inline void ScatterAddDeterministicImpl<T, U, scatterOp>::ComputeUniq
     uint32_t vfLen = platform::GetVRegSize() / sizeof(U);
     uint16_t loopCnt = ops::CeilDiv(dataLen + 1, vfLen);
     uint32_t counter = dataLen + 1;
-    __VEC_SCOPE__
-    {
-        AscendC::MicroAPI::RegTensor<int32_t> orderReg;
-        AscendC::MicroAPI::RegTensor<U> sortedIdxReg;
-        AscendC::MicroAPI::RegTensor<U> sortedIdxShiftOneReg;
-        AscendC::MicroAPI::RegTensor<int32_t> selReg0;
-        AscendC::MicroAPI::MaskReg cmpMask;
-        AscendC::MicroAPI::MaskReg maskRegUpdate;
-        AscendC::MicroAPI::UnalignReg u0;
-        AscendC::MicroAPI::UnalignReg u1;
-        AscendC::MicroAPI::UnalignReg ureg0;
-        AscendC::MicroAPI::ClearSpr<AscendC::SpecialPurposeReg::AR>();
 
-        for (uint16_t i = 0; i < loopCnt; ++i) {
-            AscendC::MicroAPI::Arange(orderReg, i * vfLen);
-            maskRegUpdate = AscendC::MicroAPI::UpdateMask<U>(counter);
-            auto startAddr = sortedIndicesAddr + i * vfLen;
-            DataCopy(sortedIdxReg, startAddr);
-            AscendC::MicroAPI::DataCopyUnAlignPre(u1, startAddr - 1);
-            AscendC::MicroAPI::DataCopyUnAlign<U>(sortedIdxShiftOneReg, u1, startAddr - 1);
-        
-            AscendC::MicroAPI::Compare<U, CMPMODE::NE>(cmpMask, sortedIdxReg, sortedIdxShiftOneReg, maskRegUpdate);
-            if constexpr (std::is_same<int64_t, U>::value) {
-                AscendC::MicroAPI::MaskReg maskHalf;
-                AscendC::MicroAPI::MaskPack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskHalf, cmpMask);
-                AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg0, orderReg,
-                    maskHalf);
-            } else {
-                AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(selReg0, orderReg,
-                    cmpMask);
-            }
-                                                                                            
-            AscendC::MicroAPI::DataCopyUnAlign<int32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-                                                uniqueIdCountsAddr, selReg0, ureg0);
-        }
-        AscendC::MicroAPI::DataCopyUnAlignPost(uniqueIdCountsAddr, ureg0);
-    }
+    ComputeUniqueIdNumVf(sortedIndicesAddr, uniqueIdCountsAddr, vfLen, loopCnt, counter);
+
     uniqueIdNum_ = ((AscendC::MicroAPI::GetSpr<AscendC::SpecialPurposeReg::AR>()) / sizeof(int32_t)) - 1;
     event_t eventS2V = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
     SetFlag<HardEvent::V_S>(eventS2V);
@@ -335,6 +339,28 @@ __aicore__ inline void ScatterAddDeterministicImpl<T, U, scatterOp>::ComputeUniq
     updateSumIdxQueue_.EnQue(updateSumIdxLocal);
 }
 
+__simd_vf__ inline void ComputeUinqueIdTimesVf(__local_mem__ int32_t* uniqueIdCountsAddr, 
+                                             uint32_t uniqueIdNum, uint32_t vfLen, uint16_t loopSize)
+{
+    AscendC::MicroAPI::RegTensor<int32_t> preReg;
+    AscendC::MicroAPI::RegTensor<int32_t> postReg;
+    AscendC::MicroAPI::RegTensor<int32_t> subReg;
+    AscendC::MicroAPI::MaskReg maskReg;
+    AscendC::MicroAPI::UnalignReg uIn;
+    AscendC::MicroAPI::UnalignReg uOut;
+    AscendC::MicroAPI::UnalignReg uInShift;
+    for (uint16_t i = 0; i < loopSize; ++i) {
+        maskReg = AscendC::MicroAPI::UpdateMask<uint32_t>(uniqueIdNum);
+        auto startAddr = uniqueIdCountsAddr + i * vfLen;
+        auto startAddrOfstOne = startAddr + 1;
+        DataCopy(preReg, startAddr);
+        AscendC::MicroAPI::DataCopyUnAlignPre(uInShift, startAddrOfstOne);
+        AscendC::MicroAPI::DataCopyUnAlign<int32_t>(postReg, uInShift, startAddrOfstOne, vfLen);
+        AscendC::MicroAPI::Sub(subReg, postReg, preReg, maskReg);
+        DataCopy(startAddr, subReg, maskReg);
+    }
+}
+
 template<typename T, typename U, uint32_t scatterOp>
 __aicore__ inline void ScatterAddDeterministicImpl<T, U, scatterOp>::ComputeUinqueIdTimes(LocalTensor<U>& uniqueIdCountLocalU, uint32_t uniqueIdNum)
 {
@@ -344,25 +370,54 @@ __aicore__ inline void ScatterAddDeterministicImpl<T, U, scatterOp>::ComputeUinq
     // compute repeated num of each id
     uint32_t vfLen = platform::GetVRegSize() / sizeof(uint32_t);
     uint16_t loopSize = ops::CeilDiv(uniqueIdNum, vfLen);
-    __VEC_SCOPE__
-    {
-        AscendC::MicroAPI::RegTensor<int32_t> preReg;
-        AscendC::MicroAPI::RegTensor<int32_t> postReg;
-        AscendC::MicroAPI::RegTensor<int32_t> subReg;
-        AscendC::MicroAPI::MaskReg maskReg;
-        AscendC::MicroAPI::UnalignReg uIn;
+
+    ComputeUinqueIdTimesVf(uniqueIdCountsAddr, uniqueIdNum, vfLen, loopSize);
+}
+
+template<typename T>
+__simd_vf__ inline void ComputeSumVf(__local_mem__ T* updatesAddr, __local_mem__ float* updateSumAddr, __local_mem__ uint32_t* uniqueIdCountAddr,
+                                     __local_mem__ uint32_t* updatesOriginIdexAddr, uint64_t totalCol, uint64_t postVarAlignSizeFp32,
+                                    uint32_t uniqueIdNum, uint32_t vfLen, uint32_t vlSize, uint32_t maskLen, uint16_t loopSize)
+{
+    int32_t idLocation = 0;
+
+    for (uint16_t i = 0; i < static_cast<uint16_t>(uniqueIdNum); i++) {
+        AscendC::MicroAPI::RegTensor<float> sumReg;
+        AscendC::MicroAPI::RegTensor<T> tmpReg;
+        AscendC::MicroAPI::RegTensor<T> dstReg1;
+        AscendC::MicroAPI::RegTensor<T> dstReg2;
+        AscendC::MicroAPI::RegTensor<float> tmpRegB32;
+        AscendC::MicroAPI::MaskReg maskReg =
+            AscendC::MicroAPI::CreateMask<int32_t, AscendC::MicroAPI::MaskPattern::ALL>();
+        MicroAPI::UnalignReg u0;
         AscendC::MicroAPI::UnalignReg uOut;
-        AscendC::MicroAPI::UnalignReg uInShift;
-        for (uint16_t i = 0; i < loopSize; ++i) {
-            maskReg = AscendC::MicroAPI::UpdateMask<uint32_t>(uniqueIdNum);
-            auto startAddr = uniqueIdCountsAddr + i * vfLen;
-            auto startAddrOfstOne = startAddr + 1;
-            DataCopy(preReg, startAddr);
-            AscendC::MicroAPI::DataCopyUnAlignPre(uInShift, startAddrOfstOne);
-            AscendC::MicroAPI::DataCopyUnAlign<int32_t>(postReg, uInShift, startAddrOfstOne, vfLen);
-            AscendC::MicroAPI::Sub(subReg, postReg, preReg, maskReg);
-            DataCopy(startAddr, subReg, maskReg);
+        AscendC::MicroAPI::MaskReg maskReg1;
+        uint16_t idRepeatTimes = static_cast<uint16_t>(uniqueIdCountAddr[i]);
+        for (uint16_t j = 0; j < loopSize; ++j) {
+            maskReg1 = AscendC::MicroAPI::UpdateMask<int32_t>(maskLen);
+            AscendC::MicroAPI::Duplicate(sumReg, (float)0, maskReg);
+            for (uint16_t k = 0; k < idRepeatTimes; k++) {
+                auto updatesOffet = updatesOriginIdexAddr[idLocation + k] * totalCol + j * vfLen;
+                auto startAddr = updatesAddr + updatesOffet;
+                AscendC::MicroAPI::DataCopyUnAlignPre(u0, startAddr);
+                AscendC::MicroAPI::DataCopyUnAlign<T>(tmpReg, u0, startAddr, vfLen);
+                if constexpr (std::is_same<half, T>::value) {
+                    Interleave(dstReg1, dstReg2, tmpReg, tmpReg);
+                    Cast<float, half, castTraitB162B32>(tmpRegB32, dstReg1, maskReg1);
+                    AscendC::MicroAPI::Add(sumReg, sumReg, tmpRegB32, maskReg1);
+                } else if constexpr (std::is_same<bfloat16_t, T>::value) {
+                    Interleave(dstReg1, dstReg2, tmpReg, tmpReg);
+                    Cast<float, bfloat16_t, castTraitB162B32>(tmpRegB32, dstReg1, maskReg1);
+                    AscendC::MicroAPI::Add(sumReg, sumReg, tmpRegB32, maskReg1);
+                } else {
+                    AscendC::MicroAPI::Add(sumReg, sumReg, tmpReg, maskReg1);
+                }
+            }
+            auto sumOffset = i * postVarAlignSizeFp32 + j * vfLen;
+            auto curUpdateSumAddr = updateSumAddr + sumOffset;
+            DataCopy(curUpdateSumAddr, sumReg, maskReg1);
         }
+        idLocation += idRepeatTimes;
     }
 }
 
@@ -377,53 +432,18 @@ __aicore__ inline void ScatterAddDeterministicImpl<T, U, scatterOp>::ComputeSum(
 
     __local_mem__ T* updatesAddr = (__local_mem__ T*)updatesLocal.GetPhyAddr();
     __local_mem__ float* updateSumAddr = (__local_mem__ float*)updateSumLocal.GetPhyAddr();
+    __local_mem__ uint32_t* uniqueIdCountAddr = (__local_mem__ uint32_t*)uniqueIdCountLocal.GetPhyAddr();
+    __local_mem__ uint32_t* updatesOriginIdexAddr = (__local_mem__ uint32_t*)updatesOriginIdexLocal.GetPhyAddr();
 
     uint32_t vfLen = platform::GetVRegSize() / sizeof(T);
     uint16_t loopSize = (tilingData_.varShape[1] + vfLen - 1) / vfLen;
-    int32_t idLocation = 0;
     uint32_t vlSize = platform::GetVRegSize();
     uint32_t maskLen = static_cast<uint32_t>((postVarAlignSizeFp32_ * sizeof(float) + vlSize - 1) / vlSize * vlSize / sizeof(float) * dataLen);
-    __VEC_SCOPE__
-    {
-        for (uint16_t i = 0; i < static_cast<uint16_t>(uniqueIdNum); i++) {
-            AscendC::MicroAPI::RegTensor<float> sumReg;
-            AscendC::MicroAPI::RegTensor<T> tmpReg;
-            AscendC::MicroAPI::RegTensor<T> dstReg1;
-            AscendC::MicroAPI::RegTensor<T> dstReg2;
-            AscendC::MicroAPI::RegTensor<float> tmpRegB32;
-            AscendC::MicroAPI::MaskReg maskReg =
-                AscendC::MicroAPI::CreateMask<int32_t, AscendC::MicroAPI::MaskPattern::ALL>();
-            MicroAPI::UnalignReg u0;
-            AscendC::MicroAPI::UnalignReg uOut;
-            AscendC::MicroAPI::MaskReg maskReg1;
-            uint16_t idRepeatTimes = static_cast<uint16_t>(uniqueIdCountLocal(i));
-            for (uint16_t j = 0; j < loopSize; ++j) {
-                maskReg1 = AscendC::MicroAPI::UpdateMask<int32_t>(maskLen);
-                AscendC::MicroAPI::Duplicate(sumReg, (float)0, maskReg);
-                for (uint16_t k = 0; k < idRepeatTimes; k++) {
-                    auto updatesOffet = updatesOriginIdexLocal(idLocation + k) * tilingData_.varShape[1] + j * vfLen;
-                    auto startAddr = updatesAddr + updatesOffet;
-                    AscendC::MicroAPI::DataCopyUnAlignPre(u0, startAddr);
-                    AscendC::MicroAPI::DataCopyUnAlign<T>(tmpReg, u0, startAddr, vfLen);
-                    if constexpr (std::is_same<half, T>::value) {
-                        Interleave(dstReg1, dstReg2, tmpReg, tmpReg);
-                        Cast<float, half, castTraitB162B32>(tmpRegB32, dstReg1, maskReg1);
-                        AscendC::MicroAPI::Add(sumReg, sumReg, tmpRegB32, maskReg1);
-                    } else if constexpr (std::is_same<bfloat16_t, T>::value) {
-                        Interleave(dstReg1, dstReg2, tmpReg, tmpReg);
-                        Cast<float, bfloat16_t, castTraitB162B32>(tmpRegB32, dstReg1, maskReg1);
-                        AscendC::MicroAPI::Add(sumReg, sumReg, tmpRegB32, maskReg1);
-                    } else {
-                        AscendC::MicroAPI::Add(sumReg, sumReg, tmpReg, maskReg1);
-                    }
-                }
-                auto sumOffset = i * postVarAlignSizeFp32_ + j * vfLen;
-                auto curUpdateSumAddr = updateSumAddr + sumOffset;
-                DataCopy(curUpdateSumAddr, sumReg, maskReg1);
-            }
-            idLocation += idRepeatTimes;
-        }
-    }
+    uint64_t totalCol = tilingData_.varShape[1];
+
+    ComputeSumVf(updatesAddr, updateSumAddr, uniqueIdCountAddr, updatesOriginIdexAddr,
+                 totalCol, postVarAlignSizeFp32_, uniqueIdNum, vfLen, vlSize, maskLen,  loopSize);
+
     updateSumQue_.EnQue(updateSumLocal);
     updatesQueue_.FreeTensor(updatesLocal);
 }
@@ -542,6 +562,37 @@ __aicore__ inline void ScatterAddDeterministicImpl<T, U, scatterOp>::ComputeRVal
     updateSumIdxQueue_.FreeTensor(updateSumIdxLocal);
 }
 
+__simd_vf__ inline void QuantizeForSumVf(uint64_t postVarAlignSizeFp32, uint64_t curRowIdx, uint32_t RCountsValue, uint32_t maskLen,
+                                         uint32_t vfLen, uint16_t loopCnt, __local_mem__ float* updateSumAddr, 
+                                         __local_mem__ float* updatesRValueAddr, __local_mem__ int* updateSumIntAddr)
+{
+    AscendC::MicroAPI::RegTensor<float> dataReg;
+    AscendC::MicroAPI::RegTensor<float> rReg;
+    AscendC::MicroAPI::RegTensor<float> resReg;
+    AscendC::MicroAPI::RegTensor<int32_t> scaleReg;
+    AscendC::MicroAPI::RegTensor<float> oneReg;
+    AscendC::MicroAPI::MaskReg cmpReg;
+    AscendC::MicroAPI::Duplicate(oneReg, (float)1);
+    AscendC::MicroAPI::MaskReg pregLoop;
+    float scaling = static_cast<float>(1 << 30);
+
+    for (uint16_t i = 0; i < loopCnt; i++) {
+        pregLoop = AscendC::MicroAPI::UpdateMask<float>(maskLen);
+        auto sumOffset = updateSumAddr + curRowIdx * postVarAlignSizeFp32 + i * vfLen;
+        auto rValueOffset = updatesRValueAddr + i * vfLen;
+        auto sumIntOffset = updateSumIntAddr + i * vfLen;
+        DataCopy(dataReg, sumOffset);
+        DataCopy(rReg, rValueOffset);
+        Muls(rReg, rReg, (float)RCountsValue, pregLoop);
+        CompareScalar<float, CMPMODE::EQ>(cmpReg, rReg, (float)0, pregLoop);
+        Select(rReg, oneReg, rReg, cmpReg);
+        Div(resReg, dataReg, rReg, pregLoop);
+        Muls(resReg, resReg, scaling, pregLoop);
+        Cast<int32_t, float, castTraitFP322INT32>(scaleReg, resReg, pregLoop);
+        DataCopy(sumIntOffset, scaleReg, pregLoop);
+    }
+}
+
 template<typename T, typename U, uint32_t scatterOp>
 __aicore__ inline void ScatterAddDeterministicImpl<T, U, scatterOp>::QuantizeForSum(uint64_t curRowIdx, uint32_t RCountsValue,
     __local_mem__ float* updateSumAddr)
@@ -555,33 +606,9 @@ __aicore__ inline void ScatterAddDeterministicImpl<T, U, scatterOp>::QuantizeFor
     uint32_t maskLen = static_cast<uint32_t>(tilingData_.varShape[1]);
     uint32_t vfLen = platform::GetVRegSize() / sizeof(float);
     uint16_t loopCnt = ops::CeilDiv(maskLen, vfLen);
-    float scaling = static_cast<float>(1 << 30);
-    __VEC_SCOPE__
-    {
-        AscendC::MicroAPI::RegTensor<float> dataReg;
-        AscendC::MicroAPI::RegTensor<float> rReg;
-        AscendC::MicroAPI::RegTensor<float> resReg;
-        AscendC::MicroAPI::RegTensor<int32_t> scaleReg;
-        AscendC::MicroAPI::RegTensor<float> oneReg;
-        AscendC::MicroAPI::MaskReg cmpReg;
-        AscendC::MicroAPI::Duplicate(oneReg, (float)1);
-        AscendC::MicroAPI::MaskReg pregLoop;
-        for (uint16_t i = 0; i < loopCnt; i++) {
-            pregLoop = AscendC::MicroAPI::UpdateMask<float>(maskLen);
-            auto sumOffset = updateSumAddr + curRowIdx * postVarAlignSizeFp32_ + i * vfLen;
-            auto rValueOffset = updatesRValueAddr + i * vfLen;
-            auto sumIntOffset = updateSumIntAddr + i * vfLen;
-            DataCopy(dataReg, sumOffset);
-            DataCopy(rReg, rValueOffset);
-            Muls(rReg, rReg, (float)RCountsValue, pregLoop);
-            CompareScalar<float, CMPMODE::EQ>(cmpReg, rReg, (float)0, pregLoop);
-            Select(rReg, oneReg, rReg, cmpReg);
-            Div(resReg, dataReg, rReg, pregLoop);
-            Muls(resReg, resReg, scaling, pregLoop);
-            Cast<int32_t, float, castTraitFP322INT32>(scaleReg, resReg, pregLoop);
-            DataCopy(sumIntOffset, scaleReg, pregLoop);
-        }
-    }
+    
+    QuantizeForSumVf(postVarAlignSizeFp32_, curRowIdx, RCountsValue, maskLen, vfLen, loopCnt, updateSumAddr, updatesRValueAddr, updateSumIntAddr);
+
     RValueQue_.FreeTensor(updateRValueLocal);
     updateSumQue_.EnQue(updateSumIntLocal);
 }
@@ -636,6 +663,49 @@ __aicore__ inline void ScatterAddDeterministicImpl<T, U, scatterOp>::ComputeRVal
     updateSumInQue_.FreeTensor(updateSumIntLocal);
 }
 
+template<typename T>
+__simd_vf__ inline void DeQuantizeForSumVf(uint64_t postVarAlignSizeFp32, uint64_t curRowIdx, uint32_t RCountsValue,  uint32_t maskLen,
+                                         uint32_t vfLen, uint16_t loopCnt, __local_mem__ T* updateSumAddr,
+                                         __local_mem__ float* updatesRValueAddr,__local_mem__ int32_t* updateSumIntAddr)
+{
+    float scaling = static_cast<float>(1 << 30);
+    AscendC::MicroAPI::RegTensor<float> dataReg;
+    AscendC::MicroAPI::RegTensor<float> rReg;
+    AscendC::MicroAPI::RegTensor<float> resRegFp32;
+    AscendC::MicroAPI::RegTensor<T> resReg;
+    AscendC::MicroAPI::RegTensor<int32_t> scaleReg;
+    AscendC::MicroAPI::MaskReg pregLoop;
+    AscendC::MicroAPI::MaskReg maskReg =
+    AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+    AscendC::MicroAPI::UnalignReg uIn;
+    AscendC::MicroAPI::UnalignReg uOut;
+    AscendC::MicroAPI::RegTensor<float> oneReg;
+    AscendC::MicroAPI::MaskReg cmpReg;
+    AscendC::MicroAPI::Duplicate(oneReg, (float)1);
+    AscendC::MicroAPI::Duplicate(dataReg, scaling, maskReg);
+
+    auto sumIntOffset = updateSumIntAddr + curRowIdx * postVarAlignSizeFp32;
+    auto rValueOffset = updatesRValueAddr;
+    auto sumResOffset = updateSumAddr;
+    for (uint16_t i = 0; i < loopCnt; ++i) {
+        pregLoop = AscendC::MicroAPI::UpdateMask<float>(maskLen);
+        DataCopy(scaleReg, sumIntOffset + i * vfLen);
+        DataCopy(rReg, rValueOffset + i * vfLen);
+        Muls(rReg, rReg, (float)RCountsValue, pregLoop);
+        CompareScalar<float, CMPMODE::EQ>(cmpReg, rReg, (float)0, pregLoop);
+        Select(rReg, oneReg, rReg, cmpReg);
+        Cast<float, int, castTraitINT322FP32>(resRegFp32, scaleReg, pregLoop);
+        Mul(resRegFp32, resRegFp32, rReg, pregLoop);
+        Div(resRegFp32, resRegFp32, dataReg, pregLoop);
+        if constexpr (!std::is_same<float, T>::value) {
+            Cast<T, float, castTraitFP322T>(resReg, resRegFp32, pregLoop);
+            DataCopy<T, MicroAPI::StoreDist::DIST_PACK_B32>(sumResOffset + i * vfLen, resReg, pregLoop);
+        } else {
+            DataCopy(sumResOffset + i * vfLen, resRegFp32, pregLoop);
+        }        
+    }
+}
+
 template<typename T, typename U, uint32_t scatterOp>
 __aicore__ inline void ScatterAddDeterministicImpl<T, U, scatterOp>::DeQuantizeForSum(uint64_t curRowIdx, uint32_t RCountsValue, __local_mem__ int32_t* updateSumIntAddr)
 {
@@ -648,44 +718,10 @@ __aicore__ inline void ScatterAddDeterministicImpl<T, U, scatterOp>::DeQuantizeF
     uint32_t maskLen = static_cast<uint32_t>(tilingData_.varShape[1]);
     uint32_t vfLen = platform::GetVRegSize() / sizeof(float);
     uint16_t loopCnt = (tilingData_.varShape[1] + vfLen - 1) / vfLen;
-    float scaling = static_cast<float>(1 << 30);
-    __VEC_SCOPE__
-    {
-        AscendC::MicroAPI::RegTensor<float> dataReg;
-        AscendC::MicroAPI::RegTensor<float> rReg;
-        AscendC::MicroAPI::RegTensor<float> resRegFp32;
-        AscendC::MicroAPI::RegTensor<T> resReg;
-        AscendC::MicroAPI::RegTensor<int32_t> scaleReg;
-        AscendC::MicroAPI::MaskReg pregLoop;
-        AscendC::MicroAPI::MaskReg maskReg =
-        AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
-        AscendC::MicroAPI::UnalignReg uIn;
-        AscendC::MicroAPI::UnalignReg uOut;
-        AscendC::MicroAPI::RegTensor<float> oneReg;
-        AscendC::MicroAPI::MaskReg cmpReg;
-        AscendC::MicroAPI::Duplicate(oneReg, (float)1);
-        AscendC::MicroAPI::Duplicate(dataReg, scaling, maskReg);
-        auto sumIntOffset = updateSumIntAddr + curRowIdx * postVarAlignSizeFp32_;
-        auto rValueOffset = updatesRValueAddr;
-        auto sumResOffset = updateSumAddr;
-        for (uint16_t i = 0; i < loopCnt; ++i) {
-            pregLoop = AscendC::MicroAPI::UpdateMask<float>(maskLen);
-            DataCopy(scaleReg, sumIntOffset + i * vfLen);
-            DataCopy(rReg, rValueOffset + i * vfLen);
-            Muls(rReg, rReg, (float)RCountsValue, pregLoop);
-            CompareScalar<float, CMPMODE::EQ>(cmpReg, rReg, (float)0, pregLoop);
-            Select(rReg, oneReg, rReg, cmpReg);
-            Cast<float, int, castTraitINT322FP32>(resRegFp32, scaleReg, pregLoop);
-            Mul(resRegFp32, resRegFp32, rReg, pregLoop);
-            Div(resRegFp32, resRegFp32, dataReg, pregLoop);
-            if constexpr (!std::is_same<float, T>::value) {
-                Cast<T, float, castTraitFP322T>(resReg, resRegFp32, pregLoop);
-                DataCopy<T, MicroAPI::StoreDist::DIST_PACK_B32>(sumResOffset + i * vfLen, resReg, pregLoop);
-            } else {
-                DataCopy(sumResOffset + i * vfLen, resRegFp32, pregLoop);
-            }        
-        }
-    }
+    
+    DeQuantizeForSumVf(postVarAlignSizeFp32_, curRowIdx, RCountsValue, maskLen, vfLen, loopCnt,
+                     updateSumAddr, updatesRValueAddr, updateSumIntAddr);
+
     updateSumQue_.EnQue(updateSumLocal);
     RValueQue_.FreeTensor(updateRValueLocal);
 }

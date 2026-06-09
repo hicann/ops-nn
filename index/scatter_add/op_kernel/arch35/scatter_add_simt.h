@@ -164,27 +164,43 @@ __aicore__ inline void ScatterAddSimt<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScal
     varQue_.FreeTensor(dstLocal);
 }
 
+template <typename VAR_T, typename CAST_T>
+__simd_vf__ inline void CastToInt32Vf(__local_mem__ VAR_T* srcAddr, __local_mem__ CAST_T* dstAddr, uint32_t dataLen, uint16_t loopTimes)
+{
+    MicroAPI::RegTensor<VAR_T> srcValue;
+    MicroAPI::RegTensor<CAST_T> dstValue;
+    MicroAPI::MaskReg preg;
+    uint32_t sregMask = dataLen;
+    for (uint16_t j = 0; j < loopTimes; j++) {
+        preg = MicroAPI::UpdateMask<uint32_t>(sregMask);
+        MicroAPI::DataCopy<VAR_T, MicroAPI::LoadDist::DIST_UNPACK4_B8>(srcValue, srcAddr + VL_B32 * j);
+        MicroAPI::Cast<CAST_T, VAR_T, castTraitB8B162B32>(dstValue, srcValue, preg);
+        MicroAPI::DataCopy<CAST_T, MicroAPI::StoreDist::DIST_NORM>(dstAddr + VL_B32 * j, dstValue, preg);
+    }
+}
+
 template <typename IDX_T, typename VAR_T, typename CAST_T, typename ADDR_T, bool isUpdateScalar, uint32_t scatterOp>
 __aicore__ inline void ScatterAddSimt<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScalar, scatterOp>::CastToInt32(
     LocalTensor<CAST_T>& dstLocal, LocalTensor<VAR_T>& srcLocal, uint32_t dataLen)
 {
     __local_mem__ VAR_T* srcAddr = (__local_mem__ VAR_T*)srcLocal.GetPhyAddr();
     __local_mem__ CAST_T* dstAddr = (__local_mem__ CAST_T*)dstLocal.GetPhyAddr();
-
     uint16_t loopTimes = ops::CeilDiv(dataLen, VL_B32);
 
-    __VEC_SCOPE__
-    {
-        MicroAPI::RegTensor<VAR_T> srcValue;
-        MicroAPI::RegTensor<CAST_T> dstValue;
-        MicroAPI::MaskReg preg;
-        uint32_t sregMask = dataLen;
-        for (uint16_t j = 0; j < loopTimes; j++) {
-            preg = MicroAPI::UpdateMask<uint32_t>(sregMask);
-            MicroAPI::DataCopy<VAR_T, MicroAPI::LoadDist::DIST_UNPACK4_B8>(srcValue, srcAddr + VL_B32 * j);
-            MicroAPI::Cast<CAST_T, VAR_T, castTraitB8B162B32>(dstValue, srcValue, preg);
-            MicroAPI::DataCopy<CAST_T, MicroAPI::StoreDist::DIST_NORM>(dstAddr + VL_B32 * j, dstValue, preg);
-        }
+    CastToInt32Vf(srcAddr, dstAddr, dataLen, loopTimes);
+}
+
+template <typename VAR_T, typename CAST_T>
+__simd_vf__ inline void CastToOriginVf(__local_mem__ CAST_T* srcAddr, __local_mem__ VAR_T* dstAddr, uint32_t dataLen, uint16_t loopTimes)
+{
+    MicroAPI::RegTensor<CAST_T> srcValue;
+    MicroAPI::MaskReg preg;
+    uint32_t sregMask = dataLen;
+    for (uint16_t j = 0; j < loopTimes; j++) {
+        preg = MicroAPI::UpdateMask<uint32_t>(sregMask);
+        MicroAPI::DataCopy<CAST_T, MicroAPI::LoadDist::DIST_NORM>(srcValue, srcAddr + VL_B32 * j);
+        MicroAPI::DataCopy<VAR_T, MicroAPI::StoreDist::DIST_PACK4_B32>(dstAddr + VL_B32 * j,
+                                                                       (MicroAPI::RegTensor<VAR_T>&)srcValue, preg);
     }
 }
 
@@ -194,21 +210,9 @@ __aicore__ inline void ScatterAddSimt<IDX_T, VAR_T, CAST_T, ADDR_T, isUpdateScal
 {
     __local_mem__ CAST_T* srcAddr = (__local_mem__ CAST_T*)srcLocal.GetPhyAddr();
     __local_mem__ VAR_T* dstAddr = (__local_mem__ VAR_T*)dstLocal.GetPhyAddr();
-
     uint16_t loopTimes = ops::CeilDiv(dataLen, VL_B32);
 
-    __VEC_SCOPE__
-    {
-        MicroAPI::RegTensor<CAST_T> srcValue;
-        MicroAPI::MaskReg preg;
-        uint32_t sregMask = dataLen;
-        for (uint16_t j = 0; j < loopTimes; j++) {
-            preg = MicroAPI::UpdateMask<uint32_t>(sregMask);
-            MicroAPI::DataCopy<CAST_T, MicroAPI::LoadDist::DIST_NORM>(srcValue, srcAddr + VL_B32 * j);
-            MicroAPI::DataCopy<VAR_T, MicroAPI::StoreDist::DIST_PACK4_B32>(dstAddr + VL_B32 * j,
-                                                                           (MicroAPI::RegTensor<VAR_T>&)srcValue, preg);
-        }
-    }
+    CastToOriginVf(srcAddr, dstAddr, dataLen, loopTimes);
 }
 
 template <typename IDX_T, typename VAR_T, typename CAST_T, typename ADDR_T, bool isUpdateScalar, uint32_t scatterOp>
