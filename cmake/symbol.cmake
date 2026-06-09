@@ -298,13 +298,15 @@ function(gen_cust_proto_symbol)
       )
     endif()
   endif()
-  
+  add_dependencies(cust_proto merge_ops_proto_${PKG_NAME}_cust)
   target_sources(
     cust_proto
     PUBLIC $<$<TARGET_EXISTS:${OPHOST_NAME}_infer_obj>:$<TARGET_OBJECTS:${OPHOST_NAME}_infer_obj>>
            $<$<TARGET_EXISTS:${GRAPH_PLUGIN_NAME}_obj>:$<TARGET_OBJECTS:${GRAPH_PLUGIN_NAME}_obj>>
            $<$<TARGET_EXISTS:opbase_util_objs>:$<TARGET_OBJECTS:opbase_util_objs>>
            $<$<TARGET_EXISTS:opbase_infer_objs>:$<TARGET_OBJECTS:opbase_infer_objs>>
+    PRIVATE 
+          ${ASCEND_GRAPH_CONF_DST}/ops_proto_nn.cpp 
     )
   
   target_link_libraries(
