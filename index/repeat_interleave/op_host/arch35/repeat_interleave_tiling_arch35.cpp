@@ -47,15 +47,19 @@ ge::graphStatus TilingPrepareRepeatInterleaveForAscendC(gert::TilingParseContext
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->coreNumAscendc = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF(
-        (compileInfo->coreNumAscendc <= 0), OP_LOGE(context->GetNodeName(), "failed to get core num."),
-        return ge::GRAPH_FAILED);
+    if (compileInfo->coreNumAscendc <= 0) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context->GetNodeName(), "coreNum", std::to_string(compileInfo->coreNumAscendc).c_str(), "failed to get core num");
+        return ge::GRAPH_FAILED;
+    }
     uint64_t ubSize;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     compileInfo->ubSizeAscendc = static_cast<int64_t>(ubSize);
-    OP_CHECK_IF(
-        (compileInfo->ubSizeAscendc <= 0), OP_LOGE(context->GetNodeName(), "failed to get ub size."),
-        return ge::GRAPH_FAILED);
+    if (compileInfo->ubSizeAscendc <= 0) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context->GetNodeName(), "ubSize", std::to_string(compileInfo->ubSizeAscendc).c_str(), "failed to get ub size");
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 IMPL_OP_OPTILING(RepeatInterleave)

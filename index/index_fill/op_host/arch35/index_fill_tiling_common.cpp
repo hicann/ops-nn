@@ -48,9 +48,14 @@ ge::graphStatus GetIndexFillShapeAttrsInfo(gert::TilingContext* context, IndexFi
     auto outputDesc = context->GetOutputDesc(INDEX_OUTPUT_Y);
     OP_CHECK_NULL_WITH_CONTEXT(context, outputDesc);
     ge::DataType yDtype = outputDesc->GetDataType();
-    OP_CHECK_IF(xDtype != yDtype,
-                    OP_LOGE(context->GetNodeName(), "x and y should have same dtype, please check."),
-                    return ge::GRAPH_FAILED);
+    if (xDtype != yDtype) {
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            context->GetNodeName(), "x, y",
+            (std::to_string(static_cast<int32_t>(xDtype)) + ", " + std::to_string(static_cast<int32_t>(yDtype)))
+                .c_str(),
+            "dtype of x must be same as dtype of y");
+        return ge::GRAPH_FAILED;
+    }
 
     auto xShapePtr = context->GetInputShape(INDEX_INPUT_X);
     OP_CHECK_NULL_WITH_CONTEXT(context, xShapePtr);
@@ -59,29 +64,46 @@ ge::graphStatus GetIndexFillShapeAttrsInfo(gert::TilingContext* context, IndexFi
     auto yShapePtr = context->GetOutputShape(INDEX_OUTPUT_Y);
     OP_CHECK_NULL_WITH_CONTEXT(context, yShapePtr);
     auto yShape = yShapePtr->GetStorageShape();
-    OP_CHECK_IF(xShape != yShape,
-                    OP_LOGE(context->GetNodeName(), "x and y should have same shape, please check."),
-                    return ge::GRAPH_FAILED);
+    if (xShape != yShape) {
+        auto shapeStr = [](const gert::Shape& s) {
+            std::string r;
+            for (size_t i = 0; i < s.GetDimNum(); ++i) {
+                if (i > 0)
+                    r += ",";
+                r += std::to_string(s.GetDim(i));
+            }
+            return r;
+        };
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context->GetNodeName(), "x, y", (shapeStr(xShape) + ", " + shapeStr(yShape)).c_str(),
+            "shape of x must be same as shape of y");
+        return ge::GRAPH_FAILED;
+    }
     inputData.dtype = xDtype;
     inputData.dtypeSize = ge::GetSizeByDataType(xDtype);
 
-    // 校验x和value是否是相同的类型，aclnn侧已经将value转为了x的同类型，这里需要进一步添加校验。
     auto valueDesc = context->GetInputDesc(INDEX_INPUT_VALUE);
     OP_CHECK_NULL_WITH_CONTEXT(context, valueDesc);
     ge::DataType valueDtype = valueDesc->GetDataType();
-    OP_CHECK_IF(xDtype != valueDtype,
-                    OP_LOGE(context->GetNodeName(), "x and value should have same dtype, please check."),
-                    return ge::GRAPH_FAILED);
+    if (xDtype != valueDtype) {
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            context->GetNodeName(), "x, value",
+            (std::to_string(static_cast<int32_t>(xDtype)) + ", " + std::to_string(static_cast<int32_t>(valueDtype)))
+                .c_str(),
+            "dtype of x must be same as dtype of value");
+        return ge::GRAPH_FAILED;
+    }
 
     int64_t xDims = xShape.GetDimNum();
     auto attrs = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
-    int64_t dim = *(attrs->GetAttrPointer<int64_t>(0)); // 获取算子输入的dim属性值.
+    int64_t dim = *(attrs->GetAttrPointer<int64_t>(0));
     dim = dim >= 0 ? dim : dim + xDims;
-    // dim如果不在[0, xDims)这个范围内，需要校验报错
-    OP_CHECK_IF(dim < 0 || dim >= xDims,
-                    OP_LOGE(context->GetNodeName(), "Dim value error, abs(input dim) is greater than the dim of x, please check."),
-                    return ge::GRAPH_FAILED);
+    if (dim < 0 || dim >= xDims) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context->GetNodeName(), "dim", std::to_string(dim).c_str(), "dim must be less than the dimension count of x and greater than the negative of dimension count of x");
+        return ge::GRAPH_FAILED;
+    }
 
     inputData.dim = dim;
     inputData.xDims = xDims;
@@ -131,7 +153,11 @@ ge::graphStatus IndexFillCommonTiling::GetPlatformInfo()
         sysWorkspaceSize_ = (sysWorkspaceSize <= 0) ? WS_SYS_SIZE : sysWorkspaceSize;
     }
 
-    OP_CHECK_IF(coreNum_ == 0, OP_LOGE(context_->GetNodeName(), "coreNum is 0"), return ge::GRAPH_FAILED);
+    if (coreNum_ == 0) {
+        OP_LOGE_FOR_INVALID_CONFIG_WITH_REASON(
+            context_->GetNodeName(), "0", "coreNum", "platform", "platform coreNum must be greater than 0");
+        return ge::GRAPH_FAILED;
+    }
 
     return ge::GRAPH_SUCCESS;
 }
@@ -162,4 +188,4 @@ ge::graphStatus Tiling4IndexFillArch35(gert::TilingContext* context)
     return Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(context);
 }
 
-}  // namespace optiling
+} // namespace optiling

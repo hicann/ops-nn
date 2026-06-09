@@ -25,17 +25,14 @@ using namespace ge;
 using namespace std;
 using namespace ut_util;
 class IndexFillTiling : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    std::cout << "IndexFillTiling SetUp" << std::endl;
-  }
+protected:
+    static void SetUpTestCase() { std::cout << "IndexFillTiling SetUp" << std::endl; }
 
-  static void TearDownTestCase() {
-    std::cout << "IndexFillTiling TearDown" << std::endl;
-  }
+    static void TearDownTestCase() { std::cout << "IndexFillTiling TearDown" << std::endl; }
 };
 
-TEST_F(IndexFillTiling, test_repeat_interleave_tiling_000) {
+TEST_F(IndexFillTiling, test_repeat_interleave_tiling_000)
+{
     std::string opType("IndexFill");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str()), nullptr);
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
@@ -60,8 +57,8 @@ TEST_F(IndexFillTiling, test_repeat_interleave_tiling_000) {
     platformInfo.Init();
     // compile info
     struct IndexFillCompileInfo {
-      int32_t totalCoreNum = 30;
-      uint64_t ubSizePlatForm = 0;
+        int32_t totalCoreNum = 30;
+        uint64_t ubSizePlatForm = 0;
     } compileInfo;
     // tilingParseFunc simulate
     auto kernelHolder =
@@ -74,8 +71,8 @@ TEST_F(IndexFillTiling, test_repeat_interleave_tiling_000) {
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-                                                                                            intrinsics);
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
+        "AICoreintrinsicDtypeMap", intrinsics);
     ASSERT_EQ(tilingParseFunc(kernelHolder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -89,23 +86,22 @@ TEST_F(IndexFillTiling, test_repeat_interleave_tiling_000) {
     gert::StorageShape outputShape = {{65535, 4096}, {65535, 4096}};
 
     // tilingParseFunc simulate
-    auto holder =
-        gert::TilingContextFaker()
-          .SetOpType("IndexFill")
-          .NodeIoNum(3, 1)
-          .IrInstanceNum({1, 1, 1})
-          .InputShapes({&xShape, &indicesShape, &valueShape})
-          .OutputShapes({&outputShape})
-          .CompileInfo(&compileInfo)
-          .PlatformInfo(reinterpret_cast<char *>(&platformInfo))
-          .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-          .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-          .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-          .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-          .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
-          .TilingData(param.get())
-          .Workspace(wsSize)
-          .Build();
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType("IndexFill")
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&xShape, &indicesShape, &valueShape})
+                      .OutputShapes({&outputShape})
+                      .CompileInfo(&compileInfo)
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
+                      .TilingData(param.get())
+                      .Workspace(wsSize)
+                      .Build();
 
     gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tilingContext->GetPlatformInfo(), nullptr);
@@ -118,7 +114,8 @@ TEST_F(IndexFillTiling, test_repeat_interleave_tiling_000) {
     EXPECT_EQ(tilingFunc(tilingContext), ge::GRAPH_SUCCESS);
 }
 
-TEST_F(IndexFillTiling, test_repeat_interleave_tiling_001) {
+TEST_F(IndexFillTiling, test_repeat_interleave_tiling_001)
+{
     std::string opType("IndexFill");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str()), nullptr);
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
@@ -143,8 +140,8 @@ TEST_F(IndexFillTiling, test_repeat_interleave_tiling_001) {
     platformInfo.Init();
     // compile info
     struct IndexFillCompileInfo {
-      int32_t totalCoreNum = 30;
-      uint64_t ubSizePlatForm = 0;
+        int32_t totalCoreNum = 30;
+        uint64_t ubSizePlatForm = 0;
     } compileInfo;
     // tilingParseFunc simulate
     auto kernelHolder =
@@ -157,8 +154,8 @@ TEST_F(IndexFillTiling, test_repeat_interleave_tiling_001) {
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-                                                                                            intrinsics);
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
+        "AICoreintrinsicDtypeMap", intrinsics);
     ASSERT_EQ(tilingParseFunc(kernelHolder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -172,23 +169,22 @@ TEST_F(IndexFillTiling, test_repeat_interleave_tiling_001) {
     gert::StorageShape outputShape = {{65535, 4096}, {65535, 4096}};
 
     // tilingParseFunc simulate
-    auto holder =
-        gert::TilingContextFaker()
-          .SetOpType("IndexFill")
-          .NodeIoNum(3, 1)
-          .IrInstanceNum({1, 1, 1})
-          .InputShapes({&xShape, &indicesShape, &valueShape})
-          .OutputShapes({&outputShape})
-          .CompileInfo(&compileInfo)
-          .PlatformInfo(reinterpret_cast<char *>(&platformInfo))
-          .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-          .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-          .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-          .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-          .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)}})
-          .TilingData(param.get())
-          .Workspace(wsSize)
-          .Build();
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType("IndexFill")
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&xShape, &indicesShape, &valueShape})
+                      .OutputShapes({&outputShape})
+                      .CompileInfo(&compileInfo)
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(-1)}})
+                      .TilingData(param.get())
+                      .Workspace(wsSize)
+                      .Build();
 
     gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tilingContext->GetPlatformInfo(), nullptr);
@@ -201,7 +197,8 @@ TEST_F(IndexFillTiling, test_repeat_interleave_tiling_001) {
     EXPECT_EQ(tilingFunc(tilingContext), ge::GRAPH_SUCCESS);
 }
 
-TEST_F(IndexFillTiling, test_repeat_interleave_tiling_002) {
+TEST_F(IndexFillTiling, test_repeat_interleave_tiling_002)
+{
     std::string opType("IndexFill");
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str()), nullptr);
     auto tilingFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling;
@@ -226,8 +223,8 @@ TEST_F(IndexFillTiling, test_repeat_interleave_tiling_002) {
     platformInfo.Init();
     // compile info
     struct IndexFillCompileInfo {
-      int32_t totalCoreNum = 30;
-      uint64_t ubSizePlatForm = 0;
+        int32_t totalCoreNum = 30;
+        uint64_t ubSizePlatForm = 0;
     } compileInfo;
     // tilingParseFunc simulate
     auto kernelHolder =
@@ -240,8 +237,8 @@ TEST_F(IndexFillTiling, test_repeat_interleave_tiling_002) {
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", socInfos);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicoreSpec);
     kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-                                                                                            intrinsics);
+    kernelHolder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
+        "AICoreintrinsicDtypeMap", intrinsics);
     ASSERT_EQ(tilingParseFunc(kernelHolder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     // tilingFunc simulate
@@ -255,23 +252,22 @@ TEST_F(IndexFillTiling, test_repeat_interleave_tiling_002) {
     gert::StorageShape outputShape = {{65535, 4096}, {65535, 4096}};
 
     // tilingParseFunc simulate
-    auto holder =
-        gert::TilingContextFaker()
-          .SetOpType("IndexFill")
-          .NodeIoNum(3, 1)
-          .IrInstanceNum({1, 1, 1})
-          .InputShapes({&xShape, &indicesShape, &valueShape})
-          .OutputShapes({&outputShape})
-          .CompileInfo(&compileInfo)
-          .PlatformInfo(reinterpret_cast<char *>(&platformInfo))
-          .NodeInputTd(0, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-          .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-          .NodeInputTd(2, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-          .NodeOutputTd(0, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
-          .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
-          .TilingData(param.get())
-          .Workspace(wsSize)
-          .Build();
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType("IndexFill")
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&xShape, &indicesShape, &valueShape})
+                      .OutputShapes({&outputShape})
+                      .CompileInfo(&compileInfo)
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+                      .NodeInputTd(0, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, ge::DT_INT64, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs({{"dim", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
+                      .TilingData(param.get())
+                      .Workspace(wsSize)
+                      .Build();
 
     gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tilingContext->GetPlatformInfo(), nullptr);

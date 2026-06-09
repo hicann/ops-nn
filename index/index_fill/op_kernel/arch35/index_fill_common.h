@@ -117,7 +117,7 @@ __aicore__ inline INDEX_TYPE GetTailSentinelValue(INDEX_TYPE last)
 }
 
 template<typename INDEX_TYPE>
-__aicore__ inline void ComputeUniqueIdNumInt64(__local_mem__ INDEX_TYPE* sortedInputAddr, __local_mem__ int32_t* uniqueIndicesAddr, uint16_t loopCnt, int64_t dataLen)
+__simd_callee__ inline void ComputeUniqueIdNumInt64(__ubuf__ INDEX_TYPE* sortedInputAddr, __ubuf__ int32_t* uniqueIndicesAddr, uint16_t loopCnt, int64_t dataLen)
 {
     uint32_t counter = dataLen + 1;
     AscendC::MicroAPI::RegTensor<int32_t> orderReg, selReg;
@@ -141,7 +141,7 @@ __aicore__ inline void ComputeUniqueIdNumInt64(__local_mem__ INDEX_TYPE* sortedI
 }
 
 template<typename INDEX_TYPE>
-__aicore__ inline void ComputeUniqueIdNumInt32(__local_mem__ INDEX_TYPE* sortedInputAddr, __local_mem__ int32_t* uniqueIndicesAddr, uint16_t loopCnt, int64_t dataLen)
+__simd_callee__ inline void ComputeUniqueIdNumInt32(__ubuf__ INDEX_TYPE* sortedInputAddr, __ubuf__ int32_t* uniqueIndicesAddr, uint16_t loopCnt, int64_t dataLen)
 {
     uint32_t counter = dataLen + 1;
     AscendC::MicroAPI::RegTensor<int32_t> orderReg, selReg;
@@ -164,22 +164,25 @@ __aicore__ inline void ComputeUniqueIdNumInt32(__local_mem__ INDEX_TYPE* sortedI
 }
 
 template<typename INDEX_TYPE>
+__simd_vf__ inline void ComputeUniqueIdNumVf(__ubuf__ INDEX_TYPE* sortedInputAddr, __ubuf__ int32_t* uniqueIndicesAddr, uint16_t loopCnt, int64_t dataLen)
+{
+    AscendC::MicroAPI::ClearSpr<AscendC::SpecialPurposeReg::AR>();
+    if constexpr (std::is_same<int64_t, INDEX_TYPE>::value) {
+        ComputeUniqueIdNumInt64<INDEX_TYPE>(sortedInputAddr, uniqueIndicesAddr, loopCnt, dataLen);
+    } else if constexpr (std::is_same<int32_t, INDEX_TYPE>::value) {
+        ComputeUniqueIdNumInt32<INDEX_TYPE>(sortedInputAddr, uniqueIndicesAddr, loopCnt, dataLen);
+    }
+}
+
+template<typename INDEX_TYPE>
 __aicore__ inline uint32_t ComputeUniqueIdNum(LocalTensor<INDEX_TYPE> sortedInput, LocalTensor<int32_t> uniqueIndicesOut, int64_t dataLen)
 {
-    __local_mem__ INDEX_TYPE* sortedInputAddr = (__local_mem__ INDEX_TYPE*)sortedInput[(UB_AGLIN_VALUE / sizeof(INDEX_TYPE))].GetPhyAddr();
-    __local_mem__ int32_t* uniqueIndicesAddr = (__local_mem__ int32_t*)uniqueIndicesOut.GetPhyAddr();
-
     constexpr int64_t vfLen = platform::GetVRegSize() / sizeof(INDEX_TYPE);
     uint16_t loopCnt = ops::CeilDiv(dataLen + 1, vfLen);
-    __VEC_SCOPE__
-    {
-        AscendC::MicroAPI::ClearSpr<AscendC::SpecialPurposeReg::AR>();
-        if constexpr (std::is_same<int64_t, INDEX_TYPE>::value) {
-            ComputeUniqueIdNumInt64<INDEX_TYPE>(sortedInputAddr, uniqueIndicesAddr, loopCnt, dataLen);
-        } else if constexpr (std::is_same<int32_t, INDEX_TYPE>::value) {
-            ComputeUniqueIdNumInt32<INDEX_TYPE>(sortedInputAddr, uniqueIndicesAddr, loopCnt, dataLen);
-        }
-    }
+    ComputeUniqueIdNumVf<INDEX_TYPE>(
+        (__ubuf__ INDEX_TYPE*)sortedInput[(UB_AGLIN_VALUE / sizeof(INDEX_TYPE))].GetPhyAddr(),
+        (__ubuf__ int32_t*)uniqueIndicesOut.GetPhyAddr(),
+        loopCnt, dataLen);
     uint32_t uniqueIdNum = ((AscendC::MicroAPI::GetSpr<AscendC::SpecialPurposeReg::AR>()) / sizeof(int32_t)) - 1;
     return uniqueIdNum;
 }

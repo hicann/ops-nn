@@ -56,17 +56,22 @@ ge::graphStatus RepeatInterleaveBaseTiling::CheckDtype()
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputYPtr);
     auto yDtype = outputYPtr->GetDataType();
 
-    OP_CHECK_IF(
-        !IsSupportDtype(SUPPORTED_DTYPE, inputDtype_),
-        OP_LOGE(
-            context_->GetNodeName(),
-            "The dtype only support float, float16, bfloat16, \
-        int8, int16, int32, int64, uint8, uint16, uint32, uint64, bool currently, please check."),
-        return ge::GRAPH_FAILED);
+    if (!IsSupportDtype(SUPPORTED_DTYPE, inputDtype_)) {
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            context_->GetNodeName(), "x", std::to_string(static_cast<int32_t>(inputDtype_)).c_str(),
+            "the dtype only supports float, float16, bfloat16, int8, int16, int32, int64, uint8, uint16, uint32, "
+            "uint64, bool currently");
+        return ge::GRAPH_FAILED;
+    }
 
-    OP_CHECK_IF(
-        inputDtype_ != yDtype, OP_LOGE(context_->GetNodeName(), "The x and y must have the same dtype, please check."),
-        return ge::GRAPH_FAILED);
+    if (inputDtype_ != yDtype) {
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            context_->GetNodeName(), "x, y",
+            (std::to_string(static_cast<int32_t>(inputDtype_)) + ", " + std::to_string(static_cast<int32_t>(yDtype)))
+                .c_str(),
+            "x and y must have the same dtype");
+        return ge::GRAPH_FAILED;
+    }
 
     return ge::GRAPH_SUCCESS;
 }
@@ -76,35 +81,47 @@ ge::graphStatus RepeatInterleaveBaseTiling::CheckShape()
     int64_t inputDimMerge = MergeDimExceptAxis(inputShape_, axis_);
     int64_t outputDimMerge = MergeDimExceptAxis(yShape_, axis_);
 
-    OP_CHECK_IF(
-        (!isDefaultAxis_) && (axis_ < 0 || axis_ >= static_cast<int64_t>(inputShape_.GetDimNum())),
-        OP_LOGE(context_->GetNodeName(), "The attribute axis is invalid."), return ge::GRAPH_FAILED);
+    if ((!isDefaultAxis_) && (axis_ < 0 || axis_ >= static_cast<int64_t>(inputShape_.GetDimNum()))) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "axis", std::to_string(axis_).c_str(), "axis is invalid");
+        return ge::GRAPH_FAILED;
+    }
 
-    OP_CHECK_IF(
-        inputShape_.GetDim(axis_) == 0,
-        OP_LOGE(context_->GetNodeName(), "The input x shape of axis dim must be nonzero."), return ge::GRAPH_FAILED);
+    if (inputShape_.GetDim(axis_) == 0) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context_->GetNodeName(), "Dimension value of input x at axis", "0", "the input x shape of axis dim must be nonzero");
+        return ge::GRAPH_FAILED;
+    }
 
-    OP_CHECK_IF(
-        repeatShape_.GetDimNum() > 1,
-        OP_LOGE(context_->GetNodeName(), "The input repeats should be 1D tensor or a scalar."),
-        return ge::GRAPH_FAILED);
+    if (repeatShape_.GetDimNum() > 1) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context_->GetNodeName(), "repeats", std::to_string(repeatShape_.GetDimNum()).c_str(),
+            "the input repeats should be 1D tensor or a scalar");
+        return ge::GRAPH_FAILED;
+    }
 
-    OP_CHECK_IF(
-        (repeatShape_.GetDimNum() != 0 && repeatShape_.GetDim(0) != 1) &&
-            (repeatShape_.GetDim(0) != inputShape_.GetDim(axis_)),
-        OP_LOGE(
-            context_->GetNodeName(),
-            "The input repeats shape should be 1 or a scalar or the same as input axis shape."),
-        return ge::GRAPH_FAILED);
+    if ((repeatShape_.GetDimNum() != 0 && repeatShape_.GetDim(0) != 1) &&
+        (repeatShape_.GetDim(0) != inputShape_.GetDim(axis_))) {
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context_->GetNodeName(), "repeats, x",
+            (std::to_string(repeatShape_.GetDim(0)) + ", " + std::to_string(inputShape_.GetDim(axis_))).c_str(),
+            "the input repeats shape should be 1 or a scalar or the same as input axis shape");
+        return ge::GRAPH_FAILED;
+    }
 
-    OP_CHECK_IF(
-        (!isDefaultAxis_) && (inputShape_.GetDimNum() != yShape_.GetDimNum()),
-        OP_LOGE(context_->GetNodeName(), "The input dim and output dim should be the same when axis isn't none."),
-        return ge::GRAPH_FAILED);
+    if ((!isDefaultAxis_) && (inputShape_.GetDimNum() != yShape_.GetDimNum())) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            context_->GetNodeName(), "x, y",
+            (std::to_string(inputShape_.GetDimNum()) + ", " + std::to_string(yShape_.GetDimNum())).c_str(),
+            "the input dim and output dim should be the same when axis isn't none");
+        return ge::GRAPH_FAILED;
+    }
 
-    OP_CHECK_IF(
-        (!isDefaultAxis_) && (inputDimMerge != outputDimMerge),
-        OP_LOGE(context_->GetNodeName(), "The output shape is invalid when axis isn't none."), return ge::GRAPH_FAILED);
+    if ((!isDefaultAxis_) && (inputDimMerge != outputDimMerge)) {
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context_->GetNodeName(), "x, y", (std::to_string(inputDimMerge) + ", " + std::to_string(outputDimMerge)).c_str(),
+            "the output shape is invalid when axis isn't none");
+        return ge::GRAPH_FAILED;
+    }
 
     return ge::GRAPH_SUCCESS;
 }

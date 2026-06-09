@@ -67,9 +67,12 @@ ge::graphStatus TilingArch35PrepareForIndexFill(gert::TilingParseContext* contex
     uint64_t ubSizePlatForm;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     compileInfo->ubSizePlatForm = static_cast<uint64_t>(ubSizePlatForm);
-    OP_CHECK_IF((compileInfo->ubSizePlatForm <= 0),
-                    OP_LOGE(context->GetNodeName(), "Failed to get ub size."),
-                    return ge::GRAPH_FAILED);
+    if (compileInfo->ubSizePlatForm <= 0) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context->GetNodeName(), "UB size", std::to_string(static_cast<uint64_t>(compileInfo->ubSizePlatForm)).c_str(), 
+            "platform UB size must be greater than 0");
+        return ge::GRAPH_FAILED;
+    }
     OP_LOGD(context->GetNodeName(), "ub_size_platform is %lu.", compileInfo->ubSizePlatForm);
 
     uint32_t sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();

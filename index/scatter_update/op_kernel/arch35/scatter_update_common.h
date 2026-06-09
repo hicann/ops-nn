@@ -61,7 +61,7 @@ constexpr SortConfig sortConfig{SortType::RADIX_SORT, false};
 
 // todo：处理计数不同indices的核心逻辑
 template<typename IDX_T>
-__aicore__ inline void ComputeUniqueIdNumInt64(__local_mem__ IDX_T* indicesAddr, __local_mem__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt, int64_t dataLen)
+__simd_callee__ inline void ComputeUniqueIdNumInt64(__ubuf__ IDX_T* indicesAddr, __ubuf__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt, int64_t dataLen)
 {
     uint32_t counter = dataLen + 1;
     AscendC::MicroAPI::RegTensor<int32_t> orderReg, selReg;
@@ -85,7 +85,7 @@ __aicore__ inline void ComputeUniqueIdNumInt64(__local_mem__ IDX_T* indicesAddr,
 }
 
 template<typename IDX_T>
-__aicore__ inline void ComputeUniqueIdNumInt32(__local_mem__ IDX_T* indicesAddr, __local_mem__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt, int64_t dataLen)
+__simd_callee__ inline void ComputeUniqueIdNumInt32(__ubuf__ IDX_T* indicesAddr, __ubuf__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt, int64_t dataLen)
 {
     uint32_t counter = dataLen + 1;
     AscendC::MicroAPI::RegTensor<int32_t> orderReg, selReg;
@@ -108,7 +108,7 @@ __aicore__ inline void ComputeUniqueIdNumInt32(__local_mem__ IDX_T* indicesAddr,
 }
 
 template<typename IDX_T>
-__aicore__ inline void ComputeUniqueIdNumInt16(__local_mem__ IDX_T* indicesAddr, __local_mem__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt, int64_t dataLen)
+__simd_callee__ inline void ComputeUniqueIdNumInt16(__ubuf__ IDX_T* indicesAddr, __ubuf__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt, int64_t dataLen)
 {
     uint32_t counter = dataLen + 1;
     AscendC::MicroAPI::RegTensor<int32_t> orderReg, orderReg2, selReg, selReg2;
@@ -135,7 +135,7 @@ __aicore__ inline void ComputeUniqueIdNumInt16(__local_mem__ IDX_T* indicesAddr,
 }
 
 template<typename IDX_T>
-__aicore__ inline void ComputeUniqueIdNumUint8(__local_mem__ IDX_T* indicesAddr, __local_mem__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt, int64_t dataLen)
+__simd_callee__ inline void ComputeUniqueIdNumUint8(__ubuf__ IDX_T* indicesAddr, __ubuf__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt, int64_t dataLen)
 {
     uint32_t counter = dataLen + 1;
     AscendC::MicroAPI::RegTensor<int32_t> orderReg, orderReg2, orderReg3, orderReg4;
@@ -173,29 +173,31 @@ __aicore__ inline void ComputeUniqueIdNumUint8(__local_mem__ IDX_T* indicesAddr,
 }
 
 template<typename INX_T>
+__simd_vf__ inline void ComputeUniqueIdNumVf(__ubuf__ INX_T* indicesAddr, __ubuf__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt, int64_t dataLen)
+{
+    AscendC::MicroAPI::ClearSpr<AscendC::SpecialPurposeReg::AR>();
+
+    if constexpr (std::is_same<int64_t, INX_T>::value) {
+        ComputeUniqueIdNumInt64<INX_T>(indicesAddr, uniqueIdCountsAddr, loopCnt, dataLen);
+    } else if constexpr (std::is_same<int32_t, INX_T>::value) {
+        ComputeUniqueIdNumInt32<INX_T>(indicesAddr, uniqueIdCountsAddr, loopCnt, dataLen);
+    } else if constexpr (std::is_same<int16_t, INX_T>::value) {
+        ComputeUniqueIdNumInt16<INX_T>(indicesAddr, uniqueIdCountsAddr, loopCnt, dataLen);
+    } else {
+        ComputeUniqueIdNumUint8<INX_T>(indicesAddr, uniqueIdCountsAddr, loopCnt, dataLen);
+    }
+}
+
+template<typename INX_T>
 __aicore__ inline uint32_t ComputeUniqueIdNum(
     LocalTensor<INX_T> indicesLocal, LocalTensor<int32_t> uniqueIdCountLocal, int64_t dataLen)
 {
-    __local_mem__ INX_T* indicesAddr = (__local_mem__ INX_T*)indicesLocal[(UB_AGLIN_VALUE / sizeof(INX_T))].GetPhyAddr();
-    __local_mem__ int32_t* uniqueIdCountsAddr = (__local_mem__ int32_t*)uniqueIdCountLocal.GetPhyAddr();
-
     int64_t vfLen = platform::GetVRegSize() / sizeof(INX_T);
     uint16_t loopCnt = ops::CeilDiv(dataLen + 1, vfLen);
-    uint32_t counter = dataLen + 1;
-    __VEC_SCOPE__
-    {
-        AscendC::MicroAPI::ClearSpr<AscendC::SpecialPurposeReg::AR>();
-
-        if constexpr (std::is_same<int64_t, INX_T>::value) {
- 	        ComputeUniqueIdNumInt64<INX_T>(indicesAddr, uniqueIdCountsAddr, loopCnt, dataLen);
- 	    } else if constexpr (std::is_same<int32_t, INX_T>::value) {
- 	        ComputeUniqueIdNumInt32<INX_T>(indicesAddr, uniqueIdCountsAddr, loopCnt, dataLen);
- 	    } else if constexpr (std::is_same<int16_t, INX_T>::value) {
- 	        ComputeUniqueIdNumInt16<INX_T>(indicesAddr, uniqueIdCountsAddr, loopCnt, dataLen);
- 	    } else {  // uint8
- 	        ComputeUniqueIdNumUint8<INX_T>(indicesAddr, uniqueIdCountsAddr, loopCnt, dataLen);
-        }
-    }
+    ComputeUniqueIdNumVf<INX_T>(
+        (__ubuf__ INX_T*)indicesLocal[(UB_AGLIN_VALUE / sizeof(INX_T))].GetPhyAddr(),
+        (__ubuf__ int32_t*)uniqueIdCountLocal.GetPhyAddr(),
+        loopCnt, dataLen);
     uint32_t uniqueIdNum = ((AscendC::MicroAPI::GetSpr<AscendC::SpecialPurposeReg::AR>()) / sizeof(int32_t)) - 1;
     return uniqueIdNum;
 }

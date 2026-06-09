@@ -97,13 +97,18 @@ static const std::unordered_map<ge::DataType, uint64_t> VAR_DATA_TYPE{{ge::DataT
 
 ge::graphStatus ScatterUpdateTiling::GetPlatformInfo()
 {
+    const char* opName_ = "ScatterUpdate";
     auto platformInfo = context_->GetPlatformInfo();
-    OP_TILING_CHECK(platformInfo == nullptr, VECTOR_INNER_ERR_REPORT_TILIING(opName, "fail to get platform info"),
-                    return ge::GRAPH_FAILED);
+    if (platformInfo == nullptr) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "platformInfo", "nullptr", "fail to get platform info");
+        return ge::GRAPH_FAILED;
+    }
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     auto aivNum = ascendcPlatform.GetCoreNumAiv();
-    OP_TILING_CHECK((aivNum <= 0), VECTOR_INNER_ERR_REPORT_TILIING(opName, "fail to get coreNum."),
-                    return ge::GRAPH_FAILED);
+    if (aivNum <= 0) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "aivNum", std::to_string(aivNum).c_str(), "fail to get coreNum");
+        return ge::GRAPH_FAILED;
+    }
     totalCoreNum_ = aivNum;
     uint64_t ubSizePlatForm = 0;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
@@ -118,9 +123,11 @@ ge::graphStatus ScatterUpdateTiling::GetPlatformInfo()
         return ge::GRAPH_SUCCESS;
     }
     if (isSimt_) {
-        OP_TILING_CHECK((ubSizePlatForm <= DCACHE_SIZE),
-                        VECTOR_INNER_ERR_REPORT_TILIING(opName, "ub size less than Dcache Size. please check"),
-                        return ge::GRAPH_FAILED);
+        if (ubSizePlatForm <= DCACHE_SIZE) {
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                opName_, "ubSize", std::to_string(ubSizePlatForm).c_str(), "ub size less than Dcache Size");
+            return ge::GRAPH_FAILED;
+        }
         ubSize_ = ubSizePlatForm - DCACHE_SIZE;
     } else {
         ubSize_ = ubSizePlatForm - DCACHE_SIZE1;
@@ -129,8 +136,31 @@ ge::graphStatus ScatterUpdateTiling::GetPlatformInfo()
     return ge::GRAPH_SUCCESS;
 }
 
+std::string ShapeToString(const gert::Shape& shape)
+{
+    std::ostringstream oss;
+    oss << "[";
+    for(size_t i = 0; i < shape.GetDimNum(); ++i) {
+        if (i > 0) oss << ", ";
+        oss << shape.GetDim(i);
+    }
+    oss << "]";
+    return oss.str();
+}
+
+std::string ShapeToString(const std::initializer_list<gert::Shape>& shapes)
+{
+    std::ostringstream oss;
+    for(size_t i = 0; i < shapes.size(); ++i) {
+        if (i > 0) oss << ", ";
+        oss << ShapeToString(*(shapes.begin() + i));
+    }
+    return oss.str();
+}
+
 ge::graphStatus ScatterUpdateTiling::GetShapeAttrsInfo()
 {
+    const char* opName_ = "ScatterUpdate";
     auto var = context_->GetInputShape(VAR_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, var);
 
@@ -140,16 +170,17 @@ ge::graphStatus ScatterUpdateTiling::GetShapeAttrsInfo()
     // 非连续三个条件：InputIsView为true varViewStride不为空 varViewStride.GetDimNum()不为0
     if (context_->InputIsView(VAR_IDX) && varViewStride != nullptr && varViewStride->GetDimNum() != 0) {
         varShape = var->GetShape();
-        OP_LOGD(opName, "start processing noncontinuous scenario shape.");
+        OP_LOGD(opName_, "start processing noncontinuous scenario shape.");
         varStride_ = varViewStride->GetStride(0);
         varSize_ = varShape.GetShapeSize();
         varShape_[0] = varShape.GetDim(0);
         varShape_[1] = varShape_[0] == 0 ? varShape_[1] : varSize_ / varShape_[0];
     } else {
         varShape = var->GetStorageShape();
-        OP_TILING_CHECK(varShape.IsScalar(),
-                    VECTOR_INNER_ERR_REPORT_TILIING(opName, "the parameter var cannot be scalar, please check."),
-                    return ge::GRAPH_FAILED);
+        if (varShape.IsScalar()) {
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName_, "var", ShapeToString(varShape), "the parameter var cannot be scalar");
+            return ge::GRAPH_FAILED;
+        }
         varSize_ = varShape.GetShapeSize();
         varShape_[0] = varShape.GetDim(0);
         if (varShape_[0] != 0) {
@@ -171,13 +202,20 @@ ge::graphStatus ScatterUpdateTiling::GetShapeAttrsInfo()
     if ((updateDims == 1 && updatesSize_ == 1) || updateDims == 0) {
         isUpdateScalar_ = 1;
     } else {
-        OP_TILING_CHECK(CheckUpdatesShape(varShape, indiceShape, updateShape) != ge::GRAPH_SUCCESS,
-                        VECTOR_INNER_ERR_REPORT_TILIING(opName, "update shape check failed."), return ge::GRAPH_FAILED);
+        if (CheckUpdatesShape(varShape, indiceShape, updateShape) != ge::GRAPH_SUCCESS) {
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                opName_, "var, indices, updates", ShapeToString({varShape, indiceShape, updateShape}),
+                "update shape check failed");
+            return ge::GRAPH_FAILED;
+        }
     }
     updateShape_[0] = indicesSize_;
     updateShape_[1] = varShape_[1];
-    OP_TILING_CHECK(CheckInputDtype() != ge::GRAPH_SUCCESS,
-                    VECTOR_INNER_ERR_REPORT_TILIING(opName, "input dtype check failed."), return ge::GRAPH_FAILED);
+    if (CheckInputDtype() != ge::GRAPH_SUCCESS) {
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            opName_, "var, indices, updates", "var_dtype, indices_dtype, updates_dtype", "input dtype check failed");
+        return ge::GRAPH_FAILED;
+    }
 
     if (context_->GetDeterministic() && !isUpdateScalar_) {
         isDeterministic_ = 1;
@@ -187,67 +225,90 @@ ge::graphStatus ScatterUpdateTiling::GetShapeAttrsInfo()
 
 ge::graphStatus ScatterUpdateTiling::CheckInputDtype()
 {
+    const char* opName_ = "ScatterUpdate";
     auto indicesPtr = context_->GetInputDesc(INDICES_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, indicesPtr);
     indicesDtype_ = indicesPtr->GetDataType();
-    OP_TILING_CHECK(
-        (INDICE_DATA_TYPE.find(indicesDtype_) == INDICE_DATA_TYPE.end()),
-        VECTOR_INNER_ERR_REPORT_TILIING(opName, "indices dtype only support int32/int64, but got [%s].", Ops::Base::ToString(indicesDtype_).c_str()),
-        return ge::GRAPH_FAILED);
+    if (INDICE_DATA_TYPE.find(indicesDtype_) == INDICE_DATA_TYPE.end()) {
+        OP_LOGE_FOR_INVALID_DTYPE(
+            opName_, "indices", std::to_string(static_cast<int32_t>(indicesDtype_)).c_str(),
+            "int32/int64");
+        return ge::GRAPH_FAILED;
+    }
     indicesDtypeSize_ = ge::GetSizeByDataType(indicesDtype_);
-    OP_TILING_CHECK(indicesDtypeSize_ <= 0, VECTOR_INNER_ERR_REPORT_TILIING(opName, "get indicesDtype size fail."),
-                    return ge::GRAPH_FAILED);
+    if (indicesDtypeSize_ <= 0) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            opName_, "indicesDtypeSize", std::to_string(indicesDtypeSize_).c_str(), "get indicesDtype size fail");
+        return ge::GRAPH_FAILED;
+    }
     auto dataPtr = context_->GetInputDesc(VAR_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, dataPtr);
     varDtype_ = dataPtr->GetDataType();
-    OP_TILING_CHECK((VAR_DATA_TYPE.find(varDtype_) == VAR_DATA_TYPE.end()),
-        VECTOR_INNER_ERR_REPORT_TILIING(opName, 
-            "var dtype only support int8/uint8/int32/uint32/int64/uint64/float32/float16/bfloat16/FLOAT8_E8M0/FLOAT8_E5M2/FLOAT8_E4M3FN, but got [%s].", Ops::Base::ToString(varDtype_).c_str()),
-        return ge::GRAPH_FAILED);
+    if (VAR_DATA_TYPE.find(varDtype_) == VAR_DATA_TYPE.end()) {
+        OP_LOGE_FOR_INVALID_DTYPE(
+            opName_, "var", std::to_string(static_cast<int32_t>(varDtype_)).c_str(),
+            "int8/uint8/int32/uint32/int64/uint64/float32/float16/bfloat16/FLOAT8_E8M0/FLOAT8_E5M2/FLOAT8_E4M3FN");
+        return ge::GRAPH_FAILED;
+    }
     varTypeSize_ = ge::GetSizeByDataType(varDtype_);
-    OP_TILING_CHECK(varTypeSize_ <= 0, VECTOR_INNER_ERR_REPORT_TILIING(opName, "get dataType size fail."),
-                    return ge::GRAPH_FAILED);
+    if (varTypeSize_ <= 0) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            opName_, "varTypeSize", std::to_string(varTypeSize_).c_str(), "get dataType size fail");
+        return ge::GRAPH_FAILED;
+    }
     isSimt_ = varShape_[1] * varTypeSize_ < VAR_TAIL_DIM_SIZE;
     auto updatePtr = context_->GetInputDesc(UPDATES_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, updatePtr);
     auto updatesType = updatePtr->GetDataType();
-    OP_TILING_CHECK(
-        (VAR_DATA_TYPE.find(updatesType) == VAR_DATA_TYPE.end()),
-        VECTOR_INNER_ERR_REPORT_TILIING(opName, 
-            "updates dtype only support int8/uint8/int32/uint32/int64/uint64/float32/float16/bfloat16/FLOAT8_E8M0/FLOAT8_E5M2/FLOAT8_E4M3FN, but got [%s].", Ops::Base::ToString(updatesType).c_str()),
-        return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(
-        (updatesType != varDtype_),
-        VECTOR_INNER_ERR_REPORT_TILIING(opName, "expected updates dtype to be equal to var dtype, please check."),
-        return ge::GRAPH_FAILED);
+    if (VAR_DATA_TYPE.find(updatesType) == VAR_DATA_TYPE.end()) {
+        OP_LOGE_FOR_INVALID_DTYPE(
+            opName_, "updates", std::to_string(static_cast<int32_t>(updatesType)).c_str(),
+            "int8/uint8/int32/uint32/int64/uint64/float32/float16/bfloat16/FLOAT8_E8M0/FLOAT8_E5M2/FLOAT8_E4M3FN");
+        return ge::GRAPH_FAILED;
+    }
+    if (updatesType != varDtype_) {
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            opName_, "updates, var",
+            (std::to_string(static_cast<int32_t>(updatesType)) + ", " + std::to_string(static_cast<int32_t>(varDtype_)))
+                .c_str(),
+            "expected updates dtype to be equal to var dtype");
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus ScatterUpdateTiling::CheckUpdatesShape(const gert::Shape& varShape, const gert::Shape& indicesShape,
                                                     const gert::Shape& updatesShape)
 {
+    const char* opName_ = "ScatterUpdate";
     uint64_t varDimNum = static_cast<uint64_t>(varShape.GetDimNum());
     uint64_t indicesDimNum = static_cast<uint64_t>(indicesShape.GetDimNum());
     uint64_t updatesDimNum = static_cast<uint64_t>(updatesShape.GetDimNum());
-    OP_TILING_CHECK(
-        (updatesDimNum != indicesDimNum + varDimNum - 1),
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            opName, "updatesDimNum must have the same number of indicesDimNum add varDimNum - 1, please check."),
-        return ge::GRAPH_FAILED);
+    if (updatesDimNum != indicesDimNum + varDimNum - 1) {
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            opName_, "updates", std::to_string(updatesDimNum),
+            "updatesDimNum must be equal to indicesDimNum + varDimNum - 1");
+        return ge::GRAPH_FAILED;
+    }
     for (uint64_t i = 0; i < indicesDimNum; i++) {
-        OP_TILING_CHECK(
-            (static_cast<uint32_t>(updatesShape.GetDim(i)) != static_cast<uint32_t>(indicesShape.GetDim(i))),
-            VECTOR_INNER_ERR_REPORT_TILIING(
-                opName, "updatesShape should be equal to the shape of 'indices' concats the shape of 'var' except for the first dimension."),
-            return ge::GRAPH_FAILED);
+        if (static_cast<uint32_t>(updatesShape.GetDim(i)) != static_cast<uint32_t>(indicesShape.GetDim(i))) {
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                opName_, "updates, indices", "updates_shape, indices_shape",
+                "updatesShape should be equal to the shape of 'indices' concats the shape of 'var' except for the "
+                "var first dimension");
+            return ge::GRAPH_FAILED;
+        }
     }
 
     for (uint64_t i = 1; i < varDimNum; i++) {
-        OP_TILING_CHECK((static_cast<uint32_t>(updatesShape.GetDim(i + indicesDimNum - 1)) !=
-                        static_cast<uint32_t>(varShape.GetDim(i))),
-                        VECTOR_INNER_ERR_REPORT_TILIING(
-                            opName, "updatesShape should be equal to the shape of 'indices' concats the shape of 'var' except for the first dimension."),
-                        return ge::GRAPH_FAILED);
+        if (static_cast<uint32_t>(updatesShape.GetDim(i + indicesDimNum - 1)) !=
+            static_cast<uint32_t>(varShape.GetDim(i))) {
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                opName_, "updates, var", "updates_shape, var_shape",
+                "updatesShape should be equal to the shape of 'indices' concats the shape of 'var' except for the "
+                "var first dimension");
+            return ge::GRAPH_FAILED;
+        }
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -340,10 +401,10 @@ void ScatterUpdateTiling::DoMaskSimdTiling()
 
     uint64_t maskSize = Ops::Base::CeilAlign(varShape_[0], static_cast<uint64_t>(ubBlock));
     uint64_t colTotalAlign = Ops::Base::CeilAlign(colTotalNum_, aglinNum);
-    
+
     uint64_t indicesBatchCopyUbSize = (normBlockRowNum_ * indicesDtypeSize_ > INDICES_MAX_BATCH_COPY_THRESHOLD) ?
-                                      INDICES_MAX_BATCH_COPY_THRESHOLD :
-                                      normBlockRowNum_ * indicesDtypeSize_;
+                                          INDICES_MAX_BATCH_COPY_THRESHOLD :
+                                          normBlockRowNum_ * indicesDtypeSize_;
     indicesBatchCopySizeAlign_ = Ops::Base::CeilAlign(indicesBatchCopyUbSize, static_cast<uint64_t>(ubBlock));
     uint64_t restUbSize = ubSize_ - maskSize - static_cast<uint64_t>(DOUBLE * ubBlock);
     if (colTotalAlign * varTypeSize_ < MULTI_LINE_THRESHOLD) {
@@ -392,14 +453,14 @@ uint64_t ScatterUpdateTiling::CalcSimtIndicesUbFactor()
         int64_t sortTmpSize = 0;
         if (indicesCastMode_ == 0) {
             totalIndexSize = Ops::Base::CeilAlign(mid * static_cast<uint64_t>(indicesDtypeSize_), static_cast<uint64_t>(ubBlock)) * (indicesBuff + posIdexBuff) +
-                             Ops::Base::CeilAlign(mid * static_cast<uint64_t>(sizeof(uint32_t)), static_cast<uint64_t>(ubBlock)) +
-                             Ops::Base::CeilAlign(mid * static_cast<uint64_t>(sizeof(int32_t)), static_cast<uint64_t>(ubBlock));
+                Ops::Base::CeilAlign(mid * static_cast<uint64_t>(sizeof(uint32_t)), static_cast<uint64_t>(ubBlock)) +
+                Ops::Base::CeilAlign(mid * static_cast<uint64_t>(sizeof(int32_t)), static_cast<uint64_t>(ubBlock));
             sortTmpSize = GetSortTmpSize(indicesDtype_, mid, false);
         } else {
             totalIndexSize = Ops::Base::CeilAlign(mid * static_cast<uint64_t>(indicesCastDtypeSize_), static_cast<uint64_t>(ubBlock)) * (indicesBuff + posIdexBuff) +
-                             Ops::Base::CeilAlign(mid * static_cast<uint64_t>(indicesDtypeSize_), static_cast<uint64_t>(ubBlock)) +
-                             Ops::Base::CeilAlign(mid * static_cast<uint64_t>(sizeof(uint32_t)), static_cast<uint64_t>(ubBlock)) +
-                             Ops::Base::CeilAlign(mid * static_cast<uint64_t>(sizeof(int32_t)), static_cast<uint64_t>(ubBlock));
+                Ops::Base::CeilAlign(mid * static_cast<uint64_t>(indicesDtypeSize_), static_cast<uint64_t>(ubBlock)) +
+                Ops::Base::CeilAlign(mid * static_cast<uint64_t>(sizeof(uint32_t)), static_cast<uint64_t>(ubBlock)) +
+                Ops::Base::CeilAlign(mid * static_cast<uint64_t>(sizeof(int32_t)), static_cast<uint64_t>(ubBlock));
             sortTmpSize = GetSortTmpSize(indicesCastDtype_, mid, false);
         }
 
@@ -419,8 +480,8 @@ void ScatterUpdateTiling::DoSimtTiling()
     uint64_t totalSize = varShape_[1] * indicesSize_;
     usedCoreNum_ = Ops::Base::CeilDiv(totalSize, MAX_THREAD_NUM);
     usedCoreNum_ = std::min(usedCoreNum_, totalCoreNum_);
-    
-    if (isSort_) {        
+
+    if (isSort_) {
         // 单次UB可处理indices个数
         indicesFactor_ = CalcSimtIndicesUbFactor();
         uint64_t totalLoop = Ops::Base::CeilDiv(static_cast<uint64_t>(indicesSize_), indicesFactor_);
@@ -455,14 +516,14 @@ uint64_t ScatterUpdateTiling::CalcIndicesUbFactor()
         // 所需空间：indicesLocal + indicesSortedLocal + updatesOriginIdxLocal + uniqueIdCountLocal
         if (indicesCastMode_ == 0) {
             totalIndexSize = Ops::Base::CeilAlign(mid * indicesDtypeSize_, ubBlock) * DOUBLE +
-                             Ops::Base::CeilAlign(mid * static_cast<uint64_t>(sizeof(uint32_t)), ubBlock) + ubBlock * DOUBLE +
-                             Ops::Base::CeilAlign(mid * static_cast<uint64_t>(sizeof(int32_t)), ubBlock) + ubBlock * DOUBLE;
+                Ops::Base::CeilAlign(mid * static_cast<uint64_t>(sizeof(uint32_t)), ubBlock) + ubBlock * DOUBLE +
+                Ops::Base::CeilAlign(mid * static_cast<uint64_t>(sizeof(int32_t)), ubBlock) + ubBlock * DOUBLE;
             sortTmpSize = GetSortTmpSize(indicesDtype_, mid, false);
         } else {
             totalIndexSize = Ops::Base::CeilAlign(mid * indicesCastDtypeSize_, ubBlock) * DOUBLE +
-                             Ops::Base::CeilAlign(mid * indicesDtypeSize_, ubBlock) +
-                             Ops::Base::CeilAlign(mid * static_cast<uint64_t>(sizeof(uint32_t)), ubBlock) + ubBlock * DOUBLE +
-                             Ops::Base::CeilAlign(mid * static_cast<uint64_t>(sizeof(int32_t)), ubBlock) + ubBlock * DOUBLE;
+                Ops::Base::CeilAlign(mid * indicesDtypeSize_, ubBlock) +
+                Ops::Base::CeilAlign(mid * static_cast<uint64_t>(sizeof(uint32_t)), ubBlock) + ubBlock * DOUBLE +
+                Ops::Base::CeilAlign(mid * static_cast<uint64_t>(sizeof(int32_t)), ubBlock) + ubBlock * DOUBLE;
             sortTmpSize = GetSortTmpSize(indicesCastDtype_, mid, false);
         }
 
@@ -490,18 +551,18 @@ void ScatterUpdateTiling::DoDeterministicTiling()
         usedCoreNum_ = Ops::Base::CeilDiv(varShape_[1], normBlockColNum_);
         tailBlockColNum_ = varShape_[1] - normBlockColNum_ * (usedCoreNum_ - 1);
         if (normBlockColNum_ * varTypeSize_ > (ubSize_ - MIN_INDICES_SIZE)) { // 尾轴大于UBSize
-            indicesUbFactor_ = 
+            indicesUbFactor_ =
                 Ops::Base::CeilAlign(std::min(MIN_INDICES_SIZE, indicesSize_ * indicesDtypeSize_), UB_AGLIN_VALUE) / indicesDtypeSize_;
             updateColUbFactor_ = Ops::Base::FloorAlign((ubSize_ - indicesUbFactor_ * indicesDtypeSize_), UB_AGLIN_VALUE) / varTypeSize_;
-            updateColUbFactor_ = 
+            updateColUbFactor_ =
                 std::min(updateColUbFactor_, Ops::Base::CeilAlign(normBlockColNum_ * varTypeSize_, UB_AGLIN_VALUE) / varTypeSize_);
         } else {
             updateColUbFactor_ = Ops::Base::CeilAlign(normBlockColNum_ * varTypeSize_, UB_AGLIN_VALUE) / varTypeSize_;
             indicesUbFactor_= Ops::Base::FloorAlign(ubSize_ - updateColUbFactor_ * varTypeSize_, UB_AGLIN_VALUE) / indicesDtypeSize_;
-            indicesUbFactor_ = 
+            indicesUbFactor_ =
                 std::min(indicesUbFactor_, Ops::Base::CeilAlign(indicesSize_ * indicesDtypeSize_, UB_AGLIN_VALUE) / indicesDtypeSize_);
         }
-        
+
         indicesLoopSize_ = Ops::Base::CeilDiv(indicesSize_, indicesUbFactor_);
         indicesTailLoopNum_ = indicesSize_ - (indicesLoopSize_ - 1) * indicesUbFactor_;
         updatesNormBlockLoop_ = Ops::Base::CeilDiv(normBlockColNum_, updateColUbFactor_);
@@ -577,25 +638,25 @@ ge::graphStatus ScatterUpdateTiling::GetCastType()
     indicesCastDtype_ = indicesDtype_;
 
     if (indicesDtype_ == ge::DT_INT32) {
- 	    if (varShape_[0] < UINT8_MAX) {
+        if (varShape_[0] < UINT8_MAX) {
  	        indicesCastMode_ = CASTMODE4;          // int32 Cast uint8
- 	        indicesCastDtype_ = ge::DT_UINT8;
- 	    } else if (varShape_[0] < INT16_MAX) {
+            indicesCastDtype_ = ge::DT_UINT8;
+        } else if (varShape_[0] < INT16_MAX) {
  	        indicesCastMode_ = CASTMODE1;          // int32 Cast int16
- 	        indicesCastDtype_ = ge::DT_INT16;
- 	    }
- 	} else {
- 	    if (varShape_[0] < UINT8_MAX) {
+            indicesCastDtype_ = ge::DT_INT16;
+        }
+    } else {
+        if (varShape_[0] < UINT8_MAX) {
  	        indicesCastMode_ = CASTMODE5;          // int64 Cast uint8
- 	        indicesCastDtype_ = ge::DT_UINT8;
- 	    } else if (varShape_[0] < INT16_MAX) {
+            indicesCastDtype_ = ge::DT_UINT8;
+        } else if (varShape_[0] < INT16_MAX) {
  	        indicesCastMode_ = CASTMODE3;          // int64 Cast int16
- 	        indicesCastDtype_ = ge::DT_INT16;
- 	    } else if (varShape_[0] < INT32_MAX) {
+            indicesCastDtype_ = ge::DT_INT16;
+        } else if (varShape_[0] < INT32_MAX) {
  	        indicesCastMode_ = CASTMODE2;          // int64 Cast int32
- 	        indicesCastDtype_ = ge::DT_INT32;
- 	    }
- 	}
+            indicesCastDtype_ = ge::DT_INT32;
+        }
+    }
 
     if (indicesCastMode_ != 0) {
         indicesCastDtypeSize_ = ge::GetSizeByDataType(indicesCastDtype_);
@@ -740,7 +801,7 @@ void ScatterUpdateTiling::AutoTiling()
     usedCoreNum_ = std::min(totalCoreNum_, static_cast<uint64_t>((colTotalNum_ * rowTotalNum_ + BASE_BLOCK_SIZE - 1) / BASE_BLOCK_SIZE));
     /* 给定Shape[M, N] 和 block core num
     ** M切分成m块，N切分成n块，找到m*n <= usedCoreNum, 且m*n尽可能接近usedCoreNum的所有m和n的可能
-    */ 
+    */
     std::set<uint64_t> cutSet = FindUniqueCut();
     std::vector<std::vector<uint64_t>> allTiling;
     // 核先按照行方向切分，枚举m的取值
@@ -789,7 +850,7 @@ std::set<uint64_t> ScatterUpdateTiling::FindUniqueCut()
 {
     std::set<uint64_t> result;
     uint64_t upbound = std::ceil(std::sqrt(usedCoreNum_) + 1);
-    
+
     for (uint64_t m = 1; m < upbound; m++) {
         uint64_t y = usedCoreNum_ / m;
         result.insert(m);
@@ -831,7 +892,7 @@ uint64_t ScatterUpdateTiling::GetTilingKey() const
 
     uint64_t tilingKey = 0;
     tilingKey = GET_TILINGKEY(isSort_, templateKey_, sizeAddrType, isUpdateScalar_,TILING_KEY_PLACE_HOLD, TILING_KEY_PLACE_HOLD,
-                    TILING_KEY_PLACE_HOLD, TILING_KEY_PLACE_HOLD, TILING_KEY_PLACE_HOLD, isMask_, deterministicMode_);
+        TILING_KEY_PLACE_HOLD, TILING_KEY_PLACE_HOLD, TILING_KEY_PLACE_HOLD, isMask_, deterministicMode_);
     OP_LOGD("ScatterUpdateTiling", "tilingKey is %lu", tilingKey);
     return tilingKey;
 }
@@ -847,6 +908,7 @@ ge::graphStatus ScatterUpdateTiling::GetWorkspaceSize()
 
 ge::graphStatus ScatterUpdateTiling::PostTiling()
 {
+    const char* opName_ = "ScatterUpdate";
     auto workspaces = context_->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
     workspaces[0] = workspaceSize_;
@@ -855,9 +917,11 @@ ge::graphStatus ScatterUpdateTiling::PostTiling()
         context_->SetScheduleMode(1);
     }
     auto res = context_->SetLocalMemorySize(ubSize_);
-    OP_TILING_CHECK((res != ge::GRAPH_SUCCESS),
-                    VECTOR_INNER_ERR_REPORT_TILIING(opName, "SetLocalMemorySize ubSize = %lu failed.", ubSize_),
-                    return ge::GRAPH_FAILED);
+    if (res != ge::GRAPH_SUCCESS) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            opName_, "ubSize", std::to_string(ubSize_).c_str(), "SetLocalMemorySize failed");
+        return ge::GRAPH_FAILED;
+    }
 
     return ge::GRAPH_SUCCESS;
 }

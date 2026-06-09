@@ -30,15 +30,9 @@
 using namespace std;
 class RepeatInterleaveTilingAscendC : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        std::cout << "RepeatInterleaveTilingAscendC SetUp" << std::endl;
-    }
+    static void SetUpTestCase() { std::cout << "RepeatInterleaveTilingAscendC SetUp" << std::endl; }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "RepeatInterleaveTilingAscendC TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "RepeatInterleaveTilingAscendC TearDown" << std::endl; }
 };
 
 template <typename T>
@@ -525,4 +519,259 @@ TEST_F(RepeatInterleaveTilingAscendC, Repeats_Tensor_Axis_1_test25)
 
     string expectTilingData = "64 48 1 1 3 1 24 20800 1380 19 2 70 256 ";
     ExecuteTestCase(opsParamInfos, expectTilingData, const_tensors);
+}
+
+TEST_F(RepeatInterleaveTilingAscendC, tiling_failed_unsupported_dtype)
+{
+    OpsParamInfosRepeatInterleave opsParamInfos;
+    opsParamInfos.xDtype = ge::DT_DOUBLE;
+    opsParamInfos.repeatsDtype = ge::DT_INT32;
+    opsParamInfos.yDtype = ge::DT_DOUBLE;
+    opsParamInfos.xShape = {{2, 3, 4}, {2, 3, 4}};
+    opsParamInfos.repeatsShape = {{1}, {1}};
+    opsParamInfos.yShape = {{2, 6, 4}, {2, 6, 4}};
+    opsParamInfos.axis = 1;
+    int32_t repeatsValue[1] = {2};
+
+    std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> const_tensors;
+    SetConstInput<int32_t>(1, ge::DT_INT32, repeatsValue, 1, const_tensors);
+
+    string expectTilingData = "";
+    ExecuteTestCase(opsParamInfos, expectTilingData, const_tensors, ge::GRAPH_FAILED);
+}
+
+TEST_F(RepeatInterleaveTilingAscendC, tiling_failed_dtype_mismatch_x_y)
+{
+    OpsParamInfosRepeatInterleave opsParamInfos;
+    opsParamInfos.xDtype = ge::DT_FLOAT;
+    opsParamInfos.repeatsDtype = ge::DT_INT32;
+    opsParamInfos.yDtype = ge::DT_INT32;
+    opsParamInfos.xShape = {{2, 3, 4}, {2, 3, 4}};
+    opsParamInfos.repeatsShape = {{1}, {1}};
+    opsParamInfos.yShape = {{2, 6, 4}, {2, 6, 4}};
+    opsParamInfos.axis = 1;
+    int32_t repeatsValue[1] = {2};
+
+    std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> const_tensors;
+    SetConstInput<int32_t>(1, ge::DT_INT32, repeatsValue, 1, const_tensors);
+
+    string expectTilingData = "";
+    ExecuteTestCase(opsParamInfos, expectTilingData, const_tensors, ge::GRAPH_FAILED);
+}
+
+TEST_F(RepeatInterleaveTilingAscendC, tiling_failed_invalid_axis)
+{
+    OpsParamInfosRepeatInterleave opsParamInfos;
+    opsParamInfos.xDtype = ge::DT_INT32;
+    opsParamInfos.repeatsDtype = ge::DT_INT32;
+    opsParamInfos.yDtype = ge::DT_INT32;
+    opsParamInfos.xShape = {{2, 3, 4}, {2, 3, 4}};
+    opsParamInfos.repeatsShape = {{1}, {1}};
+    opsParamInfos.yShape = {{2, 6, 4}, {2, 6, 4}};
+    opsParamInfos.axis = 5;
+    int32_t repeatsValue[1] = {2};
+
+    std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> const_tensors;
+    SetConstInput<int32_t>(1, ge::DT_INT32, repeatsValue, 1, const_tensors);
+
+    string expectTilingData = "";
+    ExecuteTestCase(opsParamInfos, expectTilingData, const_tensors, ge::GRAPH_FAILED);
+}
+
+TEST_F(RepeatInterleaveTilingAscendC, tiling_failed_axis_dim_zero)
+{
+    OpsParamInfosRepeatInterleave opsParamInfos;
+    opsParamInfos.xDtype = ge::DT_INT32;
+    opsParamInfos.repeatsDtype = ge::DT_INT32;
+    opsParamInfos.yDtype = ge::DT_INT32;
+    opsParamInfos.xShape = {{2, 0, 4}, {2, 0, 4}};
+    opsParamInfos.repeatsShape = {{1}, {1}};
+    opsParamInfos.yShape = {{2, 0, 4}, {2, 0, 4}};
+    opsParamInfos.axis = 1;
+    int32_t repeatsValue[1] = {2};
+
+    std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> const_tensors;
+    SetConstInput<int32_t>(1, ge::DT_INT32, repeatsValue, 1, const_tensors);
+
+    string expectTilingData = "";
+    ExecuteTestCase(opsParamInfos, expectTilingData, const_tensors, ge::GRAPH_FAILED);
+}
+
+TEST_F(RepeatInterleaveTilingAscendC, tiling_failed_repeats_dim_gt_1)
+{
+    OpsParamInfosRepeatInterleave opsParamInfos;
+    opsParamInfos.xDtype = ge::DT_INT32;
+    opsParamInfos.repeatsDtype = ge::DT_INT32;
+    opsParamInfos.yDtype = ge::DT_INT32;
+    opsParamInfos.xShape = {{2, 3, 4}, {2, 3, 4}};
+    opsParamInfos.repeatsShape = {{3, 3}, {3, 3}};
+    opsParamInfos.yShape = {{2, 6, 4}, {2, 6, 4}};
+    opsParamInfos.axis = 1;
+    int32_t repeatsValue[9] = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+
+    std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> const_tensors;
+    SetConstInput<int32_t>(1, ge::DT_INT32, repeatsValue, 9, const_tensors);
+
+    string expectTilingData = "";
+    ExecuteTestCase(opsParamInfos, expectTilingData, const_tensors, ge::GRAPH_FAILED);
+}
+
+TEST_F(RepeatInterleaveTilingAscendC, tiling_failed_repeats_shape_mismatch)
+{
+    OpsParamInfosRepeatInterleave opsParamInfos;
+    opsParamInfos.xDtype = ge::DT_INT32;
+    opsParamInfos.repeatsDtype = ge::DT_INT32;
+    opsParamInfos.yDtype = ge::DT_INT32;
+    opsParamInfos.xShape = {{2, 3, 4}, {2, 3, 4}};
+    opsParamInfos.repeatsShape = {{5}, {5}};
+    opsParamInfos.yShape = {{2, 6, 4}, {2, 6, 4}};
+    opsParamInfos.axis = 1;
+    int32_t repeatsValue[5] = {1, 2, 3, 4, 5};
+
+    std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> const_tensors;
+    SetConstInput<int32_t>(1, ge::DT_INT32, repeatsValue, 5, const_tensors);
+
+    string expectTilingData = "";
+    ExecuteTestCase(opsParamInfos, expectTilingData, const_tensors, ge::GRAPH_FAILED);
+}
+
+TEST_F(RepeatInterleaveTilingAscendC, tiling_failed_dim_num_mismatch)
+{
+    OpsParamInfosRepeatInterleave opsParamInfos;
+    opsParamInfos.xDtype = ge::DT_INT32;
+    opsParamInfos.repeatsDtype = ge::DT_INT32;
+    opsParamInfos.yDtype = ge::DT_INT32;
+    opsParamInfos.xShape = {{2, 3, 4}, {2, 3, 4}};
+    opsParamInfos.repeatsShape = {{1}, {1}};
+    opsParamInfos.yShape = {{24}, {24}};
+    opsParamInfos.axis = 1;
+    int32_t repeatsValue[1] = {2};
+
+    std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> const_tensors;
+    SetConstInput<int32_t>(1, ge::DT_INT32, repeatsValue, 1, const_tensors);
+
+    string expectTilingData = "";
+    ExecuteTestCase(opsParamInfos, expectTilingData, const_tensors, ge::GRAPH_FAILED);
+}
+
+TEST_F(RepeatInterleaveTilingAscendC, tiling_failed_merge_dim_mismatch)
+{
+    OpsParamInfosRepeatInterleave opsParamInfos;
+    opsParamInfos.xDtype = ge::DT_INT32;
+    opsParamInfos.repeatsDtype = ge::DT_INT32;
+    opsParamInfos.yDtype = ge::DT_INT32;
+    opsParamInfos.xShape = {{2, 3, 4}, {2, 3, 4}};
+    opsParamInfos.repeatsShape = {{1}, {1}};
+    opsParamInfos.yShape = {{2, 6, 5}, {2, 6, 5}};
+    opsParamInfos.axis = 1;
+    int32_t repeatsValue[1] = {2};
+
+    std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> const_tensors;
+    SetConstInput<int32_t>(1, ge::DT_INT32, repeatsValue, 1, const_tensors);
+
+    string expectTilingData = "";
+    ExecuteTestCase(opsParamInfos, expectTilingData, const_tensors, ge::GRAPH_FAILED);
+}
+
+TEST_F(RepeatInterleaveTilingAscendC, tiling_failed_core_num_le_zero)
+{
+    OpsParamInfosRepeatInterleave opsParamInfos;
+    opsParamInfos.xDtype = ge::DT_INT32;
+    opsParamInfos.repeatsDtype = ge::DT_INT32;
+    opsParamInfos.yDtype = opsParamInfos.xDtype;
+    opsParamInfos.xShape = {{2, 3, 4}, {2, 3, 4}};
+    opsParamInfos.repeatsShape = {{1}, {1}};
+    opsParamInfos.yShape = {{4, 3, 4}, {4, 3, 4}};
+    opsParamInfos.axis = 0;
+    int32_t repeatsValue[1] = {2};
+
+    std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> const_tensors;
+    SetConstInput<int32_t>(1, ge::DT_INT32, repeatsValue, 1, const_tensors);
+
+    string compileInfoString = R"({
+        "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
+                          "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
+                          "UB_SIZE": 253952, "L2_SIZE": 33554432, "L1_SIZE": 524288,
+                          "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
+                          "CORE_NUM": 0}
+                          })";
+    map<string, string> socInfos;
+    map<string, string> aicoreSpec;
+    map<string, string> intrinsics;
+
+    GetPlatFormInfos(compileInfoString.c_str(), socInfos, aicoreSpec, intrinsics);
+
+    fe::PlatFormInfos platformInfo;
+    platformInfo.Init();
+
+    optiling::RepeatInterleaveCompileInfo compileInfo;
+    compileInfo.coreNumAscendc = 0;
+    compileInfo.ubSizeAscendc = 253952;
+
+    std::string opType("RepeatInterleave");
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str()), nullptr);
+    auto tilingParseFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling_parse;
+
+    auto kernelHolder = gert::KernelRunContextFaker()
+                            .KernelIONum(2, 1)
+                            .Inputs({const_cast<char*>("{}"), reinterpret_cast<void*>(&platformInfo)})
+                            .Outputs({&compileInfo})
+                            .Build();
+
+    auto parseContext = kernelHolder.GetContext<gert::TilingParseContext>();
+    ASSERT_NE(parseContext, nullptr);
+    auto platformInfoPtr = parseContext->GetPlatformInfo();
+    ASSERT_NE(platformInfoPtr, nullptr);
+    ASSERT_TRUE(platformInfoPtr->Init());
+    platformInfoPtr->SetPlatformRes("SoCInfo", socInfos);
+    platformInfoPtr->SetPlatformRes("AICoreSpec", aicoreSpec);
+    platformInfoPtr->SetCoreNumByCoreType("AICore");
+    platformInfoPtr->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+
+    EXPECT_EQ(tilingParseFunc(kernelHolder.GetContext<gert::KernelContext>()), ge::GRAPH_FAILED);
+}
+
+TEST_F(RepeatInterleaveTilingAscendC, tiling_failed_ub_size_le_zero)
+{
+    string compileInfoString = R"({
+        "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
+                          "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
+                          "UB_SIZE": 0, "L2_SIZE": 33554432, "L1_SIZE": 524288,
+                          "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
+                          "CORE_NUM": 64}
+                          })";
+    map<string, string> socInfos;
+    map<string, string> aicoreSpec;
+    map<string, string> intrinsics;
+
+    GetPlatFormInfos(compileInfoString.c_str(), socInfos, aicoreSpec, intrinsics);
+
+    fe::PlatFormInfos platformInfo;
+    platformInfo.Init();
+
+    optiling::RepeatInterleaveCompileInfo compileInfo;
+    compileInfo.coreNumAscendc = 64;
+    compileInfo.ubSizeAscendc = 0;
+
+    std::string opType("RepeatInterleave");
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str()), nullptr);
+    auto tilingParseFunc = gert::OpImplRegistry::GetInstance().GetOpImpl(opType.c_str())->tiling_parse;
+
+    auto kernelHolder = gert::KernelRunContextFaker()
+                            .KernelIONum(2, 1)
+                            .Inputs({const_cast<char*>("{}"), reinterpret_cast<void*>(&platformInfo)})
+                            .Outputs({&compileInfo})
+                            .Build();
+
+    auto parseContext = kernelHolder.GetContext<gert::TilingParseContext>();
+    ASSERT_NE(parseContext, nullptr);
+    auto platformInfoPtr = parseContext->GetPlatformInfo();
+    ASSERT_NE(platformInfoPtr, nullptr);
+    ASSERT_TRUE(platformInfoPtr->Init());
+    platformInfoPtr->SetPlatformRes("SoCInfo", socInfos);
+    platformInfoPtr->SetPlatformRes("AICoreSpec", aicoreSpec);
+    platformInfoPtr->SetCoreNumByCoreType("AICore");
+    platformInfoPtr->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+
+    EXPECT_EQ(tilingParseFunc(kernelHolder.GetContext<gert::KernelContext>()), ge::GRAPH_FAILED);
 }

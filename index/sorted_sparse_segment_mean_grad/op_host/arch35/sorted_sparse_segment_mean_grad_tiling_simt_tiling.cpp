@@ -180,11 +180,12 @@ ge::graphStatus SortedSparseSegmentMeanGradSimtTiling::PostTiling()
     OP_LOGD(context_->GetNodeName(), "SortedSparseSegmentMeanGradSimtTiling PostTiling enter.");
     context_->SetBlockDim(needCoreNum_);
     context_->SetScheduleMode(1);
-    OP_TILING_CHECK(
-        static_cast<uint32_t>(hardwareData.ubSize - DCACHE_SIZE) < REMAIN_UB_SIZE,
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context_->GetNodeName(), "SortedSparseSegmentMeanGradSimtTiling: remian UB size is insufficient."),
-        return ge::GRAPH_FAILED);
+    if (static_cast<uint32_t>(hardwareData.ubSize - DCACHE_SIZE) < REMAIN_UB_SIZE) {
+        OP_LOGE_FOR_INVALID_CONFIG_WITH_REASON(
+            context_->GetNodeName(), std::to_string(static_cast<uint32_t>(hardwareData.ubSize - DCACHE_SIZE)).c_str(),
+            "UB remaining size", "platform", "remaining UB size after DCACHE must be >= REMAIN_UB_SIZE(33280)");
+        return ge::GRAPH_FAILED;
+    }
     context_->SetLocalMemorySize(static_cast<uint32_t>(hardwareData.ubSize - DCACHE_SIZE));
 
     return ge::GRAPH_SUCCESS;

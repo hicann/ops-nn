@@ -31,14 +31,10 @@ using namespace ut_util;
 using namespace ge;
 
 class SortedSparseSegmentMeanGradTiling : public testing::Test {
- protected:
-  static void SetUpTestCase() {
-    std::cout << "SortedSparseSegmentMeanGradTiling SetUp" << std::endl;
-  }
+protected:
+    static void SetUpTestCase() { std::cout << "SortedSparseSegmentMeanGradTiling SetUp" << std::endl; }
 
-  static void TearDownTestCase() {
-    std::cout << "SortedSparseSegmentMeanGradTiling TearDown" << std::endl;
-  }
+    static void TearDownTestCase() { std::cout << "SortedSparseSegmentMeanGradTiling TearDown" << std::endl; }
 };
 
 template <typename T>
@@ -50,11 +46,7 @@ void SetConstInput(
         std::unique_ptr<uint8_t[]>(new uint8_t[sizeof(gert::Tensor) + sizeof(T) * data_size]);
     auto input_tensor = reinterpret_cast<gert::Tensor*>(input_tensor_holder.get());
     gert::Tensor tensor(
-        {{data_size}, {data_size}},
-        {ge::FORMAT_ND, ge::FORMAT_ND, {}},
-        gert::kFollowing,
-        dtype,
-        nullptr);
+        {{data_size}, {data_size}}, {ge::FORMAT_ND, ge::FORMAT_ND, {}}, gert::kFollowing, dtype, nullptr);
     std::memcpy(input_tensor, &tensor, sizeof(gert::Tensor));
     auto tensor_data = reinterpret_cast<T*>(input_tensor + 1);
     for (int64_t i = 0; i < data_size; i++) {
@@ -65,13 +57,12 @@ void SetConstInput(
     const_tensors.push_back(std::move(pair));
 }
 
-static void RunTilingTest(gert::StorageShape xShape, gert::StorageShape sortedIndicesShape,
-                          gert::StorageShape preLocationIndicesShape, gert::StorageShape segmentIdsShape,
-                          gert::StorageShape outputDim0Shape, gert::StorageShape yShape,
-                          ge::DataType xDtype, ge::DataType sortedIndicesDtype,
-                          ge::DataType preLocationIndicesDtype, ge::DataType segmentIdsDtype,
-                          int32_t outputDim0Value, bool expectSuccess,
-                          std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>>& constTensors)
+static void RunTilingTest(
+    gert::StorageShape xShape, gert::StorageShape sortedIndicesShape, gert::StorageShape preLocationIndicesShape,
+    gert::StorageShape segmentIdsShape, gert::StorageShape outputDim0Shape, gert::StorageShape yShape,
+    ge::DataType xDtype, ge::DataType sortedIndicesDtype, ge::DataType preLocationIndicesDtype,
+    ge::DataType segmentIdsDtype, ge::DataType yDtype, ge::DataType outputDim0Dtype, int32_t outputDim0Value,
+    bool expectSuccess, std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>>& constTensors)
 {
     string compile_info_string = R"({
             "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -99,19 +90,20 @@ static void RunTilingTest(gert::StorageShape xShape, gert::StorageShape sortedIn
     auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
 
     auto kernel_holder =
-       gert::KernelRunContextFaker()
-           .KernelIONum(2, 1)
-           .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
-           .Outputs({&compile_info})
-           .Build();
+        gert::KernelRunContextFaker()
+            .KernelIONum(2, 1)
+            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
+            .Outputs({&compile_info})
+            .Build();
 
     ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
-                                                                                            intrinsics);
-    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
+        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
+        "version", soc_version_infos);
     ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
 
     auto param = gert::TilingData::CreateCap(4096);
@@ -120,26 +112,27 @@ static void RunTilingTest(gert::StorageShape xShape, gert::StorageShape sortedIn
     auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
 
     int32_t outputDim0Data[1] = {outputDim0Value};
-    SetConstInput(4, DT_INT32, outputDim0Data, 1, constTensors);
+    SetConstInput(4, outputDim0Dtype, outputDim0Data, 1, constTensors);
 
-    auto holder = gert::TilingContextFaker()
-        .SetOpType(op_type)
-        .NodeIoNum(5, 1)
-        .IrInstanceNum({1,1,1,1,1})
-        .InputShapes({&xShape, &sortedIndicesShape, &preLocationIndicesShape, &segmentIdsShape, &outputDim0Shape})
-        .OutputShapes({&yShape})
-        .CompileInfo(&compile_info)
-        .PlatformInfo(reinterpret_cast<char*>(&platform_info))
-        .NodeInputTd(0, xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(1, sortedIndicesDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(2, preLocationIndicesDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(3, segmentIdsDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeInputTd(4, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
-        .NodeOutputTd(0, xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
-        .ConstInput(constTensors)
-        .TilingData(param.get())
-        .Workspace(ws_size)
-        .Build();
+    auto holder =
+        gert::TilingContextFaker()
+            .SetOpType(op_type)
+            .NodeIoNum(5, 1)
+            .IrInstanceNum({1, 1, 1, 1, 1})
+            .InputShapes({&xShape, &sortedIndicesShape, &preLocationIndicesShape, &segmentIdsShape, &outputDim0Shape})
+            .OutputShapes({&yShape})
+            .CompileInfo(&compile_info)
+            .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+            .NodeInputTd(0, xDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+            .NodeInputTd(1, sortedIndicesDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+            .NodeInputTd(2, preLocationIndicesDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+            .NodeInputTd(3, segmentIdsDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+            .NodeInputTd(4, outputDim0Dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+            .NodeOutputTd(0, yDtype, ge::FORMAT_ND, ge::FORMAT_ND)
+            .ConstInput(constTensors)
+            .TilingData(param.get())
+            .Workspace(ws_size)
+            .Build();
 
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
     ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
@@ -154,7 +147,8 @@ static void RunTilingTest(gert::StorageShape xShape, gert::StorageShape sortedIn
     }
 }
 
-TEST_F(SortedSparseSegmentMeanGradTiling, sorted_sparse_segment_mean_grad_simt_tiling_float_int32_int32_int32) {
+TEST_F(SortedSparseSegmentMeanGradTiling, sorted_sparse_segment_mean_grad_simt_tiling_float_int32_int32_int32)
+{
     gert::StorageShape x = {{8, 64}, {8, 64}};
     gert::StorageShape sorted_indices = {{8}, {8}};
     gert::StorageShape pre_location_indices = {{8}, {8}};
@@ -162,11 +156,13 @@ TEST_F(SortedSparseSegmentMeanGradTiling, sorted_sparse_segment_mean_grad_simt_t
     gert::StorageShape output_dim0 = {{1}, {1}};
     gert::StorageShape y = {{4, 64}, {4, 64}};
     std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> constTensors;
-    RunTilingTest(x, sorted_indices, pre_location_indices, segment_ids, output_dim0, y,
-                  ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, 4, true, constTensors);
+    RunTilingTest(
+        x, sorted_indices, pre_location_indices, segment_ids, output_dim0, y, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT32,
+        ge::DT_INT32, ge::DT_FLOAT, ge::DT_INT32, 4, true, constTensors);
 }
 
-TEST_F(SortedSparseSegmentMeanGradTiling, sorted_sparse_segment_mean_grad_simt_tiling_float16_int32_int32_int32) {
+TEST_F(SortedSparseSegmentMeanGradTiling, sorted_sparse_segment_mean_grad_simt_tiling_float16_int32_int32_int32)
+{
     gert::StorageShape x = {{8, 64}, {8, 64}};
     gert::StorageShape sorted_indices = {{8}, {8}};
     gert::StorageShape pre_location_indices = {{8}, {8}};
@@ -174,11 +170,13 @@ TEST_F(SortedSparseSegmentMeanGradTiling, sorted_sparse_segment_mean_grad_simt_t
     gert::StorageShape output_dim0 = {{1}, {1}};
     gert::StorageShape y = {{4, 64}, {4, 64}};
     std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> constTensors;
-    RunTilingTest(x, sorted_indices, pre_location_indices, segment_ids, output_dim0, y,
-                  ge::DT_FLOAT16, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, 4, true, constTensors);
+    RunTilingTest(
+        x, sorted_indices, pre_location_indices, segment_ids, output_dim0, y, ge::DT_FLOAT16, ge::DT_INT32,
+        ge::DT_INT32, ge::DT_INT32, ge::DT_FLOAT16, ge::DT_INT32, 4, true, constTensors);
 }
 
-TEST_F(SortedSparseSegmentMeanGradTiling, sorted_sparse_segment_mean_grad_simt_tiling_bf16_int32_int32_int32) {
+TEST_F(SortedSparseSegmentMeanGradTiling, sorted_sparse_segment_mean_grad_simt_tiling_bf16_int32_int32_int32)
+{
     gert::StorageShape x = {{8, 64}, {8, 64}};
     gert::StorageShape sorted_indices = {{8}, {8}};
     gert::StorageShape pre_location_indices = {{8}, {8}};
@@ -186,11 +184,13 @@ TEST_F(SortedSparseSegmentMeanGradTiling, sorted_sparse_segment_mean_grad_simt_t
     gert::StorageShape output_dim0 = {{1}, {1}};
     gert::StorageShape y = {{4, 64}, {4, 64}};
     std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> constTensors;
-    RunTilingTest(x, sorted_indices, pre_location_indices, segment_ids, output_dim0, y,
-                  ge::DT_BF16, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, 4, true, constTensors);
+    RunTilingTest(
+        x, sorted_indices, pre_location_indices, segment_ids, output_dim0, y, ge::DT_BF16, ge::DT_INT32, ge::DT_INT32,
+        ge::DT_INT32, ge::DT_BF16, ge::DT_INT32, 4, true, constTensors);
 }
 
-TEST_F(SortedSparseSegmentMeanGradTiling, sorted_sparse_segment_mean_grad_simt_tiling_float_int64_int32_int64) {
+TEST_F(SortedSparseSegmentMeanGradTiling, sorted_sparse_segment_mean_grad_simt_tiling_float_int64_int32_int64)
+{
     gert::StorageShape x = {{8, 64}, {8, 64}};
     gert::StorageShape sorted_indices = {{8}, {8}};
     gert::StorageShape pre_location_indices = {{8}, {8}};
@@ -198,11 +198,13 @@ TEST_F(SortedSparseSegmentMeanGradTiling, sorted_sparse_segment_mean_grad_simt_t
     gert::StorageShape output_dim0 = {{1}, {1}};
     gert::StorageShape y = {{4, 64}, {4, 64}};
     std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> constTensors;
-    RunTilingTest(x, sorted_indices, pre_location_indices, segment_ids, output_dim0, y,
-                  ge::DT_FLOAT, ge::DT_INT64, ge::DT_INT32, ge::DT_INT64, 4, true, constTensors);
+    RunTilingTest(
+        x, sorted_indices, pre_location_indices, segment_ids, output_dim0, y, ge::DT_FLOAT, ge::DT_INT64, ge::DT_INT32,
+        ge::DT_INT64, ge::DT_FLOAT, ge::DT_INT32, 4, true, constTensors);
 }
 
-TEST_F(SortedSparseSegmentMeanGradTiling, sorted_sparse_segment_mean_grad_simt_tiling_float_int32_int64_int32) {
+TEST_F(SortedSparseSegmentMeanGradTiling, sorted_sparse_segment_mean_grad_simt_tiling_float_int32_int64_int32)
+{
     gert::StorageShape x = {{8, 64}, {8, 64}};
     gert::StorageShape sorted_indices = {{8}, {8}};
     gert::StorageShape pre_location_indices = {{8}, {8}};
@@ -210,11 +212,13 @@ TEST_F(SortedSparseSegmentMeanGradTiling, sorted_sparse_segment_mean_grad_simt_t
     gert::StorageShape output_dim0 = {{1}, {1}};
     gert::StorageShape y = {{4, 64}, {4, 64}};
     std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> constTensors;
-    RunTilingTest(x, sorted_indices, pre_location_indices, segment_ids, output_dim0, y,
-                  ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, 4, true, constTensors);
+    RunTilingTest(
+        x, sorted_indices, pre_location_indices, segment_ids, output_dim0, y, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT64,
+        ge::DT_INT32, ge::DT_FLOAT, ge::DT_INT32, 4, true, constTensors);
 }
 
-TEST_F(SortedSparseSegmentMeanGradTiling, sorted_sparse_segment_mean_grad_simt_tiling_failed_unsupported_dtype) {
+TEST_F(SortedSparseSegmentMeanGradTiling, sorted_sparse_segment_mean_grad_simt_tiling_failed_unsupported_dtype)
+{
     gert::StorageShape x = {{8, 64}, {8, 64}};
     gert::StorageShape sorted_indices = {{8}, {8}};
     gert::StorageShape pre_location_indices = {{8}, {8}};
@@ -222,6 +226,236 @@ TEST_F(SortedSparseSegmentMeanGradTiling, sorted_sparse_segment_mean_grad_simt_t
     gert::StorageShape output_dim0 = {{1}, {1}};
     gert::StorageShape y = {{4, 64}, {4, 64}};
     std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> constTensors;
-    RunTilingTest(x, sorted_indices, pre_location_indices, segment_ids, output_dim0, y,
-                  ge::DT_DOUBLE, ge::DT_INT32, ge::DT_INT32, ge::DT_INT32, 4, false, constTensors);
+    RunTilingTest(
+        x, sorted_indices, pre_location_indices, segment_ids, output_dim0, y, ge::DT_DOUBLE, ge::DT_INT32, ge::DT_INT32,
+        ge::DT_INT32, ge::DT_DOUBLE, ge::DT_INT32, 4, false, constTensors);
+}
+
+TEST_F(SortedSparseSegmentMeanGradTiling, sorted_sparse_segment_mean_grad_tiling_failed_x_dim0_le_zero)
+{
+    gert::StorageShape x = {{0, 64}, {0, 64}};
+    gert::StorageShape sorted_indices = {{8}, {8}};
+    gert::StorageShape pre_location_indices = {{8}, {8}};
+    gert::StorageShape segment_ids = {{8}, {8}};
+    gert::StorageShape output_dim0 = {{1}, {1}};
+    gert::StorageShape y = {{4, 64}, {4, 64}};
+    std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> constTensors;
+    RunTilingTest(
+        x, sorted_indices, pre_location_indices, segment_ids, output_dim0, y, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT32,
+        ge::DT_INT32, ge::DT_FLOAT, ge::DT_INT32, 4, false, constTensors);
+}
+
+TEST_F(SortedSparseSegmentMeanGradTiling, sorted_sparse_segment_mean_grad_tiling_failed_x_shape_size_le_zero)
+{
+    gert::StorageShape x = {{8, 0}, {8, 0}};
+    gert::StorageShape sorted_indices = {{8}, {8}};
+    gert::StorageShape pre_location_indices = {{8}, {8}};
+    gert::StorageShape segment_ids = {{8}, {8}};
+    gert::StorageShape output_dim0 = {{1}, {1}};
+    gert::StorageShape y = {{4, 0}, {4, 0}};
+    std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> constTensors;
+    RunTilingTest(
+        x, sorted_indices, pre_location_indices, segment_ids, output_dim0, y, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT32,
+        ge::DT_INT32, ge::DT_FLOAT, ge::DT_INT32, 4, false, constTensors);
+}
+
+TEST_F(SortedSparseSegmentMeanGradTiling, sorted_sparse_segment_mean_grad_tiling_failed_y_dtype_mismatch)
+{
+    gert::StorageShape x = {{8, 64}, {8, 64}};
+    gert::StorageShape sorted_indices = {{8}, {8}};
+    gert::StorageShape pre_location_indices = {{8}, {8}};
+    gert::StorageShape segment_ids = {{8}, {8}};
+    gert::StorageShape output_dim0 = {{1}, {1}};
+    gert::StorageShape y = {{4, 64}, {4, 64}};
+    std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> constTensors;
+    RunTilingTest(
+        x, sorted_indices, pre_location_indices, segment_ids, output_dim0, y, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT32,
+        ge::DT_INT32, ge::DT_FLOAT16, ge::DT_INT32, 4, false, constTensors);
+}
+
+TEST_F(SortedSparseSegmentMeanGradTiling, sorted_sparse_segment_mean_grad_tiling_failed_x_y_dimnum_mismatch)
+{
+    gert::StorageShape x = {{8, 64}, {8, 64}};
+    gert::StorageShape sorted_indices = {{8}, {8}};
+    gert::StorageShape pre_location_indices = {{8}, {8}};
+    gert::StorageShape segment_ids = {{8}, {8}};
+    gert::StorageShape output_dim0 = {{1}, {1}};
+    gert::StorageShape y = {{4, 64, 3}, {4, 64, 3}};
+    std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> constTensors;
+    RunTilingTest(
+        x, sorted_indices, pre_location_indices, segment_ids, output_dim0, y, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT32,
+        ge::DT_INT32, ge::DT_FLOAT, ge::DT_INT32, 4, false, constTensors);
+}
+
+TEST_F(SortedSparseSegmentMeanGradTiling, sorted_sparse_segment_mean_grad_tiling_failed_x_y_shape_mismatch)
+{
+    gert::StorageShape x = {{8, 64}, {8, 64}};
+    gert::StorageShape sorted_indices = {{8}, {8}};
+    gert::StorageShape pre_location_indices = {{8}, {8}};
+    gert::StorageShape segment_ids = {{8}, {8}};
+    gert::StorageShape output_dim0 = {{1}, {1}};
+    gert::StorageShape y = {{4, 32}, {4, 32}};
+    std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> constTensors;
+    RunTilingTest(
+        x, sorted_indices, pre_location_indices, segment_ids, output_dim0, y, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT32,
+        ge::DT_INT32, ge::DT_FLOAT, ge::DT_INT32, 4, false, constTensors);
+}
+
+TEST_F(SortedSparseSegmentMeanGradTiling, sorted_sparse_segment_mean_grad_tiling_failed_indices_dimnum_ne_1)
+{
+    gert::StorageShape x = {{8, 64}, {8, 64}};
+    gert::StorageShape sorted_indices = {{8, 2}, {8, 2}};
+    gert::StorageShape pre_location_indices = {{8}, {8}};
+    gert::StorageShape segment_ids = {{8}, {8}};
+    gert::StorageShape output_dim0 = {{1}, {1}};
+    gert::StorageShape y = {{4, 64}, {4, 64}};
+    std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> constTensors;
+    RunTilingTest(
+        x, sorted_indices, pre_location_indices, segment_ids, output_dim0, y, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT32,
+        ge::DT_INT32, ge::DT_FLOAT, ge::DT_INT32, 4, false, constTensors);
+}
+
+TEST_F(SortedSparseSegmentMeanGradTiling, sorted_sparse_segment_mean_grad_tiling_failed_indices_shape_size_le_zero)
+{
+    gert::StorageShape x = {{8, 64}, {8, 64}};
+    gert::StorageShape sorted_indices = {{0}, {0}};
+    gert::StorageShape pre_location_indices = {{8}, {8}};
+    gert::StorageShape segment_ids = {{8}, {8}};
+    gert::StorageShape output_dim0 = {{1}, {1}};
+    gert::StorageShape y = {{4, 64}, {4, 64}};
+    std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> constTensors;
+    RunTilingTest(
+        x, sorted_indices, pre_location_indices, segment_ids, output_dim0, y, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT32,
+        ge::DT_INT32, ge::DT_FLOAT, ge::DT_INT32, 4, false, constTensors);
+}
+
+TEST_F(SortedSparseSegmentMeanGradTiling, sorted_sparse_segment_mean_grad_tiling_failed_unsupported_indices_dtype)
+{
+    gert::StorageShape x = {{8, 64}, {8, 64}};
+    gert::StorageShape sorted_indices = {{8}, {8}};
+    gert::StorageShape pre_location_indices = {{8}, {8}};
+    gert::StorageShape segment_ids = {{8}, {8}};
+    gert::StorageShape output_dim0 = {{1}, {1}};
+    gert::StorageShape y = {{4, 64}, {4, 64}};
+    std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> constTensors;
+    RunTilingTest(
+        x, sorted_indices, pre_location_indices, segment_ids, output_dim0, y, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_INT32,
+        ge::DT_INT32, ge::DT_FLOAT, ge::DT_INT32, 4, false, constTensors);
+}
+
+TEST_F(
+    SortedSparseSegmentMeanGradTiling,
+    sorted_sparse_segment_mean_grad_tiling_failed_indices_segment_ids_shape_size_mismatch)
+{
+    gert::StorageShape x = {{8, 64}, {8, 64}};
+    gert::StorageShape sorted_indices = {{8}, {8}};
+    gert::StorageShape pre_location_indices = {{8}, {8}};
+    gert::StorageShape segment_ids = {{10}, {10}};
+    gert::StorageShape output_dim0 = {{1}, {1}};
+    gert::StorageShape y = {{4, 64}, {4, 64}};
+    std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> constTensors;
+    RunTilingTest(
+        x, sorted_indices, pre_location_indices, segment_ids, output_dim0, y, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT32,
+        ge::DT_INT32, ge::DT_FLOAT, ge::DT_INT32, 4, false, constTensors);
+}
+
+TEST_F(SortedSparseSegmentMeanGradTiling, sorted_sparse_segment_mean_grad_tiling_failed_segment_ids_dimnum_ne_1)
+{
+    gert::StorageShape x = {{8, 64}, {8, 64}};
+    gert::StorageShape sorted_indices = {{8}, {8}};
+    gert::StorageShape pre_location_indices = {{8}, {8}};
+    gert::StorageShape segment_ids = {{2, 4}, {2, 4}};
+    gert::StorageShape output_dim0 = {{1}, {1}};
+    gert::StorageShape y = {{4, 64}, {4, 64}};
+    std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> constTensors;
+    RunTilingTest(
+        x, sorted_indices, pre_location_indices, segment_ids, output_dim0, y, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT32,
+        ge::DT_INT32, ge::DT_FLOAT, ge::DT_INT32, 4, false, constTensors);
+}
+
+TEST_F(SortedSparseSegmentMeanGradTiling, sorted_sparse_segment_mean_grad_tiling_failed_unsupported_segment_ids_dtype)
+{
+    gert::StorageShape x = {{8, 64}, {8, 64}};
+    gert::StorageShape sorted_indices = {{8}, {8}};
+    gert::StorageShape pre_location_indices = {{8}, {8}};
+    gert::StorageShape segment_ids = {{8}, {8}};
+    gert::StorageShape output_dim0 = {{1}, {1}};
+    gert::StorageShape y = {{4, 64}, {4, 64}};
+    std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> constTensors;
+    RunTilingTest(
+        x, sorted_indices, pre_location_indices, segment_ids, output_dim0, y, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT32,
+        ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_INT32, 4, false, constTensors);
+}
+
+TEST_F(SortedSparseSegmentMeanGradTiling, sorted_sparse_segment_mean_grad_tiling_failed_output_dim0_shape_size_ne_1)
+{
+    gert::StorageShape x = {{8, 64}, {8, 64}};
+    gert::StorageShape sorted_indices = {{8}, {8}};
+    gert::StorageShape pre_location_indices = {{8}, {8}};
+    gert::StorageShape segment_ids = {{8}, {8}};
+    gert::StorageShape output_dim0 = {{2}, {2}};
+    gert::StorageShape y = {{4, 64}, {4, 64}};
+    std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> constTensors;
+    RunTilingTest(
+        x, sorted_indices, pre_location_indices, segment_ids, output_dim0, y, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT32,
+        ge::DT_INT32, ge::DT_FLOAT, ge::DT_INT32, 4, false, constTensors);
+}
+
+TEST_F(SortedSparseSegmentMeanGradTiling, sorted_sparse_segment_mean_grad_tiling_failed_output_dim0_dtype_ne_int32)
+{
+    gert::StorageShape x = {{8, 64}, {8, 64}};
+    gert::StorageShape sorted_indices = {{8}, {8}};
+    gert::StorageShape pre_location_indices = {{8}, {8}};
+    gert::StorageShape segment_ids = {{8}, {8}};
+    gert::StorageShape output_dim0 = {{1}, {1}};
+    gert::StorageShape y = {{4, 64}, {4, 64}};
+    std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> constTensors;
+    RunTilingTest(
+        x, sorted_indices, pre_location_indices, segment_ids, output_dim0, y, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT32,
+        ge::DT_INT32, ge::DT_FLOAT, ge::DT_FLOAT, 4, false, constTensors);
+}
+
+TEST_F(
+    SortedSparseSegmentMeanGradTiling,
+    sorted_sparse_segment_mean_grad_tiling_failed_indices_indices_location_shape_size_mismatch)
+{
+    gert::StorageShape x = {{8, 64}, {8, 64}};
+    gert::StorageShape sorted_indices = {{8}, {8}};
+    gert::StorageShape pre_location_indices = {{10}, {10}};
+    gert::StorageShape segment_ids = {{8}, {8}};
+    gert::StorageShape output_dim0 = {{1}, {1}};
+    gert::StorageShape y = {{4, 64}, {4, 64}};
+    std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> constTensors;
+    RunTilingTest(
+        x, sorted_indices, pre_location_indices, segment_ids, output_dim0, y, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT32,
+        ge::DT_INT32, ge::DT_FLOAT, ge::DT_INT32, 4, false, constTensors);
+}
+
+TEST_F(SortedSparseSegmentMeanGradTiling, sorted_sparse_segment_mean_grad_tiling_failed_indices_location_dimnum_ne_1)
+{
+    gert::StorageShape x = {{8, 64}, {8, 64}};
+    gert::StorageShape sorted_indices = {{8}, {8}};
+    gert::StorageShape pre_location_indices = {{2, 4}, {2, 4}};
+    gert::StorageShape segment_ids = {{8}, {8}};
+    gert::StorageShape output_dim0 = {{1}, {1}};
+    gert::StorageShape y = {{4, 64}, {4, 64}};
+    std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> constTensors;
+    RunTilingTest(
+        x, sorted_indices, pre_location_indices, segment_ids, output_dim0, y, ge::DT_FLOAT, ge::DT_INT32, ge::DT_INT32,
+        ge::DT_INT32, ge::DT_FLOAT, ge::DT_INT32, 4, false, constTensors);
+}
+
+TEST_F(
+    SortedSparseSegmentMeanGradTiling, sorted_sparse_segment_mean_grad_tiling_failed_unsupported_indices_location_dtype)
+{
+    gert::StorageShape x = {{8, 64}, {8, 64}};
+    gert::StorageShape sorted_indices = {{8}, {8}};
+    gert::StorageShape pre_location_indices = {{8}, {8}};
+    gert::StorageShape segment_ids = {{8}, {8}};
+    gert::StorageShape output_dim0 = {{1}, {1}};
+    gert::StorageShape y = {{4, 64}, {4, 64}};
+    std::vector<std::pair<size_t, std::unique_ptr<uint8_t[]>>> constTensors;
+    RunTilingTest(
+        x, sorted_indices, pre_location_indices, segment_ids, output_dim0, y, ge::DT_FLOAT, ge::DT_INT32, ge::DT_FLOAT,
+        ge::DT_INT32, ge::DT_FLOAT, ge::DT_INT32, 4, false, constTensors);
 }

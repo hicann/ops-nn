@@ -66,12 +66,15 @@ ge::graphStatus Concatenate(const gert::Shape* s1, const gert::Shape* s2, gert::
 static ge::graphStatus WithRankAtLeast(const gert::Shape* tensor, int64_t rank, 
                                        gert::Shape* out_shape, const std::string opName) {
     if (rank > INT32_MAX) {
-      OP_LOGE(opName, "rank[%ld] cannot exceed kint32max", rank);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            opName.c_str(), "target rank", std::to_string(rank).c_str(), "rank must not exceed INT32_MAX");
       return GRAPH_FAILED;
     }
     int64_t size = static_cast<int64_t>(tensor->GetDimNum());
     if ((!IsUnknownRank(*tensor)) && size < rank) {
-      OP_LOGE(opName, "rank[%ld] must be at least [%ld]", size, rank);
+        std::string reasonStr = "shape dim count should be at least " + std::to_string(rank);
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            opName.c_str(), "input shape", std::to_string(size).c_str(), reasonStr.c_str());
       return GRAPH_FAILED;
     }
     *out_shape = *tensor;
@@ -81,7 +84,8 @@ static ge::graphStatus WithRankAtLeast(const gert::Shape* tensor, int64_t rank,
 graphStatus WithRank(const gert::Shape* tensor, int64_t rank, 
                      gert::Shape* out_shape, const std::string opName) {
     if (rank > INT32_MAX) {
-      OP_LOGE(opName, "rank[%ld] cannot exceed kint32max", rank);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            opName.c_str(), "target rank", std::to_string(rank).c_str(), "rank must not exceed INT32_MAX");
       return GRAPH_FAILED;
     }
     int64_t existing = static_cast<int64_t>(tensor->GetDimNum());
@@ -90,7 +94,8 @@ graphStatus WithRank(const gert::Shape* tensor, int64_t rank,
       return GRAPH_SUCCESS;
     }
     if (existing != rank) {
-      OP_LOGE(opName, "rank[%ld] must be [%ld]", existing, rank);
+        OP_LOGE_FOR_INVALID_SHAPEDIM(
+            opName.c_str(), "input shape", std::to_string(existing).c_str(), std::to_string(rank).c_str());
       return GRAPH_FAILED;
     }
     *out_shape = *tensor;
@@ -120,26 +125,30 @@ graphStatus SubShapeUpdateStartAndEnd(SubShapePara& para, int64_t s_rank, const 
     if (start < 0) {
       start += s_rank;
       if (start < 0) {
-        OP_LOGE(opName, "invalid start[%ld] to get sub shape with rank[%ld]", 
-                start - s_rank, s_rank);
+            std::string reasonStr = "invalid start index for sub shape extraction with rank " + std::to_string(s_rank);
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                opName.c_str(), "start index", std::to_string(start - s_rank).c_str(), reasonStr.c_str());
         return GRAPH_FAILED;
       }
     }
     if (end < 0) {
       end += s_rank;
       if (end < 0) {
-        OP_LOGE(opName, "invalid end[%ld] to get sub shape with rank[%ld]", 
-                end - s_rank, s_rank);
+            std::string reasonStr = "invalid end index for sub shape extraction with rank " + std::to_string(s_rank);
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                opName.c_str(), "end index", std::to_string(end - s_rank).c_str(), reasonStr.c_str());
         return GRAPH_FAILED;
       }
     }
     if (stride > 0 && start > end) {
-      OP_LOGE(opName, "start[%ld] should be less than end[%ld] at positive stride[%ld]",
-              start, end, stride);
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            opName.c_str(), "start, end", (std::to_string(start) + ", " + std::to_string(end)).c_str(),
+            ("start must be less than end when stride is positive(" + std::to_string(stride) + ")").c_str());
       return GRAPH_FAILED;
     } else if (stride < 0 && start < end) {
-      OP_LOGE(opName, "start[%ld] should be greater than end[%ld] at negative stride[%ld]",
-              start, end, stride);
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            opName.c_str(), "start, end", (std::to_string(start) + ", " + std::to_string(end)).c_str(),
+            ("start must be greater than end when stride is negative(" + std::to_string(stride) + ")").c_str());
       return GRAPH_FAILED;
     }
     return GRAPH_SUCCESS;
@@ -154,7 +163,8 @@ graphStatus SubShape(const gert::Shape* s,
     int64_t stride = para.stride;
     int64_t s_rank = s->GetDimNum();
     if (s_rank > static_cast<int64_t>(std::numeric_limits<int32_t>::max())) {
-      OP_LOGE(opName, "rank[%ld] cannot exceed kint32max", s_rank);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            opName.c_str(), "shape rank", std::to_string(s_rank).c_str(), "rank must not exceed INT32_MAX");
       return GRAPH_FAILED;
     }
     if (start == 0 && stride == 1 &&
@@ -164,8 +174,9 @@ graphStatus SubShape(const gert::Shape* s,
       *out = out_shape;
       return GRAPH_SUCCESS;
     }
-    OP_LOGE_IF(SubShapeUpdateStartAndEnd(para, s_rank , opName) != GRAPH_SUCCESS,
-               ge::GRAPH_FAILED, opName, "update start and end failed.");
+    if (SubShapeUpdateStartAndEnd(para, s_rank, opName) != GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
     out->SetDimNum(0);
     for (int64_t i = start; (stride > 0 ? i < end : i > end); i += stride) {
       out->AppendDim(s->GetDim(i));
@@ -184,16 +195,18 @@ static ge::graphStatus CheckInputAndOutputNum(gert::InferShapeContext *context) 
     OP_LOGI(context->GetNodeName(), "Begin to do CheckInputAndOutputNum");
     constexpr size_t INPUT_NUM = 5;
     constexpr size_t OUTPUT_NUM = 1;
-    OP_CHECK_IF(INPUT_NUM != context->GetComputeNodeInputNum(),
-        OP_LOGE(
-            context->GetNodeName(),
-            "[", context->GetNodeName(), "], input size should be 5, got[%zu], ", context->GetComputeNodeInputNum()),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(OUTPUT_NUM != context->GetComputeNodeOutputNum(),
-        OP_LOGE(
-            context->GetNodeName(),
-            "[", context->GetNodeName(), "], output size should be 1, got[%zu].", context->GetComputeNodeOutputNum()),
-        return ge::GRAPH_FAILED);
+    if (INPUT_NUM != context->GetComputeNodeInputNum()) {
+        OP_LOGE_FOR_INVALID_TENSORNUM(
+            context->GetNodeName(), "Number of input tensors", static_cast<int64_t>(context->GetComputeNodeInputNum()),
+            "5");
+        return ge::GRAPH_FAILED;
+    }
+    if (OUTPUT_NUM != context->GetComputeNodeOutputNum()) {
+        OP_LOGE_FOR_INVALID_TENSORNUM(
+            context->GetNodeName(), "Number of output tensors",
+            static_cast<int64_t>(context->GetComputeNodeOutputNum()), "1");
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -202,34 +215,30 @@ static ge::graphStatus SortedSparseSegmentMeanGradCheck(gert::InferShapeContext 
     const gert::Shape *x_shape = context->GetInputShape(kInputIndex0);
     OPS_CHECK_NULL_WITH_CONTEXT(context, x_shape);
     gert::Shape unused_shape;
-    OP_CHECK_IF(WithRankAtLeast(x_shape, kRank1, &unused_shape, context->GetNodeName()) != GRAPH_SUCCESS,
-        OP_LOGE(
-            context->GetNodeName(),
-            "[", context->GetNodeName(), "], failed to call WithRankAtLeast function."),
-        return ge::GRAPH_FAILED);
-    const gert::Shape *indices_shape = context->GetInputShape(kInputIndex1);
+    if (WithRankAtLeast(x_shape, kRank1, &unused_shape, context->GetNodeName()) != GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    const gert::Shape* indices_shape = context->GetInputShape(kInputIndex1);
     OPS_CHECK_NULL_WITH_CONTEXT(context, indices_shape);
-    OP_CHECK_IF(WithRank(indices_shape, kRank1, &unused_shape, context->GetNodeName()) != GRAPH_SUCCESS,
-        OP_LOGE(
-            context->GetNodeName(),
-            "[", context->GetNodeName(), "], failed to call WithRank function."),
-        return ge::GRAPH_FAILED);
-    const gert::Shape *location_shape = context->GetInputShape(kInputIndex2);
+    if (WithRank(indices_shape, kRank1, &unused_shape, context->GetNodeName()) != GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    const gert::Shape* location_shape = context->GetInputShape(kInputIndex2);
     OPS_CHECK_NULL_WITH_CONTEXT(context, location_shape);
-    OP_CHECK_IF(WithRank(location_shape, kRank1, &unused_shape, context->GetNodeName()) != GRAPH_SUCCESS,
-        OP_LOGE(
-            context->GetNodeName(),
-            "[", context->GetNodeName(), "], failed to call WithRank function."),
-        return ge::GRAPH_FAILED);
-    const gert::Shape *out_dim_0_shape = context->GetInputShape(kInputIndex4);
+    if (WithRank(location_shape, kRank1, &unused_shape, context->GetNodeName()) != GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    const gert::Shape* out_dim_0_shape = context->GetInputShape(kInputIndex4);
     OPS_CHECK_NULL_WITH_CONTEXT(context, out_dim_0_shape);
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus InferShapeForSortedSparseSegmentMeanGrad(gert::InferShapeContext *context) {
+static ge::graphStatus InferShapeForSortedSparseSegmentMeanGrad(gert::InferShapeContext *context)
+{
     OP_LOGI(context->GetNodeName(), "Begin to do InferShapeForSortedSparseSegmentMeanGrad");
-    OP_CHECK_IF(CheckInputAndOutputNum(context) != GRAPH_SUCCESS, 
-        OP_LOGE(context->GetNodeName(), "[", context->GetNodeName(), "], num check failed."), return ge::GRAPH_FAILED);
+    if (CheckInputAndOutputNum(context) != GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
     const gert::Shape *x_shape = context->GetInputShape(kInputIndex0);
     OPS_CHECK_NULL_WITH_CONTEXT(context, x_shape);
     gert::Shape *y_shape = context->GetOutputShape(kOutputIndex0);
@@ -247,22 +256,25 @@ static ge::graphStatus InferShapeForSortedSparseSegmentMeanGrad(gert::InferShape
         }
         return ge::GRAPH_SUCCESS;
     } else {
-        OP_CHECK_IF(SortedSparseSegmentMeanGradCheck(context) != GRAPH_SUCCESS, 
-            OP_LOGE(context->GetNodeName(), "[", context->GetNodeName(), "], check failed."), return ge::GRAPH_FAILED);
+        if (SortedSparseSegmentMeanGradCheck(context) != GRAPH_SUCCESS) {
+            return ge::GRAPH_FAILED;
+        }
         int64_t start = 1;
         int64_t stride = 1;
         gert::Shape sub_shape_out;
         struct SubShapePara para(start, static_cast<int64_t>(x_shape->GetDimNum()), stride);
-        OP_CHECK_IF(SubShape(x_shape, para, &sub_shape_out, context->GetNodeName()) != GRAPH_SUCCESS,
-            OP_LOGE(context->GetNodeName(), "[", context->GetNodeName(), "], call SubShape function failed."), return ge::GRAPH_FAILED);
+        if (SubShape(x_shape, para, &sub_shape_out, context->GetNodeName()) != GRAPH_SUCCESS) {
+            return ge::GRAPH_FAILED;
+        }
         gert::Shape dim0_shape;
         const gert::Tensor *out_dim_0_tensor = context->GetInputTensor(kInputIndex4);
         OPS_CHECK_NULL_WITH_CONTEXT(context, out_dim_0_tensor);
         int32_t dims0_data = *(out_dim_0_tensor->GetData<int32_t>());
         dim0_shape = gert::Shape({dims0_data});
         gert::Shape out;
-        OP_CHECK_IF(Concatenate(&dim0_shape, &sub_shape_out, &out) != GRAPH_SUCCESS,
-            OP_LOGE(context->GetNodeName(), "[", context->GetNodeName(), "], call Concatenate function failed."), return ge::GRAPH_FAILED);
+        if (Concatenate(&dim0_shape, &sub_shape_out, &out) != GRAPH_SUCCESS) {
+            return ge::GRAPH_FAILED;
+        }
         *y_shape = out;
     }
 

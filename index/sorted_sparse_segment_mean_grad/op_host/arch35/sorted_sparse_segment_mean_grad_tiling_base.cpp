@@ -61,8 +61,11 @@ ge::graphStatus SortedSparseSegmentMeanGradBaseTiling::GetPlatformInfo()
         hardwareData.ubSize = static_cast<int64_t>(ubSizePlatform);
     }
 
-    OP_TILING_CHECK(
-        hardwareData.coreNum == 0, VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "coreNum is 0"), return ge::GRAPH_FAILED);
+    if (hardwareData.coreNum == 0) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context_->GetNodeName(), "coreNum",  "0", "platform coreNum must be greater than 0");
+        return ge::GRAPH_FAILED;
+    }
     
     PrintHardwareData();
     return ge::GRAPH_SUCCESS;
@@ -74,26 +77,24 @@ ge::graphStatus SortedSparseSegmentMeanGradBaseTiling::GetXInfoAndCheck()
     OPS_CHECK_NULL_WITH_CONTEXT(context_, inputX);
     xShape_ = Ops::Base::EnsureNotScalar(inputX->GetStorageShape());
 
-    OP_TILING_CHECK(
-        xShape_.GetDimNum() < 1,
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context_->GetNodeName(), "SortedSparseSegmentMeanGrad: input shape dim = %zu, should be greater than or equal to 1",
-            xShape_.GetDimNum()),
-        return ge::GRAPH_FAILED);
+    if (xShape_.GetDimNum() < 1) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            context_->GetNodeName(), "x", std::to_string(xShape_.GetDimNum()).c_str(),
+            "dimNum of x must be greater than or equal to 1");
+        return ge::GRAPH_FAILED;
+    }
 
-    OP_TILING_CHECK(
-        xShape_.GetDim(0) <= 0,
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context_->GetNodeName(), "SortedSparseSegmentMeanGrad: dim0 of input x is %ld, cannot less than or equal to zero",
-            xShape_.GetDim(0)),
-        return ge::GRAPH_FAILED);
-        
-    OP_TILING_CHECK(
-        xShape_.GetShapeSize() <= 0,
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context_->GetNodeName(), "SortedSparseSegmentMeanGrad: input shape size %ld less than or equal to zero failed",
-            xShape_.GetShapeSize()),
-        return ge::GRAPH_FAILED);
+    if (xShape_.GetDim(0) <= 0) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            context_->GetNodeName(), "x", std::to_string(xShape_.GetDim(0)).c_str(), "dim0 of x must be greater than 0");
+        return ge::GRAPH_FAILED;
+    }
+
+    if (xShape_.GetShapeSize() <= 0) {
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+            context_->GetNodeName(), "x", std::to_string(xShape_.GetShapeSize()).c_str(), "shapeSize of x must be greater than 0");
+        return ge::GRAPH_FAILED;
+    }
     inputData.segmentNum = xShape_.GetDim(0);
     inputData.innerSize = 1;
     for (size_t i = 1; i < xShape_.GetDimNum(); i++) {
@@ -103,8 +104,11 @@ ge::graphStatus SortedSparseSegmentMeanGradBaseTiling::GetXInfoAndCheck()
     auto inputDesc = context_->GetInputDesc(INPUT_X);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, inputDesc);
     inputData.inputDtype = inputDesc->GetDataType();
-    if (inputData.inputDtype != ge::DataType::DT_FLOAT16 && inputData.inputDtype != ge::DataType::DT_FLOAT && inputData.inputDtype != ge::DataType::DT_BF16) {
-        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "SortedSparseSegmentMeanGrad: invalid dtype! The input x dtype only support float16, float32 and bfloat16");
+    if (inputData.inputDtype != ge::DataType::DT_FLOAT16 && inputData.inputDtype != ge::DataType::DT_FLOAT &&
+        inputData.inputDtype != ge::DataType::DT_BF16) {
+        OP_LOGE_FOR_INVALID_DTYPE(
+            context_->GetNodeName(), "x", std::to_string(static_cast<int32_t>(inputData.inputDtype)).c_str(),
+            "[DT_FLOAT16, DT_FLOAT, DT_BF16]");
         return ge::GRAPH_FAILED;
     }
 
@@ -116,8 +120,12 @@ ge::graphStatus SortedSparseSegmentMeanGradBaseTiling::GetYInfoAndCheck()
     auto outputDesc = context_->GetOutputDesc(0);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, outputDesc);
     if (outputDesc->GetDataType() != inputData.inputDtype) {
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context_->GetNodeName(), "SortedSparseSegmentMeanGrad: input dtype should be same as output");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            context_->GetNodeName(), "x, y",
+            (std::to_string(static_cast<int32_t>(inputData.inputDtype)) + ", " +
+             std::to_string(static_cast<int32_t>(outputDesc->GetDataType())))
+                .c_str(),
+            "dtype of x must be same as dtype of y");
         return ge::GRAPH_FAILED;
     }
 
@@ -126,15 +134,17 @@ ge::graphStatus SortedSparseSegmentMeanGradBaseTiling::GetYInfoAndCheck()
     auto yShape = Ops::Base::EnsureNotScalar(outputY->GetStorageShape());
     auto yShapeDimNum = yShape.GetDimNum();
     if (xShape_.GetDimNum() != yShapeDimNum) {
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context_->GetNodeName(), "SortedSparseSegmentMeanGrad: input x dim number should be same as output y dim number");
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            context_->GetNodeName(), "x, y", (std::to_string(xShape_.GetDimNum()) + ", " + std::to_string(yShapeDimNum)).c_str(),
+            "dimNum of x must equal dimNum of y");
         return ge::GRAPH_FAILED;
     }
 
     for (size_t i = 1; i < yShapeDimNum; i++) {
         if (xShape_.GetDim(i) != yShape.GetDim(i)) {
-            VECTOR_INNER_ERR_REPORT_TILIING(
-                context_->GetNodeName(), "SortedSparseSegmentMeanGrad: input x shape must match the shape of output y starting from the first dim");
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                context_->GetNodeName(), "x, y", (std::to_string(xShape_.GetDim(i)) + ", " + std::to_string(yShape.GetDim(i))).c_str(),
+                "shape of x must match the shape of output y starting from the first dim");
             return ge::GRAPH_FAILED;
         }
     }
@@ -148,28 +158,26 @@ ge::graphStatus SortedSparseSegmentMeanGradBaseTiling::GetIndicesInfoAndCheck()
     OPS_CHECK_NULL_WITH_CONTEXT(context_, inputIndices);
     indicesShape_ = Ops::Base::EnsureNotScalar(inputIndices->GetStorageShape());
 
-    OP_TILING_CHECK(
-        indicesShape_.GetDimNum() != 1,
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context_->GetNodeName(), "SortedSparseSegmentMeanGrad: indices shape dim = %zu, should be equal to 1",
-            indicesShape_.GetDimNum()),
-        return ge::GRAPH_FAILED);
+    if (indicesShape_.GetDimNum() != 1) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "indices", std::to_string(indicesShape_.GetDimNum()).c_str(), "1");
+        return ge::GRAPH_FAILED;
+    }
 
-    OP_TILING_CHECK(
-        indicesShape_.GetShapeSize() <= 0,
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context_->GetNodeName(), "SortedSparseSegmentMeanGrad: indices shape size %ld less than or equal to zero failed",
-            indicesShape_.GetShapeSize()),
-        return ge::GRAPH_FAILED);
+    if (indicesShape_.GetShapeSize() <= 0) {
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+            context_->GetNodeName(), "indices", std::to_string(indicesShape_.GetShapeSize()).c_str(),
+            "shapeSize of indices must be greater than 0");
+        return ge::GRAPH_FAILED;
+    }
     inputData.outterSize = indicesShape_.GetShapeSize();
 
     auto inputIndicesDesc = context_->GetInputDesc(INPUT_INDICES);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, inputIndicesDesc);
     inputData.indicesDtype = inputIndicesDesc->GetDataType();
     if (inputData.indicesDtype != ge::DataType::DT_INT32 && inputData.indicesDtype != ge::DataType::DT_INT64) {
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context_->GetNodeName(), "SortedSparseSegmentMeanGrad: indices dtype only support int32, int64, but got [%s].",
-            Ops::Base::ToString(inputData.indicesDtype).c_str());
+        OP_LOGE_FOR_INVALID_DTYPE(
+            context_->GetNodeName(), "indices", std::to_string(static_cast<int32_t>(inputData.indicesDtype)).c_str(),
+            "[DT_INT32, DT_INT64]");
         return ge::GRAPH_FAILED;
     }
 
@@ -182,25 +190,26 @@ ge::graphStatus SortedSparseSegmentMeanGradBaseTiling::GetSegmentIdsInfoAndCheck
     auto inputSegmentIds = context_->GetInputShape(INPUT_SEGMENT_IDS);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, inputSegmentIds);
     auto segmentIdsShape = Ops::Base::EnsureNotScalar(inputSegmentIds->GetStorageShape());
-    OP_TILING_CHECK(
-        indicesShape_.GetShapeSize() != segmentIdsShape.GetShapeSize(),
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context_->GetNodeName(), "SortedSparseSegmentMeanGrad: indices shape size is not same as segment_ids shape size"),
-        return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(
-        segmentIdsShape.GetDimNum() != 1,
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context_->GetNodeName(), "SortedSparseSegmentMeanGrad: segment_ids shape dim = %zu, should be equal to 1",
-            segmentIdsShape.GetDimNum()),
-        return ge::GRAPH_FAILED);
+    if (indicesShape_.GetShapeSize() != segmentIdsShape.GetShapeSize()) {
+        OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(
+            context_->GetNodeName(), "indices, segment_ids",
+            (std::to_string(indicesShape_.GetShapeSize()) + ", " + std::to_string(segmentIdsShape.GetShapeSize()))
+                .c_str(),
+            "shapeSize of indices must equal shapeSize of segment_ids");
+        return ge::GRAPH_FAILED;
+    }
+    if (segmentIdsShape.GetDimNum() != 1) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "segment_ids", std::to_string(segmentIdsShape.GetDimNum()).c_str(), "1");
+        return ge::GRAPH_FAILED;
+    }
 
     auto inputSegmentIdsDesc = context_->GetInputDesc(INPUT_SEGMENT_IDS);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, inputSegmentIdsDesc);
     inputData.segmentIdsDtype = inputSegmentIdsDesc->GetDataType();
     if (inputData.segmentIdsDtype != ge::DataType::DT_INT32 && inputData.segmentIdsDtype != ge::DataType::DT_INT64) {
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context_->GetNodeName(), "SortedSparseSegmentMeanGrad: segment_ids dtype only support int32, int64, but got [%s].",
-            Ops::Base::ToString(inputData.segmentIdsDtype).c_str());
+        OP_LOGE_FOR_INVALID_DTYPE(
+            context_->GetNodeName(), "segment_ids", std::to_string(static_cast<int32_t>(inputData.segmentIdsDtype)).c_str(),
+            "[DT_INT32, DT_INT64]");
         return ge::GRAPH_FAILED;
     }
 
@@ -213,18 +222,18 @@ ge::graphStatus SortedSparseSegmentMeanGradBaseTiling::GetOutputDim0InfoAndCheck
     auto outputDim0 = context_->GetInputShape(OUTPUT_DIM0);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, outputDim0);
     auto outputDim0Shape = Ops::Base::EnsureNotScalar(outputDim0->GetStorageShape());
-    OP_TILING_CHECK(
-        outputDim0Shape.GetShapeSize() != 1 || outputDim0Shape.GetDimNum() != 1,
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context_->GetNodeName(), "SortedSparseSegmentMeanGrad: outputDim0 shape dim = %zu, should be equal to 1",
-            outputDim0Shape.GetShapeSize()),
-        return ge::GRAPH_FAILED);
+    if (outputDim0Shape.GetShapeSize() != 1 || outputDim0Shape.GetDimNum() != 1) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            context_->GetNodeName(), "outputDim0", std::to_string(outputDim0Shape.GetDimNum()).c_str(),
+            "dimNum and shapeSize of outputDim0 must both be 1");
+        return ge::GRAPH_FAILED;
+    }
     auto outputDim0Desc = context_->GetInputDesc(OUTPUT_DIM0);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, outputDim0Desc);
     if (outputDim0Desc->GetDataType() != ge::DataType::DT_INT32) {
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context_->GetNodeName(), "SortedSparseSegmentMeanGrad: outputDim0 dtype only support int32, but got [%s].",
-            Ops::Base::ToString(outputDim0Desc->GetDataType()).c_str());
+        OP_LOGE_FOR_INVALID_DTYPE(
+            context_->GetNodeName(), "outputDim0", std::to_string(static_cast<int32_t>(outputDim0Desc->GetDataType())).c_str(),
+            "DT_INT32");
         return ge::GRAPH_FAILED;
     }
     const gert::Tensor* outputDim0Tensor = context_->GetInputTensor(OUTPUT_DIM0);
@@ -240,25 +249,28 @@ ge::graphStatus SortedSparseSegmentMeanGradBaseTiling::GetIndicesLocationInfoAnd
     auto inputIndicesLocation = context_->GetInputShape(INPUT_INDICES_LOCATION);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, inputIndicesLocation);
     auto indicesLocationShape = Ops::Base::EnsureNotScalar(inputIndicesLocation->GetStorageShape());
-    OP_TILING_CHECK(
-        indicesShape_.GetShapeSize() != indicesLocationShape.GetShapeSize(),
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context_->GetNodeName(), "SortedSparseSegmentMeanGrad: indices shape size is not same as indicesLocation shape size"),
-        return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(
-        indicesLocationShape.GetDimNum() != 1,
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context_->GetNodeName(), "SortedSparseSegmentMeanGrad: indicesLocation shape dim = %zu, should be equal to 1",
-            indicesLocationShape.GetDimNum()),
-        return ge::GRAPH_FAILED);
+    if (indicesShape_.GetShapeSize() != indicesLocationShape.GetShapeSize()) {
+        OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(
+            context_->GetNodeName(), "indices, indicesLocation",
+            (std::to_string(indicesShape_.GetShapeSize()) + ", " + std::to_string(indicesLocationShape.GetShapeSize()))
+                .c_str(),
+            "shapeSize of indices must equal shapeSize of indicesLocation");
+        return ge::GRAPH_FAILED;
+    }
+    if (indicesLocationShape.GetDimNum() != 1) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM(
+            context_->GetNodeName(), "indicesLocation", std::to_string(indicesLocationShape.GetDimNum()).c_str(), "1");
+        return ge::GRAPH_FAILED;
+    }
 
     auto inputIndicesLocationDesc = context_->GetInputDesc(INPUT_INDICES_LOCATION);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, inputIndicesLocationDesc);
     inputData.indicesLocationDtype = inputIndicesLocationDesc->GetDataType();
-    if (inputData.indicesLocationDtype != ge::DataType::DT_INT32 && inputData.indicesLocationDtype != ge::DataType::DT_INT64) {
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            context_->GetNodeName(), "SortedSparseSegmentMeanGrad: indicesLocation dtype only support int32, int64, but got [%s].",
-            Ops::Base::ToString(inputData.indicesLocationDtype).c_str());
+    if (inputData.indicesLocationDtype != ge::DataType::DT_INT32 &&
+        inputData.indicesLocationDtype != ge::DataType::DT_INT64) {
+        OP_LOGE_FOR_INVALID_DTYPE(
+            context_->GetNodeName(), "indicesLocation", std::to_string(static_cast<int32_t>(inputData.indicesLocationDtype)).c_str(),
+            "[DT_INT32, DT_INT64]");
         return ge::GRAPH_FAILED;
     }
 
@@ -269,24 +281,24 @@ ge::graphStatus SortedSparseSegmentMeanGradBaseTiling::GetShapeAttrsInfo()
 {
     OP_LOGD("SortedSparseSegmentMeanGradBaseTiling", "[SortedSparseSegmentMeanGrad] enter GetShapeAttrsInfo");
 
-    OP_TILING_CHECK(GetXInfoAndCheck() != ge::GRAPH_SUCCESS,
-                  VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "input x check failed."),
-                  return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(GetYInfoAndCheck() != ge::GRAPH_SUCCESS,
-                  VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "output y check failed."),
-                  return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(GetIndicesInfoAndCheck() != ge::GRAPH_SUCCESS,
-                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "input indices check failed."),
-                    return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(GetSegmentIdsInfoAndCheck() != ge::GRAPH_SUCCESS,
-                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "input segment_ids check failed."),
-                    return ge::GRAPH_FAILED);
-    OP_TILING_CHECK(GetOutputDim0InfoAndCheck() != ge::GRAPH_SUCCESS,
-                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "input outputDim0 check failed."),
-                    return ge::GRAPH_FAILED);                                               
-    OP_TILING_CHECK(GetIndicesLocationInfoAndCheck() != ge::GRAPH_SUCCESS,
-                    VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "input indicesLocation check failed."),
-                    return ge::GRAPH_FAILED);  
+    if (GetXInfoAndCheck() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    if (GetYInfoAndCheck() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    if (GetIndicesInfoAndCheck() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    if (GetSegmentIdsInfoAndCheck() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    if (GetOutputDim0InfoAndCheck() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    if (GetIndicesLocationInfoAndCheck() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
     PrintInputData();
     return ge::GRAPH_SUCCESS;
 }

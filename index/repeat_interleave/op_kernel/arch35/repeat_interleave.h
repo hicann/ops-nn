@@ -26,6 +26,38 @@ using namespace AscendC;
 constexpr uint64_t DOUBLE_BUFFER = 2;
 constexpr uint64_t MIN_CP_THRESHOLD = 128;
 
+template <typename T>
+__simd_vf__ inline void CopyOneCpToRepeatOutVf(
+    __ubuf__ T* xInLocalPtr, __ubuf__ T* xOutLocalPtr, int64_t dataCount, uint16_t repeatTimes)
+{
+    AscendC::MicroAPI::UnalignReg uIn;
+    AscendC::MicroAPI::UnalignReg uOut;
+    AscendC::MicroAPI::RegTensor<T> inputRegTensor;
+    AscendC::MicroAPI::DataCopyUnAlignPre(uIn, xInLocalPtr);
+    AscendC::MicroAPI::DataCopyUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+        inputRegTensor, uIn, xInLocalPtr, dataCount);
+    for (uint16_t i = 0; i < repeatTimes; i++) {
+        AscendC::MicroAPI::DataCopyUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+            xOutLocalPtr, inputRegTensor, uOut, dataCount);
+    }
+    AscendC::MicroAPI::DataCopyUnAlignPost(xOutLocalPtr, uOut, 0);
+}
+
+__simd_vf__ inline void CopyXToOutNormVf(
+    __ubuf__ int8_t* xInLocalPtr, __ubuf__ int8_t* xOutLocalPtr, uint32_t totalBytes, uint16_t size, uint16_t stride)
+{
+    AscendC::MicroAPI::RegTensor<int8_t> inputRegTensor;
+    uint32_t sreg = totalBytes;
+    AscendC::MicroAPI::MaskReg preg;
+
+    for (uint16_t i = 0; i < size; i++) {
+        preg = AscendC::MicroAPI::UpdateMask<int8_t>(sreg);
+        AscendC::MicroAPI::AddrReg offset = AscendC::MicroAPI::CreateAddrReg<int8_t>(i, stride);
+        AscendC::MicroAPI::DataCopy(inputRegTensor, xInLocalPtr, offset);
+        AscendC::MicroAPI::DataCopy(xOutLocalPtr, inputRegTensor, offset, preg);
+    }
+}
+
 template <typename T, typename U>
 class RepeatInterleaveImpl {
 public:
@@ -173,24 +205,11 @@ __aicore__ inline void RepeatInterleaveImpl<T, U>::CopyOneCpToRepeatOut(
     const LocalTensor<T> xInLocal, uint16_t repeatTimes)
 {
     LocalTensor<T> xOutLocal = xOutQueue_.DeQue<T>();
-    __local_mem__ T* xInLocalPtr = ((__local_mem__ T*)xInLocal.GetPhyAddr()) + copyFromXNum_;
-    __local_mem__ T* xOutLocalPtr = ((__local_mem__ T*)xOutLocal.GetPhyAddr()) + copyToMatchOutNum_;
+    __ubuf__ T* xInLocalPtr = (__ubuf__ T*)xInLocal.GetPhyAddr() + copyFromXNum_;
+    __ubuf__ T* xOutLocalPtr = (__ubuf__ T*)xOutLocal.GetPhyAddr() + copyToMatchOutNum_;
 
     int64_t dataCount = tilingData_.mergedDims[2];
-    __VEC_SCOPE__
-    {
-        AscendC::MicroAPI::UnalignReg uIn;
-        AscendC::MicroAPI::UnalignReg uOut;
-        AscendC::MicroAPI::RegTensor<T> inputRegTensor;
-        AscendC::MicroAPI::DataCopyUnAlignPre(uIn, xInLocalPtr);
-        AscendC::MicroAPI::DataCopyUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-            inputRegTensor, uIn, xInLocalPtr, dataCount);
-        for (uint16_t i = 0; i < repeatTimes; i++) {
-            AscendC::MicroAPI::DataCopyUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-                xOutLocalPtr, inputRegTensor, uOut, dataCount);
-        }
-        AscendC::MicroAPI::DataCopyUnAlignPost(xOutLocalPtr, uOut, 0);
-    }
+    CopyOneCpToRepeatOutVf<T>(xInLocalPtr, xOutLocalPtr, dataCount, repeatTimes);
 
     copyToMatchOutNum_ += repeatTimes * dataCount;
     xOutQueue_.EnQue(xOutLocal);
@@ -248,25 +267,13 @@ __aicore__ inline void RepeatInterleaveImpl<T, U>::CopyXToOut(int64_t dataCount)
     LocalTensor<T> xInLocal = xInQueue_.DeQue<T>();
     LocalTensor<T> xOutLocal = xOutQueue_.AllocTensor<T>();
 
-    __local_mem__ int8_t* xInLocalPtr = (__local_mem__ int8_t*)xInLocal.GetPhyAddr();
-    __local_mem__ int8_t* xOutLocalPtr = (__local_mem__ int8_t*)xOutLocal.GetPhyAddr();
+    __ubuf__ int8_t* xInLocalPtr = (__ubuf__ int8_t*)xInLocal.GetPhyAddr();
+    __ubuf__ int8_t* xOutLocalPtr = (__ubuf__ int8_t*)xOutLocal.GetPhyAddr();
 
     uint32_t totalBytes = dataCount * sizeof(T);
     uint16_t stride = Ops::Base::GetVRegSize();
     uint16_t size = (totalBytes + stride - 1) / stride;
-    __VEC_SCOPE__
-    {
-        AscendC::MicroAPI::RegTensor<int8_t> inputRegTensor;
-        uint32_t sreg = totalBytes;
-        AscendC::MicroAPI::MaskReg preg;
-
-        for (uint16_t i = 0; i < size; i++) {
-            preg = AscendC::MicroAPI::UpdateMask<int8_t>(sreg);
-            AscendC::MicroAPI::AddrReg offset = AscendC::MicroAPI::CreateAddrReg<int8_t>(i, stride);
-            AscendC::MicroAPI::DataCopy(inputRegTensor, xInLocalPtr, offset);
-            AscendC::MicroAPI::DataCopy(xOutLocalPtr, inputRegTensor, offset, preg);
-        }
-    }
+    CopyXToOutNormVf(xInLocalPtr, xOutLocalPtr, totalBytes, size, stride);
     xOutQueue_.EnQue(xOutLocal);
     xInQueue_.FreeTensor(xInLocal);
     return;

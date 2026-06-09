@@ -38,6 +38,91 @@ constexpr AscendC::MicroAPI::CastTrait castTraitB322B64 = {
     AscendC::RoundMode::CAST_NONE,
 };
 
+template <typename U, typename V>
+__simd_callee__ inline void LoadData(
+    AscendC::MicroAPI::RegTensor<V>& dstReg, __ubuf__ U* srcAddr, uint16_t offset, AscendC::MicroAPI::MaskReg& maskReg)
+{
+    if constexpr (std::is_same_v<U, V>) {
+        AscendC::MicroAPI::DataCopy(dstReg, srcAddr + offset);
+    } else {
+        AscendC::MicroAPI::RegTensor<U> dstRegB32;
+        AscendC::MicroAPI::DataCopy<U, AscendC::MicroAPI::LoadDist::DIST_UNPACK_B32>(dstRegB32, srcAddr + offset);
+        AscendC::MicroAPI::Cast<V, U, castTraitB322B64>(dstReg, dstRegB32, maskReg);
+    }
+}
+
+template <typename T>
+__simd_vf__ inline void IndexRepeatVf(
+    __ubuf__ T* inputAddr, __ubuf__ T* outputAddr, uint16_t repeatTimes, int32_t inputStride)
+{
+    AscendC::MicroAPI::UnalignReg uIn;
+    AscendC::MicroAPI::UnalignReg uOut;
+    AscendC::MicroAPI::RegTensor<T> inputRegTensor;
+    AscendC::MicroAPI::DataCopyUnAlignPre(uIn, inputAddr);
+    AscendC::MicroAPI::DataCopyUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+        inputRegTensor, uIn, inputAddr, inputStride);
+    for (uint16_t i = 0; i < repeatTimes; i++) {
+        AscendC::MicroAPI::DataCopyUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+            outputAddr, inputRegTensor, uOut, inputStride);
+        AscendC::MicroAPI::DataCopyUnAlignPost(outputAddr, uOut, 0);
+    }
+}
+
+template <typename T, typename U>
+__simd_vf__ inline void IndexRepeatGroupVf(
+    __ubuf__ T* inputAddr, __ubuf__ T* outputAddr, __ubuf__ U* repeatsLocalAddr, int32_t inputStride, int32_t repeatLen)
+{
+    AscendC::MicroAPI::UnalignReg uIn;
+    AscendC::MicroAPI::UnalignReg uOut;
+    AscendC::MicroAPI::RegTensor<T> inputRegTensor;
+    for (uint16_t repeatIdx = 0; repeatIdx < static_cast<uint16_t>(repeatLen); repeatIdx++) {
+        uint16_t repeatTimes = repeatsLocalAddr[repeatIdx];
+        AscendC::MicroAPI::DataCopyUnAlignPre(uIn, inputAddr);
+        AscendC::MicroAPI::DataCopyUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+            inputRegTensor, uIn, inputAddr, inputStride);
+        for (uint16_t i = 0; i < repeatTimes; i++) {
+            AscendC::MicroAPI::DataCopyUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+                outputAddr, inputRegTensor, uOut, inputStride);
+        }
+        AscendC::MicroAPI::DataCopyUnAlignPost(outputAddr, uOut, 0);
+    }
+}
+
+__simd_vf__ inline void CopyXToOutSmallVf(
+    __ubuf__ int8_t* xInLocalPtr, __ubuf__ int8_t* xOutLocalPtr, uint32_t totalBytes, uint16_t size, uint16_t stride)
+{
+    AscendC::MicroAPI::RegTensor<int8_t> inputRegTensor;
+    uint32_t sreg = totalBytes;
+    AscendC::MicroAPI::MaskReg preg;
+
+    for (uint16_t i = 0; i < size; i++) {
+        preg = AscendC::MicroAPI::UpdateMask<int8_t>(sreg);
+        AscendC::MicroAPI::AddrReg offset = AscendC::MicroAPI::CreateAddrReg<int8_t>(i, stride);
+        AscendC::MicroAPI::DataCopy(inputRegTensor, xInLocalPtr, offset);
+        AscendC::MicroAPI::DataCopy(xOutLocalPtr, inputRegTensor, offset, preg);
+    }
+}
+
+template <typename U, typename V>
+__simd_vf__ inline void CustomReduceSumVf(
+    __ubuf__ U* srcAddr, __ubuf__ V* dstAddr, uint16_t vfLen, uint16_t loopSize, uint32_t dataLen)
+{
+    AscendC::MicroAPI::RegTensor<V> src;
+    AscendC::MicroAPI::RegTensor<V> dst;
+    AscendC::MicroAPI::RegTensor<V> tmpSum;
+    uint32_t pnum = dataLen;
+    uint32_t sumMask = 1;
+    AscendC::MicroAPI::MaskReg oneMask = AscendC::MicroAPI::UpdateMask<V>(sumMask);
+    AscendC::MicroAPI::Duplicate(dst, static_cast<V>(0), oneMask);
+    for (uint16_t i = 0; i < loopSize; i++) {
+        AscendC::MicroAPI::MaskReg pMask = AscendC::MicroAPI::UpdateMask<V>(pnum);
+        LoadData<U, V>(src, srcAddr, i * vfLen, pMask);
+        AscendC::MicroAPI::ReduceSum(tmpSum, src, pMask);
+        AscendC::MicroAPI::Add(dst, dst, tmpSum, oneMask);
+    }
+    AscendC::MicroAPI::DataCopy<V, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(dstAddr, dst, 0, oneMask);
+}
+
 template <typename T, typename U, typename V>
 class RepeatInterleaveSmall {
 public:
@@ -199,22 +284,7 @@ template <typename T, typename U, typename V>
 __aicore__ inline void RepeatInterleaveSmall<T, U, V>::IndexRepeat(
     __ubuf__ T* inputAddr, __ubuf__ T* outputAddr, uint16_t repeatTimes, int32_t inputStride)
 {
-    __ubuf__ T* inputAddrLocal = inputAddr;
-    __ubuf__ T* outputAddrLocal = outputAddr;
-    __VEC_SCOPE__
-    {
-        AscendC::MicroAPI::UnalignReg uIn;
-        AscendC::MicroAPI::UnalignReg uOut;
-        AscendC::MicroAPI::RegTensor<T> inputRegTensor;
-        AscendC::MicroAPI::DataCopyUnAlignPre(uIn, inputAddrLocal);
-        AscendC::MicroAPI::DataCopyUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-            inputRegTensor, uIn, inputAddrLocal, inputStride);
-        for (uint16_t i = 0; i < repeatTimes; i++) {
-            AscendC::MicroAPI::DataCopyUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-                outputAddrLocal, inputRegTensor, uOut, inputStride);
-            AscendC::MicroAPI::DataCopyUnAlignPost(outputAddrLocal, uOut, 0);
-        }
-    }
+    IndexRepeatVf<T>(inputAddr, outputAddr, repeatTimes, inputStride);
     return;
 }
 
@@ -223,23 +293,7 @@ __aicore__ inline void RepeatInterleaveSmall<T, U, V>::IndexRepeatGroup(
     __ubuf__ T* inputAddr, __ubuf__ T* outputAddr, const LocalTensor<U>& repeatsLocal, int32_t repeatLen,
     int32_t inputStride)
 {
-    __VEC_SCOPE__
-    {
-        AscendC::MicroAPI::UnalignReg uIn;
-        AscendC::MicroAPI::UnalignReg uOut;
-        AscendC::MicroAPI::RegTensor<T> inputRegTensor;
-        for (uint16_t repeatIdx = 0; repeatIdx < static_cast<uint16_t>(repeatLen); repeatIdx++) {
-            uint16_t repeatTimes = repeatsLocal.GetValue(repeatIdx);
-            AscendC::MicroAPI::DataCopyUnAlignPre(uIn, inputAddr);
-            AscendC::MicroAPI::DataCopyUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-                inputRegTensor, uIn, inputAddr, inputStride);
-            for (uint16_t i = 0; i < repeatTimes; i++) {
-                AscendC::MicroAPI::DataCopyUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-                    outputAddr, inputRegTensor, uOut, inputStride);
-            }
-            AscendC::MicroAPI::DataCopyUnAlignPost(outputAddr, uOut, 0);
-        }
-    }
+    IndexRepeatGroupVf<T, U>(inputAddr, outputAddr, (__ubuf__ U*)repeatsLocal.GetPhyAddr(), inputStride, repeatLen);
     return;
 }
 
@@ -394,25 +448,13 @@ __aicore__ inline void RepeatInterleaveSmall<T, U, V>::CopyXToOut(int64_t repeat
     LocalTensor<T> xInLocal = inputQueue_.DeQue<T>();
     LocalTensor<T> xOutLocal = outputQueue_.AllocTensor<T>();
 
-    __local_mem__ int8_t* xInLocalPtr = (__local_mem__ int8_t*)xInLocal.GetPhyAddr();
-    __local_mem__ int8_t* xOutLocalPtr = (__local_mem__ int8_t*)xOutLocal.GetPhyAddr();
+    __ubuf__ int8_t* xInLocalPtr = (__ubuf__ int8_t*)xInLocal.GetPhyAddr();
+    __ubuf__ int8_t* xOutLocalPtr = (__ubuf__ int8_t*)xOutLocal.GetPhyAddr();
 
     uint32_t totalBytes = repeatCount * cpAlign_ * sizeof(T);
     uint16_t stride = Ops::Base::GetVRegSize();
     uint16_t size = (totalBytes + stride - 1) / stride;
-    __VEC_SCOPE__
-    {
-        AscendC::MicroAPI::RegTensor<int8_t> inputRegTensor;
-        uint32_t sreg = totalBytes;
-        AscendC::MicroAPI::MaskReg preg;
-
-        for (uint16_t i = 0; i < size; i++) {
-            preg = AscendC::MicroAPI::UpdateMask<int8_t>(sreg);
-            AscendC::MicroAPI::AddrReg offset = AscendC::MicroAPI::CreateAddrReg<int8_t>(i, stride);
-            AscendC::MicroAPI::DataCopy(inputRegTensor, xInLocalPtr, offset);
-            AscendC::MicroAPI::DataCopy(xOutLocalPtr, inputRegTensor, offset, preg);
-        }
-    }
+    CopyXToOutSmallVf(xInLocalPtr, xOutLocalPtr, totalBytes, size, stride);
     outputQueue_.EnQue(xOutLocal);
     inputQueue_.FreeTensor(xInLocal);
     return;
@@ -468,19 +510,6 @@ __aicore__ inline void RepeatInterleaveSmall<T, U, V>::CopyInRepeats(int64_t rep
     return;
 }
 
-template <typename U, typename V>
-__aicore__ inline void LoadData(AscendC::MicroAPI::RegTensor<V>& dstReg, __local_mem__ U* srcAddr,
-                                    uint16_t offset, AscendC::MicroAPI::MaskReg& maskReg)
-{
-    if constexpr (std::is_same_v<U, V>) {
-        AscendC::MicroAPI::DataCopy(dstReg, srcAddr + offset);
-    } else {
-        AscendC::MicroAPI::RegTensor<U> dstRegB32;
-        AscendC::MicroAPI::DataCopy<U, MicroAPI::LoadDist::DIST_UNPACK_B32>(dstRegB32, srcAddr + offset);
-        AscendC::MicroAPI::Cast<V, U, castTraitB322B64>(dstReg, dstRegB32, maskReg);
-    } 
-}
-
 template <typename T, typename U, typename V>
 __aicore__ inline void RepeatInterleaveSmall<T, U, V>::CustomReduceSum(
     const LocalTensor<V>& dstLocal, const LocalTensor<U>& src, uint16_t dataLen)
@@ -489,23 +518,7 @@ __aicore__ inline void RepeatInterleaveSmall<T, U, V>::CustomReduceSum(
     uint16_t loopSize = (dataLen + vfLen - 1) / vfLen;
     auto srcAddr = (__ubuf__ U*)src.GetPhyAddr();
     auto dstAddr = (__ubuf__ V*)dstLocal.GetPhyAddr();
-    __VEC_SCOPE__
-    {
-        AscendC::MicroAPI::RegTensor<V> src;
-        AscendC::MicroAPI::RegTensor<V> dst;
-        AscendC::MicroAPI::RegTensor<V> tmpSum;
-        uint32_t pnum = static_cast<uint32_t>(dataLen);
-        uint32_t sumMask = 1;
-        AscendC::MicroAPI::MaskReg oneMask = AscendC::MicroAPI::UpdateMask<V>(sumMask);
-        AscendC::MicroAPI::Duplicate(dst, static_cast<V>(0), oneMask);
-        for (uint16_t i = 0; i < loopSize; i++) {
-            AscendC::MicroAPI::MaskReg pMask = AscendC::MicroAPI::UpdateMask<V>(pnum);
-            LoadData<U, V>(src, srcAddr, i * vfLen, pMask);
-            AscendC::MicroAPI::ReduceSum(tmpSum, src, pMask);
-            AscendC::MicroAPI::Add(dst, dst, tmpSum, oneMask);
-        }
-        AscendC::MicroAPI::DataCopy<V, MicroAPI::PostLiteral::POST_MODE_UPDATE>(dstAddr, dst, 0, oneMask);
-    }
+    CustomReduceSumVf<U, V>(srcAddr, dstAddr, vfLen, loopSize, static_cast<uint32_t>(dataLen));
 }
 template <typename T, typename U, typename V>
 __aicore__ inline int64_t RepeatInterleaveSmall<T, U, V>::ComputeOutputOffset(uint16_t repeatCount)

@@ -25,6 +25,57 @@ using namespace AscendC;
 
 constexpr uint64_t MIN_CP_SIZE_THRESHOLD = 128;
 
+template <typename T>
+__simd_vf__ inline void CopyOneCpToRepeatOutLargeScalarVf(
+    __ubuf__ T* xInLocalPtr, __ubuf__ T* xOutLocalPtr, uint32_t dataCount, uint16_t repeatTimes)
+{
+    AscendC::MicroAPI::UnalignReg uIn;
+    AscendC::MicroAPI::UnalignReg uOut;
+    AscendC::MicroAPI::RegTensor<T> inputRegTensor;
+    AscendC::MicroAPI::DataCopyUnAlignPre(uIn, xInLocalPtr);
+    AscendC::MicroAPI::DataCopyUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+        inputRegTensor, uIn, xInLocalPtr, dataCount);
+    for (uint16_t i = 0; i < repeatTimes; i++) {
+        AscendC::MicroAPI::DataCopyUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+            xOutLocalPtr, inputRegTensor, uOut, dataCount);
+    }
+    AscendC::MicroAPI::DataCopyUnAlignPost(xOutLocalPtr, uOut, 0);
+}
+
+template <typename T>
+__simd_vf__ inline void CopyOneCpToRepeatOutScalarVf(
+    __ubuf__ T* xInLocalPtr, __ubuf__ T* xOutLocalPtr, uint32_t dataCount, int64_t cpNum, int64_t repeatsScalarValue)
+{
+    AscendC::MicroAPI::UnalignReg uIn;
+    AscendC::MicroAPI::UnalignReg uOut;
+    AscendC::MicroAPI::RegTensor<T> inputRegTensor;
+    for (uint16_t cpIdx = 0; cpIdx < cpNum; cpIdx++) {
+        AscendC::MicroAPI::DataCopyUnAlignPre(uIn, xInLocalPtr);
+        AscendC::MicroAPI::DataCopyUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+            inputRegTensor, uIn, xInLocalPtr, dataCount);
+        for (uint16_t i = 0; i < repeatsScalarValue; i++) {
+            AscendC::MicroAPI::DataCopyUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+                xOutLocalPtr, inputRegTensor, uOut, dataCount);
+        }
+    }
+    AscendC::MicroAPI::DataCopyUnAlignPost(xOutLocalPtr, uOut, 0);
+}
+
+__simd_vf__ inline void CopyXToOutScalarVf(
+    __ubuf__ int8_t* xInLocalPtr, __ubuf__ int8_t* xOutLocalPtr, uint32_t totalBytes, uint16_t size, uint16_t stride)
+{
+    AscendC::MicroAPI::RegTensor<int8_t> inputRegTensor;
+    uint32_t sreg = totalBytes;
+    AscendC::MicroAPI::MaskReg preg;
+
+    for (uint16_t i = 0; i < size; i++) {
+        preg = AscendC::MicroAPI::UpdateMask<int8_t>(sreg);
+        AscendC::MicroAPI::AddrReg offset = AscendC::MicroAPI::CreateAddrReg<int8_t>(i, stride);
+        AscendC::MicroAPI::DataCopy(inputRegTensor, xInLocalPtr, offset);
+        AscendC::MicroAPI::DataCopy(xOutLocalPtr, inputRegTensor, offset, preg);
+    }
+}
+
 template <typename T, typename U>
 class RepeatInterleaveScalarImpl {
 public:
@@ -122,24 +173,11 @@ __aicore__ inline void RepeatInterleaveScalarImpl<T, U>::CopyOneCpToRepeatOutLar
 {
     int64_t offset = cpIdx * tilingData_.mergedDims[2];
     LocalTensor<T> xOutLocal = xOutQueue_.DeQue<T>();
-    __local_mem__ T* xInLocalPtr = ((__local_mem__ T*)xInLocal.GetPhyAddr()) + offset;
-    __local_mem__ T* xOutLocalPtr = ((__local_mem__ T*)xOutLocal.GetPhyAddr());
+    __ubuf__ T* xInLocalPtr = (__ubuf__ T*)xInLocal.GetPhyAddr() + offset;
+    __ubuf__ T* xOutLocalPtr = (__ubuf__ T*)xOutLocal.GetPhyAddr();
 
     uint32_t dataCount = tilingData_.mergedDims[2];
-    __VEC_SCOPE__
-    {
-        AscendC::MicroAPI::UnalignReg uIn;
-        AscendC::MicroAPI::UnalignReg uOut;
-        AscendC::MicroAPI::RegTensor<T> inputRegTensor;
-        AscendC::MicroAPI::DataCopyUnAlignPre(uIn, xInLocalPtr);
-        AscendC::MicroAPI::DataCopyUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-            inputRegTensor, uIn, xInLocalPtr, dataCount);
-        for (uint16_t i = 0; i < repeatTimes; i++) {
-            AscendC::MicroAPI::DataCopyUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-                xOutLocalPtr, inputRegTensor, uOut, dataCount);
-        }
-        AscendC::MicroAPI::DataCopyUnAlignPost(xOutLocalPtr, uOut, 0);
-    }
+    CopyOneCpToRepeatOutLargeScalarVf<T>(xInLocalPtr, xOutLocalPtr, dataCount, repeatTimes);
 
     xOutQueue_.EnQue(xOutLocal);
     return;
@@ -151,26 +189,12 @@ __aicore__ inline void RepeatInterleaveScalarImpl<T, U>::CopyOneCpToRepeatOut(
 {
     int64_t offset = loopIdx * repeatValueCntInUbFactor_ * tilingData_.mergedDims[2];
     LocalTensor<T> xOutLocal = xOutQueue_.DeQue<T>();
-    __local_mem__ T* xInLocalPtr = ((__local_mem__ T*)xInLocal.GetPhyAddr()) + offset;
-    __local_mem__ T* xOutLocalPtr = ((__local_mem__ T*)xOutLocal.GetPhyAddr());
+    __ubuf__ T* xInLocalPtr = (__ubuf__ T*)xInLocal.GetPhyAddr() + offset;
+    __ubuf__ T* xOutLocalPtr = (__ubuf__ T*)xOutLocal.GetPhyAddr();
 
     uint32_t dataCount = tilingData_.mergedDims[2];
-    __VEC_SCOPE__
-    {
-        AscendC::MicroAPI::UnalignReg uIn;
-        AscendC::MicroAPI::UnalignReg uOut;
-        AscendC::MicroAPI::RegTensor<T> inputRegTensor;
-        for (uint16_t cpIdx = 0; cpIdx < cpNum; cpIdx++) {
-            AscendC::MicroAPI::DataCopyUnAlignPre(uIn, xInLocalPtr);
-            AscendC::MicroAPI::DataCopyUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-                inputRegTensor, uIn, xInLocalPtr, dataCount);
-            for (uint16_t i = 0; i < repeatsScalarValue_; i++) {
-                AscendC::MicroAPI::DataCopyUnAlign<T, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-                    xOutLocalPtr, inputRegTensor, uOut, dataCount);
-            }
-        }
-        AscendC::MicroAPI::DataCopyUnAlignPost(xOutLocalPtr, uOut, 0);
-    }
+    CopyOneCpToRepeatOutScalarVf<T>(
+        xInLocalPtr, xOutLocalPtr, dataCount, cpNum, repeatsScalarValue_);
 
     xOutQueue_.EnQue(xOutLocal);
     return;
@@ -235,25 +259,13 @@ __aicore__ inline void RepeatInterleaveScalarImpl<T, U>::CopyXToOut(int64_t data
     LocalTensor<T> xInLocal = xInQueue_.DeQue<T>();
     LocalTensor<T> xOutLocal = xOutQueue_.AllocTensor<T>();
 
-    __local_mem__ int8_t* xInLocalPtr = (__local_mem__ int8_t*)xInLocal.GetPhyAddr();
-    __local_mem__ int8_t* xOutLocalPtr = (__local_mem__ int8_t*)xOutLocal.GetPhyAddr();
+    __ubuf__ int8_t* xInLocalPtr = (__ubuf__ int8_t*)xInLocal.GetPhyAddr();
+    __ubuf__ int8_t* xOutLocalPtr = (__ubuf__ int8_t*)xOutLocal.GetPhyAddr();
 
     uint32_t totalBytes = dataCount * sizeof(T);
     uint16_t stride = Ops::Base::GetVRegSize();
     uint16_t size = (totalBytes + stride - 1) / stride;
-    __VEC_SCOPE__
-    {
-        AscendC::MicroAPI::RegTensor<int8_t> inputRegTensor;
-        uint32_t sreg = totalBytes;
-        AscendC::MicroAPI::MaskReg preg;
-
-        for (uint16_t i = 0; i < size; i++) {
-            preg = AscendC::MicroAPI::UpdateMask<int8_t>(sreg);
-            AscendC::MicroAPI::AddrReg offset = AscendC::MicroAPI::CreateAddrReg<int8_t>(i, stride);
-            AscendC::MicroAPI::DataCopy(inputRegTensor, xInLocalPtr, offset);
-            AscendC::MicroAPI::DataCopy(xOutLocalPtr, inputRegTensor, offset, preg);
-        }
-    }
+    CopyXToOutScalarVf(xInLocalPtr, xOutLocalPtr, totalBytes, size, stride);
     xOutQueue_.EnQue(xOutLocal);
     xInQueue_.FreeTensor(xInLocal);
     return;
