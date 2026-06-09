@@ -22,7 +22,9 @@ const size_t INPUT_IDX_INDICES = 1;
 
 static bool CheckGatherNdParamsSize(const gert::InferShapeContext* context, const int64_t last_dim, const int64_t shape_size) {
   if (last_dim > shape_size) {
-    OP_LOGE(context->GetNodeName(), "The last dim(%ld) of indices must be <= params.rank(%ld).", last_dim, shape_size);
+    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "indices",
+        std::to_string(last_dim),
+        "The last axis of indices must be less than or equal to the shape dims of x");
     return false;
   }
   return true;
@@ -40,13 +42,15 @@ static ge::graphStatus InferShape4GatherNd(gert::InferShapeContext* context) {
   OP_CHECK_NULL_WITH_CONTEXT(context, out_shape);
   out_shape->SetDimNum(0);
   if (rank_indices < 1) {
-    OP_LOGE(context->GetNodeName(), "rank_indices is less than 1， rank_indices is %ld", rank_indices);
+    OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "indices",
+        std::to_string(rank_indices) + "D",
+        "The shape dim of indices must be greater than 0");
     return GRAPH_FAILED;
   }
   int64_t indices_last_element = indies_shape->GetDim(rank_indices - 1);
-  OP_CHECK_IF(!CheckGatherNdParamsSize(context, indices_last_element, x_real_dim_cnt),
-           OP_LOGE(context->GetNodeName(), "check params is failed"),
-           return ge::GRAPH_FAILED);
+  if (!CheckGatherNdParamsSize(context, indices_last_element, x_real_dim_cnt)) {
+      return ge::GRAPH_FAILED;
+  }
   for (int64_t i = 0; i < rank_indices - 1; ++i) {
     out_shape->AppendDim(indies_shape->GetDim(i));
   }

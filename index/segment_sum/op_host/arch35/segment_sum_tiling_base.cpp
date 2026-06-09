@@ -55,11 +55,11 @@ ge::graphStatus SegmentSumBaseTiling::CheckInputDtype()
     auto indexTypeIter = indexTypeMap.find(idType_);
     OP_CHECK_IF(
         dataTypeIter == dataTypeMap.end(),
-        OP_LOGE(context_->GetNodeName(), "data dtype does not support !"),
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "data", Ops::Base::ToString(dataType_).c_str(), "[float, float16, bfloat16, int32, int64, uint32, uint64]"),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         indexTypeIter == indexTypeMap.end(),
-        OP_LOGE(context_->GetNodeName(), "segment_ids dtype does not support !"),
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "segment_ids", Ops::Base::ToString(idType_).c_str(), "int32 or int64"),
         return ge::GRAPH_FAILED);
 
     valueTypeBytes_ = ge::GetSizeByDataType(dataType_);
@@ -70,10 +70,9 @@ ge::graphStatus SegmentSumBaseTiling::CheckInputDtype()
 
 ge::graphStatus SegmentSumBaseTiling::GetShapeAttrsInfo()
 {
-    OP_CHECK_IF(
-        CheckInputDtype() != ge::GRAPH_SUCCESS,
-        OP_LOGE(context_->GetNodeName(), "input dtype check failed."), 
-        return ge::GRAPH_FAILED);
+    if (CheckInputDtype() != ge::GRAPH_SUCCESS) { 
+        return ge::GRAPH_FAILED; 
+    }
 
     auto dataShapePtr = context_->GetInputShape(INPUT_DATA_INDEX);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, dataShapePtr);
@@ -86,8 +85,8 @@ ge::graphStatus SegmentSumBaseTiling::GetShapeAttrsInfo()
     for (size_t i = 0; i < dataShape.GetDimNum(); ++i) {
         OP_CHECK_IF(
             dataShape.GetDim(i) < 0,
-            OP_LOGE(
-                context_->GetNodeName(), "Dimension must be >= 0, but got %ld", dataShape.GetDim(i)),
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "data", 
+            Ops::Base::ToString(dataShape).c_str(), "data has negative axes"),
             return ge::GRAPH_FAILED);
         
         innerDim_ *= (i != 0) ? dataShape.GetDim(i) : 1;
@@ -96,13 +95,18 @@ ge::graphStatus SegmentSumBaseTiling::GetShapeAttrsInfo()
     
     OP_CHECK_IF(
         static_cast<int64_t>(outerDim_) != segmentIdsShape.GetDim(0),
-        OP_LOGE(
-            context_->GetNodeName(), "the dimension 0 of data shape should be same with segment_ids."),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context_->GetNodeName(), "data and segment_ids",
+            Ops::Base::ToString(dataShape) + " and " + Ops::Base::ToString(segmentIdsShape),
+            "The 0 axis of data must be equal to the same axis of segment_ids"),
         return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(
         segmentIdsShape.GetDimNum() != 1,
-        OP_LOGE(context_->GetNodeName(), "segment_ids dimension should be 1 but got %zu", segmentIdsShape.GetDimNum()),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            context_->GetNodeName(), "segment_ids",
+            std::to_string(segmentIdsShape.GetDimNum()) + "D",
+            "The shape of segment_ids must be 1D"),
         return ge::GRAPH_FAILED);
 
     dataShapeSize_ = dataShape.GetShapeSize();

@@ -37,7 +37,7 @@ constexpr uint32_t THREAD_NUMS = 2048;
 
 
 template <typename T2, typename T3>
-__aicore__ inline MicroAPI::MaskReg GenT2Mask(uint32_t& maskCount)
+__simd_callee__ inline MicroAPI::MaskReg GenT2Mask(uint32_t& maskCount)
 {
     MicroAPI::MaskReg reg;
     if constexpr (std::is_same<T3, int32_t>::value && std::is_same<T2, int64_t>::value) {
@@ -72,6 +72,89 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUMS) inline void MixSimtWithLastAxis
         T3 rowStart = indicesAddr[idx];
         bool idxOutOfBound = rowStart < 0;
         yAddr[idx] = idxOutOfBound ? 0 : xAddr[rowStart];
+    }
+}
+
+__simd_vf__ inline void GenGatherIndexVf(int32_t eleStride, __ubuf__ int32_t* helpAddr)
+{
+    AscendC::MicroAPI::RegTensor<int32_t> reg0;
+    AscendC::MicroAPI::RegTensor<int32_t> reg1;
+
+    AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::CreateMask<int32_t, AscendC::MicroAPI::MaskPattern::ALL>();
+    AscendC::MicroAPI::Arange(reg0, 0);
+    AscendC::MicroAPI::Muls(reg1, reg0, eleStride, preg);
+
+    AscendC::MicroAPI::DataCopy(helpAddr, reg1, preg);
+}
+
+template <typename T2, typename T3, const bool NIS>
+__simd_vf__ inline void FixIndicesVfCoreVf(
+    __ubuf__ T2* indicesAddr, __ubuf__ T3* maxGatherShapeAddr, __ubuf__ T3* strideShapeAddr,
+    uint16_t computeSizeT3, uint16_t repeatimes, uint32_t repeatStride,
+    __ubuf__ uint32_t* helpAddr, int32_t indicesNumPro, uint16_t rank, T3 aMergeAxisSize)
+{
+    AscendC::MicroAPI::RegTensor<uint32_t> indexStart;
+    AscendC::MicroAPI::RegTensor<uint32_t> curIndex;
+
+    AscendC::MicroAPI::RegTensor<T3> zeroConstReg;
+    AscendC::MicroAPI::RegTensor<T3> upLimitConstReg;
+    AscendC::MicroAPI::Duplicate(zeroConstReg, T3(0));
+
+    AscendC::MicroAPI::RegTensor<T3> indicesResReg;
+    AscendC::MicroAPI::RegTensor<T3> tmpReg;
+    AscendC::MicroAPI::RegTensor<T3> curIndicesReg;
+    AscendC::MicroAPI::MaskReg tmpMask;
+    AscendC::MicroAPI::MaskReg pregAll = AscendC::MicroAPI::CreateMask<uint32_t, AscendC::MicroAPI::MaskPattern::ALL>();
+    uint32_t indicesMask = indicesNumPro;
+    uint32_t indicesMaskU32 = indicesNumPro;
+    
+    AscendC::MicroAPI::DataCopy<uint32_t>(indexStart, helpAddr);
+
+    for (uint16_t i = 0; i < repeatimes; i++) {
+        uint32_t indicesOffset = i * repeatStride;
+        AscendC::MicroAPI::Duplicate(indicesResReg, T3(0));
+
+        AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<T3>(indicesMask);
+        AscendC::MicroAPI::MaskReg pregT2 = GenT2Mask<T2, T3>(indicesMaskU32);
+        AscendC::MicroAPI::MaskReg overstepMask = AscendC::MicroAPI::CreateMask<T3, AscendC::MicroAPI::MaskPattern::ALLF>();
+        for (uint16_t k = 0; k < rank; k++) {
+            AscendC::MicroAPI::Adds(curIndex, indexStart, (indicesOffset + k), pregAll);
+
+            if constexpr (std::is_same<T3, int32_t>::value && std::is_same<T2, int32_t>::value) {
+                AscendC::MicroAPI::DataCopyGather(curIndicesReg, indicesAddr, curIndex, pregT2);
+            } else if constexpr (std::is_same<T3, int32_t>::value && std::is_same<T2, int64_t>::value) {
+                AscendC::MicroAPI::RegTensor<T2, AscendC::MicroAPI::RegTraitNumTwo> curIndicesRegTwo;
+                AscendC::MicroAPI::DataCopyGather(curIndicesRegTwo, indicesAddr, curIndex, pregT2);
+                curIndicesReg = (AscendC::MicroAPI::RegTensor<T3>&)curIndicesRegTwo.reg[0];
+            } else if constexpr (std::is_same<T3, int64_t>::value && std::is_same<T2, int64_t>::value) {
+                AscendC::MicroAPI::DataCopyGather(curIndicesReg, indicesAddr, curIndex, pregT2);
+            }
+
+            T3 maxGatherDimKSize = maxGatherShapeAddr[k];
+            if constexpr (NIS) {
+                AscendC::MicroAPI::Compare<T3, CMPMODE::LT>(tmpMask, curIndicesReg, zeroConstReg, preg);
+                AscendC::MicroAPI::Adds(tmpReg, curIndicesReg, maxGatherDimKSize, tmpMask);
+                Copy<T3, AscendC::MicroAPI::MaskMergeMode::MERGING>(curIndicesReg, tmpReg, tmpMask);
+            }
+
+            AscendC::MicroAPI::Compare<T3, CMPMODE::LT>(tmpMask, curIndicesReg, zeroConstReg, preg);
+            AscendC::MicroAPI::MaskOr(overstepMask, overstepMask, tmpMask, preg);
+
+            AscendC::MicroAPI::Duplicate(upLimitConstReg, T3(maxGatherDimKSize));
+            AscendC::MicroAPI::Compare<T3, CMPMODE::GE>(tmpMask, curIndicesReg, upLimitConstReg, preg);
+            AscendC::MicroAPI::MaskOr(overstepMask, overstepMask, tmpMask, preg);
+
+            T3 strideDimKSize = strideShapeAddr[k];
+            AscendC::MicroAPI::Muls(curIndicesReg, curIndicesReg, strideDimKSize, preg);
+            AscendC::MicroAPI::Add(indicesResReg, indicesResReg, curIndicesReg, preg);
+        }
+
+        AscendC::MicroAPI::Muls(indicesResReg, indicesResReg, aMergeAxisSize, preg);
+        AscendC::MicroAPI::Duplicate(tmpReg, T3(-1), overstepMask);
+        Copy<T3, AscendC::MicroAPI::MaskMergeMode::MERGING>(indicesResReg, tmpReg, overstepMask);
+
+        AscendC::MicroAPI::AddrReg offset = AscendC::MicroAPI::CreateAddrReg<T3>(i, computeSizeT3);
+        AscendC::MicroAPI::DataCopy((__ubuf__ T3*)indicesAddr, indicesResReg, offset, preg);
     }
 }
 
@@ -130,21 +213,10 @@ __aicore__ inline void GatherNdMixKernel<T1, T2, T3>::Init(GM_ADDR x, GM_ADDR in
 template <typename T1, typename T2, typename T3>
 __aicore__ inline void GatherNdMixKernel<T1, T2, T3>::GenGatherIndex()
 {
-    LocalTensor<int32_t> helpTensor = helpTBuf_.Get<int32_t>();    // 只用前256B
-    __local_mem__ int32_t* helpAddr = (__local_mem__ int32_t*)helpTensor.GetPhyAddr();
+    LocalTensor<int32_t> helpTensor = helpTBuf_.Get<int32_t>();
     int32_t eleStride = tilingData_->rank;
 
-    __VEC_SCOPE__
-    {
-        AscendC::MicroAPI::RegTensor<int32_t> reg0;
-        AscendC::MicroAPI::RegTensor<int32_t> reg1;
-
-        AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::CreateMask<int32_t, AscendC::MicroAPI::MaskPattern::ALL>();
-        AscendC::MicroAPI::Arange(reg0, 0);
-        AscendC::MicroAPI::Muls(reg1, reg0, eleStride, preg);
-
-        AscendC::MicroAPI::DataCopy(helpAddr, reg1, preg);
-    }
+    GenGatherIndexVf(eleStride, (__ubuf__ int32_t*)helpTensor.GetPhyAddr());
 }
 
 template <typename T1, typename T2, typename T3>
@@ -152,86 +224,21 @@ template <const bool NIS>
 __aicore__ inline void GatherNdMixKernel<T1, T2, T3>::FixIndicesVf(
     LocalTensor<T2>& indicesTensor, LocalTensor<T3>& maxGatherShapeTensor, LocalTensor<T3>& strideShapeTensor, int32_t indicesNumPro, uint16_t rank, T3 aMergeAxisSize)
 {
-    __local_mem__ T2* indicesAddr = (__local_mem__ T2*)indicesTensor.GetPhyAddr();
-    __local_mem__ T3* maxGatherShapeAddr = (__local_mem__ T3*)maxGatherShapeTensor.GetPhyAddr();
-    __local_mem__ T3* strideShapeAddr = (__local_mem__ T3*)strideShapeTensor.GetPhyAddr();
-
     int32_t indicesStride = rank;
     uint16_t computeSizeT3 = platform::GetVRegSize() / sizeof(T3);
     uint16_t repeatimes = (indicesNumPro + computeSizeT3 - 1) / computeSizeT3;
 
     uint32_t repeatStride = computeSizeT3 * indicesStride;
 
-    LocalTensor<uint32_t> helpTensor = helpTBuf_.Get<uint32_t>();   // uint32   0  8  16 ...    uint64  0  4  8 ...
-    __local_mem__ uint32_t* helpAddr = (__local_mem__ uint32_t*)helpTensor.GetPhyAddr();
+    LocalTensor<uint32_t> helpTensor = helpTBuf_.Get<uint32_t>();
 
-    __VEC_SCOPE__
-    {
-        AscendC::MicroAPI::RegTensor<uint32_t> indexStart;
-        AscendC::MicroAPI::RegTensor<uint32_t> curIndex;
-
-        AscendC::MicroAPI::RegTensor<T3> zeroConstReg;
-        AscendC::MicroAPI::RegTensor<T3> upLimitConstReg;
-        AscendC::MicroAPI::Duplicate(zeroConstReg, T3(0));
-
-        AscendC::MicroAPI::RegTensor<T3> indicesResReg;
-        AscendC::MicroAPI::RegTensor<T3> tmpReg;
-        AscendC::MicroAPI::RegTensor<T3> curIndicesReg;
-        AscendC::MicroAPI::MaskReg tmpMask;
-        AscendC::MicroAPI::MaskReg pregAll = AscendC::MicroAPI::CreateMask<uint32_t, AscendC::MicroAPI::MaskPattern::ALL>();
-        uint32_t indicesMask = indicesNumPro;
-        uint32_t indicesMaskU32 = indicesNumPro;
-        
-        AscendC::MicroAPI::DataCopy<uint32_t>(indexStart, helpAddr);
-
-        for (uint16_t i = 0; i < repeatimes; i++) {
-            uint32_t indicesOffset = i * repeatStride;
-            AscendC::MicroAPI::Duplicate(indicesResReg, T3(0));
-
-            AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<T3>(indicesMask);
-            AscendC::MicroAPI::MaskReg pregT2 = GenT2Mask<T2, T3>(indicesMaskU32);
-            AscendC::MicroAPI::MaskReg overstepMask = AscendC::MicroAPI::CreateMask<T3, AscendC::MicroAPI::MaskPattern::ALLF>();
-            for (uint16_t k = 0; k < rank; k++) {
-                AscendC::MicroAPI::Adds(curIndex, indexStart, (indicesOffset + k), pregAll);
-
-                // T2 --> T3
-                if constexpr (std::is_same<T3, int32_t>::value && std::is_same<T2, int32_t>::value) {
-                    AscendC::MicroAPI::DataCopyGather(curIndicesReg, indicesAddr, curIndex, pregT2);
-                } else if constexpr (std::is_same<T3, int32_t>::value && std::is_same<T2, int64_t>::value) {
-                    AscendC::MicroAPI::RegTensor<T2, AscendC::MicroAPI::RegTraitNumTwo> curIndicesRegTwo;
-                    AscendC::MicroAPI::DataCopyGather(curIndicesRegTwo, indicesAddr, curIndex, pregT2);
-                    curIndicesReg = (AscendC::MicroAPI::RegTensor<T3>&)curIndicesRegTwo.reg[0];
-                } else if constexpr (std::is_same<T3, int64_t>::value && std::is_same<T2, int64_t>::value) {
-                    AscendC::MicroAPI::DataCopyGather(curIndicesReg, indicesAddr, curIndex, pregT2);
-                }
-
-                T3 maxGatherDimKSize = maxGatherShapeAddr[k];
-                if constexpr (NIS) {
-                    AscendC::MicroAPI::Compare<T3, CMPMODE::LT>(tmpMask, curIndicesReg, zeroConstReg, preg);
-                    AscendC::MicroAPI::Adds(tmpReg, curIndicesReg, maxGatherDimKSize, tmpMask); // 补偿负索引场景
-                    Copy<T3, AscendC::MicroAPI::MaskMergeMode::MERGING>(curIndicesReg, tmpReg, tmpMask);
-                }
-
-                AscendC::MicroAPI::Compare<T3, CMPMODE::LT>(tmpMask, curIndicesReg, zeroConstReg, preg); // 负越界
-                AscendC::MicroAPI::MaskOr(overstepMask, overstepMask, tmpMask, preg);
-
-                AscendC::MicroAPI::Duplicate(upLimitConstReg, T3(maxGatherDimKSize));
-                AscendC::MicroAPI::Compare<T3, CMPMODE::GE>(tmpMask, curIndicesReg, upLimitConstReg, preg); // 正越界
-                AscendC::MicroAPI::MaskOr(overstepMask, overstepMask, tmpMask, preg);
-
-                T3 strideDimKSize = strideShapeAddr[k];
-                AscendC::MicroAPI::Muls(curIndicesReg, curIndicesReg, strideDimKSize, preg);
-                AscendC::MicroAPI::Add(indicesResReg, indicesResReg, curIndicesReg, preg);
-            }
-
-            AscendC::MicroAPI::Muls(indicesResReg, indicesResReg, aMergeAxisSize, preg);
-            AscendC::MicroAPI::Duplicate(tmpReg, T3(-1), overstepMask); // 补偿越界
-            Copy<T3, AscendC::MicroAPI::MaskMergeMode::MERGING>(indicesResReg, tmpReg, overstepMask);
-
-            AscendC::MicroAPI::AddrReg offset = AscendC::MicroAPI::CreateAddrReg<T3>(i, computeSizeT3);
-            AscendC::MicroAPI::DataCopy((__local_mem__ T3*)indicesAddr, indicesResReg, offset, preg);
-        }
-    }
+    FixIndicesVfCoreVf<T2, T3, NIS>(
+        (__ubuf__ T2*)indicesTensor.GetPhyAddr(),
+        (__ubuf__ T3*)maxGatherShapeTensor.GetPhyAddr(),
+        (__ubuf__ T3*)strideShapeTensor.GetPhyAddr(),
+        computeSizeT3, repeatimes, repeatStride,
+        (__ubuf__ uint32_t*)helpTensor.GetPhyAddr(),
+        indicesNumPro, rank, aMergeAxisSize);
 }
 
 template <typename T1, typename T2, typename T3>

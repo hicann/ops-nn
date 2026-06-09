@@ -29,6 +29,331 @@ using namespace AscendC;
 constexpr int32_t DOUBLE_BUFFER = 2;
 constexpr int32_t HELP_BUFFER_SIZE = 256;
 
+__simd_vf__ inline void GenIndexBufVf(int32_t colFactor, __ubuf__ int32_t* helpAddr)
+{
+    AscendC::MicroAPI::RegTensor<int32_t> v0;
+    AscendC::MicroAPI::RegTensor<int32_t> vd1;
+
+    AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::CreateMask<int32_t, AscendC::MicroAPI::MaskPattern::ALL>();
+    AscendC::MicroAPI::Arange(v0, 0);
+    AscendC::MicroAPI::Muls(vd1, v0, colFactor, preg);
+
+    AscendC::MicroAPI::DataCopy(helpAddr, vd1, preg);
+}
+
+__simd_vf__ inline void InitializationXVf(uint32_t aSizeAligned, uint16_t computeSize, uint16_t repeatimes, __ubuf__ int8_t* xAddr)
+{
+    AscendC::MicroAPI::RegTensor<int8_t> zeroConstReg;
+    AscendC::MicroAPI::Duplicate(zeroConstReg, int8_t(0));
+    MicroAPI::MaskReg preg;
+    uint32_t sreg = aSizeAligned;
+    for (uint16_t r = 0; r < repeatimes; r++) {
+        preg = MicroAPI::UpdateMask<int8_t>(sreg);
+        MicroAPI::AddrReg offset = MicroAPI::CreateAddrReg<int8_t>(r, computeSize);
+        MicroAPI::DataCopy(xAddr, zeroConstReg, offset, preg);
+    }
+}
+
+template <typename INDICES_T, const bool NIS>
+__simd_vf__ inline void FixIndicesVfRank1CoreVf(
+    __ubuf__ int32_t* curIndicesAddr, __ubuf__ INDICES_T* indicesAddr,
+    __ubuf__ uint32_t* helpAddr, int32_t indicesNumPro,
+    int64_t xShape0, int32_t aSizeAligned,
+    uint16_t computeSizeT, uint16_t repeatimes, int32_t indicesStride)
+{
+    MicroAPI::RegTensor<uint32_t> upIndex;
+    MicroAPI::RegTensor<uint32_t> curUpIndex;
+
+    AscendC::MicroAPI::RegTensor<int32_t> zeroConstReg;
+    AscendC::MicroAPI::Duplicate(zeroConstReg, int32_t(0));
+
+    AscendC::MicroAPI::RegTensor<int32_t> indicesReg;
+    AscendC::MicroAPI::RegTensor<int32_t> tmpReg;
+
+    AscendC::MicroAPI::RegTensor<uint32_t> indicesIndicesReg;
+    AscendC::MicroAPI::RegTensor<int32_t> tmpVd0;
+
+    uint32_t indicesMask = indicesNumPro;
+    
+    MicroAPI::DataCopy<uint32_t>(upIndex, helpAddr);
+    MicroAPI::MaskReg preg0 = MicroAPI::CreateMask<int32_t, MicroAPI::MaskPattern::ALL>();
+    AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<int32_t>(indicesMask);
+
+    for (uint16_t i = 0; i < repeatimes; i++) {
+        MicroAPI::Copy(curUpIndex, upIndex, preg0);
+        AscendC::MicroAPI::RegTensor<uint32_t> indicesOffset;
+        AscendC::MicroAPI::Duplicate(indicesOffset, uint32_t(i * computeSizeT * indicesStride));
+        AscendC::MicroAPI::MaskReg fixMask = MicroAPI::CreateMask<int32_t, MicroAPI::MaskPattern::ALLF>();
+        AscendC::MicroAPI::Duplicate(indicesReg, int32_t(0));
+        AscendC::MicroAPI::MaskReg tmpFixMask;
+
+        int32_t tmpGatherDimSize = xShape0;
+        AscendC::MicroAPI::RegTensor<int32_t> tmpLimitConstReg;
+        AscendC::MicroAPI::Duplicate(tmpLimitConstReg, int32_t(tmpGatherDimSize));
+
+        MicroAPI::Add(indicesIndicesReg, indicesOffset, curUpIndex, preg);
+        MicroAPI::DataCopyGather(tmpVd0, curIndicesAddr, indicesIndicesReg, preg);
+
+        if constexpr (NIS) {
+            AscendC::MicroAPI::Compare<int32_t, CMPMODE::LT>(tmpFixMask, tmpVd0, zeroConstReg, preg);
+            AscendC::MicroAPI::Adds(tmpReg, tmpVd0, tmpGatherDimSize, tmpFixMask);
+            Copy<int32_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(tmpVd0, tmpReg, tmpFixMask);
+        }
+
+        AscendC::MicroAPI::Compare<int32_t, CMPMODE::LT>(tmpFixMask, tmpVd0, zeroConstReg, preg);
+        AscendC::MicroAPI::MaskOr(fixMask, fixMask, tmpFixMask, preg);
+
+        AscendC::MicroAPI::Compare<int32_t, CMPMODE::GE>(tmpFixMask, tmpVd0, tmpLimitConstReg, preg);
+        AscendC::MicroAPI::MaskOr(fixMask, fixMask, tmpFixMask, preg);
+
+        AscendC::MicroAPI::Muls(indicesReg, indicesReg, tmpGatherDimSize, preg);
+        AscendC::MicroAPI::Add(indicesReg, indicesReg, tmpVd0, preg);
+        
+        AscendC::MicroAPI::Duplicate(tmpReg, int32_t(-1), fixMask);
+        Copy<int32_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(indicesReg, tmpReg, fixMask);
+
+        AscendC::MicroAPI::Adds(indicesReg, indicesReg, 1, preg);
+        AscendC::MicroAPI::Muls(indicesReg, indicesReg, aSizeAligned, preg);
+        AscendC::MicroAPI::DataCopy((__ubuf__ int32_t*)indicesAddr + i * computeSizeT, indicesReg, preg);
+    }
+}
+
+template <typename INDICES_T, const bool NIS>
+__simd_vf__ inline void FixIndicesVfRank2CoreVf(
+    __ubuf__ int32_t* curIndicesAddr, __ubuf__ INDICES_T* indicesAddr,
+    __ubuf__ uint32_t* helpAddr, int32_t indicesNumPro,
+    int64_t xShape0, int64_t xShape1, int32_t aSizeAligned,
+    uint16_t computeSizeT, uint16_t repeatimes, int32_t indicesStride)
+{
+    MicroAPI::RegTensor<uint32_t> upIndex;
+    MicroAPI::RegTensor<uint32_t> curUpIndex;
+
+    AscendC::MicroAPI::RegTensor<int32_t> zeroConstReg;
+    AscendC::MicroAPI::Duplicate(zeroConstReg, int32_t(0));
+
+    AscendC::MicroAPI::RegTensor<int32_t> indicesReg;
+    AscendC::MicroAPI::RegTensor<int32_t> tmpReg;
+
+    AscendC::MicroAPI::RegTensor<uint32_t> indicesIndicesReg;
+    AscendC::MicroAPI::RegTensor<int32_t> tmpVd0;
+
+    uint32_t indicesMask = indicesNumPro;
+    
+    MicroAPI::DataCopy<uint32_t>(upIndex, helpAddr);
+    MicroAPI::MaskReg preg0 = MicroAPI::CreateMask<int32_t, MicroAPI::MaskPattern::ALL>();
+    AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<int32_t>(indicesMask);
+
+    for (uint16_t i = 0; i < repeatimes; i++) {
+        MicroAPI::Copy(curUpIndex, upIndex, preg0);
+        AscendC::MicroAPI::RegTensor<uint32_t> indicesOffset;
+        AscendC::MicroAPI::Duplicate(indicesOffset, uint32_t(i * computeSizeT * indicesStride));
+        AscendC::MicroAPI::MaskReg fixMask = MicroAPI::CreateMask<int32_t, MicroAPI::MaskPattern::ALLF>();
+        AscendC::MicroAPI::Duplicate(indicesReg, int32_t(0));
+        AscendC::MicroAPI::MaskReg tmpFixMask;
+
+        int32_t tmpGatherDimSize = xShape0;
+        AscendC::MicroAPI::RegTensor<int32_t> tmpLimitConstReg;
+        AscendC::MicroAPI::Duplicate(tmpLimitConstReg, int32_t(tmpGatherDimSize));
+        
+        MicroAPI::Add(indicesIndicesReg, indicesOffset, curUpIndex, preg);
+        MicroAPI::DataCopyGather(tmpVd0, curIndicesAddr, indicesIndicesReg, preg);
+
+        if constexpr (NIS) {
+            AscendC::MicroAPI::Compare<int32_t, CMPMODE::LT>(tmpFixMask, tmpVd0, zeroConstReg, preg);
+            AscendC::MicroAPI::Adds(tmpReg, tmpVd0, tmpGatherDimSize, tmpFixMask);
+            Copy<int32_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(tmpVd0, tmpReg, tmpFixMask);
+        }
+
+        AscendC::MicroAPI::Compare<int32_t, CMPMODE::LT>(tmpFixMask, tmpVd0, zeroConstReg, preg);
+        AscendC::MicroAPI::MaskOr(fixMask, fixMask, tmpFixMask, preg);
+
+        AscendC::MicroAPI::Compare<int32_t, CMPMODE::GE>(tmpFixMask, tmpVd0, tmpLimitConstReg, preg);
+        AscendC::MicroAPI::MaskOr(fixMask, fixMask, tmpFixMask, preg);
+
+        AscendC::MicroAPI::Muls(indicesReg, indicesReg, tmpGatherDimSize, preg);
+        AscendC::MicroAPI::Add(indicesReg, indicesReg, tmpVd0, preg);
+
+        tmpGatherDimSize = xShape1;
+        AscendC::MicroAPI::Duplicate(tmpLimitConstReg, int32_t(tmpGatherDimSize));
+
+        MicroAPI::Adds(curUpIndex, curUpIndex, 1, preg0);
+        
+        MicroAPI::Add(indicesIndicesReg, indicesOffset, curUpIndex, preg);
+        MicroAPI::DataCopyGather(tmpVd0, curIndicesAddr, indicesIndicesReg, preg);
+
+        if constexpr (NIS) {
+            AscendC::MicroAPI::Compare<int32_t, CMPMODE::LT>(tmpFixMask, tmpVd0, zeroConstReg, preg);
+            AscendC::MicroAPI::Adds(tmpReg, tmpVd0, tmpGatherDimSize, tmpFixMask);
+            Copy<int32_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(tmpVd0, tmpReg, tmpFixMask);
+        }
+
+        AscendC::MicroAPI::Compare<int32_t, CMPMODE::LT>(tmpFixMask, tmpVd0, zeroConstReg, preg);
+        AscendC::MicroAPI::MaskOr(fixMask, fixMask, tmpFixMask, preg);
+
+        AscendC::MicroAPI::Compare<int32_t, CMPMODE::GE>(tmpFixMask, tmpVd0, tmpLimitConstReg, preg);
+        AscendC::MicroAPI::MaskOr(fixMask, fixMask, tmpFixMask, preg);
+
+        AscendC::MicroAPI::Muls(indicesReg, indicesReg, tmpGatherDimSize, preg);
+        AscendC::MicroAPI::Add(indicesReg, indicesReg, tmpVd0, preg);
+            
+        AscendC::MicroAPI::Duplicate(tmpReg, int32_t(-1), fixMask);
+        Copy<int32_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(indicesReg, tmpReg, fixMask);
+
+        AscendC::MicroAPI::Adds(indicesReg, indicesReg, 1, preg);
+        AscendC::MicroAPI::Muls(indicesReg, indicesReg, aSizeAligned, preg);
+        AscendC::MicroAPI::DataCopy((__ubuf__ int32_t*)indicesAddr + i * computeSizeT, indicesReg, preg);
+    }
+}
+
+template <typename INDICES_T, const bool NIS>
+__simd_vf__ inline void FixIndicesVfRank3CoreVf(
+    __ubuf__ int32_t* curIndicesAddr, __ubuf__ INDICES_T* indicesAddr,
+    __ubuf__ uint32_t* helpAddr, int32_t indicesNumPro,
+    int64_t xShape0, int64_t xShape1, int64_t xShape2, int32_t aSizeAligned,
+    uint16_t computeSizeT, uint16_t repeatimes, int32_t indicesStride)
+{
+    MicroAPI::RegTensor<uint32_t> upIndex;
+    MicroAPI::RegTensor<uint32_t> curUpIndex;
+
+    AscendC::MicroAPI::RegTensor<int32_t> zeroConstReg;
+    AscendC::MicroAPI::Duplicate(zeroConstReg, int32_t(0));
+
+    AscendC::MicroAPI::RegTensor<int32_t> indicesReg;
+    AscendC::MicroAPI::RegTensor<int32_t> tmpReg;
+
+    AscendC::MicroAPI::RegTensor<uint32_t> indicesIndicesReg;
+    AscendC::MicroAPI::RegTensor<int32_t> tmpVd0;
+
+    uint32_t indicesMask = indicesNumPro;
+    
+    MicroAPI::DataCopy<uint32_t>(upIndex, helpAddr);
+    MicroAPI::MaskReg preg0 = MicroAPI::CreateMask<int32_t, MicroAPI::MaskPattern::ALL>();
+    AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<int32_t>(indicesMask);
+
+    for (uint16_t i = 0; i < repeatimes; i++) {
+        MicroAPI::Copy(curUpIndex, upIndex, preg0);
+        AscendC::MicroAPI::RegTensor<uint32_t> indicesOffset;
+        AscendC::MicroAPI::Duplicate(indicesOffset, uint32_t(i * computeSizeT * indicesStride));
+        AscendC::MicroAPI::MaskReg fixMask = MicroAPI::CreateMask<int32_t, MicroAPI::MaskPattern::ALLF>();
+        AscendC::MicroAPI::Duplicate(indicesReg, int32_t(0));
+        AscendC::MicroAPI::MaskReg tmpFixMask;
+
+        int32_t tmpGatherDimSize = xShape0;
+        AscendC::MicroAPI::RegTensor<int32_t> tmpLimitConstReg;
+        AscendC::MicroAPI::Duplicate(tmpLimitConstReg, int32_t(tmpGatherDimSize));
+
+        MicroAPI::Add(indicesIndicesReg, indicesOffset, curUpIndex, preg);
+        MicroAPI::DataCopyGather(tmpVd0, curIndicesAddr, indicesIndicesReg, preg);
+
+        if constexpr (NIS) {
+            AscendC::MicroAPI::Compare<int32_t, CMPMODE::LT>(tmpFixMask, tmpVd0, zeroConstReg, preg);
+            AscendC::MicroAPI::Adds(tmpReg, tmpVd0, tmpGatherDimSize, tmpFixMask);
+            Copy<int32_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(tmpVd0, tmpReg, tmpFixMask);
+        }
+
+        AscendC::MicroAPI::Compare<int32_t, CMPMODE::LT>(tmpFixMask, tmpVd0, zeroConstReg, preg);
+        AscendC::MicroAPI::MaskOr(fixMask, fixMask, tmpFixMask, preg);
+
+        AscendC::MicroAPI::Compare<int32_t, CMPMODE::GE>(tmpFixMask, tmpVd0, tmpLimitConstReg, preg);
+        AscendC::MicroAPI::MaskOr(fixMask, fixMask, tmpFixMask, preg);
+
+        AscendC::MicroAPI::Muls(indicesReg, indicesReg, tmpGatherDimSize, preg);
+        AscendC::MicroAPI::Add(indicesReg, indicesReg, tmpVd0, preg);
+
+        tmpGatherDimSize = xShape1;
+        AscendC::MicroAPI::Duplicate(tmpLimitConstReg, int32_t(tmpGatherDimSize));
+
+        MicroAPI::Adds(curUpIndex, curUpIndex, 1, preg0);
+        
+        MicroAPI::Add(indicesIndicesReg, indicesOffset, curUpIndex, preg);
+        MicroAPI::DataCopyGather(tmpVd0, curIndicesAddr, indicesIndicesReg, preg);
+
+        if constexpr (NIS) {
+            AscendC::MicroAPI::Compare<int32_t, CMPMODE::LT>(tmpFixMask, tmpVd0, zeroConstReg, preg);
+            AscendC::MicroAPI::Adds(tmpReg, tmpVd0, tmpGatherDimSize, tmpFixMask);
+            Copy<int32_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(tmpVd0, tmpReg, tmpFixMask);
+        }
+
+        AscendC::MicroAPI::Compare<int32_t, CMPMODE::LT>(tmpFixMask, tmpVd0, zeroConstReg, preg);
+        AscendC::MicroAPI::MaskOr(fixMask, fixMask, tmpFixMask, preg);
+
+        AscendC::MicroAPI::Compare<int32_t, CMPMODE::GE>(tmpFixMask, tmpVd0, tmpLimitConstReg, preg);
+        AscendC::MicroAPI::MaskOr(fixMask, fixMask, tmpFixMask, preg);
+
+        AscendC::MicroAPI::Muls(indicesReg, indicesReg, tmpGatherDimSize, preg);
+        AscendC::MicroAPI::Add(indicesReg, indicesReg, tmpVd0, preg);
+
+        tmpGatherDimSize = xShape2;
+        AscendC::MicroAPI::Duplicate(tmpLimitConstReg, int32_t(tmpGatherDimSize));
+
+        MicroAPI::Adds(curUpIndex, curUpIndex, 1, preg0);
+        
+        MicroAPI::Add(indicesIndicesReg, indicesOffset, curUpIndex, preg);
+        MicroAPI::DataCopyGather(tmpVd0, curIndicesAddr, indicesIndicesReg, preg);
+
+        if constexpr (NIS) {
+            AscendC::MicroAPI::Compare<int32_t, CMPMODE::LT>(tmpFixMask, tmpVd0, zeroConstReg, preg);
+            AscendC::MicroAPI::Adds(tmpReg, tmpVd0, tmpGatherDimSize, tmpFixMask);
+            Copy<int32_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(tmpVd0, tmpReg, tmpFixMask);
+        }
+
+        AscendC::MicroAPI::Compare<int32_t, CMPMODE::LT>(tmpFixMask, tmpVd0, zeroConstReg, preg);
+        AscendC::MicroAPI::MaskOr(fixMask, fixMask, tmpFixMask, preg);
+
+        AscendC::MicroAPI::Compare<int32_t, CMPMODE::GE>(tmpFixMask, tmpVd0, tmpLimitConstReg, preg);
+        AscendC::MicroAPI::MaskOr(fixMask, fixMask, tmpFixMask, preg);
+
+        AscendC::MicroAPI::Muls(indicesReg, indicesReg, tmpGatherDimSize, preg);
+        AscendC::MicroAPI::Add(indicesReg, indicesReg, tmpVd0, preg);
+
+        AscendC::MicroAPI::Duplicate(tmpReg, int32_t(-1), fixMask);
+        Copy<int32_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(indicesReg, tmpReg, fixMask);
+
+        AscendC::MicroAPI::Adds(indicesReg, indicesReg, 1, preg);
+        AscendC::MicroAPI::Muls(indicesReg, indicesReg, aSizeAligned, preg);
+        AscendC::MicroAPI::DataCopy((__ubuf__ int32_t*)indicesAddr + i * computeSizeT, indicesReg, preg);
+    }
+}
+
+__simd_vf__ inline void GatherProcessVfSingleVf(
+    int32_t indicesNumCurPro, uint32_t aSize, uint32_t aSizeAligned,
+    __ubuf__ int32_t* curIndicesAddr, __ubuf__ int8_t* xAddr, __ubuf__ int8_t* yAddr)
+{
+    MicroAPI::RegTensor<int8_t> vregTemp;
+    MicroAPI::MaskReg preg;
+
+    for (uint16_t indices = 0; indices < static_cast<uint16_t>(indicesNumCurPro); indices++) {
+        uint32_t indicesValue = (curIndicesAddr[indices]);
+        __ubuf__ int8_t* curXAddr = xAddr + indicesValue;
+        uint32_t sreg = aSize;
+        preg = MicroAPI::UpdateMask<int8_t>(sreg);
+        MicroAPI::DataCopy(vregTemp, curXAddr);
+        MicroAPI::DataCopy(yAddr, vregTemp, preg);
+        yAddr += aSizeAligned;
+    }
+}
+
+__simd_vf__ inline void GatherProcessVfMultiVf(
+    int32_t indicesNumCurPro, uint32_t aSize, uint32_t aSizeAligned,
+    uint16_t computeSize, uint16_t repeatimes,
+    __ubuf__ int32_t* curIndicesAddr, __ubuf__ int8_t* xAddr, __ubuf__ int8_t* yAddr)
+{
+    MicroAPI::RegTensor<int8_t> vregTemp;
+    MicroAPI::MaskReg preg;
+
+    for (uint16_t indices = 0; indices < static_cast<uint16_t>(indicesNumCurPro); indices++) {
+        uint32_t indicesValue = (curIndicesAddr[indices]);
+        __ubuf__ int8_t* curXAddr = xAddr + indicesValue;
+        uint32_t sreg = aSize;
+        for (uint16_t r = 0; r < repeatimes; r++) {
+            preg = MicroAPI::UpdateMask<int8_t>(sreg);
+            MicroAPI::AddrReg offset = MicroAPI::CreateAddrReg<int8_t>(r, computeSize);
+            MicroAPI::DataCopy(vregTemp, curXAddr, offset);
+            MicroAPI::DataCopy(yAddr, vregTemp, offset, preg);
+        }
+        yAddr += aSizeAligned;
+    }
+}
 
 template <typename INDICES_T, const bool NIS>
 class GatherNdAllLoad
@@ -102,20 +427,9 @@ template <typename INDICES_T, const bool NIS>
 __aicore__ inline void GatherNdAllLoad<INDICES_T, NIS>::GenIndexBuf()
 {
     LocalTensor<int32_t> helpTensor = tmpIndexBuf_.Get<int32_t>();
-    __local_mem__ int32_t* helpAddr = (__local_mem__ int32_t*)helpTensor.GetPhyAddr();
     int32_t colFactor = platform::GetUbBlockSize() / sizeof(int32_t);
 
-    __VEC_SCOPE__
-    {
-        AscendC::MicroAPI::RegTensor<int32_t> v0;
-        AscendC::MicroAPI::RegTensor<int32_t> vd1;
-
-        AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::CreateMask<int32_t, AscendC::MicroAPI::MaskPattern::ALL>();
-        AscendC::MicroAPI::Arange(v0, 0);
-        AscendC::MicroAPI::Muls(vd1, v0, colFactor, preg);
-
-        AscendC::MicroAPI::DataCopy(helpAddr, vd1, preg);
-    }
+    GenIndexBufVf(colFactor, (__ubuf__ int32_t*)helpTensor.GetPhyAddr());
 }
 
 
@@ -123,23 +437,11 @@ template <typename INDICES_T, const bool NIS>
 __aicore__ inline void GatherNdAllLoad<INDICES_T, NIS>::InitializationX()
 {
     LocalTensor<int8_t> xLocal = xBuf_.Get<int8_t>();
-    __local_mem__ int8_t* xAddr = (__local_mem__ int8_t*)xLocal.GetPhyAddr();
     uint32_t aSizeAligned = tilingData_->aSizeAligned;
     uint16_t computeSize = platform::GetVRegSize();
     uint16_t repeatimes = (aSizeAligned + computeSize - 1) / computeSize;
 
-    __VEC_SCOPE__
-    {
-        AscendC::MicroAPI::RegTensor<int8_t> zeroConstReg;
-        AscendC::MicroAPI::Duplicate(zeroConstReg, int8_t(0));
-        MicroAPI::MaskReg preg;
-        uint32_t sreg = aSizeAligned;
-        for (uint16_t r = 0; r < repeatimes; r++) {
-            preg = MicroAPI::UpdateMask<int8_t>(sreg);
-            MicroAPI::AddrReg offset = MicroAPI::CreateAddrReg<int8_t>(r, computeSize);
-            MicroAPI::DataCopy(xAddr, zeroConstReg, offset, preg);
-        }
-    }
+    InitializationXVf(aSizeAligned, computeSize, repeatimes, (__ubuf__ int8_t*)xLocal.GetPhyAddr());
 }
 
 
@@ -200,67 +502,11 @@ __aicore__ inline void GatherNdAllLoad<INDICES_T, NIS>::FixIndicesVfRank1(
     uint16_t repeatimes = (indicesNumPro + computeSizeT - 1) / computeSizeT;
 
     LocalTensor<uint32_t> helpTensor = tmpIndexBuf_.Get<uint32_t>();
-    __local_mem__ uint32_t* helpAddr = (__local_mem__ uint32_t*)helpTensor.GetPhyAddr();
-    __local_mem__ int32_t* curIndicesAddr = (__local_mem__ int32_t*)indicesAddr;
 
-    __VEC_SCOPE__
-    {
-        MicroAPI::RegTensor<uint32_t> upIndex;
-        MicroAPI::RegTensor<uint32_t> curUpIndex;
-
-        AscendC::MicroAPI::RegTensor<int32_t> zeroConstReg;
-        AscendC::MicroAPI::Duplicate(zeroConstReg, int32_t(0));
-
-        AscendC::MicroAPI::RegTensor<int32_t> indicesReg;
-        AscendC::MicroAPI::RegTensor<int32_t> tmpReg;
-
-        AscendC::MicroAPI::RegTensor<uint32_t> indicesIndicesReg;
-        AscendC::MicroAPI::RegTensor<int32_t> tmpVd0;
-
-        uint32_t indicesMask = indicesNumPro;
-        
-        MicroAPI::DataCopy<uint32_t>(upIndex, helpAddr);
-        MicroAPI::MaskReg preg0 = MicroAPI::CreateMask<int32_t, MicroAPI::MaskPattern::ALL>();
-        AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<int32_t>(indicesMask);
-
-        for (uint16_t i = 0; i < repeatimes; i++) {
-            MicroAPI::Copy(curUpIndex, upIndex, preg0);
-            AscendC::MicroAPI::RegTensor<uint32_t> indicesOffset;
-            AscendC::MicroAPI::Duplicate(indicesOffset, uint32_t(i * computeSizeT * indicesStride));
-            AscendC::MicroAPI::MaskReg fixMask = MicroAPI::CreateMask<int32_t, MicroAPI::MaskPattern::ALLF>(); // 当前repeat的最终mask，初始为全0
-            AscendC::MicroAPI::Duplicate(indicesReg, int32_t(0));
-            AscendC::MicroAPI::MaskReg tmpFixMask;
-
-            int32_t tmpGatherDimSize = xShape0;
-            AscendC::MicroAPI::RegTensor<int32_t> tmpLimitConstReg;
-            AscendC::MicroAPI::Duplicate(tmpLimitConstReg, int32_t(tmpGatherDimSize));
-
-            MicroAPI::Add(indicesIndicesReg, indicesOffset, curUpIndex, preg);
-            MicroAPI::DataCopyGather(tmpVd0, curIndicesAddr, indicesIndicesReg, preg);
-
-            if constexpr (NIS) {
-                AscendC::MicroAPI::Compare<int32_t, CMPMODE::LT>(tmpFixMask, tmpVd0, zeroConstReg, preg);
-                AscendC::MicroAPI::Adds(tmpReg, tmpVd0, tmpGatherDimSize, tmpFixMask); // 补偿负索引场景
-                Copy<int32_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(tmpVd0, tmpReg, tmpFixMask);
-            }
-
-            AscendC::MicroAPI::Compare<int32_t, CMPMODE::LT>(tmpFixMask, tmpVd0, zeroConstReg, preg); // 负越界
-            AscendC::MicroAPI::MaskOr(fixMask, fixMask, tmpFixMask, preg);
-
-            AscendC::MicroAPI::Compare<int32_t, CMPMODE::GE>(tmpFixMask, tmpVd0, tmpLimitConstReg, preg); // 正越界
-            AscendC::MicroAPI::MaskOr(fixMask, fixMask, tmpFixMask, preg);
-
-            AscendC::MicroAPI::Muls(indicesReg, indicesReg, tmpGatherDimSize, preg);
-            AscendC::MicroAPI::Add(indicesReg, indicesReg, tmpVd0, preg);
-            
-            AscendC::MicroAPI::Duplicate(tmpReg, int32_t(-1), fixMask); // 补偿越界
-            Copy<int32_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(indicesReg, tmpReg, fixMask);
-
-            AscendC::MicroAPI::Adds(indicesReg, indicesReg, 1, preg);
-            AscendC::MicroAPI::Muls(indicesReg, indicesReg, aSizeAligned, preg);
-            AscendC::MicroAPI::DataCopy((__local_mem__ int32_t*)indicesAddr + i * computeSizeT, indicesReg, preg); // k合1的indices拷出到indicesBuf
-        }
-    }
+    FixIndicesVfRank1CoreVf<INDICES_T, NIS>(
+        (__ubuf__ int32_t*)indicesAddr, (__ubuf__ INDICES_T*)indicesAddr,
+        (__ubuf__ uint32_t*)helpTensor.GetPhyAddr(), indicesNumPro,
+        xShape0, aSizeAligned, computeSizeT, repeatimes, indicesStride);
 }
 
 
@@ -277,94 +523,11 @@ __aicore__ inline void GatherNdAllLoad<INDICES_T, NIS>::FixIndicesVfRank2(
     uint16_t repeatimes = (indicesNumPro + computeSizeT - 1) / computeSizeT;
 
     LocalTensor<uint32_t> helpTensor = tmpIndexBuf_.Get<uint32_t>();
-    __local_mem__ uint32_t* helpAddr = (__local_mem__ uint32_t*)helpTensor.GetPhyAddr();
-    __local_mem__ int32_t* curIndicesAddr = (__local_mem__ int32_t*)indicesAddr;
 
-    __VEC_SCOPE__
-    {
-        MicroAPI::RegTensor<uint32_t> upIndex;
-        MicroAPI::RegTensor<uint32_t> curUpIndex;
-
-        AscendC::MicroAPI::RegTensor<int32_t> zeroConstReg;
-        AscendC::MicroAPI::Duplicate(zeroConstReg, int32_t(0));
-
-        AscendC::MicroAPI::RegTensor<int32_t> indicesReg;
-        AscendC::MicroAPI::RegTensor<int32_t> tmpReg;
-
-        AscendC::MicroAPI::RegTensor<uint32_t> indicesIndicesReg;
-        AscendC::MicroAPI::RegTensor<int32_t> tmpVd0;
-
-        uint32_t indicesMask = indicesNumPro;
-        
-        MicroAPI::DataCopy<uint32_t>(upIndex, helpAddr);
-        MicroAPI::MaskReg preg0 = MicroAPI::CreateMask<int32_t, MicroAPI::MaskPattern::ALL>();
-        AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<int32_t>(indicesMask);
-
-        for (uint16_t i = 0; i < repeatimes; i++) {
-            MicroAPI::Copy(curUpIndex, upIndex, preg0);
-            AscendC::MicroAPI::RegTensor<uint32_t> indicesOffset;
-            AscendC::MicroAPI::Duplicate(indicesOffset, uint32_t(i * computeSizeT * indicesStride));
-            AscendC::MicroAPI::MaskReg fixMask = MicroAPI::CreateMask<int32_t, MicroAPI::MaskPattern::ALLF>(); // 当前repeat的最终mask，初始为全0
-            AscendC::MicroAPI::Duplicate(indicesReg, int32_t(0));
-            AscendC::MicroAPI::MaskReg tmpFixMask;
-
-            // 循环处理每一维索引
-            // --- loop 0
-            int32_t tmpGatherDimSize = xShape0;
-            AscendC::MicroAPI::RegTensor<int32_t> tmpLimitConstReg;
-            AscendC::MicroAPI::Duplicate(tmpLimitConstReg, int32_t(tmpGatherDimSize));
-            
-            MicroAPI::Add(indicesIndicesReg, indicesOffset, curUpIndex, preg);
-            MicroAPI::DataCopyGather(tmpVd0, curIndicesAddr, indicesIndicesReg, preg);
-
-            if constexpr (NIS) {
-                AscendC::MicroAPI::Compare<int32_t, CMPMODE::LT>(tmpFixMask, tmpVd0, zeroConstReg, preg);
-                AscendC::MicroAPI::Adds(tmpReg, tmpVd0, tmpGatherDimSize, tmpFixMask); // 补偿负索引场景
-                Copy<int32_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(tmpVd0, tmpReg, tmpFixMask);
-            }
-
-            AscendC::MicroAPI::Compare<int32_t, CMPMODE::LT>(tmpFixMask, tmpVd0, zeroConstReg, preg); // 负越界
-            AscendC::MicroAPI::MaskOr(fixMask, fixMask, tmpFixMask, preg);
-
-            AscendC::MicroAPI::Compare<int32_t, CMPMODE::GE>(tmpFixMask, tmpVd0, tmpLimitConstReg, preg); // 正越界
-            AscendC::MicroAPI::MaskOr(fixMask, fixMask, tmpFixMask, preg);
-
-            AscendC::MicroAPI::Muls(indicesReg, indicesReg, tmpGatherDimSize, preg);
-            AscendC::MicroAPI::Add(indicesReg, indicesReg, tmpVd0, preg);
-
-            // --- loop 1
-            tmpGatherDimSize = xShape1;
-            AscendC::MicroAPI::Duplicate(tmpLimitConstReg, int32_t(tmpGatherDimSize));
-
-            MicroAPI::Adds(curUpIndex, curUpIndex, 1, preg0);
-            
-            MicroAPI::Add(indicesIndicesReg, indicesOffset, curUpIndex, preg);
-            MicroAPI::DataCopyGather(tmpVd0, curIndicesAddr, indicesIndicesReg, preg);
-
-            if constexpr (NIS) {
-                AscendC::MicroAPI::Compare<int32_t, CMPMODE::LT>(tmpFixMask, tmpVd0, zeroConstReg, preg);
-                AscendC::MicroAPI::Adds(tmpReg, tmpVd0, tmpGatherDimSize, tmpFixMask); // 补偿负索引场景
-                Copy<int32_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(tmpVd0, tmpReg, tmpFixMask);
-            }
-
-            AscendC::MicroAPI::Compare<int32_t, CMPMODE::LT>(tmpFixMask, tmpVd0, zeroConstReg, preg); // 负越界
-            AscendC::MicroAPI::MaskOr(fixMask, fixMask, tmpFixMask, preg);
-
-            AscendC::MicroAPI::Compare<int32_t, CMPMODE::GE>(tmpFixMask, tmpVd0, tmpLimitConstReg, preg); // 正越界
-            AscendC::MicroAPI::MaskOr(fixMask, fixMask, tmpFixMask, preg);
-
-            AscendC::MicroAPI::Muls(indicesReg, indicesReg, tmpGatherDimSize, preg);
-            AscendC::MicroAPI::Add(indicesReg, indicesReg, tmpVd0, preg);
-            // --- loop end
-            
-            AscendC::MicroAPI::Duplicate(tmpReg, int32_t(-1), fixMask); // 补偿越界
-            Copy<int32_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(indicesReg, tmpReg, fixMask);
-
-            AscendC::MicroAPI::Adds(indicesReg, indicesReg, 1, preg);
-            AscendC::MicroAPI::Muls(indicesReg, indicesReg, aSizeAligned, preg);
-            AscendC::MicroAPI::DataCopy((__local_mem__ int32_t*)indicesAddr + i * computeSizeT, indicesReg, preg); // k合1的indices拷出到indicesBuf
-        }
-    }
+    FixIndicesVfRank2CoreVf<INDICES_T, NIS>(
+        (__ubuf__ int32_t*)indicesAddr, (__ubuf__ INDICES_T*)indicesAddr,
+        (__ubuf__ uint32_t*)helpTensor.GetPhyAddr(), indicesNumPro,
+        xShape0, xShape1, aSizeAligned, computeSizeT, repeatimes, indicesStride);
 }
 
 
@@ -382,119 +545,11 @@ __aicore__ inline void GatherNdAllLoad<INDICES_T, NIS>::FixIndicesVfRank3(
     uint16_t repeatimes = (indicesNumPro + computeSizeT - 1) / computeSizeT;
 
     LocalTensor<uint32_t> helpTensor = tmpIndexBuf_.Get<uint32_t>();
-    __local_mem__ uint32_t* helpAddr = (__local_mem__ uint32_t*)helpTensor.GetPhyAddr();
-    __local_mem__ int32_t* curIndicesAddr = (__local_mem__ int32_t*)indicesAddr;
 
-    __VEC_SCOPE__
-    {
-        MicroAPI::RegTensor<uint32_t> upIndex;
-        MicroAPI::RegTensor<uint32_t> curUpIndex;
-
-        AscendC::MicroAPI::RegTensor<int32_t> zeroConstReg;
-        AscendC::MicroAPI::Duplicate(zeroConstReg, int32_t(0));
-
-        AscendC::MicroAPI::RegTensor<int32_t> indicesReg;
-        AscendC::MicroAPI::RegTensor<int32_t> tmpReg;
-
-        AscendC::MicroAPI::RegTensor<uint32_t> indicesIndicesReg;
-        AscendC::MicroAPI::RegTensor<int32_t> tmpVd0;
-
-        uint32_t indicesMask = indicesNumPro;
-        
-        MicroAPI::DataCopy<uint32_t>(upIndex, helpAddr);
-        MicroAPI::MaskReg preg0 = MicroAPI::CreateMask<int32_t, MicroAPI::MaskPattern::ALL>();
-        AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<int32_t>(indicesMask);
-
-        for (uint16_t i = 0; i < repeatimes; i++) {
-            MicroAPI::Copy(curUpIndex, upIndex, preg0);
-            AscendC::MicroAPI::RegTensor<uint32_t> indicesOffset;
-            AscendC::MicroAPI::Duplicate(indicesOffset, uint32_t(i * computeSizeT * indicesStride));
-            AscendC::MicroAPI::MaskReg fixMask = MicroAPI::CreateMask<int32_t, MicroAPI::MaskPattern::ALLF>(); // 当前repeat的最终mask，初始为全0
-            AscendC::MicroAPI::Duplicate(indicesReg, int32_t(0));
-            AscendC::MicroAPI::MaskReg tmpFixMask;
-
-            // 循环处理每一维索引
-            // --- loop 0
-            int32_t tmpGatherDimSize = xShape0;
-            AscendC::MicroAPI::RegTensor<int32_t> tmpLimitConstReg;
-            AscendC::MicroAPI::Duplicate(tmpLimitConstReg, int32_t(tmpGatherDimSize));
-
-            
-            MicroAPI::Add(indicesIndicesReg, indicesOffset, curUpIndex, preg);
-            MicroAPI::DataCopyGather(tmpVd0, curIndicesAddr, indicesIndicesReg, preg);
-
-            if constexpr (NIS) {
-                AscendC::MicroAPI::Compare<int32_t, CMPMODE::LT>(tmpFixMask, tmpVd0, zeroConstReg, preg);
-                AscendC::MicroAPI::Adds(tmpReg, tmpVd0, tmpGatherDimSize, tmpFixMask); // 补偿负索引场景
-                Copy<int32_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(tmpVd0, tmpReg, tmpFixMask);
-            }
-
-            AscendC::MicroAPI::Compare<int32_t, CMPMODE::LT>(tmpFixMask, tmpVd0, zeroConstReg, preg); // 负越界
-            AscendC::MicroAPI::MaskOr(fixMask, fixMask, tmpFixMask, preg);
-
-            AscendC::MicroAPI::Compare<int32_t, CMPMODE::GE>(tmpFixMask, tmpVd0, tmpLimitConstReg, preg); // 正越界
-            AscendC::MicroAPI::MaskOr(fixMask, fixMask, tmpFixMask, preg);
-
-            AscendC::MicroAPI::Muls(indicesReg, indicesReg, tmpGatherDimSize, preg);
-            AscendC::MicroAPI::Add(indicesReg, indicesReg, tmpVd0, preg);
-
-            // --- loop 1
-            tmpGatherDimSize = xShape1;
-            AscendC::MicroAPI::Duplicate(tmpLimitConstReg, int32_t(tmpGatherDimSize));
-
-            MicroAPI::Adds(curUpIndex, curUpIndex, 1, preg0);
-            
-            MicroAPI::Add(indicesIndicesReg, indicesOffset, curUpIndex, preg);
-            MicroAPI::DataCopyGather(tmpVd0, curIndicesAddr, indicesIndicesReg, preg);
-
-            if constexpr (NIS) {
-                AscendC::MicroAPI::Compare<int32_t, CMPMODE::LT>(tmpFixMask, tmpVd0, zeroConstReg, preg);
-                AscendC::MicroAPI::Adds(tmpReg, tmpVd0, tmpGatherDimSize, tmpFixMask); // 补偿负索引场景
-                Copy<int32_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(tmpVd0, tmpReg, tmpFixMask);
-            }
-
-            AscendC::MicroAPI::Compare<int32_t, CMPMODE::LT>(tmpFixMask, tmpVd0, zeroConstReg, preg); // 负越界
-            AscendC::MicroAPI::MaskOr(fixMask, fixMask, tmpFixMask, preg);
-
-            AscendC::MicroAPI::Compare<int32_t, CMPMODE::GE>(tmpFixMask, tmpVd0, tmpLimitConstReg, preg); // 正越界
-            AscendC::MicroAPI::MaskOr(fixMask, fixMask, tmpFixMask, preg);
-
-            AscendC::MicroAPI::Muls(indicesReg, indicesReg, tmpGatherDimSize, preg);
-            AscendC::MicroAPI::Add(indicesReg, indicesReg, tmpVd0, preg);
-
-            // --- loop 2
-            tmpGatherDimSize = xShape2;
-            AscendC::MicroAPI::Duplicate(tmpLimitConstReg, int32_t(tmpGatherDimSize));
-
-            MicroAPI::Adds(curUpIndex, curUpIndex, 1, preg0);
-            
-            MicroAPI::Add(indicesIndicesReg, indicesOffset, curUpIndex, preg);
-            MicroAPI::DataCopyGather(tmpVd0, curIndicesAddr, indicesIndicesReg, preg);
-
-            if constexpr (NIS) {
-                AscendC::MicroAPI::Compare<int32_t, CMPMODE::LT>(tmpFixMask, tmpVd0, zeroConstReg, preg);
-                AscendC::MicroAPI::Adds(tmpReg, tmpVd0, tmpGatherDimSize, tmpFixMask); // 补偿负索引场景
-                Copy<int32_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(tmpVd0, tmpReg, tmpFixMask);
-            }
-
-            AscendC::MicroAPI::Compare<int32_t, CMPMODE::LT>(tmpFixMask, tmpVd0, zeroConstReg, preg); // 负越界
-            AscendC::MicroAPI::MaskOr(fixMask, fixMask, tmpFixMask, preg);
-
-            AscendC::MicroAPI::Compare<int32_t, CMPMODE::GE>(tmpFixMask, tmpVd0, tmpLimitConstReg, preg); // 正越界
-            AscendC::MicroAPI::MaskOr(fixMask, fixMask, tmpFixMask, preg);
-
-            AscendC::MicroAPI::Muls(indicesReg, indicesReg, tmpGatherDimSize, preg);
-            AscendC::MicroAPI::Add(indicesReg, indicesReg, tmpVd0, preg);
-            // --- loop end
-
-            AscendC::MicroAPI::Duplicate(tmpReg, int32_t(-1), fixMask); // 补偿越界
-            Copy<int32_t, AscendC::MicroAPI::MaskMergeMode::MERGING>(indicesReg, tmpReg, fixMask);
-
-            AscendC::MicroAPI::Adds(indicesReg, indicesReg, 1, preg);
-            AscendC::MicroAPI::Muls(indicesReg, indicesReg, aSizeAligned, preg);
-            AscendC::MicroAPI::DataCopy((__local_mem__ int32_t*)indicesAddr + i * computeSizeT, indicesReg, preg); // k合1的indices拷出到indicesBuf
-        }
-    }
+    FixIndicesVfRank3CoreVf<INDICES_T, NIS>(
+        (__ubuf__ int32_t*)indicesAddr, (__ubuf__ INDICES_T*)indicesAddr,
+        (__ubuf__ uint32_t*)helpTensor.GetPhyAddr(), indicesNumPro,
+        xShape0, xShape1, xShape2, aSizeAligned, computeSizeT, repeatimes, indicesStride);
 }
 
 
@@ -534,40 +589,11 @@ __aicore__ inline void GatherNdAllLoad<INDICES_T, NIS>::GatherProcessVfWithGA(
     uint32_t aSizeAligned = tilingData_->aSizeAligned;
 
     if (repeatimes == 1) {
-        __VEC_SCOPE__
-        {
-            MicroAPI::RegTensor<int8_t> vregTemp;
-            MicroAPI::MaskReg preg;
-
-            for (uint16_t indices = 0; indices < static_cast<uint16_t>(indicesNumCurPro); indices++) {
-                uint32_t indicesValue = (curIndicesAddr[indices]);
-                __local_mem__ int8_t* curXAddr = xAddr + indicesValue;
-                uint32_t sreg = aSize;
-                preg = MicroAPI::UpdateMask<int8_t>(sreg);
-                MicroAPI::DataCopy(vregTemp, curXAddr);
-                MicroAPI::DataCopy(yAddr, vregTemp, preg);
-                yAddr += aSizeAligned;
-            }
-        }
+        GatherProcessVfSingleVf(indicesNumCurPro, aSize, aSizeAligned,
+            (__ubuf__ int32_t*)curIndicesAddr, (__ubuf__ int8_t*)xAddr, (__ubuf__ int8_t*)yAddr);
     } else {
-        __VEC_SCOPE__
-        {
-            MicroAPI::RegTensor<int8_t> vregTemp;
-            MicroAPI::MaskReg preg;
-
-            for (uint16_t indices = 0; indices < static_cast<uint16_t>(indicesNumCurPro); indices++) {
-                uint32_t indicesValue = (curIndicesAddr[indices]);
-                __local_mem__ int8_t* curXAddr = xAddr + indicesValue;
-                uint32_t sreg = aSize;
-                for (uint16_t r = 0; r < repeatimes; r++) {
-                    preg = MicroAPI::UpdateMask<int8_t>(sreg);
-                    MicroAPI::AddrReg offset = MicroAPI::CreateAddrReg<int8_t>(r, computeSize);
-                    MicroAPI::DataCopy(vregTemp, curXAddr, offset);
-                    MicroAPI::DataCopy(yAddr, vregTemp, offset, preg);
-                }
-                yAddr += aSizeAligned;
-            }
-        }
+        GatherProcessVfMultiVf(indicesNumCurPro, aSize, aSizeAligned, computeSize, repeatimes,
+            (__ubuf__ int32_t*)curIndicesAddr, (__ubuf__ int8_t*)xAddr, (__ubuf__ int8_t*)yAddr);
     }
 }
 

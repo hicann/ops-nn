@@ -48,14 +48,13 @@ static ge::graphStatus Infershape4Nd(gert::InferShapeContext* context) {
 
   ge::DataType shape_dtype = shape_tensor->GetDataType();
   OP_CHECK_IF(shape_dtype != ge::DT_INT32 && shape_dtype != ge::DT_INT64,
-           OP_LOGE(
-               context->GetNodeName(),
-               "[", context->GetNodeName(), "], has wrong dtype [", ge::TypeUtils::DataTypeToSerialString(shape_dtype).c_str(), "], it should be in ", "[int32, int64]"),
+           OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "shape",
+               ge::TypeUtils::DataTypeToSerialString(shape_dtype).c_str(), "int32, int64"),
            return ge::GRAPH_FAILED);
 
   if (IsConstTensor(shape_tensor)) {
     OP_CHECK_IF(!Ops::Base::GetConstIntToShape(context, SC_IN_SHAPE_IDX, *output_shape),
-             OP_LOGE(context->GetNodeName(), "Infershape4ScatterNd is failed!"),
+             OP_LOGE_WITH_INVALID_INPUT(context->GetNodeName(), "shape"),
              return ge::GRAPH_FAILED);
   } else {
     output_shape->SetDimNum(0);

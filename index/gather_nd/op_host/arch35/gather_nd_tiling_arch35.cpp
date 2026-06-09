@@ -108,13 +108,19 @@ ge::graphStatus GatherNdSimtTiling::GetIndicesShapeInfo() {
   } else if (indicesDtype == ge::DT_INT32) {
     indicesDtypeSize_ = INPUT_DTYPE_B32;
   } else {
-    OP_LOGE("GatherNdSimt", "indices dtype error!");
+    OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "indices",
+        Ops::Base::ToString(indicesDtype).c_str(),
+        "int32 or int64");
+    return ge::GRAPH_FAILED;
   }
 
   const gert::Shape orgIndicesGeShape = context_->GetInputShape(GATHER_ND_INDICES_IDX)->GetStorageShape();
   uint64_t curIndicesDimLen = orgIndicesGeShape.GetDimNum();
   if (curIndicesDimLen == static_cast<uint64_t>(0)) {
-    OP_LOGE("GatherNdSimt", "indices shape is empty!");
+    OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "indices",
+        "0D",
+        "The shape dim of indices must be greater than 0");
+    return ge::GRAPH_FAILED;
   }
 
   rank_ = orgIndicesGeShape.GetDim(curIndicesDimLen - 1);
@@ -160,14 +166,18 @@ ge::graphStatus GatherNdSimtTiling::GetXShapeInfo() {
   } else if ((xDtype == ge::DT_INT8) || (xDtype == ge::DT_UINT8) ||(xDtype == ge::DT_BOOL)) {
     xDtypeSize_ = INPUT_DTYPE_B8;
   } else {
-    OP_LOGE("GatherNdSimt", "x dtype error!");
+    OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x",
+        Ops::Base::ToString(xDtype).c_str(),
+        "[int8, uint8, bool, int16, uint16, float16, bfloat16, int32, float, uint32, int64, uint64, double]");
     return ge::GRAPH_FAILED;
   }
 
   const gert::Shape orgXGeShape = context_->GetInputShape(GATHER_ND_X_IDX)->GetStorageShape();
   int64_t curXDimLen = orgXGeShape.GetDimNum();
   if (curXDimLen == 0) {
-    OP_LOGE("GatherNdSimt", "x shape is empty!");
+    OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "x",
+        "0D",
+        "The shape dim of x must be greater than 0");
     return ge::GRAPH_FAILED;
   }
   for (int64_t i = 0; i < int64_t(rank_); i++) {

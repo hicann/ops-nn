@@ -126,7 +126,9 @@ ge::graphStatus ScatterTiling::GetShapeAttrsInfo() {
       inputDtype != ge::DataType::DT_UINT8 && inputDtype != ge::DataType::DT_INT32 &&
       inputDtype != ge::DataType::DT_FLOAT8_E4M3FN && inputDtype != ge::DataType::DT_FLOAT8_E5M2 &&
       inputDtype != ge::DataType::DT_HIFLOAT8) {
-    OP_LOGE("Scatter", "invalid input dtype.");
+    OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x",
+        Ops::Base::ToString(inputDtype).c_str(),
+        "float16, float32, bfloat16, int8, uint8, int32, float8_e4m3fn, float8_e5m2, hifloat8");
     return ge::GRAPH_FAILED;
   }
 
@@ -134,7 +136,8 @@ ge::graphStatus ScatterTiling::GetShapeAttrsInfo() {
   OP_CHECK_NULL_WITH_CONTEXT(context_, indicesDesc);
   indicesDtype = indicesDesc->GetDataType();
   if (indicesDtype != ge::DataType::DT_INT32 && indicesDtype != ge::DataType::DT_INT64) {
-    OP_LOGE("Scatter", "invalid indices dtype.");
+    OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "indices",
+        Ops::Base::ToString(indicesDtype).c_str(), "int32, int64");
     return ge::GRAPH_FAILED;
   }
 
@@ -146,12 +149,16 @@ ge::graphStatus ScatterTiling::GetShapeAttrsInfo() {
       updatesDtype != ge::DataType::DT_UINT8 && updatesDtype != ge::DataType::DT_INT32 &&
       updatesDtype != ge::DataType::DT_FLOAT8_E4M3FN && updatesDtype != ge::DataType::DT_FLOAT8_E5M2 &&
       updatesDtype != ge::DataType::DT_HIFLOAT8) {
-    OP_LOGE("Scatter", "invalid updates dtype.");
+    OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "updates",
+        Ops::Base::ToString(updatesDtype).c_str(),
+        "float16, float32, bfloat16, int8, uint8, int32, float8_e4m3fn, float8_e5m2, hifloat8");
     return ge::GRAPH_FAILED;
   }
 
   if (updatesDtype != inputDtype) {
-    OP_LOGE("Scatter", "dtype of input and updates should be same.");
+    OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "x and updates",
+        (Ops::Base::ToString(inputDtype) + " and " + Ops::Base::ToString(updatesDtype)).c_str(),
+        "The dtype of x must be the same as updates");
     return ge::GRAPH_FAILED;
   }
 
@@ -161,8 +168,9 @@ ge::graphStatus ScatterTiling::GetShapeAttrsInfo() {
   OP_CHECK_NULL_WITH_CONTEXT(context_, indices);
   auto indicesShape = Ops::Base::EnsureNotScalar(indices->GetOriginShape());
   if (indicesShape.GetDimNum() > MAX_INDICES_DIM) {
-    OP_LOGE("Scatter", "indices shape dim(=%zu) > 2, please check.",
-                                    indicesShape.GetDimNum());
+    OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "indices",
+        std::to_string(indicesShape.GetDimNum()).c_str(),
+        "The shape dim of indices must be within the range [0, 2]");
     return ge::GRAPH_FAILED;
   }
   indicesDim = indicesShape.GetDimNum();
@@ -174,14 +182,16 @@ ge::graphStatus ScatterTiling::GetShapeAttrsInfo() {
   OP_CHECK_NULL_WITH_CONTEXT(context_, reducePtr);
   std::string reduce(reducePtr);
   if (reduce != "update" && reduce != "none" && reduce != "") {
-    OP_LOGE("Scatter", "reduce(=%s) only supports 'update'", reduce.c_str());
+    OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "reduce",
+        reduce.c_str(), "'update', 'none' or empty");
     return ge::GRAPH_FAILED;
   }
 
   const int64_t* axisPtr = attrs->GetAttrPointer<int64_t>(AXIS_INDEX);
   axis = (axisPtr == nullptr) ? 0 : *axisPtr;
   if (axis == 0) {
-    OP_LOGE("Scatter", "axis does not support 0.");
+    OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "axis",
+        "0", "non-zero");
     return ge::GRAPH_FAILED;
   }
   return ge::GRAPH_SUCCESS;
@@ -202,11 +212,16 @@ ge::graphStatus ScatterTiling::GetShapes() {
 
   auto indicesDimSize = indicesShape->GetOriginShape().GetDimNum();
   if (indicesDimSize == ZERO_DIM_SIZE && updatesShape->GetOriginShape().GetDim(BATCH_DIM) != 1) {
-    OP_LOGE("Scatter", "when the dimension of indices are 0, batch axis of updates should be 1.");
+    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "indices and updates",
+        (std::to_string(indicesDimSize) + " and " +
+         std::to_string(updatesShape->GetOriginShape().GetDim(BATCH_DIM))).c_str(),
+        "When the dim of indices is 0, the axis 1 of updates must be 1");
     return ge::GRAPH_FAILED;
   }
   if (indicesDimSize != ZERO_DIM_SIZE && indicesDimSize != ONE_DIM_SIZE && indicesDimSize != TWO_DIM_SIZE) {
-    OP_LOGE("Scatter", "dimension of indices should be 0, 1 or 2.");
+    OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "indices",
+        std::to_string(indicesDimSize).c_str(),
+        "The shape dim of indices must be within the range [0, 2]");
     return ge::GRAPH_FAILED;
   }
 
@@ -223,12 +238,18 @@ ge::graphStatus ScatterTiling::GetShapes() {
 
 ge::graphStatus ScatterTiling::CheckNullTensor() {
   if (inputOriginShape.GetDimNum() != updatesOriginShape.GetDimNum()) {
-    OP_LOGE("Scatter", "input should be same dims with updates.");
+    OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "x and updates",
+        (std::to_string(inputOriginShape.GetDimNum()) + " and " +
+         std::to_string(updatesOriginShape.GetDimNum())).c_str(),
+        "The shape dims of x and updates must be the same");
     return ge::GRAPH_FAILED;
   }
 
   if (inputOriginShape.GetDimNum() * indicesOriginShape.GetDimNum() == 0) {
-    OP_LOGE("Scatter", "input or indices shouldn't be null.");
+    OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "x and indices",
+        (std::to_string(inputOriginShape.GetDimNum()) + " and " +
+         std::to_string(indicesOriginShape.GetDimNum())).c_str(),
+        "The shape dims of x and indices must greater than 0");
     return ge::GRAPH_FAILED;
   }
 
@@ -236,8 +257,10 @@ ge::graphStatus ScatterTiling::CheckNullTensor() {
   int64_t indicesSize = indicesOriginShape.GetShapeSize();
   int64_t updatesSize = updatesOriginShape.GetShapeSize();
   if (inputSize == 0 || indicesSize == 0 || updatesSize == 0) {
-    OP_LOGE("Scatter", "input %ld or indices %ld or updates %ld shape shouldn't be zero.",
-            inputSize, indicesSize, updatesSize);
+    OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(context_->GetNodeName(), "x, indices and updates",
+        (std::to_string(inputSize) + ", " + std::to_string(indicesSize) +
+         " and " + std::to_string(updatesSize)).c_str(),
+        "x, indices and updates do not support empty tensors");
     return ge::GRAPH_FAILED;
   }
   return ge::GRAPH_SUCCESS;
@@ -248,7 +271,8 @@ ge::graphStatus ScatterTiling::MergeDims() {
   int32_t tmpAbsAxis = axis < 0 ? oldDims + axis : axis;
 
   if (tmpAbsAxis < 0 || tmpAbsAxis >= oldDims) {
-    OP_LOGE("Scatter", "axis should be less than data dims.");
+      OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "axis", std::to_string(tmpAbsAxis).c_str(),
+      "The value of axis must less than the shape dims of x");
     return ge::GRAPH_FAILED;
   }
 
@@ -289,38 +313,55 @@ ge::graphStatus ScatterTiling::CheckShapes() {
   int64_t indicesOriginDim = indicesOriginShape.GetDimNum();
   if (indicesOriginDim == TWO_INDICES) {
     OP_CHECK_IF(indicesOriginShape[1] != 2,
-                    OP_LOGE("Scatter", "when discrete, indicesOriginShape[1] should be 2."),
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "indices",
+                        Ops::Base::ToString(indicesOriginShape).c_str(),
+                        "When dim of indices is 2, the shape of 2nd axis must be 2"),
                     return ge::GRAPH_FAILED);
   }
 
   if (updatesNewShape[DIM0] != indicesOriginShape[DIM0]) {
-    OP_LOGE("Scatter", "updatesShape[0] should be same with indicesShape[0].");
+    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "updates and indices",
+        (std::to_string(updatesNewShape[DIM0]) + " and " +
+         std::to_string(indicesOriginShape[DIM0])).c_str(),
+        "1st axis of updates must be equal to the same axis of indices");
     return ge::GRAPH_FAILED;
   }
 
   if (updatesNewShape[DIM0] > inputNewShape[DIM0]) {
-    OP_LOGE("Scatter", "updatesShape[0] should be less than inputShape[0].");
+    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "updates and x",
+        (std::to_string(updatesNewShape[DIM0]) + " and " +
+         std::to_string(inputNewShape[DIM0])).c_str(),
+        "The 1st axis of updates must be less than or equal to that of x");
     return ge::GRAPH_FAILED;
   }
 
   if (updatesNewShape[DIM1] != inputNewShape[DIM1]) {
-    OP_LOGE("Scatter", "updatesShape[1] should be same with inputShape[1].");
+    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "updates and x",
+        (std::to_string(updatesNewShape[DIM1]) + " and " +
+         std::to_string(inputNewShape[DIM1])).c_str(),
+        "The 2nd axis of updates must be equal to the same axis of x");
     return ge::GRAPH_FAILED;
   }
 
   if (axis == SECOND_LAST_DIM) {
     if (updatesNewShape[DIM3] != inputNewShape[DIM3]) {
-      OP_LOGE("Scatter", "updateOriginShape[3] should be same with dataOriginShape[3].");
+      OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "updates and x",
+          (std::to_string(updatesNewShape[DIM3]) + " and " +
+           std::to_string(inputNewShape[DIM3])).c_str(),
+          "when axis is -2, the 4th axis of updates must be equal to the same axis of x");
       return ge::GRAPH_FAILED;
     }
   } else if (axis == -1) {
     if (updatesNewShape[DIM2] != inputNewShape[DIM2]) {
-      OP_LOGE("Scatter", "updatesShape[2] should be same with inputShape[2].");
+      OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "updates and x",
+          (std::to_string(updatesNewShape[DIM2]) + " and " +
+           std::to_string(inputNewShape[DIM2])).c_str(),
+          "when axis is -1, the 3th axis of updates must be equal to the same axis of x");
       return ge::GRAPH_FAILED;
     }
   } else {
-    OP_LOGE("Scatter", "axis only support -1 or -2!");
-    return ge::GRAPH_FAILED;
+    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "axis", 
+    std::to_string(axis).c_str(), "The value of axis after dim-merge must be -1 or -2");
   }
   return ge::GRAPH_SUCCESS;
 }
@@ -408,7 +449,11 @@ ge::graphStatus ScatterTiling::DoDeterministicTiling() {
 
   int64_t indicesSize = indicesOriginShape.GetShapeSize();
   int64_t indicesDtypeSize = ge::GetSizeByDataType(indicesDtype);
-  OP_CHECK_IF(indicesDtypeSize <= 0, OP_LOGE("Scatter", "get indicesDtype size fail."), return ge::GRAPH_FAILED);
+  OP_CHECK_IF(indicesDtypeSize <= 0,
+      OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "indices",
+          std::to_string(static_cast<int>(indicesDtype)).c_str(),
+          "The dtype size of indices must be greater than 0"),
+      return ge::GRAPH_FAILED);
   
   if (normBlockColNum_ * dtypeSize > (ubSize - INDICES_SIZE)) { // 列长大于UBSize，需分列
     indicesUbFactor_ = 
@@ -465,28 +510,23 @@ void ScatterTiling::SetTilingData() {
 
 ge::graphStatus ScatterTiling::DoOpTiling() {
   if (GetShapes() != ge::GRAPH_SUCCESS) {
-    OP_LOGE("Scatter", "GetShapes failed!");
     return ge::GRAPH_FAILED;
   }
 
   if (CheckNullTensor() != ge::GRAPH_SUCCESS) {
-    OP_LOGE("Scatter", "CheckNullTenosr failed!");
     return ge::GRAPH_FAILED;
   }
 
   if (MergeDims() != ge::GRAPH_SUCCESS) {
-    OP_LOGE("Scatter", "MergeDims failed!");
     return ge::GRAPH_FAILED;
   }
 
   if (CheckShapes() != ge::GRAPH_SUCCESS) {
-    OP_LOGE("Scatter", "CheckShapes failed!");
     return ge::GRAPH_FAILED;
   }
 
   if (isDeterministic_) {
     if (DoDeterministicTiling() != ge::GRAPH_SUCCESS) {
-      OP_LOGE("Scatter", "DoDeterministicTiling failed!");
       return ge::GRAPH_FAILED;
     }
     SetTilingData();
@@ -507,12 +547,10 @@ ge::graphStatus ScatterTiling::DoOpTiling() {
   }
 
   if (PromoteDtype() != ge::GRAPH_SUCCESS) {
-    OP_LOGE("Scatter", "PromoteDtype failed!");
     return ge::GRAPH_FAILED;
   }
 
   if (GetTilingParam() != ge::GRAPH_SUCCESS) {
-    OP_LOGE("Scatter", "GetTilingParam failed!");
     return ge::GRAPH_FAILED;
   }
   SetTilingData();

@@ -115,8 +115,9 @@ ge::graphStatus ScatterNdTiling::GetShapeAttrsInfo() {
   rankSize_ = indiceShape.GetDim(indiceDims - 1);
   OP_CHECK_IF((RANK_MIN_VALUE > static_cast<uint16_t>(rankSize_) ||
                   static_cast<uint16_t>(rankSize_) > RANK_MAX_VALUE),
-                  OP_LOGE(opName,
-                 " rankSize %u out of range[1, 7], please check.", rankSize_),
+                  OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(opName, "indices",
+                      std::to_string(rankSize_).c_str(),
+                      "The shape dim of indices must be within the range [1, 7]"),
                   return ge::GRAPH_FAILED);
   
   auto updates = context_->GetInputTensor(INPUT_IDX_UPDATES);
@@ -127,8 +128,9 @@ ge::graphStatus ScatterNdTiling::GetShapeAttrsInfo() {
   auto shapeValue = context_->GetOutputShape(OUTPUT_IDX_SHAPE)->GetStorageShape();
   uint64_t shapeRank = shapeValue.GetDimNum();
   OP_CHECK_IF((shapeRank < rankSize_),
-          OP_LOGE(opName,
-         " shapeRank %lu less than rank %u, please check.", shapeRank, rankSize_),
+          OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(opName, "shape",
+              std::to_string(shapeRank).c_str(),
+              "The shape dims of shape must be greater than or equal to the last axis of indices"),
           return ge::GRAPH_FAILED);
 
   for (uint64_t idx = 0; idx < shapeRank; idx++) {
@@ -149,8 +151,9 @@ ge::graphStatus ScatterNdTiling::GetShapeAttrsInfo() {
   }
   outputSize_ = shapeValue.GetShapeSize();
   OP_CHECK_IF((outputSize_ == 0 && preAxis_ != 0),
-          OP_LOGE(opName,
-         " shape or update should not be empty !"),
+          OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, "shape",
+              Ops::Base::ToString(shapeValue).c_str(),
+              "All axes of shape must be positive number"),
           return ge::GRAPH_FAILED);
   if (afterAxis_ != 0) {  // avoid div 0 when preAxis_ is 0
     rankFusedAxis_ = outputSize_ / afterAxis_;
@@ -178,7 +181,10 @@ ge::graphStatus ScatterNdTiling::getRestAvailableSize(uint64_t sampleNum, uint64
     ge::DataType idType)
 {
   uint64_t indicesDtypeSize = ge::GetSizeByDataType(idType);
-  OP_CHECK_IF(indicesDtypeSize <= 0, OP_LOGE(opName, "get indicesType size fail."),
+  OP_CHECK_IF(indicesDtypeSize <= 0, 
+              OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName, "indices",
+              Ops::Base::ToString(idType).c_str(),
+              "The dtype size of indices must be greater than 0"),
                   return ge::GRAPH_FAILED);
   auto ubBlock = static_cast<uint64_t>(Ops::Base::GetUbBlockSize(context_));
   uint64_t occupy = sampleNum * Ops::Base::CeilAlign(FLOAT_BYTES * postAxisSize_, ubBlock) + 
@@ -221,8 +227,11 @@ ge::graphStatus ScatterNdTiling::UbTiling() {
   auto halfUbSize = (ubSize_ - TWO * TWO * UB_AGLIN_VALUE) / BUFFER_NUM;
   auto indiceNum = indiceShapeSize_ / rankSize_;
   sliceSize_ = updateShapeSize_ / indiceNum;
+  auto updateShape = context_->GetInputShape(INPUT_IDX_UPDATES)->GetStorageShape();
   OP_CHECK_IF(sliceSize_ == static_cast<uint64_t>(0),
-                  OP_LOGE(opName, "sliceSize %lu is zero. please check.", sliceSize_),
+                  OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName, "updates",
+                   Ops::Base::ToString(updateShape).c_str(),
+                    "All axes of shape must be positive number"),
                   return ge::GRAPH_FAILED);
   auto updateTypeSize = ge::GetSizeByDataType(updateDtype);
   
@@ -382,9 +391,9 @@ ge::graphStatus ScatterNdTiling::DoOpTiling()
   }
   if (isDeterminTemplate_) {
     OP_LOGD(opName, "ScatterNdDeterministicTiling is running");
-    OP_CHECK_IF(ScatterNdDeterministicTiling() != ge::GRAPH_SUCCESS,
-                    OP_LOGE(opName, "ScatterNdDeterministicTiling fail."),
-                    return ge::GRAPH_FAILED);
+    if (ScatterNdDeterministicTiling() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
     SetStride();
     SetTilingData();
     OP_LOGD(opName, "ScatterNdDeterministicTiling success.");
@@ -420,13 +429,17 @@ uint64_t ScatterNdTiling::GetTilingKey() const
   if (iter != INDICE_DATA_TYPE_TO_INT.end()) {
     tilingKey += iter->second;
   } else {
-    OP_LOGE(opName, "indiceDtype = %u not supported. please check.", indiceDtype);
+    OP_LOGE_FOR_INVALID_DTYPE(opName, "indices",
+        Ops::Base::ToString(indiceDtype).c_str(),
+        "int32 or int64");
   }
   iter = UPDATE_DATA_TYPE_TO_INT.find(updateDtype);
   if (iter != UPDATE_DATA_TYPE_TO_INT.end()) {
     tilingKey += iter->second;
   } else {
-    OP_LOGE(opName, "updateDtype = %u not supported. please check.", updateDtype);
+    OP_LOGE_FOR_INVALID_DTYPE(opName, "updates",
+        Ops::Base::ToString(updateDtype).c_str(),
+        "float16, float32 or int32");
   }
   if (indiceShapeSize_ < UINT32_MAX && updateShapeSize_ < UINT32_MAX && outputShapeSize_ < UINT32_MAX) {
     tilingKey += INPUT_ADDRESS_IN_INT32;
