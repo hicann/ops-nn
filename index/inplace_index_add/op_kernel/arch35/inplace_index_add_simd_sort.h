@@ -458,35 +458,8 @@ __aicore__ inline void InplaceIndexAddSimdSort<VAR_T, IDX_T, IS_CONTIGUOUS, CAST
                 } else {
                     alpha = static_cast<COMPUTE_T>(alphaValue_);
                 }
-                __VEC_SCOPE__
-                {
-                    AscendC::MicroAPI::RegTensor<COMPUTE_T> sumReg;
-                    AscendC::MicroAPI::RegTensor<COMPUTE_T> castReg;
-                    AscendC::MicroAPI::MaskReg zeroMask = AscendC::MicroAPI::CreateMask<COMPUTE_T>();
-                    uint32_t maskLen = static_cast<uint32_t>(colLen);
-                    uint16_t idRepeatTimes = static_cast<uint16_t>(uniqueIdCountLocal(i));
-                    for (uint16_t i = 0; i < static_cast<uint16_t>(loopSize); i++) {
-                        AscendC::MicroAPI::MaskReg maskReg = AscendC::MicroAPI::UpdateMask<COMPUTE_T>(maskLen);
-                        if constexpr (IsSameType<VAR_T, half>::value || IsSameType<VAR_T, bfloat16_t>::value) {
-                            ops::LoadOneTensorForDtypeT<VAR_T>(updatesAddr + i * vfLen, castReg, maskReg, 0);
-                            AscendC::MicroAPI::DataCopy(sumReg, updateSumAddr + i * vfLen);
-                            AscendC::MicroAPI::Axpy(sumReg, castReg, alpha, maskReg);
-                            AscendC::MicroAPI::DataCopy(updateSumAddr + i * vfLen, sumReg, maskReg);
-                        } else if constexpr (IsSameType<VAR_T, int8_t>::value || IsSameType<VAR_T, bool>::value) {
-                            LoadOneTensorForDtypeInt<VAR_T>(updatesAddr, castReg, maskReg, i * vfLen);
-                            LoadOneTensorForDtypeInt<VAR_T>(updateSumAddr, sumReg, maskReg, i * vfLen);
-                            AscendC::MicroAPI::Muls(castReg, castReg, alpha, maskReg);
-                            AscendC::MicroAPI::Add(sumReg, sumReg, castReg, maskReg);
-                            StoreOneTensorForDtypeInt<VAR_T>(updateSumAddr, sumReg, maskReg, i * vfLen);
-                        } else {
-                            AscendC::MicroAPI::DataCopy(sumReg, updateSumAddr + i * vfLen);
-                            AscendC::MicroAPI::DataCopy(castReg, updatesAddr + i * vfLen);
-                            AscendC::MicroAPI::Muls(castReg, castReg, alpha, maskReg);
-                            AscendC::MicroAPI::Add(sumReg, sumReg, castReg, maskReg);
-                            AscendC::MicroAPI::DataCopy(updateSumAddr + i * vfLen, sumReg, maskReg);
-                        }
-                    }
-                }
+                ComputeSumSingleRowVf<VAR_T, UPDATES_CT, COMPUTE_T>(updatesAddr, updateSumAddr, static_cast<uint16_t>(loopSize), 
+                                                                    static_cast<uint32_t>(colLen), alpha, vfLen);
                 updatesQue_.FreeTensor(updatesLocal);
             }
 

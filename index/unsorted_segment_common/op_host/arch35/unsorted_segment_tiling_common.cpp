@@ -139,14 +139,16 @@ ge::graphStatus UnsortedSegmentBaseTiling::CheckInputDtype()
     OP_CHECK_NULL_WITH_CONTEXT(context_, segmentIdsDtypePtr);
 
     auto dataTypeIter = DATA_TYPE_SUPPORT.find(dataDtypePtr->GetDataType());
-    auto indexTypeIter = SEG_TYPE_SUPPORT.find(segmentIdsDtypePtr->GetDataType());
+    auto segmentIdsTypeIter = SEG_TYPE_SUPPORT.find(segmentIdsDtypePtr->GetDataType());
     OP_TILING_CHECK(
         dataTypeIter == DATA_TYPE_SUPPORT.end(),
-        OP_LOGE(context_->GetNodeName(), "x data type only supoort %s, please check!", ToString(DATA_TYPE_SUPPORT).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x",
+            Ops::Base::ToString(dataDtypePtr->GetDataType()).c_str(), ToString(DATA_TYPE_SUPPORT).c_str()),
         return ge::GRAPH_FAILED);
     OP_TILING_CHECK(
-        indexTypeIter == SEG_TYPE_SUPPORT.end(),
-        OP_LOGE(context_->GetNodeName(), "segment_ids only support %s, please cehck!", ToString(SEG_TYPE_SUPPORT).c_str()),
+        segmentIdsTypeIter == SEG_TYPE_SUPPORT.end(),
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "segment_ids",
+            Ops::Base::ToString(segmentIdsDtypePtr->GetDataType()).c_str(), ToString(SEG_TYPE_SUPPORT).c_str()),
         return ge::GRAPH_FAILED);
 
     dataType_ = dataDtypePtr->GetDataType();
@@ -155,10 +157,14 @@ ge::graphStatus UnsortedSegmentBaseTiling::CheckInputDtype()
     dataTypeBytes_ = ge::GetSizeByDataType(dataType_);
     idTypeBytes_ = ge::GetSizeByDataType(idType_);
     OP_TILING_CHECK(
-        dataTypeBytes_ <= 0UL, OP_LOGE(context_->GetNodeName(), "get dataType size fail."),
+        dataTypeBytes_ <= 0UL,
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "x",
+            std::to_string(dataTypeBytes_).c_str(), "The dtype size of x must be greater than 0."),
         return ge::GRAPH_FAILED);
     OP_TILING_CHECK(
-        idTypeBytes_ <= 0UL, OP_LOGE(context_->GetNodeName(), "get idType size fail."),
+        idTypeBytes_ <= 0UL,
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "segment_ids",
+            std::to_string(idTypeBytes_).c_str(), "The dtype size of segment_ids must be greater than 0."),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -168,9 +174,9 @@ ge::graphStatus UnsortedSegmentBaseTiling::GetShapeAttrsInfo()
     auto nodeName = context_->GetNodeName();
     OP_LOGD(nodeName, "GetShapeAttrsInfo begin.");
 
-    OP_TILING_CHECK(
-        CheckInputDtype() != ge::GRAPH_SUCCESS,
-        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "input dtype check failed."), return ge::GRAPH_FAILED);
+    if (CheckInputDtype() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
 
     auto dataShapePtr = context_->GetInputShape(INPUT_DATA_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, dataShapePtr);
@@ -192,26 +198,34 @@ ge::graphStatus UnsortedSegmentBaseTiling::GetShapeAttrsInfo()
     Ops::Base::GetConstInt(context_, INPUT_NUM_SEGMENTS_INDEX, num_segments);
     OP_TILING_CHECK(
     num_segments != outputShape[0],
-    OP_LOGE(context_->GetNodeName(), "Num_segments which is %ld must match the Outputshape[0]=%ld!", num_segments, outputShape[0]),
+    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "num_segments",
+        std::to_string(num_segments).c_str(),
+        ("The num_segments must match Outputshape[0]=" + std::to_string(outputShape[0])).c_str()),
     return ge::GRAPH_FAILED);
 
     OP_TILING_CHECK(
         numSegmentsShape.GetDimNum() != 1,
-        OP_LOGE(context_->GetNodeName(), "Num_segments should be one dim shape!"),
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "num_segments",
+            (std::to_string(numSegmentsShape.GetDimNum()) + "D").c_str(), "1D"),
         return ge::GRAPH_FAILED);
 
     OP_TILING_CHECK(
         !ShapeStartsWith(dataShape, segmentIdsShape),
-        OP_LOGE(
-            context_->GetNodeName(), "Data.shape does not start with segment_ids.shape"),
-        return ge::GRAPH_FAILED);
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "x and segment_ids", 
+            Ops::Base::ToString(dataShape) + " and " + Ops::Base::ToString(segmentIdsShape),
+            "The shape of segment_ids must be the same as the shape consisting of the first " + 
+            std::to_string(segmentIdsShape.GetDimNum()) + "axes of x."),
+        return ge::GRAPH_FAILED);   
 
     std::tie(inputOuterDim_, innerDim_) = FlatInput(dataShape, segmentIdsShape);
     // check key value not greater than 2^48.
     uint64_t bound = static_cast<int64_t>(1ULL << 48);
     OP_TILING_CHECK(
         inputOuterDim_ > bound,
-        OP_LOGE(context_->GetNodeName(), "InputOuterDim out of 2^48!"),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "x",
+            Ops::Base::ToString(dataShape),
+            "The product of the first " + std::to_string(segmentIdsShape.GetDimNum())
+            + " axes of x must be less than 2^48"),
         return ge::GRAPH_FAILED);
 
     dataShapeSize_ = dataShape.GetShapeSize();

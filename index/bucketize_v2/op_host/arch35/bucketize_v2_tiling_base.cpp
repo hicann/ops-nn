@@ -77,7 +77,8 @@ ge::graphStatus BucketizeV2BaseTiling::GetShapeAndDtype()
     xDtype_ = inputXPtr->GetDataType();    
     xDtypeSize_ = ge::GetSizeByDataType(xDtype_);
     OP_CHECK_IF(
-        xDtypeSize_ <= 0, OP_LOGE(context_, "xDtypeSize must be greater than 0, xDtypeSize: %ld", xDtypeSize_),
+        xDtypeSize_ <= 0, OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "x",
+            Ops::Base::ToString(xDtype_).c_str(), "The dtype size of x must be greater than 0."),
         return ge::GRAPH_FAILED);
 
     auto boundShapePtr = context_->GetRequiredInputShape(INPUT_BOUND_IDX);
@@ -86,7 +87,8 @@ ge::graphStatus BucketizeV2BaseTiling::GetShapeAndDtype()
     boundSize_ = boundShape.GetShapeSize();
     size_t boundDim = boundShape.GetDimNum();
     OP_CHECK_IF(
-        boundDim > 1, OP_LOGE(context_, "boundaries must be 1 dimension, but got : dim(%zu)", boundDim),
+        boundDim > 1, OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "boundaries",
+            (std::to_string(boundDim) + "D").c_str(), "1D"),
         return ge::GRAPH_FAILED);
 
     auto inputBoundPtr = context_->GetRequiredInputDesc(INPUT_BOUND_IDX);
@@ -94,11 +96,14 @@ ge::graphStatus BucketizeV2BaseTiling::GetShapeAndDtype()
     boundDtype_ = inputBoundPtr->GetDataType();    
     boundDtypeSize_ = ge::GetSizeByDataType(boundDtype_);
     OP_CHECK_IF(
-        boundDtypeSize_ <= 0, OP_LOGE(context_, "boundDtypeSize must be greater than 0, boundDtypeSize: %ld", boundDtypeSize_),
+        boundDtypeSize_ <= 0, OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "boundaries",
+            Ops::Base::ToString(boundDtype_).c_str(), "The dtype size of boundaries must be greater than 0."),
         return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(
-        boundDtype_ != xDtype_, OP_LOGE(context_, "boundaries dtype must be same with x dtype"),
+        boundDtype_ != xDtype_, OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "boundaries and x",
+            (Ops::Base::ToString(boundDtype_) + " and " + Ops::Base::ToString(xDtype_)),
+            "The dtypes of boundaries and x must be the same."),
         return ge::GRAPH_FAILED);
 
     auto yShapePtr = context_->GetOutputShape(0);
@@ -110,12 +115,14 @@ ge::graphStatus BucketizeV2BaseTiling::GetShapeAndDtype()
     yDtype_ = outputYPtr->GetDataType();
     yDtypeSize_ = ge::GetSizeByDataType(yDtype_);
     OP_CHECK_IF(
-        yDtypeSize_ <= 0, OP_LOGE(context_, "yDtypeSize must be greater than 0, yDtypeSize: %ld", yDtypeSize_),
+        yDtypeSize_ <= 0, OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context_->GetNodeName(), "y",
+            Ops::Base::ToString(yDtype_).c_str(), "The dtype size of y must be greater than 0."),
         return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(
         IsInvalidType(xDtype_), 
-        OP_LOGE(context_, "input X dtype only support fp16, fp32, bf16 int8, int16, int32, int64, uint8 currently, please check."), 
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x", Ops::Base::ToString(xDtype_).c_str(),
+            "float16, float32, bfloat16, int8, int16, int32, int64, uint8"), 
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }

@@ -39,6 +39,7 @@ public:
     __aicore__ inline void ProcessDeterminsticPre();
     __aicore__ inline void ProcessDeterminsticAfter();
     __aicore__ inline void Process();
+    __simd_vf__ inline void CopyXToOutVf(__ubuf__ int8_t* inAddr, __ubuf__ int8_t* outAddr, uint32_t totalBytes, uint16_t stride, uint16_t size);
 
 private:
     GlobalTensor<VAR_T> var_;
@@ -89,25 +90,29 @@ __aicore__ inline void InplaceIndexAddDeterminsticNotQuant<VAR_T, IDX_T>::Init(
 }
 
 template <typename VAR_T, typename IDX_T>
+__simd_vf__ inline void InplaceIndexAddDeterminsticNotQuant<VAR_T, IDX_T>::CopyXToOutVf(
+    __ubuf__ int8_t* inAddr, __ubuf__ int8_t* outAddr, uint32_t totalBytes, uint16_t stride, uint16_t size)
+{
+    AscendC::MicroAPI::RegTensor<int8_t> inputRegTensor;
+    uint32_t sreg = totalBytes;
+    AscendC::MicroAPI::MaskReg preg;
+
+    for (uint16_t i = 0; i < size; i++) {
+        preg = AscendC::MicroAPI::UpdateMask<int8_t>(sreg);
+        AscendC::MicroAPI::AddrReg offset = AscendC::MicroAPI::CreateAddrReg<int8_t>(i, stride);
+        AscendC::MicroAPI::DataCopy(inputRegTensor, inAddr, offset);
+        AscendC::MicroAPI::DataCopy(outAddr, inputRegTensor, offset, preg);
+    }
+}
+
+template <typename VAR_T, typename IDX_T>
 __aicore__ inline void InplaceIndexAddDeterminsticNotQuant<VAR_T, IDX_T>::CopyXToOut(
     __local_mem__ int8_t* inAddr, __local_mem__ int8_t* outAddr, int64_t dataCount)
 {
     uint32_t totalBytes = dataCount * sizeof(VAR_T);
     uint16_t stride = platform::GetVRegSize();
     uint16_t size = (totalBytes + stride - 1) / stride;
-    __VEC_SCOPE__
-    {
-        AscendC::MicroAPI::RegTensor<int8_t> inputRegTensor;
-        uint32_t sreg = totalBytes;
-        AscendC::MicroAPI::MaskReg preg;
-
-        for (uint16_t i = 0; i < size; i++) {
-            preg = AscendC::MicroAPI::UpdateMask<int8_t>(sreg);
-            AscendC::MicroAPI::AddrReg offset = AscendC::MicroAPI::CreateAddrReg<int8_t>(i, stride);
-            AscendC::MicroAPI::DataCopy(inputRegTensor, inAddr, offset);
-            AscendC::MicroAPI::DataCopy(outAddr, inputRegTensor, offset, preg);
-        }
-    }
+    CopyXToOutVf(inAddr, outAddr, totalBytes, stride, size);
     return;
 }
 

@@ -136,19 +136,19 @@ ge::graphStatus InplaceIndexAddTiling::GetShapeAttrsInfo()
     int64_t dimMin = std::min(-1 * rank_, rank_ - 1);
     OP_CHECK_IF(
         (dim > dimMax || dim < dimMin),
-        OP_LOGE(
-            context_->GetNodeName(), "attr axis must be in range of [%ld, %ld], but got [%ld].", dimMin, dimMax, dim),
+        OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "axis", std::to_string(dim).c_str(),
+            ("in range of [" + std::to_string(dimMin) + ", " + std::to_string(dimMax) + "]").c_str()),
         return ge::GRAPH_FAILED);
 
     dim_ = dim < 0 ? dim + rank_ : dim;
 
-    OP_CHECK_IF(CheckInputDtype() != ge::GRAPH_SUCCESS,
-                    OP_LOGE(context_->GetNodeName(), "input dtype check failed."),
-                    return ge::GRAPH_FAILED);
+    if (CheckInputDtype() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
 
-    OP_CHECK_IF(CheckInputShape() != ge::GRAPH_SUCCESS,
-                    OP_LOGE(context_->GetNodeName(), "input shape check failed."),
-                    return ge::GRAPH_FAILED);
+    if (CheckInputShape() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
 
     return ge::GRAPH_SUCCESS;
 }
@@ -159,13 +159,14 @@ ge::graphStatus InplaceIndexAddTiling::CheckInputDtype()
     OP_CHECK_NULL_WITH_CONTEXT(context_, varPtr);
     dtype_ = varPtr->GetDataType();
     OP_CHECK_IF((VAR_DTYPE.find(dtype_) == VAR_DTYPE.end()),
-                    OP_LOGE(context_->GetNodeName(),
-                                                    "var dtype only support float32, float16, uint8, int8, int32, \
-int16, bool, int64, bfloat16 currently, but got [%s].",
-                                                    Ops::Base::ToString(dtype_).c_str()),
+                    OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "var",
+                        Ops::Base::ToString(dtype_).c_str(),
+                        "float32, float16, uint8, int8, int32, int16, bool, int64, bfloat16"),
                     return ge::GRAPH_FAILED);
     varTypeSize_ = ge::GetSizeByDataType(dtype_);
-    OP_CHECK_IF(varTypeSize_ <= 0, OP_LOGE(context_->GetNodeName(), "get dataType size fail."),
+    OP_CHECK_IF(varTypeSize_ <= 0,
+                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "var",
+                        std::to_string(varTypeSize_).c_str(), "get dataType size fail"),
                     return ge::GRAPH_FAILED);
 
     auto indicesPtr = context_->GetInputDesc(INDICES_IDX);
@@ -174,9 +175,8 @@ int16, bool, int64, bfloat16 currently, but got [%s].",
     indicesTypeSize_ = ge::GetSizeByDataType(indicesDtype_);
     bool dtypeInValid = indicesDtype_ != ge::DT_INT32 && indicesDtype_ != ge::DT_INT64;
     OP_CHECK_IF(dtypeInValid,
-                    OP_LOGE(
-                        context_->GetNodeName(), "indices dtype only support int32 and int64 currently, but got [%s].",
-                        Ops::Base::ToString(indicesDtype_).c_str()),
+                    OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "indices",
+                        Ops::Base::ToString(indicesDtype_).c_str(), "int32 or int64"),
                     return ge::GRAPH_FAILED);
 
     auto updatesPtr = context_->GetInputDesc(UPDATES_IDX);
@@ -184,8 +184,9 @@ int16, bool, int64, bfloat16 currently, but got [%s].",
     auto updatesDtype = updatesPtr->GetDataType();
     OP_CHECK_IF(
         (updatesDtype != dtype_),
-        OP_LOGE(context_->GetNodeName(), "updates [%s] and var [%s] must have the same dtype.",
-                                        Ops::Base::ToString(updatesDtype).c_str(), Ops::Base::ToString(dtype_).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "updates and var",
+            (Ops::Base::ToString(updatesDtype) + " and " + Ops::Base::ToString(dtype_)).c_str(),
+            "The dtypes of updates and var must be same."),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -250,35 +251,37 @@ ge::graphStatus InplaceIndexAddTiling::CheckInputShape()
         withAlpha_ = 1UL;
         auto alphaShape = alphaShapePtr->GetStorageShape();
         OP_CHECK_IF(alphaShape.GetShapeSize() != 1,
-                        OP_LOGE(context_->GetNodeName(), "the alpha size must be 1."),
+                        OP_LOGE_FOR_INVALID_SHAPESIZE(context_->GetNodeName(), "alpha",
+                            std::to_string(alphaShape.GetShapeSize()).c_str(), "1"),
                         return ge::GRAPH_FAILED);
     }
 
     OP_CHECK_IF((indicesDimNum > 1),
-                    OP_LOGE(
-                        context_->GetNodeName(), "index is supposed to be a vector, but got dim: %ld.", indicesDimNum),
+                    OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "indices",
+                        (std::to_string(indicesDimNum) + "D").c_str(), "1D"),
                     return ge::GRAPH_FAILED);
 
     if (varShape.IsScalar() && updatesAxis_ == 1 && indicesAxis_ == 1) {
         return ge::GRAPH_SUCCESS;
     } else {
         OP_CHECK_IF((updatesDimNum != rank_),
-                        OP_LOGE(context_->GetNodeName(),
-                                                        "updates must have the same number of dimensions as var."),
+                        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "updates and var",
+                            (std::to_string(updatesDimNum) + "D and " + std::to_string(rank_) + "D").c_str(),
+                            "The shape dims of updates and var must be the same."),
                         return ge::GRAPH_FAILED);
 
         int64_t expectedNum = updatesShape.GetDim(dim_);
         OP_CHECK_IF(indicesAxis_ != expectedNum,
-            OP_LOGE(context_->GetNodeName(),
-                                            "number of indices [%ld] should be equal to update.size(%ld): [%ld].",
-                                            indicesAxis_, dim_, expectedNum),
+            OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "indices",
+                std::to_string(indicesAxis_).c_str(),
+                ("The shape szie of indices must be equal to the size " + std::to_string(expectedNum) + "of the " + std::to_string(dim_)) + " axis of updates."),
             return ge::GRAPH_FAILED);
 
         OP_CHECK_IF(!CompareShape(updatesShape, varShape, dim_),
-                        OP_LOGE(context_->GetNodeName(),
-                            "updates shape must match var shape, excluding the specified dimension %ld. \
-Got var.shape = %s updates.shape = %s",
-                            dim_, Ops::Base::ToString(varShape).c_str(), Ops::Base::ToString(updatesShape).c_str()),
+                        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "updates",
+                            Ops::Base::ToString(updatesShape).c_str(),
+                            ("The shape of updates must match var shape excluding dimension " + std::to_string(dim_) +
+                             ", var.shape = " + Ops::Base::ToString(varShape).c_str())),
                         return ge::GRAPH_FAILED);
         CombineAxis(varShape, updatesShape);
     }

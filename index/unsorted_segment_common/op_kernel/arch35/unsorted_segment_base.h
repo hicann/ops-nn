@@ -273,7 +273,7 @@ __aicore__ inline void IndicesSortCast(LocalTensor<IDX_T> indicesLocal, LocalTen
 }
 
 template<typename IDX_T>
-__aicore__ inline void ComputeUniqueIdNumInt64(__local_mem__ IDX_T* indicesAddr, __local_mem__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt, int64_t dataLen)
+__simd_callee__ inline void ComputeUniqueIdNumInt64(__local_mem__ IDX_T* indicesAddr, __local_mem__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt, int64_t dataLen)
 {
     uint32_t counter = dataLen + 1;
     AscendC::MicroAPI::RegTensor<int32_t> orderReg, selReg;
@@ -297,7 +297,7 @@ __aicore__ inline void ComputeUniqueIdNumInt64(__local_mem__ IDX_T* indicesAddr,
 }
 
 template<typename IDX_T>
-__aicore__ inline void ComputeUniqueIdNumInt32(__local_mem__ IDX_T* indicesAddr, __local_mem__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt, int64_t dataLen)
+__simd_callee__ inline void ComputeUniqueIdNumInt32(__local_mem__ IDX_T* indicesAddr, __local_mem__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt, int64_t dataLen)
 {
     uint32_t counter = dataLen + 1;
     AscendC::MicroAPI::RegTensor<int32_t> orderReg, selReg;
@@ -320,7 +320,7 @@ __aicore__ inline void ComputeUniqueIdNumInt32(__local_mem__ IDX_T* indicesAddr,
 }
 
 template<typename IDX_T>
-__aicore__ inline void ComputeUniqueIdNumInt16(__local_mem__ IDX_T* indicesAddr, __local_mem__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt, int64_t dataLen)
+__simd_callee__ inline void ComputeUniqueIdNumInt16(__local_mem__ IDX_T* indicesAddr, __local_mem__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt, int64_t dataLen)
 {
     uint32_t counter = dataLen + 1;
     AscendC::MicroAPI::RegTensor<int32_t> orderReg, orderReg2, selReg, selReg2;
@@ -347,7 +347,7 @@ __aicore__ inline void ComputeUniqueIdNumInt16(__local_mem__ IDX_T* indicesAddr,
 }
 
 template<typename IDX_T>
-__aicore__ inline void ComputeUniqueIdNumUint8(__local_mem__ IDX_T* indicesAddr, __local_mem__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt, int64_t dataLen)
+__simd_callee__ inline void ComputeUniqueIdNumUint8(__local_mem__ IDX_T* indicesAddr, __local_mem__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt, int64_t dataLen)
 {
     uint32_t counter = dataLen + 1;
     AscendC::MicroAPI::RegTensor<int32_t> orderReg, orderReg2, orderReg3, orderReg4;
@@ -385,6 +385,22 @@ __aicore__ inline void ComputeUniqueIdNumUint8(__local_mem__ IDX_T* indicesAddr,
 }
 
 template <typename IDX_T>
+__simd_vf__ inline void UniqueGetElmVf(__ubuf__ IDX_T* indicesAddr, __ubuf__ int32_t* uniqueIdCountsAddr, uint16_t loopCnt, int64_t dataLen)
+{
+    AscendC::MicroAPI::ClearSpr<AscendC::SpecialPurposeReg::AR>();
+
+    if constexpr (std::is_same<int64_t, IDX_T>::value) {
+        ComputeUniqueIdNumInt64<IDX_T>(indicesAddr, uniqueIdCountsAddr, loopCnt, dataLen);
+    } else if constexpr (std::is_same<int32_t, IDX_T>::value) {
+        ComputeUniqueIdNumInt32<IDX_T>(indicesAddr, uniqueIdCountsAddr, loopCnt, dataLen);
+    } else if constexpr (std::is_same<int16_t, IDX_T>::value) {
+        ComputeUniqueIdNumInt16<IDX_T>(indicesAddr, uniqueIdCountsAddr, loopCnt, dataLen);
+    } else {  // uint8
+        ComputeUniqueIdNumUint8<IDX_T>(indicesAddr, uniqueIdCountsAddr, loopCnt, dataLen);
+    }
+}
+
+template <typename IDX_T>
 __aicore__ inline int64_t UniqueGetElm(
     const LocalTensor<IDX_T>& sortedIndice, LocalTensor<int32_t>& noDupRes, int64_t dataLen)
 {
@@ -393,22 +409,28 @@ __aicore__ inline int64_t UniqueGetElm(
 
     constexpr int64_t vfLen = platform::GetVRegSize() / sizeof(IDX_T);
     uint16_t loopCnt = ops::CeilDiv(dataLen + 1, vfLen);
-    __VEC_SCOPE__
-    {
-        AscendC::MicroAPI::ClearSpr<AscendC::SpecialPurposeReg::AR>();
-
-        if constexpr (std::is_same<int64_t, IDX_T>::value) {
-            ComputeUniqueIdNumInt64<IDX_T>(indicesAddr, uniqueIdCountsAddr, loopCnt, dataLen);
-        } else if constexpr (std::is_same<int32_t, IDX_T>::value) {
-            ComputeUniqueIdNumInt32<IDX_T>(indicesAddr, uniqueIdCountsAddr, loopCnt, dataLen);
-        } else if constexpr (std::is_same<int16_t, IDX_T>::value) {
-            ComputeUniqueIdNumInt16<IDX_T>(indicesAddr, uniqueIdCountsAddr, loopCnt, dataLen);
-        } else {  // uint8
-            ComputeUniqueIdNumUint8<IDX_T>(indicesAddr, uniqueIdCountsAddr, loopCnt, dataLen);
-        }
-    }
+    UniqueGetElmVf<IDX_T>(indicesAddr, uniqueIdCountsAddr, loopCnt, dataLen);
     int64_t uniqueIdNum = ((AscendC::MicroAPI::GetSpr<AscendC::SpecialPurposeReg::AR>()) / sizeof(int32_t)) - 1;
     return uniqueIdNum;
+}
+
+__simd_vf__ inline void UniqueStatVf(__ubuf__ int32_t* noDupResAddr, uint16_t loopCntStatFre, uint32_t counterStatFre)
+{
+    AscendC::MicroAPI::RegTensor<int32_t> beginReg;
+    AscendC::MicroAPI::RegTensor<int32_t> endReg;
+    AscendC::MicroAPI::RegTensor<int32_t> subReg;
+    AscendC::MicroAPI::MaskReg maskRegUpdate;
+    AscendC::MicroAPI::UnalignReg u0;
+
+    for (uint16_t i = 0; i < loopCntStatFre; i++) {
+        auto noDupResAddrUpdate = noDupResAddr + i * VF_B32 + 1;
+        maskRegUpdate = AscendC::MicroAPI::UpdateMask<int32_t>(counterStatFre);
+        AscendC::MicroAPI::DataCopy(beginReg, noDupResAddr + i * VF_B32);
+        AscendC::MicroAPI::DataCopyUnAlignPre(u0, noDupResAddrUpdate);
+        AscendC::MicroAPI::DataCopyUnAlign<int32_t>(endReg, u0, noDupResAddrUpdate);
+        AscendC::MicroAPI::Sub(subReg, endReg, beginReg, maskRegUpdate);
+        AscendC::MicroAPI::DataCopy(noDupResAddr + i * VF_B32, subReg, maskRegUpdate);
+    }
 }
 
 __aicore__ inline void UniqueStat(LocalTensor<int32_t>& noDupRes, int64_t& arNum)
@@ -417,24 +439,7 @@ __aicore__ inline void UniqueStat(LocalTensor<int32_t>& noDupRes, int64_t& arNum
 
     uint16_t loopCntStatFre = (arNum + VF_B32 - 1) / VF_B32;
     uint32_t counterStatFre = static_cast<uint32_t>(arNum);
-    __VEC_SCOPE__
-    {
-        AscendC::MicroAPI::RegTensor<int32_t> beginReg;
-        AscendC::MicroAPI::RegTensor<int32_t> endReg;
-        AscendC::MicroAPI::RegTensor<int32_t> subReg;
-        AscendC::MicroAPI::MaskReg maskRegUpdate;
-        AscendC::MicroAPI::UnalignReg u0;
-
-        for (uint16_t i = 0; i < loopCntStatFre; i++) {
-            auto noDupResAddrUpdate = noDupResAddr + i * VF_B32 + 1;
-            maskRegUpdate = AscendC::MicroAPI::UpdateMask<int32_t>(counterStatFre);
-            AscendC::MicroAPI::DataCopy(beginReg, noDupResAddr + i * VF_B32);
-            AscendC::MicroAPI::DataCopyUnAlignPre(u0, noDupResAddrUpdate);
-            AscendC::MicroAPI::DataCopyUnAlign<int32_t>(endReg, u0, noDupResAddrUpdate);
-            AscendC::MicroAPI::Sub(subReg, endReg, beginReg, maskRegUpdate);
-            AscendC::MicroAPI::DataCopy(noDupResAddr + i * VF_B32, subReg, maskRegUpdate);
-        }
-    }
+    UniqueStatVf(noDupResAddr, loopCntStatFre, counterStatFre);
 
     event_t eventIDVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));
     SetFlag<HardEvent::V_S>(eventIDVToS);

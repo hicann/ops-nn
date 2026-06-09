@@ -32,6 +32,8 @@ public:
     __aicore__ inline int32_t GetUniqueCount(
         LocalTensor<uint32_t>& cumSumLocal, LocalTensor<Index>& sortedSegmentLocal);
     __aicore__ inline void ProcessEachLoop(uint32_t maxIndexNum);
+    static __simd_vf__ inline void GetUniqueCountVf(__ubuf__ Index* sortedSengmentAddr, __ubuf__ int32_t* cumSumAddr, uint32_t vl, 
+                                                    uint16_t loopCnt, uint32_t maskCount, uint32_t offset);
 private:
     TPipe* pipe_;
     const UnsortedSegmentSortSimtTilingData* tilingData_;
@@ -103,6 +105,45 @@ __aicore__ inline void KernelUnsortedSegmentSortSimt<TX, Index, Mode>::CopyInInd
     return;
 }
 template <typename TX, typename Index, uint8_t Mode>
+__simd_vf__ inline void KernelUnsortedSegmentSortSimt<TX, Index, Mode>::GetUniqueCountVf(
+    __ubuf__ Index* sortedSengmentAddr, __ubuf__ int32_t* cumSumAddr, uint32_t vl, uint16_t loopCnt, uint32_t maskCount, uint32_t offset)
+{
+    AscendC::MicroAPI::RegTensor<int32_t> orderReg;
+    AscendC::MicroAPI::RegTensor<int32_t> selReg;
+    AscendC::MicroAPI::RegTensor<Index> indicesReg;
+    AscendC::MicroAPI::RegTensor<Index> indicesShiftOneReg;
+    AscendC::MicroAPI::MaskReg cmpMask;
+    AscendC::MicroAPI::MaskReg maskRegUpdate;
+    AscendC::MicroAPI::UnalignReg u0;
+    MicroAPI::UnalignReg ureg;
+    AscendC::MicroAPI::ClearSpr<AscendC::SpecialPurposeReg::AR>();
+    int32_t vciStart = 0;
+    for (uint16_t i = 0; i < loopCnt; ++i) {
+        vciStart = i * vl;
+        auto sortedIndicesAddrUpdate = sortedSengmentAddr + offset + i * vl;
+        AscendC::MicroAPI::Arange(orderReg, vciStart);
+        maskRegUpdate = AscendC::MicroAPI::UpdateMask<Index>(maskCount);
+        AscendC::MicroAPI::DataCopy(indicesReg, sortedIndicesAddrUpdate);
+        AscendC::MicroAPI::DataCopyUnAlignPre(u0, sortedIndicesAddrUpdate - 1);
+        AscendC::MicroAPI::DataCopyUnAlign<Index>(indicesShiftOneReg, u0, sortedIndicesAddrUpdate - 1);
+        AscendC::MicroAPI::Compare<Index, CMPMODE::NE>(cmpMask, indicesReg, indicesShiftOneReg, maskRegUpdate);
+
+        if constexpr (IsSameType<Index, int64_t>::value) {
+            AscendC::MicroAPI::MaskReg maskHalf;
+            AscendC::MicroAPI::MaskPack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskHalf, cmpMask);
+            AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(
+                selReg, orderReg, maskHalf);
+        } else {
+            AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(
+                selReg, orderReg, cmpMask);
+        }
+        AscendC::MicroAPI::DataCopyUnAlign<int32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
+            cumSumAddr, selReg, ureg);
+    }
+    AscendC::MicroAPI::DataCopyUnAlignPost(cumSumAddr, ureg);
+}
+
+template <typename TX, typename Index, uint8_t Mode>
 __aicore__ inline int32_t KernelUnsortedSegmentSortSimt<TX, Index, Mode>::GetUniqueCount(
     LocalTensor<uint32_t>& cumSumLocal, LocalTensor<Index>& sortedSegmentLocal)
 {
@@ -112,44 +153,7 @@ __aicore__ inline int32_t KernelUnsortedSegmentSortSimt<TX, Index, Mode>::GetUni
     uint16_t loopCnt = (uint16_t)(ops::CeilDiv(static_cast<uint32_t>(tilingData_->maxIndexNum + 1), vl));
     uint32_t maskCount = tilingData_->maxIndexNum + 1;
     uint32_t offset = shiftOffset_;
-    __VEC_SCOPE__
-    {
-        AscendC::MicroAPI::RegTensor<int32_t> orderReg;
-        AscendC::MicroAPI::RegTensor<int32_t> selReg;
-        AscendC::MicroAPI::RegTensor<Index> indicesReg;
-        AscendC::MicroAPI::RegTensor<Index> indicesShiftOneReg;
-        AscendC::MicroAPI::MaskReg cmpMask;
-        AscendC::MicroAPI::MaskReg maskRegUpdate;
-        AscendC::MicroAPI::UnalignReg u0;
-        MicroAPI::UnalignReg ureg;
-        AscendC::MicroAPI::ClearSpr<AscendC::SpecialPurposeReg::AR>();
-        int32_t vciStart = 0;
-        for (uint16_t i = 0; i < loopCnt; ++i) {
-            vciStart = i * vl;
-            auto sortedIndicesAddrUpdate = sortedSengmentAddr + offset + i * vl;
-            AscendC::MicroAPI::Arange(orderReg, vciStart);
-            maskRegUpdate = AscendC::MicroAPI::UpdateMask<Index>(maskCount);
-            AscendC::MicroAPI::DataCopy(indicesReg, sortedIndicesAddrUpdate);
-            AscendC::MicroAPI::DataCopyUnAlignPre(u0, sortedIndicesAddrUpdate - 1);
-            AscendC::MicroAPI::DataCopyUnAlign<Index>(indicesShiftOneReg, u0, sortedIndicesAddrUpdate - 1);
-            AscendC::MicroAPI::Compare<Index, CMPMODE::NE>(cmpMask, indicesReg, indicesShiftOneReg, maskRegUpdate);
-
-            if constexpr (IsSameType<Index, int64_t>::value) {
-                AscendC::MicroAPI::MaskReg maskHalf;
-                AscendC::MicroAPI::MaskPack<AscendC::MicroAPI::HighLowPart::LOWEST>(maskHalf, cmpMask);
-                // vSQZ
-                AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(
-                    selReg, orderReg, maskHalf);
-            } else {
-                // vSQZ
-                AscendC::MicroAPI::GatherMask<int32_t, AscendC::MicroAPI::GatherMaskMode::STORE_REG>(
-                    selReg, orderReg, cmpMask);
-            }
-            AscendC::MicroAPI::DataCopyUnAlign<int32_t, AscendC::MicroAPI::PostLiteral::POST_MODE_UPDATE>(
-                cumSumAddr, selReg, ureg);
-        }
-        AscendC::MicroAPI::DataCopyUnAlignPost(cumSumAddr, ureg);
-    }
+    GetUniqueCountVf(sortedSengmentAddr, cumSumAddr, vl, loopCnt, maskCount, offset);
     return ((AscendC::MicroAPI::GetSpr<AscendC::SpecialPurposeReg::AR>()) / sizeof(int32_t)) - 1;
 }
 template <typename TX, typename Index, uint8_t Mode>

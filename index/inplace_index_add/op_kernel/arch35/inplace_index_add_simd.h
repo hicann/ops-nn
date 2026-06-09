@@ -34,6 +34,8 @@ public:
     __aicore__ inline void ProcessIndicesSingleLoop(int64_t rowIdx, int64_t colIdx, int64_t rowLen, int64_t colLen);
     __aicore__ inline void ProcessIndices();
     __aicore__ inline void Process();
+    static __simd_vf__ inline void ComputeMulWithCastVf(__ubuf__ VAR_T* updatesAddr, __ubuf__ VAR_T* updateMulAddr, uint16_t loopSize, 
+                                                uint32_t maskLen, int16_t alphaValue, uint32_t vfLen);
 
 private:
     using mulsSelType = typename MulsSelType<VAR_T>::type;
@@ -78,6 +80,24 @@ __aicore__ inline void InplaceIndexAddSimd<VAR_T, IDX_T, CAST_T, IS_CONTIGUOUS>:
 }
 
 template <typename VAR_T, typename IDX_T, typename CAST_T, bool IS_CONTIGUOUS>
+__simd_vf__ inline void InplaceIndexAddSimd<VAR_T, IDX_T, CAST_T, IS_CONTIGUOUS>::ComputeMulWithCastVf(
+    __ubuf__ VAR_T* updatesAddr, __ubuf__ VAR_T* updateMulAddr, uint16_t loopSize, uint32_t maskLen, int16_t alphaValue, uint32_t vfLen)
+{
+    AscendC::MicroAPI::RegTensor<int16_t> sumReg;
+    AscendC::MicroAPI::RegTensor<int16_t> castReg;
+    AscendC::MicroAPI::RegTensor<int16_t> alphaReg;
+    AscendC::MicroAPI::MaskReg maskReg;
+    for (uint16_t j = 0; j < loopSize; j++) {
+        maskReg = AscendC::MicroAPI::UpdateMask<int16_t>(maskLen);
+        AscendC::MicroAPI::Duplicate(alphaReg, alphaValue, maskReg);
+        auto updatesOffet = j * vfLen;
+        LoadOneTensorForDtypeInt<VAR_T>(updatesAddr, castReg, maskReg, updatesOffet);
+        AscendC::MicroAPI::Mul(sumReg, castReg, alphaReg, maskReg);
+        StoreOneTensorForDtypeInt<VAR_T>(updateMulAddr, sumReg, maskReg, updatesOffet);
+    }
+}
+
+template <typename VAR_T, typename IDX_T, typename CAST_T, bool IS_CONTIGUOUS>
 __aicore__ inline void InplaceIndexAddSimd<VAR_T, IDX_T, CAST_T, IS_CONTIGUOUS>::ComputeMulWithCast(
     LocalTensor<VAR_T> updatesLocal, LocalTensor<VAR_T> updateMulLocal, int16_t alphaValue, int64_t colLen)
 {
@@ -90,22 +110,7 @@ __aicore__ inline void InplaceIndexAddSimd<VAR_T, IDX_T, CAST_T, IS_CONTIGUOUS>:
     int64_t colLenAlignSize = ops::CeilAlign(colLen * sizeof(VAR_T), UB_AGLIN_VALUE) / sizeof(VAR_T);
     int64_t colLenAlignIn16 = ops::CeilAlign(colLen * sizeof(int16_t), UB_AGLIN_VALUE) / sizeof(int16_t);
 
-    __VEC_SCOPE__
-    {
-        AscendC::MicroAPI::RegTensor<int16_t> sumReg;
-        AscendC::MicroAPI::RegTensor<int16_t> castReg;
-        AscendC::MicroAPI::RegTensor<int16_t> alphaReg;
-        AscendC::MicroAPI::MaskReg maskReg;
-        uint32_t maskLen = static_cast<uint32_t>(colLen);
-        for (uint16_t j = 0; j < static_cast<uint16_t>(loopSize); j++) {
-            maskReg = AscendC::MicroAPI::UpdateMask<int16_t>(maskLen);
-            AscendC::MicroAPI::Duplicate(alphaReg, alphaValue, maskReg);
-            auto updatesOffet = j * vfLen;
-            LoadOneTensorForDtypeInt<VAR_T>(updatesAddr, castReg, maskReg, updatesOffet);
-            AscendC::MicroAPI::Mul(sumReg, castReg, alphaReg, maskReg);
-            StoreOneTensorForDtypeInt<VAR_T>(updateMulAddr, sumReg, maskReg, updatesOffet);
-        }
-    }
+    ComputeMulWithCastVf(updatesAddr, updateMulAddr, static_cast<uint16_t>(loopSize), static_cast<uint32_t>(colLen), alphaValue, vfLen);
 }
 
 template <typename VAR_T, typename IDX_T, typename CAST_T, bool IS_CONTIGUOUS>
