@@ -43,8 +43,54 @@ const int32_t INDEX_7 = 7;
 constexpr int64_t TWO_DIMS = 2;
 constexpr int64_t THREE_DIMS = 3;
 
-class ReverseV2Simd
+__simd_vf__ inline void AreaReverseSmallTailVf(
+    __ubuf__ int8_t* xPtr, __ubuf__ int8_t* yPtr, int32_t dim1, int32_t dim2Stride, int32_t repeatNum,
+    uint16_t dim2Loop, uint16_t dim1Loop, uint16_t dim0Loop)
 {
+    AscendC::MicroAPI::RegTensor<int8_t> inReg;
+    uint32_t sreg = dim2Stride;
+    AscendC::MicroAPI::MaskReg preg;
+    for (uint16_t i = 0; i < dim2Loop; i++) {
+        preg = AscendC::MicroAPI::UpdateMask<int8_t>(sreg);
+        auto srcAddr = xPtr + i * repeatNum;
+        auto dstAddr = yPtr + i * repeatNum + (dim1 - 1) * dim2Stride;
+        for (uint16_t j = 0; j < dim0Loop; j++) {
+            auto srcAddr1 = srcAddr + j * dim1 * dim2Stride;
+            auto dstAddr1 = dstAddr + j * dim1 * dim2Stride;
+            for (uint16_t k = 0; k < dim1Loop; k++) {
+                auto curSrcAddr = srcAddr1 + k * dim2Stride;
+                auto curDstAddr = dstAddr1 - k * dim2Stride;
+                AscendC::MicroAPI::DataCopy(inReg, curSrcAddr);
+                AscendC::MicroAPI::DataCopy(curDstAddr, inReg, preg);
+            }
+        }
+    }
+}
+
+__simd_vf__ inline void AreaReverseVf(
+    __ubuf__ int8_t* xPtr, __ubuf__ int8_t* yPtr, int32_t dim1, int32_t dim2Size, int32_t dim2Stride, int32_t repeatNum,
+    uint16_t dim0Loop, uint16_t dim1Loop, uint16_t dim2Loop)
+{
+    AscendC::MicroAPI::RegTensor<int8_t> inReg;
+    for (uint16_t i = 0; i < dim0Loop; i++) {
+        auto srcAddr = xPtr + i * dim1 * dim2Stride;
+        auto dstAddr = yPtr + i * dim1 * dim2Stride + (dim1 - 1) * dim2Stride;
+        for (uint16_t j = 0; j < dim1Loop; j++) {
+            auto srcAddr1 = srcAddr + j * dim2Stride;
+            auto dstAddr1 = dstAddr - j * dim2Stride;
+            uint32_t sreg = dim2Size;
+            for (uint16_t k = 0; k < dim2Loop; k++) {
+                AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<int8_t>(sreg);
+                auto curSrcAddr = srcAddr1 + k * repeatNum;
+                auto curDstAddr = dstAddr1 + k * repeatNum;
+                AscendC::MicroAPI::DataCopy(inReg, curSrcAddr);
+                AscendC::MicroAPI::DataCopy(curDstAddr, inReg, preg);
+            }
+        }
+    }
+}
+
+class ReverseV2Simd {
 public:
     __aicore__ inline ReverseV2Simd(){};
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, const ReverseV2TilingData4AscendC* tilingData, TPipe* pipe);
@@ -54,7 +100,7 @@ public:
     __aicore__ inline void Compute(int64_t outBlockOffset, int64_t dimInNum, int64_t splitIdx);
     __aicore__ inline void AreaReverse(__local_mem__ int8_t* xPtr, __local_mem__ int8_t* yPtr, int32_t dim0,
                                        int32_t dim1, int32_t dim2);
-    __aicore__ inline void AreaReverseSmallTail(__local_mem__ int8_t* xPtr, __local_mem__ int8_t* yPtr, int32_t dim0,
+    __aicore__ inline void AreaReverseSmallTail(__local_mem__ int8_t* xPtr, __local_mem__ int8_t* yPtr, int32_t dim0, 
                                                 int32_t dim1, int32_t dim2);
     __aicore__ inline int64_t CalcDimUbStride(int64_t dim, int64_t tailNum);
     __aicore__ inline void CalcUbStride(int64_t tailDimNum);
@@ -284,7 +330,7 @@ __aicore__ inline int64_t ReverseV2Simd::GetOutOffset(int32_t idx, int32_t split
     return outUbOffset;
 }
 
-__aicore__ inline int64_t ReverseV2Simd::GetBlockOffsetAndIdx(int64_t idx, int64_t& inBlockOffset,
+__aicore__ inline int64_t ReverseV2Simd::GetBlockOffsetAndIdx(int64_t idx, int64_t& inBlockOffset, 
                                                               int64_t& outBlcokOffset)
 {
     int64_t tmpIdx = idx;
@@ -315,27 +361,8 @@ __aicore__ inline void ReverseV2Simd::AreaReverseSmallTail(__local_mem__ int8_t*
     uint16_t dim2Loop = (dim2Stride + repeatNum - 1) / repeatNum;
     uint16_t dim1Loop = static_cast<uint16_t>(dim1);
     uint16_t dim0Loop = static_cast<uint16_t>(dim0);
-    __VEC_SCOPE__
-    {
-        AscendC::MicroAPI::RegTensor<int8_t> inReg;
-        uint32_t sreg = dim2Stride;
-        AscendC::MicroAPI::MaskReg preg;
-        for (uint16_t i = 0; i < dim2Loop; i++) {
-            preg = AscendC::MicroAPI::UpdateMask<int8_t>(sreg);
-            auto srcAddr = xPtr + i * repeatNum;
-            auto dstAddr = yPtr + i * repeatNum + (dim1 - 1) * dim2Stride;
-            for (uint16_t j = 0; j < dim0Loop; j++) {
-                auto srcAddr1 = srcAddr + j * dim1 * dim2Stride;
-                auto dstAddr1 = dstAddr + j * dim1 * dim2Stride;
-                for (uint16_t k = 0; k < dim1Loop; k++) {
-                    auto curSrcAddr = srcAddr1 + k * dim2Stride;
-                    auto curDstAddr = dstAddr1 - k * dim2Stride;
-                    AscendC::MicroAPI::DataCopy(inReg, curSrcAddr);
-                    AscendC::MicroAPI::DataCopy(curDstAddr, inReg, preg);
-                }
-            }
-        }
-    }
+    AreaReverseSmallTailVf(
+        (__ubuf__ int8_t*)xPtr, (__ubuf__ int8_t*)yPtr, dim1, dim2Stride, repeatNum, dim2Loop, dim1Loop, dim0Loop);
 }
 
 __aicore__ inline void ReverseV2Simd::AreaReverse(__local_mem__ int8_t* xPtr, __local_mem__ int8_t* yPtr, int32_t dim0,
@@ -347,26 +374,9 @@ __aicore__ inline void ReverseV2Simd::AreaReverse(__local_mem__ int8_t* xPtr, __
     uint16_t dim2Loop = (dim2Stride + repeatNum - 1) / repeatNum;
     uint16_t dim1Loop = static_cast<uint16_t>(dim1);
     uint16_t dim0Loop = static_cast<uint16_t>(dim0);
-    __VEC_SCOPE__
-    {
-        AscendC::MicroAPI::RegTensor<int8_t> inReg;
-        for (uint16_t i = 0; i < dim0Loop; i++) {
-            auto srcAddr = xPtr + i * dim1 * dim2Stride;
-            auto dstAddr = yPtr + i * dim1 * dim2Stride + (dim1 - 1) * dim2Stride;
-            for (uint16_t j = 0; j < dim1Loop; j++) {
-                auto srcAddr1 = srcAddr + j * dim2Stride;
-                auto dstAddr1 = dstAddr - j * dim2Stride;
-                uint32_t sreg = dim2Size;
-                for (uint16_t k = 0; k < dim2Loop; k++) {
-                    AscendC::MicroAPI::MaskReg preg = AscendC::MicroAPI::UpdateMask<int8_t>(sreg);
-                    auto curSrcAddr = srcAddr1 + k * repeatNum;
-                    auto curDstAddr = dstAddr1 + k * repeatNum;
-                    AscendC::MicroAPI::DataCopy(inReg, curSrcAddr);
-                    AscendC::MicroAPI::DataCopy(curDstAddr, inReg, preg);
-                }
-            }
-        }
-    }
+    AreaReverseVf(
+        (__ubuf__ int8_t*)xPtr, (__ubuf__ int8_t*)yPtr, dim1, dim2Size, dim2Stride, repeatNum, dim0Loop, dim1Loop,
+        dim2Loop);
 }
 
 }  // namespace ReverseV2

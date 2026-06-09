@@ -27,7 +27,7 @@ ge::graphStatus TilingPrepareScatterNdAddForAscendC(gert::TilingParseContext* co
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     ci->core_num = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF((ci->core_num <= 0),
+    OP_CHECK_IF((ci->core_num <= 0), 
                     OP_LOGE(context->GetNodeName(), "Failed to core num."),
                     return ge::GRAPH_FAILED);
     uint64_t ubSize;
@@ -47,15 +47,16 @@ ge::graphStatus TilingPrepare4Scatter(gert::TilingParseContext* context) {
 
 bool CheckScatterOpsTensorShape(const gert::TilingContext* context, const CalcShapeInfo& calc_shape_info) {
   if (calc_shape_info.var_shape != calc_shape_info.out_shape) {
-    OP_LOGE(context->GetNodeName(), "the length of var must be same as the length of output.");
-    return false;
+    OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+      context->GetNodeName(), "var, output", "mismatched shapes", "The shape of var and output must be the same");
+      return false;
   }
 
   if (calc_shape_info.indices_shape.GetDimNum() == 1 && calc_shape_info.indices_shape.GetDim(0) == 1 &&
       calc_shape_info.var_shape.GetDimNum() - calc_shape_info.adds_shape.GetDimNum() == 1) {
-    OP_LOGI(context->GetNodeName(), "Input indices is a scalar.");
+      OP_LOGI(context->GetNodeName(), "Input indices is a scalar.");
   }
 
   return true;
 }
-}  // namespace optiling
+}// namespace optiling

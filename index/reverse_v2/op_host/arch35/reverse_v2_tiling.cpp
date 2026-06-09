@@ -35,8 +35,8 @@ bool GetAxisToReverseRunInfo(const gert::TilingContext* context, const gert::Sha
   const size_t axes_num = axes_tensor->GetShapeSize();
   const size_t input_x_rank = x_shape.GetDimNum();
   if (axes_num > input_x_rank) {
-    OP_LOGE(context->GetNodeName(), "the axes num(%zu) cannot greater then input rank(%zu).",
-                                    axes_num, input_x_rank);
+    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "axes",
+                    std::to_string(axes_num).c_str(), "axes cannot greater then input rank");
     return false;
   }
   run_info.real_shape_size = input_x_rank;
@@ -46,18 +46,20 @@ bool GetAxisToReverseRunInfo(const gert::TilingContext* context, const gert::Sha
   }
 
   for (size_t i = 0; i < axes_num; ++i) {
-    OP_CHECK_IF(
-        !Ops::Nn::IsDimValid(input_x_rank, axes_value[i]),
-        OP_LOGE(context->GetNodeName(), "%s",
-                                        Ops::Nn::GenInvalidDimMsg("axis", i, input_x_rank, axes_value[i]).c_str()),
-        return false);
+    if (!Ops::Nn::IsDimValid(input_x_rank, axes_value[i])) {
+      OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "axis",
+          std::to_string(axes_value[i]).c_str(),
+          Ops::Nn::GenInvalidDimMsg("axis", i, input_x_rank, axes_value[i]).c_str());
+      return false;
+    }
 
     const int64_t real_axes = axes_value[i] < 0 ? input_x_rank + axes_value[i] : axes_value[i];
     OP_LOGD(context->GetNodeName(), "axes[%zu] = %ld", i, real_axes);
-    OP_CHECK_IF(run_info.reverse_status[real_axes],
-                    OP_LOGE(
-                        context->GetNodeName(), "axes is invalid, a specified dim can not be reversed more than once!"),
-                    return false);
+    if (run_info.reverse_status[real_axes]) {
+      OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "axis",
+          "axes is invalid", "a specified dim can not be reversed more than once!");
+      return false;
+    }
 
     run_info.reverse_status[real_axes] = true;
   }
@@ -97,8 +99,8 @@ bool GetAxisToReverseRunInfo(const gert::TilingContext* context, const gert::Sha
       return GetAxisToReverseRunInfo<int64_t>(context, x_shape, axes_tensor, run_info);
     }
     default:
-      OP_LOGE(context->GetNodeName(), "axis only support [int32, int64]. but is %s",
-                                      Ops::Base::ToString(axes_dtype).c_str());
+      OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context->GetNodeName(), "axis",
+      Ops::Base::ToString(axes_dtype).c_str(), "[DT_INT32, DT_INT64]");
       return false;
   }
 

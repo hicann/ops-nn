@@ -222,10 +222,9 @@ inline ge::graphStatus ScatterNdUpdateArch32Tiling::HandleViewStride()
         int64_t dimSize = varShape.GetDim(dim);
         int64_t actualStride = stride->GetStride(dim);
         if (dimSize > 1 && actualStride != static_cast<int64_t>(expectedStride)) {
-            OP_LOGE(
-                tilingContext_,
-                "arch32 view path requires dim>=1 strides to be contiguous, dim %ld stride %ld expected %lu", dim,
-                actualStride, expectedStride);
+            OP_LOGE_FOR_INVALID_STRIDE(
+                tilingContext_->GetNodeType(), "var", std::to_string(actualStride).c_str(),
+                std::to_string(expectedStride).c_str());
             return ge::GRAPH_FAILED;
         }
         expectedStride *= static_cast<uint64_t>(dimSize);

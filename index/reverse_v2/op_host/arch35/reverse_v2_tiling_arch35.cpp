@@ -98,7 +98,8 @@ ge::graphStatus ReverseV2Tiling::GetInputShape()
     auto inputShape = inputX->GetStorageShape();
     size_t inputDimNum = inputShape.GetDimNum();
     if (inputDimNum > DIM8) {
-        OP_LOGE(context_->GetNodeName(), "input dim num must be less than or equal to 8");
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            context_->GetNodeName(), "input", std::to_string(inputDimNum).c_str(), "input dim num must be less than or equal to 8");
         return ge::GRAPH_FAILED;
     }
     for (size_t i = 0; i < inputDimNum; i++) {
@@ -110,10 +111,11 @@ ge::graphStatus ReverseV2Tiling::GetInputShape()
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputDesc);
     auto dtype = inputDesc->GetDataType();
     dtypeSize_ = ge::GetSizeByDataType(dtype);
-    OP_CHECK_IF(
-        dtypeSize_ <= 0,
-        OP_LOGE(context_, "dtypeSize must be greater than 0, dtypeSize: %ld", dtypeSize_),
-        return ge::GRAPH_FAILED);
+    if (dtypeSize_ <= 0) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context_->GetNodeName(), "input", std::to_string(dtypeSize_).c_str(), "dtypeSize must be greater than 0");
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -163,21 +165,25 @@ ge::graphStatus ReverseV2Tiling::GetShapeAttrsInfo()
             return ge::GRAPH_FAILED;
         }
     } else {
-        OP_LOGE(context_->GetNodeName(), "axis must be int32 or int64");
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            context_->GetNodeName(), "axis", Ops::Base::ToString(axisDataType).c_str(),
+            "[DT_INT32, DT_INT64]");
         return ge::GRAPH_FAILED;
     }
     // check axis if valid
     // 1. reversedDims_ cannot be duplicated
     std::set<int64_t> dimsSet(reversedDims_.begin(), reversedDims_.end());
     if (dimsSet.size() != reversedDims_.size()) {
-        OP_LOGE(context_->GetNodeName(), "values within axis cannot be duplicated");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "axis", "duplicated values", "axis cannot be duplicated");
         return ge::GRAPH_FAILED;
     }
     std::vector<int64_t> dimsVec(dimsSet.begin(), dimsSet.end());
     reversedDims_ = dimsVec;
     // 2. inputShape_ dim num must be greater than or equal to reversedDims_ size
     if (reversedDims_.size() > inputShape_.size() && !inputShape_.empty()) {
-        OP_LOGE(context_->GetNodeName(), "axis size must be less than or equal to input shape dim num");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context_->GetNodeName(), "axis", std::to_string(reversedDims_.size()).c_str(),
+            "axis size must be less than or equal to input shape dim num");
         return ge::GRAPH_FAILED;
     }
     auto axis = context_->GetInputTensor(INPUT_AXIS);
@@ -186,7 +192,8 @@ ge::graphStatus ReverseV2Tiling::GetShapeAttrsInfo()
     size_t axisDimNum = axisShape.GetDimNum();
     // 3. axis must be 1D
     if (axisDimNum != 1U) {
-        OP_LOGE(context_->GetNodeName(), "axis dim num must be 1D");
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            context_->GetNodeName(), "axis", std::to_string(axisDimNum).c_str(), "axis dim num must be 1D");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -509,7 +516,7 @@ bool ReverseV2Tiling::IsTensorMove()
     }
     for (auto revdim : reversedDims_) {
         if (inputShape_[revdim] != 1) {
-           return false;
+            return false;
         }
     }
     return true;
@@ -616,7 +623,7 @@ static ge::graphStatus ReverseV2ToTensorMoveTilingForAscendC(gert::TilingContext
     TensorMoveTilingData tilingData;
     SetTilingData4ReverseV2(tilingData, tilingParam);
     OP_CHECK_IF(ReverseV2SetTilingData(context, tilingData) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context->GetNodeName(), "ReverseV2SetTilingData set tiling data fail."),
+        OP_LOGE(context->GetNodeName(), "ReverseV2SetTilingData set tiling data fail."), 
         return ge::GRAPH_FAILED);
     context->SetBlockDim(tilingData.get_usedCoreNum());
     context->SetTilingKey(tilingData.get_tilingKey());
