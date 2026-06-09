@@ -53,20 +53,23 @@ static ge::graphStatus CheckAttrsValid(const gert::InferShapeContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, ksize);
     OP_CHECK_IF(
         ksize->GetSize() != NCHW_DIM_NUM,
-        OP_LOGE(context->GetNodeName(), "Length of ksize %lu must be 4!", ksize->GetSize()), return GRAPH_FAILED);
+        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "ksize", std::to_string(ksize->GetSize()).c_str(), "4"),
+        return GRAPH_FAILED);
 
     auto strides = attrs->GetListInt(STRIDES_ATTR_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, strides);
     OP_CHECK_IF(
         strides->GetSize() != NCHW_DIM_NUM,
-        OP_LOGE(context->GetNodeName(), "Length of strides %lu must be 4!", strides->GetSize()), return GRAPH_FAILED);
+        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "strides", std::to_string(strides->GetSize()).c_str(), "4"),
+        return GRAPH_FAILED);
 
     const char* padding = attrs->GetAttrPointer<char>(PADDING_ATTR_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, padding);
     std::string paddingStr = padding;
     OP_CHECK_IF(
         paddingStr != "VALID" && paddingStr != "SAME",
-        OP_LOGE(context->GetNodeName(), "padding only supports VALID or SAME, got %s", padding), return GRAPH_FAILED);
+        OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "padding", paddingStr.c_str(), "VALID or SAME"),
+        return GRAPH_FAILED);
     return GRAPH_SUCCESS;
 }
 
@@ -103,7 +106,8 @@ ge::graphStatus InferShapeForMaxPoolGrad(gert::InferShapeContext* context)
     auto xOriFormat = x1Desc->GetOriginFormat();
     OP_CHECK_IF(
         xOriFormat != FORMAT_ND && xOriFormat != FORMAT_NCHW && xOriFormat != FORMAT_NHWC,
-        OP_LOGE(context->GetNodeName(), "format only supports ND, NCHW, NHWC"), return GRAPH_FAILED);
+        OP_LOGE_FOR_INVALID_FORMAT(context->GetNodeName(), "x", ge::TypeUtils::FormatToSerialString(xOriFormat).c_str(), "ND, NCHW, NHWC"),
+        return GRAPH_FAILED);
 
     ge::graphStatus ret = CheckAttrsValid(context);
     if (ret != GRAPH_SUCCESS) {

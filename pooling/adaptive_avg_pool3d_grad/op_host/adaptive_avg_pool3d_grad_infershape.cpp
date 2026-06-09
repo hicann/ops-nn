@@ -14,6 +14,7 @@
  */
 
 #include "register/op_impl_registry.h"
+#include "graph/utils/type_utils.h"
 #include "log/log.h"
 #include "util/shape_util.h"
 #include "platform/platform_info.h"
@@ -87,14 +88,16 @@ static graphStatus InferDtype4AdaptiveAvgPool3dGrad(gert::InferDataTypeContext* 
     
     // 校验输入数据类型一致性
     OP_CHECK_IF(xDataType != gradDataType,
-                OP_LOGE(context->GetNodeName(), "Data type mismatch: x(%d) != grad(%d)",
-                        xDataType, gradDataType),
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context->GetNodeName(), "x, grad",
+                    (ge::TypeUtils::DataTypeToSerialString(xDataType) + ", " + ge::TypeUtils::DataTypeToSerialString(gradDataType)).c_str(),
+                    "the dtypes of x and grad must be the same"),
                 return GRAPH_FAILED);
     
     // 校验数据类型合法性
     OP_CHECK_IF((xDataType != ge::DT_FLOAT) && (xDataType != ge::DT_FLOAT16) && (xDataType != ge::DT_BF16),
-                OP_LOGE(context->GetNodeName(), "Data type invalid: x(%d), expect fp32/fp16/bf16.",
-                        xDataType),
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context->GetNodeName(), "x",
+                    ge::TypeUtils::DataTypeToSerialString(xDataType).c_str(),
+                    "the dtype of x must be fp32, fp16, or bf16"),
                 return ge::GRAPH_FAILED);
     
     context->SetOutputDataType(X_GRAD_INDEX, xDataType);    
