@@ -21,7 +21,7 @@ struct AvgPoolV2TilingParseInfo {};
 
 namespace gert {
 
-ge::graphStatus TilingPrepareForAvgPoolV2(TilingParseContext* context)
+ge::graphStatus TilingPrepareForAvgPoolV2([[maybe_unused]] TilingParseContext* context)
 {
     return ge::GRAPH_SUCCESS;
 }

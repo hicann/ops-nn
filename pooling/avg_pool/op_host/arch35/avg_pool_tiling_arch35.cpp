@@ -52,7 +52,7 @@ namespace gert {
  * @param [inout] context
  * @return succeeded or not
  */
-ge::graphStatus TilingPrepareForAvgPool(TilingParseContext* context)
+ge::graphStatus TilingPrepareForAvgPool([[maybe_unused]] TilingParseContext* context)
 {
     return ge::GRAPH_SUCCESS;
 }
