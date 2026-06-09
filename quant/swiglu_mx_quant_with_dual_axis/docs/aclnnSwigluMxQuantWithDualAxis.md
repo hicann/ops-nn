@@ -139,7 +139,7 @@ aclnnStatus aclnnSwigluMxQuantWithDualAxis(
       <td>x (aclTensor*)</td>
       <td>输入</td>
       <td>输入张量，公式中的 x。</td>
-      <td><ul><li>shape 为 [M, 2N]，最后一维必须为偶数。</li><li>不支持空 Tensor。</li></ul></td>
+      <td><ul><li>shape 为 [M, 2N]，最后一维必须为偶数。</li><li>当dstType为FLOAT4_E2M1/FLOAT4_E1M2时，最后一维必须可被4整除。</li><li>不支持空 Tensor。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>2</td>
@@ -219,7 +219,7 @@ aclnnStatus aclnnSwigluMxQuantWithDualAxis(
       <td>mxscale1Out (aclTensor*)</td>
       <td>输出</td>
       <td>表示 -1 轴每个分组对应的量化尺度，对应公式中的 mxscale1。</td>
-      <td><ul><li>shape 为 [M, (ceil(N/32)+2-1)/2, 2]，需进行偶数 pad，pad 填充值为 0。</li></ul></td>
+      <td><ul><li>shape 为 [M, ceil(N/64), 2]，需进行偶数 pad，pad 填充值为 0。</li></ul></td>
       <td>FLOAT8_E8M0</td>
       <td>ND</td>
       <td>3</td>
@@ -357,6 +357,7 @@ aclnnStatus aclnnSwigluMxQuantWithDualAxis(
 ## 约束说明
 
 - 输入 x 必须为 2 维张量，最后一维必须能被 2 整除（shape 为 [M, 2N]）。
+- 当 dstType 为 FLOAT4_E2M1/FLOAT4_E1M2 时，x的最后一维必须可被4整除。
 - FP8 输出类型（FLOAT8_E4M3FN）仅支持 "rint" 舍入模式。
 - groupIndexOptional采用 cumsum 模式，每个值表示对应 group 的行数累积值，groupIndexOptional的每个元素值需要大于0且最后一个元素值要等于M。
 - 关于 mxscale1Out、mxscale2Out 的 shape 约束说明：
