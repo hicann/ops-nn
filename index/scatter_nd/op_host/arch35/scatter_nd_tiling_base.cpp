@@ -54,6 +54,7 @@ constexpr uint16_t THRESHOLD_TOP = 256;
 constexpr uint16_t THRESHOLD_MID = 128;
 constexpr uint16_t THRESHOLD_BOTTOM = 16;
 constexpr float THRESHOLD_FACTOR = 0.8;
+constexpr float THRESHOLD_FACTOR_2 = 0.1;
 
 constexpr uint64_t TEMPLATE_EMPTY_TENSOR = 999;
 } // namespace
@@ -316,7 +317,7 @@ ge::graphStatus ScatterNdTiling::ScatterNdDeterministicTiling()
   } else if (sizeAfterAxis_ >= THRESHOLD_BOTTOM) {
       threshold = static_cast<float>(sizeAfterAxis_) / THRESHOLD_MID * THRESHOLD_FACTOR;
   } else {
-      threshold = 0.0;
+      threshold = THRESHOLD_FACTOR_2;
   }
 
   if (idxOutputRate < threshold) {
