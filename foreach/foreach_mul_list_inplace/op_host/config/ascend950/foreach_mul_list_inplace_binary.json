@@ -1,0 +1,133 @@
+{
+  "op_type": "ForeachMulListInplace",
+  "op_list": [
+    {
+      "bin_filename": "ForeachMulListInplace_20033da5412a6f3a36d5d5e684130a76",
+      "inputs": [
+        [
+          {
+            "name": "x1",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        [
+          {
+            "name": "x2",
+            "index": 1,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ]
+      ],
+      "outputs": []
+    },
+    {
+      "bin_filename": "ForeachMulListInplace_996706e4ce993c5ec7966ac25a75162e",
+      "inputs": [
+        [
+          {
+            "name": "x1",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        [
+          {
+            "name": "x2",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ]
+      ],
+      "outputs": []
+    },
+    {
+      "bin_filename": "ForeachMulListInplace_7d325bc5dda7d76268426246da9d2a75",
+      "inputs": [
+        [
+          {
+            "name": "x1",
+            "index": 0,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        [
+          {
+            "name": "x2",
+            "index": 1,
+            "dtype": "int32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ]
+      ],
+      "outputs": []
+    },
+    {
+      "bin_filename": "ForeachMulListInplace_e344a4a666a84330a5a6acdfc2064f85",
+      "inputs": [
+        [
+          {
+            "name": "x1",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        [
+          {
+            "name": "x2",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ]
+      ],
+      "outputs": []
+    }
+  ]
+}

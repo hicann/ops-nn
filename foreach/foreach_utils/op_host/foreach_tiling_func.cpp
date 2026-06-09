@@ -236,6 +236,38 @@ IMPL_OP_OPTILING(ForeachMulScalar)
     .Tiling(Tiling4ForeachMulScalarTiling)
     .TilingParse<ForeachCompileInfo>(TilingPrepare4ForeachScalarTiling);
 
+IMPL_OP_OPTILING(ForeachMulScalarInplace)
+    .Tiling(Tiling4ForeachMulScalarTiling)
+    .TilingParse<ForeachCompileInfo>(TilingPrepare4ForeachScalarTiling);
+
+IMPL_OP_OPTILING(ForeachSubScalarInplace)
+    .Tiling(Tiling4ForeachMulScalarTiling)
+    .TilingParse<ForeachCompileInfo>(TilingPrepare4ForeachScalarTiling);
+
+IMPL_OP_OPTILING(ForeachMulListInplace)
+    .Tiling(Tiling4ForeachMulScalarTiling)
+    .TilingParse<ForeachCompileInfo>(TilingPrepare4ForeachTiling);
+
+IMPL_OP_OPTILING(ForeachDivListInplace)
+    .Tiling(Tiling4ForeachMulScalarTiling)
+    .TilingParse<ForeachCompileInfo>(TilingPrepare4ForeachTiling);
+
+IMPL_OP_OPTILING(ForeachAddListInplace)
+    .Tiling(Tiling4ForeachMulScalarTiling)
+    .TilingParse<ForeachCompileInfo>(TilingPrepare4ForeachScalarTiling);
+
+IMPL_OP_OPTILING(ForeachSubListInplace)
+    .Tiling(Tiling4ForeachMulScalarTiling)
+    .TilingParse<ForeachCompileInfo>(TilingPrepare4ForeachScalarTiling);
+
+IMPL_OP_OPTILING(ForeachACosInplace)
+    .Tiling(Tiling4ForeachMulScalarTiling)
+    .TilingParse<ForeachCompileInfo>(TilingPrepare4ForeachTiling);
+
+IMPL_OP_OPTILING(ForeachLogInplace)
+    .Tiling(Tiling4ForeachMulScalarTiling)
+    .TilingParse<ForeachCompileInfo>(TilingPrepare4ForeachTiling);
+
 IMPL_OP_OPTILING(ForeachMulScalarList)
     .Tiling(Tiling4ForeachMulScalarListTiling)
     .TilingParse<ForeachCompileInfo>(TilingPrepare4ForeachTiling);

@@ -337,6 +337,11 @@ uint64_t ForeachRegbaseTiling::GetTilingKey() const
 ge::graphStatus ForeachRegbaseTiling::CheckOutput()
 {
     size_t outputCount = context_->GetComputeNodeOutputNum();
+    // In-place foreach ops declare no output (x serves as both input and output); skip the
+    // output validation for them. Non-in-place ops keep the original {x, y} count/dtype/shape checks.
+    if (outputCount == 0) {
+        return ge::GRAPH_SUCCESS;
+    }
     OP_CHECK_IF(
         totalTensorCount_ != outputCount,
         OP_LOGE_FOR_INVALID_TENSORNUMS_WITH_REASON(
@@ -768,6 +773,65 @@ uint64_t ForeachRegbaseTilingBinaryScalar::GetTilingKey() const
     }
 }
 
+ge::graphStatus ForeachRegbaseTilingBinary::GetShapeAttrsInfo()
+{
+    OP_CHECK_IF(
+        ForeachRegbaseTiling::GetShapeAttrsInfo() != ge::GRAPH_SUCCESS, OP_LOGE(context_, "Base tiling failed."),
+        return ge::GRAPH_FAILED);
+    // The second tensor list (x2) must match x1's dtype.
+    for (uint32_t i = 0; i < totalTensorCount_; i++) {
+        auto descSecond = context_->GetDynamicInputDesc(SECOND_INPUT_IDX, i);
+        OP_CHECK_IF(
+            descSecond == nullptr, OP_LOGE(context_, "The input2 %u desc is null.", i), return ge::GRAPH_FAILED);
+        OP_CHECK_IF(
+            descSecond->GetDataType() != dataType_,
+            OP_LOGE(context_, "The dtypes of x1 and x2 must be the same."), return ge::GRAPH_FAILED);
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+// Shared UB-split tail: convert per-element UB bytes into inputsTensorUbSize and store it.
+// Self-guards its divisors (ubSizePerNumber, sizePerElem) so the divisions stay divide-by-zero safe;
+// blockSize from GetUbBlockSize is a fixed 32 and FloorAlign itself returns 0 when the align is 0.
+// Currently used by ForeachRegbaseTilingBinary; the pre-existing UnaryScalar/UnaryScalarList/
+// UnaryScalarList2 paths keep their inline copies and can adopt this helper in a later pass.
+ge::graphStatus ForeachRegbaseTiling::SetInputsTensorUbSize(int64_t ubSizePerNumber)
+{
+    int64_t blockSize = Ops::Base::GetUbBlockSize(context_);
+    int64_t sizePerElem = ge::GetSizeByDataType(dataType_);
+    OP_CHECK_IF(
+        ubSizePerNumber <= 0 || sizePerElem <= 0,
+        OP_LOGE(context_, "Invalid UB divisor: ubSizePerNumber=%ld, sizePerElem=%ld.", ubSizePerNumber, sizePerElem),
+        return ge::GRAPH_FAILED);
+    int64_t inputsTensorUbSize = aicoreParams_.ubSize / ubSizePerNumber;
+    inputsTensorUbSize = Ops::Base::FloorAlign(inputsTensorUbSize * sizePerElem, blockSize) / sizePerElem;
+    foreachSoloTilingData_.set_inputsTensorUbSize(inputsTensorUbSize);
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus ForeachRegbaseTilingBinary::DoOpTiling()
+{
+    OP_CHECK_IF(
+        ForeachRegbaseTiling::DoOpTiling() != ge::GRAPH_SUCCESS, OP_LOGE(context_, "Base tiling failed."),
+        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        ForeachRegbaseTiling::CheckOutput() != ge::GRAPH_SUCCESS, OP_LOGE(context_, "check output info failed."),
+        return ge::GRAPH_FAILED);
+    int64_t sizePerElem = ge::GetSizeByDataType(dataType_);
+    OP_CHECK_IF(
+        sizePerElem <= 0, OP_LOGE(context_, "The datatype size is neg: %ld.", sizePerElem), return ge::GRAPH_FAILED);
+    // 2 inputs + 1 output, double buffered
+    int64_t ubSizePerNumber = sizePerElem * DOUBLE_BUFFER * TWO_INPUTS + sizePerElem * DOUBLE_BUFFER;
+    // half/bfloat16 binary ops that compute in float (e.g. div) need two float cast buffers.
+    if (dataType_ == ge::DT_BF16 || dataType_ == ge::DT_FLOAT16) {
+        ubSizePerNumber += static_cast<int64_t>(sizeof(float)) * TWO_INPUTS;
+    }
+    OP_CHECK_IF(
+        SetInputsTensorUbSize(ubSizePerNumber) != ge::GRAPH_SUCCESS,
+        OP_LOGE(context_, "Set inputsTensorUbSize failed."), return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
+
 ge::graphStatus ForeachRegbaseTilingUnaryScalarList2::CheckScalarList(int64_t scalarIdx)
 {
     auto scalarDesc = context_->GetRequiredInputDesc(scalarIdx);
@@ -837,4 +901,13 @@ REGISTER_OPS_TILING_TEMPLATE(ForeachDivScalarList, ForeachRegbaseTilingUnaryScal
 REGISTER_OPS_TILING_TEMPLATE(ForeachAddScalarList, ForeachRegbaseTilingUnaryScalarList2, TPL_REGISTER_PRIORITY);
 REGISTER_OPS_TILING_TEMPLATE(ForeachMulScalarList, ForeachRegbaseTilingUnaryScalarList2, TPL_REGISTER_PRIORITY);
 REGISTER_OPS_TILING_TEMPLATE(ForeachSqrt, ForeachRegbaseTilingUnary, TPL_REGISTER_PRIORITY);
+// in-place foreach operators (Ascend 950)
+REGISTER_OPS_TILING_TEMPLATE(ForeachMulScalarInplace, ForeachRegbaseTilingUnaryScalar, TPL_REGISTER_PRIORITY);
+REGISTER_OPS_TILING_TEMPLATE(ForeachSubScalarInplace, ForeachRegbaseTilingUnaryScalar, TPL_REGISTER_PRIORITY);
+REGISTER_OPS_TILING_TEMPLATE(ForeachMulListInplace, ForeachRegbaseTilingBinary, TPL_REGISTER_PRIORITY);
+REGISTER_OPS_TILING_TEMPLATE(ForeachDivListInplace, ForeachRegbaseTilingBinary, TPL_REGISTER_PRIORITY);
+REGISTER_OPS_TILING_TEMPLATE(ForeachAddListInplace, ForeachRegbaseTilingBinary, TPL_REGISTER_PRIORITY);
+REGISTER_OPS_TILING_TEMPLATE(ForeachSubListInplace, ForeachRegbaseTilingBinary, TPL_REGISTER_PRIORITY);
+REGISTER_OPS_TILING_TEMPLATE(ForeachACosInplace, ForeachRegbaseTilingUnary, TPL_REGISTER_PRIORITY);
+REGISTER_OPS_TILING_TEMPLATE(ForeachLogInplace, ForeachRegbaseTilingUnary, TPL_REGISTER_PRIORITY);
 } // namespace optiling

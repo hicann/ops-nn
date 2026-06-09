@@ -240,6 +240,38 @@ IMPL_OP_INFERSHAPE(ForeachZeroInplace)
     .InferShape(ops::InferShape4ForeachInplace)
     .InferDataType(ops::InferDataType4ForeachInplace);
 
+IMPL_OP_INFERSHAPE(ForeachMulScalarInplace)
+    .InferShape(ops::InferShape4ForeachInplace)
+    .InferDataType(ops::InferDataType4ForeachInplace);
+
+IMPL_OP_INFERSHAPE(ForeachSubScalarInplace)
+    .InferShape(ops::InferShape4ForeachInplace)
+    .InferDataType(ops::InferDataType4ForeachInplace);
+
+IMPL_OP_INFERSHAPE(ForeachMulListInplace)
+    .InferShape(ops::InferShape4ForeachInplace)
+    .InferDataType(ops::InferDataType4ForeachInplace);
+
+IMPL_OP_INFERSHAPE(ForeachDivListInplace)
+    .InferShape(ops::InferShape4ForeachInplace)
+    .InferDataType(ops::InferDataType4ForeachInplace);
+
+IMPL_OP_INFERSHAPE(ForeachAddListInplace)
+    .InferShape(ops::InferShape4ForeachInplace)
+    .InferDataType(ops::InferDataType4ForeachInplace);
+
+IMPL_OP_INFERSHAPE(ForeachSubListInplace)
+    .InferShape(ops::InferShape4ForeachInplace)
+    .InferDataType(ops::InferDataType4ForeachInplace);
+
+IMPL_OP_INFERSHAPE(ForeachACosInplace)
+    .InferShape(ops::InferShape4ForeachInplace)
+    .InferDataType(ops::InferDataType4ForeachInplace);
+
+IMPL_OP_INFERSHAPE(ForeachLogInplace)
+    .InferShape(ops::InferShape4ForeachInplace)
+    .InferDataType(ops::InferDataType4ForeachInplace);
+
 IMPL_OP_INFERSHAPE(ForeachNonFiniteCheckAndUnscale)
     .InferShape(ops::InferShape4ForeachInplace)
     .InferDataType(ops::InferDataType4ForeachInplace);

@@ -1,0 +1,62 @@
+{
+  "op_type": "ForeachACosInplace",
+  "op_list": [
+    {
+      "bin_filename": "ForeachACosInplace_16017b0b96802c7e3c966522750c2aa9",
+      "inputs": [
+        [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ]
+      ],
+      "outputs": []
+    },
+    {
+      "bin_filename": "ForeachACosInplace_085f6855312137bfbf51785536ac5afb",
+      "inputs": [
+        [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ]
+      ],
+      "outputs": []
+    },
+    {
+      "bin_filename": "ForeachACosInplace_71235f78a8637597548ae19c661da205",
+      "inputs": [
+        [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ]
+      ],
+      "outputs": []
+    }
+  ]
+}

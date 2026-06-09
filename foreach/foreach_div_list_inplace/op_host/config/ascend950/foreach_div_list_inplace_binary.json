@@ -1,0 +1,101 @@
+{
+  "op_type": "ForeachDivListInplace",
+  "op_list": [
+    {
+      "bin_filename": "ForeachDivListInplace_95092dd6b14fbe3a43e19d57c93be27f",
+      "inputs": [
+        [
+          {
+            "name": "x1",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        [
+          {
+            "name": "x2",
+            "index": 1,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ]
+      ],
+      "outputs": []
+    },
+    {
+      "bin_filename": "ForeachDivListInplace_3d709647cf898f6cefba39c63f13c254",
+      "inputs": [
+        [
+          {
+            "name": "x1",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        [
+          {
+            "name": "x2",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ]
+      ],
+      "outputs": []
+    },
+    {
+      "bin_filename": "ForeachDivListInplace_a61bf38b19b51e87329e4d0a98cb194a",
+      "inputs": [
+        [
+          {
+            "name": "x1",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        [
+          {
+            "name": "x2",
+            "index": 1,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "dynamic",
+            "shape": [
+              -2
+            ],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ]
+      ],
+      "outputs": []
+    }
+  ]
+}

@@ -46,6 +46,9 @@ protected:
     }
     // 检查output shape
     ge::graphStatus CheckOutput();
+    // Finalize UB split: given per-element UB bytes, compute and store inputsTensorUbSize.
+    // Returns GRAPH_FAILED if a divisor (ubSizePerNumber / sizePerElem) is non-positive.
+    ge::graphStatus SetInputsTensorUbSize(int64_t ubSizePerNumber);
     // check scalar shape and dtype
     ge::graphStatus CheckScalar(int64_t scalarIdx);
     ge::graphStatus CheckScalarList(int64_t scalarIdx);
@@ -140,6 +143,25 @@ private:
     ge::graphStatus CheckShape(uint32_t idx);
     // check scalar shape and dtype
     ge::graphStatus CheckScalar();
+};
+
+// Two tensor-list inputs (x1, x2), no scalar. Used by in-place binary foreach ops
+// (mul_list/div_list). UB budget accounts for 2 inputs + 1 output.
+class ForeachRegbaseTilingBinary : public ForeachRegbaseTiling
+{
+public:
+    explicit ForeachRegbaseTilingBinary(gert::TilingContext* context) : ForeachRegbaseTiling(context)
+    {}
+    ~ForeachRegbaseTilingBinary() override = default;
+
+    void Reset(gert::TilingContext* context) override
+    {
+        ForeachRegbaseTiling::Reset(context);
+    }
+
+protected:
+    ge::graphStatus GetShapeAttrsInfo() override;
+    ge::graphStatus DoOpTiling() override;
 };
 
 class ForeachRegbaseTilingUnaryScalarList : public ForeachRegbaseTiling
