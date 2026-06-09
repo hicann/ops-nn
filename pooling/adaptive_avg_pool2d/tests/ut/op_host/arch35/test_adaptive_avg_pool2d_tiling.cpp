@@ -51,16 +51,12 @@ protected:
         SetAscend950GlobalPlatformInfo();
     }
 
-    static void TearDownTestCase()
-    {
-        std::cout << "AdaptiveAvgPool2dTiling950Test TearDown" << std::endl;
-    }
+    static void TearDownTestCase() { std::cout << "AdaptiveAvgPool2dTiling950Test TearDown" << std::endl; }
 };
 
-static void ExecuteAdaptiveAvgPool2d950TestCase(gert::StorageShape xShape, gert::StorageShape yShape, 
-                                                    std::vector<int64_t> outputSize, 
-                                                    ge::DataType dtype,
-                                                    uint64_t expect_tiling_key)
+static void ExecuteAdaptiveAvgPool2d950TestCase(
+    gert::StorageShape xShape, gert::StorageShape yShape, std::vector<int64_t> outputSize, ge::DataType dtype,
+    uint64_t expect_tiling_key)
 {
     dlog_setlevel(0, 0, 0);
 
@@ -80,10 +76,7 @@ static void ExecuteAdaptiveAvgPool2d950TestCase(gert::StorageShape xShape, gert:
     map<string, string> intrinsics;
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
 
-    std::map<std::string, std::string> soc_version_infos = {
-        {"Short_SoC_version", "Ascend950"},
-        {"NpuArch", "3510"}
-    };
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
 
     fe::PlatFormInfos platform_info;
     platform_info.Init();
@@ -128,9 +121,7 @@ static void ExecuteAdaptiveAvgPool2d950TestCase(gert::StorageShape xShape, gert:
                       .PlatformInfo(reinterpret_cast<char*>(&platform_info))
                       .NodeInputTd(0, dtype, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
                       .NodeOutputTd(0, dtype, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
-                      .NodeAttrs({
-                          {"output_size", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(outputSize)}
-                      })
+                      .NodeAttrs({{"output_size", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(outputSize)}})
                       .TilingData(tiling_data.get())
                       .Workspace(ws_size)
                       .Build();
@@ -140,10 +131,8 @@ static void ExecuteAdaptiveAvgPool2d950TestCase(gert::StorageShape xShape, gert:
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
     holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
-    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
-        "AICoreintrinsicDtypeMap", intrinsics);
-    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes(
-        "version", soc_version_infos);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
 
     auto ret = tiling_func(tiling_context);
 
@@ -155,6 +144,305 @@ static void ExecuteAdaptiveAvgPool2d950TestCase(gert::StorageShape xShape, gert:
     auto raw_tiling = tiling_context->GetRawTilingData();
     ASSERT_NE(raw_tiling, nullptr);
 
+    dlog_setlevel(0, 3, 0);
+}
+
+static void ExecuteAdaptiveAvgPool2d950FailTestCase(
+    gert::StorageShape xShape, gert::StorageShape yShape, std::vector<int64_t> outputSize, ge::DataType dtype,
+    ge::graphStatus expect_result)
+{
+    dlog_setlevel(0, 0, 0);
+
+    string compile_info_string = R"({
+        "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
+                          "Intrinsic_fix_pipe_l0c2out": false,
+                          "Intrinsic_data_move_l12ub": true,
+                          "Intrinsic_data_move_l0c2ub": true,
+                          "Intrinsic_data_move_out2l1_nd2nz": false,
+                          "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
+                          "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
+                          "CORE_NUM": 64}
+                          })";
+
+    map<string, string> soc_infos;
+    map<string, string> aicore_spec;
+    map<string, string> intrinsics;
+    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
+
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
+
+    fe::PlatFormInfos platform_info;
+    platform_info.Init();
+
+    optiling::AdaptiveAvgPool2dCompileInfo compile_info;
+
+    std::string op_type("AdaptiveAvgPool2d");
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
+    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
+    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
+
+    auto kernel_holder =
+        gert::KernelRunContextFaker()
+            .KernelIONum(1, 1)
+            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
+            .Outputs({&compile_info})
+            .Build();
+
+    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
+        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
+        "version", soc_version_infos);
+
+    ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+
+    auto tiling_data = gert::TilingData::CreateCap(4096);
+    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    ASSERT_NE(tiling_data, nullptr);
+
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType(op_type)
+                      .NodeIoNum(1, 1)
+                      .IrInstanceNum({1})
+                      .InputShapes({&xShape})
+                      .OutputShapes({&yShape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, dtype, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
+                      .NodeOutputTd(0, dtype, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
+                      .NodeAttrs({{"output_size", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(outputSize)}})
+                      .TilingData(tiling_data.get())
+                      .Workspace(ws_size)
+                      .Build();
+
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
+
+    auto ret = tiling_func(tiling_context);
+
+    ASSERT_EQ(ret, expect_result);
+
+    dlog_setlevel(0, 3, 0);
+}
+
+TEST_F(AdaptiveAvgPool2dTiling950Test, test_tiling_invalid_dtype_int32)
+{
+    gert::StorageShape x_shape = {{2, 3, 4, 4}, {2, 3, 4, 4}};
+    gert::StorageShape y_shape = {{2, 3, 1, 1}, {2, 3, 1, 1}};
+    ExecuteAdaptiveAvgPool2d950FailTestCase(x_shape, y_shape, {1, 1}, ge::DT_INT32, ge::GRAPH_FAILED);
+}
+
+TEST_F(AdaptiveAvgPool2dTiling950Test, test_tiling_invalid_input_dims_2d)
+{
+    gert::StorageShape x_shape = {{4, 4}, {4, 4}};
+    gert::StorageShape y_shape = {{1, 1}, {1, 1}};
+    ExecuteAdaptiveAvgPool2d950FailTestCase(x_shape, y_shape, {1, 1}, ge::DT_FLOAT, ge::GRAPH_FAILED);
+}
+
+TEST_F(AdaptiveAvgPool2dTiling950Test, test_tiling_invalid_input_dims_5d)
+{
+    gert::StorageShape x_shape = {{1, 2, 3, 4, 4}, {1, 2, 3, 4, 4}};
+    gert::StorageShape y_shape = {{1, 2, 3, 1, 1}, {1, 2, 3, 1, 1}};
+    ExecuteAdaptiveAvgPool2d950FailTestCase(x_shape, y_shape, {1, 1}, ge::DT_FLOAT, ge::GRAPH_FAILED);
+}
+
+TEST_F(AdaptiveAvgPool2dTiling950Test, test_tiling_invalid_input_shape_zero_dim)
+{
+    gert::StorageShape x_shape = {{0, 3, 4, 4}, {0, 3, 4, 4}};
+    gert::StorageShape y_shape = {{0, 3, 1, 1}, {0, 3, 1, 1}};
+    ExecuteAdaptiveAvgPool2d950FailTestCase(x_shape, y_shape, {1, 1}, ge::DT_FLOAT, ge::GRAPH_FAILED);
+}
+
+TEST_F(AdaptiveAvgPool2dTiling950Test, test_tiling_invalid_output_size_len_3)
+{
+    gert::StorageShape x_shape = {{2, 3, 4, 4}, {2, 3, 4, 4}};
+    gert::StorageShape y_shape = {{2, 3, 1, 1}, {2, 3, 1, 1}};
+    ExecuteAdaptiveAvgPool2d950FailTestCase(x_shape, y_shape, {1, 1, 1}, ge::DT_FLOAT, ge::GRAPH_FAILED);
+}
+
+TEST_F(AdaptiveAvgPool2dTiling950Test, test_tiling_invalid_output_size_negative)
+{
+    gert::StorageShape x_shape = {{2, 3, 4, 4}, {2, 3, 4, 4}};
+    gert::StorageShape y_shape = {{2, 3, -1, -1}, {2, 3, -1, -1}};
+    ExecuteAdaptiveAvgPool2d950FailTestCase(x_shape, y_shape, {-1, -1}, ge::DT_FLOAT, ge::GRAPH_FAILED);
+}
+
+TEST_F(AdaptiveAvgPool2dTiling950Test, test_tiling_invalid_out_dims_2d)
+{
+    gert::StorageShape x_shape = {{2, 3, 4, 4}, {2, 3, 4, 4}};
+    gert::StorageShape y_shape = {{1, 1}, {1, 1}};
+    ExecuteAdaptiveAvgPool2d950FailTestCase(x_shape, y_shape, {1, 1}, ge::DT_FLOAT, ge::GRAPH_FAILED);
+}
+
+TEST_F(AdaptiveAvgPool2dTiling950Test, test_tiling_invalid_out_shape_mismatch)
+{
+    gert::StorageShape x_shape = {{2, 3, 4, 4}, {2, 3, 4, 4}};
+    gert::StorageShape y_shape = {{2, 5, 1, 1}, {2, 5, 1, 1}};
+    ExecuteAdaptiveAvgPool2d950FailTestCase(x_shape, y_shape, {1, 1}, ge::DT_FLOAT, ge::GRAPH_FAILED);
+}
+
+TEST_F(AdaptiveAvgPool2dTiling950Test, test_tiling_invalid_output_dtype_int32)
+{
+    gert::StorageShape x_shape = {{2, 32, 16, 16}, {2, 32, 16, 16}};
+    gert::StorageShape y_shape = {{2, 32, 8, 8}, {2, 32, 8, 8}};
+    string compile_info_string = R"({
+        "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
+                          "Intrinsic_fix_pipe_l0c2out": false,
+                          "Intrinsic_data_move_l12ub": true,
+                          "Intrinsic_data_move_l0c2ub": true,
+                          "Intrinsic_data_move_out2l1_nd2nz": false,
+                          "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
+                          "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
+                          "CORE_NUM": 64}
+                          })";
+    map<string, string> soc_infos;
+    map<string, string> aicore_spec;
+    map<string, string> intrinsics;
+    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
+    fe::PlatFormInfos platform_info;
+    platform_info.Init();
+    optiling::AdaptiveAvgPool2dCompileInfo compile_info;
+    std::string op_type("AdaptiveAvgPool2d");
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
+    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
+    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
+    auto kernel_holder =
+        gert::KernelRunContextFaker()
+            .KernelIONum(1, 1)
+            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
+            .Outputs({&compile_info})
+            .Build();
+    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
+        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
+        "version", soc_version_infos);
+    ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+    auto tiling_data = gert::TilingData::CreateCap(4096);
+    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    ASSERT_NE(tiling_data, nullptr);
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType(op_type)
+                      .NodeIoNum(1, 1)
+                      .IrInstanceNum({1})
+                      .InputShapes({&x_shape})
+                      .OutputShapes({&y_shape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, ge::DT_FLOAT, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
+                      .NodeOutputTd(0, ge::DT_INT32, ge::FORMAT_NCHW, ge::FORMAT_NCHW)
+                      .NodeAttrs({{"output_size", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>({8, 8})}})
+                      .TilingData(tiling_data.get())
+                      .Workspace(ws_size)
+                      .Build();
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version_infos);
+    auto ret = tiling_func(tiling_context);
+    ASSERT_EQ(ret, ge::GRAPH_FAILED);
+}
+
+TEST_F(AdaptiveAvgPool2dTiling950Test, test_tiling_parse_invalid_core_num_zero)
+{
+    dlog_setlevel(0, 0, 0);
+    string compile_info_string = R"({
+        "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
+                          "Intrinsic_fix_pipe_l0c2out": false,
+                          "Intrinsic_data_move_l12ub": true,
+                          "Intrinsic_data_move_l0c2ub": true,
+                          "Intrinsic_data_move_out2l1_nd2nz": false,
+                          "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
+                          "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
+                          "CORE_NUM": 0}
+                          })";
+    map<string, string> soc_infos;
+    map<string, string> aicore_spec;
+    map<string, string> intrinsics;
+    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
+    fe::PlatFormInfos platform_info;
+    platform_info.Init();
+    optiling::AdaptiveAvgPool2dCompileInfo compile_info;
+    std::string op_type("AdaptiveAvgPool2d");
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
+    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
+    auto kernel_holder =
+        gert::KernelRunContextFaker()
+            .KernelIONum(1, 1)
+            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
+            .Outputs({&compile_info})
+            .Build();
+    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
+        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
+        "version", soc_version_infos);
+    auto ret = tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>());
+    ASSERT_EQ(ret, ge::GRAPH_FAILED);
+    dlog_setlevel(0, 3, 0);
+}
+
+TEST_F(AdaptiveAvgPool2dTiling950Test, test_tiling_parse_invalid_ub_size_zero)
+{
+    dlog_setlevel(0, 0, 0);
+    string compile_info_string = R"({
+        "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
+                          "Intrinsic_fix_pipe_l0c2out": false,
+                          "Intrinsic_data_move_l12ub": true,
+                          "Intrinsic_data_move_l0c2ub": true,
+                          "Intrinsic_data_move_out2l1_nd2nz": false,
+                          "UB_SIZE": 0, "L2_SIZE": 33554432, "L1_SIZE": 524288,
+                          "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
+                          "CORE_NUM": 64}
+                          })";
+    map<string, string> soc_infos;
+    map<string, string> aicore_spec;
+    map<string, string> intrinsics;
+    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
+    fe::PlatFormInfos platform_info;
+    platform_info.Init();
+    optiling::AdaptiveAvgPool2dCompileInfo compile_info;
+    std::string op_type("AdaptiveAvgPool2d");
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
+    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
+    auto kernel_holder =
+        gert::KernelRunContextFaker()
+            .KernelIONum(1, 1)
+            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
+            .Outputs({&compile_info})
+            .Build();
+    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
+        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
+        "version", soc_version_infos);
+    auto ret = tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>());
+    ASSERT_EQ(ret, ge::GRAPH_FAILED);
     dlog_setlevel(0, 3, 0);
 }
 

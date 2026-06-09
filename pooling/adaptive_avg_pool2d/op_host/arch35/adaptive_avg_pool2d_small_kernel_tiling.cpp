@@ -14,6 +14,7 @@
  */
 
 #include <cstdint>
+#include "log/log.h"
 #include "adaptive_avg_pool2d_small_kernel_tiling.h"
 
 constexpr uint64_t KERNEL_SIZE_LIMIT = 128;
@@ -28,9 +29,11 @@ namespace optiling {
 
 bool AdaptiveAvgPool2dSmallKernelTiling::IsCapable()
 {
+    const char* opName_ = "AdaptiveAvgPool2d";
     computeInfo_.xDtypeSize = ge::GetSizeByDataType(input_.xDtype);
     if (computeInfo_.xDtypeSize == 0) {
-        OP_LOGE(context_->GetNodeName(), "Get xDtype size is 0, not support");
+        std::string xDtypeStr = std::to_string(static_cast<int32_t>(input_.xDtype));
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName_, "x", xDtypeStr.c_str(), "Get xDtype size is 0, not support");
         return false;
     }
     computeInfo_.vfLen = Ops::Base::GetVRegSize(context_) / computeInfo_.xDtypeSize;
@@ -43,8 +46,7 @@ bool AdaptiveAvgPool2dSmallKernelTiling::IsCapable()
     computeInfo_.kernelHMax = CalKernelSizeOneDimMax(input_.hIn, input_.hOut);
     computeInfo_.kernelWMax = CalKernelSizeOneDimMax(input_.wIn, input_.wOut);
 
-    bool isKernelSizeMeet =
-        (computeInfo_.kernelHMax * computeInfo_.kernelWMax < KERNEL_SIZE_LIMIT);
+    bool isKernelSizeMeet = (computeInfo_.kernelHMax * computeInfo_.kernelWMax < KERNEL_SIZE_LIMIT);
     bool isNcLenEnough = input_.nIn * input_.cIn >= (computeInfo_.vfLen / DOUBLE);
     /* 计算只处理一个窗口占用的UB */
     bool isCapable = isKernelSizeMeet && isNcLenEnough && IsMeetUbSize();
@@ -103,9 +105,9 @@ bool AdaptiveAvgPool2dSmallKernelTiling::IsMeetUbSize()
     CalMaxUbSplitSize();
     uint64_t dataBlock = Ops::Base::GetUbBlockSize(context_);
     uint64_t occupySize = computeInfo_.inputQueSize + computeInfo_.resQue1Size + computeInfo_.resQue2Size +
-                      Ops::Base::CeilAlign(computeInfo_.maxDimOut * sizeof(int32_t), dataBlock) +
-                      Ops::Base::CeilAlign(computeInfo_.hoFactor * sizeof(int32_t), dataBlock) +
-                      Ops::Base::CeilAlign(computeInfo_.woFactor * sizeof(int32_t), dataBlock);
+                          Ops::Base::CeilAlign(computeInfo_.maxDimOut * sizeof(int32_t), dataBlock) +
+                          Ops::Base::CeilAlign(computeInfo_.hoFactor * sizeof(int32_t), dataBlock) +
+                          Ops::Base::CeilAlign(computeInfo_.woFactor * sizeof(int32_t), dataBlock);
     return occupySize <= computeInfo_.availableUbSize;
 }
 
@@ -158,8 +160,7 @@ ge::graphStatus AdaptiveAvgPool2dSmallKernelTiling::SearchUbFactor()
     }
     BinarySearch(computeInfo_.woFactor);
 
-    OP_LOGI(
-        context_->GetNodeName(), "hoFactor = %lu, woFactor = %lu", computeInfo_.hoFactor, computeInfo_.woFactor);
+    OP_LOGI(context_->GetNodeName(), "hoFactor = %lu, woFactor = %lu", computeInfo_.hoFactor, computeInfo_.woFactor);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -176,18 +177,21 @@ ge::graphStatus AdaptiveAvgPool2dSmallKernelTiling::SearchOuter()
     }
     SearchOuterSingle(computeInfo_.woFactor);
 
-    OP_LOGI(
-        context_->GetNodeName(), "hoFactor = %lu, woFactor = %lu", computeInfo_.hoFactor, computeInfo_.woFactor);
+    OP_LOGI(context_->GetNodeName(), "hoFactor = %lu, woFactor = %lu", computeInfo_.hoFactor, computeInfo_.woFactor);
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus AdaptiveAvgPool2dSmallKernelTiling::InitUbFactor()
 {
+    const char* opName_ = "AdaptiveAvgPool2d";
     uint64_t kernelH = computeInfo_.kernelHMax;
     uint64_t kernelW = computeInfo_.kernelWMax;
-    OP_CHECK_IF(
-        (kernelW <= 0 || kernelH <= 0),
-        OP_LOGE(context_->GetNodeName(), "Kernel size <= 0, not support"), return ge::GRAPH_FAILED);
+    if (kernelW <= 0 || kernelH <= 0) {
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            opName_, "kernelHMax, kernelWMax", (std::to_string(kernelH) + ", " + std::to_string(kernelW)).c_str(),
+            "Kernel size <= 0, not support");
+        return ge::GRAPH_FAILED;
+    }
 
     computeInfo_.ncFactor = computeInfo_.vfLen;
     computeInfo_.woFactor = input_.wOut;
@@ -197,19 +201,20 @@ ge::graphStatus AdaptiveAvgPool2dSmallKernelTiling::InitUbFactor()
 
 ge::graphStatus AdaptiveAvgPool2dSmallKernelTiling::DoOpTiling()
 {
+    const char* opName_ = "AdaptiveAvgPool2d";
     OP_LOGI(context_->GetNodeName(), "AdaptiveAvgPool2dSmallKernelTiling DoOpTiling start.");
-    OP_CHECK_IF(
-        InitUbFactor() != ge::GRAPH_SUCCESS,
-        OP_LOGE(context_->GetNodeName(), "AdaptiveAvgPool2dSmallKernelTiling InitUbFactor failed"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        SearchUbFactor() != ge::GRAPH_SUCCESS,
-        OP_LOGE(context_->GetNodeName(), "AdaptiveAvgPool2dSmallKernelTiling SearchUbFactor failed"),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        SearchOuter() != ge::GRAPH_SUCCESS,
-        OP_LOGE(context_->GetNodeName(), "AdaptiveAvgPool2dSmallKernelTiling SearchOuter failed"),
-        return ge::GRAPH_FAILED);
+    if (InitUbFactor() != ge::GRAPH_SUCCESS) {
+        OP_LOGE(opName_, "AdaptiveAvgPool2dSmallKernelTiling InitUbFactor failed");
+        return ge::GRAPH_FAILED;
+    }
+    if (SearchUbFactor() != ge::GRAPH_SUCCESS) {
+        OP_LOGE(opName_, "AdaptiveAvgPool2dSmallKernelTiling SearchUbFactor failed");
+        return ge::GRAPH_FAILED;
+    }
+    if (SearchOuter() != ge::GRAPH_SUCCESS) {
+        OP_LOGE(opName_, "AdaptiveAvgPool2dSmallKernelTiling SearchOuter failed");
+        return ge::GRAPH_FAILED;
+    }
 
     if (computeInfo_.xDtypeSize == DOUBLE && computeInfo_.kernelHMax * computeInfo_.kernelWMax > KERNEL_SIZE_THR) {
         uint64_t hi = Ops::Base::CeilDiv(computeInfo_.hoFactor * input_.hIn, input_.hOut);
@@ -219,24 +224,24 @@ ge::graphStatus AdaptiveAvgPool2dSmallKernelTiling::DoOpTiling()
             computeInfo_.woFactor = input_.wOut;
             computeInfo_.hoFactor = input_.hOut;
             OP_LOGI(context_->GetNodeName(), "AdaptiveAvgPool2dSmallKernelTiling adjust vflen to 64 for type b16.");
-            OP_CHECK_IF(
-                SearchUbFactor() != ge::GRAPH_SUCCESS,
-                OP_LOGE(context_->GetNodeName(), "AdaptiveAvgPool2dSmallKernelTiling SearchUbFactor failed"),
-                return ge::GRAPH_FAILED);
-            OP_CHECK_IF(
-                SearchOuter() != ge::GRAPH_SUCCESS,
-                OP_LOGE(context_->GetNodeName(), "AdaptiveAvgPool2dSmallKernelTiling SearchOuter failed"),
-                return ge::GRAPH_FAILED);
+            if (SearchUbFactor() != ge::GRAPH_SUCCESS) {
+                OP_LOGE(opName_, "AdaptiveAvgPool2dSmallKernelTiling SearchUbFactor failed");
+                return ge::GRAPH_FAILED;
+            }
+            if (SearchOuter() != ge::GRAPH_SUCCESS) {
+                OP_LOGE(opName_, "AdaptiveAvgPool2dSmallKernelTiling SearchOuter failed");
+                return ge::GRAPH_FAILED;
+            }
         }
     }
 
     CalUbBlockFactor();
     CalMaxUbSplitSize();
 
-    OP_CHECK_IF(
-        SetTilingData() != ge::GRAPH_SUCCESS,
-        OP_LOGE(context_->GetNodeName(), "AdaptiveAvgPool2dSmallKernelTiling SetTilingData failed"),
-        return ge::GRAPH_FAILED);
+    if (SetTilingData() != ge::GRAPH_SUCCESS) {
+        OP_LOGE(opName_, "AdaptiveAvgPool2dSmallKernelTiling SetTilingData failed");
+        return ge::GRAPH_FAILED;
+    }
     PrintTilingData();
     return ge::GRAPH_SUCCESS;
 }

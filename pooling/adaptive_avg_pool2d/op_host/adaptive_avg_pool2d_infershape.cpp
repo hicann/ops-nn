@@ -32,6 +32,7 @@ constexpr int MIN_INPUT_DIMS = 3;
 constexpr int MAX_INPUT_DIMS = 4;
 static ge::graphStatus InferShape4AdaptiveAvgPool2d(gert::InferShapeContext* context)
 {
+    const char* opName_ = "AdaptiveAvgPool2d";
     OP_LOGD(context->GetNodeName(), "runtime2.0 AdaptiveAvgPool2d infershape running");
     const gert::Shape* in_shape = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, in_shape);
@@ -45,16 +46,16 @@ static ge::graphStatus InferShape4AdaptiveAvgPool2d(gert::InferShapeContext* con
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
     const gert::ContinuousVector* output_size_ptr = attrs->GetAttrPointer<gert::ContinuousVector>(0);
     int64_t output_size_num = output_size_ptr->GetSize();
-    OP_CHECK_IF(
-        output_size_num != LENS_TWO,
-        OP_LOGE(context->GetNodeName(), "don't support output_size_dims not equal to 2 , infershape failed"),
-        return ge::GRAPH_FAILED);
+    if (output_size_num != LENS_TWO) {
+        OP_LOGE_FOR_INVALID_LISTSIZE(opName_, "Length of output_size", std::to_string(output_size_num).c_str(), "2");
+        return ge::GRAPH_FAILED;
+    }
 
     int64_t in_dim = in_shape->GetDimNum();
-    OP_CHECK_IF(
-        in_dim != MIN_INPUT_DIMS && in_dim != MAX_INPUT_DIMS,
-        OP_LOGE(context->GetNodeName(), "expect input tensor is 3D or 4D tensor , infershape failed"),
-        return ge::GRAPH_FAILED);
+    if (in_dim != MIN_INPUT_DIMS && in_dim != MAX_INPUT_DIMS) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM(opName_, "x", std::to_string(in_dim).c_str(), "3 or 4");
+        return ge::GRAPH_FAILED;
+    }
 
     y_shape->SetDimNum(0);
     for (int i = 0; i < in_dim - output_size_num; i++) {

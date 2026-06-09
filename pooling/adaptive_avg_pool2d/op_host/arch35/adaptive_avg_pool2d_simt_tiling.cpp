@@ -20,6 +20,7 @@
 #include "error_util.h"
 #include "op_host/tiling_base.h"
 #include "op_host/tiling_templates_registry.h"
+#include "log/log.h"
 #include "adaptive_avg_pool2d_simt_tiling.h"
 #include "op_common/op_host/util/platform_util.h"
 #include "platform/platform_ascendc.h"
@@ -34,10 +35,7 @@ using namespace AdaptiveAvgPool2dOp;
 constexpr uint64_t KERNEL_SIZE_RATIO = 8;
 constexpr uint64_t KERNEL_SIZE_THRESHOLD = 64;
 
-bool AdaptiveAvgPool2DTilingSimt::IsCapable()
-{
-    return true;
-}
+bool AdaptiveAvgPool2DTilingSimt::IsCapable() { return true; }
 
 void AdaptiveAvgPool2DTilingSimt::SetTilingData()
 {
@@ -51,10 +49,11 @@ void AdaptiveAvgPool2DTilingSimt::SetTilingData()
 
 ge::graphStatus AdaptiveAvgPool2DTilingSimt::DoOpTiling()
 {
-    OP_TILING_CHECK(
-        GetAndCheckDataFormat() != ge::GRAPH_SUCCESS,
-        VECTOR_INNER_ERR_REPORT_TILIING(context_, "GetDataFormatAttrInfo fail."),
-        return ge::GRAPH_FAILED);
+    const char* opName_ = "AdaptiveAvgPool2d";
+    if (GetAndCheckDataFormat() != ge::GRAPH_SUCCESS) {
+        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(opName_, "x", "unknown_format", "GetDataFormatAttrInfo fail.");
+        return ge::GRAPH_FAILED;
+    }
     SetTilingData();
 
     int64_t outputSize = tilingData_->nDim * tilingData_->cDim * tilingData_->hOutDim * tilingData_->wOutDim;
@@ -85,19 +84,18 @@ uint64_t AdaptiveAvgPool2DTilingSimt::GetTilingKey() const
 
 ge::graphStatus AdaptiveAvgPool2DTilingSimt::PostTiling()
 {
+    const char* opName_ = "AdaptiveAvgPool2d";
     int64_t ubSize = input_.ubSize - DCACHE_SIZE;
     auto res = context_->SetLocalMemorySize(ubSize);
-    OP_TILING_CHECK(
-        (res != ge::GRAPH_SUCCESS),
-        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "SetLocalMemorySize ubSize = %ld failed.", ubSize),
-        return ge::GRAPH_FAILED);
+    if (res != ge::GRAPH_SUCCESS) {
+        OP_LOGE_FOR_INVALID_CONFIG_WITH_REASON(
+            opName_, std::to_string(ubSize).c_str(), "ubSize", "AdaptiveAvgPool2d", "SetLocalMemorySize failed.");
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus AdaptiveAvgPool2DTilingSimt::DoLibApiTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus AdaptiveAvgPool2DTilingSimt::DoLibApiTiling() { return ge::GRAPH_SUCCESS; }
 
 void AdaptiveAvgPool2DTilingSimt::DumpTilingInfo()
 {
@@ -112,4 +110,4 @@ void AdaptiveAvgPool2DTilingSimt::DumpTilingInfo()
     OP_LOGI(context_, "%s.", str.c_str());
 }
 REGISTER_OPS_TILING_TEMPLATE(AdaptiveAvgPool2d, AdaptiveAvgPool2DTilingSimt, 100);
-}  // namespace optiling
+} // namespace optiling

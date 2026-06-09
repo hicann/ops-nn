@@ -43,12 +43,14 @@ static constexpr int64_t UNKNOWN_DIM_VALUE_ = -1LL;
 
 static int64_t DivRtn(int64_t x, int64_t y)
 {
+    const char* opName_ = "MaxPool3DGradWithArgmax";
     if (y == 0) {
-        OP_LOGE("MaxPool3DGradWithArgmax", "strides value cannot be zero.");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "strides", "0", "strides value cannot be zero.");
         return GRAPH_FAILED;
     }
     if (x < 0) {
-        OP_LOGE("MaxPool3DGradWithArgmax", "x value cannot small than zero.");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            opName_, "x", std::to_string(x).c_str(), "x value cannot be smaller than zero.");
         return GRAPH_FAILED;
     }
     int64_t q = x / y;
@@ -98,14 +100,19 @@ ge::graphStatus InferShapeForMaxPool3DGradWithArgmax(gert::InferShapeContext* co
         return ge::GRAPH_FAILED;
     }
 
+    const char* opName_ = "MaxPool3DGradWithArgmax";
+
     OP_LOGD(context->GetNodeName(), "runtime2.0 MaxPool3DGradWithArgmax infershape running");
     auto inputXDesc = context->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputXDesc);
     auto inputXFormat = inputXDesc->GetOriginFormat();
-    OP_CHECK_IF(
-        inputXFormat != FORMAT_ND && inputXFormat != FORMAT_NCDHW && inputXFormat != FORMAT_NDHWC && 
-            inputXFormat != FORMAT_NCHW, 
-        OP_LOGE(context->GetNodeName(), "format only supports ND, NCDHW, NDHWC"), return GRAPH_FAILED);
+    if (inputXFormat != FORMAT_ND && inputXFormat != FORMAT_NCDHW && inputXFormat != FORMAT_NDHWC &&
+        inputXFormat != FORMAT_NCHW) {
+        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
+            opName_, "x", std::to_string(static_cast<int32_t>(inputXFormat)).c_str(),
+            "format only supports ND, NCDHW, NDHWC");
+        return GRAPH_FAILED;
+    }
 
     size_t input_d_dim = SHAPE_D_DIM;
     size_t input_h_dim = SHAPE_H_DIM;
@@ -116,19 +123,19 @@ ge::graphStatus InferShapeForMaxPool3DGradWithArgmax(gert::InferShapeContext* co
 
     auto ksize = attrs->GetAttrPointer<gert::ContinuousVector>(ATTR_INDEX_KSIZE);
     OP_CHECK_NULL_WITH_CONTEXT(context, ksize);
-    OP_CHECK_IF(
-        ksize->GetSize() != 1 && ksize->GetSize() != ATTR_LIST_SHAPE_SIZE,
-        OP_LOGE(context->GetNodeName(), "Length of ksize %lu must be equal 1 or 3!", ksize->GetSize()),
-        return GRAPH_FAILED);
+    if (ksize->GetSize() != 1 && ksize->GetSize() != ATTR_LIST_SHAPE_SIZE) {
+        OP_LOGE_FOR_INVALID_LISTSIZE(opName_, "Length of ksize", std::to_string(ksize->GetSize()).c_str(), "1 or 3");
+        return GRAPH_FAILED;
+    }
 
     auto ksize_data = static_cast<const int64_t*>(ksize->GetData());
     for (uint32_t i = 0; i < static_cast<uint32_t>(ksize->GetSize()); i++) {
-        OP_CHECK_IF(
-            (ksize_data[i] <= 0),
-            OP_LOGE(
-                context->GetNodeName(), "Attr value invalid, ksize_data[%u] is %ld, should bigger than 0.", i,
-                ksize_data[i]),
-            return ge::GRAPH_FAILED);
+        if (ksize_data[i] <= 0) {
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                opName_, (std::string("ksize[") + std::to_string(i) + "]").c_str(),
+                std::to_string(ksize_data[i]).c_str(), "ksize value should bigger than 0");
+            return GRAPH_FAILED;
+        }
     }
 
     int64_t kD = ksize_data[INDEX_ZERO];
@@ -137,19 +144,20 @@ ge::graphStatus InferShapeForMaxPool3DGradWithArgmax(gert::InferShapeContext* co
 
     auto strides = attrs->GetAttrPointer<gert::ContinuousVector>(ATTR_INDEX_STRIDES);
     OP_CHECK_NULL_WITH_CONTEXT(context, strides);
-    OP_CHECK_IF(
-        strides->GetSize() != 0 && strides->GetSize() != 1 && strides->GetSize() != ATTR_LIST_SHAPE_SIZE,
-        OP_LOGE(context->GetNodeName(), "Length of strides %lu must be equal 0 or 1 or 3!", strides->GetSize()),
-        return GRAPH_FAILED);
+    if (strides->GetSize() != 0 && strides->GetSize() != 1 && strides->GetSize() != ATTR_LIST_SHAPE_SIZE) {
+        OP_LOGE_FOR_INVALID_LISTSIZE(
+            opName_, "Length of strides", std::to_string(strides->GetSize()).c_str(), "0, 1, or 3");
+        return GRAPH_FAILED;
+    }
 
     auto strides_data = static_cast<const int64_t*>(strides->GetData());
     for (uint32_t i = 0; i < static_cast<uint32_t>(strides->GetSize()); i++) {
-        OP_CHECK_IF(
-            (strides_data[i] <= 0),
-            OP_LOGE(
-                context->GetNodeName(), "Attr value invalid, strides_data[%u] is %ld, should bigger than 0.", i,
-                strides_data[i]),
-            return ge::GRAPH_FAILED);
+        if (strides_data[i] <= 0) {
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                opName_, (std::string("strides[") + std::to_string(i) + "]").c_str(),
+                std::to_string(strides_data[i]).c_str(), "strides value should bigger than 0");
+            return GRAPH_FAILED;
+        }
     }
 
     int64_t sD = kD;
@@ -163,19 +171,19 @@ ge::graphStatus InferShapeForMaxPool3DGradWithArgmax(gert::InferShapeContext* co
 
     auto pads = attrs->GetAttrPointer<gert::ContinuousVector>(ATTR_INDEX_PADS);
     OP_CHECK_NULL_WITH_CONTEXT(context, pads);
-    OP_CHECK_IF(
-        pads->GetSize() != 1 && pads->GetSize() != ATTR_LIST_SHAPE_SIZE,
-        OP_LOGE(context->GetNodeName(), "Length of pads %lu must be equal 1 or 3!", pads->GetSize()),
-        return GRAPH_FAILED);
+    if (pads->GetSize() != 1 && pads->GetSize() != ATTR_LIST_SHAPE_SIZE) {
+        OP_LOGE_FOR_INVALID_LISTSIZE(opName_, "Length of pads", std::to_string(pads->GetSize()).c_str(), "1 or 3");
+        return GRAPH_FAILED;
+    }
 
     auto pads_data = static_cast<const int64_t*>(pads->GetData());
     for (uint32_t i = 0; i < static_cast<uint32_t>(pads->GetSize()); i++) {
-        OP_CHECK_IF(
-            (pads_data[i] < 0),
-            OP_LOGE(
-                context->GetNodeName(), "Attr value invalid, pads_data[%u] is %ld, should bigger or equal 0.", i,
-                pads_data[i]),
-            return ge::GRAPH_FAILED);
+        if (pads_data[i] < 0) {
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                opName_, (std::string("pads[") + std::to_string(i) + "]").c_str(), std::to_string(pads_data[i]).c_str(),
+                "pads value should be >= 0");
+            return GRAPH_FAILED;
+        }
     }
 
     int64_t pD = pads_data[INDEX_ZERO];
@@ -184,19 +192,20 @@ ge::graphStatus InferShapeForMaxPool3DGradWithArgmax(gert::InferShapeContext* co
 
     auto dilation = attrs->GetAttrPointer<gert::ContinuousVector>(ATTR_INDEX_DILATION);
     OP_CHECK_NULL_WITH_CONTEXT(context, dilation);
-    OP_CHECK_IF(
-        dilation->GetSize() != 1 && dilation->GetSize() != ATTR_LIST_SHAPE_SIZE,
-        OP_LOGE(context->GetNodeName(), "Length of dilation %lu must be equal 1 or 3!", dilation->GetSize()),
-        return GRAPH_FAILED);
+    if (dilation->GetSize() != 1 && dilation->GetSize() != ATTR_LIST_SHAPE_SIZE) {
+        OP_LOGE_FOR_INVALID_LISTSIZE(
+            opName_, "Length of dilation", std::to_string(dilation->GetSize()).c_str(), "1 or 3");
+        return GRAPH_FAILED;
+    }
 
     auto dilation_data = static_cast<const int64_t*>(dilation->GetData());
     for (uint32_t i = 0; i < static_cast<uint32_t>(dilation->GetSize()); i++) {
-        OP_CHECK_IF(
-            (dilation_data[i] <= 0),
-            OP_LOGE(
-                context->GetNodeName(), "Attr value invalid, dilation_data[%u] is %ld, should bigger than 0.", i,
-                dilation_data[i]),
-            return ge::GRAPH_FAILED);
+        if (dilation_data[i] <= 0) {
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                opName_, (std::string("dilation[") + std::to_string(i) + "]").c_str(),
+                std::to_string(dilation_data[i]).c_str(), "dilation value should bigger than 0");
+            return GRAPH_FAILED;
+        }
     }
 
     int64_t dD = dilation_data[INDEX_ZERO];
@@ -209,17 +218,19 @@ ge::graphStatus InferShapeForMaxPool3DGradWithArgmax(gert::InferShapeContext* co
     const char* data_format = attrs->GetAttrPointer<char>(ATTR_INDEX_DATA_FORMAT);
     OP_CHECK_NULL_WITH_CONTEXT(context, data_format);
 
-    OP_CHECK_IF(
-        (pD > (kD / 2)) || (pH > (kH / 2)) || (pW > (kW / 2)),
-        OP_LOGE(context->GetNodeName(), "Attr size invalid, padSize should smaller than kernelSize div 2"),
-        return ge::GRAPH_FAILED);
+    if ((pD > (kD / 2)) || (pH > (kH / 2)) || (pW > (kW / 2))) {
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            opName_, "pD, pH, pW", (std::to_string(pD) + ", " + std::to_string(pH) + ", " + std::to_string(pW)).c_str(),
+            "padSize should smaller than kernelSize div 2");
+        return ge::GRAPH_FAILED;
+    }
 
-    OP_CHECK_IF(
-        (pD > ((kD - 1) * dD + 1) / 2) || (pH > ((kH - 1) * dH + 1) / 2) || (pW > ((kW - 1) * dW + 1) / 2),
-        OP_LOGE(
-            context->GetNodeName(),
-            "Attr size invalid, padSize should smaller than ((kernelSize - 1) * dilation + 1) / 2."),
-        return ge::GRAPH_FAILED);
+    if ((pD > ((kD - 1) * dD + 1) / 2) || (pH > ((kH - 1) * dH + 1) / 2) || (pW > ((kW - 1) * dW + 1) / 2)) {
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            opName_, "pD, pH, pW", (std::to_string(pD) + ", " + std::to_string(pH) + ", " + std::to_string(pW)).c_str(),
+            "padSize should smaller than ((kernelSize - 1) * dilation + 1) / 2");
+        return ge::GRAPH_FAILED;
+    }
 
     const gert::Shape* xShape = context->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
@@ -258,25 +269,35 @@ ge::graphStatus InferShapeForMaxPool3DGradWithArgmax(gert::InferShapeContext* co
     int64_t hoExpected = CalcOutDim(xShape->GetDim(input_h_dim), kH, sH, pH, dH, *ceil_mode);
     int64_t woExpected = CalcOutDim(xShape->GetDim(input_w_dim), kW, sW, pW, dW, *ceil_mode);
 
-    OP_CHECK_IF(
-        (!Ops::Base::IsUnknownRank(*gradShape) && !Ops::Base::IsUnknownShape(*gradShape)) &&
-            ((doExpected <= 0) || (doExpected != static_cast<int64_t>(gradShape->GetDim(input_d_dim))) ||
-             (hoExpected <= 0) || (hoExpected != static_cast<int64_t>(gradShape->GetDim(input_h_dim))) ||
-             (woExpected <= 0) || (woExpected != static_cast<int64_t>(gradShape->GetDim(input_w_dim)))),
-        OP_LOGE(
-            context->GetNodeName(), "GradShape D / H / W size invalid, expected d: %ld, h: %ld, w: %ld.", doExpected,
-            hoExpected, woExpected),
-        return ge::GRAPH_FAILED);
+    if ((!Ops::Base::IsUnknownRank(*gradShape) && !Ops::Base::IsUnknownShape(*gradShape)) &&
+        ((doExpected <= 0) || (doExpected != static_cast<int64_t>(gradShape->GetDim(input_d_dim))) ||
+         (hoExpected <= 0) || (hoExpected != static_cast<int64_t>(gradShape->GetDim(input_h_dim))) ||
+         (woExpected <= 0) || (woExpected != static_cast<int64_t>(gradShape->GetDim(input_w_dim))))) {
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            opName_, "grad",
+            (std::to_string(gradShape->GetDim(input_d_dim)) + ", " + std::to_string(gradShape->GetDim(input_h_dim)) +
+             ", " + std::to_string(gradShape->GetDim(input_w_dim)))
+                .c_str(),
+            (std::string("GradShape D/H/W size invalid, expected d: ") + std::to_string(doExpected) +
+             ", h: " + std::to_string(hoExpected) + ", w: " + std::to_string(woExpected))
+                .c_str());
+        return ge::GRAPH_FAILED;
+    }
 
-    OP_CHECK_IF(
-        (!Ops::Base::IsUnknownRank(*argmaxShape) && !Ops::Base::IsUnknownShape(*argmaxShape)) &&
-            ((doExpected <= 0) || (doExpected != static_cast<int64_t>(argmaxShape->GetDim(input_d_dim))) ||
-             (hoExpected <= 0) || (hoExpected != static_cast<int64_t>(argmaxShape->GetDim(input_h_dim))) ||
-             (woExpected <= 0) || (woExpected != static_cast<int64_t>(argmaxShape->GetDim(input_w_dim)))),
-        OP_LOGE(
-            context->GetNodeName(), "ArgmaxShape D / H / W size invalid, expected d: %ld, h: %ld, w: %ld.", doExpected,
-            hoExpected, woExpected),
-        return ge::GRAPH_FAILED);
+    if ((!Ops::Base::IsUnknownRank(*argmaxShape) && !Ops::Base::IsUnknownShape(*argmaxShape)) &&
+        ((doExpected <= 0) || (doExpected != static_cast<int64_t>(argmaxShape->GetDim(input_d_dim))) ||
+         (hoExpected <= 0) || (hoExpected != static_cast<int64_t>(argmaxShape->GetDim(input_h_dim))) ||
+         (woExpected <= 0) || (woExpected != static_cast<int64_t>(argmaxShape->GetDim(input_w_dim))))) {
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            opName_, "argmax",
+            (std::to_string(argmaxShape->GetDim(input_d_dim)) + ", " +
+             std::to_string(argmaxShape->GetDim(input_h_dim)) + ", " + std::to_string(argmaxShape->GetDim(input_w_dim)))
+                .c_str(),
+            (std::string("ArgmaxShape D/H/W size invalid, expected d: ") + std::to_string(doExpected) +
+             ", h: " + std::to_string(hoExpected) + ", w: " + std::to_string(woExpected))
+                .c_str());
+        return ge::GRAPH_FAILED;
+    }
 
     OP_LOGD(context->GetNodeName(), "runtime2.0 MaxPool3DGradWithArgmax infershape run success.");
     return ge::GRAPH_SUCCESS;

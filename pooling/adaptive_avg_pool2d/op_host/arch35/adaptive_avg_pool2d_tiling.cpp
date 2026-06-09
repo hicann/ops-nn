@@ -14,6 +14,7 @@
  */
 #include <iostream>
 
+#include "log/log.h"
 #include "adaptive_avg_pool2d_tiling.h"
 using Ops::NN::Optiling::TilingRegistry;
 namespace optiling {
@@ -25,6 +26,7 @@ static ge::graphStatus Tiling4AdaptiveAvgPool2d(gert::TilingContext* context)
 
 static ge::graphStatus TilingPrepare4AdaptiveAvgPool2d(gert::TilingParseContext* context)
 {
+    const char* opName_ = "AdaptiveAvgPool2d";
     OP_LOGD(context->GetNodeName(), "Enter TilingPrepare4AdaptiveAvgPool2d.");
     auto compileInfo = context->GetCompiledInfo<AdaptiveAvgPool2dCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
@@ -32,14 +34,22 @@ static ge::graphStatus TilingPrepare4AdaptiveAvgPool2d(gert::TilingParseContext*
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->totalCoreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF(
-        (compileInfo->totalCoreNum <= 0), OP_LOGE(context->GetNodeName(), "Failed to get core num."), return ge::GRAPH_FAILED);
+    if (compileInfo->totalCoreNum <= 0) {
+        OP_LOGE_FOR_INVALID_CONFIG_WITH_REASON(
+            opName_, std::to_string(compileInfo->totalCoreNum).c_str(), "totalCoreNum", "AdaptiveAvgPool2d",
+            "Failed to get core num.");
+        return ge::GRAPH_FAILED;
+    }
     compileInfo->sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
     uint64_t ubSizePlatForm;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     compileInfo->ubSizePlatForm = static_cast<int64_t>(ubSizePlatForm);
-    OP_CHECK_IF(
-        (compileInfo->ubSizePlatForm <= 0), OP_LOGE(context->GetNodeName(), "Failed to get ub size."), return ge::GRAPH_FAILED);
+    if (compileInfo->ubSizePlatForm <= 0) {
+        OP_LOGE_FOR_INVALID_CONFIG_WITH_REASON(
+            opName_, std::to_string(compileInfo->ubSizePlatForm).c_str(), "ubSizePlatForm", "AdaptiveAvgPool2d",
+            "Failed to get ub size.");
+        return ge::GRAPH_FAILED;
+    }
     OP_LOGD(context->GetNodeName(), "TilingPrepare4AdaptiveAvgPool2d end.");
     return ge::GRAPH_SUCCESS;
 }

@@ -34,7 +34,7 @@ namespace optiling {
 
 const int INPUT_IDX_X = 0;
 static const gert::Shape g_vec_1_shape = {1};
-static constexpr uint64_t DCACHE_SIZE = 128 *1024UL;
+static constexpr uint64_t DCACHE_SIZE = 128 * 1024UL;
 static constexpr int64_t DIGIT_TWO = 2;
 constexpr size_t N_DIM_OFFSET = 0;
 constexpr size_t C_DIM_OFFSET = 4;
@@ -42,26 +42,24 @@ constexpr size_t D_DIM_OFFSET = 1;
 constexpr size_t H_DIM_OFFSET = 2;
 constexpr size_t W_DIM_OFFSET = 3;
 
-static const gert::Shape &EnsureNotScalar(const gert::Shape &inShape) {
+static const gert::Shape& EnsureNotScalar(const gert::Shape& inShape)
+{
     if (inShape.IsScalar()) {
         return g_vec_1_shape;
     }
     return inShape;
 }
 
-bool MaxPool3DGradSimtTiling::IsCapable()
-{
-    return true;
-}
+bool MaxPool3DGradSimtTiling::IsCapable() { return true; }
 
 ge::graphStatus MaxPool3DGradSimtTiling::GetPlatformInfo()
 {
     auto platformPtr = context_->GetPlatformInfo();
     if (platformPtr == nullptr) {
-        auto compileInfoPtr =
-            static_cast<const Tiling4Pool3DGradCompileInfo*>(context_->GetCompileInfo());
-        OP_CHECK_IF(compileInfoPtr == nullptr, OP_LOGE(context_->GetNodeName(), "compile info is null"),
-                    return ge::GRAPH_FAILED);
+        auto compileInfoPtr = static_cast<const Tiling4Pool3DGradCompileInfo*>(context_->GetCompileInfo());
+        OP_CHECK_IF(
+            compileInfoPtr == nullptr, OP_LOGE(context_->GetNodeName(), "compile info is null"),
+            return ge::GRAPH_FAILED);
         coreNum = compileInfoPtr->totalCoreNum;
         ubSize = compileInfoPtr->maxUbSize;
     } else {
@@ -79,6 +77,7 @@ ge::graphStatus MaxPool3DGradSimtTiling::GetPlatformInfo()
 
 ge::graphStatus MaxPool3DGradSimtTiling::GetShapeAttrsInfo()
 {
+    const char* opName_ = "MaxPool3DGrad";
     auto platformInfo = context_->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
@@ -89,11 +88,14 @@ ge::graphStatus MaxPool3DGradSimtTiling::GetShapeAttrsInfo()
     const char* data_format = runtimeAttrs->GetAttrPointer<char>(FORMAT_POS);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, data_format);
     inputData.data_format = data_format;
-    std::transform(inputData.data_format.begin(), inputData.data_format.end(), inputData.data_format.begin(),
-                    [](unsigned char c) { return std::tolower(c); });
-    OP_CHECK_IF(!(inputData.data_format == "ndhwc" || inputData.data_format == "ncdhw"),
-                OP_LOGE(context_, "ATTR data_format is %s, expect [NDHWC] or [NCDHW].", data_format),
-                return ge::GRAPH_FAILED);
+    std::transform(
+        inputData.data_format.begin(), inputData.data_format.end(), inputData.data_format.begin(),
+        [](unsigned char c) { return std::tolower(c); });
+    if (!(inputData.data_format == "ndhwc" || inputData.data_format == "ncdhw")) {
+        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
+            opName_, "Attribute data_format", data_format, "expect [NDHWC] or [NCDHW]");
+        return ge::GRAPH_FAILED;
+    }
     auto inputX = context_->GetInputShape(FIRPOS);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, inputX);
     auto inputShape = EnsureNotScalar(inputX->GetStorageShape());
@@ -108,9 +110,7 @@ ge::graphStatus MaxPool3DGradSimtTiling::GetShapeAttrsInfo()
     outShapeSize = outShape.GetShapeSize();
 
     if (inputShape.GetDimNum() != NCDHW_DIMS) {
-        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(),
-                                        "MaxPool3DGrad: input shape dim = %zu, should be equal 5",
-                                        inputShape.GetDimNum());
+        OP_LOGE_FOR_INVALID_SHAPEDIM(opName_, "x", std::to_string(inputShape.GetDimNum()).c_str(), "5");
         return ge::GRAPH_FAILED;
     }
 
@@ -122,20 +122,22 @@ ge::graphStatus MaxPool3DGradSimtTiling::GetShapeAttrsInfo()
         wDimPos = W_DIM_OFFSET;
     }
 
-    inputData.inputShape = 
-        std::array<uint64_t, NCDHW_DIMS>{uint64_t(inputShape.GetDim(nDimPos)), uint64_t(inputShape.GetDim(cDimPos)),
-                                        uint64_t(inputShape.GetDim(dDimPos)), uint64_t(inputShape.GetDim(hDimPos)), uint64_t(inputShape.GetDim(wDimPos))};
-    inputData.outShape = 
-        std::array<uint64_t, NCDHW_DIMS>{uint64_t(inputShape.GetDim(nDimPos)), uint64_t(inputShape.GetDim(cDimPos)),
-                                        uint64_t(outShape.GetDim(dDimPos)), uint64_t(outShape.GetDim(hDimPos)), uint64_t(outShape.GetDim(wDimPos))};
-    inputData.gradShape = 
-        std::array<uint64_t, NCDHW_DIMS>{uint64_t(gradShape.GetDim(nDimPos)), uint64_t(gradShape.GetDim(cDimPos)),
-                                        uint64_t(gradShape.GetDim(dDimPos)), uint64_t(gradShape.GetDim(hDimPos)), uint64_t(gradShape.GetDim(wDimPos))};
+    inputData.inputShape = std::array<uint64_t, NCDHW_DIMS>{
+        uint64_t(inputShape.GetDim(nDimPos)), uint64_t(inputShape.GetDim(cDimPos)),
+        uint64_t(inputShape.GetDim(dDimPos)), uint64_t(inputShape.GetDim(hDimPos)),
+        uint64_t(inputShape.GetDim(wDimPos))};
+    inputData.outShape = std::array<uint64_t, NCDHW_DIMS>{
+        uint64_t(inputShape.GetDim(nDimPos)), uint64_t(inputShape.GetDim(cDimPos)), uint64_t(outShape.GetDim(dDimPos)),
+        uint64_t(outShape.GetDim(hDimPos)), uint64_t(outShape.GetDim(wDimPos))};
+    inputData.gradShape = std::array<uint64_t, NCDHW_DIMS>{
+        uint64_t(gradShape.GetDim(nDimPos)), uint64_t(gradShape.GetDim(cDimPos)), uint64_t(gradShape.GetDim(dDimPos)),
+        uint64_t(gradShape.GetDim(hDimPos)), uint64_t(gradShape.GetDim(wDimPos))};
     auto inputDesc = context_->GetInputDesc(0);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, inputDesc);
     dtype = inputDesc->GetDataType();
     if (dtype != ge::DataType::DT_BF16 && dtype != ge::DataType::DT_FLOAT16 && dtype != ge::DataType::DT_FLOAT) {
-        VECTOR_INNER_ERR_REPORT_TILIING(context_->GetNodeName(), "MaxPool3DGrad: invalid dtype %s, should be BFloat16、Float16 or Float32", Ops::Base::ToString(dtype).c_str());
+        std::string dtypeStr = std::to_string(static_cast<int32_t>(dtype));
+        OP_LOGE_FOR_INVALID_DTYPE(opName_, "x", dtypeStr.c_str(), "[DT_FLOAT, DT_FLOAT16, DT_BF16]");
         return ge::GRAPH_FAILED;
     }
     OPS_CHECK_NULL_WITH_CONTEXT(context_, runtimeAttrs);
@@ -157,30 +159,30 @@ ge::graphStatus MaxPool3DGradSimtTiling::GetShapeAttrsInfo()
     uint32_t padsH = 0;
     uint32_t padsW = 0;
     if (padModeStr == "SAME") {
-        int64_t dPadNeed = std::max(int64_t{0}, int64_t((gradShape.GetDim(dDimPos) - 1) * strideD +
-                                                        kSizeD - inputShape.GetDim(dDimPos)));
+        int64_t dPadNeed = std::max(
+            int64_t{0}, int64_t((gradShape.GetDim(dDimPos) - 1) * strideD + kSizeD - inputShape.GetDim(dDimPos)));
         padsD = dPadNeed / DIGIT_TWO;
-        int64_t hPadNeed = std::max(int64_t{0}, int64_t((gradShape.GetDim(hDimPos) - 1) * strideH +
-                                                        kSizeH - inputShape.GetDim(hDimPos)));
+        int64_t hPadNeed = std::max(
+            int64_t{0}, int64_t((gradShape.GetDim(hDimPos) - 1) * strideH + kSizeH - inputShape.GetDim(hDimPos)));
         padsH = hPadNeed / DIGIT_TWO;
-        int64_t wPadNeed = std::max(int64_t{0}, int64_t((gradShape.GetDim(wDimPos) - 1) * strideW +
-                                                        kSizeW - inputShape.GetDim(wDimPos)));
+        int64_t wPadNeed = std::max(
+            int64_t{0}, int64_t((gradShape.GetDim(wDimPos) - 1) * strideW + kSizeW - inputShape.GetDim(wDimPos)));
         padsW = wPadNeed / DIGIT_TWO;
     }
-    OP_CHECK_IF((padsD * DOUB > kSizeD || padsH * DOUB > kSizeH || padsW * DOUB > kSizeW),
-                OP_LOGE(context_, "pad should be smaller than or equal to half of kernel size, pad shape is [%d, %d, %d], kernel shape is [%d, %d, %d]",
-                        padsD, padsH, padsW, kSizeD, kSizeH, kSizeW),
-                return ge::GRAPH_FAILED);
+    if (padsD * DOUB > kSizeD || padsH * DOUB > kSizeH || padsW * DOUB > kSizeW) {
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            opName_, "dPad, hPad, wPad",
+            (std::to_string(padsD) + ", " + std::to_string(padsH) + ", " + std::to_string(padsW)).c_str(),
+            "pad should be smaller than or equal to half of kernel size");
+        return ge::GRAPH_FAILED;
+    }
     inputData.pad = std::array<uint64_t, DHW_DIMS>{uint64_t(padsD), uint64_t(padsH), uint64_t(padsW)};
     inputData.dilation = std::array<uint64_t, DHW_DIMS>{1, 1, 1};
     inputData.ceilMode = false;
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus MaxPool3DGradSimtTiling::DoOpTiling()
-{
-    return ge::GRAPH_SUCCESS;
-}
+ge::graphStatus MaxPool3DGradSimtTiling::DoOpTiling() { return ge::GRAPH_SUCCESS; }
 
 ge::graphStatus MaxPool3DGradSimtTiling::DoLibApiTiling()
 {
@@ -205,7 +207,8 @@ ge::graphStatus MaxPool3DGradSimtTiling::DoLibApiTiling()
     tilingData_->dilationH = inputData.dilation[H_IDX_];
     tilingData_->dilationW = inputData.dilation[W_IDX_];
     tilingData_->ceilMode = inputData.ceilMode;
-    int64_t outputDataCount = tilingData_->nDim * tilingData_->cDim * tilingData_->dOutDim * tilingData_->hOutDim * tilingData_->wOutDim;
+    int64_t outputDataCount =
+        tilingData_->nDim * tilingData_->cDim * tilingData_->dOutDim * tilingData_->hOutDim * tilingData_->wOutDim;
     int64_t threads = std::min(outputDataCount, MAX_THREAD_NUM);
     int64_t blockNum = Ops::Base::CeilDiv(outputDataCount, threads);
     blockNum = std::min(blockNum, static_cast<int64_t>(coreNum));
@@ -217,14 +220,15 @@ ge::graphStatus MaxPool3DGradSimtTiling::DoLibApiTiling()
 
 uint64_t MaxPool3DGradSimtTiling::GetTilingKey() const
 {
-    int64_t outDataCountGrad = inputData.inputShape[N_DIM_] * inputData.inputShape[C_DIM_] * inputData.inputShape[D_DIM_] *
-                           inputData.inputShape[H_DIM_] * inputData.inputShape[W_DIM_];
+    int64_t outDataCountGrad = inputData.inputShape[N_DIM_] * inputData.inputShape[C_DIM_] *
+                               inputData.inputShape[D_DIM_] * inputData.inputShape[H_DIM_] *
+                               inputData.inputShape[W_DIM_];
     uint32_t idxDtype = outDataCountGrad <= static_cast<int64_t>(MAX_INT32) ? TPL_INT32 : TPL_INT64;
     uint32_t isChannelLast = (inputData.data_format == "ncdhw") ? 0 : 1;
     uint32_t isSimt = 1;
     uint32_t isCheckRange = 0;
-    int64_t outDataCountPos = inputData.inputShape[N_DIM_] * inputData.inputShape[C_DIM_] * inputData.gradShape[D_DIM_] *
-                           inputData.gradShape[H_DIM_] * inputData.gradShape[W_DIM_];
+    int64_t outDataCountPos = inputData.inputShape[N_DIM_] * inputData.inputShape[C_DIM_] *
+                              inputData.gradShape[D_DIM_] * inputData.gradShape[H_DIM_] * inputData.gradShape[W_DIM_];
     uint32_t useINT64Index = outDataCountPos <= MAX_INT32 ? 0 : 1;
     return GET_TPL_TILING_KEY(idxDtype, isSimt, isChannelLast, isCheckRange, useINT64Index);
 }

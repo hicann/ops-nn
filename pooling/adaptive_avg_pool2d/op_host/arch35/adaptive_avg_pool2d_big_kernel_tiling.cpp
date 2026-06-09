@@ -13,6 +13,7 @@
  * \brief
  */
 
+#include "log/log.h"
 #include "adaptive_avg_pool2d_big_kernel_tiling.h"
 
 namespace optiling {
@@ -31,6 +32,7 @@ static constexpr int64_t AVG_POOL2D_BIGKERNEL_COPY_MODE_THERSHOLD = 8;
 
 ge::graphStatus AdaptiveAvgPool2dBigKernelTiling::CheckOutputDtypeInfo()
 {
+    const char* opName_ = "AdaptiveAvgPool2d";
     auto opNodeName = context_->GetNodeName();
     OP_LOGD(opNodeName, "CheckOutputDtypeInfo begin.");
 
@@ -39,8 +41,12 @@ ge::graphStatus AdaptiveAvgPool2dBigKernelTiling::CheckOutputDtypeInfo()
     auto outputDesc = context_->GetOutputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputDesc);
     auto outputDtype = outputDesc->GetDataType();
-    OP_CHECK_IF((outputDtype != ge::DT_FLOAT && outputDtype != ge::DT_FLOAT16 && outputDtype != ge::DT_BF16),
-        OP_LOGE(opNodeName, "output datatype only supports float, float16, bfloat16"), return ge::GRAPH_FAILED);
+    if (outputDtype != ge::DT_FLOAT && outputDtype != ge::DT_FLOAT16 && outputDtype != ge::DT_BF16) {
+        std::string outputDtypeStr = std::to_string(static_cast<int32_t>(outputDtype));
+        OP_LOGE_FOR_INVALID_DTYPE(
+            opName_, "output", outputDtypeStr.c_str(), "[0(DT_FLOAT), 1(DT_FLOAT16), 27(DT_BF16)]");
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -56,14 +62,13 @@ bool AdaptiveAvgPool2dBigKernelTiling::IsCapable()
     if (avgBigKernelInfo.kernelMinHW >= AVG_POOL2D_KERNEL_MININ_MAXOUT) {
         return true;
     }
-    if ((input_.hIn < input_.hOut || input_.wIn < input_.wOut)
-        && ((input_.nIn * input_.cIn * input_.hOut * input_.wOut / AVG_POOL2D_SIMT_THREAD)
-            > AVG_POOL2D_SIMT_USE_CORE)) {
+    if ((input_.hIn < input_.hOut || input_.wIn < input_.wOut) &&
+        ((input_.nIn * input_.cIn * input_.hOut * input_.wOut / AVG_POOL2D_SIMT_THREAD) > AVG_POOL2D_SIMT_USE_CORE)) {
         return false;
     }
     auto xDtypeSize = input_.xDtype == ge::DT_FLOAT ? FLOAT32_BYTES : FLOAT16_BYTES;
-    if ((input_.hIn >= input_.hOut && input_.wIn >= input_.wOut)
-        && (static_cast<int64_t>(kernelWMin_) < AVG_POOL2D_ALIGN_BYTES / static_cast<int64_t>(xDtypeSize))) {
+    if ((input_.hIn >= input_.hOut && input_.wIn >= input_.wOut) &&
+        (static_cast<int64_t>(kernelWMin_) < AVG_POOL2D_ALIGN_BYTES / static_cast<int64_t>(xDtypeSize))) {
         return false;
     }
     return true;
@@ -137,9 +142,13 @@ void AdaptiveAvgPool2dBigKernelTiling::SetTilingData()
 
 ge::graphStatus AdaptiveAvgPool2dBigKernelTiling::DoOpTiling()
 {
+    const char* opName_ = "AdaptiveAvgPool2d";
     OP_LOGD(context_->GetNodeName(), "AdaptiveAvgPool2dBigKernelTiling DoOpTiling start.");
-    OP_CHECK_IF(CheckOutputDtypeInfo() != ge::GRAPH_SUCCESS,
-        OP_LOGE(context_->GetNodeName(), "AdaptiveAvgPool2d indices dtype unexpected"), return ge::GRAPH_FAILED);
+    if (CheckOutputDtypeInfo() != ge::GRAPH_SUCCESS) {
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            opName_, "output", "unexpected_dtype", "AdaptiveAvgPool2d output dtype unexpected");
+        return ge::GRAPH_FAILED;
+    }
     DoBlockTiling();
     SetTilingData();
     PrintTilingData();
@@ -174,4 +183,4 @@ uint64_t AdaptiveAvgPool2dBigKernelTiling::CalKernelSizeOneDimMin(uint64_t inSiz
 
 REGISTER_OPS_TILING_TEMPLATE(AdaptiveAvgPool2d, AdaptiveAvgPool2dBigKernelTiling, 1);
 
-}
+} // namespace optiling
