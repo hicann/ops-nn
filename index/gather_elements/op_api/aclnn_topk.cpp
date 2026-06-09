@@ -15,6 +15,7 @@
 #include "level0/concat.h"
 #include "level0/tensor_move.h"
 #include "index/common/op_api/gather_elements.h"
+#include "index/gather_elements_v2/op_host/op_api/gather_elements_v2.h"
 #include "level0/mod.h"
 #include "level0/split_v.h"
 #include "aclnn_kernels/contiguous.h"
@@ -60,6 +61,12 @@ const int64_t MAX_AICORE_CALC_REG_BASE_INT64_DIM = 4;
 const int64_t MAX_AICORE_CALC_REG_BASE_INT64_INPUTSIZE = 180000;
 const int32_t SORD_AND_TOPK_FP32_MAX_LAST_AXIS_NUM = 100000;
 const int32_t SORD_AND_TOPK_FP32_MIN_K = 10000;
+const int64_t MAX_INT32_INPUTSIZE = 2147483647;
+constexpr int64_t RADIX_TOP_K_S_THRESHOLD_1 = 12000000;
+constexpr int64_t RADIX_TOP_K_S_K_RATIO_1 = 100;
+constexpr int64_t RADIX_TOP_K_S_THRESHOLD_2 = 100000000;
+constexpr int64_t RADIX_TOP_K_S_K_RATIO_2 = 50;
+constexpr int64_t RADIX_TOP_K_MIN_K = 1000;
 
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_INT32, op::DataType::DT_INT64, op::DataType::DT_FLOAT16,
@@ -464,6 +471,25 @@ static bool IsDataTypeDouble(op::DataType xDataType) {
     return op::DataType::DT_DOUBLE == xDataType;
 }
 
+static bool IsRadixTopKSupported(const aclTensor* self, int64_t k)
+{
+    SocVersion version = GetCurrentPlatformInfo().GetSocVersion();
+    auto inputShape = self->GetViewShape();
+    int64_t dimNum = static_cast<int64_t>(inputShape.GetDimNum());
+    int64_t sortLen = inputShape.GetDim(dimNum - 1);
+    bool socCheck = version == SocVersion::ASCEND910B || version == SocVersion::ASCEND910_93;
+    bool dtypeCheck = self->GetDataType() == op::DataType::DT_FLOAT16 || self->GetDataType() == op::DataType::DT_BF16;
+    bool shapeCheck = false;
+    if (sortLen > MAX_INT32_INPUTSIZE) {
+        shapeCheck = false;
+    } else if (sortLen >= RADIX_TOP_K_S_THRESHOLD_2) {
+        shapeCheck = sortLen > RADIX_TOP_K_S_K_RATIO_2 * k;
+    } else if (sortLen >= RADIX_TOP_K_S_THRESHOLD_1) {
+        shapeCheck = sortLen > RADIX_TOP_K_S_K_RATIO_1 * k;
+    }
+    return socCheck && dtypeCheck && shapeCheck && k > RADIX_TOP_K_MIN_K;
+}
+
 aclnnStatus aclnnTopkGetWorkspaceSize(const aclTensor *self, int64_t k, int64_t dim, bool largest, bool sorted,
                                       aclTensor *valuesOut, aclTensor *indicesOut, uint64_t *workspaceSize,
                                       aclOpExecutor **executor) {
@@ -538,6 +564,17 @@ aclnnStatus aclnnTopkGetWorkspaceSize(const aclTensor *self, int64_t k, int64_t 
       OP_LOGD("sort and topk, positiveDim not equal lastDim.");
       topkOut = SortAndTopK(selfTranspose, k, lastDim, sortDimValue, largest, indicesDType, uniqueExecutor.get());
       isHasCasted = true;
+    } else if (IsRadixTopKSupported(selfTranspose, k)) {
+        OP_LOGD("radix topk supported, positiveDim not equal lastDim.");
+        auto topkOutFirst = l0op::Topk(selfTranspose, k, lastDim, largest, sorted, indicesDType, uniqueExecutor.get());
+        valuesTopkOut = std::get<0>(topkOutFirst);
+        aclTensor *indicesCast = std::get<1>(topkOutFirst);
+        
+        auto sortOut = l0op::Sort(valuesTopkOut, -1, largest, true, indicesDType, uniqueExecutor.get());
+        valuesTopkOut = std::get<0>(sortOut);
+        aclTensor *indicesSort = std::get<1>(sortOut);
+        indicesCastInt32 = l0op::GatherElementsV2(indicesCast, indicesSort, lastDim, uniqueExecutor.get());
+        topkOut = std::tie(valuesTopkOut, indicesCastInt32);
     } else {
       OP_LOGD("topk, positiveDim not equal lastDim.");
       topkOut = l0op::Topk(selfTranspose, k, lastDim, largest, sorted, indicesDType, uniqueExecutor.get());
@@ -573,6 +610,17 @@ aclnnStatus aclnnTopkGetWorkspaceSize(const aclTensor *self, int64_t k, int64_t 
         OP_LOGD("sort and topk, positiveDim equal lastDim.");
         topkOut = SortAndTopK(selfCast, k, positiveDim, sortDimValue, largest, indicesDType, uniqueExecutor.get());
         isHasCasted = true;
+      } else if (IsRadixTopKSupported(selfCast, k)) {
+        OP_LOGD("radix topk supported, positiveDim equal lastDim.");
+        auto topkOutFirst = l0op::Topk(selfCast, k, positiveDim, largest, sorted, indicesDType, uniqueExecutor.get());
+        valuesTopkOut = std::get<0>(topkOutFirst);
+        aclTensor *indicesCast = std::get<1>(topkOutFirst);
+        
+        auto sortOut = l0op::Sort(valuesTopkOut, -1, largest, true, indicesDType, uniqueExecutor.get());
+        valuesTopkOut = std::get<0>(sortOut);
+        aclTensor *indicesSort = std::get<1>(sortOut);
+        indicesCastInt32 = l0op::GatherElementsV2(indicesCast, indicesSort, positiveDim, uniqueExecutor.get());
+        topkOut = std::tie(valuesTopkOut, indicesCastInt32);
       } else {
         OP_LOGD("topk, positiveDim equal lastDim.");
         topkOut = l0op::Topk(selfCast, k, positiveDim, largest, sorted, indicesDType, uniqueExecutor.get());
