@@ -223,13 +223,13 @@ protected:
 
 protected:
     ge::graphStatus InputDtypeCheck(ge::DataType xDtype, ge::DataType gammaDtype, ge::DataType betaDtype);
-    bool isFloatDtype(ge::DataType dtype);
-    int64_t GetDTypeKey(ge::DataType tensorDtype, ge::DataType paramDtype);
+    bool isFloatDtype(ge::DataType dtype) const;
+    int64_t GetDTypeKey(ge::DataType tensorDtype, ge::DataType paramDtype) const;
     ge::graphStatus InputShapeAndAxisCheck(
         const gert::Shape& xShape, const gert::Shape& gammaShape, const gert::Shape& betaShape, int64_t& beginNormAxis,
         int64_t& beginParamsAxis);
     ge::graphStatus OutputShapeCheck(const gert::Shape& xShape, int64_t beginNormAxis);
-    bool isIndexValid(const gert::Shape& xShape, int64_t beginAxis);
+    bool isIndexValid(const gert::Shape& xShape, int64_t beginAxis) const;
     ge::graphStatus GetCommonPlatformInfo(const LayerNormV3CompileInfo* compileInfo);
 };
 

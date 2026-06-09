@@ -201,7 +201,7 @@ protected:
     ge::graphStatus CheckShapeAllPositive(gert::Shape& shape);
     ge::graphStatus CheckInputsShape();
     ge::graphStatus CheckInputsDtypeAndFormat();
-    ge::graphStatus CheckShapesEqual(gert::Shape& shape0, gert::Shape& shape1);
+    ge::graphStatus CheckShapesEqual(gert::Shape& lhsShape, gert::Shape& rhsShape);
     void CalcRowsAndCols(gert::Shape& xShape, gert::Shape& gammaShape);
     void CalcUsedCoreNumGamma();
     ge::graphStatus CalcUbBufferSizeDgamma();

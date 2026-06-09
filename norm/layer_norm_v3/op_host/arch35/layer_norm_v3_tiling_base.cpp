@@ -35,13 +35,13 @@ const gert::Shape g_vec_1_shape = {1};
 static const std::unordered_map<ge::DataType, uint64_t> LN_DTYPE_SIZE_MAP{
     {ge::DataType::DT_FLOAT, 4}, {ge::DataType::DT_FLOAT16, 2}, {ge::DataType::DT_BF16, 2}};
 
-bool LayerNormV3TilingBase::isIndexValid(const gert::Shape& xShape, int64_t beginAxis)
+bool LayerNormV3TilingBase::isIndexValid(const gert::Shape& xShape, int64_t beginAxis) const
 {
     int64_t dimNum = static_cast<int64_t>(xShape.GetDimNum());
     return (beginAxis >= 0 && beginAxis < dimNum) || (beginAxis < 0 && -beginAxis <= dimNum);
 }
 
-int64_t LayerNormV3TilingBase::GetDTypeKey(ge::DataType tensorDtype, ge::DataType paramDtype)
+int64_t LayerNormV3TilingBase::GetDTypeKey(ge::DataType tensorDtype, ge::DataType paramDtype) const
 {
     constexpr static int64_t LN_TENSOR_KEY_WEIGHT = 10;
 
@@ -64,7 +64,7 @@ int64_t LayerNormV3TilingBase::GetDTypeKey(ge::DataType tensorDtype, ge::DataTyp
     return tensorKey * LN_TENSOR_KEY_WEIGHT + paramKey;
 }
 
-bool LayerNormV3TilingBase::isFloatDtype(ge::DataType dtype)
+bool LayerNormV3TilingBase::isFloatDtype(ge::DataType dtype) const
 {
     static const std::unordered_set<ge::DataType> floatDtypes = {
         ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT, ge::DataType::DT_BF16};
@@ -91,7 +91,6 @@ ge::graphStatus LayerNormV3TilingBase::InputShapeAndAxisCheck(
     }
 
     if (!isIndexValid(xShape, beginNormAxis)) {
-        
         std::string reasonMsg = 
             "The value of attribute begin_norm_axis depends on the number of shape axes of input x";
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "begin_norm_axis",
@@ -99,7 +98,6 @@ ge::graphStatus LayerNormV3TilingBase::InputShapeAndAxisCheck(
         return ge::GRAPH_FAILED;
     }
         
-
     if (!isIndexValid(xShape, beginParamsAxis)) {
         std::string reasonMsg = 
             "The value of attribute begin_params_axis depends on the number of shape axes of input x";
@@ -109,10 +107,8 @@ ge::graphStatus LayerNormV3TilingBase::InputShapeAndAxisCheck(
     }
 
     beginNormAxis = beginNormAxis < 0 ? beginNormAxis + static_cast<int64_t>(xShape.GetDimNum()) : beginNormAxis;
-
     beginParamsAxis =
         beginParamsAxis < 0 ? beginParamsAxis + static_cast<int64_t>(xShape.GetDimNum()) : beginParamsAxis;
-
     if (beginNormAxis != beginParamsAxis) {
         std::string valueMsg = std::to_string(beginNormAxis) + " and " + std::to_string(beginParamsAxis);
         OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context_->GetNodeName(), "begin_norm_axis and begin_params_axis",
@@ -329,20 +325,16 @@ ge::graphStatus LayerNormV3TilingBase::GetCommonPlatformInfo(const LayerNormV3Co
 ge::graphStatus LayerNormV3TilingBase::GetPlatformInfo()
 {
     if (commonParams.isV1) {
-        auto v1CompileInfo = reinterpret_cast<const LayerNormOpInfo*>(context_->GetCompileInfo());
+        auto v1CompileInfo = context_->GetCompileInfo<LayerNormOpInfo>();
         OP_CHECK_IF(
             v1CompileInfo == nullptr, OP_LOGE(context_->GetNodeName(), "compile info is null"),
             return ge::GRAPH_FAILED);
-        const LayerNormV3CompileInfo* compileInfo =
-            reinterpret_cast<const LayerNormV3CompileInfo*>(&v1CompileInfo->regbaseCompileInfo);
-        return GetCommonPlatformInfo(compileInfo);
+        return GetCommonPlatformInfo(&v1CompileInfo->regbaseCompileInfo);
     }
-    auto v3CompileInfo = reinterpret_cast<const LayerNormV3OpInfo*>(context_->GetCompileInfo());
+    auto v3CompileInfo = context_->GetCompileInfo<LayerNormV3OpInfo>();
     OP_CHECK_IF(
         v3CompileInfo == nullptr, OP_LOGE(context_->GetNodeName(), "compile info is null"), return ge::GRAPH_FAILED);
-    const LayerNormV3CompileInfo* compileInfo =
-        reinterpret_cast<const LayerNormV3CompileInfo*>(&v3CompileInfo->regbaseCompileInfo);
-    return GetCommonPlatformInfo(compileInfo);
+    return GetCommonPlatformInfo(&v3CompileInfo->regbaseCompileInfo);
 }
 
 bool LayerNormV3TilingBase::IsCapable()

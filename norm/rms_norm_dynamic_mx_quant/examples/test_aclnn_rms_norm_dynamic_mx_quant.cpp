@@ -27,6 +27,8 @@
         printf(message, ##__VA_ARGS__); \
     } while (0)
 
+constexpr int64_t kPrintElementCount = 10;
+
 // Data type constants for dst_type attribute
 #define GE_DT_FLOAT4_E2M1 40
 #define GE_DT_FLOAT4_E1M2 41
@@ -188,7 +190,7 @@ int main()
     // Operator attributes
     double epsilon = 1e-6;
     int64_t scaleAlg = 0; // OCP algorithm
-    char* roundMode = const_cast<char*>("rint");
+    char roundMode[] = "rint";
     int64_t dstType = GE_DT_FLOAT8_E4M3FN;
     bool outputRstd = true;
 
@@ -292,8 +294,8 @@ int main()
             return ret;
         }
 
-        LOG_PRINT("Output y (first 10 values):\n");
-        for (int64_t i = 0; i < std::min(size, (int64_t)10); i++) {
+        LOG_PRINT("Output y (first %ld values):\n", kPrintElementCount);
+        for (int64_t i = 0; i < std::min(size, kPrintElementCount); i++) {
             LOG_PRINT("  y[%ld] = 0x%02x\n", i, yResult[i]);
         }
 
@@ -308,8 +310,8 @@ int main()
             return ret;
         }
 
-        LOG_PRINT("MX scale values (first 10):\n");
-        for (int64_t i = 0; i < std::min(size, (int64_t)10); i++) {
+        LOG_PRINT("MX scale values (first %ld):\n", kPrintElementCount);
+        for (int64_t i = 0; i < std::min(size, kPrintElementCount); i++) {
             LOG_PRINT("  mxscale[%ld] = 0x%02x\n", i, mxscaleResult[i]);
         }
 

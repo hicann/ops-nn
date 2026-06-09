@@ -177,7 +177,6 @@ namespace RmsNorm {
                 RegTensor<float> mul1Reg;
                 RegTensor<float> mul2Reg;
 
-
                 for (uint16_t i = 0; i < curAloops; i++) {
                     uint32_t sregElewiseNum = numCol;
                     DataCopy<float, LoadDist::DIST_BRC_B32>(RstdReg, rstdLocalUbAddr + i);
@@ -192,9 +191,6 @@ namespace RmsNorm {
                 }
             }
         }
-
-
-
 
     private:
         TPipe pipe;

@@ -291,7 +291,6 @@ private:
         }
     }
 
-
     template <
         typename T_XPF32, typename T_GAMMA, typename T_SMOOTHSCALE = float, bool HAS_SMOOTH_SCALE = true,
         bool HAS_BETA = false, typename T_YB8>

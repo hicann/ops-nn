@@ -365,7 +365,6 @@ public:
 
     // 场景3：welford整块小于二分累加整块，并且大于二分累加尾块向上对齐
 
-
     __aicore__ inline void VFCalcY(
         __local_mem__ X1_TYPE* x1Addr, __local_mem__ X2_TYPE* x2Addr, __local_mem__ BIAS_TYPE* biasAddr,
         __local_mem__ BETA_TYPE* betaAddr, __local_mem__ GAMMA_TYPE* gammaAddr, float mean, float rstd,

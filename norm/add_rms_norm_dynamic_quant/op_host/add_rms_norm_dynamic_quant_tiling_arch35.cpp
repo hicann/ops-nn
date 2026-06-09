@@ -33,6 +33,11 @@ constexpr uint64_t SCALE2_INDEX = 4;
 constexpr uint64_t EPS_ATTR_INDEX = 0;
 constexpr uint32_t LOG_2 = 2;
 constexpr uint32_t NUM_TWO = 2;
+constexpr uint32_t CONST_TWO = 2;
+constexpr uint32_t CONST_FOUR = 4;
+constexpr uint32_t CONST_EIGHT = 8;
+constexpr uint32_t CONST_SIXTEEN = 16;
+constexpr uint32_t CONST_THIRTY_TWO = 32;
 constexpr uint32_t MAX_DIM_CNT = 8;
 constexpr uint32_t WORKSPACE_COUNT = 3;
 constexpr uint32_t B32_BLOCK_NUM = 8;
@@ -435,11 +440,11 @@ uint64_t AddRmsNormDynamicQuantRegbaseTiling::CalUsedSize(
 static uint64_t GetSingleRowPowerSplit(uint64_t n)
 {
     n |= n >> 1;
-    n |= n >> 2;
-    n |= n >> 4;
-    n |= n >> 8;
-    n |= n >> 16;
-    n |= n >> 32;
+    n |= n >> CONST_TWO;
+    n |= n >> CONST_FOUR;
+    n |= n >> CONST_EIGHT;
+    n |= n >> CONST_SIXTEEN;
+    n |= n >> CONST_THIRTY_TWO;
     return (n + 1) >> 1;
 }
 

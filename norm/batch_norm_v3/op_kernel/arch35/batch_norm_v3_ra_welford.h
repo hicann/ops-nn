@@ -340,7 +340,6 @@ private:
         uint32_t sevenRLoopSize = ROW_SEVEN_OFFSET * rLoopStride;
         __VEC_SCOPE__
         {
-
             RegTensor<float> raMeanAcc0;
             RegTensor<float> raMeanAcc1;
             RegTensor<float> raBinaryTmp0;
@@ -354,7 +353,6 @@ private:
             RegTensor<float> raNextRowCount;
             RegTensor<float> raRemCount;
             RegTensor<float> raNextRemCount;
-
 
             MaskReg pregLoop;
             uint32_t sreg0 = currentANum;

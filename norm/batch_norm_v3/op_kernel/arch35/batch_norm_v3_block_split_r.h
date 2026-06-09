@@ -409,7 +409,6 @@ private:
         uint32_t twoRLoopSize = ROW_TWO_OFFSET * rLoopStride;
         __VEC_SCOPE__
         {
-
             RegTensor<float> x1;
             RegTensor<float> x2;
             RegTensor<float> x4;
@@ -423,7 +422,6 @@ private:
             RegTensor<float> nextRemCount;
             RegTensor<float> remCount;
             RegTensor<float> nextRowCount;
-
 
             MaskReg pregLoop;
             uint32_t sreg0 = currentA;

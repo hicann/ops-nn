@@ -127,7 +127,7 @@ static ge::graphStatus LayerNormV3UnknowAxisTiling(gert::TilingContext* context,
 static ge::graphStatus Tiling4LayerNormV3(gert::TilingContext* context)
 {
     // compile info
-    const LayerNormV3OpInfo* compile_info = reinterpret_cast<const LayerNormV3OpInfo*>(context->GetCompileInfo());
+    const auto* compile_info = context->GetCompileInfo<LayerNormV3OpInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compile_info);
     // norm template tiling_stratery
     OP_LOGD(context->GetNodeName(), "LayerNormV3Tiling running.");
