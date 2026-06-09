@@ -16,6 +16,7 @@
 #ifndef INDEX_FILL_COMMON_H
 #define INDEX_FILL_COMMON_H
 
+#include <limits>
 #include "kernel_tiling/kernel_tiling.h"
 #include "kernel_operator.h"
 #include "../inc/platform.h"
