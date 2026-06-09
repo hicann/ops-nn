@@ -25,17 +25,18 @@ static graphStatus MaskedScatterWithPositionInferDataType(gert::InferDataTypeCon
         return ge::GRAPH_FAILED;
     }
     OP_LOGD(context, "MaskedScatterWithPositionInferDataTypeByAttr begin.");
-    std::set<ge::DataType> support_dtype = {
-        ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_DOUBLE, ge::DT_UINT8, ge::DT_INT8,
-        ge::DT_INT16, ge::DT_INT32, ge::DT_INT64, ge::DT_BOOL, ge::DT_BF16
-    };
+    std::set<ge::DataType> support_dtype = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_DOUBLE, ge::DT_UINT8, ge::DT_INT8,
+                                            ge::DT_INT16, ge::DT_INT32,   ge::DT_INT64,  ge::DT_BOOL,  ge::DT_BF16};
 
     auto xDataType = context->GetInputDataType(0);
     OP_LOGD(context, "indices dtype:%s", Ops::Base::ToString(xDataType).c_str());
     ge::DataType yDtype = static_cast<ge::DataType>(xDataType);
-    OP_CHECK_IF(support_dtype.count(yDtype) == 0,
-    OP_LOGE(context, "out shape dtype only support float32, float16, double, uint8, int8, int16, int32, int64, bool, bfloat16, but got %s.",
-        Ops::Base::ToString(yDtype).c_str()), return ge::GRAPH_FAILED);
+    if (support_dtype.count(yDtype) == 0) {
+        OP_LOGE_FOR_INVALID_DTYPE(
+            context->GetNodeName(), "x", Ops::Base::ToString(yDtype).c_str(),
+            "float32, float16, double, uint8, int8, int16, int32, int64, bool and bfloat16");
+        return ge::GRAPH_FAILED;
+    }
     context->SetOutputDataType(0, yDtype);
     OP_LOGD(context, "MaskedScatterWithPositionInferDataTypeByAttr end. Data type is %s.",
         Ops::Base::ToString(yDtype).c_str());

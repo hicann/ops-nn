@@ -1,12 +1,12 @@
 /**
-  * Copyright (c) 2026 Huawei Technologies Co., Ltd.
-  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
-  * CANN Open Software License Agreement Version 2.0 (the "License").
-  * Please refer to the License for details. You may not use this file except in compliance with the License.
-  * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
-  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
-  * See LICENSE in the root of the software repository for the full text of the License.
-  */
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
 
 /*!
  * \file avg_pool_v2_grad_infershape.cpp
@@ -47,14 +47,15 @@ static constexpr size_t ONE = 1;
 static constexpr int32_t UNKNOWN_SHAPE_DIM = -1;
 static constexpr int64_t UNKNOWN_DIM_VALUE = -1LL;
 
-inline bool IsConstTensor(const gert::Tensor* inputTensor) {
-  if (inputTensor != nullptr) {
-    if (inputTensor->GetAddr() == nullptr) {
-      return inputTensor->GetShapeSize() == 0;
+inline bool IsConstTensor(const gert::Tensor* inputTensor)
+{
+    if (inputTensor != nullptr) {
+        if (inputTensor->GetAddr() == nullptr) {
+            return inputTensor->GetShapeSize() == 0;
+        }
+        return true;
     }
-    return true;
-  }
-  return false;
+    return false;
 }
 
 inline ge::graphStatus SetAllUnknownDim(const int64_t rank, gert::Shape* output_shape)
@@ -81,9 +82,11 @@ ge::graphStatus InferShape4AvgPoolV2Grad(gert::InferShapeContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, gradDesc);
     auto gradOriFormat = gradDesc->GetOriginFormat();
 
-    OP_CHECK_IF(
-        gradOriFormat != FORMAT_ND && gradOriFormat != FORMAT_NCHW && gradOriFormat != FORMAT_NHWC,
-        OP_LOGE(context->GetNodeName(), "format only supports ND, NCHW, NHWC"), return GRAPH_FAILED);
+    if (gradOriFormat != FORMAT_ND && gradOriFormat != FORMAT_NCHW && gradOriFormat != FORMAT_NHWC) {
+        OP_LOGE_FOR_INVALID_FORMAT(
+            context->GetNodeName(), "grad", Ops::Base::ToString(gradOriFormat).c_str(), "ND, NCHW and NHWC");
+        return GRAPH_FAILED;
+    }
 
     auto attrs = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
@@ -94,65 +97,86 @@ ge::graphStatus InferShape4AvgPoolV2Grad(gert::InferShapeContext* context)
 
     auto padding_mode = attrs->GetAttrPointer<char>(ATTR_PADDING_MODE_POS);
     OP_CHECK_NULL_WITH_CONTEXT(context, padding_mode);
-    OP_CHECK_IF(strcmp(padding_mode, "SAME") != 0 && strcmp(padding_mode, "VALID") != 0 &&
-        strcmp(padding_mode, "CALCULATED") != 0, OP_LOGE(context->GetNodeName(),
-                "attr padding_mode(%s) only support SAME, VALID and CALCULATED", padding_mode),
-        return GRAPH_FAILED);
+    if (strcmp(padding_mode, "SAME") != 0 && strcmp(padding_mode, "VALID") != 0 &&
+        strcmp(padding_mode, "CALCULATED") != 0) {
+        OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "padding_mode", padding_mode, "SAME, VALID and CALCULATED");
+        return GRAPH_FAILED;
+    }
 
     auto ksize = attrs->GetAttrPointer<gert::ContinuousVector>(ATTR_KERNEL_POS);
     OP_CHECK_NULL_WITH_CONTEXT(context, ksize);
-    OP_CHECK_IF(
-        ksize->GetSize() != ATTR_LIST_SHAPE_SIZE,
-        OP_LOGE(context->GetNodeName(), "Length of ksize %lu must be 4!", ksize->GetSize()), return GRAPH_FAILED);
+    if (ksize->GetSize() != ATTR_LIST_SHAPE_SIZE) {
+        OP_LOGE_FOR_INVALID_LISTSIZE(context->GetNodeName(), "ksize", std::to_string(ksize->GetSize()).c_str(), "4");
+        return GRAPH_FAILED;
+    }
     auto ksize_data = static_cast<const int64_t*>(ksize->GetData());
 
     if (dataFormatStr == "NCHW") {
-        OP_CHECK_IF(ksize_data[IDX_ZERO] != ONE,
-                OP_LOGE(context->GetNodeName(), "Pooling ksize[0] %ld must be 1.", ksize_data[IDX_ZERO]),
-                return GRAPH_FAILED);
-        OP_CHECK_IF(ksize_data[IDX_ONE] != ONE,
-                OP_LOGE(context->GetNodeName(), "Pooling ksize[1] %ld must be 1.", ksize_data[IDX_ONE]),
-                return GRAPH_FAILED);
+        if (ksize_data[IDX_ZERO] != ONE) {
+            OP_LOGE_FOR_INVALID_VALUE(
+                context->GetNodeName(), "ksize[0]", std::to_string(ksize_data[IDX_ZERO]).c_str(), "1");
+            return GRAPH_FAILED;
+        }
+        if (ksize_data[IDX_ONE] != ONE) {
+            OP_LOGE_FOR_INVALID_VALUE(
+                context->GetNodeName(), "ksize[1]", std::to_string(ksize_data[IDX_ONE]).c_str(), "1");
+            return GRAPH_FAILED;
+        }
     } else if (dataFormatStr == "NHWC") {
-        OP_CHECK_IF(ksize_data[IDX_ZERO] != ONE,
-                OP_LOGE(context->GetNodeName(), "Pooling ksize[0] %ld must be 1.", ksize_data[IDX_ZERO]),
-                return GRAPH_FAILED);
-        OP_CHECK_IF(ksize_data[IDX_THREE] != ONE,
-                OP_LOGE(context->GetNodeName(), "Pooling ksize[3] %ld must be 1.", ksize_data[IDX_THREE]),
-                return GRAPH_FAILED);
+        if (ksize_data[IDX_ZERO] != ONE) {
+            OP_LOGE_FOR_INVALID_VALUE(
+                context->GetNodeName(), "ksize[0]", std::to_string(ksize_data[IDX_ZERO]).c_str(), "1");
+            return GRAPH_FAILED;
+        }
+        if (ksize_data[IDX_THREE] != ONE) {
+            OP_LOGE_FOR_INVALID_VALUE(
+                context->GetNodeName(), "ksize[3]", std::to_string(ksize_data[IDX_THREE]).c_str(), "1");
+            return GRAPH_FAILED;
+        }
     }
 
     auto strides = attrs->GetAttrPointer<gert::ContinuousVector>(ATTR_STRIDE_POS);
     OP_CHECK_NULL_WITH_CONTEXT(context, strides);
-    OP_CHECK_IF(
-        strides->GetSize() != ATTR_LIST_SHAPE_SIZE,
-        OP_LOGE(context->GetNodeName(), "Length of strides %lu must be 4!", strides->GetSize()), return GRAPH_FAILED);
+    if (strides->GetSize() != ATTR_LIST_SHAPE_SIZE) {
+        OP_LOGE_FOR_INVALID_LISTSIZE(
+            context->GetNodeName(), "strides", std::to_string(strides->GetSize()).c_str(), "4");
+        return GRAPH_FAILED;
+    }
     auto strides_data = static_cast<const int64_t*>(strides->GetData());
 
     if (dataFormatStr == "NCHW") {
-        OP_CHECK_IF(strides_data[IDX_ZERO] != ONE,
-                OP_LOGE(context->GetNodeName(), "Pooling stride size[0] %ld must be 1.", strides_data[IDX_ZERO]),
-                return GRAPH_FAILED);
-        OP_CHECK_IF(strides_data[IDX_ONE] != ONE,
-                OP_LOGE(context->GetNodeName(), "Pooling stride size[1] %ld must be 1.", strides_data[IDX_ONE]),
-                return GRAPH_FAILED);
+        if (strides_data[IDX_ZERO] != ONE) {
+            OP_LOGE_FOR_INVALID_VALUE(
+                context->GetNodeName(), "strides[0]", std::to_string(strides_data[IDX_ZERO]).c_str(), "1");
+            return GRAPH_FAILED;
+        }
+        if (strides_data[IDX_ONE] != ONE) {
+            OP_LOGE_FOR_INVALID_VALUE(
+                context->GetNodeName(), "strides[1]", std::to_string(strides_data[IDX_ONE]).c_str(), "1");
+            return GRAPH_FAILED;
+        }
     } else if (dataFormatStr == "NHWC") {
-        OP_CHECK_IF(strides_data[IDX_ZERO] != ONE,
-                OP_LOGE(context->GetNodeName(), "Pooling stride size[0] %ld must be 1.", strides_data[IDX_ZERO]),
-                return GRAPH_FAILED);
-        OP_CHECK_IF(strides_data[IDX_THREE] != ONE,
-                OP_LOGE(context->GetNodeName(), "Pooling stride size[3] %ld must be 1.", strides_data[IDX_THREE]),
-                return GRAPH_FAILED);
+        if (strides_data[IDX_ZERO] != ONE) {
+            OP_LOGE_FOR_INVALID_VALUE(
+                context->GetNodeName(), "strides[0]", std::to_string(strides_data[IDX_ZERO]).c_str(), "1");
+            return GRAPH_FAILED;
+        }
+        if (strides_data[IDX_THREE] != ONE) {
+            OP_LOGE_FOR_INVALID_VALUE(
+                context->GetNodeName(), "strides[3]", std::to_string(strides_data[IDX_THREE]).c_str(), "1");
+            return GRAPH_FAILED;
+        }
     }
 
     const gert::Tensor* inputShape0 = context->GetInputTensor(IDX_ORIGIN_INPUT);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputShape0);
     size_t inputDimNum = static_cast<size_t>(inputShape0->GetOriginShape().GetShapeSize());
     const int32_t* shapeValue = inputShape0->GetData<int32_t>();
-    OP_CHECK_IF(
-        inputDimNum != CHW_DIMS && inputDimNum != NCHW_DIMS,
-        OP_LOGE(context->GetNodeName(), "input dim num should be 3 or 4, but get %zu.", inputDimNum),
-        return GRAPH_FAILED);
+    if (inputDimNum != CHW_DIMS && inputDimNum != NCHW_DIMS) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            context->GetNodeName(), "input", std::to_string(inputDimNum).c_str(), "input dim num should be 3 or 4");
+        return GRAPH_FAILED;
+    }
     const gert::Shape* inputShape1 = context->GetInputShape(IDX_ORIGIN_INPUT);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputShape1);
 
