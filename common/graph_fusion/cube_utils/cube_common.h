@@ -364,6 +364,7 @@ class PostCubeComm {
   static bool ReadPlatFormConfig(const ge::CustomPassContext &context, const bool &skip_trans, std::vector<std::string> &unit_list,
                                  std::map<std::string, std::vector<std::string>> &depends_list,
                                  std::map<std::string, std::map<std::string, std::vector<CONFIGDTYPE>>> &post_cube_map);
+  static bool ShouldSkipClipReluBySatuateMode(const ge::CustomPassContext &context);
   static ge::graphStatus CheckPeerOutNode(const ge::GNodePtr &vectornode, const uint32_t &input_index);
   static bool CheckConstValueData(const ge::GNodePtr &vectornode);
   static bool CheckIsInVector(const std::vector<PostCubeNodeInfo> &m_opnodes, const uint32_t &index = 0);

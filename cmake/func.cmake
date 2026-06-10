@@ -1000,6 +1000,7 @@ function(add_cube_utils_plugin_modules)
         $<BUILD_INTERFACE:$<IF:$<BOOL:${ENABLE_TEST}>,intf_llt_pub_asan_cxx17,intf_pub_cxx14>>
         $<BUILD_INTERFACE:dlog_headers>
         eager_style_graph_builder_base
+        acl_rt
     )
   endif()
 endfunction()

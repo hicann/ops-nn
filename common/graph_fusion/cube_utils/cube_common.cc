@@ -16,6 +16,8 @@
 #include <unordered_set>
 #include <vector>
 #include <securec.h>
+#include "version/ge-compiler_version.h"
+#include "acl/acl_rt.h"
 
 namespace ops {
 using std::queue;
@@ -134,6 +136,11 @@ const uint32_t kNumber1 = 1;
 const uint32_t kNumber2 = 2;
 const int64_t SHAPE_NUMBER_16 = 16;
 const float kRelu6Value = 6.0;
+// 90000000U 对应 ge-compiler 版本号 9.0.0，由以下公式计算得出：
+//   version_num = major * 10000000 + minor * 100000 + patch * 1000
+//               = 9     * 10000000 + 0     * 100000  + 0     * 1000
+//               = 90000000
+const int32_t kValidVersionOfGECompiler = 90000000U;
 
 // AscendString 常量定义（用于比较操作，避免重复构造）
 // 命名规则：添加 Asc 后缀以区分 std::string 版本
@@ -296,6 +303,33 @@ CONFIGDTYPE PostCubeComm::TransFerConfig2Dtype(const std::string &configstr) {
   return ret;
 }
 
+bool PostCubeComm::ShouldSkipClipReluBySatuateMode(const ge::CustomPassContext &context) {
+    ge::AscendString satuate_mode;
+    ge::graphStatus status = ge::GRAPH_FAILED;
+// 90000000U 对应 ge-compiler 版本号 9.0.0，由以下公式计算得出：
+//   version_num = major * 10000000 + minor * 100000 + patch * 1000
+//               = 9     * 10000000 + 0     * 100000  + 0     * 1000
+//               = 90000000
+#if defined(GE_COMPILER_VERSION_NUM) && GE_COMPILER_VERSION_NUM >= 90000000U
+    int32_t version_num = 0;
+    aclError aclRet = aclsysGetVersionNum("ge-compiler", &version_num);
+    if (aclRet != ACL_SUCCESS) {
+        OPS_LOG_W("PostCube", "Fail to get version number of ge-compiler.");
+        return false;
+    }
+    if (version_num >= kValidVersionOfGECompiler) {
+        status = context.GetOptionValue(kAscendSatuateModeAsc, satuate_mode);
+    } else {
+        OPS_LOG_D("PostCube", "The version of ge-compiler is invalid.");
+    }
+#else
+    OPS_LOG_D("PostCube", "The GE_COMPILER_VERSION_NUM is invalid.");
+#endif
+
+    OPS_LOG_D("PostCube", "The option value[ge.satuateMode] in ge context is %s.", satuate_mode.GetString());
+    return (status == ge::GRAPH_SUCCESS && satuate_mode == kAscendInfNanAsc);
+}
+
 bool PostCubeComm::ReadPlatFormConfig(const ge::CustomPassContext &context, const bool &skip_trans,
     std::vector<std::string> &unit_list, std::map<std::string, std::vector<std::string>> &depends_list,
     std::map<std::string, std::map<std::string, std::vector<CONFIGDTYPE>>> &post_cube_map) {
@@ -316,10 +350,7 @@ bool PostCubeComm::ReadPlatFormConfig(const ge::CustomPassContext &context, cons
     std::map<std::string, std::vector<CONFIGDTYPE>> outputinnermap;
     for (auto &opname : oplist) {
       if (opname == kClipRelu) {
-        ge::AscendString satuate_mode;
-        ge::graphStatus status = context.GetOptionValue(kAscendSatuateModeAsc, satuate_mode);
-        OPS_LOG_D("PostCube", "The option value[ge.satuateMode] in ge context is %s.", satuate_mode.GetString());
-        if (status == ge::GRAPH_SUCCESS && satuate_mode == kAscendInfNanAsc) {
+        if (ShouldSkipClipReluBySatuateMode(context)) {
           continue;
         }
       }
