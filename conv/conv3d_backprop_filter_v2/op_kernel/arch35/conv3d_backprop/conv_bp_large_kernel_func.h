@@ -170,8 +170,8 @@ __aicore__ inline void ClearBaseMNL0C(Intf *self, LocalTensor<typename Intf::L0c
         load2dv2_.kStep = 1;
     }
     load2dv2_.srcStride = load2dv2_.mStep;
-    load2dv2_.dstStride = load2dv2_.kStep;
-    load2dv2_.ifTranspose = 1;
+    load2dv2_.dstStride = load2dv2_.mStep;
+    load2dv2_.ifTranspose = 0;
     LoadData(l0a[0], self->ctx.cacheA1BufPing_, load2dv2_);
     FreeB1Tensor(self, 1);
     FreeA1Tensor(self, 1);
