@@ -46,6 +46,9 @@ private:
 template<typename T>
 __aicore__ inline void IndexFillD<T>::Init(GM_ADDR x, GM_ADDR assist1, GM_ADDR assist2, GM_ADDR y, GM_ADDR workspace)
 {
+    if (GetBlockIdx() >= GetBlockNum()) {
+        return;
+    }
     xGm_.SetGlobalBuffer((__gm__ T *)(x) + GetBlockIdx() * tilingData_.normalCoreData);
     assist1Gm_.SetGlobalBuffer((__gm__ T *)(assist1) + GetBlockIdx() * tilingData_.normalCoreData);
     assist2Gm_.SetGlobalBuffer((__gm__ T *)(assist2) + GetBlockIdx() * tilingData_.normalCoreData);

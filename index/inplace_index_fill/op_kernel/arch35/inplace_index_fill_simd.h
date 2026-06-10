@@ -173,10 +173,10 @@ __aicore__ inline void InplaceIndexFillSimd<X_T, INDICES_T>::ProcessNonSplitQ(
     }
 }
 
-template <typename X_T, typename INDICES_T>
+template <typename X_T, typename INDICES_T> 
 __aicore__ inline void InplaceIndexFillSimd<X_T, INDICES_T>::Process()
 {
-    if (blockIdx_ > tilingData_.usedCoreNum) {
+    if (blockIdx_ >= tilingData_.usedCoreNum) {
         return;
     }
     if (blockIdx_ < tilingData_.tailBlockData) {
