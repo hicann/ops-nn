@@ -127,20 +127,6 @@ static bool CheckNotNull(
     return true;
 }
 
-bool IsTransLastTwoDims(const aclTensor* tensor)
-{
-    // 相对于公共仓接口区别于，输入shape仅支持2维，在tensor输入shape为（1, 1）时返回true
-    if (tensor->GetViewShape().GetDimNum() != 2) {
-        return false;
-    }
-    int64_t dim1 = tensor->GetViewShape().GetDimNum() - 1;
-    int64_t dim2 = tensor->GetViewShape().GetDimNum() - 2;
-    if (tensor->GetViewStrides()[dim2] == 1 && tensor->GetViewStrides()[dim1] == tensor->GetViewShape().GetDim(dim2)) {
-        return true;
-    }
-    return false;
-}
-
 static bool SetShapeStrideForNZ(const aclTensor* weight, aclTensor* weightTemp, bool transposeX2)
 {
     if (!transposeX2) {
@@ -193,7 +179,7 @@ static aclnnStatus InputPreProcess(
     CHECK_RET(IsDimSupport(input, DIM_RANGE_ONLY_TWO_DIM, inputName), ACLNN_ERR_PARAM_INVALID);
     auto viewShape = input->GetViewShape();
     auto viewShapeDim = viewShape.GetDimNum();
-    bool isTranspose = IsTransLastTwoDims(input);
+    bool isTranspose = false;
     if (isTranspose) {
         // 当 isTranspose=true 时，shape 的倒数第 2 维要放大 2 倍， 即 (k/2, n) -> (k, n)
         viewShape[viewShapeDim - 2] = viewShape[viewShapeDim - 2] * FP4_NUMS_IN_INT8;
