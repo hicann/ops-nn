@@ -210,7 +210,9 @@ GraphUniqPtr Conv3dToConv3dV2FusionPass::Replacement(const GNode &convNode)
     return graphBuilder.BuildAndReset({conv3dV2});
 }
 
+#if GE_COMPILER_VERSION_NUM >= VALID_COMPILER_VERSION
 REG_DECOMPOSE_PASS(Conv3dToConv3dV2FusionPass, {ConvFusionUtils::CONV3D})
     .Stage(CustomPassStage::kCompatibleInherited);
+#endif
 
 } // namespace Ops

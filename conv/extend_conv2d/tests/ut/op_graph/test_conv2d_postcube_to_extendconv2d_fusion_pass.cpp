@@ -8,6 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+#if GE_COMPILER_VERSION_NUM >= 90000000U
 #include "../../../../common/tests/ut/op_graph/test_conv_fusion_pass_framework.h"
 #include "../../../op_graph/fusion_pass/conv2d_postcube_to_extendconv2d_fusion_pass.h"
 
@@ -38,7 +39,6 @@ protected:
             graph->DumpToFile(Graph::DumpFormat::kOnnx, AscendString(dumpName.c_str()));
         }
         CustomPassContext passContex;
-        passContex.SetPassName(passName.c_str());
         Conv2DPostCubeToExtendConv2DFusionPass pass;
         auto res = pass.Run(graph, passContex);
         if (CONV_DEBUG) {
@@ -58,7 +58,6 @@ protected:
             graph->DumpToFile(Graph::DumpFormat::kOnnx, AscendString(dumpName.c_str()));
         }
         CustomPassContext passContex;
-        passContex.SetPassName(passName.c_str());
         Conv2DPostCubeToExtendConv2DFusionPass pass;
         GNode convNode = testGraphBuilder.GetNode("Conv2D");
         ConvFusionUtilsPass::GetConvDescInfo(convNode, pass.convDescInfo);
@@ -82,7 +81,6 @@ protected:
             graph->DumpToFile(Graph::DumpFormat::kOnnx, AscendString(dumpName.c_str()));
         }
         CustomPassContext passContex;
-        passContex.SetPassName(passName.c_str());
         Conv2DPostCubeToExtendConv2DFusionPass pass;
         GNode convNode = testGraphBuilder.GetNode("Conv2D");
         ConvFusionUtilsPass::GetConvDescInfo(convNode, pass.convDescInfo);
@@ -797,7 +795,6 @@ TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, print_graph_structure_test)
         graph->DumpToFile(Graph::DumpFormat::kOnnx, "print_graph_structure_test_before");
     }
     CustomPassContext passContex;
-    passContex.SetPassName("print_graph_structure_test_before");
     Conv2DPostCubeToExtendConv2DFusionPass pass;
     GNode convNode = testGraphBuilder.GetNode("Conv2D");
     ConvFusionUtilsPass::GetConvDescInfo(convNode, pass.convDescInfo);
@@ -1006,3 +1003,5 @@ TEST_F(Conv2DPostCubeToExtendConv2DFusionPassTest, extendconv2d_fused_op_impl_mo
     ASSERT_EQ(fused.GetAttr(AscendString("_op_impl_mode_enum"), implMode), GRAPH_SUCCESS);
     EXPECT_EQ(implMode, int64_t{0x1});
 }
+
+#endif

@@ -52,6 +52,7 @@ constexpr int32_t INPUT_FMAP_INDEX = 0;
 constexpr int32_t INPUT_FILTER_INDEX = 1;
 constexpr int32_t INPUT_BIAS_INDEX = 2;
 constexpr int32_t OUTPUT_INDEX = 0;
+constexpr int32_t VALID_COMPILER_VERSION = 90000000U;
 
 const std::set<ge::AscendString> SPECIFIC_PAD_LIST = {"NOTSET", "EXPLICIT"};
 const std::vector<int64_t> HF32_PRECISION_MODES_INT = {0x1, 0x2, 0x40};

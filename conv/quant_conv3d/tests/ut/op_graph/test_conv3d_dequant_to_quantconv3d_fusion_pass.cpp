@@ -8,6 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+#if GE_COMPILER_VERSION_NUM >= 90000000U
 #include "../../../../common/tests/ut/op_graph/test_conv_fusion_pass_framework.h"
 #include "../../../op_graph/fusion_pass/conv3d_dequant_to_quantconv3d_fusion_pass.h"
 
@@ -228,3 +229,5 @@ TEST_F(Conv3DDequantToQuantConv3DFusionPassTest, quantconv3d_fused_op_impl_mode_
     ASSERT_EQ(fused.GetAttr(AscendString("_op_impl_mode_enum"), implMode), GRAPH_SUCCESS);
     EXPECT_EQ(implMode, int64_t{0x1});
 }
+
+#endif

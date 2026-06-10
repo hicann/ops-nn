@@ -8,6 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
+#if GE_COMPILER_VERSION_NUM >= 90000000U
 #include <functional>
 #include <vector>
 
@@ -383,3 +384,5 @@ TEST_F(Conv2dToConv2dV2FusionPassTest, conv2d_to_conv2dv2_graph_topology)
         p.run(*this);
     }
 }
+
+#endif
