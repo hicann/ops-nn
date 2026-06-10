@@ -238,16 +238,20 @@ static const aclTensor* ComputeGradForKlDiv(
         const float LOG_BASE = -1.0f;
         const float LOG_SCALE = 1.0f;
         const float LOG_SHIFT = 0.0f;
-        auto logOut = l0op::Log(targetBroadcast, LOG_BASE, LOG_SCALE, LOG_SHIFT, executor);
-        auto logPlusOne = l0op::Add(logOut, oneTensor, executor);
-        auto termSubSelf = l0op::Sub(logPlusOne, selfCasted, executor);
-        grad =  l0op::Mul(gradOutputCasted, termSubSelf, executor);
+        auto gradMulSelf = l0op::Mul(gradOutputCasted, selfCasted, executor);
+        auto targetLog = l0op::Log(targetBroadcast, LOG_BASE, LOG_SCALE, LOG_SHIFT, executor);
+        auto xlogy = l0op::Mul(gradOutputCasted, targetLog, executor);
+        auto logSubGrad = l0op::Sub(xlogy, gradMulSelf, executor);
+        auto gradMulTarget = l0op::Mul(gradOutputCasted, targetBroadcast, executor);
+        auto gradMulTargetDivTarget = l0op::Div(gradMulTarget, targetBroadcast, executor);
+        grad = l0op::Add(logSubGrad, gradMulTargetDivTarget, executor);
     } else {
-        auto expOut = l0op::Exp(targetBroadcast, executor);
-        auto logPlusOne = l0op::Add(targetBroadcast, oneTensor, executor);
-        auto termSubSelf = l0op::Sub(logPlusOne, selfCasted, executor);
-        auto mulExp = l0op::Mul(gradOutputCasted, expOut, executor);
-        grad = l0op::Mul(mulExp, termSubSelf, executor);
+        auto targetExp = l0op::Exp(targetBroadcast, executor);
+        auto targetSubSelf = l0op::Sub(targetBroadcast, selfCasted, executor);
+        auto gradMulDiff = l0op::Mul(gradOutputCasted, targetSubSelf, executor);
+        auto gradMulDiffMulExp = l0op::Mul(gradMulDiff, targetExp, executor);
+        auto gradMulExp = l0op::Mul(gradOutputCasted, targetExp, executor);
+        grad = l0op::Add(gradMulDiffMulExp, gradMulExp, executor);
     }
 
     return grad;
