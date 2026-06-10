@@ -9,6 +9,7 @@
 # ----------------------------------------------------------------------------
 
 add_kernel_sources(
+    COMPUTE_UNITS ascend910b ascend910_93 kirinx90 kirin9030
     AUTO_SYNC false
 )
 
