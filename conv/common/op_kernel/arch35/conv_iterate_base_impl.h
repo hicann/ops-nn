@@ -289,7 +289,7 @@ const uint64_t &KStartPosition, const uint64_t &kStep, const MmadParams &mmadPar
     LocalTensor<typename Intf::WeightT> bl0;
     if constexpr (Intf::isL0BFullLoadable) {
         bl0 = 
-            self->ctx.wholeBl0Tensor[kIter * self->ctx.convTilingData->nL0 * self->ctx.convTilingData->kL0];
+            self->ctx.wholeBl0Tensor[kIter * self->ctx.currentNL0Align * self->ctx.convTilingData->kL0];
     } else {
         bl0 = self->ctx.wholeBl0Tensor;
     }
@@ -331,7 +331,7 @@ const uint64_t &posK, const uint64_t &KStartPosition, const uint64_t &kStep, con
     LocalTensor<typename Intf::WeightT> bl0;
     if constexpr (Intf::isL0BFullLoadable) {
         bl0 = 
-            self->ctx.wholeBl0Tensor[kIter * self->ctx.convTilingData->nL0 * self->ctx.convTilingData->kL0];
+            self->ctx.wholeBl0Tensor[kIter * self->ctx.currentNL0Align * self->ctx.convTilingData->kL0];
     } else {
         bl0 = self->ctx.wholeBl0Tensor;
     }
@@ -374,7 +374,7 @@ const uint64_t &currentKL0, const uint64_t &posK, const uint64_t &KStartPosition
  
     if constexpr (Intf::isL0BFullLoadable) {
         bl0 = 
-            self->ctx.wholeBl0Tensor[kIter * self->ctx.convTilingData->nL0 * self->ctx.convTilingData->kL0];
+            self->ctx.wholeBl0Tensor[kIter * self->ctx.currentNL0Align * self->ctx.convTilingData->kL0];
     } else {
         bl0 = self->ctx.wholeBl0Tensor[(bl0PingPongFlag) * L0B_HALF_SIZE / Intf::sizeOfWeight];
         self->ctx.loadBL0Ins.LoadBL0(KStartPosition, kStep, bl0);
@@ -423,7 +423,7 @@ const uint64_t &currentKL0, const uint64_t &posK, const uint64_t &KStartPosition
 
     LocalTensor<typename Intf::WeightT> bl0;
     if constexpr (Intf::isL0BFullLoadable) {
-        bl0 = self->ctx.wholeBl0Tensor[kIter * self->ctx.convTilingData->nL0 * self->ctx.convTilingData->kL0];
+        bl0 = self->ctx.wholeBl0Tensor[kIter * self->ctx.currentNL0Align * self->ctx.convTilingData->kL0];
     } else {
         bl0 = self->ctx.wholeBl0Tensor[(al0PingPongFlag) * L0B_HALF_SIZE / Intf::sizeOfWeight];
         self->ctx.loadBL0Ins.LoadBL0(KStartPosition, kStep, bl0);
