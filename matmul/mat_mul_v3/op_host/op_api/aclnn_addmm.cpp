@@ -259,6 +259,7 @@ static const aclTensor* AddProcess(
 static const aclTensor* MulsProcess(const aclTensor* mat, const aclScalar* scalar, bool isMulsInplace, aclOpExecutor* executor){
     const aclTensor* mulsOut = nullptr;
     auto matContiguous = l0op::Contiguous(mat, executor);
+    CHECK_RET(matContiguous != nullptr, nullptr);
     if (fabs(scalar->ToFloat() - 1.0f) <= numeric_limits<float>::epsilon()) {
         mulsOut = matContiguous;
     } else {
@@ -304,6 +305,7 @@ static const aclTensor* AddMatmulProcess(
     AclnnAddmmTensor& addmmTensor, int8_t cubeMathType, aclOpExecutor* uniqueExecutor)
 {
     auto selfContiguous = l0op::Contiguous(addmmTensor.self, uniqueExecutor);
+    CHECK_RET(selfContiguous != nullptr, nullptr);
     if (addmmTensor.self != nullptr && addmmTensor.self->GetDataType() == op::DataType::DT_BF16) {
         selfContiguous = l0op::Cast(selfContiguous, op::DataType::DT_FLOAT, uniqueExecutor);
     }

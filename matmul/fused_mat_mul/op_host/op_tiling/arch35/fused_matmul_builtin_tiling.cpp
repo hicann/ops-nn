@@ -70,7 +70,8 @@ inline void GetDtype(const gert::TilingContext& context, MatMulV3Args& args, Npu
     }
     // op_impl_mode_enum: 0x1: default 0x2: high_performance 0x4: high_precision 0x8: super_performance
     // 0x10: support_of_bound_index 0x20: enable_float_32_execution 0x40: enable_hi_float_32_execution
-    args.isHf32 = *((context.GetAttrs())->GetAttrPointer<bool>(ATTR_ENABLE_HF32_IDX));
+    auto* attr_ptr = context.GetAttrs()->GetAttrPointer<bool>(ATTR_ENABLE_HF32_IDX);
+    args.isHf32 = attr_ptr ? *attr_ptr : false;
     args.aDtypeSize = ge::GetSizeByDataType(args.aType);
     args.bDtypeSize = ge::GetSizeByDataType(args.bType);
     if (args.isHf32 && npuArch != NpuArch::DAV_3510) {
@@ -414,7 +415,7 @@ ge::graphStatus FusedMatMulBuiltInTiling::CheckArgs()
         args_.hasBias = true;
     }
     OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs->GetAttrPointer<bool>(ATTR_ENABLE_HF32_IDX));
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs->GetAttrPointer<bool>(ATTR_OP_TYPE_IDX));
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX));
     std::string opType = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
     if (opType == "mul" || opType == "add") {
         args_.hasX3Input = true;
