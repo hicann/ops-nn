@@ -241,6 +241,8 @@ private:
     // indices need
     TBuf<QuePosition::VECCALC> indicesUB_;
     GlobalTensor<TINDEX> indicesGm_;
+
+    int64_t oriOverflowMode_ = 0; // 存储原始SPR配置
 };
 
 template <typename T, typename TINDEX>
@@ -482,7 +484,8 @@ __aicore__ inline void AdaptiveMaxPool3dBigKernel<T, TINDEX>::Init(
 
     // set half overflow
     if constexpr (IsSameType<T, half>::value) {
-        SetCtrlSpr<HALF_OVERFLOW_MODE_CTRL, HALF_OVERFLOW_MODE_CTRL>(1);
+        oriOverflowMode_ = GetCtrlSpr<HALF_OVERFLOW_MODE_CTRL, HALF_OVERFLOW_MODE_CTRL>();
+        SetCtrlSpr<HALF_OVERFLOW_MODE_CTRL, HALF_OVERFLOW_MODE_CTRL>(1); 
     }
 }
 
@@ -517,6 +520,9 @@ __aicore__ inline void AdaptiveMaxPool3dBigKernel<T, TINDEX>::Process()
     if (curLocalIdx != 0) {
         AdaptivePool3dBigKernel<T>::CopyOut(curLocalIdx, outputOffset);
         CopyOutIndices(curLocalIdx, outputOffset);
+    }
+    if constexpr (IsSameType<T, half>::value) { 
+        SetCtrlSpr<HALF_OVERFLOW_MODE_CTRL, HALF_OVERFLOW_MODE_CTRL>(oriOverflowMode_); 
     }
 }
 } // namespace AdaptivePool3d

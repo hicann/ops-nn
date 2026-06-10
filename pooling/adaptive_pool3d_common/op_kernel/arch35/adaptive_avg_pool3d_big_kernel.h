@@ -320,10 +320,6 @@ __aicore__ inline void AdaptiveAvgPool3dBigKernel<T>::Init(GM_ADDR x, GM_ADDR y)
     // AdaptivePool3dBigKernel init
     AdaptivePool3dBigKernel<T>::Init(x, y);
     this->pipe_.InitBuffer(storeAddUB_, STORE_ADD_BUFFER);
-    // set half overflow
-    if constexpr (IsSameType<T, half>::value) {
-        SetCtrlSpr<HALF_OVERFLOW_MODE_CTRL, HALF_OVERFLOW_MODE_CTRL>(1);
-    }
 }
 
 template <typename T>
