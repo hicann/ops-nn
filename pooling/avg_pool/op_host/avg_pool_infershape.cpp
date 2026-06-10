@@ -12,6 +12,7 @@
  * \file avg_pool_infershape.cpp
  * \brief
  */
+#include "log/log.h"
 #include "avg_pool_infershape_common.h"
 std::string GetInputFormatNotSupportErrMsg(const std::string& param_name, const std::string& expected_format_list,
                                            const std::string& data_format) {
@@ -67,8 +68,7 @@ static graphStatus GetAvgPoolXShape(const gert::CompileTimeTensorDesc* tensorDes
     const Format xdataFormat = tensorDescIn->GetOriginFormat();
     std::string dataFormat = format2str.at(xdataFormat);
     if (dataFormat != "NCHW" && dataFormat != "NHWC") {
-        std::string errMsg = OtherErrMsg("attr data format is wrong.");
-        OP_LOGE(opName.c_str(), "%s", errMsg.c_str());
+        OP_LOGE_FOR_INVALID_FORMAT(opName, "data_format", dataFormat.c_str(), "NCHW or NHWC");
         return GRAPH_FAILED;
     }
 
@@ -82,8 +82,10 @@ static graphStatus GetAvgPoolXShape(const gert::CompileTimeTensorDesc* tensorDes
 
     const gert::Shape* shapeIn = context->GetInputShape(X_IDX_AVGPOOL);
     OP_LOGE_IF(shapeIn == nullptr, ge::GRAPH_FAILED, opName, "fmap is null.");
-    OP_LOGE_IF(shapeIn->GetDimNum() != SUPPORTED_DIM_NUM, GRAPH_FAILED, opName,
-        "Not support input xShape dimnum %lu.", shapeIn->GetDimNum());
+    if (shapeIn->GetDimNum() != SUPPORTED_DIM_NUM) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(opName, "x", std::to_string(shapeIn->GetDimNum()).c_str(), "shape dim must be 4");
+        return GRAPH_FAILED;
+    }
 
     // Set x shape into structure
     inputs.inN = shapeIn->GetDim(inputs.xnPosition);
@@ -125,7 +127,7 @@ static graphStatus SetAvgPoolOutput(InferShapeContext* context, AvgPoolInputs& i
         shapeOut->SetDim(inputs.xhPosition, inputs.outH);
         shapeOut->SetDim(inputs.xwPosition, inputs.outW);
     } else {
-        OP_LOGE(opName.c_str(), "%s", "output y format is not correct! format should be NCHW or NHWC.");
+        OP_LOGE_FOR_INVALID_FORMAT(opName, "y", std::to_string(static_cast<int32_t>(formatOut)).c_str(), "NCHW or NHWC");
         return GRAPH_FAILED;
     }
     return GRAPH_SUCCESS;
@@ -157,9 +159,7 @@ static graphStatus InferShapeForAvgPool(InferShapeContext* context)
     OP_LOGE_IF(ksizeArray == nullptr, GRAPH_FAILED, opName, "ksize is null");
 
     if (ksizePtr->GetSize() != DIM_SIZE4) {
-        std::string errMsg =
-            OtherErrMsg(GetAttrValueErrMsg("ksizePtr", std::to_string(ksizePtr->GetSize()), ConcatString(DIM_SIZE4)));
-        OP_LOGE(opName.c_str(), "%s", errMsg.c_str());
+        OP_LOGE_FOR_INVALID_LISTSIZE(opName, "ksize", std::to_string(ksizePtr->GetSize()).c_str(), "4");
         return GRAPH_FAILED;
     }
 
@@ -170,9 +170,7 @@ static graphStatus InferShapeForAvgPool(InferShapeContext* context)
     OP_LOGE_IF(stridesArray == nullptr, GRAPH_FAILED, opName, "Stride is null.");
 
     if (stridesPtr->GetSize() != DIM_SIZE4) {
-        std::string errMsg =
-            GetAttrValueErrMsg("stridesPtr", std::to_string(stridesPtr->GetSize()), ConcatString(DIM_SIZE4));
-        OP_LOGE(opName.c_str(), "%s", errMsg.c_str());
+        OP_LOGE_FOR_INVALID_LISTSIZE(opName, "strides", std::to_string(stridesPtr->GetSize()).c_str(), "4");
         return GRAPH_FAILED;
     }
 
@@ -181,9 +179,8 @@ static graphStatus InferShapeForAvgPool(InferShapeContext* context)
     OP_LOGE_IF(paddingPtr == nullptr, GRAPH_FAILED, opName, "Get pads failed.");
     std::string padStr = paddingPtr == nullptr ? "NULL" : paddingPtr;
     if (padStr != "SAME" && padStr != "VALID") {
-        std::string expectedFormatList = ConcatString("SAME,VALID");
-        std::string errMsg = GetInputFormatNotSupportErrMsg(opName, expectedFormatList, padStr);
-        OP_LOGE(opName.c_str(), "%s", errMsg.c_str());
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName, "padding_mode", padStr.c_str(),
+            "padding_mode must be SAME or VALID");
         return GRAPH_FAILED;
     }
 
@@ -197,12 +194,16 @@ static graphStatus InferShapeForAvgPool(InferShapeContext* context)
     }
 
     if (inputs.strideH <= 0 || inputs.strideW <= 0) {
-        OP_LOGE(opName.c_str(), "%s", "stride is valid, which should be more than 0.");
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(opName, "strideH, strideW",
+            (std::to_string(inputs.strideH) + ", " + std::to_string(inputs.strideW)).c_str(),
+            "stride values must be > 0");
         return GRAPH_FAILED;
     }
 
     if (inputs.windowH <= 0 || inputs.windowW <= 0) {
-        OP_LOGE(opName.c_str(), "%s", "ksize is valid, which should be more than 0.");
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(opName, "windowH, windowW",
+            (std::to_string(inputs.windowH) + ", " + std::to_string(inputs.windowW)).c_str(),
+            "ksize values must be > 0");
         return GRAPH_FAILED;
     }
 
