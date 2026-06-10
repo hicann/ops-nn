@@ -166,7 +166,25 @@ static ge::graphStatus InferShapeForTransposeQuantBatchMatMul(InferShapeContext*
 
     const auto dtype = attrs->GetAttrPointer<int64_t>(0); // dtype index is 0
     CHECK(dtype == nullptr, CUBE_INNER_ERR_REPORT(nameOp, "[Infershape] attr dtype is null."), return ge::GRAPH_FAILED);
-
+    auto tensorX1 = context->GetInputDesc(0);
+    auto tensorX2 = context->GetInputDesc(1);
+    CHECK(
+        tensorX1 == nullptr || tensorX2 == nullptr, CUBE_INNER_ERR_REPORT(nameOp, "x1 or x2 is null."),
+        return ge::GRAPH_FAILED);
+    // 当前不允许x1Scale或者x2Scale为空
+    auto tensorX1Scale = context->GetOptionalInputDesc(kX1ScaleIdx);
+    auto tensorX2Scale = context->GetOptionalInputDesc(kX2ScaleIdx);
+    CHECK(
+        tensorX1Scale == nullptr || tensorX2Scale == nullptr,
+        CUBE_INNER_ERR_REPORT(nameOp, "X1Scale or x2Scale is null."), return ge::GRAPH_FAILED);
+    ge::DataType dtypeX1 = tensorX1->GetDataType();
+    ge::DataType dtypeX2 = tensorX2->GetDataType();
+    ge::DataType dtypeX1Scale = tensorX1Scale->GetDataType();
+    ge::DataType dtypeX2Scale = tensorX2Scale->GetDataType();
+    CHECK(
+        !CheckDtypeValid(dtypeX1, dtypeX2, dtypeX1Scale, dtypeX2Scale),
+        CUBE_INNER_ERR_REPORT(nameOp, "[InferShape] Failed to check dtype"), return ge::GRAPH_FAILED);
+        
     const auto permX1 = attrs->GetListInt(2);                        // permX1 index is 2
     const auto permX2 = attrs->GetListInt(3);                        // permX2 index is 3
     const auto permY = attrs->GetListInt(4);                         // permY index is 4
@@ -202,24 +220,6 @@ static ge::graphStatus InferShapeForTransposeQuantBatchMatMul(InferShapeContext*
             Ops::Base::ToString(shapeX1Transposed).c_str(), Ops::Base::ToString(shapeX2Transposed).c_str()),
         return ge::GRAPH_FAILED);
 
-    auto tensorX1 = context->GetInputDesc(0);
-    auto tensorX2 = context->GetInputDesc(1);
-    CHECK(
-        tensorX1 == nullptr || tensorX2 == nullptr, CUBE_INNER_ERR_REPORT(nameOp, "x1 or x2 is null."),
-        return ge::GRAPH_FAILED);
-    // 当前不允许x1Scale或者x2Scale为空
-    auto tensorX1Scale = context->GetOptionalInputDesc(kX1ScaleIdx);
-    auto tensorX2Scale = context->GetOptionalInputDesc(kX2ScaleIdx);
-    CHECK(
-        tensorX1Scale == nullptr || tensorX2Scale == nullptr,
-        CUBE_INNER_ERR_REPORT(nameOp, "X1Scale or x2Scale is null."), return ge::GRAPH_FAILED);
-    ge::DataType dtypeX1 = tensorX1->GetDataType();
-    ge::DataType dtypeX2 = tensorX2->GetDataType();
-    ge::DataType dtypeX1Scale = tensorX1Scale->GetDataType();
-    ge::DataType dtypeX2Scale = tensorX2Scale->GetDataType();
-    CHECK(
-        !CheckDtypeValid(dtypeX1, dtypeX2, dtypeX1Scale, dtypeX2Scale),
-        CUBE_INNER_ERR_REPORT(nameOp, "[InferShape] Failed to check dtype"), return ge::GRAPH_FAILED);
     // batchSplitFactor only support 1
     CHECK(
         batchSplitFactor != nullptr && *batchSplitFactor != VALID_BATCH_SPLIT_FACTOR,
