@@ -154,7 +154,9 @@ public:
     {
         param_.SetKStartPosition(static_cast<uint32_t>(KStartPosition));
         param_.SetKStep(static_cast<uint16_t>(kStep));
+#ifndef ASCENDC_CPU_DEBUG
         LoadData<TPosition::B2, TPosition::B1, typename Intf::WeightT>(bl0, self_->ctx.bl1, param_);
+#endif
     }
 
     __aicore__ inline void FullLoadBL0(const LocalTensor<typename Intf::WeightT> &bl0)

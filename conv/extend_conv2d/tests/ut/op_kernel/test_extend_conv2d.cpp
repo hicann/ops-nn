@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -16,11 +16,11 @@
 #include "gtest/gtest.h"
 #include "tikicpulib.h"
 #include "version/asc_devkit_version.h"
-#include "conv2d_v2_tiling_def.h"
+#include "extend_conv2d_tiling_def.h"
 
 
 #ifndef CONV_KERNEL
-#include "conv2d_v2/conv2d_v2.cpp"
+#include "extend_conv2d/extend_conv2d.cpp"
 #define CONV_KERNEL
 #endif
 
@@ -30,14 +30,14 @@ constexpr uint32_t DIM3 = 3;
 constexpr uint32_t SIZE_1K = 1024;
 constexpr uint32_t NUM_16 = 16;
 
-class Conv2DV2KernelTest : public testing::Test {
+class ExtendConv2DKernelTest : public testing::Test {
 protected:
     static void SetUpTestCase() {
-        std::cout << "Conv2DV2KernelTest SetUp." << std::endl;
+        std::cout << "ExtendConv2DKernelTest SetUp." << std::endl;
     }
 
     static void TearDownTestCase() {
-        std::cout << "Conv2DV2KernelTest TearDown." << std::endl;
+        std::cout << "ExtendConv2DKernelTest TearDown." << std::endl;
     }
 };
 namespace {
@@ -116,7 +116,6 @@ void SetConv2dApiPartOne(Conv2DTilingData* tiling, const TilingInput& tilingInpu
     tiling->orgHo = outputShape[DIM2];
     tiling->orgWo = outputShape[DIM3];
     tiling->singleCoreBatch = inputShape[0];
-    // M_MODE: singleCoreHo stores flattened M (Ho * Wo) per core
     tiling->singleCoreHo = outputShape[DIM2] * outputShape[DIM3];
     tiling->singleCoreWo = outputShape[DIM3];
     tiling->orgCi = inputShape[1];
@@ -127,7 +126,7 @@ void SetConv2dApiPartOne(Conv2DTilingData* tiling, const TilingInput& tilingInpu
     tiling->woL1 = 0;
     tiling->orgHixWi = inputShape[DIM2] * inputShape[DIM3];
     tiling->kernelHxkernelW = weightShape[DIM2] * weightShape[DIM3];
-    tiling->kernelHxkernelWxkernelD = weightShape[DIM2] * weightShape[DIM3];
+    tiling->kernelHxkernelWxkernelD = tiling->kernelHxkernelW;
     uint64_t kL1 = tiling->singleCoreCi * tiling->kernelHxkernelW;
     tiling->kAL1 = kL1;
     tiling->kBL1 = kL1;
@@ -145,10 +144,10 @@ void SetConv2dApiPartOne(Conv2DTilingData* tiling, const TilingInput& tilingInpu
     tiling->bUbKStep = 0;
     tiling->multiNBL1 = 1;
     tiling->cinAInCore = tiling->kAL1 / tiling->kernelHxkernelW;
+    tiling->aL1SpaceSize = tiling->cinAInCore * tiling->orgHixWi * FP16_SIZE;
     tiling->cinATailInCore = tiling->cinAInCore;
     tiling->cinBInCore = tiling->kBL1 / tiling->kernelHxkernelW;
     tiling->cinBTailInCore = tiling->cinBInCore;
-    tiling->aL1SpaceSize = tiling->cinAInCore * tiling->orgHixWi * FP16_SIZE;
 }
 
 void SetConv2dApiPartTwo(Conv2DTilingData* tiling, const TilingInput& tilingInput)
@@ -166,7 +165,7 @@ void SetConv2dApiPartTwo(Conv2DTilingData* tiling, const TilingInput& tilingInpu
         tiling->kernelHxkernelW * tiling->orgHixWi;
     tiling->coutOffsetBlock = (tiling->orgCi /
         tiling->groups) * tiling->kernelHxkernelW;
-    tiling->nL1DivBlockSize = tiling->nBL1 / N0;
+    tiling->nL1DivBlockSize = tiling->nBL1 / NUM_16;
     tiling->kernelH = weightShape[DIM2];
     tiling->kernelW = weightShape[DIM3];
     tiling->strideH = strides[0];
@@ -248,13 +247,19 @@ void TestSimpleKernel(const std::vector<uint64_t>& inputShape, const std::vector
     TilingInput tilingInput = {inputShape, weightShape, outputShape, pads, strides, dilations};
     SetTilingData(tilingData, tilingInput);
 
-    auto conv2dv2_func = [](GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR offset_w,
-        GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
-        // OutputOrder=1 (M_MODE): tiling uses hoL1>0 && woL1==0
-        ::conv2dv2<0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>(
-            x, filter, bias, offset_w, y, workspace, tiling);
+    auto extend_conv2d_func = [](GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR offset_w,
+        GM_ADDR scale0, GM_ADDR relu_weight0, GM_ADDR clip_value0, GM_ADDR scale1, GM_ADDR relu_weight1,
+        GM_ADDR clip_value1, GM_ADDR y0, GM_ADDR y1, GM_ADDR workspace, GM_ADDR tiling) {
+        ::extend_conv2d<0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>(
+            x, filter, bias, offset_w, scale0, relu_weight0, clip_value0, scale1, relu_weight1,
+            clip_value1, y0, y1, workspace, tiling);
     };
-    ICPU_RUN_KF(conv2dv2_func, numBlocks, input, weight, nullptr, nullptr, output, workspace, tiling);
+    ICPU_RUN_KF(extend_conv2d_func, numBlocks,
+        input, weight, nullptr, nullptr,
+        nullptr, nullptr, nullptr,
+        nullptr, nullptr, nullptr,
+        output, nullptr,
+        workspace, tiling);
 
     AscendC::GmFree(input);
     AscendC::GmFree(weight);
@@ -263,7 +268,7 @@ void TestSimpleKernel(const std::vector<uint64_t>& inputShape, const std::vector
     AscendC::GmFree(tiling);
 }
 } // namespace
-TEST_F(Conv2DV2KernelTest, conv2dv2_kernel_test_base)
+TEST_F(ExtendConv2DKernelTest, extend_conv2d_kernel_test_base)
 {
     std::vector<uint64_t> inputShape = {1, 16, 16, 16};
     std::vector<uint64_t> weightShape = {16, 16, 1, 1};

@@ -287,10 +287,8 @@ public:
         LocalTensor<typename ConvDataType::FmapT> wholeAl0Tensor;
         LocalTensor<typename ConvDataType::WeightT> wholeBl0Tensor;
         LocalTensor<typename ConvDataType::L0cT> biasBT;
-        LocalTensor<typename ConvDataType::L0cT> wholeCl0Tensor =
-            LocalTensor<typename ConvDataType::L0cT>(TPosition::CO1, 0, 0);
-        LocalTensor<typename ConvDataType::L0cT> cl0 =
-            LocalTensor<typename ConvDataType::L0cT>(TPosition::CO1, 0, 0);
+        LocalTensor<typename ConvDataType::L0cT> wholeCl0Tensor;
+        LocalTensor<typename ConvDataType::L0cT> cl0;
 
         uint8_t enableBias = false;  // 是否有bias
         uint8_t enableVectorQuant = false;  // 是否有vector类型scale，双输出场景下任一scale为vector类型，即为true

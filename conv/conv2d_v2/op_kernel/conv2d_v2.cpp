@@ -113,7 +113,7 @@ __global__ __aicore__ void conv2dv2(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_
 #endif
     using scaleType = ConvType<TPosition::GM, scaleFormat, uint64_t>;
 
-    if (SmallKernel == 1 && OutputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE) &&
+    if constexpr (SmallKernel == 1 && OutputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE) &&
         fmapFormat == ConvFormat::NCHW && outputFormat == ConvFormat::NCHW &&
         AscendC::IsSameType<DTYPE_X, half>::value) {
         Conv2dSmallKernel<DTYPE_X, DTYPE_FILTER, biasType::T, DTYPE_Y> op;
