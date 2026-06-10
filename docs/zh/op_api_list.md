@@ -338,7 +338,7 @@
 | [aclnnNonzero](../../index/non_zero/docs/aclnnNonzero.md) | 找出self中非零元素的位置，设self的维度为D，self中非零元素的个数为N，则返回out的shape为D * N，每一列表示一个非零元素的位置坐标。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnNonzeroV2](../../index/non_zero/docs/aclnnNonzeroV2.md) | 找出self中非零元素的位置，设self的维度为D，self中非零元素的个数为N，则返回out的shape为D * N，每一列表示一个非零元素的位置坐标。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnPrelu](../../activation/p_relu/docs/aclnnPrelu.md) | 激活函数，Tensor中value大于0，取该value，小于0时取权重与value的乘积。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnPreluBackward](../../activation/p_relu_grad_update/docs/aclnnPreluBackward.md) | 完成aclnnPreluBackward的反向函数。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnPreluBackward](../../activation/p_relu_grad_update/docs/aclnnPreluBackward.md) | 完成aclnnPrelu的反向函数。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnQuantConvolution](../../conv/convolution_forward/docs/aclnnQuantConvolution.md) | 完成per-channel量化的2D/3D卷积计算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnQuantConvolutionWeightNz](../../conv/convolution_forward/docs/aclnnQuantConvolutionWeightNz.md) | 完成 per-channel 量化的 3D 卷积计算，weight仅支持FRACTAL_Z_3D格式。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnQuantize](../../quant/quantize/docs/aclnnQuantize.md) | 对输入张量进行量化处理。 | 默认确定性实现 | 默认确定性实现 |
@@ -389,7 +389,7 @@
 | [aclnnSoftplus](../../activation/softplus_v2/docs/aclnnSoftplus.md) | 激活函数softplus。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnSoftplusBackward](../../activation/softplus_v2_grad/docs/aclnnSoftplusBackward.md) | aclnnSoftplus的反向传播。 | 默认确定性实现 | - |
 | [aclnnSoftshrink](../../activation/softshrink/docs/aclnnSoftshrink.md) | 以元素为单位，强制收缩λ范围内的元素。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnSoftshrinkBackward](../../activation/softshrink_grad/docs/aclnnSoftshrinkBackward.md) | 完成Softshrink函数的反向接口。 | 默认确定性实现 | 确定性实现 |
+| [aclnnSoftshrinkBackward](../../activation/softshrink_grad/docs/aclnnSoftshrinkBackward.md) | 完成Softshrink函数的反向接口。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnSparse4to2QuantMatmulWeightNz](../../matmul/sparse4to2quant_matmul/docs/aclnnSparse4to2QuantMatmulWeightNz.md) | 实现稀疏4:2量化的矩阵乘计算。 | 默认确定性实现 | - |
 | [aclnnSquaredRelu](../../activation/squared_relu/docs/aclnnSquaredRelu.md) | SquaredReLU 函数是一个基于标准ReLU函数的变体，其主要特点是对ReLU函数的输出进行平方，常作为模型的激活函数。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnSwiGlu](../../activation/swi_glu/docs/aclnnSwiGlu.md) | Swish门控线性单元激活函数，实现x的SwiGlu计算。 | 默认确定性实现 | 默认确定性实现 |

@@ -435,7 +435,7 @@
     <td>✗</td>
     <td>✗</td>
     <td>AI Core</td>
-    <td>对应PRelu的的反向传播梯度实现的vector计算部分。</td>
+    <td>对应PRelu的反向传播梯度实现的vector计算部分。</td>
   </tr>
   <tr>
     <td>activation</td>
@@ -445,7 +445,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>对应PRelu的的反向传播梯度实现的reduce计算部分。</td>
+    <td>对应PRelu的反向传播梯度实现的reduce计算部分。</td>
   </tr>
   <tr>
     <td>activation</td>

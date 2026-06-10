@@ -36,15 +36,12 @@ $$
 
 ## 参数说明
 
-  <table style="undefined;table-layout: fixed; width: 1305px"><colgroup>
-  <col style="width: 171px">
-  <col style="width: 115px">
-  <col style="width: 247px">
-  <col style="width: 108px">
-  <col style="width: 177px">
-  <col style="width: 104px">
-  <col style="width: 238px">
-  <col style="width: 145px">
+ <table style="undefined;table-layout: fixed; width: 980px"><colgroup>
+  <col style="width: 100px">
+  <col style="width: 150px">
+  <col style="width: 280px">
+  <col style="width: 330px">
+  <col style="width: 120px">
   </colgroup>
   <thead>
     <tr>

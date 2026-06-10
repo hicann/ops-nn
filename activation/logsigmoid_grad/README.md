@@ -29,15 +29,12 @@
 
 - **参数说明：**
 
-  <table style="undefined;table-layout: fixed; width: 1497px"><colgroup>
-  <col style="width: 271px">
-  <col style="width: 115px">
-  <col style="width: 247px">
+  <table style="undefined;table-layout: fixed; width: 800px"><colgroup>
+  <col style="width: 110px">
+  <col style="width: 130px">
   <col style="width: 300px">
-  <col style="width: 177px">
-  <col style="width: 104px">
-  <col style="width: 138px">
-  <col style="width: 145px">
+  <col style="width: 180px">
+  <col style="width: 80px">
   </colgroup>
   <thead>
     <tr>

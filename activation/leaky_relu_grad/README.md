@@ -52,7 +52,7 @@ $$
       <tr>
       <td>self</td>
       <td>输入</td>
-      <td>表示特性。</td>
+      <td>表示输入张量。</td>
       <td>FLOAT、FLOAT16、BFLOAT16、DOUBLE</td>
       <td>ND</td>
     </tr>

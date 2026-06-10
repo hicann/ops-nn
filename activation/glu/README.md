@@ -53,7 +53,7 @@
     </tr>
       <tr>
       <td>dim</td>
-      <td>输出</td>
+      <td>输入</td>
       <td>表示要拆分输入self的维度。</td>
       <td>INT64</td>
       <td>-</td>

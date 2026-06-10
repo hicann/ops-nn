@@ -169,7 +169,7 @@ aclnnStatus aclnnInplaceMish(
       <td>self与out的shape不同。</td>
     </tr>
     <tr>
-      <td>dim超出输入self的维度范围时。</td>
+      <td>dim超出输入self的维度范围。</td>
     </tr>
   </tbody></table>
 
