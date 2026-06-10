@@ -1392,7 +1392,13 @@ build_single_example() {
                 -L ${GRAPH_LIBRARY_STUB_PATH} -L ${GRAPH_LIBRARY_PATH} \
                 -lgraph -lge_runner -lgraph_base -lge_compiler -o test_geir_${example}
   fi
-  ${BUILD_PATH}/"${pattern}${example}" && success_example+=(${example}) && echo -e "\n$dotted_line\nRun ${pattern}${example} success.\n$dotted_line\n"
+  ${BUILD_PATH}/"${pattern}${example}" | tail -n 10
+  status=${PIPESTATUS[0]}
+  if [[ $status -eq 0 ]]; then
+    success_example+=(${example}) && echo -e "\n$dotted_line\nRun ${pattern}${example} success.\n$dotted_line\n"
+  else
+    return $status
+  fi
 }
 
 build_example() {

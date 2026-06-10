@@ -150,7 +150,7 @@ if __name__ == "__main__":
     cmake_dir = script_path.parent.parent.parent / "cmake" / "third_party"
     all_urls = get_all_urls(cmake_dir)
     git_download()
-    execute_process(['rf', '-fr', 'cann-cmake'], cwd=download_dir)
+    execute_process(['rm', '-fr', 'cann-cmake'], cwd=download_dir)
     execute_process(['mv', 'cmake', 'cann-cmake'], cwd=download_dir)
     third_partys = ['json', 'abseil-cpp', 'eigen', 'gtest', 'protobuf', 'makeself-fetch']
     for third_lib in third_partys:
