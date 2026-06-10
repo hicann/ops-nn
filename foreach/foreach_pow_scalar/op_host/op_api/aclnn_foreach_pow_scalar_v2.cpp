@@ -59,8 +59,8 @@ static inline bool CheckFormat(const aclTensorList* self, const aclTensorList* o
 }
 
 static const std::initializer_list<DataType>& GetDtypeSupportList() {
-  auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-  if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+  auto curArchs = GetCurrentPlatformInfo().GetCurNpuArch();
+  if (curArchs == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArchs)) {
     return ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPPORT_LIST;
   } else {
     OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for %s is not implemented",
@@ -69,8 +69,9 @@ static const std::initializer_list<DataType>& GetDtypeSupportList() {
   }
 }
 
-static inline bool CheckDtypeValid(const aclTensorList* self, const aclScalar* scalar, const aclTensorList* out) {
+static inline bool CheckDtype(const aclTensorList* self, const aclScalar* scalar, const aclTensorList* out) {
     const auto& dtypeSupportList = GetDtypeSupportList();
+    auto selfDtyte_1 = (*self)[0]->GetDataType();
     if (dtypeSupportList.size() == 0) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "support for %s is not implemented",
             op::ToString(GetCurrentPlatformInfo().GetSocVersion()).GetString());
@@ -81,20 +82,19 @@ static inline bool CheckDtypeValid(const aclTensorList* self, const aclScalar* s
     }
 
     // checkself input dtype, and check the releation of input and out
-    auto selfDtyte = (*self)[0]->GetDataType();
     OP_CHECK_DTYPE_NOT_SUPPORT((*self)[0], dtypeSupportList, return false);
     for (uint64_t i = 0; i < self->Size(); i++) {
-        OP_CHECK_DTYPE_NOT_MATCH((*self)[i], selfDtyte, return false);
+        OP_CHECK_DTYPE_NOT_MATCH((*self)[i], selfDtyte_1, return false);
 	}
 
-    for (uint64_t i = 0; i < out->Size(); i++) {
-        OP_CHECK_DTYPE_NOT_MATCH((*out)[i], selfDtyte, return false);
+    for (uint64_t j = 0; j < out->Size(); j++) {
+        OP_CHECK_DTYPE_NOT_MATCH((*out)[j], selfDtyte_1, return false);
 	}
 
     // check the releation of self and scalar
-    if (selfDtyte == DataType::DT_BF16 || selfDtyte == DataType::DT_FLOAT) {
+    if (selfDtyte_1 == DataType::DT_BF16 || selfDtyte_1 == DataType::DT_FLOAT) {
         OP_CHECK_DTYPE_NOT_SUPPORT(scalar, FOREACH_SCALAR_FLOAT_SUPPORT_LIST, return false);
-    } else if (selfDtyte == DataType::DT_FLOAT16) {
+    } else if (selfDtyte_1 == DataType::DT_FLOAT16) {
         OP_CHECK_DTYPE_NOT_SUPPORT(scalar, FOREACH_SCALAR_FLOAT16_SUPPORT_LIST, return false);
     } else {
         OP_CHECK_DTYPE_NOT_SUPPORT(scalar, FOREACH_SCALAR_INT_SUPPORT_LIST, return false);
@@ -104,13 +104,13 @@ static inline bool CheckDtypeValid(const aclTensorList* self, const aclScalar* s
 
 static inline bool CheckShape(const aclTensorList* self, const aclTensorList* out) {
     // tensor 维度检查
-    for (uint64_t i = 0; i < self->Size(); i++) {
-        OP_CHECK_MAX_DIM((*self)[i], MAX_SUPPORT_DIMS_NUMS, return false);
+    for (uint64_t m = 0; m < self->Size(); m++) {
+        OP_CHECK_MAX_DIM((*self)[m], MAX_SUPPORT_DIMS_NUMS, return false);
     }
 
     // self和out的shape必须一致
-    for (uint64_t i = 0; i < self->Size(); i++) {
-        OP_CHECK_SHAPE_NOT_EQUAL((*self)[i], (*out)[i], return false);
+    for (uint64_t j = 0; j < self->Size(); j++) {
+        OP_CHECK_SHAPE_NOT_EQUAL((*self)[j], (*out)[j], return false);
     }
     return true;
 }
@@ -119,7 +119,7 @@ static inline aclnnStatus CheckParams(const aclTensorList* self, const aclScalar
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(self, scalar, out), ACLNN_ERR_PARAM_NULLPTR);
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
-    CHECK_RET(CheckDtypeValid(self, scalar, out), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckDtype(self, scalar, out), ACLNN_ERR_PARAM_INVALID);
     // 3. 检查shape是否满足约束
     CHECK_RET(CheckShape(self, out), ACLNN_ERR_PARAM_INVALID);
     // 4. 检查Format是否满足约束

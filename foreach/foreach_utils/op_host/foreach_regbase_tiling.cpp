@@ -22,11 +22,12 @@
 namespace optiling {
 static constexpr uint64_t WORK_SPACE_SIZE = 32;
 static constexpr uint64_t TPL_REGISTER_PRIORITY = 30000;
+static constexpr uint64_t SIZE_2 = 2;
 
 const char* ForeachRegbaseTiling::GetFirstTensorName() const
 {
     auto computeNodeInfo = context_->GetComputeNodeInfo();
-    if (computeNodeInfo != nullptr && computeNodeInfo->GetIrInputsNum() > 2) {
+    if (computeNodeInfo != nullptr && computeNodeInfo->GetIrInputsNum() > SIZE_2) {
         return "x1";
     }
     return "x";

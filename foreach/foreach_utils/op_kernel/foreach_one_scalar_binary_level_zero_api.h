@@ -192,27 +192,27 @@ private:
         uint32_t repeatBatchCnt = totalRepeatCnt / MAX_REPEATS;
         uint32_t repeatBatchCntRemainder = totalRepeatCnt % MAX_REPEATS;
 
-        uint32_t offset = 0;
+        uint32_t offset_1 = 0;
 
         for (uint32_t i = 0; i < repeatBatchCnt; i++) {
             PipeBarrier<PIPE_V>();
-            op(float32Tensor[offset], float32Tensor[offset], oneBlockData, elementsPerRepeat, MAX_REPEATS,
+            op(float32Tensor[offset_1], float32Tensor[offset_1], oneBlockData, elementsPerRepeat, MAX_REPEATS,
                {1, 1, 0, 8, 8, 0});
             PipeBarrier<PIPE_V>();
-            offset += MAX_REPEATS * elementsPerRepeat;
+            offset_1 += elementsPerRepeat * MAX_REPEATS;
         }
 
         if (repeatBatchCntRemainder > 0) {
             PipeBarrier<PIPE_V>();
-            op(float32Tensor[offset], float32Tensor[offset], oneBlockData, elementsPerRepeat, repeatBatchCntRemainder,
+            op(float32Tensor[offset_1], float32Tensor[offset_1], oneBlockData, elementsPerRepeat, repeatBatchCntRemainder,
                {1, 1, 0, 8, 8, 0});
             PipeBarrier<PIPE_V>();
-            offset += repeatBatchCntRemainder * elementsPerRepeat;
+            offset_1 += elementsPerRepeat * repeatBatchCntRemainder;
         }
 
         if (totalRepeatCntRemainder > 0) {
             PipeBarrier<PIPE_V>();
-            op(float32Tensor[offset], float32Tensor[offset], oneBlockData, totalRepeatCntRemainder, 1,
+            op(float32Tensor[offset_1], float32Tensor[offset_1], oneBlockData, totalRepeatCntRemainder, 1,
                {1, 1, 0, 8, 8, 0});
             PipeBarrier<PIPE_V>();
         }

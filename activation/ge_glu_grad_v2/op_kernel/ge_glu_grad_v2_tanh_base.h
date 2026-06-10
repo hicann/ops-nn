@@ -192,24 +192,24 @@ __aicore__ inline void GeGluGradV2TanhBase<T>::ProcessLessEqual(CLS_NAME* objPtr
     }
     int64_t idx = 0;
     for (; idx < loopNum; idx++) {
-        int64_t tempOffset = (needCoreNum * idx + blockIdx) * groupNum * valueM;
+        int64_t tempOffset = (idx * needCoreNum + blockIdx) * groupNum * valueM;
         int64_t realProcCount = CeilAlignA2B(valueM, perBlockCount) * groupNum;
         CopyInDyAndGelu(tempOffset, valueM, groupNum);
-        CopyInX(2 * tempOffset, valueM, groupNum);
+        CopyInX(tempOffset * 2, valueM, groupNum);
         (objPtr->*funComputeLeftHalf)(realProcCount);
-        CopyOutLeft(2 * tempOffset, valueM, groupNum);
+        CopyOutLeft(tempOffset * 2, valueM, groupNum);
         (objPtr->*funComputeRightHalf)(realProcCount);
-        CopyOutRight(2 * tempOffset, valueM, groupNum);
+        CopyOutRight(tempOffset * 2, valueM, groupNum);
     }
     if (blockIdx == tailCoreIndex && tailUbLoopNum > 0) {
         int64_t tempOffset = (needCoreNum * idx + blockIdx) * groupNum * valueM;
         int64_t realProcCount = CeilAlignA2B(valueM, perBlockCount) * tailUbLoopNum;
         CopyInDyAndGelu(tempOffset, valueM, tailUbLoopNum);
-        CopyInX(2 * tempOffset, valueM, tailUbLoopNum);
+        CopyInX(tempOffset * 2, valueM, tailUbLoopNum);
         (objPtr->*funComputeLeftHalf)(realProcCount);
         CopyOutLeft(2 * tempOffset, valueM, tailUbLoopNum);
         (objPtr->*funComputeRightHalf)(realProcCount);
-        CopyOutRight(2 * tempOffset, valueM, tailUbLoopNum);
+        CopyOutRight(tempOffset * 2, valueM, tailUbLoopNum);
     }
 }
 
@@ -226,24 +226,24 @@ __aicore__ inline void GeGluGradV2TanhBase<T>::ProcessGreater(CLS_NAME* objPtr)
     int64_t modCount = valueM % maxProcCount;
     modCount = modCount ? modCount : maxProcCount;
     for (int64_t idx = 0; idx < loopNum; idx++) {
-        int64_t mIndex = (needCoreNum * idx + blockIdx) / groupNum;
-        int64_t mIndexSub = (needCoreNum * idx + blockIdx) % groupNum;
+        int64_t mIndex = (idx * needCoreNum + blockIdx) / groupNum;
+        int64_t mIndexSub = (idx * needCoreNum + blockIdx) % groupNum;
         int64_t tempOffset = mIndex * valueM + mIndexSub * maxProcCount;
-        int64_t tempXOffset = 2 * mIndex * valueM + mIndexSub * maxProcCount;
+        int64_t tempXOffset_2 = 2 * mIndex * valueM + mIndexSub * maxProcCount;
         if (mIndexSub + 1 == groupNum) {
             CopyInDyAndGelu(tempOffset, modCount, 1);
-            CopyInX(tempXOffset, modCount, 1);
+            CopyInX(tempXOffset_2, modCount, 1);
             (objPtr->*funComputeLeftHalf)(CeilAlignA2B(modCount, perBlockCount));
-            CopyOutLeft(tempXOffset, modCount, 1);
+            CopyOutLeft(tempXOffset_2, modCount, 1);
             (objPtr->*funComputeRightHalf)(CeilAlignA2B(modCount, perBlockCount));
-            CopyOutRight(tempXOffset, modCount, 1);
+            CopyOutRight(tempXOffset_2, modCount, 1);
         } else {
             CopyInDyAndGelu(tempOffset, maxProcCount, 1);
-            CopyInX(tempXOffset, maxProcCount, 1);
+            CopyInX(tempXOffset_2, maxProcCount, 1);
             (objPtr->*funComputeLeftHalf)(maxProcCount);
-            CopyOutLeft(tempXOffset, maxProcCount, 1);
+            CopyOutLeft(tempXOffset_2, maxProcCount, 1);
             (objPtr->*funComputeRightHalf)(maxProcCount);
-            CopyOutRight(tempXOffset, maxProcCount, 1);
+            CopyOutRight(tempXOffset_2, maxProcCount, 1);
         }
     }
 }

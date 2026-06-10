@@ -178,6 +178,8 @@ static aclnnStatus ExecForeachAddcdivScalarV2GetWorkspaceSize(const aclTensorLis
 
     // self如果非连续，需要转连续
     std::vector<const aclTensor *> tensorsVec1;
+    std::vector<const aclTensor *> tensorsVec2;
+    std::vector<const aclTensor *> tensorsVec3;
     for (size_t i = 0; i < x1->Size(); ++i) {
         auto secondContiguous = l0op::Contiguous((*x1)[i], uniqueExecutor.get());
         CHECK_RET(secondContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -186,7 +188,6 @@ static aclnnStatus ExecForeachAddcdivScalarV2GetWorkspaceSize(const aclTensorLis
     auto contiguousTensorsX1 = uniqueExecutor.get()->AllocTensorList(tensorsVec1.data(), tensorsVec1.size());
     CHECK_RET(contiguousTensorsX1 != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    std::vector<const aclTensor *> tensorsVec2;
     for (size_t i = 0; i < x2->Size(); ++i) {
         auto secondContiguous = l0op::Contiguous((*x2)[i], uniqueExecutor.get());
         CHECK_RET(secondContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
@@ -195,7 +196,6 @@ static aclnnStatus ExecForeachAddcdivScalarV2GetWorkspaceSize(const aclTensorLis
     auto contiguousTensorsX2 = uniqueExecutor.get()->AllocTensorList(tensorsVec2.data(), tensorsVec2.size());
     CHECK_RET(contiguousTensorsX2 != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
-    std::vector<const aclTensor *> tensorsVec3;
     for (size_t i = 0; i < x3->Size(); ++i) {
         auto secondContiguous = l0op::Contiguous((*x3)[i], uniqueExecutor.get());
         CHECK_RET(secondContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);

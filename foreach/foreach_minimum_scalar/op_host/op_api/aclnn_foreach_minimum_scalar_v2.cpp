@@ -25,14 +25,14 @@ extern "C" {
 #endif
 
 namespace {
-const float FLOAT32_MAX_VALUE = 3.4028235e+38f;
 const float FLOAT32_MIN_VALUE = -3.4028235e+38f;
+const float FLOAT32_MAX_VALUE = 3.4028235e+38f;
 const float FLOAT16_MAX_VALUE = 65504.0f;
 const float FLOAT16_MIN_VALUE = -65504.0f;
 const float BFLOAT16_MAX_VALUE = 3.3895314e+38f;
 const float BFLOAT16_MIN_VALUE = -3.3895314e+38f;
-const int32_t INT32_MIN_VAL = -2147483648;
 const int32_t INT32_MAX_VAL = 2147483647;
+const int32_t INT32_MIN_VAL = -2147483648;
 } // namespace
 
 static const std::initializer_list<DataType> ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT,
@@ -40,10 +40,10 @@ static const std::initializer_list<DataType> ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPP
                                                                                     DataType::DT_BF16,
                                                                                     DataType::DT_INT32};
 
-static const std::initializer_list<DataType> FOREACH_SCALAR_FLOAT_SUPPORT_LIST = {DataType::DT_FLOAT,
+static const std::initializer_list<DataType> FOREACH_SCALAR_FLOAT16_SUPPORT_LIST = {DataType::DT_FLOAT16,
                                                                     DataType::DT_DOUBLE};
 
-static const std::initializer_list<DataType> FOREACH_SCALAR_FLOAT16_SUPPORT_LIST = {DataType::DT_FLOAT16,
+static const std::initializer_list<DataType> FOREACH_SCALAR_FLOAT_SUPPORT_LIST = {DataType::DT_FLOAT,
                                                                     DataType::DT_DOUBLE};
 
 static const std::initializer_list<DataType> FOREACH_SCALAR_INT_SUPPORT_LIST = {DataType::DT_INT32,
@@ -71,7 +71,7 @@ static inline bool CheckFormat(const aclTensorList* self, const aclTensorList* o
 
 static const std::initializer_list<DataType>& GetDtypeSupportList() {
   auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
-  if (curArch == NpuArch::DAV_2201 || Ops::NN::AclnnUtil::IsRegbase(curArch)) {
+  if (Ops::NN::AclnnUtil::IsRegbase(curArch) || curArch == NpuArch::DAV_2201) {
     return ASCEND910BC_TENSOR_DTYPE_DTYPE_SUPPORT_LIST;
   } else {
     OP_LOGE(ACLNN_ERR_RUNTIME_ERROR, "support for %s is not implemented",
@@ -87,12 +87,11 @@ static inline bool CheckDtypeValid(const aclTensorList* self, const aclScalar* s
             op::ToString(GetCurrentPlatformInfo().GetSocVersion()).GetString());
         return false;
     }
+    auto selfDtyte = (*self)[0]->GetDataType();
     if (self->Size() == 0) {
         return true;
     }
-
     // checkself input dtype, and check the releation of input and out
-    auto selfDtyte = (*self)[0]->GetDataType();
     OP_CHECK_DTYPE_NOT_SUPPORT((*self)[0], dtypeSupportList, return false);
     for (uint64_t i = 0; i < self->Size(); i++) {
         OP_CHECK_DTYPE_NOT_MATCH((*self)[i], selfDtyte, return false);
@@ -103,7 +102,7 @@ static inline bool CheckDtypeValid(const aclTensorList* self, const aclScalar* s
 	}
 
     // check the releation of self and scalar
-    if (selfDtyte == DataType::DT_BF16 || selfDtyte == DataType::DT_FLOAT) {
+    if (selfDtyte == DataType::DT_FLOAT || selfDtyte == DataType::DT_BF16) {
         OP_CHECK_DTYPE_NOT_SUPPORT(scalar, FOREACH_SCALAR_FLOAT_SUPPORT_LIST, return false);
     } else if (selfDtyte == DataType::DT_FLOAT16) {
         OP_CHECK_DTYPE_NOT_SUPPORT(scalar, FOREACH_SCALAR_FLOAT16_SUPPORT_LIST, return false);
@@ -148,7 +147,7 @@ static inline aclnnStatus CheckScalarValueValid(const aclScalar* scalar, const D
 
     switch (tensorDtype) {
         case DataType::DT_INT32:
-            if (val < static_cast<double>(INT32_MIN_VAL) || val > static_cast<double>(INT32_MAX_VAL)) {
+            if (val > static_cast<double>(INT32_MAX_VAL) || val < static_cast<double>(INT32_MIN_VAL)) {
                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Scalar value exceeds int32 range.");
                 return ACLNN_ERR_PARAM_INVALID;
             }
@@ -160,13 +159,13 @@ static inline aclnnStatus CheckScalarValueValid(const aclScalar* scalar, const D
             }
             return ACLNN_SUCCESS;
         case DataType::DT_FLOAT16:
-            if (val < static_cast<double>(FLOAT16_MIN_VALUE) || val > static_cast<double>(FLOAT16_MAX_VALUE)) {
+            if (val > static_cast<double>(FLOAT16_MAX_VALUE) || val < static_cast<double>(FLOAT16_MIN_VALUE)) {
                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Scalar value exceeds float16 range.");
                 return ACLNN_ERR_PARAM_INVALID;
             }
             return ACLNN_SUCCESS;
         case DataType::DT_BF16:
-            if (val < static_cast<double>(BFLOAT16_MIN_VALUE) || val > static_cast<double>(BFLOAT16_MAX_VALUE)) {
+            if (val > static_cast<double>(BFLOAT16_MAX_VALUE) || val < static_cast<double>(BFLOAT16_MIN_VALUE)) {
                 OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Scalar value exceeds bfloat16 range.");
                 return ACLNN_ERR_PARAM_INVALID;
             }

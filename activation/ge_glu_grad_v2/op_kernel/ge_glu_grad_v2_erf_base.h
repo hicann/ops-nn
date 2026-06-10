@@ -113,10 +113,10 @@ protected:
 
     __aicore__ inline void CopyInXPerf(const int64_t& gmOffset, const int64_t& dataCount);
     template <typename T2>
+    __aicore__ inline void TransposeX(LocalTensor<T2>& dst, LocalTensor<T2>& src, const int64_t& nBatch);
+    template <typename T2>
     __aicore__ inline void SplitXLeftAndRight(
         LocalTensor<T2> dst1, LocalTensor<T2> dst2, LocalTensor<T2> src, const int64_t& nBatch);
-    template <typename T2>
-    __aicore__ inline void TransposeX(LocalTensor<T2>& dst, LocalTensor<T2>& src, const int64_t& nBatch);
     template <typename T2>
     __aicore__ inline void CopySplitTensor(
         LocalTensor<T2>& dst1, LocalTensor<T2>& dst2, LocalTensor<T2>& src, const int64_t& nBatch);
@@ -125,8 +125,8 @@ protected:
         LocalTensor<T2>& dst1, LocalTensor<T2>& dst2, LocalTensor<T2>& src1, LocalTensor<T2>& src2,
         const int64_t& nBatch);
 
-    __aicore__ inline void CopyOutLeft(const int64_t& gmOffset, const int64_t& dataCount, const int64_t& blockCount);
     __aicore__ inline void CopyOutRight(const int64_t& gmOffset, const int64_t& dataCount, const int64_t& blockCount);
+    __aicore__ inline void CopyOutLeft(const int64_t& gmOffset, const int64_t& dataCount, const int64_t& blockCount);
 
     __aicore__ inline void CopyOutDXPerf(const int64_t& gmOffset, const int64_t& dataCount);
     template <typename T2>
@@ -140,10 +140,10 @@ protected:
     __aicore__ inline void CopyConcatTensor(
         LocalTensor<T2>& dst, LocalTensor<T2>& src1, LocalTensor<T2>& src2, const int64_t& nBatch);
     template <typename T2>
+    __aicore__ inline LocalTensor<T2> GetTempBuf(const int32_t index);
+    template <typename T2>
     __aicore__ inline void TransposeDXBack(LocalTensor<T2>& dst, LocalTensor<T2>& src, const int64_t& nBatch);
 
-    template <typename T2>
-    __aicore__ inline LocalTensor<T2> GetTempBuf(const int32_t index);
 
 private:
     __aicore__ inline void BaseInit();
@@ -154,8 +154,8 @@ protected:
 
     GlobalTensor<T> dyGm;
     GlobalTensor<T> xGm;
-    GlobalTensor<T> geluGm;
     GlobalTensor<T> dxGm;
+    GlobalTensor<T> geluGm;
 
     TQue<QuePosition::VECIN, NO_DB_BUFFER> inQueueX1;
 #if defined(ORIG_DTYPE_DY) && ORIG_DTYPE_DY != DT_FLOAT
@@ -171,8 +171,8 @@ protected:
     TBuf<QuePosition::VECCALC> resultTempBuf;
 
     int32_t perBlockCount = 0;
-    int32_t dtypeSize = 0;
     int32_t tpsWidth = 0;
+    int32_t dtypeSize = 0;
 
     // tilingParams
     int32_t approximate = 1;
@@ -180,9 +180,9 @@ protected:
     int64_t maxProcCount = 0;
     int64_t valueM = 0;
     int64_t needCoreNum = 0;
+    int64_t tailUbLoopNum = 0;
     int64_t loopNumPerCore = 0;
     int64_t tailCoreIndex = 0;
-    int64_t tailUbLoopNum = 0;
     int64_t groupNum = 0;
 };
 
@@ -206,7 +206,7 @@ __aicore__ inline void GeGluGradV2ErfBase<T>::ProcessLessEqual(CLS_NAME* objPtr)
     }
     int64_t idx = 0;
     for (; idx < loopNum; idx++) {
-        int64_t tempOffset = (needCoreNum * idx + blockIdx) * groupNum * valueM;
+        int64_t tempOffset = (needCoreNum * idx + blockIdx) * valueM * groupNum;
         int64_t realProcCount = CeilAlignA2B(valueM, perBlockCount) * groupNum;
         CopyInDyAndGelu(tempOffset, valueM, groupNum);
         CopyInX(2 * tempOffset, valueM, groupNum);
@@ -216,12 +216,12 @@ __aicore__ inline void GeGluGradV2ErfBase<T>::ProcessLessEqual(CLS_NAME* objPtr)
         CopyOutRight(2 * tempOffset, valueM, groupNum);
     }
     if (blockIdx == tailCoreIndex && tailUbLoopNum > 0) {
-        int64_t tempOffset = (needCoreNum * idx + blockIdx) * groupNum * valueM;
+        int64_t tempOffset = (needCoreNum * idx + blockIdx) * valueM * groupNum;
         int64_t realProcCount = CeilAlignA2B(valueM, perBlockCount) * tailUbLoopNum;
         CopyInDyAndGelu(tempOffset, valueM, tailUbLoopNum);
         CopyInX(2 * tempOffset, valueM, tailUbLoopNum);
         (objPtr->*funComputeLeftHalf)(realProcCount);
-        CopyOutLeft(2 * tempOffset, valueM, tailUbLoopNum);
+        CopyOutLeft(tempOffset * 2, valueM, tailUbLoopNum);
         (objPtr->*funComputeRightHalf)(realProcCount);
         CopyOutRight(2 * tempOffset, valueM, tailUbLoopNum);
     }
@@ -242,22 +242,22 @@ __aicore__ inline void GeGluGradV2ErfBase<T>::ProcessGreater(CLS_NAME* objPtr)
     for (int64_t idx = 0; idx < loopNum; idx++) {
         int64_t mIndex = (needCoreNum * idx + blockIdx) / groupNum;
         int64_t mIndexSub = (needCoreNum * idx + blockIdx) % groupNum;
-        int64_t tempOffset = mIndex * valueM + mIndexSub * maxProcCount;
-        int64_t tempXOffset = 2 * mIndex * valueM + mIndexSub * maxProcCount;
+        int64_t tempOffset = valueM * mIndex + mIndexSub * maxProcCount;
+        int64_t tempXOffset_1 = 2 * mIndex * valueM + maxProcCount * mIndexSub;
         if (mIndexSub + 1 == groupNum) {
             CopyInDyAndGelu(tempOffset, modCount, 1);
-            CopyInX(tempXOffset, modCount, 1);
+            CopyInX(tempXOffset_1, modCount, 1);
             (objPtr->*funComputeLeftHalf)(CeilAlignA2B(modCount, perBlockCount));
-            CopyOutLeft(tempXOffset, modCount, 1);
+            CopyOutLeft(tempXOffset_1, modCount, 1);
             (objPtr->*funComputeRightHalf)(CeilAlignA2B(modCount, perBlockCount));
-            CopyOutRight(tempXOffset, modCount, 1);
+            CopyOutRight(tempXOffset_1, modCount, 1);
         } else {
             CopyInDyAndGelu(tempOffset, maxProcCount, 1);
-            CopyInX(tempXOffset, maxProcCount, 1);
+            CopyInX(tempXOffset_1, maxProcCount, 1);
             (objPtr->*funComputeLeftHalf)(maxProcCount);
-            CopyOutLeft(tempXOffset, maxProcCount, 1);
+            CopyOutLeft(tempXOffset_1, maxProcCount, 1);
             (objPtr->*funComputeRightHalf)(maxProcCount);
-            CopyOutRight(tempXOffset, maxProcCount, 1);
+            CopyOutRight(tempXOffset_1, maxProcCount, 1);
         }
     }
 }
@@ -422,9 +422,9 @@ __aicore__ inline void GeGluGradV2ErfBase<T>::CopyInXPerf(const int64_t& gmOffse
     LocalTensor<T> t0 = GetTempBuf<T>(0);
     int32_t nBatch = CeilDiv(dataCount / (2 * valueM), TPS_REPEAT_SIZE / dtypeSize);
     struct DataCopyParams copyInParams(1, 0, 0, 0);
-    event_t eventID1 = static_cast<event_t>(pipe.FetchEventID(HardEvent::MTE3_MTE2));
-    SetFlag<HardEvent::MTE3_MTE2>(eventID1);
-    WaitFlag<HardEvent::MTE3_MTE2>(eventID1);
+    event_t eventID0 = static_cast<event_t>(pipe.FetchEventID(HardEvent::MTE3_MTE2));
+    SetFlag<HardEvent::MTE3_MTE2>(eventID0);
+    WaitFlag<HardEvent::MTE3_MTE2>(eventID0);
     if (dataCount % perBlockCount == 0) {
         copyInParams.blockLen = dataCount / perBlockCount;
         DataCopy(t0, xGm[gmOffset], copyInParams);
@@ -434,9 +434,9 @@ __aicore__ inline void GeGluGradV2ErfBase<T>::CopyInXPerf(const int64_t& gmOffse
         padParams.rightPadding = CeilAlignA2B(dataCount, perBlockCount) - dataCount;
         DataCopyPad(t0, xGm[gmOffset], copyInParams, padParams);
     }
-    event_t eventID2 = static_cast<event_t>(pipe.FetchEventID(HardEvent::MTE2_V));
-    SetFlag<HardEvent::MTE2_V>(eventID2);
-    WaitFlag<HardEvent::MTE2_V>(eventID2);
+    event_t eventID1 = static_cast<event_t>(pipe.FetchEventID(HardEvent::MTE2_V));
+    SetFlag<HardEvent::MTE2_V>(eventID1);
+    WaitFlag<HardEvent::MTE2_V>(eventID1);
 
 #if defined(ORIG_DTYPE_DY) && ORIG_DTYPE_DY != DT_FLOAT
     SplitXLeftAndRight(
@@ -480,8 +480,8 @@ __aicore__ inline void GeGluGradV2ErfBase<T>::TransposeX(
         srcLocalList[i] = srcAddr + coefficient * i;
     }
     __ubuf__ T2* dstLocalList[16];
-    for (int32_t i = 0; i < 16; i++) {
-        dstLocalList[i] = dstAddr + tpsWidth * i;
+    for (int32_t j = 0; j < 16; j++) {
+        dstLocalList[j] = dstAddr + tpsWidth * j;
     }
 
     struct TransDataTo5HDParams transDataParams;
@@ -498,7 +498,7 @@ __aicore__ inline void GeGluGradV2ErfBase<T>::CopySplitTensor(
     LocalTensor<T2>& dst1, LocalTensor<T2>& dst2, LocalTensor<T2>& src, const int64_t& nBatch)
 {
     struct DataCopyParams copyParams(tpsWidth * nBatch, 0, 0, 0);
-    copyParams.blockLen = 16 * valueM / tpsWidth;
+    copyParams.blockLen = valueM * 16 / tpsWidth;
     copyParams.srcStride = copyParams.blockLen;
     int64_t x1SrcOffset = activateLeft ? 16 * valueM : 0;
     int64_t x2SrcOffset = activateLeft ? 0 : 16 * valueM;
@@ -598,7 +598,7 @@ __aicore__ inline void GeGluGradV2ErfBase<T>::CopyOutDXPerf(const int64_t& gmOff
     LocalTensor<T> ubDX1 = outQueueDX1.DeQue<T>();
     LocalTensor<T> ubDX2 = outQueueDX2.DeQue<T>();
     LocalTensor<T> t0 = GetTempBuf<T>(0);
-    int32_t nBatch = CeilDiv(dataCount / (2 * valueM), TPS_REPEAT_SIZE / dtypeSize);
+    int32_t nBatch = CeilDiv(dataCount / (valueM * 2), TPS_REPEAT_SIZE / dtypeSize);
 
 #if defined(ORIG_DTYPE_DY) && ORIG_DTYPE_DY != DT_FLOAT
     ConcatDXLeftAndRight(
@@ -610,15 +610,15 @@ __aicore__ inline void GeGluGradV2ErfBase<T>::CopyOutDXPerf(const int64_t& gmOff
         ubDX2.template ReinterpretCast<float>(), nBatch);
 #endif
 
-    event_t eventID1 = static_cast<event_t>(pipe.FetchEventID(HardEvent::V_MTE3));
-    SetFlag<HardEvent::V_MTE3>(eventID1);
-    WaitFlag<HardEvent::V_MTE3>(eventID1);
+    event_t eventID2 = static_cast<event_t>(pipe.FetchEventID(HardEvent::V_MTE3));
+    SetFlag<HardEvent::V_MTE3>(eventID2);
+    WaitFlag<HardEvent::V_MTE3>(eventID2);
     struct DataCopyParams copyOutParams(1, 0, 0, 0);
     if (dataCount % perBlockCount == 0) {
         copyOutParams.blockLen = dataCount / perBlockCount;
         DataCopy(dxGm[gmOffset], t0, copyOutParams);
     } else {
-        copyOutParams.blockLen = dataCount * dtypeSize;
+        copyOutParams.blockLen = dtypeSize * dataCount;
         DataCopyPad(dxGm[gmOffset], t0, copyOutParams);
     }
 
@@ -702,16 +702,16 @@ __aicore__ inline void GeGluGradV2ErfBase<T>::TransposeDXBack(
             srcList[i + 8] = srcAddr + 16 * i + 8;
         }
         int64_t coefficient2 = 64 * nBatch * 2 * valueM;
-        for (int32_t i = 0; i < 8; i++) {
-            dstList[2 * i] = dstAddr + coefficient1 * i;
-            dstList[2 * i + 1] = dstAddr + coefficient1 * i + coefficient2;
+        for (int32_t j = 0; j < 8; j++) {
+            dstList[2 * j] = dstAddr + coefficient1 * j;
+            dstList[2 * j + 1] = dstAddr + coefficient1 * j + coefficient2;
         }
     } else {
         for (int32_t i = 0; i < 16; i++) {
             srcList[i] = srcAddr + 16 * i;
         }
         for (int32_t i = 0; i < 16; i++) {
-            dstList[i] = dstAddr + coefficient1 * i;
+            dstList[i] = dstAddr + i * coefficient1;
         }
     }
 
