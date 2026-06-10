@@ -1353,9 +1353,7 @@ aclnnStatus aclnnIndexPutImplGetWorkspaceSize(aclTensor *selfRef,
       const bool disDeterministicHighPrecision = accumulate && deterministicValue == 0 && !useSortedV2Opt &&
           (selfRef->GetDataType() == op::DataType::DT_FLOAT16 || selfRef->GetDataType() == op::DataType::DT_BF16 ||
            selfRef->GetDataType() == op::DataType::DT_INT8 || selfRef->GetDataType() == op::DataType::DT_UINT8);
-      const bool DeterministicHighPrecision = accumulate && deterministicValue == 1 && !useSortedV2Opt &&
-          (selfRef->GetDataType() == op::DataType::DT_FLOAT16 || selfRef->GetDataType() == op::DataType::DT_BF16);
-      if (disDeterministicHighPrecision || DeterministicHighPrecision) {
+      if (disDeterministicHighPrecision) {
           OP_LOGD("Begin cast fp16, bf16 to fp32");
           if (selfRef->GetDataType() == op::DataType::DT_FLOAT16 || selfRef->GetDataType() == op::DataType::DT_BF16) {
               selfCast = l0op::Cast(selfRefContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
@@ -1373,7 +1371,7 @@ aclnnStatus aclnnIndexPutImplGetWorkspaceSize(aclTensor *selfRef,
                                           masksNum, isAiCpu, isNonContiguous, useSortedV2Opt, uniqueExecutor.get());
     CHECK_RET(indexPutOpOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
     const aclTensor* arch3510Result = indexPutOpOut;
-    if (!useSortedV2Opt && (!usePutV2SpeOpt || (usePutV2SpeOpt && selfRef->GetDataType() != op::DataType::DT_INT8))) {
+    if (!useSortedV2Opt && deterministicValue != 1 && (!usePutV2SpeOpt || (usePutV2SpeOpt && selfRef->GetDataType() != op::DataType::DT_INT8))) {
         arch3510Result = l0op::Cast(indexPutOpOut, selfRef->GetDataType(), uniqueExecutor.get());
         CHECK_RET(arch3510Result != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
