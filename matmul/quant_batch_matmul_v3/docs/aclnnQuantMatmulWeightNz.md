@@ -537,6 +537,7 @@ aclnnStatus aclnnQuantMatmulWeightNz(
       | INT8            | INT8        | null        | FLOAT32/BFLOAT16  | null         | null   | null/INT32/FLOAT32/BFLOAT16|   BFLOAT16              |
       | INT8            | INT8        | null        | FLOAT32/BFLOAT16  | null         | null   | null/INT32                 |   INT32                 |
       | HIFLOAT8        | HIFLOAT8    | null        | UINT64/INT64      | null         | null   | null/FLOAT32               |   FLOAT16/BFLOAT16/FLOAT32 |
+      | FLOAT8_E4M3FN   | FLOAT8_E4M3FN | null        | UINT64/INT64      | null         | null   | null/FLOAT32               |   FLOAT16/BFLOAT16/FLOAT32 |
 
     - T-T量化场景下，x1Scale传入nullptr，x2Scale的shape为(1,)。
     - T-C量化场景下，x1Scale传入nullptr，x2Scale的shape为(n,)，其中n与x2的n一致。
