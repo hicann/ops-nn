@@ -176,4 +176,74 @@ TEST_F(MaxPoolGradWithArgmaxV3Infer, max_pool_grad_with_argmax_v3_infershape_tes
     ASSERT_EQ(Shape2String(*output), "[-1, -1, -1, -1]");
 }
 
+// ==================== OP_LOGE_FOR Error Branch UT Cases ====================
+
+static void ExecuteInferShapeErrorTestCase(
+    ge::Format xFormat, std::vector<int64_t> ksize, std::vector<int64_t> strides,
+    std::vector<int64_t> pads, std::vector<int64_t> dilation, bool ceil_mode, std::string data_format)
+{
+    auto inferShapeFunc = gert::OpImplRegistry::GetInstance().GetOpImpl("MaxPoolGradWithArgmaxV3")->infer_shape;
+
+    gert::StorageShape xShape = {{4, 512, 16, 16}, {}};
+    gert::StorageShape gradShape = {{4, 512, 16, 16}, {}};
+    gert::StorageShape yShape = {{}, {}};
+    gert::StorageShape indicesShape = {{4, 512, 16, 16}, {}};
+
+    auto holder = gert::InferShapeContextFaker()
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .NodeInputTd(0, ge::DT_FLOAT, xFormat, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, ge::DT_FLOAT, xFormat, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(2, ge::DT_INT32, xFormat, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, ge::DT_FLOAT, xFormat, ge::Format::FORMAT_RESERVED)
+                      .NodeAttrs(
+                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(ksize)},
+                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
+                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
+                           {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(3)},
+                           {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(dilation)},
+                           {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(ceil_mode)},
+                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(data_format)}})
+                      .InputShapes({&xShape, &gradShape, &indicesShape})
+                      .OutputShapes({&yShape})
+                      .Build();
+
+    EXPECT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
+}
+
+// OP_LOGE_FOR_INVALID_FORMAT: x format not ND/NCHW/NHWC (line 59)
+TEST_F(MaxPoolGradWithArgmaxV3Infer, infershape_invalid_format)
+{
+    ExecuteInferShapeErrorTestCase(
+        ge::Format::FORMAT_FRACTAL_NZ, {1, 1}, {2, 2}, {0, 0}, {1, 1}, true, "NCHW");
+}
+
+// OP_LOGE_FOR_INVALID_LISTSIZE: ksize list size != 2 (line 70)
+TEST_F(MaxPoolGradWithArgmaxV3Infer, infershape_invalid_ksize_listsize)
+{
+    ExecuteInferShapeErrorTestCase(
+        ge::Format::FORMAT_NCHW, {1, 1, 1}, {2, 2}, {0, 0}, {1, 1}, true, "NCHW");
+}
+
+// OP_LOGE_FOR_INVALID_LISTSIZE: strides list size != 2 (line 78)
+TEST_F(MaxPoolGradWithArgmaxV3Infer, infershape_invalid_strides_listsize)
+{
+    ExecuteInferShapeErrorTestCase(
+        ge::Format::FORMAT_NCHW, {1, 1}, {2, 2, 2}, {0, 0}, {1, 1}, true, "NCHW");
+}
+
+// OP_LOGE_FOR_INVALID_LISTSIZE: pads list size != 2 (line 86)
+TEST_F(MaxPoolGradWithArgmaxV3Infer, infershape_invalid_pads_listsize)
+{
+    ExecuteInferShapeErrorTestCase(
+        ge::Format::FORMAT_NCHW, {1, 1}, {2, 2}, {0, 0, 0}, {1, 1}, true, "NCHW");
+}
+
+// OP_LOGE_FOR_INVALID_LISTSIZE: dilation list size != 2 (line 94)
+TEST_F(MaxPoolGradWithArgmaxV3Infer, infershape_invalid_dilation_listsize)
+{
+    ExecuteInferShapeErrorTestCase(
+        ge::Format::FORMAT_NCHW, {1, 1}, {2, 2}, {0, 0}, {1, 1, 1}, true, "NCHW");
+}
+
 } // namespace

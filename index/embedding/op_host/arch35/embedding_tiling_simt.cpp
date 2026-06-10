@@ -128,14 +128,12 @@ inline ge::graphStatus EmbeddingTilingBase::GetXInfoAndCheck()
 {
     // x
     xDtype_ = context_->GetInputDesc(INPUT_X_INDEX)->GetDataType();
-    OP_CHECK_IF(
-        !IsSupportDtype(X_SUPPORT_DTYPE, xDtype_),
-        OP_LOGE(
-            context_->GetNodeName(),
-            "The dtype only support float32, float16, bfloat16, int64, uint64, int32, uint32, int16, uint16, int8, uint8, \
-bool currently, please check."),
-        return ge::GRAPH_FAILED);
-
+    if (!IsSupportDtype(X_SUPPORT_DTYPE, xDtype_)) {
+        OP_LOGE_FOR_INVALID_DTYPE(
+            context_->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(xDtype_).c_str(),
+            "float32, float16, bfloat16, int64, uint64, int32, uint32, int16, uint16, int8, uint8 and bool");
+        return ge::GRAPH_FAILED;
+    }
     xShape_ = context_->GetInputShape(INPUT_X_INDEX)->GetStorageShape();
     return ge::GRAPH_SUCCESS;
 }
@@ -145,11 +143,12 @@ inline ge::graphStatus EmbeddingTilingBase::GetIndicesInfoAndCheck()
     // check dtype
     indicesDtype_ = context_->GetInputDesc(INPUT_INDICES_INDEX)->GetDataType();
     indicesDtypeSize_ = ge::GetSizeByDataType(indicesDtype_);
-    OP_CHECK_IF(
-        !IsSupportDtype(INDICES_SUPPORT_DTYPE, indicesDtype_),
-        OP_LOGE(
-            context_->GetNodeName(), "The dtype only support int32, int64 currently, please check."),
-        return ge::GRAPH_FAILED);
+    if (!IsSupportDtype(INDICES_SUPPORT_DTYPE, indicesDtype_)) {
+        OP_LOGE_FOR_INVALID_DTYPE(
+            context_->GetNodeName(), "indices", ge::TypeUtils::DataTypeToSerialString(xDtype_).c_str(),
+            "int32 and int64");
+        return ge::GRAPH_FAILED;
+    }
 
     indicesShape_ = context_->GetInputShape(INPUT_INDICES_INDEX)->GetStorageShape();
     return ge::GRAPH_SUCCESS;
@@ -277,7 +276,7 @@ ge::graphStatus EmbeddingTilingBase::DoOpTiling()
         tilingMode_ = TILING_SIMT_TWO_DIM;
         return SimtTwoDimTiling();
     } else {
-        OP_LOGE(opName_, "Embedding only support 2D and SIMT scenario.");
+        OP_LOGE_FOR_INVALID_SHAPEDIM(opName_, "x", xShape_.GetDimNum() + "D", "2D");
         return ge::GRAPH_FAILED;
     }
 }

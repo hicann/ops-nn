@@ -39,40 +39,53 @@ bool AdaptiveAvgPool2dGradTilingBase::CheckInputShape()
     auto originInputShapePtr = attrs->GetAttrPointer<gert::ContinuousVector>(ORIGIN_INPUT_SHAPE);
     OP_CHECK_NULL_WITH_CONTEXT(context_, originInputShapePtr);
     auto originDim = originInputShapePtr->GetSize();
-    OP_CHECK_IF(
-        originDim != INPUT_DIM_4D && originDim != INPUT_DIM_3D,
-        OP_LOGE(
-            context_->GetNodeName(),
-            "Check origin input shape failed, the size of origin input shape should be 4 or 3."),
-        return ge::GRAPH_FAILED);
+    if (originDim != INPUT_DIM_4D && originDim != INPUT_DIM_3D) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM(
+            context_->GetNodeName(), "input dim", std::to_string(originDim),
+            std::to_string(INPUT_DIM_4D) + " or " + std::to_string(INPUT_DIM_3D));
+        return false;
+    }
     auto originInputShapeSize = static_cast<const int64_t*>(originInputShapePtr->GetData());
     for (uint32_t i = 0; i < originDim; i++) {
-        OP_CHECK_IF(
-            originInputShapeSize[i] == 0, OP_LOGE(context_->GetNodeName(), "Input x shape can not be 0."),
-            return false);
+        if (originInputShapeSize[i] == 0) {
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                context_->GetNodeName(), "orig_input_shape", std::to_string(originInputShapeSize[i]),
+                "The value is invalid for orig_input_shape");
+            return false;
+        }
     }
     const gert::StorageShape* outGradShape = context_->GetOutputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, outGradShape);
     const gert::Shape& outputShape = Ops::NN::OpTiling::EnsureNotScalar(outGradShape->GetStorageShape());
     size_t outDimNum = outputShape.GetDimNum();
 
-    OP_CHECK_IF(
-        (originDim != gradDimNum) || (originDim != outDimNum),
-        OP_LOGE(
-            context_->GetNodeName(), "Check dim number invalid, origin input dim(%u), input grad(%u), output(%u).",
-            originDim, gradDimNum, outDimNum),
-        return false);
+    if (originDim != gradDimNum) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM(
+            context_->GetNodeName(), "origin input dim", std::to_string(originDim), std::to_string(gradDimNum));
+        return false;
+    }
+    if (originDim != outDimNum) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM(
+            context_->GetNodeName(), "origin input dim", std::to_string(originDim), std::to_string(outDimNum));
+        return false;
+    }
     for (uint32_t i = 0; i < originDim; i++) {
-        OP_CHECK_IF(
-            originInputShapeSize[i] != outputShape.GetDim(i),
-            OP_LOGE(context_->GetNodeName(), "origin input shape should be same with output shape."), return false);
+        if (originInputShapeSize[i] != outputShape.GetDim(i)) {
+            OP_LOGE_FOR_INVALID_SHAPESIZE(
+                context_->GetNodeName(), "origin input shape", std::to_string(originInputShapeSize[i]),
+                std::to_string(outputShape.GetDim(i)));
+            return false;
+        }
     }
     uint32_t loopSize = originDim == INPUT_DIM_4D ? NC_DIM_NUM : (NC_DIM_NUM - 1);
 
     for (uint32_t i = 0; i < loopSize; i++) {
-        OP_CHECK_IF(
-            originInputShapeSize[i] != inputShape.GetDim(i),
-            OP_LOGE(context_->GetNodeName(), "origin input shape and output NC should be same."), return false);
+        if (originInputShapeSize[i] != inputShape.GetDim(i)) {
+            OP_LOGE_FOR_INVALID_SHAPESIZE(
+                context_->GetNodeName(), "origin input shape nc size", std::to_string(originInputShapeSize[i]),
+                std::to_string(inputShape.GetDim(i)));
+            return false;
+        }
     }
     return true;
 }
@@ -82,10 +95,12 @@ ge::graphStatus AdaptiveAvgPool2dGradTilingBase::CheckInputDtype()
     OP_CHECK_NULL_WITH_CONTEXT(context_, context_->GetInputDesc(INPUT_GRAD_INDEX));
     auto gradDataType = context_->GetInputDesc(INPUT_GRAD_INDEX)->GetDataType();
 
-    OP_CHECK_IF(
-        (gradDataType != ge::DT_FLOAT) && (gradDataType != ge::DT_FLOAT16) && (gradDataType != ge::DT_BF16),
-        OP_LOGE(context_->GetNodeName(), "Data type invalid, input data type should be fp32/fp16/bf16."),
-        return ge::GRAPH_FAILED);
+    if ((gradDataType != ge::DT_FLOAT) && (gradDataType != ge::DT_FLOAT16) && (gradDataType != ge::DT_BF16)) {
+        OP_LOGE_FOR_INVALID_DTYPE(
+            context_->GetNodeName(), "input data type", ge::TypeUtils::DataTypeToSerialString(gradDataType).c_str(),
+            "float, float16, bfloat16");
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 

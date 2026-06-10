@@ -499,3 +499,742 @@ TEST_F(EmbeddingTiling, embedding_simt_tiling_5)
     auto tiling_data_result = TilingData2Str(tiling_context->GetRawTilingData());
     std::cout << tiling_data_result << std::endl;
 }
+
+// ==================== embedding_tiling_simt.cpp OP_LOGE_FOR Error Branches ====================
+// 以下用例使用 InputShapes（连续tensor），触发 EmbeddingTilingBase（priority=1）的 OP_LOGE_FOR 分支
+
+// EmbeddingTilingBase::GetXInfoAndCheck - OP_LOGE_FOR_INVALID_DTYPE for x (line 132)
+TEST_F(EmbeddingTiling, simt_invalid_x_dtype)
+{
+    gert::StorageShape params_shape = {{7, 8}, {7, 8}};
+    gert::StorageShape indices_shape = {{450}, {450}};
+    gert::StorageShape y_shape = {{450, 8}, {450, 8}};
+    ge::DataType params_dtype = ge::DT_STRING;
+    ge::DataType indices_dtype = ge::DT_INT32;
+
+    string compile_info_string = R"({
+        "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
+                          "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
+                          "UB_SIZE": 196608, "L2_SIZE": 33554432, "L1_SIZE": 524288,
+                          "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
+                          "CORE_NUM": 64}
+                          })";
+    map<string, string> soc_infos;
+    map<string, string> aicore_spec;
+    map<string, string> intrinsics;
+    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
+
+    fe::PlatFormInfos platform_info;
+    platform_info.Init();
+    optiling::EmbeddingCompileInfo compile_info;
+    std::string op_type("Embedding");
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
+    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
+    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
+
+    auto kernel_holder =
+        gert::KernelRunContextFaker()
+            .KernelIONum(2, 1)
+            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
+            .Outputs({&compile_info})
+            .Build();
+
+    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+
+    auto param = gert::TilingData::CreateCap(4096);
+    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    ASSERT_NE(param, nullptr);
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType(op_type)
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&params_shape, &indices_shape})
+                      .OutputShapes({&y_shape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, params_dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, indices_dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, params_dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
+
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
+}
+
+// EmbeddingTilingBase::GetIndicesInfoAndCheck - OP_LOGE_FOR_INVALID_DTYPE for indices (line 148)
+TEST_F(EmbeddingTiling, simt_invalid_indices_dtype)
+{
+    gert::StorageShape params_shape = {{7, 8}, {7, 8}};
+    gert::StorageShape indices_shape = {{450}, {450}};
+    gert::StorageShape y_shape = {{450, 8}, {450, 8}};
+    ge::DataType params_dtype = ge::DT_FLOAT;
+    ge::DataType indices_dtype = ge::DT_FLOAT;
+
+    string compile_info_string = R"({
+        "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
+                          "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
+                          "UB_SIZE": 196608, "L2_SIZE": 33554432, "L1_SIZE": 524288,
+                          "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
+                          "CORE_NUM": 64}
+                          })";
+    map<string, string> soc_infos;
+    map<string, string> aicore_spec;
+    map<string, string> intrinsics;
+    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
+
+    fe::PlatFormInfos platform_info;
+    platform_info.Init();
+    optiling::EmbeddingCompileInfo compile_info;
+    std::string op_type("Embedding");
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
+    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
+    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
+
+    auto kernel_holder =
+        gert::KernelRunContextFaker()
+            .KernelIONum(2, 1)
+            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
+            .Outputs({&compile_info})
+            .Build();
+
+    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+
+    auto param = gert::TilingData::CreateCap(4096);
+    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    ASSERT_NE(param, nullptr);
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType(op_type)
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .InputShapes({&params_shape, &indices_shape})
+                      .OutputShapes({&y_shape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, params_dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, indices_dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, params_dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
+
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
+}
+// ==================== embedding_no_contiguous_tiling.cpp OP_LOGE_FOR Error Branches ====================
+// 以下用例使用 InputTensors（非连续stride），触发 EmbeddingNoContiguousTiling（priority=0）的 OP_LOGE_FOR 分支
+
+// EmbeddingNoContiguousTiling::CheckInAndOutDtype - OP_LOGE_FOR_INVALID_DTYPE for x (line 144)
+TEST_F(EmbeddingTiling, no_contiguous_invalid_x_dtype)
+{
+    gert::StorageShape params_shape = {{100, 2048}, {204800,}};
+    gert::StorageShape indices_shape = {{10, 50}, {500,}};
+    gert::Stride xStride_({4096, 1});
+    gert::Stride indicesStride_({100, 1});
+
+    gert::TensorV2 params_tensor(
+        params_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()}, gert::TensorPlacement::kOnHost,
+        ge::DT_STRING, nullptr, nullptr, xStride_, 0);
+    gert::TensorV2 indices_tensor(
+        indices_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()}, gert::TensorPlacement::kOnHost,
+        ge::DT_INT32, nullptr, nullptr, indicesStride_, 0);
+
+    std::vector<gert::StorageShape> output_shapes(1, {{10, 50, 2048}, {10, 50, 2048}});
+    std::vector<void*> output_shapes_ref(1);
+    for (size_t i = 0; i < output_shapes.size(); ++i) {
+        output_shapes_ref[i] = &output_shapes[i];
+    }
+
+    fe::PlatFormInfos platform_info;
+    platform_info.Init();
+    string compile_info_string = R"({
+        "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
+                          "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
+                          "UB_SIZE": 196608, "L2_SIZE": 33554432, "L1_SIZE": 524288,
+                          "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
+                          "CORE_NUM": 64}
+                          })";
+    optiling::EmbeddingCompileInfo compile_info;
+    auto kernel_holder =
+        gert::KernelRunContextFaker()
+            .KernelIONum(2, 1)
+            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
+            .Outputs({&compile_info})
+            .Build();
+
+    map<string, string> soc_infos;
+    map<string, string> aicore_spec;
+    map<string, string> intrinsics;
+    map<string, string> soc_version;
+    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
+
+    std::string op_type("Embedding");
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
+    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
+    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
+    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+
+    auto param = gert::TilingData::CreateCap(4096);
+    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    ASSERT_NE(param, nullptr);
+    std::vector<gert::TensorV2*> inputTensors = {&params_tensor, &indices_tensor};
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType(op_type)
+                      .IrInstanceNum({1, 1}, {1})
+                      .OutputShapes(output_shapes_ref)
+                      .InputTensors(inputTensors)
+                      .NodeOutputTd(0, ge::DT_STRING, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
+
+    auto tiling_context = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
+}
+
+// EmbeddingNoContiguousTiling::CheckInAndOutDtype - OP_LOGE_FOR_INVALID_DTYPE for indices (line 154)
+TEST_F(EmbeddingTiling, no_contiguous_invalid_indices_dtype)
+{
+    gert::StorageShape params_shape = {{100, 2048}, {204800,}};
+    gert::StorageShape indices_shape = {{10, 50}, {500,}};
+    gert::Stride xStride_({4096, 1});
+    gert::Stride indicesStride_({100, 1});
+
+    gert::TensorV2 params_tensor(
+        params_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()}, gert::TensorPlacement::kOnHost,
+        ge::DT_FLOAT, nullptr, nullptr, xStride_, 0);
+    gert::TensorV2 indices_tensor(
+        indices_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()}, gert::TensorPlacement::kOnHost,
+        ge::DT_FLOAT, nullptr, nullptr, indicesStride_, 0);
+
+    std::vector<gert::StorageShape> output_shapes(1, {{10, 50, 2048}, {10, 50, 2048}});
+    std::vector<void*> output_shapes_ref(1);
+    for (size_t i = 0; i < output_shapes.size(); ++i) {
+        output_shapes_ref[i] = &output_shapes[i];
+    }
+
+    fe::PlatFormInfos platform_info;
+    platform_info.Init();
+    string compile_info_string = R"({
+        "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
+                          "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
+                          "UB_SIZE": 196608, "L2_SIZE": 33554432, "L1_SIZE": 524288,
+                          "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
+                          "CORE_NUM": 64}
+                          })";
+    optiling::EmbeddingCompileInfo compile_info;
+    auto kernel_holder =
+        gert::KernelRunContextFaker()
+            .KernelIONum(2, 1)
+            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
+            .Outputs({&compile_info})
+            .Build();
+
+    map<string, string> soc_infos;
+    map<string, string> aicore_spec;
+    map<string, string> intrinsics;
+    map<string, string> soc_version;
+    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
+
+    std::string op_type("Embedding");
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
+    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
+    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
+    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+
+    auto param = gert::TilingData::CreateCap(4096);
+    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    ASSERT_NE(param, nullptr);
+    std::vector<gert::TensorV2*> inputTensors = {&params_tensor, &indices_tensor};
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType(op_type)
+                      .IrInstanceNum({1, 1}, {1})
+                      .OutputShapes(output_shapes_ref)
+                      .InputTensors(inputTensors)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
+
+    auto tiling_context = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
+}
+
+// EmbeddingNoContiguousTiling::CheckInAndOutDtype - OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON for x/y (line 165)
+TEST_F(EmbeddingTiling, no_contiguous_y_dtype_mismatch)
+{
+    gert::StorageShape params_shape = {{100, 2048}, {204800,}};
+    gert::StorageShape indices_shape = {{10, 50}, {500,}};
+    gert::Stride xStride_({4096, 1});
+    gert::Stride indicesStride_({100, 1});
+
+    gert::TensorV2 params_tensor(
+        params_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()}, gert::TensorPlacement::kOnHost,
+        ge::DT_FLOAT, nullptr, nullptr, xStride_, 0);
+    gert::TensorV2 indices_tensor(
+        indices_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()}, gert::TensorPlacement::kOnHost,
+        ge::DT_INT32, nullptr, nullptr, indicesStride_, 0);
+
+    std::vector<gert::StorageShape> output_shapes(1, {{10, 50, 2048}, {10, 50, 2048}});
+    std::vector<void*> output_shapes_ref(1);
+    for (size_t i = 0; i < output_shapes.size(); ++i) {
+        output_shapes_ref[i] = &output_shapes[i];
+    }
+
+    fe::PlatFormInfos platform_info;
+    platform_info.Init();
+    string compile_info_string = R"({
+        "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
+                          "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
+                          "UB_SIZE": 196608, "L2_SIZE": 33554432, "L1_SIZE": 524288,
+                          "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
+                          "CORE_NUM": 64}
+                          })";
+    optiling::EmbeddingCompileInfo compile_info;
+    auto kernel_holder =
+        gert::KernelRunContextFaker()
+            .KernelIONum(2, 1)
+            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
+            .Outputs({&compile_info})
+            .Build();
+
+    map<string, string> soc_infos;
+    map<string, string> aicore_spec;
+    map<string, string> intrinsics;
+    map<string, string> soc_version;
+    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
+
+    std::string op_type("Embedding");
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
+    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
+    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
+    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+
+    auto param = gert::TilingData::CreateCap(4096);
+    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    ASSERT_NE(param, nullptr);
+    std::vector<gert::TensorV2*> inputTensors = {&params_tensor, &indices_tensor};
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType(op_type)
+                      .IrInstanceNum({1, 1}, {1})
+                      .OutputShapes(output_shapes_ref)
+                      .InputTensors(inputTensors)
+                      .NodeOutputTd(0, ge::DT_INT32, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
+
+    auto tiling_context = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
+}
+
+// EmbeddingNoContiguousTiling::CheckOutShape - OP_LOGE_FOR_INVALID_SHAPEDIM for y (line 186)
+TEST_F(EmbeddingTiling, no_contiguous_invalid_y_shapedim)
+{
+    gert::StorageShape params_shape = {{100, 2048}, {204800,}};
+    gert::StorageShape indices_shape = {{10, 50}, {500,}};
+    gert::Stride xStride_({4096, 1});
+    gert::Stride indicesStride_({100, 1});
+
+    gert::TensorV2 params_tensor(
+        params_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()}, gert::TensorPlacement::kOnHost,
+        ge::DT_FLOAT, nullptr, nullptr, xStride_, 0);
+    gert::TensorV2 indices_tensor(
+        indices_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()}, gert::TensorPlacement::kOnHost,
+        ge::DT_INT32, nullptr, nullptr, indicesStride_, 0);
+
+    std::vector<gert::StorageShape> output_shapes(1, {{10, 50}, {500,}});
+    std::vector<void*> output_shapes_ref(1);
+    for (size_t i = 0; i < output_shapes.size(); ++i) {
+        output_shapes_ref[i] = &output_shapes[i];
+    }
+
+    fe::PlatFormInfos platform_info;
+    platform_info.Init();
+    string compile_info_string = R"({
+        "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
+                          "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
+                          "UB_SIZE": 196608, "L2_SIZE": 33554432, "L1_SIZE": 524288,
+                          "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
+                          "CORE_NUM": 64}
+                          })";
+    optiling::EmbeddingCompileInfo compile_info;
+    auto kernel_holder =
+        gert::KernelRunContextFaker()
+            .KernelIONum(2, 1)
+            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
+            .Outputs({&compile_info})
+            .Build();
+
+    map<string, string> soc_infos;
+    map<string, string> aicore_spec;
+    map<string, string> intrinsics;
+    map<string, string> soc_version;
+    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
+
+    std::string op_type("Embedding");
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
+    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
+    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
+    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+
+    auto param = gert::TilingData::CreateCap(4096);
+    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    ASSERT_NE(param, nullptr);
+    std::vector<gert::TensorV2*> inputTensors = {&params_tensor, &indices_tensor};
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType(op_type)
+                      .IrInstanceNum({1, 1}, {1})
+                      .OutputShapes(output_shapes_ref)
+                      .InputTensors(inputTensors)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
+
+    auto tiling_context = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
+}
+
+// EmbeddingNoContiguousTiling::CheckOutShape - OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON for indices/y dim0 (line 204)
+TEST_F(EmbeddingTiling, no_contiguous_indices_y_dim0_mismatch)
+{
+    gert::StorageShape params_shape = {{100, 2048}, {204800,}};
+    gert::StorageShape indices_shape = {{10, 50}, {500,}};
+    gert::Stride xStride_({4096, 1});
+    gert::Stride indicesStride_({100, 1});
+
+    gert::TensorV2 params_tensor(
+        params_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()}, gert::TensorPlacement::kOnHost,
+        ge::DT_FLOAT, nullptr, nullptr, xStride_, 0);
+    gert::TensorV2 indices_tensor(
+        indices_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()}, gert::TensorPlacement::kOnHost,
+        ge::DT_INT32, nullptr, nullptr, indicesStride_, 0);
+
+    std::vector<gert::StorageShape> output_shapes(1, {{20, 50, 2048}, {20, 50, 2048}});
+    std::vector<void*> output_shapes_ref(1);
+    for (size_t i = 0; i < output_shapes.size(); ++i) {
+        output_shapes_ref[i] = &output_shapes[i];
+    }
+
+    fe::PlatFormInfos platform_info;
+    platform_info.Init();
+    string compile_info_string = R"({
+        "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
+                          "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
+                          "UB_SIZE": 196608, "L2_SIZE": 33554432, "L1_SIZE": 524288,
+                          "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
+                          "CORE_NUM": 64}
+                          })";
+    optiling::EmbeddingCompileInfo compile_info;
+    auto kernel_holder =
+        gert::KernelRunContextFaker()
+            .KernelIONum(2, 1)
+            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
+            .Outputs({&compile_info})
+            .Build();
+
+    map<string, string> soc_infos;
+    map<string, string> aicore_spec;
+    map<string, string> intrinsics;
+    map<string, string> soc_version;
+    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
+
+    std::string op_type("Embedding");
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
+    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
+    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
+    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+
+    auto param = gert::TilingData::CreateCap(4096);
+    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    ASSERT_NE(param, nullptr);
+    std::vector<gert::TensorV2*> inputTensors = {&params_tensor, &indices_tensor};
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType(op_type)
+                      .IrInstanceNum({1, 1}, {1})
+                      .OutputShapes(output_shapes_ref)
+                      .InputTensors(inputTensors)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
+
+    auto tiling_context = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
+}
+
+// EmbeddingNoContiguousTiling::CheckOutShape - OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON for indices/y dim1 (line 212)
+TEST_F(EmbeddingTiling, no_contiguous_indices_y_dim1_mismatch)
+{
+    gert::StorageShape params_shape = {{100, 2048}, {204800,}};
+    gert::StorageShape indices_shape = {{10, 50}, {500,}};
+    gert::Stride xStride_({4096, 1});
+    gert::Stride indicesStride_({100, 1});
+
+    gert::TensorV2 params_tensor(
+        params_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()}, gert::TensorPlacement::kOnHost,
+        ge::DT_FLOAT, nullptr, nullptr, xStride_, 0);
+    gert::TensorV2 indices_tensor(
+        indices_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()}, gert::TensorPlacement::kOnHost,
+        ge::DT_INT32, nullptr, nullptr, indicesStride_, 0);
+
+    std::vector<gert::StorageShape> output_shapes(1, {{10, 30, 2048}, {10, 30, 2048}});
+    std::vector<void*> output_shapes_ref(1);
+    for (size_t i = 0; i < output_shapes.size(); ++i) {
+        output_shapes_ref[i] = &output_shapes[i];
+    }
+
+    fe::PlatFormInfos platform_info;
+    platform_info.Init();
+    string compile_info_string = R"({
+        "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
+                          "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
+                          "UB_SIZE": 196608, "L2_SIZE": 33554432, "L1_SIZE": 524288,
+                          "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
+                          "CORE_NUM": 64}
+                          })";
+    optiling::EmbeddingCompileInfo compile_info;
+    auto kernel_holder =
+        gert::KernelRunContextFaker()
+            .KernelIONum(2, 1)
+            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
+            .Outputs({&compile_info})
+            .Build();
+
+    map<string, string> soc_infos;
+    map<string, string> aicore_spec;
+    map<string, string> intrinsics;
+    map<string, string> soc_version;
+    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
+
+    std::string op_type("Embedding");
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
+    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
+    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
+    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+
+    auto param = gert::TilingData::CreateCap(4096);
+    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    ASSERT_NE(param, nullptr);
+    std::vector<gert::TensorV2*> inputTensors = {&params_tensor, &indices_tensor};
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType(op_type)
+                      .IrInstanceNum({1, 1}, {1})
+                      .OutputShapes(output_shapes_ref)
+                      .InputTensors(inputTensors)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
+
+    auto tiling_context = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
+}
+
+// EmbeddingNoContiguousTiling::CheckOutShape - OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON for y dim2 vs x dim1 (line 220)
+TEST_F(EmbeddingTiling, no_contiguous_y_dim2_x_dim1_mismatch)
+{
+    gert::StorageShape params_shape = {{100, 2048}, {204800,}};
+    gert::StorageShape indices_shape = {{10, 50}, {500,}};
+    gert::Stride xStride_({4096, 1});
+    gert::Stride indicesStride_({100, 1});
+
+    gert::TensorV2 params_tensor(
+        params_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()}, gert::TensorPlacement::kOnHost,
+        ge::DT_FLOAT, nullptr, nullptr, xStride_, 0);
+    gert::TensorV2 indices_tensor(
+        indices_shape, {ge::FORMAT_ND, ge::FORMAT_ND, gert::ExpandDimsType()}, gert::TensorPlacement::kOnHost,
+        ge::DT_INT32, nullptr, nullptr, indicesStride_, 0);
+
+    std::vector<gert::StorageShape> output_shapes(1, {{10, 50, 100}, {10, 50, 100}});
+    std::vector<void*> output_shapes_ref(1);
+    for (size_t i = 0; i < output_shapes.size(); ++i) {
+        output_shapes_ref[i] = &output_shapes[i];
+    }
+
+    fe::PlatFormInfos platform_info;
+    platform_info.Init();
+    string compile_info_string = R"({
+        "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
+                          "Intrinsic_fix_pipe_l0c2out": false, "Intrinsic_data_move_l12ub": true, "Intrinsic_data_move_l0c2ub": true, "Intrinsic_data_move_out2l1_nd2nz": false,
+                          "UB_SIZE": 196608, "L2_SIZE": 33554432, "L1_SIZE": 524288,
+                          "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
+                          "CORE_NUM": 64}
+                          })";
+    optiling::EmbeddingCompileInfo compile_info;
+    auto kernel_holder =
+        gert::KernelRunContextFaker()
+            .KernelIONum(2, 1)
+            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
+            .Outputs({&compile_info})
+            .Build();
+
+    map<string, string> soc_infos;
+    map<string, string> aicore_spec;
+    map<string, string> intrinsics;
+    map<string, string> soc_version;
+    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics, soc_version);
+
+    std::string op_type("Embedding");
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
+    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
+    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
+    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("version", soc_version);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap",
+                                                                                            intrinsics);
+    ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+
+    auto param = gert::TilingData::CreateCap(4096);
+    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    ASSERT_NE(param, nullptr);
+    std::vector<gert::TensorV2*> inputTensors = {&params_tensor, &indices_tensor};
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType(op_type)
+                      .IrInstanceNum({1, 1}, {1})
+                      .OutputShapes(output_shapes_ref)
+                      .InputTensors(inputTensors)
+                      .NodeOutputTd(0, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
+
+    auto tiling_context = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
+}

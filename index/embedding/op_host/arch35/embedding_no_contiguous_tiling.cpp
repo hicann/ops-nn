@@ -114,12 +114,13 @@ ge::graphStatus EmbeddingNoContiguousTiling::GetTensorInfo(
         }
     }
     std::string info = isOut ? "output" : "input";
-    OP_CHECK_IF(
-        shape.GetDimNum() != stride.GetDimNum(),
-        OP_LOGE(
-            opName_, "shape's dimNum [%lu] should be equal to stride's dimNum [%lu] for [%s] [%lu]", shape.GetDimNum(),
-            stride.GetDimNum(), info.c_str(), idx),
-        return ge::GRAPH_FAILED);
+    if (shape.GetDimNum() != stride.GetDimNum()) {
+        std::string dimMsg = std::to_string(shape.GetDimNum()) + " and " + std::to_string(stride.GetDimNum());
+        std::string reasonMsg = info + " and stride's shape dim should be equal";
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            context_->GetNodeName(), info + " and stride", dimMsg.c_str(), reasonMsg.c_str());
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -138,31 +139,32 @@ ge::graphStatus EmbeddingNoContiguousTiling::CheckInAndOutDtype()
     auto xDesc = context_->GetInputDesc(IN_X_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, xDesc);
     xDtype_ = xDesc->GetDataType();
-    OP_CHECK_IF(
-        ParamTypeIsInvalid(xDtype_),
-        OP_LOGE(
-            opName_,
-            "x dtype should be "
-            "float,float16,bfloat16,bool,int8,uint8,int16,uint16,int32,uint32,int64,uint64,complex64,complex32,double, "
-            "but got [%s], please check.",
-            Ops::Base::ToString(xDtype_).c_str()),
-        return ge::GRAPH_FAILED);
+    if (ParamTypeIsInvalid(xDtype_)) {
+        OP_LOGE_FOR_INVALID_DTYPE(
+            context_->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(xDtype_).c_str(),
+            "float, float16, bfloat16, bool, int8, uint8, int16, uint16, int32, uint32, int64, uint64, complex64, "
+            "complex32 and double");
+        return ge::GRAPH_FAILED;
+    }
     auto indexDesc = context_->GetInputDesc(IN_INDICES_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, indexDesc);
     indicesDtype_ = indexDesc->GetDataType();
-    OP_CHECK_IF(
-        (indicesDtype_ != ge::DataType::DT_INT32) && (indicesDtype_ != ge::DataType::DT_INT64),
-        OP_LOGE(
-            opName_, "indices dtype should be int32,int64, but got [%s], please check.",
-            Ops::Base::ToString(indicesDtype_).c_str()),
-        return ge::GRAPH_FAILED);
+    if ((indicesDtype_ != ge::DataType::DT_INT32) && (indicesDtype_ != ge::DataType::DT_INT64)) {
+        OP_LOGE_FOR_INVALID_DTYPE(
+            context_->GetNodeName(), "indices", ge::TypeUtils::DataTypeToSerialString(indicesDtype_).c_str(),
+            "int32 and int64");
+        return ge::GRAPH_FAILED;
+    }
     auto yDesc = context_->GetOutputDesc(OUT_Y_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, yDesc);
     auto yDtype = yDesc->GetDataType();
-    OP_CHECK_IF(
-        yDtype != xDtype_,
-        OP_LOGE(opName_, "The input x and output y should have same dtype, please check."),
-        return ge::GRAPH_FAILED);
+    if (yDtype != xDtype_) {
+        std::string dtypeMsg = Ops::Base::ToString(yDtype) + " and " + Ops::Base::ToString(xDtype_);
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            context_->GetNodeName(), "x and y", dtypeMsg.c_str(),
+            "The input x and output y should have same dtype");
+        return ge::GRAPH_FAILED;
+    }
     xDtypeSize_ = ge::GetSizeByDataType(xDtype_);
     OP_CHECK_IF(
         xDtypeSize_ <= 0, OP_LOGE(opName_, "get xDtypeSize fail"), return ge::GRAPH_FAILED);
@@ -177,13 +179,12 @@ ge::graphStatus EmbeddingNoContiguousTiling::CheckOutShape()
 {
     int64_t yDimSize = static_cast<int64_t>(yShape_.GetDimNum());
     int64_t indicesDimSize = static_cast<int64_t>(indicesShape_.GetDimNum());
-    OP_CHECK_IF(
-        yDimSize != indicesDimSize + 1,
-        OP_LOGE(
-            opName_, "The output y's dimNum should be equal to indices's dimNum [%ld] plus 1, bug got %ld.",
-            indicesDimSize, yDimSize),
-        return ge::GRAPH_FAILED);
-
+    if (yDimSize != indicesDimSize + 1) {
+        std::string dimExpect = std::to_string(indicesDimSize + 1);
+        OP_LOGE_FOR_INVALID_SHAPEDIM(
+            context_->GetNodeName(), "y", std::to_string(yDimSize).c_str(), dimExpect.c_str());
+        return ge::GRAPH_FAILED;
+    }
     gatherSize_ = static_cast<int64_t>(xShape_.GetDim(0));
     innerSize_ = static_cast<int64_t>(xShape_.GetDim(1));
     int64_t indicesDim0Size = static_cast<int64_t>(indicesShape_.GetDim(0));
@@ -192,23 +193,27 @@ ge::graphStatus EmbeddingNoContiguousTiling::CheckOutShape()
     int64_t yDim1Size = static_cast<int64_t>(yShape_.GetDim(1));
     int64_t yDim2Size = static_cast<int64_t>(yShape_.GetDim(TWO));
 
-    OP_CHECK_IF(
-        indicesDim0Size != yDim0Size,
-        OP_LOGE(
-            opName_, "y dim0 shapeSize should be equal to indices dim0 shapeSize [%ld], bug got %ld.", indicesDim0Size,
-            yDim0Size),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        indicesDim1Size_ != yDim1Size,
-        OP_LOGE(
-            opName_, "y dim1 shapeSize should be equal to indices dim1 shapeSize [%ld], bug got %ld.", indicesDim1Size_,
-            yDim1Size),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        innerSize_ != yDim2Size,
-        OP_LOGE(
-            opName_, "y dim2 shapeSize should be equal to x dim1 shapeSize [%ld], but got %ld.", innerSize_, yDim2Size),
-        return ge::GRAPH_FAILED);
+    if (indicesDim0Size != yDim0Size) {
+        std::string dimMsg = std::to_string(indicesDim0Size) + " and " + std::to_string(yDim0Size);
+        std::string reasonMsg = "indices and y's shape dim0 should be equal";
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            context_->GetNodeName(), "indices and y", dimMsg.c_str(), reasonMsg.c_str());
+        return ge::GRAPH_FAILED;
+    }
+    if (indicesDim1Size_ != yDim1Size) {
+        std::string dimMsg = std::to_string(indicesDim1Size_) + " and " + std::to_string(yDim1Size);
+        std::string reasonMsg = "indices and y's shape dim1 should be equal";
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            context_->GetNodeName(), "indices and y", dimMsg.c_str(), reasonMsg.c_str());
+        return ge::GRAPH_FAILED;
+    }
+    if (innerSize_ != yDim2Size) {
+        std::string dimMsg = std::to_string(yDim2Size) + " and " + std::to_string(innerSize_);
+        std::string reasonMsg = "y's shape dim2 and x's shape dim1 should be equal";
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            context_->GetNodeName(), "y's shape dim2 and x's shape dim1", dimMsg.c_str(), reasonMsg.c_str());
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -246,7 +251,7 @@ ge::graphStatus EmbeddingNoContiguousTiling::GetShapeAttrsInfo()
 void EmbeddingNoContiguousTiling::CalcuCore()
 {
     if (enableInt64_) {
-        threadNum_ = threadNum_ / 2;
+        threadNum_ = threadNum_ / NUM_TWO;
     }
     while ((threadNum_ >= NUM_TWO * SMALL_CASE_THREAD_NUM) &&
         (Ops::Base::CeilDiv(ySize_, threadNum_) < (totalCoreNum_ / NUM_TWO))) {

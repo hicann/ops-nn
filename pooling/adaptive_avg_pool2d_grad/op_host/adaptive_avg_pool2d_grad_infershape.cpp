@@ -17,6 +17,7 @@
 #include "log/log.h"
 #include "util/shape_util.h"
 #include "platform/platform_info.h"
+#include "graph/utils/type_utils.h"
 
 using namespace ge;
 namespace {
@@ -41,18 +42,21 @@ static ge::graphStatus InferShape4AdaptiveAvgPool2dGrad(gert::InferShapeContext*
     auto output_size = static_cast<const int64_t*>(output_size_ptr->GetData());
     size_t inputDimNum = gradShape->GetDimNum();
 
-    OP_CHECK_IF(
-        inputDimNum != output_size_len,
-        OP_LOGE(
-            context->GetNodeName(), "Dim number mismatch: grad dim number (%d) != input dim number(%d)", inputDimNum,
-            output_size_len),
-        return GRAPH_FAILED);
+    if (inputDimNum != output_size_len) {
+        std::string dimMsg = std::to_string(inputDimNum) + " and " + std::to_string(output_size_len);
+        std::string reasonMsg = "input and output's dim should be equal";
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            context->GetNodeName(), "input and output dim", dimMsg.c_str(), reasonMsg.c_str());
+        return GRAPH_FAILED;
+    }
 
     for (int64_t i = 0; i < output_size_len; i++) {
-        OP_CHECK_IF(
-            output_size[i] <= 0,
-            OP_LOGE(context->GetNodeName(), "the value(%ld) is invalid for orig_input_shape", output_size[i]),
-            return GRAPH_FAILED);
+        if (output_size[i] <= 0) {
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                context->GetNodeName(), "orig_input_shape", std::to_string(output_size[i]),
+                "The value is invalid for orig_input_shape");
+            return GRAPH_FAILED;
+        }
     }
 
     // 维度数赋值    
@@ -68,11 +72,12 @@ static graphStatus InferDtype4AdaptiveAvgPool2dGrad(gert::InferDataTypeContext* 
 {
     auto gradDataType = context->GetInputDataType(Y_GRAD_INDEX);
     // 校验数据类型合法性
-    OP_CHECK_IF(
-        (gradDataType != ge::DT_FLOAT) && (gradDataType != ge::DT_FLOAT16) && (gradDataType != ge::DT_BF16),
-        OP_LOGE(context->GetNodeName(), "Data type invalid: x(%d), expect fp32/fp16/bf16.", gradDataType),
-        return ge::GRAPH_FAILED);
-
+    if ((gradDataType != ge::DT_FLOAT) && (gradDataType != ge::DT_FLOAT16) && (gradDataType != ge::DT_BF16)) {
+        OP_LOGE_FOR_INVALID_DTYPE(
+            context->GetNodeName(), "input_grad data type",
+            ge::TypeUtils::DataTypeToSerialString(gradDataType).c_str(), "float, float16, bfloat16");
+        return ge::GRAPH_FAILED;
+    }
     context->SetOutputDataType(OUTPUT_INDEX, gradDataType);
     return GRAPH_SUCCESS;
 }

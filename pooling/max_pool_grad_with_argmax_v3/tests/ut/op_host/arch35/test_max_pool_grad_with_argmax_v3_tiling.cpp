@@ -496,3 +496,371 @@ TEST_F(MaxPoolGradWithArgmaxV3Tiling, MaxPoolGradWithArgmaxV3Tiling_NHWC_Test4)
         xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, dtype_index,
         ceil_mode, data_format, except_tilingkey, expect);
 }
+
+// ==================== OP_LOGE_FOR Error Branch UT Cases ====================
+
+static void ExecuteErrorTestCase(
+    gert::StorageShape xShape, gert::StorageShape yShape, gert::StorageShape gradShape, gert::StorageShape argmaxShape,
+    std::vector<int64_t> ksize, std::vector<int64_t> strides, std::vector<int64_t> pads, std::vector<int64_t> dilation,
+    ge::DataType dtype, int64_t index_dtype, ge::DataType index_dtype_enum, bool ceil_mode, std::string data_format)
+{
+    dlog_setlevel(0, 0, 0);
+
+    string compile_info_string = R"({
+         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
+                           "Intrinsic_fix_pipe_l0c2out": false,
+                           "Intrinsic_data_move_l12ub": true,
+                           "Intrinsic_data_move_l0c2ub": true,
+                           "Intrinsic_data_move_out2l1_nd2nz": false,
+                           "UB_SIZE": 245760, "L2_SIZE": 33554432, "L1_SIZE": 524288,
+                           "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072,
+                           "CORE_NUM": 64}
+                           })";
+    map<string, string> soc_infos;
+    map<string, string> aicore_spec;
+    map<string, string> intrinsics;
+    GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
+    std::map<std::string, std::string> soc_version_infos = {{"Short_SoC_version", "Ascend950"}, {"NpuArch", "3510"}};
+    fe::PlatFormInfos platform_info;
+    platform_info.Init();
+    optiling::MaxPoolGradWithArgmaxCompileInfo compile_info;
+
+    std::string op_type("MaxPoolGradWithArgmaxV3");
+    ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str()), nullptr);
+    auto tiling_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling;
+    auto tiling_parse_func = gert::OpImplRegistry::GetInstance().GetOpImpl(op_type.c_str())->tiling_parse;
+
+    auto kernel_holder =
+        gert::KernelRunContextFaker()
+            .KernelIONum(2, 1)
+            .Inputs({const_cast<char*>(compile_info_string.c_str()), reinterpret_cast<void*>(&platform_info)})
+            .Outputs({&compile_info})
+            .Build();
+
+    ASSERT_TRUE(kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->Init());
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
+        "AICoreintrinsicDtypeMap", intrinsics);
+    kernel_holder.GetContext<gert::TilingParseContext>()->GetPlatformInfo()->SetPlatformRes(
+        "version", soc_version_infos);
+    ASSERT_EQ(tiling_parse_func(kernel_holder.GetContext<gert::KernelContext>()), ge::GRAPH_SUCCESS);
+
+    auto param = gert::TilingData::CreateCap(4096);
+    auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(4096);
+    auto ws_size = reinterpret_cast<gert::ContinuousVector*>(workspace_size_holer.get());
+    ASSERT_NE(param, nullptr);
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType(op_type)
+                      .NodeIoNum(3, 1)
+                      .IrInstanceNum({1, 1, 1})
+                      .InputShapes({&xShape, &gradShape, &argmaxShape})
+                      .OutputShapes({&yShape})
+                      .CompileInfo(&compile_info)
+                      .PlatformInfo(reinterpret_cast<char*>(&platform_info))
+                      .NodeInputTd(0, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(1, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeInputTd(2, index_dtype_enum, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeOutputTd(0, dtype, ge::FORMAT_ND, ge::FORMAT_ND)
+                      .NodeAttrs(
+                          {{"ksize", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(ksize)},
+                           {"strides", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(strides)},
+                           {"pads", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(pads)},
+                           {"dtype", Ops::NN::AnyValue::CreateFrom<int64_t>(index_dtype)},
+                           {"dilation", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(dilation)},
+                           {"ceil_mode", Ops::NN::AnyValue::CreateFrom<bool>(ceil_mode)},
+                           {"data_format", Ops::NN::AnyValue::CreateFrom<std::string>(data_format)}})
+                      .TilingData(param.get())
+                      .Workspace(ws_size)
+                      .Build();
+
+    gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("SoCInfo", soc_infos);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreSpec", aicore_spec);
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetCoreNumByCoreType("AICore");
+    holder.GetContext<gert::TilingContext>()->GetPlatformInfo()->SetPlatformRes("AICoreintrinsicDtypeMap", intrinsics);
+
+    EXPECT_EQ(tiling_func(tiling_context), ge::GRAPH_FAILED);
+}
+
+// OP_LOGE_FOR_INVALID_SHAPEDIM: x dim != 4 (line 110)
+TEST_F(MaxPoolGradWithArgmaxV3Tiling, tiling_invalid_x_shapedim)
+{
+    gert::StorageShape xShape = {{2, 3, 64}, {2, 3, 64}};
+    gert::StorageShape yShape = {{2, 3, 64}, {2, 3, 64}};
+    gert::StorageShape gradShape = {{2, 3, 1}, {2, 3, 1}};
+    gert::StorageShape argmaxShape = {{2, 3, 1}, {2, 3, 1}};
+    std::vector<int64_t> ksize = {3, 3};
+    std::vector<int64_t> strides = {3, 3};
+    std::vector<int64_t> pads = {0, 0};
+    std::vector<int64_t> dilation = {1, 1};
+    ge::DataType dtype = ge::DT_FLOAT;
+    int64_t index_dtype = 3;
+    ge::DataType dtype_index = ge::DT_INT32;
+    bool ceil_mode = false;
+    std::string data_format = "NCHW";
+    ExecuteErrorTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype,
+                         index_dtype, dtype_index, ceil_mode, data_format);
+}
+
+// OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON: x shapeSize <= 0 (line 116)
+TEST_F(MaxPoolGradWithArgmaxV3Tiling, tiling_invalid_x_shapesize_zero)
+{
+    gert::StorageShape xShape = {{2, 0, 64, 64}, {2, 0, 64, 64}};
+    gert::StorageShape yShape = {{2, 0, 64, 64}, {2, 0, 64, 64}};
+    gert::StorageShape gradShape = {{2, 0, 1, 1}, {2, 0, 1, 1}};
+    gert::StorageShape argmaxShape = {{2, 0, 1, 1}, {2, 0, 1, 1}};
+    std::vector<int64_t> ksize = {64, 64};
+    std::vector<int64_t> strides = {64, 64};
+    std::vector<int64_t> pads = {0, 0};
+    std::vector<int64_t> dilation = {1, 1};
+    ge::DataType dtype = ge::DT_FLOAT;
+    int64_t index_dtype = 3;
+    ge::DataType dtype_index = ge::DT_INT32;
+    bool ceil_mode = false;
+    std::string data_format = "NCHW";
+    ExecuteErrorTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype,
+                         index_dtype, dtype_index, ceil_mode, data_format);
+}
+
+// OP_LOGE_FOR_INVALID_DTYPE: x dtype not float/float16/bf16 (line 126)
+TEST_F(MaxPoolGradWithArgmaxV3Tiling, tiling_invalid_x_dtype)
+{
+    gert::StorageShape xShape = {{2, 3, 64, 64}, {2, 3, 64, 64}};
+    gert::StorageShape yShape = xShape;
+    gert::StorageShape gradShape = {{2, 3, 1, 1}, {2, 3, 1, 1}};
+    gert::StorageShape argmaxShape = gradShape;
+    std::vector<int64_t> ksize = {64, 64};
+    std::vector<int64_t> strides = {64, 64};
+    std::vector<int64_t> pads = {0, 0};
+    std::vector<int64_t> dilation = {1, 1};
+    ge::DataType dtype = ge::DT_INT32;
+    int64_t index_dtype = 3;
+    ge::DataType dtype_index = ge::DT_INT32;
+    bool ceil_mode = false;
+    std::string data_format = "NCHW";
+    ExecuteErrorTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype,
+                         index_dtype, dtype_index, ceil_mode, data_format);
+}
+
+// OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON: grad shapeSize <= 0 (line 136)
+TEST_F(MaxPoolGradWithArgmaxV3Tiling, tiling_invalid_grad_shapesize_zero)
+{
+    gert::StorageShape xShape = {{2, 3, 64, 64}, {2, 3, 64, 64}};
+    gert::StorageShape yShape = xShape;
+    gert::StorageShape gradShape = {{2, 0, 1, 1}, {2, 0, 1, 1}};
+    gert::StorageShape argmaxShape = {{2, 3, 1, 1}, {2, 3, 1, 1}};
+    std::vector<int64_t> ksize = {64, 64};
+    std::vector<int64_t> strides = {64, 64};
+    std::vector<int64_t> pads = {0, 0};
+    std::vector<int64_t> dilation = {1, 1};
+    ge::DataType dtype = ge::DT_FLOAT;
+    int64_t index_dtype = 3;
+    ge::DataType dtype_index = ge::DT_INT32;
+    bool ceil_mode = false;
+    std::string data_format = "NCHW";
+    ExecuteErrorTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype,
+                         index_dtype, dtype_index, ceil_mode, data_format);
+}
+
+// OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON: argmax shapeSize <= 0 (line 146)
+TEST_F(MaxPoolGradWithArgmaxV3Tiling, tiling_invalid_argmax_shapesize_zero)
+{
+    gert::StorageShape xShape = {{2, 3, 64, 64}, {2, 3, 64, 64}};
+    gert::StorageShape yShape = xShape;
+    gert::StorageShape gradShape = {{2, 3, 1, 1}, {2, 3, 1, 1}};
+    gert::StorageShape argmaxShape = {{2, 0, 1, 1}, {2, 0, 1, 1}};
+    std::vector<int64_t> ksize = {64, 64};
+    std::vector<int64_t> strides = {64, 64};
+    std::vector<int64_t> pads = {0, 0};
+    std::vector<int64_t> dilation = {1, 1};
+    ge::DataType dtype = ge::DT_FLOAT;
+    int64_t index_dtype = 3;
+    ge::DataType dtype_index = ge::DT_INT32;
+    bool ceil_mode = false;
+    std::string data_format = "NCHW";
+    ExecuteErrorTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype,
+                         index_dtype, dtype_index, ceil_mode, data_format);
+}
+
+// OP_LOGE_FOR_INVALID_DTYPE: argmax dtype not int32/int64 (line 155)
+TEST_F(MaxPoolGradWithArgmaxV3Tiling, tiling_invalid_argmax_dtype)
+{
+    gert::StorageShape xShape = {{2, 3, 64, 64}, {2, 3, 64, 64}};
+    gert::StorageShape yShape = xShape;
+    gert::StorageShape gradShape = {{2, 3, 1, 1}, {2, 3, 1, 1}};
+    gert::StorageShape argmaxShape = gradShape;
+    std::vector<int64_t> ksize = {64, 64};
+    std::vector<int64_t> strides = {64, 64};
+    std::vector<int64_t> pads = {0, 0};
+    std::vector<int64_t> dilation = {1, 1};
+    ge::DataType dtype = ge::DT_FLOAT;
+    int64_t index_dtype = 3;
+    ge::DataType dtype_index = ge::DT_FLOAT;
+    bool ceil_mode = false;
+    std::string data_format = "NCHW";
+    ExecuteErrorTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype,
+                         index_dtype, dtype_index, ceil_mode, data_format);
+}
+
+// OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON: grad shape != argmax shape (line 161)
+TEST_F(MaxPoolGradWithArgmaxV3Tiling, tiling_grad_argmax_shape_mismatch)
+{
+    gert::StorageShape xShape = {{2, 3, 64, 64}, {2, 3, 64, 64}};
+    gert::StorageShape yShape = xShape;
+    gert::StorageShape gradShape = {{2, 3, 1, 1}, {2, 3, 1, 1}};
+    gert::StorageShape argmaxShape = {{2, 3, 2, 2}, {2, 3, 2, 2}};
+    std::vector<int64_t> ksize = {64, 64};
+    std::vector<int64_t> strides = {64, 64};
+    std::vector<int64_t> pads = {0, 0};
+    std::vector<int64_t> dilation = {1, 1};
+    ge::DataType dtype = ge::DT_FLOAT;
+    int64_t index_dtype = 3;
+    ge::DataType dtype_index = ge::DT_INT32;
+    bool ceil_mode = false;
+    std::string data_format = "NCHW";
+    ExecuteErrorTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype,
+                         index_dtype, dtype_index, ceil_mode, data_format);
+}
+
+// OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON: y shape != x shape (line 170)
+TEST_F(MaxPoolGradWithArgmaxV3Tiling, tiling_y_x_shape_mismatch)
+{
+    gert::StorageShape xShape = {{2, 3, 64, 64}, {2, 3, 64, 64}};
+    gert::StorageShape yShape = {{2, 3, 32, 32}, {2, 3, 32, 32}};
+    gert::StorageShape gradShape = {{2, 3, 1, 1}, {2, 3, 1, 1}};
+    gert::StorageShape argmaxShape = gradShape;
+    std::vector<int64_t> ksize = {64, 64};
+    std::vector<int64_t> strides = {64, 64};
+    std::vector<int64_t> pads = {0, 0};
+    std::vector<int64_t> dilation = {1, 1};
+    ge::DataType dtype = ge::DT_FLOAT;
+    int64_t index_dtype = 3;
+    ge::DataType dtype_index = ge::DT_INT32;
+    bool ceil_mode = false;
+    std::string data_format = "NCHW";
+    ExecuteErrorTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype,
+                         index_dtype, dtype_index, ceil_mode, data_format);
+}
+
+// OP_LOGE_FOR_INVALID_VALUE_WITH_REASON: data_format not NCHW/NHWC (line 201)
+TEST_F(MaxPoolGradWithArgmaxV3Tiling, tiling_invalid_data_format)
+{
+    gert::StorageShape xShape = {{2, 3, 64, 64}, {2, 3, 64, 64}};
+    gert::StorageShape yShape = xShape;
+    gert::StorageShape gradShape = {{2, 3, 1, 1}, {2, 3, 1, 1}};
+    gert::StorageShape argmaxShape = gradShape;
+    std::vector<int64_t> ksize = {64, 64};
+    std::vector<int64_t> strides = {64, 64};
+    std::vector<int64_t> pads = {0, 0};
+    std::vector<int64_t> dilation = {1, 1};
+    ge::DataType dtype = ge::DT_FLOAT;
+    int64_t index_dtype = 3;
+    ge::DataType dtype_index = ge::DT_INT32;
+    bool ceil_mode = false;
+    std::string data_format = "NCWH";
+    ExecuteErrorTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype,
+                         index_dtype, dtype_index, ceil_mode, data_format);
+}
+
+// OP_LOGE_FOR_INVALID_VALUES_WITH_REASON: kernelSize <= 0 (line 211)
+TEST_F(MaxPoolGradWithArgmaxV3Tiling, tiling_invalid_kernel_size_zero)
+{
+    gert::StorageShape xShape = {{2, 3, 64, 64}, {2, 3, 64, 64}};
+    gert::StorageShape yShape = xShape;
+    gert::StorageShape gradShape = {{2, 3, 1, 1}, {2, 3, 1, 1}};
+    gert::StorageShape argmaxShape = gradShape;
+    std::vector<int64_t> ksize = {0, 0};
+    std::vector<int64_t> strides = {64, 64};
+    std::vector<int64_t> pads = {0, 0};
+    std::vector<int64_t> dilation = {1, 1};
+    ge::DataType dtype = ge::DT_FLOAT;
+    int64_t index_dtype = 3;
+    ge::DataType dtype_index = ge::DT_INT32;
+    bool ceil_mode = false;
+    std::string data_format = "NCHW";
+    ExecuteErrorTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype,
+                         index_dtype, dtype_index, ceil_mode, data_format);
+}
+
+// OP_LOGE_FOR_INVALID_VALUES_WITH_REASON: stride <= 0 (line 221)
+TEST_F(MaxPoolGradWithArgmaxV3Tiling, tiling_invalid_stride_zero)
+{
+    gert::StorageShape xShape = {{2, 3, 64, 64}, {2, 3, 64, 64}};
+    gert::StorageShape yShape = xShape;
+    gert::StorageShape gradShape = {{2, 3, 1, 1}, {2, 3, 1, 1}};
+    gert::StorageShape argmaxShape = gradShape;
+    std::vector<int64_t> ksize = {64, 64};
+    std::vector<int64_t> strides = {0, 0};
+    std::vector<int64_t> pads = {0, 0};
+    std::vector<int64_t> dilation = {1, 1};
+    ge::DataType dtype = ge::DT_FLOAT;
+    int64_t index_dtype = 3;
+    ge::DataType dtype_index = ge::DT_INT32;
+    bool ceil_mode = false;
+    std::string data_format = "NCHW";
+    ExecuteErrorTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype,
+                         index_dtype, dtype_index, ceil_mode, data_format);
+}
+
+// OP_LOGE_FOR_INVALID_VALUES_WITH_REASON: pad > kernel/2 (line 231)
+TEST_F(MaxPoolGradWithArgmaxV3Tiling, tiling_invalid_pad_exceed_kernel)
+{
+    gert::StorageShape xShape = {{2, 3, 64, 64}, {2, 3, 64, 64}};
+    gert::StorageShape yShape = xShape;
+    gert::StorageShape gradShape = {{2, 3, 1, 1}, {2, 3, 1, 1}};
+    gert::StorageShape argmaxShape = gradShape;
+    std::vector<int64_t> ksize = {3, 3};
+    std::vector<int64_t> strides = {3, 3};
+    std::vector<int64_t> pads = {2, 2};
+    std::vector<int64_t> dilation = {1, 1};
+    ge::DataType dtype = ge::DT_FLOAT;
+    int64_t index_dtype = 3;
+    ge::DataType dtype_index = ge::DT_INT32;
+    bool ceil_mode = false;
+    std::string data_format = "NCHW";
+    ExecuteErrorTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype,
+                         index_dtype, dtype_index, ceil_mode, data_format);
+}
+
+// OP_LOGE_FOR_INVALID_VALUES_WITH_REASON: dilation <= 0 (line 242)
+TEST_F(MaxPoolGradWithArgmaxV3Tiling, tiling_invalid_dilation_zero)
+{
+    gert::StorageShape xShape = {{2, 3, 64, 64}, {2, 3, 64, 64}};
+    gert::StorageShape yShape = xShape;
+    gert::StorageShape gradShape = {{2, 3, 1, 1}, {2, 3, 1, 1}};
+    gert::StorageShape argmaxShape = gradShape;
+    std::vector<int64_t> ksize = {64, 64};
+    std::vector<int64_t> strides = {64, 64};
+    std::vector<int64_t> pads = {0, 0};
+    std::vector<int64_t> dilation = {0, 0};
+    ge::DataType dtype = ge::DT_FLOAT;
+    int64_t index_dtype = 3;
+    ge::DataType dtype_index = ge::DT_INT32;
+    bool ceil_mode = false;
+    std::string data_format = "NCHW";
+    ExecuteErrorTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype,
+                         index_dtype, dtype_index, ceil_mode, data_format);
+}
+
+// OP_LOGE_FOR_INVALID_SHAPESIZE: grad shape mismatch with expected (line 85, CheckGradShape)
+TEST_F(MaxPoolGradWithArgmaxV3Tiling, tiling_grad_shape_mismatch_expected)
+{
+    gert::StorageShape xShape = {{2, 3, 64, 64}, {2, 3, 64, 64}};
+    gert::StorageShape yShape = xShape;
+    gert::StorageShape gradShape = {{5, 3, 1, 1}, {5, 3, 1, 1}};
+    gert::StorageShape argmaxShape = gradShape;
+    std::vector<int64_t> ksize = {64, 64};
+    std::vector<int64_t> strides = {64, 64};
+    std::vector<int64_t> pads = {0, 0};
+    std::vector<int64_t> dilation = {1, 1};
+    ge::DataType dtype = ge::DT_FLOAT;
+    int64_t index_dtype = 3;
+    ge::DataType dtype_index = ge::DT_INT32;
+    bool ceil_mode = false;
+    std::string data_format = "NCHW";
+    ExecuteErrorTestCase(xShape, yShape, gradShape, argmaxShape, ksize, strides, pads, dilation, dtype,
+                         index_dtype, dtype_index, ceil_mode, data_format);
+}

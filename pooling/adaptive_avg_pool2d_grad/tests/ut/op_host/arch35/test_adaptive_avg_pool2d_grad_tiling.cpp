@@ -430,9 +430,104 @@ TEST_F(AdaptiveAvgPool2dGradTilingTest, small_kernel_positive_branch_matrix)
 
     for (const auto& item : cases) {
         SCOPED_TRACE(item.name);
-        ExecuteAdaptiveAvgPool2dGradTilingKeyCase(
+ExecuteAdaptiveAvgPool2dGradTilingKeyCase(
             item.yGradShape, item.xShape, item.dtype, item.format, item.expectTilingKey);
     }
+}
+
+// ==================== OP_LOGE_FOR Error Branch UT Cases ====================
+
+static void ExecuteErrorTestCase(
+    const std::vector<int64_t>& yGradShapeVec, const std::vector<int64_t>& xShapeVec,
+    const std::vector<int64_t>& outputSizeAttr, ge::DataType dtype, ge::Format format)
+{
+    map<string, string> socInfos;
+    map<string, string> aicoreSpec;
+    map<string, string> intrinsics;
+    GetPlatFormInfos(COMPILE_INFO_STRING.c_str(), socInfos, aicoreSpec, intrinsics);
+
+    fe::PlatFormInfos platformInfo;
+    AdaptiveAvgPool2dGradCompileInfo compileInfo;
+    PrepareAdaptiveAvgPool2dGradCompileInfo(compileInfo, platformInfo);
+
+    gert::StorageShape yGradShape = MakeStorageShape(yGradShapeVec);
+    gert::StorageShape xShape = MakeStorageShape(xShapeVec);
+    gert::StorageShape xGradShape = MakeStorageShape(xShapeVec);
+
+    auto tilingData = gert::TilingData::CreateCap(4096);
+    auto workspaceHolder = gert::ContinuousVector::Create<size_t>(4096);
+    auto workspace = reinterpret_cast<gert::ContinuousVector*>(workspaceHolder.get());
+
+    ASSERT_NE(tilingData, nullptr);
+    ASSERT_NE(workspace, nullptr);
+
+    auto holder = gert::TilingContextFaker()
+                      .SetOpType(TEST_OP_TYPE)
+                      .NodeIoNum(2, 1)
+                      .IrInstanceNum({1, 1})
+                      .NodeInputTd(0, dtype, format, ge::Format::FORMAT_RESERVED)
+                      .NodeInputTd(1, dtype, format, ge::Format::FORMAT_RESERVED)
+                      .NodeOutputTd(0, dtype, format, ge::Format::FORMAT_RESERVED)
+                      .InputShapes({&yGradShape, &xShape})
+                      .OutputShapes({&xGradShape})
+                      .CompileInfo(&compileInfo)
+                      .PlatformInfo(reinterpret_cast<char*>(&platformInfo))
+                      .NodeAttrs({{"output_size", Ops::NN::AnyValue::CreateFrom<std::vector<int64_t>>(outputSizeAttr)}})
+                      .TilingData(tilingData.get())
+                      .Workspace(workspace)
+                      .Build();
+
+    gert::TilingContext* tilingContext = holder.GetContext<gert::TilingContext>();
+    ASSERT_NE(tilingContext, nullptr);
+    SetPlatformResource(tilingContext, socInfos, aicoreSpec, intrinsics);
+
+    auto opImpl = gert::OpImplRegistry::GetInstance().GetOpImpl(TEST_OP_TYPE.c_str());
+    ASSERT_NE(opImpl, nullptr);
+    ASSERT_NE(opImpl->tiling, nullptr);
+
+    EXPECT_EQ(opImpl->tiling(tilingContext), ge::GRAPH_FAILED);
+}
+
+// OP_LOGE_FOR_INVALID_DTYPE: grad dtype not float/float16/bf16 (line 95)
+TEST_F(AdaptiveAvgPool2dGradTilingTest, tiling_invalid_grad_dtype)
+{
+    ExecuteErrorTestCase({1, 4, 8, 8}, {1, 4, 16, 16}, {1, 4, 16, 16}, ge::DT_INT32, ge::FORMAT_NCHW);
+}
+
+// OP_LOGE_FOR_INVALID_SHAPEDIM: origin_dim != 3 and != 4 (line 43)
+TEST_F(AdaptiveAvgPool2dGradTilingTest, tiling_invalid_origin_shapedim)
+{
+    ExecuteErrorTestCase({1, 4, 8, 8}, {1, 4, 16, 16}, {1, 4, 16, 16, 16}, ge::DT_FLOAT, ge::FORMAT_NCHW);
+}
+
+// OP_LOGE_FOR_INVALID_VALUE_WITH_REASON: origin_input_shape contains 0 value (line 51)
+TEST_F(AdaptiveAvgPool2dGradTilingTest, tiling_invalid_origin_value_zero)
+{
+    ExecuteErrorTestCase({1, 4, 8, 8}, {1, 4, 16, 16}, {1, 0, 16, 16}, ge::DT_FLOAT, ge::FORMAT_NCHW);
+}
+
+// OP_LOGE_FOR_INVALID_SHAPEDIM: origin_dim != grad_dim_num (line 62)
+TEST_F(AdaptiveAvgPool2dGradTilingTest, tiling_origin_grad_dim_mismatch)
+{
+    ExecuteErrorTestCase({4, 8, 8}, {4, 16, 16}, {1, 4, 16, 16}, ge::DT_FLOAT, ge::FORMAT_NCHW);
+}
+
+// OP_LOGE_FOR_INVALID_SHAPEDIM: origin_dim != out_dim_num (line 67)
+TEST_F(AdaptiveAvgPool2dGradTilingTest, tiling_origin_out_dim_mismatch)
+{
+    ExecuteErrorTestCase({1, 4, 8, 8}, {4, 16, 16}, {1, 4, 16, 16}, ge::DT_FLOAT, ge::FORMAT_NCHW);
+}
+
+// OP_LOGE_FOR_INVALID_SHAPESIZE: origin shape[i] != output dim[i] (line 73)
+TEST_F(AdaptiveAvgPool2dGradTilingTest, tiling_origin_output_shapesize_mismatch)
+{
+    ExecuteErrorTestCase({1, 4, 8, 8}, {1, 4, 16, 16}, {1, 4, 15, 16}, ge::DT_FLOAT, ge::FORMAT_NCHW);
+}
+
+// OP_LOGE_FOR_INVALID_SHAPESIZE: origin NC size != grad NC dim (line 82)
+TEST_F(AdaptiveAvgPool2dGradTilingTest, tiling_origin_grad_nc_shapesize_mismatch)
+{
+    ExecuteErrorTestCase({2, 4, 8, 8}, {1, 4, 16, 16}, {1, 4, 16, 16}, ge::DT_FLOAT, ge::FORMAT_NCHW);
 }
 
 // ============ Small Kernel IsCapable False Branch Coverage ============
