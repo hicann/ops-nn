@@ -45,13 +45,15 @@ constexpr uint8_t C04_COUT_SIZE = 4;
 constexpr uint8_t C04_SHIFT_SIZE = 2;
 constexpr uint8_t MASK_REG_WIDTH = AscendC::VECTOR_REG_WIDTH >> 3; // 右移3bit: MaskReg的宽度是RegTensor的1/8
 constexpr MultiCopyConfig nddmaConfig = {false};
-#if (__NPU_ARCH__ == 5102) // mdc场景使用定点化计算，enableFixVal = true
-constexpr FixpipeConfig CFG_COLUMN_MAJOR_UB = {CO2Layout::COLUMN_MAJOR, true, true};
-constexpr FixpipeConfig CFG_COLUMN_MAJOR_GM = {CO2Layout::COLUMN_MAJOR, false, true};
-#else
 constexpr FixpipeConfig CFG_COLUMN_MAJOR_UB = {CO2Layout::COLUMN_MAJOR, true};
-constexpr FixpipeConfig CFG_COLUMN_MAJOR_GM = CFG_COLUMN_MAJOR;
+#if (__NPU_ARCH__ == 5102) // mdc场景使用定点化计算，enableFixVal = true
+constexpr FixpipeConfig CFG_COLUMN_MAJOR_UB_FIXED_POINT = {CO2Layout::COLUMN_MAJOR, true, true};
+constexpr FixpipeConfig CFG_COLUMN_MAJOR_FIXED_POINT = {CO2Layout::COLUMN_MAJOR, false, true};
+#else
+constexpr FixpipeConfig CFG_COLUMN_MAJOR_UB_FIXED_POINT = CFG_COLUMN_MAJOR_UB;
+constexpr FixpipeConfig CFG_COLUMN_MAJOR_FIXED_POINT = CFG_COLUMN_MAJOR;
 #endif
+
 constexpr uint32_t UB_SIZE = AscendC::TOTAL_UB_SIZE;
 constexpr uint32_t SHIFT_BIT_4 = 4;
 
@@ -266,32 +268,52 @@ static __aicore__ inline void CalcCutInWIndex(Intf *self, const uint32_t crossBl
 }
 
 template <class Intf>
-static __aicore__ inline void LoadL0c2GMForKernelSplitFixPipe(Intf *self, const int64_t srcOffset, const int64_t wsDstOffset,
-    FixpipeParamsC310<CO2Layout::COLUMN_MAJOR> &fixPipeParams, const LocalTensor<typename Intf::L0cT> &useC1Buf)
+static __aicore__ inline void LoadL0c2GMFixPipe(Intf *self, const int64_t srcOffset, const int64_t dstOffset, const GlobalTensor<typename Intf::DstT>& output,
+    const LocalTensor<typename Intf::L0cT>& useC1Buf, FixpipeParamsC310<CO2Layout::COLUMN_MAJOR>& fixPipeParams)
 {
     if (Intf::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT &&
         self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
         uint64_t scaleAddr = self->ctx.curNIdx_ * self->ctx.tiling_->baseN;
-        Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR_GM>(self->ctx.l0cOutWorkspace_[wsDstOffset],
-            useC1Buf[srcOffset], self->ctx.scaleL1Buf_[scaleAddr], fixPipeParams);
+        if constexpr (std::is_same<typename Intf::SrcBT, half>::value) {
+            Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR_FIXED_POINT>(output[dstOffset],
+                useC1Buf[srcOffset], self->ctx.scaleL1Buf_[scaleAddr], fixPipeParams);
+        } else {
+            Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR>(output[dstOffset],
+                useC1Buf[srcOffset], self->ctx.scaleL1Buf_[scaleAddr], fixPipeParams);
+        }
     } else {
-        Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR_GM>(self->ctx.l0cOutWorkspace_[wsDstOffset],
-            useC1Buf[srcOffset], fixPipeParams);
+        if constexpr (std::is_same<typename Intf::SrcBT, half>::value) {
+            Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR_FIXED_POINT>(output[dstOffset],
+                useC1Buf[srcOffset], fixPipeParams);
+        } else {
+            Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR>(output[dstOffset],
+                useC1Buf[srcOffset], fixPipeParams);
+        }
     }
 }
 
 template <class Intf>
-static __aicore__ inline void LoadL0c2UbForKernelSplitFixPipe(Intf *self, const int64_t srcOffset, const int64_t ubDstOffset,
-    FixpipeParamsC310<CO2Layout::COLUMN_MAJOR> &fixPipeParams, const LocalTensor<typename Intf::L0cT> &useC1Buf)
+static __aicore__ inline void LoadL0c2UbFixPipe(Intf *self, const int64_t srcOffset, const int64_t dstOffset, const LocalTensor<typename Intf::DstT>& vecOutBuf,
+    const LocalTensor<typename Intf::L0cT>& useC1Buf, FixpipeParamsC310<CO2Layout::COLUMN_MAJOR>& fixPipeParams)
 {
     if (Intf::Config::fType::format != Convolution3DBackprop::CubeFormat::UNSUPPORT &&
         self->ctx.tiling_->quantMode == static_cast<uint8_t>(Convolution3DBackprop::QuantMode::VECTOR_QUANT)) {
         uint64_t scaleAddr = self->ctx.curNIdx_ * self->ctx.tiling_->baseN;
-        Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR_UB>(self->ctx.vecOutBuf_[ubDstOffset],
-            useC1Buf[srcOffset], self->ctx.scaleL1Buf_[scaleAddr], fixPipeParams);
+        if constexpr (std::is_same<typename Intf::SrcBT, half>::value) {
+            Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR_UB_FIXED_POINT>(vecOutBuf[dstOffset],
+                useC1Buf[srcOffset], self->ctx.scaleL1Buf_[scaleAddr], fixPipeParams);
+        } else {
+            Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR_UB>(vecOutBuf[dstOffset],
+                useC1Buf[srcOffset], self->ctx.scaleL1Buf_[scaleAddr], fixPipeParams);
+        }
     } else {
-        Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR_UB>(self->ctx.vecOutBuf_[ubDstOffset],
-            useC1Buf[srcOffset], fixPipeParams);
+        if constexpr (std::is_same<typename Intf::SrcBT, half>::value) {
+            Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR_UB_FIXED_POINT>(vecOutBuf[dstOffset],
+                useC1Buf[srcOffset], fixPipeParams);
+        } else {
+            Fixpipe<typename Intf::DstT, typename Intf::L0cT, CFG_COLUMN_MAJOR_UB>(vecOutBuf[dstOffset],
+                useC1Buf[srcOffset], fixPipeParams);
+        }
     }
 }
 
@@ -329,7 +351,7 @@ static __aicore__ inline void LoadL0c2GMForKernelSplitInner(Intf *self, const Lo
         fixPipeParams.params.dstDnMatrixStride = 0; // loop3_dst_stride
 
         fixPipeParams.mSize = realHeadWi; // M: 首块的长度, 真实的headwi
-        LoadL0c2GMForKernelSplitFixPipe(self, srcOffset, wsDstOffset, fixPipeParams, useC1Buf);
+        LoadL0c2GMFixPipe(self, srcOffset, wsDstOffset, self->ctx.l0cOutWorkspace_, useC1Buf, fixPipeParams);
         // BLOCK_CUBE: MMAD一次计算为16*16, fixpipe搬到ub的时候取L0c的数据应该固定c0为16，不能随数据类型变化
         srcOffset += realHeadWi << 4; // headWi_/2是一个子kernel首块w的长度
         wsDstOffset += alignHeadWi;
@@ -341,7 +363,7 @@ static __aicore__ inline void LoadL0c2GMForKernelSplitInner(Intf *self, const Lo
         fixPipeParams.params.dstDnMatrixStride = alignMidWi; // loop3_dst_stride
 
         fixPipeParams.mSize = srcWi; // M: 中间块一行的长度, 真实的midwi
-        LoadL0c2GMForKernelSplitFixPipe(self, srcOffset, wsDstOffset, fixPipeParams, useC1Buf);
+        LoadL0c2GMFixPipe(self, srcOffset, wsDstOffset, self->ctx.l0cOutWorkspace_, useC1Buf, fixPipeParams);
         // BLOCK_CUBE: MMAD一次计算为16*16, fixpipe搬到ub的时候取L0c的数据应该固定c0为16，不能随数据类型变化
         srcOffset += self->ctx.midHi_ * srcWi << 4; // srcWi是一个子kernel中间块w的长度
         wsDstOffset += static_cast<int64_t>(self->ctx.midHi_) * alignMidWi;
@@ -353,7 +375,7 @@ static __aicore__ inline void LoadL0c2GMForKernelSplitInner(Intf *self, const Lo
         fixPipeParams.params.dstDnMatrixStride = 0; // loop3_dst_stride
 
         fixPipeParams.mSize = realTailWi; // M: 尾块的长度, 真实的tailwi
-        LoadL0c2GMForKernelSplitFixPipe(self, srcOffset, wsDstOffset, fixPipeParams, useC1Buf);
+        LoadL0c2GMFixPipe(self, srcOffset, wsDstOffset, self->ctx.l0cOutWorkspace_, useC1Buf, fixPipeParams);
     }
 }
 
@@ -389,7 +411,7 @@ static __aicore__ inline void LoadL0c2UbForKernelSplitInner(Intf *self, const Lo
         fixPipeParams.params.dstDnMatrixStride = 0; // loop3_dst_stride
 
         fixPipeParams.mSize = alignHeadWi; // M: 首块的长度
-        LoadL0c2UbForKernelSplitFixPipe(self, srcOffset, ubDstOffset, fixPipeParams, useC1Buf);
+        LoadL0c2UbFixPipe(self, srcOffset, ubDstOffset, self->ctx.vecOutBuf_, useC1Buf, fixPipeParams);
         // BLOCK_CUBE: MMAD一次计算为16*16, fixpipe搬到ub的时候取L0c的数据应该固定c0为16，不能随数据类型变化
         srcOffset += realHeadWi << 4; // headWi_/2是一个子kernel首块w的长度
         ubDstOffset += alignHeadWi;
@@ -401,7 +423,7 @@ static __aicore__ inline void LoadL0c2UbForKernelSplitInner(Intf *self, const Lo
         fixPipeParams.params.dstDnMatrixStride = alignMidWi; // loop3_dst_stride
 
         fixPipeParams.mSize = alignMidWi; // M: 中间块一行的长度
-        LoadL0c2UbForKernelSplitFixPipe(self, srcOffset, ubDstOffset, fixPipeParams, useC1Buf);
+        LoadL0c2UbFixPipe(self, srcOffset, ubDstOffset, self->ctx.vecOutBuf_, useC1Buf, fixPipeParams);
         // BLOCK_CUBE: MMAD一次计算为16*16, fixpipe搬到ub的时候取L0c的数据应该固定c0为16，不能随数据类型变化
         srcOffset += self->ctx.midHi_ * srcWi << 4; // srcWi是一个子kernel中间块w的长度
         ubDstOffset += self->ctx.midHi_ * alignMidWi;
@@ -413,7 +435,7 @@ static __aicore__ inline void LoadL0c2UbForKernelSplitInner(Intf *self, const Lo
         fixPipeParams.params.dstDnMatrixStride = 0; // loop3_dst_stride
 
         fixPipeParams.mSize = AlignUpByDtype(realTailWi, align32Byte); // M: 尾块的长度
-        LoadL0c2UbForKernelSplitFixPipe(self, srcOffset, ubDstOffset, fixPipeParams, useC1Buf);
+        LoadL0c2UbFixPipe(self, srcOffset, ubDstOffset, self->ctx.vecOutBuf_, useC1Buf, fixPipeParams);
     }
 }
 
