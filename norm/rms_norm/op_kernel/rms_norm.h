@@ -58,30 +58,18 @@ public:
 
     __aicore__ inline void InitRstdData(GM_ADDR usrWorkspace)
     {
-        uint32_t syncLen = NUM_PER_BLK_FP32 * GetBlockNum();
-        uint32_t row_factor_align = ROUND_UP(row_factor, NUM_PER_BLK_FP32);
-        uint32_t llen = syncLen > row_factor_align ? syncLen : row_factor_align;
-        syncTmpSpaceGm_.SetGlobalBuffer((__gm__ int32_t*)usrWorkspace, syncLen);
-        pipe.InitBuffer(outTmpZeroBuf, llen * sizeof(float));
-        
-        LocalTensor<int32_t> int_zero_tensor = outTmpZeroBuf.Get<int32_t>();
-        Duplicate(int_zero_tensor, (int32_t)0, row_factor_align);
-        PipeBarrier<PIPE_V>();
-        DataCopy(syncTmpSpaceGm_, int_zero_tensor, syncLen);
-
-        LocalTensor<float> float_zero_tensor = int_zero_tensor.template ReinterpretCast<float>();
-        PipeBarrier<PIPE_V>();
-        uint32_t i_o_max = CeilDiv(row_work, row_factor);
-        uint32_t row_tail = row_work - (i_o_max - 1) * row_factor;
+        uint32_t row_factor_align = ROUND_UP(row_factor, NUM_PER_BLK_FP32);	 
+        pipe.InitBuffer(outTmpZeroBuf, row_factor_align * sizeof(float));
+        LocalTensor<float> temp_zero_tensor = outTmpZeroBuf.Get<float>();
+        Duplicate(temp_zero_tensor, (float)0.0, row_factor_align);
+        PipeBarrier<PIPE_ALL>();
+        uint32_t i_o_max = CeilDiv(row_work, row_factor);	 
+        uint32_t row_tail = row_work - (i_o_max - 1) * row_factor;	 
         for (uint32_t i_o = 0; i_o < i_o_max - 1; i_o++) {
-            DataCopy(rstdGm[i_o * row_factor], float_zero_tensor, row_factor_align);
-        }
-        DataCopy(rstdGm[(i_o_max - 1) * row_factor], float_zero_tensor, ROUND_UP(row_tail, NUM_PER_BLK_FP32));
-        event_t eventMte3V_1 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
-        SetFlag<HardEvent::MTE3_V>(eventMte3V_1);
-        WaitFlag<HardEvent::MTE3_V>(eventMte3V_1);
-        LocalTensor<int32_t> workLocal = outTmpZeroBuf.Get<int32_t>();
-        SyncAll(syncTmpSpaceGm_, workLocal);
+            DataCopy(rstdGm[i_o * row_factor], temp_zero_tensor, row_factor_align);	 
+        }	 
+        DataCopy(rstdGm[(i_o_max - 1) * row_factor], temp_zero_tensor, ROUND_UP(row_tail, NUM_PER_BLK_FP32));	 
+        PipeBarrier<PIPE_ALL>();
     }
 
     __aicore__ inline void InitVar(const RMSNormTilingData* tiling)
@@ -240,10 +228,6 @@ private:
         SetAtomicNone();
 #endif
         outQueueRstd.FreeTensor(rstdLocal);
-
-        event_t eventMte3V_2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
-        SetFlag<HardEvent::MTE3_V>(eventMte3V_2);
-        WaitFlag<HardEvent::MTE3_V>(eventMte3V_2);
     }
 
     __aicore__ inline void CopyOutY(uint32_t progress)
@@ -270,7 +254,6 @@ private:
     GlobalTensor<T_GAMMA> gammaGm;
     GlobalTensor<T> yGm;
     GlobalTensor<float> rstdGm;
-    GlobalTensor<int32_t> syncTmpSpaceGm_;
 
     uint32_t num_row;
     uint32_t num_col;
