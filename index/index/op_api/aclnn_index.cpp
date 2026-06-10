@@ -14,7 +14,6 @@
  */
 #include "aclnn_index.h"
 #include "index.h"
-#include "index/index_check/op_api/index_check.h"
 #include "aclnn_kernels/contiguous.h"
 #include "aclnn_kernels/transpose.h"
 #include "aclnn_kernels/common/op_error_check.h"
@@ -428,13 +427,6 @@ const aclTensor* CallKernel(const aclTensor* self, const aclTensor* out, const I
         auto indicesDimNum = indicesInfo.allDefinedIndices[0]->GetViewShape().GetDimNum();
         auto perm = GetPerm(indicesInfo.masksNum, indicesInfo.indicesNum, selfDimNum, executor);
         selfContiguous = l0op::Transpose(selfContiguous, perm, executor);
-        FVector<int64_t, MAX_SUPPORT_DIMS_NUMS> boundsVec;
-        for (size_t i = 0; i < selfContiguous->GetViewShape().GetDimNum(); i++) {
-            boundsVec.emplace_back(selfContiguous->GetViewShape().GetDim(i));
-        }
-        auto boundsArray = executor->AllocIntArray(boundsVec.data(), boundsVec.size());
-        auto boundsTensor = executor->ConvertToTensor(boundsArray, op::ToOpDataType(ACL_INT64));
-        l0op::IndexCheck(boundsTensor, IndicesTensorList, executor);
         opOut = l0op::IndexAiCore(
             selfContiguous, indexedSizes, indexedStrides, chooseInfo.outputShape, IndicesTensorList, executor);
         auto permBack = GetPermBack(indicesInfo.masksNum - indicesInfo.indicesNum, indicesDimNum, outDimNum, executor);
@@ -447,48 +439,13 @@ const aclTensor* CallKernel(const aclTensor* self, const aclTensor* out, const I
         } else if (chooseInfo.isNonContiguous) {
             auto newself = executor->CreateView(
                 self, self->GetViewShape(), self->GetStorageShape(), self->GetViewStrides(), self->GetViewOffset());
-            FVector<int64_t, MAX_SUPPORT_DIMS_NUMS> boundsVec;
-            for (size_t i = 0; i < newself->GetViewShape().GetDimNum(); i++) {
-                boundsVec.emplace_back(newself->GetViewShape().GetDim(i));
-            }
-            auto boundsArray = executor->AllocIntArray(boundsVec.data(), boundsVec.size());
-            auto boundsTensor = executor->ConvertToTensor(boundsArray, op::ToOpDataType(ACL_INT64));
-            l0op::IndexCheck(boundsTensor, IndicesTensorList, executor);
             opOut = l0op::IndexAiCore(
                 newself, indexedSizes, indexedStrides, chooseInfo.outputShape, IndicesTensorList, executor);
         } else {
-            FVector<int64_t, MAX_SUPPORT_DIMS_NUMS> boundsVec;
-            for (size_t i = 0; i < selfContiguous->GetViewShape().GetDimNum(); i++) {
-                boundsVec.emplace_back(selfContiguous->GetViewShape().GetDim(i));
-            }
-            auto boundsArray = executor->AllocIntArray(boundsVec.data(), boundsVec.size());
-            auto boundsTensor = executor->ConvertToTensor(boundsArray, op::ToOpDataType(ACL_INT64));
-            l0op::IndexCheck(boundsTensor, IndicesTensorList, executor);
             opOut = l0op::IndexAiCore(
                 selfContiguous, indexedSizes, indexedStrides, chooseInfo.outputShape, IndicesTensorList, executor);
         }
     } else {
-        bool hasBoolIndices = false;
-        for (size_t i = 0; i < indicesInfo.indicesNum; i++) {
-            if (indicesInfo.allDefinedIndices[i]->GetDataType() == op::DataType::DT_BOOL) {
-                hasBoolIndices = true;
-                break;
-            }
-        }
-        if (!hasBoolIndices) {
-            FVector<int64_t, MAX_SUPPORT_DIMS_NUMS> boundsVec;
-            const aclTensor* boundsSelf = selfContiguous;
-            if (chooseInfo.isNonContiguous) {
-                boundsSelf = executor->CreateView(
-                    self, self->GetViewShape(), self->GetStorageShape(), self->GetViewStrides(), self->GetViewOffset());
-            }
-            for (size_t i = 0; i < boundsSelf->GetViewShape().GetDimNum(); i++) {
-                boundsVec.emplace_back(boundsSelf->GetViewShape().GetDim(i));
-            }
-            auto boundsArray = executor->AllocIntArray(boundsVec.data(), boundsVec.size());
-            auto boundsTensor = executor->ConvertToTensor(boundsArray, op::ToOpDataType(ACL_INT64));
-            l0op::IndexCheck(boundsTensor, IndicesTensorList, executor);
-        }
         if (selfContiguous->GetViewShape().GetDimNum() == 0) {
             opOut = selfContiguous;
         } else {
