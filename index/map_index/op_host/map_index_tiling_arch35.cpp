@@ -18,6 +18,7 @@
 #include "util/math_util.h"
 #include "register/op_impl_registry.h"
 #include "log/log.h"
+#include <graph/utils/type_utils.h>
 #include "op_host/tiling_util.h"
 
 using namespace std;
@@ -51,41 +52,41 @@ static ge::graphStatus CheckDtype(const gert::TilingContext *context, MapIndexTi
     auto inputXPtr = context->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputXPtr);
     auto xDtype = inputXPtr->GetDataType();
-    OP_CHECK_IF(INPUT_SUPPORT_DTYPE_SET.count(xDtype) == 0,
-        OP_LOGE(context->GetNodeName(), 
-            "Input x's data type is [%s], only supports INT32.",
-            Ops::Base::ToString(static_cast<ge::DataType>(xDtype)).c_str()),
-        return ge::GRAPH_FAILED);
+    if (INPUT_SUPPORT_DTYPE_SET.count(xDtype) == 0) {
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "x",
+            ge::TypeUtils::DataTypeToSerialString(xDtype), "INT32");
+        return ge::GRAPH_FAILED;
+    }
 
     auto inputDataSeqPtr = context->GetInputDesc(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputDataSeqPtr);
     auto dataSeqDtype = inputDataSeqPtr->GetDataType();
-    OP_CHECK_IF(INPUT_SUPPORT_DTYPE_SET.count(dataSeqDtype) == 0,
-        OP_LOGE(context->GetNodeName(), 
-            "Input dataSeq's data type is [%s], only supports INT32.",
-            Ops::Base::ToString(static_cast<ge::DataType>(dataSeqDtype)).c_str()),
-        return ge::GRAPH_FAILED);
+    if (INPUT_SUPPORT_DTYPE_SET.count(dataSeqDtype) == 0) {
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "dataSeq",
+            ge::TypeUtils::DataTypeToSerialString(dataSeqDtype), "INT32");
+        return ge::GRAPH_FAILED;
+    }
 
     auto levelIndexInput = context->GetOptionalInputDesc(LEVEL_INDEX_INDEX);
     if (levelIndexInput == nullptr) {
         tilingParam.hasLevelIndex = false;
     } else {
         auto levelIndexDtype = levelIndexInput->GetDataType();
-        OP_CHECK_IF(INPUT_SUPPORT_DTYPE_SET.count(levelIndexDtype) == 0,
-        OP_LOGE(context->GetNodeName(), 
-            "Input levelIndex's data type is [%s], only supports INT32.",
-            Ops::Base::ToString(static_cast<ge::DataType>(levelIndexDtype)).c_str()),
-        return ge::GRAPH_FAILED);
+        if (INPUT_SUPPORT_DTYPE_SET.count(levelIndexDtype) == 0) {
+            OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "levelIndex",
+                ge::TypeUtils::DataTypeToSerialString(levelIndexDtype), "INT32");
+            return ge::GRAPH_FAILED;
+        }
     }
 
     auto outputYPtr = context->GetOutputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, outputYPtr);
     auto yDtype = outputYPtr->GetDataType();
-    OP_CHECK_IF(INPUT_SUPPORT_DTYPE_SET.count(yDtype) == 0,
-        OP_LOGE(context->GetNodeName(),
-            "Output y's data type is [%s], only supports INT32.",
-            Ops::Base::ToString(static_cast<ge::DataType>(yDtype)).c_str()),
-        return ge::GRAPH_FAILED);
+    if (INPUT_SUPPORT_DTYPE_SET.count(yDtype) == 0) {
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "y",
+            ge::TypeUtils::DataTypeToSerialString(yDtype), "INT32");
+        return ge::GRAPH_FAILED;
+    }
 
     return ge::GRAPH_SUCCESS;
 }
@@ -105,39 +106,36 @@ static ge::graphStatus CheckShape(const gert::TilingContext *context, MapIndexTi
     OP_CHECK_NULL_WITH_CONTEXT(context, yShapePtr);
     auto yShape = Ops::NN::OpTiling::EnsureNotScalar(yShapePtr->GetStorageShape());
     OP_CHECK_IF(yShape.GetDimNum() != 1,
-        OP_LOGE(context->GetNodeName(),
-        "The shape of output y must be 1D."),
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "y", std::to_string(yShape.GetDimNum()), "1"),
         return ge::GRAPH_FAILED);
     
     OP_CHECK_IF(yShape.GetDim(0) != 1, 
-        OP_LOGE(context->GetNodeName(),
-        "The shape of output y must be [1]."),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "y",
+        std::to_string(yShape.GetDim(0)), "The shape dim of y must be 1"),
         return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(xShape.GetDimNum() != 1,
-        OP_LOGE(context->GetNodeName(),
-        "The shape of input x must be 1D."),
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "x", std::to_string(xShape.GetDimNum()), "1"),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(xShape.GetDim(0) > X_MAX_DIM0,
-        OP_LOGE(context->GetNodeName(),
-        "The shape of input x must be less than 24000."),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x",
+        std::to_string(xShape.GetDim(0)), "The shape dim of x must be within the range [1, 24000]"),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(dataSeqShape.GetDimNum() != 1,
-        OP_LOGE(context->GetNodeName(),
-        "The shape of input data_seq must be 1D."),
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "data_seq", std::to_string(dataSeqShape.GetDimNum()), "1"),
         return ge::GRAPH_FAILED);
 
     tilingParam.Dim1Size = xShape.GetDim(0);
     OP_CHECK_IF(dataSeqShape.GetDim(0) % xShape.GetDim(0) != 0,
-        OP_LOGE(context->GetNodeName(),
-        "the length of data_seq must be multiple of the length of x"),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "data_seq",
+        std::to_string(dataSeqShape.GetDim(0)), "Shape[0] of data_seq must be exactly divisible by shape[0] of x"),
         return ge::GRAPH_FAILED);
 
     tilingParam.Dim0Size = dataSeqShape.GetDim(0) / xShape.GetDim(0);
 
     OP_CHECK_IF(tilingParam.Dim0Size > DATA_SEQ_MAX_DIM0,
-        OP_LOGE(context->GetNodeName(),
-        "The input length of dataseq, which is a multiple of x, should be less than 256."),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "data_seq_len",
+        std::to_string(tilingParam.Dim0Size), "The value of data_seq_len must be less than 256"),
         return ge::GRAPH_FAILED);
     
     if(tilingParam.hasLevelIndex) {
@@ -145,12 +143,11 @@ static ge::graphStatus CheckShape(const gert::TilingContext *context, MapIndexTi
         OP_CHECK_NULL_WITH_CONTEXT(context, levelIndexShapePtr);
         auto levelIndexShape = levelIndexShapePtr->GetStorageShape();
         OP_CHECK_IF(levelIndexShape.GetDimNum() != 1,
-            OP_LOGE(context->GetNodeName(),
-            "The shape of input level_index must be 1D."),
+            OP_LOGE_FOR_INVALID_SHAPEDIM(context->GetNodeName(), "level_index", std::to_string(levelIndexShape.GetDimNum()), "1"),
             return ge::GRAPH_FAILED);
         OP_CHECK_IF(tilingParam.Dim0Size != levelIndexShape.GetDim(0),
-            OP_LOGE(context->GetNodeName(),
-            "The input levelindex shape should be a multiple of dataseq, which should be a multiple of x."),
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "level_index",
+            std::to_string(levelIndexShape.GetDim(0)), "Shape[0] of level_index must be equal to shape[0] of data_seq"),
             return ge::GRAPH_FAILED);
     }
 
@@ -167,8 +164,7 @@ static ge::graphStatus CheckAttr(const gert::TilingContext *context)
     auto* attrTransPose = attrs->GetAttrPointer<bool>(ATTR_INDEX_TRANSPOSE);
     OP_CHECK_NULL_WITH_CONTEXT(context, attrTransPose);
     OP_CHECK_IF((*attrTransPose),
-        OP_LOGE(
-            context->GetNodeName(), "The attr transpose should be false on A5, please check"),
+        OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "transpose", "true", "false"),
         return ge::GRAPH_FAILED);
     
     return ge::GRAPH_SUCCESS;

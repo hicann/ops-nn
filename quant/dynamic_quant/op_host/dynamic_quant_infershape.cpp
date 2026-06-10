@@ -15,6 +15,7 @@
 #include "error_util.h"
 #include "log/log.h"
 #include "util/math_util.h"
+#include "graph/utils/type_utils.h"
 
 using namespace ge;
 namespace ops {
@@ -79,8 +80,8 @@ static ge::graphStatus DynamicQuantInferDataType(gert::InferDataTypeContext* con
             yDtype = static_cast<ge::DataType>(dstDtype);
             OP_CHECK_IF(
                 std::find(OUT_TYPE_LIST.begin(), OUT_TYPE_LIST.end(), yDtype) == OUT_TYPE_LIST.end(),
-                OP_LOGE(context,
-                    "attr dst_type only support 2(int8), 29(int4), 34(hifloat8), 35(float8_e5m2), 36(float8_e4m3fn)"),
+                OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "dst_type",
+                    ge::TypeUtils::DataTypeToSerialString(yDtype), "INT8, INT4, HIFLOAT8, FLOAT8_E5M2, FLOAT8_E4M3FN"),
                 return ge::GRAPH_FAILED);
         }
     }

@@ -76,9 +76,9 @@ ge::graphStatus ReluGradTiling::DoOpTiling()
         status = brcBaseTiling.DoTiling();
         tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), RELU_GRAD_TPL_INT32);
     } else {
-        OP_LOGE(
-            context_->GetNodeName(), "Input dtype only support fp16, bf16, fp32, int8, uint8, int32, int64, currently is %s.", 
-            ge::TypeUtils::DataTypeToSerialString(inputDtype).c_str());
+        OP_LOGE_FOR_INVALID_DTYPE(
+            context_->GetNodeName(), "x",
+            ge::TypeUtils::DataTypeToSerialString(inputDtype), "FLOAT16, BF16, FLOAT, INT8, UINT8, INT32, INT64");
         return ge::GRAPH_FAILED;
     }
 

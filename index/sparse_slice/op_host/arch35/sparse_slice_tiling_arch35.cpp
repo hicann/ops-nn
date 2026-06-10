@@ -185,7 +185,9 @@ ge::graphStatus SparseSliceTiling::CheckDtype()
     auto indicesDtype = indicesPtr->GetDataType();
     OP_TILING_CHECK(
         INDICES_SUPPORT_DTYPE_SET.count(indicesDtype) == 0,
-        OP_LOGE(context_->GetNodeName(), "Input indices only support INT64 currently, please check. "),
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x_indices",
+            ge::TypeUtils::DataTypeToSerialString(indicesDtype),
+            "INT64"),
         return ge::GRAPH_FAILED);
 
     auto valuesPtr = context_->GetInputDesc(1);
@@ -193,10 +195,9 @@ ge::graphStatus SparseSliceTiling::CheckDtype()
     auto valuesDtype = valuesPtr->GetDataType();
     OP_TILING_CHECK(
         VALUE_SUPPORT_DTYPE_SET.count(valuesDtype) == 0,
-        OP_LOGE(
-            context_->GetNodeName(),
-            "Input values only support DT_FLOAT, DT_FLOAT16, DT_BF16, DT_UINT8, DT_INT8, DT_INT16, DT_UINT16,  "
-            "DT_INT32, DT_INT64, DT_BOOL currently, please check. "),
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x_values",
+            ge::TypeUtils::DataTypeToSerialString(valuesDtype),
+            "FLOAT, FLOAT16, BF16, UINT8, INT8, INT16, UINT16, INT32, INT64, BOOL"),
         return ge::GRAPH_FAILED);
 
     auto shapePtr = context_->GetInputDesc(DIGIT_TWO);
@@ -204,7 +205,9 @@ ge::graphStatus SparseSliceTiling::CheckDtype()
     auto shapeDtype = shapePtr->GetDataType();
     OP_TILING_CHECK(
         INDICES_SUPPORT_DTYPE_SET.count(shapeDtype) == 0,
-        OP_LOGE(context_->GetNodeName(), "Input shape only support INT64 currently, please check. "),
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x_shape",
+            ge::TypeUtils::DataTypeToSerialString(shapeDtype),
+            "INT64"),
         return ge::GRAPH_FAILED);
 
     auto startPtr = context_->GetInputDesc(DIGIT_THREE);
@@ -212,7 +215,9 @@ ge::graphStatus SparseSliceTiling::CheckDtype()
     auto startDtype = startPtr->GetDataType();
     OP_TILING_CHECK(
         INDICES_SUPPORT_DTYPE_SET.count(startDtype) == 0,
-        OP_LOGE(context_->GetNodeName(), "Input start only support INT64 currently, please check. "),
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x_start",
+            ge::TypeUtils::DataTypeToSerialString(startDtype),
+            "INT64"),
         return ge::GRAPH_FAILED);
 
     auto sizePtr = context_->GetInputDesc(DIGIT_FOUR);
@@ -220,7 +225,9 @@ ge::graphStatus SparseSliceTiling::CheckDtype()
     auto sizeDtype = sizePtr->GetDataType();
     OP_TILING_CHECK(
         INDICES_SUPPORT_DTYPE_SET.count(sizeDtype) == 0,
-        OP_LOGE(context_->GetNodeName(), "Input size only support INT64 currently, please check. "),
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x_size",
+            ge::TypeUtils::DataTypeToSerialString(sizeDtype),
+            "INT64"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -231,63 +238,63 @@ ge::graphStatus SparseSliceTiling::CheckShape()
     auto indicesShape = indicesPtr->GetStorageShape();
     OP_TILING_CHECK(
         static_cast<int64_t>(indicesShape.GetDimNum()) != DIGIT_TWO,
-        OP_LOGE(
-            context_->GetNodeName(), "Input indices has dim number %ld, it should be 2. ",
-            static_cast<int64_t>(indicesShape.GetDimNum())),
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x_indices",
+            std::to_string(static_cast<int64_t>(indicesShape.GetDimNum())),
+            std::to_string(DIGIT_TWO)),
         return ge::GRAPH_FAILED);
     auto valueNumbers = static_cast<int64_t>(indicesShape.GetDim(0));
     auto rankNumbers = static_cast<int64_t>(indicesShape.GetDim(1));
     OP_TILING_CHECK(
         rankNumbers > DIGIT_TWENTYFOUR || rankNumbers < DIGIT_ONE,
-        OP_LOGE(context_->GetNodeName(), "Input indices second dim only support 1-24, current is %ld. ", rankNumbers),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "x_indices[1]",
+            std::to_string(rankNumbers),
+            "The value of x_indices[1] must be in range [1, 24]"),
         return ge::GRAPH_FAILED);
     auto valuesPtr = context_->GetInputShape(1);
     auto valuesShape = valuesPtr->GetStorageShape();
     OP_TILING_CHECK(
         static_cast<int64_t>(valuesShape.GetDimNum()) != DIGIT_ONE,
-        OP_LOGE(
-            context_->GetNodeName(), "Input values has dim number %ld, it should be 1. ",
-            static_cast<int64_t>(valuesShape.GetDimNum())),
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x_values",
+            std::to_string(static_cast<int64_t>(valuesShape.GetDimNum())),
+            std::to_string(DIGIT_ONE)),
         return ge::GRAPH_FAILED);
     auto actualValueNumbers = static_cast<int64_t>(valuesShape.GetDim(0));
     OP_TILING_CHECK(
         valueNumbers != actualValueNumbers,
-        OP_LOGE(
-            context_->GetNodeName(),
-            "First dim of input values is %ld, it should be the same as the first dim of indices, which is %ld. ",
-            actualValueNumbers, valueNumbers),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "x_values, x_indices",
+            Ops::Base::ToString(valuesShape) + ", " + Ops::Base::ToString(indicesShape),
+            "The shapes of x_values and x_indices must be the same"),
         return ge::GRAPH_FAILED);
     auto shapePtr = context_->GetInputShape(DIGIT_TWO);
     auto shapeShape = shapePtr->GetStorageShape();
     OP_TILING_CHECK(
         static_cast<int64_t>(shapeShape.GetDimNum()) != DIGIT_ONE,
-        OP_LOGE(
-            context_->GetNodeName(), "Input shape has dim number %ld, it should be 1. ",
-            static_cast<int64_t>(shapeShape.GetDimNum())),
+        OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x_shape",
+            std::to_string(static_cast<int64_t>(shapeShape.GetDimNum())),
+            std::to_string(DIGIT_ONE)),
         return ge::GRAPH_FAILED);
     auto shapeRankNumbers = static_cast<int64_t>(shapeShape.GetDim(0));
     OP_TILING_CHECK(
         rankNumbers != shapeRankNumbers,
-        OP_LOGE(
-            context_->GetNodeName(),
-            "First dim of input rank is %ld, it should be the same as the second dim of indices, which is %ld. ",
-            shapeRankNumbers, rankNumbers),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "x_shape, x_indices",
+            Ops::Base::ToString(shapeShape) + ", " + Ops::Base::ToString(indicesShape),
+            "The shapes of x_shape and x_indices must be the same"),
         return ge::GRAPH_FAILED);
     auto startPtr = context_->GetInputShape(DIGIT_THREE);
     auto startShape = startPtr->GetStorageShape();
     OP_TILING_CHECK(
         startShape != shapeShape,
-        OP_LOGE(
-            context_->GetNodeName(),
-            "The shape of input start is not the same with the shape of input shape, they should be the same. "),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "x_start, x_shape",
+            Ops::Base::ToString(startShape) + ", " + Ops::Base::ToString(shapeShape),
+            "The shapes of x_start and x_shape must be the same"),
         return ge::GRAPH_FAILED);
     auto sizePtr = context_->GetInputShape(DIGIT_FOUR);
     auto sizeShape = sizePtr->GetStorageShape();
     OP_TILING_CHECK(
         sizeShape != shapeShape,
-        OP_LOGE(
-            context_->GetNodeName(),
-            "The shape of input size is not the same with the shape of input shape, they should be the same. "),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "x_size, x_shape",
+            Ops::Base::ToString(sizeShape) + ", " + Ops::Base::ToString(shapeShape),
+            "The shapes of x_size and x_shape must be the same"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }

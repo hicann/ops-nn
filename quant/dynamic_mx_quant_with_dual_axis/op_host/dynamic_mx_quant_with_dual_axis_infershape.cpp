@@ -66,7 +66,8 @@ graphStatus InferShapeForDynamicMxQuantWithDualAxis(gert::InferShapeContext* con
 
     OP_CHECK_IF(
         xShape->GetDimNum() < 2 || xShape->GetDimNum() > MAX_DIM_NUM,
-        OP_LOGE(context->GetNodeName(), "Input x rank[%lu] should be in [2, 7].", xShape->GetDimNum()),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x",
+            std::to_string(xShape->GetDimNum()), "The shape dim of x must be within the range [2, 7]"),
         return ge::GRAPH_FAILED);
 
     *yShape1 = *xShape;

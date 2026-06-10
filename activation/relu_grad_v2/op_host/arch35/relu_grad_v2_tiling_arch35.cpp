@@ -14,6 +14,7 @@
  * \brief
  */
 #include "relu_grad_v2_tiling_arch35.h"
+#include <graph/utils/type_utils.h>
 #include "log/log.h"
 #include "platform/platform_info.h"
 #include "register/op_impl_registry.h"
@@ -48,7 +49,9 @@ ge::graphStatus ReluGradV2Tiling::CalcInputDtype()
     OP_CHECK_IF(
         this->inputDtype != ge::DT_FLOAT16 && this->inputDtype != ge::DT_BF16 && this->inputDtype != ge::DT_INT8 &&
             this->inputDtype != ge::DT_UINT8 && this->inputDtype != ge::DT_INT32 && this->inputDtype != ge::DT_FLOAT,
-        OP_LOGE(tilingContext->GetNodeName(), "input x dtype not support"), return ge::GRAPH_FAILED);
+        OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "x",
+            ge::TypeUtils::DataTypeToSerialString(this->inputDtype), "FLOAT16, BF16, FLOAT, INT8, UINT8, INT32"),
+        return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -71,14 +74,20 @@ ge::graphStatus ReluGradV2Tiling::CheckShape()
 
     OP_CHECK_IF(
         (dimNum < 1 || inputGradientsShape.GetDim(dimNum - 1) % 8 != 0),
-        OP_LOGE(tilingContext->GetNodeName(), "The last dimension must be divisible by 8."), return ge::GRAPH_FAILED);
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(tilingContext->GetNodeName(), "gradients",
+            Ops::Base::ToString(inputGradientsShape),
+            "The last dimension of gradients must be divisible by 8"), return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(
         inputGradientsShape != inputMaskShape,
-        OP_LOGE(tilingContext->GetNodeName(), "Input gradients and mask shape not same."), return ge::GRAPH_FAILED);
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext->GetNodeName(), "gradients, mask",
+            Ops::Base::ToString(inputGradientsShape) + ", " + Ops::Base::ToString(inputMaskShape),
+            "The shapes of gradients and mask must be the same"), return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         inputMaskShape != outputShape,
-        OP_LOGE(tilingContext->GetNodeName(), "Input mask and output backprops shape not same."),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext->GetNodeName(), "mask, backprops",
+            Ops::Base::ToString(inputMaskShape) + ", " + Ops::Base::ToString(outputShape),
+            "The shapes of mask and backprops must be the same"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -91,7 +100,9 @@ ge::graphStatus ReluGradV2Tiling::CalcOutputDtype()
     this->outputDtype = outputDesc->GetDataType();
     OP_CHECK_IF(
         this->outputDtype != this->inputDtype,
-        OP_LOGE(tilingContext->GetNodeName(), "Output backprops dtype not same as input gradients."),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "backprops, gradients",
+            ge::TypeUtils::DataTypeToSerialString(this->outputDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(this->inputDtype),
+            "The dtypes of backprops and gradients must be the same"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -135,7 +146,8 @@ ge::graphStatus ReluGradV2Tiling::RunTiling()
         dType = TPL_INT32;
         baseTilingResult = elewiseBaseTiling.DoTiling<ReluGradV2<int32_t>::OpDag>(*tiling);
     } else {
-        OP_LOGE(tilingContext->GetNodeName(), "Output dtype not support.");
+        OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "backprops",
+            ge::TypeUtils::DataTypeToSerialString(this->outputDtype), "FLOAT16, BF16, FLOAT, INT8, UINT8, INT32");
         return ge::GRAPH_FAILED;
     }
 

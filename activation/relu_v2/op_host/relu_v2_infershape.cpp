@@ -92,11 +92,13 @@ static ge::graphStatus CheckShape(const gert::InferShapeContext* context, const 
     auto dimNum = origin_shape->GetDimNum();
     if (dimNum >= 1) {
         if (origin_shape->GetDim(dimNum - 1) % LAST_DIM_EIGHT != 0) {
-            OP_LOGE(context->GetNodeName(), "The last dimension must be divisible by 8!");
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "x",
+                Ops::Base::ToString(*origin_shape), "Shape[dimNum-1] of this parameter must be exactly divided by 8");
             return ge::GRAPH_FAILED;
         }
     } else {
-        OP_LOGE(context->GetNodeName(), "The dimension number must be larger than 0!");
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x",
+            std::to_string(dimNum), "The shape dim of x must be > 0");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -149,9 +151,8 @@ static ge::graphStatus InferShape4ReluV2(gert::InferShapeContext* context)
     }
     OP_CHECK_IF(
         origin_shape->GetDimNum() != SHAPE_4D_SIZE,
-        OP_LOGE(
-            context->GetNodeName(), "%s",
-            ConcatString("dim num of input x ", Ops::Base::ToString(*origin_shape).c_str(), " must be 4!").c_str()),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x",
+            std::to_string(origin_shape->GetDimNum()), "The shape dim of x must be 4"),
         return GRAPH_FAILED);
     mask_shape->SetDimNum(0);
     auto it = std::find_if(
@@ -161,10 +162,8 @@ static ge::graphStatus InferShape4ReluV2(gert::InferShapeContext* context)
         });
     OP_CHECK_IF(
         it == kFuncMap.end(),
-        OP_LOGE(
-            context->GetNodeName(), "%s",
-            ConcatString("origin format ", Ops::Base::ToString(origin_format).c_str(), " must in (NHWC, NCHW, HWCN).")
-                .c_str()),
+        OP_LOGE_FOR_INVALID_FORMAT(context->GetNodeName(), "x",
+            Ops::Base::ToString(origin_format), "NHWC, NCHW, HWCN"),
         return GRAPH_FAILED);
     it->second(origin_shape, bint8, mask_shape);
 

@@ -32,7 +32,10 @@ ge::graphStatus FastGeluTiling::CalcInputDtype()
     this->inputDtype = inputDesc->GetDataType();
     OP_CHECK_IF(
         this->inputDtype != ge::DT_FLOAT16 && this->inputDtype != ge::DT_BF16 && this->inputDtype != ge::DT_FLOAT,
-        OP_LOGE(tilingContext->GetNodeName(), "x dtype not support"), return ge::GRAPH_FAILED);
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            tilingContext->GetNodeName(), "x",
+            ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->inputDtype)),
+            "The dtype of x must be DT_FLOAT16, DT_BF16, or DT_FLOAT"), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -43,10 +46,16 @@ ge::graphStatus FastGeluTiling::CalcOutputDtype()
     this->outputDtype = outputDesc->GetDataType();
     OP_CHECK_IF(
         this->outputDtype != ge::DT_FLOAT16 && this->outputDtype != ge::DT_BF16 && this->outputDtype != ge::DT_FLOAT,
-        OP_LOGE(tilingContext->GetNodeName(), "output y dtype not support"), return ge::GRAPH_FAILED);
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            tilingContext->GetNodeName(), "y",
+            ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->outputDtype)),
+            "The dtype of y must be DT_FLOAT16, DT_BF16, or DT_FLOAT"), return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         this->outputDtype != this->inputDtype,
-        OP_LOGE(tilingContext->GetNodeName(), "input x dtype not same as output y"), return ge::GRAPH_FAILED);
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            tilingContext->GetNodeName(), "x, y",
+            ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->inputDtype)) + ", " + ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->outputDtype)),
+            "The dtypes of x and y must be the same"), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
@@ -61,7 +70,9 @@ ge::graphStatus FastGeluTiling::CheckShape()
     const gert::Shape& outputShape = Ops::Base::EnsureNotScalar(outStorageShape->GetStorageShape());
 
     OP_CHECK_IF(
-        inputShape != outputShape, OP_LOGE(tilingContext->GetNodeName(), "input x and output y shape not same"),
+        inputShape != outputShape, OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            tilingContext->GetNodeName(), "x, y", Ops::Base::ToString(inputShape) + ", " + Ops::Base::ToString(outputShape),
+            "The shapes of x and y must be the same"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -72,7 +83,9 @@ std::string FastGeluTiling::DataTypeToSerialString(const ge::DataType type) cons
     if (it != DATATYPE_TO_STRING_MAP.end()) {
         return it->second;
     } else {
-        OP_LOGE(tilingContext->GetNodeName(), "datatype %d not find", type);
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            tilingContext->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(type)),
+            "The dtype of x must be DT_FLOAT16, DT_BF16, or DT_FLOAT");
         return "UNDEFINED";
     }
 }
@@ -103,7 +116,10 @@ ge::graphStatus FastGeluTiling::RunTiling()
         dType = TPL_FP32;
         status = elewiseBaseTiling.DoTiling<FastGeluDag::FastGeluNoCast<float>::OpDag>(*tiling);
     } else {
-        OP_LOGE(tilingContext->GetNodeName(), "elewiseBaseTiling DoTiling failed.");
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            tilingContext->GetNodeName(), "y",
+            ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->outputDtype)),
+            "The dtype of y must be DT_FLOAT16, DT_BF16, or DT_FLOAT");
         return ge::GRAPH_FAILED;
     }
     OP_CHECK_IF(

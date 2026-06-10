@@ -112,7 +112,9 @@ ge::graphStatus SigmoidGradTiling::GetShapeAttrsInfo()
 
     opKey = GetOpKey(yDtype, dyDtype, zDtype);
     OP_CHECK_IF((opKey == OP_KEY_INVALID),
-                    OP_LOGE(context_->GetNodeName(), "can not get opKey"),
+                    OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "y, dy, z",
+                        ge::TypeUtils::DataTypeToSerialString(yDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(dyDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(zDtype),
+                        "The dtypes of y, dy, z must be the same"),
                     return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -129,7 +131,9 @@ ge::graphStatus SigmoidGradTiling::DoOpTiling()
     auto dyShape = context_->GetInputShape(INDEX_1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, dyShape);
     if (!Ops::Base::IsSameElewiseShape(yShape->GetStorageShape(), dyShape->GetStorageShape())) {
-        OP_LOGE(context_->GetNodeName(), "yShape and dyShape not equal");
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "y, dy",
+            Ops::Base::ToString(yShape->GetStorageShape()) + ", " + Ops::Base::ToString(dyShape->GetStorageShape()),
+            "The shapes of y and dy must be the same");
         return ge::GRAPH_FAILED;
     }
     Ops::Base::ElewiseTilingParams elewiseTilingParams;

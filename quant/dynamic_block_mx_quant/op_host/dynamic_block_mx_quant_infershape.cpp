@@ -61,7 +61,8 @@ graphStatus InferShapeForDynamicBlockMxQuant(gert::InferShapeContext* context)
 
     OP_CHECK_IF(
         xShape->GetDimNum() < MIN_DIM_NUM || xShape->GetDimNum() > MAX_DIM_NUM,
-        OP_LOGE(context->GetNodeName(), "Input x rank[%lu] should be in [2, 3].", xShape->GetDimNum()),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x",
+            std::to_string(xShape->GetDimNum()), "The shape dim of x must be within the range [2, 3]"),
         return ge::GRAPH_FAILED);
     *yShape = *xShape;
 
@@ -117,11 +118,8 @@ ge::graphStatus InferDataTypeForDynamicBlockMxQuant(gert::InferDataTypeContext* 
 
     OP_CHECK_IF(
         std::find(Y_SUPPORT_DTYPE_SET.begin(), Y_SUPPORT_DTYPE_SET.end(), outDtype) == Y_SUPPORT_DTYPE_SET.end(),
-        OP_LOGE(
-            context->GetNodeName(),
-            "dst_type is illegal, only supports 40(FLOAT4_E2M1), 41(FLOAT4_E1M2), "
-            "36(FLOAT8_E4M3FN) or 35(FLOAT8_E5M2). but got %d(%s)",
-            *dstDtype, ge::TypeUtils::DataTypeToAscendString(outDtype).GetString()),
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "dst_type",
+            ge::TypeUtils::DataTypeToSerialString(outDtype), "FLOAT4_E2M1, FLOAT4_E1M2, FLOAT8_E4M3FN, FLOAT8_E5M2"),
         return ge::GRAPH_FAILED);
     context->SetOutputDataType(Y1_OUTTYPE_INDEX, outDtype);
     context->SetOutputDataType(SCALE1_OUTTYPE_INDEX, ge::DT_FLOAT8_E8M0);

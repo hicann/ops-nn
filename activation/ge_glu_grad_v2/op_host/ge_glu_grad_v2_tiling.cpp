@@ -192,7 +192,9 @@ ge::graphStatus GeGluGradV2Tiling::Init()
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, ptrApproximate);
     approximateAttr = *ptrApproximate;
     OP_CHECK_IF(
-        approximateAttr == 0 && is310p, OP_LOGE(NODE_NAME, "approximate only support 1(Tanh) in 310P."),
+        approximateAttr == 0 && is310p, OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            tilingContext->GetNodeName(), "approximate", std::to_string(approximateAttr),
+            "If the platform is 310P, parameter approximate must be 1(Tanh)"),
         return ge::GRAPH_FAILED);
     const bool* ptrActivateLeft = attrs->GetAttrPointer<bool>(ACTIVATE_LEFT_ATTR_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, ptrActivateLeft);
@@ -209,44 +211,67 @@ ge::graphStatus GeGluGradV2Tiling::CheckParams()
 {
     OP_CHECK_IF(
         dyDtype != ge::DT_BF16 && dyDtype != ge::DT_FLOAT16 && dyDtype != ge::DT_FLOAT,
-        OP_LOGE(NODE_NAME, "Data type support only float16, bfloat16, float32."), return ge::GRAPH_FAILED);
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            tilingContext->GetNodeName(), "dy",
+            ge::TypeUtils::DataTypeToSerialString(dyDtype),
+            "The dtype of dy must be DT_FLOAT16, DT_BF16, or DT_FLOAT"), return ge::GRAPH_FAILED);
 
     // 310P donot support bfloat16 and erf mode
     const bool is310p = ptrCompileInfo->curSocVersion == NpuArch::DAV_2002;
     OP_CHECK_IF(
-        dyDtype == ge::DT_BF16 && is310p, OP_LOGE(NODE_NAME, "Data type donot support only bfloat16 in 310P."),
+        dyDtype == ge::DT_BF16 && is310p, OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            tilingContext->GetNodeName(), "dy",
+            ge::TypeUtils::DataTypeToSerialString(dyDtype),
+            "The dtype of dy must not be DT_BF16 on 310P"),
         return ge::GRAPH_FAILED);
     dtypeSize = ge::GetSizeByDataType(dyDtype);
-    OP_CHECK_IF(dtypeSize <= 0, OP_LOGE(NODE_NAME, "dtypeSize[%d] is invalid.", dtypeSize), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(dtypeSize <= 0,
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            tilingContext->GetNodeName(), "dy",
+            ge::TypeUtils::DataTypeToSerialString(dyDtype),
+            "The dtype of dy must be DT_FLOAT16, DT_BF16, or DT_FLOAT"), return ge::GRAPH_FAILED);
 
     auto xDtype = tilingContext->GetInputDesc(X_INDEX)->GetDataType();
     auto geluDtype = tilingContext->GetInputDesc(GELU_INDEX)->GetDataType();
     auto dxDtype = tilingContext->GetInputDesc(DX_INDEX)->GetDataType();
     OP_CHECK_IF(
         dyDtype != geluDtype || xDtype != dxDtype || dyDtype != xDtype,
-        OP_LOGE(NODE_NAME, "The dtype of input should be same."), return ge::GRAPH_FAILED);
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            tilingContext->GetNodeName(), "dy, x, gelu, dx",
+            ge::TypeUtils::DataTypeToSerialString(dyDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(xDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(geluDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(dxDtype),
+            "The dtypes of dy, x, gelu, and dx must be the same"), return ge::GRAPH_FAILED);
 
     size_t xDimNum = xShape.GetDimNum();
     dimAttr = dimAttr < 0 ? static_cast<int64_t>(xDimNum) + dimAttr : dimAttr;
     if (dimAttr < 0 || dimAttr >= static_cast<int64_t>(xDimNum)) {
-        OP_LOGE(NODE_NAME, "Dim %ld is not in [0, %lu) or input x is a scalar.", dimAttr, xDimNum);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            tilingContext->GetNodeName(), "dim", std::to_string(dimAttr),
+            "The value of dim must be in the range [0, " + std::to_string(xDimNum) + ")");
         return ge::GRAPH_FAILED;
     }
 
     size_t dyDimNum = dyShape.GetDimNum();
     size_t geluDimNum = geluShape.GetDimNum();
     OP_CHECK_IF(
-        dyDimNum != xDimNum || geluDimNum != xDimNum, OP_LOGE(NODE_NAME, "The dim num of input should be same."),
+        dyDimNum != xDimNum || geluDimNum != xDimNum,
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            tilingContext->GetNodeName(), "dy, x, gelu",
+            std::to_string(dyDimNum) + ", " + std::to_string(xDimNum) + ", " + std::to_string(geluDimNum),
+            "The shape dims of dy, x, and gelu must be the same"),
         return ge::GRAPH_FAILED);
 
     int64_t xShapeSize = xShape.GetShapeSize();
     OP_CHECK_IF(
-        xShapeSize == 0, OP_LOGE(NODE_NAME, "Can not support input x shape size is zero."), return ge::GRAPH_FAILED);
+        xShapeSize == 0, OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+            tilingContext->GetNodeName(), "x", "0", "x does not support empty tensor"), return ge::GRAPH_FAILED);
 
     gert::Shape tempShape = dyShape;
     tempShape.SetDim(dimAttr, NUM_TWO * dyShape.GetDim(dimAttr));
     if (dyShape != geluShape || xShape != dxShape || tempShape != xShape) {
-        OP_LOGE(NODE_NAME, "The input-output shape does not satisfy the operator constraint.");
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            tilingContext->GetNodeName(), "dy, gelu, x, dx",
+            Ops::Base::ToString(dyShape) + ", " + Ops::Base::ToString(geluShape) + ", " + Ops::Base::ToString(xShape) + ", " + Ops::Base::ToString(dxShape),
+            "These parameters must meet the following conditions:the shapes of dy, gelu, x, and dx must satisfy the operator constraint");
         return ge::GRAPH_FAILED;
     }
 

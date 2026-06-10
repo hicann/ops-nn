@@ -127,22 +127,23 @@ static ge::graphStatus InferShapeForGeGluGradV2(gert::InferShapeContext* context
 
     OP_CHECK_IF(
         x_dim_num != dy_dim_num || x_dim_num != gelu_dim_num,
-        OP_LOGE("GEGLUGRADV2", "inputs shape is different, shape check fail."), return GRAPH_FAILED);
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON("GEGLUGRADV2", "x, dy, gelu",
+            (std::to_string(x_dim_num) + ", " + std::to_string(dy_dim_num) + ", " + std::to_string(gelu_dim_num)),
+            "The shape dims of x, dy and gelu must be the same"), return GRAPH_FAILED);
 
     if (split_dim < 0) {
         split_dim += x_dim_num;
     }
     OP_CHECK_IF(
         (split_dim < 0 || split_dim >= static_cast<int64_t>(x_dim_num)),
-        OP_LOGE(
-            "GEGLUGRADV2", "The value of attr [dim] must be in the range [-%zu, %zu], but got [%ld].", x_dim_num,
-            x_dim_num - 1, split_dim),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context->GetNodeName(), "dim", std::to_string(split_dim),
+            "The value of dim must be in the range [-" + std::to_string(x_dim_num) + ", " + std::to_string(x_dim_num - 1) + "]"),
         return GRAPH_FAILED);
 
     auto status = CheckDimValuesConsistency(x_shape, dy_shape, gelu_shape, split_dim);
     OP_CHECK_IF(status != GRAPH_SUCCESS,
         OP_LOGE("GEGLUGRADV2", "CheckDimValuesConsistency failed."), return GRAPH_FAILED);
-
     return CopyShapeInput2OutputWithIdx(context, 1, 0);
 }
 

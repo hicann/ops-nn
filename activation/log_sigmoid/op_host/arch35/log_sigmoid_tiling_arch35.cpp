@@ -48,7 +48,9 @@ ge::graphStatus LogSigmoidTiling::CheckDtype()
     this->outputDtype = outputDesc->GetDataType();
 
     OP_CHECK_IF(
-        inputDtype != this->outputDtype, OP_LOGE(tilingContext->GetNodeName(), "dtype of input and output are not same"),
+        inputDtype != this->outputDtype, OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "x, y",
+            ge::TypeUtils::DataTypeToSerialString(inputDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(this->outputDtype),
+            "The dtypes of x and y must be the same"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -63,7 +65,9 @@ ge::graphStatus LogSigmoidTiling::CheckShape()
     const gert::Shape& outputShape = Ops::NN::OpTiling::EnsureNotScalar(outputStorageShape->GetStorageShape());
 
     OP_CHECK_IF(
-        inputShape != outputShape, OP_LOGE(tilingContext->GetNodeName(), "shape of input and output are not same"),
+        inputShape != outputShape, OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext->GetNodeName(), "x, y",
+            Ops::Base::ToString(inputShape) + ", " + Ops::Base::ToString(outputShape),
+            "The shapes of x and y must be the same"),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -100,7 +104,9 @@ ge::graphStatus LogSigmoidTiling::RunTiling()
         dType = TPL_FP32;
         baseTilingResult = eleBaseTiling.DoTiling<LogSigmoidDag::LogSigmoidNoCast<float>::OpDag>(*tiling);
     } else {
-        OP_LOGE(tilingContext->GetNodeName(), "output dtype is not support.");
+        OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "y",
+            ge::TypeUtils::DataTypeToSerialString(this->outputDtype),
+            "FLOAT16, BF16, FLOAT");
         return ge::GRAPH_FAILED;
     }
     OP_CHECK_IF(

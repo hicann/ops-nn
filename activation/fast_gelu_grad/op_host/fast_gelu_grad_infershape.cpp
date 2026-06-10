@@ -36,9 +36,10 @@ static ge::graphStatus InferShape4FastGeluGrad(gert::InferShapeContext* context)
 
     OP_CHECK_IF(
         !Ops::Base::BroadcastShape(fast_gelu_grad_in_shape1, fast_gelu_grad_in_shape2, fast_gelu_grad_out_shape),
-        OP_LOGE(
-            context->GetNodeName(), "%s",
-            ShapeCannotBroadcastMsg(*fast_gelu_grad_in_shape2, *fast_gelu_grad_in_shape1).c_str()),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context->GetNodeName(), "x, y",
+            (Ops::Base::ToString(*fast_gelu_grad_in_shape1) + ", " + Ops::Base::ToString(*fast_gelu_grad_in_shape2)),
+            "The shapes of x and y must be broadcastable"),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;

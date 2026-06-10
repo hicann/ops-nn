@@ -41,10 +41,9 @@ ge::graphStatus MishGradTiling::CalcInputDtype()
     this->inputDtype = inputDesc->GetDataType();
     OP_CHECK_IF(
         this->inputDtype != ge::DT_FLOAT16 && this->inputDtype != ge::DT_BF16 && this->inputDtype != ge::DT_FLOAT,
-        OP_LOGE(
-            tilingContext->GetNodeName(),
-            "input grad dtype [%s] not support, only support [DT_BFLOAT16, DT_FLOAT16, DT_FLOAT32]",
-            ge::TypeUtils::DataTypeToSerialString(this->inputDtype).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(tilingContext->GetNodeName(), "grad",
+            ge::TypeUtils::DataTypeToSerialString(this->inputDtype),
+            "The dtype of grad must be FLOAT16, BF16 or FLOAT"),
         return ge::GRAPH_FAILED);
     auto inputDesc1 = tilingContext->GetInputDesc(1);
 
@@ -52,10 +51,9 @@ ge::graphStatus MishGradTiling::CalcInputDtype()
     this->inputDtype1 = inputDesc1->GetDataType();
     OP_CHECK_IF(
         this->inputDtype1 != this->inputDtype,
-        OP_LOGE(
-            tilingContext->GetNodeName(),
-            "input x dtype [%s] not support, only support [DT_BFLOAT16, DT_FLOAT16, DT_FLOAT32]",
-            ge::TypeUtils::DataTypeToSerialString(this->inputDtype1).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "x, grad",
+            ge::TypeUtils::DataTypeToSerialString(this->inputDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(this->inputDtype1),
+            "The dtypes of x and grad must be the same"),
         return ge::GRAPH_FAILED);
     if (!unfullCompute) {
         auto inputDesc2 = tilingContext->GetInputDesc(THIRD);
@@ -63,10 +61,9 @@ ge::graphStatus MishGradTiling::CalcInputDtype()
         this->inputDtype2 = inputDesc2->GetDataType();
         OP_CHECK_IF(
             this->inputDtype2 != this->inputDtype,
-            OP_LOGE(
-                tilingContext->GetNodeName(),
-                "input tanh dtype [%s] not support, only support [DT_BFLOAT16, DT_FLOAT16, DT_FLOAT32]",
-                ge::TypeUtils::DataTypeToSerialString(this->inputDtype2).c_str()),
+            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "tanh_x, grad",
+            ge::TypeUtils::DataTypeToSerialString(this->inputDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(this->inputDtype2),
+            "The dtypes of tanh_x and grad must be the same"),
             return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
@@ -85,7 +82,9 @@ ge::graphStatus MishGradTiling::CheckShape()
 
     OP_CHECK_IF(
         inputYShape != outputZShape,
-        OP_LOGE(tilingContext->GetNodeName(), "input x and output y shape not same"),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext->GetNodeName(), "x, y",
+            Ops::Base::ToString(inputYShape) + ", " + Ops::Base::ToString(outputZShape),
+            "The shapes of x and y must be the same"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -98,10 +97,9 @@ ge::graphStatus MishGradTiling::CalcOutputDtype()
     this->outputDtype = outputDesc->GetDataType();
     OP_CHECK_IF(
         this->outputDtype != this->inputDtype,
-        OP_LOGE(
-            tilingContext->GetNodeName(),
-            "output y dtype [%s] not support, only support [DT_BFLOAT16, DT_FLOAT16, DT_FLOAT32]",
-            ge::TypeUtils::DataTypeToSerialString(this->outputDtype).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "y, grad",
+            ge::TypeUtils::DataTypeToSerialString(this->outputDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(this->inputDtype),
+            "The dtypes of y and grad must be the same"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -145,7 +143,9 @@ ge::graphStatus MishGradTiling::RunTiling()
         dType = TPL_FP32_FULL;
         baseTilingResult = elewiseBaseTiling.DoTiling<MishGradOp::MishGradFullDAG<float>::OpDag>(*tiling);
     } else {
-        OP_LOGE(tilingContext->GetNodeName(), "output dtype not support");
+        OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "y",
+            ge::TypeUtils::DataTypeToSerialString(this->outputDtype),
+            "FLOAT16, BF16, FLOAT");
         return ge::GRAPH_FAILED;
     }
     OP_CHECK_IF(

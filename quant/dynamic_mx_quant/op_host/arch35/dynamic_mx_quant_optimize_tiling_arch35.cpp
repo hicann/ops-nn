@@ -147,7 +147,7 @@ ge::graphStatus DynamicMxQuantOptimzieTiling::SetCalcMode()
             tilingParam_.calcMode = MODE_THREE;
         }
     } else {
-        OP_LOGE(context_->GetNodeName(), "Invalid scaleAlg value: %ld", tilingParam_.scaleAlg);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "scale_alg", std::to_string(tilingParam_.scaleAlg), "The value of scale_alg must be [0, 1, 2]");
         return ge::GRAPH_FAILED;
     }
 

@@ -52,12 +52,9 @@ ge::graphStatus LogSigmoidGradTiling::DoOpTiling()
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputDesc);
     ge::DataType outputDtype = outputDesc->GetDataType();
     if ((input0DType != input1DType) || (outputDtype != input0DType)) {
-        OP_LOGE(
-            context_->GetNodeName(),
-            "dtype of gradOutput[%s], dtype of self[%s], dtype of gradInput[%s] are not equal.",
-            Ops::Base::ToString(static_cast<ge::DataType>(input0DType)).c_str(),
-            Ops::Base::ToString(static_cast<ge::DataType>(input1DType)).c_str(),
-            Ops::Base::ToString(static_cast<ge::DataType>(outputDtype)).c_str());
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "gradOutput, self, gradInput",
+            ge::TypeUtils::DataTypeToSerialString(input0DType) + ", " + ge::TypeUtils::DataTypeToSerialString(input1DType) + ", " + ge::TypeUtils::DataTypeToSerialString(outputDtype),
+            "The dtypes of gradOutput, self and gradInput must be the same");
         return ge::GRAPH_FAILED;
     }
 
@@ -75,11 +72,9 @@ ge::graphStatus LogSigmoidGradTiling::DoOpTiling()
         status = brcBaseTiling.DoTiling();
         tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode());
     } else {
-        OP_LOGE(
-            context_->GetNodeName(),
-            "Input0[gradOutput]:%s and input1[self]:%s is only support float16, bfloat16, float32",
-            Ops::Base::ToString(static_cast<ge::DataType>(input0DType)).c_str(),
-            Ops::Base::ToString(static_cast<ge::DataType>(input1DType)).c_str());
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "gradOutput, self",
+            ge::TypeUtils::DataTypeToSerialString(input0DType) + ", " + ge::TypeUtils::DataTypeToSerialString(input1DType),
+            "The dtypes of gradOutput and self must be FLOAT16, BF16 or FLOAT");
         return ge::GRAPH_FAILED;
     }
 

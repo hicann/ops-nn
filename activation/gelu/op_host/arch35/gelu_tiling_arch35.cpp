@@ -31,8 +31,10 @@ ge::graphStatus GeluTiling::CalcInputDtype()
     this->inputDtype = inputDesc->GetDataType();
     OP_CHECK_IF(
         this->inputDtype != ge::DT_FLOAT16 && this->inputDtype != ge::DT_BF16 && this->inputDtype != ge::DT_FLOAT,
-        OP_LOGE(tilingContext->GetNodeName(), "input x dtype[%s] not support",
-        ge::TypeUtils::DataTypeToSerialString(this->inputDtype).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            tilingContext->GetNodeName(), "x",
+            ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->inputDtype)),
+            "The dtype of x must be DT_FLOAT16, DT_BF16, or DT_FLOAT"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -56,7 +58,9 @@ ge::graphStatus GeluTiling::CheckShape()
     const gert::Shape& outputZShape = EnsureNotScalar(outputStorageShape->GetStorageShape());
 
     OP_CHECK_IF(inputYShape != outputZShape,
-               OP_LOGE(tilingContext->GetNodeName(), "input x and output y shape not same"),
+               OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                   tilingContext->GetNodeName(), "x, y", Ops::Base::ToString(inputYShape) + ", " + Ops::Base::ToString(outputZShape),
+                   "The shapes of x and y must be the same"),
                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -68,9 +72,10 @@ ge::graphStatus GeluTiling::CalcOutputDtype()
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, outputDesc);
     this->outputDtype = outputDesc->GetDataType();
     OP_CHECK_IF(this->outputDtype != this->inputDtype,
-               OP_LOGE(tilingContext->GetNodeName(), "output y dtype[%s] not same as input x[%s]",
-               ge::TypeUtils::DataTypeToSerialString(this->outputDtype).c_str(),
-               ge::TypeUtils::DataTypeToSerialString(this->inputDtype).c_str()),
+               OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                   tilingContext->GetNodeName(), "x, y",
+                   ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->inputDtype)) + ", " + ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->outputDtype)),
+                   "The dtypes of x and y must be the same"),
                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -99,8 +104,10 @@ ge::graphStatus GeluTiling::RunTiling()
         dType = TPL_FP32;
         baseTilingResult = elewiseBaseTiling.DoTiling<GeluOp::GeluDAG<float>::OpDag>(*tiling);
     } else {
-        OP_LOGE(tilingContext->GetNodeName(), "output dtype[%s] not support",
-        ge::TypeUtils::DataTypeToSerialString(this->outputDtype).c_str());
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+        tilingContext->GetNodeName(), "y",
+        ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->outputDtype)),
+        "The dtype of y must be DT_FLOAT16, DT_BF16, or DT_FLOAT");
         return ge::GRAPH_FAILED;
     }
     OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED,

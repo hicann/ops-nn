@@ -47,7 +47,9 @@ ge::graphStatus SwishTiling::CalcInputDtype()
     this->inputDtype = inputDesc->GetDataType();
     OP_CHECK_IF(
         this->inputDtype != ge::DT_FLOAT16 && this->inputDtype != ge::DT_BF16 && this->inputDtype != ge::DT_FLOAT,
-        OP_LOGE(tilingContext->GetNodeName(), "input x dtype not support %d", this->inputDtype),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(tilingContext->GetNodeName(), "x",
+            ge::TypeUtils::DataTypeToSerialString(this->inputDtype),
+            "The dtype of x must be FLOAT16, BF16 or FLOAT"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -60,10 +62,14 @@ ge::graphStatus SwishTiling::CalcOutputDtype()
     this->outputDtype = outputDesc->GetDataType();
     OP_CHECK_IF(
         this->outputDtype != ge::DT_FLOAT16 && this->outputDtype != ge::DT_BF16 && this->outputDtype != ge::DT_FLOAT,
-        OP_LOGE(tilingContext->GetNodeName(), "output dtype not support"),
+        OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "y",
+            ge::TypeUtils::DataTypeToSerialString(this->outputDtype),
+            "FLOAT16, BF16, FLOAT"),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(this->outputDtype != this->inputDtype,
-        OP_LOGE(tilingContext->GetNodeName(), "output y dtype not same as input x"),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "y, x",
+            ge::TypeUtils::DataTypeToSerialString(this->outputDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(this->inputDtype),
+            "The dtypes of y and x must be the same"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -80,7 +86,9 @@ ge::graphStatus SwishTiling::CheckShape()
     const gert::Shape& outputZShape = EnsureNotScalar(outputStorageShape->GetStorageShape());
 
     OP_CHECK_IF(inputYShape != outputZShape,
-               OP_LOGE(tilingContext->GetNodeName(), "input x and output y shape not same"),
+               OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext->GetNodeName(), "x, y",
+            Ops::Base::ToString(inputYShape) + ", " + Ops::Base::ToString(outputZShape),
+            "The shapes of x and y must be the same"),
                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -142,7 +150,9 @@ ge::graphStatus SwishTiling::RunTiling()
             baseTilingResult = elewiseBaseTiling.DoTiling32B<SwishDag::SwishOther<float>::OpDag>();
         }
     } else {
-        OP_LOGE(tilingContext->GetNodeName(), "output dtype not support");
+        OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "y",
+            ge::TypeUtils::DataTypeToSerialString(this->outputDtype),
+            "FLOAT16, BF16, FLOAT");
         return ge::GRAPH_FAILED;
     }
     OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED,

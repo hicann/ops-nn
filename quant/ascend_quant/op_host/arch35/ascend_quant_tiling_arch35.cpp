@@ -107,9 +107,8 @@ ge::graphStatus AscendQuantRegbase::CheckDtype()
     xDtype_ = xInputDesc->GetDataType();
     OP_CHECK_IF(
         xDtype_ != ge::DT_FLOAT16 && xDtype_ != ge::DT_FLOAT,
-        OP_LOGE(
-            context_->GetNodeName(), "input x dtype [%s] not supported, only support [DT_FLOAT16, DT_FLOAT]",
-            ge::TypeUtils::DataTypeToSerialString(xDtype_).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPE(
+            context_->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(xDtype_), "DT_FLOAT16, DT_FLOAT"),
         return ge::GRAPH_FAILED);
 
     auto yOutputDesc = context_->GetOutputDesc(OUTPUT_Y_INDEX);
@@ -118,11 +117,9 @@ ge::graphStatus AscendQuantRegbase::CheckDtype()
     OP_CHECK_IF(
         yDtype_ != ge::DT_INT8 && yDtype_ != ge::DT_INT4 && yDtype_ != ge::DT_HIFLOAT8 &&
             yDtype_ != ge::DT_FLOAT8_E5M2 && yDtype_ != ge::DT_FLOAT8_E4M3FN,
-        OP_LOGE(
-            context_->GetNodeName(),
-            "output y dtype [%s] not supported, only support [DT_INT8, DT_INT4, DT_HIFLOAT8, DT_FLOAT8_E5M2, "
-            "DT_FLOAT8_E4M3FN]",
-            ge::TypeUtils::DataTypeToSerialString(yDtype_).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPE(
+            context_->GetNodeName(), "y", ge::TypeUtils::DataTypeToSerialString(yDtype_),
+            "DT_INT8, DT_INT4, DT_HIFLOAT8, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN"),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -190,14 +187,16 @@ ge::graphStatus AscendQuantRegbase::CheckAttrs()
     // check dstType and output dtype, must be same
     if (dstType_ != ge::DT_INT8 && dstType_ != ge::DT_INT4 && dstType_ != ge::DT_HIFLOAT8 &&
         dstType_ != ge::DT_FLOAT8_E5M2 && dstType_ != ge::DT_FLOAT8_E4M3FN) {
-        OP_LOGE(
-            context_->GetNodeName(), "dst type:%s is invalid", ToString(static_cast<ge::DataType>(dstType_)).c_str());
+        OP_LOGE_FOR_INVALID_DTYPE(
+            context_->GetNodeName(), "dst_type", ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(dstType_)),
+            "DT_INT8, DT_INT4, DT_HIFLOAT8, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN");
         return ge::GRAPH_FAILED;
     }
     if (dstType_ != yDtype_) {
-        OP_LOGE(
-            context_->GetNodeName(), "dst type:%s not equal output y dtype:%s",
-            ToString(static_cast<ge::DataType>(dstType_)).c_str(), ToString(yDtype_).c_str());
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            context_->GetNodeName(), "dst_type, y",
+            ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(dstType_)) + ", " + ge::TypeUtils::DataTypeToSerialString(yDtype_),
+            "The dtype of dst_type must be the same as the dtype of y");
         return ge::GRAPH_FAILED;
     }
 
@@ -206,7 +205,7 @@ ge::graphStatus AscendQuantRegbase::CheckAttrs()
     roundMode_ = GetRoundMode(roundModeStr);
     OP_CHECK_IF(
         (roundMode_ == RoundMode::MODE_UNDEFINED),
-        OP_LOGE(context_->GetNodeName(), "invalid round mode:%s, %s", roundMode, errorMsg_.c_str()),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "round_mode", roundMode, errorMsg_),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -216,20 +215,23 @@ ge::graphStatus AscendQuantRegbase::CheckShape(const gert::Shape& xShape, const 
 {
     size_t xDimNum = xShape.GetDimNum();
 
-    OP_CHECK_IF(
-        xDimNum > 8 || xDimNum < 1, OP_LOGE(context_->GetNodeName(), "input x dim num should be in range [1, 8]"),
-        return ge::GRAPH_FAILED);
-
-    if (dstType_ == ge::DT_INT4 && (xShape.GetDim(xDimNum - 1) % INT4_NUMS_IN_INT8_SPACE)) {
-        OP_LOGE(
-            context_->GetNodeName(), "if dst_type represents DT_INT4, x last dim:%ld must be divisible by 2",
-            xShape.GetDim(xDimNum - 1));
+    if (xDimNum > 8 || xDimNum < 1) {
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "x", std::to_string(xDimNum),
+                                                  "The shape dim of x must be within the range [1,8]");
         return ge::GRAPH_FAILED;
     }
-
-    OP_CHECK_IF(
-        xShape != yShape, OP_LOGE(context_->GetNodeName(), "input x and output y shape not same"),
-        return ge::GRAPH_FAILED);
+    if (dstType_ == ge::DT_INT4 && (xShape.GetDim(xDimNum - 1) % INT4_NUMS_IN_INT8_SPACE)) {
+         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x",
+             Ops::Base::ToString(xShape),
+             "When dstDype is DT_INT4, the tail axis of x must be an even number");
+         return ge::GRAPH_FAILED;
+    }
+    if (xShape != yShape) {
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "x, y",
+                                                Ops::Base::ToString(xShape) + ", " + Ops::Base::ToString(yShape),
+                                                "The shapes of x and y must be the same");
+        return ge::GRAPH_FAILED;
+    }
 
     return ge::GRAPH_SUCCESS;
 }
@@ -260,7 +262,8 @@ ge::graphStatus AscendQuantRegbase::GetOpParam()
 
     size_t xSizeNum = xInputShape.GetShapeSize();
     if (xSizeNum == 0ULL) {
-        OP_LOGE(context_->GetNodeName(), "ascend_quant does not support empty tensor.");
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "x", "0",
+                                            "x does not support empty tensor");
         return ge::GRAPH_FAILED;
     }
 

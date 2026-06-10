@@ -78,24 +78,25 @@ ge::graphStatus HardtanhGradTiling::CalcInputDtype()
     auto inputDesc = tilingContext->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, inputDesc);
     this->inputDtype = inputDesc->GetDataType();
-    OP_CHECK_IF(
-        this->inputDtype != ge::DT_FLOAT16 && this->inputDtype != ge::DT_BF16 && this->inputDtype != ge::DT_FLOAT,
-        OP_LOGE("HardtanhGrad", "input result dtype[%s] not support",
-        ge::TypeUtils::DataTypeToSerialString(this->inputDtype).c_str()),
-        return ge::GRAPH_FAILED);
+    if (this->inputDtype != ge::DT_FLOAT16 && this->inputDtype != ge::DT_BF16 && this->inputDtype != ge::DT_FLOAT) {
+        OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "input result",
+            ge::TypeUtils::DataTypeToSerialString(this->inputDtype), "FLOAT16, BF16, FLOAT");
+        return ge::GRAPH_FAILED;
+    }
     auto inputDesc1 = tilingContext->GetInputDesc(1);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, inputDesc1);
     this->inputDtype1 = inputDesc1->GetDataType();
-    OP_CHECK_IF(
-        this->inputDtype1 != ge::DT_FLOAT16 && this->inputDtype1 != ge::DT_BF16 && this->inputDtype1 != ge::DT_FLOAT,
-        OP_LOGE("HardtanhGrad", "input grad dtype[%s] not support",
-        ge::TypeUtils::DataTypeToSerialString(this->inputDtype1).c_str()),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(this->inputDtype1 != this->inputDtype,
-               OP_LOGE("HardtanhGrad", "input grad dtype[%s] not same as input result dtype[%s]",
-               ge::TypeUtils::DataTypeToSerialString(this->inputDtype1).c_str(),
-               ge::TypeUtils::DataTypeToSerialString(this->inputDtype).c_str()),
-               return ge::GRAPH_FAILED);
+    if (this->inputDtype1 != ge::DT_FLOAT16 && this->inputDtype1 != ge::DT_BF16 && this->inputDtype1 != ge::DT_FLOAT) {
+        OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "input grad",
+            ge::TypeUtils::DataTypeToSerialString(this->inputDtype1), "FLOAT16, BF16, FLOAT");
+        return ge::GRAPH_FAILED;
+    }
+    if (this->inputDtype1 != this->inputDtype) {
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "input grad, input result",
+            ge::TypeUtils::DataTypeToSerialString(this->inputDtype1) + ", " + ge::TypeUtils::DataTypeToSerialString(this->inputDtype),
+            "The dtypes of input grad and input result must be the same");
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -112,12 +113,18 @@ ge::graphStatus HardtanhGradTiling::CheckShape()
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, yStorageShape);
     const gert::Shape& outputYShape = Ops::Base::EnsureNotScalar(yStorageShape->GetStorageShape());
 
-    OP_CHECK_IF(inputResultShape != inputGradShape,
-               OP_LOGE("HardtanhGrad", "input result and grad shape not same"),
-               return ge::GRAPH_FAILED);
-    OP_CHECK_IF(inputResultShape != outputYShape,
-               OP_LOGE("HardtanhGrad", "input result and output y shape not same"),
-               return ge::GRAPH_FAILED);
+    if (inputResultShape != inputGradShape) {
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext->GetNodeName(), "input result, input grad",
+            Ops::Base::ToString(inputResultShape) + ", " + Ops::Base::ToString(inputGradShape),
+            "The shapes of input result and input grad must be the same");
+        return ge::GRAPH_FAILED;
+    }
+    if (inputResultShape != outputYShape) {
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext->GetNodeName(), "input result, output y",
+            Ops::Base::ToString(inputResultShape) + ", " + Ops::Base::ToString(outputYShape),
+            "The shapes of input result and output y must be the same");
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -126,16 +133,17 @@ ge::graphStatus HardtanhGradTiling::CalcOutputDtype()
     auto outputDesc = tilingContext->GetOutputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, outputDesc);
     this->outputDtype = outputDesc->GetDataType();
-    OP_CHECK_IF(
-        this->outputDtype != ge::DT_FLOAT16 && this->outputDtype != ge::DT_BF16 && this->outputDtype != ge::DT_FLOAT,
-        OP_LOGE(tilingContext, "output y dtype[%s] not support",
-        ge::TypeUtils::DataTypeToSerialString(this->outputDtype).c_str()),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(this->outputDtype != this->inputDtype,
-               OP_LOGE("HardtanhGrad", "output y dtype[%s] not same as input result dtype[%s]",
-               ge::TypeUtils::DataTypeToSerialString(this->outputDtype).c_str(),
-               ge::TypeUtils::DataTypeToSerialString(this->inputDtype).c_str()),
-               return ge::GRAPH_FAILED);
+    if (this->outputDtype != ge::DT_FLOAT16 && this->outputDtype != ge::DT_BF16 && this->outputDtype != ge::DT_FLOAT) {
+        OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "output y",
+            ge::TypeUtils::DataTypeToSerialString(this->outputDtype), "FLOAT16, BF16, FLOAT");
+        return ge::GRAPH_FAILED;
+    }
+    if (this->outputDtype != this->inputDtype) {
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "output y, input result",
+            ge::TypeUtils::DataTypeToSerialString(this->outputDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(this->inputDtype),
+            "The dtypes of output y and input result must be the same");
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -158,7 +166,9 @@ ge::graphStatus HardtanhGradTiling::RunTiling()
     } else if (this->outputDtype == ge::DT_FLOAT) {
         baseTilingResult = elewiseBaseTiling.DoTiling<HardtanhGradOp::HardtanhGradDag<float>::OpDag>(tiling->baseTiling);
     } else {
-        OP_LOGE("HardtanhGrad", "output dtype not support");
+        OP_LOGE_FOR_INVALID_DTYPE("HardtanhGrad", "y",
+            ge::TypeUtils::DataTypeToSerialString(this->outputDtype),
+            "FLOAT16, BF16, FLOAT");
         return ge::GRAPH_FAILED;
     }
     OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED,

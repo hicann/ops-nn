@@ -14,6 +14,7 @@
  */
 #include "relu_tiling_arch35.h"
 #include <iostream>
+#include <graph/utils/type_utils.h>
 #include "tiling/platform/platform_ascendc.h"
 #include "register/op_impl_registry.h"
 #include "log/log.h"
@@ -44,7 +45,9 @@ ge::graphStatus ReluTiling::CalcOutputDtype()
     this->outputDtype = outputDesc->GetDataType();
 
     OP_CHECK_IF(inputDtype != this->outputDtype,
-        OP_LOGE(tilingContext, "input and output dtype is diff, check failed"),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "x, y",
+            ge::TypeUtils::DataTypeToSerialString(inputDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(this->outputDtype),
+            "The dtypes of x and y must be the same"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -70,7 +73,8 @@ ge::graphStatus ReluTiling::RunTiling()
     } else if (this->outputDtype == ge::DT_INT64) {
         res = elewiseBaseTiling.DoTiling<ReluOp::GraphReluMax<int64_t>::OpDag>(*tiling);
     } else {
-        OP_LOGE(tilingContext, "data type check failed. getype：%d", this->outputDtype);
+        OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "y",
+            ge::TypeUtils::DataTypeToSerialString(this->outputDtype), "FLOAT16, BF16, FLOAT, INT8, INT32, INT64");
         return ge::GRAPH_FAILED;
     }
 

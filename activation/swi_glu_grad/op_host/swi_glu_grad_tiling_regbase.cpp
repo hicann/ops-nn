@@ -45,7 +45,9 @@ bool GluBaseTiling4RegBase::CalcShapeTo2D(const gert::Shape& inShape, const int6
 
     // 如果shape 不是2的倍数，则报错
     if (shapeAfter % DOUBLE != 0) {
-        OP_LOGE(opName_, "CalcShapeTo2D Unsupported splitDim %ld, shapeAfter %ld %% 2 != 0", splitDim, shapeAfter);
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(opName_.c_str(), "x",
+            std::to_string(shapeAfter),
+            "Shape[" + std::to_string(splitDim) + "] of x must be exactly divisible by 2");
         return false;
     }
 
@@ -59,12 +61,15 @@ bool GluBaseTiling4RegBase::CheckShapeValid(const gert::Shape& gradYShape, const
     int64_t dimGradYNum = gradYShape.GetDimNum();
     int64_t dimXNum = xShape.GetDimNum();
     if (dimGradYNum != dimXNum) {
-        OP_LOGE(opName_, "y_grad dim number(%ld) is not equal x(%ld).", dimGradYNum, dimXNum);
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(opName_.c_str(), "y_grad, x",
+            std::to_string(dimGradYNum) + ", " + std::to_string(dimXNum),
+            "The shape dims of y_grad, x must be the same");
         return false;
     }
 
     if (dim < -dimXNum || dim >= dimXNum) {
-        OP_LOGE(opName_, "CheckShapeValid Unsupported dim %ld", dim);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_.c_str(), "dim", std::to_string(dim),
+            "The value of dim must be in range [" + std::to_string(-dimXNum) + ", " + std::to_string(dimXNum - 1) + "]");
         return false;
     }
 
@@ -74,16 +79,16 @@ bool GluBaseTiling4RegBase::CheckShapeValid(const gert::Shape& gradYShape, const
         int64_t yDim = gradYShape.GetDim(i);
         if (i != splitDim) {
             if (xDim != yDim) {
-                OP_LOGE(
-                    opName_, "[cur_dim(%ld) split_dim(%ld)]: y_grad number(%ld) is not equal to x(%ld).", i, splitDim,
-                    yDim, xDim);
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(opName_.c_str(), "y_grad, x",
+                    std::to_string(yDim) + ", " + std::to_string(xDim),
+                    "Shape[" + std::to_string(i) + "] of y_grad must be equal to Shape[" + std::to_string(i) + "] of x");
                 return false;
             }
         } else {
             if (xDim != yDim * DOUBLE) {
-                OP_LOGE(
-                    opName_, "[cur_dim(%ld) split_dim(%ld)]: y_grad number(%ld) is not equal to x(%ld) / 2.", i,
-                    splitDim, yDim, xDim);
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(opName_.c_str(), "y_grad, x",
+                    std::to_string(yDim) + ", " + std::to_string(xDim),
+                    "Shape[" + std::to_string(i) + "] of y_grad must be equal to Shape[" + std::to_string(i) + "] of x / 2");
                 return false;
             }
         }

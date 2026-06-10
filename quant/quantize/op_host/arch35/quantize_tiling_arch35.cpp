@@ -133,27 +133,20 @@ ge::graphStatus Quantize::CheckDtype()
     OP_CHECK_NULL_WITH_CONTEXT(context_, xInputDesc);
     xDtype_ = xInputDesc->GetDataType();
     OP_CHECK_IF(INPUT_X_SUPPORT_DTYPE_SET.count(xDtype_) == 0,
-                    OP_LOGE(
-                        context_->GetNodeName(),
-                        "Input x dtype only support float32, float16 and bfloat16, currently is %s, please check.",
-                        ge::TypeUtils::DataTypeToSerialString(xDtype_).c_str()),
+                    OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(xDtype_), "[DT_FLOAT, DT_FLOAT16, DT_BF16]"),
                     return ge::GRAPH_FAILED);
 
     auto scaleInputDesc = context_->GetInputDesc(INPUT_SCALE_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, scaleInputDesc);
     scalesDtype_ = scaleInputDesc->GetDataType();
     OP_CHECK_IF(INPUT_SCALE_SUPPORT_DTYPE_SET.count(scalesDtype_) == 0,
-                    OP_LOGE(
-                        context_->GetNodeName(),
-                        "Input scales dtype only support float32, float16 and bfloat16, currently is %s, please check.",
-                        ge::TypeUtils::DataTypeToSerialString(scalesDtype_).c_str()),
+                    OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "scales", ge::TypeUtils::DataTypeToSerialString(scalesDtype_), "[DT_FLOAT, DT_BF16]"),
                     return ge::GRAPH_FAILED);
 
     if (scalesDtype_ == ge::DT_BF16) {
         OP_CHECK_IF(
             xDtype_ != scalesDtype_,
-            OP_LOGE(context_->GetNodeName(),
-                                            "If scales dtype is bf16, x dtype has to be bf16 as well, please check."),
+            OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(xDtype_), "DT_BF16"),
             return ge::GRAPH_FAILED);
     }
 
@@ -163,27 +156,20 @@ ge::graphStatus Quantize::CheckDtype()
         zeroPointsDtype_ = zeroPointInputDesc->GetDataType();
         OP_CHECK_IF(
             INPUT_ZERO_POINT_SUPPORT_DTYPE_SET.count(zeroPointsDtype_) == 0,
-            OP_LOGE(context_->GetNodeName(),
-                                            "Input zero_points dtype only support int32, int8, uint8, float32 and "
-                                            "bfloat16, currently is %s, please check.",
-                                            ge::TypeUtils::DataTypeToSerialString(zeroPointsDtype_).c_str()),
+            OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "zero_points", ge::TypeUtils::DataTypeToSerialString(zeroPointsDtype_), "[DT_INT32, DT_INT8, DT_UINT8, DT_FLOAT, DT_BF16]"),
             return ge::GRAPH_FAILED);
 
         if (scalesDtype_ == ge::DT_BF16) {
             OP_CHECK_IF(
                 scalesDtype_ != zeroPointsDtype_,
-                OP_LOGE(
-                    context_->GetNodeName(),
-                    "If scales dtype is bf16, x and zero_points dtypes have to be bf16 as well, please check."),
+                OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "zero_points", ge::TypeUtils::DataTypeToSerialString(zeroPointsDtype_), "DT_BF16"),
                 return ge::GRAPH_FAILED);
         }
 
         if (zeroPointsDtype_ == ge::DT_BF16) {
             OP_CHECK_IF(
                 scalesDtype_ != zeroPointsDtype_,
-                OP_LOGE(
-                    context_->GetNodeName(),
-                    "If zero_points dtype is bf16, x and scales dtypes have to be bf16 as well, please check."),
+                OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "scales", ge::TypeUtils::DataTypeToSerialString(scalesDtype_), "DT_BF16"),
                 return ge::GRAPH_FAILED);
         }
     }
@@ -192,10 +178,7 @@ ge::graphStatus Quantize::CheckDtype()
     OP_CHECK_NULL_WITH_CONTEXT(context_, yOutputDesc);
     yDtype_ = yOutputDesc->GetDataType();
     OP_CHECK_IF(OUTPUT_Y_SUPPORT_DTYPE_SET.count(yDtype_) == 0,
-                    OP_LOGE(context_->GetNodeName(),
-                                                    "Output y dtype only support int8, uint8, int32, hifloat8, "
-                                                    "float8_e4m3fn and float8_e5m2, currently is %s,  please check.",
-                                                    ge::TypeUtils::DataTypeToSerialString(yDtype_).c_str()),
+                    OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "y", ge::TypeUtils::DataTypeToSerialString(yDtype_), "[DT_INT8, DT_UINT8, DT_INT32, DT_HIFLOAT8, DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2]"),
                     return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -205,15 +188,11 @@ ge::graphStatus Quantize::CheckAttrs()
 {
     OP_LOGD(context_->GetNodeName(), "CheckAttrs begin");
     if (OUTPUT_Y_SUPPORT_DTYPE_SET.count(dtype_) == 0) {
-        OP_LOGE(context_->GetNodeName(),
-                "Input attr[dtype] is invalid, only support torch.quint8, torch.qint8, torch.qint32, "
-                "torch.hifloat8, torch.float8_e4m3fn, torch.float8_e5m2.");
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "dtype", ge::TypeUtils::DataTypeToSerialString(dtype_), "[DT_UINT8, DT_INT8, DT_INT32, DT_HIFLOAT8, DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2]");
         return ge::GRAPH_FAILED;
     }
     if (dtype_ != yDtype_) {
-        OP_LOGE(context_->GetNodeName(), "Input attr[dtype]:%s is inconsistent with output y dtype:%s.",
-                ge::TypeUtils::DataTypeToSerialString(dtype_).c_str(),
-                ge::TypeUtils::DataTypeToSerialString(yDtype_).c_str());
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "dtype, y", ge::TypeUtils::DataTypeToSerialString(dtype_) + ", " + ge::TypeUtils::DataTypeToSerialString(yDtype_), "The dtype of attr[dtype] must be the same as the dtype of y");
         return ge::GRAPH_FAILED;
     }
 
@@ -230,7 +209,7 @@ ge::graphStatus Quantize::CheckAttrs()
         axis_ = xDimNum_ - 1;
         return ge::GRAPH_SUCCESS;
     }
-    OP_LOGE(context_->GetNodeName(), "Input attr[axis]:%ld is not in the valid range.", axis_);
+    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "axis", std::to_string(axis_), "The value of axis must be within the range [-" + std::to_string(xDimNum_) + ", " + std::to_string(xDimNum_) + ")");
     return ge::GRAPH_FAILED;
 }
 
@@ -238,21 +217,20 @@ ge::graphStatus Quantize::CheckShape()
 {
     OP_LOGD(context_->GetNodeName(), "CheckShape begin");
     if (scalesDimNum_ == 0) {
-        OP_LOGE(context_->GetNodeName(), "Scales dim number should not be 0.");
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "scales", "0", "The shape dim of scales must not be 0");
         return ge::GRAPH_FAILED;
     } else if (scalesDimNum_ == 1) {
         OP_LOGD(context_->GetNodeName(), "Scales dim number is 1.");
         // elewise轴需要和x一致, or 1
         if (xInputShape_.GetDim(axis_) != scalesInputShape_.GetDim(0) && scalesInputShape_.GetDim(0) != 1) {
-            OP_LOGE(context_->GetNodeName(),
-                    "Scales shape is invalid, the specified axis by attr[axis] shoule be 1 or the same with x.");
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "scales, x", Ops::Base::ToString(scalesInputShape_) + ", " + Ops::Base::ToString(xInputShape_), "dim[0] of scales must be equal to dim[axis] of x or 1");
             return ge::GRAPH_FAILED;
         }
     } else {
         // scales轴个数不为1时，需要和x轴个数保持一致
         OP_LOGD(context_->GetNodeName(), "Scales dim number is %ld.", scalesDimNum_);
         if (scalesDimNum_ != xDimNum_) {
-            OP_LOGE(context_->GetNodeName(), "Scales dim number should be 1 or the same with x.");
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "scales", std::to_string(scalesDimNum_), "The shape dim of scales must be 1 or the shape dim of x");
             return ge::GRAPH_FAILED;
         }
         // elewise轴需要和x一致 or 1，非elewise轴必须为1
@@ -260,16 +238,13 @@ ge::graphStatus Quantize::CheckShape()
             if (i == axis_) {
                 if (xInputShape_.GetDim(axis_) != scalesInputShape_.GetDim(axis_) &&
                     scalesInputShape_.GetDim(axis_) != 1) {
-                    OP_LOGE(
-                        context_->GetNodeName(),
-                        "Scales shape is invalid, the specified axis by attr[axis] shoule be 1 or the same with x.");
+OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "scales, x", Ops::Base::ToString(scalesInputShape_) + ", " + Ops::Base::ToString(xInputShape_), "dim[axis] of scales must be equal to dim[axis] of x or 1");
                     return ge::GRAPH_FAILED;
                 }
                 continue;
             }
             if (scalesInputShape_.GetDim(i) != 1) {
-                OP_LOGE(context_->GetNodeName(),
-                        "Scales shape is invalid, all axes should be 1 except the axis specified by attr[axis].");
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "scales", Ops::Base::ToString(scalesInputShape_), "The values of all axes except for axis_ must be 1");
                 return ge::GRAPH_FAILED;
             }
         }
@@ -280,7 +255,7 @@ ge::graphStatus Quantize::CheckShape()
     }
     // offset的shape要和scales一致
     if (scalesInputShape_ != zeroPointsInputShape_) {
-        OP_LOGE(context_->GetNodeName(), "Scales and zero_points shape should be the same.");
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "scales, zero_points", Ops::Base::ToString(scalesInputShape_) + ", " + Ops::Base::ToString(zeroPointsInputShape_), "The shapes of scales and zero_points must be the same");
         return ge::GRAPH_FAILED;
     }
 

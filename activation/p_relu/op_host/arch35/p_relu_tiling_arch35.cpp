@@ -59,9 +59,9 @@ ge::graphStatus PreluTiling::DoOpTiling()
     ge::DataType xInputDtype = xInputDesc->GetDataType();
     OP_CHECK_IF(
         xInputDtype != ge::DT_FLOAT16 && xInputDtype != ge::DT_BF16 && xInputDtype != ge::DT_FLOAT,
-        OP_LOGE(
-            context_->GetNodeName(), "input x dtype %s not supported, only support [float16, bfloat16, float32].",
-            ge::TypeUtils::DataTypeToSerialString(xInputDtype).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPE(
+            context_->GetNodeName(), "x",
+            ge::TypeUtils::DataTypeToSerialString(xInputDtype), "FLOAT16, BF16, FLOAT"),
         return ge::GRAPH_FAILED);
 
     auto weightInputDesc = context_->GetInputDesc(1);
@@ -69,10 +69,10 @@ ge::graphStatus PreluTiling::DoOpTiling()
     ge::DataType weightInputDtype = weightInputDesc->GetDataType();
     OP_CHECK_IF(
         xInputDtype != weightInputDtype,
-        OP_LOGE(
-            context_->GetNodeName(), "input weight dtype %s not equal input x dtype %s.",
-            ge::TypeUtils::DataTypeToSerialString(weightInputDtype).c_str(),
-            ge::TypeUtils::DataTypeToSerialString(xInputDtype).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            context_->GetNodeName(), "weight, x",
+            ge::TypeUtils::DataTypeToSerialString(xInputDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(weightInputDtype),
+            "The dtypes of weight and x must be the same"),
         return ge::GRAPH_FAILED);
 
     auto outputDesc = context_->GetOutputDesc(0);
@@ -80,10 +80,10 @@ ge::graphStatus PreluTiling::DoOpTiling()
     ge::DataType outputDtype = outputDesc->GetDataType();
     OP_CHECK_IF(
         outputDtype != xInputDtype,
-        OP_LOGE(
-            context_->GetNodeName(), "output y dtype %s not same as input x %s.",
-            ge::TypeUtils::DataTypeToSerialString(outputDtype).c_str(),
-            ge::TypeUtils::DataTypeToSerialString(xInputDtype).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            context_->GetNodeName(), "y, x",
+            ge::TypeUtils::DataTypeToSerialString(outputDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(xInputDtype),
+            "The dtypes of y and x must be the same"),
         return ge::GRAPH_FAILED);
 
     ge::graphStatus baseTilingResult = ge::GRAPH_FAILED;
@@ -113,9 +113,9 @@ ge::graphStatus PreluTiling::DoOpTiling()
             return ge::GRAPH_FAILED);
         tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode());
     } else {
-        OP_LOGE(
-            context_->GetNodeName(), "input dtype %s not supported, only support [float16, bfloat16, float32].",
-            ge::TypeUtils::DataTypeToSerialString(xInputDtype).c_str());
+        OP_LOGE_FOR_INVALID_DTYPE(
+            context_->GetNodeName(), "x",
+            ge::TypeUtils::DataTypeToSerialString(xInputDtype), "FLOAT16, BF16, FLOAT");
         return ge::GRAPH_FAILED;
     }
 

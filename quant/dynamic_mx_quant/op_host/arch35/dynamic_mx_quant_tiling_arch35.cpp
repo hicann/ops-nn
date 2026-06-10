@@ -167,15 +167,11 @@ static ge::graphStatus GetAttr(const gert::TilingContext* context, DynamicMxQuan
     RoundModeList roundMode = GetRoundMode(roundModeStr);
     OP_CHECK_IF(
         (roundMode == RoundModeList::MODE_UNDEFINED),
-        OP_LOGE(
-            context->GetNodeName(), "invalid round_mode:%s; round_mode should be one of {rint, floor, round}",
-            attrRoundMode),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "round_mode", roundModeStr, "The value of round_mode must be [rint, round, floor]"),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         (Y_SUPPORT_DTYPE_FP8_SET.count(yDtype) != 0 && roundMode != RoundModeList::MODE_RINT),
-        OP_LOGE(
-            context->GetNodeName(),
-            "When output y's data type is FLOAT8_E4M3FN/FLOAT8_E5M2, round_mode only support rint, please check."),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "round_mode", roundModeStr, "If the dtype of output y is FLOAT8_E4M3FN/FLOAT8_E5M2, parameter round_mode must be rint"),
         return ge::GRAPH_FAILED);
     tilingParam.roundMode = static_cast<int64_t>(roundMode);
 
@@ -188,11 +184,7 @@ static ge::graphStatus GetAttr(const gert::TilingContext* context, DynamicMxQuan
             (yDtype == ge::DT_FLOAT4_E1M2 && checkDstType != ge::DT_FLOAT4_E1M2) ||
             (yDtype == ge::DT_FLOAT8_E4M3FN && checkDstType != ge::DT_FLOAT8_E4M3FN) ||
             (yDtype == ge::DT_FLOAT8_E5M2 && checkDstType != ge::DT_FLOAT8_E5M2),
-        OP_LOGE(
-            context->GetNodeName(),
-            "y's data type[%s] and dst_type[%d] is not corresponded, y's data type: "
-            "FLOAT4_E2M1/FLOAT4_E1M2/FLOAT8_E4M3FN/FLOAT8_E5M2 correspond to dst_type: 40/41/36/35, please check.",
-            Ops::Base::ToString(static_cast<ge::DataType>(yDtype)).c_str(), checkDstType),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context->GetNodeName(), "y, dst_type", ge::TypeUtils::DataTypeToSerialString(yDtype) + ", " + std::to_string(checkDstType), "The dtypes of y and dst_type must be the same"),
         return ge::GRAPH_FAILED);
 
     auto* attrBlockSize = attrs->GetAttrPointer<int64_t>(INDEX_ATTR_BLOCK_SIZE);
@@ -200,16 +192,11 @@ static ge::graphStatus GetAttr(const gert::TilingContext* context, DynamicMxQuan
     tilingParam.blockSize = static_cast<int64_t>(*attrBlockSize);
     OP_CHECK_IF(
         tilingParam.blockSize <= 0 || tilingParam.blockSize > DYNAMIC_MX_QUANT_MAX_BLOCK_SIZE,
-        OP_LOGE(
-            context->GetNodeName(),
-            "The blocksize[%ld] should should be larger than 0 and not be larger than 1024, please check.",
-            tilingParam.blockSize),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "block_size", std::to_string(tilingParam.blockSize), "The value of block_size must be within the range (0, 1024]"),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         tilingParam.blockSize % ATTR_BLOCK_SIZE != 0,
-        OP_LOGE(
-            context->GetNodeName(), "The blocksize[%ld] should be a multiple of 32, please check.",
-            tilingParam.blockSize),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "block_size", std::to_string(tilingParam.blockSize), "The value of block_size must be a multiple of 32"),
         return ge::GRAPH_FAILED);
 
     auto* attrScaleAlg = attrs->GetAttrPointer<int64_t>(INDEX_ATTR_SCALE_ALG);
@@ -217,30 +204,27 @@ static ge::graphStatus GetAttr(const gert::TilingContext* context, DynamicMxQuan
     tilingParam.scaleAlg = static_cast<int64_t>(*attrScaleAlg);
     OP_CHECK_IF(
         tilingParam.scaleAlg < 0 || tilingParam.scaleAlg > 2,
-        OP_LOGE(
-            context->GetNodeName(), "The scaleAlg[%ld] should be one of {0, 1, 2}, please check.",
-            tilingParam.scaleAlg),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "scale_alg", std::to_string(tilingParam.scaleAlg), "The value of scale_alg must be [0, 1, 2]"),
         return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(
         tilingParam.scaleAlg == 1 && yDtype == ge::DT_FLOAT4_E2M1,
-        OP_LOGE(context->GetNodeName(), "When y's data type is FLOAT4_E2M1, scaleAlg must be 0 or 2."),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "scale_alg", std::to_string(tilingParam.scaleAlg), "If the dtype of output y is FLOAT4_E2M1, parameter scale_alg must be 0 or 2"),
         return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(
         (tilingParam.scaleAlg == 1 || tilingParam.scaleAlg == 2) && yDtype == ge::DT_FLOAT4_E1M2,
-        OP_LOGE(context->GetNodeName(), "When y's data type is FLOAT4_E1M2, scaleAlg must be 0."),
+        OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "scale_alg", std::to_string(tilingParam.scaleAlg), "0"),
         return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(
         tilingParam.scaleAlg == 2 && Y_SUPPORT_DTYPE_FP8_SET.count(yDtype) != 0,
-        OP_LOGE(context->GetNodeName(), "When y's data type is FLOAT8_E4M3/FLOAT8_E5M2, scaleAlg must be 0 or 1."),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "scale_alg", std::to_string(tilingParam.scaleAlg), "If the dtype of output y is FLOAT8_E4M3FN/FLOAT8_E5M2, parameter scale_alg must be 0 or 1"),
         return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(
         tilingParam.scaleAlg == 2 && tilingParam.blockSize != ATTR_BLOCK_SIZE,
-        OP_LOGE(
-            context->GetNodeName(), "When scaleAlg is 2, blockSize must be 32, but got %ld.", tilingParam.blockSize),
+        OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "block_size", std::to_string(tilingParam.blockSize), "32"),
         return ge::GRAPH_FAILED);
 
     auto* attrDstTypeMax = attrs->GetAttrPointer<float>(INDEX_ATTR_DST_DTYPE_MAX);
@@ -257,9 +241,7 @@ static ge::graphStatus GetAttr(const gert::TilingContext* context, DynamicMxQuan
     OP_CHECK_IF(
         tilingParam.dstTypeMax < 0 || (tilingParam.dstTypeMax > 0 && tilingParam.dstTypeMax < 6) ||
             tilingParam.dstTypeMax > 12,
-        OP_LOGE(
-            context->GetNodeName(), "The dstTypeMax[%f] should be one of [6,12] or equal 0, please check.",
-            tilingParam.dstTypeMax),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "dst_type_max", std::to_string(tilingParam.dstTypeMax), "The value of dst_type_max must be within the range [6, 12] or equal to 0"),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -272,10 +254,9 @@ static ge::graphStatus CheckDtype(const gert::TilingContext* context)
     auto xDtype = inputXPtr->GetDataType();
     OP_CHECK_IF(
         INPUT_SUPPORT_DTYPE_SET.count(xDtype) == 0,
-        OP_LOGE(
+        OP_LOGE_FOR_INVALID_DTYPE(
             context->GetNodeName(),
-            "Input x's data type[%s] only support FLOAT16 and BFLOAT16 currently, please check.",
-            Ops::Base::ToString(static_cast<ge::DataType>(xDtype)).c_str()),
+            "x", ge::TypeUtils::DataTypeToSerialString(xDtype), "[DT_FLOAT16, DT_BF16]"),
         return ge::GRAPH_FAILED);
 
     auto outputYPtr = context->GetOutputDesc(0);
@@ -283,11 +264,9 @@ static ge::graphStatus CheckDtype(const gert::TilingContext* context)
     auto yDtype = outputYPtr->GetDataType();
     OP_CHECK_IF(
         Y_SUPPORT_DTYPE_SET.count(yDtype) == 0,
-        OP_LOGE(
+        OP_LOGE_FOR_INVALID_DTYPE(
             context->GetNodeName(),
-            "Output y's data type[%s] only support FLOAT4_E2M1/FLOAT4_E1M2/FLOAT8_E4M3FN/FLOAT8_E5M2 currently, please "
-            "check.",
-            Ops::Base::ToString(static_cast<ge::DataType>(yDtype)).c_str()),
+            "y", ge::TypeUtils::DataTypeToSerialString(yDtype), "[DT_FLOAT4_E2M1, DT_FLOAT4_E1M2, DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2]"),
         return ge::GRAPH_FAILED);
 
     auto outputMxScalePtr = context->GetOutputDesc(1);
@@ -295,9 +274,8 @@ static ge::graphStatus CheckDtype(const gert::TilingContext* context)
     auto scaleDtype = outputMxScalePtr->GetDataType();
     OP_CHECK_IF(
         OUTPUT_SUPPORT_DTYPE_SET.count(scaleDtype) == 0,
-        OP_LOGE(
-            context->GetNodeName(), "Input mxscale's data type[%s] only support FLOAT8_E8M0 currently, please check.",
-            Ops::Base::ToString(static_cast<ge::DataType>(scaleDtype)).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPE(
+            context->GetNodeName(), "mxscale", ge::TypeUtils::DataTypeToSerialString(scaleDtype), "[DT_FLOAT8_E8M0]"),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -311,15 +289,15 @@ static ge::graphStatus CheckShape(const gert::TilingContext* context, const Dyna
 
     OP_CHECK_IF(
         xShape.GetDimNum() < 1 || xShape.GetDimNum() > MAX_DIM_NUM,
-        OP_LOGE(context->GetNodeName(), "Input x rank[%zu] should be in [1, 7].", xShape.GetDimNum()),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x", std::to_string(xShape.GetDimNum()), "The shape dim of x must be within the range [1, 7]"),
         return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(
         tilingParam.axis >= static_cast<int64_t>(xShape.GetDimNum()) ||
             tilingParam.axis < static_cast<int64_t>(-1 * xShape.GetDimNum()),
-        OP_LOGE(
-            context->GetNodeName(), "The attr axis is invalid, axis should be in [%ld, %ld], please check.",
-            static_cast<int64_t>(-1 * xShape.GetDimNum()), static_cast<int64_t>(xShape.GetDimNum()) - 1),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context->GetNodeName(), "axis", std::to_string(tilingParam.axis),
+            "The value of axis must be within the range [-" + std::to_string(xShape.GetDimNum()) + ", " + std::to_string(xShape.GetDimNum() - 1) + "]"),
         return ge::GRAPH_FAILED);
 
     auto outputYPtr = context->GetOutputDesc(0);
@@ -328,9 +306,9 @@ static ge::graphStatus CheckShape(const gert::TilingContext* context, const Dyna
     if (Y_SUPPORT_DTYPE_FP4_SET.count(yDtype) != 0) {
         OP_CHECK_IF(
             GetRemainder(xShape.GetDim(xShape.GetDimNum() - 1), DIGIT_TWO) != 0,
-            OP_LOGE(
-                context->GetNodeName(),
-                "When output y's data type is FLOAT4_E2M1/FLOAT4_E1M2, the last axis should be even, please check."),
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                context->GetNodeName(), "x", Ops::Base::ToString(xShape),
+                "When the yDtype is FLOAT4_E2M1 or FLOAT4_E1M2, the tail axis of x must be an even number"),
             return ge::GRAPH_FAILED);
     }
 
@@ -340,7 +318,7 @@ static ge::graphStatus CheckShape(const gert::TilingContext* context, const Dyna
 
     OP_CHECK_IF(
         xShape != yShape,
-        OP_LOGE(context->GetNodeName(), "The shape of output y must be same with shape of input x, please check."),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "x, y", Ops::Base::ToString(xShape) + ", " + Ops::Base::ToString(yShape), "The shapes of x and y must be the same"),
         return ge::GRAPH_FAILED);
 
     auto axis = tilingParam.axis >= 0 ? tilingParam.axis : tilingParam.axis + xShape.GetDimNum();
@@ -352,9 +330,9 @@ static ge::graphStatus CheckShape(const gert::TilingContext* context, const Dyna
 
     OP_CHECK_IF(
         mxScaleShape.GetDimNum() != xShape.GetDimNum() + 1,
-        OP_LOGE(
-            context->GetNodeName(), "Output mxscale rank[%zu] should be equal x rank[%zu] + 1.",
-            mxScaleShape.GetDimNum(), xShape.GetDimNum()),
+OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            context->GetNodeName(), "mxscale", std::to_string(mxScaleShape.GetDimNum()),
+            "The shape dim of mxscale must be the shape dim of x plus 1"),
         return ge::GRAPH_FAILED);
 
     auto newScaleShape = xShape;
@@ -363,9 +341,7 @@ static ge::graphStatus CheckShape(const gert::TilingContext* context, const Dyna
 
     OP_CHECK_IF(
         newScaleShape != mxScaleShape,
-        OP_LOGE(
-            context->GetNodeName(), "The shape of output mxscale %s is incorrect, correct shape is %s, please check.",
-            Shape2String(mxScaleShape).c_str(), Shape2String(newScaleShape).c_str()),
+        OP_LOGE_FOR_INVALID_SHAPE(context->GetNodeName(), "mxscale", Shape2String(mxScaleShape), Shape2String(newScaleShape)),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -404,7 +380,7 @@ static ge::graphStatus SetCalcMode(const gert::TilingContext* context, DynamicMx
             tilingParam.calcMode = MODE_THREE;
         }
     } else {
-        OP_LOGE(context->GetNodeName(), "Invalid scaleAlg value: %ld", tilingParam.scaleAlg);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "scale_alg", std::to_string(tilingParam.scaleAlg), "The value of scale_alg must be [0, 1, 2]");
         return ge::GRAPH_FAILED;
     }
 

@@ -43,7 +43,8 @@ ge::graphStatus MishTiling::CalcInputDtype()
     this->inputDtype = inputDesc->GetDataType();
     OP_CHECK_IF(
         this->inputDtype != ge::DT_FLOAT && this->inputDtype != ge::DT_FLOAT16 && this->inputDtype != ge::DT_BF16,
-        OP_LOGE(tilingContext->GetNodeName(), "input x dtype not support [%s],only support [DT_FLOAT, DT_FLOAT16, DT_BF16]", ge::TypeUtils::DataTypeToSerialString(this->inputDtype).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "x",
+            ge::TypeUtils::DataTypeToSerialString(this->inputDtype), "FLOAT, FLOAT16, BF16"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -57,7 +58,7 @@ ge::graphStatus MishTiling::CheckShape()
     
     OP_CHECK_IF(
         inputYShape.GetDimNum() > MAX_DIM_NUM,
-        OP_LOGE(tilingContext->GetNodeName(), "input x dim num should be no more than 8"),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(tilingContext->GetNodeName(), "x", std::to_string(inputYShape.GetDimNum()), "The shape dim of x must be within the range [1, 8]"),
         return ge::GRAPH_FAILED);
      
     auto outputStorageShape = tilingContext->GetOutputShape(0);
@@ -66,7 +67,9 @@ ge::graphStatus MishTiling::CheckShape()
 
     OP_CHECK_IF(
         inputYShape != outputZShape,
-        OP_LOGE(tilingContext->GetNodeName(), "output y shape not same as input x"),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext->GetNodeName(), "x, y",
+            Ops::Base::ToString(inputYShape) + ", " + Ops::Base::ToString(outputZShape),
+            "The shapes of x and y must be the same"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -79,7 +82,9 @@ ge::graphStatus MishTiling::CalcOutputDtype()
     this->outputDtype = outputDesc->GetDataType();
     OP_CHECK_IF(
         this->outputDtype != this->inputDtype,
-        OP_LOGE(tilingContext->GetNodeName(), "output y dtype not same as input x"),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext->GetNodeName(), "y, x",
+            ge::TypeUtils::DataTypeToSerialString(this->outputDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(this->inputDtype),
+            "The dtypes of y and x must be the same"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -113,7 +118,8 @@ ge::graphStatus MishTiling::RunTiling()
         dType = TPL_FP32;
         baseTilingResult = elewiseBaseTiling.DoTiling<MishDAG<float>::OpDag>(*tiling);
     } else {
-        OP_LOGE(tilingContext->GetNodeName(), "output dtype not support");
+        OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "output y",
+            ge::TypeUtils::DataTypeToSerialString(this->outputDtype), "FLOAT16, BF16, FLOAT");
         return ge::GRAPH_FAILED;
     }
     OP_CHECK_IF(

@@ -55,11 +55,10 @@ ge::graphStatus LeakyReluGradTiling::DoOpTiling()
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputDesc);
     ge::DataType outputDtype = outputDesc->GetDataType();
     if ((input0DType != input1DType) || (outputDtype != input1DType)) {
-    OP_LOGE(context_->GetNodeName(), "dtype of gradients[%s], dtype of features[%s], dtype of backprops[%s] are not equal.",
-        Ops::Base::ToString(static_cast<ge::DataType>(input0DType)).c_str(),
-        Ops::Base::ToString(static_cast<ge::DataType>(input1DType)).c_str(),
-        Ops::Base::ToString(static_cast<ge::DataType>(outputDtype)).c_str());
-    return ge::GRAPH_FAILED;
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "gradients, features, backprops",
+            ge::TypeUtils::DataTypeToSerialString(input0DType) + ", " + ge::TypeUtils::DataTypeToSerialString(input1DType) + ", " + ge::TypeUtils::DataTypeToSerialString(outputDtype),
+            "The dtypes of gradients, features and backprops must be the same");
+        return ge::GRAPH_FAILED;
     }
     auto attrs = context_->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context_, attrs);
@@ -89,8 +88,8 @@ ge::graphStatus LeakyReluGradTiling::DoOpTiling()
         tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(), LEAKY_RELU_GRAD_TPL_FP32);
         brcBaseTiling.SetScalar<float>(negativeSlope);
     } else {
-        OP_LOGE(context_->GetNodeName(), "Input0[gradients]:%s and input1[features]:%s is only support float16, bfloat16, float32",
-            Ops::Base::ToString(static_cast<ge::DataType>(input0DType)).c_str(), Ops::Base::ToString(static_cast<ge::DataType>(input1DType)).c_str());
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "gradients, features",
+            ge::TypeUtils::DataTypeToSerialString(input0DType), "FLOAT16, BF16, FLOAT");
         return ge::GRAPH_FAILED;
     }
 

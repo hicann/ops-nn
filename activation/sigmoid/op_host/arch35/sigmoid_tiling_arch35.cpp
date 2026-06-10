@@ -113,7 +113,9 @@ ge::graphStatus SigmoidTiling::GetShapeAttrsInfo()
 
     opKey = GetOpKey(xDtype, yDtype);
     OP_CHECK_IF((opKey == OP_KEY_INVALID),
-                    OP_LOGE(context_->GetNodeName(), "can not get opKey"),
+                    OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "x, y",
+                        ge::TypeUtils::DataTypeToSerialString(xDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(yDtype),
+                        "The dtypes of x and y must be the same"),
                     return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }

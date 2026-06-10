@@ -113,7 +113,8 @@ ge::graphStatus LeakyReluTiling::RunTiling()
                         OP_LOGE(tilingContext->GetNodeName(), "do tiling failed for fp32"),
                         return ge::GRAPH_FAILED);
     } else {
-        OP_LOGE(tilingContext->GetNodeName(), "current dtype not supported");
+        OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "output y",
+            ge::TypeUtils::DataTypeToSerialString(this->outputDtype), "FLOAT16, BF16, FLOAT");
         return ge::GRAPH_FAILED;
     }
     tiling->negativeSlope = negativeSlope;

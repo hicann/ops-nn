@@ -17,6 +17,7 @@
 #include "register/op_impl_registry.h"
 #include "util/shape_util.h"
 #include "util/math_util.h"
+#include "graph/utils/type_utils.h"
 
 using namespace ge;
 namespace ops {
@@ -60,18 +61,20 @@ graphStatus InferShapeForGroupedDynamicMxQuant(gert::InferShapeContext* context)
     const int32_t *blockSize = attrsPtr->GetAttrPointer<int32_t>(INDEX_ATTR_BLOCK_SIZE);
     OP_CHECK_NULL_WITH_CONTEXT(context, blockSize);
     OP_CHECK_IF(static_cast<int64_t>(*blockSize) != 32,
-        OP_LOGE(context->GetNodeName(), "blockSize is invalid, must be 32"),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "blockSize",
+            std::to_string(*blockSize), "The value of blockSize must be 32"),
         return ge::GRAPH_FAILED);
 
     size_t xShapeSize = xShape->GetDimNum();
     size_t groupIdxShapeSize = groupIdxShape->GetDimNum();
     OP_CHECK_IF(groupIdxShapeSize != 1,
-        OP_LOGE(context->GetNodeName(),
-            "group_index's shape must be 1D, but is %lu", groupIdxShapeSize),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "group_index",
+            std::to_string(groupIdxShapeSize), "The shape dim of group_index must be 1"),
         return ge::GRAPH_FAILED);
     int64_t groupIdxDim0 = groupIdxShape->GetDim(0);
     OP_CHECK_IF(groupIdxDim0 == 0,
-        OP_LOGE(context->GetNodeName(), "group_index does not support empty tensor"),
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "group_index",
+            Ops::Base::ToString(*groupIdxShape), "Shape[0] of this parameter must be greater than 0"),
         return ge::GRAPH_FAILED);
 
     // dynamic -2 (input x)
@@ -81,8 +84,8 @@ graphStatus InferShapeForGroupedDynamicMxQuant(gert::InferShapeContext* context)
         return ge::GRAPH_SUCCESS;
     } else {
         OP_CHECK_IF(xShapeSize != 2,
-        OP_LOGE(context->GetNodeName(),
-            "input x is not UnknownRank, shape must be 2D, but is %lu", xShapeSize),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x",
+            std::to_string(xShapeSize), "The shape dim of x must be 2"),
         return ge::GRAPH_FAILED);
     }
 
@@ -110,7 +113,8 @@ static ge::graphStatus InferDataTypeForGroupedDynamicMxQuant(gert::InferDataType
     if (pDstDtype != nullptr) {
         int32_t dstDtype = *pDstDtype;
         OP_CHECK_IF(dstDtype != DTYPE_FLOAT8_E5M2 && dstDtype != DTYPE_FLOAT8_E4M3FN,
-            OP_LOGE(context->GetNodeName(), "attr dst_type only support 35(FLOAT8_E5M2) and 36(FLOAT8_E4M3FN)"),
+            OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "dst_type",
+                ge::TypeUtils::DataTypeToSerialString(yDtype), "FLOAT8_E5M2, FLOAT8_E4M3FN"),
             return ge::GRAPH_FAILED);
         yDtype = static_cast<ge::DataType>(dstDtype);
     }

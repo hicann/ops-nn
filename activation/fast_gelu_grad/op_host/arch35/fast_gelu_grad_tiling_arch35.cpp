@@ -32,17 +32,26 @@ ge::graphStatus FastGeluGradTiling::CalcInputDtype()
     this->inputDtype = inputDesc->GetDataType();
     OP_CHECK_IF(
         this->inputDtype != ge::DT_FLOAT16 && this->inputDtype != ge::DT_BF16 && this->inputDtype != ge::DT_FLOAT,
-        OP_LOGE(tilingContext->GetNodeName(), "self dtype not support"), return ge::GRAPH_FAILED);
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            tilingContext->GetNodeName(), "x",
+            ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->inputDtype)),
+            "The dtype of x must be DT_FLOAT16, DT_BF16, or DT_FLOAT"), return ge::GRAPH_FAILED);
 
     auto inputDesc1 = tilingContext->GetInputDesc(1);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, inputDesc1);
     this->inputDtype1 = inputDesc1->GetDataType();
     OP_CHECK_IF(
         this->inputDtype1 != ge::DT_FLOAT16 && this->inputDtype1 != ge::DT_BF16 && this->inputDtype1 != ge::DT_FLOAT,
-        OP_LOGE(tilingContext->GetNodeName(), "input dy dtype not support"), return ge::GRAPH_FAILED);
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            tilingContext->GetNodeName(), "dy",
+            ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->inputDtype1)),
+            "The dtype of dy must be DT_FLOAT16, DT_BF16, or DT_FLOAT"), return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(
-        this->inputDtype1 != this->inputDtype, OP_LOGE(tilingContext->GetNodeName(), "input dy dtype not support"),
+        this->inputDtype1 != this->inputDtype, OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            tilingContext->GetNodeName(), "x, dy",
+            ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->inputDtype)) + ", " + ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->inputDtype1)),
+            "The dtypes of x and dy must be the same"),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -55,9 +64,15 @@ ge::graphStatus FastGeluGradTiling::CalcOutputDtype()
     this->outputDtype = outputDesc->GetDataType();
     OP_CHECK_IF(
         this->outputDtype != ge::DT_FLOAT16 && this->outputDtype != ge::DT_BF16 && this->outputDtype != ge::DT_FLOAT,
-        OP_LOGE(tilingContext->GetNodeName(), "self dtype not support"), return ge::GRAPH_FAILED);
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            tilingContext->GetNodeName(), "z",
+            ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->outputDtype)),
+            "The dtype of z must be DT_FLOAT16, DT_BF16, or DT_FLOAT"), return ge::GRAPH_FAILED);
     OP_CHECK_IF(
-        this->outputDtype != this->inputDtype, OP_LOGE(tilingContext->GetNodeName(), "out dtype not same as self"),
+        this->outputDtype != this->inputDtype, OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            tilingContext->GetNodeName(), "x, z",
+            ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->inputDtype)) + ", " + ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->outputDtype)),
+            "The dtypes of x and z must be the same"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -77,10 +92,14 @@ ge::graphStatus FastGeluGradTiling::CheckShape()
     const gert::Shape& outputShape = Ops::Base::EnsureNotScalar(outStorageShape->GetStorageShape());
 
     OP_CHECK_IF(
-        inputXShape != inputDyShape, OP_LOGE(tilingContext->GetNodeName(), "input x and input dy shape not same"),
+        inputXShape != inputDyShape, OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            tilingContext->GetNodeName(), "x, dy", Ops::Base::ToString(inputXShape) + ", " + Ops::Base::ToString(inputDyShape),
+            "The shapes of x and dy must be the same"),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(
-        inputXShape != outputShape, OP_LOGE(tilingContext->GetNodeName(), "input x and output z shape not same"),
+        inputXShape != outputShape, OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            tilingContext->GetNodeName(), "x, z", Ops::Base::ToString(inputXShape) + ", " + Ops::Base::ToString(outputShape),
+            "The shapes of x and z must be the same"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -91,7 +110,8 @@ std::string FastGeluGradTiling::DataTypeToSerialString(const ge::DataType type) 
     if (it != DATATYPE_TO_STRING_MAP.end()) {
         return it->second;
     } else {
-        OP_LOGE("Neg", "datatype %d not find", type);
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON("FastGeluGrad", "x", ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(type)),
+            "The dtype of x must be DT_FLOAT16, DT_BF16, or DT_FLOAT");
         return "UNDEFINED";
     }
 }
@@ -127,7 +147,10 @@ ge::graphStatus FastGeluGradTiling::RunTiling()
         dType = TPL_FP32;
         status = elewiseBaseTiling.DoTiling<FastGeluGradDag::FastGeluGradNoCast<float>::OpDag>(*tiling);
     } else {
-        OP_LOGE(tilingContext->GetNodeName(), "elewiseBaseTiling DoTiling failed.");
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            tilingContext->GetNodeName(), "z",
+            ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->outputDtype)),
+            "The dtype of z must be DT_FLOAT16, DT_BF16, or DT_FLOAT");
         return ge::GRAPH_FAILED;
     }
     OP_CHECK_IF(

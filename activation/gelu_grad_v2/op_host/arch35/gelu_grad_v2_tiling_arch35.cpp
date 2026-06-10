@@ -49,9 +49,10 @@ ge::graphStatus GeluGradV2Tiling::CheckValid()
     ge::DataType dyInputDtype = dyInputDesc->GetDataType();
     OP_CHECK_IF(
         dyInputDtype != ge::DT_FLOAT16 && dyInputDtype != ge::DT_BF16 && dyInputDtype != ge::DT_FLOAT,
-        OP_LOGE(
-            context_->GetNodeName(), "input dy dtype %s not supported, only support [float16, bfloat16, float32].",
-            ge::TypeUtils::DataTypeToSerialString(dyInputDtype).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            context_->GetNodeName(), "dy",
+            ge::TypeUtils::DataTypeToSerialString(dyInputDtype),
+            "The dtype of dy must be DT_FLOAT16, DT_BF16, or DT_FLOAT"),
         return ge::GRAPH_FAILED);
 
     auto xInputDesc = context_->GetInputDesc(1);
@@ -59,10 +60,10 @@ ge::graphStatus GeluGradV2Tiling::CheckValid()
     ge::DataType xInputDtype = xInputDesc->GetDataType();
     OP_CHECK_IF(
         xInputDtype != dyInputDtype,
-        OP_LOGE(
-            context_->GetNodeName(), "input x dtype %s not equal dy dtype %s.",
-            ge::TypeUtils::DataTypeToSerialString(xInputDtype).c_str(),
-            ge::TypeUtils::DataTypeToSerialString(dyInputDtype).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            context_->GetNodeName(), "dy, x",
+            ge::TypeUtils::DataTypeToSerialString(xInputDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(dyInputDtype),
+            "The dtypes of dy and x must be the same"),
         return ge::GRAPH_FAILED);
     
     auto outputDesc = context_->GetOutputDesc(0);
@@ -70,10 +71,10 @@ ge::graphStatus GeluGradV2Tiling::CheckValid()
     this->outputDtype = outputDesc->GetDataType();
     OP_CHECK_IF(
         this->outputDtype != dyInputDtype,
-        OP_LOGE(
-            context_->GetNodeName(), "output z dtype %s not same as input dy %s.",
-            ge::TypeUtils::DataTypeToSerialString(this->outputDtype).c_str(),
-            ge::TypeUtils::DataTypeToSerialString(dyInputDtype).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            context_->GetNodeName(), "dy, z",
+            ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->outputDtype)) + ", " + ge::TypeUtils::DataTypeToSerialString(dyInputDtype),
+            "The dtypes of dy and z must be the same"),
         return ge::GRAPH_FAILED);
 
     auto attrs = context_->GetAttrs();
@@ -86,7 +87,9 @@ ge::graphStatus GeluGradV2Tiling::CheckValid()
     } else if (approximateStr == "tanh") {
         approximate = TPL_TANH;
     } else {
-        OP_LOGE(context_->GetNodeName(), "approximate [%s] not supported, only support [none, tanh]", approximateStr.c_str());
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+        context_->GetNodeName(), "approximate", approximateStr,
+        "The value of approximate must be none or tanh");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -112,7 +115,10 @@ ge::graphStatus GeluGradV2Tiling::DoOpTiling()
             baseTilingResult=brcBaseTiling.DoTiling(ASCEND_API_BUFFER);
             tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(),approximate);
         } else {
-            OP_LOGE(context_->GetNodeName(), "input dtype %s not supported, only support [float16, bfloat16, float32].", ge::TypeUtils::DataTypeToSerialString(this->outputDtype).c_str());
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            context_->GetNodeName(), "z",
+            ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->outputDtype)),
+            "The dtype of z must be DT_FLOAT16, DT_BF16, or DT_FLOAT");
             return ge::GRAPH_FAILED;
         }
         OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED,
@@ -131,13 +137,18 @@ ge::graphStatus GeluGradV2Tiling::DoOpTiling()
             baseTilingResult=brcBaseTiling.DoTiling();
             tilingKey = GET_TPL_TILING_KEY(brcBaseTiling.GetSchMode(),approximate);
         } else {
-            OP_LOGE(context_->GetNodeName(), "input dtype %s not supported, only support [float16, bfloat16, float32].", ge::TypeUtils::DataTypeToSerialString(this->outputDtype).c_str());
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            context_->GetNodeName(), "z",
+            ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->outputDtype)),
+            "The dtype of z must be DT_FLOAT16, DT_BF16, or DT_FLOAT");
             return ge::GRAPH_FAILED;
         }
         OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED,
             OP_LOGE(context_->GetNodeName(), "BroadcastBaseTiling<GeluGradV2TanhDAG::OpDag> failed"), return ge::GRAPH_FAILED);
     } else {
-        OP_LOGE(context_->GetNodeName(), "approximate [%s] not supported, only support [none, tanh]", approximateStr.c_str());
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+        context_->GetNodeName(), "approximate", approximateStr,
+        "The value of approximate must be none or tanh");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;

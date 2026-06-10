@@ -80,7 +80,8 @@ graphStatus CheckShape(gert::InferShapeContext* context, const gert::Shape* inpu
             scaleShape->SetDim(DIGIT_TWO, Ops::Base::CeilDiv(dim2, static_cast<int64_t>(*colBlockSize)));
         }
     } else {
-        OP_LOGE(context, "only support input dim num is 2 or 3, infershape failed");
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x",
+            std::to_string(inputXShape->GetDimNum()), "The shape dim of x must be within the range [2, 3]");
         return ge::GRAPH_FAILED;
     }
 

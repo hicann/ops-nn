@@ -61,11 +61,17 @@ ge::graphStatus EluGradV2Tiling::CalcInputDtype()
     this->activationsDtype = activationsDesc->GetDataType();
     OP_CHECK_IF(
         this->gradsDtype != ge::DT_FLOAT16 && this->gradsDtype != ge::DT_BF16 && this->gradsDtype != ge::DT_FLOAT,
-        OP_LOGE(tilingContext->GetNodeName(), "Gradoutput dtype not support"),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            tilingContext->GetNodeName(), "grads",
+            Ops::Base::ToString(static_cast<ge::DataType>(this->gradsDtype)),
+            "The dtype of grads must be DT_FLOAT16, DT_BF16, or DT_FLOAT"),
         return ge::GRAPH_FAILED);
      OP_CHECK_IF(
         this->activationsDtype != this->gradsDtype,
-        OP_LOGE(tilingContext->GetNodeName(), "Activations dtype not support"),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            tilingContext->GetNodeName(), "grads, activations",
+            Ops::Base::ToString(static_cast<ge::DataType>(this->gradsDtype)) + ", " + Ops::Base::ToString(static_cast<ge::DataType>(this->activationsDtype)),
+            "The dtypes of grads and activations must be the same"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -78,10 +84,16 @@ ge::graphStatus EluGradV2Tiling::CalcOutputDtype()
     this->outputDtype = outputDesc->GetDataType();
     OP_CHECK_IF(
         this->outputDtype != ge::DT_FLOAT16 && this->outputDtype != ge::DT_BF16 && this->outputDtype != ge::DT_FLOAT,
-        OP_LOGE(tilingContext->GetNodeName(), "Gradinput dtype not support"),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            tilingContext->GetNodeName(), "y",
+            Ops::Base::ToString(static_cast<ge::DataType>(this->outputDtype)),
+            "The dtype of y must be DT_FLOAT16, DT_BF16, or DT_FLOAT"),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(this->outputDtype != this->gradsDtype,
-        OP_LOGE(tilingContext->GetNodeName(), "Gradinput dtype not same as gradoutput"),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            tilingContext->GetNodeName(), "grads, y",
+            Ops::Base::ToString(static_cast<ge::DataType>(this->gradsDtype)) + ", " + Ops::Base::ToString(static_cast<ge::DataType>(this->outputDtype)),
+            "The dtypes of grads and y must be the same"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -102,7 +114,10 @@ ge::graphStatus EluGradV2Tiling::CheckShape()
     const gert::Shape& outputShape = EnsureNotScalar(outStorageShapeV2->GetStorageShape());
 
     OP_CHECK_IF(gradsShape != outputShape && gradsShape != activationsShape,
-               OP_LOGE(tilingContext->GetNodeName(), "Input grads, activations and output y shape not same"),
+               OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                   tilingContext->GetNodeName(), "grads, activations, y",
+                   Ops::Base::ToString(gradsShape) + ", " + Ops::Base::ToString(activationsShape) + ", " + Ops::Base::ToString(outputShape),
+                   "The shapes of grads, activations, and y must be the same"),
                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -123,8 +138,10 @@ ge::graphStatus EluGradV2Tiling::SetTilingData(bool is_result)
     }else if (this->outputDtype == ge::DT_FLOAT && !is_result) {
         dType = static_cast<uint64_t>(EluGradV2_TPL_FP32_N);
     } else {
-        OP_LOGE(tilingContext->GetNodeName(),
-                                        "Self dtype is only support fp16、bf16、fp32");
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            tilingContext->GetNodeName(), "y",
+            Ops::Base::ToString(static_cast<ge::DataType>(this->outputDtype)),
+            "The dtype of y must be DT_FLOAT16, DT_BF16, or DT_FLOAT");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -141,7 +158,9 @@ ge::graphStatus EluGradV2Tiling::SetAttr()
     this->isResult = *tilingContext->GetAttrs()->GetAttrPointer<bool>(IS_RESULT_ATTR_IDX);
     float alphaValue = alphaValueAttr == nullptr ? 1.0f : *alphaValueAttr;
     OP_CHECK_IF(this->isResult && alphaValue < 0,
-               OP_LOGE(tilingContext->GetNodeName(), "If result is true, alpha must >= 0"),
+               OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                   tilingContext->GetNodeName(), "alpha", std::to_string(alphaValue),
+                   "If is_result is true, the value of alpha must be greater than or equal to 0"),
                return ge::GRAPH_FAILED);
     float scale = scaleValueAttr == nullptr ? 1.0f : *scaleValueAttr;
     float inputScale = inputScaleValueAttr == nullptr ? 1.0f : *inputScaleValueAttr;
@@ -186,7 +205,10 @@ ge::graphStatus EluGradV2Tiling::RunTiling()
     } else if(dType == static_cast<uint64_t>(EluGradV2_TPL_FP32_N)) {
         status = elewiseBaseTiling.DoTiling<EluGradV2NoResultOp<float>::OpDag>(tiling->baseTiling);
     } else {
-        OP_LOGE(tilingContext->GetNodeName(), "elewiseBaseTiling DoTiling failed.");
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            tilingContext->GetNodeName(), "y",
+            Ops::Base::ToString(static_cast<ge::DataType>(this->outputDtype)),
+            "The dtype of y must be DT_FLOAT16, DT_BF16, or DT_FLOAT");
         return ge::GRAPH_FAILED;
     }
     OP_CHECK_IF(status == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "elewiseBaseTiling failed"), return ge::GRAPH_FAILED);

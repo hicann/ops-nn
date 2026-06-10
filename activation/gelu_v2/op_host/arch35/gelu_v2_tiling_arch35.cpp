@@ -41,8 +41,10 @@ ge::graphStatus GeluV2Tiling::CalcInputDtype()
     this->inputDtype = inputDesc->GetDataType();
     OP_CHECK_IF(
         this->inputDtype != ge::DT_FLOAT16 && this->inputDtype != ge::DT_BF16 && this->inputDtype != ge::DT_FLOAT,
-        OP_LOGE(tilingContext, "input x dtype [%s] not supported, only support [DT_FLOAT16, DT_BF16, DT_FLOAT]",
-                ge::TypeUtils::DataTypeToSerialString(this->inputDtype).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            tilingContext->GetNodeName(), "x",
+            ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->inputDtype)),
+            "The dtype of x must be DT_FLOAT16, DT_BF16, or DT_FLOAT"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -54,7 +56,10 @@ ge::graphStatus GeluV2Tiling::CalcOutputDtype()
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, outputDesc);
     this->outputDtype = outputDesc->GetDataType();
     OP_CHECK_IF(this->outputDtype != this->inputDtype,
-                OP_LOGE(tilingContext, "output y dtype not same as input x"),
+                OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                    tilingContext->GetNodeName(), "x, y",
+                    ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->inputDtype)) + ", " + ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->outputDtype)),
+                    "The dtypes of x and y must be the same"),
                 return ge::GRAPH_FAILED);
     if (this->outputDtype == ge::DT_FLOAT16) {
         dType = TPL_FP16;
@@ -63,8 +68,10 @@ ge::graphStatus GeluV2Tiling::CalcOutputDtype()
    } else if (this->outputDtype == ge::DT_FLOAT) {
         dType = TPL_FP32;
    } else {
-        OP_LOGE(tilingContext, "output y dtype [%s] not supported, only support [DT_FLOAT16, DT_BF16, DT_FLOAT]",
-                ge::TypeUtils::DataTypeToSerialString(this->outputDtype).c_str());
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                tilingContext->GetNodeName(), "y",
+                ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->outputDtype)),
+                "The dtype of y must be DT_FLOAT16, DT_BF16, or DT_FLOAT");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -82,7 +89,9 @@ ge::graphStatus GeluV2Tiling::CheckShape()
     const gert::Shape& outputYShape = Ops::Base::EnsureNotScalar(outputStorageShape->GetStorageShape());
 
     OP_CHECK_IF(inputXShape != outputYShape,
-                OP_LOGE(tilingContext, "input x and output y shape not same"),
+                OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+                    tilingContext->GetNodeName(), "x, y", Ops::Base::ToString(inputXShape) + ", " + Ops::Base::ToString(outputYShape),
+                    "The shapes of x and y must be the same"),
                 return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -109,7 +118,9 @@ ge::graphStatus GeluV2Tiling::CheckValid()
     } else if (approximateStr == "tanh") {
         approximate = TPL_TANH;
     } else {
-        OP_LOGE(tilingContext, "approximate [%s] not supported, only support [none, tanh]", approximateStr.c_str());
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            tilingContext->GetNodeName(), "approximate", approximateStr,
+            "The value of approximate must be none or tanh");
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -132,8 +143,10 @@ ge::graphStatus GeluV2Tiling::RunTiling()
         } else if (dType == TPL_FP32) {
             baseTilingResult = elewiseBaseTiling.DoTiling<GeluV2Op::GeluV2Erf32BDag<float>::OpDag>(*tiling, ASCEND_API_BUFFER);
         } else {
-            OP_LOGE(tilingContext, "output y dtype [%s] not supported, only support [DT_FLOAT16, DT_BF16, DT_FLOAT]",
-                    ge::TypeUtils::DataTypeToSerialString(this->outputDtype).c_str());
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                    tilingContext->GetNodeName(), "y",
+                    ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->outputDtype)),
+                    "The dtype of y must be DT_FLOAT16, DT_BF16, or DT_FLOAT");
             return ge::GRAPH_FAILED;
         }
     } else if (approximate == TPL_TANH) {  
@@ -144,12 +157,16 @@ ge::graphStatus GeluV2Tiling::RunTiling()
         } else if (dType == TPL_FP32) {
             baseTilingResult = elewiseBaseTiling.DoTiling<GeluV2Op::GeluV2TanhDag<float>::OpDag>(*tiling, ASCEND_API_BUFFER);
         } else {
-            OP_LOGE(tilingContext, "output y dtype [%s] not supported, only support [DT_FLOAT16, DT_BF16, DT_FLOAT]",
-                    ge::TypeUtils::DataTypeToSerialString(this->outputDtype).c_str());
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                    tilingContext->GetNodeName(), "y",
+                    ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(this->outputDtype)),
+                    "The dtype of y must be DT_FLOAT16, DT_BF16, or DT_FLOAT");
             return ge::GRAPH_FAILED;
         }
     } else {
-        OP_LOGE(tilingContext, "approximate [%s] not supported, only support [none, tanh]", approximateStr.c_str());
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            tilingContext->GetNodeName(), "approximate", approximateStr,
+            "The value of approximate must be none or tanh");
         return ge::GRAPH_FAILED;
     }
     OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED, OP_LOGE(tilingContext, "elewiseBaseTiling failed"), 

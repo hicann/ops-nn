@@ -53,9 +53,9 @@ ge::graphStatus SoftplusTiling::CalcOutputDtype()
 
     OP_CHECK_IF(
         inputDtype != this->outputDtype,
-        OP_LOGE(
-            tilingContext_, "input dtype %s and output dtype %s are different, which should be same",
-            Ops::Base::ToString(inputDtype).c_str(), Ops::Base::ToString(this->outputDtype).c_str()),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(tilingContext_->GetNodeName(), "x, y",
+            ge::TypeUtils::DataTypeToSerialString(inputDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(this->outputDtype),
+            "The dtypes of x and y must be the same"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -73,9 +73,9 @@ ge::graphStatus SoftplusTiling::CheckShape()
 
     OP_CHECK_IF(
         inputShape != outputShape,
-        OP_LOGE(
-            tilingContext_->GetNodeName(), "input shape %s and output shape %s are different, which should be same",
-            Ops::Base::ToString(inputShape).c_str(), Ops::Base::ToString(outputShape).c_str()),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(tilingContext_->GetNodeName(), "x, y",
+            Ops::Base::ToString(inputShape) + ", " + Ops::Base::ToString(outputShape),
+            "The shapes of x and y must be the same"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -102,7 +102,9 @@ ge::graphStatus SoftplusTiling::RunTiling()
     } else if (this->outputDtype == ge::DT_BF16) {
         res = elewiseBaseTiling.DoTiling<SoftplusDag<bfloat16_t, float>::OpDag>(tiling->baseTiling);
     } else {
-        OP_LOGE(tilingContext_, "data type check failed. getype: %s", Ops::Base::ToString(this->outputDtype).c_str());
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(tilingContext_->GetNodeName(), "y",
+            ge::TypeUtils::DataTypeToSerialString(this->outputDtype),
+            "The dtype of y must be in [DT_FLOAT16, DT_FLOAT, DT_BF16]");
         return ge::GRAPH_FAILED;
     }
 

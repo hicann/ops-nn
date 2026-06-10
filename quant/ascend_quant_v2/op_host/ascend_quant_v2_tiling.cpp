@@ -97,7 +97,9 @@ ge::graphStatus AscendQuantV2::CheckInputValid(const gert::Shape& input1, const 
     size_t input1DimNum = input1.GetDimNum();
     size_t input2DimNum = input2.GetDimNum();
     if (input1DimNum != input2DimNum && static_cast<int32_t>(input2DimNum) != 1) {
-        OP_LOGE(context_->GetNodeName(), "scale/offset's number of dimensions is invalid, should be same as x or 1");
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "scale/offset",
+                                                  std::to_string(input2DimNum),
+                                                  "The shape dim of scale/offset must be the same as x or 1");
         return ge::GRAPH_FAILED;
     }
     size_t input1Axis =
@@ -106,19 +108,17 @@ ge::graphStatus AscendQuantV2::CheckInputValid(const gert::Shape& input1, const 
     int64_t input1Dim = input1.GetDim(input1Axis);
     int64_t input2Dim = input2.GetDim(input2Axis);
     if (input1Dim != input2Dim && input2Dim != 1) {
-        OP_LOGE(
-            context_->GetNodeName(),
-            "scale/offset dim(%zu)'s value(%ld) is invalid, should be same as x dim(%zu)'s value(%ld) or 1", input2Axis,
-            input2Dim, input1Axis, input1Dim);
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "scale/offset, x",
+                                                Ops::Base::ToString(input2) + ", " + Ops::Base::ToString(input1),
+                                                "Shape[" + std::to_string(input2Axis) + "] of scale/offset must be equal to shape[" + std::to_string(input1Axis) + "] of x or 1");
         return ge::GRAPH_FAILED;
     }
 
     auto input2Size = input2.GetShapeSize();
     if (input2Size != input2Dim) {
-        OP_LOGE(
-            context_->GetNodeName(),
-            "scale/offset should be 1-dimensional, otherwise all dimensions except the dimension specified by axis "
-            "should be 1.");
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "scale/offset",
+                                                  std::to_string(input2Size),
+                                                  "The shape size of scale/offset should be equal to "+std::to_string(input2Dim));
         return ge::GRAPH_FAILED;
     }
 
@@ -142,7 +142,7 @@ RoundMode AscendQuantV2::GetRoundMode(std::string& roundMode)
 ge::graphStatus AscendQuantV2::CheckSupport310P()
 {
     if (dstType_ != ge::DT_INT8) {
-        OP_LOGE(context_->GetNodeName(), "dstType only support int8 in 310P");
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "dst_type", ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(dstType_)), "DT_INT8");
         return ge::GRAPH_FAILED;
     }
     axis_ = -1;
@@ -154,12 +154,16 @@ ge::graphStatus AscendQuantV2::CheckShapeEqual(const gert::Shape& shape1, const 
     size_t x1DimNum = shape1.GetDimNum();
     size_t x2DimNum = shape2.GetDimNum();
     OP_CHECK_IF(
-        x1DimNum != x2DimNum, OP_LOGE(context_->GetNodeName(), "scale shape and offset shape must be same."),
+        x1DimNum != x2DimNum, OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "scale, offset",
+                                                               Ops::Base::ToString(shape1) + ", " + Ops::Base::ToString(shape2),
+                                                               "The shapes of scale and offset must be the same"),
         return ge::GRAPH_FAILED);
     for (uint32_t i = 0; i < x1DimNum; i++) {
         OP_CHECK_IF(
             shape1.GetDim(i) != shape2.GetDim(i),
-            OP_LOGE(context_->GetNodeName(), "scale shape and offset shape must be same."), return ge::GRAPH_FAILED);
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "scale, offset",
+                                                    Ops::Base::ToString(shape1) + ", " + Ops::Base::ToString(shape2),
+                                                    "The shapes of scale and offset must be the same"), return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -177,8 +181,8 @@ ge::graphStatus AscendQuantV2::CheckAttrs(const gert::Shape& xShape)
     roundMode_ = GetRoundMode(roundModeStr);
     OP_CHECK_IF(
         (roundMode_ == RoundMode::MODE_UNDEFINED),
-        OP_LOGE(
-            context_->GetNodeName(), "invalid round mode:%s, value should be in [round/trunc/ceil/floor].", roundMode),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "round_mode", roundMode,
+                                               "The value of round_mode must be in [round, trunc, ceil, floor]"),
         return ge::GRAPH_FAILED);
     // get dstType
     const int32_t* dstType = attrs->GetAttrPointer<int32_t>(g_AttrDstType);
@@ -198,25 +202,26 @@ ge::graphStatus AscendQuantV2::CheckAttrs(const gert::Shape& xShape)
     }
     // check dstType and output dtype, must be same
     if (dstType_ != ge::DT_INT8 && dstType_ != ge::DT_INT4) {
-        OP_LOGE(context_->GetNodeName(), "dst type:%d is invalid, type should be int8 or int4", dstType_);
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "dst_type",
+                                  ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(dstType_)), "DT_INT8, DT_INT4");
         return ge::GRAPH_FAILED;
     }
     if (dstType_ != yDtype_) {
-        OP_LOGE(context_->GetNodeName(), "dst type:%d not equal output dtype:%d", dstType_, yDtype_);
-        return ge::GRAPH_FAILED;
-    }
-    if (dstType_ == ge::DT_INT4 && (xShape.GetDim(xDimNum - 1) % INT4_NUMS_IN_INT8_SPACE)) {
-        OP_LOGE(context_->GetNodeName(), "if dst_type is DT_INT4, x last dim must be divisible by 2");
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "dst_type, y",
+                                                ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(dstType_)) + ", " + ge::TypeUtils::DataTypeToSerialString(yDtype_),
+                                                "The dtype of dst_type must be the same as the dtype of y");
         return ge::GRAPH_FAILED;
     }
     // check axis and shape, support last two dim
     if (axis_ >= xDimNum || axis_ < -xDimNum) {
-        OP_LOGE(context_->GetNodeName(), "invalid axis:%d, axis can't exceed the dimension of x", axis_);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "axis", std::to_string(axis_),
+                                               "The value of axis must be within the range [-xDimNum, xDimNum)");
         return ge::GRAPH_FAILED;
     }
     if (xDimNum > g_AxisMax) {
         if (axis_ < -g_AxisMax || (axis_ >= 0 && axis_ < xDimNum - g_AxisMax)) {
-            OP_LOGE(context_->GetNodeName(), "invalid axis:%d, axis must be one of last two dimensions", axis_);
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "axis", std::to_string(axis_),
+                                                   "The value of axis must be one of last two dimensions");
             return ge::GRAPH_FAILED;
         }
     }

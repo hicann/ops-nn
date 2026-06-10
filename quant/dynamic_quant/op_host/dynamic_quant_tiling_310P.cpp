@@ -203,7 +203,7 @@ ge::graphStatus DynamicQuantTiling310P::CheckDtype(const gert::TilingContext* co
     auto x = context->GetInputDesc(X_INDEX);
     ge::DataType dataType = x->GetDataType();
     if (dataType != ge::DT_FLOAT16) {
-        OP_LOGE(context->GetNodeName(), "DynamicQuan on Atlas 300I Duo only support float16.");
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(dataType), "DT_FLOAT16");
         return ge::GRAPH_FAILED;
     }
 

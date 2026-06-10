@@ -156,7 +156,9 @@ ge::graphStatus SiluGradTiling::GetShapeAttrsInfo()
 
     opKey = GetOpKey(dyDtype, xDtype, dxDtype);
     OP_CHECK_IF((opKey == OP_KEY_INVALID),
-                    OP_LOGE(context_->GetNodeName(), "can not get opKey"),
+                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "opKey",
+                        std::to_string(opKey),
+                        "The value of opKey cannot be 0"),
                     return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }

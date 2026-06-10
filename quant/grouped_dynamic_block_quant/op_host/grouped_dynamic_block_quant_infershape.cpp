@@ -139,7 +139,8 @@ ge::graphStatus InferShapeForGroupedDynamicBlockQuant(gert::InferShapeContext* c
     } else if (inputXShape->GetDimNum() == INPUT_DIM_THREE) {
         SetShapeDimThree(context, groupNum, *rowBlockSize, *colBlockSize);
     } else {
-        OP_LOGE(context, "only support input dim num is 2 or 3, infershape failed");
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x",
+            std::to_string(inputXShape->GetDimNum()), "The shape dim of x must be within the range [2, 3]");
         return ge::GRAPH_FAILED;
     }
 

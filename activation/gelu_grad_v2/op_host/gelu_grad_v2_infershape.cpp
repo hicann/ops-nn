@@ -53,7 +53,9 @@ static ge::graphStatus InferShapeForGeluGradV2(gert::InferShapeContext* context)
         OP_CHECK_NULL_WITH_CONTEXT(context, out_shape);
 
         OP_CHECK_IF(
-            !BroadcastShape(to_broadcast_shapes, out_shape), OP_LOGE(context->GetNodeName(), "BroadcastShape failed!"),
+            !BroadcastShape(to_broadcast_shapes, out_shape), OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "dy, x",
+            (Ops::Base::ToString(*to_broadcast_shapes[0]) + ", " + Ops::Base::ToString(*to_broadcast_shapes[1])),
+            "The shapes of dy and x must be broadcastable"),
             return ge::GRAPH_FAILED);
 
         return ge::GRAPH_SUCCESS;

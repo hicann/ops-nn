@@ -203,7 +203,8 @@ ge::graphStatus DynamicQuantTiling::CheckOpInpuShape(gert::TilingContext* contex
     OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
     size_t xDimNum = xShape->GetStorageShape().GetDimNum();
     if (xDimNum == 1U) {
-        OP_LOGE(context, "x shape dimension is less than 2!");
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x", std::to_string(xDimNum),
+                                              "The shape dim of x must be greater than or equal to 2");
         return ge::GRAPH_FAILED;
     }
     int64_t xDimLast = xShape->GetStorageShape().GetDim(xDimNum - 1);
@@ -211,8 +212,9 @@ ge::graphStatus DynamicQuantTiling::CheckOpInpuShape(gert::TilingContext* contex
     if (yDtype == ge::DT_INT4) {
         OP_CHECK_IF(
             (xDimLast % EVEN_FACTOR),
-            OP_LOGE(context, "if y datatype is int4, the last dim(%ld) of x should be an even number",
-                xDimLast),
+	    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "x", 
+		    Ops::Base::ToString(xShape->GetStorageShape()),
+                    "When the yDtype is DT_INT4, the tail axis of x must be an even number"),
             return ge::GRAPH_FAILED);
     }
 
@@ -223,7 +225,8 @@ ge::graphStatus DynamicQuantTiling::CheckOpInpuShape(gert::TilingContext* contex
             groupNum = groupShape->GetStorageShape().GetDim(groupShape->GetStorageShape().GetDimNum() - 1);
             OP_CHECK_IF(
                 (groupNum > MAX_EXPERT_NUM),
-                OP_LOGE(context, "moe expert nums exceed maximum, the maximum is 1024."),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "groupNum", std::to_string(groupNum),
+                                               "The value of groupNum must be less than or equal to 1024"),
                 return ge::GRAPH_FAILED);
         }
 
@@ -232,25 +235,28 @@ ge::graphStatus DynamicQuantTiling::CheckOpInpuShape(gert::TilingContext* contex
         if (groupNum >= 1U) {
             OP_CHECK_IF(
                 (smoothDimNum != MOE_SMOOTH_NUM),
-                OP_LOGE(context, "In moe scenario, smooth_scales dim num must be two."),
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "smooth_scales", std::to_string(smoothDimNum),
+                                              "When groupNum is more than 0, the shape dim of smooth_scales must be equal to 2"),
                 return ge::GRAPH_FAILED);
             int64_t smoothDimFirst = smoothShape->GetStorageShape().GetDim(0);
             if (groupNum != static_cast<uint32_t>(smoothDimFirst)) {
-                OP_LOGE(context,
-                    "moe expert and smooth_scales first dim is not equal! expert nums is :%u, smooth_scales is:%ld",
-                    groupNum, smoothDimFirst);
+                OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context->GetNodeName(), "smooth_scales, group_index",
+                                                std::to_string(smoothDimFirst) + ", " + std::to_string(groupNum),
+                                                "The value of smooth_scales first dim and group_num must be the same");
                 return ge::GRAPH_FAILED;
             }
         } else {
             if (smoothDimNum != 1U) {
-                OP_LOGE(context, "smooth_scales dim num not one");
+                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "smooth_scales", std::to_string(smoothDimNum),
+                                              "The shape dim of smooth_scales must be 1");
                 return ge::GRAPH_FAILED;
             }
         }
         int64_t smoothDimLast = smoothShape->GetStorageShape().GetDim(smoothDimNum - 1);
         if (xDimLast != smoothDimLast) {
-            OP_LOGE(context, "x and smooth_scales last dim is not equal! x is :%ld, smooth_scales is:%ld",
-                xDimLast, smoothDimLast);
+            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "x, smooth_scales",
+                                                std::to_string(xDimLast) + ", " + std::to_string(smoothDimLast),
+                                                "last dim of x and smooth_scales must be equal");
             return ge::GRAPH_FAILED;
         }
         hasSmooth = true;
@@ -267,7 +273,9 @@ ge::graphStatus DynamicQuantTiling::CheckOpOutputShape(gert::TilingContext* cont
     size_t yDimNum = yShape->GetStorageShape().GetDimNum();
     OP_CHECK_IF(
         (CheckOpDim(xShape, yShape, xDimNum, yDimNum) != ge::GRAPH_SUCCESS),
-        OP_LOGE(context, "x and y shape is inconsistency."),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "x, y",
+                                                Ops::Base::ToString(xShape->GetStorageShape()) + ", " + Ops::Base::ToString(yShape->GetStorageShape()),
+                                                "The shapes of x and y must be the same"),
         return ge::GRAPH_FAILED);
 
     auto scaleShape = context->GetOutputShape(SCALE_INDEX);
@@ -275,7 +283,9 @@ ge::graphStatus DynamicQuantTiling::CheckOpOutputShape(gert::TilingContext* cont
     size_t scaleDimNum = scaleShape->GetStorageShape().GetDimNum();
     OP_CHECK_IF(
         (CheckOpDim(xShape, scaleShape, xDimNum - 1, scaleDimNum) != ge::GRAPH_SUCCESS),
-        OP_LOGE(context, "scale shape is wrong, must be same as before x exclude the last dim."),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "scale, x",
+                                                Ops::Base::ToString(scaleShape->GetStorageShape()) + ", " + Ops::Base::ToString(xShape->GetStorageShape()),
+                                                "The shapes of scale and x excluding the last dim must be the same"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -298,7 +308,7 @@ ge::graphStatus DynamicQuantTiling::CheckOutputDtype(gert::TilingContext* contex
     OP_CHECK_NULL_WITH_CONTEXT(context, yDesc);
     yDtype = yDesc->GetDataType();
     if (yDtype != ge::DataType::DT_INT8 && yDtype != ge::DataType::DT_INT4) {
-        OP_LOGE(context, "y dtype is support int8 or int4!");
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "y", ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(yDtype)), "DT_INT8, DT_INT4");
         return ge::GRAPH_FAILED;
     }
 
@@ -306,7 +316,7 @@ ge::graphStatus DynamicQuantTiling::CheckOutputDtype(gert::TilingContext* contex
     OP_CHECK_NULL_WITH_CONTEXT(context, scaleDesc);
     auto scaleDtype = scaleDesc->GetDataType();
     if (scaleDtype != ge::DataType::DT_FLOAT) {
-        OP_LOGE(context, "scale dtype is only support fp32!");
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "scale", ge::TypeUtils::DataTypeToSerialString(scaleDtype), "DT_FLOAT");
         return ge::GRAPH_FAILED;
     }
 
@@ -315,7 +325,7 @@ ge::graphStatus DynamicQuantTiling::CheckOutputDtype(gert::TilingContext* contex
         OP_CHECK_NULL_WITH_CONTEXT(context, offsetDesc);
         auto offsetDtype = scaleDesc->GetDataType();
         if (offsetDtype != ge::DataType::DT_FLOAT) {
-            OP_LOGE(context, "offset dtype is only support fp32!");
+            OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "offset", ge::TypeUtils::DataTypeToSerialString(offsetDtype), "DT_FLOAT");
             return ge::GRAPH_FAILED;
         }
     }
@@ -328,7 +338,7 @@ ge::graphStatus DynamicQuantTiling::CheckInputDtype(gert::TilingContext* context
     OP_CHECK_NULL_WITH_CONTEXT(context, xDesc);
     auto xDtype = xDesc->GetDataType();
     if (xDtype != ge::DataType::DT_FLOAT16 && xDtype != ge::DataType::DT_BF16) {
-        OP_LOGE(context, "x dtype is only support fp16 or bf16.");
+        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(xDtype), "DT_FLOAT16, DT_BF16");
         return ge::GRAPH_FAILED;
     }
 
@@ -336,11 +346,13 @@ ge::graphStatus DynamicQuantTiling::CheckInputDtype(gert::TilingContext* context
     if (smoothDesc != nullptr) {
         auto smoothDtype = smoothDesc->GetDataType();
         if (smoothDtype != ge::DataType::DT_FLOAT16 && smoothDtype != ge::DataType::DT_BF16) {
-            OP_LOGE(context, "smooth dtype is only support fp16 or bf16.");
+            OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "smooth_scales", ge::TypeUtils::DataTypeToSerialString(smoothDtype), "DT_FLOAT16, DT_BF16");
             return ge::GRAPH_FAILED;
         }
         if (xDtype != smoothDtype) {
-            OP_LOGE(context, "x and smooth_scales dtype is not equal.");
+            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context->GetNodeName(), "x, smooth_scales",
+                                                ge::TypeUtils::DataTypeToSerialString(xDtype) + ", " + ge::TypeUtils::DataTypeToSerialString(smoothDtype),
+                                                "The dtype of x must be the same as the dtype of smooth_scales");
             return ge::GRAPH_FAILED;
         }
 
@@ -348,7 +360,7 @@ ge::graphStatus DynamicQuantTiling::CheckInputDtype(gert::TilingContext* context
         if (groupDesc != nullptr) {
             auto groupDtype = groupDesc->GetDataType();
             if (groupDtype != ge::DataType::DT_INT32) {
-                OP_LOGE(context, "group dtype is only support int32.");
+                OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "group_index", ge::TypeUtils::DataTypeToSerialString(groupDtype), "DT_INT32");
                 return ge::GRAPH_FAILED;
             }
             groupDtypeSize = g_dTypeLen[groupDtype];
@@ -365,7 +377,9 @@ ge::graphStatus DynamicQuantTiling::CheckAttrs(gert::TilingContext* context)
         OP_CHECK_NULL_WITH_CONTEXT(context, dstTypePtr);
         int32_t dstType = *dstTypePtr;
         if (dstType != yDtype) {
-            OP_LOGE(context, "dst type:%d not equal output dtype:%d", dstType, yDtype);
+            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context->GetNodeName(), "dst_type, y",
+                                                std::to_string(dstType) + ", " + std::to_string(yDtype),
+                                                "The dtype of dst_type must be the same as the dtype of y");
             return ge::GRAPH_FAILED;
         }
     }
