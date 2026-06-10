@@ -132,10 +132,10 @@ uint64_t Conv2dBaseTiling::GetSmallKernelVal()
         return CONV_NOT_SMALL_KERNEL;
     }
 
-    if (tilingData_.get_padLeft() < tilingData_.get_kernelW() &&
-        tilingData_.get_padRight() < tilingData_.get_kernelW() &&
-        tilingData_.get_padTop() < tilingData_.get_kernelH() &&
-        tilingData_.get_padBottom() < tilingData_.get_kernelH()) {
+    if (tilingData_.get_padLeft() > tilingData_.get_kernelW() ||
+        tilingData_.get_padRight() > tilingData_.get_kernelW() ||
+        tilingData_.get_padTop() > tilingData_.get_kernelH() ||
+        tilingData_.get_padBottom() > tilingData_.get_kernelH()) {
         return CONV_NOT_SMALL_KERNEL;
     }
 
