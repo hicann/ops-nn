@@ -63,9 +63,9 @@ public:
 
         LocalTensor<T> gammaLocal = weightBuf01.template Get<T>();
 
-        int32_t gmOffset = 0;
-        int32_t gmOffsetScale = 0;
-        int32_t elementCount = this->numLastDimAligned * this->rowStep;
+        uint64_t gmOffset = 0;
+        uint64_t gmOffsetScale = 0;
+        uint32_t elementCount = this->numLastDimAligned * this->rowStep;
 
         for (int32_t rowIdx = 0; rowIdx < rowMoveCnt - 1; ++rowIdx) {
             CopyInX1X2AndAddX1X2(gmOffset, this->rowStep, elementCount);
@@ -78,7 +78,7 @@ public:
             gmOffsetScale += this->rowStep;
         }
         {
-            elementCount = this->numLastDimAligned * this->rowTail_;
+            elementCount = static_cast<uint32_t>(this->numLastDimAligned * this->rowTail_);
             int32_t rowIdx = rowMoveCnt - 1;
             CopyInX1X2AndAddX1X2(gmOffset, this->rowTail_, elementCount);
             CopyOutX(gmOffset, this->rowTail_, elementCount);
@@ -90,7 +90,7 @@ public:
     }
 
 private:
-    __aicore__ inline void CopyInX1X2AndAddX1X2(int32_t gmOffset, int32_t rowCount, int32_t elementCount)
+    __aicore__ inline void CopyInX1X2AndAddX1X2(uint64_t gmOffset, int32_t rowCount, uint32_t elementCount)
     {
         LocalTensor<float> xLocalFp32 = xBufFp32.Get<float>();
         LocalTensor<float> yLocalFp32 = yBufFp32.Get<float>();
@@ -123,7 +123,7 @@ private:
         inRowsQue.FreeTensor(x1x2LocalIn);
     }
 
-    __aicore__ inline void CopyOutX(int32_t gmOffset, int32_t rowCount, int32_t elementCount)
+    __aicore__ inline void CopyOutX(uint64_t gmOffset, int32_t rowCount, uint32_t elementCount)
     {
         LocalTensor<float> xLocalFp32 = xBufFp32.Get<float>();
         LocalTensor<T> xOut = outRowsQue.template AllocTensor<T>();
@@ -138,7 +138,7 @@ private:
         outRowsQue.FreeTensor(x);
     }
 
-    __aicore__ inline void CopyOutY(int32_t gmOffset, int32_t rowCount, int32_t elementCount)
+    __aicore__ inline void CopyOutY(uint64_t gmOffset, int32_t rowCount, uint32_t elementCount)
     {
         LocalTensor<float> yLocal = xBufFp32.Get<float>();
         LocalTensor<T> yOut = outRowsQue.template AllocTensor<T>();
@@ -167,7 +167,7 @@ private:
         }
     }
 
-    __aicore__ inline void ComputeRmsNorm(int32_t nums, int32_t elementCount, LocalTensor<T>& gammaLocal)
+    __aicore__ inline void ComputeRmsNorm(int32_t nums, uint32_t elementCount, LocalTensor<T>& gammaLocal)
     {
         LocalTensor<float> xLocalFp32 = xBufFp32.Get<float>(); // xLocalFp32 <-- x1 + x2
         LocalTensor<float> yLocalFp32 = yBufFp32.Get<float>();
@@ -200,7 +200,7 @@ private:
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void ComputeDynamicQuant(int32_t nums, int32_t elementCount)
+    __aicore__ inline void ComputeDynamicQuant(int32_t nums, uint32_t elementCount)
     {
         if (!this->smooth1Exist) {
             ComputeZeroDynamicQuant(nums, elementCount);
@@ -211,7 +211,7 @@ private:
         }
     }
 
-    __aicore__ inline void ComputeDualDynamicQuant(int32_t nums, int32_t elementCount)
+    __aicore__ inline void ComputeDualDynamicQuant(int32_t nums, uint32_t elementCount)
     {
         LocalTensor<float> scaleLocal = scalesBuf.Get<float>();
         LocalTensor<float> scale1Local = scaleLocal[0];
@@ -261,7 +261,7 @@ private:
         outRowsQue.EnQue(zLocalFp32);
     }
 
-    __aicore__ inline void CopyOut(int32_t gmOffset, int32_t gmOffsetScale, int32_t rowCount)
+    __aicore__ inline void CopyOut(uint64_t gmOffset, uint64_t gmOffsetScale, int32_t rowCount)
     {
         LocalTensor<int8_t> outY12 = outRowsQue.template DeQue<int8_t>();
         LocalTensor<float> scaleLocal = scalesBuf.Get<float>();
@@ -280,7 +280,7 @@ private:
     }
 
     __aicore__ inline void ScaleTensor(
-        LocalTensor<float>& srcTensor, LocalTensor<float>& tmpTensor, LocalTensor<float>& scaleTensor, int32_t size,
+        LocalTensor<float>& srcTensor, LocalTensor<float>& tmpTensor, LocalTensor<float>& scaleTensor, uint32_t size,
         int32_t nums)
     {
         float maxTemp;
@@ -306,7 +306,7 @@ private:
         }
     }
 
-    __aicore__ inline void ComputeZeroDynamicQuant(int32_t nums, int32_t elementCount)
+    __aicore__ inline void ComputeZeroDynamicQuant(int32_t nums, uint32_t elementCount)
     {
         LocalTensor<float> scaleLocal = scalesBuf.Get<float>();
         LocalTensor<float> xLocalFp32 = xBufFp32.Get<float>(); // xLocalFp32 <-- RmsNorm(x)
@@ -320,7 +320,7 @@ private:
         outRowsQue.EnQue(yLocal);
     }
 
-    __aicore__ inline void ComputeSoleDynamicQuant(int32_t nums, int32_t elementCount)
+    __aicore__ inline void ComputeSoleDynamicQuant(int32_t nums, uint32_t elementCount)
     {
         LocalTensor<float> scaleLocal = scalesBuf.Get<float>();
         LocalTensor<float> xLocalFp32 = xBufFp32.Get<float>(); // xLocalFp32 <-- y

@@ -57,8 +57,8 @@ public:
         }
         int32_t outLoopTail = this->rowWork % ROW_FACTOR;
         int32_t outLoopCount = this->rowWork / ROW_FACTOR;
-        uint32_t gmOffset = 0;
-        uint32_t gmOffsetReduce = 0;
+        uint64_t gmOffset = 0;
+        uint64_t gmOffsetReduce = 0;
 
         int64_t oriOverflowMode = GetOverflowMode<T_Y>();
         SetOverflowMode<T_Y>(0);
@@ -99,7 +99,7 @@ public:
     }
 
 private:
-    __aicore__ inline void CopyOutScale(int32_t gmOffset, int32_t copyInNums)
+    __aicore__ inline void CopyOutScale(uint64_t gmOffset, int32_t copyInNums)
     {
         AscendC::LocalTensor<float> outScalesLocal = scalesQue.template DeQue<float>();
         AscendC::LocalTensor<float> outScales1Local = outScalesLocal[0];
@@ -111,7 +111,7 @@ private:
         scalesQue.FreeTensor(outScalesLocal);
     }
 
-    __aicore__ inline void CopyOut(int32_t gmOffset)
+    __aicore__ inline void CopyOut(uint64_t gmOffset)
     {
         AscendC::LocalTensor<T_Y> res12 = yQue.template DeQue<T_Y>();
         auto res1 = res12[0];
@@ -318,7 +318,7 @@ private:
         inRowsQue.EnQue(gammaCopyIn1);
     }
 
-    __aicore__ inline void AddSingleRow(int32_t gmOffset1)
+    __aicore__ inline void AddSingleRow(uint64_t gmOffset1)
     {
         auto x1x2Local = inRowsQue.template DeQue<T_X>();
         auto x1Local = x1x2Local[0];
@@ -344,7 +344,7 @@ private:
         yQue.FreeTensor(x);
     }
 
-    __aicore__ inline void CopyInX1X2(int32_t gmOffset1)
+    __aicore__ inline void CopyInX1X2(uint64_t gmOffset1)
     {
         AscendC::LocalTensor<T_X> x1x2LocalIn = inRowsQue.template AllocTensor<T_X>();
         AscendC::DataCopyPad(x1x2LocalIn[0], this->x1Gm[gmOffset1], {1, static_cast<uint16_t>(this->numLastDim * sizeof(T_X)), 0, 0}, {});

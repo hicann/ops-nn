@@ -55,7 +55,7 @@ public:
         }
     }
 
-    __aicore__ inline void CalcScale(uint32_t gmOffset_, uint32_t realM)
+    __aicore__ inline void CalcScale(uint64_t gmOffset_, uint64_t realM)
     {
         LocalTensor<float> scale1Local = outQueueScale1_.AllocTensor<float>();
         Duplicate(scale1Local, -std::numeric_limits<float>::infinity(), realM);

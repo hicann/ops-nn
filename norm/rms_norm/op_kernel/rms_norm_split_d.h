@@ -40,10 +40,10 @@ public:
             this->row_work = num_row - (GetBlockNum() - 1) * block_factor;
         }
         // get start index for current core, core parallel
-        xGm.SetGlobalBuffer((__gm__ T*)x + blockIdx_ * block_factor * num_col, row_work * num_col);
-        yGm.SetGlobalBuffer((__gm__ T*)y + blockIdx_ * block_factor * num_col, row_work * num_col);
+        xGm.SetGlobalBuffer((__gm__ T*)x + static_cast<uint64_t>(blockIdx_) * block_factor * num_col, static_cast<uint64_t>(row_work) * num_col);
+        yGm.SetGlobalBuffer((__gm__ T*)y + static_cast<uint64_t>(blockIdx_) * block_factor * num_col, static_cast<uint64_t>(row_work) * num_col);
         gammaGm.SetGlobalBuffer((__gm__ T_GAMMA*)gamma, num_col);
-        rstdGm.SetGlobalBuffer((__gm__ float*)rstd + blockIdx_ * block_factor, block_factor);
+        rstdGm.SetGlobalBuffer((__gm__ float*)rstd + static_cast<uint64_t>(blockIdx_) * block_factor, block_factor);
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 200
         InitRstdData();
 #endif
@@ -70,12 +70,12 @@ public:
         Duplicate(temp_zero_tensor, (float)0.0, row_factor_align_v1);
 
         PipeBarrier<PIPE_ALL>();
-        uint32_t i_o_max = CeilDiv(row_work, row_factor);
-        uint32_t row_tail = row_work - (i_o_max - 1) * row_factor;
-        for (uint32_t i_o = 0; i_o < i_o_max - 1; i_o++) {
+        uint64_t i_o_max = CeilDiv(row_work, static_cast<uint64_t>(row_factor));
+        uint64_t row_tail = row_work - (i_o_max - 1) * row_factor;
+        for (uint64_t i_o = 0; i_o < i_o_max - 1; i_o++) {
             DataCopy(rstdGm[i_o * row_factor], temp_zero_tensor, row_factor_align_v1);
         }
-        DataCopy(rstdGm[(i_o_max - 1) * row_factor], temp_zero_tensor, ROUND_UP(row_tail, NUM_PER_BLK_FP32));
+        DataCopy(rstdGm[(i_o_max - 1) * row_factor], temp_zero_tensor, ROUND_UP(static_cast<uint32_t>(row_tail), NUM_PER_BLK_FP32));
         PipeBarrier<PIPE_ALL>();
     }
 
@@ -100,24 +100,24 @@ public:
 
     __aicore__ inline void Process()
     {
-        uint32_t iOuterMax = CeilDiv(row_work, row_factor);
-        uint32_t rowTail = row_work - (iOuterMax - 1) * row_factor;
+        uint64_t iOuterMax = CeilDiv(row_work, static_cast<uint64_t>(row_factor));
+        uint64_t rowTail = row_work - (iOuterMax - 1) * row_factor;
         uint32_t jMax = CeilDiv(num_col, (uint64_t)ub_factor);
-        uint32_t jTail = num_col - (jMax - 1) * ub_factor;
+        uint32_t jTail = num_col - static_cast<uint64_t>(jMax - 1) * ub_factor;
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 100
-        for (uint32_t iOuter = 0; iOuter < iOuterMax - 1; iOuter++) {
-            SubProcess(iOuter, row_factor, jMax, jTail);
+        for (uint64_t iOuter = 0; iOuter < iOuterMax - 1; iOuter++) {
+            SubProcess(static_cast<uint32_t>(iOuter), row_factor, jMax, jTail);
         }
-        SubProcess(iOuterMax - 1, rowTail, jMax, jTail);
+        SubProcess(static_cast<uint32_t>(iOuterMax - 1), static_cast<uint32_t>(rowTail), jMax, jTail);
 #else
         uint32_t jFactor = ub_factor * row_factor;
         uint32_t jOuterMax = CeilDiv(num_col, (uint64_t)jFactor);
-        uint32_t jOuterTail = num_col - (jOuterMax - 1) * jFactor;
+        uint32_t jOuterTail = num_col - static_cast<uint64_t>(jOuterMax - 1) * jFactor;
         uint32_t jInnerMax = CeilDiv(jOuterTail, ub_factor);
-        for (uint32_t iOuter = 0; iOuter < iOuterMax - 1; iOuter++) {
-            SubProcess(iOuter, row_factor, jMax, jTail, jOuterMax, jInnerMax);
+        for (uint64_t iOuter = 0; iOuter < iOuterMax - 1; iOuter++) {
+            SubProcess(static_cast<uint32_t>(iOuter), row_factor, jMax, jTail, jOuterMax, jInnerMax);
         }
-        SubProcess(iOuterMax - 1, rowTail, jMax, jTail, jOuterMax, jInnerMax);
+        SubProcess(static_cast<uint32_t>(iOuterMax - 1), static_cast<uint32_t>(rowTail), jMax, jTail, jOuterMax, jInnerMax);
 #endif
     }
 
@@ -165,7 +165,7 @@ private:
     __aicore__ inline void CopyIn(uint32_t i_idx, uint32_t j_idx, uint32_t num)
     {
         LocalTensor<T> xLocal = inQueueX.AllocTensor<T>();
-        DataCopyCustom<T>(xLocal, xGm[i_idx * num_col + j_idx * ub_factor], num);
+        DataCopyCustom<T>(xLocal, xGm[static_cast<uint64_t>(i_idx) * num_col + static_cast<uint64_t>(j_idx) * ub_factor], num);
         inQueueX.EnQue(xLocal);
     }
 
@@ -180,7 +180,7 @@ private:
 
         for (uint32_t iInner = 0; iInner < calcRowNum; iInner++) {
             float reduceOut = 0;
-            uint32_t rowIndex = iOuter * row_factor + iInner;
+            uint32_t rowIndex = static_cast<uint32_t>(static_cast<uint64_t>(iOuter) * row_factor + iInner);
 
             // 1. jOuter main loop
             for (uint32_t jOuterIdx = 0; jOuterIdx < jOuterMax - 1; jOuterIdx++) {
@@ -246,7 +246,7 @@ private:
         LocalTensor<float>& sumLocal, uint32_t num, uint32_t left_num = 0, uint32_t reduce_mask = 0)
     {
         for (uint32_t i_i = 0; i_i < calc_row_num; i_i++) {
-            CopyIn(i_o_idx * row_factor + i_i, j_idx, num);
+            CopyIn(static_cast<uint32_t>(static_cast<uint64_t>(i_o_idx) * row_factor + i_i), j_idx, num);
             ComputeSum(i_i, sumLocal, num, left_num, reduce_mask);
         }
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 100
@@ -306,9 +306,9 @@ private:
         CopyInGamma(j_idx, num);
         LocalTensor<T_GAMMA> gammaLocal = inQueueGamma.DeQue<T_GAMMA>();
         for (uint32_t i_i = 0; i_i < calc_row_num; i_i++) {
-            CopyIn(i_o_idx * row_factor + i_i, j_idx, num);
+            CopyIn(static_cast<uint32_t>(static_cast<uint64_t>(i_o_idx) * row_factor + i_i), j_idx, num);
             ComputeY(i_i, gammaLocal, rstdLocal, num);
-            CopyOutY(i_o_idx * row_factor + i_i, j_idx, num);
+            CopyOutY(static_cast<uint32_t>(static_cast<uint64_t>(i_o_idx) * row_factor + i_i), j_idx, num);
         }
         inQueueGamma.FreeTensor(gammaLocal);
     }
@@ -316,7 +316,7 @@ private:
     __aicore__ inline void CopyInGamma(uint32_t j_idx, uint32_t num)
     {
         LocalTensor<T_GAMMA> gammaLocal = inQueueGamma.AllocTensor<T_GAMMA>();
-        DataCopyCustom<T_GAMMA>(gammaLocal, gammaGm[j_idx * ub_factor], num);
+        DataCopyCustom<T_GAMMA>(gammaLocal, gammaGm[static_cast<uint64_t>(j_idx) * ub_factor], num);
         inQueueGamma.EnQue(gammaLocal);
     }
 
@@ -377,7 +377,7 @@ private:
     __aicore__ inline void CopyOutY(uint32_t i_idx, uint32_t j_idx, uint32_t num)
     {
         LocalTensor<T> yLocal = outQueueY.DeQue<T>();
-        DataCopyCustom<T>(yGm[i_idx * num_col + j_idx * ub_factor], yLocal, num);
+        DataCopyCustom<T>(yGm[static_cast<uint64_t>(i_idx) * num_col + static_cast<uint64_t>(j_idx) * ub_factor], yLocal, num);
         outQueueY.FreeTensor(yLocal);
     }
 
@@ -385,11 +385,11 @@ private:
     {
         LocalTensor<float> rstdLocal = outQueueRstd.DeQue<float>();
 #if (__CCE_AICORE__ == 220) || (__CCE_AICORE__ == 100) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
-        DataCopyCustom<float>(rstdGm[i_o_idx * row_factor], rstdLocal, num);
+        DataCopyCustom<float>(rstdGm[static_cast<uint64_t>(i_o_idx) * row_factor], rstdLocal, num);
 #else
         uint32_t copyRstd_num = ROUND_UP(num, NUM_PER_BLK_FP32);
         SetAtomicAdd<float>();
-        DataCopy(rstdGm[i_o_idx * row_factor], rstdLocal, copyRstd_num);
+        DataCopy(rstdGm[static_cast<uint64_t>(i_o_idx) * row_factor], rstdLocal, copyRstd_num);
         SetAtomicNone();
 #endif
         outQueueRstd.FreeTensor(rstdLocal);
@@ -421,15 +421,15 @@ private:
     uint32_t left_num;
     uint32_t last_reduce_mask; // number of calculations rows on each core
     uint32_t last_left_num;
-    uint32_t block_factor; // number of calculations rows on each core
+    uint64_t block_factor; // number of calculations rows on each core
     uint32_t row_factor;
     uint32_t ub_factor;
     float epsilon;
     float avg_factor;
     int32_t blockIdx_;
     uint32_t data_per_block;
-    uint32_t row_work = 1;
-    uint32_t num_row_align;
+    uint64_t row_work = 1;
+    uint64_t num_row_align;
     uint8_t is_gemma = 0;
     int tempbuf_num;
 };

@@ -59,8 +59,8 @@ public:
 
     __aicore__ inline void Process()
     {
-        uint32_t rowGmOffset = 0;
-        uint32_t baseGmOffset1 = 0;
+        uint64_t rowGmOffset = 0;
+        uint64_t baseGmOffset1 = 0;
         for (int32_t rowIdx = 0; rowIdx < this->rowWork; ++rowIdx) {
             rowGmOffset = 0;
             this->localSum = ZERO;
@@ -125,7 +125,7 @@ public:
     }
 
 private:
-    __aicore__ inline void ComputeDynamicQuant(int32_t rowGmOffset, int32_t elementCount)
+    __aicore__ inline void ComputeDynamicQuant(uint64_t rowGmOffset, int64_t elementCount)
     {
         LocalTensor<float> xLocalFp32 = xBufFp32.Get<float>();
         LocalTensor<float> yLocalFp32 = yBufFp32.Get<float>();
@@ -143,7 +143,7 @@ private:
         outRowQue.template EnQue<T_Y>(y12Local);
     }
 
-    __aicore__ inline void CopyOutQuant(int32_t baseGmOffset, int32_t rowGmOffset, int32_t elementCount)
+    __aicore__ inline void CopyOutQuant(uint64_t baseGmOffset, uint64_t rowGmOffset, int64_t elementCount)
     {
         LocalTensor<T_Y> yOut = outRowQue.template DeQue<T_Y>();
         if (this->isOld || this->outQuant1Flag == 1) {
@@ -169,7 +169,7 @@ private:
     }
 
     __aicore__ inline void CopyInSmoothNorm(
-        LocalTensor<float>& dstLocal1, int32_t workspaceOffset, int32_t rowGmOffset, int32_t elementCount,
+        LocalTensor<float>& dstLocal1, int32_t workspaceOffset, uint64_t rowGmOffset, int64_t elementCount,
         float scaleNum)
     {
         LocalTensor<float> smoothYLocalIn = inRowsQue.template AllocTensor<float>();
@@ -181,14 +181,14 @@ private:
         inRowsQue.FreeTensor(smoothYLocal);
     }
 
-    __aicore__ inline void ComputeSliceAdd(int32_t baseGmOffset, int32_t rowGmOffset, int32_t elementCount)
+    __aicore__ inline void ComputeSliceAdd(uint64_t baseGmOffset, uint64_t rowGmOffset, int64_t elementCount)
     {
         CopyInX1X2(baseGmOffset, rowGmOffset, elementCount);
         AddX1X2Slice(rowGmOffset, elementCount);
         CopyOutX(baseGmOffset, rowGmOffset, elementCount);
     }
 
-    __aicore__ inline void ComputeRmsNormAndSmoothMax(int32_t rowGmOffset, int32_t elementCount, float rstdLocalTemp)
+    __aicore__ inline void ComputeRmsNormAndSmoothMax(uint64_t rowGmOffset, int64_t elementCount, float rstdLocalTemp)
     {
         CopyInTmpX(rowGmOffset, elementCount, rstdLocalTemp);
         CopyInGamma(rowGmOffset, elementCount);
@@ -196,7 +196,7 @@ private:
         UpdateLocalMax(elementCount);
     }
 
-    __aicore__ inline void CopyInTmpX(int32_t rowGmOffset1, int32_t elementCount, float rstdLocalTemp)
+    __aicore__ inline void CopyInTmpX(uint64_t rowGmOffset1, int64_t elementCount, float rstdLocalTemp)
     {
         LocalTensor<float> yLocalFp32 = yBufFp32.Get<float>();
         LocalTensor<float> xLocalIn = inRowsQue.template AllocTensor<float>();
@@ -208,7 +208,7 @@ private:
         inRowsQue.FreeTensor(xLocal);
     }
 
-    __aicore__ inline void CopyInGamma(int32_t rowGmOffset2, int32_t elementCount)
+    __aicore__ inline void CopyInGamma(uint64_t rowGmOffset2, int64_t elementCount)
     {
         LocalTensor<float> zLocalFp32 = zBufFp32.Get<float>();
         LocalTensor<T> gammaLocalIn = inRowsQue.template AllocTensor<T>();
@@ -220,7 +220,7 @@ private:
         inRowsQue.FreeTensor(gammaLocal);
     }
 
-    __aicore__ inline void CopyInBeta(int32_t rowGmOffset, int32_t elementCount)
+    __aicore__ inline void CopyInBeta(uint64_t rowGmOffset, int64_t elementCount)
     {
         LocalTensor<float> zLocalFp32 = zBufFp32.Get<float>();
         LocalTensor<T> betaLocalIn = inRowsQue.template AllocTensor<T>();
@@ -232,7 +232,7 @@ private:
         inRowsQue.FreeTensor(betaLocalIn);
     }
 
-    __aicore__ inline void CopyInSmooth(int32_t rowGmOffset, int32_t elementCount)
+    __aicore__ inline void CopyInSmooth(uint64_t rowGmOffset, int64_t elementCount)
     {
         if (this->newSingleFirst || this->newSingleSecond ||
             (this->isOld && (this->smooth1Exist || this->smooth2Exist))) {
@@ -250,7 +250,7 @@ private:
         }
     }
 
-    __aicore__ inline void ComputeNormAndSmooth(int32_t rowGmOffset, int32_t elementCount)
+    __aicore__ inline void ComputeNormAndSmooth(uint64_t rowGmOffset, int64_t elementCount)
     {
         LocalTensor<float> xLocalFp32 = xBufFp32.Get<float>();
         LocalTensor<float> yLocalFp32 = yBufFp32.Get<float>();
@@ -270,7 +270,7 @@ private:
 
     __aicore__ inline void ComputeSmoothWithFlag(
         LocalTensor<float> yLocalFp32V1, LocalTensor<float> zLocalFp32, LocalTensor<float> xLocalFp32,
-        int32_t rowGmOffset1, int32_t elementCount)
+        uint64_t rowGmOffset1, int64_t elementCount)
     {
         if (this->newSingleFirst || this->newSingleSecond ||
             (this->isOld && (this->smooth1Exist || this->smooth2Exist))) {
@@ -306,7 +306,7 @@ private:
         }
     }
 
-    __aicore__ inline void UpdateLocalMax(int32_t elementCount1)
+    __aicore__ inline void UpdateLocalMax(int64_t elementCount1)
     {
         LocalTensor<float> xLocalFp32 = xBufFp32.Get<float>();
         LocalTensor<float> yLocalFp32 = yBufFp32.Get<float>();
@@ -322,7 +322,7 @@ private:
     }
 
     __aicore__ inline float FindSliceMax(
-        LocalTensor<float>& srcTensor, LocalTensor<float>& tmpTensor, int32_t elementCount2)
+        LocalTensor<float>& srcTensor, LocalTensor<float>& tmpTensor, int64_t elementCount2)
     {
         Abs(tmpTensor, srcTensor, elementCount2); // tmpLocal <-- |y * smooth|
         PipeBarrier<PIPE_V>();
@@ -333,7 +333,7 @@ private:
     }
 
     __aicore__ inline void CopyOutSmoothNorm(
-        LocalTensor<float>& smoothNormTensor, int32_t workspaceOffset, int32_t rowGmOffset, int32_t elementCount3)
+        LocalTensor<float>& smoothNormTensor, int32_t workspaceOffset, uint64_t rowGmOffset, int64_t elementCount3)
     {
         LocalTensor<float> ySmoothLocal = tmpOutQue.template AllocTensor<float>();
         Adds(ySmoothLocal, smoothNormTensor, ZERO, elementCount3);
@@ -343,7 +343,7 @@ private:
         tmpOutQue.FreeTensor(ySmooth);
     }
 
-    __aicore__ inline void CopyInX1X2(int32_t baseGmOffset, int32_t rowGmOffset, int32_t elementCount4)
+    __aicore__ inline void CopyInX1X2(uint64_t baseGmOffset, uint64_t rowGmOffset, int64_t elementCount4)
     {
         LocalTensor<T> x1x2LocalIn = inRowsQue.template AllocTensor<T>();
         DataCopyEx(x1x2LocalIn[0], this->x1Gm[baseGmOffset + rowGmOffset], elementCount4);
@@ -351,7 +351,7 @@ private:
         inRowsQue.EnQue(x1x2LocalIn);
     }
 
-    __aicore__ inline void AddX1X2Slice(int32_t rowGmOffset, int32_t elementCount5)
+    __aicore__ inline void AddX1X2Slice(uint64_t rowGmOffset, int64_t elementCount5)
     {
         LocalTensor<T> x1x2Local = inRowsQue.template DeQue<T>();
         auto x1Local = x1x2Local[0];
@@ -382,7 +382,7 @@ private:
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void CopyOutX(int32_t baseGmOffset, int32_t rowGmOffset, int32_t elementCount6)
+    __aicore__ inline void CopyOutX(uint64_t baseGmOffset, uint64_t rowGmOffset, int64_t elementCount6)
     {
         LocalTensor<T> x = outRowQue.template DeQue<T>();
         DataCopyEx(this->xGm[baseGmOffset + rowGmOffset], x, elementCount6);
@@ -392,7 +392,7 @@ private:
         tmpOutQue.FreeTensor(xFp32);
     }
 
-    __aicore__ inline float ReduceSquareSumSlice(int32_t elementCount7)
+    __aicore__ inline float ReduceSquareSumSlice(int64_t elementCount7)
     {
         LocalTensor<float> xLocalFp32 = xBufFp32.Get<float>();
         LocalTensor<float> yLocalFp32 = yBufFp32.Get<float>();

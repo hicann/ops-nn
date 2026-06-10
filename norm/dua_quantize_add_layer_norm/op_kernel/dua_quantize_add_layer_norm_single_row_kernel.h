@@ -74,9 +74,9 @@ public:
             lastDimPad = true;
             numLastDimAligned = ROUND_UP32(numLastDim * sizeof(T)) / sizeof(T);
         }
-        gmOffset_ = nlFirstDimPerCore * numLastDim;
-        x1Gm.SetGlobalBuffer((__gm__ T*)(x1) + block_idx * gmOffset_);
-        x2Gm.SetGlobalBuffer((__gm__ T*)(x2) + block_idx * gmOffset_);
+        gmOffset_ = static_cast<uint64_t>(nlFirstDimPerCore) * numLastDim;
+        x1Gm.SetGlobalBuffer((__gm__ T*)(x1) + static_cast<uint64_t>(block_idx) * gmOffset_);
+        x2Gm.SetGlobalBuffer((__gm__ T*)(x2) + static_cast<uint64_t>(block_idx) * gmOffset_);
         gammaGm.SetGlobalBuffer((__gm__ T*)gamma);
         betaGm.SetGlobalBuffer((__gm__ T*)beta);
         biasGm.SetGlobalBuffer((__gm__ T*)bias);
@@ -88,9 +88,9 @@ public:
         if (isZeroPoint2Exist == 1) {
             zeroPoints2Gm.SetGlobalBuffer((__gm__ T*)zeroPoints2);
         }
-        y1Gm.SetGlobalBuffer((__gm__ int8_t*)(y1) + block_idx * gmOffset_);
-        y2Gm.SetGlobalBuffer((__gm__ int8_t*)(y2) + block_idx * gmOffset_);
-        xGm.SetGlobalBuffer((__gm__ T*)(x) + block_idx * gmOffset_);
+        y1Gm.SetGlobalBuffer((__gm__ int8_t*)(y1) + static_cast<uint64_t>(block_idx) * gmOffset_);
+        y2Gm.SetGlobalBuffer((__gm__ int8_t*)(y2) + static_cast<uint64_t>(block_idx) * gmOffset_);
+        xGm.SetGlobalBuffer((__gm__ T*)(x) + static_cast<uint64_t>(block_idx) * gmOffset_);
 
         // single row
         Ppipe->InitBuffer(rowInQue, BUFFER_NUM, numLastDimAligned * sizeof(T));            // 2
@@ -100,7 +100,7 @@ public:
     }
     __aicore__ inline void Process()
     {
-        uint32_t gm_offset = 0;
+        uint64_t gm_offset = 0;
         for (uint32_t row_idx = 0; row_idx < rowWork; ++row_idx) {
             CopyInAddSingleRow(gm_offset);
             precision_compute_single_row(gm_offset);
@@ -109,7 +109,7 @@ public:
     }
 
 private:
-    __aicore__ inline void CopyInAddSingleRow(uint32_t gm_offset)
+    __aicore__ inline void CopyInAddSingleRow(uint64_t gm_offset)
     {
         LocalTensor<float> tmpTensors = tmpBuf.Get<float>();
 
@@ -162,7 +162,7 @@ private:
         rowInQue.FreeTensor(biasTensor);
     }
 
-    __aicore__ inline void precision_compute_single_row(uint32_t gm_offset)
+    __aicore__ inline void precision_compute_single_row(uint64_t gm_offset)
     {
         LocalTensor<float> tmpTensors = tmpBuf.Get<float>();
 
@@ -338,7 +338,7 @@ private:
     uint32_t numLastDim;
     uint32_t rowStep;
     uint32_t rowWork;
-    uint32_t gmOffset_;
+    uint64_t gmOffset_;
     uint32_t rowTail_;
     uint32_t colTail;
     uint32_t colMoveCnt;

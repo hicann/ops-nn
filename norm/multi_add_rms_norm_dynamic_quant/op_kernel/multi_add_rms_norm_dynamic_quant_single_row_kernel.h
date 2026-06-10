@@ -63,8 +63,8 @@ public:
 
         int32_t outLoopCount = this->rowWork / ROW_FACTOR;
         int32_t outLoopTail = this->rowWork % ROW_FACTOR;
-        uint32_t gmOffset = 0;
-        uint32_t gmOffsetReduce = 0;
+        uint64_t gmOffset = 0;
+        uint64_t gmOffsetReduce = 0;
 
         LocalTensor<float> scalesLocalOut;
 
@@ -102,7 +102,7 @@ public:
     }
 
 private:
-    __aicore__ inline void CopyInX1X2AndAddX1X2AndCopyOutX(int32_t gmOffset)
+    __aicore__ inline void CopyInX1X2AndAddX1X2AndCopyOutX(uint64_t gmOffset)
     {
         auto xBufLocal = xBufFp32.Get<float>();
         auto yBufLocal = yBufFp32.Get<float>();
@@ -140,7 +140,7 @@ private:
         yQue.FreeTensor(x);
     }
 
-    __aicore__ inline void CopyOutY(int32_t gmOffset)
+    __aicore__ inline void CopyOutY(uint64_t gmOffset)
     {
         LocalTensor<float> yLocal = xBufFp32.Get<float>();
         LocalTensor<T> yOut = yQue.template AllocTensor<T>();
@@ -155,7 +155,7 @@ private:
         yQue.FreeTensor(y);
     }
 
-    __aicore__ inline void AddSingleRow(int32_t gmOffset)
+    __aicore__ inline void AddSingleRow(uint64_t gmOffset)
     {
         auto x1x2Local = inRowsQue.template DeQue<T>();
         auto x1Local = x1x2Local[0];
@@ -181,7 +181,7 @@ private:
         yQue.FreeTensor(x);
     }
 
-    __aicore__ inline void ComputeRmsNorm(int32_t gmOffset)
+    __aicore__ inline void ComputeRmsNorm(uint64_t gmOffset)
     {
         LocalTensor<float> xLocalFp32 = xBufFp32.Get<float>();
         LocalTensor<float> yLocalFp32 = yBufFp32.Get<float>();
@@ -205,7 +205,7 @@ private:
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void ComputeDynamicQuant(int32_t idx, LocalTensor<float>& scalesLocalOut, int32_t gmOffset)
+    __aicore__ inline void ComputeDynamicQuant(int32_t idx, LocalTensor<float>& scalesLocalOut, uint64_t gmOffset)
     {
         LocalTensor<float> xLocalFp32 = xBufFp32.Get<float>();
         LocalTensor<float> yLocalFp32 = yBufFp32.Get<float>();
@@ -276,7 +276,7 @@ private:
         PipeBarrier<PIPE_V>();
     }
 
-    __aicore__ inline void CopyOut(int32_t gmOffset)
+    __aicore__ inline void CopyOut(uint64_t gmOffset)
     {
         LocalTensor<int8_t> res12 = yQue.template DeQue<int8_t>();
         auto res1 = res12[0];
@@ -288,7 +288,7 @@ private:
         yQue.FreeTensor(res12);
     }
 
-    __aicore__ inline void CopyOutScale(int32_t gmOffset, int32_t copyInNums)
+    __aicore__ inline void CopyOutScale(uint64_t gmOffset, int32_t copyInNums)
     {
         LocalTensor<float> outScalesLocal = scalesQue.template DeQue<float>();
         LocalTensor<float> outScales1Local = outScalesLocal[0];

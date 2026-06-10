@@ -37,21 +37,29 @@ inline uint32_t CEIL_DIV(uint32_t x, uint32_t y)
     return 0;
 }
 
+inline int64_t CEIL_DIV(int64_t x, int64_t y)
+{
+    if (y > 0LL) {
+        return (x + y - 1LL) / y;
+    }
+    return 0;
+}
+
 bool CheckUbLimit(uint64_t ubSize, int32_t numCol, int32_t dtSize)
 {
     if (dtSize == 0) {
         return false;
     }
     int32_t blockNum = static_cast<int32_t>(BLOCK_SIZE) / dtSize;
-    int32_t numColAligned =
-        static_cast<int32_t>(CEIL_DIV(static_cast<uint32_t>(numCol), static_cast<uint32_t>(blockNum))) * blockNum;
+    int64_t numColAligned =
+        static_cast<int64_t>(CEIL_DIV(static_cast<uint32_t>(numCol), static_cast<uint32_t>(blockNum))) * blockNum;
 
     // 1 inQue, 1 outQue, 3 Tbuf
-    uint32_t ubRequired = (1U + 1U) * static_cast<uint32_t>(numColAligned) * static_cast<uint32_t>(dtSize) +
-                          static_cast<uint32_t>(numColAligned) * static_cast<uint32_t>(sizeof(int8_t)) +
-                          3U * static_cast<uint32_t>(numColAligned) * static_cast<uint32_t>(sizeof(float));
+    uint64_t ubRequired = (1U + 1U) * static_cast<uint64_t>(numColAligned) * static_cast<uint64_t>(dtSize) +
+                          static_cast<uint64_t>(numColAligned) * static_cast<uint64_t>(sizeof(int8_t)) +
+                          3U * static_cast<uint64_t>(numColAligned) * static_cast<uint64_t>(sizeof(float));
 
-    OP_LOGI("CheckUbLimit", "maxUB: %lu, ubRequired: %u", ubSize, ubRequired);
+    OP_LOGI("CheckUbLimit", "maxUB: %lu, ubRequired: %lu", ubSize, ubRequired);
     OP_CHECK_IF(
         ubRequired > ubSize, OP_LOGW("DuaQuantizeAddLayerNorm", "Reduce axis is too large, Tiling is not support."),
         return false);
@@ -77,7 +85,7 @@ static inline void GetAndSetAttrs(
     }
 }
 
-static inline void GetRowCols(gert::TilingContext* context, int32_t& numRow, int32_t& numLastDim)
+static inline void GetRowCols(gert::TilingContext* context, int64_t& numRow, int32_t& numLastDim)
 {
     numRow = 1;
     for (size_t i = 0; i < context->GetInputShape(0)->GetStorageShape().GetDimNum() - 1; i++) {
@@ -104,7 +112,7 @@ static inline void SetOptInputs(gert::TilingContext* context, DuaQuantizeAddLaye
 }
 
 static inline void SetTilingData(
-    DuaQuantizeAddLayerNormTilingData* tiling, int32_t numRow, int32_t numLastDim, int64_t numCore,
+    DuaQuantizeAddLayerNormTilingData* tiling, int64_t numRow, int32_t numLastDim, int64_t numCore,
     int64_t nlFirstDimPerCore)
 {
     tiling->set_numCore(numCore);
@@ -145,11 +153,16 @@ static ge::graphStatus Tiling4DuaQuantizeAddLayerNorm(gert::TilingContext* conte
     uint64_t tilingKey = TILING_BASE;
     GetAndSetAttrs(context, &tiling, tilingKey);
 
-    int32_t numRow = 1;
+    int64_t numRow = 1;
     int32_t numLastDim = 1;
     GetRowCols(context, numRow, numLastDim);
 
-    int64_t nlFirstDimPerCore = CEIL_DIV(numRow, maxCoreNum);
+    OP_CHECK_IF(
+        numRow > static_cast<int64_t>(UINT32_MAX),
+        OP_LOGE("DuaQuantizeAddLayerNorm", "numRow(%ld) exceeds uint32_t limit, not supported.", numRow),
+        return ge::GRAPH_FAILED);
+
+    int64_t nlFirstDimPerCore = CEIL_DIV(numRow, static_cast<int64_t>(maxCoreNum));
     int64_t numCore = CEIL_DIV(numRow, nlFirstDimPerCore);
 
     int32_t dataTypeSize = GetSizeByDataType(context->GetInputDesc(0)->GetDataType());
