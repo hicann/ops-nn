@@ -13,7 +13,9 @@
  * \brief
  */
 
-#if ASC_DEVKIT_MAJOR >= 9 && ASC_DEVKIT_MINOR > 0
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+#define IS_BLAZE false
+#elif ASC_DEVKIT_MAJOR >= 9 && ASC_DEVKIT_MINOR > 0
 #define IS_BLAZE true
 #else
 #define IS_BLAZE false
@@ -34,18 +36,30 @@
 #include "qbmm_mix_online_dynamic_al1_full_load.h"
 #include "qbmm_mix_pertile_cmct.h"
 #endif
-#if (ORIG_DTYPE_SCALE == DT_FLOAT8_E8M0) && IS_BLAZE
-#include "tensor_api/tensor.h"
-#include "qbmm_mx_tensor_api_blaze.h"
-#elif (ORIG_DTYPE_SCALE == DT_FLOAT8_E8M0)
-#include "qbmm_mx_basic_api_cmct.h"
-#else
-#include "qbmm_cube_basic_api_cmct.h"
-#endif
 #if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
 #else
 #include "kernel_operator.h"
+#endif
+
+#ifndef FORMAT_FRACTAL_NZ
+#define FORMAT_FRACTAL_NZ
+#endif
+
+#if IS_BLAZE == false
+#if (ORIG_DTYPE_SCALE == DT_FLOAT8_E8M0)
+#include "qbmm_mx_basic_api_cmct.h"
+#else
+#include "qbmm_cube_basic_api_cmct.h"
+#endif
+#endif
+
+#if IS_BLAZE
+#include "tensor_api/tensor.h"
+#include "qbmm_cube_tensor_api_blaze.h"
+#if (ORIG_DTYPE_SCALE == DT_FLOAT8_E8M0)
+#include "qbmm_mx_tensor_api_blaze.h"
+#endif
 #endif
 
 #ifdef IS_A4W4I
@@ -89,10 +103,6 @@
 
 using namespace AscendC;
 using namespace matmul;
-
-#ifndef FORMAT_FRACTAL_NZ
-#define FORMAT_FRACTAL_NZ
-#endif
 
 #if (defined(ORIG_DTYPE_X1) && defined(ORIG_DTYPE_X2) && defined(ORIG_DTYPE_SCALE) && defined(FORMAT_X2))
 #define IS_MX                                                                                                     \
@@ -161,6 +171,18 @@ constexpr CubeFormat format_y = CubeFormat::ND;
             QbmmMxBasicApiKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, aLayout, bLayout, cLayout, fullLoadMode>(        \
                 x1, x2, scale, bias, pertokenScale, y, &tilingData);                                           \
         }                                                                                                      \
+    } while (0)
+#endif
+
+#if IS_BLAZE
+#define QUANT_BMMV3_CUBE_TENSOR_API_IMPL_CLASS(aLayout, bLayout, cLayout, fullLoadMode)                         \
+    do {                                                                                                        \
+        if ASCEND_IS_AIC {                                                                                      \
+            GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3BasicAPITilingData, tilingData, tiling);  \
+            QbmmCubeTensorApiKernel<                                                                            \
+                DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, cLayout, fullLoadMode>( \
+                x1, x2, scale, bias, pertokenScale, y, &tilingData);                                            \
+        }                                                                                                       \
     } while (0)
 #endif
 
@@ -384,6 +406,42 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(
     } else {
         if constexpr (TPL_BIASMODE == TPL_EXCLUDE_FROM_TEMPLATE) { // Bias Mode = 0
 #if CUBE_TEMPLATE_ND && defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
+#if IS_BLAZE
+            if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI) { // Kernel Type = 0;
+                if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
+                    QUANT_BMMV3_CUBE_TENSOR_API_IMPL_CLASS(
+                        AscendC::Te::NDExtLayoutPtn, AscendC::Te::NDExtLayoutPtn, AscendC::Te::NDExtLayoutPtn, 0);
+                } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
+                    QUANT_BMMV3_CUBE_TENSOR_API_IMPL_CLASS(
+                        AscendC::Te::NDExtLayoutPtn, AscendC::Te::DNExtLayoutPtn, AscendC::Te::NDExtLayoutPtn, 0);
+                } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
+                    QUANT_BMMV3_CUBE_TENSOR_API_IMPL_CLASS(
+                        AscendC::Te::DNExtLayoutPtn, AscendC::Te::NDExtLayoutPtn, AscendC::Te::NDExtLayoutPtn, 0);
+                } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
+                    QUANT_BMMV3_CUBE_TENSOR_API_IMPL_CLASS(
+                        AscendC::Te::DNExtLayoutPtn, AscendC::Te::DNExtLayoutPtn, AscendC::Te::NDExtLayoutPtn, 0);
+                }
+            }
+            if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI) { // Kernel Type = 1;
+                if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
+                    QUANT_BMMV3_CUBE_TENSOR_API_IMPL_CLASS(
+                        AscendC::Te::NDExtLayoutPtn, AscendC::Te::NDExtLayoutPtn, AscendC::Te::NDExtLayoutPtn,
+                        Blaze::Gemm::A_FULL_LOAD_MODE);
+                } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
+                    QUANT_BMMV3_CUBE_TENSOR_API_IMPL_CLASS(
+                        AscendC::Te::NDExtLayoutPtn, AscendC::Te::DNExtLayoutPtn, AscendC::Te::NDExtLayoutPtn,
+                        Blaze::Gemm::A_FULL_LOAD_MODE);
+                } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
+                    QUANT_BMMV3_CUBE_TENSOR_API_IMPL_CLASS(
+                        AscendC::Te::DNExtLayoutPtn, AscendC::Te::NDExtLayoutPtn, AscendC::Te::NDExtLayoutPtn,
+                        Blaze::Gemm::A_FULL_LOAD_MODE);
+                } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
+                    QUANT_BMMV3_CUBE_TENSOR_API_IMPL_CLASS(
+                        AscendC::Te::DNExtLayoutPtn, AscendC::Te::DNExtLayoutPtn, AscendC::Te::NDExtLayoutPtn,
+                        Blaze::Gemm::A_FULL_LOAD_MODE);
+                }
+            }
+#else
             if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI) { // Kernel Type = 0;
                 if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
                     QUANT_BMMV3_CUBE_CMCT_IMPL_CLASS(
@@ -422,7 +480,45 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(
                         Cmct::Gemm::layout::RowMajorAlign, Cmct::Gemm::A_FULL_LOAD_MODE);
                 }
             }
+#endif
 #else
+#if defined(FORMAT_X2) && FORMAT_X2 == FORMAT_FRACTAL_NZ
+    #if IS_BLAZE
+            if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI) { // Kernel Type = 0;
+                if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
+                    QUANT_BMMV3_CUBE_TENSOR_API_IMPL_CLASS(
+                        AscendC::Te::NDExtLayoutPtn, AscendC::Te::NZLayoutPtn, AscendC::Te::NDExtLayoutPtn, 0);
+                } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
+                    QUANT_BMMV3_CUBE_TENSOR_API_IMPL_CLASS(
+                        AscendC::Te::NDExtLayoutPtn, AscendC::Te::ZNLayoutPtn, AscendC::Te::NDExtLayoutPtn, 0);
+                } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
+                    QUANT_BMMV3_CUBE_TENSOR_API_IMPL_CLASS(
+                        AscendC::Te::DNExtLayoutPtn, AscendC::Te::NZLayoutPtn, AscendC::Te::NDExtLayoutPtn, 0);
+                } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
+                    QUANT_BMMV3_CUBE_TENSOR_API_IMPL_CLASS(
+                        AscendC::Te::DNExtLayoutPtn, AscendC::Te::ZNLayoutPtn, AscendC::Te::NDExtLayoutPtn, 0);
+                }
+            }
+            if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI) { // Kernel Type = 1;
+                if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
+                    QUANT_BMMV3_CUBE_TENSOR_API_IMPL_CLASS(
+                        AscendC::Te::NDExtLayoutPtn, AscendC::Te::NZLayoutPtn, AscendC::Te::NDExtLayoutPtn,
+                        Blaze::Gemm::A_FULL_LOAD_MODE);
+                } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
+                    QUANT_BMMV3_CUBE_TENSOR_API_IMPL_CLASS(
+                        AscendC::Te::NDExtLayoutPtn, AscendC::Te::ZNLayoutPtn, AscendC::Te::NDExtLayoutPtn,
+                        Blaze::Gemm::A_FULL_LOAD_MODE);
+                } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
+                    QUANT_BMMV3_CUBE_TENSOR_API_IMPL_CLASS(
+                        AscendC::Te::DNExtLayoutPtn, AscendC::Te::NZLayoutPtn, AscendC::Te::NDExtLayoutPtn,
+                        Blaze::Gemm::A_FULL_LOAD_MODE);
+                } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
+                    QUANT_BMMV3_CUBE_TENSOR_API_IMPL_CLASS(
+                        AscendC::Te::DNExtLayoutPtn, AscendC::Te::ZNLayoutPtn, AscendC::Te::NDExtLayoutPtn,
+                        Blaze::Gemm::A_FULL_LOAD_MODE);
+                }
+            }
+    #else
             if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI) { // Kernel Type = 0;
                 GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling);
                 MatMulASWKernel<
@@ -441,6 +537,8 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(
                 op.Init(x1, x2, bias, scale, pertokenScale, y, user1, &tilingData, &tPipe);
                 op.Process();
             }
+    #endif
+#endif
 #endif
         }
     }

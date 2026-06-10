@@ -40,6 +40,10 @@ public:
 private:
     void GetX1X2DimValue();
     bool CheckDtype4WeightNz() const;
+    bool CheckWeightNzAbDtypes() const;
+    bool CheckWeightNzDtype4Hifloat8() const;
+    bool CheckWeightNzDtype4Fp4() const;
+    bool CheckWeightNzDtype4Fp8E4M3() const;
     aclnnStatus CheckDtype() const;
     aclnnStatus CheckDtypeL0c2outOrL0c2ub() const;
     bool CheckDoubleScaleAndFp8Hif8PertokenPerblock() const;
