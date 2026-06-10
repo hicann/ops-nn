@@ -367,9 +367,16 @@ aclnnStatus aclnnEmbeddingBagGetWorkspaceSize(
         CHECK_RET(perSampleWeightsContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
 
+    const aclTensor* indicesCast = nullptr;
+    const aclTensor* offsetsCast = nullptr;
     // indices、offsets类型转换。
-    auto indicesCast = l0op::Cast(indicesContiguous, op::DataType::DT_INT32, uniqueExecutor.get());
-    auto offsetsCast = l0op::Cast(offsetsContiguous, op::DataType::DT_INT32, uniqueExecutor.get());
+    if (Ops::NN::AclnnUtil::IsRegbase()) {
+        indicesCast = indicesContiguous;
+        offsetsCast = offsetsContiguous;
+    }else {
+        indicesCast = l0op::Cast(indicesContiguous, op::DataType::DT_INT32, uniqueExecutor.get());
+        offsetsCast = l0op::Cast(offsetsContiguous, op::DataType::DT_INT32, uniqueExecutor.get());
+    }
     CHECK_RET(indicesCast != nullptr && offsetsCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     static const std::string modeStr[] = {"sum", "mean"};
