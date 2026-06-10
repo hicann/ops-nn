@@ -166,6 +166,44 @@ template <typename DATA_T, typename COMP_T, typename CAST_T, const uint32_t REDU
 __simt_callee__ __aicore__ inline void ReplaceOut(__gm__ DATA_T* updates, __gm__ DATA_T* y, __gm__ CAST_T* updatesWorkspaceGm,
                                   __gm__ CAST_T* xWorkspaceGm, COMP_T yOffset, COMP_T updatesOffset);
 
+template <typename DATA_T, typename CAST_T>
+__simd_vf__ inline void CastToInt32Vf(__ubuf__ DATA_T* srcAddr, __ubuf__ CAST_T* dstAddr, uint32_t dataLen, uint16_t loopTimes)
+{
+    MicroAPI::RegTensor<DATA_T> srcValue;
+    MicroAPI::RegTensor<CAST_T> dstValue;
+    MicroAPI::MaskReg preg;
+    uint32_t sregMask = dataLen;
+    for (uint16_t j = 0; j < loopTimes; j++) {
+        preg = MicroAPI::UpdateMask<uint32_t>(sregMask);
+        if constexpr (IsSameType<DATA_T, int16_t>::value) {
+            MicroAPI::DataCopy<DATA_T, MicroAPI::LoadDist::DIST_UNPACK_B16>(srcValue, srcAddr + VL_B32 * j);
+        } else {
+            MicroAPI::DataCopy<DATA_T, MicroAPI::LoadDist::DIST_UNPACK4_B8>(srcValue, srcAddr + VL_B32 * j);
+        }
+        MicroAPI::Cast<CAST_T, DATA_T, castTraitB8B162B32>(dstValue, srcValue, preg);
+        MicroAPI::DataCopy<CAST_T, MicroAPI::StoreDist::DIST_NORM>(dstAddr + VL_B32 * j, dstValue, preg);
+    }
+}
+
+template <typename DATA_T, typename CAST_T>
+__simd_vf__ inline void CastToOriginVf(__ubuf__ CAST_T* srcAddr, __ubuf__ DATA_T* dstAddr, uint32_t dataLen, uint16_t loopTimes)
+{
+    MicroAPI::RegTensor<CAST_T> srcValue;
+    MicroAPI::MaskReg preg;
+    uint32_t sregMask = dataLen;
+    for (uint16_t j = 0; j < loopTimes; j++) {
+        preg = MicroAPI::UpdateMask<uint32_t>(sregMask);
+        MicroAPI::DataCopy<CAST_T, MicroAPI::LoadDist::DIST_NORM>(srcValue, srcAddr + VL_B32 * j);
+        if constexpr (IsSameType<DATA_T, int16_t>::value) {
+            MicroAPI::DataCopy<DATA_T, MicroAPI::StoreDist::DIST_PACK_B32>(
+                dstAddr + VL_B32 * j, (MicroAPI::RegTensor<DATA_T>&)srcValue, preg);
+        } else {
+            MicroAPI::DataCopy<DATA_T, MicroAPI::StoreDist::DIST_PACK4_B32>(
+                dstAddr + VL_B32 * j, (MicroAPI::RegTensor<DATA_T>&)srcValue, preg);
+        }
+    }
+}
+
 template <typename DATA_T, typename IDX_T, typename COMP_T, typename CAST_T, const uint32_t REDU, const uint32_t TEMPLATE_V2=0>
 class KernelScatterElements
 {
@@ -371,56 +409,16 @@ template <typename DATA_T, typename IDX_T, typename COMP_T, typename CAST_T, con
 __aicore__ inline void KernelScatterElements<DATA_T, IDX_T, COMP_T, CAST_T, REDU, TEMPLATE_V2>::CastToInt32(
     LocalTensor<CAST_T>& dstLocal, LocalTensor<DATA_T>& srcLocal, uint32_t dataLen)
 {
-    __local_mem__ DATA_T* srcAddr = (__local_mem__ DATA_T*)srcLocal.GetPhyAddr();
-    __local_mem__ CAST_T* dstAddr = (__local_mem__ CAST_T*)dstLocal.GetPhyAddr();
-
     uint16_t loopTimes = ops::CeilDiv(dataLen, VL_B32);
-
-    __VEC_SCOPE__
-    {
-        MicroAPI::RegTensor<DATA_T> srcValue;
-        MicroAPI::RegTensor<CAST_T> dstValue;
-        MicroAPI::MaskReg preg;
-        uint32_t sregMask = dataLen;
-        for (uint16_t j = 0; j < loopTimes; j++) {
-            preg = MicroAPI::UpdateMask<uint32_t>(sregMask);
-            if constexpr (IsSameType<DATA_T, int16_t>::value) {
-                MicroAPI::DataCopy<DATA_T, MicroAPI::LoadDist::DIST_UNPACK_B16>(srcValue, srcAddr + VL_B32 * j);
-            } else {
-                MicroAPI::DataCopy<DATA_T, MicroAPI::LoadDist::DIST_UNPACK4_B8>(srcValue, srcAddr + VL_B32 * j);
-            }
-            MicroAPI::Cast<CAST_T, DATA_T, castTraitB8B162B32>(dstValue, srcValue, preg);
-            MicroAPI::DataCopy<CAST_T, MicroAPI::StoreDist::DIST_NORM>(dstAddr + VL_B32 * j, dstValue, preg);
-        }
-    }
+    CastToInt32Vf<DATA_T, CAST_T>((__ubuf__ DATA_T*)srcLocal.GetPhyAddr(), (__ubuf__ CAST_T*)dstLocal.GetPhyAddr(), dataLen, loopTimes);
 }
 
 template <typename DATA_T, typename IDX_T, typename COMP_T, typename CAST_T, const uint32_t REDU, const uint32_t TEMPLATE_V2>
 __aicore__ inline void KernelScatterElements<DATA_T, IDX_T, COMP_T, CAST_T, REDU, TEMPLATE_V2>::CastToOrigin(
     LocalTensor<DATA_T>& dstLocal, LocalTensor<CAST_T>& srcLocal, uint32_t dataLen)
 {
-    __local_mem__ CAST_T* srcAddr = (__local_mem__ CAST_T*)srcLocal.GetPhyAddr();
-    __local_mem__ DATA_T* dstAddr = (__local_mem__ DATA_T*)dstLocal.GetPhyAddr();
-
     uint16_t loopTimes = ops::CeilDiv(dataLen, VL_B32);
-
-    __VEC_SCOPE__
-    {
-        MicroAPI::RegTensor<CAST_T> srcValue;
-        MicroAPI::MaskReg preg;
-        uint32_t sregMask = dataLen;
-        for (uint16_t j = 0; j < loopTimes; j++) {
-            preg = MicroAPI::UpdateMask<uint32_t>(sregMask);
-            MicroAPI::DataCopy<CAST_T, MicroAPI::LoadDist::DIST_NORM>(srcValue, srcAddr + VL_B32 * j);
-            if constexpr (IsSameType<DATA_T, int16_t>::value) {
-                MicroAPI::DataCopy<DATA_T, MicroAPI::StoreDist::DIST_PACK_B32>(
-                    dstAddr + VL_B32 * j, (MicroAPI::RegTensor<DATA_T>&)srcValue, preg);
-            } else {
-                MicroAPI::DataCopy<DATA_T, MicroAPI::StoreDist::DIST_PACK4_B32>(
-                    dstAddr + VL_B32 * j, (MicroAPI::RegTensor<DATA_T>&)srcValue, preg);
-            }
-        }
-    }
+    CastToOriginVf<DATA_T, CAST_T>((__ubuf__ CAST_T*)srcLocal.GetPhyAddr(), (__ubuf__ DATA_T*)dstLocal.GetPhyAddr(), dataLen, loopTimes);
 }
 
 template <typename DATA_T, typename IDX_T, typename COMP_T, typename CAST_T, const uint32_t REDU, const uint32_t TEMPLATE_V2>

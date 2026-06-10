@@ -26,13 +26,11 @@
 namespace optiling {
 static ge::graphStatus ScatterElementsV2TilingForArch35(gert::TilingContext* context)
 {
-  OP_LOGD(context->GetNodeName(), "Tiling for ScatterElementsV2 start.");
   return Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(context);
 }
 
 ge::graphStatus TilingArch35PrepareForScatterElementsV2(gert::TilingParseContext* context)
 {
-    OP_LOGD(context->GetNodeName(), "Tiling Prepare For ScatterElementsV2 start.");
     auto compileInfo = context->GetCompiledInfo<ScatterElementsV2CompileInfoArch35>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
     auto platformInfo = context->GetPlatformInfo();
@@ -42,15 +40,13 @@ ge::graphStatus TilingArch35PrepareForScatterElementsV2(gert::TilingParseContext
     uint64_t ubSizePlatForm;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
     compileInfo->ubSizePlatForm = static_cast<uint64_t>(ubSizePlatForm);
-    OP_CHECK_IF((compileInfo->ubSizePlatForm <= 0),
-                    OP_LOGE(context->GetNodeName(), "Failed to get ub size."),
-                    return ge::GRAPH_FAILED);
-    OP_LOGD(context->GetNodeName(), "ub_size_platform is %lu.", compileInfo->ubSizePlatForm);
+    if (compileInfo->ubSizePlatForm <= 0) {
+      OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "compileInfo->ubSizePlatForm",
+                                                std::to_string(compileInfo->ubSizePlatForm).c_str(),
+                                                "ubSize must be greater than 0");
+    }
 
     uint32_t workspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
-    OP_LOGD(context->GetNodeName(), "workspaceSize is %lu.", compileInfo->workspaceSize);
-
-    OP_LOGD(context->GetNodeName(), "Tiling Prepare For ScatterElementsV2 end.");
     return ge::GRAPH_SUCCESS;
 }
 

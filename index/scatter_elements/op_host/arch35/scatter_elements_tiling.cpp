@@ -109,52 +109,56 @@ static void PrintTilingParams(const gert::TilingContext* context, const ScatterE
 }
 
 ge::graphStatus CheckInputList(gert::TilingContext* context, ScatterElementsTilingParams* param,
-                               const gert::Shape& data_origin_shape, const gert::Shape& indices_origin_shape) {
-  // dims_data = dims_indices
+                                const gert::Shape& data_origin_shape, const gert::Shape& indices_origin_shape) {
+  const char* opName_ = "ScatterElements";
   if (param->dims_data != param->dims_indices) {
-    OP_LOGE(context->GetNodeName(), "dims_data(%d) != dims_indices(%d)", param->dims_data,
-                                    param->dims_indices);
+    OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(opName_, "data, indices",
+                                               (std::to_string(param->dims_data) + ", " + std::to_string(param->dims_indices)).c_str(),
+                                               "the dimNum of data and indices must be same");
     return ge::GRAPH_FAILED;
   }
 
-  // dims_data = dims_updates
   auto updates_shape = context->GetInputShape(INDEX_UPDATES);
   OP_CHECK_NULL_WITH_CONTEXT(context, updates_shape);
   const auto& updates_origin_shape = Ops::Base::EnsureNotScalar(updates_shape->GetOriginShape());
   int32_t dims_updates = static_cast<int32_t>(updates_origin_shape.GetDimNum());
   if (param->dims_data != dims_updates) {
-    OP_LOGE(context->GetNodeName(), "dims_data(%d) != dims_updates(%d)", param->dims_data,
-                                    dims_updates);
+    OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(opName_, "data, updates",
+                                               (std::to_string(param->dims_data) + ", " + std::to_string(dims_updates)).c_str(),
+                                               "the dimNum of data and updates must be same");
     return ge::GRAPH_FAILED;
   }
 
-  // data_dtype = updates_dtype
   auto data_desc = context->GetInputDesc(INDEX_DATA);
   ge::DataType data_dtype = data_desc->GetDataType();
   auto updates_desc = context->GetInputDesc(INDEX_UPDATES);
   ge::DataType updates_dtype = updates_desc->GetDataType();
   if (data_dtype != updates_dtype) {
-    OP_LOGE(context->GetNodeName(), "data_dtype(%s) != updates_dtype(%s)",
-                                    ge::TypeUtils::DataTypeToAscendString(data_dtype).GetString(), ge::TypeUtils::DataTypeToAscendString(updates_dtype).GetString());
+    OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(opName_, "data, updates",
+                                            (std::to_string(static_cast<int32_t>(data_dtype)) + ", " +
+                                             std::to_string(static_cast<int32_t>(updates_dtype))).c_str(),
+                                            "the dtype of data and updates must be same");
     return ge::GRAPH_FAILED;
   }
 
-  // data and indices are not empty tensor
-  // indices_shape = updates_shape in each dim
   for (int32_t i = 0; i < param->dims_indices; i++) {
     if (data_origin_shape.GetDim(i) == 0) {
-      OP_LOGE(context->GetNodeName(), "data_shape[%d](%ld) == 0", i,
-                                      data_origin_shape.GetDim(i));
+      OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(opName_, "data",
+                                                 std::to_string(data_origin_shape.GetDim(i)).c_str(),
+                                                 "the shape[i] of data can't be zero");
       return ge::GRAPH_FAILED;
     }
     if (indices_origin_shape.GetDim(i) == 0) {
-      OP_LOGE(context->GetNodeName(), "indices_shape[%d](%ld) == 0", i,
-                                      indices_origin_shape.GetDim(i));
+      OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(opName_, "indices",
+                                                 std::to_string(indices_origin_shape.GetDim(i)).c_str(),
+                                                 "the shape[i] of indices can't be zero");
       return ge::GRAPH_FAILED;
     }
     if (indices_origin_shape.GetDim(i) != updates_origin_shape.GetDim(i)) {
-      OP_LOGE(context->GetNodeName(), "indices_shape[%d](%ld) != updates_shape[%d](%ld)", i,
-                                      indices_origin_shape.GetDim(i), i, updates_origin_shape.GetDim(i));
+      OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(opName_, "indices, updates",
+                                              (std::to_string(indices_origin_shape.GetDim(i)) + ", " +
+                                               std::to_string(updates_origin_shape.GetDim(i))).c_str(),
+                                              "the shape of indices and updates must be same");
       return ge::GRAPH_FAILED;
     }
   }
@@ -163,54 +167,55 @@ ge::graphStatus CheckInputList(gert::TilingContext* context, ScatterElementsTili
 }
 
 ge::graphStatus CheckList(gert::TilingContext* context, ScatterElementsTilingParams* param,
-                          const gert::Shape& data_origin_shape, const gert::Shape& indices_origin_shape) {
-  OP_CHECK_IF(CheckInputList(context, param, data_origin_shape, indices_origin_shape) != ge::GRAPH_SUCCESS,
-                  OP_LOGE("scatter_elements tiling", "check input list fail"),
-                  return ge::GRAPH_FAILED);
-
-  // axis in [-dims_data, dims_data - 1]
-  auto attrs = context->GetAttrs();
-  OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
-  const auto axis = attrs->GetAttrPointer<int32_t>(INDEX_AXIS);
-  if (*axis >= param->dims_data) {
-    OP_LOGE(context->GetNodeName(), "axis(%d) >= dims_data(%d)", *axis, param->dims_data);
+                           const gert::Shape& data_origin_shape, const gert::Shape& indices_origin_shape) {
+  const char* opName_ = "ScatterElements";
+  if (CheckInputList(context, param, data_origin_shape, indices_origin_shape) != ge::GRAPH_SUCCESS) {
     return ge::GRAPH_FAILED;
   }
-  if (*axis < -1 * param->dims_data) {
-    OP_LOGE(context->GetNodeName(), "axis(%d) < -dims_data(%d)", *axis, param->dims_data);
-    return ge::GRAPH_FAILED;
-  }
-  if (*axis < 0) {
-    param->axis =  static_cast<int32_t>(*axis + param->dims_data);
-  } else {
-    param->axis = static_cast<int32_t>(*axis);
-  }
-
+  // axis in [-dims_data, dims_data - 1] 
+   auto attrs = context->GetAttrs(); 
+   OP_CHECK_NULL_WITH_CONTEXT(context, attrs); 
+   const auto axis = attrs->GetAttrPointer<int32_t>(INDEX_AXIS); 
+   if (*axis >= param->dims_data) { 
+     OP_LOGE(context->GetNodeName(), "axis(%d) >= dims_data(%d)", *axis, param->dims_data); 
+     return ge::GRAPH_FAILED;	 
+   }	 
+   if (*axis < -1 * param->dims_data) { 
+     OP_LOGE(context->GetNodeName(), "axis(%d) < -dims_data(%d)", *axis, param->dims_data); 
+     return ge::GRAPH_FAILED; 
+   } 
+   if (*axis < 0) { 
+     param->axis =  static_cast<int32_t>(*axis + param->dims_data); 
+   } else { 
+     param->axis = static_cast<int32_t>(*axis); 
+   }
   return ge::GRAPH_SUCCESS;
 }
 
 static ge::graphStatus CalParam(gert::TilingContext* context, const ScatterElementsCompileInfo* compile_info,
-                               ScatterElementsTilingParams* param) {
+                                ScatterElementsTilingParams* param) {
+  const char* opName_ = "ScatterElements";
   auto data_desc = context->GetInputDesc(INDEX_DATA);
   OP_CHECK_NULL_WITH_CONTEXT(context, data_desc);
   const ge::DataType data_dtype = data_desc->GetDataType();
-  // data, updates, output have same 'block' (because they have same dtype)
   auto iter = DATA_BLOCK_LEN.find(data_dtype);
-  OP_CHECK_IF(
-    iter == DATA_BLOCK_LEN.end(),
-    OP_LOGE(context->GetNodeName(), "do not support data_dtype(%s)",
-                                    ge::TypeUtils::DataTypeToAscendString(data_dtype).GetString()),
-    return ge::GRAPH_FAILED);
+  if (iter == DATA_BLOCK_LEN.end()) {
+    OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName_, "data",
+                                           std::to_string(static_cast<int32_t>(data_dtype)).c_str(),
+                                           "dtype must be in[DT_INT8, DT_UINT8, DT_FLOAT16, DT_FLOAT, DT_INT32, DT_BF16]");
+    return ge::GRAPH_FAILED;
+  }
   const int32_t block = DATA_BLOCK_LEN[data_dtype];
 
-  // numbers of elements in data per core
   int32_t data_block = compile_info->ub_size_bytes / UB_DATA_RATIO / BYTES_PER_BLOCK * block;
   if (data_block > param->shape_acc_data) {
     data_block = param->shape_acc_data;
   }
   data_block = (data_block + block - 1) / block * block;
-  OP_CHECK_IF(data_block == 0,
-                  OP_LOGE(context->GetNodeName(), "data_block = 0"), return ge::GRAPH_FAILED);
+  if (data_block == 0) {
+      OP_LOGE(opName_, "data_block = 0");
+      return ge::GRAPH_FAILED;
+  }
   int32_t repeat = data_block / block;
 
   int32_t rounds = (param->shape_acc_data + data_block - 1) / data_block;
@@ -228,18 +233,22 @@ static ge::graphStatus CalParam(gert::TilingContext* context, const ScatterEleme
   OP_CHECK_NULL_WITH_CONTEXT(context, indices_desc);
   const ge::DataType indices_dtype = indices_desc->GetDataType();
   iter = INDICES_BLOCK_LEN.find(indices_dtype);
-  OP_CHECK_IF(iter == INDICES_BLOCK_LEN.end(),
-    OP_LOGE(context->GetNodeName(), "do not support indices_dtype(%s)",
-                                    ge::TypeUtils::DataTypeToAscendString(indices_dtype).GetString()),
-    return ge::GRAPH_FAILED);
+  if (iter == INDICES_BLOCK_LEN.end()) {
+    OP_LOGE_FOR_INVALID_DTYPE(opName_, "indices",
+                               std::to_string(static_cast<int32_t>(indices_dtype)).c_str(),
+                               "[DT_INT32, DT_INT64]");
+    return ge::GRAPH_FAILED;
+  }
   const int32_t block_indices = INDICES_BLOCK_LEN[indices_dtype];
 
   // numbers of elements in indices per core
   int32_t ub_size_bytes_indices = compile_info->ub_size_bytes / UB_INDICES_AND_UPDATES_RATIO *
                                   block / (block + block_indices);
   int32_t indices_block = ub_size_bytes_indices / BYTES_PER_BLOCK * block_indices;
-  OP_CHECK_IF(indices_block == 0, OP_LOGE(context->GetNodeName(), "indices_block = 0"),
-                  return ge::GRAPH_FAILED);
+  if (indices_block == 0) {
+      OP_LOGE(opName_, "indices_block = 0");
+      return ge::GRAPH_FAILED;
+  }
   int32_t indices_repeat = indices_block / block_indices;
   int32_t rounds_indices = param->shape_acc_indices / indices_block;
   int32_t tail_indices = param->shape_acc_indices % indices_block;
@@ -276,8 +285,9 @@ static ge::graphStatus CalParam(gert::TilingContext* context, const ScatterEleme
 }
 
 static ge::graphStatus CalParamLastAxis(gert::TilingContext* context, const ScatterElementsCompileInfo* compile_info,
-                               ScatterElementsTilingParams* param, const gert::Shape& data_origin_shape,
-                               const gert::Shape& indices_origin_shape) {
+                                ScatterElementsTilingParams* param, const gert::Shape& data_origin_shape,
+                                const gert::Shape& indices_origin_shape) {
+  const char* opName_ = "ScatterElements";
   int32_t rounds = 1;
   for (int32_t i = 0; i < param->axis; i++) {
     rounds *= data_origin_shape.GetDim(i);
@@ -286,8 +296,7 @@ static ge::graphStatus CalParamLastAxis(gert::TilingContext* context, const Scat
   auto data_desc = context->GetInputDesc(INDEX_DATA);
   OP_CHECK_NULL_WITH_CONTEXT(context, data_desc);
   const ge::DataType data_dtype = data_desc->GetDataType();
-  // data, updates, output have same 'block' (because they have same dtype)
-  const int32_t block = DATA_BLOCK_LEN[data_dtype]; // block is already checked in func CheckModeLastAxis
+  const int32_t block = DATA_BLOCK_LEN[data_dtype];
 
   int32_t data_width = data_origin_shape.GetDim(param->axis);
   int32_t data_block = (data_width + block - 1) / block * block;
@@ -297,10 +306,12 @@ static ge::graphStatus CalParamLastAxis(gert::TilingContext* context, const Scat
   OP_CHECK_NULL_WITH_CONTEXT(context, indices_desc);
   const ge::DataType indices_dtype = indices_desc->GetDataType();
   auto iter = INDICES_BLOCK_LEN.find(indices_dtype);
-  OP_CHECK_IF(iter == INDICES_BLOCK_LEN.end(),
-    OP_LOGE(context->GetNodeName(), "do not support indices_dtype(%s)",
-                                    ge::TypeUtils::DataTypeToAscendString(indices_dtype).GetString()),
-    return ge::GRAPH_FAILED);
+  if (iter == INDICES_BLOCK_LEN.end()) {
+    OP_LOGE_FOR_INVALID_DTYPE(opName_, "indices",
+                               std::to_string(static_cast<int32_t>(indices_dtype)).c_str(),
+                               "[DT_INT32, DT_INT64]");
+    return ge::GRAPH_FAILED;
+  }
   const int32_t block_indices = INDICES_BLOCK_LEN[indices_dtype];
 
   int32_t repeat_per_core = 1;
@@ -363,16 +374,21 @@ static ge::graphStatus CalParamLastAxis(gert::TilingContext* context, const Scat
 
 static int32_t CheckModeLastAxis(gert::TilingContext* context, const ScatterElementsCompileInfo* compile_info,
                                   ScatterElementsTilingParams* param, const gert::Shape& data_origin_shape,
-                               const gert::Shape& indices_origin_shape) {
+                                const gert::Shape& indices_origin_shape) {
+  const char* opName_ = "ScatterElements";
   auto data_desc = context->GetInputDesc(INDEX_DATA);
-  OP_CHECK_IF(data_desc == nullptr, OP_LOGE(context->GetNodeName(), "data_desc is null"), -1);
+  if (data_desc == nullptr) {
+      OP_LOGE(opName_, "data_desc is null");
+      return -1;
+  }
   const ge::DataType data_dtype = data_desc->GetDataType();
-  // data, updates, output have same 'block' (because they have same dtype)
   auto iter = DATA_BLOCK_LEN.find(data_dtype);
-  OP_CHECK_IF(iter == DATA_BLOCK_LEN.end(),
-    OP_LOGE(context->GetNodeName(), "do not support data_dtype(%s)",
-                                    ge::TypeUtils::DataTypeToAscendString(data_dtype).GetString()),
-    return -1);
+  if (iter == DATA_BLOCK_LEN.end()) {
+    OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName_, "data",
+                                           std::to_string(static_cast<int32_t>(data_dtype)).c_str(),
+                                           "dtype must be in [DT_INT8, DT_UINT8, DT_FLOAT16, DT_FLOAT, DT_INT32, DT_BF16]");
+    return -1;
+  }
   const int32_t block = DATA_BLOCK_LEN[data_dtype];
 
   int32_t ub_for_data = compile_info->ub_size_bytes / UB_DATA_RATIO_LAST_AXIS; // ub space for data
@@ -448,20 +464,28 @@ ge::graphStatus Tiling4ScatterElements(gert::TilingContext* context) {
 
 ge::graphStatus TilingPrepareScatterElementsForAscendC(gert::TilingParseContext *context)
 {
-    OP_LOGD(context->GetNodeName(), "TilingPrepareScatterElementsForAscendC entering.");
     auto compileInfo = context->GetCompiledInfo<ScatterElementsCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);
     auto platformInfo = context->GetPlatformInfo();
     OP_CHECK_NULL_WITH_CONTEXT(context, platformInfo);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
     compileInfo->coreNum = ascendcPlatform.GetCoreNumAiv();
-    OP_CHECK_IF((compileInfo->coreNum <= 0),
-        OP_LOGE(context->GetNodeName(), "Failed to core num."), return ge::GRAPH_FAILED);
+    const char* opName_ = "ScatterElements";
+    if (compileInfo->coreNum <= 0) {
+      OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "compileInfo->coreNum",
+                                                std::to_string(compileInfo->coreNum).c_str(),
+                                                "coreNum must be greater than 0");
+        return ge::GRAPH_FAILED;
+    }
     uint64_t ubSize;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     compileInfo->ubSize = static_cast<int64_t>(ubSize);
-    OP_CHECK_IF((compileInfo->ubSize <= 0),
-        OP_LOGE(context->GetNodeName(), "Failed to get ub size."), return ge::GRAPH_FAILED);
+    if (compileInfo->ubSize <= 0) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "compileInfo->ubSize",
+                                                std::to_string(compileInfo->ubSize).c_str(),
+                                                "ubSize must be greater than 0");
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 

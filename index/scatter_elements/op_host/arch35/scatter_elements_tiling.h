@@ -19,6 +19,7 @@
 #include "register/tilingdata_base.h"
 #include "register/op_impl_registry.h"
 #include "log/log.h"
+#include "op_common/log/log.h"
 
 namespace optiling {
 struct ScatterElementsCompileInfo {
