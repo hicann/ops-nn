@@ -321,10 +321,7 @@ public:
             return;
         }
         curBatchAL1_ = curBatchAL1;
-        l0cDBOffset_ = batchL0_ * alignedN_ * alignedM_ * (l0cEventID_ & 0x1);
-        if constexpr (AType::isTrans) {
-            l0cDBOffset_ *= batchL0_;
-        }
+        l0cDBOffset_ = (AscendC::TOTAL_L0C_SIZE / BUFFER_NUM / sizeof(float)) * (l0cEventID_ & 0x1);
         if ASCEND_IS_AIC {
             uint64_t kL1Num = CeilDiv(k_, kL1_);
             AscendC::WaitFlag<AscendC::HardEvent::FIX_M>(l0cEventID_ & 0x1);
