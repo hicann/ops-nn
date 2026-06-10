@@ -28,7 +28,8 @@ public:
     __aicore__ inline KernelAddLayerNormQuantBase()
     {}
 
-    __aicore__ inline void InitBaseParams(const AddLayerNormQuantTilingData* tiling)
+    template <typename TilingDataT>
+    __aicore__ inline void InitBaseParams(const TilingDataT* tiling)
     {
         this->numCore = tiling->numCore;
         this->numLastDim = tiling->numLastDim;

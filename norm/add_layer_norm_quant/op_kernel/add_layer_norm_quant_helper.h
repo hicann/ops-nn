@@ -17,7 +17,7 @@
 #define ADD_LAYER_NORM_QUANT_HELPER_H_
 
 #include "kernel_operator.h"
-#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113 || _NPU_ARCH__ == 2002))
 #include "impl/dav_c220/kernel_operator_reg_others_impl.h"
 #endif
 
@@ -32,6 +32,19 @@ constexpr float DYNAMIC_QUANT_DIVIDEND = 127.0;
 constexpr uint32_t UINT32_ZERO = 0;
 constexpr uint32_t UINT32_ONE = 1;
 constexpr uint32_t UINT32_TWO = 2;
+// 双缓冲队列深度
+constexpr int32_t BUFFER_NUM_SPLIT_D = 2;
+// 32-byte 对齐块大小
+constexpr int32_t BLOCK_SIZE_SPLIT_D = 32;
+// float 类型每块元素数 (32/4=8)
+constexpr int32_t NUM_PER_BLK_FP32_SPLIT_D = 8;
+// fp16 类型每块元素数 (32/2=16)
+constexpr int32_t NUM_PER_BLK_FP16_SPLIT_D = 16;
+// float 类型每次 REP 操作元素数
+constexpr int32_t ELEM_PER_REP_FP32_SPLIT_D = 64;
+// 量化范围
+constexpr float QUANT_MIN_SPLIT_D = -128.0f;
+constexpr float QUANT_MAX_SPLIT_D = 127.0f;
 
 template <typename Tp, Tp v>
 struct integral_constant {
@@ -74,6 +87,7 @@ __aicore__ inline void DataCopyEx(
     const R<T>& dst, const S<T>& src, const uint32_t len, const uint32_t count = 1,
     const DataCopyPadParams& padParams = {})
 {
+    int32_t numPerBlock = ONE_BLK_SIZE / sizeof(T);
 #if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     DataCopyParams copyParams;
     copyParams.blockLen = len * sizeof(T);
@@ -85,7 +99,6 @@ __aicore__ inline void DataCopyEx(
     }
 #else
     auto elementCount = len * count;
-    int32_t numPerBlock = ONE_BLK_SIZE / sizeof(T);
     if (elementCount % numPerBlock == 0) {
         DataCopy(dst, src, elementCount);
     } else {
@@ -109,6 +122,66 @@ __aicore__ inline void DataCopyEx(
         }
     }
 #endif
+}
+
+template <typename T, template <typename U> typename R, template <typename U> typename S>
+__aicore__ inline void DataCopyExV2(
+    const R<T>& dst, const S<T>& src, const AscendC::LocalTensor<T> &tmp, const uint32_t len, const uint32_t count = 1,
+    const DataCopyPadParams& padParam = {})
+{
+    constexpr int32_t NUM_PER_BLOCK = ONE_BLK_SIZE / sizeof(T);
+#if __CCE_AICORE__ == 220 || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
+    DataCopyParams copyParams;
+    copyParams.blockLen = len * sizeof(T);
+    copyParams.blockCount = count;
+    if constexpr (is_same<R<T>, AscendC::LocalTensor<T>>::value) {
+        DataCopyPad(dst, src, copyParams, padParam);
+    } else {
+        DataCopyPad(dst, src, copyParams);
+    }
+#else
+    auto eleCount = len * count;
+    if (eleCount % NUM_PER_BLOCK == 0) {
+        DataCopy(dst, src, eleCount);
+    } else {
+        if constexpr (is_same<R<T>, AscendC::LocalTensor<T>>::value) {
+            auto num = AlignUp(eleCount, NUM_PER_BLOCK);
+            DataCopy(dst, src, num);
+        } else {
+            int32_t num = eleCount / NUM_PER_BLOCK * NUM_PER_BLOCK;
+            DataCopy(dst, src, num);
+            if (eleCount != num) {
+                SetFlag<HardEvent::MTE3_S>(EVENT_ID0);
+                WaitFlag<HardEvent::MTE3_S>(EVENT_ID0);
+                for (int32_t i = 0; i < NUM_PER_BLOCK; i++) {
+                    auto tensorValue = src.GetValue(eleCount - NUM_PER_BLOCK + i);
+                    tmp.SetValue(i, tensorValue);
+                }
+                SetFlag<HardEvent::S_MTE3>(EVENT_ID0);
+                WaitFlag<HardEvent::S_MTE3>(EVENT_ID0);
+                DataCopy(dst[eleCount - NUM_PER_BLOCK], tmp, NUM_PER_BLOCK);
+            }
+        }
+    }
+#endif
+}
+
+template <typename T, template <typename U> typename R, template <typename U> typename S>
+__aicore__ inline void DataCopyExAlign(
+    const R<T>& dst, const S<T>& src, const AscendC::LocalTensor<T> &tmp, const uint32_t len, uint32_t stride, const uint32_t count = 1,
+    const DataCopyPadParams& padParams = {})
+{
+    DataCopyParams copyParams;
+    copyParams.blockLen = len * sizeof(T);
+    copyParams.blockCount = count;
+    
+    if constexpr (is_same<R<T>, AscendC::LocalTensor<T>>::value) {
+        copyParams.dstStride = stride;
+        DataCopyPad(dst, src, copyParams, padParams);
+    } else {
+        copyParams.srcStride = stride;
+        DataCopyPad(dst, src, copyParams);
+    }
 }
 
 /*
@@ -228,6 +301,16 @@ __aicore__ inline void RoundFloat2Int8(LocalTensor<int8_t>& dstTensor, LocalTens
     Cast(srcTensor.ReinterpretCast<half>(), srcTensor.ReinterpretCast<int32_t>(), RoundMode::CAST_NONE, size);
     PipeBarrier<PIPE_V>();
     Cast(dstTensor, srcTensor.ReinterpretCast<half>(), RoundMode::CAST_TRUNC, size);
+}
+
+template <typename T>
+__aicore__ inline void CastToFloat(LocalTensor<float>& dst, const LocalTensor<T>& src, uint32_t size)
+{
+    if constexpr (is_same<T, float>::value) {
+        Adds(dst, src, ZERO, size);
+    } else {
+        Cast(dst, src, RoundMode::CAST_NONE, size);
+    }
 }
 
 #endif // __ADD_LAYER_NORM_QUANT_HELPER_H_

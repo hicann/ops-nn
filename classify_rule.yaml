@@ -1468,6 +1468,8 @@ norm-c@ops-nn:
         - ops/ops-nn/norm/add_layer_norm_quant/op_kernel/add_layer_norm_quant_helper.h
         - ops/ops-nn/norm/add_layer_norm_quant/op_kernel/add_layer_norm_static_quant_normal_kernel.h
         - ops/ops-nn/norm/add_layer_norm_quant/op_kernel/add_layer_norm_static_quant_single_row_kernel.h
+        - ops/ops-nn/norm/add_layer_norm_quant/op_kernel/add_layer_norm_dual_static_quant_single_row_kernel.h
+        - ops/ops-nn/norm/add_layer_norm_quant/op_kernel/add_layer_norm_sole_static_quant_single_row_kernel.h
         - ops/ops-nn/norm/add_layer_norm_quant/op_kernel/reduce_common.h
         - ops/ops-nn/norm/add_rms_norm/op_graph/add_rms_norm_proto.h
         - ops/ops-nn/norm/add_rms_norm/op_host/add_rms_norm_def.cpp

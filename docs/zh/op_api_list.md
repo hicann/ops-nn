@@ -50,6 +50,7 @@
 | [aclnnAddLayerNorm](../../norm/add_layer_norm/docs/aclnnAddLayerNorm.md) | 实现AddLayerNorm功能。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnAddLayerNormGrad](../../norm/add_layer_norm_grad/docs/aclnnAddLayerNormGrad.md) | LayerNorm是一种归一化方法，可以将网络层输入数据归一化到[0, 1]之间。 | 默认非确定性实现，支持配置开启 | 默认非确定性实现，支持配置开启 |
 | [aclnnAddLayerNormQuant](../../norm/add_layer_norm_quant/docs/aclnnAddLayerNormQuant.md) | LayerNorm算子是大模型常用的归一化操作。 | - | 默认确定性实现 |
+| [aclnnAddLayerNormQuantV2](../../norm/add_layer_norm_quant_v2/docs/aclnnAddLayerNormQuantV2.md) | LayerNorm算子是大模型常用的归一化操作。AddLayerNormQuantV2算子将LayerNorm前的Add算子和LayerNorm归一化输出给1个或2个下游的量化算子融合起来，减少搬入搬出操作。LayerNorm下游的量化算子可以是Quantize、AscendQuantV2或DynamicQuant算子，具体的量化算子类型由attr入参divMode和quantMode决定。当下游有2个量化算子时，2个量化算子的算子类型、输入输出dtype组合和可选输入的组合需要完全一致。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnAddRmsNormCast](../../norm/add_rms_norm_cast/docs/aclnnAddRmsNormCast.md) | RmsNorm算子是大模型常用的归一化操作，AddRmsNormCast算子将AddRmsNorm后的Cast算子融合起来，减少搬入搬出操作。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnAddRmsNormDynamicMxQuant](../../norm/add_rms_norm_dynamic_mx_quant/docs/aclnnAddRmsNormDynamicMxQuant.md) | RmsNorm算子是大模型常用的归一化操作。DynamicMxQuant算子则是在尾轴上按blocksize分组进行动态MX量化的算子。AddRmsNormDynamicMxQuant算子将RmsNorm前的Add算子和RmsNorm归一化输出给到的DynamicMxQuant算子融合起来，减少搬入搬出操作。 | - | 默认确定性实现 |
 | [aclnnAddRmsNormDynamicQuant](../../norm/add_rms_norm_dynamic_quant/docs/aclnnAddRmsNormDynamicQuant.md) | 将RmsNorm前的Add算子和RmsNorm归一化输出给到的1个或2个DynamicQuant算子融合起来，减少搬入搬出操作。 | 默认确定性实现 | 默认确定性实现 |

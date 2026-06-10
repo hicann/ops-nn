@@ -71,6 +71,37 @@ TILING_DATA_FIELD_DEF(uint8_t, dstRepStrideFp32);
 TILING_DATA_FIELD_DEF(uint32_t, firstDimPerTimeTail);
 TILING_DATA_FIELD_DEF(uint32_t, rowTailPerBlock);
 TILING_DATA_FIELD_DEF(uint32_t, rowTailLastBlock);
+
+TILING_DATA_FIELD_DEF(uint64_t, gmOffset);
+END_TILING_DATA_DEF;
+
+BEGIN_TILING_DATA_DEF(AddLayerNormQuantV2TilingData)
+TILING_DATA_FIELD_DEF(uint32_t, numCore);
+TILING_DATA_FIELD_DEF(uint32_t, numLastDim);
+TILING_DATA_FIELD_DEF(uint32_t, numFirstDim);
+TILING_DATA_FIELD_DEF(uint32_t, firstDimPerCore);
+TILING_DATA_FIELD_DEF(uint32_t, firstDimPerCoreTail);
+TILING_DATA_FIELD_DEF(uint32_t, numLastDimAlign32);
+TILING_DATA_FIELD_DEF(uint32_t, firstDimPerTime);
+TILING_DATA_FIELD_DEF(uint32_t, lastDimPerTime);
+TILING_DATA_FIELD_DEF(float, eps);
+TILING_DATA_FIELD_DEF(float, aveFactor);
+TILING_DATA_FIELD_DEF(uint32_t, colMoveCnt);
+TILING_DATA_FIELD_DEF(uint32_t, sliceSize);
+TILING_DATA_FIELD_DEF(uint32_t, colTail);
+TILING_DATA_FIELD_DEF(uint32_t, isXOut);
+TILING_DATA_FIELD_DEF(uint32_t, scaleOffsetMode);
+TILING_DATA_FIELD_DEF(uint32_t, isPerTensor);
+TILING_DATA_FIELD_DEF(uint32_t, sliceNum);
+TILING_DATA_FIELD_DEF(uint32_t, workspaceSize);
+TILING_DATA_FIELD_DEF(uint32_t, numLastDimAlign);
+TILING_DATA_FIELD_DEF(uint32_t, tailSliceSize);
+TILING_DATA_FIELD_DEF(uint32_t, mulLoopFp32);
+TILING_DATA_FIELD_DEF(uint32_t, mulTailFp32);
+TILING_DATA_FIELD_DEF(uint8_t, dstRepStrideFp32);
+TILING_DATA_FIELD_DEF(uint32_t, firstDimPerTimeTail);
+TILING_DATA_FIELD_DEF(uint32_t, rowTailPerBlock);
+TILING_DATA_FIELD_DEF(uint32_t, rowTailLastBlock);
 TILING_DATA_FIELD_DEF(uint64_t, gmOffset);
 END_TILING_DATA_DEF;
 
@@ -94,6 +125,7 @@ END_TILING_DATA_DEF;
 REGISTER_TILING_DATA_CLASS(AddLayerNormQuant_9, AddLayerNormQuantEmptyTilingData)
 
 REGISTER_TILING_DATA_CLASS(AddLayerNormQuant, AddLayerNormQuantTilingData)
+REGISTER_TILING_DATA_CLASS(AddLayerNormQuantV2, AddLayerNormQuantV2TilingData)
 
 BEGIN_TILING_DATA_DEF(AddLayerNormQuantRegbaseTilingData)
 TILING_DATA_FIELD_DEF(int64_t, rowsPerCore);

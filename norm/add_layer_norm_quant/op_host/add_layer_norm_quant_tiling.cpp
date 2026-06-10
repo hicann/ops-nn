@@ -178,6 +178,70 @@ inline TILING_TYPE AddLayerNormQuantTilingImpl(
     return TILING_TYPE::SLICE_EXT;
 }
 
+inline TILING_TYPE AddLayerNormQuantTilingImplV2(AddLayerNormQuantV2TilingData* tiling, uint32_t optionalScaleOffsetMode,
+    uint64_t maxUbSize, int64_t& dtSize, int32_t bufferNum, int32_t numCol, int32_t firstdimPerCore, bool enableXOut,
+    enum BIAS_TYPE biasType, uint32_t& rowPerTime, uint32_t& colPerTime)
+{
+    auto numColAligned = (numCol + BLOCK_SIZE - 1) / BLOCK_SIZE * BLOCK_SIZE;
+
+    // try Normal case:
+    // UB = ROW*(DT*(3+enableXOut)*numColAligned*BN + 4*2*BN + 4*3*numColAligned) + DT*2*numColAligned*BN + 4*64 + UB_RESERVED
+    int64_t bytesPerRow = dtSize * (3 + (enableXOut ? 1 : 0)) * numColAligned * bufferNum + 4 * 2 * bufferNum + 4 * 3 * numColAligned;
+    int64_t fixedBytes = dtSize * 2 * numColAligned * bufferNum + 4 * 64 + UB_RESERVED_BYTE;
+    float tmpRow = static_cast<float>(static_cast<int64_t>(maxUbSize) - fixedBytes) / static_cast<float>(bytesPerRow);
+    if (tmpRow > 1) {
+        rowPerTime = floor(tmpRow);
+        colPerTime = numCol;
+        return TILING_TYPE::NORMAL;
+    }
+
+    // try Single case:
+    uint64_t tmpUbSize = 4 * numColAligned * bufferNum * dtSize + 3 * numColAligned * sizeof(float) + numColAligned + 32 + UB_RESERVED_BYTE;
+    if(optionalScaleOffsetMode > 200){
+        tmpUbSize = 2 * numColAligned * bufferNum * dtSize + 3 * numColAligned * sizeof(float) + numColAligned + 32 + UB_RESERVED_BYTE;
+    }
+
+    if (tmpUbSize < maxUbSize) {
+        rowPerTime = 1;
+        colPerTime = numCol;
+        return TILING_TYPE::SINGLE_ROW;
+    }
+
+    // try Silce case
+    // SplitD kernel uses BUFFER_NUM_SPLIT_D = 2, not bufferNum
+    constexpr int32_t SLICE_D_BUFFER_NUM = 2;
+    int64_t numPerBlock = 1;
+    if (dtSize > 0) {
+        numPerBlock = BLOCK_SIZE / dtSize;
+    }
+    rowPerTime = 1;
+    int64_t biasUbPerCol = (biasType != BIAS_TYPE::NO_BIAS) ? (dtSize * SLICE_D_BUFFER_NUM) : 0;
+    int64_t ubPerCol = dtSize * 4 * SLICE_D_BUFFER_NUM + biasUbPerCol + SLICE_D_BUFFER_NUM + dtSize * SLICE_D_BUFFER_NUM + 16 + 20;
+    int64_t ubFixed = 352 + UB_RESERVED_BYTE;
+    auto tmpCol = static_cast<double>(static_cast<long>(maxUbSize) - ubFixed) / static_cast<double>(ubPerCol);
+    colPerTime = floor(tmpCol);
+    if (colPerTime % numPerBlock != 0) { // colPerTime should be 32-byte aligned
+        colPerTime = (colPerTime / numPerBlock) * numPerBlock;
+    }
+    // Ensure colPerTime is positive
+    if (colPerTime < numPerBlock) {
+        colPerTime = numPerBlock;
+    }
+
+    int32_t colMoveCnt = CEIL_DIV(numCol, colPerTime);
+    int32_t colTail = numCol - (colMoveCnt - 1) * colPerTime;
+    while (colTail < 32) {
+        colPerTime = colPerTime - 32;
+        colTail = numCol - (CEIL_DIV(numCol, colPerTime) - 1) * colPerTime;
+    }
+
+    tiling->set_sliceSize(colPerTime);
+    tiling->set_sliceNum(colMoveCnt);
+    tiling->set_tailSliceSize(colTail);
+
+    return TILING_TYPE::SLICE_EXT;
+}
+
 inline bool CheckScaleOffset(bool isDynamicQuant, uint32_t mode)
 {
     bool ret = true;
@@ -206,8 +270,9 @@ static inline uint32_t ComputeOptCode(gert::TilingContext* context)
     return optionalScaleOffsetMode;
 }
 
+template <typename TilingDataT>
 static inline bool GetAttrs(
-    gert::TilingContext* context, AddLayerNormQuantTilingData* tiling, bool& isDynamicQuant,
+    gert::TilingContext* context, TilingDataT* tiling, bool& isDynamicQuant,
     bool& enableAdditionalOutput)
 {
     const gert::RuntimeAttrs* attrs = context->GetAttrs();
@@ -289,15 +354,9 @@ static inline void GetSocVersion(gert::TilingContext* context, uint64_t& maxUbSi
     OP_LOGI(context, "Get Platform Info: maxUbSize = %lu, maxCoreNum = %u", maxUbSize, maxCoreNum);
 }
 
-static inline void ComputeFusedAxis(
-    gert::TilingContext* context, AddLayerNormQuantTilingData* tiling, int32_t& numRow, int32_t& numCol, int64_t& dtSize)
+template<typename TilingDataT>
+static inline void SetFusedAxisTiling(TilingDataT* tiling, int32_t numRow, int32_t numCol, int64_t dtSize)
 {
-    numRow = 1;
-    for (size_t i = 0; i < context->GetInputShape(0)->GetStorageShape().GetDimNum() - 1; i++) {
-        numRow *= context->GetInputShape(0)->GetStorageShape().GetDim(i);
-    }
-    numCol = context->GetInputShape(0)->GetStorageShape().GetDim(
-        context->GetInputShape(0)->GetStorageShape().GetDimNum() - 1);
     float tempAve = (numCol == 0) ? 0 : float(1.0 / numCol);
     int32_t numColAligned = numCol;
     if (dtSize > 0) {
@@ -307,11 +366,7 @@ static inline void ComputeFusedAxis(
 
     uint32_t mulLoopFp32 = numColAligned / ELEM_PER_REP_FP32;
     uint32_t mulTailFp32 = numColAligned - mulLoopFp32 * ELEM_PER_REP_FP32;
-    uint8_t dstRepStrideFp32 = numColAligned / 8; 
-
-    uint32_t mulLoopFp16 = numColAligned / 128;
-    uint32_t mulTailFp16 = numColAligned - mulLoopFp16 * 128;
-    uint8_t dstRepStrideFp16 = numColAligned / 16; 
+    uint8_t dstRepStrideFp32 = numColAligned / 8;
 
     tiling->set_numFirstDim(numRow);
     tiling->set_numLastDim(numCol);
@@ -323,8 +378,45 @@ static inline void ComputeFusedAxis(
     tiling->set_dstRepStrideFp32(dstRepStrideFp32);
 }
 
+static inline void ComputeFusedAxis(
+    gert::TilingContext* context, AddLayerNormQuantTilingData* tiling, int32_t& numRow, int32_t& numCol, int64_t& dtSize)
+{
+    numRow = 1;
+    for (size_t i = 0; i < context->GetInputShape(0)->GetStorageShape().GetDimNum() - 1; i++) {
+        numRow *= context->GetInputShape(0)->GetStorageShape().GetDim(i);
+    }
+    numCol = context->GetInputShape(0)->GetStorageShape().GetDim(
+        context->GetInputShape(0)->GetStorageShape().GetDimNum() - 1);
+    SetFusedAxisTiling(tiling, numRow, numCol, dtSize);
+}
+
+static inline bool ComputeFusedAxisV2(
+    gert::TilingContext* context, AddLayerNormQuantV2TilingData* tiling, int32_t& numRow, int32_t& numCol, int64_t& dtSize)
+{
+    auto xShape = context->GetInputShape(X1_IDX)->GetStorageShape();
+    auto gammaShape = context->GetInputShape(GAMMA_IDX)->GetStorageShape();
+    size_t xDimNum = xShape.GetDimNum();
+    size_t gammaDimNum = gammaShape.GetDimNum();
+
+    if (gammaDimNum > xDimNum) {
+        OP_LOGE(context, "gamma dim count %zu exceeds x dim count %zu, invalid shape", gammaDimNum, xDimNum);
+        return false;
+    }
+
+    for (size_t i = 0; i < xDimNum - gammaDimNum; i++) {
+        numRow *= xShape.GetDim(i);
+    }
+    for (size_t i = 0; i < gammaDimNum; i++) {
+        numCol *= gammaShape.GetDim(i);
+    }
+
+    SetFusedAxisTiling(tiling, numRow, numCol, dtSize);
+    return true;
+}
+
+template<typename TilingDataT>
 static inline void DoBlockTiling(
-    gert::TilingContext* context, AddLayerNormQuantTilingData* tiling, uint32_t maxCoreNum, int32_t numRow,
+    gert::TilingContext* context, TilingDataT* tiling, uint32_t maxCoreNum, int32_t numRow,
     uint32_t& firstdimPerCore, uint32_t& numCore, int32_t& nlFirstdimPerCoreNum)
 {
     firstdimPerCore = CEIL_DIV(tiling->get_numFirstDim(), maxCoreNum);
@@ -334,15 +426,16 @@ static inline void DoBlockTiling(
     firstdimPerCore = CEIL_DIV(numRow, numCore);
     uint32_t firstDimPerCoreTail = numRow - firstdimPerCore * (numCore - 1);
     uint64_t gmOffset = static_cast<uint64_t>(firstdimPerCore) * tiling->get_numLastDim();
-    
     tiling->set_firstDimPerCore(firstdimPerCore);
     tiling->set_firstDimPerCoreTail(firstDimPerCoreTail);
     tiling->set_gmOffset(gmOffset);
+
     OP_LOGI("AddLayerNormQuant", "numCore = %u", numCore);
 }
 
+template<typename TilingDataT>
 static inline void SetWorkSapce4AddLayerNormQuant(
-    gert::TilingContext* context, AddLayerNormQuantTilingData* tiling, TILING_TYPE tilingType, int32_t numRow,
+    gert::TilingContext* context, TilingDataT* tiling, TILING_TYPE tilingType, int32_t numRow,
     int32_t numCol)
 {
     size_t workspaceSize = (tilingType == TILING_TYPE::SLICE_EXT) ? (numRow * numCol * sizeof(float)) : 1;
@@ -353,12 +446,13 @@ static inline void SetWorkSapce4AddLayerNormQuant(
     OP_LOGI("AddLayerNormQuant", "workspaceSize = %zu", workspaceSize);
 }
 
+template<typename TilingDataT>
 static inline void PostUbTiling(
-    AddLayerNormQuantTilingData* tiling, int32_t firstdimPerCore, int32_t numCol, uint32_t colPerTime,
+    TilingDataT* tiling, int32_t firstdimPerCore, int32_t numCol, uint32_t colPerTime,
     uint32_t& rowPerTime)
 {
     uint32_t firstDimPerCoreTail = tiling->get_firstDimPerCoreTail();
-    
+
     rowPerTime =
         (rowPerTime > static_cast<uint32_t>(firstdimPerCore)) ? static_cast<uint32_t>(firstdimPerCore) : rowPerTime;
     uint32_t firstDimPerTimeTail = rowPerTime < firstDimPerCoreTail ? rowPerTime : firstDimPerCoreTail;
@@ -369,7 +463,7 @@ static inline void PostUbTiling(
     uint32_t rowTailPerBlock = tt == 0 ? rowPerTime : tt;
     uint32_t rowTailLastBlock = (firstDimPerCoreTail % firstDimPerTimeTail == 0) ? firstDimPerTimeTail : (firstDimPerCoreTail % firstDimPerTimeTail);
     int32_t colMoveCnt = CEIL_DIV(numCol, colPerTime);
-    int32_t colTail = (numCol % colPerTime == 0) ? colPerTime : (numCol % colPerTime);
+    int32_t colTail = numCol - (colMoveCnt - 1) * colPerTime;
 
     tiling->set_firstDimPerTime(rowPerTime);
     tiling->set_firstDimPerTimeTail(firstDimPerTimeTail);
@@ -384,25 +478,84 @@ static inline void PostUbTiling(
         colMoveCnt, colTail);
 }
 
+static ge::graphStatus Tiling4AddLayerNormQuantV2Membase(gert::TilingContext* context)
+{
+    AddLayerNormQuantV2TilingData tiling;
+    OP_LOGI(context, "Begin to do Tiling4AddLayerNormQuantV2");
+    bool isDynamicQuant = false;
+    bool enableAdditionalOutput = false;
+    OP_CHECK_IF(!GetAttrs(context, &tiling, isDynamicQuant, enableAdditionalOutput),
+        OP_LOGE(context, "GetAttrs failed"), return ge::GRAPH_FAILED);
+
+    auto scales1Shape = context->GetOptionalInputShape(SCALE1_IDX);
+    uint32_t optionalScaleOffsetMode = ComputeOptCode(context);
+
+    OP_CHECK_IF(!CheckScaleOffset(isDynamicQuant, optionalScaleOffsetMode),
+        OP_LOGE(context, "Optional input Scales and Offsets are invalid, get mode = %u, tiling failed",
+            optionalScaleOffsetMode),return ge::GRAPH_FAILED);
+
+    tiling.set_scaleOffsetMode(optionalScaleOffsetMode);
+    tiling.set_isPerTensor(0);
+    if ((nullptr != scales1Shape)) {
+        OP_LOGD(context, "scales1Shape size : %ld", scales1Shape->GetStorageShape().GetShapeSize());
+        if (!isDynamicQuant && (scales1Shape->GetStorageShape().GetShapeSize() == 1)) {
+            tiling.set_isPerTensor(1);
+            OP_LOGD(context, "PerTensor Mode Open. ");
+        }
+    }
+
+    auto dataType = context->GetInputDesc(0)->GetDataType();
+    int64_t dtSize = GetSizeByDataType(dataType);
+    int64_t bufferNum = 1;
+    uint32_t maxCoreNum = 0;
+    uint64_t maxUbSize = 0;
+    GetSocVersion(context, maxUbSize, maxCoreNum);
+
+    int32_t numCol = 1;
+    int32_t numRow = 1;
+    uint32_t firstdimPerCore = 1;
+    uint32_t numCore = 1;
+    int32_t nlFirstdimPerCoreNum = 1;
+    if (!ComputeFusedAxisV2(context, &tiling, numRow, numCol, dtSize)) {
+        OP_LOGE(context, "ComputeFusedAxisV2 failed"); return ge::GRAPH_FAILED;
+    }
+    DoBlockTiling(context, &tiling, maxCoreNum, numRow, firstdimPerCore, numCore, nlFirstdimPerCoreNum);
+
+    uint32_t rowPerTime;
+    uint32_t colPerTime;
+    BIAS_TYPE biasType = FindBiasType(context, numRow, numCol);
+
+    auto tilingType = AddLayerNormQuantTilingImplV2(&tiling, optionalScaleOffsetMode,
+        maxUbSize, dtSize, bufferNum, numCol, firstdimPerCore, enableAdditionalOutput, biasType, rowPerTime, colPerTime);
+    PostUbTiling(&tiling, firstdimPerCore, numCol, colPerTime, rowPerTime);
+
+    SetWorkSapce4AddLayerNormQuant(context, &tiling, tilingType, numRow, numCol);
+    tiling.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
+    context->GetRawTilingData()->SetDataSize(tiling.GetDataSize());
+
+    uint64_t tilingKey = ComputeTilingKey(dataType, isDynamicQuant, tilingType, biasType);
+    context->SetTilingKey(tilingKey);
+
+    OP_LOGI("AddLayerNormQuantV2", "tilingType = %u, SLICE_EXT will use split_d kernel", static_cast<uint32_t>(tilingType));
+
+    return ge::GRAPH_SUCCESS;
+}
+
 static ge::graphStatus Tiling4AddLayerNormQuantMembase(gert::TilingContext* context)
 {
     AddLayerNormQuantTilingData tiling;
     OP_LOGI(context, "Begin to do Tiling4AddLayerNormQuant");
     bool isDynamicQuant = false;
     bool enableAdditionalOutput = false;
-    OP_CHECK_IF(
-        !GetAttrs(context, &tiling, isDynamicQuant, enableAdditionalOutput),
+    OP_CHECK_IF(!GetAttrs(context, &tiling, isDynamicQuant, enableAdditionalOutput),
         OP_LOGE(context, "GetAttrs failed"), return ge::GRAPH_FAILED);
 
     auto scale1Shape = context->GetOptionalInputShape(SCALE1_IDX);
     uint32_t optionalScaleOffsetMode = ComputeOptCode(context);
 
-    OP_CHECK_IF(
-        !CheckScaleOffset(isDynamicQuant, optionalScaleOffsetMode),
-        OP_LOGE(
-            context, "Optional input Scales and Offsets are invalid, get mode = %u, tiling failed",
-            optionalScaleOffsetMode),
-        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!CheckScaleOffset(isDynamicQuant, optionalScaleOffsetMode),
+        OP_LOGE(context, "Optional input Scales and Offsets are invalid, get mode = %u, tiling failed",
+            optionalScaleOffsetMode), return ge::GRAPH_FAILED);
 
     tiling.set_scaleOffsetMode(optionalScaleOffsetMode);
     tiling.set_isPerTensor(0);
@@ -446,8 +599,7 @@ static ge::graphStatus Tiling4AddLayerNormQuantMembase(gert::TilingContext* cont
     uint64_t tilingKey = ComputeTilingKey(dataType, isDynamicQuant, tilingType, biasType);
     context->SetTilingKey(tilingKey);
 
-    OP_CHECK_IF(
-        tilingType == TILING_TYPE::SLICE_EXT,
+    OP_CHECK_IF(tilingType == TILING_TYPE::SLICE_EXT,
         OP_LOGE(context, "D-axis is too big to do AddLayerNormQuant compute"), return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -522,6 +674,11 @@ static ge::graphStatus Tiling4AddLayerNormQuant(gert::TilingContext* context)
         return ge::GRAPH_SUCCESS;
     }
     return Tiling4AddLayerNormQuantMembase(context);
+}
+
+static ge::graphStatus Tiling4AddLayerNormQuantV2(gert::TilingContext* context)
+{
+    return Tiling4AddLayerNormQuantV2Membase(context);
 }
 
 inline ge::graphStatus GenSimplifiedKey4AddLayerNormQuant(gert::TilingContext* context, ge::char_t* simplifiedKey)
@@ -600,4 +757,8 @@ IMPL_OP_OPTILING(AddLayerNormQuant)
     .Tiling(Tiling4AddLayerNormQuant)
     .TilingParse<AddLayerNormQuantCompileInfo>(TilingPrepare4AddLayerNormQuant)
     .GenSimplifiedKey(GenSimplifiedKey4AddLayerNormQuant);
+
+IMPL_OP_OPTILING(AddLayerNormQuantV2)
+    .Tiling(Tiling4AddLayerNormQuantV2)
+    .TilingParse<AddLayerNormQuantCompileInfo>(TilingPrepare4AddLayerNormQuant);
 } // namespace optiling
