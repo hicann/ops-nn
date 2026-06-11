@@ -26,6 +26,7 @@
 
 #include "aclnn_kernels/reshape.h"
 #include "matmul/common/op_host/log_format_util.h"
+#include "matmul/common/op_host/op_api/batch_matmul_util.h"
 #include "matmul/common/op_host/op_api/matmul_util.h"
 #include "matmul/common/op_host/op_api/cube_util.h"
 
@@ -327,10 +328,27 @@ static const aclTensor* BuildFusedMatMulGraph(
         contiguousBias = ContiguousBias(x, bias, executor);
         CHECK_RET(contiguousBias != nullptr, nullptr);
     }
+    // Reuse MatMul/BMM handling for k/m/n == 1 reshape and transpose normalization.
+    auto selfReshapeOutput = selfCastOut;
+    auto mat2ReshapeOutput = mat2CastOut;
+    bool ifKEqual1 = false;
+    if (x->GetViewShape().GetDimNum() > DIM_LEN_MIN) {
+        CHECK_RET(
+            ProcessEqual1Cases(
+                selfCastOut, mat2CastOut, mmOpInfo, contiguousBias, mmOpInfo.shapeInfo.transposeX1,
+                mmOpInfo.shapeInfo.transposeX2, selfReshapeOutput, mat2ReshapeOutput, executor, ifKEqual1) != -1,
+            nullptr);
+    } else {
+        CHECK_RET(
+            ProcessSpecialCases(
+                selfCastOut, mat2CastOut, mmOpInfo, contiguousBias, selfReshapeOutput, mat2ReshapeOutput, executor,
+                ifKEqual1) != -1,
+            nullptr);
+    }
     // 全部转成ND
-    selfCastOut = l0op::ReFormat(selfCastOut, op::Format::FORMAT_ND);
+    selfCastOut = l0op::ReFormat(selfReshapeOutput, op::Format::FORMAT_ND);
     CHECK_RET(selfCastOut != nullptr, nullptr);
-    mat2CastOut = l0op::ReFormat(mat2CastOut, op::Format::FORMAT_ND);
+    mat2CastOut = l0op::ReFormat(mat2ReshapeOutput, op::Format::FORMAT_ND);
     CHECK_RET(mat2CastOut != nullptr, nullptr);
     // x3非连续转连续
     auto contiguousX3 = x3;

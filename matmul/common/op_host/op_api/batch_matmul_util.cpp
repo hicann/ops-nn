@@ -672,29 +672,6 @@ bool CheckArchIfBatchMatMulToMul(const aclTensor* self, const aclTensor* mat2, b
     return iter(self, mat2, adjX1, adjX2);
 }
 
-static inline int64_t ProcessEqual1Cases(
-    const aclTensor*& selfCast, const aclTensor*& mat2Cast, MmOpInfo& matmulOpInfo, const aclTensor*& bias, bool& adjX1,
-    bool& adjX2, const aclTensor*& selfReshape, const aclTensor*& mat2Reshape, aclOpExecutor* executor, bool& ifKEqual1)
-{
-    ifKEqual1 = IfKEqual1(selfCast, matmulOpInfo, adjX1, bias) &&
-                     CheckArchIfBatchMatMulToMul(selfCast, mat2Cast, adjX1, adjX2); // distincted by different arch
-    if (ifKEqual1) {
-        aclnnStatus kEqual1SelfToMKRes = IfKEqual1Mat2ToKN(selfCast, selfReshape, adjX1, executor);
-        CHECK_RET(kEqual1SelfToMKRes == ACLNN_SUCCESS, -1);
-        aclnnStatus kEqual1Mat2ToKNRes = IfKEqual1Mat2ToKN(mat2Cast, mat2Reshape, adjX2, executor);
-        CHECK_RET(kEqual1Mat2ToKNRes == ACLNN_SUCCESS, -1);
-        OP_LOGI("Hit MatMul or BatchMatmul k=1 scenario, trans matmul to mul to calculate.");
-    } else {
-        aclnnStatus mEqual1SelfToMKRes =
-            IfMEqual1SelfToMK(selfCast, selfReshape, matmulOpInfo.support_info.self_format, adjX1, executor);
-        CHECK_RET(mEqual1SelfToMKRes == ACLNN_SUCCESS, -1);
-        aclnnStatus nEqual1Mat2ToNKRes =
-            IfNEqual1Mat2ToNK(mat2Cast, mat2Reshape, matmulOpInfo.support_info.mat2_format, adjX2, executor);
-        CHECK_RET(nEqual1Mat2ToNKRes == ACLNN_SUCCESS, -1);
-    }
-    return 0L;
-}
-
 static inline bool CheckNotNull(const aclTensor* self, const aclTensor* mat2, const aclTensor* out)
 {
     OP_CHECK_NULL(self, return false);
@@ -864,6 +841,30 @@ static aclnnStatus CheckBmmOp(
 
 namespace Ops {
 namespace NN {
+int64_t ProcessEqual1Cases(
+    const aclTensor*& selfCast, const aclTensor*& mat2Cast, MmOpInfo& matmulOpInfo, const aclTensor*& bias, bool& adjX1,
+    bool& adjX2, const aclTensor*& selfReshape, const aclTensor*& mat2Reshape, aclOpExecutor* executor,
+    bool& ifKEqual1)
+{
+    ifKEqual1 = IfKEqual1(selfCast, matmulOpInfo, adjX1, bias) &&
+                     CheckArchIfBatchMatMulToMul(selfCast, mat2Cast, adjX1, adjX2); // distincted by different arch
+    if (ifKEqual1) {
+        aclnnStatus kEqual1SelfToMKRes = IfKEqual1Mat2ToKN(selfCast, selfReshape, adjX1, executor);
+        CHECK_RET(kEqual1SelfToMKRes == ACLNN_SUCCESS, -1);
+        aclnnStatus kEqual1Mat2ToKNRes = IfKEqual1Mat2ToKN(mat2Cast, mat2Reshape, adjX2, executor);
+        CHECK_RET(kEqual1Mat2ToKNRes == ACLNN_SUCCESS, -1);
+        OP_LOGI("Hit MatMul or Batchmatmul k=1 scenario, trans matmul to mul to calculate.");
+    } else {
+        aclnnStatus mEqual1SelfToMKRes =
+            IfMEqual1SelfToMK(selfCast, selfReshape, matmulOpInfo.support_info.self_format, adjX1, executor);
+        CHECK_RET(mEqual1SelfToMKRes == ACLNN_SUCCESS, -1);
+        aclnnStatus nEqual1Mat2ToNKRes =
+            IfNEqual1Mat2ToNK(mat2Cast, mat2Reshape, matmulOpInfo.support_info.mat2_format, adjX2, executor);
+        CHECK_RET(nEqual1Mat2ToNKRes == ACLNN_SUCCESS, -1);
+    }
+    return 0L;
+}
+
 const aclTensor* ExecBatchMatmulOpWithBiasAndAttrs(
     const aclTensor* self, const aclTensor* mat2, const aclTensor* bias, const aclTensor* out, bool adjX1, bool adjX2,
     int8_t cubeMathType, aclOpExecutor* executor, bool isTransposeMat2Contiguous, bool isBaddbmm)

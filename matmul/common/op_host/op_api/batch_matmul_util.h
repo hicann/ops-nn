@@ -11,6 +11,7 @@
 #pragma once
 
 #include "aclnn/aclnn_base.h"
+#include "matmul/common/op_host/op_api/matmul_util.h"
 #include "opdev/common_types.h"
 #include "opdev/platform.h"
 
@@ -48,6 +49,11 @@ const aclTensor *ExecBatchMatmulOp(const aclTensor *self, const aclTensor *mat2,
 
 const aclTensor *ExecBmmOp(const aclTensor *self, const aclTensor *mat2, const aclTensor *out, int8_t cubeMathType,
                            aclOpExecutor *executor, bool isBaddbmm = false);
+
+int64_t ProcessEqual1Cases(
+    const aclTensor*& selfCast, const aclTensor*& mat2Cast, MmOpInfo& matmulOpInfo, const aclTensor*& bias, bool& adjX1,
+    bool& adjX2, const aclTensor*& selfReshape, const aclTensor*& mat2Reshape, aclOpExecutor* executor,
+    bool& ifKEqual1);
 
 bool checkFusedmm(
     const aclTensor* bias, const aclTensor* self, const aclTensor* mat2, const aclScalar* alpha, const aclScalar* beta,
