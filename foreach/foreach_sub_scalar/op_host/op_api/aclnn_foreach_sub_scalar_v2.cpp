@@ -20,8 +20,8 @@
 #include "op_api/aclnn_util.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "opdev/op_dfx.h"
-#include "opdev/make_op_executor.h"
 #include "opdev/platform.h"
+#include "opdev/make_op_executor.h"
 
 using namespace op;
 
@@ -120,13 +120,13 @@ static inline bool CheckDtypeValid(const aclTensorList* self, const aclScalar* s
 static inline bool CheckShape(const aclTensorList* self, const aclTensorList* out)
 {
     // tensor 维度检查
-    for (uint64_t i = 0; i < self->Size(); i++) {
-        OP_CHECK_MAX_DIM((*self)[i], MAX_SUPPORT_DIMS_NUMS, return false);
+    for (uint64_t p = 0; p < self->Size(); p++) {
+        OP_CHECK_MAX_DIM((*self)[p], MAX_SUPPORT_DIMS_NUMS, return false);
     }
 
     // self和out的shape必须一致
-    for (uint64_t i = 0; i < self->Size(); i++) {
-        OP_CHECK_SHAPE_NOT_EQUAL((*self)[i], (*out)[i], return false);
+    for (uint64_t p = 0; p < self->Size(); p++) {
+        OP_CHECK_SHAPE_NOT_EQUAL((*self)[p], (*out)[p], return false);
     }
     return true;
 }

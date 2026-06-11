@@ -199,7 +199,7 @@ private:
             op(float32Tensor[offset_1], float32Tensor[offset_1], oneBlockData, elementsPerRepeat, MAX_REPEATS,
                {1, 1, 0, 8, 8, 0});
             PipeBarrier<PIPE_V>();
-            offset_1 += elementsPerRepeat * MAX_REPEATS;
+            offset_1 += MAX_REPEATS * elementsPerRepeat;
         }
 
         if (repeatBatchCntRemainder > 0) {
@@ -207,7 +207,7 @@ private:
             op(float32Tensor[offset_1], float32Tensor[offset_1], oneBlockData, elementsPerRepeat, repeatBatchCntRemainder,
                {1, 1, 0, 8, 8, 0});
             PipeBarrier<PIPE_V>();
-            offset_1 += elementsPerRepeat * repeatBatchCntRemainder;
+            offset_1 += repeatBatchCntRemainder * elementsPerRepeat;
         }
 
         if (totalRepeatCntRemainder > 0) {
@@ -218,7 +218,7 @@ private:
         }
 
         PipeBarrier<PIPE_V>();
-        Cast(outLocal[index * maxCastDataCount], float32Tensor, RoundMode::CAST_RINT, dataCount);
+        Cast(outLocal[maxCastDataCount * index], float32Tensor, RoundMode::CAST_RINT, dataCount);
         PipeBarrier<PIPE_V>();
     }
 };

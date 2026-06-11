@@ -52,12 +52,12 @@ extern "C" __global__ __aicore__ void foreach_addcdiv_list(
     // foreach(vector) not need workspace
     GM_ADDR userWS = nullptr;
 
-    if (TILING_KEY_IS(1)) {
-        ForeachOneScalarQuaternary<half, half, AddcDivListFloatAdapter, 2, 3> op;
+    if (TILING_KEY_IS(2)) {
+        ForeachOneScalarQuaternary<float, float, AddcDivListFloatAdapter, 2, 3> op;
         op.Init(tensor1, tensor2, tensor3, scalar, outputs, userWS, &tilingData);
         op.Process();
-    } else if (TILING_KEY_IS(2)) {
-        ForeachOneScalarQuaternary<float, float, AddcDivListFloatAdapter, 2, 3> op;
+    } else if (TILING_KEY_IS(1)) {
+        ForeachOneScalarQuaternary<half, half, AddcDivListFloatAdapter, 2, 3> op;
         op.Init(tensor1, tensor2, tensor3, scalar, outputs, userWS, &tilingData);
         op.Process();
     }

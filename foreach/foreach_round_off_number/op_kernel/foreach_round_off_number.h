@@ -246,19 +246,19 @@ __aicore__ inline void ForeachRoundOffNumberND<T>::Process()
         float32Tensor = float32Queue.DeQue<float>();
     }
 
-    for (uint16_t i = tensorStart; i <= tensorEnd; i++) {
+    for (uint16_t k = tensorStart; k <= tensorEnd; k++) {
         int64_t cursorStart = 0;
-        int64_t cursorEnd = tensorDataCountList[i] - 1;
+        int64_t cursorEnd = tensorDataCountList[k] - 1;
         int64_t dataCount = 0;
-        if (i == tensorStart) {
+        if (k == tensorStart) {
             cursorStart = tensorStartOffset;
         }
-        if (i == tensorEnd) {
+        if (k == tensorEnd) {
             cursorEnd = tensorEndOffset;
         }
         dataCount = cursorEnd - cursorStart + 1;
-        inTensorGM.SetGlobalBuffer(GetInputTensorAddr(i) + cursorStart);
-        outTensorGM.SetGlobalBuffer(GetOutputTensorAddr(i) + cursorStart);
+        inTensorGM.SetGlobalBuffer(GetInputTensorAddr(k) + cursorStart);
+        outTensorGM.SetGlobalBuffer(GetOutputTensorAddr(k) + cursorStart);
         SingleTensorProcess(dataCount, float32Tensor);
     }
 #if __CCE_AICORE__ >= 220

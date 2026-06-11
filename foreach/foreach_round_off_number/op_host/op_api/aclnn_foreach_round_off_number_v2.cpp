@@ -17,11 +17,11 @@
 #include "foreach_round_off_number_v2.h"
 #include "aclnn_kernels/contiguous.h"
 #include "op_api/op_api_def.h"
-#include "op_api/aclnn_util.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "opdev/op_dfx.h"
 #include "opdev/make_op_executor.h"
 #include "opdev/platform.h"
+#include "op_api/aclnn_util.h"
 
 using namespace op;
 
@@ -45,18 +45,6 @@ static inline bool CheckNotNull(const aclTensorList* self, const aclScalar* scal
     return true;
 }
 
-static inline bool CheckFormat(const aclTensorList* self, const aclTensorList* out)
-{
-    for (uint64_t i = 0; i < self->Size(); i++) {
-        // self格式不能是私有格式
-        if (IsPrivateFormat((*self)[i]->GetStorageFormat()) || IsPrivateFormat((*out)[i]->GetStorageFormat())) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format only support ND、NCHW、NHWC、HWCN、NDHWC、NCDHW.");
-            return false;
-        }
-    }
-    return true;
-}
-
 static const std::initializer_list<DataType>& GetDtypeSupportList()
 {
   auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
@@ -68,6 +56,18 @@ static const std::initializer_list<DataType>& GetDtypeSupportList()
             op::ToString(GetCurrentPlatformInfo().GetSocVersion()).GetString());
         return EMPTY_LIST;
     }
+}
+
+static inline bool CheckFormat(const aclTensorList* self, const aclTensorList* out)
+{
+    for (uint64_t i = 0; i < self->Size(); i++) {
+        // self格式不能是私有格式
+        if (IsPrivateFormat((*self)[i]->GetStorageFormat()) || IsPrivateFormat((*out)[i]->GetStorageFormat())) {
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format only support ND、NCHW、NHWC、HWCN、NDHWC、NCDHW.");
+            return false;
+        }
+    }
+    return true;
 }
 
 static inline bool CheckDtypeValid(const aclTensorList* self, const aclScalar* scalar, const aclTensorList* out)
@@ -86,12 +86,12 @@ static inline bool CheckDtypeValid(const aclTensorList* self, const aclScalar* s
     // checkself input dtype, and check the releation of input and out
     auto selfDtyte = (*self)[0]->GetDataType();
     OP_CHECK_DTYPE_NOT_SUPPORT((*self)[0], dtypeSupportList, return false);
-    for (uint64_t i = 0; i < self->Size(); i++) {
-        OP_CHECK_DTYPE_NOT_MATCH((*self)[i], selfDtyte, return false);
+    for (uint64_t b = 0; b < self->Size(); b++) {
+        OP_CHECK_DTYPE_NOT_MATCH((*self)[b], selfDtyte, return false);
     }
 
-    for (uint64_t i = 0; i < out->Size(); i++) {
-        OP_CHECK_DTYPE_NOT_MATCH((*out)[i], selfDtyte, return false);
+    for (uint64_t b = 0; b < out->Size(); b++) {
+        OP_CHECK_DTYPE_NOT_MATCH((*out)[b], selfDtyte, return false);
     }
 
     // check the releation of self and scalar
@@ -135,8 +135,8 @@ static aclnnStatus ExecForeachRoundOffNumberV2GetWorkspaceSize(
     CHECK_RET(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
 
     // 固定写法，参数检查
-    auto ret = CheckParams(x, scalar, out);
-    CHECK_RET(ret == ACLNN_SUCCESS, ret);
+    auto ret_1 = CheckParams(x, scalar, out);
+    CHECK_RET(ret_1 == ACLNN_SUCCESS, ret_1);
 
     // 空Tensorlist处理
     if (x->Size() == 0) {
@@ -147,8 +147,8 @@ static aclnnStatus ExecForeachRoundOffNumberV2GetWorkspaceSize(
 
     // self如果非连续，需要转连续
     std::vector<const aclTensor*> tensorsVec;
-    for (size_t i = 0; i < x->Size(); ++i) {
-        auto secondContiguous = l0op::Contiguous((*x)[i], uniqueExecutor.get());
+    for (size_t j = 0; j < x->Size(); ++j) {
+        auto secondContiguous = l0op::Contiguous((*x)[j], uniqueExecutor.get());
         CHECK_RET(secondContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
         tensorsVec.push_back(secondContiguous);
     }

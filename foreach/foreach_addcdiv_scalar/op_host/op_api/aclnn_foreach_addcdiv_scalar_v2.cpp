@@ -17,10 +17,10 @@
 #include "foreach_addcdiv_scalar_v2.h"
 #include "aclnn_kernels/contiguous.h"
 #include "op_api/op_api_def.h"
-#include "op_api/aclnn_util.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "opdev/op_dfx.h"
 #include "opdev/make_op_executor.h"
+#include "op_api/aclnn_util.h"
 #include "opdev/platform.h"
 
 using namespace op;
@@ -181,25 +181,25 @@ static aclnnStatus ExecForeachAddcdivScalarV2GetWorkspaceSize(const aclTensorLis
     std::vector<const aclTensor *> tensorsVec2;
     std::vector<const aclTensor *> tensorsVec3;
     for (size_t i = 0; i < x1->Size(); ++i) {
-        auto secondContiguous = l0op::Contiguous((*x1)[i], uniqueExecutor.get());
-        CHECK_RET(secondContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        tensorsVec1.push_back(secondContiguous);
+        auto secondContiguous_1 = l0op::Contiguous((*x1)[i], uniqueExecutor.get());
+        CHECK_RET(secondContiguous_1 != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        tensorsVec1.push_back(secondContiguous_1);
     }
     auto contiguousTensorsX1 = uniqueExecutor.get()->AllocTensorList(tensorsVec1.data(), tensorsVec1.size());
     CHECK_RET(contiguousTensorsX1 != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     for (size_t i = 0; i < x2->Size(); ++i) {
-        auto secondContiguous = l0op::Contiguous((*x2)[i], uniqueExecutor.get());
-        CHECK_RET(secondContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        tensorsVec2.push_back(secondContiguous);
+        auto secondContiguous_1 = l0op::Contiguous((*x2)[i], uniqueExecutor.get());
+        CHECK_RET(secondContiguous_1 != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        tensorsVec2.push_back(secondContiguous_1);
     }
     auto contiguousTensorsX2 = uniqueExecutor.get()->AllocTensorList(tensorsVec2.data(), tensorsVec2.size());
     CHECK_RET(contiguousTensorsX2 != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     for (size_t i = 0; i < x3->Size(); ++i) {
-        auto secondContiguous = l0op::Contiguous((*x3)[i], uniqueExecutor.get());
-        CHECK_RET(secondContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        tensorsVec3.push_back(secondContiguous);
+        auto secondContiguous_1 = l0op::Contiguous((*x3)[i], uniqueExecutor.get());
+        CHECK_RET(secondContiguous_1 != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        tensorsVec3.push_back(secondContiguous_1);
     }
     auto contiguousTensorsX3 = uniqueExecutor.get()->AllocTensorList(tensorsVec3.data(), tensorsVec3.size());
     CHECK_RET(contiguousTensorsX3 != nullptr, ACLNN_ERR_INNER_NULLPTR);

@@ -181,9 +181,9 @@ ge::graphStatus ForeachRegbaseTiling::CheckScalarListInt(int64_t scalarIdx)
             context_->GetNodeName(), "x",
             ge::TypeUtils::DataTypeToSerialString(dataType_).c_str(), "FP32, FP16, BF16 or INT32"),
         return ge::GRAPH_FAILED);
-    auto scalarDesc = context_->GetRequiredInputDesc(scalarIdx);
-    OP_CHECK_IF(scalarDesc == nullptr, OP_LOGE(context_, "The scalars desc is null."), return ge::GRAPH_FAILED);
-    scalarDtype_ = scalarDesc->GetDataType();
+    auto scalarDesc_1 = context_->GetRequiredInputDesc(scalarIdx);
+    OP_CHECK_IF(scalarDesc_1 == nullptr, OP_LOGE(context_, "The scalars desc is null."), return ge::GRAPH_FAILED);
+    scalarDtype_ = scalarDesc_1->GetDataType();
     std::vector<ge::DataType> dtypeComb = {dataType_, scalarDtype_};
     OP_CHECK_IF(
         std::find(SCALAR_LIST_SUPPORT_DTYPE_COMB.begin(), SCALAR_LIST_SUPPORT_DTYPE_COMB.end(), dtypeComb) ==
@@ -195,13 +195,13 @@ ge::graphStatus ForeachRegbaseTiling::CheckScalarListInt(int64_t scalarIdx)
             "The dtypes of x and scalars must be within the range {F32/F32, INT32/INT64, BF16/F32, F16/F32}"),
         return ge::GRAPH_FAILED);
 
-    auto scalarShape = context_->GetRequiredInputShape(scalarIdx);
-    OP_CHECK_IF(scalarShape == nullptr, OP_LOGE(context_, "The scalars shape is null."), return ge::GRAPH_FAILED);
+    auto scalarShape_1 = context_->GetRequiredInputShape(scalarIdx);
+    OP_CHECK_IF(scalarShape_1 == nullptr, OP_LOGE(context_, "The scalars shape is null."), return ge::GRAPH_FAILED);
     OP_CHECK_IF(
-        scalarShape->GetStorageShape().GetShapeSize() != totalTensorCount_,
+        scalarShape_1->GetStorageShape().GetShapeSize() != totalTensorCount_,
         OP_LOGE_FOR_INVALID_SHAPESIZE(
             context_->GetNodeName(), "scalars",
-            std::to_string(scalarShape->GetStorageShape().GetShapeSize()).c_str(),
+            std::to_string(scalarShape_1->GetStorageShape().GetShapeSize()).c_str(),
             (std::to_string(totalTensorCount_)).c_str()),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
@@ -253,14 +253,14 @@ void ForeachRegbaseTiling::AssignDataToEachCore(int64_t needCoreNum, int64_t ele
     int64_t cursorPos = 0;
     tensorStartList_[coreIndex] = 0;
     tensorStartOffsetList_[coreIndex] = 0;
-    for (uint16_t i = 0; i < totalTensorCount_; i++) {
+    for (uint16_t j = 0; j < totalTensorCount_; j++) {
         // When the remainder is not 0, each kernel index with less than the remainder processes one more block of data.
         if (remainderCount && coreIndex < remainderCount) {
             curCmpCount = tempPerCoreCount + elementsPerBlock;
         } else {
             curCmpCount = tempPerCoreCount;
         }
-        int64_t tempCount = tensorDataCountList_[i] - cursorPos;
+        int64_t tempCount = tensorDataCountList_[j] - cursorPos;
 
         if (dataCount + tempCount < curCmpCount) {
             dataCount += tempCount;
@@ -268,17 +268,17 @@ void ForeachRegbaseTiling::AssignDataToEachCore(int64_t needCoreNum, int64_t ele
             continue;
         }
         // dataCount >= curCmpCount, Calculate the offset
-        tensorEndList_[coreIndex] = i;
+        tensorEndList_[coreIndex] = j;
         cursorPos = cursorPos + curCmpCount - dataCount;
         tensorEndOffsetList_[coreIndex] = cursorPos - 1;
         dataCount = 0;
         coreIndex++;
-        if (cursorPos < tensorDataCountList_[i]) {
-            tensorStartList_[coreIndex] = i;
+        if (cursorPos < tensorDataCountList_[j]) {
+            tensorStartList_[coreIndex] = j;
             tensorStartOffsetList_[coreIndex] = cursorPos;
-            --i; // The next loop continues to allocate the current tensor
+            --j; // The next loop continues to allocate the current tensor
         } else if (coreIndex != needCoreNum) {
-            tensorStartList_[coreIndex] = i + 1;
+            tensorStartList_[coreIndex] = j + 1;
             tensorStartOffsetList_[coreIndex] = 0;
             cursorPos = 0;
         }
@@ -350,9 +350,9 @@ ge::graphStatus ForeachRegbaseTiling::CheckOutput()
             (std::to_string(totalTensorCount_) + " and " + std::to_string(outputCount)).c_str(),
             "The tensor nums in {x, y} must be the same"),
         return ge::GRAPH_FAILED);
-    for (uint32_t i = 0; i < totalTensorCount_; i++) {
-        auto tempDesc = context_->GetOutputDesc(i);
-        OP_CHECK_IF(tempDesc == nullptr, OP_LOGE(context_, "The output %u desc is null.", i), return ge::GRAPH_FAILED);
+    for (uint32_t j = 0; j < totalTensorCount_; j++) {
+        auto tempDesc = context_->GetOutputDesc(j);
+        OP_CHECK_IF(tempDesc == nullptr, OP_LOGE(context_, "The output %u desc is null.", j), return ge::GRAPH_FAILED);
         auto dstDtype = tempDesc->GetDataType();
         OP_CHECK_IF(
             dstDtype != dataType_,
@@ -361,22 +361,22 @@ ge::graphStatus ForeachRegbaseTiling::CheckOutput()
                 ge::TypeUtils::DataTypeToSerialString(dstDtype).c_str(),
                 "The dtype of y must be the same as x"),
             return ge::GRAPH_FAILED);
-        auto srcShape = context_->GetDynamicInputShape(0, i);
-        OP_CHECK_IF(srcShape == nullptr, OP_LOGE(context_, "The input %u shape is null.", i), return ge::GRAPH_FAILED);
-        auto dstShape = context_->GetOutputShape(i);
-        OP_CHECK_IF(dstShape == nullptr, OP_LOGE(context_, "The output %u shape is null.", i), return ge::GRAPH_FAILED);
+        auto srcShape = context_->GetDynamicInputShape(0, j);
+        OP_CHECK_IF(srcShape == nullptr, OP_LOGE(context_, "The input %u shape is null.", j), return ge::GRAPH_FAILED);
+        auto dstShape = context_->GetOutputShape(j);
+        OP_CHECK_IF(dstShape == nullptr, OP_LOGE(context_, "The output %u shape is null.", j), return ge::GRAPH_FAILED);
         // check max dim
         OP_CHECK_IF(
             dstShape->GetStorageShape().GetDimNum() > MAX_SUPPORT_DIM_NUMS,
             OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
                 context_->GetNodeName(), "y",
                 std::to_string(dstShape->GetStorageShape().GetDimNum()).c_str(),
-                ("The " + std::to_string(i) + "th tensor in tensor list y must be less than or equal to 8").c_str()),
+                ("The " + std::to_string(j) + "th tensor in tensor list y must be less than or equal to 8").c_str()),
             return ge::GRAPH_FAILED);
 
         if (srcShape->GetStorageShape() != dstShape->GetStorageShape() &&
                 srcShape->GetStorageShape().GetShapeSize() > dstShape->GetStorageShape().GetShapeSize()) {
-            std::string reasonMsg = "The shape size of " + std::to_string(i) +
+            std::string reasonMsg = "The shape size of " + std::to_string(j) +
                                     "th tensor in tensor list y should be greater than or equal to that of the tensor "
                                     "in the same position of the another tensor list x";
             OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
@@ -416,7 +416,7 @@ ge::graphStatus ForeachRegbaseTilingUnaryScalar::DoOpTiling()
     int64_t sizePerElem = ge::GetSizeByDataType(dataType_);
     OP_CHECK_IF(
         sizePerElem <= 0, OP_LOGE(context_, "The datatype size is neg: %ld.", sizePerElem), return ge::GRAPH_FAILED);
-    int64_t ubSizePerNumber = sizePerElem * DOUBLE_BUFFER + sizePerElem * DOUBLE_BUFFER;
+    int64_t ubSizePerNumber = sizePerElem * DOUBLE_BUFFER + DOUBLE_BUFFER * sizePerElem;
     if (dataType_ == ge::DT_BF16 || dataType_ == ge::DT_FLOAT16) {
         ubSizePerNumber += sizeof(float);
     }

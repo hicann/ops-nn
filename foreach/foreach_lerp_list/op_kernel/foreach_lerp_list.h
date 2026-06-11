@@ -395,21 +395,21 @@ __aicore__ inline void ForeachLerpListND<T>::Process()
         float32Tensor = float32Queue.DeQue<float>();
     }
 
-    for (uint16_t i = tensorStart; i <= tensorEnd; i++) {
+    for (uint16_t j = tensorStart; j <= tensorEnd; j++) {
         int64_t cursorStart = 0;
-        int64_t cursorEnd = tensorDataCountList[i] - 1;
+        int64_t cursorEnd = tensorDataCountList[j] - 1;
         int64_t dataCount = 0;
-        if (i == tensorStart) {
+        if (j == tensorStart) {
             cursorStart = tensorStartOffset;
         }
-        if (i == tensorEnd) {
+        if (j == tensorEnd) {
             cursorEnd = tensorEndOffset;
         }
         dataCount = cursorEnd - cursorStart + 1;
-        x1TensorGM.SetGlobalBuffer(GetTensorAddr(i, x1TensorPtr) + cursorStart);
-        x2TensorGM.SetGlobalBuffer(GetTensorAddr(i, x2TensorPtr) + cursorStart);
-        weightTensorGM.SetGlobalBuffer(GetTensorAddr(i, weightTensorPtr) + cursorStart);
-        yTensorGM.SetGlobalBuffer(GetTensorAddr(i, yTensorPtr) + cursorStart);
+        x1TensorGM.SetGlobalBuffer(GetTensorAddr(j, x1TensorPtr) + cursorStart);
+        x2TensorGM.SetGlobalBuffer(GetTensorAddr(j, x2TensorPtr) + cursorStart);
+        weightTensorGM.SetGlobalBuffer(GetTensorAddr(j, weightTensorPtr) + cursorStart);
+        yTensorGM.SetGlobalBuffer(GetTensorAddr(j, yTensorPtr) + cursorStart);
         SingleTensorProcess(dataCount, float32Tensor);
     }
 #if __CCE_AICORE__ >= 220

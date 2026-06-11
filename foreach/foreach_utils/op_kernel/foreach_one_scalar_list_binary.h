@@ -55,8 +55,8 @@ private:
     __aicore__ inline void Compute(
         uint32_t index, int64_t dataCount, LocalTensor<float>& float32Tensor, bool isRemainder)
     {
-        LocalTensor<T> dataLocal = Base::dataQueue.template DeQue<T>();
         LocalTensor<T> outLocal = Base::outQueue.template AllocTensor<T>();
+        LocalTensor<T> dataLocal = Base::dataQueue.template DeQue<T>();
 
         InnerComputer<T, P, op, paramsCount> computer;
         computer.Compute(dataLocal, outLocal, float32Tensor, scalarVal, Base::maxCastDataCount, dataCount);
@@ -68,10 +68,10 @@ private:
     __aicore__ inline void CopyInPlus(uint32_t index, int64_t dataCount, bool isRemainder)
     {}
 
-    __aicore__ inline void BeforeProcess()
-    {}
-
     __aicore__ inline void AfterProcess()
+    {}
+    
+    __aicore__ inline void BeforeProcess()
     {}
 
     __aicore__ inline bool CopyOut(uint32_t index, int64_t dataCount, bool isRemainder)

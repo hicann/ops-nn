@@ -14,9 +14,9 @@
 #include "op_api/op_api_def.h"
 #include "op_api/aclnn_util.h"
 #include "aclnn_kernels/common/op_error_check.h"
+#include "opdev/platform.h"
 #include "opdev/op_dfx.h"
 #include "opdev/make_op_executor.h"
-#include "opdev/platform.h"
 
 using namespace op;
 
@@ -69,7 +69,7 @@ static const std::initializer_list<DataType>& GetDtypeSupportList() {
   }
 }
 
-static inline bool CheckDtype(const aclTensorList* self, const aclScalar* scalar, const aclTensorList* out) {
+static inline bool CheckDtypePowScalar(const aclTensorList* self, const aclScalar* scalar, const aclTensorList* out) {
     const auto& dtypeSupportList = GetDtypeSupportList();
     auto selfDtyte_1 = (*self)[0]->GetDataType();
     if (dtypeSupportList.size() == 0) {
@@ -119,7 +119,7 @@ static inline aclnnStatus CheckParams(const aclTensorList* self, const aclScalar
     // 1. 检查参数是否为空指针
     CHECK_RET(CheckNotNull(self, scalar, out), ACLNN_ERR_PARAM_NULLPTR);
     // 2. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
-    CHECK_RET(CheckDtype(self, scalar, out), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckDtypePowScalar(self, scalar, out), ACLNN_ERR_PARAM_INVALID);
     // 3. 检查shape是否满足约束
     CHECK_RET(CheckShape(self, out), ACLNN_ERR_PARAM_INVALID);
     // 4. 检查Format是否满足约束
@@ -146,8 +146,8 @@ static aclnnStatus ExecForeachPowScalarV2GetWorkspaceSize(const aclTensorList *x
 
     // self如果非连续，需要转连续
     std::vector<const aclTensor *> tensorsVec;
-    for (size_t i = 0; i < x->Size(); ++i) {
-        auto secondContiguous = l0op::Contiguous((*x)[i], uniqueExecutor.get());
+    for (size_t a = 0; a < x->Size(); ++a) {
+        auto secondContiguous = l0op::Contiguous((*x)[a], uniqueExecutor.get());
         CHECK_RET(secondContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
         tensorsVec.push_back(secondContiguous);
     }
