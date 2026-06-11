@@ -2773,12 +2773,23 @@ void MatmulV3BaseTiling::DoTilingKey()
 
 uint64_t MatmulV3BaseTiling::GetDeterministicSplitKWorkspaceSize(uint64_t alignedM, uint64_t alignedN)
 {
-    uint64_t singleSize = tilingEnable_.tilingEnableFixOpti == TilingEnableFixOpti::BASE ?
-                              (static_cast<uint64_t>(tilingData_.matmulTiling.singleCoreN) *
-                               static_cast<uint64_t>(tilingData_.matmulTiling.singleCoreM)) :
-                              (alignedM * alignedN);
+    const auto &tiling = tilingData_.matmulTiling;
+    uint64_t singleSize = static_cast<uint64_t>(tiling.singleCoreN) * static_cast<uint64_t>(tiling.singleCoreM);
+    if (tilingEnable_.tilingEnableFixOpti == TilingEnableFixOpti::VEC_NZ2ND_UNALIGNOUT) {
+        const bool orderFlag = !static_cast<bool>(tiling.iterateOrder);
+        const bool isL2cacheSplit = orderFlag ? (tiling.M != tiling.singleCoreM) : (tiling.N != tiling.singleCoreN);
+        uint64_t alignedSingleCoreN = ops::CeilAlign(static_cast<uint64_t>(tiling.singleCoreN), BASIC_ALIGN_16);
+        uint64_t alignedOutN = ops::CeilAlign(static_cast<uint64_t>(tiling.N), BASIC_ALIGN_16);
+        if (isL2cacheSplit) {
+            singleSize = static_cast<uint64_t>(tiling.singleCoreM) * alignedSingleCoreN;
+        } else if (orderFlag) {
+            singleSize = static_cast<uint64_t>(tiling.M) * alignedSingleCoreN;
+        } else {
+            singleSize = static_cast<uint64_t>(tiling.singleCoreM) * alignedOutN;
+        }
+    }
 
-    return static_cast<uint64_t>(tilingData_.matmulTiling.usedCoreNum) * singleSize * DB_SIZE * DATA_SIZE_FP32 +
+    return static_cast<uint64_t>(tiling.usedCoreNum) * singleSize * DB_SIZE * DATA_SIZE_FP32 +
            RPC_WORKSIZE * MB_SIZE;
 }
 

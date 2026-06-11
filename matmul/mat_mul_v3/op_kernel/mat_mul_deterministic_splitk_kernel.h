@@ -31,6 +31,77 @@ __aicore__ inline uint64_t AlignTo256B(uint64_t base) {
     return MMV3DivCeil(alignedSize, ALIGN_BYTE) * ALIGN_BYTE / DATA_SIZE_FP32;
 }
 
+__aicore__ inline uint64_t GetTailSize(uint64_t idx, uint64_t total, uint64_t base)
+{
+    uint64_t offset = idx * base;
+    if (offset >= total) {
+        return 0;
+    }
+    return min(base, total - offset);
+}
+
+__aicore__ inline uint64_t GetNzSequentialTileSize(uint64_t tileM, uint64_t tileN)
+{
+    return MMV3CeilAlign(tileM, static_cast<uint64_t>(ALIGNED_H)) *
+           MMV3CeilAlign(tileN, static_cast<uint64_t>(ALIGNED_H));
+}
+
+__aicore__ inline uint64_t GetNzSequentialIterOffset(uint64_t iterIdx, uint64_t actualM, uint64_t actualN,
+                                                     uint64_t baseM, uint64_t baseN, bool mOuter)
+{
+    if (baseM == 0 || baseN == 0) {
+        return 0;
+    }
+    uint64_t mTileCnt = MMV3DivCeil(actualM, baseM);
+    uint64_t nTileCnt = MMV3DivCeil(actualN, baseN);
+    uint64_t mTileIdx = mOuter ? iterIdx / nTileCnt : iterIdx % mTileCnt;
+    uint64_t nTileIdx = mOuter ? iterIdx % nTileCnt : iterIdx / mTileCnt;
+    uint64_t offset = 0;
+
+    if (mOuter) {
+        for (uint64_t mIdx = 0; mIdx < mTileIdx; ++mIdx) {
+            uint64_t currM = GetTailSize(mIdx, actualM, baseM);
+            for (uint64_t nIdx = 0; nIdx < nTileCnt; ++nIdx) {
+                offset += GetNzSequentialTileSize(currM, GetTailSize(nIdx, actualN, baseN));
+            }
+        }
+        uint64_t currM = GetTailSize(mTileIdx, actualM, baseM);
+        for (uint64_t nIdx = 0; nIdx < nTileIdx; ++nIdx) {
+            offset += GetNzSequentialTileSize(currM, GetTailSize(nIdx, actualN, baseN));
+        }
+    } else {
+        for (uint64_t nIdx = 0; nIdx < nTileIdx; ++nIdx) {
+            uint64_t currN = GetTailSize(nIdx, actualN, baseN);
+            for (uint64_t mIdx = 0; mIdx < mTileCnt; ++mIdx) {
+                offset += GetNzSequentialTileSize(GetTailSize(mIdx, actualM, baseM), currN);
+            }
+        }
+        uint64_t currN = GetTailSize(nTileIdx, actualN, baseN);
+        for (uint64_t mIdx = 0; mIdx < mTileIdx; ++mIdx) {
+            offset += GetNzSequentialTileSize(GetTailSize(mIdx, actualM, baseM), currN);
+        }
+    }
+    return offset;
+}
+
+__aicore__ inline uint64_t GetNzSequentialBlockOffset(uint64_t processIdx, uint64_t mTileIdx,
+                                                      uint64_t actualM, uint64_t actualN,
+                                                      uint64_t baseM, uint64_t baseN, bool mOuter)
+{
+    if (baseM == 0 || baseN < ALIGNED_H) {
+        return 0;
+    }
+    uint64_t nTileBlock = baseN / ALIGNED_H;
+    uint64_t nTileIdx = processIdx / nTileBlock;
+    uint64_t localNBlock = processIdx % nTileBlock;
+    uint64_t iterIdx = mOuter ? (mTileIdx * MMV3DivCeil(actualN, baseN) + nTileIdx)
+                              : (nTileIdx * MMV3DivCeil(actualM, baseM) + mTileIdx);
+    uint64_t tileM = GetTailSize(mTileIdx, actualM, baseM);
+    uint64_t alignedTileM = MMV3CeilAlign(tileM, static_cast<uint64_t>(ALIGNED_H));
+    return GetNzSequentialIterOffset(iterIdx, actualM, actualN, baseM, baseN, mOuter) +
+           localNBlock * alignedTileM * ALIGNED_H;
+}
+
 template <class A_TYPE, class B_TYPE>
 __aicore__ inline void SetOffset(uint64_t &offsetA, uint64_t &offsetB, uint64_t mOffset, uint64_t nOffset,
                                  uint64_t kOffset, uint64_t c0Size, uint64_t alignedOriM, uint64_t alignedOriN,
@@ -138,6 +209,40 @@ __aicore__ inline void SplitKVectorProcess(LocalTensor<float> ubSrc1, LocalTenso
 }
 
 template <class T>
+__aicore__ inline void SplitKVectorNZCopyOut(
+    GlobalTensor<T> gmDst,
+    uint64_t copySize,
+    uint64_t currSplitN,
+    uint64_t oriN,
+    LocalTensor<float> ubSrc1,
+    LocalTensor<T> ubDst)
+{
+    PipeBarrier<PIPE_V>();
+    if constexpr (sizeof(T) == sizeof(half)) {
+        Cast(ubDst, ubSrc1, RoundMode::CAST_RINT, copySize);
+    }
+    TPipeSetWaitFlag<HardEvent::V_MTE3>();
+    if constexpr (sizeof(T) == sizeof(half)) {
+        CopyUbufToGmAlign<T>(
+            gmDst, ubDst, copySize / ALIGNED_H,
+            currSplitN * sizeof(T),
+            0,
+            (oriN - currSplitN) * sizeof(T));
+    } else if constexpr (sizeof(T) == sizeof(float)) {
+        uint32_t srcGap = 0;
+        if (currSplitN <= 8) {
+            srcGap = 1;
+        }
+        CopyUbufToGmAlign<T>(
+            gmDst, ubSrc1, copySize / ALIGNED_H,
+            currSplitN * sizeof(T),
+            srcGap,
+            (oriN - currSplitN) * sizeof(T));
+    }
+    TPipeSetWaitFlag<HardEvent::MTE3_MTE2>();
+}
+
+template <class T>
 __aicore__ inline void SplitKVectorNZProcess(
     GlobalTensor<float> gmSrc,
     GlobalTensor<T> gmDst,
@@ -149,7 +254,6 @@ __aicore__ inline void SplitKVectorNZProcess(
     LocalTensor<float> ubSrc1, LocalTensor<float> ubSrc2, LocalTensor<T> ubDst
     )
 {
-    uint64_t vIndex = GetBlockIdx();
     auto copySize = copyElemNum;
     uint64_t repeatNums = MMV3DivCeil(copySize, MAX_NUM);
     if (copySize > MAX_NUM) {
@@ -162,6 +266,7 @@ __aicore__ inline void SplitKVectorNZProcess(
             copySize = copyElemNum - MAX_NUM * (repeatNums - 1);
         }
         DataCopy(ubSrc1, gmSrc[offsetcopysize], copySize);
+        TPipeSetWaitFlag<HardEvent::MTE2_V>();
         for (uint64_t j = 1; j < singleCoreNum; ++j) {
             tmpOffset += (singleSize << 1);
             DataCopy(ubSrc2, gmSrc[tmpOffset + offsetcopysize], copySize);
@@ -169,37 +274,57 @@ __aicore__ inline void SplitKVectorNZProcess(
             Add(ubSrc1, ubSrc1, ubSrc2, copySize);
             TPipeSetWaitFlag<HardEvent::V_MTE2>();
         }
-        PipeBarrier<PIPE_V>();
-        if constexpr (sizeof(T) == sizeof(half)) {
-            Cast(ubDst, ubSrc1, RoundMode::CAST_RINT, copySize);
-        }
-        TPipeSetWaitFlag<HardEvent::V_MTE3>();
-        if constexpr (sizeof(T) == sizeof(half)) {
-            // copy out
-            CopyUbufToGmAlign<T>(
-                gmDst[repeat * MAX_NUM / 16 * oriN], ubDst, copySize / 16,  // burst
-                currSplitN * sizeof(T), // burstLen   16
-                0,                              // srcGap, block
-                (oriN - currSplitN) * sizeof(T) // dstGap, element, bytes
-            );
-        } else if constexpr (sizeof(T) == sizeof(float)) {
-            uint32_t srcGap = 0;
-            if (currSplitN <= 8) {
-                srcGap = 1;
-            }
-            // copy out
-            CopyUbufToGmAlign<T>(
-                gmDst[repeat * MAX_NUM / 16 * oriN], ubSrc1, copySize / 16, // burst
-                currSplitN * sizeof(T), // burstLen
-                srcGap,                         // srcGap, block
-                (oriN - currSplitN) * sizeof(T) // dstGap, element, bytes
-            );
-        }
+        SplitKVectorNZCopyOut(gmDst[repeat * MAX_NUM / ALIGNED_H * oriN],
+            copySize, currSplitN, oriN, ubSrc1, ubDst);
         offsetcopysize += copySize;
-        TPipeSetWaitFlag<HardEvent::MTE3_MTE2>();
     }
 }
 
+template <class T>
+__aicore__ inline void SplitKVectorNZProcessCompact(
+    GlobalTensor<float> gmSrc,
+    GlobalTensor<T> gmDst,
+    uint64_t processIdx,
+    uint64_t actualM,
+    uint64_t actualN,
+    uint64_t currSplitN,
+    uint64_t singleCoreNum,
+    uint64_t singleSize,
+    uint64_t oriN,
+    uint64_t baseM,
+    uint64_t baseN,
+    bool mOuter,
+    LocalTensor<float> ubSrc1, LocalTensor<float> ubSrc2, LocalTensor<T> ubDst)
+{
+    uint64_t mTileCnt = MMV3DivCeil(actualM, baseM);
+    uint64_t copySize = actualM * ALIGNED_H;
+    uint64_t dstOffset = 0;
+    for (uint64_t mTileIdx = 0; mTileIdx < mTileCnt; ++mTileIdx) {
+        uint64_t tileM = GetTailSize(mTileIdx, actualM, baseM);
+        uint64_t tileCopySize = tileM * ALIGNED_H;
+        uint64_t srcOffset = GetNzSequentialBlockOffset(processIdx, mTileIdx, actualM, actualN,
+                                                        baseM, baseN, mOuter);
+        DataCopy(ubSrc1[dstOffset], gmSrc[srcOffset], tileCopySize);
+        dstOffset += tileCopySize;
+    }
+    TPipeSetWaitFlag<HardEvent::MTE2_V>();
+    for (uint64_t j = 1; j < singleCoreNum; ++j) {
+        uint64_t splitOffset = j * (singleSize << 1);
+        dstOffset = 0;
+        for (uint64_t mTileIdx = 0; mTileIdx < mTileCnt; ++mTileIdx) {
+            uint64_t tileM = GetTailSize(mTileIdx, actualM, baseM);
+            uint64_t tileCopySize = tileM * ALIGNED_H;
+            uint64_t srcOffset = splitOffset + GetNzSequentialBlockOffset(processIdx, mTileIdx, actualM, actualN,
+                                                                          baseM, baseN, mOuter);
+            DataCopy(ubSrc2[dstOffset], gmSrc[srcOffset], tileCopySize);
+            dstOffset += tileCopySize;
+        }
+        TPipeSetWaitFlag<HardEvent::MTE2_V>();
+        Add(ubSrc1, ubSrc1, ubSrc2, copySize);
+        TPipeSetWaitFlag<HardEvent::V_MTE2>();
+    }
+    SplitKVectorNZCopyOut(gmDst, copySize, currSplitN, oriN, ubSrc1, ubDst);
+}
 
 template <class C_TYPE>
 __aicore__ inline void ReduceKInUb(GM_ADDR cGM, GM_ADDR mmGM, uint64_t coreSize, uint64_t singleSize,
@@ -403,6 +528,8 @@ __aicore__ inline void ReduceKNzInUb(GM_ADDR cGM, GM_ADDR mmGM, uint64_t coreSiz
         uint64_t alignedN = (actualN + 15) / 16 * 16; // 160
         uint64_t rowBlockNum = alignedN / 16; // nz base block, 16 x 16, 4  7
         uint64_t colBlockNum = alignedN / 16; // nz base block, 16 x 16, 4  10
+        // The non-L2cache MK path with M <= 256 uses the legacy mmmk_33 workspace layout.
+        bool useMmmk33WorkspaceLayout = (!orderFlag && tiling.M <= NUM_256);
         uint64_t currSplitN = 16;
         uint64_t currOutCOffset = 0;
         if (orderFlag) {
@@ -433,11 +560,20 @@ __aicore__ inline void ReduceKNzInUb(GM_ADDR cGM, GM_ADDR mmGM, uint64_t coreSiz
             // deal with alignedM x 16 nz matrix, double buffer inside the function
             if (processIdx == colBlockNum - 1) currSplitN = actualN - processIdx * 16;
             uint64_t nOffset = processIdx * 16;
-            uint64_t currSrcOffset = processIdx * 16 * originM; // 1 * 16 * 2331
+            uint64_t currSrcOffset = useMmmk33WorkspaceLayout
+                ? processIdx * ALIGNED_H * originM
+                : GetNzSequentialBlockOffset(processIdx, 0, actualM, actualN,
+                                             tiling.baseM, tiling.baseN, orderFlag);
             uint64_t copySize = actualM * 16;
             WaitFlag<HardEvent::MTE3_MTE2>(pingpongEventId);
-            SplitKVectorNZProcess(gmSrc[currSrcOffset], gmDst[currOutCOffset + nOffset],
-                copySize, currSplitN, singleCoreNum, singleSize, oriN, ubSrc1, ubSrc2, ubDst);
+            if (useMmmk33WorkspaceLayout) {
+                SplitKVectorNZProcess(gmSrc[currSrcOffset], gmDst[currOutCOffset + nOffset],
+                    copySize, currSplitN, singleCoreNum, singleSize, oriN, ubSrc1, ubSrc2, ubDst);
+            } else {
+                SplitKVectorNZProcessCompact(gmSrc, gmDst[currOutCOffset + nOffset], processIdx, actualM, actualN,
+                    currSplitN, singleCoreNum, singleSize, oriN, tiling.baseM, tiling.baseN, orderFlag,
+                    ubSrc1, ubSrc2, ubDst);
+            }
             SetFlag<HardEvent::MTE3_MTE2>(pingpongEventId);
         }
         WaitFlag<HardEvent::MTE3_MTE2>(eventMTE3toMTE2Zero);
@@ -652,7 +788,17 @@ __aicore__ inline void MatMulMultiCoreSplitKDivide(GM_ADDR aGM, GM_ADDR bGM, GM_
                 mmnk.SetTensorA(aGlobal[offsetA], A_TYPE::isTrans);
                 mmnk.SetTensorB(bGlobal[offsetB], B_TYPE::isTrans);
                 isBias && kIndex == 0 ? mmnk.SetBias(biasGlobal[outIndex * tiling.singleCoreN]) : mmnk.ClearBias(); // set bias at the first k loop and clear bias tag in the following loop
-                mmnk.IterateAll(cGlobal[offsetC], kIndex != index);
+                if constexpr (C_TYPE::format == CubeFormat::NZ) {
+                    uint64_t iterIdx = 0;
+                    while (mmnk.Iterate()) {
+                        uint64_t seqOffsetC = GetNzSequentialIterOffset(iterIdx, mCoreUse, nCoreUse,
+                                                                         tiling.baseM, tiling.baseN, orderFlag);
+                        mmnk.GetTensorC(cGlobal[seqOffsetC], kIndex != index, true);
+                        ++iterIdx;
+                    }
+                } else {
+                    mmnk.IterateAll(cGlobal[offsetC], kIndex != index);
+                }
             } else {
                 if (is33MK) {
                     mmmk_33.SetSingleShape(mCoreUse, nCoreUse, kCoreUse);
@@ -665,7 +811,17 @@ __aicore__ inline void MatMulMultiCoreSplitKDivide(GM_ADDR aGM, GM_ADDR bGM, GM_
                     mmmk.SetTensorA(aGlobal[offsetA], A_TYPE::isTrans);
                     mmmk.SetTensorB(bGlobal[offsetB], B_TYPE::isTrans);
                     isBias && kIndex == 0 ? mmmk.SetBias(biasGlobal[0]) : mmmk.ClearBias(); // set bias at the first k loop and clear bias tag in the following loop
-                    mmmk.IterateAll(cGlobal[offsetC], kIndex != index);
+                    if constexpr (C_TYPE::format == CubeFormat::NZ) {
+                        uint64_t iterIdx = 0;
+                        while (mmmk.Iterate()) {
+                            uint64_t seqOffsetC = GetNzSequentialIterOffset(iterIdx, mCoreUse, nCoreUse,
+                                                                             tiling.baseM, tiling.baseN, orderFlag);
+                            mmmk.GetTensorC(cGlobal[seqOffsetC], kIndex != index, true);
+                            ++iterIdx;
+                        }
+                    } else {
+                        mmmk.IterateAll(cGlobal[offsetC], kIndex != index);
+                    }
                 }
             }
         }
@@ -889,12 +1045,13 @@ __aicore__ inline void ReduceKInUbNzL2cache(GM_ADDR cGM, GM_ADDR mmGM, uint64_t 
                 // deal with alignedM x 16 nz matrix, double buffer inside the function
                 if (processIdx == colBlockNum - 1) currSplitN = actualN - processIdx * 16;
                 uint64_t nOffset = processIdx * 16;
-                uint64_t currSrcOffset = processIdx * 16 * originM;
                 uint64_t copySize = actualM * 16;
 
                 WaitFlag<HardEvent::MTE3_MTE2>(pingpongEventId);
-                SplitKVectorNZProcess(gmSrc[currSrcOffset], gmDst[currOutCOffset + nOffset],
-                    copySize, currSplitN, singleCoreNum, singleSize, oriN, ubSrc1, ubSrc2, ubDst);
+                // L2cache split does not select the mmmk_33 path, so the workspace is always compact NZ layout.
+                SplitKVectorNZProcessCompact(gmSrc, gmDst[currOutCOffset + nOffset], processIdx, actualM, actualN,
+                    currSplitN, singleCoreNum, singleSize, oriN, tiling.baseM, tiling.baseN, orderNMFlag,
+                    ubSrc1, ubSrc2, ubDst);
                 SetFlag<HardEvent::MTE3_MTE2>(pingpongEventId);
             }
             WaitFlag<HardEvent::MTE3_MTE2>(eventMTE3toMTE2Zero);
@@ -1266,13 +1423,33 @@ __aicore__ inline void MatMulMultiCoreSplitKDivideL2cache(GM_ADDR aGM, GM_ADDR b
                     mmNM.SetTensorA(aGlobal[offsetA], A_TYPE::isTrans);
                     mmNM.SetTensorB(bGlobal[offsetB], B_TYPE::isTrans);
                     isBias && kIndex == 0 ? mmNM.SetBias(biasGlobal[outIndex * tiling.singleCoreN]) : mmNM.ClearBias(); // set bias at the first k loop and clear bias tag in the following loop
-                    mmNM.IterateAll(cGlobal[offsetC], kIndex != index);
+                    if constexpr (C_TYPE::format == CubeFormat::NZ) {
+                        uint64_t iterIdx = 0;
+                        while (mmNM.Iterate()) {
+                            uint64_t seqOffsetC = GetNzSequentialIterOffset(iterIdx, mCoreUse, nCoreUse,
+                                                                             tiling.baseM, tiling.baseN, orderNMFlag);
+                            mmNM.GetTensorC(cGlobal[seqOffsetC], kIndex != index, true);
+                            ++iterIdx;
+                        }
+                    } else {
+                        mmNM.IterateAll(cGlobal[offsetC], kIndex != index);
+                    }
                 } else {
                     mmMN.SetSingleShape(mCoreUse, nCoreUse, kCoreUse);
                     mmMN.SetTensorA(aGlobal[offsetA], A_TYPE::isTrans);
                     mmMN.SetTensorB(bGlobal[offsetB], B_TYPE::isTrans);
                     isBias && kIndex == 0 ? mmMN.SetBias(biasGlobal[inIndex * tiling.singleCoreN]) : mmMN.ClearBias(); // set bias at the first k loop and clear bias tag in the following loop
-                    mmMN.IterateAll(cGlobal[offsetC], kIndex != index);
+                    if constexpr (C_TYPE::format == CubeFormat::NZ) {
+                        uint64_t iterIdx = 0;
+                        while (mmMN.Iterate()) {
+                            uint64_t seqOffsetC = GetNzSequentialIterOffset(iterIdx, mCoreUse, nCoreUse,
+                                                                             tiling.baseM, tiling.baseN, orderNMFlag);
+                            mmMN.GetTensorC(cGlobal[seqOffsetC], kIndex != index, true);
+                            ++iterIdx;
+                        }
+                    } else {
+                        mmMN.IterateAll(cGlobal[offsetC], kIndex != index);
+                    }
                 }
             }
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
@@ -1313,22 +1490,30 @@ __aicore__ inline void MatMulKernelDeterministicSplitK(GM_ADDR aGM, GM_ADDR bGM,
     alignedN = alignedN > static_cast<uint64_t>(tiling.singleCoreN)? alignedN : static_cast<uint64_t>(tiling.singleCoreN);
 
     uint64_t vIndex = GetBlockIdx();
-    singleSize = alignedM * alignedN;
+    uint64_t alignedSingleCoreNForNz = MMV3CeilAlign(static_cast<uint64_t>(tiling.singleCoreN), ALIGNED_H);
+    uint64_t alignedNForNz = MMV3CeilAlign(static_cast<uint64_t>(tiling.N), ALIGNED_H);
+    singleSize = static_cast<uint64_t>(tiling.singleCoreM) * static_cast<uint64_t>(tiling.singleCoreN);
     if (isL2cacheSplit) {
-        if (FIXPIPE_OPT == FIXPIPE_OPT_SELECT::BASE) {
+        if constexpr (FIXPIPE_OPT == FIXPIPE_OPT_SELECT::BASE) {
             singleSize = static_cast<uint64_t>(tiling.singleCoreM) * static_cast<uint64_t>(tiling.singleCoreN);
+        } else if constexpr (FIXPIPE_OPT == FIXPIPE_OPT_SELECT::VEC_NZ2ND_UNALIGNOUT) {
+            singleSize = static_cast<uint64_t>(tiling.singleCoreM) * alignedSingleCoreNForNz;
         }
         coreSize = MMV3DivCeil(tiling.singleCoreM, static_cast<uint64_t>(tiling.usedCoreNum) * NUM_AIV_TO_AIC_RATIO) * tiling.singleCoreN; // 无论MK还是NK都按照M方向进行分AIV核
     } else { // 不切L2cache
         if (orderFlag) {
-            if (FIXPIPE_OPT == FIXPIPE_OPT_SELECT::BASE) {
+            if constexpr (FIXPIPE_OPT == FIXPIPE_OPT_SELECT::BASE) {
                 singleSize = static_cast<uint64_t>(tiling.singleCoreN) * static_cast<uint64_t>(tiling.M);
+            } else if constexpr (FIXPIPE_OPT == FIXPIPE_OPT_SELECT::VEC_NZ2ND_UNALIGNOUT) {
+                singleSize = static_cast<uint64_t>(tiling.M) * alignedSingleCoreNForNz;
             }
             coreSize = MMV3DivCeil(tiling.M, static_cast<uint64_t>(tiling.usedCoreNum) * NUM_AIV_TO_AIC_RATIO) * tiling.singleCoreN;
             cnt = nCnt;
         } else {
-            if (FIXPIPE_OPT == FIXPIPE_OPT_SELECT::BASE) {
+            if constexpr (FIXPIPE_OPT == FIXPIPE_OPT_SELECT::BASE) {
                 singleSize = static_cast<uint64_t>(tiling.singleCoreM) * static_cast<uint64_t>(tiling.N);
+            } else if constexpr (FIXPIPE_OPT == FIXPIPE_OPT_SELECT::VEC_NZ2ND_UNALIGNOUT) {
+                singleSize = static_cast<uint64_t>(tiling.singleCoreM) * alignedNForNz;
             }
             coreSize = MMV3DivCeil(singleSize, static_cast<uint64_t>(tiling.usedCoreNum) * NUM_AIV_TO_AIC_RATIO);
             cnt = mCnt;
