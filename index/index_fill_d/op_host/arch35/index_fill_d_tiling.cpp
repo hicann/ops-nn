@@ -118,6 +118,9 @@ ge::graphStatus IndexFillDTiling::DoOpTiling() {
     inputShapeSize_ = inputXShape_.GetShapeSize();
     int64_t maxUbAvailable = ubSize_ / (BUFFER_NUM * ALL_BUFFERS * dataTypeSize_);
     normalCoreData_ = std::max(CeilDiv(inputShapeSize_, totalCoreNum_), MIN_DATA_SIZE);
+    if (inputShapeSize_ < MIN_DATA_SIZE) {
+        normalCoreData_ = inputShapeSize_;
+    }
     usedCoreNum_ = CeilDiv(inputShapeSize_, normalCoreData_);
     tailCoreData_ = inputShapeSize_ - (usedCoreNum_ - 1) * normalCoreData_;
     ubFactor_ = (maxUbAvailable / ALIGN_SIZE) * ALIGN_SIZE;
