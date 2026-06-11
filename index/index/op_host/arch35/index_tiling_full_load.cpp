@@ -30,6 +30,7 @@ static constexpr size_t MASK_INPUT_IDX = 1;
 static constexpr size_t INDICES_IDX = 3;
 static constexpr size_t Y_OUTPUT_IDX = 0;
 static constexpr size_t DIM_THRESHOLD = 2;
+static constexpr size_t DIM_NUM_TWO = 2;
 static constexpr int64_t DOUBLE = 2;
 static constexpr int64_t INDEX_THRESHOLD = 16;
 static constexpr int64_t LAST_AXIS_THRESHOLD = 64;
@@ -249,9 +250,9 @@ uint64_t IndexFullLoadTiling::GetTilingKey() const
     uint32_t fullLoadMode = 0;
     if (inputShape_.GetDimNum() == 1) {
         fullLoadMode = INDEX_FULL_LOAD_1D;
-    } else if (inputShape_.GetDimNum() == 2 && maskMode_ == MASK_MODE_0) {
+    } else if (inputShape_.GetDimNum() == DIM_NUM_TWO && maskMode_ == MASK_MODE_0) {
         fullLoadMode = INDEX_FULL_LOAD_2D_MASK_0;
-    } else if (inputShape_.GetDimNum() == 2 && maskMode_ == MASK_MODE_1) {
+    } else if (inputShape_.GetDimNum() == DIM_NUM_TWO && maskMode_ == MASK_MODE_1) {
         fullLoadMode = INDEX_FULL_LOAD_2D_MASK_1;
     }
     return GET_TPL_TILING_KEY(GenXDtype(), fullLoadMode, 0, 0, 0, 0, 0);

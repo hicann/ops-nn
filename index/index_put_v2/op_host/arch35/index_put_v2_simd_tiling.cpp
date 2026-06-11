@@ -35,6 +35,7 @@ constexpr size_t MAX_DIM = 8;
 constexpr size_t INDEXED_SIZES_IDX = 2;
 static constexpr int64_t BASE_BLOCK_ALIGN = 512;
 static constexpr int64_t SINGLE_CORE_THRESHOLD = 4 * 1024;
+static constexpr int64_t COLS_ALIGN_BYTES = 128;
 constexpr uint32_t TWO = 2;
 
 bool IndexPutV2SimdTiling::IsCapable()
@@ -274,7 +275,6 @@ void IndexPutV2SimdTiling::DoUBTiling()
     minRows = std::min(minRows, normalCoreRowsNum_);
     uint64_t tmpBuf = minRows * Ops::Base::CeilAlign(normalCoreColsNum_ * valueTypeSize, ubBlockSize) * doubleB
                       + Ops::Base::CeilAlign(minRows * indicesTypeSize, ubBlockSize) * (rankDim * doubleB + 1);
-
     if (tmpBuf < availableUbsize) {
         colsFactor_ = normalCoreColsNum_;
         oneRowBuffer = Ops::Base::CeilAlign(normalCoreColsNum_ * valueTypeSize, ubBlockSize) * doubleB
@@ -284,7 +284,7 @@ void IndexPutV2SimdTiling::DoUBTiling()
     } else {
         rowsFactor_ = minRows;
         colsFactor_ = (availableUbsize - Ops::Base::CeilAlign(rowsFactor_ * indicesTypeSize, ubBlockSize) * (rankDim * doubleB + 1)) / rowsFactor_ / doubleB / valueTypeSize;
-        colsFactor_ = Ops::Base::FloorAlign(colsFactor_, 128 / static_cast<int64_t>(valueTypeSize));
+        colsFactor_ = Ops::Base::FloorAlign(colsFactor_, COLS_ALIGN_BYTES / static_cast<int64_t>(valueTypeSize));
         colsFactor_ = std::min(colsFactor_, normalCoreColsNum_);
     }
 }

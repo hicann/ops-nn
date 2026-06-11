@@ -49,6 +49,8 @@ static constexpr int64_t OUT_Y_IDX = 0;
 static constexpr int64_t INDEXPUT_VALUE_IDX = 1;
 static constexpr int64_t INDEXPUT_INDEXSIZE_IDX = 2;
 static constexpr int64_t INDEXPUT_INDEX_IDX = 4;
+static constexpr int32_t NUM_FOUR = 4;
+static constexpr int32_t NUM_EIGHT = 8;
 
 inline bool IndexNonContinuousTiling::ParamTypeIsInvalid(ge::DataType &x)
 {
@@ -310,7 +312,7 @@ void IndexNonContinuousTiling::SetTilingData()
 
     // m_tilingData_ 已经在 GetShapeAttrsInfo 中初始化
     
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < NUM_FOUR; i++) {
         m_tilingData_->xShape[i] = xShape[i];
         m_tilingData_->indexShape[i] = indexShape[i];
         m_tilingData_->xStride[i] = xStride[i];
@@ -320,7 +322,7 @@ void IndexNonContinuousTiling::SetTilingData()
         m_tilingData_->indexStride4[i] = indexStride4[i];
         m_tilingData_->yStride[i] = yStride[i];
     }
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < NUM_EIGHT; i++) {
         m_tilingData_->valueShape[i] = valueShape[i];
         m_tilingData_->valueStride[i] = valueStride[i];
     }

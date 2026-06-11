@@ -37,6 +37,7 @@ static constexpr uint64_t SIMD_THRES = 256;
 static constexpr int32_t NUM_TWO = 2;
 static constexpr int32_t NUM_ZERO = 0;
 static constexpr int32_t NUM_ONE = 1;
+static constexpr int32_t NUM_EIGHT = 8;
 static constexpr uint32_t MERGE_OUTPUT_SHAPE_DIM = 3;
 
 ge::graphStatus IndexTilingSimd::CheckShapeInfo()
@@ -168,7 +169,7 @@ void IndexTilingSimd::CalcSimdTiling()
     simdTilingData_->indiceUbSize = indexedDimNum_ * INDICES_SIZE;
     simdTilingData_->inputDtypeSize = inputDtypeSize_;
     simdTilingData_->indexedDimNum = indexedDimNum_;
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < NUM_EIGHT; i++) {
         simdTilingData_->mergeInputShape[i] = mergeInputShape_[i];
         simdTilingData_->mergeInputIndexed[i] = mergeInputIndexed_[i];
         simdTilingData_->mergeOutputShape[i] = mergeOutputShape_[i];

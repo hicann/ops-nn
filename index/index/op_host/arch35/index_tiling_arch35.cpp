@@ -166,7 +166,6 @@ ge::graphStatus IndexSimtTiling::GetShapeAttrsInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, op_type);
     OP_LOGD("IndexSimtTiling", "tiling for %s", op_type);
     isIndexPut_ = std::string_view(op_type) == "IndexPutV2";
-
     if (isIndexPut_) {
         auto const attrs = context_->GetAttrs();
         auto* accumuMode = attrs->GetAttrPointer<bool>(0);
@@ -207,7 +206,7 @@ ge::graphStatus IndexSimtTiling::PostTiling()
         perfTilingData_->inputShape1 = inputShapes_[1];
     } else {
         OP_CHECK_NULL_WITH_CONTEXT(context_, tilingData_);
-        for (int i = 0; i < 8; i++) {
+        for (int i = 0; i < MAX_DIM; i++) {
             tilingData_->inputShape[i] = inputShapes_[i];
         }
         tilingData_->indexedSizesNum = indexedSizesNum_;

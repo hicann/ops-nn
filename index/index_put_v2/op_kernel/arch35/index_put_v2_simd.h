@@ -75,7 +75,6 @@ private:
     int64_t actualColsNum_ = 0;
     int64_t invalidIndex = -1;
     ListTensorDesc indicesList_;
-
 };
 
 template<typename TX, typename TIDX, bool IsAtomicAdd>

@@ -20,8 +20,6 @@
 #include "../../../index/op_host/arch35/index_tiling.h"
 #include "../../op_kernel/arch35/index_put_v2_tiling_data.h"
 
-using namespace IndexPutV2;
-
 namespace optiling {
 constexpr size_t MAX_DIM_NUM = 8;
 
@@ -42,7 +40,7 @@ protected:
     bool CheckInputDtype();
     void DoUBTiling();
     bool IsContinuous();
-    void AutoTilingRowCol(int64_t& blockNumInRow, int64_t& blockNumInCol, int64_t usedCoreNum, int64_t rowTotalNum, int64_t colTotalNum);
+    void AutoTilingRowCol(int64_t& rowTileNum, int64_t& colTileNum, int64_t usedCoreNum, int64_t rowTotalNum, int64_t colTotalNum);
 
 private:
     uint64_t valueTypeSize = 0;
@@ -69,7 +67,7 @@ private:
     int64_t colsFactor_ = 0;
     int64_t rowsFactor_ = 0;
 
-    IndexPutV2SimdTilingData* tilingData_;
+    IndexPutV2::IndexPutV2SimdTilingData* tilingData_;
 };
 } // namespace optiling
 #endif // OPS_BUILD_IN_OP_TILING_RUNTIME_INDEX_PUT_V2_SIMD_TILING_H
