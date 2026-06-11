@@ -70,7 +70,7 @@ static const std::initializer_list<op::DataType> DTYPE_LIST_HALF = {op::DataType
 static inline bool CheckNpuArchIsSupportBf16(void)
 {
     auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
-    return (npuArch == NpuArch::DAV_2201) || (npuArch == NpuArch::DAV_3510);
+    return (npuArch == NpuArch::DAV_2201) || IsNpuArch3510Series();
 }
 
 static const aclTensor* ProcessEmptyTensor(const aclTensor* self, const aclTensor* mat2, aclOpExecutor* executor)
@@ -221,7 +221,7 @@ static bool CheckAscendCScenario(
         return true;
     }
     auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
-    if (npuArch == NpuArch::DAV_3510) {
+    if (IsNpuArch3510Series()) {
         return true;
     }
     if ((npuArch != NpuArch::DAV_2201) ||
@@ -396,7 +396,7 @@ const aclTensor* GetBatchMatmulOp(
                                        matmulOpInfo.support_info.self_dtype == op::DataType::DT_BF16) && isBaddbmm &&
                                        (npuArch == NpuArch::DAV_2201);
     if (CheckAscendCScenario(selfTransdata, mat2Transdata, bias, matmulOpInfo, adjX1, adjX2) || bmm16In32OutRorA2) {
-        if ((npuArch == NpuArch::DAV_3510) && // 1.多维*2维(左非转置)2.多维*多维batch为1
+        if (IsNpuArch3510Series() && // 1.多维*2维(左非转置)2.多维*多维batch为1
             (GetBatchDimAll(mat2Transdata) <= 1 &&
              (!adjX1 || GetBatchDimAll(selfTransdata) <= 1))) {
             int64_t opImplModeEnumV3 = matmulOpInfo.enableHf32 ? 0x40 : (matmulOpInfo.enableForceGrpAccForFp32 ? 0x4 : 0x1);
@@ -791,7 +791,7 @@ static aclnnStatus GetBatchMatmulOpInfo(
 bool CheckDtypeValidWeightNz(const aclTensor* self, const aclTensor* mat2, const aclTensor* out, int8_t cubeMathType)
 {
     auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if ((npuArch != NpuArch::DAV_2201) && (npuArch != NpuArch::DAV_3510)) {
+    if ((npuArch != NpuArch::DAV_2201) && !IsNpuArch3510Series()) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID,
             "batchmatmulweightnz is unsupported in this npu arch");

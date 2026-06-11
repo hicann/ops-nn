@@ -76,7 +76,7 @@ inline static bool CheckDtypeValid(const aclTensor* x1, const aclTensor* x2,
     if (x2->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) {
         auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
         auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
-        if ((npuArch != NpuArch::DAV_2201) && (npuArch != NpuArch::DAV_3510)) {
+        if ((npuArch != NpuArch::DAV_2201) && !IsNpuArch3510Series()) {
             OP_LOGE(
                 ACLNN_ERR_PARAM_INVALID,
                 "transposebatchmatmulweightnz is unsupported by the current SOC version [%s].",
@@ -128,7 +128,7 @@ inline static bool CheckScaleValid(const aclTensor* scale, int64_t batch, int64_
                     "dimTensorScale[%zu] != 1 or the length of the first dim of scale != batch mul N", dimTensorScale);
             return false;
         }
-        if (GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510 && scaleDim >= SUPPORTED_INNER_AXIS) {
+        if (!IsNpuArch3510Series() && scaleDim >= SUPPORTED_INNER_AXIS) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batch mul N should be less than 65536.");
             return false;
         }
@@ -180,7 +180,7 @@ static bool CheckShapeValid(const aclTensor* x1, const aclTensor* x2, const aclT
         return false;
     }
 
-    if (GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510) {
+    if (!IsNpuArch3510Series()) {
         auto x1_need_transpose = ((*perm_x1)[0] == 1 && (*perm_x1)[1] == 0 && (*perm_x1)[2] == 2);	 
         auto x2_need_transpose = ((*perm_x2)[0] == 0 && (*perm_x2)[1] == 2 && (*perm_x2)[2] == 1);
         if (N >= SUPPORTED_INNER_AXIS || batchNum >= SUPPORTED_INNER_AXIS) {
@@ -247,7 +247,7 @@ inline static aclnnStatus CheckParams(const aclTensor* x1, const aclTensor* x2, 
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The perm parameter must be three-dimensional!");
         return ACLNN_ERR_PARAM_INVALID;
     }
-    if (GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510 && cubeMathType == -1) {
+    if (IsNpuArch3510Series() && cubeMathType == -1) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
             "aclnnTransposeBatchMatMulGetWorkspaceSize", "cubeMathType",
             Ops::NN::FormatString("%d", cubeMathType).c_str(),

@@ -29,8 +29,7 @@ static const std::initializer_list<DataType> DAV_3510_CONVBP_DTYPE_SUPPORT_LIST 
 // 根据dtype进行初步拦截，后续需要再和cubemathtype + 芯片再进行一次拦截
 const std::initializer_list<DataType>& GetDtypeSupportListBySocVersion()
 {
-    auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
-    if (npuArch == NpuArch::DAV_3510) {
+    if (IsNpuArch3510Series()) {
         return DAV_3510_DTYPE_SUPPORT_LIST;
     }
     return (IsCubeSupportFp32()) ? V200_DTYPE_SUPPORT_LIST : V100_DTYPE_SUPPORT_LIST;
@@ -38,8 +37,7 @@ const std::initializer_list<DataType>& GetDtypeSupportListBySocVersion()
 
 const std::initializer_list<DataType>& GetDtypeSupportListBySocVersion4ConvBackward(bool transposed)
 {
-    auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
-    if (npuArch == NpuArch::DAV_3510) {
+    if (IsNpuArch3510Series()) {
         return transposed ? DAV_3510_DTYPE_SUPPORT_LIST : DAV_3510_CONVBP_DTYPE_SUPPORT_LIST;
     }
     return (IsCubeSupportFp32()) ? V200_DTYPE_SUPPORT_LIST : V100_DTYPE_SUPPORT_LIST;
@@ -176,7 +174,7 @@ bool CheckCubeMathTypeForAddMm(
         return true;
     }
     // 平台校验
-    if (npuArch != NpuArch::DAV_2201 && npuArch != NpuArch::DAV_3510) {
+    if (npuArch != NpuArch::DAV_2201 && !IsNpuArch3510Series()) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID,
             "current platform not support cubeMathType = 4: USE_FP32_ADD.");

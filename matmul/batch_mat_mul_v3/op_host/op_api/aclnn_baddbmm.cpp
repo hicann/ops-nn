@@ -66,7 +66,7 @@ static const std::initializer_list<op::DataType> dtypeSupportListWithoutBf16 = {
 static inline bool CheckSocVersionIsSupportBf16(void)
 {
     auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
-    return (npuArch == NpuArch::DAV_2201) || (npuArch == NpuArch::DAV_3510);
+    return (npuArch == NpuArch::DAV_2201) || IsNpuArch3510Series();
 }
 
 static bool CheckShape(const aclTensor* selfTensor, const aclTensor* batch1Tensor, const aclTensor* batch2Tensor)

@@ -19,6 +19,7 @@
 #include "aclnn_kernels/contiguous.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "matmul/common/op_host/op_api/matmul_util.h"
+#include "matmul/common/op_host/op_api/cube_util.h"
 #include "matmul/common/op_host/op_api/batch_matmul_util.h"
 #include "opdev/common_types.h"
 #include "opdev/data_type_utils.h"
@@ -54,7 +55,7 @@ static const std::initializer_list<op::DataType> DAV_2201_DTYPE_SUPPORT_LIST = {
 
 static const std::initializer_list<DataType>& GetDtypeSupportList() {
     auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
-    if ((npuArch == NpuArch::DAV_2201) || (npuArch == NpuArch::DAV_3510)) {
+    if ((npuArch == NpuArch::DAV_2201) || IsNpuArch3510Series()) {
         return DAV_2201_DTYPE_SUPPORT_LIST;
     } else {
         return ASCEND310P_DTYPE_SUPPORT_LIST;

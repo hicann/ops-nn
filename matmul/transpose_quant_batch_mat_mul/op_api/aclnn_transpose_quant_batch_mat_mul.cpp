@@ -450,7 +450,7 @@ inline static aclnnStatus CheckParams(
     int32_t batch_split_factor, int64_t groupSize)
 {
     // Only support DAV_3510
-    if (GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510) {
+    if (!IsNpuArch3510Series()) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
             OP_NAME, "platform",
             Ops::NN::FormatString("%d", static_cast<int>(GetCurrentPlatformInfo().GetCurNpuArch())).c_str(),

@@ -72,7 +72,7 @@ static inline bool CheckAddbmmOutputNotNull(const aclTensor* out)
 static inline bool CheckNpuArchIsSupportBf16(void)
 {
     auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
-    return (npuArch == NpuArch::DAV_2201) || (npuArch == NpuArch::DAV_3510);
+    return (npuArch == NpuArch::DAV_2201) || IsNpuArch3510Series();
 }
 
 static inline bool CheckDtypeValid(

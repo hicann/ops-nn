@@ -198,7 +198,7 @@ static inline bool CheckMathType(const aclTensor* self, const aclTensor* mat2, i
 bool CheckDtypeValidWeightNz(const aclTensor* self, const aclTensor* mat2, const aclTensor* out, int8_t cubeMathType)
 {
     auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
-    if ((npuArch != NpuArch::DAV_2201) && (npuArch != NpuArch::DAV_3510)) {
+    if ((npuArch != NpuArch::DAV_2201) && !IsNpuArch3510Series()) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID,
             "batchmatmulweightnz is unsupported in this npu arch");
