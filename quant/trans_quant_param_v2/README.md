@@ -116,4 +116,4 @@
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_trans_quant_param_v2](examples/test_aclnn_trans_quant_param_v2.cpp) | 通过[aclnnTransQuantParamV2](docs/aclnnTransQuantParamV2.md)接口方式调用TransQuantParamV2算子。 |
 | aclnn接口  | [test_aclnn_trans_quant_param_v3](examples/test_aclnn_trans_quant_param_v3.cpp) | 通过[aclnnTransQuantParamV3](docs/aclnnTransQuantParamV3.md)接口方式调用TransQuantParamV2算子。 |
-| 图模式 | -  | 通过[算子IR](op_graph/trans_quant_param_v2_proto.h)构图方式调用TransQuantParamV2算子。         |
+| 图模式 | [test_geir_trans_quant_param_v2](examples/test_geir_trans_quant_param_v2.cpp) | 通过[算子IR](op_graph/trans_quant_param_v2_proto.h)构图方式调用TransQuantParamV2算子。         |
