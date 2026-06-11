@@ -76,20 +76,17 @@ ge::graphStatus SortedSparseSegmentMeanGradBaseTiling::GetXInfoAndCheck()
     auto inputX = context_->GetInputShape(INPUT_X);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, inputX);
     xShape_ = Ops::Base::EnsureNotScalar(inputX->GetStorageShape());
-
     if (xShape_.GetDimNum() < 1) {
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
             context_->GetNodeName(), "x", std::to_string(xShape_.GetDimNum()).c_str(),
             "dimNum of x must be greater than or equal to 1");
         return ge::GRAPH_FAILED;
     }
-
     if (xShape_.GetDim(0) <= 0) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
             context_->GetNodeName(), "x", std::to_string(xShape_.GetDim(0)).c_str(), "dim0 of x must be greater than 0");
         return ge::GRAPH_FAILED;
     }
-
     if (xShape_.GetShapeSize() <= 0) {
         OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
             context_->GetNodeName(), "x", std::to_string(xShape_.GetShapeSize()).c_str(), "shapeSize of x must be greater than 0");
@@ -157,12 +154,10 @@ ge::graphStatus SortedSparseSegmentMeanGradBaseTiling::GetIndicesInfoAndCheck()
     auto inputIndices = context_->GetInputShape(INPUT_INDICES);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, inputIndices);
     indicesShape_ = Ops::Base::EnsureNotScalar(inputIndices->GetStorageShape());
-
     if (indicesShape_.GetDimNum() != 1) {
         OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "indices", std::to_string(indicesShape_.GetDimNum()).c_str(), "1");
         return ge::GRAPH_FAILED;
     }
-
     if (indicesShape_.GetShapeSize() <= 0) {
         OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
             context_->GetNodeName(), "indices", std::to_string(indicesShape_.GetShapeSize()).c_str(),
