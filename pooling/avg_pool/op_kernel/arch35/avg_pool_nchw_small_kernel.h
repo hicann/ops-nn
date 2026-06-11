@@ -37,39 +37,6 @@ struct ComputeParam {
 
 constexpr int32_t SPARSE_THRESHOLD = 64;
 
-template <typename T, typename M, typename U>
-__simd_vf__ inline void NchwSmallComputeMultiBatchVf(__ubuf__ M* dstAddr, __ubuf__ M* srcAddr, __ubuf__ U* indexAddr,
-    uint16_t kH, uint16_t kW, uint16_t loopN, uint32_t inCols, U oneLoopStride, U oneLoopElements, U tailLoopElements,
-    float32_t divisor)
-{
-    MicroAPI::RegTensor<U> v0;
-    MicroAPI::DataCopy(v0, indexAddr);
-    AvgPoolSplitBatch<T, U>(dstAddr, srcAddr, v0, kH, kW, loopN, inCols, oneLoopStride, oneLoopElements,
-                            tailLoopElements, 0, 0, 0, 0, divisor);
-}
-
-template <typename T, typename M, typename U>
-__simd_vf__ inline void NchwSmallComputeMultiRowVf(__ubuf__ M* dstAddr, __ubuf__ M* srcAddr, __ubuf__ U* indexAddr,
-    uint16_t kH, uint16_t kW, uint16_t loopN, uint16_t loopH, U oneChannelElements, uint32_t inCols,
-    U oneLoopStrideH, U oneLoopElements, uint32_t tailLoopElements, float32_t divisor)
-{
-    MicroAPI::RegTensor<U> v0;
-    MicroAPI::DataCopy(v0, indexAddr);
-    AvgPoolSplitH<T, U>(dstAddr, srcAddr, v0, kH, kW, loopN, loopH, oneChannelElements, inCols,
-                        oneLoopStrideH, oneLoopElements, tailLoopElements, 0, 0, 0, 0, divisor);
-}
-
-template <typename M, typename U>
-__simd_vf__ inline void NchwSmallComputeSingleRowVf(__ubuf__ M* dstAddr, __ubuf__ M* srcAddr, __ubuf__ U* indexAddr,
-    uint16_t kH, uint16_t kW, uint16_t loopH, uint16_t loopW, U oneLoopStrideH, U oneLoopStrideW,
-    uint32_t inCols, uint32_t num, uint16_t tailW, float32_t divisor)
-{
-    MicroAPI::RegTensor<U> v0;
-    MicroAPI::DataCopy(v0, indexAddr);
-    AvgPoolSplitW<M, U>(dstAddr, srcAddr, v0, kH, kW, loopH, loopW, oneLoopStrideH, oneLoopStrideW,
-                        inCols, num, tailW, 0, 0, 0, 0, divisor);
-}
-
 template <typename T>
 class AvgPoolSmallKernel
 {
@@ -367,8 +334,13 @@ __aicore__ inline void AvgPoolSmallKernel<T>::ComputeMultiBatch(const ComputePar
     U tailLoopElements = static_cast<U>(tailN * outUbFactorW * outUbFactorH);
     float32_t divisor = static_cast<float32_t>(tilingData_->divisor);
 
-    NchwSmallComputeMultiBatchVf<T, M, U>((__ubuf__ M*)dstLocalAddr, (__ubuf__ M*)xLocalAddr, indexAddr,
-        kH, kW, loopN, param.inCols, oneLoopStride, oneLoopElements, tailLoopElements, divisor);
+    __VEC_SCOPE__
+    {
+        MicroAPI::RegTensor<U> v0;
+        MicroAPI::DataCopy(v0, indexAddr);
+        AvgPoolSplitBatch<T, U>(dstLocalAddr, xLocalAddr, v0, kH, kW, loopN, param.inCols, oneLoopStride, oneLoopElements,
+                                tailLoopElements, 0, 0, 0, 0, divisor);
+    }
     inputQue_.FreeTensor<M>(xLocal);
     maxUBOutput_.EnQue<M>(maxOutLocal);
 }
@@ -406,9 +378,13 @@ __aicore__ inline void AvgPoolSmallKernel<T>::ComputeMultiRow(const ComputeParam
     uint32_t tailNum = static_cast<uint32_t>(tailH * outUbFactorW);
     uint32_t tailLoopElements = static_cast<uint32_t>(tailH * outUbFactorW);
     float32_t divisor = static_cast<float32_t>(tilingData_->divisor);
-    NchwSmallComputeMultiRowVf<T, M, U>((__ubuf__ M*)dstLocalAddr, (__ubuf__ M*)xLocalAddr, indexAddr,
-        kH, kW, loopN, loopH, oneChannelElements, param.inCols, oneLoopStrideH, oneLoopElements,
-        tailLoopElements, divisor);
+    __VEC_SCOPE__
+    {
+        MicroAPI::RegTensor<U> v0;
+        MicroAPI::DataCopy(v0, indexAddr);
+        AvgPoolSplitH<T, U>(dstLocalAddr, xLocalAddr, v0, kH, kW, loopN, loopH, oneChannelElements, param.inCols,
+                            oneLoopStrideH, oneLoopElements, tailLoopElements, 0, 0, 0, 0, divisor);
+    }
     inputQue_.FreeTensor<M>(xLocal);
     maxUBOutput_.EnQue<M>(maxOutLocal);
 }
@@ -451,14 +427,24 @@ __aicore__ inline void AvgPoolSmallKernel<T>::ComputeSingleRow(const ComputePara
     uint32_t tailLoopElements = tailW;
     float32_t divisor = static_cast<float32_t>(tilingData_->divisor);
     if (ubFactorN == 1U) {
-        NchwSmallComputeSingleRowVf<M, U>((__ubuf__ M*)dstLocalAddr, (__ubuf__ M*)xLocalAddr, indexAddr,
-            kH, kW, loopH, loopW, oneLoopStrideH, oneLoopStrideW, param.inCols, num, tailW, divisor);
+        __VEC_SCOPE__
+        {
+            MicroAPI::RegTensor<U> v0;
+            MicroAPI::DataCopy(v0, indexAddr);
+            AvgPoolSplitW<M, U>(dstLocalAddr, xLocalAddr, v0, kH, kW, loopH, loopW, oneLoopStrideH, oneLoopStrideW,
+                                param.inCols, num, tailW, 0, 0, 0, 0, divisor);
+        }
     } else {
         for (uint16_t i = 0; i < loopN; i++) {
             __local_mem__ M* srcAddr = xLocalAddr + i * oneChannelElements;
             __local_mem__ M* dstAddr = dstLocalAddr + i * oneChannelOutElements;
-            NchwSmallComputeSingleRowVf<M, U>((__ubuf__ M*)dstAddr, (__ubuf__ M*)srcAddr, indexAddr,
-                kH, kW, loopH, loopW, oneLoopStrideH, oneLoopStrideW, param.inCols, num, tailW, divisor);
+            __VEC_SCOPE__
+            {
+                MicroAPI::RegTensor<U> v0;
+                MicroAPI::DataCopy(v0, indexAddr);
+                AvgPoolSplitW<M, U>(dstAddr, srcAddr, v0, kH, kW, loopH, loopW, oneLoopStrideH, oneLoopStrideW, param.inCols,
+                                    num, tailW, 0, 0, 0, 0, divisor);
+            }
         }
     }
     inputQue_.FreeTensor<M>(xLocal);
