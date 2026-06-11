@@ -258,6 +258,11 @@ public:
 
     __aicore__ inline void WeightUbTransUpdateKValue(Intf *self)
     {
+        uint64_t currentKBL1 = self->ctx.kBL1Iter == self->ctx.maxKBL1Iter ?
+ 	        self->ctx.kBL1Tail : self->ctx.convTilingData->convApiTiling.kBL1;
+ 	    self->ctx.vecKLoopTimes = CeilDiv(currentKBL1, self->ctx.convTilingData->convApiTiling.bUbKStep);
+ 	    self->ctx.maxVecKIter = self->ctx.vecKLoopTimes - 1;
+
         if (self->ctx.kBL1Iter == self->ctx.maxKBL1Iter && self->ctx.vecKIter == self->ctx.maxVecKIter) {
             self->ctx.currentUbKStep = self->ctx.kUbTail;
             self->ctx.currentKLoopRpSize = self->ctx.convTilingData->convApiTiling.bUbKStep - self->ctx.kUbTail;
