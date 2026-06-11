@@ -200,7 +200,9 @@ bool CTCLossV2GradTiling4AscendC::IsLargeSize() const
 {
     return (batchSize > INT32_MAX) || (symbolSet > INT32_MAX) || (maxInputLength > INT32_MAX) ||
            (alphaLength > INT32_MAX) || (batchSize * symbolSet > INT32_MAX) ||
-           (batchSize * logAlphaT * alphaLength > INT32_MAX);
+           (batchSize * logAlphaT * alphaLength > INT32_MAX) ||
+           (maxInputLength * batchSize * symbolSet > INT32_MAX) ||  // 修复507035: grad/logProbs/tempGrad 元素数 T*N*C>2^31 时须用 int64 偏移
+           (targetsNum > INT32_MAX);  // 防御性: targets 总元素数>2^31 时 targetBatchOffset 也须用 int64
 }
 
 int64_t CTCLossV2GradTiling4AscendC::GetThreadNum() const
