@@ -156,7 +156,6 @@ ge::graphStatus Gatherv2TilingBase::GetPlatformInfo() {
 inline ge::graphStatus Gatherv2TilingBase::GetXInfoAndCheck() {
   // x
   xDtype_ = context_->GetInputDesc(INPUT_X_INDEX)->GetDataType();
-
   if (!IsSupportDtype(X_SUPPORT_DTYPE, xDtype_)) {
     OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x", std::to_string(xDtype_).c_str(),
       "float32, float16, bfloat16, fp8, int64, uint64, int32, uint32, int16, uint16, int8, uint8, bool");
