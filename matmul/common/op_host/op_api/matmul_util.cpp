@@ -476,7 +476,8 @@ static const aclTensor* GetMatMulOp(
         KEEP_DTYPE, bias);
     bool supportNdNz = mmOpInfo.support_info.self_format == ge::FORMAT_ND &&
                        mmOpInfo.support_info.mat2_format == ge::FORMAT_FRACTAL_NZ;
-    bool addmm16In32Out = enable16In32Out && (bias != nullptr || supportNdNz);
+    bool isBiasDtypeFp32 = bias == nullptr ? false : bias->GetDataType() == DataType::DT_FLOAT;
+    bool addmm16In32Out = enable16In32Out && ((bias != nullptr && !isBiasDtypeFp32) || supportNdNz);
     bool isFp32Out = mmOpInfo.support_info.output_dtype == DataType::DT_FLOAT;
     bool bothMatFp16Bf16 = (mmOpInfo.support_info.self_dtype == DataType::DT_FLOAT16 &&
                             mmOpInfo.support_info.mat2_dtype == DataType::DT_FLOAT16) ||
@@ -2674,6 +2675,9 @@ const aclTensor* ExecGemmV3WithAlphaBetaOp(const aclTensor* bias,
 {
     bool isNdNzInput = self->GetStorageFormat() == Format::FORMAT_ND &&
                        mat2->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ;
+
+    auto transposeSelf = Ops::NN::IsTransposeLastTwoDims(self);
+    auto transposeMat2 = Ops::NN::IsTransposeLastTwoDims(mat2);
     // reformat, 转成ND
     auto reformatSelf = self;
     reformatSelf = l0op::ReFormat(self, op::Format::FORMAT_ND);
@@ -2704,8 +2708,8 @@ const aclTensor* ExecGemmV3WithAlphaBetaOp(const aclTensor* bias,
                                                                  contiguousBias,
                                                                  alpha->ToFloat(),
                                                                  beta->ToFloat(),
-                                                                 false,
-                                                                 false,
+                                                                 transposeSelf,
+                                                                 transposeMat2,
                                                                  false,
                                                                  executor,
                                                                  enable16In32Out);
