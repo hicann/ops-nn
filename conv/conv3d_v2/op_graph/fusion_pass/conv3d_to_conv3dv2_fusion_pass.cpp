@@ -58,7 +58,7 @@ bool Conv3dToConv3dV2FusionPass::CheckSocCapability()
     return true;
 }
 
-bool Conv3dToConv3dV2FusionPass::CheckPostCubeInOutNode(const GNode &convNode)
+bool Conv3dToConv3dV2FusionPass::CheckPostCubeInOutNode(const GNode &convNode) const
 {
     auto convOutputNodes = convNode.GetOutDataNodesAndPortIndexs(OUTPUT_INDEX);
     for (size_t i = 0; i < convOutputNodes.size(); ++i) {
@@ -76,7 +76,7 @@ bool Conv3dToConv3dV2FusionPass::CheckPostCubeInOutNode(const GNode &convNode)
     return false;
 }
 
-bool Conv3dToConv3dV2FusionPass::CheckTransDataInInputNode(const GNode &convNode)
+bool Conv3dToConv3dV2FusionPass::CheckTransDataInInputNode(const GNode &convNode) const
 {
     auto nodePtr = convNode.GetInDataNodesAndPortIndexs(INPUT_FMAP_INDEX).first;
     FUSION_PASS_CHECK(nodePtr == nullptr,
@@ -102,7 +102,7 @@ bool Conv3dToConv3dV2FusionPass::CheckTransDataInInputNode(const GNode &convNode
     return false;
 }
 
-bool Conv3dToConv3dV2FusionPass::CheckIFMRInSameOutputNode(const GNode &convNode)
+bool Conv3dToConv3dV2FusionPass::CheckIFMRInSameOutputNode(const GNode &convNode) const
 {
     auto convOutputNodes = convNode.GetOutDataNodesAndPortIndexs(OUTPUT_INDEX);
     for (size_t i = 0; i < convOutputNodes.size(); ++i) {

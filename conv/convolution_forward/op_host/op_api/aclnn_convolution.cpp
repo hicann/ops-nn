@@ -291,6 +291,7 @@ constexpr size_t CONV_1D_DIM_SIZE = 3;
 constexpr size_t CONV_2D_DIM_SIZE = 4;
 constexpr size_t CONV_3D_DIM_SIZE = 5;
 constexpr size_t CONST_VALUE_TWO = 2;
+constexpr size_t CONST_VALUE_FOUR = 4;
 static constexpr uint64_t MAX_UINT16 = 65536;
 
 struct TensorMeta {
@@ -787,40 +788,40 @@ public:
         size_t inputDim = engine.meta.input.shape.size();
 
         auto strideSize = engine.meta.stride.size();
-        if (strideSize != inputDim - 2) {
+        if (strideSize != inputDim - CONST_VALUE_TWO) {
             OP_LOGE_FOR_INVALID_LISTSIZE(engine.entityName, "strides", std::to_string(strideSize),
-                std::to_string(inputDim - 2));
+                std::to_string(inputDim - CONST_VALUE_TWO));
             return ACLNN_ERR_PARAM_INVALID;
         }
 
         auto dilationSize = engine.meta.dilation.size();
-        if (dilationSize != inputDim - 2) {
+        if (dilationSize != inputDim - CONST_VALUE_TWO) {
             OP_LOGE_FOR_INVALID_LISTSIZE(engine.entityName, "dilations", std::to_string(dilationSize),
-                std::to_string(inputDim - 2));
+                std::to_string(inputDim - CONST_VALUE_TWO));
             return ACLNN_ERR_PARAM_INVALID;
         }
 
         auto paddingSize = engine.meta.padding.size();
         if (((inputDim == CONV_1D_DIM_SIZE || inputDim == CONV_2D_DIM_SIZE) && !engine.params.transposed) ||
             (inputDim == CONV_2D_DIM_SIZE && engine.params.transposed)) {
-            if (!Any(paddingSize, Equal<size_t>, inputDim - 2, inputDim * 2 - 4)) {
+            if (!Any(paddingSize, Equal<size_t>, inputDim - CONST_VALUE_TWO, inputDim * CONST_VALUE_TWO - CONST_VALUE_FOUR)) {
                 OP_LOGE_FOR_INVALID_LISTSIZE(engine.entityName, "pads", std::to_string(paddingSize),
-                    std::to_string(inputDim - 2) + " or " + std::to_string(inputDim * 2 - 4));
+                    std::to_string(inputDim - CONST_VALUE_TWO) + " or " + std::to_string(inputDim * CONST_VALUE_TWO - CONST_VALUE_FOUR));
                 return ACLNN_ERR_PARAM_INVALID;
             }
         } else {
-            if (paddingSize != inputDim - 2) {
+            if (paddingSize != inputDim - CONST_VALUE_TWO) {
                 OP_LOGE_FOR_INVALID_LISTSIZE(engine.entityName, "pads", std::to_string(paddingSize),
-                    std::to_string(inputDim - 2));
+                    std::to_string(inputDim - CONST_VALUE_TWO));
                 return ACLNN_ERR_PARAM_INVALID;
             }
         }
 
         if (engine.params.transposed) {
             auto outputPaddingSize = engine.meta.outputPadding.size();
-            if (outputPaddingSize != inputDim - 2) {
+            if (outputPaddingSize != inputDim - CONST_VALUE_TWO) {
                 OP_LOGE_FOR_INVALID_LISTSIZE(engine.entityName, "outputPadding", std::to_string(outputPaddingSize),
-                    std::to_string(inputDim - 2));
+                    std::to_string(inputDim - CONST_VALUE_TWO));
                 return ACLNN_ERR_PARAM_INVALID;
             }
         }
@@ -921,23 +922,23 @@ public:
         }
 
         auto strideSize = engine.meta.stride.size();
-        if (strideSize != inputDim - 2) {
+        if (strideSize != inputDim - CONST_VALUE_TWO) {
             OP_LOGE_FOR_INVALID_LISTSIZE(engine.entityName, "strides", std::to_string(strideSize),
-                std::to_string(inputDim - 2));
+                std::to_string(inputDim - CONST_VALUE_TWO));
             return ACLNN_ERR_PARAM_INVALID;
         }
 
         auto dilationSize = engine.meta.dilation.size();
-        if (dilationSize != inputDim - 2) {
+        if (dilationSize != inputDim - CONST_VALUE_TWO) {
             OP_LOGE_FOR_INVALID_LISTSIZE(engine.entityName, "dilations", std::to_string(dilationSize),
-                std::to_string(inputDim - 2));
+                std::to_string(inputDim - CONST_VALUE_TWO));
             return ACLNN_ERR_PARAM_INVALID;
         }
 
         auto paddingSize = engine.meta.padding.size();
-        if (paddingSize != inputDim - 2) {
+        if (paddingSize != inputDim - CONST_VALUE_TWO) {
             OP_LOGE_FOR_INVALID_LISTSIZE(engine.entityName, "pads", std::to_string(paddingSize),
-                std::to_string(inputDim - 2));
+                std::to_string(inputDim - CONST_VALUE_TWO));
             return ACLNN_ERR_PARAM_INVALID;
         }
 
@@ -1815,7 +1816,6 @@ private:
         int64_t outputShapeN = output.N();
         int64_t outputShapeC = output.C();
         int64_t outputShapeL = output.L();
-
         if (!All(0L, LessEqual<int64_t>, inputShapeN, inputShapeC, inputShapeL, weightShapeN, weightShapeC,
                 weightShapeL, outputShapeN, outputShapeC, outputShapeL)) {
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(entityName, "x, filter, y",

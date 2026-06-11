@@ -54,9 +54,9 @@ protected:
 
 private:
     bool CheckSocCapability();
-    bool CheckPostCubeInOutNode(const ge::GNode &convNode);
-    bool CheckTransDataInInputNode(const ge::GNode &convNode);
-    bool CheckIFMRInSameOutputNode(const ge::GNode &convNode);
+    bool CheckPostCubeInOutNode(const ge::GNode &convNode) const;
+    bool CheckTransDataInInputNode(const ge::GNode &convNode) const;
+    bool CheckIFMRInSameOutputNode(const ge::GNode &convNode) const;
     void InitMember();
 
     bool supportOut2L1Dn2Nz = false;

@@ -584,7 +584,7 @@ class FormatsChecker : public QuantConvolutionChecker {
 public:
     FormatsChecker() = default;
     ~FormatsChecker() override = default;
-    aclnnStatus CheckBias(QuantConvEngine &engine)
+    aclnnStatus CheckBias(QuantConvEngine &engine) const
     {
         if (engine.params.bias) {
             auto biasFormat = engine.meta.bias.format;
@@ -597,7 +597,7 @@ public:
         return ACLNN_SUCCESS;
     }
 
-    aclnnStatus CheckScale(QuantConvEngine &engine)
+    aclnnStatus CheckScale(QuantConvEngine &engine) const
     {
         auto scaleFormat = engine.meta.scale.format;
         if (scaleFormat != Format::FORMAT_ND) {
@@ -608,7 +608,7 @@ public:
         return ACLNN_SUCCESS;
     }
 
-    aclnnStatus CheckFormat2D(QuantConvEngine &engine)
+    aclnnStatus CheckFormat2D(QuantConvEngine &engine) const
     {
         if (!IsSocSupportND()) {
             return ACLNN_SUCCESS;
