@@ -22,7 +22,7 @@
     $$
     Y = (x.\text{reshape}(*,k) @ \text{rotation}).\text{reshape}(m, n)
     $$
-    
+
     其中：$\mathbf{x} \in \mathbb{R}^{m \times n}$，$\mathbf{Y} \in \mathbb{R}^{m \times n}$，$\mathbf{rotation} \in \mathbb{R}^{k \times k}$。
 
   2. 当alpha在有效取值范围(0.0, 1.0)内，执行clamp计算
@@ -199,7 +199,7 @@ aclnnStatus aclnnRotateQuant(
       <td>不支持空Tensor。</td>
       <td>BFLOAT16、FLOAT16</td>
       <td>ND</td>
-      <td>1~7</td>
+      <td>1-7</td>
       <td>√</td>
     </tr>
     <tr>
@@ -279,7 +279,7 @@ aclnnStatus aclnnRotateQuant(
       <td>输出Tensor需预先分配。yOut的数据类型即为量化输出类型（y_dtype），torch单算子调用时通过参数传入，aclnn调用时无需单独传入y_dtype参数，通过yOut获取dtype即可。</td>
       <td>FLOAT4_E2M1、FLOAT8_E4M3FN、FLOAT8_E5M2、INT8、INT32</td>
       <td>ND</td>
-      <td>1~7</td>
+      <td>1-7</td>
       <td>√</td>
     </tr>
     <tr>
@@ -289,7 +289,7 @@ aclnnStatus aclnnRotateQuant(
       <td>输出Tensor需预先分配。</td>
       <td>FLOAT8_E8M0、FLOAT</td>
       <td>ND</td>
-      <td>1或3</td>
+      <td>1-8</td>
       <td>√</td>
     </tr>
     <tr>
@@ -338,109 +338,66 @@ aclnnStatus aclnnRotateQuant(
       <td>161001</td>
       <td>x、rotation、yOut或scaleOut是空指针。</td>
     </tr>
-    <tr>
-      <td>ACLNN_ERR_PARAM_INVALID</td>
-      <td>161002</td>
+     <tr>
+      <td rowspan="20">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="20">161002</td>
       <td>x或rotation的数据类型不在支持列表{BFLOAT16, FLOAT16}中。</td>
     </tr>
     <tr>
-      <td>ACLNN_ERR_PARAM_INVALID</td>
-      <td>161002</td>
       <td>x和rotation的数据类型不一致。</td>
     </tr>
     <tr>
-      <td>ACLNN_ERR_PARAM_INVALID</td>
-      <td>161002</td>
       <td>scaleOut为FLOAT8_E8M0时，yOut的数据类型不在支持列表{FLOAT4_E2M1, FLOAT8_E4M3FN, FLOAT8_E5M2}中。</td>
     </tr>
     <tr>
-      <td>ACLNN_ERR_PARAM_INVALID</td>
-      <td>161002</td>
       <td>scaleOut为FLOAT时，yOut的数据类型不在支持列表{INT32, INT8}中。</td>
     </tr>
     <tr>
-      <td>ACLNN_ERR_PARAM_INVALID</td>
-      <td>161002</td>
-      <td>x、rotation、yOut或scaleOut的存储格式不为ND。</td>
-    </tr>
-    <tr>
-      <td>ACLNN_ERR_PARAM_INVALID</td>
-      <td>161002</td>
       <td>alpha不为空时，数据类型不为BFLOAT16，或shape不为(1,)。</td>
     </tr>
     <tr>
-      <td>ACLNN_ERR_PARAM_INVALID</td>
-      <td>161002</td>
       <td>scaleOut为FLOAT8_E8M0时，x的维度不在范围[1, 7]内。</td>
     </tr>
     <tr>
-      <td>ACLNN_ERR_PARAM_INVALID</td>
-      <td>161002</td>
       <td>scaleOut为FLOAT8_E8M0时，rotation的维度不在范围[2, 3]内。</td>
     </tr>
     <tr>
-      <td>ACLNN_ERR_PARAM_INVALID</td>
-      <td>161002</td>
       <td>scaleOut为FLOAT时，x或rotation的维度不为2。</td>
     </tr>
     <tr>
-      <td>ACLNN_ERR_PARAM_INVALID</td>
-      <td>161002</td>
       <td>rotation的最后两维长度不相等。</td>
     </tr>
     <tr>
-      <td>ACLNN_ERR_PARAM_INVALID</td>
-      <td>161002</td>
       <td>x最后一维的长度N不是rotation最后一维的长度K的整数倍。</td>
     </tr>
     <tr>
-      <td>ACLNN_ERR_PARAM_INVALID</td>
-      <td>161002</td>
       <td>yOut的shape与x的shape不一致。</td>
     </tr>
     <tr>
-      <td>ACLNN_ERR_PARAM_INVALID</td>
-      <td>161002</td>
       <td>scaleOut为FLOAT8_E8M0时，scaleOut的shape不为(*, CeilDiv(N,64), 2)。</td>
     </tr>
     <tr>
-      <td>ACLNN_ERR_PARAM_INVALID</td>
-      <td>161002</td>
       <td>scaleOut为FLOAT时，scaleOut的shape不为(M,)，M表示x的第一维大小。</td>
     </tr>
     <tr>
-      <td>ACLNN_ERR_PARAM_INVALID</td>
-      <td>161002</td>
       <td>scaleOut为FLOAT时，x的最后一维的长度N不能被8整除。</td>
     </tr>
     <tr>
-      <td>ACLNN_ERR_PARAM_INVALID</td>
-      <td>161002</td>
       <td>axis不为-1或D-1，D为x的shape的维数。</td>
     </tr>
     <tr>
-      <td>ACLNN_ERR_PARAM_INVALID</td>
-      <td>161002</td>
       <td>scaleAlg不在范围[0, 2]内。</td>
     </tr>
     <tr>
-      <td>ACLNN_ERR_PARAM_INVALID</td>
-      <td>161002</td>
       <td>yOut为FLOAT4_E2M1时，scaleAlg不为0或2。</td>
     </tr>
     <tr>
-      <td>ACLNN_ERR_PARAM_INVALID</td>
-      <td>161002</td>
       <td>scaleOut为FLOAT8_E8M0时，当scaleAlg=0或1时dstTypeMax不为0.0。</td>
     </tr>
     <tr>
-      <td>ACLNN_ERR_PARAM_INVALID</td>
-      <td>161002</td>
       <td>scaleOut为FLOAT8_E8M0时，当scaleAlg=2时dstTypeMax不在范围[6.0, 12.0]内。</td>
     </tr>
     <tr>
-      <td>ACLNN_ERR_PARAM_INVALID</td>
-      <td>161002</td>
       <td>trans不为false。</td>
     </tr>
     <tr>
@@ -506,7 +463,7 @@ aclnnStatus aclnnRotateQuant(
   - x最后一维的长度(N)必须是K的整数倍。
   - yOut的输出类型为FLOAT4_E2M1、FLOAT8_E4M3FN或FLOAT8_E5M2，shape与x相同。
   - x和rotation的数据类型必须相同。
-  - scaleOut的shape必须是(*, CeilDiv(N,64), 2)，数据类型为FLOAT8_E8M0。
+  - scaleOut的shape必须是(*, CeilDiv(N,64), 2)，shape的维度支持2-8，数据类型为FLOAT8_E8M0。
   - alpha为可选输入，不为空指针时，shape为(1,)，数据类型为BFLOAT16，有效取值范围(0.0, 1.0)。传入空指针或者不在有效取值范围内不做clamp处理。
   - axis目前只支持-1或者D-1，D为x的shape的维数。
   - roundMode支持"rint"、"round"、"floor"，传入空指针时，采用"rint"模式。当yOut的数据类型为FLOAT8_E4M3FN或FLOAT8_E5M2时，roundMode仅支持"rint"。
@@ -530,6 +487,7 @@ aclnnStatus aclnnRotateQuant(
   - trans目前只支持false。
   - N的范围为[128, 16000]。
   - K的范围为[16, 1024]。
+  - scaleOut的shape仅支持1维。
 
 - 确定性计算：
   - aclnnRotateQuant默认确定性实现。

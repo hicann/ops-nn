@@ -354,7 +354,9 @@ aclnnStatus aclnnAddRmsNormQuant(
 
 ## 约束说明
 
-- <term>Atlas 推理系列产品</term>：x1、x2、y1Out、y2Out、xOut的norm轴长度，以及gamma、scales1、scales2Optional、zeroPoints1Optional、zeroPoints2Optional的长度必须大于等于32Bytes。
+- 参数`x1`、`x2`、`gamma`、`scales1`、`scales2Optional`、`zeroPoints1Optional`、`zeroPoints2Optional`、`y1Out`、`y2Out`、`xOut`的shape中每一维大小都不大于INT32的最大值2147483647。
+
+- <term>Atlas 推理系列产品</term>：`x1`、`x2`、`y1Out`、`y2Out`、`xOut`的norm轴长度，以及`gamma`、`scales1`、`scales2Optional`、`zeroPoints1Optional`、`zeroPoints2Optional`的长度必须大于等于32Bytes。
 
 - 数据格式说明：
   

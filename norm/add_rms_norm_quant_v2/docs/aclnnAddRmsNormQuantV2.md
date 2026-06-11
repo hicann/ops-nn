@@ -40,7 +40,7 @@
     $$
     y2Out=round((y/scales2)+zeroPoints2Optional)
     $$
-    
+
   - divMode为False时：
 
     $$
@@ -360,6 +360,8 @@ aclnnStatus aclnnAddRmsNormQuantV2(
   aclnnStatus：返回状态码。（具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)）
 
 ## 约束说明
+
+- 参数`x1`、`x2`、`gamma`、`scales1`、`scales2Optional`、`zeroPoints1Optional`、`zeroPoints2Optional`、`betaOptional`、`y1Out`、`y2Out`、`xOut`的shape中每一维大小都不大于INT32的最大值2147483647。
 
 - <term>Atlas 推理系列产品</term>：`x1`、`x2`需要norm的维度数据个数不能小于32。`gamma`、`betaOptional`、`scales1`、`scales2Optional`、`zeroPoints1Optional`、`zeroPoints2Optional`的数据个数不能小于32。
 
