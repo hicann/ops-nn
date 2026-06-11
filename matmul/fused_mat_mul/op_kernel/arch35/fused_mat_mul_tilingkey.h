@@ -16,7 +16,6 @@
 #pragma once
 
 #include "ascendc/host_api/tiling/template_argument.h"
-#include "fused_mat_mul_tiling_data.h"
 #include "fused_mat_mul_tiling_key_public.h"
 #if defined(__CCE_AICORE__)
 #if ASC_DEVKIT_MAJOR >= 9

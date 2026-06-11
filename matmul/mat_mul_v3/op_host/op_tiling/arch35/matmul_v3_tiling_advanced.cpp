@@ -90,9 +90,9 @@ ge::graphStatus IsValidDtype(const MatMulV3Args &args)
     if (args.hasBias) {
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
             args.opName, "mat1, mat2, out, self",
-            Ops::NN::FormatString(
-                "%s, %s, %s, %s", Ops::Base::ToString(args.aType).c_str(), Ops::Base::ToString(args.bType).c_str(),
-                Ops::Base::ToString(args.cType).c_str(), Ops::Base::ToString(args.biasType).c_str())
+            Ops::NN::FormatString("%s, %s, %s, %s", Ops::Base::ToString(args.aType).c_str(),
+                                  Ops::Base::ToString(args.bType).c_str(), Ops::Base::ToString(args.cType).c_str(),
+                                  Ops::Base::ToString(args.biasType).c_str())
                 .c_str(),
             Ops::NN::FormatString(
                 "The dtypes of %s must be the same and within the range %s or when the dtype of %s is %s, the dtypes "
@@ -104,9 +104,8 @@ ge::graphStatus IsValidDtype(const MatMulV3Args &args)
     } else {
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
             args.opName, "self, mat2, out",
-            Ops::NN::FormatString(
-                "%s, %s, %s", Ops::Base::ToString(args.aType).c_str(), Ops::Base::ToString(args.bType).c_str(),
-                Ops::Base::ToString(args.cType).c_str())
+            Ops::NN::FormatString("%s, %s, %s", Ops::Base::ToString(args.aType).c_str(),
+                                  Ops::Base::ToString(args.bType).c_str(), Ops::Base::ToString(args.cType).c_str())
                 .c_str(),
             Ops::NN::FormatString(
                 "The dtypes of %s must be the same and within the range %s or when the dtype of %s is %s, the dtypes "
@@ -129,9 +128,8 @@ ge::graphStatus GetInputDims(const gert::Shape& storageShape, const gert::Shape&
         if (dimNum < TWO_BATCH_DIM) {
             OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
                 "MatMulV3", paramName, Ops::NN::FormatString("%zu", dimNum).c_str(),
-                Ops::NN::FormatString(
-                    "When the format of %s is %s, the shape dim of %s must be at least %d", paramName, "ND", paramName,
-                    2)
+                Ops::NN::FormatString("When the format of %s is %s, the shape dim of %s must be at least %llu",
+                                      paramName, "ND", paramName, TWO_BATCH_DIM)
                     .c_str());
             return ge::GRAPH_FAILED;
         }
@@ -139,9 +137,8 @@ ge::graphStatus GetInputDims(const gert::Shape& storageShape, const gert::Shape&
         if (dimNum < FOUR_BATCH_DIM) {
             OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
                 "MatMulV3", paramName, Ops::NN::FormatString("%zu", dimNum).c_str(),
-                Ops::NN::FormatString(
-                    "When the format of %s is %s, the shape dim of %s must be at least %d", paramName, "FRACTAL_NZ",
-                    paramName, 4)
+                Ops::NN::FormatString("When the format of %s is %s, the shape dim of %s must be at least %llu",
+                                      paramName, "FRACTAL_NZ", paramName, FOUR_BATCH_DIM)
                     .c_str());
             return ge::GRAPH_FAILED;
         }
@@ -193,8 +190,8 @@ ge::graphStatus MatMulV3Tiling::CheckInputTranspose(int64_t (&dims)[TWO_BATCH_DI
     if (oriDimNum != THREE_BATCH_DIM) {
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
             args_.opName, paramName, Ops::NN::FormatString("%zu", oriDimNum).c_str(),
-            Ops::NN::FormatString(
-                "In %s scene, the shape dim of %s must be %d", "non-contiguous transpose", paramName, 3)
+            Ops::NN::FormatString("In %s scene, the shape dim of %s must be %llu", "non-contiguous transpose",
+                                  paramName, THREE_BATCH_DIM)
                 .c_str());
         return ge::GRAPH_FAILED;
     }
@@ -341,7 +338,7 @@ ge::graphStatus MatMulV3Tiling::GetShape()
     if (cDimNum < TWO_BATCH_DIM) {
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
             args_.opName, "out", Ops::NN::FormatString("%zu", cDimNum).c_str(),
-            Ops::NN::FormatString("The shape dim of %s must be at least %d", "out", 2).c_str());
+            Ops::NN::FormatString("The shape dim of %s must be at least %llu", "out", TWO_BATCH_DIM).c_str());
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;

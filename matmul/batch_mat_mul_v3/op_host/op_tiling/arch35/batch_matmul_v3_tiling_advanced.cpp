@@ -130,7 +130,8 @@ ge::graphStatus BatchMatMulV3Tiling::GetBatchInfo(const gert::TilingContext &con
     if (aDims > BATCH_DIM_MAX || bDims > BATCH_DIM_MAX) {
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
             args.opName, "self, mat2", Ops::NN::FormatString("%zu, %zu", aDims, bDims).c_str(),
-            Ops::NN::FormatString("The shape dims of %s must be %s %d", "self, mat2", "less than or equal to", 6)
+            Ops::NN::FormatString("The shape dims of %s must be %s %llu", "self, mat2", "less than or equal to",
+                                  BATCH_DIM_MAX)
                 .c_str());
         return ge::GRAPH_FAILED;
     }

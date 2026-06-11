@@ -29,6 +29,7 @@ constexpr uint64_t FOUR_BATCH_SHAPE_DIM = 6;
 constexpr uint64_t ND_NZ_DIM_DIFF = 2;
 constexpr uint64_t BATCH_DIM_MAX = 6;
 constexpr uint64_t NUM_EIGHT = 8UL;
+constexpr uint64_t MAX_BIAS_DIM = 3UL;
 }
 }
 

@@ -167,7 +167,7 @@ void MatMulV3BasicAswtTiling::DoAL1FullLoad()
         std::min(std::min(MathUtil::CeilDivision(args_.kValue, runInfo_.baseK), maxStepKWithBufferLimit), 4UL);
     // B矩阵K为内轴，k_bl1不满足256B对齐，尝试baseK放大一倍， 提升B矩阵搬运效率
     if (args_.isBTrans && maxStepK == maxStepKWithBufferLimit &&
-        maxStepK * runInfo_.baseK % BASIC_BLOCK_K_256_BYTE &&
+        maxStepK * runInfo_.baseK % BASIC_BLOCK_K_256_BYTE != 0 &&
         (runInfo_.baseK << 1) * runInfo_.baseM * args_.aDtypeSize * DB_SIZE <= compileInfo_.l0ASize) {
         runInfo_.baseK <<= 1;
         maxBaseNWithL1 = remainL1Size / (runInfo_.baseK * args_.bDtypeSize * DB_SIZE);
@@ -237,7 +237,7 @@ void MatMulV3BasicAswtTiling::DoBL1FullLoad()
         std::min(std::min(MathUtil::CeilDivision(args_.kValue, runInfo_.baseK), maxStepKWithBufferLimit), 4UL);
     // A矩阵K为内轴，k_al1不满足256B对齐，尝试baseK放大一倍
     if (!args_.isATrans && maxStepK == maxStepKWithBufferLimit &&
-        maxStepK * runInfo_.baseK % BASIC_BLOCK_K_256_BYTE &&
+        maxStepK * runInfo_.baseK % BASIC_BLOCK_K_256_BYTE != 0 &&
         (runInfo_.baseK << 1) * runInfo_.baseN * args_.bDtypeSize * DB_SIZE <= compileInfo_.l0BSize) {
         runInfo_.baseK <<= 1;
         maxBaseMWithL1 = remainL1Size / (runInfo_.baseK * args_.aDtypeSize * DB_SIZE);

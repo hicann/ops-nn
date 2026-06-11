@@ -16,7 +16,14 @@
 #ifndef __OP_HOST_BATCH_MATMUL_V3_STREAM_K_TILING_H__
 #define __OP_HOST_BATCH_MATMUL_V3_STREAM_K_TILING_H__
 
+#include <cstdint>
+#include <cstddef>
+#include <vector>
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_v3_base_tiling_advanced.h"
+#include "graph/ge_error_codes.h"
+#include "mat_mul_v3/op_host/op_tiling/arch35/matmul_tiling_cfg.h"
+#include "mat_mul_v3/op_kernel/arch35/mat_mul_v3_tiling_key_public.h"
+#include "exe_graph/runtime/tiling_context.h"
 
 namespace optiling {
 namespace batch_matmul_v3_advanced {

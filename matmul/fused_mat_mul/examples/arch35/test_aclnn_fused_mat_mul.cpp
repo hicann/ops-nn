@@ -130,10 +130,10 @@ int AclnnFusedMatmulTest(int32_t deviceId, aclrtStream& stream)
     aclTensor* x2 = nullptr;
     aclTensor* x3 = nullptr;
     aclTensor* y = nullptr;
-    std::vector<uint16_t> xHostData(512, 0b0011110000000000); // 设置为fp16的1.0
-    std::vector<uint16_t> x2HostData(512, 0b0011110000000000);
-    std::vector<uint16_t> x3HostData(256, 0b0100000000000000); // 设置为fp16的2.0
-    std::vector<uint16_t> yHostData(256, 0);
+    std::vector<uint16_t> xHostData(512, 0b0011110000000000); // 设置为fp16的1.0，512为xShape的大小
+    std::vector<uint16_t> x2HostData(512, 0b0011110000000000); // 512为x1Shape的大小
+    std::vector<uint16_t> x3HostData(256, 0b0100000000000000); // 设置为fp16的2.0，256为x1Shape的大小
+    std::vector<uint16_t> yHostData(256, 0);                   // 256为yShape的大小
     // 创建x aclTensor
     ret = CreateAclTensor(xHostData, xShape, &xDeviceAddr, aclDataType::ACL_FLOAT16, &x);
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> xTensorPtr(x, aclDestroyTensor);

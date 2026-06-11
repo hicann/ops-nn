@@ -148,16 +148,9 @@ ge::graphStatus TQBMMGetShapeMKN(
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus TQBMMGetShape(const gert::TilingContext& context, MatMulV3Args& args)
+ge::graphStatus TQBMMCheckPerm(const gert::ContinuousVector* aPermList, const gert::ContinuousVector* bPermList,
+                               const gert::ContinuousVector* yPermList, MatMulV3Args& args, bool isMxfp8)
 {
-    bool isMxfp8 =
-        IsMicroScaling(context.GetOptionalInputDesc(SCALE_X1_IDX), context.GetOptionalInputDesc(SCALE_X2_IDX));
-    const gert::Shape& aShape = context.GetInputShape(0)->GetOriginShape();
-    const gert::Shape& bShape = context.GetInputShape(1)->GetOriginShape();
-    auto attrs = context.GetAttrs();
-    const gert::ContinuousVector* aPermList = attrs->GetAttrPointer<gert::ContinuousVector>(PERM_X1_IDX);
-    const gert::ContinuousVector* bPermList = attrs->GetAttrPointer<gert::ContinuousVector>(PERM_X2_IDX);
-    const gert::ContinuousVector* yPermList = attrs->GetAttrPointer<gert::ContinuousVector>(PERM_Y_IDX);
     // perm_x1
     const int64_t* aPerm = static_cast<const int64_t*>(aPermList->GetData());
     bool aPermCheck = ((aPerm[BATCH_IDX] == 1L) && (aPerm[M_IDX] == 0L) && (aPerm[KA_IDX] == 2L)); // aPerm is [1,0,2]
@@ -178,8 +171,8 @@ ge::graphStatus TQBMMGetShape(const gert::TilingContext& context, MatMulV3Args& 
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
             args.opName, "permX2",
             Ops::NN::FormatString("[%ld, %ld, %ld]", bPerm[BATCH_IDX], bPerm[KB_IDX], bPerm[N_IDX]).c_str(),
-            Ops::NN::FormatString(
-                "The value of %s must be in %s", "permX2", isMxfp8 ? "{[0,1,2], [0,2,1]}" : "{[0,1,2]}")
+            Ops::NN::FormatString("The value of %s must be in %s", "permX2",
+                                  isMxfp8 ? "{[0,1,2], [0,2,1]}" : "{[0,1,2]}")
                 .c_str());
         return ge::GRAPH_FAILED;
     }
@@ -193,9 +186,23 @@ ge::graphStatus TQBMMGetShape(const gert::TilingContext& context, MatMulV3Args& 
             Ops::NN::FormatString("The value of %s must be %s", "permY", "[1,0,2]").c_str());
         return ge::GRAPH_FAILED;
     }
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus TQBMMGetShape(const gert::TilingContext& context, MatMulV3Args& args)
+{
+    bool isMxfp8 =
+        IsMicroScaling(context.GetOptionalInputDesc(SCALE_X1_IDX), context.GetOptionalInputDesc(SCALE_X2_IDX));
+    const gert::Shape& aShape = context.GetInputShape(0)->GetOriginShape();
+    const gert::Shape& bShape = context.GetInputShape(1)->GetOriginShape();
+    auto attrs = context.GetAttrs();
+    const gert::ContinuousVector* aPermList = attrs->GetAttrPointer<gert::ContinuousVector>(PERM_X1_IDX);
+    const gert::ContinuousVector* bPermList = attrs->GetAttrPointer<gert::ContinuousVector>(PERM_X2_IDX);
+    const gert::ContinuousVector* yPermList = attrs->GetAttrPointer<gert::ContinuousVector>(PERM_Y_IDX);
+    OP_TILING_CHECK((TQBMMCheckPerm(aPermList, bPermList, yPermList, args, isMxfp8) != ge::GRAPH_SUCCESS),
+                    CUBE_INNER_ERR_REPORT(args.opName, "check perm failed"), return ge::GRAPH_FAILED);
     OP_TILING_CHECK((TQBMMGetShapeMKN(aShape, bShape, aPermList, bPermList, args, isMxfp8) != ge::GRAPH_SUCCESS),
                     CUBE_INNER_ERR_REPORT(args.opName, "get m/k/n failed"), return ge::GRAPH_FAILED);
-
     if (attrs->GetAttrNum() >= ATTR_NUM) {
         int32_t batchSplitFactor = *(attrs->GetAttrPointer<int32_t>(ATTR_NUM - 1));
         bool batchSplitFactorPermCheck = (batchSplitFactor == 1);
@@ -309,7 +316,7 @@ ge::graphStatus TransposeQuantBatchMatMulTiling::CheckScale(
         int64_t numGroup = ops::CeilDiv(ops::CeilDiv(k, SUPPORTED_GROUP_SIZE), NUM_TWO);
         if (scaleX1DimNum != EXPECTED_MX_SCALE_DIM || scaleX1ShapePtr->GetStorageShape().GetDim(0) != m ||
             scaleX1ShapePtr->GetStorageShape().GetDim(1) != b ||
-            scaleX1ShapePtr->GetStorageShape().GetDim(2) != numGroup ||
+            scaleX1ShapePtr->GetStorageShape().GetDim(NUM_TWO) != numGroup ||
             scaleX1ShapePtr->GetStorageShape().GetDim(NUM_THREE) != NUM_TWO) {
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
                 args_.opName, "x1Scale", Ops::Base::ToString(scaleX1ShapePtr->GetStorageShape()).c_str(),

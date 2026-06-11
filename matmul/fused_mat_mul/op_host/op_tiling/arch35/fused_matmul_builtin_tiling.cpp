@@ -266,7 +266,7 @@ ge::graphStatus FusedMatMulBuiltInTiling::GetBmmBiasInfo(const gert::TilingConte
     if (biasDims > NUM_TWO) {
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
             args.opName, "bias", Ops::NN::FormatString("%zu", biasDims).c_str(),
-            Ops::NN::FormatString("The shape dim of %s must be less than %d", "bias", 3).c_str());
+            Ops::NN::FormatString("The shape dim of %s must be less than %llu", "bias", MAX_BIAS_DIM).c_str());
         return ge::GRAPH_FAILED;
     }
     // 先校验bias的尾值是否与output尾值相等
@@ -303,7 +303,9 @@ ge::graphStatus FusedMatMulBuiltInTiling::GetBatchInfo(
     if (aDims > BATCH_DIM_MAX || bDims > BATCH_DIM_MAX) {
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
             args.opName, "x1, x2", Ops::NN::FormatString("%zu, %zu", aDims, bDims).c_str(),
-            Ops::NN::FormatString("The shape dims of %s must be %s %d", "x1, x2", "less than or equal to", 6).c_str());
+            Ops::NN::FormatString("The shape dims of %s must be %s %llu", "x1, x2", "less than or equal to",
+                                  BATCH_DIM_MAX)
+                .c_str());
         return ge::GRAPH_FAILED;
     }
     batchInfo.batchA3 = aDims > NO_BATCH_SHAPE_DIM ? aShape.GetDim(aDims - ONE_BATCH_SHAPE_DIM) : 1UL;

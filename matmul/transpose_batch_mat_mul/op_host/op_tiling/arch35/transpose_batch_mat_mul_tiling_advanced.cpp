@@ -168,7 +168,7 @@ ge::graphStatus TBMMGetShape(const gert::TilingContext &context, MatMulV3Args &a
     if ((aDimNum != ALLOW_DIM) || (bDimNum != ALLOW_DIM) || (cDimNum != ALLOW_DIM)) {
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
             args.opName, "x1, x2, out", Ops::NN::FormatString("%zu, %zu, %zu", aDimNum, bDimNum, cDimNum).c_str(),
-            Ops::NN::FormatString("The shape dims of %s must be %d", "x1, x2, out", 3).c_str());
+            Ops::NN::FormatString("The shape dims of %s must be %zu", "x1, x2, out", ALLOW_DIM).c_str());
         return ge::GRAPH_FAILED;
     }
 

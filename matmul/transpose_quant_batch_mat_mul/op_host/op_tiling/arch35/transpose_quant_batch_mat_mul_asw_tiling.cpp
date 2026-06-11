@@ -168,10 +168,10 @@ void TransposeQuantBatchMatMulAswTiling::CalStepKs()
     }
 
     if (runInfo_.stepKa > runInfo_.stepKb) {
-        runInfo_.stepKa = runInfo_.stepKa / runInfo_.stepKb * runInfo_.stepKb;
+        runInfo_.stepKa = ops::FloorAlign(runInfo_.stepKa, runInfo_.stepKb);
     }
     if (runInfo_.stepKb > runInfo_.stepKa) {
-        runInfo_.stepKb = runInfo_.stepKb / runInfo_.stepKa * runInfo_.stepKa;
+        runInfo_.stepKb = ops::FloorAlign(runInfo_.stepKb, runInfo_.stepKa);
     }
     runInfo_.stepKa =
         std::min(runInfo_.stepKa, static_cast<uint64_t>(4)); // 限制stepKa最大为4, 防止issue queue阻塞

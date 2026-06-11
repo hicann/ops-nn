@@ -40,7 +40,7 @@ void CalL1TilingDefault(const MatmulV3CompileInfo& compileInfo, const MatMulV3Ar
         uint64_t aL1Size = runInfo.baseM * curKL1 * args.aDtypeSize;
         uint64_t bL1Size = runInfo.baseN * curKL1 * args.bDtypeSize;
         if ((aL1Size + bL1Size) * DB_SIZE > totalL1Size ||
-            std::max(aL1Size, bL1Size) * DB_SIZE * 2 > compileInfo.l1Size) {
+            std::max(aL1Size, bL1Size) * DB_SIZE * NUM_TWO > compileInfo.l1Size) {
             break;
         }
         bool condNoRes = resKL1 == 0;

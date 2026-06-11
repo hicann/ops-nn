@@ -96,10 +96,10 @@ float bf16_to_float(uint16_t bf16)
         if (mant == 0) {
             return sign ? -0.0f : 0.0f;
         } else {
-            // 非规格化 BF16 -> float
+            // 非规格化 BF16 -> float，7为bfloat指数位偏移，126为最小正规格化数的指数
             return (sign ? -1.0f : 1.0f) * (float)mant * (1.0f / (1 << 7) / std::ldexp(1.0, 126));
         }
-    } else if (exp == 255) {
+    } else if (exp == 255) { // exp为255，则float表示特殊值
         //无穷大或 NaN
         if (mant == 0) {
             return sign ? -std::numeric_limits<float>::infinity() : std::numeric_limits<float>::infinity();

@@ -15,7 +15,6 @@
 #include "fused_matmul_asw_basic_tiling.h"
 #include "fused_matmul_builtin_tiling_strategy.h"
 #include "fused_matmul_common.h"
-#include "../../../op_kernel/arch35/fused_mat_mul_tiling_data.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_tiling_registry.h"
 #include "matmul/common/op_host/math_util.h"
 #include "matmul/common/op_host/log_format_util.h"
@@ -67,7 +66,7 @@ inline uint64_t GetSmallNBaseK(const MatMulV3Args& args, uint64_t baseM, uint64_
     }
     uint64_t kValueAlign = ops::CeilAlign(static_cast<uint64_t>(args.kValue), baseKAlignValue);
     uint64_t kValueMax = ops::FloorAlign(
-        L0A_SIZE_2 / DB_SIZE / args.aDtypeSize / std::max(baseM, baseN), baseKAlignValue);
+        ops::FloorDiv(L0A_SIZE_2 / DB_SIZE / args.aDtypeSize, std::max(baseM, baseN)), baseKAlignValue);
     return std::min(kValueAlign, kValueMax);
 }
 // ------------------------------ CheckBatch -------------------------------------------//

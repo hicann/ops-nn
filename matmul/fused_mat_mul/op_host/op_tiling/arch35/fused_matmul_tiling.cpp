@@ -163,7 +163,7 @@ bool OpSpecificCheck(const gert::TilingContext& context, int64_t m, int64_t n, b
                 "%zu, %zu", context.GetInputShape(0)->GetOriginShape().GetDimNum(),
                 context.GetInputShape(1)->GetOriginShape().GetDimNum())
                 .c_str(),
-            Ops::NN::FormatString("The shape dims of %s must be %d", "x1, x2", 2).c_str());
+            Ops::NN::FormatString("The shape dims of %s must be %llu", "x1, x2", TWO_BATCH_DIM).c_str());
         return false;
     }
 
@@ -173,7 +173,7 @@ bool OpSpecificCheck(const gert::TilingContext& context, int64_t m, int64_t n, b
         if (x3DimNum < TWO_BATCH_DIM) {
             OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
                 context.GetNodeName(), "x3", Ops::NN::FormatString("%zu", x3DimNum).c_str(),
-                Ops::NN::FormatString("The shape dim of %s must be at least %d", "x3", 2).c_str());
+                Ops::NN::FormatString("The shape dim of %s must be at least %llu", "x3", TWO_BATCH_DIM).c_str());
             return false;
         }
         if (x3Shape[0] != m || x3Shape[1] != n) {
@@ -219,7 +219,7 @@ bool GetShape(const gert::TilingContext& context, int64_t& m, int64_t& n, int64_
                 "%zu, %zu", context.GetInputShape(0)->GetStorageShape().GetDimNum(),
                 context.GetInputShape(1)->GetStorageShape().GetDimNum())
                 .c_str(),
-            Ops::NN::FormatString("The shape dims of %s must be %d", "x1, x2", 2).c_str());
+            Ops::NN::FormatString("The shape dims of %s must be %llu", "x1, x2", TWO_BATCH_DIM).c_str());
         return false;
     }
     uint64_t kIdxA = isATrans ? 0ULL : 1ULL;
@@ -269,7 +269,7 @@ bool CheckShape(const gert::TilingContext& context, bool hasX3Input, bool hasBia
     if (cDimNum < TWO_BATCH_DIM) {
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
             context.GetNodeName(), "y", Ops::NN::FormatString("%zu", cDimNum).c_str(),
-            Ops::NN::FormatString("The shape dim of %s must be at least %d", "y", 2).c_str());
+            Ops::NN::FormatString("The shape dim of %s must be at least %llu", "y", TWO_BATCH_DIM).c_str());
         return false;
     }
     return OpSpecificCheck(context, m, n, hasX3Input, hasBias);

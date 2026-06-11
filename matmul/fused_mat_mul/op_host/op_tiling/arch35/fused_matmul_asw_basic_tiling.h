@@ -14,6 +14,9 @@
  */
 #pragma once
 
+#include <cstdint>
+#include "exe_graph/runtime/tiling_context.h"
+#include "mat_mul_v3/op_host/op_tiling/arch35/matmul_tiling_cfg.h"
 #include "mat_mul_v3/op_host/op_tiling/arch35/matmul_v3_basic_aswt_tiling.h"
 
 namespace optiling {

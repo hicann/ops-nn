@@ -320,7 +320,7 @@ static bool CheckPermValid(const aclIntArray* permX1, const aclIntArray* permX2,
     auto allowedPermY = ((*permY)[0] == 1 && (*permY)[1] == 0 && (*permY)[2] == 2);     // 1 0 2
     std::string permX2ErrorInfo = "[0, 1, 2].";
     if (isMxFp) {
-        allowedPermX2 = allowedPermX2 || ((*permX2)[0] == 0 && (*permX2)[1] == 2 && (*permX2)[2] == 1);
+        allowedPermX2 = allowedPermX2 || ((*permX2)[0] == 0 && (*permX2)[1] == NUM_TWO && (*permX2)[NUM_TWO] == 1);
         permX2ErrorInfo = "[0, 1, 2] or [0, 2, 1].";
     }
 
