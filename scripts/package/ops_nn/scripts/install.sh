@@ -325,7 +325,7 @@ get_opts() {
 
   if [ "$*" = "" ]; then
     echo "[OpsNN] [ERROR]: ERR_NO:${PARAM_INVALID};ERR_DES:\
- only support one type: full/upgrade/uninstall, operation execute failed!\
+ only support one type: full/upgrade/uninstall/check, operation execute failed!\
  Please use [--help] to see the usage."
     exitlog
     exit 1
@@ -347,6 +347,11 @@ get_opts() {
         ;;
       --uninstall)
         IS_UNINSTALL="y"
+        CONFLICT_CMD_NUMS=$(expr $CONFLICT_CMD_NUMS + 1)
+        shift
+        ;;
+      --check)
+        IS_CHECK="y"
         CONFLICT_CMD_NUMS=$(expr $CONFLICT_CMD_NUMS + 1)
         shift
         ;;
@@ -389,7 +394,7 @@ check_opts() {
 
   if [ "${CONFLICT_CMD_NUMS}" != 1 ]; then
     echo "[OpsNN] [ERROR]: ERR_NO:${PARAM_INVALID};ERR_DES:\
- only support one type: full/upgrade/uninstall, operation execute failed!\
+ only support one type: full/upgrade/uninstall/check, operation execute failed!\
  Please use [--help] to see the usage."
     exitlog
     exit 1
@@ -651,6 +656,74 @@ pre_check_only() {
   fi
 }
 
+check_dependencies() {
+  local version_info_file="$1"
+  local failed=0
+
+  logandprint "[INFO]: Start checking dependencies from ${version_info_file}"
+
+  if [ ! -f "${version_info_file}" ]; then
+    logandprint "[ERROR]: version.info not found at ${version_info_file}"
+    return 1
+  fi
+
+  local dep_lines
+  dep_lines=$(grep "^required_package_" "${version_info_file}")
+
+  if [ -z "${dep_lines}" ]; then
+    logandprint "[INFO]: All dependency checks passed."
+    return 0
+  fi
+
+  while IFS= read -r line; do
+    local component=$(echo "${line}" | sed -n 's/^required_package_\(.*\)_version=.*/\1/p')
+    local req_version=$(echo "${line}" | cut -d= -f2- | tr -d '"')
+
+    if [ -z "${component}" ] || [ -z "${req_version}" ]; then
+      continue
+    fi
+
+    local ascend_home="${ASCEND_HOME_PATH:-${TARGET_VERSION_DIR}}"
+    local info_file="${ascend_home}/share/info/${component}/version.info"
+    if [ ! -f "${info_file}" ]; then
+      logandprint "[ERROR]: ${component} version.info not found at ${info_file}"
+      failed=1
+      continue
+    fi
+
+    local actual_version=$(grep "^Version=" "${info_file}" | cut -d= -f2-)
+
+    if [ -z "${actual_version}" ]; then
+      logandprint "[ERROR]: Failed to get version of ${component} from ${info_file}"
+      failed=1
+      continue
+    fi
+
+    local op=$(echo "${req_version}" | sed 's/[0-9].*//')
+    local ver=$(echo "${req_version}" | sed 's/^[^0-9]*//')
+
+    if [ "${op}" = ">=" ]; then
+      local first=$(printf '%s\n%s\n' "${actual_version}" "${ver}" | sort -V | head -n 1)
+
+      if [ "$first" = "${ver}" ]; then
+        logandprint "[INFO]: ${component} version ${actual_version} satisfies requirement ${req_version}"
+      else
+        logandprint "[ERROR]: ${component} version ${actual_version} does not satisfy requirement ${req_version}"
+        failed=1
+      fi
+    else
+      logandprint "[ERROR]: Unsupported version operator '${op}' for ${component}, skipping"
+    fi
+  done <<< "${dep_lines}"
+
+  if [ "${failed}" -eq 0 ]; then
+    logandprint "[INFO]: All dependency checks passed."
+  else
+    logandprint "[ERROR]: Some dependency checks failed."
+  fi
+  return ${failed}
+}
+
 main() {
 
   get_run_path "$@"
@@ -662,6 +735,13 @@ main() {
   check_opts
 
   init_env
+
+  if [ "${IS_CHECK}" = "y" ]; then
+    check_dependencies "${VERSION_INFO_FILE}"
+    local check_ret=$?
+    exitlog
+    exit ${check_ret}
+  fi
 
   check_pre_install
 
