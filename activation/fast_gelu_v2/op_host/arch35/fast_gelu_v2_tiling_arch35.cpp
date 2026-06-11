@@ -32,6 +32,12 @@ using Ops::Base::GetUbBlockSize;
 
 constexpr uint32_t WS_SYS_SIZE = 0U;
 constexpr int64_t MIN_SPLIT_THRESHOLD = 1024;
+constexpr int64_t FP32_BYTE_SIZE = 4;
+constexpr int64_t FP16_BYTE_SIZE = 2;
+constexpr int64_t IO_BUF_NUM = 2;          // input + output 队列各 1 块
+constexpr int64_t TMP_BUF_FP32_NUM = 5;    // FP16/BF16 路径 5 块 fp32 中间 buffer
+constexpr int64_t FP32_BUF_NUM_DB = 7;     // FP32 路径双缓冲总块数
+constexpr int64_t FP32_BUF_NUM_SB = 5;     // FP32 路径单缓冲总块数
 
 static const gert::Shape g_vec_1_shape = {1};
 
@@ -104,16 +110,17 @@ static ge::graphStatus CalcTilingParams(gert::TilingContext* context, FastGeluV2
     int64_t totalIdx, ge::DataType dataType, int64_t coreNum, uint64_t ubSize)
 {
     int64_t ubBlockSize = GetUbBlockSize(context);
-    uint64_t useDoubleBuffer = (totalIdx > MIN_SPLIT_THRESHOLD) ? 1 : 0;
+    bool useDoubleBuffer = (totalIdx > MIN_SPLIT_THRESHOLD);
 
     tiling->totalNum = totalIdx;
     tiling->blockFactor = CeilAlign(CeilDiv(totalIdx, coreNum), ubBlockSize);
 
     int64_t bytesPerElement;
     if (dataType == ge::DT_FLOAT16 || dataType == ge::DT_BF16) {
-        bytesPerElement = (useDoubleBuffer ? 4 : 2) * 2 + 5 * 4;
+        int64_t ioBufNum = useDoubleBuffer ? IO_BUF_NUM * 2 : IO_BUF_NUM;
+        bytesPerElement = ioBufNum * FP16_BYTE_SIZE + TMP_BUF_FP32_NUM * FP32_BYTE_SIZE;
     } else {
-        bytesPerElement = (useDoubleBuffer ? 7 : 5) * 4;
+        bytesPerElement = (useDoubleBuffer ? FP32_BUF_NUM_DB : FP32_BUF_NUM_SB) * FP32_BYTE_SIZE;
     }
     tiling->ubFactor = FloorAlign(FloorDiv(static_cast<int64_t>(ubSize), bytesPerElement), ubBlockSize);
 
@@ -124,7 +131,8 @@ static ge::graphStatus CalcTilingParams(gert::TilingContext* context, FastGeluV2
         OP_LOGE(context, "FastGeluV2: blockFactor is 0"), return ge::GRAPH_FAILED);
 
     context->SetBlockDim(CeilDiv(totalIdx, tiling->blockFactor));
-    ASCENDC_TPL_SEL_PARAM(context, static_cast<uint32_t>(dataType), static_cast<uint32_t>(useDoubleBuffer));
+    uint32_t doubleBufferKey = useDoubleBuffer ? 1U : 0U;
+    ASCENDC_TPL_SEL_PARAM(context, static_cast<uint32_t>(dataType), doubleBufferKey);
     return ge::GRAPH_SUCCESS;
 }
 

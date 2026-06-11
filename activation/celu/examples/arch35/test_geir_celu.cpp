@@ -57,7 +57,7 @@ using std::vector;
     input.push_back(tensor_placeholder##intputIndex);                                        \
     graph.AddOp(placeholder##intputIndex);                                                   \
     celu_op.set_input_##intputName(placeholder##intputIndex);                                \
-    inputs.push_back(placeholder##intputIndex);
+    inputs.push_back(placeholder##intputIndex)
 
 #define LOG_PRINT(message, ...)     \
   do {                              \
@@ -120,8 +120,7 @@ int32_t GenOnesDataFloat32(vector<int64_t> shapes, Tensor &input_tensor, TensorD
 
 int32_t WriteDataToFile(string bin_file, uint64_t data_size, uint8_t *inputData)
 {
-    FILE *fp;
-    fp = fopen(bin_file.c_str(), "w");
+    FILE *fp = fopen(bin_file.c_str(), "w");
     if (fp == nullptr) {
         return FAILED;
     }

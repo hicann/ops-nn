@@ -29,6 +29,12 @@ using Ops::NN::OpTiling::EnsureNotScalar;
 constexpr int64_t FP32_SIZE = 4;
 constexpr int64_t MIN_SPLIT_THRESHOLD = 1024;
 
+// UB 划分份数：按是否需 Cast、是否开启 double buffer 区分缓冲块数
+constexpr int64_t BUFFER_NUM_CAST_DB = 6;
+constexpr int64_t BUFFER_NUM_CAST_SB = 5;
+constexpr int64_t BUFFER_NUM_NOCAST_DB = 7;
+constexpr int64_t BUFFER_NUM_NOCAST_SB = 4;
+
 static ge::graphStatus GetPlatformInfo(gert::TilingContext* context, uint64_t& ubSize, int64_t& coreNum)
 {
     fe::PlatFormInfos* platformInfoPtr = context->GetPlatformInfo();
@@ -132,14 +138,14 @@ static ge::graphStatus SoftsignGradTilingFunc(gert::TilingContext* context)
     int64_t usedCoreNum = CeilDiv(totalNum, tiling->blockFactor);
 
     int64_t ubBlockSize = GetUbBlockSize(context);
-    uint64_t useDoubleBuffer = (totalNum > MIN_SPLIT_THRESHOLD) ? 1 : 0;
+    bool useDoubleBuffer = (totalNum > MIN_SPLIT_THRESHOLD);
 
     int64_t bufferNum;
     bool needsCast = (dataType != ge::DT_FLOAT);
     if (needsCast) {
-        bufferNum = useDoubleBuffer ? 6 : 5;
+        bufferNum = useDoubleBuffer ? BUFFER_NUM_CAST_DB : BUFFER_NUM_CAST_SB;
     } else {
-        bufferNum = useDoubleBuffer ? 7 : 4;
+        bufferNum = useDoubleBuffer ? BUFFER_NUM_NOCAST_DB : BUFFER_NUM_NOCAST_SB;
     }
 
     tiling->ubFactor = FloorAlign(
@@ -148,7 +154,8 @@ static ge::graphStatus SoftsignGradTilingFunc(gert::TilingContext* context)
 
     context->SetBlockDim(usedCoreNum);
 
-    ASCENDC_TPL_SEL_PARAM(context, useDoubleBuffer);
+    uint64_t bufferModeKey = useDoubleBuffer ? 1U : 0U;
+    ASCENDC_TPL_SEL_PARAM(context, bufferModeKey);
 
     return ge::GRAPH_SUCCESS;
 }

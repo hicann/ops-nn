@@ -46,6 +46,9 @@ using std::map;
 using std::string;
 using std::vector;
 
+constexpr uint32_t FP32_BYTE_SIZE = 4;
+constexpr uint32_t FP16_BYTE_SIZE = 2;
+
 #define ADD_INPUT(inputIndex, inputName, inputDtype, inputShape)                                                \
     vector<int64_t> placeholder##inputIndex##_shape = inputShape;                                               \
     auto placeholder##inputIndex = op::Data("placeholder" #inputIndex).set_attr_index(inputIndex - 1);          \
@@ -65,11 +68,11 @@ using std::vector;
     input.push_back(tensor_placeholder##inputIndex);                                                            \
     graph.AddOp(placeholder##inputIndex);                                                                       \
     softsignGradOp.set_input_##inputName(placeholder##inputIndex);                                              \
-    inputs.push_back(placeholder##inputIndex);
+    inputs.push_back(placeholder##inputIndex)
 
 #define ADD_OUTPUT(outputIndex, outputName, outputDtype, outputShape)                                            \
     TensorDesc outputName##outputIndex##_desc = TensorDesc(ge::Shape(outputShape), FORMAT_ND, outputDtype);     \
-    softsignGradOp.update_output_desc_##outputName(outputName##outputIndex##_desc);
+    softsignGradOp.update_output_desc_##outputName(outputName##outputIndex##_desc)
 
 string GetTime()
 {
@@ -83,11 +86,11 @@ string GetTime()
 uint32_t GetDataTypeSize(DataType dt)
 {
     if (dt == ge::DT_FLOAT) {
-        return 4;
+        return FP32_BYTE_SIZE;
     } else if (dt == ge::DT_FLOAT16 || dt == ge::DT_BF16) {
-        return 2;
+        return FP16_BYTE_SIZE;
     }
-    return 4;
+    return FP32_BYTE_SIZE;
 }
 
 int32_t GenInputData(

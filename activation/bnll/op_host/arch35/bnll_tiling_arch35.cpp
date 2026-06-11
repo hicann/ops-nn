@@ -29,6 +29,8 @@ constexpr uint32_t WS_SYS_SIZE = 0U;
 constexpr int64_t COMPUTE_TYPE_SIZE = 4;
 constexpr int64_t MIN_SPLIT_THRESHOLD = 1024;
 constexpr int64_t COMPARE_ALIGN_ELEMENTS = 256 / COMPUTE_TYPE_SIZE;
+constexpr int64_t BUFFER_NUM_DB = 9;   // 双缓冲 UB 划分份数
+constexpr int64_t BUFFER_NUM_SB = 7;   // 单缓冲 UB 划分份数
 
 static const gert::Shape g_vec_1_shape = {1};
 
@@ -76,15 +78,15 @@ static ge::graphStatus BNLLTilingFunc(gert::TilingContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, currentWorkspace);
 
     int64_t usedCoreNum = 1;
-    uint64_t useDoubleBuffer = 0;
+    bool useDoubleBuffer = false;
 
     if (totalIdx > 0) {
         int64_t ubBlockSize = GetUbBlockSize(context);
         tiling->totalNum = totalIdx;
         tiling->blockFactor = CeilAlign(CeilDiv(totalIdx, coreNum), ubBlockSize);
         usedCoreNum = CeilDiv(totalIdx, tiling->blockFactor);
-        useDoubleBuffer = (totalIdx > MIN_SPLIT_THRESHOLD) ? 1 : 0;
-        int64_t bufferNum = useDoubleBuffer ? 9 : 7;
+        useDoubleBuffer = (totalIdx > MIN_SPLIT_THRESHOLD);
+        int64_t bufferNum = useDoubleBuffer ? BUFFER_NUM_DB : BUFFER_NUM_SB;
         int64_t alignUnit = (ubBlockSize > COMPARE_ALIGN_ELEMENTS) ? ubBlockSize : COMPARE_ALIGN_ELEMENTS;
         tiling->ubFactor = FloorAlign(
             FloorDiv(static_cast<int64_t>(ubSize) / COMPUTE_TYPE_SIZE, bufferNum), alignUnit);
@@ -94,7 +96,8 @@ static ge::graphStatus BNLLTilingFunc(gert::TilingContext* context)
     }
 
     context->SetBlockDim(usedCoreNum);
-    ASCENDC_TPL_SEL_PARAM(context, static_cast<uint32_t>(dataType), useDoubleBuffer);
+    uint32_t doubleBufferKey = useDoubleBuffer ? 1U : 0U;
+    ASCENDC_TPL_SEL_PARAM(context, static_cast<uint32_t>(dataType), doubleBufferKey);
     return ge::GRAPH_SUCCESS;
 }
 

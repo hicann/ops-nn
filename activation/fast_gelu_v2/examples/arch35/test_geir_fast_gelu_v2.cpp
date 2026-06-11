@@ -37,6 +37,9 @@ using std::map;
 using std::string;
 using std::vector;
 
+constexpr uint32_t FP32_BYTE_SIZE = 4;
+constexpr uint32_t FP16_BYTE_SIZE = 2;
+
 string GetTime()
 {
     time_t timep;
@@ -49,11 +52,11 @@ string GetTime()
 uint32_t GetDataTypeSize(DataType dt)
 {
     if (dt == ge::DT_FLOAT) {
-        return 4;
+        return FP32_BYTE_SIZE;
     } else if (dt == ge::DT_FLOAT16 || dt == ge::DT_BF16) {
-        return 2;
+        return FP16_BYTE_SIZE;
     }
-    return 4;
+    return FP32_BYTE_SIZE;
 }
 
 int32_t GenOnesData(vector<int64_t> shapes, Tensor &input_tensor, TensorDesc &input_tensor_desc,

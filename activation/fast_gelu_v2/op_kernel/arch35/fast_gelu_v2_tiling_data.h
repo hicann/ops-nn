@@ -22,6 +22,8 @@
 #ifndef _FAST_GELU_V2_TILING_DATA_H_
 #define _FAST_GELU_V2_TILING_DATA_H_
 
+#include <cstdint>
+
 struct FastGeluV2TilingData {
     int64_t totalNum = 0;     // Total number of input elements across all dimensions
     int64_t blockFactor = 0;  // Number of elements assigned to each AI Core (aligned to ubBlockSize)

@@ -21,6 +21,8 @@
 #ifndef _SELU_TILING_DATA_H_
 #define _SELU_TILING_DATA_H_
 
+#include <cstdint>
+
 struct SeluTilingData {
     int64_t totalElements = 0;   // Total number of elements
     int64_t blockFactor = 0;     // Number of elements per AI Core

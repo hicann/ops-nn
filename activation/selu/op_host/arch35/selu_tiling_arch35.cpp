@@ -47,6 +47,12 @@ using Ops::Base::GetAivCoreNum;
 using Ops::Base::GetUbSize;
 
 constexpr uint32_t WS_SYS_SIZE = 0U;
+constexpr int64_t BLOCK_ALIGN_BYTES = 32;          // UB 32 字节对齐
+constexpr int64_t FP32_BYTE_SIZE = 4;              // cast-to-fp32 中间计算字节宽
+constexpr int64_t FP16_BYTE_SIZE = 2;
+constexpr int64_t INT8_BYTE_SIZE = 1;
+constexpr int64_t IO_BUF_NUM = 2;                  // inputQueue + outputQueue
+constexpr int64_t TMP_BUF_NUM = 2;                 // tmpBuf1 + tmpBuf2
 
 static const gert::Shape g_vec_1_shape = {1};
 
@@ -107,30 +113,30 @@ static ge::graphStatus ComputeTiling(gert::TilingContext* context, SeluTilingDat
                                       uint64_t ubSize, int64_t coreNum)
 {
     // 用户约定：所有非 fp32 dtype 中间都走 cast-to-fp32，computeTypeSize 固定为 4
-    int64_t typeSize = 4;
-    int64_t computeTypeSize = 4;
+    int64_t typeSize = FP32_BYTE_SIZE;
+    int64_t computeTypeSize = FP32_BYTE_SIZE;
     switch (dataType) {
         case ge::DT_FLOAT:
         case ge::DT_INT32:
-            typeSize = 4;
+            typeSize = FP32_BYTE_SIZE;
             break;
         case ge::DT_FLOAT16:
         case ge::DT_BF16:
-            typeSize = 2;
+            typeSize = FP16_BYTE_SIZE;
             break;
         case ge::DT_INT8:
-            typeSize = 1;
+            typeSize = INT8_BYTE_SIZE;
             break;
         default:
             OP_LOGE(context, "Selu: unexpected dtype %d", static_cast<int>(dataType));
             return ge::GRAPH_FAILED;
     }
 
-    int64_t ubBlockSize = 32 / typeSize; // 32-byte alignment in elements
+    int64_t ubBlockSize = BLOCK_ALIGN_BYTES / typeSize; // 32-byte alignment in elements
     int64_t blockFactor = CeilDiv(totalElements, coreNum);
     blockFactor = ((blockFactor + ubBlockSize - 1) / ubBlockSize) * ubBlockSize;
     int64_t usedCoreNum = CeilDiv(totalElements, blockFactor);
-    int64_t ubDivisor = (2 * typeSize + 2 * computeTypeSize) / typeSize;
+    int64_t ubDivisor = (IO_BUF_NUM * typeSize + TMP_BUF_NUM * computeTypeSize) / typeSize;
     int64_t ubFactor = FloorAlign(
         FloorDiv(static_cast<int64_t>(ubSize) / typeSize, ubDivisor),
         ubBlockSize);

@@ -13,6 +13,8 @@
 #ifndef _BNLL_TILING_DATA_H_
 #define _BNLL_TILING_DATA_H_
 
+#include <cstdint>
+
 struct BNLLTilingData {
     int64_t totalNum = 0;
     int64_t blockFactor = 0;
