@@ -15,6 +15,8 @@
 #ifdef __CCE_KT_TEST__
 #include "tikicpulib.h"
 #include "data_utils.h"
+#include "kernel_ut_data_helper.h"
+#include "kernel_ut_data_executor.h"
 #include "string.h"
 #include <iostream>
 #include <string>
@@ -24,22 +26,22 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void multi_scale_deformable_attn_function(GM_ADDR value_gm, GM_ADDR spatial_shapes_gm,
-                                                                            GM_ADDR level_start_index_gm, GM_ADDR sampling_loc_gm,
-                                                                            GM_ADDR attn_weight_gm, GM_ADDR output_gm,
-                                                                            GM_ADDR workspace, GM_ADDR tiling_data);
+extern "C" __global__ __aicore__ void multi_scale_deformable_attn_function(
+    GM_ADDR value_gm, GM_ADDR spatial_shapes_gm, GM_ADDR level_start_index_gm, GM_ADDR sampling_loc_gm,
+    GM_ADDR attn_weight_gm, GM_ADDR output_gm, GM_ADDR workspace, GM_ADDR tiling_data);
 
 class multi_scale_deformable_attn_function_test : public testing::Test {
-    protected:
-    static void SetUpTestCase() {
-        cout << "multi_scale_deformable_attn_function_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase() {
+protected:
+    static void SetUpTestCase() { cout << "multi_scale_deformable_attn_function_test SetUp\n" << endl; }
+    static void TearDownTestCase()
+    {
         cout << "multi_scale_deformable_attn_function_test TearDown\n" << endl;
+        kernel_ut::CleanGeneratedBinFiles("./multi_scale_deformable_attn_function_data");
     }
 };
 
-TEST_F(multi_scale_deformable_attn_function_test, msda_test_high_perf) {
+TEST_F(multi_scale_deformable_attn_function_test, msda_test_high_perf)
+{
     uint64_t batch_size = 1;
     uint64_t spatial_size = 24;
     uint64_t num_heads = 8;
@@ -64,35 +66,43 @@ TEST_F(multi_scale_deformable_attn_function_test, msda_test_high_perf) {
     uint8_t* attention_weight = (uint8_t*)AscendC::GmAlloc(attention_weight_size + 32);
     uint8_t* output = (uint8_t*)AscendC::GmAlloc(output_size + 32);
 
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(1024 * 16 * 1024);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tiling_data_size + 32);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 16 * 1024);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size + 32);
     uint32_t blockDim = 48;
 
     memset(workspace, 0, 16 * 1024 * 1024);
-    system("cp -rf ../../../../vfusion/multi_scale_deformable_attn_function/tests/ut/op_kernel/multi_scale_deformable_attn_function_data/ ./");
-    system("chmod -R 755 ./multi_scale_deformable_attn_function_data/");
-    system("cd ./multi_scale_deformable_attn_function_data/ && rm -rf ./*bin");
-    // bs, num_heads, channels, num_levels, num_points, num_queries
-    system("cd ./multi_scale_deformable_attn_function_data/ && python3 gen_data.py 1 8 64 1 2 100");
-    system("cd ./multi_scale_deformable_attn_function_data/ && python3 gen_tiling.py 1 8 64 1 2 100");
+    kernel_ut::SetupTestEnvironment(
+        "vfusion/multi_scale_deformable_attn_function/tests/ut/op_kernel/multi_scale_deformable_attn_function_data",
+        "multi_scale_deformable_attn_function_data");
+    kernel_ut::RunGenData("./multi_scale_deformable_attn_function_data", {"1", "8", "64", "1", "2", "100"});
+    kernel_ut::RunGenTiling("./multi_scale_deformable_attn_function_data", "1 8 64 1 2 100");
 
-    char * path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/multi_scale_deformable_attn_function_data/value.bin", value_size, value, value_size);
-    ReadFile(path + "/multi_scale_deformable_attn_function_data/value_spatial_shape.bin", value_spatial_shape_size, value_spatial_shape, value_spatial_shape_size);
-    ReadFile(path + "/multi_scale_deformable_attn_function_data/level_start_index.bin", level_start_index_size, level_start_index, level_start_index_size);
-    ReadFile(path + "/multi_scale_deformable_attn_function_data/sample_loc.bin", sample_loc_size, sample_loc, sample_loc_size);
-    ReadFile(path + "/multi_scale_deformable_attn_function_data/attention_weight.bin", attention_weight_size, attention_weight, attention_weight_size);
+    ReadFile(
+        path + "/multi_scale_deformable_attn_function_data/value_spatial_shape.bin", value_spatial_shape_size,
+        value_spatial_shape, value_spatial_shape_size);
+    ReadFile(
+        path + "/multi_scale_deformable_attn_function_data/level_start_index.bin", level_start_index_size,
+        level_start_index, level_start_index_size);
+    ReadFile(
+        path + "/multi_scale_deformable_attn_function_data/sample_loc.bin", sample_loc_size, sample_loc,
+        sample_loc_size);
+    ReadFile(
+        path + "/multi_scale_deformable_attn_function_data/attention_weight.bin", attention_weight_size,
+        attention_weight, attention_weight_size);
     ReadFile(path + "/multi_scale_deformable_attn_function_data/output.bin", output_size, output, output_size);
-    std::cout<<"tiling_data_size:"<<tiling_data_size<<std::endl;
-    ReadFile(path + "/multi_scale_deformable_attn_function_data/tiling.bin", tiling_data_size, tiling, tiling_data_size);
+    std::cout << "tiling_data_size:" << tiling_data_size << std::endl;
+    ReadFile(
+        path + "/multi_scale_deformable_attn_function_data/tiling.bin", tiling_data_size, tiling, tiling_data_size);
 
     ICPU_SET_TILING_KEY(0);
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
-    std::cout<<"ICPU_RUN_KF start:"<<tiling<<std::endl;
-    ICPU_RUN_KF(multi_scale_deformable_attn_function, blockDim, value, value_spatial_shape, level_start_index,
-        sample_loc, attention_weight, output, workspace, tiling);
-    std::cout<<"ICPU_RUN_KF Finsh:"<<tiling<<std::endl;
+    std::cout << "ICPU_RUN_KF start:" << tiling << std::endl;
+    ICPU_RUN_KF(
+        multi_scale_deformable_attn_function, blockDim, value, value_spatial_shape, level_start_index, sample_loc,
+        attention_weight, output, workspace, tiling);
+    std::cout << "ICPU_RUN_KF Finsh:" << tiling << std::endl;
 
     AscendC::GmFree(value);
     AscendC::GmFree(value_spatial_shape);
@@ -102,6 +112,4 @@ TEST_F(multi_scale_deformable_attn_function_test, msda_test_high_perf) {
     AscendC::GmFree(output);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-
-    free(path_);
 }

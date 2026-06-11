@@ -17,6 +17,8 @@
 #include "tikicpulib.h"
 #include "scaled_masked_softmax_v2_tiling_def.h"
 #include "data_utils.h"
+#include "kernel_ut_data_helper.h"
+#include "kernel_ut_data_executor.h"
 
 #include <cstdint>
 
@@ -25,16 +27,13 @@ using namespace std;
 extern "C" __global__ __aicore__ void scaled_masked_softmax_v2(
     GM_ADDR x, GM_ADDR mask, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling);
 
-class scaled_masked_softmax_v2_test : public testing::Test
-{
+class scaled_masked_softmax_v2_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "scaled_masked_softmax_v2_test SetUp\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "scaled_masked_softmax_v2_test SetUp\n" << endl; }
     static void TearDownTestCase()
     {
         cout << "scaled_masked_softmax_v2_test TearDown\n" << endl;
+        kernel_ut::CleanGeneratedBinFiles("./scaled_masked_softmax_v2_data");
     }
 };
 
@@ -62,13 +61,12 @@ TEST_F(scaled_masked_softmax_v2_test, test_case_half_align)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 48;
 
-    system("cp -rf ../../../../vfusion/scaled_masked_softmax_v2/tests/ut/op_kernel/scaled_masked_softmax_v2_data/ ./");
-    system("chmod -R 755 ./scaled_masked_softmax_v2_data/");
-    system("cd ./scaled_masked_softmax_v2_data/ && rm -rf ./*bin");
-    system("cd ./scaled_masked_softmax_v2_data/ && python3 gen_data.py 1 32 32 128 1 32 half");
+    kernel_ut::SetupTestEnvironment(
+        "vfusion/scaled_masked_softmax_v2/tests/ut/op_kernel/scaled_masked_softmax_v2_data",
+        "scaled_masked_softmax_v2_data");
+    kernel_ut::RunGenData("./scaled_masked_softmax_v2_data", {"1", "32", "32", "128", "1", "32", "half"});
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/scaled_masked_softmax_v2_data/input_x.bin", x_size, x, x_size);
     ReadFile(path + "/scaled_masked_softmax_v2_data/input_mask.bin", mask_size, mask, mask_size);
 
@@ -126,8 +124,6 @@ TEST_F(scaled_masked_softmax_v2_test, test_case_half_align)
 
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-
-    free(path_);
 }
 
 TEST_F(scaled_masked_softmax_v2_test, test_case_half_align_broadcastC)
@@ -154,13 +150,12 @@ TEST_F(scaled_masked_softmax_v2_test, test_case_half_align_broadcastC)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 48;
 
-    system("cp -rf ../../../../vfusion/scaled_masked_softmax_v2/tests/ut/op_kernel/scaled_masked_softmax_v2_data/ ./");
-    system("chmod -R 755 ./scaled_masked_softmax_v2_data/");
-    system("cd ./scaled_masked_softmax_v2_data/ && rm -rf ./*bin");
-    system("cd ./scaled_masked_softmax_v2_data/ && python3 gen_data.py 1 32 32 128 1 1 half");
+    kernel_ut::SetupTestEnvironment(
+        "vfusion/scaled_masked_softmax_v2/tests/ut/op_kernel/scaled_masked_softmax_v2_data",
+        "scaled_masked_softmax_v2_data");
+    kernel_ut::RunGenData("./scaled_masked_softmax_v2_data", {"1", "32", "32", "128", "1", "1", "half"});
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/scaled_masked_softmax_v2_data/input_x.bin", x_size, x, x_size);
     ReadFile(path + "/scaled_masked_softmax_v2_data/input_mask.bin", mask_size, mask, mask_size);
 
@@ -218,8 +213,6 @@ TEST_F(scaled_masked_softmax_v2_test, test_case_half_align_broadcastC)
 
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-
-    free(path_);
 }
 
 TEST_F(scaled_masked_softmax_v2_test, test_case_half_align_broadcastN)
@@ -246,13 +239,12 @@ TEST_F(scaled_masked_softmax_v2_test, test_case_half_align_broadcastN)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 48;
 
-    system("cp -rf ../../../../vfusion/scaled_masked_softmax_v2/tests/ut/op_kernel/scaled_masked_softmax_v2_data/ ./");
-    system("chmod -R 755 ./scaled_masked_softmax_v2_data/");
-    system("cd ./scaled_masked_softmax_v2_data/ && rm -rf ./*bin");
-    system("cd ./scaled_masked_softmax_v2_data/ && python3 gen_data.py 32 1 32 128 1 1 half");
+    kernel_ut::SetupTestEnvironment(
+        "vfusion/scaled_masked_softmax_v2/tests/ut/op_kernel/scaled_masked_softmax_v2_data",
+        "scaled_masked_softmax_v2_data");
+    kernel_ut::RunGenData("./scaled_masked_softmax_v2_data", {"32", "1", "32", "128", "1", "1", "half"});
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/scaled_masked_softmax_v2_data/input_x.bin", x_size, x, x_size);
     ReadFile(path + "/scaled_masked_softmax_v2_data/input_mask.bin", mask_size, mask, mask_size);
 
@@ -310,8 +302,6 @@ TEST_F(scaled_masked_softmax_v2_test, test_case_half_align_broadcastN)
 
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-
-    free(path_);
 }
 
 TEST_F(scaled_masked_softmax_v2_test, test_case_half_align_broadcastNC)
@@ -338,13 +328,12 @@ TEST_F(scaled_masked_softmax_v2_test, test_case_half_align_broadcastNC)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 48;
 
-    system("cp -rf ../../../../vfusion/scaled_masked_softmax_v2/tests/ut/op_kernel/scaled_masked_softmax_v2_data/ ./");
-    system("chmod -R 755 ./scaled_masked_softmax_v2_data/");
-    system("cd ./scaled_masked_softmax_v2_data/ && rm -rf ./*bin");
-    system("cd ./scaled_masked_softmax_v2_data/ && python3 gen_data.py 4 4 32 128 1 1 half");
+    kernel_ut::SetupTestEnvironment(
+        "vfusion/scaled_masked_softmax_v2/tests/ut/op_kernel/scaled_masked_softmax_v2_data",
+        "scaled_masked_softmax_v2_data");
+    kernel_ut::RunGenData("./scaled_masked_softmax_v2_data", {"4", "4", "32", "128", "1", "1", "half"});
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/scaled_masked_softmax_v2_data/input_x.bin", x_size, x, x_size);
     ReadFile(path + "/scaled_masked_softmax_v2_data/input_mask.bin", mask_size, mask, mask_size);
 
@@ -402,8 +391,6 @@ TEST_F(scaled_masked_softmax_v2_test, test_case_half_align_broadcastNC)
 
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-
-    free(path_);
 }
 
 TEST_F(scaled_masked_softmax_v2_test, test_case_float_align)
@@ -430,13 +417,12 @@ TEST_F(scaled_masked_softmax_v2_test, test_case_float_align)
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
     uint32_t blockDim = 48;
 
-    system("cp -rf ../../../../vfusion/scaled_masked_softmax_v2/tests/ut/op_kernel/scaled_masked_softmax_v2_data/ ./");
-    system("chmod -R 755 ./scaled_masked_softmax_v2_data/");
-    system("cd ./scaled_masked_softmax_v2_data/ && rm -rf ./*bin");
-    system("cd ./scaled_masked_softmax_v2_data/ && python3 gen_data.py 1 32 32 512 1 32 float32");
+    kernel_ut::SetupTestEnvironment(
+        "vfusion/scaled_masked_softmax_v2/tests/ut/op_kernel/scaled_masked_softmax_v2_data",
+        "scaled_masked_softmax_v2_data");
+    kernel_ut::RunGenData("./scaled_masked_softmax_v2_data", {"1", "32", "32", "512", "1", "32", "float32"});
 
-    char* path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/scaled_masked_softmax_v2_data/input_x.bin", x_size, x, x_size);
     ReadFile(path + "/scaled_masked_softmax_v2_data/input_mask.bin", mask_size, mask, mask_size);
 
@@ -494,6 +480,4 @@ TEST_F(scaled_masked_softmax_v2_test, test_case_float_align)
 
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-
-    free(path_);
 }

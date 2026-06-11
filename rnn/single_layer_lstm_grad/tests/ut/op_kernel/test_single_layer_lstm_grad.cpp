@@ -10,7 +10,7 @@
 
 /*!
  * \file test_single_layer_lstm_grad.cpp
- * \brief
+ * \brief Single Layer LSTM Gradient Operator Kernel Test (Optimized)
  */
 
 #include <array>
@@ -27,906 +27,476 @@ using namespace std;
 
 extern "C" void single_layer_lstm_grad(
     GM_ADDR x, GM_ADDR w, GM_ADDR b, GM_ADDR y, GM_ADDR init_h, GM_ADDR init_c, GM_ADDR h, GM_ADDR c, GM_ADDR dy,
-    GM_ADDR dh, GM_ADDR dc, GM_ADDR i, GM_ADDR j, GM_ADDR f, GM_ADDR o, GM_ADDR tanhct, GM_ADDR seq_length,
-    GM_ADDR dw, GM_ADDR db, GM_ADDR dx, GM_ADDR dh_prev,
-    GM_ADDR dc_prev, GM_ADDR workspace, GM_ADDR rnnGradTiling);
+    GM_ADDR dh, GM_ADDR dc, GM_ADDR i, GM_ADDR j, GM_ADDR f, GM_ADDR o, GM_ADDR tanhct, GM_ADDR seq_length, GM_ADDR dw,
+    GM_ADDR db, GM_ADDR dx, GM_ADDR dh_prev, GM_ADDR dc_prev, GM_ADDR workspace, GM_ADDR rnnGradTiling);
 
-class SingleLayerLstmGradKernel : public testing::Test
-{
+class SingleLayerLstmGradKernel : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "SingleLayerLstmGrad Kernel SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "SingleLayerLstmGrad Kernel TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "SingleLayerLstmGrad Kernel SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "SingleLayerLstmGrad Kernel TearDown\n" << endl; }
+};
+
+struct LstmGradBuffers {
+    uint8_t* x = nullptr;
+    uint8_t* w = nullptr;
+    uint8_t* b = nullptr;
+    uint8_t* y = nullptr;
+    uint8_t* inith = nullptr;
+    uint8_t* initc = nullptr;
+    uint8_t* h = nullptr;
+    uint8_t* c = nullptr;
+    uint8_t* dy = nullptr;
+    uint8_t* dh = nullptr;
+    uint8_t* dc = nullptr;
+    uint8_t* i = nullptr;
+    uint8_t* j = nullptr;
+    uint8_t* f = nullptr;
+    uint8_t* o = nullptr;
+    uint8_t* tanhc = nullptr;
+    uint8_t* seqLength = nullptr;
+    uint8_t* dw = nullptr;
+    uint8_t* db = nullptr;
+    uint8_t* dx = nullptr;
+    uint8_t* dhPrev = nullptr;
+    uint8_t* dcPrev = nullptr;
+    uint8_t* workspace = nullptr;
+    uint8_t* tiling = nullptr;
 };
 
 template <typename T>
-void TestSingleLayerLstmGradKernel(
-    uint64_t batchSize, uint64_t timeStep, uint64_t inputSize, uint64_t hiddenSize, uint64_t workspaceSize, uint64_t blockDim,
-    uint64_t tilingKey)
+void FillBufferFast(uint8_t* buffer, size_t size, T value)
+{
+    if (buffer == nullptr || size == 0)
+        return;
+    T* ptr = reinterpret_cast<T*>(buffer);
+    size_t count = size / sizeof(T);
+
+    ptr[0] = value;
+    size_t filled = 1;
+    while (filled < count) {
+        size_t copyCount = std::min(filled, count - filled);
+        std::memcpy(ptr + filled, ptr, copyCount * sizeof(T));
+        filled += copyCount;
+    }
+}
+
+template <typename T>
+void AllocateBuffers(
+    LstmGradBuffers& buffers, uint64_t batchSize, uint64_t timeStep, uint64_t inputSize, uint64_t hiddenSize,
+    uint64_t workspaceSize, bool needSeqLength = false)
 {
     size_t xBits = batchSize * inputSize * timeStep * sizeof(T);
-    size_t hBits= batchSize * timeStep * hiddenSize * sizeof(T);
-    size_t inithBits= batchSize * hiddenSize * sizeof(T);
-    size_t wBits= 4 * hiddenSize * (hiddenSize + inputSize) * sizeof(T);
-    size_t bBits= 4 * hiddenSize * sizeof(T);
-    
-    size_t tilingDataSize = sizeof(SingleLayerLstmGradTilingDataTest);
+    size_t hBits = batchSize * timeStep * hiddenSize * sizeof(T);
+    size_t inithBits = batchSize * hiddenSize * sizeof(T);
+    size_t wBits = 4 * hiddenSize * (hiddenSize + inputSize) * sizeof(T);
+    size_t bBits = 4 * hiddenSize * sizeof(T);
 
-    uint8_t* x = (uint8_t*)AscendC::GmAlloc(xBits);
-    uint8_t* w = (uint8_t*)AscendC::GmAlloc(wBits);
-    uint8_t* b = (uint8_t*)AscendC::GmAlloc(bBits);
-    uint8_t* y = (uint8_t*)AscendC::GmAlloc(hBits);
-    uint8_t* inith = (uint8_t*)AscendC::GmAlloc(inithBits);
-    uint8_t* initc = (uint8_t*)AscendC::GmAlloc(inithBits);
-    uint8_t* h = (uint8_t*)AscendC::GmAlloc(hBits);
-    uint8_t* c = (uint8_t*)AscendC::GmAlloc(hBits);
-    uint8_t* dy = (uint8_t*)AscendC::GmAlloc(hBits);
-    uint8_t* dh = (uint8_t*)AscendC::GmAlloc(inithBits);
-    uint8_t* dc = (uint8_t*)AscendC::GmAlloc(inithBits);
-    uint8_t* i = (uint8_t*)AscendC::GmAlloc(hBits);
-    uint8_t* j = (uint8_t*)AscendC::GmAlloc(hBits);
-    uint8_t* f = (uint8_t*)AscendC::GmAlloc(hBits);
-    uint8_t* o = (uint8_t*)AscendC::GmAlloc(hBits);
-    uint8_t* tanhc = (uint8_t*)AscendC::GmAlloc(hBits);
-    T one = 1.0;
-    for (size_t idx = 0; idx < xBits; idx += sizeof(T)) {
-        std::memcpy(x + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < wBits; idx += sizeof(T)) {
-        std::memcpy(w + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < bBits; idx += sizeof(T)) {
-        std::memcpy(b + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < hBits; idx += sizeof(T)) {
-        std::memcpy(y + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < inithBits; idx += sizeof(T)) {
-        std::memcpy(inith + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < inithBits; idx += sizeof(T)) {
-        std::memcpy(initc + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < hBits; idx += sizeof(T)) {
-        std::memcpy(h + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < hBits; idx += sizeof(T)) {
-        std::memcpy(c + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < hBits; idx += sizeof(T)) {
-        std::memcpy(dy + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < inithBits; idx += sizeof(T)) {
-        std::memcpy(dh + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < inithBits; idx += sizeof(T)) {
-        std::memcpy(dc + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < hBits; idx += sizeof(T)) {
-        std::memcpy(i + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < hBits; idx += sizeof(T)) {
-        std::memcpy(j + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < hBits; idx += sizeof(T)) {
-        std::memcpy(f + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < hBits; idx += sizeof(T)) {
-        std::memcpy(o + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < hBits; idx += sizeof(T)) {
-        std::memcpy(tanhc + idx, &one, sizeof(T));
+    buffers.x = (uint8_t*)AscendC::GmAlloc(xBits);
+    buffers.w = (uint8_t*)AscendC::GmAlloc(wBits);
+    buffers.b = (uint8_t*)AscendC::GmAlloc(bBits);
+    buffers.y = (uint8_t*)AscendC::GmAlloc(hBits);
+    buffers.inith = (uint8_t*)AscendC::GmAlloc(inithBits);
+    buffers.initc = (uint8_t*)AscendC::GmAlloc(inithBits);
+    buffers.h = (uint8_t*)AscendC::GmAlloc(hBits);
+    buffers.c = (uint8_t*)AscendC::GmAlloc(hBits);
+    buffers.dy = (uint8_t*)AscendC::GmAlloc(hBits);
+    buffers.dh = (uint8_t*)AscendC::GmAlloc(inithBits);
+    buffers.dc = (uint8_t*)AscendC::GmAlloc(inithBits);
+    buffers.i = (uint8_t*)AscendC::GmAlloc(hBits);
+    buffers.j = (uint8_t*)AscendC::GmAlloc(hBits);
+    buffers.f = (uint8_t*)AscendC::GmAlloc(hBits);
+    buffers.o = (uint8_t*)AscendC::GmAlloc(hBits);
+    buffers.tanhc = (uint8_t*)AscendC::GmAlloc(hBits);
+    if (needSeqLength) {
+        buffers.seqLength = (uint8_t*)AscendC::GmAlloc(hBits);
     }
 
-    uint8_t* dw = (uint8_t*)AscendC::GmAlloc(wBits);
-    uint8_t* db = (uint8_t*)AscendC::GmAlloc(bBits);
-    uint8_t* dx = (uint8_t*)AscendC::GmAlloc(xBits);
-    uint8_t* dhPrev = (uint8_t*)AscendC::GmAlloc(inithBits);
-    uint8_t* dcPrev = (uint8_t*)AscendC::GmAlloc(inithBits);
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
-    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
+    buffers.dw = (uint8_t*)AscendC::GmAlloc(wBits);
+    buffers.db = (uint8_t*)AscendC::GmAlloc(bBits);
+    buffers.dx = (uint8_t*)AscendC::GmAlloc(xBits);
+    buffers.dhPrev = (uint8_t*)AscendC::GmAlloc(inithBits);
+    buffers.dcPrev = (uint8_t*)AscendC::GmAlloc(inithBits);
+    buffers.workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
+    buffers.tiling = (uint8_t*)AscendC::GmAlloc(sizeof(SingleLayerLstmGradTilingDataTest));
 
-    SingleLayerLstmGradTilingDataTest* tilingDatafromBin = reinterpret_cast<SingleLayerLstmGradTilingDataTest*>(tiling);
+    T one = static_cast<T>(1.0);
+    FillBufferFast<T>(buffers.x, xBits, one);
+    FillBufferFast<T>(buffers.w, wBits, one);
+    FillBufferFast<T>(buffers.b, bBits, one);
+    FillBufferFast<T>(buffers.y, hBits, one);
+    FillBufferFast<T>(buffers.inith, inithBits, one);
+    FillBufferFast<T>(buffers.initc, inithBits, one);
+    FillBufferFast<T>(buffers.h, hBits, one);
+    FillBufferFast<T>(buffers.c, hBits, one);
+    FillBufferFast<T>(buffers.dy, hBits, one);
+    FillBufferFast<T>(buffers.dh, inithBits, one);
+    FillBufferFast<T>(buffers.dc, inithBits, one);
+    FillBufferFast<T>(buffers.i, hBits, one);
+    FillBufferFast<T>(buffers.j, hBits, one);
+    FillBufferFast<T>(buffers.f, hBits, one);
+    FillBufferFast<T>(buffers.o, hBits, one);
+    FillBufferFast<T>(buffers.tanhc, hBits, one);
+    if (needSeqLength) {
+        FillBufferFast<T>(buffers.seqLength, hBits, one);
+    }
+}
 
-    tilingDatafromBin->ubSize = 196352;
-    // lstm input tiling
-    tilingDatafromBin->timeStep = 1;
-    tilingDatafromBin->batch = 20;
-    tilingDatafromBin->inputSize = 8;
-    tilingDatafromBin->hiddenSize = 8;
-    tilingDatafromBin->isBias = 1;
-    tilingDatafromBin->isSeqLength = 0;
+void FreeBuffers(LstmGradBuffers& buffers)
+{
+#define SAFE_GM_FREE(ptr)     \
+    if (ptr) {                \
+        AscendC::GmFree(ptr); \
+        ptr = nullptr;        \
+    }
+    SAFE_GM_FREE(buffers.x);
+    SAFE_GM_FREE(buffers.w);
+    SAFE_GM_FREE(buffers.b);
+    SAFE_GM_FREE(buffers.y);
+    SAFE_GM_FREE(buffers.inith);
+    SAFE_GM_FREE(buffers.initc);
+    SAFE_GM_FREE(buffers.h);
+    SAFE_GM_FREE(buffers.c);
+    SAFE_GM_FREE(buffers.dy);
+    SAFE_GM_FREE(buffers.dh);
+    SAFE_GM_FREE(buffers.dc);
+    SAFE_GM_FREE(buffers.i);
+    SAFE_GM_FREE(buffers.j);
+    SAFE_GM_FREE(buffers.f);
+    SAFE_GM_FREE(buffers.o);
+    SAFE_GM_FREE(buffers.tanhc);
+    SAFE_GM_FREE(buffers.seqLength);
+    SAFE_GM_FREE(buffers.dw);
+    SAFE_GM_FREE(buffers.db);
+    SAFE_GM_FREE(buffers.dx);
+    SAFE_GM_FREE(buffers.dhPrev);
+    SAFE_GM_FREE(buffers.dcPrev);
+    SAFE_GM_FREE(buffers.workspace);
+    SAFE_GM_FREE(buffers.tiling);
+#undef SAFE_GM_FREE
+}
 
-    // vector block params
-    tilingDatafromBin->singleCoreM = 1;
-    tilingDatafromBin->singleCoreMTail = 1;
-    tilingDatafromBin->singleCoreN = 16;
-    tilingDatafromBin->singleCoreNTail = 8;
-    tilingDatafromBin->baseN = 16;
-    tilingDatafromBin->baseM = 160;
-    tilingDatafromBin->mCnt = 20;
-    tilingDatafromBin->nCnt = 1;
+void InitTCubeTiling(TCubeTiling* tiling, uint64_t batchSize)
+{
+    tiling->usedCoreNum = 1;
+    tiling->M = batchSize;
+    tiling->N = 16;
+    tiling->Ka = 32;
+    tiling->Kb = 32;
+    tiling->singleCoreM = 32;
+    tiling->singleCoreN = 16;
+    tiling->singleCoreK = 32;
+    tiling->baseM = 32;
+    tiling->baseN = 16;
+    tiling->baseK = 32;
+    tiling->depthA1 = 1;
+    tiling->depthB1 = 1;
+    tiling->depthAL1CacheUB = 0;
+    tiling->depthBL1CacheUB = 0;
+    tiling->stepM = 1;
+    tiling->stepN = 1;
+    tiling->isBias = 0;
+    tiling->transLength = 0;
+    tiling->iterateOrder = 0;
+    tiling->shareMode = 0;
+    tiling->shareL1Size = 6144;
+    tiling->shareL0CSize = 2048;
+    tiling->shareUbSize = 0;
+    tiling->batchM = 1;
+    tiling->batchN = 1;
+    tiling->singleBatchM = 1;
+    tiling->singleBatchN = 1;
+    tiling->stepKa = 1;
+    tiling->stepKb = 1;
+    tiling->dbL0A = 2;
+    tiling->dbL0B = 2;
+    tiling->dbL0C = 1;
+    tiling->ALayoutInfoB = 0;
+    tiling->ALayoutInfoS = 0;
+    tiling->ALayoutInfoN = 0;
+    tiling->ALayoutInfoG = 0;
+    tiling->ALayoutInfoD = 0;
+    tiling->BLayoutInfoB = 0;
+    tiling->BLayoutInfoS = 0;
+    tiling->BLayoutInfoN = 0;
+    tiling->BLayoutInfoG = 0;
+    tiling->BLayoutInfoD = 0;
+    tiling->CLayoutInfoB = 0;
+    tiling->CLayoutInfoS1 = 0;
+    tiling->CLayoutInfoN = 0;
+    tiling->CLayoutInfoG = 0;
+    tiling->CLayoutInfoS2 = 0;
+    tiling->BatchNum = 0;
+}
 
-    // reduce block params
-    tilingDatafromBin->singleCoreReduceN = 16;
-    tilingDatafromBin->singleCoreReduceNTail = 16;
-    tilingDatafromBin->baseReduceN = 16;
-    tilingDatafromBin->nReduceCnt = 2;
-    tilingDatafromBin->maxReduceNumOnce = 3052;
-    tilingDatafromBin->reduceBlockSize = 20;
+void InitDefaultTiling(
+    SingleLayerLstmGradTilingDataTest* tiling, uint64_t batchSize, uint64_t inputSize, uint64_t hiddenSize)
+{
+    tiling->ubSize = 196352;
+    tiling->timeStep = 1;
+    tiling->batch = batchSize;
+    tiling->inputSize = inputSize;
+    tiling->hiddenSize = hiddenSize;
+    tiling->isBias = 1;
+    tiling->isSeqLength = 0;
 
-    // lstm attr
-    tilingDatafromBin->gateOrder = 0;
-    tilingDatafromBin->direction = 0;
-    tilingDatafromBin->cellClip = 0;
-    tilingDatafromBin->forgetBias = 0;
+    tiling->singleCoreM = 1;
+    tiling->singleCoreMTail = 1;
+    tiling->singleCoreN = 16;
+    tiling->singleCoreNTail = 8;
+    tiling->baseN = 16;
+    tiling->baseM = 160;
+    tiling->mCnt = batchSize;
+    tiling->nCnt = 1;
 
-    // split and concat params
-    tilingDatafromBin->inputSizeAligned = 16;
-    tilingDatafromBin->hiddenSizeAligned = 16;
-    tilingDatafromBin->oneLineAligned = 32;
+    tiling->singleCoreReduceN = 16;
+    tiling->singleCoreReduceNTail = 16;
+    tiling->baseReduceN = 16;
+    tiling->nReduceCnt = 2;
+    tiling->maxReduceNumOnce = 3052;
+    tiling->reduceBlockSize = batchSize;
 
-    tilingDatafromBin->dxhInputTiling.taskNum = 20;
-    tilingDatafromBin->dxhInputTiling.copyMLines = 1;
-    tilingDatafromBin->dxhInputTiling.copyMLinesTail = 1;
-    tilingDatafromBin->dxhInputTiling.nLoop = 1;
-    tilingDatafromBin->dxhInputTiling.copyNLength = 48832;
-    tilingDatafromBin->dxhInputTiling.copyNLengthTail = 16;
-    tilingDatafromBin->dxhInputTiling.splitTaskPerCore = 0;
-    tilingDatafromBin->dxhInputTiling.splitPreCore = 20;
+    tiling->gateOrder = 0;
+    tiling->direction = 0;
+    tiling->cellClip = 0;
+    tiling->forgetBias = 0;
 
-    tilingDatafromBin->dxhHiddenTiling.taskNum = 20;
-    tilingDatafromBin->dxhHiddenTiling.copyMLines = 1;
-    tilingDatafromBin->dxhHiddenTiling.copyMLinesTail = 1;
-    tilingDatafromBin->dxhHiddenTiling.nLoop = 1;
-    tilingDatafromBin->dxhHiddenTiling.copyNLength = 48832;
-    tilingDatafromBin->dxhHiddenTiling.copyNLengthTail = 16;
-    tilingDatafromBin->dxhHiddenTiling.splitTaskPerCore = 0;
-    tilingDatafromBin->dxhHiddenTiling.splitPreCore = 20;
+    tiling->inputSizeAligned = 16;
+    tiling->hiddenSizeAligned = 16;
+    tiling->oneLineAligned = 32;
 
-    tilingDatafromBin->xhInputTiling.taskNum = 20;
-    tilingDatafromBin->xhInputTiling.copyMLines = 1;
-    tilingDatafromBin->xhInputTiling.copyMLinesTail = 1;
-    tilingDatafromBin->xhInputTiling.nLoop = 1;
-    tilingDatafromBin->xhInputTiling.copyNLength = 32560;
-    tilingDatafromBin->xhInputTiling.copyNLengthTail = 16;
-    tilingDatafromBin->xhInputTiling.splitTaskPerCore = 0;
-    tilingDatafromBin->xhInputTiling.splitPreCore = 20;
+    auto* dxhInput = &tiling->dxhInputTiling;
+    dxhInput->taskNum = batchSize;
+    dxhInput->copyMLines = 1;
+    dxhInput->copyMLinesTail = 1;
+    dxhInput->nLoop = 1;
+    dxhInput->copyNLength = 48832;
+    dxhInput->copyNLengthTail = 16;
+    dxhInput->splitTaskPerCore = 0;
+    dxhInput->splitPreCore = batchSize;
 
-    tilingDatafromBin->xhHiddenTiling.taskNum = 20;
-    tilingDatafromBin->xhHiddenTiling.copyMLines = 1;
-    tilingDatafromBin->xhHiddenTiling.copyMLinesTail = 1;
-    tilingDatafromBin->xhHiddenTiling.nLoop = 1;
-    tilingDatafromBin->xhHiddenTiling.copyNLength = 32560;
-    tilingDatafromBin->xhHiddenTiling.copyNLengthTail = 16;
-    tilingDatafromBin->xhHiddenTiling.splitTaskPerCore = 0;
-    tilingDatafromBin->xhHiddenTiling.splitPreCore = 20;
+    auto* dxhHidden = &tiling->dxhHiddenTiling;
+    dxhHidden->taskNum = batchSize;
+    dxhHidden->copyMLines = 1;
+    dxhHidden->copyMLinesTail = 1;
+    dxhHidden->nLoop = 1;
+    dxhHidden->copyNLength = 48832;
+    dxhHidden->copyNLengthTail = 16;
+    dxhHidden->splitTaskPerCore = 0;
+    dxhHidden->splitPreCore = batchSize;
 
-    tilingDatafromBin->dgateMMParam.usedCoreNum = 1;
-    tilingDatafromBin->dgateMMParam.M = 20;
-    tilingDatafromBin->dgateMMParam.N = 16;
-    tilingDatafromBin->dgateMMParam.Ka = 32;
-    tilingDatafromBin->dgateMMParam.Kb = 32;
-    tilingDatafromBin->dgateMMParam.singleCoreM = 32;
-    tilingDatafromBin->dgateMMParam.singleCoreN = 16;
-    tilingDatafromBin->dgateMMParam.singleCoreK = 32;
-    tilingDatafromBin->dgateMMParam.baseM = 32;
-    tilingDatafromBin->dgateMMParam.baseN = 16;
-    tilingDatafromBin->dgateMMParam.baseK = 32;
-    tilingDatafromBin->dgateMMParam.depthA1 = 1;
-    tilingDatafromBin->dgateMMParam.depthB1 = 1;
-    tilingDatafromBin->dgateMMParam.depthAL1CacheUB = 0;
-    tilingDatafromBin->dgateMMParam.depthBL1CacheUB = 0;
-    tilingDatafromBin->dgateMMParam.stepM = 1;
-    tilingDatafromBin->dgateMMParam.stepN = 1;
-    tilingDatafromBin->dgateMMParam.isBias = 0;
-    tilingDatafromBin->dgateMMParam.transLength = 0;
-    tilingDatafromBin->dgateMMParam.iterateOrder = 0;
-    tilingDatafromBin->dgateMMParam.shareMode = 0;
-    tilingDatafromBin->dgateMMParam.shareL1Size = 6144;
-    tilingDatafromBin->dgateMMParam.shareL0CSize = 2048;
-    tilingDatafromBin->dgateMMParam.shareUbSize = 0;
-    tilingDatafromBin->dgateMMParam.batchM = 1;
-    tilingDatafromBin->dgateMMParam.batchN = 1;
-    tilingDatafromBin->dgateMMParam.singleBatchM = 1;
-    tilingDatafromBin->dgateMMParam.singleBatchN = 1;
-    tilingDatafromBin->dgateMMParam.stepKa = 1;
-    tilingDatafromBin->dgateMMParam.stepKb = 1;
-    tilingDatafromBin->dgateMMParam.dbL0A = 2;
-    tilingDatafromBin->dgateMMParam.dbL0B = 2;
-    tilingDatafromBin->dgateMMParam.dbL0C = 1;
-    tilingDatafromBin->dgateMMParam.ALayoutInfoB = 0;
-    tilingDatafromBin->dgateMMParam.ALayoutInfoS = 0;
-    tilingDatafromBin->dgateMMParam.ALayoutInfoN = 0;
-    tilingDatafromBin->dgateMMParam.ALayoutInfoG = 0;
-    tilingDatafromBin->dgateMMParam.ALayoutInfoD = 0;
-    tilingDatafromBin->dgateMMParam.BLayoutInfoB = 0;
-    tilingDatafromBin->dgateMMParam.BLayoutInfoS = 0;
-    tilingDatafromBin->dgateMMParam.BLayoutInfoN = 0;
-    tilingDatafromBin->dgateMMParam.BLayoutInfoG = 0;
-    tilingDatafromBin->dgateMMParam.BLayoutInfoD = 0;
-    tilingDatafromBin->dgateMMParam.CLayoutInfoB = 0;
-    tilingDatafromBin->dgateMMParam.CLayoutInfoS1 = 0;
-    tilingDatafromBin->dgateMMParam.CLayoutInfoN = 0;
-    tilingDatafromBin->dgateMMParam.CLayoutInfoG = 0;
-    tilingDatafromBin->dgateMMParam.CLayoutInfoS2 = 0;
-    tilingDatafromBin->dgateMMParam.BatchNum = 0;
+    auto* xhInput = &tiling->xhInputTiling;
+    xhInput->taskNum = batchSize;
+    xhInput->copyMLines = 1;
+    xhInput->copyMLinesTail = 1;
+    xhInput->nLoop = 1;
+    xhInput->copyNLength = 32560;
+    xhInput->copyNLengthTail = 16;
+    xhInput->splitTaskPerCore = 0;
+    xhInput->splitPreCore = batchSize;
 
-    tilingDatafromBin->dwMMParam.usedCoreNum = 1;
-    tilingDatafromBin->dwMMParam.M = 32;
-    tilingDatafromBin->dwMMParam.N = 16;
-    tilingDatafromBin->dwMMParam.Ka = 20;
-    tilingDatafromBin->dwMMParam.Kb = 20;
-    tilingDatafromBin->dwMMParam.singleCoreM = 32;
-    tilingDatafromBin->dwMMParam.singleCoreN = 16;
-    tilingDatafromBin->dwMMParam.singleCoreK = 20;
-    tilingDatafromBin->dwMMParam.baseM = 32;
-    tilingDatafromBin->dwMMParam.baseN = 16;
-    tilingDatafromBin->dwMMParam.baseK = 24;
-    tilingDatafromBin->dwMMParam.depthA1 = 1;
-    tilingDatafromBin->dwMMParam.depthB1 = 1;
-    tilingDatafromBin->dwMMParam.depthAL1CacheUB = 0;
-    tilingDatafromBin->dwMMParam.depthBL1CacheUB = 0;
-    tilingDatafromBin->dwMMParam.stepM = 1;
-    tilingDatafromBin->dwMMParam.stepN = 1;
-    tilingDatafromBin->dwMMParam.isBias = 0;
-    tilingDatafromBin->dwMMParam.transLength = 0;
-    tilingDatafromBin->dwMMParam.iterateOrder = 0;
-    tilingDatafromBin->dwMMParam.shareMode = 0;
-    tilingDatafromBin->dwMMParam.shareL1Size = 4608;
-    tilingDatafromBin->dwMMParam.shareL0CSize = 2048;
-    tilingDatafromBin->dwMMParam.shareUbSize = 0;
-    tilingDatafromBin->dwMMParam.batchM = 1;
-    tilingDatafromBin->dwMMParam.batchN = 1;
-    tilingDatafromBin->dwMMParam.singleBatchM = 1;
-    tilingDatafromBin->dwMMParam.singleBatchN = 1;
-    tilingDatafromBin->dwMMParam.stepKa = 1;
-    tilingDatafromBin->dwMMParam.stepKb = 1;
-    tilingDatafromBin->dwMMParam.dbL0A = 2;
-    tilingDatafromBin->dwMMParam.dbL0B = 2;
-    tilingDatafromBin->dwMMParam.dbL0C = 1;
-    tilingDatafromBin->dwMMParam.ALayoutInfoB = 0;
-    tilingDatafromBin->dwMMParam.ALayoutInfoS = 0;
-    tilingDatafromBin->dwMMParam.ALayoutInfoN = 0;
-    tilingDatafromBin->dwMMParam.ALayoutInfoG = 0;
-    tilingDatafromBin->dwMMParam.ALayoutInfoD = 0;
-    tilingDatafromBin->dwMMParam.BLayoutInfoB = 0;
-    tilingDatafromBin->dwMMParam.BLayoutInfoS = 0;
-    tilingDatafromBin->dwMMParam.BLayoutInfoN = 0;
-    tilingDatafromBin->dwMMParam.BLayoutInfoG = 0;
-    tilingDatafromBin->dwMMParam.BLayoutInfoD = 0;
-    tilingDatafromBin->dwMMParam.CLayoutInfoB = 0;
-    tilingDatafromBin->dwMMParam.CLayoutInfoS1 = 0;
-    tilingDatafromBin->dwMMParam.CLayoutInfoN = 0;
-    tilingDatafromBin->dwMMParam.CLayoutInfoG = 0;
-    tilingDatafromBin->dwMMParam.CLayoutInfoS2 = 0;
-    tilingDatafromBin->dwMMParam.BatchNum = 0;
+    auto* xhHidden = &tiling->xhHiddenTiling;
+    xhHidden->taskNum = batchSize;
+    xhHidden->copyMLines = 1;
+    xhHidden->copyMLinesTail = 1;
+    xhHidden->nLoop = 1;
+    xhHidden->copyNLength = 32560;
+    xhHidden->copyNLengthTail = 16;
+    xhHidden->splitTaskPerCore = 0;
+    xhHidden->splitPreCore = batchSize;
+
+    InitTCubeTiling(&tiling->dgateMMParam, batchSize);
+
+    TCubeTiling* dwMM = &tiling->dwMMParam;
+    dwMM->usedCoreNum = 1;
+    dwMM->M = 32;
+    dwMM->N = 16;
+    dwMM->Ka = batchSize;
+    dwMM->Kb = batchSize;
+    dwMM->singleCoreM = 32;
+    dwMM->singleCoreN = 16;
+    dwMM->singleCoreK = batchSize;
+    dwMM->baseM = 32;
+    dwMM->baseN = 16;
+    dwMM->baseK = 24;
+    dwMM->depthA1 = 1;
+    dwMM->depthB1 = 1;
+    dwMM->depthAL1CacheUB = 0;
+    dwMM->depthBL1CacheUB = 0;
+    dwMM->stepM = 1;
+    dwMM->stepN = 1;
+    dwMM->isBias = 0;
+    dwMM->transLength = 0;
+    dwMM->iterateOrder = 0;
+    dwMM->shareMode = 0;
+    dwMM->shareL1Size = 4608;
+    dwMM->shareL0CSize = 2048;
+    dwMM->shareUbSize = 0;
+    dwMM->batchM = 1;
+    dwMM->batchN = 1;
+    dwMM->singleBatchM = 1;
+    dwMM->singleBatchN = 1;
+    dwMM->stepKa = 1;
+    dwMM->stepKb = 1;
+    dwMM->dbL0A = 2;
+    dwMM->dbL0B = 2;
+    dwMM->dbL0C = 1;
+    dwMM->ALayoutInfoB = 0;
+    dwMM->ALayoutInfoS = 0;
+    dwMM->ALayoutInfoN = 0;
+    dwMM->ALayoutInfoG = 0;
+    dwMM->ALayoutInfoD = 0;
+    dwMM->BLayoutInfoB = 0;
+    dwMM->BLayoutInfoS = 0;
+    dwMM->BLayoutInfoN = 0;
+    dwMM->BLayoutInfoG = 0;
+    dwMM->BLayoutInfoD = 0;
+    dwMM->CLayoutInfoB = 0;
+    dwMM->CLayoutInfoS1 = 0;
+    dwMM->CLayoutInfoN = 0;
+    dwMM->CLayoutInfoG = 0;
+    dwMM->CLayoutInfoS2 = 0;
+    dwMM->BatchNum = 0;
+}
+
+template <typename T>
+void TestSingleLayerLstmGradKernel(
+    uint64_t batchSize, uint64_t timeStep, uint64_t inputSize, uint64_t hiddenSize, uint64_t workspaceSize,
+    uint64_t blockDim, uint64_t tilingKey)
+{
+    LstmGradBuffers buffers;
+    AllocateBuffers<T>(buffers, batchSize, timeStep, inputSize, hiddenSize, workspaceSize);
+
+    SingleLayerLstmGradTilingDataTest* tilingData =
+        reinterpret_cast<SingleLayerLstmGradTilingDataTest*>(buffers.tiling);
+    InitDefaultTiling(tilingData, batchSize, inputSize, hiddenSize);
 
     ICPU_SET_TILING_KEY(tilingKey);
     ICPU_RUN_KF(
-        single_layer_lstm_grad, blockDim, x, w, b, y, inith, initc, h, c, dy, dh, dc, i, j, f, o, tanhc, nullptr, dw, db, dx,
-        dhPrev, dcPrev, workspace, (uint8_t*)(tilingDatafromBin));
+        single_layer_lstm_grad, blockDim, buffers.x, buffers.w, buffers.b, buffers.y, buffers.inith, buffers.initc,
+        buffers.h, buffers.c, buffers.dy, buffers.dh, buffers.dc, buffers.i, buffers.j, buffers.f, buffers.o,
+        buffers.tanhc, nullptr, buffers.dw, buffers.db, buffers.dx, buffers.dhPrev, buffers.dcPrev, buffers.workspace,
+        buffers.tiling);
 
-    AscendC::GmFree(x);
-    AscendC::GmFree(w);
-    AscendC::GmFree(b);
-    AscendC::GmFree(y);
-    AscendC::GmFree(inith);
-    AscendC::GmFree(initc);
-    AscendC::GmFree(h);
-    AscendC::GmFree(c);
-    AscendC::GmFree(dy);
-    AscendC::GmFree(dh);
-    AscendC::GmFree(dc);
-    AscendC::GmFree(i);
-    AscendC::GmFree(j);
-    AscendC::GmFree(f);
-    AscendC::GmFree(o);
-    AscendC::GmFree(tanhc);
-    AscendC::GmFree(dw);
-    AscendC::GmFree(db);
-    AscendC::GmFree(dx);
-    AscendC::GmFree(dhPrev);
-    AscendC::GmFree(dcPrev);
-    AscendC::GmFree(workspace);
-    AscendC::GmFree(tiling);
+    FreeBuffers(buffers);
 }
 
 template <typename T>
 void TestSingleLayerLstmGradKernelLarge(
-    uint64_t batchSize, uint64_t timeStep, uint64_t inputSize, uint64_t hiddenSize, uint64_t workspaceSize, uint64_t blockDim,
-    uint64_t tilingKey)
+    uint64_t batchSize, uint64_t timeStep, uint64_t inputSize, uint64_t hiddenSize, uint64_t workspaceSize,
+    uint64_t blockDim, uint64_t tilingKey)
 {
-    size_t xBits = batchSize * inputSize * timeStep * sizeof(T);
-    size_t hBits= batchSize * timeStep * hiddenSize * sizeof(T);
-    size_t inithBits= batchSize * hiddenSize * sizeof(T);
-    size_t wBits= 4 * hiddenSize * (hiddenSize + inputSize) * sizeof(T);
-    size_t bBits= 4 * hiddenSize * sizeof(T);
-    
-    size_t tilingDataSize = sizeof(SingleLayerLstmGradTilingDataTest);
+    LstmGradBuffers buffers;
+    AllocateBuffers<T>(buffers, batchSize, timeStep, inputSize, hiddenSize, workspaceSize);
 
-    uint8_t* x = (uint8_t*)AscendC::GmAlloc(xBits);
-    uint8_t* w = (uint8_t*)AscendC::GmAlloc(wBits);
-    uint8_t* b = (uint8_t*)AscendC::GmAlloc(bBits);
-    uint8_t* y = (uint8_t*)AscendC::GmAlloc(hBits);
-    uint8_t* inith = (uint8_t*)AscendC::GmAlloc(inithBits);
-    uint8_t* initc = (uint8_t*)AscendC::GmAlloc(inithBits);
-    uint8_t* h = (uint8_t*)AscendC::GmAlloc(hBits);
-    uint8_t* c = (uint8_t*)AscendC::GmAlloc(hBits);
-    uint8_t* dy = (uint8_t*)AscendC::GmAlloc(hBits);
-    uint8_t* dh = (uint8_t*)AscendC::GmAlloc(inithBits);
-    uint8_t* dc = (uint8_t*)AscendC::GmAlloc(inithBits);
-    uint8_t* i = (uint8_t*)AscendC::GmAlloc(hBits);
-    uint8_t* j = (uint8_t*)AscendC::GmAlloc(hBits);
-    uint8_t* f = (uint8_t*)AscendC::GmAlloc(hBits);
-    uint8_t* o = (uint8_t*)AscendC::GmAlloc(hBits);
-    uint8_t* tanhc = (uint8_t*)AscendC::GmAlloc(hBits);
-    T one = 1.0;
-    for (size_t idx = 0; idx < xBits; idx += sizeof(T)) {
-        std::memcpy(x + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < wBits; idx += sizeof(T)) {
-        std::memcpy(w + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < bBits; idx += sizeof(T)) {
-        std::memcpy(b + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < hBits; idx += sizeof(T)) {
-        std::memcpy(y + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < inithBits; idx += sizeof(T)) {
-        std::memcpy(inith + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < inithBits; idx += sizeof(T)) {
-        std::memcpy(initc + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < hBits; idx += sizeof(T)) {
-        std::memcpy(h + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < hBits; idx += sizeof(T)) {
-        std::memcpy(c + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < hBits; idx += sizeof(T)) {
-        std::memcpy(dy + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < inithBits; idx += sizeof(T)) {
-        std::memcpy(dh + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < inithBits; idx += sizeof(T)) {
-        std::memcpy(dc + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < hBits; idx += sizeof(T)) {
-        std::memcpy(i + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < hBits; idx += sizeof(T)) {
-        std::memcpy(j + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < hBits; idx += sizeof(T)) {
-        std::memcpy(f + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < hBits; idx += sizeof(T)) {
-        std::memcpy(o + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < hBits; idx += sizeof(T)) {
-        std::memcpy(tanhc + idx, &one, sizeof(T));
-    }
+    SingleLayerLstmGradTilingDataTest* tilingData =
+        reinterpret_cast<SingleLayerLstmGradTilingDataTest*>(buffers.tiling);
+    InitDefaultTiling(tilingData, batchSize, inputSize, hiddenSize);
 
-    uint8_t* dw = (uint8_t*)AscendC::GmAlloc(wBits);
-    uint8_t* db = (uint8_t*)AscendC::GmAlloc(bBits);
-    uint8_t* dx = (uint8_t*)AscendC::GmAlloc(xBits);
-    uint8_t* dhPrev = (uint8_t*)AscendC::GmAlloc(inithBits);
-    uint8_t* dcPrev = (uint8_t*)AscendC::GmAlloc(inithBits);
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
-    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
+    tilingData->singleCoreN = 8;
+    tilingData->singleCoreNTail = 8;
+    tilingData->baseN = 8;
+    tilingData->baseM = 321;
+    tilingData->singleCoreReduceN = 8;
+    tilingData->singleCoreReduceNTail = 8;
+    tilingData->baseReduceN = 8;
+    tilingData->nReduceCnt = 4;
+    tilingData->maxReduceNumOnce = 6104;
+    tilingData->gateOrder = 1;
+    tilingData->inputSizeAligned = 8;
+    tilingData->hiddenSizeAligned = 8;
+    tilingData->oneLineAligned = 16;
 
-    SingleLayerLstmGradTilingDataTest* tilingDatafromBin = reinterpret_cast<SingleLayerLstmGradTilingDataTest*>(tiling);
+    auto* dxhInput = &tilingData->dxhInputTiling;
+    dxhInput->taskNum = 0;
+    dxhInput->copyMLines = 0;
+    dxhInput->copyMLinesTail = 0;
+    dxhInput->nLoop = 0;
+    dxhInput->copyNLength = 0;
+    dxhInput->copyNLengthTail = 0;
+    dxhInput->splitTaskPerCore = 0;
+    dxhInput->splitPreCore = 0;
 
-    tilingDatafromBin->ubSize = 196352;
-    // lstm input tiling
-    tilingDatafromBin->timeStep = 1;
-    tilingDatafromBin->batch = 20;
-    tilingDatafromBin->inputSize = 8;
-    tilingDatafromBin->hiddenSize = 8;
-    tilingDatafromBin->isBias = 1;
-    tilingDatafromBin->isSeqLength = 0;
+    auto* dxhHidden = &tilingData->dxhHiddenTiling;
+    dxhHidden->taskNum = 0;
+    dxhHidden->copyMLines = 0;
+    dxhHidden->copyMLinesTail = 0;
+    dxhHidden->nLoop = 0;
+    dxhHidden->copyNLength = 0;
+    dxhHidden->copyNLengthTail = 0;
+    dxhHidden->splitTaskPerCore = 0;
+    dxhHidden->splitPreCore = 0;
 
-    // vector block params
-    tilingDatafromBin->singleCoreM = 1;
-    tilingDatafromBin->singleCoreMTail = 1;
-    tilingDatafromBin->singleCoreN = 8;
-    tilingDatafromBin->singleCoreNTail = 8;
-    tilingDatafromBin->baseN = 8;
-    tilingDatafromBin->baseM = 321;
-    tilingDatafromBin->mCnt = 20;
-    tilingDatafromBin->nCnt = 1;
+    auto* xhInput = &tilingData->xhInputTiling;
+    xhInput->taskNum = 0;
+    xhInput->copyMLines = 0;
+    xhInput->copyMLinesTail = 0;
+    xhInput->nLoop = 0;
+    xhInput->copyNLength = 0;
+    xhInput->copyNLengthTail = 0;
+    xhInput->splitTaskPerCore = 0;
+    xhInput->splitPreCore = 0;
 
-    // reduce block params
-    tilingDatafromBin->singleCoreReduceN = 8;
-    tilingDatafromBin->singleCoreReduceNTail = 8;
-    tilingDatafromBin->baseReduceN = 8;
-    tilingDatafromBin->nReduceCnt = 4;
-    tilingDatafromBin->maxReduceNumOnce = 6104;
-    tilingDatafromBin->reduceBlockSize = 20;
-
-    // lstm attr
-    tilingDatafromBin->gateOrder = 1;
-    tilingDatafromBin->direction = 0;
-    tilingDatafromBin->cellClip = 0;
-    tilingDatafromBin->forgetBias = 0;
-
-    // split and concat params
-    tilingDatafromBin->inputSizeAligned = 8;
-    tilingDatafromBin->hiddenSizeAligned = 8;
-    tilingDatafromBin->oneLineAligned = 16;
-
-    tilingDatafromBin->dxhInputTiling.taskNum = 0;
-    tilingDatafromBin->dxhInputTiling.copyMLines = 0;
-    tilingDatafromBin->dxhInputTiling.copyMLinesTail = 0;
-    tilingDatafromBin->dxhInputTiling.nLoop = 0;
-    tilingDatafromBin->dxhInputTiling.copyNLength = 0;
-    tilingDatafromBin->dxhInputTiling.copyNLengthTail = 0;
-    tilingDatafromBin->dxhInputTiling.splitTaskPerCore = 0;
-    tilingDatafromBin->dxhInputTiling.splitPreCore = 0;
-
-    tilingDatafromBin->dxhHiddenTiling.taskNum = 0;
-    tilingDatafromBin->dxhHiddenTiling.copyMLines = 0;
-    tilingDatafromBin->dxhHiddenTiling.copyMLinesTail = 0;
-    tilingDatafromBin->dxhHiddenTiling.nLoop = 0;
-    tilingDatafromBin->dxhHiddenTiling.copyNLength = 0;
-    tilingDatafromBin->dxhHiddenTiling.copyNLengthTail = 0;
-    tilingDatafromBin->dxhHiddenTiling.splitTaskPerCore = 0;
-    tilingDatafromBin->dxhHiddenTiling.splitPreCore = 0;
-
-    tilingDatafromBin->xhInputTiling.taskNum = 0;
-    tilingDatafromBin->xhInputTiling.copyMLines = 0;
-    tilingDatafromBin->xhInputTiling.copyMLinesTail = 0;
-    tilingDatafromBin->xhInputTiling.nLoop = 0;
-    tilingDatafromBin->xhInputTiling.copyNLength = 0;
-    tilingDatafromBin->xhInputTiling.copyNLengthTail = 0;
-    tilingDatafromBin->xhInputTiling.splitTaskPerCore = 0;
-    tilingDatafromBin->xhInputTiling.splitPreCore = 0;
-
-    tilingDatafromBin->xhHiddenTiling.taskNum = 0;
-    tilingDatafromBin->xhHiddenTiling.copyMLines = 0;
-    tilingDatafromBin->xhHiddenTiling.copyMLinesTail = 0;
-    tilingDatafromBin->xhHiddenTiling.nLoop = 0;
-    tilingDatafromBin->xhHiddenTiling.copyNLength = 0;
-    tilingDatafromBin->xhHiddenTiling.copyNLengthTail = 0;
-    tilingDatafromBin->xhHiddenTiling.splitTaskPerCore = 0;
-    tilingDatafromBin->xhHiddenTiling.splitPreCore = 0;
-
-    tilingDatafromBin->dgateMMParam.usedCoreNum = 1;
-    tilingDatafromBin->dgateMMParam.M = 20;
-    tilingDatafromBin->dgateMMParam.N = 16;
-    tilingDatafromBin->dgateMMParam.Ka = 32;
-    tilingDatafromBin->dgateMMParam.Kb = 32;
-    tilingDatafromBin->dgateMMParam.singleCoreM = 32;
-    tilingDatafromBin->dgateMMParam.singleCoreN = 16;
-    tilingDatafromBin->dgateMMParam.singleCoreK = 32;
-    tilingDatafromBin->dgateMMParam.baseM = 32;
-    tilingDatafromBin->dgateMMParam.baseN = 16;
-    tilingDatafromBin->dgateMMParam.baseK = 32;
-    tilingDatafromBin->dgateMMParam.depthA1 = 1;
-    tilingDatafromBin->dgateMMParam.depthB1 = 1;
-    tilingDatafromBin->dgateMMParam.depthAL1CacheUB = 0;
-    tilingDatafromBin->dgateMMParam.depthBL1CacheUB = 0;
-    tilingDatafromBin->dgateMMParam.stepM = 1;
-    tilingDatafromBin->dgateMMParam.stepN = 1;
-    tilingDatafromBin->dgateMMParam.isBias = 0;
-    tilingDatafromBin->dgateMMParam.transLength = 0;
-    tilingDatafromBin->dgateMMParam.iterateOrder = 0;
-    tilingDatafromBin->dgateMMParam.shareMode = 0;
-    tilingDatafromBin->dgateMMParam.shareL1Size = 6144;
-    tilingDatafromBin->dgateMMParam.shareL0CSize = 2048;
-    tilingDatafromBin->dgateMMParam.shareUbSize = 0;
-    tilingDatafromBin->dgateMMParam.batchM = 1;
-    tilingDatafromBin->dgateMMParam.batchN = 1;
-    tilingDatafromBin->dgateMMParam.singleBatchM = 1;
-    tilingDatafromBin->dgateMMParam.singleBatchN = 1;
-    tilingDatafromBin->dgateMMParam.stepKa = 1;
-    tilingDatafromBin->dgateMMParam.stepKb = 1;
-    tilingDatafromBin->dgateMMParam.dbL0A = 2;
-    tilingDatafromBin->dgateMMParam.dbL0B = 2;
-    tilingDatafromBin->dgateMMParam.dbL0C = 1;
-    tilingDatafromBin->dgateMMParam.ALayoutInfoB = 0;
-    tilingDatafromBin->dgateMMParam.ALayoutInfoS = 0;
-    tilingDatafromBin->dgateMMParam.ALayoutInfoN = 0;
-    tilingDatafromBin->dgateMMParam.ALayoutInfoG = 0;
-    tilingDatafromBin->dgateMMParam.ALayoutInfoD = 0;
-    tilingDatafromBin->dgateMMParam.BLayoutInfoB = 0;
-    tilingDatafromBin->dgateMMParam.BLayoutInfoS = 0;
-    tilingDatafromBin->dgateMMParam.BLayoutInfoN = 0;
-    tilingDatafromBin->dgateMMParam.BLayoutInfoG = 0;
-    tilingDatafromBin->dgateMMParam.BLayoutInfoD = 0;
-    tilingDatafromBin->dgateMMParam.CLayoutInfoB = 0;
-    tilingDatafromBin->dgateMMParam.CLayoutInfoS1 = 0;
-    tilingDatafromBin->dgateMMParam.CLayoutInfoN = 0;
-    tilingDatafromBin->dgateMMParam.CLayoutInfoG = 0;
-    tilingDatafromBin->dgateMMParam.CLayoutInfoS2 = 0;
-    tilingDatafromBin->dgateMMParam.BatchNum = 0;
-
-    tilingDatafromBin->dwMMParam.usedCoreNum = 1;
-    tilingDatafromBin->dwMMParam.M = 32;
-    tilingDatafromBin->dwMMParam.N = 16;
-    tilingDatafromBin->dwMMParam.Ka = 20;
-    tilingDatafromBin->dwMMParam.Kb = 20;
-    tilingDatafromBin->dwMMParam.singleCoreM = 32;
-    tilingDatafromBin->dwMMParam.singleCoreN = 16;
-    tilingDatafromBin->dwMMParam.singleCoreK = 20;
-    tilingDatafromBin->dwMMParam.baseM = 32;
-    tilingDatafromBin->dwMMParam.baseN = 16;
-    tilingDatafromBin->dwMMParam.baseK = 24;
-    tilingDatafromBin->dwMMParam.depthA1 = 1;
-    tilingDatafromBin->dwMMParam.depthB1 = 1;
-    tilingDatafromBin->dwMMParam.depthAL1CacheUB = 0;
-    tilingDatafromBin->dwMMParam.depthBL1CacheUB = 0;
-    tilingDatafromBin->dwMMParam.stepM = 1;
-    tilingDatafromBin->dwMMParam.stepN = 1;
-    tilingDatafromBin->dwMMParam.isBias = 0;
-    tilingDatafromBin->dwMMParam.transLength = 0;
-    tilingDatafromBin->dwMMParam.iterateOrder = 0;
-    tilingDatafromBin->dwMMParam.shareMode = 0;
-    tilingDatafromBin->dwMMParam.shareL1Size = 4608;
-    tilingDatafromBin->dwMMParam.shareL0CSize = 2048;
-    tilingDatafromBin->dwMMParam.shareUbSize = 0;
-    tilingDatafromBin->dwMMParam.batchM = 1;
-    tilingDatafromBin->dwMMParam.batchN = 1;
-    tilingDatafromBin->dwMMParam.singleBatchM = 1;
-    tilingDatafromBin->dwMMParam.singleBatchN = 1;
-    tilingDatafromBin->dwMMParam.stepKa = 1;
-    tilingDatafromBin->dwMMParam.stepKb = 1;
-    tilingDatafromBin->dwMMParam.dbL0A = 2;
-    tilingDatafromBin->dwMMParam.dbL0B = 2;
-    tilingDatafromBin->dwMMParam.dbL0C = 1;
-    tilingDatafromBin->dwMMParam.ALayoutInfoB = 0;
-    tilingDatafromBin->dwMMParam.ALayoutInfoS = 0;
-    tilingDatafromBin->dwMMParam.ALayoutInfoN = 0;
-    tilingDatafromBin->dwMMParam.ALayoutInfoG = 0;
-    tilingDatafromBin->dwMMParam.ALayoutInfoD = 0;
-    tilingDatafromBin->dwMMParam.BLayoutInfoB = 0;
-    tilingDatafromBin->dwMMParam.BLayoutInfoS = 0;
-    tilingDatafromBin->dwMMParam.BLayoutInfoN = 0;
-    tilingDatafromBin->dwMMParam.BLayoutInfoG = 0;
-    tilingDatafromBin->dwMMParam.BLayoutInfoD = 0;
-    tilingDatafromBin->dwMMParam.CLayoutInfoB = 0;
-    tilingDatafromBin->dwMMParam.CLayoutInfoS1 = 0;
-    tilingDatafromBin->dwMMParam.CLayoutInfoN = 0;
-    tilingDatafromBin->dwMMParam.CLayoutInfoG = 0;
-    tilingDatafromBin->dwMMParam.CLayoutInfoS2 = 0;
-    tilingDatafromBin->dwMMParam.BatchNum = 0;
+    auto* xhHidden = &tilingData->xhHiddenTiling;
+    xhHidden->taskNum = 0;
+    xhHidden->copyMLines = 0;
+    xhHidden->copyMLinesTail = 0;
+    xhHidden->nLoop = 0;
+    xhHidden->copyNLength = 0;
+    xhHidden->copyNLengthTail = 0;
+    xhHidden->splitTaskPerCore = 0;
+    xhHidden->splitPreCore = 0;
 
     ICPU_SET_TILING_KEY(tilingKey);
     ICPU_RUN_KF(
-        single_layer_lstm_grad, blockDim, x, w, b, y, inith, initc, h, c, dy, dh, dc, i, j, f, o, tanhc, nullptr, dw, db, dx,
-        dhPrev, dcPrev, workspace, (uint8_t*)(tilingDatafromBin));
+        single_layer_lstm_grad, blockDim, buffers.x, buffers.w, buffers.b, buffers.y, buffers.inith, buffers.initc,
+        buffers.h, buffers.c, buffers.dy, buffers.dh, buffers.dc, buffers.i, buffers.j, buffers.f, buffers.o,
+        buffers.tanhc, nullptr, buffers.dw, buffers.db, buffers.dx, buffers.dhPrev, buffers.dcPrev, buffers.workspace,
+        buffers.tiling);
 
-    AscendC::GmFree(x);
-    AscendC::GmFree(w);
-    AscendC::GmFree(b);
-    AscendC::GmFree(y);
-    AscendC::GmFree(inith);
-    AscendC::GmFree(initc);
-    AscendC::GmFree(h);
-    AscendC::GmFree(c);
-    AscendC::GmFree(dy);
-    AscendC::GmFree(dh);
-    AscendC::GmFree(dc);
-    AscendC::GmFree(i);
-    AscendC::GmFree(j);
-    AscendC::GmFree(f);
-    AscendC::GmFree(o);
-    AscendC::GmFree(tanhc);
-    AscendC::GmFree(dw);
-    AscendC::GmFree(db);
-    AscendC::GmFree(dx);
-    AscendC::GmFree(dhPrev);
-    AscendC::GmFree(dcPrev);
-    AscendC::GmFree(workspace);
-    AscendC::GmFree(tiling);
+    FreeBuffers(buffers);
 }
 
 template <typename T>
 void TestSingleLayerLstmGradKernelLargeSeq(
-    uint64_t batchSize, uint64_t timeStep, uint64_t inputSize, uint64_t hiddenSize, uint64_t workspaceSize, uint64_t blockDim,
-    uint64_t tilingKey, bool isSeqLength=false)
+    uint64_t batchSize, uint64_t timeStep, uint64_t inputSize, uint64_t hiddenSize, uint64_t workspaceSize,
+    uint64_t blockDim, uint64_t tilingKey, bool isSeqLength)
 {
-    size_t xBits = batchSize * inputSize * timeStep * sizeof(T);
-    size_t hBits= batchSize * timeStep * hiddenSize * sizeof(T);
-    size_t inithBits= batchSize * hiddenSize * sizeof(T);
-    size_t wBits= 4 * hiddenSize * (hiddenSize + inputSize) * sizeof(T);
-    size_t bBits= 4 * hiddenSize * sizeof(T);
-    
-    size_t tilingDataSize = sizeof(SingleLayerLstmGradTilingDataTest);
+    LstmGradBuffers buffers;
+    AllocateBuffers<T>(buffers, batchSize, timeStep, inputSize, hiddenSize, workspaceSize, isSeqLength);
 
-    uint8_t* x = (uint8_t*)AscendC::GmAlloc(xBits);
-    uint8_t* w = (uint8_t*)AscendC::GmAlloc(wBits);
-    uint8_t* b = (uint8_t*)AscendC::GmAlloc(bBits);
-    uint8_t* y = (uint8_t*)AscendC::GmAlloc(hBits);
-    uint8_t* inith = (uint8_t*)AscendC::GmAlloc(inithBits);
-    uint8_t* initc = (uint8_t*)AscendC::GmAlloc(inithBits);
-    uint8_t* h = (uint8_t*)AscendC::GmAlloc(hBits);
-    uint8_t* c = (uint8_t*)AscendC::GmAlloc(hBits);
-    uint8_t* dy = (uint8_t*)AscendC::GmAlloc(hBits);
-    uint8_t* dh = (uint8_t*)AscendC::GmAlloc(inithBits);
-    uint8_t* dc = (uint8_t*)AscendC::GmAlloc(inithBits);
-    uint8_t* i = (uint8_t*)AscendC::GmAlloc(hBits);
-    uint8_t* j = (uint8_t*)AscendC::GmAlloc(hBits);
-    uint8_t* f = (uint8_t*)AscendC::GmAlloc(hBits);
-    uint8_t* o = (uint8_t*)AscendC::GmAlloc(hBits);
-    uint8_t* tanhc = (uint8_t*)AscendC::GmAlloc(hBits);
-    uint8_t* seqLength = (uint8_t*)AscendC::GmAlloc(hBits);
-    T one = 1.0;
-    for (size_t idx = 0; idx < xBits; idx += sizeof(T)) {
-        std::memcpy(x + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < wBits; idx += sizeof(T)) {
-        std::memcpy(w + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < bBits; idx += sizeof(T)) {
-        std::memcpy(b + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < hBits; idx += sizeof(T)) {
-        std::memcpy(y + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < inithBits; idx += sizeof(T)) {
-        std::memcpy(inith + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < inithBits; idx += sizeof(T)) {
-        std::memcpy(initc + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < hBits; idx += sizeof(T)) {
-        std::memcpy(h + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < hBits; idx += sizeof(T)) {
-        std::memcpy(c + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < hBits; idx += sizeof(T)) {
-        std::memcpy(dy + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < inithBits; idx += sizeof(T)) {
-        std::memcpy(dh + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < inithBits; idx += sizeof(T)) {
-        std::memcpy(dc + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < hBits; idx += sizeof(T)) {
-        std::memcpy(i + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < hBits; idx += sizeof(T)) {
-        std::memcpy(j + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < hBits; idx += sizeof(T)) {
-        std::memcpy(f + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < hBits; idx += sizeof(T)) {
-        std::memcpy(o + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < hBits; idx += sizeof(T)) {
-        std::memcpy(tanhc + idx, &one, sizeof(T));
-    }
-    for (size_t idx = 0; idx < hBits; idx += sizeof(T)) {
-        std::memcpy(seqLength + idx, &one, sizeof(T));
-    }
+    SingleLayerLstmGradTilingDataTest* tilingData =
+        reinterpret_cast<SingleLayerLstmGradTilingDataTest*>(buffers.tiling);
+    InitDefaultTiling(tilingData, batchSize, inputSize, hiddenSize);
 
-    uint8_t* dw = (uint8_t*)AscendC::GmAlloc(wBits);
-    uint8_t* db = (uint8_t*)AscendC::GmAlloc(bBits);
-    uint8_t* dx = (uint8_t*)AscendC::GmAlloc(xBits);
-    uint8_t* dhPrev = (uint8_t*)AscendC::GmAlloc(inithBits);
-    uint8_t* dcPrev = (uint8_t*)AscendC::GmAlloc(inithBits);
-    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(workspaceSize);
-    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingDataSize);
+    tilingData->isBias = 0;
+    tilingData->isSeqLength = 1;
+    tilingData->singleCoreN = 8;
+    tilingData->singleCoreNTail = 8;
+    tilingData->baseN = 8;
+    tilingData->baseM = 305;
+    tilingData->singleCoreReduceN = 8;
+    tilingData->singleCoreReduceNTail = 8;
+    tilingData->baseReduceN = 8;
+    tilingData->nReduceCnt = 4;
+    tilingData->maxReduceNumOnce = 6104;
+    tilingData->gateOrder = 1;
+    tilingData->inputSizeAligned = 8;
+    tilingData->hiddenSizeAligned = 8;
+    tilingData->oneLineAligned = 16;
 
-    SingleLayerLstmGradTilingDataTest* tilingDatafromBin = reinterpret_cast<SingleLayerLstmGradTilingDataTest*>(tiling);
-
-    tilingDatafromBin->ubSize = 196352;
-    // lstm input tiling
-    tilingDatafromBin->timeStep = 1;
-    tilingDatafromBin->batch = 20;
-    tilingDatafromBin->inputSize = 8;
-    tilingDatafromBin->hiddenSize = 8;
-    tilingDatafromBin->isBias = 0;
-    tilingDatafromBin->isSeqLength = 1;
-
-    // vector block params
-    tilingDatafromBin->singleCoreM = 1;
-    tilingDatafromBin->singleCoreMTail = 1;
-    tilingDatafromBin->singleCoreN = 8;
-    tilingDatafromBin->singleCoreNTail = 8;
-    tilingDatafromBin->baseN = 8;
-    tilingDatafromBin->baseM = 305;
-    tilingDatafromBin->mCnt = 20;
-    tilingDatafromBin->nCnt = 1;
-
-    // reduce block params
-    tilingDatafromBin->singleCoreReduceN = 8;
-    tilingDatafromBin->singleCoreReduceNTail = 8;
-    tilingDatafromBin->baseReduceN = 8;
-    tilingDatafromBin->nReduceCnt = 4;
-    tilingDatafromBin->maxReduceNumOnce = 6104;
-    tilingDatafromBin->reduceBlockSize = 20;
-
-    // lstm attr
-    tilingDatafromBin->gateOrder = 1;
-    tilingDatafromBin->direction = 0;
-    tilingDatafromBin->cellClip = 0;
-    tilingDatafromBin->forgetBias = 0;
-
-    // split and concat params
-    tilingDatafromBin->inputSizeAligned = 8;
-    tilingDatafromBin->hiddenSizeAligned = 8;
-    tilingDatafromBin->oneLineAligned = 16;
-
-    tilingDatafromBin->dxhInputTiling.taskNum = 20;
-    tilingDatafromBin->dxhInputTiling.copyMLines = 1;
-    tilingDatafromBin->dxhInputTiling.copyMLinesTail = 1;
-    tilingDatafromBin->dxhInputTiling.nLoop = 1;
-    tilingDatafromBin->dxhInputTiling.copyNLength = 48832;
-    tilingDatafromBin->dxhInputTiling.copyNLengthTail = 8;
-    tilingDatafromBin->dxhInputTiling.splitTaskPerCore = 0;
-    tilingDatafromBin->dxhInputTiling.splitPreCore = 20;
-
-    tilingDatafromBin->dxhHiddenTiling.taskNum = 20;
-    tilingDatafromBin->dxhHiddenTiling.copyMLines = 1;
-    tilingDatafromBin->dxhHiddenTiling.copyMLinesTail = 1;
-    tilingDatafromBin->dxhHiddenTiling.nLoop = 1;
-    tilingDatafromBin->dxhHiddenTiling.copyNLength = 16280;
-    tilingDatafromBin->dxhHiddenTiling.copyNLengthTail = 8;
-    tilingDatafromBin->dxhHiddenTiling.splitTaskPerCore = 0;
-    tilingDatafromBin->dxhHiddenTiling.splitPreCore = 20;
-
-    tilingDatafromBin->xhInputTiling.taskNum = 20;
-    tilingDatafromBin->xhInputTiling.copyMLines = 1;
-    tilingDatafromBin->xhInputTiling.copyMLinesTail = 1;
-    tilingDatafromBin->xhInputTiling.nLoop = 1;
-    tilingDatafromBin->xhInputTiling.copyNLength = 48832;
-    tilingDatafromBin->xhInputTiling.copyNLengthTail = 16;
-    tilingDatafromBin->xhInputTiling.splitTaskPerCore = 0;
-    tilingDatafromBin->xhInputTiling.splitPreCore = 20;
-
-    tilingDatafromBin->xhHiddenTiling.taskNum = 20;
-    tilingDatafromBin->xhHiddenTiling.copyMLines = 1;
-    tilingDatafromBin->xhHiddenTiling.copyMLinesTail = 1;
-    tilingDatafromBin->xhHiddenTiling.nLoop = 1;
-    tilingDatafromBin->xhHiddenTiling.copyNLength = 48832;
-    tilingDatafromBin->xhHiddenTiling.copyNLengthTail = 16;
-    tilingDatafromBin->xhHiddenTiling.splitTaskPerCore = 0;
-    tilingDatafromBin->xhHiddenTiling.splitPreCore = 20;
-
-    tilingDatafromBin->dgateMMParam.usedCoreNum = 1;
-    tilingDatafromBin->dgateMMParam.M = 20;
-    tilingDatafromBin->dgateMMParam.N = 16;
-    tilingDatafromBin->dgateMMParam.Ka = 32;
-    tilingDatafromBin->dgateMMParam.Kb = 32;
-    tilingDatafromBin->dgateMMParam.singleCoreM = 32;
-    tilingDatafromBin->dgateMMParam.singleCoreN = 16;
-    tilingDatafromBin->dgateMMParam.singleCoreK = 32;
-    tilingDatafromBin->dgateMMParam.baseM = 32;
-    tilingDatafromBin->dgateMMParam.baseN = 16;
-    tilingDatafromBin->dgateMMParam.baseK = 32;
-    tilingDatafromBin->dgateMMParam.depthA1 = 1;
-    tilingDatafromBin->dgateMMParam.depthB1 = 1;
-    tilingDatafromBin->dgateMMParam.depthAL1CacheUB = 0;
-    tilingDatafromBin->dgateMMParam.depthBL1CacheUB = 0;
-    tilingDatafromBin->dgateMMParam.stepM = 1;
-    tilingDatafromBin->dgateMMParam.stepN = 1;
-    tilingDatafromBin->dgateMMParam.isBias = 0;
-    tilingDatafromBin->dgateMMParam.transLength = 0;
-    tilingDatafromBin->dgateMMParam.iterateOrder = 0;
-    tilingDatafromBin->dgateMMParam.shareMode = 0;
-    tilingDatafromBin->dgateMMParam.shareL1Size = 6144;
-    tilingDatafromBin->dgateMMParam.shareL0CSize = 2048;
-    tilingDatafromBin->dgateMMParam.shareUbSize = 0;
-    tilingDatafromBin->dgateMMParam.batchM = 1;
-    tilingDatafromBin->dgateMMParam.batchN = 1;
-    tilingDatafromBin->dgateMMParam.singleBatchM = 1;
-    tilingDatafromBin->dgateMMParam.singleBatchN = 1;
-    tilingDatafromBin->dgateMMParam.stepKa = 1;
-    tilingDatafromBin->dgateMMParam.stepKb = 1;
-    tilingDatafromBin->dgateMMParam.dbL0A = 2;
-    tilingDatafromBin->dgateMMParam.dbL0B = 2;
-    tilingDatafromBin->dgateMMParam.dbL0C = 1;
-    tilingDatafromBin->dgateMMParam.ALayoutInfoB = 0;
-    tilingDatafromBin->dgateMMParam.ALayoutInfoS = 0;
-    tilingDatafromBin->dgateMMParam.ALayoutInfoN = 0;
-    tilingDatafromBin->dgateMMParam.ALayoutInfoG = 0;
-    tilingDatafromBin->dgateMMParam.ALayoutInfoD = 0;
-    tilingDatafromBin->dgateMMParam.BLayoutInfoB = 0;
-    tilingDatafromBin->dgateMMParam.BLayoutInfoS = 0;
-    tilingDatafromBin->dgateMMParam.BLayoutInfoN = 0;
-    tilingDatafromBin->dgateMMParam.BLayoutInfoG = 0;
-    tilingDatafromBin->dgateMMParam.BLayoutInfoD = 0;
-    tilingDatafromBin->dgateMMParam.CLayoutInfoB = 0;
-    tilingDatafromBin->dgateMMParam.CLayoutInfoS1 = 0;
-    tilingDatafromBin->dgateMMParam.CLayoutInfoN = 0;
-    tilingDatafromBin->dgateMMParam.CLayoutInfoG = 0;
-    tilingDatafromBin->dgateMMParam.CLayoutInfoS2 = 0;
-    tilingDatafromBin->dgateMMParam.BatchNum = 0;
-
-    tilingDatafromBin->dwMMParam.usedCoreNum = 1;
-    tilingDatafromBin->dwMMParam.M = 32;
-    tilingDatafromBin->dwMMParam.N = 16;
-    tilingDatafromBin->dwMMParam.Ka = 20;
-    tilingDatafromBin->dwMMParam.Kb = 20;
-    tilingDatafromBin->dwMMParam.singleCoreM = 32;
-    tilingDatafromBin->dwMMParam.singleCoreN = 16;
-    tilingDatafromBin->dwMMParam.singleCoreK = 20;
-    tilingDatafromBin->dwMMParam.baseM = 32;
-    tilingDatafromBin->dwMMParam.baseN = 16;
-    tilingDatafromBin->dwMMParam.baseK = 24;
-    tilingDatafromBin->dwMMParam.depthA1 = 1;
-    tilingDatafromBin->dwMMParam.depthB1 = 1;
-    tilingDatafromBin->dwMMParam.depthAL1CacheUB = 0;
-    tilingDatafromBin->dwMMParam.depthBL1CacheUB = 0;
-    tilingDatafromBin->dwMMParam.stepM = 1;
-    tilingDatafromBin->dwMMParam.stepN = 1;
-    tilingDatafromBin->dwMMParam.isBias = 0;
-    tilingDatafromBin->dwMMParam.transLength = 0;
-    tilingDatafromBin->dwMMParam.iterateOrder = 0;
-    tilingDatafromBin->dwMMParam.shareMode = 0;
-    tilingDatafromBin->dwMMParam.shareL1Size = 4608;
-    tilingDatafromBin->dwMMParam.shareL0CSize = 2048;
-    tilingDatafromBin->dwMMParam.shareUbSize = 0;
-    tilingDatafromBin->dwMMParam.batchM = 1;
-    tilingDatafromBin->dwMMParam.batchN = 1;
-    tilingDatafromBin->dwMMParam.singleBatchM = 1;
-    tilingDatafromBin->dwMMParam.singleBatchN = 1;
-    tilingDatafromBin->dwMMParam.stepKa = 1;
-    tilingDatafromBin->dwMMParam.stepKb = 1;
-    tilingDatafromBin->dwMMParam.dbL0A = 2;
-    tilingDatafromBin->dwMMParam.dbL0B = 2;
-    tilingDatafromBin->dwMMParam.dbL0C = 1;
-    tilingDatafromBin->dwMMParam.ALayoutInfoB = 0;
-    tilingDatafromBin->dwMMParam.ALayoutInfoS = 0;
-    tilingDatafromBin->dwMMParam.ALayoutInfoN = 0;
-    tilingDatafromBin->dwMMParam.ALayoutInfoG = 0;
-    tilingDatafromBin->dwMMParam.ALayoutInfoD = 0;
-    tilingDatafromBin->dwMMParam.BLayoutInfoB = 0;
-    tilingDatafromBin->dwMMParam.BLayoutInfoS = 0;
-    tilingDatafromBin->dwMMParam.BLayoutInfoN = 0;
-    tilingDatafromBin->dwMMParam.BLayoutInfoG = 0;
-    tilingDatafromBin->dwMMParam.BLayoutInfoD = 0;
-    tilingDatafromBin->dwMMParam.CLayoutInfoB = 0;
-    tilingDatafromBin->dwMMParam.CLayoutInfoS1 = 0;
-    tilingDatafromBin->dwMMParam.CLayoutInfoN = 0;
-    tilingDatafromBin->dwMMParam.CLayoutInfoG = 0;
-    tilingDatafromBin->dwMMParam.CLayoutInfoS2 = 0;
-    tilingDatafromBin->dwMMParam.BatchNum = 0;
+    tilingData->dxhInputTiling.copyNLengthTail = 8;
+    tilingData->dxhHiddenTiling.copyNLength = 16280;
+    tilingData->dxhHiddenTiling.copyNLengthTail = 8;
 
     ICPU_SET_TILING_KEY(tilingKey);
-    auto seqLengthTensor = isSeqLength ? seqLength : nullptr;
+    auto seqLengthTensor = isSeqLength ? buffers.seqLength : nullptr;
     ICPU_RUN_KF(
-        single_layer_lstm_grad, blockDim, x, w, b, y, inith, initc, h, c, dy, dh, dc, i, j, f, o, tanhc,
-            seqLengthTensor, dw, db, dx, dhPrev, dcPrev, workspace, (uint8_t*)(tilingDatafromBin));
+        single_layer_lstm_grad, blockDim, buffers.x, buffers.w, buffers.b, buffers.y, buffers.inith, buffers.initc,
+        buffers.h, buffers.c, buffers.dy, buffers.dh, buffers.dc, buffers.i, buffers.j, buffers.f, buffers.o,
+        buffers.tanhc, seqLengthTensor, buffers.dw, buffers.db, buffers.dx, buffers.dhPrev, buffers.dcPrev,
+        buffers.workspace, buffers.tiling);
 
-    AscendC::GmFree(x);
-    AscendC::GmFree(w);
-    AscendC::GmFree(b);
-    AscendC::GmFree(y);
-    AscendC::GmFree(inith);
-    AscendC::GmFree(initc);
-    AscendC::GmFree(h);
-    AscendC::GmFree(c);
-    AscendC::GmFree(dy);
-    AscendC::GmFree(dh);
-    AscendC::GmFree(dc);
-    AscendC::GmFree(i);
-    AscendC::GmFree(j);
-    AscendC::GmFree(f);
-    AscendC::GmFree(o);
-    AscendC::GmFree(tanhc);
-    AscendC::GmFree(seqLength);
-    AscendC::GmFree(dw);
-    AscendC::GmFree(db);
-    AscendC::GmFree(dx);
-    AscendC::GmFree(dhPrev);
-    AscendC::GmFree(dcPrev);
-    AscendC::GmFree(workspace);
-    AscendC::GmFree(tiling);
+    FreeBuffers(buffers);
 }
 
 TEST_F(SingleLayerLstmGradKernel, single_layer_lstm_grad_case_float_0)
@@ -934,8 +504,7 @@ TEST_F(SingleLayerLstmGradKernel, single_layer_lstm_grad_case_float_0)
     uint64_t workspaceSize = 5120;
     uint64_t blockDim = 20;
     uint64_t tilingKey = 0;
-    TestSingleLayerLstmGradKernel<float>(
-        20, 1, 8, 8, workspaceSize, blockDim, tilingKey);
+    TestSingleLayerLstmGradKernel<float>(20, 1, 8, 8, workspaceSize, blockDim, tilingKey);
 }
 
 TEST_F(SingleLayerLstmGradKernel, single_layer_lstm_grad_case_float_1100)
@@ -943,8 +512,7 @@ TEST_F(SingleLayerLstmGradKernel, single_layer_lstm_grad_case_float_1100)
     uint64_t workspaceSize = 5120;
     uint64_t blockDim = 20;
     uint64_t tilingKey = 1100;
-    TestSingleLayerLstmGradKernelLarge<float>(
-        20, 1, 8, 8, workspaceSize, blockDim, tilingKey);
+    TestSingleLayerLstmGradKernelLarge<float>(20, 1, 8, 8, workspaceSize, blockDim, tilingKey);
 }
 
 TEST_F(SingleLayerLstmGradKernel, single_layer_lstm_grad_case_float_1)
@@ -952,6 +520,5 @@ TEST_F(SingleLayerLstmGradKernel, single_layer_lstm_grad_case_float_1)
     uint64_t workspaceSize = 5120;
     uint64_t blockDim = 20;
     uint64_t tilingKey = 0;
-    TestSingleLayerLstmGradKernelLargeSeq<float>(
-        20, 1, 8, 8, workspaceSize, blockDim, tilingKey, true);
+    TestSingleLayerLstmGradKernelLargeSeq<float>(20, 1, 8, 8, workspaceSize, blockDim, tilingKey, true);
 }

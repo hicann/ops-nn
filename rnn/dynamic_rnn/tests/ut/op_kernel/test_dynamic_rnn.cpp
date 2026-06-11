@@ -17,6 +17,8 @@
 #include <iostream>
 #include <string>
 #include "data_utils.h"
+#include "kernel_ut_data_helper.h"
+#include "kernel_ut_data_executor.h"
 #include "dynamic_rnn_tiling_def.h"
 #include "string.h"
 #endif
@@ -25,26 +27,22 @@
 using namespace std;
 
 extern "C" __global__ __aicore__ void dynamic_rnn(
-    GM_ADDR inputX, GM_ADDR weight, GM_ADDR bias, GM_ADDR seqLength,
-    GM_ADDR initH, GM_ADDR initC,
-    GM_ADDR wCi, GM_ADDR wCf, GM_ADDR wCo,
-    GM_ADDR mask,
-    GM_ADDR outputY, GM_ADDR outputH, GM_ADDR outputC, GM_ADDR outputI,
-    GM_ADDR outputJ, GM_ADDR outputF, GM_ADDR outputO, GM_ADDR outputTanhC,
-    GM_ADDR workspace, GM_ADDR rnnTiling);
-
+    GM_ADDR inputX, GM_ADDR weight, GM_ADDR bias, GM_ADDR seqLength, GM_ADDR initH, GM_ADDR initC, GM_ADDR wCi,
+    GM_ADDR wCf, GM_ADDR wCo, GM_ADDR mask, GM_ADDR outputY, GM_ADDR outputH, GM_ADDR outputC, GM_ADDR outputI,
+    GM_ADDR outputJ, GM_ADDR outputF, GM_ADDR outputO, GM_ADDR outputTanhC, GM_ADDR workspace, GM_ADDR rnnTiling);
 
 class dynamic_r_n_n_test : public testing::Test {
-    protected:
-    static void SetUpTestCase() {
-        cout << "dynamic_r_n_n_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase() {
+protected:
+    static void SetUpTestCase() { cout << "dynamic_r_n_n_test SetUp\n" << endl; }
+    static void TearDownTestCase()
+    {
         cout << "dynamic_r_n_n_test TearDown\n" << endl;
+        kernel_ut::CleanGeneratedBinFiles("./rnn_data");
     }
 };
 
-TEST_F(dynamic_r_n_n_test, test_case_1) {
+TEST_F(dynamic_r_n_n_test, test_case_1)
+{
     size_t time = 1;
     size_t batch = 16;
     size_t input_size = 512;
@@ -52,19 +50,17 @@ TEST_F(dynamic_r_n_n_test, test_case_1) {
 
     int32_t block_dim = 24;
 
-    string path = get_current_dir_name();
+    kernel_ut::SetupTestEnvironment("rnn/dynamic_rnn/tests/ut/op_kernel/rnn_data", "rnn_data");
+    kernel_ut::RunGenData("./rnn_data", {"1", "16", "512", "512"});
 
-    system("cp -r ../../../../rnn/dynamic_rnn/tests/ut/op_kernel/rnn_data ./");
-    system("chmod -R 755 ./rnn_data/");
-    system("cd ./rnn_data/ && rm -rf ./*bin");
-    system("cd ./rnn_data/ && python3 gen_data.py 1 16 512 512");
+    string path = kernel_ut::GetTestWorkDir();
 
     size_t aGMByteSize = time * batch * input_size * sizeof(float);
     size_t bGMByteSize = (input_size + hidden_size) * 4 * hidden_size * sizeof(float);
     size_t initHCGMByteSize = batch * hidden_size * sizeof(float);
     size_t tiling_data_size = sizeof(DynamicRNNTilingData);
     size_t cGMByteSize = time * batch * 4 * hidden_size * sizeof(float);
-    size_t workspaceGMByteSize = 96*1024*1024;
+    size_t workspaceGMByteSize = 96 * 1024 * 1024;
     size_t biasGMByteSize = 4 * hidden_size * sizeof(float);
 
     uint8_t* cGM = (uint8_t*)AscendC::GmAlloc(cGMByteSize);
@@ -218,10 +214,9 @@ TEST_F(dynamic_r_n_n_test, test_case_1) {
         *((half*)outGM2 + i) = i;
     }
     ICPU_SET_TILING_KEY(10000001);
-    ICPU_RUN_KF(dynamic_rnn, block_dim, aGM, bGM, biasGM, nullptr, initHGM, initCGM,
-                nullptr, nullptr, nullptr, nullptr,
-                cGM, outGM1, outGM2, outGM3, outGM4, outGM5, outGM6, outGM7,
-                workspaceGM, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(
+        dynamic_rnn, block_dim, aGM, bGM, biasGM, nullptr, initHGM, initCGM, nullptr, nullptr, nullptr, nullptr, cGM,
+        outGM1, outGM2, outGM3, outGM4, outGM5, outGM6, outGM7, workspaceGM, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(aGM);
     AscendC::GmFree(bGM);
@@ -237,7 +232,8 @@ TEST_F(dynamic_r_n_n_test, test_case_1) {
     AscendC::GmFree(biasGM);
 }
 
-TEST_F(dynamic_r_n_n_test, test_case_2) {
+TEST_F(dynamic_r_n_n_test, test_case_2)
+{
     size_t time = 1;
     size_t batch = 16;
     size_t input_size = 512;
@@ -245,12 +241,10 @@ TEST_F(dynamic_r_n_n_test, test_case_2) {
 
     int32_t block_dim = 24;
 
-    string path = get_current_dir_name();
+    kernel_ut::SetupTestEnvironment("rnn/dynamic_rnn/tests/ut/op_kernel/rnn_data", "rnn_data");
+    kernel_ut::RunGenData("./rnn_data", {"1", "16", "512", "512"});
 
-    system("cp -r ../../../../rnn/dynamic_rnn/tests/ut/op_kernel/rnn_data ./");
-    system("chmod -R 755 ./rnn_data/");
-    system("cd ./rnn_data/ && rm -rf ./*bin");
-    system("cd ./rnn_data/ && python3 gen_data.py 1 16 512 512");
+    string path = kernel_ut::GetTestWorkDir();
 
     size_t aGMByteSize = time * batch * input_size * sizeof(float);
     size_t bGMByteSize = (input_size + hidden_size) * 4 * hidden_size * sizeof(float);
@@ -258,7 +252,7 @@ TEST_F(dynamic_r_n_n_test, test_case_2) {
     size_t initHCGMByteSize = batch * hidden_size * sizeof(float);
     size_t tiling_data_size = sizeof(DynamicRNNTilingData);
     size_t cGMByteSize = time * batch * 4 * hidden_size * sizeof(float);
-    size_t workspaceGMByteSize = 96*1024*1024;
+    size_t workspaceGMByteSize = 96 * 1024 * 1024;
     size_t biasGMByteSize = 4 * hidden_size * sizeof(float);
 
     uint8_t* cGM = (uint8_t*)AscendC::GmAlloc(cGMByteSize);
@@ -413,10 +407,9 @@ TEST_F(dynamic_r_n_n_test, test_case_2) {
         *((half*)outGM2 + i) = i;
     }
     ICPU_SET_TILING_KEY(10000001);
-    ICPU_RUN_KF(dynamic_rnn, block_dim, aGM, bGM, biasGM, seqGM, initHGM, initCGM,
-                nullptr, nullptr, nullptr, nullptr,
-                cGM, outGM1, outGM2, outGM3, outGM4, outGM5, outGM6, outGM7,
-                workspaceGM, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(
+        dynamic_rnn, block_dim, aGM, bGM, biasGM, seqGM, initHGM, initCGM, nullptr, nullptr, nullptr, nullptr, cGM,
+        outGM1, outGM2, outGM3, outGM4, outGM5, outGM6, outGM7, workspaceGM, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(aGM);
     AscendC::GmFree(bGM);
@@ -433,7 +426,8 @@ TEST_F(dynamic_r_n_n_test, test_case_2) {
     AscendC::GmFree(biasGM);
 }
 
-TEST_F(dynamic_r_n_n_test, test_case_3) {
+TEST_F(dynamic_r_n_n_test, test_case_3)
+{
     size_t time = 1;
     size_t batch = 16;
     size_t input_size = 512;
@@ -441,19 +435,17 @@ TEST_F(dynamic_r_n_n_test, test_case_3) {
 
     int32_t block_dim = 24;
 
-    string path = get_current_dir_name();
+    kernel_ut::SetupTestEnvironment("rnn/dynamic_rnn/tests/ut/op_kernel/rnn_data", "rnn_data");
+    kernel_ut::RunGenData("./rnn_data", {"1", "16", "512", "512"});
 
-    system("cp -r ../../../../rnn/dynamic_rnn/tests/ut/op_kernel/rnn_data ./");
-    system("chmod -R 755 ./rnn_data/");
-    system("cd ./rnn_data/ && rm -rf ./*bin");
-    system("cd ./rnn_data/ && python3 gen_data.py 1 16 512 512");
+    string path = kernel_ut::GetTestWorkDir();
 
     size_t aGMByteSize = time * batch * input_size * sizeof(float);
     size_t bGMByteSize = (input_size + hidden_size) * 4 * hidden_size * sizeof(float);
     size_t initHCGMByteSize = batch * hidden_size * sizeof(float);
     size_t tiling_data_size = sizeof(DynamicRNNTilingData);
     size_t cGMByteSize = time * batch * 4 * hidden_size * sizeof(float);
-    size_t workspaceGMByteSize = 96*1024*1024;
+    size_t workspaceGMByteSize = 96 * 1024 * 1024;
     size_t biasGMByteSize = 4 * hidden_size * sizeof(float);
 
     uint8_t* cGM = (uint8_t*)AscendC::GmAlloc(cGMByteSize);
@@ -607,10 +599,9 @@ TEST_F(dynamic_r_n_n_test, test_case_3) {
         *((half*)outGM2 + i) = i;
     }
     ICPU_SET_TILING_KEY(10000002);
-    ICPU_RUN_KF(dynamic_rnn, block_dim, aGM, bGM, biasGM, nullptr, initHGM, initCGM,
-                nullptr, nullptr, nullptr, nullptr,
-                cGM, outGM1, outGM2, outGM3, outGM4, outGM5, outGM6, outGM7,
-                workspaceGM, (uint8_t*)(tilingDatafromBin));
+    ICPU_RUN_KF(
+        dynamic_rnn, block_dim, aGM, bGM, biasGM, nullptr, initHGM, initCGM, nullptr, nullptr, nullptr, nullptr, cGM,
+        outGM1, outGM2, outGM3, outGM4, outGM5, outGM6, outGM7, workspaceGM, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(aGM);
     AscendC::GmFree(bGM);
@@ -626,7 +617,8 @@ TEST_F(dynamic_r_n_n_test, test_case_3) {
     AscendC::GmFree(biasGM);
 }
 
-TEST_F(dynamic_r_n_n_test, test_case_4) {
+TEST_F(dynamic_r_n_n_test, test_case_4)
+{
     size_t time = 1;
     size_t batch = 16;
     size_t input_size = 512;
@@ -634,12 +626,10 @@ TEST_F(dynamic_r_n_n_test, test_case_4) {
 
     int32_t block_dim = 24;
 
-    string path = get_current_dir_name();
+    kernel_ut::SetupTestEnvironment("rnn/dynamic_rnn/tests/ut/op_kernel/rnn_data", "rnn_data");
+    kernel_ut::RunGenData("./rnn_data", {"1", "16", "512", "512"});
 
-    system("cp -r ../../../../rnn/dynamic_rnn/tests/ut/op_kernel/rnn_data ./");
-    system("chmod -R 755 ./rnn_data/");
-    system("cd ./rnn_data/ && rm -rf ./*bin");
-    system("cd ./rnn_data/ && python3 gen_data.py 1 16 512 512");
+    string path = kernel_ut::GetTestWorkDir();
 
     size_t aGMByteSize = time * batch * input_size * sizeof(float);
     size_t bGMByteSize = (input_size + hidden_size) * 4 * hidden_size * sizeof(float);
@@ -647,7 +637,7 @@ TEST_F(dynamic_r_n_n_test, test_case_4) {
     size_t initHCGMByteSize = batch * hidden_size * sizeof(float);
     size_t tiling_data_size = sizeof(DynamicRNNTilingData);
     size_t cGMByteSize = time * batch * 4 * hidden_size * sizeof(float);
-    size_t workspaceGMByteSize = 96*1024*1024;
+    size_t workspaceGMByteSize = 96 * 1024 * 1024;
     size_t biasGMByteSize = 4 * hidden_size * sizeof(float);
 
     uint8_t* cGM = (uint8_t*)AscendC::GmAlloc(cGMByteSize);
@@ -802,11 +792,9 @@ TEST_F(dynamic_r_n_n_test, test_case_4) {
         *((half*)outGM2 + i) = i;
     }
     ICPU_SET_TILING_KEY(10000002);
-    ICPU_RUN_KF(dynamic_rnn, block_dim, aGM, bGM, biasGM, seqGM, initHGM, initCGM,
-                nullptr, nullptr, nullptr, nullptr,
-                cGM, outGM1, outGM2, outGM3, outGM4, outGM5, outGM6, outGM7,
-                workspaceGM, (uint8_t*)(tilingDatafromBin));
-
+    ICPU_RUN_KF(
+        dynamic_rnn, block_dim, aGM, bGM, biasGM, seqGM, initHGM, initCGM, nullptr, nullptr, nullptr, nullptr, cGM,
+        outGM1, outGM2, outGM3, outGM4, outGM5, outGM6, outGM7, workspaceGM, (uint8_t*)(tilingDatafromBin));
 
     AscendC::GmFree(aGM);
     AscendC::GmFree(bGM);
@@ -822,4 +810,3 @@ TEST_F(dynamic_r_n_n_test, test_case_4) {
     AscendC::GmFree(workspaceGM);
     AscendC::GmFree(biasGM);
 }
-

@@ -18,6 +18,8 @@
 #include "string.h"
 #include <iostream>
 #include <string>
+#include "kernel_ut_data_helper.h"
+#include "kernel_ut_data_executor.h"
 #endif
 
 #ifndef DTYPE_INPUT0
@@ -38,14 +40,8 @@ extern "C" __global__ __aicore__ void adam_apply_one_with_decay(
 
 class adam_apply_one_with_decay_test : public testing::Test {
 protected:
-    static void SetUpTestCase()
-    {
-        cout << "adam_apply_one_with_decay SetUp\n" << endl;
-    }
-    static void TearDownTestCase()
-    {
-        cout << "adam_apply_one_with_decay TearDown\n" << endl;
-    }
+    static void SetUpTestCase() { cout << "adam_apply_one_with_decay SetUp\n" << endl; }
+    static void TearDownTestCase() { cout << "adam_apply_one_with_decay TearDown\n" << endl; }
 };
 
 TEST_F(adam_apply_one_with_decay_test, test_adam_apply_one_with_decay_dynamic)
@@ -71,9 +67,6 @@ TEST_F(adam_apply_one_with_decay_test, test_adam_apply_one_with_decay_dynamic)
 
     uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 1024 * 16);
     uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size);
-
-    char* path_ = get_current_dir_name();
-    string path(path_);
 
     AdamApplyOneWithDecayTilingData* tilingDatafromBin = reinterpret_cast<AdamApplyOneWithDecayTilingData*>(tiling);
 
@@ -117,6 +110,4 @@ TEST_F(adam_apply_one_with_decay_test, test_adam_apply_one_with_decay_dynamic)
     AscendC::GmFree(output2);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-
-    free(path_);
 }

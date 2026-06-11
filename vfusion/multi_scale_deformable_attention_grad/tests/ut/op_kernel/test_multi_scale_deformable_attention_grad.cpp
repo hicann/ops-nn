@@ -15,6 +15,8 @@
 #ifdef __CCE_KT_TEST__
 #include "tikicpulib.h"
 #include "data_utils.h"
+#include "kernel_ut_data_helper.h"
+#include "kernel_ut_data_executor.h"
 #include "string.h"
 #include <iostream>
 #include <string>
@@ -24,24 +26,23 @@
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void multi_scale_deformable_attention_grad(GM_ADDR value_gm, GM_ADDR spatial_shapes_gm,
-                                                                            GM_ADDR level_start_index_gm, GM_ADDR sampling_loc_gm,
-                                                                            GM_ADDR attn_weight_gm, GM_ADDR grad_output_gm,
-                                                                            GM_ADDR grad_value_gm, GM_ADDR grad_sampling_loc_gm,
-                                                                            GM_ADDR grad_attn_weight_gm, GM_ADDR workspace,
-                                                                            GM_ADDR tiling_data);
+extern "C" __global__ __aicore__ void multi_scale_deformable_attention_grad(
+    GM_ADDR value_gm, GM_ADDR spatial_shapes_gm, GM_ADDR level_start_index_gm, GM_ADDR sampling_loc_gm,
+    GM_ADDR attn_weight_gm, GM_ADDR grad_output_gm, GM_ADDR grad_value_gm, GM_ADDR grad_sampling_loc_gm,
+    GM_ADDR grad_attn_weight_gm, GM_ADDR workspace, GM_ADDR tiling_data);
 
 class multi_scale_deformable_attention_grad_test : public testing::Test {
-    protected:
-    static void SetUpTestCase() {
-        cout << "multi_scale_deformable_attention_grad_test SetUp\n" << endl;
-    }
-    static void TearDownTestCase() {
+protected:
+    static void SetUpTestCase() { cout << "multi_scale_deformable_attention_grad_test SetUp\n" << endl; }
+    static void TearDownTestCase()
+    {
         cout << "multi_scale_deformable_attention_grad_test TearDown\n" << endl;
+        kernel_ut::CleanGeneratedBinFiles("./multi_scale_deformable_attention_grad_data");
     }
 };
 
-TEST_F(multi_scale_deformable_attention_grad_test, test_case_fp32) {
+TEST_F(multi_scale_deformable_attention_grad_test, test_case_fp32)
+{
     uint64_t batch_size = 1;
     uint64_t spatial_size = 24;
     uint64_t num_heads = 8;
@@ -72,35 +73,53 @@ TEST_F(multi_scale_deformable_attention_grad_test, test_case_fp32) {
     uint8_t* grad_sample_loc = (uint8_t*)AscendC::GmAlloc(grad_sample_loc_size);
     uint8_t* grad_attn_weight = (uint8_t*)AscendC::GmAlloc(grad_attn_weight_size);
 
-    uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(1024 * 16 * 1024);
-    uint8_t *tiling = (uint8_t *)AscendC::GmAlloc(tiling_data_size + 16);
+    uint8_t* workspace = (uint8_t*)AscendC::GmAlloc(1024 * 16 * 1024);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tiling_data_size + 16);
     uint32_t blockDim = 48;
 
     memset(workspace, 0, 16 * 1024 * 1024);
 
-    system("cp -rf ../../../../vfusion/multi_scale_deformable_attention_grad/tests/ut/op_kernel/multi_scale_deformable_attention_grad_data/ ./");
-    system("chmod -R 755 ./multi_scale_deformable_attention_grad_data/");
-    system("cd ./multi_scale_deformable_attention_grad_data/ && rm -rf ./*bin");
-    system("cd ./multi_scale_deformable_attention_grad_data/ && python3 gen_data.py 1 8 8 1 2 100");
-    system("cd ./multi_scale_deformable_attention_grad_data/ && python3 gen_tiling.py 1 8 8 1 2 100");
+    kernel_ut::SetupTestEnvironment(
+        "vfusion/multi_scale_deformable_attention_grad/tests/ut/op_kernel/multi_scale_deformable_attention_grad_data",
+        "multi_scale_deformable_attention_grad_data");
+    kernel_ut::RunGenData("./multi_scale_deformable_attention_grad_data", {"1", "8", "8", "1", "2", "100"});
+    kernel_ut::RunGenTiling("./multi_scale_deformable_attention_grad_data", "1 8 8 1 2 100");
 
-    char * path_ = get_current_dir_name();
-    string path(path_);
+    string path = kernel_ut::GetTestWorkDir();
     ReadFile(path + "/multi_scale_deformable_attention_grad_data/value.bin", value_size, value, value_size);
-    ReadFile(path + "/multi_scale_deformable_attention_grad_data/value_spatial_shape.bin", value_spatial_shape_size, value_spatial_shape, value_spatial_shape_size);
-    ReadFile(path + "/multi_scale_deformable_attention_grad_data/level_start_index.bin", level_start_index_size, level_start_index, level_start_index_size);
-    ReadFile(path + "/multi_scale_deformable_attention_grad_data/sample_loc.bin", sample_loc_size, sample_loc, sample_loc_size);
-    ReadFile(path + "/multi_scale_deformable_attention_grad_data/attention_weight.bin", attention_weight_size, attention_weight, attention_weight_size);
-    ReadFile(path + "/multi_scale_deformable_attention_grad_data/grad_output.bin", grad_output_size, grad_output, grad_output_size);
-    ReadFile(path + "/multi_scale_deformable_attention_grad_data/grad_value.bin", grad_value_size, grad_value, grad_value_size);
-    ReadFile(path + "/multi_scale_deformable_attention_grad_data/grad_sample_loc.bin", grad_sample_loc_size, grad_sample_loc, grad_sample_loc_size);
-    ReadFile(path + "/multi_scale_deformable_attention_grad_data/grad_attn_weight.bin", grad_attn_weight_size, grad_attn_weight, grad_attn_weight_size);
-    ReadFile(path + "/multi_scale_deformable_attention_grad_data/tiling.bin", tiling_data_size, tiling, tiling_data_size + 16);
+    ReadFile(
+        path + "/multi_scale_deformable_attention_grad_data/value_spatial_shape.bin", value_spatial_shape_size,
+        value_spatial_shape, value_spatial_shape_size);
+    ReadFile(
+        path + "/multi_scale_deformable_attention_grad_data/level_start_index.bin", level_start_index_size,
+        level_start_index, level_start_index_size);
+    ReadFile(
+        path + "/multi_scale_deformable_attention_grad_data/sample_loc.bin", sample_loc_size, sample_loc,
+        sample_loc_size);
+    ReadFile(
+        path + "/multi_scale_deformable_attention_grad_data/attention_weight.bin", attention_weight_size,
+        attention_weight, attention_weight_size);
+    ReadFile(
+        path + "/multi_scale_deformable_attention_grad_data/grad_output.bin", grad_output_size, grad_output,
+        grad_output_size);
+    ReadFile(
+        path + "/multi_scale_deformable_attention_grad_data/grad_value.bin", grad_value_size, grad_value,
+        grad_value_size);
+    ReadFile(
+        path + "/multi_scale_deformable_attention_grad_data/grad_sample_loc.bin", grad_sample_loc_size, grad_sample_loc,
+        grad_sample_loc_size);
+    ReadFile(
+        path + "/multi_scale_deformable_attention_grad_data/grad_attn_weight.bin", grad_attn_weight_size,
+        grad_attn_weight, grad_attn_weight_size);
+    ReadFile(
+        path + "/multi_scale_deformable_attention_grad_data/tiling.bin", tiling_data_size, tiling,
+        tiling_data_size + 16);
 
     AscendC::SetKernelMode(KernelMode::AIV_MODE);
     ICPU_SET_TILING_KEY(1);
-    ICPU_RUN_KF(multi_scale_deformable_attention_grad, blockDim, value, value_spatial_shape, level_start_index,
-        sample_loc, attention_weight, grad_output, grad_value, grad_sample_loc, grad_attn_weight, workspace, tiling);
+    ICPU_RUN_KF(
+        multi_scale_deformable_attention_grad, blockDim, value, value_spatial_shape, level_start_index, sample_loc,
+        attention_weight, grad_output, grad_value, grad_sample_loc, grad_attn_weight, workspace, tiling);
 
     AscendC::GmFree(value);
     AscendC::GmFree(value_spatial_shape);
@@ -113,6 +132,4 @@ TEST_F(multi_scale_deformable_attention_grad_test, test_case_fp32) {
     AscendC::GmFree(grad_attn_weight);
     AscendC::GmFree(workspace);
     AscendC::GmFree(tiling);
-
-    free(path_);
 }
