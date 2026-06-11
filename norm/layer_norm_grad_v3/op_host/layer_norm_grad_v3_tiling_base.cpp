@@ -62,7 +62,6 @@ bool CheckShapeSame(
     // get storage shape
     gert::Shape leftShapeVal = leftShape->GetStorageShape();
     gert::Shape rightShapeVal = rightShape->GetStorageShape();
-
     // check the leftIndex shape and rightIndex shape are the same
     if (leftShapeVal != rightShapeVal) {
         std::string paramMsg = rightName + " and " + leftName;
@@ -153,7 +152,6 @@ ge::graphStatus LayerNormGradV3TilingBase::GetShapeAttrsInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, gamma);
     auto gammaShape = gamma->GetStorageShape();
     int64_t gammaDimNum = gammaShape.GetDimNum();
-
     if (dyDimNum < gammaDimNum) {
         std::string dimsMsg = std::to_string(dyDimNum) + " and " + std::to_string(gammaDimNum);
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(

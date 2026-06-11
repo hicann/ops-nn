@@ -193,7 +193,6 @@ aclnnStatus aclnnLayerNormQuantGetWorkspaceSize(
         x, gammma, beta, scale, zeroPointsOptional, quantMode, res);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
-    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     // 空tensor场景处理
     if (x->IsEmpty()) {
         OP_LOGW("Got empty tensor in aclnnLayerNormQuant!");

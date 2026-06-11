@@ -81,8 +81,8 @@ ge::graphStatus LayerNormQuantTiling::GetTilingSliceInfo()
         uint32_t elementSize = roundDown((maxUbSize - MEAN_AND_VAR_SIZE) / (singleRowSizePerElem + multiRowSizePerElem),
                                       oneRepeatElemCount);
         uint32_t tailSize = numCol - (CeilDiv(numCol, elementSize) - 1) * elementSize;
-        while (tailSize < 32) {
-            elementSize = elementSize - 32;
+        while (tailSize < BLOCK_SIZE) {
+            elementSize = elementSize - BLOCK_SIZE;
             tailSize = numCol - (CeilDiv(numCol, elementSize) - 1) * elementSize;
         }
         

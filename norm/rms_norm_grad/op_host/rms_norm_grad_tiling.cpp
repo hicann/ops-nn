@@ -25,6 +25,7 @@ using namespace Ops::NN::OpTiling;
 static const uint32_t ALIGN_32 = 8;
 static const uint32_t ALIGN_16 = 16;
 static const uint32_t ALIGN_4096 = 4096;
+static const uint32_t SIZEOF_FLOAT = 4;
 static const uint64_t DTYPE_FP32 = 1;
 static const uint64_t DTYPE_FP16 = 2;
 static const uint64_t DTYPE_BF16 = 3;
@@ -358,11 +359,11 @@ static void SetChunkWorkspace(
     uint64_t totalInputSize = row_val * col_val * dtype_size * 2 + row_val * 4 + col_val * dtype_size;
     const uint64_t WORKSPACE_LIMIT = 500 * 1024 * 1024;  // 16MB
     const uint64_t WORKSPACE_ENABLE = static_cast<uint64_t>(totalInputSize * 0.05);  // 16MB
-    const uint32_t sizeof_float = 4;
+    const uint32_t sizeof_float = SIZEOF_FLOAT;
     uint32_t blockDim = tiling.get_block_dim();
     uint32_t need_chunk = 0;
     // Deterministic mode: calculate chunk parameters
-    uint64_t currentWorkspace = (uint64_t)blockDim * col_val_align * sizeof_float;
+    uint64_t currentWorkspace = static_cast<uint64_t>(blockDim) * col_val_align * sizeof_float;
     auto ascendc_platform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
     platform_ascendc::SocVersion curSocVersion = ascendc_platform.GetSocVersion();
     bool isSoc910bc = curSocVersion == platform_ascendc::SocVersion::ASCEND910B || curSocVersion == platform_ascendc::SocVersion::ASCEND910_93; 
@@ -428,13 +429,13 @@ static void SetTilingDataAndWorkspace(
         uint32_t need_chunk = tiling.get_need_chunk();
         // Deterministic mode: use chunk_size instead of col_val_align
         if (need_chunk == 1) {
-            usr_workspace_size = (tiling.get_chunk_size() + ALIGN_32 + block_factor) * tiling.get_block_dim() * 4;
+            usr_workspace_size = (tiling.get_chunk_size() + ALIGN_32 + block_factor) * tiling.get_block_dim() *
+                                 SIZEOF_FLOAT;
         } else {
-            usr_workspace_size = (col_val_align + ALIGN_32) * tiling.get_block_dim() * 4;
+            usr_workspace_size = (col_val_align + ALIGN_32) * tiling.get_block_dim() * SIZEOF_FLOAT;
         }
-        
     } else {
-        usr_workspace_size = ALIGN_32 * tiling.get_block_dim() * 4;
+        usr_workspace_size = ALIGN_32 * tiling.get_block_dim() * SIZEOF_FLOAT;
     }
     size_t sys_work_space_size = 16 * 1024 * 1024;
     size_t* current_workspace = context->GetWorkspaceSizes(1);
