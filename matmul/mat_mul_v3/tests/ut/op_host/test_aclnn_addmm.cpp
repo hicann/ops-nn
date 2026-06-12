@@ -273,6 +273,43 @@ TEST_F(l2_addmm_test, case_beta_0)
     EXPECT_EQ(aclRet, ACL_SUCCESS);
 }
 
+// beta == 0 && USE_FP32_ADD 场景，910B上路由至GemmV3融合kernel
+TEST_F(l2_addmm_test, addmm_910b_beta_0_fp16_use_fp32_add)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910B);
+    auto self = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto mat1 = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto mat2 = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto out = TensorDesc({16, 16}, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.005, 0.005);
+    auto beta = ScalarDesc(0.0f);
+    auto alpha = ScalarDesc(1.0f);
+    int8_t cubeMathType = USE_FP32_ADD;
+
+    auto ut = OP_API_UT(aclnnAddmm, INPUT(self, mat1, mat2, beta, alpha), OUTPUT(out), cubeMathType);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
+TEST_F(l2_addmm_test, addmm_910b_beta_0_bf16_use_fp32_add)
+{
+    op::SocVersionManager versionManager(op::SocVersion::ASCEND910B);
+    auto self = TensorDesc({16, 16}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto mat1 = TensorDesc({16, 16}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto mat2 = TensorDesc({16, 16}, ACL_BF16, ACL_FORMAT_ND).ValueRange(0, 2);
+    auto out = TensorDesc({16, 16}, ACL_BF16, ACL_FORMAT_ND).Precision(0.005, 0.005);
+    auto beta = ScalarDesc(0.0f);
+    auto alpha = ScalarDesc(2.0f);
+    int8_t cubeMathType = USE_FP32_ADD;
+
+    auto ut = OP_API_UT(aclnnAddmm, INPUT(self, mat1, mat2, beta, alpha), OUTPUT(out), cubeMathType);
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+    EXPECT_EQ(aclRet, ACL_SUCCESS);
+}
+
 // self空指针
 TEST_F(l2_addmm_test, case_empty_tensor_input_1)
 {

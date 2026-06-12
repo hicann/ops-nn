@@ -227,6 +227,14 @@ public:
     };
 
     aclnnStatus Impl() override{
+        auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
+        bool isSupportNpuArch = (npuArch == NpuArch::DAV_2201);
+        if (CheckGemmV3WithAlphaBeta(bias, matA, matB, cubeMathType) && isSupportNpuArch) {
+            const aclTensor* bmmOut = ExecGemmV3WithAlphaBetaOp(bias, matA, matB, alpha, beta, executor);
+            CHECK_RET(bmmOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            convOut = bmmOut;
+            return ACLNN_SUCCESS;
+        }
         // bmmOut = batch1(matA) @ batch2(matB)
         bool isBaddbmm = true;
         const aclTensor* bmmOut = ExecBmmOpV2(matA, matB, output, cubeMathType, executor, isBaddbmm);

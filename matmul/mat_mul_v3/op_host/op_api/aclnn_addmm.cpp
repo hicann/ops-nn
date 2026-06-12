@@ -600,6 +600,14 @@ public:
     using MatmulGraphImpl::MatmulGraphImpl;
 
     aclnnStatus Impl() override{
+        auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
+        bool isSupportNpuArch = (npuArch == NpuArch::DAV_2201);
+        if (CheckGemmV3WithAlphaBeta(bias, matA, matB, cubeMathType) && isSupportNpuArch) {
+            auto outGemmV3 = ExecGemmV3WithAlphaBetaOp(bias, matA, matB, alpha, beta, executor);
+            CHECK_RET(outGemmV3 != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            convOut = outGemmV3;
+            return ACLNN_SUCCESS;
+        }
         // 执行 Matmul: out = mat1 @ mat2
         const aclTensor* out = MatmulProcess(matA, matB, output, cubeMathType, opInfo, executor);
         CHECK_RET(out != nullptr, ACLNN_ERR_INNER_NULLPTR);
