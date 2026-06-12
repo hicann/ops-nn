@@ -216,6 +216,12 @@ __aicore__ inline void RepeatInterleaveImpl<T, U>::CopyXToMatchOut(int64_t start
         int64_t tailRepeatTimes = curCoreRepeatsCountOnCurDim_ - cpCountInUbFactor_ * (loopSize - 1);
         if (curCoreRepeatsCountOnCurDim_ == 0) {
             copyFromXNum_ += tilingData_.mergedDims[2];
+            LocalTensor<T> xOutLocal = xOutQueue_.DeQue<T>();
+            xOutQueue_.FreeTensor(xOutLocal);
+            if (likely(i < (cpCount - 1))) {
+                xOutLocal = xOutQueue_.AllocTensor<T>();
+                xOutQueue_.EnQue(xOutLocal);
+            }
             continue;
         }
         for (int64_t loopIdx = 0; loopIdx < (loopSize - 1); loopIdx++) {
