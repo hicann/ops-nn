@@ -158,7 +158,7 @@ public:
                 SetDn2NzIntriParams(intriParams, kAL1Iter);
                 DataCopy<typename Intf::FmapT>(self_->ctx.al1, self_->ctx.agm[aL1GmOffset], intriParams);
             }
-        } else if constexpr (Intf::formatOutput == ConvFormat::NHWC) {
+        } else if constexpr (Intf::formatFmap == ConvFormat::NHWC) {
             uint64_t aL1GmOffset = 0;
             if constexpr (!Intf::isKL1NL0FullLoad) {
                 aL1GmOffset += kAL1Iter * self_->ctx.convTilingData->cinAInCore;

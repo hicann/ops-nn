@@ -224,9 +224,9 @@ __aicore__ __forceinline__ void ConvCommon<CONV, CONV_TILING>::
         } else if constexpr (CONV::C_FORMAT == ConvFormat::NHWC) {
             outputStartAddr += convOps->woIdxStart * convTilingData->cout;
         }
-        if constexpr (CONV::A_FORMAT == ConvFormat::NCDHW) {
+        if constexpr (CONV::C_FORMAT == ConvFormat::NCDHW) {
             outputStartAddr += doIdxStart * hwOut;
-        } else if constexpr (CONV::A_FORMAT == ConvFormat::NDHWC) {
+        } else if constexpr (CONV::C_FORMAT == ConvFormat::NDHWC) {
             outputStartAddr += doIdxStart * hwOut * convTilingData->cout;
         }
     }
