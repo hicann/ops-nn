@@ -544,18 +544,16 @@ static aclnnStatus Conv2dWithFlag(const aclTensor *input, const aclTensor *weigh
                                               useHf32, output, executor);
     }
 
-    auto inferShapeRet = ACLNN_SUCCESS;
-    auto launchRet = ACLNN_SUCCESS;
-    inferShapeRet = INFER_SHAPE(Conv2D, OP_INPUT(input, weight, bias), OP_OUTPUT(output),
+    auto ret = INFER_SHAPE(Conv2D, OP_INPUT(input, weight, bias), OP_OUTPUT(output),
       OP_ATTR(stride4, pad4, dilation4, groups, dataFormat, 0, empty_str, empty_str, hf32));
-    launchRet = ADD_TO_LAUNCHER_LIST_AICORE(
-      Conv2D, OP_INPUT(input, weight, bias), OP_OUTPUT(output),
-      OP_ATTR(stride4, pad4, dilation4, groups, dataFormat, 0, empty_str, empty_str, hf32));
-    if (inferShapeRet != ACLNN_SUCCESS) {
+    if (ret != ACLNN_SUCCESS) {
       OP_LOGE(ACLNN_ERR_INNER_INFERSHAPE_ERROR, "InferShape failed.");
       output = nullptr;
       return ACLNN_ERR_INNER_INFERSHAPE_ERROR;
     }
+    auto launchRet = ADD_TO_LAUNCHER_LIST_AICORE(
+      Conv2D, OP_INPUT(input, weight, bias), OP_OUTPUT(output),
+      OP_ATTR(stride4, pad4, dilation4, groups, dataFormat, 0, empty_str, empty_str, hf32));
     if (launchRet != ACLNN_SUCCESS) {
       OP_LOGE(ACLNN_ERR_INNER_FIND_KERNEL_ERROR, "Conv2D ADD_TO_LAUNCHER_LIST_AICORE failed.");
       output = nullptr;
