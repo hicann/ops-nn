@@ -26,6 +26,7 @@ constexpr int64_t BIG_SHAPE_NUM = 2;    // x, y
 constexpr int64_t SMALL_AB1_FACTOR_LIMIT = 32;
 constexpr int64_t MIN_SMALL_AB1_B0_CORE_FACTOR = 2;
 constexpr int64_t SMALL_AB1_CACHE_BUFFER_NUM = 5;
+constexpr int64_t MEAN_VAR_OUTPUT_COUNT = 2;  // mean, var
 }  // namespace
 
 namespace optiling
@@ -103,7 +104,8 @@ ge::graphStatus BatchNormInferTiling::DoOpTiling()
         int64_t paramCacheElemLen = (vlFp32_ / abLen) * abLen;
         int64_t alignedParamCacheLen = CeilDiv(paramCacheElemLen, vlFp32_) * vlFp32_;
         int64_t smallAB1CacheBytes = SMALL_AB1_CACHE_BUFFER_NUM * alignedParamCacheLen * FLOAT32_BYTES;
-        int64_t ubCanUseBytes = static_cast<int64_t>(aicoreParams_.ubSize) - DOUBLE_BUFFER * paramBytes -
+        int64_t meanVarOutBytes = MEAN_VAR_OUTPUT_COUNT * AlignUp(FLOAT32_BYTES * aInner, static_cast<int64_t>(blockSize_));
+        int64_t ubCanUseBytes = static_cast<int64_t>(aicoreParams_.ubSize) - DOUBLE_BUFFER * paramBytes - meanVarOutBytes -
                                 smallAB1CacheBytes;
         int64_t bytesPerB0 = abLen * bytesPerElement_ * BIG_SHAPE_NUM * DOUBLE_BUFFER;
         b0Inner = bytesPerB0 == 0 ? 1 : ubCanUseBytes / bytesPerB0;

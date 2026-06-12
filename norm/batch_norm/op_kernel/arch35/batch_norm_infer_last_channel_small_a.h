@@ -35,6 +35,7 @@ class BatchNormInferLastChannelSmallA {
     static constexpr uint16_t VECTOR_LENGTH = BatchNormOps::VECTOR_LENGTH;
     static constexpr uint16_t VL_FP32 = VECTOR_LENGTH / sizeof(float);
     static constexpr int64_t BLOCK_SIZE = BatchNormOps::BLOCK_SIZE;
+    static constexpr int32_t MEAN_VAR_OUTPUT_COUNT = 2;  // mean, var
 
     constexpr static AscendC::MicroAPI::CastTrait castTraitB162B32 = {
         AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN, MaskMergeMode::ZEROING,
@@ -78,6 +79,8 @@ public:
         int64_t xShapeLen = tilingData_->tileBlockBLen * tilingData_->tileBlockALen;
         pipe_->InitBuffer(xQueue_, BUFFER_NUM, xShapeLen * sizeof(T));
         pipe_->InitBuffer(yQueue_, BUFFER_NUM, xShapeLen * sizeof(T));
+        int64_t varOffset = AlignUp(tilingData_->tileBlockALen, BLOCK_SIZE / sizeof(T_RUNNING_MEAN));
+        pipe_->InitBuffer(meanVarOutQueue_, BUFFER_DEPTH, MEAN_VAR_OUTPUT_COUNT * varOffset * sizeof(T_RUNNING_MEAN));
 
         int64_t paramCacheElemLen = GetSmallLastChannelParamCacheElemLen();
         int64_t offsetLen = AlignUp(paramCacheElemLen, BLOCK_SIZE / sizeof(uint32_t));
@@ -207,7 +210,7 @@ private:
 
         VFPrepareSmallLastChannelParamCache(gammaLocal, betaLocal, meanLocal, varLocal, offsetLocal, gammaFp32Local,
             betaFp32Local, meanFp32Local, rstdFp32Local);
-        CopyOutMeanVar(mean, var, tilingData_->tileBlockALen);
+        CopyOutMeanVar(tilingData_->tileBlockALen);
 
         betaQueue_.FreeTensor<T_GAMMA>(beta);
         gammaQueue_.FreeTensor<T_GAMMA>(gamma);
@@ -215,18 +218,35 @@ private:
         varQueue_.FreeTensor<T_RUNNING_MEAN>(var);
     }
 
-    __aicore__ inline void CopyOutMeanVar(
-        const LocalTensor<T_RUNNING_MEAN>& mean, const LocalTensor<T_RUNNING_MEAN>& var, int64_t curTileALen)
+    __aicore__ inline void CopyOutMeanVar(int64_t curTileALen)
     {
+        if (GetBlockIdx() != 0) { return; }
+
         DataCopyExtParams extParams;
         extParams.blockLen = curTileALen * sizeof(T_RUNNING_MEAN);
         extParams.srcStride = 0;
         extParams.dstStride = 0;
         extParams.blockCount = 1;
-        DataCopyPad(batchMeanGm_[0], mean, extParams);
-        DataCopyPad(reserveSpace1Gm_[0], mean, extParams);
-        DataCopyPad(batchVarGm_[0], var, extParams);
-        DataCopyPad(reserveSpace2Gm_[0], var, extParams);
+
+        int64_t varOffset = AlignUp(curTileALen, BLOCK_SIZE / sizeof(T_RUNNING_MEAN));
+        LocalTensor<T_RUNNING_MEAN> meanVarBuf = meanVarOutQueue_.AllocTensor<T_RUNNING_MEAN>();
+
+        DataCopyPadExtParams<T_RUNNING_MEAN> padExtParams;
+        padExtParams.isPad = false;
+        DataCopyPad(meanVarBuf, meanGm_[0], extParams, padExtParams);
+        DataCopyPad(meanVarBuf[varOffset], varGm_[0], extParams, padExtParams);
+
+        meanVarOutQueue_.EnQue<QuePosition::GM, QuePosition::VECIN, T_RUNNING_MEAN>(meanVarBuf);
+
+        LocalTensor<T_RUNNING_MEAN> meanVarOut =
+            meanVarOutQueue_.DeQue<QuePosition::VECOUT, QuePosition::GM, T_RUNNING_MEAN>();
+
+        DataCopyPad(batchMeanGm_[0], meanVarOut, extParams);
+        DataCopyPad(reserveSpace1Gm_[0], meanVarOut, extParams);
+        DataCopyPad(batchVarGm_[0], meanVarOut[varOffset], extParams);
+        DataCopyPad(reserveSpace2Gm_[0], meanVarOut[varOffset], extParams);
+
+        meanVarOutQueue_.FreeTensor(meanVarOut);
     }
 
     __aicore__ inline void Compute(int64_t curTileBLen, int64_t curTileALen)
@@ -386,6 +406,7 @@ private:
     TQue<QuePosition::VECIN, BUFFER_DEPTH> meanQueue_;
     TQue<QuePosition::VECIN, BUFFER_DEPTH> varQueue_;
     TQue<QuePosition::VECOUT, BUFFER_DEPTH> yQueue_;
+    TQueBind<TPosition::VECIN, TPosition::VECOUT, BUFFER_DEPTH> meanVarOutQueue_;
     TBuf<TPosition::VECCALC> offsetBuf_;
     TBuf<TPosition::VECCALC> betaFp32Buf_;
     TBuf<TPosition::VECCALC> gammaFp32Buf_;

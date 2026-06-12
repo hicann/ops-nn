@@ -28,6 +28,7 @@ constexpr int64_t MAX_CONTINUOUS_A_OUTER_FP16 = 3;
 constexpr int64_t MIN_SMALL_A_B_LEN = 65536;
 constexpr int64_t SMALL_SHAPE_NUM = 6;  // scale, offset, mean, var, outMean, outVar
 constexpr int64_t BIG_SHAPE_NUM = 2;    // x, y
+constexpr int64_t MEAN_VAR_OUTPUT_COUNT = 2;  // mean, var
 constexpr int64_t SMALL_LAST_CHANNEL_CACHE_BUFFER_NUM = 4;
 }  // namespace
 
@@ -141,7 +142,8 @@ ge::graphStatus BatchNormInferLastChannelTiling::DoOpTiling()
 
     isSmallLastChannel_ = fusedALen_ > 0 && fusedALen_ <= MAX_SMALL_A && fusedB0Len_ > MIN_SMALL_A_B_LEN;
     if (isSmallLastChannel_) {
-        int64_t paramBytes = DOUBLE_BUFFER * SMALL_SHAPE_NUM * FLOAT32_BYTES * fusedALen_;
+        int64_t meanVarOutBytes = MEAN_VAR_OUTPUT_COUNT * AlignUp(FLOAT32_BYTES * fusedALen_, blockSize_);
+        int64_t paramBytes = DOUBLE_BUFFER * SMALL_SHAPE_NUM * FLOAT32_BYTES * fusedALen_ + meanVarOutBytes;
         int64_t paramCacheElemLen = (vlFp32_ / fusedALen_) * fusedALen_;
         int64_t offsetBytes = AlignUp(paramCacheElemLen * static_cast<int64_t>(sizeof(uint32_t)), blockSize_);
         int64_t cacheBytes = offsetBytes + SMALL_LAST_CHANNEL_CACHE_BUFFER_NUM *
@@ -155,7 +157,8 @@ ge::graphStatus BatchNormInferLastChannelTiling::DoOpTiling()
                                baseAOuter > 1 && baseAOuter <= maxContinuousAOuter;
     if (isContinuousLastChannel_) {
         int64_t paramAlignLen = AlignUp(fusedALen_, vlFp32_);
-        int64_t paramBytes = DOUBLE_BUFFER * SMALL_SHAPE_NUM * FLOAT32_BYTES * paramAlignLen;
+        int64_t meanVarOutBytes = MEAN_VAR_OUTPUT_COUNT * AlignUp(FLOAT32_BYTES * fusedALen_, blockSize_);
+        int64_t paramBytes = DOUBLE_BUFFER * SMALL_SHAPE_NUM * FLOAT32_BYTES * paramAlignLen + meanVarOutBytes;
         int64_t paramCacheBytes = SMALL_SHAPE_NUM * FLOAT32_BYTES * paramAlignLen;
         return FillLastChannelTilingForBSplit(paramBytes, paramCacheBytes);
     }
