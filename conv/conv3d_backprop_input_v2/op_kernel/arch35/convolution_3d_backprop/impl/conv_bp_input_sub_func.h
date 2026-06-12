@@ -152,16 +152,24 @@ static __aicore__ inline void LoadL0Zero(
     load3dB.mStartPt = 0;
     load3dB.kExtension = k0B;
 
+    load3dA.mExtension = AlignUp(baseM, BLOCK_CUBE);
+    load3dB.mExtension = AlignUp(baseN, BLOCK_CUBE);
+#if defined(ASC_DEVKIT_VERSION_NUM) && (ASC_DEVKIT_VERSION_NUM >= 90000000)
     LoadDataRepeatParamWithStride repeat = {};
     repeat.repeatTime = 1;
     // 重置repeat参数
     SetLoadDataRepeatWithStride(repeat);
 
-    load3dA.mExtension = AlignUp(baseM, BLOCK_CUBE);
     LoadDataWithStride(l0a, dummyL1A, load3dA);
-
-    load3dB.mExtension = AlignUp(baseN, BLOCK_CUBE);
     LoadDataWithStride(l0b, dummyL1B, load3dB);
+#else
+    LoadDataRepeatParam repeat = {};
+    repeat.repeatTime = 1;
+    SetLoadDataRepeat(repeat);
+
+    LoadData(l0a, dummyL1A, load3dA);
+    LoadData(l0b, dummyL1B, load3dB);
+#endif
 }
 
 template <class Intf>
