@@ -98,5 +98,5 @@
 
 算子交付件中涉及的关键文档主要包括如下，具体写作格式、内容要求请参考模板。
 
-- [算子RAEDME文档模板](https://gitcode.com/cann/ops-nn/wiki/%E7%AE%97%E5%AD%90README%E6%96%87%E6%A1%A3%E6%A8%A1%E6%9D%BF)
+- [算子README文档模板](https://gitcode.com/cann/ops-nn/wiki/%E7%AE%97%E5%AD%90README%E6%96%87%E6%A1%A3%E6%A8%A1%E6%9D%BF)
 - [aclnn API文档模板](https://gitcode.com/cann/ops-nn/wiki/aclnn%20API%E6%96%87%E6%A1%A3%E6%A8%A1%E6%9D%BF)
