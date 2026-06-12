@@ -131,7 +131,7 @@ aclnnStatus aclnnAddRmsNorm(
       <td>rstdOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示归一化后的标准差的倒数。对应公式中`Rms(x)`的倒数。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape与`x1`前几维保持一致，前几维表示不需要norm的维度。rstdOut shape与x1 shape，gamma shape关系举例：若x1 shape:(2，3，4，8)，gamma shape:(8)，rstdOut shape(2，3，4，1)；若x1 shape:(2，3，4，8)，gamma shape:(4，8)，rstdOut shape(2，3，1，1)。</li><li>当传入nullptr时，该参数的最终输出无效。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>维度数与`x1`保持一致，其中不需要norm的维度与`x1`对应维度保持一致，需要norm的维度（与`gamma`维度数相同的后几维）均为1。rstdOut shape与x1 shape，gamma shape关系举例：若x1 shape:(2，3，4，8)，gamma shape:(8)，rstdOut shape(2，3，4，1)；若x1 shape:(2，3，4，8)，gamma shape:(4，8)，rstdOut shape(2，3，1，1)。</li><li>当传入nullptr时，该参数的最终输出无效。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
       <td>1-8</td>

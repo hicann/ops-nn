@@ -23,7 +23,7 @@ quant\_in_i=\frac{x_i}{\operatorname{Rms}(\mathbf{x})} gamma_i + beta_i, \quad \
 $$
 
 $$
-y=round((quant\_in*scale)+offset)
+y=round((quant\_in/scale)+offset)
 $$
 
 ## 函数原型
