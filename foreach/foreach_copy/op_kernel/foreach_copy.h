@@ -62,10 +62,10 @@ private:
     // tiling params
     uint64_t inputsTensorUbSize = 0;
     const int64_t* tensorDataCountList = nullptr;
-    uint16_t tensorStart = {0};
-    uint16_t tensorEnd = {0};
     int64_t tensorStartOffset = {0};
     int64_t tensorEndOffset = {0};
+    uint16_t tensorStart = {0};
+    uint16_t tensorEnd = {0};
 
     TQue<QuePosition::VECIN, 1> float32Queue;
 
@@ -91,19 +91,19 @@ __aicore__ inline void ForeachCopyND<T>::Process()
     LocalTensor<float> float32Tensor;
 
     for (uint16_t i = tensorStart; i <= tensorEnd; i++) {
-        int64_t cursorStart = 0;
+        int64_t cursorStart_2 = 0;
         int64_t cursorEnd = tensorDataCountList[i] - 1;
         int64_t dataCount = 0;
         if (i == tensorStart) {
-            cursorStart = tensorStartOffset;
+            cursorStart_2 = tensorStartOffset;
         }
         if (i == tensorEnd) {
             cursorEnd = tensorEndOffset;
         }
 
-        dataCount = cursorEnd - cursorStart + 1;
-        inTensorsGM.SetGlobalBuffer(GetTensorAddr(i, inTensorsPtr) + cursorStart);
-        outTensorsGM.SetGlobalBuffer(GetTensorAddr(i, outTensorsPtr) + cursorStart);
+        dataCount = cursorEnd - cursorStart_2 + 1;
+        inTensorsGM.SetGlobalBuffer(GetTensorAddr(i, inTensorsPtr) + cursorStart_2);
+        outTensorsGM.SetGlobalBuffer(GetTensorAddr(i, outTensorsPtr) + cursorStart_2);
         SingleTensorProcess(dataCount, float32Tensor);
     }
 }

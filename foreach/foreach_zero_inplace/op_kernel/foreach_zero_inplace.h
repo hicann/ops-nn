@@ -81,19 +81,19 @@ template <typename T>
 __aicore__ inline void ForeachZeroInplaceND<T>::Process()
 {
     for (uint16_t i = tensorStart; i <= tensorEnd; i++) {
-        int64_t cursorStart = 0;
+        int64_t cursorStart_4 = 0;
         int64_t cursorEnd = tensorDataCountList[i] - 1;
         int64_t dataCount = 0;
         if (i == tensorStart) {
-            cursorStart = tensorStartOffset;
+            cursorStart_4 = tensorStartOffset;
         }
         if (i == tensorEnd) {
             cursorEnd = tensorEndOffset;
         }
 
-        dataCount = cursorEnd - cursorStart + 1;
+        dataCount = cursorEnd - cursorStart_4 + 1;
 
-        inTensorsGM.SetGlobalBuffer(GetTensorAddr(i, inTensorsPtr) + cursorStart);
+        inTensorsGM.SetGlobalBuffer(GetTensorAddr(i, inTensorsPtr) + cursorStart_4);
 
         SingleTensorProcess(dataCount);
     }

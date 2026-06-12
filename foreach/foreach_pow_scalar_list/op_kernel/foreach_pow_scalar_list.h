@@ -185,11 +185,11 @@ template <typename T>
 __aicore__ inline void ForeachPowScalarListND<T>::Process()
 {
     for (uint16_t i = tensorStart; i <= tensorEnd; i++) {
-        int64_t cursorStart = 0;
+        int64_t cursorStart_7 = 0;
         int64_t cursorEnd = tensorDataCountList[i] - 1;
         int64_t dataCount = 0;
         if (i == tensorStart) {
-            cursorStart = tensorStartOffset;
+            cursorStart_7 = tensorStartOffset;
         }
         if (i == tensorEnd) {
             cursorEnd = tensorEndOffset;
@@ -201,9 +201,9 @@ __aicore__ inline void ForeachPowScalarListND<T>::Process()
             scalarValue = T(inScalarGM.GetValue(i));
         }
 
-        dataCount = cursorEnd - cursorStart + 1;
-        inTensorGM.SetGlobalBuffer(GetInputTensorAddr(i) + cursorStart);
-        outTensorGM.SetGlobalBuffer(GetOutputTensorAddr(i) + cursorStart);
+        dataCount = cursorEnd - cursorStart_7 + 1;
+        inTensorGM.SetGlobalBuffer(GetInputTensorAddr(i) + cursorStart_7);
+        outTensorGM.SetGlobalBuffer(GetOutputTensorAddr(i) + cursorStart_7);
         SingleTensorProcess(dataCount);
     }
 }

@@ -180,11 +180,11 @@ private:
 
     // tiling params
     uint64_t inputsTensorUbSize = 0;
+    int64_t tensorStartOffset = {0};
+    int64_t tensorEndOffset = {0};
     const int64_t* tensorDataCountList = nullptr;
     uint16_t tensorStart = {0};
     uint16_t tensorEnd = {0};
-    int64_t tensorStartOffset = {0};
-    int64_t tensorEndOffset = {0};
 
     TQue<QuePosition::VECIN, 1> float32Queue;
 

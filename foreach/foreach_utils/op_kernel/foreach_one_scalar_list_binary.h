@@ -65,9 +65,6 @@ private:
         Base::outQueue.template EnQue<T>(outLocal);
     }
 
-    __aicore__ inline void CopyInPlus(uint32_t index, int64_t dataCount, bool isRemainder)
-    {}
-
     __aicore__ inline void AfterProcess()
     {}
     
@@ -78,6 +75,8 @@ private:
     {
         return false;
     }
+    __aicore__ inline void CopyInPlus(uint32_t index, int64_t dataCount, bool isRemainder)
+    {}
 
     __aicore__ inline void ProcessPlusInLoop(uint32_t index, uint64_t cursorStart)
     {

@@ -255,17 +255,17 @@ public:
             if (tensorDataCountList[i] == 0) {
                 continue;
             }
-            int64_t cursorStart = 0;
+            int64_t cursorStart_5 = 0;
             int64_t cursorEnd = tensorDataCountList[i] - 1;
             int64_t dataCount = 0;
             if (i == tensorStart) {
-                cursorStart = tensorStartOffset;
+                cursorStart_5 = tensorStartOffset;
             }
             if (i == tensorEnd) {
                 cursorEnd = tensorEndOffset;
             }
-            dataCount = cursorEnd - cursorStart + 1;
-            inTensorGM.SetGlobalBuffer(GetTensorAddr(i, inTensorPtr) + cursorStart);
+            dataCount = cursorEnd - cursorStart_5 + 1;
+            inTensorGM.SetGlobalBuffer(GetTensorAddr(i, inTensorPtr) + cursorStart_5);
 
             // coreMiddleOffset : describe this core's offset for middle value of tensor
             SingleTensorProcess(dataCount, coreMiddleOffset + i - tensorStart);

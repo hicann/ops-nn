@@ -155,11 +155,11 @@ private:
     uint32_t maxDataCount = {0};
     // tiling params
     uint64_t inputsTensorUbSize = 0;
+    int64_t tensorEndOffset = {0};
     const int64_t* tensorDataCountList = nullptr;
     uint16_t tensorStart = {0};
     uint16_t tensorEnd = {0};
     int64_t tensorStartOffset = {0};
-    int64_t tensorEndOffset = {0};
 
     TQue<QuePosition::VECIN, 1> float32Queue;
 
@@ -232,19 +232,19 @@ __aicore__ inline void ForeachLerpScalarND<T>::Process()
     }
 
     for (uint16_t i = tensorStart; i <= tensorEnd; i++) {
-        int64_t cursorStart = 0;
+        int64_t cursorStart_0 = 0;
         int64_t cursorEnd = tensorDataCountList[i] - 1;
         int64_t dataCount = 0;
         if (i == tensorStart) {
-            cursorStart = tensorStartOffset;
+            cursorStart_0 = tensorStartOffset;
         }
         if (i == tensorEnd) {
             cursorEnd = tensorEndOffset;
         }
-        dataCount = cursorEnd - cursorStart + 1;
-        x1TensorGM.SetGlobalBuffer(GetTensorAddr(i, x1TensorPtr) + cursorStart);
-        x2TensorGM.SetGlobalBuffer(GetTensorAddr(i, x2TensorPtr) + cursorStart);
-        yTensorGM.SetGlobalBuffer(GetTensorAddr(i, yTensorPtr) + cursorStart);
+        dataCount = cursorEnd - cursorStart_0 + 1;
+        x1TensorGM.SetGlobalBuffer(GetTensorAddr(i, x1TensorPtr) + cursorStart_0);
+        x2TensorGM.SetGlobalBuffer(GetTensorAddr(i, x2TensorPtr) + cursorStart_0);
+        yTensorGM.SetGlobalBuffer(GetTensorAddr(i, yTensorPtr) + cursorStart_0);
         SingleTensorProcess(dataCount, float32Tensor);
     }
 #if __CCE_AICORE__ >= 220

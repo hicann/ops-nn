@@ -87,19 +87,19 @@ template <typename T_in, typename T_out>
 __aicore__ inline void ForeachCastND<T_in, T_out>::Process()
 {
     for (uint16_t i = tensorStart; i <= tensorEnd; i++) {
-        int64_t cursorStart = 0;
+        int64_t cursorStart_3 = 0;
         int64_t cursorEnd = tensorDataCountList[i] - 1;
         int64_t dataCount = 0;
         if (i == tensorStart) {
-            cursorStart = tensorStartOffset;
+            cursorStart_3 = tensorStartOffset;
         }
         if (i == tensorEnd) {
             cursorEnd = tensorEndOffset;
         }
 
-        dataCount = cursorEnd - cursorStart + 1;
-        inTensorsGM.SetGlobalBuffer(GetInputTensorAddr(i, inTensorsPtr) + cursorStart);
-        outTensorsGM.SetGlobalBuffer(GetOutputTensorAddr(i, outTensorsPtr) + cursorStart);
+        dataCount = cursorEnd - cursorStart_3 + 1;
+        inTensorsGM.SetGlobalBuffer(GetInputTensorAddr(i, inTensorsPtr) + cursorStart_3);
+        outTensorsGM.SetGlobalBuffer(GetOutputTensorAddr(i, outTensorsPtr) + cursorStart_3);
         SingleTensorProcess(dataCount);
     }
 }

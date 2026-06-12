@@ -267,19 +267,19 @@ __aicore__ inline void ForeachSignND<T>::Process()
         float16Tensor = float32Queue.DeQue<half>();
     }
     for (uint16_t i = tensorStart; i <= tensorEnd; i++) {
-        int64_t cursorStart = 0;
+        int64_t cursorStart_1 = 0;
         int64_t cursorEnd = tensorDataCountList[i] - 1;
         int64_t dataCount = 0;
         if (i == tensorStart) {
-            cursorStart = tensorStartOffset;
+            cursorStart_1 = tensorStartOffset;
         }
         if (i == tensorEnd) {
             cursorEnd = tensorEndOffset;
         }
 
-        dataCount = cursorEnd - cursorStart + 1;
-        inTensorGM.SetGlobalBuffer(GetInputTensorAddr(i) + cursorStart);
-        outTensorGM.SetGlobalBuffer(GetOutputTensorAddr(i) + cursorStart);
+        dataCount = cursorEnd - cursorStart_1 + 1;
+        inTensorGM.SetGlobalBuffer(GetInputTensorAddr(i) + cursorStart_1);
+        outTensorGM.SetGlobalBuffer(GetOutputTensorAddr(i) + cursorStart_1);
         SingleTensorProcess(dataCount, float32Tensor, float16Tensor);
     }
     if (std::is_same_v<T, bfloat16_t> || std::is_same_v<T, int64_t>) {
