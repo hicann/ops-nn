@@ -78,7 +78,7 @@ aclnnStatus aclnnEmbeddingDenseBackward(
         <td>indices</td>
         <td>输入</td>
         <td>grad输入对应的索引值。</td>
-        <td>-</td>
+        <td>不支持输入负索引，数值取值范围为[0,numWeights-1]。</td>
         <td>FLOAT、FLOAT16、DOUBLE、INT32、INT64、INT16、INT8、UINT8、BOOL</td>
         <td>ND</td>
         <td>1-8</td>
