@@ -181,7 +181,7 @@
 - <term>Atlas 推理系列产品</term>：`x1`、`x2`需要Norm的维度数据个数不能小于32。`gamma`、`bias`、`scales1`、`scales2`、`zero_points1`、`zero_points2`的数据个数不能小于32。
 
 - 可选输出`x`和`resOut`，必须且只能选择其一进行输出。
-- 当需要输出`y2`时，此时要求`gamma`与`scale`的shape保持一致，且需要与`x1`需要Norm的维度保持一致，可选输出只能输出`x`。
+- 当需要输出`y2`时，此时要求`gamma`与`scale1`的shape保持一致，且需要与`x1`需要Norm的维度保持一致，可选输出只能输出`x`。
 - 当需要输出`x`时，且参数`scales1`和`zero_points1`的shape为[1]，且`gamma`的shape为1维且与x1的最后一维相等或者`gamma`的shape为2维且第一维为1、第二维为`x1`的最后一维时，此时`scales2`和`zero_points2`不生效。
 - 当需要输出`resOut`时，参数`scales1`和`zero_points1`的shape为[1]，且`gamma`的shape为1维且与x1的最后一维相等或者`gamma`的shape为2维且第一维为1、第二维为`x1`的最后一维，且`bias`和`x`必须传空指针，此时`scales2`和`zero_points2`不生效。
 

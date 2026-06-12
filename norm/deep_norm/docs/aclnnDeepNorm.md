@@ -23,7 +23,7 @@
   $$
 
   $$
-  \text { where } rstd = \frac{1} {\sqrt{\frac{1}{n} \sum_{i=1}^n (x^{\prime}_i - \bar{x^{\prime}})^2 + epsilon} }, \quad \operatorname{x^{\prime}_i} = alpha * x_i   + gx_i
+  \text { where } rstd = \frac{1} {\sqrt{\frac{1}{n} \sum_{i=1}^n (x^{\prime}_i - \bar{x^{\prime}})^2 + epsilon} }, \quad x^{\prime}_i = alpha * x_i   + gx_i
   $$
 
 ## 函数原型

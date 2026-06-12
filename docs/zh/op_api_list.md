@@ -198,7 +198,7 @@
 | [aclnnForeachMulScalarList](../../foreach/foreach_mul_scalar_list/docs/aclnnForeachMulScalarList.md) | 对输入张量列表与标量列表执行逐元素相乘运算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachMulScalarV2](../../foreach/foreach_mul_scalar/docs/aclnnForeachMulScalarV2.md) | 对输入张量列表的每个张量与标量scalar执行相乘运算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachNeg](../../foreach/foreach_neg/docs/aclnnForeachNeg.md) | 计算输入张量列表中每个张量的相反数。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnForeachNonFiniteCheckAndUnscale](../../foreach/foreach_non_finite_check_and_unscale/docs/aclnnForeachNonFiniteCheckAndUnscale.md) | 遍历scaledGrads中的所有Tensor，检查是否存在Inf或NaN，如果存在则将foundInf设置为1.0，否则foundInf保持不变，并对scaledGrads中的所有Tensor进行反缩放。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnForeachNonFiniteCheckAndUnscale](../../foreach/foreach_non_finite_check_and_unscale/docs/aclnnForeachNonFiniteCheckAndUnscale.md) | 遍历scaledGrads中的所有Tensor，检查是否存在Inf或NaN，如果存在则将foundInf设置为1.0，否则foundInf的值保持不变，并对scaledGrads中的所有Tensor进行反缩放。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachNorm](../../foreach/foreach_norm/docs/aclnnForeachNorm.md) | 对输入张量列表的每个张量进行范数运算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachPowList](../../foreach/foreach_pow_list/docs/aclnnForeachPowList.md) | 对输入张量列表的每个张量进行幂运算（底数为x1，指数为x2）。 | 默认确定性实现 | - |
 | [aclnnForeachPowScalar](../../foreach/foreach_pow_scalar/docs/aclnnForeachPowScalar.md) | 对输入张量列表x中的每个张量进行指数运算，指数为张量scale。 | 默认确定性实现 | - |

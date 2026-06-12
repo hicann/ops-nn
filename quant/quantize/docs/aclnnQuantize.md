@@ -85,7 +85,7 @@ aclnnStatus aclnnQuantize(
     <tr>
       <td>scales（aclTensor*）</td>
       <td>输入</td>
-      <td>表示量化过程中对x进行scales的张量。对应公式中的`scales`。</td>
+      <td>表示量化过程中的缩放因子张量。对应公式中的`scales`。</td>
       <td><ul><li>支持空Tensor。</li><li>size需要为1或和输入x中axis轴的size相等。</li><li>如果`x`的dtype不是FLOAT32，需要和`x`的dtype一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
@@ -95,7 +95,7 @@ aclnnStatus aclnnQuantize(
     <tr>
       <td>zeroPoints（aclTensor*）</td>
       <td>输入</td>
-      <td>表示量化过程中对x进行offset的张量，对应公式中的`zeroPoints`。</td>
+      <td>表示量化过程中的零点偏移张量，对应公式中的`zeroPoints`。</td>
       <td><ul><li>支持空Tensor。</li><li>支持传入空指针。</li><li>size需要为1或和输入x中axis轴的size相等，并与scales的size相等。</li></ul></td>
       <td>INT32、INT8、UINT8、FLOAT32、BFLOAT16</td>
       <td>ND</td>

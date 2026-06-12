@@ -27,6 +27,12 @@
   \frac{1}{S} = \frac{1}{\sqrt{Var(x) + eps}}
   $$
 
+  其中：
+  
+  - E[x]表示x的均值。
+  - Var(x)表示x的方差。
+  - S表示x的标准差。
+
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnBatchNormElemtGetWorkspaceSize”接口获取入参并根据流程计算所需workspace大小，再调用“aclnnBatchNormElemt”接口执行计算。

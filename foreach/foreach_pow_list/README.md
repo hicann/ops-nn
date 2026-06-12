@@ -49,21 +49,21 @@
     <tr>
       <td>x1</td>
       <td>输入</td>
-      <td>表示进行x2次方运算的底数，对应公式中的`x1`。该参数中所有Tensor的数据类型保持一致。</td>
+      <td>表示进行幂运算的底数，对应公式中的`x1`。该参数中所有Tensor的数据类型保持一致。</td>
       <td>FLOAT32、FLOAT16、INT32、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>x2</td>
       <td>输入</td>
-      <td>表示进行x2次方运算的指数，对应公式中的`x2`。该参数中所有Tensor的数据类型保持一致。数据类型和shape与输入`x1`的保持一致。</td>
+      <td>表示进行幂运算的指数，对应公式中的`x2`。该参数中所有Tensor的数据类型保持一致。数据类型和shape与输入`x1`的保持一致。</td>
       <td>FLOAT32、FLOAT16、INT32、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>表示进行x2次方运算的输出结果，对应公式中的`y`。该参数中所有Tensor的数据类型保持一致。数据类型与入参`x1`的数据类型一致，shape size大于等于入参`x1`的shape size。</td>
+      <td>表示进行幂运算的输出结果，对应公式中的`y`。该参数中所有Tensor的数据类型保持一致。数据类型与入参`x1`的数据类型一致，shape size大于等于入参`x1`的shape size。</td>
       <td>FLOAT32、FLOAT16、INT32、BFLOAT16</td>
       <td>ND</td>
     </tr>

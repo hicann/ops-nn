@@ -22,29 +22,29 @@
   - 当training为true时：
   
     $$
-    gradInput = \frac{weight}{ n{\sqrt{saveVar + eps}} }(n * gradOut - \sum^m_{i=0}{gradOut} - \frac{x-saveMean}{ {\sqrt{saveVar + eps}} }\sum^m_{i=0}({gradOut} *\frac{x-saveMean}{ {\sqrt{saveVar + eps}} } ))
+    gradInput = \frac{weight}{ n{\sqrt{saveVar + eps}} }(n * gradOut - \sum^m_{i=0}{gradOut} - \frac{x-saveMean}{\sqrt{saveVar + eps}} \sum^m_{i=0}({gradOut} *\frac{x-saveMean}{ \sqrt{saveVar + eps} } ))
     $$
 
     $$
-    gradWeight = \sum^m_{i=0}[{gradOut} * (x - saveMean)] * \frac{1}{ {\sqrt{saveVar + eps}} } 
+    gradWeight = \sum^m_{i=0}[{gradOut} * (x - saveMean)] * \frac{1}{ \sqrt{saveVar + eps} }
     $$
 
     $$
-    gradBias = \sum^m_{i=0}{gradOut} 
+    gradBias = \sum^m_{i=0}{gradOut}
     $$
 
   - 当training为false时：
 
     $$
-    gradInput = gradOut * \frac{1}{ {\sqrt{runningVar + eps}} } * weight
+    gradInput = gradOut * \frac{1}{ \sqrt{runningVar + eps} } * weight
     $$
 
     $$
-    gradWeight = \sum^m_{i=0}[{gradOut} * (x - runningMean)] * \frac{1}{ {\sqrt{runningVar + eps}} } 
+    gradWeight = \sum^m_{i=0}[{gradOut} * (x - runningMean)] * \frac{1}{ \sqrt{runningVar + eps} }
     $$
 
     $$
-    gradBias = \sum^m_{i=0}{gradOut} 
+    gradBias = \sum^m_{i=0}{gradOut}
     $$
 
 ## 函数原型

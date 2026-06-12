@@ -22,7 +22,7 @@
     - 若不输入smooth_scales，则
 
       $$
-        scale=row\_max(abs(x))/127
+        scale=row\_max(abs(x))/dtypeMax
       $$
 
       $$
@@ -36,7 +36,7 @@
       $$
 
       $$
-        scale=row\_max(abs(input))/127
+        scale=row\_max(abs(input))/dtypeMax
       $$
 
       $$
@@ -47,11 +47,11 @@
     - 若不输入smooth_scales，则
 
       $$
-        scale=(row\_max(x) - row\_min(x))/scale\_opt
+        scale=(row\_max(x) - row\_min(x))/(dtypeMax - dtypeMin)
       $$
 
       $$
-        offset=offset\_opt-row\_max(x)/scale
+        offset=dtypeMax-row\_max(x)/scale
       $$
 
       $$
@@ -65,11 +65,11 @@
       $$
 
       $$
-        scale=(row\_max(input) - row\_min(input))/scale\_opt
+        scale=(row\_max(input) - row\_min(input))/(dtypeMax - dtypeMin)
       $$
 
       $$
-        offset=offset\_opt-row\_max(input)/scale
+        offset=dtypeMax-row\_max(input)/scale
       $$
 
       $$
@@ -80,8 +80,8 @@
   
   - row_max代表每行求最大值。
   - row_min代表每行求最小值。
-  - 当输出y类型为INT8时，scale_opt为255.0，offset_opt为127.0。
-  - 当输出y类型为INT4时，scale_opt为15.0，offset_opt为7.0。
+  - dtypeMax为输出数据类型的最大值。
+  - dtypeMin为输出数据类型的最小值。
 
 ## 参数说明
 
@@ -104,7 +104,7 @@
     <tr>
       <td>x</td>
       <td>输入</td>
-      <td><ul><li>算子输入的Tensor，对应公式中的`x`。</li><li>shape维度要大于1。</li></ul></td>
+      <td><ul><li>算子输入的Tensor，对应公式中的`x`。</li><li>shape的维度要大于1。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>

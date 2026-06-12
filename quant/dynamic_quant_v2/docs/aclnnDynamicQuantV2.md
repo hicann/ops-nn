@@ -22,7 +22,7 @@
     - 若不输入smoothScalesOptional，则
 
       $$
-        scaleOut=row\_max(abs(x))/127
+        scaleOut=row\_max(abs(x))/dtypeMax
       $$
 
       $$
@@ -36,7 +36,7 @@
       $$
 
       $$
-        scaleOut=row\_max(abs(input))/127
+        scaleOut=row\_max(abs(input))/dtypeMax
       $$
 
       $$
@@ -47,11 +47,11 @@
     - 若不输入smoothScalesOptional，则
 
       $$
-        scaleOut=(row\_max(x) - row\_min(x))/scale\_opt
+        scaleOut=(row\_max(x) - row\_min(x))/(dtypeMax - dtypeMin)
       $$
 
       $$
-        offset=offset\_opt-row\_max(x)/scaleOut
+        offset=dtypeMax-row\_max(x)/scaleOut
       $$
 
       $$
@@ -65,18 +65,18 @@
       $$
 
       $$
-        scaleOut=(row\_max(input) - row\_min(input))/scale\_opt
+        scaleOut=(row\_max(input) - row\_min(input))/(dtypeMax - dtypeMin)
       $$
 
       $$
-        offset=offset\_opt-row\_max(input)/scaleOut
+        offset=dtypeMax-row\_max(input)/scaleOut
       $$
 
       $$
         yOut=round(input/scaleOut+offset)
       $$
 
-  其中row\_max代表每行求最大值，row_min代表每行求最小值。当输出yOut类型为INT8时，scale_opt为255.0，offset_opt为127.0；yOut类型为INT4或INT32时，scale_opt为15.0，offset_opt为7.0。
+  其中row\_max代表每行求最大值，row_min代表每行求最小值，dtypeMax为输出数据类型的最大值，dtypeMin为输出数据类型的最小值。
 
 ## 函数原型
 

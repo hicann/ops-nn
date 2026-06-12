@@ -1245,7 +1245,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>遍历scaledGrads中的所有Tensor，检查是否存在Inf或NaN，如果存在则将foundInf设置为1.0，否则foundInf保持不变，并对scaledGrads中的所有Tensor进行反缩放。</td>
+    <td>遍历scaledGrads中的所有Tensor，检查是否存在Inf或NaN，如果存在则将foundInf设置为1.0，否则foundInf的值保持不变，并对scaledGrads中的所有Tensor进行反缩放。</td>
   </tr>
   <tr>
     <td>foreach</td>

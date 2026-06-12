@@ -84,7 +84,7 @@
       <td>round_mode</td>
       <td>可选属性</td>
       <td><ul><li>量化计算中FP32填充到FP19的round模式，仅支持以下取值：0（aclnn
-      的V3兼容V2），1（提升计算精度）。对应公式中描述中的`round_mode`。</li><li>默认值为0。</li></ul></td>
+      的V3接口兼容V2接口），1（提升计算精度）。对应公式中描述中的`round_mode`。</li><li>默认值为0。</li></ul></td>
       <td>INT</td>
       <td>-</td>
     </tr>

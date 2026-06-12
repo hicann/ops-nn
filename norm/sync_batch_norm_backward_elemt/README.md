@@ -80,14 +80,14 @@
     <tr>
       <td>mean_dy</td>
       <td>输入</td>
-      <td>表示输出梯度的样本均值和的平均值，对应公式中的`sumDy`。</td>
+      <td>表示输出梯度的样本均值和的平均值，对应公式中的`meanDy`。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>mean_dy_xmu</td>
       <td>输入</td>
-      <td>表示样本均值和与输入梯度乘积的平均值，对应公式中的`sumDyXmu`。</td>
+      <td>表示样本均值和与输入梯度乘积的平均值，对应公式中的`meanDyXmu`。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>

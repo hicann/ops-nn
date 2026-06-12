@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-- **接口功能**：该融合算子为输入矩阵x一次进行两次小矩阵乘法，即右乘输入矩阵kroneckerP2，左乘输入矩阵kroneckerP1，然后针对矩阵乘的结果进行量化处理。目前支持pertoken和pergroup量化方式，分别对应int4和float4_e2m1量化输出类型。
+- **接口功能**：该融合算子为输入矩阵x一次进行两次小矩阵乘法，即右乘输入矩阵kroneckerP2，左乘输入矩阵kroneckerP1，然后针对矩阵乘的结果进行量化处理。目前支持pertoken和pergroup量化方式，分别对应INT4和FLOAT4_E2M1量化输出类型。
 
 - 矩阵乘计算公式：
 
@@ -182,8 +182,8 @@ aclnnStatus aclnnFlatQuant(
       <td>quantScale（aclTensor*）</td>
       <td>输出</td>
       <td>输出的量化因子，对应公式中的quantScale。</td>
-      <td><ul><li>不支持空Tensor。</li><li>量化输出类型为INT4或INT32时，shape为[K],K与x中K维度一致，类型为FLOAT32。</li><li>量化输出类型为float4_e2m1时，shape为[K,ceildiv(M*N,64),2]，类型为Float_e8m0。</li></ul></td>
-      <td>FLOAT32、 FLOAT_E8M0</td>
+      <td><ul><li>不支持空Tensor。</li><li>量化输出类型为INT4或INT32时，shape为[K],K与x中K维度一致，数据类型为FLOAT32。</li><li>量化输出类型为FLOAT4_E2M1时，shape为[K,ceildiv(M*N,64),2]，数据类型为FLOAT8_E8M0。</li></ul></td>
+      <td>FLOAT32、FLOAT8_E8M0</td>
       <td>ND</td>
       <td>1或3</td>
       <td>√</td>
@@ -256,10 +256,10 @@ aclnnStatus aclnnFlatQuant(
       <td>perToken场景下，kroneckerP2的维度不为2，或者第一维度和第二维度与x的第三维度不一致。</td>
     </tr>
     <tr>
-      <td>int4或int32场景下quantScale的维度不为1，或者第一维度与x的第一维度不一致。</td>
+      <td>INT4或INT32场景下quantScale的维度不为1，或者第一维度与x的第一维度不一致。</td>
     </tr>
     <tr>
-      <td>float4_e2m1场景下quantScale的维度不为3，或者第一维度与x的第一维度不一致。</td>
+      <td>FLOAT4_E2M1场景下quantScale的维度不为3，或者第一维度与x的第一维度不一致。</td>
     </tr>
     <tr>
       <td>clipRatio的数值超出范围(0, 1]。</td>

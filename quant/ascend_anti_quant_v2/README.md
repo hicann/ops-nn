@@ -68,7 +68,7 @@
     <tr>
       <td>scale</td>
       <td>输入</td>
-      <td><ul><li>表示反量化中的scale值。对应公式中的scale；</li><li>不支持空Tensor；</li><li>scale的维数必须与x相同，或者是1维；</li><li>如果x是1维，scale的形状必须是[1]或与x相同；</li><li>如果scale是1维，其大小必须是1、x[-1]或x[-2]；</li><li>如果scale是多维，最多只能有一个非1的维度，且这个非1的维度只能是-1或-2轴；</li><li>当输入x的类型为HIFLOAT8、FLOAT8_E4M3、FLOAT8_E5M2时，scale只支持FLOAT32。</li></ul></td>
+      <td><ul><li>表示反量化中的scale值。对应公式中的scale；</li><li>不支持空Tensor；</li><li>scale的维度数必须与x相同，或者是1维；</li><li>如果x是1维，scale的形状必须是[1]或与x相同；</li><li>如果scale是1维，其大小必须是1、x[-1]或x[-2]；</li><li>如果scale是多维，最多只能有一个非1的维度，且这个非1的维度只能是-1或-2轴；</li><li>当输入x的类型为HIFLOAT8、FLOAT8_E4M3、FLOAT8_E5M2时，scale只支持FLOAT32。</li></ul></td>
       <td>FLOAT32、BFLOAT16</td>
       <td>ND</td>
     </tr>
