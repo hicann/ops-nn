@@ -164,8 +164,6 @@ private:
         inRowsQue.EnQue(x1x2LocalIn);
     }
 
-
-
     __aicore__ inline void AddX1X2BiasFp32(int32_t elementCount, int32_t rowCount, LocalTensor<float> xLocalFp32, 
         LocalTensor<T> x1Local, LocalTensor<T> x2Local)
     {
@@ -432,7 +430,6 @@ private:
             }else{
                 Div(xLocalFp32[rid * alignedStride], xLocalFp32[rid * alignedStride], yLocalFp32, this->numLastDim);
             }
-            
         }
         PipeBarrier<PIPE_V>();
         if (isZeroPoint2Exist) {

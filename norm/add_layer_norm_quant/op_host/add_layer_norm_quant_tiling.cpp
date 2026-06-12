@@ -52,6 +52,10 @@ static constexpr uint32_t MODE_CODE_INPUT_ZEROPOINTS1 = 10;
 static constexpr uint32_t MODE_CODE_INPUT_ZEROPOINTS2 = 1;
 static constexpr int32_t ELEM_PER_REP_FP32 = 64;
 static constexpr int32_t ONE_BLK_SIZE = 32;
+static constexpr int32_t INNUM_TWO = 2;
+static constexpr int32_t INNUM_THREE = 3;
+static constexpr int32_t INPUT_TENSOR = 4;
+static constexpr int32_t SLICE_D_BUFFER_NUM = 2;
 
 const std::string OP_NAME = "AddLayerNormQuant";
 
@@ -165,7 +169,7 @@ inline TILING_TYPE AddLayerNormQuantTilingImpl(
     // try Silce case
     int64_t numPerBlock = 1;
     if (dtSize > 0) {
-        numPerBlock = BLOCK_SIZE / dtSize;
+        numPerBlock = ONE_BLK_SIZE / dtSize;
     }
     rowPerTime = 1;
     auto tmpCol = static_cast<double>(static_cast<long>(maxUbSize) - (4 * 2 * bufferNum + 4 * 64 + UB_RESERVED_BYTE)) /
@@ -196,9 +200,9 @@ inline TILING_TYPE AddLayerNormQuantTilingImplV2(AddLayerNormQuantV2TilingData* 
     }
 
     // try Single case:
-    uint64_t tmpUbSize = 4 * numColAligned * bufferNum * dtSize + 3 * numColAligned * sizeof(float) + numColAligned + 32 + UB_RESERVED_BYTE;
-    if(optionalScaleOffsetMode > 200){
-        tmpUbSize = 2 * numColAligned * bufferNum * dtSize + 3 * numColAligned * sizeof(float) + numColAligned + 32 + UB_RESERVED_BYTE;
+    uint64_t tmpUbSize = INPUT_TENSOR * numColAligned * bufferNum * dtSize + INNUM_THREE * numColAligned * sizeof(float) + numColAligned + BLOCK_SIZE + UB_RESERVED_BYTE;
+    if(optionalScaleOffsetMode > MODE_DUAL_WITHOUT_OFFSETS){
+        tmpUbSize = INNUM_TWO * numColAligned * bufferNum * dtSize + INNUM_THREE * numColAligned * sizeof(float) + numColAligned + BLOCK_SIZE + UB_RESERVED_BYTE;
     }
 
     if (tmpUbSize < maxUbSize) {
@@ -208,8 +212,6 @@ inline TILING_TYPE AddLayerNormQuantTilingImplV2(AddLayerNormQuantV2TilingData* 
     }
 
     // try Silce case
-    // SplitD kernel uses BUFFER_NUM_SPLIT_D = 2, not bufferNum
-    constexpr int32_t SLICE_D_BUFFER_NUM = 2;
     int64_t numPerBlock = 1;
     if (dtSize > 0) {
         numPerBlock = BLOCK_SIZE / dtSize;
@@ -230,8 +232,8 @@ inline TILING_TYPE AddLayerNormQuantTilingImplV2(AddLayerNormQuantV2TilingData* 
 
     int32_t colMoveCnt = CEIL_DIV(numCol, colPerTime);
     int32_t colTail = numCol - (colMoveCnt - 1) * colPerTime;
-    while (colTail < 32) {
-        colPerTime = colPerTime - 32;
+    while (colTail < ONE_BLK_SIZE) {
+        colPerTime = colPerTime - ONE_BLK_SIZE;
         colTail = numCol - (CEIL_DIV(numCol, colPerTime) - 1) * colPerTime;
     }
 
@@ -397,7 +399,6 @@ static inline bool ComputeFusedAxisV2(
     auto gammaShape = context->GetInputShape(GAMMA_IDX)->GetStorageShape();
     size_t xDimNum = xShape.GetDimNum();
     size_t gammaDimNum = gammaShape.GetDimNum();
-
     if (gammaDimNum > xDimNum) {
         OP_LOGE(context, "gamma dim count %zu exceeds x dim count %zu, invalid shape", gammaDimNum, xDimNum);
         return false;
