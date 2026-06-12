@@ -114,7 +114,7 @@ ge::graphStatus LeakyReluTiling::RunTiling()
                         return ge::GRAPH_FAILED);
     } else {
         OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "output y",
-            ge::TypeUtils::DataTypeToSerialString(this->outputDtype), "FLOAT16, BF16, FLOAT");
+            ge::TypeUtils::DataTypeToSerialString(this->outputDtype), "DT_FLOAT16, DT_BF16, DT_FLOAT");
         return ge::GRAPH_FAILED;
     }
     tiling->negativeSlope = negativeSlope;

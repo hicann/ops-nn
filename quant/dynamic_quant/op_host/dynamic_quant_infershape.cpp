@@ -81,7 +81,7 @@ static ge::graphStatus DynamicQuantInferDataType(gert::InferDataTypeContext* con
             OP_CHECK_IF(
                 std::find(OUT_TYPE_LIST.begin(), OUT_TYPE_LIST.end(), yDtype) == OUT_TYPE_LIST.end(),
                 OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "dst_type",
-                    ge::TypeUtils::DataTypeToSerialString(yDtype), "INT8, INT4, HIFLOAT8, FLOAT8_E5M2, FLOAT8_E4M3FN"),
+                    ge::TypeUtils::DataTypeToSerialString(yDtype), "DT_INT8, DT_INT4, DT_HIFLOAT8, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN"),
                 return ge::GRAPH_FAILED);
         }
     }

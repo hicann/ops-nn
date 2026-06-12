@@ -114,7 +114,7 @@ static ge::graphStatus InferDataTypeForGroupedDynamicMxQuant(gert::InferDataType
         int32_t dstDtype = *pDstDtype;
         OP_CHECK_IF(dstDtype != DTYPE_FLOAT8_E5M2 && dstDtype != DTYPE_FLOAT8_E4M3FN,
             OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "dst_type",
-                ge::TypeUtils::DataTypeToSerialString(yDtype), "FLOAT8_E5M2, FLOAT8_E4M3FN"),
+                ge::TypeUtils::DataTypeToSerialString(yDtype), "DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN"),
             return ge::GRAPH_FAILED);
         yDtype = static_cast<ge::DataType>(dstDtype);
     }

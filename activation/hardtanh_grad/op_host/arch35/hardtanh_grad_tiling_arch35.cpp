@@ -80,7 +80,7 @@ ge::graphStatus HardtanhGradTiling::CalcInputDtype()
     this->inputDtype = inputDesc->GetDataType();
     if (this->inputDtype != ge::DT_FLOAT16 && this->inputDtype != ge::DT_BF16 && this->inputDtype != ge::DT_FLOAT) {
         OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "input result",
-            ge::TypeUtils::DataTypeToSerialString(this->inputDtype), "FLOAT16, BF16, FLOAT");
+            ge::TypeUtils::DataTypeToSerialString(this->inputDtype), "DT_FLOAT16, DT_BF16, DT_FLOAT");
         return ge::GRAPH_FAILED;
     }
     auto inputDesc1 = tilingContext->GetInputDesc(1);
@@ -88,7 +88,7 @@ ge::graphStatus HardtanhGradTiling::CalcInputDtype()
     this->inputDtype1 = inputDesc1->GetDataType();
     if (this->inputDtype1 != ge::DT_FLOAT16 && this->inputDtype1 != ge::DT_BF16 && this->inputDtype1 != ge::DT_FLOAT) {
         OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "input grad",
-            ge::TypeUtils::DataTypeToSerialString(this->inputDtype1), "FLOAT16, BF16, FLOAT");
+            ge::TypeUtils::DataTypeToSerialString(this->inputDtype1), "DT_FLOAT16, DT_BF16, DT_FLOAT");
         return ge::GRAPH_FAILED;
     }
     if (this->inputDtype1 != this->inputDtype) {
@@ -135,7 +135,7 @@ ge::graphStatus HardtanhGradTiling::CalcOutputDtype()
     this->outputDtype = outputDesc->GetDataType();
     if (this->outputDtype != ge::DT_FLOAT16 && this->outputDtype != ge::DT_BF16 && this->outputDtype != ge::DT_FLOAT) {
         OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "output y",
-            ge::TypeUtils::DataTypeToSerialString(this->outputDtype), "FLOAT16, BF16, FLOAT");
+            ge::TypeUtils::DataTypeToSerialString(this->outputDtype), "DT_FLOAT16, DT_BF16, DT_FLOAT");
         return ge::GRAPH_FAILED;
     }
     if (this->outputDtype != this->inputDtype) {
@@ -168,7 +168,7 @@ ge::graphStatus HardtanhGradTiling::RunTiling()
     } else {
         OP_LOGE_FOR_INVALID_DTYPE("HardtanhGrad", "y",
             ge::TypeUtils::DataTypeToSerialString(this->outputDtype),
-            "FLOAT16, BF16, FLOAT");
+            "DT_FLOAT16, DT_BF16, DT_FLOAT");
         return ge::GRAPH_FAILED;
     }
     OP_CHECK_IF(baseTilingResult == ge::GRAPH_FAILED,

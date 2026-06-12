@@ -50,7 +50,7 @@ ge::graphStatus ReluGradV2Tiling::CalcInputDtype()
         this->inputDtype != ge::DT_FLOAT16 && this->inputDtype != ge::DT_BF16 && this->inputDtype != ge::DT_INT8 &&
             this->inputDtype != ge::DT_UINT8 && this->inputDtype != ge::DT_INT32 && this->inputDtype != ge::DT_FLOAT,
         OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "x",
-            ge::TypeUtils::DataTypeToSerialString(this->inputDtype), "FLOAT16, BF16, FLOAT, INT8, UINT8, INT32"),
+            ge::TypeUtils::DataTypeToSerialString(this->inputDtype), "DT_FLOAT16, DT_BF16, DT_FLOAT, DT_INT8, DT_UINT8, DT_INT32"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -147,7 +147,7 @@ ge::graphStatus ReluGradV2Tiling::RunTiling()
         baseTilingResult = elewiseBaseTiling.DoTiling<ReluGradV2<int32_t>::OpDag>(*tiling);
     } else {
         OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "backprops",
-            ge::TypeUtils::DataTypeToSerialString(this->outputDtype), "FLOAT16, BF16, FLOAT, INT8, UINT8, INT32");
+            ge::TypeUtils::DataTypeToSerialString(this->outputDtype), "DT_FLOAT16, DT_BF16, DT_FLOAT, DT_INT8, DT_UINT8, DT_INT32");
         return ge::GRAPH_FAILED;
     }
 

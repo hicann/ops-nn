@@ -61,7 +61,7 @@ ge::graphStatus PreluTiling::DoOpTiling()
         xInputDtype != ge::DT_FLOAT16 && xInputDtype != ge::DT_BF16 && xInputDtype != ge::DT_FLOAT,
         OP_LOGE_FOR_INVALID_DTYPE(
             context_->GetNodeName(), "x",
-            ge::TypeUtils::DataTypeToSerialString(xInputDtype), "FLOAT16, BF16, FLOAT"),
+            ge::TypeUtils::DataTypeToSerialString(xInputDtype), "DT_FLOAT16, DT_BF16, DT_FLOAT"),
         return ge::GRAPH_FAILED);
 
     auto weightInputDesc = context_->GetInputDesc(1);
@@ -115,7 +115,7 @@ ge::graphStatus PreluTiling::DoOpTiling()
     } else {
         OP_LOGE_FOR_INVALID_DTYPE(
             context_->GetNodeName(), "x",
-            ge::TypeUtils::DataTypeToSerialString(xInputDtype), "FLOAT16, BF16, FLOAT");
+            ge::TypeUtils::DataTypeToSerialString(xInputDtype), "DT_FLOAT16, DT_BF16, DT_FLOAT");
         return ge::GRAPH_FAILED;
     }
 

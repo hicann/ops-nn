@@ -54,7 +54,7 @@ static ge::graphStatus CheckDtype(const gert::TilingContext *context, MapIndexTi
     auto xDtype = inputXPtr->GetDataType();
     if (INPUT_SUPPORT_DTYPE_SET.count(xDtype) == 0) {
         OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "x",
-            ge::TypeUtils::DataTypeToSerialString(xDtype), "INT32");
+            ge::TypeUtils::DataTypeToSerialString(xDtype), "DT_INT32");
         return ge::GRAPH_FAILED;
     }
 
@@ -63,7 +63,7 @@ static ge::graphStatus CheckDtype(const gert::TilingContext *context, MapIndexTi
     auto dataSeqDtype = inputDataSeqPtr->GetDataType();
     if (INPUT_SUPPORT_DTYPE_SET.count(dataSeqDtype) == 0) {
         OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "dataSeq",
-            ge::TypeUtils::DataTypeToSerialString(dataSeqDtype), "INT32");
+            ge::TypeUtils::DataTypeToSerialString(dataSeqDtype), "DT_INT32");
         return ge::GRAPH_FAILED;
     }
 
@@ -74,7 +74,7 @@ static ge::graphStatus CheckDtype(const gert::TilingContext *context, MapIndexTi
         auto levelIndexDtype = levelIndexInput->GetDataType();
         if (INPUT_SUPPORT_DTYPE_SET.count(levelIndexDtype) == 0) {
             OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "levelIndex",
-                ge::TypeUtils::DataTypeToSerialString(levelIndexDtype), "INT32");
+                ge::TypeUtils::DataTypeToSerialString(levelIndexDtype), "DT_INT32");
             return ge::GRAPH_FAILED;
         }
     }
@@ -84,7 +84,7 @@ static ge::graphStatus CheckDtype(const gert::TilingContext *context, MapIndexTi
     auto yDtype = outputYPtr->GetDataType();
     if (INPUT_SUPPORT_DTYPE_SET.count(yDtype) == 0) {
         OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "y",
-            ge::TypeUtils::DataTypeToSerialString(yDtype), "INT32");
+            ge::TypeUtils::DataTypeToSerialString(yDtype), "DT_INT32");
         return ge::GRAPH_FAILED;
     }
 

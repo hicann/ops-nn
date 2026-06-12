@@ -89,7 +89,7 @@ ge::graphStatus LeakyReluGradTiling::DoOpTiling()
         brcBaseTiling.SetScalar<float>(negativeSlope);
     } else {
         OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "gradients, features",
-            ge::TypeUtils::DataTypeToSerialString(input0DType), "FLOAT16, BF16, FLOAT");
+            ge::TypeUtils::DataTypeToSerialString(input0DType), "DT_FLOAT16, DT_BF16, DT_FLOAT");
         return ge::GRAPH_FAILED;
     }
 

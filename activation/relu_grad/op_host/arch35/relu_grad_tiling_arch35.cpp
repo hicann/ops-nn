@@ -78,7 +78,7 @@ ge::graphStatus ReluGradTiling::DoOpTiling()
     } else {
         OP_LOGE_FOR_INVALID_DTYPE(
             context_->GetNodeName(), "x",
-            ge::TypeUtils::DataTypeToSerialString(inputDtype), "FLOAT16, BF16, FLOAT, INT8, UINT8, INT32, INT64");
+            ge::TypeUtils::DataTypeToSerialString(inputDtype), "DT_FLOAT16, DT_BF16, DT_FLOAT, DT_INT8, DT_UINT8, DT_INT32, DT_INT64");
         return ge::GRAPH_FAILED;
     }
 

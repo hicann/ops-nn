@@ -44,7 +44,7 @@ ge::graphStatus MishTiling::CalcInputDtype()
     OP_CHECK_IF(
         this->inputDtype != ge::DT_FLOAT && this->inputDtype != ge::DT_FLOAT16 && this->inputDtype != ge::DT_BF16,
         OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "x",
-            ge::TypeUtils::DataTypeToSerialString(this->inputDtype), "FLOAT, FLOAT16, BF16"),
+            ge::TypeUtils::DataTypeToSerialString(this->inputDtype), "DT_FLOAT, DT_FLOAT16, DT_BF16"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -119,7 +119,7 @@ ge::graphStatus MishTiling::RunTiling()
         baseTilingResult = elewiseBaseTiling.DoTiling<MishDAG<float>::OpDag>(*tiling);
     } else {
         OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "output y",
-            ge::TypeUtils::DataTypeToSerialString(this->outputDtype), "FLOAT16, BF16, FLOAT");
+            ge::TypeUtils::DataTypeToSerialString(this->outputDtype), "DT_FLOAT16, DT_BF16, DT_FLOAT");
         return ge::GRAPH_FAILED;
     }
     OP_CHECK_IF(

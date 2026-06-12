@@ -187,7 +187,7 @@ ge::graphStatus SparseSliceTiling::CheckDtype()
         INDICES_SUPPORT_DTYPE_SET.count(indicesDtype) == 0,
         OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x_indices",
             ge::TypeUtils::DataTypeToSerialString(indicesDtype),
-            "INT64"),
+            "DT_INT64"),
         return ge::GRAPH_FAILED);
 
     auto valuesPtr = context_->GetInputDesc(1);
@@ -197,7 +197,7 @@ ge::graphStatus SparseSliceTiling::CheckDtype()
         VALUE_SUPPORT_DTYPE_SET.count(valuesDtype) == 0,
         OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x_values",
             ge::TypeUtils::DataTypeToSerialString(valuesDtype),
-            "FLOAT, FLOAT16, BF16, UINT8, INT8, INT16, UINT16, INT32, INT64, BOOL"),
+            "DT_FLOAT, DT_FLOAT16, DT_BF16, DT_UINT8, DT_INT8, DT_INT16, DT_UINT16, DT_INT32, DT_INT64, DT_BOOL"),
         return ge::GRAPH_FAILED);
 
     auto shapePtr = context_->GetInputDesc(DIGIT_TWO);
@@ -207,7 +207,7 @@ ge::graphStatus SparseSliceTiling::CheckDtype()
         INDICES_SUPPORT_DTYPE_SET.count(shapeDtype) == 0,
         OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x_shape",
             ge::TypeUtils::DataTypeToSerialString(shapeDtype),
-            "INT64"),
+            "DT_INT64"),
         return ge::GRAPH_FAILED);
 
     auto startPtr = context_->GetInputDesc(DIGIT_THREE);
@@ -217,7 +217,7 @@ ge::graphStatus SparseSliceTiling::CheckDtype()
         INDICES_SUPPORT_DTYPE_SET.count(startDtype) == 0,
         OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x_start",
             ge::TypeUtils::DataTypeToSerialString(startDtype),
-            "INT64"),
+            "DT_INT64"),
         return ge::GRAPH_FAILED);
 
     auto sizePtr = context_->GetInputDesc(DIGIT_FOUR);
@@ -227,7 +227,7 @@ ge::graphStatus SparseSliceTiling::CheckDtype()
         INDICES_SUPPORT_DTYPE_SET.count(sizeDtype) == 0,
         OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "x_size",
             ge::TypeUtils::DataTypeToSerialString(sizeDtype),
-            "INT64"),
+            "DT_INT64"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }

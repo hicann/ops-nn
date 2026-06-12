@@ -183,7 +183,7 @@ ge::graphStatus ReluV2Tiling::RunTiling()
         tilingContext->SetTilingKey(RELU_TILING_KEY_ELEMENTWISE_INT64);
     } else {
         OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "y",
-            ge::TypeUtils::DataTypeToSerialString(this->outputDtype), "FLOAT16, BF16, FLOAT, INT8, INT32, UINT8, INT64");
+            ge::TypeUtils::DataTypeToSerialString(this->outputDtype), "DT_FLOAT16, DT_BF16, DT_FLOAT, DT_INT8, DT_INT32, DT_UINT8, DT_INT64");
         return ge::GRAPH_FAILED;
     }
 

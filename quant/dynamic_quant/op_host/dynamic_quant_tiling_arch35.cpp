@@ -274,7 +274,7 @@ ge::graphStatus DynamicQuantRegbaseTiling::CheckOutputDtype(gert::TilingContext*
         ge::DT_INT8, ge::DT_INT4, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2, ge::DT_HIFLOAT8};
     if (std::find(ySupportDtype.begin(), ySupportDtype.end(), yDtype) == ySupportDtype.end()) {
         OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "y", ge::TypeUtils::DataTypeToSerialString(static_cast<ge::DataType>(yDtype)),
-                                  "INT8, INT4, FLOAT8_E5M2, FLOAT8_E4M3FN, HIFLOAT8");
+                                  "DT_INT8, DT_INT4, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN, DT_HIFLOAT8");
         return ge::GRAPH_FAILED;
     }
 

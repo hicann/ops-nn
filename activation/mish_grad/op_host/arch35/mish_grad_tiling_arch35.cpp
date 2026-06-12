@@ -43,7 +43,7 @@ ge::graphStatus MishGradTiling::CalcInputDtype()
         this->inputDtype != ge::DT_FLOAT16 && this->inputDtype != ge::DT_BF16 && this->inputDtype != ge::DT_FLOAT,
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(tilingContext->GetNodeName(), "grad",
             ge::TypeUtils::DataTypeToSerialString(this->inputDtype),
-            "The dtype of grad must be FLOAT16, BF16 or FLOAT"),
+            "The dtype of grad must be DT_FLOAT16, DT_BF16 or DT_FLOAT"),
         return ge::GRAPH_FAILED);
     auto inputDesc1 = tilingContext->GetInputDesc(1);
 
@@ -145,7 +145,7 @@ ge::graphStatus MishGradTiling::RunTiling()
     } else {
         OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "y",
             ge::TypeUtils::DataTypeToSerialString(this->outputDtype),
-            "FLOAT16, BF16, FLOAT");
+            "DT_FLOAT16, DT_BF16, DT_FLOAT");
         return ge::GRAPH_FAILED;
     }
     OP_CHECK_IF(

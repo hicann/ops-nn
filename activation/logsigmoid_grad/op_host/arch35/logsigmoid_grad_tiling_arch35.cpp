@@ -74,7 +74,7 @@ ge::graphStatus LogSigmoidGradTiling::DoOpTiling()
     } else {
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "gradOutput, self",
             ge::TypeUtils::DataTypeToSerialString(input0DType) + ", " + ge::TypeUtils::DataTypeToSerialString(input1DType),
-            "The dtypes of gradOutput and self must be FLOAT16, BF16 or FLOAT");
+            "The dtypes of gradOutput and self must be DT_FLOAT16, DT_BF16 or DT_FLOAT");
         return ge::GRAPH_FAILED;
     }
 

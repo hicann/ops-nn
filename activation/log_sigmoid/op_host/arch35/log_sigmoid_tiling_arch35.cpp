@@ -106,7 +106,7 @@ ge::graphStatus LogSigmoidTiling::RunTiling()
     } else {
         OP_LOGE_FOR_INVALID_DTYPE(tilingContext->GetNodeName(), "y",
             ge::TypeUtils::DataTypeToSerialString(this->outputDtype),
-            "FLOAT16, BF16, FLOAT");
+            "DT_FLOAT16, DT_BF16, DT_FLOAT");
         return ge::GRAPH_FAILED;
     }
     OP_CHECK_IF(

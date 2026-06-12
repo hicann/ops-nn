@@ -112,7 +112,7 @@ ge::graphStatus InferDataTypeForDynamicMxQuant(gert::InferDataTypeContext* conte
     OP_CHECK_IF(
         std::find(Y_SUPPORT_DTYPE_SET.begin(), Y_SUPPORT_DTYPE_SET.end(), outDtype) == Y_SUPPORT_DTYPE_SET.end(),
         OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "dst_type",
-            ge::TypeUtils::DataTypeToSerialString(outDtype), "FLOAT4_E2M1, FLOAT4_E1M2, FLOAT8_E4M3FN, FLOAT8_E5M2"),
+            ge::TypeUtils::DataTypeToSerialString(outDtype), "DT_FLOAT4_E2M1, DT_FLOAT4_E1M2, DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2"),
         return ge::GRAPH_FAILED);
     context->SetOutputDataType(0, outDtype);
     context->SetOutputDataType(1, ge::DT_FLOAT8_E8M0);
