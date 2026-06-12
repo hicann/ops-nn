@@ -2482,6 +2482,7 @@ VC8@ops-nn:
         - ops/ops-nn/index/sorted_sparse_segment_mean_grad/op_kernel/arch35/
         - ops/ops-nn/pooling/avg_pool_v2/op_host/avg_pool_grad_infershape.cpp
         - ops/ops-nn/pooling/avg_pool_v2/op_host/arch35/avg_poolv2_tiling_arch35.cpp
+        - ops/ops-nn/pooling/avg_pool_v2/CMakeLists.txt
         - ops/ops-nn/pooling/avg_pool/avg_pool_infershape.cpp
         - ops/ops-nn/pooling/avg_pool/avg_pool_infershape_common.h
         - ops/ops-nn/pooling/avg_pool/op_host/arch35/avg_pool_tiling_arch35.cpp
