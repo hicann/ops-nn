@@ -481,7 +481,7 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(
                 }
             }
 #endif
-#else
+#elif defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
 #if defined(FORMAT_X2) && FORMAT_X2 == FORMAT_FRACTAL_NZ
     #if IS_BLAZE
             if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI) { // Kernel Type = 0;
@@ -576,6 +576,24 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(
 // supportMmadS8S4平台独有模板
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
     if constexpr (TPL_BIASMODE == TPL_EXCLUDE_FROM_TEMPLATE) {
+        if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI) { // Kernel Type = 0;
+            GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling);
+            MatMulASWKernel<
+                DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_BIAS, DTYPE_Y, format_x1, format_x2, format_y,
+                static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS)>
+                op;
+            op.Init(x1, x2, bias, scale, pertokenScale, y, user1, &tilingData, &tPipe);
+            op.Process();
+        }
+        if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI) { // Kernel Type = 1;
+            GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling);
+            QuantBatchMatmulV3::MatmulAswKernelAL1FullLoad<
+                DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_BIAS, DTYPE_Y, format_x1, format_x2, format_y,
+                static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS)>
+                op;
+            op.Init(x1, x2, bias, scale, pertokenScale, y, user1, &tilingData, &tPipe);
+            op.Process();
+        }
         if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOABL1_WITH_MMAPI) {
             GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling);
             QuantBatchMatmulV3::MatmulAswKernelABL1FullLoad<
