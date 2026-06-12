@@ -100,15 +100,15 @@
     <tr>
       <td>mean</td>
       <td>输出</td>
-      <td>表示进行归一化后的均值，对应公式中的`mean`。与rstd的shape相同，shape为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。数据类型与x的数据类型保持一致。</td>
-      <td>FLOAT32、FLOAT16、BFLOAT16</td>
+      <td>表示进行归一化后的均值，对应公式中的`mean`。与rstd的shape相同，shape为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。数据类型为FLOAT32。</td>
+      <td>FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>rstd</td>
       <td>输出</td>
-      <td>表示进行归一化后的标准差倒数，对应公式中的`rstd`。与mean的shape相同，shape为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。数据类型与x的数据类型保持一致。</td>
-      <td>FLOAT32、FLOAT16、BFLOAT16</td>
+      <td>表示进行归一化后的标准差倒数，对应公式中的`rstd`。与mean的shape相同，shape为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。数据类型为FLOAT32。</td>
+      <td>FLOAT32</td>
       <td>ND</td>
     </tr>
   </tbody></table>

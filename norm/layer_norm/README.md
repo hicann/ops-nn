@@ -63,21 +63,21 @@
     <tr>
       <td>gamma</td>
       <td>输入</td>
-      <td>表示进行归一化计算的权重，公式中的输入w。gamma非空时，数据类型与输入x一致或为FLOAT类型，且当beta存在时gamma与beta的数据类型相同。shape与normalized_shape相等，为[R1,...,Rj]。gamma为空时，接口内部会构造一个shape为[R1,...,Rj]，数据全为1的tensor，当beta存在时gamma与beta的数据类型相同，beta不存在时gamma与输入x的数据类型相同。</td>
+      <td>表示进行归一化计算的权重，公式中的输入w。gamma为必选输入，不支持为空。数据类型与输入x一致或为FLOAT类型，且与beta的数据类型相同。shape为[R1,...,Rj]，与输入x从begin_norm_axis起始的连续维度shape相同。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>beta</td>
       <td>输入</td>
-      <td>表示进行归一化计算的偏移量，公式中的输入b。beta非空时，数据类型与输入x一致或为FLOAT类型，且当gamma存在时beta与gamma的数据类型相同。shape与normalized_shape相等，为[R1,...,Rj]。beta为空时，接口内部会构造一个shape为[R1,...,Rj]，数据全为0的tensor，当gamma存在时beta与gamma的数据类型相同，gamma不存在时beta与输入x的数据类型相同。</td>
+      <td>表示进行归一化计算的偏移量，公式中的输入b。beta为必选输入，不支持为空。数据类型与输入x一致或为FLOAT类型，且与gamma的数据类型相同。shape为[R1,...,Rj]，与gamma的shape相同。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>begin_norm_axis</td>
       <td>可选属性</td>
-      <td><ul><li>表示需要进行norm计算的维度。值为[R1,...,Rj]，长度小于等于输入x的shape长度，不支持为空。</li><li>默认值为0。</li></ul></td>
+      <td><ul><li>表示需要进行norm计算的维度，该维度需在输入x的shape维度范围内。</li><li>默认值为0。</li></ul></td>
       <td>INT</td>
       <td>-</td>
     </tr>
@@ -105,14 +105,14 @@
     <tr>
       <td>mean</td>
       <td>输出</td>
-      <td>表示进行归一化后的均值，公式中的mean。与rstd的shape相同，shape为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。数据类型与x的数据类型保持一致。</td>
+      <td>表示进行归一化后的均值，公式中的mean。与variance的shape相同，shape为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。数据类型与gamma和beta的数据类型保持一致。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>variance</td>
       <td>输出</td>
-      <td>表示进行归一化后的方差，公式中的variance。与mean的shape相同，shape为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。数据类型与x的数据类型保持一致。</td>
+      <td>表示进行归一化后的方差，公式中的variance。与mean的shape相同，shape为[A1,...,Ai,1,...,1]，Ai后共有j个1，与需要norm的轴长度保持相同。数据类型与gamma和beta的数据类型保持一致。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
