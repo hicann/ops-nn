@@ -151,7 +151,7 @@ void FusedMatMulAswBasicApiTiling::UpdateSmallNTailInfo(uint64_t tailCnt)
     while ((runInfo_.tailInfo.mCnt + 1UL) * runInfo_.tailInfo.nCnt * tailCnt <= compileInfo_.aicNum) {
         runInfo_.tailInfo.mCnt += 1UL;
         uint64_t nSubTileSize = runInfo_.baseN / (runInfo_.tailInfo.nCnt + 1UL);
-        if (nSubTileSize >= BASIC_BLOCK_SIZE_16 &&
+        if (nSubTileSize >= ADD_MUL_SMALL_N_LIMIT &&
             runInfo_.tailInfo.mCnt * (runInfo_.tailInfo.nCnt + 1UL) * tailCnt <= compileInfo_.aicNum) {
             runInfo_.tailInfo.nCnt += 1UL;
         }
