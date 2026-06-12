@@ -81,7 +81,7 @@ ge::graphStatus BatchMatMulV3AswBL1FullLoadBasicTiling::DoOpTiling()
     uint64_t aL1TensorSize = runInfo_.baseM * runInfo_.baseK * runInfo_.stepKa * args_.aDtypeSize;
     uint64_t dtypeSize = GetSizeByDataType(ge::DT_FLOAT);
     runInfo_.dbL0C = runInfo_.baseM * runInfo_.baseN * dtypeSize * DB_SIZE <= compileInfo_.l0CSize ? DB_SIZE : 1UL;
-    runInfo_.stepN = ops::CeilAlign(args_.nValue, runInfo_.baseN);
+    runInfo_.stepN = ops::CeilDiv(args_.nValue, runInfo_.baseN);
     if (aL1TensorSize * NUM_FOUR + bL1TensorSize <= compileInfo_.l1Size) {
         runInfo_.l1BufferNum = NUM_FOUR;
     } else {

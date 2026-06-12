@@ -261,7 +261,12 @@ inline static aclnnStatus CheckParams(const aclTensor* x1, const aclTensor* x2, 
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "batch_split_factor should be 1 when the scale is not null.");
         return ACLNN_ERR_PARAM_INVALID;
     }
-
+    // 不支持x1Format、 outFormat为NZ
+    if (ge::GetPrimaryFormat(x1->GetStorageFormat()) == Format::FORMAT_FRACTAL_NZ ||
+        ge::GetPrimaryFormat(out->GetStorageFormat()) == Format::FORMAT_FRACTAL_NZ) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format of x1 or out can not be FORMAT_FRACTAL_NZ.");
+        return ACLNN_ERR_PARAM_INVALID;
+    }
     CHECK_RET(CheckDtypeValid(x1, x2, scale, out), ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckShapeValid(x1, x2, scale, perm_x1, perm_x2, perm_y, batch_split_factor), ACLNN_ERR_PARAM_INVALID);
 

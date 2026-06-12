@@ -32,6 +32,61 @@ using namespace optiling::matmul_v3_advanced;
 
 constexpr uint64_t ONE_BATCH_DIM = 1UL;
 
+static inline ge::graphStatus TBMMCheckNotNull(const gert::TilingContext* context)
+{
+    auto attrs = context->GetAttrs();
+    OPS_CHECK_NULL_WITH_CONTEXT(context, attrs);
+    const gert::ContinuousVector* aPermList = attrs->GetAttrPointer<gert::ContinuousVector>(0);
+    const gert::ContinuousVector* bPermList = attrs->GetAttrPointer<gert::ContinuousVector>(1);
+    const gert::ContinuousVector* yPermList = attrs->GetAttrPointer<gert::ContinuousVector>(NUM_TWO);
+    OPS_CHECK_NULL_WITH_CONTEXT(context, aPermList);
+    OPS_CHECK_NULL_WITH_CONTEXT(context, bPermList);
+    OPS_CHECK_NULL_WITH_CONTEXT(context, yPermList);
+    OPS_CHECK_NULL_WITH_CONTEXT(context, aPermList->GetData());
+    OPS_CHECK_NULL_WITH_CONTEXT(context, bPermList->GetData());
+    OPS_CHECK_NULL_WITH_CONTEXT(context, yPermList->GetData());
+    OPS_CHECK_NULL_WITH_CONTEXT(context, context->GetInputDesc(0));
+    OPS_CHECK_NULL_WITH_CONTEXT(context, context->GetInputShape(0));
+    OPS_CHECK_NULL_WITH_CONTEXT(context, context->GetInputDesc(1));
+    OPS_CHECK_NULL_WITH_CONTEXT(context, context->GetInputShape(1));
+    OPS_CHECK_NULL_WITH_CONTEXT(context, context->GetOutputDesc(0));
+    if (attrs->GetAttrNum() >= HF32_ATTR_NUM) {
+        OPS_CHECK_NULL_WITH_CONTEXT(context, attrs->GetAttrPointer<bool>(HF32_ATTR_INDEX));
+    }
+    if (attrs->GetAttrNum() >= ATTR_NUM) {
+        OPS_CHECK_NULL_WITH_CONTEXT(context, attrs->GetAttrPointer<int32_t>(ATTR_NUM - 1));
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+static inline ge::graphStatus TBMMCheckPermAndShapeDim(const gert::TilingContext& context, const char* opName)
+{
+    const gert::Shape& aShape = context.GetInputShape(0)->GetOriginShape();
+    const gert::Shape& bShape = context.GetInputShape(1)->GetOriginShape();
+    const gert::Shape& cShape = context.GetOutputShape(0)->GetOriginShape();
+    if ((aShape.GetDimNum() != ALLOW_DIM) || (bShape.GetDimNum() != ALLOW_DIM) || (cShape.GetDimNum() != ALLOW_DIM)) {
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            opName, "x1, x2, out",
+            Ops::NN::FormatString("%zu, %zu, %zu", aShape.GetDimNum(), bShape.GetDimNum(), cShape.GetDimNum()).c_str(),
+            Ops::NN::FormatString("The shape dims of %s must be %d", "x1, x2, out", ALLOW_DIM).c_str());
+        return ge::GRAPH_FAILED;
+    }
+    auto attrs = context.GetAttrs();
+    if ((attrs->GetAttrPointer<gert::ContinuousVector>(0)->GetSize() != ALLOW_DIM) ||
+        (attrs->GetAttrPointer<gert::ContinuousVector>(1)->GetSize() != ALLOW_DIM) ||
+        (attrs->GetAttrPointer<gert::ContinuousVector>(NUM_TWO)->GetSize() != ALLOW_DIM)) {
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
+            opName, "perm_x1, perm_x2, perm_y",
+            Ops::NN::FormatString("%zu, %zu, %zu", attrs->GetAttrPointer<gert::ContinuousVector>(0)->GetSize(),
+                                  attrs->GetAttrPointer<gert::ContinuousVector>(1)->GetSize(),
+                                  attrs->GetAttrPointer<gert::ContinuousVector>(NUM_TWO)->GetSize())
+                .c_str(),
+            Ops::NN::FormatString("The shape dims of %s must be %d", "perm_x1, perm_x2, perm_y", ALLOW_DIM).c_str());
+        return ge::GRAPH_FAILED;
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
 static inline void TBMMGetFormat(const gert::TilingContext &context, MatMulV3Args &args)
 {
     ge::Format formatA = static_cast<ge::Format>(ge::GetPrimaryFormat(context.GetInputDesc(0)->GetStorageFormat()));
@@ -115,23 +170,16 @@ ge::graphStatus TBMMGetShapeMKN(const gert::Shape &aShape, const gert::Shape &bS
                                 const gert::ContinuousVector *aPermList, const gert::ContinuousVector *bPermList,
                                 MatMulV3Args &args)
 {
-    int64_t m = aShape[M_IDX];
-    int64_t kA = aShape[KA_IDX];
-    int64_t kB = bShape[KB_IDX];
-    int64_t n = bShape[N_IDX];
+    const int64_t* aPerm = static_cast<const int64_t*>(aPermList->GetData());
+    int64_t m = aShape[aPerm[M_IDX]];
+    int64_t kA = aShape[aPerm[KA_IDX]];
+    args.isATrans = aPerm[M_IDX] > aPerm[KA_IDX];
 
-    if(aPermList != nullptr && aPermList->GetSize() == ALLOW_DIM) {
-        const int64_t *aPerm = static_cast<const int64_t *>(aPermList->GetData());
-        m = aShape[aPerm[M_IDX]];
-        kA = aShape[aPerm[KA_IDX]];
-        args.isATrans = aPerm[M_IDX] > aPerm[KA_IDX];
-    }
-    if(bPermList != nullptr && bPermList->GetSize() == ALLOW_DIM) {
-        const int64_t *bPerm = static_cast<const int64_t *>(bPermList->GetData());
-        kB = bShape[bPerm[KB_IDX]];
-        n = bShape[bPerm[N_IDX]];
-        args.isBTrans = bPerm[KB_IDX] > bPerm[N_IDX];
-    }
+    const int64_t* bPerm = static_cast<const int64_t*>(bPermList->GetData());
+    int64_t kB = bShape[bPerm[KB_IDX]];
+    int64_t n = bShape[bPerm[N_IDX]];
+    args.isBTrans = bPerm[KB_IDX] > bPerm[N_IDX];
+
     if (kA != kB) {
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
             args.opName, "x1, x2",
@@ -159,74 +207,57 @@ ge::graphStatus TBMMGetShapeMKN(const gert::Shape &aShape, const gert::Shape &bS
 
 ge::graphStatus TBMMGetShape(const gert::TilingContext &context, MatMulV3Args &args)
 {
-    const gert::Shape &aShape = context.GetInputShape(0)->GetOriginShape();
-    const gert::Shape &bShape = context.GetInputShape(1)->GetOriginShape();
-    const gert::Shape &cShape = context.GetOutputShape(0)->GetOriginShape();
-    const size_t aDimNum = aShape.GetDimNum();
-    const size_t bDimNum = bShape.GetDimNum();
-    const size_t cDimNum = cShape.GetDimNum();
-    if ((aDimNum != ALLOW_DIM) || (bDimNum != ALLOW_DIM) || (cDimNum != ALLOW_DIM)) {
-        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
-            args.opName, "x1, x2, out", Ops::NN::FormatString("%zu, %zu, %zu", aDimNum, bDimNum, cDimNum).c_str(),
-            Ops::NN::FormatString("The shape dims of %s must be %zu", "x1, x2, out", ALLOW_DIM).c_str());
-        return ge::GRAPH_FAILED;
-    }
+    const gert::Shape& aShape = context.GetInputShape(0)->GetOriginShape();
+    const gert::Shape& bShape = context.GetInputShape(1)->GetOriginShape();
 
     auto attrs = context.GetAttrs();
     size_t idx = 0;
     const gert::ContinuousVector *aPermList = attrs->GetAttrPointer<gert::ContinuousVector>(idx++);
     const gert::ContinuousVector *bPermList = attrs->GetAttrPointer<gert::ContinuousVector>(idx++);
     const gert::ContinuousVector *yPermList = attrs->GetAttrPointer<gert::ContinuousVector>(idx++);
-    if(aPermList != nullptr && aPermList->GetSize() == ALLOW_DIM) {
-        const int64_t *aPerm = static_cast<const int64_t *>(aPermList->GetData());
-        bool aPermCheck =
-            ((aPerm[BATCH_IDX] == 1L) && (aPerm[M_IDX] == 0L) && (aPerm[KA_IDX] == 2L)) ||
-            ((aPerm[BATCH_IDX] == 0L) && (aPerm[M_IDX] == 1L) && (aPerm[KA_IDX] == 2L)); // aPerm is [1,0,2] or [0,1,2]
-        if (!aPermCheck) {
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-                args.opName, "permX1",
-                Ops::NN::FormatString("[%ld, %ld, %ld]", aPerm[BATCH_IDX], aPerm[M_IDX], aPerm[KA_IDX]).c_str(),
-                Ops::NN::FormatString("The value of %s must be in %s", "permX1", "{[1,0,2], [0,1,2]}").c_str());
-            return ge::GRAPH_FAILED;
-        }
+    const int64_t* aPerm = static_cast<const int64_t*>(aPermList->GetData());
+    bool aPermCheck =
+        ((aPerm[BATCH_IDX] == 1L) && (aPerm[M_IDX] == 0L) && (aPerm[KA_IDX] == 2L)) ||
+        ((aPerm[BATCH_IDX] == 0L) && (aPerm[M_IDX] == 1L) && (aPerm[KA_IDX] == 2L)); // aPerm is [1,0,2] or [0,1,2]
+    if (!aPermCheck) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            args.opName, "permX1",
+            Ops::NN::FormatString("[%ld, %ld, %ld]", aPerm[BATCH_IDX], aPerm[M_IDX], aPerm[KA_IDX]).c_str(),
+            Ops::NN::FormatString("The value of %s must be in %s", "permX1", "{[1,0,2], [0,1,2]}").c_str());
+        return ge::GRAPH_FAILED;
     }
-    if(bPermList != nullptr && bPermList->GetSize() == ALLOW_DIM) {
-        const int64_t *bPerm = static_cast<const int64_t *>(bPermList->GetData());
-        bool bPermCheck = ((bPerm[BATCH_IDX] == 0L) && (bPerm[KB_IDX] == 1L) && (bPerm[N_IDX] == 2L)) || // bPerm 012 or
-                          ((bPerm[BATCH_IDX] == 0L) && (bPerm[KB_IDX] == 2L) && (bPerm[N_IDX] == 1L)); // bPerm 021
-        if (!bPermCheck) {
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-                args.opName, "permX2",
-                Ops::NN::FormatString("[%ld, %ld, %ld]", bPerm[BATCH_IDX], bPerm[KB_IDX], bPerm[N_IDX]).c_str(),
-                Ops::NN::FormatString("The value of %s must be in %s", "permX2", "{[0,1,2], [0,2,1]}").c_str());
-            return ge::GRAPH_FAILED;
-        }
+    const int64_t* bPerm = static_cast<const int64_t*>(bPermList->GetData());
+    bool bPermCheck = ((bPerm[BATCH_IDX] == 0L) && (bPerm[KB_IDX] == 1L) && (bPerm[N_IDX] == 2L)) || // bPerm 012 or
+                      ((bPerm[BATCH_IDX] == 0L) && (bPerm[KB_IDX] == 2L) && (bPerm[N_IDX] == 1L));   // bPerm 021
+    if (!bPermCheck) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            args.opName, "permX2",
+            Ops::NN::FormatString("[%ld, %ld, %ld]", bPerm[BATCH_IDX], bPerm[KB_IDX], bPerm[N_IDX]).c_str(),
+            Ops::NN::FormatString("The value of %s must be in %s", "permX2", "{[0,1,2], [0,2,1]}").c_str());
+        return ge::GRAPH_FAILED;
     }
-    if(yPermList != nullptr && yPermList->GetSize() == ALLOW_DIM) {
-        const int64_t *yPerm = static_cast<const int64_t *>(yPermList->GetData());
-        bool yPermCheck = (yPerm[BATCH_IDX] == 1L) && (yPerm[M_IDX] == 0L) && (yPerm[N_IDX] == 2L); // yPerm is [1,0,2]
-        if (!yPermCheck) {
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-                args.opName, "permY",
-                Ops::NN::FormatString("[%ld, %ld, %ld]", yPerm[BATCH_IDX], yPerm[M_IDX], yPerm[N_IDX]).c_str(),
-                Ops::NN::FormatString("The value of %s must be %s", "permY", "[1,0,2]").c_str());
-            return ge::GRAPH_FAILED;
-        }
+    const int64_t* yPerm = static_cast<const int64_t*>(yPermList->GetData());
+    bool yPermCheck = (yPerm[BATCH_IDX] == 1L) && (yPerm[M_IDX] == 0L) && (yPerm[N_IDX] == 2L); // yPerm is [1,0,2]
+    if (!yPermCheck) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            args.opName, "permY",
+            Ops::NN::FormatString("[%ld, %ld, %ld]", yPerm[BATCH_IDX], yPerm[M_IDX], yPerm[N_IDX]).c_str(),
+            Ops::NN::FormatString("The value of %s must be %s", "permY", "[1,0,2]").c_str());
+        return ge::GRAPH_FAILED;
     }
 
     OP_TILING_CHECK((TBMMGetShapeMKN(aShape, bShape, aPermList, bPermList, args) != ge::GRAPH_SUCCESS),
                     CUBE_INNER_ERR_REPORT(args.opName, "get m/k/n failed"), return ge::GRAPH_FAILED);
 
-    if (aPermList != nullptr && attrs->GetAttrNum() >= ATTR_NUM) {
+    if (attrs->GetAttrNum() >= ATTR_NUM) {
         uint32_t batchSplitFactor = std::max(*(attrs->GetAttrPointer<int32_t>(ATTR_NUM - 1)), 1);
         bool batchSplitFactorPermCheck =
             aShape[static_cast<const int64_t*>(aPermList->GetData())[0]] % batchSplitFactor == 0;
         if (!batchSplitFactorPermCheck) {
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
                 args.opName, "x1", Ops::Base::ToString(aShape).c_str(),
-                Ops::NN::FormatString(
-                    "%s of %s must be exactly divisible by attribute %s (%u)", "Batch-axis", "x1", "batch_split_factor",
-                    batchSplitFactor)
+                Ops::NN::FormatString("%s of %s must be exactly divisible by attribute %s (%u)", "Batch-axis", "x1",
+                                      "batch_split_factor", batchSplitFactor)
                     .c_str());
             return ge::GRAPH_FAILED;
         }
@@ -264,19 +295,16 @@ ge::graphStatus TransposeBatchMatMulTiling::CheckScale(const gert::Shape& shape_
             return ge::GRAPH_FAILED;
         }
     }
-    if (bPermList != nullptr && bPermList->GetSize() == ALLOW_DIM) {
-        const int64_t* bPerm = static_cast<const int64_t*>(bPermList->GetData());
-        int64_t n = bShape[bPerm[N_IDX]];
-        int64_t b = bShape[bPerm[BATCH_IDX]];
-        if (shape_scale.GetDim(0) != b * n) {
-            OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
-                args_.opName, "scale", Ops::NN::FormatString("%ld", shape_scale.GetDim(0)).c_str(),
-                Ops::NN::FormatString(
-                    "%s of %s must be equal to %s of %s multiplied by %s of %s (%ld)", "Shape[0]", "scale",
-                    "batch-axis", "x2", "n-axis", "x2", b * n)
-                    .c_str());
-            return ge::GRAPH_FAILED;
-        }
+    const int64_t* bPerm = static_cast<const int64_t*>(bPermList->GetData());
+    int64_t n = bShape[bPerm[N_IDX]];
+    int64_t b = bShape[bPerm[BATCH_IDX]];
+    if (shape_scale.GetDim(0) != b * n) {
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
+            args_.opName, "scale", Ops::NN::FormatString("%ld", shape_scale.GetDim(0)).c_str(),
+            Ops::NN::FormatString("%s of %s must be equal to %s of %s multiplied by %s of %s (%ld)", "Shape[0]",
+                                  "scale", "batch-axis", "x2", "n-axis", "x2", b * n)
+                .c_str());
+        return ge::GRAPH_FAILED;
     }
     auto tensor_x1 = context_->GetInputDesc(0);
     auto tensor_x2 = context_->GetInputDesc(1);
@@ -298,15 +326,12 @@ ge::graphStatus TransposeBatchMatMulTiling::CheckScale(const gert::Shape& shape_
 
 ge::graphStatus TransposeBatchMatMulTiling::CheckArgs()
 {
-    auto attrs = context_->GetAttrs();
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs);
-    size_t idx = 0;
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetInputDesc(idx));
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetInputShape(idx));
-    idx++;
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetInputDesc(idx));
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetInputShape(idx));
-    idx++;
+    if (TBMMCheckNotNull(context_) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    if (TBMMCheckPermAndShapeDim(*context_, args_.opName) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
     if (context_->GetOptionalInputShape(BIAS_IDX) != nullptr) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
             args_.opName, "bias", "", Ops::NN::FormatString("The value of %s must be %s", "bias", "null").c_str());
@@ -318,13 +343,6 @@ ge::graphStatus TransposeBatchMatMulTiling::CheckArgs()
         OP_TILING_CHECK((CheckScale(shape_scale) != ge::GRAPH_SUCCESS),
                         CUBE_INNER_ERR_REPORT(args_.opName, "scale condition not satisfied"), return ge::GRAPH_FAILED);
     }
-    if (attrs->GetAttrNum() >= HF32_ATTR_NUM) {
-        OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs->GetAttrPointer<bool>(HF32_ATTR_INDEX));
-    }
-    if (attrs->GetAttrNum() >= ATTR_NUM) {
-        OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs->GetAttrPointer<int32_t>(ATTR_NUM - 1));
-    }
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetOutputDesc(0));
     return ge::GRAPH_SUCCESS;
 }
 
@@ -372,16 +390,10 @@ ge::graphStatus TransposeBatchMatMulTiling::GetBatchInfo(const gert::TilingConte
     const gert::ContinuousVector *aPermList = attrs->GetAttrPointer<gert::ContinuousVector>(idx++);
     const gert::ContinuousVector *bPermList = attrs->GetAttrPointer<gert::ContinuousVector>(idx++);
 
-    uint64_t batchA = static_cast<uint64_t>(aShape[BATCH_IDX]);
-    uint64_t batchB = static_cast<uint64_t>(bShape[BATCH_IDX]);
-    if (aPermList != nullptr && aPermList->GetSize() == ALLOW_DIM) {
-        const int64_t *aPerm = static_cast<const int64_t *>(aPermList->GetData());
-        batchA = aShape[aPerm[BATCH_IDX]];
-    }
-    if (bPermList != nullptr && bPermList->GetSize() == ALLOW_DIM) {
-        const int64_t *bPerm = static_cast<const int64_t *>(bPermList->GetData());
-        batchB = bShape[bPerm[BATCH_IDX]];
-    }
+    const int64_t* aPerm = static_cast<const int64_t*>(aPermList->GetData());
+    uint64_t batchA = aShape[aPerm[BATCH_IDX]];
+    const int64_t* bPerm = static_cast<const int64_t*>(bPermList->GetData());
+    uint64_t batchB = bShape[bPerm[BATCH_IDX]];
     if (batchA != batchB) {
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
             args.opName, "x1, x2",

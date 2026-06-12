@@ -83,7 +83,7 @@ ge::graphStatus BatchMatMulV3AswAL1FullLoadBasicTiling::DoOpTiling()
     // 是否开启dbLoc
     runInfo_.dbL0C = runInfo_.baseM * runInfo_.baseN * dtypeSize * DB_SIZE <= compileInfo_.l0CSize ? DB_SIZE : 1UL;
     // A全载更新stepM
-    runInfo_.stepM = ops::CeilAlign(args_.mValue, runInfo_.baseM);
+    runInfo_.stepM = ops::CeilDiv(args_.mValue, runInfo_.baseM);
     // A全载对matB开启4buffer
     if (bL1TensorSize * NUM_FOUR + aL1TensorSize <= compileInfo_.l1Size) {
         runInfo_.l1BufferNum = NUM_FOUR;

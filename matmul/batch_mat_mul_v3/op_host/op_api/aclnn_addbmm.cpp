@@ -243,6 +243,7 @@ static const aclTensor* SelfMulsBetaProcess(const aclTensor* self, const aclScal
     const aclTensor* selfContiguous = l0op::Contiguous(self, executor);
     // self为bf16时cast为fp32保证精度
     if (self != nullptr && self->GetDataType() == op::DataType::DT_BF16) {
+        OP_CHECK_NULL(selfContiguous, return nullptr);
         selfContiguous = l0op::Cast(selfContiguous, op::DataType::DT_FLOAT, executor);
     }
     OP_CHECK_NULL(selfContiguous, return nullptr);

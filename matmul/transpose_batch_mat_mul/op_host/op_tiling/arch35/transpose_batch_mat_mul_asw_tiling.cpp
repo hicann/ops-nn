@@ -113,21 +113,17 @@ void TransposeBatchMatMulAswTiling::GetTransposeBatchMatMulInfo()
     size_t idx = 0;
     const gert::ContinuousVector* aPermList = attrs->GetAttrPointer<gert::ContinuousVector>(idx++);
     const gert::ContinuousVector* bPermList = attrs->GetAttrPointer<gert::ContinuousVector>(idx++);
-    if (aPermList != nullptr && aPermList->GetSize() == ALLOW_DIM) {
-        const int64_t* aPerm = static_cast<const int64_t*>(aPermList->GetData());
-        if ((aPerm[BATCH_IDX] == 1L) && (aPerm[M_IDX] == 0L) && (aPerm[KA_IDX] == 2L)) {
-            permX1_ = TBMMPermX1::PERM_X1_1_0_2;
-        } else if ((aPerm[BATCH_IDX] == 0L) && (aPerm[M_IDX] == 1L) && (aPerm[KA_IDX] == 2L)) {
-            permX1_ = TBMMPermX1::PERM_X1_0_1_2;
-        }
+    const int64_t* aPerm = static_cast<const int64_t*>(aPermList->GetData());
+    if ((aPerm[BATCH_IDX] == 1L) && (aPerm[M_IDX] == 0L) && (aPerm[KA_IDX] == NUM_TWO)) {
+        permX1_ = TBMMPermX1::PERM_X1_1_0_2;
+    } else if ((aPerm[BATCH_IDX] == 0L) && (aPerm[M_IDX] == 1L) && (aPerm[KA_IDX] == NUM_TWO)) {
+        permX1_ = TBMMPermX1::PERM_X1_0_1_2;
     }
-    if (bPermList != nullptr && bPermList->GetSize() == ALLOW_DIM) {
-        const int64_t* bPerm = static_cast<const int64_t*>(bPermList->GetData());
-        if ((bPerm[BATCH_IDX] == 0L) && (bPerm[M_IDX] == 1L) && (bPerm[KA_IDX] == 2L)) {
-            permX2_ = TBMMPermX2::PERM_X2_0_1_2;
-        } else if ((bPerm[BATCH_IDX] == 0L) && (bPerm[M_IDX] == 2L) && (bPerm[KA_IDX] == 1L)) {
-            permX2_ = TBMMPermX2::PERM_X2_0_2_1;
-        }
+    const int64_t* bPerm = static_cast<const int64_t*>(bPermList->GetData());
+    if ((bPerm[BATCH_IDX] == 0L) && (bPerm[M_IDX] == 1L) && (bPerm[KA_IDX] == NUM_TWO)) {
+        permX2_ = TBMMPermX2::PERM_X2_0_1_2;
+    } else if ((bPerm[BATCH_IDX] == 0L) && (bPerm[M_IDX] == NUM_TWO) && (bPerm[KA_IDX] == 1L)) {
+        permX2_ = TBMMPermX2::PERM_X2_0_2_1;
     }
     if (attrs->GetAttrNum() >= ATTR_NUM) {
         batchSplitFactor_ = std::max(*(attrs->GetAttrPointer<int32_t>(ATTR_NUM - 1)), 1);

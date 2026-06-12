@@ -422,8 +422,9 @@ ge::graphStatus TransposeBatchMatMulBaseTiling::CheckArgs()
     OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetInputDesc(idx));
     OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetInputShape(idx));
     idx++;
-    if (context_->GetOptionalInputShape(2)!= nullptr) { // bias是第2入参
+    if (context_->GetOptionalInputShape(BIAS_IDX)!= nullptr) { // bias是第2入参
         args_.hasBias = true;
+        OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetOptionalInputDesc(BIAS_IDX));
     }
     auto* shape_scale = context_->GetOptionalInputShape(SCALE_IDX);
     if (shape_scale != nullptr) {
@@ -463,7 +464,7 @@ static inline void GetDtype(const gert::TilingContext &context, optiling::matmul
     args.bType = context.GetInputDesc(1)->GetDataType();
     args.cType = context.GetOutputDesc(0)->GetDataType();
     if (args.hasBias) {
-        args.biasType = context.GetInputDesc(BIAS_IDX)->GetDataType();
+        args.biasType = context.GetOptionalInputDesc(BIAS_IDX)->GetDataType();
     }
 }
 
@@ -591,6 +592,8 @@ ge::graphStatus TransposeBatchMatMulBaseTiling::GetShape()
     size_t idx = 0;
     aPermList_ = attrs->GetAttrPointer<gert::ContinuousVector>(idx++);
     bPermList_ = attrs->GetAttrPointer<gert::ContinuousVector>(idx++);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, aPermList_);
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, bPermList_);
 
     OP_TILING_CHECK(GetShapeMKN(aShape, bShape) != ge::GRAPH_SUCCESS, CUBE_INNER_ERR_REPORT(args_.opName,
                     "get m/k/n failed"), return ge::GRAPH_FAILED);

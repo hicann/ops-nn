@@ -311,6 +311,7 @@ bool MatMulV3TilingHelper::IsTransposeNonContiguous(const gert::TilingContext* c
     // 获得stride 然后根据stride判断
     auto viewShape = context->GetInputShape(idx)->GetOriginShape();
     auto viewStride = context->GetInputStride(idx);
+    OP_CHECK_NULL_WITH_CONTEXT(context, viewStride);
     int64_t dimNum = viewStride->GetDimNum();
     StrideIndexPairs strideIndexPairs;
     strideIndexPairs.reserve(dimNum);

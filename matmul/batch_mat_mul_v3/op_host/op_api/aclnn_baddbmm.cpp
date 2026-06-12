@@ -380,6 +380,7 @@ aclnnStatus aclnnBaddbmmGetWorkspaceSize(
         CHECK_RET(emptyOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
         castOut = l0op::Cast(emptyOut, out->GetDataType(), uniqueExecutor.get());
+        CHECK_RET(castOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
         auto viewCopyResult = l0op::ViewCopy(castOut, out, uniqueExecutor.get());
         CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
 

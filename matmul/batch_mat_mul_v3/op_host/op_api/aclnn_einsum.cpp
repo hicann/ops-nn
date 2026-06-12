@@ -148,6 +148,7 @@ aclnnStatus HandleABCDxABCED2ABCE(const aclTensorList *tensors, aclTensor *outpu
       tensor1Cast = l0op::Cast(tensor1Contigous, op::DataType::DT_FLOAT16, uniqueExecutor.get());
       CHECK_RET(tensor1Cast != nullptr, ACLNN_ERR_INNER_NULLPTR);
       auto outputContigous = l0op::Contiguous(output, uniqueExecutor.get());
+      CHECK_RET(outputContigous != nullptr, ACLNN_ERR_INNER_NULLPTR);
       outputCast = l0op::Cast(outputContigous, op::DataType::DT_FLOAT16, uniqueExecutor.get());
       CHECK_RET(outputCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
@@ -157,8 +158,9 @@ aclnnStatus HandleABCDxABCED2ABCE(const aclTensorList *tensors, aclTensor *outpu
     auto matmulOut = ExecBmmOp(tensor1Cast, expandA, outputCast, cubeMathType, uniqueExecutor.get());
     CHECK_RET(matmulOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
     auto castResult = l0op::Cast(matmulOut, inputDtype, uniqueExecutor.get());
+    CHECK_RET(castResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
     const aclTensor *result = l0op::SqueezeNd(castResult, DIM_FOUR, uniqueExecutor.get());
-
+    CHECK_RET(result != nullptr, ACLNN_ERR_INNER_NULLPTR);
     // 固定写法，将计算结果拷贝到输出 output output可能是非连续的tensor
     auto viewCopyResult = l0op::ViewCopy(result, output, uniqueExecutor.get());
     CHECK_RET(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
