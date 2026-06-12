@@ -67,6 +67,9 @@ struct EuclideanNormTilingData {
     int64_t postReduceUbSize = 0;
     int64_t tmpBufUbSize = 0;
     int64_t cacheBufUbSize = 0;                                // 固定 16 KB
+
+    // ─── group 模板 ───
+    int64_t rGroupCnt = 0;                                     // Phase 1 分组数 = Phase 2 workspace R 维大小
 };
 
 #endif // OPS_NORM_EUCLIDEAN_NORM_TILING_DATA_H_

@@ -41,34 +41,31 @@ using namespace AscendC;
 template <typename DType>
 class EuclideanNormEmptyKernel {
 public:
-    using D_T      = DType;
+    using D_T = DType;
     using ComputeT = float;
 
-    static constexpr bool kIsFp32   = std::is_same_v<D_T, float>;
-    static constexpr bool kIsInt32  = std::is_same_v<D_T, int32_t>;
-    static constexpr bool kIsB16    = (sizeof(D_T) == 2);    // fp16 / bf16
+    static constexpr bool kIsFp32 = std::is_same_v<D_T, float>;
+    static constexpr bool kIsInt32 = std::is_same_v<D_T, int32_t>;
+    static constexpr bool kIsB16 = (sizeof(D_T) == 2); // fp16 / bf16
 
     // CastTrait：fp32 → X（与 normal kernel 一致；int32 用 CAST_TRUNC，fp16/bf16 用 CAST_RINT）
     static constexpr AscendC::Reg::CastTrait kCastTraitFromFp32{
-        AscendC::Reg::RegLayout::ZERO,
-        AscendC::Reg::SatMode::NO_SAT,
-        AscendC::Reg::MaskMergeMode::ZEROING,
-        kIsInt32 ? AscendC::RoundMode::CAST_TRUNC : AscendC::RoundMode::CAST_RINT
-    };
+        AscendC::Reg::RegLayout::ZERO, AscendC::Reg::SatMode::NO_SAT, AscendC::Reg::MaskMergeMode::ZEROING,
+        kIsInt32 ? AscendC::RoundMode::CAST_TRUNC : AscendC::RoundMode::CAST_RINT};
 
-    static constexpr uint32_t kVlBytes  = 256;
-    static constexpr uint32_t kRepF32   = kVlBytes / sizeof(float);     // = 64
-    static constexpr uint16_t kRepF32U  = static_cast<uint16_t>(kRepF32);
+    static constexpr uint32_t kVlBytes = 256;
+    static constexpr uint32_t kRepF32 = kVlBytes / sizeof(float); // = 64
+    static constexpr uint16_t kRepF32U = static_cast<uint16_t>(kRepF32);
 
     __aicore__ inline EuclideanNormEmptyKernel() {}
 
     __aicore__ inline void Init(GM_ADDR y, const EuclideanNormTilingData* td)
     {
-        usedCoreNum_       = td->usedCoreNum;
-        aTotal_            = td->axisShape[0];          // aTotal 走 axisShape[0]
-        aUbFactor_         = td->aUbFactor;
-        aBigCoreCnt_       = td->aBigCoreCnt;
-        aBigCoreLoopCnt_   = td->aBigCoreLoopCnt;
+        usedCoreNum_ = td->usedCoreNum;
+        aTotal_ = td->axisShape[0]; // aTotal 走 axisShape[0]
+        aUbFactor_ = td->aUbFactor;
+        aBigCoreCnt_ = td->aBigCoreCnt;
+        aBigCoreLoopCnt_ = td->aBigCoreLoopCnt;
         aSmallCoreLoopCnt_ = td->aSmallCoreLoopCnt;
 
         yGm_.SetGlobalBuffer(reinterpret_cast<__gm__ D_T*>(y));
@@ -81,19 +78,23 @@ public:
         const int64_t blockIdx = static_cast<int64_t>(GetBlockIdx());
         // EMPTY_A: usedCoreNum=0 → 所有核早退（kernel 零操作）
         // EMPTY_R: usedCoreNum>0 → 走下面主循环
-        if (blockIdx >= static_cast<int64_t>(usedCoreNum_)) return;
+        if (blockIdx >= static_cast<int64_t>(usedCoreNum_)) {
+            return;
+        }
 
         // blockIdx → [aStart, aEnd) 按 a 元素数切（同型简化版：aSplit 单核独享一段，外层无 outer A）
         int64_t aStart, aEnd;
         if (blockIdx < static_cast<int64_t>(aBigCoreCnt_)) {
             aStart = blockIdx * aBigCoreLoopCnt_ * aUbFactor_;
-            aEnd   = aStart + aBigCoreLoopCnt_ * aUbFactor_;
+            aEnd = aStart + aBigCoreLoopCnt_ * aUbFactor_;
         } else {
-            aStart = static_cast<int64_t>(aBigCoreCnt_) * aBigCoreLoopCnt_ * aUbFactor_
-                   + (blockIdx - static_cast<int64_t>(aBigCoreCnt_)) * aSmallCoreLoopCnt_ * aUbFactor_;
-            aEnd   = aStart + aSmallCoreLoopCnt_ * aUbFactor_;
+            aStart = static_cast<int64_t>(aBigCoreCnt_) * aBigCoreLoopCnt_ * aUbFactor_ +
+                     (blockIdx - static_cast<int64_t>(aBigCoreCnt_)) * aSmallCoreLoopCnt_ * aUbFactor_;
+            aEnd = aStart + aSmallCoreLoopCnt_ * aUbFactor_;
         }
-        if (aEnd > aTotal_) aEnd = aTotal_;     // 最后一 chunk 兜底
+        if (aEnd > aTotal_) {
+            aEnd = aTotal_; // 最后一 chunk 兜底
+        }
 
         for (int64_t aOff = aStart; aOff < aEnd; aOff += aUbFactor_) {
             const int64_t aLen = (aOff + aUbFactor_ > aEnd) ? (aEnd - aOff) : aUbFactor_;
@@ -116,7 +117,8 @@ private:
         const uint32_t totalElems = static_cast<uint32_t>(aLen);
         const uint16_t repeatTime = static_cast<uint16_t>((totalElems + kRepF32U - 1) / kRepF32U);
 
-        __VEC_SCOPE__ {
+        __VEC_SCOPE__
+        {
             AscendC::Reg::RegTensor<float> f32Reg;
             AscendC::Reg::Duplicate(f32Reg, 0.0f);
             AscendC::Reg::MaskReg mask;
@@ -131,9 +133,8 @@ private:
                 } else if constexpr (kIsB16) {
                     AscendC::Reg::RegTensor<D_T> b16Reg;
                     AscendC::Reg::Cast<D_T, float, kCastTraitFromFp32>(b16Reg, f32Reg, mask);
-                    AscendC::Reg::StoreAlign<D_T, AscendC::Reg::StoreDist::DIST_PACK_B32>(
-                        outPtr + off, b16Reg, mask);
-                } else {  // int32
+                    AscendC::Reg::StoreAlign<D_T, AscendC::Reg::StoreDist::DIST_PACK_B32>(outPtr + off, b16Reg, mask);
+                } else { // int32
                     AscendC::Reg::RegTensor<int32_t> iReg;
                     AscendC::Reg::Cast<int32_t, float, kCastTraitFromFp32>(iReg, f32Reg, mask);
                     AscendC::Reg::StoreAlign(outPtr + off, iReg, mask);
@@ -144,26 +145,26 @@ private:
 
         auto outDeq = outQue_.DeQue<D_T>();
         DataCopyExtParams outParams;
-        outParams.blockLen   = static_cast<uint32_t>(aLen * static_cast<int64_t>(sizeof(D_T)));
+        outParams.blockLen = static_cast<uint32_t>(aLen * static_cast<int64_t>(sizeof(D_T)));
         outParams.blockCount = 1;
-        outParams.srcStride  = 0;
-        outParams.dstStride  = 0;
+        outParams.srcStride = 0;
+        outParams.dstStride = 0;
         DataCopyPad(yGm_[outOff], outDeq, outParams);
         outQue_.FreeTensor(outDeq);
     }
 
     // ─── tilingdata 镜像 ───
-    int32_t usedCoreNum_       = 0;
-    int64_t aTotal_            = 0;     // = tilingData.axisShape[0]
-    int64_t aUbFactor_         = 0;
-    int32_t aBigCoreCnt_       = 0;
-    int64_t aBigCoreLoopCnt_   = 0;
+    int32_t usedCoreNum_ = 0;
+    int64_t aTotal_ = 0; // = tilingData.axisShape[0]
+    int64_t aUbFactor_ = 0;
+    int32_t aBigCoreCnt_ = 0;
+    int64_t aBigCoreLoopCnt_ = 0;
     int64_t aSmallCoreLoopCnt_ = 0;
 
     // ─── GM + UB ───
-    GlobalTensor<D_T>             yGm_;
-    TPipe                         pipe_;
-    TQue<QuePosition::VECOUT, 2>  outQue_;
+    GlobalTensor<D_T> yGm_;
+    TPipe pipe_;
+    TQue<QuePosition::VECOUT, 2> outQue_;
 };
 
 } // namespace NsEuclideanNorm
