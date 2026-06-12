@@ -293,7 +293,7 @@ static aclnnStatus CheckParams(RmsNormQuantInputTensor& inputTensor, aclTensor* 
 } // namespace
 
 aclnnStatus Int42Int32PackedTensor(
-    const aclTensor *y, const aclTensor *&outTensor, int32_t outDtype, aclOpExecutor *executor)
+    const aclTensor *y, const aclTensor *&outTensor, aclOpExecutor *executor)
 {
     // if outType is int32, pack output
     auto viewShape = y->GetViewShape();
@@ -348,7 +348,7 @@ aclnnStatus aclnnRmsNormQuantGetWorkspaceSize(
         CHECK_RET(resultTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
         const aclTensor* outTensor = resultTensor;
         if (yType == op::DataType::DT_INT4 && y->GetDataType() == op::DataType::DT_INT32) {
-            ret = Int42Int32PackedTensor(resultTensor, outTensor, yType, uniqueExecutor.get());
+            ret = Int42Int32PackedTensor(resultTensor, outTensor, uniqueExecutor.get());
             auto viewCopyY = l0op::ViewCopy(outTensor, y, uniqueExecutor.get());
             CHECK_RET(viewCopyY != nullptr, ACLNN_ERR_INNER_NULLPTR);
         } else {
@@ -363,7 +363,7 @@ aclnnStatus aclnnRmsNormQuantGetWorkspaceSize(
         auto resultTensor = l0op::RmsNormQuant(x, gamma, beta, scale, offset, epsilon, yType, uniqueExecutor.get());
         const aclTensor* outTensor = resultTensor;
         if (yType == op::DataType::DT_INT4) {
-            ret = Int42Int32PackedTensor(resultTensor, outTensor, yType, uniqueExecutor.get());
+            ret = Int42Int32PackedTensor(resultTensor, outTensor, uniqueExecutor.get());
             auto viewCopyY = l0op::ViewCopy(outTensor, y, uniqueExecutor.get());
             CHECK_RET(viewCopyY != nullptr, ACLNN_ERR_INNER_NULLPTR);
         } else {
