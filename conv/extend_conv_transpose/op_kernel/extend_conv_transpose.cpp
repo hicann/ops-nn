@@ -12,6 +12,7 @@
  * \file extend_conv_transpose.cpp
  * \brief
  */
+#define K_MAX_SHAPE_DIM 0
 #include "../conv3d_backprop_input_v2/arch35/conv3d_backprop_input_v2/conv3d_backprop_input_v2.h"
 #include "../conv3d_backprop_input_v2/arch35/conv3d_backprop_input_v2/conv3d_backprop_input_v2_init_output.h"
 #include "../conv3d_backprop_input_v2/arch35/conv3d_backprop_input_v2/conv3d_dx_rowc_block.h"
@@ -23,7 +24,7 @@ using namespace AscendC;
 #define EXTEND_CONV_TRANSPOSE_RUN_OP(...)                       \
     do {                                                        \
         __VA_ARGS__ op;                                         \
-        op.Init(filter, x, y, usrWsp, &tilingData, bias, scale);\
+        op.Init(filter, x, y, workSpace, &tilingData, bias, scale);\
         op.Process();                                           \
     } while (0)
 
@@ -39,13 +40,6 @@ template <uint8_t loadB2Condition, uint8_t kernelSplitMode, uint8_t groupConvMod
 __global__ __aicore__ void extend_conv_transpose(GM_ADDR input_size, GM_ADDR x, GM_ADDR filter, GM_ADDR bias,
                                                  GM_ADDR scale, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling)
 {
-    if (workSpace == nullptr) {
-        return;
-    }
-    GM_ADDR usrWsp = GetUserWorkspace(workSpace);
-    if (usrWsp == nullptr) {
-        return;
-    }
     REGISTER_TILING_DEFAULT(conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData);
     GET_TILING_DATA_WITH_STRUCT(conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData, tilingData, tiling);
 
