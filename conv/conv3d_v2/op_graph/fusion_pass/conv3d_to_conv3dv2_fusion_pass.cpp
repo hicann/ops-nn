@@ -15,6 +15,7 @@
 #include "graph/utils/type_utils.h"
 #include "log/log.h"
 #include "platform/platform_info.h"
+#include "version/ge-compiler_version.h"
 
 namespace Ops {
 using namespace NN;

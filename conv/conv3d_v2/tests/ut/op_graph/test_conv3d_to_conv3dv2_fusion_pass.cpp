@@ -8,12 +8,14 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#if GE_COMPILER_VERSION_NUM >= 90000000U
 #include <functional>
 #include <vector>
 
 #include "../../../../common/tests/ut/op_graph/test_conv_fusion_pass_framework.h"
 #include "../../../op_graph/fusion_pass/conv3d_to_conv3dv2_fusion_pass.h"
+
+#include "version/ge-compiler_version.h"
+#if GE_COMPILER_VERSION_NUM >= 90000000U
 
 using namespace ge;
 using namespace es;
