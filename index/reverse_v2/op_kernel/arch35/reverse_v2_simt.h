@@ -23,6 +23,7 @@ namespace ReverseV2 {
 using namespace AscendC;
 
 const uint32_t LAUNCH_THREAD_NUM = 1024;
+const uint32_t THREAD_DIM_2048 = 2048;
 const uint32_t SIMT_PARAM_BUFFER = 512;
 const uint32_t SIMT_PARAM_NUM = 31;
 
@@ -95,7 +96,10 @@ public:
     __aicore__ inline void Process();
 
 private:
-    static __simt_vf__ __aicore__ inline void SimtCompute(__gm__ T2* input, __gm__ T2* output, T1 blockIdx,
+    static __simt_vf__ __aicore__ LAUNCH_BOUND(LAUNCH_THREAD_NUM) inline void SimtCompute(__gm__ T2* input, __gm__ T2* output, T1 blockIdx,
+                                                          __local_mem__ T1* simtParam);
+    
+    static __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_2048) inline void SimtComputeDim1ToDim2(__gm__ T2* input, __gm__ T2* output, T1 blockIdx,
                                                           __local_mem__ T1* simtParam);
 
     static __simt_callee__ __aicore__ inline void ProcDim8(__gm__ T2* input, __gm__ T2* output, T1 &param0, T1 &param1,
@@ -364,8 +368,8 @@ __simt_callee__ __aicore__ inline void ReverseV2Simt<T1, T2, isReverse, dimNum>:
 }
 
 template <typename T1, typename T2, const bool isReverse, const uint32_t dimNum>
-__simt_vf__ __aicore__ inline void ReverseV2Simt<T1, T2, isReverse, dimNum>::SimtCompute(__gm__ T2* input, __gm__ T2* output, T1 blockIdx,
-                                                                                         __local_mem__ T1* simtParam)
+__simt_vf__ __aicore__ LAUNCH_BOUND(LAUNCH_THREAD_NUM) inline void ReverseV2Simt<T1, T2, isReverse, dimNum>::SimtCompute(__gm__ T2* input, 
+    __gm__ T2* output, T1 blockIdx, __local_mem__ T1* simtParam)
 
 {
     T1 param0 = simtParam[static_cast<uint32_t>(SIMT_PARAM_INDEX::SIMT_PARAM_INDEX0)];
@@ -441,10 +445,37 @@ __simt_vf__ __aicore__ inline void ReverseV2Simt<T1, T2, isReverse, dimNum>::Sim
         } else if constexpr (dimNum == DIM3) {
             ProcDim3(input, output, param0, param1, param2, dim0, dim1, dim2, fastDivParam, idx0, idx1, idx2,
                      y0, y1, idx,inputIdx);
-        } else if constexpr (dimNum == DIM2) {
+        }
+    }
+}
+
+template <typename T1, typename T2, const bool isReverse, const uint32_t dimNum>
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM_2048) inline void ReverseV2Simt<T1, T2, isReverse, dimNum>::SimtComputeDim1ToDim2(__gm__ T2* input, 
+    __gm__ T2* output, T1 blockIdx, __local_mem__ T1* simtParam)
+{
+    T1 param0 = simtParam[static_cast<uint32_t>(SIMT_PARAM_INDEX::SIMT_PARAM_INDEX0)];
+    T1 param1 = simtParam[static_cast<uint32_t>(SIMT_PARAM_INDEX::SIMT_PARAM_INDEX1)];
+    T1 dim0 = simtParam[static_cast<uint32_t>(SIMT_PARAM_INDEX::SIMT_PARAM_INDEX7)];
+    T1 dim1 = simtParam[static_cast<uint32_t>(SIMT_PARAM_INDEX::SIMT_PARAM_INDEX8)];
+    T1 blockFactor = simtParam[static_cast<uint32_t>(SIMT_PARAM_INDEX::SIMT_PARAM_INDEX15)];
+    T1 inputSize = simtParam[static_cast<uint32_t>(SIMT_PARAM_INDEX::SIMT_PARAM_INDEX16)];
+    
+    FastDivParam<T1> fastDivParam;
+    fastDivParam.magic0 = simtParam[static_cast<uint32_t>(SIMT_PARAM_INDEX::SIMT_PARAM_INDEX17)];
+    fastDivParam.shift0 = simtParam[static_cast<uint32_t>(SIMT_PARAM_INDEX::SIMT_PARAM_INDEX24)];
+
+    T1 curCoreEndIdx = (blockIdx + 1) * blockFactor;
+    curCoreEndIdx = curCoreEndIdx > inputSize ? inputSize : curCoreEndIdx;
+    T1 idx0 = 0;
+    T1 idx1 = 0;
+    T1 y0 = 0;
+    T1 inputIdx = 0;
+    
+    for (T1 idx = blockIdx * blockFactor + threadIdx.x; idx < curCoreEndIdx; idx += blockDim.x) {
+        if constexpr (dimNum == DIM2) {
             ProcDim2(input, output, param0, param1, dim0, dim1, fastDivParam, idx0, idx1, y0, idx, inputIdx);
-        } else if constexpr (dimNum == DIM1){
-            ProcDim1(input, output, param0, idx0,dim0, idx, inputIdx);
+        } else if constexpr (dimNum == DIM1) {
+            ProcDim1(input, output, param0, idx0, dim0, idx, inputIdx);
         }
     }
 }
@@ -524,8 +555,14 @@ __aicore__ inline void ReverseV2Simt<T1, T2, isReverse, dimNum>::Process()
     simtParamLocal(static_cast<uint32_t>(SIMT_PARAM_INDEX::SIMT_PARAM_INDEX30)) = fastDivParam.shift6;
 
     DataSyncBarrier<MemDsbT::UB>();
-    asc_vf_call<SimtCompute>(dim3(LAUNCH_THREAD_NUM), (__gm__ T2*)(inputGm_.GetPhyAddr()), (__gm__ T2*)(outputGm_.GetPhyAddr()),
+
+    if constexpr (dimNum == DIM1 || dimNum == DIM2) {
+        asc_vf_call<SimtComputeDim1ToDim2>(dim3(THREAD_DIM_2048), (__gm__ T2*)(inputGm_.GetPhyAddr()), (__gm__ T2*)(outputGm_.GetPhyAddr()),
             blockIdx_, (__local_mem__ T1*)(simtParamLocal.GetPhyAddr()));
+    } else {
+        asc_vf_call<SimtCompute>(dim3(LAUNCH_THREAD_NUM), (__gm__ T2*)(inputGm_.GetPhyAddr()), (__gm__ T2*)(outputGm_.GetPhyAddr()),
+            blockIdx_, (__local_mem__ T1*)(simtParamLocal.GetPhyAddr()));
+    }
 }
 } // namespace ReverseV2
 
